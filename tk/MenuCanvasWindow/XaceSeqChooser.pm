@@ -7,21 +7,21 @@ use strict;
 use 5.006_001;  # For qr support
 use Carp qw{ cluck confess };
 use Tk::Dialog;
+
 use Hum::Ace::SubSeq;
 use Hum::Ace::Locus;
 use Hum::Ace::GeneMethod;
 use Hum::Ace::XaceRemote;
 use Hum::Ace::DotterLauncher;
-use Hum::Sequence::DNA;
 use Hum::Ace;
-use Data::Dumper;
-
-use base 'MenuCanvasWindow';
+use Hum::Analysis::Factory::ExonLocator;
 use MenuCanvasWindow::ExonCanvas;
 use CanvasWindow::DotterWindow;
 use CanvasWindow::PolyAWindow;
 use CanvasWindow::LocusWindow;
 use Bio::Otter::Lace::Defaults;
+
+use base 'MenuCanvasWindow';
 
 sub new {
     my( $pkg, $tk ) = @_;
@@ -669,6 +669,7 @@ sub populate_menus {
     $top->bind('<Control-e>', $edit_command);
     $top->bind('<Control-E>', $edit_command);
     
+    # Close all open subseq windows
     my $close_subseq_command = sub{
         return unless $self->current_state eq 'subseq';
         $self->close_all_subseq_edit_windows;
@@ -682,6 +683,38 @@ sub populate_menus {
     $top->bind('<F4>', $close_subseq_command);
     $top->bind('<F4>', $close_subseq_command);
 
+    # Copy selected subseqs to holding pen
+    my $copy_subseq = sub{
+        return unless $self->current_state eq 'subseq';
+        $self->copy_selected_subseqs;
+        };
+    $subseq->add('command',
+        -label          => 'Copy',
+        -command        => $copy_subseq,
+        -accelerator    => 'Ctrl+C',
+        -underline      => 0,
+        );
+    $top->bind('<Control-c>', $copy_subseq);
+    $top->bind('<Control-C>', $copy_subseq);
+
+    # Paste selected subseqs, realigning them to the genomic sequence
+    my $paste_subseq = sub{
+        return unless $self->current_state eq 'subseq';
+        eval {
+            $self->paste_selected_subseqs;
+        };
+        if ($@) {
+            $self->exception_message($@);
+        }
+    };
+    $subseq->add('command',
+        -label          => 'Paste',
+        -command        => $paste_subseq,
+        -accelerator    => 'Ctrl+V',
+        -underline      => 0,
+        );
+    $top->bind('<Control-v>', $paste_subseq);
+    $top->bind('<Control-V>', $paste_subseq);
     
     #### Separator ####
     $subseq->add('separator');
@@ -756,6 +789,35 @@ sub populate_menus {
     #    -underline      => 0,
     #    );
 
+}
+
+sub bind_events {
+    my( $self ) = @_;
+    
+    my $canvas = $self->canvas;
+
+    $canvas->Tk::bind('<Button-1>', [
+        sub{ $self->left_button_handler(@_); },
+        Tk::Ev('x'), Tk::Ev('y') ]);
+    $canvas->Tk::bind('<Shift-Button-1>', [
+        sub{ $self->shift_left_button_handler(@_); },
+        Tk::Ev('x'), Tk::Ev('y') ]);
+    $canvas->Tk::bind('<Double-Button-1>', [
+        sub{
+            $self->left_button_handler(@_);
+            $self->edit_double_clicked;
+            },
+        Tk::Ev('x'), Tk::Ev('y') ]);
+    
+    $canvas->Tk::bind('<Escape>',   sub{ $self->deselect_all        });    
+    $canvas->Tk::bind('<Return>',   sub{ $self->edit_double_clicked });    
+    $canvas->Tk::bind('<KP_Enter>', sub{ $self->edit_double_clicked });    
+    
+    # Object won't get DESTROY'd without:
+    $canvas->Tk::bind('<Destroy>', sub{
+        #cluck "Dealing with <Destroy> call";
+        $self = undef;
+        });
 }
 
 ## needs to be called when drawing the clone_sequences (clone sequence details not present when other menus are created)
@@ -866,34 +928,100 @@ sub close_all_PolyAWindows {
     return scalar(keys %$polyAs) ? 0 : 1;
 }
 
+{
+    my( @holding_pen );
 
-sub bind_events {
-    my( $self ) = @_;
-    
-    my $canvas = $self->canvas;
+    sub copy_selected_subseqs {
+        my( $self ) = @_;
+        
+        # Empty holding pen
+        @holding_pen = ();
+        
+        my @select = $self->list_selected_subseq_names;
+        unless (@select) {
+            $self->message('Nothing selected');
+            return;
+        }
+        foreach my $name (@select) {
+            my $sub = $self->get_SubSeq($name)->clone;
+            $sub->is_archival(0);
+            push(@holding_pen, $sub);
+        }
+    }
 
-    $canvas->Tk::bind('<Button-1>', [
-        sub{ $self->left_button_handler(@_); },
-        Tk::Ev('x'), Tk::Ev('y') ]);
-    $canvas->Tk::bind('<Shift-Button-1>', [
-        sub{ $self->shift_left_button_handler(@_); },
-        Tk::Ev('x'), Tk::Ev('y') ]);
-    $canvas->Tk::bind('<Double-Button-1>', [
-        sub{
-            $self->left_button_handler(@_);
-            $self->edit_double_clicked;
-            },
-        Tk::Ev('x'), Tk::Ev('y') ]);
-    
-    $canvas->Tk::bind('<Escape>',   sub{ $self->deselect_all        });    
-    $canvas->Tk::bind('<Return>',   sub{ $self->edit_double_clicked });    
-    $canvas->Tk::bind('<KP_Enter>', sub{ $self->edit_double_clicked });    
-    
-    # Object won't get DESTROY'd without:
-    $canvas->Tk::bind('<Destroy>', sub{
-        #cluck "Dealing with <Destroy> call";
-        $self = undef;
-        });
+    sub paste_selected_subseqs {
+        my( $self ) = @_;
+        
+        unless (@holding_pen) {
+            $self->message('No SubSequences on clipboard');
+            return;
+        }
+        
+        unless ($self->current_state eq 'subseq') {
+            $self->message('Can only paste when in SubSequence view');
+            return;
+        }
+        
+        my @clone_names = $self->list_selected_clone_names;
+        unless (@clone_names == 1) {
+            $self->message(
+                "Can only paste if one clone is selected, but have:\n",
+                map "  '$_'\n", @clone_names);
+            return;
+        }
+        my $clone = $self->get_CloneSeq(shift @clone_names);
+        
+        my $finder = Hum::Analysis::Factory::ExonLocator->new;
+        $finder->genomic_Sequence($clone->Sequence);
+        my( @msg, @new_subseq, $i );
+        foreach my $sub (@holding_pen) {
+            my $name = $sub->name;
+            my $exon_seq = $sub->exon_Sequence_array;
+            my $fs = $finder->find_best_Feature_set($exon_seq);
+            my @exons = $sub->get_all_Exons;
+            my( $strand, @new_exons, $done_msg );
+            for (my $i = 0; $i < @exons; $i++) {
+                my $feat = $fs->[$i] or next;
+                my $ex = Hum::Ace::Exon->new;
+                $ex->start($feat->seq_start);
+                $ex->end($feat->seq_end);
+                $strand ||= $feat->seq_strand;
+                push(@new_exons, $ex);
+            }
+            
+            if (@new_exons) {
+                my $new = $sub->clone;
+                my $temp_name = sprintf "TEMP-%03d", ++$i;
+                $new->name($temp_name);
+                $new->strand($strand);
+                $new->replace_all_Exons(@new_exons);
+                $new->clone_Sequence($clone->Sequence);
+                $clone->add_SubSeq($new);
+                if ($sub->translation_region_is_set) {
+                    eval {
+                        $new->set_translation_region_from_cds_coords($sub->cds_coords);
+                    };
+                    if ($@) {
+                        push(@msg, "Failed to set translation region - check translation of '$temp_name'");
+                        $new->translation_region($new->start, $new->end);
+                    }
+                }
+                $new->Locus($self->get_Locus($sub->Locus->name));
+                $self->add_SubSeq($new);
+                push(@new_subseq, $new);
+                print STDERR $new->ace_string;
+            } else {
+                $self->message("Got zero exons from realigning '$name'");
+            }
+        }
+        $self->do_subseq_display;
+        $self->highlight_by_name('subseq', map $_->name, @new_subseq);
+        $self->message(@msg) if @msg;
+        foreach my $new (@new_subseq) {
+            $self->make_exoncanvas_edit_window($new);
+        }
+        $self->fix_window_min_max_sizes;
+    }
 }
 
 sub exit_save_data {
@@ -1750,12 +1878,27 @@ sub draw_subseq_list {
             push(@subseq, map($_->name, @$clust));
         }
     }
+    $self->opened_clones(@selected_clones);
     
     $self->draw_sequence_list('subseq', @subseq);
     $self->subseq_menubutton->configure(-state => 'normal');
 
 }
 
+sub opened_clones {
+    my( $self, @clones ) = @_;
+    
+    if (@clones) {
+        $self->{'_opened_clones'} = [@clones];
+    } else {
+        my $cl = $self->{'_opened_clones'};
+        if ($cl) {
+            return @$cl;
+        } else {
+            return;
+        }
+    }
+}
 
 
 sub get_all_Subseq_clusters {

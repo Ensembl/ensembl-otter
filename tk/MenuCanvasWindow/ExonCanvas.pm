@@ -19,7 +19,6 @@ use Hum::Ace;
 
 # "new" is in MenuCanvasWindow
 
-
 sub initialize {
     my( $self ) = @_;
     
@@ -773,23 +772,9 @@ sub show_peptide {
             if ($peptext) {
                 $peptext->toplevel->withdraw;
             }
-            warn "is mutable" ;
             $self->message("non-coding method");
             return;
         }
-    } else {
-    # the gene is not mutable - maybe truncated, check if it gets translation start and end set
-        #warn "isn't mutable" ;
-        $sub = $self->SubSeq;
-        
-        eval { $self->tk_t_start ;
-                $self->tk_t_end  } ;
-                
-        if ($@){
-            $self->message("Truncated transcript - this part doesn't contain coding region ");
-            return ;
-        }        
-        
     }
 
     unless ($peptext) {
