@@ -10,11 +10,19 @@ use Data::Dumper;
     my $dataset_name = undef;
     my $help         = 0;
     my $ss_name      = undef;
+    my $start        = undef;
+    my $stop         = undef;
+    my $sql          = 0;
+    my $special      = undef;
     my $ss;
     Bio::Otter::Lace::Defaults::do_getopt(
-					  'h|help!'     => \$help,
-					  'dataset=s'   => \$dataset_name,
-					  'set=s'       => \$ss_name
+					  'h|help!'   => \$help,
+					  'dataset=s' => \$dataset_name,
+					  'set=s'     => \$ss_name,
+					  'min=i'     => \$start,
+					  'max=i'     => \$stop,
+					  'sql'       => \$sql,
+					  'slice=s'   => \$special,
 					  ) || usage();
     usage() if $help;
     die "I need a dataset name\n"      unless $dataset_name;
@@ -30,8 +38,46 @@ use Data::Dumper;
     my $cs = $ds->fetch_all_CloneSequences_for_SequenceSet($ss);
     $ds->fetch_all_SequenceNotes_for_SequenceSet($ss);
 
+    # make slices of sequence sets available
+    
+    # defined $start as 0 is valid
+    if(defined($start) || $stop){
+	# just some sanity checks here.
+	my $c = scalar @$cs;
+	$start ||= 0;
+	$stop  ||= $c;
+	$stop--  if ($stop > 0 && $start != 0);
+	$start-- if $start > 0;
+	$start = 0 if ($start > $stop || $start > $c);
+	$stop  = 1 if ($stop > $c);
+	# take a slice out 
+	$cs = [ @{$cs}[$start..$stop] ];
+    }elsif($special){
+	my $list = [ split(",", $special) ];
+	my @slice;
+	my $c = scalar @$cs;
+	foreach my $i( @$list ){
+	    if($i =~ /\-/){
+		if($i =~ /(\d+)\-(\d+)/){
+		    my $start = $1;
+		    my $stop  = $2;
+		    $stop--  if ($stop > 0 && $start != 0);
+		    $start-- if $start > 0;
+		    $start = 0 if ($start > $stop || $start > $c);
+		    $stop  = 1 if ($stop > $c);
+		    push(@slice, $start..$stop);
+		}
+	    }else{
+		$i-- if $i > 0;
+		push(@slice, int($i));
+	    }
+	}
+	$cs = [ @{$cs}[@slice] ];
+    }
+    my @accs = ();
     foreach my $cloneSequence(@$cs){
 	printf "\n%s.%s %s \n", $cloneSequence->accession(), $cloneSequence->sv, $cloneSequence->clone_name;
+	push(@accs, "'".$cloneSequence->accession()."'");
 	my $notes = $cloneSequence->get_all_SequenceNotes();
 	unless( $notes ){
 	    print "\tNo sequence notes for this clone.\n";
@@ -41,17 +87,24 @@ use Data::Dumper;
 	    printf "\t%s %s %s\n", scalar(localtime($seqNote->timestamp)), $seqNote->author, $seqNote->text;
 	}
     }
-    
+    if($sql){
+	warn "\nSELECT c.* FROM clone_lock c, clone cl\n";
+	warn "WHERE c.clone_id = cl.clone_id && cl.embl_acc \n";
+	warn " IN(" . join(",", @accs) . ");\n";
+    }
 }
 
 sub usage{ exit(exec('perldoc', $0)); }
+
 __END__
 
-=head1 NAME - show_ana_notes_history
+=head1 NAME
+
+show_ana_notes_history
 
 =head1 SYNOPSIS
 
-  show_ana_notes_history -dataset <DATASET_NAME> -set <SEQUENCE_SET_NAME>
+show_ana_notes_history -dataset <DATASET_NAME> -set <SEQUENCE_SET_NAME>
 
 =head1 DESCRIPTION
 
@@ -59,7 +112,24 @@ Shows the sequence notes history for a B<sequence set> in B<dataset>.
 
 =head1 USEAGE
 
-    show_ana_notes_history -dataset <DATASET_NAME> -set <SEQUENCE_SET_NAME>
+show_ana_notes_history [options] -dataset <DATASET_NAME> -set <SEQUENCE_SET_NAME>
+
+Where options are:
+
+ option       default   comment
+ --------------------------------
+ -min                   only show from this clone number in list
+ -max                   only show up to this clone number in list
+ -slice                 only show this slice of the clones in list
+
+examples:
+
+./show_ana_notes_history -dataset human -set example
+
+./show_ana_notes_history -min 150 -max 200 -dataset human -set example
+
+./show_ana_notes_history -slice 100-120,130-140,200,202 -dataset human -set example
+
 
 =head1 AUTHOR
 
