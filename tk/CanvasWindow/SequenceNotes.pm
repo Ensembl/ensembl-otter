@@ -213,6 +213,7 @@ sub _column_text_seq_note_text {
     my( $cs ) = @_;
     
     if (my $sn = $cs->current_SequenceNote) {
+        return { -text => $sn->prefix . " " . $sn->text, -tags => ['searchable']} if $sn->prefix;
         return { -text => $sn->text, -tags => ['searchable']};
     } else {
         return {};
