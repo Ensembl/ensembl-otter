@@ -152,7 +152,7 @@ my $font = ['Helvetica', 12, 'bold'];
                 }
             }
         }
-        if (1 and $row > 10) {
+        if (0 and $row > 10) {
             warn "DEBUG BAILOUT";
             last;
         }

@@ -176,6 +176,115 @@ use Getopt::Long 'GetOptions';
     ###############
 }
 
+{
+    my( $top, $hist );
+
+    sub popup_ana_seq_history {
+        my( $gc ) = @_;
+        
+        my $canvas = $gc->canvas;
+        my $asid = get_current_ana_seq_id($canvas)
+            or return;
+        
+        unless ($top) {
+            my $master = $canvas->toplevel;
+            $top = $master->Toplevel;
+            $top->transient($master);
+            my $font = 'helvetica';
+            my $size = $gc->font_size;
+
+            $hist = $top->ROText(
+                -font           => [$font, $size, 'normal'],
+                #-justify        => 'left',
+                -padx                   => 6,
+                -pady                   => 6,
+                -relief                 => 'groove',
+                -background             => 'white',
+                -border                 => 2,
+                -selectbackground       => 'gold',
+                #-exportselection => 1,
+                )->pack(
+                    -expand => 1,
+                    -fill   => 'both',
+                    );
+        
+            # Make a Close button inside a frame
+            my $frame = $top->Frame(
+                -border => 6,
+                )->pack(
+                    -anchor => 'sw',
+                    );
+
+            # Close only unmaps it from the display
+            my $close_command = sub{ $top->withdraw };
+
+            my $exit = $frame->Button(
+                -text => 'Close',
+                -command => $close_command ,
+                )->pack;
+            $top->bind(    '<Control-w>',      $close_command);
+            $top->bind(    '<Control-W>',      $close_command);
+            $top->bind(    '<Escape>',         $close_command);
+
+            # Closing with window manager only unmaps window
+            $top->protocol('WM_DELETE_WINDOW', $close_command);
+        }
+        
+        my $text = get_history_for_ana_seq_id($asid);
+        
+        my $lines = $fasta =~ tr/\n//;
+        $peptext->delete('1.0', 'end');
+
+        # Markup stop codons
+        foreach my $bit (split /(\*+)/, $fasta) {
+            if ($bit =~ /\*/) {
+                $peptext->insert('end', $bit, 'redstop');
+            } else {
+                # Highlight "X", the unknown amino acid
+                foreach my $xstr (split /(X+)/, $bit) {
+                    if ($xstr =~ /X/) {
+                        $peptext->insert('end', $xstr, 'blueunk');
+                    } else {
+                        $peptext->insert('end', $xstr);
+                    }
+                }
+            }
+        }
+
+        # Size widget to fit
+        $peptext->configure(
+            -width  => 60,
+            -height => $lines,
+            );
+
+        # Set the window title, and make it visible
+        my $win = $peptext->toplevel;
+        $win->configure( -title => $sub->name . " translation" );
+        $win->deiconify;
+        $win->raise;
+        
+    }
+}
+
+sub get_history_for_ana_seq_id {
+    my( $asid ) = @_;
+    
+    my $sth = prepare_statement(qq{
+        SELECT ass.rank
+          , s.sequence_name
+          , r.review_time
+          , r.annotator_uname
+          , r.review_comment
+        FROM sequence s
+          , ana_sequence a
+        WHERE s.seq_id = a.seq_id
+          AND a.ana_seq_id = r.ana_seq_id
+          AND s.ana_seq_id = $asid
+        ORDER BY r.review_time        
+        });
+    $sth->execute;
+}
+
 sub list_sets {
     my $sth = prepare_statement(q{
         SELECT set_name
@@ -480,11 +589,18 @@ sub toggle_current {
     
     my $canvas = $gc->canvas;
     
-    my ($ana_seq) = grep /^ana_seq_id=/, $canvas->gettags('current');
+    my $ana_seq = get_current_ana_seq_id($canvas);
     return unless $ana_seq;
 
-    my ($rec) = $canvas->find('withtag', "$ana_seq&&contig_seq_rectangle");        
+    my ($rec) = $canvas->find('withtag', "ana_seq_id=$ana_seq&&contig_seq_rectangle");        
     toggle_selection($gc, $rec);
+}
+
+sub get_current_ana_seq_id {
+    my( $canvas ) = @_;
+    
+    my ($ana_seq) = map /^ana_seq_id=(\d+)/, $canvas->gettags('current');
+    return $ana_seq;
 }
 
 sub deselect_all_selected_not_current {
