@@ -1,0 +1,119 @@
+#!/usr/local/bin/perl -w
+
+### show_clones_for_duplicated_transcript_name
+
+use strict;
+use Bio::Otter::Lace::Defaults;
+
+{
+    my $usage = sub { exec('perldoc', $0) };
+
+    my $dataset_name = undef;
+    my $tsct_name    = undef;
+    my $set_name     = undef;
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'       => $usage,
+        'dataset=s'     => \$dataset_name,
+        'set|chr=s'     => \$set_name,
+        'name=s'        => \$tsct_name,
+        ) or $usage->();
+    $usage->() unless $dataset_name and $set_name and $tsct_name;
+    
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    my $otter_db = $ds->make_DBAdaptor;
+    $otter_db->assembly_type($set_name);
+    
+    my @current_gene_id = fetch_current_gene_id_for_transcript($otter_db, $tsct_name);
+    foreach my $gid (@current_gene_id) {
+        print_gene_clones($otter_db, $gid);
+    }
+}
+
+sub print_gene_clones {
+    my( $otter_db, $gid ) = @_;
+    
+    my $gene = $otter_db->get_GeneAdaptor->fetch_by_dbID($gid);
+    my $info = $gene->gene_info;
+    my $name = $info->name->name;
+    my $author = $info->author->name;
+    my $time = localtime($info->timestamp);
+    my $type = $gene->type;
+    print "\nGene: $type:$name ($gid)\n$author  $time\n";
+    foreach my $transcript (@{$gene->get_all_Transcripts}) {
+        #print "Tsct: ", $transcript->stable_id, " ", $transcript->transcript_info->name, "\n";
+        foreach my $remark ($transcript->transcript_info->remark) {
+            print $remark->remark, "\n";
+        }
+    }
+    #foreach my $remark ($info->remark) {
+    #    print $remark->remark, "\n";
+    #}
+    
+    my $ass_type = $otter_db->assembly_type;
+    my $sth = $otter_db->prepare(q{
+        SELECT cl.embl_acc
+          , cl.name
+        FROM transcript t
+          , exon_transcript et
+          , exon e
+          , assembly a
+          , contig g
+          , clone cl
+        WHERE t.transcript_id = et.transcript_id
+          AND et.exon_id = e.exon_id
+          AND e.contig_id = a.contig_id
+          AND a.contig_id = g.contig_id
+          AND g.clone_id = cl.clone_id
+          AND t.gene_id = ?
+          AND a.type = ?
+        GROUP BY cl.clone_id
+        ORDER BY a.chr_start
+        });
+    $sth->execute($gid, $ass_type);
+    
+    while (my ($acc, $name) = $sth->fetchrow) {
+        print "$acc\t$name\n";
+    }
+}
+
+sub fetch_current_gene_id_for_transcript {
+    my( $db, $name ) = @_;
+    
+    my $sth = $db->prepare(q{
+        SELECT gs.stable_id
+          , gs.gene_id
+        FROM transcript_info i
+          , transcript_stable_id ts
+          , transcript t
+          , gene_stable_id gs
+        WHERE i.transcript_stable_id = ts.stable_id
+          AND ts.transcript_id = t.transcript_id
+          AND t.gene_id = gs.gene_id
+          AND i.name = ?
+        GROUP BY gs.stable_id
+          , gs.version
+        ORDER BY gs.version ASC
+        });
+    $sth->execute($name);
+    
+    my( %stable_gid );
+    while (my ($stable, $gid) = $sth->fetchrow) {
+        $stable_gid{$stable} = $gid;
+    }
+    return sort {$a <=> $b} values %stable_gid;
+}
+
+
+__END__
+
+=head1 NAME - show_clones_for_duplicated_transcript_name
+
+=head1 EXAMPLE
+
+  show_clones_for_duplicated_transcript_name -dataset human -chr chr1-07 -name RP5-902P15.1-002
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
