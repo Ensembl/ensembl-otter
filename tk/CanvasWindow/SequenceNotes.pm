@@ -59,26 +59,29 @@ sub get_CloneSequence_list {
     return $cs_list;
 }
 
-sub refresh_column{
+### Might be able to make this a bit more general
+sub refresh_column {
     my ($self, $col_no) = @_;
-    my $tag = "col=$col_no";
+
+    my $col_tag = "col=$col_no";
     my $ss = $self->SequenceSet();
     my $ds = $self->SequenceSetChooser->DataSet();
     my $cs_list   = $self->get_CloneSequence_list;
     $ds->status_refresh_for_SequenceSet($ss);
     my $canvas = $self->canvas();
-    # fetch all members of column [$tag]
-    my @all_col_objs = $canvas->find('withtag', $tag);
-    foreach my $obj (@all_col_objs) {
-        # update the text
-	my @tags = $canvas->gettags($obj);
-	my ($tag) = map { /cs=(\d+)/ } @tags;
-	$tag =~ s/cs=(\d+)/$1/;
-	my $new_text = &_column_text_seq_note_status($cs_list->[$tag]);
-	$new_text->{'-tags'} = \@tags;
-	$canvas->itemconfigure($obj, %$new_text);
+    
+    for (my $i = 0; $i < @$cs_list; $i++) {
+        my $cs = $cs_list->[$i];
+        if (my ($status_text) = $canvas->find('withtag', "$col_tag&&cs=$i")) {
+            my $new_text = _column_text_seq_note_status($cs);
+	    delete $new_text->{'-tags'};    # Don't want to alter tags
+	    $canvas->itemconfigure($status_text, %$new_text);
+        } else {
+            warn "No object withtag '$col_tag&&cs=$i'";
+        }
     }
 }
+
 sub column_methods {
     my( $self, $methods ) = @_;
     
@@ -218,12 +221,15 @@ sub initialise {
                 );
 
             $comment = $button_frame->Entry(
-                -width              => 55,
-                -font               => ['Helvetica', $self->font_size, 'normal'],
+                -width  => 55,
+                -font   => ['Helvetica', $self->font_size, 'normal'],
                 );
             $comment->pack(
                 -side => 'left',
                 );
+            # Remove Control-H binding from Entry
+            $comment->bind(ref($comment), '<Control-h>', '');
+            $comment->bind(ref($comment), '<Control-H>', '');
         }
         
         
@@ -267,7 +273,17 @@ sub initialise {
         $self->make_button($button_frame2, 'Refresh', $refesher, 0);
         $top->bind('<Control-r>', $refesher);
         $top->bind('<Control-R>', $refesher);
-        $top->bind('<F5>', $refesher);
+        $top->bind('<F5>',        $refesher);
+
+	my $refresh_status = sub {
+            $top->Busy;
+            $self->refresh_column(3);
+            $top->Unbusy;
+	};
+	$self->make_button($button_frame2, 'Refresh Ana. Status', $refresh_status, 8);
+        $top->bind('<Control-a>', $refresh_status);
+        $top->bind('<Control-A>', $refresh_status);
+        $top->bind('<F6>',        $refresh_status);
 
         my $run_lace = sub{
             $top->Busy;
@@ -277,13 +293,6 @@ sub initialise {
         $self->make_button($button_frame2, 'Run lace', $run_lace, 4);
         $top->bind('<Control-l>', $run_lace);
         $top->bind('<Control-L>', $run_lace);
-
-	my $refresh_status = sub {
-            $top->Busy;
-            $self->refresh_column(3);
-            $top->Unbusy;
-	};
-	$self->make_button($button_frame2, 'Refresh Ana Status', $refresh_status, undef);
 
         #if ($write) {
         #    
