@@ -20,9 +20,12 @@ use vars qw(
    $OTTER_SERVER_PORT
    $OTTER_ALTROOT
    $OTTER_SCRIPTDIR
+   $OTTER_GET_SCRIPTS
+   $OTTER_POST_SCRIPTS
    $OTTER_SERVER
    $OTTER_PORT
    $OTTER_MAX_CLIENTS
+   $OTTER_SCRIPT_TIMEOUT
    $OTTER_DBNAME 
    $OTTER_USER
    $OTTER_HOST
@@ -49,12 +52,19 @@ $OTTER_SCRIPTDIR            = $OTTER_SERVER_ROOT . '/scripts/server';
 $OTTER_SERVER		    = 'ecs2a.internal.sanger.ac.uk';#Sys::Hostname::hostname();  # Local machine name
 $OTTER_MAX_CLIENTS          = 5;
 $OTTER_SERVER_PORT          = 39312;
-
+$OTTER_SCRIPT_TIMEOUT       = 60;
 $OTTER_SPECIES_FILE         = $OTTER_SERVER_ROOT . "/conf/species.dat";
 $OTTER_SPECIES              = read_species($OTTER_SPECIES_FILE);
 $OTTER_DEFAULT_SPECIES      = 'human_9p12';
 $OTTER_PREFIX               = 'OTT';
-
+$OTTER_GET_SCRIPTS          = {'/perl/get_region'     => "get_region",
+                               '/perl/get_sequence'   => "get_sequence",
+                               '/perl/get_datasets'   => "get_datasets",
+                               '/perl/get_loci_names' => "get_loci_names"
+                              };
+$OTTER_POST_SCRIPTS         = {'/perl/write_region'   => "write_region",
+                               '/perl/unlock_region'  => "unlock_region",
+                              };
 ################################################################################################
 #
 # Nothing below here should need to be edited
@@ -81,9 +91,12 @@ $OTTER_DNA_PASS       = $OTTER_SPECIES->{$OTTER_DEFAULT_SPECIES}{DNA_PASS} || $O
    $OTTER_SERVER_PORT
    $OTTER_ALTROOT
    $OTTER_SCRIPTDIR
+   $OTTER_GET_SCRIPTS
+   $OTTER_POST_SCRIPTS
    $OTTER_SERVER
    $OTTER_PORT
    $OTTER_MAX_CLIENTS
+   $OTTER_SCRIPT_TIMEOUT
    $OTTER_SPECIES
    $OTTER_DEFAULT_SPECIES
    $OTTER_PREFIX

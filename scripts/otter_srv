@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/local/bin/perl
 
 # Shamelessly ripped off from pfetch_srv
 package OtterServer;
@@ -21,6 +21,7 @@ my $DEFAULT_HOME          = $OTTER_SERVER_ROOT;
 my $ALT_HOME              = $OTTER_ALTROOT;
 my $SCRIPTDIR             = $OTTER_SCRIPTDIR;
 my $HOME                  = $DEFAULT_HOME;
+my $SCRIPT_TIMEOUT        = int($OTTER_SCRIPT_TIMEOUT) || 60;
 my $PIDFILE               = $DEFAULT_HOME . "/$0.$HOSTNAME.pid";
 my $OTTER_INFO            = undef;
 my $PREFORK               = 5;
@@ -28,6 +29,8 @@ my $MAX_CLIENTS_PER_CHILD = $OTTER_MAX_CLIENTS;
 my $SOCKET                = $OTTER_SERVER_PORT;
 my $DEBUG                 = 1;
 my $VERSION               = "0.1";
+my $GET_SCRIPTS           = $OTTER_GET_SCRIPTS || {};
+my $POST_SCRIPTS          = $OTTER_POST_SCRIPTS || {};
 
 #--------------------- global variables ----------------------#
 my %CHILDREN = ();  # keys are current child process IDs
@@ -129,102 +132,46 @@ sub make_new_child {
       $ENV{VEGADBSRC} = $vegadbsrc;
       set_cgi_env($r);
 
-      if ($r->method eq 'GET' and $r->url->path eq "/perl/get_region") {
-        print "OTTER_SERVER : Doing get_region\n";
-        $ENV{SCRIPT_FILENAME} = "$SCRIPTDIR/get_region";
-        open PRG, "$SCRIPTDIR/get_region|";
-        while (<PRG>) {
-          print $client $_;
-          #print STDERR $_;
-        }
-        #$client->send_file(\*PRG);
-        close PRG;
-      } elsif ($r->method eq 'GET' and $r->url->path eq "/perl/get_sequence") {
-        print "OTTER_SERVER : Doing get_sequence\n";
-        $ENV{SCRIPT_FILENAME} = "$SCRIPTDIR/get_sequence";
-        open PRG, "$SCRIPTDIR/get_sequence|";
-        while (<PRG>) {
-          print $client $_;
-          #print STDERR $_;
-        }
-        close PRG;
-      } elsif ($r->method eq 'GET' and $r->url->path eq "/perl/get_datasets") {
-        print "Doing get_datasets\n";
-        $ENV{SCRIPT_FILENAME} = "$SCRIPTDIR/get_datasets";
-        eval {
-          open PRG, "$SCRIPTDIR/get_datasets|";
-        
-          # $client->send_file(\*PRG);
-          my $nline = 0;
-          while (<PRG>) {
-            print $client $_;
-            #print STDERR $_;
-            $nline++;
-          }
-          if (!$nline) {
-            print STDERR "ERROR: Failed\n";
-          }
-          close PRG;
-        };
-        if ($@) {
-          print STDERR "ERROR: ". $@ . "\n";
-        }
-        print "Done sending file\n";
-      } elsif ($r->method eq 'GET' and $r->url->path eq "/perl/get_loci_names") {
-        print "Doing get_loci_names\n";
-        $ENV{SCRIPT_FILENAME} = "$SCRIPTDIR/get_loci_names";
-        eval {      
-          open PRG, "$SCRIPTDIR/get_loci_names|";
+      
 
-          # $client->send_file(\*PRG);
-          my $nline = 0;     
-          while (<PRG>) {    
-            #print STDERR $_;
-            print $client $_;
-            $nline++;
-          }
-          if (!$nline) {
-            print STDERR "ERROR: Failed\n";
-          }
-          close PRG;       
-        };
-        if ($@) {
-          print STDERR "ERROR: ". $@ . "\n";
+      if ($r->method eq 'GET' and $GET_SCRIPTS->{$r->url->path}) {
+        my $program = $ENV{SCRIPT_FILENAME} = "$SCRIPTDIR/" . $GET_SCRIPTS->{$r->url->path};
+        my @args = ();
+        if( my $pid = open (my $fh, '-|') ){
+            eval{
+                local $SIG{ALRM} = sub { warn qq{!TIMEOUT! PID <$pid> is TERMinating...\n};  kill 9, $pid;};
+                alarm ($SCRIPT_TIMEOUT); # defaults to 1 minute
+                while (<$fh>){
+                    print $client $_;
+                }
+                close $fh;# || die qq{unexpected exit by $program: $!\n};
+                alarm 0;
+            };
+            if ($@) {
+                print STDERR qq{ERROR: $@ \n};
+            }
+        }else{
+            exec( $program, @args );
+            die q{Something went wrong here $!: } . $! . "\n";
         }
-        print "Done sending file\n";
-   
-      } elsif ($r->method eq 'POST' and $r->url->path eq "/perl/write_region") {
-        print "OTTER_SERVER : Doing write_region\n";
-        $ENV{SCRIPT_FILENAME} = "$SCRIPTDIR/write_region";
-        my $in;
-        my $out;
-        my $pid = open2($out,$in,"$SCRIPTDIR/write_region");
+            
+      } elsif ($r->method eq 'POST' and $POST_SCRIPTS->{$r->url->path}) {
+        print "OTTER_SERVER : Doing " . $POST_SCRIPTS->{$r->url->path} . "\n";
+        my $program = $ENV{SCRIPT_FILENAME} = "$SCRIPTDIR/" . $POST_SCRIPTS->{$r->url->path};
+        my ($in, $out);
+        my $pid = open2($out,$in,$program);
         print $in $r->content;
         close $in;
-        open FPDBG,">../data/test_server_wr.xml";
+        open  FPDBG,">../data/test_server_wr.xml";
         print FPDBG $r->content;
         close FPDBG;
         print "OTTER_SERVER : Printing response\n";
+        
         while (<$out>) {
           #print STDERR $_;
           print $client $_;
         }
-        print "OTTER_SERVER : End response\n";
-        close $out;
-        waitpid $pid, 0;
-      } elsif ($r->method eq 'POST' and $r->url->path eq "/perl/unlock_region") {
-        print "OTTER_SERVER : Doing unlock_region\n";
-        $ENV{SCRIPT_FILENAME} = "$SCRIPTDIR/unlock_region";
-        my $in;
-        my $out;
-        my $pid = open2($out,$in,"$SCRIPTDIR/unlock_region");
-        print $in $r->content;
-        close $in;
-        print "OTTER_SERVER : Printing response\n";
-        while (<$out>) {
-          #print STDERR $_;
-          print $client $_;
-        }
+        #print $client $r->content;
         print "OTTER_SERVER : End response\n";
         close $out;
         waitpid $pid, 0;
