@@ -325,7 +325,7 @@ sub search_window{
                 )->pack(    -side    =>  'left' ,
                             -padx    =>   5  ,
                         ) ; 
-        my $clone_radio = $radio_frame->Radiobutton(    -text       =>  'intl. clone name or accession'  , 
+        my $clone_radio = $radio_frame->Radiobutton(    -text       =>  'intl. clone name or accession[.version]'  , 
                                                         -variable   =>  \$radio_variable    ,
                                                         -value      =>  'clone'
                 )->pack(    -side   =>  'right' ,
