@@ -141,7 +141,9 @@ sub draw{
         confess 'the polyA window needs to be given a slice name' ;    
     $tl->title("Poly A sites / signals for : $slice_name");
     
-    
+    # hope xace_seq_chooser exists
+    my $write_acces = $self->xace_seq_chooser->write_access();
+
     my $close_window = sub { $self->close_window };
     $tl->bind('<Control-w>',          $close_window);
     $tl->bind('<Control-W>',          $close_window);
@@ -158,7 +160,7 @@ sub draw{
     my $sig_label = $top_frame->Label(-text => 'PolyA Signal')->pack(-side => 'left' , padx => 5) ;
     my $site_label = $top_frame->Label(-text => 'PolyA Site' )->pack(-side =>'right'  , padx => 5);
     
-    my $add_signal = sub { $self->add_entry_widget('signal') };
+    my $add_signal = $write_acces ? sub { $self->add_entry_widget('signal') } : sub { return 1 };
     $top_frame->Button( -text => 'Add Signal',
                         -underline => 6,
                         -relief => 'groove',
@@ -167,7 +169,7 @@ sub draw{
     $tl->bind('<Control-G>', $add_signal) ;
     $tl->bind('<Control-g>', $add_signal) ;
     
-    my $add_site = sub { $self->add_entry_widget('site') };
+    my $add_site = $write_acces ? sub { $self->add_entry_widget('site') } : sub { return 1 };
     $top_frame->Button( -text => 'Add Site',
                         -underline => 6,
                         -relief => 'groove',
@@ -398,8 +400,10 @@ sub add_entry_widget{
 #asks user if he/she wants to save coords (only when unsaved)
 sub save_window{
     my ($self) = @_ ;
-#    warn "close_window called\n";
-    #checks to see if any (ie an ace file is created) and it is not invalid
+
+    # hope xace_seq_chooser exists
+    return 1 unless my $write_acces = $self->xace_seq_chooser->write_access();
+    # checks to see if any (ie an ace file is created) and it is not invalid
     my ($status , $ace) = $self->create_ace_file;
     if ($ace){
         my $save_changes = $self->toplevel->messageBox(
@@ -413,30 +417,34 @@ sub save_window{
         if ($save_changes eq "Yes"){
             my $result = $self->save_details($status ,$ace );
             return 0 if $result eq 'Cancel';
-        }
+        }elsif($save_changes eq 'Cancel'){
+	    return 0;
+	}
     }
+    return 1;
 }
 sub close_window{
     my ($self) = @_;
-    $self->save_window();
-#    warn "close_window calling clean_Xace\n";
+    # return 0 if user decides to cancel [see save_window]
+    $self->save_window() or return 0;
+    # cleaning out this object's xace
     $self->clean_XaceSeqChooser();
-#    warn "incase xace has managed to close itself without this\n";
+    # incase xace has managed to close itself. this was in previous version
     $self->toplevel->destroy;
-#    warn "making self undef\n";
+    # making self undef, probably removes need for clean_XaceSeqChooser
     $self = undef;
+    return 1; # sucess for closing
 }
 
 sub hide_window{
     my ($self) = @_;
-    $self->save_window();
+    # return 0 if user decides to cancel [see save_window]
+    $self->save_window() or return 0;
     $self->xace_seq_chooser->withdraw_PolyAWindow($self);
 }
 
 sub clean_XaceSeqChooser{
     my $self = shift;
-    my @caller = caller();
-#    warn "@caller deleting ref to xace before this polyA gets destroyed\n";
     $self->{'_xace_seq_chooser'} = undef;
 }
 
