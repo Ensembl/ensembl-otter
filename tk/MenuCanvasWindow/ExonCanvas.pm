@@ -1914,19 +1914,21 @@ sub xace_save {
     my( $self, $sub ) = @_;
     
     confess "Missing SubSeq argument" unless $sub;
-    
-    my $ace = '';
-    
-    # Need to object if name has changed
+
     my $old = $self->SubSeq;
     my $old_name = $old->name;
     my $new_name = $sub->name;
+    
+    # Preserve Otter ids
+    $sub->take_otter_ids($old);
     
     my $clone_name = $sub->clone_Sequence->name;
     if ($clone_name eq $new_name) {
         $self->message("Can't have SubSequence with same name as clone!");
         return;
     }
+    
+    my $ace = '';
     
     # Do we need to rename?
     if ($old->is_archival and $new_name ne $old_name) {
@@ -1935,7 +1937,7 @@ sub xace_save {
         $ace .= $sub->ace_string;
     }
     
-    #print STDERR "Sending:\n$ace";
+    print STDERR "Sending:\n$ace";
     
     my $xc = $self->xace_seq_chooser;
     my $xr = $xc->xace_remote;

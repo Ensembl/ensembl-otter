@@ -527,7 +527,7 @@ sub XML_to_otter {
 sub otter_to_ace {
   my ($contig, $genes, $path, $seq) = @_;
   
-  my $str =  "Sequence : \"" . $contig->display_id . "\"\nGenomic_canonical\n";
+  my $str =  "\n\nSequence : \"" . $contig->display_id . "\"\nGenomic_canonical\n";
 
   my @path;
 
@@ -538,7 +538,7 @@ sub otter_to_ace {
   if ($contig->isa("Bio::EnsEMBL::Slice")) {
     my $slice = $contig;
 
-    $str .= qq{Assembly_name "$path"\n};
+    $str .= sprintf qq{Assembly_name "%s"\n}, $contig->assembly_type;
 
     if (!(@path)) {
       @path = @{$slice->get_tiling_path};
@@ -715,7 +715,7 @@ sub otter_to_ace {
         @ev = sort {$a->name cmp $b->name} @ev;
 
         foreach my $ev (@ev) {
-        if (exists($dbhash{$ev->db_name})) {
+        if ($ev->db_name and exists($dbhash{$ev->db_name})) {
           $str .= $ev_types{ $ev->type } . " \"" . $dbhash{ $ev->db_name } . ":"
             . $ev->name . "\"\n";
         } else {
@@ -817,8 +817,9 @@ sub otter_to_ace {
   # Finally the dna
   $str .= "\nDNA \"" . $contig->display_id . "\"\n";
 
-  $seq =~ s/(.{72})/$1\n/g;
-  $str .= $seq;
+  while ($seq =~ /(.{1,72})/g) {
+    $str .= $1 . "\n";
+  }
   return $str;
 }
 
@@ -920,22 +921,22 @@ sub ace_to_otter {
     chomp;
     $_ =~ s/\t//g;
 
-    if (/^Sequence +: +\"(.*)\"/) {
+    if (/^Sequence[\s:]+"?([^"]+)/) {
       my $currname = $1;
-      #print STDERR "Found sequence [$currname]\n";
+      print STDERR "Found sequence [$currname]\n";
 
       while (($_ = <$fh>) !~ /^\n$/) {
         chomp;
         $_ =~ s/\t//g;
 
-        if (/^Subsequence\s+(\S+)\s+(\d+)\s+(\d+)/) {
+        if (/^Subsequence\s+"?([^"]+)"?\s+(\d+)\s+(\d+)/) {
           my $name  = $1;
           my $start = $2;
           my $end   = $3;
 
           $name =~ s/\"//g;
 
-          #print STDERR "Name $name $start $end\n";
+          print STDERR "Name $name $start $end\n";
 
           my $strand = 1;
 
@@ -951,9 +952,9 @@ sub ace_to_otter {
           $sequence{$name}{parent} = $currname;
           $sequence{$name}{strand} = $strand;
 
-        } elsif (/Assembly_name +(\S+)/) {
+        } elsif (/Assembly_name\s+"?([^"]+)/) {
           $type = $1;
-        } elsif (/TilePath +(\d+) +(\e+) +(\S+) +(\S+)/) {
+        } elsif (/TilePath"?\s+(\d+)\s+(\d+)\s+(\S+)\s+"?([^"]+)/) {
           my $assstart  = $1;
           my $assend    = $2;
           my $assname   = $4;
@@ -982,14 +983,14 @@ sub ace_to_otter {
 
           $contig = new Bio::EnsEMBL::RawContig;
           $contig->name($currname);
-        } elsif (/^Clone_left_end +(\S+) +(\d+)/) {
+        } elsif (/^Clone_left_end\s+(\S+)\s+(\d+)/) {
           my $val = $1;
           my $cle = $2;
 
           $val =~ s/\"//g;
           $sequence{$currname}{Clone_left_end}{$val} = $cle;
 
-        } elsif (/^Clone_right_end +(\S+) +(\d+)/) {
+        } elsif (/^Clone_right_end\s+(\S+)\s+(\d+)/) {
 
           my $val = $1;
           my $cre = $2;
@@ -997,18 +998,18 @@ sub ace_to_otter {
           $val =~ s/\"//g;
           $sequence{$currname}{Clone_right_end}{$val} = $cre;
 
-        } elsif (/^Keyword +\"(.*)\"/) {
+        } elsif (/^Keyword\s+"?([^"]+)/) {
 
           if (!defined($sequence{$currname}{keyword})) {
             $sequence{$currname}{keyword} = [];
           }
           push (@{ $sequence{$currname}{keyword} }, $1);
 
-        } elsif (/^EMBL_dump_info +DE_line \"(.*)\"/) {
+        } elsif (/^EMBL_dump_info\s+DE_line"?([^"]+)/) {
 
           $sequence{$currname}{EMBL_dump_info} = $1;
 
-        } elsif (/^Feature +(\S+) +(\d+) +(\d+) +(\d+) +(\S+)/) {
+        } elsif (/^Feature\s+(\S+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\S+)/) {
 
           my $val   = $1;
           my $val2  = $5;
@@ -1033,7 +1034,7 @@ sub ace_to_otter {
           }
           push (@{ $sequence{$currname}{feature} }, $f);
 
-        } elsif (/^Source +(\S+)/) {
+        } elsif (/^Source\s+"?([^"]+)/) {
 
           # We have a gene and not a contig.
 
@@ -1046,7 +1047,7 @@ sub ace_to_otter {
           $sequence{$currname}{transcript} = $tran;
 
           #print STDERR "new tran  $currname [$tran][$val]\n";
-        } elsif (/^Source_Exons +(\d+) +(\d+) +(\S+)/) {
+        } elsif (/^Source_Exons\s+(\d+)\s+(\d+)\s+"?([^"]+)/) {
           my $oldstart = $1;
           my $oldend   = $2;
           my $stableid = $3;
@@ -1076,11 +1077,11 @@ sub ace_to_otter {
 
           $sequence{$currname}{transcript}->add_Exon($exon);
 
-        } elsif (/^Continues_as +(\S+)/) {
+        } elsif (/^Continues_as\s+"?([^"]+)/) {
 
           $sequence{$currname}{Continues_as} = $1;
 
-        } elsif (/^EST_match +(\S+)/) {
+        } elsif (/^EST_match\s+"?([^"]+)/) {
 
           my $val = $1;
           $val =~ s/\"//g;
@@ -1089,7 +1090,7 @@ sub ace_to_otter {
             $sequence{$currname}{EST_match} = [];
           }
           push (@{ $sequence{$currname}{EST_match} }, $val);
-        } elsif (/^cDNA_match +(\S+)/) {
+        } elsif (/^cDNA_match\s+"?([^"]+)/) {
 
           my $val = $1;
           $val =~ s/\"//g;
@@ -1099,7 +1100,7 @@ sub ace_to_otter {
           }
           push (@{ $sequence{$currname}{cDNA_match} }, $val);
 
-        } elsif (/^Protein_match +(\S+)/) {
+        } elsif (/^Protein_match\s+"?([^"]+)/) {
 
           my $val = $1;
           $val =~ s/\"//g;
@@ -1109,7 +1110,7 @@ sub ace_to_otter {
           }
           push (@{ $sequence{$currname}{Protein_match} }, $val);
 
-        } elsif (/^Genomic_match +(\S+)/) {
+        } elsif (/^Genomic_match\s+"?([^"]+)/) {
 
           my $val = $1;
           $val =~ s/\"//g;
@@ -1119,21 +1120,21 @@ sub ace_to_otter {
           }
           push (@{ $sequence{$currname}{Genomic_match} }, $val);
 
-        } elsif (/^Locus +(\S+)/) {
+        } elsif (/^Locus\s+"?([^"]+)/) {
 
           my $val = $1;
           $val =~ s/\"//g;
 
           $genenames{$currname} = $val;
 
-        } elsif (/^Remark +\"(.*)\"/) {
+        } elsif (/^Remark\s+"?([^"]+)/) {
 
           if (!defined($sequence{$currname}{Remark})) {
             $sequence{$currname}{Remark} = [];
           }
           push (@{ $sequence{$currname}{Remark} }, $1);
 
-        } elsif (/^Isoform +(\S+)/) {
+        } elsif (/^Isoform\s+"?([^"]+)/) {
 
           my $val = $1;
           $val =~ s/\"//g;
@@ -1144,7 +1145,7 @@ sub ace_to_otter {
 
           $sequence{$currname}{Predicted_gene} = 1;
 
-        } elsif (/^CDS +(\d+) +(\d+)/) {
+        } elsif (/^CDS\s+(\d+)\s+(\d+)/) {
 
           $sequence{$currname}{CDS_start} = $1;
           $sequence{$currname}{CDS_end}   = $2;
@@ -1153,7 +1154,7 @@ sub ace_to_otter {
 
           $sequence{$currname}{End_not_found} = 0;
 
-        } elsif (/^Start_not_found +(\d+)/) {
+        } elsif (/^Start_not_found\s+(\d+)/) {
 
           #print "start not found with $1\n";    
           $sequence{$currname}{Start_not_found} = $1;
@@ -1162,7 +1163,7 @@ sub ace_to_otter {
 
           $sequence{$currname}{Start_not_found} = 0;
 
-        } elsif (/^Method +(\S+)/) {
+        } elsif (/^Method\s+"?([^"]+)/) {
 
           my $val = $1;
           $val =~ s/\"//g;
@@ -1178,7 +1179,7 @@ sub ace_to_otter {
 
         }
       }
-    } elsif (/^DNA +(\S+)/) {
+    } elsif (/^DNA[\s:]+"?([^"]+)/) {
       my $name = $1;
       $name =~ s/\"//g;
       my $seq;
@@ -1189,9 +1190,8 @@ sub ace_to_otter {
         $seq .= $line;
       }
       $dna = $seq;
-    } elsif (/^Locus +: +(\S+)/) {
+    } elsif (/^Locus\s+:\s+"?([^"]+)/) {
       my $name = $1;
-      $name =~ s/\"//g;
 
       while (($_ = <$fh>) !~ /^\n$/) {
         $_ =~ s/\t//g;
@@ -1203,7 +1203,7 @@ sub ace_to_otter {
           $genes{$name}{GeneType} = "Pseudogene";
         } elsif (/^Organism_supported/) {
           $genes{$name}{GeneType} = "Organism_supported";
-        } elsif (/^Positive_sequence +(\S+)/) {
+        } elsif (/^Positive_sequence\s+"?([^"]+)/) {
           my $tranname = $1;
           $tranname =~ s/\"//g;
 
@@ -1211,6 +1211,8 @@ sub ace_to_otter {
             $genes{$name}{transcripts} = [];
           }
           push (@{ $genes{$name}{transcripts} }, $tranname);
+        } elsif (/^Otter_id\s+"?([^"]+)/) {
+            $genes{$name}{StableID} = $1;
         }
       }
     }
@@ -1226,11 +1228,11 @@ sub ace_to_otter {
   my %anntran;
 
   SEQ: foreach my $seq (keys %sequence) {
-    next SEQ unless (defined($sequence{$seq}{anntran}));
+    next SEQ unless (defined($sequence{$seq}{transcript}));
 
-    print "Seq = $seq\n";
+    print STDERR "Seq = $seq\n";
 
-    print "Key $seq " . $sequence{$seq}{Source} . " " . $contig_name . "\n";
+    print STDERR "Key $seq " . $sequence{$seq}{Source} . " " . $contig_name . "\n";
     if (defined($sequence{$seq}{Source})
       && $sequence{$seq}{Source} eq $contig_name)
     {
@@ -1479,6 +1481,20 @@ sub ace_to_otter {
     prune_Exons($gene);
   }
   return \@genes,\%frags,$type,$dna,$chr,$chrstart,$chrend;
+}
+
+sub ace_to_XML {
+    my( $fh ) = @_;
+    
+    my( $genes, $frags, $type, $dna, $chr, $chrstart, $chrend) = ace_to_otter($fh);
+    use Data::Dumper;
+    print Dumper($genes, $frags);
+    my $xml = "<otter>\n" . frags_to_XML($frags, $type, $chr, $chrstart, $chrend);
+    foreach my $g (@$genes) {
+        $xml .= $g->toXMLString;
+    }
+    $xml .= "\n</otter>\n";
+    return $xml;
 }
 
 sub make_translation_from_cds {

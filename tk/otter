@@ -425,12 +425,13 @@ sub show_dataset_list {
     my $font = $cw->font;
     my $size = $cw->font_size;
     my $x = $size;
+    my $incr = $size + int($size / 6);
     my @sorted_name = sort keys %$datasets;
     for (my $i = 0; $i < @sorted_name; $i++) {
         my $name = $sorted_name[$i];
         my $details = $datasets->{$name};
         my $txt = $canvas->createText(
-            $x, $i * (1.2 * $size),
+            $x, $i * $incr,
             -text   => $sorted_name[$i],
             -font   => [$font, $size, 'bold'],
             -anchor => 'nw',
@@ -528,8 +529,11 @@ sub draw_sequence_list {
             $cw->deselect_all;
             $cw->highlight($txt)
             });
-        $canvas->bind($txt, '<Shift-Button-1>', sub{
+        $canvas->bind($txt, '<Control-Button-1>', sub{
             $cw->highlight($txt)
+            });
+        $canvas->bind($txt, '<Shift-Button-1>', sub{
+            extend_highlighted_region($cw, $txt);
             });
         $canvas->bind($txt, '<Double-Button-1>', sub{ do_fetch($cw) });
         
@@ -540,6 +544,41 @@ sub draw_sequence_list {
     set_state('sequences');
     
     $cw->fix_window_min_max_sizes;
+}
+
+sub extend_highlighted_region {
+    my( $cw, $txt ) = @_;
+    
+    # list_selected returns object indices sorted
+    my @obj = $cw->list_selected;
+    my %already_selected = map {$_, 1} @obj;
+    
+    # We assume that the object indices allocated by
+    # the canvas get sequential numbers.
+    my $closest = get_nearest($txt, @obj);
+    
+    my @range = $closest < $txt ? ($closest .. $txt) : ($txt .. $closest);
+    foreach my $i (@range) {
+        $cw->highlight($i) unless $already_selected{$i};
+    }
+}
+
+sub get_nearest {
+    my( $this, @list ) = @_;
+    
+    return $this unless @list;
+    
+    my( $closest, $close_distance );
+    foreach my $i (@list) {
+        my $distance = $i < $this ? $this - $i : $i - $this;
+        if ($closest) {
+            next unless $distance < $close_distance;
+        }
+        $closest = $i;
+        $close_distance = $distance;
+    }
+    
+    return $closest;
 }
 
 sub get_chr_name {

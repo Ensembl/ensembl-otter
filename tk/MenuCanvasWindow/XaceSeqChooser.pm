@@ -347,19 +347,19 @@ sub populate_menus {
     $top->bind('<Control-n>', $new_command);
     $top->bind('<Control-N>', $new_command);
     
-    # Make an isoform of the current selected sequence
-    my $isoform_command = sub{
+    # Make an variant of the current selected sequence
+    my $variant_command = sub{
         return unless $self->current_state eq 'subseq';
-        $self->make_isoform_subsequence;
+        $self->make_variant_subsequence;
         };
     $subseq->add('command',
-        -label          => 'Isoform',
-        -command        => $isoform_command,
+        -label          => 'Variant',
+        -command        => $variant_command,
         -accelerator    => 'Ctrl+I',
-        -underline      => 0,
+        -underline      => 4,
         );
-    $top->bind('<Control-i>', $isoform_command);
-    $top->bind('<Control-I>', $isoform_command);
+    $top->bind('<Control-i>', $variant_command);
+    $top->bind('<Control-I>', $variant_command);
     
     # Delete subsequence
     my $delete_command = sub {
@@ -847,7 +847,7 @@ sub delete_subsequences {
     $self->draw_current_state;
 }
 
-sub make_isoform_subsequence {
+sub make_variant_subsequence {
     my( $self ) = @_;
     
     my $xr = $self->xace_remote;
@@ -862,13 +862,13 @@ sub make_isoform_subsequence {
         return;
     }
     elsif (@sub_names > 1) {
-        $self->message("Can't make more an Isoform from more than one selected sequence");
+        $self->message("Can't make more an variant from more than one selected sequence");
         return;
     }
     my $name = $sub_names[0];
     my $sub = $self->get_SubSeq($name);
     
-    # Work out a name for the new isoform
+    # Work out a name for the new variant
     my $clone_name = $sub->clone_Sequence->name;
     my( $new_name, $iso_name );
     if ($name =~ /^$clone_name\.(.+)/) {
@@ -883,7 +883,7 @@ sub make_isoform_subsequence {
             return;
         }
         elsif (@numbers == 2) {
-            # Making an isoform of an exisiting isoform
+            # Making an variant of an exisiting variant
             $new_name = $name;
             for (my $i = $numbers[1] + 1; ; $i++) {
                 $iso_name = join('.', $clone_name, $numbers[0], $i);
@@ -896,7 +896,7 @@ sub make_isoform_subsequence {
             }
         }
         elsif (@numbers == 1) {
-            # Making the first isoform
+            # Making the first variant
             $new_name = join('.', $clone_name, $numbers[0], 1);
             $iso_name = join('.', $clone_name, $numbers[0], 2);
             if ($extn) {
@@ -915,9 +915,9 @@ sub make_isoform_subsequence {
         $iso_name = "$name.2";
     }
     
-    # Check we don't already have the isoform we are trying to create
+    # Check we don't already have the variant we are trying to create
     if ($self->get_SubSeq($iso_name)) {
-        $self->message("Tried to create isoform '$iso_name', but it already exists!");
+        $self->message("Tried to create variant '$iso_name', but it already exists!");
         return;
     }
     
@@ -928,7 +928,7 @@ sub make_isoform_subsequence {
             return;
         }
         if ($self->get_SubSeq($new_name)) {
-            $self->message("Can't make isoform of '$name' because '$new_name' already exists!");
+            $self->message("Can't make variant of '$name' because '$new_name' already exists!");
             return;
         }
         my $ec = $self->make_exoncanvas_edit_window($sub);
@@ -936,7 +936,7 @@ sub make_isoform_subsequence {
         $ec->xace_save($ec->new_SubSeq_from_tk);
     }
     
-    # Make the isoform
+    # Make the variant
     my $iso = $sub->clone;
     $iso->name($iso_name);
     $self->add_SubSeq($iso);
