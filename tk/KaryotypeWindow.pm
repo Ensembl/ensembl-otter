@@ -133,9 +133,14 @@ sub draw_chromsome_set {
 
     foreach my $chr (@$set) {
         $chr->set_initial_and_terminal_bands;
-        $chr->draw( $self, $x, $y + $max_chr_height - $chr->height($self) );
+        my $chr_y = $y + $max_chr_height - $chr->height($self);
+        $chr->draw( $self, $x, $chr_y );
+        $canvas->createRectangle(
+            $x, $chr_y, $x + $chr->width($self), $chr_y + $chr->height($self),
+            -fill   => undef,
+            -outline    => 'blue',
+            );
         $x += $chr->width($self) + $pad;
-
     }
     return $max_chr_height;
 }

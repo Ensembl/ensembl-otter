@@ -57,11 +57,8 @@ sub draw {
     my $graph_x = $x + $self->chr_width($kw) + $self->pad($kw);
     foreach my $graph ($self->get_all_Graphs) {
         $graph->max_y($max_y);
-        warn "Drawing graph at [$graph_x, $save_y]\n";
         $graph->draw($kw, $graph_x, $save_y);
-        warn sprintf "%s += %s + %s", $graph_x, $pad, $graph->width;
         $graph_x += $pad + $graph->width;
-        warn "graph_x now $graph_x\n";
     }
 }
 
@@ -71,6 +68,32 @@ sub height {
     my ( $first, $last ) = $self->get_first_and_last_Bands;
     my $length = ( $last->end - $first->start + 1 ) / 1_000_000;
     return(($kw->font_size * 2) + ($length / $kw->Mb_per_pixel));
+}
+
+sub pad {
+    my( $self, $kw ) = @_;
+
+    return $kw->pad / 4;
+}
+
+sub chr_width {
+    my( $self, $kw ) = @_;
+
+    return $kw->Mb_per_pixel * 15;
+}
+
+sub width {
+    my( $self, $kw ) = @_;
+    
+    my @graphs = $self->get_all_Graphs;
+    my $graph_width = 0;
+    my $pad = $self->pad($kw);
+    foreach my $graph (@graphs) {
+        $graph_width += $pad + $graph->width;
+    }
+    warn sprintf"graph_width = %d  chr_width = %d\n",
+        $graph_width, $self->chr_width($kw);
+    return $graph_width + $self->chr_width($kw);
 }
 
 sub get_outline_coordinates {
@@ -106,32 +129,6 @@ sub get_first_and_last_Bands {
 
     my @bands = $self->get_all_Bands;
     return @bands[ 0, $#bands ];
-}
-
-sub chr_width {
-    my( $self, $kw ) = @_;
-
-    return $kw->Mb_per_pixel * 15;
-}
-
-sub pad {
-    my( $self, $kw ) = @_;
-
-    my $pad = $kw->pad / 2;
-    warn "Internal pad = $pad";
-
-    return $kw->pad / 2;
-}
-
-sub width {
-    my( $self, $kw ) = @_;
-    
-    my @graphs = $self->get_all_Graphs;
-    my $graph_width = $self->pad($kw) * $#graphs;
-    foreach my $graph (@graphs) {
-        $graph_width += $graph->width;
-    }
-    return $graph_width + $self->chr_width($kw);
 }
 
 sub get_all_Graphs {
