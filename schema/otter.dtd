@@ -1,49 +1,50 @@
 
 <!-- Otter XML -->
 
-<!-- Each otter XML document can contain one or more annotated
+<!-- Root element of an otter XML document.
+     Each otter XML document can contain one or more annotated
      regions of chromosomes, each of which is contained in a
      sequence-set element -->
-<!ELEMENT otter (sequence-set+)>
+<!ELEMENT otter (sequence_set+)>
 
 <!-- Author names and email addresses can be optionally attached
      to many of the elements in an otter XML document to flag
      who last modified that element -->
 <!ELEMENT author #PCDATA>
-<!ELEMENT author-email #PCDATA>
+<!ELEMENT author_email #PCDATA>
 
 <!-- a genomic region - part or whole of a chromosome -->
-<!ELEMENT sequence-set (
-    assemly-type,
-    sequence-fragment+,
+<!ELEMENT sequence_set (
+    assemly_type,
+    sequence_fragment+,
     locus*,
-    poly-a-signal*,
-    poly-a-site*,
+    polyA_signal*,
+    polyA_site*,
     dna?)>
 
 <!-- a that identifies the assembly from which the genomic region is taken -->
-<!ELEMENT assembly-type #PCDATA>
+<!ELEMENT assembly_type #PCDATA>
 
 <!-- A genomic nucleotide entry in EMBL/Genbank -->
-<!ELEMENT sequence-fragment (
+<!ELEMENT sequence_fragment (
     accession,
     version,
     id?,
-    assembly-start,
-    assembly-end,
-    fragment-ori,
-    fragment-offset,
+    assembly_start,
+    assembly_end,
+    fragment_ori,
+    fragment_offset,
     keyword*,
     remark*,
     author?,
-    author-email?)>
+    author_email?)>
 <!ELEMENT accession #PCDATA>
 <!ELEMENT version #PCDATA>
 <!ELEMENT id #PCDATA>
-<!ELEMENT assembly-start #PCDATA>
-<!ELEMENT assembly-end #PCDATA>
-<!ELEMENT fragment-ori #PCDATA>
-<!ELEMENT fragment-offset #PCDATA>
+<!ELEMENT assembly_start #PCDATA>
+<!ELEMENT assembly_end #PCDATA>
+<!ELEMENT fragment_ori #PCDATA>
+<!ELEMENT fragment_offset #PCDATA>
 <!ELEMENT keyword #PCDATA>
 <!ELEMENT remark #PCDATA>
 <!ELEMENT locus (
@@ -51,14 +52,14 @@
     type?,
     truncated?,
     author?,
-    author-email?,
+    author_email?,
     description?,
     synonym*,
     remark*
     known?,
     transcript+)>
 <!ATTLIST locus
-    stable-id CDATA #IMPLIED
+    stable_id CDATA #IMPLIED
     >
 <!ELEMENT name #PCDATA>
 <!ELEMENT type #PCDATA>
@@ -70,29 +71,29 @@
 <!ELEMENT transcrpt (
     name,
     author?,
-    author-email?,
+    author_email?,
     remark*,
-    translation-start?,
-    translation-end?,
-    mRNA-start-not-found?,
-    mRNA-end-not-found?,
-    cds-start-not-found?,
-    cds-end-not-found?,
-    transcript-class,
+    translation_start?,
+    translation_end?,
+    mRNA_start_not_found?,
+    mRNA_end_not_found?,
+    cds_start_not_found?,
+    cds_end_not_found?,
+    transcript_class,
     evidence*,
     exon+,
     )>
 <!ATTLIST locus
-    stable-id CDATA #IMPLIED,
-    translation-stable-id CDATA #IMPLIED
+    stable_id CDATA #IMPLIED,
+    translation_stable_id CDATA #IMPLIED
     >
-<!ELEMENT translation-start #PCDATA>
-<!ELEMENT translation-end #PCDATA>
-<!ELEMENT mRNA-start-not-found EMPTY>
-<!ELEMENT mRNA-end-not-found EMPTY>
-<!ELEMENT cds-start-not-found EMPTY>
-<!ELEMENT cds-end-not-found EMPTY>
-<!ELEMENT transcript-class #PCDATA>
+<!ELEMENT translation_start #PCDATA>
+<!ELEMENT translation_end #PCDATA>
+<!ELEMENT mRNA_start_not_found EMPTY>
+<!ELEMENT mRNA_end_not_found EMPTY>
+<!ELEMENT cds_start_not_found EMPTY>
+<!ELEMENT cds_end_not_found EMPTY>
+<!ELEMENT transcript_class #PCDATA>
 
 <!-- Supporting evidence used to construct the transcript.
      It is a sequence database entry.
@@ -117,7 +118,7 @@
     strand,
     frame?)>
 <!ATTLIST exon
-    stable-id CDATA #IMPLIED
+    stable_id CDATA #IMPLIED
     >
 
 <!-- start is integer greater than zero and less than end
@@ -133,11 +134,11 @@
 
 <!-- we have dropped the old <feature> element and now have
      explicit polyA signal and site elements -->
-<!ELEMENT poly-a-signal (
+<!ELEMENT polyA_signal (
     start,
     end,
     strand)>
-<!ELEMENT poly-a-site (
+<!ELEMENT polyA_site (
     start,
     end,
     strand)>
