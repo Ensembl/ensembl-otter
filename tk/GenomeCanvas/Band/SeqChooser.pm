@@ -33,6 +33,15 @@ sub render {
     }
 }
 
+sub x_padding {
+    my( $band, $pad ) = @_;
+    
+    if (defined $pad) {
+        $band->{'_x_padding'} = $pad;
+    }
+    return $band->{'_x_padding'} || 10;
+}
+
 sub draw_spacer {
     my( $band, $row, $y_offset ) = @_;
     
@@ -73,12 +82,11 @@ sub draw_seq_row {
     my $font   = $band->column_font;
     my @tags   = $band->tags;
     push(@tags, $id, "sequence_name=$text[0]");
-    my $x1 = 3;
     my $y1 = $y_offset + 3;
     for (my $i = 0; $i < @text; $i++) {
         my $t = $text[$i] or next;
         my $label = $canvas->createText(
-            ($x1 + $x_offsets[$i]), $y1,
+            $x_offsets[$i], $y1,
             -text       => $t,
             -font       => $font,
             -anchor     => 'nw',
@@ -86,6 +94,7 @@ sub draw_seq_row {
             );
     }
     my @rect = $canvas->bbox($id);
+    $rect[0] = 0;
     $rect[2] = $x_offsets[$#x_offsets];
     $band->expand_bbox(\@rect, 1);
     $rect[0] = 0;
@@ -120,9 +129,9 @@ sub column_offsets {
     #warn "Calculating column widths\n";
     my @widths = $band->column_widths;
     #warn "widths [@widths]\n";
-    my $column_gap = 20;
-    my( @offsets ) = (0);
-    my $x_offset = 0;
+    my $x_offset = $band->x_padding;
+    my $column_gap = $x_offset * 2;
+    my( @offsets ) = ($x_offset);
     for (my $i = 0; $i < @widths; $i++) {
         $x_offset += $widths[$i];
         push(@offsets, $x_offset);
