@@ -1,0 +1,88 @@
+#!/usr/local/bin/bash
+
+cd ..
+
+root=`pwd`
+#echo "root=$root"
+pid_file=$root/ensembl-otter/otter_srv.pid
+pid_exist=0
+
+# set PERL5LIB
+PERL5LIB=\
+$root/ensembl-otter/modules:\
+$root/ensembl/modules:\
+$root/bioperl-0.7.2
+
+export PERL5LIB
+
+cd ensembl-otter/scripts
+
+# check the pid file exists for later
+if [ -e $pid_file ]; then
+    pid_exist=1
+fi
+
+start(){
+    if [ $pid_exist == 0 ]; then
+	echo "starting otter_srv..."
+        exec ./otter_srv &
+    else
+	echo "can't start `pwd`/$pid_file exists"
+    fi
+}
+stop(){
+    if [ $pid_exist == 1 ]; then
+	pid=`cat $pid_file`
+	if [ $pid > 0 ]; then
+	    echo "pid exists so stopping $pid"
+            kill -2 $pid
+            rm $pid_file
+	else
+	    echo "`pwd`/$pid_file is not a valid pid file"
+	    exit 1
+	fi
+    else
+	echo "no pidfile exists can't stop"
+	exit 1
+    fi
+}
+rotate_log(){
+    if [ $pid_exist == 1 ]; then
+	pid=`cat $pid_file`
+	if [ $pid > 0 ]; then
+	    echo "rotating logs..."
+            kill -1 $pid
+	else
+	    echo "`pwd`/$pid_file is not a valid pid file."
+	fi
+    else
+	echo "no pidfile exists can't do rotate."	
+    fi
+}
+restart(){
+    stop
+    start
+}
+
+case "$1" in
+  start)
+    start
+    ;;
+  stop)
+    stop
+    ;;
+  logrotate)
+    rotate_log
+    ;;
+  restart)
+    restart
+    ;;
+  *)
+    echo $"Usage: $0 {start|stop|logrotate|restart}"
+    exit 1
+esac
+
+
+
+#exec ./otter_srv > ../../server.log 2>&1
+#exec ./otter_srv
