@@ -782,10 +782,14 @@ sub delete_SequenceSet{
 #
 sub get_cached_DBAdaptor {
     my( $self ) = @_;
-    
-    my $dba = $self->{'_dba_cache'} ||= $self->make_DBAdaptor;
+
+    unless($self->{'_dba_cache'}){
+	$self->{'_dba_cache'} = $self->make_DBAdaptor;
+	$self->_attach_DNA_DBAdaptor($self->{'_dba_cache'});
+	warn $self->{'_dba_cache'}->dnadb->dbname;
+    }
     #warn "OTTER DBADAPTOR = '$dba'";
-    return $dba;
+    return $self->{'_dba_cache'};
 }
 
 sub make_EnsEMBL_DBAdaptor {
@@ -813,7 +817,30 @@ sub _make_DBAdptor_with_class {
 
     return $class->new(@args);
 }
+sub _attach_DNA_DBAdaptor{
+    my( $self, $dba ) = @_;
 
+    return unless $dba;
+
+    my(@ott_args, @dna_args);
+    foreach my $prop (grep /^DNA/, $self->list_all_db_properties) {
+	$prop =~ /DNA_(\w+)/;
+        if (my $val = $self->$prop()) {
+            push(@dna_args, "-$1", $val);
+            push(@ott_args, "-$1", $self->$1);
+        }
+    }
+
+    if(("@dna_args" eq "@ott_args") && @dna_args){
+	warn "They are the same the DBAdaptor will just return itself\n";
+    }elsif(@dna_args){
+	warn "@dna_args\n";
+	my $dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new(@dna_args);
+	$dba->dnadb($dnadb);
+    }else{
+	warn "No DNA_* options found. *** CHECK species.dat ***\n";
+    }
+}
 sub disconnect_DBAdaptor {
     my( $self ) = @_;
     
@@ -833,6 +860,7 @@ sub list_all_db_properties {
         DNA_PORT
         DNA_HOST
         DNA_USER
+	DNA_DBNAME
         PORT
         };
 }
@@ -917,7 +945,14 @@ sub DNA_USER {
     }
     return $self->{'_DNA_USER'};
 }
-
+sub DNA_DBNAME {
+    my( $self, $DNA_DBNAME ) = @_;
+    
+    if ($DNA_DBNAME) {
+        $self->{'_DNA_DBNAME'} = $DNA_DBNAME;
+    }
+    return $self->{'_DNA_DBNAME'};
+}
 sub PORT {
     my( $self, $PORT ) = @_;
     
