@@ -5,7 +5,8 @@ package CanvasWindow::PolyAWindow ;
 use strict ;
 use Carp;
 use Tk ;
-
+  
+use Scalar::Util 'weaken';
 use base 'CanvasWindow';
 
 sub toplevel {
@@ -17,6 +18,7 @@ sub toplevel {
 sub xace_seq_chooser{
     my ($self , $seq_chooser) = @_ ;
     if ($seq_chooser){
+
         $self->{'_xace_seq_chooser'} = $seq_chooser;
     }
     return $self->{'_xace_seq_chooser'} ;
@@ -32,9 +34,9 @@ sub slice_name {
 
 sub add_CloneSequence{
     my ($self , $cs ) = @_;
-    warn "***************\n*Not sure this should be called!\n**************\n";
     push(@{$self->{'_cs_list'}},$cs);   
 }
+
 sub get_all_CloneSequences{
     my $self = shift;
     my $xaceSeqChooser = $self->xace_seq_chooser();
@@ -94,8 +96,8 @@ sub initialize{
         my @site_array;
         my @signal_array;
         foreach my $polyA (@polyA_list){
-            my $start = @$polyA->[1] ;
-            my $end = @$polyA->[2] ;
+            my $start = $$polyA[1] ;
+            my $end = $$polyA[2] ;
             if ($polyA->[0] =~ /site/ ){
                 #note we are using references here - as that is what is supplied to the entry widgets
                 #2 coords for each poly a site
@@ -107,7 +109,7 @@ sub initialize{
                 push (@signal_array , [ \$start , \$end ]);
             }
             else{
-                warn "Poly A from CloneSequence not in expected format.\nExpected PolyA_signal or PolyA_site , got ".$polyA->[0] ;
+                print STDERR "Poly A from CloneSequence not in expected format.\nExpected PolyA_signal or PolyA_site , got ".$polyA->[0] ;
             }
         }
         
@@ -141,6 +143,7 @@ sub draw{
         confess 'the polyA window needs to be given a slice name' ;    
     $tl->title("Poly A sites / signals for : $slice_name");
     
+    
     # hope xace_seq_chooser exists
     my $write_acces = $self->xace_seq_chooser->write_access();
     
@@ -150,6 +153,10 @@ sub draw{
     $tl->bind('<Control-w>',          $hide_window);
     $tl->bind('<Control-W>',          $hide_window);
     $tl->protocol('WM_DELETE_WINDOW', $hide_window);
+
+    ## this will redraw the subframes portion of the window - so that it displays the stored coords after it has been closed and refreshed
+    my $redraw = sub {$self->draw_subframes};
+    $tl->bind('<<redraw_polya>>' , $redraw) ; 
 
   
     my $canvas = $self->canvas();
@@ -202,16 +209,35 @@ sub draw{
         $self = undef;
         });
     
+    $self->draw_subframes;
+}
+
+
+# this may be called when the window has been withdrawn then raised - 
+# so that it displays the actual stored coords, rather than messed up values (is close and dont save)
+sub draw_subframes{
+    my ($self) = @_ ;
     # get the arrays (or produce arrays with blank entries)
     ##my ($empty_1 , $empty_2 , $empty_3 , $empty_4) = ('' , '' , '', '' );
     ##my ($empty_1 , $empty_2 , $empty_3 , $empty_4) = ('') x 4;
+    my $canvas = $self->canvas;
     my @site  = @{$self->stored_array_refs('site')};
     my @signal = @{$self->stored_array_refs('signal')};
     
     if (scalar(@site )< 1){@site = $self->create_empty_array} ; 
     if (scalar( @signal) < 1){@signal = $self->create_empty_array} ; 
     
-    my @largest  = (scalar(@signal) > scalar(@site)) ? @signal: @site ;
+  #  my @largest  = (scalar(@signal) > scalar(@site)) ? @signal: @site ;
+
+    $self->{'_entry_pairs'} = undef ;
+
+    # remove existing subframes
+    if( my $sigframe =  $self->sub_frame('signal')) {
+        $canvas->delete($sigframe->id , 'signal_frame'); 
+    }
+    if( my $siteframe =  $self->sub_frame('site')) {
+        $canvas->delete($siteframe->id  , 'site_frame' );
+    }
 
     my $signal_frame = $canvas->Frame() ;
     my $site_frame = $canvas->Frame();
@@ -223,15 +249,16 @@ sub draw{
     $self->populate_subframe('signal', @signal);
     $self->populate_subframe('site', @site) ;
    
-    my $id = $canvas->createWindow( 0, 0 , -window=> $signal_frame , -anchor=> 'nw',  -tags=>'signal_frame');
+    $canvas->createWindow( 0, 0 , -window=> $signal_frame , -anchor=> 'nw',  -tags=>'signal_frame');
     $canvas->update;
     
     $canvas->createWindow( $signal_frame->width + 15  , 0 , -window=> $site_frame , anchor => 'nw' , -tags=>'site_frame');
     $canvas->update();
     
-   
     $self->fix_window_min_max_sizes;    
 }
+
+
 
 sub create_empty_array{
     my $self = @_ ;
@@ -258,7 +285,6 @@ sub populate_subframe{
         my $coord_2 = ${$entry_pair->[1]};
         my $coord_1_ref = \$coord_1;
         my $coord_2_ref = \$coord_2;                           
-
 
         my $strand;
         my $update_cmd = sub { update_entry($coord_1_ref , $coord_2_ref , \$strand , $frame_type ); };
@@ -395,13 +421,13 @@ sub add_entry_widget{
 	}elsif( $$end =~ /\d/){
 	    $$start = $$end - ($length * $multiplier) ; 
 	}else{
-	    warn "nothing to update\n";
+	    print STDERR "nothing to update\n";
 	}
     }
 
 }
-#asks user if he/she wants to save coords (only when unsaved)
-sub save_window{
+#brings up a dialogue which asks user if he/she wants to save coords (only when unsaved)
+sub dialogue_for_save{
     my ($self) = @_ ;
 
     # hope xace_seq_chooser exists
@@ -429,7 +455,7 @@ sub save_window{
 sub close_window{
     my ($self) = @_;
     # return 0 if user decides to cancel [see save_window]
-    $self->save_window() or return 0;
+    $self->dialogue_for_save() or return 0;
     # cleaning out this object's xace
     $self->clean_XaceSeqChooser();
     # incase xace has managed to close itself. this was in previous version
@@ -442,7 +468,7 @@ sub close_window{
 sub hide_window{
     my ($self) = @_;
     # return 0 if user decides to cancel [see save_window]
-    $self->save_window() or return 0;
+    $self->dialogue_for_save() or return 0;
     $self->xace_seq_chooser->withdraw_PolyAWindow($self);
 }
 
@@ -474,7 +500,8 @@ sub save_details{
             if ($result ne 'Yes'){
                 print STDERR 'not saving';
                 return $result;
-            } 
+            }
+            print STDERR $ace; 
             $xace_remote->load_ace($ace);
             $xace_remote->save;
             $xace_remote->send_command('gif ; seqrecalc');
@@ -486,8 +513,7 @@ sub save_details{
             }
             return 'part saved'
         }
-        else{
-            #warn "no Xace attached - put this in a proper message later."       
+        else{       
             my $result = $self->toplevel->messageBox(    -title => 'Error!', 
                                             -message => "No Xace attached,\nCan't save Poly A details.", 
                                             -type => 'OKCancel', -default => 'Ok');
@@ -538,13 +564,12 @@ sub create_ace_file{
         foreach my $new_entries (@new_array ){
             my $start_ref = $new_entries->[0] ;
             my $end_ref = $new_entries->[1]  ;
-#            warn 'adding ' . $$start_ref . ' , '  . $$end_ref ;
+
             ($status ,$ace) = $self->write_ace_line($status , $ace , $$start_ref , $$end_ref , $type);
         }    
     }
     unless ($ace  eq ''){
-        warn "ace...\n" .$ace;
-#        warn "status $status" ;
+        #print STDERR  "created ace file...\n" .$ace;
         return  ($status , $ace) ;    
     }
     else{
@@ -590,7 +615,7 @@ sub validate_coords{
             return ($start , $end) ;
         }    
         else {
-            warn "$type coordinates '$start' and '$end' are not the expected distance apart" ;     
+            print STDERR "$type coordinates '$start' and '$end' are not the expected distance apart\n" ;     
             return ('invalid', 'invalid')  ; 
         }
     }
@@ -599,7 +624,7 @@ sub validate_coords{
             return ('blank','blank');
         }
         else{
-            warn "Coordinates $start and $end are invalid.";
+            print STDERR "Coordinates $start and $end are invalid.";
             return ('invalid', 'invalid');                
         }
     }
@@ -622,11 +647,12 @@ sub _update_arrays{
         my @new_array;
         
         foreach my $ref_pair (@old_array){
-            my $start = ${@$ref_pair->[0]};
-            my $end = ${@$ref_pair->[1]};
-           
-            push (@new_array , [ \$start, \$end] ) ; 
-           
+            my $start = ${$$ref_pair[0]};
+            my $end = ${$$ref_pair[1]};
+            
+            if ( $start =~ /\d+/ && $end =~ /\d+/){
+                push (@new_array , [ \$start, \$end] ) ; 
+            }
         }
         
         $self->stored_array_refs($type, \@new_array);
