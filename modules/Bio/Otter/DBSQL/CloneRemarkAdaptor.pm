@@ -16,7 +16,8 @@ sub _generic_sql_fetch {
           , remark
           , clone_info_id
         FROM clone_remark
-        } . $where_clause);
+        } . $where_clause .
+        q{ ORDER BY clone_remark_id });
     $sth->execute(@param);
 
     my @remark;

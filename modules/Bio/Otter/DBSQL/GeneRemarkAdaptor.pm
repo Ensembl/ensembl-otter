@@ -30,7 +30,8 @@ sub _generic_sql_fetch {
 		       remark,
 		       gene_info_id 
 		FROM gene_remark }
-	. $where_clause;
+	. $where_clause
+        . q{ ORDER BY gene_remark_id };
 
 	my $sth = $self->prepare($sql);
 	$sth->execute;
