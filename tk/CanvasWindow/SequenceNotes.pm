@@ -590,7 +590,6 @@ sub draw {
     my( $self ) = @_;
     
     my $cs_list   = $self->get_rows_list;
-    return unless scalar @$cs_list;
     print STDERR " done\n";
     my $size      = $self->font_size;
     my $canvas    = $self->canvas;
@@ -600,8 +599,7 @@ sub draw {
     $canvas->delete('all');
     my $helv_def = ['Helvetica', $size, 'normal'];
 
-#    my ($type) = $cs_list->[0] =~ /^(.+)=/;
-#    print STDERR "Drawing $type list...";
+    print STDERR "Drawing list...";
     my $gaps = 0;
     my $gap_pos = {};
     for (my $i = 0; $i < @$cs_list; $i++) {
@@ -675,6 +673,7 @@ sub draw {
     print STDERR "Drawing background rectangles...";
     $self->draw_row_backgrounds($row_count, $gap_pos);
     print STDERR " done\n";
+    $self->message($self->empty_canvas_message) unless scalar @$cs_list;
     $self->fix_window_min_max_sizes;
 }
 
@@ -980,6 +979,10 @@ sub check_for_History{
     $hist_win->canvas->toplevel->raise;
     return 1;
 }
+sub empty_canvas_message{
+    return "No Clone Sequences found";
+}
+
 1;
 
 __END__
