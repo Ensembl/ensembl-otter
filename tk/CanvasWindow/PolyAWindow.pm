@@ -316,7 +316,7 @@ sub populate_subframe{
         $end_entry->bind('<Return>',  sub {
             $self->update_entry($coord_1_ref , $coord_2_ref , \$strand , $frame_type, 'end' )
             });
-        $frame->toplevel->bind('<Destroy>', sub{ $self = undef });
+        $frame->bind('<Destroy>', sub{ $self = undef });
 
 
 

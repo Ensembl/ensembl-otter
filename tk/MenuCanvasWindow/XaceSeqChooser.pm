@@ -819,7 +819,6 @@ sub populate_polyA_menu{
     my $menu_frame = $self->menu_bar
             or confess 'No menu Bar';
     my $menu = $self->make_menu("PolyA");
-    $menu->bind('<Destroy>', sub{ $self = undef });
     
     my @clone_list = $self->clone_list;
     
@@ -832,6 +831,7 @@ sub populate_polyA_menu{
         );
     } 
     
+    $menu->bind('<Destroy>', sub{ $self = undef });
 }
 
 sub launch_polyA{
