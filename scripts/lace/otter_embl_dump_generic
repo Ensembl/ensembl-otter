@@ -142,12 +142,12 @@ use Carp;
 
 __END__
 
-=head1 NAME - otter_embl_dump_test
+=head1 NAME - otter_embl_dump_generic
 
 =head1 EXAMPLE
 
-  otter_embl_dump_test -dataset human -chr chr1-07 AC114498.2 AL669831.13
-  otter_embl_dump_test -dataset human -chr chr11-hsa11_20040402 Z83307 Z95332
+  otter_embl_dump_generic -dataset human -chr chr1-07 AC114498.2 AL669831.13
+  otter_embl_dump_generic -dataset human -chr chr11-hsa11_20040402 Z83307 Z95332
 
 =head1 AUTHOR
 

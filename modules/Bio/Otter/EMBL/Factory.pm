@@ -965,6 +965,8 @@ sub _do_Gene {
     foreach my $transcript (@{$gene->get_all_Transcripts}) {
 
         my $transcript_info = $transcript->transcript_info;
+        my $locus_tag = $transcript->transcript_info->name
+            or warn "No transcript_info->name for locus_tag\n";
  
         #Do the mRNA
         my $all_transcript_Exons = $transcript->get_all_Exons;
@@ -987,6 +989,7 @@ sub _do_Gene {
                 $mRNA_exonlocation->end_not_found($transcript_info->mRNA_end_not_found);
             
                 $self->_add_gene_qualifiers($gene, $ft);
+                $ft->addQualifierStrings('locus_tag', $locus_tag);
                 
                 if ($gene->type !~ /pseudo/i) {
                     $self->_supporting_evidence($transcript_info, $ft, 'EST', 'cDNA');
@@ -1017,6 +1020,7 @@ sub _do_Gene {
                     $self->_add_gene_qualifiers($gene, $ft);
                     $self->_supporting_evidence($transcript_info, $ft, 'Protein');
                     $ft->addQualifierStrings('standard_name', $transcript->translation->stable_id);
+                    $ft->addQualifierStrings('locus_tag', $locus_tag);
                 }
             } else {
                 warn "No CDS exons\n";
