@@ -1,0 +1,100 @@
+#!/usr/local/bin/perl -w
+
+### list_zero_feature_analysis
+
+use strict;
+use Getopt::Long 'GetOptions';
+use Bio::Otter::Lace::Defaults;
+use Bio::Otter::Lace::PipelineDB;
+
+$| = 1;
+
+{
+    my $dataset_name = undef;
+    my $fix = 0;
+    
+    my $usage = sub { exec('perldoc', $0) };
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'   => $usage,
+        'dataset=s' => \$dataset_name,
+        'fix!'      => \$fix,
+        ) or $usage->();
+    $usage->() unless $dataset_name;
+
+    my $dbh = get_pipe_dbh($dataset_name);
+
+    my $sth = $dbh->prepare(q{
+        SELECT analysis_id
+          , logic_name
+          , program
+        FROM analysis
+        WHERE program like '%blast%'
+        });
+    $sth->execute;
+    while (my ($ana_id, $logic_name, $program) = $sth->fetchrow) {
+        my $align_table = $program =~ /blastx/i ? 'protein_align_feature' : 'dna_align_feature';
+        list_missing_ana($fix, $dbh, $ana_id, $logic_name, $align_table);
+    }
+}
+
+sub get_pipe_dbh {
+    my( $dataset_name ) = @_;
+    
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    my $otter_db = $ds->make_EnsEMBL_DBAdaptor;
+    my $pipe_db = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($otter_db);
+    return $pipe_db->db_handle;
+}
+
+sub list_missing_ana {
+    my( $fix, $dbh, $ana_id, $logic_name, $align_table ) = @_;
+    
+    my $count_features = $dbh->prepare(qq{
+        SELECT count(*)
+        FROM $align_table
+        WHERE contig_id = ?
+          AND analysis_id = $ana_id
+        });
+    
+    my $list_contig_id = $dbh->prepare(q{
+        SELECT g.contig_id
+          , g.name
+        FROM input_id_analysis ida
+          , contig g
+        WHERE ida.input_id = g.name
+          AND ida.input_id_type = 'CONTIG'
+          AND ida.analysis_id = ?
+        });
+    $list_contig_id->execute($ana_id);
+    
+    my $delete_input_id = $dbh->prepare(q{
+        DELETE FROM input_id_analysis
+        WHERE input_id = ?
+          AND analysis_id = ?
+        });
+    
+    while (my ($ctg_id, $name) = $list_contig_id->fetchrow) {
+        $count_features->execute($ctg_id);
+        my ($count) = $count_features->fetchrow;
+        if ($count == 0) {
+            print "$logic_name\t$ctg_id\n";
+            if ($fix) {
+                $delete_input_id->execute($name, $ana_id);
+            }
+        }
+    }
+}
+
+
+
+
+
+__END__
+
+=head1 NAME - list_zero_feature_analysis
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
