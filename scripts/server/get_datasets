@@ -6,9 +6,9 @@ use strict;
 use CGI;
 
 use HTTPD::Authen;
-
 use Bio::Otter::ServerSide qw(error_exit
                               send_response
+                              send_xml_response
                               set_nph);
 
 $|             = 1;
@@ -30,8 +30,6 @@ if($ENV{AUTHUSERFILE} && $ENV{AUTHGROUPFILE}){
     $ALLOW_ALL = 1;
 }
 
-my $response = "Datasets\n\n";
-
 # This is a check so that $groupAd->exists won't die if
 # ALLOW_ALL is false when no authentication was passed
 error_exit($q, $ERROR_AUTH) unless $groupAd || $ALLOW_ALL;
@@ -49,26 +47,45 @@ foreach my $dataset (keys %$OTTER_SPECIES) {
   push(@allowed_to_see, $dataset);
 }
 
+
+# I'd like to use xml::writer here, but it won't do output to string
+# Also it's probably a bit heavyweight just to concatenate a few strings together.
+my $xml = qq`<?xml version="1.0" encoding="UTF-8"?>\n`;
+$xml   .= qq`<otter>\n`;
+$xml   .= qq`  <datasets>\n`;
 # print the one's user is allowed to see.
 foreach my $dataset(@allowed_to_see){
-  $response .= "$dataset\n";
-}
-
-# print details if they've ask for it.
-if (defined($params{details})) {
-  $response .= "\nDetails\n";
-  foreach my $dataset (@allowed_to_see) {
-    next if ($dataset =~ /defaults/);
-    $response .= "\n$dataset\n";
-    foreach my $key (keys %{$OTTER_SPECIES->{$dataset}}) {
-      $response .= " $key " . $OTTER_SPECIES->{$dataset}->{$key} . "\n";
+    $xml .= qq`    <dataset name="$dataset">\n`;
+    # print details if they've ask for it.
+    if (defined($params{details})) {
+        foreach my $key (keys %{$OTTER_SPECIES->{$dataset}}) {
+            $xml .= qq`      <` . lc $key . qq`>`;
+            $xml .= $OTTER_SPECIES->{$dataset}->{$key};
+            $xml .= qq`</` . lc $key . qq`>\n`;
+        }
     }
-  }
+    $xml .= qq`    </dataset>\n`;
 }
+$xml .= qq`  </datasets>\n`;
+$xml .= qq`</otter>\n`;
 
-send_response($q, $response);
+
+send_xml_response($q, $xml);
 
 #End main
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 sub check_authorisation{
     my ($groupAdminObj, $authinfo, $authen);
