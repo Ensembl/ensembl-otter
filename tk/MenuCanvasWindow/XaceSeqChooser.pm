@@ -218,19 +218,11 @@ sub populate_menus {
     my $subseq = $self->make_menu('SubSeq');
     $self->subseq_menubutton($subseq->parent);
     
-    # New subsequence
-    my $new_command = sub{ $self->edit_new_subsequence };
-    $subseq->add('command',
-        -label          => 'New',
-        -command        => $new_command,
-        -accelerator    => 'Ctrl+N',
-        -underline      => 0,
-        );
-    $top->bind('<Control-n>', $new_command);
-    $top->bind('<Control-N>', $new_command);
-    
     # Edit subsequence
-    my $edit_command = sub{ $self->edit_subsequences };
+    my $edit_command = sub{
+        return unless $self->current_state eq 'subseq';
+        $self->edit_subsequences;
+        };
     $subseq->add('command',
         -label          => 'Edit',
         -command        => $edit_command,
@@ -240,8 +232,42 @@ sub populate_menus {
     $top->bind('<Control-e>', $edit_command);
     $top->bind('<Control-E>', $edit_command);
     
+    #### Separator ####
+    $subseq->add('separator');
+    
+    # New subsequence
+    my $new_command = sub{
+        return unless $self->current_state eq 'subseq';
+        $self->edit_new_subsequence;
+        };
+    $subseq->add('command',
+        -label          => 'New',
+        -command        => $new_command,
+        -accelerator    => 'Ctrl+N',
+        -underline      => 0,
+        );
+    $top->bind('<Control-n>', $new_command);
+    $top->bind('<Control-N>', $new_command);
+    
+    # Make an isoform of the current selected sequence
+    my $isoform_command = sub{
+        return unless $self->current_state eq 'subseq';
+        $self->make_isoform_subsequence;
+        };
+    $subseq->add('command',
+        -label          => 'Isoform',
+        -command        => $isoform_command,
+        -accelerator    => 'Ctrl+I',
+        -underline      => 0,
+        );
+    $top->bind('<Control-i>', $isoform_command);
+    $top->bind('<Control-I>', $isoform_command);
+    
     # Delete subsequence
-    my $delete_command = sub { $self->delete_subsequences };
+    my $delete_command = sub {
+        return unless $self->current_state eq 'subseq';
+        $self->delete_subsequences;
+        };
     $subseq->add('command',
         -label          => 'Delete',
         -command        => $delete_command,
@@ -250,8 +276,8 @@ sub populate_menus {
         );
     $top->bind('<Control-d>', $delete_command);
     $top->bind('<Control-D>', $delete_command);
-    
-    $subseq->add('separator');
+
+    ## Unimplemented methods
     $subseq->add('command',
         -label          => 'Merge',
         -command        => sub{ warn "Called Merge" },
@@ -266,16 +292,6 @@ sub populate_menus {
         -underline      => 0,
         -state          => 'disabled',
         );
-    
-    my $isoform_command = sub{ $self->make_isoform_subsequence };
-    $subseq->add('command',
-        -label          => 'Isoform',
-        -command        => $isoform_command,
-        -accelerator    => 'Ctrl+I',
-        -underline      => 0,
-        );
-    $top->bind('<Control-i>', $isoform_command);
-    $top->bind('<Control-I>', $isoform_command);
     
     # What did I intend this command to do?
     #$subseq->add('command',

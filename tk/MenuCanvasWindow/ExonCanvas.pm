@@ -766,13 +766,29 @@ sub control_left_button_handler {
             $canvas->itemconfigure($exon_arrow_tag, 
                 -arrow   => $new_end,
                 );
-            if ($new_end eq 'first') {
-                $self->SubSeq->strand(-1);
-            } else {
-                $self->SubSeq->strand(1);
-            }
         }
     }
+}
+
+sub strand_from_tk {
+    my( $self ) = @_;
+    
+    my $canvas = $self->canvas;
+    my( $dir );
+    foreach my $arrow ($canvas->find('withtag', 'exon_arrow')) {
+        my $end = $canvas->itemcget($arrow, 'arrow');
+        my $exon_dir = ($end eq 'first') ? 'reverse' : 'forward';
+        if ($dir) {
+            if ($exon_dir ne $dir) {
+                $self->message("Inconsistent exon directions.  I chose '$dir'");
+                last;
+            }
+        } else {
+            $dir = $exon_dir;
+        }
+    }
+    
+    return ($dir eq 'forward') ? 1 : -1;
 }
 
 sub empty_string {
@@ -1051,6 +1067,7 @@ sub new_SubSeq_from_tk {
     $sub->name              ( $self->get_subseq_name        );
     $sub->replace_all_Exons ( $self->Exons_from_canvas      );
     $sub->GeneMethod        ( $self->get_GeneMethod_from_tk );
+    $sub->strand            ( $self->strand_from_tk         );
     return $sub;
 }
 
