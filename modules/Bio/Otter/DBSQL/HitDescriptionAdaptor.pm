@@ -21,7 +21,7 @@ sub fetch_HitDescriptions_into_hash {
         };
     $sql .= join(',', map "'$_'", keys %$hash);
     $sql .= qq{\n)};
-    warn $sql;
+    #warn $sql;
     
     my $sth = $self->prepare($sql);
     $sth->execute;

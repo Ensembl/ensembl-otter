@@ -18,6 +18,16 @@ __END__
 
 =head1 NAME - Bio::Otter::DnaDnaAlignFeature
 
+=head1 DESCRIPTION
+
+Extends its Bio::Otter::DnaDnaAlignFeature
+baseclass to add the method:
+
+=head1 get_HitDescription
+
+Returns the Bio::Otter::HitDescription object
+attached to the feature.
+
 =head1 AUTHOR
 
 James Gilbert B<email> jgrg@sanger.ac.uk

@@ -52,6 +52,37 @@ __END__
 
 =head1 NAME - Bio::Otter::HitDescription
 
+=head1 DESCRIPTION
+
+The HitDescription object provides extra
+information about database matches that is not
+provided by the AlignFeature objects to which it
+is attached.
+
+=head1 MEHTODS
+
+=over 4
+
+=item hit_length
+
+The length of the entire hit sequence - not just
+the region matched.
+
+=item description
+
+A one line description of the sequence.
+
+=item taxon_id
+
+The numeric NCBI taxonomy database ID for the
+node (which is usually species).
+
+=item db_name
+
+The database which the hit belongs to.
+
+=back
+
 =head1 AUTHOR
 
 James Gilbert B<email> jgrg@sanger.ac.uk
