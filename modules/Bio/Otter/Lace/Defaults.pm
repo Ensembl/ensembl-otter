@@ -320,6 +320,7 @@ sub get_default_GeneMethods{
         Predicted                      => [1,         0,          0],
         Transposon                     => [1,         1,          0],
 	Artifact                       => [1,         0,          0],
+	TEC                            => [1,         0,          0],
         # newly added - truncated versions of above methods        
         Coding_trunc                   => [0,         1,          1],
         Transcript_trunc               => [0,         0,          0],
@@ -333,8 +334,9 @@ sub get_default_GeneMethods{
         Processed_pseudogene_trunc     => [0,         0,          1],
         Unprocessed_pseudogene_trunc   => [0,         0,          1],
         Predicted_trunc                => [0,         0,          0],
-	Transposon_trunc               => [1,         1,          0],
-	Artifact_trunc                 => [1,         0,          0],
+	Transposon_trunc               => [0,         1,          0],
+	Artifact_trunc                 => [0,         0,          0],
+	TEC_trunc                      => [0,         0,          0],
         
         # Auto-analysis gene types (non-editable)
         fgenesh                        => [0,         1],
