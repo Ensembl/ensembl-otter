@@ -163,6 +163,10 @@ sub initialise {
         });
     $canvas->CanvasBind('<Shift-Button-1>', sub {
         return if $self->delete_message;
+        $self->extend_selection;
+        });
+    $canvas->CanvasBind('<Control-Button-1>', sub {
+        return if $self->delete_message;
         $self->toggle_current;
         });
     
@@ -198,23 +202,7 @@ sub initialise {
         
         if ($write) {
             my $set_reviewed = sub{
-                my $c = $comment->get;
-                my @ana_seq_id_list;
-                if (defined $self->list_selected_unique_ids){
-                    @ana_seq_id_list = @{$self->list_selected_unique_ids()} ;
-                }
-                else{ 
-                    $top->messageBox(-title => 'Error', 
-                    -message => "You need to select one or more contigs to set the note!", 
-                    -type => 'OK');
-                    return ; #unless @ana_seq_id_list;
-                }
-                
-                ### Save sequence note
-                $self->save_sequence_notes($comment->get , @ana_seq_id_list);
-                
-                $self->draw;
-                $self->set_scroll_region_and_maxsize;
+                $self->save_sequence_notes($comment);
                 };
             $self->make_button($button_frame2, 'Set note', $set_reviewed, 0);
             $top->bind('<Control-s>', $set_reviewed);
@@ -285,8 +273,7 @@ sub initialise {
         $top->bind('<Control-p>', $print_to_file);
         $top->bind('<Control-P>', $print_to_file);
         
-        $canvas->Tk::bind('<Control-Button-1>', sub{ $self->popup_ana_seq_history });
-        $canvas->Tk::bind('<Double-Button-1>',  sub{ $self->popup_ana_seq_history });
+        #$canvas->Tk::bind('<Double-Button-1>',  sub{ $self->popup_ana_seq_history });
         
         $self->make_button($button_frame2, 'Close', $close_window, 0);
         
@@ -402,7 +389,7 @@ sub make_button {
 sub set_seleted_from_canvas {
     my( $self ) = @_;
     
-    my $ss    = $self->SequenceSet;
+    my $ss = $self->SequenceSet;
     if (my $sel_i = $self->selected_CloneSequence_indices) {
         my $cs_list = $ss->CloneSequence_list;
         my $selected = [ @{$cs_list}[@$sel_i] ];
@@ -422,14 +409,13 @@ sub run_lace {
     my( $self ) = @_;
     
     ### Prevent opening of sequences already in lace sessions
+    
+    
     return unless $self->set_seleted_from_canvas;
     my $ss = $self->SequenceSet;
     my $cl = $self->Client;
 
-    my $selected_sequences = $self->get_selected_sequence_list;
-
-    
-    my $title = 'lace '. $self->name . $selected_sequences;
+    my $title = 'lace '. $self->name . $self->selected_sequence_string;
     
     ## For debugging to check selection OK:
     #foreach my $cs (@$selected) {
@@ -459,26 +445,26 @@ sub run_lace {
 }
 
 # creates a string based on the selected clones, with commas seperating individual values or dots to represent a continous sequence
-sub get_selected_sequence_list{
+sub selected_sequence_string{
     my ($self ) = @_ ;
     
-    my @selected = @{$self->get_selected_clone_sequence_ref};   
+    my $selected = $self->selected_CloneSequence_indices;
     
 
     
-    my $prev = shift @selected;
+    my $prev = shift @$selected;
     my $string;
     
-    if (scalar(@selected) == 0){ 
+    if (scalar(@$selected) == 0){ 
         $string = ", clone " . ($prev + 1);
     }
     else{
         $string = ", clones " . ($prev + 1);
         my $continous = 0 ;
 
-        foreach my $element (@selected){
+        foreach my $element (@$selected){
             if (($element  eq ($prev + 1))){
-                if ($element == @selected->[$#selected]){
+                if ($element == $selected->[$#$selected]){
                     $string .= (".." . ($element + 1));
                 }
                 $continous = 1;
@@ -616,6 +602,59 @@ sub toggle_current {
     $self->toggle_selection($rect);
 }
 
+sub extend_selection {
+    my( $self ) = @_;
+    
+    my $canvas = $self->canvas;
+    my $row_tag = $self->get_current_row_tag or return;
+    my ($current_row) = $row_tag =~ /row=(\d+)/;
+    die "Can't parse row number from '$row_tag'" unless defined $current_row;
+    
+    # Get a list of all the rows that are currently selected
+    my( @sel_rows );
+    foreach my $obj ($canvas->find('withtag', 'selected&&clone_seq_rectangle')) {
+        my ($row) = map /^row=(\d+)/, $canvas->gettags($obj);
+        unless (defined $row) {
+            die "Can't see row=# in tags: ", join(', ', map "'$_'", $canvas->gettags($obj));
+        }
+        push(@sel_rows, $row);
+    }
+    
+    my( @new_select, %is_selected );
+    if (@sel_rows) {
+        %is_selected = map {$_, 1} @sel_rows;
+
+        # Find the row closest to the current row
+        my( $closest, $distance );
+        foreach my $row (sort @sel_rows) {
+            my $this_distance = $current_row < $row ? $row - $current_row : $current_row - $row;
+            if (defined $distance) {
+                next unless $this_distance < $distance;
+            }
+            $closest  = $row;
+            $distance = $this_distance;
+        }
+
+        # Make a list of all the new rows to select between the current and closest selected
+        if ($current_row < $closest) {
+            @new_select = ($current_row .. $closest);
+        } else {
+            @new_select = ($closest .. $current_row);
+        }
+    } else {
+        @new_select = ($current_row);
+    }
+    
+    
+    # Select all the rows in the new list that are not already selected
+    foreach my $row (@new_select) {
+        next if $is_selected{$row};
+        if (my ($rect) = $canvas->find('withtag', "row=$row&&clone_seq_rectangle")) {
+            $self->toggle_selection($rect);
+        }
+    }
+}
+
 sub selected_CloneSequence_indices {
     my( $self ) = @_;
     
@@ -629,27 +668,12 @@ sub selected_CloneSequence_indices {
         push(@$select, $i);
     }
     
-    $self->set_selected_clone_sequences_ref($select);
     if (@$select) {
-        
         return $select;
     } else {
         return;
     }
 }
-
-
-sub set_selected_clone_sequences_ref{
-    my ($self, $selected_clones) = @_;
-    $self->{'_selected_clones'} = $selected_clones ;   
-}
-
-sub get_selected_clone_sequence_ref{
-    my $self = shift @_;
-    
-    return $self->{'_selected_clones'} ;
-}
-
 
 sub get_current_row_tag {
     my( $self ) = @_;
@@ -739,6 +763,32 @@ sub layout_columns_and_rows {
     }
 }
 
+sub save_sequence_notes {
+    my( $self, $comment ) = @_;
+
+    my $text = $comment->get;
+    $text =~ s/\s/ /g;
+    $text =~ s/\s+$//;
+    $text =~ s/^\s+//;
+    unless ($self->set_seleted_from_canvas) {
+        $self->message("No clones selected");
+        return;
+    }
+
+    my $note = Bio::Otter::Lace::SequenceNote->new;
+    $note->text($text);
+
+    my $seq_list = $self->SequenceSet->selected_CloneSequences;
+    my $ds = $self->SequenceSetChooser->DataSet;
+    foreach my $sequence (@$seq_list) {
+        $sequence->add_SequenceNote($note);    
+        $sequence->current_SequenceNote($note);
+        $ds->save_current_SequenceNote_for_CloneSequence($sequence);
+    } 
+
+    $self->draw;
+    $self->set_scroll_region_and_maxsize;
+}
 
 
 sub DESTROY {
@@ -749,29 +799,11 @@ sub DESTROY {
     warn "Destroying $type $name\n";
 }
 
-#------------------------------------------------------------------------------------------------
-#colins stuff after here
-
-sub list_selected_unique_ids{
-        my $self = shift @_ ;
-        my $canvas = $self->canvas;
-        
-        my @objects = $canvas->find('withtag', 'selected') or return;
-        my( @row_tag );
-        foreach my $object (@objects){
-            foreach my $tag ($canvas->gettags($object)) {
-                if ($tag =~ /^row=/) {
-                    push @row_tag , $tag;
-                }
-            }
-        }
-        return \@row_tag;    
-    }
-
-
-
 sub popup_ana_seq_history{
     my $self = shift @_ ;
+    
+    my $sel = $self->selected_CloneSequence_indices;
+    my $index = $sel->[0] or return;
     
     my $canv = $self->canvas;
     
@@ -783,39 +815,10 @@ sub popup_ana_seq_history{
     $hp->sequence_set($self->SequenceSet);
     $hp->DataSet($self->SequenceSetChooser->DataSet);
     
-    my $index = $self->current_CloneSequence_index(); 
     $hp->current_index($index);  
     $hp->display;
     $canv->toplevel->Unbusy;   
 }
-
-sub current_CloneSequence_index {
-    my( $self ) = @_;       
-    my $rowtag = $self->get_current_row_tag;
-    $rowtag =~ s/row=// ;
-    return $rowtag;
-}
-
-sub save_sequence_notes{
-    my ($self , $comment ,  @sequence_id_list ) = @_;
-    {  
-        my @seq_list = @{$self->SequenceSet->CloneSequence_list} ;
-        
-        my $note = Bio::Otter::Lace::SequenceNote->new();
-        $note->text($comment);
-
-        $note->author(getlogin) ;
-        foreach my $seq_index (@sequence_id_list){
-            $seq_index =~ s/^row=// ;
-            warn "\n\n" . $seq_index ." of " . scalar(@seq_list)  ; 
-            my $sequence = $seq_list[$seq_index] ;
-            $sequence->add_SequenceNote($note);    
-            $sequence->current_SequenceNote($note);
-            $self->SequenceSetChooser->DataSet->save_current_SequenceNote_for_CloneSequence($sequence);
-        } 
-    }
-}
-
 
 
 1;
