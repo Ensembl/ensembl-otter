@@ -935,7 +935,7 @@ if($ngcl>1){
 	  }
 	}
       }
-      print "D: $gsi->$is2e->".join(',',(keys %tsi))."\n";
+      print "D: ".join(',',(keys %tsi))."\n";
       $tcl->link([(keys %tsi)]);
     }
     my @ctsi=$tcl->cluster_ids;
