@@ -59,9 +59,11 @@ sub delete_input_id_analysis {
     my( $dba ) = @_;
     
     # Check that this is a pipeline database
-    return unless $dba->can('get_AnalysisAdaptor');
-
+   
+    return unless $dba->isa('Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor');
+    
     my $ana_daptr = $dba->get_AnalysisAdaptor;
+    
     my $input = $ana_daptr->fetch_by_logic_name('SubmitContig');
     my $ana_id = $input->dbID;
     
