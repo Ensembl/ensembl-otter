@@ -393,9 +393,36 @@ sub attach_to_Slice {
          $trans->translation->end_Exon  ($transformed_exons{$trans->translation->end_Exon});
        }
     }
-    
-    
 }
+
+sub fetch_all_by_DBEntry {
+  my $self = shift;
+  my $external_id = shift;
+  my @genes = ();
+  my @ids = ();
+
+  my $sth = $self->prepare("SELECT DISTINCT( oxr.ensembl_id )
+                   FROM xref x, object_xref oxr
+                  WHERE oxr.xref_id = x.xref_id
+                    AND x.display_label = '$external_id'
+                    AND oxr.ensembl_object_type='Gene'");
+
+  print $sth->{Statement} . "\n";
+  $sth->execute();
+
+   while( ($a) = $sth->fetchrow_array ) {
+       push(@ids,$a);
+   }
+
+  foreach my $gene_id ( @ids ) {
+    my $gene = $self->fetch_by_dbID( $gene_id );
+    if( $gene ) {
+      push( @genes, $gene );
+    }
+  }
+  return \@genes;
+}
+
 1;
 
 	
