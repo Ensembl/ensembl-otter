@@ -608,7 +608,7 @@ sub populate_polyA_menu{
     my @clone_list = $self->clone_list;
     
     foreach my  $clone_name (@clone_list) {
-        warn "should be adding $clone_name to polyA menu";
+        #warn "should be adding $clone_name to polyA menu";
         $menu->add( 'command' ,
                     -label => $clone_name,    
                     -command => sub { $self->launch_polyA($clone_name) },

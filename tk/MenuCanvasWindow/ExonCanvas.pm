@@ -902,74 +902,101 @@ sub show_peptide {
             );
         # Gold for methionine codons
         $peptext->tagConfigure('goldmeth' ,
-            -background => '#ffd700'  ,
-            -foreground => 'black' , 
+            -background => '#ffd700',
+            -foreground => 'black',
         );
+        $peptext->tagBind('goldmeth', '<Button-1>',
+            sub{ $self->trim_cds_coord_to_current_methionine; }
+            );
+        $peptext->tagBind('goldmeth', '<Enter>',
+            sub{ $peptext->configure(-cursor => 'arrow'); }
+            );
+        $peptext->tagBind('goldmeth', '<Leave>',
+            sub{ $peptext->configure(-cursor => 'xterm'); }
+            );
         
-        
-        # Make a Close button inside a frame
+        # Frame for buttons
         my $frame = $top->Frame(
             -border => 6,
             )->pack(
-                -anchor => 'sw',
+                -side   => 'bottom',
+                -fill   => 'x',
                 );
         
+        my $trim_command = sub{
+            $self->trim_cds_coord_to_first_stop;
+            $self->show_peptide;
+            };
+        $frame->Button(
+            -text       => 'Trim',
+            -underline  => 0,
+            -command    => $trim_command ,
+            )->pack(-side => 'left');
+        $top->bind('<Control-t>',   $trim_command);
+        $top->bind('<Control-T>',   $trim_command);
+        $top->bind('<Return>',      $trim_command);
+        $top->bind('<KP_Enter>',    $trim_command);
+
         # Close only unmaps it from the display
         my $close_command = sub{ $top->withdraw };
         
         my $exit = $frame->Button(
             -text => 'Close',
             -command => $close_command ,
-            )->pack;
+            )->pack(-side => 'right');
         $top->bind(    '<Control-w>',      $close_command);
         $top->bind(    '<Control-W>',      $close_command);
         $top->bind(    '<Escape>',         $close_command);
         
+        
         # Closing with window manager only unmaps window
         $top->protocol('WM_DELETE_WINDOW', $close_command);
+
+        $peptext->bind('<Destroy>', sub{ $self = undef });
     }
-    
-    my( $fasta );
+
+    # Empty the text widget    
+    $peptext->delete('1.0', 'end');
+
     eval{ $sub->validate; };
     if ($@) {
         $self->exception_message($@, 'Invalid transcript');
-        $fasta = "TRANSLATION ERROR";
+        $peptext->insert('end', "TRANSLATION ERROR");
     } else {
         # Put the new translation into the Text widget
         my $pep = $self->translator->translate($sub->translatable_Sequence);
-        $fasta = $pep->fasta_string;
+        $peptext->insert('end', sprintf(">%s\n", $pep->name));
 
-    }
-    #$fasta =~ s/\n$//s;
-    my $lines = $fasta =~ tr/\n//;
-    $peptext->delete('1.0', 'end');
-    
-    # Markup stop codons
-    foreach my $bit (split /(\*+)/, $fasta) {
-        if ($bit =~ /\*/) {
-            $peptext->insert('end', $bit, 'redstop');
-        } else {
-            # Highlight "X", the unknown amino acid
-            foreach my $xstr (split /(X+)/, $bit) {
-                if ($xstr =~ /X/) {
-                    $peptext->insert('end', $xstr, 'blueunk');
-                } else {
-                    # highlight methionines in gold
-                    foreach my $meth_str (split /(M+)/, $xstr)
-                    { 
-                       if ($meth_str =~ /M/){                 
-                            $peptext->insert('end', $meth_str, 'goldmeth');
-                        }
-                        else{
-                            $peptext->insert('end', $meth_str);
-                        }
-                    }
-                }
+        my $line_length = 60;
+        my $str = $pep->sequence_string;
+        my $map = $sub->codon_start_map;
+        my %style = (
+            '*' => 'redstop',
+            'X' => 'blueunk',
+            'M' => 'goldmeth',
+            );
+        my $pep_genomic = $self->{'_peptext_index_to_genomic_position'} = {};
+        for (my $i = 0; $i < length($str); $i++) {
+            my $char = substr($str, $i, 1);
+            my $tag = $style{$char};
+            $peptext->insert('end', $char, $tag);
+            
+            if ($char eq 'M') {
+                my $index = $peptext->index('insert - 1 chars');
+                #printf STDERR "$index  $map->[$i]\n";
+                $pep_genomic->{$index} = $map->[$i];
+            }
+            
+            unless (($i + 1) % $line_length) {
+                $peptext->insert('end', "\n");
             }
         }
     }
     
+    
     # Size widget to fit
+    my ($lines) = $peptext->index('end') =~ /(\d+)\./;    
+    $lines--;
     $peptext->configure(
         -width  => 60,
         -height => $lines,
@@ -980,6 +1007,21 @@ sub show_peptide {
     $win->configure( -title => $sub->name . " translation" );
     $win->deiconify;
     $win->raise;
+}
+
+sub trim_cds_coord_to_current_methionine {
+    my( $self ) = @_;
+    
+    my $peptext = $self->{'_pep_peptext'} or return;
+    my $index = $peptext->index('current');
+    my $new = $self->{'_peptext_index_to_genomic_position'}{$index} or return;
+
+    $self->deselect_all;
+    my $original = $self->tk_t_start;
+    $self->tk_t_start($new);
+
+    # Highlight the translation end if we have changed it
+    $self->highlight('t_start') if $new != $original;
 }
 
 sub trim_cds_coord_to_first_stop {
