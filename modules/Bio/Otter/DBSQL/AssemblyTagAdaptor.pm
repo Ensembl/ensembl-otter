@@ -4,23 +4,8 @@ use strict;
 use Bio::Otter::AssemblyTag;
 use Bio::Otter::DBSQL::RawContigAdaptor;
 use vars qw(@ISA);
-@ISA = qw (Bio::EnsEMBL::DBSQL::BaseAdaptor Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor);
+@ISA = qw (BSQL::BaseAdaptor Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor);
 
-
-=head2 fetch_AssemblyTags_by_Slice
-
- Title   : fetch_AssemblyTags_by_Slice
- Arg     : slice obj
- Function:
- Returns :list of hash ref to each row of assembly_tag table
-
-=cut
-
-sub fetch_AssemblyTags_by_Slice {
-  my ($self, $slice) = @_;
-
-  return $self->fetch_all_by_Slice_constraint($slice);
-}
 
 sub _tables {
   my $self = shift;
