@@ -1,0 +1,250 @@
+#!/usr/local/bin/perl -w
+
+### remove_pipe_analysis_of_clones
+
+use strict;
+use Bio::Otter::Lace::Defaults;
+
+{
+  my ( $dataset, @sets, $action );
+
+  my $help = sub { exec('perldoc', $0) };
+
+  # -pipeline option is needed for fetch_pipeline_ctg_ids_for_SequenceSet()
+  # otherwise the method Bio::Otter::Lace::Defaults::fetch_pipeline_switch()
+  # returns null
+
+  push (@ARGV, "-pipeline");
+
+  Bio::Otter::Lace::Defaults::do_getopt('ds|dataset=s' => \$dataset,
+                                        's|set=s@'     => \@sets,
+                                        'action=s'     => \$action,
+                                        'h|help'       => $help
+                                       ) or $help->(); # plus default options
+
+
+  # @ARGV is filename with a list of contig_names (eg, AC012101.7.1.168965)
+   $help->() unless ($dataset and (@sets or @ARGV) and $action);
+
+  # pipeline db connection
+  my $client    = Bio::Otter::Lace::Defaults::make_Client(); # Bio::Otter::Lace::Client
+  my $dset      = $client->get_DataSet_by_name($dataset);    # Bio::Otter::Lace::DataSet
+  my $otter_db  = $dset->get_cached_DBAdaptor;               # Bio::EnsEMBL::Container
+  my $pipe_db   = Bio::Otter::Lace::PipelineDB::get_pipeline_rw_DBAdaptor($otter_db);
+
+  my $ctgId_ctgName = {}; # contig_name to contig_id mapping
+
+  # first fetch all clones in a sequence set from otter or from a list of contig_name in a file
+  # and turn them into a %ctgId_ctgName hash
+  if ( @sets ) {
+    foreach ( @sets ) {
+      my $seqSet = $dset->get_SequenceSet_by_name($_);
+	  my $cs = $dset->fetch_all_CloneSequences_for_SequenceSet($seqSet);
+
+	  # CAREFUL: contig_id from pipeline db, NOT otter as they are auto-incremented
+	  $dset->fetch_pipeline_ctg_ids_for_SequenceSet($seqSet);
+	  map { $ctgId_ctgName ->{$_->contig_id} = $_->contig_name } @$cs;
+	}
+  }
+  else {
+    while (<>) {
+      chomp;
+      $ctgId_ctgName->{ contig_name_to_contig_id($pipe_db, $_) } = $_;
+    }
+  }
+
+  # then do things with each clone (as contig_name) in pipeline db
+  foreach my $ctg_id ( sort keys %$ctgId_ctgName ) {
+
+	my $ctg_name = $ctgId_ctgName->{$ctg_id};
+	if ( $ctg_name and $ctg_id ) {
+
+	  my $msg = "\nWorking on $dataset" . "_finished contig_id $ctg_id => $ctg_name\n";
+
+	  my ($counter, $order) = remove_pipeline_analysis($action, $pipe_db, $ctg_name, $ctg_id);
+
+	  # this tells if an analysis actually creates rows in the database
+	  printf ( "%s\t%s\n", $msg, ($action eq "kill" ? "Deleted" : "Found") );
+	  foreach my $k (@$order ) {
+		printf("\t\t%7d row(s) in $k table\n", $counter->{$k});
+	  }
+	}
+	else {
+	  warn "Need contig_name and contig_id info to proceed.";
+	}
+  }
+}
+
+
+sub remove_pipeline_analysis {
+
+  my ( $action, $pipe_db, $contig_name, $contig_id ) = @_;
+
+  my $deleted;
+
+  my $counter = {};
+  my $order = [qw(
+                  input_id_analysis
+
+                  dna_align_feature
+                  protein_align_feature
+                  prediction_transcript
+                  simple_feature
+                  repeat_feature
+
+                  gene
+                  gene_description
+                  exon
+                  exon_transcript
+                  transcript
+                  translation
+                  object_xref
+                 )];
+
+  for my $k (@$order) {
+     $counter->{$k}=0;
+  }
+
+  # delete rows in input_id_analysis table but keep the input_ids which analysis_id = 1
+  $counter->{input_id_analysis} =
+    delete_rows($action, $pipe_db, "input_id_analysis", "input_id = ? AND analysis_id > 1", $contig_name);
+
+  # delete rows in these 6 tables based on contig_id
+  # dna_align_feature, protein_align_feature, simple_feature, repeat_feature, prediction_transcript
+  my @tbls = qw(dna_align_feature protein_align_feature simple_feature repeat_feature prediction_transcript);
+
+  foreach my $t ( @tbls ) {
+    $counter->{$t} = delete_rows($action, $pipe_db, $t, "contig_id = $contig_id");
+  }
+
+  # Also delete rows in these 6 tables: gene, exon, exon_transcript, transcript, translation and object_xref
+  # Not all genes have translations - use left join
+
+  # Deleting rows in object_xref is based on gene_id col where gene_id = object_xref.ensembl_id and object_xref.ensembl_object_type = 'Gene'
+
+  my $sql = $pipe_db->prepare(qq{
+                                 SELECT e.exon_id, et.transcript_id, g.gene_id, tl.translation_id
+                                 FROM exon e, contig c, exon_transcript et, transcript t, gene g
+                                 LEFT JOIN translation tl
+                                 ON t.translation_id = tl.translation_id
+								 WHERE c.contig_id = e.contig_id
+                                 AND e.exon_id = et.exon_id
+                                 AND et.transcript_id = t.transcript_id
+                                 AND t.gene_id = g.gene_id
+                                 AND e.contig_id = $contig_id}
+                             );
+  $sql->execute();
+
+  my $column_to_table = {
+						 'exon_id'          => ['exon'],
+						 'gene_id'          => ['gene', 'gene_description', 'object_xref'],
+						 'transcript_id'    => ['exon_transcript', 'transcript'],
+						 'translation_id'   => ['translation'],
+						};
+  my $col_to_ids = {};
+
+  while ( my $col_ids = $sql->fetchrow_hashref ){
+	foreach my $column ( keys %$col_ids ){
+
+	  # in case translation_id is null
+	  my $id = $col_ids->{$column} or next;
+	  $col_to_ids->{$column}{$id}++;
+	}
+  }
+
+  foreach my $column_name ( keys %$col_to_ids ){
+
+	# concatenate all ids for deletion
+	my $values = join( ',', keys %{$col_to_ids->{$column_name}} );
+
+	foreach my $table_name ( @{$column_to_table->{$column_name}} ){
+
+	  # need to do something different for object_xref table
+	  if ( $column_name eq "gene_id" and $table_name eq "object_xref" ){
+		foreach my $gene_id (  keys %{$col_to_ids->{$column_name}} ){
+		  $counter->{$table_name} += delete_rows($action, $pipe_db, $table_name, "ensembl_id = $gene_id and ensembl_object_type = ?", "Gene");
+		}
+	  }
+	  else {
+		$counter->{$table_name} += delete_rows($action, $pipe_db, $table_name, "$column_name in ($values)");
+	  }
+	}
+  }
+
+  return ($counter, $order);
+}
+
+sub delete_rows {
+  my ( $action, $pipe_db, $table, $where_clause, $holder )= @_;
+
+  my ($rows_deleted, $sql);
+
+  if ( $action eq "kill" ) {
+	$sql = $pipe_db->prepare(qq{DELETE from $table WHERE $where_clause});
+	$sql->execute($holder?$holder:());
+
+	$rows_deleted = $sql->rows;
+    return $rows_deleted;
+  }
+
+  elsif ( $action eq "info" ) {
+	$sql = $pipe_db->prepare(qq{SELECT count(*) FROM $table WHERE $where_clause});
+	$sql->execute($holder?$holder:());
+
+    return $sql->fetchrow;
+  }
+}
+
+sub contig_name_to_contig_id {
+
+  my ($pipe_db, $contig_name) = @_;
+
+  my $sql = $pipe_db->prepare(qq{SELECT contig_id from contig WHERE name = ?});
+  $sql->execute($contig_name);
+
+  return $sql->fetchrow;
+}
+
+__END__
+
+=head1 B<NAME> - remove_pipe_analysis_of_clones
+
+=head1 B<SYNOPSIS>
+
+eg:
+
+remove_pipe_analysis_of_clones -ds human -action [kill|info] -set MHC_PGF -set MHC_COX > outfile
+
+or
+
+remove_pipe_analysis_of_clones -ds human -action [kill|info] filename > outfile
+
+
+=head1 B<DESCRIPTION>
+
+This script deletes or shows pipleline analysis results of each analysis. It works with contig_names of clones.
+So if the analysis results of clones to delete are enlisted in a file, their format is of contig_name, eg, AC012101.7.1.168965, separated by new line.
+
+
+The [-action kill] option deletes rows in the tables where pipeline analysis results go to as well as outputs a brief stats about the rows deleted.
+
+The [-action info] option shows info about how many rows are created in which table for each analysis.
+
+With [-set dataset] the OTTER API figures out the contig_name of each clone in the pipeline database.
+
+
+The following query used in the script is useful for hand-checking B<halfwise> results of a contig_id:
+
+SELECT e.exon_id, et.transcript_id, g.gene_id, tl.translation_id
+FROM exon e, contig c, exon_transcript et, transcript t, gene g
+LEFT JOIN translation tl
+ON t.translation_id = tl.translation_id
+WHERE c.contig_id = e.contig_id
+AND e.exon_id = et.exon_id
+AND et.transcript_id = t.transcript_id
+AND t.gene_id = g.gene_id
+AND e.contig_id =
+
+=head1 B<AUTHOR>
+
+Chao-Kung Chen B<email> ck1@sanger.ac.uk
