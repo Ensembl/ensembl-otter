@@ -902,7 +902,7 @@ foreach my $ecst (keys %eall){
 	$dgcl->link([(keys %gsi)]);
 	$s2e[$is2e]=[@{$eall{$ecst}->{$eced}}];
 	foreach my $gsi (keys %gsi){
-	  $dg2s{$gsi}=$is2e;
+	  push(@{$dg2s{$gsi}},$is2e);
 	}
 	$is2e++;
       }
@@ -920,12 +920,19 @@ if($ngcl>1){
 
     # for each gene cluster, identify transcripts involved and how they are linked
     my $tcl=new cluster();
+    my %is2e;
     foreach my $gsi (@gsi){
-      my $is2e=$dg2s{$gsi};
+      foreach my $is2e (@{$dg2s{$gsi}}){
+	$is2e{$is2e}++;
+      }
+    }
+    foreach my $is2e (keys %is2e){
       my %tsi;
       foreach my $eid (@{$s2e[$is2e]}){
-	foreach my $tsi (@{$e2t{$gsi}->{$eid}}){
-	  $tsi{$tsi}++;
+	foreach my $gsi (@gsi){
+	  foreach my $tsi (@{$e2t{$gsi}->{$eid}}){
+	    $tsi{$tsi}++;
+	  }
 	}
       }
       print "D: $gsi->$is2e->".join(',',(keys %tsi))."\n";
