@@ -1,0 +1,145 @@
+
+<!-- Otter XML -->
+
+<!-- Each otter XML document can contain one or more annotated
+     regions of chromosomes, each of which is contained in a
+     sequence-set element -->
+<!ELEMENT otter (sequence-set+)>
+
+<!-- Author names and email addresses can be optionally attached
+     to many of the elements in an otter XML document to flag
+     who last modified that element -->
+<!ELEMENT author #PCDATA>
+<!ELEMENT author-email #PCDATA>
+
+<!-- a genomic region - part or whole of a chromosome -->
+<!ELEMENT sequence-set (
+    assemly-type,
+    sequence-fragment+,
+    locus*,
+    poly-a-signal*,
+    poly-a-site*,
+    dna?)>
+
+<!-- a that identifies the assembly from which the genomic region is taken -->
+<!ELEMENT assembly-type #PCDATA>
+
+<!--  -->
+<!ELEMENT sequence-fragment (
+    accession,
+    version,
+    id?,
+    assembly-start,
+    assembly-end,
+    fragment-ori,
+    fragment-offset,
+    keyword*,
+    remark*,
+    author?,
+    author-email?)>
+<!ELEMENT accession #PCDATA>
+<!ELEMENT version #PCDATA>
+<!ELEMENT id #PCDATA>
+<!ELEMENT assembly-start #PCDATA>
+<!ELEMENT assembly-end #PCDATA>
+<!ELEMENT fragment-ori #PCDATA>
+<!ELEMENT fragment-offset #PCDATA>
+<!ELEMENT keyword #PCDATA>
+<!ELEMENT remark #PCDATA>
+<!ELEMENT locus (
+    name,
+    type?,
+    truncated?,
+    author?,
+    author-email?,
+    description?,
+    synonym*,
+    remark*
+    known?,
+    transcript+)>
+<!ATTLIST locus
+    stable-id CDATA #IMPLIED
+    >
+<!ELEMENT name #PCDATA>
+<!ELEMENT type #PCDATA>
+<!ELEMENT truncated EMPTY>
+<!ELEMENT description #PCDATA>
+<!ELEMENT synonym #PCDATA>
+<!ELEMENT remark #PCDATA>
+<!ELEMENT known EMPTY>
+<!ELEMENT transcrpt (
+    name,
+    author?,
+    author-email?,
+    remark*,
+    translation-start?,
+    translation-end?,
+    mRNA-start-not-found?,
+    mRNA-end-not-found?,
+    cds-start-not-found?,
+    cds-end-not-found?,
+    transcript-class,
+    evidence*,
+    exon+,
+    )>
+<!ATTLIST locus
+    stable-id CDATA #IMPLIED,
+    translation-stable-id CDATA #IMPLIED
+    >
+<!ELEMENT translation-start #PCDATA>
+<!ELEMENT translation-end #PCDATA>
+<!ELEMENT mRNA-start-not-found EMPTY>
+<!ELEMENT mRNA-end-not-found EMPTY>
+<!ELEMENT cds-start-not-found EMPTY>
+<!ELEMENT cds-end-not-found EMPTY>
+<!ELEMENT transcript-class #PCDATA>
+
+<!-- Supporting evidence used to construct transcripts -->
+<!ELEMENT evidence (
+    name,
+    type>
+<!ELEMENT type (est|c-dna|genomic|protein|unknown)>
+<!ELEMENT est EMPTY>
+<!ELEMENT c-dna EMPTY>
+<!ELEMENT genomic EMPTY>
+<!ELEMENT protein EMPTY>
+<!ELEMENT unknown EMPTY>
+
+
+<!-- exons with coordinates in the sequence-set -->
+<!ELEMENT exon (
+    start,
+    end,
+    strand,
+    frame?)>
+<!ATTLIST exon
+    stable-id CDATA #IMPLIED
+    >
+
+<!-- start is integer greater than zero and less than end
+     and is in chromosomal (sequence-set) coordinates -->
+<!ELEMENT start #PCDATA>
+
+<!-- like start, but greater than or equal to start -->
+<!ELEMENT end #PCDATA>
+
+<!-- is "1" for forward strand or "-1" for reverse strand -->
+<!ELEMENT strand #PCDATA>
+
+
+<!-- we have dropped the old <feature> element and now have
+     explicit polyA signal and site elements -->
+<!ELEMENT poly-a-signal (
+    start,
+    end,
+    strand)>
+<!ELEMENT poly-a-site (
+    start,
+    end,
+    strand)>
+
+<!-- Can contain the whole DNA string of the sequence-set if
+     desired to make a self-contained annotation -->
+<!ELEMENT dna #PCDATA>
+
+

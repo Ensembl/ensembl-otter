@@ -24,7 +24,9 @@ create table clone_remark (
 	clone_remark_id int(10) unsigned DEFAULT '0' NOT NULL auto_increment,
 	remark TEXT,
 	clone_info_id int(10) unsigned DEFAULT '0' NOT NULL,
-        PRIMARY KEY (clone_remark_id)
+        PRIMARY KEY (clone_remark_id),
+        
+        KEY(clone_info_id, clone_remark_id)
 );
 
 create table clone_info (
@@ -110,6 +112,13 @@ create table transcript_info (
 
         PRIMARY KEY (transcript_info_id)
 	);
+
+create table transcript_synonym (
+        transcript_name varchar(40) not null,
+        transcript_synonym varchar(40) not null,
+        
+        PRIMARY KEY (transcript_name, transcript_synonym)
+        );
 
 create table evidence (
 	evidence_id int(10) unsigned default '0' not null auto_increment,
