@@ -410,7 +410,7 @@ sub unlock_otter_slice{
     confess "Missing DatsSet name argument" unless $dataset_name;
 
     my $client   = $self->Client or confess "No Client attached";
-    return unless $client->write_access();
+
     my $xml_file = Bio::Otter::Lace::PersistentFile->new;
     $xml_file->root($self->home);
     $xml_file->name(".${slice_name}${dataset_name}${LOCK_REGION_XML_FILE}");
@@ -985,7 +985,7 @@ sub DESTROY {
     }
     my $client = $self->Client;
     if($client){
-        $self->unlock_all_slices();
+        $self->unlock_all_slices() if $client->write_access;
     }
     rmtree($home);
 }
