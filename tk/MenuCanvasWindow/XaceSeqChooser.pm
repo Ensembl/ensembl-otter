@@ -614,7 +614,10 @@ sub bind_events {
     $canvas->Tk::bind('<KP_Enter>', sub{ $self->edit_double_clicked });    
     
     # Object won't get DESTROY'd without:
-    $canvas->toplevel->bind('<Destroy>', sub{ $self = undef });
+    $canvas->toplevel->bind('<Destroy>', sub{
+        warn "Dealing with <Destroy> call";
+        $self = undef;
+        });
 }
 
 sub exit_save_data {
@@ -622,7 +625,7 @@ sub exit_save_data {
 
     # Ask the user if any changes should be saved
     my $dialog = $self->canvas->toplevel->Dialog(
-        -title          => 'Save changes?',
+        -title          => 'Otter save?',
         -bitmap         => 'question',
         -text           => "Save any changes to otter server?",
         -default_button => 'Yes',

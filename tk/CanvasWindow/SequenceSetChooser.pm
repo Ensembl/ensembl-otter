@@ -50,7 +50,7 @@ sub new {
         )->pack(-side => 'left');
     
     my $quit = $button_frame->Button(
-        -text       => 'Close Window',
+        -text       => 'Close',
         -command    => $close_window,
         )->pack(-side => 'right');
     
