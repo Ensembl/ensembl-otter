@@ -270,8 +270,8 @@ sub get_default_GeneMethods{
     my ($self ) = @_ ;       
     my @methods = (
 
-    # Method name                Editable?  Coding?  sub-category of?
-        
+        # note: if the sub category field is 0 it is a parent if it is 1 it is a child of the last parent listed 
+        # Method name               Editable?  Coding?  sub-category of?        
         # New set of methods for Otter
         Coding                   => [1,         1,          0],
         Transcript               => [1,         0,          0],
@@ -285,6 +285,7 @@ sub get_default_GeneMethods{
         Processed_pseudogene     => [1,         0,          1],
         Unprocessed_pseudogene   => [1,         0,          1],
         Predicted                => [1,         0,          0],
+        Transposon               => [1,         1,          0],
         # newly added - truncated versions of above methods        
         Coding_trunc                    => [0,         1,          1],
         Transcript_trunc                => [0,         0,          0],
