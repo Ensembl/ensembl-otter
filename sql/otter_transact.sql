@@ -12,6 +12,13 @@ create table keyword (
         PRIMARY KEY (keyword_id)
 ) Type=InnoDB;
 
+create table clone_remark (
+        clone_remark_id int(10) unsigned DEFAULT '0' NOT NULL auto_increment,
+        remark TEXT,
+        clone_info_id int(10) unsigned DEFAULT '0' NOT NULL,
+        PRIMARY KEY (clone_remark_id)
+) Type=InnoDB;
+
 create table clone_info_keyword (
 	keyword_id  int(10) unsigned DEFAULT '0' NOT NULL,
 	clone_info_id int(10) unsigned DEFAULT '0' NOT NULL,
