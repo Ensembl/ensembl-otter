@@ -70,6 +70,7 @@ use GenomeCanvas;
         #$canvas->move('current', 0, $y_diff);
         #$canvas->move('current', $x_diff, 0);
         $canvas->move($current_obj, $x_diff, $y_diff);
+        snap_to_canvas($canvas);
     }
     
     sub snap_to_canvas {

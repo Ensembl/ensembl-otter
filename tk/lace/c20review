@@ -584,6 +584,7 @@ sub get_unplaced_clones {
                 WHERE sgp.raw_id = raw.internal_id
                   AND raw.clone = c.internal_id
                   AND sgp.fpcctg_name = '$ctg_name'
+                  AND sgp.type = 'SANGER'
                 ORDER BY sgp.chr_start ASC
                   , sgp.chr_end ASC
                 });
