@@ -13,39 +13,41 @@ use vars qw(@ISA);
 =head2 _generic_sql_fetch
 
  Title   : _generic_sql_fetch
- Usage   :
- Function:
- Example :
- Returns : 
- Args    :
+ Usage   : $self->_generic_sql_fetch("where gene_name = ?", [$var1])
+ Function: return a list ref of GeneName objs that match a criterion.
+ Example : 
+ Returns : array ref '[]' of GeneName objs
+ Args    : optional "where clause" and bind variables for that clause []
 
 
 =cut
 
 sub _generic_sql_fetch {
-	my( $self, $where_clause ) = @_;
+	my( $self, $where_clause, $bind ) = @_;
+
+        my @bind = ($bind ? @$bind : ());
 
 	my $sql = q{
 		SELECT gene_name_id,
 		       name,
 		       gene_info_id
 		FROM gene_name }
-	. $where_clause;
+	. ( $where_clause ? $where_clause : '' );
 
 	my $sth = $self->prepare($sql);
-	$sth->execute;
+	$sth->execute(@bind);
 
-	if (my $ref = $sth->fetchrow_hashref) {
-	    my $obj = new Bio::Otter::GeneName;
-		$obj->dbID($ref->{gene_name_id});
-		$obj->name($ref->{name});
-		$obj->gene_info_id($ref->{gene_info_id});
-		
-		return $obj;
+        my $names = [];
 
-	} else {
-		return;
-	}
+        while (my $ref = $sth->fetchrow_hashref)  {
+            my $obj = new Bio::Otter::GeneName;
+            $obj->dbID($ref->{gene_name_id});
+            $obj->name($ref->{name});
+            $obj->gene_info_id($ref->{gene_info_id});
+            push(@$names,$obj);
+        }
+
+        return $names;
 }
 
 =head2 fetch_by_dbID
@@ -61,37 +63,20 @@ sub _generic_sql_fetch {
 =cut
 
 sub fetch_by_dbID {
-	my ($self,$id) = @_;
+    my ($self,$id) = @_;
+    
+    if (!defined($id)) {
+        $self->throw("Id must be entered to fetch a GeneName object");
+    }
 
-	if (!defined($id)) {
-		$self->throw("Id must be entered to fetch a GeneName object");
-	}
+    my $geneNames = $self->_generic_sql_fetch("where gene_name_id = ?", [$id]);
 
-	my $obj = $self->_generic_sql_fetch("where gene_name_id = $id");
-
-	return $obj;
+    return @$geneNames ? $geneNames->[0] : undef; # not sure this is right, previous behaviour though
 }
 
 sub fetch_all {
-  my ($self) = @_;
-
-  my $query = "select * from gene_name";
-
-  my $sth = $self->prepare($query);
-
-  my $res = $sth->execute;
-
-  my @names;
-
-  while (my $ref = $sth->fetchrow_hashref)  {
-     my $obj = new Bio::Otter::GeneName;
-	$obj->dbID($ref->{gene_name_id});
-	$obj->name($ref->{name});
-	$obj->gene_info_id($ref->{gene_info_id});
-     push(@names,$obj);
-  }
-
-  return @names;
+    my ($self) = @_;
+    return $self->_generic_sql_fetch();
 }
 
 =head2 fetch_by_name
@@ -108,15 +93,13 @@ sub fetch_all {
 
 
 sub fetch_by_name {
-	my ($self,$name) = @_;
+    my ($self,$name) = @_;
+    
+    if (!defined($name)) {
+        $self->throw("Name must be entered to fetch a GeneName object");
+    }
 
-	if (!defined($name)) {
-		$self->throw("Name must be entered to fetch a GeneName object");
-	}
-
-	my $obj = $self->_generic_sql_fetch("where name = \'$name\'");
-
-	return $obj;
+    return $self->_generic_sql_fetch("where name = ? ",[$name]);
 }
 
 
@@ -139,9 +122,9 @@ sub fetch_by_gene_info_id{
        $self->throw("GeneInfo id must be entered to fetch a GeneName object");
 	}
 
-   my $obj = $self->_generic_sql_fetch("where gene_info_id = $id");
+   my $geneNames = $self->_generic_sql_fetch("where gene_info_id = ?",[$id]);
 
-   return $obj;
+   return @$geneNames ? $geneNames->[0] : undef; # not sure this is right, previous behaviour though
 
 }
 
@@ -218,10 +201,9 @@ sub exists {
 	$self->throw("Can't check if a GeneName exists without a GeneInfo id");
     }
 
-    my $newobj = $self->_generic_sql_fetch("where name = \'" .   $obj->name .
-                       "\' and gene_info_id = " . $obj->gene_info_id);
+    my $geneNames = $self->_generic_sql_fetch("where name = ? and gene_info_id = ?", [$obj->name, $obj->gene_info_id]);
 
-    return $newobj;
+    return @$geneNames ? $geneNames->[0] : undef; # not sure this is right, previous behaviour though
 
 }
 1;
