@@ -215,8 +215,10 @@ sub get_SequenceNotes_by_name{
 sub clean_SequenceNotes{
     my ($self) = @_;
     my $seqNotes = $self->{'_sequence_notes'} || {};
+     
     foreach my $hash_id(keys %$seqNotes){
-	$seqNotes->{"$hash_id"} = undef;
+#	warn $hash_id ;
+        $seqNotes->{"$hash_id"} = undef;
 	delete $seqNotes->{"$hash_id"};
     }
     return 0;
@@ -292,9 +294,13 @@ sub search_window{
         my $search_entry    =   $search_window->Entry(   
                                                     -width      => 30       ,
                                                     -relief     => 'sunken' ,
-                                                    -borderwidth=> 4        ,
-                                                    -font       =>   'Helvetica',   
-                )->pack(    -side => 'top') ;
+                                                    -borderwidth=> 2        ,
+                                                    #-font       =>   'Helvetica-14',   
+                )->pack(    -side => 'top' , 
+                            -padx => 5 ,
+                            -fill => 'x'    
+                            ) ;
+                            
         $search_entry->bind('<Return>' , sub {$self->search}) ;
         $self->{'search_entry'} = $search_entry ;
         
@@ -303,20 +309,27 @@ sub search_window{
         my $radio_variable = 'locus' ;         
         my $radio_frame = $search_window->Frame(    
                 )->pack(    -side   =>  'top'   ,
+                            -pady   =>  5       ,
                             -fill   =>  'x'     ,) ; 
         my $locus_radio = $radio_frame->Radiobutton(  -text       =>  'search for locus',
                                                       -variable   =>  \$radio_variable  ,
                                                       -value      =>  'locus' ,       
-                )->pack(    -side   =>  'left') ; 
+                )->pack(    -side    =>  'left' ,
+                            -padx    =>   5  ,
+                        ) ; 
         my $clone_radio = $radio_frame->Radiobutton(    -text       =>  'search for clone'  , 
                                                         -variable   =>  \$radio_variable    ,
                                                         -value      =>  'clone'
-                )->pack(    -side   =>  'right');
+                )->pack(    -side   =>  'right' ,
+                            -padx   =>  5
+                        );
         
         
         ## search cancel buttons
         my $search_cancel_frame = $search_window->Frame(
                 )->pack(-side => 'bottom'   , 
+                        -padx =>  5         ,
+                        -pady =>  5         , 
                         -fill => 'x'        , ) ;   
         my $find_button     =   $search_cancel_frame->Button(   -text       => 'Search' ,
                                                                 -command    =>  sub{$self->search($radio_variable)}    
@@ -326,10 +339,11 @@ sub search_window{
                 )->pack(-side => 'right');
            
         $self->{'_search_window'} = $search_window ;
+        $search_window->bind('<Destroy>' , sub { $self = undef }  ) ;
     }
     
     $search_window->deiconify;
-    $search_window->raise;
+    $search_window->raise ;
     $search_window->focus ;
     $self->{'search_entry'}->focus;
 }
@@ -372,6 +386,7 @@ sub search{
         $sn->initialise;
         $sn->draw;
         $top->raise ;
+        $self->add_SequenceNotes($sn) ;
     }else{
         ## send mesasage to main window
         $self->message("no clones matched your search criteria") ;
