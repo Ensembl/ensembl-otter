@@ -7,7 +7,7 @@ use strict;
 
 use Carp;
 use Getopt::Long 'GetOptions';
-use Hum::Tracking;
+
 use Bio::Otter::Lace::PipelineDB;
 use Bio::Otter::Lace::Defaults;
 
