@@ -197,7 +197,7 @@ my $input_type;
         # splits each line into its component parts - puts line in a temporary array (splits the line on whitespace)
     
  
-        if(@line_in_array == 9 ){
+        if (@line_in_array >= 9) {
             # we must have the full file rather than just clone names
             $input_type = "AGP";
             $chromosome_name = @line_in_array->[0]; 
@@ -288,7 +288,6 @@ my $input_type;
         if ($input_type eq 'LIST'){
             ## all we have is the list of contigs/clones - need to give default values for agp
             $acc_ver = $file_line->[0];
-            $seq = $pfetch->get_Seq_by_acc($acc_ver);
             $super_contig_name = $chromosome_name;  # should be available from the command line if we have a clone list as input (or we would have died earlier)       
             $n = 5;    # does this get used for anything? - don't think so
             $type = 'F' ;        
@@ -315,8 +314,8 @@ my $input_type;
             $ctg_end,
             $ctg_ori,
             ) = @$file_line;    
-            $seq = $pfetch->get_Seq_by_acc($acc_ver);
         }
+        $seq = $pfetch->get_Seq_by_acc($acc_ver);
         
         next unless ($type eq 'F');
 
