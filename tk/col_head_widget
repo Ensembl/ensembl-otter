@@ -9,6 +9,7 @@ use CanvasWindow;
 
 {
     my $mw = CanvasWindow::MainWindow->new('col. row. head widget');
+    $mw->configure(-background => 'orange');
     my $heading_width   =  50;
     my $heading_height  =  50;
     my $canvas_width    = 300;
