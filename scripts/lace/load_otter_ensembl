@@ -106,7 +106,7 @@ my $input_type;
             'name=s'        => \$set_name,
             );
     
-    print STDERR $host;
+    print STDERR "host=$host\n";
     
     my $otter_db = Bio::Otter::DBSQL::DBAdaptor->new(
         -HOST   => $host,
@@ -117,7 +117,7 @@ my $input_type;
         );
         
     
-    my $pipe_options ;#= get_pipeline_options($otter_db);
+    my $pipe_options = get_pipeline_options($otter_db);
     if ($pipe_options) {
         # Check none of the pipe options are set on command line
         if ($pipehost or $pipeport or $pipedbname or $pipedbuser or $pipedbpass) {
@@ -140,6 +140,11 @@ my $input_type;
             };
         save_pipeline_options($otter_db, $pipe_options);
     }
+    
+    #while (my ($key, $val) = each %$pipe_options) {
+    #    print STDERR "  $key => $val\n";
+    #}
+    
     my $pipeline_db = Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor->new(%$pipe_options);
 
     if ($help){
@@ -235,15 +240,15 @@ my $input_type;
     $sth = $otter_db->prepare("SELECT meta_value FROM meta WHERE meta_key ='pipeline_db' ");
     unless ($sth->execute){
         die "could not execute statement on otter database";
-    }else{
+    } else {
         ## the row returned should contain the following piece of code or something equivalent
         ## $pipeline_db = Bio::EnsEMBL::DBLoader->new('Bio::EnsEMBL::DBSQL::DBAdaptor/host=ecs1b;port=3306;dbname=roy_test_new;user=ensadmin;pass=ensembl');
         
         
         my $pipeline_connecting_code = $sth->fetchrow  ;
         eval  $pipeline_connecting_code  ;    
-        if ($@)
-        {   warn "errors when fetching details of pipeline database from otter meta table:  ";
+        if ($@) {
+            warn "errors when fetching details of pipeline database from otter meta table:  ";
         }
     }
 
@@ -385,7 +390,7 @@ my $input_type;
         my $ctg_id;
 ###-----------------------------------end of bit to be replaced----------------------------------------------------------        
 ###-----------------------------------to be replaced with --------------------------------------------------------- 
-#        my $ctg_id = clone_to_db($pipe_clone_adaptor , $acc , $ver);      
+#        my $ctg_id = clone_to_db($pipe_clone_adaptor , $pfetch, $acc , $ver);      
 ###----------------------------------------------------------------------------------------------------------------------
 
                 
@@ -639,9 +644,10 @@ sub store_input_id_analysis{
 
 sub clone_to_db{
     
-    my ( $adaptor, $acc , $ver ) = @_ ; 
+    my ( $adaptor, $pfetch, $acc , $ver ) = @_ ; 
     my $clone;
     
+    my $acc_ver = "$acc.$ver";
     eval { $clone = $adaptor->fetch_by_accession_version($acc , $ver); };
     if (! $@){
         warn "this clone is already in the " . $adaptor->db->dbname . " database" ;
@@ -654,7 +660,7 @@ sub clone_to_db{
                 
         $clone = Bio::EnsEMBL::Clone->new();
         $clone->htg_phase(3);
-        $clone->id($acc.$ver);
+        $clone->id($acc_ver);
         $clone->embl_id($acc);
         $clone->version(1);
         $clone->embl_version($ver);
@@ -674,7 +680,7 @@ sub clone_to_db{
         $clone->add_Contig($contig);
  
         ##------------------
-        store_clone($pipe_clone_adaptor , $clone);       
+        store_clone($adaptor , $clone);       
     }
     
    
@@ -690,11 +696,11 @@ sub clone_to_db{
 sub get_pipeline_options {
     my( $db ) = @_;
     
-    my $sth = $db->prepare("SELECT meta_value FROM meta WHERE meta_key ='pipeline_db'");
+    my $sth = $db->prepare("SELECT meta_value FROM meta WHERE meta_key = 'pipeline_db'");
     $sth->execute;
     my ($opt_str) = $sth->fetchrow;
     if ($opt_str) {
-        my $options_hash = eval $opt_str;
+        my $options_hash = {eval $opt_str};
         if ($@) {
             die "Error evaluating '$opt_str' : $@";
         }
@@ -707,11 +713,11 @@ sub get_pipeline_options {
 sub save_pipeline_options {
     my( $db, $options_hash ) = @_;
     
-    my $host = $options_hash->{host}; 
-    my $port = $options_hash->{port};
-    my $user = $options_hash->{user};
-    my $pass = $options_hash->{pass};
-    my $dbname = $options_hash->{dbname};
+    my $host    = $options_hash->{-HOST};
+    my $port    = $options_hash->{-PORT};
+    my $user    = $options_hash->{-USER};
+    my $pass    = $options_hash->{-PASS};
+    my $dbname  = $options_hash->{-DBNAME};
     
     
     my $opt_str = qq{
