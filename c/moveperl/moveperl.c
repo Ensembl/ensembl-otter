@@ -119,10 +119,6 @@ int main(int argc, char *argv[]) {
   strcpy(fullFromName,argv[0]);
   strcpy(fullDestName,argv[1]);
 
-  if (strlen(fullFromName) < strlen(fullDestName) && !allowLongerDest) {
-    fprintf(stderr,"Error: Length of to path can't be longer than from path\n");
-    exit(1);
-  }
 
   if (!allowAppend) {
     stat(fullFromName,&st);
@@ -136,6 +132,10 @@ int main(int argc, char *argv[]) {
   strcpy(baseToPath,fullDestName);
   if (baseSrcPath[0]=='\0') {
     strcpy(baseSrcPath,fullFromName);
+  }
+  if (strlen(baseSrcPath) < strlen(baseToPath) && !allowLongerDest) {
+    fprintf(stderr,"Error: Length of to path can't be longer than from path\n");
+    exit(1);
   }
 
   descendAndDo(fromdir,fullFromName,fullDestName,
@@ -263,7 +263,7 @@ int doFuncInp(char *fromName, char *toName, char *baseSrcName,
         !strcmp(&(toName[toNameLen-archExtLen-1]),archiveExtension)) {
       char comStr[MAXPATHLEN + 1024];
       sprintf(comStr,"ranlib %s",toName);
-      printf("%s\n",comStr);
+      //printf("%s\n",comStr);
       system(comStr);
     }
 
@@ -329,7 +329,7 @@ char *copyAndReplace(char *fromBuf,char *toBuf,char *baseSrcName, char *baseToNa
       fromChP  += lenBaseSrcName;
       toChP    += lenBaseToName;
       while (!iscntrl(*fromChP) && !isspace(*fromChP)) {
-        printf("%c",*fromChP);
+        //printf("%c",*fromChP);
         *toChP = *fromChP;
         toChP++;
         fromChP++;
@@ -341,7 +341,7 @@ char *copyAndReplace(char *fromBuf,char *toBuf,char *baseSrcName, char *baseToNa
           toChP++;
         }
       }
-      printf("\n");
+      //printf("\n");
     } else {
       *toChP = *fromChP;
       fromChP++;
@@ -377,13 +377,13 @@ FileType fileType(char *fileBuf,int len) {
       nCntrl++;
     }
   }
-  printf("nNewline = %d nCntrl = %d nToGet = %d\n",nNewline,nCntrl,nToGet);
+  //printf("nNewline = %d nCntrl = %d nToGet = %d\n",nNewline,nCntrl,nToGet);
   if (!nNewline) return BINARY;
+
   if ((float)nCntrl/(float)nToGet > 0.15) return BINARY;
 
-  if ((float)nToGet/(float)nNewline < 81) {
-    return TEXT;
-  }
+  if ((float)nCntrl/(float)nToGet < 0.01) return TEXT;
+  if ((float)nToGet/(float)nNewline < 81) return TEXT;
 
   return BINARY;
 }
