@@ -23,7 +23,7 @@ use CanvasWindow::DotterWindow;
 use Scalar::Util 'weaken';
 
 use CanvasWindow::PolyAWindow;
-use LocusWindow;
+use CanvasWindow::LocusWindow;
 
 sub new {
     my( $pkg, $tk ) = @_;
