@@ -1,0 +1,1 @@
+ps -e | grep otter_srv | awk '{print $1}' | xargs kill
