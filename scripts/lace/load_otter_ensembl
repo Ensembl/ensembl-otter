@@ -1,0 +1,714 @@
+#!/usr/local/bin/perl -w
+
+=head1 NAME
+
+load_otter_ensembl
+
+=head1 SYNOPSIS
+ 
+  load_otter_ensembl (-pipe) 
+
+=head1 DESCRIPTION
+
+This script reads the assembly information from an agp file and pfetches the clone and contig details based on the accession. 
+It then populates the assembly table in both databases ;
+BEWARE! It is for gunshot sequencing projects like fugu, where one clone = one contig is the rule (and they are usually referred to as scaffolds. It does not deal with multiple contigs per clone.
+
+example;
+./Load_otter_ensembl -host ecs1d -dbuser ensadmin -dbpass "ensembl" -port 19322 -dbname colins_otter_test -name COLTEST2 -description 'test description' -chromosome chr12 clone_list
+
+=head1 OPTIONS
+
+    following info is  wrong! this hast been changed yet...
+    -host      host name for database (gets put as host= in locator)
+    -dbname    For RDBs, what name to connect to (dbname= in locator)
+    -dbuser    For RDBs, what username to connect as (dbuser= in locator)
+    -dbpass    For RDBs, what password to use (dbpass= in locator)
+    -module    Module name to load (Defaults to Bio::EnsEMBL::DBSQL::DBAdaptor)
+    -chunk     Maximum size of sequence to load.  Larger sequences than this
+               are chopped into $chunk size pieces.  Default is no chunking (0)
+    -help      displays this documentation with PERLDOC
+=cut
+use Benchmark;
+
+use strict;
+#use vars qw($USER $PASS $DB $HOST $DSN);
+use Getopt::Long;
+use Bio::SeqIO;
+use Bio::EnsEMBL::Clone;
+use Bio::EnsEMBL::RawContig;
+#use Bio::EnsEMBL::DBLoader;
+use Bio::Otter::DBSQL::DBAdaptor;
+use Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor;
+use Bio::EnsEMBL::Pipeline::SeqFetcher::Pfetch;
+use Bio::EnsEMBL::Chromosome;
+
+
+
+
+my $input_type; 
+{
+    my $t0 = new Benchmark; # test the time taken for the script to run.
+    
+    # some important variables (and some less inportant ones that look neater up here) 
+#    my $otter_db;             # connection to the otter db
+#    my $pipeline_db;          # connects to the pipeline db
+    my $sth ;                 # used as a variable for storing the various statement handles used through the script
+    my $agp_file ;            # the file containing the assembly details
+    my $pipe_analysis ;       # analysis adaptor for the pipeline db
+    my $pipe_clone_adaptor ;  # clone adaptor for the pipeline db
+    my $otter_analysis ;      # analysis adaptor for the otter deb
+    my $otter_clone_adaptor;  # clone adaptor for the otter db
+    my $chromosome_id ;
+    my @sgp ;           #static golden path. stores an array of arrays. each sub array contains the details for 1 row in the asembly table effectivley
+    my @sgp_pipe ;
+    my @alternative_id ;      # stores the id of contigs for one of the dbs
+    my $sv;                   # sequence version
+    my $module = 'Bio::EnsEMBL::DBSQL::DBAdaptor';
+    my @file_values;          # stores the values given in each line of input as an array of the component parts
+    my $chromosome_name;
+    my $set_name;
+    my $end_coord;          # stores the end coord of the last contig in sequence set - used when appending contigs to a previous set
+
+
+    #----------------
+    
+    my $host = 'localhost';
+    my $port = 3306;
+    my $dbname = 'otter';
+    
+    my(                                      $dbuser,     $dbpass );
+    my( $pipehost, $pipeport, $pipedbname, $pipedbuser, $pipedbpass );
+
+    my $analysis_priority =  5; # to be stored in the sequence set table
+    my $description; 
+    ####---------------
+
+    my $help = 0;
+    &GetOptions(
+            'host=s'        => \$host,
+	    'port=i'        => \$port,
+	    'user=s'        => \$dbuser,
+	    'pass=s'        => \$dbpass,
+            'dbname=s'      => \$dbname,
+
+            'pipehost=s'    => \$pipehost,      
+	    'pipeport=i'    => \$pipeport,      
+	    'pipeuser=s'    => \$pipedbuser,    
+	    'pipepass=s'    => \$pipedbpass,
+            'pipedbname=s'  => \$pipedbname, 
+
+	    'module=s'      => \$module,
+       	    'h|help'        => \$help,
+            'description=s' => \$description,
+            'priority=i'    => \$analysis_priority ,
+            'chromosome=s'  => \$chromosome_name, 
+            'name=s'        => \$set_name,
+            );
+    
+    print STDERR $host;
+    
+    my $otter_db = Bio::Otter::DBSQL::DBAdaptor->new(
+        -HOST   => $host,
+        -PORT   => $port,
+        -USER   => $dbuser,
+        -PASS   => $dbpass,
+        -DBNAME => $dbname,
+        );
+        
+    
+    my $pipe_options ;#= get_pipeline_options($otter_db);
+    if ($pipe_options) {
+        # Check none of the pipe options are set on command line
+        if ($pipehost or $pipeport or $pipedbname or $pipedbuser or $pipedbpass) {
+            die "pipeline db options are specified on command line, but are already stored in the otter db";
+        }
+    } else {
+        # Pipeline database defaults to same values as otter
+        $pipehost   ||= $host  ;
+        $pipeport   ||= $port  ;
+        $pipedbname ||= $dbname;
+        $pipedbuser ||= $dbuser;
+        $pipedbpass ||= $dbpass;
+        
+        $pipe_options = {
+            -HOST   => $pipehost,
+            -PORT   => $pipeport,
+            -USER   => $pipedbuser,
+            -PASS   => $pipedbpass,
+            -DBNAME => $pipedbname,
+            };
+        save_pipeline_options($otter_db, $pipe_options);
+    }
+    my $pipeline_db = Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor->new(%$pipe_options);
+
+    if ($help){
+        exec('perldoc', $0); #runs perldoc on itself (variable $0 stores the program name)
+    } 
+    
+    if (! defined $description){
+        die "no description given" ;
+    }
+
+    if (! defined  $set_name){
+        die "you need to give the set name as an argument";
+    }
+
+
+    ## takes the last arguments as the filename to be read
+    $agp_file = @ARGV->[0];
+    if (! defined $agp_file ) {warn 'cannot load assembly details, as there is no agp file';}
+    open AGP, "$agp_file" or die "couldnt open $agp_file";
+
+
+
+
+
+
+    #------------------------- read input file bit -----------------------------------------
+    ##- go through file , check that the file contains the same chromosome for each entry
+    my $line_counter = 0;
+    my $prev_chr_name ='';
+    while(<AGP>){
+    
+        $line_counter ++;    
+    
+        my @line_in_array = split /[\s]/ , $_ ; # puts line in a temporary array (splits the array on whitespace)
+        # 0       1       2       3       4       5               6       7       8
+        # chr_20  2808333 2934911 29      F       AL121905.0      101     126679  +
+        # splits each line into its component parts
+    
+ 
+        if(@line_in_array == 9 ){
+            # we must have the full file rather than just clone names
+            $input_type = "AGP";
+            my $chromosome_name = @line_in_array->[0]; 
+            my $type = @line_in_array->[4];
+            if ($prev_chr_name eq $chromosome_name){
+                die "clones on different chromosomes" unless $chromosome_name eq $prev_chr_name ;
+            }
+            else{
+                $prev_chr_name = $chromosome_name;
+            }
+        
+            # if clones are not finished , dont add them to database
+            if (! $type  eq 'F'){
+                      next;            
+            }
+               
+        }
+        elsif(@line_in_array == 1){ 
+            # cant think of anything to check  here yet
+            # we will end up here if the input file has only a list of contigs in it. 
+            $input_type = "LIST";
+            if (! defined $chromosome_name){
+                # we need a chromosome name if only a list of contigs is given
+                die "you need to provide the name of a chromosome when the input file is a list of clones";
+            }
+            
+        }
+        else {
+            print STDERR "\n\tinput file does not have the expected number of columns at line $line_counter\n\tshould have the format ...\n\tchr_20  2808333 2934911 29      F       AL121905.0      101     126679  +";
+            print STDERR "line $line_counter has been skipped";
+            next; 
+        }
+        push (@file_values , [@line_in_array]); 
+    
+    }#--------------------------------finish reading input file bit------------------------
+    
+
+    # die on INT signal    - should clean things up a bit , if program terminates early
+    $SIG{INT} = sub {my $sig=shift;die "exited after SIG$sig";};
+
+
+    ## change the conection parameters if a password is given or not then connect to otter db
+    my $otter_locator;
+    if ($dbpass) {
+       $otter_locator = "$module/host=$host;port=$port;dbname=$dbname;user=$dbuser;pass=$dbpass";
+    }
+    else {
+        $otter_locator = "$module/host=$host;port=$port;dbname=$dbname;user=$dbuser;pass=";
+    }
+    $otter_db  =  Bio::EnsEMBL::Pipeline::DBAdaptor->new($otter_locator);
+
+    ## query otter database for details of pipelinedb
+    $sth = $otter_db->prepare("SELECT meta_value FROM meta WHERE meta_key ='pipeline_db' ");
+    unless ($sth->execute){
+        die "could not execute statement on otter database";
+    }else{
+        ## the row returned should contain the following piece of code or something equivalent
+        ## $pipeline_db = Bio::EnsEMBL::DBLoader->new('Bio::EnsEMBL::DBSQL::DBAdaptor/host=ecs1b;port=3306;dbname=roy_test_new;user=ensadmin;pass=ensembl');
+        
+        
+        my $pipeline_connecting_code = $sth->fetchrow  ;
+        eval  $pipeline_connecting_code  ;    
+        if ($@)
+        {   warn "errors when fetching details of pipeline database from otter meta table:  ";
+        }
+    }
+
+
+    # update the sequence sets table and return the coord of the last contig
+    $end_coord = check_sequence_set($otter_db, $set_name);
+
+    # create an analysis adaptor and a clone adaptor for the otter database and then one of each for the pipeline db
+    $otter_analysis = $otter_db->get_AnalysisAdaptor;
+    $otter_clone_adaptor = $otter_db->get_CloneAdaptor;
+    $pipe_analysis = $pipeline_db->get_AnalysisAdaptor;
+    $pipe_clone_adaptor = $pipeline_db->get_CloneAdaptor;
+
+    # ensure that there is one and only one analysis per logic name
+    my @otter_analysis = $otter_analysis->fetch_by_logic_name('SubmitContig');
+    if ($#otter_analysis != 0) {
+        die ("More than one or none SubmitContig logic name in otter . Eeek! [@otter_analysis]");
+    }
+    my @pipe_analysis = $pipe_analysis->fetch_by_logic_name('SubmitContig');
+    if ($#pipe_analysis != 0){
+        die ("More than one or none SubmitContig logic name in pipeline db. Eeek! [@pipe_analysis]");
+    }
+
+    ## default value for just now. - true value will be added by a different script
+    my $superctg_ori = 1;  
+
+    #### pfetch the details of a clone
+    my  $pfetch = Bio::EnsEMBL::Pipeline::SeqFetcher::Pfetch->new();
+    my $seq ; # stores the sequence (of each line entry) and name as a bio::seq object  
+    
+    
+    
+    ## while loop effectively reads each line of a .agp file (that has already been done and stored in @file values)
+    ## it pfetches the sequence details based on the accsession number and version.
+    my ($super_contig_name, $chr_start,$chr_end, $n, $type, $acc_ver, $ctg_start, $ctg_end,$ctg_ori,) ; 
+       
+    foreach my $file_line (@file_values) {       
+ 
+            
+        if ($input_type eq 'LIST'){
+            ## all we have is the list of contigs/clones - need to give default values for agp
+            $acc_ver = $file_line->[0];
+            $seq = $pfetch->get_Seq_by_acc($acc_ver);            
+            $super_contig_name = $chromosome_name;  # should be available from the command line if we have a clone list as input (or we would have died earlier)       
+            $n = 5;    # does this get used for anything? - don't think so
+            $type = 'F' ;        
+            $ctg_ori =  '+';
+            $chr_start =  $end_coord + 10000 ; 
+            $chr_end = $chr_start + $seq->length;
+            
+            $ctg_start = 1 ;
+            $ctg_end =  1 + $seq->length;
+                       
+            $end_coord = $chr_end; # so that it is in a suitable position for next time            
+            
+        }
+        else {
+        # input file must be in AGP format
+        # 0       1       2       3       4       5               6       7       8
+        # chr_20  2808333 2934911 29      F       AL121905.0      101     126679  +
+            (
+            $super_contig_name,
+            $chr_start,
+            $chr_end,
+            $n,
+            $type,
+            $acc_ver,
+            $ctg_start,
+            $ctg_end,
+            $ctg_ori,
+            ) = @$file_line;    
+        
+            $seq = $pfetch->get_Seq_by_acc($acc_ver);
+        }
+        
+        
+        next unless ($type eq 'F');
+    #    warn "number of bits :" . scalar(@$file_line) ;   #debugging - make sure we have correct number of   
+
+        #split ino accesion number and version number 
+        my ($acc, $sv) = $acc_ver =~ /^(.+)\.(\d+)$/;
+        # translate orientation to integer
+        if ($ctg_ori eq '-') {
+            $ctg_ori = -1;
+        }
+        elsif ($ctg_ori eq '+') {
+            $ctg_ori = 1;
+        }
+        else {
+            die "Invalid orientation '$ctg_ori'";
+        }
+           
+        ## check to see if the clone exists in the db already
+        my $clone;
+        eval{ 
+            $clone = $pipe_clone_adaptor->fetch_by_accession_version($acc , $sv);
+            $clone = $otter_clone_adaptor->fetch_by_accession_version($acc, $sv);
+        };
+
+        if (! $@) {
+            warn "this clone is already in the database    " .$clone->dbID ;
+            
+        }
+        else{
+                 
+            $clone= Bio::EnsEMBL::Clone->new();
+            $clone->htg_phase(3);
+            $clone->id($acc_ver);
+            $clone->embl_id($acc);
+            $clone->version(1);
+            $clone->embl_version($sv);
+            $clone->created(time);
+            $clone->modified(time);
+    
+            #    create and add contig(s) to the clone
+            ##   now we only expect one contig per clone
+
+            my $contig = Bio::EnsEMBL::RawContig->new;
+            my $end = $seq->length;
+
+        
+            $contig->name($acc_ver . '.1.' . $seq->length);
+            $contig->length($seq->length);
+            $contig->seq($seq->seq); 
+            $clone->add_Contig($contig);
+        
+            ##-------------------------------------- 
+            ## need to store the ID of the first db in a seperate array as storing the clone 
+            store_clone($pipe_clone_adaptor , $clone);
+            push  @alternative_id,   $clone->get_all_Contigs->[0]->dbID ;
+            store_clone($otter_clone_adaptor , $clone);
+            ##---------------------------------------    
+        }
+        
+##         store_input_id_analysis($pipeline_db, $clone->embl_id) ;
+        
+        
+        
+                
+        # assembly details get put into a 2D array corresponding to columns in the assembly table of the db
+        
+        my $contigs = $clone->get_all_Contigs;
+        if (scalar(@$contigs) == 1) {
+            my $ctg_id = @$contigs->[0]->dbID; 
+            push(@sgp, [
+                $chr_start, $chr_end,
+                $super_contig_name,
+                $chr_start, $chr_end,
+                $superctg_ori,
+                $ctg_id,
+                $ctg_start, $ctg_end,
+                $ctg_ori,
+                $set_name ]
+                );
+                    
+        } else {
+            warn "Error: got ", scalar(@$contigs), " contigs for '$acc' (should be one clone per contig)";
+        }
+        ##-------------------------------------
+    }  #-----end of read in file loop
+
+
+    my $otter_chromosome   = get_chromosome($otter_db , @file_values->[0]->[0]  );
+    my $pipe_chromosome  =  get_chromosome($pipeline_db , @file_values->[0]->[0] );
+
+    
+    my $check_query = q{SELECT * FROM assembly WHERE };
+    
+    
+    my $insert_query = q{
+        INSERT assembly ( 
+                        chromosome_id
+                        , chr_start, chr_end
+                        , superctg_name
+                        , superctg_start, superctg_end
+                        , superctg_ori
+                        , contig_id
+                        , contig_start, contig_end
+                        , contig_ori
+                        , type )
+                        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+                        } ;
+
+    $sth = $pipeline_db->prepare($insert_query);   
+    my $otter_sth = $otter_db->prepare($insert_query); 
+
+    foreach my $line (@sgp) {
+        # add the appropriate chromosome_id before executing the query        
+        eval{ 
+            unshift(@$line, $otter_chromosome->dbID);             
+            $otter_sth->execute(@$line) or warn "Couldn\'t execute \"INSERT assembly ...\" statement in otterdb";
+            $line->[0] = $pipe_chromosome->dbID ;
+            $line->[7] = shift @alternative_id;  
+            $sth->execute(@$line) or warn "Couldn\'t execute statement in pipeline db " 
+        } ;
+        if ($@){
+            print STDERR "Could not write to databases error was $@\n";
+        }    
+    }
+
+
+
+    #update chromosome length now. - set to max value of chr end in assembly table
+    # I am doing this as two seperate entries, incase one databases contains previous entries that the other doesnt.
+    update_chromosome_length($pipeline_db, $pipe_chromosome);
+    update_chromosome_length($otter_db, $otter_chromosome);
+
+
+
+    # benchmarking 
+    my $t1 = new Benchmark;
+    my $td = timediff($t1, $t0);
+    print STDERR "code took: ", timestr($td) , "\n";
+
+}
+#------------------end of main script -------------------------------------------------------
+
+
+
+#               Subroutines
+#--------------------------------------------------------------------------------------------------------------------------
+#
+
+# 
+sub store_clone{
+    my ($clone_adaptor, $clone) = @_ ;
+    
+    my $acc_ver = $clone->id;
+
+    my ($acc, $sv) = $acc_ver =~ /^(.+)\.(\d+)$/;
+    # check if clone is in db already
+#    eval{
+        #my $clone = $clone_adaptor->fetch_by_accession($acc);
+#        my $clone = $clone_adaptor->fetch_by_accession_version($acc , $sv);
+#    };
+    
+#    if ($@){  
+        eval{ $clone_adaptor->store($clone);  };
+        
+        if($@){
+            print STDERR "Problems writing " . $clone->id . " to database. \nProblem was " . $@;             
+        }
+#    }else
+#    {
+#        print STDERR "Clone " . $clone->id . " (version " . $sv . ")  exists in the databases already\n";
+#    }       
+    warn "->>>>>>".$clone->get_all_Contigs->[0]->dbID . " : " . $clone_adaptor->db->dbname;
+}
+
+
+#------------------------------------------------------------------------------
+
+# check if a set with that name exists 
+# if it deosnt exist update databases with appropritae entry;
+# it returns the last cromosome end coordinate in that sequence set 
+sub check_sequence_set{
+    my ($db, $name) = @_;
+    my $value = 0;
+    
+    my $sth = $db->prepare("SELECT * FROM sequence_set WHERE assembly_type = '$name' ");
+    $sth->execute();
+    my @row = $sth->fetchrow;
+    if (@row){
+        
+        if ($input_type  eq  'AGP'){
+            die "sorry, cant have the same name as an existing set (when using an agp file)";
+        }
+        else{
+            ## input must be a list of accessions - append to end of existing set
+            print STDERR "we already have that sequence set name. Entires will be appended to end\n";    
+            $sth = $db->prepare("SELECT max(chr_end) FROM assembly WHERE type = '$name'");
+            $sth->execute;
+            if (my $row = $sth->fetchrow){
+                $value = @row->[0];
+            }       
+        }
+    }
+    else{
+        
+        ## so there is no entry in the sequence set table- create an entry then
+        $sth = $db->prepare(q{INSERT sequence_set (assembly_type , description , analysis_priority) VALUES (?,?,?)});
+        my @values;
+        @values->[0] = $name;
+        @values->[1] = "description test" ; # need to get this from the command line
+        @values->[2] = 5 ;
+        
+        foreach my $value (@values){
+            print STDERR $value ;
+        }
+        
+        $sth->execute(@values) or warn "could not enter information into the sequence set table of otter" ; 
+        
+    }
+    return $value;
+}
+
+#---------------------------------------------------------------------------------------------------
+
+# returns a chromosome when given a db object and a chromosome name
+sub get_chromosome{
+    
+    my ($db , $chr_name) = @_;
+ 
+    my $chr_adp = $db->get_ChromosomeAdaptor();
+    my $chr;
+    eval{  $chr = $chr_adp->fetch_by_chr_name($chr_name) };    
+    
+    if (! $@) {   # if no errors with getting the chromosome 
+        return $chr;
+    }
+    else{
+        ## put a new chromosome into the db to get its id # note that the length value is a default value and will be set later 
+        my $chr = Bio::EnsEMBL::Chromosome->new(
+                                                -chr_name      => $chr_name,
+                                                -adaptor       => $chr_adp,
+                                                -length       => 1 
+                                                );
+           $chr_adp->store($chr);
+        return $chr;     
+    }
+}
+
+#-----------------------------------------------------------------------------------------------------------------------
+## updates the chromosome length field after assembly table has had values entered
+sub update_chromosome_length{
+    
+     my ($db, $chromosome) = @_ ;
+         
+     my $chr_id = $chromosome->dbID;
+     
+     my $chr_length_query = qq{ SELECT max(chr_end) FROM assembly WHERE chromosome_id = $chr_id } ;   
+     my $sth = $db->prepare($chr_length_query);
+     if($sth->execute()){
+         my $chr_end = $sth->fetchrow ;
+         if (!defined $chr_end) {$chr_end = 0}; 
+#         warn "max chr_end = $chr_end";
+     
+         $sth = $db->prepare("UPDATE chromosome SET length = $chr_end WHERE chromosome_id = $chr_id");
+         if ($sth->execute){  
+         }
+         else{
+            warn "Couldn't update the chromosome";
+         } 
+     
+     }
+     else{
+         warn "Couldn't find the max_end value for chromosome with ID: $chr_id";
+     }   
+}
+
+##--------------------------------------------------------------------------------------------------
+
+sub store_input_id_analysis{
+    my ($db , $input_id ) = @_;
+    
+    my $sth = $db->prepare (qq{ SELECT * FROM input_id_analysis WHERE input_id = '$input_id' }) ;
+    
+    $sth->execute;
+    
+    if ($sth->fetchrow){
+        #there is an entry already - not allowed
+        warn "there is already an input analysis of $input_id";
+    }
+    else{
+    
+        my $analysis_id = $db->get_AnalysisAdaptor->fetch_by_logic_name('SubmitContig');
+        my $time = time;
+        my $result = 0;
+        
+        $sth= $db->prepare(qq{INSERT input_id_analysis (input_id , analysis_id , created , result ) 
+                         VALUES ($input_id , $analysis_id , $time , $result ) });
+    }
+    
+    
+    
+}
+
+
+##---------------------------------------------------------------------------------------------------------
+### check if clone is in db already not used yet, but will be when i tidy up the code.
+
+##sub clone_to_db{
+##    
+##    my ( $adaptor, $acc , $sv ) = @_ ; 
+##    
+##    eval { $clone = $pipe_clone_adaptor->fetch_by_accession_version($acc , $sv); };
+##    if (! $@){
+##        warn "this clone is already in the " . $adaptor->db->dbname . " database" ;
+##    }
+##    else{
+##                 
+##            $clone= Bio::EnsEMBL::Clone->new();
+##            $clone->htg_phase(3);
+##            $clone->id($acc_ver);
+##            $clone->embl_id($acc);
+##            $clone->version(1);
+##            $clone->embl_version($sv);
+##            $clone->created(time);
+##            $clone->modified(time);
+##    
+##            #    create and add contig(s) to the clone
+##            ##   now we only expect one contig per clone
+##            $seq = $pfetch->get_Seq_by_acc($acc_ver);
+##            my $contig = Bio::EnsEMBL::RawContig->new;
+##            my $end = $seq->length;
+##
+##        
+##            $contig->name($acc_ver . '.1.' . $seq->length);
+##            $contig->length($seq->length);
+##            $contig->seq($seq->seq); 
+##            $clone->add_Contig($contig);
+##        
+##            ##-------------------------------------- 
+##            ## need to store the ID of the first db in a seperate array as storing the clone 
+##            store_clone($pipe_clone_adaptor , $clone);
+###            push  @alternative_id,   $clone->get_all_Contigs->[0]->dbID ;
+##            store_clone($otter_clone_adaptor , $clone);
+##            ##---------------------------------------    
+##        }
+##    
+##    #fetch by clone accession
+###    if exists 
+###            warn user
+###    else
+###           store it    
+##
+###   return sqp or whatever.    
+    
+    
+##}
+
+
+sub get_pipeline_options {
+    my( $db ) = @_;
+    
+    my $sth = $db->prepare("SELECT meta_value FROM meta WHERE meta_key ='pipeline_db'");
+    $sth->execute;
+    my ($opt_str) = $sth->fetchrow;
+    if ($opt_str) {
+        my $options_hash = eval $opt_str;
+        if ($@) {
+            die "Error evaluating '$opt_str' : $@";
+        }
+        return $options_hash
+    } else {
+        return;
+    }
+}
+
+sub save_pipeline_options {
+    my( $db, $options_hash ) = @_;
+    
+    my $host = $options_hash->{host}; 
+    my $port = $options_hash->{port};
+    my $user = $options_hash->{user};
+    my $pass = $options_hash->{pass};
+    my $dbname = $options_hash->{dbname};
+    
+    my $opt_str = qq{
+        -HOST   => '$host',
+        -PORT   => '$port',
+        -USER   => '$user',
+        -PASS   => '$pass',
+        -DBNAME => '$dbname',
+        };
+    my $sth = $db->prepare("INSERT INTO meta(meta_key, meta_value) VALUES (?,?)");
+    $sth->execute('pipeline_db', $opt_str);
+}
