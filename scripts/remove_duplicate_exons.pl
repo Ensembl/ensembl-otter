@@ -234,6 +234,8 @@ foreach my $cid ($cl->cluster_ids){
     # skip match
     next if($rtid==$tid);
     print OUT "update exon_transcript set exon_id=$reid where transcript_id=$tid and exon_id=$eid;\n";
+    print OUT "delete from exon where exon_id=$eid;\n";
+    print OUT "delete from exon_stable_id where exon_id=$eid;\n";
     my $rsv="$rseid.$rsev";
     my $sv="$seid.$sev";
     # ensure unique entry (perhaps should check here)
