@@ -1,4 +1,4 @@
-#!/nfs/humace2/hum/bin/perl -w
+#!/nfs/humace2/hum/bin/perl5.6.1 -w
 
 ### genome_canvas
 
