@@ -11,4 +11,5 @@ delete from gene_synonym; delete from gene_stable_id_pool;
 delete from transcript_stable_id_pool; delete from translation_stable_id_pool;
 delete from exon_stable_id_pool; delete from translation_stable_id;
 delete from clone_remark; delete from clone_info; delete from keyword;
-delete from clone_info_keyword;
+delete from clone_info_keyword; delete from simple_feature;
+delete from current_clone_info;
