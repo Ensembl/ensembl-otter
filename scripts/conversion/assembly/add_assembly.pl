@@ -58,8 +58,9 @@ my $tdb = new Bio::EnsEMBL::DBSQL::DBAdaptor(-host => $t_host,
 # First check for duplicate clones used in contigs
 my $dup_sth = $sdb->prepare( qq {
   select contig.name from 
-         assembly, contig, dna 
-  where  assembly.chromosome_id=$chr and 
+         assembly, contig, dna, chromosome 
+  where  assembly.chromosome_id=chromosome.chromosome_id and
+         chromosome.name='$chr' and 
          contig.contig_id=assembly.contig_id and 
          assembly.chr_start>= $chrstart and
          assembly.chr_end <=$chrend and
@@ -92,7 +93,7 @@ while ($hashref = $dup_sth->fetchrow_hashref()) {
 
 
 my $sth = $sdb->prepare(qq {
-  select chromosome_id,
+  select chromosome.chromosome_id,
          chr_start,
          chr_end,
          superctg_name,
@@ -105,9 +106,10 @@ my $sth = $sdb->prepare(qq {
          contig_end,
          contig_ori,
          type 
-  from assembly,contig 
+  from assembly,contig,chromosome 
   where assembly.type = "$path" and
-        assembly.chromosome_id=$chr and
+        assembly.chromosome_id=chromosome.chromosome_id and
+        chromosome.name = '$chr' and
         assembly.chr_start>= $chrstart and
         assembly.chr_end <=$chrend and
         assembly.contig_id = contig.contig_id
