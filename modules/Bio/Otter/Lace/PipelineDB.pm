@@ -3,6 +3,7 @@
 
 package Bio::Otter::Lace::PipelineDB;
 
+use Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor;
 use strict;
 use Carp;
 
