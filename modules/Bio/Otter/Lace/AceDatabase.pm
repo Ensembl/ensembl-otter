@@ -685,7 +685,8 @@ sub make_AceDataFactory {
     }
 
     # If we aren't fetching all the analysis, we only need the DNA
-    my $submitcontig = $self->Client->option_from_array([qw!client dna!]) || 'submitcontig';
+    my $submitcontig = $self->Client->option_from_array([qw!client dna!]) 
+        || ( $fetch_all_pipeline_data ? 'SubmitContig' : 'otter' );
     $logic_to_load->{$submitcontig} = 1;
     $module_options->{$submitcontig}->{'module'} = 'Bio::EnsEMBL::Ace::Filter::DNA';
 
