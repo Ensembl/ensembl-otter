@@ -128,7 +128,7 @@ use Bio::Otter::Lace::Defaults;
             my $chr_start = $chr_pos + 1;
             $chr_pos += $length;
             print join("\t",
-                'chrUNK', $chr_start, $chr_pos, ++$row, 'F', $acc_sv, 1, $length,
+                'chrUNK', $chr_start, $chr_pos, ++$row, 'F', $acc_sv, 1, $length, '+',
                 ), "\n";
             $gap_size = $intra_set_gap;
         }
