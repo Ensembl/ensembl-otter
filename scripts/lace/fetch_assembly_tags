@@ -3,13 +3,14 @@
 ### fetch_assembly_tags
 
 use strict;
-use Hum::Submission 'prepare_statement';
+use Hum::Submission ('prepare_statement');
+use Hum::Tracking ('intl_clone_name');
 use Hum::AnaStatus::Sequence;
-
-use Bio::EnsEMBL::Slice;
 
 use Bio::Otter::Lace::Defaults;
 use Bio::Otter::AnnotatedClone;
+
+use Bio::EnsEMBL::DBSQL::CloneAdaptor;
 
 use Getopt::Long 'GetOptions';
 
@@ -124,11 +125,11 @@ sub fetch_by_clone_obj {
       $to_do = 1;
 
       $acc        = $obj->accession;
-      $ctg_strand = $obj->contig_strand;
       $ctg_name   = $obj->contig_name;
       $seq_name   = sanger_name($obj->accession);
       $ctg_id     = $obj->contig_id;
       $version    = $obj->sv;
+      $ctg_strand = $obj->contig_strand;
     }
 
     # skip clones in otter db where there is no corresponding accession in the submissions database
@@ -138,29 +139,25 @@ sub fetch_by_clone_obj {
     };
 
     # work out path to acefile with assembly_tags info of a Sanger clone
-    if ( $@ && $verbose && $acc ){
-      my ($sanger_id, $ver) = check_latest_embl_version_sanger_id( $acc, $otter_db );
-
-      if ( $ctg_name && $obj->sv != $ver ){
-        print "SKIP: $ctg_name is of SV ".$obj->sv.", current SV is $ver\n";
-      }
-      if ( $seq_name && lc($seq_name) ne lc($sanger_id) ){
-	print "SKIP: $ctg_name has internal name ($seq_name) swapped with project_name $sanger_id\n";
-      }
-    }
-
-    if ( !$@ && $to_do == 1 ){
+    if ( !$@ && $seq_name && $to_do == 1 ){
       #my $seq = Hum::AnaStatus::Sequence->new_from_seqname_sv($seq_name, $version);
-       my $seq = Hum::AnaStatus::Sequence->new_from_accession($acc);
+      my $seq = Hum::AnaStatus::Sequence->new_from_accession($acc);
       my $dir = $seq->analysis_directory;
 
       # double check existence of acefile
-      if ( -e "$dir/rawdata/$seq_name.humace.ace" ) {
+      if ( -e "$dir/rawdata/$seq_name.humace.ace" ){
+
 	my $humace_file = "$dir/rawdata/$seq_name.humace.ace";
 	push(@{$seq_acefile_clone{$ctg_name}}, $humace_file, $ctg_strand, $ctg_id);
       }
+      elsif ( -e "$dir/rawdata/$seq_name.humace.ace.gz" ){
+
+	my $humace_file = "$dir/rawdata/$seq_name.humace.ace.gz";
+	push(@{$seq_acefile_clone{$ctg_name}}, $humace_file, $ctg_strand, $ctg_id);
+      }
       else {
-	print "ERROR: $ctg_name ($seq_name) has no associated acefile at $dir/rawdata/\n";
+	
+	print "INFO: $ctg_name - no acefile at $dir/rawdata/\n" if $verbose;
       }
     }
   }
@@ -170,45 +167,6 @@ sub fetch_by_clone_obj {
 
   # parsing acefile for all Sanger clones of an assembly type in one go
   parse_ace(\%seq_acefile_clone, $otter_db, $fetched);
-}
-
-sub check_latest_embl_version_sanger_id {
-
-  my ($acc, $otter_db) = @_;
-  my ($sql, $sth);
-
-  $sql = "SELECT   cl.embl_version "
-       . "FROM     clone cl, contig ct "
-       . "WHERE    ct.clone_id = cl.clone_id "
-       . "AND      ct.name like '$acc%'"
-       . "ORDER BY cl.embl_version DESC "
-       . "LIMIT 1";
-
-  $sth = $otter_db->prepare($sql);
-  $sth->execute;
-
-  my $version;
-  while ( my $ver = $sth->fetchrow_array ) {
-    $version = $ver;
-  }
-  $sth->finish;
-
-  $sql = "SELECT pa.sanger_id, s.sequence_name "
-       . "FROM   sequence s, project_acc pa, project_dump pd "
-       . "WHERE  pa.accession = ? "
-       . "AND    pa.sanger_id = pd.sanger_id "
-       . "AND    pd.seq_id = s.seq_id "
-       . "ORDER by s.sequence_version DESC LIMIT 1";
-
-  $sth = prepare_statement($sql);
-  $sth->execute($acc);
-
-  while ( my ($sanger_id, $seq_name) = $sth->fetchrow_array ) {
-    $sanger_id =~ s/^_//;
-    $sanger_id = lcfirst($sanger_id);
-    return $sanger_id, $version;
-  }
-  $sth->finish;
 }
 
 sub get_assembly_tagged_clones {
@@ -247,44 +205,47 @@ sub get_contig_strand {
   my $sth = $otter_db->prepare($sql);
   $sth->execute($ctg_id);
 
-  while ( my $strand = $sth->fetchrow_array ) {
-    return $strand;
-  }
+  my $strand = $sth->fetchrow;
   $sth->finish;
+
+  return $strand;
 }
 
 sub parse_ace {
 
   my ($href, $otter_db, $fetched)  = @_;
 
-  my %seq_acefile_clone = %$href;
+  my $seq_acefile_clone = $href;
   my $asmblyTagAd = $otter_db->get_AssemblyTagAdaptor;
 
   my ($fh, $line);
   my $counter = 0;
-  my %contig_tag_data;
+  my (%contig_tag_data, $ctg_name);
 
   # go thru each contig of an assembly type
-  foreach my $ctg_name ( keys %seq_acefile_clone ){
+  foreach $ctg_name ( keys %$seq_acefile_clone ){
 
     my @values;
-    open( $fh, $seq_acefile_clone{$ctg_name}->[0] ) || die "Failed to read ".$seq_acefile_clone{$ctg_name}->[0];
+    my $ace_file   = $seq_acefile_clone->{$ctg_name}->[0];
+    my $ctg_id     = $seq_acefile_clone->{$ctg_name}->[2];
 
-    print "\n", $ctg_name, " => ",  $seq_acefile_clone{$ctg_name}->[0], "\n" if $verbose;
+    if ($ace_file =~ /\.gz$/) {
+      $ace_file = "gzip -cd $ace_file |";
+    }
 
-    my $ctg_id     = $seq_acefile_clone{$ctg_name}->[2];
-
+    open( $fh, $ace_file ) || die "Failed to read ".$ace_file;
+    my $info;
     while ( $line = <$fh> ){
 
-      my $ctg_strand = $seq_acefile_clone{$ctg_name}->[1];
+      my $ctg_strand = $seq_acefile_clone->{$ctg_name}->[1];
       my ( $tag_type, $tag_start, $tag_end, $tag_info);
 
-      if ( $line =~ /^Assembly_[Tt]ags\s+\"(-)\"\s+(\d+)\s+(\d+)\s+\"(.+)\"/ ||
-	   $line =~ /^Assembly_[Tt]ags\s+(Oligo|unsure)\s+(\d+)\s+(\d+)\s+\"(.+)\"/i){
+      # omit Type "Oligo"
+      if ( $line =~ /^Assembly_tags\s+(-|\"-\"|unsure)\s+(\d+)\s+(\d+)\s+\"(.+)\"/i ){
 
 	$counter++;
 
-	($1 eq "-") ? ($tag_type = "Misc") : ($tag_type = $1);
+	($1 eq "-" || $1 eq "\"-\"") ? ($tag_type = "Misc") : ($tag_type = $1);
 
 	# convertion for Ensembl/otter_db: starting coord is always smaller, so flip if not so
         #                                  starting coord > end coord means minus strand
@@ -312,8 +273,8 @@ sub parse_ace {
    	$tag_info = trim($tag_info);
 
 	if ( $verbose ){
-	  print "flip\n" if $2>$3;
-	  print "$ctg_id : $tag_type : $ctg_strand : $tag_start : $tag_end : $tag_info\n";
+	  $info .= "flip\n" if $2>$3;
+	  $info .= "$ctg_id : $tag_type : $ctg_strand : $tag_start : $tag_end : $tag_info\n";
 	}
 	push(@{$contig_tag_data{$ctg_name}}, $ctg_id, $tag_start, $tag_end, $ctg_strand, $tag_type, $tag_info);
       }
@@ -326,12 +287,26 @@ sub parse_ace {
 	$tag_end   = $3;  # set end value to start value where no end value present
 	$tag_info  = $2;
 	$tag_info =~ s/\"//g;
-	$tag_info = trim($tag_info);
 	$ctg_strand = 1;
+	$tag_info = trim($tag_info);
 	
-	print "$ctg_id : $tag_type : $ctg_strand : $tag_start : $tag_end : $tag_info\n" if $verbose;
+	# replace internal Sanger name (= $tag_info) with international clone name
+	my $name = $tag_info." (old name) ";
+	$tag_info = Hum::Tracking::intl_clone_name($tag_info); # info in Oracle Trackings db
+	$name .= $tag_info." (intl name)";
+
+	$info .= "$ctg_id : $tag_type : $ctg_strand : $tag_start : $tag_end : $tag_info ### [$name]\n" if $verbose;
 	push(@{$contig_tag_data{$ctg_name}}, $ctg_id, $tag_start, $tag_end, $ctg_strand, $tag_type, $tag_info);
       }
+    }
+
+    # log/info message
+    if ( $info ){
+      $info = "\n".$ctg_name." => ".$ace_file."\n".$info;
+      print $info if $verbose;
+    }
+    else {
+      print "\nNOTE: ".$ctg_name." => ".$ace_file." (no assembly_tag data)\n" if $verbose;
     }
   }
 
@@ -353,7 +328,7 @@ sub parse_ace {
   }
   else {
     $otter_db->begin_work;
-    printf("> %-35s no info or clone already is assembly_tag tagged\n\n", $fetched);
+    printf("> %-35s no info or clone has already assembly_tag info\n\n", $fetched);
     $otter_db->commit;
   }
   undef $@;
@@ -470,4 +445,3 @@ Assembly_tag info in the otter DB is dumped out in EMBL format via the script B<
 =head1 AUTHOR
 
 Chao-Kung Chen B<email> ck1@sanger.ac.uk
-
