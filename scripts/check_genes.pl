@@ -142,6 +142,7 @@ if($make_cache){
   my %offagp_gsi;
   my %onagp_gsi;
   my %reported_gsi;
+  my %reported_gsi_cid;
   my %gsi_ao_clone;
   my %gsi_clone;
   my %atype_gsi;
@@ -193,7 +194,10 @@ if($make_cache){
 	my($cname,$atype,$acst,$aced,$ast,$aed,$ao,$cla,$clv)=@{$ao{$ecid}};
 	$gsi_ao_clone{$gsi}->{"$cla.$clv"}=1;
       }else{
-	print "FATAL: $gsi attached to contig $ecid not in assembly table\n";
+	if(!$reported_gsi_cid{$gsi}->{$ecid}){
+	  $reported_gsi_cid{$gsi}->{$ecid}=1;
+	  print "WARN: $gsi attached to contig $ecid not in assembly table\n";
+	}
       }
     }
     last if ($opt_t && $n>=$opt_t);
@@ -213,6 +217,7 @@ if($make_cache){
 	foreach my $sv (keys %{$gsi_clone{$gsi}}){$sv{$sv}=1;}
 	my $gn=$gsi2gn{$gsi};
 	print " ERR $gsi ($gn) ss=\'$atype\' has exon(s) off assembly:\n";
+	print "  on clones: ".join(",",(keys %{$gsi_ao_clone{$gsi}}))."\n";
 	print "  ".join("\n  ",@{$excluded_gsi{$gsi}})."\n" if $opt_v;
       }
     }
