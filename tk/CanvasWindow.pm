@@ -157,10 +157,15 @@ sub bind_scroll_commands {
     my $x_scroll = $canvas->parent->Subwidget('xscrollbar');
     my $y_scroll = $canvas->parent->Subwidget('yscrollbar');
     
-    foreach my $sequence ($x_scroll->Tk::bind(ref($x_scroll))) {
-        #print STDERR "seq=$sequence\n";
+    # Unbind the scrollbar keyboard events from the canvas
+    my $class = ref($canvas);
+    foreach my $sequence ($canvas->Tk::bind($class)) {
+        if ($sequence =~ /Key/) {
+            #print STDERR "seq=$sequence\n";
+            $canvas->Tk::bind($class, $sequence, '');
+        }
     }
-    
+        
     # Don't want the scrollbars to take keyboard focus
     foreach my $widget ($x_scroll, $y_scroll) {
         $widget->configure(
@@ -208,31 +213,23 @@ sub bind_scroll_commands {
     
     # Left and Right
     $canvas->Tk::bind('<Shift-Left>', sub{
-        warn "Shift-Left";
+        #warn "Shift-Left";
         $x_scroll->ScrlByUnits('h', -1);
         });
     $canvas->Tk::bind('<Shift-Right>', sub{
-        warn "Shift-Right";
+        #warn "Shift-Right";
         $x_scroll->ScrlByUnits('h', 1);
         });
     
     # Up and Down
     $canvas->Tk::bind('<Shift-Up>', sub{
-        warn "Shift-Up";
+        #warn "Shift-Up";
         $y_scroll->ScrlByUnits('v', -1);
         });
     $canvas->Tk::bind('<Shift-Down>', sub{
-        warn "Shift-Down";
+        #warn "Shift-Down";
         $y_scroll->ScrlByUnits('v', 1);
         });
-    
-    # Left and Right
-    $canvas->Tk::bind('<Left>', sub{ warn "nop" });
-    $canvas->Tk::bind('<Right>', sub{ warn "nop" });
-    
-    # Up and Down
-    $canvas->Tk::bind('<Up>', sub{ warn "nop" });
-    $canvas->Tk::bind('<Down>', sub{ warn "nop" });
 }
 
     #foreach my $key_seq ($x_scroll->bind($class)) {
