@@ -33,6 +33,7 @@ my $t_path   = '';
 
 my $filter_gd;
 my $filter_obs;
+my $filter_for_vega;
 my $filter_anno;
 my $gene_type;
 my @gene_stable_ids;
@@ -62,6 +63,7 @@ my $opt_o;
              't_path:s'         => \$t_path,
 	     'filter_gd'        => \$filter_gd,
 	     'filter_obs'       => \$filter_obs,
+	     'filter_for_vega'  => \$filter_for_vega,
 	     'gene_type:s'      => \$gene_type,
 	     'gene_stable_id:s' => \@gene_stable_ids,
 	     't'                => \$opt_t,
@@ -141,30 +143,29 @@ print "Fetched ".scalar(@$genes)." genes\n";
 # find genes that have at least one exon in a clone with the remark 'annotated'
 my %okay_genes;
 my %parentclone;
-my $okaycount;
+my $okaycount=0;
 if ($filter_anno) {
-    my $sthx = $sdb->prepare(q{
-         select distinct gsi.stable_id, cl.name from 
-         gene g, gene_stable_id gsi, transcript t, exon_transcript et, exon e, contig c, clone cl, clone_info ci, clone_remark cr 
-         where gsi.gene_id = g.gene_id 
-         and g.gene_id = t.gene_id 
-         and t.transcript_id = et.transcript_id 
-         and et.exon_id = e.exon_id 
-         and e.contig_id = c.contig_id 
-         and c.clone_id = cl.clone_id 
-         and cl.clone_id = ci.clone_id 
-         and ci.clone_info_id = cr.clone_info_id 
-         and cr.remark like '%annotated%';
-    });
-    $sthx->execute();
-    while (my @row = $sthx->fetchrow_array) {
-        $okay_genes{$row[0]}++;
-        $parentclone{$row[0]} = $row[1];
-        $okaycount++;
-    }
+  my $sthx = $sdb->prepare(q{
+    select distinct gsi.stable_id, cl.name from 
+    gene g, gene_stable_id gsi, transcript t, exon_transcript et, exon e, contig c, clone cl, clone_info ci, clone_remark cr 
+    where gsi.gene_id = g.gene_id 
+    and g.gene_id = t.gene_id 
+    and t.transcript_id = et.transcript_id 
+    and et.exon_id = e.exon_id 
+    and e.contig_id = c.contig_id 
+    and c.clone_id = cl.clone_id 
+    and cl.clone_id = ci.clone_id 
+    and ci.clone_info_id = cr.clone_info_id 
+    and cr.remark like '%annotated%';
+  });
+  $sthx->execute();
+  while (my @row = $sthx->fetchrow_array) {
+    $okay_genes{$row[0]}++;
+    $parentclone{$row[0]} = $row[1];
+    $okaycount++;
+  }
+  print "$okaycount genes were marked as annotated\n";
 }
-print "$okaycount genes were marked as annotated\n";
-
 
 # get the genes
 my %genehash;
@@ -172,62 +173,68 @@ my $ngd=0;
 my $nobs=0;
 my $nskipped=0;
 my $not_okay=0;
+my $n_not_vega=0;
 open(OUT,">$opt_o") || die "cannot open $opt_o" if $opt_o;
 foreach my $gene (@$genes) {
-    my $gsi=$gene->stable_id;
-    my $version=$gene->version;
-    if(scalar(@gene_stable_ids)){
-      next unless $gene_stable_ids{$gsi};
+  my $gsi=$gene->stable_id;
+  my $version=$gene->version;
+  if(scalar(@gene_stable_ids)){
+    next unless $gene_stable_ids{$gsi};
+  }
+  if($filter_gd){
+    my $name=$gene->gene_info->name->name;
+    if($name=~/\.GD$/ || $name=~/^GD:/){
+      print "GD gene $gsi $name was ignored\n";
+      $ngd++;
+      next;
     }
-    if($filter_gd){
-	my $name=$gene->gene_info->name->name;
-	if($name=~/\.GD$/ || $name=~/^GD:/){
-	    print "GD gene $gsi $name was ignored\n";
-	    $ngd++;
-	    next;
-	}
+  }
+  my $type=$gene->type;
+  if($filter_obs){
+    if($type eq 'obsolete'){
+      print "Gene $gsi is type obsolete\n";
+      $nobs++;
+      next;
     }
-    my $type=$gene->type;
-    if($filter_obs){
-	if($type eq 'obsolete'){
-	    print "Gene $gsi is type obsolete\n";
-	    $nobs++;
-	    next;
-	}
+  }
+  if($filter_for_vega){
+    if($type=~/(Artifact|TEC)$/){
+      print "Gene $gsi is not for Vega ($type)\n";
+      $n_not_vega++;
+      next;
     }
-    if($gene_type){
-      if($type ne $gene_type){
-	print "Gene $gsi skipped - not of type $gene_type\n";
-	$nskipped++;
-	next;
+  }
+  if($gene_type){
+    if($type ne $gene_type){
+      print "Gene $gsi skipped - not of type $gene_type\n";
+      $nskipped++;
+      next;
+    }
+  }
+    
+  # filter out genes that don't have at least one exon in a clone marked as 'annotated'
+  if ($filter_anno) {
+    if (exists $okay_genes{$gsi}) {
+      print "Gene $gsi is fine and will be taken\n";
+    }
+    else {
+      if ($parentclone{$gsi}) {
+	print "Gene $gsi from clone(s) ",$parentclone{$gsi}," is not in clone marked as 'annotated' - skipping\n";
       }
+      else {
+	print "Gene $gsi is not in clone marked as 'annotated' - skipping\n";
+      }
+      $not_okay++;            
+      next;
     }
-    
-    
-    # filter out genes that don't have at least one exon in a clone marked as 'annotated'
-    if ($filter_anno) {
-        if (exists $okay_genes{$gsi}) {
-            print "Gene $gsi is fine and will be taken\n";
-        }
-        else {
-            if ($parentclone{$gsi}) {
-                print "Gene $gsi from clone(s) ",$parentclone{$gsi}," is not in clone marked as 'annotated' - skipping\n";
-            }
-            else {
-                print "Gene $gsi is not in clone marked as 'annotated' - skipping\n";
-            }
-            $not_okay++;            
-            next;
-        }
-    }
-    
-    
-    
-    $genehash{$gsi} = $gene;
-    print OUT "$gsi\t$version\n" if $opt_o;
+  }
+
+  $genehash{$gsi} = $gene;
+  print OUT "$gsi\t$version\n" if $opt_o;
 }
 close(OUT) if $opt_o;
-print "$ngd GD genes removed, $nobs obsolete genes removed, $nskipped skipped as incorrect type, $not_okay skipped as not in annotated part\n";
+print "$ngd GD genes removed, $nobs obsolete genes removed, $nskipped skipped as incorrect type\n";
+print "$not_okay skipped as not in annotated part; $n_not_vega skipped as not for vega\n";
 print scalar(keys %genehash)." genes to transfer\n";
 
 exit 0 if $opt_t;

@@ -208,7 +208,7 @@ if($make_cache){
   }
 
   # get exons of current genes
-  my $sth=$dbh->prepare("select gsi1.stable_id,gn.name,g.type,tsi.stable_id,ti.name,et.rank,e.exon_id,e.contig_id,e.contig_start,e.contig_end,e.sticky_rank,e.contig_strand,e.phase,e.end_phase from exon e, exon_transcript et, transcript t, current_gene_info cgi, gene_stable_id gsi1, gene_name gn, gene g, transcript_stable_id tsi, current_transcript_info cti, transcript_info ti left join gene_stable_id gsi2 on (gsi1.stable_id=gsi2.stable_id and gsi1.version<gsi2.version) where gsi2.stable_id IS NULL and cgi.gene_stable_id=gsi1.stable_id and cgi.gene_info_id=gn.gene_info_id and gsi1.gene_id=g.gene_id and g.gene_id=t.gene_id and t.transcript_id=tsi.transcript_id and tsi.stable_id=cti.transcript_stable_id and cti.transcript_info_id=ti.transcript_info_id and t.transcript_id=et.transcript_id and et.exon_id=e.exon_id and e.contig_id");
+  my $sth=$dbh->prepare("select gsi1.stable_id,gn.name,g.type,tsi.stable_id,ti.name,et.rank,e.exon_id,e.contig_id,e.contig_start,e.contig_end,e.sticky_rank,e.contig_strand,e.phase,e.end_phase,tr.remark from exon e, exon_transcript et, transcript t, current_gene_info cgi, gene_stable_id gsi1, gene_name gn, gene g, transcript_stable_id tsi, current_transcript_info cti, transcript_info ti left join gene_stable_id gsi2 on (gsi1.stable_id=gsi2.stable_id and gsi1.version<gsi2.version) left join transcript_remark tr on (ti.transcript_info_id=tr.transcript_info_id) where gsi2.stable_id IS NULL and cgi.gene_stable_id=gsi1.stable_id and cgi.gene_info_id=gn.gene_info_id and gsi1.gene_id=g.gene_id and g.gene_id=t.gene_id and t.transcript_id=tsi.transcript_id and tsi.stable_id=cti.transcript_stable_id and cti.transcript_info_id=ti.transcript_info_id and t.transcript_id=et.transcript_id and et.exon_id=e.exon_id and e.contig_id");
   $sth->execute;
   my $nexclude=0;
   my %excluded_gsi;
@@ -222,13 +222,14 @@ if($make_cache){
   my %gsi_clone;
   my %atype_gsi;
   my %gsi2gn;
+  my %missing_tr;
   my $nobs=0;
   open(OUT,">$cache_file") || die "cannot open cache file $cache_file";
   while (my @row = $sth->fetchrow_array()){
     $n++;
 
     # transform to chr coords
-    my($gsi,$gn,$gt,$tsi,$tn,$erank,$eid,$ecid,$est,$eed,$esr,$es,$ep,$eep)=@row;
+    my($gsi,$gn,$gt,$tsi,$tn,$erank,$eid,$ecid,$est,$eed,$esr,$es,$ep,$eep,$tr)=@row;
 
     # skip obs genes
     if($gt eq 'obsolete'){
@@ -267,6 +268,11 @@ if($make_cache){
       }
       my @row2=($gsi,$gn,$gt,$tsi,$tn,$erank,$eid,$ecst,$eced,$cname,$atype,$esr,$es,$ep,$eep);
       print OUT join("\t",@row2)."\n";
+
+      # record genes with no gene_remark
+      if($tr eq ''){
+	$missing_tr{$gt}->{$tsi}="$gsi:$gn";
+      }
       
       # record clones that each gsi are attached to and assembly for each gsi
       $gsi_clone{$gsi}->{"$cla.$clv"}=1;
@@ -300,6 +306,21 @@ if($make_cache){
   }
   close(OUT);
   $dbh->disconnect();
+
+  # report all genes with missing remarks
+  open (MOUT,">missing_remarks.lis") || die "cannot open remarks file";
+  print "Transcripts with missing remarks\n\n";
+  foreach my $gt (sort keys %missing_tr){
+    my $n=0;
+    my $out='';
+    foreach my $tsi (sort keys %{$missing_tr{$gt}}){
+      my $gname=$missing_tr{$gt}->{$tsi};
+      $n++;
+      $out.="  $tsi ($gname)\n";
+    }
+    print MOUT " $n transcripts of gene type $gt have missing remarks:\n$out";
+  }
+  close(MOUT);
 
   my %n_offtrack;
 
