@@ -49,6 +49,11 @@ sub rollback {
     $self->db_handle->rollback();
 }
 
+sub get_RawContigAdaptor {
+  my $self = shift;
+
+  return $self->_get_adaptor("Bio::Otter::DBSQL::RawContigAdaptor");
+}
 
 sub get_AnnotatedCloneAdaptor {
   my $self = shift;

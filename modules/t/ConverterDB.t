@@ -21,8 +21,11 @@ ok($db);
 my $file = "../data/test_db.xml";
 
 ok(open(IN,"<$file"));
+ok(my ($genes,$slice,$seq,$tile) = Bio::Otter::Converter::XML_to_otter(\*IN,$db));
 
-ok(my ($genes2,$chr,$chrstart,$chrend,$type,$dna) = Bio::Otter::Converter::XML_to_otter(\*IN,$db));
+#ok(my ($genes2,$clones,$chr,$chrstart,$chrend,$type,$dna) = Bio::Otter::Converter::XML_to_otter(\*IN,$db));
+
+#$otter_test->pause;
 
 close(IN);
 
@@ -33,13 +36,12 @@ while (<IN>) {
 }
 close(IN);
 
-print "Chr $chr $chrstart $chrend $type " . length($dna) . "\n";
-
-ok($db->assembly_type($type));
+ok($db->assembly_type($slice->assembly_type));
 
 my @contigs = @{$db->get_RawContigAdaptor->fetch_all};
 
 #DBI->trace(2);
+
 my $db2 = new Bio::Otter::DBSQL::DBAdaptor(-host => $otter_test->host,
                                            -user => $otter_test->user,
                                            -port => $otter_test->port,

@@ -51,7 +51,8 @@ sub XML_to_otter {
   my @clones;
   my @cloneremarks;
   my @keywords;
-
+  my @tiles;
+ 
   my $clone;
   my $version;
 
@@ -110,7 +111,6 @@ sub XML_to_otter {
         my $rem = new Bio::Otter::TranscriptRemark(-remark => $remark);
         $traninfo->remark($rem);
       } elsif ($currentobj eq 'frag') {
-        print "Found remark $remark\n";
         push(@cloneremarks,$remark);
       } else {
         print "ERROR: Current obj is $currentobj -can only add remarks to gene,tran\n";
@@ -281,19 +281,23 @@ sub XML_to_otter {
       $currentobj = 'frag';
     } elsif (/<\/sequencefragment>/) {
        if (defined($clone) && defined($version)) {
+
          my $cloneobj = new Bio::Otter::AnnotatedClone;
+
          $cloneobj->id($clone);
          $cloneobj->embl_version($version);
+
          my $cloneinfo = new Bio::Otter::CloneInfo;
+
          my @keyobj;
          my @clonerem;
+
          foreach my $keyword (@keywords) {
            my $keyobj = new Bio::Otter::Keyword(-name => $keyword);
            push(@keyobj,$keyobj);
          }
          foreach my $remark (@cloneremarks) {
            my $remobj = new Bio::Otter::CloneRemark(-remark => $remark);
-           print "Adding remark $remark\n";
            push(@clonerem,$remobj);
          }
          $cloneinfo->remark(@clonerem);
@@ -301,7 +305,8 @@ sub XML_to_otter {
 
          $cloneobj->clone_info($cloneinfo);
 
-         push(@clones,$cloneobj);
+         $frag{$currfragname}{clone} = $cloneobj;
+
        }
        $clone = undef;
        $version = undef;
@@ -318,7 +323,6 @@ sub XML_to_otter {
     } elsif (/<version>(.*)<\/version>/) {
       if ($currentobj eq 'frag') {
          $version = $1;
-         print "Found version $version : $clone\n";
       } else {
          die "ERROR: version tag only allowed for sequence fragments.  Current obj is [$currentobj]\n";
       }
@@ -373,6 +377,7 @@ sub XML_to_otter {
   my $chrname  = "";
   my $chrstart = 2000000000;
   my $chrend   = -1;
+  my $slice;
 
   foreach my $f (@fragnames) {
     if ($chrname eq "") {
@@ -393,12 +398,41 @@ sub XML_to_otter {
     if ($frag{$f}{end} > $chrend) {
       $chrend = $frag{$f}{end};
     }
+
+    my $tile = new Bio::EnsEMBL::Tile();
+    $tile->assembled_start($frag{$f}{start});
+    $tile->assembled_end($frag{$f}{end});
+    $tile->component_ori($frag{$f}{strand});
+    $tile->component_start($frag{$f}{offset});
+    $tile->component_end($frag{$f}{offset} + $frag{$f}{end} - $frag{$f}{start});
+   
+my $contig = new Bio::EnsEMBL::RawContig();
+
+   $contig->name($f);
+   $contig->clone($frag{$f}{clone});
+
+   $tile->component_Seq($contig);
+
+   push(@tiles,$tile);
+        
   }
+  
+
+  $slice = new Bio::EnsEMBL::Slice(-chr_name  => $chrname,
+                                   -chr_start => $chrstart,
+                                   -chr_end   => $chrend,
+                                   -strand    => 1,
+                                   -assembly_type => $assembly_type);
+
+
+  #$slice->seq($seqstr);
 
   @fragnames = sort { $frag{$a}{start} <=> $frag{$b}{start} } @fragnames;
+  @tiles     = sort { $a->assembled_start <=> $b->assembled_start} @tiles;
 
   # print STDERR "chrname = " . $chrname . " chrstart = " . $chrstart . " chrend = "
   #  . $chrend . "\n";
+
   if (defined($db)) {
     if ($assembly_type) {
       $db->assembly_type($assembly_type);
@@ -408,10 +442,13 @@ sub XML_to_otter {
 
     my @path = @{ $slice->get_tiling_path };
   
-# Only store slice if no tiling path returned
-# Then refetch slice
+    # Only store slice if no tiling path returned
+    # Then refetch slice
+
     if (!scalar(@path)) {
+
       Bio::Otter::Converter::frags_to_slice($chrname,$chrstart,$chrend,$assembly_type,$seqstr,\%frag,$db);
+
       $sa    = $db->get_SliceAdaptor;
       $slice = $sa->fetch_by_chr_start_end($chrname, $chrstart, $chrend);
 
@@ -460,7 +497,8 @@ sub XML_to_otter {
     }
   }
 
-  return (\@genes, \@clones,$chrname, $chrstart, $chrend,$assembly_type,$seqstr,);
+  #return (\@genes, \@clones,$chrname, $chrstart, $chrend,$assembly_type,$seqstr,);
+  return (\@genes, $slice,$seqstr,\@tiles);
 }
 
 sub otter_to_ace {
@@ -1644,8 +1682,12 @@ sub clone_to_XML {
   $str .= "  <version>" . $clone->embl_version . "<\/version>\n";
 
   if ($clone->isa("Bio::Otter::AnnotatedClone") && defined($clone->clone_info)) {
+     
      my @rem = $clone->clone_info->remark;
      my @key = $clone->clone_info->keyword;
+
+     @rem = sort {$a->remark cmp $b->remark} @rem;
+     @key = sort {$a->name   cmp $b->name  } @key;
 
      foreach my $rem (@rem) {
         $rem =~ s/\n/ /g;
@@ -1687,7 +1729,7 @@ sub frags_to_XML {
 }
 
 sub genes_to_XML_with_Slice {
-  my ($slice, $genes, $type, $writeseq) = @_;
+  my ($slice, $genes, $writeseq,$path,$seqstr) = @_;
 
   my @genes = @$genes;
 
@@ -1696,18 +1738,24 @@ sub genes_to_XML_with_Slice {
   $xmlstr .= "<otter>\n";
   $xmlstr .= "<sequenceset>\n";
 
-  my @path  = @{ $slice->get_tiling_path };
+  my @path;
+
+  if (!defined($path)) {
+    @path  = @{ $slice->get_tiling_path };
+  } else {
+    @path  = @$path;
+  }
 
   my $chr      = $slice->chr_name;
   my $chrstart = $slice->chr_start;
   my $chrend   = $slice->chr_end;
 
   $xmlstr .= Bio::Otter::Converter::path_to_XML($chr, $chrstart, $chrend, 
-                                                $type, \@path);
+                                                $slice->assembly_type, \@path);
 
   if (defined($writeseq)) {
     $xmlstr .= "<dna>\n";
-    my $seqstr = $slice->seq;
+    $seqstr = $slice->seq unless $seqstr;
     $seqstr =~ s/(.{72})/  $1\n/g;
     $xmlstr .= $seqstr . "\n";
     $xmlstr .= "</dna>\n";

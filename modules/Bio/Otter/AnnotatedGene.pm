@@ -107,7 +107,9 @@ sub toXMLString{
         @rem = sort {$a->remark cmp $b->remark} @rem;
 
 	foreach my $rem (@rem) {
-	    $str .= " <remark>" . $rem->remark . "</remark>\n";
+            my $remstr = $rem->remark;
+            $remstr =~ s/\n/ /g;
+	    $str .= " <remark>" . $remstr . "</remark>\n";
 	}
         my $name;
         my $email;
@@ -139,7 +141,9 @@ sub toXMLString{
             my @rem = $tinfo->remark;
             @rem = sort {$a->remark cmp $b->remark} @rem;
 	    foreach my $rem (@rem) {
-		$str .= "  <remark>" . $rem->remark . "</remark>\n";
+                my $remstr = $rem->remark;
+                $remstr =~ s/\n/ /g;
+		$str .= "  <remark>" . $remstr . "</remark>\n";
 	    }
 	   
             my $cds_snf = "";
