@@ -52,8 +52,8 @@ if ($species_prefix) {
   $meta_con->store_key_value('prefix.species',"$species_prefix");
 }
 if ($species_taxon){
-  $meta_con->store_key_value('taxon.species',"$species_taxon");
+  $meta_con->store_key_value('species.taxonomy_id',"$species_taxon");
 }
 if ($species_common){
-  $meta_con->store_key_value('common.species',"$species_common");
+  $meta_con->store_key_value('species.common_name',"$species_common");
 }
