@@ -712,16 +712,20 @@ sub make_isoform_subsequence {
             return;
         }
         elsif (@numbers == 2) {
-            # Are making an isoform of an exisiting isoform
+            # Making an isoform of an exisiting isoform
             $new_name = $name;
             for (my $i = $numbers[1] + 1; ; $i++) {
                 $iso_name = join('.', $clone_name, $numbers[0], $i);
                 $iso_name .= $3 if $3;
-                last unless $self->get_SubSeq($iso_name);
+                my $have_iso = 0;
+                foreach my $n ($iso_name, "$iso_name.mRNA") {
+                    $have_iso = 1 if $self->get_SubSeq($n);
+                }
+                last unless $have_iso;
             }
         }
         elsif (@numbers == 1) {
-            # Are making the first isoform
+            # Making the first isoform
             $new_name = join('.', $clone_name, $numbers[0], 1);
             $iso_name = join('.', $clone_name, $numbers[0], 2);
             if ($extn) {
