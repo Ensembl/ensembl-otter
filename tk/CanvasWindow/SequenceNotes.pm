@@ -153,18 +153,25 @@ sub _column_text_seq_note_text {
         return {};
     }
 }
+
 sub _column_text_seq_note_status{
     my $cs = shift;
-    my $missing = join(",\n" => keys(%{$cs->unfinished()}));    
+    my $missing = join(",\n" => keys(%{$cs->unfinished()}));
     my $color   = 'darkgreen';
     if ($missing){
+        warn "missing:\n$missing\n";
 	$missing = "missing";
 	$color   = 'red';
     }else{
 	$missing = "complete";
     }
-    return { -text => $missing, -fill => $color, -tags => ['searchable']};
+    return {
+        -text => $missing,
+        -fill => $color,
+        -tags => ['searchable'],
+        };
 }
+
 sub max_column_width {
     my( $self, $max_column_width ) = @_;
     

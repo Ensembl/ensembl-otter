@@ -1074,9 +1074,17 @@ sub edit_new_subsequence {
     if (@subseq) {
         # Find 3' most coordinate in subsequences
         foreach my $sub (@subseq) {
-            my $this_3prime = $sub->strand == 1 ? $sub->end : $sub->start;
-            if ($most_3prime) {
-                next unless $this_3prime < $most_3prime;
+            my( $this_3prime );
+            if ($sub->strand == 1) {
+                $this_3prime = $sub->end;
+                if ($most_3prime) {
+                    next unless $this_3prime > $most_3prime;
+                }
+            } else {
+                my $this_3prime = $sub->start;
+                if ($most_3prime) {
+                    next unless $this_3prime < $most_3prime;
+                }
             }
             $most_3prime = $this_3prime;
         }
@@ -1109,7 +1117,8 @@ sub edit_new_subsequence {
     }
     $max++;
     
-    my $seq_name = "$prefix$region_name.$max-001";
+    my $loc_name = "$prefix$region_name.$max";
+    my $seq_name = "$loc_name-001";
     
     # Check we don't already have a sequence of this name
     if ($self->get_SubSeq($seq_name)) {
@@ -1154,10 +1163,10 @@ sub edit_new_subsequence {
             $ex->end  (2);
         }
     }
-    my $gm = $self->get_default_mutable_GeneMethod
-        or return;
-    $new->GeneMethod($gm);
     $new->name($seq_name);
+    #$new->Locus($self->get_Locus($loc_name));
+    my $gm = $self->get_default_mutable_GeneMethod or confess "No default mutable GeneMethod";
+    $new->GeneMethod($gm);
 
     $clone->add_SubSeq($new);
 

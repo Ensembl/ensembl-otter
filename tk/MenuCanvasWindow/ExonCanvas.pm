@@ -1059,6 +1059,7 @@ sub add_locus_rename_widget {
         -selectbackground   => 'gold',
         -font               => [$self->font, $self->font_size, 'normal'],
         )->pack;
+    #$be->bind('<Leave>', sub{ print STDERR "Variable now: ", ${$self->{'_locus_name_variable'}}, "\n"; });
     return $be;
 }
 
@@ -1843,6 +1844,7 @@ sub new_SubSeq_from_tk {
 
     my $sub = $self->SubSeq->clone;
     $sub->unset_translation_region;
+    $sub->unset_Locus;
     $sub->translation_region     ( $self->translation_region_from_tk  );
     $sub->name                   ( $self->get_subseq_name             );
     $sub->replace_all_Exons      ( $self->Exons_from_canvas           );
@@ -1892,6 +1894,8 @@ sub xace_save {
         $self->message("Can't have SubSequence with same name as clone!");
         return;
     }
+    
+    confess "No Locus" unless $sub->Locus;
     
     my $ace = '';
     

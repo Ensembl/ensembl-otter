@@ -6,7 +6,7 @@ package Tk::ComboBox;
 use strict;
 
 use vars qw($VERSION);
-$VERSION = '0.1'; # $Id: ComboBox.pm,v 1.3 2002-08-12 13:38:38 jgrg Exp $
+$VERSION = '0.1'; # $Id: ComboBox.pm,v 1.4 2003-10-29 11:31:54 jgrg Exp $
 
 use Tk qw(Ev);
 use Carp;
@@ -287,18 +287,21 @@ sub choices {
  if (@_ > 1)
   {
    $w->delete( qw/0 end/ );
-   my %hash;
-   my $var = $w->cget('-textvariable');
+   ### Code commented out puts the first choice
+   ### into the Entry widget if there are choices
+   ### and the Entry is empty.
+   #my $var = $w->cget('-textvariable');
    #my $old = $$var;
+   #my( %seen );
    foreach my $val (@$choices)
     {
      $w->insert( 'end', $val);
-     $hash{$val} = 1;
+     #$seen{$val} = 1;
     }
-   #unless (defined($old) and exists $hash{$old}) {
-   #    $old = (@$choices) ? $choices->[0] : undef;
-   #}
-   #$$var = $old;
+    #unless (defined($old) and defined $seen{$old}) {
+    #    $old = @$choices ? $choices->[0] : undef;
+    #}
+    #$$var = $old;
   }
  else
   {
