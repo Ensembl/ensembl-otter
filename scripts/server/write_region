@@ -255,13 +255,32 @@ eval {
       $gene = $event->new_gene;
     }
 
+    # attach_to_Slice transforms exons to contig coordinates.
+    # Need to save the original coordinates for the response XML.
+    my( %exon_start_end_strand );
+    foreach my $exon (@{$gene->get_all_Exons}) {
+        my $stable = $exon->stable_id or die "Missing exon stable ID";
+        $exon_start_end_strand{$stable} = [$exon->start, $exon->end, $exon->strand];
+    }
     print STDERR "Attaching gene to slice " . $gene->stable_id . " " . $gene->version. "";
     $oaga->attach_to_Slice($gene,$slice);
     $gene->detach_DBAdaptors;
     print STDERR "Done attaching";
 
-    $output_xml .= $gene->toXMLString() unless $event->type eq 'deleted';
     $oaga->store($gene);
+    
+    # Restore the pre-transform exon coordinates
+    foreach my $exon (@{$gene->get_all_Exons}) {
+        my $stable = $exon->stable_id or die "Missing exon stable ID";
+        my $ses = $exon_start_end_strand{$stable}
+            or die "Couldn't get pre-transformed coordinates for exon '$stable'";
+        my ($start, $end, $strand) = @$ses;
+        $exon->start($start);
+        $exon->end($end);
+        $exon->strand($strand);
+    }
+    
+    $output_xml .= $gene->toXMLString() unless $event->type eq 'deleted';
     print STDERR "Stored gene";
     $outputstr .= " " . $gene->version . " " . $gene->gene_info->name->name . "";
   }
