@@ -100,8 +100,9 @@ my ($pipeline_db); # pipeline database adaptor (holds the submission status deta
     
     $chooser->chooser_map(make_chooser_map($set_name)); # chooser map stores informaion of db results
     $chooser->chooser_tags(get_seq_chooser_tags());     # chooser tags are the tags that go with each line of the display - taken from choosermap
-    my @display_list = (1,2,3,4,5,6);                  # list contains the coulmns to be displayed
-    $chooser->chooser_display_list(\@display_list);
+    my @display_list = (1,2,3,4,5,6);                  # list contains the coulmns in the order to be displayed
+    # if you want to display different columns / different order , then change this list to correspont with the rows in the chooser_map 
+    $chooser->chooser_display_list(\@display_list);    
     
     my $canvas = $gc->canvas;
     $canvas->configure(-selectbackground => 'gold');
@@ -349,7 +350,8 @@ my ($pipeline_db); # pipeline database adaptor (holds the submission status deta
                  
         $hist_chooser ->chooser_map(@text);
         $hist_chooser->chooser_tags(get_hist_chooser_tags());
-        my @display_list = ( 6, 5,4,3,2 );                   # this is the list of elements in the chooser_map array that are to be displayed
+        # to change which of these elements are displayed or their order, alter the list on the next line 
+        my @display_list = ( 2,3,4,5,6); # this is the list of elements in the chooser_map array that are to be displayed
         $hist_chooser->chooser_display_list(\@display_list);  
     
         $hist_gen_canv->render;
