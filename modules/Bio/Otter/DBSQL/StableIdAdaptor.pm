@@ -10,6 +10,30 @@ use vars qw(@ISA);
 @ISA = qw ( Bio::EnsEMBL::DBSQL::BaseAdaptor);
 
 
+sub fetch_new_gene_stable_id {
+    my ($self) = @_;
+
+    return $self->_fetch_new_by_type('gene', 'G');
+}
+
+sub fetch_new_transcript_stable_id {
+    my ($self) = @_;
+
+    return $self->_fetch_new_by_type('transcript', 'T');
+}
+
+sub fetch_new_exon_stable_id {
+    my ($self) = @_;
+
+    return $self->_fetch_new_by_type('exon', 'E');
+}
+
+sub fetch_new_translation_stable_id {
+    my ($self) = @_;
+
+    return $self->_fetch_new_by_type('translation', 'P');
+}
+
 sub _fetch_new_by_type {
   my( $self, $type, $type_prefix ) = @_;
 
@@ -95,53 +119,6 @@ sub store_by_type {
 
      $self->throw("Couldn't update the $table table for $id [$type]") unless $res;
    }
-}
-
-sub exists_gene_stable_id {
-    my ($self,$id) = @_;
-
-    return $self->_exists_stable_id_by_type($id,'gene');
-
-}
-sub exists_transcript_stable_id {
-    my ($self,$id) = @_;
-
-    return $self->_exists_stable_id_by_type($id,'transcript');
-
-}
-sub exists_tranlation_stable_id {
-    my ($self,$id) = @_;
-
-    return $self->_exists_stable_id_by_type($id,'translation');
-
-}
-sub exists_exon_stable_id {
-    my ($self,$id) = @_;
-
-    return $self->_exists_stable_id_by_type($id,'exon');
-
-}
-sub fetch_new_gene_stable_id {
-    my ($self) = @_;
-
-    return $self->_fetch_new_by_type('gene', 'G');
-}
-
-sub fetch_new_transcript_stable_id {
-    my ($self) = @_;
-
-    return $self->_fetch_new_by_type('transcript', 'T');
-}
-
-sub fetch_new_exon_stable_id {
-    my ($self) = @_;
-
-    return $self->_fetch_new_by_type('exon', 'E');
-}
-sub fetch_new_translation_stable_id {
-    my ($self) = @_;
-
-    return $self->_fetch_new_by_type('translation', 'P');
 }
 
 
