@@ -1,6 +1,7 @@
 package Bio::Otter::AssemblyTag;
 
 use strict;
+use Bio::EnsEMBL::SeqFeature;
 
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::SeqFeature);
