@@ -6,6 +6,7 @@ use strict;
 use GenomeCanvas;
 use GenomeCanvas::Band::TilingPath;
 use GenomeCanvas::Band::Plot;
+use GenomeCanvas::Band::RepeatFeature;
 use Bio::EnsEMBL::DBSQL::Obj;
 use Hum::Submission 'prepare_statement'; # For Sanger sequence names
 use Getopt::Long 'GetOptions';
@@ -93,6 +94,11 @@ use Getopt::Long 'GetOptions';
         #$tiling2->show_labels($labels);
         #$tiling2->tiling_direction(1);
         #$gc->add_Band($tiling2);
+
+        my $repeat = GenomeCanvas::Band::RepeatFeature->new;
+        $repeat->virtual_contig($vc);
+        $repeat->draw_simple(0);
+        $gc->add_Band($repeat);
 
         my $plot = GenomeCanvas::Band::Plot->new;
         $plot->virtual_contig($vc);
@@ -192,7 +198,7 @@ sub get_sanger_name {
     my( $name ) = @_;
     
     my $acc = trim_name($name);
-    return seq_name_from_acc($acc) || $acc;
+    return seq_name_from_acc($acc) || "Em:$acc";
 }
 
 {

@@ -36,6 +36,7 @@ sub print_gif {
     for (my $i = 0; $i < $n_steps; $i++) {
         my $lgt_fade = $lgt + (((1 - $lgt) / $n_steps) * $i);
         my $sat_fade = $sat - (($sat / $n_steps) * $i);
+        #my $sat_fade = $sat;
         my @rgb = hsl_to_rgb($hue, $sat_fade, $lgt_fade);
         my $color = $img->colorAllocate(@rgb);
         my $x = $i * $step_width;
@@ -118,13 +119,13 @@ sub rgb_to_hsl {
         # Calculate the hue
         my $divisor = $max - $min;
         if ($r == $max) {
-            $hue = ($g - $b) / $divisor;
+            $hue =      ($g - $b) / $divisor;
         }
         elsif ($g == $max) {
-            $hue = (2 + $b - $r) / $divisor;
+            $hue = 2 + (($b - $r) / $divisor);
         }
         elsif ($b == $max) {
-            $hue = (4 + $r - $g) / $divisor;
+            $hue = 4 + (($r - $g) / $divisor);
         }
     }
     

@@ -10,15 +10,6 @@ use GenomeCanvas::Band;
 use vars '@ISA';
 @ISA = ('GenomeCanvas::Band');
 
-sub height {
-    my( $band, $height ) = @_;
-    
-    if ($height) {
-        $band->{'_height'} = $height;
-    }
-    return $band->{'_height'} || $band->font_size * 10;
-}
-
 sub plot_method {
     my( $band, $plot_method ) = @_;
     
@@ -26,6 +17,15 @@ sub plot_method {
         $band->{'_plot_method'} = $plot_method;
     }
     return $band->{'_plot_method'} || "gc_profile";
+}
+
+sub height {
+    my( $band, $height ) = @_;
+    
+    if ($height) {
+        $band->{'_height'} = $height;
+    }
+    return $band->{'_height'} || $band->font_size * 10;
 }
 
 sub range {
@@ -236,56 +236,6 @@ sub draw_plot_axes {
         -width      => 1,
         -tags       => [@tags],
         );
-}
-
-sub draw_sequence_gaps {
-    my( $band ) = @_;
-    
-    my $vc = $band->virtual_contig;
-    my $rpp = $band->residues_per_pixel;
-    my $canvas = $band->canvas;
-    my $height = $band->height;
-    my $y_offset = $band->y_offset;
-    my $y_max = $y_offset + $height;
-    my @tags = $band->tags;
-    
-    my( @gap_map );
-    my $prev_end = 0;
-    my @map_contig_list = $vc->_vmap->each_MapContig;
-    for (my $i = 0; $i < @map_contig_list; $i++) {
-        my $map_c = $map_contig_list[$i];
-        my $start = $map_c->start;
-        my $end   = $map_c->end;
-        
-        # Gap at the start?
-        if ($i == 0 and $start > 1) {
-            push(@gap_map, [1, $start - 1]);
-        }
-        
-        # Gap after previous MapContig?
-        my $gap = ($start - $prev_end - 1);
-        if ($gap) {
-            push(@gap_map, [$prev_end + 1, $start - 1]);
-        }
-        $prev_end = $end;
-    }
-    
-    # Gap at end?
-    my $vc_length = $vc->length;
-    if ($prev_end < $vc_length) {
-        push(@gap_map, [$prev_end + 1, $vc_length]);
-    }
-
-    # Draw the gaps    
-    foreach my $gap (@gap_map) {
-        my ($x1, $x2) = map $_ / $rpp, @$gap;
-        $canvas->createRectangle(
-            $x1, $y_offset, $x2, $y_max,
-            -fill       => 'grey',
-            -outline    => undef,
-            -tags       => [@tags],
-            );
-    }
 }
 
 sub sequence_chunk_coords {
