@@ -664,13 +664,13 @@ sub write_ensembl_data {
 sub write_ensembl_data_for_key {
     my( $self, $ss, $key, $logic_name ) = @_;
 
-    my $debug_flag = 1;
+    my $debug_flag = 0;
 
     my $dataset = $self->Client->get_DataSet_by_name($ss->dataset_name);
     $dataset->selected_SequenceSet($ss);    # Not necessary?
     my $ens_db = Bio::Otter::Lace::SatelliteDB::get_DBAdaptor(
         $dataset->get_cached_DBAdaptor, $key
-        );
+        ) or return;
 
     # create file for output and add it to the acedb object
     my $ace_file = $self->home . "/rawdata/$key.ace";

@@ -74,6 +74,9 @@ sub new_AceDatabase {
     my( $self ) = @_;
     
     my $db = Bio::Otter::Lace::AceDatabase->new;
+    my $home = $db->home;
+    my $i = ++$self->{'_last_db'};
+    $db->home("${home}_$i");
     $db->Client($self);
     return $db;
 }
