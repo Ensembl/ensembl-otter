@@ -718,7 +718,9 @@ sub make_embl_ft {
         }
         
         #PolyA signals and sites for the slice
-        $self->_do_polyA($slice, $set);   
+        $self->_do_polyA($slice, $set);
+        
+        ### Assembly tags here
     }
     
     #Finish up
