@@ -8,8 +8,6 @@ use Carp;
 use Tk;
 use GenomeCanvas::MainWindow;
 use GenomeCanvas::Band;
-use GenomeCanvas::BandSet;
-use GenomeCanvas::Drawable;
 use GenomeCanvas::State;
 
 use vars qw{@ISA @DEFAULT_CANVAS_SIZE};
@@ -47,39 +45,57 @@ sub new {
     return $gc;
 }
 
-sub bandset_padding {
+sub band_padding {
     my( $gc, $pixels ) = @_;
     
     if ($pixels) {
-        $gc->{'_bandset_padding'} = $pixels;
+        $gc->{'_band_padding'} = $pixels;
     }
-    return $gc->{'_bandset_padding'} || 20;
+    return $gc->{'_band_padding'} || 20;
+}
+
+sub add_Band {
+    my( $gc, $band ) = @_;
+    
+    $band->add_State($gc->state);
+    push(@{$gc->{'_band_list'}}, $band);
+}
+
+sub band_list {
+    my( $gc ) = @_;
+    
+    return @{$gc->{'_band_list'}};
 }
 
 sub render {
     my( $gc ) = @_;
     
-    $gc->delete_all_bandsets;
+    $gc->delete_all_bands;
     
     my $canvas = $gc->canvas;
     my $y_offset = 0;
     my $c = 0;
-    foreach my $set ($gc->band_sets) {
+    my @band_list = $gc->band_list;
+    for (my $i = 0; $i < @band_list; $i++) {
+        my $band = $band_list[$i];
+        my $tag = "$band-$i";
         if ($c > 0) {
             # Increase y_offset by the amount
-            # given by bandset_padding
-            $y_offset += $gc->bandset_padding;
+            # given by band_padding
+            $y_offset += $gc->band_padding;
         }
-        my $tag = $gc->bandset_tag($set);
-        #warn "Rendering bandset '$tag' with offset $y_offset\n";
+        $gc->band_tag($band, $tag);
+        #warn "Rendering band '$tag' with offset $y_offset\n";
         
         $gc->y_offset($y_offset);
-        $set->render($tag);
+        $band->tags($tag);
+        $band->render;
 
         #warn "[", join(',', $canvas->bbox($tag)), "]\n";
 
         # Move the band to the correct position if it
         # drew itself somewhere else
+        $gc->draw_band_outline($band);
         my $actual_y = ($canvas->bbox($tag))[1];
         if ($actual_y < $y_offset) {
             my $y_move = $y_offset - $actual_y;
@@ -94,46 +110,40 @@ sub render {
     }
 }
 
-sub delete_all_bandsets {
+sub draw_band_outline {
+    my( $gc, $band ) = @_;
+    
+    my $canvas = $gc->canvas;
+    my @tags = $band->tags;
+    my @rect = $canvas->bbox(@tags)
+        or confess "Can't get bbox for tags [@tags]";
+    $canvas->createRectangle(
+        @rect,
+        -fill       => undef,
+        -outline    => undef,
+        -tags       => [@tags],
+        );
+}
+
+sub delete_all_bands {
     my( $gc ) = @_;
     
     my $canvas = $gc->canvas;
-    foreach my $set ($gc->band_sets) {
-        my $tag = $gc->bandset_tag($set);
+    foreach my $band ($gc->band_list) {
+        my $tag = $gc->band_tag($band);
         $canvas->delete($tag);
     }
 }
 
-sub new_BandSet {
-    my( $gc ) = @_;
+sub band_tag {
+    my( $gc, $band, $tag ) = @_;
     
-    my $band_set = GenomeCanvas::BandSet->new;
-    push( @{$gc->{'_band_sets'}}, $band_set );
-    $band_set->add_State($gc->state);
-
-    # Add a tag which identifies this set on the canvas
-    my $tag = 'set_'. scalar(@{$gc->{'_band_sets'}});
-    $band_set->bandset_tag($tag);
-    $gc->bandset_tag($band_set, $tag);
-    
-    return $band_set;
-}
-
-sub bandset_tag {
-    my( $gc, $set, $tag ) = @_;
-    
-    confess "Missing argument: no bandset" unless $set;
+    confess "Missing argument: no band" unless $band;
     
     if ($tag) {
-        $gc->{'_bandset_tag_map'}{$set} = $tag;
+        $gc->{'_band_tag_map'}{$band} = $tag;
     }
-    return $gc->{'_bandset_tag_map'}{$set};
-}
-
-sub band_sets {
-    my( $gc ) = @_;
-    
-    return @{$gc->{'_band_sets'}};
+    return $gc->{'_band_tag_map'}{$band};
 }
 
 sub zoom {
@@ -285,18 +295,10 @@ __END__
 
 GenomeCanvas is a container object for a
 Tk::Canvas object, and one or many
-GenomeCanvas::BandSet objects.
+GenomeCanvas::Band objects.
 
-Each GenomeCanvas::BandSet object contains a
-Bio::EnsEMBL::Virtual::Contig object, and one or
-many GenomeCanvas::Band objects.
-
-Each GenomeCanvas::Band contains an array
-containing one or many GenomeCanvas::Drawable
-objects, in the order in which they are drawn
-onto the canvas.  To render each Drawable object,
-the Band object passes the appropriate data as
-arguments to the draw() method on the Drawable.
+Each GenomeCanvas::Band object implements the
+render method.
 
 =head1 AUTHOR
 
