@@ -755,12 +755,13 @@ foreach my $atype (keys %gsi){
 	      print OUT3 "WARN NON-DUP: $eid, $eid2 identical but diff end phases ($eep,$eep2) [$ep,$ep2]\n";
 	    }elsif($dup_exon{$eid}==$eid2 || $dup_exon{$eid2}==$eid){
 	      # don't report again
+	      print "should never happen $eid, $eid2\n";
 	    }else{
 	      $dup_exon{$eid}=$eid2;
 	      print OUT2 "$eid\t$eid2\t$st\t$ed\n";
+	      $flag=1;
+	      $eid=$eid2;
 	    }
-	    $flag=1;
-	    $eid=$eid2;
 	  }else{
 	    my $mxst=$st;
 	    $mxst=$ecst if $ecst>$mxst;
