@@ -919,6 +919,7 @@ sub popup_missing_analysis{
     unless (defined $index ){
         return;
     }
+    $self->canvas->delete('msg');
     my $cs =  $self->get_CloneSequence_list->[$index];
     my $missing = join(", " => keys(%{$cs->unfinished()}));
     my $clone = $cs->accession . "." . $cs->sv;
