@@ -105,7 +105,7 @@ my $DEBUG = 0;
         'sanger!'       => \$at_sanger,
         ) or useage();
     useage() if $help;
-    useage() unless $dataset;
+    useage() unless $dataset_name;
     $agp_file           = $ARGV[0]; # takes the remaining argument as the filename to be read
 
     # some options checking to make sure there's some sanity
