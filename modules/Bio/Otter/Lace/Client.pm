@@ -54,7 +54,7 @@ sub author {
     
     warn "Set using the Config file please.\n" if $author;
 
-    return $self->option_from_array([qw( client author )]) || (getpwuid($<))[6];
+    return $self->option_from_array([qw( client author )]) || (getpwuid($<))[0];
 }
 
 sub email {
