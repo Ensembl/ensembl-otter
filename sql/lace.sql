@@ -30,30 +30,41 @@ create table sequence_set_access (
     PRIMARY KEY(assembly_type, author_id)
 );
 
-create table contig_status (
-    contig_status_id  INT(10) unsigned DEFAULT '0' NOT NULL  auto_increment,
+create table contig_annotation_status (
+    conitg_ann_status_id  INT(10) unsigned DEFAULT '0' NOT NULL  auto_increment,
     contig_id INT(10) unsigned DEFAULT '0' NOT NULL,
     author_id INT(10) unsigned DEFAULT '0' NOT NULL,
     status_date DATETIME,
     status ENUM(
+        'in_progress',
         'annotated',
         'marked_for_checking',
         'checked',
-        'marked_for_submitting',
+        'marked_for_submission',
         'submitted'
         ),
     
-    PRIMARY KEY (contig_status_id),
+    PRIMARY KEY (conitg_ann_status_id),
     KEY cln_stat_date (contig_id, status, status_date)
 );
 
-create table current_contig_status (
-    contig_status_id  INT(10) unsigned DEFAULT '0' NOT NULL,
+create table current_contig_annotation_status (
+    conitg_ann_status_id  INT(10) unsigned DEFAULT '0' NOT NULL,
     contig_id INT(10) unsigned DEFAULT '0' NOT NULL,
     
-    PRIMARY KEY (contig_status_id),
+    PRIMARY KEY (conitg_ann_status_id),
     KEY (contig_id)
 );
+
+
+# This should be part of the contig table, but is not part of the core schema
+# Maybe: alter table contig add column is_private ENUM('Y', 'N') DEFAULT 'N';
+
+create table private_contig {
+    contig_id INT(10) unsigned DEFAULT '0' NOT NULL,
+    
+    PRIMARY KEY(contig_id)
+}
 
 create table contig_vega_status (
     contig_vega_status_id  INT(10) unsigned DEFAULT '0' NOT NULL  auto_increment,
@@ -62,9 +73,8 @@ create table contig_vega_status (
     vega_status_date DATETIME,
     vega_status ENUM(
         'unpublished',
-        'private',
-        'marked_for_publishing',
-        'vega_published'
+        'marked_for_publication',
+        'published'
         ),
     
     PRIMARY KEY (contig_vega_status_id),
