@@ -1,13 +1,15 @@
 
 <otter>
  <sequenceset>
+  <assembly_type>type</assembly_type>
   <author>xxxx</author>
   <sequencefragment>
-    <name>name</name>
-    <remark>remark</remark>
+    <id>name</id>
     <chromosome>xxx</chromosome>
-    <id>xx</id>
+    <accession>xx</accession>
     <version>xx</version>
+    <remark>remark</remark>
+    <keyword>keyword</keyword>
     <assemblystart>xxx</assemblystart>
     <assemblyend>xxx</assemblyend>
     <assemblyori> </assemblyori>
