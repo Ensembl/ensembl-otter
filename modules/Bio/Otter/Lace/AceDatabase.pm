@@ -17,6 +17,7 @@ use Bio::Otter::Lace::PersistentFile;
 
 use Bio::EnsEMBL::Ace::DataFactory;
 use Bio::EnsEMBL::Ace::Filter::Gene;
+use Bio::EnsEMBL::Ace::Filter::DNA;
 
 my $DATASET_HASH_FILE    = '.slice_dataset';
 my $LOCK_REGION_XML_FILE = '.lock_region.xml';
