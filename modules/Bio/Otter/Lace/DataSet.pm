@@ -282,8 +282,8 @@ sub lock_refresh_for_SequenceSet{
         push (@id_list , $clone->contig_id);
     }
      
-    my $id_string =  '"'  .  ( join "\" , \"" , @id_list )  .  '"' ;    
-    
+    my $id_string =  join( ", " , map { qq`'$_'`} @id_list );        
+
     my $sql = qq{
         SELECT cl.clone_lock_id , g.contig_id, t.author_id
             , t.author_name, t.author_email, cl.hostname
@@ -294,7 +294,8 @@ sub lock_refresh_for_SequenceSet{
         LEFT JOIN author t ON t.author_id = cl.author_id
         WHERE a.contig_id = g.contig_id
           AND g.clone_id = c.clone_id
-          AND a.type = "$type"
+--          AND a.type = "$type"
+          AND cl.clone_lock_id IS NOT NULL
           AND g.contig_id in ($id_string)          
         };
         #warn $sql;
