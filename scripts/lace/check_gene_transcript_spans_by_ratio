@@ -1,20 +1,26 @@
 #!/usr/local/bin/perl -w
 
-### chk_gene_transcript_spans
+### check_gene_transcript_spans_by_ratio
 
 use strict;
 use Getopt::Long 'GetOptions';
 use Bio::Otter::Lace::Defaults;
 use Data::Dumper;
 
-my ($dataset, $verbose, $help, @a_types);
+$| = 1;
+
+my ($dataset, $verbose, @a_types);
+my $check_vega = 0;
+
+my $help = sub { exec('perldoc', $0) };
 
 Bio::Otter::Lace::Defaults::do_getopt('ds|dataset=s' => \$dataset,
 	                              'v|verbose'    => \$verbose,
 				      't|type=s@'     => \@a_types,
-				      'h|help'       =>	\$help);    # plus default options
-				
-exec('perldoc', $0) if !($dataset) || $help;
+				      'h|help'       =>	$help,
+                                      'vega!'       => \$check_vega,
+                                      ) or $help->();    # plus default options
+$help->() unless $dataset;
 
 my $client    = Bio::Otter::Lace::Defaults::make_Client();          # Bio::Otter::Lace::Client
 my $dset      = $client->get_DataSet_by_name($dataset);             # Bio::Otter::Lace::DataSet
@@ -24,23 +30,26 @@ my $otter_db  = $dset->get_cached_DBAdaptor;                        # Bio::EnsEM
 unless ( @a_types ){
 
   # sql query to get all assembly types
-  my $sth = $otter_db->prepare(qq{SELECT count(*), type FROM assembly group by type});
+  my $sql = q{SELECT assembly_type FROM sequence_set};
+  if ($check_vega) {
+    $sql .= q{  where vega_set_id != 0 };
+  }
+  my $sth = $otter_db->prepare($sql);
   $sth->execute;
-  while( my @row = $sth->fetchrow_array()) {
-    push (@a_types, $row[1]);
+  while( my ($type) = $sth->fetchrow_array()) {
+    push (@a_types, $type);
   }
   $sth->finish;
 }
 
 # loop thru all assembly types to fetch all annotated genes in it on otter
 
-my (@spans, @length, $error, $mRNA_snf, $mRNA_enf, %span_trans, $g_error, $total_error, $type);
+foreach my $type ( @a_types ) {
 
-foreach $type ( @a_types ) {
+    print STDERR "\nExamining genes on '$type'\n";
 
   $otter_db->assembly_type($type); # replace the default sequence set setting
 
-  warn $type;
   my $seqSet    = $dset->get_SequenceSet_by_name($type);
   $dset->fetch_all_CloneSequences_for_SequenceSet($seqSet);
   my $chrom     = $seqSet->CloneSequence_list()->[0]->chromosome;
@@ -52,54 +61,56 @@ foreach $type ( @a_types ) {
 
   my $latest_gene_id = $geneAd->list_current_dbIDs_for_Slice($slice);
 
+    my $i = 0;
   foreach my $id ( @$latest_gene_id ) {
-
+    $i++;
     my $gene = $geneAd->fetch_by_dbID($id)->transform($slice);
-
-    my $g_start = $gene->start;
-    my $g_end   = $gene->end;
-    my $gid     = $gene->stable_id;
-
-    my $gene_span1 = "Gene span(dbID ".$gene->dbID."): $g_start-$g_end"; # gene span here is from the first exon to the last exon
-    print $gene_span1, "\n";
-
-    my $gene_span = $g_end - $g_start +1;
-
-    # get all transcripts of a gene
-
+    my $gene_length = $gene->end - $gene->start + 1;
+    
     my $all_trans = $gene->get_all_Transcripts;
-
-    @length = ();
-    $error = ();
-
-    foreach my $trans ( @$all_trans) {
-
-      warn $trans->stable_id;
-
-      my $trans_id = $trans->transcript_info->{stable_id};
-
-      print $trans->start." => ".$trans->end." (start - end of $trans_id)\n";
-      push( @length, ($trans->end - $trans->start + 1) );
-     }
-
-    @length = sort { $a<=>$b } @length;
-
-    # compare longest transcript span with gene span
-    # problem spotted is the ratio not equal to 1
-
-    if ( $length[-1] != $gene_span ){
-      $error .= "$gid\t".$length[-1]/$gene_span."\n";
-      print "$gid\t".$length[-1]/$gene_span."\n";
+    my( $longest );
+    my $longest_length = 0;
+    foreach my $tsct (@$all_trans) {
+        my $length = $tsct->end - $tsct->start + 1;
+        if ($length > $longest_length) {
+            $longest_length = $length;
+            $longest = $tsct;
+        }
     }
-  }
 
-  if ( $error ) {
-    my $outfile = "/nfs/team71/analysis/ck1/OTTER/error/gene_span_check_".$type."_$dataset";
-    open (F, ">$outfile") || die $!;
-    print F $error;
-    close F;
+    unless ($longest) {
+        my $msg = sprintf "FAILED TO GET LONGEST TRANSCRIPT FOR '%s'\n", $gene->stable_id;
+        print $msg;
+        print STDERR $msg;
+        next;
+    }
+    
+    my $ratio = $longest_length / $gene_length;
+    if ($ratio != 1) {
+        print STDERR "+";
+        print join("\t",
+            $type,
+            $gene->stable_id,
+            $longest->transcript_info->name,
+            $ratio,
+            ), "\n";
+    } else {
+        print STDERR '.';
+    }
+    unless ($i % 60) {
+        print STDERR "\n";
+    }
   }
 }
 
 __END__
+
+=head1 NAME - check_gene_transcript_spans_by_ratio
+
+=head1 SYNOPSIS
+
+  check_gene_transcript_spans_by_ratio -dataset <DATASET> [-vega] [-type <SET>]
+
+
+
 
