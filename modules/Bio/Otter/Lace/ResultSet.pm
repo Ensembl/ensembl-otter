@@ -100,7 +100,7 @@ sub fetch_Clones_containing_stable_id{
 
     my $stable_id_types = {};
     foreach my $id(@$stable_ids){
-        if($id =~ /^$prefix_primary$prefix_species([TPG])\d+/i){
+        if($id =~ /^$prefix_primary$prefix_species([TPGE])\d+/i){
             push(@{$stable_id_types->{uc $1}}, $id);
         }else{
             print STDERR "'$id' doesn't look like a stable id. It doesn't start with '$prefix_primary$prefix_species'\n";
@@ -108,6 +108,7 @@ sub fetch_Clones_containing_stable_id{
     }
 
     my $geneAdapt       = $dba->get_GeneAdaptor();
+    my $exonAdapt       = $dba->get_ExonAdaptor();
     my $transcriptAdapt = $dba->get_TranscriptAdaptor();
     my $clone_names     = {};
 
@@ -158,6 +159,23 @@ sub fetch_Clones_containing_stable_id{
                 #print STDERR "Found '$clone_name'\n";
                 $clone_names->{$clone_name} = 1;
             }
+        };        
+        if ($@){
+            ## assume error was caused by not being able to create a $geneNameObjList - as name didnt exist
+            print STDERR "nothing found for $stable_id" ; 
+        }
+
+    }
+    $stable_id_types->{'E'} ||= [];
+    foreach my $stable_id (@{$stable_id_types->{'E'}}){
+        eval{
+            print STDERR "Looking for '$stable_id' and assuming it's an exon\n";
+            my $exonObj     = $exonAdapt->fetch_by_stable_id($stable_id);
+            print STDERR "Found exon with id '".$exonObj->stable_id."' & version " . $exonObj->version . "\n";
+            my $clone_name = $exonObj->contig->clone->id();
+            #print STDERR "Found '$clone_name'\n";
+            $clone_names->{$clone_name} = 1;
+        
         };        
         if ($@){
             ## assume error was caused by not being able to create a $geneNameObjList - as name didnt exist
