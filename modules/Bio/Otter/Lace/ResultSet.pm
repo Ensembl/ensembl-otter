@@ -301,7 +301,7 @@ sub fetch_Clones_containing_CloneNames{
     while ( my ($type , $cs_list)  = each (%cs_hash) ){
         my $ss = $self->uncached_SequenceSet_by_name($type);
         $ss->CloneSequence_list($cs_list);
-        $self->DataSet->status_refresh_for_SequenceSet($ss);
+#        $self->DataSet->status_refresh_for_SequenceSet($ss);
         $self->add_SequenceSet($ss);
     }
     $self->get_context_and_intron_clones();
@@ -358,8 +358,7 @@ sub get_context_and_intron_clones{
                         . " - need to insert " . $cs->accession . " into \@results_list"
                         . "\n" if $DEBUG;
                     my $size = scalar(@$results_list);
-                    my @tmp = @{$results_list}[$sync_idx..($size - 1)];
-                    splice(@$results_list, $sync_idx, $size - $sync_idx, $cs, @tmp);
+                    splice(@$results_list, $sync_idx, $size - $sync_idx, $cs, @{$results_list}[$sync_idx..($size - 1)]);
                 }
             }
         }
