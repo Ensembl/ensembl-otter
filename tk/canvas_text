@@ -18,13 +18,23 @@ use GenomeCanvas;
         -fill       => '#ffffff',
         -outline    => '#999999',
         );
-    $canvas->Tk::bind('<Button-1>',     [ \&deal_with_button_1, Tk::Ev('@') ] );
-    $canvas->Tk::bind('<BackSpace>',      \&backspace                         );
-    $canvas->Tk::bind('<Left>',           \&go_left                           );
-    $canvas->Tk::bind('<Right>',          \&go_right                          );
-    $canvas->Tk::bind('<<alpha_num>>',  [ \&insert_character,   Tk::Ev('A') ] );
+    
+    # Look at the "Tk::bind" man page for the Ev subroutine's documenation
+    $canvas->Tk::bind('<Double-Button-1>',  [ \&deal_with_double_click, Tk::Ev('x'), Tk::Ev('y') ] );
+    $canvas->Tk::bind('<Button-1>',         [ \&deal_with_button_1,     Tk::Ev('x'), Tk::Ev('y') ] );
+    $canvas->Tk::bind('<Button-2>',         [ \&paste_into_text,        Tk::Ev('x'), Tk::Ev('y') ] );
+    $canvas->Tk::bind('<BackSpace>',          \&backspace                                          );
+    $canvas->Tk::bind('<Left>',               \&go_left                                            );
+    $canvas->Tk::bind('<Right>',              \&go_right                                           );
+    $canvas->Tk::bind('<<alpha_num>>',      [ \&insert_character,   Tk::Ev('A')                  ] );
+    
     
     $canvas->eventAdd('<<alpha_num>>', map "<KeyPress-$_>", ' ', "a".."z", "A".."Z", 0..9);
+
+    $canvas->SelectionHandle( sub {
+        warn "Called selection handler with [@_]";
+        return $canvas->SelectionGet;
+        } );
 
     my $size = 15;
     my $x = 10;
@@ -59,9 +69,10 @@ sub make_editable_label {
 BEGIN {
     my $sel_tag = 'SelectedThing';
     my $selected = 0;
+    my $empty_string = '<empty>';
 
     sub deal_with_button_1 {
-        my( $canvas, $xy ) = @_;
+        my( $canvas, $x, $y ) = @_;
 
         my $obj = $canvas->find('withtag', 'current');
         unless ($obj) {
@@ -79,9 +90,15 @@ BEGIN {
         if ($type eq 'text') {
         
             # Position the icursor in the text
-            my($x,$y) = canvas_x_y($canvas, $xy);
+            my($x,$y) = canvas_x_y($canvas, $x, $y);
             my $pos = $canvas->index($obj, [$x, $y]) + 1;
             $canvas->icursor($obj, $pos);
+            
+            if ($canvas->itemcget($obj, 'text') eq $empty_string) {
+                $canvas->itemconfigure($obj, 
+                    -text   => '',
+                    );
+            }
             
             # Hightlight and focus if it isn't the
             # current object
@@ -93,8 +110,36 @@ BEGIN {
         }
     }
     
+    sub paste_into_text {
+        my( $canvas, $x, $y ) = @_;
+        
+        my $text = $canvas->SelectionGet                or return;
+        my $obj  = $canvas->find('withtag', 'current')  or return;
+        my $type = $canvas->type($obj)                  or return;
+        if ($type eq 'text') {
+            $canvas->itemconfigure($obj, 
+                -text   => $text,
+                );
+        }
+        deal_with_button_1($canvas, $x, $y);
+    }
+    
     sub deselect {
         my( $canvas ) = @_;
+        
+        $canvas->selectClear;
+        
+        # Avoid unselectable empty text objects
+        if (my $obj = $canvas->focus) {
+            if ($canvas->type($obj) eq 'text') {
+                my $text_string = $canvas->itemcget($obj, 'text');
+                unless ($text_string) {
+                    $canvas->itemconfigure($obj, 
+                        -text   => $empty_string,
+                        );
+                }
+            }
+        }
         
         $canvas->delete($sel_tag);
         $canvas->focus("");
@@ -119,13 +164,32 @@ BEGIN {
             );
         $canvas->lower($rec, $obj);
     }
+
+    sub deal_with_double_click {
+        my( $canvas, $x, $y ) = @_;
+
+        $canvas->selectClear;
+        
+        my $obj = $canvas->find('withtag', 'current')
+            or return;
+        my $focus = $canvas->focus
+            or return;
+        if ($obj == $focus) {
+            my $type = $canvas->type($obj)
+                or return;
+            if ($type eq 'text') {
+                $canvas->selectFrom($obj, 0);
+                $canvas->selectTo  ($obj, 'end');
+            }
+        }
+    }
 }
 
 sub canvas_x_y {
-    my( $canvas, $xy ) = @_;
+    my( $canvas, $x, $y ) = @_;
     
-    my ($x,$y) = $xy =~ /^\@(\d+),(\d+)/
-        or die "Wierd xy: '$xy'";
+    #my ($x,$y) = $xy =~ /^\@(\d+),(\d+)/
+    #    or die "Wierd xy: '$xy'";
     $x = $canvas->canvasx($x);
     $y = $canvas->canvasy($y);
     
@@ -137,7 +201,8 @@ sub backspace {
 
     my $text = $canvas->focus or return;
 
-    my $pos = $canvas->index($text, 'insert');
+    my $pos = $canvas->index($text, 'insert')
+        or return;  # Don't delete when at beginning of string
     $canvas->dchars($text, $pos - 1);
     maintain_highlight_rectangle($canvas, $text);
 }
