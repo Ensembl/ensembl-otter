@@ -8,14 +8,11 @@ use base 'CanvasWindow';
 use Data::Dumper;
 
 sub new{
-    my ($pkg , $toplevel ,$locus ) = @_ ;
+    my ($pkg , $toplevel ) = @_ ;
     my $self = bless {}, $pkg ;
 
     $self->toplevel($toplevel);    
     
-    if ($locus) {
-        $self->locus($locus);
-    }
     return $self ;
 }
 
@@ -96,6 +93,7 @@ sub initialize{
                                     )->pack(-side => 'left');
 
     $combo_box->bind('Return' , sub{$self->run_command});
+#    $combo_box->bind('<Destory>' , sub{ $combo_box} ) ;
     
     $self->_combo_box($combo_box);
     
@@ -173,7 +171,6 @@ sub update_checkbutton{
 sub show{
     my ($self, $state) = @_ ;
     
-#    warn "state from here $state";
     my $top = $self->toplevel();
     $top->resizable(1, 1);
     my $combo = $self->_combo_box ; 
@@ -200,19 +197,13 @@ sub show{
         ${$self->locus_name_ref} = '';
     }
     elsif($state eq 'edit'){ # state eq merge / swap ...
-        $combo->configure(-listcmd => sub{  my @names = $self->xace_seq_chooser->list_Locus_names;
-                                            $combo->configure(  -choices   => [@names] );       
-                                            });
-        ${$self->locus_name_ref} = $self->locus->name;        
-        $combo->bind('<Destroy>' , sub { $self = undef }) ; ## need this otherwise we get a memory leak!
-    }
 
-    ##position window
-    ##my $geometry = $self->toplevel()->geometry() ;
-    ##warn "geometry $geometry " ;
-    ##my ($size, $xpos , $ypos) = $geometry =~ /(\d+x\d+)?[+-]?(\d+)?[+-]?(\d+)?/ ;
-    ##warn "x= $xpos y = $ypos ";
-    ##$self->toplevel()->geometry( "+50+50") ; 
+        my @names = $self->xace_seq_chooser->list_Locus_names ;
+        $combo->configure(-listcmd => sub{  
+                                        $combo->configure(  -choices   => [@names] );
+                                             });        
+        ${$self->locus_name_ref} = $self->locus->name ;      
+    }
 
     $combo->focus ;
     $self->toplevel->deiconify ;
