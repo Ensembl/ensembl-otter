@@ -1465,10 +1465,10 @@ sub xace_save {
     
     # Do we need to rename?
     if ($old->is_archival and $new_name ne $old_name) {
-        $ace .= qq{\n-R Sequence "$old_name" "$new_name"\n};
+        $ace .= $sub->ace_string($old_name);
+    } else {
+        $ace .= $sub->ace_string;
     }
-    
-    $ace .= $sub->ace_string;
     
     #print STDERR "Sending:\n$ace";
     
