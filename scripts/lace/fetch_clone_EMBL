@@ -4,9 +4,7 @@
 
 use strict;
 
-use Getopt::Long 'GetOptions';
 use Bio::Otter::Lace::Defaults;
-use Bio::Otter::Lace::PipelineDB;
 
 {
     my $dataset_name = undef;
@@ -20,6 +18,7 @@ use Bio::Otter::Lace::PipelineDB;
         ) or $usage->();
     $usage->() unless $dataset_name and $sequence_set;
 
+    # Connect to Ensembl/Otter database and fetch adaptors
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
     my $ds = $cl->get_DataSet_by_name($dataset_name);
     my $otter_db = $ds->make_DBAdaptor;
@@ -28,6 +27,7 @@ use Bio::Otter::Lace::PipelineDB;
     my $gene_aptr  = $otter_db->get_GeneAdaptor;
 
     foreach my $acc (@ARGV) {
+        
         foreach my $chr_s_e (fetch_chr_start_end_for_accession($otter_db, $acc)) {
             my $slice = $slice_aptr->fetch_by_chr_start_end(@$chr_s_e);
             my $gene_id_list = $gene_aptr->list_current_dbIDs_for_Slice($slice);
@@ -40,7 +40,12 @@ use Bio::Otter::Lace::PipelineDB;
             my $slice_contig = $tile_path->[0]->component_Seq;
             my $contig_length = $slice_contig->length;
             foreach my $gid (@$gene_id_list) {
+                # Fetch gene
                 my $gene = $gene_aptr->fetch_by_dbID($gid);
+                
+                # Deleted genes have type 'obsolete'
+                next if $gene->type eq 'obsolete';
+                
                 foreach my $transcript (@{$gene->get_all_Transcripts}) {
                     my $sid = $transcript->stable_id;
                     print "\nTranscript $sid\n";
@@ -48,14 +53,16 @@ use Bio::Otter::Lace::PipelineDB;
                         my $contig  = $exon->contig;
                         my $start   = $exon->start;
                         my $end     = $exon->end;
+                        # May be an is_sticky method?
                         if ($exon->isa('Bio::Ensembl::StickyExon')) {
                             # Deal with sticy exon
                             warn "STICKY!\n";
                         }
                         elsif ($contig != $slice_contig) {
                             my $acc = $contig->clone->embl_id;
+                            my $sv  = $contig->clone->embl_version;
                             # Is not on Slice
-                            print "$acc:$start..$end\n";
+                            print "$acc.$sv:$start..$end\n";
                         }
                         else {
                             # Is on Slice (ie: clone)
@@ -109,7 +116,7 @@ __END__
 
 =head1 EXAMPLE
 
-  fetch_clone_EMBL -dataset human -chr chr1_07 AC114498 AL669831
+  fetch_clone_EMBL -dataset human -chr chr1-07 AC114498 AL669831
 
 =head1 AUTHOR
 
