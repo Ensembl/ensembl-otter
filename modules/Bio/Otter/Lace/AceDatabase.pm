@@ -146,11 +146,12 @@ sub fetch_otter_ace {
     my $selected_count = 0;
     foreach my $dsObj ($client->get_all_DataSets) {
         my $ss_list = $dsObj->get_all_SequenceSets;
-        foreach my $ss (@$ss_list) {
+        foreach my $ss (@$ss_list ) {
             if (my $ctg_list = $ss->selected_CloneSequences_as_contig_list) {
                 $dsObj->selected_SequenceSet($ss);
                 $ace .= $self->ace_from_contig_list($ctg_list, $dsObj);
                 foreach my $ctg (@$ctg_list) {
+                    warn "$ctg\n";
                     $selected_count += @$ctg;
                 }
             }
@@ -313,7 +314,7 @@ sub save_all_slices {
     foreach my $ds_name (keys %$sd_h) {
         my $slices = $sd_h->{$ds_name};
         foreach my $slice(@$slices){
-            warn "SAVING SLICE '$slice' WITH DATASET $ds_name\n";
+            warn "SAVING SLICE '$slice' WITH DATASET '$ds_name' to the Otter Server\n";
             $self->save_otter_slice($slice, $ds_name);
         }
     }
@@ -389,8 +390,73 @@ sub save_otter_slice {
     }
 
     my $success = $client->save_otter_xml($xml, $dataset_name);
-    $self->error_flag($success ? 0 : 1);
+    $self->error_flag($success ? 0 : 1); # not sure this is correct (check out).
+    $self->update_with_stable_ids($success);
     return $success;
+}
+
+sub update_with_stable_ids{
+    my ($self, $xml, $anything_else) = @_;
+##    my ($self, $xml_ref, $anything_else) = @_; if Client->save_otter_xml changes to return a SCALAR ref.
+    ## set error_flag = 1
+    $self->error_flag(1);
+    return unless $xml;
+
+    ## get an aceperl handle
+    my $ace = $self->aceperl_db_handle();
+
+    ## write the temp/persisent file
+    my $fileObj;
+    if($self->Client->debug){
+        $fileObj = Bio::Otter::Lace::PersistentFile->new();
+    }else{
+        $fileObj = Bio::Otter::Lace::TempFile->new;
+    }
+    $fileObj->name('otter_response.xml');
+    my $write = $fileObj->write_file_handle();
+    print $write (ref($xml) eq 'SCALAR' ? ${$xml} : $xml);
+    my $read  = $fileObj->read_file_handle();
+
+    ## convert the xml returned from the server into otter stuff
+    my ($genes,$slice,$seqstr,$tiles) = Bio::Otter::Converter::XML_to_otter($read);
+
+    ## this should only contain the CHANGED genes.
+
+    if(!$genes){
+        warn "No genes changed\n";
+    }else{
+        my $kungFu = 40;
+        warn "Some genes changed, KungFu level set to '$kungFu'\n";
+
+        ## need to do genes, transcripts, translations and exons
+        
+        ## learn/ask James about aceperl
+        if($kungFu > 9){
+            ## do aceperl stuff
+            warn Bio::Otter::Converter::ace_transcript_seq_objs_from_genes($genes, $slice, {}, 1);
+        }elsif($kungFu > 5){
+            ## do print of what aceperl will get
+            
+        }elsif($kungFu > 3){
+            foreach my $gene(@$genes){
+                # do dump of gene stableids
+                warn "Gene with stable id " . $gene->stable_id . " changed \n";
+            }
+        }elsif($kungFu > 2){
+            ## do a dump of otter xml
+            foreach my $gene(@$genes){
+                warn "This is what I think changed " . $gene->toXMLString;
+            }
+        }else{
+            ## until then
+            warn qq`Didn't write anything \n`;
+        }
+        
+    }
+
+    ## everything went ok so error_flag = 0;
+    $self->error_flag(0);
+    return 1;
 }
 
 sub unlock_all_slices {
@@ -809,7 +875,7 @@ sub write_ensembl_data_for_key {
 	    my $first_ctg = $cs->[0];
 	    my $last_ctg = $cs->[$#$cs];
 
-	    my $chr = $first_ctg->chromosome->name;  
+	    my $chr = $first_ctg->chromosome->name;
 	    my $chr_start = $first_ctg->chr_start;
 	    my $chr_end = $last_ctg->chr_end;
 	    $otter_slice_name="$chr.$chr_start-$chr_end";
@@ -992,10 +1058,12 @@ sub DESTROY {
         return;
     }
     my $client = $self->Client;
-    if($client){
-        $self->unlock_all_slices();# if $client->write_access;
-    }
-    rmtree($home);
+    eval{
+        if($client){
+            $self->unlock_all_slices();# if $client->write_access;
+        }
+    };
+    rmtree($home) unless $@;
 }
 
 1;
