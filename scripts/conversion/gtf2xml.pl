@@ -35,7 +35,7 @@ my $chr='21';
 my $chrstart=1;
 my $chrend=44626493;
 my $type='chr21';
-my $suffix='RIKEN';
+my $prefix='RI';
 
 my $opt_i='chr21-20030701_catalog_20031010_gtf.table';
 my $opt_o='chr21.xml';
@@ -54,7 +54,7 @@ GetOptions(
 	   'o:s',        \$opt_o,
 	   'author:s',   \$author,
 	   'email:s',    \$email,
-	   'suffix:s',   \$suffix,
+	   'prefix:s',   \$prefix,
 	   'P',          \$opt_P,
 
 	   'help', \$phelp,
@@ -77,7 +77,7 @@ gtf2xml.pl
   -o               file   output filename ($opt_o)
   -author          char   author label ($author)
   -email           char   email address for feedback on database ($email)
-  -suffix          char   group suffix to append to gene_names ($suffix)
+  -prefix          char   group prefix to prepend to gene_names and types ($prefix)
 
   -h                      this help
   -help                   perldoc help
@@ -315,10 +315,10 @@ foreach my $gene_id (keys %genes){
   $gene->type($gene_type);
 
   my $gene_name=$gene_id;
-  if($suffix){$gene_name.=".$suffix";}
+  if($prefix){$gene_name="$prefix:$gene_name";}
   if(defined($values{'Locus'}) && $values{'Locus'} ne $gene_id){
-    if($suffix){
-      print "WARN Locus $gene_id defined ($values{'Locus'}) ignored as using suffix\n";
+    if($prefix){
+      print "WARN Locus $gene_id defined ($values{'Locus'}) ignored as using prefix\n";
     }else{
       $gene_name=$values{'Locus'};
     }
@@ -381,8 +381,8 @@ foreach my $gene_id (keys %genes){
     print STDERR " Transcript id $transcript_name ($transcript_id)\n";
     $traninfo->name($transcript_name);
     my $remark;
-    if($suffix){
-      $remark="$suffix name: $transcript_id";
+    if($prefix){
+      $remark="$prefix name: $transcript_id";
     }else{
       $remark="GTF name: $transcript_id";
     }
@@ -390,8 +390,8 @@ foreach my $gene_id (keys %genes){
     # recognise some tags and save as remarks
     if($values{'complete_CDS'}){
       my $remark;
-      if($suffix){
-	$remark="$suffix";
+      if($prefix){
+	$remark="$prefix";
       }else{
 	$remark="GTF";
       }
