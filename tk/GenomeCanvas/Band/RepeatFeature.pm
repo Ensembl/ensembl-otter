@@ -4,11 +4,8 @@
 package GenomeCanvas::Band::RepeatFeature;
 
 use strict;
-use strict;
 use Carp;
-use GD;
 use GenomeCanvas::DensityBand;
-use GenomeCanvas::GD_StepMap;
 
 use vars '@ISA';
 @ISA = ('GenomeCanvas::DensityBand');
@@ -71,7 +68,7 @@ sub draw_repeat_features_on_sub_vc {
     my $vc_length = $vc->length;
     for (my $i = 0; $i < @class_list; $i++) {
         my $c = $class_list[$i];
-        $band->draw_density_segment($x_offset, $i, $vc_length, $class{$c});
+        $band->draw_density_segment($x_offset, $i, $vc_length, @{$class{$c}});
     }
 }
 

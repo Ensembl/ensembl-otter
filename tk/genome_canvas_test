@@ -7,6 +7,7 @@ use GenomeCanvas;
 use GenomeCanvas::Band::TilingPath;
 use GenomeCanvas::Band::Plot;
 use GenomeCanvas::Band::RepeatFeature;
+use GenomeCanvas::Band::GeneDensity;
 use Bio::EnsEMBL::DBSQL::Obj;
 use Hum::Submission 'prepare_statement'; # For Sanger sequence names
 use Getopt::Long 'GetOptions';
@@ -94,6 +95,10 @@ use Getopt::Long 'GetOptions';
         #$tiling2->show_labels($labels);
         #$tiling2->tiling_direction(1);
         #$gc->add_Band($tiling2);
+
+        my $gene_density = GenomeCanvas::Band::GeneDensity->new;
+        $gene_density->virtual_contig($vc);
+        $gc->add_Band($gene_density);
 
         my $repeat = GenomeCanvas::Band::RepeatFeature->new;
         $repeat->virtual_contig($vc);

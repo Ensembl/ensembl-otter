@@ -5,6 +5,7 @@ package GenomeCanvas::DensityBand;
 
 use strict;
 use Carp;
+use GenomeCanvas::GD_StepMap;
 use GenomeCanvas::Band;
 
 use vars '@ISA';
@@ -13,7 +14,7 @@ use vars '@ISA';
 sub height {
     my( $band ) = @_;
     
-    my $strip_count = $band->repeat_classes;
+    my $strip_count = $band->strip_labels;
     my $s_height    = $band->strip_height;
     my $pad         = $band->strip_padding;
     my $height = ($strip_count * $band->strip_height) +
@@ -95,12 +96,15 @@ sub draw_sequence_gaps {
 }
 
 sub draw_density_segment {
-    my( $band, $x_offset, $level, $vc_length, $feature_list ) = @_;
+    my $band        = shift;
+    my $x_offset    = shift;
+    my $level       = shift;
+    my $vc_length   = shift;
 
     # Sort all the feature features by start and end and adjust
     # their coordinates, so we have an ordered list of non-
     # overlapping features.
-    my @feature = $band->merge_sort_Features(@$feature_list);
+    my @feature = $band->merge_sort_Features(@_);
     
     my $height = $band->strip_height;
     my $y = ($band->strip_y_map)[$level];

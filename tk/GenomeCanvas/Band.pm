@@ -293,9 +293,9 @@ sub merge_sort_Features {
             if ($new_this_start > $this->end) {
                 # $prev engulfs $this
                 warn "Removing engulfed feature:\n  ",
-                    $this->gff2_string, "\n",
+                    $this->gff_string, "\n",
                     "Which is engulfed by:\n  ",
-                    $prev->gff2_string, "\n";
+                    $prev->gff_string, "\n";
                 splice(@feature, $i, 1);
                 next;   # Don't increment $i
             } else {
