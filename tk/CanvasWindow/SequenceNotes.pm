@@ -60,41 +60,68 @@ sub get_CloneSequence_list {
     return $cs_list;
 }
 
-
 ## now takes the column number to be refreshed (image or text) and refreshes it
+## $i is the row index to start from - allows this method to be used by Searched SequenceNotes
 sub refresh_column{
-    my ($self, $col_no , $i) = @_ ;
+    my ($self, $col_no , $list_pos) = @_ ;
     
+    my $canvas = $self->canvas(); 
     my $col_tag = "col=$col_no";
     my $ds = $self->SequenceSetChooser->DataSet();
     my $ss = $self->SequenceSet();
-    my $cs_list ;
-    if ($col_no == 3 ){
-        # ana-status column -has it's own query # should be faster
-        $ds->status_refresh_for_SequenceSet($ss);
-        $cs_list   = $self->get_CloneSequence_list();
-    }elsif($col_no == 7 ) {
-        # locks also has its own query should be faster
-        $ds->lock_refresh_for_SequenceSet($ss) ;
-        $cs_list   = $self->get_CloneSequence_list();
-    }else{
-        # forces requery of databases
-        $cs_list   = $self->get_CloneSequence_list(1);
-    }
     
-    my $canvas = $self->canvas();
-    
-    for ( $i ||= 0; $i < @$cs_list; $i++) {
+    $self->_refresh_SequenceSet($col_no);
+    my $cs_list = $self->get_CloneSequence_list;
+            
+    for (my $i = 0; $i < @$cs_list; $i++) {
+
         my $cs = $cs_list->[$i];
-        if (my ($old_content) = $canvas->find('withtag', "$col_tag&&cs=$i")) {
+        my $tag_string = $self->_tag_string($col_tag, $i) ;
+        if (my ($old_content) = $canvas->find('withtag', $tag_string) ) {
             my $method_list = $self->column_methods;
 	    my $new_content = $method_list->[$col_no]->[1]->($cs, $i , $self);
             delete $new_content->{'-tags'};    # Don't want to alter tags
-	    $canvas->itemconfigure($old_content, %$new_content);
-        } else {
-            warn "No object withtag '$col_tag&&cs=$i'";
+#	    warn "re-configuring column  $col_no , row $i" ; 
+            $canvas->itemconfigure($old_content, %$new_content);
+         } else {
+            warn "No object withtag '$tag_string'";
         }
     }
+}
+
+# not needed, but may be useful for inheriting subroutines that want to search on different tags
+sub _tag_string {
+    my ($self, $col_tag , $i) = @_ ;
+    my $tag_string = "$col_tag&&cs=$i"  ;     
+    return $tag_string ;
+}
+
+
+
+# this should be used by the refresh column method
+# some of the columns have had different queries written to sped up the refresh ,
+# this method activates the appropriate one 
+sub _refresh_SequenceSet{
+    my ($self , $column_number ) = @_ ;
+
+    my $ds = $self->SequenceSetChooser->DataSet();
+    my $ss = $self->SequenceSet;
+    my $force_refresh = 0 ;
+    if ($column_number == 3){
+        # this is the ana_status column - we have a seperate (faster) query for this
+        $ds->status_refresh_for_SequenceSet($ss);
+    }
+    elsif($column_number == 7){
+        # padlock cloumn - again we have a query for this (hopefully faster also)
+        $ds->status_refresh_for_SequenceSet($ss);
+        $ds->lock_refresh_for_SequenceSet($ss) ;
+    }else{
+        # no column number - just update the whole thing
+        $force_refresh = 1;
+    }
+    
+    ## this should requery the database, if it has not been already
+    $self->get_CloneSequence_list($force_refresh) ; 
 }
 
 
@@ -653,7 +680,6 @@ sub draw {
     # draws a row for each of them
     
     my $cs_list   = $self->get_rows_list;
-    warn "COMING FROM " . $self->isa('CanvasWindow::SequenceNotes::SearchHistory');
     print STDERR " done\n";
     my $size      = $self->font_size;
     my $canvas    = $self->canvas;
@@ -670,7 +696,6 @@ sub draw {
     for (my $i = 0; $i < @$cs_list; $i++) {   # go through each clone sequence
         my $row = $i + $gaps;
         my $cs = $cs_list->[$i];
-#        warn "cs? " . $cs->isa('Hum::Ace::CloneSequence') ;
         my $row_tag = "row=$row";
         my $y = $row * $size;
 
@@ -837,7 +862,6 @@ sub get_current_CloneSequence_index {
     my $obj = $canvas->find('withtag', 'current') or return;
      
     my ($i) = map /^cs=(\d+)/, $canvas->gettags($obj);  
-#    warn "\n\n$i\n\n";
     return $i;
 
 }
