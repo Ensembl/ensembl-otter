@@ -425,7 +425,23 @@ sub otter_to_ace {
        } 
        $str .= "Feature TilePath " . $start . " " . $end . " 1.0 " . $path->component_Seq->name . "\n";
     }
+
+    foreach my $path (@path) {
+       my $start;
+       my $end;
+    
+       if ($path->component_ori == 1) {
+         $start = $chrstart + $path->assembled_start - 1;
+         $end   = $chrstart + $path->assembled_end - 1;
+       } else {
+         $end     = $chrstart + $path->assembled_start - 1 ;
+         $start   = $chrstart + $path->assembled_end - 1;
+       } 
+       $str .= "SubSequence   \"" .$path->component_Seq->clone->embl_id . "\" ";
+       $str .= "$start $end\n";
+    }
   }
+ 
   foreach my $gene (@$genes) {
   
     foreach my $tran (@{ $gene->get_all_Transcripts }) {
@@ -443,8 +459,50 @@ sub otter_to_ace {
     }
   }
 
-  #Clone start end, features, keywords?
   $str .= "\n";
+
+
+  #Clone features, keywords
+  if ($contig->isa("Bio::EnsEMBL::Slice")) {
+    my $slice = $contig;
+
+    my @path  = @{ $slice->get_tiling_path };
+
+    my $clone_info_adaptor = $slice->adaptor->db->get_CloneInfoAdaptor;
+    if (defined($clone_info_adaptor)) {
+      foreach my $path (@path) {
+         my $clone = $path->component_Seq->clone; 
+         $str .= "Sequence : \"". $clone->embl_id . "\"\n";
+         my $clone_info = $clone_info_adaptor->fetch_by_cloneID($clone->dbID);
+         foreach my $keyword ($clone_info->keyword) {
+           $str .= "Keyword \"" . $keyword->name . "\"\n";
+         }
+         foreach my $remark ($clone_info->remark) {
+           if ($remark->remark =~ /^Annotation_remark- /) {
+             my $rem = $remark->remark;
+             $rem =~ s/^Annotation_remark- //;
+             $str .= "Annotation_remark \"" . $rem . "\"\n";
+           } elsif ($remark->remark =~ /^EMBL_dump_info.DE_line- /) {
+             my $rem = $remark->remark;
+             $rem =~ s/^EMBL_dump_info.DE_line- //;
+             $str .= "EMBL_dump_info DE_line \"" . $rem . "\"\n";
+           } else {
+             $str .= "Annotation_remark \"" . $remark->remark . "\"\n";
+           }
+         }
+         foreach my $sf (@{$path->component_Seq->get_all_SimpleFeatures}) {
+           $str .= "Feature \"" . $sf->analysis->logic_name . "\" " ;
+           if ($sf->strand == 1) {
+             $str .= $sf->start . " " . $sf->end . " ";
+           } else {
+             $str .= $sf->end . " " . $sf->start . " ";
+           }
+           $str .= "\"" . $sf->display_label . "\"\n";
+         }
+         $str .= "\n";
+      }
+    }
+  }
 
   my %ev_types = (
     'EST'     => "EST_match",
@@ -461,11 +519,25 @@ sub otter_to_ace {
   );
 
   foreach my $gene (@$genes) {
+    my $gene_name;
+    if ($gene->gene_info->name && $gene->gene_info->name->name) {
+      $gene_name = $gene->gene_info->name->name;
+    } else {
+      $gene_name = $gene->stable_id;
+    }
+
     foreach my $tran (@{ $gene->get_all_Transcripts }) {
-      $str .= "Sequence : \"" . $tran->transcript_info->name . "\"\n";
+      my $tran_name;
+      if ($tran->transcript_info->name) {
+        $tran_name = $tran->transcript_info->name;
+      } else {
+        $tran_name = $tran->stable_id;
+      }
+
+      $str .= "Sequence : \"" . $tran_name . "\"\n";
       $str .= "Otter_id \"" . $tran->stable_id . "\"\n";
       $str .= "Source \"" . $contig->display_id . "\"\n";
-      $str .= "Locus \"" . $gene->gene_info->name->name . "\"\n";
+      $str .= "Locus \"" . $gene_name . "\"\n";
       $str .= "Method \"" . $tran->transcript_info->class->name . "\"\n";
 
       my @remark = $tran->transcript_info->remark;
@@ -481,8 +553,12 @@ sub otter_to_ace {
       @ev = sort {$a->name cmp $b->name} @ev;
 
       foreach my $ev (@ev) {
-        $str .= $ev_types{ $ev->type } . " \"" . $dbhash{ $ev->db_name } . ":"
-          . $ev->name . "\"\n";
+        if (exists($dbhash{$ev->db_name})) {
+          $str .= $ev_types{ $ev->type } . " \"" . $dbhash{ $ev->db_name } . ":"
+            . $ev->name . "\"\n";
+        } else {
+          $str .= $ev_types{ $ev->type } . " \"" . $ev->name . "\"\n";
+        }
       }
 
       $tran->sort;
@@ -541,11 +617,27 @@ sub otter_to_ace {
   $str .= "\n";
 
   foreach my $gene (@$genes) {
-    $str .= "Locus : \"" . $gene->gene_info->name->name . "\"\n";
+    my $gene_name;
+    if ($gene->gene_info->name && $gene->gene_info->name->name) {
+      $gene_name = $gene->gene_info->name->name;
+    } else {
+      $gene_name = $gene->stable_id;
+    }
+
+    $str .= "Locus : \"" . $gene_name . "\"\n";
+    foreach my $synonym ($gene->gene_info->synonym) {
+      $str .= "Alias \"" . $synonym->name . "\"\n";
+    }
 
     #Need to add type here
     $str .= $gene->type . "\n";
     foreach my $tran (@{ $gene->get_all_Transcripts }) {
+      my $tran_name;
+      if ($tran->transcript_info->name) {
+        $tran_name = $tran->transcript_info->name;
+      } else {
+        $tran_name = $tran->stable_id;
+      }
       $str .= "Positive_sequence  \"" . $tran->transcript_info->name . "\"\n";
     }
     $str .= "Otter_id \"" . $gene->stable_id . "\"\n";
