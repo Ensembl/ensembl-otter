@@ -158,15 +158,15 @@ use Hum::EnsCmdLineDB;
             my $gene_names = GenomeCanvas::Band::Gene->new;
             $gene_names->show_labels($gene_labels);
             $gene_names->label_type_color_list(
-                #[ 'Known',              'HUMACE-Known',             '#4169e7' ],
-                #[ 'Novel CDS',          'HUMACE-Novel_CDS',         '#86ceff' ],
-                #[ 'Novel Transcript',   'HUMACE-Novel_Transcript',  '#ffa600' ],
-                #[ 'Pseudogene',         'HUMACE-Pseudogene',        '#31ce31' ],
-                #[ 'Putative',           'HUMACE-Putative',          '#cccccc' ],
-                [ 'Known',              'Known',             '#4169e7' ],
-                [ 'Novel CDS',          'Novel_CDS',         '#86ceff' ],
-                [ 'Novel Transcript',   'Novel_Transcript',  '#ffa600' ],
-                [ 'Pseudogene',         'Pseudogene',        '#31ce31' ],
+                [ 'Known',              'HUMACE-Known',             '#4169e7' ],
+                [ 'Novel CDS',          'HUMACE-Novel_CDS',         '#86ceff' ],
+                [ 'Novel Transcript',   'HUMACE-Novel_Transcript',  '#ffa600' ],
+                [ 'Pseudogene',         'HUMACE-Pseudogene',        '#31ce31' ],
+                [ 'Putative',           'HUMACE-Putative',          '#cccccc' ],
+                #[ 'Known',              'Known',             '#4169e7' ],
+                #[ 'Novel CDS',          'Novel_CDS',         '#86ceff' ],
+                #[ 'Novel Transcript',   'Novel_Transcript',  '#ffa600' ],
+                #[ 'Pseudogene',         'Pseudogene',        '#31ce31' ],
                 );
             $gene_names->virtual_contig($vc);
             $gene_names->span_file($span_file);
