@@ -49,6 +49,7 @@ use Getopt::Long 'GetOptions';
     $gc->fix_window_min_max_sizes;
     
     my $canvas = $gc->canvas;
+    $canvas->configure(-selectbackground => 'gold');
     $canvas->CanvasBind('<Button-1>', sub {
         deselect_all_selected_not_current($gc);
         toggle_current($gc);
@@ -73,7 +74,9 @@ use Getopt::Long 'GetOptions';
                 );
 
             $comment = $button_frame->Entry(
-                -width => 55,
+                -width              => 55,
+                -background         => 'white',
+                -selectbackground   => 'gold',
                 );
             $comment->pack(
                 -side => 'left',
@@ -93,9 +96,8 @@ use Getopt::Long 'GetOptions';
                 return unless @ana_seq_id_list;
                 set_reviewed($annotator, $c, @ana_seq_id_list);
                 $chooser->chooser_map(make_chooser_map($set_id));
-                $gc->set_window_size(1);
                 $gc->render;
-                $gc->fix_window_min_max_sizes
+                $gc->set_scroll_region_and_maxsize;
                 };
             make_button($button_frame2, 'Set note', $set_reviewed, 0);
             $mw->bind('<Control-s>', $set_reviewed);
@@ -118,9 +120,8 @@ use Getopt::Long 'GetOptions';
         my $refesher = sub{
             watch_cursor($mw);
             $chooser->chooser_map(make_chooser_map($set_id));
-            $gc->set_window_size(1);
             $gc->render;
-            $gc->fix_window_min_max_sizes;
+            $gc->set_scroll_region_and_maxsize;
             default_cursor($mw);
             };
         make_button($button_frame2, 'Refresh', $refesher, 0);
@@ -339,7 +340,7 @@ sub hunt_for_selection {
     }
     
     unless ($found) {
-        warn "Can't find '$query_str'\n";
+        $gc->message("Can't find '$query_str'");
         return;
     }
     
@@ -476,6 +477,7 @@ sub deselect_all_selected_not_current {
     my( $gc ) = @_;
     
     my $canvas = $gc->canvas;
+    $canvas->selectClear;
     foreach my $obj ($canvas->find('withtag', 'selected&&!current')) {
         toggle_selection($gc, $obj);
     }
