@@ -55,6 +55,14 @@ sub get_options_for_key {
     }
 }
 
+sub remove_options_hash_for_key{
+    my ($db, $key) = @_;
+    my $sth = $db->prepare("DELETE FROM meta where meta_key = ?");
+    $sth->execute($key);
+    $sth->finish();
+    return;
+}
+
 sub save_options_hash {
     my( $db, $key, $options_hash ) = @_;
     
