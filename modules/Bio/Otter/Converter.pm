@@ -1768,7 +1768,7 @@ sub prune_Exons {
     # keep track of all unique exons found so far to avoid making duplicates
     # need to be very careful about translation->start_exon and translation->end_Exon
 
-    #print STDERR "Pruning exons\n";
+    warn "Pruning exons";
 
     my( %stable_key, %unique_exons );
 
@@ -1786,6 +1786,7 @@ sub prune_Exons {
                         $tran->translation->end_Exon($found);
                     }
                 }
+                # re-use existing exon in this transcript
                 $exon = $found;
             } else {
                 $unique_exons{$key} = $exon;
@@ -1801,7 +1802,7 @@ sub prune_Exons {
                         printf STDERR  "Already seen exon_id '$stable' on different exon\n";
                     }
                 } else {
-                    $stable_key{$stable} = $seen_key;
+                    $stable_key{$stable} = $key;
                 }
             }
         }
