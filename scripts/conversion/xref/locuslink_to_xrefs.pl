@@ -7,7 +7,7 @@ use Getopt::Long;
 
 my $host   = 'ecs4';
 my $user   = 'ensadmin';
-my $pass   = ;
+my $pass   = '';
 my $port   = 3352;
 my $dbname = 'mouse_vega040719_xref';
 
@@ -18,6 +18,11 @@ my $path = 'VEGA';
 my $do_store = 0;
 
 my $organism='human';
+
+my $opt_h;
+my $opt_v;
+my $opt_t;
+my $opt_o;
 
 $| = 1;
 
@@ -32,7 +37,32 @@ $| = 1;
   'lltmpl_file:s' => \$lltmpl_file,
   'organism:s'    => \$organism,
   'store'         => \$do_store,
+  'h'             => \$opt_h,
+  'v'             => \$opt_v,
+  't'             => \$opt_t,
+  'o:s'           => \$opt_o,
 );
+
+if($opt_h){
+    print<<ENDOFTEXT;
+locuslink_to_xrefs.pl
+
+  -host           host    host of mysql instance ($host)
+  -db             dbname  database ($dbname)
+  -port           port    port ($port)
+  -user           user    user ($user)
+  -pass           pass    password 
+
+  -path           path    path ($path)
+  -organism       org     organism ($organism)
+  -store                  write xrefs to database
+  -chromosomes    chr,[chr]
+
+  -h                      this help
+  -v                      verbose
+ENDOFTEXT
+    exit 0;
+}
 
 if (scalar(@chromosomes)) {
   @chromosomes = split (/,/, join (',', @chromosomes));
@@ -98,23 +128,37 @@ my %seqname;
 # parse and index LLtmpl file:
 # pos -> set to >>
 # index off OFFICIAL_SYMBOL
+if($opt_o){
+  open(OUT,">$opt_o") || die "cannot open $opt_o";
+}
 if($lltmpl_file=~/\.gz$/){
   open(FPLLT,"gzip -d -c $lltmpl_file |") or die "cannot open $lltmpl_file";
 }else{
   open(FPLLT,$lltmpl_file) or die "cannot open $lltmpl_file";
 }
-my %loctmplindex;
+my %lltmp;
 {
   my $nok=0;
   my $nworg=0;
   my $nmorg=0;
   my $nmsym=0;
-  my $llid;
+  my $locus_id;
   my $pos=0;
   my $flag_found=0;
   my $flag_org=0;
+  my $nm='';
+  my $np='';
+  my $desc='';
+  my $gene_name='';
   while(<FPLLT>){
-    if(/^LOCUSID: (.*)/){
+    if(/^SUMMARY: (.*)/){
+      $desc = $1;
+    }elsif(/^NM: (.*)/){
+      $nm = $1;
+      $nm =~ s/\|.*//;
+    }elsif(/^NP: (.*)/){
+      $np = $1;
+      $np =~ s/\|.*//;
     }elsif(/^ORGANISM: (.*)/){
       my $org2=$1;
       if($org eq $org2){
@@ -124,80 +168,38 @@ my %loctmplindex;
       }
     }elsif(/^OFFICIAL_SYMBOL: (\w+)/){
       if($flag_org==1){
-	$loctmplindex{$1}=$pos;
+	$gene_name=$1;
 	$nok++;
       }elsif($flag_org==2){
 	# skip - wrong organism
 	$nworg++;
       }elsif($flag_org==0){
-	print "WARN: organism not found for $llid\n";
+	print "WARN: organism not found for $locus_id\n";
 	$nmorg++;
       }
       $flag_org=0;
       $flag_found=0;
     }elsif(/\>\>(\d+)/){
-      $pos = tell FPLLT;
+      if($gene_name){
+      	$lltmp{$gene_name}=[$nm,$np,$locus_id,$desc];
+	print OUT "$gene_name\t$nm\t$np\t$locus_id\t$desc\n" if $opt_o;
+	$nm='';
+	$np='';
+	$desc='';
+      }
       if($flag_found){
 	$nmsym++;
-	print "WARN: $llid was not saved\n";
+	print "WARN: OFFICIAL_SYMBOL for $locus_id not found\n" if $opt_v;
       }
       $flag_found=1;
-      $llid=$1;
+      $locus_id=$1;
     }
   }
   print "$nok entries indexed ok\n";
   print "$nworg entries skipped - not \'$organism\'\n";
   print "$nmorg entries skipped - no organism label\n";
   print "$nmsym entries skipped - no official symbol\n";
-  exit 0;
 }
-
-my %crossrefs;
-
-open(IN,$gff_file) or die "cannot open $gff_file";
-while(<IN>){
-  if(/locus_id\s+\"([^\"]+)\"/){
-    my $locus_id = $1;
-    my $gene_id = $_;
-    /gene_id\s+\"([^\"]+)\"/;
-    my $gene_id = $1;
-    if ($locus_id ne "undef") {
-      seek FPLLT, $loctmplindex{$locus_id},"SEEK_SET" ;
-      my $line = <FPLLT>;
-      my $off_sym;
-      my $nm;
-      my $np;
-      my $desc;
-      while (<FPLLT>) {
-        last if (/^LOCUSID:/); 
-        if (/^OFFICIAL_SYMBOL: (.*)/) {
-          $off_sym = $1;
-        } elsif (/^SUMMARY: (.*)/) {
-          $desc = $1;
-        } elsif (/^NM: (.*)/) {
-          $nm = $1;
-          $nm =~ s/\|.*//;
-        } elsif (/^NP: (.*)/) {
-          $np = $1;
-          $np =~ s/\|.*//;
-        }
-      }
-            
-      print $line;
-      print "Gene $gene_id locuslink $locus_id\n";
-      if ($off_sym) { print " offsym = $off_sym\n"; }
-      $locus{$locus_id}++;
-      $crossrefs{$gene_id}->{locus_id} = $locus_id;
-      $crossrefs{$gene_id}->{off_sym} = ($off_sym ? $off_sym : $locus_id);
-      $crossrefs{$gene_id}->{nm} = $nm if defined($nm);
-      $crossrefs{$gene_id}->{np} = $nm if defined($np);
-    }
-  }
-}
-close(IN);
-close(FPLLT);
-print scalar(keys %locus)." locus ids found\n";
-
 
 foreach my $chr (reverse sort bychrnum keys %$chrhash) {
   print STDERR "Chr $chr from 1 to " . $chrhash->{$chr} . " on " . $path . "\n";
@@ -208,7 +210,8 @@ foreach my $chr (reverse sort bychrnum keys %$chrhash) {
 
   print "Fetching genes\n";
   my $genes = $aga->fetch_by_Slice($slice);
-  print "Done fetching genes\n";
+  print "Fetched (".scalar(@$genes).") genes\n";
+  my $n=0;
 
   foreach my $gene (@$genes) {
     my $gene_name;
@@ -218,28 +221,34 @@ foreach my $chr (reverse sort bychrnum keys %$chrhash) {
       die "Failed finding gene name for " .$gene->stable_id . "\n";
     }
 
-    if (defined($crossrefs{$gene_name})) {
+    # lookup this gene name
+    if($lltmp{$gene_name}){
+
       print "Found locuslink match for $gene_name\n";
-      my $dbentry=Bio::EnsEMBL::DBEntry->new(-primary_id=>$crossrefs{$gene_name}->{locus_id},
-                                             -display_id=>$crossrefs{$gene_name}->{off_sym},
+      $n++;
+      my($nm,$np,$locus_id,$desc)=@{$lltmp{$gene_name}};
+
+      my $dbentry=Bio::EnsEMBL::DBEntry->new(-primary_id=>$locus_id,
+                                             -display_id=>$gene_name,
                                              -version=>1,
                                              -release=>1,
                                              -dbname=>"LocusLink",
                                             );
-      print " locus link = " .$crossrefs{$gene_name}->{off_sym} . "\n";
+      print " locus link = " .$locus_id . "\n";
       $dbentry->status('KNOWN');
       $gene->add_DBEntry($dbentry);
       $adx->store($dbentry,$gene->dbID,'Gene') if $do_store;
 
-  # Display xref id update
+      # Display xref id update
       my $sth = $db->prepare("update gene set display_xref_id=" . 
                              $dbentry->dbID . " where gene_id=" . $gene->dbID);
-      print $sth->{Statement} . "\n";
+      print "  ". $sth->{Statement} . "\n";
       $sth->execute if $do_store;
 
-      if ($crossrefs{$gene_name}->{nm}) {
-        my $dbentry=Bio::EnsEMBL::DBEntry->new(-primary_id=>$crossrefs{$gene_name}->{nm},
-                                               -display_id=>$crossrefs{$gene_name}->{nm},
+      if ($nm) {
+	print " RefSeq NM = " .$nm . "\n";
+        my $dbentry=Bio::EnsEMBL::DBEntry->new(-primary_id=>$nm,
+                                               -display_id=>$nm,
                                                -version=>1,
                                                -release=>1,
                                                -dbname=>"RefSeq",
@@ -252,7 +261,9 @@ foreach my $chr (reverse sort bychrnum keys %$chrhash) {
       print "No locuslink match for $gene_name\n";
     }
   }
+  print "Locuslink information for $n genes added\n";
 }
+close(FPLLT);
 
 sub get_chrlengths{
   my $db = shift;

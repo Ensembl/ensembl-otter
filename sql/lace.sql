@@ -7,9 +7,27 @@ create table sequence_set (
     assembly_type varchar (20) NOT NULL,
     description TEXT,
     analysis_priority int,
-    
+    hide ENUM ('Y', 'N') DEFAULT 'N' NOT NULL,
+    vega_set_id int(10) unsigned DEFAULT '0' NOT NULL
     PRIMARY KEY(assembly_type)
     );
+
+create table vega_set (
+    vega_set_id int(10) unsigned DEFAULT '0' NOT NULL auto_increment,
+    vega_author_id int(10) unsigned DEFAULT '0' NOT NULL,
+    vega_type ENUM ('E', 'I', 'N') DEFAULT 'N' NOT NULL,
+    vega_name varchar (20),
+    PRIMARY KEY(vega_set_id),
+    UNIQUE (vega_name)
+    );
+
+create table vega_author (
+    vega_author_id  int(10) unsigned DEFAULT '0' NOT NULL auto_increment,
+    author_email varchar(50),
+    author_name  varchar(50),
+    PRIMARY KEY (vega_author_id),
+    UNIQUE (author_name)
+);
 
 create table sequence_note (
     contig_id   INT (10) unsigned DEFAULT '0' NOT NULL,

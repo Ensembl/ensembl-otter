@@ -34,6 +34,8 @@ my $t_path   = 'NCBI31';
 my $filter_gd;
 my $filter_obs;
 my $gene_type;
+my @gene_names;
+my $opt_t;
 
 &GetOptions( 'host:s'    => \$host,
              'user:s'    => \$user,
@@ -59,8 +61,15 @@ my $gene_type;
 	     'filter_gd'   => \$filter_gd,
 	     'filter_obs'  => \$filter_obs,
 	     'gene_type:s' => \$gene_type,
+	     'gene_name:s' => \@gene_names,
+	     't'           => \$opt_t,
             );
 
+my %gene_names;
+if (scalar(@gene_names)) {
+  @gene_names=split (/,/, join (',', @gene_names));
+  %gene_names = map {$_,1} @gene_names;
+}
 
 my $sdb = new Bio::Otter::DBSQL::DBAdaptor(-host => $host,
                                            -user => $user,
@@ -117,6 +126,9 @@ my $nobs=0;
 my $nskipped=0;
 foreach my $gene (@$genes) {
     my $gsi=$gene->stable_id;
+    if(scalar(@gene_names)){
+      next unless $gene_names{$gsi};
+    }
     if($filter_gd){
 	my $name=$gene->gene_info->name->name;
 	if($name=~/\.GD$/ || $name=~/^GD:/){
@@ -144,6 +156,8 @@ foreach my $gene (@$genes) {
 }
 
 print "$ngd GD genes removed, $nobs obsolete genes removed, $nskipped skipped as incorrect type\n";
+print scalar(keys %genehash)." genes to transfer\n";
+exit 0 if $opt_t;
 
 my $c_genes = $c_aga->fetch_by_Slice($c_vcontig);
 print "Fetched comparison genes\n";
