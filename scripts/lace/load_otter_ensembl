@@ -17,44 +17,30 @@ populates the assembly table in both databases.
 
 BEWARE! It assumes 1 contig for each clone.
 
-example:
+=head1 USEAGE
 
- ./load_otter_ensembl -host ecs1d -user ensadmin -pass "ensembl" -dbname otter_test -name mySequenceSet -description 'test description' -chromosome chr12 clone_list
+load_otter_ensembl [options] -dataset human -description 'just an example' -set example AGP_FILE
 
-=head1 OPTIONS
+Where options are:
 
-    -host           host name for the otter database (gets put as host= in locator)
-    -port           port number of the otter database
-    -user           username for the otter database
-    -pass           password for the otter databases
-    -dbname         what the name of otter database to connect is (dbname= in locator)
-        
-    -name           name of the set of clones
-    -description    description of thesequence set 
-    -priority       analysis priority of the sequnce set
-    -chromosome     name of the chromosome the set comes from
-       
-    -help           displays this documentation with PERLDOC
+ option       default   comment
+ ----------------------------------
+ -priority              analysis priority of the sequnce set
+ -chromosome            name of the chromosome the set comes from [required when input is list]
+ -help                  displays this documentation with PERLDOC
 
-    user should also supply either a list of accession numbers (one per line) or a .agp (golden path) file.
+ ** plus the default otter options of Bio::Otter::Lace::Defaults **
+
+user should also supply either a list of accession numbers (one per line) or a .agp (golden path) file.
+
     
+=head1 SETUP
 
-    NOTE: The first time this script is run, it expects arguments for 
-the pipeline database (port, password, etc may be optional , depending 
-on the way the database has been set up).
- These are then stored in the otter database, so after that the user 
-need only specify the otter database options and the set name and description.
+  Before running this script the meta table must contain connection information
+for the pipeline database.  This is done by running B<save_satellite_db> possibly 
+in the following way:
 
-This has changed and now it must be set up with the following.
-
-    ./save_satellite_db -dataset DATASET -key pipeline_db [ db connection options ]
-
- This will set up the pipeline database stuff
-
-    ./save_satellite_db -dataset DATASET -key self [ db connection options ]
-    
- This will set up the Bio::EnsEMBL::DBSQL::DBAdaptor to Otter database stuff
-
+ ./save_satellite_db -dataset DATASET -key pipeline_db [ db connection options ]
 
 =cut
 
@@ -79,6 +65,8 @@ use Bio::Otter::Lace::PipelineDB;
 use Bio::Otter::Lace::Defaults;
 
 use Data::Dumper;
+
+my $DEBUG = 0;
 
 {
     my $t0 = [gettimeofday];
@@ -112,6 +100,7 @@ use Data::Dumper;
         'chromosome=s'  => \$chromosome_name, 
         'set|name=s'    => \$set_name,
 	'delete'        => \$delete,
+        'debug'         => \$DEBUG
         );
     useage() if $help;
     $agp_file           = $ARGV[0]; # takes the remaining argument as the filename to be read
@@ -269,7 +258,7 @@ use Data::Dumper;
     # benchmarking 
 
     my $elapsed = tv_interval ( $t0, [gettimeofday]);
-    print STDERR "code took: $elapsed seconds\n";
+    print STDERR "code took: $elapsed seconds\n" if $DEBUG;
 
 }
 
@@ -341,6 +330,11 @@ sub check_line{
             warn "Fetching '$acc_ver' from archive\n";
             $seq = $pfetch_archive->get_Seq_by_acc($acc_ver);
         }
+	unless ($seq){
+	    warn "Attempting to read fasta file <$acc_ver.seq> in current dir.\n";
+	    $seq = Bio::SeqIO->new(-file   => "$acc_ver.seq",
+				   -format => 'FASTA');
+	}
         return $seq;
     }
 }
@@ -411,8 +405,8 @@ sub store_input_id_analysis{
     my $state_info = $pipe_db->get_StateInfoContainer();
     foreach my $contig(@$contigs){
 	my $ctg_name = $contig->name();
-	eval { $state_info->store_input_id_analysis($ctg_name, $ana_obj); };
-	warn "$ctg_name already has entry for " . $ana_obj->logic_name . "\n" if $@;
+	eval { $state_info->store_input_id_analysis($ctg_name, $ana_obj, 'localhost'); };
+	warn "$ctg_name already has entry for " . $ana_obj->logic_name . " $@ \n" if $@ && $DEBUG;
     }
 }
 sub useage{ exit(exec('perldoc', $0)); }
