@@ -9,14 +9,21 @@ use Getopt::Long 'GetOptions';
 use Symbol 'gensym';
 use Bio::Otter::Lace::Client;
 
-my $defaults = {};
+
+# List of options which correspond to methods in Lace::Client
+# and which are needed to create the client.
 my @option_fields = qw{ host port author email write_access };
 
+my $defaults = {};
 my $save_option = sub {
     my( $option, $value ) = @_;
 
     $defaults->{$option} = $value;
 };
+
+sub fetch_pipeline_switch {
+    return $defaults->{'pipeline'} ? 1 : 0;
+}
 
 sub do_getopt {
     my( @script_args ) = @_;
@@ -27,6 +34,7 @@ sub do_getopt {
         'author=s'      => $save_option,
         'email=s'       => $save_option,
         'write_access!' => $save_option,
+        'pipeline!'     => $save_option,
         'view'          => sub{ $defaults->{'write_access'} = 0 },
         @script_args,
     ) or confess "Error processing command line";
@@ -72,7 +80,9 @@ sub do_getopt {
 
 sub make_Client {
     my $client = Bio::Otter::Lace::Client->new;
-    while (my ($meth, $value) = each %$defaults) {
+    
+    foreach my $meth (@option_fields) {
+        my $value = $defaults->{$meth};
         $client->$meth($value);
     }
     return $client;

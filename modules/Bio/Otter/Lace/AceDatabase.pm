@@ -9,6 +9,7 @@ use File::Path 'rmtree';
 use Symbol 'gensym';
 use Fcntl qw{ O_WRONLY O_CREAT };
 use Ace;
+use Bio::Otter::Lace::Defaults;
 use Bio::Otter::Lace::PipelineDB;
 use Bio::Otter::Lace::SatelliteDB;
 use Bio::Otter::Converter;
@@ -601,14 +602,22 @@ sub make_AceDataFactory {
    
    ##----------code to add all of the ace filters to data factory-----------------------------------
     
+    my $fetch_all_pipeline_data = Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
+    
     my @logic_class = (
-        [qw{ SubmitContig   Bio::EnsEMBL::Ace::Filter::DNA              }],
-        [qw{ RepeatMask     Bio::EnsEMBL::Ace::Filter::Repeatmasker     }],
-        [qw{ trf            Bio::EnsEMBL::Ace::Filter::TRF              }],
-        [qw{ genscan        Bio::EnsEMBL::Ace::Filter::Gene::Predicted  }],
-        [qw{ Fgenesh        Bio::EnsEMBL::Ace::Filter::Gene::Predicted  }],
-        [qw{ CpG            Bio::EnsEMBL::Ace::Filter::CpG              }],
+        [qw{ SubmitContig   Bio::EnsEMBL::Ace::Filter::DNA              }]
         );
+    
+    # If we aren't fetching all the analysis, we only need the DNA
+    if ($fetch_all_pipeline_data) {
+        push(@logic_class,
+            [qw{ RepeatMask     Bio::EnsEMBL::Ace::Filter::Repeatmasker     }],
+            [qw{ trf            Bio::EnsEMBL::Ace::Filter::TRF              }],
+            [qw{ genscan        Bio::EnsEMBL::Ace::Filter::Gene::Predicted  }],
+            [qw{ Fgenesh        Bio::EnsEMBL::Ace::Filter::Gene::Predicted  }],
+            [qw{ CpG            Bio::EnsEMBL::Ace::Filter::CpG              }],
+            );
+    }
 
     foreach my $lc (@logic_class) {
         my ($logic_name, $class) = @$lc;
@@ -619,6 +628,11 @@ sub make_AceDataFactory {
         } else {
             warn "No analysis called '$logic_name'\n";
         }
+    }
+    
+    # Return factory containing just the DNA filter if we don't want all the pipeline data
+    unless ($fetch_all_pipeline_data) {
+        return $factory;
     }
     
     #halfwise
