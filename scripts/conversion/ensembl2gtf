@@ -200,7 +200,8 @@ sub make_start_codon_features {
                              -end   => $pepgencoord->end,
                              -phase => $phase,
                              -strand => $translateable[0]->strand);
-    $phase = ($pepgencoord->end-$pepgencoord->start+1);
+    $phase = 3 - ($pepgencoord->end-$pepgencoord->start+1);
+    # print "New phase = $phase given " . $pepgencoord->start . " " . $pepgencoord->end . " " . ($pepgencoord->end-$pepgencoord->start+1) . "\n";
   }
   if ($translateable[0]->strand == 1) {
     @startc_feat = sort {$a->start <=> $b->start } @startc_feat;
@@ -250,7 +251,8 @@ sub make_stop_codon_features {
                              -end   => $pepgencoord->end,
                              -phase => $phase,
                              -strand => $translateable[0]->strand);
-    $phase = ($pepgencoord->end-$pepgencoord->start+1);
+    $phase = 3 - ($pepgencoord->end-$pepgencoord->start+1);
+    # print "New phase = $phase given " . $pepgencoord->start . " " . $pepgencoord->end . " " . ($pepgencoord->end-$pepgencoord->start+1) . "\n";
   }
 
   if ($translateable[0]->strand == 1) {
