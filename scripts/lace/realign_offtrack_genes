@@ -42,9 +42,13 @@ use Hum::Analysis::Factory::ExonLocator;
     my ($chr, $start, $end) = $cl->chr_start_end_from_contig($ss->selected_CloneSequences);
     my $slice = $slice_aptr->fetch_by_chr_start_end($chr, $start, $end);
     my $tiles = $slice->get_tiling_path;
-    my $genes = $gene_atpr->fetch_by_Slice($slice);
+    my $genes = $gene_aptr->fetch_by_Slice($slice);
     #my ($genes, $tiles) = otter_objects_from_contig($cl, $ds, $ss);
     my $acc_list = accession_list_hash_from_tile_path($tiles);
+
+    my $dest_seq = hum_seq_from_contig($slice);
+    my $finder = Hum::Analysis::Factory::ExonLocator->new;
+    $finder->genomic_Sequence($dest_seq);
 
     foreach my $slice_gene (@$genes) {
         my $name = $slice_gene->gene_info->name->name;
@@ -58,7 +62,26 @@ use Hum::Analysis::Factory::ExonLocator;
             #print STDERR "Found truncated gene '$name' ($stable_id)\n";
             next;
         }
-        print STDERR "Found off track gene '$name' ($stable_id)\n";
+        my $v = $slice_gene->version;
+        print STDERR "Found off track gene '$name' ($stable_id v$v)\n";
+        if (remap_ens_Exons($finder, $whole_gene->get_all_Exons, $slice)) {
+            #save_new_gene($dba, $gene_aptr, $whole_gene);
+        }
+    }
+}
+
+sub save_new_gene {
+    my( $dba, $gene_aptr, $gene ) = @_;
+
+    eval {
+        $dba->begin_work;
+        $gene_aptr->increment_versions($gene);
+        $gene_aptr->store($gene);
+        $dba->commit;
+    };
+    if ($@) {
+        $dba->rollback;
+        warn "Error saving remapped gene: $@";
     }
 }
 
@@ -140,6 +163,76 @@ sub select_CloneSequence_contig {
     $ss->selected_CloneSequences($ctg);
 }
 
+sub hum_seq_from_contig {
+    my( $ctg ) = @_;
+
+    my $seq = Hum::Sequence::DNA->new;
+    $seq->sequence_string($ctg->seq);
+    $seq->name($ctg->name);
+    return $seq;
+}
+sub hum_seq_from_exon {
+    my( $exon ) = @_;
+    
+    my $seq = Hum::Sequence::DNA->new;
+    $seq->sequence_string($exon->seq->seq);
+    $seq->name($exon->stable_id);
+    return $seq;
+}
+
+sub remap_ens_Exons {
+    my( $finder, $exons, $dest_ctg ) = @_;
+
+    # Make a Hum::Sequence object for each exon
+    my $exon_seq = [];
+    for (my $i = 0; $i < @$exons; $i++) {
+        push(@$exon_seq, hum_seq_from_exon($exons->[$i]));
+    }
+
+    # Find the exons (with cross_match)
+    my $fs = $finder->find_best_Feature_set($exon_seq);
+    
+    # Give Exons new coords
+    my $sub_strand = undef;
+    my $all_found = 1;
+    for (my $i = 0; $i < @$exons; $i++) {
+        my $exon  = $exons->[$i];
+        my $name  = $exon->stable_id;
+        my $e_len = $exon->length;
+        if (my $feat = $fs->[$i]) {
+            my $start  = $feat->seq_start;
+            my $end    = $feat->seq_end;
+            my $strand = $feat->seq_strand;
+            my $h_len  = $feat->seq_length;
+
+            if ($sub_strand and $strand != $sub_strand) {
+                # Should trap this in ExonLocator
+                warn "Exons on different strands from same feature set\n";
+            } else {
+                $sub_strand = $strand;
+            }
+
+            if ($h_len != $e_len) {
+                printf STDERR "Incomplete ($h_len of $e_len) to %10s %d %d %d\n",
+                    $name, $start, $end, $strand;
+            }
+            else {
+                printf STDERR "Found %10s %d %d %d\n",
+                    $name, $start, $end, $strand;
+            }
+            $exon->start($start);
+            $exon->end($end);
+            $exon->strand($strand);
+            $exon->contig($dest_ctg);
+        } else {
+            printf STDERR "Failed to find %d bp exon '%s'\n",
+                $exon->length,
+                $exon->stable_id;
+            $all_found = 0;
+        }
+    }
+    return $all_found;
+}
 
 __END__
 
@@ -153,3 +246,27 @@ __END__
 
 James Gilbert B<email> jgrg@sanger.ac.uk
 
+=head2 Example from Liz
+
+One for your 'greyed-out' list if you've got one
+-  clone AL603882 has been put in chr1-07 
+recently I think and contains evidence to extend
+an existing locus, RP4-533D7.1, which is
+unfortunately. greyed out - the objects
+associated with RP4-533D7.1 continue all the way
+down into AL358075/RP4-533D7 (481)).
+
+Thanks very much 
+Liz
+
+
+  473  RP11-291L19   AL451136
+  474  RP4-697E16    AL355480
+  475  RP11-767N6    AL604028
+GAP  50,000 bp
+  476  XX-FW85598E4  BX664740
+  477  RP11-630I5    AL603882
+  478  RP11-397E14   AL772251
+  479  RP11-735A5    AL603888
+  480  RP11-386M16   AL645480
+  481  RP4-533D7     AL358075

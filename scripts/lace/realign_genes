@@ -82,10 +82,10 @@ sub remap_ens_Exons {
         my $name  = $exon->stable_id;
         my $e_len = $exon->length;
         if (my $feat = $fs->[$i]) {
-            my $start  = $feat->hit_start;
-            my $end    = $feat->hit_end;
-            my $strand = $feat->hit_strand;
-            my $h_len  = $feat->hit_length;
+            my $start  = $feat->seq_start;
+            my $end    = $feat->seq_end;
+            my $strand = $feat->seq_strand;
+            my $h_len  = $feat->seq_length;
 
             if ($sub_strand and $strand != $sub_strand) {
                 # Should trap this in ExonLocator

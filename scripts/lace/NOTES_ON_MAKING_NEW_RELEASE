@@ -1,0 +1,36 @@
+
+CVS modules labelled with "CURRENT_TAG" below
+need to be updated.
+
+Server files are in:
+  /humsql/otter
+
+on humsrv1 and for the test server:
+  
+  /humsql/test_otter
+
+Client CVS modules and support files are in:
+
+  ~humpub/otter
+
+and test client in:
+
+  ~humpub/test_otter
+
+server requires:
+  bioperl           0.72
+  ensembl           branch-ensembl-19
+  ensembl-otter     CURRENT_TAG
+
+client requires:
+  bioperl           0.72
+  ensembl           branch-ensembl-19
+  ensembl-pipeline  branch-ensembl-19
+  ensembl-ace       CURRENT_TAG
+  ensembl-otter     CURRENT_TAG
+  tk                CURRENT_TAG
+  PerlModules       CURRENT_TAG
+  otter_config
+  lace_acedb.tar
+
+

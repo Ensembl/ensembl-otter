@@ -144,9 +144,10 @@ my $DEBUG = 0;
     
     
 
-    while(!$INPUT_TYPE && (my $first = <$fh>)){
+    while(!$INPUT_TYPE && defined (my $first = <$fh>)){
 	chomp($first);
 	($INPUT_TYPE, $agp_chr_name) = check_line($first, $chromosome_name);
+        $INPUT_TYPE = undef if $INPUT_TYPE eq 'SKIP';
     }
     seek($fh, 0, 0);
     die "check format of file" unless $INPUT_TYPE;
@@ -164,6 +165,7 @@ my $DEBUG = 0;
     # warn "This is end_coord: $end_coord";
 
     while(<$fh>){
+        # Skip comment lines
         chomp;
 	my ($input_type, 
 	    $super_contig_name,
@@ -175,13 +177,17 @@ my $DEBUG = 0;
 	    $ctg_start,
 	    $ctg_end,
 	    $ctg_ori) = check_line($_, $chromosome_name);
-	next unless $input_type && $input_type eq $INPUT_TYPE;
-	if($input_type eq 'AGP'){
+        if ($input_type ne $INPUT_TYPE) {
+            warn "Skipping $input_type type line\n";
+            next;
+        }
+	if ($input_type eq 'AGP') {
 	    # input file must be in AGP format
             # 0       1       2       3       4       5               6       7       8
             # chr_20  2808333 2934911 29      F       AL121905.0      101     126679  +
 	    # nothing else needs to be done to organise the line.
-	}elsif($input_type eq 'LIST'){
+	}
+        elsif ($input_type eq 'LIST') {
 	    # grrr we have to pfetch twice.
             ## all we have is the list of contigs/clones - need to give default values for agp
             my $seq     = pfetch_acc_sv($acc_ver);
@@ -247,6 +253,7 @@ my $DEBUG = 0;
     #--------------------------------finished reading input file ------------------------
 
     # Store the sequence set, returning a list of pipeline contigs
+    warn "Storing '$clone_sequence_list'";
     $SequenceSet->CloneSequence_list($clone_sequence_list);
     my $pipe_contigs = $ds->store_SequenceSet($SequenceSet, \&pfetch_acc_sv, $INPUT_TYPE eq 'LIST');
     # print STDERR join("\n", map { $_->name } @$pipe_contigs);
@@ -313,8 +320,7 @@ sub check_line{
 	}
     }
     else {
-	warn "Skipping: $line \n";
-	return (); 
+	return ('SKIP'); 
     } 
     return $input_type, @line_in_array;
 }
