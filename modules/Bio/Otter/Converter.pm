@@ -3,11 +3,15 @@ package Bio::Otter::Converter;
 use strict;
 
 use Bio::Otter::Author;
+use Bio::Otter::Keyword;
 use Bio::Otter::AnnotatedGene;
+use Bio::Otter::AnnotatedClone;
 use Bio::Otter::AnnotatedTranscript;
 use Bio::Otter::TranscriptInfo;
+use Bio::Otter::CloneInfo;
 use Bio::Otter::GeneInfo;
 use Bio::Otter::Evidence;
+use Bio::Otter::CloneRemark;
 use Bio::Otter::GeneRemark;
 use Bio::Otter::GeneName;
 use Bio::Otter::GeneSynonym;
@@ -43,6 +47,13 @@ sub XML_to_otter {
   my @genes;
   my $foundend = 0;
   my $time_now = time;
+  my %clones;
+  my @clones;
+  my @cloneremarks;
+  my @keywords;
+
+  my $clone;
+  my $version;
 
   while (<$fh>) {
     chomp;
@@ -91,13 +102,16 @@ sub XML_to_otter {
       }
     } elsif (/<remark>(.*)<\/remark>/) {
       my $remark = $1;
-
       if ($currentobj eq 'gene') {
         my $rem = new Bio::Otter::GeneRemark(-remark => $remark);
         $geneinfo->remark($rem);
       } elsif ($currentobj eq 'tran') {
+       
         my $rem = new Bio::Otter::TranscriptRemark(-remark => $remark);
         $traninfo->remark($rem);
+      } elsif ($currentobj eq 'frag') {
+        print "Found remark $remark\n";
+        push(@cloneremarks,$remark);
       } else {
         print "ERROR: Current obj is $currentobj -can only add remarks to gene,tran\n";
       }
@@ -155,9 +169,12 @@ sub XML_to_otter {
         if (!defined($start_exon) || !defined($end_exon)) {
           print "ERROR: Failed mapping translation to transcript\n";
         } else {
+
           my $translation = new Bio::EnsEMBL::Translation;
+
           $translation->start_Exon($start_exon);
           $translation->start($start_pos);
+
           if ($start_exon->strand == 1 && $start_exon->start != $tl_start) {
             #$start_exon->phase(-1);
             $start_exon->end_phase(($start_exon->length-$start_pos+1)%3);
@@ -165,9 +182,11 @@ sub XML_to_otter {
             #$start_exon->phase(-1);
             $start_exon->end_phase(($start_exon->length-$start_pos+1)%3);
           }
+
           $translation->end_Exon($end_exon);
           $translation->end($end_pos);
-          if ($end_exon->length != $end_pos) {
+          print "End / pos " . $end_exon->stable_id . " " . $end_exon->length . " " . $end_pos . "\n";
+          if ($end_exon->length >= $end_pos) {
             $end_exon->end_phase(-1);
           }
           $tran->translation($translation);
@@ -260,6 +279,55 @@ sub XML_to_otter {
       }
     } elsif (/<sequencefragment>/) {
       $currentobj = 'frag';
+    } elsif (/<\/sequencefragment>/) {
+       if (defined($clone) && defined($version)) {
+         my $cloneobj = new Bio::Otter::AnnotatedClone;
+         $cloneobj->id($clone);
+         $cloneobj->embl_version($version);
+         my $cloneinfo = new Bio::Otter::CloneInfo;
+         my @keyobj;
+         my @clonerem;
+         foreach my $keyword (@keywords) {
+           my $keyobj = new Bio::Otter::Keyword(-name => $keyword);
+           push(@keyobj,$keyobj);
+         }
+         foreach my $remark (@cloneremarks) {
+           my $remobj = new Bio::Otter::CloneRemark(-remark => $remark);
+           print "Adding remark $remark\n";
+           push(@clonerem,$remobj);
+         }
+         $cloneinfo->remark(@clonerem);
+         $cloneinfo->keyword(@keyobj);
+
+         $cloneobj->clone_info($cloneinfo);
+
+         push(@clones,$cloneobj);
+       }
+       $clone = undef;
+       $version = undef;
+
+       @cloneremarks = ();
+       @keywords     = ();
+
+    } elsif (/<accession>(.*)<\/accession>/) {
+      if ($currentobj eq 'frag') {
+         $clone = $1;
+      } else {
+         die "ERROR: accession tag only allowed for sequence fragments.  Current obj is [$currentobj]\n";
+      }
+    } elsif (/<version>(.*)<\/version>/) {
+      if ($currentobj eq 'frag') {
+         $version = $1;
+         print "Found version $version : $clone\n";
+      } else {
+         die "ERROR: version tag only allowed for sequence fragments.  Current obj is [$currentobj]\n";
+      }
+
+    } elsif (/<keyword>(.*)<\/keyword>/) {
+      if ($currentobj ne 'frag') {
+         die "ERROR: keyword tag only valid for sequence fragments";
+      }
+      push(@keywords,$1);
     } elsif (/<assembly_type>(.*)<\/assembly_type>/) {
       $assembly_type = $1;
     } elsif (/<chromosome>(.*)<\/chromosome>/) {
@@ -392,7 +460,7 @@ sub XML_to_otter {
     }
   }
 
-  return (\@genes, $chrname, $chrstart, $chrend,$assembly_type,$seqstr);
+  return (\@genes, \@clones,$chrname, $chrstart, $chrend,$assembly_type,$seqstr,);
 }
 
 sub otter_to_ace {
@@ -486,10 +554,12 @@ sub otter_to_ace {
          foreach my $remark ($clone_info->remark) {
            if ($remark->remark =~ /^Annotation_remark- /) {
              my $rem = $remark->remark;
+             $rem =~ s/\n/ /g;
              $rem =~ s/^Annotation_remark- //;
              $str .= "Annotation_remark \"" . $rem . "\"\n";
            } elsif ($remark->remark =~ /^EMBL_dump_info.DE_line- /) {
              my $rem = $remark->remark;
+             $rem =~ s/\n/ /g;
              $rem =~ s/^EMBL_dump_info.DE_line- //;
              $str .= "EMBL_dump_info DE_line \"" . $rem . "\"\n";
            } else {
@@ -1501,7 +1571,7 @@ sub prune_Exons {
           last UNI;
         }
       }
-
+        print " Exon " . $exon->stable_id . "\n";
         print " Phase " . $exon->phase . " EndPhase " . $exon->end_phase . "\n";
         print " Strand " . $exon->strand . " Start " . $exon->start . " End ". $exon->end ."\n";
       if (defined($found)) {
@@ -1531,10 +1601,9 @@ sub prune_Exons {
 }
 
 sub path_to_XML {
-  my ($chr, $chrstart, $chrend, $type, @path) = @_;
+  my ($chr,$chrstart,$chrend,$type,$path) = @_;
 
-  my %clones;
-  my %versions;
+  my @path   = @$path;
 
   my $xmlstr;
 
@@ -1544,26 +1613,50 @@ sub path_to_XML {
 
   foreach my $p (@path) {
     $xmlstr .= "<sequencefragment>\n";
-
     $xmlstr .= "  <id>" . $p->component_Seq->id . "<\/id>\n";
     $xmlstr .= "  <chromosome>" . $chr . "<\/chromosome>\n";
-    $xmlstr .= "  <assemblystart>" . ($chrstart + $p->assembled_start() - 1)
-      . "<\/assemblystart>\n";
-    $xmlstr .= "  <assemblyend>" . ($chrstart + $p->assembled_end() - 1)
-      . "<\/assemblyend>\n";
+
+    if (defined($p->component_Seq->clone)) {
+        my $clone = $p->component_Seq->clone;
+        $xmlstr .= Bio::Otter::Converter::clone_to_XML($clone);
+    }
+
+    $xmlstr .= "  <assemblystart>" . ($chrstart + $p->assembled_start() - 1) . "<\/assemblystart>\n";
+    $xmlstr .= "  <assemblyend>" . ($chrstart + $p->assembled_end() - 1) . "<\/assemblyend>\n";
     $xmlstr .= "  <assemblyori>" . $p->component_ori() . "<\/assemblyori>\n";
-    $xmlstr .=
-      "  <assemblyoffset>" . $p->component_start() . "<\/assemblyoffset>\n";
-
+    $xmlstr .= "  <assemblyoffset>" . $p->component_start() . "<\/assemblyoffset>\n";
     $xmlstr .= "<\/sequencefragment>\n";
-
   }
 
   return $xmlstr;
 
 }
 
+sub clone_to_XML {
+  my ($clone) = @_;
 
+  if (!defined($clone)) {
+     die "ERROR: clone needs to be entered to clone_to_XML\n";
+  }
+  my $str = "";
+
+  $str .= "  <accession>" . $clone->id . "<\/accession>\n";
+  $str .= "  <version>" . $clone->embl_version . "<\/version>\n";
+
+  if ($clone->isa("Bio::Otter::AnnotatedClone") && defined($clone->clone_info)) {
+     my @rem = $clone->clone_info->remark;
+     my @key = $clone->clone_info->keyword;
+
+     foreach my $rem (@rem) {
+        $rem =~ s/\n/ /g;
+        $str .= "  <remark>" . $rem->remark . "<\/remark>\n";
+     }
+     foreach my $key (@key) {
+        $str .= "  <keyword>" . $key->name . "<\/keyword>\n";
+     }
+   }
+   return $str;
+}
 sub frags_to_XML {
   my ($frags,$type,$chr,$start,$end) = @_;
 
@@ -1592,10 +1685,9 @@ sub frags_to_XML {
   }
   return $str;
 }
+
 sub genes_to_XML_with_Slice {
   my ($slice, $genes, $type, $writeseq) = @_;
-
-  #print "Slice $slice\n";
 
   my @genes = @$genes;
 
@@ -1611,11 +1703,11 @@ sub genes_to_XML_with_Slice {
   my $chrend   = $slice->chr_end;
 
   $xmlstr .= Bio::Otter::Converter::path_to_XML($chr, $chrstart, $chrend, 
-                                                $type, @path);
+                                                $type, \@path);
 
   if (defined($writeseq)) {
     $xmlstr .= "<dna>\n";
-    my $seqstr = $slice->seq->seq;
+    my $seqstr = $slice->seq;
     $seqstr =~ s/(.{72})/  $1\n/g;
     $xmlstr .= $seqstr . "\n";
     $xmlstr .= "</dna>\n";
