@@ -1,0 +1,193 @@
+#!/usr/local/bin/perl
+
+use OtterDefs;
+use strict;
+use CGI;
+
+use Bio::Otter::DBSQL::DBAdaptor;
+use Bio::Otter::CloneLockBroker;
+use Bio::Otter::Converter;
+use Bio::Otter::Author;
+
+$| = 1;
+
+print STDERR "\n\n******* Starting to unlock region *********\n\n";
+
+my $q = new CGI;
+
+if ($ENV{SERVER_SOFTWARE} =~ /libwww-perl-daemon/) {
+  print STDERR "NOTE NOTE NOTE Setting nph to 1\n";
+  $q->nph(1);
+}
+
+my %params = $q->Vars;
+
+my $dataset = $params{dataset} || error_exit($q,"No dataset type entered. Can't unlock region");
+my $data    = $params{data}    || error_exit($q,"No xml data entered. Can't unlock region");
+my $author  = $params{author}  || error_exit($q,"Author must defined to unlock a region");
+my $email   = $params{email}   || error_exit($q,"Email must defined to unlock a region");
+
+print STDERR "Length of data " . length($data) . "\n";
+
+if (!defined($OTTER_SPECIES->{$params{'dataset'}})) {
+  print STDERR "Unknown data set\n";
+  error_exit($q, "Unknown data set " . $params{'dataset'} . " in unlock_region\n");
+}
+
+my %dbinfo   = %{$OTTER_SPECIES->{$params{'dataset'}}};
+my %defaults = %{$OTTER_SPECIES->{'defaults'}};
+
+my $odb;
+my $dnadb;
+
+my $author = Bio::Otter::Author->new(-name  => $params{author},
+                                     -email => $params{email});
+
+my $host = $dbinfo{HOST}   || $defaults{HOST},
+my $user = $dbinfo{USER}   || $defaults{USER},
+my $pass = $dbinfo{PASS}   || $defaults{PASS},
+my $port = $dbinfo{PORT}   || $defaults{PORT},
+my $dbname = $dbinfo{DBNAME};
+
+print STDERR "\nDatabase [$dbname][$host][$user][$pass][$port]\n";
+
+my $dnahost = $dbinfo{DNA_HOST}    || $defaults{DNA_HOST},
+my $dnauser = $dbinfo{DNA_USER}    || $defaults{DNA_USER},
+my $dnapass = $dbinfo{DNA_PASS}    || $defaults{DNA_PASS},
+my $dnaport = $dbinfo{DNA_PORT}    || $defaults{DNA_PORT},
+my $dna_dbname = $dbinfo{DNA_DBNAME};
+  
+eval {
+  $odb = new Bio::Otter::DBSQL::DBAdaptor(-host => $host,
+                                          -user => $user,
+                                          -pass => $pass,
+                                          -port => $port,
+                                          -dbname => $dbname);
+};
+if ($@) {
+  error_exit($q, "Failed opening otter database [$@]");
+}
+
+print STDERR "Connected to database\n";
+
+if (defined($dbinfo{DNA_DBNAME})) {
+  eval {
+    $dnadb = new Bio::EnsEMBL::DBSQL::DBAdaptor(-host   => $dnahost,
+                                                -user   => $dnauser,
+                                                -pass   => $dnapass,
+                                                -port   => $dnaport,
+                                                -dbname => $dna_dbname);
+  };
+  if ($@) {
+    error_exit($q, "Failed opening dna database [$@]");
+  }
+  $odb->dnadb($dnadb);
+  
+  print STDERR "Connected to dna database\n";
+}
+my $tmp_xmlfile = get_tmp_file("/tmp","otter","xml");
+
+print STDERR "\nWriting xml to tmp file [" . $tmp_xmlfile . "]\n\n";
+
+open FPOUT,">$tmp_xmlfile" or error_exit($q, "Failed opening temp file for write");
+
+print FPOUT $params{'data'};
+close FPOUT;
+
+open(XML,"<$tmp_xmlfile");
+my $fh = \*XML;
+
+my @genes;
+my $chrname;
+my $chrstart;
+my $chrend;
+my $genes;
+
+my $sa  = $odb->get_SliceAdaptor;
+
+print STDERR "\nConverting xml to otter...\n";
+
+eval {
+  ($genes,$chrname,$chrstart,$chrend) = Bio::Otter::Converter::XML_to_otter($fh,$odb);
+};
+if ($@) {
+  print STDERR "Failed converting XML [$genes,$chrname,$chrstart,$chrend][$@]\n";
+  error_exit($q, "Failed converting XML to otter [$@]");
+}
+print STDERR "done\n";
+
+#if (scalar(@$genes)) {
+#  error_exit($q, "Found genes in XML for unlock_region that should only contain assembly");
+#}
+
+my $slice;
+
+print STDERR "\nFetching slice $chrname $chrname $chrend...";
+
+eval {
+  $slice = $sa->fetch_by_chr_start_end($chrname,$chrstart,$chrend);
+};
+if ($@) {
+  print STDERR "\nFailed fetching slice [$@]\n";
+  error_exit($q, "Failed fetching slice [$@]");
+}
+
+print STDERR "done\n";
+
+my $cb   = new Bio::Otter::CloneLockBroker($odb);
+
+print STDERR "Checking region is locked...\n";
+
+eval {
+  $cb->check_locks_exist_by_slice($slice,$author);
+};
+if ($@) {
+  print STDERR "\nFailed checking locks [$@]\n";
+  error_exit($q, "Failed checking locks [$@]");
+}
+print STDERR "done\n";
+
+print STDERR "\nUnlocking clones...";
+
+$cb->remove_by_slice($slice,$author);
+
+print STDERR "done\n";
+#####################################################################################
+
+sub error_exit {
+  my ($q,$reason) = @_;
+
+  print $q->header();
+
+  print "<otter>\n";
+  print "  <response>\n";
+  print "    ERROR: $reason\n";
+  print "  </response>\n";
+  print "</otter>\n";
+
+  print STDERR "ERROR: $reason\n";
+
+  exit(1);
+}
+
+
+sub get_tmp_file {
+  my ($dir,$stub,$ext) = @_;
+
+
+  if ($dir !~ /\/$/) {
+    $dir = $dir . "/";
+  }
+
+  # This is not good
+
+  my $num = int(rand(10000));
+  my $file = $dir . $stub . "." . $num . "." . $ext;
+
+  while (-e $file) {
+    $num = int(rand(10000));
+    $file = $stub . "." . $num . "." . $ext;
+  }
+
+  return $file;
+}
