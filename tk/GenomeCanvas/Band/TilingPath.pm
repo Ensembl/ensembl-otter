@@ -73,7 +73,7 @@ sub render {
     my $y_offset       = $band->y_offset;
     my @tags           = $band->tags;
     my $font_size      = $band->font_size;
-    my $name_morpher = $band->name_morpher;
+    my $name_morpher   = $band->name_morpher;
 
     if ($y_dir == -1) {
         # We have to build above the other bands
@@ -88,11 +88,11 @@ sub render {
     my $text_nudge_flag = 0;
     foreach my $map_c ($vc->_vmap->each_MapContig) {
         $map_contig_count++;
-        my $start  = $map_c->start;
-        my $end    = $map_c->end;
+        my $start     = $map_c->start;
+        my $end       = $map_c->end;
         my $raw_start = $map_c->rawcontig_start;
         my $raw_end   = $map_c->rawcontig_end;
-        my $contig = $map_c->contig;
+        my $contig    = $map_c->contig;
         my $length = $contig->length;
         my $name = $contig->id;
         if ($name_morpher) {
@@ -172,7 +172,7 @@ sub render {
         $band->nudge_into_free_space($group, $nudge_distance);
     }
     $canvas->delete('bkgd_rec');
-    confess "No mapcontigs in virtual contig" unless $map_contig_count;
+    #confess "No mapcontigs in virtual contig" unless $map_contig_count;
 }
 
 1;

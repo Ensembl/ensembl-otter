@@ -198,7 +198,10 @@ sub draw_plot_axes {
     }
     
     # Scale along bottom of plot
-    my $seq_length  = $band->virtual_contig->length;
+    my $vc = $band->virtual_contig;
+    my $chr_start  = $vc->_global_start;
+    my $seq_length = $vc->length;
+    my $seq_end = $chr_start + $seq_length;
     my $rpp = $band->residues_per_pixel;
     # Choose minumum space between labeled ticks based on font size
     my $min_interval = $rpp * $band->font_size * 4;
@@ -210,9 +213,18 @@ sub draw_plot_axes {
     }
     my $precision = 7 - length($interval);
     #warn "interval = $interval, precision = $precision";
-    for (my $i = 0; $i < $seq_length; $i += $interval) {
-        my $Mbp = sprintf("%.${precision}f", $i / 1e6);
-        $band->tick_label($Mbp, 's', $i / $rpp, $y_max);
+    {
+        my( $i );
+        if (my $rem = $chr_start % $interval) {
+            $i = $chr_start - $rem + $interval;
+        } else {
+            $i = $chr_start;
+        }
+        #warn "First label = $i";
+        for (; $i <= $seq_end; $i += $interval) {
+            my $Mbp = sprintf("%.${precision}f", $i / 1e6);
+            $band->tick_label($Mbp, 's', ($i - $chr_start) / $rpp, $y_max);
+        }
     }
 
     # Rectangle in front of everything else

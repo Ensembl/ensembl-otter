@@ -357,7 +357,6 @@ sub make_chooser_map {
 sub get_unplaced_clones {
     my( @map ) = @_;
     
-    
     my %is_placed = map {$_->[1], 1} grep $_->[1], @map;
     my( @unplaced );
     foreach my $seq_name (list_all_seq_names())  {

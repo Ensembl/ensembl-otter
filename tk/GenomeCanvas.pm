@@ -55,18 +55,65 @@ sub bind_scroll_commands {
     my $x_scroll = $canvas->parent->Subwidget('xscrollbar');
     my $y_scroll = $canvas->parent->Subwidget('yscrollbar');
     my $top = $x_scroll->toplevel;
-    foreach my $key_seq ($x_scroll->bind($class)) {
-        my $com_ref = $x_scroll->bind($class, $key_seq);
-        if ($com_ref =~ /ARRAY/) {
-            my($method, @args) = @$com_ref;
-            #warn "[$method, @args]";
-            $top->bind($key_seq, sub{
-                $x_scroll->$method(@args);
-                $y_scroll->$method(@args);
-                });
-        }
-    }
     
+    # Home and End keys
+    $top->bind('<Key-Home>', sub{
+        $y_scroll->ScrlToPos(0);
+        });
+    $top->bind('<Key-End>', sub{
+        $y_scroll->ScrlToPos(1);
+        });
+    
+    # Page-Up and Page-Down keys
+    $top->bind('<Key-Next>', sub{
+        $y_scroll->ScrlByPages('v', 1);
+        });
+    $top->bind('<Key-Prior>', sub{
+        $y_scroll->ScrlByPages('v', -1);
+        });
+    $top->bind('<Control-Key-Down>', sub{
+        $y_scroll->ScrlByPages('v', 1);
+        });
+    $top->bind('<Control-Key-Up>', sub{
+        $y_scroll->ScrlByPages('v', -1);
+        });
+    
+    # Ctrl-Left and Ctrl-Right
+    $top->bind('<Control-Key-Left>', sub{
+        $x_scroll->ScrlByPages('h', -1);
+        });
+    $top->bind('<Control-Key-Right>', sub{
+        $x_scroll->ScrlByPages('h', 1);
+        });
+    
+    # Left and Right
+    $top->bind('<Key-Left>', sub{
+        $x_scroll->ScrlByUnits('h', -1);
+        });
+    $top->bind('<Key-Right>', sub{
+        $x_scroll->ScrlByUnits('h', 1);
+        });
+    
+    # Up and Down
+    $top->bind('<Key-Up>', sub{
+        $y_scroll->ScrlByUnits('v', -1);
+        });
+    $top->bind('<Key-Down>', sub{
+        $y_scroll->ScrlByUnits('v', 1);
+        });
+    
+    #foreach my $key_seq ($x_scroll->bind($class)) {
+    #    my $x_com_ref = $x_scroll->bind($class, $key_seq);
+    #    my $y_com_ref = $y_scroll->bind($class, $key_seq);
+    #    if ($x_com_ref =~ /ARRAY/) {
+    #        my($x_method, @x_args) = @$x_com_ref;
+    #        my($y_method, @y_args) = @$y_com_ref;
+    #        warn "\nx: $key_seq [$x_method, @x_args]\n";
+    #        warn "y: $key_seq [$y_method, @y_args]\n";
+    #    }
+    #}
+    
+    # The Scrolled Canvas widgets shouldn't get keyboard focus
     foreach my $widget ($canvas, $x_scroll, $y_scroll) {
         $widget->configure(
             -takefocus => 0,
