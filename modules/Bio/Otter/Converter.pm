@@ -445,7 +445,13 @@ sub otter_to_ace {
   foreach my $gene (@$genes) {
   
     foreach my $tran (@{ $gene->get_all_Transcripts }) {
-      $str .= "Subsequence   \"" . $tran->transcript_info->name . "\" ";
+      my $tran_name;
+      if ($tran->transcript_info->name) {
+        $tran_name = $tran->transcript_info->name;
+      } else {
+        $tran_name = $tran->stable_id;
+      }
+      $str .= "Subsequence   \"" . $tran_name . "\" ";
       my @exons = @{ $tran->get_all_Exons };
       if ($exons[0]->strand == 1) {
         @exons = sort {$a->start <=> $b->start} @exons;
