@@ -100,6 +100,8 @@ while (my $seq = $seqio->next_seq) {
     $clone->add_Contig($contig);
 
     $clone->clone_info($cloneinfo);
+
+    print $clone->toXMLString . "\n";
  
  }
 }

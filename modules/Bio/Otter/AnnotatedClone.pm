@@ -62,7 +62,20 @@ sub clone_info {
 sub toXMLString{
     my ($self) = shift;
 
+    my $str = "";
 
+    $str .= "  <accession>" . $self->id . "<\/accession>\n";
+    $str .= "  <version>" . $self->embl_version . "<\/version>\n";
+   
+    if (defined($self->clone_info)) {
+      foreach my $keyword ($self->clone_info->keyword) {
+        $str .= "  <keyword>" . $keyword->name . "<\/keyword>\n";
+      }
+      foreach my $remark ($self->clone_info->remark) {
+        $str .= "  <remark>" . $remark->remark . "<\/remark>\n";
+     }
+    }
+    return $str;    
 }
    
 
