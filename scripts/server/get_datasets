@@ -8,29 +8,59 @@ use Bio::Otter::DBSQL::DBAdaptor;
 use Bio::Otter::Converter;
 use Bio::Otter::Author;
 use OtterDefs;
+use HTTPD::Authen;
 
-$| = 1;
+$|             = 1;
+my $DEBUG      = 0;
+my $ALLOW_ALL  = 0;
+my $ERROR_AUTH = q`unknown user or incorrect password`;
 
-my $q = new CGI;
-
+my $q      = new CGI;
 my %params = $q->Vars;
- 
+my $user   = $params{'author'} || '**NOT Using Authorization**';
+
 if ($ENV{SERVER_SOFTWARE} =~ /libwww-perl-daemon/) {
   print STDERR "NOTE NOTE NOTE Setting nph to 1\n";
   $q->nph(1);
 }
-
 print $q->header('text/plain');
 
+my $groupAd;
+
+if($ENV{AUTHUSERFILE} && $ENV{AUTHGROUPFILE}){
+    ($groupAd,$user) = check_authorisation();
+}else{
+    $ALLOW_ALL = 1;
+}
+
 print "Datasets\n\n";
+
+# This is a check so that $groupAd->exists won't die if
+# ALLOW_ALL is false when no authentication was passed
+error_exit($ERROR_AUTH) unless $groupAd || $ALLOW_ALL;
+
+# find the ones they're allowed
+my @allowed_to_see = ();
+
 foreach my $dataset (keys %$OTTER_SPECIES) {
   next if ($dataset =~ /defaults/);
+  print STDERR "Testing user '$user' in dataset '$dataset'" if $DEBUG;
+  # This "next unless" uses perl's clever "or" checking where it 
+  # won't bother checking the second for truth if the first is true.
+  next unless $ALLOW_ALL || $groupAd->exists($dataset, $user);
+  print STDERR "Allowing user '$user' access to dataset '$dataset'" if $DEBUG;
+  push(@allowed_to_see, $dataset);
+}
+
+# print the one's user is allowed to see.
+foreach my $dataset(@allowed_to_see){
   print "$dataset\n";
 }
 
+# print details if they've ask for it.
 if (defined($params{details})) {
   print "\nDetails\n";
-  foreach my $dataset (keys %$OTTER_SPECIES) {
+  foreach my $dataset (@allowed_to_see) {
     next if ($dataset =~ /defaults/);
     print "\n$dataset\n";
     foreach my $key (keys %{$OTTER_SPECIES->{$dataset}}) {
@@ -43,7 +73,7 @@ if (defined($params{details})) {
 #End main
 
 sub error_exit {
-  my ($q,$reason) = @_;
+  my ($reason) = @_;
 
   print "<otter>\n";
   print "  <response>\n";
@@ -54,4 +84,41 @@ sub error_exit {
   print STDERR "ERROR: $reason\n";
   
   exit;
+}
+
+sub check_authorisation{
+    my ($groupAdminObj, $authinfo, $authen);
+
+    $authinfo = $ENV{'HTTP_AUTHORIZATION'} || 'Basic xxxxxxx';
+    $authen = HTTPD::Authen->new(DB     => $ENV{AUTHUSERFILE},
+                                 DBType => 'Text',
+                                 Server => 'Apache');
+    print STDERR "AUTH was '$authinfo'" if $DEBUG;
+
+    my $authtype      = $authen->type($authinfo);
+    my ($user, $pass) = ('ERROR') x 2;
+    ($user, $pass)    = $authtype->parse($authinfo);
+
+    print STDERR "Got info ['$user', '$pass']" if $DEBUG;
+
+    if( my $ok = $authen->check($user, $pass) ){
+        print STDERR "user '$user', was AUTHENTICATED" if $DEBUG;
+        $groupAdminObj = $authen->{USER}->group($user);
+        $groupAdminObj->db($ENV{'AUTHGROUPFILE'});
+        if($DEBUG){
+            # this gets all the groups in the .htgroups file
+            foreach my $groupname($groupAdminObj->list()){
+                if($groupAdminObj->exists($groupname, $user)){
+                    print STDERR "User: '$user' is part of group: '$groupname'";
+                }else{
+                    print STDERR "User: '$user' is *NOT* part of group: '$groupname'";
+                }
+            }
+        }
+    }else{
+        print STDERR "user was NOT AUTHENTICATED" if $DEBUG;
+        error_exit($ERROR_AUTH);
+    }
+    return $groupAdminObj, $user;
+
 }
