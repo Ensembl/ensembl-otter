@@ -551,7 +551,7 @@ sub write_pipeline_data {
         $dataset->get_cached_DBAdaptor
         );
     $ens_db->assembly_type($ss->name);
-    my $factory = $self->make_AceDataFactory($ens_db);
+    my $factory = $self->{'_pipeline_data_factory'} ||= $self->make_AceDataFactory($ens_db);
     
     # create file for output and add it to the acedb object
     my $ace_file = $self->home . "/rawdata/pipeline.ace";
@@ -598,8 +598,6 @@ sub write_pipeline_data {
 
 sub make_AceDataFactory {
     my( $self, $ens_db ) = @_;
-
-    my $percent_identity_cutoff = undef; ## change this if a cutoff value is reqired
 
     # create new datafactory object - cotains all ace filters and produces the data from these
     my $factory = Bio::EnsEMBL::Ace::DataFactory->new;       
@@ -686,9 +684,7 @@ sub make_AceDataFactory {
             $sim->method_tag($meth);
             $sim->hseq_prefix('Em:');
             $sim->max_coverage($coverage);
-            if ( defined($percent_identity_cutoff) ) {
-                $sim->percent_identity_cutoff($percent_identity_cutoff);
-            }
+            #$sim->percent_identity_cutoff(40);
             $factory->add_AceFilter($sim);
 #            warn 'logic_tag:' , $tag , "\n" ;
         } else{
@@ -703,9 +699,7 @@ sub make_AceDataFactory {
         $prot_sim->analysis_object($ana);
         $prot_sim->homol_tag('swall');
         $prot_sim->method_tag('BLASTX');
-        if( defined($percent_identity_cutoff)  ){
-            $prot_sim->percent_identity_cutoff($percent_identity_cutoff);
-        }
+        $prot_sim->percent_identity_cutoff(40);
         $factory->add_AceFilter($prot_sim);    
     } else {
         warn "No analysis called 'swall'\n";
@@ -733,6 +727,18 @@ sub write_ensembl_data {
     }
 }
 
+sub make_ensembl_gene_DataFactory {
+    my( $self, $ens_db, $logic_name ) = @_;
+    
+    my $factory = Bio::EnsEMBL::Ace::DataFactory->new;
+    my $ana_adaptor = $ens_db->get_AnalysisAdaptor;
+    my $ensembl = Bio::EnsEMBL::Ace::Filter::Gene->new;
+    $ensembl->url_string('http\:\/\/www.ensembl.org\/Homo_sapiens\/contigview?chr=%s&vc_start=%s&vc_end=%s&highlight=%s');    
+    $ensembl->analysis_object( $ana_adaptor->fetch_by_logic_name($logic_name) );
+    $factory->add_AceFilter($ensembl);
+    return $factory;
+}
+
 sub write_ensembl_data_for_key {
     my( $self, $ss, $key, $logic_name ) = @_;
 
@@ -754,15 +760,8 @@ sub write_ensembl_data_for_key {
     # later on will have to get chromsome names...not proper way to do it
     my $ch = get_all_LaceChromosomes($ens_db);
 
-    my $factory = Bio::EnsEMBL::Ace::DataFactory->new;
-    my $ana_adaptor = $ens_db->get_AnalysisAdaptor;
-    my $ensembl = Bio::EnsEMBL::Ace::Filter::Gene->new;
-    
-#    $ensembl->url_string('http\:\/\/www.ensembl.org\/Homo_sapiens\/geneview?gene=%s');
-    $ensembl->url_string('http\:\/\/www.ensembl.org\/Homo_sapiens\/contigview?chr=%s&vc_start=%s&vc_end=%s&highlight=%s');
-    
-    $ensembl->analysis_object( $ana_adaptor->fetch_by_logic_name($logic_name) );
-    $factory->add_AceFilter($ensembl);
+    my $factory = $self->{'_ensembl_gene_data_factory'}{$logic_name}
+        ||= $self->make_ensembl_gene_DataFactory($ens_db, $logic_name);
 
     my $slice_adaptor = $ens_db->get_SliceAdaptor();
 
