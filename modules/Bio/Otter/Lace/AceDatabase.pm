@@ -169,7 +169,8 @@ sub sMap_assembly_info_from_contig {
             $ace .= qq{AGP_Fragment "$name" $chr_start $chr_end Align $chr_start $contig_start\n};
         }
         elsif ($strand == -1) {
-            $ace .= qq{AGP_Fragment "$name" $chr_end $chr_start Align $chr_start $contig_end\n};
+            #$ace .= qq{AGP_Fragment "$name" $chr_end $chr_start Align $chr_start $contig_end\n};
+            $ace .= qq{AGP_Fragment "$name" $chr_end $chr_start Align $chr_end $contig_start\n};
         } else {
             confess "Unrecognized strand '$strand'";
         }

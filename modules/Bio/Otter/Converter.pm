@@ -80,7 +80,6 @@ sub XML_to_otter {
     } elsif (/<locus_type>(.*)<\/locus_type>/) {
       if ($currentobj ne $1) {
         #print STDERR "EEEK! Wrong locus type [$currentobj][$1]\n";
-        $gene->type($1);
       }
     } elsif (/<stable_id>(.*)<\/stable_id>/) {
       my $stable_id = $1;
@@ -449,19 +448,17 @@ sub XML_to_otter {
   
   #$assembly_type = 'fake_gp_1' if (!defined($assembly_type));
 
-  if ($chrstart != 2000000000) {
+  $slice = new Bio::EnsEMBL::Slice(-chr_name  => $chrname,
+                                   -chr_start => $chrstart,
+                                   -chr_end   => $chrend,
+                                   -strand    => 1,
+                                   -assembly_type => $assembly_type);
 
-      $slice = new Bio::EnsEMBL::Slice(-chr_name  => $chrname,
-                                       -chr_start => $chrstart,
-                                       -chr_end   => $chrend,
-                                       -strand    => 1,
-                                       -assembly_type => $assembly_type);
-  
-                                       
-        @fragnames = sort { $frag{$a}{start} <=> $frag{$b}{start} } @fragnames;
-        @tiles     = sort { $a->assembled_start <=> $b->assembled_start} @tiles;
-    }
-    
+
+  #$slice->seq($seqstr);
+
+  @tiles     = sort { $a->assembled_start <=> $b->assembled_start} @tiles;
+
   # print STDERR "chrname = " . $chrname . " chrstart = " . $chrstart . " chrend = "
   #  . $chrend . "\n";
 
@@ -960,20 +957,55 @@ sub ace_to_otter {
 
         } elsif (/Assembly_name $STRING/x) {
           $type = $1;
-        } elsif (/TilePath"? $INT $INT $STRING $STRING/x) {
-            confess "chrstart not set" unless $chrstart;
-          # TilePath is part of a feature line
-          my $assstart  = $1;
-          my $assend    = $2;
-          my $assname   = $4;
+        }
 
-          if (defined($frags{$assname})) {
-             print STDERR "ERROR: Fragment name [$assname] appears more than once in the tiling path\n";
-          }
-          $frags{$assname}{start} = $assstart;
-          $frags{$assname}{end}   = $assend;
-          # Hmm - no offset
-        } elsif (/^Genomic_canonical/) {
+        # SMap assembly information is formatted like this:
+        #
+        #  AGP_Fragment "AL356489.14"      1 130539 Align      1  101
+        #  AGP_Fragment "AL358573.25" 130540 143537 Align 130540 2001
+        #  AGP_Fragment "AL139113.21" 143538 334817 Align 143538 2001
+        #  AGP_Fragment "AL354989.13" 334818 484807 Align 334818 2001
+        #  AGP_Fragment "AL160051.22" 484808 514439 Align 484808 1001
+        #  AGP_Fragment "AL353662.19" 514440 680437 Align 514440 2001
+        elsif (/^AGP_Fragment $STRING $INT $INT \s+Align $INT $INT/x) {
+            my $name   = $1;
+            my $start  = $2;
+            my $end    = $3;
+            # Do we need $4?
+            my $offset = $5;
+            
+            ### Not tested for reverse strand!
+            my $strand = 1;
+            if ($start > $end) {
+                $strand = -1;
+                ($start, $end) = ($end, $start);
+                $offset -= ($end - $start);
+            }
+            
+            $frags{$name} = {
+                start   => $start,
+                end     => $end,
+                offset  => $offset,
+                strand  => $strand,
+                }
+        }
+        
+        #elsif (/TilePath"? $INT $INT $STRING $STRING/x) {
+        #    confess "chrstart not set" unless $chrstart;
+        #  # TilePath is part of a feature line
+        #  my $assstart  = $1;
+        #  my $assend    = $2;
+        #  my $assname   = $4;
+        #
+        #  if (defined($frags{$assname})) {
+        #     print STDERR "ERROR: Fragment name [$assname] appears more than once in the tiling path\n";
+        #  }
+        #  $frags{$assname}{start} = $assstart;
+        #  $frags{$assname}{end}   = $assend;
+        #  # Hmm - no offset
+        #}
+        
+        elsif (/^Genomic_canonical/) {
           if ($currname =~ /(\S+)\.(\d+)-(\d+)/) {
              $chr      = $1;
              $chrstart = $2;
@@ -1395,20 +1427,15 @@ sub ace_to_otter {
     prune_Exons($gene);
   }
   
-  # Adjust the start and end of each fragment
-  foreach my $name (keys %frags) {
-    $frags{$name}{start} -= $chrstart - 1;
-    $frags{$name}{end}   -= $chrstart - 1;
-  }
-  
   return \@genes,\%frags,$type,$dna,$chr,$chrstart,$chrend;
 }
 
 sub ace_to_XML {
     my( $fh ) = @_;
     
-    my( $genes, $frags, $type, $dna, $chr, $chrstart, $chrend) = ace_to_otter($fh);
-    my $xml = "<otter>\n" . frags_to_XML($frags, $type, $chr, $chrstart, $chrend);
+    my( $genes, $frags, $type, $dna, $chr, $chrstart, $chrend ) = ace_to_otter($fh);
+    my $xml = "<otter>\n"
+        . frags_to_XML($frags, $type, $chr, $chrstart, $chrend);
     foreach my $g (@$genes) {
         $xml .= $g->toXMLString;
     }
@@ -1648,7 +1675,7 @@ sub prune_Exons {
 
   foreach my $id (keys %exonhash) {
      if ($exonhash{$id} > 1) {
-     # print STDERR "Exon id seen twice $id " . $exonhash{$id} . "\n";
+      print STDERR "Exon id seen twice $id " . $exonhash{$id} . "\n";
      }
    }
 }
@@ -1716,33 +1743,22 @@ sub clone_to_XML {
 }
 
 sub frags_to_XML {
-  my ($frags,$type,$chr,$start,$end) = @_;
+    my( $frags, $type, $chr, $chrstart, $chrend ) = @_;
 
-  my $str = "  <assembly_type>" . $type . "<\/assembly_type>\n";
+    my $str = "  <assembly_type>" . $type . "</assembly_type>\n";
 
-  my @names = keys %$frags;
-  @names = sort {$frags->{$a}{start} <=> $frags->{$b}{start}} @names;
-
-  foreach my $name (@names) {
-     $str .= "    <sequencefragment>\n";
-     $str .= "      <id>" . $name . "<\/id>\n";
-     $str .= "      <chromosome>" . $chr . "<\/chromosome>\n";
-
-     my $start = $frags->{$name}{start};
-     my $end   = $frags->{$name}{end};
-
-     if ($start < $end) {
-         $str .= "      <assemblystart>" . $start . "<\/assemblystart>\n";
-         $str .= "      <assemblyend>" . $end . "<\/assemblyend>\n";
-         $str .= "      <assemblyori>1<\/assemblyori>\n";
-     } else {
-         $str .= "      <assemblystart>" . $end . "<\/assemblystart>\n";
-         $str .= "      <assemblyend>" . $start . "<\/assemblyend>\n";
-         $str .= "      <assemblyori>-1<\/assemblyori>\n";
-     }
-     $str .= "    </sequencefragment>\n";
-  }
-  return $str;
+    foreach my $name (sort {$frags->{$a}{start} <=> $frags->{$b}{start}} keys %$frags) {
+        my $tile = $frags->{$name};
+        $str .= "    <sequencefragment>\n"
+              . "      <id>"                 .  $name                            . "</id>\n"
+              . "      <chromosome>"         .  $chr                             . "</chromosome>\n"
+              . "      <assemblystart>"      . ($tile->{start} + $chrstart - 1)  . "</assemblystart>\n"
+              . "      <assemblyend>"        . ($tile->{end}   + $chrstart - 1)  . "</assemblyend>\n"
+              . "      <assemblyori>"        .  $tile->{strand}                  . "</assemblyori>\n"
+              . "      <assemblyoffset>"     .  $tile->{offset}                  . "</assemblyoffset>\n"
+              . "    </sequencefragment>\n";
+    }
+    return $str;
 }
 
 sub genes_to_XML_with_Slice {
@@ -2058,3 +2074,4 @@ sub ace_escape {
 }
 
 1;
+
