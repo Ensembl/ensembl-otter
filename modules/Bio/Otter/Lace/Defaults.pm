@@ -23,6 +23,7 @@ my @CLIENT_OPTIONS = qw(
     group=s
     gene_type_prefix=s
     debug!
+    misc_acefile=s
     );
 
 # @CLIENT_OPTIONS is Getopt::GetOptions() keys which will be included in the 
@@ -48,6 +49,9 @@ sub fetch_pipeline_switch {
     return $DEFAULTS->{$CLIENT_STANZA}->{'pipeline'} ? 1 : 0;
 }
 
+sub misc_acefile {
+    return $DEFAULTS->{$CLIENT_STANZA}->{'misc_acefile'};
+}
 
 =head1 do_getopt
 
@@ -318,7 +322,9 @@ sub set_known_GeneMethods{
     }
 }
 
-## this method stores the defualt GeneMethod values. 
+## this method stores the defualt GeneMethod values.
+### I intended Colin to add this to the config file in order
+### to get it out of the code, but he added it here.
 sub get_default_GeneMethods{
     my ($self ) = @_ ;       
     my @methods = (

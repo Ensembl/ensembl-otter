@@ -673,6 +673,13 @@ sub edit_displays_wrm {
     close $disp_out;
 }
 
+sub add_misc_acefile {
+    my( $self ) = @_;
+    
+    return unless my $file = Bio::Otter::Lace::Defaults::misc_acefile();
+    confess "No such file '$file'" unless -e $file;
+    $self->add_acefile($file);
+}
 
 sub initialize_database {
     my( $self ) = @_;

@@ -212,6 +212,8 @@ sub list_current_dbIDs_for_Slice {
     
     my $tiling_path = $slice->get_tiling_path;
     my $ctg_id_list = join(',', map($_->component_Seq->dbID, @$tiling_path));
+    
+    $self->throw("No contig IDs in slice") unless $ctg_id_list;
 
     my $sth = $self->db->prepare(qq{
         SELECT gsid.stable_id
