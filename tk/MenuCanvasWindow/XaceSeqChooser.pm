@@ -971,8 +971,10 @@ sub close_all_PolyAWindows {
         }
         my $clone = $self->get_CloneSeq(shift @clone_names);
         
+        # The ExonLoacator finds exons in a genomic sequence
         my $finder = Hum::Analysis::Factory::ExonLocator->new;
         $finder->genomic_Sequence($clone->Sequence);
+
         my( @msg, @new_subseq, $i );
         foreach my $sub (@holding_pen) {
             my $name = $sub->name;
