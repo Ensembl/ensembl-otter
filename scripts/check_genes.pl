@@ -125,9 +125,11 @@ if($make_cache){
   $sth->execute;
   my $nexclude=0;
   my %excluded_gsi;
+  my %offagp_gsi;
+  my %onagp_gsi;
   my %reported_gsi;
-  my %clone_gsi;
-  my %ass_gsi;
+  my %gsi_clone;
+  my %atype_gsi;
   my %gsi2gn;
   open(OUT,">$cache_file") || die "cannot open cache file $cache_file";
   while (my @row = $sth->fetchrow_array()){
@@ -139,6 +141,14 @@ if($make_cache){
     if($a{$ecid}){
 
       my($cname,$atype,$acst,$aced,$ast,$aed,$ao,$cla,$clv)=@{$a{$ecid}};
+
+      # check if exon coordinates are outside AGP
+      if($est<$ast || $eed>$aed){
+	push(@{$offagp_gsi{$gsi}},join(',',@row));
+      }else{
+	push(@{$onagp_gsi{$gsi}},join(',',@row));
+      }
+
       my $ecst;
       my $eced;
       if($ao==1){
@@ -158,8 +168,8 @@ if($make_cache){
       print OUT join("\t",@row2)."\n";
       
       # record clones that each gsi are attached to and assembly for each gsi
-      $clone_gsi{$gsi}->{"$cla.$clv"}=1;
-      $ass_gsi{$atype}->{$gsi}=1;
+      $gsi_clone{$gsi}->{"$cla.$clv"}=1;
+      $atype_gsi{$atype}->{$gsi}=1;
 
     }else{
       $nexclude++;
@@ -172,16 +182,17 @@ if($make_cache){
 
   # report all offtrack genes
   my %orphan_gsi;
-  foreach my $atype (sort keys %ass_gsi){
+  foreach my $atype (sort keys %atype_gsi){
     print "sequence_set $atype\n";
+    # report 
     my %sv;
-    foreach my $gsi (sort keys %{$ass_gsi{$atype}}){
-      my $gn=$gsi2gn{$gsi};
+    foreach my $gsi (sort keys %{$atype_gsi{$atype}}){
       if($excluded_gsi{$gsi}){
 	$orphan_gsi{$gsi}=1;
-	foreach my $sv (keys %{$clone_gsi{$gsi}}){$sv{$sv}=1;}
-	print "WARN $gsi ($gn) ss=\'$atype\' has exon(s) off assembly:\n  ".
-	    join("\n  ",@{$excluded_gsi{$gsi}})."\n";	
+	foreach my $sv (keys %{$gsi_clone{$gsi}}){$sv{$sv}=1;}
+	my $gn=$gsi2gn{$gsi};
+	print " ERR $gsi ($gn) ss=\'$atype\' has exon(s) off assembly:\n";
+	print "  ".join("\n  ",@{$excluded_gsi{$gsi}})."\n" if $opt_v;
       }
     }
     my $n=0;
@@ -191,10 +202,37 @@ if($make_cache){
       $n++;
       my $sv="$cla.$clv";
       if($sv{$sv}){
-	print "[$n] $sv\n";
+	print " [$n] $sv\n";
+      }
+    }
+    my %sv2;
+    foreach my $gsi (sort keys %{$atype_gsi{$atype}}){
+      if($offagp_gsi{$gsi}){
+	foreach my $sv (keys %{$gsi_clone{$gsi}}){$sv2{$sv}=1;}
+	my $gn=$gsi2gn{$gsi};
+	if($onagp_gsi{$gsi}){
+	  print "ERR $gsi ($gn) ss=\'$atype\' all exon(s) off agp:\n";
+	}else{
+	  print "ERR $gsi ($gn) ss=\'$atype\' some exon(s) off agp:\n";
+	}
+	print "  ".join("\n  ",@{$offagp_gsi{$gsi}})."\n" if $opt_v;
+      }
+    }
+    my $n=0;
+    foreach my $cid (sort {$a{$a}->[2]<=>$a{$b}->[2]} keys %a){
+      my($cname,$atype2,$acst,$aced,$ast,$aed,$ao,$cla,$clv)=@{$a{$cid}};
+      next if $atype ne $atype2;
+      $n++;
+      my $sv="$cla.$clv";
+      if($sv2{$sv}){
+	print " [$n] $sv\n";
       }
     }
   }
+
+  # big problem with orphans - how to tell which elements of assembly
+  # are historical?
+
   if(0){
     foreach my $gsi (keys %excluded_gsi){
       next if $orphan_gsi{$gsi};
