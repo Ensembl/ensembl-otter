@@ -47,7 +47,6 @@ sub render {
     my( @bbox );
     my $canvas   = $set->canvas;
     my $tag      = $set->bandset_tag;
-    my $y_offset = $set->y_offset;
     $canvas->delete($tag);
     foreach my $band ($set->band_list) {
         $band->tags($tag);

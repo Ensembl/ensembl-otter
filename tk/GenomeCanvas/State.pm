@@ -36,6 +36,15 @@ sub canvas {
     return $self->{'_state_hash'}{'_canvas'};
 }
 
+sub y_offset {
+    my( $self, $y_offset ) = @_;
+    
+    if (defined $y_offset) {
+        $self->{'_state_hash'}{'_y_offset'} = $y_offset;
+    }
+    return $self->{'_state_hash'}{'_y_offset'};
+}
+
 sub residues_per_pixel {
     my( $self, $scale ) = @_;
     
@@ -64,7 +73,6 @@ sub expand_bbox {
     $bbox->[2] += $pad;
     $bbox->[3] += $pad;
 }
-
 
 1;
 

@@ -9,7 +9,7 @@ use GenomeCanvas::Band::Plot;
 use Getopt::Long 'GetOptions';
 
 {
-    my $host = 'ecs1c';
+    my $host = 'ensrv3';
     my $db   = 'chr20';
     my $user = 'ensro';
     my $fpc = 'chr20';
