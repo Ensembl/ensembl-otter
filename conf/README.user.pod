@@ -53,6 +53,7 @@ The B<client> uses the password=*user_pass* line in the [client] stanza of
 =head1 STEP BY STEP
 
 1. Install HTTPD-User-Manage-1.61 (CPAN or http://stein.cshl.org/WWW/software/user_manage/)
+   Also check MIME::Base64 is installed.
 
 2. copy user_manage to somewhere in your $PATH
 
