@@ -122,3 +122,15 @@ sub check_authorisation{
     return $groupAdminObj, $user;
 
 }
+
+=pod
+
+=head1 get_datasets
+
+=head1 DESCRIPTION
+
+Returns a list of datasets to the Client.
+Will only return the list the user has access to see
+if the server has been setup (see ../../conf/README.user.pod).
+
+=cut
