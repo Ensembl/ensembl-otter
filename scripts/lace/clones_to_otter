@@ -53,8 +53,8 @@ use Bio::Otter::Lace::PipelineDB;
     while (my ($acc, $sv) = $list_acc_sv_clones->fetchrow) {
         next unless my $intl = get_international_clone_name($acc);
         warn "$acc.$sv -> $intl\n";
-        #$update_otter->execute($intl, $acc, $sv);
-        # $update_pipe->execute($intl, $acc, $sv);
+        $update_otter->execute($intl, $acc, $sv);
+         $update_pipe->execute($intl, $acc, $sv);
     }
 }
 

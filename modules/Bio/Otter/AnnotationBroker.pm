@@ -237,6 +237,7 @@ sub compare_genes {
         foreach my $tran (@{$g->get_all_Transcripts}) {
            my $tid = $self->db->get_StableIdAdaptor->fetch_new_transcript_stable_id;
            $tran->stable_id($tid);
+           $tran->transcript_info->author($current_author);
 
            if (defined($tran->translation)) {
              my $tid = $self->db->get_StableIdAdaptor->fetch_new_translation_stable_id;
