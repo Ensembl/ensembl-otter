@@ -275,7 +275,7 @@ sub save_otter_ace {
     local *DEBUG;
     my $debug_file = "/var/tmp/otter-debug.$$.save.ace";
     open DEBUG, "> $debug_file" or die;
-    print DEBUG $ace_str;
+#    print DEBUG $ace_str;
     close DEBUG;
     
     my $ace = Bio::Otter::Lace::TempFile->new;
@@ -308,6 +308,7 @@ sub save_otter_ace {
     return 1;
 }
 
+
 sub unlock_otter_ace {
     my( $self, $ace_str, $dataset ) = @_;
     
@@ -318,12 +319,22 @@ sub unlock_otter_ace {
     my $write = $ace->write_file_handle;
     print $write $ace_str;
     my $xml = Bio::Otter::Converter::ace_to_XML($ace->read_file_handle);
+    
     #print STDERR $xml;
     
     # Save to server with POST
+    return $self->_send_to_server($xml , $dataset);
+
+}
+
+# saves some code replication between unlock_otter_ace and remove_stale_locks  
+sub _send_to_server{
+    my ($self , $xml , $dataset ) =@_ ;
+    
     my $url = $self->url_root . '/unlock_region';
     my $request = $self->new_http_request('POST');
     $request->uri($url);
+    
     $request->content(
         join('&',
             'author='   . uri_escape($self->author),
@@ -334,8 +345,43 @@ sub unlock_otter_ace {
         );
     
     my $content = $self->get_UserAgent->request($request)->content;
+    
     $self->_check_for_error(\$content);
     return 1;
+}
+
+
+# this method is used when a lace session has failed to open, and has left locks behind
+# It takes the sequence set (with the 'locked' clones as the selected_CloneSequences)
+sub remove_stale_locks {
+    my( $self,  $ss , $dataset) = @_;
+
+    my $xml ;
+    foreach my $cs ( @{ $ss->selected_CloneSequences }){
+        $xml .= $self->_xml_string($cs , $ss->name);    
+    }
+    
+    return $self->_send_to_server($xml , $dataset) ;
+}
+
+## used to produce the relevant XML for the 'remove_stale_locks' method above
+sub _xml_string{
+    my ($self, $contig, $ss_name) = @_ ;
+       
+    my $xml_string = "<otter>
+    <sequence_set>
+      <assembly_type>" . $ss_name . "</assembly_type>
+        <sequence_fragment>
+            <id>" . $contig->contig_name . "</id>
+            <chromosome>" . $contig->chromosome->name . "</chromosome>
+            <accession>" . $contig->accession . "</accession>
+            <assembly_start>" . $contig->chr_start . "</assembly_start>
+            <assembly_end>" . $contig->chr_end ."</assembly_end>
+        </sequence_fragment> 
+    </sequence_set>
+    </otter>" ;
+
+    return $xml_string ;
 }
 
 sub new_http_request{
