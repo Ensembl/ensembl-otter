@@ -18,6 +18,222 @@ after the containing tag.
 use strict;
 
 {
+    my $title = 'Otter XML format description';
+    
+    my $html = qq{<html>
+
+<head><title>$title</title></head>
+
+<body>
+
+<h1>Annotation Exchange Format</h1>
+
+
+<h2>Motivation</h2>
+
+<p>When multiple centres start annotating the human
+genome we will need an agreed upon format to
+exchange data between ourselves.   Commonly used
+formats (GFF, DAS, GTF), although extremely
+useful, are only really designed to sequence
+features structures and are not easily extended
+to include gene structures the extra textual
+information that annotators provide.</p>
+
+<p>XML is a good solution for this kind of
+structured textural data.  It is well defined, 
+easily extended if need be and relatively easily
+parsed.</p>
+
+<p>GAME xml - has been used.  Why don't we -
+simplify it?  Otter has all the GAME information
+we need.</p>
+
+
+<h2>Description of stored annotations</h2>
+
+<p>
+We are proposing an xml format to store the following information 
+</p>
+
+<ul>
+
+<li>
+   The chromosomal region that is being
+   transferred.  As we are working with a clone
+   based assembly this contains information on
+   which clone accessions make up this region and
+   how they are joined together (the golden path
+   or assembly information).  Thus checks can be
+   made that the golden path in the xml is
+   <u>exactly</u> the same as the golden path in the
+   database being written to.  All the
+   coordinates in the xml are in chromosomal
+   (assembled) coordinates, with the exception of
+   the offset within each clone that is needed to
+   specify how it aligns in the assembly.
+</li>
+
+<li>
+   The dna.  This is <u>optional</u> as it will be
+   quite large and most centres should have the
+   dna in house anyway.  But it's there as we
+   suspect it will be useful for making small
+   scale analyses totally portable.
+</li>
+
+<li>
+   The gene annotation.  We have followed the
+   annotation information provided by the Sanger
+   annotators and information from the HAWK
+   workshops as well as the apollo (drosophila)
+   annotation model.   
+</li>
+
+</ul>
+<p>
+Genes contain a group of transcripts and
+transcripts contain a group of exons so we have
+three levels of objects we can annotate.  Genes,
+transcripts, translations and exons can all have
+a stable_id attached.
+</p>
+
+<h2>Authors</h2>
+
+<p>Three components of the XML, sequence_fragment,
+gene and transcript, have an author name and
+email attached to them to record which annotator
+created or last changed them.</p>
+
+<p>Our database implementation also attaches the
+author who is writing to the database to any
+anonymous or changed components.</p>
+
+
+<h2>Naming of Gene Components</h2>
+
+
+<p>Four of the gene components, gene, transcript,
+translation and exon, have a stable_id tag.  The
+stable_id is an accession for the component which
+is automatically assigned by the database used to
+store the annotation.  It is used by the database
+to track modifications to gene components,
+replace old versions, and maintain a history of
+changes.</p>
+
+<p>The name tag is attached to gene and
+transcripts.  In the gene it records the official
+HUGO name, or an interim name assigned by the
+annotator.  In transcripts it is used to store a
+user readable or annotation center specific
+name.</p>
+
+
+<h2>Gene annotations</h2>
+
+<p>In addition to the names described above, there
+are tags under gene for storing synonyms and
+anotator's remarks. The structure of the gene is
+described by its constituent transcripts.</p>
+
+
+<h2>Transcript annotations</h2>
+
+<p>
+Each transcript has tags that describe:</p>
+
+<ul>
+  <li>
+    One or more exons
+  </li>
+  <li>
+    Zero or one translation
+  </li>
+  <li>
+    Whether or not the annotation is believed to
+    describe the complete coding sequence and
+    UTRs
+  </li>
+  <li>
+    transcript class (see below)
+  </li>
+  <li>
+    As most annotations will arise from an
+    alignment of a known or similar protein or
+    EST/cDNA sequence each transcript has attached a
+    set of evidence identifiers.  These
+    identifiers are accessions and versions, and
+    also have a type associated with them (EST,
+    cDNA, Protein, Genomic, UNKNOWN)
+  </li>
+</ul>
+
+<h2>Transcript class</h2>
+
+
+<p>This is a restricted vocabulary that may be
+particular to the annotation center or
+annotation.  A suggested list is:</p>
+
+<ul>
+  <li>
+    <b>Coding</b> - a protein coding transcript.
+  </li>
+  <li>
+    <b>Non_coding</b> - transcript which is not protein
+    coding or has ambiguous ORFs.
+  </li>
+  <li>
+    <b>Antisense</b> - transcript believed to be an
+    antisense product used in the regulation of
+    the gene to which it belongs.
+  </li>
+  <li>
+    <b>Immature</b> - transcript based on evidence
+    believed to be an immature splice product.
+  </li>
+  <li>
+    <b>IG_segment</b> - an immunogobulin variable chain
+    region.
+  </li>
+  <li>
+    <b>Putative</b> - transcript based on a very little
+    sequence data, but which does show splicing.
+  </li>
+  <li>
+    <b>Pseudogene</b> - gene with homology to other
+    genes and products, but which is believed to
+    have lost its function.
+  </li>
+  <li>
+    <b>Processed_pseudogene</b> - pseudogene that
+    appears to have been produced by integration
+    of a reverse transcribed mRNA into the
+    genome.
+  </li>
+  <li>
+    <b>Unprocessed_pseudogene</b> - pseudogene that
+    shows evidence of loss of function, but has
+    exon-intron structure.
+  </li>
+  <li>
+    <b>Predicted</b> - transcript partly based on
+    ab-initio predictions.
+  </li>
+</ul>
+
+<h2>Exon annotations</h2>
+
+<p>The exon's coordinates are given in the
+coordinate system of the assembly described.</p>
+
+
+<h1>$title</h1>
+
+};
+
     $/ = '';
 
     my $tag_stack = [];
@@ -57,9 +273,6 @@ use strict;
         . qq{    <td>\%s</td>\n} x scalar(@heads)
         . qq{  </tr>\n};
     
-    my $title = 'Otter XML format description';
-    
-    my $html = qq{<html><head><title>$title</title></head><body><h1>$title</h1>\n};
     for (my $i = 0; $i < @$tag_stack; $i++) {
         my $tag = $tag_stack->[$i];
         my $container = $tag->name;
@@ -358,7 +571,7 @@ value           0 or 1
 
 <transcript_class>
 description     type of transcript - part of a resticted vocabulary of transcript categories used by the annotation center
-value           Coding or\nNon_coding or\nImmature or\nIG_segment or\nPutative or\nPseudogene or\nProcessed_pseudogene or\nUnprocessed_pseudogene
+value           Coding or\nNon_coding or\nImmature or\nIG_segment or\nAntisense or\nPutative or\nPseudogene or\nProcessed_pseudogene or\nUnprocessed_pseudogene or\nPredicted
 
 
 <evidence_set>
@@ -374,7 +587,7 @@ multiple
 mandatory
 
 <name>
-description     accession of database sequence
+description     accession.sv of database sequence. (The sequence version (sv) may not be available)
 value           string
 
 <type>
