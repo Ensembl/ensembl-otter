@@ -102,7 +102,30 @@ sub make_id_version_hash {
         }
     }
     
-    return $stable_version;
+    $self->{'_id_version_hash'} = $stable_version;
+}
+
+sub increment_obj_version {
+    my( $self, $obj ) = @_;
+    
+    my $stable_version = $self->{'_id_version_hash'};
+    
+    my $stable = $obj->stable_id
+        or $self->throw("No stable_id on object '$obj'");
+    my ($type) = ref($obj) =~ /(\w+)$/;
+    if (my $version = ++$stable_version->{$stable}) {
+        warn "New version '$version' for '$type' '$stable'\n";
+        $obj->version($version);
+    } else {
+        warn "New object '$type' '$stable'\n";
+        $obj->version(1);
+    }
+}
+
+sub drop_id_version_hash {
+    my( $self ) = @_;
+    
+    $self->{'_id_version_hash'} = undef;
 }
 
 sub store_stable {
@@ -116,7 +139,7 @@ sub store_stable {
 sub compare_genes {
     my ($self, $old_genes, $new_genes) = @_;
     
-    my $id_version_hash = $self->make_id_version_hash($old_genes);
+    $self->make_id_version_hash($old_genes);
 
     my $current_author = $self->current_author
         or $self->throw("current_author not set");
@@ -141,8 +164,8 @@ sub compare_genes {
     foreach my $geneid (keys %$mod) {
         my $gene_modified   = 0;
 
-        my $oldg = $mod->{$geneid}{old};
-        my $newg = $mod->{$geneid}{new};
+        my $oldg = $mod->{$geneid}{'old'};
+        my $newg = $mod->{$geneid}{'new'};
 
         # Genes which were deleted but have now been restored
         if (defined ($oldg->type) && $oldg->type eq 'obsolete') {
@@ -150,7 +173,7 @@ sub compare_genes {
           print STDERR "Found restored gene '$geneid'\n";
         }
 
-        if ($oldg->description ne $newg->description) {
+        if (($oldg->description || '') ne ($newg->description || '')) {
             warn "Gene descriptions differ in '$geneid'\n";
             $gene_modified = 1;
         }
@@ -168,20 +191,21 @@ sub compare_genes {
             $newg->get_all_Transcripts);
 
         # Set the author for deleted and new transcripts
-        if (scalar(@$tdel)) {
-            $gene_modified = 1;
-            print STDERR "Deleted transcripts ";
-            foreach my $td (@$tdel) {
-               printf STDERR "  %s\n", $td->stable_id;
-               $td->transcript_info->author($current_author);
-            }
-        }
+        ### No point doing this on deleted transcripts because they are not saved
+        #if (scalar(@$tdel)) {
+        #    $gene_modified = 1;
+        #    print STDERR "Deleted transcripts ";
+        #    foreach my $td (@$tdel) {
+        #       printf STDERR "  %s\n", $td->stable_id;
+        #       $td->transcript_info->author($current_author);
+        #    }
+        #}
         if (scalar(@$tnew)) {
             $gene_modified = 1;
             print STDERR "New transcripts ";
             foreach my $tn (@$tnew) {
-               printf STDERR "  %s\n", $tn->stable_id;
-               $tn->transcript_info->author($current_author);
+                printf STDERR "  %s\n", $tn->stable_id;
+                $tn->transcript_info->author($current_author);
             }
         }
 
@@ -191,8 +215,8 @@ sub compare_genes {
 
         foreach my $tranid (keys %$tmod) {
             my $transcript_modified = 0;
-            my $oldt = $tmod->{$tranid}{old};
-            my $newt = $tmod->{$tranid}{new};
+            my $oldt = $tmod->{$tranid}{'old'};
+            my $newt = $tmod->{$tranid}{'new'};
 
             unless ($oldt->transcript_info->equals($newt->transcript_info)) {
                 $gene_modified = $transcript_modified = 1;
@@ -203,23 +227,6 @@ sub compare_genes {
 
             if ($self->compare_transcripts($oldt, $newt) == 0) {
                 $gene_modified = $transcript_modified = 1;
-
-                #print STDERR "Increasing transcript version $tranid\n";
-
-                my $newversion = $oldt->version + 1;
-                $newt->version($newversion);
-
-                if ($newt->translation) {
-                    my $tnv = 0;
-                    if (my $old_tl = $oldt->translation) {
-                        $tnv = $old_tl->version;
-                    }
-                    $tnv++;
-                    #print STDERR "Increasing translation version $tnv\n";
-                    $newt->translation->version($tnv);
-                }
-            } else {
-                #print STDERR "Found same transcript $tranid\n";
             }
             
             if ($transcript_modified) {
@@ -229,31 +236,43 @@ sub compare_genes {
 
 	# We only need to look through all the exons if the gene is modified
         if ($gene_modified == 1) {
+            $self->increment_obj_version($newg);
+            $newg->gene_info->author($current_author);
             $modified_gene_ids{$geneid} = 1;
 
-	    my @newexons = @{$newg->get_all_Exons};
-	    my @oldexons = @{$oldg->get_all_Exons};
-
-	    my ($edel,$enew,$emod) = $self->compare_obj(\@oldexons,\@newexons);
+            foreach my $tn (@{$newg->get_all_Transcripts}) {
+                print STDERR "Transcript: ", $tn->stable_id, "\n";
+                $self->increment_obj_version($tn);
+                if (my $tp = $tn->translation) {
+                    $self->increment_obj_version($tp);
+                }
+            }
 
 	    # This is wrong - should we increase the version of modified exons?
+            ### No - we don't need to store new versions of unchanged exons.
+            ### Need to fix.
 
-	    my @modexon = keys %$emod;
+            foreach my $exon (@{$newg->get_all_Exons}) {
+                $self->increment_obj_version($exon);
+            }
 
-	    foreach my $ex (@modexon) {
-	        if ($self->compare_exons($emod->{$ex}{old},$emod->{$ex}{new}) == 0) {
-		    # my $ev = $emod->{$ex}{old}->version;
-		    # $ev++;
-		    # $emod->{$ex}{new}->version($ev);
-                    print STDERR "Found modified exon " . $ex ."\n";
+            #my ($edel, $enew, $emod) = $self->compare_obj(
+            #        $newg->get_all_Exons,
+            #        $oldg->get_all_Exons,
+            #        );
+            #my @modexon = keys %$emod;
 
-                    #print STDERR " Exon 1 " . $emod->{$ex}{old}->start . " " . $emod->{$ex}{old}->end . " " . $emod->{$ex}{old}->phase . " " . $emod->{$ex}{old}->end_phase . "\n"; 
-                    #print STDERR " Exon 2 " . $emod->{$ex}{new}->start . " " . $emod->{$ex}{new}->end . " " . $emod->{$ex}{new}->phase . " " . $emod->{$ex}{new}->end_phase . "\n";
-                    $gene_modified = 1;
-	        } else {
-		    # print "Found same exon\n";
-	        }
-	    }
+            #foreach my $ex (@modexon) {
+            #    if ($self->compare_exons($emod->{$ex}{old},$emod->{$ex}{new}) == 0) {
+            #            print STDERR "Found modified exon " . $ex ."\n";
+
+            #            #print STDERR " Exon 1 " . $emod->{$ex}{old}->start . " " . $emod->{$ex}{old}->end . " " . $emod->{$ex}{old}->phase . " " . $emod->{$ex}{old}->end_phase . "\n"; 
+            #            #print STDERR " Exon 2 " . $emod->{$ex}{new}->start . " " . $emod->{$ex}{new}->end . " " . $emod->{$ex}{new}->phase . " " . $emod->{$ex}{new}->end_phase . "\n";
+            #            $gene_modified = 1;
+            #    } else {
+            #    # print STDERR "Found same exon\n";
+            #    }
+            #}
         }
 
     } # done comparisons - now need to build arrays
@@ -323,8 +342,6 @@ sub compare_genes {
     foreach my $id (keys %modified_gene_ids) {
 	my $old_gene = $oldgenehash{$id};
         my $new_gene = $newgenehash{$id};
-	
-        $self->increment_versions($id_version_hash, $new_gene);
 
 	my $event = Bio::Otter::AnnotationBroker::Event->new( -type => 'modified',
 							      -new  => $new_gene,
@@ -333,6 +350,7 @@ sub compare_genes {
 	push(@events,$event);	    
     }
     
+    $self->drop_id_version_hash;
 
     return @events;
 }
@@ -364,28 +382,20 @@ sub set_gene_created_version_modified {
     }
 }
 
-sub increment_versions {
-  my ($self, $id_version_hash, $new_gene) = @_;
-
-    $self->incerement_obj_version($id_version_hash, $new_gene);
-    foreach my $exon (@{$new_gene->get_all_Exons}) {
-        $self->incerement_obj_version($id_version_hash, $exon);
-    }
-    foreach my $tsct (@{$new_gene->get_all_Transcripts}) {
-        $self->incerement_obj_version($id_version_hash, $tsct);
-        if (my $tnsl = $tsct->translation) {
-            $self->incerement_obj_version($id_version_hash, $tnsl);
-        }
-    }
-}
-
-sub increment_obj_version {
-    my( $self, $id_version_hash, $obj ) = @_;
-    
-    my $version = $id_version_hash->{$obj->stable_id} || 0;
-    $version++;
-    $obj->version($version);
-}
+#sub increment_versions {
+#    my ($self, $id_version_hash, $new_gene) = @_;
+#
+#    $self->increment_obj_version($id_version_hash, $new_gene);
+#    foreach my $exon (@{$new_gene->get_all_Exons}) {
+#        $self->increment_obj_version($id_version_hash, $exon);
+#    }
+#    foreach my $tsct (@{$new_gene->get_all_Transcripts}) {
+#        $self->increment_obj_version($id_version_hash, $tsct);
+#        if (my $tnsl = $tsct->translation) {
+#            $self->increment_obj_version($id_version_hash, $tnsl);
+#        }
+#    }
+#}
 
 sub compare_obj {
     my ($self, $oldobjs, $newobjs) = @_;
@@ -411,11 +421,18 @@ sub compare_obj {
             # of new ones have the same stable_id?
             if (my $oldobj = $id_old{$new_id}) {
                 delete($id_old{$new_id});
+                $newobj->created($oldobj->created);
                 $mod{$new_id}{'old'} = $oldobj;
                 $mod{$new_id}{'new'} = $newobj;
                 next;
             }
         }
+        
+        # This is here because the new object may not be new,
+        # but could be, for example, an existing transcript
+        # that has now been moved into another gene.
+        $self->increment_obj_version($newobj);
+        
         push(@new, $newobj);
     }
 
