@@ -33,6 +33,7 @@ sub new {
   $self->timestamp($timestamp);
 
   $self->{_remark}   = [];
+  $self->flush_Evidence;
 
   if (defined($evidence)) {
       if (ref($evidence) eq "ARRAY") {
@@ -40,8 +41,6 @@ sub new {
       } else {
 	  $self->throw("Argument to evidence must be an array ref. Currently [$evidence]");
       }
-  } else {
-    $self->flush_Evidence;
   }
   
   if (defined($remark)) {
@@ -362,7 +361,7 @@ sub add_Evidence {
 }
 
 sub get_all_Evidence {
-    my $self = shift @_;
+    my $self = shift;
 
     return $self->{'_evidence'};
 }
