@@ -86,7 +86,7 @@ my $sth = $odb->prepare(q{
          , sequence_set_access ssa 
          , access_author aa
          , author a 
-     WHERE a.author_id = a.author_id
+     WHERE a.author_id = aa.author_id
        AND ss.assembly_type LIKE ssa.access_spec
        AND aa.access_id = ssa.access_id
        AND a.author_id = ?
