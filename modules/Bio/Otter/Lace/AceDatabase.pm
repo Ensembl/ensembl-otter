@@ -635,13 +635,11 @@ sub make_AceDataFactory {
     my %logic_tag_method = (
 #        'Est2Genome'        => [qw{             EST_homol  EST_eg           }],
 
-        #'Est2Genome_human'  => [qw{             EST_homol  EST_Human     }],
-        #'Est2Genome_mouse'  => [qw{             EST_homol  EST_Mouse     }],
-        #'Est2Genome_other'  => [qw{             EST_homol  EST           }],
-
-        'Est_human_test'  => [qw{             EST_homol  EST_Human     }],
-        'Est_mouse_test'  => [qw{             EST_homol  EST_Mouse     }],
-        'Est_other_test'  => [qw{             EST_homol  EST           }],
+        'Est2Genome_human'  => [qw{             EST_homol  EST_Human     }],
+        'Est2Genome_mouse'  => [qw{             EST_homol  EST_Mouse     }],
+        'Est2Genome_fish'   => [qw{             EST_homol  EST_fish      }],
+        'Est2Genome_other'  => [qw{             EST_homol  EST           }],
+        'vertrna'           => [qw{ vertebrate_mRNA_homol  vertebrate_mRNA  }],
 
 #        'Full_dbGSS'        => [qw{             GSS_homol  GSS_eg           }],
 #        'Full_dbSTS'        => [qw{             STS_homol  STS_eg           }],
@@ -649,8 +647,6 @@ sub make_AceDataFactory {
 #        'riken_mouse_cdnal' => [qw{             EST_homol  riken_mouse_cdna }],
 #        'primer'            => [qw{             DNA_homol  primer           }],
 
-        #'vertrna'           => [qw{ vertebrate_mRNA_homol  vertebrate_mRNA 0 }],
-        'vertrna_test'           => [qw{ vertebrate_mRNA_homol  vertebrate_mRNA 0 }],
 
 #        'zfishEST'          => [qw{             EST_homol  EST_eg-fish      }],
         );
