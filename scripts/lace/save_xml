@@ -50,14 +50,15 @@ use Bio::Otter::Lace::Defaults;
         }
     }
     # save the xml
-    my $success  = $cl->save_otter_xml($xml, $dataset);
-
-    # need to unlock if all was ok
-    if($success){
-        $cl->unlock_otter_xml($lock_xml, $dataset);
-    }else{
-        warn "$lock_xml";
+    my $success;
+    eval{
+        $success  = $cl->save_otter_xml($xml, $dataset);
+    };
+    if($@){
+        warn $@;
     }
+
+    $cl->unlock_otter_xml($lock_xml, $dataset);
 
 
     # Save to server with POST
