@@ -159,10 +159,10 @@ sub XML_to_otter {
           $translation->start_Exon($start_exon);
           $translation->start($start_pos);
           if ($start_exon->strand == 1 && $start_exon->start != $tl_start) {
-            $start_exon->phase(-1);
+            #$start_exon->phase(-1);
             $start_exon->end_phase(($start_exon->length-$start_pos+1)%3);
           } elsif ($start_exon->strand == -1 && $start_exon->end != $tl_start) {
-            $start_exon->phase(-1);
+            #$start_exon->phase(-1);
             $start_exon->end_phase(($start_exon->length-$start_pos+1)%3);
           }
           $translation->end_Exon($end_exon);
@@ -380,6 +380,16 @@ sub XML_to_otter {
 
   foreach my $gene (@genes) {
     prune_Exons($gene);
+
+    foreach my $tran (@{$gene->get_all_Transcripts}) {
+        my @exons = @{$tran->get_all_Exons};
+        if ($exons[0]->strand == 1) {
+           @exons = sort {$a->start <=> $b->start} @exons;
+        } else {
+           @exons = sort {$b->start <=> $a->start} @exons;
+        }
+        $tran->{_trans_exon_array} = \@exons;
+    }
   }
 
   return (\@genes, $chrname, $chrstart, $chrend,$assembly_type,$seqstr);
@@ -1414,7 +1424,43 @@ sub slice_to_XML {
   $xmlstr .= "<sequenceset>\n";
 
   my @path  = @{ $slice->get_tiling_path };
-  my @genes = @{ $db->get_AnnotatedGeneAdaptor->fetch_by_Slice($slice) };
+  #my @genes = @{ $db->get_AnnotatedGeneAdaptor->fetch_by_Slice($slice) };
+  my @genes;
+
+  if ($db->isa("Bio::Otter::DBSQL::DBAdaptor")) {
+     @genes = @{ $db->get_AnnotatedGeneAdaptor->fetch_all_by_Slice($slice) };
+   } else {
+     my @tmpgenes = @{ $db->get_GeneAdaptor->fetch_all_by_Slice($slice) };
+     foreach my $g (@tmpgenes) {
+         my $ann = bless $g,"Bio::Otter::AnnotatedGene";
+         my $ginfo = new Bio::Otter::GeneInfo;
+         $ann->gene_info($ginfo);
+         push(@genes,$ann);
+         my @tran;
+
+          foreach my $t (@{$g->get_all_Transcripts}) {
+            if (defined($t->translation)) {
+              print "Translate " . $t->stable_id . " " . $t->translate->seq . "\n";
+              my $tr = $t->translation;
+              print "Tran " . $tr->start_Exon->stable_id . " " . $tr->end_Exon->stable_id. " " . $tr->start . " " . $tr->end . "\n";
+
+            foreach my $ex (@{$t->get_all_Exons}) {
+               print $ex->stable_id . "\t" . $ex->gffstring . "\n";
+            }
+            }
+            my $annt = bless $t, "Bio::Otter::AnnotatedTranscript";
+            my $tinfo = new Bio::Otter::TranscriptInfo;
+            if (defined($g->type)) {
+               my $class = new Bio::Otter::TranscriptClass(-name => $g->type);
+               $tinfo->class($class);
+            }
+ 
+            $annt->transcript_info($tinfo);
+          }
+
+      }
+
+   }
 
   my $chr      = $slice->chr_name;
   my $chrstart = $slice->chr_start;
