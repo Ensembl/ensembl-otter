@@ -19,7 +19,11 @@ use Data::Dumper;
 use base 'MenuCanvasWindow';
 use MenuCanvasWindow::ExonCanvas;
 use CanvasWindow::DotterWindow;
+
+use Scalar::Util 'weaken';
+
 use CanvasWindow::PolyAWindow;
+use LocusWindow;
 
 sub new {
     my( $pkg, $tk ) = @_;
@@ -224,6 +228,202 @@ sub get_default_mutable_GeneMethod {
     }
 }
 
+
+
+
+# sequence called from 
+sub show_LocusWindow{
+    my ($self , $exon_canv , $state) = @_ ;
+    
+    my $locus ;
+
+    $locus = $exon_canv->SubSeq->Locus ;  
+  
+    my $top;
+    my $window ;
+
+    $window = $self->{'_locus_window_cache'}{$locus};
+
+    unless($window){
+       
+        print STDERR "creating LocusWindow" ;
+        $top = $self->canvas->toplevel->Toplevel(-width => 500);
+       
+        $window = LocusWindow->new($top);        
+        $self->{'_locus_window_cache'}{$locus} = $window;
+        $window->initialize; 
+    
+    }
+    $window->last_exon_canvas($exon_canv);    
+    $window->show($state); 
+}
+
+sub remove_locus_window{
+    my ($self , $locus) = @_ ;
+    print STDERR "deleting " . $locus->name ;
+    delete $self->{'_locus_window_cache'}{$locus} || warn "problems deleteing locus window " . $locus->name ;
+}
+
+# looks like this isnt used
+##sub get_locus_window{
+##   my ($self , $name) = @_ ;
+##    
+##   my $locus = $self->get_locus($name) ;
+##    
+##   my $top ;
+##   $top = $self->{'_locus_window_cache'}{$locus};  
+##   return $top ;
+##}
+
+sub get_all_locus_windows{
+    my ($self) = @_ ;
+    
+    my @array ;
+    my %hash = %{$self->{'_locus_window_cache'}}  ;  
+    while (my ($key , $value) = each (%hash)){
+        push (@array , $value);
+    }
+    return @array ;
+}
+
+sub add_new_Locus{
+    my ($self , $locus) = @_ ;
+    
+    my $name = $locus->name;
+    if ($self->{'_locus_cache'}{$name} ){
+        $self->message("The new locus name has already been assigned, please choose another");
+        return 0;
+    }
+    else{
+        $self->{'_locus_cache'}{$name} = $locus ;  
+        return 1;
+    }
+}
+
+sub remove_Locus_if_not_in_use{
+    my ($self , $locus_name) = @_ ;   
+    my %subseq_hash = %{$self->get_stored_SubSeq_hash()} ;   
+    while (my ($key , $SubSeq ) = each (%subseq_hash) ){
+        # dont delete locus if another subseq is using it
+        my $locus = $SubSeq->Locus || next ;
+        if ( $locus->name eq  $locus_name  ) {
+            return;
+        }
+    }         
+    #locus is not used anywhere else - get rid of it (or it will cause other problems)
+    $self->remove_Locus($locus_name);
+    
+}
+
+sub remove_Locus{
+    my ($self , $locus_name) = @_;
+    if ($self->{'_locus_cache'}{$locus_name}){
+        print STDERR "removing " . $locus_name;
+        # remove all associated windows first
+        my $locus = $self->get_Locus($locus_name); 
+        delete ($self->{'_locus_window_cache'}{$locus}) ;
+        delete ($self->{'_locus_cache'}{$locus_name});      
+    }
+    else{
+        print STDERR "No Locus with name $locus_name to be removed" ;
+    }
+}
+
+
+sub rename_loci{
+    my ($self , $old_name , $new_name ) = @_ ; 
+    
+    
+    my $locus = $self->get_Locus($old_name);
+    $self->remove_Locus($old_name) ; # otherwise we have two hash keys for the same locus.
+    $locus->name($new_name); 
+    $self->add_new_Locus($locus) ;
+    
+    my $clone_name = $self->current_clone_name ;
+#    my $ace = $locus->ace_string($clone_name , $old_name);  
+
+    my $ace = qq{\n\n-R Locus "$old_name" "$new_name"\n\n} ;
+    $ace .= $locus->is_known_string() ;
+    
+    foreach my $name ($self->list_all_subseq_edit_window_names) {
+        my $top = $self->get_subseq_edit_window($name) or next;
+        $top->deiconify;
+        $top->raise;
+        $top->update;
+        $top->focus;
+        $top->eventGenerate('<<refresh_locus_display>>');
+    } 
+    $self->update_ace_display($ace);   
+}
+
+
+# go through all the SubSeq objects replace the locus if  it is the selected one ($removable_name)
+# add data to .ace file for each locus changed. Update AceDb with this file.
+sub merge_loci {
+    my ($self , $stable_name , $removable_name) = @_ ;
+    
+    my $stable_locus = $self->get_Locus( $stable_name);
+    my $removable_locus = $self->get_Locus($removable_name) ;  
+    $self->replace_loci($removable_locus , $stable_locus);
+}
+
+sub replace_loci{
+    my ($self , $old , $new) = @_ ;
+
+    my %subseq_hash = %{$self->get_stored_SubSeq_hash()};
+    my $ace = '';   
+    while (my ($name, $SubSeq) = each(%subseq_hash)){   
+        if (($SubSeq->Locus || next ) == $old){
+            $SubSeq->Locus($new) ; 
+            $ace .= $SubSeq->ace_string ;              
+            $SubSeq->is_archival(1);
+#            warn "updating ace db for " . $SubSeq->name;  
+        }    
+    }
+    my $result = $self->update_ace_display($ace);  
+    unless ($result == 0){
+        $self->remove_Locus($old->name);
+    }
+}
+
+
+
+sub update_ace_display{
+    my ($self , $ace) = @_ ;
+    
+    
+    my $xr = $self->xace_remote  || $self->open_xace_dialogue;
+    
+    print STDERR "Sending:\n$ace";
+    if ($xr) {
+        $xr->load_ace($ace);
+        $xr->save;
+        $xr->send_command('gif ; seqrecalc');
+       
+        return 1;
+    } else {
+        $self->message("No xace attached");
+        print STDERR "not able to send .ace file - no xace attached";
+        return 0;
+    }    
+}
+
+# this should be called when a user tries to save, but no Xace is opened
+sub open_xace_dialogue{
+    my ($self) = @_ ;
+    
+    my $answer = $self->canvas->toplevel()->messageBox(-title => 'Please Reply', 
+     -message => 'No Xace attached, would you like to launch Xace?', 
+     -type => 'YesNo', -icon => 'question', -default => 'Yes');
+
+    if ($answer eq 'Yes'){
+        $self->launch_xace();
+    }
+    return $self->xace_remote;
+}
+
+#----------------------------------------- current way of doing things is based on name - might change this ----------------
+
 sub get_Locus {
     my( $self, $name ) = @_;
     
@@ -239,6 +439,7 @@ sub get_Locus {
         unless ($locus) {
             $locus = Hum::Ace::Locus->new;
             $locus->name($name);
+#            warn "Creating new locus!!!!!!" ;
         }
         $self->{'_locus_cache'}{$name} = $locus;
         return $locus;
@@ -246,17 +447,17 @@ sub get_Locus {
 }
 
 sub get_all_Loci {
-    my( $self ) = @_;
-    
+    my( $self ) = @_;    
     my $lc = $self->{'_locus_cache'};
     return values %$lc;
 }
 
 sub list_Locus_names {
-    my( $self ) = @_;
-    
+    my( $self ) = @_;    
     return sort {lc $a cmp lc $b} map $_->name, $self->get_all_Loci;
 }
+
+#------------------------------------------------------------------------------------------
 
 sub make_menu {
     my( $self, $name, $pos ) = @_;
@@ -1438,6 +1639,8 @@ sub make_exoncanvas_edit_window {
     my( $self, $sub ) = @_;
     
     my $sub_name = $sub->name;
+#    warn "subsequence-name $sub_name " ;
+#    warn "locus " . $sub->Locus->name ;
     my $canvas = $self->canvas;
     
     # Make a new window
@@ -1516,11 +1719,8 @@ sub close_all_subseq_edit_windows {
         $top->focus;
         $top->eventGenerate('<Control-w>');
         
-        # User pressed "Cancel" if window is till there
-        if ($self->get_subseq_edit_window($name)) {
-            #warn "window for '$name' was not closed\n";
-            return 0;
-        }
+        # User pressed "Cancel" if window is still there
+        return 0 if $self->get_subseq_edit_window($name);
     }
     
     return 1;
@@ -1707,6 +1907,7 @@ sub add_SubSeq {
     if ($self->{'_subsequence_cache'}{$name}) {
         confess "already have SubSeq '$name'";
     } else {
+
         $self->{'_subsequence_cache'}{$name} = $sub;
     }
 }
@@ -1732,6 +1933,11 @@ sub get_SubSeq {
     
     confess "no name given" unless $name;
     return $self->{'_subsequence_cache'}{$name};
+}
+
+sub get_stored_SubSeq_hash{
+    my ($self) = @_ ;
+    return $self->{'_subsequence_cache'} ;
 }
 
 sub empty_SubSeq_cache {
@@ -1960,7 +2166,7 @@ sub run_dotter {
 
 sub DESTROY {
     my( $self ) = @_;
-    
+
     warn "Destroying XaceSeqChooser for ", $self->ace_path, "\n";
 }
 
