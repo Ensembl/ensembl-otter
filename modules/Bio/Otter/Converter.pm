@@ -28,7 +28,6 @@ use Bio::EnsEMBL::Clone;
 use Bio::EnsEMBL::SimpleFeature;
 use Bio::Seq;
 
-
 sub XML_to_otter {
   my $fh = shift;
   my $db = shift;
@@ -69,6 +68,7 @@ sub XML_to_otter {
 
   my $feature_set = [];
   my $assembly_tag_set = [];
+  my $at;
 
     ### <sequence_set> tag is ignored - parser will produce rubbish with multiple sequence_sets
 
@@ -401,7 +401,37 @@ sub XML_to_otter {
     } elsif (/<fragment_offset>(.*)<\/fragment_offset>/) {
       $frag{$currfragname}{offset} = $1;
 
-    } elsif (/<.*?>.*<\/.*?>/) {
+    }
+
+    elsif (/<assembly_tag>/) {
+      $at = Bio::Otter::AssemblyTag->new;
+    }
+    elsif (/<contig_strand>(.+)<\/contig_strand>/){
+      $at->strand($1);
+    }
+    elsif (/<tag_type>(.+)<\/tag_type>/) {
+      $at->tag_type($1);
+    }
+    elsif (/<contig_start>(.+)<\/contig_start>/) {
+      $at->start($1);
+    }
+    elsif (/<contig_end>(.+)<\/contig_end>/) {
+      $at->end($1);
+    }
+    elsif (/<tag_info>(.+)<\/tag_info>/) {
+      $at->tag_info($1);
+    }
+    elsif (/<tag_id>(.+)<\/tag_id>/){
+      $at->tag_id($1);
+    }
+    elsif (/<contig_id>(.+)<\/contig_id>/){
+      $at->contig_id($1);
+    }
+    elsif (/<\/assembly_tag>/) {
+      push(@$assembly_tag_set, $at);
+    }
+
+    elsif (/<.*?>.*<\/.*?>/) {
       print STDERR "ERROR: Unrecognised tag [$_]\n";
 
     } elsif (!/</ && !/>/) {
@@ -415,12 +445,8 @@ sub XML_to_otter {
       }
     }
 
-    elsif (/<assembly_tag>/) {
-      XML_to_assembly_tags($fh, $assembly_tag_set);
-    }
-
     elsif (/<feature_set>/) {
-        XML_to_features($fh, $feature_set);
+      XML_to_features($fh, $feature_set);
     }
     elsif (/<\/otter>/) {
       $foundend = 1;
@@ -428,6 +454,7 @@ sub XML_to_otter {
     #else {
     #    warn "UNKNOWN TAG: $_";
     #}
+   
   }
 
   if (!$foundend) {
@@ -629,49 +656,6 @@ sub XML_to_features {
     }
 
     confess "Failed to find closing </feature_set> tag";
-}
-
-sub XML_to_assembly_tags {
-  my( $fh, $assembly_tag_set ) = @_;
-
-  while (<$fh>) {
-    if (/<tag_data>/) {
-      my $at = Bio::Otter::AssemblyTag->new;
-
-      while (<$fh>) {
-	if (/<tag_id>(.+)<\/tag_id>/){
-	  $at->tag_id($1);
-	}
-	elsif (/<contig_id>(.+)<\/contig_id>/){
-	  $at->contig_id($1);
-	}
-	if (/<contig_strand>(.+)<\/contig_strand>/) {
-	  $at->strand($1);
-	}
-	elsif (/<tag_type>(.+)<\/tag_type>/) {
-	  $at->tag_type($1);
-	}
-	elsif (/<contig_start>(.+)<\/contig_start>/) {
-	  $at->start($1);
-	}
-	elsif (/<contig_end>(.+)<\/contig_end>/) {
-	  $at->end($1);
-	}
-	elsif (/<tag_info>(.+)<\/tag_info>/) {
-	  $at->tag_info($1);
-	}
-	elsif (/<\/tag_data>/) {
-	  push(@$assembly_tag_set, $at);
-	  last;
-	}
-      }
-    }
-    elsif (/<\/assembly_tag>/) {
-      return 1;
-    }
-  }
-  return $assembly_tag_set;
-  confess "Failed to find closing </assembly_tag> tag";
 }
 
 my %ace2ens_phase = (
@@ -2052,20 +2036,16 @@ sub assembly_tags_to_XML {
     $tag_data = $slice;
   }
 
-  $str = "<assembly_tag>\n";
-
   foreach my $h ( @$tag_data ){
 
-    $str .= "  <tag_data>\n"
-#         . "    <tag_id>"        . $h->tag_id     . "</tag_id>\n"
-	 . "    <contig_strand>" . $h->strand     . "</contig_strand>\n"	
-         . "    <tag_type>"      . $h->tag_type   . "</tag_type>\n"
-	 . "    <contig_start>"  . $h->start      . "</contig_start>\n"
-	 . "    <contig_end>"    . $h->end        . "</contig_end>\n"
-	 . "    <tag_info>"      . $h->tag_info   . "</tag_info>\n"
-         . "  </tag_data>\n";
+    $str .= "<assembly_tag>\n"
+ 	 . "  <contig_strand>" . $h->strand     . "</contig_strand>\n"	
+         . "  <tag_type>"      . $h->tag_type   . "</tag_type>\n"
+	 . "  <contig_start>"  . $h->start      . "</contig_start>\n"
+	 . "  <contig_end>"    . $h->end        . "</contig_end>\n"
+	 . "  <tag_info>"      . $h->tag_info   . "</tag_info>\n"
+         . "</assembly_tag>\n";
   }
-  $str .= "</assembly_tag>\n";
 
   return $str;
 }
