@@ -248,6 +248,8 @@ sub XML_to_otter {
       $evidence = new Bio::Otter::Evidence;
       $traninfo->evidence($evidence);
       $currentobj = 'evidence';
+    } elsif (/<\/evidence>/) {
+      $currentobj = 'transcript';
     } elsif (/<name>(.*)<\/name>/) {
 
       if ($currentobj eq 'evidence') {
