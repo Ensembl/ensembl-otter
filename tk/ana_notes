@@ -7,7 +7,7 @@ use GenomeCanvas;
 
 use Bio::EnsEMBL::Pipeline::AnaSubmission qw{ set_db_args sub_db prepare_statement get_db}  ;
 use Hum::Submission qw{ submission_user user_has_access  get_user};
-use Hum::SubmissionVersion;
+use Bio::Otter::Lace::Version;
 
 use Hum::AnaStatus qw{ annotator_full_name };
 use Hum::AnaStatus::Sequence;

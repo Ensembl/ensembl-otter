@@ -67,7 +67,12 @@ sub initialize {
     $db->error_flag(1);
 
     ### Candidate for Defaults module?
-    $db->tar_file('/nfs/team71/analysis/jgrg/work/ace_skeleton/lace_acedb.tar');
+    if($ENV{'LACE_LOCAL'}){
+      my $dir=$ENV{'LACE_LOCAL'};
+      $db->tar_file("$dir/lace_acedb.tar");
+    }else{
+      $db->tar_file('/nfs/team71/analysis/jgrg/work/ace_skeleton/lace_acedb.tar');
+    }
 
     $db->make_database_directory;
     $db->write_otter_acefile($ss);
