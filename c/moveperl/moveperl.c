@@ -1,3 +1,18 @@
+/* 
+ * Program to allow moving of a perl or other software installation 
+ * 
+ * Modifies all occurences of the old location to the new location
+ * in the moved files (both text and binary files).
+ *
+ * For binary file moves the destination path MUST be shorter than
+ * the source path.
+ *
+ * It was written for the otter/apollo/Ensembl website distribution
+ * 
+ * Written by Steve Searle <searle@sanger.ac.uk>
+ *
+ * Copyright GRL/EBI
+ */
 #include <stdio.h>
 #include <sys/types.h>
 #include <dirent.h>
@@ -93,7 +108,7 @@ int main(int argc, char *argv[]) {
  
 
   if ((fromdir = opendir(argv[0])) == NULL) {
-    fprintf(stderr,"Error: Couldn't open source perl directory %s\n",argv[1]);
+    fprintf(stderr,"Error: Couldn't open source perl directory %s\n",argv[0]);
     exit(1);
   }
 
