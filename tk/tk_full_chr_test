@@ -1,0 +1,140 @@
+#!/usr/local/bin/perl -w
+
+use lib '/nfs/disk84/jgrg/bin/Perl';
+
+### tk_full_chr_test
+
+use strict;
+use Tk;
+
+{
+    my $mw = MainWindow->new(
+        -class => 'JamesTk',
+        -title => 'Contig test',
+        );
+    $mw->optionReadfile("$0.xdef");
+    $mw->configure(
+        -background     => 'grey',
+        );
+
+    my $canvas = $mw->Scrolled('Canvas',
+        -highlightthickness => 1,
+        -background         => 'white',
+        -scrollbars         => 'se',
+        -width              => 400,
+        -height             => 100,
+        );
+
+    $canvas->bind($name, '<1>', [\&clipboard_place_name, $canvas, $name]);
+
+    #foreach my $num ('000001'..'000625') {
+    #    my $ac = "AC$num";
+    #    warn "$ac";
+    #    add_contig($canvas, $ac);
+    #}
+
+    while (<>) {
+        chomp;
+        my ($ctg, $sname, $acc, $len, $status) = split "\t", $_;
+        $len    ||= 100000;
+        $status ||= 'unknown';
+        $status = lc $status;
+        add_contig($canvas, $sname, $len, $status);
+    }
+    
+    my @bbox = $canvas->bbox('all');
+    my $border = 5;
+    $bbox[0] -= $border;
+    $bbox[1] -= $border;
+    $bbox[2] += $border;
+    $bbox[3] += $border;
+    $canvas->configure(
+        -scrollregion => [@bbox],
+        );
+    $canvas->pack(
+        -side => 'top',
+        -fill => 'both',
+        -expand => 1,
+        );
+    
+    MainLoop();
+}
+
+BEGIN {
+
+    my %status_color = (
+        unknown          => 'blue',
+        finished         => 'deeppink',
+        analysis         => 'red',
+        analysed         => 'orangered',
+        'analysis-check' => 'orange',
+        submitted        => 'gold',
+        );
+
+    sub add_contig {
+        my( $canvas, $name, $length, $status ) = @_;
+
+        my $fill_color = $status_color{lc $status} || 'chartreuse';
+
+        my ($right_most) = ($canvas->bbox('contig'))[2] || 0;
+
+        my $size = $length / 2000;  # 1 pixel = 2 kbp
+        my $x1 = $right_most - 1;
+        my $rec = $canvas->createRectangle(
+            $x1, 0, $x1 + $size, 8,
+            -fill => $fill_color,
+            -outline => undef,
+            -tags => ['contig', $name],
+            );
+
+        my $label = $canvas->createText(
+            $x1, -1,
+            -text => $name,
+            -anchor => 'sw',
+            -tags => ['contig_label', $name],
+            );
+        
+        #$canvas->bind($name, '<1>', [\&clipboard_place_name, $canvas, $name]);
+        
+        #$canvas->bind($rec, '<ButtonRelease-1>', [\&move_rectangle, $rec]);
+        #$canvas->bind($rec, '<Enter>', \&cursor_arrow);
+        #$canvas->bind($rec, '<Leave>', \&cursor_default);
+
+        nudge_into_free_space($canvas, $name);
+    }
+}
+
+sub nudge_into_free_space {
+    my( $canvas, $ac ) = @_;
+    
+    my %self = map {$_, 1} $canvas->find('withtag', $ac);
+    while (grep ! $self{$_}, $canvas->find('overlapping', $canvas->bbox($ac))) {
+        $canvas->move($ac, 0, -5);
+    }
+}
+
+#sub clipboard_place_name {
+#    my( $canvas, $frame, $name ) = @_;
+#    
+#    warn "Called with '$name'";
+#    
+#    $canvas->SelectionClear;
+#    $canvas->SelectionHandle(
+#        -selection => 'PRIMARY',
+#        -type      => 'STRING',
+#        '-format'  => 'STRING',
+#        sub {
+#            warn "Handling selection: @_";
+#            return $name
+#        }
+#        );
+#}
+
+__END__
+
+=head1 NAME - tk_full_chr_test
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+

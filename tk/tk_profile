@@ -1,0 +1,86 @@
+#!/usr/local/bin/perl -w
+
+use lib '/nfs/disk84/jgrg/bin/Perl';
+
+### tk_profile
+
+use strict;
+use Tk;
+use Bio::SeqIO;
+
+my $mw = MainWindow->new(
+    -class => 'JamesTk',
+    -title => 'A tk test',
+    );
+$mw->optionReadfile("$0.xdef");
+$mw->configure(
+    -background     => 'grey',
+    );
+
+my $file = shift || die "usage: tk_profile <fasta file>\n";
+my $fasta_in = Bio::SeqIO->new( -FILE => $file , -FORMAT => 'fasta' );
+my $seq = $fasta_in->next_seq;
+
+
+my $plot_width = 1000;
+my $plot_height = 200;
+my $canvas_width  = $plot_width  + 10;
+my $canvas_height = $plot_height + 10;
+my $canvas = $mw->Canvas(
+    -highlightthickness => 1,
+    -width  => $canvas_width,
+    -height => $canvas_height,
+    -scrollregion   => [0,0,$canvas_width,$canvas_height],
+    -background     => 'white',
+    #-borderwidth    => 2,
+    #-relief => 'groove',
+    -confine => 1, # Default
+    );
+$canvas->pack(
+    -side => 'top',
+    -fill => 'both',
+    -expand => 1,
+    );
+
+my $rec = $canvas->createRectangle(
+    5, 5, $plot_width + 5, $plot_height + 5,
+    -outline => 'black',
+    -fill    => 'white',
+    -width   => 1,
+    );
+
+my $seq_length = $seq->length;
+my $sample_interval = int($seq_length / 300);
+
+my( @line_coords );
+my $seq_string = $seq->seq;
+my $seg_len = $sample_interval * 2;
+for (my $offset = 0; $offset < $seq_length; $offset += $sample_interval) {
+    my $seg = substr($seq_string, $offset, $seg_len);
+    my $x_pos = (($offset + $sample_interval) / $seq_length) * $plot_width;
+    my $n_gc = $seg =~ tr/GCgc/GCgc/;
+    my $gc = ($n_gc / length($seg)) * $plot_height;
+    push( @line_coords, $x_pos, $gc );
+}
+
+$canvas->createLine(
+    @line_coords,
+    -width => 0.5,
+    -smooth => 1,
+    );
+
+if (-t STDOUT) {
+    MainLoop();
+} else {
+    $canvas->update;
+    print $canvas->postscript();
+}
+
+__END__
+
+=head1 NAME - tk_profile
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+

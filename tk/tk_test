@@ -1,0 +1,247 @@
+#!/usr/local/bin/perl -w
+
+use lib '/nfs/disk84/jgrg/bin/Perl';
+
+### tk_test ###
+
+use strict;
+use Tk;
+
+#print "Tk v$Tk::VERSION\n";
+
+my $mw = MainWindow->new(
+    -class => 'JamesTk',
+    -title => 'A tk test',
+    );
+$mw->optionReadfile("$0.xdef");
+$mw->configure(
+    -background     => 'grey',
+    );
+
+my $canvas_width = 600;
+my $canvas_height = 450;
+my $c_win_width  = 400;
+my $c_win_height = 200;
+my $canvas = $mw->Scrolled('Canvas',
+    -scrollbars => 'se',
+    -scrollregion   => [0,0,$canvas_width,$canvas_height],
+    -highlightthickness => 1,
+    -width  => $c_win_width,
+    -height => $c_win_height,
+    -background     => 'white',
+    #-borderwidth    => 2,
+    #-relief => 'groove',
+    -confine => 1, # Default
+    );
+$canvas->pack(
+    -side => 'top',
+    -fill => 'both',
+    -expand => 1,
+    );
+$canvas->createRectangle(
+    2,2,$canvas_width - 4,$canvas_height - 4,
+    -fill       => 'Gold',
+    -outline    => undef,
+    -tags       => ['canvas_background'],
+    );
+
+my $frame = $mw->Frame();
+$frame->pack(-side => 'top');
+
+my $draw = $frame->Button(
+    -text   => 'Draw',
+    );
+$draw->configure(
+    -command    => sub {
+        my($w,$h) = ($canvas->bbox('canvas_background'))[2,3];
+        #warn "Width=$w\tHeight=$h\n";
+        my $x = int(rand $w);
+        my $y = int(rand $h);
+        my $rec = $canvas->createRectangle(
+            $x, $y, $x+10, $y+4,
+            -fill   => 'black',
+            );
+        $canvas->bind($rec, '<1>', [\&toggle_colour, $rec]);
+        #$canvas->bind($rec, '<ButtonRelease-1>', [\&move_rectangle, $rec]);
+        $canvas->bind($rec, '<Enter>', \&cursor_arrow);
+        $canvas->bind($rec, '<Leave>', \&cursor_default);
+        },
+    );
+    
+
+$draw->pack(
+    -side   => 'left',
+    );
+
+my $del_selected = $frame->Button(
+    -text   => 'Delete selected',
+    );
+$del_selected->configure(
+    -command    => sub {
+        $canvas->delete('selected');
+        }
+    );
+$del_selected->pack(
+    -side   => 'left',
+    );
+
+{
+    my $x = 0;
+
+    my $clear = $frame->Button(
+        -text   => 'Clear',
+        );
+    $clear->configure(
+        -command    => sub {
+            $canvas->delete('!canvas_background');
+            $x = 0
+            }
+        );
+    $clear->pack(
+        -side   => 'left',
+        );
+
+    my $ps = $frame->Button(
+        -text   => 'write ps',
+        );
+    $ps->configure(
+        -command    => sub {
+            $canvas->postscript(-file => 'tk_test.ps');
+            }
+        );
+    $ps->pack(
+        -side   => 'left',
+        );
+
+    my $draw_label = $frame->Button(
+        -text   => 'write label',
+        );
+    $draw_label->configure(
+        -command    => sub {
+                $x += 10;
+                my $item = $canvas->createText($x, 10, -anchor => 'nw', -text => 'AC000026');
+                while (something_overlaps($canvas, $item)) {
+                    $canvas->move($item, 0, 5);
+                }
+                my @coord = $canvas->bbox($item);
+                warn join("\t", @coord), "\n";
+            }
+        );
+    $draw_label->pack(
+        -side   => 'left',
+        );
+}
+
+sub something_overlaps {
+    my( $canvas, $item ) = @_;
+    
+    my $bkgd = $canvas->find('withtag', 'canvas_background');
+    
+    my @list = $canvas->find('overlapping', $canvas->bbox($item));
+    @list = grep {$_ != $bkgd and $_ != $item } @list;
+    warn "[$item] @list";
+    return @list;
+}
+
+#my $ok = $mw->Button(
+#    -text   => 'OK',
+#    -underline  => 0,
+#    );
+#$ok->configure(
+#    -command    => sub {
+#        $ok->configure(
+#            -state  => 'disabled',
+#            );
+#        $ok->update;
+#        sleep 60;
+#        $ok->configure(
+#            -state  => 'active',
+#            );
+#        },
+#    );
+#$ok->pack(
+#    -side   => 'left',
+#    );
+
+my $exit = $frame->Button(
+    -text   => 'Exit',
+    -command    => sub { exit; },
+    -borderwidth    => 1,
+    );
+$exit->pack(
+    -side   => 'left',
+    );
+
+$mw->update;
+$mw->minsize($mw->width, $mw->height);
+$mw->maxsize(
+    $canvas_width  + $mw->width  - $c_win_width,
+    $canvas_height + $mw->height - $c_win_height,
+    );
+$mw->resizable(1,1);
+
+MainLoop;
+
+sub toggle_colour {
+    my( $canvas, $rec ) = @_;
+    
+    my $colour = $canvas->itemcget($rec, '-outline');
+    my( $new_colour, $new_width ); 
+    if ($colour eq 'black') {
+        ( $new_colour, $new_width ) = ('red', 2);
+        $canvas->addtag('selected', 'withtag', $rec);
+    } else {
+        ( $new_colour, $new_width ) = ('black', 1);
+        $canvas->dtag  ($rec, 'selected');
+    }
+    $canvas->itemconfigure($rec,
+        -outline => $new_colour,
+        -width   => $new_width,
+        );
+}
+
+sub cursor_arrow {
+    my( $canvas ) = @_;
+    $canvas->configure(
+        -cursor => 'arrow',
+        );
+}
+
+sub cursor_default {
+    my( $canvas ) = @_;
+    $canvas->configure(
+        -cursor => undef,
+        );
+}
+
+sub move_rectangle {
+    my( $canvas, $rec ) = @_;
+    
+    my $x = int(rand 20) - 10;
+    my $y = int(rand 20) - 10;
+    $canvas->move($rec, $x, $y);
+}
+
+#my $hello = $mw->Label(
+#    -text   => 'Hello World!',
+#    #-width  => 300,
+#    #-height => 200,
+#    #-border => 20,
+#    -relief => 'groove',
+#    -background => 'gold',
+#    -padx  => 30,
+#    -pady  => 30,
+#    );
+#$hello->pack(
+#    -side   => 'left',
+#    -expand => 1,
+#    );
+
+__END__
+
+=head1 NAME - tk_test
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+

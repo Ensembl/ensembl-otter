@@ -1,0 +1,23 @@
+
+Lace functions:
+
+Control panel shows current active lace's, along
+with who is annotating them.
+
+Annotators have another window where they can
+choose sequences to work on, and assign new
+sequences to themselves.
+
+Table in submissions db to lock sequences
+
+Buttons to:
+
+launch xace
+launch spangle
+dump EMBL (to analysis directory)
+submit to EMBL
+commit changes to humace
+remove sessions
+
+
+Need an analysis status window.

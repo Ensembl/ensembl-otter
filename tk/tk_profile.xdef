@@ -1,0 +1,12 @@
+
+JamesTk*background: grey
+JamesTk*troughColor: DarkGrey
+JamesTk*foreground: black
+JamesTk*activecolor: Gold
+JamesTk*color: Gold
+JamesTk*Button.borderWidth: 1
+JamesTk*Scrollbar.borderWidth: 1
+JamesTk*Scrollbar.width: 11
+JamesTk*Menu.borderWidth: 1
+JamesTk*font: -*-helvetica-medium-r-*-*-12-*-*-*-*-*-*-*
+
