@@ -1,0 +1,93 @@
+#!/usr/local/bin/perl -w
+
+### fill_in_missing_dna
+
+use strict;
+use Getopt::Long 'GetOptions';
+use Bio::Otter::Lace::Defaults;
+use Bio::Otter::Lace::PipelineDB;
+use Hum::Pfetch 'get_Sequences';
+
+$| = 1;
+
+{
+    my $dataset_name = undef;
+    
+    my $usage = sub { exec('perldoc', $0) };
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'   => $usage,
+        'dataset=s' => \$dataset_name,
+        ) or $usage->();
+    $usage->() unless $dataset_name;
+
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    my $otter_db = $ds->make_EnsEMBL_DBAdaptor;
+
+    my $sth = $otter_db->prepare(q{
+        SELECT c.embl_acc
+          , c.embl_version
+          , g.dna_id
+        FROM clone c
+          , contig g
+        LEFT JOIN dna d
+          ON g.dna_id = d.dna_id
+        WHERE c.clone_id = g.clone_id
+          AND d.dna_id IS NULL
+        });
+    $sth->execute;
+    
+    my( @missing );
+    while (my ($acc, $sv, $dna_id) = $sth->fetchrow) {
+        push(@missing, ["$acc.$sv", $dna_id]);
+    }
+    
+    my $insert = $otter_db->prepare(q{
+        INSERT INTO dna(dna_id
+              , sequence
+              , created)
+        VALUES(?
+              , ?
+              , NOW())
+        });
+    
+    my $chunk_size = 100;
+    for (my $i = 0; $i < @missing; $i += $chunk_size) {
+        my $j = $i + $chunk_size;
+        $j = @missing if $j > @missing;
+        $j--;
+        my @chunk = @missing[$i..$j];
+        my @seq_chunk = get_Sequences(map $_->[0], @chunk);
+        for (my $k = 0; $k < @chunk; $k++) {
+            if (my $seq = $seq_chunk[$k]) {
+                my $dna_id = $chunk[$k][1];
+                printf STDERR "Got DNA for '%s' which is '%d' long\n",
+                    $chunk[$k][0], $seq->sequence_length;
+                $insert->execute($dna_id, $seq->sequence_string);
+            } else {
+                warn "Can't fetch DNA for '$chunk[$k][0]'\n";
+            }
+        }
+    }
+}
+
+
+
+
+__END__
+
+=head1 NAME - fill_in_missing_dna
+
+=head1 SYNOPSIS
+
+
+
+=head1 DESCRIPTION
+
+Used to fill in the genomic DNA in an ensembl
+database.
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
