@@ -61,9 +61,11 @@ sub get_contig_SQL {
 
     my $contigstr = $self->get_raw_contig_string;
 
-    my $str = $self->query("select * from contig where contig_id in $contigstr");
+    if ($contigstr ne "") {
+	my $str = $self->query("select * from contig where contig_id in $contigstr");
 
-    return $str;
+	return $str;
+    }
 }
 
 sub get_clone_SQL {
@@ -75,9 +77,11 @@ sub get_clone_SQL {
 
     my $contigstr = $self->get_raw_contig_string;
 
-    my $str = $self->query("select clone.* from clone,contig where clone.clone_id = contig.clone_id and contig.contig_id in $contigstr");
+    if ($contigstr ne "") {
+	my $str = $self->query("select clone.* from clone,contig where clone.clone_id = contig.clone_id and contig.contig_id in $contigstr");
 
-    return $str;
+	return $str;
+    }
 }
 
 sub get_dna_SQL {
@@ -88,10 +92,12 @@ sub get_dna_SQL {
     }
 
     my $contigstr = $self->get_raw_contig_string;
-
-    my $str = $self->query("select dna.* from dna,contig where dna.dna_id = contig.dna_id and contig.contig_id in $contigstr");
-
-    return $str;
+    
+    if ($contigstr ne "") {
+	my $str = $self->query("select dna.* from dna,contig where dna.dna_id = contig.dna_id and contig.contig_id in $contigstr");
+	
+	return $str;
+    }
 
 }
 
@@ -104,9 +110,11 @@ sub get_dna_align_feature_SQL {
 
     my $contigstr = $self->get_raw_contig_string;
 
-    my $str = $self->query("select * from dna_align_feature where contig_id in $contigstr");
+    if ($contigstr ne "") {
+	my $str = $self->query("select * from dna_align_feature where contig_id in $contigstr");
 
-    return $str;
+	return $str;
+    }
 }
 
 sub get_protein_align_feature_SQL {
@@ -118,9 +126,11 @@ sub get_protein_align_feature_SQL {
 
     my $contigstr = $self->get_raw_contig_string;
 
-    my $str = $self->query("select * from protein_align_feature where contig_id in $contigstr");
+    if ($contigstr ne "") {
+	my $str = $self->query("select * from protein_align_feature where contig_id in $contigstr");
 
-    return $str;
+	return $str;
+    }
 }
 
 sub get_simple_feature_SQL {
@@ -132,10 +142,13 @@ sub get_simple_feature_SQL {
 
     my $contigstr = $self->get_raw_contig_string;
 
-    my $str = $self->query("select * from simple_feature where contig_id in $contigstr");
+    if ($contigstr ne "") {
+	my $str = $self->query("select * from simple_feature where contig_id in $contigstr");
 
-    return $str;
+	return $str;
+    }
 }
+
 
 sub get_prediction_transcript_SQL {
     my ($self) = @_;
@@ -146,9 +159,11 @@ sub get_prediction_transcript_SQL {
 
     my $contigstr = $self->get_raw_contig_string;
 
-    my $str = $self->query("select * from prediction_transcript where contig_id in $contigstr");
+    if ($contigstr ne "") {
+	my $str = $self->query("select * from prediction_transcript where contig_id in $contigstr");
 
-    return $str;
+	return $str;
+    }
 }
 
 sub get_exon_SQL {
@@ -160,9 +175,11 @@ sub get_exon_SQL {
 
     my $contigstr = $self->get_raw_contig_string;
 
-    my $str = $self->query("select * from exon where contig_id in $contigstr");
+    if ($contigstr ne "") {
+	my $str = $self->query("select * from exon where contig_id in $contigstr");
 
-    return $str;
+	return $str;
+    }
 }
 
 sub get_exon_transcript_SQL {
@@ -174,9 +191,11 @@ sub get_exon_transcript_SQL {
 
     my $exonstr = $self->get_exon_string;
 
-    my $str = $self->query("select * from exon_transcript where exon_id in $exonstr");
+    if ($exonstr ne "") {
+	my $str = $self->query("select distinct * from exon_transcript where exon_id in $exonstr");
 
-    return $str;
+	return $str;
+    }
 }
 
 sub get_transcript_SQL {
@@ -188,9 +207,11 @@ sub get_transcript_SQL {
 
     my $exonstr = $self->get_exon_string;
 
-    my $str = $self->query("select transcript.* from exon_transcript et, transcript where et.transcript_id  = transcript.transcript_id and et.exon_id in $exonstr");
-
-    return $str;
+    if ($exonstr ne "") {
+	my $str = $self->query("select distinct transcript.* from exon_transcript et, transcript where et.transcript_id  = transcript.transcript_id and et.exon_id in $exonstr");
+    
+	return $str;
+    }
 
 }
 
@@ -203,9 +224,11 @@ sub get_translation_SQL {
 
     my $exonstr = $self->get_exon_string;
 
-    my $str = $self->query("select translation.* from exon_transcript et, transcript t,translation where t.translation_id = translation.translation_id and et.transcript_id  = t.transcript_id and et.exon_id in $exonstr");
+    if ($exonstr ne "") {
+	my $str = $self->query("select distinct translation.* from exon_transcript et, transcript t,translation where t.translation_id = translation.translation_id and et.transcript_id  = t.transcript_id and et.exon_id in $exonstr");
 
-    return $str;
+	return $str;
+    }
 }
 
 sub get_gene_SQL {
@@ -217,9 +240,11 @@ sub get_gene_SQL {
 
     my $exonstr = $self->get_exon_string;
 
-    my $str = $self->query("select gene.* from exon_transcript et, transcript t, gene where gene.gene_id = t.gene_id and et.transcript_id  = t.transcript_id and et.exon_id in $exonstr");
+    if ($exonstr ne "") {
+	my $str = $self->query("select distinct gene.* from exon_transcript et, transcript t, gene where gene.gene_id = t.gene_id and et.transcript_id  = t.transcript_id and et.exon_id in $exonstr");
 
-    return $str;
+	return $str;
+    }
 }
 
 sub get_gene_description_SQL {
@@ -231,9 +256,11 @@ sub get_gene_description_SQL {
 
     my $exonstr = $self->get_exon_string;
 
-    my $str = $self->query("select gd.* from gene_description gd,exon_transcript et, transcript t, gene where gd.gene_id = gene.gene_id and gene.gene_id = t.gene_id and et.transcript_id  = t.transcript_id and et.exon_id in $exonstr");
+    if ($exonstr ne "") {
+	my $str = $self->query("select distinct gd.* from gene_description gd,exon_transcript et, transcript t, gene where gd.gene_id = gene.gene_id and gene.gene_id = t.gene_id and et.transcript_id  = t.transcript_id and et.exon_id in $exonstr");
 
-    return $str;
+	return $str;
+    }
 }
 
 sub get_gene_stable_id_SQL {
@@ -245,9 +272,11 @@ sub get_gene_stable_id_SQL {
 
     my $exonstr = $self->get_exon_string;
 
-    my $str = $self->query("select gsi.* from gene_stable_id gsi,exon_transcript et, transcript t, gene where gsi.gene_id = gene.gene_id and gene.gene_id = t.gene_id and et.transcript_id  = t.transcript_id and et.exon_id in $exonstr");
+    if ($exonstr ne "") {
+	my $str = $self->query("select distinct gsi.* from gene_stable_id gsi,exon_transcript et, transcript t, gene where gsi.gene_id = gene.gene_id and gene.gene_id = t.gene_id and et.transcript_id  = t.transcript_id and et.exon_id in $exonstr");
 
-    return $str;
+	return $str;
+    }
 }
 sub get_transcript_stable_id_SQL {
     my ($self) = @_;
@@ -258,9 +287,12 @@ sub get_transcript_stable_id_SQL {
 
     my $exonstr = $self->get_exon_string;
 
-    my $str = $self->query("select tsi.* from transcript_stable_id tsi,exon_transcript et where tsi.transcript_id = et.transcript_id and et.exon_id in $exonstr");
+    if ($exonstr ne "") {
+	my $str = $self->query("select distinct tsi.* from transcript_stable_id tsi,exon_transcript et where tsi.transcript_id = et.transcript_id and et.exon_id in $exonstr");
 
-    return $str;
+	return $str;
+
+    }
 }
 sub get_exon_stable_id_SQL {
     my ($self) = @_;
@@ -271,9 +303,11 @@ sub get_exon_stable_id_SQL {
 
     my $exonstr = $self->get_exon_string;
 
-    my $str = $self->query("select * from exon_stable_id esi where esi.exon_id in $exonstr");
+    if ($exonstr ne "") {
+	my $str = $self->query("select distinct * from exon_stable_id esi where esi.exon_id in $exonstr");
 
-    return $str;
+	return $str;
+    }
 }
 sub get_translation_stable_id_SQL {
     my ($self) = @_;
@@ -284,10 +318,12 @@ sub get_translation_stable_id_SQL {
 
     my $exonstr = $self->get_exon_string;
 
-    my $str = $self->query("select tsi.* from translation_stable_id tsi,exon_transcript et, transcript t where tsi.translation_id = t.translation_id and t.transcript_id = et.transcript_id and et.exon_id in $exonstr");
+    if ($exonstr ne "") {
+	my $str = $self->query("select distinct tsi.* from translation_stable_id tsi,exon_transcript et, transcript t where tsi.translation_id = t.translation_id and t.transcript_id = et.transcript_id and et.exon_id in $exonstr");
 
 
-    return $str;
+	return $str;
+    }
 }
 
 sub get_protein_feature_SQL {
@@ -299,10 +335,12 @@ sub get_protein_feature_SQL {
 
     my $exonstr = $self->get_exon_string;
 
-    my $str = $self->query("select pf.* from exon_transcript et, transcript t,protein_feature pf where pf.translation_id = t.translation_id and t.transcript_id = et.transcript_id and et.exon_id in $exonstr");
+    if ($exonstr ne "") {
+	my $str = $self->query("select distinct pf.* from exon_transcript et, transcript t,protein_feature pf where pf.translation_id = t.translation_id and t.transcript_id = et.transcript_id and et.exon_id in $exonstr");
 
 
-    return $str;
+	return $str;
+    }
 }
 
 sub get_repeat_feature_SQL {
@@ -314,9 +352,11 @@ sub get_repeat_feature_SQL {
 
     my $contigstr = $self->get_raw_contig_string;
 
-    my $str = $self->query("select * from repeat_feature where contig_id in $contigstr");
+    if ($contigstr ne "") {
+	my $str = $self->query("select * from repeat_feature where contig_id in $contigstr");
 
-    return $str;
+	return $str;
+    }
 }
 
 sub get_repeat_consensus_SQL {
@@ -328,9 +368,11 @@ sub get_repeat_consensus_SQL {
 
     my $contigstr = $self->get_raw_contig_string;
 
-    my $str = $self->query("select rc.* from repeat_consensus rc,repeat_feature rf where rc.repeat_consensus_id = rf.repeat_consensus_id and rf.contig_id in $contigstr");
+    if ($contigstr ne "") {
+	my $str = $self->query("select distinct rc.* from repeat_consensus rc,repeat_feature rf where rc.repeat_consensus_id = rf.repeat_consensus_id and rf.contig_id in $contigstr");
 
-    return $str;
+	return $str;
+    }
 }
 
 
@@ -343,9 +385,11 @@ sub get_supporting_feature_SQL {
 
     my $exonstr = $self->get_exon_string;
 
-    my $str = $self->query("select * from supporting_feature where exon_id in $exonstr");
+    if ($exonstr ne "") {
+	my $str = $self->query("select * from supporting_feature where exon_id in $exonstr");
 
-    return $str;
+	return $str;
+    }
 }
 
 sub get_stable_id_event_SQL {
@@ -357,9 +401,11 @@ sub get_stable_id_event_SQL {
 
     my $exonstr = $self->get_exon_string;
 
-    my $str = $self->query("select * from supporting_feature where exon_id in $exonstr");
+    if ($exonstr ne "") {
+	my $str = $self->query("select * from supporting_feature where exon_id in $exonstr");
 
-    return $str;
+	return $str;
+    }
 }
 
 sub get_stable_id_event_SQL {
@@ -371,9 +417,11 @@ sub get_stable_id_event_SQL {
 
     my $exonstr = $self->get_exon_string;
 
-    my $str = $self->query("select * from supporting_feature where exon_id in $exonstr");
+    if ($exonstr ne "") {
+	my $str = $self->query("select * from supporting_feature where exon_id in $exonstr");
 
-    return $str;
+	return $str;
+    }
 }
 
 sub get_exon_dbIDs {
@@ -407,6 +455,10 @@ sub get_exon_string {
 
     my @exonids = @{$self->get_exon_dbIDs};
 
+    if (scalar(@exonids) == 0) {
+	return;
+    }
+
     my $str = " (";
 
     foreach my $exon (@exonids) {
@@ -424,6 +476,11 @@ sub get_raw_contig_string {
 
     if (!defined($self->{_raw_contig_string})) {
 	my @ids = @{$self->get_raw_contig_dbIDs};
+
+
+	if (scalar(@ids) == 0) {
+	    return;
+	}
 
 	my $str = " (";
 
@@ -482,5 +539,127 @@ sub get_contigs {
     
     return $self->{_raw_contigs};
 }
+
+sub get_object_xref_SQL {
+    my ($self) = @_;
+  
+    if (!defined($self->slice)) {
+	$self->throw("Can't dump object_xref SQL with no slice");
+    }
+
+    my $xref_id_string = $self->get_xref_id_string;
+
+    my $str = $self->query("select * from object_xref where xref_id in $xref_id_string");
+
+    return $str;
+
+}
+
+sub get_xref_SQL {
+    my ($self) = @_;
+  
+    if (!defined($self->slice)) {
+	$self->throw("Can't dump xref SQL with no slice");
+    }
+
+    my $xref_id_string = $self->get_xref_id_string;
+
+    my $str = $self->query("select * from xref where xref_id in $xref_id_string");
+
+    return $str;
+
+}
+
+sub get_identity_xref_SQL {
+    my ($self) = @_;
+  
+    if (!defined($self->slice)) {
+	$self->throw("Can't dump identity_xref SQL with no slice");
+    }
+
+    my $xref_id_string = $self->get_xref_id_string;
+
+    my $str = $self->query("select * from identity_xref ix,object_xref ox where ix.object_xref_id = ox.object_xref_id and ox.xref_id in $xref_id_string");
+
+    return $str;
+
+}
+
+sub get_external_synonym_SQL {
+    my ($self) = @_;
+  
+    if (!defined($self->slice)) {
+	$self->throw("Can't dump external_synonym SQL with no slice");
+    }
+
+    my $xref_id_string = $self->get_xref_id_string;
+
+    my $str = $self->query("select * from external_synonym where xref_id in $xref_id_string");
+
+    return $str;
+
+}
+
+
+
+sub get_xref_id_string {
+    my ($self) = @_;
+
+    if (!defined($self->{_xref_id_string})) {
+
+	my $str = " (";
+
+	my @ids = @{$self->get_xref_ids};
+
+	if (scalar(@ids) == 0){ 
+	    return;
+	}
+
+
+	foreach my $id (@ids) {
+	    $str .= $id . ",";
+	}
+	chop($str);
+
+	$str .= ") ";
+    
+	$self->{_xref_id_string} = $str;
+
+    } 
+    return $self->{_xref_id_string};
+}
+
+
+sub get_xref_ids {
+    my ($self) = @_;
+
+    if (!defined($self->{_xref_ids})) {
+	$self->{_xref_ids} = [];
+
+	my $exonstr = $self->get_exon_string;
+
+	if ($exonstr ne "") {
+	    my $query = "select object_xref.xref_id from object_xref,exon_transcript et, transcript t where t.translation_id = object_xref.ensembl_id and et.transcript_id  = t.transcript_id and et.exon_id in $exonstr";
+
+
+	    my $sth = $self->prepare($query);
+
+	    my $res = $sth->execute;
+
+	    my @ids;
 	
+	    while (my $ref = $sth->fetchrow_arrayref) {
+		push(@ids,$ref->[0]);
+	    }
+
+	    $self->{_xref_ids} = \@ids;
+	}
+    }
+
+
+    return $self->{_xref_ids};
+
+}
+
+    
 1;

@@ -89,6 +89,9 @@ sub query  {
 
 	while (my @row = $sth->fetchrow_array) {
 	    foreach my $r (@row) {
+		if (!defined($r) || $r eq "") {
+		    $r = "\\N";
+		}
 		$str .= "$r\t";
 	    }
 	    chop($str);
@@ -103,6 +106,33 @@ sub query  {
     return $str;
 }
 
+sub dump_SQL_to_file {
+    my ($self,$dir,$table) = @_;
+
+    my $method = "get_" . $table . "_SQL";
+
+    if ($self->can($method)) {
+	print STDERR "Dumping SQL for $table using custom method\n";
+
+	my $file = "$dir/$table.sql";
+
+	open(OUT,">$file");
+
+	print OUT $self->$method;
+	
+	close(OUT);
+    } else {
+	print STDERR "Dumping whole table SQL\n";
+
+	my $file = "$dir/$table.sql";
+
+	open(OUT,">$file");
+
+	print OUT $self->dump_table($table);
+    }
+}
+
+
 sub dump_table {
     my ($self,$table) = @_;
 
@@ -113,8 +143,14 @@ sub dump_table {
     my $str;
 
     while (my @row = $sth->fetchrow_array) {
-	# Might need some tabs in here
-	$str .= "@row\n";
+	foreach my $r (@row) {
+	    if (!defined($r) || $r eq "") {
+		$r = "\\N";
+	    }
+	    $str .= "$r\t";
+	}
+	chop($str);
+	$str .= "\n";
     }
 
     return $str;
