@@ -1,5 +1,25 @@
 # SQL for otter - manual annotation database
 
+create table assembly_tag (
+       tag_id		    INT(10)    UNSIGNED NOT NULL AUTO_INCREMENT,
+       contig_id	    INT(10)    UNSIGNED NOT NULL,
+       contig_start	    INT(10)    NOT NULL,
+       contig_end	    INT(10)    NULL,
+       contig_strand	    TINYINT(1) NOT NULL DEFAULT '0',
+       tag_type		    ENUM('Unsure', 'Clone_left_end', 'Clone_right_end', 'Misc') NOT NULL DEFAULT 'Misc',
+       tag_info		    TEXT       NULL, 		    
+
+       PRIMARY KEY (tag_id),
+       UNIQUE KEY (contig_id, contig_start, contig_end, contig_strand, tag_type)
+)
+
+create table assembly_tagged_clone (
+       clone_id		   INT(10)        UNSIGNED NOT NULL,
+       transferred	   ENUM('yes', 'no') NOT NULL DEFAULT 'no',
+
+       UNIQUE KEY (clone_id)
+)
+
 create table author (
 	author_id  int(10) unsigned DEFAULT '0' NOT NULL auto_increment,
 	author_email varchar(50),
