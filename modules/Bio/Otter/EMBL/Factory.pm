@@ -468,7 +468,7 @@ sub make_embl_ft {
     my ( $self, $acc, $embl, $sequence_version ) = @_;
 
     unless ($acc and $embl and $sequence_version) {
-        confess "Must pass an accession, Hum::EMBL object and sequence_versios";
+        confess "Must pass an accession, Hum::EMBL object and sequence_version";
     }
     $self->accession($acc);
 

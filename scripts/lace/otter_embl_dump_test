@@ -49,19 +49,18 @@ use Bio::Otter::EMBL::Factory;
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
     my $ds = $cl->get_DataSet_by_name($dataset_name); #Bio::Otter::Lace::DataSet
 
-    #print "species: ", $ds->species, "\n"; # human
-    #print "taxon  : ", $ds->taxon, "\n";   # 9606
-
     my $otter_db = $ds->get_cached_DBAdaptor; #Bio::EnsEMBL::Container
     $otter_db->assembly_type($sequence_set);  #e.g. 'chr1-07'
     
-    my $embl_factory = Bio::Otter::EMBL::Factory->new;
-    $embl_factory->Dataset($ds);
+    my $ft_factory = Bio::Otter::EMBL::Factory->new;
+    $ft_factory->DataSet($ds);
     
     foreach my $acc (@ARGV) {
         
-        my $embl = $embl_factory->make_embl_ft($acc);
-        print $embl->compose();
+        my $embl = Hum::EMBL->new;
+        
+        my $embl = $ft_factory->make_embl_ft($acc);
+        #print $embl->compose();
         print "\n\n";
     }
 }
