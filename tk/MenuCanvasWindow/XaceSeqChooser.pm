@@ -58,14 +58,14 @@ sub set_known_GeneMethods {
     my $self = shift;
     my %methods_mutable = @_;
     
-    my $ace = $self->ace_handle;
+    my $db = $self->ace_handle;
     while (my($name, $is_mutable) = each %methods_mutable) {
-        my $meth_tag = $ace->fetch(Method => $name);
-        unless ($meth_tag) {
+        my $ace = $db->fetch(Method => $name);
+        unless ($ace) {
             warn "Method '$name' is not in database\n";
             next;
         }
-        my $meth = Hum::Ace::GeneMethod->new_from_ace_tag($meth_tag);
+        my $meth = Hum::Ace::GeneMethod->new_from_ace($ace);
         $meth->is_mutable($is_mutable);
         $self->add_GeneMethod($meth);
     }
@@ -1051,53 +1051,29 @@ sub express_clone_and_subseq_fetch {
     my( $self, $clone_name ) = @_;
     
     my $ace = $self->ace_handle;
+    my( $clone );
+    eval {
+        $clone = Hum::Ace::CloneSeq
+            ->new_from_name_and_db_handle($clone_name, $ace);
+    };
+    if ($clone) {
+        $self->exception_message($@) if $@;
+    } else {
+        $self->exception_message("Can't fetch CloneSeq '$clone_name' :\n$@");
+        return;
+    }
     
-    my $clone = Hum::Ace::CloneSeq->new;
-    $clone->ace_name($clone_name);
-    # Get the DNA
-    my $seq = $clone->store_Sequence_from_ace_handle($ace);
+    foreach my $sub ($clone->get_all_SubSeqs) {
+        $self->add_SubSeq($sub);
+            
+        if (my $s_meth = $sub->GeneMethod) {
+            my $meth = $self->get_GeneMethod($s_meth->name);
+            $sub->GeneMethod($meth);
+        }
 
-    # These raw_queries are much faster than
-    # fetching the whole Genome_Sequence object!
-    $ace->raw_query("find Sequence $clone_name");
-    my $sub_list = $ace->raw_query('show -a Subsequence');
-    $sub_list =~ s/\0//g;   # Remove any nulls
-    
-    while ($sub_list =~ /^Subsequence\s+"([^"]+)"\s+(\d+)\s+(\d+)/mg) {
-        my($name, $start, $end) = ($1, $2, $3);
-        eval{
-            my $t_seq = $ace->fetch(Sequence => $name)
-                or die "No such Subsequence '$name'\n";
-            my $sub = Hum::Ace::SubSeq
-                ->new_from_name_start_end_transcript_seq(
-                    $name, $start, $end, $t_seq,
-                    );
-            $sub->clone_Sequence($seq);
-            # Adding PolyA depends on having the clone Sequence
-            $sub->add_all_PolyA_from_ace($t_seq);
-            
-            # Flag that the sequence is in the db
-            $sub->is_archival(1);
-            
-            if (my $mt = $t_seq->at('Method[1]')) {
-                if (my $meth = $self->get_GeneMethod($mt->name)) {
-                    $sub->GeneMethod($meth);
-                }
-            }
-            
-            # Is there a Locus attached?
-            if (my $locus_tag = $t_seq->at('Visible.Locus[1]')) {
-                my $locus = $self->get_Locus($locus_tag->name);
-                $sub->Locus($locus);
-            } else {
-                #warn "No Locus attached to SubSeq '$name'\n";
-            }
-            
-            $clone->add_SubSeq($sub);
-            $self ->add_SubSeq($sub);
-        };
-        if ($@) {
-            $self->exception_message($@, "Error fetching '$name' ($start - $end):\n");
+        if (my $s_loc = $sub->Locus) {
+            my $locus = $self->get_Locus($s_loc->name);
+            $sub->Locus($locus);
         }
     }
     return $clone;
