@@ -37,7 +37,7 @@ GetOptions(
 	   );
 
 # help
-if($help || !$gene_type){
+if($help || !$chr_name){
     print<<ENDOFTEXT;
 split_gene.pl
   -host           char      host of mysql instance ($host)
