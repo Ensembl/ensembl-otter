@@ -1,0 +1,106 @@
+#!/usr/local/bin/perl -w
+
+### update_species_embl_file_path
+
+use strict;
+use Hum::Submission 'prepare_statement';
+use Hum::Conf qw( FTP_GHOST );
+
+use Getopt::Long 'GetOptions';
+
+{
+  my ( $ftp_dir, $species );
+
+  my $help = sub { exec('perldoc', $0) };
+
+  GetOptions('species|s=s' => \$species,
+	     'h|help'      => $help,
+	    ) or $help->(); # plus default options
+
+
+  $species = lc($species);
+
+  my $seq_chr = seq_name_to_chr_name($species);
+  print $FTP_GHOST, "===\n";
+
+  # move files to chrom. dir in FTP_GHOST
+  foreach ( `ls $FTP_GHOST/$species` ){
+    chomp;
+    if ( exists $seq_chr->{$_} ){
+      print "$FTP_GHOST/$species/Chr_$seq_chr->{$_}\n";
+      my $ftp_dir = "$FTP_GHOST/$species/Chr_$seq_chr->{$_}";
+
+      mkdir("$ftp_dir");
+      `mv $FTP_GHOST/$species/$_ $FTP_GHOST/$species/$_.embl $ftp_dir`;
+    }
+  }
+
+  # update all sequence_name file_path in sequence table
+  foreach ( keys %$seq_chr ){
+    update_file_path($_, "$FTP_GHOST/$species/Chr_$seq_chr->{$_}");
+  }
+
+}
+
+sub seq_name_to_chr_name {
+
+  my $species = shift;
+
+  my $sth = prepare_statement(qq{
+       SELECT s.sequence_name
+       FROM   sequence s, species_chromosome sc
+       WHERE  s.chromosome_id = sc.chromosome_id
+       AND    sc.species_name = '$species'
+       });
+
+  $sth->execute;
+
+  my $seqs = [];
+  while ( my $seq_name = $sth->fetchrow ){
+    push( @$seqs, $seq_name );
+  }
+
+  $sth->finish;
+  my $seq_chr = {};
+  my $count = 0;
+
+  foreach (  @$seqs ){
+    $count++;
+
+    my $sth =  prepare_statement(qq{
+       SELECT s.sequence_name, sc.chr_name
+       FROM sequence s, species_chromosome sc
+       WHERE s.chromosome_id = sc.chromosome_id
+       AND sc.species_name = '$species'
+       AND s.sequence_name = '$_'
+       ORDER by s.seq_id
+       DESC LIMIT 1
+       });
+
+    $sth->execute;
+
+    my ($seq_name, $chr) = $sth->fetchrow;
+    $seq_chr->{$seq_name} = $chr;
+
+    if ( $count % 1000 == 0 ){
+      print "Processed $count sequence_name: total ". scalar @$seqs. "\n";
+    }
+
+    $sth->finish;
+  }
+
+  return $seq_chr;
+}
+
+
+sub update_file_path {
+
+  my ( $seq_name, $ftp_dir ) = @_;
+
+  my $sth =  prepare_statement(qq{
+     UPDATE sequence set file_path = '$ftp_dir' where sequence_name = '$seq_name'
+   });
+
+  $sth->execute;
+}
+
