@@ -72,6 +72,28 @@ sub fetch_by_dbID {
 	return $obj;
 }
 
+sub fetch_all {
+  my ($self) = @_;
+
+  my $query = "select * from gene_name";
+
+  my $sth = $self->prepare($query);
+
+  my $res = $sth->execute;
+
+  my @names;
+
+  while (my $ref = $sth->fetchrow_hashref)  {
+     my $obj = new Bio::Otter::GeneName;
+	$obj->dbID($ref->{gene_name_id});
+	$obj->name($ref->{name});
+	$obj->gene_info_id($ref->{gene_info_id});
+     push(@names,$obj);
+  }
+
+  return @names;
+}
+
 =head2 fetch_by_name
 
  Title   : fetch_by_name

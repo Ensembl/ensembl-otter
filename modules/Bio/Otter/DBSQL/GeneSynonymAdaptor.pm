@@ -126,6 +126,14 @@ sub list_by_gene_info_id{
 
 }
 
+sub fetch_all {
+  my ($self) = @_;
+
+  my @obj = $self->_generic_sql_fetch;;
+
+  return @obj;
+}
+
 =head2 store
 
  Title   : store
