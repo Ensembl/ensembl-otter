@@ -157,9 +157,14 @@ foreach my $geneid (keys %genes) {
       die "Didn't find $geneid2\n";
     }
     $gene->gene_info($geneinfo);
-    #$gene->type($values{'type'});
+    #$gene->type($values{'Type'});
     $gene->type($type_conv_hash->{$geneid2});
-    $geneinfo->name(new Bio::Otter::GeneName(-name => $geneid));
+    if (defined($values{'Locus'}) && $values{'Locus'} ne $geneid) {
+      print "update gene_name set name='" . $values{'Locus'} . "' where name='" . $geneid . "';\n";
+      $geneinfo->name(new Bio::Otter::GeneName(-name => $values{'locus'}));
+    } else {
+      $geneinfo->name(new Bio::Otter::GeneName(-name => $geneid));
+    }
     $geneinfo->author($author);
 
     #SMJS Added and then removed
@@ -346,7 +351,7 @@ foreach my $geneid (keys %genes) {
       }
     }
 
-    print $gene->toXMLString . "\n";
+  #  print $gene->toXMLString . "\n";
   }
 }
 
