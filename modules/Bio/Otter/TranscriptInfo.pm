@@ -33,21 +33,21 @@ sub new {
   $self->timestamp($timestamp);
 
   $self->{_remark}   = [];
-  $self->{_evidence} = [];
+  $self->flush_Evidence();
 
   if (defined($evidence)) {
       if (ref($evidence) eq "ARRAY") {
-	  $self->evidence(@$evidence);
+		  $self->add_Evidence(@$evidence);
       } else {
-	  $self->throw("Argument to evidence must be an array ref. Currently [$evidence]");
+		  $self->throw("Argument to evidence must be an array ref. Currently [$evidence]");
       }
   }
   
   if (defined($remark)) {
       if (ref($remark) eq "ARRAY") {
-	  $self->remark(@$remark);
+		  $self->remark(@$remark);
       } else {
-	  $self->throw("Argument to remark must be an array ref. Currently [$remark]");
+		  $self->throw("Argument to remark must be an array ref. Currently [$remark]");
       }
   }
 
@@ -363,16 +363,32 @@ sub remark{
 sub evidence {
     my $obj = shift @_;
 
-
     while (my $rem = shift @_) {
-	if ($rem->isa("Bio::Otter::Evidence")) {
-	    push(@{$obj->{'_evidence'}},$rem);
-	} else {
-	    $obj->throw("Object [$rem] is not an Evidence object");
-	}
+		if ($rem->isa("Bio::Otter::Evidence")) {
+			push(@{$obj->{'_evidence'}},$rem);
+		} else {
+			$obj->throw("Object [$rem] is not an Evidence object");
+		}
     }
    return @{$obj->{'_evidence'}};
+}
 
+sub add_Evidence {
+	my $self = shift @_;
+
+	$self->evidence(@_);
+}
+
+sub get_all_Evidence {
+	my $self = shift @_;
+
+	return [ $self->evidence() ];
+}
+
+sub flush_Evidence {
+	my $self = shift @_;
+
+	$self->{_evidence} = [];
 }
 
 
@@ -434,7 +450,7 @@ sub toString{
 
     $str .= "EV " . $self->evidence . "\n";
     foreach my $ev ($self->evidence) {
-	$str .= $ev->toString() . "\n";
+		$str .= $ev->toString() . "\n";
     }
     return $str;
 
