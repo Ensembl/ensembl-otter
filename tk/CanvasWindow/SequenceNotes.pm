@@ -7,7 +7,8 @@ use strict;
 use Carp;
 use base 'CanvasWindow';
 use MenuCanvasWindow::XaceSeqChooser;
-
+use CanvasWindow::SequenceNotes::History;
+ 
 sub name {
     my( $self, $name ) = @_;
     
@@ -179,6 +180,7 @@ sub initialise {
                 -width              => 55,
                 -background         => 'white',
                 -selectbackground   => 'gold',
+#                -textvariable       => $self->comment_string ,
                 );
             $comment->pack(
                 -side => 'left',
@@ -194,9 +196,12 @@ sub initialise {
         if ($write) {
             my $set_reviewed = sub{
                 my $c = $comment->get;
-                my @ana_seq_id_list = $self->list_selected_unique_ids();
+                my @ana_seq_id_list = @{$self->list_selected_unique_ids()};
                 return unless @ana_seq_id_list;
+                
                 ### Save sequence note
+                $self->save_sequence_notes($comment->get , @ana_seq_id_list);
+                
                 $self->draw;
                 $self->set_scroll_region_and_maxsize;
                 };
@@ -643,6 +648,89 @@ sub DESTROY {
     my $name = $self->name;
     warn "Destroying $type $name\n";
 }
+
+#------------------------------------------------------------------------------------------------
+#colins stuff after here
+
+sub list_selected_unique_ids{
+        my $self = shift @_ ;
+        my $canvas = $self->canvas;
+        
+        my @objects = $canvas->find('withtag', 'selected') or return;
+        my( @row_tag );
+        foreach my $object (@objects){
+            foreach my $tag ($canvas->gettags($object)) {
+                if ($tag =~ /^row=/) {
+                    push @row_tag , $tag;
+                }
+            }
+        }
+        return \@row_tag;    
+    }
+
+
+
+sub popup_ana_seq_history{
+    my $self = shift @_ ;
+    
+    my $canv = $self->canvas;
+    
+    $canv->toplevel->Busy;
+    
+#    my $hp  = HistoryPopup->new($canv);
+    my $hp  = CanvasWindow::SequenceNotes::History->new($canv);
+    $hp->sequence_set($self->SequenceSet );
+    $hp->DataSet($self->SequenceSetChooser->DataSet);
+    
+    my $index = $self->current_CloneSequence_index();
+
+# change next line (or better,  method name in popup code) 
+    $hp->current_index($index);  
+    $hp->display;
+    $canv->toplevel->Unbusy;   
+}
+
+sub current_CloneSequence_index {
+    my( $self ) = @_;       
+    my $rowtag = $self->get_current_row_tag;
+    $rowtag =~ s/row=// ;
+    return $rowtag;
+}
+
+sub save_sequence_notes{
+    my ($self , $comment ,  @sequence_id_list ) = @_;
+    {  
+        my @seq_list = @{$self->SequenceSet->CloneSequence_list} ;
+        
+        my $note = Bio::Otter::Lace::SequenceNote->new();
+        
+        $note->text($comment);
+#        $note->timestamp = ;
+#        $note->is_current = '';
+        $note->author(getlogin) ;
+        warn $note->author ;
+        foreach my $seq_index (@sequence_id_list){
+            $seq_index =~ s/^row=// ;
+            warn "\n\n" . $seq_index ." of " . scalar(@seq_list)  ; 
+            my $sequence = @seq_list->[$seq_index] ;
+            $sequence->add_SequenceNote($note);    
+            $sequence->current_SequenceNote($note);
+            $self->SequenceSetChooser->DataSet->save_current_SequenceNote_for_CloneSequence($sequence);
+        } 
+    }
+}
+
+# stores the reference for the string in the text entry widget
+    sub comment_string(\$){
+        my ($self , $string_ref) = @_ ;
+    
+        if ($string_ref){
+            $self->{'_string_ref'} = $string_ref;
+
+        }
+        return $self->{'_string_ref'};
+    }
+
 
 1;
 
