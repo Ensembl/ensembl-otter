@@ -111,6 +111,60 @@ sub band_sets {
     return @{$gc->{'_band_sets'}};
 }
 
+sub zoom {
+    my( $gc, $zoom ) = @_;
+    
+    my $rpp = $gc->residues_per_pixel;
+    my $canvas = $gc->canvas;
+    
+    # Calculate the coordinate of the centre of the view
+    my ($x1, $y1, $x2, $y2) = $canvas->cget('scrollregion');
+    #$canvas->configure(
+    #    -scrollregion => [$x1, $y1, $x2, $y2],
+    #    );
+
+    # center on x axis
+    my @x_view = $canvas->xview;
+    my $x_view_center_fraction = $x_view[0] + (($x_view[1] - $x_view[0]) / 2);
+    my $x_view_center_coord = $x1 + (($x2 - $x1) * $x_view_center_fraction);   
+
+    # center on y axis
+    my @y_view = $canvas->yview;
+    my $y_view_center_fraction = $y_view[0] + (($y_view[1] - $y_view[0]) / 2);
+    my $y_view_center_coord = $y1 + (($y2 - $y1) * $y_view_center_fraction);
+    
+    #{
+    #    my $x = $x_view_center_coord;
+    #    my $y = $y_view_center_coord;
+    #    my @rectangle = ($x-2, $y-2, $x+2, $y+2);
+    #    $canvas->createRectangle(
+    #        @rectangle,
+    #        -fill       => 'red',
+    #        -outline    => undef,
+    #        );
+    #}
+    
+    # Calculate the new number of residues per pixel
+    my( $new_rpp );
+    if ($zoom > 0) {
+        $new_rpp = $rpp / $zoom;
+    }
+    elsif ($zoom < 0) {
+        $zoom *= -1;
+        $new_rpp = $rpp * $zoom;
+    }
+    else {
+        return;
+    }
+    warn "rpp=$new_rpp\n";
+    
+    my $x_zoom_factor = $rpp / $new_rpp;
+    $canvas->scale('all', $x_view_center_coord, $y_view_center_coord, $x_zoom_factor, 1);
+    
+    $gc->residues_per_pixel($new_rpp);
+    $gc->fix_window_min_max_sizes;
+}
+
 sub fix_window_min_max_sizes {
     my( $gc ) = @_;
     

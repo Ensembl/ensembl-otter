@@ -146,6 +146,9 @@ use Getopt::Long 'GetOptions';
         #sub{ kill 'INT', $$ } );
         sub{ exit } );
 
+    make_button($button_frame, 'Zoom in', sub{ $gc->zoom(2) } );
+    make_button($button_frame, 'Zoom out', sub{ $gc->zoom(-2) } );
+
     make_button($button_frame, 'PostScript',
         sub {
             my $n_tiles = 6;
