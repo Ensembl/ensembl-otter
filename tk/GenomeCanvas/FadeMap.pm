@@ -25,14 +25,16 @@ sub fade_color {
     }
     my( $hue, $sat, $lgt ) = $self->rgb_to_hsl(@rgb);
     my $n_steps = $self->number_of_steps;
-    my( @color_scale );
+    my( @fade_scale, @rgb_scale );
     for (my $i = 0; $i < $n_steps; $i++) {
         my $lgt_fade = $lgt + (((1 - $lgt) / $n_steps) * $i);
         my $sat_fade = $sat - (($sat / $n_steps) * $i);
         my @rgb = $self->hsl_to_rgb($hue, $sat_fade, $lgt_fade);
-        push( @color_scale, $self->rgb_to_web_hex(@rgb) );
+        push( @fade_scale, $self->rgb_to_web_hex(@rgb) );
+        push( @rgb_scale, [map sprintf("%.0f", $_), @rgb] );
     }
-    $self->{'_fade_scale'} = [reverse @color_scale];
+    $self->{'_fade_scale'} = [reverse @fade_scale];
+    $self->{'_rgb_scale'} = [reverse @rgb_scale];
 }
 
 sub rgb_to_web_hex {
@@ -42,39 +44,20 @@ sub rgb_to_web_hex {
     return '#' . $hex;
 }
 
-sub get_color {
-    my( $self, $value ) = @_;
+sub rgb_scale {
+    my( $self ) = @_;
     
-    my $min = $self->min;
-    my $max = $self->max;
-    confess "max ($max) is less than min ($min)" if $max < $min;
-    unless ($min <= $value and $value <= $max) {
-        confess "value '$value' is outside range $max -> $min";
-    }
+    my $scale = $self->{'_rgb_scale'}
+        or confess "No rgb scale found.  Call fade_color(COLOR) first";
+    return @$scale;
+}
+
+sub get_color {
+    my( $self, $i ) = @_;
+    
     my $scale = $self->{'_fade_scale'}
         or confess "No color scale found.  Call fade_color(COLOR) first";
-    my $i = sprintf("%.0f", (($value - $min) / ($max - $min)) * @$scale);
     return $scale->[$i];
-}
-
-sub min {
-    my( $self, $min ) = @_;
-    
-    if (defined $min) {
-        $self->{'_min'} = $min;
-    }
-    $min = $self->{'_min'};
-    return (defined $min) ? $min : 0;
-}
-
-sub max {
-    my( $self, $max ) = @_;
-    
-    if (defined $max) {
-        $self->{'_max'} = $max;
-    }
-    $max = $self->{'_max'};
-    return (defined $max) ? $max : 1;
 }
 
 sub number_of_steps {
