@@ -92,7 +92,7 @@ sub new_Bin {
 sub draw {
     my ( $self, $kw, $x, $y ) = @_;
 
-    warn "args = [$self, $kw, $x, $y]";
+    warn "args = [$self, $kw, $x, $y]\n";
 
     my @coords = ($x, $y, $x + $self->width, $y + $self->height($kw));
     $kw->canvas->createRectangle(
