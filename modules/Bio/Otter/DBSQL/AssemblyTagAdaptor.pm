@@ -2,9 +2,7 @@ package Bio::Otter::DBSQL::AssemblyTagAdaptor;
 
 use strict;
 use Bio::Otter::AssemblyTag;
-use Bio::Otter::DBSQL::RawContigAdaptor;
-use vars qw(@ISA);
-@ISA = qw (Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor);
+use base 'Bio::Otter::DBSQL::BaseFeatureAdaptor';
 
 
 sub _tables {
