@@ -26,6 +26,13 @@ use Hum::EnsCmdLineDB;
         });
     $sth->execute();
     
+    my %stain_intensity = (
+        100 => '#000000',
+         75 => '#666666',
+         50 => '#999999',
+         25 => '#cccccc',
+        );
+    
     my( $chr );
     my $current_name = '';
     my( %stain_count );
@@ -57,7 +64,8 @@ use Hum::EnsCmdLineDB;
             $band->fill('#000000');
         }
         elsif ($stain =~ /(\d+)/) {
-            $band->set_fill_from_shade($1 / 100);
+            $band->fill($stain_intensity{$1});
+            #$band->set_fill_from_shade($1 / 100);
         }
     }
     $kw->draw;

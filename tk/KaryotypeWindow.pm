@@ -22,9 +22,9 @@ sub new {
             '1.',
             )
         );
-    $self->canvas->DefineBitmap(
-        'gcen', 2, 1, pack('b2', '.1')
-        );
+    #$self->canvas->DefineBitmap(
+    #    'gcen', 2, 1, pack('b2', '.1')
+    #    );
     return $self;
 }
 

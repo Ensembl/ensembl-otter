@@ -171,7 +171,7 @@ sub set_fill_from_shade {
     my( $self, $shade ) = @_;
     
     confess "Missing shade argument" unless defined($shade);
-    $shade *= 255;
+    $shade = 255 - (255 * $shade);
     my $fill = sprintf "#%02x%02x%02x", $shade, $shade, $shade;
     $self->fill($fill);
 }
