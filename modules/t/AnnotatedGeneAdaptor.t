@@ -137,13 +137,15 @@ my $translation2 = new Bio::EnsEMBL::Translation;
 
 $translation1->start_Exon($exon1);
 $translation1->start(1);
+$translation1->version(1);
 $translation1->end_Exon($exon3);
 $translation1->end(11);
-
 $transcript1->translation($translation1);
+
 
 $translation2->start_Exon($exon4);
 $translation2->start(1);
+$translation2->version(1);
 $translation2->end_Exon($exon4);
 $translation2->end(20);
 $transcript2->translation($translation2);
@@ -153,6 +155,8 @@ $transcript1->version(1);
 $transcript2->stable_id("ENST000000100002");
 $transcript2->version(1);
 
+$translation1->stable_id("ENSP00000100001");
+$translation2->stable_id("ENSP00000100002");
 
 my $class = new Bio::Otter::TranscriptClass(
      -name => 'CDS',
@@ -243,6 +247,12 @@ foreach my $tran (@{$gene->get_all_Transcripts}) {
     my $version = $tran->version;
     $version++;
     $tran->version($version);
+
+    if (defined($tran->translation)) {
+       my $version = $tran->translation->version;
+       $version++;
+       $tran->translation->version($version);
+    }
 }
 $adaptor->store($gene);
 #$testdb->pause;
@@ -307,6 +317,11 @@ foreach my $tran (@{$gene->get_all_Transcripts}) {
     my $version = $tran->version;
     $version++;
     $tran->version($version);
+    if (defined($tran->translation)) {
+       my $version = $tran->translation->version;
+       $version++;
+       $tran->translation->version($version);
+    }
 }
 
 $exon1->contig($slice2);
