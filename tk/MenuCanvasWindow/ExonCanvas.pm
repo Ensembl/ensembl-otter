@@ -250,6 +250,11 @@ sub delete_selected_exons {
     
     $self->trim_position_pairs($trim);
     $self->set_all_position_pair_text(@keep);
+    
+    # Put in an empty exon holder if we have deleted them all
+    unless ($self->position_pairs) {
+        $self->add_exon_holder(undef, undef, 1);
+    }
 }
 
 sub add_coordinate_pair {
@@ -767,7 +772,7 @@ sub add_start_end_widgets {
                 );
         $snf = $self->SubSeq->start_not_found;
         $om->menu->invoke($snf);
-        warn "snf = $snf";
+        #warn "snf = $snf";
 
         $self->{'_start_not_found_variable'} = \$snf;
 
@@ -807,7 +812,7 @@ sub add_start_end_widgets {
             )->pack( -side => 'top' );
         $enf = $self->SubSeq->end_not_found;
         $om->menu->invoke($enf);
-        warn "enf = $enf";
+        #warn "enf = $enf";
 
         $self->{'_end_not_found_variable'} = \$enf;
 
@@ -1232,7 +1237,7 @@ sub _coord_matrix {
         # Create rectangle to pad canvas to max number width
         my $canvas = $self->canvas;
         my $max_width = 4 * ($size + $text_len);
-        warn "max_width = $max_width\n";
+        #warn "max_width = $max_width\n";
         $canvas->createRectangle(
             $half, $half,
             $half + $max_width, $half + $size,
@@ -1464,8 +1469,8 @@ sub next_exon_number {
 sub DESTROY {
     my( $self ) = @_;
     
-    my $name = $self->name;
-    warn "Destroying: '$name'\n";
+    #my $name = $self->name;
+    #warn "Destroying: '$name'\n";
 }
 
 1;
