@@ -920,17 +920,24 @@ sub popup_ana_seq_history{
     }
     unless ( $self->check_for_history_window($index) ){
         # window has not been created already - create one
-        my $top = $self->canvas->Toplevel();
-        $top->transient($self->canvas->toplevel);
+       
         my $cs =  $self->get_CloneSequence_list->[$index];
-        $top->title( "History for " .$cs->contig_name . "  " .$cs->clone_name   );
-        my $hp  = CanvasWindow::SequenceNotes::History->new($top, 550 , 50 );
-        $self->add_history_window($hp , $index) ;
-        $hp->clone_index($index) ;
-        $hp->name($cs->contig_name);
-        $hp->SequenceNotes($self);
-        $hp->initialise;
-        $hp->draw;
+        my $clone_list = $cs->get_all_SequenceNotes ;
+        if ($clone_list ){
+            my $top = $self->canvas->Toplevel();
+            $top->transient($self->canvas->toplevel);
+            $top->title( "History for " .$cs->contig_name . "  " .$cs->clone_name   );
+            my $hp  = CanvasWindow::SequenceNotes::History->new($top, 550 , 50 );
+            $self->add_history_window($hp , $index) ;
+            $hp->clone_index($index) ;
+            $hp->name($cs->contig_name);
+            $hp->SequenceNotes($self);
+            $hp->initialise;
+            $hp->draw;
+        }
+        else{
+            $self->message( "no History for this sequence" ); 
+        }
     }  
 }
 
