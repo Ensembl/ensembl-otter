@@ -768,40 +768,38 @@ sub refresh_locks{
     
     my $cs_list = $ss->CloneSequence_list ;
     my @contig_ids ; # or could use embl acc / version combo - but this seems simpler
+    
+    # put all the clones in a hash with the contig_id as the key, also put contig id's in an array for the query
+    my %cs_hash ;
     foreach my $cs (@$cs_list){
+        $cs_hash{$cs->contig_id} = $cs ;
         push @contig_ids , $cs->contig_id ;
     }
     my $comma_list = join ',' , @contig_ids  ;
     
     my $dba = $self->get_cached_DBAdaptor ;
     my $sth = $dba->prepare(qq{
-        SELECT  cg.clone_id
-            ,   cg.contig_id
+        SELECT  cg.contig_id
         FROM    clone_lock cl
             ,   contig cg 
         WHERE   cl.clone_id = cg.clone_id
         AND     cg.contig_id IN ($comma_list)     
         } ) ;
     $sth->execute() ;
+    my ($contig_id) ;
+    $sth->bind_columns(\$contig_id) ;
     
-    my ($clone_id , $contig_id) ;
-    $sth->bind_columns(\$clone_id , \$contig_id) ;
-    
-    my @locked_ids;
-    while ($sth->fetch){
-        push @locked_ids , $contig_id ;
+    # set all locks to 0
+    while( my ($key , $clone) = each (%cs_hash)){
+        $clone->set_lock_status(0) ;
     }
     
-    # go through each clone_sequence, setting the status to unlocked, unless the id matches one in the list 
-    foreach my $cs (@$cs_list){
-        $cs->set_lock_status(0) ;
-        foreach my $id (@locked_ids){
-            if ($id == $cs->contig_id){
-                $cs->set_lock_status(1) ;
-                last ;
-            }
-        }
-    }    
+    # set the locked clones (from query result) to 1
+    while ($sth->fetch){
+        my $locked_clone  =  $cs_hash{$contig_id} ; 
+        $locked_clone->set_lock_status(1) ;
+    }
+        
 }
 
 sub delete_SequenceSet{
