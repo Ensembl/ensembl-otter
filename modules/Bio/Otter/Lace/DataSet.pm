@@ -786,7 +786,7 @@ sub get_cached_DBAdaptor {
     unless($self->{'_dba_cache'}){
 	$self->{'_dba_cache'} = $self->make_DBAdaptor;
 	$self->_attach_DNA_DBAdaptor($self->{'_dba_cache'});
-	warn $self->{'_dba_cache'}->dnadb->dbname;
+	#warn $self->{'_dba_cache'}->dnadb->dbname;
     }
     #warn "OTTER DBADAPTOR = '$dba'";
     return $self->{'_dba_cache'};
@@ -832,9 +832,9 @@ sub _attach_DNA_DBAdaptor{
     }
 
     if(("@dna_args" eq "@ott_args") && @dna_args){
-	warn "They are the same the DBAdaptor will just return itself\n";
+	#warn "They are the same the DBAdaptor will just return itself\n";
     }elsif(@dna_args){
-	warn "@dna_args\n";
+	#warn "@dna_args\n";
 	my $dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new(@dna_args);
 	$dba->dnadb($dnadb);
     }else{
