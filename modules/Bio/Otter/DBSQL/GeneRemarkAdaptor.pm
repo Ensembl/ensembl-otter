@@ -131,24 +131,14 @@ sub store {
 	   return;
 	}
 
-        my $quoted_remark = $self->db->db_handle->quote($remark->remark);
-	#my $sql = "insert into gene_remark(gene_remark_id,remark,gene_info_id) values (null,\'" .  $remark->remark . "\',".
-	#	$remark->gene_info_id . ")";
-	my $sql = "insert into gene_remark(gene_remark_id,remark,gene_info_id) values (null," .
-                        $quoted_remark . "," .
-		        $remark->gene_info_id . ")";
-
-	my $sth = $self->prepare($sql);
-	my $rv = $sth->execute();
-
-	$self->throw("Failed to insert gene remark " . $remark->remark) unless $rv;
-
-	$sth = $self->prepare("select last_insert_id()");
-	my $res = $sth->execute;
-	my $row = $sth->fetchrow_hashref;
-	$sth->finish;
+	my $sth = $self->prepare(q{
+            INSERT INTO gene_remark(remark
+                  , gene_info_id)
+            VALUES (?,?)
+            });
+	$sth->execute($remark->remark, $remark->gene_info_id);
 	
-	$remark->dbID($row->{'last_insert_id()'});
+	$remark->dbID($sth->{'mysql_insertid'});
     }
     return 1;
 }
