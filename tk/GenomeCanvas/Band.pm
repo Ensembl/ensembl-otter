@@ -166,13 +166,34 @@ sub y_max {
 sub draw_sequence_gaps {
     my( $band ) = @_;
     
-    my $vc = $band->virtual_contig;
-    my $rpp = $band->residues_per_pixel;
-    my $canvas = $band->canvas;
-    my $height = $band->height;
-    my $y_offset = $band->y_offset;
+    my $canvas      = $band->canvas;
+    my $height      = $band->height;
+    my $rpp         = $band->residues_per_pixel;
+    my $y_offset    = $band->y_offset;
+    my $color       = $band->sequence_gap_color;
     my $y_max = $y_offset + $height;
     my @tags = $band->tags;
+
+    # Draw the gaps    
+    foreach my $gap ($band->sequence_gap_map) {
+        my ($x1, $x2) = map $_ / $rpp, @$gap;
+        $canvas->createRectangle(
+            $x1, $y_offset, $x2, $y_max,
+            -fill       => $color,
+            -outline    => undef,
+            '-tags'     => [@tags],
+            );
+    }
+}
+
+sub sequence_gap_color {    
+    return '#ccbebe';
+}
+
+sub sequence_gap_map {
+    my( $band ) = @_;
+
+    my $vc = $band->virtual_contig;
     
     my( @gap_map );
     my $prev_end = 0;
@@ -200,19 +221,9 @@ sub draw_sequence_gaps {
     if ($prev_end < $vc_length) {
         push(@gap_map, [$prev_end + 1, $vc_length]);
     }
-
-    # Draw the gaps    
-    foreach my $gap (@gap_map) {
-        my ($x1, $x2) = map $_ / $rpp, @$gap;
-        $canvas->createRectangle(
-            $x1, $y_offset, $x2, $y_max,
-            -fill       => 'grey',
-            -outline    => undef,
-            '-tags'     => [@tags],
-            );
-    }
+    
+    return @gap_map;
 }
-
 
 1;
 

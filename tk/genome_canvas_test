@@ -98,6 +98,7 @@ use Getopt::Long 'GetOptions';
         my $repeat = GenomeCanvas::Band::RepeatFeature->new;
         $repeat->virtual_contig($vc);
         $repeat->draw_simple(0);
+        $repeat->repeat_classifier(\&repeat_class);
         $gc->add_Band($repeat);
 
         my $plot = GenomeCanvas::Band::Plot->new;
@@ -301,6 +302,65 @@ sub nudge_into_free_space {
     while (grep ! $self{$_}, $canvas->find('overlapping', $canvas->bbox($ac))) {
         $canvas->move($ac, 0, -5);
     }
+}
+
+{
+    my( %repeat_class );
+
+    sub repeat_class {
+        my( $band, $repeat_name ) = @_;
+        
+        make_repeat_class($band) unless %repeat_class;
+        return $repeat_class{$repeat_name};
+    }
+    
+    ### Yuk!  I look through the headers of the RepeatMasker
+    ### libraries for the classes of each repeat.
+    sub make_repeat_class {
+        my( $band ) = @_;
+        
+        my $dbobj = $band->virtual_contig->dbobj;
+        my %is_ens_repeat = map {$_, 1} list_repeat_names($dbobj);
+        my %valid_classes = map {$_, 1} $band->repeat_classes;
+
+        local *LIB;
+        my $dir = '/nfs/disk84/jgrg/work/repeatmasker/RepeatMasker08142000/Libraries';
+        opendir LIB, $dir or die "Can't opendir '$dir' : $!";
+        foreach my $file (map "$dir/$_", grep /\.lib$/, readdir LIB) {
+            local *FA;
+            open FA, $file or die "Can't read '$file' : $!";
+            while (<FA>) {
+                if (/^>(\S+)/) {
+                    my ($rep, $class) = split /#/, $1, 2;
+                    next unless $is_ens_repeat{$rep};
+                    $class =~ s{/.+}{};
+                    if (my $stored_class = $repeat_class{$rep}) {
+                        warn "$rep: class '$class' doesn't match stored '$stored_class'"
+                            if $stored_class ne $class;
+                    } else {
+                        $repeat_class{$rep} = $class;
+                    }
+                }
+            }
+            close FA;
+        }
+        close LIB;
+    }
+}
+
+sub list_repeat_names {
+    my( $dbobj ) = @_;
+    
+    my $sth = $dbobj->prepare(q{
+        SELECT DISTINCT hid
+        FROM repeat_feature
+        });
+    $sth->execute;
+    my( @repeat );
+    while (my ($r) = $sth->fetchrow) {
+        push(@repeat, $r);
+    }
+    return @repeat;
 }
 
 

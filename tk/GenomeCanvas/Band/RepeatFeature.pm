@@ -18,6 +18,90 @@ sub render {
     
     $band->draw_repeat_features;
     $band->draw_sequence_gaps;
+    $band->draw_keys;
+}
+
+sub draw_keys {
+    my( $band ) = @_;
+    
+    my $height      = $band->strip_height;
+    my $canvas      = $band->canvas;
+    my @classes     = $band->repeat_classes;
+    my @tags        = $band->tags;
+    my $font_size   = $band->font_size;
+    my $text_offset = $font_size / 2;
+    my $x1 = 0;
+    my $x2 = $band->virtual_contig->length / $band->residues_per_pixel;
+    my @strip_map = $band->strip_y_map;
+    for (my $i = 0; $i < @strip_map; $i++) {
+        my( $y1, $y2 ) = @{$strip_map[$i]};
+        $canvas->createRectangle(
+            $x1, $y1, $x2, $y2,
+            -fill       => undef,
+            -outline    => '#000000',
+            '-tags'     => [@tags],
+            );
+        my $text_y = $y1 + ($height / 2);
+        $canvas->createText(
+            -1 * $text_offset, $text_y,
+            -text       => $classes[$i],
+            -anchor     => 'e',
+            -justify    => 'right',
+            -font       => ['helvetica', $font_size],
+            '-tags'     => [@tags],
+            );
+        $canvas->createText(
+            $x2 + $text_offset, $text_y,
+            -text       => $classes[$i],
+            -anchor     => 'w',
+            -justify    => 'left',
+            -font       => ['helvetica', $font_size],
+            '-tags'     => [@tags],
+            );
+
+    }
+}
+
+sub strip_y_map {
+    my( $band ) = @_;
+    
+    my @classes     = $band->repeat_classes;
+    my $y_offset    = $band->y_offset;
+    my $height      = $band->strip_height;
+    my $pad         = $band->strip_padding;
+    my( @strip_map );
+    for (my $i = 0; $i < @classes; $i++) {
+        my $y1 = $y_offset + ($i * ($height + $pad));
+        my $y2 = $y1 + $height;
+        push(@strip_map, [$y1, $y2]);
+    }
+    return @strip_map;
+}
+
+sub draw_sequence_gaps {
+    my( $band ) = @_;
+    
+    my $canvas      = $band->canvas;
+    my $height      = $band->height;
+    my $rpp         = $band->residues_per_pixel;
+    my $color       = $band->sequence_gap_color;
+    my @tags = $band->tags;
+
+    # Draw the gaps
+    foreach my $gap ($band->sequence_gap_map) {
+        my ($x1, $x2) = map $_ / $rpp, @$gap;
+        
+        # Over each strip
+        foreach my $strip ($band->strip_y_map) {
+            my( $y1, $y2 ) = @$strip;
+            $canvas->createRectangle(
+                $x1, $y1, $x2, $y2,
+                -fill       => $color,
+                -outline    => undef,
+                '-tags'     => [@tags],
+                );
+        }
+    }
 }
 
 sub draw_simple {
@@ -27,6 +111,32 @@ sub draw_simple {
         $band->{'_draw_simple'} = $flag ? 1 : 0;
     }
     return $band->{'_draw_simple'} || 0;
+}
+
+sub repeat_classes {
+    my( $band, @classes ) = @_;
+    
+    if (@classes) {
+        $band->{'_repeat_classes'} = [@classes];
+    }
+    if (my $c = $band->{'_repeat_classes'}) {
+        @classes = @$c;
+    } else {
+        @classes = qw{ SINE LINE DNA LTR };
+    }
+    push(@classes, 'Other');
+    return @classes;
+}
+
+sub repeat_classifier {
+    my( $band, $sub ) = @_;
+    
+    if ($sub) {
+        confess "Not a subroutine ref: '$sub'"
+            unless ref($sub) eq 'CODE';
+        $band->{'_repeat_classifer'} = $sub;
+    }
+    return $band->{'_repeat_classifer'} || confess "No repeat classifer";
 }
 
 sub draw_repeat_features {
@@ -56,19 +166,64 @@ sub draw_repeat_features {
 }
 
 sub draw_repeat_features_on_sub_vc {
-    my( $band, $vc, $offset ) = @_;
+    my( $band, $vc, $x_offset ) = @_;
+
+    my $repeat_classifier = $band->repeat_classifier;
+    my @class_list = $band->repeat_classes;
+    my $other_class = $class_list[$#class_list];
+    my %class = map {$_, []} @class_list;
+    foreach my $r ($vc->get_all_RepeatFeatures) {
+        my $c = &$repeat_classifier($band, $r->hseqname) || $other_class;
+        push @{$class{$c}}, $r;
+    }
+    
+    my $vc_length = $vc->length;
+    for (my $i = 0; $i < @class_list; $i++) {
+        my $c = $class_list[$i];
+        $band->draw_repeat_class($x_offset, $i, $vc_length, $c, $class{$c});
+    }
+}
+
+sub height {
+    my( $band ) = @_;
+    
+    my $strip_count = $band->repeat_classes;
+    my $s_height    = $band->strip_height;
+    my $pad         = $band->strip_padding;
+    my $height = ($strip_count * $band->strip_height) +
+        (($strip_count - 1) * $band->strip_padding);
+    return $height;
+}
+
+sub strip_height {
+    my( $band ) = @_;
+    
+    return $band->font_size * 2;
+}
+
+sub strip_padding {
+    my( $band ) = @_;
+    
+    my $pad = int($band->strip_height / 5);
+    $pad = 2 if $pad < 2;
+    return $pad;
+}
+
+sub draw_repeat_class {
+    my( $band, $x_offset, $level, $vc_length, $name, $repeat_list ) = @_;
 
     # Sort all the repeat features by start and end and adjust
     # their coordinates, so we have an ordered list of non-
     # overlapping features.
-    my $y1 = $band->y_offset;
-    my $y2 = $y1 + $band->height;
+    my $height = $band->strip_height;
+    my $y1 = $band->y_offset + ($level * ($height + $band->strip_padding));
+    my $y2 = $y1 + $height;
     my $rpp = $band->residues_per_pixel;
     my $canvas = $band->canvas;
     my @tags = $band->tags;
-    push(@tags, 'repeat');
-    my @repeat = $vc->get_all_RepeatFeatures;
-    @repeat = sort {$a->start <=> $b->start || $a->end <=> $b->end } @repeat;
+    #push(@tags, 'repeat');
+    push(@tags, "level_$level");
+    my @repeat = sort {$a->start <=> $b->start || $a->end <=> $b->end } @$repeat_list;
     for (my $i = 1; $i < @repeat;) {
         my($prev, $this) = @repeat[$i - 1, $i];
         if ($prev->end >= $this->start) {
@@ -91,8 +246,8 @@ sub draw_repeat_features_on_sub_vc {
     if ($band->draw_simple) {
         # Simple draw method:
         foreach my $feat (@repeat) {
-            my $x1 = ($offset + $feat->start) / $rpp;
-            my $x2 = ($offset + $feat->end  ) / $rpp;
+            my $x1 = ($x_offset + $feat->start) / $rpp;
+            my $x2 = ($x_offset + $feat->end  ) / $rpp;
             $canvas->createRectangle(
                 $x1, $y1, $x2, $y2,
                 -fill => '#6666ff',
@@ -102,9 +257,8 @@ sub draw_repeat_features_on_sub_vc {
         }
     } else {
         my $fademap = GenomeCanvas::FadeMap->new;
-        $fademap->fade_color('#009900');
+        $fademap->fade_color('#284d49');
 
-        my $vc_length = $vc->length;
         my $tile_count = int($vc_length / $rpp) + 1;
         for (my ($i,$j) = (0,0); $i < $tile_count; $i++) {
             my $start = $i * $rpp;
@@ -140,8 +294,8 @@ sub draw_repeat_features_on_sub_vc {
                 $j++;
             }
             
-            my $x1 = ($offset + $start) / $rpp;
-            my $x2 = ($offset + $end  ) / $rpp;
+            my $x1 = ($x_offset + $start) / $rpp;
+            my $x2 = ($x_offset + $end  ) / $rpp;
             $end = $vc_length if $vc_length < $end;
             #warn "$covered_length / ($end - $start + 1)\n";
             my $color = $fademap->get_color($covered_length / ($end - $start + 1));
