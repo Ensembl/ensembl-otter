@@ -13,11 +13,9 @@ THISSCRIPT=`basename $0`
 cd $ILIVEIN/$CVSBASE/..
 
 root=`pwd`
-#echo "root=$root"
 
 pid_file=$root/ensembl-otter/otter_srv.pid
 pid_exist=0
-
 
 # set PERL5LIB
 PERL5LIB=\
@@ -35,7 +33,7 @@ if [ -e $pid_file ]; then
 fi
 
 start(){
-    if [ $pid_exist == 0 ]; then
+    if [ "$pid_exist" == "0" ]; then
 	echo "starting otter_srv..."
         exec ./otter_srv &
     else
@@ -43,12 +41,12 @@ start(){
     fi
 }
 stop(){
-    if [ $pid_exist == 1 ]; then
+    if [ "$pid_exist" == "1" ]; then
 	pid=`cat $pid_file`
-	if [ $pid > 0 ]; then
+	if [ $pid -gt 0 ]; then
 	    echo "pid exists so stopping $pid"
-            kill -2 $pid
-            rm $pid_file
+            kill -INT $pid
+            rm -f $pid_file
 	    pid_exist=0
 	else
 	    echo "'$pid_file' is not a valid pid file" 1>&2
@@ -60,11 +58,11 @@ stop(){
     fi
 }
 rotate_log(){
-    if [ $pid_exist == 1 ]; then
+    if [ "$pid_exist" == "1" ]; then
 	pid=`cat $pid_file`
-	if [ $pid > 0 ]; then
+	if [ $pid -gt 0 ]; then
 	    echo "rotating logs..."
-            kill -1 $pid
+            kill -HUP $pid
 	else
 	    echo "'$pid_file' is not a valid pid file." 1>&2
 	fi
