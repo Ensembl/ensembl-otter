@@ -100,7 +100,7 @@ sub selected_CloneSequences_as_contig_list {
     {
         my $last = $ctg->[$#$ctg];
         if ($last) {
-            if ($last->chr_end + 1 == $this->chr_start) {
+            if ($last->chr_end + 50_001 >= $this->chr_start) {
                 push(@$ctg, $this);
             } else {
                 $ctg = [$this];

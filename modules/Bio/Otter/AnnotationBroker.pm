@@ -112,13 +112,15 @@ sub increment_obj_version {
     
     my $stable = $obj->stable_id
         or $self->throw("No stable_id on object '$obj'");
+    my $version = ++$stable_version->{$stable};
+    $obj->version($version);
+
+    # Rest is just for the log file:
     my ($type) = ref($obj) =~ /(\w+)$/;
-    if (my $version = ++$stable_version->{$stable}) {
-        warn "New version '$version' for '$type' '$stable'\n";
-        $obj->version($version);
+    if ($version > 1) {
+        warn "New version '$type' '$stable' = '$version'\n";
     } else {
-        warn "New object '$type' '$stable'\n";
-        $obj->version(1);
+        warn "New  object '$type' '$stable'\n";
     }
 }
 

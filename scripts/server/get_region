@@ -13,6 +13,7 @@ use Bio::Otter::Author;
 $| = 1;
 
 my $q = new CGI;
+
 print STDERR "\n\n************* Getting region ************\n\n";
 
 if ($ENV{SERVER_SOFTWARE} =~ /libwww-perl-daemon/) {
