@@ -2,10 +2,31 @@
 
 ### genome_canvas_test
 
+use lib '/nfs/disk84/jgrg/temp/ensembl/modules';
+
 use strict;
 use GenomeCanvas;
+use GenomeCanvas::Band::TilingPath;
+use Getopt::Long 'GetOptions';
 
 {
+    my $host = 'localhost';
+    my $db   = 'chr_20';
+    my $user = 'ensro';
+    my $fpc = 'chr_20';
+    my $static_type = 'ACE';
+    my $scale = 2000;
+    my $labels = 1;
+    GetOptions(
+        'host=s'    => \$host,
+        'db=s'      => \$db,
+        'user=s'    => \$user,
+        'fpc=s'     => \$fpc,
+        'scale=s'   => \$scale,
+        'type=s'    => \$static_type,
+        'label!'    => \$labels,
+        );
+
     my $mw = GenomeCanvas::MainWindow->new;
     my $gc = GenomeCanvas->new($mw);
     
@@ -15,16 +36,15 @@ use GenomeCanvas;
         require Bio::EnsEMBL::DBSQL::Obj;
         
         my $db = Bio::EnsEMBL::DBSQL::Obj->new(
-            -DBNAME => 'brca2',
-            -USER   => 'ensro',
-            -HOST   => 'localhost',
+            -DBNAME => $db,
+            -USER   => $user,
+            -HOST   => $host,
             );
 
-        $db->static_golden_path_type("ACE");
+        $db->static_golden_path_type($static_type);
         my $stadp = $db->get_StaticGoldenPathAdaptor();
 
         my( $vc, $chr, $chrstart, $chrend );
-        my $fpc = '13q';
         if (defined($fpc)) {
             $vc = $stadp->fetch_VirtualContig_by_fpc_name($fpc);
         } else {
@@ -36,18 +56,13 @@ use GenomeCanvas;
                 );
         }
         
-        foreach my $map_c ($vc->_vmap->each_MapContig) {
-            my $start  = $map_c->start;
-            my $end    = $map_c->end;
-            my $raw_start = $map_c->rawcontig_start;
-            my $raw_end   = $map_c->rawcontig_end;
-            my $contig = $map_c->contig;
-            my $length = $contig->length;
-            my $name = $contig->id;
-            print "$name length=$length ($raw_start->$raw_end) start=$start end=$end\n";
-            
-        }
-        die "DEVEL EXIT";
+        my $tiling = GenomeCanvas::Band::TilingPath->new($vc);
+        $tiling->show_labels($labels);
+        
+        my $set = $gc->new_BandSet;
+        $set->add_Band($tiling);
+        $gc->residues_per_pixel($scale);
+        $gc->render;
     }
     elsif (0) {
         my $band = GenomeCanvas::Band->new;

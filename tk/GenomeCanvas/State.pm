@@ -53,9 +53,9 @@ sub residues_per_pixel {
     my( $self, $scale ) = @_;
     
     if ($scale) {
-        $self->{'_residues_per_pixel'} = $scale;
+        $self->{'_state_hash'}{'_residues_per_pixel'} = $scale;
     }
-    return $self->{'_residues_per_pixel'} || 2000;
+    return $self->{'_state_hash'}{'_residues_per_pixel'} || 2000;
 }
 
 sub frame_union {

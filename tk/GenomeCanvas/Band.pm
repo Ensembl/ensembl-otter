@@ -8,7 +8,7 @@ use Carp;
 use GenomeCanvas::State;
 
 use vars '@ISA';
-@ISA = 'GenomeCanvas::State';
+@ISA = ('GenomeCanvas::State');
 
 sub new {
     my( $pkg ) = @_;

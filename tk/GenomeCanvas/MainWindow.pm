@@ -7,7 +7,7 @@ use strict;
 use vars '@ISA';
 use Tk;
 
-@ISA = 'MainWindow';
+@ISA = ('MainWindow');
 
 sub new {
     my( $pkg, $title ) = @_;
