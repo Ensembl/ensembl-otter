@@ -1,0 +1,204 @@
+#!/usr/local/bin/perl -w
+
+use strict;
+use Carp;
+use Bio::Otter::Lace::Defaults;
+
+my $DEBUG = 0;
+
+{
+    my $dataset_name = 'human';
+    my $help         = 0;
+    my $separator    = "\t";
+    my $safe         = 1;
+    my @order        = qw(transcriptMatch name stabledotversion);
+
+    # just make it return an array
+    my $code_refs = {
+        name             => sub { return shift->gene_info->name->name(); },
+#  just an example 
+#        name2times       => sub { return (shift->gene_info->name->name()) x 2; },
+        stable_id        => sub { return shift->stable_id(); },
+        version          => sub { return shift->version(); },
+        stabledotversion => sub { my $g = shift; return $g->stable_id().".".$g->version; },
+        xml              => sub { return shift->toXMLString(); },
+        exons            => sub { my $g = shift; return map { $_->stable_id . "." . $_->version } @{$g->get_all_Exons}; },
+        exonMatch        => \&findExon_matches,
+        transcripts      => sub { my $g = shift; return map { $_->stable_id } @{$g->get_all_Transcripts}; },
+        transcriptMatch  => \&findTranscript_matches,
+        geneauthor       => sub { return shift->gene_info->author->name },
+    };
+    my $add   = sub { 
+        push(@order, shift);
+    };
+    ## my $proxy = sub { my ($n,$g) = @_; return $safe ? join(" ", $code_refs->{$n}->($g)) : $code_refs->{$n}->($g) };
+
+    Bio::Otter::Lace::Defaults::do_getopt(
+                                          'dataset=s'     => \$dataset_name,
+                                          'h|help'        => \$help,
+                                          'debug'         => \$DEBUG,
+                                          'separator=s'   => \$separator,
+                                          'safe!'         => \$safe,
+                                          'nodefaults'    => sub { @order = (); },
+                                          map { $_ => $add } keys(%$code_refs)
+                                          ) or usage();
+    usage() if $help;
+    usage() unless $dataset_name;
+      
+    # make otter client and get dataset
+    my $cl       = Bio::Otter::Lace::Defaults::make_Client();
+    my $ds       = $cl->get_DataSet_by_name($dataset_name) || die "No dataset by name '$dataset_name'";
+    my $genes    = genes_from_stable_ids($ds, \@ARGV );
+    print join($separator, @order) . "\n";
+    foreach my $geneObj(@$genes){
+        #print join($separator, map { $proxy->($_, $geneObj) } @order ) . "\n";
+        print join($separator, map { $code_refs->{$_}->($geneObj) } @order ) . "\n";
+    }
+    print "\n";
+    
+}
+
+
+sub findTranscript_matches { 
+    my ($g, @ret) = @_; 
+    my $m = { map {$_, 1} @ARGV }; 
+    foreach my $t(@{$g->get_all_Transcripts}){
+        push(@ret, $t->stable_id) if $m->{$t->stable_id};
+    }
+    return @ret;
+}
+sub findExon_matches { 
+    my ($g, @ret) = @_; 
+    my $m = { map {$_, 1} @ARGV }; 
+    foreach my $e(@{$g->get_all_Exons}){
+        push(@ret, $e->stable_id) if $m->{$e->stable_id};
+    }
+    return @ret;
+}
+
+# stolen from Bio::Otter::Lace::ResultSet
+# maybe should be somewhere modular
+
+sub genes_from_stable_ids{
+    my ($ds, $stable_ids) = @_;
+    $stable_ids ||= [];
+
+    my $dba = $ds->get_cached_DBAdaptor();
+    my $meta_con = $dba->get_MetaContainer();
+
+    my $prefix_primary = $meta_con->get_primary_prefix() || confess "Missing prefix.primary in meta table ";
+    my $prefix_species = $meta_con->get_species_prefix() || confess "Missing prefix.species in meta table ";
+
+    my $stable_id_types = {};
+    foreach my $id(@$stable_ids){
+        if($id =~ /^$prefix_primary$prefix_species([TPGE])\d+/i){
+            push(@{$stable_id_types->{uc $1}}, $id);
+        }else{
+            print STDERR "'$id' doesn't look like a stable id. It doesn't start with '$prefix_primary$prefix_species'\n";
+        }
+    }
+
+    my $geneAdapt       = $dba->get_GeneAdaptor();
+    my $exonAdapt       = $dba->get_ExonAdaptor();
+    my $transcriptAdapt = $dba->get_TranscriptAdaptor();
+    my $geneObjHash     = {};
+
+    $stable_id_types->{'G'} ||= [];
+    $stable_id_types->{'T'} ||= [];
+    $stable_id_types->{'P'} ||= [];
+    $stable_id_types->{'E'} ||= [];
+
+    eval{
+        foreach my $stable_id (@{$stable_id_types->{'G'}}){
+            print STDERR "Looking for '$stable_id' and assuming it's a gene\n";
+            my $geneObj     = $geneAdapt->fetch_by_stable_id($stable_id);
+            $geneObjHash->{$geneObj->stable_id . $geneObj->version} = $geneObj;
+        }
+    };   
+    if ($@){
+        ## assume error was caused by not being able to create a $geneNameObjList - as name didnt exist
+        print STDERR "sorry nothing found\n"; 
+        print STDERR $@ if $DEBUG;
+    }
+
+    eval{
+        foreach my $stable_id (@{$stable_id_types->{'T'}}){
+            print STDERR "Looking for '$stable_id' and assuming it's a transcript\n";
+            my $transcriptObj     = $transcriptAdapt->fetch_by_stable_id($stable_id);
+            my $geneObj = $geneAdapt->fetch_by_transcript_id($transcriptObj->dbID);
+            #my $alt_geneObj = $geneAdapt->fetch_by_transcript_stable_id($stable_id);
+            #warn "$geneObj " . $geneObj->stable_id . ".".$geneObj->version;
+            #warn "$alt_geneObj " . $alt_geneObj->stable_id . ".".$alt_geneObj->version;
+            $geneObjHash->{$geneObj->stable_id . $geneObj->version} = $geneObj;
+        }
+    };        
+    if ($@){
+        ## assume error was caused by not being able to create a $geneNameObjList - as name didnt exist
+        print STDERR "sorry nothing found\n"; 
+        print STDERR $@ if $DEBUG;
+    }
+    
+
+    eval{
+        foreach my $stable_id (@{$stable_id_types->{'P'}}){
+            print STDERR "Looking for '$stable_id' and assuming it's a translation\n";
+            my $transcriptObj = $transcriptAdapt->fetch_by_translation_stable_id($stable_id);
+            my $geneObj       = $geneAdapt->fetch_by_transcript_id($transcriptObj->dbID);
+            $geneObjHash->{$geneObj->stable_id . $geneObj->version} = $geneObj;
+        }
+    };        
+    if ($@){
+        ## assume error was caused by not being able to create a $geneNameObjList - as name didnt exist
+        print STDERR "sorry nothing found\n"; 
+        print STDERR $@ if $DEBUG;
+    }
+
+    eval{
+        foreach my $stable_id (@{$stable_id_types->{'E'}}){
+            print STDERR "Looking for '$stable_id' and assuming it's an exon\n";
+            my $exonObj = $exonAdapt->fetch_by_stable_id($stable_id);
+            my $geneObj = $geneAdapt->fetch_by_transcript_id($exonObj->dbID);
+            $geneObjHash->{$geneObj->stable_id . $geneObj->version} = $geneObj;
+        }
+    };        
+    if ($@){
+        ## assume error was caused by not being able to create a $geneNameObjList - as name didnt exist
+        print STDERR "sorry - exon IDs can't be fetched yet.\n"; 
+        print STDERR $@ if $DEBUG;
+    }
+
+    return [ values(%$geneObjHash) ];
+}
+
+sub usage{ exit(exec('perldoc', $0)) }
+
+
+=pod
+
+=head1 NAME
+
+gene_info_from_stable_id
+
+=head1 DESCRIPTION
+
+fetch gene info about the latest version associated with a stable id
+
+=head1 SYNOPSIS
+
+It will search the database for GENE, TRANSCRIPT, TRANSLATION stable ids
+EXON stable ids will be supported later.
+
+=head1 USAGE
+
+gene_info_from_stable_id -dataset <DATASET> [output options] [<list of stable ids>]
+
+ output options:
+    -name             gene name
+    -stable_id        gene stable id
+    -version          gene version
+    -exons            all the exons
+    -transcripts      all the transcripts
+    -transcriptMatch  the transcripts of the gene in the query
+    -separator        change the separator from default(<tab>)
+
+=cut
