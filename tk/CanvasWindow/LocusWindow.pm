@@ -50,7 +50,19 @@ sub last_exon_canvas{
 
 sub xace_seq_chooser{
     my ($self) = @_  ;
-    return $self->last_exon_canvas->xace_seq_chooser ;
+    if ($self->last_exon_canvas){
+        return $self->last_exon_canvas->xace_seq_chooser ;
+    }
+    else{
+        print STDERR "No reference to the Exon Canvas for this locus window ";
+    }
+}
+
+sub hide_window{
+    my ($self) = @_ ;
+    $self->toplevel->withdraw ;
+    $self->{'_exon_canvas'} = undef ;
+   
 }
 
 
@@ -58,8 +70,8 @@ sub initialize{
     my ($self) = @_ ;
     
     my $top = $self->toplevel;
-    $self->{'_locus_window'} = $top;
-    $top->protocol('WM_DELETE_WINDOW', sub{ $top->withdraw });
+    $top->protocol('WM_DELETE_WINDOW', sub{ $self->hide_window });
+    $top->Tk::bind('<Destroy>', sub{    $self = undef ;} );
     
     my $label_frame = $top->Frame;
     $label_frame->pack(-side => 'top');
@@ -69,11 +81,8 @@ sub initialize{
     $locus_name ||= '';
     $self->locus_name_ref(\$locus_name);
     
- 
-
     my $active_frame = $top->Frame()->pack(-side => 'top');
 
-    my $update_checkbutton = sub {$self->update_checkbutton} ;
     my $combo_box = $active_frame->ComboBox( -listheight => 10,
                                     -label      => 'Locus: ',
                                     -width      => 18,
@@ -83,10 +92,11 @@ sub initialize{
                                     -background         => 'white',
                                     -selectbackground   => 'gold',
 #                                    -font               => [$self->font, $self->font_size, 'normal'],
-                                    -command            => $update_checkbutton ,
+                                    -command            => sub {$self->update_checkbutton} ,
                                     )->pack(-side => 'left');
 
     $combo_box->bind('Return' , sub{$self->run_command});
+    
     $self->_combo_box($combo_box);
     
     my $checkbox_var = 0 ;
@@ -97,7 +107,8 @@ sub initialize{
                                                 
     my $button = $active_frame->Button( -text => 'Save', 
                                         -command => sub {$self->run_command } ,
-                                        )->pack(-side => 'left');
+                                        )->pack(-side => 'left');    
+    
 }
 
 sub _is_known_ref {
@@ -106,7 +117,7 @@ sub _is_known_ref {
         $self->{'_checkbox_ref'} = $var_ref ;   
     }
     return $self->{'_checkbox_ref'};
-}
+} 
 
 sub _combo_box{
     my ($self, $combo) =@_ ;
@@ -189,14 +200,11 @@ sub show{
         ${$self->locus_name_ref} = '';
     }
     elsif($state eq 'edit'){ # state eq merge / swap ...
-        $combo->configure(-listcmd => 
-            sub{
-                my @names = $self->xace_seq_chooser->list_Locus_names;
-                $combo->configure(
-                -choices   => [@names],
-                );       
-            });
-         ${$self->locus_name_ref} = $self->locus->name; 
+        $combo->configure(-listcmd => sub{  my @names = $self->xace_seq_chooser->list_Locus_names;
+                                            $combo->configure(  -choices   => [@names] );       
+                                            });
+        ${$self->locus_name_ref} = $self->locus->name;        
+        $combo->bind('<Destroy>' , sub { $self = undef }) ; ## need this otherwise we get a memory leak!
     }
 
     ##position window
@@ -205,8 +213,6 @@ sub show{
     ##my ($size, $xpos , $ypos) = $geometry =~ /(\d+x\d+)?[+-]?(\d+)?[+-]?(\d+)?/ ;
     ##warn "x= $xpos y = $ypos ";
     ##$self->toplevel()->geometry( "+50+50") ; 
-    
-    
 
     $combo->focus ;
     $self->toplevel->deiconify ;
@@ -218,7 +224,7 @@ sub show{
 sub run_command{
     my ($self) = @_ ;
     my $state = $self->state();
-    
+
     my $method = $state. '_locus' ;
     $self->$method;
 }
@@ -243,12 +249,10 @@ sub edit_locus{
                 -bitmap => 'question' )->Show(  );
             if ($answer eq 'merge') {
             # ... do something ...
-#                warn "merge";
                 $self->state('merge');
                 $self->merge_locus;
             }
             if ($answer eq 'replace'){
-#                warn "replace";
                 $self->state('swap');
                 $self->swap_locus ;
             }
@@ -287,7 +291,7 @@ sub swap_locus{
     # update ace display
     my $ace = $ec->SubSeq->ace_string;  
     $self->xace_seq_chooser->update_ace_display($ace);
-    $self->toplevel->withdraw ;  
+    $self->hide_window ;  
 }
 
 ## should not be needed any more - achieved with a 'new' folowed by a 'rename';
@@ -305,7 +309,7 @@ sub new_locus{
     my ($self) = @_ ;
     my $new = Hum::Ace::Locus->new;
     $self->store_new_locus($new) ; 
-    $self->toplevel->withdraw ;
+    $self->hide_window ;
 }
 
 sub set_gene_type{
@@ -313,10 +317,9 @@ sub set_gene_type{
     
     my $is_known = ${$self->_is_known_ref};
     if ($is_known) {
-#        warn "should be setting the gene type to known ";
+
         $locus->gene_type('Known');
     }else{
-        warn 'unsetting the gene type!!!!!!!' ;
 #        # ok, not the 'proper' way to have to do things .....
         $locus->unset_gene_type()  ;
     }
@@ -331,7 +334,7 @@ sub change_gene_type{
     my $ace = $locus->is_known_string ;
     my $xace = $self->xace_seq_chooser ;
     $xace->update_ace_display($ace);
-    $self->toplevel->withdraw ;
+    $self->hide_window ;
 }
 
 
@@ -362,7 +365,7 @@ sub store_new_locus{
     $ace .= $self->locus->is_known_string ;
 
     $xace->update_ace_display($ace);
-    $self->toplevel->withdraw ;
+    $self->hide_window ;
 }
 
 sub rename_locus{
@@ -383,7 +386,7 @@ sub rename_locus{
     my $xace = $self->xace_seq_chooser();
     $xace->rename_loci($old_name , $new_name ) ;
     
-    $self->toplevel->withdraw ;
+    $self->hide_window ;
 }
 
 sub merge_locus{
@@ -403,7 +406,7 @@ sub merge_locus{
     my $selected_name = ${ $self->locus_name_ref } ;
     $self->set_gene_type($current_locus);
     $xace->merge_loci($current_locus_name , $selected_name ) ;
-    $self->toplevel->withdraw ;
+    $self->hide_window ;
 }
 
 sub update_canvases{
@@ -465,11 +468,11 @@ sub get_locus_new_name{
     return $selection;
 }
 
-
 sub DESTROY{
     my ($self) = @_ ;
-    $self->xace_seq_chooser->remove_locus_window($self->locus);
-    $self->{'_exon_canvas'} = undef ; 
+
+    my ($type) = ref($self) =~ /([^:]+)$/;
+    warn "Destroying $type \n";
 }
 
 
