@@ -22,19 +22,16 @@ sub ResultSet {
     return $self->{'result_set'}  ;
 }
 
-
-sub get_CloneSequence_list {
-    my( $self , $force ) = @_;
-
-       
-    my $rs = $self->ResultSet ;
-    my $ss_list = $rs->get_all_SequenceSets ;  
+sub get_CloneSequence_list{
+    my ($self) = @_;
     
-    my @cs_list ;
-    foreach my $ss (@$ss_list){ 
-        my $ds = $self->SequenceSetChooser->DataSet;
+    my $rs = $self->ResultSet();
+    my $ss_list = $rs->get_all_SequenceSets();
+    my @cs_list;
+    foreach my $ss(@$ss_list){
+        my $ds = $self->SequenceSetChooser->DataSet();
         $ds->fetch_all_SequenceNotes_for_SequenceSet($ss);
-        push (@cs_list ,  @{$ss->CloneSequence_list});    
+        push(@cs_list, @{$ss->CloneSequence_list});
     }
     return \@cs_list;
 }
@@ -51,25 +48,6 @@ sub _refresh_SequenceSet{
 
 }
 
-# returns a list. Each element of the list is an annonymous array with 2 elements.
-# the first element is the CloneSequence and the second element is the assembly type
-sub get_CloneSequence_list_with_assembly{
-    my( $self ) = @_;  
-    my $rs = $self->ResultSet ;
-    my $ss_list = $rs->get_all_SequenceSets ;  
-    my @cs_assembly_list ;
-    foreach my $ss (@$ss_list){ 
-        my $ds = $self->SequenceSetChooser->DataSet;
-        $ds->fetch_all_SequenceNotes_for_SequenceSet($ss);
-        my $assembly_list = $ss->CloneSequence_list ;
-        my @newlist ;
-        foreach my $cs ( @$assembly_list) {
-            push (@cs_assembly_list ,  [ $cs , $ss->name ] );
-        } 
-    }
-    return \@cs_assembly_list; 
-}
-
 sub _write_access{
     my ($self) = @_ ;
     my $rs = $self->ResultSet or confess "no ResultSet attached" ;
@@ -80,15 +58,7 @@ sub _write_access{
 
 sub draw {
     my( $self ) = @_;
-    
-    # gets a list of CloneSequence objects.
-    # draws a row for each of them
-    
-    #my $cs_list   = $self->get_rows_list;
-    my $cs_assembly_list = $self->get_CloneSequence_list_with_assembly ;
 
-    
-    print STDERR " done\n";
     my $size      = $self->font_size;
     my $canvas    = $self->canvas;
     my $methods   = $self->column_methods;
@@ -96,230 +66,172 @@ sub draw {
     my $max_width = $self->max_column_width;
 
     $canvas->delete('all');
-   
 
     print STDERR "Drawing list...";
        
-    my $prev_assembly = '';#undef ; #$cs_assembly_list->[0]->[1] ;
-    my $prev_chr = '' ; #$$cs_assembly_list[0]->[0]->chromosome;
-    my $assembly_index = 0 ;
-    
     my $norm_font   =  ['Helvetica', $size, 'normal'];
     my $bold        =  ['Helvetica', $size, 'bold'];
     
-    my $gaps = 0;
     my $gap_pos = {};
-    my $assembly_indices = {} ;
     
-    for (my $i = 0; $i < @$cs_assembly_list; $i++) {   # go through each clone sequence
-        my $row = $i + $gaps;
-        my $cs = $cs_assembly_list->[$i]->[0];
-        my $assembly = $cs_assembly_list->[$i]->[1];
-        my $row_tag = "row=$row";
-        my $y = $row * $size;
+    my $rs   = $self->ResultSet();
+    my $list = $rs->matching_assembly_types();
 
+    my $row_tag  = sub { return "row=".shift(@_) };
+    my $col_tag  = sub { return "col=".shift(@_) };
+    my $cs_tag   = sub { return "cs=".shift(@_)  };
+    my $ass_tag  = sub { return "assembly=". shift(@_) };
+    my $y_coord  = sub { return $size * shift(@_) };
+    my $x_coord  = sub { return $size * shift(@_) };
+    my $col_meth = sub { return @{$methods->[shift(@_)]}[0,1] };
+    my $add_gap  = sub { $gap_pos->{shift(@_)} = 1 };
 
-        ##
-        my $font = $norm_font ;
+    my $row  = 0; # keep track of which row we're on
+    # go through each of the assemblies which match
+    foreach my $type(@$list){
+        my $ss      = $rs->get_SequenceSet_by_name($type);
+        my $cs_list = $ss->CloneSequence_list();
 
-        my $last = $cs_assembly_list->[$i - 1]->[0];
+        # display a header for the assembly
+        $canvas->createText(
+                            $x_coord->(1), $y_coord->($row),
+                            -anchor => 'nw',
+                            -font   => $bold,
+                            -tags   => [$row_tag->($row), 'gap_label'],
+                            -text   => "Assembly : $type    Chromosome : " . $cs_list->[0]->chromosome->name,
+                            );
+        $add_gap->($row);
+        $row++; # increment the number after drawing this row
+        my $prev_cs;
+        
+        # go through each of the clone sequences for this assembly
+        for(my $i = 0; $i < @$cs_list; $i++){
+            my $cs = $cs_list->[$i];
+            $prev_cs ||= $cs;
 
-        my $gap_type = '';
-        my $gap = 0;
-
-        ## split up assemblies first
-        if ($assembly ne $prev_assembly){
-           # put gaps in here
-           $gap_type = "Assembly : $assembly    Chromosome : " . $cs->chromosome->name   ;
-           $assembly_index = 0 ;
-           $prev_assembly = $assembly;
-           $prev_chr = $cs->chromosome ;
-           $font = $bold;    
-        }        
-        ## split on chromosomes next
-        elsif ($prev_chr != $cs->chromosome ){
-            $gap_type = "Chromosome : ". $cs->chromosome->name ;
-            $prev_chr = $cs->chromosome ;
-        }
-        ## split when contigs start doesnt match up with prev contig end
-        elsif ($cs->can('chr_start')){
-            $gap = $cs->chr_start - $last->chr_end - 1;
-            $gap_type = 'Gap' if $gap > 0 ;
-        }
-
-
-        if  ($gap_type =~ /[Assembly||Chromosome||Gap]/  ) {
-            $gap_pos->{$row} = 1;              
-
-            my $text ;
-            my $gap_size ;
-
-            if ($gap_type eq 'Gap' ){
-                $gap_size = reverse $gap;
-                $gap_size =~ s/(\d{3})(?=\d)/$1 /g;
-                $gap_size = reverse $gap_size;
-
-                $text = "GAP ($gap_size bp)" ;
+            # check for a gap here.
+            my $gap_text = '';
+            if($prev_cs->chromosome() != $cs->chromosome()){
+                $gap_text = "Chromosome : " . $cs->chromosome->name();
+            }elsif($cs->can('chr_start')){
+                my $gap = $cs->chr_start - $prev_cs->chr_end - 1;
+                if($gap > 0){
+                    my $gap_size = reverse $gap;
+                    $gap_size =~ s/(\d{3})(?=\d)/$1 /g;
+                    $gap_size = reverse $gap_size;
+                    $gap_text = qq`GAP ($gap_size bp)`;
+                }
             }
-            else{
-                $text = $gap_type
-            }            
+            $prev_cs = $cs;
+            if($gap_text){
+                $canvas->createText(
+                                    $x_coord->(1), $y_coord->($row),
+                                    -anchor => 'nw',
+                                    -font   => $bold,
+                                    -tags   => [$row_tag->($row), 'gap_label'],
+                                    -text   => $gap_text ,
+                                    );
+                $add_gap->($row);
+                $row++;
+            }
 
-            $canvas->createText(
-                $size, $y,
-                -anchor => 'nw',
-                -font   => $font,
-                -tags   => [$row_tag, 'gap_label'],
-                -text   => $text ,
-                );
-            $gaps++;
-            $row++;                
+
+            # draw each of the columns for this clone sequence
+            my $no_cols = scalar(@$methods);
+            for (my $col = 0; $col < $no_cols; $col++) { # go through each method
+                my ($calling_method, $arg_method) = $col_meth->($col);
+
+                my $opt_hash = $arg_method->($cs, $i , $self) if $arg_method ;
+                $opt_hash->{'-anchor'} ||= 'nw';
+                $opt_hash->{'-font'}   ||= $norm_font;
+                $opt_hash->{'-width'}  ||= $max_width;
+                $opt_hash->{'-tags'}   ||= [];
+                $opt_hash->{'-fill'}     = 'red' if $cs->is_match && $col == 1;
+                push(@{$opt_hash->{'-tags'}}, 
+                     $row_tag->($row),
+                     $col_tag->($col),
+#                     $ass_tag->($type),
+                     $cs_tag->($row - scalar(keys(%$gap_pos))));
+                
+                $calling_method->($canvas,  $x_coord->($col) , $y_coord->($row) ,  %$opt_hash);  ## in most cases $calling_method will be $canvas->createText   
+            }
+            $self->cs_assembly_lookup($row - scalar(keys(%$gap_pos)), $type);
+            warn $cs->accession . " - $type - " . $row_tag->($row) . " - " . $cs_tag->($row - scalar(keys(%$gap_pos))) . " " .$ass_tag->($type)." \n";
+            $row++;
         }
-
-        #--
-
-        $row_tag = "row=$row";
-        $y = $row * $size;
-        
-        my $assembly_tag = "assembly=$assembly" ;
-        my $assembly_index_tag = "assembly_index=$assembly_index" ;  # this is the index of the clone relative to the assembl
-        $assembly_index ++ ;
-        
-        for (my $col = 0; $col < @$methods; $col++) { # go through each method
-            my $x = $col * $size;
-
-            my $col_tag = "col=$col";
-            my $meth_pair = $methods->[$col];
-            my $calling_method = @$meth_pair[0]; 
-            my $arg_method = @$meth_pair[1] ;
-            
-	    my $opt_hash = $arg_method->($cs, $i , $self) if $arg_method ;
-	    $opt_hash->{'-anchor'} ||= 'nw';
-	    $opt_hash->{'-font'}   ||= $norm_font;
-	    $opt_hash->{'-width'}  ||= $max_width;
-	    $opt_hash->{'-tags'}   ||= [];
-	    push(@{$opt_hash->{'-tags'}}, $row_tag, $col_tag, $assembly_tag,  $assembly_index_tag , "cs=$i");
-            
-            $calling_method->($canvas,  $x , $y ,  %$opt_hash);  ## in most cases $calling_method will be $canvas->createText   
-        } 
     }
     print STDERR " done\n";
-    my $col_count = scalar @$methods  + 1; # +1 fopr the padlock (non text column)
-    my $row_count = scalar @$cs_assembly_list + $gaps;
-    
+    my $col_count = scalar @$methods  + 1; # +1 for the padlock (non text column)
+
     print STDERR "Laying out table...";
-    $self->layout_columns_and_rows($col_count, $row_count);
+    $self->layout_columns_and_rows($col_count, $row);
     print STDERR " done\n";
     print STDERR "Drawing background rectangles...";
-    $self->draw_row_backgrounds($row_count, $gap_pos);
+    $self->draw_row_backgrounds($row, $gap_pos);
     print STDERR " done\n";
-    $self->message($self->empty_canvas_message) unless scalar @$cs_assembly_list;
+    $self->message($self->empty_canvas_message) if !$row;
+    $self->refresh_column(3);
     $self->fix_window_min_max_sizes;
+    
 }
+
 
 sub run_lace{
     my ($self) = @_ ;
-    ### Prevent opening of sequences already in lace sessions
-    
-    return unless $self->set_selected_from_canvas; # sets the selected clones on the canvas as selected in the ss object!
-    my $rs = $self->ResultSet ;
-    my $ss_list = $self->selected_SequenceSets ;
-    return unless $self->check_for_duplicates($ss_list);
-    
-    ## going to open a new Lace session for each diff SequenceSet    
-    foreach my $ss ( @$ss_list){
-        my $selected = $ss->selected_CloneSequences   ;
-        my $number_selected = ( $selected ? scalar( @$selected) : 0 )  ;
 
-        next unless $number_selected ;  # dont want to try and open ss with unselected clones
-        my @names = map {$_->clone_name}  @{$ss->selected_CloneSequences} ;
-        my $title = $self->selected_sequence_string($ss);
-        $self->_open_SequenceSet($ss, $title) ;
+    ### Prevent opening of sequences already in lace sessions    
+    return unless $self->set_selected_from_canvas; # sets the selected clones on the canvas as selected in the ss object!
+
+    my @pair = $self->get_SequenceSet_index_list_of_selected();
+
+    my ($ss, $indices) = @pair;
+    my $selected = $ss->selected_CloneSequences();
+
+    my $number_selected = ( $selected ? scalar( @$selected) : 0 )  ;
+
+    next unless $number_selected ;  # dont want to try and open ss with unselected clones
+    my @names = map {$_->clone_name}  @{$ss->selected_CloneSequences} ;
+    print "@names";
+    my $title = $self->selected_sequence_string($ss, $indices);
+    $self->_open_SequenceSet($ss, $title);
+
+}
+sub cs_assembly_lookup{
+    my ($self, $cs_idx, $type) = @_;
+    if(defined($cs_idx) && $type){
+        $self->{'_cs2assembly'}->{$cs_idx} = $type;
     }
+    return $self->{'_cs2assembly'} || {};
 }
 
 # sets the CloneSequence list in each SequenceSet object ( cs's selected on the canvas)
 sub set_selected_from_canvas{
-    my ($self) = @_ ;
+    my ($self) = @_;
+    # this does the work
+    my @pair = $self->get_SequenceSet_index_list_of_selected();
 
-    my $rs = $self->ResultSet;
-    my $cs_pair_list = $self->get_CloneSequence_list_with_assembly  ;
-    if (my $sel_i = $self->selected_CloneSequence_indices){
-        # arrange selected clones by sequence set and store in a hash
-        my %selected_hash ;
-        my $selected ;
-        my $count =  0;
-        foreach my $index (@$sel_i ){  
-            my $pair = $cs_pair_list->[$index] ;
-            my $cs = $pair->[0] ;
-            my $ss_name = $pair->[1] ;    
-                 
-            push ( @{ $selected_hash{$ss_name} } , $cs ) ;
-        }    
-        
-        # remove previous selected sequences
-        foreach my $ss (@{$rs->get_all_SequenceSets}){
-            $ss->unselect_all_CloneSequences ;
-        }
-        
-        # go through each element of the hash and store selected ones in SS object        
-        while (my ($ss_name , $selected) = each (%selected_hash)) {
-            if ( my $ss = $rs->get_SequenceSet_by_name($ss_name)){
-                $ss->selected_CloneSequences($selected);
-            }else{
-                confess "Could not find SequenceSet with name $ss_name";
-            }
-        }
-        
-        foreach my $ss (@{$rs->get_all_SequenceSets}){
-            my $cs_list = $ss->selected_CloneSequences;
-            if ($cs_list){
-                warn "assembly ". $ss->name . "number selected :" . scalar(@$cs_list) ;
-            }
-            else{
-                warn "nothing selected for " . $ss->name ;
-            }
-        }
-        
-        return 1 ;   
+    if(scalar(@pair) == 2){
+        my ($ss, $allowed_idx) = @pair;
+        my $cs_list = $ss->CloneSequence_list();
+        my $selected = [ @{$cs_list}[@$allowed_idx] ];
+        $ss->selected_CloneSequences($selected);
+        return 1;
+    }else{
+        return 0;
     }
-    else{
-        foreach my $ss (@{$rs->get_all_SequenceSets}){
-            $ss->unselect_all_CloneSequences ;
-        }
-        return 0;    
-    }  
 }
 
 ##returns the indices of the selected clones
-sub selected_CloneSequence_indices {
-    my( $self ) = @_;
-    
-    my $canvas = $self->canvas;
-    my $select = [];
-    foreach my $obj ($canvas->find('withtag', 'selected&&clone_seq_rectangle')) {
-        my ($i) = map /^cs=(\d+)/, $canvas->gettags($obj);
-        unless (defined $i) {
-            die "Can't see cs=# in tags: ", join(', ', map "'$_'", $canvas->gettags($obj));
-        }
-        push(@$select, $i);
-    }
-    
-    if (@$select) {
-        return $select;
-    } else {
-        return;
-    }
-}
 sub popup_missing_analysis{
     my ($self) = @_;
-    my $index = $self->get_current_CloneSequence_index ; 
+    #my $index = $self->get_current_CloneSequence_index ; 
+    my ($ss, $index) = $self->get_SequenceSet_index_of_current;
     unless (defined $index ){
         return;
     }
-    unless ( $self->check_for_Status($index) ){
+    unless ( $self->check_for_Status($ss, $index) ){
         # window has not been created already - create one
-        my $cs =  $self->get_CloneSequence_list->[$index];
+        my $cs =  $ss->CloneSequence_list->[$index];
         my $using_no_pipeline = $cs->pipelineStatus->unavailable();
         if (!$using_no_pipeline){
             my $top = $self->canvas->Toplevel();
@@ -327,7 +239,7 @@ sub popup_missing_analysis{
             my $hp  = CanvasWindow::SequenceNotes::Status->new($top, 550 , 50);
 	    # $hp->SequenceNotes($self); # can't have reference to self if we're inheriting
 	    # clean up just won't work.
-            $hp->SequenceSet($self->current_SequenceSet);
+            $hp->SequenceSet($ss);
             $hp->SequenceSetChooser($self->SequenceSetChooser);
             $hp->name($cs->contig_name);
             $hp->clone_index($index) ;
@@ -342,22 +254,24 @@ sub popup_missing_analysis{
 }
 sub popup_ana_seq_history{
     my ($self) = @_;    
-    my ($ss , $index) = $self->current_SequenceSet ; 
+    my ($ss , $index) = $self->get_SequenceSet_index_of_current; 
     
-    unless (defined $ss ){
+    unless (defined($index)){
         return;
     }
   
-    unless ( $self->check_for_History($ss , $index) ){
+    unless ( $self->check_for_History($ss, $index) ){
         # window has not been created already - create one
-        my $cs =  $self->get_CloneSequence_list->[$index];
+        my $cs =  $ss->CloneSequence_list->[$index];
         my $clone_list = $cs->get_all_SequenceNotes; 
         if (@$clone_list){
             my $top = $self->canvas->Toplevel();
             $top->transient($self->canvas->toplevel);
-            my $hp  = CanvasWindow::SequenceNotes::SearchHistory->new($top, 550 , 50);  
+            use CanvasWindow::SequenceNotes::History;
+            #my $hp  = CanvasWindow::SequenceNotes::SearchHistory->new($top, 550 , 50);  
+            my $hp  = CanvasWindow::SequenceNotes::History->new($top, 650 , 50);  
             $hp->SequenceSet($ss);
-            $hp->ResultSet($self->ResultSet);
+            #$hp->ResultSet($self->ResultSet);
             $hp->SequenceSetChooser($self->SequenceSetChooser);
             $hp->name($cs->contig_name);
             $hp->clone_index($index) ;
@@ -374,108 +288,96 @@ sub popup_ana_seq_history{
 # so we dont bring up copies of the same window
 sub check_for_History{
     my ($self , $ss , $index) = @_;
-    return 0 unless defined($ss); # 0 is valid index
+    return 0 unless defined($index); # 0 is valid index
 
     my $hist_win = $self->{'_History_win'};
     return 0 unless $hist_win;
     $hist_win->clone_index($index);
-    $hist_win->SequenceSet($ss) ;
+    $hist_win->SequenceSet($ss);
     $hist_win->draw();
     $hist_win->canvas->toplevel->deiconify;
     $hist_win->canvas->toplevel->raise;
     return 1;
 }
+sub get_SequenceSet_index_of_current{
+    my ($self) = @_;
+    warn "get_SequenceSet_index_of_current called \n";
+    # get the hash to correct the indices from cs=n to indices for each SeqSet
+    my $idx_adjust = $self->__index_adjust_hash(); 
 
+    if(defined(my $index = $self->get_current_CloneSequence_index)){
+        # this is a lookup between cs=n index and assembly type
+        my $lookup = $self->cs_assembly_lookup();
+        my $name   = $lookup->{$index};
+        my $rs     = $self->ResultSet();
+        my $ss     = $rs->get_SequenceSet_by_name($name);        
+        my $adjusted_idx = $index - $idx_adjust->{$name};
 
-#returns the SequenceSet of the 'current' clone as well as the index of that clone in the SequenceSet
-sub current_SequenceSet{
-    my ($self ) = @_ ;
-    
-    # get assembly from tag
-    my $canvas = $self->canvas ;
-    my ($ss_name , $assem_index);
-    # get the selected clone from canvas canvas
-    foreach my $obj ($canvas->find('withtag', "current")) {
-        my @tags = $canvas->gettags($obj);
-        ($ss_name) = map /^assembly=(\S+)/ , @tags;
-        ($assem_index) = map /^assembly_index=(\d+)/ , @tags ;
-        last if defined $ss_name ;
+        warn "Found type '$name' and index $adjusted_idx \n";
+        return ($ss, $adjusted_idx);
     }
-    return unless defined($ss_name) ; 
-   
-    # get appropriate SS
-    my $ss = $self->ResultSet->get_SequenceSet_by_name($ss_name) ;
-    return ($ss , $assem_index ) ;
+    return ();
 }
 
-
-#returns the sequence_sets of the selected clones    
-sub selected_SequenceSets{
-    my ($self) = @_ ;
+sub get_SequenceSet_index_list_of_selected{
+    my ($self) = @_;
     
-    my %ss_hash ;
-    my @ss_list ;
+    # get the hash to correct the indices from cs= to indices for each SeqSet
+    my $idx_adjust = $self->__index_adjust_hash(); 
     
-    return unless my $cs_pairs = $self->get_CloneSequence_list_with_assembly ;
-    
-    foreach my $pair (@$cs_pairs){
-
-        my $assembly_name = $pair->[1] ;
-        unless (exists ($ss_hash{$assembly_name})){
-            $ss_hash{$assembly_name} = $self->ResultSet->get_SequenceSet_by_name($assembly_name) ;   
-        } 
+    my $message = '"Nothing is selected"';
+    if (my $sel_i = $self->selected_CloneSequence_indices){
+        my $first;
+        my @allowed_idx = ();
+        # lookup between clone seq (cs=n) index and assembly type 
+        my $lookup = $self->cs_assembly_lookup();
+        foreach my $selected_idx(@$sel_i){
+            $first ||= $lookup->{$selected_idx};
+            if($first eq $lookup->{$selected_idx}){
+                push(@allowed_idx, $selected_idx - $idx_adjust->{$first});
+            }else{
+                $message = "Please select clones from just one Sequence Set.";
+            }
+        }
+        warn " type $first  - @allowed_idx\n";
+        unless($first){
+            return $self->message("Error");
+            return ();
+        }
+        my $rs = $self->ResultSet();
+        my $ss = $rs->get_SequenceSet_by_name($first);
+        unless($ss){
+            $self->message("Couldn't find Sequence Set by the name of '$first'.");
+            return ();
+        }
+        return $ss, \@allowed_idx;
     }
-    
-    #stick sequence sets in an array
-    while (my ($name , $ss) = each (%ss_hash) ) {
-        push @ss_list , $ss ;
-    }
-    
-    return \@ss_list ; 
-} 
+    $self->message($message);
+    return ();
+}
 
 
 # creates a string based on the selected clones, with commas seperating individual values or dots to represent a continous sequence
 sub selected_sequence_string{
-    my ($self , $ss) = @_ ;
+    my ($self, @pair) = @_ ;
     
-    my $assembly_type = $ss->name ;
-    my $canvas = $self->canvas;
-    my @selected  ;
-    foreach my $obj ($canvas->find('withtag', 'selected&&clone_seq_rectangle')) {
+    return "Error getting title" unless @pair == 2;
 
-        my ($i ) = map /^row=(\d+)/, $canvas->gettags($obj);
-        unless (defined $i) {
-            die "Can't see cs=# in tags: ", join(', ', map "'$_'", $canvas->gettags($obj));
-        }
-        my $ass_index = undef;
-        my $ass_type = undef ;
+    my ($ss, $selected) = @pair;
 
-        foreach my $obj2 ( $canvas->find('withtag' , "row=$i&&!clone_seq_rectangle")  ){
-            my @tags =  $canvas->gettags($obj2) ;
-            last if defined $ass_index ;   
-            ($ass_index) = map /^assembly_index=(\d+)/ , $canvas->gettags($obj2) ;
-            ($ass_type) = map /^assembly=(\S+)/ , $canvas->gettags($obj2) ;           
-        }
-        if( ! defined ($ass_index)){
-            die "cant find the assembly_index of clone " . ($i + 1) . " in the list" ;
-        }
-        push(@selected, $ass_index) if $ass_type eq $ss->name;
-    }   
-    
-    my $prev = shift @selected;
     my $string = "Assembly " . $ss->name ;
     
-    if (scalar(@selected) == 0){ 
+    my $prev = shift @$selected;
+    if (scalar(@$selected) == 0){ 
         $string .= ", clone " . ($prev + 1);
     }
     else{
         $string .= ", clones " . ($prev + 1);
         my $continous = 0 ;
 
-        foreach my $element (@selected){
+        foreach my $element (@$selected){
             if (($element  eq ($prev + 1))){
-                if ($element == $selected[$#selected]){
+                if ($element == $selected->[$#{$selected}]){
                     $string .= (".." . ($element + 1));
                 }
                 $continous = 1;
@@ -493,27 +395,22 @@ sub selected_sequence_string{
     return $string ;
 }
 
+sub __index_adjust_hash{
+    my $self = shift;
+    my $rs   = $self->ResultSet();
 
-# checks that the same clone has not been selected twice (as this object may display the same Clone under different assemblies)
-# return value of 1 signifies no duplicates;
-sub check_for_duplicates{
-    my ($self , $ss_list) = @_;
-    my %hash ; 
-    foreach my $ss ( @$ss_list){          
-        my $cs_list = $ss->selected_CloneSequences ;
-
-        foreach my $cs (@$cs_list){
-            if (defined $hash{$cs->clone_name}){
-                $self->message('You appear to be trying to open the same clone ' . $cs->clone_name . ' on different assemblies. Please select one version to open' );     
-                return 0 ;
-            }
-            else{
-                $hash{$cs->clone_name} = $cs ;
-            }
-        }
+    # always get them in this order
+    my $all_ss_names = $rs->matching_assembly_types(); 
+    my $idx_adjust   = {};
+    my $total = 0;
+    $idx_adjust->{$all_ss_names->[0]} = 0;
+    for(my $i = 1;$i < @$all_ss_names; $i++){
+        my $p       = $all_ss_names->[$i-1];
+        my $p_count = scalar(@{$rs->get_SequenceSet_by_name($p)->CloneSequence_list()});
+        $total     += $p_count;
+        $idx_adjust->{$all_ss_names->[$i]} = $total;
     }
-    return 1 ;
+    return $idx_adjust;
 }
-
 
 1;
