@@ -91,13 +91,24 @@ We are proposing an xml format to store the following information
 </li>
 
 </ul>
+
 <p>
+
+We have decided to use <b>locus</b> as the name
+of the tag for the gene objects.
+
+</p>
+
+<p>
+
 Genes contain a group of transcripts and
 transcripts contain a group of exons so we have
 three levels of objects we can annotate.  Genes,
 transcripts, translations and exons can all have
 a stable_id attached.
+
 </p>
+
 
 <h2>Authors</h2>
 
@@ -407,11 +418,17 @@ contains        sequence_set
 
 <sequence_set>
 description     a genomic region - part or whole of a chromosome
+contains        assembly_type
 contains        sequence_fragment
-contains        gene
+contains        locus
 contains        dna
 mandatory
 multiple
+
+<assembly_type>
+description     a name that identifies the assembly from which the genomic region is taken
+value           string
+mandatory
 
 <sequence_fragment>
 description     a genomic region - part or whole of a chromosome
@@ -482,7 +499,7 @@ description     email address of the author who created or last modified the rem
 value           string
 
 
-<gene>
+<locus>
 description     structure and annotations of a gene
 contains        name
 contains        stable_id
