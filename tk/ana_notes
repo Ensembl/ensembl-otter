@@ -12,15 +12,21 @@ use Hum::Conf qw{ HUMACESERVER_HOST HUMGIFACESERVER_PORT };
 use GenomeCanvas::Band::SeqChooser;
 use Carp;
 use Getopt::Long 'GetOptions';
+use Hum::SubmissionVersion;
 
 my $user;
+my $nospangle;
 {
     my $list_sets = 0;
     GetOptions(
         'help!'     => \&useage,
         'list!'     => \$list_sets,
 	'user:s'    => \$user,
+        'ns'        => \$nospangle,
         ) or useage();
+
+    # check global access to database
+    exit 0 unless Hum::SubmissionVersion::check_version();
     
     # user is login unless overridden by 'user'
     # (this would be place to put password check)
@@ -389,8 +395,12 @@ sub default_cursor {
             return 1;
         }
         elsif (defined $pid) {
+	    my $other_param;
+	    if($nospangle){
+	    	$other_param.=" -ns ";
+            }
             #exec('lace', '-path', $lace_dir, '-view', '-noens', @seq_name_list);
-            exec('lace', '-path', $lace_dir, '-user', $user, @seq_name_list);
+            exec('lace', '-path', $lace_dir, '-user', $user, $other_param, @seq_name_list);
         }
         else {
             die "Error: Can't fork : $!";
