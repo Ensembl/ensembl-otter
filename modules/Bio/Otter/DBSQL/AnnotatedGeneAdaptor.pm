@@ -173,10 +173,11 @@ sub fetch_by_Slice{
         $self->annotate_gene($g);
         push(@$latest_genes, $g);
     }
-    %genes = ();
+    %genes = ();    # Don't need genes hash any more
 
     # Truncate gene components to Slice
-    foreach my $g (@$latest_genes) {
+    for (my $j = 0; $j < @$latest_genes;) {
+        my $g = $latest_genes->[$j];
         my $tsct_list = $g->get_all_Transcripts;
         
         for (my $i = 0; $i < @$tsct_list;) {
@@ -193,6 +194,13 @@ sub fetch_by_Slice{
                 splice(@$tsct_list, $i, 1);
                 $g->gene_info->truncated_flag(1);
             }
+        }
+        
+        # Remove any genes that don't have transcripts left.
+        if (@$tsct_list) {
+            $j++;
+        } else {
+            splice(@$latest_genes, $j, 1);
         }
     }
 
