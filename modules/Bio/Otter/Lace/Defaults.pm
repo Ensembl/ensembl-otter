@@ -14,7 +14,9 @@ use Bio::Otter::Lace::Client;
 # and which are needed to create the client.
 my @option_fields = qw{ host port author email write_access };
 
-my $defaults = {};
+my $defaults = {
+    'pipeline'  => 1,
+    };
 my $save_option = sub {
     my( $option, $value ) = @_;
 
