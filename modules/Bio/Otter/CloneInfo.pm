@@ -245,6 +245,69 @@ sub source{
 
 }
 
+sub equals {
+    my ($self,$obj) = @_;     
+
+    if (!defined($obj)) { 
+        $self->throw("Need an object to compare with");
+    }
+    if (!$obj->isa("Bio::Otter::CloenInfo")) {
+        $self->throw("[$obj] is not a Bio::Otter::CloneInfo");
+    }
+
+    if ($self->accession ne $obj->accession ||
+        $self->author->equals($obj->author) == 0) {
+        return 0;
+    }      
+
+    if ($self->source ne $obj->source) {
+       return 0;
+    }
+
+    my @remark1 = $self->remark;
+    my @remark2 = $obj->remark;
+
+    if (scalar(@remark1) != scalar(@remark2)) {
+      return 0;
+    }
+
+    foreach my $rem (@remark1) {
+        my $found = 0;
+
+        foreach my $rem2 (@remark2) {
+            if ($rem->equals($rem2)) {
+                $found = 1;
+            }
+        }
+        if ($found == 0) {
+            return 0;
+        }
+    }
+
+
+    my @key1 = $self->keyword;
+    my @key2 = $obj->keyword;
+
+    if (scalar(@key1) != scalar(@key2)) {
+      return 0;
+    }
+
+    foreach my $rem (@key1) {
+        my $found = 0;
+
+        foreach my $rem2 (@key2) {
+            if ($rem eq $rem2) {
+                $found = 1;
+            }
+        }
+        if ($found == 0) {
+            return 0;
+        }
+    }
+   
+    return 1;
+}
+
 
 1;
 
