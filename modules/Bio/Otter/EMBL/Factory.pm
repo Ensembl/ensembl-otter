@@ -145,6 +145,9 @@ sub embl_setup {
     
     my ( $self, $accession, $seq_version ) = @_;
 
+    $self->accession($accession) if $accession;
+    $self->sequence_version($seq_version) if $seq_version;
+
     my $embl = Hum::EMBL->new;    
     my @sec;
     if ($self->secondary_accs) {
@@ -168,7 +171,7 @@ sub embl_setup {
     #Sequence length
     my $seq_length;
     unless ($seq_length = $self->seq_length) {
-        $seq_length = $self->get_clone_length_from_otter($accession, $seq_version);
+        $seq_length = $self->get_clone_length_from_otter;
     }
     confess "Could not get clone length\n" unless $seq_length;
 
@@ -193,7 +196,7 @@ sub embl_setup {
     # DE line
     my $description;
     unless ($description = $self->description) {
-        $description = $self->get_description_from_otter($accession, $seq_version);
+        $description = $self->get_description_from_otter;
     }
     my $de = $embl->newDE;
     $de->list($description);
@@ -204,7 +207,7 @@ sub embl_setup {
     if ($self->keywords) {
         push(@keywords, $self->keywords);
     }
-    push (@keywords, $self->get_keywords_from_otter($accession, $seq_version));
+    push (@keywords, $self->get_keywords_from_otter);
     if (@keywords) {
         my $kw = $embl->newKW;
         $kw->list(@keywords);
@@ -266,6 +269,26 @@ sub secondary_accs {
         $self->{'_bio_otter_embl_factory_secondary_accs'} = $value;
     }
     return $self->{'_bio_otter_embl_factory_secondary_accs'};
+}
+
+#Used
+sub accession {
+    my ( $self, $value ) = @_;
+    
+    if ($value) {
+        $self->{'_bio_otter_embl_factory_accession'} = $value;
+    }
+    return $self->{'_bio_otter_embl_factory_accession'};
+}
+
+#Used
+sub sequence_version {
+    my ( $self, $value ) = @_;
+    
+    if ($value) {
+        $self->{'_bio_otter_embl_factory_sequence_version'} = $value;
+    }
+    return $self->{'_bio_otter_embl_factory_sequence_version'};
 }
 
 #Used
@@ -557,22 +580,59 @@ sub make_embl_ft {
 
 #Used
 sub get_clone_length_from_otter {
-    my ( $self, $accession, $sv ) = @_;
+    my ( $self ) = @_;
     
-    my ($otter_db, $slice_aptr, $gene_aptr, $annotated_clone_aptr) 
-        = $self->get_DBAdaptors();
-    
-    my $annotated_clone = $annotated_clone_aptr->fetch_by_accession_version(
-        $accession, $sv) or confess "Could not fetch AnnotatedClone by accession_version"
-        . "acc: $accession sv: $sv";
-
+    my $annotated_clone = $self->annotated_clone();
     my $contigs = $annotated_clone->get_all_Contigs();
     if (@$contigs > 1) {
-        warn "Can't work clone length for: $accession . $sv\n";
-        return;
+        confess warn "Can't work clone length for ". $self->accession
+            . $self->sequence_version;
     }
     my $length = length($contigs->[0]->seq);
     return $length;
+}
+
+=head2  _cache_annotated_clone
+
+Internal method, to fetch clone from Otter using accession and
+sequence version attributes. Confess if these have not
+previously set.
+
+=cut
+
+sub _cache_annotated_clone {
+    my ( $self ) = @_;
+    
+    my $accession = $self->accession or confess "accession not set";
+    my $seq_version = $self->sequence_version
+        or confess "sequence_version not set";
+        
+    my ($otter_db, $slice_aptr, $gene_aptr, $annotated_clone_aptr) 
+        = $self->get_DBAdaptors();
+
+    my $annotated_clone = $annotated_clone_aptr->fetch_by_accession_version(
+        $accession, $seq_version)
+        or confess "Could not fetch AnnotatedClone by accession_version"
+        . "acc: $accession sv: $seq_version";
+        
+    $self->{'_bio_otter_embl_factory_annotated_clone'} = $annotated_clone;
+}
+
+=head2 annotated_clone
+
+Returns the AnnotatedClone object point by accession and sequence_version.
+If it is not already in memory, it is retrieved and stored with
+_cache_annotated_clone
+
+=cut
+
+sub annotated_clone {
+    my ( $self ) = @_;
+    
+    unless ($self->{'_bio_otter_embl_factory_annotated_clone'}) {
+        $self->_cache_annotated_clone();
+    }
+    return $self->{'_bio_otter_embl_factory_annotated_clone'};
 }
 
 =head2 get_description_from_otter
@@ -586,20 +646,15 @@ Warns if no CloneRemarks are fetched for the clone, returning undef.
 =cut
 
 sub get_description_from_otter {
-	my ( $self, $accession, $sv ) = @_;
+	my ( $self ) = @_;
     
-    my ($otter_db, $slice_aptr, $gene_aptr, $annotated_clone_aptr) 
-        = $self->get_DBAdaptors();
-
-    my $annotated_clone = $annotated_clone_aptr->fetch_by_accession_version(
-        $accession, $sv) or confess "Could not fetch AnnotatedClone by accession_version"
-        . "acc: $accession sv: $sv";
-
+    my $annotated_clone = $self->annotated_clone();
     my $clone_info = $annotated_clone->clone_info
         or confess "could not get: CloneInfo object";
         
     my @clone_remarks = $clone_info->remark
-        or warn "No CloneRemarks for acc: $accession sv: $sv";
+        or warn "No CloneRemarks for annotated clone " . $self->accession
+            . "." . $self->sequence_version;
 
     my ($description_txt);
     foreach my $clone_remark (@clone_remarks) {
@@ -624,20 +679,15 @@ Warns if no Keyword objects are fetched for the clone, returning undef.
 =cut 
 
 sub get_keywords_from_otter {
-	my ( $self, $accession, $sv ) = @_;
+	my ( $self ) = @_;
     
-    my ($otter_db, $slice_aptr, $gene_aptr, $annotated_clone_aptr) 
-        = $self->get_DBAdaptors();
-
-    my $annotated_clone = $annotated_clone_aptr->fetch_by_accession_version(
-        $accession, $sv) or confess "Could not fetch AnnotatedClone by accession_version"
-        . "acc: $accession sv: $sv";
-
+    my $annotated_clone = $self->annotated_clone();
     my $clone_info = $annotated_clone->clone_info
         or confess "could not get: CloneInfo object";
         
     my @keywords = $clone_info->keyword
-        or warn "No Keyword objects for acc: $accession sv: $sv";
+        or warn "No CloneRemarks for annotated clone " . $self->accession
+            . "." . $self->sequence_version;
 
     my @keywords_txt;
     foreach my $keyword (@keywords) {

@@ -65,6 +65,8 @@ use Carp;
         my ($accession, $seq_version) = $acc =~ /(^.*)\.(\d+)/ 
             or confess "Error parsing accession and version for: $acc\n";
         
+        $ft_factory->accession($accession);
+        $ft_factory->sequence_version($seq_version);
         $ft_factory->entry_name($accession);
         $ft_factory->data_class('standard');
         $ft_factory->mol_type('genomic DNA');
@@ -75,6 +77,7 @@ use Carp;
         $ft_factory->clone_name('to_be_provided_2');
         $ft_factory->keywords('HTG');
 
+        #embl_setup sets $ft_factory->accession, and $ft_factory->sequence_version
         my $embl = $ft_factory->embl_setup($accession, $seq_version);
         $ft_factory->make_embl_ft($accession, $embl, $seq_version);
         print $embl->compose();
