@@ -12,7 +12,7 @@ use Hum::Ace::GeneMethod;
 {
     my $dataset_name = undef;
     my $source_acc   = undef;   # Remap exons from this accession
-    my $dest_acc     = undef;   # To this accession
+    my $dest_acc     = undef;   # To this accession.  (Can end with .SV for version.)
     
     my $usage = sub { exec('perldoc', $0) };
     Bio::Otter::Lace::Defaults::do_getopt(
@@ -37,11 +37,6 @@ use Hum::Ace::GeneMethod;
     my $dest_ctg   = fetch_contig_by_acc($clone_aptr, $dest_acc);
     my $source_seq = hum_seq_from_contig($source_ctg);
     my   $dest_seq = hum_seq_from_contig($dest_ctg);
-    
-    my $source_cln = $clone_aptr->fetch_by_accession($source_acc);
-    my   $dest_cln = $clone_aptr->fetch_by_accession($dest_acc);
-    
-    my $clone_name = $dest_cln->id;
     
     my $gene_id_list = $gene_aptr->list_current_dbIDs_for_Contig($source_ctg);
     my $finder = Hum::Analysis::Factory::ExonLocator->new;
@@ -126,9 +121,14 @@ sub remap_ens_Exons {
         #print $subseq->ace_string;
 
 sub fetch_contig_by_acc {
-    my( $clone_aptr, $acc ) = @_;
+    my( $clone_aptr, $acc_str ) = @_;
     
-    my $cln = $clone_aptr->fetch_by_accession($acc);
+    my( $cln );
+    if (my ($acc, $sv) = $acc_str =~ /^([^.]+)\.(\d+)$/) {
+        $cln = $clone_aptr->fetch_by_accession_version($acc, $sv);
+    } else {
+        $cln = $clone_aptr->fetch_by_accession($acc_str);
+    }
     my $contigs = $cln->get_all_Contigs;
     if (@$contigs > 1) {
         die "clone has more than 1 contig";

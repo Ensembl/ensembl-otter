@@ -11,12 +11,14 @@ use Hum::Sort 'ace_sort';
     my( $dataset_name,
         $sequence_set,
         );
+    my $acc_only = 0;
 
     my $usage = sub { exec('perldoc', $0) };
     Bio::Otter::Lace::Defaults::do_getopt(
         'h|help!'       => $usage,
         'dataset=s'     => \$dataset_name,
         'chr|set=s'     => \$sequence_set,
+        'acc_only!'      => \$acc_only,
         ) or $usage->();
     unless ($dataset_name) {
         $usage->();
@@ -27,14 +29,14 @@ use Hum::Sort 'ace_sort';
     my $ds = $cl->get_DataSet_by_name($dataset_name);
     
     if ($sequence_set) {
-        print_sequence_set($ds, $sequence_set);
+        print_sequence_set($ds, $sequence_set, $acc_only);
     } else {
         print_set_list($ds);
     }
 }
 
 sub print_sequence_set {
-    my( $ds, $sequence_set ) = @_;
+    my( $ds, $sequence_set, $acc_only ) = @_;
     
     my $ss = $ds->get_SequenceSet_by_name($sequence_set);
     $ds->fetch_all_CloneSequences_for_SequenceSet($ss);
@@ -45,16 +47,20 @@ sub print_sequence_set {
         my $cs = $cs_list->[$i];
         
         # Show sizes of gaps between clones
-        if (my $gap = $cs->chr_start - $last_pos - 1) {
+        if (! $acc_only and my $gap = $cs->chr_start - $last_pos - 1) {
             printf "GAP  %s bp\n", comma_format($gap);
         }
         $last_pos = $cs->chr_end;
         
         # Print the clone information
-        printf "%5d  %-12s  %-8s\n",
-            $i + 1,
-            $cs->clone_name,
-            $cs->accession;
+        if ($acc_only) {
+            print $cs->accession, "\n";
+        } else {
+            printf "%5d  %-12s  %-8s\n",
+                $i + 1,
+                $cs->clone_name,
+                $cs->accession;
+        }
     }
 }
 
