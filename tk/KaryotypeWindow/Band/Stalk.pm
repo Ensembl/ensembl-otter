@@ -52,9 +52,9 @@ sub set_stalk_coords {
     my( $self, $x, $y, $width, $height ) = @_;
     
     $self->set_top_coordinates(
-        $x+(0.4*$width), $y+(0.5*$height),
+        $x+(0.45*$width), $y+(0.5*$height),
         $x,$y, $x,$y, $x+$width,$y, $x+$width,$y,
-        $x+(0.6*$width), $y+(0.5*$height),
+        $x+(0.55*$width), $y+(0.5*$height),
         );
     $self->set_bottom_coordinates(
         $x+$width,$y+$height, $x+$width,$y+$height,
