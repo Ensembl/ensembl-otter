@@ -75,7 +75,7 @@ sub truncate_to_Slice {
         $end_exon   = $tsl->end_Exon;
     }
                                                                                                                                        
-    my $is_truncated = 0;
+    my $exons_truncated = 0;
     my $in_translation_zone = 0;
     my $slice_length = $slice->length;
     my $ex_list = $self->get_all_Exons;
@@ -88,29 +88,31 @@ sub truncate_to_Slice {
             ### This won't work if get_all_Exons() ceases to return
             ### a ref to the actual array of exons in the transcript.
             splice(@$ex_list, $i, 1);
-            $is_truncated = 1;
+            $exons_truncated++;
         } else {
             $i++;
+            my $trunc_flag = 0;
             if ($exon->start < 1) {
                 #warn "truncating exon that overlaps start of slice";
-                $is_truncated = 1;
+                $trunc_flag = 1;
                 $exon->start(1);
             }
             if ($exon->end > $slice_length) {
                 #warn "truncating exon that overlaps end of slice";
-                $is_truncated = 1;
+                $trunc_flag = 1;
                 $exon->end($slice_length);
             }
+            $exons_truncated++ if $trunc_flag;
         }
     }
                                                                                                                                        
     ### Hack until we fiddle with translation stuff
-    if ($is_truncated) {
+    if ($exons_truncated) {
         $self->{'translation'}     = undef
         $self->{'_translation_id'} = undef;
     }
                                                                                                                                        
-    return $is_truncated;
+    return $exons_truncated;
 }
 
 

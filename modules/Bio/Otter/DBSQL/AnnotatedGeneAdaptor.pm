@@ -220,21 +220,30 @@ sub fetch_by_Slice{
     # Truncate gene components to Slice
     for (my $j = 0; $j < @$latest_genes;) {
         my $g = $latest_genes->[$j];
+        my $g_info = $g->gene_info;
         my $tsct_list = $g->get_all_Transcripts;
         
         for (my $i = 0; $i < @$tsct_list;) {
             my $transcript = $tsct_list->[$i];
-            if ($transcript->truncate_to_Slice($slice)) {
-                $g->gene_info->truncated_flag(1);
-            }
+            my $t_name = $transcript->transcript_info->name || $transcript->stable_id || 'ANONYMOUS';
+            my $exons_truncated = $transcript->truncate_to_Slice($slice);
             my $ex_list = $transcript->get_all_Exons;
             if (@$ex_list) {
                 $i++;
+                if ($exons_truncated) {
+                    my $remark = Bio::Otter::GeneRemark->new;
+                    $remark->remark("Transcript '$t_name' has $exons_truncated exons that are not within the slice");
+                    $g_info->remark($remark);
+                    $g_info->truncated_flag(1);
+                }
             } else {
                 # This will fail if get_all_Transcripts() ceases to return a ref
                 # to the actual list of Transcripts inside the Gene object
                 splice(@$tsct_list, $i, 1);
-                $g->gene_info->truncated_flag(1);
+                my $remark = Bio::Otter::GeneRemark->new;
+                $remark->remark("Transcript '$t_name' has no exons within the slice");
+                $g_info->remark($remark);
+                $g_info->truncated_flag(1);
             }
         }
         
