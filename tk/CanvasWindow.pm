@@ -308,63 +308,54 @@ sub bind_scroll_commands {
 
 sub scroll_to_obj {
     my( $self, $obj ) = @_;
+
+    my $margin = 10;
     
     confess "No object index given" unless $obj;
-    
     my $canvas = $self->canvas;
-    my ($x1, $y1, $x2, $y2) = $self->normalize_coords($canvas->bbox($obj));
     
     my $scroll_ref = $canvas->cget('scrollregion')
         or confess "No scrollregion";
-    my @scroll = $self->normalize_coords(@$scroll_ref);
+    my ($scr_left,$scr_top,$scr_right,$src_bottom) = @$scroll_ref;
 
-    my $width  = $scroll[2] - $scroll[0];
-    my $height = $scroll[3] - $scroll[1];
+    my $width  = $scr_right  - $scr_left;
+    my $height = $scr_bottom - $scr_top;
     #warn "width=$width, height=$height\n";
+
+    my ($obj_left, $obj_top, $obj_right, $obj_bottom) = $canvas->bbox($obj);
+    $obj_left   -= $scr_left;
+    $obj_right  -= $scr_left;
+    $obj_top    -= $scr_top;
+    $obj_bottom -= $scr_top;
     
     my ($l_frac, $r_frac) = $canvas->xview;
-    my $left  = $width * $l_frac;
-    my $right = $width * $r_frac;
-    #warn "left=$left, right=$right\n";
-    if ($x2 < $left) {
-        $canvas->xviewMoveto(($x1 - 10) / $width);
+    my $visible_left  = $width * $l_frac;
+    my $visible_right = $width * $r_frac;
+    #warn "left=$visible_left, right=$visible_right\n";
+    if ($obj_right < $visible_left) {
+        $canvas->xviewMoveto(($obj_left - $margin) / $width);
     }
-    elsif ($x1 > $right) {
-        my $visible_width = $right - $left;
-        $canvas->xviewMoveto(($x2 + 10 - $visible_width) / $width);
+    elsif ($obj_left > $visible_right) {
+        my $visible_width = $visible_right - $visible_left;
+        $canvas->xviewMoveto(($obj_right + $margin - $visible_width) / $width);
     }
     else {
         #warn "object is visible in x axis\n";
     }
     
     my ($t_frac, $b_frac) = $canvas->yview;
-    my $top  =   $height * $t_frac;
-    my $bottom = $height * $b_frac;
+    my $visible_top  =   $height * $t_frac;
+    my $visible_bottom = $height * $b_frac;
     #warn "top=$top, bottom=$bottom\n";
-    if ($y2 < $top) {
-        $canvas->yviewMoveto(($y1 - 10) / $height);
+    if ($obj_bottom < $visible_top) {
+        $canvas->yviewMoveto(($obj_top - $margin) / $height);
     }
-    elsif ($y1 > $bottom) {
-        my $visible_height = $bottom - $top;
-        $canvas->yviewMoveto(($y2 + 10 - $visible_height) / $height);
+    elsif ($obj_top > $visible_bottom) {
+        my $visible_height = $visible_bottom - $visible_top;
+        $canvas->yviewMoveto(($obj_bottom + margin - $visible_height) / $height);
     } else {
-        #warn "object is visible in x axis\n";
+        #warn "object is visible in y axis\n";
     }
-}
-
-sub normalize_coords {
-    my( $self, $x1, $y1, $x2, $y2 ) = @_;
-    
-    if ($x1 < 0) {
-        $x1 = 0;
-        $x2 = $x1 + $x2;
-    }
-    if ($y1 < 0) {
-        $y1 = 0;
-        $y2 = $y1 + $y2;
-    }
-    
-    return ($x1, $y1, $x2, $y2);
 }
 
 sub fix_window_min_max_sizes {

@@ -50,7 +50,8 @@ sub Populate {
 	my $topleft_canvas = $lframe->Canvas(-width =>0,-height=>0)->pack(-side=>'top');
 	my $left_canvas  = $lframe->Canvas(-width =>0)->pack(-side=>'left',-fill=>'y',-expand=>1);
 	my $top_canvas  = $cframe->Canvas(-height=>0)->pack(-side=>'top',-fill=>'x');
-	my $main_canvas = $cframe->Canvas()->pack(-side=>'bottom',-fill=>'both',-expand=>1);
+	my $main_canvas = $cframe->Canvas(
+	)->pack(-side=>'bottom',-fill=>'both',-expand=>1);
 
 		# scrolls' binding:
 	$sh->configure( -command => [ \&_multiscrollx, $sh, [$main_canvas,$top_canvas]]);
@@ -73,6 +74,7 @@ sub Populate {
 	$self->ConfigSpecs(
 		-background => [['DESCENDANTS','SELF'],'background','Background','white'],
 		-foreground => [['DESCENDANTS','SELF'],'foreground','Foreground','black'],
+		-scrollregion => ['METHOD','scrollregion','Scrollregion',[0,0,0,0]],
 		'DEFAULT' => [$main_canvas],
 	);
 		# delegate methods to the main canvas:
@@ -81,6 +83,8 @@ sub Populate {
 	);
 }
 
+# overrriding the existing canvas methods:
+
 sub delete { # override the standard method
 	my $self = shift @_;
 
@@ -88,6 +92,31 @@ sub delete { # override the standard method
 	$self->Subwidget('left_canvas')->delete(@_);
 	$self->Subwidget('top_canvas')->delete(@_);
 	$self->Subwidget('topleft_canvas')->delete(@_);
+}
+
+sub scrollregion {
+	my $self = shift @_;
+	if(scalar(@_)) { # configure request
+		$self->fit_everything();
+	} else { # cget request
+		return $self->Subwidget('main_canvas')->cget(-scrollregion);
+	}
+}
+
+# calls to 'xview()' and 'yview()' should get propagated to the main_canvas
+
+sub xviewMoveto {
+	my ($self,$frac) = @_;
+
+	$self->Subwidget('main_canvas')->xviewMoveto($frac);
+	$self->Subwidget('top_canvas')->xviewMoveto($frac);
+}
+
+sub yviewMoveto {
+	my ($self,$frac) = @_;
+
+	$self->Subwidget('main_canvas')->xviewMoveto($frac);
+	$self->Subwidget('left_canvas')->xviewMoveto($frac);
 }
 
 sub defmin { # not a method
