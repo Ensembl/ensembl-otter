@@ -2,27 +2,28 @@
 
 use strict;
 use Getopt::Long;
-
+use Bio::Otter::Converter;
 use Bio::Otter::DBSQL::AnnotatedGeneAdaptor;
 use Bio::Otter::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 
-my $host    = 'ecs1c';
+my $host    = 'ecs1d';
 my $user    = 'ensro';
-my $port    = 3306;
+my $port    = 19322;
 my $pass    = undef;
-my $dbname  = 'michele_otter';
+my $dbname  = 'test_ag2o';
 
-my $dna_host   = 'ecs1d';
+my $dna_host   = 'ecs2d';
 my $dna_user   = 'ensro';
 my $dna_port   = 3306;
 my $dna_pass   = undef;
-my $dna_dbname = 'homo_sapiens_core_9_30';
+my $dna_dbname = undef;
 
 
 my $chr      = '20';
 my $chrstart = 1;
-my $chrend   = 20000000;
+my $chrend   = 2000000;
+my $path     = "NCBI_30";
 
 my $clone_accession = undef;
 my $output_type = 'xml';
@@ -43,6 +44,7 @@ my $output_type = 'xml';
              'dna_port:s'=> \$dna_port,
              'dna_dbname:s'  => \$dna_dbname,
              'output:s'  => \$output_type,
+             'path:s'    => \$path,
              );
 
 
@@ -53,35 +55,39 @@ my $otterdb = new Bio::Otter::DBSQL::DBAdaptor(-host => $host,
 					       -dbname => $dbname);
 
 
-my $dnadb = new Bio::EnsEMBL::DBSQL::DBAdaptor(-host => $dna_host,
-                                               -user => $dna_user,
-                                               -pass => $dna_pass,
-                                               -port => $dna_port,
-                                               -dbname => $dna_dbname);
-$otterdb->dnadb($dnadb);
+if ($dna_dbname) {
+  my $dnadb = new Bio::EnsEMBL::DBSQL::DBAdaptor(-host => $dna_host,
+                                                 -user => $dna_user,
+                                                 -pass => $dna_pass,
+                                                 -port => $dna_port,
+                                                 -dbname => $dna_dbname);
+  $otterdb->dnadb($dnadb);
+}
 
 my $genes;
+my $vcontig;
 if (defined($clone_accession)) {
   my $sgp = $otterdb->get_CloneAdaptor;
   my $clone = $sgp->fetch_by_accession($clone_accession);
   $genes = $clone->get_all_Genes;
 } else {
   my $sgp = $otterdb->get_SliceAdaptor;
-  my $vcontig = $sgp->fetch_by_chr_start_end($chr,$chrstart,$chrend);
+  $vcontig = $sgp->fetch_by_chr_start_end($chr,$chrstart,$chrend);
   $genes = $vcontig->get_all_Genes;
 }
 
 my $oaga = $otterdb->get_AnnotatedGeneAdaptor();
 
 foreach my $gene (@$genes) {
-
   $oaga->annotate_gene($gene);
-
-  if ($output_type eq 'xml') {
+}
+if ($output_type eq 'xml') {
+  foreach my $gene (@$genes) {
     print $gene->toXMLString() . "\n";
-  } elsif ($output_type eq 'ace') {
-    print "Not implemented yet\n";
-  } else {
-    print "Unknown output type $output_type\n";
   }
+} elsif ($output_type eq 'ace') {
+  my $str =  Bio::Otter::Converter::otter_to_ace($vcontig, $genes, $path);
+  print $str . "\n";
+} else {
+  print "Unknown output type $output_type\n";
 }
