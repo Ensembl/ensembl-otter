@@ -144,12 +144,28 @@ sub get_all_visible_SequenceSets {
 }
 
 sub get_all_SequenceSets {
-    my( $self ) = @_;
-    
+    my( $self, $ss_array ) = @_;
+
+    # If using xml transfer for sequence set remove old bit below
+    # note need to call $client->get_SequenceSets_for_DataSet($datasetObj) FIRST
+    # that's the rub when this object hasn't got a client or isn't using 
+    # a direct db connection. See SequenceSetChooser version 1.28 line 130
+    if($ss_array 
+       && ref($ss_array)
+       && ref($ss_array) eq 'ARRAY'){
+        $self->{'_sequence_sets'} = $ss_array;
+    }
+    # this is the old bit of this method.
+    # doesn't need $client->get_SequenceSets_for_DataSet($datasetObj)
+    # to be called first
     my( $ss );
     unless ($ss = $self->{'_sequence_sets'}) {
         $ss = $self->{'_sequence_sets'} = [];
-        
+        my @a = caller(0);
+        return [] if $a[0] eq 'Bio::Otter::Lace::Client';
+
+        warn "Client->get_SequenceSets_for_DataSet(DataSetObject) should replace this\n";
+
         my $this_author = $self->author or confess "author not set";
         my $ssal = $self->sequence_set_access_list;
         
