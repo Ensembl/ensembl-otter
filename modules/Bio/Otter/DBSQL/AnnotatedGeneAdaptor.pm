@@ -465,7 +465,14 @@ sub fetch_by_Slice {
         
         for (my $i = 0; $i < @$tsct_list;) {
             my $transcript = $tsct_list->[$i];
-            my $t_name = $transcript->transcript_info->name || $transcript->stable_id || 'ANONYMOUS';
+            my( $t_name );
+            eval{
+                $t_name = $transcript->transcript_info->name;
+            };
+            if ($@) {
+                die sprintf("Missing transcript_info on transcript %s (%d)", 
+                    $transcript->stable_id || $transcript->dbID);
+            }
             my $exons_truncated = $transcript->truncate_to_Slice($slice);
             my $ex_list = $transcript->get_all_Exons;
             if (@$ex_list) {
