@@ -1,0 +1,1068 @@
+<otter>
+<sequenceset>
+  <assembly_type>fake_gp</assembly_type>
+  <sequencefragment>
+    <id>AL356218.22.1.142839</id>
+    <chromosome>virt_chrom_1</chromosome>
+    <assemblystart>1</assemblystart>
+    <assemblyend>142839</assemblyend>
+    <assemblyori>1</assemblyori>
+    <assemblyoffset>1</assemblyoffset>
+    <accession>AL356218.22.1.142839</accession>
+    <version>1</version>
+  </sequencefragment>
+
+  <sequencefragment>
+    <id>AL139008.10.1.159974</id>
+    <chromosome>virt_chrom_1</chromosome>
+    <assemblystart>146840</assemblystart>
+    <assemblyend>306813</assemblyend>
+    <assemblyori>1</assemblyori>
+    <assemblyoffset>1</assemblyoffset>
+    <accession>AL139008.10.1.159974</accession>
+    <version>1</version>
+  </sequencefragment>
+
+  <sequencefragment>
+    <id>AL356489.14.1.130639</id>
+    <chromosome>virt_chrom_1</chromosome>
+    <assemblystart>310814</assemblystart>
+    <assemblyend>441452</assemblyend>
+    <assemblyori>1</assemblyori>
+    <assemblyoffset>1</assemblyoffset>
+    <accession>AL356489.14.1.130639</accession>
+    <version>1</version>
+  </sequencefragment>
+
+  <sequencefragment>
+    <id>AL358573.25.1.14998</id>
+    <chromosome>virt_chrom_1</chromosome>
+    <assemblystart>445453</assemblystart>
+    <assemblyend>460450</assemblyend>
+    <assemblyori>1</assemblyori>
+    <assemblyoffset>1</assemblyoffset>
+    <accession>AL358573.25.1.14998</accession>
+    <version>1</version>
+  </sequencefragment>
+
+  <sequencefragment>
+    <id>AL139113.21.1.193280</id>
+    <chromosome>virt_chrom_1</chromosome>
+    <assemblystart>464451</assemblystart>
+    <assemblyend>657730</assemblyend>
+    <assemblyori>1</assemblyori>
+    <assemblyoffset>1</assemblyoffset>
+    <accession>AL139113.21.1.193280</accession>
+    <version>1</version>
+  </sequencefragment>
+
+  <sequencefragment>
+    <id>AL354989.13.1.151990</id>
+    <chromosome>virt_chrom_1</chromosome>
+    <assemblystart>661731</assemblystart>
+    <assemblyend>813720</assemblyend>
+    <assemblyori>1</assemblyori>
+    <assemblyoffset>1</assemblyoffset>
+    <accession>AL354989.13.1.151990</accession>
+    <version>1</version>
+  </sequencefragment>
+
+  <sequencefragment>
+    <id>AL160051.22.1.30632</id>
+    <chromosome>virt_chrom_1</chromosome>
+    <assemblystart>817721</assemblystart>
+    <assemblyend>848352</assemblyend>
+    <assemblyori>1</assemblyori>
+    <assemblyoffset>1</assemblyoffset>
+    <accession>AL160051.22.1.30632</accession>
+    <version>1</version>
+  </sequencefragment>
+
+  <sequencefragment>
+    <id>AL353662.19.1.167998</id>
+    <chromosome>virt_chrom_1</chromosome>
+    <assemblystart>852353</assemblystart>
+    <assemblyend>1000000</assemblyend>
+    <assemblyori>1</assemblyori>
+    <assemblyoffset>1</assemblyoffset>
+    <accession>AL353662.19.1.167998</accession>
+    <version>1</version>
+  </sequencefragment>
+
+  <locus>
+    <locus_type>otter</locus_type>
+    <stable_id>OTTG00000000132</stable_id>
+    <name>GN:temp1</name>
+    <author>michele</author>
+    <author_email>michele@sanger.ac.uk</author_email>
+    <transcript>
+      <stable_id>OTTT00000000330</stable_id>
+      <name>XS:temp1</name>
+      <transcript_class>transcript</transcript_class>
+      <cds_start_not_found>0</cds_start_not_found>
+      <cds_end_not_found>0</cds_end_not_found>
+      <mRNA_start_not_found>0</mRNA_start_not_found>
+      <mRNA_end_not_found>0</mRNA_end_not_found>
+      <translation_start>10398</translation_start>
+      <translation_end>15629</translation_end>
+      <exon_set>
+      <exon>
+        <stable_id>OTTE00000001232</stable_id>
+        <start>9656</start>
+        <end>9761</end>
+        <strand>1</strand>
+      </exon>
+
+      <exon>
+        <stable_id>OTTE00000001228</stable_id>
+        <start>10361</start>
+        <end>10427</end>
+        <strand>1</strand>
+        <frame>0</frame>
+      </exon>
+
+      <exon>
+        <stable_id>OTTE00000001230</stable_id>
+        <start>12282</start>
+        <end>12427</end>
+        <strand>1</strand>
+        <frame>0</frame>
+      </exon>
+
+      <exon>
+        <stable_id>OTTE00000001231</stable_id>
+        <start>13168</start>
+        <end>13272</end>
+        <strand>1</strand>
+        <frame>1</frame>
+      </exon>
+
+      <exon>
+        <stable_id>OTTE00000001229</stable_id>
+        <start>15559</start>
+        <end>16810</end>
+        <strand>1</strand>
+        <frame>1</frame>
+      </exon>
+
+    </exon_set>
+
+  </transcript>
+
+</locus>
+
+
+  <locus>
+    <locus_type>otter</locus_type>
+    <stable_id>OTTG00000000147</stable_id>
+    <name>GN:temp1</name>
+    <author>michele</author>
+    <author_email>michele@sanger.ac.uk</author_email>
+    <transcript>
+      <stable_id>OTTT00000000366</stable_id>
+      <name>XS:temp1</name>
+      <transcript_class>transcript</transcript_class>
+      <cds_start_not_found>0</cds_start_not_found>
+      <cds_end_not_found>0</cds_end_not_found>
+      <mRNA_start_not_found>0</mRNA_start_not_found>
+      <mRNA_end_not_found>0</mRNA_end_not_found>
+      <translation_start>180489</translation_start>
+      <translation_end>186149</translation_end>
+      <exon_set>
+      <exon>
+        <stable_id>OTTE00000001460</stable_id>
+        <start>180380</start>
+        <end>180494</end>
+        <strand>1</strand>
+        <frame>0</frame>
+      </exon>
+
+      <exon>
+        <stable_id>OTTE00000001454</stable_id>
+        <start>180653</start>
+        <end>180826</end>
+        <strand>1</strand>
+        <frame>0</frame>
+      </exon>
+
+      <exon>
+        <stable_id>OTTE00000001453</stable_id>
+        <start>185092</start>
+        <end>185179</end>
+        <strand>1</strand>
+        <frame>0</frame>
+      </exon>
+
+      <exon>
+        <stable_id>OTTE00000001452</stable_id>
+        <start>185180</start>
+        <end>185198</end>
+        <strand>1</strand>
+        <frame>2</frame>
+      </exon>
+
+      <exon>
+        <stable_id>OTTE00000001456</stable_id>
+        <start>186023</start>
+        <end>186125</end>
+        <strand>1</strand>
+        <frame>1</frame>
+      </exon>
+
+      <exon>
+        <stable_id>OTTE00000001455</stable_id>
+        <start>186126</start>
+        <end>186138</end>
+        <strand>1</strand>
+        <frame>0</frame>
+      </exon>
+
+      <exon>
+        <stable_id>OTTE00000001457</stable_id>
+        <start>186141</start>
+        <end>186160</end>
+        <strand>1</strand>
+        <frame>2</frame>
+      </exon>
+
+      <exon>
+        <stable_id>OTTE00000001458</stable_id>
+        <start>188534</start>
+        <end>188582</end>
+        <strand>1</strand>
+      </exon>
+
+      <exon>
+        <stable_id>OTTE00000001459</stable_id>
+        <start>188583</start>
+        <end>188598</end>
+        <strand>1</strand>
+      </exon>
+
+    </exon_set>
+
+  </transcript>
+
+</locus>
+
+
+  <locus>
+    <locus_type>otter</locus_type>
+    <stable_id>OTTG00000000151</stable_id>
+    <name>GN:temp1</name>
+    <author>michele</author>
+    <author_email>michele@sanger.ac.uk</author_email>
+    <transcript>
+      <stable_id>OTTT00000000370</stable_id>
+      <name>XS:temp1</name>
+      <transcript_class>transcript</transcript_class>
+      <cds_start_not_found>0</cds_start_not_found>
+      <cds_end_not_found>0</cds_end_not_found>
+      <mRNA_start_not_found>0</mRNA_start_not_found>
+      <mRNA_end_not_found>0</mRNA_end_not_found>
+      <translation_start>375486</translation_start>
+      <translation_end>377403</translation_end>
+      <exon_set>
+      <exon>
+        <stable_id>OTTE00000001474</stable_id>
+        <start>375440</start>
+        <end>375621</end>
+        <strand>1</strand>
+        <frame>0</frame>
+      </exon>
+
+      <exon>
+        <stable_id>OTTE00000001475</stable_id>
+        <start>377344</start>
+        <end>378071</end>
+        <strand>1</strand>
+        <frame>2</frame>
+      </exon>
+
+    </exon_set>
+
+  </transcript>
+
+</locus>
+
+
+  <locus>
+    <locus_type>otter</locus_type>
+    <stable_id>OTTG00000000156</stable_id>
+    <name>GN:temp1</name>
+    <author>michele</author>
+    <author_email>michele@sanger.ac.uk</author_email>
+    <transcript>
+      <stable_id>OTTT00000000376</stable_id>
+      <name>XS:temp1</name>
+      <transcript_class>transcript</transcript_class>
+      <cds_start_not_found>0</cds_start_not_found>
+      <cds_end_not_found>0</cds_end_not_found>
+      <mRNA_start_not_found>0</mRNA_start_not_found>
+      <mRNA_end_not_found>0</mRNA_end_not_found>
+      <translation_start>465803</translation_start>
+      <translation_end>459726</translation_end>
+      <exon_set>
+      <exon>
+        <stable_id>OTTE00000001493</stable_id>
+        <start>459582</start>
+        <end>459835</end>
+        <strand>-1</strand>
+        <frame>1</frame>
+      </exon>
+
+      <exon>
+        <stable_id>OTTE00000001490</stable_id>
+        <start>460239</start>
+        <end>460381</end>
+        <strand>-1</strand>
+        <frame>0</frame>
+      </exon>
+
+      <exon>
+        <stable_id>OTTE00000001497</stable_id>
+        <start>465582</start>
+        <end>465835</end>
+        <strand>-1</strand>
+        <frame>0</frame>
+      </exon>
+
+      <exon>
+        <stable_id>OTTE00000001491</stable_id>
+        <start>466239</start>
+        <end>466375</end>
+        <strand>-1</strand>
+      </exon>
+
+      <exon>
+        <stable_id>OTTE00000001494</stable_id>
+        <start>466781</start>
+        <end>466984</end>
+        <strand>-1</strand>
+      </exon>
+
+    </exon_set>
+
+  </transcript>
+
+  <transcript>
+    <stable_id>OTTT00000000377</stable_id>
+    <name>XS:temp2</name>
+    <transcript_class>transcript</transcript_class>
+    <cds_start_not_found>0</cds_start_not_found>
+    <cds_end_not_found>0</cds_end_not_found>
+    <mRNA_start_not_found>0</mRNA_start_not_found>
+    <mRNA_end_not_found>0</mRNA_end_not_found>
+    <translation_start>465803</translation_start>
+    <translation_end>464549</translation_end>
+    <exon_set>
+    <exon>
+      <stable_id>OTTE00000001495</stable_id>
+      <start>464506</start>
+      <end>464555</end>
+      <strand>-1</strand>
+      <frame>0</frame>
+    </exon>
+
+    <exon>
+      <stable_id>OTTE00000001497</stable_id>
+      <start>465582</start>
+      <end>465835</end>
+      <strand>-1</strand>
+      <frame>0</frame>
+    </exon>
+
+    <exon>
+      <stable_id>OTTE00000001492</stable_id>
+      <start>466239</start>
+      <end>466359</end>
+      <strand>-1</strand>
+    </exon>
+
+    <exon>
+      <stable_id>OTTE00000001496</stable_id>
+      <start>466782</start>
+      <end>466982</end>
+      <strand>-1</strand>
+    </exon>
+
+  </exon_set>
+
+</transcript>
+
+</locus>
+
+
+  <locus>
+    <locus_type>otter</locus_type>
+    <stable_id>OTTG00000000152</stable_id>
+    <name>GN:temp4</name>
+    <author>michele</author>
+    <author_email>michele@sanger.ac.uk</author_email>
+    <transcript>
+      <stable_id>OTTT00000000371</stable_id>
+      <name>XS:temp4</name>
+      <transcript_class>transcript</transcript_class>
+      <cds_start_not_found>0</cds_start_not_found>
+      <cds_end_not_found>0</cds_end_not_found>
+      <mRNA_start_not_found>0</mRNA_start_not_found>
+      <mRNA_end_not_found>0</mRNA_end_not_found>
+      <translation_start>394169</translation_start>
+      <translation_end>389059</translation_end>
+      <exon_set>
+      <exon>
+        <stable_id>OTTE00000001477</stable_id>
+        <start>388994</start>
+        <end>389078</end>
+        <strand>-1</strand>
+        <frame>1</frame>
+      </exon>
+
+      <exon>
+        <stable_id>OTTE00000001476</stable_id>
+        <start>394033</start>
+        <end>394189</end>
+        <strand>-1</strand>
+        <frame>0</frame>
+      </exon>
+
+    </exon_set>
+
+  </transcript>
+
+</locus>
+
+
+  <locus>
+    <locus_type>otter</locus_type>
+    <stable_id>OTTG00000000144</stable_id>
+    <name>GN:temp1</name>
+    <author>michele</author>
+    <author_email>michele@sanger.ac.uk</author_email>
+    <transcript>
+      <stable_id>OTTT00000000359</stable_id>
+      <name>XS:temp1</name>
+      <transcript_class>transcript</transcript_class>
+      <cds_start_not_found>0</cds_start_not_found>
+      <cds_end_not_found>0</cds_end_not_found>
+      <mRNA_start_not_found>0</mRNA_start_not_found>
+      <mRNA_end_not_found>0</mRNA_end_not_found>
+      <translation_start>160840</translation_start>
+      <translation_end>156194</translation_end>
+      <exon_set>
+      <exon>
+        <stable_id>OTTE00000001423</stable_id>
+        <start>156194</start>
+        <end>156244</end>
+        <strand>-1</strand>
+        <frame>2</frame>
+      </exon>
+
+      <exon>
+        <stable_id>OTTE00000001425</stable_id>
+        <start>160012</start>
+        <end>160082</end>
+        <strand>-1</strand>
+        <frame>1</frame>
+      </exon>
+
+      <exon>
+        <stable_id>OTTE00000001424</stable_id>
+        <start>160797</start>
+        <end>160852</end>
+        <strand>-1</strand>
+        <frame>0</frame>
+      </exon>
+
+      <exon>
+        <stable_id>OTTE00000001418</stable_id>
+        <start>162273</start>
+        <end>162366</end>
+        <strand>-1</strand>
+      </exon>
+
+    </exon_set>
+
+  </transcript>
+
+  <transcript>
+    <stable_id>OTTT00000000360</stable_id>
+    <name>XS:temp2</name>
+    <transcript_class>transcript</transcript_class>
+    <cds_start_not_found>0</cds_start_not_found>
+    <cds_end_not_found>0</cds_end_not_found>
+    <mRNA_start_not_found>0</mRNA_start_not_found>
+    <mRNA_end_not_found>0</mRNA_end_not_found>
+    <translation_start>162333</translation_start>
+    <translation_end>156234</translation_end>
+    <exon_set>
+    <exon>
+      <stable_id>OTTE00000001426</stable_id>
+      <start>156190</start>
+      <end>156244</end>
+      <strand>-1</strand>
+      <frame>1</frame>
+    </exon>
+
+    <exon>
+      <stable_id>OTTE00000001417</stable_id>
+      <start>159453</start>
+      <end>159546</end>
+      <strand>-1</strand>
+      <frame>2</frame>
+    </exon>
+
+    <exon>
+      <stable_id>OTTE00000001425</stable_id>
+      <start>160012</start>
+      <end>160082</end>
+      <strand>-1</strand>
+      <frame>1</frame>
+    </exon>
+
+    <exon>
+      <stable_id>OTTE00000001422</stable_id>
+      <start>160783</start>
+      <end>160852</end>
+      <strand>-1</strand>
+      <frame>2</frame>
+    </exon>
+
+    <exon>
+      <stable_id>OTTE00000001427</stable_id>
+      <start>162273</start>
+      <end>162366</end>
+      <strand>-1</strand>
+      <frame>0</frame>
+    </exon>
+
+  </exon_set>
+
+</transcript>
+
+<transcript>
+  <stable_id>OTTT00000000361</stable_id>
+  <name>XS:temp3</name>
+  <transcript_class>transcript</transcript_class>
+  <cds_start_not_found>0</cds_start_not_found>
+  <cds_end_not_found>0</cds_end_not_found>
+  <mRNA_start_not_found>0</mRNA_start_not_found>
+  <mRNA_end_not_found>0</mRNA_end_not_found>
+  <translation_start>160886</translation_start>
+  <translation_end>160020</translation_end>
+  <exon_set>
+  <exon>
+    <stable_id>OTTE00000001421</stable_id>
+    <start>160020</start>
+    <end>160082</end>
+    <strand>-1</strand>
+    <frame>1</frame>
+  </exon>
+
+  <exon>
+    <stable_id>OTTE00000001429</stable_id>
+    <start>160783</start>
+    <end>160989</end>
+    <strand>-1</strand>
+    <frame>0</frame>
+  </exon>
+
+  <exon>
+    <stable_id>OTTE00000001420</stable_id>
+    <start>162273</start>
+    <end>162364</end>
+    <strand>-1</strand>
+  </exon>
+
+  <exon>
+    <stable_id>OTTE00000001419</stable_id>
+    <start>162472</start>
+    <end>162702</end>
+    <strand>-1</strand>
+  </exon>
+
+</exon_set>
+
+</transcript>
+
+</locus>
+
+
+  <locus>
+    <locus_type>otter</locus_type>
+    <stable_id>OTTG00000000141</stable_id>
+    <name>GN:temp2</name>
+    <author>michele</author>
+    <author_email>michele@sanger.ac.uk</author_email>
+    <transcript>
+      <stable_id>OTTT00000000345</stable_id>
+      <name>XS:temp2</name>
+      <transcript_class>transcript</transcript_class>
+      <cds_start_not_found>0</cds_start_not_found>
+      <cds_end_not_found>0</cds_end_not_found>
+      <mRNA_start_not_found>0</mRNA_start_not_found>
+      <mRNA_end_not_found>0</mRNA_end_not_found>
+      <translation_start>115287</translation_start>
+      <translation_end>107905</translation_end>
+      <exon_set>
+      <exon>
+        <stable_id>OTTE00000001335</stable_id>
+        <start>107388</start>
+        <end>108024</end>
+        <strand>-1</strand>
+        <frame>2</frame>
+      </exon>
+
+      <exon>
+        <stable_id>OTTE00000001336</stable_id>
+        <start>114688</start>
+        <end>114774</end>
+        <strand>-1</strand>
+        <frame>2</frame>
+      </exon>
+
+      <exon>
+        <stable_id>OTTE00000001401</stable_id>
+        <start>114860</start>
+        <end>114994</end>
+        <strand>-1</strand>
+        <frame>2</frame>
+      </exon>
+
+      <exon>
+        <stable_id>OTTE00000001347</stable_id>
+        <start>115152</start>
+        <end>115287</end>
+        <strand>-1</strand>
+        <frame>0</frame>
+      </exon>
+
+    </exon_set>
+
+  </transcript>
+
+  <transcript>
+    <stable_id>OTTT00000000354</stable_id>
+    <name>XS:temp3</name>
+    <transcript_class>transcript</transcript_class>
+    <cds_start_not_found>0</cds_start_not_found>
+    <cds_end_not_found>0</cds_end_not_found>
+    <mRNA_start_not_found>0</mRNA_start_not_found>
+    <mRNA_end_not_found>0</mRNA_end_not_found>
+    <translation_start>119495</translation_start>
+    <translation_end>108319</translation_end>
+    <exon_set>
+    <exon>
+      <stable_id>OTTE00000001349</stable_id>
+      <start>107240</start>
+      <end>108466</end>
+      <strand>-1</strand>
+      <frame>0</frame>
+    </exon>
+
+    <exon>
+      <stable_id>OTTE00000001344</stable_id>
+      <start>108686</start>
+      <end>108787</end>
+      <strand>-1</strand>
+      <frame>0</frame>
+    </exon>
+
+    <exon>
+      <stable_id>OTTE00000001339</stable_id>
+      <start>108900</start>
+      <end>109094</end>
+      <strand>-1</strand>
+      <frame>0</frame>
+    </exon>
+
+    <exon>
+      <stable_id>OTTE00000001357</stable_id>
+      <start>109484</start>
+      <end>109573</end>
+      <strand>-1</strand>
+      <frame>0</frame>
+    </exon>
+
+    <exon>
+      <stable_id>OTTE00000001333</stable_id>
+      <start>109690</start>
+      <end>109814</end>
+      <strand>-1</strand>
+      <frame>2</frame>
+    </exon>
+
+    <exon>
+      <stable_id>OTTE00000001341</stable_id>
+      <start>110532</start>
+      <end>110626</end>
+      <strand>-1</strand>
+      <frame>1</frame>
+    </exon>
+
+    <exon>
+      <stable_id>OTTE00000001337</stable_id>
+      <start>110860</start>
+      <end>111012</end>
+      <strand>-1</strand>
+      <frame>1</frame>
+    </exon>
+
+    <exon>
+      <stable_id>OTTE00000001351</stable_id>
+      <start>111387</start>
+      <end>111550</end>
+      <strand>-1</strand>
+      <frame>0</frame>
+    </exon>
+
+    <exon>
+      <stable_id>OTTE00000001345</stable_id>
+      <start>111724</start>
+      <end>111878</end>
+      <strand>-1</strand>
+      <frame>2</frame>
+    </exon>
+
+    <exon>
+      <stable_id>OTTE00000001352</stable_id>
+      <start>111961</start>
+      <end>112078</end>
+      <strand>-1</strand>
+      <frame>0</frame>
+    </exon>
+
+    <exon>
+      <stable_id>OTTE00000001332</stable_id>
+      <start>112222</start>
+      <end>112362</end>
+      <strand>-1</strand>
+      <frame>0</frame>
+    </exon>
+
+    <exon>
+      <stable_id>OTTE00000001355</stable_id>
+      <start>112565</start>
+      <end>112640</end>
+      <strand>-1</strand>
+      <frame>1</frame>
+    </exon>
+
+    <exon>
+      <stable_id>OTTE00000001353</stable_id>
+      <start>112767</start>
+      <end>112915</end>
+      <strand>-1</strand>
+      <frame>0</frame>
+    </exon>
+
+    <exon>
+      <stable_id>OTTE00000001346</stable_id>
+      <start>113047</start>
+      <end>113169</end>
+      <strand>-1</strand>
+      <frame>0</frame>
+    </exon>
+
+    <exon>
+      <stable_id>OTTE00000001354</stable_id>
+      <start>113344</start>
+      <end>113521</end>
+      <strand>-1</strand>
+      <frame>1</frame>
+    </exon>
+
+    <exon>
+      <stable_id>OTTE00000001334</stable_id>
+      <start>113683</start>
+      <end>113798</end>
+      <strand>-1</strand>
+      <frame>0</frame>
+    </exon>
+
+    <exon>
+      <stable_id>OTTE00000001358</stable_id>
+      <start>113974</start>
+      <end>114075</end>
+      <strand>-1</strand>
+      <frame>0</frame>
+    </exon>
+
+    <exon>
+      <stable_id>OTTE00000001350</stable_id>
+      <start>114161</start>
+      <end>114219</end>
+      <strand>-1</strand>
+      <frame>2</frame>
+    </exon>
+
+    <exon>
+      <stable_id>OTTE00000001348</stable_id>
+      <start>114405</start>
+      <end>114525</end>
+      <strand>-1</strand>
+      <frame>0</frame>
+    </exon>
+
+    <exon>
+      <stable_id>OTTE00000001340</stable_id>
+      <start>114611</start>
+      <end>114765</end>
+      <strand>-1</strand>
+      <frame>2</frame>
+    </exon>
+
+    <exon>
+      <stable_id>OTTE00000001401</stable_id>
+      <start>114860</start>
+      <end>114994</end>
+      <strand>-1</strand>
+      <frame>2</frame>
+    </exon>
+
+    <exon>
+      <stable_id>OTTE00000001338</stable_id>
+      <start>115152</start>
+      <end>115320</end>
+      <strand>-1</strand>
+      <frame>0</frame>
+    </exon>
+
+    <exon>
+      <stable_id>OTTE00000001343</stable_id>
+      <start>115665</start>
+      <end>115844</end>
+      <strand>-1</strand>
+      <frame>0</frame>
+    </exon>
+
+    <exon>
+      <stable_id>OTTE00000001356</stable_id>
+      <start>117657</start>
+      <end>117773</end>
+      <strand>-1</strand>
+      <frame>0</frame>
+    </exon>
+
+    <exon>
+      <stable_id>OTTE00000001359</stable_id>
+      <start>117859</start>
+      <end>118071</end>
+      <strand>-1</strand>
+      <frame>0</frame>
+    </exon>
+
+    <exon>
+      <stable_id>OTTE00000001400</stable_id>
+      <start>119442</start>
+      <end>119547</end>
+      <strand>-1</strand>
+      <frame>0</frame>
+    </exon>
+
+  </exon_set>
+
+</transcript>
+
+</locus>
+
+
+  <locus>
+    <locus_type>otter</locus_type>
+    <stable_id>OTTG00000000138</stable_id>
+    <name>GN:temp1</name>
+    <author>michele</author>
+    <author_email>michele@sanger.ac.uk</author_email>
+    <transcript>
+      <stable_id>OTTT00000000336</stable_id>
+      <name>XS:temp1</name>
+      <transcript_class>transcript</transcript_class>
+      <cds_start_not_found>0</cds_start_not_found>
+      <cds_end_not_found>0</cds_end_not_found>
+      <mRNA_start_not_found>0</mRNA_start_not_found>
+      <mRNA_end_not_found>0</mRNA_end_not_found>
+      <translation_start>88528</translation_start>
+      <translation_end>87698</translation_end>
+      <exon_set>
+      <exon>
+        <stable_id>OTTE00000001277</stable_id>
+        <start>86802</start>
+        <end>87864</end>
+        <strand>-1</strand>
+        <frame>1</frame>
+      </exon>
+
+      <exon>
+        <stable_id>OTTE00000001279</stable_id>
+        <start>87954</start>
+        <end>88171</end>
+        <strand>-1</strand>
+        <frame>0</frame>
+      </exon>
+
+      <exon>
+        <stable_id>OTTE00000001278</stable_id>
+        <start>88505</start>
+        <end>88762</end>
+        <strand>-1</strand>
+        <frame>0</frame>
+      </exon>
+
+    </exon_set>
+
+  </transcript>
+
+  <transcript>
+    <stable_id>OTTT00000000340</stable_id>
+    <name>XS:temp2</name>
+    <transcript_class>transcript</transcript_class>
+    <cds_start_not_found>0</cds_start_not_found>
+    <cds_end_not_found>0</cds_end_not_found>
+    <mRNA_start_not_found>0</mRNA_start_not_found>
+    <mRNA_end_not_found>0</mRNA_end_not_found>
+    <translation_start>93144</translation_start>
+    <translation_end>87698</translation_end>
+    <exon_set>
+    <exon>
+      <stable_id>OTTE00000001277</stable_id>
+      <start>86802</start>
+      <end>87864</end>
+      <strand>-1</strand>
+      <frame>1</frame>
+    </exon>
+
+    <exon>
+      <stable_id>OTTE00000001279</stable_id>
+      <start>87954</start>
+      <end>88171</end>
+      <strand>-1</strand>
+      <frame>0</frame>
+    </exon>
+
+    <exon>
+      <stable_id>OTTE00000001295</stable_id>
+      <start>88505</start>
+      <end>88623</end>
+      <strand>-1</strand>
+      <frame>2</frame>
+    </exon>
+
+    <exon>
+      <stable_id>OTTE00000001294</stable_id>
+      <start>88974</start>
+      <end>89111</end>
+      <strand>-1</strand>
+      <frame>2</frame>
+    </exon>
+
+    <exon>
+      <stable_id>OTTE00000001293</stable_id>
+      <start>89419</start>
+      <end>89545</end>
+      <strand>-1</strand>
+      <frame>0</frame>
+    </exon>
+
+    <exon>
+      <stable_id>OTTE00000001292</stable_id>
+      <start>93076</start>
+      <end>93160</end>
+      <strand>-1</strand>
+      <frame>0</frame>
+    </exon>
+
+  </exon_set>
+
+</transcript>
+
+</locus>
+
+
+  <locus>
+    <locus_type>otter</locus_type>
+    <stable_id>OTTG00000000135</stable_id>
+    <name>GN:temp2</name>
+    <author>michele</author>
+    <author_email>michele@sanger.ac.uk</author_email>
+    <transcript>
+      <stable_id>OTTT00000000333</stable_id>
+      <name>XS:temp3</name>
+      <transcript_class>transcript</transcript_class>
+      <cds_start_not_found>0</cds_start_not_found>
+      <cds_end_not_found>0</cds_end_not_found>
+      <mRNA_start_not_found>0</mRNA_start_not_found>
+      <mRNA_end_not_found>0</mRNA_end_not_found>
+      <translation_start>40829</translation_start>
+      <translation_end>30887</translation_end>
+      <exon_set>
+      <exon>
+        <stable_id>OTTE00000001255</stable_id>
+        <start>30617</start>
+        <end>30707</end>
+        <strand>-1</strand>
+      </exon>
+
+      <exon>
+        <stable_id>OTTE00000001257</stable_id>
+        <start>30812</start>
+        <end>30933</end>
+        <strand>-1</strand>
+        <frame>1</frame>
+      </exon>
+
+      <exon>
+        <stable_id>OTTE00000001250</stable_id>
+        <start>31302</start>
+        <end>31519</end>
+        <strand>-1</strand>
+        <frame>0</frame>
+      </exon>
+
+      <exon>
+        <stable_id>OTTE00000001253</stable_id>
+        <start>31730</start>
+        <end>31863</end>
+        <strand>-1</strand>
+        <frame>2</frame>
+      </exon>
+
+      <exon>
+        <stable_id>OTTE00000001258</stable_id>
+        <start>32069</start>
+        <end>32194</end>
+        <strand>-1</strand>
+        <frame>2</frame>
+      </exon>
+
+      <exon>
+        <stable_id>OTTE00000001251</stable_id>
+        <start>32622</start>
+        <end>32745</end>
+        <strand>-1</strand>
+        <frame>0</frame>
+      </exon>
+
+      <exon>
+        <stable_id>OTTE00000001259</stable_id>
+        <start>40731</start>
+        <end>40848</end>
+        <strand>-1</strand>
+        <frame>0</frame>
+      </exon>
+
+      <exon>
+        <stable_id>OTTE00000001256</stable_id>
+        <start>48079</start>
+        <end>48274</end>
+        <strand>-1</strand>
+      </exon>
+
+    </exon_set>
+
+  </transcript>
+
+</locus>
+
+
+</sequenceset>
+</otter>
