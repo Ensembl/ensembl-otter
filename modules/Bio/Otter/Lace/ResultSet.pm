@@ -73,9 +73,96 @@ sub execute_search{
 
     if ($self->search_type eq 'locus'){
         $self->fetch_Clones_containing_locus($search_list) ;
+    }elsif($self->search_type eq 'stable_id'){
+        $self->fetch_Clones_containing_stable_id($search_list) ;
     }else{
         $self->fetch_Clones_containing_CloneNames($search_list) ;
     }
+}
+sub fetch_Clones_containing_stable_id{
+    my ($self, $stable_ids) = @_;
+
+    confess "Missing locus name argument " unless ($stable_ids);
+
+    my $dba = $self->DataSet->get_cached_DBAdaptor ;    
+    my $meta_con = $dba->get_MetaContainer();
+
+    my $prefix_primary = $meta_con->get_primary_prefix() || confess "Missing prefix.primary in meta table ";
+    my $prefix_species = $meta_con->get_species_prefix() || confess "Missing prefix.species in meta table ";
+
+    my $stable_id_types = {};
+    foreach my $id(@$stable_ids){
+        if($id =~ /^$prefix_primary$prefix_species([TPG])\d+/){
+            push(@{$stable_id_types->{$1}}, $id);
+        }else{
+            print STDERR "'$id' doesn't look like a stable id. It doesn't start with '$prefix_primary$prefix_species'\n";
+        }
+    }
+
+    my $geneAdapt       = $dba->get_GeneAdaptor();
+    my $transcriptAdapt = $dba->get_TranscriptAdaptor();
+    my $clone_names     = {};
+
+    $stable_id_types->{'G'} ||= [];
+    foreach my $stable_id (@{$stable_id_types->{'G'}}){
+        eval{
+            print STDERR "Looking for '$stable_id' and assuming it's a gene\n";
+            my $geneObj     = $geneAdapt->fetch_by_stable_id($stable_id);
+            foreach my $exonObj(@{$geneObj->get_all_Exons}){
+                my $clone_name = $exonObj->contig->clone->id();
+                #print STDERR "Found '$clone_name'\n";
+                $clone_names->{$clone_name} = 1;
+            }
+        };        
+        if ($@){
+            ## assume error was caused by not being able to create a $geneNameObjList - as name didnt exist
+            #print STDERR "nothing found for $stable_id" ; 
+        }
+    }
+
+    $stable_id_types->{'T'} ||= [];
+    foreach my $stable_id (@{$stable_id_types->{'T'}}){
+        eval{
+            print STDERR "Looking for '$stable_id' and assuming it's a transcript\n";
+            my $transcriptObj     = $transcriptAdapt->fetch_by_stable_id($stable_id);
+            foreach my $exonObj(@{$transcriptObj->get_all_Exons}){
+                my $clone_name = $exonObj->contig->clone->id();
+                #print STDERR "Found '$clone_name'\n";
+                $clone_names->{$clone_name} = 1;
+            }
+        };        
+        if ($@){
+            ## assume error was caused by not being able to create a $geneNameObjList - as name didnt exist
+            print STDERR "nothing found for $stable_id" ; 
+        }
+    }
+
+    $stable_id_types->{'P'} ||= [];
+    foreach my $stable_id (@{$stable_id_types->{'P'}}){
+        eval{
+            print STDERR "Looking for '$stable_id' and assuming it's a translation\n";
+            my $transcriptObj     = $transcriptAdapt->fetch_by_translation_stable_id($stable_id);
+            foreach my $exonObj(@{$transcriptObj->get_all_Exons}){
+                my $clone_name = $exonObj->contig->clone->id();
+                #print STDERR "Found '$clone_name'\n";
+                $clone_names->{$clone_name} = 1;
+            }
+        };        
+        if ($@){
+            ## assume error was caused by not being able to create a $geneNameObjList - as name didnt exist
+            print STDERR "nothing found for $stable_id" ; 
+        }
+
+    }
+
+    my @cl_names = keys(%$clone_names);
+    if (@cl_names){
+        print STDERR "Found " . join(', '=> @cl_names)  . "\n";
+        return $self->fetch_Clones_containing_CloneNames( \@cl_names);    
+    }
+    else{
+        return 0 ;
+    }    
 }
 
 sub fetch_Clones_containing_locus{
@@ -86,7 +173,6 @@ sub fetch_Clones_containing_locus{
     my $locus_names_string = join(',', map "'$_'", @$locus_names);
 
     my $dba = $self->DataSet->get_cached_DBAdaptor ;    
-    my %id_chr = map {$_->chromosome_id, $_} $self->DataSet->get_all_Chromosomes;
     
     my $geneNameAdapt = $dba->get_GeneNameAdaptor();
     my $geneInfoAdapt = $dba->get_GeneInfoAdaptor();
