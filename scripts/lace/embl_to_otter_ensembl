@@ -24,7 +24,7 @@ for which the dataset resolves.
 
 =head1 USEAGE
 
-embl_to_otter_ensembl [options] EMBL_Entries_File
+embl_to_otter_ensembl [options] -embl EMBL_Entries_File
 
 Where options are:
 
@@ -40,7 +40,7 @@ Where options are:
 
 example:
 
-./embl_to_otter_ensembl -dataset human -chr X -name 'example' -desc 'just an example' ~/example.embl
+./embl_to_otter_ensembl -dataset human -chr X -name 'example' -desc 'just an example' -embl ~/example.embl
 
 ./embl_fetch_set AL133226.16 | ./embl_to_otter_ensembl -dataset human -chr X -name 'example' -desc 'just an example'
 
@@ -71,7 +71,7 @@ use Mail::Mailer;
 
 my $DOMAIN = 'sanger.ac.uk';
 my $EMAIL = 'anacode@'.$DOMAIN;
-my $DEBUG = 1;
+my $DEBUG = 0;
 my $embl_entries = {};
 
 # this script will read STDIN only if piped to
@@ -108,10 +108,11 @@ my $PIPED_TO = (-p STDIN ? 1 : 0);
         'priority=i'    => \$analysis_priority ,
         'chromosome=s'  => \$chromosome_name, 
         'set|name=s'    => \$set_name,
-	'debug'         => \$DEBUG
+	'debug'         => \$DEBUG,
+        'embl=s'        => \$embl_file,
         );
     useage() if $help;
-    $embl_file            = $ARGV[0]; # takes the remaining argument as the filename to be read
+#    $embl_file            = $ARGV[0]; # takes the remaining argument as the filename to be read
 
     # some options checking to make sure there's some sanity
     die "No EMBL file given. Please give a file name.\n"               if (! defined $embl_file) && (! $PIPED_TO);
@@ -132,7 +133,8 @@ my $PIPED_TO = (-p STDIN ? 1 : 0);
     my $species  = $ds->taxon();
 
     # parse the EMBL input file, list of EMBL Entries separated by //
-    $embl_entries  = check_embl_input($embl_file, $species, $molecule_type);
+    my $order = [];
+    ($order, $embl_entries)  = check_embl_input($embl_file, $species, $molecule_type);
 
     # Make a connection to the pipeline database
     my $pipeline_db = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($otter_db);
@@ -169,7 +171,7 @@ my $PIPED_TO = (-p STDIN ? 1 : 0);
     
     $end_coord = $ds->tmpstore_meta_info_for_SequenceSet($SequenceSet, [$otter_db, $pipeline_db]);
 
-    foreach my $acc_ver(keys(%$embl_entries)){
+    foreach my $acc_ver(@$order){
  	my ($input_type, 
  	    $super_contig_name,
  	    $chr_start,
@@ -236,7 +238,8 @@ my $PIPED_TO = (-p STDIN ? 1 : 0);
 	$CloneSequence->contig_start($ctg_start);
 	$CloneSequence->contig_end($ctg_end);
 	$CloneSequence->contig_strand($ctg_ori);
- 
+
+        warn "adding $acc to list";
         # add CloneSequence to the SequenceSet (temporary array)
 	push (@{$clone_sequence_list}, $CloneSequence);  
 
@@ -313,6 +316,7 @@ sub check_embl_input{
     warn "Checking file <".( $PIPED_TO ? 'STDIN' : $infile)."> for species <$sp> and molecule <$mol>\n" if $DEBUG;
 
     my $parser = Hum::EMBL->new;
+    my $order  = []; # remembers the order of the clones in the file
     my $bio_seq_objs = {};
     my $fh;
 
@@ -371,13 +375,13 @@ sub check_embl_input{
 	my $bio_seq = $entry->bio_seq();
 	my $seq_len = $bio_seq->length();
 	warn "Adding $bio_seq $acc_sv has length $seq_len\n" if $DEBUG;
-
+        push @$order, $acc_sv;
 	# As a further sanity check that the seq can only appear once
 	$bio_seq_objs->{$acc_sv} = $bio_seq; # "*************TEST***************";
     }
     close $fh;
 
-    return $bio_seq_objs;
+    return $order, $bio_seq_objs;
 }
 
 #
