@@ -11,15 +11,32 @@ use Bio::Otter::Lace::Client;
 use Getopt::Long 'GetOptions';
 use Symbol 'gensym';
 
-{
-    my $usage = sub{ exec('perldoc', $0) };
+use Bio::EnsEMBL::Ace::DataFactory;
+use Bio::EnsEMBL::Ace::Filter::Repeatmasker;
+use Bio::EnsEMBL::Ace::Filter::CpG;
+use Bio::EnsEMBL::Ace::Filter::DNA;
+use Bio::EnsEMBL::Ace::Filter::TRF;
+use Bio::EnsEMBL::Ace::Filter::Gene::Halfwise;
+use Bio::EnsEMBL::Ace::Filter::Gene;
+use Bio::EnsEMBL::Ace::Filter::Gene::Predicted;
+use Bio::EnsEMBL::Ace::Filter::Similarity;
+use Bio::EnsEMBL::Ace::Filter::Similarity::DnaSimilarity;
+use Bio::EnsEMBL::Ace::Filter::Similarity::ProteinSimilarity;
+use Bio::EnsEMBL::Ace::Filter::SimpleFeature;
+
+use Hum::EnsCmdLineDB;
+
+
+{   
+        my $usage = sub{ exec('perldoc', $0) };
     my $host = 'ecs1d';
     my $port = 39312;
     my $ace_tar = '/nfs/team71/analysis/jgrg/work/ace_skeleton/lace_acedb.tar';
     my $recover = '';
     my $write_flag  = 0;
     my $unlock_flag = 0;
-
+    
+    
     GetOptions(
         'view'      => sub{ $write_flag = 0 },
         'host=s'    => \$host,
@@ -29,10 +46,10 @@ use Symbol 'gensym';
         'write!'    => \$write_flag,
         'recover=s' => \$recover,
         'unlock!'   => \$unlock_flag,
-        ) or $usage->();
+         ) or $usage->();
     die "Can't specify both write and unlock\n"
         if $unlock_flag and $write_flag;
-
+   
     my $cl = Bio::Otter::Lace::Client->new;
     $cl->host($host);
     $cl->port($port);
@@ -46,28 +63,31 @@ use Symbol 'gensym';
     if ($recover) {
         $db->home($recover);
         $db->recover_slice_dataset_hash;
-    } else {
+    } else { 
         ### Need a Dataset chooser
         my $ds = $cl->get_DataSet_by_name('otter_chr9p12');
+        
         
         ### Need a CloneSequence chooser
         my $cs_list = $ds->get_all_CloneSequences;
         $ds->selected_CloneSequences([@$cs_list[2..7]]);
 
-
+        
+        
         $db->make_database_directory;
         $db->write_otter_acefile;
+        
 
+        
         ### Fetch data for CloneSequences
-        fetch_sanger_data($ds, $db);
+        fetch_sanger_data($ds, $db);     ## not needed now? now that I am using my own filters
         #debug_print_sequence($ds, $db);
-
+        
+        
         unless ($db->initialize_database) {
             die "Error initialzing database";
         }
     }
-    
-    warn "Database is in '", $db->home, "'\n";
     
     if ($unlock_flag) {
         $db->unlock_all_slices;
@@ -93,45 +113,156 @@ use Symbol 'gensym';
     $db->error_flag(0);     # OK to cleanup now
 }
 
+
+
+
+##  creates a data factory and adds all the appropriate filters to it. It then produces a slice from
+##  the  ensembl db (using the $dataset coords) and produces output based on that slice in sanger.ace 
 sub fetch_sanger_data {
     my( $dataset, $acedb ) = @_;
 
+    my $percent_identity_cutoff = undef; ## change this if a cutoff value is reqired
+
+
+    # create new datafactory object - cotains all ace filters and produces the data from these
+    my $factory = Bio::EnsEMBL::Ace::DataFactory->new;       
+#    $factory->add_all_Filters($ensdb);   
+   
+    #connect to database          
+    Hum::EnsCmdLineDB::do_getopt();
+    my $ens_db = Hum::EnsCmdLineDB::connect();
+
+   
+   
+   ##----------code to add all of the ace filters to data factory-----------------------------------
+        
+
+    ## get analysis adaptor
+    my $ana_adaptor = $ens_db->get_AnalysisAdaptor or die "analysis adaptor";
+    
+    ##create and add a DNA filter
+    my $DNAfilt = Bio::EnsEMBL::Ace::Filter::DNA->new;
+    $DNAfilt->analysis_object($ana_adaptor->fetch_by_logic_name('SubmitContig'));
+    $factory->add_AceFilter($DNAfilt);
+    
+    ##repeat masker
+    my $repeat_masker = Bio::EnsEMBL::Ace::Filter::Repeatmasker->new;  
+    $repeat_masker->analysis_object( $ana_adaptor->fetch_by_logic_name('RepeatMask'));
+    $factory->add_AceFilter($repeat_masker);
+    
+    ##predicted  genscan
+    my $genscan = Bio::EnsEMBL::Ace::Filter::Gene::Predicted->new;
+    $genscan->analysis_object( $ana_adaptor->fetch_by_logic_name('genscan') );
+    $factory->add_AceFilter($genscan);
+    
+    ##fgenesh
+    my $fgenesh = Bio::EnsEMBL::Ace::Filter::Gene::Predicted->new;
+    $fgenesh->analysis_object( $ana_adaptor->fetch_by_logic_name('Fgenesh') );
+    $factory->add_AceFilter($fgenesh); 
+    
+    #halfwise
+    my $halfwise = Bio::EnsEMBL::Ace::Filter::Gene::Halfwise->new;
+    $halfwise->url_string('http\\:\\/\\/www.sanger.ac.uk\\/cgi-bin\\/Pfam\\/getacc?%s');   ##??is this still correct?
+    $halfwise->analysis_object( $ana_adaptor->fetch_by_logic_name('Pfam'));
+    $factory->add_AceFilter($halfwise);
+    
+    #CpG
+    my $CpG_filter = Bio::EnsEMBL::Ace::Filter::CpG->new;
+    $CpG_filter->analysis_object ($ana_adaptor->fetch_by_logic_name('CpG') ); 
+    $factory->add_AceFilter($CpG_filter);
+    
+    #trf
+    my $trf =Bio::EnsEMBL::Ace::Filter::TRF->new;
+    $trf ->analysis_object ($ana_adaptor->fetch_by_logic_name('trf'));
+    $factory->add_AceFilter($trf);
+    
+
+## big list for DNASimilarity / Protein_similarity
+
+## note: most of the list here is taken from the previous version, 
+## currently only the uncommented ones seem to be in the database   
+    my %logic_tag_method = (
+        'Est2Genome'        => [qw{             EST_homol  EST_eg           }],
+#        'Est2Genome_human'  => [qw{             EST_homol  EST_eg-human     }],
+#        'Est2Genome_mouse'  => [qw{             EST_homol  EST_eg-mouse     }],
+#        'Est2Genome_other'  => [qw{             EST_homol  EST_eg           }],
+#        'Full_dbGSS'        => [qw{             GSS_homol  GSS_eg           }],
+#        'Full_dbSTS'        => [qw{             STS_homol  STS_eg           }],
+#        'sccd'              => [qw{             EST_homol  egag             }],
+#        'riken_mouse_cdnal' => [qw{             EST_homol  riken_mouse_cdna }],
+#        'primer'            => [qw{             DNA_homol  primer           }],
+        'vertrna'           => [qw{ vertebrate_mRNA_homol  vertebrate_mRNA  }],
+        'Swall'             => [qw{             Pep_homol  BLASTX           }],
+#        'zfishEST'          => [qw{             EST_homol  EST_eg-fish      }],
+        );
+        
+    foreach my $logic_name (keys %logic_tag_method) {
+        if (my ($ana) = $ana_adaptor->fetch_by_logic_name($logic_name)) {
+            my( $tag, $meth ) = @{$logic_tag_method{$logic_name}};
+            my $sim = Bio::EnsEMBL::Ace::Filter::Similarity::DnaSimilarity->new;
+            $sim->analysis_object($ana);
+            $sim->homol_tag($tag);
+            $sim->method_tag($meth);
+            $sim->hseq_prefix('Em:') unless $logic_name eq 'Swall';
+            if ( defined($percent_identity_cutoff) ) {
+                $sim->percent_identity_cutoff($percent_identity_cutoff);
+            }
+            $factory->add_AceFilter($sim);
+#            warn 'logic_tag:' , $tag , "\n" ;
+        }
+        else{
+            warn "problem with the DNA Similarity filter";
+        }
+    }
+    
+    
+    ## protein similarity
+    my $homol = 'swall';
+     
+    my $prot_sim = Bio::EnsEMBL::Ace::Filter::Similarity::ProteinSimilarity->new();
+    $prot_sim->analysis_object($ana_adaptor->fetch_by_logic_name($homol));
+    $prot_sim->homol_tag($homol);
+    $prot_sim->method_tag('BLASTX');
+    if( defined($percent_identity_cutoff)  ){
+        $prot_sim->percent_identity_cutoff($percent_identity_cutoff);
+    }
+    $factory->add_AceFilter($prot_sim);    
+   
+    
+   ##--------------------------------------------------------------------------------- 
+    
+    
+    # create file for output and add it to the acedb object
     my $ace_file = $acedb->home . "/rawdata/sanger.ace";
     my $fh = gensym();
     open $fh, "> $ace_file" or confess "Can't write to '$ace_file' : $!";
     $acedb->add_acefile($ace_file);
+
+
+    my $slice_adaptor = $ens_db->get_SliceAdaptor();
     
-    my $sel = $dataset->selected_CloneSequences;
+    # note: the next line returns a 2 dimensional array (not a one dimensional array)
+    # each subarray contains a list of clones that are together on the golden path
+    my $sel = $dataset->selected_CloneSequences_as_contig_list ;
     foreach my $cs (@$sel) {
-        my $ana = Hum::AnaStatus::Sequence->new_from_accession($cs->accession);
-        my ($acc, $sv) = $ana->get_accession_and_sv;
-        unless ($cs->accession eq $acc and $cs->sv == $sv) {
-            confess sprintf("Ana sequence '%s.%d' doesn't match otter '%s.%d'",
-                $acc, $sv, $cs->accession, $cs->sv);
-        }
         
-        ### Could add in clone end info here - but does not have the
-        ### correct name
-        #my $ana_dir  = $ana->analysis_directory;
-        #my $seq_name = $ana->sequence_name;
-        #foreach my $humace (map "$ana_dir/rawdata/$seq_name.humace.$_", qw{ ace ace.gz }) {
-        #    if (-e $humace) {
-        #        $acedb->add_acefile($humace);
-        #        last;
-        #    }
-        #}
+        my $first_ctg = $cs->[0];
+        my $last_ctg = $cs->[$#$cs];
+              
+        my $chr = $first_ctg->chromosome->name;  
+        my $chr_start = $first_ctg->chr_start;
+        my $chr_end = $last_ctg->chr_end;
         
-        my $seq = $ana->hum_Sequence;
-        my $full = $seq->name;
-        my $ctg_name = $cs->contig_name;
-        $seq->name($ctg_name);
-        print $fh
-            $seq->ace_string,
-            qq{\nSequence "$ctg_name"\nClone "$full"\n};
+        my $slice = $slice_adaptor->fetch_by_chr_start_end($chr, $chr_start , $chr_end);
+        
+        print $fh $factory->ace_data_from_slice($slice);# method will also accept another argument as a percent cuttoff value
     }
-    
     close $fh;
+
 }
+
+
+
 
 sub debug_print_sequence {
     my( $dataset, $acedb ) = @_;
