@@ -128,6 +128,22 @@ sub bind_events {
     $canvas->Tk::bind('<Shift-Button-1>', [
         sub{ $self->shift_left_button_handler(@_); },
         Tk::Ev('x'), Tk::Ev('y') ]);
+    $canvas->Tk::bind('<Double-Button-1>', [
+        sub{
+            $self->left_button_handler(@_);
+            $self->edit_double_clicked;
+            },
+        Tk::Ev('x'), Tk::Ev('y') ]);
+}
+
+sub edit_double_clicked {
+    my( $self ) = @_;
+    
+    if ($self->current_state eq 'clone') {
+        $self->clone_sub_switch;
+    } else {
+        $self->edit_subsequences;
+    }
 }
 
 sub left_button_handler {
@@ -172,7 +188,7 @@ sub clone_sub_switch {
 sub switch_to_subseq_display {
     my( $self ) = @_;
     
-    my @clone_names = $self->list_selected_names;
+    my @clone_names = $self->list_selected_clone_names;
     $self->deselect_all;
     $self->canvas->delete('all');
     $self->current_state('subseq');
@@ -182,11 +198,13 @@ sub switch_to_subseq_display {
 sub switch_to_clone_display {
     my( $self ) = @_;
     
-    my @subseq_names = $self->list_selected;
+    my @clone_names = $self->list_selected_clone_names;
     $self->deselect_all;
     $self->canvas->delete('all');
     $self->current_state('clone');
     $self->draw_clone_list;
+    $self->highlight_by_name('clone', @clone_names);
+    $self->update_clone_sub_switch_button;
 }
 
 sub clone_sub_switch_button {
@@ -204,8 +222,22 @@ sub ace_handle {
     if ($adbh) {
         $self->{'_ace_database_handle'} = $adbh;
     }
-    return $self->{'_ace_database_handle'}
-        || confess "ace_handle not set";
+    elsif (my $local = $self->local_server) {
+        $adbh = $local->ace_handle;
+    }
+    else {
+        $adbh = $self->{'_ace_database_handle'};
+    }
+    return $adbh;
+}
+
+sub local_server {
+    my( $self, $local ) = @_;
+    
+    if ($local) {
+        $self->{'_local_ace_server'} = $local;
+    }
+    return $self->{'_local_ace_server'};
 }
 
 sub max_seq_list_length {
@@ -247,14 +279,46 @@ sub edit_subsequences {
     my @sub_names = $self->list_selected_subseq_names;
     my $canvas = $self->canvas;
     foreach my $sub_name (@sub_names) {
+        next if $self->raise_subseq_edit_window($sub_name);
+        
         my $sub = $self->get_SubSeq($sub_name);
         my $top = $canvas->Toplevel(
             -title  => $sub_name,
             );
         my $ec = ExonCanvas->new($top);
+        $ec->name($sub_name);
+        $ec->xace_seq_chooser($self);
         $ec->add_ace_subseq($sub);
         $ec->fix_window_min_max_sizes;
+        
+        $self->save_subseq_edit_window($sub_name, $top);
     }
+}
+
+sub raise_subseq_edit_window {
+    my( $self, $name ) = @_;
+    
+    confess "no name given" unless $name;
+    
+    if (my $top = $self->{'_subseq_edit_window'}{$name}) {
+        $top->deiconify;
+        $top->raise;
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+sub save_subseq_edit_window {
+    my( $self, $name, $top ) = @_;
+    
+    $self->{'_subseq_edit_window'}{$name} = $top;
+}
+
+sub delete_subseq_edit_window {
+    my( $self, $name ) = @_;
+    
+    delete($self->{'_subseq_edit_window'}{$name});
 }
 
 sub draw_clone_list {
@@ -275,7 +339,7 @@ sub draw_subseq_list {
     
     my( @subseq );
     foreach my $clone_name (@selected_clones) {
-        warn "Fetching sequence for '$clone_name'\n";
+        #warn "Fetching Subsequences for '$clone_name'\n";
         my $clone = $self->get_CloneSeq($clone_name);
         my( @gensub );
         foreach my $sub ($clone->get_all_SubSeqs) {
@@ -319,6 +383,10 @@ sub express_clone_and_subseq_fetch {
                 ->new_from_name_start_end_transcript_seq(
                     $name, $start, $end, $t_seq,
                     );
+            
+            # Mark the subsequence as coming from the db
+            $sub->is_archival(1);
+            
             $clone->add_SubSeq($sub);
             $self->add_SubSeq($sub);
         };
@@ -414,14 +482,39 @@ sub get_xace_window_id {
     }
 }
 
-sub list_selected_names {
-    my( $self ) = @_;
+sub highlight_by_name {
+    my( $self, $tag, @names ) = @_;
     
     my $canvas = $self->canvas;
+    my %selected_clone = map {$_, 1} @names;
+    
+    my( @obj );
+    foreach my $cl ($canvas->find('withtag', $tag)) {
+        my $n = $canvas->itemcget($cl, 'text');
+        if ($selected_clone{$n}) {
+            push(@obj, $cl);
+        }
+    }
+    
+    $self->highlight(@obj);
+}
+
+sub list_selected_clone_names {
+    my( $self ) = @_;
+
     my( @names );
-    foreach my $obj ($self->list_selected) {
-        my $n = $canvas->itemcget($obj, 'text');
-        push(@names, $n);
+    if ($self->current_state eq 'clone') {
+        my $canvas = $self->canvas;
+        foreach my $obj ($self->list_selected) {
+            if (grep $_ eq 'clone', $canvas->gettags($obj)) {
+                my $n = $canvas->itemcget($obj, 'text');
+                push(@names, $n);
+            }
+        }
+        $self->{'_selected_clone_list'} = [@names];
+    }
+    elsif (my $nam = $self->{'_selected_clone_list'}) {
+        @names = @$nam;
     }
     return @names;
 }
@@ -432,7 +525,7 @@ sub list_selected_subseq_names {
     my $canvas = $self->canvas;
     my( @names );
     foreach my $obj ($self->list_selected) {
-        if (grep 'subseq', $canvas->gettags($obj)) {
+        if (grep $_ eq 'subseq', $canvas->gettags($obj)) {
             my $n = $canvas->itemcget($obj, 'text');
             push(@names, $n);
         }
@@ -440,72 +533,6 @@ sub list_selected_subseq_names {
     return @names;
 }
 
-{
-    my $sel_tag = 'SelectedThing';
-
-    sub highlight {
-        my( $self, @obj ) = @_;
-
-        my $canvas = $self->canvas;
-        foreach my $o (@obj) {
-            my @bbox = $canvas->bbox($o);
-            $bbox[0] -= 1;
-            $bbox[1] -= 1;
-            $bbox[2] += 1;
-            $bbox[3] += 1;
-            my $r = $canvas->createRectangle(
-                @bbox,
-                -outline    => undef,
-                -fill       => '#ffd700',
-                -tags       => [$sel_tag],
-                );
-            $canvas->lower($r, $o);
-            $self->add_selected($o, $r);
-        }
-    }
-
-    sub deselect_all {
-        my( $self ) = @_;
-
-        my $canvas = $self->canvas;
-        $canvas->delete($sel_tag);
-        $self->{'_selected_list'} = undef;
-    }
-
-    sub add_selected {
-        my( $self, $obj, $rect ) = @_;
-
-        $self->{'_selected_list'}{$obj} = $rect;
-    }
-
-    sub remove_selected {
-        my( $self, @obj ) = @_;
-
-        my $canvas = $self->canvas;
-        foreach my $o (@obj) {
-            if (my $d = $self->{'_selected_list'}{$o}) {
-                $canvas->delete($d);
-                delete($self->{'_selected_list'}{$o});
-            }
-        }
-    }
-
-    sub is_selected {
-        my( $self, $obj ) = @_;
-
-        return $self->{'_selected_list'}{$obj} ? 1 : 0;
-    }
-
-    sub list_selected {
-        my( $self ) = @_;
-
-        if (my $sel = $self->{'_selected_list'}) {
-            return sort {$a <=> $b} keys %$sel;
-        } else {
-            return;
-        }
-    }
-}
 
 1;
 

@@ -19,28 +19,32 @@ use Getopt::Long 'GetOptions';
         'help!'     => \&useage,
         ) or useage();
     
-    my @seq_list = @ARGV;
-    
-    my( $ace );
     if ($path) {
-        $ace = Ace->connect(
-            -PATH   => $path
-            ) or die "Can't connect to db in '$path' :\n", Ace->error;
         $title ||= "$cript: $path";
     } else {
         useage() unless $host and $port;
-        $ace = Ace->connect(
-            -HOST       => $host,
-            -PORT       => $port,
-            -TIMEOUT    => 60,
-            ) or die "Can't connect to db on '$host' port '$port' :\n", Ace->error;
         $title ||= "$cript: $host $port";
     }
     
     my $mw = CanvasWindow::MainWindow->new($title);
     my $xc = XaceSeqChooser->new($mw);
-    $xc->ace_handle($ace);
-    $xc->clone_list(@seq_list);
+    $xc->clone_list(@ARGV);
+     
+    my( $local_server, $ace );
+    if ($path) {
+        $local_server = Hum::Ace::LocalServer->new($path);
+        $local_server->start_server;
+        $xc->local_server($local_server);
+    } else {
+        $ace = Ace->connect(
+            -HOST       => $host,
+            -PORT       => $port,
+            -TIMEOUT    => 60,
+            ) or die "Can't connect to db on '$host' port '$port' :\n", Ace->error;
+        $ace->auto_save(0);
+        $xc->ace_handle($ace);
+    }
+    
     $xc->draw_clone_list;
     $xc->fix_window_min_max_sizes;
     

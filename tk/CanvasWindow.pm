@@ -711,6 +711,73 @@ sub next_message_id {
     return ++$self->{'_last_message_id'};
 }
 
+{
+    my $sel_tag = 'SelectedThing';
+
+    sub highlight {
+        my( $self, @obj ) = @_;
+
+        my $canvas = $self->canvas;
+        foreach my $o (@obj) {
+            my @bbox = $canvas->bbox($o);
+            $bbox[0] -= 1;
+            $bbox[1] -= 1;
+            $bbox[2] += 1;
+            $bbox[3] += 1;
+            my $r = $canvas->createRectangle(
+                @bbox,
+                -outline    => undef,
+                -fill       => '#ffd700',
+                -tags       => [$sel_tag],
+                );
+            $canvas->lower($r, $o);
+            $self->add_selected($o, $r);
+        }
+    }
+
+    sub deselect_all {
+        my( $self ) = @_;
+
+        my $canvas = $self->canvas;
+        $canvas->delete($sel_tag);
+        $self->{'_selected_list'} = undef;
+    }
+
+    sub add_selected {
+        my( $self, $obj, $rect ) = @_;
+
+        $self->{'_selected_list'}{$obj} = $rect;
+    }
+
+    sub remove_selected {
+        my( $self, @obj ) = @_;
+
+        my $canvas = $self->canvas;
+        foreach my $o (@obj) {
+            if (my $d = $self->{'_selected_list'}{$o}) {
+                $canvas->delete($d);
+                delete($self->{'_selected_list'}{$o});
+            }
+        }
+    }
+
+    sub is_selected {
+        my( $self, $obj ) = @_;
+
+        return $self->{'_selected_list'}{$obj} ? 1 : 0;
+    }
+
+    sub list_selected {
+        my( $self ) = @_;
+
+        if (my $sel = $self->{'_selected_list'}) {
+            return sort {$a <=> $b} keys %$sel;
+        } else {
+            return;
+        }
+    }
+}
+
 1;
 
 __END__

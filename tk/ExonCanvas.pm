@@ -16,9 +16,34 @@ sub new {
     
     my $self = $pkg->SUPER::new(@args);
     
-    $self->bind_edit_commands;
+    $self->bind_events;
     
     return $self;
+}
+
+sub name {
+    my( $self, $name ) = @_;
+    
+    if ($name) {
+        $self->{'_name'} = $name;
+    }
+    return $self->{'_name'};
+}
+
+sub subseq {
+    my( $self ) = @_;
+    
+    my $name = $self->name;
+    return $self->xace_seq_chooser->get_SubSeq($name);
+}
+
+sub xace_seq_chooser {
+    my( $self, $chooser ) = @_;
+    
+    if ($chooser) {
+        $self->{'_xace_seq_chooser'} = $chooser;
+    }
+    return $self->{'_xace_seq_chooser'};
 }
 
 sub add_ace_subseq {
@@ -53,40 +78,64 @@ sub add_coordinate_pair {
     
     my $y_offset = $self->drawing_y_max;
     my $strand = 1;
-    if ($start > $end) {
+    if ($start and $end and $start > $end) {
         $strand = -1;
         ($start, $end) = ($end, $start);
     }
     $self->add_exon_holder($start, $end, $strand, $x_offset, $y_offset);
 }
 
-sub bind_edit_commands {
+sub bind_events {
     my( $self ) = @_;
     
     my $canvas = $self->canvas;
     $canvas->SelectionHandle(
         sub {
-            $self->export_ace_subseq_to_selection(@_);
+            $self->export_highlighted_text_to_selection(@_);
         });
     my $select_sub = sub{
-        #warn "becoming selection owner\n";
+        $self->select_all_exon_pos;
         $canvas->SelectionOwn(
-            -command => sub{ warn "No longer selection owner" },
+            -command => sub{
+                $self->deselect_all;
+            },
             );
         };
-    $canvas->Tk::bind('<Control-c>', $select_sub);
-    $canvas->Tk::bind('<Control-C>', $select_sub);
+    $canvas->Tk::bind('<Control-a>', $select_sub);
+    $canvas->Tk::bind('<Control-A>', $select_sub);
 
     $canvas->Tk::bind('<Button-1>', [
-        sub{ $self->left_button_handle(@_); },
+        sub{ $self->left_button_handler(@_); },
         Tk::Ev('x'), Tk::Ev('y') ]);
+
+    $canvas->Tk::bind('<Control-Button-1>', sub{
+        $self->control_left_button_handler(@_);
+        });
+
     $canvas->Tk::bind('<Button-2>', sub{
         $self->middle_button_paste;
         });
-
+    
+    my $top = $canvas->toplevel;
+    $top->protocol('WM_DELETE_WINDOW', sub{
+        $self->delete_chooser_window_ref;
+        $self = undef;  # -- or the ExonCanvas object
+                        #    doesn't get destroyed
+        $top->destroy;
+        });
+    
+    #$top->transient($top->parent);
 }
 
-sub left_button_handle {
+sub delete_chooser_window_ref {
+    my( $self ) = @_;
+    
+    my $name = $self->name;
+    my $xc = $self->xace_seq_chooser;
+    $xc->delete_subseq_edit_window($name);
+}
+
+sub left_button_handler {
     my( $self, $canvas, $x, $y ) = @_;
     
     #warn "\n before: x=$x y=$y\n";
@@ -94,25 +143,19 @@ sub left_button_handle {
     #$y = $canvas->canvasy($y);
     #warn   "  after: x=$x y=$y\n";
     
-    my $obj = $canvas->find('withtag', 'current');
-    unless ($obj) {
-        $self->canvas_deselect;
-        return;
-    }
-
-    my $selected = $self->selected_obj;
-    if ($obj != $selected) {
-        $self->canvas_deselect;
-    }
-
-    my $type = $canvas->type($obj)
-        or return;
+    return if $self->delete_message;
+    $self->deselect_all;
+    
+    my $obj  = $canvas->find('withtag', 'current')  or return;
+    my $type = $canvas->type($obj)                  or return;
+    my @tags = $canvas->gettags($obj);
 
     if ($type eq 'text') {
 
         # Position the icursor in the text
-        my $pos = $canvas->index($obj, [$x, $y]) + 1;
-        $canvas->icursor($obj, $pos);
+        #my $pos = $canvas->index($obj, [$x, $y]) + 1;
+        #$canvas->icursor($obj, $pos);
+        $canvas->icursor($obj, 'end');
 
         if ($canvas->itemcget($obj, 'text') eq $self->empty_string) {
             $canvas->itemconfigure($obj, 
@@ -122,68 +165,46 @@ sub left_button_handle {
 
         # Hightlight and focus if it isn't the
         # current object
-        if ($obj != $selected) {
-            $canvas->focus($obj);
-            $self->maintain_highlight_rectangle($obj);
-            $selected = $obj;
+        $canvas->focus($obj);
+        $self->highlight($obj);
+    }
+    elsif (grep $_ eq 'exon_furniture', @tags) {
+        my ($exon_id) = grep /^exon_id/, @tags;
+        my( @exon_text );
+        foreach my $ex_obj ($canvas->find('withtag', $exon_id)) {
+            if ($canvas->type($ex_obj) eq 'text') {
+                push(@exon_text, $ex_obj);
+            }
         }
+        $self->highlight(@exon_text);
     }
-    elsif (my ($exon_id) = grep /^exon/, $canvas->gettags($obj)) {
-        $self->maintain_highlight_rectangle($exon_id);
-    }
-    elsif ($type eq 'line') {
+}
+
+sub control_left_button_handler {
+    my( $self ) = @_;
+    
+    my $canvas = $self->canvas;
+    my $obj = $canvas->find('withtag', 'current')
+        or return;
+    return unless $canvas->type($obj) eq 'line';
+    if (grep $_ eq 'exon_furniture', $canvas->gettags($obj)) {
         if (my $head_end = $canvas->itemcget($obj, 'arrow')) {
-            $head_end = ($head_end eq 'first') ? 'last' : 'first';
+            my $new_end = ($head_end eq 'first') ? 'last' : 'first';
             $canvas->itemconfigure($obj, 
-                -arrow   => $head_end,
+                -arrow   => $new_end,
                 );
         }
     }
-}
-
-sub maintain_highlight_rectangle {
-    my( $self, $obj ) = @_;
-    
-    my $canvas      = $self->canvas;
-    my $sel_tag     = $self->highlight_tag;
-    $canvas->delete($sel_tag);
-
-    my @bbox = $canvas->bbox($obj);
-    $bbox[0] -= 1;
-    $bbox[1] -= 1;
-    $bbox[2] += 1;
-    $bbox[3] += 1;
-    my $rec = $canvas->createRectangle(
-        @bbox,
-        -fill       => '#ffd700',
-        -outline    => undef,
-        -tags       => [$sel_tag],
-        );
-    $canvas->lower($rec, $obj);
-}
-
-sub selected_obj {
-    my( $self, $i ) = @_;
-    
-    if (defined $i) {
-        $self->{'_selected_obj_index'} = $i;
-    }
-    return $self->{'_selected_obj_index'} || 0;
-}
-
-sub highlight_tag {
-    return 'HighlightedThing';
 }
 
 sub empty_string {
     return '<empty>';
 }
 
-sub canvas_deselect {
+sub deselect_all {
     my( $self ) = @_;
 
     my $canvas = $self->canvas;
-    $canvas->selectClear;
 
     # Avoid unselectable empty text objects
     if (my $obj = $canvas->focus) {
@@ -196,10 +217,37 @@ sub canvas_deselect {
             }
         }
     }
-
-    $canvas->delete($self->highlight_tag);
     $canvas->focus("");
-    $self->selected_obj(0);
+    
+    $self->SUPER::deselect_all;
+}
+
+sub export_highlighted_text_to_selection {
+    my( $self, $offset, $max_bytes ) = @_;
+    
+    my $canvas = $self->canvas;
+    my( @text );
+    foreach my $obj ($self->list_selected) {
+        if ($canvas->type($obj) eq 'text') {
+            my $t = $canvas->itemcget($obj, 'text');
+            push(@text, $t);
+        }
+    }
+    my $strand = $self->subseq->strand;
+    my $clip = '';
+    for (my $i = 0; $i < @text; $i += 2) {
+        my($start, $end) = @text[$i, $i + 1];
+        $end ||= $self->empty_string;
+        if ($strand == -1) {
+            ($start, $end) = ($end, $start);
+        }
+        $clip .= "$start  $end\n";
+    }
+    
+    if (length($clip) > $max_bytes)) {
+        die "Text string longer than $max_bytes: ", length($clip);
+    }
+    return $clip;
 }
 
 sub export_ace_subseq_to_selection {
@@ -228,7 +276,7 @@ sub middle_button_paste {
     my @ints = $text =~ /(\d+)/g;
     
     if (@ints == 1) {
-        $self->canvas_deselect;
+        $self->deselect_all;
         my $obj  = $canvas->find('withtag', 'current')  or return;
         my $type = $canvas->type($obj)                  or return;
         if ($type eq 'text') {
@@ -236,7 +284,7 @@ sub middle_button_paste {
                 -text   => $ints[0],
                 );
         }
-        $self->maintain_highlight_rectangle($obj);
+        $self->highlight($obj);
     } else {
         for (my $i = 0; $i < @ints; $i += 2) {
             $self->add_coordinate_pair(@ints[$i, $i + 1]);
@@ -254,7 +302,7 @@ sub add_exon_holder {
     my $canvas  =          $self->canvas;
     my $font    =          $self->font;
     my $size    =          $self->font_size;
-    my $exon_id = 'exon-'. $self->next_exon_number;
+    my $exon_id = 'exon_id-'. $self->next_exon_number;
     my $pad  = int($size / 6);
     my $half = int($size / 2);
     my $arrow_size = $half - $pad;
@@ -278,7 +326,7 @@ sub add_exon_holder {
         -width      => 1,
         -arrow      => $arrow,
         -arrowshape => [$arrow_size, $arrow_size, $arrow_size - $pad],
-        -tags       => [$exon_id],
+        -tags       => [$exon_id, 'exon_furniture', 'exon_arrow'],
         );
     
     my $end_text = $canvas->createText(
@@ -295,7 +343,7 @@ sub add_exon_holder {
         $canvas->bbox($exon_id),
         -fill       => 'white',
         -outline    => undef,
-        -tags       => [$exon_id],
+        -tags       => [$exon_id, 'exon_furniture'],
         );
     $canvas->lower($bkgd, $start_text);
     
@@ -316,21 +364,23 @@ sub to_ace_subseq {
     my $canvas = $self->canvas;
     
     my $subseq = Hum::Ace::SubSeq->new;
-    $subseq->name($canvas->toplevel->cget('title'));
+    $subseq->name($self->name);
+    #$subseq->name($canvas->toplevel->cget('title'));
 
-    my( $subseq_strand );
+    my $subseq_strand = $self->subseq->strand;
+    my $done_message = 0;
     foreach my $exid (keys %$e) {
         my ($start_id, $strand_arrow, $end_id) = @{$e->{$exid}};
                 
         my $start  =  $canvas->itemcget($start_id, 'text');
-        my $strand = ($canvas->itemcget($strand_arrow, 'arrow') eq 'last') ? 1 : -1;
+        my $strand = ($canvas->itemcget($strand_arrow, 'arrow') eq 'last')
+            ? 1 : -1;
         my $end    =  $canvas->itemcget(  $end_id, 'text');
         
-        if ($subseq_strand) {
+        unless ($done_message) {
             $self->message("inconsistent strands")
                 unless $strand == $subseq_strand;
-        } else {
-            $subseq_strand = $strand;
+            $done_message = 1;
         }
         
         my $exon = Hum::Ace::Exon->new;
@@ -344,13 +394,6 @@ sub to_ace_subseq {
     return $subseq;
 }
 
-sub message {
-    my( $self, @message ) = @_;
-    
-    # put in stuff to put message in window
-    print STDERR "\n", @message, "\n";
-}
-
 sub max_exon_number {
     my( $self ) = @_;
     
@@ -362,6 +405,13 @@ sub next_exon_number {
     
     $self->{'_max_exon_number'}++;
     return $self->{'_max_exon_number'};
+}
+
+sub DESTROY {
+    my( $self ) = @_;
+    
+    my $name = $self->name;
+    warn "Destroying: '$name'\n";
 }
 
 1;
