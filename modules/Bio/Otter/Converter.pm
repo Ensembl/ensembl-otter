@@ -1724,7 +1724,7 @@ sub prune_Exons {
 
   my @exons = @{$gene->get_all_Exons};
 
-  my %exonhash;
+  %exonhash = ();
 
   foreach my $ex (@exons) {
       $exonhash{$ex->stable_id}++;

@@ -4,11 +4,14 @@
 package Bio::Otter::Lace::TempFile;
 
 use strict;
+use Carp;
+use Symbol 'gensym';
+use Fcntl qw{ O_WRONLY O_CREAT O_RDONLY };
 
 sub new {
-    my( $pkg ) = @_;
+    my( $pkg, $name ) = @_;
     
-    
+    return bless {}, $pkg;
 }
 
 sub root {
@@ -33,15 +36,55 @@ sub full_name {
     my( $self, $full_name ) = @_;
     
     if ($full_name) {
+        confess "Can't change full_name after filehandles opened"
+            if $self->{'_read_file_handle'} || $self->{'_write_file_handle'};
         $self->{'_full_name'} = $full_name;
     }
     return $self->{'_full_name'} ||
-        join('/'
+        join('/',
             $self->root,
             $self->name,
             $$);
 }
 
+sub read_file_handle {
+    my( $self ) = @_;
+    
+    if (my $fh = $self->{'_write_file_handle'}) {
+        close($fh) or confess "Error closing filehandle: $!";
+        $self->{'_write_file_handle'} = undef;
+    }
+    my( $fh );
+    unless ($fh = $self->{'_read_file_handle'}) {
+        my $fh = gensym();
+        my $full = $self->full_name;
+        sysopen($fh, $full, O_RDONLY)
+            or confess "Error reading '$full' : $!";
+        $self->{'_read_file_handle'} = $fh;
+    }
+    return $fh;
+}
+
+sub write_file_handle {
+    my( $self ) = @_;
+    
+    my( $fh );
+    unless ($fh = $self->{'_write_file_handle'}) {
+        $self->{'_read_file_handle'} = undef;
+        my $fh = gensym();
+        my $full = $self->full_name;
+        sysopen($fh, $full, O_WRONLY | O_CREAT)
+            or confess "Error creating '$full' : $!";
+        $self->{'_write_file_handle'} = $fh;
+    }
+    return $fh;
+}
+
+sub DESTROY {
+    my( $self ) = @_;
+    
+    unlink($self->full_name);
+}
 
 1;
 

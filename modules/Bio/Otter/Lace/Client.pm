@@ -8,6 +8,7 @@ use Carp;
 use LWP;
 use Bio::Otter::Lace::DataSet;
 use Bio::Otter::Converter;
+use Bio::Otter::Lace::TempFile;
 
 sub new {
     my( $pkg ) = @_;
@@ -95,10 +96,13 @@ sub get_otter_ace {
 
             foreach my $ctg (@$ctg_list) {
                 ### It is rather tempting here not to go through the XML layer
-                my $xml = $self->get_xml_for_contig_from_Dataset($ctg, $ds);
-                print $xml;
-                my ($genes, $slice, $sequence, $tiles) = Bio::Otter::Converter::XML_to_otter($xml);
-                #$ace .= Bio::Otter::Converter::otter_to_ace($slice, $genes, $tiles, $sequence);
+                my $xml = Bio::Otter::Lace::TempFile->new;
+                $xml->file('lace_xml');
+                my $write = $xml->write_file_handle;
+                print $write $self->get_xml_for_contig_from_Dataset($ctg, $ds);
+                my ($genes, $slice, $sequence, $tiles) = Bio::Otter::Converter::XML_to_otter(
+                    $xml->read_file_handle);
+                $ace .= Bio::Otter::Converter::otter_to_ace($slice, $genes, $tiles, $sequence);
             }
         }
     }
