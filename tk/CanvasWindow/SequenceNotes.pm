@@ -156,10 +156,10 @@ sub _column_text_seq_note_text {
 
 sub _column_text_seq_note_status{
     my $cs = shift;
-    my $missing = join(",\n" => keys(%{$cs->unfinished()}));
+    my $missing = join(", " => keys(%{$cs->unfinished()}));
     my $color   = 'darkgreen';
     if ($missing){
-        warn "missing:\n$missing\n";
+        warn $cs->accession . " is missing analyses:\t $missing\n";
 	$missing = "missing";
 	$color   = 'red';
     }else{
@@ -332,6 +332,7 @@ sub initialise {
         $top->bind('<Control-P>', $print_to_file);
         
         $canvas->Tk::bind('<Double-Button-1>',  sub{ $self->popup_ana_seq_history });
+        $canvas->Tk::bind('<Button-3>',  sub{ $self->popup_missing_analysis });
         
         $self->make_button($button_frame2, 'Close', sub{ $top->withdraw } , 0);
         
@@ -912,7 +913,21 @@ sub DESTROY {
     my $name = $self->name;
     warn "Destroying $type $name\n";
 }
-
+sub popup_missing_analysis{
+    my ($self) = @_;
+    my $index = $self->get_current_CloneSequence_index ; 
+    unless (defined $index ){
+        return;
+    }
+    my $cs =  $self->get_CloneSequence_list->[$index];
+    my $missing = join(", " => keys(%{$cs->unfinished()}));
+    my $clone = $cs->accession . "." . $cs->sv;
+    if($missing){
+	$self->message("$clone is missing : $missing");
+    }else{
+	$self->message("$clone has a complete set of analyses");
+    }
+}
 sub popup_ana_seq_history{
     my $self = shift @_ ;
     my $index = $self->get_current_CloneSequence_index ; 
