@@ -280,7 +280,7 @@ sub XML_to_otter {
     }
     elsif (/<synonym>(.*)<\/synonym>/) {
       if ($currentobj eq 'gene') {
- 	my $syn = new Bio::Otter::GeneSynonym($1);
+ 	my $syn = new Bio::Otter::GeneSynonym(-name => $1);
         $geneinfo->synonym($syn);
       }
       else {

@@ -194,7 +194,6 @@ sub exists {
     } elsif (! $obj->isa("Bio::Otter::GeneName")) {
 	$self->throw("Argument must be a GeneName object to the exists method.  Currently is [$obj]");
     }
-      warn $obj->name, "  NEW";
     if (!defined($obj->name)) {
 
 	$self->throw("Can't check if a GeneName exists without a name");

@@ -16,7 +16,6 @@ sub new {
 							  NAME
 							  GENE_INFO_ID
 							  )],@args);
-
   $self->dbID($dbid);
   $self->name($name);
   $self->gene_info_id($gene_info_id);

@@ -248,6 +248,60 @@ sub list_current_dbIDs_for_Slice {
     return [sort {$a <=> $b} values %sid_gid];
 }
 
+sub list_current_dbIDs_linked_by_accession_for_Slice {
+    my( $self, $slice ) = @_;
+    
+    my $tiling_path = $slice->get_tiling_path;
+    my $clone_acc_list = join(',', map("'" . $_->component_Seq->clone->embl_id . "'", @$tiling_path));
+
+    my $list_contigs = $self->db->prepare(qq{
+        SELECT g.contig_id
+        FROM clone c
+          , contig g
+        WHERE c.clone_id = g.clone_id
+          AND c.embl_acc IN ($clone_acc_list)
+        });
+    $list_contigs->execute;
+    my $ctg_list = [];
+    while (my ($ctg_id) = $list_contigs->fetchrow) {
+        push(@$ctg_list, $ctg_id);
+    }
+    my $ctg_id_list = join(',', @$ctg_list);
+
+    my $sth = $self->db->prepare(qq{
+        SELECT gsid.stable_id
+          , gsid.version
+          , g.gene_id
+        FROM gene_stable_id gsid
+          , gene g
+          , transcript t
+          , exon_transcript et
+          , exon e
+          , assembly a
+        WHERE gsid.gene_id = g.gene_id
+          AND g.gene_id = t.gene_id
+          AND t.transcript_id = et.transcript_id
+          AND et.exon_id = e.exon_id
+          AND e.contig_id = a.contig_id
+          AND a.contig_id in ($ctg_id_list)
+        GROUP BY gsid.stable_id
+          , gsid.version
+        ORDER BY gsid.version ASC
+        });
+    $sth->execute;
+    
+    my $get_max = $self->_max_version_for_stable_sth;
+
+    my( %sid_gid );
+    while (my ($sid, $version, $gid) = $sth->fetchrow) {
+        $get_max->execute($sid);
+        my ($max) = $get_max->fetchrow;
+        next unless $max == $version;
+        $sid_gid{$sid} = $gid;
+    }
+    return [sort {$a <=> $b} values %sid_gid];
+}
+
 =head2 list_current_dbIDs_for_Contig
 
   my $id_list = $self->list_current_dbIDs_for_Contig($contig);
