@@ -36,11 +36,23 @@ my $author = new Bio::Otter::Author(-dbID  => 1,
 
 print ($author ? "ok 5\n" : "not ok 5\n");
 
+my $remark1 = new Bio::Otter::CloneRemark(-remark => "remark 1");
+my $remark2 = new Bio::Otter::CloneRemark(-remark => "remark 2");
+
+my @remarks = ($remark1,$remark2);
+
+my $keyword1 = new Bio::Otter::Keyword(-name => "keyword 1");
+my $keyword2 = new Bio::Otter::Keyword(-name => "keyword 2");
+
+my @keywords = ($keyword1,$keyword2);
+
+
 my $cloneinfo = new Bio::Otter::CloneInfo(
                                           -clone_id  => 1,
                                           -author    => $author,
                                           -is_active => 1,
-                                          -remark    => "This is some remark",
+                                          -remark    => \@remarks,
+                                          -keyword   => \@keywords,
                                           -source    => "SANGER");
 
 
@@ -51,11 +63,17 @@ print "ok 6\n";
 my $newinfo = $adaptor->fetch_by_dbID(1);
 
 print "DBID   " . $newinfo->dbID . "\n";
-print "REMARK " . $newinfo->remark . "\n";
 print "CLONE  " . $newinfo->clone_id . "\n";
 print "ACTIVE " . $newinfo->is_active . "\n";
 print "SOURCE " . $newinfo->source . "\n";
 print "TIME   " . $newinfo->timestamp . "\n";
 print "AUTHOR " .$newinfo->author->name . " " . $newinfo->author->email . " " . $newinfo->author->dbID . "\n";
+foreach my $keyword ($newinfo->keyword) {
+  print "KEYWORD " . $keyword->name . " " . $keyword->dbID . "\n";
+}
+foreach my $remark ($newinfo->remark) {
+  print "REMARK " . $remark->remark . " " . $remark->dbID . "\n";
+}
+
 print "ok 7\n";
 
