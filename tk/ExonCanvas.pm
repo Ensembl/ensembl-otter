@@ -145,7 +145,7 @@ sub maintain_highlight_rectangle {
     my( $self, $obj ) = @_;
     
     my $canvas      = $self->canvas;
-    my $sel_tag     = $self->selected_tag;
+    my $sel_tag     = $self->highlight_tag;
     $canvas->delete($sel_tag);
 
     my @bbox = $canvas->bbox($obj);
@@ -160,6 +160,23 @@ sub maintain_highlight_rectangle {
         -tags       => [$sel_tag],
         );
     $canvas->lower($rec, $obj);
+}
+
+sub selected_obj {
+    my( $self, $i ) = @_;
+    
+    if (defined $i) {
+        $self->{'_selected_obj_index'} = $i;
+    }
+    return $self->{'_selected_obj_index'} || 0;
+}
+
+sub highlight_tag {
+    return 'HighlightedThing';
+}
+
+sub empty_string {
+    return '<empty>';
 }
 
 sub canvas_deselect {
@@ -180,26 +197,9 @@ sub canvas_deselect {
         }
     }
 
-    $canvas->delete($self->selected_tag);
+    $canvas->delete($self->highlight_tag);
     $canvas->focus("");
     $self->selected_obj(0);
-}
-
-sub selected_obj {
-    my( $self, $i ) = @_;
-    
-    if (defined $i) {
-        $self->{'_selected_obj_index'} = $i;
-    }
-    return $self->{'_selected_obj_index'} || 0;
-}
-
-sub selected_tag {
-    return 'SelectedThing';
-}
-
-sub empty_string {
-    return '<empty>';
 }
 
 sub export_ace_subseq_to_selection {
@@ -362,24 +362,6 @@ sub next_exon_number {
     
     $self->{'_max_exon_number'}++;
     return $self->{'_max_exon_number'};
-}
-
-sub font {
-    my( $self, $font ) = @_;
-    
-    if ($font) {
-        $self->{'_font'} = $font;
-    }
-    return $self->{'_font'} || 'lucidatypewriter';
-}
-
-sub font_size {
-    my( $self, $font_size ) = @_;
-    
-    if ($font_size) {
-        $self->{'_font_size'} = $font_size;
-    }
-    return $self->{'_font_size'} || 15;
 }
 
 1;

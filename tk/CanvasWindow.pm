@@ -66,6 +66,26 @@ sub canvas {
     return $self->{'_canvas'};
 }
 
+# Default font and size for drawing on canvas
+
+sub font {
+    my( $self, $font ) = @_;
+    
+    if ($font) {
+        $self->{'_font'} = $font;
+    }
+    return $self->{'_font'} || 'lucidatypewriter';
+}
+
+sub font_size {
+    my( $self, $font_size ) = @_;
+    
+    if ($font_size) {
+        $self->{'_font_size'} = $font_size;
+    }
+    return $self->{'_font_size'} || 15;
+}
+
 sub set_scroll_region {
     my( $self ) = @_;
     
