@@ -84,17 +84,20 @@ $| = 1;
         printf  "  %6d  %12s  %-7s  %-12s  %s\n",
             $lid, $host, $author, $clone, join(' ', @type);
     }
-    if ($do_delete) {
-        print "Delete all these locks? [y|N]\n";
+    if ($do_delete and scalar keys %lock_id) {
+        print STDERR "Delete all these locks? [y|N] ";
         my $ans = <STDIN>;
         if ($ans =~ /^y/i) {
             my $del_sth = $otter_db->prepare(q{
                 DELETE FROM clone_lock
                 WHERE clone_lock_id = ?
                 });
+            my $count = 0;
             foreach my $lid (sort {$a <=> $b} keys %lock_id) {
                 $del_sth->execute($lid);
+                $count += $del_sth->rows;
             }
+            print "Deleted $count locks\n";
         }
     }
 }
