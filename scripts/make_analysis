@@ -1,2 +1,4 @@
  insert into analysis(analysis_id,created,logic_name,gff_source,gff_feature)  values(null,now(),'otter','otter','otter');
+ insert into analysis(analysis_id,created,logic_name,gff_source,gff_feature)  values(null,now(),'polyA_site','polyA_site','polyA_site');
+ insert into analysis(analysis_id,created,logic_name,gff_source,gff_feature)  values(null,now(),'polyA_signal','polyA_signal','polyA_signal');
 
