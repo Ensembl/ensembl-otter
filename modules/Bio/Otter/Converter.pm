@@ -607,6 +607,7 @@ sub otter_to_ace {
 
     my $slice_name = $slice->display_id;
 
+
     my $str =  qq{\n\nSequence : "$slice_name"\nAssembly\n};
     $str .= sprintf qq{Assembly_name "%s"\n}, $slice->assembly_type;
 
@@ -675,13 +676,20 @@ sub otter_to_ace {
         }
     }
 
-    # Clone remarks, keywords
+
+
+    my $clone_context = '' ;
+    my $original_start = $$path[0]->assembled_start ; 
     foreach my $tile (@$path) {
+    
         my $clone = $tile->component_Seq->clone;
         my $name  = $tile->component_Seq->name;
         my $accession  = $clone->embl_id       or die "No embl_id on clone attached to '$name' in tile";
         my $sv         = $clone->embl_version  or die "No embl_version on clone attached to '$name' in tile";;
         my $clone_info = $clone->clone_info;
+        my $orientation = $tile->component_ori ;
+        my $clone_length = $tile->component_end - $tile->component_start + 1 ;  
+        
         $str .= qq{\nSequence : "$name"\nSource "$slice_name"\nAccession "$accession"\nSequence_version $sv\n};
 
         foreach my $keyword ($clone_info->keyword) {
@@ -699,7 +707,28 @@ sub otter_to_ace {
                 $str .= qq{Annotation_remark "$rem"\n};
             }
         }
-        $str .= "\n";
+        
+        ## add CloneContext object - so that annotators can  see features as clone coords   
+        my ( $contig_start , $contig_end, $gp_start, $target_start , $contig_length );
+               
+        $contig_start  = 1; 
+        $contig_end    = $tile->component_end  ;
+        
+        $gp_start = $tile->component_start ;    
+        $target_start = $tile->assembled_start  - $original_start + 1;
+        $contig_length = $tile->assembled_end - $tile->assembled_start  + 1;  
+        
+        $clone_context .= qq{\nSequence "$name" \n} ;
+        if ($orientation == 1 ){
+            $clone_context .= qq{AGP_Fragment "$slice_name" $contig_start $contig_end Align $gp_start $target_start $contig_length\n} ;
+        }else{
+            $clone_context .= qq{AGP_Fragment "$slice_name" $contig_end $contig_start Align $contig_end $target_start $contig_length\n} ;
+        }
+        $clone_context .= qq{CloneContext\n} ;
+                    
+        
+        $str .= "\n" ;
+        $str .= "$clone_context\n" ;        
     } 
 
     # Add Sequence objects for Transcripts
@@ -879,6 +908,9 @@ sub otter_to_ace {
             $str .= $1 . "\n";
         }
     }
+    open TEST , ">test_ace.ace" ;
+    print TEST $str ; 
+    
     return $str;
 }
 
