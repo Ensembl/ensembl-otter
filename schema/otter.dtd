@@ -16,14 +16,20 @@
 <!-- a genomic region - part or whole of a chromosome -->
 <!ELEMENT sequence_set (
     assemly_type,
+    chromosome,
     sequence_fragment+,
     locus*,
     polyA_signal*,
     polyA_site*,
     dna?)>
 
-<!-- a that identifies the assembly from which the genomic region is taken -->
+<!-- name that identifies the assembly from
+     which the genomic region is taken -->
 <!ELEMENT assembly_type (#PCDATA)>
+
+<!-- the name of the chromosome from which the
+     genomic region is taken -->
+<!ELEMENT chromosome (#PCDATA)>
 
 <!-- A genomic nucleotide entry in EMBL/Genbank -->
 <!ELEMENT sequence_fragment (
@@ -69,6 +75,7 @@
     synonym*,
     remark*,
     transcript+)>
+<!-- Note that stable_id attribute is of type ID, so can only appear once in a document -->
 <!ATTLIST locus
     stable_id ID #IMPLIED
     >
@@ -99,7 +106,7 @@
     )>
 <!ATTLIST transcript
     stable_id ID #IMPLIED
-    translation_stable_id ID #IMPLIED
+    translation_stable_id CDATA #IMPLIED
     >
 <!ELEMENT translation_start (#PCDATA)>
 <!ELEMENT translation_end (#PCDATA)>
@@ -131,6 +138,9 @@
     end,
     strand,
     frame?)>
+<!-- Unlike for locus and transcript the stable_id attribute
+     cannot be of type ID since the same exon can appear in
+     multiple transcripts in the document -->
 <!ATTLIST exon
     stable_id CDATA #IMPLIED
     >
@@ -145,6 +155,15 @@
 <!-- is "1" for forward strand or "-1" for reverse strand -->
 <!ELEMENT strand (#PCDATA)>
 
+<!-- Where to begin translation of exon.
+     This tag is omitted for a non-coding exon
+
+     0 = translation begins at first base of exon
+         (or first base of the translation region within the exon)
+     1 = translation begins at second base of exon
+     2 = translation begins at third base of exon
+-->
+<!ELEMENT frame (#PCDATA)>
 
 <!-- we have dropped the old <feature> element and now have
      explicit polyA signal and site elements -->
