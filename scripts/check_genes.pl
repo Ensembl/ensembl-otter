@@ -883,7 +883,7 @@ print scalar(keys %dup_exon)." duplicate exons\n";
 print "$nmc genes with non overlapping transcripts; $nmcb cases gap crosses single clone boudary\n";
 print "found $nexon exons; $nsticky sticky exons\n";
 print "$nip exons have inconsistent noncoding phases; $npntr exons have phase when no translation\n";
-print "$nl large transcripts found (see $opt_o)\n";
+print "$nl large transcripts found (see $opt_o)\n\n";
 close(OUT);
 close(OUT2);
 close(OUT3);
@@ -925,6 +925,7 @@ if($ngcl>1){
     # for each gene cluster, identify transcripts involved and how they are linked
     my $tcl=new cluster();
     my %is2e;
+    my %e2s;
     foreach my $gsi (@gsi){
       foreach my $is2e (@{$dg2s{$gsi}}){
 	$is2e{$is2e}++;
@@ -933,6 +934,7 @@ if($ngcl>1){
     foreach my $is2e (keys %is2e){
       my %tsi;
       foreach my $eid (@{$s2e[$is2e]}){
+	$e2s{$eid}=$is2e;
 	foreach my $gsi (@gsi){
 	  foreach my $tsi (@{$e2t{$gsi}->{$eid}}){
 	    $tsi{$tsi}++;
@@ -965,20 +967,29 @@ if($ngcl>1){
 	    my @e=@{$t2e{$gsi}->{$tsi}};
 	    my $ne=scalar(@e);
 	    my $ned=0;
+	    my $txt;
 	    foreach my $eid (@e){
-	      ###
-	      $ned++;
+	      my $i=0;
+	      if($e2s{$eid}){
+		$i=$e2s{$eid};
+		$ned++;
+	      }
+	      $txt.=$i." ";
 	    }
-	    print "    $tsi ($ned/$ne)\n";
+	    print "    $tsi ($ned/$ne): $txt\n";
 	  }
 	}
       }
     }
   }
 }
+print "\n";
 
 # new check - for each transcript, check all exons are sequential, same strand
 # sensible direction etc.  Check orientation of all transcripts in a gene consistent
+my $neo=0;
+my $ned=0;
+my $ntd=0;
 foreach my $atype (keys %gsi){
   my $cname=$atype{$atype};
   foreach my $gsi (keys %{$gsi{$atype}}){
@@ -1006,11 +1017,11 @@ foreach my $atype (keys %gsi){
 	  }elsif($eced2+1==$ecst){
 	    $ecst=$ecst2;
 	  }else{
-	    print "WARN: cannot merge sticky exons $tsi: $eid:$ecst-$eced, $eid2:$ecst2-$eced2\n";
+	    print "FATAL: cannot merge sticky exons $tsi: $eid:$ecst-$eced, $eid2:$ecst2-$eced2\n";
 	  }
 	  $tsi{$tsi}->[$erank]=[$eid,$ecst,$eced,$esr3,$es,$ep,$eep];
 	}else{
-	  print "WARN: Duplicate rank for $tsi, $erank\n";
+	  print "FATAL: Duplicate rank for $tsi, $erank\n";
 	}
       }else{
 	$tsi{$tsi}->[$erank]=[$eid,$ecst,$eced,$esr,$es,$ep,$eep];
@@ -1029,6 +1040,7 @@ foreach my $atype (keys %gsi){
 	if($dirt){
 	  if($es!=$dirt){
 	    print "ERR: $tsi direction is $dirt, but exon $eid is $es\n";
+	    $ned++;
 	    next;
 	  }
 	}else{
@@ -1040,6 +1052,7 @@ foreach my $atype (keys %gsi){
 	  if($last){
 	    if($last>=$ecst){
 	      print "ERR: $gsi $tsi exon $erank ($eid) out of order $ecst-$eced follows $last ($dirt)\n";
+	      $neo++;
 	    }else{
 	      $last=$eced;
 	    }
@@ -1050,6 +1063,7 @@ foreach my $atype (keys %gsi){
 	  if($last){
 	    if($last<=$eced){
 	      print "ERR: $gsi $tsi exon $erank ($eid) out of order $ecst-$eced follows $last ($dirt)\n";
+	      $neo++;
 	    }else{
 	      $last=$ecst;
 	    }
@@ -1063,6 +1077,7 @@ foreach my $atype (keys %gsi){
       if($dirg){
 	if($dirt!=$dirg){
 	  print "ERR: $gsi has direction $dirg, but $tsi has direction $dirt\n";
+	  $ntd++;
 	}
       }else{
 	$dirg=$dirt;
@@ -1071,7 +1086,10 @@ foreach my $atype (keys %gsi){
     }
   }
 }
+print "$neo exons are out of order; $ned exons have inconsistent direction\n";
+print "$ntd transcripts have inconsistent direction\n";
 
+print "\nEND check_genes.pl\n";
 
 exit 0;
 
