@@ -789,7 +789,7 @@ foreach my $atype (keys %gsi){
       }
       push(@{$t2e{$gsi}->{$tsi}},$eid);
       push(@{$e2t{$gsi}->{$eid}},$tsi);
-      if($e2g{$eid}){
+      if($e2g{$eid} && $e2g{$eid} ne $gsi){
 	# eids should only be part of a single gid
 	print "FATAL $eid part of $gsi and $e2g{$eid}\n";
       }else{
@@ -886,6 +886,10 @@ close(OUT3);
 
 # global check on duplicate exons - look for cases where exact duplicate exons are part of different genes
 my $dgcl=new cluster();
+# need to keep a list of exons that are involved in pairs
+my %dg2s;
+my @s2e;
+my $is2e=0;
 foreach my $ecst (keys %eall){
   foreach my $eced (keys %{$eall{$ecst}}){
     if(scalar(@{$eall{$ecst}->{$eced}})>1){
@@ -896,6 +900,11 @@ foreach my $ecst (keys %eall){
       }
       if(scalar(keys %gsi)>1){
 	$dgcl->link([(keys %gsi)]);
+	$s2e[$is2e]=[@{$eall{$ecst}->{$eced}}];
+	foreach my $gsi (keys %gsi){
+	  $dg2s{$gsi}=$is2e;
+	}
+	$is2e++;
       }
     }
   }
@@ -907,7 +916,29 @@ if($ngcl>1){
   my $igcl=0;
   foreach my $cid ($dgcl->cluster_ids){
     $igcl++;
-    print " Cluster $igcl: ".join(',',$dgcl->cluster_members($cid))."\n";
+    my @gsi=$dgcl->cluster_members($cid);
+
+    # for each gene cluster, identify transcripts involved and how they are linked
+    my $tcl=new cluster();
+    foreach my $gsi (@gsi){
+      foreach my $is2e (keys %{$dg2s{$gsi}}){
+	my %tsi;
+	foreach my $eid (@s2e[$is2e]){
+	  foreach my $tsi (@{$t2e{$gsi}->{$eid}}){
+	    $tsi{$tsi}++;
+	  }
+	}
+	$tcl->link([(keys %tsi)]);
+      }
+    }
+    my @ctsi=$tcl->cluster_ids;
+    print " Cluster $igcl: ".scalar(@gsi)." genes; ".scalar(@ctsi)." sets of duplicated transcripts\n";
+
+    my $itcl=0;
+    foreach my $tcid (@ctsi){
+      my @tsi=$tcl->cluster_members($tcid);
+      print "  Cluster $itcl: ".scalar(@tsi)." transcripts\n";
+    }
   }
 }
 
