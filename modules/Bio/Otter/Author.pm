@@ -123,8 +123,9 @@ sub toXMLString {
 sub equals {
     my ($self,$obj) = @_;
 
-    if ($self->name eq $obj->name &&
-	$self->email eq $obj->email) {
+    #if ($self->name eq $obj->name &&
+    #$self->email eq $obj->email) {
+    if ($self->name eq $obj->name) {
 	return 1;
     } else {
 	return 0;
