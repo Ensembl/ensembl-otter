@@ -125,7 +125,7 @@ sub draw {
     my $helv_def = ['Helvetica', $size, 'normal'];
 
     my $ds = $self->Client->get_DataSet_by_name($self->name);
-    my $ss_list = $ds->get_all_SequenceSets;
+    my $ss_list = $ds->get_all_visible_SequenceSets;
     my $row_height = int $size * 1.5;
     my $x = $size;
 
