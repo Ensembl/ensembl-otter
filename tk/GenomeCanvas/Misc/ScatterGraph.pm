@@ -117,7 +117,9 @@ sub render {
     
     # Label X axis
     my $x_tick_major = $band->x_tick_major;
-    my $magnitude = 10 ** int(log($x_tick_major) / log(10));
+    #my $magnitude = 10 ** int(log($x_tick_major) / log(10));
+    my $magnitude = 10 ** 6;
+    #warn "magnitude = $magnitude\n";
     for (my $n = 0; $n < $x_max; $n += $x_tick_major) {
         $band->tick_label($n / $magnitude, 's', $n * $x_scale, $y_offset + $axis_size);
     }

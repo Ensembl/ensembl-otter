@@ -1,0 +1,102 @@
+#!/usr/local/bin/perl5.6.1 -w
+
+use lib '../../tk';
+
+### tk_genetic_map
+
+use strict;
+use GenomeCanvas;
+use GenomeCanvas::Misc::ScatterGraph;
+
+{
+    my( @data );
+
+    # Skip 1st field?
+    my $first_field = 0;
+
+    my $row_num = 0;
+    while (<>) {
+        next if /^\s*#/;
+        chomp;
+        my @row = split /\t/, $_;
+        
+        next unless $row[0];
+        
+        for (my $i = $first_field; $i < @row; $i++) {
+            my $j = $i - $first_field;
+            $data[$j] ||= [];
+            $data[$j][$row_num] = $row[$i];
+        }
+        
+        $row_num++;
+    }
+
+    my $name = 'chr_6_genetic_map';
+    my $mw = CanvasWindow::MainWindow->new;
+    $mw->title($name);
+    my $gc = GenomeCanvas->new($mw);
+    
+    my $graph = GenomeCanvas::Misc::ScatterGraph->new;
+    $graph->x_tick_major(20_000_000);
+    $graph->y_tick_major(20);
+    $graph->axis_size(7 * 72);
+    $gc->add_Band($graph);
+    
+    # use Data::Dumper;
+    # die Dumper(\@data);
+    
+    $graph->x_y_data(@data);
+    $graph->x_max(170_670_676);
+    $graph->y_axis_label("Cumulative\ngenetic\ndistance\n(cM)");
+    $graph->x_axis_label("Physical distance (Mb)");
+    $graph->y_series_styles(
+        ['draw_rectangle', 'black', undef, 'sex averaged'],
+        ['draw_circle', 'white', 'black', 'female'],
+        ['draw_diamond', 'white', 'black', 'male'],
+        );
+    
+    $gc->render;
+    $gc->set_scroll_region;
+    
+    add_buttons($mw, $gc, $name);
+    
+    $gc->fix_window_min_max_sizes;
+    
+    Tk::MainLoop();
+}
+
+sub add_buttons {
+    my( $mw, $gc, $name ) = @_;
+
+    my $button_frame = $mw->Frame;
+    $button_frame->pack(
+        -side => 'top',
+        );
+    
+    $button_frame->Button(
+        -text       => 'PostScript',
+        -command    => sub{
+            my @files = $gc->print_postscript($name);
+            warn "Printed to files:\n",
+                map "  $_\n", @files;
+            },
+        )->pack(
+        -side => 'left',
+        );
+    $button_frame->Button(
+        -text       => 'Exit',
+        -command    => sub{ $mw->destroy },
+        )->pack(
+        -side => 'left',
+        );
+}
+
+
+__END__
+
+=head1 NAME - tk_genetic_map
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
