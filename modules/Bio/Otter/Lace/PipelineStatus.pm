@@ -18,7 +18,6 @@ sub new{
 }
 sub unfinished{
     my $self = shift;
-    $self->_get_only() if @_;
     unless($self->{'_unfinished'}){
         my $full_list  = $self->full();
         my $completed  = $self->completed();
@@ -72,7 +71,7 @@ sub add_completedAnalysis{
             unless $exp_object_type eq $act_object_type;
         my $logic_name = $ana->logic_name();
         $self->{'_completed'} ||= {};
-        $self->{'_completed'}->{$logic_name} = $ana;
+        $self->{'_completed'}->{lc $logic_name} = $ana;
     }
 }
 ################
