@@ -4,10 +4,12 @@
 
 use strict;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
+use Data::Dumper;
 use Hum::Submission 'sanger_name';
 use Hum::EnsCmdLineDB;
+use lib qw(/nfs/disk100/humpub/scripts/tk);
 use CanvasWindow;
-
+#-chr 10 -host ecs2 -user ensadmin -pass ensembl -port 3310 -dbname human_finished -sgp chr_10_int_repeats
 my   $sel_tag = 'selected';
 my   $lab_tag = 'seq_label';
 my   $seq_tag = 'seq_rect';
@@ -20,9 +22,9 @@ my $active_color = '#ff0000';
 my $pad = 5;
 my $font = ['Helvetica', 12, 'bold'];
 
-
 {
     my $chr_name = 'chr9';
+    my $chr_start = 45544339;
     my $min_percent_id = 95;
     my $logic_name = 'contig_vs_contig.exp';
     Hum::EnsCmdLineDB::do_getopt(
@@ -34,30 +36,56 @@ my $font = ['Helvetica', 12, 'bold'];
     
     print STDERR "Ignoring hits below $min_percent_id% identity\n";
     
-    my $vc = $ensdb->get_StaticGoldenPathAdaptor
-        ->fetch_VirtualContig_by_chr_name($chr_name);
+    # some adaptors
+    my $assemblyAdaptor = $ensdb->get_adaptor('AssemblyMapper');
+    my $rawContigAdaptor = $ensdb->get_adaptor('RawContig');
+    my $anaAdaptor = $ensdb->get_adaptor('Analysis');
     
-    my ($ana) = $ensdb->get_AnalysisAdaptor
-        ->fetch_by_logic_name($logic_name)
-        or die "Can't get Analysis object for '$logic_name'";
+    my $ana = $anaAdaptor->fetch_by_logic_name($logic_name) or die "Can't get Analysis object for '$logic_name'";
     my $ana_id = $ana->dbID;
     
+    my $assembly = $assemblyAdaptor->fetch_by_type('chr_10_int_repeats');
+    my $chromosome = $ensdb->get_adaptor('Chromosome')->fetch_by_chr_name('chr10');
+
+
+
     my( @map );
-    foreach my $map_c ($vc->_vmap->each_MapContig) {
-        #print STDERR ".";
-        my $start     = $map_c->start;
-        my $end       = $map_c->end;
-        #my $raw_start = $map_c->rawcontig_start;
-        #my $raw_end   = $map_c->rawcontig_end;
-        my $contig    = $map_c->contig;
-        my $length = $contig->length;
-        my ($name) = $contig->id =~ /^(\w+\.\d+)/;
-        my $id = $contig->internal_id;
-
-        #printf STDERR "%10d  %-10d  %s\n", $start, $end, $name;
-        push(@map, [$start, $end, $name, $id]);
+    # assembly map method 1
+    foreach my $map($assembly->map_coordinates_to_rawcontig('chr10', $chr_start, $chromosome->length, 1)){
+        next unless($map->isa('Bio::EnsEMBL::Mapper::Coordinate'));
+        my ($start, $end, $name, $id, $strand);
+        my $rc = $rawContigAdaptor->fetch_by_dbID($map->id);
+        my $a_map = [ $assembly->map_coordinates_to_assembly($map->id, $map->start, $map->end, $map->strand) ];
+        $start = $a_map->[0]->start - $chr_start;
+        $end = $a_map->[0]->end - $chr_start;
+        $strand = $a_map->[0]->strand;
+        ($name) = $rc->name =~ /(\w+\.\d+)/;
+        $id = $map->id;
+        ##print STDERR join(":",($start, $end, $name, $id)) . "\n";
+        push(@map, [$start, $end, $name, $id, $strand]);
     }
-
+    
+    
+    
+    
+    
+    
+    # assembly map method 2
+    #foreach my $c_id ($assembly->list_contig_ids('chr10',$chr_start, $chromosome->length)){
+    #    my ($start, $end, $name, $id, $strand);
+    #    my $rc = $rawContigAdaptor->fetch_by_dbID($c_id);        
+    #    foreach my $map($rc->ctg2genomic){
+    #        next unless($map->isa('Bio::EnsEMBL::Mapper::Coordinate'));
+    #        $start = $map->start - $chr_start;
+    #        $end = $map->end - $chr_start;
+    #        $strand = $map->strand;
+    #        ($name) = $rc->name =~ /(\w+\.\d+)/;
+    #        $id = $c_id;
+    #        ##print STDERR join(":",($start, $end, $name, $id)) . "\n";
+    #        push(@map, [$start, $end, $name, $id, $strand]);    
+    #    }
+    #}
+    
     my $mw = CanvasWindow::MainWindow->new("$chr_name contig vs contig");
     my $cw = CanvasWindow->new($mw);
     my $canvas = $cw->canvas;
@@ -76,7 +104,7 @@ my $font = ['Helvetica', 12, 'bold'];
     $canvas->CanvasBind('<Control-P>', $print_to_file);
     #$canvas->configure(-cursor => 'plus');
 
-    my $scale = 5_000;
+    my $scale = 1_000;
     my $col_max = 1;
     my $feature_count = 0;
     my $x_offset = 200;
@@ -113,16 +141,16 @@ my $font = ['Helvetica', 12, 'bold'];
                 );
             
             my $sql = qq{
-                SELECT seq_start
-                  , seq_end
-                  , strand
-                  , hstart
-                  , hend
-                  , perc_id
-                FROM feature
-                WHERE contig = $col_id
-                  AND analysis = $ana_id
-                  AND hid = '$row_name'
+                SELECT contig_start
+                  , contig_end
+                  , contig_strand
+                  , hit_start
+                  , hit_end
+                  , perc_ident
+                FROM dna_align_feature
+                WHERE contig_id = $col_id
+                  AND analysis_id = $ana_id
+                  AND hit_name = '$row_name'
                 };
             my $sth = $ensdb->prepare($sql);
             $sth->execute;
