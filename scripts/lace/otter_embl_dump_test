@@ -60,7 +60,7 @@ use Bio::Otter::EMBL::Factory;
     
     foreach my $acc (@ARGV) {
         
-        my $embl = $embl_factory->make_embl($acc);
+        my $embl = $embl_factory->make_embl_ft($acc);
         print $embl->compose();
         print "\n\n";
     }

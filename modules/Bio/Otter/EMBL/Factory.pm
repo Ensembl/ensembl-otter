@@ -125,7 +125,6 @@ sub get_DBAdaptors {
     return ($otter_db, $slice_aptr, $gene_aptr, $annotated_clone_aptr);
 }
 
-
 =head2 embl_setup
 
 Sets a lot of the attributes in the Hum::EMBL object from those stored
@@ -338,136 +337,6 @@ sub clone_name {
     return $self->{'_bio_otter_embl_factory_clone_name'};
 }
 
-=head2 fake_embl_setup
-
-Debugging routine to be removed later.
-
-=cut
-
-sub fake_embl_setup {
-    my ( $self, $embl, $acc, @sec ) = @_;
-    
-    # ID line
-    my $id = $embl->newID;
-    $id->entryname('fake');
-    $id->dataclass('standard');
-    $id->molecule('genomic DNA');
-    $id->division('hum');
-    $id->seqlength(150000);
-    $embl->newXX;
-    
-    # AC line
-    my $ac = $embl->newAC;
-    if (@sec) {
-        $ac->secondaries(@sec);
-        # We need the placeholder "ACCESSION"
-        # if we don't have an accession
-        $ac->primary($acc);
-    } else {
-        $ac->primary($acc);
-    }
-    $embl->newXX;
-
-    # AC * line
-    my $ac_star = $embl->newAC_star;
-    $ac_star->identifier('fake');
-    $embl->newXX;
-
-    # DE line
-    #$pdmp->add_Description($embl);
-
-    # KW line
-    #$pdmp->add_Keywords($embl);
-
-    # Organism
-    #add_Organism($embl, $species);
-    #$embl->newXX;
-
-    # Reference
-    #$pdmp->add_Reference($embl, $seqlength);
-
-    # CC lines
-    #$pdmp->add_Headers($embl, $contig_map);
-    #$embl->newXX;
-
-    # Feature table header
-    $embl->newFH;
-
-    my $source = $embl->newFT;
-    $source->key('source');
-
-    my $loc = $source->newLocation;
-    $loc->exons([1, 20000]);
-    $loc->strand('W');
-        
-    $source->addQualifierStrings('mol_type',  'genomic DNA');
-    $source->addQualifierStrings('organism',  "Homo sapiens");
-    $source->addQualifierStrings('clone_lib', 'RPCI-4');
-    $source->addQualifierStrings('clone',     'RP4-734C18');
-
-    # Feature table source feature
-    #my( $libraryname ) = library_and_vector( $project );
-    #add_source_FT( $embl, $seqlength, $binomial, $ext_clone,
-    #               $chr, $map, $libraryname );
-
-
-
-}
-
-=head2 fake_features
-
-Debugging method, just to see how features are made
-To be removed later
-
-=cut
-
-sub fake_features {
-    my ( $self ) = @_;
-    
-    my $set = $self->FeatureSet;
-    
-    #Hum::EMBL::Line::FT
-    my $ft = $set->newFeature;
-    my $key = 'mRNA'; # or 'CDS'
-    $ft->key($key);
-    
-    my $loc = Hum::EMBL::Location->new;
-    $loc->strand('W');
-    $loc->exons([1000, 1024], [1048, 1100], [1112, 1196]);
-    $ft->location($loc);
-    $ft->addQualifierStrings('gene', "fcuk");
-    $ft->addQualifierStrings('standard_name', "assmapper");
-    $ft->addQualifierStrings('evidence','NOT_EXPERIMENTAL');
-    
-    my $ft2 = $set->newFeature;
-    my $key2 = 'mRNA'; # or 'CDS'
-    $ft2->key($key2);
-    my $loc2 = Hum::EMBL::Location->new;
-    $loc2->strand('C');
-    $loc2->exons([2000, 2024], [2048, 2100], [2112, 2196]);
-    $ft2->location($loc2);
-    $ft2->addQualifierStrings('gene', "blows_chunks");
-    $ft2->addQualifierStrings('standard_name', "badass");
-    $ft2->addQualifierStrings('evidence','EXPERIMENTAL');
-
-    my $ft3 = $set->newFeature;
-    my $key3 = 'mRNA'; # or 'CDS'
-    $ft3->key($key3);
-    my $loc3 = Hum::EMBL::Location->new;
-    $loc3->strand('C');
-    $loc3->exons(34);
-    $ft3->location($loc3);
-    $ft3->addQualifierStrings('gene', "blows_chunks");
-    $ft3->addQualifierStrings('standard_name', "badass");
-    $ft3->addQualifierStrings('evidence','EXPERIMENTAL');
-
-    #locations_from_subsequence ??
-
-    #$ft->addQualifier($product);
-
-
-  #  my $loc = simple_location(6104,7000);
-}
 
 =head2 Embl
 
@@ -554,22 +423,7 @@ sub FeatureSet {
     return $self->{'_bio_otter_embl_factory_feature_set'};
 }
 
-
-
-    # Get polyA sites
-    #$pdmp->addPolyA_toSet($set);
-    
-    # Get CpG islands
-    #$pdmp->addCpG_toSet($set);
-    
-    # Add the genes and other features into the entry
-    #$set->sortByPosition;
-    #$set->removeDuplicateFeatures;
-    #$set->addToEntry($embl);
-
-
-
-=head2 make_embl
+=head2 make_embl_ft
 
 **This Documentation is wrong.
  
@@ -610,10 +464,12 @@ g)  Returns the populated Hum::EMBL object
 
 =cut
 
-sub make_embl {
+sub make_embl_ft {
     my ( $self, $acc, $embl, $sequence_version ) = @_;
 
-    confess "Must pass an accession" unless $acc;
+    unless ($acc and $embl and $sequence_version) {
+        confess "Must pass an accession, Hum::EMBL object and sequence_versios";
+    }
     $self->accession($acc);
 
     my $ds = $self->DataSet
@@ -651,8 +507,12 @@ sub make_embl {
     return $embl;
 }
 
+=head2 get_description
+
+=cut
+
 sub get_description {
-	my ( $self, $accession, $embl, $sv ) = @_;
+	my ( $self, $accession, $sv ) = @_;
     
     my ($otter_db, $slice_aptr, $gene_aptr, $annotated_clone_aptr) 
         = $self->get_DBAdaptors();
@@ -680,7 +540,7 @@ sub get_description {
 }
 
 sub get_keywords {
-	my ( $self, $accession, $embl, $sv ) = @_;
+	my ( $self, $accession, $sv ) = @_;
     
     my ($otter_db, $slice_aptr, $gene_aptr, $annotated_clone_aptr) 
         = $self->get_DBAdaptors();
