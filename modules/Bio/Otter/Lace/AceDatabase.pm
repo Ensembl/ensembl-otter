@@ -224,7 +224,7 @@ sub write_lock_xml{
         my ($genes,$slice,$seqstr,$tiles) = Bio::Otter::Converter::XML_to_otter($read);
         my $slice_name = $slice->display_id();
         $self->save_slice_dataset($slice_name, $ds_name);
-        $lock_xml->mv("${slice_name}${ds_name}${LOCK_REGION_XML_FILE}");
+        $lock_xml->mv(".${slice_name}${ds_name}${LOCK_REGION_XML_FILE}");
     }
 }
 sub save_slice_dataset {
@@ -358,8 +358,9 @@ sub save_otter_slice {
     $ace_txt =~ s{^\s*//.+}{\n}mg;  # Strip comments
     
     if($self->Client->debug){
-        my $debug_file = "/var/tmp/otter-debug.$$.save.ace";
-        open my $fh, "> $debug_file" or die;
+        my $debug_file = Bio::Otter::Lace::PersistentFile->new();
+        $debug_file->name("otter-debug.$$.save.ace");
+        my $fh = $debug_file->write_file_handle();
         print $fh $ace_txt;
         close $fh;
     }else{
@@ -373,8 +374,9 @@ sub save_otter_slice {
     my $xml = Bio::Otter::Converter::ace_to_XML($ace_file->read_file_handle);
     
     if($self->Client->debug){
-        my $debug_file = "/var/tmp/otter-debug.$$.save.xml";
-        open my $fh, "> $debug_file" or die;
+        my $debug_file = Bio::Otter::Lace::PersistentFile->new();
+        $debug_file->name("otter-debug.$$.save.xml");
+        my $fh = $debug_file->write_file_handle();
         print $fh $xml;
         close $fh;
     }else{
@@ -388,7 +390,7 @@ sub save_otter_slice {
 
 sub unlock_all_slices {
     my( $self ) = @_;
-
+    
     my $sd_h = $self->slice_dataset_hash;
 
     # if the unlock otter slice goes wrong half way through
@@ -408,10 +410,10 @@ sub unlock_otter_slice{
     confess "Missing DatsSet name argument" unless $dataset_name;
 
     my $client   = $self->Client or confess "No Client attached";
-
+    return unless $client->write_access();
     my $xml_file = Bio::Otter::Lace::PersistentFile->new;
     $xml_file->root($self->home);
-    $xml_file->name("${slice_name}${dataset_name}${LOCK_REGION_XML_FILE}");
+    $xml_file->name(".${slice_name}${dataset_name}${LOCK_REGION_XML_FILE}");
     my $xml = '';
     my $read = $xml_file->read_file_handle;
     while(<$read>){
