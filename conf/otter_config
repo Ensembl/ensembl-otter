@@ -117,6 +117,7 @@ module=Bio::EnsEMBL::Ace::Filter::Gene::Predicted
 
 [default.filter.CpG]
 module=Bio::EnsEMBL::Ace::Filter::SimpleFeature::CpG
+method_tag=Predicted_CpG_island
 
 [default.filter.Halfwise]
 module=Bio::EnsEMBL::Ace::Filter::Gene::Halfwise
