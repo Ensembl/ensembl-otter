@@ -527,6 +527,18 @@ sub XML_to_otter {
   return (\@genes, $slice,$seqstr,\@tiles);
 }
 
+my %ace2ens_phase = (
+    1   => 0,
+    2   => 2,
+    3   => 1,
+    );
+
+my %ens2ace_phase = (
+    0   => 1,
+    2   => 2,
+    1   => 3,
+    );
+
 sub otter_to_ace {
     my ($slice, $genes, $path, $seq) = @_;
 
@@ -706,7 +718,10 @@ sub otter_to_ace {
 
             ### Need to fix for Start_not_found Int
             my $info = $tran->transcript_info;
-            if ($info->cds_start_not_found || $info->mRNA_start_not_found) {
+            if ($info->cds_start_not_found) {
+                # Get start phase of first exon
+            }
+            elsif ($info->mRNA_start_not_found) {
                 $str .= "Start_not_found\n";
             }
 
@@ -1035,11 +1050,11 @@ sub ace_to_otter {
                     $curr_seq->{End_not_found} = 1;
                 }
                 elsif (/^Start_not_found $INT/x) {
-                    #print STDERR "start not found with $1\n";    
+                    #print STDERR "start not found with $1\n";
+                    my $phase = $ace2ens_phase{$1} or die "Bad Start_not_found '$1'";
                     $curr_seq->{Start_not_found} = $1;
                 }
                 elsif (/^Start_not_found/) {
-                    ### May be cause of exon phase problem?  Is zero correct?
                     $curr_seq->{Start_not_found} = -1;
                 }
                 elsif (/^Method $STRING/x) {
@@ -1126,6 +1141,7 @@ sub ace_to_otter {
 
     my %anntran;
 
+    # Make transcripts and translations
     SEQ: foreach my $seq (keys %sequence) {
         my $seq_data = $sequence{$seq};
         my $transcript = $seq_data->{transcript} or next SEQ;
@@ -1164,20 +1180,6 @@ sub ace_to_otter {
             }
         }
 
-        # Start not found and end not found (should it ever be mRNA_start_not_found?)
-        if ($seq_data->{Method} =~ /RNA/) {
-            $traninfo->mRNA_start_not_found(
-                $seq_data->{Start_not_found} ? 1 : 0);
-            $traninfo->mRNA_end_not_found(
-                $seq_data->{End_not_found}     ? 1 : 0);
-        } else {
-            $traninfo->cds_start_not_found(
-                $seq_data->{Start_not_found} ? 1 : 0);
-            $traninfo->cds_end_not_found(
-                $seq_data->{End_not_found}     ? 1 : 0);
-        }
-
-
         # Evidence for the transcript
         my @evidence;
         foreach my $type (qw{ EST cDNA Protein Genomic }) {
@@ -1199,13 +1201,11 @@ sub ace_to_otter {
         # Type of transcript (Method tag)
         my $class = Bio::Otter::TranscriptClass
             ->new(-name => $seq_data->{Method});
-
         $traninfo->class($class);
         $traninfo->name($seq);
 
         #print STDERR "Defined $seq " . $seq_data->{transcript} . "\n";
-        if (defined($seq_data->{transcript})) {
-            my $anntran = $seq_data->{transcript};
+        if (my $anntran = $seq_data->{transcript}) {
 
             $anntran->transcript_info($traninfo);
 
@@ -1213,38 +1213,102 @@ sub ace_to_otter {
 
             # Sort the exons here just in case
             print STDERR "Anntran $seq [$anntran]\n";
-            die "No exons in transcript" unless @{$anntran->get_all_Exons};
+            die "No exons in transcript '$seq'" unless @{$anntran->get_all_Exons};
             $anntran->sort;
 
-            # Set the translation start and end
+            if ($seq_data->{CDS_start}) {                
+                # Set the translation start and end
+                my $cds_start = $seq_data->{CDS_start};
+                my $cds_end   = $seq_data->{CDS_end};
+                
+                my $translation = Bio::EnsEMBL::Translation->new;
+                $anntran->translation($translation);
+                $translation->version(1);
+                if (my $tsl_id = $seq_data->{Translation_id}) {
+                    $translation->stable_id($tsl_id);
+                }
 
-            # Set the phase of the transcript
-            my $phase = $seq_data->{Start_not_found};
+                # Set the phase of the exons
+                my $start_phase = $seq_data->{Start_not_found};
+                if (defined $start_phase) {
+                    $traninfo->mRNA_start_not_found(1);
+                    $traninfo->cds_start_not_found(1) if $start_phase != -1;
+                } else {
+                    $start_phase = 0;
+                }
 
-            if (defined($phase) && $phase != -1) {
-                $phase--;
+                my $phase = -1;
+                my $in_cds = 0;
+                my $found_cds = 0;
+                my $cds_pos = 0;
+                #foreach my $exon (@{$anntran->get_all_Exons}) {
+                my $exon_list = $anntran->get_all_Exons;
+                for (my $i = 0; $i < @$exon_list; $i++) {
+                    my $exon = $exon_list->[$i];
+                    my $exon_start = $cds_pos + 1;
+                    my $exon_end   = $cds_pos + $exon->length;
+                    my $exon_cds_length = 0;
+                    if ($in_cds) {
+                        $exon_cds_length = $exon->length;
+                        $exon->phase($phase);
+                    }
+                    elsif ($cds_start <= $exon_end) {
+                        $in_cds    = 1;
+                        $found_cds = 1;
+                        $phase = $start_phase;
+
+                        if ($cds_start > $exon_start) {
+                            # beginning of exon is non-coding
+                            $exon->phase(-1);
+                        } else {
+                            $exon->phase($phase);
+                        }
+                        $exon_cds_length = $exon_end - $cds_start + 1;
+                        $translation->start_Exon($exon);
+                        $translation->start($cds_start - $exon_start + 1);
+                    }
+                    else {
+                        $exon->phase($phase);
+                    }
+
+                    my $end_phase = -1;
+                    if ($in_cds) {
+                        $end_phase = ($exon_cds_length + $phase) % 3;
+                    }
+
+                    if ($cds_end <= $exon_end) {
+                        # Last translating exon
+                        $in_cds = 0;
+                        $translation->end_Exon($exon);
+                        $translation->end($cds_end - $exon_start + 1);
+                        if ($cds_end < $exon_end) {
+                            $exon->end_phase(-1);
+                        } else {
+                            $exon->end_phase($end_phase);
+                        }
+                        $phase = -1;
+                    } else {
+                        $exon->end_phase($end_phase);
+                        $phase = $end_phase;
+                    }
+
+                    $cds_pos = $exon_end;
+                }
+                $anntran->throw("Failed to find CDS in '$seq'") unless $found_cds;
+                
+                if ($seq_data->{End_not_found}) {
+                    my $last_exon_end_phase = $exon_list->[$#$exon_list]->end_phase;
+                    $traninfo->mRNA_end_not_found(1);
+                    $traninfo->cds_end_not_found(1) if $last_exon_end_phase != -1;
+                }
             } else {
-                $phase = 0;
-            }
-
-            #SMJS Added
-            if ($phase == 1) {
-                $phase = 2;
-            } elsif ($phase == 2) {
-                $phase = 1;
-            }
-
-            #SMJS End added
-            # print STDERR "Phase for $seq exon = $phase\n";
-
-            foreach my $exon (@{ $anntran->get_all_Exons }) {
-                my $len            = $exon->end - $exon->start + 1;
-                my $endphase = ($len + $phase) % 3;
-
-                $exon->phase($phase);
-                $exon->end_phase($endphase);
-
-                $phase = $endphase;
+                # No translation, so all exons get phase -1
+                foreach my $exon (@{$anntran->get_all_Exons}) {
+                    $exon->phase(-1);
+                    $exon->end_phase(-1);
+                }
+                $traninfo->mRNA_start_not_found(1) if defined $seq_data->{Start_not_found};
+                $traninfo->mRNA_end_not_found(1)   if defined $seq_data->{End_not_found};
             }
         }
     }
@@ -1297,26 +1361,6 @@ sub ace_to_otter {
             }
 
             $gene->add_Transcript($tran);
-
-            if ($tran_data->{CDS_start}) {
-
-                my $translation = new Bio::EnsEMBL::Translation;
-
-                $tran->translation($translation);
-                $translation->version(1);
-                
-                if (my $tsl_id = $tran_data->{Translation_id}) {
-                    $translation->stable_id($tsl_id);
-                }
-
-                my $cds_start = $tran_data->{CDS_start};
-                my $cds_end   = $tran_data->{CDS_end};
-
-                # print STDERR "Found new CDS $tranname " . $cds_start . " " . $cds_end . "\n";
-
-                make_translation_from_cds($tran, $cds_start, $cds_end);
-
-            }
         }
 
         prune_Exons($gene);
