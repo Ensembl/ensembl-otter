@@ -282,7 +282,8 @@ sub default_cursor {
 
 sub hr_min_sec {
     my ($sec, $min, $hr) = localtime(time);
-    return "${hr}_${min}_$sec";
+
+    return sprintf("%02d_%02d_%02d", $hr, $min, $sec);
 }
 
 sub hunt_for_selection {
