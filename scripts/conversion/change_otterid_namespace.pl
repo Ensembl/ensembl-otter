@@ -8,7 +8,7 @@
 # modify it under the terms of the GNU General Public License
 # as published by the Free Software Foundation
 #
-# $Header: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/conversion/Attic/change_otterid_namespace.pl,v 1.1 2004-01-25 17:35:50 th Exp $
+# $Header: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/conversion/Attic/change_otterid_namespace.pl,v 1.2 2004-01-25 21:48:09 th Exp $
 #
 # Function:
 # T: 
@@ -132,7 +132,8 @@ open(OUT,">$opt_o") || die "cannot open $opt_o";
 
 foreach my $table (keys %tables){
 
-  my $n;
+  my $n=0;
+  my $ns=0;
   my($key,$val,$type)=@{$tables{$table}};
   my $sth = $dbh->prepare("select $key,$val from $table $test");
   $sth->execute;
@@ -141,13 +142,15 @@ foreach my $table (keys %tables){
     if($val1=~/^($match)00(\d{6})$/){
       print OUT "update $table set $val=\'$1$opt_p$2\' where $key=$key1;\n";
       $n++;
+    }elsif($val1=~/^($match)$opt_p(\d{6})$/){
+      $ns++;
     }else{
       print "$table: $key=\'$key1\'; $val=\'$val1\' could not parse [$match]\n";
       exit 0;
     }
   }
   $sth->finish;
-  print "$n records modified for TABLE $table\n";
+  print "$n records modified for TABLE $table, $ns already ok\n";
 
 }
 close(OUT);
