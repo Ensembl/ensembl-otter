@@ -236,7 +236,7 @@ if ($@) {
 my( @gene_events, @changed_clones );
 
 
-print STDERR "\nComparing " . scalar(@$dbgenes) . " old to " . scalar(@$genes) . " genes...\n";
+print STDERR "\nComparing " . scalar(@$dbgenes) . " old to " . scalar(@$genes) . " new gene(s)... ";
 
 my( $del_sf, $save_sf );
 eval {

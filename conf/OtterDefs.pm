@@ -71,6 +71,10 @@ $OTTER_POST_SCRIPTS         = {'/perl/write_region'   => "write_region",
 #
 ################################################################################################
 
+unless ($OTTER_SPECIES->{$OTTER_DEFAULT_SPECIES}) {
+    die "no information for default species '$OTTER_DEFAULT_SPECIES'";
+}
+
 $OTTER_DBNAME        = $OTTER_SPECIES->{$OTTER_DEFAULT_SPECIES}{DBNAME};
 $OTTER_USER          = $OTTER_SPECIES->{$OTTER_DEFAULT_SPECIES}{USER} || $OTTER_SPECIES->{defaults}{USER};
 $OTTER_HOST          = $OTTER_SPECIES->{$OTTER_DEFAULT_SPECIES}{HOST} || $OTTER_SPECIES->{defaults}{HOST};

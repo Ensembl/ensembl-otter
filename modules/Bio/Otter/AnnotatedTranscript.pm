@@ -81,20 +81,20 @@ sub truncate_to_Slice {
         my $exon_start = $exon->start;
         my $exon_end   = $exon->end;
         if ($exon->contig != $slice or $exon_end < 1 or $exon_start > $slice_length) {
-            warn "removing exon that is off slice";
-            # This won't work if get_all_Exons() ceases to return
-            # a ref to the actual array of exons in the transcript.
+            #warn "removing exon that is off slice";
+            ### This won't work if get_all_Exons() ceases to return
+            ### a ref to the actual array of exons in the transcript.
             splice(@$ex_list, $i, 1);
             $is_truncated = 1;
         } else {
             $i++;
             if ($exon->start < 1) {
-                warn "truncating exon that overlaps start of slice";
+                #warn "truncating exon that overlaps start of slice";
                 $is_truncated = 1;
                 $exon->start(1);
             }
             if ($exon->end > $slice_length) {
-                warn "truncating exon that overlaps end of slice";
+                #warn "truncating exon that overlaps end of slice";
                 $is_truncated = 1;
                 $exon->end($slice_length);
             }
