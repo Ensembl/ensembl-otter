@@ -152,7 +152,11 @@ sub add_SequenceNote {
     my $sn_list = $self->{'_SequenceNote_list'} ||= [];
     push(@$sn_list, $note);
 }
-
+sub truncate_SequenceNotes{
+    my( $self ) = @_;
+    $self->{'_SequenceNote_list'} = [];
+    return $self->{'_SequenceNote_list'};
+}
 sub get_all_SequenceNotes {
     my( $self ) = @_;
     
