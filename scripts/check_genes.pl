@@ -738,7 +738,7 @@ foreach my $atype (keys %gsi){
       }else{
 	my $flag;
 	# compare current exon to all existing ones...
-	foreach my $eid2 (keys %e){
+	foreach my $eid2 (keys %{$e{$gsi}}){
 	  my($st,$ed,$es2,$ep2,$eep2,$trid2)=@{$e{$gsi}->{$eid2}};
 	  if($st==$ecst && $ed==$eced){
 	    # duplicate exons
