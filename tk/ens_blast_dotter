@@ -23,8 +23,10 @@ my $font = ['Helvetica', 12, 'bold'];
 
 {
     my $chr_name = 'chr9';
+    my $min_percent_id = 0;
     Hum::EnsCmdLineDB::do_getopt(
         'chr=s'     => \$chr_name,
+        'percent=f' => \$min_percent_id,
         );
     my $ensdb = Hum::EnsCmdLineDB::connect();
     
