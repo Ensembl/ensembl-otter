@@ -185,7 +185,7 @@ sub XML_to_otter {
 
           $translation->end_Exon($end_exon);
           $translation->end($end_pos);
-          print "End / pos " . $end_exon->stable_id . " " . $end_exon->length . " " . $end_pos . "\n";
+
           if ($end_exon->length >= $end_pos) {
             $end_exon->end_phase(-1);
           }
