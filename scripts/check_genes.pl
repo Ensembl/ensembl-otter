@@ -234,7 +234,7 @@ if($make_cache){
   my %gsi_ao_clone;
   my %gsi_au_clone;
   my %gsi_clone;
-  my %atype_gsi;
+  my %type_gsi;
   my %gsi2gn;
   my %missing_tr;
   my $nobs=0;
@@ -298,7 +298,7 @@ if($make_cache){
       
       # record clones that each gsi are attached to and assembly for each gsi
       $gsi_clone{$gsi}->{"$cla.$clv"}=1;
-      $atype_gsi{$atype}->{$gsi}=1;
+      $type_gsi{"$atype:$cname"}->{$gsi}=1;
 
     }else{
       $nexclude++;
@@ -350,15 +350,26 @@ if($make_cache){
 
   # report all offtrack genes
   my %orphan_gsi;
-  foreach my $atype (sort keys %atype_gsi){
-    $n_offtrack{$atype}->[0]=0;
-    $n_offtrack{$atype}->[1]=0;
-    $n_offtrack{$atype}->[2]=0;
-    print "sequence_set $atype\n";
+  foreach my $type (sort keys %type_gsi){
+
+    # in vega case, chromosome is most useful label
+    # in otter case, type is most useful label
+    my($atype,$cname)=split(/:/,$type);
+    my $label;
+    if($vega){
+      $label=$type;
+    }else{
+      $label=$atype;
+    }
+
+    $n_offtrack{$label}->[0]=0;
+    $n_offtrack{$label}->[1]=0;
+    $n_offtrack{$label}->[2]=0;
+    print "sequence_set $label\n";
 
     # report partial genes:
     my %sv;
-    foreach my $gsi (sort keys %{$atype_gsi{$atype}}){
+    foreach my $gsi (sort keys %{$type_gsi{$type}}){
       if($excluded_gsi{$gsi}){
 	$orphan_gsi{$gsi}=1;
 	# record all sv's that these genes are on in the sequence_set
@@ -370,8 +381,8 @@ if($make_cache){
 	  }
 	}
 	my $gn=$gsi2gn{$gsi};
-	print " ERR1 $gsi ($gn) ss=\'$atype\' has exon(s) off assembly:\n";
-	$n_offtrack{$atype}->[0]++;
+	print " ERR1 $gsi ($gn) ss=\'$type\' has exon(s) off assembly:\n";
+	$n_offtrack{$label}->[0]++;
 	# 3 diff classes of clones:
 	# V = different version of clone in assembly
 	# O = clone in another specified set
@@ -402,7 +413,7 @@ if($make_cache){
     
     # repeat for genes where an exon is on a valid clone, but off AGP
     my %sv2;
-    foreach my $gsi (sort keys %{$atype_gsi{$atype}}){
+    foreach my $gsi (sort keys %{$type_gsi{$type}}){
       if($offagp_gsi{$gsi}){
 	foreach my $sv (keys %{$gsi_clone{$gsi}}){
 	  if($sv2{$sv}){
@@ -412,7 +423,7 @@ if($make_cache){
 	  }
 	}
 	my $gn=$gsi2gn{$gsi};
-	$n_offtrack{$atype}->[1]++;
+	$n_offtrack{$label}->[1]++;
 	if($onagp_gsi{$gsi}){
 	  print " ERR2 $gsi ($gn) ss=\'$atype\' some exon(s) off agp:\n";
 	}else{
@@ -444,18 +455,26 @@ if($make_cache){
     # ignore unless in another version of clone in current assembly
     next unless $gsi_a2_clone{$gsi};
     my $gn=$gsi2gn{$gsi};
-    my %atype;
+    my %type;
     my %sv;
     foreach my $sv (sort keys %{$gsi_a2_clone{$gsi}}){
       my $cid=$gsi_a2_clone{$gsi}->{$sv};
       my($cla2,$clv2,$atype2,$clv,$cid,$cname,$atype)=@{$a2{$cid}};
+      $type="$atype:$cname";
       $sv{"$cla2.$clv"}=1;
-      $atype{$atype}++;
+      $type{$type}++;
     }
-    foreach my $atype (keys %atype){
-      $n_offtrack{$atype}->[2]++;
+    foreach my $type (keys %type){
+      my($atype,$cname)=split(/:/,$type);
+      my $label;
+      if($vega){
+	$label=$type;
+      }else{
+	$label=$atype;
+      }
+      $n_offtrack{$label}->[2]++;
     }
-    print " ERR3 $gsi ($gn) linked to =\'".join("\',\'",(keys %atype))."\'; clones: ".
+    print " ERR3 $gsi ($gn) linked to =\'".join("\',\'",(keys %type))."\'; clones: ".
 	join(",",(keys %sv))."\n";
     # 3 diff classes of clones:
     # V = different version of clone in assembly
@@ -476,8 +495,8 @@ if($make_cache){
   print "skipped $nobs exons marked as obsolete\n";
 
   print "\nNumber of offtrack gene problems by sequence_set and type (ERR1, ERR2, ERR3)\n";
-  foreach my $atype (sort keys %n_offtrack){
-    printf "%-20s %4d %4d %4d\n",$atype,@{$n_offtrack{$atype}};
+  foreach my $label (sort keys %n_offtrack){
+    printf "%-20s %4d %4d %4d\n",$label,@{$n_offtrack{$label}};
   }
 
   exit 0;
