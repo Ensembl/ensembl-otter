@@ -168,37 +168,48 @@ foreach my $cid ($cl->cluster_ids){
   $sth->execute();
 
   my($gid2,$eid2,$cid2,$cst2,$ced2,$st2,$ph2,$eph2,$sr2);
+  my @exon2;
   my %tid;
   while (my @row = $sth->fetchrow_array()){
     my($gid,$tid,$seid,$sev,$eid,$cid,$cst,$ced,$st,$ph,$eph,$sr)=@row;
+
+    # check both exons part of same gene
     if($gid2){
-      # check both exons part of same gene
       if($gid!=$gid2){
 	print " FATAL: Different gene_ids $gid $gid2\n";
 	$flag_fail=1;
 	last;
       }
-      # check exons really are identical
-      if($cid!=$cid2 || $cst!=$cst2 || $ced!=$ced2 || $st!=$st2 || $ph!=$ph2 || $eph!=$eph2 || $sr!=$sr2){
+    }else{
+      $gid2=$gid;
+    }
+
+    # check exons really are identical (allow for stick parts)
+    if($exon2[$sr]){
+      my($eid2,$cid2,$cst2,$ced2,$st2,$ph2,$eph2)=@{$exon2[$sr]};
+      if($cid!=$cid2 || $cst!=$cst2 || $ced!=$ced2 || $st!=$st2 || $ph!=$ph2 || $eph!=$eph2){
 	print " FATAL: Exons not identical\n";
-	print "  $eid,$cid,$cst,$ced,$st,$ph,$eph,$sr\n";
-	print "  $eid2,$cid2,$cst2,$ced2,$st2,$ph2,$eph2,$sr2\n";
+	print "  $eid,$cid,$cst,$ced,$st,$ph,$eph\n";
+	print "  $eid2,$cid2,$cst2,$ced2,$st2,$ph2,$eph2\n";
 	$flag_fail=1;
 	last;
       }
-      if($tid{$tid}){
-	print " FATAL: Multiple exons saved for transcript $tid\n";
-	print "  ".join(',',@{$tid{$tid}})."\n";
-	print "  $seid,$sev,$eid\n";
-	$flag_fail=1;
-	last;
-      }else{
-	$tid{$tid}=[$seid,$sev,$eid];
+      if($sr==1){
+	if($tid{$tid}){
+	  print " FATAL: Multiple exons saved for transcript $tid\n";
+	  print "  ".join(',',@{$tid{$tid}})."\n";
+	  print "  $seid,$sev,$eid\n";
+	  $flag_fail=1;
+	  last;
+	}else{
+	  $tid{$tid}=[$seid,$sev,$eid];
+	}
       }
     }else{
-      ($gid2,$eid2,$cid2,$cst2,$ced2,$st2,$ph2,$eph2,$sr2)=
-	  ($gid,$eid,$cid,$cst,$ced,$st,$ph,$eph,$sr);
-      $tid{$tid}=[$seid,$sev,$eid];
+      $exon2[$sr]=[$eid,$cid,$cst,$ced,$st,$ph,$eph];
+      if($sr==1){
+	$tid{$tid}=[$seid,$sev,$eid];
+      }
     }
   }
   if($flag_fail){
