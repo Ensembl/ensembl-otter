@@ -16,7 +16,7 @@ use Hum::Conf qw{ HUMACESERVER_HOST HUMGIFACESERVER_PORT };
 use GenomeCanvas::Band::SeqChooser;
 
 use GenomeCanvas::AnaNotes;
-use GenomeCanvas::AnaNotes::History;
+#use GenomeCanvas::AnaNotes::History;
 use Carp;
 use Getopt::Long 'GetOptions';
 #use Hum::SubmissionVersion;
