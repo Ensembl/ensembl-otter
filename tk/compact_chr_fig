@@ -1,0 +1,315 @@
+#!/usr/local/bin/perl -w
+
+### compact_chr_fig
+
+use strict;
+
+use strict;
+use GenomeCanvas;
+use GenomeCanvas::Band::TilingPath;
+use GenomeCanvas::Band::Plot;
+use GenomeCanvas::Band::SNP;
+use GenomeCanvas::Band::Gene;
+use GenomeCanvas::DensityBand::RepeatFeature;
+use GenomeCanvas::DensityBand::Gene;
+use GenomeCanvas::Band::CpG;
+use Bio::EnsEMBL::DBSQL::DBAdaptor;
+use GenomeCanvas::Band::GeneticMap;
+#use Bio::EnsEMBL::ExternalData::SNPSQL::DBAdaptor;
+use Hum::Submission 'prepare_statement'; # For Sanger sequence names
+use Getopt::Long 'GetOptions';
+
+{
+    my $test_flag = 0;
+    GetOptions(
+        'test!' => \$test_flag,
+        ) or die "error processing command line";
+
+    my $host            = 'ensrv3';
+    my $db_name         = 'chr20';
+    my $user            = 'ensro';
+    my $chr_name        = 'chr20';
+    my $static_type     = 'SANGER';
+    my $scale           = 4000;
+    
+    my $mw = GenomeCanvas::MainWindow->new;
+    $mw->title($chr_name);
+    my $gc = GenomeCanvas->new($mw);
+    $gc->vertical_tile(1);
+    # A4 is 841 x 591 points
+    $gc->page_height(841);
+    $gc->page_width(591);
+    
+    my $canvas = $gc->canvas;
+
+    my $db = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
+        -DBNAME => $db_name,
+        -USER   => $user,
+        -HOST   => $host,
+        );
+    $db->static_golden_path_type($static_type);
+    my $stadp = $db->get_StaticGoldenPathAdaptor();
+    
+    # Coords for p and q arms
+    my( @chr_parts );
+    if ($test_flag) {
+        @chr_parts = (
+            [1, 3_000_000],
+            [60_000_000, 62_500_000],
+            );
+    } else {
+        @chr_parts = (
+            [1, 27_500_000],
+            [27_500_000, get_chr_end($db, $static_type, $chr_name)]);
+    }
+    
+    foreach my $chr_pos (@chr_parts) {
+        my $vc = $stadp->fetch_VirtualContig_by_chr_start_end(
+            $chr_name,
+            @$chr_pos,
+            );
+                
+        my $tiling = GenomeCanvas::Band::TilingPath->new($vc);
+        $tiling->title("Contig\nTiling\nPath");
+        $tiling->name_morpher(\&trim_name);
+        $tiling->tiling_direction(-1);
+        $gc->add_Band($tiling);
+
+        my $genetic = GenomeCanvas::Band::GeneticMap->new;
+        $genetic->virtual_contig($vc);
+        $genetic->epcr_results_file('/nfs/disk84/jgrg/work/chr_20/genetic_map/epcr-new_SANGER.out');
+        $gc->add_Band($genetic);
+
+        my $repeat = GenomeCanvas::DensityBand::RepeatFeature->new;
+        $repeat->virtual_contig($vc);
+        $repeat->title('Repeats');
+        $repeat->repeat_classifier(\&repeat_class);
+        $gc->add_Band($repeat);
+
+        my $plot = GenomeCanvas::Band::Plot->new;
+        $plot->title('gc Content');
+        $plot->virtual_contig($vc);
+        $plot->range(0.3,0.7);
+        $plot->x_major(0.2);
+        $gc->add_Band($plot);
+
+        my $cpg = GenomeCanvas::Band::CpG->new;
+        $cpg->virtual_contig($vc);
+        $gc->add_Band($cpg);
+
+        my $gene_names = GenomeCanvas::Band::Gene->new;
+        $gene_names->show_labels(1);
+        $gene_names->label_type_color_list(
+            [ 'Known',              'HUMACE-Known',             '#4169e7' ],
+            [ 'Novel CDS',          'HUMACE-Novel_CDS',         '#86ceff' ],
+            [ 'Novel Transcript',   'HUMACE-Novel_Transcript',  '#ffa600' ],
+            [ 'Pseudogene',         'HUMACE-Pseudogene',        '#31ce31' ],
+            [ 'Putative',           'HUMACE-Putative',          '#cccccc' ],
+            );
+        $gene_names->virtual_contig($vc);
+        $gene_names->tiling_direction(1);
+        $gc->add_Band($gene_names);
+
+        my $snps = GenomeCanvas::Band::SNP->new;
+        $snps->virtual_contig($vc);
+        $gc->add_Band($snps);
+    }
+
+    print STDERR "Rendering canvas\n";
+    $gc->residues_per_pixel($scale);
+    $gc->render;
+    
+    $gc->set_scroll_region;
+
+    my $button_frame = $mw->Frame;
+    $button_frame->pack(
+        -side => 'top',
+        );
+
+    make_button($button_frame, 'Exit',
+        #sub{ kill 'INT', $$ } );
+        sub{ exit } );
+
+    make_button($button_frame, 'Zoom in', sub{ $gc->zoom(2) } );
+    make_button($button_frame, 'Zoom out', sub{ $gc->zoom(-2) } );
+    make_button($button_frame, 'Redraw', sub{
+        $gc->render;
+        $gc->fix_window_min_max_sizes
+        } );
+    make_button($button_frame, 'Show outline', sub{
+            foreach my $obj ($canvas->find('withtag', 'all')) {
+                if ($canvas->type($obj) eq 'rectangle') {
+                    $canvas->itemconfigure($obj, -outline => 'red');
+                }
+            }
+        } );
+
+    make_button($button_frame, 'PostScript',
+        sub {
+            my @files = $gc->print_postscript($chr_name);
+            warn "Printed to files:\n",
+                map "  $_\n", @files;
+        });
+    $gc->fix_window_min_max_sizes;
+}
+
+
+                            ###############
+                            Tk::MainLoop();
+                            ###############
+
+
+sub get_chr_end {
+    my( $db, $static_type, $chr_name ) = @_;
+    
+    my $get_max = $db->prepare(q{
+        SELECT MAX(chr_end)
+        FROM static_golden_path
+        WHERE type = ?
+          AND chr_name = ?
+        });
+    $get_max->execute($static_type, $chr_name);
+    my ($max) = $get_max->fetchrow;
+    die "No max for type = '$static_type' and chr_name = '$chr_name'" unless $max;
+    return $max;
+}
+
+sub parse_num {
+    my( $string ) = @_;
+    
+    my ($int, $mod) = $string =~ /^([\d\.]+)(.?)/ or return;
+    if ($mod) {
+        $mod = lc $mod;
+        if ($mod eq 'k') {
+            $int *= 1e3;
+        }
+        elsif ($mod eq 'm') {
+            $int *= 1e6
+        }
+        else {
+            return;
+        }
+    }
+    return $int;
+}
+
+sub get_sanger_name {
+    my( $name ) = @_;
+    
+    my $acc = trim_name($name);
+    return seq_name_from_acc($acc) || "Em:$acc";
+}
+
+{
+    my( $sth );
+    
+    sub seq_name_from_acc {
+        my( $acc ) = @_;
+        
+        $sth ||= prepare_statement(q{
+            SELECT s.sequence_name
+            FROM project_acc a
+              , project_dump d
+              , sequence s
+            WHERE a.sanger_id = d.sanger_id
+              AND d.seq_id = s.seq_id
+              AND d.is_current = 'Y'
+              AND a.accession = ?
+            });
+        $sth->execute($acc);
+        my ($seq_name) = $sth->fetchrow;
+        return $seq_name;
+    }
+}
+
+sub trim_name {
+    my( $name ) = @_;
+    
+    my ($trim) = $name =~ /^([^\.]+)/
+        or confess("Can't get trimmed name from '$name'");
+    return $trim;
+}
+
+
+sub make_button {
+    my( $parent, $label, $command ) = @_;
+    
+    my $button = $parent->Button(
+        -text => $label,
+        -command => $command,
+        );
+    $button->pack(
+        -side => 'left',
+        );
+    return $button;
+}
+
+{
+    my( %repeat_class );
+
+    sub repeat_class {
+        my( $band, $repeat_name ) = @_;
+        
+        make_repeat_class($band) unless %repeat_class;
+        return $repeat_class{$repeat_name};
+    }
+    
+    ### Yuk!  I look through the headers of the RepeatMasker
+    ### libraries for the classes of each repeat.
+    sub make_repeat_class {
+        my( $band ) = @_;
+        
+        my $dbobj = $band->virtual_contig->dbobj;
+        my %is_ens_repeat = map {$_, 1} list_repeat_names($dbobj);
+        my %valid_classes = map {$_, 1} $band->repeat_classes;
+
+        local *LIB;
+        my $dir = '/nfs/disk84/jgrg/work/repeatmasker/RepeatMasker08142000/Libraries';
+        opendir LIB, $dir or die "Can't opendir '$dir' : $!";
+        foreach my $file (map "$dir/$_", grep /\.lib$/, readdir LIB) {
+            local *FA;
+            open FA, $file or die "Can't read '$file' : $!";
+            while (<FA>) {
+                if (/^>(\S+)/) {
+                    my ($rep, $class) = split /#/, $1, 2;
+                    next unless $is_ens_repeat{$rep};
+                    $class =~ s{/.+}{};
+                    if (my $stored_class = $repeat_class{$rep}) {
+                        warn "$rep: class '$class' doesn't match stored '$stored_class'"
+                            if $stored_class ne $class;
+                    } else {
+                        $repeat_class{$rep} = $class;
+                    }
+                }
+            }
+            close FA;
+        }
+        close LIB;
+    }
+}
+
+sub list_repeat_names {
+    my( $dbobj ) = @_;
+    
+    my $sth = $dbobj->prepare(q{
+        SELECT DISTINCT hid
+        FROM repeat_feature
+        });
+    $sth->execute;
+    my( @repeat );
+    while (my ($r) = $sth->fetchrow) {
+        push(@repeat, $r);
+    }
+    return @repeat;
+}
+
+
+
+__END__
+
+=head1 NAME - compact_chr_fig
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
