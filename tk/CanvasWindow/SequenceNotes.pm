@@ -1094,12 +1094,13 @@ sub selected_CloneSequence_indices {
     
     my $canvas = $self->canvas;
     my $select = [];
+    my $first = $self->_user_first_clone_seq() || 1;
     foreach my $obj ($canvas->find('withtag', 'selected&&clone_seq_rectangle')) {
         my ($i) = map /^cs=(\d+)/, $canvas->gettags($obj);
         unless (defined $i) {
             die "Can't see cs=# in tags: ", join(', ', map "'$_'", $canvas->gettags($obj));
         }
-        push(@$select, $i);
+        push(@$select, $i + $first - 1);
     }
     
     if (@$select) {
