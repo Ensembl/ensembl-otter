@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl5.6.1 -w
+#!/usr/local/bin/perl -w
 
 ### xml_description_tables
 
@@ -503,12 +503,13 @@ value           string
 <locus>
 description     structure and annotations of a gene
 contains        name
+contains        locus_symbol
+contains        description
 contains        stable_id
 contains        type
 contains        truncated
 contains        author
 contains        author_email
-contains        description
 contains        synonym
 contains        remark
 contains        known
@@ -520,9 +521,26 @@ description     a center specific class of gene
 value           string
 
 <name>
-description     official HUGO name for the gene, or an interim name assigned by the annotation center
+description     name assigned by the annotation center - 
 value           string
 mandatory
+
+<locus_symbol>
+description     agreed symbol for the locus assigned by organization responsible for curating names for genes in the particular species (eg: HUGO for human)
+value           string
+
+<known>
+description     whether the gene is know, or is novel (do we still need this now that <locus_symbol> has been added?
+value           0 if novel or\n1 if known
+
+<description>
+description     brief description of the gene - this is an an agreed description if the gene is known
+value           string
+
+<synonym>
+description     alternative name(s) for the gene
+value           string
+multiple
 
 <stable_id>
 description     accession number for the gene if it has been stored in the annotation database
@@ -540,23 +558,10 @@ value           string
 description     email address of the author who created or last modified the gene
 value           string
 
-<description>
-description     brief description of the gene - this is an official description if the gene is known
-value           string
-
-<synonym>
-description     alternative name(s) for the gene
-value           string
-multiple
-
 <remark>
 description     remark(s) about the gene added by an annotator
 value           string
 multiple
-
-<known>
-description     whether the gene is know, or is novel
-value           0 if novel or\n1 if known
 
 <transcript>
 description     structure of a mRNA or CDS, possibly partial
@@ -679,12 +684,21 @@ description     where to begin translation of exon. This tag is omitted for a no
 value           0 = translation begins at first base of exon (or first base of the translation region within the exon)\n1 = translation begins at second base of exon\n2 = translation begins at third base of exon
 
 <feature_set>
-description     list of simple features, such as PolyA sites, that form an essential part of the gene annotation
-contains        feature
+description     list of simple features of strictly defined types, such as PolyA sites, that form an essential part of the gene annotation
+contains        poly_a_signal
+contains        poly_a_site
 
-<feature>
-description     A simple annotated feature
-contains        type
+<poly_a_signal>
+description     The location of a poly-adenylation signal
+contains        start
+contains        end
+contains        strand
+contains        score
+contains        label
+multiple
+
+<poly_a_site>
+description     The location of a poly-adenylation site
 contains        start
 contains        end
 contains        strand
@@ -698,17 +712,17 @@ value           string
 mandatory
 
 <start>
-description     start coordinate of the exon in the assembly
+description     start coordinate of the feature in the assembly
 value           integer greater than zero and less than <end>
 mandatory
 
 <end>
-description     end coordinate of the exon in the assembly
+description     end coordinate of the feature in the assembly
 value           integer greater than or equal to <start>
 mandatory
 
 <strand>
-description     strand of the assembly that the exon is on
+description     strand of the assembly that the feature is on
 value           1 if forward or\n-1 if reverse
 mandatory
 

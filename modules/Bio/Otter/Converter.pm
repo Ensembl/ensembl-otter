@@ -908,6 +908,9 @@ sub otter_to_ace {
             my $txt = $rem->remark;
             $str .= qq{Remark "$txt"\n};
         }
+        if ($gene->type =~ /^([^:]+):/) {
+            $str .= qq{Type_prefix "$1"\n};
+        }
         
         $str .= "\n";
     }
@@ -1571,10 +1574,11 @@ sub ace_to_otter {
         if ($ace_type and $ace_type =~ /known/i) {
             $ginfo->known_flag(1);
         }
-        my $type = gene_type_from_transcript_set($gene->get_all_Transcripts, $ginfo->known_flag) || $ace_type;
-        if (my $prefix   = $gene_data->{Type_prefix}) {
-            $type = "$prefix.$type";
+        my $type = gene_type_from_transcript_set($gene->get_all_Transcripts, $ginfo->known_flag);
+        if (my $prefix = $gene_data->{Type_prefix}) {
+            $type = "$prefix:$type";
         }
+        $gene->type($type);
     }
     
     # Turn %frags into a Tiling Path
@@ -2143,7 +2147,7 @@ sub gene_type_from_transcript_set {
     my $class_set = {};
     foreach my $transcript (@$transcripts) {
         my $class = $transcript->transcript_info->class->name;
-        $class =~ s/^.+\.//;    # Strip leading GD. etc ...
+        $class =~ s/^([^:]+)://;    # Strip leading GD. etc ...
         $class =~ s/_trunc$//;
         $class_set->{$class}++;
         if ($class =~ /pseudo/i) {

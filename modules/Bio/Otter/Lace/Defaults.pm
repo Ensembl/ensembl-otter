@@ -13,7 +13,17 @@ use Bio::Otter::Lace::Client;
 our $CLIENT_STANZA  = 'client';
 our $DEFAULT_TAG    = 'default';
 our $DEFAULTS       = {};
-my @CLIENT_OPTIONS = qw(host=s port=s author=s email=s pipeline! write_access! group=s);
+my @CLIENT_OPTIONS = qw(
+    host=s
+    port=s
+    author=s
+    email=s
+    pipeline!
+    write_access!
+    group=s
+    gene_type_prefix=s
+    );
+
 # @CLIENT_OPTIONS is Getopt::GetOptions() keys which will be included in the 
 # $DEFAULTS->{$CLIENT_STANZA} hash.  To add another client option just include in above
 # and if necessary add to hardwired defaults in do_getopt().

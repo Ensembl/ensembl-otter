@@ -1280,64 +1280,6 @@ sub update_locus{
 }
 
 
-##sub edit_locus{
-##    my ($self , @names) = @_ ;
-##    
-##    ### popup new window with edit / new  buttons
-###    my $locus_window = $self->{'_locus_window'};
-##    my $top = $self->{'_locus_window'};
-##    unless ($top) {
-##        my $master = $self->canvas->toplevel;
-##        $top = $master->Toplevel;
-##        $top->transient($master);
-##        $top->title('Edit locus') ;
-##        $self->{'_locus_window'} = $top;
-##        my $font = $self->font;
-##        my $size = $self->font_size;
-##        
-##        $top->protocol('WM_DELETE_WINDOW', sub{$top->withdraw});
-##        
-###        $top->Label(-text => 'Locus :')->pack(-side => 'left') ;        
-###        $top->Entry(-text => 'current_name')->pack(-side => 'left') ;
-##        my $locus_name ;
-##        eval{ $locus_name = $self->SubSeq->Locus->name };
-##        $locus_name ||= '';
-##        $self->{'_locus_name_variable'} = \$locus_name;
-##        my $combo_box = $top->ComboBox( -listheight => 10,
-##                                        -label      => 'Locus: ',
-##                                        -width      => 18,
-##                                        -variable   => \$locus_name,
-##                                        -text       => $locus_name,
-##                                        -exportselection    => 1,
-##                                        -background         => 'white',
-##                                        -selectbackground   => 'gold',
-##                                        -font               => [$self->font, $self->font_size, 'normal'],
-##                                        )->pack(-side => 'left');
-##        
-##        my $edit_locus = sub{$self->editing_locus};        
-##        $top->Button(   -text => 'Edit', 
-##                        -command => $edit_locus )->pack(-side => 'left');
-##
-##        my $new_locus = sub{$self->new_locus};
-##        $top->Button(   -text => 'New',
-##                        -command => $new_locus)->pack(-side => 'left');
-##    
-##        
-##        
-##        $combo_box->configure(
-##                -choices   => [@names],
-##                #-listwidth => scalar @names,
-##                );
-##        
-##        foreach (@names){
-##            print $_ ."\n";
-##        }
-##    }
-##    
-##    $top->deiconify;
-##    $top->raise;
-##}
-
 sub new_locus{
     my ($self ) = @_ ;
     $self->{'_new_locus'} = 1 ;    

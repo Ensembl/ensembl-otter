@@ -316,7 +316,7 @@ sub change_gene_type{
     my $locus = $self->locus ;
 
     $self->set_gene_type($locus) ;
-    my $ace = $locus->is_known_string ;
+    my $ace = $locus->ace_string ;
     my $xace = $self->xace_seq_chooser ;
     $xace->update_ace_display($ace);
     $self->hide_window ;
@@ -347,7 +347,7 @@ sub store_new_locus{
     } 
     
     my $ace = $self->last_exon_canvas->SubSeq->ace_string(); 
-    $ace .= $self->locus->is_known_string ;
+    $ace .= $self->locus->ace_string ;
 
     $xace->update_ace_display($ace);
     $self->hide_window ;
@@ -398,16 +398,16 @@ sub update_canvases{
     my ($self) = @_ ;
     
     my $xace = $self->xace_seq_chooser();   
+    $self->is_current(1);
     foreach my $name ($xace->list_all_subseq_edit_window_names) {
         my $top = $xace->get_subseq_edit_window($name) or next;
-        $top->deiconify;
-        $top->raise;
-        $top->update;
+        $top->deiconify;    ### Don't know if
+        $top->raise;        ### we need all 3
+        $top->update;       ### of these methods.
         $top->focus;
-        $self->is_current(1);
         $top->eventGenerate('<<update_locus>>');
-        $self->is_current(0);
     } 
+    $self->is_current(0);
 }
 
 sub is_current{

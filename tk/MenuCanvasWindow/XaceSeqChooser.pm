@@ -285,11 +285,7 @@ sub rename_loci{
     $locus->name($new_name); 
     $self->add_new_Locus($locus) ;
     
-    my $clone_name = $self->current_clone_name ;
-#    my $ace = $locus->ace_string($clone_name , $old_name);  
-
-    my $ace = qq{\n\n-R Locus "$old_name" "$new_name"\n\n} ;
-    $ace .= $locus->is_known_string() ;
+    my $ace = $locus->ace_string($old_name);  
     
     foreach my $name ($self->list_all_subseq_edit_window_names) {
         my $top = $self->get_subseq_edit_window($name) or next;
@@ -1393,21 +1389,24 @@ sub edit_new_subsequence {
     
     # Trim sequence version from accession if clone_name ends .SV
     $region_name =~ s/\.\d+$//;
-    
-    # Now get the maximum locus number for this root
-    my $regex = qr{^(SC:)?$region_name\.(\d+)}; # qr is a Perl 5.6 feature
+
+    my $regex = qr{^(?:[^:]+:)?$region_name\.(\d+)}; # qr is a Perl 5.6 feature
     my $max = 0;
-    my $prefix = '';
     foreach my $sub ($clone->get_all_SubSeqs) {
-        my ($sc, $n) = $sub->name =~ /$regex/;
-        $prefix = $sc if $sc;
+        my ($n) = $sub->name =~ /$regex/;
         if ($n and $n > $max) {
             $max = $n;
         }
     }
     $max++;
     
-    my $loc_name = "$prefix$region_name.$max";
+    
+    # Now get the maximum locus number for this root
+    my $prefix = Bio::Otter::Lace::Defaults::fetch_gene_type_prefix() || '';
+    my $loc_name = $prefix ? "$prefix:$region_name.$max" : "$region_name.$max";
+    my $locus = $self->get_Locus($loc_name);
+    $locus->gene_type_prefix($prefix);
+
     my $seq_name = "$loc_name-001";
     
     # Check we don't already have a sequence of this name
@@ -1454,7 +1453,7 @@ sub edit_new_subsequence {
         }
     }
     $new->name($seq_name);
-    $new->Locus($self->get_Locus($loc_name));
+    $new->Locus($locus);
     my $gm = $self->get_default_mutable_GeneMethod or confess "No default mutable GeneMethod";
     $new->GeneMethod($gm);
 
@@ -1575,7 +1574,6 @@ sub make_variant_subsequence {
         # Now get the maximum variant number for this root
         my $regex = qr{^$root-(\d{3,})$};
         my $max = 0;
-        my $prefix = '';
         foreach my $sub ($clone->get_all_SubSeqs) {
             my ($n) = $sub->name =~ /$regex/;
             if ($n and $n > $max) {
@@ -1715,22 +1713,6 @@ sub draw_clone_list {
 }
 
 
-sub OLD_draw_subseq_list {
-    my( $self, @selected_clones ) = @_;
-    
-    my( @subseq );
-    foreach my $clone_name (@selected_clones) {
-        #warn "Fetching Subsequences for '$clone_name'\n";
-        my $clone = $self->get_CloneSeq($clone_name);
-        my( @gensub );
-        foreach my $sub ($clone->get_all_SubSeqs) {
-            push(@gensub, $sub->name);
-        }
-        push(@subseq, sort @gensub);
-    }
-    $self->draw_sequence_list('subseq', @subseq);
-}
-
 sub draw_subseq_list {
     my( $self, @selected_clones ) = @_;
 
@@ -1746,8 +1728,6 @@ sub draw_subseq_list {
             push(@subseq, "") if @subseq;
             push(@subseq, map($_->name, @$clust));
         }
-
-
     }
     
     $self->draw_sequence_list('subseq', @subseq);
