@@ -1,0 +1,64 @@
+#!/usr/local/bin/perl -w
+
+### lock_set
+
+use strict;
+use Bio::Otter::Lace::Defaults;
+
+{
+    my( $author, $email, $dataset, $seqsetname );
+    my $unlock_flag = 0;
+    my $usage = sub{ exec('perldoc', $0) };
+    Bio::Otter::Lace::Defaults::do_getopt(
+                                          'dataset=s'   => \$dataset,
+                                          'set=s'       => \$seqsetname,
+                                          'h|help!'     => $usage,
+                                          'unlock!'    => \$unlock_flag,
+                                          );
+    $usage->() unless $dataset and $seqsetname;
+    
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    my $ds = $cl->get_DataSet_by_name($dataset);
+    my $dsObj    = $cl->get_DataSet_by_name($dataset);
+    my $seqSet   = $dsObj->get_SequenceSet_by_name($seqsetname);
+    $dsObj->selected_SequenceSet($seqSet);
+    my $csObjs   = $dsObj->fetch_all_CloneSequences_for_selected_SequenceSet();
+
+    if ($unlock_flag) {
+        local $/ = undef;
+        my $lock_xml = <>;
+        $cl->unlock_otter_xml($lock_xml, $dataset);
+    } else {
+        # this means they ALL get locked.
+        $seqSet->selected_CloneSequences($csObjs);
+
+        my $ctg_list = $seqSet->selected_CloneSequences_as_contig_list;
+        my $lock_xml;
+        my $n=0;
+        foreach my $ctg(@$ctg_list){
+            eval{
+                $lock_xml .=  $cl->lock_region_for_contig_from_Dataset($ctg, $dsObj);
+            };
+            if($@){
+                $cl->unlock_otter_xml($lock_xml, $dataset) if $lock_xml;
+                die $@;
+            }
+        }
+        print $lock_xml;
+    }
+}
+
+
+__END__
+
+=head1 NAME - lock_set
+
+=head1 SYNOPSIS
+
+  lock_set -author <NAME> -email <ADDRESS> -dataset <DATASET> -seqset <SEQUENCE SET> > lock.xml
+  lock_set -unlock < lock.xml
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+

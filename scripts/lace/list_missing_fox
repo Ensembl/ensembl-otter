@@ -32,6 +32,17 @@ use Hum::AnaStatus::Sequence;
           AND c.embl_version = ?
         });
     
+    my $test_xfer_exons = $dba->prepare(q{
+        SELECT COUNT(DISTINCT(e.exon_id))
+        FROM clone c
+          , contig g
+          , exon e
+        WHERE c.clone_id = g.clone_id
+          AND g.contig_id = e.contig_id
+          AND c.embl_acc = ?
+          AND c.embl_version = ?
+        });
+    
     my $species_name = $ds->species or die "species not set";
 
     my $list_all_fox_genomic = fox_prepare_statement(q{
@@ -57,6 +68,10 @@ use Hum::AnaStatus::Sequence;
                 my ($acc, $sv) = $seq->get_accession_and_sv;
                 $test_xfer->execute($acc, $sv);
                 my ($present, $xfered) = $test_xfer->fetchrow;
+                unless ($xfered) {
+                    $test_xfer_exons->execute($acc, $sv);
+                    ($xfered) = $test_xfer_exons->fetchrow;
+                }
                 $load++ unless $present;
                 $xfer++ unless $xfered;
                 printf "%12s.%-2d  %-14s  %4s  %4s  %d\n",
