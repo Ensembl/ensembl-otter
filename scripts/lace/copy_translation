@@ -1,0 +1,443 @@
+#!/usr/local/bin/perl -w
+
+### copy_translation
+
+use strict;
+use Getopt::Long 'GetOptions';
+use Bio::Otter::Lace::Defaults;
+use Data::Dumper;
+use Bio::Otter::AnnotationBroker;
+
+$| = 1;
+
+{
+  my ($dataset, $verbose, @a_types);
+
+  my $help = sub { exec('perldoc', $0) };
+
+  Bio::Otter::Lace::Defaults::do_getopt('ds|dataset=s' => \$dataset,
+					'v|verbose'    => \$verbose,
+					't|type=s@'    => \@a_types,
+					'h|help'       => $help,
+				       ) or $help->(); # plus default options
+  $help->() unless $dataset;
+
+  my $client    = Bio::Otter::Lace::Defaults::make_Client(); # Bio::Otter::Lace::Client
+  my $dset      = $client->get_DataSet_by_name($dataset);    # Bio::Otter::Lace::DataSet
+  my $otter_db  = $dset->get_cached_DBAdaptor;               # Bio::EnsEMBL::Containerr
+
+  my ($type, $chrom, $geneAd, $sliceAd, $slice, $tiles, $gene);
+
+  unless ( @a_types ){
+
+    # sql query to get all assembly types
+    my $sql = q{SELECT assembly_type FROM sequence_set};
+    my $sth = $otter_db->prepare($sql);
+    $sth->execute;
+    while ( my ($type) = $sth->fetchrow_array()) {
+      push (@a_types, $type);
+    }
+    $sth->finish;
+  }
+
+  # loop thru all assembly types to fetch all annotated genes in it on otter
+
+  my $data_error;
+  my $match_with_stop              = 0;
+  my $match_without_stop           = 0;
+  my $match_if_without_stop_at_end = 0;
+  my $copy                         = 0;
+
+  foreach $type ( @a_types ) {
+
+    print STDERR "\nExamining genes on '$type'\n";
+
+    my $redundant = "Redundant_transcript_".$dataset."_$type";
+    open (R, ">$redundant") || die $!;
+
+    $otter_db->assembly_type($type); # replace the default sequence set setting
+
+    my $seqSet    = $dset->get_SequenceSet_by_name($type);
+    $dset->fetch_all_CloneSequences_for_SequenceSet($seqSet);
+    $chrom     = $seqSet->CloneSequence_list()->[0]->chromosome;
+
+    $geneAd  = $otter_db->get_GeneAdaptor; # Bio::Otter::AnnotatedGeneAdaptor
+    $sliceAd = $otter_db->get_SliceAdaptor;
+    $slice = $sliceAd->fetch_by_chr_name($chrom->name);
+    $tiles = $slice->get_tiling_path;
+
+
+    my $latest_gene_id = $geneAd->list_current_dbIDs_for_Slice($slice);
+
+    my $i = 0;
+    my $pos = 0; my $neg = 0;
+
+  GENE:
+    foreach my $id ( @$latest_gene_id ) {
+      $i++;
+
+      my $db_gene = $geneAd->fetch_by_dbID($id)->transform($slice); # transform contig coords of a gene into chrom. coords
+      $gene       = $geneAd->fetch_by_dbID($id)->transform($slice); # make $gene a copy of $db_gene and work on $gene
+
+      my $all_exons = $gene->get_all_Exons;
+      foreach ( @$all_exons ) {
+	if ( $_->contig != $slice ) {
+	  print STDERR "$type\t". $gene->stable_id ."\t". $gene->gene_info->name->name. " has exon not mapped onto slice\n" if ( $_->contig != $slice );
+	  $data_error .= "$type\t". $gene->stable_id ."\t". $gene->gene_info->name->name. " has exon not mapped onto slice\n" if ( $_->contig != $slice );
+	  next GENE;
+	}
+      }
+
+      my $all_trans = $gene->get_all_Transcripts;
+      if ( scalar @$all_trans > 1 ){
+	my (@positives, @negatives, $no_product, $has_product, %array_order);
+
+	my $order = 0;
+	foreach my $trans (@$all_trans) {
+
+	  $order++;
+	  $array_order{$trans}=$order-1;
+
+	  if ( $trans->translation ) {
+	    $has_product++;
+	    $pos++;
+	    push (@positives, $trans);
+	  }
+	  if ( !$trans->translation ) {
+	    $no_product++;
+	    $neg++;
+	    push(@negatives, $trans);
+	  }
+	}
+
+	if ( $no_product && $has_product ) {
+
+	  foreach my $trans_CDS ( @positives ) {
+
+	    my $trans_info = "\n=========$trans_CDS ". $gene->stable_id."\n";
+	    foreach my $t ( @negatives ) {
+
+	      $trans_info .= $t->transcript_info->name." (no translation)\n";
+
+	      my ($start_Exon, $end_Exon, $start_Exon_start, $ATG_site, $start_Exon_end, $end_Exon_start, $STOP_site, $end_Exon_end) =
+		coordinate_munging($t, $trans_CDS, $gene, %array_order);
+
+	      if ( $start_Exon_start && $ATG_site && $start_Exon_end) {
+		$copy++;
+
+		# make new translation obj for transcript $t
+		my $trln = Bio::EnsEMBL::Translation->new();
+	
+		# assign start_Exon / end_Exon to exons of transcript w/o translation
+		$trln->start_Exon($start_Exon);
+		$trln->  end_Exon(  $end_Exon);
+
+		# assign ATG site position relative to the start (stating with 1) of start_Exon
+		if ( $ATG_site == $start_Exon_start ) { $trln->start(1) }
+		else { $trln->start($ATG_site - $start_Exon_start + 1) }
+
+		# assign STOP site position relative to the start (stating with 1) of end_Exon
+		$trln->end($STOP_site - $end_Exon_start + 1);
+	
+		# assign new translation obj to transcript $t and fetch new translation
+		$t->translation($trln);
+
+		my $stable_id_Ad = $otter_db->get_StableIdAdaptor;
+		$t->translation->stable_id( $stable_id_Ad->fetch_new_translation_stable_id );
+
+		# original and new protein seqs
+		my $new_seq = $t        ->translate->primary_seq->seq;
+		my $ori_seq = $trans_CDS->translate->primary_seq->seq;
+
+		# remark for the script-modified transcript $t
+		my $remark = "Annotation_remark- automatic translation info for the start_Exon, ATG site, end_Exon and STOP site from ".
+                                             $trans_CDS->transcript_info->name;
+                $t->transcript_info->remark( new Bio::Otter::TranscriptRemark(-remark => $remark) );
+
+		# for debugging only, use with -v option
+		$trans_info .= $gene->stable_id."\t".$gene->gene_info->name->name."\t".$t->transcript_info->name. "\n".
+                               "Remark: ". $t->transcript_info->remark."\n".
+		               "start_Exon: $start_Exon\nend_Exon: $end_Exon\n".
+    		               "start_Exon_start ATG start_Exon_end end_Exon_start STOP end_Exon_end\n".
+             	               "$start_Exon_start $ATG_site $start_Exon_end $end_Exon_start $STOP_site $end_Exon_end\n".
+                               "==== copied from ".$trans_CDS->transcript_info->name."\n".
+		               $trans_CDS->translation->start_Exon->start."\t".$trans_CDS->translation->start."\t".$trans_CDS->translation->start_Exon->end."\t".
+		               $trans_CDS->translation->end_Exon->start."\t".$trans_CDS->translation->end."\t".$trans_CDS->translation->end_Exon->end."\n".
+		               $t->translation->start_Exon."\n".
+   		               $t->translation->end_Exon."\n".
+		               "\n".$new_seq."  ". length ($new_seq) . "\n";
+
+		#----------------------------------------------------------------------------------------------
+		#  check that new translation obj can be translated and compare old with new protein sequences
+                #----------------------------------------------------------------------------------------------
+		
+		# grep only transcirpts with non-stop translation
+		if ( $new_seq !~ /\*/ && $new_seq eq $ori_seq){
+		  $match_without_stop++;
+
+		  # prepare gene->XML->gene roundtrip
+		  otter_to_XML_to_otter($chrom->name, $slice->chr_start, $slice->chr_end, $type, $tiles, $otter_db, $geneAd, $db_gene, $gene, $slice);
+
+		  # print transcript info for debugging purposes
+		  trans_info($trans_info) if $verbose;
+		}
+
+		# should spot selenocystein gene if translation seqs are identical and has stop codon
+		if ( $new_seq =~ /\*/ && $new_seq eq $ori_seq){
+		  $match_with_stop++;
+		  $trans_info .= "selenocystein gene: ". $gene->stable_id. " ". $t->transcript_info->name. " ?";
+
+		  otter_to_XML_to_otter($chrom->name, $slice->chr_start, $slice->chr_end, $type, $tiles, $otter_db, $geneAd, $db_gene, $gene, $slice);
+		  trans_info($trans_info) if $verbose;
+		}
+
+		# also captures 2 sequences differ only by end stop codon
+	        if ( $new_seq =~ /\*$/ && $new_seq ne $ori_seq){
+		  my @matches = $new_seq =~ /\*/g;
+		  warn @matches, "**********";
+		  my $no_stop = substr($new_seq, 0, (length $new_seq)-1); # $new_seq w/o end stop codon
+		  if ( scalar @matches == 1 && $no_stop eq $ori_seq){
+		    $match_if_without_stop_at_end++;
+
+		    otter_to_XML_to_otter($chrom->name, $slice->chr_start, $slice->chr_end, $type, $tiles, $otter_db, $geneAd, $db_gene, $gene, $slice);
+		    trans_info($trans_info) if $verbose;
+		    print "\nSAME_if_without_end_Stop: ".$new_seq. "  ".length ($new_seq). "\n";
+		  }
+		}
+	      }	
+	    }
+	  }
+	}
+      }
+    }
+    print "Total number of candidate transcripts w/o translation: $copy\n".
+          "$match_with_stop: same translation with stop\n".
+          "$match_without_stop: same translation without stop\n".
+	  "$match_if_without_stop_at_end: same translation if without stop at end\n".
+          "Rest is irrelevant\n";
+  }
+
+  if ( $data_error ) {
+    my $outfile = $dataset."_data_error";	
+    open (my $f, ">$outfile") || die $!;
+    print $f $data_error;
+  }
+}
+
+sub trans_info {
+  print @_;
+}
+
+sub coordinate_munging {
+  my ($trans, $trans_CDS, $gene, %array_order) = @_;
+  my ($start_Exon, $start_Exon_start, $start_Exon_end);
+
+  # look for start_Exon with start coord that is identical or higher than ATG site and identical start_Exon end coord
+  foreach my $e ( @{$trans ->get_all_Exons} ){
+
+    #------------------------------------
+    #      dealing with single exon
+    #------------------------------------
+
+    # situation where start_Exon = end_Exon eg. OTTHUMG00000028635
+    # ie,$trans_CDS->translation->start_Exon->start ==$trans_CDS->translation->end_Exon->start
+
+    if ( $trans_CDS->translation->start_Exon->start == $trans_CDS->translation->end_Exon->start ){
+
+      if ( $e->start < get_ATG_site_coord($trans_CDS) && $e->end == $trans_CDS->translation->end_Exon->end ||
+           $e->start == $trans_CDS->translation->end_Exon->start && $e->end >= get_STOP_site_coord($trans_CDS) ){
+
+	my $end_Exon       = $start_Exon       = $e;
+	my $end_Exon_start = $start_Exon_start = $e->start;
+	my $end_Exon_end   = $start_Exon_end   = $e->end;
+
+	return ($start_Exon, $end_Exon, $start_Exon_start, get_ATG_site_coord($trans_CDS),
+		$start_Exon_end, $end_Exon_start, get_STOP_site_coord($trans_CDS), $end_Exon_end);
+	last;
+      }
+    }
+
+    #---------------------------------------
+    #      dealing with multiple exon
+    #---------------------------------------
+
+    # working on 5': situation 1 (coord of start_Exon start matched)
+    if ( $trans_CDS->translation->start_Exon->start != $trans_CDS->translation->end_Exon->start  &&
+	 $e->start == $trans_CDS->translation->start_Exon->start ) {
+
+      # ensures that start_Exon end coord > ATG site coord
+      if ( $e->end > get_ATG_site_coord($trans_CDS) ){
+
+	# first check if this is a redundant transcript
+	my @exon_coords1 = get_exon_coords($trans_CDS);
+	my @exon_coords2 = get_exon_coords($trans);
+	my $comp = array_comp( \@exon_coords1, \@exon_coords2);
+
+	if ( $comp == 0 ){
+	  print R "Redundant transcript: ". $trans->transcript_info->name."\t".$gene->stable_id."\t".$gene->gene_info->name->name."\n";
+
+	  # remove redundant transcript (ie, all exons (coding and nocoding) are identical) of a gene
+	  my @ori = @{$gene->{'_transcript_array'}};
+	  splice (@ori, $array_order{$trans}, 1); # remove 1 element starting at index $array_order{$trans}
+
+	  $gene->{'_transcript_array'}=[];
+	  foreach my $e (@ori){$gene->add_Transcript($e)}
+	  last;
+	}
+	else {
+	  $start_Exon = $e;
+	  $start_Exon_start = $e->start;
+	  $start_Exon_end   = $e->end;
+	}
+	next;
+      }
+    }
+
+    # working on 5': situation 2 (coord of start_Exon start not matched, but start_Exon end does)
+    if ( $trans_CDS->translation->start_Exon->start != $trans_CDS->translation->end_Exon->start &&
+	 $e->start != $trans_CDS->translation->start_Exon->start && $e->end == $trans_CDS->translation->start_Exon->end ){	
+
+      # ensure start_Exon start < ATG_site coord
+      if ( $e->start < get_ATG_site_coord($trans_CDS) ){
+	$start_Exon = $e;
+	$start_Exon_start = $e->start;
+	$start_Exon_end   = $e->end;
+	next;
+      }
+    }
+
+    # working on 3'
+    if ( $e->start == $trans_CDS->translation->end_Exon->start &&
+	 $trans_CDS->translation->start_Exon->start != $trans_CDS->translation->end_Exon->start ) {
+
+      if ( $e->end >= get_STOP_site_coord($trans_CDS) && $start_Exon_start ){
+	my $end_Exon = $e;
+	my $end_Exon_start = $e->start;
+	my $end_Exon_end   = $e->end;
+
+	return ($start_Exon, $end_Exon, $start_Exon_start, get_ATG_site_coord($trans_CDS),
+                $start_Exon_end, $end_Exon_start, get_STOP_site_coord($trans_CDS), $end_Exon_end);
+	last;
+      }
+    }
+  }
+}
+
+
+sub get_ATG_site_coord {
+  my ($trans_CDS) = @_;
+  my $ATG_site_coord = $trans_CDS->translation->start_Exon->start + $trans_CDS->translation->start - 1 if $trans_CDS->translation->start  > 1;
+     $ATG_site_coord = $trans_CDS->translation->start_Exon->start                                      if $trans_CDS->translation->start == 1;
+
+  return $ATG_site_coord;
+}
+
+sub get_STOP_site_coord {
+  my ($trans_CDS) = @_;
+  return my $STOP_site_coord = $trans_CDS->translation->end_Exon->start + $trans_CDS->translation->end - 1;
+}
+
+
+# get all exon coords of a transcript
+sub get_exon_coords {
+  my ($trans) = @_;
+  my @exon_coords;
+  foreach ( @{$trans ->get_all_Exons} ){
+    push(@exon_coords, $_->start, $_->end);
+  }
+  return @exon_coords;
+}
+
+sub array_comp {
+  my ($ar1_ref, $ar2_ref)=@_;
+
+  my(@diff, %count, $e);
+  %count=();
+  foreach $e (@$ar1_ref, @$ar2_ref){
+    $count{$e}++;
+  }
+  foreach $e (keys %count){
+    unless ($count{$e}==2){
+      push @diff, $e;
+    }
+  }
+  return @diff;
+}
+
+# using codes in script realign_offtrack_genes
+sub otter_to_XML_to_otter {
+  my ($chr_name, $chr_start, $chr_end, $seq_set, $tiles, $otter_db, $geneAd, $db_gene, $gene, $slice) = @_;
+
+  my $temp = Bio::Otter::Lace::TempFile->new;
+  $temp->name("copy_translation.$$.xml");
+  my $w_fh = $temp->write_file_handle;
+
+  # using Bio::Otter::Converter::path_to_XML to do XML conversion
+  # To update/modified a gene, the API cannot write to otterdb directly and needs XML converter,
+  # which assigns a new dbID and an incremented version number of the existent gene that needs update
+  # to a copied gene (in XML format). These dbIDs will have same gene_stable_id.
+  # Ie, the modified version out of XML converter is the $xml_gene (based on $gene);
+  # the original version of the same gene is $db_gene
+  # The save_new_gene() routine is then able to make the distintion between the original copy of gene
+  # ($db_gene) and the modified version of the same gene ($xml_gene) and save the modified version to
+  # the database.
+
+  print $w_fh
+    "<otter>\n<sequence_set>\n"
+    , Bio::Otter::Converter::path_to_XML($chr_name, $chr_start, $chr_end, $seq_set, $tiles)
+    , $gene->toXMLString
+    , "</otter>\n</sequence_set>\n";
+
+  my $r_fh = $temp->read_file_handle;
+  my ($gene_list) = Bio::Otter::Converter::XML_to_otter($r_fh);
+  my $xml_gene = shift @$gene_list;
+
+  my $anal = $otter_db->get_AnalysisAdaptor->fetch_by_logic_name('otter');
+  $xml_gene->analysis($anal);
+
+  save_new_gene($otter_db, $geneAd, $db_gene, $xml_gene, $slice);
+}
+
+
+# function from script realign_offtrack_genes
+sub save_new_gene {
+  my( $dba, $gene_aptr, $db_gene, $xml_gene, $slice ) = @_;
+
+  my $broker = Bio::Otter::AnnotationBroker->new($dba);
+  $broker->make_id_version_hash([$db_gene]);
+  $broker->increment_versions_in_gene($xml_gene);
+  $gene_aptr->attach_to_Slice($xml_gene, $slice);
+
+  eval {
+    $dba->begin_work;
+    $xml_gene->detach_DBAdaptors;
+    $gene_aptr->store($xml_gene);
+    $dba->commit;
+  };
+  if ($@) {
+    $dba->rollback;
+    warn "Error saving remapped gene: $@";
+  }
+}
+
+
+
+__END__
+
+=head1 NAME - copy_translation
+
+=head1 SYNOPSIS
+
+copy_translation [-ds <dataset>] [-t <assembly_type>] -v > output_filename
+-v > output_filename is optional to capture transcript information and can be useful for debugging purposes.
+
+
+=head1 DESCRIPTION
+
+On chromosome 14, there are transcripts that do not have corresponding translations due to annotators who made only
+one of the transcripts (if multiple) of a gene into a tranlation object.
+This script corrects the problem by copying information of start_Exon, ATG site, end_Exon and STOP sites, when appropriate, from transcripts having UTR and CDS annotations.
+
+=head1 AUTHOR
+
+Chao-Kung Chen B<email> ck1@sanger.ac.uk
