@@ -1,0 +1,82 @@
+
+### Bio::Otter::Lace::SatelliteDB
+
+package Bio::Otter::Lace::SatelliteDB;
+
+use strict;
+use Carp;
+use Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor;
+
+
+## takes in an otter_db adaptor and optionally a meta_key value.
+## uses these to connect to the otter db and return a db handle for the pipeline db
+sub get_pipeline_DBAdaptor {
+    my( $otter_db, $key ) = @_;
+
+    require 'Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor';
+    return _get_DBAdaptor($otter_db, $key, 'Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor');
+}
+
+sub get_DBAdaptor {
+    my( $otter_db, $key ) = @_;
+
+    return _get_DBAdaptor($otter_db, $key, 'Bio::EnsEMBL::DBSQL::DBAdaptor');
+}
+
+sub _get_DBAdaptor {
+    my( $otter_db, $key, $class ) = @_;
+
+    confess "Missing otter_db argument" unless $otter_db;
+
+    my $pipe_options = get_options_for_key($otter_db, $key) or return;
+    my $pipeline_db = $class->new(%$pipe_options);
+
+    if ($pipeline_db) {
+        return $pipeline_db
+    } else {
+        confess "Couldn't connect to pipeline db";
+    } 
+}
+
+sub get_options_for_key {
+    my( $db, $key ) = @_;
+    
+    my $sth = $db->prepare("SELECT meta_value FROM meta WHERE meta_key = ?");
+    $sth->execute($key);
+    my ($opt_str) = $sth->fetchrow;
+    if ($opt_str) {
+        my $options_hash = {eval $opt_str};
+        if ($@) {
+            die "Error evaluating '$opt_str' : $@";
+        }
+        return $options_hash
+    } else {
+        return;
+    }
+}
+
+sub save_options_hash {
+    my( $db, $key, $options_hash ) = @_;
+    
+    confess "missing key argument"          unless $key;
+    confess "missing options hash argument" unless $options_hash;
+    
+    my $opt_str = '';
+    while (my ($key, $val) = each %$options_hash) {
+        $opt_str .= "'$key' => '$val',\n";
+    }
+    my $sth = $db->prepare("INSERT INTO meta(meta_key, meta_value) VALUES (?,?)");
+    $sth->execute($key, $opt_str);    
+}
+
+
+1;
+
+__END__
+
+=head1 NAME - Bio::Otter::Lace::SatelliteDB
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
