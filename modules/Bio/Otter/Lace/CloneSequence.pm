@@ -4,6 +4,7 @@
 package Bio::Otter::Lace::CloneSequence;
 
 use strict;
+use Bio::Otter::Lace::PipelineStatus;
 
 sub new {
     my( $pkg ) = @_;
@@ -132,20 +133,18 @@ sub contig_strand {
     return $self->{'_contig_strand'};
 }
 
-# unfinished analysis hash { logic_name => analysis_id, ... }
 sub unfinished{
     my $self = shift;
-    if(@_){
-	my $unfinished = shift;
-	if(ref($unfinished) eq 'HASH'){
-	    $self->{'_unfinished'} = $unfinished;
-	}elsif(!defined($unfinished)){
-	    $self->{'_unfinished'} = $unfinished;	    
-	}
-    }
-    return $self->{'_unfinished'} || {};
+    warn "This method is now deprecated. Use $self->pipelineStatus->unfinished()\n";
+# unfinished analysis hash { logic_name => analysis_id, ... }
+    return $self->pipelineStatus->unfinished();
 }
-
+sub pipelineStatus{
+    my $self = shift;
+    $self->{'_pipelineStatus'} = $_[0] if $_[0];
+    $self->{'_pipelineStatus'} ||= Bio::Otter::Lace::PipelineStatus->new(-unavailable => 1);
+    return $self->{'_pipelineStatus'};
+}
 sub add_SequenceNote {
     my( $self, $note ) = @_;
     

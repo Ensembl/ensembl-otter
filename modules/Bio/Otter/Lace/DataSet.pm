@@ -15,6 +15,7 @@ use Bio::EnsEMBL::Pipeline::Monitor;
 use Bio::Otter::Lace::PipelineDB;
 use Bio::Otter::Lace::SatelliteDB;
 use Bio::Otter::Lace::Defaults;
+use Bio::Otter::Lace::PipelineStatus;
 
 sub new {
     my( $pkg ) = @_;
@@ -216,12 +217,41 @@ sub fetch_all_CloneSequences_for_selected_SequenceSet {
 sub status{
     my ($self, $dba, $type, $force_refresh) = @_;
     if(!$self->{'_dataset_status_hash'}->{$type} || $force_refresh){
+        my $hash;
 	return unless Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
-	my $pipeline_db = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($dba);
-	my $monitor     = Bio::EnsEMBL::Pipeline::Monitor->new(-dbobj => $pipeline_db);
-	my $unfin       = $monitor->get_unfinished_analyses_for_assembly_type($type);
-	my $hash        = {};
-	map { $hash->{$_->[0]}->{$_->[1]} = $_->[2] } @$unfin;
+        my $pipeline_db = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($dba);
+        my $anaAdapt    = $pipeline_db->get_AnalysisAdaptor();
+        my $ruleAdapt   = $pipeline_db->get_RuleAdaptor();
+        my @rules       = $ruleAdapt->fetch_all;
+        my $rule_list   = [];
+        foreach my $rule (@rules)  {
+            push(@$rule_list, $rule->goalAnalysis->logic_name) if ($rule->list_conditions())[0];
+        }
+        # I think this query can be optimised more
+        my $sql = qq{SELECT i.input_id, i.analysis_id, i.created, i.db_version
+                       FROM assembly a straight_join contig c
+                          , input_id_analysis i
+                      WHERE i.input_id = c.name
+                         && a.contig_id = c.contig_id
+                         && a.type = ?
+                     };
+        my $sth = $pipeline_db->prepare($sql);
+        $sth->execute($type);
+        while(my $row = $sth->fetchrow_arrayref()){
+            # $row->[0] is contig name
+            # $row->[1] is analysis id
+            # $row->[2] is created
+            # $row->[3] is db_version
+            my $anaObj = $anaAdapt->fetch_by_dbID($row->[1]);
+            next unless $anaObj;
+            my $tmpObj = $hash->{$row->[0]} 
+                         || Bio::Otter::Lace::PipelineStatus->new(-runnable_logic_names => $rule_list,
+                                                                  -contig_name          => $row->[0]);
+            $anaObj->created($row->[2]);
+            $anaObj->db_version($row->[3]);
+            $tmpObj->add_completedAnalysis($anaObj);
+            $hash->{$row->[0]} = $tmpObj;
+        }
 	$self->{'_dataset_status_hash'}->{$type} = $hash;
     }
     return $self->{'_dataset_status_hash'}->{$type};
@@ -236,7 +266,7 @@ sub status_refresh_for_SequenceSet{
     my $lookup = $self->status($dba, $type, 1);
     foreach my $cs (@{$ss->CloneSequence_list}){
 	my $ctg_name = $cs->contig_name();
-	$cs->unfinished($lookup->{$ctg_name});
+	$cs->pipelineStatus($lookup->{$ctg_name});
     }
 }
 
@@ -344,7 +374,7 @@ sub fetch_all_CloneSequences_for_SequenceSet {
         $cl->contig_strand($strand);
         $cl->contig_name($ctg_name);
         $cl->contig_id($ctg_id);
-	$cl->unfinished($lookup->{$ctg_name});
+	$cl->pipelineStatus($lookup->{$ctg_name});
         if (defined $clone_lock_id){
             $cl->set_lock_status(1) ;
         }
