@@ -52,7 +52,8 @@ create table gene_name (
 	name varchar(100),
 	gene_info_id int(10) unsigned DEFAULT '0' NOT NULL,
         PRIMARY KEY (gene_name_id),
-        KEY (name)
+        KEY (name),
+	KEY (gene_info_id)
 );
 
 create table gene_synonym (
@@ -66,7 +67,8 @@ create table gene_remark (
 	gene_remark_id int(10) unsigned DEFAULT '0' NOT NULL auto_increment,
 	remark TEXT, 
 	gene_info_id int(10) unsigned DEFAULT '0' NOT NULL,
-        PRIMARY KEY (gene_remark_id)
+        PRIMARY KEY (gene_remark_id),
+	KEY (gene_info_id)
 );
 
 create table gene_info (
@@ -126,13 +128,15 @@ create table current_clone_info (
 create table current_gene_info (
 	gene_info_id int(10) unsigned default '0' not null,
 	gene_stable_id varchar(40),
-	PRIMARY KEY (gene_info_id)
+	PRIMARY KEY (gene_info_id),
+	KEY (gene_stable_id)
 	);
 
 create table current_transcript_info (
 	transcript_info_id int(10) unsigned default '0' not null,
 	transcript_stable_id varchar(40),
-	PRIMARY KEY (transcript_info_id)
+	PRIMARY KEY (transcript_info_id),
+	KEY (transcript_stable_id)
 	);
 
 create table gene_stable_id_pool (
