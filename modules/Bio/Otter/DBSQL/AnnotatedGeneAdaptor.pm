@@ -137,7 +137,7 @@ sub annotate_gene {
 
   my $id_list = $self->list_current_dbIDs_for_Slice($slice);
 
-Given a slice 
+Given a slice, lists the dbIDs of the genes with exons on the slice.
 
 =cut
 
@@ -167,6 +167,42 @@ sub list_current_dbIDs_for_Slice {
         ORDER BY gsid.version ASC
         });
     $sth->execute($slice->assembly_type);
+    
+    my( %sid_gid );
+    while (my ($sid, $gid) = $sth->fetchrow) {
+        $sid_gid{$sid} = $gid;
+    }
+    return [sort {$a <=> $b} values %sid_gid];
+}
+
+=head2 list_current_dbIDs_for_Contig
+
+  my $id_list $self->list_current_dbIDs_for_Contig($contig);
+
+=cut
+
+sub list_current_dbIDs_for_Contig {
+    my( $self, $contig ) = @_;
+    
+    my $ctg_id = $contig->dbID;
+    my $sth = $self->db->prepare(qq{
+        SELECT gsid.stable_id
+          , g.gene_id
+        FROM gene_stable_id gsid
+          , gene g
+          , transcript t
+          , exon_transcript et
+          , exon e
+        WHERE gsid.gene_id = g.gene_id
+          AND g.gene_id = t.gene_id
+          AND t.transcript_id = et.transcript_id
+          AND et.exon_id = e.exon_id
+          AND e.contig_id = ?
+        GROUP BY gsid.stable_id
+          , gsid.version
+        ORDER BY gsid.version ASC
+        });
+    $sth->execute($ctg_id);
     
     my( %sid_gid );
     while (my ($sid, $gid) = $sth->fetchrow) {

@@ -48,6 +48,15 @@ sub priority {
     return $self->{'_priority'};
 }
 
+sub have_fetched_pipeline_contig_ids {
+    my( $self, $flag ) = @_;
+    
+    if (defined $flag) {
+        $self->{'_have_fetched_pipeline_contig_ids'} = $flag;
+    }
+    return $self->{'_have_fetched_pipeline_contig_ids'};
+}
+
 sub write_access {
     my( $self, $write_access ) = @_;
     
@@ -66,6 +75,7 @@ sub CloneSequence_list {
     
     if ($CloneSequence_list) {
         $self->{'_CloneSequence_list'} = $CloneSequence_list;
+        $self->have_fetched_pipeline_contig_ids(0);
     }
     return $self->{'_CloneSequence_list'};
 }
@@ -74,6 +84,7 @@ sub drop_CloneSequence_list {
     my( $self ) = @_;
     
     $self->{'_CloneSequence_list'} = undef;
+    $self->have_fetched_pipeline_contig_ids(0);
 }
 
 sub selected_CloneSequences {

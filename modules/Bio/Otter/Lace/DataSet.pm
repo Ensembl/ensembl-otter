@@ -284,7 +284,7 @@ sub lock_refresh_for_SequenceSet{
      
     my $id_string =  '"'  .  ( join "\" , \"" , @id_list )  .  '"' ;    
     
-    my $sth = $dba->prepare(qq{
+    my $sql = qq{
         SELECT cl.clone_lock_id , g.contig_id, t.author_id
             , t.author_name, t.author_email, cl.hostname
         FROM assembly a
@@ -296,9 +296,9 @@ sub lock_refresh_for_SequenceSet{
           AND g.clone_id = c.clone_id
           AND a.type = "$type"
           AND g.contig_id in ($id_string)          
---        ORDER BY a.chromosome_id
---          , a.chr_start
-        }) ;
+        };
+        #warn $sql;
+        my $sth = $dba->prepare($sql);
              
     $sth->execute;
     my ($clone_lock_id , $contig_id, $author_id,
@@ -404,29 +404,33 @@ sub fetch_all_CloneSequences_for_SequenceSet {
 
 sub fetch_pipeline_ctg_ids_for_SequenceSet{
     my ($self, $ss) = @_;
+    
     return unless Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
+    return if $ss->have_fetched_pipeline_contig_ids;
+    
     my $dba            = $self->get_cached_DBAdaptor;
     my $cloneSeqList   = $ss->CloneSequence_list();
     my $pipeline_db    = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($dba);
     my $dbh            = $pipeline_db->db_handle();
-    # my @ctg_names      = map { $dbh->quote($_->contig_name()) } @$cloneSeqList;
-    my %ctg_names      = map { $dbh->quote($_->contig_name()) => $_ } @$cloneSeqList;
-    my $sql            = q{SELECT c.name, c.contig_id FROM contig c WHERE c.name IN (} .
-                               join(', ' => keys %ctg_names) .q{)};
-    #                           join(', ' => @ctg_names) .q{)};
-    my $sth            = $pipeline_db->prepare($sql);
-    # warn $sql;
-    $sth->execute();
-    # my $hash;
-    while(my $row = $sth->fetchrow_arrayref()){
-        my $key = $dbh->quote($row->[0]); # this is how the hash was made !!
-        $ctg_names{$key}->pipeline_contig_id($row->[1]) 
-            if $ctg_names{$key} && $ctg_names{$key}->can('pipeline_contig_id');
-        # $hash->{$row->[0]} = $row->[1];
+
+    my( %ctgname_cs );
+    foreach my $cs (@$cloneSeqList) {
+        next if $cs->pipeline_contig_id;
+        $ctgname_cs{$cs->contig_name} = $cs;
     }
-    # this uses another loop & hash, but array above. slower?
-    # update each of the cloneSeq with the pipe contig id from contig name hash cache.
-    # map { $_->pipeline_contig_id($hash->{$_->contig_name}) } @$cloneSeqList;
+    my $ctg_name_list = join(',', map $dbh->quote($_), keys %ctgname_cs);
+    my $sql = qq{SELECT c.name, c.contig_id FROM contig c WHERE c.name IN ($ctg_name_list)};
+    # warn $sql;
+    my $sth = $pipeline_db->prepare($sql);
+    $sth->execute();
+    my( $name, $ctg_id );
+    $sth->bind_columns(\$name, \$ctg_id);
+    while($sth->fetch){
+        $ctgname_cs{$name}->pipeline_contig_id($ctg_id);
+    }
+    
+    # Flag that we have fetched all the pipeline contig_ids that we can
+    $ss->have_fetched_pipeline_contig_ids(1);
 }
 
 sub fetch_all_SequenceNotes_for_SequenceSet {

@@ -458,7 +458,7 @@ sub make_database_directory {
     my( $self ) = @_;
     
     my $home = $self->home;
-    my $tar  = $self->tar_file;
+    my $tar  = $self->tar_file or confess "tar_file not set";
     mkdir($home, 0777) or die "Can't mkdir('$home') : $!\n";
     
     my $tar_command = "cd $home ; tar xf $tar";

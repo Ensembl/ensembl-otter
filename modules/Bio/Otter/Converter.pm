@@ -1556,7 +1556,7 @@ sub ace_to_otter {
         TRAN: foreach my $tranname (@{ $gene_data->{transcripts} }) {
             my $tran = $anntran{$tranname};
             my $tran_data = $sequence{$tranname};
-	    #print STDERR "CONverter: transcript name $tranname \n";
+	    #print STDERR "Converter: transcript name $tranname \n";
             unless ($tran) {
                 warn "Transcript '$tranname' in Locus '$gname' not found in ace data\n";
                 next TRAN;

@@ -36,8 +36,8 @@ sub full_name{
 }
 
 sub DESTROY{
-    my ($self) = @_;
-    my $name = $self->full_name();
-    print STDERR "File $name is not being removed even though it's being DESTROY'd\n";
+    #my ($self) = @_;
+    #my $name = $self->full_name();
+    #print STDERR "File $name is not being removed even though it's being DESTROY'd\n";
     # $self->close(); # not needed as Perl will close it automagically
 }
