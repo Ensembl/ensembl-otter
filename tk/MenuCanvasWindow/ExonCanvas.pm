@@ -303,7 +303,7 @@ sub initialize {
         
         };
 
-    my $menu_bar = $self->menu_bar;
+    my $menu_bar  = $self->menu_bar;
     my $file_menu = $self->make_menu('File');
     
     # Show the subsequence in fMap
@@ -454,6 +454,7 @@ sub initialize {
             }
         });
         
+        # Widget for changing name
         $self->add_subseq_rename_widget;
     } else {
         # SubSeq with an immutable method
@@ -527,15 +528,23 @@ sub add_subseq_rename_widget {
         #-side => 'top',
         -anchor => 'nw',
         );
+    
+    my $sub = $self->SubSeq;
+    my       $name = $sub->name;
+    my $clone_name = $sub->clone_Sequence->name;
+    my $root = '';
+    if ($name =~ /^($clone_name\.)(.+)/) {
+        $root = $1;
+        $name = $2;
+    }
 
     my $sub_name_label = $button_frame->Label(
-        -text => 'Name:',
+        -text => "Name: $root",
         );
     $sub_name_label->pack(
         -side => 'left',
         );
 
-    my $name = $self->SubSeq->name;
     my $sub_name = $button_frame->Entry(
         -width              => 20,
         -exportselection    => 1,
@@ -554,6 +563,16 @@ sub subseq_name_Entry {
         $self->{'_subseq_name_entry'} = $entry;
     }
     return $self->{'_subseq_name_entry'};
+}
+
+sub update_subseq_name {
+    my( $self ) = @_;
+    
+    my $name = $self->subseq_name_Entry->get;
+    $self->SubSeq->name($name);
+    $self->canvas->toplevel->configure(
+        -title  => $name,
+        );
 }
 
 sub canvas_insert_character {
@@ -1002,6 +1021,7 @@ sub update_ace_subseq {
     my( $self ) = @_;
 
     $self->update_translation_region;
+    $self->update_subseq_name;
     my @exons = $self->Exons_from_canvas;
 
     my $sub = $self->SubSeq;

@@ -459,7 +459,9 @@ sub ace_handle {
 sub resync_with_db {
     my( $self ) = @_;
     
-    $self->canvas->Busy;
+    $self->canvas->Busy(
+        -recurse => 0,
+        );
     
     # Disconnect aceperl
     $self->{'_ace_database_handle'} = undef;
@@ -671,12 +673,18 @@ sub get_all_Subseq_clusters {
 sub get_CloneSeq {
     my( $self, $clone_name ) = @_;
     
+    my $canvas = $self->canvas;
+    
     my( $clone );
     unless ($clone = $self->{'_clone_sequences'}{$clone_name}) {
         use Time::HiRes 'gettimeofday';
         my $before = gettimeofday();
+        $canvas->Busy(
+            -recurse => 0,
+            );
         $clone = $self->express_clone_and_subseq_fetch($clone_name);
         my $after  = gettimeofday();
+        $canvas->Unbusy;
         printf "Express fetch for '%s' took %4.3f\n", $clone_name, $after - $before;
         $self->{'_clone_sequences'}{$clone_name} = $clone;
     }
