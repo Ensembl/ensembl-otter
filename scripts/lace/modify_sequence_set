@@ -1,48 +1,18 @@
-#!/usr/local/bin/perl5.6.1 -w
+#!/usr/local/bin/perl -w
 
 ### modify_sequence_set
 
 use strict;
-# for benchmarking
-use Time::HiRes qw(gettimeofday tv_interval);
 
-use Getopt::Long;
-use Bio::SeqIO;
-use Bio::EnsEMBL::Analysis;
-use Bio::EnsEMBL::Clone;
-use Bio::EnsEMBL::RawContig;
-use Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor;
-use Bio::EnsEMBL::Pipeline::SeqFetcher::Finished_Pfetch;
-use Bio::EnsEMBL::Chromosome;
-
-use Bio::EnsEMBL::DBSQL::DBAdaptor;
-use Bio::EnsEMBL::Clone;
-use Bio::Otter::Lace::CloneSequence;
-use Bio::Otter::Lace::PipelineDB;
 use Bio::Otter::Lace::Defaults;
 
-use Data::Dumper;
-
 {
-    my $t0 = [gettimeofday];
-
-    my $INPUT_TYPE;           # AGP or LIST
-    my $agp_file ;            # the file containing the assembly details
-    my $agp_chr_name;         # tmp variable for chr in agp file
-    my $pipe_analysis ;       # analysis adaptor for the pipeline db
-    my $end_coord;            # max(chr_end) 
-    my $clone_sequence_list;  # the clone sequence list built for the sequence set
-    
-    ## next set of variables are overwritten if a command line option is specified
-    my $priority          = 0; # hold the deafulat value for the analysis priority
+    my $priority          = 0;
     my $author            = (getpwuid($<))[0];
     my $description       = undef;   # "This is a default description, created by $author";
     my $dataset_name      = 'human'; # dataset to get from otter server
-    my $chromosome_name   = undef;
     my $set_name          = undef;
     my $delete            = undef;
-    my $submit_contig     = 'SubmitContig';
-    my $superctg_ori      = 1; # default value for just now. - true value will be added by a different script
     my $help              = 0;
     
     #---------------------------------------------------------------------------
@@ -64,7 +34,6 @@ use Data::Dumper;
     my $otter_db = $ds->get_cached_DBAdaptor;
 
     my $SequenceSet = $ds->get_SequenceSet_by_name($set_name);
-    # make an empty sequence set to start with
 
     if($description || $priority){ # if we're updating
 	print STDERR "Changing from:\n";
@@ -80,6 +49,8 @@ use Data::Dumper;
     }
 
 }
+
+sub useage{ exit(exec('perldoc', $0)); }
 
 __END__
 
