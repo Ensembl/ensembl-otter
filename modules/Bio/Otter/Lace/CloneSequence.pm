@@ -202,11 +202,15 @@ sub set_lock_status{
 }
 
 sub get_lock_status{
-    my ($self) = @_ ;
-    return $self->{'_lock_status'} || 0 ;
+    my $self = shift;
+    warn "get_lock_status is 'Get' only" if @_;
+    return $self->{'_lock_status'} ? 1 : 0 ;
 }
 
-
+sub get_lock_as_CloneLock{
+    my ($self) = @_;
+    return $self->{'_lock_status'};
+}
 1;
 
 __END__
