@@ -709,7 +709,8 @@ sub make_embl_ft {
         my $tile_path = $self->get_tiling_path_for_Slice($slice);
 
         #Bio::EnsEMBL::RawContig
-        $self->Slice_contig($tile_path->[0]->component_Seq);
+        my $slice_contig = $tile_path->[0]->component_Seq;
+        $self->Slice_contig($slice_contig);
 
         my $gene_id_list = $gene_aptr->list_current_dbIDs_for_Slice($slice);
         foreach my $gid (@$gene_id_list) {
@@ -719,10 +720,10 @@ sub make_embl_ft {
         }
 
         #PolyA signals and sites for the slice
-        $self->_do_polyA($slice, $set);
+        $self->_do_polyA($slice_contig, $set);
        
         # assembly_tags on the slice
-	$self->_do_assembly_tag($slice, $set);
+	$self->_do_assembly_tag($slice_contig, $set);
     }
 
     #Finish up
