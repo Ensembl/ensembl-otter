@@ -693,9 +693,9 @@ foreach my $atype (keys %gsi){
     # look for overlapping exons and group exons into transcripts
     # (one gene at a time)
     foreach my $rt (sort {
-                          $gsi{$atype}->{$gsi}->[$a]->[0]<=>$gsi{$atype}->{$gsi}->[$b]->[0] || 
-                          $gsi{$atype}->{$gsi}->[$a]->[1]<=>$gsi{$atype}->{$gsi}->[$b]->[1] || 
-                          $gsi{$atype}->{$gsi}->[$a]->[5]<=>$gsi{$atype}->{$gsi}->[$b]->[5] 
+                          $a->[0]<=>$b->[0] || 
+                          $a->[1]<=>$b->[1] || 
+                          $a->[5]<=>$b->[5]
 			    } @{$gsi{$atype}->{$gsi}}){
       my($tsi,$erank,$eid,$ecst,$eced,$esr,$es,$ep,$eep,$trid)=@{$rt};
       if($e{$gsi}->{$eid}){
