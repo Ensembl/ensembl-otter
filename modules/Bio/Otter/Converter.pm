@@ -1443,7 +1443,7 @@ sub ace_to_otter {
     # Make gene objects
     my @genes;
     while (my ($gname, $gene_data) = each %genes) {
-        print STDERR "Gene name = $gname\n";
+        #print STDERR "Gene name = $gname\n";
         my $gene  = Bio::Otter::AnnotatedGene->new;
         my $ginfo = Bio::Otter::GeneInfo->new;
         $gene->gene_info($ginfo);
@@ -1497,7 +1497,7 @@ sub ace_to_otter {
         TRAN: foreach my $tranname (@{ $gene_data->{transcripts} }) {
             my $tran = $anntran{$tranname};
             my $tran_data = $sequence{$tranname};
-	    print STDERR "CONverter: transcript name $tranname \n";
+	    #print STDERR "CONverter: transcript name $tranname \n";
             unless ($tran) {
                 warn "Transcript '$tranname' in Locus '$gname' not found in ace data\n";
                 next TRAN;
