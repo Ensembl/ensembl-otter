@@ -3,5 +3,5 @@
 create table sequence_set (
         assembly_type varchar (20),
         description TEXT,
-        analysis_prioroty int
+        analysis_priority int
     );
