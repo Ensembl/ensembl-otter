@@ -98,7 +98,7 @@ foreach my $chr (reverse sort bychrnum keys %$chrhash) {
                                            -dbname=>"Vega_gene",
                                           );
     $dbentry->status('KNOWN');
-    $gene->add_DBLink($dbentry);
+    $gene->add_DBEntry($dbentry);
     $adx->store($dbentry,$gene->dbID,'Gene') if $do_store;
 
     my $sth = $db->prepare("update gene set display_xref_id=" .      
