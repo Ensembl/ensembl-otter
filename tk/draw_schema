@@ -5,21 +5,28 @@
 use strict;
 use CanvasWindow;
 use DBI;
+use Hum::Fox;
 
 {
 
 #Make DB connection
 
-    my $user = 'ensro';
-    my $host   = 'ecs1g';
-    my $dbname = 'tropicalis_est';
-    my $port   = 3306;
-    my $password = undef;
-    
-    my $dbh = DBI->connect(
-        "DBI:mysql:host=$host;port=$port;database=$dbname",
-        $user, $password, {RaiseError => 1}
-        );
+    my( $dbh, $dbname );
+    if (0) {
+        my $user   = 'ensro';
+        my $host   = 'ecs1g';
+        $dbname = 'tropicalis_est';
+        my $port   = 3306;
+        my $password = undef;
+
+        $dbh = DBI->connect(
+            "DBI:mysql:host=$host;port=$port;database=$dbname",
+            $user, $password, {RaiseError => 1}
+            );
+    } else {
+        $dbname = 'fox';
+        $dbh = Hum::Fox::fox_db();
+    }
     
     my $query;
     my $sth;
@@ -32,7 +39,7 @@ use DBI;
     
     while ( my $each_table = $sth->fetchrow ){
     
-    my $fieldlist;
+        my $fieldlist;
 
         $query = "describe $each_table";
         my $table_sth = $dbh->prepare($query);
@@ -62,7 +69,7 @@ use DBI;
     $canvas->Tk::bind('<ButtonPress-1>' => \&save_current );
     $canvas->Tk::bind('<Button1-Motion>' => [ \&move_current, Tk::Ev('x'), Tk::Ev('y') ] );
     $canvas->Tk::bind('<ButtonRelease-1>' => [ \&snap_to_canvas, Tk::Ev('x'), Tk::Ev('y') ] );
-
+    $canvas->Tk::bind('<ButtonRelease-1>' => sub { $cw->set_scroll_region_and_maxsize } );
     
 
     my $i = 0; 
@@ -163,6 +170,7 @@ use DBI;
         my ($group) = grep /^group-/, $canvas->gettags($i);
         if ($group) {
             $current_obj = $group;
+            $canvas->raise($group, 'all');
         } else {
             $current_obj = undef;
         }
