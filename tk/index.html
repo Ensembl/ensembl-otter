@@ -65,34 +65,18 @@ says.</p>
 
 <center><h1>Tk::Canvas</h1></center>
 
-<h2>Scaling</h2>
+<h2>Drawing graphic items</h2>
 
-<b><pre>
-    $mw->scaling(1);
-</pre></b>
-
-<p>X displays have a resolution which is set
-accoring to their size.  This affects the size of
-the fonts relative to the other objects in the
-PostScript output from <b>Tk::Canvas</b>, but
-setting <b><code>scaling</code></b> to 1 (1 pixel
-equals 1 point) fixes this. </p>
-
-<p>You need to call <b><code>scaling</code></b>
-before anything gets drawn on the screen. </p>
-
-<h2>Drawing objects</h2>
-
-<p>Objects are drawn on the canvas using the
+<p>Items are drawn on the canvas using the
 <b><code>create&lt;Type&gt;</code></b> methods. </p>
 
 <b><pre>
     # Draw a red rectangle with no outline
     my $rec = $canvas->createRectangle(
         $x1, $y1, $x2, $y2,
-        -tags       => [@tags],
         -fill       => 'red',
         -outline    => undef,
+        -tags       => [@tags],
         );
 </pre></b>
 
@@ -101,20 +85,20 @@ are floating points. </p>
 
 <p>The return value, <b><code>$rec</code></b> is
 an integer.  This identifier can be used to
-address the object, and, for instance, change its
+address the item, and, for instance, change its
 size or colour. </p>
 
 <p><b>Tags</b>, which are strings, can be added
-to objects, and are used to group objects.  In
+to items, and are used to group items.  In
 many Canvas methods, they can be used
 interchangeably with the integer identifiers of
-the objects.  </p>
+the items.  </p>
 
-<p>Canvas has lots of convenient methods, eg: </p>
+<p>Canvas has lots of useful methods, eg: </p>
 
 <b><pre>
     # Find the bounding box of all the
-    # objects with the tag "gene"
+    # items with the tag "gene"
     my @bbox = $canvas->bbox('gene');
 </pre></b>
 
@@ -125,8 +109,12 @@ the objects.  </p>
 each feature, because they would be too small,
 and would produce too big a PostScript file. </p>
 
-<p>Created images withLincoln Stein's <b>GD</b>
-module. Tried to place them without using file:</p>
+<p>Created images with Lincoln Stein's <b>GD</b> module,
+where each pixel is coloured according to the density of
+repeats under it. </p>
+
+<p>Tried to place images without using an intermediate
+file:</p>
 
 <b><pre>
     my $image = $canvas->Photo(
@@ -152,6 +140,22 @@ base64 encoded:</p>
         );
 </pre></b>
 
+<h2>Scaling</h2>
+
+<b><pre>
+    $mw->scaling(1);
+</pre></b>
+
+<p>X displays have a resolution which is set
+accoring to their size.  This affects the size of
+the fonts relative to the other items in the
+PostScript output from <b>Tk::Canvas</b>, but
+setting <b><code>scaling</code></b> to 1 (1 pixel
+equals 1 point) fixes this. </p>
+
+<p>You need to call <b><code>scaling</code></b>
+before anything gets drawn on the screen. </p>
+
 <h2>What's Missing?</h2>
 
 <p>Biggest feature missing is the ability to
@@ -161,6 +165,13 @@ text. </p>
 <hr /><br />
 
 <center><h1>GenomeCanvas</h1></center>
+
+<center><img src="GenomeCanvas_schema.png" />
+
+<p><font size=3>Dotted arrows show inheritance, solid
+arrows references.</font> </p>
+
+</center>
 
 <p>GenomeCanvas is a set of modules for drawing an
 overview of a genomic region. </p>
@@ -222,7 +233,7 @@ class. </p>
 
 <p>Each Band module implements a
 <b><code>render</code></b> method, which creates
-the objects on the Canvas.  This is called by the
+the items on the Canvas.  This is called by the
 containing <b><code>GenomeCanvas</code></b>
 object on each band in turn. </p>
 
@@ -232,7 +243,7 @@ draws. </p>
 
 <p>After calling the <b><code>render</code></b>
 on a band, the GenomeCanvas finds the bounding
-box of the objects the band has drawn, and
+box of the items the band has drawn, and
 calculates the y-axis offset for the next band.
 <p>
 
