@@ -1,8 +1,9 @@
 #!/usr/local/bin/perl -w
 
-### erase_genes_by_name
+### erase_genes_by_db_id
 
 use strict;
+
 use Bio::Otter::Lace::Defaults;
 use Bio::Otter::DBUtils 'delete_genes_by_exon_id_list';
 
@@ -21,37 +22,29 @@ use Bio::Otter::DBUtils 'delete_genes_by_exon_id_list';
     
     
     $otter_db->begin_work;
-    eval{ delete_genes_by_name($otter_db, @ARGV) };
+    eval{ delete_genes_by_db_id($otter_db, @ARGV) };
     if ($@) {
         warn "Error doing delete: $@";
         $otter_db->rollback;
     } else {
+        #$otter_db->rollback;
         $otter_db->commit;
     }
 }
 
-sub delete_genes_by_name {
-    my( $dbh, @gene_names ) = @_;
+sub delete_genes_by_db_id {
+    my( $dbh, @gene_id ) = @_;
     
-    my $name_str = join(',', map "'$_'", @gene_names);
+    my $id_str = join(',', map "'$_'", @gene_id);
     
     my $sql = qq{
-        SELECT e.exon_id
-        FROM gene g
-          , gene_stable_id gsid
-          , gene_info i
-          , gene_name n
-          , transcript t
+        SELECT DISTINCT e.exon_id
+        FROM transcript t
           , exon_transcript et
           , exon e
-        WHERE g.gene_id = gsid.gene_id
-          AND gsid.stable_id = i.gene_stable_id
-          AND i.gene_info_id = n.gene_info_id
-          AND g.gene_id = t.gene_id
-          AND t.transcript_id = et.transcript_id
+        WHERE t.transcript_id = et.transcript_id
           AND et.exon_id = e.exon_id
-          AND n.name in ($name_str)
-        GROUP BY e.exon_id
+          AND t.gene_id in ($id_str)
         };
     my $sth = $dbh->prepare($sql);
     $sth->execute;    
@@ -71,11 +64,10 @@ sub delete_genes_by_name {
 
 
 
+
 __END__
 
-=head1 NAME - erase_genes_by_name
-
-    erase_genes_by_name -dataset <NAME> <GENE_NAME_LIST>
+=head1 NAME - erase_genes_by_db_id
 
 =head1 AUTHOR
 
