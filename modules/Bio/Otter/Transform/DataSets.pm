@@ -20,6 +20,7 @@ sub start_handler{
     my $xml  = shift;
     my $ele  = lc shift;
     my $attr = {@_};
+    $self->_check_version(@_) if $ele eq 'otter';
 
     if($ele eq 'dataset'){
         my $ds = Bio::Otter::Lace::DataSet->new();

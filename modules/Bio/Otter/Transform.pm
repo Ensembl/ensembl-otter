@@ -45,6 +45,7 @@ use strict;
 use warnings;
 
 use XML::Parser;
+use Bio::Otter::Version;
 
 sub new{
     my $pkg = shift;
@@ -79,7 +80,26 @@ sub default_handler{
 
 sub start_handler{
     my $self = shift;
-    $self->default_handler(@_);
+    my $xml  = shift;
+    my $ele  = lc shift;
+    $self->_check_version(@_) if $ele eq 'otter';
+}
+sub _check_version{
+    my $self = shift;
+    my $attr = {@_};
+    my $schemaVersion = $attr->{'schemaVersion'} || '';
+    my $xmlVersion    = $attr->{'xmlVersion'}    || '';
+    error_exit("Wrong schema version, expected '$SCHEMA_VERSION' not '$schemaVersion'\n")
+        unless ($schemaVersion && $schemaVersion <= $SCHEMA_VERSION);
+    # $schemaVersion xml client receives must be older than client understands ($SCHEMA_VERSION)
+    error_exit("Wrong xml version, expected '$XML_VERSION' not '$xmlVersion'\n")
+        unless ($xmlVersion    && $xmlVersion    <= $XML_VERSION);
+    #### $xmlVersion xml client receives must be older than client understands ($XML_VERSION)
+}
+sub error_exit{
+    print STDOUT "@_";
+    print STDERR "@_";
+    exit(1);
 }
 sub end_handler{
     my $self = shift;
