@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl
+#!/usr/local/bin/perl5.6.1
 
 # Shamelessly ripped off from pfetch_srv
 package OtterServer;
@@ -26,7 +26,7 @@ my $OTTER_INFO            = undef;
 my $PREFORK               = 5;
 my $MAX_CLIENTS_PER_CHILD = $OTTER_MAX_CLIENTS;
 my $SOCKET                = $OTTER_SERVER_PORT;
-my $DEBUG                 = 1;
+my $DEBUG                 = 0;
 my $VERSION               = "0.1";
 
 #--------------------- global variables ----------------------#
@@ -42,6 +42,7 @@ if ($SOCKET != 19312) {
   $PREFORK               = 3;
   $MAX_CLIENTS_PER_CHILD = 5;
 }
+#  $MAX_CLIENTS_PER_CHILD = 500;
 
 # establish SERVER socket, bind and listen.
 
@@ -114,6 +115,7 @@ sub make_new_child {
       my $client = $server->accept() or last;
 
       sigprocmask(SIG_BLOCK, $sigset2) or die "Can't block SIGHUP for request: $!\n";
+      $SIG{CHLD} = 'IGNORE';
 
       my $r = $client->get_request;
 
@@ -143,14 +145,29 @@ sub make_new_child {
           print $client $_;
           print STDERR $_;
         }
-        #$client->send_file(\*PRG);
         close PRG;
       } elsif ($r->method eq 'GET' and $r->url->path eq "/perl/get_datasets") {
         print "Doing get_datasets\n";
         $ENV{SCRIPT_FILENAME} = "$SCRIPTDIR/get_datasets";
-        open PRG, "$SCRIPTDIR/get_datasets|";
-        $client->send_file(\*PRG);
-        close PRG;
+        eval {
+          open PRG, "$SCRIPTDIR/get_datasets|";
+        
+          # $client->send_file(\*PRG);
+          my $nline = 0;
+          while (<PRG>) {
+            print $client $_;
+            print STDERR $_;
+            $nline++;
+          }
+          if (!$nline) {
+            print STDERR "ERROR: Failed\n";
+          }
+          close PRG;
+        };
+        if ($@) {
+          print STDERR "ERROR: ". $@ . "\n";
+        }
+        print "Done sending file\n";
       } elsif ($r->method eq 'POST' and $r->url->path eq "/perl/write_region") {
         print "OTTER_SERVER : Doing write_region\n";
         $ENV{SCRIPT_FILENAME} = "$SCRIPTDIR/write_region";
@@ -175,6 +192,7 @@ sub make_new_child {
         print "Unknown command " . $r->method . " " . $r->url->path . "\n";
       }
       $client->close;
+      $SIG{CHLD} = \&REAPER;
       sigprocmask(SIG_UNBLOCK, $sigset2) or die "Can't unblock SIGHUP after request: $!\n";
     }
 
@@ -269,11 +287,11 @@ sub REAPER {    # takes care of dead children
     $CHILDREN--;
   } else {
 
-    warn("OTTER_SERVER : Attempted to delete a non-child PID: $pid!\n") if $DEBUG;
-    warn("OTTER_SERVER : Child PIDs are:\n", join("\n",keys %CHILDREN), "\n") if $DEBUG;
+  #  warn("OTTER_SERVER : Attempted to delete a non-child PID: $pid!\n") if $DEBUG;
+  #  warn("OTTER_SERVER : Child PIDs are:\n", join("\n",keys %CHILDREN), "\n") if $DEBUG;
   }
   sigprocmask(SIG_UNBLOCK, $sigset);
-  print STDERR "OTTER_SERVER : Got SIGCHLD from: $pid\n" if $DEBUG;
+  #print STDERR "OTTER_SERVER : Got SIGCHLD from: $pid\n" if $DEBUG;
   $SIG{CHLD} = \&REAPER;
 }
 
