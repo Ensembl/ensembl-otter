@@ -896,10 +896,16 @@ sub close_all_PolyAWindows {
         $top->raise;
         $top->update;
         $top->focus;
-        $top->eventGenerate('<Control-w>');
 
-	# clean out the cache of polyAs.
-	$self->delete_PolyAWindow($polyA);
+        my $opt = $polyA->close_window();
+	# wanted to use this method, but eventGenerate() doesn't seem to return
+	# the value of the code it executes for you.
+	# my $opt = $top->eventGenerate('<Control-w>');
+
+	# so $opt = 1 unless user hit cancel
+
+	# clean out the cache of polyAs, unless user hit cancel at some point
+	$self->delete_PolyAWindow($polyA) if $opt;
 
 	# not sure this was right
 	# if ($top) {
@@ -907,7 +913,10 @@ sub close_all_PolyAWindows {
 	#     return 0;
 	# }
     }
-    return 1;
+    $polyAs = $self->get_all_PolyAWindows() || {};
+    # check that all the polyAWindows have been removed
+    # return 0 if there are still polyAs
+    return scalar(keys %$polyAs) ? 0 : 1;
 }
 
 
@@ -946,6 +955,7 @@ sub exit_save_data {
     my $ace = $self->AceDatabase;
     unless ($self->write_access) {
         $ace->error_flag(0);
+	$self->close_all_PolyAWindows; # free some memory when read only
         $self->kill_xace;
         return 1;
     }
