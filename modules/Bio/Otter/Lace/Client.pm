@@ -107,10 +107,16 @@ sub get_xml_for_contig_from_Dataset {
     $request->method('GET');
     $request->uri($url);
     
-    my $content = $ua->request($request)->content;
+    my $xml = $ua->request($request)->content;
     #warn $content;
-    $self->_check_for_error(\$content);
-    return $content;
+    $self->_check_for_error(\$xml);
+    
+    my $debug_file = "/tmp/otter-debug.$$.fetch.xml";
+    open DEBUG, "> $debug_file" or die;
+    print DEBUG $xml;
+    close DEBUG;
+    
+    return $xml;
 }
 
 sub _check_for_error {
@@ -197,12 +203,16 @@ sub save_otter_ace {
     
     confess "Don't have write access" unless $self->write_access;
     
+    my $debug_file = "/tmp/otter-debug.$$.save.ace";
+    open DEBUG, "> $debug_file" or die;
+    print DEBUG $ace_str;
+    close DEBUG;
+    
     my $ace = Bio::Otter::Lace::TempFile->new;
     $ace->name('lace_edited.ace');
     my $write = $ace->write_file_handle;
     print $write $ace_str;
     my $xml = Bio::Otter::Converter::ace_to_XML($ace->read_file_handle);
-    #print $xml;
     
     # Save to server with POST
     my $url = $self->url_root . '/write_region';

@@ -82,7 +82,7 @@ sub toXMLString{
     if (defined($self->stable_id)) { $stableid = $self->stable_id;}
    
     #if (!defined($self->type) || $self->type eq "") {
-        $self->type('gene');
+    #    $self->type('gene');
     #} 
     $str .= " <locus_type>" . $self->type . "</locus_type>\n";
     $str .= " <stable_id>" . $stableid . "</stable_id>\n";
@@ -201,13 +201,15 @@ sub toXMLString{
 
         my $tran_low  = undef;
         my $tran_high = undef;
-        if (defined($tran->translation)) {
-          my $strand = $tran->translation->start_Exon->strand;
+        if (my $tl = $tran->translation) {
+          my $strand = $tl->start_Exon->strand;
           $tran_low  = $tran->coding_region_start;
           $tran_high = $tran->coding_region_end;
-          $str .= "  <translation_start>" . (($strand == 1) ? ($tran_low+$offset) : ($tran_high+$offset)) . "</translation_start>\n";
-          $str .= "  <translation_end>" . (($strand == 1) ? ($tran_high+$offset) : ($tran_low+$offset)) . "</translation_end>\n";
-
+          $str .= "  <translation_start>" . (($strand == 1) ? ($tran_low  + $offset) : ($tran_high + $offset)) . "</translation_start>\n";
+          $str .= "  <translation_end>"   . (($strand == 1) ? ($tran_high + $offset) : ($tran_low  + $offset)) . "</translation_end>\n";
+            if (my $tl_id = $tl->stable_id) {
+                $str .= "  <translation_stable_id>$tl_id</translation_stable_id>\n";
+            }
         }
 
 	$str .= "  <exon_set>\n";
@@ -304,7 +306,6 @@ sub equals {
     } else {
 	print " - Equal gene info\n";
     }
-
 }
     
 1;

@@ -147,6 +147,7 @@ sub get_all_CloneSequences {
             SELECT c.embl_acc
               , c.embl_version
               , g.length
+              , g.name
               , a.chromosome_id
               , a.chr_start
               , a.chr_end
@@ -164,11 +165,11 @@ sub get_all_CloneSequences {
             });
         $sth->execute($type);
         my( $acc, $sv,
-            $ctg_length, $chr_id,
+            $ctg_length, $ctg_name, $chr_id,
             $chr_start, $chr_end,
             $contig_start, $contig_end, $strand );
         $sth->bind_columns( \$acc, \$sv,
-            \$ctg_length, \$chr_id,
+            \$ctg_length, \$ctg_name, \$chr_id,
             \$chr_start, \$chr_end,
             \$contig_start, \$contig_end, \$strand );
         while ($sth->fetch) {
@@ -182,6 +183,7 @@ sub get_all_CloneSequences {
             $cl->contig_start($contig_start);
             $cl->contig_end($contig_end);
             $cl->contig_strand($strand);
+            $cl->contig_name($ctg_name);
             push(@$cs, $cl);
         }
     }

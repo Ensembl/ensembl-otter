@@ -36,15 +36,15 @@ sub compare_annotations {
     #print STDERR "GENE : new @$new\n";
     #print STDERR "GENE : mod @modgenes\n";
 
-    foreach my $del (@$del) {
-       #print $del;
-    } 
-    foreach my $del (@$new) {
-       #print $del;
-    } 
-    foreach my $del (@modgenes) {
-       #print $del;
-    } 
+    #foreach my $del (@$del) {
+    #   print $del;
+    #} 
+    #foreach my $del (@$new) {
+    #   print $del;
+    #} 
+    #foreach my $del (@modgenes) {
+    #   print $del;
+    #} 
 
     foreach my $geneid (keys %$mod) {
        my $ismodified   = 0;
@@ -164,11 +164,11 @@ sub compare_annotations {
 		# my $ev = $emod->{$ex}{old}->version;
 		# $ev++;
 		# $emod->{$ex}{new}->version($ev);
-          print STDERR "Found modified exon " . $ex ."\n";
-         
-          #print STDERR " Exon 1 " . $emod->{$ex}{old}->start . " " . $emod->{$ex}{old}->end . " " . $emod->{$ex}{old}->phase . " " . $emod->{$ex}{old}->end_phase . "\n"; 
-          #print STDERR " Exon 2 " . $emod->{$ex}{new}->start . " " . $emod->{$ex}{new}->end . " " . $emod->{$ex}{new}->phase . " " . $emod->{$ex}{new}->end_phase . "\n";
-          $modids{$geneid} = 1;
+                print STDERR "Found modified exon " . $ex ."\n";
+
+                #print STDERR " Exon 1 " . $emod->{$ex}{old}->start . " " . $emod->{$ex}{old}->end . " " . $emod->{$ex}{old}->phase . " " . $emod->{$ex}{old}->end_phase . "\n"; 
+                #print STDERR " Exon 2 " . $emod->{$ex}{new}->start . " " . $emod->{$ex}{new}->end . " " . $emod->{$ex}{new}->phase . " " . $emod->{$ex}{new}->end_phase . "\n";
+                $modids{$geneid} = 1;
 	    } else {
 		# print "Found same exon\n";
 	    }
@@ -205,7 +205,7 @@ sub compare_annotations {
 		$tran->version(1);
 	    }
             if (defined($tran->translation) && !defined($tran->translation->version)) {
-            $tran->translation->version(1);
+                $tran->translation->version(1);
             }
 	    $tran->modified($time);
 	    
@@ -392,10 +392,13 @@ sub compare_obj {
 	    }
 	}
 	if ($found == 0) {
+            my ($thing) = ref($oldobj) =~ /([^:]+)$/;
+            print STDERR "$thing '", $oldobj->stable_id, "' was not found\n";
 	    push(@del,$oldobj);
 	}
     }
 
+    # New objects don't have a stable_id
     foreach my $newobj (@$newobjs) {
 	if (!defined($mod{$newobj->stable_id})) {
 	    push(@new,$newobj);

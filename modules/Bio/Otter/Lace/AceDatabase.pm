@@ -128,12 +128,12 @@ sub fetch_otter_ace {
                 print $write $client->get_xml_for_contig_from_Dataset($ctg, $ds);
                 my ($genes, $slice, $sequence, $tiles) =
                     Bio::Otter::Converter::XML_to_otter($xml->read_file_handle);
-                my $slice_name = $slice->display_id;
+                $ace .= Bio::Otter::Converter::otter_to_ace($slice, $genes, $tiles, $sequence);
                 
                 # We need to record which dataset each slice came
                 # from so that we can save it back.
-                $self->save_slice_name_dataset($slice_name, $ds);
-                $ace .= Bio::Otter::Converter::otter_to_ace($slice, $genes, $tiles, $sequence);
+                my $slice_name = $slice->display_id;
+                $self->save_slice_dataset($slice_name, $ds);
             }
         }
     }
@@ -145,13 +145,12 @@ sub fetch_otter_ace {
     }
 }
 
-sub save_slice_name_dataset {
+sub save_slice_dataset {
     my( $self, $slice_name, $dataset ) = @_;
     
     $self->{'_slice_name_dataset'}{$slice_name} = $dataset;
 }
 
-### Need some way to make this persistent for "lace -recover"
 sub slice_dataset_hash {
     my $self = shift;
     
@@ -161,6 +160,8 @@ sub slice_dataset_hash {
     return $h;
 }
 
+# Makes hash persistent for "lace -recover"
+# (Could store in Dataset_name tag in database?)
 sub save_slice_dataset_hash {
     my( $self ) = @_;
     
@@ -171,6 +172,7 @@ sub save_slice_dataset_hash {
     open $fh, "> $file" or confess "Can't write to file '$file' : $!";
     while (my ($slice, $ds) = each %$h) {
         my $ds_name = $ds->name;
+        $slice =~ s/\t/\\t/g;   # Escape tab characterts in slice name (v. unlikely)
         print $fh "$slice\t$ds_name\n";
     }
     close $fh;
@@ -188,6 +190,7 @@ sub recover_slice_dataset_hash {
     while (<$fh>) {
         chomp;
         my ($slice, $ds_name) = split /\t/, $_, 2;
+        $slice =~ s/\\t/\t/g;   # Unscape tab characterts in slice name (v. unlikely)
         my $ds = $cl->get_DataSet_by_name($ds_name);
         $h->{$slice} = $ds;
     }
@@ -227,10 +230,17 @@ sub save_otter_slice {
     $ace_txt .= $ace->raw_query('show -a');
     $ace->raw_query('Follow Locus');
     $ace_txt .= $ace->raw_query('show -a');
+    $ace->find(Person => '*');  # For Authors
+    $ace_txt .= $ace->raw_query('show -a');
     
     # Cleanup text
     $ace_txt =~ s/\0//g;            # Remove nulls
     $ace_txt =~ s{^\s*//.+}{\n}mg;  # Strip comments
+    
+    #my $debug_file = "/tmp/otter-debug.$$.ace";
+    #open DEBUG, ">> $debug_file" or die;
+    #print DEBUG $ace_txt;
+    #close DEBUG;
     
     return $client->save_otter_ace($ace_txt, $dataset);
 }

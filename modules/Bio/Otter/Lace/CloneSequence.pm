@@ -65,6 +65,15 @@ sub chr_end {
     return $self->{'_chr_end'};
 }
 
+sub contig_name {
+    my( $self, $contig_name ) = @_;
+    
+    if ($contig_name) {
+        $self->{'_contig_name'} = $contig_name;
+    }
+    return $self->{'_contig_name'};
+}
+
 sub contig_start {
     my( $self, $contig_start ) = @_;
     

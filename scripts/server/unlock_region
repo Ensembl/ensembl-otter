@@ -23,7 +23,7 @@ if ($ENV{SERVER_SOFTWARE} =~ /libwww-perl-daemon/) {
 my %params = $q->Vars;
 
 my $dataset = $params{dataset} || error_exit($q, "No dataset name entered. Can't unlock region");
-my $author  = $params{author}  || error_exit($q, "Author must defined to unlock a region");
+error_exit($q, "Author must defined to unlock a region") unless $params{author};
 my $data    = $params{data}    || error_exit($q, "No xml data entered. Can't unlock region");
 warn $data;
 
@@ -34,7 +34,7 @@ if (!defined($OTTER_SPECIES->{$dataset})) {
   error_exit($q, "Unknown data set '$dataset' in unlock_region\n");
 }
 
-my %dbinfo   = %{$OTTER_SPECIES->{$params{'dataset'}}};
+my %dbinfo   = %{$OTTER_SPECIES->{$dataset}};
 my %defaults = %{$OTTER_SPECIES->{'defaults'}};
 
 my $odb;

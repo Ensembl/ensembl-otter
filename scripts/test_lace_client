@@ -17,6 +17,7 @@ use Bio::Otter::Lace::Client;
         'h|help!'       => $usage,
         'recover=s'     => \$recover,
         ) or $usage->();
+    $write_flag = 1 if $recover;
 
     my $cl = Bio::Otter::Lace::Client->new;
     $cl->host('ecs1d');
@@ -26,6 +27,7 @@ use Bio::Otter::Lace::Client;
     #my ($ds) = grep $_->name eq 'human_chr20_with_anal_end_feb',
     my $db = $cl->new_AceDatabase;
     $db->title('lace test');
+    $db->error_flag(1);
 
     if ($recover) {
         $db->home($recover);
@@ -46,14 +48,16 @@ use Bio::Otter::Lace::Client;
         $db->write_otter_acefile;
 
         unless ($db->initialize_database) {
-            $db->error_flag(1);
             die "Error initialzing database";
         }
     }
     
     system('xace', $db->home);
     
-    $db->save_all_slices if $write_flag;
+    if ($write_flag) {
+        $db->save_all_slices;
+    }
+    $db->error_flag(0);
 }
 
 

@@ -5,6 +5,7 @@ create table author (
 	author_email varchar(50),
         author_name  varchar(50),
         PRIMARY KEY (author_id)
+        UNIQUE email (author_email)
 ) TYPE=InnoDB;
 create table keyword (
 	keyword_id  int(10) unsigned DEFAULT '0' NOT NULL auto_increment,

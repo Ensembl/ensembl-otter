@@ -25,7 +25,7 @@ my %params = $q->Vars;
 
 my $dataset = $params{dataset} || error_exit($q,"No dataset type entered. Can't write region");
 my $data    = $params{data}    || error_exit($q,"No xml data entered. Can't write region");
-my $author  = $params{author}  || error_exit($q,"Author must defined to write a region");
+error_exit($q,"Author must defined to write a region") unless $params{author};
 my $email   = $params{email}   || error_exit($q,"Email must defined to write a region");
 
 print STDERR "Length of data " . length($data) . "\n";
@@ -134,29 +134,25 @@ print STDERR "done\n";
 @genes = @$genes;
 print STDERR "\nFound " . scalar(@genes) . " genes on region $chrname $chrstart-$chrend\n";
 
- my $sida = $odb->get_StableIdAdaptor();
- foreach my $gene (@genes) {
-   if (!defined($gene->stable_id) || $gene->stable_id eq "") {
-     $gene->stable_id($sida->fetch_new_gene_stable_id);
-   }
-   foreach my $trans (@{$gene->get_all_Transcripts}) {
-     if (!defined($trans->stable_id) || $trans->stable_id eq "") {
-       $trans->stable_id($sida->fetch_new_transcript_stable_id);
-     }
-     if (defined($trans->translation)) {
-        if (!defined($trans->translation->stable_id) || $trans->translation->stable_id eq "") {
-        $trans->translation->stable_id($sida->fetch_new_translation_stable_id);
+
+# Get stable IDs for any genes, transcripts, translations and exons that don't have them
+my $sida = $odb->get_StableIdAdaptor();
+foreach my $gene (@genes) {
+    $gene->stable_id($sida->fetch_new_gene_stable_id)
+        unless $gene->stable_id;
+    foreach my $trans (@{$gene->get_all_Transcripts}) {
+        $trans->stable_id($sida->fetch_new_transcript_stable_id)
+            unless $trans->stable_id;
+        if (my $translation = $trans->translation) {
+            $translation->stable_id($sida->fetch_new_translation_stable_id)
+                unless $translation->stable_id;
         }
-     }
-     foreach my $exon (@{$trans->get_all_Exons}) {
-       if (!defined($exon->stable_id) || $exon->stable_id eq "") {
-         $exon->stable_id($sida->fetch_new_exon_stable_id);
-       }
-     }
-   }
- }
-
-
+        foreach my $exon (@{$trans->get_all_Exons}) {
+            $exon->stable_id($sida->fetch_new_exon_stable_id)
+                unless $exon->stable_id;
+        }
+    }
+}
 
 my $ab = new Bio::Otter::AnnotationBroker($odb);
 my $oaga = $odb->get_AnnotatedGeneAdaptor();
@@ -179,6 +175,7 @@ my $cb   = new Bio::Otter::CloneLockBroker($odb);
 
 print STDERR "Checking region is locked...\n";
 
+### Why is this commented out?
 eval {
   #$cb->check_locks_exist_by_slice($slice,$author);
 };
@@ -249,8 +246,11 @@ my @events;
 print STDERR "\nComparing annotations " . scalar(@$dbgenes) . " " . scalar(@genes) . "...\n";
 
 eval {
-  my ($oldgenes,$newgenes) = trim_genes_to_slice($dbgenes,\@genes,$slice);
-  @events = $ab->compare_annotations($oldgenes,$newgenes,$slice);
+    print STDERR "trimming old genes to slice:\n";
+    my $oldgenes = trim_genes_to_slice($dbgenes, $slice);
+    print STDERR "trimming new genes to slice:\n";
+    my $newgenes = trim_genes_to_slice(\@genes,  $slice);
+    @events = $ab->compare_annotations($oldgenes,$newgenes);
 };
 if ($@) {
   print STDERR "Failed comparing annotations [$@]\n";
@@ -278,6 +278,8 @@ eval {
       $gene = $event->new_gene;
     }
 
+    ### Attach Author to gene?
+    #$gene->attach_Author_to_all_components($author);
 
     print STDERR "\nAttaching gene to slice " . $gene->stable_id . " " . $gene->version. "\n";
     $oaga->attach_to_Slice($gene,$slice);
@@ -306,55 +308,39 @@ print($outputstr);
 #print("  </response>\n");
 #print("</otter>\n");
 
-print STDERR "\nUnlocking clones...";
 
-if (defined($params{unlock})) {
+if ($params{unlock} eq 'true') {
+  print STDERR "\nUnlocking clones...";
   $cb->remove_by_slice($slice,$author);
+  print STDERR "done\n";
 }
 
-print STDERR "done\n";
 #####################################################################################
 
 sub trim_genes_to_slice {
-  my ($genes1,$genes2,$slice) = @_;
+    my( $genes, $slice ) = @_;
 
-  my $start = $slice->chr_start;
-  my $end   = $slice->chr_end;
+    my $start = $slice->chr_start;
+    my $end   = $slice->chr_end;
 
-  my @newgenes1;
-  my @newgenes2;
+    my $newgenes = [];
 
-  print STDERR "Start end $start $end\n";
+    print STDERR "Start end $start $end\n";
 
-  foreach my $g (@$genes1) {
-    my ($gstart,$gend) = find_gene_ends($g);
+    foreach my $g (@$genes) {
+        my ($gstart,$gend) = find_gene_ends($g);
 
-    $gstart = $gstart + $start -1;
-    $gend   = $gend   + $start -1;
-    
-    if ($gstart > $start && $gend < $end) {
-      print STDERR "Gene inside region " . $gstart . " " . $gend . "\t" . $g->stable_id . "\n";
-      push(@newgenes1,$g);
-    } else {
-      print STDERR "Gene outside region " . $gstart . " " . $gend . "\t" . $g->stable_id . "\n";
+        $gstart = $gstart + $start -1;
+        $gend   = $gend   + $start -1;
+
+        if ($gstart >= $start and $gend <= $end) {
+            print STDERR "Gene inside region " . $gstart . " " . $gend . "\t" . $g->stable_id . "\n";
+            push(@$newgenes,$g);
+        } else {
+            print STDERR "Gene outside region " . $gstart . " " . $gend . "\t" . $g->stable_id . "\n";
+        }
     }
-  }
-  foreach my $g (@$genes2) {
-    my ($gstart,$gend) = find_gene_ends($g);
-    $gstart = $gstart + $start -1;
-    $gend   = $gend   + $start -1;
-    if ($gstart > $start && $gend < $end) {
-      print STDERR "Gene inside region " . $gstart . " " . $gend . "\t" . $g->stable_id . "\n";
-      push(@newgenes2,$g);
-    } else {
-      print STDERR "Gene outside region " . $gstart . " " . $gend . "\t" . $g->stable_id . "\n";
-    }
-  }
-
-  print STDERR "New genes 1 @newgenes1\n";
-  print STDERR "New genes 2 @newgenes2\n";
-
-  return (\@newgenes1,\@newgenes2);
+    return $newgenes;
 }
 
 sub find_gene_ends {
