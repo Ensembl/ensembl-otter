@@ -123,7 +123,7 @@ if($make_cache){
 	if($vega_type ne 'E'){
 	  $other=1;
 	}
-      }elsif($vega_type eq 'N' || $vega_type eq 'NULL'){
+      }elsif($vega_type eq 'N' || $vega_type eq ''){
 	$other=1;
       }
     }
