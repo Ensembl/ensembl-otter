@@ -619,13 +619,13 @@ sub make_AceDataFactory {
     }
     
     #halfwise
-    if (my $ana = $ana_adaptor->fetch_by_logic_name('Pfam')) {
+    if (my $ana = $ana_adaptor->fetch_by_logic_name('Halfwise')) {
         my $halfwise = Bio::EnsEMBL::Ace::Filter::Gene::Halfwise->new;
         $halfwise->url_string('http\\:\\/\\/www.sanger.ac.uk\\/cgi-bin\\/Pfam\\/getacc?%s');   ##??is this still correct?
         $halfwise->analysis_object($ana);
         $factory->add_AceFilter($halfwise);
     } else {
-        warn "No analysis called 'Pfam'\n";
+        warn "No analysis called 'Halfwise'\n";
     }
 
 ## big list for DNASimilarity / Protein_similarity
