@@ -247,27 +247,40 @@ sub draw{
     my $sig_label = $top_frame->Label(-text => 'PolyA Signal')->pack(-side => 'left' , padx => 5) ;
     my $site_label = $top_frame->Label(-text => 'PolyA Site' )->pack(-side =>'right'  , padx => 5);
     
+    my $add_signal = sub {$self->add_entry_widget('signal')};
     $top_frame->Button( -text => 'Add Signal',
+                        -underline => 6,
                         -relief => 'groove',
                         -borderwidth => 2 ,
-                            -command => sub {$self->add_entry_widget('signal')})->pack( -side => 'left' , -after=>$sig_label );
+                        -command => $add_signal)->pack( -side => 'left' , -after=>$sig_label );
+    $tl->bind('<Control-G>', $add_signal) ;
+    $tl->bind('<Control-g>', $add_signal) ;
+    
+    my $add_site = sub {$self->add_entry_widget('site')};
     $top_frame->Button( -text => 'Add Site',
+                        -underline => 6,
                         -relief => 'groove',
                         -borderwidth => 2 ,
-                        -command => sub {$self->add_entry_widget('site')} )->pack( -side => 'right' , -before => $site_label );
+                        -command =>  $add_site )->pack( -side => 'right' , -before => $site_label );
+    $tl->bind('<Control-T>' , $add_site ) ;
+    $tl->bind('<Control-t>' , $add_site ) ;
     
     ##add save / close button at bottom
     $Button_frame->Button(-text => 'Save co-ordinates' ,
+                          -underline => 0 ,
                           -relief => 'groove',
                           -borderwidth => 2 ,  
                           -command => sub {$self->save_details }  )->pack( -side => 'left' , padx=> 45);
+    $tl->bind('<Control-S>' , sub {$self->save_details} ) ;
+    $tl->bind('<Control-s>' , sub {$self->save_details} ) ;
     
     
     $Button_frame->Button(-text => 'Close' ,
                           -relief => 'groove',
                           -borderwidth => 2 ,  
                           -command => $close_window  )->pack( -side => 'right' , padx=>45 );
-    
+    $tl->bind('<Control-x>' , $close_window ) ;
+    $tl->bind('<Control-X>' , $close_window ) ;
     
     # get the arrays (or produce arrays with blank entries)
     ##my ($empty_1 , $empty_2 , $empty_3 , $empty_4) = ('' , '' , '', '' );
@@ -290,11 +303,12 @@ sub draw{
     $self->populate_subframe('site', @site) ;
    
     my $id = $canvas->createWindow( 0, 0 , -window=> $signal_frame , -anchor=> 'nw',  -tags=>'signal_frame');
-    
     $canvas->update;
     
     $canvas->createWindow( $signal_frame->width + 15  , 0 , -window=> $site_frame , anchor => 'nw' , -tags=>'site_frame');
     $canvas->update();
+    
+   
     $self->fix_window_min_max_sizes;    
 }
 
@@ -326,25 +340,36 @@ sub populate_subframe{
         my $coord_2_ref = \$coord_2;                           
 
 
-
-        my $start_entry = $entry_frame->Entry(
-            -textvariable => $coord_1_ref ,
-            -width => 10 ,
-            -relief => 'sunken' )->pack(-side => 'left' );
-        
-        my $end_entry = $entry_frame->Entry(
-            -textvariable => $coord_2_ref ,
-            -width => 10 ,
-            -relief => 'sunken' )->pack(-side => 'left' );                            
-         
         my $strand;
         my $update_cmd = sub {$self->update_entry($coord_1_ref , $coord_2_ref , \$strand , $frame_type )};
+        
+
+            
+
+
+        my $start_entry = $entry_frame->Entry(
+                                            -textvariable => $coord_1_ref ,
+                                            -width => 10 ,
+                                            -relief => 'sunken' )->pack(-side => 'left' );
+        
+        my $end_entry = $entry_frame->Entry(
+                                            -textvariable => $coord_2_ref ,
+                                            -width => 10 ,
+                                            -relief => 'sunken' )->pack(-side => 'left' );                            
+
+
+        
         $start_entry->bind('<Return>',  sub {
             $self->update_entry($coord_1_ref , $coord_2_ref , \$strand , $frame_type, 'start' )
             });
         $end_entry->bind('<Return>',  sub {
             $self->update_entry($coord_1_ref , $coord_2_ref , \$strand , $frame_type, 'end' )
             });
+
+
+
+
+            
         my $pos_button = $entry_frame->Radiobutton(  -command => $update_cmd, 
                                                 -text => '+' ,
                                                 -variable => \$strand ,
@@ -358,6 +383,10 @@ sub populate_subframe{
                                                 -borderwidth => 2 ,
                                                 -relief => 'groove')->pack(-side=> 'left' ) ;
        
+
+
+
+
 
 
         my $delete = sub{ ${$coord_1_ref} = '' ; ${$coord_2_ref} = '' ;  } ; 
@@ -380,6 +409,7 @@ sub populate_subframe{
         } else {
             $pos_button->select;
         }
+        $start_entry->focus();
     }  
 }
 
@@ -399,6 +429,7 @@ sub add_entry_widget{
     my $entry_variable = [\$start , \$end ];
     $self->populate_subframe($type , $entry_variable );
     $self->fix_window_min_max_sizes  
+    
 }
 
 
@@ -442,7 +473,7 @@ sub update_entry {
     }elsif( $$end =~ /\d/){
         $$start = $$end - ($length * $multiplier) ; 
     }else{
-        warn "nothing to update";
+#        warn "nothing to update";
     }
 }
 
