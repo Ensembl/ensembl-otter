@@ -56,3 +56,23 @@ name for the $OTTER_GLOBAL_ACCESS_USER in OtterDefs.pm.
 
 N.B. scripts/user_access -assignAllDefault will give all the users in the 
 database the default rule.
+
+
+=head1 SQL
+
+DROP TABLE IF EXISTS access_author;
+CREATE TABLE access_author (
+  access_id int(10) unsigned NOT NULL,
+  author_id int(10) unsigned NOT NULL,
+  PRIMARY KEY (access_id, author_id)
+) TYPE=InnoDB;
+
+DROP TABLE IF EXISTS sequence_set_access;
+CREATE TABLE sequence_set_access (
+  access_id int(10) unsigned NOT NULL auto_increment,
+  access_spec varchar(20) NOT NULL,
+  description varchar(100) default '',
+  access_level enum('RO', 'RW') default 'RO' NOT NULL,
+  PRIMARY KEY (access_id)
+) TYPE=InnoDB;
+
