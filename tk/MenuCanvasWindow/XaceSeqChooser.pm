@@ -757,7 +757,7 @@ sub delete_subsequences {
     # Delete from acedb database
     $xr->load_ace($ace);
     $xr->save;
-    #$xr->send_command('gif ; seqrecalc');
+    $xr->send_command('gif ; seqrecalc');
     
     # Remove from our objects
     foreach my $sub (@to_die) {

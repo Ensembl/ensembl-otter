@@ -94,6 +94,7 @@ use vars '@command_line';
         HALFWISE            => 0,
         SPAN                => 0,
         EnsEMBL             => 0,
+        genomewise          => 0,
         );
     $xc->set_known_GeneMethods(%methods_mutable);
     
