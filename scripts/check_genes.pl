@@ -189,7 +189,7 @@ if($make_cache){
     }else{
       $nexclude++;
       push(@{$excluded_gsi{$gsi}},join(',',@row));
-      if(ao{$ecid}){
+      if($ao{$ecid}){
 	my($cname,$atype,$acst,$aced,$ast,$aed,$ao,$cla,$clv)=@{$ao{$ecid}};
 	$gsi_ao_clone{$gsi}->{"$cla.$clv"}=1;
       }else{
