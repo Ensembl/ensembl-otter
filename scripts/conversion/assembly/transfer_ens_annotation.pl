@@ -30,6 +30,7 @@ my $chrend   = 300000000;
 my $path     = 'GENOSCOPE';
 my $c_path   = 'NCBI31';
 my $t_path   = 'NCBI31';
+my $no_offset;
 
 &GetOptions( 'host:s'    => \$host,
              'user:s'    => \$user,
@@ -52,6 +53,7 @@ my $t_path   = 'NCBI31';
              'path:s'      => \$path,
              'c_path:s'    => \$c_path,
              't_path:s'    => \$t_path,
+	     'no_offset'   => \$no_offset,
             );
 
 
@@ -273,7 +275,7 @@ sub write_gene {
 
   }
 
-# Transform gene to raw contig coords
+  # Transform gene to raw contig coords
   print "Gene " .$gene->start ." to " . $gene->end  . " type ".$gene->type."\n";
   $gene->transform;
 

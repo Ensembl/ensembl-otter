@@ -222,13 +222,21 @@ if($make_cache){
   my %gsi_clone;
   my %atype_gsi;
   my %gsi2gn;
+  my $nobs=0;
   open(OUT,">$cache_file") || die "cannot open cache file $cache_file";
   while (my @row = $sth->fetchrow_array()){
     $n++;
 
     # transform to chr coords
     my($gsi,$gn,$gt,$tsi,$tn,$erank,$eid,$ecid,$est,$eed,$esr,$es,$ep,$eep)=@row;
-    $gsi2gn{$gsi}=$gn;
+
+    # skip obs genes
+    if($gt eq 'obsolete'){
+      $nobs++;
+      next;
+    }
+
+    $gsi2gn{$gsi}="$gn:$gt";
 
     # look for contig for this exon in selected assembly regions
     if($a{$ecid}){
@@ -293,6 +301,8 @@ if($make_cache){
   close(OUT);
   $dbh->disconnect();
 
+  my %n_offtrack;
+
   # report all offtrack genes
   my %orphan_gsi;
   foreach my $atype (sort keys %atype_gsi){
@@ -313,6 +323,7 @@ if($make_cache){
 	}
 	my $gn=$gsi2gn{$gsi};
 	print " ERR1 $gsi ($gn) ss=\'$atype\' has exon(s) off assembly:\n";
+	$n_offtrack{$atype}->[0]++;
 	# 3 diff classes of clones:
 	# V = different version of clone in assembly
 	# O = clone in another specified set
@@ -324,7 +335,7 @@ if($make_cache){
 	if($aoc){$a2c="O:$a2c";}
 	if($auc){$a2c="U:$a2c";}
 	print "  on clones: $a2c $aoc $auc\n";
-	print "  ".join("\n  ",@{$excluded_gsi{$gsi}})."\n" if $opt_v;
+	print "   ".join("\n   ",@{$excluded_gsi{$gsi}})."\n" if $opt_v;
       }
     }
 
@@ -353,12 +364,13 @@ if($make_cache){
 	  }
 	}
 	my $gn=$gsi2gn{$gsi};
+	$n_offtrack{$atype}->[1]++;
 	if($onagp_gsi{$gsi}){
 	  print " ERR2 $gsi ($gn) ss=\'$atype\' some exon(s) off agp:\n";
 	}else{
 	  print " ERR2 $gsi ($gn) ss=\'$atype\' all exon(s) off agp:\n";
 	}
-	print "  ".join("\n  ",@{$offagp_gsi{$gsi}})."\n" if $opt_v;
+	print "   ".join("\n   ",@{$offagp_gsi{$gsi}})."\n" if $opt_v;
       }
     }
     my $n=0;
@@ -392,6 +404,9 @@ if($make_cache){
       $sv{"$cla2.$clv"}=1;
       $atype{$atype}++;
     }
+    foreach my $atype (keys %atype){
+      $n_offtrack{$atype}->[2]++;
+    }
     print " ERR3 $gsi ($gn) linked to =\'".join("\',\'",(keys %atype))."\'; clones: ".
 	join(",",(keys %sv))."\n";
     # 3 diff classes of clones:
@@ -405,11 +420,17 @@ if($make_cache){
     if($aoc){$a2c="O:$a2c";}
     if($auc){$a2c="U:$a2c";}
     print "  found on clones: $a2c $aoc $auc\n";
-    print "  ".join("\n  ",@{$excluded_gsi{$gsi}})."\n" if $opt_v;
+    print "   ".join("\n   ",@{$excluded_gsi{$gsi}})."\n" if $opt_v;
   }
 
   print "wrote $n records to cache file $cache_file\n";
   print "wrote $nexclude exons ignored as not in selected assembly\n";
+  print "skipped $nobs exons marked as obsolete\n";
+
+  foreach my $atype (sort keys %n_offtrack){
+    printf "%-20s %4d %4d %4d\n",$atype,@{$n_offtrack{$atype}};
+  }
+
   exit 0;
 }
 

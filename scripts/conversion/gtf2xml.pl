@@ -194,6 +194,8 @@ while(<IN>){
       $hashy{'transcript_id'}=$val;
       if($val=~/(\S+)\_transcript\_variant/){
 	$val=$1;
+      }elsif($val=~/(\S+)\_full\_length/){
+	$val=$1;
       }
     }elsif($key ne 'Description'){
       # store unrecognised keys as remarks
@@ -402,6 +404,38 @@ my $author = new Bio::Otter::Author(
     -name  => $author,
     -email => $email
 );
+
+# fix conflicting gene_types
+foreach my $gene_id (keys %genes){
+  my $gene_type;
+  my $flag;
+  my $flagn;
+  my @transcript_ids = keys %{ $genes{$gene_id} };
+  foreach my $transcript_id (@transcript_ids){
+    my $gene_type2=$genes{$gene_id}{$transcript_id}{'values'}{'gene_category'};
+    if($gene_type){
+      if($gene_type ne $gene_type2){
+	print "Type mismatch for $gene_id: $gene_type2, $gene_type\n";
+	if($gene_type2 eq 'Known' && $gene_type eq 'Novel_Transcript'){
+	  $gene_type='Known';
+	  $flag=1;
+	}elsif($gene_type eq 'Known' && $gene_type2 eq 'Novel_Transcript'){
+	  $flag=1;
+	}else{
+	  $flagn=1;
+	}
+      }
+    }else{
+      $gene_type=$gene_type2;
+    }
+  }
+  if($flag && !$flagn){
+    print "All transcripts of $gene_id set to $gene_type\n";
+    foreach my $transcript_id (@transcript_ids){
+      $genes{$gene_id}{$transcript_id}{'values'}{'gene_category'}=$gene_type;
+    }
+  }
+}
 
 my $nmm=0;
 foreach my $gene_id (keys %genes){

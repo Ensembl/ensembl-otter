@@ -23,6 +23,8 @@ my $chrstart = 1;
 my $chrend   = 100000000;
 my $path     = 'NCBI31';
 
+my $no_offset;
+
 &GetOptions( 's_host:s'    => \$s_host,
              's_user:s'    => \$s_user,
              's_pass:s'    => \$s_pass,
@@ -37,6 +39,7 @@ my $path     = 'NCBI31';
              'chrstart:n'=> \$chrstart,
              'chrend:n'  => \$chrend,
              'path:s'  => \$path,
+	     'no_offset' => \$no_offset,
             );
 
 
@@ -152,6 +155,9 @@ while ($hashref = $sth->fetchrow_hashref()) {
 
   my $clonename = $bits[0] . "." . $bits[1];
 
+  $hashref->{'t_contig_start'}=$hashref->{'contig_start'};
+  $hashref->{'t_contig_end'}=$hashref->{'contig_end'};
+
   if (!exists($dupclones{$clonename})) {
 
     my $contig = $rca->fetch_by_name($hashref->{'name'});
@@ -178,9 +184,26 @@ while ($hashref = $sth->fetchrow_hashref()) {
       $sth->execute;
       my $hashref2 = $sth->fetchrow_hashref;
       if (defined($hashref2)) {
-        print "Looking for $acc did find " . $hashref2->{'name'} . "\n";
+	my $name2=$hashref2->{'name'};
+        print "Looking for $acc did find $name2\n";
+	$contig = $rca->fetch_by_name($hashref2->{'name'});
+
+	# contig fetch worked - now fix start end
+	my $name = $hashref->{'name'};
+	if($name=~/^(\w+\.\d+)\.(\d+)\.(\d+)$/ && !$no_offset){
+	  # change from AC.V.ST.ED -> AC.V.1.ED
+	  my($sv,$st,$ed)=($1,$2,$3);
+	  my $cst = $hashref->{'contig_start'};
+	  my $ced = $hashref->{'contig_end'};
+	  if($cst==1 && $ced==$ed-$st+1){
+	    $cst=$st;
+	    $ced=$ced+$st-1;
+	    print STDOUT "  assembly coordinates remapped to $cst-$ced\n";
+	    $hashref->{'t_contig_start'}=$cst;
+	    $hashref->{'t_contig_end'}=$ced;
+	  }
+	}
       }
-      $contig = $rca->fetch_by_name($hashref2->{'name'});
     }
 
     if (!defined($contig)) {
@@ -208,7 +231,7 @@ while ($hashref = $sth->fetchrow_hashref()) {
       my $s_contig = @{$s_clone->get_all_Contigs}[0];
 
       my $s_assseq = $s_contig->subseq($hashref->{contig_start},$hashref->{contig_end});
-      my $t_assseq = $contig->subseq($hashref->{contig_start},$hashref->{contig_end});
+      my $t_assseq = $contig->subseq($hashref->{t_contig_start},$hashref->{t_contig_end});
       if ($s_assseq ne $t_assseq) {
 	print "start = " . $hashref->{contig_start} . " end " . $hashref->{contig_end} . "\n";
         print "NOTE Contig subseqs sequences different for $clonename\n";
@@ -241,8 +264,8 @@ while ($hashref = $sth->fetchrow_hashref()) {
                            $hashref->{superctg_end},
                            $hashref->{superctg_ori},
                            $contig_id,
-                           $hashref->{contig_start},
-                           $hashref->{contig_end},
+                           $hashref->{t_contig_start},
+                           $hashref->{t_contig_end},
                            $hashref->{contig_ori},
                            "$hashref->{type}"
                          ):);
