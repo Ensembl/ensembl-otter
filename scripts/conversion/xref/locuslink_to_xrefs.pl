@@ -10,7 +10,11 @@ my $user   = 'ensadmin';
 my $pass   = 'ensembl';
 my $port   = 3306;
 my $dbname = 'otter_merged_chrs_with_anal';
-my $gff_file='/nfs/acari/searle/progs/otter/scripts/convdata/chr14/v1/thot.311002.res_sanger';
+#my $gff_file='/nfs/acari/searle/progs/otter/scripts/convdata/chr14/v1/thot.311002.res_sanger';
+my $gff_file = '/acari/work7a/keenan/ensembl-otter/scripts/convdata/chr14/v2/NN.240203.res_sanger';
+#my $gff_file = '/acari/work7a/keenan/ensembl-otter/scripts/convdata/chr7/chr7.build31.gff';
+
+my $lltmpl_file = "/ecs2/scratch6/ensembl/keenan/LL_tmpl";
 
 my @chromosomes;
 my $path = 'VEGA';
@@ -27,6 +31,7 @@ $| = 1;
   'port:n'        => \$port,
   'chromosomes:s' => \@chromosomes,
   'gfffile:s'     => \$gff_file,
+  'lltmpl_file:s'   => \$lltmpl_file,
   'store'         => \$do_store,
 );
 
@@ -75,7 +80,8 @@ open(IN,$gff_file) or die "cannot open $gff_file";
 my %locus;
 my %seqname;
 
-open FPLLT,"</nfs/acari/searle/progs/otter/scripts/convdata/xref/LL_tmpl" or die "Couldn't open LL_tmpl";
+#open FPLLT,"</nfs/acari/searle/progs/otter/scripts/convdata/xref/LL_tmpl" or die "Couldn't open LL_tmpl";
+open(FPLLT,$lltmpl_file) or die "cannot open $lltmpl_file";
 my %loctmplindex;
 my $pos =0;
 while (<FPLLT>) {
@@ -159,7 +165,7 @@ foreach my $chr (reverse sort bychrnum keys %$chrhash) {
                                             );
       print " locus link = " .$crossrefs{$gene_name}->{off_sym} . "\n";
       $dbentry->status('KNOWN');
-      $gene->add_DBLink($dbentry);
+      $gene->add_DBEntry($dbentry);
       $adx->store($dbentry,$gene->dbID,'Gene') if $do_store;
 
   # Display xref id update
@@ -176,7 +182,7 @@ foreach my $chr (reverse sort bychrnum keys %$chrhash) {
                                                -dbname=>"RefSeq",
                                               );
         $dbentry->status('KNOWNXREF');
-        $gene->add_DBLink($dbentry);
+        $gene->add_DBEntry($dbentry);
         $adx->store($dbentry,$gene->dbID,'Gene') if $do_store;
       }
     } else {

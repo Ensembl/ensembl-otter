@@ -112,6 +112,7 @@ foreach my $chr (reverse sort bychrnum keys %$chrhash) {
   my $genes = $aga->fetch_by_Slice($slice);
   print "Done fetching genes\n";
 
+  my $nhugo=0;
   foreach my $gene (@$genes) {
     my $gene_name;
     if ($gene->gene_info->name && $gene->gene_info->name->name) {
@@ -131,6 +132,7 @@ foreach my $chr (reverse sort bychrnum keys %$chrhash) {
 
     if (defined($hugohash{$uc_gene_name})) {
       print "Found hugo match for $gene_name\n";
+      $nhugo++;
       my $dbentry=Bio::EnsEMBL::DBEntry->new(-primary_id=>$hugohash{$uc_gene_name}->[0],
                                              -display_id=>$gene_name, 
                                              -version=>1,
@@ -138,13 +140,13 @@ foreach my $chr (reverse sort bychrnum keys %$chrhash) {
                                              -dbname=>"HUGO",
                                             );
       $dbentry->status('KNOWN');
-      $gene->add_DBLink($dbentry);
+      $gene->add_DBEntry($dbentry);
       $adx->store($dbentry,$gene->dbID,'Gene') if $do_store;
-  # Display xref id update
-      my $sth = $db->prepare("update gene set display_xref_id=" . 
-                             $dbentry->dbID . " where gene_id=" . $gene->dbID);
-      print $sth->{Statement} . "\n";
-      $sth->execute;
+
+      # Display xref id update
+      my $sth = $db->prepare("update gene set display_xref_id=?". 
+			     " where gene_id=?");
+      $sth->execute($dbentry->dbID,$gene->dbID) if $do_store;
 
       for (my $i=4;$i<13;$i++) {
         my $xid = $hugohash{$uc_gene_name}->[$i];
@@ -160,7 +162,7 @@ foreach my $chr (reverse sort bychrnum keys %$chrhash) {
           } else {
             $dbentry->status('KNOWNXREF');
           }
-          $gene->add_DBLink($dbentry);
+          $gene->add_DBEntry($dbentry);
           #print "Would have added $convhash{$fieldnames[$i]} with $xid\n"
           $adx->store($dbentry,$gene->dbID,'Gene') if $do_store;
         }
@@ -169,6 +171,7 @@ foreach my $chr (reverse sort bychrnum keys %$chrhash) {
       print "No hugo match for $gene_name\n";
     }
   }
+  print "$nhugo HUGO names found for chromosome $chr\n";
 }
 
 sub get_chrlengths{
