@@ -138,7 +138,7 @@ sub fetch_by_clone_obj {
     };
 
     # work out path to acefile with assembly_tags info of a Sanger clone
-    if ( $@ && $verbose ){
+    if ( $@ && $verbose && $acc ){
       my ($sanger_id, $ver) = check_latest_embl_version_sanger_id( $acc, $otter_db );
 
       if ( $ctg_name && $obj->sv != $ver ){
