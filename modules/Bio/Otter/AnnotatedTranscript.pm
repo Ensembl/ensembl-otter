@@ -48,6 +48,26 @@ sub transcript_info {
 
 }
 
+=head2 flush_Translation
+
+ Title   : flush_Translation
+ Usage   : $obj->flush_Translation()
+ Function:
+ Example :
+ Returns :
+ Args    :
+
+
+=cut
+
+sub flush_Translation {
+  my $self = shift;
+
+  $self->{'translation'}     = undef;
+  $self->{'_translation_id'} = undef;
+}
+
+
 sub stable_id {
   my ($self,$arg) = @_;
 
