@@ -266,8 +266,6 @@ sub open_sequence_set {
             #$this_top->Unbusy;
             $this_top->configure(-cursor => undef);
             
-
-
             return 1;
         }
     }
@@ -348,7 +346,7 @@ sub search_window{
     $self->{'search_entry'}->focus;
 }
 
-sub search{
+sub OLD_search{
     my ($self , $search_type ) = @_ ;
     
     ## create a new resultSet and pass it to dataset in query
@@ -372,10 +370,9 @@ sub search{
         $number_of_clones = $self->DataSet->fetch_ResultSet_containing_CloneName( $rs , \@search_names ) ;
     }
        
-    print STDERR "number of clones found: $number_of_clones";
     
     if ($number_of_clones > 0){
-        my $top = $self->canvas->toplevel->Toplevel(  -title  =>  'Search results for ' . $self->{'search_entry'}->get);
+        my $top = $self->canvas->toplevel->Toplevel(  -title  =>  'Search results for ' . $self->{'search_entry'}->get );
         my $sn = CanvasWindow::SequenceNotes::SearchedSequenceNotes->new($top);
 
         $sn->name('Search Results'); ## do I need to change this to an ss name ? 
@@ -396,6 +393,49 @@ sub search{
     $search_window->withdraw();
 
 }
+
+sub search{
+    my ($self , $search_type) = @_ ;
+    
+    $search_type = 'locus' unless defined $search_type ; # defaults to locus search 
+    
+    my $rs = Bio::Otter::Lace::ResultSet->new ;
+    $rs->DataSet($self->DataSet) ;
+    my $search = $self->{'search_entry'}->get   ;
+    my @search_names = split /\s+/ ,  $search ;
+        
+    if  ($search_type eq 'clone') {
+        $rs->search_type('clone') ;
+    }else{
+        $rs->search_type('locus') ; # defaults to locus 
+    }
+    
+    my $clones_found = $rs->execute_search(\@search_names) ;
+    
+    if ( $clones_found > 0 ){
+    my $top = $self->canvas->toplevel->Toplevel(  -title  =>  'Search results for ' . $self->{'search_entry'}->get );
+        my $sn = CanvasWindow::SequenceNotes::SearchedSequenceNotes->new($top);
+
+        $sn->name('Search Results'); 
+        $sn->Client($self->Client);
+        $sn->ResultSet($rs);
+        $sn->SequenceSetChooser($self);
+        $sn->initialise;
+        $sn->draw;
+        $top->raise ;
+        $self->add_SequenceNotes($sn) ;              
+    }
+    else{
+        ## send mesasage to main window
+        $self->message("no clones matched your search criteria") ;
+    }
+    
+    # remove the window from viewing
+    my $search_window = $self->{'_search_window'} ;
+    $search_window->withdraw();   
+
+}
+
 
 
 
