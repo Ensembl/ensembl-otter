@@ -1,6 +1,7 @@
 package Bio::Otter::DBSQL::AuthorAdaptor;
 
 use strict;
+use Carp;
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 use Bio::Otter::Author;
 
@@ -135,72 +136,45 @@ sub fetch_by_email {
 =cut
 
 sub store {
-	my ($self,$author) = @_;
+    my ($self,$author) = @_;
 
-	if (!defined($author)) {
-		$self->throw("Must provide an author object to the store method");
-	} elsif (! $author->isa("Bio::Otter::Author")) {
-		$self->throw("Argument must be an author object to the store method.  Currently is [$author]");
-	}
+    if (!defined($author)) {
+	$self->throw("Must provide an author object to the store method");
+    } elsif (! $author->isa("Bio::Otter::Author")) {
+	$self->throw("Argument must be an author object to the store method.  Currently is [$author]");
+    }
 
-	my $tmpauth = $self->exists($author);
+    my $author_name = $author->name  or confess "Author doesn't have a name";
+    my $autor_email = $author->email or confess "Author does not have an email address";
 
-	if (defined($tmpauth)) {
-		$author->dbID($tmpauth->dbID);
-		return;
-	}
+    # Is this author already in the database?
+    my $get_db_id = $self->prepare(q{
+        SELECT author_id
+        FROM author
+        WHERE author_name = ?
+        });
+    $get_db_id->execute($author_name);
+    my ($db_id) = $get_db_id->fetchrow;
+    $get_db_id->finish;
 
-	my $sql = "insert into author(author_id,author_email,author_name) values (null,\'" . 
-		$author->email . "\',\'".
-		$author->name . "\')";
+    if ($db_id) {
+	$author->dbID($db_id);
+	return 1;
+    }
 
-  my $sth = $self->prepare($sql);
-	my $rv = $sth->execute();
-
-	$self->throw("Failed to insert author " . $author->name) unless $rv;
-
-	$sth = $self->prepare("select last_insert_id()");
-	my $res = $sth->execute;
-	my $row = $sth->fetchrow_hashref;
-	$sth->finish;
-	
-	$author->dbID($row->{'last_insert_id()'});
+    # Insert new author entry
+    my $sth = $self->prepare(q{
+        INSERT INTO author(author_id
+              , author_email
+              , author_name)
+        VALUES (NULL,?,?)
+        });
+    $sth->execute($author_email, $author_name);
+    $db_id = $sth->{'mysql_insertid'}
+        or $self->throw('Failed to get autoincremented ID from statement handle');
+    $author->dbID($db_id);
 }
 
-=head2 exists
-
- Title   : exists
- Usage   :
- Function:
- Example :
- Returns : 
- Args    :
-
-
-=cut
-
-sub exists {
-	my ($self,$author) = @_;
-
-	if (!defined($author)) {
-		$self->throw("Must provide an author object to the exists method");
-	} elsif (! $author->isa("Bio::Otter::Author")) {
-		$self->throw("Argument must be an author object to the exists method.  Currently is [$author]");
-	}
-
-	if (!defined($author->name)) {
-		$self->throw("Can't check if an author exists without a name");
-	}
-	if (!defined($author->email)) {
-		$self->throw("Can't check if an author exists without an email address");
-	}
-
-	my $newauthor = $self->_generic_sql_fetch("where author_name = \'" .   $author->name .
-																				 "\' and author_email = \'" . $author->email . "\'");
-
-	return $newauthor;
-
-}
 1;
 
 	
