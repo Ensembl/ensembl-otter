@@ -19,13 +19,13 @@ Factory object used to create Hum::EMBL objects in order to dump EMBL flatfiles
 from an Otter finished & annotated genomic sequence database. Uses a variety of
 of the Hum::EMBL modules.
 
-First pass a Bio::Otter::Lace::DataSet object by a call to the Dataset method,
+First pass a Bio::Otter::Lace::DataSet object by a call to the DataSet method,
 then call make_embl with an EMBL accession.
 
 Typical usage:
  
   my $embl_factory = Bio::Otter::EMBL::Factory->new;
-  $embl_factory->Dataset($ds);
+  $embl_factory->DataSet($ds);
     
   foreach my $acc (@ARGV) {
         
@@ -93,8 +93,8 @@ sub standard_comments {
 
 =head2 get_DBAdaptors
 
-Providing $self->Dataset has been set, retrieves the cached DBAdaptor
-from the Dataset, together with Slice and Gene adaptors.
+Providing $self->DataSet has been set, retrieves the cached DBAdaptor
+from the DataSet, together with Slice and Gene adaptors.
 
     my ($otter_db, $slice_aptr, $gene_aptr) = get_DBAdaptors();
 
@@ -103,8 +103,8 @@ from the Dataset, together with Slice and Gene adaptors.
 sub get_DBAdaptors {
     my ( $self ) = @_;
 
-    my $ds = $self->Dataset
-        or confess "Dataset not set";
+    my $ds = $self->DataSet
+        or confess "DataSet not set";
 
     #Bio::EnsEMBL::Container    
     my $otter_db = $ds->get_cached_DBAdaptor
@@ -484,20 +484,20 @@ g)  Returns the populated Hum::EMBL object
 =cut
 
 sub make_embl {
-    my ( $self, $acc ) = @_;
+    my ( $self, $acc, $embl ) = @_;
 
     confess "Must pass an accession" unless $acc;
 
-    my $ds = $self->Dataset
-        or confess "Dataset must be set before calling make_embl";
+    my $ds = $self->DataSet
+        or confess "DataSet must be set before calling make_embl";
 
     my ($otter_db, $slice_aptr, $gene_aptr) = $self->get_DBAdaptors();
-    my $embl = Hum::EMBL->new;
-    $self->EMBL($embl);
-    $self->fake_embl_setup($embl, $acc); #Debug
+    #my $embl = Hum::EMBL->new;
+    #$self->EMBL($embl);
+    #$self->fake_embl_setup($embl, $acc); #Debug
 
     my $set = 'Hum::EMBL::FeatureSet'->new;
-    $self->FeatureSet($set);
+    #$self->FeatureSet($set);
     
     foreach my $chr_s_e ($self->fetch_chr_start_end_for_accession($otter_db, $acc)) {
 
@@ -512,11 +512,11 @@ sub make_embl {
         foreach my $gid (@$gene_id_list) {
 
             my $gene = $gene_aptr->fetch_by_dbID($gid);
-            $self->_do_Gene($gene);
+            $self->_do_Gene($gene, $set);
         }
         
         #PolyA signals and sites for the slice
-        $self->_do_polyA($slice);   
+        $self->_do_polyA($slice, $set);   
     }
     
     #Finish up
@@ -540,9 +540,9 @@ These are stored in Otter as SimpleFeatures on the Slice
 =cut
 
 sub _do_polyA {
-    my ( $self, $slice ) = @_;
+    my ( $self, $slice, $set ) = @_;
     
-    my $set = $self->FeatureSet;
+    #my $set = $self->FeatureSet;
     my $polyA_signal_feats = $slice->get_all_SimpleFeatures('polyA_signal');
     my $polyA_site_feats = $slice->get_all_SimpleFeatures('polyA_site');
 
@@ -605,14 +605,14 @@ Currently flags a warning, if StickyExon(s) are found.
 =cut
 
 sub _do_Gene {
-    my ( $self, $gene ) = @_;
+    my ( $self, $gene, $set ) = @_;
 
     #Bio::Otter::AnnotatedGene, isa Bio::EnsEMBL::Gene
     return if $gene->type eq 'obsolete'; # Deleted genes
 
     #my $contig_length = $self->contig_length;
-    my $embl = $self->EMBL;
-    my $set = $self->FeatureSet;
+    #my $embl = $self->EMBL;
+    #my $set = $self->FeatureSet;
     
     #Bio::Otter::AnnotatedTranscript, isa Bio::EnsEMBL::Transcript
     #Transcript here give an mRNA, potentially + a CDS in EMBL record.
@@ -829,23 +829,23 @@ sub get_tiling_path_for_Slice {
     return $tile_path;
 }
 
-=head2 Dataset
+=head2 DataSet
  
-Get/set method for the Bio::Otter::Lace::Dataset object
+Get/set method for the Bio::Otter::Lace::DataSet object
 used to access the Otter database.
 
 =cut
 
-sub Dataset {
+sub DataSet {
     my ( $self, $obj ) = @_;
     
     if ($obj) {
         unless ($obj->isa('Bio::Otter::Lace::DataSet')) {
             confess "Must pass a 'Bio::Otter::Lace::DataSet' object\n";
         }
-        $self->{'_bio_otter_embl_factory_dataset'} = $obj;
+        $self->{'_bio_otter_embl_factory_DataSet'} = $obj;
     }
-    return $self->{'_bio_otter_embl_factory_dataset'};
+    return $self->{'_bio_otter_embl_factory_DataSet'};
 }
 
 
