@@ -90,10 +90,15 @@ foreach my $chr (@chr){
   my %analyses;
 
   foreach my $ens_gene (@$ens_genes) {
+    my $gsi=$ens_gene->stable_id;
+    if(scalar(@gene_stable_ids)){
+      next unless $gene_stable_ids{$gsi};
+    }
+
+    # get corresponding gene on slice
     my $slice_start=$ens_gene->start-$padding;
     my $slice_end=$ens_gene->end+$padding;
     my $gene_slice = $tdb->get_SliceAdaptor()->fetch_by_chr_start_end($chr,$slice_start,$slice_end);
-    
     my $ott_genes = $tdb->get_GeneAdaptor()->fetch_by_Slice($gene_slice);
 
     my $gene = undef;
@@ -117,9 +122,6 @@ foreach my $chr (@chr){
 	")\n";
 
     # don't process slices no list again
-    if(scalar(@gene_stable_ids)){
-      next unless $gene_stable_ids{$gsi};
-    }
     print "Looking for matches to $gsi\n";
     my $has_support = 0;
 
