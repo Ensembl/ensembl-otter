@@ -50,11 +50,22 @@ sub canvas {
     return $gc->{'_canvas'};
 }
 
+sub band_padding {
+    my( $gc ) = @_;
+    
+    return 20;
+}
+
 sub render {
     my( $gc ) = @_;
     
+    my $canvas = $gc->canvas;
+    my ($x_origin, $y_origin) = (0,0);
     foreach my $set ($gc->band_sets) {
-        $set->render($gc->canvas);
+        $set->render($canvas, $x_origin, $y_origin);
+        my @bbox = $canvas->bbox("$set");
+        $x_origin = $bbox[0];
+        $y_origin = $bbox[1] + $gc->band_padding;
     }
 }
 
