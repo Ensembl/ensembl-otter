@@ -1575,12 +1575,20 @@ sub empty_SubSeq_cache {
 sub draw_sequence_list {
     my( $self, $tag, @slist ) = @_;
 
+    # Work out number of rows to keep chooser
+    # window roughly square.  Also a lower and
+    # an upper limit of 20 and 40 rows.  
     my $total_name_length = 0;
     foreach my $name (@slist) {
         $total_name_length += length($name);
     }
     my $rows = int sqrt($total_name_length);
-    $rows = 20 if $rows < 20;
+    if ($rows < 20) {
+        $rows = 20;
+    }
+    elsif ($rows > 40) {
+        $rows = 40;
+    }
 
     my $canvas = $self->canvas;
     my $font = $self->font;
