@@ -50,57 +50,70 @@ sub new {
 sub bind_scroll_commands {
     my( $gc ) = @_;
     
-    my $class = 'Tk::Scrollbar';
     my $canvas = $gc->canvas;
     my $x_scroll = $canvas->parent->Subwidget('xscrollbar');
     my $y_scroll = $canvas->parent->Subwidget('yscrollbar');
-    my $top = $x_scroll->toplevel;
+    $canvas->Tk::bind('<Enter>', sub{
+        $canvas->Tk::focus;
+        });
+    
+    # Don't want the scrollbars to take keyboard focus
+    foreach my $widget ($x_scroll, $y_scroll) {
+        $widget->configure(
+            -takefocus => 0,
+            );
+    }
+    $canvas->configure(
+        -takefocus => 1,
+        );
+    return;
     
     # Home and End keys
-    $top->bind('<Key-Home>', sub{
+    $canvas->bind('<Key-Home>', sub{
         $y_scroll->ScrlToPos(0);
         });
-    $top->bind('<Key-End>', sub{
+    $canvas->bind('<Key-End>', sub{
         $y_scroll->ScrlToPos(1);
         });
     
     # Page-Up and Page-Down keys
-    $top->bind('<Key-Next>', sub{
+    $canvas->bind('<Key-Next>', sub{
         $y_scroll->ScrlByPages('v', 1);
         });
-    $top->bind('<Key-Prior>', sub{
+    $canvas->bind('<Key-Prior>', sub{
         $y_scroll->ScrlByPages('v', -1);
         });
-    $top->bind('<Control-Key-Down>', sub{
+    $canvas->bind('<Control-Key-Down>', sub{
         $y_scroll->ScrlByPages('v', 1);
         });
-    $top->bind('<Control-Key-Up>', sub{
+    $canvas->bind('<Control-Key-Up>', sub{
         $y_scroll->ScrlByPages('v', -1);
         });
     
     # Ctrl-Left and Ctrl-Right
-    $top->bind('<Control-Key-Left>', sub{
+    $canvas->bind('<Control-Key-Left>', sub{
         $x_scroll->ScrlByPages('h', -1);
         });
-    $top->bind('<Control-Key-Right>', sub{
+    $canvas->bind('<Control-Key-Right>', sub{
         $x_scroll->ScrlByPages('h', 1);
         });
     
     # Left and Right
-    $top->bind('<Key-Left>', sub{
+    $canvas->bind('<Key-Left>', sub{
         $x_scroll->ScrlByUnits('h', -1);
         });
-    $top->bind('<Key-Right>', sub{
+    $canvas->bind('<Key-Right>', sub{
         $x_scroll->ScrlByUnits('h', 1);
         });
     
     # Up and Down
-    $top->bind('<Key-Up>', sub{
+    $canvas->bind('<Key-Up>', sub{
         $y_scroll->ScrlByUnits('v', -1);
         });
-    $top->bind('<Key-Down>', sub{
+    $canvas->bind('<Key-Down>', sub{
         $y_scroll->ScrlByUnits('v', 1);
         });
+}
     
     #foreach my $key_seq ($x_scroll->bind($class)) {
     #    my $x_com_ref = $x_scroll->bind($class, $key_seq);
@@ -112,14 +125,6 @@ sub bind_scroll_commands {
     #        warn "y: $key_seq [$y_method, @y_args]\n";
     #    }
     #}
-    
-    # The Scrolled Canvas widgets shouldn't get keyboard focus
-    foreach my $widget ($canvas, $x_scroll, $y_scroll) {
-        $widget->configure(
-            -takefocus => 0,
-            );
-    }
-}
 
 sub band_padding {
     my( $gc, $pixels ) = @_;

@@ -179,7 +179,7 @@ sub column_widths {
     }
     my $font = $band->column_font;
     my $canvas = $band->canvas;
-    my $max = $band->max_width;
+    $max = $band->max_width;
     for (my $i = 0; $i < @widths; $i++) {
         my $text = substr($longest[$i], 0, $max) . 'XX';
         my $w = $canvas->fontMeasure($font, $text);
