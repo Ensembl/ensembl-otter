@@ -357,7 +357,8 @@ sub initialise {
     
     my $refresh_status = sub {
 	$top->Busy;
-	$self->refresh_column(3);
+        $self->_refresh_SequenceSet();
+	$self->draw();
 	$top->Unbusy;
     };
     $self->make_button($button_frame_2, 'Refresh Ana. Status', $refresh_status, 8);
