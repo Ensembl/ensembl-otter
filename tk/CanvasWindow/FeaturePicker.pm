@@ -27,18 +27,21 @@ sub new {
     $canvas->Tk::bind('<Double-Button-1>',  $open_command);
     $canvas->Tk::bind('<Return>',           $open_command);
     $canvas->Tk::bind('<KP_Enter>',         $open_command);
-    $canvas->Tk::bind('<Control-o>',        $open_command);
-    $canvas->Tk::bind('<Control-O>',        $open_command);
-    my $open = $button_frame->Button(
-        -text       => 'Open',
-        -command    => $open_command,
-        )->pack(-side => 'left');
+    $canvas->Tk::bind('<Control-d>',        $open_command);
+    $canvas->Tk::bind('<Control-D>',        $open_command);
+
+    $canvas->Tk::bind('<Up>',   sub{ $self->next_match(-1) });
+    $canvas->Tk::bind('<Down>', sub{ $self->next_match( 1) });
 
     my $attach = $button_frame->Button(
-        -text       => 'Attach',
+        -text       => 'Attach zMap',
         -command    => sub {
             $self->attach_zmap
         },
+        )->pack(-side => 'left');
+    my $open = $button_frame->Button(
+        -text       => 'Display',
+        -command    => $open_command,
         )->pack(-side => 'left');
 
     my $close_window = sub{
@@ -57,15 +60,26 @@ sub new {
     return $self;
 }
 
+sub next_match {
+    my( $self, $incr ) = @_;
+    
+    my ($obj) = $self->list_selected or return;
+    $obj += $incr;
+    my $canvas = $self->canvas;
+    if ($canvas->gettags($obj)) {
+        $self->deselect_all;
+        $self->highlight($obj);
+    }
+}
+
 sub select_feature {
     my( $self ) = @_;
     
     return if $self->delete_message;
     my $canvas = $self->canvas;
+    $self->deselect_all;
     if (my ($current) = $canvas->find('withtag', 'current')) {
         $self->highlight($current);
-    } else {
-        $self->deselect_all;
     }
 }
 
@@ -93,13 +107,17 @@ sub show_selected_in_zmap {
     my $command = join(' ; ',
         'feature_find method = readpairs',
         'type = homol',
-        "sequence = $ftr->{query_name}",
+        "feature = $ftr->{query_name}",
         "q_start = $ftr->{query_start}",
         "q_end = $ftr->{query_end}",
         "t_start = $ftr->{subject_start}",
         "t_end = $ftr->{subject_end}",
         );
     warn $command;
+    eval {
+        $zmap_rem->send_command($command);
+    };
+    $self->exception_message($@) if $@;
 }
 
 sub parse_feature_filehandle {
@@ -191,11 +209,12 @@ sub draw_feature_list {
     my $font_size = 10;
     my $font = 'courier';
     my $font_def = ['courier', $font_size];
+    my $font_line_height = 1.2 * $font_size;
     
     my $canvas = $self->canvas;
     for (my $i = 0; $i < @$feat_list; $i++) {
         my $x = 0;
-        my $y = $i * $font_size;
+        my $y = $i * $font_line_height;
         my $ftr = $feat_list->[$i];
         my $txt_str = sprintf $printf_str, map($ftr->{$_}, @fields);
         $canvas->createText($x, $y,
