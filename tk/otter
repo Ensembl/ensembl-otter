@@ -11,18 +11,43 @@ use strict;
 use Carp;
 use CanvasWindow;
 use Bio::Otter::DBSQL::DBAdaptor;
+use Bio::Otter::Converter;
+use Hum::AnaStatus::Sequence;
+use Hum::AnaStatus::EnsAnalysis;
 use LWP::Simple ();
 use Getopt::Long 'GetOptions';
+
+use Bio::EnsEMBL::Ace::Filter;
+use Bio::EnsEMBL::Ace::DataFactory;
+use Bio::EnsEMBL::Ace::Filter::Gene;
+use Bio::EnsEMBL::Ace::Filter::Gene::Predicted;
+use Bio::EnsEMBL::Ace::Filter::Gene::Halfwise;
+use Bio::EnsEMBL::Ace::Filter::Repeatmasker;
+use Bio::EnsEMBL::Ace::Filter::TRF;
+use Bio::EnsEMBL::Ace::Filter::Similarity;
+use Bio::EnsEMBL::Ace::Filter::SimpleFeature;
+use Bio::EnsEMBL::Ace::Filter::CpG;
+use Bio::EnsEMBL::Ace::Filter::DNA;
+
 
 {
     my $usage = sub{ exec('perldoc', $0) };
     my $host = 'ecs1d.sanger.ac.uk';
     my $port = 19312;
+    my $ace_tar = '/nfs/humace2/hum/data/lace_acedb.tar';
+
+    if($ENV{"LACE_LOCAL"}){
+	$ace_tar=$ENV{"LACE_LOCAL"}."/lace_acedb.tar";
+    }
+
     GetOptions(
         'host=s'    => \$host,
         'port=i'    => \$port,
+        'tar=s'     => \$ace_tar,
         'h|help'    => $usage,
         ) or $usage->();
+
+    set_ace_tar($ace_tar);
 
     my $mw = CanvasWindow::MainWindow->new('Otter: datasets');
     my $cw = CanvasWindow->new($mw, 400, 300);
@@ -34,6 +59,18 @@ use Getopt::Long 'GetOptions';
     
     $cw->fix_window_min_max_sizes;
     Tk::MainLoop();
+}
+
+{
+    my( $ace_tar );
+
+    sub set_ace_tar {
+        $ace_tar = shift;
+    }
+    
+    sub get_ace_tar {
+        return $ace_tar;
+    }
 }
 
 {
@@ -85,10 +122,295 @@ sub do_fetch {
     }
 }
 
-sub run_lace {
-    my( $cw ) = @_;
+{
+    my( @cleanup );
     
-    warn "Running lace";
+    END {
+        foreach my $thing (@cleanup) {
+            if ( -d $thing ) {
+                rmtree( $thing, 0 );
+            } else {
+                unlink($thing);
+            }
+        }
+    }
+
+    sub run_lace {
+        my( $cw ) = @_;
+
+        my @sel = $cw->list_selected
+            or return;
+        my $canvas = $cw->canvas;
+        my( @prop );
+        foreach my $obj (@sel) {
+            push(@prop, get_canvas_object_properties($cw, $obj));
+        }
+
+        my $ctg = [];
+        my @contig_list = ($ctg);
+        foreach my $this (sort {$a->{'chr_start'} <=> $b->{'chr_start'}} @prop) {
+            my $last = $ctg->[$#$ctg];
+            if ($last) {
+                if ($last->{'chr_end'} + 1 == $this->{'chr_start'}) {
+                    push(@$ctg, $this);
+                } else {
+                    $ctg = [$this];
+                    push(@contig_list, $ctg);
+                }
+            } else {
+                push(@$ctg, $this);
+            }
+        }
+
+        my $home = "/var/tmp/lace.$$";
+        warn "Making lace database in '$home'\n";
+        mkdir( $home, 0777 ) or die "Can't mkdir('$home') : $!\n";
+        chdir($home) or die "Can't chdir ('$home') : $!";
+
+        # List of ace files
+        my $lace_files = [];
+       
+        # Make an empty acedb database
+        make_acedb_dir_structure($home, $lace_files, 'otter');
+       
+        # Get annotatons and dna from otter database.
+        get_otter_data($cw, $lace_files, @contig_list);
+        
+        # Make AnaStatus::Sequence objects
+        my @ana_seq = get_anastatus_sequences(@prop);
+        fetch_pipeline_data($lace_files, @ana_seq);
+        
+        # Parse all the acefiles into the database
+        my $errors = initializeDatabase( 'tace', $home, $lace_files );
+        if ($errors) {
+            die "Error detected parsing ace files\n";
+        }
+        unless ( -e 'database/ACEDB.wrm' ) {
+            die "Error: Local database creation failed\n";
+        }
+
+        system('xace', '-fmapcutcoords', $home);
+    }
+}
+
+sub fetch_pipeline_data {
+    my( $lace_files, @ana_seq ) = @_;
+    
+    my $ens_pipe_ace = 'rawdata/enspipe_data.ace';
+    local *ENSPIPEACE;
+    open ENSPIPEACE, "> $ens_pipe_ace"
+        or die "Can't write to '$ens_pipe_ace' : $!";
+    push(@$lace_files, $ens_pipe_ace);
+
+    foreach my $seq (@ana_seq) {
+        my $name = $seq->full_sequence_name;
+        my @ens_ana = Hum::AnaStatus::EnsAnalysis
+            ->fetch_all_complete_for_ana_seq_id($seq->ana_seq_id);
+
+        # Always parse humace.ace file
+        find_humace_acefile($lace_files, $seq);
+
+        if (@ens_ana > 1) {
+            warn "Got ", scalar(@ens_ana), " complete ensembl analyses!\n",
+                " -- choosing the first";
+        }
+        warn "Using Ensembl pipeline data for '$name'\n";
+        write_enspipe_ace_data($ens_ana[0], \*ENSPIPEACE, $name);
+        
+        ### Need to add in:
+        ###write_ensembl_genes(\*ENSPIPEACE, $seq);
+    }
+    
+    #Hum::AnaStatus::EnsAnalysisDB->disconnect_all_ensembl_dbs;
+    close ENSPIPEACE or die "Error writing ensembl pipe ace data : $!";;
+    
+}
+
+sub write_enspipe_ace_data {
+    my( $ens_ana, $fh, $name ) = @_;
+    
+    my $ens_db = $ens_ana->get_EnsAnalysisDB;
+           
+    my( $factory );
+    unless ($factory = $ens_db->ace_data_factory) {
+        $factory = make_ace_filter_factory($ens_db->db_adaptor);
+        $ens_db->ace_data_factory($factory);
+    }
+    
+    my $vcontig = $ens_ana->get_EnsEMBL_VirtualContig_of_contig;
+    $vcontig->id($name);
+    
+    print $fh $factory->ace_data_from_contig($vcontig);
+}
+
+
+sub make_ace_filter_factory {
+    my( $ens_db ) = @_;
+
+    warn "Making ace filter factory\n";
+
+    my $ana_adaptor = $ens_db->get_AnalysisAdaptor;
+
+    my $factory = Bio::EnsEMBL::Ace::DataFactory->new;
+
+    my $DNA = Bio::EnsEMBL::Ace::Filter::DNA->new;
+    $DNA->analysis_object( $ana_adaptor->fetch_by_logic_name('SubmitContig') );
+    $factory->add_AceFilter($DNA);
+
+    my $halfwise = Bio::EnsEMBL::Ace::Filter::Gene::Halfwise->new;
+    $halfwise->analysis_object( $ana_adaptor->fetch_by_logic_name('Halfwise') );
+    $halfwise->url_string('http\\:\\/\\/www.sanger.ac.uk\\/cgi-bin\\/Pfam\\/getacc?%s');
+    $factory->add_AceFilter($halfwise);
+
+    my $genscan = Bio::EnsEMBL::Ace::Filter::Gene::Predicted->new;
+    $genscan->is_off_by_one(1);
+    $genscan->analysis_object( $ana_adaptor->fetch_by_logic_name('genscan') );
+    $factory->add_AceFilter( $genscan );
+
+    my $fgenesh = Bio::EnsEMBL::Ace::Filter::Gene::Predicted->new;
+    $fgenesh->is_off_by_one(1);
+    $fgenesh->analysis_object( $ana_adaptor->fetch_by_logic_name('fgenesh') );
+    $factory->add_AceFilter($fgenesh);
+
+    my $repeatmasker = Bio::EnsEMBL::Ace::Filter::Repeatmasker->new;
+    my $repeat_lib_dir='/nfs/humace2/RepeatMasker_2001-06-19';
+    if($ENV{"LACE_LOCAL"}){
+	$repeat_lib_dir=$ENV{"LACE_LOCAL"}."/RepeatMasker_2001-06-19";
+    }
+    $repeatmasker->repeatmasker_home($repeat_lib_dir);
+    $repeatmasker->analysis_object( $ana_adaptor->fetch_by_logic_name('RepeatMask') );
+    $factory->add_AceFilter($repeatmasker);
+
+    my $trf = Bio::EnsEMBL::Ace::Filter::TRF->new;
+    $trf->analysis_object($ana_adaptor->fetch_by_logic_name('trf'));
+    $factory->add_AceFilter($trf);
+
+    my %logic_tag_method = (
+        'Est2Genome'        => [qw{             EST_homol  EST_eg           }],
+        'Est2Genome_human'  => [qw{             EST_homol  EST_eg-human     }],
+        'Est2Genome_mouse'  => [qw{             EST_homol  EST_eg-mouse     }],
+        'Est2Genome_other'  => [qw{             EST_homol  EST_eg           }],
+        'Full_dbGSS'        => [qw{             GSS_homol  GSS_eg           }],
+        'Full_dbSTS'        => [qw{             STS_homol  STS_eg           }],
+        'sccd'              => [qw{             EST_homol  egag             }],
+        'riken_mouse_cdna'  => [qw{             EST_homol  riken_mouse_cdna }],
+        'primer'            => [qw{             DNA_homol  primer           }],
+        'vertrna'           => [qw{ vertebrate_mRNA_homol  vertebrate_mRNA  }],
+        'Swall'             => [qw{             Pep_homol  BLASTX           }],
+        'zfishEST'          => [qw{             EST_homol  EST_eg-fish      }],
+        );
+    foreach my $logic_name (keys %logic_tag_method) {
+        if (my ($ana) = $ana_adaptor->fetch_by_logic_name($logic_name)) {
+            my( $tag, $meth ) = @{$logic_tag_method{$logic_name}};
+            my $sim = Bio::EnsEMBL::Ace::Filter::Similarity->new;
+            $sim->analysis_object($ana);
+            $sim->homol_tag($tag);
+            $sim->method_tag($meth);
+            $sim->hseq_prefix('Em:') unless $logic_name eq 'Swall';
+            #if ($percent_identity_cutoff) {
+            #    $sim->percent_identity_cutoff($percent_identity_cutoff);
+            #}
+            $factory->add_AceFilter($sim);
+        }
+    }
+
+    my $GC = Bio::EnsEMBL::Ace::Filter::SimpleFeature->new;
+    $GC->analysis_object( $ana_adaptor->fetch_by_logic_name('GC') );
+    $factory->add_AceFilter($GC);
+
+    my $CpG = Bio::EnsEMBL::Ace::Filter::CpG->new;
+    $CpG->analysis_object( $ana_adaptor->fetch_by_logic_name('CpG') );
+    $factory->add_AceFilter($CpG);
+
+    return $factory;
+}
+
+
+sub find_humace_acefile {
+    my( $lace_files, $seq ) = @_;
+
+    my $seq_name = $seq->sequence_name
+        or die "No sequence_name";
+
+    # Get a list of paths to existing and (possibly) missing acefiles
+    my $ana_dir = $seq->analysis_directory or die "No analysis_directory";
+    my $humace = "$ana_dir/rawdata/$seq_name.humace.ace";
+
+    if (-e $humace) {
+        push(@$lace_files, $humace);
+    } else {
+        warn "Error: humace ace file '$humace' is missing\n",
+    }
+}
+
+sub make_acedb_dir_structure {
+    my( $home, $lace_files, $title ) = @_;
+
+    my $ace_tar = get_ace_tar();
+
+    # Make acedb directory structure (includes methods.ace in rawdata)
+    my $make_ace_tar = "tar xf $ace_tar";
+    system($make_ace_tar) == 0
+        or die "Error running '$make_ace_tar' : $!";
+
+    push(@$lace_files, 'rawdata/methods.ace');
+
+    # Create password file
+    makePasswdWrm($title);
+
+    # Add title to displays.wrm
+    editDisplaysWrm( $home, $title );
+}
+
+sub get_anastatus_sequences {
+    my( @prop ) = @_;
+    
+    my( @ana_seq );
+    foreach my $pr (@prop) {
+        my $acc = $pr->{'accession'};
+        my $sv  = $pr->{'sv'};
+        my $ana = Hum::AnaStatus::Sequence->new_from_accession($acc);
+        unless ($ana) {
+            warn "No AnaStatus::Sequence for '$acc'\n";
+            next;
+        }
+        push(@ana_seq, $ana);
+    }
+    return @ana_seq;
+}
+
+sub get_otter_data {
+    my( $cw, $lace_files, @contig_list ) = @_;
+    
+    my $ace_file = "rawdata/otter.ace";
+    push(@$lace_files, $ace_file);
+
+    local *OTTER_ACE;
+    open OTTER_ACE, "> $ace_file"
+        or confess "Can't write to '$ace_file' : $!";
+    foreach my $ctg (@contig_list) {
+        print OTTER_ACE get_otter_ctg($cw, $ctg);
+    }
+    close OTTER_ACE or confess "Error writing to '$ace_file' : $!";
+}
+
+sub get_otter_ctg {
+    my( $cw, $ctg ) = @_;
+    
+    my $chr_name  = $ctg->[0]{'chr_name'};
+    my $start     = $ctg->[0]{'chr_start'};
+    my $end       = $ctg->[$#$ctg]{'chr_end'};
+    
+    my $dba = current_dba();
+    my $aa = $dba->get_SliceAdaptor;
+    my $vc = $aa->fetch_by_chr_start_end($chr_name, $start, $end);
+    my $genes = $vc->get_all_Genes;
+    my $oaga = $dba->get_AnnotatedGeneAdaptor;
+    foreach my $gene (@$genes) {
+        $oaga->annotate_gene($gene);
+    }
+
+    return Bio::Otter::Converter::otter_to_ace($vc, $genes, "${chr_name}_$start-$end");
 }
 
 sub get_canvas_object_properties {
@@ -98,6 +420,7 @@ sub get_canvas_object_properties {
     my $prop = {};
     foreach my $tag_val ($canvas->gettags($obj)) {
         my ($tag, $val) = split /=/, $tag_val, 2;
+        next unless $tag and defined($val);
         $prop->{$tag} = $val;
     }
     return $prop;
@@ -131,6 +454,19 @@ sub show_dataset_list {
     set_state('datasets');
 }
 
+{
+    my( $current );
+    
+    sub current_dba {
+        my( $dba ) = @_;
+        
+        if ($dba) {
+            $current = $dba;
+        }
+        return $current;
+    }
+}
+
 sub draw_sequence_list {
     my( $cw, $name, $details ) = @_;
     
@@ -138,10 +474,12 @@ sub draw_sequence_list {
     $canvas->delete('all');    
     $canvas->toplevel->configure(-title => "Otter: $name");
     my $dba = get_DBAdaptor_from_details($details);
+    current_dba($dba);
     my $type = $dba->assembly_type;
     my $sth = $dba->prepare(q{
         SELECT c.embl_acc
           , c.embl_version
+          , a.chromosome_id
           , a.chr_start
           , a.chr_end
         FROM assembly a
@@ -153,8 +491,8 @@ sub draw_sequence_list {
         ORDER BY a.chr_start
         });
     $sth->execute($type);
-    my( $acc, $sv, $chr_start, $chr_end );
-    $sth->bind_columns( \$acc, \$sv, \$chr_start, \$chr_end );
+    my( $acc, $sv, $chr_id, $chr_start, $chr_end );
+    $sth->bind_columns( \$acc, \$sv, \$chr_id, \$chr_start, \$chr_end );
 
     my $font = $cw->font;
     my $size = $cw->font_size;
@@ -162,7 +500,11 @@ sub draw_sequence_list {
 
     my $i = 0;
     my $last_end = 0;
+    my( $chr_name );
     while ($sth->fetch) {
+        unless ($chr_name) {
+            $chr_name = get_chr_name($dba, $chr_id);
+        }
         if ($last_end + 1 != $chr_start) {
             #warn "$last_end + 1 != $chr_start\n";
             $i++;
@@ -176,6 +518,9 @@ sub draw_sequence_list {
             -tags   => [
                 "chr_start=$chr_start",
                 "chr_end=$chr_end",
+                "accession=$acc",
+                "sv=$sv",
+                "chr_name=$chr_name",
                 ],
             );
         $canvas->bind($txt, '<Button-1>', sub{
@@ -193,6 +538,20 @@ sub draw_sequence_list {
     set_state('sequences');
     
     $cw->fix_window_min_max_sizes;
+}
+
+sub get_chr_name {
+    my( $dba, $chr_id ) = @_;
+    
+    my $sth = $dba->prepare(q{
+        SELECT name
+        FROM chromosome
+        WHERE chromosome_id = ?
+        });
+    $sth->execute($chr_id);
+    
+    my ($name) = $sth->fetchrow;
+    return $name || confess "No name for chromosome_id '$chr_id'";
 }
 
 sub get_DBAdaptor_from_details {
@@ -234,6 +593,105 @@ sub get_dataset_details {
     return $datasets;
 }
 
+
+sub makePasswdWrm {
+    my( $prog ) = @_;
+
+    my $passWrm       = 'wspec/passwd.wrm';
+    my $realNAME      = ( getpwuid($<) )[0];
+    my $effectiveNAME = ( getpwuid($>) )[0];
+
+    open PASSWD, ">$passWrm" or die;
+    print PASSWD "// passwd.wrm generated by $prog\n",
+      "// \"root\" added to cope with weird acedb bug under lstcsh\n\n";
+
+    # acedb looks at the real user ID, but some
+    # versions of the code seem to behave differently
+    if ( $realNAME ne $effectiveNAME ) {
+        print PASSWD "root\n\n$realNAME\n\n$effectiveNAME\n\n";
+    }
+    else {
+        print PASSWD "root\n\n$realNAME\n\n";
+    }
+
+    close PASSWD;    # Must close to ensure buffer is flushed into file
+    chmod 0644, $passWrm;
+}
+
+sub editDisplaysWrm {
+    my ( $home, $title ) = @_;
+    my $displays = "$home/wspec/displays.wrm";
+
+    open DISP, "< $displays" or die "Can't open '$displays' : $!";
+    my @disp = <DISP>;
+    close DISP;
+
+    foreach (@disp) {
+        next unless /^_DDtMain/;
+
+        # Add our title onto the Main window
+        s/\s-t\s*"[^"]+/ -t "$title/i and last;
+    }
+
+    open DISPOUT, "> $displays" or die;
+    print DISPOUT @disp;
+    close DISPOUT;
+}
+
+sub initializeDatabase {
+    my ( $tace, $dbDir, @acefiles ) = @_;
+
+    my @parse_commands = map "parse $_\n", @acefiles;
+
+    my $parse_log = 'init_parse.log';
+    
+    return tace_parse_and_check($tace, $dbDir, $parse_log, "y\n", @parse_commands);
+}
+
+sub tace_parse_and_check {
+    my( $tace, $dbDir, $parse_log, @parse_commands ) = @_;
+
+    my $pipe = "| $tace $dbDir > $parse_log";
+    open TACE, $pipe
+        or die "Can't open pipe '$pipe' : $!";
+    foreach my $com (@parse_commands) {
+        print TACE $com;
+    }
+    close TACE or die "Error initializing database ($?)\n";
+
+    # This works as well:
+    #system("echo 'y\nparse $source' | $tace $dbDir >/dev/null") == 0
+    #  or die "Error: Can't initialise database\n";
+
+    local *PARSELOG;
+    open PARSELOG, $parse_log or die "Can't open '$parse_log' : $!";
+    my $file_log = '';
+    my $in_parse = 0;
+    my $errors = 0;
+    while (<PARSELOG>) {
+        if (/parsing/i) {
+            $file_log = "  $_";
+            $in_parse = 1;
+        }
+        
+        if (/(\d+) (errors|parse failed)/i) {
+            if ($1) {
+                warn "\nParse error detected:\n$file_log  $_\n";
+                $errors++;
+            }
+        }
+        elsif (/Sorry/) {
+            warn "Apology detected:\n$file_log  $_\n";
+            $errors++;
+        }
+        elsif ($in_parse) {
+            $file_log .= "  $_";
+        }
+    }
+    close PARSELOG;
+
+    return $errors;
+}
 
 
 
