@@ -1,0 +1,20 @@
+
+jgrg@humsrv1:
+cd /humsql/otter/ensembl-otter
+./scripts/control_server stop
+cd ..
+tar cf ensembl-otter.rollback.tar ensembl-otter
+cd ensembl-otter
+cvs update -r humpub-release-30
+
+humpub@cbi1:
+cd ~humpub/test_otter
+perl -i -pe 's/port=33999/port=33966/' otter_config
+cd ..
+mv otter otter_old
+mv test_otter otter
+
+jgrg@humsrv1:
+./scripts/control_server start
+
+test ...
