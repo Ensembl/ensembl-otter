@@ -18,6 +18,8 @@ use Getopt::Long 'GetOptions';
     $mw->bind('<Control-q>', sub {$mw->destroy});
     $mw->bind('<Control-Q>', sub {$mw->destroy});
 
+    my $one_day_in_sec = 24 * 60 * 60;
+
     my $gc = CanvasWindow->new($mw);
     my $canvas = $gc->canvas;
     my $txt = $canvas->createText(
@@ -53,12 +55,19 @@ use Getopt::Long 'GetOptions';
             $gc->fix_window_min_max_sizes;
             $mw->deiconify;
             };
-        $mw->after(1000 * ($warn_time - time), $message);
+        my $wait = $warn_time - time;
+        $wait += $one_day_in_sec if $wait < 0;
+        $mw->after(1000 * $wait, $message);
         last if $test_flag;
     }
     
+    # Restart after 1 day.
+    $mw->after(1000 * $one_day_in_sec, sub{ exec($0, @ARGV) });
+    
+    
     $gc->fix_window_min_max_sizes;
-    $mw->iconify;
+    #$mw->iconify;
+    $mw->withdraw;
     Tk::MainLoop();
 }
 
