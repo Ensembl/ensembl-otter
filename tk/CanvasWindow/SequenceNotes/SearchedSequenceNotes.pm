@@ -185,7 +185,6 @@ sub draw {
     $self->draw_row_backgrounds($row, $gap_pos);
     print STDERR " done\n";
     $self->message($self->empty_canvas_message) if !$row;
-    $self->refresh_column(3);
     $self->fix_window_min_max_sizes;
     
 }
