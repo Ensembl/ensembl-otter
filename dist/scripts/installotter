@@ -20,16 +20,20 @@ while [ x$instdir = x ]; do
     echo "Where do you want to install otter? "
     read instdir leftover
 done
+
 tmpdirname=/tmp/otter_dist_tmp.$$
 mkdir $tmpdirname
+
 echo "Extracting to $tmpdirname..."
 rundir=`pwd`
 cd $tmpdirname
-gzip -dc $rundir/otterdist.$VERSION.tar.gz | tar -xvf -
-echo "Installing in $instdir..."
-$rundir/moveperl  -s $LONGDIR $tmpdirname $instdir
+gzip -dc $rundir/otterdist.$VERSION.tar.gz | $rundir/tar -xvf -
 
-echo "Done."
+echo "Installing in $instdir..."
+$rundir/moveperl -r a -s $LONGDIR $tmpdirname $instdir
+
 cd $rundir
+
 rm -rf $tmpdirname
+echo "Done."
 exit 0
