@@ -272,7 +272,9 @@ sub write_transcript_gtf {
              "." . "\t". 
              $strand . "\t". 
              "." . "\t";
-         print_attribs($fh,$gene,$transcript,$count);
+    print_attribs($fh,$gene,$transcript,$count);
+    if ($count == 1) { print_description_attribs($fh,$gene,$transcript,$count); }
+    print $fh "\n";
 
     if ($intrans) {
 
@@ -307,7 +309,8 @@ sub write_transcript_gtf {
                  "." . "\t". 
                  $strand . "\t". 
                  $phase . "\t";
-           print_attribs($fh,$gene,$transcript,$count);
+        print_attribs($fh,$gene,$transcript,$count);
+        print $fh "\n";
       }
     }
     if ($transcript->translation && 
@@ -320,7 +323,8 @@ sub write_transcript_gtf {
                "." . "\t". 
                $strand . "\t". 
                "0" . "\t";
-         print_attribs($fh,$gene,$transcript,$count);
+      print_attribs($fh,$gene,$transcript,$count);
+      print $fh "\n";
     }
     if ($transcript->translation && 
         $exon == $transcript->translation->end_Exon) {
@@ -334,12 +338,36 @@ sub write_transcript_gtf {
                  $strand . "\t". 
                  "0" . "\t";
          print_attribs($fh,$gene,$transcript,$count);
+         print $fh "\n";
       }
       $intrans = 0;
     }
 
     $count++;
   }
+}
+
+sub print_description_attribs {
+  my ($fh,$gene,$transcript,$count) = @_;
+  my $gene_description = undef;
+  foreach my $remark ($gene->gene_info->remark) {
+    $gene_description .= $remark->remark . " ";
+  }
+  if ($gene_description) {
+    chop $gene_description;
+    if ($gene_description eq "undef") {
+      $gene_description = undef;
+    }
+  }
+  my $trans_description = undef;
+  foreach my $remark ($transcript->transcript_info->remark) {
+    $trans_description .= $remark->remark . " ";
+  }
+  if ($trans_description) {
+    chop $trans_description;
+  }
+  print $fh ($gene_description ? "gene_description \"$gene_description\"; " : "") .
+            ($trans_description ? "trans_description \"$trans_description\"; " : "");
 }
 
 sub print_attribs {
@@ -357,9 +385,12 @@ sub print_attribs {
     croak "Failed finding transcript name for " .$transcript->stable_id . "\n";
   }
 
+
   print $fh "gene_id \"" .  $gene_name . "\"; " .
             "transcript_id \"" . $trans_name . "\"; " .
-            "exon_number \"$count\";\n";
+            "exon_number \"$count\"; " .
+            "otter_gene_id \"" . $gene->stable_id . "\"; " .
+            "otter_transcript_id \"" . $transcript->stable_id . "\"; ";
 }
 
 sub check_start_and_stop {
