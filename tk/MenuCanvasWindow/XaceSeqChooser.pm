@@ -5,6 +5,10 @@ package MenuCanvasWindow::XaceSeqChooser;
 
 use strict;
 use Carp;
+use Hum::Ace::SubSeq;
+use Hum::Ace::Locus;
+use Hum::Ace::GeneMethod;
+use Hum::Ace::XaceRemote;
 use MenuCanvasWindow;
 use MenuCanvasWindow::ExonCanvas;
 use vars ('@ISA');
@@ -107,6 +111,32 @@ sub get_default_mutable_GeneMethod {
         $self->message("Unable to get a default GeneMethod");
         return;
     }
+}
+
+sub get_Locus {
+    my( $self, $name ) = @_;
+    
+    if (my $locus = $self->{'_locus_cache'}{$name}) {
+        return $locus;
+    } else {
+        $locus = Hum::Ace::Locus->new;
+        $locus->name($name);
+        $self->{'_locus_cache'}{$name} = $locus;
+        return $locus;
+    }
+}
+
+sub get_all_Loci {
+    my( $self ) = @_;
+    
+    my $lc = $self->{'_locus_cache'};
+    return values %$lc;
+}
+
+sub list_Locus_names {
+    my( $self ) = @_;
+    
+    return sort {$a cmp $b} map $_->name, $self->get_all_Loci;
 }
 
 sub make_menu {
@@ -546,17 +576,19 @@ sub edit_new_subsequence {
     
     # Now get the maximum transcript number for this root
     my $clone = $self->get_CloneSeq($clone_name);
-    my $regex = qr{^$clone_name\.(\d+)}; # Perl 5.6 feature!
+    my $regex = qr{^(SC:)?$clone_name\.(\d+)}; # Perl 5.6 feature!
     my $max = 0;
+    my $prefix = '';
     foreach my $sub_name (map $_->name, $clone->get_all_SubSeqs) {
-        my ($n) = $sub_name =~ /$regex/;
+        my ($sc, $n) = $sub_name =~ /$regex/;
+        $prefix = $sc if $sc;
         if ($n and $n > $max) {
             $max = $n;
         }
     }
     $max++;
     
-    my $seq_name = "$clone_name.$max";
+    my $seq_name = "$prefix$clone_name.$max";
     
     # Check we don't already have a sequence of this name
     if ($self->get_SubSeq($seq_name)) {
@@ -589,14 +621,13 @@ sub edit_new_subsequence {
     my $gm = $self->get_default_mutable_GeneMethod
         or return;
     $new->GeneMethod($gm);
-
     $new->name($seq_name);
-    $self->add_SubSeq($new);
+
     $clone->add_SubSeq($new);
 
+    $self->add_SubSeq($new);
     $self->do_subseq_display;
     $self->highlight_by_name('subseq', $seq_name);
-    
     $self->make_exoncanvas_edit_window($new);
 }
 
@@ -983,6 +1014,14 @@ sub express_clone_and_subseq_fetch {
                 if (my $meth = $self->get_GeneMethod($mt->name)) {
                     $sub->GeneMethod($meth);
                 }
+            }
+            
+            # Is there a Locus attached?
+            if (my $locus_tag = $t_seq->at('Visible.Locus[1]')) {
+                my $locus = $self->get_Locus($locus_tag->name);
+                $sub->Locus($locus);
+            } else {
+                #warn "No Locus attached to SubSeq '$name'\n";
             }
             
             $clone->add_SubSeq($sub);

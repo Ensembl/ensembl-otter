@@ -8,6 +8,7 @@ use Carp;
 use Tk::Dialog;
 use Tk::ROText;
 use Tk::LabFrame;
+use Tk::BrowseEntry;
 use Hum::Ace::SubSeq;
 use Hum::Translator;
 use MenuCanvasWindow;
@@ -474,6 +475,16 @@ sub initialize {
         # Widget for changing name
         $self->add_subseq_rename_widget($frame);
         
+        # Widget for changing locus name
+        my $be = $self->add_locus_rename_widget($frame);
+        $be->configure(-listcmd => sub{
+            my @names = $self->xace_seq_chooser->list_Locus_names;
+            $be->configure(
+                -choices   => [@names],
+                #-listwidth => scalar @names,
+                );
+            });
+        
         # Start not found and end not found widgets
         $self->add_start_end_widgets($frame);
     } else {
@@ -699,6 +710,46 @@ sub translator {
         $self->{'_translator'} = $tlr = Hum::Translator->new;
     }
     return $tlr;
+}
+
+sub add_locus_rename_widget {
+    my( $self, $widget ) = @_;
+    
+    # Get the Locus name
+    my( $locus_name );
+    eval{ $locus_name = $self->SubSeq->Locus->name };
+    $locus_name ||= '';
+    $self->{'_locus_name_variable'} = \$locus_name;
+
+    my $frame = $widget->Frame(
+        -borderwidth    => 6,
+        )->pack;
+    $frame->Label(
+        -text   => 'Locus:',
+        -anchor => 's',
+        -padx   => 6,
+        )->pack(-side => 'left');
+    
+    my $be = $frame->BrowseEntry(
+        #-listwidth  => 18,
+        -width      => 18,
+        -variable   => \$locus_name,
+        -text       => $locus_name,
+        -exportselection    => 1,
+        -relief             => 'flat',
+        -background         => 'white',
+        -selectbackground   => 'gold',
+        -font               => [$self->font, $self->font_size, 'normal'],
+        )->pack(-side => 'left');
+    return $be;
+}
+
+sub get_Locus_from_tk {
+    my( $self ) = @_;
+    
+    my $name = ${$self->{'_locus_name_variable'}}
+        or return;
+    return $self->xace_seq_chooser->get_Locus($name);
 }
 
 sub add_subseq_rename_widget {
@@ -1351,9 +1402,14 @@ sub get_SubSeq_if_changed {
     my $old = $self->SubSeq;
     if ($old->is_archival and $new->ace_string eq $old->ace_string) {
         return;
-    } else {
-        return $new;
     }
+    my $new_name = $new->name;
+    if ($new_name ne $self->name) {
+        if ($self->xace_seq_chooser->get_SubSeq($new_name)) {
+            confess "Error: SubSeq '$new_name' already exists\n";
+        }
+    }
+    return $new;
 }
 
 sub new_SubSeq_from_tk {
@@ -1364,6 +1420,7 @@ sub new_SubSeq_from_tk {
     $sub->name                   ( $self->get_subseq_name         );
     $sub->replace_all_Exons      ( $self->Exons_from_canvas       );
     $sub->GeneMethod             ( $self->get_GeneMethod_from_tk  );
+    $sub->Locus                  ( $self->get_Locus_from_tk       );
     $sub->strand                 ( $self->strand_from_tk          );
     $sub->start_not_found        ( $self->start_not_found_from_tk );
     $sub->end_not_found          ( $self->end_not_found_from_tk   );
@@ -1377,8 +1434,16 @@ sub new_SubSeq_from_tk {
 sub save_if_changed {
     my( $self ) = @_;
     
-    if (my $sub = $self->get_SubSeq_if_changed) {
-        $self->xace_save($sub);
+    eval {
+        if (my $sub = $self->get_SubSeq_if_changed) {
+            $self->xace_save($sub);
+        }
+    };
+    
+    # Make sure the annotators see the messages!
+    if ($@) {
+        my ($msg) = $@ =~ /^(.+)$/m;
+        $self->message($msg);
     }
 }
 
