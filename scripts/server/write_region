@@ -306,7 +306,7 @@ print($outputstr);
 print STDERR "\nUnlocking clones...";
 
 if (defined($params{unlock})) {
-  #$cb->remove_by_slice($slice,$author);
+  $cb->remove_by_slice($slice,$author);
 }
 
 print STDERR "done\n";

@@ -25,13 +25,12 @@ my %params = $q->Vars;
 my $dataset = $params{dataset} || error_exit($q,"No dataset type entered. Can't unlock region");
 my $data    = $params{data}    || error_exit($q,"No xml data entered. Can't unlock region");
 my $author  = $params{author}  || error_exit($q,"Author must defined to unlock a region");
-my $email   = $params{email}   || error_exit($q,"Email must defined to unlock a region");
 
 print STDERR "Length of data " . length($data) . "\n";
 
-if (!defined($OTTER_SPECIES->{$params{'dataset'}})) {
+if (!defined($OTTER_SPECIES->{$dataset})) {
   print STDERR "Unknown data set\n";
-  error_exit($q, "Unknown data set " . $params{'dataset'} . " in unlock_region\n");
+  error_exit($q, "Unknown data set '$dataset' in unlock_region\n");
 }
 
 my %dbinfo   = %{$OTTER_SPECIES->{$params{'dataset'}}};
@@ -107,31 +106,15 @@ my $sa  = $odb->get_SliceAdaptor;
 
 print STDERR "\nConverting xml to otter...\n";
 
+my( $slice );
 eval {
-  ($genes,$chrname,$chrstart,$chrend) = Bio::Otter::Converter::XML_to_otter($fh,$odb);
+  my( $genes, $seqstr, $tiles );
+  ($genes,$slice,$seqstr,$tiles) = Bio::Otter::Converter::XML_to_otter($fh,$odb);
 };
 if ($@) {
-  print STDERR "Failed converting XML [$genes,$chrname,$chrstart,$chrend][$@]\n";
+  print STDERR "Failed converting XML [$@]\n";
   error_exit($q, "Failed converting XML to otter [$@]");
 }
-print STDERR "done\n";
-
-#if (scalar(@$genes)) {
-#  error_exit($q, "Found genes in XML for unlock_region that should only contain assembly");
-#}
-
-my $slice;
-
-print STDERR "\nFetching slice $chrname $chrname $chrend...";
-
-eval {
-  $slice = $sa->fetch_by_chr_start_end($chrname,$chrstart,$chrend);
-};
-if ($@) {
-  print STDERR "\nFailed fetching slice [$@]\n";
-  error_exit($q, "Failed fetching slice [$@]");
-}
-
 print STDERR "done\n";
 
 my $cb   = new Bio::Otter::CloneLockBroker($odb);

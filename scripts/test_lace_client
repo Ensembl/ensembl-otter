@@ -5,14 +5,16 @@
 use strict;
 use Bio::Otter::Lace::AceDatabase;
 use Bio::Otter::Lace::Client;
-use Data::Dumper;   # For debugging
+use Data::Dumper;
 
 {
     my $cl = Bio::Otter::Lace::Client->new;
     $cl->host('ecs1d');
     $cl->port(39312);
+    $cl->write_access(1);
     
-    my ($ds) = grep $_->name eq 'human_chr20_with_anal_end_feb',
+    #my ($ds) = grep $_->name eq 'human_chr20_with_anal_end_feb',
+    my ($ds) = grep $_->name eq 'otter_chr9p12',
         $cl->get_all_DataSets;
     
     #foreach my $chr ($ds->get_all_Chromosomes) {
@@ -20,26 +22,24 @@ use Data::Dumper;   # For debugging
     #}
     
     my $cs_list = $ds->get_all_CloneSequences;
-    #print Dumper($cs_list);
     
-    $ds->selected_CloneSequences([@$cs_list[50..55]]);
+    $ds->selected_CloneSequences([@$cs_list[2..7]]);
+    print Dumper( $ds->selected_CloneSequences );
     
-    my $db = Bio::Otter::Lace::AceDatabase->new;
+    my $db = $cl->new_AceDatabase;
     $db->title('lace test');
     $db->make_database_directory;
+    $db->write_otter_acefile;
     
-    my $dir = $db->home;
-    my $otter_ace = "$dir/rawdata/otter.ace";
-    open OTT_ACE, "> $otter_ace" or die "Can't write to '$otter_ace'";
-    print OTT_ACE $cl->get_otter_ace;
-    close OTT_ACE;
-    $db->add_acefile($otter_ace);
     unless ($db->initialize_database) {
         $db->error_flag(1);
         die "Error initialzing database";
     }
     
-    $cl->save_all_slices($db);
+    system('xace', $db->home);
+    
+    # At the moment this unlocks the region as well
+    $db->save_all_slices;
 }
 
 
