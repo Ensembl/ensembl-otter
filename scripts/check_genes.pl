@@ -952,6 +952,8 @@ if($ngcl>1){
       my @tsi=$tcl->cluster_members($tcid);
       print "  Transcript set $itcl: ".scalar(@tsi)." transcripts\n";
       my %tsi=map{$_,1}@tsi;
+      my %gset;
+      my %tset;
       foreach my $gsi (sort @gsi){
 	my @gtsi=(keys %{$t2e{$gsi}});
 	my $nt=scalar(@gtsi);
@@ -961,23 +963,59 @@ if($ngcl>1){
 	    $ntd++;
 	  }
 	}
-	print "  $gsi ($ntd/$nt):\n";
+	$gset{$gsi}=[$ntd,$nt];
 	foreach my $tsi (sort @gtsi){
 	  if($tsi{$tsi}){
 	    my @e=@{$t2e{$gsi}->{$tsi}};
 	    my $ne=scalar(@e);
 	    my $ned=0;
-	    my $txt;
+	    my @eo;
 	    foreach my $eid (@e){
 	      my $i=0;
 	      if($e2s{$eid}){
 		$i=$e2s{$eid};
 		$ned++;
 	      }
-	      $txt.=$i." ";
+	      push(@eo,$i);
 	    }
-	    print "    $tsi ($ned/$ne): $txt\n";
+	    $tset{$gsi}->{$tsi}=[$ned,$ne,@eo];
 	  }
+	}
+      }
+      # space and order
+      my %id;
+      foreach my $gsi (@gsi){
+	foreach my $tsi (keys %{$tset{$gsi}}){
+	  my($ned,$ne,@eo)=@{$tset{$gsi}->{$tsi}};
+	  for(my $i=0;$i<scalar(@eo);$i++){
+	    if($eo[$i]>0){
+	      $id{$eo[$i]}->[0]+=$i;
+	      $id{$eo[$i]}->[1]++;
+	    }
+	  }
+	}
+      }
+      foreach my $id (keys %id){
+	my($s,$n)=@{$id{$id}};
+	$id{$id}=$s/$n;
+      }
+      my $i=1;
+      foreach my $id (sort {$id{$a}<=>$id{$b}} keys %id){
+	$id{$id}=$i;
+	$i++;
+      }
+      # output
+      foreach my $gsi (sort @gsi){
+	my($ntd,$nt)=@{$gset{$gsi}};
+	print "  $gsi ($ntd/$nt):\n";
+	foreach my $tsi (sort keys %{$tset{$gsi}}){
+	  my($ned,$ne,@eo)=@{$tset{$gsi}->{$tsi}};
+	  for($i=0;$i<scalar(@eo);$i++){
+	    if($eo[$i]>0){
+	      $eo[$i]=$id{$eo[$i]};
+	    }
+	  }
+	  print "    $tsi ($ned/$ne): ".join(' ',@eo)."\n";
 	}
       }
     }
