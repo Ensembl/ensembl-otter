@@ -708,7 +708,7 @@ sub make_embl_ft {
         my $slice = $self->Slice($slice_aptr->fetch_by_chr_start_end(@$chr_s_e));
         my $tile_path = $self->get_tiling_path_for_Slice($slice);
 
-        #Bio::EnsEMBL::RawContig
+        #Bio::EnsEMBL::RawContig: turn slice coords. into RawContig coord
         my $slice_contig = $tile_path->[0]->component_Seq;
         $self->Slice_contig($slice_contig);
 
@@ -898,7 +898,12 @@ sub _do_assembly_tag {
   my ( $self, $slice, $set ) = @_;
 
   my $atags_Ad = $slice->adaptor->db->get_AssemblyTagAdaptor;
-  my $atags = $atags_Ad->fetch_AssemblyTags_by_Slice($slice);
+
+  # $atags_Ad inherits from Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor,
+  # which inherits from Bio::EnsEMBL::DBSQL:BaseAdaptor
+  # This also allows fetching AssemblyTag features by passing a RowContig obj to fetch_all_by_RawContig()
+
+  my $atags = $atags_Ad->fetch_all_by_RawContig($slice); # slice obj transformed into RawContig obj
 
   foreach my $atag (@$atags) {
 
