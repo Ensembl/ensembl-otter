@@ -1,0 +1,400 @@
+#!/usr/local/bin/perl5.6.1 -w
+
+### xml_description_tables
+
+=pod
+
+If you want to edit the otter XML descriptions,
+it is at the end of the file.
+
+Format should be fairly self-explanatory.  The
+definition of each sub-tag must, however occur
+after the containing tag.
+
+    - jgrg
+
+=cut
+
+use strict;
+
+{
+    $/ = '';
+
+    my $tag_stack = [];
+    while (<DATA>) {
+        my ($table_name) = /^\<(\w+)\>/m;
+        if ($table_name) {
+            my $tag = bless [$table_name], 'TagDescription';
+            push(@$tag_stack, $tag);
+            while (/^(\w.*)/mg) {
+                my ($type, $value) = split /\s+/, $1, 2;
+                my $tv = [$type];
+                if ($value) {
+                    $value =~ s/</&lt;/g;
+                    $value =~ s/>/&gt;/g;
+                    $value =~ s/"/&quot;/g;
+                    $value =~ s/\\n/<br>\n/g;
+                    push(@$tv, $value);
+                };
+                push(@$tag, $tv);
+            }
+        } else {
+            die "Can't see tag name in:\n$_" if /\w/;
+        }
+    }
+    
+    my @heads = qw{
+            Contains
+            Mandatory
+            Multiple
+            Value
+            Description
+            };
+    my $table_headings = qq{  <tr>\n}
+        . join('', map "    <th>$_</th>\n", @heads)
+        . qq{  </tr>\n};
+    my $table_cells = qq{  <tr>\n}
+        . qq{    <td>\%s</td>\n} x scalar(@heads)
+        . qq{  </tr>\n};
+    
+    my $title = 'Otter XML format description';
+    
+    my $html = qq{<html><head><title>$title</title></head><body><h1>$title</h1>\n};
+    for (my $i = 0; $i < @$tag_stack; $i++) {
+        my $tag = $tag_stack->[$i];
+        my $container = $tag->name;
+        
+        # Make a new table for every tag that contains others
+        # (Each tag either contains others or has a value definition.)
+        if (my @contents = $tag->contained) {
+            $html .= sprintf qq{<br><br>\n\n<table border="1" cellpadding="5" cellspacing="0">\n  <tr>\n    <th>&lt;%s&gt;</th>\n    <td colspan="4">%s</td>\n  </tr>\n},
+                $container, $tag->description;
+            $html .= $table_headings;
+            CONTENT: foreach my $name (@contents) {
+                # Look through all the subsequent tags until we find
+                # the definition for this sub-tag.
+                for (my $j = $i; $j < @$tag_stack; $j++) {
+                    my $this = $tag_stack->[$j];
+                    if ($this->name eq $name) {
+                        $html .= sprintf $table_cells,
+                            '&lt;' . $this->name . '&gt;',
+                            $this->mandatory ? 'YES' : 'NO',
+                            $this->multiple  ? 'YES' : 'NO',
+                            $this->value       || ($this->contained ? '<b>xml</b>' : '<b><font color="red">UNKNOWN</font></b>'),
+                            $this->description || 'none',
+                            ;
+                        next CONTENT;
+                    }
+                }
+                die "Can't find data for tag '$name' which is part of '$container'\n";
+            }
+            $html .= qq{</table>\n};
+        }
+    }
+    
+    $html .= qq{\n</body>\n</html>\n};
+    
+    print $html;
+}
+
+package TagDescription;
+
+sub name {
+    my $self = shift;
+    return $self->[0];
+}
+
+sub description {
+    my $self = shift;
+    
+    foreach my $tv (@$self[1..$#$self]) {
+        if ($tv->[0] eq 'description') {
+            return $tv->[1];
+        }
+    }
+    return "NO DESCRIPTION";
+}
+
+sub value {
+    my $self = shift;
+    
+    foreach my $tv (@$self[1..$#$self]) {
+        if ($tv->[0] eq 'value') {
+            return $tv->[1];
+        }
+    }
+}
+
+sub mandatory {
+    my $self = shift;
+    
+    foreach my $tv (@$self[1..$#$self]) {
+        if ($tv->[0] eq 'mandatory') {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+sub multiple {
+    my $self = shift;
+    
+    foreach my $tv (@$self[1..$#$self]) {
+        if ($tv->[0] eq 'multiple') {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+sub contained {
+    my $self = shift;
+    
+    my( @contained );
+    foreach my $tv (@$self[1..$#$self]) {
+        if ($tv->[0] eq 'contains') {
+            push(@contained, $tv->[1]);
+        }
+    }
+    return @contained;
+}
+
+1;
+
+# Switch back to main package, or script will not see DATA filehandle
+package main;
+
+__DATA__
+
+
+<otter>
+description     a set of annotated genomic regions - could be a whole genome
+contains        sequence_set
+
+<sequence_set>
+description     a genomic region - part or whole of a chromosome
+contains        sequence_fragment
+contains        gene
+mandatory
+multiple
+
+<sequence_fragment>
+description     a genomic region - part or whole of a chromosome
+contains        id
+contains        version
+contains        assembly_start
+contains        assembly_end
+contains        fragment_ori
+contains        fragment_offset
+contains        keyword
+contains        remark
+multiple
+mandatory
+
+<id>
+description     EMBL/Genbank/DDBJ accession number for this sequence
+value           string
+mandatory
+
+<version>
+description     EMBL/Genbank/DDBJ sequence version for this accession
+value           integer
+mandatory
+
+<assembly_start>
+description     start position of this sequence in the genomic assembly (chromosome)
+value           integer
+mandatory
+
+<assembly_end>
+description     end position of this sequence in the genomic assembly (chromosome)
+value           integer
+mandatory
+
+<fragment_ori>
+description     orientation of the fragment in the genomic assembly
+value           1 if forward or\n-1 if reverse
+mandatory
+
+<fragment_offset>
+description     the first base in the fragemnt that contributes to the assembled sequence
+value           integer
+mandatory
+
+<keyword>
+description     keyword used in the keyword field in EMBL/Genbank/DDBJ
+value           string
+
+<remark>
+description     remark added by an annotator about the clone
+value           string
+
+
+<gene>
+description     structure and annotations of a gene
+contains        name
+contains        stable_id
+contains        author
+contains        author_email
+contains        synonym
+contains        remark
+contains        transcript
+multiple
+
+<name>
+description     official HUGO name for the gene, or an interim name assigned by the annotation center
+value           string
+mandatory
+
+<stable_id>
+description     accession number for the gene if it has been stored in the annotation database
+value           string
+
+<author>
+description     name of the author who created or last modified the gene
+value           string
+
+<author_email>
+description     email address of the author who created or last modified the gene
+value           string
+
+<synonym>
+description     alternative name for the gene
+value           string
+
+<remark>
+description     remark about the gene added by an annotator
+value           string
+
+<transcript>
+description     structure of a mRNA or CDS, possibly partial
+contains        name
+contains        stable_id
+contains        translation_stable_id
+contains        author
+contains        author_email
+contains        remark
+contains        translation_start
+contains        translation_end
+contains        mRNA_start_not_found
+contains        mRNA_end_not_found
+contains        cds_start_not_found
+contains        cds_end_not_found
+contains        transcript_class
+contains        evidence_set
+contains        exon_set
+multiple
+mandatory
+
+<name>
+description     readable or center specific name assigned by the annotator
+value           string
+mandatory
+
+<stable_id>
+description     accession number for the transcript if it has been stored in the annotation database
+value           string
+
+<translation_stable_id>
+description     accession number for the translation if it has been stored in the annotation database
+value           string
+
+<author>
+description     name of the author who created or last modified the transcript
+value           string
+
+<author_email>
+description     email address of the author who created or last modified the transcript
+value           string
+
+<remark>
+description     remark about the gene added by an annotator
+value           string
+
+<translation_start>
+description     assembly coordinate where the translation begins
+value           integer
+
+<translation_end>
+description     assembly coordinate where the translation ends
+value           integer
+
+<mRNA_start_not_found>
+description     transcript is incomplete - set to 1 if start is missing
+value           0 or 1
+
+<mRNA_end_not_found>
+description     transcript is incomplete - set to 1 if end is missing
+value           0 or 1
+
+<cds_start_not_found>
+description     coding region is incomplete - set to 1 if start is missing
+value           0 or 1
+
+<cds_end_not_found>
+description     coding region is incomplete - set to 1 if end is missing
+value           0 or 1
+
+<transcript_class>
+description     type of transcript - part of a resticted vocabulary of transcript categories used by the annotation center
+value           Known or\nNovel_CDS or\nNovel_Transcript or\nPseudogene
+
+
+<evidence_set>
+description     sequence database entries used as evidence when building this transcript
+contains        evidence
+
+
+<evidence>
+description     a sequence database entry
+contains        name
+contains        type
+multiple
+
+<name>
+description     accession of database sequence
+value           string
+
+<type>
+description     type of the sequence database
+value           EST or\ncDNA or\nGenomic or\nProtein or\nUNKNOWN
+
+
+<exon_set>
+description     list of exons that constitute the transcript
+contains        exon
+mandatory
+
+
+<exon>
+description     position and orientation of an exon in the assembly
+contains        stable_id
+contains        start
+contains        end
+contains        strand
+contains        frame
+multiple
+mandatory
+
+<stable_id>
+description     accession number for the exon if it has been stored in the annotation database
+value           string
+
+<start>
+description     start coordinate of the exon in the assembly
+value           integer greater than zero and less than <end>
+mandatory
+
+<end>
+description     end coordinate of the exon in the assembly
+value           integer greater than or equal to <start>
+mandatory
+
+<strand>
+description     strand of the assembly that the exon is on
+value           1 if forward or\n-1 if reverse
+mandatory
+
+<frame>
+description     Where to begin translation of exon. This tag is omitted for a non-coding exon.
+value           0 = translation begins at first base of exon (or first base of the translation region within the exon)\n1 = translation begins at second base of exon\n2 = translation begins at third base of exon
