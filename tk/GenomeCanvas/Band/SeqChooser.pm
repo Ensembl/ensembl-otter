@@ -106,10 +106,10 @@ sub chooser_map {
 sub column_offsets {
     my( $band ) = @_;
     
-    warn "Calculating column widths\n";
+    #warn "Calculating column widths\n";
     my @widths = $band->column_widths;
-    warn "widths [@widths]\n";
-    my $column_gap = 10;
+    #warn "widths [@widths]\n";
+    my $column_gap = 20;
     my( @offsets ) = (0);
     my $x_offset = 0;
     for (my $i = 0; $i < @widths; $i++) {
@@ -118,36 +118,9 @@ sub column_offsets {
         $x_offset += $column_gap;
     }
     
-    warn "offsets [@offsets]\n";
+    #warn "offsets [@offsets]\n";
     
     return @offsets;
-}
-
-sub cheap_column_widths {
-    my( $band ) = @_;
-    
-    my(@widths);
-    foreach my $row ($band->chooser_map) {
-        my( $id, @text ) = @$row;
-        for (my $i = 0; $i < @text; $i++) {
-            my $text = $text[$i] or next;
-            my $t_length = length($text);
-            if (my $l = $widths[$i]) {
-                $widths[$i] = $t_length if $t_length > $l;
-            } else {
-                $widths[$i] = $t_length;
-            }
-        }
-    }
-    foreach my $w (@widths) {
-        if ($w) {
-            my $text = 'N' x $w;
-            ($w) = $band->text_size($text);
-        } else {
-            $w = 20;    # Empty columns
-        }
-    }
-    return @widths;
 }
 
 sub column_widths {
@@ -157,7 +130,6 @@ sub column_widths {
     my(@longest);
     my(@widths);
     foreach my $row ($band->chooser_map) {
-        print STDERR ".";
         my( $id, @text ) = @$row;
         for (my $i = 0; $i < @text; $i++) {
             my $text = $text[$i] or next;
@@ -178,36 +150,6 @@ sub column_widths {
         $i *= $font_size;
     }
     return @widths;
-    
-    print STDERR "\nlongest = [@longest]\n";
-    
-    # Calculate the actual width in pixels for each
-    # of the longest strings.
-    my $canvas = $band->canvas;
-    for (my $i = 0; $i < @longest; $i++) {
-        my $text = $longest[$i] .'XX';
-        warn "Measuring '$text'";
-        $widths[$i] = $band->text_width($text);
-    }
-    return @widths;
-}
-
-sub text_width {
-    my( $band, $text ) = @_;
-    
-    print STDERR "Making text object ...";
-    my $canvas = $band->canvas;
-    my $font_size = $band->font_size;
-    my $t = $canvas->createText(
-        0,0,
-        -text       => $text,
-        -font       => ['helvetica', $font_size],
-        -anchor     => 'nw',
-        );
-    print STDERR " done";
-    my @bbox = $canvas->bbox($t);
-    $canvas->delete($t);
-    return ($bbox[2] - $bbox[0]);
 }
 
 
