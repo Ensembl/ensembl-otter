@@ -488,13 +488,14 @@ sub ace_handle {
             elsif (my $path = $self->ace_path) {
                 $adbh = $self->{'_ace_database_handle'}
                       = Ace->connect(
-                    -PATH   => $path,
+                    -PATH       => $path,
+                    -PROGRAM    => 'tace',
                     ) or die "Can't connect to db '$path' :\n", Ace->error;
-                $adbh->auto_save(0);
             }
         }
+        $adbh->auto_save(0);
+        $adbh->{database}->auto_save(0);
     }
-
     return $adbh;
 }
 
