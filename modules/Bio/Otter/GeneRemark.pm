@@ -138,10 +138,10 @@ sub equals {
     }
     
     if ($self->remark eq $obj->remark) {
-        #print STDERR "The same:\n'", $obj->remark, "'\n";
+        #printf STDERR "The same:\n'%s'\n", $obj->remark;
 	return 1;
     } else {
-        #print STDERR "Different:\n  '", $self->remark, "'\n  '", $obj->remark, "'\n";
+        #printf STDERR "Different:\n  '%s'\n  '%s'\n", $self->remark, $obj->remark;
 	return 0;
     }
 }

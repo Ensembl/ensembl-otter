@@ -1030,7 +1030,7 @@ sub ace_locus_objs_from_genes{
 	    }
 	}
         if ($gene->type =~ /^([^:]+):/) {
-            $str .= qq{Type_prefix ace_unescape($1)\n};
+            $str .= qq{Type_prefix "$1"\n};
         }
 
         $str .= "\n";

@@ -301,7 +301,7 @@ sub equals {
 	}
 	if ($found == 0) {
             printf STDERR "Different remark for %s %s\n  '%s'\n",
-                $self->gene_stable_id, $self->name->name, $rem->remark, ;
+                $self->gene_stable_id, $self->name->name, $rem->remark;
 	    return 0;
 	}
     }
