@@ -18,8 +18,8 @@ use Bio::Otter::Lace::Defaults;
     my $ds = $cl->get_DataSet_by_name($dataset_name);
     my $dba = $ds->get_cached_DBAdaptor;
     my $sth = $dba->prepare(q{
-        SELECT g.type
-          , count(distinct gsid.stable_id)
+        SELECT gsid.stable_id
+          , g.type
         FROM gene_stable_id gsid
           , gene g
           , transcript t
@@ -32,18 +32,35 @@ use Bio::Otter::Lace::Defaults;
           AND et.exon_id = e.exon_id
           AND e.contig_id = a.contig_id
           AND a.type = ?
-        GROUP BY g.type
+        GROUP BY gsid.stable_id
+          , gsid.version
+        ORDER BY gsid.version ASC
         });
     $sth->execute($set_name);
     
-    while (my ($type, $count) = $sth->fetchrow) {
-        printf "%25s  %5d\n", $type, $count;
+    my( %sid_type );
+    while (my ($sid, $type) = $sth->fetchrow) {
+        $sid_type{$sid} = $type;
+    }
+    
+    my( %type_count );
+    foreach my $type (values %sid_type) {
+        next if $type eq 'obsolete';
+        $type_count{$type}++;
+    }
+    
+    foreach my $type (sort keys %type_count) {
+        printf "%25s  %5d\n", $type, $type_count{$type};
     }
 }
 
 __END__
 
 =head1 NAME - list_gene_type_counts_for_set
+
+=head1 EXAMPLE
+
+  list_gene_type_counts_for_set -dataset pig -set mhc-01
 
 =head1 AUTHOR
 
