@@ -47,7 +47,7 @@ GetOptions(
 	   );
 
 # help
-if($phelp || !$opt_c){
+if($phelp){
   exec('perldoc', $0);
   exit 0;
 }
@@ -81,7 +81,7 @@ my $n=0;
 if($make_cache){
 
   # get assemblies of interest
-  my %ass;
+  my %a;
   my $sth=$dbh->prepare("select a.contig_id, c.name, a.type, a.chr_start, a.chr_end, a.contig_start, a.contig_end, a.contig_ori from chromosome c, assembly a, sequence_set ss, vega_set vs where a.chromosome_id=c.chromosome_id and a.type=ss.assembly_type and ss.vega_set_id=vs.vega_set_id and vs.vega_type != 'N'");
   $sth->execute;
   my $n=0;
@@ -95,7 +95,7 @@ if($make_cache){
   # get exons of current genes
   my $sth=$dbh->prepare("select gsi1.stable_id,gn.name,g.type,tsi.stable_id,ti.name,et.rank,e.exon_id,e.contig_id,e.contig_start,e.contig_end from contig ct, exon e, exon_transcript et, transcript t, current_gene_info cgi, gene_stable_id gsi1, gene_name gn, gene g, transcript_stable_id tsi, current_transcript_info cti, transcript_info ti left join gene_stable_id gsi2 on (gsi1.stable_id=gsi2.stable_id and gsi1.version<gsi2.version) where gsi2.stable_id IS NULL and cgi.gene_stable_id=gsi1.stable_id and cgi.gene_info_id=gn.gene_info_id and gsi1.gene_id=g.gene_id and g.gene_id=t.gene_id and t.transcript_id=tsi.transcript_id and tsi.stable_id=cti.transcript_stable_id and cti.transcript_info_id=ti.transcript_info_id and t.transcript_id=et.transcript_id and et.exon_id=e.exon_id and e.contig_id");
   $sth->execute;
-  $nexclude=0;
+  my $nexclude=0;
   my %excluded_gsi;
   open(OUT,">$cache_file") || die "cannot open cache file $cache_file";
   while (my @row = $sth->fetchrow_array()){
@@ -133,200 +133,22 @@ if($make_cache){
     last if ($opt_t && $n>=$opt_t);
   }
   close(OUT);
+  $dbh->disconnect();
   print "wrote $n records to cache file $cache_file\n";
   print "wrote $nexclude exons ignored as not in selected assembly\n";
   exit 0;
 }
 
 my %gsi;
+my $n=0;
 open(IN,"$cache_file") || die "cannot open $opt_i";
 while(<IN>){
   chomp;
   my($gsi,$gii,$gn,$chr,$atype,$gtype)=split(/\t/);
-    $gn{$gn}=[$gsi,$gii,$chr,$atype,$gtype];
-    $gii{$gii}=$gn;
-    $n++;
-  }
-  close(IN);
-  print "$n name relationships read\n";
-}else{
-
-
-
-    my($gsi,$gii,$gn,$chr,$atype,$gtype)=@row;
-    if($gn{$gn}){
-      my($gsi2,$gii2,$chr2,$atype2,$gtype2)=@{$gn{$gn}};
-      # save on this chromosome if choice (avoid other haplotypes)
-      # else keep old one
-      if($chr eq $opt_c){
-	# want to keep higher OTT if chr are same
-	my $ngsi=$gsi;
-	my $ngsi2=$gsi2;
-	$ngsi=~s/^OTTHUMG//;
-	$ngsi2=~s/^OTTHUMG//;
-	if($chr2 ne $chr || $ngsi>$ngsi2){
-	  $gn{$gn}=[$gsi,$gii,$chr,$atype,$gtype];
-	}
-      }
-      if($chr ne $chr2 || $atype ne $atype2){
-	print "warn - duplicate gene_name $gsi:$gii:$chr:$atype:$gtype ($gn) diff chr/ass\n";
-	print "                           $gsi2:$gii2:$chr2:$atype2:$gtype2\n";
-	$ndd++;
-      }else{
-	print "WARN - duplicate gene_name $gsi:$gii:$chr:$atype:$gtype ($gn) SAME chr/ass\n";
-	print "                           $gsi2:$gii2:$chr2:$atype2:$gtype2\n";
-	print OUT "$gsi $gsi2 $chr $atype\n";
-	$nds++;
-      }
-    }else{
-      $gn{$gn}=[$gsi,$gii,$chr,$atype,$gtype];
-    }
-  }
-  close(OUT);
-  print "$ndd duplicate genes on different chr/ass\n";
-  print "$nds duplicate genes on SAME chr/ass\n";
-  # save cache file
-  open(OUT,">$cache_file") || die "cannot open $cache_file";
-  foreach my $gn (keys %gn){
-    my($gsi,$gii,$chr,$atype,$gtype)=@{$gn{$gn}};
-    print OUT "$gsi\t$gii\t$gn\t$chr\t$atype\t$gtype\n";
-    $n++;
-  }
-  close(OUT);
-  print "$n name relationships read\n";
-  exit 0;
-}
-
-# build gii->gn mapping
-print "\ngene_info_id -> gene_name mapping:\n";
-my %gii2gn;
-my $n=0;
-foreach my $gn (keys %gn){
-  my($gsi,$gii,$chr,$atype,$gtype)=@{$gn{$gn}};
-  if($gii2gn{$gii}){
-    my $gn2=$gii2gn{$gii};
-    print "WARN multiple gene_name for $gii ($gn, $gn2)\n";
-    $n++;
-  }
-  $gii2gn{$gii}=$gn;
-}
-print "$n duplicate gene_name for gene_info_ids\n";
-
-# get gene_synonym table (no cache as simple query)
-my %gs;
-my $n=0;
-my $nd=0;
-my $sth=$dbh->prepare("select name,gene_info_id from gene_synonym");
-$sth->execute;
-while (my @row = $sth->fetchrow_array()){
-  my($sn,$gii)=@row;
-  if($gs{$sn}){
-    my $gii2=$gs{$sn};
-    print "warn $sn is synonym for multiple gene_info_ids ($gii, $gii2)\n" if $opt_v;
-    # if there are multiple
-    # warn if both in cache
-    if($gii{$gii} && $gii{$gii2}){
-      print "WARN $sn is synonym for $gii ($gii{$gii}) and $gii2 ($gii{$gii2})\n";
-    }
-    # keep any that are in the cache
-    if($gii{$gii}){
-      $gs{$sn}=$gii;
-    }
-    $nd++;
-  }else{
-    $gs{$sn}=$gii;
-  }
   $n++;
 }
-print "read $n gene_synonyms ($nd duplicates)\n\n";
-
-# out file for writing SQL changes:
-open(OUT,">$opt_o") || die "cannot open $opt_o";
-open(OUT2,">$opt_q") || die "cannot open $opt_q";
-
-print "Check existing naming\n";
-my %skip;
-# if new name already there, don't need to change, but check for old too
-my $nexist=0;
-my $ne1=0;
-my $ne2=0;
-my $ne3=0;
-my $ne4=0;
-my $nok1=0;
-my $nhap=0;
-foreach my $gn (keys %gn){
-  my($gsi,$gii,$chr,$atype,$gtype)=@{$gn{$gn}};
-  # ignore if it's in a different haplotype
-  if($new2old{$gn} && $hap{$chr}){
-    print "$gn already a gene name in a different haplotype\n";
-    $nhap++;
-  }elsif($new2old{$gn}){
-    my $old=$new2old{$gn};
-    $skip{$old}=1;
-    $nexist++;
-    print "$gn already a gene name - no change from $old required\n";
-    # expect it to be on this chromsome
-    if($chr ne $opt_c){
-      print "  WARN unexpected chromosome $chr ($opt_c) for $gn\n";
-      $ne1++;
-      next;
-    }
-    # don't expect old name to also be a gene_name\n";
-    if($gn{$old}){
-      my($gsi2,$gii2,$chr2)=@{$gn{$old}};
-      print "  WARN old name also found: $old $gsi2:$chr2\n";
-      $ne2++;
-      next;
-    }
-    # check if old name has been stored as a gene synonym, and if so
-    # if it points to the new name as expected..
-    if($gs{$old}){
-      my $gii2=$gs{$old};
-      if($gii2 ne $gii){
-	print "  WARN $old is listed as a synonym, but for a different gene\n";
-	$ne3++;
-      }else{
-	$nok1++;
-      }
-    }else{
-      print "  WARN $old is not listed as a synonym for $gn - writing change\n";
-      print OUT "insert into gene_synonym values (NULL,'$old',$gii);\n";
-      $ne4++;
-    }
-  }
-}
-print "$nexist names already changed\n";
-print "  $ne1 names used on other chromsomes!\n";
-print "  $ne2 old name still exists!\n";
-print "  $ne3 old names listed as synonym for different gene!\n";
-print "  $ne4 old names not listed as synonym!\n";
-print "  $nok1 listed correctly as synonym\n";
-print "  $nhap listed in different haplotype\n\n";
-
-# go through list, avoiding ones already skipped
-my $no=0;
-my $nc=0;
-foreach my $old (keys %old2new){
-  next if($skip{$old});
-  my $new=$old2new{$old};
-  if($gn{$old}){
-    my($gsi,$gii,$chr,$atype,$gtype)=@{$gn{$old}};
-    print OUT "insert into gene_synonym values (NULL,'$old',$gii);\n";
-    print OUT "update gene_name set name='$new' where gene_info_id=$gii;\n";
-    print OUT2 "$gsi\n";
-    $nc++;
-  }else{
-    print "Warn: Old gene name $old not found in db - New gene name $new not used\n";
-    $no++;
-  }
-}
-print "$no old gene names not found\n";
-print "$nc gene names changes proposed\n";
-
-close(OUT);
-close(OUT2);
-
-$dbh->disconnect();
+close(IN);
+print "$n name relationships read\n";
 
 exit 0;
 
