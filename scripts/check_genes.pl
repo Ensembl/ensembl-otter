@@ -235,6 +235,7 @@ foreach my $atype (keys %gsi){
     
     my($gn,$gt)=@{$gsi_sum{$gsi}};
     my %t2e;
+    my %e2t;
     my %e;
     my %eids;
     my %eidso;
@@ -321,6 +322,7 @@ foreach my $atype (keys %gsi){
 	}
       }
       push(@{$t2e{$tsi}},$eid);
+      push(@{$e2t{$eid}},$tsi);
     }
     # get size of transcripts and warn of large ones
     my %tse;
@@ -355,6 +357,19 @@ foreach my $atype (keys %gsi){
     }
     if($cl->cluster_count>1){
       print "$gsi ($gt,$gn) has multiple clusters\n";
+
+      # analysis by overlap of exons
+      foreach my $cid ($cl->cluster_ids){
+	my %tcl;
+	foreach my $eid ($cl->cluster_members($cid)){
+	  foreach my $tsi (@{$e2t{$eid}}){
+	    $tcl{$tsi}++;
+	  }
+	}
+	print "Cluster $cid: ".join(',',(keys %tcl))."\n";
+      }
+
+      # analysis by overlap of transcripts
       my $last_ed;
       foreach my $tsi (sort {$tse{$a}->[0]<=>$tse{$b}->[0]} keys %tse){
 	my($st,$ed)=@{$tse{$tsi}};
