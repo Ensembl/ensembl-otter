@@ -1,0 +1,34 @@
+#!/usr/bin/perl
+
+use strict;
+
+use Bio::Otter::DBSQL::DBAdaptor;
+use Bio::Otter::Converter;
+
+my $host    = '127.0.0.1';
+my $user    = 'ensro';
+my $pass    = undef;
+my $port    = 3322;
+my $dbname  = 'otter_chr9p12';
+
+my $chr      = 'virt_chrom_1';
+my $chrstart = 1;
+my $chrend   = 2000000;
+
+my $db = new Bio::Otter::DBSQL::DBAdaptor(-host => $host,
+	         		       -user => $user,
+				       -pass => $pass,
+				       -port => $port,
+				       -dbname => $dbname);
+
+
+my $sa = $db->get_SliceAdaptor;
+
+my $slice = $sa->fetch_by_chr_start_end($chr,$chrstart,$chrend);
+
+my @genes = @{$db->get_AnnotatedGeneAdaptor->fetch_by_Slice($slice)};
+my @path  = @{$slice->get_tiling_path};
+
+my $xmlstr = Bio::Otter::Converter::genes_to_XML_with_Slice($slice,\@genes,$db->assembly_type,1);
+
+print $xmlstr . "\n";
