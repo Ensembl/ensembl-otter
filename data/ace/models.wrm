@@ -26,6 +26,7 @@
 // #Locus#
 
 ?Locus  Full_name Text
+	Otter_id UNIQUE Text
         Alias Text
         Remark Text
         Type UNIQUE Gene UNIQUE Known
@@ -55,6 +56,7 @@
 // #Sequence#
 
 ?Sequence DNA UNIQUE ?DNA UNIQUE Int                    // Int is the length
+	  Otter_id UNIQUE Text                                 // Otter stable id
 	  Assembly_name UNIQUE Text                     // Genome assembly name
           External_refs External_library UNIQUE Text    // Real, world unique library identifier
                         External_clone UNIQUE Text      // Real, world unique clone identifier
@@ -147,6 +149,7 @@
           Paired_read ?Sequence XREF Paired_read
           Homol DNA_homol ?Sequence ?Method Float Int UNIQUE Int Int UNIQUE Int
                 EST_homol ?Sequence ?Method Float Int UNIQUE Int Int UNIQUE Int
+                TilePath  ?Sequence ?Method Float Int UNIQUE Int Int UNIQUE Int
                 STS_homol ?Sequence ?Method Float Int UNIQUE Int Int UNIQUE Int
                 Sanger_STS_homol ?Sequence ?Method Float Int UNIQUE Int Int UNIQUE Int
                 GSS_homol ?Sequence ?Method Float Int UNIQUE Int Int UNIQUE Int
