@@ -268,9 +268,11 @@ while(<IN>){
       if(!$ngtgnerr{$gsi}){
 	$ngtgnerr{$gsi}=1;
 	print "WARN $gsi: type=\'$gt\' but name=\'$gn\'\n";
+	$eflag=1;
       }
     }
   }
+  next if $eflag;
 
   # expect transcripts to stay on same assembly
   if($tsi_sum{$tsi}){
