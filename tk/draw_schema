@@ -13,12 +13,12 @@ use Hum::Submission;
 #Make DB connection
 
     my( $dbh, $dbname );
-    if (0) {
-        my $user   = 'ensro';
-        my $host   = 'ecs1g';
-        $dbname = 'tropicalis_est';
+    if (1) {
+        my $user   = 'ensadmin';
+        my $host   = 'humsrv1';
+        $dbname = 'otter_human';
         my $port   = 3306;
-        my $password = undef;
+        my $password = 'ensembl';
 
         $dbh = DBI->connect(
             "DBI:mysql:host=$host;port=$port;database=$dbname",

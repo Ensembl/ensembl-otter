@@ -124,6 +124,15 @@ sub initialize {
     $self->fix_window_min_max_sizes;
 }
 
+sub write_access {
+    my( $self, $write_access ) = @_;
+    
+    if (defined $write_access) {
+        $self->{'_write_access'} = $write_access;
+    }
+    return $self->{'_write_access'} || 0;
+}
+
 sub menu_bar {
     my( $self, $bf ) = @_;
     
@@ -623,6 +632,8 @@ sub bind_events {
 sub exit_save_data {
     my( $self ) = @_;
 
+    return 1 unless $self->write_access;
+
     # Ask the user if any changes should be saved
     my $dialog = $self->canvas->toplevel->Dialog(
         -title          => 'Otter save?',
@@ -662,7 +673,7 @@ sub exit_save_data {
 sub save_data {
     my( $self ) = @_;
 
-    unless ($self->SequenceSet->write_access) {
+    unless ($self->write_access) {
         warn "Read only session - not saving\n";
         return 1;   # Can't save - but is OK
     }

@@ -427,6 +427,7 @@ sub run_lace {
     my $xc = $self->make_XaceSeqChooser($title);
     ### Maybe: $xc->SequenceNotes($self);
     $xc->SequenceSet($ss);
+    $xc->write_access($ss->write_access);  ### Can be part of interface in future
     $xc->Client($self->Client);
     $xc->initialize;
 }

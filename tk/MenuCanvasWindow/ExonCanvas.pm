@@ -1129,18 +1129,18 @@ sub add_start_end_widgets {
 
         $self->{'_start_not_found_variable'} = \$snf;
 
-        # Continued from
-        my $e_frame = $frame->Frame(
-            -border => 6,
-            )->pack( -side => 'bottom' );
-        $self->{'_continued_from_Entry'} = 
-            $self->make_labelled_entry_widget(
-                $e_frame,
-                'Continued from',
-                $self->SubSeq->upstream_subseq_name,
-                15,
-                -anchor => 'nw',
-                );
+        ## Continued from
+        #my $e_frame = $frame->Frame(
+        #    -border => 6,
+        #    )->pack( -side => 'bottom' );
+        #$self->{'_continued_from_Entry'} = 
+        #    $self->make_labelled_entry_widget(
+        #        $e_frame,
+        #        'Continued from',
+        #        $self->SubSeq->upstream_subseq_name,
+        #        15,
+        #        -anchor => 'nw',
+        #        );
     }
     
     ### End frame ###
@@ -1170,18 +1170,18 @@ sub add_start_end_widgets {
 
         $self->{'_end_not_found_variable'} = \$enf;
 
-        # Continues as
-        my $e_frame = $frame->Frame(
-            -border => 6,
-            )->pack( -side => 'bottom' );
-        $self->{'_continues_as_Entry'} = 
-            $self->make_labelled_entry_widget(
-                $e_frame,
-                'Continues as',
-                $self->SubSeq->downstream_subseq_name,
-                15,
-                -anchor => 'nw',
-                );
+        ## Continues as
+        #my $e_frame = $frame->Frame(
+        #    -border => 6,
+        #    )->pack( -side => 'bottom' );
+        #$self->{'_continues_as_Entry'} = 
+        #    $self->make_labelled_entry_widget(
+        #        $e_frame,
+        #        'Continues as',
+        #        $self->SubSeq->downstream_subseq_name,
+        #        15,
+        #        -anchor => 'nw',
+        #        );
     }
 }
 
@@ -1191,21 +1191,21 @@ sub start_not_found_from_tk {
     return ${$self->{'_start_not_found_variable'}} || 0;
 }
 
-sub continued_from_from_tk {
-    my( $self ) = @_;
-    
-    my $txt = $self->{'_continued_from_Entry'}->get;
-    $txt =~ s/\s+//g;
-    return $txt || '';
-}
-
-sub continues_as_from_tk {
-    my( $self ) = @_;
-    
-    my $txt = $self->{'_continues_as_Entry'}->get;
-    $txt =~ s/\s+//g;
-    return $txt || '';
-}
+#sub continued_from_from_tk {
+#    my( $self ) = @_;
+#    
+#    my $txt = $self->{'_continued_from_Entry'}->get;
+#    $txt =~ s/\s+//g;
+#    return $txt || '';
+#}
+#
+#sub continues_as_from_tk {
+#    my( $self ) = @_;
+#    
+#    my $txt = $self->{'_continues_as_Entry'}->get;
+#    $txt =~ s/\s+//g;
+#    return $txt || '';
+#}
 
 sub end_not_found_from_tk {
     my( $self ) = @_;
@@ -1885,8 +1885,8 @@ sub new_SubSeq_from_tk {
     $sub->strand                 ( $self->strand_from_tk              );
     $sub->start_not_found        ( $self->start_not_found_from_tk     );
     $sub->end_not_found          ( $self->end_not_found_from_tk       );
-    $sub->upstream_subseq_name   ( $self->continued_from_from_tk      );
-    $sub->downstream_subseq_name ( $self->continues_as_from_tk        );
+    #$sub->upstream_subseq_name   ( $self->continued_from_from_tk      );
+    #$sub->downstream_subseq_name ( $self->continues_as_from_tk        );
     $sub->replace_all_PolyA      ( $self->get_PolyA_from_tk           );
     #warn "Start not found ", $self->start_not_found_from_tk, "\n",
     #    "End not found ", $self->end_not_found_from_tk, "\n";
