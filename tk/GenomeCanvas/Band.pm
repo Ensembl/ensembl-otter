@@ -225,6 +225,90 @@ sub sequence_gap_map {
     return @gap_map;
 }
 
+sub sub_vc_size {
+    my( $band, $size ) = @_;
+    
+    if ($size) {
+        $band->{'sub_vc_size'} = $size;
+    }
+    return $band->{'sub_vc_size'} || 1e6;
+}
+
+sub next_sub_VirtualContig {
+    my( $band ) = @_;
+    
+    my $big_vc = $band->virtual_contig;
+    my $vc_length = $big_vc->length;
+    my $i = $band->{'_sub_vc_offset'} || 0;
+    if ($i >= $vc_length) {
+        $band->{'_sub_vc_offset'} = undef;
+        return;
+    }
+    
+    my $global_chr_start = $big_vc->_global_start;
+    my $sgp_adapt        = $big_vc->dbobj->get_StaticGoldenPathAdaptor;
+    my $chr_name         = $big_vc->_chr_name;
+    
+    my $max_vc_length = $band->sub_vc_size;
+    my $end = $i + $max_vc_length;
+    
+    my $last = 0;
+    if ($end > $vc_length) {
+        $end = $vc_length;
+    }
+    # Also extend to the end if the last vc would
+    # be less than 10% of the max_vc_length
+    elsif (($vc_length - $end) < ($max_vc_length / 10)) {
+        $end = $vc_length;
+        $last = 1;
+    }
+
+    # Record our position in the vc
+    if ($last) {
+        $band->{'_sub_vc_offset'} = $vc_length
+    } else {
+        $band->{'_sub_vc_offset'} += $max_vc_length;
+    }
+
+    my $chr_start = $global_chr_start + $i;
+    my $chr_end   = $global_chr_start + $end - 1;
+    #warn "Drawing repeat features from $chr_start to $chr_end\n";
+    my $vc = $sgp_adapt->fetch_VirtualContig_by_chr_start_end(
+        $chr_name,
+        $chr_start,
+        $chr_end,
+        );
+
+    return ($vc, $i);
+}
+
+sub merge_sort_Features {
+    my $band = shift;
+    
+    my @feature = sort {$a->start <=> $b->start || $a->end <=> $b->end } @_;
+    for (my $i = 1; $i < @feature;) {
+        my($prev, $this) = @feature[$i - 1, $i];
+        if ($prev->end >= $this->start) {
+            my $new_this_start = $prev->end + 1;
+            if ($new_this_start > $this->end) {
+                # $prev engulfs $this
+                warn "Removing engulfed feature:\n  ",
+                    $this->gff2_string, "\n",
+                    "Which is engulfed by:\n  ",
+                    $prev->gff2_string, "\n";
+                splice(@feature, $i, 1);
+                next;   # Don't increment $i
+            } else {
+                # $prev only overlaps part of $this
+                $this->start($new_this_start);
+            }
+        }
+        $i++;
+    }
+    return @feature;
+}
+
+
 1;
 
 __END__

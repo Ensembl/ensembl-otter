@@ -97,7 +97,6 @@ use Getopt::Long 'GetOptions';
 
         my $repeat = GenomeCanvas::Band::RepeatFeature->new;
         $repeat->virtual_contig($vc);
-        $repeat->draw_simple(0);
         $repeat->repeat_classifier(\&repeat_class);
         $gc->add_Band($repeat);
 
