@@ -437,13 +437,23 @@ sub otter_to_ace {
       $str .= "Locus \"" . $gene->stable_id . "\"\n";
       $str .= "Method \"" . $tran->transcript_info->class->name . "\"\n";
 
-      foreach my $rem ($tran->transcript_info->remark) {
+      my @remark = $tran->transcript_info->remark;
+
+      @remark = sort {$a->remark cmp $b->remark} @remark;
+
+      foreach my $rem (@remark) {
         $str .= "Remark \"" . $rem->remark . "\"\n";
       }
-      foreach my $ev ($tran->transcript_info->evidence) {
+
+      my @ev = $tran->transcript_info->evidence;
+
+      @ev = sort {$a->name cmp $b->name} @ev;
+
+      foreach my $ev (@ev) {
         $str .= $ev_types{ $ev->type } . " \"" . $dbhash{ $ev->db_name } . ":"
           . $ev->name . "\"\n";
       }
+
       $tran->sort;
       my $trans_off;
       my @exons = @{ $tran->get_all_Exons };

@@ -1,18 +1,18 @@
 use lib 't';
 use Test;
 use strict;
+use DBI;
 
-BEGIN { $| = 1; plan tests => 8;}
+BEGIN { $| = 1; plan tests => 7;}
 
 use OtterTestDB;
 
 use Bio::Otter::Converter;
 
-ok(1);
-
 my $otter_test = OtterTestDB->new;
 
 ok($otter_test);
+
 
 my $db = $otter_test->get_DBSQL_Obj;
 
@@ -35,13 +35,27 @@ close(IN);
 
 print "Chr $chr $chrstart $chrend $type " . length($dna) . "\n";
 
-
-
 ok($db->assembly_type($type));
 
-my $slice = $db->get_SliceAdaptor->fetch_by_chr_start_end($chr,$chrstart,$chrend);
+my @contigs = @{$db->get_RawContigAdaptor->fetch_all};
+
+foreach my $contig (@contigs) {
+  print $contig->name . "\n";
+  #print $contig->seq . "\n";
+} 
+
+#DBI->trace(2);
+my $db2 = new Bio::Otter::DBSQL::DBAdaptor(-host => $otter_test->host,
+                                           -user => $otter_test->user,
+                                           -port => $otter_test->port,
+                                           -dbname => $otter_test->dbname);
+
+$db2->assembly_type($type);
+
+my $slice = $db2->get_SliceAdaptor->fetch_by_chr_start_end($chr,$chrstart,$chrend);
 
 ok($dna eq $slice->seq);
+
 
 my $analysis = new Bio::EnsEMBL::Analysis(-logic_name => 'otter');
 $db->get_AnalysisAdaptor->store($analysis);
@@ -49,10 +63,11 @@ $db->get_AnalysisAdaptor->store($analysis);
 my %transeq;
 
 foreach my $gene (@$genes2) {
-
   
   $gene->analysis($analysis);
+
   $db->get_AnnotatedGeneAdaptor->attach_to_Slice($gene,$slice);
+
   foreach my $tran (@{$gene->get_all_Transcripts}) {
     if (defined($tran->translation)) {
       print "Pre tran " . $tran->translate->seq . "\n";

@@ -43,8 +43,8 @@ use Exporter();
 
 @ISA=qw(Exporter);
 
-$OTTER_SERVER_ROOT 	    = '/ecs2/scratch1/michele/rat/ensembl-otter';
-$OTTER_ALTROOT    	    = '/ecs2/scratch1/michele/rat/ensembl-otter/otter_alt';
+$OTTER_SERVER_ROOT 	    = '/Users/michele/cvs/ensembl-otter';
+$OTTER_ALTROOT    	    = '/Users/michele/cvs/ensembl-otter/otter_alt';
 $OTTER_SCRIPTDIR            = $OTTER_SERVER_ROOT . '/scripts/server';
 $OTTER_SERVER		    = 'ecs2a.internal.sanger.ac.uk';#Sys::Hostname::hostname();  # Local machine name
 $OTTER_MAX_CLIENTS          = 5;

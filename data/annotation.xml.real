@@ -18,11 +18,19 @@
   <name>bA420L9.1.1</name>
   <evidence_set>
     <evidence>
-      <name>BE159143</name>
+      <name>AK024828.1</name>
+      <type>cDNA</type>
+    </evidence>
+    <evidence>
+      <name>AL533952</name>
       <type>EST</type>
     </evidence>
     <evidence>
-      <name>BI686272</name>
+      <name>BC018520.1</name>
+      <type>cDNA</type>
+    </evidence>
+    <evidence>
+      <name>BE159143</name>
       <type>EST</type>
     </evidence>
     <evidence>
@@ -34,20 +42,12 @@
       <type>EST</type>
     </evidence>
     <evidence>
-      <name>AL533952</name>
-      <type>EST</type>
-    </evidence>
-    <evidence>
       <name>BI549854</name>
       <type>EST</type>
     </evidence>
     <evidence>
-      <name>AK024828.1</name>
-      <type>cDNA</type>
-    </evidence>
-    <evidence>
-      <name>BC018520.1</name>
-      <type>cDNA</type>
+      <name>BI686272</name>
+      <type>EST</type>
     </evidence>
   </evidence_set>
   <translation_start>18532</translation_start>
@@ -137,7 +137,23 @@
   <name>bA420L9.3.1</name>
   <evidence_set>
     <evidence>
-      <name>BI488606</name>
+      <name>AA830135</name>
+      <type>EST</type>
+    </evidence>
+    <evidence>
+      <name>AI936359</name>
+      <type>EST</type>
+    </evidence>
+    <evidence>
+      <name>AW591060</name>
+      <type>EST</type>
+    </evidence>
+    <evidence>
+      <name>BC001261.1</name>
+      <type>cDNA</type>
+    </evidence>
+    <evidence>
+      <name>BE857173</name>
       <type>EST</type>
     </evidence>
     <evidence>
@@ -145,7 +161,7 @@
       <type>EST</type>
     </evidence>
     <evidence>
-      <name>BI820514</name>
+      <name>BI488606</name>
       <type>EST</type>
     </evidence>
     <evidence>
@@ -161,35 +177,11 @@
       <type>EST</type>
     </evidence>
     <evidence>
-      <name>AI936359</name>
+      <name>BI820514</name>
       <type>EST</type>
     </evidence>
     <evidence>
-      <name>AA830135</name>
-      <type>EST</type>
-    </evidence>
-    <evidence>
-      <name>AW591060</name>
-      <type>EST</type>
-    </evidence>
-    <evidence>
-      <name>BE857173</name>
-      <type>EST</type>
-    </evidence>
-    <evidence>
-      <name>BC001261.1</name>
-      <type>cDNA</type>
-    </evidence>
-    <evidence>
-      <name>Y18503.1</name>
-      <type>cDNA</type>
-    </evidence>
-    <evidence>
-      <name>Q9WTJ8</name>
-      <type>Protein</type>
-    </evidence>
-    <evidence>
-      <name>Q9WV03</name>
+      <name>O16128</name>
       <type>Protein</type>
     </evidence>
     <evidence>
@@ -201,12 +193,20 @@
       <type>Protein</type>
     </evidence>
     <evidence>
+      <name>Q9WTJ8</name>
+      <type>Protein</type>
+    </evidence>
+    <evidence>
+      <name>Q9WV03</name>
+      <type>Protein</type>
+    </evidence>
+    <evidence>
       <name>Q9Y247</name>
       <type>Protein</type>
     </evidence>
     <evidence>
-      <name>O16128</name>
-      <type>Protein</type>
+      <name>Y18503.1</name>
+      <type>cDNA</type>
     </evidence>
   </evidence_set>
   <translation_start>116813</translation_start>
@@ -239,19 +239,15 @@
   <name>bA420L9.3.2</name>
   <evidence_set>
     <evidence>
-      <name>BI765909</name>
-      <type>EST</type>
-    </evidence>
-    <evidence>
       <name>BE745423</name>
       <type>EST</type>
     </evidence>
     <evidence>
-      <name>Q9WTJ8</name>
-      <type>Protein</type>
+      <name>BI765909</name>
+      <type>EST</type>
     </evidence>
     <evidence>
-      <name>Q9WV03</name>
+      <name>O16128</name>
       <type>Protein</type>
     </evidence>
     <evidence>
@@ -263,11 +259,15 @@
       <type>Protein</type>
     </evidence>
     <evidence>
-      <name>Q9Y247</name>
+      <name>Q9WTJ8</name>
       <type>Protein</type>
     </evidence>
     <evidence>
-      <name>O16128</name>
+      <name>Q9WV03</name>
+      <type>Protein</type>
+    </evidence>
+    <evidence>
+      <name>Q9Y247</name>
       <type>Protein</type>
     </evidence>
   </evidence_set>
