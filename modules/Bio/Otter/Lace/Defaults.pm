@@ -153,7 +153,7 @@ otter client from:
 The values filled in, which can be given by
 command line options of the same name, are:
 
-=over4
+=over 4
 
 =item B<host>
 
