@@ -689,7 +689,7 @@ sub make_AceDataFactory {
             if ( defined($percent_identity_cutoff) ) {
                 $sim->percent_identity_cutoff($percent_identity_cutoff);
             }
-            $factory->add_AceFilter($sim);
+#            $factory->add_AceFilter($sim);
 #            warn 'logic_tag:' , $tag , "\n" ;
         } else{
             warn "No analysis called '$logic_name'\n";
@@ -706,7 +706,7 @@ sub make_AceDataFactory {
         if( defined($percent_identity_cutoff)  ){
             $prot_sim->percent_identity_cutoff($percent_identity_cutoff);
         }
-        $factory->add_AceFilter($prot_sim);    
+#        $factory->add_AceFilter($prot_sim);    
     } else {
         warn "No analysis called 'swall'\n";
     }
@@ -757,6 +757,10 @@ sub write_ensembl_data_for_key {
     my $factory = Bio::EnsEMBL::Ace::DataFactory->new;
     my $ana_adaptor = $ens_db->get_AnalysisAdaptor;
     my $ensembl = Bio::EnsEMBL::Ace::Filter::Gene->new;
+    
+#    $ensembl->url_string('http\:\/\/www.ensembl.org\/Homo_sapiens\/geneview?gene=%s');
+    $ensembl->url_string('http\:\/\/www.ensembl.org\/Homo_sapiens\/contigview?chr=%s&vc_start=%s&vc_end=%s&highlight=%s');
+    
     $ensembl->analysis_object( $ana_adaptor->fetch_by_logic_name($logic_name) );
     $factory->add_AceFilter($ensembl);
 
