@@ -1028,7 +1028,7 @@ sub express_clone_and_subseq_fetch {
             $self ->add_SubSeq($sub);
         };
         if ($@) {
-            warn("Error fetching '$name' ($start - $end):\n", $@);
+            $self->exception_message($@, "Error fetching '$name' ($start - $end):\n");
         }
     }
     return $clone;
@@ -1099,7 +1099,9 @@ sub draw_sequence_list {
     my $pad  = int($size / 6);
     my $half = int($size / 2);
 
-    $canvas->delete('all');
+    
+    # Delete everything apart from messages
+    $canvas->delete('all&&!msg');
 
     my $x = 0;
     my $y = 0;
@@ -1122,6 +1124,11 @@ sub draw_sequence_list {
             $x = $x_max + ($size * 2);
         }
     }
+    
+    # Raise messages above everything else
+    eval{
+        $canvas->raise('msg', $tag);
+    };
 }
 
 sub xace_remote {

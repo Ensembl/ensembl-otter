@@ -540,8 +540,7 @@ sub window_close {
         my $name = $self->name;
 
         if ($@) {
-            my ($msg) = $@ =~ /^(.+)$/m;
-            $self->message($msg);
+            $self->exception_message($@);
             my $dialog = $self->canvas->toplevel->Dialog(
                 -title          => 'Abandon?',
                 -bitmap         => 'question',
@@ -1442,8 +1441,7 @@ sub save_if_changed {
     
     # Make sure the annotators see the messages!
     if ($@) {
-        my ($msg) = $@ =~ /^(.+)$/m;
-        $self->message($msg);
+        $self->exception_message($@);
     }
 }
 

@@ -320,6 +320,7 @@ sub fix_window_min_max_sizes {
     
     my $mw = $self->canvas->toplevel;
     $mw->update;
+    $mw->withdraw;
     
     my @bbox = $self->set_scroll_region;
     my $canvas_width  = $bbox[2] - $bbox[0];
@@ -375,6 +376,8 @@ sub fix_window_min_max_sizes {
 
     my $geom = "${max_x}x$max_y+$x+$y";
     $mw->geometry($geom);
+    $mw->deiconify;
+    $mw->raise;
 }
 
 sub set_window_size {
@@ -658,6 +661,19 @@ sub visible_canvas_x_y {
     return( $bbox[2] - $bbox[0], $bbox[3] - $bbox[1] );
 }
 
+sub exception_message {
+    my( $self, $except, @message ) = @_;
+    
+    # Take just the first line of the exception message
+    my ($except_first) = $except =~ /^(.+)$/m;
+    
+    # Put the message on the terminal
+    warn $except_first;
+
+    push(@message, $except_first);
+    $self->message(@message);
+}
+
 sub message {
     my( $self, @message ) = @_;
     
@@ -702,13 +718,14 @@ sub message_at_x_y {
 
     # Print the message
     my $msg_id = 'message_id='. $self->next_message_id;
+    my @tags = ('msg', $msg_id);
     my $canvas = $self->canvas;
     my $text = $canvas->createText(
         $x, $y,
         -anchor => 'nw',
         -text   => join("\n", @message),
         -width  => $text_width,
-        -tags   => [$msg_id],
+        -tags   => [@tags],
         );
     
     # Expand the bbox of the text
@@ -723,7 +740,7 @@ sub message_at_x_y {
         @bbox,
         -outline    => undef,
         -fill       => '#ffff66',
-        -tags       => [$msg_id],
+        -tags       => [@tags],
         );
     $canvas->lower($yellow_rec, $text);
     
@@ -733,7 +750,7 @@ sub message_at_x_y {
         @bbox,
         -outline    => undef,
         -fill       => '#666666',
-        -tags       => [$msg_id],
+        -tags       => [@tags],
         );
     $canvas->lower($grey_rec, $yellow_rec);
     $canvas->update;
