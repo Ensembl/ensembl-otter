@@ -6,6 +6,7 @@ use strict;
 use CGI;
 
 use HTTPD::Authen;
+use Bio::Otter::Version;
 use Bio::Otter::ServerSide qw(error_exit
                               send_response
                               send_xml_response
@@ -51,7 +52,7 @@ foreach my $dataset (keys %$OTTER_SPECIES) {
 # I'd like to use xml::writer here, but it won't do output to string
 # Also it's probably a bit heavyweight just to concatenate a few strings together.
 my $xml = qq`<?xml version="1.0" encoding="UTF-8"?>\n`;
-$xml   .= qq`<otter>\n`;
+$xml   .= qq`<otter schemaVersion="$SCHEMA_VERSION" xmlVersion="$XML_VERSION">\n`;
 $xml   .= qq`  <datasets>\n`;
 # print the one's user is allowed to see.
 foreach my $dataset(@allowed_to_see){
