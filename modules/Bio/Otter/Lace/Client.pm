@@ -229,8 +229,9 @@ sub save_otter_ace {
     
     confess "Don't have write access" unless $self->write_access;
     
+    local *DEBUG;
     my $debug_file = "/var/tmp/otter-debug.$$.save.ace";
-    open DEBUG, ">> $debug_file" or die;
+    open DEBUG, "> $debug_file" or die;
     print DEBUG $ace_str;
     close DEBUG;
     
@@ -241,7 +242,7 @@ sub save_otter_ace {
     my $xml = Bio::Otter::Converter::ace_to_XML($ace->read_file_handle);
     
     $debug_file = "/var/tmp/otter-debug.$$.save.xml";
-    open DEBUG, ">> $debug_file" or die;
+    open DEBUG, "> $debug_file" or die;
     print DEBUG $xml;
     close DEBUG;
     

@@ -278,7 +278,7 @@ sub slice_dataset_hash_file {
 sub save_all_slices {
     my( $self ) = @_;
     
-    warn "SAVING ALL SLICES";
+    #warn "SAVING ALL SLICES";
     
     # Make sure we don't have a stale database handle
     $self->drop_aceperl_db_handle;
@@ -292,7 +292,7 @@ sub save_all_slices {
     #while (my ($name, $ds) = each %$sd_h) {
     foreach my $name (keys %$sd_h) {
         my $ds = $sd_h->{$name};
-        warn "SAVING SLICE '$name'";
+        #warn "SAVING SLICE '$name'";
         $self->save_otter_slice($name, $ds);
     }
 }
@@ -307,7 +307,7 @@ sub save_otter_slice {
     my $client = $self->Client or confess "No Client attached";
     
     # Get the Genome_Sequence object ...
-    $ace->find(Genome_Sequence => $name);
+    $ace->raw_query(qq{find Genome_Sequence "$name"});
     my $ace_txt = $ace->raw_query('show -a');
 
     # ... its SubSequences ...
@@ -317,13 +317,13 @@ sub save_otter_slice {
     # ... and all the Loci attached to the SubSequences.
     $ace->raw_query('Follow Locus');
     $ace_txt .= $ace->raw_query('show -a');
-    $ace->find(Person => '*');
     
     # List of people for Authors
+    $ace->raw_query(qq{find Person *});
     $ace_txt .= $ace->raw_query('show -a');
 
     # Then get the information for the TilePath
-    $ace->find(Genome_Sequence => $name);
+    $ace->raw_query(qq{find Genome_Sequence "$name"});
     $ace->raw_query('Follow AGP_Fragment');
     # Do show -a on a restricted list of tags
     foreach my $tag (qw{
@@ -334,15 +334,16 @@ sub save_otter_slice {
     {
         $ace_txt .= $ace->raw_query("show -a $tag");
     }
+
+    #my $debug_file = "/tmp/otter-debug.$$.raw.ace";
+    #open DEBUG, ">> $debug_file" or die;
+    #print DEBUG $ace_txt;
+    #close DEBUG;
     
     # Cleanup text
     $ace_txt =~ s/\0//g;            # Remove nulls
     $ace_txt =~ s{^\s*//.+}{\n}mg;  # Strip comments
     
-    #my $debug_file = "/tmp/otter-debug.$$.ace";
-    #open DEBUG, ">> $debug_file" or die;
-    #print DEBUG $ace_txt;
-    #close DEBUG;
     
     return $client->save_otter_ace($ace_txt, $dataset);
 }
@@ -351,7 +352,8 @@ sub unlock_all_slices {
     my( $self ) = @_;
 
     my $sd_h = $self->slice_dataset_hash;
-    while (my ($name, $ds) = each %$sd_h) {
+    foreach my $name (keys %$sd_h) {
+        my $ds = $sd_h->{$name};
         $self->unlock_otter_slice($name, $ds);
     }
 }
@@ -365,10 +367,8 @@ sub unlock_otter_slice {
     my $ace    = $self->aceperl_db_handle;
     my $client = $self->Client or confess "No Client attached";
     
-    $ace->find(Genome_Sequence => $name);
+    $ace->raw_query(qq{find Genome_Sequence "$name"});
     my $ace_txt = $ace->raw_query('show -a');
-
-    $ace->find(Genome_Sequence => $name);
     $ace->raw_query('Follow AGP_Fragment');
     $ace_txt .= $ace->raw_query('show -a');
     

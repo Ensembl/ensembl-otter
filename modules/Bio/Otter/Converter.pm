@@ -1305,7 +1305,8 @@ sub ace_to_otter {
             die "No exons in transcript '$seq'" unless @{$anntran->get_all_Exons};
             $anntran->sort;
 
-            if ($seq_data->{CDS_start}) {                
+            if ($seq_data->{CDS_start}) {
+                
                 # Set the translation start and end
                 my $cds_start = $seq_data->{CDS_start};
                 my $cds_end   = $seq_data->{CDS_end};
@@ -1329,18 +1330,19 @@ sub ace_to_otter {
                 my $phase = -1;
                 my $in_cds = 0;
                 my $found_cds = 0;
-                my $cds_pos = 0;
+                my $mrna_pos = 0;
                 my $exon_list = $anntran->get_all_Exons;
                 for (my $i = 0; $i < @$exon_list; $i++) {
                     my $exon = $exon_list->[$i];
-                    my $exon_start = $cds_pos + 1;
-                    my $exon_end   = $cds_pos + $exon->length;
+                    my $strand = $exon->strand;
+                    my $exon_start = $mrna_pos + 1;
+                    my $exon_end   = $mrna_pos + $exon->length;
                     my $exon_cds_length = 0;
                     if ($in_cds) {
                         $exon_cds_length = $exon->length;
                         $exon->phase($phase);
                     }
-                    elsif ($cds_start <= $exon_end) {
+                    elsif (! $found_cds and $cds_start <= $exon_end) {
                         $in_cds    = 1;
                         $found_cds = 1;
                         $phase = $start_phase;
@@ -1353,7 +1355,9 @@ sub ace_to_otter {
                         }
                         $exon_cds_length = $exon_end - $cds_start + 1;
                         $translation->start_Exon($exon);
-                        $translation->start($cds_start - $exon_start + 1);
+                        my $t_start = $cds_start - $exon_start + 1;
+                        die "Error in '$seq' : translation start is '$t_start'" if $t_start < 1;
+                        $translation->start($t_start);
                     }
                     else {
                         $exon->phase($phase);
@@ -1364,11 +1368,13 @@ sub ace_to_otter {
                         $end_phase = ($exon_cds_length + $phase) % 3;
                     }
 
-                    if ($cds_end <= $exon_end) {
+                    if ($in_cds and $cds_end <= $exon_end) {
                         # Last translating exon
                         $in_cds = 0;
                         $translation->end_Exon($exon);
-                        $translation->end($cds_end - $exon_start + 1);
+                        my $t_end = $cds_end - $exon_start + 1;
+                        die "Error in '$seq' : translation end is '$t_end'" if $t_end < 1;
+                        $translation->end($t_end);
                         if ($cds_end < $exon_end) {
                             $exon->end_phase(-1);
                         } else {
@@ -1380,7 +1386,7 @@ sub ace_to_otter {
                         $phase = $end_phase;
                     }
 
-                    $cds_pos = $exon_end;
+                    $mrna_pos = $exon_end;
                 }
                 $anntran->throw("Failed to find CDS in '$seq'") unless $found_cds;
                 
