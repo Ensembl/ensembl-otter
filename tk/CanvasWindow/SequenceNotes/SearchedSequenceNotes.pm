@@ -217,9 +217,8 @@ sub draw {
     $self->fix_window_min_max_sizes;
 }
 
-
-sub run_lace {
-    my( $self ) = @_;    
+sub run_lace{
+    my ($self) = @_ ;
     ### Prevent opening of sequences already in lace sessions
     
     return unless $self->set_selected_from_canvas; # sets the selected clones on the canvas as selected in the ss object!
@@ -227,52 +226,15 @@ sub run_lace {
     my $ss_list = $self->selected_SequenceSets ;
     return unless $self->check_for_duplicates($ss_list);
     
-    ## going to spawn a new Lace session for each diff SequenceSet    
+    ## going to open a new Lace session for each diff SequenceSet    
     foreach my $ss ( @$ss_list){
         my $selected = $ss->selected_CloneSequences   ;
         my $number_selected = ( $selected ? scalar( @$selected) : 0 )  ;
 
         next unless $number_selected ;  # dont want to try and open ss with unselected clones
         my @names = map {$_->clone_name}  @{$ss->selected_CloneSequences} ;
-           
-        my $cl = $self->Client;
         my $title = $self->selected_sequence_string($ss);
-
-        my $db = $self->Client->new_AceDatabase;
-        $db->title($title);
-        $db->error_flag(1);
-        eval{
-            $self->init_AceDatabase($db, $ss);
-        };
-        if ($@) {
-            $db->error_flag(0);
-            if ($@ =~ /Clones locked/){
-                # if our error is because of locked clones, display these to the user
-                my $message = "Some of the clones you are trying to open are locked\n";
-                my @lines = split /\n/ , $@ ;
-                print STDERR $@ ;
-                foreach my $line (@lines ){
-                    if (my ($clone_name , $author) = $line =~ m/(\S+) has been locked by \'(\S+)\'/ ){            
-                        $message  .= "$clone_name is locked by $author \n" ;
-                    }
-                }
-                $self->message( $message  );
-            }
-            else{
-                $self->exception_message($@, 'Error initialising database');
-            }
-            return;
-        }    
-
-        my $xc = $self->make_XaceSeqChooser($title);
-        ### Maybe: $xc->SequenceNotes($self);
-        $xc->SequenceNotes($self) ;
-        $xc->AceDatabase($db);
-        my $write_flag = $cl->write_access ? $ss->write_access : 0;
-        $xc->write_access($write_flag);  ### Can be part of interface in future
-        $xc->Client($self->Client);
-        $xc->initialize;
-        $self->refresh_column(7) ; # 7 is the locks column
+        $self->_open_SequenceSet($ss, $title) ;
     }
 }
 
