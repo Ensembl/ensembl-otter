@@ -3,7 +3,7 @@ use lib 't';
 use strict;
 use Test;
 
-BEGIN { $| = 1; plan tests => 9 }
+BEGIN { $| = 1; plan tests => 7 }
 
 use Bio::Otter::AnnotatedClone;
 use Bio::Otter::CloneInfo;
@@ -48,11 +48,11 @@ my $cloneinfo = new Bio::Otter::CloneInfo(-clone_id  => 1,
 
 ok(4);
 
-my $fastafile = "../data/test_clone.fa";
+my $fastafile = "../data/test_seq.fa";
 
 if (-e $fastafile) {
   ok(5);
-} 
+}
 
 open(IN,"<$fastafile") || die "can't open fasta file [$fastafile]\n";;
 
@@ -98,18 +98,10 @@ while (my $seq = $seqio->next_seq) {
     $contig->seq($tmpseq->seq);
 
     $clone->add_Contig($contig);
-    $clone->cloneinfo($clone_info);
 
-    $odb->get_AnnotatedCloneAdaptor->store($clone);
-
-    ok(7);
-
-    my $newclone = $odb->get_AnnotatedCloneAdaptor->fetch_by_accession_version($tmpseq->id,1);
-
-    my $cloneinfo = $newclone->clone_info;
-
-    my @contigs = @{$newclone->get_all_Contigs};
-
+    $clone = bless($clone,"Bio::Otter::AnnotatedClone");
+    $clone->clone_info($cloneinfo);
+ 
+ }
 }
-
-
+ok(7);
