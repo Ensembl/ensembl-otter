@@ -43,7 +43,10 @@ use Data::Dumper;
     $sat_opts->{'-PASS'}    = $satpass      if $satpass;
     $sat_opts->{'-DBNAME'}  = $satdbname    if $satdbname;
 
-    # Check we can connect to the Satellite database
+    # so we can use undefined password
+    foreach(qw(-PASS)){ delete $sat_opts->{$_} if $sat_opts->{$_} eq 'undef'; }
+
+    # Check we can connect to the Satellite database with options supplied
     eval {
 	my $sat_db = Bio::EnsEMBL::DBSQL::DBAdaptor->new(%$sat_opts);
 	$sat_db = undef;
