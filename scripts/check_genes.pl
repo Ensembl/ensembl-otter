@@ -965,7 +965,7 @@ if($ngcl>1){
 	      ###
 	      $ned++;
 	    }
-	    print "   $gsi ($ntd/$nt): $tsi ($ned/$ed)\n";
+	    print "   $gsi ($ntd/$nt): $tsi ($ned/$ne)\n";
 	  }
 	}
       }
