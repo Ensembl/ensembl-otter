@@ -1,0 +1,68 @@
+#!/usr/local/bin/perl -w
+
+# test the HeadedCanvas class
+#
+# 2.feb'2005, lg4
+
+my $mwidth =  800;
+my $lwidth =  100;
+
+my $mheight =  600;
+my $theight =  100;
+
+use strict;
+use Tk;
+use Tk::HeadedCanvas;
+
+sub fill_canvas { # just to make a canvas visible during the scroll
+        my $canvas = shift @_;
+	my $width  = shift @_;
+	my $height = shift @_;
+        my $color  = shift @_ || 'white';
+
+	$canvas->delete('all');
+
+        for (0..3) {
+                my $x = int(rand $width);
+                my $y = int(rand $height);
+                $canvas->createRectangle($x, $y, $x+1, $y+1,-outline=>$color);
+                $canvas->createText($x, $y, -text => "$x,$y");
+        }
+}
+
+my $mw = MainWindow->new(-title => "HeadedCanvas");
+my $hc = $mw->HeadedCanvas()->pack(-side=>'bottom',-fill=>'both',-expand=>1);
+
+$hc->Subwidget('main_canvas')->configure(-bg=>'darkgreen');
+$hc->Subwidget('left_canvas')->configure(-bg=>'blue');
+$hc->Subwidget('top_canvas')->configure(-bg=>'blue');
+$hc->Subwidget('topleft_canvas')->configure(-bg=>'orange');
+
+my $b_fill = $mw->Button(
+	-text => 'fill_everything',
+	-command => sub {
+		$hc->delete('all');
+
+		for (0..15) {
+			my $x = int(rand $mwidth);
+			my $y = int(rand $mheight);
+			my $r = int(rand 10);
+
+			$hc->createRectangle($x-$r,$y-$r,$x+$r,$y+$r,-outline=>'white');
+			$hc->createLine($x-2*$r,$y,$x+2*$r,$y,-fill=>'white');
+			$hc->createLine($x,$y-2*$r,$x,$y+2*$r,-fill=>'white');
+
+			$hc->Subwidget('left_canvas')->createText(20,$y,-text=>$y,-fill=>'white');
+			$hc->Subwidget('top_canvas')->createText($x,20,-text=>$x,-fill=>'white');
+		}
+	},
+)->pack(-side=>'left',-fill=>'x',-expand=>1);
+
+my $b_fit = $mw->Button(
+	-text => 'fit_everything',
+	-command => sub {
+		$hc->fit_everything();
+	},
+)->pack(-side=>'right',-fill=>'x',-expand=>1);
+
+MainLoop();
