@@ -4,24 +4,33 @@
 
 use strict;
 use GenomeCanvas;
-use Hum::Submission qw{ prepare_statement submission_user user_has_access };
+
+use Ana_Submission qw{ set_db_args sub_db prepare_statement get_db}  ;
+use Hum::Submission qw{ submission_user user_has_access  get_user};
+use Hum::SubmissionVersion;
+
 use Hum::AnaStatus qw{ annotator_full_name };
 use Hum::AnaStatus::Sequence;
 use Hum::AnaStatus::SequenceSet;
 use Hum::Conf qw{ HUMACESERVER_HOST HUMGIFACESERVER_PORT };
 use GenomeCanvas::Band::SeqChooser;
-use GenomeCanvas::Band::HistChooser;
+
 use GenomeCanvas::AnaNotes;
 use GenomeCanvas::AnaNotes::History;
 use Carp;
 use Getopt::Long 'GetOptions';
-use Hum::SubmissionVersion;
+#use Hum::SubmissionVersion;
 use Tk::ROText;
+use Tk::Dialog;
+
+use Bio::Otter::Lace::PipelineDB;
 
 my $user;
 my $write;
 my $set_name;
-my $opt_d;
+
+my ($db_pass , $db_name , $port , $host);
+my ($pipeline_db); # pipeline database adaptor (holds the submission status details)
 {
     my $list_sets = 0;
     GetOptions(
@@ -29,11 +38,22 @@ my $opt_d;
         'list!'     => \$list_sets,
 	'user:s'    => \$user,
 	'write'	    => \$write,
-	'd!'        => \$opt_d,
+        'password:s'=> \$db_pass,
+        'dbname:s'  => \$db_name,
+        'port:i'    => \$port,
+        'host:s'    => \$host
         ) or useage();
+   
+        
+    set_db_args(  db_name => $db_name ,
+                  db_pass => $db_pass ,
+                  user    => $user ,        
+                  port    => $port ,
+                  host    => $host,
+                                );
 
     # check global access to database
-    exit 0 unless Hum::SubmissionVersion::check_version();
+    exit 0 unless Hum::SubmissionVersion::check_version();   #note: this line will need the package directory added
     
     # user is login unless overridden by 'user'en
     # (this would be place to put password check)
@@ -57,19 +77,19 @@ my $opt_d;
     die "Unknown elements on command line: '@ARGV'\n" if @ARGV;
     
     # annotator is set to user, if has RW access, else set to '' for R access
-    my( $annotator );
+    my( $annotator , $annotator_id  );
     if (is_valid_annotator($user,$set_name)) {
         $annotator = $user;
+        $annotator_id = annotator_id($user) ; 
     }
-
+  
     # debug
     ##print "a: |$annotator|\n";s
     
     # Set group writable
     umask(002);
     
-    my $set_id = set_name_to_set_id($set_name);
-
+#    my $set_id = set_name_to_set_id($set_name);
     ##exit 0;
     
     my $mw = CanvasWindow::MainWindow->new;
@@ -77,14 +97,18 @@ my $opt_d;
     my $gc = GenomeCanvas::AnaNotes->new($mw);
     my $chooser = GenomeCanvas::Band::SeqChooser->new;
     $gc->add_Band($chooser);
-    $chooser->chooser_map(make_chooser_map($set_id));
+    
+    $chooser->chooser_map(make_chooser_map($set_name)); # chooser map stores informaion of db results
+    $chooser->chooser_tags(get_seq_chooser_tags());     # chooser tags are the tags that go with each line of the display - taken from choosermap
+    my @display_list = (1,2,3,4,5,6);                  # list contains the coulmns to be displayed
+    $chooser->chooser_display_list(\@display_list);
     
     my $canvas = $gc->canvas;
     $canvas->configure(-selectbackground => 'gold');
     $canvas->CanvasBind('<Button-1>', sub {
         return if $gc->delete_message;
         $gc->deselect_all_selected_not_current();
-        $gc->toggle_current;######## new version - method placed in GC object so it can be overridden
+        $gc->toggle_current;
         });
     $canvas->CanvasBind('<Shift-Button-1>', sub {
         return if $gc->delete_message;
@@ -125,10 +149,12 @@ my $opt_d;
         if ($annotator) {
             my $set_reviewed = sub{
                 my $c = $comment->get;
-                my @ana_seq_id_list = list_selected_ana_seq_ids($canvas);
+#                my @ana_seq_id_list = list_selected_ana_seq_ids($canvas);
+                my @ana_seq_id_list = list_selected_unique_ids($canvas);
                 return unless @ana_seq_id_list;
-                set_reviewed($annotator, $c, @ana_seq_id_list);
-                $chooser->chooser_map(make_chooser_map($set_id));
+                warn "here";
+                set_reviewed($annotator_id, $c, @ana_seq_id_list);
+                $chooser->chooser_map(make_chooser_map($set_name));
                 $gc->render;
                 $gc->set_scroll_region_and_maxsize;
                 };
@@ -152,7 +178,7 @@ my $opt_d;
         
         my $refesher = sub{
             watch_cursor($mw);
-            $chooser->chooser_map(make_chooser_map($set_id));
+            $chooser->chooser_map(make_chooser_map($set_name));
             $gc->render;
             $gc->set_scroll_region_and_maxsize;
             default_cursor($mw);
@@ -202,9 +228,15 @@ my $opt_d;
 
         
         $mw->bind('<Control-Button-1>', sub{ popup_ana_seq_history($gc) });
-        $mw->bind('<Double-Button-1>',  sub{ popup_ana_seq_history($gc) });
-        make_button($button_frame2, 'Quit',    sub{ $mw->destroy }, 0);
+        $mw->bind('<Double-Button-1>',  sub{  popup_ana_seq_history($gc) });
+        make_button($button_frame2, 'Quit',    sub{ $pipeline_db = undef; # otherwise we see "potential memory leak" errors 
+                                                    $mw->destroy }, 0);
     }
+    
+    
+    
+#    my $status = 'CREATED';
+#    my $analysis = 'test';   
     $gc->render;
     $gc->fix_window_min_max_sizes;
     
@@ -220,9 +252,10 @@ my $opt_d;
         my( $gc ) = @_;
         
         my $canvas = $gc->canvas;
-        $asid = get_current_ana_seq_id($canvas)
+               
+        $asid = get_current_unique_id($canvas)
             or return;
-        
+                
         unless ($top) {
             # Make a new Toplevel object which is a transient of $master
             my $master = $canvas->toplevel;
@@ -230,14 +263,15 @@ my $opt_d;
             $top->transient($master);
             
             # create new GenomeCanvas object
-            $hist_gen_canv = GenomeCanvas::AnaNotes::History->new($top);
+            $hist_gen_canv = GenomeCanvas::AnaNotes::History->new($top) ;
             # create new SeqChooser object
-            $hist_chooser = GenomeCanvas::Band::HistChooser->new;
+            $hist_chooser = GenomeCanvas::Band::SeqChooser->new ;
             # add band to history canvas
-            $hist_gen_canv->add_Band($hist_chooser);
+            $hist_gen_canv->add_Band($hist_chooser) ;
 
             # Close only unmaps it from the display
-            my $close_command = sub{ $top->withdraw };
+            my $close_command = sub{ $top->withdraw ;
+                                   };
             $top->bind(    '<Control-w>',      $close_command);
             $top->bind(    '<Control-W>',      $close_command);
             $top->bind(    '<Escape>',         $close_command);
@@ -265,58 +299,59 @@ my $opt_d;
                 -text   => ' Note text:',
                 )->pack(-side => 'left');
             
-            # entry widget to update comment
+            # entry widget to type updated comment into
             my $comment_entry = $frame->Entry(
                 -width              => 55,
                 -background         => 'white',
                 -selectbackground   => 'gold',
                 -textvariable       => \$comment_string ,
                 )->pack(
-                    -side   => 'left',
-                    -padx   => 4,
-                    -fill   => 'x',
-                    );      
-
-            # button to update database and refresh remark history
-            my $update_button = $frame->Button(-text=> 'Update Comment',
-                -command => sub {
-                    update_db_comment($canv , $hist_chooser, $comment_entry->get());
-                    update_window($hist_chooser, $asid);
-                    $comment_string = "";
-                    $hist_gen_canv->render;
-                    })->pack(
                         -side   => 'left',
                         -padx   => 4,
-                        );
+                        -fill   => 'x',
+                        );      
+
+            # button to update database and refresh remark history
+            my $update_button = $frame->Button(
+                -text=> 'Update Comment',
+                -command => sub { 
+                    if (confirm_update($top) eq 'Ok'){
+                        update_db_comment($canv , $hist_chooser, $comment_entry->get());
+                        update_window($hist_chooser, $asid);
+                        $comment_string = "";
+                        $hist_gen_canv->render;
+                    }
+                })->pack(-side   => 'left', -padx   => 4,);
             
             $canv->CanvasBind('<Button-1>',
                 sub {
                     #my $selected = $canv->find('withtag' , 'current');
-                    
                     $hist_gen_canv->deselect_all_selected_not_current();
                     $hist_gen_canv->toggle_current();    
  
                     # get id of currently selected row
                     my @list = $canv->gettags('current'); 
                     #if (scalar(@list) == 0) {warn  "no current\n "} else {warn (join ":" ,@list)}  ; 
-                    my @id = grep {s/^row_id=//} @list;
-                    
+                    my @id = grep {s/^unique_id=//} @list;
                     my @choosermap = $hist_chooser->chooser_map;
                     
                     # get comment from choosermap (choosermap is a 2 dimensional array)
-                    $comment_string = @choosermap[$id[0]]->[4]; 
-                    @choosermap[$id[0]]->[4] = $comment_entry->get();
-                    
-                    #$comment_entry->focusForce;
-                    
+                    $comment_string = @choosermap[$id[0]]->[5] ; 
+                    @choosermap[$id[0]]->[5] = $comment_entry->get();
+                   
+                    $comment_entry->focusForce;
                     });
         } else {
             # window is already present, just need to clear textbox
             $comment_string = '';
         }   
         my @text = get_history_for_ana_seq_id($asid);
+                 
+        $hist_chooser ->chooser_map(@text);
+        $hist_chooser->chooser_tags(get_hist_chooser_tags());
+        my @display_list = ( 6, 5,4,3,2 );                   # this is the list of elements in the chooser_map array that are to be displayed
+        $hist_chooser->chooser_display_list(\@display_list);  
     
-        $hist_chooser->chooser_map(@text);
         $hist_gen_canv->render;
         
         $top->deiconify;
@@ -332,52 +367,75 @@ my $opt_d;
         # Set the window title, and make it visible
         my $win = $hist_gen_canv->canvas->toplevel; #$hist->toplevel;
         $win->configure( -title => "Remark history" );
-        
-        # code to update entry widget when band is clicked.
-        
-        
+                
     }
-}
 
+#--------------------------------------------------------------------------------------------------------
+sub get_hist_chooser_tags{
+    ## these chooser tags correspond to the  2d array produced below, to make the hist_chooser work
+    
+    my %tag_hash = ("unique_id=" => 0) ;   
+    
+    return \%tag_hash ;
+    
+}
 #--------------------------------------------------------------------------------------------------------------------------
-sub get_history_for_ana_seq_id {
-    my( $asid ) = @_;
+## this next method returns a 2d array that holds most of the information for the history canvas.
+## the 1st array contains information contained in each row of the display. Each row (currently) has the format 
+## [0] row_id 
+## [1] contig_id
+## [2] contig name
+## [3] note time
+## [4] author name
+## [5] note
+## [6] db_id 
+
+    sub get_history_for_ana_seq_id {
+        my( $asid ) = @_;
     
-    my $sth = prepare_statement(qq{
-        SELECT s.sequence_name
-          , r.review_time
-          , r.annotator_uname
-          , r.review_comment
-        FROM sequence s
-          , ana_sequence a
-          , ana_sequence_review r
-        WHERE s.seq_id = a.seq_id
-          AND a.ana_seq_id = r.ana_seq_id
-          AND a.ana_seq_id = $asid
-        ORDER BY r.review_time DESC       
+        my $sth = prepare_statement(qq{
+            SELECT  cg.contig_id ,
+                    cg.name ,
+                    sn.note_time ,
+                    a.author_name ,
+                    sn.note   
+            FROM    sequence_note sn,
+                    author a,
+                    contig cg        
+            WHERE   cg.contig_id = sn.contig_id
+            AND     a.author_id = sn.author_id
+            AND     cg.contig_id = ?
+            ORDER BY sn.note_time DESC
         });
-    $sth->execute;
     
-    my $txt;
-    my @text ;
-    my $id =0; # for just now
-    while (my @row = $sth->fetchrow) { 
+        $sth->execute($asid);
+    
+        my @text  ;
+        my $id = 0; # for just now - used as a row_id - needs a unique identifier, as the clone name wont work in the history 
+        while (my @row = $sth->fetchrow) { 
         
- #       $txt .= join("\t", @row) . "\n";
-        unshift @row , $id;
-        push (@text,[@row]);            
-        $id++;
-    }
+ #         $txt .= join("\t", @row) . "\n";
+            unshift @row , $id;
+
+            push (@text,[@row]);            
+            $id++;
+        } 
     
-    return @text;
+        # if an undefined array is returned, the choosermap get/set method will not update the previous version 
+        if (! @text ){
+            @text = [-1, -1 ,"no notes to go with this contig"];
+        }
+        return @text;
+    }
 }
 #--------------------------------------------------------------------------------------------------------------------
+
 sub list_sets {
     my ( $user ) = @_;
     my $sth = prepare_statement(q{
-        SELECT set_name
-          , set_description
-        FROM ana_set
+        SELECT assembly_type
+          , description
+        FROM sequence_set
         });
     $sth->execute;
     
@@ -414,23 +472,23 @@ sub list_sets {
     print "\n";
 }
 #-----------------------------------------------------------------------------------------------------------------------
-sub set_name_to_set_id {
-    my( $set_name ) = @_;
-    
-    my $sth = prepare_statement(q{
-        SELECT set_id
-        FROM ana_set
-        WHERE set_name = ?
-        });
-    $sth->execute($set_name);
-    my ($set_id) = $sth->fetchrow;
-    
-    if ($set_id) {
-        return $set_id;
-    } else {
-        die "No such set '$set_name'\n";
-    }
-}
+##sub set_name_to_set_id {
+##    my( $set_name ) = @_;
+##    
+##    my $sth = prepare_statement(q{
+##        SELECT set_id
+##        FROM ana_set
+##        WHERE set_name = ?
+##        });
+##    $sth->execute($set_name);
+##    my ($set_id) = $sth->fetchrow;
+##    
+##    if ($set_id) {
+##        return $set_id;
+##    } else {
+##        die "No such set '$set_name'\n";
+##    }
+##}
 
 sub watch_cursor {
     my( $w ) = @_;
@@ -480,9 +538,6 @@ sub default_cursor {
 		    push(@lace, '-write',);
 		}	
 	    }
-	    if($opt_d){
-                push(@lace,'-d');
-            }
 	    exec(@lace, @seq_name_list);
         }
         else {
@@ -521,7 +576,12 @@ sub hunt_for_selection {
     my( $gc ) = @_;
     
     my $canvas = $gc->canvas;
-    
+
+    ##my $ana_seq = get_current_ana_seq_id($canvas);
+    ##return unless $ana_seq;
+
+    ##my ($rec) = $canvas->find('withtag', "ana_seq_id=$ana_seq&&contig_seq_rectangle");        
+    ##toggle_selection($gc, $rec);
     my( $query_str );
     eval {
         $query_str = $canvas->SelectionGet;
@@ -610,19 +670,37 @@ sub make_matcher {
         return $matcher;
     }
 }
-
-sub list_selected_ana_seq_ids {
-    my( $canvas ) = @_;
+#--------------------------------------------------------------------------------------
+sub list_selected_unique_ids{
     
+    my $canvas = shift @_;
     my @selected_objects = $canvas->find('withtag', 'selected');
-    my( @ana_seq_id_list );
-    foreach my $obj (@selected_objects) {
-        my ($ana_seq_id) = map /ana_seq_id=(\d+)/, $canvas->gettgags($obj); 
-        die "Found selected object without ana_seq_id" unless $ana_seq_id;
-        push(@ana_seq_id_list, $ana_seq_id);
+    my( @db_id_list );
+    foreach my $obj (@selected_objects) { 
+#        warn    join "\n",     $canvas->gettags($obj); 
+        my ($ana_seq_id) = grep s/^unique_id=//, $canvas->gettags($obj); 
+        die "Found selected object without unique_id" unless $ana_seq_id;
+        push(@db_id_list, $ana_seq_id);
     }
-    return @ana_seq_id_list;
+    return @db_id_list;
+    
 }
+#---------------------------------------------------------------------------------------
+##sub list_selected_ana_seq_ids {
+##    my( $canvas ) = @_;
+##    
+##    my @selected_objects = $canvas->find('withtag', 'selected');
+##    my( @ana_seq_id_list );
+##    foreach my $obj (@selected_objects) {
+##        ### rather than return the tag that I am expecting , this is returning a 1 (should be a grep rather than a map?)
+##        my ($ana_seq_id) = map /ana_seq_id=/, $canvas->gettags($obj); 
+##        die "Found selected object without ana_seq_id" unless $ana_seq_id;
+##        push(@ana_seq_id_list, $ana_seq_id);
+##    }
+##    return @ana_seq_id_list;
+##}
+##
+###---------------------------------------------------------------------------------------
 
 sub list_selected_sequence_names {
     my( $canvas ) = @_;
@@ -651,28 +729,70 @@ sub list_selected_accessions {
 }
 
 sub set_reviewed {
-    my( $user, $comment, @ana_seq_id ) = @_;
+    my( $user, $comment, @ana_id_list ) = @_;
 
-    foreach my $id (@ana_seq_id) {
+    
+    foreach my $id (@ana_id_list) {
+        update_old_notes($id);
         add_new_entry($id, $user, $comment);
     }
 }
+
+##sub contig_name_to_id{
+##    my  @name_list = @_ ;
+##    my $name_list_string = '"' . (join '" , "' , @name_list) .'"' ;
+##    warn $name_list_string ;
+##    my $sth = prepare_statement(q{SELECT clone_id FROM clone, contig WHERE IN ()});
+##    
+##    return @name_list;    
+##}
+
+
+sub confirm_update{
+    my $mw = shift @_;
+    my $confirm = $mw->messageBox(
+                            -title      =>  "Warning!" ,
+                            -message    =>  "This action will overwrite the selected entry. (Use the text entry field in the main window if you want to add a new comment)\nAre you sure you want to change this entry?", 
+                            -type       =>  "OKCancel"   
+                            );
+    return $confirm;
+}
+
+ 
+sub update_old_notes{
+    my  $ctg_id = shift @_;
+#    warn "updating contig : $ctg_id";
+    my ($sth);
+    
+    $sth ||= prepare_statement(q{
+                UPDATE sequence_note 
+                SET is_current = 'N'
+                WHERE contig_id = ?
+    });
+    $sth->execute($ctg_id);    
+}
+
 
 {
     my( $sth );
     
     sub add_new_entry {
-        my( $id, $user, $comment ) = @_;
+        my( $ctg_id, $user_id, $comment ) = @_;
+      
+        $sth ||= prepare_statement (q{
+                INSERT INTO sequence_note (
+                    contig_id, 
+                    author_id,
+                    is_current,
+                    note_time,
+                    note )
+                VALUES (?,?,'Y',NOW(),?)
+        });
         
-        $sth ||= prepare_statement(q{
-            INSERT ana_sequence_review( ana_seq_id
-                  , annotator_uname
-                  , review_time
-                  , review_comment)
-            VALUES(?,?,NOW(),?)
-            });
-        $sth->execute($id, $user, $comment);
-        $sth->rows or confess "Error inserting [$id, $user, $comment]";
+#        warn "id : $ctg_id \nuser id: $user_id\ncomment : $comment  ";
+        
+        $sth->execute($ctg_id, $user_id, $comment);
+        $sth->rows or confess "Error inserting [$ctg_id, $user, $comment]";
     }
 }
 
@@ -708,23 +828,13 @@ sub is_valid_annotator {
 	return 0;
     }
 }
-
-sub toggle_current {
-    my( $gc ) = @_;
-    
-    my $canvas = $gc->canvas;
-    
-    my $ana_seq = get_current_ana_seq_id($canvas);
-    return unless $ana_seq;
-
-    my ($rec) = $canvas->find('withtag', "ana_seq_id=$ana_seq&&contig_seq_rectangle");        
-    toggle_selection($gc, $rec);
-}
 #----------------------------------------------------------------------------------------------------
-sub get_current_ana_seq_id {
+sub get_current_unique_id {
     my( $canvas ) = @_;
     
-    my ($ana_seq) = map /^ana_seq_id=(\d+)/, $canvas->gettags('current');
+   # my ($ana_seq) = map /^ana_seq_id=(\d+)/, $canvas->gettags('current');
+    my ($ana_seq) = map /^unique_id=(\d+)/, $canvas->gettags('current');
+    
     return $ana_seq;
 }
 #----------------------------------------------------------------------------------------------------
@@ -735,7 +845,6 @@ sub deselect_all_selected_not_current {
     $canvas->selectClear;
     foreach my $obj ($canvas->find('withtag', 'selected&&!current')) {
         toggle_selection($gc,  $obj);
-        warn $obj->gettags;
     }
 }
 #----------------------------------------------------------------------------------------------------
@@ -756,128 +865,146 @@ sub toggle_selection {
         -fill => $new_colour,
         );
 }
-
 #---------------------------------------------------------------------------------------------------
 
 sub useage {
     exec('perldoc', $0);
 }
 
-#sub make_history_map{
-#    my $set_id = @_;
-    
-#    confess "No ID given" unless $set_id;
-    
-#    print STDERR "getting history on...";
-#    
-#    my $history_text = get_history_for_ana_seq_id($set_id);
-#    };
-    
-#}
-sub make_chooser_map {
-    my( $set_id ) = @_;
-    
-    confess "No set_id given" unless $set_id;
-    
-    print STDERR "Getting set notes...";
-   
-    # FIXME
-    # left join added to get accession.
-    # Not really correct as sometimes sequence_name does not match project_name.
-    # Correct syntax should go via project_dump table (see new_from_accession in AnaStatus/Sequence.pm)
-    # current syntax:
-    #   LEFT JOIN project_acc p
-    #     ON s.sequence_name = p.project_name
-    # required syntax (doesn't work)
-    #    LEFT JOIN project_acc p
-    #     ON (s.seq_id = d.seq_id
-    #    AND d.is_current = 'Y'
-    #    AND d.sanger_id = p.sanger_id)
-    my $sql = qq{
-        SELECT ss.rank
-          , s.sequence_name
-          , a.ana_seq_id
-          , st.status_id
-          , r.annotator_uname
-          , r.review_time
-          , r.review_comment
-          , a.is_current
-          , p.accession
-        FROM sequence s
-          , ana_sequence a
-          , ana_status st
-          , species_chromosome c
-          , ana_sequence_set ss
-          , project_dump d
-        LEFT JOIN ana_sequence_review r
-          ON a.ana_seq_id = r.ana_seq_id
-        LEFT JOIN project_acc p
-          ON s.sequence_name = p.project_name
-        WHERE s.seq_id = a.seq_id
-          AND a.ana_seq_id = st.ana_seq_id
-          AND s.chromosome_id = c.chromosome_id
-          AND a.ana_seq_id = ss.ana_seq_id
-          AND st.is_current = 'Y'
-          AND ss.set_id = $set_id
-        ORDER BY ss.rank ASC
-          , r.review_time DESC
-        };
-    my $sth = prepare_statement($sql);
-    $sth->execute;
+#----------------------------------------------------------------------------------------------------
 
-    my(  $rank,     $seq_name,   $ana_seq_id,
-         $status,   $uname,      $date,
-         $comment,  $is_current, $accession  );
-    $sth->bind_columns(
-        \$rank,    \$seq_name,  \$ana_seq_id,
-        \$status,  \$uname,     \$date,
-        \$comment, \$is_current,\$accession  );
+sub get_seq_chooser_tags{
+    ## these chooser tags correspond to the chooser map produced below, to make the sequence_chooser work
     
-    my( @map );
-    my $last_ana_seq_id = 0;
-    my $last_rank = 0;
-    while ($sth->fetch) {
-        next if $ana_seq_id == $last_ana_seq_id;
-        
-        while ($rank != $last_rank + 1) {
-            push(@map, ['GAP']);
-            $last_rank++;
-        }
-        $last_rank = $rank;
-        
-        ($date) = $date =~ /(\d{4}-\d\d-\d\d)/ if $date;
-
-	# th 11/06/03 replaced status with accession
-        #$status = status_name($status);
-	if($accession){
-	    $status = $accession;
-	}else{
-	    $status = '';
-	}
-
-        if ($is_current eq 'Y') {
-            push(@map,
-                [ $ana_seq_id, $rank,  $seq_name,
-                  $status,     $uname, $date,
-                  $comment ]
-                );
-        } else {
-            push(@map,
-                [ 'Old sequence',  $seq_name,
-                  $status, $uname, $date,
-                  $comment ]
-                );    
-        }
-        $last_ana_seq_id = $ana_seq_id;
-    }
+    my %tag_hash = ("dbid=" => 6 , "sequence_name="=> 0  , "accession=" => 1 , "unique_id="=>0) ;   
     
-    
-    print STDERR " got them.\n";
-
-    return @map;
+    return \%tag_hash ;
     
 }
 
+#--------------------------------------------------------------------------------------------------------
+
+#each row has the format ..
+##  [0] clone_name
+##  [1] clone_accession
+##  [2] author_name
+##  [3] note time
+##  [4] note
+##  [5] status
+##  [6] contig_id
+
+sub make_chooser_map {
+    my( $set_name ) = @_;
+    
+    
+    unless (defined $pipeline_db){
+    ## connect to otterdb to get pipeline db details. get submission status from there
+        my $otter_db = get_db();
+        ## defined $otter_db ?  warn "defined" : warn "not defined";
+        $pipeline_db = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($otter_db) ;
+    }
+               
+    confess "No set_id given" unless $set_name;
+    
+    print STDERR "Getting set notes...";
+        
+    my $sql = qq{
+        SELECT      cl.name ,
+            cl.embl_acc ,
+            cl.embl_version , 
+            au.author_name ,
+            sn.note_time, 
+            sn.note,
+            cg.contig_id,
+            a.chr_start,
+            a.chr_end
+        FROM  sequence_set ss ,
+              clone cl,
+              contig cg  
+        LEFT JOIN assembly a ON 
+            ss.assembly_type = a.type
+        LEFT JOIN sequence_note sn  
+            ON sn.contig_id = a.contig_id
+        LEFT JOIN author au 
+            ON au.author_id = sn.author_id
+        WHERE cg.contig_id  = a.contig_id 
+        AND cl.clone_id = cg.clone_id
+        AND (sn.is_current = 'Y'
+        OR sn.is_current IS NULL)
+        AND ss.assembly_type = ? 
+        ORDER BY chr_start , chr_end , sn.note_time        
+        } ;
+    
+    
+        
+    my $sth = prepare_statement($sql);
+    $sth->execute($set_name);
+
+    my(  $clone_name,   $acc,       $ver,
+         $author_name,  $note_time, $note ,
+         $contig_id,         $chr_st ,   $chr_end 
+          );
+    $sth->bind_columns(
+         \$clone_name,  \$acc,       \$ver,
+         \$author_name, \$note_time, \$note ,
+         \$contig_id,   \$chr_st ,     \$chr_end );
+    
+    my( @map );
+    my $prev_end ;
+    while ($sth->fetch) {
+        
+        # if there is a gap of more than 10 kb , add a gap band        
+        if (defined $prev_end && ($chr_st - $prev_end) > 10000 )
+        {  
+            push(@map, ['GAP']);
+        }
+        $prev_end = $chr_end;
+        
+        # format time 
+        ($note_time) = $note_time =~ /(\d{4}-\d\d-\d\d)/ if $note_time;
+        
+
+        my $status ;         #   = 'CURRENT';
+#            my $analysis =  $clone_name;
+#            $monitor->show_jobs_by_status_and_analysis ($status , $analysis);
+        $status = get_status($pipeline_db , $clone_name);   
+
+        push(@map,
+                [$contig_id , $clone_name, $acc,  $author_name, $note_time, $note , $status   ]
+            );
+    }
+    print STDERR " got them.\n";
+    
+    return @map;    
+}
+
+#---------------------------------------------------------------------------------------------------------------
+
+sub get_status{
+    my ($db , $name) = @_ ;
+    
+#    warn defined ($name) ? "defined $name" : "not defined" ;
+    my $sth = $db->prepare(q{ SELECT status 
+                    FROM job j, job_status js, clone c
+                    WHERE  j.job_id = js.job_id
+                    AND c.name = j.input_id
+                    AND is_current = 'Y'
+                    AND c.name = ?
+                    });
+    
+    $sth->execute($name);
+    
+    my $status = $sth->fetch();
+#    warn @$status->[0];
+    
+    if ($status){
+        return @$status->[0];
+    }else {
+        return "";
+    }
+}
+
+## doesnt appear to be used any more......?
 sub get_unplaced_clones {
     my( @map ) = @_;
     
@@ -889,26 +1016,20 @@ sub get_unplaced_clones {
     return @unplaced;
 }
 
+sub annotator_id{
+    my $username = shift @_ ;
+    
+    my $sth = prepare_statement(q{
+        SELECT author_id FROM author WHERE author_email = ?
+        });
+    $sth->execute($username);
+    my $id = $sth->fetchrow;
+    return $id;    
+}
+
+
 {
-    my( %id_status );
-    
-    sub status_name {
-        my( $id ) = @_;
-        
-        unless (%id_status) {
-            my $sth = prepare_statement(q{
-                SELECT status_id
-                  , status_name
-                FROM ana_status_dict
-                });
-            $sth->execute;
-            while (my( $id, $name ) = $sth->fetchrow) {
-                $id_status{$id} = $name;
-            }
-        }
-        return $id_status{$id};
-    }
-    
+       
     sub update_db_comment{
         
         my $canv = shift @_;            #canvas object of popup window
@@ -917,63 +1038,63 @@ sub get_unplaced_clones {
         my @choosermap = $chooser->chooser_map;
         
        
-        my ($time_variable, $seq_id_variable , $annotator_name_variable, $current_time);
+        my ($time_variable, $seq_id_variable , $ctg_id, $current_time);
         
         my @list = $canv->gettags('selected');
-        my @row_ids = grep {s/^row_id=//} @list;
+        my @row_ids = grep {s/^unique_id=//} @list;
         my $row_selected = $row_ids[0];
+
+#        warn $row_selected;
 
         if ( scalar(@list) > 0 ) #checks that something has been selected.
         {
             
-            $seq_id_variable = $choosermap[$row_selected]->[1];
-            $time_variable =   $choosermap[$row_selected]->[2] ;
-            $annotator_name_variable = $choosermap[$row_selected]->[3];
-            
+            $time_variable   =  $choosermap[$row_selected]->[3];
+            $ctg_id          =  $choosermap[$row_selected]->[1];
+
+            ##warn $ctg_id ;
+            ##warn $time_variable;
+            ##warn $new_string;
             
             $choosermap[$row_selected]->[4] = $new_string ;
  
-#           warn (@choosermap->[$row_selected]);
- 
+            
             $chooser->chooser_map(@choosermap);
  
- 
- 
-#            warn $time_variable,"  ", $annotator_name_variable, "  ", $seq_id_variable ;
-
-            #my $comment_ref = shift @_;
-            #warn "this is the commet_ref from update_sub: $$comment_ref";
-            #$$comment_ref = '';
+#$$comment_ref = '';
             
-            # assuming that a combination of time and annotator username will be unique.  
+            # assuming that a combination of time and contig_name will be unique.  
             my $sth = prepare_statement(qq{
-                    UPDATE ana_sequence_review 
-                    SET review_comment = ?,
-                        review_time = now()
-                    WHERE review_time =  ?
-                    AND annotator_uname = ?
+                    UPDATE sequence_note 
+                    SET note = ?
+                    WHERE contig_id = ?
+                    AND note_time =  ?
                                     });
                                     
-             $sth->execute($new_string,$time_variable,$annotator_name_variable);
+             $sth->execute($new_string,$ctg_id, $time_variable);
             
         }
         else
         {   warn "nothing has been selected to update";
 
         }
-        
-        
-        
     }
     
-    sub update_window
-    {   
+    sub update_window{   
         my ($hist_chooser, $asid) = @_;
         my @text = get_history_for_ana_seq_id($asid);
     
         $hist_chooser->chooser_map(@text);
         
     
+    }
+
+    sub contig_id_from_band{
+        my $canvas = shift @_ ;
+        
+        my ($ana_seq) = map /^dbid=(\d+)/, $canvas->gettags('current');
+        return $ana_seq;
+        
     }
 }
 
