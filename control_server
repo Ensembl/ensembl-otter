@@ -1,5 +1,8 @@
 #!/usr/local/bin/bash
 
+# Make sure files are group writable
+umask 0002
+
 cd ..
 
 root=`pwd`
@@ -27,7 +30,7 @@ start(){
 	echo "starting otter_srv..."
         exec ./otter_srv &
     else
-	echo "can't start `pwd`/$pid_file exists"
+	echo "can't start '$pid_file' exists"
     fi
 }
 stop(){
@@ -38,7 +41,7 @@ stop(){
             kill -2 $pid
             rm $pid_file
 	else
-	    echo "`pwd`/$pid_file is not a valid pid file"
+	    echo "'$pid_file' is not a valid pid file"
 	    exit 1
 	fi
     else
@@ -53,7 +56,7 @@ rotate_log(){
 	    echo "rotating logs..."
             kill -1 $pid
 	else
-	    echo "`pwd`/$pid_file is not a valid pid file."
+	    echo "'$pid_file' is not a valid pid file."
 	fi
     else
 	echo "no pidfile exists can't do rotate."	
