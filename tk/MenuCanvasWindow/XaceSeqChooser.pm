@@ -455,7 +455,11 @@ sub do_subseq_display {
     my @clone_names = $self->list_selected_clone_names;
     $self->deselect_all;
     $self->canvas->delete('all');
-    $self->draw_subseq_list(@clone_names);
+    if (@clone_names) {
+        $self->draw_subseq_list(@clone_names);
+    } else {
+        $self->message('No clone selected');
+    }
 }
 
 sub do_clone_display {
