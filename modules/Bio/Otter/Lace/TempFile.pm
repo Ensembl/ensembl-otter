@@ -29,7 +29,8 @@ sub name {
     if ($name) {
         $self->{'_name'} = $name;
     }
-    return $self->{'_name'} || 'TempFile';
+    my ($def_name) = ( ref($self) =~ /:([^:]+)$/ );
+    return $self->{'_name'} || $def_name;
 }
 
 sub full_name {
