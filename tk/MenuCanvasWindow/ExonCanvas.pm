@@ -117,7 +117,7 @@ sub initialize {
     # Deselect all
     $canvas->Tk::bind('<Escape>', sub{ $self->deselect_all });
     
-    if ($self->is_mutable ) {
+    if ($self->is_mutable) {
 
         # Save into db via xace
         my $save_command = sub{ $self->save_if_changed };
@@ -303,9 +303,14 @@ sub initialize {
         # Widget for changing locus name
         my $button_frame = $frame->Frame()->pack ;
         my $be = $self->add_locus_rename_widget($button_frame);    
-        
-        $self->_locus_combo($be);
-        $self->update_combo_list();
+
+        $be->configure(-listcmd => sub{
+            my @names = $self->xace_seq_chooser->list_Locus_names;
+            $be->configure(
+                -choices   => [@names],
+                #-listwidth => scalar @names,
+                );
+            });      
         
     
 #       my $button_frame = $frame->Frame()->pack(-side => '') ;
@@ -361,27 +366,7 @@ sub initialize {
     $self->fix_window_min_max_sizes;
 }
 
-sub _locus_combo{
-    my ($self , $combo) = @_    ;
-    if ($combo){
-        $self->{'_locus_combo'} = $combo ;
-    }
-    return $self->{'_locus_combo'};
-}
 
-sub update_combo_list{
-    my ($self) = @_ ;
-    
-    my $be = $self->_locus_combo ;
-    $be->configure(-listcmd => sub{
-            my @names = $self->xace_seq_chooser->list_Locus_names;
-            $be->configure(
-                -choices   => [@names],
-                #-listwidth => scalar @names,
-                );
-            });   
-    $be->Tk::bind('<Destroy>', sub{ $self = undef });    
-}
 
 sub name {
     my( $self, $name ) = @_;
@@ -1289,10 +1274,6 @@ sub update_locus{
         #remove old locus if this is the only excon canvas using it
         my $xace = $self->xace_seq_chooser; 
         $xace->remove_Locus_if_not_in_use($old_locus->name);
-        my @list = $self->xace_seq_chooser->list_Locus_names ;
-#        warn "@list" ;
-        
-        $self->update_combo_list;
     }else{
         $self->message('need to supply a new locus');
     }
@@ -2368,7 +2349,7 @@ sub DESTROY {
     my( $self ) = @_;
     
     my $name = $self->name;
-    warn "Destroying: '$name'\n";
+    warn "Destroying ExonCanvas: '$name'\n";
 }
 
 sub icon_pixmap {
