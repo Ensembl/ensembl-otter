@@ -61,7 +61,7 @@ sub initialize{
     
     my $top = $self->toplevel;
     $self->{'_locus_window'} = $top;
-    #$top->protocol('WM_DELETE_WINDOW', sub{$self->close});
+    $top->protocol('WM_DELETE_WINDOW', sub{ $top->withdraw });
     
     my $label_frame = $top->Frame;
     $label_frame->pack(-side => 'top');
