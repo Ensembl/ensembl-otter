@@ -14,20 +14,42 @@ sub new {
 
   my $self = bless {}, $class;
 
-  my ($dbid,$clone_id,$author,$timestamp,$is_active,$remark,$source)  = 
+  my ($dbid,$clone_id,$author,$timestamp,$is_active,$remark,$source,$keyword)  = 
         $self->_rearrange([qw(DBID CLONE_ID AUTHOR TIMESTAMP IS_ACTIVE REMARK SOURCE
-                            )],@args);
+                              KEYWORD)],@args);
 
   $self->dbID($dbid);
   $self->clone_id($clone_id);
   $self->author($author);
   $self->timestamp($timestamp);
-  $self->remark($remark);
   $self->is_active($is_active);
   $self->source($source);
 
+  $self->{_remark}   = [];
+  $self->{_keyword} = [];
+
+
+  if (defined($remark)) {
+      if (ref($remark) eq "ARRAY") {
+          $self->remark(@$remark);
+      } else {
+          $self->throw("Argument to remark must be an array ref. Currently [$remark]");
+      }
+  }
+
+  if (defined($keyword)) {
+      if (ref($keyword) eq "ARRAY") {
+          $self->keyword(@$keyword);
+      } else {
+          $self->throw("Argument to keyword must be an array ref. Currently [$keyword]");
+      }
+  }
+
+
   return $self;
 }
+
+
 
 =head2 dbID
 
@@ -83,14 +105,48 @@ sub clone_id{
 
 =cut
 
-sub remark { 
-   my ($obj,$value) = @_;
-   if( defined $value) {
-      $obj->{'description'} = $value;
+sub remark{
+    my $obj = shift @_;
+
+    while (my $rem = shift @_) {
+        if ($rem->isa("Bio::Otter::CloneRemark")) {
+            push(@{$obj->{'_remark'}},$rem);
+        } else {
+            $obj->throw("Object [$rem] is not a CloneRemark object");
+        }
     }
-    return $obj->{'description'};
+
+   return @{$obj->{'_remark'}};
 
 }
+
+=head2 keyword
+
+ Title   : keyword
+ Usage   : $obj->keyword($newval)
+ Function: 
+ Example : 
+ Returns : value of keyword
+ Args    : newvalue (optional)
+
+
+=cut
+
+sub keyword{
+    my $obj = shift @_;
+
+    while (my $keyword = shift @_) {
+        if ($keyword->isa("Bio::Otter::Keyword")) {
+            push(@{$obj->{'_keyword'}},$keyword);
+        } else {
+            $obj->throw("Object [$keyword] is not a Keyword object");
+        }
+    }
+
+   return @{$obj->{'_keyword'}};
+
+}
+
 
 =head2 author
 
