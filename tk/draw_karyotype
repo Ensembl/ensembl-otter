@@ -6,14 +6,23 @@ use strict;
 use KaryotypeWindow;
 use Hum::EnsCmdLineDB;
 
+my %chr_bin;
+
+while (<>) {
+
+    my ( $chr, $data ) = split;
+    push @{ $chr_bin{$chr} }, $data;
+
+}
+
 {
     my $mw = CanvasWindow::MainWindow->new;
     $mw->title('Karyotype');
     my $kw = KaryotypeWindow->new($mw);
-    
+
     Hum::EnsCmdLineDB::do_getopt();
     my $dba = Hum::EnsCmdLineDB::connect();
-    my $sth = $dba->prepare(q{
+    my $sth = $dba->prepare( q{
         SELECT c.name
           , k.chr_start
           , k.chr_end
@@ -24,70 +33,69 @@ use Hum::EnsCmdLineDB;
         WHERE k.chromosome_id = c.chromosome_id
         ORDER BY k.chromosome_id
           , k.chr_start
-        });
+        }
+    );
     $sth->execute();
-    
+
     my %stain_intensity = (
         100 => '#000000',
-         75 => '#666666',
-         50 => '#999999',
-         25 => '#cccccc',
-        );
-    
-    my( $chr );
+        75  => '#666666',
+        50  => '#999999',
+        25  => '#cccccc',
+    );
+
+    my ($chr);
     my $current_name = '';
-    my( %stain_count );
-    while (my ($chr_name, $start, $end, $band_name, $stain) = $sth->fetchrow) {
+    my (%stain_count);
+    while ( my ( $chr_name, $start, $end, $band_name, $stain ) = $sth->fetchrow ) {
         $stain_count{$stain}++;
-        if ($chr_name ne $current_name) {
+        if ( $chr_name ne $current_name ) {
             $chr = $kw->new_Chromosome;
             $chr->name($chr_name);
             $current_name = $chr_name;
         }
-        
+
         my $class = undef;
-        if ($stain eq 'acen') {
+        if ( $stain eq 'acen' ) {
             $class = 'KaryotypeWindow::Band::Centromere';
         }
-        elsif ($stain eq 'stalk') {
+        elsif ( $stain eq 'stalk' ) {
             $class = 'KaryotypeWindow::Band::Stalk';
         }
         my $band = $chr->new_Band($class);
         $band->start($start);
         $band->end($end);
         $band->name($band_name);
-        
-        if ($stain eq 'gneg') {
+
+        if ( $stain eq 'gneg' ) {
             $band->fill('#ffffff');
         }
-        elsif ($stain eq 'gvar') {
+        elsif ( $stain eq 'gvar' ) {
             $band->stipple('gvar');
             $band->fill('#000000');
         }
-        elsif ($stain =~ /(\d+)/) {
-            $band->fill($stain_intensity{$1});
+        elsif ( $stain =~ /(\d+)/ ) {
+            $band->fill( $stain_intensity{$1} );
+
             #$band->set_fill_from_shade($1 / 100);
         }
     }
+    $kw->data(%chr_bin);
     $kw->draw;
-    
-    foreach my $stain (sort keys %stain_count) {
+
+    foreach my $stain ( sort keys %stain_count ) {
         printf "  %8s  %4d\n", $stain, $stain_count{$stain};
     }
-    
+
     my $ps_dump = sub {
-        print STDERR "Printed to:", 
-            map("  $_\n", $kw->print_postscript);
-        };
-    $mw->bind('<Control-p>', $ps_dump);
-    $mw->bind('<Control-P>', $ps_dump);
-    
+        print STDERR "Printed to:", map( "  $_\n", $kw->print_postscript );
+    };
+    $mw->bind( '<Control-p>', $ps_dump );
+    $mw->bind( '<Control-P>', $ps_dump );
+
     $kw->fix_window_min_max_sizes;
     Tk::MainLoop();
 }
-
-
-
 
 __END__
 
