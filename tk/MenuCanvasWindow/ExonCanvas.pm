@@ -1519,28 +1519,7 @@ sub middle_button_paste {
     my( $self ) = @_;
 
     my $canvas = $self->canvas;
-
-    my( $text );
-    eval {
-        $text = $canvas->SelectionGet;
-    };
-    return if $@;
-    #warn "Trying to parse: [$text]\n";
-    
-    my( @ints );
-    # match fMap "blue box" DNA selection
-    if (@ints = $text =~ /Selection -?(\d+) ---> -?(\d+)/) {
-        if ($ints[0] == $ints[1]) {
-            # user clicked on single base pair
-            @ints = ($ints[0]);
-        }
-    } else {
-        # match general fMap "blue box" pattern
-        unless (@ints = $text =~ /^\S+\s+-?(\d+)\s+-?(\d+)\s+\(\d+\)/) {
-            # or just get all the integers
-            @ints = grep ! /\./, $text =~ /([\.\d]+)/g;
-        }
-    }
+    my @ints = $self->integers_from_clipboard;
     return unless @ints;
     
     $self->deselect_all;

@@ -4,6 +4,7 @@
 package MenuCanvasWindow::XaceSeqChooser;
 
 use strict;
+use 5.006_001;  # For qr support
 use Carp qw{ cluck confess };
 use Tk::Dialog;
 use Hum::Ace::SubSeq;
@@ -224,8 +225,8 @@ sub get_default_mutable_GeneMethod {
     my( $self ) = @_;
     
     my @possible = grep $_->is_coding, $self->get_all_mutable_GeneMethods;
-    if (my ($supp) = grep $_->name eq 'supported', @possible) {
-        # "supported" is the default method, if it is there
+    if (my ($supp) = grep $_->name eq 'Coding', @possible) {
+        # "Coding" is the default method, if it is there
         return $supp;
     }
     elsif (@possible)  {
@@ -967,14 +968,24 @@ sub edit_new_subsequence {
         }
     }
     
-    # Find 3' most coordinate in subsequences
-    my( $most_3prime );
-    foreach my $sub (@subseq) {
-        my $this_3prime = $sub->strand == 1 ? $sub->end : $sub->start;
-        if ($most_3prime) {
-            next unless $this_3prime < $most_3prime;
+    my( $most_3prime, @ints );
+    if (@subseq) {
+        # Find 3' most coordinate in subsequences
+        foreach my $sub (@subseq) {
+            my $this_3prime = $sub->strand == 1 ? $sub->end : $sub->start;
+            if ($most_3prime) {
+                next unless $this_3prime < $most_3prime;
+            }
+            $most_3prime = $this_3prime;
         }
-        $most_3prime = $this_3prime;
+    } else {
+        # Get 3' most coordinate from those on clipboard
+        # (feature highlighted in xace fMap)
+        @ints = $self->integers_from_clipboard;
+        foreach my $i (@ints) {
+            $most_3prime ||= $i;
+            $most_3prime = $i if $i > $most_3prime;
+        }
     }
     
     my $clone = $self->get_CloneSeq($clone_name);
@@ -983,7 +994,7 @@ sub edit_new_subsequence {
     # Trim sequence version from accession if clone_name ends .SV
     $region_name =~ s/\.\d+$//;
     
-    # Now get the maximum transcript number for this root
+    # Now get the maximum locus number for this root
     my $regex = qr{^(SC:)?$region_name\.(\d+)}; # qr is a Perl 5.6 feature
     my $max = 0;
     my $prefix = '';
@@ -1021,11 +1032,21 @@ sub edit_new_subsequence {
         $new->strand(1);
         $new->clone_Sequence($clone->Sequence);
         
-        # Need to have at least 1 exon
-        my $ex = $new->new_Exon;
-        $ex->start(1);
-        $ex->end  (2);
-        
+        if (@ints > 1) {
+            # Make exons from coordinates from clipboard
+            for (my $i = 0; $i < @ints; $i += 2) {
+                my $start = $ints[$i];
+                my $end   = $ints[$i + 1] or last;
+                my $ex = $new->new_Exon;
+                $ex->start($start);
+                $ex->end  ($end);
+            }
+        } else {
+            # Need to have at least 1 exon
+            my $ex = $new->new_Exon;
+            $ex->start(1);
+            $ex->end  (2);
+        }
     }
     my $gm = $self->get_default_mutable_GeneMethod
         or return;
@@ -1038,6 +1059,8 @@ sub edit_new_subsequence {
     $self->do_subseq_display;
     $self->highlight_by_name('subseq', $seq_name);
     $self->make_exoncanvas_edit_window($new);
+    
+    $self->fix_window_min_max_sizes;
 }
 
 sub delete_subsequences {
