@@ -220,7 +220,7 @@ sub draw_plot_axes {
     my $scale = $height / ($high - $low);
     my $major = $band->x_major;
 
-    # X axis ticks
+    # Y axis ticks
     for (my $i = $low; $i <= $high; $i += $major) {
         my $y = $y_max - (($i - $low) * $scale);
         # Left axis

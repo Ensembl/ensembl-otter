@@ -108,8 +108,9 @@ sub gif {
     
     # Get the data to be plotted on the image
     my @values = $self->values;
-    confess "Number of values '", scalar(@values), "' doesn't match image length '$y'"
-        unless $x == @values;
+    my $value_count = @values;
+    confess "Number of values '$value_count' doesn't match image length '$x'"
+        unless $x == $value_count;
     
     # Plot the data
     my ($min, $max) = $self->range;

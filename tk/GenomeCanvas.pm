@@ -476,10 +476,10 @@ sub print_postscript {
     my $page_border = $gc->page_border;
     my $page_width  = $gc->page_width  - (2 * $page_border);
     my $page_height = $gc->page_height - (2 * $page_border);
-    if ($page_width > $page_height) {
-        confess "Page width must be greater than page height:\n",
-            "  width = '$page_width', height = '$page_height'";
-    }
+    #if ($page_width > $page_height) {
+    #    confess "Page width must be greater than page height:\n",
+    #        "  width = '$page_width', height = '$page_height'";
+    #}
     
     my $horiz_tile      = $gc->horizontal_tile;
     my $vert_tile       = $gc->vertical_tile;

@@ -153,7 +153,8 @@ sub draw_gene_features_on_vc {
     }
     
     my $text_nudge_flag = 0;
-    foreach my $rank (grep $_, @ranked_genes) {
+    for (my $i = 0; $i < @ranked_genes; $i++) {
+        my $rank = $ranked_genes[$i] or next;
         foreach my $vg (sort {$a->start <=> $b->start} @$rank) {
             my $color = $band->gene_type_color($vg->gene->type)
                 or next;
@@ -172,8 +173,9 @@ sub draw_gene_features_on_vc {
 
             $band->draw_gene_arrow($x1, $x2, $vg->strand, $rectangle_height, @tags, $group);
 
-            if ($band->show_labels) {
-
+            if ($i == 0 and $band->show_labels) {
+                warn "Hack to only show labels for first class of gene";
+                
                 my( $anchor, $y1 );
                 if ($y_dir == 1) {
                     $anchor = 'nw';

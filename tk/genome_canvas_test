@@ -90,14 +90,14 @@ use Getopt::Long 'GetOptions';
             -HOST   => $host,
             );
 
-        # Add database for SNPs
-        my $snpdba = Bio::EnsEMBL::ExternalData::SNPSQL::DBAdaptor->new(       
-            -dbname => 'snp110',
-            -host   => 'ecs1a',
-            -port   => '3306',
-            -user   => 'ensadmin',
-            ); 
-        $db->add_ExternalFeatureFactory($snpdba);
+        ## Add database for SNPs
+        #my $snpdba = Bio::EnsEMBL::ExternalData::SNPSQL::DBAdaptor->new(       
+        #    -dbname => 'snp110',
+        #    -host   => 'ecs1a',
+        #    -port   => '3306',
+        #    -user   => 'ensadmin',
+        #    ); 
+        #$db->add_ExternalFeatureFactory($snpdba);
 
         $chr_name ||= $fpc;
         if ($chr_start and ! $chr_end) {
