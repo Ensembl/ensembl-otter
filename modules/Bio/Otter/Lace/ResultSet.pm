@@ -304,17 +304,16 @@ sub fetch_Clones_containing_CloneNames{
         $self->DataSet->status_refresh_for_SequenceSet($ss);
         $self->add_SequenceSet($ss);
     }
-
-    $self->get_context_clones();
+    $self->get_context_and_intron_clones();
     ## sets the things in ResultSet, but the return value is the number of clones returned
     return $results ;
 }
 
-sub get_context_clones{
+sub get_context_and_intron_clones{
     my ($self) = @_;
 
     my $context_size = $self->context_size();
-    return unless $context_size;
+    # return unless $context_size;
     
     my $ss_list = $self->get_all_SequenceSets ;  
     my $ds = $self->DataSet;
@@ -327,42 +326,62 @@ sub get_context_clones{
 
         my ($first_idx, $last_idx, $full_ss_size, @prefix_slice, @postfix_slice);
 
-        if($context_size){
-            my $full_ss      = $ds->get_SequenceSet_by_name($ss_assembly);
-            my $full_cs_list = $ds->fetch_all_CloneSequences_for_SequenceSet($full_ss);
-            my $first        = $results_list->[0];
-            my $last         = $results_list->[$#{$results_list}];
-            $full_ss_size    = scalar(@$full_cs_list) ;
-            $full_ss_size--; # make it the last array index
+        my $full_ss      = $ds->get_SequenceSet_by_name($ss_assembly);
+        my $full_cs_list = $ds->fetch_all_CloneSequences_for_SequenceSet($full_ss);
+        my $first        = $results_list->[0];
+        my $last         = $results_list->[$#{$results_list}];
+        $full_ss_size    = scalar(@$full_cs_list) ;
+        $full_ss_size--; # make it the last array index
 
-            # search for the indices of the matches in the full seq set.
-            for my $i(0..$full_ss_size){
-                my $cs = $full_cs_list->[$i];
-                # needs to be 2 if statements in case there's only one match
-                # only check the accession is this wise? I think it'll be enough
-                if($cs->accession eq $first->accession){
-                    $first_idx = $i;
-                }
-                if($cs->accession eq $last->accession){
-                    $last_idx = $i;
-                }
-                last if $last_idx; # not need to keep on searching
+        # search for the indices of the matches in the full seq set.
+        my $sync_idx = 0;
+        for my $i(0..$full_ss_size){
+            my $cs = $full_cs_list->[$i];
+            # needs to be 2 if statements in case there's only one match
+            # only check the accession is this wise? I think it'll be enough
+            if($cs->accession eq $first->accession){
+                $first_idx = $i;
             }
-            warn "first = $first_idx, last = $last_idx, lower = 0, upper = $full_ss_size\n" if $DEBUG;
+            if($cs->accession eq $last->accession){
+                $last_idx = $i;
+            }
+            last if $last_idx; # not need to keep on searching
 
+            if($first_idx){
+                $sync_idx = $i - $first_idx;
+                my $sync = $results_list->[$sync_idx];
+                warn "\ti = $i first_idx = $first_idx, sync_idx = $sync_idx "
+                    . "current acc = '".$cs->accession."' current sync acc = '"
+                    . $sync->accession."'\n" if $DEBUG;
+                if($sync && $sync->accession ne $cs->accession){
+                    warn "\tI've found a gap " . $sync->accession . " - " . $cs->accession
+                        . " - need to insert " . $cs->accession . " into \@results_list"
+                        . "\n" if $DEBUG;
+                    my $size = scalar(@$results_list);
+                    my @tmp = @{$results_list}[$sync_idx..($size - 1)];
+                    splice(@$results_list, $sync_idx, $size - $sync_idx, $cs, @tmp);
+                }
+            }
+        }
+        # RP11-134H2, PRKG1
+        warn "first = $first_idx, last = $last_idx, lower = 0, upper = $full_ss_size\n" if $DEBUG;
+
+        if($context_size){
             # make this faster easier to read
             my $prefix_start = ($first_idx - $context_size < 0 ? 0 : $first_idx - $context_size);
             my $postfix_end  = ($last_idx + $context_size > $full_ss_size ? $full_ss_size : $last_idx + $context_size);
-            
+
             @prefix_slice  = @{$full_cs_list}[$prefix_start..--$first_idx];
             @postfix_slice = @{$full_cs_list}[++$last_idx..$postfix_end];
-
         }
+
+
         # add the context before
         push (@cs_assembly_list, @prefix_slice) if @prefix_slice;
 
         # add the matches
-        push (@cs_assembly_list, @$results_list);
+         push (@cs_assembly_list, @$results_list);
+
         # add the context after
         push (@cs_assembly_list, @postfix_slice) if @postfix_slice;
         $ss->drop_CloneSequence_list();
