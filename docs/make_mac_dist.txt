@@ -1,0 +1,297 @@
+REMEMBER
+source ~/otterdistprep/setenv.csh
+
+Then if you havent done it:
+mkdir -p $LONGDIR
+
+You may want to move /usr/local temporarily to stop things from there being used.
+
+You need to recompile tar and install it to stop the LongLink file
+truncation.
+
+For tar
+==
+ lynx -source 'ftp://gnu.teleglobe.net/ftp.gnu.org/tar/tar-1.13.tar.gz' > tar-1.13.tar.gz
+ gzip -dc tarfiles/tar-1.13.tar.gz | tar -xvf -
+ cd tar-1.13
+ chmod +w *
+ cp /sw/lib/fink/update/config.{guess,sub} .
+ ./configure --prefix=$LONGDIR
+ make
+ make install
+
+
+For GD
+==
+ For zlib
+ =
+  lynx -source 'http://umn.dl.sourceforge.net/libpng/zlib-1.1.4.tar.gz' >zlib-1.1.4.tar.gz
+  NOTE ZLIB DOESN'T WORK - just use the Apple provided one
+
+ For libpng
+ =
+  lynx -source 'http://umn.dl.sourceforge.net/sourceforge/libpng/libpng-1.2.5.tar.gz' >libpng-1.2.5.tar.gz
+  gzip -dc tarfiles/libpng-1.2.5.tar.gz | tar -xvf -
+  cd libpng-1.2.5
+  cp scripts/makefile.macosx ./Makefile
+  perl -i.pre -p -e 's/-current_version \$\(PNGVER\)//g' Makefile
+  sed -e 's|prefix=/usr/local|prefix='$LONGDIR'|' Makefile >junk.jnk
+  mv junk.jnk Makefile
+  rehash
+  make ZLIBINC="/usr/lib" ZLIBLIB="/usr/lib"
+  make install
+  ranlib $LONGDIR/lib/libpng.a
+  rm $LONGDIR/lib/libpng.
+  rm $LONGDIR/lib/libpng.3.
+
+ 
+ For jpeg
+ =
+  lynx -source 'http://www.ijg.org/files/jpegsrc.v6b.tar.gz' > jpegsrc.v6b.tar.gz
+  gzip -dc tarfiles/jpegsrc.v6b.tar.gz | tar -xvf -
+  cd jpeg-6b
+  cp /sw/lib/fink/update/config.{guess,sub} .
+  rehash
+  ./configure --prefix=$LONGDIR --enable-shared --enable-static
+  mkdir -p $LONGDIR/man/man1
+  make
+  make install
+  make install-lib
+  ranlib $LONGDIR/lib/libjpeg.a
+
+ For freetype
+ =
+  lynx -source 'http://umn.dl.sourceforge.net/sourceforge/freetype/freetype-2.1.4.tar.gz' >freetype-2.1.4.tar.gz
+  gzip -dc tarfiles/freetype-2.1.4.tar.gz | tar -xvf -
+  cd freetype-2.1.4
+  rehash
+  ./configure --prefix=$LONGDIR
+  Editted src/base/ftobjs.c to remove FT_MACINTOSH ifdef
+  make
+  make install
+  ranlib $LONGDIR/lib/libfreetype.a
+
+ lynx -source 'http://www.boutell.com/gd/http/gd-2.0.12.tar.gz' > gd-2.0.12.tar.gz
+ gzip -dc tarfiles/gd-2.0.12.tar.gz | tar -xvf -
+ cd gd-2.0.12
+ rehash
+ ./configure --prefix=$LONGDIR
+ make
+ make install
+ ranlib $LONGDIR/lib/libgd.a
+
+OR with GIF support (must remove existing libraries first)
+ lynx -source 'http://downloads.rhyme.com.au/gd/gd-2.0.12gif.tar.gz' > gd-2.0.12gif.tar.gz
+ gzip -dc tarfiles/gd-2.0.12gif.tar.gz | tar -xvf -
+ cd gd-2.0.12gif
+ rehash
+ ./configure --prefix=$LONGDIR
+ perl -i.bak -p -e 's/malloc\.h/stdlib.h/' gd_lzw_out.c
+ make
+ make install
+ ranlib $LONGDIR/lib/libgd.a
+
+
+
+For expat
+==
+ lynx -source 'http://umn.dl.sourceforge.net/sourceforge/expat/expat-1.95.6.tar.gz' >expat-1.95.6.tar.gz
+ gzip -dc tarfiles/expat-1.95.6.tar.gz | tar -xvf -
+ cd expat-1.95.6
+ rehash
+ ./configure --prefix=$LONGDIR
+ make
+ NOTE: Lots of errors and warnings but it does compiile
+ make install
+ ranlib $LONGDIR/lib/libexpat.a
+
+For Perl
+==
+ lynx -source 'http://www.cpan.org/src/stable.tar.gz' > perl58.tar.gz
+ gzip -dc tarfiles/perl58.tar.gz | tar -xvf -
+ cd perl-5.8.0
+ rm -f config.sh Policy.sh
+ sh ./Configure -de -Dprefix=$LONGDIR -Uinstallusrbinperl \
+                -Dlocincpth="$LONGDIR/include" \
+                -Dloclibpth="$LONGDIR/lib"
+ make
+ make install
+
+
+For mysql
+==
+ lynx -source 'http://mysql.mirror.anlx.net/Downloads/MySQL-4.0/mysql-4.0.12.tar.gz' > mysql-4.0.12.tar.gz
+ gzip -dc tarfiles/mysql-4.0.12.tar.gz | tar -xvf -
+ cd mysql-4.0.12
+ ./configure --prefix=$LONGDIR
+
+ Modify max path lengths in include/my_global.h (FN_REFLEN etc)
+#define FN_LEN          512     /* Max file name len */
+#define FN_HEADLEN      509     /* Max length of filepart of file name */
+#define FN_REFLEN       1024    /* Max length of full path-name */
+
+
+ Modify get_relative_path code in sql/mysqld.cc to make a temp string to
+ hold DEAFULT_MYSQL_HOME:-
+
+static char *get_relative_path(const char *path)
+{
+  char def_mysql_home[FN_REFLEN];
+  strcpy(def_mysql_home,DEFAULT_MYSQL_HOME);
+
+  if (test_if_hard_path(path) &&
+      is_prefix(path,def_mysql_home) &&
+      strcmp(def_mysql_home,FN_ROOTDIR))
+  {
+    path+=(uint) strlen(def_mysql_home);
+    while (*path == FN_LIBCHAR)
+      path++;
+  }
+  return (char*) path;
+}
+
+ make
+ make install
+ $LONGDIR/bin/mysql_install_db
+ $LONGDIR/bin/mysqld_safe &
+
+ $LONGDIR/bin/mysql -u root -e 'grant all privileges on *.* to otteradmin@localhost identified by "otter"'
+ $LONGDIR/bin/mysql -u root -e 'grant all privileges on *.* to otteradmin@"%" identified by "otter"'
+ $LONGDIR/bin/mysql -u root -e 'grant select on *.* to otterro@localhost'
+ $LONGDIR/bin/mysql -u root -e 'grant select on *.* to otterro@"%"'
+ $LONGDIR/bin/mysql -u root -e 'flush privileges'
+
+ $LONGDIR/bin/mysqladmin -u root shutdown
+
+Perl modules
+==
+ perl -MCPAN -e shell
+ install Bundle::CPAN
+ quit
+ perl -MCPAN -e shell
+ install Compress::Zlib
+ install Bundle::LWP
+ install DBI
+ install File::Temp
+ install File::PathConvert
+ install Storable
+ install Parse::RecDescent
+ install Spreadsheet::WriteExcel
+ install OLE::Storage_Lite
+ install Time::HiRes
+ install HTML::Template
+ install Mail::Mailer
+ install PDF::API2
+ install FCGI
+
+#Not with GIF
+ install GD
+
+#Useful to have path for GD
+#/Users/searle/longdir/lllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooonnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnggggggggggggggggggggggggggggggggggggggggggggggg/lllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooonnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnggggggggggggggggggggggggggggggggggggggggggggggg/long/long/long/lib
+
+For DBD::mysql
+==
+ perl -MCPAN -e shell
+ force install DBD::mysql
+#Force because three of the tests fail
+
+
+For CGI (want slightly older version)
+==
+ lynx -source 'http://www.cpan.org/modules/by-authors/id/LDS/CGI.pm-2.89.tar.gz' > CGI.pm-2.89.tar.gz
+ gzip -dc tarfiles/CGI.pm-2.89.tar.gz | tar -xvf -
+ cd CGI.pm-2.89
+ perl Makefile.PL
+ make 
+ make test
+ make install
+
+For Apache
+==
+ lynx -source 'http://www.cpan.org/authors/id/D/DO/DOUGM/mod_perl-1.27.tar.gz' > mod_perl-1.27.tar.gz
+ lynx -source 'http://apache.ttlhost.com/httpd/apache_1.3.27.tar.gz' > apache_1.3.27.tar.gz
+ gzip -dc tarfiles/apache_1.3.27.tar.gz | tar -xvf -
+ gzip -dc tarfiles/mod_perl-1.27.tar.gz | tar -xvf -
+ cd apache_1.3.27
+ ./configure --prefix=$LONGDIR --with-layout=GNU
+ cd ../mod_perl-1.27
+ perl Makefile.PL APACHE_SRC=../apache_1.3.27/src DO_HTTPD=1 USE_APACI=1 \
+       EVERYTHING=1 PREFIX=$LONGDIR
+ make
+ make install
+ cd ../apache_1.3.27
+ ./configure --enable-module=include --activate-module=src/modules/perl/libperl.a \
+             --enable-module=perl --prefix=$LONGDIR --with-layout=GNU
+ make
+ make install
+
+For Apache::DBI
+==
+ perl -MCPAN -e shell
+ force install Apache::DBI
+#Force because one of the tests fails
+
+
+For GD (with GIF)
+==
+ lynx -source 'http://downloads.rhyme.com.au/gd/GD-2.041gif.tar.gz' > GD-2.041gif.tar.gz
+ gzip -dc tarfiles/GD-2.041gif.tar.gz  | tar -xvf -
+ cd GD-2.041gif
+ perl Makefile.PL
+ make
+ make install
+
+#Useful to have path
+#/Users/searle/longdir/lllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooonnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnggggggggggggggggggggggggggggggggggggggggggggggg/lllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooonnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnggggggggggggggggggggggggggggggggggggggggggggggg/long/long/long/lib
+
+
+For dotter
+==
+ lynx -source 'ftp://ftp.gtk.org/pub/gtk/v1.2/glib-1.2.10.tar.gz' > glib-1.2.10.tar.gz
+ gzip -dc tarfiles/glib-1.2.10.tar.gz | tar -xvf -
+ cd glib-1.2.10
+ cp /sw/lib/fink/update/config.{guess,sub} .
+ ./configure --prefix=$LONGDIR
+ make
+ make install
+
+ lynx -source 'ftp://ftp.gtk.org/pub/gtk/v1.2/gtk+-1.2.10.tar.gz' > gtk+-1.2.10.tar.gz
+ gzip -dc tarfiles/gtk+-1.2.10.tar.gz | tar -xvf -
+ cd gtk+-1.2.10
+ cp /sw/lib/fink/update/config.{guess,sub} .
+ ./configure --prefix=$LONGDIR
+ make
+ make install
+
+ lynx -source 'ftp://gnu.teleglobe.net/ftp.gnu.org/readline/readline-4.3.tar.gz' > readline-4.3.tar.gz
+ gzip -dc tarfiles/readline-4.3.tar.gz | tar -xvf -
+ cd readline-4.3
+ perl -i.bak -p -e \
+     "s/SHLIB_LIBS='-lSystem'/SHLIB_LIBS='-lSystem -lncurses -lcc_dynamic'/g" \
+     support/shobj-conf
+ ./configure --prefix=$LONGDIR
+ make
+ make install
+
+ lynx -source 'ftp://ftp.sanger.ac.uk/pub/acedb/SUPPORTED/ACEDB-source.4_9p.tar.gz' >ACEDB-source.4_9p.tar.gz
+ mkdir ACEDB-source.4_9p
+ cd ACEDB-source.4_9p
+ gzip -dc ../tarfiles/ACEDB-source.4_9p.tar.gz | tar -xvf - 
+ setenv ACEDB_MACHINE MACOSX_4
+ make
+
+ NOTE: Requires LOTS of fiddling to get this to go.
+
+Ensembl
+==
+ cvs -d :pserver:cvsuser@cvsro.sanger.ac.uk:/cvsroot/CVSmaster login
+password CVSUSER
+ cvs -d :pserver:cvsuser@cvsro.sanger.ac.uk:/cvsroot/CVSmaster co -r branch-ensembl-13 ensembl-api
+ cvs -d :pserver:cvsuser@cvsro.sanger.ac.uk:/cvsroot/CVSmaster co -r branch-ensembl-13-1 ensembl-web
+ cvs -d :pserver:cvsuser@cvsro.sanger.ac.uk:/cvsroot/CVSmaster co ensembl-otter
+
+Bioperl
+==
+ cvs -d :pserver:cvs@cvs.open-bio.org:/home/repository/bioperl login
+ cvs -d :pserver:cvs@cvs.open-bio.org:/home/repository/bioperl co -r branch-1-2 bioperl-live
