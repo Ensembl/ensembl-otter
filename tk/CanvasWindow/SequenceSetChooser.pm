@@ -64,7 +64,16 @@ sub new {
         -text       => 'Close',
         -command    => $close_window,
         )->pack(-side => 'right');
+
+    my $show_err_log = sub {
+        $self->show_log();
+    };
     
+    my $err_log = $button_frame->Button(
+        -text       => 'Error Log',
+        -command    => $show_err_log,
+        )->pack(-side => 'right');
+
     return $self;
 }
 
