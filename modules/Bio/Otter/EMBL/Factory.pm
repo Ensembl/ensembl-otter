@@ -1009,6 +1009,12 @@ Currently flags a warning, if StickyExon(s) are found.
 
 =cut
 
+my %ens2embl_phase = (
+    0   => 1,
+    2   => 2,
+    1   => 3,
+    );
+
 sub _do_Gene {
     my ( $self, $gene, $set ) = @_;
 
@@ -1069,9 +1075,15 @@ sub _do_Gene {
                     my $ft = $set->newFeature;
                     $ft->key('CDS');
                     $ft->location($CDS_exonlocation);
-                    $CDS_exonlocation->start_not_found($transcript_info->cds_start_not_found);
+                    if ($transcript_info->cds_start_not_found) {
+                        $CDS_exonlocation->start_not_found(1);
+                        my $phase = $all_transcript_Exons->[0]->phase;
+                        my $embl_phase = $ens2embl_phase{$phase}
+                            or confess "Bad exon phase '$phase'";
+                        $ft->addQualifierStrings('codon_start', $embl_phase);
+                    }
                     $CDS_exonlocation->end_not_found($transcript_info->cds_end_not_found);
-
+                    
                     $self->_add_gene_qualifiers($gene, $ft);
                     $self->_supporting_evidence($transcript_info, $ft, 'Protein');
                     $ft->addQualifierStrings('standard_name', $transcript->translation->stable_id);
