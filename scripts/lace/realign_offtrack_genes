@@ -32,18 +32,33 @@ use Hum::Ace::GeneMethod;
     my $ss = $ds->get_SequenceSet_by_name($sequence_set);
     $ds->selected_SequenceSet($ss);
     $ds->fetch_all_CloneSequences_for_SequenceSet($ss);
-    my $gene_aptr = $ds->get_cached_DBAdaptor->get_GeneAdaptor;
+    
+    my $dba = $ds->get_cached_DBAdaptor;
+    $dba->assembly_type($sequence_set);
+    my $slice_aptr = $dba->get_SliceAdaptor;
+    my $gene_aptr  = $dba->get_GeneAdaptor;
     
     select_CloneSequence_contig($ss, $start_acc, $end_acc);
+    my ($chr, $start, $end) = $cl->chr_start_end_from_contig($ss->selected_CloneSequences);
+    my $slice = $slice_aptr->fetch_by_chr_start_end($chr, $start, $end);
+    my $tiles = $slice->get_tiling_path;
+    my $genes = $slice->get_all_Genes;
+    ###
     my ($genes, $tiles) = otter_objects_from_contig($cl, $ds, $ss);
     
     my $acc_list = accession_list_hash_from_tile_path($tiles);
     foreach my $slice_gene (@$genes) {
-        next unless $slice_gene->gene_info->truncated_flag;
+        my $name = $slice_gene->gene_info->name->name;
+        my $stable_id = $slice_gene->stable_id;
+        unless ($slice_gene->gene_info->truncated_flag) {
+            #print STDERR "Found entire gene '$name' ($stable_id)\n";
+            next;
+        }
         my $whole_gene = $gene_aptr->fetch_by_stable_id($slice_gene->stable_id);
-        next unless gene_is_off_track($whole_gene, $acc_list);
-        my $name = $whole_gene->gene_info->name->name;
-        my $stable_id = $whole_gene->stable_id;
+        unless (gene_is_off_track($whole_gene, $acc_list)) {
+            #print STDERR "Found truncated gene '$name' ($stable_id)\n";
+            next;
+        }
         print STDERR "Found off track gene '$name' ($stable_id)\n";
     }
 }
