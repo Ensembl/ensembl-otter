@@ -5,6 +5,7 @@ use Exporter;
 
 use Bio::Otter::DBSQL::DBAdaptor;
 use Bio::Otter::Author;
+use Bio::Otter::Version;
 
 our @ISA       = qw(Exporter);
 our @EXPORT    = qw();
@@ -28,11 +29,11 @@ sub error_exit {
 
   chomp($reason);
 
-  print "<otter>\n";
-  print "  <response>\n";
-  print "    ERROR:\n$reason\n";
-  print "  </response>\n";
-  print "</otter>\n";
+  print qq`<otter schemaVersion="$SCHEMA_VERSION" xmlVersion="$XML_VERSION">\n`;
+  print qq` <response>\n`;
+  print qq`    ERROR:\n$reason\n`;
+  print qq`  </response>\n`;
+  print qq`</otter>\n`;
 
   print STDERR "ERROR: $reason";
 
