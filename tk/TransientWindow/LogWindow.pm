@@ -1,15 +1,15 @@
 package TransientWindow::LogWindow;
 
 use strict;
-use Mail::Mailer;
 use TransientWindow;
+use Symbol 'gensym';
 
 our @ISA   = qw(TransientWindow);
 
 my $email  = q`anacode`;
 my $domain = q`sanger.ac.uk`;
 my @mail   = qw(smtp Server localhost);
-my $allow_mailing = 0;
+my $allow_mailing = 1;
 my $loggingOn     = 0;
 
 sub initialise{
@@ -175,17 +175,15 @@ sub mail_contents{
     return unless $result eq 'Ok';
 
     my $mess = $self->get_log_contents();
-    my $mailer = new Mail::Mailer @mail;
-    $mailer->open({
-        'To'      => $to,
-        'Subject' => $subj,
-    });
     if($allow_mailing){
-        print $mailer "$mess";
+        my $fh = gensym();
+        my $mail_pipe = "| Mail -s '$subj' $to";
+        open $fh, $mail_pipe or die "Error opening '$mail_pipe' : $!";
+        print $fh "$pre $mess";
+        close $fh or warn "Error emailing with pipe '$mail_pipe' : exit($?)";
     }else{
         print STDOUT $mess;
     }
-    $mailer->close();
 }
 
 
