@@ -77,7 +77,7 @@ sub XML_to_otter {
       undef($tran);
     } elsif (/<locus_type>(.*)<\/locus_type>/) {
       if ($currentobj ne $1) {
-        print STDERR "EEEK! Wrong locus type [$currentobj][$1]\n";
+        #print STDERR "EEEK! Wrong locus type [$currentobj][$1]\n";
       }
     } elsif (/<stable_id>(.*)<\/stable_id>/) {
       my $stable_id = $1;
@@ -161,14 +161,15 @@ sub XML_to_otter {
       # exons 
       if (defined($tl_start) && defined($tl_end)) {
 
-        print STDERR  "Setting translation to $tl_start and $tl_end\n";
+        #print STDERR  "Setting translation to $tl_start and $tl_end\n";
+
         my ($start_exon, $start_pos) = exon_pos($tran, $tl_start);
         my ($end_exon,   $end_pos)   = exon_pos($tran, $tl_end);
 
         if (!defined($start_exon) || !defined($end_exon)) {
           print "ERROR: Failed mapping translation to transcript\n";
         } else {
-
+          #print STDERR "Translation id " . $tran->transcript_info->name . " " . $tran->stable_id . "\n";
           my $translation = new Bio::EnsEMBL::Translation;
           $translation->stable_id($tran->stable_id);
           $translation->version(1);
@@ -337,6 +338,8 @@ sub XML_to_otter {
       push(@keywords,$1);
     } elsif (/<assembly_type>(.*)<\/assembly_type>/) {
       $assembly_type = $1;
+    } elsif (/<assemblytype>(.*)<\/assemblytype>/) {
+      $assembly_type = $1;
     } elsif (/<chromosome>(.*)<\/chromosome>/) {
       my $chr = $1;
       $frag{$currfragname}{chr} = $chr;
@@ -420,7 +423,7 @@ sub XML_to_otter {
     if (!defined($offset)) {
        print "ERROR : No offset defined for $f\n";
     }
-     print "START $f:$start:$end:$offset:$strand\n";
+    # print STDERR "START $f:$start:$end:$offset:$strand\n";
 
     $tile->assembled_start($start);
     $tile->assembled_end($end);
@@ -1656,18 +1659,24 @@ sub prune_Exons {
   my @unique_Exons;
 
   # keep track of all unique exons found so far to avoid making duplicates
-# need to be very careful about translation->start_exon and translation->end_Exon
+  # need to be very careful about translation->start_exon and translation->end_Exon
+
+  #print STDERR "Pruning exons\n";
+
+  my %exonhash;
 
   foreach my $tran (@{ $gene->get_all_Transcripts }) {
     my @newexons;
-    foreach my $exon (@{ $tran->get_all_Exons }) {
+    foreach my $exon (@{$tran->get_all_Exons}) {
       my $found;
-
       #always empty
+
       UNI: foreach my $uni (@unique_Exons) {
-        if ($uni->start == $exon->start && $uni->end == $exon->end
-          && $uni->strand == $exon->strand && $uni->phase == $exon->phase
-          && $uni->end_phase == $exon->end_phase)
+        if ($uni->start  == $exon->start  && 
+            $uni->end    == $exon->end    &&
+            $uni->strand == $exon->strand && 
+            $uni->phase  == $exon->phase   &&
+            $uni->end_phase == $exon->end_phase)
         {
           $found = $uni;
           last UNI;
@@ -1676,8 +1685,9 @@ sub prune_Exons {
         print STDERR " Exon " . $exon->stable_id . "\n";
         print STDERR " Phase " . $exon->phase . " EndPhase " . $exon->end_phase . "\n";
         print STDERR " Strand " . $exon->strand . " Start " . $exon->start . " End ". $exon->end ."\n";
+
       if (defined($found)) {
-        print "Duplicate = " . $exon->stable_id . "\n";
+        print STDERR " Duplicate\n";
         push (@newexons, $found);
         if ($tran->translation) {
           if ($exon == $tran->translation->start_Exon) {
@@ -1690,16 +1700,41 @@ sub prune_Exons {
         }
       } else {
         print STDERR "New = " . $exon->stable_id . "\n";
+
+        ### This is nasty for the phases - sometimes exons come back with 
+        ### the same stable id and different phases - we need to strip off
+        ### the stable id if we think we have a new exon but we've
+        ### already seen the stable_id
+
+        if (defined($exon->stable_id) && defined($exonhash{$exon->stable_id})) {
+           print STDERR "Already seen stable id " . $exon->stable_id . " - removing stable_id\n";
+           $exon->{_stable_id} = undef;
+           print STDERR "Exon id " .$exon->stable_id . "\n";
+        }
         push (@newexons,     $exon);
         push (@unique_Exons, $exon);
       }
-
+      $exonhash{$exon->stable_id} = 1;
     }
     $tran->flush_Exons;
     foreach my $exon (@newexons) {
       $tran->add_Exon($exon);
     }
   }
+
+  my @exons = @{$gene->get_all_Exons};
+
+  my %exonhash;
+
+  foreach my $ex (@exons) {
+      $exonhash{$ex->stable_id}++;
+  }
+
+  foreach my $id (keys %exonhash) {
+     if ($exonhash{$id} > 1) {
+      print STDERR "Exon id seen twice $id " . $exonhash{$id} . "\n";
+     }
+   }
 }
 
 sub path_to_XML {
@@ -1815,8 +1850,10 @@ sub genes_to_XML_with_Slice {
 
   $xmlstr .= Bio::Otter::Converter::path_to_XML($chr, $chrstart, $chrend, 
                                                 $slice->assembly_type, \@path);
-  print "XML $xmlstr\n";  
-  if (defined($writeseq) && defined($slice->adaptor)) {
+  #print "XML $xmlstr\n";  
+
+  print "Writeseq $writeseq\n";
+  if ($writeseq && defined($slice->adaptor)) {
     $xmlstr .= "<dna>\n";
     $seqstr = $slice->seq unless $seqstr;
     $seqstr =~ s/(.{72})/  $1\n/g;
@@ -1908,7 +1945,21 @@ sub slice_to_XML {
 
   @genes = sort by_stable_id_or_name @genes;
 
+  my %genehash;
+
   foreach my $g (@genes) {
+    #print STDERR "Gene type " . $g->type . "\n";
+    if ($g->type ne 'obsolete') {
+    if (!defined($genehash{$g->stable_id})) {
+       $genehash{$g->stable_id} = $g;
+    } else {
+      if ($g->version > $genehash{$g->stable_id}->version) {
+         $genehash{$g->stable_id} = $g;
+      }
+    }
+    }
+  }
+  foreach my $g (values %genehash) {
     $xmlstr .= $g->toXMLString . "\n";
   }
 
@@ -1960,7 +2011,7 @@ sub frags_to_slice {
   my $chr = $db->get_ChromosomeAdaptor->fetch_by_chr_name($chrname);
 
   if (!defined($chr)) {
-    print STDERR "Storing chromosome $chrname\n";
+    #print STDERR "Storing chromosome $chrname\n";
     my $chrsql = "insert into chromosome(chromosome_id,name) values(null,'$chrname')";
     my $sth    = $db->prepare($chrsql);
     my $res    = $sth->execute;
@@ -1971,7 +2022,7 @@ sub frags_to_slice {
     ($chrid) = $sth->fetchrow_array;
     $sth->finish;
   } else {
-    print STDERR "Using existing chromosome " . $chr->dbID . "\n";
+    #print STDERR "Using existing chromosome " . $chr->dbID . "\n";
     $chrid = $chr->dbID;
   }
 

@@ -284,6 +284,7 @@ sub equals {
 	    }
 	}
 	if ($found == 0) {
+            print STDERR "Differenct remark " . $rem->remark . " for  " . $self->gene_stable_id . " " . $self->name . "\n";
 	    return 0;
 	}
     }
@@ -298,18 +299,20 @@ sub equals {
 
     foreach my $rem (@syn1) {
 	my $found = 0;
-	
 	foreach my $rem2 (@syn2) {
-	    if ($rem eq $rem2) {
+            print "Rem2  " . $rem->name . "\n";
+	    if ($rem->equals($rem2)) {
 		$found = 1;
 	    }
 	}
 	if ($found == 0) {
+            print STDERR "Different synonym " . $rem->name . " for  " . $self->gene_stable_id . " " . $self->name->name . "\n";
 	    return 0;
 	}
     }
     
     if (!$self->name->equals($obj->name)) {
+        print STDERR "Different name " . $self->name  . " for  " . $self->gene_stable_id . " " . $self->name . "\n";
 	return 0;
     }
 

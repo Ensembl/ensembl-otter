@@ -153,6 +153,9 @@ sub store {
 
     my $dbea = $self->db->get_DBEntryAdaptor;
 
+    if (!defined($obj->type)) {
+        $obj->type('UNKNOWN');
+    }
     my $tmp = $self->exists($obj);
 
 

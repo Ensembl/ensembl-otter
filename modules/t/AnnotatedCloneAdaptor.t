@@ -125,7 +125,7 @@ while (my $seq = $seqio->next_seq) {
 
     my @contigs = @{$newclone->get_all_Contigs};
 
-    $testdb->pause;
+    #$testdb->pause;
   }
 }
 ok(9);

@@ -109,7 +109,6 @@ sub annotate_gene {
    my $current_gene_info_adaptor = $self->db->get_CurrentGeneInfoAdaptor();
 
    my $infoid = $current_gene_info_adaptor->fetch_by_gene_id($gene->stable_id);
-   #print "Stable " . $gene->stable_id . " " . $gene->dbID . " " . $infoid . "\n";
    my $info = $gene_info_adaptor->fetch_by_dbID($infoid);
 
    $gene->gene_info($info);
@@ -123,7 +122,6 @@ sub annotate_gene {
 
        eval {
 	   my $infoid = $ctia->fetch_by_transcript_id($tran->stable_id);
-           print STDERR "Info id $infoid\n";
 	   my $info = $transcript_info_adaptor->fetch_by_dbID($infoid);
 	   
 	   $tran->transcript_info($info);
@@ -154,18 +152,18 @@ sub fetch_by_Slice{
    #my @genes = @{$self->_fetch_by_Slice($slice)};
 
    my @genes = @{$slice->get_all_Genes};
-   
+
+   #my @genes = @{$self->SUPER::fetch_all_by_slice($slice)};
+   #my @genes = @{$self->_fetch_by_Slice($slice)};
+ 
    my %genes; 
 
    foreach my $g (@genes) {
-      print STDERR "Gene " . $g->stable_id . " " . $g->version . "\n";
       if (defined($genes{$g->stable_id})) {
         if ($g->version > $genes{$g->stable_id}->version) {
-          print STDERR "Found greater version\n";
           $genes{$g->stable_id} = $g;
         } 
       } else {
-        print STDERR "Found initial version\n";
         $genes{$g->stable_id} = $g;
       }
    }
@@ -174,9 +172,6 @@ sub fetch_by_Slice{
    }
   
    my @latest_genes = values(%genes); 
-   foreach my $g (@latest_genes)  {
-      print $g->stable_id . " " . $g->version . "\n";
-   }
    return \@latest_genes;
 
 }
@@ -283,7 +278,6 @@ sub store{
    if (!defined($obj->gene_info)) {
       $self->throw("Annotated Gene must have a gene info object");
    }
-   # print STDERR "Ann id " . $obj->stable_id . "\n";
 
    my $gene_info_adaptor = $self->db->get_GeneInfoAdaptor();
    my $current_g_info_ad = $self->db->get_CurrentGeneInfoAdaptor;
@@ -323,7 +317,9 @@ sub store{
 sub attach_to_Slice {
     my ($self,$gene,$slice) = @_;
 
+
     #my $anal = $self->db->get_AnalysisAdaptor()->fetch_by_logic_name('otter');
+
     my $aga  = $self;
     my $ea   = $self->db->get_ExonAdaptor;
     my $ta   = $self->db->get_TranscriptAdaptor;
@@ -392,6 +388,7 @@ sub attach_to_Slice {
        }
 
        if (defined($trans->translation)) {
+         $trans->translation->adaptor($self->db->get_TranslationAdaptor);
          $trans->translation->start_Exon($transformed_exons{$trans->translation->start_Exon});
          $trans->translation->end_Exon  ($transformed_exons{$trans->translation->end_Exon});
        }

@@ -490,14 +490,12 @@ sub equals {
     $self->validate;
     $obj->validate;
 
-    print STDERR "Validating......\n";
-
     if ($self->transcript_stable_id ne $obj->transcript_stable_id) {
         print STDERR " FOUND DIFF : Stable id different " . $self->transcript_stable_id . " : " . $obj->transcript_stable_id . "\n";
         return 0;
      }
      if ($self->class->equals ($obj->class) == 0) {
-        print STDERR "FOUND DIFF : Different class " . $self->class . " : " . $obj->class . "\n";
+        print STDERR "FOUND DIFF : Different class " . $self->class->name . " : " . $obj->class->name . "\n";
         return 0;
      }
      if ($self->name ne $obj->name) {      
@@ -570,7 +568,6 @@ sub equals {
 	}
     }
 
-    print STDERR "Transcript info is fine**************\n";
     return 1;
 }
 

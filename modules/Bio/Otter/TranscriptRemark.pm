@@ -138,7 +138,6 @@ sub equals {
     if ($self->remark eq $obj->remark) {
 	return 1;
     } else {
-        print STDERR "FOUND DIFF : " . $self->remark . " : " . $obj->remark . "\n";
 	return 0;
     }
 }
