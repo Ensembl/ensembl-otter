@@ -31,6 +31,8 @@ my $opt_c='';
 my $opt_s=1000000;
 my $opt_t;
 my $exclude='GD:';
+my $ext;
+my $stats;
 
 $Getopt::Long::ignorecase=0;
 
@@ -52,6 +54,8 @@ GetOptions(
 	   'make_cache',\$make_cache,
 	   't:s',  \$opt_t,
 	   'exclude:s', \$exclude,
+	   'external',  \$ext,
+	   'stats',     \$stats,
 	   );
 
 # help
@@ -77,6 +81,9 @@ rename_genes.pl
   -c              char      chromosome ($opt_c)
   -make_cache               make cache file
   -exclude                  gene types prefixes to exclude ($exclude)
+  -external                 external genes from vega_set only
+
+  -stats                    calculate stats from cache file only
 ENDOFTEXT
     exit 0;
 }
@@ -93,8 +100,13 @@ if($make_cache){
 
   # get assemblies of interest
   my %a;
-  my $sth=$dbh->prepare("select a.contig_id, c.name, a.type, a.chr_start, a.chr_end, a.contig_start, a.contig_end, a.contig_ori from chromosome c, assembly a, sequence_set ss, vega_set vs where a.chromosome_id=c.chromosome_id and a.type=ss.assembly_type and ss.vega_set_id=vs.vega_set_id and vs.vega_type != 'N'");
-  $sth->execute;
+  my $sth;
+  if($ext){
+    $sth=$dbh->prepare("select a.contig_id, c.name, a.type, a.chr_start, a.chr_end, a.contig_start, a.contig_end, a.contig_ori, cl.embl_acc, cl.embl_version from contig ct, clone cl, chromosome c, assembly a, sequence_set ss, vega_set vs where cl.clone_id=ct.clone_id and ct.contig_id=a.contig_id and a.chromosome_id=c.chromosome_id and a.type=ss.assembly_type and ss.vega_set_id=vs.vega_set_id and vs.vega_type = 'E'");
+  }else{
+    $sth=$dbh->prepare("select a.contig_id, c.name, a.type, a.chr_start, a.chr_end, a.contig_start, a.contig_end, a.contig_ori, cl.embl_acc, cl.embl_version from contig ct, clone cl, chromosome c, assembly a, sequence_set ss, vega_set vs where cl.clone_id=ct.clone_id and ct.contig_id=a.contig_id and a.chromosome_id=c.chromosome_id and a.type=ss.assembly_type and ss.vega_set_id=vs.vega_set_id and vs.vega_type != 'N'");
+  }
+  $sth->execute();
   my $n=0;
   while (my @row = $sth->fetchrow_array()){
     my $cid=shift @row;
@@ -109,15 +121,19 @@ if($make_cache){
   my $nexclude=0;
   my %excluded_gsi;
   my %reported_gsi;
+  my %clone_gsi;
+  my %ass_gsi;
+  my %gsi2gn;
   open(OUT,">$cache_file") || die "cannot open cache file $cache_file";
   while (my @row = $sth->fetchrow_array()){
     $n++;
 
     # transform to chr coords
     my($gsi,$gn,$gt,$tsi,$tn,$erank,$eid,$ecid,$est,$eed,$esr,$es,$ep,$eep)=@row;
+    $gsi2gn{$gsi}=$gn;
     if($a{$ecid}){
 
-      my($cname,$atype,$acst,$aced,$ast,$aed,$ao)=@{$a{$ecid}};
+      my($cname,$atype,$acst,$aced,$ast,$aed,$ao,$cla,$clv)=@{$a{$ecid}};
       my $ecst;
       my $eced;
       if($ao==1){
@@ -135,12 +151,10 @@ if($make_cache){
       }
       my @row2=($gsi,$gn,$gt,$tsi,$tn,$erank,$eid,$ecst,$eced,$cname,$atype,$esr,$es,$ep,$eep);
       print OUT join("\t",@row2)."\n";
-
-      if($excluded_gsi{$gsi} && !$reported_gsi{$gsi}){
-	print "WARN $gsi ($gn) chr=\'$cname\' ss=\'$atype\' has exon(s) off assembly:\n  ".
-	    join("\n  ",@{$excluded_gsi{$gsi}})."\n";
-	$reported_gsi{$gsi}=1;
-      }
+      
+      # record clones that each gsi are attached to and assembly for each gsi
+      $clone_gsi{$gsi}->{"$cla.$clv"}=1;
+      $ass_gsi{$atype}->{$gsi}=1;
 
     }else{
       $nexclude++;
@@ -150,6 +164,42 @@ if($make_cache){
   }
   close(OUT);
   $dbh->disconnect();
+
+  # report all offtrack genes
+  my %orphan_gsi;
+  foreach my $atype (sort keys %ass_gsi){
+    print "sequence_set $atype\n";
+    my %sv;
+    foreach my $gsi (sort keys %{$ass_gsi{$atype}}){
+      my $gn=$gsi2gn{$gsi};
+      if($excluded_gsi{$gsi}){
+	$orphan_gsi{$gsi}=1;
+	foreach my $sv (keys %{$clone_gsi{$gsi}}){$sv{$sv}=1;}
+	print "WARN $gsi ($gn) ss=\'$atype\' has exon(s) off assembly:\n  ".
+	    join("\n  ",@{$excluded_gsi{$gsi}})."\n";	
+      }
+    }
+    my $n=0;
+    foreach my $cid (sort {$a{$a}->[2]<=>$a{$b}->[2]} keys %a){
+      my($cname,$atype2,$acst,$aced,$ast,$aed,$ao,$cla,$clv)=@{$a{$cid}};
+      next if $atype ne $atype2;
+      $n++;
+      my $sv="$cla.$clv";
+      if($sv{$sv}){
+	print "[$n] $sv\n";
+      }
+    }
+  }
+  if(0){
+    foreach my $gsi (keys %excluded_gsi){
+      next if $orphan_gsi{$gsi};
+      my $atype='ORPHAN';
+      my $gn=$gsi2gn{$gsi};
+      print "WARN $gsi ($gn) ss=\'$atype\' has exon(s) off assembly:\n  ".
+	  join("\n  ",@{$excluded_gsi{$gsi}})."\n";
+    }
+  }
+
   print "wrote $n records to cache file $cache_file\n";
   print "wrote $nexclude exons ignored as not in selected assembly\n";
   exit 0;
@@ -162,6 +212,9 @@ my %atype;
 my $n=0;
 my $nobs=0;
 my $nexclude=0;
+my %ngtgnerr;
+my %ngtgnerr2;
+my %ngtgnerr3;
 open(IN,"$cache_file") || die "cannot open $opt_i";
 while(<IN>){
   chomp;
@@ -172,6 +225,33 @@ while(<IN>){
     $nobs++;
     next;
   }
+
+  # warn for mislabelled genes
+  foreach my $excl (split(/,/,$exclude)){
+    if($gt=~/^$excl/ && $gn!~/^$excl/){
+      if(!$ngtgnerr2{$gsi}){
+	$ngtgnerr2{$gsi}=1;
+	print "WARN2 $gsi: type=\'$gt\' but name=\'$gn\'\n";
+      }
+    }
+  }
+
+  # warn for mislabelled genes/transcripts
+  my $gpre='';
+  if($gsi=~/^(\w+):/){
+    my $gpre=$1;
+  }
+  my $tpre='';
+  if($tsi=~/^(\w+):/){
+    my $tpre=$1;
+  }
+  if($gpre ne $tpre){
+    if(!$ngtgnerr3{$tsi}){
+      $ngtgnerr3{$tsi}=1;
+      print "WARN3 $gsi: $tsi\n";
+    }
+  }
+
   my $eflag=0;
   foreach my $excl (split(/,/,$exclude)){
     if($gt=~/^$excl/){
@@ -181,6 +261,16 @@ while(<IN>){
     }
   }
   next if $eflag;
+
+  # warn for mislabelled genes
+  foreach my $excl (split(/,/,$exclude)){
+    if($gn=~/^$excl/){
+      if(!$ngtgnerr{$gsi}){
+	$ngtgnerr{$gsi}=1;
+	print "WARN $gsi: type=\'$gt\' but name=\'$gn\'\n";
+      }
+    }
+  }
 
   # expect transcripts to stay on same assembly
   if($tsi_sum{$tsi}){
@@ -205,6 +295,47 @@ while(<IN>){
 close(IN);
 print scalar(keys %gsi_sum)." genes read; $nobs obsolete skipped; $nexclude excluded\n";
 print "$n name relationships read\n\n";
+print scalar(keys %ngtgnerr)." naming errors (GD:name; type)\n";
+print scalar(keys %ngtgnerr2)." naming errors (name; GD:type\n";
+
+# another option for script, to use cache file to generate gene count stats
+if($stats){
+  my %stats;
+  foreach my $atype (keys %gsi){
+    my $cname=$atype{$atype};
+    foreach my $gsi (keys %{$gsi{$atype}}){
+      my($gn,$gt)=@{$gsi_sum{$gsi}};
+      foreach my $set ($atype,'All'){
+	foreach my $type ($gt,'All'){
+	  # count genes
+	  $stats{$set}->{$type}->[0]++;
+	  my %t;
+	  my %e;
+	  foreach my $re (@{$gsi{$atype}->{$gsi}}){
+	    my($tsi,$erank,$eid)=@$re;
+	    $t{$tsi}++;
+	    $e{$eid}++;
+	    # number of exons
+	    $stats{$set}->{$type}->[2]++;
+	  }
+	  # number of transcripts
+	  $stats{$set}->{$type}->[1]+=scalar(keys %t);
+	  # number of unique exons
+	  $stats{$set}->{$type}->[3]+=scalar(keys %e);
+	}
+      }
+    }
+  }
+  $atype{'All'}='All';
+  foreach my $atype (sort keys %stats){
+    my $cname=$atype{$atype};
+    foreach my $type (sort keys %{$stats{$atype}}){
+      printf "%-20s %-25s %6d %6d %6d %6d\n",
+      "$atype ($cname)",$type,@{$stats{$atype}->{$type}};
+    }
+  }
+  exit 0;
+}
 
 # get clones from assemblies of interest
 my %a;

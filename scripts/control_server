@@ -40,6 +40,7 @@ stop(){
 	    echo "pid exists so stopping $pid"
             kill -2 $pid
             rm $pid_file
+	    pid_exist=0
 	else
 	    echo "'$pid_file' is not a valid pid file"
 	    exit 1
