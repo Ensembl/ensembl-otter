@@ -905,9 +905,9 @@ if($ngcl>1){
   print "$ngcl clusters of genes that share identical exons\n";
   # analysis by cluster
   my $igcl=0;
-  foreach my $cid ($ngcl->cluster_ids){
+  foreach my $cid ($dgcl->cluster_ids){
     $igcl++;
-    print " Cluster $igcl: ".join(',',$ngcl->cluster_members($cid))."\n";
+    print " Cluster $igcl: ".join(',',$dgcl->cluster_members($cid))."\n";
   }
 }
 
