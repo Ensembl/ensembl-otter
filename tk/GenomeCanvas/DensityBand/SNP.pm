@@ -72,11 +72,11 @@ sub draw_snps {
     $map->color($color);
     $map->values(@snp_count);
 
-    # Add the gif to the image
+    # Add the png to the image
     my $canvas = $band->canvas;
     my $image = $canvas->Photo(
-        '-format'   => 'gif',
-        -data       => $map->base64_gif,
+        '-format'   => 'png',
+        -data       => $map->base64_png,
         );
     my $y_offset    = $band->y_offset;
     my @tags        = $band->tags;

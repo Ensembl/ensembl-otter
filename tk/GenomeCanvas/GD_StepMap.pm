@@ -78,7 +78,7 @@ sub values {
     return @{$self->{'_values'}};
 }
 
-sub gif {
+sub png {
     my( $self ) = @_;
     
     # Make a graduated color scale
@@ -86,7 +86,7 @@ sub gif {
     my $fader = GenomeCanvas::FadeMap->new;
     $fader->fade_color($color);
     
-    # Make a GIF image object
+    # Make a PNG image object
     my ($x,$y) = $self->dimensions;
     confess "Missing dimensions (x='$x', y='$y')"
         unless $x and $y;
@@ -123,16 +123,16 @@ sub gif {
         $img->filledRectangle($i,0,$i,$y_max, $color_i);
     }
     
-    return $img->gif;
+    return $img->png;
 }
 
 # To pass to the Canvas' "-data" parameter, the
-# gif image has to be base64 encoded.
+# png image has to be base64 encoded.
 
-sub base64_gif {
+sub base64_png {
     my( $self ) = @_;
     
-    return encode_base64($self->gif);
+    return encode_base64($self->png);
 }
 
 1;

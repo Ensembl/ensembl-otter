@@ -164,11 +164,11 @@ sub draw_density_segment {
     }
     $stepmap->values(@values);
 
-    # Add the gif to the image
+    # Add the png to the image
     my $x = $x_offset / $rpp;
     my $image = $canvas->Photo(
-        '-format'   => 'gif',
-        -data       => $stepmap->base64_gif,
+        '-format'   => 'png',
+        -data       => $stepmap->base64_png,
         );
     $canvas->createImage(
         $x, $y->[0] + 0.5,    # Off-by-1 error when placing images?

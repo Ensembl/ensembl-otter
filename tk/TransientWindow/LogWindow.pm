@@ -140,13 +140,9 @@ sub get_log_contents{
         }else{
             @log_strings = (qq`Logging is turned off.\n`,
                             qq`To see the log start otterlace as:\n`,
-                            qq`$0 -log /path/to/logfile`);
+                            qq`$0 -logdir /path/to/logfile`);
         }
-        if(1){
-            local $" = '';
-            $self->{'_log_contents'} = "@log_strings";
-            $self->{'_log_contents'} =~ s/\n\n/\n/g;
-        }
+        $self->{'_log_contents'} = join('', @log_strings);
     }
     return $self->{'_log_contents'};
 }

@@ -441,12 +441,12 @@ sub next_sub_VirtualContig {
 sub merge_sort_Features {
     my $band = shift;
     
-    my @feature = sort {$a->{start} <=> $b->{start} || $a->{end} <=> $b->{end} } @_;
+    my @feature = sort {$a->start <=> $b->start || $a->end <=> $b->end } @_;
     for (my $i = 1; $i < @feature;) {
         my($prev, $this) = @feature[$i - 1, $i];
-        if ($prev->{end} >= $this->{start}) {
-            my $new_this_start = $prev->{end} + 1;
-            if ($new_this_start > $this->{end}) {
+        if ($prev->end >= $this->start) {
+            my $new_this_start = $prev->end + 1;
+            if ($new_this_start > $this->end) {
                 # $prev engulfs $this
                 #warn "Removing engulfed feature:\n  ",
                 #    $this->gff_string, "\n",
@@ -456,7 +456,7 @@ sub merge_sort_Features {
                 next;   # Don't increment $i
             } else {
                 # $prev only overlaps part of $this
-                $this->{start} = $new_this_start;
+                $this->start($new_this_start);
             }
         }
         $i++;
