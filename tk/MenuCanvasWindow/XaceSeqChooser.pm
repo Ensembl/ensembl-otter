@@ -210,6 +210,15 @@ sub populate_menus {
     $top->bind('<Control-r>', $resync_command);
     $top->bind('<Control-R>', $resync_command);
     
+    # Respawn
+    $file->add('command',
+        -label          => 'Restart',
+        -hidemargin     => 1,
+        -command        => sub { $self->command_line_restart },
+        #-accelerator    => 'Ctrl+R',
+        #-underline      => 0,
+        );
+    
     $file->add('separator');
     
     # Quit
@@ -354,6 +363,24 @@ sub bind_events {
     $canvas->Tk::bind('<Return>',   sub{ $self->edit_double_clicked });    
     $canvas->Tk::bind('<KP_Enter>', sub{ $self->edit_double_clicked });    
     
+}
+
+sub command_line_restart {
+    my( $self ) = @_;
+
+    if (my @exec = @main::command_line) {
+        if (my $pid = fork) {
+            $self->canvas->toplevel->destroy;
+        }
+        elsif (defined $pid) {
+            exec(@exec);
+        }
+        else {
+            $self->message("Error: Can't fork");
+        }
+    } else {
+        $self->message("Can't see command_line in main package");
+    }
 }
 
 sub edit_double_clicked {
