@@ -624,7 +624,7 @@ sub bind_events {
     
     # Object won't get DESTROY'd without:
     $canvas->toplevel->bind('<Destroy>', sub{
-        warn "Dealing with <Destroy> call";
+        #warn "Dealing with <Destroy> call";
         $self = undef;
         });
 }
