@@ -125,7 +125,7 @@ sub sequence_set_access_list {
         $sth->execute;
         
         while (my ($set_name, $access, $author) = $sth->fetchrow) {
-            $al->{$set_name}{$author} = $access eq 'RW' ? 1 : 0;
+            $al->{$author}{$set_name} = $access eq 'RW' ? 1 : 0;
         }
     }
     
@@ -156,13 +156,13 @@ sub get_all_SequenceSets {
         my $ds_name = $self->name;
         while (my ($name, $desc, $priority) = $sth->fetchrow) {
             my( $write_flag );
-            if (%$ssal) {
-                $write_flag = $ssal->{$name}{$this_author};
+            if (%$ssal && $ssal->{$this_author}) {
+                $write_flag = $ssal->{$this_author}{$name};
                 # If an author doesn't have an entry in the sequence_set_access
                 # table for this set, then it is invisible to them.
                 next unless defined $write_flag;
             } else {
-                # No entries in sequence_set_access table - everyone
+                # No entries for person in sequence_set_access table - person
                 # can write and see everything.
                 $write_flag = 1;
             }
