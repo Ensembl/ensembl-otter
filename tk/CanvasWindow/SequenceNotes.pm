@@ -191,18 +191,21 @@ sub initialise {
     my $write = $ss->write_access;
 
     my $top = $self->canvas->toplevel;
-    my $close_window = sub{ $top->withdraw };
-    $top->protocol('WM_DELETE_WINDOW', $close_window);
-    $top->bind('<Control-w>', $close_window);
-    $top->bind('<Control-W>', $close_window);
-   
+    $self->close_window($top);
+    ##my $close_window = sub{ $top->withdraw };
+##    $top->protocol('WM_DELETE_WINDOW', $close_window);
+##    $top->bind('<Control-w>', $close_window);
+##    $top->bind('<Control-W>', $close_window);
+##   
     my $canvas = $self->canvas;
-    $canvas->configure(-selectbackground => 'gold');
-    $canvas->CanvasBind('<Button-1>', sub {
-        return if $self->delete_message;
-        $self->deselect_all_selected_not_current();
-        $self->toggle_current;
-        });
+    
+    $self->item_selection($canvas);
+    ##$canvas->configure(-selectbackground => 'gold');
+##    $canvas->CanvasBind('<Button-1>', sub {
+##        return if $self->delete_message;
+##        $self->deselect_all_selected_not_current();
+##        $self->toggle_current;
+##        });
     $canvas->CanvasBind('<Shift-Button-1>', sub {
         return if $self->delete_message;
         $self->extend_selection;
@@ -330,13 +333,36 @@ sub initialise {
         
         $canvas->Tk::bind('<Double-Button-1>',  sub{ $self->popup_ana_seq_history });
         
-        $self->make_button($button_frame2, 'Close', $close_window, 0);
+        $self->make_button($button_frame2, 'Close', sub{ $top->withdraw } , 0);
         
         $top->bind('<Destroy>', sub{ $self = undef });
     }
     
     return $self;
 }
+
+sub close_window{
+    my ($self , $top)  = @_ ;
+    
+    my $close_window = sub{ $top->withdraw };
+    $top->protocol('WM_DELETE_WINDOW', $close_window);
+    $top->bind('<Control-w>', $close_window);
+    $top->bind('<Control-W>', $close_window);
+}
+
+
+sub item_selection{
+    my ($self , $canvas) = @_ ;
+    
+    $canvas->configure(-selectbackground => 'gold');
+    $canvas->CanvasBind('<Button-1>', sub {
+        return if $self->delete_message;
+        $self->deselect_all_selected_not_current();
+        $self->toggle_current;
+        });
+}
+
+
 
 sub make_matcher {
     my( $self, $str ) = @_;
@@ -585,10 +611,13 @@ sub draw {
 
         unless ($i == 0) {
             my $last = $cs_list->[$i - 1];
-            my $gap = $cs->chr_start - $last->chr_end - 1;
+            
+            my $gap = 0; # default for non SequenceNotes methods inheriting this method
+            if ($cs->can('chr_start')){
+                $gap = $cs->chr_start - $last->chr_end - 1;
+            }            
             if ($gap > 0) {
-                $gap_pos->{$row} = 1;
-                
+                $gap_pos->{$row} = 1;              
                 # Put spaces between thousands in gap length
                 my $gap_size = reverse $gap;
                 $gap_size =~ s/(\d{3})(?=\d)/$1 /g;
@@ -740,11 +769,23 @@ sub selected_CloneSequence_indices {
     }
 }
 
+sub get_current_CloneSequence_index {
+    my $self = shift @_ ;
+    my $canvas = $self->canvas;
+    my $obj = $canvas->find('withtag', 'current') or return;
+     
+    my ($i) = map /^cs=(\d+)/, $canvas->gettags($obj);  
+#    warn "\n\n$i\n\n";
+    return $i;
+
+}
+
 sub get_current_row_tag {
     my( $self ) = @_;
     
     my $canvas = $self->canvas;
     my $obj = $canvas->find('withtag', 'current') or return;
+
     my( $row_tag );
     foreach my $tag ($canvas->gettags($obj)) {
         if ($tag =~ /^row=/) {
@@ -778,13 +819,15 @@ sub draw_row_backgrounds {
     
     my $canvas = $self->canvas;
     my ($x1, $x2) = ($canvas->bbox('all'))[0,2];
+    my  ($scroll_x2, $scroll_y)  = $self->initial_canvas_size;
+    $x2 = $scroll_x2 if $scroll_x2 > $x2;  
     $x1--; $x2++;
     my $cs_i = 0;
     for (my $i = 0; $i < $row_count; $i++) {
         # Don't draw a rectangle behind gaps
         next if $gap_pos->{$i};
         
-         my $row_tag = "row=$i";
+        my $row_tag = "row=$i";
         my ($y1, $y2) = ($canvas->bbox($row_tag))[1,3];
         $y1--; $y2++;
         my $rec = $canvas->createRectangle(
@@ -798,8 +841,11 @@ sub draw_row_backgrounds {
     }
 }
 
+my $count ;
 sub layout_columns_and_rows {
     my( $self, $max_col, $max_row ) = @_;
+
+    if (defined $count)  { ($count ++ )} else { $count  = 0};
     
     my $canvas = $self->canvas;
     $canvas->delete('clone_seq_rectangle');
@@ -821,7 +867,9 @@ sub layout_columns_and_rows {
     my $y_pad = int $size * 0.5;
     for (my $r = 0; $r < $max_row; $r++) {
         my $row_tag = "row=$r";
+        
         my ($y1, $y2) = ($canvas->bbox($row_tag))[1,3];
+        
         my $y_shift = $y - $y1;
         $canvas->move($row_tag, 0, $y_shift);
         $y = $y2 + $y_shift + $y_pad;
@@ -858,7 +906,7 @@ sub save_sequence_notes {
 
 sub DESTROY {
     my( $self ) = @_;
-
+    
     my ($type) = ref($self) =~ /([^:]+)$/;
     my $name = $self->name;
     warn "Destroying $type $name\n";
@@ -866,24 +914,50 @@ sub DESTROY {
 
 sub popup_ana_seq_history{
     my $self = shift @_ ;
-    
-    my $sel = $self->selected_CloneSequence_indices;
-    my $index = $sel->[0] or return;
-    
-    my $canv = $self->canvas;
-    
-    $canv->toplevel->Busy;
-    
-    #my $hp  = CanvasWindow::SequenceNotes::History->new($canv);
-    my $hp  = CanvasWindow::SequenceNotes::History->new($self);
-    
-    $hp->sequence_set($self->SequenceSet);
-    $hp->DataSet($self->SequenceSetChooser->DataSet);
-    
-    $hp->current_index($index);  
-    $hp->display;
-    $canv->toplevel->Unbusy;   
+    my $index = $self->get_current_CloneSequence_index or return; 
+
+    unless ( $self->check_for_history_window($index) ){
+        # window has not been created already - create one
+        my $top = $self->canvas->Toplevel();
+        $top->transient($self->canvas->toplevel);
+        my $cs =  $self->get_CloneSequence_list->[$index];
+        $top->title( "History for " .$cs->contig_name . "  " .$cs->clone_name   );
+        my $hp  = CanvasWindow::SequenceNotes::History->new($top, 550 , 50 );
+        $self->add_history_window($hp , $index) ;
+        $hp->clone_index($index) ;
+        $hp->name($cs->contig_name);
+        $hp->SequenceNotes($self);
+        $hp->initialise;
+        $hp->draw;
+    }  
 }
+
+sub add_history_window{
+    my ($self , $history, $index ) = @_ ;
+    #add a new element to the hash
+    $self->{'_window_hash'}{$index} = $history ; 
+}
+
+# so we dont bring up copies of the same window
+sub check_for_history_window{
+    my ($self , $index) = @_ ;
+    
+    unless  ( $self->{'_window_hash'} ){
+        return ; # because if it doesnt exist then it can't have any windows
+    }
+    
+    my %window_hash = %{ $self->{'_window_hash'} }  ; 
+    if ( exists ($window_hash{$index}) ){
+        my $window = $window_hash{$index};
+        $window->canvas->toplevel->deiconify;
+        $window->canvas->toplevel->raise;
+        return 1;
+    }
+    else{
+        return ;
+    }
+}
+
 
 
 1;
