@@ -52,17 +52,18 @@ sub read_custom_option_file {
     my( $mw ) = @_;
     
     my $xres_file = (getpwuid($<))[7] . "/.CanvasWindow.Xres";
-    my $no_file = 0;
     my $mtime = (stat($xres_file))[9] || 0;
 
     ### Change time int here if you modify the X resources
-    if ($mtime < 1066664026) {
+    if ($mtime < 1066666791) {
         warn "Writing new X resource file '$xres_file'\n";
         rename($xres_file, "$xres_file.bak") if $mtime;
+        
+        
 
         local *XRES;
         if (open XRES, "> $xres_file") {
-            print XRES q{
+            print XRES qq{
 
 CanvasWindow*color: #ffd700
 CanvasWindow*background: #bebebe
@@ -82,18 +83,20 @@ CanvasWindow*Scrollbar.width: 11
 CanvasWindow*Menubutton.padX: 6
 CanvasWindow*Menubutton.padY: 6
 CanvasWindow*Entry.relief: flat
-CanvasWindow*Entry.font: -*-lucidatypewriter-medium-r-*-*-14-*-*-*-*-*-*-*
 CanvasWindow*Entry.foreground: black
 CanvasWindow*Entry.background: white
 
 };
             close XRES;
 
-        } else {
-            $no_file = 1;
         }
     }
     $mw->optionReadfile($xres_file);
+    
+    # lucidatypewriter size 15 on dec_osf looks the same as size 14 on other systems
+    my $font_size = $^O eq 'dec_osf' ? 15 : 14;
+    $mw->optionAdd('CanvasWindow*Entry.font' =>
+        "-*-lucidatypewriter-medium-r-*-*-$font_size-*-*-*-*-*-*-*");
 }
 
 1;
