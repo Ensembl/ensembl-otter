@@ -9,52 +9,58 @@ use Tk ;
 use base 'CanvasWindow';
 
 
-sub new {
-    my( $pkg, $tk, $x, $y ) = @_;
-    
-    unless ($tk) {
-        confess "Error usage: $pkg->new(<Tk::Widget object>)";
-    }
+#sub new {
+#    my( $pkg, $tk, $x, $y ) = @_;
+#    
+#    unless ($tk) {
+#        confess "Error usage: $pkg->new(<Tk::Widget object>)";
+#    }
+#
+    ## Make new object and set-get initial canvas size
+    #my $self = bless {}, $pkg;
+    #($x, $y) = $self->initial_canvas_size($x, $y);
 
-    # Make new object and set-get initial canvas size
-    my $self = bless {}, $pkg;
-    ($x, $y) = $self->initial_canvas_size($x, $y);
-
-    # Create and store the canvas object
-    my $scrolled = $tk->Scrolled('Canvas',
-        -highlightthickness => 1,
-        -scrollbars         => 'e',
-        -width              => $x,
-        -height             => $y,
-        );
-    $scrolled->pack(
-        -side => 'top',
-        -fill => 'both',
-        -expand => 1,
-        );
-        
-    my $canvas = $scrolled->Subwidget('canvas');
-    
-    # Make a new CanvasWindow object, and return
-    $self->canvas($canvas);
-    $self->bind_scroll_commands;
-        
-    my $top = $canvas->toplevel;
-    $self->toplevel($top);
-    
-   
-    return $self;
-}
+#    # Create and store the canvas object
+#    my $scrolled = $tk->Scrolled('Canvas',
+#        -highlightthickness => 1,
+#        -scrollbars         => 'e',
+#        -width              => $x,
+#        -height             => $y,
+#        );
+#    $scrolled->pack(
+#        -side => 'top',
+#        -fill => 'both',
+#        -expand => 1,
+#        );
+#        
+#    my $canvas = $scrolled->Subwidget('canvas');
+#    
+#    # Make a new CanvasWindow object, and return
+#    $self->canvas($canvas);
+#    $self->bind_scroll_commands;
+#        
+#    my $top = $canvas->toplevel;
+#    $self->toplevel($top);
+#    
+#   
+#    return $self;
+#}
 
 
 
+
+#sub toplevel {
+#    my ($self , $tl) = @_ ;
+#    if ($tl){
+#        $self->{'_toplevel'} = $tl ;
+#    }
+#    return $self->{'_toplevel'} ;
+#}
 
 sub toplevel {
-    my ($self , $tl) = @_ ;
-    if ($tl){
-        $self->{'_toplevel'} = $tl ;
-    }
-    return $self->{'_toplevel'} ;
+    my( $self ) = @_;
+    
+    return $self->canvas->toplevel;
 }
 
 sub xace_seq_chooser{
@@ -292,39 +298,47 @@ sub populate_subframe{
     my ($self , $frame_type , @array) = @_ ;
     
     my $frame_subroutine = $frame_type .'_frame' ;
-    my $frame = $self->$frame_subroutine; 
+    my $frame = $self->$frame_subroutine(); 
 
     foreach my $entry_pair (@array){
         my $entry_frame = $frame->Frame->pack(-side => 'top',
                                             -fill => 'none'
                                             );
-        my $coord_1 = ${@$entry_pair->[0]};                                    
+        my $coord_1 = ${$entry_pair->[0]};
+        my $coord_2 = ${$entry_pair->[1]};
         my $coord_1_ref = \$coord_1;
-        my $start_entry = $entry_frame->Entry(        -textvariable => $coord_1_ref ,
-                                    -background => 'white' ,
-                                    -width => 10 ,
-                                    -relief => 'sunken' )->pack(-side => 'left' );
+        my $coord_2_ref = \$coord_2;                           
+
+        my $start_entry = $entry_frame->Entry(
+            -textvariable => $coord_1_ref ,
+            -width => 10 ,
+            -relief => 'sunken' )->pack(-side => 'left' );
         
-        my $coord_2 = ${@$entry_pair->[1]} ;
-        my $coord_2_ref = \$coord_2 ;                           
-        my $end_entry = $entry_frame->Entry(        -textvariable => $coord_2_ref ,
-                                    -background => 'white'  ,
-                                    -width => 10 ,
-                                    -relief => 'sunken' )->pack(-side => 'left' , -after=>$start_entry );                            
+        my $end_entry = $entry_frame->Entry(
+            -textvariable => $coord_2_ref ,
+            -width => 10 ,
+            -relief => 'sunken' )->pack(-side => 'left' );                            
          
-        my $strand;         
-        my $pos_button = $entry_frame->Radiobutton(  -command => sub {$self->update_entry($coord_1_ref , $coord_2_ref , \$strand , $frame_type )} , 
+        my $strand;
+        my $update_cmd = sub {$self->update_entry($coord_1_ref , $coord_2_ref , \$strand , $frame_type )};
+        $start_entry->bind('<Return>',  sub {
+            $self->update_entry($coord_1_ref , $coord_2_ref , \$strand , $frame_type, 'start' )
+            });
+        $end_entry->bind('<Return>',  sub {
+            $self->update_entry($coord_1_ref , $coord_2_ref , \$strand , $frame_type, 'end' )
+            });
+        my $pos_button = $entry_frame->Radiobutton(  -command => $update_cmd, 
                                                 -text => '+' ,
                                                 -variable => \$strand ,
                                                 -value => '+',
                                                 -borderwidth => 2 ,
-                                                -relief => 'groove')->pack(-side=> 'right' ) ;
-        my $neg_button = $entry_frame->Radiobutton(  -command =>  sub {$self->update_entry($coord_1_ref , $coord_2_ref  , \$strand, $frame_type )},
+                                                -relief => 'groove')->pack(-side=> 'left' ) ;
+        my $neg_button = $entry_frame->Radiobutton(  -command => $update_cmd,
                                                 -text => '-' ,
                                                 -variable => \$strand , 
                                                 -value =>'-',
                                                 -borderwidth => 2 ,
-                                                -relief => 'groove')->pack(-side=> 'right' , -before=> $pos_button ) ; # -before - bcause -side is right
+                                                -relief => 'groove')->pack(-side=> 'left' ) ; # -before - bcause -side is right
        
 
 
@@ -333,7 +347,7 @@ sub populate_subframe{
                                                     -relief=> 'flat' ,
                                                     -command => $delete ,
                                                     -borderwidth => 1,
-                                                    )->pack(-side =>'right' , -before => $neg_button);
+                                                    )->pack(-side =>'left');
         
         ## add entry to an array , so values can be retrieved later
         my $subroutine = 'add_'.$frame_type.'_entry_pair' ;
@@ -372,8 +386,8 @@ sub add_entry_widget{
 
 
 ## when a + or - radio button is pressed, this will automatically update the corresponding entry, based on strand
-sub update_entry{
-    my ($self , $start , $end , $strand_ref , $type) = @_;
+sub update_entry {
+    my ($self , $start , $end , $strand_ref , $type, $entry) = @_;
     # Remebmer that $start AND $end are REFERENCES - not values (lots of $$ in this subroutine)
     
     my $length;
@@ -389,6 +403,15 @@ sub update_entry{
         $multiplier = 1 ;
     }else{
         $multiplier = -1 ;
+    }
+    
+    if ($entry) {
+        if ($entry eq 'start') {
+            $$end = '';
+        }
+        elsif ($entry eq 'end') {
+            $$start = '';
+        }
     }
     
     ## we have both coords - check strand orientation is correct. Otherwise we have one coord and can calculate other
