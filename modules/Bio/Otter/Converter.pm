@@ -1502,7 +1502,6 @@ sub ace_to_otter {
         push(@$tile_path, $tile);
     }    
     
-    #return(\@genes, \%frags, $assembly_type, $dna, $chr_name, $chr_start, $chr_end);
     return(\@genes, $tile_path, $assembly_type, $dna, $chr_name, $chr_start, $chr_end);
 }
 

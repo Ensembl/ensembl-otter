@@ -84,13 +84,14 @@ sub get_xml_for_contig_from_Dataset {
     my $chr_name  = $ctg->[0]->chromosome->name;
     my $start     = $ctg->[0]->chr_start;
     my $end       = $ctg->[$#$ctg]->chr_end;
+    my $ss = $dataset->selected_SequenceSet
+        or confess "no selected_SequenceSet attached to DataSet";
     
     printf STDERR "Fetching data from chr %s %s-%s (lock='%s')\n",
         $chr_name, $start, $end, $self->lock;
     
     my $root   = $self->url_root;
-    my $script = 'get_region';
-    my $url = "$root/$script?" .
+    my $url = "$root/get_region?" .
         join('&',
 	     'author='   . uri_escape($self->author),
 	     'email='    . uri_escape($self->email),
@@ -98,7 +99,8 @@ sub get_xml_for_contig_from_Dataset {
 	     'dataset='  . uri_escape($dataset->name),
 	     'chr='      . uri_escape($chr_name),
 	     'chrstart=' . uri_escape($start),
-	     'chrend='   . uri_escape($end)
+	     'chrend='   . uri_escape($end),
+             'type='     . uri_escape($ss->name),
 	     );
     #warn "url <$url>\n";
 
@@ -159,7 +161,7 @@ sub get_all_DataSets {
         my $request = HTTP::Request->new;
         $request->method('GET');
         $request->uri("$root/get_datasets?details=true");
-        warn $request->uri;
+        #warn $request->uri;
 
         my $content = $ua->request($request)->content;
         $self->_check_for_error(\$content);

@@ -146,6 +146,7 @@ sub fetch_otter_ace_for_SequenceSet {
     }
     confess "Can't find DataSet that SequenceSet belongs to"
         unless $ds;
+    $ds->selected_SequenceSet($ss);
     my $ctg_list = $ss->selected_CloneSequences_as_contig_list
         or confess "No CloneSequences selected";
     return $self->ace_from_contig_list($ctg_list, $ds);
@@ -162,6 +163,7 @@ sub fetch_otter_ace {
         my $ss_list = $ds->get_all_SequenceSets;
         foreach my $ss (@$ss_list) {
             if (my $ctg_list = $ss->selected_CloneSequences_as_contig_list) {
+                $ds->selected_SequenceSet($ss);
                 $ace .= $self->ace_from_contig_list($ctg_list, $ds);
                 foreach my $ctg (@$ctg_list) {
                     $selected_count += @$ctg;
@@ -491,9 +493,11 @@ sub write_pipeline_data {
     my( $self, $ss ) = @_;
 
     my $dataset = $self->Client->get_DataSet_by_name($ss->dataset_name);
+    $dataset->selected_SequenceSet($ss);    # Not necessary?
     my $ens_db = Bio::Otter::Lace::PipelineDB::get_DBAdaptor(
         $dataset->get_cached_DBAdaptor
         );
+    $ens_db->assembly_type($ss->name);
     my $factory = $self->make_AceDataFactory($ens_db);
     
     # create file for output and add it to the acedb object
@@ -518,6 +522,18 @@ sub write_pipeline_data {
         my $chr_end = $last_ctg->chr_end;
 
         my $slice = $slice_adaptor->fetch_by_chr_start_end($chr, $chr_start, $chr_end);
+        
+        ### Check we got a slice
+        my $tp = $slice->get_tiling_path;
+        my $type = $slice->assembly_type;
+        warn "assembly type = $type";
+        if (@$tp) {
+            foreach my $tile (@$tp) {
+                print STDERR "contig: ", $tile->component_Seq->name, "\n";
+            }
+        } else {
+            warn "No components in tiling path";
+        }
 
         $factory->ace_data_from_slice($slice);
     }
