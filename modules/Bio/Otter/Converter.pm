@@ -1415,13 +1415,13 @@ sub ace_to_XML {
     
     #my( $genes, $frags, $type, $dna, $chr, $chrstart, $chrend ) = ace_to_otter($fh);
     my( $genes, $tile_path, $type, $dna, $chr, $chrstart, $chrend ) = ace_to_otter($fh);
-    my $xml = "<otter>\n<sequence_set>\n"
+    my $xml = "<otter>\n<sequenceset>\n"
         #. frags_to_XML($frags, $type, $chr, $chrstart, $chrend);
         . path_to_XML($chr, $chrstart, $chrend, $type, $tile_path);
     foreach my $g (@$genes) {
         $xml .= $g->toXMLString;
     }
-    $xml .= "\n</sequence_set>\n</otter>\n";
+    $xml .= "\n</sequenceset>\n</otter>\n";
     return $xml;
 }
 
