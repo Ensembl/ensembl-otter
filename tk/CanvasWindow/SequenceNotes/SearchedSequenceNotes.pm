@@ -9,7 +9,7 @@ package CanvasWindow::SequenceNotes::SearchedSequenceNotes;
 use strict;
 use Carp;
 use base 'CanvasWindow::SequenceNotes';
-use CanvasWindow::SequenceNotes::SearchHistory ;
+use CanvasWindow::SequenceNotes::History;
 use Data::Dumper ;
 
 sub ResultSet {
@@ -282,11 +282,8 @@ sub popup_ana_seq_history{
         if (@$clone_list){
             my $top = $self->canvas->Toplevel();
             $top->transient($self->canvas->toplevel);
-            use CanvasWindow::SequenceNotes::History;
-            #my $hp  = CanvasWindow::SequenceNotes::SearchHistory->new($top, 550 , 50);  
             my $hp  = CanvasWindow::SequenceNotes::History->new($top, 650 , 50);  
             $hp->SequenceSet($ss);
-            #$hp->ResultSet($self->ResultSet);
             $hp->SequenceSetChooser($self->SequenceSetChooser);
             $hp->name($cs->contig_name);
             $hp->clone_index($index) ;
