@@ -61,6 +61,15 @@ sub scale {
     return $self->max_x / $self->width;
 }
 
+sub bin_size {
+    my( $self, $bin_size ) = @_;
+    
+    if ($bin_size) {
+        $self->{'_bin_size'} = $bin_size;
+    }
+    return $self->{'_bin_size'};
+}
+
 sub get_all_Bins {
     my ($self) = @_;
 
@@ -83,23 +92,54 @@ sub add_Bin {
 sub new_Bin {
     my ( $self, $class ) = @_;
 
-    $class ||= 'KaryotypeWindow::Bin';
+    $class ||= 'KaryotypeWindow::Graph::Bin';
     my $Bin = $class->new;
     $self->add_Bin($Bin);
     return $Bin;
 }
 
+sub color {
+    my( $self, $color ) = @_;
+    
+    if ($color) {
+        $self->{'_color'} = $color;
+    }
+    return $self->{'_color'} || '#cc3333';
+}
+
+
 sub draw {
     my ( $self, $kw, $x, $y ) = @_;
 
-    warn "args = [$self, $kw, $x, $y]\n";
+    my $scale  = $kw->Mb_per_pixel * 1_000_000;
+    my $canvas = $kw->canvas;
 
-    my @coords = ($x, $y, $x + $self->width, $y + $self->height($kw));
-    $kw->canvas->createRectangle(
-        @coords,
+    my $max_x  = $self->max_x;
+    my $max_y  = $self->max_y;
+    my $color  = $self->color;
+    my $width  = $self->width;
+
+    # Draw axes
+    $canvas->createRectangle(
+        $x,$y, $x + $width, $y + $self->height($kw),
         -fill       => undef,
-        -outline    => 'red',
+        -outline    => 'black',
+        -width      => 0.25,
         );
+
+    # Draw bars in front of axes, so that small bars
+    # aren't hidden my the axes.
+    foreach my $bin ($self->get_all_Bins) {
+        my $y1 = $y + ($bin->start / $scale);
+        my $y2 = $y + ($bin->end   / $scale);
+        my $x2 = $x + ($width * ($bin->value / $max_x));
+        $canvas->createRectangle(
+            $x, $y1, $x2, $y2,
+            -fill       => $color,
+            -outline    => $color,
+            -width      => 0.5,
+            );
+    }
 
     #my $chr = $self->chromosome;
 

@@ -11,7 +11,6 @@ sub new {
     return bless {}, $pkg;
 }
 
-
 sub start {
     my( $self, $start ) = @_;
     

@@ -82,39 +82,68 @@ sub draw {
         $y += $pad;
     }
     
-    $self->_draw_scale( $x, $y, scalar(@all_set), $max );
-
+    $self->draw_legend($x, $y);
 }
 
-sub _draw_scale {
-    my ( $self, $x, $y, $row_count, $max ) = @_;
-
-    my $pad     = $self->pad;
-    my $scale_y = $y - 75;
-    my $scale_x = ( $pad * $max ) + $pad + 75;
-
-    $self->{'_canvas'}->createText(
-        $scale_x - 18, $scale_y, -text => 'Scale: ',
-        -font => [ 'Helvetica', '10', 'bold' ],
-    );
-
-    $self->{'_canvas'}->createText(
-        $scale_x + 17, $scale_y + 10, -text => '50 tRNAs',
-        -font => [ 'Helvetica', '8' ],
-    );
-
-    $self->{'_canvas'}->createLine(
-        $scale_x, $scale_y, $scale_x + 25, $scale_y, -fill => '#cc3333',
-    );
-
-    $self->{'_canvas'}->createLine(
-        $scale_x, $scale_y - 2, $scale_x, $scale_y + 3, -fill => 'black',
-    );
-
-    $self->{'_canvas'}->createLine(
-        $scale_x + 25, $scale_y - 2, $scale_x + 25, $scale_y + 3, -fill => 'black',
-    );
-
+sub draw_legend {
+    my( $self, $x, $y ) = @_;
+    
+    my @graphs = ($self->get_all_Chromosomes)[0]
+        ->get_all_Graphs;
+    my $max_width;
+    foreach my $graph (@graphs) {
+        my $width = $graph->width;
+        $max_width = $width if $width > $max_width;
+    }
+    
+    my $font_size = $self->font_size;
+    my $pad = $self->pad;
+    my $canvas = $self->canvas;
+    my $font = ['Helvetica', $font_size, 'bold'];
+    foreach my $graph (@graphs) {
+        my $height = $graph->bin_size / (1_000_000 * $self->Mb_per_pixel);
+        my $y_off = ($font_size - $height) / 2;
+        my $width  = $graph->width;
+        $canvas->createLine(
+            $x, $y, $x, $y+$font_size,
+            -fill       => 'black',
+            -width      => 0.25,
+            );
+        $canvas->createLine(
+            $x+$width, $y, $x+$width, $y+$font_size,
+            -fill       => 'black',
+            -width      => 0.25,
+            );
+        $canvas->createRectangle(
+            $x, $y+$y_off, $x+$width, $y+$y_off+$height,
+            -fill       => $graph->color,
+            -outline    => $graph->color,
+            -width      => 0.5,
+            );
+        $canvas->createText(
+            $x, $y+(1.5*$font_size),
+            -anchor => 'n',
+            -text   => '0',
+            -font   => $font,
+            );
+        $canvas->createText(
+            $x+$width, $y+(1.5*$font_size),
+            -anchor => 'n',
+            -text   => $graph->max_x,
+            -font   => $font,
+            );
+        $canvas->createText(
+            $x+$max_width+$font_size, $y,
+            -anchor => 'nw',
+            -text   => $graph->label,
+            -font   => $font,
+            -tags   => 'scale_label',
+            );
+        my @bbox = $canvas->bbox('scale_label');
+        
+        # Move pointer to the right for next label
+        $x = $bbox[2] + $pad;
+    }
 }
 
 sub draw_chromsome_set {
@@ -135,11 +164,11 @@ sub draw_chromsome_set {
         $chr->set_initial_and_terminal_bands;
         my $chr_y = $y + $max_chr_height - $chr->height($self);
         $chr->draw( $self, $x, $chr_y );
-        $canvas->createRectangle(
-            $x, $chr_y, $x + $chr->width($self), $chr_y + $chr->height($self),
-            -fill   => undef,
-            -outline    => 'blue',
-            );
+        #$canvas->createRectangle(
+        #    $x, $chr_y, $x + $chr->width($self), $chr_y + $chr->height($self),
+        #    -fill   => undef,
+        #    -outline    => 'blue',
+        #    );
         $x += $chr->width($self) + $pad;
     }
     return $max_chr_height;
@@ -160,8 +189,76 @@ sub pad {
     if ($pad) {
         $self->{'_pad'} = $pad;
     }
-    return $self->{'_pad'} || 4 * $self->font_size;
+    return $self->{'_pad'} || 2 * $self->font_size;
 }
+
+sub process_graph_data_file {
+    my( $self, $file ) = @_;
+    
+    my $test_graph = KaryotypeWindow::Graph->new;
+    
+    local *DATA;
+    open DATA, $file or die "Can't read '$file' : $!";
+    my $param = {};
+    my $data  = {};
+    my $bin_size = 0;
+    while (<DATA>) {
+        next if /^\s*$/;
+        if (/^\s*#/) {
+            while (/(\w+)="([^"]+)"/g){
+                unless ($test_graph->can($1)) {
+                    die "Unknown graph property '$1' in file '$file'\n";
+                }
+                $param->{$1} = $2;
+            }
+            while (/(\w+)=(\S+)/g){
+                next if $param->{$1};
+                unless ($test_graph->can($1)) {
+                    die "Unknown graph property '$1' in file '$file'\n";
+                }
+                $param->{$1} = $2;
+            }
+            next;
+        }
+        my ($chr, $start, $end, $value) = split;
+        my $this_bin_size = $end - $start + 1;
+        if ($bin_size and $this_bin_size != $bin_size) {
+            warn "data point in '$file' with bin_size=$this_bin_size instead of $bin_size";
+        } else {
+            $bin_size = $this_bin_size;
+        }
+        my $chr_data = $data->{$chr} ||= [];
+        push(@$chr_data, [$start, $end, $value]);
+    }
+    close DATA or die "Error reading data from '$file' : $!";
+    
+    foreach my $chr ($self->get_all_Chromosomes) {
+        my $graph = $chr->new_Graph;
+        $graph->bin_size($bin_size);
+        while (my ($method, $value) = each %$param) {
+            $graph->$method($value);
+        }
+        my $chr_name = $chr->name;
+        if (my $data = delete($data->{$chr_name})) {
+            foreach my $d (@$data) {
+                my( $start, $end, $value ) = @$d;
+                next unless $value;     # Don't bother with zeros
+                my $bin = $graph->new_Bin;
+                $bin->start($start);
+                $bin->end($end);
+                $bin->value($value);
+            }
+        } else {
+            warn "No data for chromosome '$chr_name' in '$file'\n";
+        }
+    }
+    
+    if (my @none_such = sort keys %$data) {
+        warn "No such chromosomes:\n", map "  $_\n", @none_such;
+    }
+}
+
+
 
 1;
 

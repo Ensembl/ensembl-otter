@@ -91,8 +91,8 @@ sub width {
     foreach my $graph (@graphs) {
         $graph_width += $pad + $graph->width;
     }
-    warn sprintf"graph_width = %d  chr_width = %d\n",
-        $graph_width, $self->chr_width($kw);
+    #warn sprintf"graph_width = %d  chr_width = %d\n",
+    #    $graph_width, $self->chr_width($kw);
     return $graph_width + $self->chr_width($kw);
 }
 

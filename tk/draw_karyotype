@@ -5,21 +5,20 @@
 use strict;
 use KaryotypeWindow;
 use Hum::EnsCmdLineDB;
-
-my %chr_bin;
-
-#while (<>) {
-#
-    #my ( $chr, $data ) = split;
-    #push @{ $chr_bin{$chr} }, $data;
-
-#}
+use Getopt::Long 'GetOptions';
 
 {
+    my @graph_data;
+    my $chr_per_row = 12;
+    GetOptions(
+        'data=s'    => \@graph_data,
+        'row=i'     => \$chr_per_row,
+        ) or die "Error processing command line";
+
     my $mw = CanvasWindow::MainWindow->new;
     $mw->title('Karyotype');
     my $kw = KaryotypeWindow->new($mw);
-    $kw->chromosomes_per_row(6);
+    $kw->chromosomes_per_row($chr_per_row);
 
     Hum::EnsCmdLineDB::do_getopt();
     my $dba = Hum::EnsCmdLineDB::connect();
@@ -83,17 +82,15 @@ my %chr_bin;
     }
     #$kw->data(%chr_bin);
     
-    foreach my $chr ($kw->get_all_Chromosomes) {
-        $chr->new_Graph;
-        my $new = $chr->new_Graph;
-        $new->width(20);
+    foreach my $file (@graph_data) {
+        $kw->process_graph_data_file($file);
     }
     
     $kw->draw;
 
-    foreach my $stain ( sort keys %stain_count ) {
-        printf "  %8s  %4d\n", $stain, $stain_count{$stain};
-    }
+    #foreach my $stain ( sort keys %stain_count ) {
+    #    printf "  %8s  %4d\n", $stain, $stain_count{$stain};
+    #}
 
     my $ps_dump = sub {
         print STDERR "Printed to:", map( "  $_\n", $kw->print_postscript );
@@ -104,6 +101,7 @@ my %chr_bin;
     $kw->fix_window_min_max_sizes;
     Tk::MainLoop();
 }
+
 
 __END__
 
