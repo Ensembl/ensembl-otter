@@ -14,6 +14,7 @@ use Hum::Analysis::Factory::ExonLocator;
         $start_acc,
         $end_acc,
         );
+    my $liberal = 0;    # If set, doesn't care if it fails to find some exons
 
     my $usage = sub { exec('perldoc', $0) };
     Bio::Otter::Lace::Defaults::do_getopt(
@@ -22,6 +23,7 @@ use Hum::Analysis::Factory::ExonLocator;
         'chr|set=s'     => \$sequence_set,
         'start_acc=s'   => \$start_acc,
         'end_acc=s'     => \$end_acc,
+        'liberal!'      => \$liberal,
         ) or $usage->();
     $usage->() unless $dataset_name and $sequence_set and $start_acc and $end_acc;
     
@@ -52,22 +54,29 @@ use Hum::Analysis::Factory::ExonLocator;
     my $finder = Hum::Analysis::Factory::ExonLocator->new;
     $finder->genomic_Sequence($dest_seq);
 
+    my $ss_accs = {};
+    foreach my $cs (@{$ss->CloneSequence_list}) {
+        $ss_accs->{$cs->accession} = 1;
+    }
+
     foreach my $slice_gene (@$genes) {
+        next if $slice_gene->type eq 'obsolete';
         my $name = $slice_gene->gene_info->name->name;
+        warn "Looking at gene '$name'\n";
         my $stable_id = $slice_gene->stable_id;
         unless ($slice_gene->gene_info->truncated_flag) {
             #print STDERR "Found entire gene '$name' ($stable_id)\n";
             next;
         }
         my $db_gene = $gene_aptr->fetch_by_dbID($slice_gene->dbID);
-        unless (gene_is_off_track($db_gene, $acc_list)) {
+        unless (gene_is_off_track($db_gene, $ss_accs, $acc_list)) {
             #print STDERR "Found truncated gene '$name' ($stable_id)\n";
             next;
         }
         my $v = $slice_gene->version;
         my $db_v = $db_gene->version;
         print STDERR "Found off track gene '$name' ($stable_id v$v dbv$db_v)\n";
-        if (remap_ens_Exons($finder, $db_gene->get_all_Exons, $slice)) {
+        if (remap_ens_Exons($finder, $db_gene->get_all_Exons, $slice, $liberal)) {
             warn "Remapped exons OK\n";
             # otter > XML > otter
             my $temp = Bio::Otter::Lace::TempFile->new;
@@ -108,7 +117,7 @@ sub save_new_gene {
 }
 
 sub gene_is_off_track {
-    my( $gene, $slice_acc_list ) = @_;
+    my( $gene, $set_acc, $slice_acc ) = @_;
     
     foreach my $exon (@{$gene->get_all_Exons}) {
         my $exon_list = $exon->isa('Bio::EnsEMBL::StickyExon')
@@ -116,9 +125,10 @@ sub gene_is_off_track {
             : [$exon];
         foreach my $exon (@$exon_list) {
             my $clone_acc = $exon->contig->clone->embl_id;
-            unless ($slice_acc_list->{$clone_acc}) {
+            if ($set_acc->{$clone_acc} and ! $slice_acc->{$clone_acc}) {
                 # Exon is attached to a clone who's accession is
-                # not in the slice, so gene is really truncated.
+                # in the sequence set for the whole chromosome, but
+                # is not in the slice, so gene is really truncated.
                 return 0;
             }
         }
@@ -203,7 +213,7 @@ sub hum_seq_from_exon {
 }
 
 sub remap_ens_Exons {
-    my( $finder, $exons, $dest_ctg ) = @_;
+    my( $finder, $exons, $dest_ctg, $liberal ) = @_;
 
     # Make a Hum::Sequence object for each exon
     my $exon_seq = [];
@@ -217,7 +227,7 @@ sub remap_ens_Exons {
     # Give Exons new coords
     my $sub_strand = undef;
     my $all_found = 1;
-    for (my $i = 0; $i < @$exons; $i++) {
+    for (my $i = 0; $i < @$exons;) {
         my $exon  = $exons->[$i];
         my $name  = $exon->stable_id;
         my $e_len = $exon->length;
@@ -246,14 +256,26 @@ sub remap_ens_Exons {
             $exon->end($end);
             $exon->strand($strand);
             $exon->contig($dest_ctg);
+            $i++;
         } else {
             printf STDERR "Failed to find %d bp exon '%s'\n",
                 $exon->length,
                 $exon->stable_id;
             $all_found = 0;
+            if ($liberal) {
+                splice(@$exons, $i, 1);
+            } else {
+                $i++;
+            }
         }
     }
-    return $all_found;
+    if ($liberal) {
+        # Only return true if we found any exons 
+        # Could add code to remove transcript from gene
+        return @$exons ? 1 : 0;
+    } else {
+        return $all_found;
+    }
 }
 
 __END__
