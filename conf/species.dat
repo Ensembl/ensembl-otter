@@ -17,6 +17,8 @@ TYPE       GENOSCOPE
 DBNAME     otter_chr22
 #DNA_DBNAME otter_chr22
 TYPE       SANGER
+SPECIES_PREFIX HUM
+STABLE_ID_MIN  22000000
 
 [human_chr20]
 DBNAME     otter_chr20
