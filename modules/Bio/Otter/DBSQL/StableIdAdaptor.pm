@@ -11,7 +11,7 @@ use vars qw(@ISA);
 
 
 sub _fetch_new_by_type {
-  my( $self, $type ) = @_;
+  my( $self, $type, $type_prefix ) = @_;
 
   my $id     = $type . "_id";
   my $poolid = $type . "_pool_id";
@@ -55,33 +55,15 @@ sub _fetch_new_by_type {
     $stableid .= $species_prefix;
   }
 
-  if ($type eq "gene") {
-    $stableid .= "G";
-  } elsif ($type eq "transcript") {
-    $stableid .= "T";
-  } elsif ($type eq "exon") {
-    $stableid .= "E";
-  } elsif ($type eq "translation") {
-    $stableid .= "P";
-  } else {
-    $self->throw("Unknown stable_id type $type\n");
-  }
-
-  my $len = length($num);
-
-  my $pad = 11 - $len;
-
-  my $padstr = '0' x $pad;
-
-  $stableid .= $padstr . $num;
-  
-  $sth = $self->prepare("update $table set ${type}_stable_id = \' $stableid \' where $poolid = $num");
+  $stableid .= $type_prefix . sprintf('%011d', $num);
+    
+  $sth = $self->prepare("update $table set ${type}_stable_id = '$stableid' where $poolid = $num");
   $res = $sth->execute;
 
   $sth->finish;
   $self->throw("Couldn't update $table with new stable id $stableid") unless $res;
 
-  print STDERR "Got new stable id " . $stableid . "\n";
+  print STDERR "Got new stable id '" . $stableid . "'\n";
   return $stableid;
 }
 
@@ -91,18 +73,11 @@ sub _exists_stable_id_by_type {
     my $table  = $type . "_stable_id_pool";
     my $column = $type . "_stable_id";
 
-    my $sql = "select * from $table where $column = '$id'";
+    my $sql = "select count(*) from $table where $column = '$id'";
     my $sth = $self->prepare($sql);
-
-    my $res = $sth->execute;
-
-    my $row = $sth->fetchrow_hashref;
-
-    if ($sth->rows > 0) {
-       return 1;
-    } else {
-       return 0;
-    }
+    $sth->execute;
+    my ($count) = $sth->fetchrow;
+    return $count;
 }
 
 sub store_by_type {
@@ -150,24 +125,24 @@ sub exists_exon_stable_id {
 sub fetch_new_gene_stable_id {
     my ($self) = @_;
 
-    return $self->_fetch_new_by_type('gene');
+    return $self->_fetch_new_by_type('gene', 'G');
 }
 
 sub fetch_new_transcript_stable_id {
     my ($self) = @_;
 
-    return $self->_fetch_new_by_type('transcript');
+    return $self->_fetch_new_by_type('transcript', 'T');
 }
 
 sub fetch_new_exon_stable_id {
     my ($self) = @_;
 
-    return $self->_fetch_new_by_type('exon');
+    return $self->_fetch_new_by_type('exon', 'E');
 }
 sub fetch_new_translation_stable_id {
     my ($self) = @_;
 
-    return $self->_fetch_new_by_type('translation');
+    return $self->_fetch_new_by_type('translation', 'P');
 }
 
 
