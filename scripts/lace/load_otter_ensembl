@@ -100,8 +100,8 @@ my $DEBUG = 0;
         'chromosome=s'  => \$chromosome_name, 
         'set|name=s'    => \$set_name,
 	'delete'        => \$delete,
-        'debug'         => \$DEBUG
-        );
+        'debug'         => \$DEBUG,
+        ) or useage();
     useage() if $help;
     $agp_file           = $ARGV[0]; # takes the remaining argument as the filename to be read
 
