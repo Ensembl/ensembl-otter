@@ -13,7 +13,7 @@
 
 =head1 NAME
  
-EST_DB::DB_Entry::EST
+Bio::Otter::EMBL::Factory
  
 =head2 Constructor:
 
@@ -31,8 +31,8 @@ use Hum::EmblUtils qw( add_source_FT add_Organism);
 
 
 =head2 new
- 
-?? 
+
+my $factory = Bio::Otter::EMBL::Factory->new;
 
 =cut
 	
@@ -41,6 +41,7 @@ sub new {
      
     return bless {}, $pkg;
 }
+
 
 =head2 organism_lines
  
@@ -52,6 +53,7 @@ sub organism_lines {
 
 }
 
+
 =head2 standard_comments
  
 ?? 
@@ -61,6 +63,7 @@ sub organism_lines {
 sub standard_comments {
 
 }
+
 
 =head2 make_embl
  
@@ -81,15 +84,51 @@ sub make_embl {
     my $embl = Hum::EMBL->new();
     
     foreach my $chr_s_e ($self->fetch_chr_start_end_for_accession($otter_db, $acc)) {
+
         print "ACC: $acc ";  
         print "Chr: ", $chr_s_e->[0], " Start: ", $chr_s_e->[1], " End: ", $chr_s_e->[2], "\n";
+
+        #Get the Bio::EnsEMBL::Slice
+        my $slice = $slice_aptr->fetch_by_chr_start_end(@$chr_s_e);
+
+        my $gene_id_list = $gene_aptr->list_current_dbIDs_for_Slice($slice);
+        my $tile_path = $self->get_tiling_path_for_Slice($slice);
+
+
      }
         
-    
     return $embl;
 }
 
 
+=head2 get_tiling_path_for_Slice
+
+Wraps $slice->get_tiling_path, additionally checking there
+is only 1 in component in the retrieved tiling_path
+
+=cut
+
+sub get_tiling_path_for_Slice {
+    my ( $self, $slice ) = @_;
+    
+    my $tile_path = $slice->get_tiling_path;
+    
+    if (@$tile_path != 1) {
+        my $count = @$tile_path;
+        confess "Expected 1 component in tiling_path but have $count\n";
+    }
+    
+    return $tile_path;
+}
+
+=head2 get_DBAdaptors
+
+    my ($otter_db, $slice_aptr, $gene_aptr) = get_DBAdaptors();
+
+Providing $self->Dataset has been set, retrieves the cached DBAdaptor
+from the Dataset, together with Slice and Gene adaptors.
+
+=cut
 
 sub get_DBAdaptors {
     my ( $self ) = @_;
@@ -115,6 +154,8 @@ sub get_DBAdaptors {
 
 =head2 Dataset
  
+Get/set method for the 'Bio::Otter::Lace::Dataset' object
+used to access the Otter database.
 
 =cut
 
@@ -133,8 +174,10 @@ sub Dataset {
 
 =head2 fetch_chr_start_end_for_accession
 
+When passed an Otter DBAdaptor and a Clone accession,
 Returns an array of arrays of [chr, start, end]
-Such as [1, 561232, 672780]
+
+eg. Such as [1, 561232, 672780]
 
 =cut
 
