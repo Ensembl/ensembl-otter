@@ -749,6 +749,44 @@ sub otter_to_ace {
     } 
 
     # Add Sequence objects for Transcripts
+    $str .= ace_transcript_seq_objs_from_genes($genes, $slice, \%authors);
+
+    $str .= "\n";
+
+    # Locus objects for genes
+    $str .= ace_locus_objs_from_genes($genes, \%authors);
+
+    # Authors
+    $str .= ace_people_from_authors(\%authors);
+
+    if ($seq) {
+        # Finally the dna
+        $str .= "\nDNA \"" . $slice->display_id . "\"\n";
+        while ($seq =~ /(.{1,72})/g) {
+            $str .= $1 . "\n";
+        }
+    }
+    return $str;
+}
+
+sub ace_people_from_authors{
+    my ($authors) = @_;
+    my $str = '';
+    return $str unless ref($authors) eq 'HASH';
+    foreach my $author (values %$authors) {
+        my $name  = $author->name;
+        my $email = $author->email;
+        $str     .= qq{\nPerson : "$name"\nEmail "$email"\n};
+    }
+    return $str;
+}
+
+sub ace_transcript_seq_objs_from_genes{
+
+    my ($genes, $slice, $authors, $with_delete) = @_;
+    my $str = '';
+
+    # Add Sequence objects for Transcripts
     foreach my $gene (@$genes) {
         my $gene_name;
         my $info = $gene->gene_info;
@@ -760,6 +798,8 @@ sub otter_to_ace {
         foreach my $tran (@{ $gene->get_all_Transcripts }) {
             my $tran_name = $tran->transcript_info->name || $tran->stable_id;
 
+            $str .= qq`\n//THIS IS THE DELETE STATMENT  \n-D Sequence : "$tran_name"\n` if $with_delete;
+
             $str .= "Sequence : \"" . $tran_name . "\"\n";
             $str .= "Transcript_id \"" . $tran->stable_id . "\"\n";
             $str .= "Source \"" . $slice->display_id . "\"\n";
@@ -767,7 +807,7 @@ sub otter_to_ace {
             if (my $author = $tran->transcript_info->author) {
                 my $name  = $author->name;
                 # author has a unique key in the database
-                $authors{$author->email} ||= $author;
+                $authors->{$author->email} ||= $author;
                 $str .= qq{Transcript_author "$name"\n};
             }
 
@@ -862,8 +902,13 @@ sub otter_to_ace {
         }
         $str .= "\n";
     }
+    return $str;
+}
 
-    $str .= "\n";
+sub ace_locus_objs_from_genes{
+    my($genes, $authors, $with_delete) = @_;
+    my $str = '';
+#    my %authors = %$authors;
 
     # Locus objects for genes
     foreach my $gene (@$genes) {
@@ -874,6 +919,8 @@ sub otter_to_ace {
         } else {
             $gene_name = $gene->stable_id;
         }
+        
+        $str .= qq`\n//THIS IS THE DELETE STATMENT  \n-D Locus : "$gene_name"\n` if $with_delete;
 
         $str .= "Locus : \"" . $gene_name . "\"\n";
         foreach my $synonym ($info->synonym) {
@@ -886,7 +933,7 @@ sub otter_to_ace {
         if (my $author = $info->author) {
             my $name  = $author->name;
             # email has a unique key in the database
-            $authors{$author->email} ||= $author;
+            $authors->{$author->email} ||= $author;
             $str .= qq{Locus_author "$name"\n};
         }
         
@@ -913,20 +960,6 @@ sub otter_to_ace {
         }
         
         $str .= "\n";
-    }
-
-    foreach my $author (values %authors) {
-        my $name = $author->name;
-        my $email = $author->email;
-        $str .= qq{\nPerson : "$name"\nEmail "$email"\n};
-    }
-
-    if ($seq) {
-        # Finally the dna
-        $str .= "\nDNA \"" . $slice->display_id . "\"\n";
-        while ($seq =~ /(.{1,72})/g) {
-            $str .= $1 . "\n";
-        }
     }
     return $str;
 }
@@ -1780,7 +1813,6 @@ sub path_to_XML {
   }
 
   return $xmlstr;
-
 }
 
 sub clone_to_XML {
