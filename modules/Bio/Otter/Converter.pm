@@ -793,7 +793,8 @@ sub ace_to_otter {
           }
           $frags{$assname}{start} = $assstart;
           $frags{$assname}{end}   = $assend;
-          $frags{$assname}{offset};  # SHOULD BE SET
+          $frags{$assname}{offset} = 1;  # SHOULD BE SET
+
         } elsif (/^Genomic_canonical/) {
           if ($currname =~ /(\S+).(\d+)-(\d+)/) {
              $chr      = $1;

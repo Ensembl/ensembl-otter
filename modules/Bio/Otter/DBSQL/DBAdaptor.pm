@@ -50,6 +50,12 @@ sub rollback {
 }
 
 
+sub get_AnnotatedCloneAdaptor {
+  my $self = shift;
+
+  return
+    $self->_get_adaptor("Bio::Otter::DBSQL::AnnotatedCloneAdaptor");
+} 
 sub get_AnnotatedGeneAdaptor {
   my $self = shift;
 
@@ -140,6 +146,11 @@ sub get_KeywordAdaptor {
     return $self->_get_adaptor("Bio::Otter::DBSQL::KeywordAdaptor");
 }
 
+sub get_CurrentCloneInfoAdaptor {
+    my $self = shift;
+
+    return $self->_get_adaptor("Bio::Otter::DBSQL::CurrentCloneInfoAdaptor");
+}
 sub get_CurrentGeneInfoAdaptor {
     my $self = shift;
 

@@ -7,6 +7,7 @@ use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 use Bio::Otter::AnnotatedClone;
 
 use Bio::EnsEMBL::DBSQL::CloneAdaptor;
+use Bio::Otter::DBSQL::CurrentCloneInfoAdaptor;
 
 use vars qw(@ISA);
 
@@ -110,7 +111,7 @@ sub annotate_clone {
    my $clone_info_adaptor         = $self->db->get_CloneInfoAdaptor();
    my $current_clone_info_adaptor = $self->db->get_CurrentCloneInfoAdaptor();
 
-   my $infoid = $current_clone_info_adaptor->fetch_by_clone_accession_version($clone->name,$clone->embl_version);
+   my $infoid = $current_clone_info_adaptor->fetch_by_accession_version($clone->id,$clone->embl_version);
 
    my $info = $clone_info_adaptor->fetch_by_dbID($infoid);
 
@@ -152,7 +153,7 @@ sub fetch_by_Slice {
   my @clones;
  
   foreach my $cid (@cids) {
-     my $contig = $db->get_RawContigAdaptor->fetch_by_dbID($cid);
+     my $contig = $self->db->get_RawContigAdaptor->fetch_by_dbID($cid);
 
      my $clone  = $contig->clone;
 
