@@ -160,7 +160,7 @@ foreach my $geneid (keys %genes) {
     #$gene->type($values{'Type'});
     $gene->type($type_conv_hash->{$geneid2});
     if (defined($values{'Locus'}) && $values{'Locus'} ne $geneid) {
-      print "update gene_name set name='" . $values{'Locus'} . "' where name='" . $geneid . "';\n";
+      #print "update gene_name set name='" . $values{'Locus'} . "' where name='" . $geneid . "';\n";
       $geneinfo->name(new Bio::Otter::GeneName(-name => $values{'locus'}));
     } else {
       $geneinfo->name(new Bio::Otter::GeneName(-name => $geneid));
@@ -328,7 +328,10 @@ foreach my $geneid (keys %genes) {
         
               # Is this right?
               
-              $exon->end_phase(($exon->length + $exon->phase) % 3);
+              #$exon->end_phase(($exon->length + $exon->phase) % 3);
+              #Changed from exon->length
+              $exon->end_phase(
+                (($exon->length - $translation->start + 1) + $exon->phase) % 3);
 
               $phase       = $exon->end_phase;
               $found_start = 1;
@@ -351,7 +354,7 @@ foreach my $geneid (keys %genes) {
       }
     }
 
-  #  print $gene->toXMLString . "\n";
+    print $gene->toXMLString . "\n";
   }
 }
 
