@@ -46,7 +46,6 @@ sub _fetch_new_by_type {
           }
         }
 
-	print STDERR "New num for $type is $num\n";
 
 	my $stableid = $prefix;
 
