@@ -14,6 +14,8 @@ my $dbname = 'otter_merged_chrs_with_anal';
 my @chromosomes;
 my $path = 'VEGA';
 my $do_store = 0;
+my $gene_type;
+my $start_gid;
 
 $| = 1;
 
@@ -25,6 +27,8 @@ $| = 1;
   'path:s'        => \$path,
   'port:n'        => \$port,
   'chromosomes:s' => \@chromosomes,
+  'gene_type:s'   => \$gene_type,
+  'start_gid:s'   => \$start_gid,
   'store'         => \$do_store,
 );
 
@@ -71,7 +75,7 @@ if (scalar(@chromosomes)) {
 
 
 
-
+my $first=0;
 foreach my $chr (reverse sort bychrnum keys %$chrhash) {
   print STDERR "Chr $chr from 1 to " . $chrhash->{$chr} . "\n";
   my $chrstart = 1;
@@ -89,6 +93,21 @@ foreach my $chr (reverse sort bychrnum keys %$chrhash) {
       $gene_name = $gene->gene_info->name->name;
     } else {
       $gene_name = $gene->stable_id;
+    }
+    if($gene_type){
+      if($gene_type ne $gene->type){
+	print "Gene $gene_name skipped - not of type $gene_type\n";
+	next;
+      }
+    }
+    if($start_gid && !$first){
+      my $gid=$gene->dbID;
+      if($gid==$start_gid){
+	$first=1;
+	print "Found $gid\n";
+      }
+      print "Skipping $gene_name $gid - waiting for start\n";
+      next;
     }
 
     my $dbentry=Bio::EnsEMBL::DBEntry->new(-primary_id=>$gene->stable_id,

@@ -11,13 +11,10 @@ my $pass   = 'ensembl';
 my $port   = 3306;
 my $dbname = 'otter_merged_chrs_with_anal';
 
-my @chromosomes;
 my $path = 'VEGA';
 my $do_store = 0;
 my $nomeid_file = undef;
 my $otterid_file = undef;
-
-
 
 $| = 1;
 
@@ -28,15 +25,10 @@ $| = 1;
   'pass:s'        => \$pass,
   'path:s'        => \$path,
   'port:n'        => \$port,
-  'chromosomes:s' => \@chromosomes,
   'nomeidfile:s'  => \$nomeid_file,
   'otteridfile:s' => \$otterid_file,
   'store'         => \$do_store,
 );
-
-if (scalar(@chromosomes)) {
-  @chromosomes = split (/,/, join (',', @chromosomes));
-}
 
 my $db = new Bio::Otter::DBSQL::DBAdaptor(
   -host   => $host,
@@ -50,8 +42,6 @@ $db->assembly_type($path);
 my $sa  = $db->get_SliceAdaptor();
 my $aga = $db->get_GeneAdaptor();
 my $adx = $db->get_DBEntryAdaptor();
-
-
 
 open FPNOM, "<$nomeid_file" or die "Couldn't open file $nomeid_file\n";
 my $line = <FPNOM>;
@@ -80,78 +70,80 @@ while (<FPNOM>) {
 my %convhash;
 $convhash{MIM} = "MIM";
 $convhash{"Ref Seq"} = "RefSeq";
-$convhash{"Locus Link"},"LocusLink";
-$convhash{"SWISSPROT"},"SWISSPROT";
+$convhash{"Locus Link"} = "LocusLink";
+$convhash{"SWISSPROT"} = "SWISSPROT";
 
-
-open IDNAMES, "<$otterid_file" or die "Couldn't open file $nomeid_file\n";
-
+open IDNAMES, "<$otterid_file" or die "Couldn't open file $otterid_file\n";
 
 while (<IDNAMES>) {
-    chomp;
-    my $gene = $aga->fetch_by_stable_id($_);
-
-    my $gene_name = $gene->gene_info->name->name;
-
-    # Human hugo symbols are meant to be upper case apart from orfs.
-    # There's one which isn't (IL27w).
-    my $uc_gene_name;
-    if ( $gene_name =~ /C.*orf[0-9]*/ ) {
-        $uc_gene_name = $gene_name;
+  chomp;
+  my $gene = $aga->fetch_by_stable_id($_);
+  
+  my $gene_name;
+  if ($gene->gene_info->name && $gene->gene_info->name->name) {
+    $gene_name = $gene->gene_info->name->name;
+  } else {
+    die "Failed finding gene name for " .$gene->stable_id . "\n";
+  }
+  
+  # Human hugo symbols are meant to be upper case apart from orfs.
+  # There's one which isn't (IL27w).
+  my $uc_gene_name;
+  if ( $gene_name =~ /C.*orf[0-9]*/ ) {
+    $uc_gene_name = $gene_name;
+  }
+  else {
+    $uc_gene_name = uc $gene_name;
+  }
+  
+  if ( defined( $hugohash{$uc_gene_name} ) ) {
+    print "Found hugo match for $gene_name\n";
+    my $dbentry = Bio::EnsEMBL::DBEntry->new(
+					     -primary_id => $hugohash{$uc_gene_name}->[0],
+					     -display_id => $gene_name,
+					     -version    => 1,
+					     -release    => 1,
+					     -dbname     => "HUGO",
+					     );
+    $dbentry->status('KNOWN');
+    $gene->add_DBEntry($dbentry);
+    $adx->store( $dbentry, $gene->dbID, 'Gene' ) if $do_store;
+    
+    # Display xref id update
+    my $sth = $db->prepare(qq{update gene set 
+                              display_xref_id= ?  
+                              where gene_id= ?});
+    print "update gene set display_xref_id=",$dbentry->dbID," where gene_id=",$gene->dbID,"\n";
+    $sth->execute($dbentry->dbID, $gene->dbID) if $do_store;
+    
+    for ( my $i = 4 ; $i < 13 ; $i++ ) {
+      my $xid = $hugohash{$uc_gene_name}->[$i];
+      if ( exists( $convhash{ $fieldnames[$i] } ) && $xid ne "" ) {
+	my $dbentry = Bio::EnsEMBL::DBEntry->new(
+						 -primary_id=>$xid,
+						 -display_id=>$xid,
+						 -version   =>1,
+						 -release   =>1,
+						 -dbname    =>$convhash{ $fieldnames[$i] },
+						 );
+	if ( $fieldnames[$i] eq "SWISSPROT" ) {
+	  $dbentry->status('XREF');
+	}
+	else {
+	  $dbentry->status('KNOWNXREF');
+	}
+	$gene->add_DBEntry($dbentry);
+	if($do_store){
+	  print "Added $convhash{$fieldnames[$i]} with $xid\n";
+	}else{
+	  print "Would have added $convhash{$fieldnames[$i]} with $xid\n";
+	}
+	$adx->store( $dbentry, $gene->dbID, 'Gene' ) if $do_store;
+      }
     }
-    else {
-        $uc_gene_name = uc $gene_name;
-    }
-
-    die $gene_name;
-
-    if ( defined( $hugohash{$uc_gene_name} ) ) {
-        print "Found hugo match for $gene_name\n";
-        my $dbentry = Bio::EnsEMBL::DBEntry->new(
-            -primary_id => $hugohash{$uc_gene_name}->[0],
-            -display_id => $gene_name,
-            -version    => 1,
-            -release    => 1,
-            -dbname     => "HUGO",
-        );
-        
-        
-        
-        $dbentry->status('KNOWN');
-        $gene->add_DBLink($dbentry);
-        $adx->store( $dbentry, $gene->dbID, 'Gene' ) if $do_store;
-
-        # Display xref id update
-        my $sth = $db->prepare( "update gene set display_xref_id=" . $dbentry->dbID . " where gene_id=" . $gene->dbID );
-        print $sth->{Statement} . "\n";
-        $sth->execute;
-
-        for ( my $i = 4 ; $i < 13 ; $i++ ) {
-            my $xid = $hugohash{$uc_gene_name}->[$i];
-            if ( exists( $convhash{ $fieldnames[$i] } ) && $xid ne "" ) {
-                my $dbentry = Bio::EnsEMBL::DBEntry->new(
-                    -primary_id => $xid,
-                    -display_id => $xid,
-                    -version    => 1,
-                    -release    => 1,
-                    -dbname     => $convhash{ $fieldnames[$i] },
-                );
-                if ( $fieldnames[$i] eq "SWISSPROT" ) {
-                    $dbentry->status('XREF');
-                }
-                else {
-                    $dbentry->status('KNOWNXREF');
-                }
-                $gene->add_DBLink($dbentry);
-
-                #print "Would have added $convhash{$fieldnames[$i]} with $xid\n"
-                $adx->store( $dbentry, $gene->dbID, 'Gene' ) if $do_store;
-            }
-        }
-    }
-    else {
-        print "No hugo match for $gene_name\n";
-    }
+  }else{
+    print "No hugo match for $gene_name\n";
+  }
 }
 
 

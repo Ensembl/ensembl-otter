@@ -33,6 +33,7 @@ my $t_path   = 'NCBI31';
 
 my $filter_gd;
 my $filter_obs;
+my $gene_type;
 
 &GetOptions( 'host:s'    => \$host,
              'user:s'    => \$user,
@@ -57,8 +58,8 @@ my $filter_obs;
              't_path:s'    => \$t_path,
 	     'filter_gd'   => \$filter_gd,
 	     'filter_obs'  => \$filter_obs,
+	     'gene_type:s' => \$gene_type,
             );
-
 
 
 my $sdb = new Bio::Otter::DBSQL::DBAdaptor(-host => $host,
@@ -87,12 +88,15 @@ $tdb->assembly_type($t_path);
 
 my $sgp = $sdb->get_SliceAdaptor;
 my $aga = $sdb->get_GeneAdaptor;
+my $sfa = $sdb->get_SimpleFeatureAdaptor;
 
 my $c_sgp = $cdb->get_SliceAdaptor;
 my $c_aga = $cdb->get_GeneAdaptor;
+my $c_sfa = $cdb->get_SimpleFeatureAdaptor;
 
 my $t_sgp = $tdb->get_SliceAdaptor;
 my $t_aga = $tdb->get_GeneAdaptor;
+my $t_sfa = $tdb->get_SimpleFeatureAdaptor;
 
 
 my $vcontig = $sgp->fetch_by_chr_start_end($chr,$chrstart,$chrend);
@@ -104,12 +108,22 @@ print "Fetched comparison slice\n";
 my $t_vcontig = $t_sgp->fetch_by_chr_start_end($chr,$chrstart,$chrend);
 print "Fetched target vcontig\n";
 
+# get simple features and transfer them
+my $features = $sfa->fetch_all_by_Slice($vcontig);
+foreach my $feature (@$features){
+  $feature->attach_seq($t_vcontig);
+  $t_sfa->store($feature);
+}
+
+exit 0;
+
 my $genes = $aga->fetch_by_Slice($vcontig);
 print "Fetched ".scalar(@$genes)." genes\n";
 
 my %genehash;
 my $ngd=0;
 my $nobs=0;
+my $nskipped=0;
 foreach my $gene (@$genes) {
     my $gsi=$gene->stable_id;
     if($filter_gd){
@@ -120,18 +134,25 @@ foreach my $gene (@$genes) {
 	    next;
 	}
     }
+    my $type=$gene->type;
     if($filter_obs){
-	my $type=$gene->type;
 	if($type eq 'obsolete'){
 	    print "Gene $gsi is type obsolete\n";
 	    $nobs++;
 	    next;
 	}
     }
+    if($gene_type){
+      if($type ne $gene_type){
+	print "Gene $gsi skipped - not of type $gene_type\n";
+	$nskipped++;
+	next;
+      }
+    }
     $genehash{$gsi} = $gene;
 }
 
-print "$ngd GD genes removed, $nobs obsolete genes removed\n";
+print "$ngd GD genes removed, $nobs obsolete genes removed, $nskipped skipped as incorrect type\n";
 
 my $c_genes = $c_aga->fetch_by_Slice($c_vcontig);
 print "Fetched comparison genes\n";
