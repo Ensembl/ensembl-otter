@@ -16,6 +16,15 @@ sub new {
     return bless {}, $pkg;
 }
 
+sub OtterClient {
+    my( $self, $client ) = @_;
+    
+    if ($client) {
+        $self->{'_OtterClient'} = $client;
+    }
+    return $self->{'_OtterClient'};
+}
+
 sub home {
     my( $self, $home ) = @_;
     
@@ -89,6 +98,137 @@ sub list_all_acefiles {
     } else {
         return;
     }
+}
+
+sub write_otter_acefile {
+    my( $self ) = @_;
+
+    my $dir = $self->home;
+    my $otter_ace = "$dir/rawdata/otter.ace";
+    my $fh = gensym();
+    open $fh, "> $otter_ace" or die "Can't write to '$otter_ace'";
+    print $fh $self->fetch_otter_ace;
+    close $fh or confess "Error writing to '$otter_ace' : $!";
+    $self->add_acefile($otter_ace);
+}
+
+sub fetch_otter_ace {
+    my( $self ) = @_;
+
+    my $client = $self->OtterClient or confess "No otter client attached";
+    
+    my $ace = '';
+    my $selected_count = 0;
+    foreach my $ds ($client->get_all_DataSets) {
+        if (my $ctg_list = $ds->selected_CloneSequences_as_contig_list) {
+            foreach my $ctg (@$ctg_list) {
+                $selected_count += @$ctg;
+                my $xml = Bio::Otter::Lace::TempFile->new;
+                $xml->name('lace.xml');
+                my $write = $xml->write_file_handle;
+                print $write $client->get_xml_for_contig_from_Dataset($ctg, $ds);
+                my ($genes, $slice, $sequence, $tiles) =
+                    Bio::Otter::Converter::XML_to_otter($xml->read_file_handle);
+                my $slice_name = $slice->display_id;
+                
+                # We need to record which dataset each slice came
+                # from so that we can save it back.
+                $self->save_slice_name_dataset($slice_name, $ds);
+                $ace .= Bio::Otter::Converter::otter_to_ace($slice, $genes, $tiles, $sequence);
+                $ace .= $client->sMap_assembly_info_from_contig($ctg, $slice_name);
+            }
+        }
+    }
+    
+    if ($selected_count) {
+        return $ace;
+    } else {
+        return;
+    }
+}
+
+sub sMap_assembly_info_from_contig {
+    my( $self, $ctg, $slice_name ) = @_;
+    
+    my $ace = qq{\nSequence : "$slice_name"\n};
+    my $offset = $ctg->[0]->chr_start - 1;
+    foreach my $cs (@$ctg) {
+        my $acc             = $cs->accession;
+        my $sv              = $cs->sv;
+        my $chr_start       = $cs->chr_start  - $offset;
+        my $chr_end         = $cs->chr_end    - $offset;
+        my $contig_start    = $cs->contig_start;
+        my $contig_end      = $cs->contig_end;
+        my $strand          = $cs->contig_strand;
+
+        my $name = "$acc.$sv";
+    
+        # Clone in reverse orientaton in AGP is indicated
+        # to acedb by chr_start > chr_end
+        if ($strand == 1) {
+            $ace .= qq{AGP_Fragment "$name" $chr_start $chr_end Align $chr_start $contig_start\n};
+        }
+        elsif ($strand == -1) {
+            $ace .= qq{AGP_Fragment "$name" $chr_end $chr_start Align $chr_start $contig_end\n};
+        } else {
+            confess "Unrecognized strand '$strand'";
+        }
+        ## The length of the fragment is needed where the same sequence ($name)
+        ## appears twice in the assembly.  If this happens and length is not
+        ## filled in, then acedb gets confused!
+        #my $len = $contig_end - $contig_start + 1;
+    }
+    return $ace;
+}
+
+sub save_slice_name_dataset {
+    my( $self, $slice_name, $dataset ) = @_;
+    
+    $self->{'_slice_name_dataset'}{$slice_name} = $dataset;
+}
+
+sub slice_dataset_hash {
+    my $self = shift;
+    
+    confess "slice_dataset_hash method is read-only" if @_;
+    
+    my $h = $self->{'_slice_name_dataset'} ||= {};
+    return $h;
+}
+
+sub save_all_slices {
+    my( $self ) = @_;
+    
+    # Make sure we don't have a stale database handle
+    $self->drop_aceperl_db_handle;
+
+    my $sd_h = $self->slice_dataset_hash;
+    while (my ($name, $ds) = each %$sd_h) {
+        $self->save_otter_slice($name, $ds);
+    }
+}
+
+sub save_otter_slice {
+    my( $self, $name, $dataset ) = @_;
+    
+    confess "Missing slice name argument"   unless $name;
+    confess "Missing DatsSet argument"      unless $dataset;
+
+    my $ace    = $self->aceperl_db_handle;
+    my $client = $self->OtterClient or confess "No OtterClient attached";
+    
+    $ace->find(Genome_Sequence => $name);
+    my $ace_txt = $ace->raw_query('show -a');
+    $ace->raw_query('Follow SubSequence');
+    $ace_txt .= $ace->raw_query('show -a');
+    $ace->raw_query('Follow Locus');
+    $ace_txt .= $ace->raw_query('show -a');
+    
+    # Cleanup text
+    $ace_txt =~ s/\0//g;            # Remove nulls
+    $ace_txt =~ s{^\s*//.+}{\n}mg;  # Strip comments
+    
+    return $client->save_otter_ace($ace_txt, $dataset);
 }
 
 sub aceperl_db_handle {

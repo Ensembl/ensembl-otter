@@ -9,6 +9,7 @@ use LWP;
 use Bio::Otter::Lace::DataSet;
 use Bio::Otter::Converter;
 use Bio::Otter::Lace::TempFile;
+use URI::Escape qw{ uri_escape };
 
 sub new {
     my( $pkg ) = @_;
@@ -68,87 +69,12 @@ sub lock {
     return $self->write_access ? 'true' : 'false';
 }
 
-sub get_otter_ace {
+sub new_AceDatabase {
     my( $self ) = @_;
     
-    my $ace = '';
-    foreach my $ds ($self->get_all_DataSets) {
-        if (my $ctg_list = $ds->selected_CloneSequences_as_contig_list) {
-            foreach my $ctg (@$ctg_list) {
-                my $xml = Bio::Otter::Lace::TempFile->new;
-                $xml->name('lace.xml');
-                my $write = $xml->write_file_handle;
-                print $write $self->get_xml_for_contig_from_Dataset($ctg, $ds);
-                my ($genes, $slice, $sequence, $tiles) =
-                    Bio::Otter::Converter::XML_to_otter($xml->read_file_handle);
-                $self->add_slice_name($slice->display_id);
-                $ace .= Bio::Otter::Converter::otter_to_ace($slice, $genes, $tiles, $sequence);
-            }
-        }
-    }
-    return $ace;
-}
-
-sub add_slice_name {
-    my( $self, $ace ) = @_;
-    
-    my $af = $self->{'_slice_name_list'} ||= [];
-    push(@$af, $ace);
-}
-
-sub list_all_slice_names {
-    my( $self ) = @_;
-    
-    if (my $af = $self->{'_slice_name_list'}) {
-        return @$af;
-    } else {
-        return;
-    }
-}
-
-sub save_all_slices {
-    my( $self, $adb ) = @_;
-    
-    confess "Missing AceDatabase argument" unless $adb;
-    
-    # Make sure we don't have a stale database handle
-    $adb->drop_aceperl_db_handle;
-    my $ace = $adb->aceperl_db_handle;
-    foreach my $name ($self->list_all_slice_names) {
-        $self->save_otter_AcePerl($ace, $name);
-    }
-}
-
-sub save_otter_AcePerl {
-    my( $self, $ace, $name ) = @_;
-    
-    confess "Missing name argument" unless $name;
-    
-    $ace->find(Genome_Sequence => $name);
-    my $ace_txt = $ace->raw_query('show -a');
-    $ace->raw_query('Follow SubSequence');
-    $ace_txt .= $ace->raw_query('show -a');
-    $ace->raw_query('Follow Locus');
-    $ace_txt .= $ace->raw_query('show -a');
-    
-    # Cleanup text
-    $ace_txt =~ s/\0//g;            # Remove nulls
-    $ace_txt =~ s{^\s*//.+}{\n}mg;  # Strip comments
-    
-    return $self->save_otter_ace($ace_txt);
-}
-
-sub save_otter_ace {
-    my( $self, $ace_str ) = @_;
-    
-    my $ace = Bio::Otter::Lace::TempFile->new;
-    $ace->name('lace_edited.ace');
-    my $write = $ace->write_file_handle;
-    print $write $ace_str;
-    my $xml = Bio::Otter::Converter::ace_to_XML($ace->read_file_handle);
-    print $xml;
-    
-    ### Save to server with POST
+    my $db = Bio::Otter::Lace::AceDatabase->new;
+    $db->OtterClient($self);
+    return $db;
 }
 
 sub get_xml_for_contig_from_Dataset {
@@ -160,15 +86,17 @@ sub get_xml_for_contig_from_Dataset {
     my $root   = $self->url_root;
     my $script = 'get_region';
     my $url = "$root/$script?" .
-        join('&',
-            'author='   . $self->author,
-            'email='    . $self->email,
-            'lock='     . $self->lock,
-            'dataset='  . $dataset->name,
-            'chr='      . $chr_name,
-            'chrstart=' . $start,
-            'chrend='   . $end,
-            );
+        uri_escape(
+            join('&',
+                'author='   . $self->author,
+                'email='    . $self->email,
+                'lock='     . $self->lock,
+                'dataset='  . $dataset->name,
+                'chr='      . $chr_name,
+                'chrstart=' . $start,
+                'chrend='   . $end,
+            )
+        );
     warn "url <$url>\n";
     
     my $ua = $self->get_UserAgent;
@@ -176,11 +104,20 @@ sub get_xml_for_contig_from_Dataset {
     $request->method('GET');
     $request->uri($url);
     
-    my $response = $ua->request($request);
-    unless ($response->is_success) {
-        confess "get datasets request failed: ", $response->status_line;
+    my $content = $ua->request($request)->content;
+    $self->_check_for_error(\$content);
+    return $content;
+}
+
+sub _check_for_error {
+    my( $self, $xml_ref ) = @_;
+    
+    if ($$xml_ref =~ m{<response>(.+?)</response>}s) {
+        # response can be empty on success
+        my $err = $1;
+        confess $err if $err =~ /\w/;
     }
-    return $response->content;
+    return 1;
 }
 
 sub url_root {
@@ -202,17 +139,15 @@ sub get_all_DataSets {
         $request->method('GET');
         $request->uri("$root/get_datasets?details=true");
 
-        my $response = $ua->request($request);
-        unless ($response->is_success) {
-            confess "get datasets request failed: ", $response->status_line;
-        }
+        my $content = $ua->request($request)->content;
+        $self->_check_for_error(\$content);
 
         $ds = $self->{'_datasets'} = [];
 
         my $in_details = 0;
         # Split the string into blocks of text which
         # are separated by two or more newlines.
-        foreach (split /\n{2,}/, $response->content) {
+        foreach (split /\n{2,}/, $content) {
             if (/Details/) {
                 $in_details = 1;
                 next;
@@ -240,6 +175,47 @@ sub get_UserAgent {
         $ua = $self->{'_user_agent'} = LWP::UserAgent->new;
     }
     return $ua;
+}
+
+sub save_otter_ace {
+    my( $self, $ace_str, $dataset ) = @_;
+    
+    confess "Don't have write access" unless $self->write_access;
+    
+    my $ace = Bio::Otter::Lace::TempFile->new;
+    $ace->name('lace_edited.ace');
+    my $write = $ace->write_file_handle;
+    print $write $ace_str;
+    my $xml = Bio::Otter::Converter::ace_to_XML($ace->read_file_handle);
+    #print $xml;
+    
+    # Save to server with POST
+    my $url = $self->url_root . '/write_region';
+    my $request = HTTP::Request->new;
+    $request->method('POST');
+    $request->uri($url);
+    $request->content(
+        uri_escape(
+            join('&',
+                'author='   . $self->author,
+                'email='    . $self->email,
+                'dataset='  . $dataset->name,
+                'data='     . $xml,
+                'unlock=true',  ### May want to provide annotators with
+                )               ### option to save during sessions, not
+            )                   ### just on exit.
+        );
+    
+    my $content = $self->get_UserAgent->request($request)->content;
+    $self->_check_for_error(\$content);
+    $self->write_access(0);
+    return 1;
+}
+
+sub unlock_otter_ace {
+    my( $self, $ace_str, $dataset ) = @_;
+    
+    
 }
 
 1;

@@ -1806,8 +1806,8 @@ sub slice_to_XML {
   if ($db->isa("Bio::Otter::DBSQL::DBAdaptor")) {
      @genes = @{ $db->get_AnnotatedGeneAdaptor->fetch_by_Slice($slice) };
    } else {
-     my @tmpgenes = @{ $db->get_GeneAdaptor->fetch_all_by_Slice($slice) };
-     foreach my $g (@tmpgenes) {
+     my $tmpgenes = $db->get_GeneAdaptor->fetch_all_by_Slice($slice);
+     foreach my $g (@$tmpgenes) {
          my $ann = bless $g,"Bio::Otter::AnnotatedGene";
          my $ginfo = new Bio::Otter::GeneInfo;
          $ann->gene_info($ginfo);
