@@ -1,0 +1,99 @@
+#!/usr/local/bin/perl -w
+
+### otter_ensembl_connect
+
+use strict;
+use Bio::Otter::Lace::Defaults;
+
+{
+    my $ds_name = 'human';
+    my $type    = '';
+    my $set     = '';
+    my $show    = 0;
+    my $sort    = 0;
+    my $useage  = sub { exit( exec('perldoc', $0)) };
+    Bio::Otter::Lace::Defaults::do_getopt(
+                                          'dataset=s' => \$ds_name,
+                                          'type=s'    => \$type,
+                                          'set=s'     => \$set,
+                                          'show'      => \$show,
+                                          'sort'      => \$sort,
+                                          'help'      => $useage
+        );
+    $useage->() unless $ds_name && $set;
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    my $ds = $cl->get_DataSet_by_name($ds_name);
+    my $ss = $ds->get_SequenceSet_by_name($set);
+
+    my $ens_db     = $ds->get_cached_DBAdaptor;
+    my $gene_types = get_types($ens_db);
+    just_show_types($gene_types) if ($show || !($gene_types->{$type}));
+
+    my $order_by = ($sort ? 'ORDER BY gsi1.stable_id' : '');
+
+    my $sth = $ens_db->prepare(qq{
+        SELECT gsi1.stable_id
+          FROM assembly a,
+            contig c,
+            exon e,
+            exon_transcript et,
+            transcript t, 
+            gene g,
+            gene_stable_id gsi1 LEFT JOIN gene_stable_id gsi2 
+            ON gsi1.stable_id = gsi2.stable_id 
+            && gsi1.version < gsi2.version
+          WHERE gsi2.stable_id IS NULL
+            && g.gene_id = gsi1.gene_id
+            && g.type = ?
+            && a.contig_id = c.contig_id
+            && a.type = ?
+            && e.contig_id = c.contig_id
+            && e.exon_id = et.exon_id
+            && t.transcript_id = et.transcript_id
+            && t.gene_id = g.gene_id
+          $order_by
+        });
+    $sth->execute($type, $set);
+    while (my ($stable_id) = $sth->fetchrow) {
+        print "$stable_id\n";
+    }
+}
+
+sub get_types{
+    my $ens_db = shift;
+    my $types  = {};
+    my $sth    = $ens_db->prepare(qq`SELECT DISTINCT type FROM gene`);
+    $sth->execute();
+    while(my $row = $sth->fetchrow_arrayref){
+        $types->{$row->[0]} = 1;
+    }
+    $sth->finish();
+    return $types;
+}
+
+sub just_show_types{
+    my $types = shift;
+    print join("\n", keys(%$types)) . "\n";
+    exit 0;
+}
+
+__END__
+
+=head1 NAME - stable_id_for_type_on_chr
+
+=head1 DESCRIPTION
+
+ Get the Stable Id for the genes of type <TYPE> on Chromosome <CHR>.
+
+=head1 USEAGE
+
+  ./stable_id_for_type_on_chr -dataset <DATASET> -set <CHR> -type <TYPE> [-sort]
+
+E.G.
+
+ ./stable_id_for_type_on_chr -dataset human -set Chr1_final -type Pseudogene
+
+
+=head1 AUTHOR
+
+
