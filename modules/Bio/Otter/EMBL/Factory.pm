@@ -461,18 +461,41 @@ sub _do_Gene {
         #Do the mRNA
         my $all_transcript_Exons = $transcript->get_all_Exons;
         if ($all_transcript_Exons) {
-            my $ft = $set->newFeature;
-            $ft->key('mRNA');
+        
             my $mRNA_exonlocation = Hum::EMBL::ExonLocation->new;
-            $ft->location($mRNA_exonlocation);
+            if ($self->_add_exons_to_exonlocation($mRNA_exonlocation
+                , $all_transcript_Exons)) {
+                    
+                my $ft = $set->newFeature;
+                $ft->key('mRNA');
+                $ft->location($mRNA_exonlocation);
 
-            $self->_add_exons_to_exonlocation($mRNA_exonlocation
-                , $all_transcript_Exons);
-
-            $mRNA_exonlocation->start_not_found($transcript_info->mRNA_start_not_found);
-            $mRNA_exonlocation->end_not_found($transcript_info->mRNA_end_not_found);
+                $mRNA_exonlocation->start_not_found($transcript_info->mRNA_start_not_found);
+                $mRNA_exonlocation->end_not_found($transcript_info->mRNA_end_not_found);
             
-            $self->_add_gene_qualifiers($gene, $ft);
+                $self->_add_gene_qualifiers($gene, $ft);
+
+                #Add EST, cDNA supporting evidence
+                my ($EST_string, $cDNA_string);
+                foreach my $evidence ($transcript_info->evidence) {
+
+                    my $type = $evidence->type;
+                    if ($type eq 'EST') {
+                        $EST_string .= $evidence->name . ' ';
+                    } elsif ($type eq 'cDNA') {   
+                        $cDNA_string .= $evidence->name . ' ';
+                    }
+                }
+                if ($EST_string) {
+                    chop($EST_string);
+                    $ft->addQualifierStrings('note', 'match: ESTs: ' . $EST_string);
+                }
+                if ($cDNA_string) {
+                    chop($cDNA_string);
+                    $ft->addQualifierStrings('note', 'match: cDNAs: ' . $cDNA_string);
+                }
+            }
+            
         } else {
             warn "No mRNA exons\n";
         }
@@ -481,20 +504,58 @@ sub _do_Gene {
         if ($transcript->translation) {
             my $all_CDS_Exons = $transcript->get_all_translateable_Exons;
             if ($all_CDS_Exons) {
-                my $ft = $set->newFeature;
-                $ft->key('CDS');
+            
                 my $CDS_exonlocation = Hum::EMBL::ExonLocation->new;
-                $ft->location($CDS_exonlocation);
+                #This only returns true, 
+                if ($self->_add_exons_to_exonlocation($CDS_exonlocation
+                    , $all_CDS_Exons)) {
+            
+                    my $ft = $set->newFeature;
+                    $ft->key('CDS');
+                    $ft->location($CDS_exonlocation);
 
-                $self->_add_exons_to_exonlocation($CDS_exonlocation
-                    , $all_CDS_Exons);
+                    $CDS_exonlocation->start_not_found($transcript_info->cds_start_not_found);
+                    $CDS_exonlocation->end_not_found($transcript_info->cds_end_not_found);
 
-                $CDS_exonlocation->start_not_found($transcript_info->cds_start_not_found);
-                $CDS_exonlocation->end_not_found($transcript_info->cds_end_not_found);
+                    $self->_add_gene_qualifiers($gene, $ft);
 
-                $self->_add_gene_qualifiers($gene, $ft);
+                    #Add the Protein supporting evidence
+                    my ($protein_string);
+                    foreach my $evidence ($transcript_info->evidence) {
+
+                        my $type = $evidence->type;
+                        if ($type eq 'Protein') {
+                            $protein_string .= $evidence->name . ' ';
+                        }
+                    }
+
+                    if ($protein_string) {
+                        chop($protein_string);
+                        $ft->addQualifierStrings('note', 'match: proteins: ' . $protein_string);
+                    }
+                    
+                    $ft->addQualifierStrings('standard_name', $transcript->translation->stable_id);
+                }
             } else {
                 warn "No CDS exons\n";
+            }
+        }
+    }
+}
+
+
+#Currently not used
+sub _supporting_evidence {
+    my ($evidence_hash_ref, $transcript_info) = @_;
+    
+    my @evidence_types = keys(%{$evidence_hash_ref});
+
+    foreach my $evidence ($transcript_info->evidence) {
+        
+        foreach my $evidence_type (@evidence_types) {
+            if ($evidence->type eq $evidence_type) {
+                $evidence_hash_ref->{$evidence_type} .= $evidence->name;
+                last;
             }
         }
     }
@@ -521,7 +582,7 @@ sub _add_gene_qualifiers {
     my $gene_info = $gene->gene_info; #Bio::Otter::GeneInfo object
 
     if ($gene_info->known_flag) {
-        $ft->addQualifierStrings('gene', $gene_info->name);
+        $ft->addQualifierStrings('gene', $gene_info->name->name);
     }
     if ($gene->description) {
         $ft->addQualifierStrings('product', $gene->description);
@@ -536,12 +597,15 @@ sub _add_gene_qualifiers {
 
 Internal method called by _do_gene. See the latter for doumentation.
 
+Returns a count of how many exons are actually on the Slice (i.e. clone)
+or undef if none are.
+
 =cut
 
 sub _add_exons_to_exonlocation {
     my ( $self, $exonlocation, $exons ) = @_;
     
-    my @hum_embl_exons;
+    my (@hum_embl_exons , $exons_on_slice);
     foreach my $exon (@$exons) {
 
         my $hum_embl_exon = Hum::EMBL::Exon->new;
@@ -574,6 +638,8 @@ sub _add_exons_to_exonlocation {
             if ($end < 1 or $start > $contig_length) {
                 carp "Unexpected exon start '$start' end '$end' "
                     . "on contig of length '$contig_length'\n";
+            } else {
+                $exons_on_slice++;
             }
         }
         push(@hum_embl_exons, $hum_embl_exon);
@@ -583,6 +649,7 @@ sub _add_exons_to_exonlocation {
     #Set the start and end for the Hum::EMBL::ExonLocation
     $exonlocation->start($hum_embl_exons[0]->start);
     $exonlocation->end($hum_embl_exons[-1]->end);
+    return $exons_on_slice;
 }
     
 
