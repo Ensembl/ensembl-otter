@@ -5,7 +5,6 @@
 use strict;
 use DBI;
 use File::Path 'rmtree';
-use Hum::FileUtils 'mirror_copy_dir';
 
 {
     my $user = 'root';
