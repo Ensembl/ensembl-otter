@@ -366,7 +366,10 @@ sub initialise {
     
     my $refresh_status = sub {
 	$top->Busy;
+        # we want this to refresh all columns
         $self->_refresh_SequenceSet();
+        #$self->_refresh_SequenceSet(3);
+        #$self->refresh_column(3);
 	$self->draw();
 	$top->Unbusy;
     };
@@ -816,7 +819,7 @@ sub _user_last_clone_seq{
         $max =~ s/\D//g;
         $self->{'_user_max_element'} = $max;
     }
-    return $self->{'_user_max_element'} || 1;
+    return $self->{'_user_max_element'} || scalar(@{$self->get_CloneSequence_list});
 }
 sub max_per_page{
     my ($self, $max) = @_;
