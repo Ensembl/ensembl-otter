@@ -22,7 +22,9 @@ char *typeStrings[] = {
   "TEXT"
 };
 
-char *copyAndReplace(char *fromBuf,char *toBuf,char *baseFromName, char *baseToName, int len, int *toLen, FileType type);
+char *copyAndReplace(char *fromBuf,char *toBuf,char *baseFromName, 
+                     char *baseToName, char *toName, int len, 
+                     int *toLen, FileType type);
 FileType fileType(char *fileBuf,int len);
 void descendAndDo(DIR *dir, char *fromDirName, char *toDirName, 
                   char *baseFromName, char *baseToName, int doFunc());
@@ -37,26 +39,26 @@ int main(int argc, char *argv[]) {
   struct stat st;
 
   if (argc != 3) {
-    printf("Usage: moveperl <fromdir> <todir>\n");
+    fprintf(stderr, "Usage: moveperl <fromdir> <todir>\n");
     exit(1);
   }
 
   if ((fromdir = opendir(argv[1])) == NULL) {
-    printf("Error - couldn't open source perl directory %s\n",argv[1]);
+    fprintf(stderr,"Error: Couldn't open source perl directory %s\n",argv[1]);
     exit(1);
   }
 
   if ((opendir(argv[2])) != NULL) {
-    printf("Error - destination perl directory already exists\n");
+    fprintf(stderr,"Error: Destination perl directory already exists\n");
     exit(1);
   }
 /*
   if (!realpath(argv[1],fullFromName)) {
-    printf("Error - couldn't get realpath to fromdir\n");
+    fprintf(stderr,"Error: Couldn't get realpath to fromdir\n");
     exit(1);
   }
   if (!realpath(argv[2],fullDestName)) {
-    printf("Error - couldn't get realpath to destdir\n");
+    fprintf(stderr,"Error: Couldn't get realpath to destdir\n");
     exit(1);
   }
 */
@@ -64,13 +66,13 @@ int main(int argc, char *argv[]) {
   strcpy(fullDestName,argv[2]);
 
   if (strlen(fullFromName) < strlen(fullDestName)) {
-    printf("Length of to path can't be longer than from path\n");
+    fprintf(stderr,"Error: Length of to path can't be longer than from path\n");
     exit(1);
   }
 
   stat(fullFromName,&st);
   if (mkdir(fullDestName,st.st_mode)) {
-    printf("Failed making directory %s\n",fullDestName);
+    fprintf(stderr, "Error: Failed making directory %s\n",fullDestName);
     exit(1);
   }
   strcpy(baseFromPath,fullFromName);
@@ -92,19 +94,20 @@ void descendAndDo(DIR *dir, char *fromDirName, char *toDirName, char *baseFromNa
       stat(fromName,&st);
       if (st.st_mode & S_IFDIR) {
         DIR *childdir;
-        printf("  is a directory\n");
+        //printf("  is a directory\n");
         if ((childdir = opendir(fromName)) == NULL) {
-          printf("Error - couldn't open directory %s\n",fromName);
+          fprintf(stderr,"Error: Couldn't open directory %s\n",fromName);
           exit(1);
         }
         if (!doFunc(fromName,toName,baseFromName,baseToName)) {
-          printf("Failed executing doFunc\n");
+          fprintf(stderr,"Error: Failed executing doFunc\n");
           exit(1);
         }
+/* Recurse here */
         descendAndDo(childdir,fromName,toName,baseFromName,baseToName,doFunc);
       } else {
         if (!doFunc(fromName,toName,baseFromName,baseToName)) {
-          printf("Failed executing doFunc\n");
+          fprintf(stderr,"Error: Failed executing doFunc\n");
           exit(1);
         }
       }
@@ -124,26 +127,26 @@ int doFunc(char *fromName, char *toName, char *baseFromName, char *baseToName) {
   FileType type;
   int toLen;
   
-  printf("%s %s %s %s\n",fromName,toName,baseFromName,baseToName);
+  //printf("%s %s %s %s\n",fromName,toName,baseFromName,baseToName);
 
   stat(fromName,&st);
   if (st.st_mode & S_IFDIR) {
     if (mkdir(toName,st.st_mode)) {
-      printf("Failed making directory %s\n",toName);
+      fprintf(stderr,"Error: Failed making directory %s\n",toName);
       exit(1);
     }
   } else {
     if ((fileBuf = calloc(st.st_size+1,sizeof(char))) == NULL) {
-      printf("Failed allocating space for file buffer\n");
+      fprintf(stderr,"Error: Failed allocating space for file buffer\n");
       exit(1);
     }
     if ((toBuf = calloc(st.st_size+1,sizeof(char))) == NULL) {
-      printf("Failed allocating space for file buffer\n");
+      fprintf(stderr,"Error: Failed allocating space for file buffer\n");
       exit(1);
     }
   
     if ((fp = fopen(fromName,"r")) == NULL) {
-      printf("Failed opening from perl file %s\n",fromName);
+      fprintf(stderr,"Error: Failed opening from perl file %s\n",fromName);
       exit(1);
     }
     chP = fileBuf;
@@ -155,12 +158,12 @@ int doFunc(char *fromName, char *toName, char *baseFromName, char *baseToName) {
     }
     fclose(fp);
     if ((fp = fopen(toName,"w")) == NULL) {
-      printf("Failed opening to perl file %s\n",toName);
+      fprintf(stderr,"Error: Failed opening to perl file %s\n",toName);
       exit(1);
     }
     type = fileType(fileBuf,st.st_size);
-    printf("Type = %d (%s)\n",type,typeStrings[type]);
-    copyAndReplace(fileBuf,toBuf,baseFromName,baseToName,st.st_size,&toLen,type);
+    //printf("Type = %d (%s)\n",type,typeStrings[type]);
+    copyAndReplace(fileBuf,toBuf,baseFromName,baseToName,toName,st.st_size,&toLen,type);
     fwrite(toBuf,toLen,1,fp); 
     fclose(fp);
     chmod(toName,st.st_mode);
@@ -171,13 +174,15 @@ int doFunc(char *fromName, char *toName, char *baseFromName, char *baseToName) {
   return 1;
 }
 
-char *copyAndReplace(char *fromBuf,char *toBuf,char *baseFromName, char *baseToName, int fromLen, int *toLen, FileType type) {
+char *copyAndReplace(char *fromBuf,char *toBuf,char *baseFromName, char *baseToName, char *toName, 
+                     int fromLen, int *toLen, FileType type) {
   char *fromChP;
   char *toChP;
   int nToCopy = 0;
   int lenBaseFromName = strlen(baseFromName);
   int lenBaseToName = strlen(baseToName);
   int i;
+  int printDone = 0;
 
   
   
@@ -189,24 +194,27 @@ char *copyAndReplace(char *fromBuf,char *toBuf,char *baseFromName, char *baseToN
         !strncmp(baseFromName,fromChP,lenBaseFromName)) {
       strcpy(toChP,baseToName);
     
-      printf("NOTE NOTE NOTE NOTE NOTE Match to baseFromName\n");
+      if (!printDone) {
+        printf("Modifying %s\n",toName);
+        printDone = 1;
+      }
 
       fromChP  += lenBaseFromName;
       toChP    += lenBaseToName;
       while (!iscntrl(*fromChP) && !isspace(*fromChP)) {
-        printf("%c",*fromChP);
+        //printf("%c",*fromChP);
         *toChP = *fromChP;
         toChP++;
         fromChP++;
       }
       if (type == BINARY) {
-        printf("padding with %d chars\n",lenBaseFromName-lenBaseToName);
+        //printf("padding with %d chars\n",lenBaseFromName-lenBaseToName);
         for (i=0;i<lenBaseFromName-lenBaseToName;i++) {
           (*toChP)='\0';
           toChP++;
         }
       }
-      printf("\n");
+      //printf("\n");
     } else {
       *toChP = *fromChP;
       fromChP++;
@@ -215,7 +223,7 @@ char *copyAndReplace(char *fromBuf,char *toBuf,char *baseFromName, char *baseToN
   } 
   
   *toLen = toChP-toBuf;
-  printf("From len = %d,  To len = %d\n",fromLen, *toLen);
+  //printf("From len = %d,  To len = %d\n",fromLen, *toLen);
   return toBuf;
 }
 
@@ -241,7 +249,7 @@ FileType fileType(char *fileBuf,int len) {
   }
   if (!nNewline) return BINARY;
 
-  if ((float)nToGet/(float)nNewline < 50) {
+  if ((float)nToGet/(float)nNewline < 60) {
     return TEXT;
   }
 
