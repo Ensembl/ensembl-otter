@@ -545,13 +545,10 @@ sub write_pipeline_data {
     $dataset->selected_SequenceSet($ss);    # Not necessary?
     my $ens_db = $dataset->get_cached_DBAdaptor();
     my $pipe_db;
-    #warn "$ens_db                                                    not otter_human\n";
-    #warn $ens_db->dbname;
-    #warn $ens_db->dnadb->dbname;
     my $fetch_pipe = Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
     if($fetch_pipe){
 	$pipe_db = Bio::Otter::Lace::PipelineDB::get_DBAdaptor($dataset->get_cached_DBAdaptor);
-	$pipe_db->dnadb($ens_db->dnadb);
+	#$pipe_db->dnadb($ens_db->dnadb);
     }
     $ens_db = $pipe_db || $ens_db;
     

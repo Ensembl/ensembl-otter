@@ -810,7 +810,7 @@ sub _make_DBAdptor_with_class {
     my(@args);
     foreach my $prop ($self->list_all_db_properties) {
         if (my $val = $self->$prop()) {
-#            print STDERR "-$prop  $val\n";
+            print STDERR "-$prop  $val\n";
             push(@args, "-$prop", $val);
         }
     }
