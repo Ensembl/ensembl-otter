@@ -1,7 +1,7 @@
 
-### GenomeCanvas::MainWindow
+### CanvasWindow::MainWindow
 
-package GenomeCanvas::MainWindow;
+package CanvasWindow::MainWindow;
 
 use strict;
 use vars '@ISA';
@@ -77,7 +77,7 @@ GenomeCanvas*font: -*-helvetica-medium-r-*-*-12-*-*-*-*-*-*-*
 
 __END__
 
-=head1 NAME - GenomeCanvas::MainWindow
+=head1 NAME - CanvasWindow::MainWindow
 
 =head1 AUTHOR
 

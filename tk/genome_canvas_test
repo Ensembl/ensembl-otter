@@ -62,7 +62,7 @@ use Getopt::Long 'GetOptions';
         $chr_end = $chr_end_num;
     }
     
-    my $mw = GenomeCanvas::MainWindow->new;
+    my $mw = CanvasWindow::MainWindow->new;
     $mw->title($fpc);
     my $gc = GenomeCanvas->new($mw);
     $gc->font_size($font_size);

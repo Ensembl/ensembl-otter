@@ -7,7 +7,7 @@ package GenomeCanvas;
 use strict;
 use Carp;
 use Tk;
-use GenomeCanvas::MainWindow;
+use CanvasWindow::MainWindow;
 use GenomeCanvas::Band;
 use GenomeCanvas::State;
 use CanvasWindow;

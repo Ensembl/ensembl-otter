@@ -6,7 +6,7 @@ use strict;
 use GenomeCanvas;
 
 {
-    my $mw = GenomeCanvas::MainWindow->new;
+    my $mw = CanvasWindow::MainWindow->new;
     $mw->title('Drag & Drop');
     $mw->bind(<Control-q>, sub {exit 0});
     $mw->bind(<Control-Q>, sub {exit 0});

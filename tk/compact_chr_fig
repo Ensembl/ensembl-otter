@@ -34,7 +34,7 @@ use Getopt::Long 'GetOptions';
     my $static_type     = 'SANGER';
     my $scale           = 4000;
     
-    my $mw = GenomeCanvas::MainWindow->new;
+    my $mw = CanvasWindow::MainWindow->new;
     $mw->title($chr_name);
     my $gc = GenomeCanvas->new($mw);
     
