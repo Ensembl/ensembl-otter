@@ -28,12 +28,12 @@ my $LOCK_REGION_XML_FILE = '.lock_region.xml';
 
 sub new {
     my( $pkg ) = @_;
-    
+
     return bless {}, $pkg;
 }
 sub Client {
     my( $self, $client ) = @_;
-    
+
     if ($client) {
         $self->{'_Client'} = $client;
     }
@@ -42,7 +42,7 @@ sub Client {
 
 sub home {
     my( $self, $home ) = @_;
-    
+
     if ($home) {
         $self->{'_home'} = $home;
     }
@@ -60,7 +60,7 @@ sub readonly_tag{
 
 sub title {
     my( $self, $title ) = @_;
-    
+
     if ($title) {
         $self->{'_title'} = $title;
     }
@@ -72,7 +72,7 @@ sub title {
 
 sub tar_file {
     my( $self, $tar_file ) = @_;
-    
+
     if ($tar_file) {
         $self->{'_tar_file'} = $tar_file;
     }
@@ -92,7 +92,7 @@ sub tar_file {
 
 sub tace {
     my( $self, $tace ) = @_;
-    
+
     if ($tace) {
         $self->{'_tace'} = $tace;
     }
@@ -101,7 +101,7 @@ sub tace {
 
 sub error_flag {
     my( $self, $error_flag ) = @_;
-    
+
     if (defined $error_flag) {
         $self->{'_error_flag'} = $error_flag;
     }
@@ -109,14 +109,14 @@ sub error_flag {
 }
 sub add_acefile {
     my( $self, $ace ) = @_;
-    
+
     my $af = $self->{'_acefile_list'} ||= [];
     push(@$af, $ace);
 }
 
 sub list_all_acefiles {
     my( $self ) = @_;
-    
+
     if (my $af = $self->{'_acefile_list'}) {
         return @$af;
     } else {
@@ -149,7 +149,6 @@ sub write_local_blast{
                                                         -gff_feature    => 'similarity',
                                                         -db_file        => $fasta_file,
                                                         );
-    
     my $blast = Bio::Otter::Lace::Blast->new(-analysis        => $ana_obj,
                                              -indicate        => $indicate,
                                              -blast_idx_prog  => $pressdb,
@@ -160,7 +159,7 @@ sub write_local_blast{
     eval{
         $blast->hide_error(0);
         $blast->run_on_selected_CloneSequences($ss, $pipe_db->get_SliceAdaptor);
-        my $factory   = Bio::EnsEMBL::Ace::DataFactory->new;       
+        my $factory   = Bio::EnsEMBL::Ace::DataFactory->new;
         my $filter    = Bio::EnsEMBL::Ace::Filter::FPSimilarity->new(-features => $blast->output());
         $filter->analysis_object($ana_obj);
         $filter->homol_tag($homol_tag);
@@ -179,14 +178,14 @@ sub write_local_blast{
         foreach my $cs(@$sel){
             my $first_ctg = $cs->[0];
             my $last_ctg = $cs->[$#$cs];
-            
+
             my $chr = $first_ctg->chromosome->name;  
             my $chr_start = $first_ctg->chr_start;
             my $chr_end = $last_ctg->chr_end;
-            
+
             warn "fetching slice $chr $chr_start $chr_end \n";
             my $slice = $pipe_db->get_SliceAdaptor->fetch_by_chr_start_end($chr, $chr_start, $chr_end);
-            
+
             ### Check we got a slice
             my $tp = $slice->get_tiling_path;
             if(@$tp){
@@ -233,7 +232,7 @@ sub fetch_otter_ace {
     my( $self ) = @_;
 
     my $client = $self->Client or confess "No otter Client attached";
-    
+
     my $ace = '';
     my $selected_count = 0;
     foreach my $dsObj ($client->get_all_DataSets) {
@@ -249,7 +248,7 @@ sub fetch_otter_ace {
             }
         }
     }
-    
+
     if ($selected_count) {
         return $ace;
     } else {
@@ -259,7 +258,7 @@ sub fetch_otter_ace {
 
 sub fetch_otter_ace_for_SequenceSet {
     my( $self, $ss ) = @_;
-    
+
     my $client = $self->Client
         or confess "No otter client attached";
     my $dsObj = $client->get_DataSet_by_name($ss->dataset_name);
@@ -285,20 +284,23 @@ sub ace_from_contig_list {
         $xml->name('lace.xml');
         my $write      = $xml->write_file_handle;
         my $xml_string = $client->get_xml_for_contig_from_Dataset($ctg, $dsObj);
+
         print $write $xml_string ;
         # If we're here we now have all the locks!!!
 
         ### Nasty that genes and slice arguments are in
         ### different order in these two subroutines
-        my ($genes, $slice, $sequence, $tiles, $feature_set) =
+        my ($genes, $slice, $sequence, $tiles, $feature_set, $assembly_tag_set) =
             Bio::Otter::Converter::XML_to_otter($xml->read_file_handle);
-        $ace .= Bio::Otter::Converter::otter_to_ace($slice, $genes, $tiles, $sequence, $feature_set);
+
+        $ace .= Bio::Otter::Converter::otter_to_ace($slice, $genes, $tiles, $sequence, $feature_set, $assembly_tag_set);
         # We need to record which dataset each slice came
         # from so that we know where to save it back to.
         # this gets done in the write_lock_xml so only need to do it here
         # if we haven't got write access.
 #        $self->save_slice_dataset($slice->display_id, $dsObj->name) unless $write_access;
     }
+
     return $ace;
 }
 
@@ -349,7 +351,7 @@ sub save_slice_dataset_hash {
     my( $self ) = @_;
 
     my $h    = $self->slice_dataset_hash;
-    
+
     my $hash_file = Bio::Otter::Lace::PersistentFile->new;
     $hash_file->root($self->home);
     $hash_file->name($DATASET_HASH_FILE);
@@ -367,12 +369,12 @@ sub recover_slice_dataset_hash {
 
     my $cl   = $self->Client or confess "No Otter Client attached";
     my $h    = $self->slice_dataset_hash;
-    
+
     my $hash_file = Bio::Otter::Lace::PersistentFile->new;
     $hash_file->root($self->home);
     $hash_file->name($DATASET_HASH_FILE);
     my $read = $hash_file->read_file_handle;
-    
+
     while (<$read>) {
         chomp;
         my ($ds_name, @slices) = split(/\t/, $_);
@@ -385,7 +387,7 @@ sub recover_slice_dataset_hash {
 
 sub save_all_slices {
     my( $self ) = @_;
-    
+
     #warn "SAVING ALL SLICES";
     $self->error_flag(1);
 
@@ -408,6 +410,7 @@ sub save_all_slices {
         }
     }
     $self->error_flag(0);
+
     return \$ace;
 }
 
@@ -420,7 +423,7 @@ sub save_otter_slice {
 
     my $ace    = $self->aceperl_db_handle;
     my $client = $self->Client or confess "No Client attached";
-    
+
     # Get the Assembly object ...
     $ace->raw_query(qq{find Assembly "$name"});
     my $ace_txt = $ace->raw_query('show -a');
@@ -432,7 +435,7 @@ sub save_otter_slice {
     # ... and all the Loci attached to the SubSequences.
     $ace->raw_query('Follow Locus');
     $ace_txt .= $ace->raw_query('show -a');
-    
+
     # List of people for Authors
     $ace->raw_query(qq{find Person *});
     $ace_txt .= $ace->raw_query('show -a');
@@ -453,7 +456,7 @@ sub save_otter_slice {
     # Cleanup text
     $ace_txt =~ s/\0//g;            # Remove nulls
     $ace_txt =~ s{^\s*//.+}{\n}mg;  # Strip comments
-    
+
     if($self->Client->debug){
         my $debug_file = Bio::Otter::Lace::PersistentFile->new();
         $debug_file->name("otter-debug.$$.save.ace");
@@ -469,7 +472,7 @@ sub save_otter_slice {
     my $write = $ace_file->write_file_handle;
     print $write $ace_txt;
     my $xml = Bio::Otter::Converter::ace_to_XML($ace_file->read_file_handle);
-    
+
     if($self->Client->debug){
         my $debug_file = Bio::Otter::Lace::PersistentFile->new();
         $debug_file->name("otter-debug.$$.save.xml");
@@ -500,7 +503,7 @@ sub update_with_stable_ids{
     my $fileObj;
     if($self->Client->debug){
         $fileObj = Bio::Otter::Lace::PersistentFile->new();
-        $fileObj->name(qq`otter_response.$$.xml`);
+        $fileObj->name(qq`otter_response_$$.xml`);
         $fileObj->rm();
     }else{
         $fileObj = Bio::Otter::Lace::TempFile->new;
@@ -512,10 +515,10 @@ sub update_with_stable_ids{
     my $read  = $fileObj->read_file_handle();
 
     ## convert the xml returned from the server into otter stuff
-    my ($genes,$slice,$seqstr,$tiles) = Bio::Otter::Converter::XML_to_otter($read);
+    my ($genes, $slice, $seqstr, $tiles) = Bio::Otter::Converter::XML_to_otter($read);
 
     ## this should only contain the CHANGED genes.
-    
+
     unless($genes){
         warn "No genes changed\n";
         return undef;
@@ -523,6 +526,7 @@ sub update_with_stable_ids{
 
     warn "Some genes changed\n";
     ## need to do genes, transcripts, translations and exons
+
     my $ace_txt = Bio::Otter::Converter::ace_transcripts_locus_people($genes, $slice);
 
     ## everything went ok so error_flag = 0;
@@ -533,7 +537,7 @@ sub update_with_stable_ids{
 
 sub unlock_all_slices {
     my( $self ) = @_;
-    
+
     my $sd_h = $self->slice_dataset_hash;
 
     # if the unlock otter slice goes wrong half way through
@@ -566,7 +570,6 @@ sub unlock_otter_slice{
     return unless $xml;
 
     return $client->unlock_otter_xml($xml, $dataset_name);
-    
 }
 
 sub aceperl_db_handle {
@@ -576,14 +579,14 @@ sub aceperl_db_handle {
     unless ($dbh = $self->{'_aceperl_db_handle'}) {
         my $home = $self->home;
         my $tace = $self->tace;
-        
+
         # Check for ACEDB.wrm, or tace will hang waiting for
         # an answer to the "initialize database?" question.
         my $init_file = "$home/database/ACEDB.wrm";
         unless (-e $init_file) {
             confess "The file '$init_file' is missing - database has not been initialized";
         }
-        
+
         $dbh = $self->{'_aceperl_db_handle'}
             = Ace->connect(-PATH => $home, -PROGRAM => $tace)
                 or confess "Can't connect to database in '$home': ", Ace->error;
@@ -594,26 +597,26 @@ sub aceperl_db_handle {
 
 sub drop_aceperl_db_handle {
     my( $self ) = @_;
-    
+
     $self->{'_aceperl_db_handle'} = undef;
 }
 
 sub make_database_directory {
     my( $self ) = @_;
-    
+
     my $home = $self->home;
     my $tar  = $self->tar_file or confess "tar_file not set";
     mkdir($home, 0777) or die "Can't mkdir('$home') : $!\n";
-    
+
     my $tar_command = "cd $home ; tar xf $tar";
     if (system($tar_command) != 0) {
         $self->error_flag(1);
         confess "Error running '$tar_command' exit($?)";
     }
-    
+
     # This acefile from the tar file needs to get parsed
     $self->add_acefile("$home/rawdata/methods.ace");
-    
+
     $self->make_passwd_wrm;
     $self->edit_displays_wrm;
 }
@@ -645,10 +648,10 @@ sub make_passwd_wrm {
 
 sub edit_displays_wrm {
     my( $self ) = @_;
-    
+
     my $home  = $self->home;
     my $title = $self->title;
-    
+
     my $displays = "$home/wspec/displays.wrm";
 
     my $disp_in = gensym();
@@ -681,7 +684,7 @@ sub initialize_database {
 
     my $parse_log = "$home/init_parse.log";
     my $pipe = "| $tace $home > $parse_log";
-    
+
     my $pipe_fh = gensym();
     open $pipe_fh, $pipe
         or die "Can't open pipe '$pipe' : $!";
@@ -702,7 +705,7 @@ sub initialize_database {
             $file_log = "  $_";
             $in_parse = 1;
         }
-        
+
         if (/(\d+) (errors|parse failed)/i) {
             if ($1) {
                 warn "\nParse error detected:\n$file_log  $_\n";
@@ -736,12 +739,12 @@ sub write_pipeline_data {
 	#$pipe_db->dnadb($ens_db->dnadb);
     }
     $ens_db = $pipe_db || $ens_db;
-    
+
     $ens_db->assembly_type($ss->name);
     my $species = $dataset->species();
     warn "This is species <$species>\n";
     my $factory = $self->{'_pipeline_data_factory'} ||= $self->make_AceDataFactory($ens_db, $species);
-    
+
     # create file for output and add it to the acedb object
     $ace_file ||= $self->home . "/rawdata/pipeline.ace";
     my $fh;
@@ -755,7 +758,7 @@ sub write_pipeline_data {
     $factory->file_handle($fh);
 
     my $slice_adaptor = $ens_db->get_SliceAdaptor();
-    
+
     # note: the next line returns a 2 dimensional array (not a one dimensional array)
     # each subarray contains a list of clones that are together on the golden path
     my $sel = $ss->selected_CloneSequences_as_contig_list ;
@@ -769,7 +772,7 @@ sub write_pipeline_data {
         my $chr_end = $last_ctg->chr_end;
 
         my $slice = $slice_adaptor->fetch_by_chr_start_end($chr, $chr_start, $chr_end);
-        
+
         ### Check we got a slice
         my $tp = $slice->get_tiling_path;
         my $type = $slice->assembly_type;
@@ -786,7 +789,7 @@ sub write_pipeline_data {
     }
     $factory->drop_file_handle;
     close $fh;
-    
+
     Bio::Otter::Lace::SatelliteDB::disconnect_DBAdaptor($ens_db) if $fetch_pipe;
 }
 
@@ -794,8 +797,8 @@ sub make_AceDataFactory {
     my( $self, $ens_db, $species ) = @_;
 
     # create new datafactory object - cotains all ace filters and produces the data from these
-    my $factory = Bio::EnsEMBL::Ace::DataFactory->new;       
-    # $factory->add_all_Filters($ensdb);   
+    my $factory = Bio::EnsEMBL::Ace::DataFactory->new;
+    # $factory->add_all_Filters($ensdb);
     my $ana_adaptor = $ens_db->get_AnalysisAdaptor;
 
     ##----------code to add all of the ace filters to data factory-----------------------------------
@@ -857,7 +860,7 @@ sub make_AceDataFactory {
             $factory->add_AceFilter($filt);
         }
     }
-        
+
     return $factory;
 }
 
@@ -882,7 +885,7 @@ sub write_ensembl_data {
 
 sub make_ensembl_gene_DataFactory {
     my( $self, $ens_db, $logic_name ) = @_;
-    
+
     my $factory = Bio::EnsEMBL::Ace::DataFactory->new;
     my $ana_adaptor = $ens_db->get_AnalysisAdaptor;
     my $ensembl = Bio::EnsEMBL::Ace::Filter::Gene->new;
@@ -1043,7 +1046,7 @@ sub write_ensembl_data_for_key {
 	}
     }
     close $fh;
-    
+
     ### Disconnect Ensembl DBAdaptor
     Bio::Otter::Lace::SatelliteDB::disconnect_DBAdaptor($ens_db);
 }
