@@ -137,6 +137,8 @@ sub write_local_blast{
     my $parser     = $cl->option_from_array(['local_blast', 'indicate_parser']);
     my $pressdb    = $cl->option_from_array(['local_blast', 'blast_indexer']);
 
+    return 0 unless -e $fasta_file;
+
     my $ds = $cl->get_DataSet_by_name($ss->dataset_name());
 
     my $ana_obj = Bio::EnsEMBL::Pipeline::Analysis->new(-LOGIC_NAME     => $logic_name,
