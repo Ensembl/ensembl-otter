@@ -168,6 +168,7 @@ sub get_xml_for_contig_from_Dataset {
 
     my $ua = $self->get_UserAgent;
     my $request = $self->new_http_request('GET');
+    $request->uri($url);
 
     my $xml = $ua->request($request)->content;
     #warn $xml;
