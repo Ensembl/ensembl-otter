@@ -428,11 +428,13 @@ sub get_dot_otter_config{
     foreach my $c(@{$configs}){
         my $obj = tied(%$c);
         next unless $obj;
-        $dot_otter_config = $obj if $obj->FileName eq $location;
+        my $obj_file = $obj->GetFileName;
+        $dot_otter_config = $c if $obj_file && $obj_file eq $location;
         last if $dot_otter_config;
     }
     unless($dot_otter_config){
         open(my $fh, ">>$location") || die "ERROR $!";
+        print $fh "[client]\n";
         close $fh;
         $dot_otter_config = options_from_file($location);
     }
