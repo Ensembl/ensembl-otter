@@ -631,7 +631,7 @@ sub exit_save_data {
     my $ans = $dialog->Show;
 
     if ($ans eq 'Cancel') {
-        return; # Abandon window close
+        return;
     }
     elsif ($ans eq 'Yes') {
         if (my $xr = $self->xace_remote) {
