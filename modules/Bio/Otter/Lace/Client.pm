@@ -84,7 +84,8 @@ sub get_xml_for_contig_from_Dataset {
     my $start     = $ctg->[0]->chr_start;
     my $end       = $ctg->[$#$ctg]->chr_end;
     
-    warn "Fetching data from chr $chr_name $start-$end\n";
+    printf STDERR "Fetching data from chr %s %s-%s (lock='%s')\n",
+        $chr_name, $start, $end, $self->lock;
     
     my $root   = $self->url_root;
     my $script = 'get_region';
@@ -108,7 +109,7 @@ sub get_xml_for_contig_from_Dataset {
     $request->uri($url);
     
     my $xml = $ua->request($request)->content;
-    #warn $content;
+    #warn $xml;
     $self->_check_for_error(\$xml);
     
     my $debug_file = "/tmp/otter-debug.$$.fetch.xml";

@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/local/bin/perl -w
 
 use OtterDefs;
 use strict;
@@ -56,8 +56,8 @@ my $pass = $dbinfo{PASS}   || $defaults{PASS},
 my $port = $dbinfo{PORT}   || $defaults{PORT},
 my $dbname = $dbinfo{DBNAME};
 
-print STDERR "\nDatabase [$dbname][$host][$user][$pass][$port]\n";
-print STDERR "\nAuthor $author email $email dataset $dataset\n";
+#print STDERR "\nDatabase [$dbname][$host][$user][$pass][$port]\n";
+#print STDERR "\nAuthor $author email $email dataset $dataset\n";
 
 my $dnahost = $dbinfo{DNA_HOST}    || $defaults{DNA_HOST},
 my $dnauser = $dbinfo{DNA_USER}    || $defaults{DNA_USER},
@@ -105,12 +105,11 @@ close FPOUT;
 open(XML,"<$tmp_xmlfile");
 my $fh = \*XML;
 
-my @genes;
 my $chrname;
 my $chrstart;
 my $chrend;
 my $genes;
-my $xmlslice;
+my $slice;
 my $path;
 my $seqstr;
 my $sa  = $odb->get_SliceAdaptor;
@@ -118,13 +117,16 @@ my $sa  = $odb->get_SliceAdaptor;
 print STDERR "\nConverting xml to otter...\n";
 
 eval {
-  ($genes,$xmlslice,$path,$seqstr) = Bio::Otter::Converter::XML_to_otter($fh,$odb);
+    ($genes,$slice,$seqstr,$path) = Bio::Otter::Converter::XML_to_otter($fh,$odb);
+    die "no path from XML" unless $path;
+    die "empty path from XML" unless @$path;
 
-  $chrname  = $xmlslice->chr_name;
-  $chrstart = $xmlslice->chr_start;
-  $chrend   = $xmlslice->chr_end;
- 
-  print STDERR "Processing incoming xml file :  Chr start end $chrname $chrstart $chrend\n"; 
+    $chrname  = $slice->chr_name;
+    $chrstart = $slice->chr_start;
+    $chrend   = $slice->chr_end;
+
+
+    print STDERR "Processed incoming xml file :  Chr start end $chrname $chrstart $chrend\n"; 
 };
 if ($@) {
   print STDERR "Failed converting XML [$genes,$chrname,$chrstart,$chrend][$@]\n";
@@ -132,13 +134,12 @@ if ($@) {
 }
 print STDERR "done\n";
 
-@genes = @$genes;
-print STDERR "\nFound " . scalar(@genes) . " genes on region $chrname $chrstart-$chrend\n";
+print STDERR "\nFound " . scalar(@$genes) . " genes on region $chrname $chrstart-$chrend\n";
 
 
 # Get stable IDs for any genes, transcripts, translations and exons that don't have them
 my $sida = $odb->get_StableIdAdaptor();
-foreach my $gene (@genes) {
+foreach my $gene (@$genes) {
     $gene->stable_id($sida->fetch_new_gene_stable_id)
         unless $gene->stable_id;
     foreach my $trans (@{$gene->get_all_Transcripts}) {
@@ -158,18 +159,9 @@ foreach my $gene (@genes) {
 my $ab = new Bio::Otter::AnnotationBroker($odb);
 $ab->current_author($author);
 my $oaga = $odb->get_GeneAdaptor();
-$odb->assembly_type($xmlslice->assembly_type);
+$odb->assembly_type($slice->assembly_type);
 
 print STDERR "\nFetching slice $chrname $chrstart $chrend...";
-
-my( $slice );
-eval {
-  $slice = $sa->fetch_by_chr_start_end($chrname,$chrstart,$chrend);
-};
-if ($@) {
-  print STDERR "\nFailed fetching slice [$@]\n";
-  error_exit($q, "Failed fetching slice [$@]");
-}
 
 print STDERR "done\n";
 
@@ -177,12 +169,10 @@ my $cb   = new Bio::Otter::CloneLockBroker($odb);
 
 print STDERR "Checking region is locked...\n";
 
-### Why is this commented out?
 eval {
   $cb->check_locks_exist_by_slice($slice, $author);
 };
 if ($@) {
-  print STDERR "\nFailed checking locks [$@]\n";
   error_exit($q, "Failed checking locks [$@]");
 }
 print STDERR "done\n";
@@ -194,7 +184,6 @@ eval {
 };
 
 if ($@) {
-  print STDERR "Failed fetching analysis [$@]\n";
   error_exit($q, "Failed fetching analysis [$@]");
 }
 if( !defined($anal)) {
@@ -208,15 +197,13 @@ eval {
   $dbgenes = $oaga->fetch_by_Slice($slice);
 };
 if ($@) {
-  print STDERR "Failed fetching genes [$@]\n";
   error_exit($q, "Failed fetching genes [$@]");
 }
 
 print STDERR "done\n";
 
-foreach my $gene (@genes) {
+foreach my $gene (@$genes) {
   $gene->analysis($anal);
-  $gene->type('otter');     # Is this where Novel_transcript etc... is stored?
 }
 
 
@@ -239,23 +226,29 @@ eval {
   }
 };
 if ($@) {
-  print STDERR "Failed fully loading genes before write [$@]\n";
   error_exit($q, "Failed fully loading genes before write [$@]");
 }
 
 
-my @events;
-print STDERR "\nComparing annotations " . scalar(@$dbgenes) . " " . scalar(@genes) . "...\n";
+my( @gene_events, @changed_clones );
+
+print STDERR "New clones\n";
+my $new_clones = clones_from_path($path);
+print STDERR "Old clones\n";
+my $old_clones = clones_from_path($slice->get_tiling_path);
+
+
+print STDERR "\nComparing annotations " . scalar(@$dbgenes) . " " . scalar(@$genes) . "...\n";
 
 eval {
     print STDERR "trimming old genes to slice:\n";
-    my $oldgenes = trim_genes_to_slice($dbgenes, $slice);
+    my $old_genes = trim_genes_to_slice($dbgenes, $slice);
     print STDERR "trimming new genes to slice:\n";
-    my $newgenes = trim_genes_to_slice(\@genes,  $slice);
-    @events = $ab->compare_genes($oldgenes, $newgenes);
+    my $new_genes = trim_genes_to_slice($genes,  $slice);
+    @gene_events = $ab->compare_genes($old_genes, $new_genes);
+    @changed_clones = $ab->compare_clones($old_clones, $new_clones);
 };
 if ($@) {
-  print STDERR "Failed comparing annotations [$@]\n";
   error_exit($q, "Failed comparing annotations [$@]");
 }
 print STDERR "done\n";
@@ -266,9 +259,9 @@ my $outputstr;
 eval {
   $odb->begin_work();
 
-  print STDERR "\nFound " . scalar(@events) . " changed annotations\n";
+  print STDERR "\nFound " . scalar(@gene_events) . " changed gene annotations\n";
   
-  foreach my $event ( @events ) {
+  foreach my $event ( @gene_events ) {
     $outputstr .= $event->to_string;
     print STDERR $event->to_string;
 
@@ -287,6 +280,13 @@ eval {
     print STDERR "Stored gene\n";
     $outputstr .= " " . $gene->version . " " . $gene->gene_info->name->name . "\n";
   }
+  
+  my $ocia = $odb->get_CloneInfoAdaptor;
+  foreach my $clone (@changed_clones) {
+    printf STDERR "Storing new version of clone '%s'\n", $clone->id;
+    $ocia->store($clone->clone_info);
+  }
+  
   $odb->commit();
 };
 
@@ -322,7 +322,7 @@ sub trim_genes_to_slice {
     my $start = $slice->chr_start;
     my $end   = $slice->chr_end;
 
-    my $newgenes = [];
+    my $new_genes = [];
 
     print STDERR "Start end $start $end\n";
 
@@ -334,12 +334,12 @@ sub trim_genes_to_slice {
 
         if ($gstart >= $start and $gend <= $end) {
             print STDERR "Gene inside region " . $gstart . " " . $gend . "\t" . $g->stable_id . "\n";
-            push(@$newgenes,$g);
+            push(@$new_genes,$g);
         } else {
             print STDERR "Gene outside region " . $gstart . " " . $gend . "\t" . $g->stable_id . "\n";
         }
     }
-    return $newgenes;
+    return $new_genes;
 }
 
 sub find_gene_ends {
@@ -360,7 +360,7 @@ sub error_exit {
 
   print "<otter>\n";
   print "  <response>\n";
-  print "    ERROR: $reason\n";
+  print "ERROR:\n$reason\n";
   print "  </response>\n";
   print "</otter>\n";
 
@@ -389,4 +389,19 @@ sub get_tmp_file {
   }
 
   return $file;
+}
+
+sub clones_from_path {
+    my( $path ) = @_;
+
+    my $clones = [];
+    foreach my $rawcontig (map $_->component_Seq, @$path) {
+        my $clone = $rawcontig->clone;
+        unless ($clone) {
+            printf STDERR "No clone attached to '%s'\n", $rawcontig->id;
+            next;
+        }
+        push(@$clones, $clone);
+    }
+    return $clones;
 }

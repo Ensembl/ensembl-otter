@@ -25,7 +25,7 @@ my %params = $q->Vars;
 my $dataset = $params{dataset} || error_exit($q, "No dataset name entered. Can't unlock region");
 error_exit($q, "Author must defined to unlock a region") unless $params{author};
 my $data    = $params{data}    || error_exit($q, "No xml data entered. Can't unlock region");
-warn $data;
+#warn $data;
 
 print STDERR "Length of data " . length($data) . "\n";
 
@@ -112,7 +112,6 @@ eval {
   ($genes,$slice,$seqstr,$tiles) = Bio::Otter::Converter::XML_to_otter(\*XML, $odb);
 };
 if ($@) {
-  print STDERR "Failed converting XML [$@]\n";
   error_exit($q, "Failed converting XML to otter [$@]");
 }
 print STDERR "done\n";
@@ -125,7 +124,6 @@ eval {
   $cb->check_locks_exist_by_slice($slice,$author);
 };
 if ($@) {
-  print STDERR "\nFailed checking locks [$@]\n";
   error_exit($q, "Failed checking locks [$@]");
 }
 print STDERR "done\n";

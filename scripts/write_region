@@ -91,7 +91,6 @@ if (defined($dna_dbname)) {
 
 my $sa  = $odb->get_SliceAdaptor;
 
-my @genes;
 my $chrname;
 my $chrstart;
 my $chrend;
@@ -100,20 +99,20 @@ my $genes;
 if ($acefile) {
   ($genes,$chrname,$chrstart,$chrend) = Bio::Otter::Converter::ace_to_otter($fh);
 } elsif ($xmlfile) {
+    ### broken here - XML_to_otter has changed
   ($genes,$chrname,$chrstart,$chrend) = Bio::Otter::Converter::XML_to_otter($fh,$odb);
 }
 
-@genes = @$genes;
-
 if ($print) {
-  print "Printing @genes\n";
-  foreach my $gene (@genes) {
+  print "Printing @$genes\n";
+  foreach my $gene (@$genes) {
     print $gene->toXMLString . "\n";
   }
 }
 if ($store) {  
   my $ab = new Bio::Otter::AnnotationBroker($odb);
   my $oaga = $odb->get_GeneAdaptor();
+  my $ocla = $odb->get_CloneAdaptor();
 
   print "chr = $chrname chrstart = $chrstart chrend = $chrend\n";
   my $slice = $sa->fetch_by_chr_start_end($chrname,$chrstart,$chrend);
@@ -134,9 +133,9 @@ if ($store) {
 
   my $dbgenes = $oaga->fetch_by_Slice($slice);
 
-  foreach my $gene (@genes) {
+  foreach my $gene (@$genes) {
     $gene->analysis($anal);
-    $gene->type('otter');
+    $gene->type('otter');   ### curious!
   }
 
 
@@ -156,7 +155,7 @@ if ($store) {
   }
 
 
-  my @events = $ab->compare_genes($dbgenes,\@genes,$slice);
+  my @events = $ab->compare_genes($dbgenes, $genes, $slice);
 
 # the magic happens!
 

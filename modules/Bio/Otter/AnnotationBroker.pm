@@ -25,26 +25,40 @@ sub current_author {
 sub compare_clones {
     my( $self, $old_clones, $new_clones ) = @_;
     
+    my %new = map {$_->id . "." . $_->embl_version, $_} @$new_clones;
+    my %old = map {$_->id . "." . $_->embl_version, $_} @$old_clones;
     
+    my( @changed );
+    foreach my $acc_sv (keys %old) {
+        my $old_clone = $old{$acc_sv};
+        my $new_clone = $new{$acc_sv}
+            or $self->throw(
+                "No such clone '$acc_sv' in new annotation:\n"
+                . join('', map "$_\n", keys %new));
+        unless ($old_clone->clone_info->equals($new_clone->clone_info)) {
+            push(@changed, $new_clone);
+        }
+    }
+    return @changed;
 }
 
 sub compare_genes {
-    my ($self, $oldgenes, $newgenes) = @_;
+    my ($self, $old_genes, $new_genes) = @_;
 
     my %oldgenehash;
     my %newgenehash;
 
-    foreach my $g (@$oldgenes) {
+    foreach my $g (@$old_genes) {
 	$oldgenehash{$g->stable_id} = $g;
     }
-    foreach my $g (@$newgenes) {
+    foreach my $g (@$new_genes) {
 	$newgenehash{$g->stable_id} = $g;
     }
 
     # Find deleted genes
     # Change type on deleted genes
 
-    my ($del,$new,$mod) = $self->compare_obj($oldgenes, $newgenes);
+    my ($del,$new,$mod) = $self->compare_obj($old_genes, $new_genes);
     
     my %modified_gene_ids;
     my @events;

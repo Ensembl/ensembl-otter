@@ -10,7 +10,6 @@ use POSIX qw(:signal_h);
 use Sys::Hostname;
 use Getopt::Long;
 use HTTP::Daemon;
-use HTTP::Status qw{ RC_BAD_REQUEST };
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use OtterDefs;
 

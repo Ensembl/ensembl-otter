@@ -81,9 +81,6 @@ sub toXMLString{
 
     if (defined($self->stable_id)) { $stableid = $self->stable_id;}
    
-    #if (!defined($self->type) || $self->type eq "") {
-    #    $self->type('gene');
-    #}
     $str .= " <locus_type>" . $self->type . "</locus_type>\n";
     $str .= " <stable_id>" . $stableid . "</stable_id>\n";
 

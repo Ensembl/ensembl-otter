@@ -30,9 +30,9 @@ sub check_locks_exist_by_slice {
     my @locks;
     my %clones = $self->get_clones_versions($slice);
 
-    foreach my $clone (keys %clones) {
+    while (my ($clone, $version) = each %clones) {
 	
-	my $lock = $self->get_CloneLockAdaptor->fetch_by_clone_id_version($clone,$clones{$clone});
+	my $lock = $self->get_CloneLockAdaptor->fetch_by_clone_id_version($clone,$version);
 	
 	if (defined($lock)) {
 	    if ($lock->author->name ne $author->name ||
@@ -42,7 +42,7 @@ sub check_locks_exist_by_slice {
 		push(@locks,$lock);
 	    }
 	} else {
-	    $self->throw("Clone [$clone] not locked\n");
+	    $self->throw("Clone [$clone $version] not locked\n");
 	}
     }
     return @locks;

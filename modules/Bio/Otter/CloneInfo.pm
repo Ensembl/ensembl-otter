@@ -133,9 +133,9 @@ sub remark{
 =cut
 
 sub keyword{
-    my $obj = shift @_;
+    my $obj = shift;
 
-    while (my $keyword = shift @_) {
+    while (my $keyword = shift) {
         if ($keyword->isa("Bio::Otter::Keyword")) {
             push(@{$obj->{'_keyword'}},$keyword);
         } else {
@@ -251,7 +251,7 @@ sub equals {
     if (!defined($obj)) { 
         $self->throw("Need an object to compare with");
     }
-    if (!$obj->isa("Bio::Otter::CloenInfo")) {
+    if (!$obj->isa("Bio::Otter::CloneInfo")) {
         $self->throw("[$obj] is not a Bio::Otter::CloneInfo");
     }
 

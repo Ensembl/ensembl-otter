@@ -111,6 +111,7 @@ my $genes;
 if ($acefile) {
   ($genes,$chrname,$chrstart,$chrend) = Bio::Otter::Converter::ace_to_otter($fh);
 } elsif ($xmlfile) {
+    ### broken here - XML_to_otter has changed
   ($genes,$chrname,$chrstart,$chrend) = Bio::Otter::Converter::XML_to_otter($fh,$odb);
 }
 @genes = @$genes;

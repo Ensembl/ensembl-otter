@@ -765,6 +765,7 @@ sub otter_to_ace {
 
         # Add gene type
         if (my $type = $gene->type) {
+            ### Is this adequate?
             $str .= "$type\n";
         }
         foreach my $tran (@{ $gene->get_all_Transcripts }) {
@@ -1086,23 +1087,23 @@ sub ace_to_otter {
             my $cur_gene = $genes{$name} ||= {};
 
             while (($_ = <$fh>) !~ /^\n$/) {
-                if (/^Known/) {
-                    $genes{$name}{GeneType} = "Known";
+
+                ### Need to deal with polymorphic loci?
+                if (/^(Known|Novel_(CDS|Transcript)|Putative|Pseudogene)/) {
+                    $genes{$name}{GeneType} = $1;
                 }
-                elsif (/^Putative/) {
-                    $genes{$name}{GeneType} = "Putative";
+                elsif (/((P|Unp)rocessed)/) {
+                    $genes{$name}{GeneType} = "Pseudogene-$1";
                 }
-                elsif (/^Pseudogene/) {
-                    $genes{$name}{GeneType} = "Pseudogene";
+                elsif (/^((Non_o|O)rganism_supported)/) {
+                    $genes{$name}{GeneType} = "Novel_CDS-$1";
                 }
-                elsif (/^Organism_supported/) {
-                    $genes{$name}{GeneType} = "Organism_supported";
-                }
+
                 elsif (/^Positive_sequence $STRING/x) {
                     my $tran_list = $genes{$name}{transcripts} ||= [];
                     push @$tran_list, $1;
                 }
-                elsif (/^(Locus_id|Locus_author) $STRING/x) {
+                elsif (/^(Locus_(?:id|author)) $STRING/x) {
                     $genes{$name}{$1} = $2;
                 }
             }
@@ -1333,18 +1334,26 @@ sub ace_to_otter {
         }
     }
 
+
+    # Make gene objects
     my @genes;
-
-    foreach my $gname (keys %genes) {
+    while (my ($gname, $gene_data) = each %genes) {
         print STDERR "Gene name = $gname\n";
-        my $gene    = new Bio::Otter::AnnotatedGene;
-        my $ginfo = new Bio::Otter::GeneInfo;
+        my $gene  = Bio::Otter::AnnotatedGene->new;
+        my $ginfo = Bio::Otter::GeneInfo->new;
         $gene->gene_info($ginfo);
+        
+        if (my $type = $gene_data->{GeneType}) {
+            $gene->type($type);
+        } else {
+            warn "No gene type for gene '$gname' - setting type to 'Gene'\n";
+            $gene->type('Gene');
+        }
 
-        if (my $gsid = $genes{$gname}{Locus_id}) {
+        if (my $gsid = $gene_data->{Locus_id}) {
                 $gene->stable_id($gsid);
         }
-        if (my $au_name = $genes{$gname}{Locus_author}) {
+        if (my $au_name = $gene_data->{Locus_author}) {
                 my $author = $authors{$au_name} || die "No author object '$au_name'";
                 $ginfo->author($author);
         }
@@ -1359,7 +1368,7 @@ sub ace_to_otter {
 
         my @newtran;
 
-        TRAN: foreach my $tranname (@{ $genes{$gname}{transcripts} }) {
+        TRAN: foreach my $tranname (@{ $gene_data->{transcripts} }) {
             my $tran = $anntran{$tranname};
             my $tran_data = $sequence{$tranname};
 
@@ -1401,19 +1410,19 @@ sub ace_to_otter {
             foreach my $word (@$kw_list) {
                 my $kw = Bio::Otter::Keyword->new;
                 $kw->name($word);
-                $info->remark($kw);
+                $info->keyword($kw);
             }
         }
         if (my $rem_list = $cln->{Annotation_remark}) {
             foreach my $txt (@$rem_list) {
                 my $remark = Bio::Otter::CloneRemark->new;
-                $remark->name("Annotation_remark- $txt");
+                $remark->remark("Annotation_remark- $txt");
                 $info->remark($remark);
             }
         }
         if (my $de = $cln->{EMBL_dump_info}) {
             my $remark = Bio::Otter::CloneRemark->new;
-            $remark->name("EMBL_dump_info.DE_line- $de");
+            $remark->remark("EMBL_dump_info.DE_line- $de");
             $info->remark($remark);
         }
         
