@@ -32,6 +32,7 @@ use strict;
 
 use Bio::Otter::Lace::Defaults;
 use Bio::Otter::EMBL::Factory;
+use Carp;
 
 {
     my $dataset_name = undef;
@@ -57,8 +58,10 @@ use Bio::Otter::EMBL::Factory;
     
     foreach my $acc (@ARGV) {
         
-        $ft_factory->accession($acc);
-        $ft_factory->entry_name($acc);
+        my ($accession, $seq_version) = $acc =~ /(^.*)\.(\d+)/ 
+            or confess "Error parsing accession and version for: $acc\n";
+        
+        $ft_factory->entry_name($accession);
         $ft_factory->data_class('standard');
         $ft_factory->mol_type('genomic DNA');
         $ft_factory->division('HUM');
@@ -67,10 +70,10 @@ use Bio::Otter::EMBL::Factory;
         $ft_factory->organism('Homo sapiens');
         $ft_factory->clone_lib('to_be_provided');
         $ft_factory->clone_name('to_be_provided_2');
-        
-        my $seq_version = 1;
-        my $embl = $ft_factory->embl_setup();
-        $ft_factory->make_embl_ft($acc, $embl, $seq_version);
+        $ft_factory->keywords('HTG');
+
+        my $embl = $ft_factory->embl_setup($accession, $seq_version);
+        $ft_factory->make_embl_ft($accession, $embl, $seq_version);
         print $embl->compose();
     }
 }
@@ -174,7 +177,7 @@ __END__
 
 =head1 EXAMPLE
 
-  otter_embl_dump_test -dataset human -chr chr1-07 AC114498 AL669831
+  otter_embl_dump_test -dataset human -chr chr1-07 AC114498.2 AL669831.13
   otter_embl_dump_test -dataset human -chr chr11-hsa11_20040402 Z83307 Z95332
 
 =head1 AUTHOR

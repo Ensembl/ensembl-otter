@@ -138,10 +138,9 @@ or by make_embl.
 
 sub embl_setup {
     
-    my ( $self ) = @_;
+    my ( $self, $accession, $seq_version ) = @_;
 
     my $embl = Hum::EMBL->new;    
-    my $acc = $self->accession or confess "accession not set";
     my @sec;
     if ($self->secondary_accs) {
         @sec = @{$self->secondary_accs};
@@ -155,7 +154,7 @@ sub embl_setup {
     my $organism = $self->organism or confess "organism not set";
     my $clone_lib = $self->clone_lib or confess "clone_lib not set";
     my $clone_name = $self->clone_name or confess "clone_name not set";
-    
+        
     my $id = $embl->newID;
     $id->entryname($entry_name);
     $id->dataclass($data_class);
@@ -168,9 +167,9 @@ sub embl_setup {
     my $ac = $embl->newAC;
     if (@sec) {
         $ac->secondaries(@sec);
-        $ac->primary($acc);
+        $ac->primary($accession);
     } else {
-        $ac->primary($acc);
+        $ac->primary($accession);
     }
     $embl->newXX;
 
@@ -180,10 +179,25 @@ sub embl_setup {
     $embl->newXX;
 
     # DE line
-    #$pdmp->add_Description($embl);
-
-    # KW line
-    #$pdmp->add_Keywords($embl);
+    my $description;
+    unless ($description = $self->description) {
+        $description = $self->get_description($accession, $seq_version);
+    }
+    my $de = $embl->newDE;
+    $de->list($description);
+    $embl->newXX;
+    
+    #KW line
+    my @keywords;
+    if ($self->keywords) {
+        push(@keywords, $self->keywords);
+    }
+    push (@keywords, $self->get_keywords($accession, $seq_version));
+    if (@keywords) {
+        my $kw = $embl->newKW;
+        $kw->list(@keywords);
+        $embl->newXX;
+    }
 
     # Organism
     #add_Organism($embl, $species);
@@ -218,21 +232,6 @@ sub embl_setup {
     return $embl;
 }
 
-sub accession {
-    my ( $self, $value ) = @_;
-    
-    if ($value) {
-        $self->{'_bio_otter_embl_factory_accession'} = $value;
-    }
-    return $self->{'_bio_otter_embl_factory_accession'};
-}
-
-=head2 secondary_accs
-
-Get/set method for secondary accessions of the Clone being dumped.
-The list is passed as an array reference (checked). Returns an arrayref or undef.
-
-=cut 
 
 sub secondary_accs {
     my ( $self, $value ) = @_;
@@ -244,6 +243,24 @@ sub secondary_accs {
         $self->{'_bio_otter_embl_factory_secondary_accs'} = $value;
     }
     return $self->{'_bio_otter_embl_factory_secondary_accs'};
+}
+
+sub description {
+    my ( $self, $value ) = @_;
+    
+    if ($value) {
+        $self->{'_bio_otter_embl_factory_description'} = $value;
+    }
+    return $self->{'_bio_otter_embl_factory_description'};
+}
+
+sub keywords {
+    my ( $self, $value ) = @_;
+    
+    if ($value) {
+        $self->{'_bio_otter_embl_factory_keywords'} = $value;
+    }
+    return $self->{'_bio_otter_embl_factory_keywords'};
 }
 
 sub entry_name {
@@ -463,7 +480,6 @@ sub make_embl_ft {
     unless ($acc and $embl and $sequence_version) {
         confess "Must pass an accession, Hum::EMBL object and sequence_version";
     }
-    #$self->accession($acc);
 
     my $ds = $self->DataSet
         or confess "DataSet must be set before calling make_embl";
@@ -556,7 +572,7 @@ sub get_keywords {
     my $annotated_clone = $annotated_clone_aptr->fetch_by_accession_version(
         $accession, $sv) or confess "Could not fetch AnnotatedClone by accession_version"
         . "acc: $accession sv: $sv";
-        
+
     my $clone_info = $annotated_clone->clone_info
         or confess "could not get: CloneInfo object";
         
