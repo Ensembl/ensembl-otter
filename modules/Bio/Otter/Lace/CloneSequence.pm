@@ -90,6 +90,17 @@ sub contig_id {
     }
     return $self->{'_contig_id'};
 }
+
+sub pipeline_contig_id {
+    my( $self, $pipe_contig_id ) = @_;
+    
+    if ($pipe_contig_id) {
+        $self->{'_pipe_contig_id'} = $pipe_contig_id;
+    }
+    return $self->{'_pipe_contig_id'};
+}
+
+
 sub contig_name {
     my( $self, $contig_name ) = @_;
     

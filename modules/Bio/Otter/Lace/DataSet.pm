@@ -214,59 +214,57 @@ sub fetch_all_CloneSequences_for_selected_SequenceSet {
     return $self->fetch_all_CloneSequences_for_SequenceSet($ss);
 }
 
-sub status{
-    my ($self, $dba, $type, $force_refresh) = @_;
-    if(!$self->{'_dataset_status_hash'}->{$type} || $force_refresh){
-        my $hash;
-	return unless Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
-        my $pipeline_db = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($dba);
-        my $anaAdapt    = $pipeline_db->get_AnalysisAdaptor();
-        my $ruleAdapt   = $pipeline_db->get_RuleAdaptor();
-        my @rules       = $ruleAdapt->fetch_all;
-        my $rule_list   = [];
-        foreach my $rule (@rules)  {
-            push(@$rule_list, $rule->goalAnalysis->logic_name) if ($rule->list_conditions())[0];
-        }
-        # I think this query can be optimised more
-        my $sql = qq{SELECT i.input_id, i.analysis_id, i.created, i.db_version
-                       FROM assembly a straight_join contig c
-                          , input_id_analysis i
-                      WHERE i.input_id = c.name
-                         && a.contig_id = c.contig_id
-                         && a.type = ?
-                     };
-        my $sth = $pipeline_db->prepare($sql);
-        $sth->execute($type);
-        while(my $row = $sth->fetchrow_arrayref()){
-            # $row->[0] is contig name
-            # $row->[1] is analysis id
-            # $row->[2] is created
-            # $row->[3] is db_version
-            my $anaObj = $anaAdapt->fetch_by_dbID($row->[1]);
-            next unless $anaObj;
-            my $tmpObj = $hash->{$row->[0]} 
-                         || Bio::Otter::Lace::PipelineStatus->new(-runnable_logic_names => $rule_list,
-                                                                  -contig_name          => $row->[0]);
-            $anaObj->created($row->[2]);
-            $anaObj->db_version($row->[3]);
-            $tmpObj->add_completedAnalysis($anaObj);
-            $hash->{$row->[0]} = $tmpObj;
-        }
-	$self->{'_dataset_status_hash'}->{$type} = $hash;
-    }
-    return $self->{'_dataset_status_hash'}->{$type};
-}
-
 sub status_refresh_for_SequenceSet{
 #   this forces a refresh of the $self->status query
 #   but doesn't re fetch all CloneSequences of the SequenceSet
     my ($self, $ss) = @_;
-    my $dba    = $self->get_cached_DBAdaptor;
-    my $type   = $ss->name;
-    my $lookup = $self->status($dba, $type, 1);
+    return unless Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
+    my $dba            = $self->get_cached_DBAdaptor;
+    my $type           = $ss->name;
+    my $cloneSeqList   = $ss->CloneSequence_list();
+    my $pipeline_db    = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($dba);
+    my $dbh            = $pipeline_db->db_handle();
+    $self->fetch_pipeline_ctg_ids_for_SequenceSet($ss);
+    my @pipe_ctg_ids   = map { $dbh->quote($_->pipeline_contig_id()) } @$cloneSeqList;
+    my $anaAdapt       = $pipeline_db->get_AnalysisAdaptor();
+    my $ruleAdapt      = $pipeline_db->get_RuleAdaptor();
+    my @rules          = $ruleAdapt->fetch_all;
+    my $rule_list      = [];
+    foreach my $rule (@rules)  {
+        push(@$rule_list, $rule->goalAnalysis->logic_name) if ($rule->list_conditions())[0];
+    }
+    # I think this query can be optimised more
+    my $sql = q{SELECT i.input_id, i.analysis_id, i.created, i.db_version
+                     FROM assembly a straight_join contig c
+                     , input_id_analysis i
+                     WHERE i.input_id = c.name
+                     && a.contig_id = c.contig_id
+                     && a.contig_id IN (
+                 } . 
+                 join(', ' => @pipe_ctg_ids) . 
+                 q{)};
+    my $sth = $pipeline_db->prepare($sql);
+    $sth->execute();
+    my $hash = {};
+    while(my $row = $sth->fetchrow_arrayref()){
+        # $row->[0] is contig name
+        # $row->[1] is analysis id
+        # $row->[2] is created
+        # $row->[3] is db_version
+        my $anaObj = $anaAdapt->fetch_by_dbID($row->[1]);
+        next unless $anaObj;
+        my $tmpObj = $hash->{$row->[0]} 
+                      || Bio::Otter::Lace::PipelineStatus->new(-runnable_logic_names => $rule_list,
+                                                               -contig_name          => $row->[0]);
+        $anaObj->created($row->[2]);
+        $anaObj->db_version($row->[3]);
+        $tmpObj->add_completedAnalysis($anaObj);
+        $hash->{$row->[0]} = $tmpObj;
+    }
+
     foreach my $cs (@{$ss->CloneSequence_list}){
 	my $ctg_name = $cs->contig_name();
-	$cs->pipelineStatus($lookup->{$ctg_name});
+	$cs->pipelineStatus($hash->{$ctg_name});
     }
 }
 
@@ -294,8 +292,8 @@ sub lock_refresh_for_SequenceSet{
           AND g.clone_id = c.clone_id
           AND a.type = "$type"
           AND g.contig_id in ($id_string)          
-        ORDER BY a.chromosome_id
-          , a.chr_start
+--        ORDER BY a.chromosome_id
+--          , a.chr_start
         }) ;
              
     $sth->execute;
@@ -328,16 +326,15 @@ sub fetch_all_CloneSequences_for_SequenceSet {
     
     my $dba = $self->get_cached_DBAdaptor;
     my $type = $ss->name;
+    my $ass_table_name = $ss->fake_assembly_table_name();
 
-    my $lookup = $self->status($dba, $type);
-
-    my $sth = $dba->prepare(q{
+    my $sth = $dba->prepare(qq{
         SELECT c.name, c.embl_acc, c.embl_version
           , g.contig_id, g.name, g.length
           , a.chromosome_id, a.chr_start, a.chr_end
           , a.contig_start, a.contig_end, a.contig_ori
           , cl.clone_lock_id
-        FROM assembly a
+        FROM $ass_table_name a
           , contig g
           , clone c
         LEFT JOIN clone_lock cl ON cl.clone_id = c.clone_id
@@ -374,7 +371,6 @@ sub fetch_all_CloneSequences_for_SequenceSet {
         $cl->contig_strand($strand);
         $cl->contig_name($ctg_name);
         $cl->contig_id($ctg_id);
-	$cl->pipelineStatus($lookup->{$ctg_name});
         if (defined $clone_lock_id){
             $cl->set_lock_status(1) ;
         }
@@ -382,6 +378,34 @@ sub fetch_all_CloneSequences_for_SequenceSet {
     }
 
     $ss->CloneSequence_list($cs);
+    $self->status_refresh_for_SequenceSet($ss);
+}
+
+sub fetch_pipeline_ctg_ids_for_SequenceSet{
+    my ($self, $ss) = @_;
+    return unless Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
+    my $dba            = $self->get_cached_DBAdaptor;
+    my $cloneSeqList   = $ss->CloneSequence_list();
+    my $pipeline_db    = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($dba);
+    my $dbh            = $pipeline_db->db_handle();
+    # my @ctg_names      = map { $dbh->quote($_->contig_name()) } @$cloneSeqList;
+    my %ctg_names      = map { $dbh->quote($_->contig_name()) => $_ } @$cloneSeqList;
+    my $sql            = q{SELECT c.name, c.contig_id FROM contig c WHERE c.name IN (} .
+                               join(', ' => keys %ctg_names) .q{)};
+    #                           join(', ' => @ctg_names) .q{)};
+    my $sth            = $pipeline_db->prepare($sql);
+    warn $sql;
+    $sth->execute();
+    # my $hash;
+    while(my $row = $sth->fetchrow_arrayref()){
+        my $key = $dbh->quote($row->[0]); # this is how the hash was made !!
+        $ctg_names{$key}->pipeline_contig_id($row->[1]) 
+            if $ctg_names{$key} && $ctg_names{$key}->can('pipeline_contig_id');
+        # $hash->{$row->[0]} = $row->[1];
+    }
+    # this uses another loop & hash, but array above. slower?
+    # update each of the cloneSeq with the pipe contig id from contig name hash cache.
+    # map { $_->pipeline_contig_id($hash->{$_->contig_name}) } @$cloneSeqList;
 }
 
 sub fetch_all_SequenceNotes_for_SequenceSet {
@@ -389,9 +413,9 @@ sub fetch_all_SequenceNotes_for_SequenceSet {
     
     my $name = $ss->name or confess "No name in SequenceSet object";
     my $cs_list = $ss->CloneSequence_list;
-    
+
     my $dba = $self->get_cached_DBAdaptor;
-    my $sth = $dba->prepare(q{
+    my $sth = $dba->prepare(qq{
         SELECT n.contig_id
           , n.note
           , UNIX_TIMESTAMP(n.note_time)
@@ -461,14 +485,14 @@ sub fetch_ResultSet_containing_CloneName{
     
     if ($clone_names){
         $result_set->search_array($clone_names) ;
-        $result_set->search_type('clone');
+#        $result_set->search_type('clone');
     }else{
         $clone_names = $result_set->search_array;
     }
     confess "Missing clone names argument " unless $clone_names ;
     
     my $clone_names_string = "'" . (join "', '" ,  @$clone_names) . "'" ;
-    warn "clone names $clone_names_string"  ;
+    warn "clone names $clone_names_string";
  
     
     my $dba= $self->get_cached_DBAdaptor ;
@@ -490,7 +514,7 @@ sub fetch_ResultSet_containing_CloneName{
         AND cl.name IN ($clone_names_string)
         ORDER BY a.chromosome_id , a.chr_start
     });
-    
+
     $sth->execute();
     my(  $name, $acc,  $sv,
          $ctg_id,  $ctg_name,  $ctg_length,
@@ -506,7 +530,6 @@ sub fetch_ResultSet_containing_CloneName{
         \$type ,
         \$clone_lock_id
         );
-        
     # add each CS to a diff anonymous array according to its assembly type - all the  
     while ($sth->fetch) {
         my $cl = Bio::Otter::Lace::CloneSequence->new;
@@ -522,27 +545,23 @@ sub fetch_ResultSet_containing_CloneName{
         $cl->contig_strand($strand);
         $cl->contig_name($ctg_name);
         $cl->contig_id($ctg_id);
-#	$cl->unfinished($lookup->{$ctg_name});
         if (defined $clone_lock_id){
             $cl->set_lock_status(1) ;
         }   
-          
         push ( @{ $cs_hash{$type} }  , $cl )  ;
         $results ++ ;      
     }
 
-    # for each element of the hash, create a sequencSet and add it to the ResultSet
+    # for each element of the hash, create a sequenceSet and add it to the ResultSet
     while ( my ($type , $cs_list)  = each (%cs_hash) ){
-        my $ss = $self->get_SequenceSet_by_name($type) ;
-        $ss->CloneSequence_list($cs_list) ;
-        $result_set->add_SequenceSet($ss) ; 
+        my $ss = $self->get_SequenceSet_by_name($type);
+        $ss->CloneSequence_list($cs_list);
+        $self->status_refresh_for_SequenceSet($ss);
+        $result_set->add_SequenceSet($ss); 
     }
-    
     ## sets the things in ResultSet, but the return value is the number of clones returned
     return $results ;
 }
-
-
 # takes a ResultSet  object and optionally a reference to an array of locus names. 
 # The database is queried and the clones containing these loci are put into SequenceSet objects (based on the assemblies)
 # The SequenceSet objects are added to the ResultSet. The return value is the number of clones returned
@@ -553,7 +572,7 @@ sub fetch_ResultSet_containing_Locus{
     ## this at least makes it consistent
     if ($locus_names){
         $result_set->search_array($locus_names)   ;
-        $result_set->search_type('locus');
+#        $result_set->search_type('locus');
     }
     else{
         $locus_names = $result_set->search_array ;
@@ -565,84 +584,25 @@ sub fetch_ResultSet_containing_Locus{
 
     my $dba = $self->get_cached_DBAdaptor;
     my %id_chr = map {$_->chromosome_id, $_} $self->get_all_Chromosomes;
-#    my $lookup = $self->status($dba, $type);
 
-    my %cs_hash ;
-    
-    my $results = 0;
-    my $sth = $dba->prepare (qq{
-        SELECT DISTINCT cl.name, cl.embl_acc, cl.embl_version 
-            , c.contig_id, c.name, c.length	
-            , a.chromosome_id, a.chr_start, a.chr_end
-            , a.contig_start, a.contig_end, a.contig_ori
-            , a.type
-            , lk.clone_lock_id
-        FROM    gene_name gn , gene_info gi , gene_stable_id gs , gene g , transcript t, 
-                exon_transcript et, exon e , contig c ,  assembly a , clone cl
-        LEFT JOIN clone_lock lk ON lk.clone_id = cl.clone_id
-        WHERE gn.gene_info_id = gi.gene_info_id 
-        AND  gi.gene_stable_id =gs.stable_id 
-        AND gs.gene_id = g.gene_id 
-        AND t.gene_id = g.gene_id
-        AND et.transcript_id = t.transcript_id
-        AND e.exon_id = et.exon_id 
-        AND e.contig_id = c.contig_id 
-        AND cl.clone_id = c.clone_id
-        AND a.contig_id = c.contig_id
-        AND gn.name IN ($locus_names_string)  
-#       AND a.type in ('MHC_PGF' , 'MHC_COX' )  ###
-        ORDER BY a.chromosome_id , a.chr_start  
-    });
-    
-    $sth->execute();
-    my(  $name, $acc,  $sv,
-         $ctg_id,  $ctg_name,  $ctg_length,
-         $chr_id,  $chr_start,  $chr_end,
-         $contig_start,  $contig_end,  $strand,
-         $type ,
-         $clone_lock_id );
-    $sth->bind_columns(
-        \$name, \$acc, \$sv,
-        \$ctg_id, \$ctg_name, \$ctg_length,
-        \$chr_id, \$chr_start, \$chr_end,
-        \$contig_start, \$contig_end, \$strand,
-        \$type ,
-        \$clone_lock_id
-        );
-        
-    # add each CS to a diff anonymous array according to its assembly type - all the  
-    while ($sth->fetch) {
-        my $cl = Bio::Otter::Lace::CloneSequence->new;
-        $cl->clone_name($name);
-        $cl->accession($acc);
-        $cl->sv($sv);
-        $cl->length($ctg_length);
-        $cl->chromosome($id_chr{$chr_id});
-        $cl->chr_start($chr_start);
-        $cl->chr_end($chr_end);
-        $cl->contig_start($contig_start);
-        $cl->contig_end($contig_end);
-        $cl->contig_strand($strand);
-        $cl->contig_name($ctg_name);
-        $cl->contig_id($ctg_id);
-#	$cl->unfinished($lookup->{$ctg_name});
-        if (defined $clone_lock_id){
-            $cl->set_lock_status(1) ;
-        }   
-          
-        push ( @{ $cs_hash{$type} }  , $cl )  ;
-        $results ++ ;      
+    my $geneNameAdapt = $dba->get_GeneNameAdaptor();
+    my $geneInfoAdapt = $dba->get_GeneInfoAdaptor();
+    my $geneAdapt     = $dba->get_GeneAdaptor();
+    my $clone_names   = {};
+    foreach my $locus_name(@$locus_names){
+#        warn "Looking for $locus_name\n";
+        my $geneNameObj = $geneNameAdapt->fetch_by_name($locus_name);
+        my $geneInfoObj = $geneInfoAdapt->fetch_by_dbID($geneNameObj->gene_info_id());
+        my $geneObj     = $geneAdapt->fetch_by_stable_id($geneInfoObj->gene_stable_id());
+        foreach my $exonObj(@{$geneObj->get_all_Exons}){
+            my $clone_name = $exonObj->contig->clone->id();
+#            warn "Found '$clone_name'\n";
+            $clone_names->{$clone_name} = 1;
+        }
     }
-    
-    # for each element of the hash, create a sequencSet and add it to the ResultSet
-    while ( my ($type , $cs_list)  = each (%cs_hash) ){
-        my $ss = $self->get_SequenceSet_by_name($type) ;
-        $ss->CloneSequence_list($cs_list) ;
-        $result_set->add_SequenceSet($ss) ; 
-    }
-    
-    ## sets the things in ResultSet, but the return value is the number of clones returned
-    return $results ;
+    my @cl_names = keys(%$clone_names);
+    warn "Found " . join(', '=> @cl_names)  . "\n";
+    return $self->fetch_ResultSet_containing_CloneName($result_set,\@cl_names);
 }
 
 sub save_current_SequenceNote_for_CloneSequence {
