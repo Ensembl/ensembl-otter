@@ -20,12 +20,15 @@ use Getopt::Long 'GetOptions';
     my $fpc = 'chr20';
     my $static_type = 'SANGER';
     my $scale = 2000;
-    my $n_tiles = 1;
+    my $v_tiles = 0;
+    my $h_tiles = 0;
     my $chr_name = '';
     my $chr_start = 0;
     my $chr_end = 0;
     my $font_size = 12;
     my $sanger_names = 0;
+    my $landscape = 1;
+    my $portrait = 0;
     GetOptions(
         'host=s'        => \$host,
         'db=s'          => \$db,
@@ -33,12 +36,15 @@ use Getopt::Long 'GetOptions';
         'fpc=s'         => \$fpc,
         'scale=s'       => \$scale,
         'type=s'        => \$static_type,
-        'tiles=i'       => \$n_tiles,
+        'htiles=i'      => \$h_tiles,
+        'vtiles=i'      => \$v_tiles,
         'chr=s'         => \$chr_name,
         'start=s'       => \$chr_start,
         'end=s'         => \$chr_end,
         'font_size=i'   => \$font_size,
         'sanger!'       => \$sanger_names,
+        'landscape!'    => \$landscape,
+        'portrait!'     => \$portrait,
         ) or die "Error processing command line options";
 
     if ($chr_start) {
@@ -56,6 +62,20 @@ use Getopt::Long 'GetOptions';
     $mw->title($fpc);
     my $gc = GenomeCanvas->new($mw);
     $gc->font_size($font_size);
+    if ($h_tiles and $v_tiles) {
+        die "Can't set both htiles and vtiles";
+    }
+    elsif ($h_tiles) {
+        $gc->horizontal_tile($h_tiles);
+    }
+    elsif ($v_tiles) {
+        $gc->vertical_tile($v_tiles);
+    }
+    
+    $gc->landscape($landscape);
+    if ($portrait) {
+        $gc->landscape(0);
+    }
     
     my $canvas = $gc->canvas;
 
@@ -111,6 +131,12 @@ use Getopt::Long 'GetOptions';
         #$gene_density->band_color('#6600cc');
         #$gc->add_Band($gene_density);
 
+        my $repeat = GenomeCanvas::DensityBand::RepeatFeature->new;
+        $repeat->virtual_contig($vc);
+        $repeat->title('Repeats');
+        $repeat->repeat_classifier(\&repeat_class);
+        $gc->add_Band($repeat);
+
         my $plot = GenomeCanvas::Band::Plot->new;
         $plot->title('gc Content');
         $plot->virtual_contig($vc);
@@ -130,11 +156,6 @@ use Getopt::Long 'GetOptions';
         $gene_names->virtual_contig($vc);
         $gene_names->tiling_direction(1);
         $gc->add_Band($gene_names);
-
-        #my $repeat = GenomeCanvas::DensityBand::RepeatFeature->new;
-        #$repeat->virtual_contig($vc);
-        #$repeat->repeat_classifier(\&repeat_class);
-        #$gc->add_Band($repeat);
 
         print STDERR "Rendering canvas\n";
         $gc->residues_per_pixel($scale);
@@ -168,34 +189,39 @@ use Getopt::Long 'GetOptions';
 
     make_button($button_frame, 'PostScript',
         sub {
-            my $page_width = 841;
+            my @files = $gc->print_postscript($fpc);
+            warn "Printed to files:\n",
+                map "  $_\n", @files;
+            #my $page_width  = 591;
+            #my $page_height = 841;
+            #my $border = 36;
 
-            my @bbox = $canvas->cget('scrollregion');
-            my $canvas_width  = $bbox[2] - $bbox[0];
-            my $canvas_height = $bbox[3] - $bbox[1];
-            my $tile_width = $canvas_width / $n_tiles;
-            for (my $i = 0; $i < $n_tiles; $i++) {
-                my( $file );
-                if ($n_tiles == 1) {
-                    $file = "$fpc.ps";
-                } else {
-                    my $n = ('01'..'99')[$i];
-                    $file = "${fpc}_$n.ps";
-                }
-                $canvas->postscript(
-                    -file => $file,
-                    '-x' => $bbox[0] + ($i * $tile_width),
-                    '-y' => $bbox[1],
-                    -width  => $tile_width,
-                    -height => $canvas_height,
-                    -pageanchor => 'nw',
-                    -pagex => 36,
-                    -pagey => 36,
-                    -pagewidth => $page_width - 72,
-                    -rotate => 1,   # landscape
-                    );
-                warn "Printed to file '$file'"
-            }
+            #my $bbox = $canvas->cget('scrollregion');
+            #my $canvas_width  = $bbox->[2] - $bbox->[0];
+            #my $canvas_height = $bbox->[3] - $bbox->[1];
+            #my $tile_width = $canvas_width / $n_tiles;
+            #for (my $i = 0; $i < $n_tiles; $i++) {
+            #    my( $file );
+            #    if ($n_tiles == 1) {
+            #        $file = "$fpc.ps";
+            #    } else {
+            #        my $n = ('01'..'99')[$i];
+            #        $file = "${fpc}_$n.ps";
+            #    }
+            #    $canvas->postscript(
+            #        -file => $file,
+            #        '-x' => $bbox->[0] + ($i * $tile_width),
+            #        '-y' => $bbox->[1],
+            #        -width  => $tile_width,
+            #        -height => $canvas_height,
+            #        -pageanchor => 'nw',
+            #        -pagex => $border,
+            #        -pagey => $border,
+            #        -pagewidth => $page_height - ($border * 2),
+            #        -rotate => 1,   # landscape
+            #        );
+            #    warn "Printed to file '$file'"
+            #}
         });
     $gc->fix_window_min_max_sizes;
 }

@@ -457,6 +457,240 @@ sub fix_window_min_max_sizes {
     $mw->geometry("${max_x}x$max_y+$x+$y");
 }
 
+sub print_postscript {
+    my( $gc, $file_root ) = @_;
+    
+    unless ($file_root) {
+        $file_root = $gc->TopLevel->cget('title')
+            || 'GenomeCanvas';
+        $file_root =~ s/\s/_/g;
+    }
+    $file_root =~ s/\.ps$//i;
+    
+    my $canvas = $gc->canvas;
+    my $bbox = $canvas->cget('scrollregion');
+    my $canvas_width  = $bbox->[2] - $bbox->[0];
+    my $canvas_height = $bbox->[3] - $bbox->[1];
+    my $canvas_ratio = $canvas_width / $canvas_height;
+
+    my $page_border = $gc->page_border;
+    my $page_width  = $gc->page_width  - (2 * $page_border);
+    my $page_height = $gc->page_height - (2 * $page_border);
+    if ($page_width > $page_height) {
+        confess "Page width must be greater than page height:\n",
+            "  width = '$page_width', height = '$page_height'";
+    }
+    
+    my $horiz_tile      = $gc->horizontal_tile;
+    my $vert_tile       = $gc->vertical_tile;
+    my $landscape       = $gc->landscape;
+    my $tile_overlap    = $gc->tile_overlap;
+    
+    my $page_x = $page_border;
+    my $page_y = $page_border;
+    if ($landscape) {
+        ($page_width, $page_height) = ($page_height, $page_width);
+    } else {
+        $page_y += $page_height;
+    }
+    
+    my( $print_width, $print_height,
+        $tile_width, $tile_height,
+        $canvas_tile_pad,
+        @ps_args );
+    if ($horiz_tile) {
+        my $overlap_count = $horiz_tile - 1;
+        
+        # Calculate the print width and height
+        $print_width  = ($page_width * $horiz_tile) - ($tile_overlap * $overlap_count);
+        $print_height = $print_width * ($canvas_height / $canvas_width);
+        
+        # Calculate size of tile overlap on canavs
+        $canvas_tile_pad = $tile_overlap * ($canvas_width / $print_width);
+
+        # Deduce the number of vertical tiles        
+        $vert_tile = 1 + int($print_height / ($page_height - $tile_overlap));
+
+        $tile_width  = ($canvas_width + ($overlap_count * $canvas_tile_pad)) / $horiz_tile;
+        $tile_height = $tile_width  * ($page_height / $page_width);
+        push(@ps_args, '-pagewidth', $page_width);
+    }
+    elsif ($vert_tile) {
+        my $overlap_count = $vert_tile - 1;
+        
+        # Calculate print height and width
+        $print_height = ($page_height * $vert_tile) - ($tile_overlap * $overlap_count);
+        $print_width  = $print_height * ($canvas_width / $canvas_height);
+        
+        # Calculate size of tile overlap on canavs
+        $canvas_tile_pad = $tile_overlap * ($canvas_height / $print_height);
+        
+        # Deduce the number of horizontal tiles
+        $horiz_tile = 1 + int($print_width / ($page_width - $tile_overlap));
+        
+        $tile_height = ($canvas_height + ($overlap_count * $canvas_tile_pad)) / $vert_tile;
+        $tile_width  = $tile_height  * ($page_width / $page_height);
+        push(@ps_args, '-pageheight', $page_height);
+    }
+    else {
+        $horiz_tile = 1;
+        $vert_tile  = 1;
+        $print_width  = $page_width;
+        $print_height = $page_height;
+        $tile_height = $canvas_height;
+        $tile_width  = $canvas_width;
+        $canvas_tile_pad = 0;
+        my $print_ratio = $print_width / $print_height;
+        if ($print_ratio < $canvas_ratio) {
+            # May need to squish width
+            if ($canvas_width > $print_width) {
+                push(@ps_args, '-pagewidth', $print_width);
+            }
+        } else {
+            # May need to squish height
+            if ($canvas_height > $print_height) {
+                push(@ps_args, '-pageheight', $print_height);
+            }
+        }
+    }
+    
+    my $h_format = '%0'. length($horiz_tile) .'d';
+    my $v_format = '%0'. length($vert_tile)  .'d';
+    
+    # Foreach row ...
+    my( @ps_files );
+    for (my $i = 0; $i < $vert_tile; $i++) {
+        my $h_num = $vert_tile == 1 ? '' : sprintf($h_format, $i + 1);
+        my $y = $bbox->[1] + ($i * $tile_height) - ($i * $canvas_tile_pad);
+        
+        # ... print each column
+        for (my $j = 0; $j < $horiz_tile; $j++) {
+            my $x = $bbox->[0] + ($j * $tile_width) - ($j * $canvas_tile_pad);
+            my $v_num = $horiz_tile == 1 ? '' : sprintf($v_format, $j + 1);
+            my( $ps_file_name );
+            if ($horiz_tile == 1 and $vert_tile == 1) {
+                $ps_file_name = "$file_root.ps";
+            } else {
+                my $join = ($v_num && $h_num) ? '-' : '';
+                $ps_file_name = "$file_root-$v_num$join$h_num.ps";
+            }
+            
+#            warn "\nps args =
+#  -file => $ps_file_name,
+#  '-x' => $x,
+#  '-y' => $y,
+#  -width  => $tile_width,
+#  -height => $tile_height,
+#  -pageanchor => 'nw',
+#  -pagex => $page_x,
+#  -pagey => $page_y,
+#  -rotate => $landscape,
+#  @ps_args,
+#";
+            
+            $canvas->postscript(
+                -file => $ps_file_name,
+                '-x' => $x,
+                '-y' => $y,
+                -width  => $tile_width,
+                -height => $tile_height,
+                -pageanchor => 'nw',
+                -pagex => $page_x,
+                -pagey => $page_y,
+                -rotate => $landscape,
+                @ps_args,
+                );
+            push(@ps_files, $ps_file_name);
+        }
+    }
+    return @ps_files;
+}
+
+sub page_width {
+    my( $gc, $page_width ) = @_;
+    
+    if ($page_width) {
+        confess "Illegal page width '$page_width'"
+            unless $page_width =~ /^\d+$/;
+        $gc->{'_page_width'} = $page_width;
+    }
+    return $gc->{'_page_width'}
+        || 591; # A4 width in points
+}
+
+sub page_height {
+    my( $gc, $page_height ) = @_;
+    
+    if ($page_height) {
+        confess "Illegal page height '$page_height'"
+            unless $page_height =~ /^\d+$/;
+        $gc->{'_page_height'} = $page_height;
+    }
+    return $gc->{'_page_height'}
+        || 841; # A4 height in points
+}
+
+sub page_border {
+    my( $gc, $page_border ) = @_;
+    
+    if ($page_border) {
+        confess "Illegal page border '$page_border'"
+            unless $page_border =~ /^\d+$/;
+        $gc->{'_page_border'} = $page_border;
+    }
+    return $gc->{'_page_border'}
+        || 36; # half an inch in points
+}
+
+sub tile_overlap {
+    my( $gc, $tile_overlap ) = @_;
+    
+    if ($tile_overlap) {
+        confess "Illegal page border '$tile_overlap'"
+            unless $tile_overlap =~ /^\d+$/;
+        $gc->{'_tile_overlap'} = $tile_overlap;
+    }
+    return $gc->{'_tile_overlap'}
+        || ($gc->page_border / 2);
+}
+
+sub landscape {
+    my( $gc, $flag ) = @_;
+    
+    if (defined $flag) {
+        $gc->{'_print_landscape'} = $flag ? 1 : 0;
+    }
+    $flag = $gc->{'_print_landscape'};
+    return defined($flag) ? $flag : 0;
+}
+
+
+# Don't allow both horizontal and vertical tile to be set
+
+sub horizontal_tile {
+    my( $gc, $count ) = @_;
+    
+    if ($count) {
+        confess "Illegal horizontal tile count '$count'"
+            unless $count =~ /^\d+$/;
+        $gc->{'_print_horizontal_tile'} = $count;
+        $gc->{'_print_vertical_tile'}   = 0;
+    }
+    return $gc->{'_print_horizontal_tile'} || 0;
+}
+
+sub vertical_tile {
+    my( $gc, $count ) = @_;
+    
+    if ($count) {
+        confess "Illegal vertical tile count '$count'"
+            unless $count =~ /^\d+$/;
+        $gc->{'_print_horizontal_tile'} = 0;
+        $gc->{'_print_vertical_tile'}   = $count;
+    }
+    return $gc->{'_print_vertical_tile'} || 0;
+}
+
 1;
 
 __END__

@@ -13,9 +13,10 @@ use vars '@ISA';
 sub render {
     my( $band ) = @_;
     
-    while (my($vc, $x_offset) = $band->next_sub_VirtualContig) {
-        $band->draw_gene_features_on_sub_vc($vc, $x_offset);
-    }
+    #while (my($vc, $x_offset) = $band->next_sub_VirtualContig) {
+    #    $band->draw_gene_features_on_sub_vc($vc, $x_offset);
+    #}
+    $band->draw_gene_features_on_sub_vc($band->virtual_contig, 0);
 }
 
 sub draw_titles {
@@ -136,73 +137,108 @@ sub draw_gene_features_on_sub_vc {
     my $rectangle_border = $font_size * 1  / 12;
     my $nudge_distance = ($rectangle_height + 1) * $y_dir;
 
-    my $text_nudge_flag = 0;
-    foreach my $vg ($vc->get_all_VirtualGenes) {        
-        my $color = $band->gene_type_color($vg->gene->type)
-            or next;
-        $band->current_color($color);
-        my $start = $x_offset + $vg->start;
-        my $end   = $x_offset + $vg->end;
-        my $id    = $vg->id;
-        #warn "[$x_offset] $id: $start -> $end\n";
-        
-        my $group = "gene_group-$id-$vc";
-        
-        my $x1 = $start / $rpp;
-        my $x2 = $end   / $rpp;
-        $canvas->createRectangle(
-            $x1, $y_offset, $x2, $y_offset + $rectangle_height,
-            -fill => $color,
-            -outline => undef,
-            -tags => [@tags, 'gene_rectangle', $group],
-            );
-
-        my $label_space = $rectangle_height * (3 / 4);
-        my( $anchor, $y1 );
-        if ($y_dir == 1) {
-            $anchor = 'nw';
-            $y1 = $y_offset + $rectangle_height + $label_space;
-        } else {
-            $anchor = 'sw';
-            $y1 = $y_offset + (-1 * $label_space);
+    my @genes = $vc->get_all_VirtualGenes;
+    my( @ranked_genes );
+    if (my $label_type = $band->label_type_list) {
+        my @types = map $_->[1], @$label_type;
+        my( %type_level );
+        for (my $i = 0; $i < @types; $i++) {
+            $type_level{$types[$i]} = $i;
         }
-        
-        if ($vg->strand == 1) {
-            $band->forward_arrow($x2, $rectangle_height, @tags, $group);
-        } else {
-            $band->reverse_arrow($x1, $rectangle_height, @tags, $group);
+        foreach my $vg (@genes) {
+            my $type = $vg->gene->type;
+            my $i = $type_level{$type};
+            next unless defined($i);
+            $ranked_genes[$i] ||= [];
+            push(@{$ranked_genes[$i]}, $vg);
         }
-
-        if ($band->show_labels) {
-            
-            my $label = $canvas->createText(
-                $x1, $y1,
-                -text => $id,
-                -font => ['helvetica', $font_size],
-                -anchor => $anchor,
-                -tags => [@tags, 'gene_label', $group],
-                );
-
-            my @bkgd = $canvas->bbox($group);
-
-            my $sp = $font_size / 5;
-            $band->expand_bbox(\@bkgd, $sp);
-            my $bkgd_rectangle = $canvas->createRectangle(
-                @bkgd,
-                -outline    => '#cccccc',
-                -tags       => [@tags, 'bkgd_rec', $group],
-                );
-            
-            unless ($text_nudge_flag) {
-                my( $small, $big ) = sort {$a <=> $b} map abs($_), @bkgd[1,3];
-                $nudge_distance = ($big - $small + 3) * $y_dir;
-                $text_nudge_flag = 1;
-            }
-        }
-        
-        $band->nudge_into_free_space($group, $nudge_distance);
+    } else {
+        @ranked_genes = [@genes];
     }
+    
+    my $text_nudge_flag = 0;
+    foreach my $rank (grep $_, @ranked_genes) {
+        foreach my $vg (sort {$a->start <=> $b->start} @$rank) {
+            my $color = $band->gene_type_color($vg->gene->type)
+                or next;
+        
+            my $id    = $vg->id;
+            my $group = "gene_group-$id-$vc";
+            #$band->draw_gene($vg, $x_offset, $y_offset, $color, $group);
+        
+            $band->current_color($color);
+            my $start = $x_offset + $vg->start;
+            my $end   = $x_offset + $vg->end;
+            #warn "[$x_offset] $id: $start -> $end\n";
+
+
+            my $x1 = $start / $rpp;
+            my $x2 = $end   / $rpp;
+            $canvas->createRectangle(
+                $x1, $y_offset, $x2, $y_offset + $rectangle_height,
+                -fill => $color,
+                -outline => undef,
+                -tags => [@tags, 'gene_rectangle', $group],
+                );
+
+            if ($vg->strand == 1) {
+                $band->forward_arrow($x2, $rectangle_height, @tags, $group);
+            } else {
+                $band->reverse_arrow($x1, $rectangle_height, @tags, $group);
+            }
+
+            if ($band->show_labels) {
+
+                my $label_space = $rectangle_height * (3 / 4);
+                my( $anchor, $y1 );
+                if ($y_dir == 1) {
+                    $anchor = 'nw';
+                    $y1 = $y_offset + $rectangle_height + $label_space;
+                } else {
+                    $anchor = 'sw';
+                    $y1 = $y_offset + (-1 * $label_space);
+                }
+
+                my $label = $canvas->createText(
+                    $x1, $y1,
+                    -text => $id,
+                    -font => ['helvetica', $font_size],
+                    -anchor => $anchor,
+                    -tags => [@tags, 'gene_label', $group],
+                    );
+
+                my @bkgd = $canvas->bbox($group);
+
+                my $sp = $font_size / 5;
+                $band->expand_bbox(\@bkgd, $sp);
+                my $bkgd_rectangle = $canvas->createRectangle(
+                    @bkgd,
+                    -outline    => '#cccccc',
+                    -tags       => [@tags, 'bkgd_rec', $group],
+                    );
+
+                unless ($text_nudge_flag) {
+                    my( $small, $big ) = sort {$a <=> $b} map abs($_), @bkgd[1,3];
+                    $nudge_distance = ($big - $small + 3) * $y_dir;
+                    $text_nudge_flag = 1;
+                }
+            }
+
+            $band->nudge_into_free_space($group, $nudge_distance);
+        }
+    }
+
     $canvas->delete('bkgd_rec');
+}
+
+sub draw_gene {
+    my( $band, $vg, $x_offset, $y_offset, $color, $group ) = @_;
+
+    my $canvas  = $band->canvas;
+    my @tags    = $band->tags;
+    my $strand  = $vg->strand;
+    
+    
 }
 
 sub forward_arrow {
