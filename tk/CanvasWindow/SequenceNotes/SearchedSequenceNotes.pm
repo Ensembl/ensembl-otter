@@ -1,8 +1,8 @@
 
 ### CanvasWindow::SequenceNotes::SearchedSequenceNotes
 
-## this module is designed to work the same as the SequenceNotes module, exept that it will display a ResultSet 
-## (which may contain 1 or more SequenceSets )
+## this module is designed to work the same as the SequenceNotes module, exept that it will display a ResultSet object 
+## (which may contain 1 or more SequenceSets) rather than a single sequenceSet object 
 
 package CanvasWindow::SequenceNotes::SearchedSequenceNotes;
 
@@ -51,13 +51,12 @@ sub _refresh_SequenceSet{
 
 }
 
-# returns a list. Each elemnt of the list is an annonymous array with 2 elements.
+# returns a list. Each element of the list is an annonymous array with 2 elements.
 # the first element is the CloneSequence and the second element is the assembly type
 sub get_CloneSequence_list_with_assembly{
     my( $self ) = @_;  
     my $rs = $self->ResultSet ;
     my $ss_list = $rs->get_all_SequenceSets ;  
-    
     my @cs_assembly_list ;
     foreach my $ss (@$ss_list){ 
         my $ds = $self->SequenceSetChooser->DataSet;
@@ -74,8 +73,8 @@ sub get_CloneSequence_list_with_assembly{
 sub _write_access{
     my ($self) = @_ ;
     my $rs = $self->ResultSet or confess "no ResultSet attached" ;
-    my $ss = pop @{$rs->get_all_SequenceSets} ;
-    return $ss->write_access;
+    my $ss =  $rs->get_all_SequenceSets->[0] ;
+    return $ss->write_access ;
 }
 
 
@@ -88,6 +87,7 @@ sub draw {
     #my $cs_list   = $self->get_rows_list;
     my $cs_assembly_list = $self->get_CloneSequence_list_with_assembly ;
 
+    
     print STDERR " done\n";
     my $size      = $self->font_size;
     my $canvas    = $self->canvas;
@@ -100,8 +100,8 @@ sub draw {
 
     print STDERR "Drawing list...";
        
-    my $prev_assembly = undef ; #$cs_assembly_list->[0]->[1] ;
-    my $prev_chr = 'undef' ; #$$cs_assembly_list[0]->[0]->chromosome;
+    my $prev_assembly = '';#undef ; #$cs_assembly_list->[0]->[1] ;
+    my $prev_chr = '' ; #$$cs_assembly_list[0]->[0]->chromosome;
     my $assembly_index = 0 ;
     
     my $norm_font   =  ['Helvetica', $size, 'normal'];
@@ -149,7 +149,6 @@ sub draw {
 
 
         if  ($gap_type =~ /[Assembly||Chromosome||Gap]/  ) {
-#            warn "should be creating a gap - gaps $gaps , rows $row";
             $gap_pos->{$row} = 1;              
 
             my $text ;
@@ -200,7 +199,7 @@ sub draw {
 	    $opt_hash->{'-width'}  ||= $max_width;
 	    $opt_hash->{'-tags'}   ||= [];
 	    push(@{$opt_hash->{'-tags'}}, $row_tag, $col_tag, $assembly_tag,  $assembly_index_tag , "cs=$i");
-	    
+            
             $calling_method->($canvas,  $x , $y ,  %$opt_hash);  ## in most cases $calling_method will be $canvas->createText   
         } 
     }
@@ -230,9 +229,11 @@ sub run_lace {
     
     ## going to spawn a new Lace session for each diff SequenceSet    
     foreach my $ss ( @$ss_list){
-        my $number_selected = scalar( $ss->selected_CloneSequences) ;
-#        warn $ss->name . " number selected $number_selected " ; 
+        my $selected = $ss->selected_CloneSequences   ;
+        my $number_selected = ( $selected ? scalar( @$selected) : 0 )  ;
+
         next unless $number_selected ;  # dont want to try and open ss with unselected clones
+        my @names = map {$_->clone_name}  @{$ss->selected_CloneSequences} ;
            
         my $cl = $self->Client;
         my $title = $self->selected_sequence_string($ss);
@@ -290,7 +291,7 @@ sub set_selected_from_canvas{
             my $pair = $cs_pair_list->[$index] ;
             my $cs = $pair->[0] ;
             my $ss_name = $pair->[1] ;    
-        
+                 
             push ( @{ $selected_hash{$ss_name} } , $cs ) ;
         }    
         
@@ -300,12 +301,11 @@ sub set_selected_from_canvas{
         }
         
         # go through each element of the hash and store selected ones in SS object        
-        while (my ($cs_name , $selected) = each (%selected_hash)) {
-            if ( my $ss = $rs->get_SequenceSet_by_name($cs_name)){
-                warn "setting SS now" ;
+        while (my ($ss_name , $selected) = each (%selected_hash)) {
+            if ( my $ss = $rs->get_SequenceSet_by_name($ss_name)){
                 $ss->selected_CloneSequences($selected);
             }else{
-                confess "Could not find SequenceSet with name $cs_name";
+                confess "Could not find SequenceSet with name $ss_name";
             }
         }
         
@@ -315,7 +315,7 @@ sub set_selected_from_canvas{
                 warn "assembly ". $ss->name . "number selected :" . scalar(@$cs_list) ;
             }
             else{
-                warn "nowt selected for " . $ss->name ;
+                warn "nothing selected for " . $ss->name ;
             }
         }
         
@@ -457,6 +457,7 @@ sub selected_SequenceSets{
     return unless my $cs_pairs = $self->get_CloneSequence_list_with_assembly ;
     
     foreach my $pair (@$cs_pairs){
+
         my $assembly_name = $pair->[1] ;
         unless (exists ($ss_hash{$assembly_name})){
             $ss_hash{$assembly_name} = $self->ResultSet->get_SequenceSet_by_name($assembly_name) ;   
