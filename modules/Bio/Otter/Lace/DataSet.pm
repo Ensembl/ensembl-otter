@@ -285,7 +285,7 @@ sub lock_refresh_for_SequenceSet{
     my $id_string =  join( ", " , map { qq`'$_'`} @id_list );        
 
     my $sql = qq{
-        SELECT cl.clone_lock_id , g.contig_id, t.author_id
+        SELECT DISTINCT cl.clone_lock_id , g.contig_id, t.author_id
             , t.author_name, t.author_email, cl.hostname
         FROM assembly a
           , contig g
@@ -308,14 +308,14 @@ sub lock_refresh_for_SequenceSet{
                         \$author_name, \$author_email, \$hostname );
     my %lock_hash ;
     while($sth->fetch) {
-        if(defined($clone_lock_id)){
+        #if(defined($clone_lock_id)){
             my $authorObj = Bio::Otter::Author->new(-dbid  => $author_id,
                                                     -name  => $author_name,
                                                     -email => $author_email);            
             $lock_hash{$contig_id} = Bio::Otter::CloneLock->new(-author   => $authorObj,
                                                                 -hostname => $hostname,
                                                                 -dbID     => $clone_lock_id);
-        }
+        #}
     }
     
     foreach my  $clone (@{$ss->CloneSequence_list}){
