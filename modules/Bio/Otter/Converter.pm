@@ -542,7 +542,6 @@ sub XML_to_otter {
         }
         $tran->{_trans_exon_array} = \@exons;
     }
-    
     $gene->set_gene_type_from_transcript_classes;
   }
 
@@ -1520,9 +1519,7 @@ sub ace_to_otter {
         if (my $type = $gene_data->{GeneType}) {
             $ginfo->known_flag(1) if $type eq 'Known';
         }
-        unless ($ginfo->truncated_flag) {
-            $gene->set_gene_type_from_transcript_classes;
-        }
+        $gene->set_gene_type_from_transcript_classes;
     }
     
     # Turn %frags into a Tiling Path

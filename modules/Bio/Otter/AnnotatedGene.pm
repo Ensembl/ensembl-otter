@@ -301,6 +301,7 @@ sub set_gene_type_from_transcript_classes {
     $self->throw('No transcripts') unless @$transcripts;
     foreach my $transcript (@$transcripts) {
         my $class = $transcript->transcript_info->class->name;
+        $class =~ s/_trunc$//;
         $class_set{$class}++;
         $pseudo_count++ if $class =~ /pseudo/i;
     }
