@@ -1,0 +1,30 @@
+#!/usr/local/bin/perl -w
+
+### make_ecore_ace
+
+use strict;
+
+{
+    print qq{\n\nMethod : "ecore"\nColour "MAGENTA"\nRight_priority 1.010\n};
+
+    my $current_ctg = '';
+    while (<>) {
+        
+        my ($ctg, $start, $end) = /^(\S+)\/(\d+)-(\d+)/;
+        if ($ctg ne $current_ctg) {
+            print qq{\nSequence : "$ctg"\n};
+            $current_ctg = $ctg;
+        }
+        print qq{Feature "ecore" $start $end 100.00\n};
+    }
+    print "\n";
+}
+
+__END__
+
+=head1 NAME - make_ecore_ace
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+

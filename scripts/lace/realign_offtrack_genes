@@ -98,7 +98,6 @@ $| = 1;
         my $finder = Hum::Analysis::Factory::ExonLocator->new;
         $finder->genomic_Sequence($dest_seq);
         
-        
         if (remap_ens_Exons($finder, $db_gene->get_all_Exons, $short_slice, $liberal)) {
             warn "Remapped exons OK\n";
             # otter > XML > otter
