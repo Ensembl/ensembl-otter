@@ -5,57 +5,38 @@
 use strict;
 use Getopt::Long;
 use Bio::Otter::Lace::SatelliteDB;
+use Bio::Otter::Lace::Defaults;
+use Data::Dumper;
 
 {
-    my $usage = sub{ exec('perldoc', $0) };
-
-    my(
-        $host,
-        $port,
-        $user,
-        $pass,
-        $dbname,
-        
-        $key,
-        
+    my( $help,
+	$key, 
         $sathost,
         $satport,
         $satuser,
         $satpass,
-        $satdbname,
-        
+        $satdbname, 
         );
-
-    GetOptions(
-        'h|help!'       => $usage,
-
-        'host=s'        => \$host,
-	'port=i'        => \$port,
-	'user=s'        => \$user,
-	'password=s'    => \$pass,
-        'dbname=s'      => \$dbname,
-
-        'key=s'         => \$key,
-
-        'sathost=s'     => \$sathost,
-	'satport=i'     => \$satport,
-	'satuser=s'     => \$satuser,
-	'satpassword=s' => \$satpass,
-        'satdbname=s'   => \$satdbname, 
-        ) or $usage->();
-    
+    my $dataset_name = 'human';
+    Bio::Otter::Lace::Defaults::do_getopt(
+					  'h|help!'    => \$help,
+					  'key=s'      => \$key,
+					  'host=s'     => \$sathost,
+					  'port=s'     => \$satport,
+					  'user=s'     => \$satuser,
+					  'password=s' => \$satpass,
+					  'dbname=s'   => \$satdbname,
+					  'dataset=s'  => \$dataset_name
+					  ) || usage();
+    usage() if $help;
     die "Key not given" unless $key;
-    
-    # DB were the key will be written
-    my $otter_db = Bio::EnsEMBL::DBSQL::DBAdaptor->new(   
-        -HOST   => $host,
-        -PORT   => $port,
-        -USER   => $user,
-        -PASS   => $pass,
-        -DBNAME => $dbname,
-        );
-    
-    my $sat_opts = {};
+
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    my $otter_db = $ds->get_cached_DBAdaptor;
+
+    my $current = Bio::Otter::Lace::SatelliteDB::get_options_for_key($otter_db, $key);
+    my $sat_opts = $current || {};
     $sat_opts->{'-HOST'}    = $sathost      if $sathost;
     $sat_opts->{'-PORT'}    = $satport      if $satport;
     $sat_opts->{'-USER'}    = $satuser      if $satuser;
@@ -63,17 +44,46 @@ use Bio::Otter::Lace::SatelliteDB;
     $sat_opts->{'-DBNAME'}  = $satdbname    if $satdbname;
 
     # Check we can connect to the Satellite database
-    my $sat_db = Bio::EnsEMBL::DBSQL::DBAdaptor->new(%$sat_opts);
-    $sat_db = undef;
-    
+    eval {
+	my $sat_db = Bio::EnsEMBL::DBSQL::DBAdaptor->new(%$sat_opts);
+	$sat_db = undef;
+    };
+    if ($@){ die "Couldn't connect to SatelliteDB selected:\n" . Dumper($sat_opts) . $@ }
+
+    # delete the key
+    Bio::Otter::Lace::SatelliteDB::remove_options_hash_for_key($otter_db, $key);
+    # replace with new version
     Bio::Otter::Lace::SatelliteDB::save_options_hash($otter_db, $key, $sat_opts);
+
 }
 
-
+#---------
+sub usage{ exit(exec("perldoc", $0)) }
 
 __END__
 
 =head1 NAME - save_satellite_db
+
+=head1 DESCRIPTION
+
+    Saves the connection hash for a satellite database for 
+the otter server under the key.  By default it uses the options 
+already stored in the database for the key.
+
+=head1 USAGE
+
+    help           - print this pod
+    key (required) - meta_key to use in the meta table
+    host           - host for the satellite DB
+    port           - port for the satellite DB
+    user           - user for the satellite DB
+    password       - pass for the satellite DB
+    dbname         - dbname for the satellite DB
+    dataset        - otter dataset to use [human]
+
+=head1 EXAMPLE
+
+    ./save_satellite_db -dataset zebrafish -key pipeline_db -host ecs2 -port 3310 -user ensro
 
 =head1 AUTHOR
 
