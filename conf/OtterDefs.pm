@@ -60,7 +60,8 @@ $OTTER_PREFIX               = 'OTT';
 $OTTER_GET_SCRIPTS          = {'/perl/get_region'     => "get_region",
                                '/perl/get_sequence'   => "get_sequence",
                                '/perl/get_datasets'   => "get_datasets",
-                               '/perl/get_loci_names' => "get_loci_names"
+                               '/perl/get_loci_names' => "get_loci_names",
+                               '/perl/lock_region'    => "lock_region"
                               };
 $OTTER_POST_SCRIPTS         = {'/perl/write_region'   => "write_region",
                                '/perl/unlock_region'  => "unlock_region",
