@@ -222,6 +222,7 @@ eval {
       $gene = $event->old_gene;
     } else {
       $gene = $event->new_gene;
+        $output_xml .= $gene->toXMLString();
     }
 
     print STDERR "Attaching gene to slice " . $gene->stable_id . " " . $gene->version. "";
@@ -229,7 +230,6 @@ eval {
     $gene->detach_DBAdaptors;
     print STDERR "Done attaching";
     $oaga->store($gene);
-    $output_xml .= $gene->toXMLString() unless $event->type eq 'deleted';
     print STDERR "Stored gene";
     $outputstr .= " " . $gene->version . " " . $gene->gene_info->name->name . "";
   }
