@@ -1,6 +1,7 @@
 package Bio::Otter::Converter;
 
 use strict;
+use Carp;
 
 use Bio::Otter::Author;
 use Bio::Otter::Keyword;
@@ -28,6 +29,8 @@ use Bio::Seq;
 sub XML_to_otter {
   my $fh = shift;
   my $db = shift;
+
+    confess "Not a filehandle" unless ref($fh) eq 'GLOB';
 
   my $gene = undef;
   my $tran;
@@ -57,7 +60,6 @@ sub XML_to_otter {
 
   while (<$fh>) {
     chomp;
-
     if (/<locus>/) {
       if (defined($gene)) {
         $gene->gene_info->author($author);
@@ -976,7 +978,7 @@ sub ace_to_otter {
              $chrstart = $2;
              $chrend   = $3;
           } else {
-            print "Warning: Genomic|_canonical sequence is not in the 6.1-10000 format [$currname].  Can't convert to chr, start,end\n";
+            print "Warning: Genomic_canonical sequence is not in the 6.1-10000 format [$currname].  Can't convert to chr, start,end\n";
           }
           #print "Found contig\n";
 

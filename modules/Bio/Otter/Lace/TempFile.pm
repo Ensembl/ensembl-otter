@@ -41,10 +41,7 @@ sub full_name {
         $self->{'_full_name'} = $full_name;
     }
     return $self->{'_full_name'} ||
-        join('/',
-            $self->root,
-            $self->name,
-            $$);
+        $self->root . '/' . $$ . '.' . $self->name;
 }
 
 sub read_file_handle {
@@ -56,7 +53,7 @@ sub read_file_handle {
     }
     my( $fh );
     unless ($fh = $self->{'_read_file_handle'}) {
-        my $fh = gensym();
+        $fh = gensym();
         my $full = $self->full_name;
         sysopen($fh, $full, O_RDONLY)
             or confess "Error reading '$full' : $!";
@@ -71,7 +68,7 @@ sub write_file_handle {
     my( $fh );
     unless ($fh = $self->{'_write_file_handle'}) {
         $self->{'_read_file_handle'} = undef;
-        my $fh = gensym();
+        $fh = gensym();
         my $full = $self->full_name;
         sysopen($fh, $full, O_WRONLY | O_CREAT)
             or confess "Error creating '$full' : $!";

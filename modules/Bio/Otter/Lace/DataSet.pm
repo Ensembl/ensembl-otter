@@ -33,6 +33,39 @@ sub selected_CloneSequences {
     return $self->{'_selected_CloneSequences'};
 }
 
+sub unselect_all_CloneSequences {
+    my( $self ) = @_;
+    
+    $self->{'_selected_CloneSequences'} = undef;
+}
+
+sub selected_CloneSequences_as_contig_list {
+    my( $self ) = @_;
+    
+    my $cs_list = $self->selected_CloneSequences
+        or return;
+    my $ctg = [];
+    my $ctg_list = [$ctg];
+    foreach my $this (sort {
+        $a->chromosome->chromosome_id <=> $b->chromosome->chromosome_id ||
+        $a->chr_start <=> $b->chr_start
+        } @$cs_list)
+    {
+        my $last = $ctg->[$#$ctg];
+        if ($last) {
+            if ($last->chr_end + 1 == $this->chr_start) {
+                push(@$ctg, $this);
+            } else {
+                $ctg = [$this];
+                push(@$ctg_list, $ctg);
+            }
+        } else {
+            push(@$ctg, $this);
+        }
+    }
+    return $ctg_list;
+}
+
 sub get_all_Chromosomes {
     my( $self ) = @_;
     

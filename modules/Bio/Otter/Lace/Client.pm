@@ -73,40 +73,53 @@ sub get_otter_ace {
     
     my $ace = '';
     foreach my $ds ($self->get_all_DataSets) {
-        if (my $cs_list = $ds->selected_CloneSequences) {
-            my $ctg = [];
-            my $ctg_list = [$ctg];
-            foreach my $this (sort {
-                $a->chromosome->chromosome_id <=> $b->chromosome->chromosome_id ||
-                $a->chr_start <=> $b->chr_start
-                } @$cs_list)
-            {
-                my $last = $ctg->[$#$ctg];
-                if ($last) {
-                    if ($last->chr_end + 1 == $this->chr_start) {
-                        push(@$ctg, $this);
-                    } else {
-                        $ctg = [$this];
-                        push(@$ctg_list, $ctg);
-                    }
-                } else {
-                    push(@$ctg, $this);
-                }
-            }
-
+        if (my $ctg_list = $ds->selected_CloneSequences_as_contig_list) {
             foreach my $ctg (@$ctg_list) {
                 ### It is rather tempting here not to go through the XML layer
                 my $xml = Bio::Otter::Lace::TempFile->new;
-                $xml->file('lace_xml');
+                $xml->name('lace.xml');
                 my $write = $xml->write_file_handle;
                 print $write $self->get_xml_for_contig_from_Dataset($ctg, $ds);
-                my ($genes, $slice, $sequence, $tiles) = Bio::Otter::Converter::XML_to_otter(
-                    $xml->read_file_handle);
+                my ($genes, $slice, $sequence, $tiles) =
+                    Bio::Otter::Converter::XML_to_otter($xml->read_file_handle);
                 $ace .= Bio::Otter::Converter::otter_to_ace($slice, $genes, $tiles, $sequence);
             }
         }
     }
     return $ace;
+}
+
+sub save_otter_AcePerl {
+    my( $self, $ace_handle, $name ) = @_;
+    
+    confess "Missing name argument" unless $name;
+    
+    ### This code should be in a data only module
+    $ace->find(Genome_Sequence => $name);
+    my $ace_txt = $ace->raw_query('show -a');
+    $ace->raw_query('Follow SubSequence');
+    $ace_txt .= $ace->raw_query('show -a');
+    $ace->raw_query('Follow Locus');
+    $ace_txt .= $ace->raw_query('show -a');
+    
+    # Cleanup text
+    $ace_txt =~ s/\0//g;            # Remove nulls
+    $ace_txt =~ s{^\s*//.+}{\n}mg;  # Strip comments
+    
+    return $self->save_otter_ace($ace_txt);
+}
+
+sub save_otter_ace {
+    my( $self, $ace_str ) = @_;
+    
+    my $ace = Bio::Otter::Lace::TempFile->new;
+    $ace->name('lace_edited.ace');
+    my $write = $ace->write_file_handle;
+    print $write $ace_str;
+    my $xml = Bio::Otter::Converter::ace_to_XML($ace->read_file_handle);
+    return $xml;
+    
+    ### Save to server with POST
 }
 
 sub get_xml_for_contig_from_Dataset {

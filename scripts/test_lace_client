@@ -22,7 +22,9 @@ use Data::Dumper;   # For debugging
     #print Dumper($cs_list);
     
     $ds->selected_CloneSequences([@$cs_list[50..55]]);
-    print $cl->get_otter_ace;
+    my $ace = $cl->get_otter_ace;
+    
+    $cl->save_otter_ace($ace);
 }
 
 
