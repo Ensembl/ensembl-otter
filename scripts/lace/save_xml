@@ -8,15 +8,16 @@ use URI::Escape qw{ uri_escape };
 use Bio::Otter::Lace::Defaults;
 
 {
-    my( $author, $email, $dataset );
+    my( $author, $email, $dataset, $seqsetname );
     my $usage = sub{ exec('perldoc', $0) };
     Bio::Otter::Lace::Defaults::do_getopt(
-        'dataset=s' => \$dataset,
-        'author=s'  => \$author,
-        'email=s'   => \$email,
-        'h|help!'   => $usage,
-        );
-    $usage->() unless $dataset and $author and $email;
+                                          'dataset=s' => \$dataset,
+                                          'seqset=s'  => \$seqsetname,
+                                          'author=s'  => \$author,
+                                          'email=s'   => \$email,
+                                          'h|help!'   => $usage,
+                                          );
+    $usage->() unless $dataset and $author and $email and $seqsetname;
     
     my( $xml );
     {
@@ -24,33 +25,60 @@ use Bio::Otter::Lace::Defaults;
         $xml = <>;
     }
     
-    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    my $cl       = Bio::Otter::Lace::Defaults::make_Client();
+    my $dsObj    = $cl->get_DataSet_by_name($dataset);
+    my $seqSet   = $dsObj->get_SequenceSet_by_name($seqsetname);
+    $dsObj->selected_SequenceSet($seqSet);
+    my $csObjs   = $dsObj->fetch_all_CloneSequences_for_selected_SequenceSet();
+
+    # this means they ALL get locked.
+    $seqSet->selected_CloneSequences($csObjs);
     
+    # need to lock the region first
+    my $lock_xml = 
+        $client->lock_region_for_contig_from_Dataset($seqSet->selected_CloneSequences_as_contig_list, 
+                                                     $dsObj
+                                                     );
+
+    # save the xml
+    my $success  = $cl->save_otter_xml($xml, $dataset);
+
+    # need to unlock if all was ok
+    if($success){
+        $client->unlock_otter_xml($lock_xml);
+    }else{
+        warn "$lock_xml";
+    }
+
+
     # Save to server with POST
-    my $url = $cl->url_root . '/write_region';
-    my $request = HTTP::Request->new;
-    $request->method('POST');
-    $request->uri($url);
-    $request->content(
-        join('&',
-            'author='   . uri_escape($author),
-            'email='    . uri_escape($email),
-            'dataset='  . uri_escape($dataset),
-            'data='     . uri_escape($xml),
-            'lock_before_write=true',
-            'unlock=true',
-            )
-        );
+    # my $url = $cl->url_root . '/write_region';
+    # my $request = HTTP::Request->new;
+    # $request->method('POST');
+    # $request->uri($url);
+    # $request->content(
+    #     join('&',
+    #         'author='   . uri_escape($author),
+    #         'email='    . uri_escape($email),
+    #         'dataset='  . uri_escape($dataset),
+    #         'data='     . uri_escape($xml),
+    #         'lock_before_write=true',
+    #         'unlock=true',
+    #         )
+    #     );
     
-    my $content = $cl->get_UserAgent->request($request)->content;
-    $cl->_check_for_error(\$content);
+    # my $content = $cl->get_UserAgent->request($request)->content;
+    # $cl->_check_for_error(\$content);
+
+    
+    
 }
 
 __END__
 
 =head1 NAME - save_xml
 
-  save_xml -dataset <DATASET> -author <NAME> -email <ADDRESS>
+  save_xml -dataset <DATASET> -author <NAME> -email <ADDRESS> -seqset <SEQUENCE SET>
 
 =head1 AUTHOR
 
