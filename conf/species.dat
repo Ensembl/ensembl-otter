@@ -2,17 +2,17 @@
 [defaults]
 USER     ensadmin
 PASS     ensembl
-HOST     ecs1d
-PORT     19322 
+HOST     humsrv1
+PORT     3306
 DNA_USER ensadmin 
-DNA_PORT 19322
+DNA_PORT 3306
 DNA_PASS ensembl
-DNA_HOST ecs1d
+DNA_HOST humsrv1
 
-[human_chr20_with_anal_end_feb]
-DBNAME         otter_chr20_with_anal_end_feb
+[human]
+DBNAME         test_otter_human
 TYPE           SANGER
 
-[otter_chr9p12]
-DBNAME         otter_chr9p12
+[zebrafish]
+DBNAME         otter_zebrafish
 TYPE           SANGER

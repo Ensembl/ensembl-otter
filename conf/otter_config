@@ -1,6 +1,6 @@
 
 [client]
-port=33999
+port=33966
 host=humsrv1
 write_access=1
 
@@ -8,15 +8,16 @@ write_access=1
 ensembl_core_db=ensembl
 ensembl_estgene_db=genomewise
 
-[default.filters]
+[default.use_filters]
 genscan=1
 trf=1
 swall=1
 est2Genome_other=1
 repeatmask=1
 est2genome_human=1
-eponine=1
+eponine=0
 refseq_human=1
+refseq_zebrafish=1
 halfwise=1
 cpg=1
 fgenesh=1
@@ -24,10 +25,27 @@ est2genome_fish=1
 est2genome_mouse=1
 vertrna=1
 
-[human.filters]
+[human.use_filters]
 est2genome_fish=0
+refseq_zebrafish=0
 
-[zebrafish.filters]
+[pig.use_filters]
+est2genome_fish=0
+refseq_zebrafish=0
+
+[dog.use_filters]
+est2genome_fish=0
+refseq_zebrafish=0
+
+[cat.use_filters]
+est2genome_fish=0
+refseq_zebrafish=0
+
+[mouse.use_filters]
+est2genome_fish=0
+refseq_zebrafish=0
+
+[zebrafish.use_filters]
 est2genome_human=0
 est2genome_mouse=0
 refseq_human=0
@@ -42,26 +60,36 @@ module=Bio::EnsEMBL::Ace::Filter::TRF
 module=Bio::EnsEMBL::Ace::Filter::Similarity::DnaSimilarity
 max_coverage=10
 hseq_prefix=Em:
+method_tag=EST_Human
+homol_tag=EST_homol
 
 [default.filter.Est2Genome_fish]
 module=Bio::EnsEMBL::Ace::Filter::Similarity::DnaSimilarity
 max_coverage=10
 hseq_prefix=Em:
+method_tag=EST_Fish
+homol_tag=EST_homol
 
 [default.filter.Est2Genome_mouse]
 module=Bio::EnsEMBL::Ace::Filter::Similarity::DnaSimilarity
 max_coverage=10
 hseq_prefix=Em:
+method_tag=EST_Mouse
+homol_tag=EST_homol
 
 [default.filter.Est2Genome_other]
 module=Bio::EnsEMBL::Ace::Filter::Similarity::DnaSimilarity
 max_coverage=10
 hseq_prefix=Em:
+method_tag=EST
+homol_tag=EST_homol
 
 [default.filter.vertrna]
 module=Bio::EnsEMBL::Ace::Filter::Similarity::DnaSimilarity
 max_coverage=10
 hseq_prefix=Em:
+method_tag=vertebrate_mRNA
+homol_tag=vertebrate_mRNA_homol
 
 [default.filter.genscan]
 module=Bio::EnsEMBL::Ace::Filter::Gene::Predicted
@@ -76,19 +104,30 @@ module=Bio::EnsEMBL::Ace::Filter::CpG
 module=Bio::EnsEMBL::Ace::Filter::Gene::Halfwise
 url_string=http:\/\/www.sanger.ac.uk\/cgi-bin\/Pfam\/getacc?%s
 
-[default.filter.refseq_human]
-module=Bio::EnsEMBL::Ace::Filter::Similarity::RefSeq
 # This url requires a LocusLink ID
 # http://www.ncbi.nlm.nih.gov/LocusLink/help.html#LinkingtoaSpecificRecord
 # url_string=http\:\/\/www.ncbi.nlm.nih.gov\/LocusLink\/LocRpt.cgi?l=?%s
 ########################################
 # This url does a search as described by
 # http://www.ncbi.nlm.nih.gov/LocusLink/help.html#CreatingaLink
+
+[default.filter.refseq_human]
+module=Bio::EnsEMBL::Ace::Filter::Similarity::DnaSimilarity
 url_string=http:\/\/www.ncbi.nlm.nih.gov\/LocusLink\/list.cgi?ORG\=Hs\&Q\=%s
+method_tag=REFSEQ
+homol_tag=DNA_homol
+
+[default.filter.refseq_zebrafish]
+module=Bio::EnsEMBL::Ace::Filter::Similarity::DnaSimilarity
+url_string=http:\/\/www.ncbi.nlm.nih.gov\/LocusLink\/list.cgi?ORG\=Dr\&Q\=%s
+method_tag=REFSEQ
+homol_tag=DNA_homol
 
 [default.filter.swall]
 module=Bio::EnsEMBL::Ace::Filter::Similarity::ProteinSimilarity
 percent_identity_cutoff=40
+method_tag=BLASTX
+homol_tag=Pep_homol
 
 [default.filter.eponine]
 module=Bio::EnsEMBL::Ace::Filter::SimpleFeature
