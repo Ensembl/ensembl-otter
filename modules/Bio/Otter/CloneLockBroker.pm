@@ -47,7 +47,7 @@ sub check_locks_exist_by_slice {
     foreach my $clone (@$clone_list) {
 	my $lock = $aptr->fetch_by_clone_id($clone->dbID)   
             or $self->throw(sprintf "Clone [%s] not locked\n", $clone->id);
-	unless ($lock->author->equals($author)) {
+	unless ($lock->author->name eq $author->name) {
 	    $self->throw("Author [" . $author->name . "] doesn't own lock for $clone");
         }
         push(@locks, $lock);
