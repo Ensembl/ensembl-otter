@@ -23,6 +23,8 @@ use Socket;
         ) or useage();
     
     if ($path) {
+        die "Error: path argument must be an absolute path"
+            unless $path =~ m{^/};
         $title ||= "$cript: $path";
     } else {
         useage() unless $host and $port;
