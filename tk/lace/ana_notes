@@ -21,6 +21,7 @@ use Getopt::Long 'GetOptions';
         'list!'     => \$list_sets,
         ) or useage();
     
+    
     if ($list_sets) {
         list_sets();
         exit;
@@ -30,7 +31,13 @@ use Getopt::Long 'GetOptions';
     die "Unknown elements on command line: '@ARGV'\n" if @ARGV;
     
     if ($annotator) {
-        die "Invalid annotator '$annotator'" unless is_valid_annotator($annotator);
+        die "Invalid annotator '$annotator'"
+            unless is_valid_annotator($annotator);
+    } else {
+        my $user = (getpwuid($<))[0];
+        if (is_valid_annotator($user)) {
+            $annotator = $user;
+        }
     }
     
     my $set_id = set_name_to_set_id($set_name);

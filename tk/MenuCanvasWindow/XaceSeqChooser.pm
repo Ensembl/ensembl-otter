@@ -19,7 +19,6 @@ sub new {
 
     $self->populate_menus;
     $self->bind_events;
-    $self->current_state('clone');
     $self->minimum_scroll_bbox(0,0,200,200);
     return $self;
 }
@@ -31,6 +30,24 @@ sub menu_bar {
         $self->{'_menu_bar'} = $bf;
     }
     return $self->{'_menu_bar'};
+}
+
+sub subseq_menubutton {
+    my( $self, $smb ) = @_;
+    
+    if ($smb) {
+        $self->{'_subseq_menubutton'} = $smb;
+    }
+    return $self->{'_subseq_menubutton'};
+}
+
+sub clone_sub_switch_var {
+    my( $self, $switch_ref ) = @_;
+    
+    if ($switch_ref) {
+        $self->{'_clone_sub_switch_var'} = $switch_ref;
+    }
+    return $self->{'_clone_sub_switch_var'};
 }
 
 sub set_known_GeneMethods {
@@ -80,6 +97,18 @@ sub get_all_mutable_GeneMethods {
         grep $_->is_mutable, $self->get_all_GeneMethods;
 }
 
+sub get_default_mutable_GeneMethod {
+    my( $self ) = @_;
+    
+    my @possible = grep $_->is_coding, $self->get_all_mutable_GeneMethods;
+    if (@possible)  {
+        return $possible[0];
+    } else {
+        $self->message("Unable to get a default GeneMethod");
+        return;
+    }
+}
+
 sub make_menu {
     my( $self, $name, $pos ) = @_;
     
@@ -102,6 +131,7 @@ sub make_menu {
     $button->configure(
         -menu       => $menu,
         );
+    
     return $menu;
 }
 
@@ -146,9 +176,11 @@ sub populate_menus {
     # Show menu
     my $mode = $self->make_menu('Show');
     my $mode_var = 'clone';
+    $self->clone_sub_switch_var(\$mode_var);
     my $mode_switch = sub {
-        $self->clone_sub_switch($mode_var);
+        $self->switch_state;
     };
+    
     $mode->add('radiobutton',
         -label          => 'Clones',
         -value          => 'clone',
@@ -164,10 +196,11 @@ sub populate_menus {
     
     # Subseq menu
     my $subseq = $self->make_menu('SubSeq');
+    $self->subseq_menubutton($subseq->parent);
     
     $subseq->add('command',
         -label          => 'New',
-        -command        => sub{ warn "Called New" },
+        -command        => sub{ $self->edit_new_subsequence },
         -accelerator    => 'Ctrl+N',
         -underline      => 0,
         );
@@ -177,31 +210,130 @@ sub populate_menus {
         -accelerator    => 'Ctrl+E',
         -underline      => 0,
         );
+    $subseq->add('command',
+        -label          => 'Delete',
+        -command        => sub{ warn "Called Delete" },
+        -accelerator    => 'Ctrl+D',
+        -underline      => 0,
+        -state          => 'disabled',
+        );
     $subseq->add('separator');
     $subseq->add('command',
         -label          => 'Merge',
         -command        => sub{ warn "Called Merge" },
         -accelerator    => 'Ctrl+M',
         -underline      => 0,
+        -state          => 'disabled',
         );
     $subseq->add('command',
         -label          => 'AutoMerge',
         -command        => sub{ warn "Called AutoMerge" },
         -accelerator    => 'Ctrl+U',
         -underline      => 0,
+        -state          => 'disabled',
         );
-    $subseq->add('command',
+    my $I = $subseq->add('command',
         -label          => 'Isoform',
         -command        => sub{ warn "Called Isoform" },
         -accelerator    => 'Ctrl+I',
         -underline      => 0,
+        -state          => 'disabled',
         );
-    $subseq->add('command',
-        -label          => 'Transcript',
-        -command        => sub{ warn "Called Transcript" },
-        -accelerator    => 'Ctrl+T',
-        -underline      => 0,
-        );
+    
+    # What did I intend this command to do?
+    #$subseq->add('command',
+    #    -label          => 'Transcript',
+    #    -command        => sub{ warn "Called Transcript" },
+    #    -accelerator    => 'Ctrl+T',
+    #    -underline      => 0,
+    #    );
+}
+
+sub edit_new_subsequence {
+    my( $self ) = @_;
+    
+    my @sub_names = $self->list_selected_subseq_names;
+    my( %clone_names );
+    foreach my $sn (@sub_names) {
+        my $sub = $self->get_SubSeq($sn);
+        my $seq_name = $sub->clone_Sequence->name;
+        $clone_names{$seq_name} = 1;
+    }
+    my @clone_n = keys %clone_names;
+
+    my @selected_clone = $self->list_selected_clone_names;
+    my      @all_clone = $self->clone_list;
+    
+    my( $clone_name );
+    if (@clone_n == 1) {
+        $clone_name = $clone_n[0];
+    }
+    elsif (@selected_clone == 1) {
+        $clone_name = $selected_clone[0];
+    }
+    elsif (@all_clone == 1) {
+        $clone_name = $all_clone[0];
+    }
+    else {
+       $self->message("Unable to determine clone name");
+       return;
+    }
+    
+    # Now get the maximum transcript number for this root
+    my $clone = $self->get_CloneSeq($clone_name);
+    my $regex = qr{^$clone_name\.(\d+)}; # Perl 5.6 feature!
+    my $max = 0;
+    foreach my $sub_name (map $_->name, $clone->get_all_SubSeqs) {
+        my ($n) = $sub_name =~ /$regex/;
+        if ($n and $n > $max) {
+            $max = $n;
+        }
+    }
+    $max++;
+    
+    my $seq_name = "$clone_name.$max";
+    
+    # Check we don't already have a sequence of this name
+    if ($self->get_SubSeq($seq_name)) {
+        # Should be impossible!
+        confess "Already have SubSeq named '$seq_name'";
+    }
+
+    warn "Making '$seq_name'\n";
+    my( $new );
+    if (@sub_names) {
+        $new = $self->get_SubSeq($sub_names[0])->clone;
+        for (my $i = 1; $i < @sub_names; $i++) {
+            my $extra_sub = $self->get_SubSeq($sub_names[$i])->clone;
+            foreach my $ex ($extra_sub->get_all_Exons) {
+                $new->add_Exon($ex);
+            }
+        }
+    }
+    else {
+        $new = Hum::Ace::SubSeq->new;
+        $new->strand(1);
+        $new->clone_Sequence($clone->Sequence);
+        
+        # Need to have at least 1 exon
+        my $ex = $new->new_Exon;
+        $ex->start(1);
+        $ex->end  (2);
+        
+        my $gm = $self->get_default_mutable_GeneMethod
+            or return;
+        $new->GeneMethod($gm);
+    }
+    $new->name($seq_name);
+    $self->add_SubSeq($new);
+    $clone->add_SubSeq($new);
+
+    $self->do_subseq_display;
+    $self->highlight_by_name('subseq', $seq_name);
+    
+    my $ec = $self->make_exoncanvas_edit_window($new);
+    $ec->archive_string('');
+    $ec->initialize;
 }
 
 sub bind_events {
@@ -221,13 +353,20 @@ sub bind_events {
             $self->edit_double_clicked;
             },
         Tk::Ev('x'), Tk::Ev('y') ]);
+    
+    $canvas->Tk::bind('<Escape>',   sub{ $self->deselect_all        });    
+    $canvas->Tk::bind('<Return>',   sub{ $self->edit_double_clicked });    
+    $canvas->Tk::bind('<KP_Enter>', sub{ $self->edit_double_clicked });    
+    
 }
 
 sub edit_double_clicked {
     my( $self ) = @_;
     
     if ($self->current_state eq 'clone') {
-        $self->clone_sub_switch('subseq');
+        $self->save_selected_clone_names;
+        $self->current_state('subseq');
+        $self->draw_current_state;
     } else {
         $self->edit_subsequences;
     }
@@ -258,38 +397,46 @@ sub shift_left_button_handler {
     }
 }
 
-sub clone_sub_switch {
-    my( $self, $new_state ) = @_;
+sub switch_state {
+    my( $self ) = @_;
     
-    if ($new_state eq 'clone') {
-        $self->switch_to_clone_display;
+    my $state = $self->current_state;
+    if ($state eq 'subseq') {
+        # We are going from clone to subseq so we
+        # need to save the highlighted clone names
+        $self->save_selected_clone_names;
     }
-    elsif ($new_state eq 'subseq') {
-        $self->switch_to_subseq_display;   
+    $self->draw_current_state;
+}
+
+sub draw_current_state {
+    my( $self ) = @_;
+    
+    my $state = $self->current_state;
+    if ($state eq 'clone') {
+        $self->do_clone_display;
     }
     else {
-        confess "Unknown state '$new_state'";
+        $self->do_subseq_display;   
     }
     $self->fix_window_min_max_sizes;
 }
 
-sub switch_to_subseq_display {
+sub do_subseq_display {
     my( $self ) = @_;
-    
+        
     my @clone_names = $self->list_selected_clone_names;
     $self->deselect_all;
     $self->canvas->delete('all');
-    $self->current_state('subseq');
     $self->draw_subseq_list(@clone_names);
 }
 
-sub switch_to_clone_display {
+sub do_clone_display {
     my( $self ) = @_;
-    
+        
     my @clone_names = $self->list_selected_clone_names;
     $self->deselect_all;
     $self->canvas->delete('all');
-    $self->current_state('clone');
     $self->draw_clone_list;
     $self->highlight_by_name('clone', @clone_names);
 }
@@ -325,7 +472,7 @@ sub resync_with_db {
     $self->empty_SubSeq_cache;
     
     # Redisplay
-    $self->clone_sub_switch($self->current_state);
+    $self->draw_current_state;
     
     $self->canvas->Unbusy;
 }
@@ -384,20 +531,31 @@ sub edit_subsequences {
         # Get a copy of the subseq
         my $sub = $self->get_SubSeq($sub_name)->clone;
         
-        # Make a new window
-        my $top = $canvas->Toplevel(
-            -title  => $sub_name,
-            );
-        
-        # Make new MenuCanvasWindow::ExonCanvas object and initialize
-        my $ec = MenuCanvasWindow::ExonCanvas->new($top);
-        $ec->name($sub_name);
-        $ec->xace_seq_chooser($self);
-        $ec->SubSeq($sub);
-        $ec->initialize;
-        
-        $self->save_subseq_edit_window($sub_name, $top);
+        $self->make_exoncanvas_edit_window($sub)
+             ->initialize;
     }
+}
+
+sub make_exoncanvas_edit_window {
+    my( $self, $sub ) = @_;
+    
+    my $sub_name = $sub->name;
+    my $canvas = $self->canvas;
+    
+    # Make a new window
+    my $top = $canvas->Toplevel(
+        -title  => $sub_name,
+        );
+    
+    # Make new MenuCanvasWindow::ExonCanvas object and initialize
+    my $ec = MenuCanvasWindow::ExonCanvas->new($top);
+    $ec->name($sub_name);
+    $ec->xace_seq_chooser($self);
+    $ec->SubSeq($sub);
+    
+    $self->save_subseq_edit_window($sub_name, $top);
+    
+    return $ec;
 }
 
 sub raise_subseq_edit_window {
@@ -405,13 +563,19 @@ sub raise_subseq_edit_window {
     
     confess "no name given" unless $name;
     
-    if (my $top = $self->{'_subseq_edit_window'}{$name}) {
+    if (my $top = $self->get_subseq_edit_window($name)) {
         $top->deiconify;
         $top->raise;
         return 1;
     } else {
         return 0;
     }
+}
+
+sub get_subseq_edit_window {
+    my( $self, $name ) = @_;
+    
+    return $self->{'_subseq_edit_window'}{$name};
 }
 
 sub save_subseq_edit_window {
@@ -437,6 +601,7 @@ sub draw_clone_list {
     }
     
     $self->draw_sequence_list('clone', @slist);
+    $self->subseq_menubutton->configure(-state => 'disabled');
 }
 
 sub OLD_draw_subseq_list {
@@ -467,11 +632,7 @@ sub draw_subseq_list {
         }
     }
     $self->draw_sequence_list('subseq', @subseq);
-}
-
-sub draw_sequence_cluster {
-    my( $self, $clust ) = @_;
-    
+    $self->subseq_menubutton->configure(-state => 'normal');
 }
 
 sub get_all_Subseq_clusters {
@@ -579,6 +740,7 @@ sub replace_SubSeq {
     my $clone = $self->get_CloneSeq($clone_name);
     $clone->replace_SubSeq($sub);
     $self->{'_subsequence_cache'}{$sub_name} = $sub;
+    $self->draw_current_state;
 }
 
 sub add_SubSeq {
@@ -689,13 +851,14 @@ sub get_xace_window_id {
     sub current_state {
         my( $self, $state ) = @_;
 
+        my $s_var = $self->clone_sub_switch_var;
         if ($state) {
             unless ($state_label{$state}) {
                 confess "Not a permitted state '$state'";
             }
-            $self->{'_current_state'} = $state;
+            $$s_var = $state;
         }
-        return $self->{'_current_state'};
+        return $$s_var;
     }
 }
 
@@ -716,24 +879,28 @@ sub highlight_by_name {
     $self->highlight(@obj);
 }
 
+sub save_selected_clone_names {
+    my( $self ) = @_;
+
+    my $canvas = $self->canvas;
+    my( @names );
+    foreach my $obj ($self->list_selected) {
+        if (grep $_ eq 'clone', $canvas->gettags($obj)) {
+            my $n = $canvas->itemcget($obj, 'text');
+            push(@names, $n);
+        }
+    }
+    $self->{'_selected_clone_list'} = [@names];
+}
+
 sub list_selected_clone_names {
     my( $self ) = @_;
 
-    my( @names );
-    if ($self->current_state eq 'clone') {
-        my $canvas = $self->canvas;
-        foreach my $obj ($self->list_selected) {
-            if (grep $_ eq 'clone', $canvas->gettags($obj)) {
-                my $n = $canvas->itemcget($obj, 'text');
-                push(@names, $n);
-            }
-        }
-        $self->{'_selected_clone_list'} = [@names];
+    if (my $n = $self->{'_selected_clone_list'}) {
+        return @$n;
+    } else {
+        return;
     }
-    elsif (my $nam = $self->{'_selected_clone_list'}) {
-        @names = @$nam;
-    }
-    return @names;
 }
 
 sub list_selected_subseq_names {

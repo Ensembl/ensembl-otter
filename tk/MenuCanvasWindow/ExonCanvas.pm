@@ -272,7 +272,9 @@ sub initialize {
     my $canvas = $self->canvas;
     my $top = $canvas->toplevel;
 
-    $self->archive_string($sub->as_ace_file_format_text);
+    unless (defined $self->archive_string) {
+        $self->archive_string($sub->ace_string);
+    }
     $self->draw_subseq;
 
     # Routines to handle the clipboard
@@ -293,10 +295,12 @@ sub initialize {
     my $window_close = sub {
         $self->window_close or return;
         
-        # Have to specifically undef $self, or the
-        # MenuCanvasWindow::ExonCanvas object doesn't get destroyed,
-        # because the other closures still reference it.
+        #  Have to specifically undef $self here, or the    #
+        #  MenuCanvasWindow::ExonCanvas object doesn't get  #
+        #  destroyed, because the closures in this scope    #
+        #  still reference it.                              #
         $self = undef;
+        
         };
 
     my $menu_bar = $self->menu_bar;
@@ -333,6 +337,7 @@ sub initialize {
     $canvas->Tk::bind('<Control-Q>',   $window_close);
 
     my $edit_menu = $self->make_menu('Edit');
+    
     # Select all positions
     $edit_menu->add('command',
         -label          => 'Select All',
@@ -342,6 +347,9 @@ sub initialize {
         );
     $canvas->Tk::bind('<Control-a>', $select_all_sub);
     $canvas->Tk::bind('<Control-A>', $select_all_sub);
+    
+    # Deselect all
+    $canvas->Tk::bind('<Escape>', sub{ $self->deselect_all});
     
     my $method = $sub->GeneMethod;
     if ($method->is_mutable) {
@@ -414,18 +422,18 @@ sub initialize {
         $canvas->Tk::bind('<<digit>>', [sub{ $self->canvas_insert_character(@_) }, Tk::Ev('A')]);
 
         # Increases the number which has keyboard focus
-        $canvas->eventAdd('<<increment>>', qw{ <plus> <KP_Add> <equal> });
+        $canvas->eventAdd('<<increment>>', qw{ <Up> <plus> <KP_Add> <equal> });
         $canvas->Tk::bind('<<increment>>', sub{ $self->increment_int });
 
         # Decreases the number which has keyboard focus
-        $canvas->eventAdd('<<decrement>>', qw{ <minus> <KP_Subtract> <underscore> });
+        $canvas->eventAdd('<<decrement>>', qw{ <Down> <minus> <KP_Subtract> <underscore> });
         $canvas->Tk::bind('<<decrement>>', sub{ $self->decrement_int });
 
         # Control-Left mouse for switching strand
         $canvas->Tk::bind('<Control-Button-1>', sub{
             $self->control_left_button_handler;
             if ($self->count_selected) {
-                $canvas->SelectionOwn( -command => $deselect_sub )
+                $canvas->SelectionOwn( -command => $deselect_sub );
             }
         });
 
@@ -433,7 +441,7 @@ sub initialize {
         $canvas->Tk::bind('<Button-2>', sub{
             $self->middle_button_paste;
             if ($self->count_selected) {
-                $canvas->SelectionOwn( -command => $deselect_sub )
+                $canvas->SelectionOwn( -command => $deselect_sub );
             }
         });
         
@@ -442,9 +450,11 @@ sub initialize {
             $self->left_button_handler;
             $self->focus_on_current_text;
             if ($self->count_selected) {
-                $canvas->SelectionOwn( -command => $deselect_sub )
+                $canvas->SelectionOwn( -command => $deselect_sub );
             }
         });
+        
+        $self->add_subseq_rename_widget;
     } else {
         # SubSeq with an immutable method
         
@@ -452,7 +462,7 @@ sub initialize {
         $canvas->Tk::bind('<Button-1>', sub{
             $self->left_button_handler;
             if ($self->count_selected) {
-                $canvas->SelectionOwn( -command => $deselect_sub )
+                $canvas->SelectionOwn( -command => $deselect_sub );
             }
         });
     }
@@ -507,6 +517,43 @@ sub window_close {
     $self->canvas->toplevel->destroy;
     
     return 1;
+}
+
+sub add_subseq_rename_widget {
+    my( $self ) = @_;
+    
+    my $button_frame = $self->canvas->toplevel->Frame;
+    $button_frame->pack(
+        #-side => 'top',
+        -anchor => 'nw',
+        );
+
+    my $sub_name_label = $button_frame->Label(
+        -text => 'Name:',
+        );
+    $sub_name_label->pack(
+        -side => 'left',
+        );
+
+    my $name = $self->SubSeq->name;
+    my $sub_name = $button_frame->Entry(
+        -width              => 20,
+        -exportselection    => 1,
+        );
+    $sub_name->pack(
+        -side => 'left',
+        );
+    $sub_name->insert(0, $name);
+    $self->subseq_name_Entry($sub_name);
+}
+
+sub subseq_name_Entry {
+    my( $self, $entry ) = @_;
+    
+    if ($entry) {
+        $self->{'_subseq_name_entry'} = $entry;
+    }
+    return $self->{'_subseq_name_entry'};
 }
 
 sub canvas_insert_character {
@@ -740,7 +787,7 @@ sub export_ace_subseq_to_selection {
     my( $self, $offset, $max_bytes ) = @_;
         
     my $sub = $self->update_ace_subseq;
-    my $text = $sub->as_ace_file_format_text;
+    my $text = $sub->ace_string;
     if (length($text) > $max_bytes) {
         die "text too big";
     }
@@ -933,7 +980,7 @@ sub get_ace_if_changed {
     my( $self ) = @_;
     
     my $sub = $self->update_ace_subseq;
-    my $new = $sub->as_ace_file_format_text;
+    my $new = $sub->ace_string;
     my $old = $self->archive_string;
     if ($new eq $old) {
         return;
@@ -945,11 +992,10 @@ sub get_ace_if_changed {
 sub archive_string {
     my( $self, $string ) = @_;
     
-    if ($string) {
+    if (defined $string) {
         $self->{'_archive_string'} = $string;
     }
-    return $self->{'_archive_string'}
-        || confess "archive string not set";
+    return $self->{'_archive_string'};
 }
 
 sub update_ace_subseq {
@@ -972,7 +1018,7 @@ sub xace_save {
         $sub = $self->SubSeq;
     } else {
         $sub = $self->update_ace_subseq;
-        $ace = $sub->as_ace_file_format_text;
+        $ace = $sub->ace_string;
     }
     
     my $xc = $self->xace_seq_chooser;
