@@ -177,14 +177,13 @@ sub draw_gene_features_on_sub_vc {
 
             if ($band->show_labels) {
 
-                my $label_space = $rectangle_height / 4;
                 my( $anchor, $y1 );
                 if ($y_dir == 1) {
                     $anchor = 'nw';
-                    $y1 = $y_offset + $rectangle_height + $label_space;
+                    $y1 = $y_offset + $rectangle_height;
                 } else {
                     $anchor = 'sw';
-                    $y1 = $y_offset + (-1 * $label_space);
+                    $y1 = $y_offset - $rectangle_height;
                 }
 
                 my $label = $canvas->createText(
@@ -197,7 +196,7 @@ sub draw_gene_features_on_sub_vc {
 
                 my @bkgd = $canvas->bbox($group);
 
-                my $sp = $font_size / 4;
+                my $sp = $rectangle_height / 4;
                 $bkgd[0] -= $sp;
                 $bkgd[2] += $sp;
                 my $bkgd_rectangle = $canvas->createRectangle(
@@ -226,6 +225,7 @@ sub draw_gene_arrow {
 
     my $y_offset = $band->y_offset;
     
+    #my $u = sprintf("%.0f", $rectangle_height / 8);
     my $u = $rectangle_height / 8;
     my $length = $x2 - $x1;
     my $head_center = 2 * $u;
