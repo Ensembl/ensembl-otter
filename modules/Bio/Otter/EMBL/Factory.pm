@@ -65,41 +65,126 @@ sub standard_comments {
 }
 
 
+
+=head2 get_DBAdaptors
+
+    my ($otter_db, $slice_aptr, $gene_aptr) = get_DBAdaptors();
+
+Providing $self->Dataset has been set, retrieves the cached DBAdaptor
+from the Dataset, together with Slice and Gene adaptors.
+
+=cut
+
+{
+    my ( $otter_db, $slice_aptr, $gene_aptr );
+    my ( $contig_length, $slice, $slice_contig );
+
+    sub get_DBAdaptors {
+        my ( $self ) = @_;
+
+        my $ds = $self->Dataset
+            or confess "Dataset not set";
+
+        #Bio::EnsEMBL::Container    
+        $otter_db = $ds->get_cached_DBAdaptor
+            or confess 'Bio::Otter::Lace::DataSet->get_cached_DBAdaptor failed';
+
+        #Bio::EnsEMBL::DBSQL::SliceAdaptor
+        $slice_aptr = $otter_db->get_SliceAdaptor
+            or confess "get_SliceAdaptor failed";
+
+        #Bio::EnsEMBL::DBSQL::ProxyGeneAdaptor
+        $gene_aptr  = $otter_db->get_GeneAdaptor
+            or confess "get_GeneAdaptor failed";
+    }
+
+    sub kill_DBAdaptors {
+    
+        $otter_db = undef;
+        $slice_aptr = undef;
+        $gene_aptr = undef;
+    }
+
 =head2 make_embl
  
 This is the big one!
 
 =cut
 
-sub make_embl {
-    my ( $self, $acc ) = @_;
-    
-    confess "Must pass an accession" unless $acc;
-    
-    my $ds = $self->Dataset
-        or confess "Dataset must be set before calling make_embl";
+    sub make_embl {
+        my ( $self, $acc ) = @_;
 
-    my ($otter_db, $slice_aptr, $gene_aptr) = $self->get_DBAdaptors();
-    
-    my $embl = Hum::EMBL->new();
-    
-    foreach my $chr_s_e ($self->fetch_chr_start_end_for_accession($otter_db, $acc)) {
+        confess "Must pass an accession" unless $acc;
 
-        print "ACC: $acc ";  
-        print "Chr: ", $chr_s_e->[0], " Start: ", $chr_s_e->[1], " End: ", $chr_s_e->[2], "\n";
+        my $ds = $self->Dataset
+            or confess "Dataset must be set before calling make_embl";
 
-        #Get the Bio::EnsEMBL::Slice
-        my $slice = $slice_aptr->fetch_by_chr_start_end(@$chr_s_e);
+        $self->get_DBAdaptors();
+        my $embl = Hum::EMBL->new();
 
-        my $gene_id_list = $gene_aptr->list_current_dbIDs_for_Slice($slice);
-        my $tile_path = $self->get_tiling_path_for_Slice($slice);
+        foreach my $chr_s_e ($self->fetch_chr_start_end_for_accession($otter_db, $acc)) {
 
+            print "ACC: $acc ";  
+            print "Chr: ", $chr_s_e->[0], " Start: ", $chr_s_e->[1], " End: ", $chr_s_e->[2], "\n";
 
-     }
+            #Get the Bio::EnsEMBL::Slice
+            $slice = $slice_aptr->fetch_by_chr_start_end(@$chr_s_e);
+            my $tile_path = $self->get_tiling_path_for_Slice($slice);
+
+            #Bio::EnsEMBL::RawContig
+            $slice_contig = $tile_path->[0]->component_Seq;
+            $contig_length = $slice_contig->length;
+
+            my $gene_id_list = $gene_aptr->list_current_dbIDs_for_Slice($slice);
+            foreach my $gid (@$gene_id_list) {
+                #$self->do_gene_by_id($gid);
+            }
+        }
+        kill_DBAdaptors();
+        return $embl;
+    }
+
+    sub do_gene_by_id {
+        my ( $self, $gid ) = @_;
+
+        #Bio::Otter::AnnotatedGene, isa Bio::EnsEMBL::Gene
+        my $gene = $gene_aptr->fetch_by_dbID($gid);
+        return if $gene->type eq 'obsolete'; # Deleted genes
+
+        #Bio::Otter::AnnotatedTranscript, isa Bio::EnsEMBL::Transcript
+        foreach my $transcript (@{$gene->get_all_Transcripts}) {
         
-    return $embl;
-}
+            my $sid = $transcript->stable_id;
+            foreach my $exon (@{$transcript->get_all_Exons}) {
 
+                #Bio::EnsEMBL::RawContig, each exon knows its contig
+                my $contig  = $exon->contig;
+                my $start   = $exon->start;
+                my $end     = $exon->end;
+
+                # May be an is_sticky method?
+                if ($exon->isa('Bio::Ensembl::StickyExon')) {
+                    # Deal with sticy exon
+                    warn "STICKY!\n";
+                }
+                elsif ($contig != $slice_contig) {
+                    my $acc = $contig->clone->embl_id;
+                    my $sv  = $contig->clone->embl_version;
+                    # Is not on Slice
+                    print "$acc.$sv:$start..$end\n";
+                }
+                else {
+                    # Is on Slice (ie: clone)
+                    if ($end < 1 or $start > $contig_length) {
+                        carp "Unexpected exon start '$start' end '$end' "
+                            . "on contig of length '$contig_length'\n";
+                    }
+                    print "$start..$end\n";
+                }
+            }
+        }
+    }
+}
 
 =head2 get_tiling_path_for_Slice
 
@@ -120,37 +205,6 @@ sub get_tiling_path_for_Slice {
     
     return $tile_path;
 }
-
-=head2 get_DBAdaptors
-
-    my ($otter_db, $slice_aptr, $gene_aptr) = get_DBAdaptors();
-
-Providing $self->Dataset has been set, retrieves the cached DBAdaptor
-from the Dataset, together with Slice and Gene adaptors.
-
-=cut
-
-sub get_DBAdaptors {
-    my ( $self ) = @_;
-
-    my $ds = $self->Dataset
-        or confess "Dataset not set";
-    
-    #Bio::EnsEMBL::Container    
-    my $otter_db = $ds->get_cached_DBAdaptor
-        or confess 'Bio::Otter::Lace::DataSet->get_cached_DBAdaptor failed';
-    
-    #Bio::EnsEMBL::DBSQL::SliceAdaptor
-    my $slice_aptr = $otter_db->get_SliceAdaptor
-        or confess "get_SliceAdaptor failed";
-        
-    #Bio::EnsEMBL::DBSQL::ProxyGeneAdaptor
-    my $gene_aptr  = $otter_db->get_GeneAdaptor
-        or confess "get_GeneAdaptor failed";
-    
-    return ($otter_db, $slice_aptr, $gene_aptr);        
-}
-
 
 =head2 Dataset
  
