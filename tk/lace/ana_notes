@@ -496,7 +496,8 @@ sub make_chooser_map {
     print STDERR "Getting set notes...";
     
     my $sql = qq{
-        SELECT s.sequence_name
+        SELECT ss.rank
+          , s.sequence_name
           , a.ana_seq_id
           , st.status_id
           , r.annotator_uname
@@ -522,9 +523,13 @@ sub make_chooser_map {
     my $sth = prepare_statement($sql);
     $sth->execute;
 
-    my( $seq_name, $ana_seq_id, $status, $uname, $date, $comment );
+    my( $rank,   $seq_name, $ana_seq_id,
+        $status, $uname,    $date,
+        $comment );
     $sth->bind_columns(
-        \$seq_name, \$ana_seq_id, \$status, \$uname, \$date, \$comment,
+        \$rank,   \$seq_name, \$ana_seq_id,
+        \$status, \$uname,    \$date,
+        \$comment,
         );
     
     my( @map );
@@ -534,7 +539,7 @@ sub make_chooser_map {
         ($date) = $date =~ /(\d{4}-\d\d-\d\d)/ if $date;
         $status = status_name($status);
         push(@map,
-            [ $ana_seq_id, $seq_name, $status, $uname, $date, $comment ]
+            [ $ana_seq_id, $rank, $seq_name, $status, $uname, $date, $comment ]
             );
         $last_ana_seq_id = $ana_seq_id;
     }
