@@ -130,15 +130,15 @@ sub synonym {
 =cut
 
 sub author{
-   my ($self,$value) = @_;
+    my ($self, $value) = @_;
 
-   if( defined $value) {
-		 if ($value->isa("Bio::Otter::Author")) {
-			 $self->{'author'} = $value;
-		 } else {
-			 $self->throw("Argument [$value] is not a Bio::Otter::Author");
-		 }
-	 }
+    if (defined $value) {
+        if ($value->isa("Bio::Otter::Author")) {
+            $self->{'author'} = $value;
+        } else {
+            $self->throw("Argument [$value] is not a Bio::Otter::Author");
+        }
+    }
     return $self->{'author'};
 }
 
@@ -276,18 +276,21 @@ sub equals {
     }
 
     if ($self->known_flag != $obj->known_flag) {
+        #print STDERR "Known status mismatch";
         return 0;
     }
 
-    if ($self->gene_stable_id ne $obj->gene_stable_id ||
-	$self->author->equals($obj->author) == 0) {          
-	return 0;
+    if ($self->gene_stable_id ne $obj->gene_stable_id) {
+        #print STDERR "Gene stable ID mismatch: '%s' vs '%s'\n",
+        #    $self->gene_stable_id, $obj->gene_stable_id;
+        return 0;
     }
 
     my @remark1 = $self->remark;
     my @remark2 = $obj->remark;
 
     if (scalar(@remark1) != scalar(@remark2)) {
+        #print STDERR "Different remark count";
       return 0;
     }
 
@@ -300,8 +303,8 @@ sub equals {
 	    }
 	}
 	if ($found == 0) {
-            printf STDERR "Different remark for %s %s\n  '%s'\n",
-                $self->gene_stable_id, $self->name->name, $rem->remark;
+            #printf STDERR "Different remark for %s %s\n  '%s'\n",
+            #    $self->gene_stable_id, $self->name->name, $rem->remark;
 	    return 0;
 	}
     }
@@ -311,25 +314,26 @@ sub equals {
     my @syn2 = $obj->synonym;
 
     if (scalar(@syn1) != scalar(@syn2)) {
+        #print STDERR "Different synonym count";
       return 0;
     }
 
     foreach my $rem (@syn1) {
 	my $found = 0;
 	foreach my $rem2 (@syn2) {
-            print "Rem2  " . $rem->name . "\n";
+            #print "Rem2  " . $rem->name . "\n";
 	    if ($rem->equals($rem2)) {
 		$found = 1;
 	    }
 	}
 	if ($found == 0) {
-            print STDERR "Different synonym " . $rem->name . " for  " . $self->gene_stable_id . " " . $self->name->name . "\n";
+            #print STDERR "Different synonym " . $rem->name . " for  " . $self->gene_stable_id . " " . $self->name->name . "\n";
 	    return 0;
 	}
     }
     
     if (!$self->name->equals($obj->name)) {
-        print STDERR "Different name " . $self->name  . " for  " . $self->gene_stable_id . " " . $self->name . "\n";
+        #print STDERR "Different name " . $self->name  . " for  " . $self->gene_stable_id . " " . $self->name . "\n";
 	return 0;
     }
 

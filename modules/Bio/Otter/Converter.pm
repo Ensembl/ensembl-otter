@@ -804,7 +804,6 @@ sub otter_to_ace {
         $str .= "\n$clone_context\n";
     }
 
-    my( %authors );
     $str .= ace_transcripts_locus_people($genes, $slice);
 
     if ($seq) {

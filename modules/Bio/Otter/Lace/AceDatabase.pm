@@ -508,7 +508,7 @@ sub update_with_stable_ids{
     my $fileObj;
     if($self->Client->debug){
         $fileObj = Bio::Otter::Lace::PersistentFile->new();
-        $fileObj->name(qq`otter_response_$$.xml`);
+        $fileObj->name("otter_response_$$.xml");
         $fileObj->rm();
     }else{
         $fileObj = Bio::Otter::Lace::TempFile->new;
@@ -524,6 +524,7 @@ sub update_with_stable_ids{
 
     ## this should only contain the CHANGED genes.
 
+    ### Should this test @$genes?
     unless($genes){
         warn "No genes changed\n";
         return undef;
