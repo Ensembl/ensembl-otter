@@ -64,17 +64,17 @@ print "Chr $chr $chrstart $chrend $type " . length($dna) . "\n";
 ok($db->assembly_type($type));
 
 #DBI->trace(2);
-my $db2 = new Bio::Otter::DBSQL::DBAdaptor(-host => $otter_test->host,
+my $db3 = new Bio::Otter::DBSQL::DBAdaptor(-host => $otter_test->host,
                                            -user => $otter_test->user,
                                            -port => $otter_test->port,
                                            -dbname => $otter_test->dbname);
 
-$db2->assembly_type($type);
+$db3->assembly_type($type);
 
-my $slice = $db2->get_SliceAdaptor->fetch_by_chr_start_end($chr,$chrstart,$chrend);
+my $slice3 = $db3->get_SliceAdaptor->fetch_by_chr_start_end($chr,$chrstart,$chrend);
 
-ok($dna eq $slice->seq);
-my @genes = @{$db2->get_AnnotatedGeneAdaptor->fetch_by_Slice($slice)};
+ok($dna eq $slice3->seq);
+my @genes = @{$db3->get_AnnotatedGeneAdaptor->fetch_by_Slice($slice)};
 #$otter_test->pause;
 
 print "PRE**************\n";
@@ -88,13 +88,13 @@ close(OUT);
 
 open(IN,"<test.ace");
 
-my ($genes,$frags,$path,$dna,$chr,$start,$end) = Bio::Otter::Converter::ace_to_otter(\*IN);
+my ($genes,$frags,$path,$dna3,$chr3,$start,$end) = Bio::Otter::Converter::ace_to_otter(\*IN);
 
 
 open(OUT2,">test.xml");
 
-my $str = Bio::Otter::Converter::frags_to_XML($frags,$path,$chr,$start,$end);
-print OUT2 $str . "\n";
+my $str2 = Bio::Otter::Converter::frags_to_XML($frags,$path,$chr3,$start,$end);
+print OUT2 $str2 . "\n";
 
 @$genes = sort {$a->gene_info->name cmp $b->gene_info->name} @$genes;
 
