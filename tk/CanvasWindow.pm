@@ -8,24 +8,24 @@ use Carp;
 use CanvasWindow::MainWindow;
 use CanvasWindow::Utils 'expand_bbox';
 
-use vars ('@DEFAULT_CANVAS_SIZE');
-
-@DEFAULT_CANVAS_SIZE = (500,50);
-
 sub new {
-    my( $pkg, $tk ) = @_;
+    my( $pkg, $tk, $x, $y ) = @_;
     
     unless ($tk) {
         confess "Error usage: $pkg->new(<Tk::Widget object>)";
     }
+
+    # Make new object and set-get initial canvas size
+    my $self = bless {}, $pkg;
+    ($x, $y) = $self->initial_canvas_size($x, $y);
 
     # Create and store the canvas object
     my $scrolled = $tk->Scrolled('Canvas',
         -highlightthickness => 1,
         -background         => 'white',
         -scrollbars         => 'se',
-        -width              => $DEFAULT_CANVAS_SIZE[0],
-        -height             => $DEFAULT_CANVAS_SIZE[1],
+        -width              => $x,
+        -height             => $y,
         );
     $scrolled->pack(
         -side => 'top',
@@ -36,11 +36,23 @@ sub new {
     my $canvas = $scrolled->Subwidget('canvas');
     
     # Make a new CanvasWindow object, and return
-    my $self = bless {}, $pkg;
     $self->canvas($canvas);
     $self->bind_scroll_commands;
     
     return $self;
+}
+
+sub initial_canvas_size {
+    my( $self, $x, $y ) = @_;
+    
+    if ($x and $y) {
+        $self->{'_initial_canvas_size'} = [$x, $y];
+    }
+    if (my $in = $self->{'_initial_canvas_size'}) {
+        return @$in;
+    } else {
+        return (500,50); # Default
+    }
 }
 
 sub canvas {
@@ -227,8 +239,9 @@ sub fix_window_min_max_sizes {
         my $height = $mw->height;
         $mw->minsize($width, $height);
 
-        $other_x = $width  - $DEFAULT_CANVAS_SIZE[0];
-        $other_y = $height - $DEFAULT_CANVAS_SIZE[1];
+        my @init = $self->initial_canvas_size;
+        $other_x = $width  - $init[0];
+        $other_y = $height - $init[1];
 
         ($display_max_x, $display_max_y) = $mw->maxsize;
         $self->{'_toplevel_other_max'} = [$other_x, $other_y, $display_max_x, $display_max_y];
@@ -265,7 +278,8 @@ sub fix_window_min_max_sizes {
         }
     }
 
-    $mw->geometry("${max_x}x$max_y+$x+$y");
+    my $geom = "${max_x}x$max_y+$x+$y";
+    $mw->geometry($geom);
 }
 
 sub set_window_size {

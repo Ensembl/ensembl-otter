@@ -57,6 +57,7 @@ sub make_editable_label {
         $x,$y,
         -anchor => 'nw',
         -text   => $text,
+        -justify => 'right',
         -font   => ['lucidatypewriter', $size, 'normal'],
         -tags   => ['test text'],
         );
