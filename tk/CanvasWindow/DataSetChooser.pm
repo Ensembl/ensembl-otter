@@ -6,7 +6,7 @@ package CanvasWindow::DataSetChooser;
 use strict;
 use Carp;
 use base 'CanvasWindow';
-
+use CanvasWindow::SequenceSetChooser;
 
 sub new {
     my( $pkg, @args ) = @_;
@@ -24,6 +24,10 @@ sub new {
     $canvas->Tk::bind('<Control-o>',        $edit_command);
     $canvas->Tk::bind('<Control-O>',        $edit_command);
     $canvas->Tk::bind('<Escape>', sub{ $self->deselect_all });
+    
+    my $close_window = sub{ $self->canvas->toplevel->destroy };
+    $canvas->Tk::bind('<Control-q>',  $close_window);
+    $canvas->Tk::bind('<Control-Q>',  $close_window);
         
     my $top = $canvas->toplevel;
     my $button_frame = $top->Frame->pack(-side => 'top', -fill => 'x');
@@ -35,7 +39,12 @@ sub new {
             }
         },
         )->pack(-side => 'left');
-    
+
+    my $quit = $button_frame->Button(
+        -text       => 'Quit',
+        -command    => $close_window,
+        )->pack(-side => 'right');
+        
     return $self;
 }
 
@@ -66,10 +75,16 @@ sub open_dataset {
     my ($obj) = $self->list_selected;
     return unless $obj;
     
-    foreach my $tag ($self->canvas->gettags($obj)) {
+    my $canvas = $self->canvas;
+    foreach my $tag ($canvas->gettags($obj)) {
         if ($tag =~ /DataSet=(.+)/) {
             my $name = $1;
-            $self->message("Going to open '$name'");
+            my $top = $canvas->Toplevel(-title => "DataSet $name");
+            my $sc = CanvasWindow::SequenceSetChooser->new($top);
+            $sc->name($name);
+            $sc->Client($self->Client);
+            $sc->DataSetChooser($self);
+            $canvas->toplevel->withdraw;
             return 1;
         }
     }

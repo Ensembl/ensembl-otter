@@ -27,7 +27,7 @@ sub get_current_ana_seq_id {
     my ($ana_seq) = map { s/^unique_id=// ? $_ : () } $canvas->gettags('current');   #
     
     return $ana_seq;
-    }
+}
 
 
 sub toggle_selection {
