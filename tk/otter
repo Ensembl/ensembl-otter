@@ -1,0 +1,160 @@
+#!/usr/local/bin/perl5.6.1 -w
+
+use lib '/nfs/team71/analysis/jgrg/work/ensembl-otter/modules';
+use lib '/nfs/team71/analysis/jgrg/work/ensembl-otter/conf';
+use lib '/nfs/team71/analysis/jgrg/work/ensembl/modules';
+use lib '/nfs/team71/analysis/jgrg/work/tk';
+
+### otter
+
+use strict;
+use CanvasWindow;
+use Bio::Otter::DBSQL::DBAdaptor;
+use LWP::Simple ();
+use Getopt::Long 'GetOptions';
+
+{
+    my $usage = sub{ exec('perldoc', $0) };
+    my $host = 'ecs1d.sanger.ac.uk';
+    my $port = 19312;
+    GetOptions(
+        'host=s'    => \$host,
+        'port=i'    => \$port,
+        'h|help'    => $usage,
+        ) or $usage->();
+
+    my $mw = CanvasWindow::MainWindow->new('Otter: datasets');
+    my $cw = CanvasWindow->new($mw, 400, 300);
+    
+    my $datasets = get_dataset_details($host, $port);
+    show_dataset_list($cw, $datasets);
+    
+    $cw->fix_window_min_max_sizes;
+    Tk::MainLoop();
+}
+
+sub show_dataset_list {
+    my( $cw, $datasets ) = @_;
+    
+    my $canvas = $cw->canvas;
+    $canvas->delete('all');
+    my $font = $cw->font;
+    my $size = $cw->font_size;
+    my $x = $size;
+    my @sorted_name = sort keys %$datasets;
+    for (my $i = 0; $i < @sorted_name; $i++) {
+        my $name = $sorted_name[$i];
+        my $details = $datasets->{$name};
+        my $txt = $canvas->createText(
+            $x, $i * (1.2 * $size),
+            -text   => $sorted_name[$i],
+            -font   => [$font, $size, 'bold'],
+            -anchor => 'nw',
+            );
+        $canvas->bind($txt, '<Double-Button-1>', sub{ draw_sequence_list($cw, $name, $details) });
+    }
+}
+
+sub draw_sequence_list {
+    my( $cw, $name, $details ) = @_;
+    
+    my $canvas = $cw->canvas;
+    $canvas->delete('all');    
+    $canvas->toplevel->configure(-title => "Otter: $name");
+    my $dba = get_DBAdaptor_from_details($details);
+    my $type = $dba->assembly_type;
+    my $sth = $dba->prepare(q{
+        SELECT c.embl_acc
+          , c.embl_version
+          , a.chr_start
+          , a.chr_end
+        FROM assembly a
+          , contig g
+          , clone c
+        WHERE a.contig_id = g.contig_id
+          AND g.clone_id = c.clone_id
+          AND a.type = ?
+        ORDER BY a.chr_start
+        });
+    $sth->execute($type);
+    my( $acc, $sv, $chr_start, $chr_end );
+    $sth->bind_columns( \$acc, \$sv, \$chr_start, \$chr_end );
+
+    my $font = $cw->font;
+    my $size = $cw->font_size;
+    my $x = $size;
+
+    my $i = 0;
+    my $last_end = 0;
+    while ($sth->fetch) {
+        if ($last_end + 1 != $chr_start) {
+            warn "$last_end + 1 != $chr_start\n";
+            $i++;
+        }
+        my $seq_line = sprintf("%-10s  %2d", $acc, $sv);
+        my $txt = $canvas->createText(
+            $x, $i * (1.2 * $size),
+            -text   => $seq_line,
+            -font   => [$font, $size, 'bold'],
+            -anchor => 'nw',
+            -tags   => [
+                "chr_start=$chr_start",
+                "chr_end=$chr_end",
+                ],
+            );
+        $canvas->bind($txt, '<Button-1>', sub{ $cw->highlight($txt) });
+        
+        $last_end = $chr_end;
+        $i++;
+    }
+    $cw->fix_window_min_max_sizes;
+}
+
+sub get_DBAdaptor_from_details {
+    my( $details ) = @_;
+    
+    my( @args );
+    while (my ($key, $val) = each %$details) {
+        #warn "  -$key  => $val\n";
+        push(@args, "-$key", $val);
+    }
+    return Bio::Otter::DBSQL::DBAdaptor->new(@args);
+}
+
+sub get_dataset_details {
+    my( $host, $port ) = @_;
+
+    my $datasets_url = "http://$host:$port/perl/get_datasets?details=true";
+    my $sets = LWP::Simple::get($datasets_url);
+    
+    my( $in_details );
+    my $datasets = {};
+    
+    # Split the string into blocks of text which
+    # are separated by two or more newlines.
+    foreach (split /\n{2,}/, $sets) {
+        if (/Details/) {
+            $in_details = 1;
+            next;
+        }
+        next unless $in_details;
+        my ($name) = /(\S+)/;
+        my $opt = $datasets->{$name} = {};
+        while (/^\s+(\S+)\s+(\S+)/mg) {
+            $opt->{$1} = $2;
+        }
+    }
+    return $datasets;
+}
+
+
+
+
+__END__
+
+=head1 NAME - otter
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
