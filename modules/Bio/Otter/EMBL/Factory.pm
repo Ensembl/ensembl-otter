@@ -920,7 +920,7 @@ sub _do_assembly_tag {
       $feat->key('misc_feature');
     }
 
-    if ($atag->strand == 1) {
+    if ($atag->strand <= 1) {
       $feat->location(simple_location($atag->start, $atag->end));
     }
     elsif ($atag->strand == -1) {
