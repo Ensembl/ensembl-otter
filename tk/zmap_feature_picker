@@ -23,7 +23,7 @@ use Symbol 'gensym';
         $fh = \*ARGV;
     }
 
-    my $mw = CanvasWindow::MainWindow->new;
+    my $mw = CanvasWindow::MainWindow->new('zMap feature picker');
     my $fp = CanvasWindow::FeaturePicker->new($mw);
     $fp->parse_feature_filehandle($fh);
     $fp->draw_feature_list;

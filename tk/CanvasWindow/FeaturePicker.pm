@@ -69,6 +69,7 @@ sub next_match {
     if ($canvas->gettags($obj)) {
         $self->deselect_all;
         $self->highlight($obj);
+        $self->scroll_to_obj($obj);
     }
 }
 
