@@ -292,7 +292,7 @@ sub initialize {
                                             -relief => 'groove',
                                             -textvariable => \$current_method ,
                                             -width => $width
-            )->pack(-side => 'left' , -ipady => 3 , -padx=> 1);
+            )->pack(-side => 'left' , -ipady => 3 , -padx=> 3);
         
         my $length = 0;
         my ($prev ,@menu_items) ;
@@ -325,7 +325,7 @@ sub initialize {
                                             -tearoff    =>  0 ,
                                             -direction  => 'left' ,
                                             -menuitems  => [@menu_items]   
-        )->pack(-side => 'right', -padx => 1, -fill => 'y', -expand => 1 , -ipady => 3 , -ipadx => 1, -padx =>1);
+        )->pack(-side => 'right', -padx => 1, -fill => 'y', -expand => 1 , -ipady => 3 , -ipadx => 1, -padx =>2);
    
         $om->menu->invoke($method_i);
         
