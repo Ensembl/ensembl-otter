@@ -836,7 +836,7 @@ foreach my $atype (keys %gsi){
       # id, st, ed, esr, strand, phase, endphase
       if($tsi{$tsi}->[$erank]){
 	# assume merging a sticky...
-	my($eid2,$ecst2,$eced2,$esr2,$es2,$ep2,$eep2)=$tsi{$tsi}->[$erank];
+	my($eid2,$ecst2,$eced2,$esr2,$es2,$ep2,$eep2)=@{$tsi{$tsi}->[$erank]};
 	if($esr==2 || $esr2==2){
 	  my $esr3;
 	  if($esr==1 || $esr2==1){
@@ -851,7 +851,7 @@ foreach my $atype (keys %gsi){
 	  }elsif($eced2+1==$ecst){
 	    $ecst=$ecst2;
 	  }else{
-	    print "FATAL: cannot merge stick exons $tsi: $eid:$ecst-$eced, $eid2:$ecst2-$eced2\n";
+	    print "FATAL: cannot merge sticky exons $tsi: $eid:$ecst-$eced, $eid2:$ecst2-$eced2\n";
 	    exit 0;
 	  }
 	  $tsi{$tsi}->[$erank]=[$eid,$ecst,$eced,$esr,$es,$ep,$eep];
