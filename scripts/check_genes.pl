@@ -944,7 +944,8 @@ if($ngcl>1){
       $tcl->link([(keys %tsi)]);
     }
     my @ctsi=$tcl->cluster_ids;
-    print " Cluster $igcl: ".scalar(@gsi)." genes; ".scalar(@ctsi)." sets of duplicated transcripts\n";
+    my($tn,$cname,$atype)=@{$tsi_sum{$ctsi[0]}};
+    print " Cluster $igcl: ".scalar(@gsi)." genes; ".scalar(@ctsi)." sets of duplicated transcripts [$cname,$atype]\n";
 
     my $itcl=0;
     foreach my $tcid (@ctsi){
@@ -1007,15 +1008,17 @@ if($ngcl>1){
       # output
       foreach my $gsi (sort @gsi){
 	my($ntd,$nt)=@{$gset{$gsi}};
-	print "  $gsi ($ntd/$nt):\n";
+	my($gn,$gt)=@{$gsi_sum{$gsi}};
+	print "  $gsi ($gn, $gt) $ntd/$nt transcripts in duplication:\n";
 	foreach my $tsi (sort keys %{$tset{$gsi}}){
+	  my($tn)=@{$tsi_sum{$tsi}};
 	  my($ned,$ne,@eo)=@{$tset{$gsi}->{$tsi}};
 	  for($i=0;$i<scalar(@eo);$i++){
 	    if($eo[$i]>0){
 	      $eo[$i]=$id{$eo[$i]};
 	    }
 	  }
-	  print "    $tsi ($ned/$ne): ".join(' ',@eo)."\n";
+	  print "    $tsi ($tn) $ned/$ne exons: ".join(' ',@eo)."\n";
 	}
       }
     }
