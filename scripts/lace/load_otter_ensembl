@@ -294,9 +294,9 @@ my $input_type;
             $type = 'F' ;        
             $ctg_ori =  '+';
             $chr_start =  $end_coord + 10000 ;
-            $chr_end = ($chr_start + $seq->length + 1);
+            $chr_end = ($chr_start + $seq->length - 1);
             $ctg_start = 1 ;
-            $ctg_end =  1 + $seq->length;
+            $ctg_end =   $seq->length ; # $ctg_end = $ctg_start + length - 1 ; as we are starting at 1 just use length   
             $end_coord = $chr_end; # so that it is in a suitable position for next time              
         
         }
@@ -369,7 +369,7 @@ my $input_type;
         ## store_input_id_analysis($pipeline_db, $clone->embl_id) ;
         ## update input_id_analysis table
         eval{
-            $state_info->store_input_id_analysis( $acc_ver . ".1."  . ($seq->length + 1)  , $ana_obj );
+            $state_info->store_input_id_analysis( $acc_ver . ".1."  . ($seq->length )  , $ana_obj );
         };
         if ($@){
             print STDERR "could not enter values to input_id_analysis table\n$@"; 
@@ -397,8 +397,7 @@ my $input_type;
     
     
     foreach my $line_otter (@sgp_otter) {
-        
-        # add the appropriate chromosome_id before executing the query        
+             
         eval{ 
             my $line_pipe = shift(@sgp_pipe); # 
             $otter_assembly_insert->execute(@$line_otter);
