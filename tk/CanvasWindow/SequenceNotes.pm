@@ -82,11 +82,6 @@ sub column_methods {
                 return("$acc.$sv", $bold, 'searchable');
                 },
             sub{
-                # Use closure for font definition
-                my $cs = shift;
-                return($cs->clone_name, $bold, 'searchable');
-                },
-            sub{
                 my $cs = shift;
                 if (my $sn = $cs->current_SequenceNote) {
                     my $time = $sn->timestamp;
@@ -416,6 +411,10 @@ sub set_seleted_from_canvas {
     }
 }
 
+
+
+
+
 sub run_lace {
     my( $self ) = @_;
     
@@ -424,14 +423,17 @@ sub run_lace {
     my $ss = $self->SequenceSet;
     my $cl = $self->Client;
 
-    my $title = 'lace '. $self->name;
+    my $selected_sequences = $self->get_selected_sequence_list;
 
+    
+    my $title = 'lace '. $self->name . $selected_sequences;
+    
     ## For debugging to check selection OK:
     #foreach my $cs (@$selected) {
     #    printf "%s.%s\n", $cs->accession, $cs->sv;
     #}
 
-    my $db = $cl->new_AceDatabase;
+    my $db = $self->Client->new_AceDatabase;
     $db->title($title);
     $db->error_flag(1);
     eval{
@@ -451,6 +453,47 @@ sub run_lace {
     $xc->Client($self->Client);
     $xc->initialize;
 }
+
+# creates a string based on the selected clones, with commas seperating individual values or dots to represent a continous sequence
+sub get_selected_sequence_list{
+    my ($self ) = @_ ;
+    
+    my @selected = @{$self->get_selected_clone_sequence_ref};   
+    
+
+    
+    my $prev = shift @selected;
+    my $string;
+    
+    if (scalar(@selected) == 0){ 
+        $string = ", clone " . ($prev + 1);
+    }
+    else{
+        $string = ", clones " . ($prev + 1);
+        my $continous = 0 ;
+
+        foreach my $element (@selected){
+            if (($element  eq ($prev + 1))){
+                if ($element == @selected->[$#selected]){
+                    $string .= (".." . ($element + 1));
+                }
+                $continous = 1;
+            }
+            else{                                       
+                if ($continous){
+                    $string .= (".." . ($prev + 1)) ;
+                    $continous = 0;
+                }
+                $string .= (", " . ($element + 1)) ; 
+            }
+            $prev = $element ;
+        }
+    }
+    return $string ;
+}
+
+
+
 
 sub init_AceDatabase {
     my( $self, $db, $ss ) = @_;
@@ -581,12 +624,28 @@ sub selected_CloneSequence_indices {
         }
         push(@$select, $i);
     }
+    
+    $self->set_selected_clone_sequences_ref($select);
     if (@$select) {
+        
         return $select;
     } else {
         return;
     }
 }
+
+
+sub set_selected_clone_sequences_ref{
+    my ($self, $selected_clones) = @_;
+    $self->{'_selected_clones'} = $selected_clones ;   
+}
+
+sub get_selected_clone_sequence_ref{
+    my $self = shift @_;
+    
+    return $self->{'_selected_clones'} ;
+}
+
 
 sub get_current_row_tag {
     my( $self ) = @_;
