@@ -175,11 +175,10 @@ not been set. Fetches information from the Otter database, as necessary.
 =cut 
 
 sub embl_setup {
-    
-    my ( $self, $accession, $seq_version ) = @_;
+    my ( $self ) = @_;
 
-    $self->accession($accession) if $accession;
-    $self->sequence_version($seq_version) if $seq_version;
+    my $accession   = $self->accession;
+    my $seq_version = $self->sequence_version;
 
     my $embl = Hum::EMBL->new;    
     my @sec;
@@ -189,8 +188,8 @@ sub embl_setup {
     my $entry_name = $self->entry_name or confess "entry_name not set";
     my $data_class = $self->data_class or confess "data_class not set";
     my $mol_type = $self->mol_type or confess "mol_type not set";
-    my $clone_lib = $self->clone_lib or confess "clone_lib not set";
-    my $clone_name = $self->clone_name or confess "clone_name not set";
+    my $clone_lib = $self->clone_lib;
+    my $clone_name = $self->clone_name;
     my $comments_ref = $self->comments;
     my $references_ref = $self->references;
     
@@ -227,12 +226,16 @@ sub embl_setup {
     
     # AC line
     my $ac = $embl->newAC;
+    $ac->primary($accession);
     if (@sec) {
         $ac->secondaries(@sec);
-        $ac->primary($accession);
-    } else {
-        $ac->primary($accession);
     }
+    $embl->newXX;
+
+    # SV line
+    my $sv = $embl->newSV;
+    $sv->accession($accession);
+    $sv->version($seq_version);
     $embl->newXX;
 
     # DE line
@@ -293,8 +296,8 @@ sub embl_setup {
     $source->addQualifierStrings('mol_type',  $mol_type);
     $source->addQualifierStrings('organism',  species_binomial($species));
     $source->addQualifierStrings('chromosome',  $chromosome_name);
-    $source->addQualifierStrings('clone',     $clone_name);
-    $source->addQualifierStrings('clone_lib', $clone_lib);
+    $source->addQualifierStrings('clone',     $clone_name) if $clone_name;
+    $source->addQualifierStrings('clone_lib', $clone_lib) if $clone_lib;
 
     return $embl;
 }
@@ -334,6 +337,8 @@ sub embl_setup {
         'mouse'         => 'MUS',
         'rat'           => 'ROD',
         'dog'           => 'MAM',
+        'cat'           => 'MAM',
+        'pig'           => 'MAM',
 
         'fugu'          => 'VRT',
         'zebrafish'     => 'VRT',
@@ -361,8 +366,7 @@ the module).
         my $species = $ds->species
             or confess "Could not get species from DataSet";
         
-        $species = lc($species);    
-        unless ($species_division{lc($species)}) {
+        unless ($species_division{lc $species}) {
             confess "Dont know EMBL_division for: $species";
         }
         return ($species_division{$species}, $species);
@@ -410,8 +414,7 @@ sub secondary_accs {
 
 =head2 accession
 
-Get/set method for the accession of the clone. Must be set for
-embl_setup to succeed.
+Get/set method for the accession of the clone.
 
 =cut
 
@@ -442,8 +445,7 @@ sub chromosome_name {
 
 =head2 sequence_version
 
-Get/set method for the sequence version of the clone. Must be set for
-embl_setup to succeed.
+Get/set method for the sequence version of the clone.
 
 =cut
 

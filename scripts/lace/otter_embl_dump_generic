@@ -75,38 +75,38 @@ use Carp;
     my $otter_db = $ds->get_cached_DBAdaptor; #Bio::EnsEMBL::Container
     $otter_db->assembly_type($sequence_set);  #e.g. 'chr1-07'
     
-    my @comments = (
-        '-------------- Project Information'      
-        , 'Here are some comments'
-        , 'To go in the EMBL record'
-    );
+    #my @comments = (
+    #    '-------------- Project Information'      
+    #    , 'Here are some comments'
+    #    , 'To go in the EMBL record'
+    #);
 
-    my @comments2 = (
-        'Second paragraph of comments'      
-        , 'To go in the EMBL record'
-    );
-    
-    
-    my @reference1_text = (
-        'Submitted (13-JUL-2004) to the EMBL/Genbank/DDBJ databases.'
-        , 'Wellcome Trust Sanger Institute, Hinxton, Cambridgeshire, CB10 1SA, UK.'
-        , 'E-mail enquiries: vega@sanger.ac.uk'
-        , 'Clone requests: clonerequest@sanger.ac.uk'
-    );
+    #my @comments2 = (
+    #    'Second paragraph of comments'      
+    #    , 'To go in the EMBL record'
+    #);
+    #
+    #
+    #my @reference1_text = (
+    #    'Submitted (13-JUL-2004) to the EMBL/Genbank/DDBJ databases.'
+    #    , 'Wellcome Trust Sanger Institute, Hinxton, Cambridgeshire, CB10 1SA, UK.'
+    #    , 'E-mail enquiries: vega@sanger.ac.uk'
+    #    , 'Clone requests: clonerequest@sanger.ac.uk'
+    #);
 
-    my @reference2_text = (
-        'Text for reference 2 goes here.'
-    );
-    
-    my $reference_1 = ['1'
-        , ''
-        , 'Tracey A.'
-        , \@reference1_text];
+    #my @reference2_text = (
+    #    'Text for reference 2 goes here.'
+    #);
+    #
+    #my $reference_1 = ['1'
+    #    , ''
+    #    , 'Tracey A.'
+    #    , \@reference1_text];
 
-    my $reference_2 = ['2'
-        , ''
-        , 'Another A.N.'
-        , \@reference2_text];
+    #my $reference_2 = ['2'
+    #    , ''
+    #    , 'Another A.N.'
+    #    , \@reference2_text];
         
     foreach my $acc (@ARGV) {
         
@@ -118,21 +118,21 @@ use Carp;
         $ft_factory->SequenceSet($ss);
         $ft_factory->accession($accession);
         $ft_factory->sequence_version($seq_version);
+        $ft_factory->entry_name($accession);
         
         my $clone_length = $ft_factory->get_clone_length_from_otter;
-        $reference_1->[1] = "1-$clone_length";
-        $reference_2->[1] = "1-$clone_length";
-        $ft_factory->entry_name($accession);
         $ft_factory->data_class('standard');
-        $ft_factory->clone_lib('to_be_provided');
-        $ft_factory->clone_name('to_be_provided_2');
+        #$ft_factory->clone_lib('to_be_provided');
+        #$ft_factory->clone_name('to_be_provided_2');
         $ft_factory->keywords('HTG');
-        $ft_factory->comments(\@comments);
-        $ft_factory->comments(\@comments2);
-        $ft_factory->references($reference_1);
-        $ft_factory->references($reference_2);
+        #$ft_factory->comments(\@comments);
+        #$ft_factory->comments(\@comments2);
+        #$reference_1->[1] = "1-$clone_length";
+        #$ft_factory->references($reference_1);
+        #$reference_2->[1] = "1-$clone_length";
+        #$ft_factory->references($reference_2);
 
-        my $embl = $ft_factory->embl_setup();
+        my $embl = $ft_factory->embl_setup;
         $ft_factory->make_embl_ft($accession, $embl, $seq_version);
         $ft_factory->add_sequence_from_otter($embl);
         print $embl->compose();

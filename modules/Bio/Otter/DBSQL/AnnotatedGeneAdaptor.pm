@@ -164,6 +164,7 @@ sub list_current_dbIDs_for_Slice_by_type {
     my $ctg_id_list = join(',', map($_->component_Seq->dbID, @$tiling_path));
     my $sth = $self->db->prepare(qq{
         SELECT gsid.stable_id
+          , gsid.version
           , g.gene_id
           , g.type
         FROM gene_stable_id gsid
@@ -185,8 +186,13 @@ sub list_current_dbIDs_for_Slice_by_type {
         });
     $sth->execute($slice->assembly_type);
     
+    my $get_max = $self->_max_version_for_stable_sth;
+    
     my( %sid_gid );
-    while (my ($sid, $gid, $type) = $sth->fetchrow) {
+    while (my ($sid, $version, $gid, $type) = $sth->fetchrow) {
+        $get_max->execute($sid);
+        my ($max) = $get_max->execute($sid);
+        next unless $max == $version;
         $sid_gid{$sid} = [$gid, $type];
     }
     my @gene_id = map $_->[0], grep $_->[1] eq $gene_type, values %sid_gid;
@@ -209,6 +215,7 @@ sub list_current_dbIDs_for_Slice {
 
     my $sth = $self->db->prepare(qq{
         SELECT gsid.stable_id
+          , gsid.version
           , g.gene_id
         FROM gene_stable_id gsid
           , gene g
@@ -228,9 +235,14 @@ sub list_current_dbIDs_for_Slice {
         ORDER BY gsid.version ASC
         });
     $sth->execute($slice->assembly_type);
+    
+    my $get_max = $self->_max_version_for_stable_sth;
 
     my( %sid_gid );
-    while (my ($sid, $gid) = $sth->fetchrow) {
+    while (my ($sid, $version, $gid) = $sth->fetchrow) {
+        $get_max->execute($sid);
+        my ($max) = $get_max->fetchrow;
+        next unless $max == $version;
         $sid_gid{$sid} = $gid;
     }
     return [sort {$a <=> $b} values %sid_gid];
@@ -248,6 +260,7 @@ sub list_current_dbIDs_for_Contig {
     my $ctg_id = $contig->dbID;
     my $sth = $self->db->prepare(qq{
         SELECT gsid.stable_id
+          , gsid.version
           , g.gene_id
         FROM gene_stable_id gsid
           , gene g
@@ -264,9 +277,14 @@ sub list_current_dbIDs_for_Contig {
         ORDER BY gsid.version ASC
         });
     $sth->execute($ctg_id);
-    
+        
+    my $get_max = $self->_max_version_for_stable_sth;
+
     my( %sid_gid );
-    while (my ($sid, $gid) = $sth->fetchrow) {
+    while (my ($sid, $version, $gid) = $sth->fetchrow) {
+        $get_max->execute($sid);
+        my ($max) = $get_max->fetchrow;
+        next unless $max == $version;
         $sid_gid{$sid} = $gid;
     }
     return [sort {$a <=> $b} values %sid_gid];
@@ -293,7 +311,7 @@ sub list_current_dbIDs {
         ORDER BY s.version ASC
         });
     $sth->execute;
-    
+
     my( %stable_gid_type );
     while (my ($stable, $gid, $type) = $sth->fetchrow) {
         $stable_gid_type{$stable} = [$gid, $type];
@@ -325,15 +343,21 @@ sub Gene_is_current_version {
     
     my $stable  = $gene->stable_id;
     my $version = $gene->version;
-    my $sth = $self->db->prepare(q{
-        SELECT MAX(version)
-        FROM gene_stable_id
-        WHERE stable_id = ?
-        });
+    my $sth = $self->_max_version_for_stable_sth;
     $sth->execute($stable);
     my ($max_version) = $sth->fetchrow;
     
     return $version == $max_version;
+}
+
+sub _max_version_for_stable_sth {
+    my( $self ) = @_;
+    
+    return $self->db->prepare(q{
+        SELECT MAX(version)
+        FROM gene_stable_id
+        WHERE stable_id = ?
+        });
 }
 
 ### fetch_by_Slice should have been called fetch_all_by_Slice
@@ -366,6 +390,9 @@ sub fetch_by_Slice {
     my $latest_genes = [];
     foreach my $id (@$latest_gene_id) {
         my $gene = $self->fetch_by_dbID($id)->transform($slice);
+        
+        # Skip any genes that aren't the latest version of that gene
+        next unless $self->Gene_is_current_version($gene);
         
         # Skip any genes that are off slice
         next unless $gene->start <= $slice->length and $gene->end >= 1;

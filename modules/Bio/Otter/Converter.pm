@@ -544,10 +544,19 @@ sub XML_to_otter {
     foreach my $gene (@genes) {
       foreach my $exon (@{ $gene->get_all_Exons }) {
         $exon->start($exon->start - $chrstart + 1);
-        $exon->end($exon->end - $chrstart + 1);
+        $exon->end(  $exon->end   - $chrstart + 1);
       }
     }
   }
+
+    # Features need similarly to be fixed
+    {
+        my $offset = 1 - $chrstart;
+        foreach my $feat (@$feature_set) {
+            $feat->start($feat->start + $offset);
+            $feat->end(  $feat->end   + $offset);
+        }
+    }
 
   foreach my $gene (@genes) {
     prune_Exons($gene);
@@ -1849,14 +1858,16 @@ sub clone_to_XML {
 }
 
 sub features_to_XML {
-    my( $features ) = @_;
+    my( $chrstart, $features ) = @_;
+    
+    my $offset = $chrstart - 1;
     
     my $xml = "<feature_set>\n";
     foreach my $sf (@$features) {
         $xml .= "  <feature>\n"
             . sprintf("    <type>%s</type>\n",      $sf->analysis->logic_name   )
-            . sprintf("    <start>%s</start>\n",    $sf->start                  )
-            . sprintf("    <end>%s</end>\n",        $sf->end                    )
+            . sprintf("    <start>%s</start>\n",    $sf->start + $offset        )
+            . sprintf("    <end>%s</end>\n",        $sf->end   + $offset        )
             . sprintf("    <strand>%s</strand>\n",  $sf->strand                 )
             . sprintf("    <score>%s</score>\n",    $sf->score                  )
             . sprintf("    <label>%s</label>\n",    $sf->display_label          )
@@ -1925,7 +1936,7 @@ sub slice_to_XML {
     
     # Simple features for polyA signals and sites etc...
     if (my $feats = $slice->get_all_SimpleFeatures) {
-        $xmlstr .= features_to_XML($feats);
+        $xmlstr .= features_to_XML($chrstart, $feats);
     }
 
     if (defined($writeseq)) {
