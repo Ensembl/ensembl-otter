@@ -1,5 +1,7 @@
 #!/usr/local/bin/perl -w
 
+use lib '/nfs/disk84/jgrg/work/tk';
+
 ### compact_chr_fig
 
 use strict;
@@ -35,10 +37,6 @@ use Getopt::Long 'GetOptions';
     my $mw = GenomeCanvas::MainWindow->new;
     $mw->title($chr_name);
     my $gc = GenomeCanvas->new($mw);
-    $gc->vertical_tile(1);
-    # A4 is 841 x 591 points
-    $gc->page_height(841);
-    $gc->page_width(591);
     
     my $canvas = $gc->canvas;
 
@@ -93,6 +91,10 @@ use Getopt::Long 'GetOptions';
         $plot->x_major(0.2);
         $gc->add_Band($plot);
 
+        my $snps = GenomeCanvas::Band::SNP->new;
+        $snps->virtual_contig($vc);
+        $gc->add_Band($snps);
+
         my $cpg = GenomeCanvas::Band::CpG->new;
         $cpg->virtual_contig($vc);
         $gc->add_Band($cpg);
@@ -109,10 +111,6 @@ use Getopt::Long 'GetOptions';
         $gene_names->virtual_contig($vc);
         $gene_names->tiling_direction(1);
         $gc->add_Band($gene_names);
-
-        my $snps = GenomeCanvas::Band::SNP->new;
-        $snps->virtual_contig($vc);
-        $gc->add_Band($snps);
     }
 
     print STDERR "Rendering canvas\n";
@@ -146,9 +144,28 @@ use Getopt::Long 'GetOptions';
 
     make_button($button_frame, 'PostScript',
         sub {
-            my @files = $gc->print_postscript($chr_name);
+            
+            # A4 is 841 x 591 points
+            $gc->page_height(841);
+            $gc->page_width(591 * 4);
+            my @files = $gc->print_postscript('chr_20-single');
             warn "Printed to files:\n",
                 map "  $_\n", @files;
+        
+            $gc->page_height(841);
+            $gc->page_width(591);
+            $gc->horizontal_tile(4);
+            my @files = $gc->print_postscript('chr_20-4-page');
+            warn "Printed to files:\n",
+                map "  $_\n", @files;
+        
+            $gc->page_height(841);
+            $gc->page_width(591);
+            $gc->horizontal_tile(5);
+            my @files = $gc->print_postscript('chr_20-5-page');
+            warn "Printed to files:\n",
+                map "  $_\n", @files;
+        
         });
     $gc->fix_window_min_max_sizes;
 }

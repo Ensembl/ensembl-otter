@@ -25,6 +25,17 @@ sub title {
     return $band->{'_title'};
 }
 
+sub canvas {
+    my( $self, $canvas ) = @_;
+    
+    if ($canvas) {
+        confess("Not a Tk::Canvas object '$canvas'")
+            unless ref($canvas) and $canvas->isa('Tk::Canvas');
+        $self->{'_canvas'} = $canvas;
+    }
+    return $self->{'_canvas'};
+}
+
 sub draw_titles {
     my( $band ) = @_;
     
@@ -247,17 +258,18 @@ sub y_max {
 sub draw_sequence_gaps {
     my( $band ) = @_;
     
-    my $canvas      = $band->canvas;
-    my $height      = $band->height;
-    my $rpp         = $band->residues_per_pixel;
-    my $y_offset    = $band->y_offset;
-    my $color       = $band->sequence_gap_color;
+    my $canvas          = $band->canvas;
+    my $height          = $band->height;
+    my $rpp             = $band->residues_per_pixel;
+    my $y_offset        = $band->y_offset;
+    my $default_color   = $band->sequence_gap_color;
     my $y_max = $y_offset + $height;
     my @tags = $band->tags;
 
     # Draw the gaps    
     foreach my $gap ($band->sequence_gap_map) {
-        my ($x1, $x2) = map $_ / $rpp, @$gap;
+        my ($x1, $x2) = map $_ / $rpp, @{$gap}[0,1];
+        my $color = $gap->[2] || $default_color;
         $canvas->createRectangle(
             $x1, $y_offset, $x2, $y_max,
             -fill       => $color,

@@ -151,6 +151,17 @@ sub render {
         $band->nudge_into_free_space($group, $nudge_distance);
     }
     $canvas->delete('bkgd_rec');
+    
+    my @bbox = $band->band_bbox;
+    $bbox[0] = 0;
+    $bbox[2] = $band->width;
+    $canvas->createRectangle(
+        @bbox,
+        -outline    => undef,
+        -fill       => undef,
+        -tags       => [@tags],
+        );
+    
     #confess "No mapcontigs in virtual contig" unless $map_contig_count;
     #print STDERR "Done render tilingpath\n";
 }

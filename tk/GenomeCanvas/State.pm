@@ -25,17 +25,6 @@ sub state {
     return $self->{'_state_hash'};
 }
 
-sub canvas {
-    my( $self, $canvas ) = @_;
-    
-    if ($canvas) {
-        confess("Not a Tk::Canvas object '$canvas'")
-            unless ref($canvas) and $canvas->isa('Tk::Canvas');
-        $self->{'_state_hash'}{'_canvas'} = $canvas;
-    }
-    return $self->{'_state_hash'}{'_canvas'};
-}
-
 sub y_offset {
     my( $self, $y_offset ) = @_;
     
