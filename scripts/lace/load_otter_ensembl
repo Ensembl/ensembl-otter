@@ -145,7 +145,7 @@ use Bio::Otter::Lace::SatelliteDB;
         -PASS   => $dbpass,
         -DBNAME => $dbname,
         );
-        
+    $otter_db->db_handle->{'PrintError'} = 0;
     
     my $pipe_options = Bio::Otter::Lace::SatelliteDB::get_options_for_key($otter_db, 'pipeline_db');
     if ($pipe_options) {
@@ -174,6 +174,7 @@ use Bio::Otter::Lace::SatelliteDB;
     
   
     my $pipeline_db = Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor->new(%$pipe_options);
+    $pipeline_db->db_handle->{'PrintError'} = 0;
 
     if ($help){
         exec('perldoc', $0); #runs perldoc on itself (variable $0 stores the program name)
@@ -244,14 +245,6 @@ use Bio::Otter::Lace::SatelliteDB;
     if ($chromosome_name =~ /chr/i) {
         die "Chromosome names containing 'chr' are illegal: '$chromosome_name'\n";
     }
-    
-
-    # die on INT signal    - should clean things up a bit , if program terminates early
-    $SIG{INT} = sub {
-        my $sig = shift;
-        die "exited after SIG$sig";
-        };
-
 
     # update the sequence sets table and return the coord of the last contig if available
     $end_coord          = check_and_save_sequence_set($otter_db,     $set_name, $description, $input_type);
@@ -471,9 +464,14 @@ sub store_clone{
         
         $pfetch         ||= Bio::EnsEMBL::Pipeline::SeqFetcher::Finished_Pfetch->new;
         $pfetch_archive ||= Bio::EnsEMBL::Pipeline::SeqFetcher::Finished_Pfetch->new(
-            -PORT => 23100,
+            -PFETCH_PORT => 23100,
             );
-        return $pfetch->get_Seq_by_acc($acc_ver) || $pfetch_archive->get_Seq_by_acc($acc_ver);
+        my $seq = $pfetch->get_Seq_by_acc($acc_ver);
+        unless ($seq) {
+            warn "Fetching '$acc_ver' from archive\n";
+            $seq = $pfetch_archive->get_Seq_by_acc($acc_ver);
+        }
+        return $seq;
     }
 }
 
@@ -587,7 +585,7 @@ sub clone_to_db {
     
     eval { $clone = $adaptor->fetch_by_accession_version($acc , $seq_ver); };
     if (! $@){
-        warn "this clone is already in the " . $adaptor->db->dbname . " database" ;
+        warn "this clone is already in the " . $adaptor->db->dbname . " database\n" ;
         my $contigs = $clone->get_all_Contigs;
         if (scalar(@$contigs) != 1){
             die "more than 1 contig for clone " . $acc ; 
@@ -596,11 +594,11 @@ sub clone_to_db {
     else{
                 
         $clone = Bio::EnsEMBL::Clone->new();
-        $clone->htg_phase(3);
         $clone->id("$acc.$seq_ver");    ### Should set to international clone name
         $clone->embl_id($acc);
-        $clone->version(1);
         $clone->embl_version($seq_ver);
+        $clone->htg_phase(3);
+        $clone->version(1);
         $clone->created(time);
         $clone->modified(time);
  
