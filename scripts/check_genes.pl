@@ -351,6 +351,9 @@ if($make_cache){
   # report all offtrack genes
   my %orphan_gsi;
   foreach my $atype (sort keys %atype_gsi){
+    $n_offtrack{$atype}->[0]=0;
+    $n_offtrack{$atype}->[1]=0;
+    $n_offtrack{$atype}->[2]=0;
     print "sequence_set $atype\n";
 
     # report partial genes:
