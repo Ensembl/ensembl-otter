@@ -684,6 +684,7 @@ sub make_chooser_map {
           , r.annotator_uname
           , r.review_time
           , r.review_comment
+          , a.is_current
         FROM sequence s
           , ana_sequence a
           , ana_status st
@@ -695,7 +696,6 @@ sub make_chooser_map {
           AND a.ana_seq_id = st.ana_seq_id
           AND s.chromosome_id = c.chromosome_id
           AND a.ana_seq_id = ss.ana_seq_id
-          AND a.is_current = 'Y'
           AND st.is_current = 'Y'
           AND ss.set_id = $set_id
         ORDER BY ss.rank ASC
@@ -704,24 +704,41 @@ sub make_chooser_map {
     my $sth = prepare_statement($sql);
     $sth->execute;
 
-    my( $rank,   $seq_name, $ana_seq_id,
-        $status, $uname,    $date,
-        $comment );
+    my(  $rank,     $seq_name,   $ana_seq_id,
+         $status,   $uname,      $date,
+         $comment,  $is_current  );
     $sth->bind_columns(
-        \$rank,   \$seq_name, \$ana_seq_id,
-        \$status, \$uname,    \$date,
-        \$comment,
-        );
+        \$rank,    \$seq_name,  \$ana_seq_id,
+        \$status,  \$uname,     \$date,
+        \$comment, \$is_current  );
     
     my( @map );
     my $last_ana_seq_id = 0;
+    my $last_rank = 0;
     while ($sth->fetch) {
         next if $ana_seq_id == $last_ana_seq_id;
+        
+        while ($rank != $last_rank + 1) {
+            push(@map, ['GAP']);
+            $last_rank++;
+        }
+        $last_rank = $rank;
+        
         ($date) = $date =~ /(\d{4}-\d\d-\d\d)/ if $date;
         $status = status_name($status);
-        push(@map,
-            [ $ana_seq_id, $rank, $seq_name, $status, $uname, $date, $comment ]
-            );
+        if ($is_current eq 'Y') {
+            push(@map,
+                [ $ana_seq_id, $rank,  $seq_name,
+                  $status,     $uname, $date,
+                  $comment ]
+                );
+        } else {
+            push(@map,
+                [ 'Old sequence',  $seq_name,
+                  $status, $uname, $date,
+                  $comment ]
+                );
+        }
         $last_ana_seq_id = $ana_seq_id;
     }
     

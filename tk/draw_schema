@@ -50,15 +50,14 @@ use Hum::Submission;
         my $table_sth = $dbh->prepare($query);
         $table_sth->execute();
 
-        push @table_titles,$each_table;
+        push @table_titles, $each_table;
 
         while ( my @desc = $table_sth->fetchrow ) {
             my ($field,$type,$null,$key,$default,$extra) = @desc;
             $fieldlist .= qq{$field\n};
         }
         
-         push @tablelist,$fieldlist;
-    
+         push @tablelist, $fieldlist;
     }
     
     my $mw = CanvasWindow::MainWindow->new;
