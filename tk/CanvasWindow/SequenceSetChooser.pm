@@ -365,9 +365,19 @@ sub search_window{
                                                                 -command    => sub { $search_window->withdraw }
                 )->pack(-side => 'right');
            
-        my $clear_button    =   $search_cancel_frame->Button(   -text       => 'clear'   ,
-                                                                -command    => sub { my $ref = $self->search_text_ref(); $$ref = undef; }
+        my $reset_button    =   $search_cancel_frame->Button(   -text       => 'reset',
+                                                                -command    => sub { my $ref         = $self->search_text_ref(); 
+                                                                                     $$ref           = undef; 
+                                                                                     $radio_variable = 'locus';
+                                                                                     my $cont        = $self->context_size_ref();
+                                                                                     $$cont          = 1;
+                                                                                 }
                 )->pack(-side => 'right');
+        my $clear_button    =   $search_cancel_frame->Button(-text       => 'clear',
+                                                             -command    => sub { my $ref         = $self->search_text_ref(); 
+                                                                                  $$ref           = undef; 
+                                                                              }
+                                                             )->pack(-side => 'right');
            
         $self->{'_search_window'} = $search_window ;
         $search_window->bind('<Destroy>' , sub { $self = undef }  ) ;
