@@ -352,7 +352,7 @@ sub scroll_to_obj {
     }
     elsif ($obj_top > $visible_bottom) {
         my $visible_height = $visible_bottom - $visible_top;
-        $canvas->yviewMoveto(($obj_bottom + margin - $visible_height) / $height);
+        $canvas->yviewMoveto(($obj_bottom + $margin - $visible_height) / $height);
     } else {
         #warn "object is visible in y axis\n";
     }
