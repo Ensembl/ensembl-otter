@@ -196,6 +196,7 @@ gene_info_from_stable_id -dataset <DATASET> [output options] [<list of stable id
     -name             gene name
     -stable_id        gene stable id
     -version          gene version
+    -stabledotversion gene stable_id.version
     -exons            all the exons
     -transcripts      all the transcripts
     -transcriptMatch  the transcripts of the gene in the query
