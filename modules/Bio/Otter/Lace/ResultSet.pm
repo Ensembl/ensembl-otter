@@ -408,6 +408,7 @@ sub get_context_and_intron_clones{
         push (@cs_assembly_list, @postfix_slice) if @postfix_slice;
         $ss->drop_CloneSequence_list();
         $ss->CloneSequence_list(\@cs_assembly_list);
+#        $self->DataSet->status_refresh_for_SequenceSet($ss);
     }
 }
 
