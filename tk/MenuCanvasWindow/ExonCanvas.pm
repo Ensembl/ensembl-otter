@@ -180,7 +180,7 @@ sub initialize {
         my $current_method = $sub->GeneMethod->name;
         $self->method_name_var(\$current_method);
 
-        my $method_menu = $self->make_menu('Gene type');
+        my $method_menu = $self->make_menu('Type');
         my $redraw_tr = sub { $self->draw_translation_region };
         foreach my $method_name (@allowed_methods ) {
             $method_menu->add('radiobutton',
