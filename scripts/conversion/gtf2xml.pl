@@ -43,6 +43,7 @@ my $opt_o='chr21.xml';
 
 my $author='Riken';
 my $email='taylor@gsc.riken.go.jp';
+my $opt_v;
 
 my $opt_P;
 my $opt_v;
@@ -62,6 +63,7 @@ GetOptions(
 
 	   'help', \$phelp,
 	   'h', \$help,
+	   'v',\$opt_v,
 	   );
 
 # help
@@ -81,6 +83,7 @@ gtf2xml.pl
   -author          char   author label ($author)
   -email           char   email address for feedback on database ($email)
   -prefix          char   group prefix to prepend to gene_names and types ($prefix)
+  -P                      parse input file only
 
   -P                      parse input file only
 
@@ -280,11 +283,49 @@ if($n1){
 }
 
 print scalar(keys(%genes))," genes found\n";
+# get number of transcripts
 my $nt=0;
+# get distribution of number of exons per transcript
+my %nexon;
+# get distribution of intron lengths per transcript
+my %nintron;
 foreach my $gene_id (keys %genes){
-  $nt+=scalar(keys %{$genes{$gene_id}});
+  foreach my $transcript_id (keys %{$genes{$gene_id}}){
+    $nt++;
+    my $nexon=@{$genes{$gene_id}->{$transcript_id}->{'exons'}};
+    $nexon{$nexon}++;
+    my %ex;
+    foreach my $ehash (@{$genes{$gene_id}->{$transcript_id}->{'exons'}}){
+      $ex{$ehash->{'start'}}=$ehash->{'end'};
+    }
+    my $last;
+    foreach my $st (sort {$a<=>$b} keys %ex){
+      if($last){
+	my $lintron=$st-$last;
+	#print "$st $last $lintron\n";
+	$nintron{$lintron}++;
+      }
+      $last=$ex{$st};
+    }
+  }
 }
 print "$nt transcripts found\n";
+
+if($opt_v){
+  print "Distribution of number of exons per transcript\n";
+  foreach my $nexon (sort {$a<=>$b} keys %nexon){
+    print "$nexon $nexon{$nexon}\n";
+  }
+  print "\n";
+}
+
+#if($opt_v){
+  print "Distribution of intron lengths\n";
+  foreach my $nintron (sort {$a<=>$b} keys %nintron){
+    print "$nintron $nintron{$nintron}\n";
+  }
+  print "\n";
+#}
 
 # look for entries in gene, not in genes
 foreach my $gene_id (keys %gene){

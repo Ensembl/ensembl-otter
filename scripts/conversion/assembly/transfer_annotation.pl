@@ -34,56 +34,56 @@ my $t_path   = 'NCBI31';
 my $filter_gd;
 my $filter_obs;
 my $gene_type;
-my @gene_names;
+my @gene_stable_ids;
 my $opt_t;
 my $opt_o;
 
-&GetOptions( 'host:s'    => \$host,
-             'user:s'    => \$user,
-             'pass:s'    => \$pass,
-             'port:s'    => \$port,
-             'dbname:s'  => \$dbname,
-             'c_host:s'    => \$c_host,
-             'c_user:s'    => \$c_user,
-             'c_pass:s'    => \$c_pass,
-             'c_port:s'    => \$c_port,
-             'c_dbname:s'  => \$c_dbname,
-             't_host:s'    => \$t_host,
-             't_user:s'    => \$t_user,
-             't_pass:s'    => \$t_pass,
-             't_port:s'    => \$t_port,
-             't_dbname:s'  => \$t_dbname,
-             'chr:s'       => \$chr,
-             'chrstart:n'  => \$chrstart,
-             'chrend:n'    => \$chrend,
-             'path:s'      => \$path,
-             'c_path:s'    => \$c_path,
-             't_path:s'    => \$t_path,
-	     'filter_gd'   => \$filter_gd,
-	     'filter_obs'  => \$filter_obs,
-	     'gene_type:s' => \$gene_type,
-	     'gene_name:s' => \@gene_names,
-	     't'           => \$opt_t,
-	     'o:s'         => \$opt_o,
+&GetOptions( 'host:s'           => \$host,
+             'user:s'           => \$user,
+             'pass:s'           => \$pass,
+             'port:s'           => \$port,
+             'dbname:s'         => \$dbname,
+             'c_host:s'         => \$c_host,
+             'c_user:s'         => \$c_user,
+             'c_pass:s'         => \$c_pass,
+             'c_port:s'         => \$c_port,
+             'c_dbname:s'       => \$c_dbname,
+             't_host:s'         => \$t_host,
+             't_user:s'         => \$t_user,
+             't_pass:s'         => \$t_pass,
+             't_port:s'         => \$t_port,
+             't_dbname:s'       => \$t_dbname,
+             'chr:s'            => \$chr,
+             'chrstart:n'       => \$chrstart,
+             'chrend:n'         => \$chrend,
+             'path:s'           => \$path,
+             'c_path:s'         => \$c_path,
+             't_path:s'         => \$t_path,
+	     'filter_gd'        => \$filter_gd,
+	     'filter_obs'       => \$filter_obs,
+	     'gene_type:s'      => \$gene_type,
+	     'gene_stable_id:s' => \@gene_stable_ids,
+	     't'                => \$opt_t,
+	     'o:s'              => \$opt_o,
             );
 
-my %gene_names;
-if (scalar(@gene_names)) {
-  my $gene_name=$gene_names[0];
-  if(scalar(@gene_names)==1 && -e $gene_name){
+my %gene_stable_ids;
+if (scalar(@gene_stable_ids)) {
+  my $gene_stable_id=$gene_stable_ids[0];
+  if(scalar(@gene_stable_ids)==1 && -e $gene_stable_id){
     # 'gene' is a file
-    @gene_names=();
-    open(IN,$gene_name) || die "cannot open $gene_name";
+    @gene_stable_ids=();
+    open(IN,$gene_stable_id) || die "cannot open $gene_stable_id";
     while(<IN>){
       chomp;
-      push(@gene_names,$_);
+      push(@gene_stable_ids,$_);
     }
     close(IN);
   }else{
-    @gene_names = split (/,/, join (',', @gene_names));
+    @gene_stable_ids = split (/,/, join (',', @gene_stable_ids));
   }
-  print scalar(@gene_names)." gene names found\n";
-  %gene_names = map {$_,1} @gene_names;
+  print scalar(@gene_stable_ids)." gene names found\n";
+  %gene_stable_ids = map {$_,1} @gene_stable_ids;
 }
 
 my $sdb = new Bio::Otter::DBSQL::DBAdaptor(-host => $host,
@@ -143,8 +143,8 @@ open(OUT,">$opt_o") || die "cannot open $opt_o" if $opt_o;
 foreach my $gene (@$genes) {
     my $gsi=$gene->stable_id;
     my $version=$gene->version;
-    if(scalar(@gene_names)){
-      next unless $gene_names{$gsi};
+    if(scalar(@gene_stable_ids)){
+      next unless $gene_stable_ids{$gsi};
     }
     if($filter_gd){
 	my $name=$gene->gene_info->name->name;

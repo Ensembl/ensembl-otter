@@ -20,26 +20,26 @@ my $help;
 my $phelp;
 my $opt_v;
 my $opt_t;
-my @gene_names;
+my @gene_stable_ids;
 
 $Getopt::Long::ignorecase=0;
 
 GetOptions(
-	   'port:s', \$port,
-	   'pass:s', \$password,
-	   'host:s', \$host,
-	   'user:s', \$user,
-	   'db:s', \$db,
+	   'port:s',           \$port,
+	   'pass:s',           \$password,
+	   'host:s',           \$host,
+	   'user:s',           \$user,
+	   'db:s',             \$db,
 
-	   'help', \$phelp,
-	   'h', \$help,
-	   'v', \$opt_v,
-	   't', \$opt_t,
-	   'gene:s', \@gene_names,
+	   'help',             \$phelp,
+	   'h',                \$help,
+	   'v',                \$opt_v,
+	   't',                \$opt_t,
+	   'gene_stable_id:s', \@gene_stable_ids,
 	   );
 
 # help
-if($help || scalar(@gene_names)==0){
+if($help || scalar(@gene_stable_ids)==0){
     print<<ENDOFTEXT;
 split_gene.pl
   -host           char      host of mysql instance ($host)
@@ -48,7 +48,7 @@ split_gene.pl
   -user           char      user ($user)
   -pass           char      passwd
 
-  -gene           char      gene name,[gene_name] (or file)
+  -gene_stable_id char      gene_stable_id,[gene_stable_id] (or file)
 
   -h                        this help
   -help                     perldoc help
@@ -61,21 +61,21 @@ ENDOFTEXT
     exit 0;
 }
 
-if (scalar(@gene_names)) {
-  my $gene_name=$gene_names[0];
-  if(scalar(@gene_names)==1 && -e $gene_name){
+if (scalar(@gene_stable_ids)) {
+  my $gene_stable_id=$gene_stable_ids[0];
+  if(scalar(@gene_stable_ids)==1 && -e $gene_stable_id){
     # 'gene' is a file
-    @gene_names=();
-    open(IN,$gene_name) || die "cannot open $gene_name";
+    @gene_stable_ids=();
+    open(IN,$gene_stable_id) || die "cannot open $gene_stable_id";
     while(<IN>){
       chomp;
-      push(@gene_names,$_);
+      push(@gene_stable_ids,$_);
     }
     close(IN);
   }else{
-    @gene_names = split (/,/, join (',', @gene_names));
+    @gene_stable_ids = split (/,/, join (',', @gene_stable_ids));
   }
-  print scalar(@gene_names)." gene names found\n";
+  print scalar(@gene_stable_ids)." gene names found\n";
 }
 
 # connect
@@ -85,12 +85,12 @@ if(my $err=&_db_connect(\$dbh,$host,$db,$user,$password)){
     exit 0;
 }
 
-delete_genes_by_name($dbh, @gene_names);
+delete_genes_by_name($dbh, @gene_stable_ids);
 
 sub delete_genes_by_name {
-    my( $dbh, @gene_names ) = @_;
+    my( $dbh, @gene_stable_ids ) = @_;
     
-    my $name_str = join(',', map "'$_'", @gene_names);
+    my $name_str = join(',', map "'$_'", @gene_stable_ids);
     ### Get exon IDs then use Stephen's delete genes by chromosome script
     
     # if contains OTT, assume names are stable id's

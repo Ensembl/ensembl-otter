@@ -1,6 +1,30 @@
 =head1 Notes on scripts to create vega database from otter/pipeline
 
-Update which vega_set is dumped
+=head2 adding a new vega_set
+
+(example: adding chr19)
+
+Create vega_author entry if required
+
+	insert into vega_author values (NULL,'tmp@tmp.org','JGI');
+
+Create vega_set entry
+
+	insert into vega_set values (NULL,5,'I',19);
+
+Modify sequence_set entry to point to vega_set entry
+
+	update sequence_set set vega_set_id=15 where assembly_type='chr19';
+
+
+=head2 disable a vega_set which is now OBS
+
+(example: PGF chr6 haplotype now part of main chr6 assembly)
+
+	update vega_set set vega_type = 'N' where vega_set_id=10;
+
+
+=head2 Update which vega_set is dumped
 
 	mysql> select ss.vega_set_id,assembly_type,vega_name from vega_set vs, sequence_set ss where ss.vega_set_id=vs.vega_set_id and vega_name='6';
 +-------------+---------------+-----------+

@@ -31,16 +31,16 @@ my $path     = 'GENOSCOPE';
 
 $|=1;
 
-my $elist;
+my @gene_stable_ids;
 
-&GetOptions( 't_host:s'=>    \$t_host,
-             't_user:s'=>    \$t_user,
-             't_pass:s'=>    \$t_pass,
-             't_port:s'=>    \$t_port,
-             't_dbname:s' => \$t_dbname,
-             'chr:s'      => \@chr,
-             'path:s'     => \$path,
-	     'elist:s'    => \$elist,
+&GetOptions( 't_host:s'            => \$t_host,
+             't_user:s'            => \$t_user,
+             't_pass:s'            => \$t_pass,
+             't_port:s'            => \$t_port,
+             't_dbname:s'          => \$t_dbname,
+             'chr:s'               => \@chr,
+             'path:s'              => \$path,
+	     'gene_stable_id:s'    => \@gene_stable_ids,
             );
 
 if (scalar(@chr)) {
@@ -49,19 +49,23 @@ if (scalar(@chr)) {
   die "Missing required args\n";
 }
 
-# script can fail when not enough memory.  Rerunning it will
-# add duplicate features (since supporting features are written into tables)
-# possible to add a list of gene_stable_id's that have already been added
-# ONLY use when single Chr defined
-my %elist;
-if(-e $elist){
-    open(IN,$elist) || die "cannot open $elist";
+my %gene_stable_ids;
+if (scalar(@gene_stable_ids)) {
+  my $gene_stable_id=$gene_stable_ids[0];
+  if(scalar(@gene_stable_ids)==1 && -e $gene_stable_id){
+    # 'gene' is a file
+    @gene_stable_ids=();
+    open(IN,$gene_stable_id) || die "cannot open $gene_stable_id";
     while(<IN>){
-	chomp;
-	$elist{$_}=1;
+      chomp;
+      push(@gene_stable_ids,$_);
     }
     close(IN);
-    print scalar(keys %elist)." gene stable id loaded\n";
+  }else{
+    @gene_stable_ids = split (/,/, join (',', @gene_stable_ids));
+  }
+  print scalar(@gene_stable_ids)." gene names found\n";
+  %gene_stable_ids = map {$_,1} @gene_stable_ids;
 }
 
 my $tdb = new Bio::Otter::DBSQL::DBAdaptor(-host => $t_host,
@@ -113,12 +117,10 @@ foreach my $chr (@chr){
 	")\n";
 
     # don't process slices no list again
-    if($elist{$gsi}){
-      print "$gsi in exclusion list - skipped\n";
-      next;
-    }else{
-      print "Looking for matches to $gsi\n";
+    if(scalar(@gene_stable_ids)){
+      next unless $gene_stable_ids{$gsi};
     }
+    print "Looking for matches to $gsi\n";
     my $has_support = 0;
 
     my $fps = $gene_slice->get_all_SimilarityFeatures;
