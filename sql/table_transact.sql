@@ -32,7 +32,7 @@ CREATE TABLE analysis (
   PRIMARY KEY (analysis_id),
   KEY logic_name_idx( logic_name )
 
-) Type=MyISAM;
+)TYPE=InnoDB;
 
 # semantics
 # analysis_id - internal id
@@ -56,7 +56,7 @@ CREATE TABLE analysis (
 # Table structure for table 'chromosome'
 #
 CREATE TABLE chromosome (
-  chromosome_id     tinyint unsigned NOT NULL auto_increment,
+  chromosome_id     int unsigned NOT NULL auto_increment,
   name              varchar(40) NOT NULL,
   known_genes       int(11) NULL,
   unknown_genes     int(11) NULL,
@@ -64,7 +64,7 @@ CREATE TABLE chromosome (
   length            int(11) NULL,
   
   PRIMARY KEY (chromosome_id)
-) Type=MyISAM;
+)TYPE=InnoDB;
 # Statistics for the web site
 
 
@@ -84,7 +84,7 @@ CREATE TABLE clone (
   PRIMARY KEY (clone_id),
   KEY embl (embl_acc,embl_version),
   KEY id   (name, version)
-) Type=MyISAM;
+)TYPE=InnoDB;
 
 # semantics
 # id - string we give to this clone in ensembl
@@ -97,14 +97,14 @@ CREATE TABLE clone (
 # Table structure for table 'map_density'
 #
 CREATE TABLE map_density (
-   chromosome_id    tinyint unsigned NOT NULL,
+   chromosome_id    int unsigned NOT NULL,
    chr_start	    int(10) NOT NULL,
    chr_end	    int(10) NOT NULL,
    type		    varchar(20) NOT NULL,
    value	    int(10) NOT NULL,
     
    PRIMARY KEY(type,chromosome_id,chr_start) 
-) Type=MyISAM;
+)TYPE=InnoDB;
 
 #
 # Table structure for table 'contig'
@@ -121,7 +121,7 @@ CREATE TABLE contig (
   UNIQUE name (name),
   KEY clone (clone_id),
   KEY dna (dna_id)
-) Type=MyISAM;
+)TYPE=InnoDB;
 
 
 
@@ -146,7 +146,7 @@ CREATE TABLE dna (
   created   datetime NOT NULL,
   
   PRIMARY KEY (dna_id)
-) MAX_ROWS = 750000 AVG_ROW_LENGTH = 19000 TYPE = MyISAM;
+) MAX_ROWS = 750000 AVG_ROW_LENGTH = 19000 TYPE=InnoDB;
 
 #
 # Table structure for table 'exon'
@@ -175,7 +175,7 @@ CREATE TABLE exon (
   
   PRIMARY KEY ( exon_id, sticky_rank),
   KEY contig_idx (contig_id, contig_start )
-) Type=InnoDB;
+)TYPE=InnoDB;
 
 CREATE TABLE exon_stable_id (
     exon_id   int unsigned not null,       # foreign key exon:exon_id
@@ -186,7 +186,7 @@ CREATE TABLE exon_stable_id (
     
     PRIMARY KEY( exon_id ),
     UNIQUE( stable_id, version )
-) Type=InnoDB;
+)TYPE=InnoDB;
 
 
 
@@ -201,8 +201,9 @@ CREATE TABLE exon_transcript (
                                           # the exon is the 5' most within this transcript
   
   PRIMARY KEY (exon_id,transcript_id,rank),
-  KEY transcript (transcript_id)
-) Type=InnoDB;
+  KEY transcript (transcript_id),
+  KEY exon ( exon_id )
+)TYPE=InnoDB;
 
 
 
@@ -212,8 +213,8 @@ CREATE TABLE simple_feature (
   contig_start int(10) unsigned NOT NULL,
   contig_end int(10) unsigned NOT NULL,
   contig_strand tinyint(1) NOT NULL,
-  analysis_id int(10) unsigned NOT NULL,
   display_label varchar(40) NOT NULL, # what to show, may link to other things, depends on analysis
+  analysis_id int(10) unsigned NOT NULL,
 
 # What scoring do we need ?
 
@@ -223,7 +224,7 @@ CREATE TABLE simple_feature (
   KEY contig_idx( contig_id, analysis_id, contig_start ),
   KEY analysis_idx( analysis_id, contig_id ),
   KEY hit_idx( display_label )
-) MAX_ROWS=100000000 AVG_ROW_LENGTH=80 Type=MyISAM;
+) MAX_ROWS=100000000 AVG_ROW_LENGTH=80 TYPE=InnoDB;
 
 
 CREATE TABLE protein_align_feature (
@@ -232,23 +233,22 @@ CREATE TABLE protein_align_feature (
   contig_start int(10) unsigned NOT NULL,
   contig_end int(10) unsigned NOT NULL,
   contig_strand tinyint(1) DEFAULT '1' NOT NULL,
-  analysis_id int(10) unsigned NOT NULL,
   hit_start int(10) NOT NULL,
   hit_end int(10) NOT NULL,
   hit_name varchar(40) NOT NULL,
-  cigar_line varchar(255),
+  analysis_id int(10) unsigned NOT NULL,
 
-  # cigar might be too small
   #  What scoring do we need ?
 
+  score double,
   evalue double,
   perc_ident float,
-  score double,
+  cigar_line text,
 
   PRIMARY KEY (	protein_align_feature_id ),
   KEY hit_idx( hit_name ),
   KEY ctg_idx( contig_id, contig_start, analysis_id )
-) MAX_ROWS=100000000 AVG_ROW_LENGTH=80 Type=MyISAM;
+) MAX_ROWS=100000000 AVG_ROW_LENGTH=80 TYPE=InnoDB;
 
 
 CREATE TABLE dna_align_feature (
@@ -257,24 +257,23 @@ CREATE TABLE dna_align_feature (
   contig_start int(10) unsigned NOT NULL,
   contig_end int(10) unsigned NOT NULL,
   contig_strand tinyint(1) NOT NULL,
-  analysis_id int(10) unsigned NOT NULL,
   hit_start int NOT NULL,
   hit_end int NOT NULL,
-  hit_name varchar(40) NOT NULL,
   hit_strand tinyint(1) NOT NULL,
+  hit_name varchar(40) NOT NULL,
+  analysis_id int(10) unsigned NOT NULL,
 
-  cigar_line varchar(255),
-  
 #  What scoring do we need ?
 
+  score double,
   evalue double,
   perc_ident float,
-  score double,
+  cigar_line text,
 
   PRIMARY KEY ( dna_align_feature_id ),
   KEY hit_idx( hit_name ),
   KEY ctg_idx( contig_id, analysis_id, contig_start )
-) MAX_ROWS=100000000 AVG_ROW_LENGTH=80 Type=MyISAM;
+) MAX_ROWS=100000000 AVG_ROW_LENGTH=80 TYPE=InnoDB;
 
 
 CREATE TABLE repeat_consensus (
@@ -286,8 +285,9 @@ CREATE TABLE repeat_consensus (
     
     PRIMARY KEY( repeat_consensus_id ),
     KEY name (repeat_name),
-    KEY class (repeat_class)
-) Type=MyISAM;
+    KEY class (repeat_class),
+    KEY consensus(repeat_consensus(10))
+);
 
 
 CREATE TABLE repeat_feature (
@@ -296,10 +296,10 @@ CREATE TABLE repeat_feature (
   contig_start int(10) unsigned NOT NULL,
   contig_end int(10) unsigned NOT NULL,
   contig_strand tinyint(1) DEFAULT '1' NOT NULL,
-  analysis_id int(10) unsigned NOT NULL,
   repeat_start int(10) NOT NULL,
   repeat_end int(10) NOT NULL,
   repeat_consensus_id int(10) unsigned NOT NULL,
+  analysis_id int(10) unsigned NOT NULL,
 
 #  What scoring do we need ?
 
@@ -309,19 +309,21 @@ CREATE TABLE repeat_feature (
   KEY contig_idx( contig_id, contig_start, analysis_id ),
   KEY repeat_idx( repeat_consensus_id, contig_id, contig_start ),
   KEY analysis_idx( analysis_id )
-) MAX_ROWS=100000000 AVG_ROW_LENGTH=80 Type=MyISAM;
+) MAX_ROWS=100000000 AVG_ROW_LENGTH=80 Type=InnoDB;
 
 #
 # Table structure for table 'gene'
 #
 CREATE TABLE gene (
-  gene_id   int unsigned not null auto_increment,
-  type VARCHAR(40) not null,
+  gene_id   int unsigned NOT NULL auto_increment,
+  type VARCHAR(40) NOT NULL,
   analysis_id int,
-  transcript_count int not null,
+  transcript_count int NOT NULL,
+  display_xref_id int unsigned NOT NULL,
 
-  PRIMARY KEY (gene_id)
-) Type=InnoDB;
+  PRIMARY KEY (gene_id),
+  KEY xref_id_index ( display_xref_id )
+)TYPE=InnoDB;
 
 
 CREATE TABLE gene_stable_id (
@@ -333,7 +335,7 @@ CREATE TABLE gene_stable_id (
     
     PRIMARY KEY( gene_id ),
     UNIQUE( stable_id, version )
-) Type=InnoDB;
+)TYPE=InnoDB;
 
 #
 # Table structure for table 'supporting_feature'
@@ -345,7 +347,7 @@ CREATE TABLE supporting_feature (
   feature_id int(11) DEFAULT '0' NOT NULL,
   UNIQUE all_idx (exon_id,feature_type,feature_id),
   KEY feature_idx (feature_type,feature_id)
-) MAX_ROWS=100000000 AVG_ROW_LENGTH=80 Type=InnoDB;
+) MAX_ROWS=100000000 AVG_ROW_LENGTH=80 TYPE=InnoDB;
 
  
 
@@ -357,12 +359,15 @@ CREATE TABLE transcript (
   transcript_id    INT UNSIGNED NOT NULL auto_increment,  
   gene_id          INT UNSIGNED NOT NULL,          # foreign key gene:gene_id
   translation_id   INT UNSIGNED NOT NULL,          # foreign key translation:translation_id
-  exon_count int not null,
+  exon_count int NOT NULL,
+  display_xref_id int unsigned NOT NULL,
 
   PRIMARY KEY (transcript_id),
   KEY gene_index (gene_id),
-  KEY translation_index ( translation_id )		
-) Type=InnoDB;
+  KEY translation_index ( translation_id ),
+  KEY xref_id_index ( display_xref_id )
+
+)TYPE=InnoDB;
 
 CREATE TABLE transcript_stable_id (
     transcript_id int unsigned not null,  # foreign key transcript:transcript_id
@@ -371,7 +376,7 @@ CREATE TABLE transcript_stable_id (
     
     PRIMARY KEY( transcript_id ),
     UNIQUE( stable_id, version )
-) Type=InnoDB;
+)TYPE=InnoDB;
 
 
 #
@@ -391,7 +396,7 @@ CREATE TABLE translation (
   end_exon_id     INT UNSIGNED NOT NULL,  # foreign key exon:exon_id
   
   PRIMARY KEY (translation_id)
-) Type=InnoDB;
+)TYPE=InnoDB;
 
 CREATE TABLE translation_stable_id (
     translation_id INT unsigned NOT NULL, # foreign key translation:translation_id
@@ -400,7 +405,7 @@ CREATE TABLE translation_stable_id (
     
     PRIMARY KEY( translation_id ),
     UNIQUE( stable_id, version )
-) Type=InnoDB;
+)TYPE=InnoDB;
 
 # this is a denormalised golden path
 
@@ -424,7 +429,7 @@ CREATE TABLE translation_stable_id (
  
 
 CREATE TABLE assembly (
-    chromosome_id  tinyint unsigned  NOT NULL,
+    chromosome_id  int unsigned  NOT NULL,
     chr_start      int(10) NOT NULL,
     chr_end        int(10) NOT NULL,
     superctg_name    varchar(20) NOT NULL,
@@ -440,7 +445,7 @@ CREATE TABLE assembly (
     PRIMARY KEY(contig_id,type),
     KEY(superctg_name, superctg_start),
     KEY(chromosome_id,chr_start) 
-) Type=MyISAM;
+)TYPE=InnoDB;
 
 
 #
@@ -452,10 +457,10 @@ CREATE TABLE protein_feature (
   translation_id int NOT NULL,	
   seq_start     int(10) NOT NULL,
   seq_end       int(10) NOT NULL,
-  analysis_id      int(10) unsigned NOT NULL,
   hit_start        int(10) NOT NULL,
   hit_end          int(10) NOT NULL,
   hit_id           varchar(40) NOT NULL,
+  analysis_id      int(10) unsigned NOT NULL,
   score         double NOT NULL,
   evalue        double,
   perc_ident    float,
@@ -463,7 +468,7 @@ CREATE TABLE protein_feature (
   PRIMARY KEY   (protein_feature_id),
   KEY (translation_id),
   KEY hid_index ( hit_id )
-) Type=MyISAM;
+)TYPE=InnoDB;
 
 #
 #Table structure for table 'interpro'
@@ -474,7 +479,7 @@ CREATE TABLE interpro (
   id		varchar(40) NOT NULL,
   KEY (interpro_ac),
   KEY (id)
-) Type=MyISAM;
+)TYPE=InnoDB;
 
 
 #
@@ -485,16 +490,16 @@ CREATE TABLE gene_description (
   gene_id     int unsigned NOT NULL,
   description varchar(255),
   PRIMARY KEY (gene_id)
-) Type=InnoDB;
+);
 
 CREATE TABLE karyotype (
-   chromosome_id  tinyint unsigned NOT NULL,
+   chromosome_id  int unsigned NOT NULL,
    chr_start      int(10)     NOT NULL,
    chr_end        int(10)     NOT NULL,
    band           varchar(40) NOT NULL,
    stain          varchar(40) NOT NULL,
    PRIMARY KEY (chromosome_id,band)
-) Type=MyISAM;
+)TYPE=InnoDB;
 
 
 #
@@ -509,7 +514,7 @@ CREATE TABLE object_xref(
 
        UNIQUE ( ensembl_object_type, ensembl_id, xref_id ),
        KEY xref_index( object_xref_id, xref_id, ensembl_object_type, ensembl_id )
-) Type=InnoDB;
+)TYPE=InnoDB;
 
 #
 #Table structure for identity_xref
@@ -520,7 +525,7 @@ CREATE TABLE identity_xref(
 	query_identity 	int(5),
         target_identity int(5),
         PRIMARY KEY (object_xref_id)
-) Type=InnoDB;
+)TYPE=InnoDB;
 
 
 #
@@ -538,7 +543,7 @@ CREATE TABLE xref (
          PRIMARY KEY( xref_id ),
          UNIQUE KEY id_index( dbprimary_acc, external_db_id ),
          KEY display_index ( display_label )
-) Type=InnoDB;
+)TYPE=InnoDB;
 
 
 #
@@ -550,7 +555,7 @@ CREATE TABLE external_synonym(
          synonym VARCHAR(40) not null,
          PRIMARY KEY( xref_id, synonym ),
 	 KEY name_index( synonym )
-   	) Type=InnoDB;
+   	)TYPE=InnoDB;
 
 #
 #Table structure for table externalDB 
@@ -558,11 +563,11 @@ CREATE TABLE external_synonym(
 
 CREATE TABLE external_db(
          external_db_id INT not null auto_increment,
-         db_name ENUM ('gene_name','Celera_Pep','Celera_Trans','Celera_Gene','HumanGenscans','protein_id','SCOP','HUGO','GO','SPTREMBL','EMBL','MarkerSymbol','SWISSPROT','PDB','MIM','RefSeq','LocusLink','Interpro','Superfamily') not null,
+         db_name ENUM ('gene_name','Celera_Pep','Celera_Trans','Celera_Gene','HumanGenscans','protein_id','SCOP','HUGO','GO','SPTREMBL','EMBL','MarkerSymbol','SWISSPROT','PDB','MIM','RefSeq','LocusLink','Interpro','Superfamily','ANOSUB') not null,
 	 release VARCHAR(40) DEFAULT '' NOT NULL,
 	 status  ENUM ('KNOWN','XREF','PRED') not null,
          PRIMARY KEY( external_db_id ) 
-) Type=InnoDB;
+)TYPE=InnoDB;
 
 
 
@@ -574,11 +579,12 @@ CREATE TABLE meta (
     PRIMARY KEY( meta_id ),
     KEY meta_key_index ( meta_key ),
     KEY meta_value_index ( meta_value )
-) Type=MyISAM;
+)TYPE=InnoDB;
 
 CREATE TABLE prediction_transcript (
     prediction_transcript_id int unsigned not null auto_increment,
     exon_rank smallint unsigned not null,
+    exon_count smallint,
     contig_id int unsigned not null,
     contig_start int unsigned not null,
     contig_end int unsigned not null,
@@ -587,16 +593,15 @@ CREATE TABLE prediction_transcript (
     score double,
     p_value double,
     analysis_id int,
-    exon_count smallint,
 
     PRIMARY KEY( prediction_transcript_id, exon_rank ),
     KEY contig_idx( contig_id, contig_start )
-) Type=MyISAM;
+)TYPE=InnoDB;
 
     
 
 # Auto add schema version to database
-insert into meta (meta_key, meta_value) values ("schema_version", "$Revision: 1.1 $");
+insert into meta (meta_key, meta_value) values ("schema_version", "$Revision: 1.2 $");
 
 
 # MySQL dump 8.12
@@ -620,7 +625,7 @@ CREATE TABLE mapfrag (
   PRIMARY KEY (mapfrag_id),
   KEY name_idx( name ),
   KEY m(dnafrag_id,seq_start)
-) TYPE=MyISAM;
+)TYPE=InnoDB;
 
 #
 # Table structure for table 'dnafrag'
@@ -632,7 +637,7 @@ CREATE TABLE dnafrag (
   dnafrag_type enum('RawContig','Chromosome') default NULL,
   PRIMARY KEY (dnafrag_id),
   UNIQUE KEY name(name)
-) TYPE=MyISAM;
+)TYPE=InnoDB;
 
 #
 # Table structure for table 'mapannotation'
@@ -648,7 +653,7 @@ CREATE TABLE mapannotation (
   KEY mapannotationtype_id(mapannotationtype_id,mapfrag_id),
   KEY value(value,mapannotationtype_id),
   KEY mapannotationtype_id_2(mapannotationtype_id,value)
-) TYPE=MyISAM;
+)TYPE=InnoDB;
 
 #
 # Table structure for table 'mapannotationtype'
@@ -661,7 +666,7 @@ CREATE TABLE mapannotationtype (
   description text NOT NULL,
   PRIMARY KEY (mapannotationtype_id),
   UNIQUE KEY c(code)
-) TYPE=MyISAM;
+)TYPE=InnoDB;
 
 #
 # Table structure for table 'mapset'
@@ -672,9 +677,10 @@ CREATE TABLE mapset (
   code varchar(15) NOT NULL default '',
   name varchar(255) NOT NULL default '',
   description text NOT NULL,
+  max_length int unsigned not null,
   PRIMARY KEY (mapset_id),
   UNIQUE KEY c(code)
-) TYPE=MyISAM;
+)TYPE=InnoDB;
 
 #
 # Table structure for table 'mapfrag_mapset'
@@ -684,6 +690,6 @@ CREATE TABLE mapfrag_mapset (
   mapfrag_id int(10) unsigned NOT NULL default '0',
   mapset_id smallint(5) unsigned NOT NULL default '0',
   PRIMARY KEY (mapset_id,mapfrag_id)
-) TYPE=MyISAM;
+)TYPE=InnoDB;
 
 
