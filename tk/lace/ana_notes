@@ -234,7 +234,8 @@ sub default_cursor {
 
         # Record the lace db directory of each
         # of the sequences.
-        my $lace_dir = "/tmp/lace-$seq_name_list[0].$$";
+        my $time = hr_min_sec();
+        my $lace_dir = "/tmp/lace-$seq_name_list[0]-$time";
         foreach my $seq (@seq_name_list) {
             if (my $dir = $lace_dir{$seq}) {
                 if (-e $dir) {
@@ -277,6 +278,11 @@ sub default_cursor {
             warn "No lace database for '$sequence_name'";
         }
     }
+}
+
+sub hr_min_sec {
+    my ($sec, $min, $hr) = localtime(time);
+    return "${hr}_${min}_$sec";
 }
 
 sub hunt_for_selection {
