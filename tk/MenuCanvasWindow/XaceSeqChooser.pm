@@ -39,8 +39,11 @@ sub set_known_GeneMethods {
     
     my $ace = $self->ace_handle;
     while (my($name, $is_mutable) = each %methods_mutable) {
-        my $meth_tag = $ace->fetch(Method => $name)
-            or confess "Can't get Method '$name'";
+        my $meth_tag = $ace->fetch(Method => $name);
+        unless ($meth_tag) {
+            warn "Method '$name' is not in database\n";
+            next;
+        }
         my $meth = Hum::Ace::GeneMethod->new_from_ace_tag($meth_tag);
         $meth->is_mutable($is_mutable);
         $self->add_GeneMethod($meth);

@@ -75,7 +75,7 @@ use Socket;
     
     my %methods_mutable = (
       # Method name        Mutable?
-        #supported       => 1,
+        supported       => 1,
         supported_CDS   => 1,
         supported_mRNA  => 1,
         Pseudogene      => 1,
