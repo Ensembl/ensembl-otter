@@ -212,7 +212,7 @@ sub truncate_to_Slice{
                                 ## may need to truncate it!
                                 $translation->end($original_translation_end);
                                 if ($exon->end > $slice->length){
-                                    my $difference = $$exon->end - $slice->length ;
+                                    my $difference = $exon->end - $slice->length ;
                                     $exon->end($slice->length);                                    
                                     my $new_end = $original_translation_end - $difference; 
                                     $new_end = 1 if ($new_end < 1) ;

@@ -85,7 +85,8 @@ create table transcript_remark (
 	transcript_remark_id int(10) unsigned DEFAULT '0' NOT NULL auto_increment,
 	remark TEXT,
 	transcript_info_id int(10) unsigned DEFAULT '0' NOT NULL,
-        PRIMARY KEY (transcript_remark_id)
+        PRIMARY KEY (transcript_remark_id),
+	KEY (transcript_info_id)
 );
 
 create table transcript_class (
