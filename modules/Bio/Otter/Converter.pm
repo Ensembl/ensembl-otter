@@ -1,6 +1,7 @@
 package Bio::Otter::Converter;
 
 use strict;
+use warnings;
 use Carp;
 
 use Bio::Otter::Author;
@@ -645,7 +646,6 @@ sub otter_to_ace {
     my $chr      = $slice->chr_name;
     my $chrstart = $slice->chr_start;
 
-    my( %authors );
 
     # Add SMap tags for assembly
     foreach my $tile (@$path) {
@@ -757,16 +757,8 @@ sub otter_to_ace {
         $str .= "\n$clone_context\n";
     } 
 
-    # Add Sequence objects for Transcripts
-    $str .= ace_transcript_seq_objs_from_genes($genes, $slice, \%authors);
-
-    $str .= "\n";
-
-    # Locus objects for genes
-    $str .= ace_locus_objs_from_genes($genes, \%authors);
-
-    # Authors
-    $str .= ace_people_from_authors(\%authors);
+    my( %authors );
+    $str .= ace_transcripts_locus_people($genes, $slice);
 
     if ($seq) {
         # Finally the dna
@@ -775,6 +767,19 @@ sub otter_to_ace {
             $str .= $1 . "\n";
         }
     }
+    return $str;
+}
+
+sub ace_transcripts_locus_people{
+    my ($genes, $slice) = @_;
+    my (%authors, $str);
+    # Add Sequence objects for Transcripts
+    $str = ace_transcript_seq_objs_from_genes($genes, $slice, \%authors);
+    $str .= "\n";
+    # Locus objects for genes
+    $str .= ace_locus_objs_from_genes($genes, \%authors);
+    # Authors
+    $str .= ace_people_from_authors(\%authors);
     return $str;
 }
 
@@ -791,8 +796,7 @@ sub ace_people_from_authors{
 }
 
 sub ace_transcript_seq_objs_from_genes{
-
-    my ($genes, $slice, $authors, $with_delete) = @_;
+    my ($genes, $slice, $authors) = @_;
     my $str = '';
 
     # Add Sequence objects for Transcripts
@@ -807,7 +811,7 @@ sub ace_transcript_seq_objs_from_genes{
         foreach my $tran (@{ $gene->get_all_Transcripts }) {
             my $tran_name = $tran->transcript_info->name || $tran->stable_id;
 
-            $str .= qq`\n//THIS IS THE DELETE STATMENT  \n-D Sequence : "$tran_name"\n` if $with_delete;
+            $str .= qq`\n//DELETE THE SEQUENCE FIRST\n-D Sequence : "$tran_name"\n\n`;
 
             $str .= "Sequence : \"" . $tran_name . "\"\n";
             $str .= "Transcript_id \"" . $tran->stable_id . "\"\n";
@@ -915,9 +919,8 @@ sub ace_transcript_seq_objs_from_genes{
 }
 
 sub ace_locus_objs_from_genes{
-    my($genes, $authors, $with_delete) = @_;
+    my($genes, $authors) = @_;
     my $str = '';
-#    my %authors = %$authors;
 
     # Locus objects for genes
     foreach my $gene (@$genes) {
@@ -929,7 +932,7 @@ sub ace_locus_objs_from_genes{
             $gene_name = $gene->stable_id;
         }
         
-        $str .= qq`\n//THIS IS THE DELETE STATMENT  \n-D Locus : "$gene_name"\n` if $with_delete;
+        $str .= qq`\n//DELETE SEQUENCE FIRST\n-D Locus : "$gene_name"\n\n`;
 
         $str .= "Locus : \"" . $gene_name . "\"\n";
         foreach my $synonym ($info->synonym) {
@@ -1798,7 +1801,6 @@ sub prune_Exons {
 
 sub path_to_XML {
   my ($chr,$chrstart,$chrend,$type,$path) = @_;
-
   my $xmlstr;
 
   $xmlstr .= "  <assembly_type>" . $type . "<\/assembly_type>\n";
