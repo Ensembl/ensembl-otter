@@ -8,13 +8,16 @@ use Bio::Otter::Lace::Defaults;
 use Bio::Otter::AnnotationBroker;
 use Hum::Analysis::Factory::ExonLocator;
 
+$| = 1;
+
 {
     my( $dataset_name,
         $sequence_set,
         $start_acc,
         $end_acc,
         );
-    my $liberal = 0;    # If set, doesn't care if it fails to find some exons
+    my $liberal = 0;  # If set, doesn't care if it fails to find some exons
+    my $test_flag = 0;  # Don't write realigned genes to database
 
     my $usage = sub { exec('perldoc', $0) };
     Bio::Otter::Lace::Defaults::do_getopt(
@@ -24,8 +27,9 @@ use Hum::Analysis::Factory::ExonLocator;
         'start_acc=s'   => \$start_acc,
         'end_acc=s'     => \$end_acc,
         'liberal!'      => \$liberal,
+        'test!'         => \$test_flag,
         ) or $usage->();
-    $usage->() unless $dataset_name and $sequence_set;# and $start_acc and $end_acc;
+    $usage->() unless $dataset_name and $sequence_set;
     
 
     # Connect to Ensembl/Otter database and fetch adaptors
@@ -42,12 +46,19 @@ use Hum::Analysis::Factory::ExonLocator;
     
     my $anal = $dba->get_AnalysisAdaptor->fetch_by_logic_name('otter');
 
-    select_CloneSequence_contig($ss, $start_acc, $end_acc);
+    if ($start_acc or $end_acc) {
+        die sprintf("Need both start_acc (got '%s') and end_acc (got '%s')\n",
+            $start_acc || 'NONE',
+            $end_acc   || 'NONE',
+            ) unless $start_acc and $end_acc;
+        select_CloneSequence_contig($ss, $start_acc, $end_acc);
+    } else {
+        $ss->selected_CloneSequences($ss->CloneSequence_list);
+    }
     my ($chr, $start, $end) = $cl->chr_start_end_from_contig($ss->selected_CloneSequences);
     my $slice = $slice_aptr->fetch_by_chr_start_end($chr, $start, $end);
     my $tiles = $slice->get_tiling_path;
-    my $genes = $gene_aptr->fetch_by_Slice($slice);
-    #my ($genes, $tiles) = otter_objects_from_contig($cl, $ds, $ss);
+    my $gene_id_list = $gene_aptr->list_current_dbIDs_linked_by_accession_for_Slice($slice);
     my $acc_list = accession_list_hash_from_tile_path($tiles);
 
     my $dest_seq = hum_seq_from_contig($slice);
@@ -55,22 +66,26 @@ use Hum::Analysis::Factory::ExonLocator;
     $finder->genomic_Sequence($dest_seq);
 
     my $ss_accs = {};
-    foreach my $cs (@{$ss->CloneSequence_list}) {
+    foreach my $cs (@{$ss->selected_CloneSequences}) {
         $ss_accs->{$cs->accession} = 1;
     }
 
-    foreach my $slice_gene (@$genes) {
-        next if $slice_gene->type eq 'obsolete';
+    foreach my $gene_dbid (@$gene_id_list) {
+        my $db_gene = $gene_aptr->fetch_by_dbID($gene_dbid);
+        next if $db_gene->type eq 'obsolete';
+        
+        my $slice_gene = $db_gene->transform($slice);
+        $db_gene = $gene_aptr->fetch_by_dbID($gene_dbid);
+        
         my $name = $slice_gene->gene_info->name->name;
         warn "Looking at gene '$name'\n";
         my $stable_id = $slice_gene->stable_id;
-        unless ($slice_gene->gene_info->truncated_flag) {
-            #print STDERR "Found entire gene '$name' ($stable_id)\n";
+        unless (gene_is_truncated($slice_gene, $slice)) {
+            print STDERR "Found entire gene '$name' ($stable_id)\n";
             next;
         }
-        my $db_gene = $gene_aptr->fetch_by_dbID($slice_gene->dbID);
-        unless (gene_is_off_track($db_gene, $ss_accs, $acc_list)) {
-            #print STDERR "Found truncated gene '$name' ($stable_id)\n";
+        unless (gene_has_only_slice_accs($db_gene, $ss_accs, $acc_list)) {
+            print STDERR "Found gene with accs not in slice '$name' ($stable_id)\n";
             next;
         }
         my $v = $slice_gene->version;
@@ -91,13 +106,13 @@ use Hum::Analysis::Factory::ExonLocator;
             my ($gene_list) = Bio::Otter::Converter::XML_to_otter($r_fh);
             my $xml_gene = shift @$gene_list;
             $xml_gene->analysis($anal);
-            save_new_gene($dba, $gene_aptr, $db_gene, $xml_gene, $slice);
+            save_new_gene($dba, $gene_aptr, $db_gene, $xml_gene, $slice, $test_flag);
         }
     }
 }
 
 sub save_new_gene {
-    my( $dba, $gene_aptr, $db_gene, $xml_gene, $slice ) = @_;
+    my( $dba, $gene_aptr, $db_gene, $xml_gene, $slice, $test_flag ) = @_;
 
     my $broker = Bio::Otter::AnnotationBroker->new($dba);
     $broker->make_id_version_hash([$db_gene]);
@@ -108,15 +123,32 @@ sub save_new_gene {
         $dba->begin_work;
         $xml_gene->detach_DBAdaptors;
         $gene_aptr->store($xml_gene);
-        $dba->commit;
     };
     if ($@) {
         $dba->rollback;
         warn "Error saving remapped gene: $@";
     }
+    elsif ($test_flag) {
+        $dba->rollback;
+    }
+    else {
+        $dba->commit;
+    }
 }
 
-sub gene_is_off_track {
+sub gene_is_truncated {
+    my( $gene, $slice ) = @_;
+    
+    my $slice_length = $slice->length;
+    foreach my $exon (@{$gene->get_all_Exons}) {
+        if ($exon->contig != $slice or $exon->start < 1 or $exon->end > $slice_length) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+sub gene_has_only_slice_accs {
     my( $gene, $set_acc, $slice_acc ) = @_;
     
     foreach my $exon (@{$gene->get_all_Exons}) {

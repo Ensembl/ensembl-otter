@@ -73,15 +73,34 @@ sub export_SequenceSet{
     my $name = $ss->name();
     my $fh;
     my $found = {};
-    my $columns = $only_list ? "CONCAT(c.embl_acc, '.', c.embl_version)" : "a.superctg_name, a.chr_start, a.chr_end, a.contig_id, 'F', 
-		 CONCAT(c.embl_acc, '.', c.embl_version), a.contig_start, a.contig_end, IF(a.contig_ori = '1', '+','-'), a.type";
-    my $sql = qq{SELECT $columns
-		     FROM assembly a, contig g, clone c 
-		     WHERE c.clone_id = g.clone_id 
-		     &&   a.contig_id = g.contig_id
-		     &&   a.type = ?
-		     };
-    if($file && -e $file){
+    my $columns = $only_list
+        ? "CONCAT(c.embl_acc, '.', c.embl_version)"
+        : " chr.name
+            , a.chr_start
+            , a.chr_end
+            , a.contig_id
+            , 'F'
+            , CONCAT(c.embl_acc
+                , '.'
+                , c.embl_version)
+            , a.contig_start
+            , a.contig_end
+            , IF(a.contig_ori = '1'
+                , '+','-')
+            , a.superctg_name ";
+    my $sql = qq{
+        SELECT $columns
+        FROM assembly a
+          , contig g
+          , clone c
+          , chromosome chr
+        WHERE c.clone_id = g.clone_id
+          AND a.contig_id = g.contig_id
+          AND a.chromosome_id = chr.chromosome_id
+          AND a.type = ?
+        };
+
+    if($file and -e $file){
 	open($fh, $file) or die $!;
 	my @accessions;
 	while(<$fh>){
@@ -112,14 +131,13 @@ sub show_agp{
     while(my $row = $sth->fetchrow_arrayref()){
 	if ($chr_end && ($chr_end + 2) < $row->[1]){
 	    $gaps++;
-	    print STDERR $row->[0] . "\t--- GAP ---\t--- GAP ---\n";
+	    #print STDERR $row->[0] . "\t--- GAP ---\t--- GAP ---\n";
 	    print join("\t", ($row->[0], 
 			      $chr_end + 1, 
 			      $row->[1] - 1, 
 			      $gaps, 
 			      'N', 
-			      $row->[1] - $chr_end - 1, 
-			      "Unfinished Sequence\n"));
+			      $row->[1] - $chr_end - 1)), "\n";
 	}
 	$chr_end = $row->[2];
 	print join("\t",  @$row) . "\n";

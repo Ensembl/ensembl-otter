@@ -12,13 +12,15 @@ use Hum::Sort 'ace_sort';
         $sequence_set,
         );
     my $acc_only = 0;
+    my $show_agp = 0;
 
     my $usage = sub { exec('perldoc', $0) };
     Bio::Otter::Lace::Defaults::do_getopt(
         'h|help!'       => $usage,
         'dataset=s'     => \$dataset_name,
         'chr|set=s'     => \$sequence_set,
-        'acc_only!'      => \$acc_only,
+        'acc_only!'     => \$acc_only,
+        'agp!'          => \$show_agp,
         ) or $usage->();
     unless ($dataset_name) {
         $usage->();
@@ -29,9 +31,52 @@ use Hum::Sort 'ace_sort';
     my $ds = $cl->get_DataSet_by_name($dataset_name);
     
     if ($sequence_set) {
-        print_sequence_set($ds, $sequence_set, $acc_only);
+        if ($show_agp) {
+            print_agp($ds, $sequence_set);
+        } else {
+            print_sequence_set($ds, $sequence_set, $acc_only);
+        }
     } else {
         print_set_list($ds);
+    }
+}
+
+sub print_agp {
+    my( $ds, $sequence_set ) = @_;
+    
+    my $dba = $ds->get_cached_DBAdaptor;
+    my $sth = $dba->prepare(q{
+        SELECT chr.name, a.chr_start, a.chr_end
+          , a.contig_start, a.contig_end, a.contig_ori
+          , c.embl_acc, c.embl_version, a.superctg_name
+        FROM chromosome chr
+          , assembly a
+          , contig g
+          , clone c
+        WHERE chr.chromosome_id = a.chromosome_id
+          AND a.contig_id = g.contig_id
+          AND g.clone_id = c.clone_id
+          AND a.type = ?
+        ORDER BY a.chr_start
+        });
+    $sth->execute($sequence_set);
+    
+    my $row = 0;
+    my $pos = 0;
+    while (my ($chr_name, $chr_start, $chr_end,
+               $contig_start, $contig_end, $strand,
+               $acc, $sv, $superctg_name) = $sth->fetchrow)
+    {
+        $row++;
+        if (my $gap = ($chr_start - ($pos + 1))) {
+            print join("\t", $pos + 1, $pos + $gap, $row, 'N', $gap), "\n";
+            $row++;
+        }
+        print join("\t", $chr_start, $chr_end, $row, 'F',
+            "$acc.$sv", $contig_start, $contig_end,
+            $strand eq '1' ? '+' : '-',
+            "# $superctg_name"), "\n";
+        $pos = $chr_end;
     }
 }
 
