@@ -392,11 +392,11 @@ Ensembl
 ==
  mkdir -p cvsdis/cvs
  cd cvs
- cvs -d :pserver:cvsuser@cvsro.sanger.ac.uk:/cvsroot/CVSmaster login
+ cvs -d :pserver:cvsuser@cvs.sanger.ac.uk:/cvsroot/ensembl login
 password CVSUSER
- cvs -d :pserver:cvsuser@cvsro.sanger.ac.uk:/cvsroot/CVSmaster co -r branch-ensembl-13 ensembl-api
- cvs -d :pserver:cvsuser@cvsro.sanger.ac.uk:/cvsroot/CVSmaster co -r branch-ensembl-13-1 ensembl-web
- cvs -d :pserver:cvsuser@cvsro.sanger.ac.uk:/cvsroot/CVSmaster co ensembl-otter
+ cvs -d :pserver:cvsuser@cvs.sanger.ac.uk:/cvsroot/ensembl co -r branch-ensembl-13 ensembl-api
+ cvs -d :pserver:cvsuser@cvs.sanger.ac.uk:/cvsroot/ensembl co -r branch-ensembl-13-1 ensembl-web
+ cvs -d :pserver:cvsuser@cvs.sanger.ac.uk:/cvsroot/ensembl co ensembl-otter
 
 Bioperl
 ==
