@@ -82,6 +82,11 @@ sub column_methods {
                 return("$acc.$sv", $bold, 'searchable');
                 },
             sub{
+                # Use closure for font definition
+                my $cs = shift;
+                return($cs->clone_name, $bold, 'searchable');
+                },
+            sub{
                 my $cs = shift;
                 if (my $sn = $cs->current_SequenceNote) {
                     my $time = $sn->timestamp;
