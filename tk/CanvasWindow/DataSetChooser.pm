@@ -205,14 +205,23 @@ sub make_XaceSeqChooser_windows {
     my $cl     = $self->Client;
     
     my $i = 1;
+    
+     
     foreach my $dir (@dirs) {
         ### Can recover title from wspec/displays.wrm
-        my $title = "Recover $i";
+        #my $title = "Recover $i";
         my $db = $cl->new_AceDatabase;
         $db->error_flag(1);
-        $db->title($title);
+        
         my $home = $db->home;
         rename($dir, $home) or die "Cannot move '$dir' to '$home' : $!";
+        
+        #warn "home directory $home";
+        
+        my $title = "Recover ". $self->add_title($db);
+        
+        $db->title($title);
+        
         $db->recover_slice_dataset_hash;
 
         # Bring up GUI
@@ -227,6 +236,26 @@ sub make_XaceSeqChooser_windows {
         $i++;
     }
 }
+
+sub add_title{
+    my ($self , $db ) = @_ ;
+    
+    my $file =   $db->home . '/wspec/displays.wrm';
+    warn "opening file $file";
+    open ( DISPLAY , $file) || die "$!"   ;
+        
+    foreach my $line (<DISPLAY>){
+        #my ($name ) = ($line  =~ /_DDtMain -g TEXT_FIT -t "(.*)"/ ) ; 
+        my ($name ) = ($line  =~ /_DDtMain.*-t\s*"(.*)"/ ) ;
+        if ($name){
+            #warn   "\n\n'$name'\n\n";
+            return $name;
+        }    
+    }
+    warn "\n\nno name found in $file\n\n";
+}
+
+
 
 1;
 
