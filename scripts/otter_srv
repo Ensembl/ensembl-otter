@@ -144,12 +144,13 @@ sub make_new_child {
         my @args = ();
         if( my $pid = open (my $fh, '-|') ){
             eval{
-                local $SIG{ALRM} = sub { warn qq{!TIMEOUT! PID <$pid> is TERMinating...\n};  kill 9, $pid;};
-                alarm ($SCRIPT_TIMEOUT); # defaults to 1 minute
+		# Timeout code
+                # local $SIG{ALRM} = sub { warn qq{!TIMEOUT! PID <$pid> is TERMinating...\n};  kill 9, $pid;};
+                # alarm ($SCRIPT_TIMEOUT); # defaults to 1 minute
                 while (<$fh>){
                     print $client $_;
                 }
-                close $fh;# || die qq{unexpected exit by $program: $!\n};
+                # close $fh;# || die qq{unexpected exit by $program: $!\n};
                 alarm 0;
             };
             if ($@) {
