@@ -17,7 +17,7 @@ repeatmask=1
 est2genome_human=1
 eponine=0
 refseq_human=1
-refseq_zebrafish=1
+refseq_zebrafish=0
 halfwise=1
 cpg=1
 fgenesh=1
@@ -31,23 +31,35 @@ refseq_zebrafish=0
 
 [pig.use_filters]
 est2genome_fish=0
-refseq_zebrafish=0
+refseq_human=0
 
 [dog.use_filters]
 est2genome_fish=0
-refseq_zebrafish=0
+refseq_human=0
 
 [cat.use_filters]
 est2genome_fish=0
-refseq_zebrafish=0
+refseq_human=0
 
 [mouse.use_filters]
 est2genome_fish=0
-refseq_zebrafish=0
+refseq_human=0
+refseq_mouse=1
+
+[rat.use_filters]
+est2genome_fish=0
+refseq_human=0
+refseq_rat=1
 
 [zebrafish.use_filters]
 est2genome_human=0
 est2genome_mouse=0
+refseq_human=0
+refseq_zebrafish=1
+est2genome_clusters=1
+
+[chicken.use_filters]
+refseq_chicken=0
 refseq_human=0
 
 [default.filter.RepeatMask]
@@ -83,6 +95,12 @@ max_coverage=10
 hseq_prefix=Em:
 method_tag=EST
 homol_tag=EST_homol
+
+[default.filter.est2genome_clusters]
+module=Bio::EnsEMBL::Ace::Filter::Similarity::DnaSimilarity
+max_coverage=10
+method_tag=EST_Clusters
+homol_tag=DNA_homol
 
 [default.filter.vertrna]
 module=Bio::EnsEMBL::Ace::Filter::Similarity::DnaSimilarity
@@ -123,6 +141,19 @@ url_string=http:\/\/www.ncbi.nlm.nih.gov\/LocusLink\/list.cgi?ORG\=Dr\&Q\=%s
 method_tag=REFSEQ
 homol_tag=DNA_homol
 
+[rat.filter.refseq_rat]
+module=Bio::EnsEMBL::Ace::Filter::Similarity::DnaSimilarity
+url_string=http:\/\/www.ncbi.nlm.nih.gov\/LocusLink\/list.cgi?ORG\=Rn\&Q\=%s
+method_tag=REFSEQ
+homol_tag=DNA_homol
+
+[mouse.filter.refseq_mouse]
+module=Bio::EnsEMBL::Ace::Filter::Similarity::DnaSimilarity
+url_string=http:\/\/www.ncbi.nlm.nih.gov\/LocusLink\/list.cgi?ORG\=Mm\&Q\=%s
+method_tag=REFSEQ
+homol_tag=DNA_homol
+
+
 [default.filter.swall]
 module=Bio::EnsEMBL::Ace::Filter::Similarity::ProteinSimilarity
 percent_identity_cutoff=40
@@ -130,6 +161,6 @@ method_tag=BLASTX
 homol_tag=Pep_homol
 
 [default.filter.eponine]
-module=Bio::EnsEMBL::Ace::Filter::SimpleFeature
+module=Bio::EnsEMBL::Ace::Filter::SimpleFeature::Eponine
 
 
