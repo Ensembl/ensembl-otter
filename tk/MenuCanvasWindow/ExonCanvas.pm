@@ -779,7 +779,7 @@ sub show_peptide {
         }
     } else {
     # the gene is not mutable - maybe truncated, check if it gets translation start and end set
-        warn "isnt mutable" ;
+        #warn "isn't mutable" ;
         $sub = $self->SubSeq;
         
         eval { $self->tk_t_start ;

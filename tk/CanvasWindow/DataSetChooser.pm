@@ -7,6 +7,7 @@ use strict;
 use Carp;
 use base 'CanvasWindow';
 use CanvasWindow::SequenceSetChooser;
+use File::Path 'rmtree';
 
 sub new {
     my( $pkg, @args ) = @_;
@@ -153,6 +154,17 @@ sub recover_old_sessions {
         }
     }
     closedir VAR_TMP or die "Error closing directory '$tmp_dir' : $!";
+    
+    for (my $i = 0; $i < @lace;) {
+        my $ace_wrm = "$lace[$i]/database/ACEDB.wrm";
+        if (-e $ace_wrm) {
+            $i++;
+        } else {
+            print STDERR "\nNo such file: '$ace_wrm'\nDeleting uninitialized database '$lace[$i]'\n";
+            rmtree($lace[$i]);
+            splice(@lace, $i, 1);
+        }
+    }
     
     if (@lace) {
         my $text = "Recover these lace sessions?\n"
