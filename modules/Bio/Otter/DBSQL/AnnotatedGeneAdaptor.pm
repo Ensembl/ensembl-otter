@@ -232,7 +232,13 @@ sub fetch_by_Slice{
                 $i++;
                 if ($exons_truncated) {
                     my $remark = Bio::Otter::GeneRemark->new;
-                    $remark->remark("Transcript '$t_name' has $exons_truncated exons that are not within the slice");
+                    my $message = "Transcript '$t_name' has $exons_truncated exon";
+                    if ($exons_truncated > 1) {
+                        $message .= 's that are not in this slice';
+                    } else {
+                        $message .= ' that is not in this slice';
+                    }
+                    $remark->remark($message);
                     $g_info->remark($remark);
                     $g_info->truncated_flag(1);
                 }
