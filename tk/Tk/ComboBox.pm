@@ -6,7 +6,7 @@ package Tk::ComboBox;
 use strict;
 
 use vars qw($VERSION);
-$VERSION = '0.1'; # $Id: ComboBox.pm,v 1.1 2002-06-24 20:48:42 jgrg Exp $
+$VERSION = '0.1'; # $Id: ComboBox.pm,v 1.2 2002-06-25 14:27:46 jgrg Exp $
 
 use Tk qw(Ev);
 use Carp;
@@ -35,7 +35,7 @@ sub Populate {
     my $b = $w->Button(-bitmap => '@' . Tk->findINC('cbxarrow.xbm'));
     $w->Advertise('entry' => $e);
     $w->Advertise('arrow' => $b);
-    $b->pack(-side => 'right', -padx => 1);
+    $b->pack(-side => 'right', -padx => 1, -fill => 'y', -expand => 1);
     $e->pack(-side => 'right', -fill => 'x', -expand => 1, -padx => 1);
 
     # popup shell for listbox with values.
@@ -91,10 +91,26 @@ sub SetBindings {
     $w->bindtags([$w, 'Tk::ComboBox', $w->toplevel, 'all']);
     $e->bindtags([$e, $e->toplevel, 'all']);
 
+    # Unbind all Button class bindings from this button
+    $b->bindtags(undef);
+
+    # Re-establish standard Button highlighting behaviour
+    $b->bind('<Leave>', sub{
+        if ($w->cget('-state') ne 'disabled') {
+          $b->configure('-state' => 'normal');
+        }
+      });
+    $b->bind('<Enter>', sub{
+        if ($w->cget('-state') ne 'disabled') {
+          $b->configure('-state' => 'active');
+        }
+      });
+
     # bindings for the button and entry
-    $b->bind('<1>',[$w,'BtnDown']);
-    $b->toplevel->bind('<ButtonRelease-1>',[$w,'ButtonHack']);
-    $b->bind('<space>',[$w,'space']);
+    foreach my $event (qw{ <ButtonPress-1> <space> <Return> }) {
+        $b->bind($event, [$w,'BtnDown']);
+    }
+    #$b->bind('<space>',[$w,'space']);
 
     # bindings for listbox
     my $sl = $w->Subwidget('slistbox');
@@ -117,7 +133,6 @@ sub space {
 
 sub ListboxRelease {
  my ($w,$x,$y) = @_;
- $w->ButtonHack;
  $w->LbChoose($x, $y);
 }
 
@@ -134,10 +149,8 @@ sub BtnDown {
 
     if ($w->{'popped'}) {
 	$w->Popdown;
-	$w->{'buttonHack'} = 0;
     } else {
 	$w->PopupChoices;
-	$w->{'buttonHack'} = 1;
     }
 }
 
@@ -145,11 +158,12 @@ sub PopupChoices {
     my ($w) = @_;
 
     if (!$w->{'popped'}) {
-        $w->Callback(-listcmd => $w);
 	my $e = $w->Subwidget('entry')->Subwidget('entry');
 	my $c = $w->Subwidget('choices');
 	my $s = $w->Subwidget('slistbox');
 	my $a = $w->Subwidget('arrow');
+        $a->butDown;
+        $w->Callback(-listcmd => $w);
 	my $y1 = $e->rooty + $e->height;
 	my $bd = $c->cget(-bd) + $c->cget(-highlightthickness);
 	my $x1 = $e->rootx;
@@ -234,9 +248,6 @@ sub LbCopySelection {
 	my $l = $w->Subwidget('slistbox')->Subwidget('listbox');
         my $var_ref = $w->cget( '-textvariable' );
         $$var_ref = $l->get($index);
-	if ($w->{'popped'}) {
-	    $w->Popdown;
-	}
     }
     $w->Popdown;
 }
@@ -255,7 +266,7 @@ sub LbIndex {
     }
 }
 
-# pop down the listbox
+# remove the listbox
 sub Popdown {
     my ($w) = @_;
     if ($w->{'savefocus'} && Tk::Exists($w->{'savefocus'})) {
@@ -267,16 +278,7 @@ sub Popdown {
 	$c->withdraw;
 	$w->grabRelease;
 	$w->{'popped'} = 0;
-    }
-}
-
-# This hack is to prevent the ugliness of the arrow being depressed.
-#
-sub ButtonHack {
-    my ($w) = @_;
-    my $b = $w->Subwidget('arrow');
-    if ($w->{'buttonHack'}) {
-	$b->butUp;
+        $w->Subwidget('arrow')->butUp;
     }
 }
 
