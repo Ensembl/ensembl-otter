@@ -10,6 +10,9 @@ use Hum::AnaStatus::Sequence;
 use Hum::AnaStatus::SequenceSet;
 use Hum::Conf qw{ HUMACESERVER_HOST HUMGIFACESERVER_PORT };
 use GenomeCanvas::Band::SeqChooser;
+use GenomeCanvas::Band::HistChooser;
+use GenomeCanvas::AnaNotes;
+use GenomeCanvas::AnaNotes::History;
 use Carp;
 use Getopt::Long 'GetOptions';
 use Hum::SubmissionVersion;
@@ -29,7 +32,7 @@ my $nospangle;
     # check global access to database
     exit 0 unless Hum::SubmissionVersion::check_version();
     
-    # user is login unless overridden by 'user'
+    # user is login unless overridden by 'user'en
     # (this would be place to put password check)
     $user=submission_user($user);
 
@@ -57,7 +60,7 @@ my $nospangle;
     }
 
     # debug
-    ##print "a: |$annotator|\n";
+    ##print "a: |$annotator|\n";s
     
     # Set group writable
     umask(002);
@@ -68,7 +71,7 @@ my $nospangle;
     
     my $mw = CanvasWindow::MainWindow->new;
     $mw->title($set_name);
-    my $gc = GenomeCanvas->new($mw);
+    my $gc = GenomeCanvas::AnaNotes->new($mw);
     my $chooser = GenomeCanvas::Band::SeqChooser->new;
     $gc->add_Band($chooser);
     $chooser->chooser_map(make_chooser_map($set_id));
@@ -77,12 +80,12 @@ my $nospangle;
     $canvas->configure(-selectbackground => 'gold');
     $canvas->CanvasBind('<Button-1>', sub {
         return if $gc->delete_message;
-        deselect_all_selected_not_current($gc);
-        toggle_current($gc);
+        $gc->deselect_all_selected_not_current();
+        $gc->toggle_current;######## new version - method placed in GC object so it can be overridden
         });
     $canvas->CanvasBind('<Shift-Button-1>', sub {
         return if $gc->delete_message;
-        toggle_current($gc);
+        $gc->toggle_current;
         });
     
     {
@@ -204,45 +207,49 @@ my $nospangle;
     Tk::MainLoop();
     ###############
 }
-
+#---------------------------------------------------------------------------------------------------------------------
 {
-    my( $top, $hist );
+    my( $top, $hist , $hist_gen_canv, $hist_chooser , $comment_string, $asid);
 
     sub popup_ana_seq_history {
         my( $gc ) = @_;
         
         my $canvas = $gc->canvas;
-        my $asid = get_current_ana_seq_id($canvas)
+        $asid = get_current_ana_seq_id($canvas)
             or return;
         
         unless ($top) {
             my $master = $canvas->toplevel;
             $top = $master->Toplevel;
+            
             $top->transient($master);
             my $font = 'helvetica';
             my $size = $gc->font_size;
 
-            $hist = $top->ROText(
-                -font           => [$font, $size, 'normal'],
-                #-justify        => 'left',
-                -padx                   => 6,
-                -pady                   => 6,
-                -relief                 => 'groove',
-                -background             => 'white',
-                -border                 => 2,
-                -selectbackground       => 'gold',
-                #-exportselection => 1,
-                )->pack(
-                    -expand => 1,
-                    -fill   => 'both',
-                    );
-        
-            # Make a Close button inside a frame
+            $hist_gen_canv = GenomeCanvas::AnaNotes::History->new($top);            # create new GenomeCanvas object
+            $hist_chooser = GenomeCanvas::Band::HistChooser->new;     # create new SeqChooser object            
+           
+            $hist_gen_canv->add_Band($hist_chooser);                  #     add band to history canvas 
+            my $canv = $hist_gen_canv->canvas;
+            $canv->configure(-selectbackground => 'gold');
+
+            # Make a buttons inside a frame
             my $frame = $top->Frame(
-                -border => 6,
+                -border => 6, 
                 )->pack(
-                    -anchor => 'sw',
+                    -anchor => 's',
+                    -fill   => 'x',                  
                     );
+                    
+            # entry widget to update comment
+            my $comment_entry = $frame->Entry(
+                -background => '#ffffff' ,
+                -foreground => '#000000' ,
+                -textvariable => \$comment_string ,
+                )->pack(-side   => 'top',
+                        -expand => 1,
+                        -fill   => 'x', 
+                        );      
 
             # Close only unmaps it from the display
             my $close_command = sub{ $top->withdraw };
@@ -250,36 +257,81 @@ my $nospangle;
             my $exit = $frame->Button(
                 -text => 'Close',
                 -command => $close_command ,
-                )->pack;
+                )->pack(-side => 'left');
             $top->bind(    '<Control-w>',      $close_command);
             $top->bind(    '<Control-W>',      $close_command);
             $top->bind(    '<Escape>',         $close_command);
-
+                
             # Closing with window manager only unmaps window
             $top->protocol('WM_DELETE_WINDOW', $close_command);
-        }
-        
-        my $text = get_history_for_ana_seq_id($asid);
-        
-        my $lines = $text =~ tr/\n//;
-        $hist->delete('1.0', 'end');
-        $hist->insert('1.0', $text);
+            
+             
+            #button to update database and refresh remark history
+            my $update_button = $frame->Button(-text=> 'Update Comment',
+                -command => sub {
+                                    update_db_comment($canv , $hist_chooser, $comment_entry->get());
+                                    update_window($hist_chooser, $asid);
+                                    $comment_string = "";
+                                    $hist_gen_canv->render;
+                                }
+                )->pack(-side => 'right');
+       
 
-        # Size widget to fit
-        $hist->configure(
-            #-width  => 60,
-            -height => $lines,
-            );
+            
+            $canv->CanvasBind('<Button-1>',
+                sub {
+                    #my $selected = $canv->find('withtag' , 'current');
+                    
+                    $hist_gen_canv->deselect_all_selected_not_current();
+                    $hist_gen_canv->toggle_current();    
+ 
+                    # get id of currently selected row
+                    my @list = $canv->gettags('current'); 
+                    #if (scalar(@list) == 0) {warn  "no current\n "} else {warn (join ":" ,@list)}  ; 
+                    my @id = grep {s/^row_id=//} @list;
+                    
+                    my @choosermap = $hist_chooser->chooser_map;
+                    
+                    # get comment from choosermap (choosermap is a 2 dimensional array)
+                    $comment_string = @choosermap[$id[0]]->[4]; 
+                    @choosermap[$id[0]]->[4] = $comment_entry->get();
+                    
+                    $comment_entry->focusForce;
+                    
+                    });
+        }
+        else  # window is already present, just need to clear textbox and 
+        {
+            $comment_string = '';
+        }   
+        my @text = get_history_for_ana_seq_id($asid);
+    
+        $hist_chooser->chooser_map(@text);
+        $hist_gen_canv->render;
+        
+#        $top->deiconify;
+#        $top->raise;
+                    
+#        my $lines = $text =~ tr/\n//;
+#        $hist->delete('1.0', 'end');                   #
+#        $hist->insert('1.0', $text);                   #
+
+        # Size widget to fitc
+        $hist_gen_canv->fix_window_min_max_sizes;    
 
         # Set the window title, and make it visible
-        my $win = $hist->toplevel;
+        my $win = $hist_gen_canv->canvas->toplevel; #$hist->toplevel;
         $win->configure( -title => "Remark history" );
-        $win->deiconify;
-        $win->raise;
+#        $win->deiconify;
+#        $win->raise;
+        
+        # code to update entry widget when band is clicked.
+        
         
     }
 }
 
+#--------------------------------------------------------------------------------------------------------------------------
 sub get_history_for_ana_seq_id {
     my( $asid ) = @_;
     
@@ -294,18 +346,24 @@ sub get_history_for_ana_seq_id {
         WHERE s.seq_id = a.seq_id
           AND a.ana_seq_id = r.ana_seq_id
           AND a.ana_seq_id = $asid
-        ORDER BY r.review_time        
+        ORDER BY r.review_time DESC       
         });
     $sth->execute;
     
-    my( $txt );
-    while (my @row = $sth->fetchrow) {
-        $txt .= join("\t", @row) . "\n";
+    my $txt;
+    my @text ;
+    my $id =0; # for just now
+    while (my @row = $sth->fetchrow) { 
+        
+ #       $txt .= join("\t", @row) . "\n";
+        unshift @row , $id;
+        push (@text,[@row]);            
+        $id++;
     }
-    warn $txt;
-    return $txt;
+    
+    return @text;
 }
-
+#--------------------------------------------------------------------------------------------------------------------
 sub list_sets {
     my ( $user ) = @_;
     my $sth = prepare_statement(q{
@@ -347,7 +405,7 @@ sub list_sets {
     }
     print "\n";
 }
-
+#-----------------------------------------------------------------------------------------------------------------------
 sub set_name_to_set_id {
     my( $set_name ) = @_;
     
@@ -549,7 +607,7 @@ sub list_selected_ana_seq_ids {
     my @selected_objects = $canvas->find('withtag', 'selected');
     my( @ana_seq_id_list );
     foreach my $obj (@selected_objects) {
-        my ($ana_seq_id) = map /ana_seq_id=(\d+)/, $canvas->gettags($obj); 
+        my ($ana_seq_id) = map /ana_seq_id=(\d+)/, $canvas->gettgags($obj); 
         die "Found selected object without ana_seq_id" unless $ana_seq_id;
         push(@ana_seq_id_list, $ana_seq_id);
     }
@@ -639,24 +697,25 @@ sub toggle_current {
     my ($rec) = $canvas->find('withtag', "ana_seq_id=$ana_seq&&contig_seq_rectangle");        
     toggle_selection($gc, $rec);
 }
-
+#----------------------------------------------------------------------------------------------------
 sub get_current_ana_seq_id {
     my( $canvas ) = @_;
     
     my ($ana_seq) = map /^ana_seq_id=(\d+)/, $canvas->gettags('current');
     return $ana_seq;
 }
-
+#----------------------------------------------------------------------------------------------------
 sub deselect_all_selected_not_current {
     my( $gc ) = @_;
     
     my $canvas = $gc->canvas;
     $canvas->selectClear;
     foreach my $obj ($canvas->find('withtag', 'selected&&!current')) {
-        toggle_selection($gc, $obj);
+        toggle_selection($gc,  $obj);
+        warn $obj->gettags;
     }
 }
-
+#----------------------------------------------------------------------------------------------------
 sub toggle_selection {
     my( $gc, $obj ) = @_;
     
@@ -675,10 +734,23 @@ sub toggle_selection {
         );
 }
 
+#---------------------------------------------------------------------------------------------------
+
 sub useage {
     exec('perldoc', $0);
 }
 
+#sub make_history_map{
+#    my $set_id = @_;
+    
+#    confess "No ID given" unless $set_id;
+    
+#    print STDERR "getting history on...";
+#    
+#    my $history_text = get_history_for_ana_seq_id($set_id);
+#    };
+    
+#}
 sub make_chooser_map {
     my( $set_id ) = @_;
     
@@ -747,14 +819,16 @@ sub make_chooser_map {
                 [ 'Old sequence',  $seq_name,
                   $status, $uname, $date,
                   $comment ]
-                );
+                );    
         }
         $last_ana_seq_id = $ana_seq_id;
     }
     
-    print STDERR " got them.\n";
     
+    print STDERR " got them.\n";
+
     return @map;
+    
 }
 
 sub get_unplaced_clones {
@@ -786,6 +860,73 @@ sub get_unplaced_clones {
             }
         }
         return $id_status{$id};
+    }
+    
+    sub update_db_comment{
+        
+        my $canv = shift @_;            #canvas object of popup window
+        my $chooser = shift @_;         #hist_chooser object 
+        my $new_string = shift @_;      # new string to be updated
+        my @choosermap = $chooser->chooser_map;
+        
+       
+        my ($time_variable, $seq_id_variable , $annotator_name_variable, $current_time);
+        
+        my @list = $canv->gettags('selected');
+        my @row_ids = grep {s/^row_id=//} @list;
+        my $row_selected = $row_ids[0];
+
+        if ( scalar(@list) > 0 ) #checks that something has been selected.
+        {
+            
+            $seq_id_variable = $choosermap[$row_selected]->[1];
+            $time_variable =   $choosermap[$row_selected]->[2] ;
+            $annotator_name_variable = $choosermap[$row_selected]->[3];
+            
+            
+            $choosermap[$row_selected]->[4] = $new_string ;
+ 
+#           warn (@choosermap->[$row_selected]);
+ 
+            $chooser->chooser_map(@choosermap);
+ 
+ 
+ 
+#            warn $time_variable,"  ", $annotator_name_variable, "  ", $seq_id_variable ;
+
+            #my $comment_ref = shift @_;
+            #warn "this is the commet_ref from update_sub: $$comment_ref";
+            #$$comment_ref = '';
+            
+            # assuming that a combination of time and annotator username will be unique.  
+            my $sth = prepare_statement(qq{
+                    UPDATE ana_sequence_review 
+                    SET review_comment = ?,
+                        review_time = now()
+                    WHERE review_time =  ?
+                    AND annotator_uname = ?
+                                    });
+                                    
+             $sth->execute($new_string,$time_variable,$annotator_name_variable);
+            
+        }
+        else
+        {   warn "nothing has been selected to update";
+
+        }
+        
+        
+        
+    }
+    
+    sub update_window
+    {   
+        my ($hist_chooser, $asid) = @_;
+        my @text = get_history_for_ana_seq_id($asid);
+    
+        $hist_chooser->chooser_map(@text);
+        
+    
     }
 }
 
