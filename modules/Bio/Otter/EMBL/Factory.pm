@@ -139,8 +139,8 @@ or by make_embl.
 sub embl_setup {
     
     my ( $self ) = @_;
-    
-    my $embl = $self->EMBL or confess "EMBL not set";
+
+    my $embl = Hum::EMBL->new;    
     my $acc = $self->accession or confess "accession not set";
     my @sec;
     if ($self->secondary_accs) {
@@ -215,6 +215,7 @@ sub embl_setup {
     #my( $libraryname ) = library_and_vector( $project );
     #add_source_FT( $embl, $seqlength, $binomial, $ext_clone,
     #               $chr, $map, $libraryname );
+    return $embl;
 }
 
 sub accession {
@@ -462,7 +463,7 @@ sub make_embl_ft {
     unless ($acc and $embl and $sequence_version) {
         confess "Must pass an accession, Hum::EMBL object and sequence_version";
     }
-    $self->accession($acc);
+    #$self->accession($acc);
 
     my $ds = $self->DataSet
         or confess "DataSet must be set before calling make_embl";
@@ -496,7 +497,6 @@ sub make_embl_ft {
     $set->sortByPosition;
     $set->removeDuplicateFeatures;
     $set->addToEntry($embl);
-    return $embl;
 }
 
 =head2 get_description
