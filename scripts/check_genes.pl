@@ -69,7 +69,7 @@ if($phelp){
 }
 if($help){
   print<<ENDOFTEXT;
-rename_genes.pl
+check_genes.pl
   -host           char      host of mysql instance ($host)
   -db             char      database ($db)
   -port           num       port ($port)
