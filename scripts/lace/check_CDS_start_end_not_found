@@ -42,8 +42,8 @@ $| =1;
 
   # loop thru all assembly types to fetch all annotated genes in it on otter
   my $date = `date +%Y%m%d`; chomp $date;
-  open (my $fh, ">cds_end_not_found_updateInfo.$dataset.$date") || die $!;
-  open (my $fh1, ">cds_end_not_found_annotator.$dataset.$date") || die $!;
+  open (my $fh, ">cds_start_end_not_found_updateInfo.$dataset.$date") || die $!;
+  open (my $fh1, ">cds_start_end_not_found_annotator.$dataset.$date") || die $!;
 
   foreach my $set ( @sets ) {
 
@@ -107,17 +107,12 @@ $| =1;
 	
 	$start_codon = check_start_codon($t->get_all_translateable_Exons->[0]->seq->seq);
 	
-	# length of $start_codon can be < 3, as the start exon seqs are immediately followed by intron
+	# length of $start_codon can be < 3 when the start_exon seqs are immediately followed by intron
 	# if so, fetch the rest bp of the start codon from the second exon
 	if ( length $start_codon < 3 ){
 	  my $bps = check_start_codon($t->get_all_translateable_Exons->[1]->seq->seq);
 	  $start_codon = uc($start_codon . substr($bps, 0, (3 - length $start_codon) ));
 	}
-
-	print $fh $tsi, "\n";
-	print $fh $t->get_all_translateable_Exons->[0]->seq->seq."\n";
-	print $fh $start_codon;
-	print $fh "-----------\n";
       };
 
       # cds_start_not_found tag should be selected in AceDB
@@ -282,6 +277,7 @@ select assembly_type, description from otter_human.sequence_set where vega_set_i
 | MHC_QBL       | Human Chromosome 6 Haplotype QBL                  |
 | MHC_SSTO      | Human Chromosome 6 Haplotype SSTO                 |
 +---------------+---------------------------------------------------+
+-set chr10_06 -set chr13-10 -set chr14 -set chr19 -set Chr1_final -set chr20-9 -set chr22-02 -set chr6-14 -set chr7 -set chr9-12 -set ChrX-07 -set chr_Y_01 -set MHC_COX -set MHC_NCBI34.1 -set MHC_NCBI34.2 -set MHC_PGF -set MHC_QBL -set MHC_SSTO
 
 Mouse sequence_set to sumbit
 
