@@ -2,7 +2,6 @@
 
 
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
-use Bio::EnsEMBL::Pipeline::SeqFetcher::Pfetch;
 use Getopt::Long;
 
 my $host   = 'ecs1d';
@@ -38,7 +37,6 @@ my $db = new Bio::EnsEMBL::DBSQL::DBAdaptor(
 );
 $db->assembly_type($path);
 
-my $seqfetcher = new Bio::EnsEMBL::Pipeline::SeqFetcher::Pfetch;
 
 my $sa = $db->get_SliceAdaptor();
 my $ga = $db->get_GeneAdaptor();
