@@ -37,6 +37,7 @@ use Bio::Otter::Lace::Defaults;
             'email='    . uri_escape($email),
             'dataset='  . uri_escape($dataset),
             'data='     . uri_escape($xml),
+            'lock_before_write=true',
             'unlock=true',
             )
         );

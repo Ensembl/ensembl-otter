@@ -141,14 +141,26 @@ print STDERR "done\n";
 print STDERR "\nFound " . scalar(@$genes) . " genes on region $chrname $chrstart-$chrend\n";
 
 
-
-print STDERR "Checking region is locked...\n";
 my $cb = new Bio::Otter::CloneLockBroker($odb);
-eval {
-  $cb->check_locks_exist_by_slice($slice, $author);
-};
-if ($@) {
-  error_exit($q, "Failed checking locks [$@]");
+
+if($params{'lock_before_write'} eq 'true'){
+  print STDERR "Locking region...\n";
+  eval {
+    my @locks = $cb->lock_clones_by_slice($slice,$author);
+  }; 
+  
+  if ($@) { 
+    error_exit($q, "Failed to lock clones - exiting [$@]");
+  }
+  
+}else{
+  print STDERR "Checking region is locked...\n";
+  eval {
+    $cb->check_locks_exist_by_slice($slice, $author);
+  };
+  if ($@) {
+    error_exit($q, "Failed checking locks [$@]");
+  }
 }
 print STDERR "done\n";
 
