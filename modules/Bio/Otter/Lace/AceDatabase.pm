@@ -195,22 +195,26 @@ sub ace_from_contig_list {
         my $xml = Bio::Otter::Lace::TempFile->new;
         $xml->name('lace.xml');
         my $write = $xml->write_file_handle;
-        print $write $client->get_xml_for_contig_from_Dataset($ctg, $ds);
-
+        my $xml_string = $client->get_xml_for_contig_from_Dataset($ctg, $ds);
+        print $write $xml_string ;
+       
         ### Nasty that genes and slice arguments are in
         ### different order in these two subroutines
                 
       
         my ($genes, $slice, $sequence, $tiles, $feature_set) =
             Bio::Otter::Converter::XML_to_otter($xml->read_file_handle);
+        
         $ace .= Bio::Otter::Converter::otter_to_ace($slice, $genes, $tiles, $sequence, $feature_set);
         # We need to record which dataset each slice came
         # from so that we know where to save it back to.
         my $slice_name = $slice->display_id;
         $self->save_slice_dataset($slice_name, $ds);
     }
+    
     return $ace;
 }
+
 
 sub save_slice_dataset {
     my( $self, $slice_name, $dataset ) = @_;
@@ -349,7 +353,7 @@ sub save_otter_slice {
 
 sub unlock_all_slices {
     my( $self ) = @_;
-
+    
     my $sd_h = $self->slice_dataset_hash;
     foreach my $name (keys %$sd_h) {
         my $ds = $sd_h->{$name};
@@ -357,9 +361,10 @@ sub unlock_all_slices {
     }
 }
 
+# name argument is the name of the slice in format [chr_name].[start_coord]-[end_coord] , 
 sub unlock_otter_slice {
     my( $self, $name, $dataset ) = @_;
-    
+       
     confess "Missing slice name argument"   unless $name;
     confess "Missing DatsSet argument"      unless $dataset;
 
@@ -384,6 +389,7 @@ sub unlock_otter_slice {
     $ace_txt =~ s{^\s*//.+}{\n}mg;  # Strip comments
     
     return $client->unlock_otter_ace($ace_txt, $dataset);
+    
 }
 
 sub aceperl_db_handle {
