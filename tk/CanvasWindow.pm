@@ -846,6 +846,7 @@ sub message_at_x_y {
     $canvas->lower($grey_rec, $yellow_rec);
     $canvas->update;
     
+    $self->set_scroll_region_and_maxsize;
     return $msg_id;
 }
 
@@ -861,6 +862,7 @@ sub delete_message {
     }
     if ($msg_id) {
         $canvas->delete($msg_id);
+        $self->set_scroll_region_and_maxsize;
         return 1;
     } else {
         return 0;

@@ -82,6 +82,11 @@ sub column_methods {
                 return("$acc.$sv", $bold, 'searchable');
                 },
             sub{
+                # Use closure for font definition
+                my $cs = shift;
+                return($cs->clone_name, $bold, 'searchable');
+                },
+            sub{
                 my $cs = shift;
                 if (my $sn = $cs->current_SequenceNote) {
                     my $time = $sn->timestamp;
@@ -426,7 +431,7 @@ sub run_lace {
     #    printf "%s.%s\n", $cs->accession, $cs->sv;
     #}
 
-    my $db = $self->Client->new_AceDatabase;
+    my $db = $cl->new_AceDatabase;
     $db->title($title);
     $db->error_flag(1);
     eval{
