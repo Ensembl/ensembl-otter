@@ -113,7 +113,8 @@ create table evidence (
 	evidence_name varchar(40),
 	transcript_info_id  int(10) unsigned,
 	type enum('EST','cDNA','Protein','Genomic','UNKNOWN'),
-        PRIMARY KEY (evidence_id)
+        PRIMARY KEY (evidence_id),
+        KEY (transcript_info_id, evidence_name, type)
 	);
 
 create table current_clone_info (
@@ -138,26 +139,31 @@ create table gene_stable_id_pool (
         gene_pool_id  int(10) unsigned default '0' not null auto_increment,
         gene_stable_id varchar(40),
         timestamp datetime DEFAULT '0000-00-00 00:00:00' NOT NULL,
-        PRIMARY KEY (gene_pool_id)
+        PRIMARY KEY (gene_pool_id),
+        KEY (gene_stable_id)
         );
 
 create table transcript_stable_id_pool (
         transcript_pool_id  int(10) unsigned default '0' not null auto_increment,
         transcript_stable_id varchar(40),
         timestamp datetime DEFAULT '0000-00-00 00:00:00' NOT NULL,
-        PRIMARY KEY (transcript_pool_id)
+        PRIMARY KEY (transcript_pool_id),
+        KEY (transcript_stable_id)
         );
 
 create table translation_stable_id_pool (
         translation_pool_id  int(10) unsigned default '0' not null auto_increment,
         translation_stable_id varchar(40),
         timestamp datetime DEFAULT '0000-00-00 00:00:00' NOT NULL,
-        PRIMARY KEY (translation_pool_id)
+        PRIMARY KEY (translation_pool_id),
+        KEY (translation_stable_id)
         );
 
 create table exon_stable_id_pool (  
         exon_pool_id  int(10) unsigned default '0' not null auto_increment,
         exon_stable_id varchar(40),
-        timestamp datetime DEFAULT '0000-00-00 00:00:00' NOT NULL,
-        PRIMARY KEY (exon_pool_id)
+        timestamp datetime DEFAULT '0000-00-,00 00:00:00' NOT NULL,
+        PRIMARY KEY (exon_pool_id),
+        KEY (exon_stable_id)
         );
+        
