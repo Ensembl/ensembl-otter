@@ -356,7 +356,7 @@ sub add_Evidence {
 	if ($ev->isa("Bio::Otter::Evidence")) {
 	    push(@$list, $ev);
 	} else {
-	    $obj->throw("Object [$ev] is not an Evidence object");
+	    $self->throw("Object [$ev] is not an Evidence object");
 	}
     }
 }
