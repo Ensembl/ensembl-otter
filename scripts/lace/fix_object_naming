@@ -4,7 +4,7 @@
 
 use strict;
 use Bio::Otter::Lace::Defaults;
-use Hum::Submission 'accession_from_sanger_name';
+use Hum::Submission 'prepare_cached_statement';
 
 {
     my $dataset_name = undef;
@@ -32,26 +32,92 @@ use Hum::Submission 'accession_from_sanger_name';
     }
 }
 
+sub is_sequence_name {
+    my( $name ) = @_;
+
+    my $sth = prepare_cached_statement(q{
+        SELECT count(*)
+        FROM sequence
+        WHERE sequence_name = ?
+        });
+    $sth->execute($name);
+    
+    my ($count) = $sth->fetchrow;
+    return $count;
+}
+
 sub fix_names {
     my( $gene_aptr, $id ) = @_;
 
     my $gene = $gene_aptr->fetch_by_dbID($id);
     my $gene_name = $gene->gene_info->name->name;
     print STDERR "GENE: $gene_name\n";
+    my $clone3prime = three_prime_clone_name($gene);
 
     ### Lock clones here
 
-    my $is_sanger_gene_name = 0;
+    ### What about K14 genes?
+    my $fix_names = 0;
     my $gene_number = undef;
     if ($gene_name =~ /^(?:[Ee][Mm]:)?([^\.]+)\.(\d+)$/) {
         my $clone_root = $1;
-        $gene_number = $2;
-        if (my $acc = accession_from_sanger_name($clone_root)) {
-            $is_sanger_gene_name = 1;
+        $gene_number   = $2;
+        if (is_sequence_name($clone_root)) {
+            $fix_names = 1;
         }
     }
+    # Chromosome 14 gene names
+    elsif ($gene_name =~ /^K14_(?:.+)_(\d+)$/) {
+        $fix_names = 1;
+        $gene_number = $1;
+    }
+
+    # grep the gene number from the transcript
+    $gene_number ||= transcript_gene_number($gene);
+    my $new_gene_name = make_new_gene_name($gene_number, $clone3prime);
+
+    ### Deal with C22, RI, and GD genes and transcripts.
+    ### Fix gene classes here too?
 
     my $tsct_list = $gene->get_all_Transcripts;
+    foreach my $tsct (@$tsct_list) {
+        my $name = $tsct->transcript_info->name;
+        print STDERR "  TSCT: $name\n";
+        my ($variant_number) = $name =~ /-(\d{3})$/;
+        
+        ### Exception if already has intl gene name
+    }
+
+    if ($fix_names) {
+        unless ($new_gene_name) {
+            ($gene_number, $new_gene_name) = make_new_gene_name($gene_number, $clone3prime);
+        }
+        print STDERR "  GENE RENAME: $gene_name > $new_gene_name\n";
+    }
+
+    # Need to fix transcript and gene remarks.
+}
+
+sub transcript_gene_number {
+    my( $gene ) = @_;
+    
+    my $tsct_list = $gene->get_all_Transcripts;
+
+    my( %gene_n );
+    foreach my $name (map $_->transcript_info->name, @$tsct_list) {
+        if ($name =~ /(\d+)-\d{3}$/) {
+            $gene_n{$1}++;
+        }
+    }
+    my ($most_common) = sort {$gene_n{$b} <=> $gene_n{$a}} keys %gene_n;
+    return $most_common;
+}
+
+sub three_prime_clone_name {
+    my( $gene ) = @_;
+    
+    my $tsct_list = $gene->get_all_Transcripts;
+    
     my $longest = [];
     foreach my $tsct (@$tsct_list) {
         my $clone_list = [map $_->contig->clone->id, @{$tsct->get_all_Exons}];
@@ -68,55 +134,24 @@ sub fix_names {
     #print STDERR " + @$longest\n";
     die "No clone list!" unless @$longest;
     my $clone3prime = pop @$longest;
-    $clone3prime =~ s/\.\d+$//;
+    $clone3prime =~ s/\.\d+$//; # Trim SV from ACC.SV names
     #print STDERR "   end = $clone3prime\n";
+    return $clone3prime;    
+}
 
-    ### Deal with C22, RI, and GD genes and transcripts.
-    ### Fix gene classes here too?
-
-    my( $new_gene_name );
-    foreach my $tsct (@$tsct_list) {
-        my $name = $tsct->transcript_info->name;
-        print STDERR "  TSCT: $name\n";
-        if ($name =~ /^(?:[Ee][Mm]:)?([^\.]+)(?:\.(\d+))?-(\d{3})$/) {
-            my $clone_root     = $1;
-            my $t_gene_number  = $2;
-            my $variant_number = $3;
-
-            if ($clone_root ne $clone3prime and $clone_root !~ /^[A-Z0-9]+-[A-Z0-9]+$/) {
-                # Transcript is not named by 3' most clone and clone
-                # name is not an international clone name.
-                if ($t_gene_number and $gene_number and ($t_gene_number ne $gene_number)) {
-                    warn "  GENE# MISMATCH: '$gene_number' vs '$t_gene_number'\n";
-                }
-                unless ($new_gene_name) {
-                    $gene_number ||= $t_gene_number || new_gene_number($clone3prime);
-                    $new_gene_name = "$clone3prime.$gene_number";
-                    while (gene_exists($new_gene_name)) {
-                        $gene_number++;
-                        $new_gene_name = "$clone3prime.$gene_number";
-                        print STDERR "  INCREMENT GENE: $gene_number\n";
-                    }
-                    save_gene_name($new_gene_name);
-                }
-                my $new_tsct_name = "$clone3prime.$gene_number-$variant_number";
-                while (transcript_name_exists($new_tsct_name)) {
-                    $variant_number++;
-                    $new_tsct_name = "$clone3prime.$gene_number-$variant_number";
-                    print STDERR "    INCREMENT VARIANT: $variant_number\n";
-                }
-                save_transcript_name($new_tsct_name);
-                print STDERR "    RENAME: $name > $clone3prime.$gene_number-$variant_number\n";
-            }
-        }
+sub make_new_gene_name {
+    my( $gene_number, $clone3prime ) = @_;
+    
+    $gene_number ||= new_gene_number($clone3prime);
+    my $new_gene_name = "$clone3prime.$gene_number";
+    while (gene_exists($new_gene_name)) {
+        $gene_number++;
+        $new_gene_name = "$clone3prime.$gene_number";
+        print STDERR "  INCREMENT GENE: $gene_number\n";
     }
-
-    if ($is_sanger_gene_name) {
-        die "no new gene name created" unless $new_gene_name;
-        print STDERR "  GENE RENAME: $gene_name > $new_gene_name\n";
-    }
-
-    # Need to fix transcript and gene remarks.
+    save_gene_name($new_gene_name);
+    
+    return($gene_number, $new_gene_name);
 }
 
 

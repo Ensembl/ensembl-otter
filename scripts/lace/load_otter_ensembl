@@ -86,7 +86,6 @@ my $DEBUG = 0;
     my $dataset_name      = undef; # dataset to get from otter server
     my $chromosome_name   = undef;
     my $set_name          = undef;
-    my $delete            = undef;
     my $submit_contig     = 'SubmitContig';
     my $superctg_ori      = 1; # default value for just now. - true value will be added by a different script
     my $help              = 0;
@@ -100,7 +99,6 @@ my $DEBUG = 0;
         'priority=i'    => \$analysis_priority ,
         'chromosome=s'  => \$chromosome_name, 
         'set|name=s'    => \$set_name,
-	'delete'        => \$delete,
         'debug'         => \$DEBUG,
         'sanger!'       => \$at_sanger,
         ) or useage();

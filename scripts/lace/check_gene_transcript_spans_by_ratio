@@ -79,7 +79,7 @@ foreach my $type ( @a_types ) {
     }
 
     unless ($longest) {
-        my $msg = sprintf "FAILED TO GET LONGEST TRANSCRIPT FOR '%s'\n", $gene->stable_id;
+        my $msg = sprintf "\nFAILED TO GET LONGEST TRANSCRIPT FOR '%s'\n", $gene->stable_id;
         print $msg;
         print STDERR $msg;
         next;

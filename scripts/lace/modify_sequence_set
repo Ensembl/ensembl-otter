@@ -53,8 +53,6 @@ use Hum::Submission qw(accession_from_sanger_name);
 	$ds->update_SequenceSet($SequenceSet);
 	print STDERR join("  |  ", $SequenceSet->name, $SequenceSet->description, $SequenceSet->priority) . "\n";
     }elsif($delete){
-	my $description = $SequenceSet->description();
-	$priority       = $SequenceSet->priority();
 	$ds->delete_SequenceSet($SequenceSet);
     }elsif($show){
 #	$ds->export_SequenceSet();
