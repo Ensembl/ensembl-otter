@@ -428,7 +428,14 @@ sub save_data {
     my( $self ) = @_;
 
     if (my $save = $self->save_command) {
-        $save->($self);
+        my @clone = $self->list_selected_clone_names;
+        if (@clone) {
+            foreach my $cl (@clone) {
+                $save->($self, $cl);
+            }
+        } else {
+            $self->message("First select a clone to save [@clone]");
+        }
     } else {
         $self->message('No save command');
     }

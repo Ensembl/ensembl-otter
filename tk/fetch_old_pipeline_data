@@ -141,7 +141,9 @@ sub make_ace_filter_factory {
             $sim->analysis_object($ana);
             $sim->homol_tag($tag);
             $sim->method_tag($meth);
-            $sim->hseq_prefix('Em:') unless $logic_name eq 'Swall';
+            unless ($logic_name eq 'Swall' or $logic_name eq 'Swall') {
+                $sim->hseq_prefix('Em:');
+            }
             #if ($percent_identity_cutoff) {
             #    $sim->percent_identity_cutoff($percent_identity_cutoff);
             #}

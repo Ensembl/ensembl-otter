@@ -200,7 +200,7 @@ sub do_fetch {
 
 
 sub otter_save {
-    my( $self ) = @_;
+    my( $self, $name ) = @_;
     
     # Disconnect aceperl
     $self->{'_ace_database_handle'} = undef;
@@ -208,8 +208,8 @@ sub otter_save {
     # Get new handle
     my $ace = $self->ace_handle;
     
-    ### This code should be in a non-graphical module
-    $ace->raw_query('find Genome_Sequence *');
+    ### This code should be in a data only module
+    $ace->find(Genome_Sequence => $name);
     my $ace_txt = $ace->raw_query('show -a');
     $ace->raw_query('Follow SubSequence');
     $ace_txt .= $ace->raw_query('show -a');
@@ -227,8 +227,8 @@ sub otter_save {
     print OTT $ace_txt;
     close OTT;
     open OTT, $otter_file or confess "Can't read '$otter_file' : $!";
-    my( $genes, $frags, $type, $dna, $chr, $chrstart, $chrend) = 
-        Bio::Otter::Converter::ace_to_otter(\*OTT);
+    my $xml =  Bio::Otter::Converter::ace_to_XML(\*OTT);
+    print $xml;
 }
 
 sub launch_XaceSeqChooser {
