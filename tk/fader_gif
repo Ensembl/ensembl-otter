@@ -10,31 +10,38 @@ use CGI::Carp 'fatalsToBrowser';
 {
     my $q = CGI->new;
 
-    my $img_height = 200;
-    my( $steps, $width, $img_width );
+    my $max_steps = 255;
+    my $max_img_width = 2000;
+    
+    my( $steps );
     if ($steps = $q->param('steps')) {
-        my $max_steps = 255;
-        my $max_img_width = 2000;
-
         if ($steps > $max_steps) {
-            $q->param('steps', $max_steps);
             $steps = $max_steps;
         }
-        
-        $width = $q->param('width');
+    } else {
+        $steps = $max_steps;
+    }
+    $q->param('steps', $steps);
+    
+    my( $width );
+    if ($width = $q->param('width')) {
         my $max_width = int($max_img_width / $steps);
         if ($width > $max_width) {
-            $q->param('width', $max_width);
             $width = $max_width;
         }
 
-        $img_width  = $steps * $width;
+    } else {
+        $width = 2;
     }
+    $q->param('width', $width);
+    
+    my $img_height = 200;
+    my $img_width = ($steps + 1) * $width;
 
     if ($q->param('get_gif')) {
-        print_gif($q, $steps, $width, $img_height, $img_width);
+        print_gif ($q, $steps, $width, $img_height, $img_width);
     } else {
-        print_form($q, $steps, $img_height, $img_width);
+        print_form($q, $steps,         $img_height, $img_width);
     }
 }
 
@@ -45,7 +52,7 @@ sub print_gif {
         or die "No rgb paramter given";
     my @steps = make_tile_colours($rgb_param, $n_steps);
 
-    my $img = GD::Image->new($img_width,$img_height);
+    my $img = GD::Image->new($img_width, $img_height);
     
     my($y1, $y2) = (0, $img_height - 1);
     for (my $i = 0; $i < @steps; $i++) {
@@ -62,6 +69,7 @@ sub print_gif {
 
 sub print_form {
     my( $q, $n_steps, $img_height, $img_width ) = @_;
+    
     
     print $q->header,
         $q->start_html(
@@ -97,13 +105,14 @@ sub print_form {
         $q->submit,
         $q->end_form,
         "<hr><br>\n";
+
     if (my $rgb_param = $q->param('rgb')) {
         eval{ web_hex_to_rgb($rgb_param) };
         if ($@) {
             print qq{<font size=6>Illegal rgb parameter: <b><code>'$rgb_param'</code></b></font>\n};
         } else {
             my $url = $q->self_url;
-            print qq{<img src="$url&get_gif=fader.gif" height=$img_height width=$img_width>};
+            print qq{<img src="$url&get_gif=1" height=$img_height width=$img_width>};
             
             my @steps = make_tile_colours($rgb_param, $n_steps);
             print qq{<br><pre>\n};
@@ -112,7 +121,7 @@ sub print_form {
                 my $web = rgb_to_web_hex(@$rgb);
                 printf "   %3d  %s\n", $i + 1, $web;
             }
-            print qq{<br></pre>\n};
+            print qq{</pre>\n};
         }
     }
     print $q->end_html;
@@ -134,6 +143,7 @@ sub make_tile_colours {
         }
         push(@steps, $rgb);
     }
+    push(@steps, [$max, $max, $max]);
     
     return @steps
 }
