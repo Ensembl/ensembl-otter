@@ -146,26 +146,11 @@ sub toXMLString{
 		$str .= "  <remark>" . $remstr . "</remark>\n";
 	    }
 	   
-            my $cds_snf = "";
-            my $cds_enf = "";
-            my $rna_snf = "";
-            my $rna_enf = "";
             my $classname = "";
 	    my $tname    = "";
 
+            
 
-            if (defined($tinfo->cds_start_not_found)) {
-               $cds_snf = $tinfo->cds_start_not_found;
-            }
-            if (defined($tinfo->cds_end_not_found)) {
-               $cds_enf = $tinfo->cds_end_not_found;
-            }
-            if (defined($tinfo->mRNA_start_not_found)) {
-               $rna_snf = $tinfo->mRNA_start_not_found;
-            }
-            if (defined($tinfo->mRNA_end_not_found)) {
-               $rna_enf = $tinfo->mRNA_end_not_found;
-            }
             if (defined($tinfo->class)) {
                if (defined($tinfo->class->name)) {
                   $classname = $tinfo->class->name;
@@ -176,10 +161,15 @@ sub toXMLString{
 		$tname = $tinfo->name;
 	    }
 
-	    $str .= "  <cds_start_not_found>"  . $cds_snf . "</cds_start_not_found>\n";
-	    $str .= "  <cds_end_not_found>"    . $cds_enf . "</cds_end_not_found>\n";
-	    $str .= "  <mRNA_start_not_found>" . $rna_snf . "</mRNA_start_not_found>\n";
-	    $str .= "  <mRNA_end_not_found>"   . $rna_enf . "</mRNA_end_not_found>\n";
+            foreach my $method (qw{
+                cds_start_not_found
+                cds_end_not_found
+                mRNA_start_not_found
+                mRNA_end_not_found
+                })
+            {
+                $str .= "  <$method>" . ($tinfo->$method() || 0) . "</$method>\n";
+            }
 	    
 	    $str .= "  <transcript_class>" . $classname . "</transcript_class>\n";
 	    $str .= "  <name>" . $tname . "</name>\n";

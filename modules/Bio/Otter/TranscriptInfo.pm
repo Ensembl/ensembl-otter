@@ -199,7 +199,7 @@ sub class {
  Usage   : $obj->cds_start_not_found($newval)
  Function: 
  Example : 
- Returns : value of cds_start_not_found
+ Returns : value of cds_start_not_found, or zero if not set
  Args    : newvalue (optional)
 
 
@@ -222,7 +222,7 @@ sub cds_start_not_found {
        
        $obj->{'cds_start_not_found'} = $value;
     }
-    return $obj->{'cds_start_not_found'};
+    return $obj->{'cds_start_not_found'} || 0;
 }
 
 =head2 cds_end_not_found
@@ -231,7 +231,7 @@ sub cds_start_not_found {
  Usage   : $obj->cds_start_not_found($newval)
  Function: 
  Example : 
- Returns : value of cds_end_not_found
+ Returns : value of cds_end_not_found, or zero if not set
  Args    : newvalue (optional)
 
 
@@ -254,7 +254,7 @@ sub cds_end_not_found {
        }
       $obj->{'cds_end_not_found'} = $value;
     }
-    return $obj->{'cds_end_not_found'};
+    return $obj->{'cds_end_not_found'} || 0;
 }
 
 
@@ -265,7 +265,7 @@ sub cds_end_not_found {
  Usage   : $obj->mRNA_start_not_found($newval)
  Function: 
  Example : 
- Returns : value of mRNA_start_not_found
+ Returns : value of mRNA_start_not_found, or zero if not set
  Args    : newvalue (optional)
 
 
@@ -286,7 +286,7 @@ sub mRNA_start_not_found {
        }
       $obj->{'mRNA_start_not_found'} = $value;
     }
-    return $obj->{'mRNA_start_not_found'};
+    return $obj->{'mRNA_start_not_found'} || 0;
 }
 
 =head2 mRNA_end_not_found
@@ -295,7 +295,7 @@ sub mRNA_start_not_found {
  Usage   : $obj->mRNA_start_not_found($newval)
  Function: 
  Example : 
- Returns : value of mRNA_end_not_found
+ Returns : value of mRNA_end_not_found, or zero if not set
  Args    : newvalue (optional)
 
 
@@ -316,7 +316,7 @@ sub mRNA_end_not_found {
        }
       $obj->{'mRNA_end_not_found'} = $value;
     }
-    return $obj->{'mRNA_end_not_found'};
+    return $obj->{'mRNA_end_not_found'} || 0;
 }
 =head2 remark
   
@@ -474,18 +474,6 @@ sub equals {
 	$self->throw("[$obj] is not a Bio::Otter::TranscriptInfo");
     }
 
-    my ($cdss,$cdse,$rnas,$rnae) = ("","","","");
-
-    if (defined($self->cds_start_not_found))  { $cdss = $self->cds_start_not_found; }
-    if (defined($self->cds_end_not_found))    { $cdse = $self->cds_end_not_found; }
-    if (defined($self->mRNA_start_not_found)) { $rnas = $self->mRNA_start_not_found; } 
-    if (defined($self->mRNA_end_not_found))   { $rnae = $self->mRNA_end_not_found; }
-
-    my ($obj_cdss,$obj_cdse,$obj_rnas,$obj_rnae) = ("","","","");
-    if (defined($obj->cds_start_not_found))  { $obj_cdss = $obj->cds_start_not_found; }
-    if (defined($obj->cds_end_not_found))    { $obj_cdse = $obj->cds_end_not_found; }
-    if (defined($obj->mRNA_start_not_found)) { $obj_rnas = $obj->mRNA_start_not_found; } 
-    if (defined($obj->mRNA_end_not_found))   { $obj_rnae = $obj->mRNA_end_not_found; }
 
     $self->validate;
     $obj->validate;
@@ -503,27 +491,31 @@ sub equals {
         return 0;
      }
     
+     my $cdss = $self->cds_start_not_found;
+     my $cdse = $self->cds_end_not_found;
+     my $rnas = $self->mRNA_start_not_found;
+     my $rnae = $self->mRNA_end_not_found;
+
+     my $obj_cdss = $obj->cds_start_not_found;
+     my $obj_cdse = $obj->cds_end_not_found;
+     my $obj_rnas = $obj->mRNA_start_not_found;
+     my $obj_rnae = $obj->mRNA_end_not_found;
      if( $cdss != $obj_cdss ) {
-       print STDERR "FOUND DIFF : Cds start different $cdse : $obj_cdss\n";
+       print STDERR "FOUND DIFF : Cds start not found different $cdse : $obj_cdss\n";
+       return 0;
      }
      if( $cdse != $obj_cdse ) {
-       print STDERR "FOUND DIFF : Cds end different $cdse : $obj_cdse\n";
+       print STDERR "FOUND DIFF : Cds end not found different $cdse : $obj_cdse\n";
+       return 0;
      }
      if( $rnas != $obj_rnas ) {
-       print STDERR "FOUND DIFF : Rna start different $rnas : $obj_rnas\n";
+       print STDERR "FOUND DIFF : Rna start not found different $rnas : $obj_rnas\n";
+       return 0;
      }
      if( $rnae != $obj_rnae ) {
-       print STDERR "FOUND DIFF : Rna end different $rnae : $obj_rnae\n";
+       print STDERR "FOUND DIFF : Rna end not found different $rnae : $obj_rnae\n";
+       return 0;
      }
-        
-#	$self->cds_start_not_found  != $obj->cds_start_not_found   ||
-#	$self->cds_end_not_found    != $obj->cds_end_not_found   ||
-#	$self->mRNA_start_not_found != $obj->mRNA_start_not_found   ||
-#	$self->mRNA_end_not_found   != $obj->mRNA_end_not_found) 
-	
-    #{          
-#	return 0;
-    #}
 
     my @remark1 = $self->remark;
     my @remark2 = $self->remark;

@@ -208,30 +208,13 @@ sub XML_to_otter {
       $tl_end       = undef;
       $tl_stable_id = undef;
     } elsif (/<cds_start_not_found>(.*)<\/cds_start_not_found>/) {
-
-      if (defined($1) && $1 ne "") {
-
-        #if (defined($1)) {
-        $traninfo->cds_start_not_found(($1 eq "") ? 0 : $1);
-      }
+        $traninfo->cds_start_not_found($1);
     } elsif (/<cds_end_not_found>(.*)<\/cds_end_not_found>/) {
-      if (defined($1) && $1 ne "") {
-
-        #if (defined($1)) {
-        $traninfo->cds_end_not_found(($1 eq "") ? 0 : $1);
-      }
+        $traninfo->cds_end_not_found($1);
     } elsif (/<mRNA_start_not_found>(.*)<\/mRNA_start_not_found>/) {
-      if (defined($1) && $1 ne "") {
-
-        #if (defined($1)) {
-        $traninfo->mRNA_start_not_found(($1 eq "") ? 0 : $1);
-      }
+        $traninfo->mRNA_start_not_found($1);
     } elsif (/<mRNA_end_not_found>(.*)<\/mRNA_end_not_found>/) {
-      if (defined($1) && $1 ne "") {
-
-        #if (defined($1)) {
-        $traninfo->mRNA_end_not_found(($1 eq "") ? 0 : $1);
-      }
+        $traninfo->mRNA_end_not_found($1);
     } elsif (/<transcript_class>(.*)<\/transcript_class>/) {
       if (defined($1) && $1 ne "") {
         $traninfo->class(new Bio::Otter::TranscriptClass(-name => $1));
@@ -1049,7 +1032,7 @@ sub ace_to_otter {
                     $curr_seq->{CDS_end}   = $2;
                 }
                 elsif (/^End_not_found/) {
-                    $curr_seq->{End_not_found} = 0;
+                    $curr_seq->{End_not_found} = 1;
                 }
                 elsif (/^Start_not_found $INT/x) {
                     #print STDERR "start not found with $1\n";    
@@ -1057,7 +1040,7 @@ sub ace_to_otter {
                 }
                 elsif (/^Start_not_found/) {
                     ### May be cause of exon phase problem?  Is zero correct?
-                    $curr_seq->{Start_not_found} = 0;
+                    $curr_seq->{Start_not_found} = -1;
                 }
                 elsif (/^Method $STRING/x) {
                     $curr_seq->{Method} = $1;
@@ -1238,7 +1221,7 @@ sub ace_to_otter {
             # Set the phase of the transcript
             my $phase = $seq_data->{Start_not_found};
 
-            if (defined($phase) && $phase != 0) {
+            if (defined($phase) && $phase != -1) {
                 $phase--;
             } else {
                 $phase = 0;
