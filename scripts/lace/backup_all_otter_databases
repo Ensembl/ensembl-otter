@@ -7,6 +7,11 @@ use DBI;
 use File::Path 'rmtree';
 
 {
+    {
+        my $path = $ENV{'PATH'};
+        $ENV{'PATH'} = "/usr/local/bin:/usr/apps/bin:$path";
+    }
+
     my $user = 'root';
     my $host = 'humsrv1';
     # Can add password with netrc if needed
