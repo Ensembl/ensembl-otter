@@ -26,16 +26,39 @@ use Bio::EnsEMBL::Ace::Filter::SimpleFeature;
 
 use Hum::EnsCmdLineDB;
 
+# for use of submissions database, link with ana_notes
+use Hum::Submission qw{ acetime prepare_statement submission_disconnect submission_user};
+use Hum::AnaStatus qw{ list_active_tasks annotator_full_name };
+use Hum::AnaStatus::Sequence;
+use Hum::AnaStatus::EnsAnalysis;
+use Hum::AnaStatus::EnsAnalysisDB;
+use Hum::SubmissionVersion;
 
 {   
-        my $usage = sub{ exec('perldoc', $0) };
+    my $usage = sub{ exec('perldoc', $0) };
+
+    # connect to submissions database
+
+    # get the machine/port for access to otter
+
     my $host = 'ecs1d';
     my $port = 39312;
     my $ace_tar = '/nfs/team71/analysis/jgrg/work/ace_skeleton/lace_acedb.tar';
+    if($ENV{"LACE_LOCAL"}){
+	$ace_tar=$ENV{"LACE_LOCAL"}."/lace_acedb.tar";
+    }
     my $recover = '';
     my $write_flag  = 0;
     my $unlock_flag = 0;
-    
+
+    # parameters passed by ana_notes
+    # user (to allow getpwuid to be overridden)
+    my($user);
+    # set_name (from ana_notes)
+    my($set_name);
+    my($path);
+    my $open_spandit=1;
+    my $multiple_slices=1;
     
     GetOptions(
         'view'      => sub{ $write_flag = 0 },
@@ -46,10 +69,36 @@ use Hum::EnsCmdLineDB;
         'write!'    => \$write_flag,
         'recover=s' => \$recover,
         'unlock!'   => \$unlock_flag,
+	'user=s'    => \$user,
+        'set=s'     => \$set_name,
+	'path=s'    => \$path,
+	'spandit!'  => \$open_spandit,
          ) or $usage->();
     die "Can't specify both write and unlock\n"
         if $unlock_flag and $write_flag;
+
+    # check global access to database
+    exit 0 unless Hum::SubmissionVersion::check_version();
+    
+    # create closure containing user, referred to from Submission::get_user
+    $user=submission_user($user);
+
+    # create subroutine that call be called from anywhere to return
+    # user
+    #{
+	#sub main_user {
+	    #return $user;
+	#}
+    #}
+
+    # from list of clones, create objects to get accessions, ensdb etc.
+    my @accessions=@ARGV;
    
+    # use submissions to get otterdb, host, port from set_name
+    # needed even for a 'recover'
+    my $otter_db_name;
+    ($otter_db_name,$host,$port)=get_otter_db_name($set_name);
+
     my $cl = Bio::Otter::Lace::Client->new;
     $cl->host($host);
     $cl->port($port);
@@ -64,26 +113,82 @@ use Hum::EnsCmdLineDB;
         $db->home($recover);
         $db->recover_slice_dataset_hash;
     } else { 
-        ### Need a Dataset chooser
-        my $ds = $cl->get_DataSet_by_name('otter_chr9p12');
-        
-        
-        ### Need a CloneSequence chooser
-        my $cs_list = $ds->get_all_CloneSequences;
-        $ds->selected_CloneSequences([@$cs_list[2..7]]);
 
+        my $ds = $cl->get_DataSet_by_name($otter_db_name);
         
+        my $cs_list = $ds->get_all_CloneSequences;
+
+	# find extent of selected clones
+	# (build a slice containing any unselected clones)
+	my($ist,$ied,$first);
+	my %accessions=map{$_,1}@accessions;
+	for(my $i=0;$i<scalar(@$cs_list);$i++){
+	    my $acc=$cs_list->[$i]->accession;
+	    if($accessions{$acc}){
+		unless($first){
+		    $ist=$i;
+		    $first=1;
+		}
+		$ied=$i;
+	    }
+	}
+        $ds->selected_CloneSequences([@$cs_list[$ist..$ied]]);
+        #$ds->selected_CloneSequences([@$cs_list[3..4]]);
+        #$ds->selected_CloneSequences([@$cs_list[6..6]]);
+
+	# get ensdb database handle for slice, based on pipeline for each clone
+	# checking that all clones point to same ensdb pipeline db
+	my $ensdb;
+	{
+
+	    # get full list of accessions to define @prop
+	    my @prop;
+	    foreach my $cs (@$cs_list[$ist..$ied]){
+		my $pr={};
+		$pr->{'accession'}=$cs->accession;
+		$pr->{'sv'}=$cs->sv;
+		push(@prop,$pr);
+	    }
+
+	    my $ensdb_id;
+	    my $acc_anaseq=get_anastatus_sequences(@prop);
+	    foreach my $acc (keys %$acc_anaseq) {
+		my $seq=$$acc_anaseq{$acc};
+		my $name=$seq->full_sequence_name;
+		my @ens_ana = Hum::AnaStatus::EnsAnalysis
+		    ->fetch_all_complete_for_ana_seq_id($seq->ana_seq_id);
+		print "WARN multiple pipeline entries for $name\n" if scalar(@ens_ana)>1;
+		my $ensdb_id_new=$ens_ana[0]->ensembl_db_id;
+		if($ensdb_id){
+		    if($ensdb_id ne $ensdb_id_new){
+			die "FATAL $acc connected to different ensembl database";
+		    }
+		}else{
+		    $ensdb_id=$ensdb_id_new;
+		    $ensdb = $ens_ana[0]->get_EnsAnalysisDB;
+		}
+		print "got $acc: $ensdb_id\n";
+	    }
+	}
+        
+	print "$set_name: $otter_db_name, $host, $port\n";
+	print join(',',@accessions)." $ist-$ied\n";
+	#exit 0;
+
         
         $db->make_database_directory;
         $db->write_otter_acefile;
         
-
-        
-        ### Fetch data for CloneSequences
-        fetch_sanger_data($ds, $db);     ## not needed now? now that I am using my own filters
+	### Fetch data for CloneSequences
+        fetch_sanger_data($ds, $db, $ensdb);
         #debug_print_sequence($ds, $db);
+
+	### Disconnect from pipeline db (wrong???)
+	#$ensdb->disconnect_all_ensembl_dbs;
         
-        
+	### Fetch ensembl genes
+	#fetch_ensembl_genes($ds, $db);
+
         unless ($db->initialize_database) {
             die "Error initialzing database";
         }
@@ -92,6 +197,11 @@ use Hum::EnsCmdLineDB;
     if ($unlock_flag) {
         $db->unlock_all_slices;
     } else {
+
+	### spandit - the new sequence coordinate editor
+	fork_spandit($db->home) if $write_flag or $open_spandit;
+	
+	######### LAUNCH XACE ON DATABASE #########
         system('xace', $db->home);
     }
 
@@ -114,28 +224,25 @@ use Hum::EnsCmdLineDB;
 }
 
 
-
+sub fetch_ensembl_genes{
+    my($dataset,$acedb)=@_;
+    my $factory = Bio::EnsEMBL::Ace::DataFactory->new;
+}
 
 ##  creates a data factory and adds all the appropriate filters to it. It then produces a slice from
 ##  the  ensembl db (using the $dataset coords) and produces output based on that slice in sanger.ace 
 sub fetch_sanger_data {
-    my( $dataset, $acedb ) = @_;
+    my( $dataset, $acedb, $ensdb ) = @_;
 
     my $percent_identity_cutoff = undef; ## change this if a cutoff value is reqired
 
 
     # create new datafactory object - cotains all ace filters and produces the data from these
     my $factory = Bio::EnsEMBL::Ace::DataFactory->new;       
-#    $factory->add_all_Filters($ensdb);   
    
-    #connect to database          
-    Hum::EnsCmdLineDB::do_getopt();
-    my $ens_db = Hum::EnsCmdLineDB::connect();
 
-   
-   
    ##----------code to add all of the ace filters to data factory-----------------------------------
-        
+    my $ens_db=$ensdb->db_adaptor;
 
     ## get analysis adaptor
     my $ana_adaptor = $ens_db->get_AnalysisAdaptor or die "analysis adaptor";
@@ -711,7 +818,42 @@ sub get_nearest {
     return $closest;
 }
 
+# get otter db details from submissions database (schema >0.21)
+# from set_name 
+sub get_otter_db_name{
+    my($set_name)=@_;
+    my $sth = prepare_statement(qq{
+	SELECT d.db_name,d.host,d.port
+	FROM ana_set a, ana_ensembl_db d
+	WHERE a.set_name='$set_name'
+	    and a.ensembl_db_id = d.ensembl_db_id
+        });
+    $sth->execute;
+    my( @ret );
+    my ($nam,$host,$port);
+    my $n=0;
+    while (@ret = $sth->fetchrow) {
+	($nam,$host,$port)=@ret;
+	$n++;
+    }
+    die "Set '$set_name' not found\n" if $n==0;
+    die "ERROR: Set '$set_name' found multiple times\n" if $n>1;
+    return $nam,$host,$port;
+}
 
+sub fork_spandit {
+    my( $path ) = @_;
+    
+    if (my $pid = fork) {
+        return;
+    }
+    elsif (defined $pid) {
+        exec('spandit', '-path', $path);
+    }
+    else {
+        warn "Unable to fork : $!";
+    }
+}
 
 __END__
 

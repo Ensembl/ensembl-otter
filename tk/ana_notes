@@ -19,14 +19,15 @@ use Hum::SubmissionVersion;
 use Tk::ROText;
 
 my $user;
-my $nospangle;
+my $write;
+my $set_name;
 {
     my $list_sets = 0;
     GetOptions(
         'help!'     => \&useage,
         'list!'     => \$list_sets,
 	'user:s'    => \$user,
-        'ns'        => \$nospangle,
+	'write'	    => \$write,
         ) or useage();
 
     # check global access to database
@@ -50,7 +51,7 @@ my $nospangle;
         exit;
     }
 
-    my $set_name = shift(@ARGV) || useage();
+    $set_name = shift(@ARGV) || useage();
     die "Unknown elements on command line: '@ARGV'\n" if @ARGV;
     
     # annotator is set to user, if has RW access, else set to '' for R access
@@ -161,7 +162,8 @@ my $nospangle;
 
         my $run_lace = sub{
             watch_cursor($mw);
-            my @sequence_name_list = list_selected_sequence_names($canvas);
+            #my @sequence_name_list = list_selected_sequence_names($canvas);
+            my @sequence_name_list = list_selected_accessions($canvas);
             return unless @sequence_name_list;
             fork_lace_process($annotator, @sequence_name_list);
             default_cursor($mw);
@@ -468,16 +470,15 @@ sub default_cursor {
             return 1;
         }
         elsif (defined $pid) {
-           my @lace = ('lace', '-path', $lace_dir);
-            push(@lace, '-ns') if $nospangle;
-            if ($annotator) {
-                push(@lace, '-user', $user);
-            } else {
-                push(@lace, '-view');
-            }
-            exec(@lace, @seq_name_list);
-            #exec('lace', '-path', $lace_dir, '-view', '-noens', @seq_name_list);
-            #exec('lace', '-path', $lace_dir, '-user', $user, $other_param, @seq_name_list);
+            my @lace = ('otter', '-path', $lace_dir, '-set', $set_name);
+	    # RO unless recognised annotator + asked for write
+	    if ($annotator) {
+		push(@lace, '-user', $user);
+		if ($write){
+		    push(@lace, '-write',);
+		}	
+	    }
+	    exec(@lace, @seq_name_list);
         }
         else {
             die "Error: Can't fork : $!";
@@ -631,6 +632,19 @@ sub list_selected_sequence_names {
     return @sequence_name_list;
 }
 
+sub list_selected_accessions {
+    my( $canvas ) = @_;
+    
+    my @selected_objects = $canvas->find('withtag', 'selected');
+    my( @sequence_name_list );
+    foreach my $obj (@selected_objects) {
+        my ($sequence_name) = map /accession=(.+)/, $canvas->gettags($obj); 
+        die "Found selected object without accession" unless $sequence_name;
+        push(@sequence_name_list, $sequence_name);
+    }
+    return @sequence_name_list;
+}
+
 sub set_reviewed {
     my( $user, $comment, @ana_seq_id ) = @_;
 
@@ -761,7 +775,19 @@ sub make_chooser_map {
     confess "No set_id given" unless $set_id;
     
     print STDERR "Getting set notes...";
-    
+   
+    # FIXME
+    # left join added to get accession.
+    # Not really correct as sometimes sequence_name does not match project_name.
+    # Correct syntax should go via project_dump table (see new_from_accession in AnaStatus/Sequence.pm)
+    # current syntax:
+    #   LEFT JOIN project_acc p
+    #     ON s.sequence_name = p.project_name
+    # required syntax (doesn't work)
+    #    LEFT JOIN project_acc p
+    #     ON (s.seq_id = d.seq_id
+    #    AND d.is_current = 'Y'
+    #    AND d.sanger_id = p.sanger_id)
     my $sql = qq{
         SELECT ss.rank
           , s.sequence_name
@@ -771,13 +797,17 @@ sub make_chooser_map {
           , r.review_time
           , r.review_comment
           , a.is_current
+          , p.accession
         FROM sequence s
           , ana_sequence a
           , ana_status st
           , species_chromosome c
           , ana_sequence_set ss
+          , project_dump d
         LEFT JOIN ana_sequence_review r
           ON a.ana_seq_id = r.ana_seq_id
+        LEFT JOIN project_acc p
+          ON s.sequence_name = p.project_name
         WHERE s.seq_id = a.seq_id
           AND a.ana_seq_id = st.ana_seq_id
           AND s.chromosome_id = c.chromosome_id
@@ -792,11 +822,11 @@ sub make_chooser_map {
 
     my(  $rank,     $seq_name,   $ana_seq_id,
          $status,   $uname,      $date,
-         $comment,  $is_current  );
+         $comment,  $is_current, $accession  );
     $sth->bind_columns(
         \$rank,    \$seq_name,  \$ana_seq_id,
         \$status,  \$uname,     \$date,
-        \$comment, \$is_current  );
+        \$comment, \$is_current,\$accession  );
     
     my( @map );
     my $last_ana_seq_id = 0;
@@ -811,7 +841,15 @@ sub make_chooser_map {
         $last_rank = $rank;
         
         ($date) = $date =~ /(\d{4}-\d\d-\d\d)/ if $date;
-        $status = status_name($status);
+
+	# th 11/06/03 replaced status with accession
+        #$status = status_name($status);
+	if($accession){
+	    $status = $accession;
+	}else{
+	    $status = '';
+	}
+
         if ($is_current eq 'Y') {
             push(@map,
                 [ $ana_seq_id, $rank,  $seq_name,
