@@ -119,6 +119,20 @@ sub contig_strand {
     return $self->{'_contig_strand'};
 }
 
+# unfinished analysis hash { logic_name => analysis_id, ... }
+sub unfinished{
+    my $self = shift;
+    if(@_){
+	my $unfinished = shift;
+	if(ref($unfinished) eq 'HASH'){
+	    $self->{'_unfinished'} = $unfinished;
+	}elsif(!defined($unfinished)){
+	    $self->{'_unfinished'} = $unfinished;	    
+	}
+    }
+    return $self->{'_unfinished'} || {};
+}
+
 sub add_SequenceNote {
     my( $self, $note ) = @_;
     
