@@ -1,0 +1,487 @@
+#!/usr/local/ensembl/bin/perl
+
+use strict;
+
+$| = 1;
+
+use Bio::EnsEMBL::Gene;
+use Bio::EnsEMBL::Exon;
+use Bio::EnsEMBL::Transcript;
+use Bio::EnsEMBL::DBSQL::DBAdaptor;
+use Bio::Otter::Converter;
+
+use Getopt::Long;
+
+my %cds;
+my %genes;
+my %exons;
+my %trans;
+
+my $host = 'ecs4';
+my $user = 'ensadmin';
+my $pass = 'ensembl';
+my $port = 3350;
+my $dbname = 'steve_ncbi_feb04_all';
+my @chromosomes;
+my $analtype = 'ncbigene';
+my $path = 'NCBI35';
+
+
+
+$| = 1;
+
+&GetOptions(
+  'host:s'   => \$host,
+  'user:s'   => \$user,
+  'dbname:s' => \$dbname,
+  'path:s'   => \$path,
+  'pass:s'   => \$pass,
+  'port:n'   => \$port,
+  'chromosomes:s' => \@chromosomes,
+  'analtype' => $analtype,
+);
+
+if (scalar(@chromosomes)) {
+  @chromosomes = split(/,/,join(',',@chromosomes));
+}
+
+my $db = new Bio::EnsEMBL::DBSQL::DBAdaptor(-host => $host,
+                                            -user => $user,
+                                            -pass => $pass,
+                                            -port => $port,
+                                            -dbname => $dbname);
+
+$db->assembly_type($path);
+
+my $analysis = new Bio::EnsEMBL::Analysis(-logic_name => $analtype);
+
+my $slice = $db->get_SliceAdaptor->fetch_by_chr_name($chromosomes[0]);
+
+my $nbetween_gene;
+my $genename;
+my %cds_id_hash;
+my %exon_id_hash;
+
+while (<>) {
+  chomp;
+
+  
+  my @arr = split (' ', $_, 9);
+  my $start    = $arr[3];
+  my $end      = $arr[4];
+  my $strand   = $arr[6];
+  my $phase    = $arr[7];
+
+  my @arr2 = split (/\;/, $arr[8]);
+
+  my %hashy;
+  foreach my $str (@arr2) {
+    my ($key, $val) = split (' ', $str, 2);
+
+    # print "Found key $key $val\n";
+    $key =~ s/ //g;
+    $key =~ s/\"//g;
+    $val =~ s/\"//g;
+    if ($key ne "Description") {
+      $val =~ s/^ +//;
+      $val =~ s/ +$//;
+      $key =~ s/\t//g;
+      $val =~ s/\t//g;
+    } else {
+      $val =~ s/\t/ /g;
+    }
+
+    if (!exists($hashy{$key})) {
+      $hashy{$key} = $val;
+    }
+
+    # print "Found key $key $val\n";
+  }
+#  if ($arr[2] eq "gene") {
+#
+#    if (!$nbetween_gene && $genename) {
+#      delete($genes{$genename});
+#      print "Deleted empty gene $genename\n";
+#    }
+#    my $id = $hashy{gene_id};
+#
+#    $genename = $id;
+#    $nbetween_gene = 0;
+#
+#    print "Id is now $id\n";
+#    $genes{$id}{$id}{start}  = $start;
+#    $genes{$id}{$id}{end}    = $end;
+#    $genes{$id}{$id}{strand} = $strand;
+#
+#    if (!defined($genes{$id}{$id}{values}{Type})) {
+#      $genes{$id}{$id}{values} = \%hashy;
+#    }
+  if (exists($hashy{gene_id})) {
+    my $id = $hashy{gene_id};
+
+    $genes{$id}{$id}{values} = {};
+  } 
+  if ($arr[2] eq "exon") {
+
+    my $id = $hashy{transcript_id};
+
+    $id =~ s/unknown_transcript/u_t/;
+
+    my $geneid = $hashy{gene_id};
+
+    #print "In exon geneid = $geneid tranid = $id\n";
+    if (!defined($exons{$geneid}{$id}{exons})) {
+      $exons{$geneid}{$id}{exons} = [];
+    }
+    $nbetween_gene++;
+    my %exonhash;
+    $exonhash{start}  = $start;
+    $exonhash{end}    = $end;
+    $exonhash{strand} = $strand;
+    $exonhash{values} = \%hashy;
+    push (@{ $exons{$geneid}{$id}{exons} }, \%exonhash);
+
+  } elsif ($arr[2] eq "CDS") {
+
+    my $id = $hashy{transcript_id};
+
+    $id =~ s/unknown_transcript/u_t/;
+    my $geneid = $hashy{gene_id};
+    #print "In CDS geneid = $geneid tranid = $id\n";
+
+    if (!defined($cds{$geneid}{$id}{cds})) {
+      $cds{$geneid}{$id}{cds} = [];
+    }
+    $nbetween_gene++;
+
+    my %cdshash;
+    $cdshash{start}  = $start;
+    $cdshash{end}    = $end;
+    $cdshash{strand} = $strand;
+    $cdshash{phase}  = $phase;
+    $cdshash{values} = \%hashy;
+    push (@{ $cds{$geneid}{$id}{cds} }, \%cdshash);
+
+  } elsif ($arr[2] eq "stop_codon") {
+
+    my $id = $hashy{transcript_id};
+
+    $id =~ s/unknown_transcript/u_t/;
+    my $geneid = $hashy{gene_id};
+
+    $cds{$geneid}{$id}{hasstop}=1;
+
+    my %stophash;
+    $stophash{start}  = $start;
+    $stophash{end}    = $end;
+    $stophash{strand} = $strand;
+    $stophash{phase}  = $phase;
+    push @{$cds{$geneid}{$id}{stop}}, \%stophash;
+  }
+}
+
+foreach my $geneid (keys %genes) {
+  print STDERR "Gene id " . $geneid . "\n";
+
+  foreach my $geneid2 (keys %{ $genes{$geneid} }) {
+    print STDERR "Gene id 2  $geneid2\n";
+
+    my %values = %{ $genes{$geneid}{$geneid2}{values} };
+
+    foreach my $key (keys %values) {
+    #  print STDERR "Gene Key $key " . $values{$key} . "\n";
+    }
+
+    my $gene     = new Bio::EnsEMBL::Gene;
+    $gene->analysis($analysis);
+    $gene->type($analtype);
+
+    #SMJS Added and then removed
+    $gene->stable_id($geneid);
+    $gene->version(1);
+    $gene->created(time);
+    $gene->modified(time);
+
+
+# HACK HACK HACK
+    if (!defined($exons{$geneid}) && defined($cds{$geneid})) {
+      print "hacking\n";
+      foreach my $tid (keys %{ $cds{$geneid} }) {
+        $exons{$geneid}{$tid}{exons} = [];
+        push @{$exons{$geneid}{$tid}{exons}}, @{$cds{$geneid}{$tid}{cds}};
+      }
+ 
+    }
+# End hack
+
+    my @tranids = keys(%{ $exons{$geneid} });
+
+    foreach my $tranid (@tranids) {
+
+      print STDERR " transcript $tranid\n";
+
+      my $ecount = 1;
+      my $tran     = new Bio::EnsEMBL::Transcript;
+
+      $gene->add_Transcript($tran);
+
+      $tran->stable_id($tranid);
+      $tran->version(1);
+      $tran->created(time);
+      $tran->modified(time);
+
+      my %exhash = %{ $exons{$geneid}{$tranid} };
+      foreach my $key (keys %exhash) {
+      #  print STDERR "Key $key " . $exhash{$key} . "\n";
+      }
+      my @exons = @{ $exons{$geneid}{$tranid}{exons} };
+
+      foreach my $exon (@exons) {
+        my $newexon = new Bio::EnsEMBL::Exon(
+          -start  => $exon->{start},
+          -end    => $exon->{end},
+          -strand => $exon->{strand},
+        );
+
+        $tran->add_Exon($newexon);
+        $newexon->stable_id($tran->stable_id . ".$ecount");
+        $newexon->version(1);
+        $newexon->created(time);
+        $newexon->modified(time);
+        $ecount++;
+        $newexon->phase(-1);
+        $newexon->end_phase(-1);
+        $newexon->contig($slice);
+        $newexon->adaptor($db->get_ExonAdaptor);
+
+
+        foreach my $key (keys %{ $exon->{values} }) {
+        #  print STDERR "Exon value key $key " . $exon->{values}{$key} . "\n";
+        }
+      }
+
+      if (exists($cds{$geneid}{$tranid}{cds})) {
+
+        my @cdsexons = @{ $cds{$geneid}{$tranid}{cds} };
+        my $mincds = -1;
+        my $maxcds = -1;
+        foreach my $cdsex (@cdsexons) {
+          if ($mincds == -1) {
+            $mincds = $cdsex->{start};
+          }
+          if ($maxcds == -1) {
+            $maxcds = $cdsex->{end};
+          }
+          if ($cdsex->{start} < $mincds) {
+            $mincds = $cdsex->{start};
+          }
+          if ($cdsex->{end} > $maxcds) {
+            $maxcds = $cdsex->{end};
+          }
+          print STDERR "  exon "
+              . $cdsex->{start} . " "
+              . $cdsex->{end} . " "
+              . $cdsex->{strand} . "\n";
+        }
+        print STDERR "Min / max " . $mincds . " " . $maxcds . "\n";
+
+        my $translation = new Bio::EnsEMBL::Translation;
+
+        $translation->stable_id($tran->stable_id);
+        $translation->version(1);
+
+        $tran->translation($translation);
+
+        $tran->sort;
+        my @exons = @{ $tran->get_all_Exons };
+
+        my $end_hack_flag=0;
+
+        my $i;
+        for ($i=0; $i<scalar(@exons); $i++) {
+          my $ex=$exons[$i];
+          if ($mincds >= $ex->start && $mincds <= $ex->end) {
+            if ($ex->strand == 1) {
+              $translation->start_Exon($ex);
+              $translation->start($mincds - $ex->start + 1);
+            } else {
+              $translation->end_Exon($ex);
+              $translation->end($ex->end - $mincds + 1);
+
+              if (exists($cds{$geneid}{$tranid}{hasstop})) {
+                if ($translation->end+3 > $ex->length) {
+                  print STDERR "WARNING: Adding stop pushes end into next exon\n";
+
+                  if ($i < scalar(@exons)-1) {
+
+                    $end_hack_flag=(3 - ($ex->length - $translation->end));
+
+                    $translation->end_Exon($exons[$i+1]);
+                    $translation->end(3 - ($ex->length - $translation->end));
+
+                    print STDERR "New end (minus strand) = " . 
+                                 ($exons[$i+1]->end - $translation->end + 1) . "\n";
+                  } else {
+		    print STDERR "In ELSE!!!!\n";
+
+                    $ex->end($ex->end + $ex->length - $translation->end + 3);
+                    $translation->end($translation->end + 3);
+                  }
+
+                } else {
+                  $translation->end($translation->end + 3);
+                }
+              }
+            }
+          }
+
+          if ($maxcds >= $ex->start && $maxcds <= $ex->end) {
+
+            if ($ex->strand == 1) {
+
+              $translation->end_Exon($ex);
+              $translation->end($maxcds - $ex->start + 1);
+              if (exists($cds{$geneid}{$tranid}{hasstop})) {
+
+                if ($translation->end+3 > $ex->length) {
+
+                  print STDERR "WARNING: Adding stop pushes end into next exon\n";
+
+                  if ($i < scalar(@exons)-1) {
+
+                    $end_hack_flag=(3 - ($ex->length - $translation->end));
+
+
+                    $translation->end_Exon($exons[$i+1]);
+                    $translation->end(3 - ($ex->length - $translation->end));
+
+                    print STDERR "New end (plus strand) = " . 
+                                 ($exons[$i+1]->start + $translation->end - 1) . "\n";
+
+                  } else {
+		    print STDERR "In ELSE!!!!\n";
+                    $ex->end($ex->end + $ex->length - $translation->end + 3);
+                    $translation->end($translation->end + 3);
+                  }
+                } else {
+                  $translation->end($translation->end + 3);
+                }
+              }
+            } else {
+              $translation->start_Exon($ex);
+              $translation->start($ex->end - $maxcds + 1);
+            }
+          }
+        }
+
+        # Finally the phase
+        my @cdsexons = @{ $cds{$geneid}{$tranid}{cds} };
+
+        if ($exons[0]->strand == 1) {
+          @exons = sort { $a->start <=> $b->start } @exons;
+          @cdsexons = sort { $a->{start} <=> $b->{start} } @cdsexons;
+
+          if (exists($cds{$geneid}{$tranid}{stop}) && 
+              $cds{$geneid}{$tranid}{stop}->[0]->{start} != $cdsexons[$#cdsexons]->{end}+1 &&
+              $end_hack_flag != 3) {
+            print STDERR "ERROR: Last CDS exon doesn't abut stop codon for $tranid strand 1\n";
+          }
+          
+        } else {
+          @exons = sort { $b->start <=> $a->start } @exons;
+          @cdsexons = sort { $b->{start} <=> $a->{start} } @cdsexons;
+
+          if (exists($cds{$geneid}{$tranid}{stop}) && 
+              $cds{$geneid}{$tranid}{stop}->[0]->{end} != $cdsexons[$#cdsexons]->{start}-1 &&
+              $end_hack_flag != 3) {
+            print STDERR "ERROR: Last CDS exon doesn't abut stop codon for $tranid strand -1\n";
+          }
+        }
+        my $found_start = 0;
+        my $found_end   = 0;
+        #OLD: my $phase       = 0;
+        my $test_phase       = 0;
+
+        foreach my $exon (@exons) {
+          if ($found_start && !$found_end) {
+            #OLD: $exon->phase($phase);
+            #OLD: $exon->end_phase(($exon->length + $exon->phase) % 3);
+            #OLD: $phase = $exon->end_phase;
+
+            shift @cdsexons;
+
+            if (!scalar(@cdsexons)) {
+              print STDERR "WARNING: Fell off end of CDS exon array. end_hack_flag = $end_hack_flag\n";
+              if ($end_hack_flag) {
+                $exon->phase($test_phase);            
+              }
+            } else {
+              $exon->phase($cdsexons[0]->{phase});            
+            }
+
+
+            if ($test_phase != $exon->phase) {
+              print STDERR "WARNING: Phase change between exons\n";
+            }
+
+            $exon->end_phase(($exon->length + $exon->phase) % 3);
+
+            $test_phase = $exon->end_phase;
+
+          }
+          if ($translation->start_Exon == $exon) {
+            #OLD: $exon->phase($phase);
+            # Is this right?
+            #OLD: $exon->end_phase(($exon->length + $exon->phase) % 3);
+            #OLD: $phase       = $exon->end_phase;
+            #OLD: $found_start = 1;
+
+            $exon->phase($cdsexons[0]->{phase});            
+
+            # Yuck this is horrible - if there's an end hack and its a single exon cds then use
+            # the end of the exon for calculating length (because the cds now extends into the next exon)
+
+            if ($end_hack_flag && scalar(@cdsexons) == 1) {
+              $exon->end_phase((($exon->end-$cdsexons[0]->{start}+1) + $exon->phase) % 3);
+            } else { # Normal case
+              $exon->end_phase((($cdsexons[0]->{end}-$cdsexons[0]->{start}+1) + $exon->phase) % 3);
+            }
+
+            $test_phase = $exon->end_phase;
+
+            $found_start = 1;
+          }
+          if ($translation->end_Exon == $exon) {
+            $found_end = 1;
+          }
+        }
+      } else {
+        print STDERR "No CDS for $geneid $tranid\n"
+      }
+    }
+
+    eval {
+      Bio::Otter::Converter::prune_Exons($gene);
+
+      $gene->transform;
+
+      foreach my $t (@{$gene->get_all_Transcripts}) {
+        if (defined($t->translation)) {
+           $t->translation->version(1);
+        }
+      }
+
+      # print "Not actually writing gene\n";
+      $db->get_GeneAdaptor->store($gene);
+    };
+
+    if ($@) {
+       print "ERROR: Can't write gene [$@]\n";
+    }  else {
+       print "Written gene " . $gene->stable_id . "\n";
+    }
+  }
+}
+
+
+
