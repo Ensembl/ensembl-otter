@@ -302,43 +302,55 @@ sub sequence_gap_color {
 }
 
 sub sequence_gap_map {
-    my( $band ) = @_;
+    my( $band, @gaps ) = @_;
 
     my $vc = $band->virtual_contig;
     
     my( @gap_map );
-    my $prev_end = 0;
-    #my @map_contig_list = $vc->_vmap->each_MapContig;
-    my @map_contig_list = @{$vc->get_tiling_path};
-    for (my $i = 0; $i < @map_contig_list; $i++) {
-        my $map_c = $map_contig_list[$i];
-        my $start = $map_c->assembled_start;
-        my $end   = $map_c->assembled_end;
-        
-        # Gap at the start?
-        if ($i == 0 and $start > 1) {
+
+    if (not @gaps) {
+      if (not exists($band->{'_map_gap_positions'})) {
+        my $prev_end = 0;
+        #my @map_contig_list = $vc->_vmap->each_MapContig;
+        my @map_contig_list = @{$vc->get_tiling_path};
+        for (my $i = 0; $i < @map_contig_list; $i++) {
+          my $map_c = $map_contig_list[$i];
+          my $start = $map_c->assembled_start;
+          my $end   = $map_c->assembled_end;
+          
+          # Gap at the start?
+          if ($i == 0 and $start > 1) {
             push(@gap_map, [1, $start - 1]);
+          }
+          
+          # Gap after previous MapContig?
+          my $gap = ($start - $prev_end - 1);
+          if ($gap) {
+            push(@gap_map, [$prev_end + 1, $start - 1]);
+          }
+          $prev_end = $end;
         }
         
-        # Gap after previous MapContig?
-        my $gap = ($start - $prev_end - 1);
-        if ($gap) {
-            push(@gap_map, [$prev_end + 1, $start - 1]);
+        # Gap at end?
+        my $vc_length = $vc->length;
+        if ($prev_end < $vc_length) {
+          push(@gap_map, [$prev_end + 1, $vc_length]);
         }
-        $prev_end = $end;
+
+        $band->{'_map_gap_positions'} = \@gap_map;
+      }
+      @gap_map = @{$band->{'_map_gap_positions'}};
+    } else {
+      $band->{'_map_gap_positions'} = \@gaps;
+      @gap_map = @gaps;
     }
     
-    # Gap at end?
-    my $vc_length = $vc->length;
-    if ($prev_end < $vc_length) {
-        push(@gap_map, [$prev_end + 1, $vc_length]);
-    }
-    
+
     foreach my $gap (@gap_map) {
-        my( $start, $end ) = @$gap;
-        if (my $color = $band->zone_color($start, $end)) {
-            push(@$gap, $color);
-        }
+      my( $start, $end ) = @$gap;
+      if (my $color = $band->zone_color($start, $end)) {
+        push(@$gap, $color);
+      }
     }
     
     return @gap_map;
@@ -429,12 +441,12 @@ sub next_sub_VirtualContig {
 sub merge_sort_Features {
     my $band = shift;
     
-    my @feature = sort {$a->start <=> $b->start || $a->end <=> $b->end } @_;
+    my @feature = sort {$a->{start} <=> $b->{start} || $a->{end} <=> $b->{end} } @_;
     for (my $i = 1; $i < @feature;) {
         my($prev, $this) = @feature[$i - 1, $i];
-        if ($prev->end >= $this->start) {
-            my $new_this_start = $prev->end + 1;
-            if ($new_this_start > $this->end) {
+        if ($prev->{end} >= $this->{start}) {
+            my $new_this_start = $prev->{end} + 1;
+            if ($new_this_start > $this->{end}) {
                 # $prev engulfs $this
                 #warn "Removing engulfed feature:\n  ",
                 #    $this->gff_string, "\n",
@@ -444,7 +456,7 @@ sub merge_sort_Features {
                 next;   # Don't increment $i
             } else {
                 # $prev only overlaps part of $this
-                $this->start($new_this_start);
+                $this->{start} = $new_this_start;
             }
         }
         $i++;
