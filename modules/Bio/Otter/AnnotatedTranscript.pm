@@ -69,7 +69,6 @@ sub stable_id {
 sub truncate_to_Slice{
     my ($self , $slice ) = @_ ;
    
-    warn "doing truncate to slice bit!!!!" ;
     my $is_truncated    = 0;
     my $exon_list       = $self->get_all_Exons;
     
