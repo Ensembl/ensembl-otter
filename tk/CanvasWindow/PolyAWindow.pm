@@ -325,9 +325,26 @@ sub populate_subframe{
         my $coord_1_ref = \$coord_1;
         my $coord_2_ref = \$coord_2;                           
 
-#-----------------         
+
+
+        my $start_entry = $entry_frame->Entry(
+            -textvariable => $coord_1_ref ,
+            -width => 10 ,
+            -relief => 'sunken' )->pack(-side => 'left' );
+        
+        my $end_entry = $entry_frame->Entry(
+            -textvariable => $coord_2_ref ,
+            -width => 10 ,
+            -relief => 'sunken' )->pack(-side => 'left' );                            
+         
         my $strand;
         my $update_cmd = sub {$self->update_entry($coord_1_ref , $coord_2_ref , \$strand , $frame_type )};
+        $start_entry->bind('<Return>',  sub {
+            $self->update_entry($coord_1_ref , $coord_2_ref , \$strand , $frame_type, 'start' )
+            });
+        $end_entry->bind('<Return>',  sub {
+            $self->update_entry($coord_1_ref , $coord_2_ref , \$strand , $frame_type, 'end' )
+            });
         my $pos_button = $entry_frame->Radiobutton(  -command => $update_cmd, 
                                                 -text => '+' ,
                                                 -variable => \$strand ,
@@ -340,32 +357,7 @@ sub populate_subframe{
                                                 -value =>'-',
                                                 -borderwidth => 2 ,
                                                 -relief => 'groove')->pack(-side=> 'left' ) ;
-
-        $start_entry->bind('<Return>',  sub {
-            $self->update_entry($coord_1_ref , $coord_2_ref , \$strand , $frame_type, 'start' )
-            });
-        $end_entry->bind('<Return>',  sub {
-            $self->update_entry($coord_1_ref , $coord_2_ref , \$strand , $frame_type, 'end' )
-            });
-
-
        
-
-
-#--------------
-        my $start_entry = $entry_frame->Entry(
-            -textvariable => $coord_1_ref ,
-            -width => 10 ,
-            -relief => 'sunken' )->pack(-side => 'left' );
-        
-        my $end_entry = $entry_frame->Entry(
-            -textvariable => $coord_2_ref ,
-            -width => 10 ,
-            -relief => 'sunken' )->pack(-side => 'left' );                            
-
-
-
-
 
 
         my $delete = sub{ ${$coord_1_ref} = '' ; ${$coord_2_ref} = '' ;  } ; 
