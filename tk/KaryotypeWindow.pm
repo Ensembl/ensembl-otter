@@ -18,6 +18,17 @@ sub get_all_Chromosomes {
     }
 }
 
+
+sub chromosomes_per_row {
+    my( $self, $chromosomes_per_row ) = @_;
+    
+    if ($chromosomes_per_row) {
+        $self->{'_chromosomes_per_row'} = $chromosomes_per_row;
+    }
+    return $self->{'_chromosomes_per_row'} || 12;
+}
+
+
 sub add_Chromosome {
     my( $self, $chr ) = @_;
     
@@ -37,16 +48,47 @@ sub new_Chromosome {
 sub draw {
     my( $self ) = @_;
     
-    my $scale = $self->Mb_per_pixel;
-    my $pad = $self->pad;
-    my $canvas = $self->canvas;
-    my ($x, $y) = ($pad, $pad);
+    my $max = $self->chromosomes_per_row;
+    my $set = [];
+    my @all_set = ($set);
     foreach my $chr ($self->get_all_Chromosomes) {
-        $chr->set_initial_and_terminal_bands;
+        push(@$set, $chr);
+        if (@$set >= $max) {
+            $set = [];
+            push(@all_set, $set);
+        }
+    }
+    
+    my $pad = $self->pad;
+    my ($x, $y) = ($pad, $pad);
+    foreach my $set (@all_set) {
+        $y = $self->draw_chromsome_set($x, $y, $set);
+        $y += $pad * 2;
+    }
+}
+
+sub draw_chromsome_set {
+    my( $self, $x, $y, $set ) = @_;
+
+    warn sprintf "Drawing set of %d chromsomes\n", scalar @$set;
+
+    my $scale = $self->Mb_per_pixel;
+    my $canvas = $self->canvas;
+    my $pad = $self->pad;
+    my $max_chr_height = 0;
+    foreach my $chr (@$set) {
         $chr->Mb_per_pixel($scale);
-        $chr->draw($canvas, $x, $y);
+        my $h = $chr->height;
+        warn "height = $h";
+        $max_chr_height = $h if $h > $max_chr_height;
+    }
+    
+    foreach my $chr (@$set) {
+        $chr->set_initial_and_terminal_bands;
+        $chr->draw($self, $x, $y + $max_chr_height - $chr->height);
         $x += $chr->width + $pad;
     }
+    return $max_chr_height + $self->pad + $self->font_size;
 }
 
 sub Mb_per_pixel {

@@ -23,9 +23,12 @@ sub name {
 }
 
 sub draw {
-    my( $self, $canvas, $x, $y ) = @_;
+    my( $self, $kw, $x, $y ) = @_;
+    
+    my $save_y = $y;
     
     my $scale = $self->Mb_per_pixel;
+    my $canvas = $kw->canvas;
     foreach my $band ($self->get_all_Bands) {
         $band->Mb_per_pixel($scale);
         $band->draw($self, $canvas, $x, $y);
@@ -34,12 +37,27 @@ sub draw {
     
     my ($first, $last) = $self->get_first_and_last_Bands;
     $canvas->createPolygon(
-        $first->right_coordinates, $last->right_coordinates,
-        $last->left_coordinates, $first->left_coordinates,
+        $self->get_outline_coordinates,
         -fill    => undef,
         -outline => 'black',
         -smooth  => 1,
         );
+    
+    $canvas->createText(
+        $x + $self->width / 2,
+        $save_y + $self->height + $kw->pad / 2,
+        -anchor => 'n',
+        -text   => $self->name,
+        -font   => ['Helvetica', $kw->font_size, 'bold'],
+        );
+}
+
+sub height {
+    my( $self ) = @_;
+    
+    my ($first, $last) = $self->get_first_and_last_Bands;
+    my $length = ($last->end - $first->start + 1) / 1_000_000;
+    return $length / $self->Mb_per_pixel;
 }
 
 sub get_outline_coordinates {
