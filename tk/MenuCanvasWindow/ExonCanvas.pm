@@ -277,6 +277,7 @@ sub delete_selected_exons {
         if ($count and $count == 2) {
             $trim++;
         } else {
+            ### FIXME Preserve strand of kept exons!
             push(@keep, $text[$i]);
         }
     }
@@ -1358,7 +1359,7 @@ sub middle_button_paste {
     
     my( @ints );
     # match fMap "blue box" DNA selection
-    if (@ints = $text =~ /Selection (\d+) ---> (\d+)/) {
+    if (@ints = $text =~ /Selection -?(\d+) ---> -?(\d+)/) {
         if ($ints[0] == $ints[1]) {
             # user clicked on single base pair
             @ints = ($ints[0]);
