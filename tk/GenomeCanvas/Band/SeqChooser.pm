@@ -20,14 +20,15 @@ sub new {
 }
 
 sub render {
-    my( $band ) = @_;
-    
+    my( $band , $tags ) = @_;
+           
     my $y_offset = $band->y_offset;
     my @x_offsets = $band->column_offsets;
     foreach my $row ($band->chooser_map) {
-        #warn "$y_offset: [@$row]\n";
-        if ($row->[0] =~ /^\d+$/) {
-            $y_offset = $band->draw_seq_row($row, $y_offset, @x_offsets);
+#        warn "$y_offset: [@$row]\n";
+        #if ($row->[0] =~ /^\d+$/) {
+        if ($row->[0] ne 'GAP') {
+            $y_offset = $band->draw_seq_row($row,  $y_offset, @x_offsets);
         } else {
             $y_offset = $band->draw_spacer($row, $y_offset);
         }
@@ -54,7 +55,6 @@ sub max_width {
 
 sub draw_spacer {
     my( $band, $row, $y_offset ) = @_;
-    
     my $name = "$row";
     my $canvas = $band->canvas;
     my $font_size = $band->font_size;
@@ -83,18 +83,34 @@ sub draw_spacer {
     return $rect[3];
 }
 
+#--------------------------------------------------------------------------------------------------------------------
 sub draw_seq_row {
     my( $band, $row, $y_offset, @x_offsets ) = @_;
-    
-    my ($id, @text) = @$row;
-    $id = "ana_seq_id=$id";
-    my $canvas = $band->canvas;
-    my $font   = $band->column_font;
+
+    my (@text) = $band->text_from_row(@$row);
+
+    my %newtags = %{$band->chooser_tags};
+
     my @tags   = $band->tags;
+    
+    while (my($tag_key, $row_index) = each(%newtags))
+    {
+        my $fulltag = $tag_key . @$row->[$row_index] ;
+        push (@tags , $fulltag ); 
+    } 
+ 
+    my $id = "unique_id=@$row[0]";
+    
+#    my $db_id = "dbid=@$row[6]";
+    
+    my $canvas = $band->canvas;
+    my $font   = $band->column_font; 
     my $width  = $band->max_width;
-    push(@tags, $id, "sequence_name=$text[1]", "accession=$text[2]");
+
+#    push(@tags, $id, "sequence_name=$text[0]", "accession=$text[1]" , $db_id);
+
     my $y1 = $y_offset + 3;
-    for (my $i = 0; $i < @text; $i++) {
+    for (my $i = 0; $i < @text   ; $i++) {
         my $t = $text[$i] or next;
         my $label = $canvas->createText(
             $x_offsets[$i], $y1,
@@ -105,7 +121,9 @@ sub draw_seq_row {
             -tags       => [@tags, 'contig_text'],
             );
     }
+      
     my @rect = $canvas->bbox($id);
+
     $rect[0] = 0;
     $rect[2] = $x_offsets[$#x_offsets];
     expand_bbox(\@rect, 1);
@@ -118,6 +136,37 @@ sub draw_seq_row {
         );
     $canvas->lower($bkgd, $id);
     return $rect[3];
+}
+#--------------------------------------------------------------------------------------------------------------------------
+
+sub chooser_tags{
+    my ($band , $tag_ref) = @_;
+    
+#    if (defined $tag_ref) {warn %$tag_ref;};
+    if($tag_ref){
+        $band->{'_chooser_tags'} = $tag_ref;    
+    }
+    
+    $tag_ref = $band->{'_chooser_tags'};    
+    if ( $tag_ref ){
+        return $tag_ref;
+    }
+    else{
+        return  ;
+    }
+} 
+
+sub chooser_display_list{
+    my ($band , $list) = @_;
+    if ($list){
+
+        $band->{'_display_list'} = $list    
+    }
+    
+    $list = $band->{'_display_list'};
+    
+    return $list;
+        
 }
 
 sub chooser_map {
@@ -138,9 +187,9 @@ sub column_font {
 sub column_offsets {
     my( $band ) = @_;
     
-    #warn "Calculating column widths\n";
+#    warn "Calculating column widths\n";
     my @widths = $band->column_widths;
-    #warn "widths [@widths]\n";
+#    warn "widths [@widths]\n";
     my $x_offset = $band->x_padding;
     my $column_gap = $x_offset * 2;
     my( @offsets ) = ($x_offset);
@@ -149,21 +198,19 @@ sub column_offsets {
         push(@offsets, $x_offset);
         $x_offset += $column_gap;
     }
-    
-    #warn "offsets [@offsets]\n";
-    
+#    warn "offsets [@offsets]\n";
     return @offsets;
 }
 
 sub column_widths {
-    my( $band ) = @_;
+    my($band ) = @_;
     
     # Get the longest ascii string for each column
     my(@longest);
     my(@widths);
     my $max = $band->max_width;
     foreach my $row ($band->chooser_map) {
-        my( $id, @text ) = @$row;
+        my @text = $band->text_from_row(@$row);
         for (my $i = 0; $i < @text; $i++) {
             my $text = $text[$i] or next;
             my ($t_length) = length($text);
@@ -182,12 +229,35 @@ sub column_widths {
     my $canvas = $band->canvas;
     $max = $band->max_width;
     for (my $i = 0; $i < @widths; $i++) {
+        if (! defined $longest[$i]){
+            $longest[$i] = defined;
+        }
+        
         my $text = substr($longest[$i], 0, $max) . 'XX';
         my $w = $canvas->fontMeasure($font, $text);
         $widths[$i] = ($w > $max) ? $max : $w;
-    }
-    
+    }   
     return @widths;
+}
+
+
+
+
+
+sub text_from_row{
+
+    my ($self, @row) =  @_;
+    my @text ;
+    
+    my $meta =  $self->chooser_display_list; 
+    
+    my $count = 0;
+    foreach my $i( @$meta ){
+        @text->[$count] = @row->[$i];        
+        $count ++;
+    }   
+    
+    return @text; 
 }
 
 
