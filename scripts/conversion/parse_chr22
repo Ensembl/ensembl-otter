@@ -50,6 +50,9 @@ my %genes;
 my %exons;
 my %trans;
 
+my $mapping_dir = "/nfs/acari/searle/progs/otter/scripts/convdata/chr22/22_to_havana_type_mapping";
+my $type_conv_hash = read_22_to_havana_mappings($mapping_dir);
+
 while (<>) {
   chomp;
 
@@ -89,7 +92,7 @@ while (<>) {
 
     $hashy{Sequence} = $id;
 
-    print "Id is now $id\n";
+    # print "Id is now $id\n";
     $genes{$id}{$id}{start}  = $start;
     $genes{$id}{$id}{end}    = $end;
     $genes{$id}{$id}{strand} = $strand;
@@ -132,23 +135,30 @@ my $author = new Bio::Otter::Author(
   -email => 'vega@sanger.ac.uk'
 );
 
+
 foreach my $geneid (keys %genes) {
-  print STDERR "Gene id " . $geneid . "\n";
+  # print STDERR "Gene id " . $geneid . "\n";
 
   foreach my $geneid2 (keys %{ $genes{$geneid} }) {
-    print STDERR "Gene id 2  $geneid2\n";
+    # print STDERR "Gene id 2  $geneid2\n";
 
     my %values = %{ $genes{$geneid}{$geneid2}{values} };
 
-    foreach my $key (keys %values) {
-      print STDERR "Gene Key $key " . $values{$key} . "\n";
-    }
+    # foreach my $key (keys %values) {
+    #   print STDERR "Gene Key $key " . $values{$key} . "\n";
+    # }
 
     my $gene     = new Bio::Otter::AnnotatedGene;
     my $geneinfo = new Bio::Otter::GeneInfo;
 
+    if (exists($type_conv_hash->{$geneid2})) {
+      # print "Type = " . $type_conv_hash->{$geneid2} . "\n";
+    } else { 
+      die "Didn't find $geneid2\n";
+    }
     $gene->gene_info($geneinfo);
-    $gene->type($values{'type'});
+    #$gene->type($values{'type'});
+    $gene->type($type_conv_hash->{$geneid2});
     $geneinfo->name(new Bio::Otter::GeneName(-name => $geneid));
     $geneinfo->author($author);
 
@@ -165,12 +175,12 @@ foreach my $geneid (keys %genes) {
       foreach my $word (@descwords) {
         if ( $word =~ /^..:[A-Z][0-9][0-9][0-9][0-9][0-9]$/ ||
              $word =~ /^..:[A-Z][0-9][A-Z][A-Z][0-9][0-9]$/) {
-          print "Evidence: $word looks like an identifier\n";
+          # print "Evidence: $word looks like an identifier\n";
           push @evidence,(new Bio::Otter::Evidence(-name => $word, -type => 'Protein'));
           
         } elsif ( $word =~ /^A[A-Z][0-9][0-9][0-9][0-9][0-9][0-9]/ ||
                   $word =~ /^..:[A-Z][0-9][0-9][0-9][0-9][0-9][0-9]$/) {
-          print "DNA Evidence: $word looks like an identifier\n";
+          # print "DNA Evidence: $word looks like an identifier\n";
           push @evidence,(new Bio::Otter::Evidence(-name => $word, -type => 'cDNA'));
         }
       }
@@ -193,17 +203,15 @@ foreach my $geneid (keys %genes) {
       $gene->add_Transcript($tran);
 
       $tran->transcript_info($traninfo);
-      $traninfo->class(
-        new Bio::Otter::TranscriptClass(-name => $values{'Type'}));
       $traninfo->name($tranid);
       $traninfo->author($author);
 
       # $tran->stable_id($tranid);
 
       my %exhash = %{ $exons{$geneid}{$tranid} };
-      foreach my $key (keys %exhash) {
-        print STDERR "Key $key " . $exhash{$key} . "\n";
-      }
+#       foreach my $key (keys %exhash) {
+#         print STDERR "Key $key " . $exhash{$key} . "\n";
+#       }
       my @exons = @{ $exons{$geneid}{$tranid}{exons} };
 
       my %evidence;
@@ -218,16 +226,9 @@ foreach my $geneid (keys %genes) {
         $tran->add_Exon($newexon);
         $newexon->phase(-1);
 
-#Looks like chr 14 to me
-#        if (defined($exon->{values}{AC})) {
-#          my $acc = $exon->{values}{AC};
-#          print STDERR "found evidence $acc\n";
-#          $evidence{$acc} = 1;
-#        }
-
-        foreach my $key (keys %{ $exon->{values} }) {
-          print STDERR "Exon value key $key " . $exon->{values}{$key} . "\n";
-        }
+        # foreach my $key (keys %{ $exon->{values} }) {
+        #   print STDERR "Exon value key $key " . $exon->{values}{$key} . "\n";
+        # }
       }
 
 #      foreach my $ev (keys %evidence) {
@@ -242,15 +243,15 @@ foreach my $geneid (keys %genes) {
 
       my @tmp = keys(%{ $cds{$geneid} });
 
-      print STDERR "CDS tmp [$tranid] @tmp\n";
+      # print STDERR "CDS tmp [$tranid] @tmp\n";
 
       if (scalar(@tmp) == 1) {
         my $tmpid = $tmp[0];
 
-        print STDERR "Ids [$tmpid][$tranid]\n";
+        # print STDERR "Ids [$tmpid][$tranid]\n";
         if ($tmpid eq $tranid) {
           my @cdsexons = @{ $cds{$geneid}{$tmpid}{cds} };
-          print STDERR "id [$tmpid][$tranid]\n";
+          # print STDERR "id [$tmpid][$tranid]\n";
           my $mincds = -1;
           my $maxcds = -1;
           foreach my $cdsex (@cdsexons) {
@@ -266,12 +267,12 @@ foreach my $geneid (keys %genes) {
             if ($cdsex->{end} > $maxcds) {
               $maxcds = $cdsex->{end};
             }
-            print STDERR "exon "
-              . $cdsex->{start} . " "
-              . $cdsex->{end} . " "
-              . $cdsex->{strand} . "\n";
+            # print STDERR "exon "
+            #  . $cdsex->{start} . " "
+            #  . $cdsex->{end} . " "
+            #  . $cdsex->{strand} . "\n";
           }
-          print STDERR "Min / max " . $mincds . " " . $maxcds . "\n";
+          # print STDERR "Min / max " . $mincds . " " . $maxcds . "\n";
 
           my $translation = new Bio::EnsEMBL::Translation;
           $tran->translation($translation);
@@ -333,9 +334,45 @@ foreach my $geneid (keys %genes) {
           }
         }
       }
+      if ($gene->type =~ /seudogene/) {
+        $traninfo->class(
+          new Bio::Otter::TranscriptClass(-name => "Pseudogene"));
+      } elsif ($tran->translation) {
+        $traninfo->class(
+          new Bio::Otter::TranscriptClass(-name => "supported"));
+      } else {
+        $traninfo->class(
+          new Bio::Otter::TranscriptClass(-name => "supported"));
+      }
     }
 
     print $gene->toXMLString . "\n";
   }
 }
 
+sub read_22_to_havana_mappings {
+  my ($dir) = @_;
+
+  my %typehash;
+
+  foreach my $file (qw(HUMACE-Known HUMACE-Novel_Transcript HUMACE-Putative
+                       HUMACE-Novel_CDS HUMACE-Pseudogene)) {
+    my $filename = "$dir/$file";
+    my $type = $file;
+    $type =~ s/HUMACE-//;
+    if (! -e $filename) {
+      die "Couldn't open mapping file $filename\n";
+    }
+    open FPMAP,"<$filename" or die "Couldn't open mapping file $filename";
+    while (<FPMAP>) {
+      if (/Sequence : \"(.*)\"/) {
+        my $id = $1;
+        $id =~ s/\.mRNA$//;
+        $typehash{$id} = $type;
+      }
+    }
+    close FPMAP;
+  }
+ 
+  return \%typehash;
+}
