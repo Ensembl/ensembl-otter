@@ -260,10 +260,10 @@ sub show_LocusWindow{
 
     unless($window){
        
-        print STDERR "creating LocusWindow" ;
-        $top = $self->canvas->toplevel->Toplevel(-width => 500);
+        #print STDERR "creating LocusWindow" ;
+        $top = $self->canvas->Toplevel(-width => 500);
        
-        $window = LocusWindow->new($top);        
+        $window = CanvasWindow::LocusWindow->new($top);        
         $self->{'_locus_window_cache'}{$locus} = $window;
         $window->initialize; 
     
@@ -277,17 +277,6 @@ sub remove_locus_window{
     print STDERR "deleting " . $locus->name ;
     delete $self->{'_locus_window_cache'}{$locus} || warn "problems deleteing locus window " . $locus->name ;
 }
-
-# looks like this isnt used
-##sub get_locus_window{
-##   my ($self , $name) = @_ ;
-##    
-##   my $locus = $self->get_locus($name) ;
-##    
-##   my $top ;
-##   $top = $self->{'_locus_window_cache'}{$locus};  
-##   return $top ;
-##}
 
 sub get_all_locus_windows{
     my ($self) = @_ ;

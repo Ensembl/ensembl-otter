@@ -352,7 +352,7 @@ sub name_start_end_from_fMap_blue_box {
     
     #warn "clipboard: $text";
     
-    if ($text =~ /^(\S+)\s+-?(\d+)\s+-?(\d+)\s+\(\d+\)/) {
+    if ($text =~ /^(?:Sequence:)(\S+)\s+-?(\d+)\s+-?(\d+)\s+\(\d+\)/) {
         my $name  = $1;
         my $start = $2;
         my $end   = $3;

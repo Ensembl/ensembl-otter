@@ -207,8 +207,8 @@ sub get_gene_span_data {
 	    next if $en > $vc->length;
 	    
 	    my ($id, $desc);
-	    if ($s[8] =~ /ID\=\"([^\"]+)\"/) {
-		$id = $1;
+	    if ($s[8] =~ /(Sequence |ID=")([^"]+)"/) {
+		$id = $2;
 	    }
 
 	    push(@span, [$id, $type, $st, $en, $str]) if defined $id;

@@ -1,6 +1,6 @@
-## LocusWindow.pm
 
-package LocusWindow;
+
+package CanvasWindow::LocusWindow;
 
 use strict;
 use Tk;
@@ -61,7 +61,7 @@ sub initialize{
     
     my $top = $self->toplevel;
     $self->{'_locus_window'} = $top;
-#    $top->protocol('WM_DELETE_WINDOW', sub{$self->close});
+    #$top->protocol('WM_DELETE_WINDOW', sub{$self->close});
     
     my $label_frame = $top->Frame;
     $label_frame->pack(-side => 'top');
@@ -100,8 +100,6 @@ sub initialize{
     my $button = $active_frame->Button( -text => 'Save', 
                                         -command => sub {$self->run_command } ,
                                         )->pack(-side => 'left');
-             
-    $self->_button($button);                
 }
 
 sub _is_known_ref {
@@ -263,7 +261,7 @@ sub edit_locus{
         else{
             my $answer = $self->toplevel->messageBox(
                 -title => 'Please Reply', 
-                -message => 'Rename locus??', 
+                -message => 'Rename locus?', 
                 -type => 'YesNoCancel', -icon => 'question', -default => 'yes');
 
             if ($answer eq 'Yes'){

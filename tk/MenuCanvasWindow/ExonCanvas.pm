@@ -184,40 +184,6 @@ sub initialize {
         $canvas->Tk::bind('<Control-d>', $delete_exons);
         $canvas->Tk::bind('<Control-D>', $delete_exons);
 
-        ## For finding PolyA signals and sites (This was never used in production.)
-        #my $polyA_menu = $self->make_menu('Poly-A');
-        #
-        #my $auto_find_sub = sub { $self->auto_find_PolyA };
-        #$polyA_menu->add('command',
-        #    -label          => 'Auto find',
-        #    -command        => $auto_find_sub,
-        #    -accelerator    => 'Ctrl+U',
-        #    -underline      => 1,
-        #    );
-        #$canvas->Tk::bind('<Control-U>', $auto_find_sub);
-        #$canvas->Tk::bind('<Control-u>', $auto_find_sub);
-        #
-        #my $polyA_search_sub = sub { $self->open_PolyA_search_window };
-        #$polyA_menu->add('command',
-        #    -label          => 'Edit...',
-        #    -command        => $polyA_search_sub,
-        #    -accelerator    => 'Ctrl+Y',
-        #    -underline      => 0,
-        #    -state          => 'disabled',
-        #    );
-        #$canvas->Tk::bind('<Control-Y>', $polyA_search_sub);
-        #$canvas->Tk::bind('<Control-y>', $polyA_search_sub);
-
-        #my $polyA_delete_sub = sub { $self->delete_selected_PolyA };
-        #$polyA_menu->add('command',
-        #    -label          => 'Delete',
-        #    -command        => $polyA_delete_sub,
-        #    -accelerator    => 'Ctrl+K',
-        #    -underline      => 0,
-        #    );
-        #$canvas->Tk::bind('<Control-K>', $polyA_delete_sub);
-        #$canvas->Tk::bind('<Control-k>', $polyA_delete_sub);
-
         # Keyboard editing commands
         $canvas->Tk::bind('<Left>',      sub{ $self->canvas_text_go_left   });
         $canvas->Tk::bind('<Right>',     sub{ $self->canvas_text_go_right  });
@@ -721,112 +687,6 @@ sub draw_subseq {
     my $sub = $self->SubSeq;
     $self->add_subseq_exons($sub);
     $self->draw_translation_region($sub);
-#    $self->draw_PolyA($sub->get_all_PolyA);
-}
-
-sub draw_PolyA {
-    my( $self, @poly ) = @_;
-    
-    my %uniq_poly = map {$_->hash_key, $_} @poly;
-    if ($self->strand_from_tk == 1) {
-        @poly = sort {$a->signal_position <=> $b->signal_position
-            || $a->site_position <=> $b->site_position} values %uniq_poly;
-    } else {
-        @poly = sort {$b->signal_position <=> $a->signal_position
-            || $b->site_position <=> $a->site_position} values %uniq_poly;
-    }
-    
-    my $canvas = $self->canvas;
-    $canvas->delete('polyA');
-    
-    my $font = $self->font;
-    my $size = $self->font_size;
-    my @rec = $canvas->coords('max_width_rectangle');
-    my $x = $rec[0];
-    #my $x = int($size / 2);
-    
-    for (my $i = 0; $i < @poly; $i++) {
-        my $p = $poly[$i];
-        my $y = $size * ($i + 1);
-        my $txt = sprintf("polyA  %6s  %6d  %6d  %.2f%%",
-            $p->consensus->signal,
-            $p->signal_position,
-            $p->site_position,
-            $p->score,
-            );
-        $canvas->createText(
-            $x, $y,
-            -anchor => 'nw',
-            -text   => $txt,
-            -font   => [$font, $size, 'normal'],
-            -tags   => ['polyA', 'mobile'],
-            );
-    }
-    
-    $self->position_mobile_elements;
-}
-
-sub auto_find_PolyA {
-    my( $self ) = @_;
-    
-    my $sub = $self->new_SubSeq_from_tk
-        or return;
-    my @poly = $self->get_PolyA_from_tk;
-    push(@poly, $sub->find_PolyA_above_score(0));
-    if (@poly) {
-        $self->draw_PolyA(@poly);
-        $self->fix_window_min_max_sizes;
-    } else {
-        $self->message("No PolyA signals found")
-    }
-}
-
-sub open_PolyA_search_window {
-    my( $self ) = @_;
-    
-    $self->message('Not yet implemented');
-}
-
-sub get_PolyA_from_tk {
-    my( $self ) = @_;
-    
-    my( @poly );
-    my $canvas = $self->canvas;
-    foreach my $obj ($canvas->find('withtag', 'polyA')) {
-        push(@poly, $self->_PolyA_from_obj($obj));
-    }
-    return @poly;
-}
-
-sub _PolyA_from_obj {
-    my( $self, $obj ) = @_;
-    
-    my $canvas = $self->canvas;
-    my $txt = $canvas->itemcget($obj, 'text');
-    my( $cons_str, $sig_start, $site_end ) = $txt =~
-        /^polyA  (\S+)\s+(\d+)\s+(\d+)/
-        or confess "Can't parse text '$txt'";
-    my $cons = Hum::Ace::PolyA::Consensus->fetch_by_signal($cons_str);
-    my $p = Hum::Ace::PolyA->new;
-    $p->signal_position($sig_start);
-    $p->site_position($site_end);
-    $p->consensus($cons);
-    return $p;
-}
-
-sub delete_selected_PolyA {
-    my( $self ) = @_;
-    
-    my $canvas = $self->canvas;
-    my %to_delete = map {$_, 1} $self->list_selected;
-    $self->deselect_all;
-    my( @poly );
-    foreach my $obj ($canvas->find('withtag', 'polyA')) {
-        next if $to_delete{$obj};
-        push(@poly, $self->_PolyA_from_obj($obj));
-    }
-    $self->draw_PolyA(@poly);
-    $self->fix_window_min_max_sizes;
 }
 
 sub is_mutable {
@@ -891,7 +751,7 @@ sub show_subseq {
     my( $self ) = @_;
 
     
-    my $xr = $self->xace_sequence_chooser->xace_remote  || $self->xace_sequence_chooser->open_xace_dialogue;
+    my $xr = $self->xace_seq_chooser->xace_remote  || $self->xace_seq_chooser->open_xace_dialogue;
     if ($xr) {
         my $sub = $self->SubSeq;
         unless ($sub->is_archival) {
@@ -2175,10 +2035,11 @@ sub strand_from_tk {
 
     sub draw_translation_region {
         my( $self, $sub ) = @_;
-    
+
         if ($sub) {
             return unless $sub->translation_region_is_set;
         }
+
         # Get the translation region from the
         # canvas or the SubSequence
         my( @trans );
@@ -2192,7 +2053,7 @@ sub strand_from_tk {
         }
 
         # Delete the existing translation region
-        my $canvas      = $self->canvas;
+        my $canvas = $self->canvas;
         $canvas->delete($tr_tag);
 
         # Don't draw anything if it isn't coding
@@ -2304,9 +2165,6 @@ sub new_SubSeq_from_tk {
     $sub->strand                 ( $self->strand_from_tk              );
     $sub->start_not_found        ( $self->start_not_found_from_tk     );
     $sub->end_not_found          ( $self->end_not_found_from_tk       );
-    #$sub->upstream_subseq_name   ( $self->continued_from_from_tk      );
-    #$sub->downstream_subseq_name ( $self->continues_as_from_tk        );
-    #$sub->replace_all_PolyA      ( $self->get_PolyA_from_tk           );
     #warn "Start not found ", $self->start_not_found_from_tk, "\n",
     #    "End not found ", $self->end_not_found_from_tk, "\n";
     return $sub;
@@ -2465,7 +2323,7 @@ sub run_dotter {
     };
     my( $hit_name );
     if ($txt) {
-        ($hit_name) = $txt =~ /(\S+)/;
+        ($hit_name) = $txt =~ /(?:Sequence:)(\S+)/;
     }
     unless ($hit_name) {
         $self->message('Cannot see a hit name on the clipboard');
