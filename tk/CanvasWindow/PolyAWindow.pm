@@ -516,15 +516,16 @@ sub create_ace_file{
             my $new_start_ref = $new_coord_pair->[0];
             my $new_end_ref = $new_coord_pair->[1];
             
-            unless (($$old_start_ref == $$new_start_ref) || ($$old_end_ref == $$new_end_ref) ) {
+            unless (($$old_start_ref == $$new_start_ref) && ($$old_end_ref == $$new_end_ref) ) {
                 ## original coord changed
                 ## write a deletion then an addition line
                 
-#                warn 'deleting ' . $$old_start_ref . ' , ' . $$old_end_ref    ;
-                $ace .= qq{Sequence "$slice_name"\n};
-                $ace .= qq{-D Feature "polyA_$type" $$old_start_ref $$old_end_ref  0.5 "polyA_$type"\n\n} ;
-                
+                unless (($$old_start_ref eq '') && ($$old_end_ref eq '')){
+                    $ace .= qq{Sequence "$slice_name"\n};
+                    $ace .= qq{-D Feature "polyA_$type" $$old_start_ref $$old_end_ref  0.5 "polyA_$type"\n\n} ;
+                }
                 ($status ,$ace) = $self->write_ace_line($status , $ace , $$new_start_ref , $$new_end_ref , $type);           
+                
             }
         }
         foreach my $new_entries (@new_array ){
@@ -617,9 +618,9 @@ sub _update_arrays{
         foreach my $ref_pair (@old_array){
             my $start = ${@$ref_pair->[0]};
             my $end = ${@$ref_pair->[1]};
-        
+           
             push (@new_array , [ \$start, \$end] ) ; 
-          
+           
         }
         
         $subroutine = $type.'_array_ref_stored';
