@@ -164,6 +164,7 @@ sub draw{
     $top_frame->Button( -text => 'Add Signal',
                         -underline => 6,
                         -relief => 'groove',
+			-state  => $write_acces ? 'normal': 'disabled',
                         -borderwidth => 2 ,
                         -command => $add_signal)->pack( -side => 'left' , -after=>$sig_label );
     $tl->bind('<Control-G>', $add_signal) ;
@@ -173,6 +174,7 @@ sub draw{
     $top_frame->Button( -text => 'Add Site',
                         -underline => 6,
                         -relief => 'groove',
+			-state  => $write_acces ? 'normal': 'disabled',
                         -borderwidth => 2 ,
                         -command =>  $add_site )->pack( -side => 'right' , -before => $site_label );
     $tl->bind('<Control-T>' , $add_site ) ;
