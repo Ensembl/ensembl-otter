@@ -683,8 +683,14 @@ contains        type
 contains        start
 contains        end
 contains        strand
+contains        score
 contains        label
 multiple
+
+<type>
+description     the kind of feature (eg: PolyA-signal)
+value           string       
+mandatory
 
 <start>
 description     start coordinate of the exon in the assembly
@@ -701,10 +707,9 @@ description     strand of the assembly that the exon is on
 value           1 if forward or\n-1 if reverse
 mandatory
 
-<type>
-description     the kind of feature (eg: PolyA-signal)
-value           string       
-mandatory
+<score>
+description     a score for the feature
+value           float
 
 <label>
 description     extra information to display about the feature
