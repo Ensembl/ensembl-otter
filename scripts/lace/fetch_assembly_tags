@@ -62,7 +62,7 @@ $help->() unless ($dataset && (@sets || @clones || $clone_list));
       my $seqSet = $dset->get_SequenceSet_by_name($type);
       my $clones = $dset->fetch_all_CloneSequences_for_SequenceSet($seqSet);
 
-      fetch_by_clone_obj($clones, $otter_db, $type, $atagged_ctgs);
+      fetch_by_clone_obj($clones, $otter_db, $atagged_ctgs, $type);
     }
   }
 
@@ -97,13 +97,11 @@ sub fetch_by_clone_name {
 
 sub fetch_by_clone_obj {
 
-  my ($clones, $otter_db, $fetched, $atagged_ctgs) = @_;
+  my ($clones, $otter_db, $atagged_ctgs, $fetched) = @_;
 
   my $cloneAd = $otter_db->get_CloneAdaptor;
-  my %seq_acefile_clone;
-  my ($clone, $ctg_name, $ctg_strand, $ctg_id, $seq_name, $version);
   my %atagged_ctgs = %$atagged_ctgs;
-  my $to_do;
+  my (%seq_acefile_clone, $ctg_name, $ctg_strand, $ctg_id, $seq_name, $version, $acc, $to_do);
 
   foreach my $obj (@$clones) {
 
@@ -113,7 +111,7 @@ sub fetch_by_clone_obj {
 
       $to_do = 1;
 
-      $clone = $obj;
+      $acc        = $obj->embl_id;
       $ctg_name   = $obj->get_all_Contigs->[0]->name;
       $seq_name   = sanger_name($obj->embl_id);
       $ctg_id     = $obj->get_all_Contigs->[0]->dbID;
@@ -125,9 +123,7 @@ sub fetch_by_clone_obj {
 
       $to_do = 1;
 
-      # get Bio::Otter::AnnotatedClone obj via Bio::Otter::Lace::CloneSequence obj
-      $clone = $cloneAd->fetch_by_accession_version($obj->accession, $obj->sv);
-
+      $acc        = $obj->accession;
       $ctg_strand = $obj->contig_strand;
       $ctg_name   = $obj->contig_name;
       $seq_name   = sanger_name($obj->accession);
@@ -137,18 +133,34 @@ sub fetch_by_clone_obj {
 
     # skip clones in otter db where there is no corresponding accession in the submissions database
     eval {
-      Hum::AnaStatus::Sequence->new_from_seqname_sv($seq_name, $version);
+      #Hum::AnaStatus::Sequence->new_from_seqname_sv($seq_name, $version);
+      Hum::AnaStatus::Sequence->new_from_accession($acc);
     };
 
     # work out path to acefile with assembly_tags info of a Sanger clone
+    if ( $@ && $verbose ){
+      my ($sanger_id, $ver) = check_latest_embl_version_sanger_id( $acc, $otter_db );
+
+      if ( $ctg_name && $obj->sv != $ver ){
+        print "SKIP: $ctg_name is of SV ".$obj->sv.", current SV is $ver\n";
+      }
+      if ( $seq_name && lc($seq_name) ne lc($sanger_id) ){
+	print "SKIP: $ctg_name has internal name ($seq_name) swapped with project_name $sanger_id\n";
+      }
+    }
+
     if ( !$@ && $to_do == 1 ){
-      my $seq = Hum::AnaStatus::Sequence->new_from_seqname_sv($seq_name, $version);
+      #my $seq = Hum::AnaStatus::Sequence->new_from_seqname_sv($seq_name, $version);
+       my $seq = Hum::AnaStatus::Sequence->new_from_accession($acc);
       my $dir = $seq->analysis_directory;
 
       # double check existence of acefile
       if ( -e "$dir/rawdata/$seq_name.humace.ace" ) {
 	my $humace_file = "$dir/rawdata/$seq_name.humace.ace";
-	push(@{$seq_acefile_clone{$ctg_name}}, $humace_file, $clone, $ctg_strand, $ctg_id);
+	push(@{$seq_acefile_clone{$ctg_name}}, $humace_file, $ctg_strand, $ctg_id);
+      }
+      else {
+	print "ERROR: $ctg_name ($seq_name) has no associated acefile at $dir/rawdata/\n";
       }
     }
   }
@@ -157,7 +169,46 @@ sub fetch_by_clone_obj {
   $fetched = "Clone fetch" unless $fetched;
 
   # parsing acefile for all Sanger clones of an assembly type in one go
-  parse_ace(\%seq_acefile_clone, $otter_db, $clones, $fetched);
+  parse_ace(\%seq_acefile_clone, $otter_db, $fetched);
+}
+
+sub check_latest_embl_version_sanger_id {
+
+  my ($acc, $otter_db) = @_;
+  my ($sql, $sth);
+
+  $sql = "SELECT   cl.embl_version "
+       . "FROM     clone cl, contig ct "
+       . "WHERE    ct.clone_id = cl.clone_id "
+       . "AND      ct.name like '$acc%'"
+       . "ORDER BY cl.embl_version DESC "
+       . "LIMIT 1";
+
+  $sth = $otter_db->prepare($sql);
+  $sth->execute;
+
+  my $version;
+  while ( my $ver = $sth->fetchrow_array ) {
+    $version = $ver;
+  }
+  $sth->finish;
+
+  $sql = "SELECT pa.sanger_id, s.sequence_name "
+       . "FROM   sequence s, project_acc pa, project_dump pd "
+       . "WHERE  pa.accession = ? "
+       . "AND    pa.sanger_id = pd.sanger_id "
+       . "AND    pd.seq_id = s.seq_id "
+       . "ORDER by s.sequence_version DESC LIMIT 1";
+
+  $sth = prepare_statement($sql);
+  $sth->execute($acc);
+
+  while ( my ($sanger_id, $seq_name) = $sth->fetchrow_array ) {
+    $sanger_id =~ s/^_//;
+    $sanger_id = lcfirst($sanger_id);
+    return $sanger_id, $version;
+  }
+  $sth->finish;
 }
 
 sub get_assembly_tagged_clones {
@@ -204,7 +255,7 @@ sub get_contig_strand {
 
 sub parse_ace {
 
-  my ($href, $otter_db, $clones, $fetched)  = @_;
+  my ($href, $otter_db, $fetched)  = @_;
 
   my %seq_acefile_clone = %$href;
   my $asmblyTagAd = $otter_db->get_AssemblyTagAdaptor;
@@ -221,12 +272,11 @@ sub parse_ace {
 
     print "\n", $ctg_name, " => ",  $seq_acefile_clone{$ctg_name}->[0], "\n" if $verbose;
 
-    my $clone      = $seq_acefile_clone{$ctg_name}->[1];
-    my $ctg_id     = $seq_acefile_clone{$ctg_name}->[3];
+    my $ctg_id     = $seq_acefile_clone{$ctg_name}->[2];
 
     while ( $line = <$fh> ){
 
-      my $ctg_strand = $seq_acefile_clone{$ctg_name}->[2];
+      my $ctg_strand = $seq_acefile_clone{$ctg_name}->[1];
       my ( $tag_type, $tag_start, $tag_end, $tag_info);
 
       if ( $line =~ /^Assembly_[Tt]ags\s+\"(-)\"\s+(\d+)\s+(\d+)\s+\"(.+)\"/ ||
@@ -265,7 +315,7 @@ sub parse_ace {
 	  print "flip\n" if $2>$3;
 	  print "$ctg_id : $tag_type : $ctg_strand : $tag_start : $tag_end : $tag_info\n";
 	}
-	push(@{$contig_tag_data{$ctg_name}}, $ctg_id, $tag_start, $tag_end, $ctg_strand, $tag_type, $tag_info, $clone);
+	push(@{$contig_tag_data{$ctg_name}}, $ctg_id, $tag_start, $tag_end, $ctg_strand, $tag_type, $tag_info);
       }
       if ( $line =~ /^(Clone_\w+_end)\s+(.+)\s+(\d+)/i ){
 
@@ -280,7 +330,7 @@ sub parse_ace {
 	$ctg_strand = 1;
 	
 	print "$ctg_id : $tag_type : $ctg_strand : $tag_start : $tag_end : $tag_info\n" if $verbose;
-	push(@{$contig_tag_data{$ctg_name}}, $ctg_id, $tag_start, $tag_end, $ctg_strand, $tag_type, $tag_info, $clone);
+	push(@{$contig_tag_data{$ctg_name}}, $ctg_id, $tag_start, $tag_end, $ctg_strand, $tag_type, $tag_info);
       }
     }
   }
@@ -349,7 +399,7 @@ sub store {
 
       my @values = @{$ctg_tag_data{$ctg_name}};
 
-      for ( my $i = 0; $i < scalar @values; $i=$i+7 ) {
+      for ( my $i = 0; $i < scalar @values; $i=$i+6 ) {
 
 	# column contig_end/tag_info can be null for tag_type = clone_left_end or clone_right_end
 	$values[$i+5] = '' if  $values[$i+5] eq "Null";
@@ -359,7 +409,7 @@ sub store {
 
 	my @vals = ('', @values[$i..$i+5]);
 
-	my $sth = $values[-1]->adaptor->db->prepare($sql);
+	my $sth = $otter_db->prepare($sql);
 	$sth->execute(@vals);
 	$sth->finish;
 
