@@ -109,18 +109,15 @@ sub XML_to_otter {
         print "ERROR: Current obj is $currentobj -can only add stable ids to gene,tran,exon\n";
       }
     }
-    
     elsif (/<known>(.*)<\/known>/) {
         $geneinfo->known_flag($1);
     }
-    
     elsif (/<remark>(.*)<\/remark>/) {
       my $remark = $1;
       if ($currentobj eq 'gene') {
         my $rem = new Bio::Otter::GeneRemark(-remark => $remark);
         $geneinfo->remark($rem);
       } elsif ($currentobj eq 'tran') {
-       
         my $rem = new Bio::Otter::TranscriptRemark(-remark => $remark);
         $traninfo->remark($rem);
       } elsif ($currentobj eq 'frag') {
@@ -282,11 +279,11 @@ sub XML_to_otter {
       $currentobj = 'tran';
     }
     elsif (/<synonym>(.*)<\/synonym>/) {
-
       if ($currentobj eq 'gene') {
-        my $syn = new Bio::Otter::GeneSynonym(-name => $1);
+ 	my $syn = new Bio::Otter::GeneSynonym($1);
         $geneinfo->synonym($syn);
-      } else {
+      }
+      else {
         die "ERROR: synonym tag only associated with gene objects. Object is [$currentobj]\n";
       }
     }
@@ -419,9 +416,9 @@ sub XML_to_otter {
   if (!$foundend) {
      print STDERR "Didn't find end tag <\/otter>\n";
   }
-  
+
   ### End of XML parsing ###
-  
+
   # Make the sequence fragments
   my @contigs;
 
@@ -474,7 +471,7 @@ sub XML_to_otter {
     $tile->component_ori($strand);
     $tile->component_start($offset);
     $tile->component_end($offset + $end - $start);
-   
+
     my $contig = new Bio::EnsEMBL::RawContig();
 
     $contig->name($f);
@@ -483,9 +480,8 @@ sub XML_to_otter {
     $tile->component_Seq($contig);
 
    push(@tiles,$tile);
-        
   }
-  
+
   #$assembly_type = 'fake_gp_1' if (!defined($assembly_type));
 
   unless ($chrname and $chrstart and $chrend) {
@@ -579,7 +575,7 @@ sub XML_to_otter {
 
 sub XML_to_features {
     my( $fh, $feature_set ) = @_;
-    
+
     my( %logic_ana );
     while (<$fh>) {
         if (/<feature>/) {
@@ -614,7 +610,7 @@ sub XML_to_features {
             return 1;
         }
     }
-    
+
     confess "Failed to find closing </feature_set> tag";
 }
 
@@ -683,7 +679,7 @@ sub otter_to_ace {
             }
         }
     }
-    
+
     # Features (polyA signals and sites etc...)
     if ($feature_set) {
         foreach my $sf (@$feature_set) {
@@ -703,48 +699,46 @@ sub otter_to_ace {
         }
     }
 
-
-
     my $clone_context = '' ;
     my $original_start = $$path[0]->assembled_start ; 
     foreach my $tile (@$path) {
-    
+
         my $clone = $tile->component_Seq->clone;
         my $name  = $tile->component_Seq->name;
         my $accession  = $clone->embl_id       or die "No embl_id on clone attached to '$name' in tile";
         my $sv         = $clone->embl_version  or die "No embl_version on clone attached to '$name' in tile";;
         my $clone_info = $clone->clone_info;
         my $orientation = $tile->component_ori ;
-        my $clone_length = $tile->component_end - $tile->component_start + 1 ;  
-        
+        my $clone_length = $tile->component_end - $tile->component_start + 1 ;
+
         $str .= qq{\nSequence : "$name"\nSource "$slice_name"\nAccession "$accession"\nSequence_version $sv\n};
 
         foreach my $keyword ($clone_info->keyword) {
             $str .= sprintf qq{Keyword "%s"\n}, ace_escape($keyword->name);
         }
         foreach my $remark ($clone_info->remark) {
-            my $rem = ace_escape($remark->remark);
-            if ($rem =~ s/^Annotation_remark- //) {
-                $str .= qq{Annotation_remark "$rem"\n};
-            }
-            elsif ($rem =~ s/^EMBL_dump_info.DE_line- //) {
-                $str .= qq{EMBL_dump_info DE_line "$rem"\n};
-            }
-            else {
-                $str .= qq{Annotation_remark "$rem"\n};
-            }
-        }
-        
-        ## add CloneContext object - so that annotators can  see features as clone coords   
+	    my $rem = ace_escape($remark->remark);
+	    if ($rem =~ s/^Annotation_remark- //) {
+	      $str .= qq{Annotation_remark "$rem"\n};
+	    }
+	    elsif ($rem =~ s/^EMBL_dump_info.DE_line- //) {
+	      $str .= qq{EMBL_dump_info DE_line "$rem"\n};
+	    }
+	    else {
+	      $str .= qq{Annotation_remark "$rem"\n};
+	    }
+	}
+
+	## add CloneContext object - so that annotators can  see features as clone coords
         my ( $contig_start , $contig_end, $gp_start, $target_start , $contig_length );
-               
+
         $contig_start  = 1; 
         $contig_end    = $tile->component_end  ;
-        
-        $gp_start = $tile->component_start ;    
+
+        $gp_start = $tile->component_start ;
         $target_start = $tile->assembled_start  - $original_start + 1;
-        $contig_length = $tile->assembled_end - $tile->assembled_start  + 1;  
-        
+        $contig_length = $tile->assembled_end - $tile->assembled_start  + 1;
+
         $clone_context .= qq{\nSequence "CloneCtxt-$name" \n} ;
         if ($orientation == 1 ){
             $clone_context .= qq{AGP_Fragment "$slice_name" $contig_start $contig_end Align $gp_start $target_start $contig_length\n} ;
@@ -752,10 +746,9 @@ sub otter_to_ace {
             $clone_context .= qq{AGP_Fragment "$slice_name" $contig_end $contig_start Align $contig_end $target_start $contig_length\n} ;
         }
         $clone_context .= qq{CloneContext\n} ;
-                    
-        
+
         $str .= "\n$clone_context\n";
-    } 
+    }
 
     my( %authors );
     $str .= ace_transcripts_locus_people($genes, $slice);
@@ -767,7 +760,7 @@ sub otter_to_ace {
             $str .= $1 . "\n";
         }
     }
-    return $str;
+     return $str;
 }
 
 sub ace_transcripts_locus_people{
@@ -829,7 +822,7 @@ sub ace_transcript_seq_objs_from_genes{
             $str .= "Method \"" . $method ;
             $str .= "_trunc" if $info->truncated_flag ;
             $str .=  "\"\n";
-            
+
             # Extra tags needed by ace
             if ($method =~ /supported_mRNA/) {
                 $str .= "Processed_mRNA\n";     ### check this
@@ -931,14 +924,14 @@ sub ace_locus_objs_from_genes{
         } else {
             $gene_name = $gene->stable_id;
         }
-        
+
         $str .= qq`\n//DELETE SEQUENCE FIRST\n-D Locus : "$gene_name"\n\n`;
 
         $str .= "Locus : \"" . $gene_name . "\"\n";
         foreach my $synonym ($info->synonym) {
             $str .= "Alias \"" . $synonym->name . "\"\n";
         }
-        
+
         $str .= "Known\n"     if $info->known_flag;
         $str .= "Truncated\n" if $info->truncated_flag;
 
@@ -948,7 +941,7 @@ sub ace_locus_objs_from_genes{
             $authors->{$author->email} ||= $author;
             $str .= qq{Locus_author "$name"\n};
         }
-        
+
         foreach my $tran (@{ $gene->get_all_Transcripts }) {
             my $tran_name;
             if ($tran->transcript_info->name) {
@@ -959,18 +952,23 @@ sub ace_locus_objs_from_genes{
             $str .= qq{Positive_sequence "$tran_name"\n};
         }
         $str .= "Locus_id \"" . $gene->stable_id . "\"\n";
-        
+
         if (my $desc = $gene->description) {
             $str .= qq{Full_name "$desc"\n};
         }
-        foreach my $rem ($info->remark) {
-            my $txt = $rem->remark;
-            $str .= qq{Remark "$txt"\n};
-        }
+        foreach my $rem ( $info->remark ) {
+	  my $txt = $rem->remark;
+
+	    if ($txt =~ s/^Annotation_remark- //) {
+	        $str .= qq{Annotation_remark "$txt"\n};
+	    } else {
+	        $str .= qq{Remark "$txt"\n};
+	    }
+	}
         if ($gene->type =~ /^([^:]+):/) {
             $str .= qq{Type_prefix "$1"\n};
         }
-        
+
         $str .= "\n";
     }
     return $str;
@@ -1299,7 +1297,7 @@ sub ace_to_otter {
                 elsif (/^Truncated/) {
                     $cur_gene->{Truncated} = 1;
                 }
-                elsif (/^Remark $STRING/x) {
+                elsif (/^Remark $STRING/x || /^Annotation_remark $STRING/x ) {
                     my $remark_list = $cur_gene->{'remarks'} ||= [];
                     push(@$remark_list, $1);
                 }
@@ -1715,17 +1713,22 @@ sub ace_to_XML {
 sub prune_Exons {
   my ($gene) = @_;
 
-  my @unique_Exons;
+  #my @unique_Exons;
 
   # keep track of all unique exons found so far to avoid making duplicates
   # need to be very careful about translation->start_exon and translation->end_Exon
 
   #print STDERR "Pruning exons\n";
 
-  my %exonhash;
+  #my %exonhash;
 
   foreach my $tran (@{ $gene->get_all_Transcripts }) {
     my @newexons;
+    my @unique_Exons;
+    my %exonhash;
+    print $tran->transcript_info->name, "\n";
+    print "All exons: ". "@{$tran->get_all_Exons}\n";
+
     foreach my $exon (@{$tran->get_all_Exons}) {
       my $found;
       #always empty
@@ -1741,12 +1744,12 @@ sub prune_Exons {
           last UNI;
         }
       }
-        #print STDERR " Exon " . $exon->stable_id . "\n";
-        #print STDERR " Phase " . $exon->phase . " EndPhase " . $exon->end_phase . "\n";
-        #print STDERR " Strand " . $exon->strand . " Start " . $exon->start . " End ". $exon->end ."\n";
+        ### print  " Exon " . $exon->stable_id . "\n";
+        ### print  " Phase " . $exon->phase . " EndPhase " . $exon->end_phase . "\n";
+        ### print  " Strand " . $exon->strand . " Start " . $exon->start . " End ". $exon->end ."\n";
 
       if (defined($found)) {
-        #print STDERR " Duplicate\n";
+        print  " Duplicate: $found\n";
         push (@newexons, $found);
         if ($tran->translation) {
           if ($exon == $tran->translation->start_Exon) {
@@ -1758,7 +1761,7 @@ sub prune_Exons {
           }
         }
       } else {
-        #print STDERR "New = " . $exon->stable_id . "\n";
+        print  "New = " . $exon->stable_id . "\n";
 
         ### This is nasty for the phases - sometimes exons come back with 
         ### the same stable id and different phases - we need to strip off
@@ -1766,9 +1769,9 @@ sub prune_Exons {
         ### already seen the stable_id
 
         if (defined($exon->stable_id) && defined($exonhash{$exon->stable_id})) {
-           #print STDERR "Already seen stable id " . $exon->stable_id . " - removing stable_id\n";
+           print  "Already seen stable id " . $exon->stable_id . " - removing stable_id\n";
            $exon->{_stable_id} = undef;
-           #print STDERR "Exon id " .$exon->stable_id . "\n";
+          # print STDERR  "Exon id " .$exon->stable_id . "\n";
         }
         push (@newexons,     $exon);
         push (@unique_Exons, $exon);
@@ -1778,14 +1781,16 @@ sub prune_Exons {
       }
     }
     $tran->flush_Exons;
-    foreach my $exon (@newexons) {
+    #foreach my $exon (@newexons) {
+    foreach my $exon (@unique_Exons) {
       $tran->add_Exon($exon);
     }
   }
 
   my @exons = @{$gene->get_all_Exons};
 
-  %exonhash = ();
+ # %exonhash = ();
+  my %exonhash = ();
 
     foreach my $ex (@exons) {
         if (my $stable = $ex->stable_id) {
@@ -1794,10 +1799,9 @@ sub prune_Exons {
     }
 
     while (my ($id, $count) = each %exonhash) {
-        print STDERR "Exon id $id seen $count times\n" if $count > 1;
+        print  "Exon id $id seen $count times\n" if $count > 1;
     }
 }
-
 
 sub path_to_XML {
   my ($chr,$chrstart,$chrend,$type,$path) = @_;
