@@ -75,22 +75,16 @@ sub XML_to_otter {
   while (<$fh>) {
     chomp;
     if (/<locus>/) {
-      if (defined($gene)) {
-        $gene->gene_info->author($author);
-      }
-
-      $gene = new Bio::Otter::AnnotatedGene();
-
-      push (@genes, $gene);
-
-      $geneinfo = new Bio::Otter::GeneInfo;
+      $gene     = Bio::Otter::AnnotatedGene->new;
+      $geneinfo = Bio::Otter::GeneInfo->new;
+      $author   = Bio::Otter::Author->new;
 
       $gene->gene_info($geneinfo);
+      $geneinfo->author($author);
+      push (@genes, $gene);
 
-      $author     = new Bio::Otter::Author;
       $currentobj = 'gene';
-
-      undef($tran);
+      $tran = undef;
     } elsif (/<stable_id>(.*)<\/stable_id>/) {
       my $stable_id = $1;
 
@@ -159,8 +153,8 @@ sub XML_to_otter {
       $currentobj = 'dna';
     } elsif (/<transcript>/) {
 
-      $tran     = new Bio::Otter::AnnotatedTranscript;
-      $traninfo = new Bio::Otter::TranscriptInfo;
+      $tran     = Bio::Otter::AnnotatedTranscript->new;
+      $traninfo = Bio::Otter::TranscriptInfo->new;
       $author   = Bio::Otter::Author->new;
 
       $tran->transcript_info($traninfo);
@@ -578,10 +572,6 @@ sub XML_to_otter {
         die "Assembly doesn't match for contig $fragname\n";
       }
     }
-  }
-
-  if (defined($gene)) {
-    $gene->gene_info->author($author);
   }
 
   # The xml coordinates are all in chromosomal coords - these
