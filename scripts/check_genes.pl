@@ -24,6 +24,7 @@ my $help;
 my $phelp;
 my $opt_v;
 my $opt_V;
+my $opt_D;
 my $opt_i='';
 my $opt_o='large_transcripts.lis';
 my $opt_p='duplicate_exons.lis';
@@ -54,6 +55,7 @@ GetOptions(
 	   'h',    \$help,
 	   'v',    \$opt_v,
 	   'V',    \$opt_V,
+	   'D',    \$opt_D,
 	   'i:s',  \$opt_i,
 	   'o:s',  \$opt_o,
 	   'p:s',  \$opt_p,
@@ -240,14 +242,14 @@ if($make_cache){
   my $nobs=0;
 
   # get exons of current genes
-  my $sth=$dbh->prepare("select gsi1.stable_id,gn.name,g.type,tsi.stable_id,ti.name,et.rank,e.exon_id,e.contig_id,e.contig_start,e.contig_end,e.sticky_rank,e.contig_strand,e.phase,e.end_phase,cti.transcript_info_id from exon e, exon_transcript et, transcript t, current_gene_info cgi, gene_stable_id gsi1, gene_name gn, gene g, transcript_stable_id tsi, current_transcript_info cti, transcript_info ti left join gene_stable_id gsi2 on (gsi1.stable_id=gsi2.stable_id and gsi1.version<gsi2.version) where gsi2.stable_id IS NULL and cgi.gene_stable_id=gsi1.stable_id and cgi.gene_info_id=gn.gene_info_id and gsi1.gene_id=g.gene_id and g.gene_id=t.gene_id and t.transcript_id=tsi.transcript_id and tsi.stable_id=cti.transcript_stable_id and cti.transcript_info_id=ti.transcript_info_id and t.transcript_id=et.transcript_id and et.exon_id=e.exon_id and e.contig_id");
+  my $sth=$dbh->prepare("select gsi1.stable_id,gn.name,g.type,tsi.stable_id,ti.name,et.rank,e.exon_id,e.contig_id,e.contig_start,e.contig_end,e.sticky_rank,e.contig_strand,e.phase,e.end_phase,cti.transcript_info_id,t.translation_id from exon e, exon_transcript et, transcript t, current_gene_info cgi, gene_stable_id gsi1, gene_name gn, gene g, transcript_stable_id tsi, current_transcript_info cti, transcript_info ti left join gene_stable_id gsi2 on (gsi1.stable_id=gsi2.stable_id and gsi1.version<gsi2.version) where gsi2.stable_id IS NULL and cgi.gene_stable_id=gsi1.stable_id and cgi.gene_info_id=gn.gene_info_id and gsi1.gene_id=g.gene_id and g.gene_id=t.gene_id and t.transcript_id=tsi.transcript_id and tsi.stable_id=cti.transcript_stable_id and cti.transcript_info_id=ti.transcript_info_id and t.transcript_id=et.transcript_id and et.exon_id=e.exon_id and e.contig_id");
   $sth->execute;
   open(OUT,">$cache_file") || die "cannot open cache file $cache_file";
   while (my @row = $sth->fetchrow_array()){
     $n++;
 
     # transform to chr coords
-    my($gsi,$gn,$gt,$tsi,$tn,$erank,$eid,$ecid,$est,$eed,$esr,$es,$ep,$eep,$ti)=@row;
+    my($gsi,$gn,$gt,$tsi,$tn,$erank,$eid,$ecid,$est,$eed,$esr,$es,$ep,$eep,$tiid,$trid)=@row;
 
     # skip obs genes
     if($gt eq 'obsolete'){
@@ -288,11 +290,11 @@ if($make_cache){
 	$ecst=$eced;
 	$eced=$t;
       }
-      my @row2=($gsi,$gn,$gt,$tsi,$tn,$erank,$eid,$ecst,$eced,$cname,$atype,$esr,$es,$ep,$eep);
+      my @row2=($gsi,$gn,$gt,$tsi,$tn,$erank,$eid,$ecst,$eced,$cname,$atype,$esr,$es,$ep,$eep,$trid);
       print OUT join("\t",@row2)."\n";
 
       # record genes with no gene_remark
-      if(!$trii{$ti}){
+      if(!$trii{$tiid}){
 	$missing_tr{$gt}->{$tsi}="$gsi:$gn";
       }
       
@@ -515,7 +517,7 @@ my %ngtgnerr3;
 open(IN,"$cache_file") || die "cannot open $opt_i";
 while(<IN>){
   chomp;
-  my($gsi,$gn,$gt,$tsi,$tn,$erank,$eid,$ecst,$eced,$cname,$atype,$esr,$es,$ep,$eep)=split(/\t/);
+  my($gsi,$gn,$gt,$tsi,$tn,$erank,$eid,$ecst,$eced,$cname,$atype,$esr,$es,$ep,$eep,$trid)=split(/\t/);
 
   # skip obs genes
   if($gt eq 'obsolete'){
@@ -583,7 +585,7 @@ while(<IN>){
     $tsi_sum{$tsi}=[$tn,$cname,$atype];
   }
 
-  push(@{$gsi{$atype}->{$gsi}},[$tsi,$erank,$eid,$ecst,$eced,$esr,$es,$ep,$eep]);
+  push(@{$gsi{$atype}->{$gsi}},[$tsi,$erank,$eid,$ecst,$eced,$esr,$es,$ep,$eep,$trid]);
 
   # these relationships should be fixed
   $atype{$atype}=$cname;
@@ -658,8 +660,17 @@ my $nsticky=0;
 my $nexon=0;
 my %dup_exon;
 my $nmc=0;
+my $nmcb=0;
 my $nl=0;
 my $flag_v;
+my $nip=0;
+my $npntr=0;
+my %t2e;
+my %e2t;
+my %e;
+my %elink;
+my %eall;
+my %e2g;
 open(OUT,">$opt_o") || die "cannot open $opt_o";
 open(OUT2,">$opt_p") || die "cannot open $opt_p";
 open(OUT3,">$opt_q") || die "cannot open $opt_q";
@@ -669,7 +680,7 @@ foreach my $atype (keys %gsi){
   foreach my $gsi (keys %{$gsi{$atype}}){
 
     # debug:
-    if($gsi eq 'OTTHUMG00000032751' && $opt_v){
+    if($gsi eq 'OTTHUMG00000032751' && $opt_D){
       $flag_v=1;
       print "debug mode\n";
     }else{
@@ -677,20 +688,17 @@ foreach my $atype (keys %gsi){
     }
     
     my($gn,$gt)=@{$gsi_sum{$gsi}};
-    my %t2e;
-    my %e2t;
-    my %e;
     my %eids;
     my %eidso;
-    my %elink;
     # look for overlapping exons and group exons into transcripts
+    # (one gene at a time)
     foreach my $rt (@{$gsi{$atype}->{$gsi}}){
-      my($tsi,$erank,$eid,$ecst,$eced,$esr,$es,$ep,$eep)=@{$rt};
-      if($e{$eid}){
+      my($tsi,$erank,$eid,$ecst,$eced,$esr,$es,$ep,$eep,$trid)=@{$rt};
+      if($e{$gsi}->{$eid}){
 	# either stored as sticky rank2 or this is sticky rank2
 	if($eids{$eid} || $esr>1){
 
-	  my($st,$ed,$es,$ep,$eep)=@{$e{$eid}};
+	  my($st,$ed,$es,$ep,$eep,$trid)=@{$e{$gsi}->{$eid}};
 
 	  # save originals
 	  my $esro=1;
@@ -717,11 +725,11 @@ foreach my $atype (keys %gsi){
 	  }elsif($ed+1==$ecst){
 	    $eids{"$eid.$esr"}=[$ecst,$eced];
 	    $ed=$eced;
-	    $e{$eid}=[$st,$ed,$es,$ep,$eep];
+	    $e{$gsi}->{$eid}=[$st,$ed,$es,$ep,$eep,$trid];
 	    $nsticky++;
 	  }elsif($eced+1==$st){
 	    $st=$ecst;
-	    $e{$eid}=[$st,$ed,$es,$ep,$eep];
+	    $e{$gsi}->{$eid}=[$st,$ed,$es,$ep,$eep,$trid];
 	    $nsticky++;
 	  }else{
 	    print "ERR: duplicate exon id $eid, but no sticky alignment\n";
@@ -729,8 +737,9 @@ foreach my $atype (keys %gsi){
 	}
       }else{
 	my $flag;
+	# compare current exon to all existing ones...
 	foreach my $eid2 (keys %e){
-	  my($st,$ed,$es2,$ep2,$eep2)=@{$e{$eid2}};
+	  my($st,$ed,$es2,$ep2,$eep2,$trid2)=@{$e{$gsi}->{$eid2}};
 	  if($st==$ecst && $ed==$eced){
 	    # duplicate exons
 	    if($es!=$es2){
@@ -753,37 +762,48 @@ foreach my $atype (keys %gsi){
 	    my $mied=$ed;
 	    $mied=$eced if $eced<$mied;
 	    if($mxst<=$mied){
-	      if(1){
-		push(@{$elink{$eid}},$eid2);
-	      }else{
-	      # overlapping exons
-		my $mist=$st;
-		$mist=$ecst if $ecst<$mist;
-		my $mxed=$ed;
-		$mxed=$eced if $eced>$mxed;
-		$e{$eid2}=[$mist,$mxed];
-		$eid=$eid2;
-		$flag=1;
-	      }
+	      push(@{$elink{$gsi}->{$eid}},$eid2);
 	    }
 	  }
 	}
 	if(!$flag){
-	  $e{$eid}=[$ecst,$eced,$es,$ep,$eep];
+	  # check for phase consistency and warn
+	  # if trid==0; $ep=$eep=-1; else either $ep=$eep=-1 or any positive
+	  my $flag_noncoding=0;
+	  if($ep==-1 || $eep==-1){
+	    $flag_noncoding=1 if $ep==-1;
+	    if($ep+$eep==-2){
+	      print OUT3 "ERR1 $eid $ep $eep inconsistent noncoding phases\n";
+	      $nip++;
+	    }
+	  }
+	  if($trid==0 && $flag_noncoding==0){
+	    print OUT3 "ERR2 $eid $ep $eep exon has phase when no translation\n";
+	    $npntr++;
+	  }
+	  $e{$gsi}->{$eid}=[$ecst,$eced,$es,$ep,$eep,$trid];
+	  push(@{$eall{$ecst}->{$eced}},$eid);
 	  $eids{$eid}=$esr if $esr>1;
 	  $nexon++;
 	}
       }
-      push(@{$t2e{$tsi}},$eid);
-      push(@{$e2t{$eid}},$tsi);
+      push(@{$t2e{$gsi}->{$tsi}},$eid);
+      push(@{$e2t{$gsi}->{$eid}},$tsi);
+      if($e2g{$eid}){
+	# eids should only be part of a single gid
+	print "FATAL $eid part of $gsi and $e2g{$eid}\n";
+      }else{
+	$e2g{$eid}=$gsi;
+      }
     }
+
     # get size of transcripts and warn of large ones
     my %tse;
-    foreach my $tsi (keys %t2e){
+    foreach my $tsi (keys %{$t2e{$gsi}}){
       my $mist=1000000000000;
       my $mxed=-1000000000000;
-      foreach my $eid (@{$t2e{$tsi}}){
-	my($st,$ed)=@{$e{$eid}};
+      foreach my $eid (@{$t2e{$gsi}->{$tsi}}){
+	my($st,$ed)=@{$e{$gsi}->{$eid}};
 	$mist=$st if $st<$mist;
 	$mxed=$ed if $ed>$mxed;
       }
@@ -797,16 +817,14 @@ foreach my $atype (keys %gsi){
     }
     my $cl=new cluster();
     # link exons by transcripts
-    foreach my $tsi (keys %t2e){
-      #if(scalar(@{$t2e{$tsi}})>1){
-	$cl->link([@{$t2e{$tsi}}]);
-	print "D: $tsi ".join(',',@{$t2e{$tsi}})."\n" if $flag_v;
-      #}
+    foreach my $tsi (keys %{$t2e{$gsi}}){
+      $cl->link([@{$t2e{$gsi}->{$tsi}}]);
+      print "D: $tsi ".join(',',@{$t2e{$gsi}->{$tsi}})."\n" if $flag_v;
     }
     # link exons by overlap
-    foreach my $eid (keys %elink){
-      $cl->link([$eid,@{$elink{$eid}}]);
-      print "D: $eid ".join(',',@{$elink{$eid}})."\n" if $flag_v;
+    foreach my $eid (keys %{$elink{$gsi}}){
+      $cl->link([$eid,@{$elink{$gsi}->{$eid}}]);
+      print "D: $eid ".join(',',@{$elink{$gsi}->{$eid}})."\n" if $flag_v;
     }
     if($cl->cluster_count>1){
       print "$gsi ($gt,$gn) has multiple clusters\n";
@@ -817,7 +835,7 @@ foreach my $atype (keys %gsi){
 	$ncid++;
 	my %tcl;
 	foreach my $eid ($cl->cluster_members($cid)){
-	  foreach my $tsi (@{$e2t{$eid}}){
+	  foreach my $tsi (@{$e2t{$gsi}->{$eid}}){
 	    $tcl{$tsi}++;
 	  }
 	}
@@ -826,8 +844,8 @@ foreach my $atype (keys %gsi){
 
       # analysis by overlap of transcripts
       my $last_ed;
-      foreach my $tsi (sort {$tse{$a}->[0]<=>$tse{$b}->[0]} keys %tse){
-	my($st,$ed)=@{$tse{$tsi}};
+      foreach my $tsi (sort {$tse{$gsi}->{$a}->[0]<=>$tse{$gsi}->{$b}->[0]} keys %tse){
+	my($st,$ed)=@{$tse{$gsi}->{$tsi}};
 	my($tn)=@{$tsi_sum{$tsi}};
 	if($last_ed && $last_ed<$st){
 	  my $gap=$st-$last_ed;
@@ -847,6 +865,7 @@ foreach my $atype (keys %gsi){
 	  }
 	  if($nc<=2){
 	    print $out;
+	    $nmcb++;
 	  }
 	}
 	print "  $tsi ($tn): $st-$ed\n";
@@ -857,12 +876,40 @@ foreach my $atype (keys %gsi){
   }
 }
 print scalar(keys %dup_exon)." duplicate exons\n";
-print "$nmc genes with non overlapping transcripts\n";
+print "$nmc genes with non overlapping transcripts; $nmcb cases gap crosses single clone boudary\n";
 print "found $nexon exons; $nsticky sticky exons\n";
+print "$nip exons have inconsistent noncoding phases; $npntr exons have phase when no translation\n";
 print "$nl large transcripts found (see $opt_o)\n";
 close(OUT);
 close(OUT2);
 close(OUT3);
+
+# global check on duplicate exons - look for cases where exact duplicate exons are part of different genes
+my $dgcl=new cluster();
+foreach my $ecst (keys %eall){
+  foreach my $eced (keys %{$eall{$ecst}}){
+    if(scalar(@{$eall{$ecst}->{$eced}})>1){
+      # multiple exons share these coordinates (however could be just different phases...so count distinct genes)
+      my %gsi;
+      foreach my $eid (@{$eall{$ecst}->{$eced}}){
+	$gsi{$e2g{$eid}}++;
+      }
+      if(scalar(keys %gsi)>1){
+	$dgcl->link([(keys %gsi)]);
+      }
+    }
+  }
+}
+my $ngcl=$dgcl->cluster_count;
+if($ngcl>1){
+  print "$ngcl clusters of genes that share identical exons\n";
+  # analysis by cluster
+  my $igcl=0;
+  foreach my $cid ($ngcl->cluster_ids){
+    $igcl++;
+    print " Cluster $igcl: ".join(',',$ngcl->cluster_members($cid))."\n";
+  }
+}
 
 # new check - for each transcript, check all exons are sequential, same strand
 # sensible direction etc.  Check orientation of all transcripts in a gene consistent
