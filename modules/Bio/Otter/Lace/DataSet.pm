@@ -273,7 +273,8 @@ sub save_current_SequenceNote_for_CloneSequence {
     confess "Missing CloneSequence argument" unless $cs;
     my $dba = $self->get_cached_DBAdaptor;
     my $author_id = $self->_author_id;
-
+    warn "author name and id " . $self->author . $self->_author_id ;
+   
     my $contig_id = $cs->contig_id
         or confess "contig_id not set";
     my $current_note = $cs->current_SequenceNote
@@ -315,6 +316,45 @@ sub save_current_SequenceNote_for_CloneSequence {
         $note->is_current(0);
     }
     $current_note->is_current(1);
+}
+
+# takes an existing sequence_note object and update the comment
+sub update_current_SequenceNote{
+    
+    my ($self , $clone_sequence, $new_text) = @_ ;
+    
+    my $current_sequence_note = $clone_sequence->current_SequenceNote;
+    
+    my $dba = $self->get_cached_DBAdaptor;
+    
+    my $contig_id = $clone_sequence->contig_id 
+        or confess 'contig_id not set';
+    my $timestamp = $current_sequence_note->timestamp  
+        or confess 'timestamp not set';
+    my $author = $current_sequence_note->author 
+        or confess 'author not set';  
+    
+    # sequence_note stores the username, we needto get the db id      
+    my $author_query = $dba->prepare(q{
+            SELECT author_id
+            FROM author
+            WHERE author_name = ?
+            }); 
+            
+    $author_query->execute($author); 
+    my $author_id = $author_query->fetchrow; 
+
+    my $update = $dba->prepare(q{
+        UPDATE  sequence_note
+        SET     note    = ?
+        WHERE   contig_id = ?
+        AND     author_id = ?
+        AND     note_time = FROM_UNIXTIME(?)  
+        });
+     
+     my $rows = $update->execute($new_text , $contig_id , $author_id, $timestamp);
+     
+    
 }
 
 sub get_all_Chromosomes {
@@ -401,6 +441,7 @@ sub make_DBAdaptor {
             push(@args, "-$prop", $val);
         }
     }
+
     return Bio::Otter::DBSQL::DBAdaptor->new(@args);
 }
 
