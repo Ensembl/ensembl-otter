@@ -252,6 +252,8 @@ sub get_all_DataSets {
             confess "No properties in dataset '$name'" unless $property_count;
             push(@$ds, $set);
         }
+        ### Would prefer to keep order found in species.dat
+        @$ds = sort {$a->name cmp $b->name} @$ds;
     }
     return @$ds;
 }

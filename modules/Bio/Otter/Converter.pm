@@ -60,6 +60,11 @@ sub XML_to_otter {
   my $accession;
   my $version;
   
+  # These two hashes are to check that we don't
+  # have the same gene name more than once.
+  my %seen_gene_name;
+  my %seen_transcript_name;
+  
   my $feature_set = [];
 
     ### <sequence_set> tag is ignored - parser will produce rubbish with multiple sequence_sets
@@ -256,8 +261,18 @@ sub XML_to_otter {
       if ($currentobj eq 'evidence') {
         $evidence->name($1);
       } elsif ($currentobj eq 'tran') {
+        if ($seen_transcript_name{$1}) {
+            confess "more than one transcript has the name '$1'";
+        } else {
+            $seen_transcript_name{$1} = 1;
+        }
         $traninfo->name($1);
       } elsif ($currentobj eq 'gene') {
+        if ($seen_gene_name{$1}) {
+            confess "more than one gene has the name '$1'";
+        } else {
+            $seen_gene_name{$1} = 1;
+        }
         $geneinfo->name(new Bio::Otter::GeneName(-name => $1));
       } else {
         die "ERROR: name tag only associated with evidence, transcript or gene - obj is $currentobj\n";
