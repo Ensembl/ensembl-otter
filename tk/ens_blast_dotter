@@ -23,7 +23,7 @@ my $font = ['Helvetica', 12, 'bold'];
 
 {
     my $chr_name = 'chr9';
-    my $min_percent_id = 0;
+    my $min_percent_id = 95;
     Hum::EnsCmdLineDB::do_getopt(
         'chr=s'     => \$chr_name,
         'percent=f' => \$min_percent_id,
@@ -48,7 +48,7 @@ my $font = ['Helvetica', 12, 'bold'];
         #my $raw_end   = $map_c->rawcontig_end;
         my $contig    = $map_c->contig;
         my $length = $contig->length;
-        my $name = $contig->id;
+        my ($name) = $contig->id =~ /^(\w+\.\d+)/;
         my $id = $contig->internal_id;
 
         #printf STDERR "%10d  %-10d  %s\n", $start, $end, $name;
@@ -123,9 +123,15 @@ my $font = ['Helvetica', 12, 'bold'];
                 };
             my $sth = $ensdb->prepare($sql);
             $sth->execute;
-            while (my ($col_start, $col_end, $col_strand,
-                $row_start, $row_end, $pid) = $sth->fetchrow)
-            {
+            
+            my ($col_start, $col_end, $col_strand,
+                $row_start, $row_end, $pid);
+            $sth->bind_columns(
+                \$col_start, \$col_end, \$col_strand,
+                \$row_start, \$row_end, \$pid);
+            
+            while ($sth->fetch) {
+                next unless $pid >= $min_percent_id;
                 my $length = $col_end - $col_start + 1;
                 if ($col_strand == -1) {
                     ($col_start, $col_end) = ($col_end, $col_start);

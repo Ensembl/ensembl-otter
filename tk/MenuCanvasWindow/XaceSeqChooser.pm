@@ -1134,6 +1134,7 @@ sub draw_subseq_list {
         foreach my $clust ($self->get_all_Subseq_clusters($clone)) {
             push(@subseq, "") if @subseq;
             #push(@subseq, map($_->name, @$clust));
+            ### This logic can be moved to the draw_sequence_list method
 	    foreach my $sub (@$clust){
 		my $text=$sub->name;
 		if($sub->is_truncated){
