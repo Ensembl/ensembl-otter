@@ -324,9 +324,9 @@ sub get_all_SequenceSets_for_DataSet{
     $ssp->set_property('dataset_name', $dsObj->name);
     my $p   = $ssp->my_parser();
     $p->parse($content);
-    $dsObj->get_all_SequenceSets($ssp->objects);
-    
+    return $dsObj->get_all_SequenceSets($ssp->objects);
 }
+
 sub save_otter_xml {
     my( $self, $xml, $dataset_name ) = @_;
     
