@@ -425,21 +425,13 @@ sub FeatureSet {
 
 =head2 make_embl_ft
 
-**This Documentation is wrong.
- 
-This is the principal method of the module. When passed an EMBL accession
-creates a Hum::EMBL object, which can be subsequently dumped. Does this by
-interrogating the Otter database and using various Hum::EMBL modules,
-returning the populated Hum::EMBL object, which can be dumped with
-print $embl->compose()
+This is the principal method of the module. When passed an EMBL accession,
+a Hum::EMBL object and a sequence version, adds the FT lines to the
+Hum::EMBL object.
 
 Brief outline:
 
-a) Creates Hum::EMBL object, setting $embl_factory->EMBL;
-
-b)  Does initial setup of EMBL properties with $embl_factory->fake_embl_setup
-
-c)  Creates a Hum::EMBL::FeatureSet, setting $embl_factory->FeatureSet
+c)  Creates a Hum::EMBL::FeatureSet
 
 d)  Calls $embl_factory->fetch_chr_start_end_for_accession to get a list of
     listrefs such as [1, 561232, 672780]
@@ -642,8 +634,9 @@ sub _do_polyA {
 =head2 _do_Gene
 
 Internal method to add FT lines to the Hum::EMBL object being built, according
-to the passed Gene object. For each Transcript in the Gene object mRNA and CDS
-lines are added.
+to the passed gene object, and Hum::EMBL::FeatureSet
+
+For each Transcript in the Gene object mRNA and CDS lines are added.
 
 The mRNA is built up by iterating over all Exons ($transcript->get_all_Exons),
 the CDS by Exons fetched with $transcript->get_all_translateable_Exons
@@ -667,21 +660,16 @@ sub _do_Gene {
     #Bio::Otter::AnnotatedGene, isa Bio::EnsEMBL::Gene
     return if $gene->type eq 'obsolete'; # Deleted genes
 
-    #my $contig_length = $self->contig_length;
-    #my $embl = $self->EMBL;
-    #my $set = $self->FeatureSet;
-    
     #Bio::Otter::AnnotatedTranscript, isa Bio::EnsEMBL::Transcript
     #Transcript here give an mRNA, potentially + a CDS in EMBL record.
     foreach my $transcript (@{$gene->get_all_Transcripts}) {
 
         my $transcript_info = $transcript->transcript_info;
-        my $sid = $transcript->stable_id; #Currently not used
-        
+ 
         #Do the mRNA
         my $all_transcript_Exons = $transcript->get_all_Exons;
         if ($all_transcript_Exons) {
-        
+            
             my $mRNA_exonlocation = Hum::EMBL::ExonLocation->new;
             
             #This will only return true if one or more Exons are on the Slice.
@@ -689,13 +677,22 @@ sub _do_Gene {
                 , $all_transcript_Exons)) {
                     
                 my $ft = $set->newFeature;
-                $ft->key('mRNA');
+                if ($gene->type !~ /pseudo/i) {
+                    $ft->key('mRNA');
+                } else {
+                    $ft->key('CDS');
+                }
                 $ft->location($mRNA_exonlocation);
                 $mRNA_exonlocation->start_not_found($transcript_info->mRNA_start_not_found);
                 $mRNA_exonlocation->end_not_found($transcript_info->mRNA_end_not_found);
             
                 $self->_add_gene_qualifiers($gene, $ft);
-                $self->_supporting_evidence($transcript_info, $ft, 'EST', 'cDNA');
+                
+                if ($gene->type !~ /pseudo/i) {
+                    $self->_supporting_evidence($transcript_info, $ft, 'EST', 'cDNA');
+                } else {
+                    $self->_supporting_evidence($transcript_info, $ft, 'Protein');
+                }
             }
         } else {
             warn "No mRNA exons\n";
@@ -703,6 +700,7 @@ sub _do_Gene {
         
         #Do the CDS, if it has a translation
         if ($transcript->translation) {
+
             my $all_CDS_Exons = $transcript->get_all_translateable_Exons;
             if ($all_CDS_Exons) {
             
@@ -724,6 +722,9 @@ sub _do_Gene {
                 warn "No CDS exons\n";
             }
         }
+        
+        #If gene->type =~ /pseudo/i
+        
     }
 }
 
