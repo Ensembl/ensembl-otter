@@ -49,6 +49,21 @@ cd to each module directory and run:
 
   cvs update -r CURRENT_TAG
 
+To ensure that you can overwrite files owned by
+others in a group-writable checkout, you can use:
+
+  cvs -d :ext:USER@cvs.sanger.ac.uk:/nfs/ensembl/cvsroot update -r CURRENT_TAG
+
+Replacing USER with your user ID.
+
+In the ensembl-otter module, the only files that
+should have been modified on the server are:
+
+    conf/species.dat
+    scripts/OtterDefs.pm
+
+OtterDefs.pm may need updating!
+
 =head1 Backing out of an upgrade
 
 cd to module directories and:
