@@ -11,7 +11,7 @@ use vars '@ISA';
 @ISA = ('CanvasWindow');
 
 sub new {
-    my( $pkg, $tk ) = @_;
+    my( $pkg, $tk, @rest ) = @_;
 
     my $menu_frame = $tk->Frame(
         -borderwidth    => 1,
@@ -22,7 +22,7 @@ sub new {
         -fill   => 'x',
         );
     
-    my $self = $pkg->SUPER::new($tk);
+    my $self = $pkg->SUPER::new($tk, @rest);
     $self->menu_bar($menu_frame);
     return $self;
 }

@@ -9,6 +9,7 @@ use CanvasWindow::MainWindow;
 use CanvasWindow::Utils 'expand_bbox';
 use TransientWindow;
 use TransientWindow::LogWindow;
+use Tk::HeadedCanvas;
 
 sub new {
     my( $pkg, $tk, $x, $y, $construct_method ) = @_;
@@ -60,7 +61,20 @@ sub make_canvas {
 }
 
 sub make_headed_canvas {
-    die "not yet implemented";
+    my( $self, $tk, $x, $y ) = @_;
+
+    my $hc = $tk->HeadedCanvas(
+        -highlightthickness => 1,
+        -background         => 'white',
+        -width              => $x,
+        -height             => $y,
+    )->pack(
+        -side => 'top',
+        -fill => 'both',
+        -expand => 1,
+    );
+
+    return $hc;
 }
 
 sub icon_pixmap {
