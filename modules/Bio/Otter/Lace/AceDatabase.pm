@@ -898,8 +898,7 @@ sub DESTROY {
         warn "Not cleaning up '$home' because error flag is set\n";
         return;
     }
-    
-    $self->unlock_all_slices if $self->Client->write_access;
+
     rmtree($home);
 }
 

@@ -4,7 +4,7 @@
 package Bio::Otter::Lace::Client;
 
 use strict;
-use Carp;
+use Carp qw{ confess cluck };
 use Sys::Hostname qw{ hostname };
 use LWP;
 use Bio::Otter::Lace::DataSet;
@@ -265,6 +265,8 @@ sub save_otter_ace {
 
 sub unlock_otter_ace {
     my( $self, $ace_str, $dataset ) = @_;
+    
+    #cluck "Unlocking ", substr($ace_str, 0, 80);
     
     my $ace = Bio::Otter::Lace::TempFile->new;
     $ace->name('lace_unlock_contig.ace');

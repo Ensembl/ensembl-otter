@@ -117,14 +117,14 @@ sub lock_clones_by_slice {
             );
 	eval {
 	    $self->get_CloneLockAdaptor->store($lock); 
-	};  
+	};
 	if ($@) {
 	    my $exlock = $self->get_CloneLockAdaptor->fetch_by_clone_id($clone_id);
 	    push(@existing, $exlock);
             $existing_clone{$clone_id} = $clone;
 	} else {
 	    push(@new, $lock);
-	}   
+	}
     }
 
     if (@existing) {
