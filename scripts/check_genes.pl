@@ -88,9 +88,9 @@ check_genes.pl
   -make_cache               make cache file
   -exclude                  gene types prefixes to exclude ($exclude)
 
-Select sets:
-  -external                 external genes from vega_set only
-  -progress                 also consider vega_sets tagged as 'in progress'
+Select sets (default is vega_sets tagged 'external' + 'internal', E+I)
+  -external                 only consider vega_sets tagged as 'external' (E)
+  -progress                 also consider vega_sets tagged as 'in progress' (E+I+P)
   -vega                     vega database (all sets in assembly table)
   -set            set       specified set only
 
