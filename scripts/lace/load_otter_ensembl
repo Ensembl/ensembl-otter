@@ -86,7 +86,9 @@ my $input_type;
     my @file_values;          # stores the values given in each line of input as an array of the component parts
     my $chromosome_name;
     my $set_name;
-    my $end_coord;          # stores the end coord of the last contig in sequence set - used when appending contigs to a previous set  
+    my $end_coord;            # stores the end coord of the last contig in sequence set - used when appending contigs to a previous set  
+              
+    
     
     ## next set of variables are overwritten if a command line option is specified
     my $host = 'localhost'; # holds the (default) value for the otter port
@@ -239,8 +241,10 @@ my $input_type;
     $SIG{INT} = sub {my $sig=shift;die "exited after SIG$sig";};
 
 
-    # update the sequence sets table and return the coord of the last contig
+    # update the sequence sets table and return the coord of the last contig if available
     $end_coord = check_sequence_set($otter_db, $set_name);
+    my $other_end_coord = check_sequence_set($pipeline_db , $set_name);
+    if ($other_end_coord > $end_coord)  { $end_coord = $other_end_coord };
     
     
     # create an analysis adaptor and a clone adaptor for the otter database and then one of each for the pipeline db
@@ -280,7 +284,7 @@ my $input_type;
             $n = 5;    # does this get used for anything? - don't think so
             $type = 'F' ;        
             $ctg_ori =  '+';
-            $chr_start =  $end_coord + 10000 ; 
+            $chr_start =  $end_coord + 10000 ;
             $chr_end = ($chr_start + $seq->length + 1);
             
             $ctg_start = 1 ;
@@ -338,8 +342,7 @@ my $input_type;
         };
 
         if (! $@) {
-            warn "this clone is already in the database    " .$clone->dbID ;
-            
+            warn "this clone is already in the database (id: " .$clone->dbID .")";   
         }
         else{
             $clone= Bio::EnsEMBL::Clone->new();
@@ -403,8 +406,13 @@ my $input_type;
         my $ana_obj = $pipe_analysis->fetch_by_logic_name('SubmitContig');
         $ana_obj->input_id_type('CONTIG');
         my $state_info = $pipeline_db->get_StateInfoContainer;
-        $state_info->store_input_id_analysis( $acc_ver.".$chr_start.$chr_end" , $ana_obj );
-    
+        eval{
+            $state_info->store_input_id_analysis( $acc_ver.".$chr_start.$chr_end" , $ana_obj );
+        };
+        if ($@){
+            print STDERR "could not enter values to input_id_analysis table "; 
+        }
+        
         ##-------------------------------------
     }  #-----end of read in file loop
 
@@ -504,6 +512,8 @@ sub check_sequence_set{
     if (@row){
         
         if ($input_type  eq  'AGP'){
+            $sth->finish;
+            print STDERR "this exists already in the " . $db->dbname . " database\n";
             die "sorry, cant have the same name as an existing set (when using an agp file)";
         }
         else{
