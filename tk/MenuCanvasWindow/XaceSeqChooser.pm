@@ -11,10 +11,12 @@ use Hum::Ace::SubSeq;
 use Hum::Ace::Locus;
 use Hum::Ace::GeneMethod;
 use Hum::Ace::XaceRemote;
+use Hum::Sequence::DNA;
 use MenuCanvasWindow;
 use MenuCanvasWindow::ExonCanvas;
 use vars ('@ISA');
 use Hum::Ace;
+use Data::Dumper;
 
 @ISA = ('MenuCanvasWindow');
 
@@ -120,7 +122,14 @@ sub subseq_menubutton {
     }
     return $self->{'_subseq_menubutton'};
 }
-
+sub dotter_menuitem{
+    my( $self, $dmi ) = @_;
+    
+    if ($dmi) {
+        $self->{'_dotter_menuitem'} = $dmi;
+    }
+    return $self->{'_dotter_menuitem'};
+}
 sub clone_sub_switch_var {
     my( $self, $switch_ref ) = @_;
     
@@ -443,8 +452,19 @@ sub populate_menus {
     #    #-underline      => 0,
     #    );
     
-    $file->add('separator');
+    ## Spawn dotter Ctrl . ?????
+    $file->add('command',
+        -label          => 'Spawn me a dotter!',
+        -hidemargin     => 1,
+        -command        => sub { $self->spawn_dotter },
+	#-command        => sub { $self->command_line_restart },
+        -accelerator    => 'Ctrl+B.',
+#	-state          => 'disabled',
+        -underline      => 0,
+        );
     
+    $file->add('separator');
+
     # Close window
     my $exit_command = sub {
         $self->exit_save_data or return;
@@ -1586,7 +1606,7 @@ sub get_xace_window_id {
 
 sub highlight_by_name {
     my( $self, $tag, @names ) = @_;
-    
+
     my $canvas = $self->canvas;
     my %selected_clone = map {$_, 1} @names;
     
@@ -1639,6 +1659,71 @@ sub list_selected_subseq_names {
     return @names;
 }
 
+sub spawn_dotter{
+    my ($self) = @_;
+    my $matching = {feature_name => [ qr/(\w+):(.+)/, 0 ],
+		    gen_start      => [ qr/(\d+)/, 1 ],
+		    gen_end        => [ qr/(\d+)/, 2 ]
+		};
+    my $matched = $self->hash_from_clipboard($matching);
+#    warn Dumper($matched);
+    return undef unless @{$matched->{feature_name}}; # don't need to do anything
+    # now we can require the Dotter Launcher Class
+    require CanvasWindow::DotterLauncher;
+
+    # Dotter Launcher will take care of most of stuff.
+    my $subj_name  = $matched->{feature_name}->[1];
+    my $geno_start = $matched->{gen_start}->[0];
+    my $geno_end   = $matched->{gen_end}->[0];
+    my $geno_name  = $self->save_selected_clone_names()->[0]; # can only get first one!
+
+    warn "my sub name is : <$subj_name>";
+    warn "my gen name is : <$geno_name>";
+
+    # now fetch sequence objects, they're Hum::Sequence::DNA objects
+    my $subj_Sequence = $self->fetch_Sequence($subj_name, 'pfetch');
+    my $geno_Sequence = $self->get_CloneSeq($geno_name)->Sequence();
+
+    
+    warn "I'm spawning a dotter launcher";
+    # everything's gone ok so far
+    my $canvas = $self->canvas;
+    my $this_top = $canvas->toplevel;
+    $this_top->configure(-cursor => 'watch');
+    my $top =  $this_top->Toplevel(-title => "Dotter Launcher"); # store this?
+    # make the DotterLauncher
+    my $launcher  = CanvasWindow::DotterLauncher->new($top);
+    $launcher->subject($subj_Sequence);
+    $launcher->genomic($geno_Sequence);
+    $launcher->start($geno_start);
+    $launcher->end($geno_end);
+#    $launcher->initialise();    # what does this do in CanvasWindow
+#    $launcher->Client();        # Do we need this?
+    $launcher->draw();
+}
+
+sub fetch_Sequence{
+    my ($self, $seqname, $program, $options, $seq) = @_;
+    $program ||= 'pfetch';
+    $seqname || confess "No Seqname given";
+    $options ||= [];
+    my @args = @$options;
+    push @args, $seqname;
+    open (my $fh, "$program @args |") || confess "can't pipe to <$program @args>";
+    local $/ = "";
+    while (<$fh>){
+	$seq .= $_;
+    }
+    close $fh;
+    confess("$program can't find $seqname") if $seq =~ /No match/;
+    my ($name, $dna) = $seq =~ m/^\>([^\n]+)\n(.+)/s;
+    my $seqObj = Hum::Sequence::DNA->new();
+    $seqObj->name($seqname);
+    $seqObj->description($name);
+    $seqObj->sequence_string($dna);
+    return $seqObj;
+}
+
 sub DESTROY {
     my( $self ) = @_;
     
@@ -1655,3 +1740,11 @@ __END__
 
 James Gilbert B<email> jgrg@sanger.ac.uk
 
+>gi|1760411|gb|AA179042.1|AA179042 zp11a08.r1 Stratagene fetal retina 937202 Homo sapiens cDNA clone IMAGE:609110 5'
+GGAGCCTCTCCCCCTGACATCTCCACACACCTCTGCCGTCTCGCTTCCCCTCCCTCTAGC
+ATCCTGTGGACTTTGGGTGCTGGACAGTTATGGGCCCCAGTCCCAGCCCTGCCACCTCGT
+AGCTGTGTGACTTGGTAGAGTTAAACTCTTTGAGTCTCAATTTCCCTTTTCTACAGAAGA
+GGAATAGCAAGACTCCCTGCCTCAGAAGGCTGCTGAGAGGATGAAGTGAGTTCAGGCATG
+TTAAGCCCTTAAAACTGTACCTGGTACATATCAGGACTTAATAAATTTGAGTATTGTGTG
+TGCCCCCCACACACGTAAGCATGTGCACACCTACACCCTGCAAACAACGTGTTCCTCTGT
+GGGACCCATGCCTGGAACTGGGTCATAA
