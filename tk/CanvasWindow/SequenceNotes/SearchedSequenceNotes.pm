@@ -55,6 +55,12 @@ sub save_sequence_notes{
     $self->SequenceSet($ss);
     $self->SUPER::save_sequence_notes($comment);
     $self->{'_SequenceSet'} = undef;
+    # this is really slow 
+    # SUPER::save_sequence_notes calls draw, 
+    # so we draw everything only to refresh the column hmm.
+    # Has to be done to re get the sequence notes for other 
+    # sequence sets which contain the same clone.
+    $self->refresh_column(6);
 }
 
 sub _write_access{
