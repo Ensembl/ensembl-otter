@@ -121,14 +121,7 @@ sub subseq_menubutton {
     }
     return $self->{'_subseq_menubutton'};
 }
-sub dotter_menuitem{
-    my( $self, $dmi ) = @_;
-    
-    if ($dmi) {
-        $self->{'_dotter_menuitem'} = $dmi;
-    }
-    return $self->{'_dotter_menuitem'};
-}
+
 sub clone_sub_switch_var {
     my( $self, $switch_ref ) = @_;
     
@@ -580,7 +573,12 @@ sub populate_menus {
         -underline      => 0,
         -state          => 'disabled',
         );
-        
+    
+    $subseq->bind('<Destroy>', sub{
+        $self = undef;
+        });
+
+    
     # What did I intend this command to do?
     #$subseq->add('command',
     #    -label          => 'Transcript',

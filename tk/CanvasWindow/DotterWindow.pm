@@ -351,7 +351,7 @@ sub name_start_end_from_fMap_blue_box {
 }
 
 sub DESTROY {
-    warn "Freeing DotterWindow";
+    #warn "Freeing DotterWindow\n";
 }
 
 1;

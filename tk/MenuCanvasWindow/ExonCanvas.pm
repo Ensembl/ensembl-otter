@@ -12,6 +12,7 @@ use Tk::ComboBox;
 use Hum::Ace::SubSeq;
 use Hum::Translator;
 use MenuCanvasWindow;
+use Hum::Ace::DotterLauncher;
 use vars ('@ISA');
 use Hum::Ace;
 
@@ -79,6 +80,17 @@ sub initialize {
     $top->bind('<Control-p>',   $show_pep_command);
     $top->bind('<Control-P>',   $show_pep_command);
     $top->bind('<space>',       $show_pep_command);
+    
+    # Run dotter
+    my $run_dotter = sub{ $self->run_dotter };
+    $file_menu->add('command',
+        -label          => 'Dotter',
+        -command        => $run_dotter,
+        -accelerator    => 'Ctrl+.',
+        -underline      => 0,
+        );
+    $top->bind('<Control-period>',  $run_dotter);
+    $top->bind('<Control-greater>', $run_dotter);
     
     # Trap window close
     $top->protocol('WM_DELETE_WINDOW', $window_close);
@@ -173,56 +185,39 @@ sub initialize {
         $canvas->Tk::bind('<Control-d>', $delete_exons);
         $canvas->Tk::bind('<Control-D>', $delete_exons);
 
-        # Choice of Method
-        my @allowed_methods = map $_->name,
-            $self->xace_seq_chooser->get_all_mutable_GeneMethods;
-        my $current_method = $sub->GeneMethod->name;
-        $self->method_name_var(\$current_method);
+        ## For finding PolyA signals and sites
+        #my $polyA_menu = $self->make_menu('Poly-A');
+        #
+        #my $auto_find_sub = sub { $self->auto_find_PolyA };
+        #$polyA_menu->add('command',
+        #    -label          => 'Auto find',
+        #    -command        => $auto_find_sub,
+        #    -accelerator    => 'Ctrl+U',
+        #    -underline      => 1,
+        #    );
+        #$canvas->Tk::bind('<Control-U>', $auto_find_sub);
+        #$canvas->Tk::bind('<Control-u>', $auto_find_sub);
+        #
+        #my $polyA_search_sub = sub { $self->open_PolyA_search_window };
+        #$polyA_menu->add('command',
+        #    -label          => 'Edit...',
+        #    -command        => $polyA_search_sub,
+        #    -accelerator    => 'Ctrl+Y',
+        #    -underline      => 0,
+        #    -state          => 'disabled',
+        #    );
+        #$canvas->Tk::bind('<Control-Y>', $polyA_search_sub);
+        #$canvas->Tk::bind('<Control-y>', $polyA_search_sub);
 
-        my $method_menu = $self->make_menu('Type');
-        my $redraw_tr = sub { $self->draw_translation_region };
-        foreach my $method_name (@allowed_methods ) {
-            $method_menu->add('radiobutton',
-                -label      => $method_name,
-                -value      => $method_name,
-                -variable   => \$current_method,
-                -command    => $redraw_tr,
-                );
-        }
-
-        # For finding PolyA signals and sites
-        my $polyA_menu = $self->make_menu('Poly-A');
-        
-        my $auto_find_sub = sub { $self->auto_find_PolyA };
-        $polyA_menu->add('command',
-            -label          => 'Auto find',
-            -command        => $auto_find_sub,
-            -accelerator    => 'Ctrl+U',
-            -underline      => 1,
-            );
-        $canvas->Tk::bind('<Control-U>', $auto_find_sub);
-        $canvas->Tk::bind('<Control-u>', $auto_find_sub);
-        
-        my $polyA_search_sub = sub { $self->open_PolyA_search_window };
-        $polyA_menu->add('command',
-            -label          => 'Edit...',
-            -command        => $polyA_search_sub,
-            -accelerator    => 'Ctrl+Y',
-            -underline      => 0,
-            -state          => 'disabled',
-            );
-        $canvas->Tk::bind('<Control-Y>', $polyA_search_sub);
-        $canvas->Tk::bind('<Control-y>', $polyA_search_sub);
-
-        my $polyA_delete_sub = sub { $self->delete_selected_PolyA };
-        $polyA_menu->add('command',
-            -label          => 'Delete',
-            -command        => $polyA_delete_sub,
-            -accelerator    => 'Ctrl+K',
-            -underline      => 0,
-            );
-        $canvas->Tk::bind('<Control-K>', $polyA_delete_sub);
-        $canvas->Tk::bind('<Control-k>', $polyA_delete_sub);
+        #my $polyA_delete_sub = sub { $self->delete_selected_PolyA };
+        #$polyA_menu->add('command',
+        #    -label          => 'Delete',
+        #    -command        => $polyA_delete_sub,
+        #    -accelerator    => 'Ctrl+K',
+        #    -underline      => 0,
+        #    );
+        #$canvas->Tk::bind('<Control-K>', $polyA_delete_sub);
+        #$canvas->Tk::bind('<Control-k>', $polyA_delete_sub);
 
         # Keyboard editing commands
         $canvas->Tk::bind('<Left>',      sub{ $self->canvas_text_go_left   });
@@ -265,15 +260,32 @@ sub initialize {
                 $canvas->SelectionOwn( -command => $deselect_sub );
             }
         });
-        
-        my $frame = $canvas->toplevel->Frame(
-            #-relief => 'groove',
-            #-border => 2,
-            )->pack(
-                -side => 'top',
-                #-expand => 1,
-                #-fill => 'x',
-                );
+
+        my $frame = $canvas->toplevel->Frame->pack( -side => 'top', );
+
+        # Choice of Method
+        my @allowed_methods = map $_->name,
+            $self->xace_seq_chooser->get_all_mutable_GeneMethods;
+        my $current_method = $self->SubSeq->GeneMethod->name;
+        $self->method_name_var(\$current_method);
+
+        my $type_frame = $frame->Frame(-border => 6)->pack(-side => 'top');
+        $type_frame->Label(
+            -text => 'Type:',
+            -padx => 6,
+            )->pack(-side => 'left');
+
+        my $om = $type_frame->Optionmenu(
+            -variable   => \$current_method,
+            -options    => [@allowed_methods],
+            -takefocus  => 0,   # Doesn't work
+            -command    => sub{
+                $self->draw_translation_region;
+                $top->focus;  # Need this
+                my $txt = $self->method_name_var;
+                },
+            )->pack( -side => 'top' );
+        $om->menu->invoke($current_method);
         
         # Widget for changing name
         $self->add_subseq_rename_widget($frame);
@@ -288,8 +300,8 @@ sub initialize {
                 );
             });
         
-        # Start not found and end not found widgets
-        $self->add_start_end_widgets($frame);
+        # Start not found and end not found and method widgets
+        $self->add_start_end_method_widgets($frame);
     } else {
         # SubSeq with an immutable method
         
@@ -320,6 +332,8 @@ sub initialize {
             $canvas->SelectionOwn( -command => $deselect_sub )
         }
     });
+    
+    $canvas->Tk::bind('<Destroy>', sub{ $self = undef });
     
     $self->fix_window_min_max_sizes;
 }
@@ -1078,107 +1092,76 @@ sub make_labelled_entry_widget {
     my $entry = $widget->Entry(
         -width              => $size,
         -exportselection    => 1,
+        -font               => [$self->font, $self->font_size, 'normal'],
         );
     $entry->pack(@pack);
     $entry->insert(0, $value) if $value;
     return $entry;
 }
 
-sub add_start_end_widgets {
+sub add_start_end_method_widgets {
     my( $self, $widget ) = @_;
     
-    my $start_end_frame = $widget->Frame->pack(
-        -side => 'top',
-        -expand => 0,
-        );
-    
     my $top = $widget->toplevel;
-    
-    ### The Start frame ###
-    {
-        my $frame = $start_end_frame->LabFrame(
-            -borderwidth    => 3,
-            -label          => 'Start',
-            -labelside      => 'acrosstop',
-            )->pack(
-                -side => 'left',
-                );
+    my $frame = $widget->Frame(
+        -border => 6,
+        )->pack(
+            -side   => 'top',
+            -expand => 0,
+            );
 
-        # Menu
-        my( $snf );
-        my $om = $frame->Optionmenu(
-            -variable   => \$snf,
-            -options    => [
-                    ['Found'          => 0],
-                    ['Not found - 1'  => 1],
-                    ['Not found - 2'  => 2],
-                    ['Not found - 3'  => 3],
-                ],
-            -takefocus  => 0,   # Doesn't work
-            -command    => sub{ $top->focus },  # Need this
-            )->pack(
-                -side => 'top',
-                );
-        $snf = $self->SubSeq->start_not_found;
-        $om->menu->invoke($snf);
-        #warn "snf = $snf";
+    $frame->Label(
+        -text   => 'Start:',
+        -padx   => 6,
+        )->pack(-side => 'left');
 
-        $self->{'_start_not_found_variable'} = \$snf;
+    # Menu
+    my( $snf );
+    my $om = $frame->Optionmenu(
+        -variable   => \$snf,
+        -options    => [
+                ['Found'          => 0],
+                ['Not found - 1'  => 1],
+                ['Not found - 2'  => 2],
+                ['Not found - 3'  => 3],
+            ],
+        -takefocus  => 0,   # Doesn't work
+        -command    => sub{ $top->focus },  # Need this
+        )->pack(
+            -side => 'left',
+            );
+    $snf = $self->SubSeq->start_not_found;
+    $om->menu->invoke($snf);
+    #warn "snf = $snf";
 
-        ## Continued from
-        #my $e_frame = $frame->Frame(
-        #    -border => 6,
-        #    )->pack( -side => 'bottom' );
-        #$self->{'_continued_from_Entry'} = 
-        #    $self->make_labelled_entry_widget(
-        #        $e_frame,
-        #        'Continued from',
-        #        $self->SubSeq->upstream_subseq_name,
-        #        15,
-        #        -anchor => 'nw',
-        #        );
-    }
-    
-    ### End frame ###
-    {
-        my $frame = $start_end_frame->LabFrame(
-            -borderwidth    => 3,
-            -label          => 'End',
-            -labelside      => 'acrosstop',
-            )->pack(
-                -side => 'right',
-                );
+    # Pad between Start and End not found widgets
+    $frame->Frame(
+        -width  => 10,
+        )->pack(-side => 'left');
 
-        # Menu
-        my( $enf );
-        my $om = $frame->Optionmenu(
-            -variable   => \$enf,
-            -options    => [
-                    ['Found'        => 0],
-                    ['Not found'    => 1],
-                ],
-            -takefocus  => 0,   # Doesn't work
-            -command    => sub{ $top->focus },  # Need this
-            )->pack( -side => 'top' );
-        $enf = $self->SubSeq->end_not_found;
-        $om->menu->invoke($enf);
-        #warn "enf = $enf";
+    $self->{'_start_not_found_variable'} = \$snf;
 
-        $self->{'_end_not_found_variable'} = \$enf;
+    $frame->Label(
+        -text   => 'End:',
+        -padx   => 6,
+        )->pack(-side => 'left');
 
-        ## Continues as
-        #my $e_frame = $frame->Frame(
-        #    -border => 6,
-        #    )->pack( -side => 'bottom' );
-        #$self->{'_continues_as_Entry'} = 
-        #    $self->make_labelled_entry_widget(
-        #        $e_frame,
-        #        'Continues as',
-        #        $self->SubSeq->downstream_subseq_name,
-        #        15,
-        #        -anchor => 'nw',
-        #        );
-    }
+    # Menu
+    my( $enf );
+    $om = $frame->Optionmenu(
+        -variable   => \$enf,
+        -options    => [
+                ['Found'        => 0],
+                ['Not found'    => 1],
+            ],
+        -takefocus  => 0,   # Doesn't work
+        -command    => sub{ $top->focus },  # Need this
+        )->pack( -side => 'top' );
+    $enf = $self->SubSeq->end_not_found;
+    $om->menu->invoke($enf);
+    #warn "enf = $enf";
+
+    $self->{'_end_not_found_variable'} = \$enf;
 }
 
 sub start_not_found_from_tk {
@@ -1956,6 +1939,47 @@ sub Exons_from_canvas {
     }
     
     return @exons;
+}
+
+sub run_dotter {
+    my( $self ) = @_;
+    
+    my( $txt );
+    eval{
+        $txt = $self->canvas->SelectionGet;
+    };
+    my( $hit_name );
+    if ($txt) {
+        ($hit_name) = $txt =~ /(\S+)/;
+    }
+    unless ($hit_name) {
+        $self->message('Cannot see a hit name on the clipboard');
+        return;
+    }
+    
+    my( $cdna );
+    eval {
+        my( $sub );
+        if ($self->is_mutable) {
+            $sub = $self->new_SubSeq_from_tk;
+        } else {
+            $sub = $self->SubSeq;
+        }
+        $sub->validate;
+        $cdna = $sub->mRNA_Sequence;
+    };
+    if ($@) {
+        $self->exception_message($@);
+        return;
+    }
+    
+    my $dotter = Hum::Ace::DotterLauncher->new;
+    $dotter->query_Sequence($cdna);
+    $dotter->query_start(1);
+    $dotter->query_end($cdna->sequence_length);
+    $dotter->subject_name($hit_name);
+    
+    return $dotter->fork_dotter;
 }
 
 sub max_exon_number {
