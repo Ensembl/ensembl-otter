@@ -200,8 +200,8 @@ sub bind_scroll_commands {
     my( $self ) = @_;
     
     my $canvas = $self->canvas;
-    my $x_scroll = $canvas->Subwidget('xscrollbar') || $canvas->parent->Subwidget('xscrollbar');
-    my $y_scroll = $canvas->Subwidget('yscrollbar') || $canvas->parent->Subwidget('yscrollbar');
+    my $x_scroll = $canvas->can('Subwidget') ? $canvas->Subwidget('xscrollbar') : $canvas->parent->Subwidget('xscrollbar');
+    my $y_scroll = $canvas->can('Subwidget') ? $canvas->Subwidget('yscrollbar') : $canvas->parent->Subwidget('yscrollbar');
     
     # Unbind the scrollbar keyboard events from the canvas
     my $class = ref($canvas);
