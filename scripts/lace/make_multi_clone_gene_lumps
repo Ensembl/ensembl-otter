@@ -1,0 +1,110 @@
+#!/usr/local/bin/perl5.6.1 -w
+
+### make_multi_clone_gene_lumps
+
+use strict;
+use Bio::Otter::Lace::Defaults;
+
+{
+    my $dataset_name = 'zebrafish';
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'dataset=s' => \$dataset_name,
+        );
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    my $ens_db = $ds->get_cached_DBAdaptor;
+    
+    my $sth = $ens_db->prepare(q{
+        SELECT g.gene_id
+          , c.embl_acc
+          , c.embl_version
+        FROM gene g
+          , transcript t
+          , exon_transcript et
+          , exon e
+          , contig ctg
+          , clone c
+        WHERE g.gene_id = t.gene_id
+          AND t.transcript_id = et.transcript_id
+          AND et.exon_id = e.exon_id
+          AND e.contig_id = ctg.contig_id
+          AND ctg.clone_id = c.clone_id
+        GROUP BY g.gene_id
+          , c.clone_id
+        });
+    $sth->execute;
+    
+    my( %gene2acc_sv );
+    while (my ($gene_id, $acc, $sv) = $sth->fetchrow) {
+        my $list = $gene2acc_sv{$gene_id} ||= [];
+        push(@$list, "$acc.$sv");
+    }
+    
+    my $get_gene_name = $ens_db->prepare(q{
+        SELECT n.name
+        FROM gene g
+          , gene_stable_id gsid
+          , current_gene_info c
+          , gene_name n
+        WHERE g.gene_id = gsid.gene_id
+          AND gsid.stable_id = c.gene_stable_id
+          AND c.gene_info_id = n.gene_info_id
+          AND g.gene_id = ?
+        });
+    
+    
+    my( %acc_sv2pool, @all_pools );
+    while (my ($id, $accs) = each %gene2acc_sv) {
+        if (@$accs > 1) {
+            my( $pool );
+            foreach my $acc_sv (@$accs) {
+                last if $pool = $acc_sv2pool{$acc_sv};
+            }
+            unless ($pool) {
+                $pool = {
+                    'acc_sv'    => {},
+                    'gene_id'   => [],
+                    };
+                push(@all_pools, $pool);
+            }
+            push(@{$pool->{'gene_id'}}, $id);
+            foreach my $acc_sv (@$accs) {
+                $pool->{'acc_sv'}{$acc_sv}++;
+                $acc_sv2pool{$acc_sv} = $pool;
+            }
+        } else {
+            delete($gene2acc_sv{$id});
+        }
+    }
+    
+    foreach my $pool (@all_pools) {
+        my $genes = $pool->{'gene_id'};
+        my $accs  = $pool->{'acc_sv'};
+        my( @gene_name );
+        foreach my $id (@$genes) {
+            $get_gene_name->execute($id);
+            my ($name) = $get_gene_name->fetchrow;
+            push(@gene_name, $name);
+        }
+        @gene_name = sort @gene_name;
+        print "\nGENES: @gene_name\n";
+        foreach my $acc_sv (sort keys %$accs) {
+            my $count = $accs->{$acc_sv};
+            printf "  %-14s  %d\n", $acc_sv, $count;
+        }
+    }
+    
+    $get_gene_name->finish;
+}
+
+
+
+
+__END__
+
+=head1 NAME - make_multi_clone_gene_lumps
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
