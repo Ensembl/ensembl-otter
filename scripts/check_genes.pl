@@ -24,6 +24,7 @@ my $opt_v;
 my $opt_i='';
 my $opt_o='large_transcripts.lis';
 my $opt_p='duplicate_exons.lis';
+my $opt_q='near_duplicate_exons.lis';
 my $cache_file='check_genes.cache';
 my $make_cache;
 my $opt_c='';
@@ -46,6 +47,7 @@ GetOptions(
 	   'i:s',  \$opt_i,
 	   'o:s',  \$opt_o,
 	   'p:s',  \$opt_p,
+	   'q:s',  \$opt_q,
 	   'c:s',  \$opt_c,
 	   'make_cache',\$make_cache,
 	   't:s',  \$opt_t,
@@ -221,6 +223,7 @@ my $nl=0;
 my $flag_v;
 open(OUT,">$opt_o") || die "cannot open $opt_o";
 open(OUT2,">$opt_p") || die "cannot open $opt_p";
+open(OUT3,">$opt_q") || die "cannot open $opt_q";
 foreach my $atype (keys %gsi){
   my $cname=$atype{$atype};
   print "Checking \'$atype\' (chr \'$cname\')\n";
@@ -288,11 +291,11 @@ foreach my $atype (keys %gsi){
 	  if($st==$ecst && $ed==$eced){
 	    # duplicate exons
 	    if($es!=$es2){
-	      print "NON-DUP: $eid, $eid2 identical but on opposite strands!\n";
+	      print OUT3 "NON-DUP: $eid, $eid2 identical but on opposite strands!\n";
 	    }elsif($ep!=$ep2){
-	      print "NON-DUP: $eid, $eid2 identical but on diff phases ($ep,$ep2)\n";
+	      print OUT3 "NON-DUP: $eid, $eid2 identical but on diff phases ($ep,$ep2)\n";
 	    }elsif($eep!=$eep2){
-	      print "WARN NON-DUP: $eid, $eid2 identical but diff end phases ($eep,$eep2)\n";
+	      print OUT3 "WARN NON-DUP: $eid, $eid2 identical but diff end phases ($eep,$eep2)\n";
 	    }elsif($dup_exon{$eid}==$eid2 || $dup_exon{$eid2}==$eid){
 	      # don't report again
 	    }else{
@@ -416,6 +419,7 @@ print "found $nexon exons; $nsticky sticky exons\n";
 print "$nl large transcripts\n";
 close(OUT);
 close(OUT2);
+close(OUT3);
 
 exit 0;
 
