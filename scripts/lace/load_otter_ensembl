@@ -200,7 +200,7 @@ my $input_type;
         if(@line_in_array == 9 ){
             # we must have the full file rather than just clone names
             $input_type = "AGP";
-            my $chromosome_name = @line_in_array->[0]; 
+            $chromosome_name = @line_in_array->[0]; 
             my $type = @line_in_array->[4];
             if ($prev_chr_name eq $chromosome_name){
                 die "clones on different chromosomes" unless $chromosome_name eq $prev_chr_name ;
@@ -401,8 +401,8 @@ my $input_type;
         # add the appropriate chromosome_id before executing the query        
         eval{ 
             my $line_pipe = shift(@sgp_pipe); # 
-            $otter_assembly_insert->execute(@$line_otter) or warn "Couldn\'t execute \"INSERT assembly ...\" statement in otterdb";
-            $pipe_assembly_insert->execute(@$line_pipe) or warn "Couldn\'t execute statement in pipeline db " 
+            $otter_assembly_insert->execute(@$line_otter);
+            $pipe_assembly_insert->execute(@$line_pipe);
         } ;
         
         if ($@){
