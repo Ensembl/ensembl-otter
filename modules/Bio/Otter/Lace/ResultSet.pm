@@ -186,6 +186,7 @@ sub fetch_Clones_containing_locus{
     my $dba = $self->DataSet->get_cached_DBAdaptor ;    
     
     my $geneNameAdapt = $dba->get_GeneNameAdaptor();
+    my $geneSynAdapt  = $dba->get_GeneSynonymAdaptor();
     my $geneInfoAdapt = $dba->get_GeneInfoAdaptor();
     my $geneAdapt     = $dba->get_GeneAdaptor();
     my $clone_names   = {};
@@ -194,7 +195,8 @@ sub fetch_Clones_containing_locus{
         eval{
             print STDERR "Looking for $locus_name\n";
             my $geneNameObjList = $geneNameAdapt->fetch_by_name($locus_name);
-            foreach my $geneNameObj (@$geneNameObjList){
+            my $geneSynObjList  = $geneSynAdapt->fetch_by_name($locus_name);
+            foreach my $geneNameObj (@$geneNameObjList, @$geneSynObjList){
                 my $geneInfoObj = $geneInfoAdapt->fetch_by_dbID($geneNameObj->gene_info_id());    
                 my $geneObj     = $geneAdapt->fetch_by_stable_id($geneInfoObj->gene_stable_id());
                 foreach my $exonObj(@{$geneObj->get_all_Exons}){
@@ -208,6 +210,7 @@ sub fetch_Clones_containing_locus{
         if ($@){
             ## assume error was caused by not being able to create a $geneNameObjList - as name didnt exist
             print STDERR "nothing found for $locus_name" ; 
+            print $@ if $DEBUG;
         }
     }
     my @cl_names = keys(%$clone_names);
@@ -363,7 +366,7 @@ sub get_context_and_intron_clones{
                 }
             }
         }
-        # RP11-134H2, PRKG1
+        # RP11-134H2 , PRKG1
         warn "first = $first_idx, last = $last_idx, lower = 0, upper = $full_ss_size\n" if $DEBUG;
 
         if($context_size){
