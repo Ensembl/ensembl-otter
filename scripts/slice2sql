@@ -179,11 +179,14 @@ if ($all || $databases{'disease'} == 1) {
 
 sub dump_database {
     my ($db,$dir) = @_;
-    
+
+
     if (!defined($dir)) {
 	$dir = '/tmp/';
     }
-    $dir = "/tmp/". $db->dbname . "." . $db->chromosome . "." . $db->start . "-" . $db->end ."." . $db->type;
+    $dir = $dir . "/" if ($dir !~ /\/$/);
+
+    $dir = $dir . $db->dbname . "." . $db->chromosome . "." . $db->start . "-" . $db->end ."." . $db->type;
 
     if (-e $dir) {
 	print "\nDirectory $dir exists. Remove this and rerun script.\n";
