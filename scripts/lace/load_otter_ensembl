@@ -148,6 +148,11 @@ use Data::Dumper;
     $SequenceSet->dataset_name($dataset_name); # data set from command line
     $SequenceSet->description($description);   # description from command line
 
+    
+    # Chr prefix causes problems for Apollo
+    $chromosome_name ||= $agp_chr_name;
+    die "you need to specify a chromosome name" unless $chromosome_name;
+    $chromosome_name =~ s/^chr//i; # recheck chromosome name as it may have changed [AGP]
 
     while(!$INPUT_TYPE && (my $first = <$fh>)){
 	chomp($first);
@@ -155,11 +160,6 @@ use Data::Dumper;
     }
     seek($fh, 0, 0);
     die "check format of file" unless $INPUT_TYPE;
-    
-    # Chr prefix causes problems for Apollo
-    $chromosome_name ||= $agp_chr_name;
-    die "you need to specify a chromosome name" unless $chromosome_name;
-    $chromosome_name =~ s/^chr//i; # recheck chromosome name as it may have changed [AGP]
 
     my $otter_chromosome = get_chromosome($otter_db    , $chromosome_name);
     my $pipe_chromosome  = get_chromosome($pipeline_db , $chromosome_name);
@@ -306,6 +306,7 @@ sub check_line{
 	$input_type = "AGP";
 	
 	if ($chromosome_name) {
+            $line_in_array[0] =~ s/^chr//i;
 	    die "clones on different chromosomes: '$chromosome_name' and '$line_in_array[0]'"
 		unless $chromosome_name eq $line_in_array[0];
 	}
