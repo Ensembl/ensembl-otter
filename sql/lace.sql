@@ -8,7 +8,7 @@ create table sequence_set (
     description TEXT,
     analysis_priority int,
     hide ENUM ('Y', 'N') DEFAULT 'N' NOT NULL,
-    vega_set_id int(10) unsigned DEFAULT '0' NOT NULL
+    vega_set_id int(10) unsigned DEFAULT '0' NOT NULL,
     PRIMARY KEY(assembly_type)
     );
 
@@ -79,48 +79,48 @@ create table current_contig_annotation_status (
 # This should be part of the contig table, but is not part of the core schema
 # Maybe: alter table contig add column is_private ENUM('Y', 'N') DEFAULT 'N';
 
-create table private_contig {
+create table private_contig (
     contig_id INT(10) unsigned DEFAULT '0' NOT NULL,
     
     PRIMARY KEY(contig_id)
-}
+);
 
-create table vega_snap {
+create table vega_snap (
     vega_snap_id    INT(10) unsigned DEFAULT '0' NOT NULL  auto_increment,
     vega_snap_date  DATETIME,
     author_id       INT(10) unsigned DEFAULT '0' NOT NULL,
     
-    primary key (vega_snap_id)
+    primary key (vega_snap_id),
     key (vega_snap_date)
-}
+);
 
-create table vega_set_snap {
+create table vega_set_snap (
     vega_snap_id    INT(10) unsigned DEFAULT '0' NOT NULL,
     set_snap_id     INT(10) unsigned DEFAULT '0' NOT NULL,
     
     primary key (vega_snap_id, set_snap_id)
-}
+);
 
-create table set_snap {
+create table set_snap (
     set_snap_id     INT(10) unsigned DEFAULT '0' NOT NULL  auto_increment,
     set_snap_date   DATETIME,
     author_id       INT(10) unsigned DEFAULT '0' NOT NULL,
     is_current      ENUM('Y', 'N') DEFAULT 'N' NOT NULL,
     
-    primary key (set_snap_id)
+    primary key (set_snap_id),
     key (set_snap_date)
-}
+);
 
-create table set_snap_gene {
+create table set_snap_gene (
     set_snap_id     INT(10) unsigned DEFAULT '0' NOT NULL,
     gene_id         INT(10) unsigned DEFAULT '0' NOT NULL,
     
     primary key (set_snap_id, gene_id)
-}
+);
 
-create table set_snap_clone_info {
+create table set_snap_clone_info (
     set_snap_id     INT(10) unsigned DEFAULT '0' NOT NULL,
     clone_info_id   INT(10) unsigned DEFAULT '0' NOT NULL,
     
     primary key (set_snap_id, clone_info_id)
-}
+);

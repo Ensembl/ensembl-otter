@@ -11,14 +11,14 @@ create table assembly_tag (
 
        PRIMARY KEY (tag_id),
        UNIQUE KEY (contig_id, contig_start, contig_end, contig_strand, tag_type)
-)
+);
 
 create table assembly_tagged_clone (
        clone_id		   INT(10)        UNSIGNED NOT NULL,
        transferred	   ENUM('yes', 'no') NOT NULL DEFAULT 'no',
 
        UNIQUE KEY (clone_id)
-)
+);
 
 create table author (
 	author_id  int(10) unsigned DEFAULT '0' NOT NULL auto_increment,
