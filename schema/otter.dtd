@@ -94,17 +94,20 @@
 <!ELEMENT cds-end-not-found EMPTY>
 <!ELEMENT transcript-class #PCDATA>
 
-<!-- Supporting evidence used to construct transcripts -->
-<!ELEMENT evidence (
-    name,
-    type>
-<!ELEMENT type (est|c-dna|genomic|protein|unknown)>
-<!ELEMENT est EMPTY>
-<!ELEMENT c-dna EMPTY>
-<!ELEMENT genomic EMPTY>
-<!ELEMENT protein EMPTY>
-<!ELEMENT unknown EMPTY>
+<!-- Supporting evidence used to construct transcripts
+     Usually "ACCESSION.SV", but "SV" may be unknown -->
+<!ELEMENT evidence #PCDATA>
+<!ATTLIST type (EST | cDNA | Genomic | Protein | UNKNOWN) "UNKNOWN" #REQUIRED>
 
+<!-- Could also model it this way:
+
+    <!ELEMENT type (est|c-dna|genomic|protein|unknown)>
+    <!ELEMENT est EMPTY>
+    <!ELEMENT c-dna EMPTY>
+    <!ELEMENT genomic EMPTY>
+    <!ELEMENT protein EMPTY>
+    <!ELEMENT unknown EMPTY>
+-->
 
 <!-- exons with coordinates in the sequence-set -->
 <!ELEMENT exon (
