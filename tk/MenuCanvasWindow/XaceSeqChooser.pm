@@ -299,8 +299,10 @@ sub bind_events {
         Tk::Ev('x'), Tk::Ev('y') ]);
     $canvas->Tk::bind('<Double-Button-1>', [
         sub{
+            $canvas->Busy;
             $self->left_button_handler(@_);
             $self->edit_double_clicked;
+            $canvas->Unbusy;
             },
         Tk::Ev('x'), Tk::Ev('y') ]);
     
