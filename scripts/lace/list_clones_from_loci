@@ -1,0 +1,87 @@
+#!/usr/local/bin/perl5.6.1 -w
+
+### list_clones_from_loci
+
+use strict;
+
+use Getopt::Long 'GetOptions';
+use Hum::Tracking;
+use Bio::Otter::Lace::PipelineDB;
+use Bio::Otter::Lace::Defaults;
+
+{
+    my $dataset_name = undef;
+    my $usage = sub { exec 'perldoc', $0 };
+    
+    Bio::Otter::Lace::Defaults::do_getopt(
+          'dataset=s'   => \$dataset_name,
+          ) or $usage->();
+    $usage->() unless $dataset_name;
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    # Make a connection to the otter database
+    my $otter_db = $ds->get_cached_DBAdaptor;
+    
+    my $contig_to_clone = $otter_db->prepare(q{
+        SELECT g.contig_id
+          , c.name
+        FROM clone c
+          , contig g
+        WHERE c.clone_id = g.clone_id
+        });
+    $contig_to_clone->execute;
+    my( %ctg_clone );
+    while (my ($ctg, $clone) = $contig_to_clone->fetchrow) {
+        $ctg_clone{$ctg} = $clone;
+    }
+
+    my $sth = $otter_db->prepare(q{
+        SELECT cl.name
+        FROM gene g
+          , gene_stable_id gsid
+          , current_gene_info c
+          , gene_info i
+          , gene_name n
+          , transcript t
+          , exon_transcript et
+          , exon e
+          , contig ctg
+          , clone cl
+        WHERE g.gene_id = gsid.gene_id
+          AND gsid.stable_id = c.gene_stable_id
+          AND c.gene_info_id = i.gene_info_id
+          AND i.gene_info_id = n.gene_info_id
+          AND g.gene_id = t.gene_id
+          AND t.transcript_id = et.transcript_id
+          AND et.exon_id = e.exon_id
+          AND e.contig_id = ctg.contig_id
+          AND ctg.clone_id = cl.clone_id
+          AND n.name = ?
+        GROUP BY e.contig_id
+        });
+    
+    foreach my $gene_name (@ARGV) {
+        $sth->execute($gene_name);
+        my( @clones );
+        while (my ($cl) = $sth->fetchrow) {
+            push(@clones, $cl);
+        }
+        @clones = ('NOT_FOUND') unless @clones;
+        print "$gene_name\t@clones\n";
+    }
+}
+
+
+
+__END__
+
+=head1 NAME - list_clones_from_loci
+
+=head1 EXAMPLE
+
+  list_clones_from_loci -dataset human SCL TAL1
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
