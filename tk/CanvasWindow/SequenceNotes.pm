@@ -187,25 +187,13 @@ sub initialise {
     # Use a slightly smaller font so that more info fits on the screen
     $self->font_size(12);
 
-    my $ss = $self->SequenceSet or confess "No SequenceSet attached";
-    my $write = $ss->write_access;
-
-    my $top = $self->canvas->toplevel;
-    $self->close_window($top);
-    ##my $close_window = sub{ $top->withdraw };
-##    $top->protocol('WM_DELETE_WINDOW', $close_window);
-##    $top->bind('<Control-w>', $close_window);
-##    $top->bind('<Control-W>', $close_window);
-##   
+    my $ss     = $self->SequenceSet or confess "No SequenceSet attached";
+    my $write  = $ss->write_access;
     my $canvas = $self->canvas;
+    my $top    = $canvas->toplevel;
     
-    $self->item_selection($canvas);
-    ##$canvas->configure(-selectbackground => 'gold');
-##    $canvas->CanvasBind('<Button-1>', sub {
-##        return if $self->delete_message;
-##        $self->deselect_all_selected_not_current();
-##        $self->toggle_current;
-##        });
+    $self->bind_item_selection($canvas);
+
     $canvas->CanvasBind('<Shift-Button-1>', sub {
         return if $self->delete_message;
         $self->extend_selection;
@@ -214,145 +202,147 @@ sub initialise {
         return if $self->delete_message;
         $self->toggle_current;
         });
-    
-    {
-        my( $comment );
-        if ($write) {
-            my $button_frame = $top->Frame;
-            $button_frame->pack(
-                -side => 'top',
-                );
 
-            my $comment_label = $button_frame->Label(
-                -text => 'Note text:',
-                );
-            $comment_label->pack(
-                -side => 'left',
-                );
+    my ( $comment, $comment_label );
+    my ( $button_frame_1, $button_frame_2 );
 
-            $comment = $button_frame->Entry(
-                -width  => 55,
-                -font   => ['Helvetica', $self->font_size, 'normal'],
-                );
-            $comment->pack(
-                -side => 'left',
-                );
-            # Remove Control-H binding from Entry
-            $comment->bind(ref($comment), '<Control-h>', '');
-            $comment->bind(ref($comment), '<Control-H>', '');
-        }
-        
-        
-        my $button_frame2 = $top->Frame;
-        $button_frame2->pack(
-            -side => 'top',
-            );
-        
-        if ($write) {
-            my $set_reviewed = sub{
-                $self->save_sequence_notes($comment);
-                };
-            $self->make_button($button_frame2, 'Set note', $set_reviewed, 0);
-            $top->bind('<Control-s>', $set_reviewed);
-            $top->bind('<Control-S>', $set_reviewed);
-        }
-        
-        ### Is hunting in CanvasWindow?
-        my $hunter = sub{
-            $top->Busy;
-            $self->hunt_for_selection;
-            $top->Unbusy;
-            };
-        
-        ## First call to this returns empty list!
-        #my @all_text_obj = $canvas->find('withtag', 'contig_text');
-        
-        $self->make_button($button_frame2, 'Hunt selection', $hunter, 0);
-        $top->bind('<Control-h>', $hunter);
-        $top->bind('<Control-H>', $hunter);
-        
-        my $refesher = sub{
-            $top->Busy;
-            my $ds = $self->SequenceSetChooser->DataSet;
-            my $ss = $self->SequenceSet;
-            $ds->fetch_all_SequenceNotes_for_SequenceSet($ss);
-            $self->draw;
-            $self->set_scroll_region_and_maxsize;
-            $top->Unbusy;
-            };
-        $self->make_button($button_frame2, 'Refresh', $refesher, 0);
-        $top->bind('<Control-r>', $refesher);
-        $top->bind('<Control-R>', $refesher);
-        $top->bind('<F5>',        $refesher);
+    if ($write) {
+	$button_frame_1 = $top->Frame->pack(-side => 'top');
 
-	my $refresh_status = sub {
-            $top->Busy;
-            $self->refresh_column(3);
-            $top->Unbusy;
+	$button_frame_2 = $top->Frame->pack(-side => 'top');
+
+	$comment_label = $button_frame_1->Label(-text => 'Note text:',);
+	$comment_label->pack(-side => 'left',);
+	
+	$comment = $button_frame_1->Entry(-width  => 55,
+					  -font   => ['Helvetica', $self->font_size, 'normal'],
+					  );
+	$comment->pack(-side => 'left',);
+	
+	# Remove Control-H binding from Entry
+	$comment->bind(ref($comment), '<Control-h>', '');
+	$comment->bind(ref($comment), '<Control-H>', '');
+	$button_frame_1->bind('<Destroy>', sub { $self = undef });
+
+	my $set_reviewed = sub{
+	    $self->save_sequence_notes($comment);
 	};
-	$self->make_button($button_frame2, 'Refresh Ana. Status', $refresh_status, 8);
-        $top->bind('<Control-a>', $refresh_status);
-        $top->bind('<Control-A>', $refresh_status);
-        $top->bind('<F6>',        $refresh_status);
+	$self->make_button($button_frame_2, 'Set note', $set_reviewed, 0);
+	$top->bind('<Control-s>', $set_reviewed);
+	$top->bind('<Control-S>', $set_reviewed);
 
-        my $run_lace = sub{
-            $top->Busy;
-            $self->run_lace;
-            $top->Unbusy;
-            };
-        $self->make_button($button_frame2, 'Run lace', $run_lace, 4);
-        $top->bind('<Control-l>', $run_lace);
-        $top->bind('<Control-L>', $run_lace);
-
-        #if ($write) {
-        #    
-        #    my $do_embl_dump = sub{
-        #        watch_cursor($top);
-        #        my @sequence_name_list = list_selected_sequence_names($canvas);
-        #        foreach my $seq (@sequence_name_list) {
-        #            do_embl_dump($seq);
-        #        }
-        #        default_cursor($top);
-        #        };
-        #    $self->make_button($button_frame2, 'EMBL dump', $do_embl_dump, 0);
-        #    $top->bind('<Control-e>', $do_embl_dump);
-        #    $top->bind('<Control-E>', $do_embl_dump);
-        #}
-        
-        my $print_to_file = sub {
-            $self->page_width(591);
-            $self->page_height(841);
-            my $title = $top->title;
-            $title =~ s/\W+/_/g;
-            my @files = $self->print_postscript($title);
-            warn "Printed to files:\n",
-                map "  $_\n", @files;
-          };
-        $top->bind('<Control-p>', $print_to_file);
-        $top->bind('<Control-P>', $print_to_file);
-        
-        $canvas->Tk::bind('<Double-Button-1>',  sub{ $self->popup_ana_seq_history });
-        $canvas->Tk::bind('<Button-3>',  sub{ $self->popup_missing_analysis });
-        
-        $self->make_button($button_frame2, 'Close', sub{ $top->withdraw } , 0);
-        
-        $top->bind('<Destroy>', sub{ $self = undef });
+    }else{
+	$button_frame_2 = $top->Frame->pack(-side => 'top');
     }
+
+    ### Is hunting in CanvasWindow?
+    my $hunter = sub{
+	$top->Busy;
+	$self->hunt_for_selection;
+	$top->Unbusy;
+    };
+    
+    ## First call to this returns empty list!
+    #my @all_text_obj = $canvas->find('withtag', 'contig_text');
+    
+    $self->make_button($button_frame_2, 'Hunt selection', $hunter, 0);
+    $top->bind('<Control-h>', $hunter);
+    $top->bind('<Control-H>', $hunter);
+    
+    my $refesher = sub{
+	$top->Busy;
+	my $ds = $self->SequenceSetChooser->DataSet;
+	my $ss = $self->SequenceSet;
+	$ds->fetch_all_SequenceNotes_for_SequenceSet($ss);
+	$self->draw;
+	$self->set_scroll_region_and_maxsize;
+	$top->Unbusy;
+    };
+    $self->make_button($button_frame_2, 'Refresh', $refesher, 0);
+    $top->bind('<Control-r>', $refesher);
+    $top->bind('<Control-R>', $refesher);
+    $top->bind('<F5>',        $refesher);
+    
+    my $refresh_status = sub {
+	$top->Busy;
+	$self->refresh_column(3);
+	$top->Unbusy;
+    };
+    $self->make_button($button_frame_2, 'Refresh Ana. Status', $refresh_status, 8);
+    $top->bind('<Control-a>', $refresh_status);
+    $top->bind('<Control-A>', $refresh_status);
+    $top->bind('<F6>',        $refresh_status);
+    
+    my $run_lace = sub{
+	$top->Busy;
+	$self->run_lace;
+	$top->Unbusy;
+    };
+    $self->make_button($button_frame_2, 'Run lace', $run_lace, 4);
+    $top->bind('<Control-l>', $run_lace);
+    $top->bind('<Control-L>', $run_lace);
+    
+    #if ($write) {
+    #    
+    #    my $do_embl_dump = sub{
+    #        watch_cursor($top);
+    #        my @sequence_name_list = list_selected_sequence_names($canvas);
+    #        foreach my $seq (@sequence_name_list) {
+    #            do_embl_dump($seq);
+    #        }
+    #        default_cursor($top);
+    #        };
+    #    $self->make_button($button_frame2, 'EMBL dump', $do_embl_dump, 0);
+    #    $top->bind('<Control-e>', $do_embl_dump);
+    #    $top->bind('<Control-E>', $do_embl_dump);
+    #}
+    
+    my $print_to_file = sub {
+	$self->page_width(591);
+	$self->page_height(841);
+	my $title = $top->title;
+	$title =~ s/\W+/_/g;
+	my @files = $self->print_postscript($title);
+	warn "Printed to files:\n",
+	map "  $_\n", @files;
+    };
+    $top->bind('<Control-p>', $print_to_file);
+    $top->bind('<Control-P>', $print_to_file);
+    
+    $canvas->Tk::bind('<Double-Button-1>',  sub{ $self->popup_ana_seq_history });
+    $canvas->Tk::bind('<Button-3>',  sub{ $self->popup_missing_analysis });
+    
+    
+    my $close_window = $self->bind_close_window($top);
+
+    # close window button in second button frame
+    $self->make_button($button_frame_2, 'Close', $close_window , 0);
     
     return $self;
 }
 
-sub close_window{
+sub bind_close_window{
     my ($self , $top)  = @_ ;
     
-    my $close_window = sub{ $top->withdraw };
+    my $close_window = sub{ 
+	# This removes the seqSetCh.
+	# It must be reset by seqSetCh. when the cached version
+	# of this object is deiconified [get_SequenceNotes_by_name in ssc]!!!!
+	# not necessary ATM.
+	# $self->clean_SequenceSetChooser(); 
+	my $top = $self->canvas->toplevel;
+	$top->withdraw;
+    };
     $top->protocol('WM_DELETE_WINDOW', $close_window);
-    $top->bind('<Control-w>', $close_window);
-    $top->bind('<Control-W>', $close_window);
+    $top->bind('<Control-w>',          $close_window);
+    $top->bind('<Control-W>',          $close_window);
+    $top->bind('<Destroy>',            sub { $self = undef; });
+
+    return $close_window;
 }
 
 
-sub item_selection{
+sub bind_item_selection{
     my ($self , $canvas) = @_ ;
     
     $canvas->configure(-selectbackground => 'gold');
@@ -361,6 +351,8 @@ sub item_selection{
         $self->deselect_all_selected_not_current();
         $self->toggle_current;
         });
+    # needs to bind destroy so everyhting gets cleaned up.
+    $canvas->CanvasBind('<Destroy>', sub { $self = undef} );
 }
 
 
@@ -456,15 +448,16 @@ sub make_button {
     my( $self, $parent, $label, $command, $underline_index ) = @_;
     
     my @args = (
-        -text => $label,
-        -command => $command,
-        );
-    push(@args, -underline => $underline_index)
-        if defined $underline_index;
+	-text => $label,
+	-command => $command,
+	);
+    push(@args, -underline => $underline_index) 
+	if defined $underline_index;
     my $button = $parent->Button(@args);
     $button->pack(
-        -side => 'left',
-        );
+	-side => 'left',
+	);
+
     return $button;
 }
 
@@ -587,11 +580,17 @@ sub make_XaceSeqChooser {
     return $xc;
 }
 
+sub get_rows_list{
+    my ($self) = @_;
+    print STDERR "Fetching CloneSequence list...";
+    return $self->get_CloneSequence_list;
+}
+
 sub draw {
     my( $self ) = @_;
     
-    print STDERR "Fetching CloneSequence list...";
-    my $cs_list   = $self->get_CloneSequence_list;
+    my $cs_list   = $self->get_rows_list;
+    return unless scalar @$cs_list;
     print STDERR " done\n";
     my $size      = $self->font_size;
     my $canvas    = $self->canvas;
@@ -601,7 +600,8 @@ sub draw {
     $canvas->delete('all');
     my $helv_def = ['Helvetica', $size, 'normal'];
 
-    print STDERR "Drawing CloneSequence list...";
+#    my ($type) = $cs_list->[0] =~ /^(.+)=/;
+#    print STDERR "Drawing $type list...";
     my $gaps = 0;
     my $gap_pos = {};
     for (my $i = 0; $i < @$cs_list; $i++) {
@@ -821,7 +821,7 @@ sub draw_row_backgrounds {
     my $canvas = $self->canvas;
     my ($x1, $x2) = ($canvas->bbox('all'))[0,2];
     my  ($scroll_x2, $scroll_y)  = $self->initial_canvas_size;
-    $x2 = $scroll_x2 if $scroll_x2 > $x2;  
+    $x2 = $scroll_x2 if $scroll_x2 > ($x2||0);
     $x1--; $x2++;
     my $cs_i = 0;
     for (my $i = 0; $i < $row_count; $i++) {
@@ -858,9 +858,9 @@ sub layout_columns_and_rows {
     for (my $c = 0; $c < $max_col; $c++) {
         my $col_tag = "col=$c";
         my ($x1, $x2) = ($canvas->bbox($col_tag))[0,2];
-        my $x_shift = $x - $x1;
+        my $x_shift = $x - ($x1 || 0);
         $canvas->move($col_tag, $x_shift, 0);
-        $x = $x2 + $x_shift + $x_pad;
+        $x = ($x2||0) + $x_shift + $x_pad;
     }
     
     # Put the rows in the right place
@@ -908,7 +908,6 @@ sub save_sequence_notes {
 
 sub DESTROY {
     my( $self ) = @_;
-    
     my ($type) = ref($self) =~ /([^:]+)$/;
     my $name = $self->name;
     warn "Destroying $type $name\n";
@@ -930,62 +929,57 @@ sub popup_missing_analysis{
     }
 }
 sub popup_ana_seq_history{
-    my $self = shift @_ ;
+    my ($self) = @_;
     my $index = $self->get_current_CloneSequence_index ; 
     unless (defined $index ){
         return;
     }
-    unless ( $self->check_for_history_window($index) ){
+    unless ( $self->check_for_History($index) ){
         # window has not been created already - create one
-       
         my $cs =  $self->get_CloneSequence_list->[$index];
         my $clone_list = $cs->get_all_SequenceNotes ;
         if ($clone_list ){
             my $top = $self->canvas->Toplevel();
             $top->transient($self->canvas->toplevel);
-            $top->title( "History for " .$cs->contig_name . "  " .$cs->clone_name   );
-            my $hp  = CanvasWindow::SequenceNotes::History->new($top, 550 , 50 );
-            $self->add_history_window($hp , $index) ;
-            $hp->clone_index($index) ;
+            my $hp  = CanvasWindow::SequenceNotes::History->new($top, 550 , 50);
+	    # $hp->SequenceNotes($self); # can't have reference to self if we're inheriting
+	    # clean up just won't work.
+            $hp->SequenceSet($self->SequenceSet);
+            $hp->SequenceSetChooser($self->SequenceSetChooser);
             $hp->name($cs->contig_name);
-            $hp->SequenceNotes($self);
+            $hp->clone_index($index) ;
             $hp->initialise;
             $hp->draw;
+            $self->add_History($hp);
         }
         else{
-            $self->message( "no History for this sequence" ); 
+            $self->message( "no History for sequence " . $cs->contig_name . "  " . $cs->clone_name); 
         }
     }  
 }
 
-sub add_history_window{
-    my ($self , $history, $index ) = @_ ;
+sub add_History{
+    my ($self , $history) = @_ ;
     #add a new element to the hash
-    $self->{'_window_hash'}{$index} = $history ; 
+    if ($history){
+	$self->{'_History_win'} = $history;
+    }
+    return $self->{'_History_win'};
 }
 
 # so we dont bring up copies of the same window
-sub check_for_history_window{
-    my ($self , $index) = @_ ;
-    
-    unless  ( $self->{'_window_hash'} ){
-        return ; # because if it doesnt exist then it can't have any windows
-    }
-    
-    my %window_hash = %{ $self->{'_window_hash'} }  ; 
-    if ( exists ($window_hash{$index}) ){
-        my $window = $window_hash{$index};
-        $window->canvas->toplevel->deiconify;
-        $window->canvas->toplevel->raise;
-        return 1;
-    }
-    else{
-        return ;
-    }
+sub check_for_History{
+    my ($self , $index) = @_;
+    return 0 unless defined($index); # 0 is valid index
+
+    my $hist_win = $self->{'_History_win'};
+    return 0 unless $hist_win;
+    $hist_win->clone_index($index);
+    $hist_win->draw();
+    $hist_win->canvas->toplevel->deiconify;
+    $hist_win->canvas->toplevel->raise;
+    return 1;
 }
-
-
-
 1;
 
 __END__
