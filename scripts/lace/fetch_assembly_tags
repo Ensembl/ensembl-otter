@@ -25,7 +25,6 @@ Bio::Otter::Lace::Defaults::do_getopt('ds|dataset=s' => \$dataset,
 				      's|set=s@'     => \@sets,
 				      'c|clone=s@'   => \@clones,
 				      'clist=s'      => \$clone_list,
-				      'v|verbose'    => \$verbose,
 				      'h|help'       => $help,
 				     ) or $help->(); # plus default options
 
@@ -40,7 +39,6 @@ $help->() unless ($dataset && (@sets || @clones || $clone_list));
   # options to populate assembly_tag table, see also POD
 
   if ( @sets ) {
-
     my @tmp;
     if ( $sets[0] eq "all" ){
       warn "Fetching all assembly types";
@@ -58,7 +56,7 @@ $help->() unless ($dataset && (@sets || @clones || $clone_list));
     foreach $type ( @sets ) {
 
       print "Working on $type\n\n";
-      warn "\tWorking on $type";
+      warn "\tWorking on $type\n";
 
       $otter_db->assembly_type($type); # replace the default sequence set setting
       my $seqSet = $dset->get_SequenceSet_by_name($type);
@@ -69,12 +67,10 @@ $help->() unless ($dataset && (@sets || @clones || $clone_list));
   }
 
   elsif ( @clones ) {
-
     fetch_by_clone_name(\@clones, $otter_db, $atagged_ctgs);
   }
 
   elsif ( $clone_list ){
-
     my $clones = [];
     open(my $fh, $clone_list) || die $!;
     while (<$fh>){
@@ -111,6 +107,7 @@ sub fetch_by_clone_obj {
 
   foreach my $obj (@$clones) {
 
+    $to_do = 0;
     # does only clones not yet assembly_tag tagged
     if ( ref($obj) eq "Bio::Otter::AnnotatedClone" && !exists $atagged_ctgs{$obj->get_all_Contigs->[0]->dbID} ){
 
@@ -144,7 +141,7 @@ sub fetch_by_clone_obj {
     };
 
     # work out path to acefile with assembly_tags info of a Sanger clone
-    if (!$@ && $to_do){
+    if ( !$@ && $to_do == 1 ){
       my $seq = Hum::AnaStatus::Sequence->new_from_seqname_sv($seq_name, $version);
       my $dir = $seq->analysis_directory;
 
@@ -391,18 +388,24 @@ __END__
 
 =head1 SYNOPSIS
 
-Script parameters: database_name [-ds dataset] followed by one of the 4 options, eg:
+Script parameters: database_name (eg, fetch_assembly_tags B<-dataset> human B<-verbose> [optional]) followed by one of the 4 options, eg:
 
-1. B<-set> chr4 B<-set> -chr20  (fetch from one or more chromosomes)
+1. B<-set> chr4 B<-set> -chr20  (fetch all clones from one or more chromosomes)
 
-2. B<-set> all (fetch from all chromosomes)
+2. B<-set> all (fetch all clones from all chromosomes)
 
 3. B<-clone> AC000094.x B<-clone> AC000095.x  (fetch single or multiple clones [accession.version])
 
 4. B<-clist> filename (fetch from list of clones as [accession.version] from file, one clone per line)
 
+Verbose mode prints detailed info of assembly_tags.
 
 =head1 DESCRIPTION
+
+There are assembly_tags info for Sanger clones submitted to EMBL. This is stored in "submissions" database (B<~jgrg/bin/sql>)
+and can be found in acefiles, eg, /nfs/disk100/humpub/analysis/projects/Chr_20/yR31BE7/20001221/rawdata/yR31BE7.humace.ace.
+
+The Assembly_tags info is shown in AceDB under the Assembly_tags tag of a Sequence object and is stored in otterlace in B<assembly_tag> table
 
 This script populates and updates the otter B<assembly_tag> and B<assemlby_tagged_clone> tables, respectively.
 The latter table is populated by "INSERT INTO assembly_tagged_clone (clone_id) SELECT clone_id FROM clone;"
@@ -411,11 +414,8 @@ For clones which have assembly_tag data, it will be updated to "yes".
 
 The B<assembly_tagged_clone> table allows quick look up of clones that have assembly_tag info.
 
-There are assembly_tags info for Sanger clones submitted to EMBL. This is stored in "submissions" database (B<~jgrg/bin/sql>)
-and can be found in acefiles, eg, /nfs/disk100/humpub/analysis/projects/Chr_20/yR31BE7/20001221/rawdata/yR31BE7.humace.ace.
-
-The Assembly_tags info is shown in AceDB under the Assembly_tags tag of a Sequence object and is stored in otterlace in B<assembly_tag> table
-
+Assembly_tag info in the otter DB is dumped out in EMBL format via the script B<emblDump> in the humscripts directory.
+(To check out: cvs -d /nfs/humace2/CVS_master checkout humscripts)
 
 =head1 AUTHOR
 
