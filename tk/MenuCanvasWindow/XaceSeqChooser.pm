@@ -92,6 +92,7 @@ sub initialize {
         );
 
     $self->draw_clone_list;
+    $self->_make_search();
     $self->fix_window_min_max_sizes;
 }
 
@@ -790,10 +791,70 @@ sub do_subseq_display {
     my @clone_names = $self->list_selected_clone_names;
     $self->deselect_all;
     $self->canvas->delete('all');
+    
     if (@clone_names) {
         $self->draw_subseq_list(@clone_names);
     } else {
         $self->message('No clone selected');
+    }
+}
+sub _make_search{
+    my ($self) = @_;
+
+    my $top = $self->canvas->toplevel();
+    my $search_frame = $top->Frame();
+    $search_frame->pack(-side => 'top');
+    
+    my $label = $search_frame->Label(-text => 'Search text:');
+    $label->pack(-side => 'left');
+    my $search_box = $search_frame->Entry(
+					  -width => 35,
+					  -font  => ['Helvetica', $self->font_size, 'normal'],
+					  );
+    $search_box->pack(-side => 'left');
+    ## Is hunting in CanvasWindow?
+    my $hunter = sub{
+	$top->Busy;
+	$self->hunt_for_Entry_text($search_box);
+	$top->Unbusy;
+    };
+    my $button = $search_frame->Button(
+				       -text    => 'Find',
+				       -command => $hunter,
+				       );
+    $button->pack(-side => 'left');
+    $self->{'_search_box'} = 1;
+
+}
+
+sub hunt_for_Entry_text{
+    my ($self, $entry) = @_; 
+#   Finds the text given in the supplied Entry in $self->canvas
+    my $canvas = $self->canvas;
+    my( $query_str, $regex );
+    eval{
+	$query_str = $entry->get();
+	$query_str =~ s{(\W)}{\\$1}g;
+	$regex =  qr/($query_str)/i;
+    };
+    return unless $query_str;
+#    warn $query_str;
+#    warn $regex;
+    $canvas->delete('msg');
+    $self->deselect_all();
+    my @all_text_obj = $canvas->find('withtag', 'searchable');
+    my $found = 0;
+    foreach my $obj (@all_text_obj) {
+        my $text = $canvas->itemcget($obj, 'text');
+#        warn "matching $text against $regex\n";
+        if (my ($hit) = $text =~ /$regex/) {
+            $found = $obj;
+	    $self->highlight($obj);
+        }
+    }
+    unless ($found) {
+        $self->message("Can't find '$query_str'");
+        return;
     }
 }
 
