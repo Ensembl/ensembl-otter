@@ -112,8 +112,11 @@ sub band_bbox {
 sub render {
     my( $band ) = @_;
     
-    my $color = 'red';
-    warn "GenomeCanvas::Band : Drawing default $color rectangle\n";
+    my $color = $band->band_color;
+    if (not defined $color) {
+	$color = 'red';
+	warn "GenomeCanvas::Band : Drawing default $color rectangle\n";
+    }
 
     my $canvas   = $band->canvas;
     my $y_offset = $band->y_offset;
