@@ -22,14 +22,16 @@ my $compara_name = 'ensembl_compara_13_1';
 my $disease_name = 'homo_sapiens_disease_13_31';
 #my $family_name  = 'ensembl_family_13_1';
 
-my $all;
+
 my $species = 'Homo sapiens';
-my $chr     = '13';
-my $start   = 1;
-my $end     = 5000000;
 my $type    = 'NCBI31';
+my $chr;
+my $start;
+my $end;
+my $all;
 my $databases;
 my $dir;
+my $help;
 
 &GetOptions( 
              'host:s'        => \$host,
@@ -49,7 +51,28 @@ my $dir;
 	     'species:s'     => \$species,
 	     'all'           => \$all,
 	     'databases:s'   => \$databases,
-             );
+	     'help'          => \$help,
+             ) || &usage();
+
+if ($help) {
+    &usage;
+}
+
+if (!defined($chr)) {
+    print "\nNo chromosome input\n";
+    &usage;
+}
+
+if (!defined($start)) {
+    print "\nNo chromosome start input\n";
+    &usage;
+}
+
+if (!defined($end)) {
+    print "\nNo chromosome end input\n";
+    &usage;
+
+}
 
 my @dbs;
 my %databases;
@@ -70,7 +93,7 @@ foreach my $db (@dbs) {
 
 if (scalar(@dbs) == 0 && $all == 0) {
     print "\nMust define some databases to download or use the -all option for all databases\n\n";
-    exit(0);
+    &usage;
 }
 
 
@@ -163,7 +186,7 @@ sub dump_database {
     $dir = "/tmp/". $db->dbname . "." . $db->chromosome . "." . $db->start . "-" . $db->end ."." . $db->type;
 
     if (-e $dir) {
-	print "Directory $dir exists - exiting\n";
+	print "\nDirectory $dir exists. Remove this and rerun script.\n";
 	exit(0);
     } else {
 	mkdir $dir;
@@ -176,4 +199,37 @@ sub dump_database {
     foreach my $table (@tables) {
 	$db->dump_SQL_to_file($dir,$table);
     }
+}
+
+
+sub usage {
+
+print "\nSimple Usage : slice2sql -chr <chrname> -start <chrstart> -end <chrend>  -all|-databases core:estgene\n\n";
+print "  -chr     : Name of chromosome to dump\n";
+print "  -start   : Start position in chromosome\n";
+print "  -end     : End position in chromosome\n";
+print "  -all     : Dump all databases (core/est/estgene/compara/disease)\n";
+print "  -databases db1:db2:db3  : Dump only the specified databases\n";
+print "\n\n";
+print "Additional options\n\n";
+
+print "  -species : Species name (e.g. \"Homo sapiens\" \"Mus musculus\" \"Rattus norvegicus\") (default \"Homo sapiens\")\n";
+print "  -type    : Assembly type or version (default NCBI31)\n";
+print "  -dir     : Directory to dump to (default /tmp)\n";
+
+print "\nDatabase location options\n\n";
+print "  -host    : Database host (default kaka.sanger.ac.uk)\n";
+print "  -user    : Database user (default anonymous)\n";
+print "  -port    : Database port (default 3306)\n";
+print "  -pass    : Database password (default \'\')\n";
+
+print "\nDatabase name options\n\n";
+print "  -core_name    : Core database name (dna/genes/features/repeats etc) (default homo_sapiens_core_13_31)\n";
+print "  -est_name     : Est database name                                   (default homo_sapiens_est_13_31)\n";
+print "  -estgene_name : Est gene database name                              (default homo_sapiens_estgene_13_31)\n";
+print "  -compara_name : Genome comparison database name                     (default ensembl_compara_13_31)\n";
+print "  -disease_name : Disease gene database name                          (default homo_sapiens_disease_13_31)\n";
+print "\n\n";
+
+exit(0);
 }
