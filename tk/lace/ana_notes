@@ -45,16 +45,16 @@ use Getopt::Long 'GetOptions';
     my $chooser = GenomeCanvas::Band::SeqChooser->new;
     $gc->add_Band($chooser);
     $chooser->chooser_map(make_chooser_map($set_id));
-    $gc->render;
-    $gc->fix_window_min_max_sizes;
     
     my $canvas = $gc->canvas;
     $canvas->configure(-selectbackground => 'gold');
     $canvas->CanvasBind('<Button-1>', sub {
+        return if $gc->delete_message;
         deselect_all_selected_not_current($gc);
         toggle_current($gc);
         });
     $canvas->CanvasBind('<Shift-Button-1>', sub {
+        return if $gc->delete_message;
         toggle_current($gc);
         });
     
@@ -168,6 +168,8 @@ use Getopt::Long 'GetOptions';
         
         make_button($button_frame2, 'Quit', sub{ $mw->destroy }, 0);
     }
+    $gc->render;
+    $gc->fix_window_min_max_sizes;
     
     ###############
     Tk::MainLoop();

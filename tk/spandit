@@ -81,7 +81,7 @@ use vars '@command_line';
     $xc->fix_window_min_max_sizes;
     
     my %methods_mutable = (
-      # Method name        Mutable?
+      # Method name         Mutable?
         supported           => 1,
         supported_CDS       => 1,
         supported_mRNA      => 1,
