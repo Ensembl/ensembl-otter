@@ -5,7 +5,7 @@ package CanvasWindow::SequenceNotes::History;
 
 use strict;
 use Carp;
-
+use Data::Dumper;
 use base 'CanvasWindow::SequenceNotes';
 
 sub clone_index{
@@ -68,7 +68,7 @@ sub current_clone{
 
 sub initialise {
     my( $self ) = @_;
-    warn "$self INITIALISING\n";
+    
     # Use a slightly smaller font so that more info fits on the screen
     $self->font_size(12);
 
@@ -155,8 +155,9 @@ sub get_rows_list{
     print STDERR "Fetching SequenceNotes list...";
     my $clone = $self->current_clone;
     my $note_list = $clone->get_all_SequenceNotes;
-    unless ($note_list){
-	$self->message( "no History for sequence " . $clone->contig_name . "  " .$clone->clone_name );
+    unless (@$note_list){
+	$self->delete_message();
+	$self->message( "No History for sequence " . $clone->contig_name . "  " .$clone->clone_name );
 	return [];
     }
     return $note_list;
@@ -320,7 +321,7 @@ sub Unbusy{
 sub DESTROY {
     my( $self ) = @_;
     my $idx = $self->clone_index();
-    warn "Destroying $self $idx ";
+    warn "Destroying CanvasWindow::SequenceNotes::History with idx $idx\n";
 }
 
 1;
