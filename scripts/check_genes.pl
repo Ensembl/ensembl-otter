@@ -851,8 +851,7 @@ foreach my $atype (keys %gsi){
 	  }elsif($eced2+1==$ecst){
 	    $ecst=$ecst2;
 	  }else{
-	    print "FATAL: cannot merge sticky exons $tsi: $eid:$ecst-$eced, $eid2:$ecst2-$eced2\n";
-	    exit 0;
+	    print "WARN: cannot merge sticky exons $tsi: $eid:$ecst-$eced, $eid2:$ecst2-$eced2\n";
 	  }
 	  $tsi{$tsi}->[$erank]=[$eid,$ecst,$eced,$esr,$es,$ep,$eep];
 	}else{
