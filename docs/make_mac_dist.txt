@@ -399,4 +399,12 @@ password CVSUSER
 Bioperl
 ==
  cvs -d :pserver:cvs@cvs.open-bio.org:/home/repository/bioperl login
+password cvs
  cvs -d :pserver:cvs@cvs.open-bio.org:/home/repository/bioperl co -r branch-1-2 bioperl-live
+
+Perl script #! munging
+==
+find . -name '*' -type f ! -size 0 -exec perl -pe 'if (/^#\!.*perl/) { print; exit(0) } else { exit(1)}' {} \; \
+                                   -print \
+                                   -exec perl -p -i.bak -e 's/^#\!.*perl/#\!\/usr\/local\/bin\/perl/' {} \;
+
