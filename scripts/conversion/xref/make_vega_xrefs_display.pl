@@ -103,10 +103,10 @@ foreach my $chr (reverse sort bychrnum keys %$chrhash) {
     #   $display_dbentry = $locuslink_dbentry;
     # }
     if (defined($display_dbentry)) {
-      my $sth = $db->prepare("update table gene set display_xref_id=" . 
+      my $sth = $db->prepare("update gene set display_xref_id=" . 
                              $display_dbentry->dbID . 
                            " where gene_id=" . $gene->dbID);
-      print $sth->{Statement} . "\n";
+      print $sth->{Statement} . ";\n";
     } else {
       print "No $dbentry_type match for ". $gene->stable_id ." dbID " . $gene->dbID ."\n";
     }
@@ -121,7 +121,7 @@ foreach my $chr (reverse sort bychrnum keys %$chrhash) {
         } 
       }
       if (defined($display_dbentry)) {
-        my $sth = $db->prepare("update table transcript set display_xref_id=" . 
+        my $sth = $db->prepare("update transcript set display_xref_id=" . 
                                $display_dbentry->dbID . 
                              " where transcript_id=" . $trans->dbID);
         print $sth->{Statement} . ";\n";
