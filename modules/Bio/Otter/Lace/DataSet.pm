@@ -230,9 +230,13 @@ sub status_refresh_for_SequenceSet{
     my $anaAdapt       = $pipeline_db->get_AnalysisAdaptor();
     my $ruleAdapt      = $pipeline_db->get_RuleAdaptor();
     my @rules          = $ruleAdapt->fetch_all;
-    my $rule_list      = [];
-    foreach my $rule (@rules)  {
-        push(@$rule_list, $rule->goalAnalysis->logic_name) if ($rule->list_conditions())[0];
+    my $rule_list      = []; # all the analysis which can run for this species.
+    my $species = $self->species();
+    my $filters = Bio::Otter::Lace::Defaults::option_from_array([$species, 'use_filters']);
+    foreach my $s(keys %$filters){
+        # filter name can be present and have value 0.
+        next unless $filters->{$s};
+        push(@$rule_list, $s);
     }
     # I think this query can be optimised more
     my $sql = q{SELECT i.input_id, i.analysis_id, i.created, i.db_version
@@ -478,7 +482,7 @@ sub fetch_all_SequenceNotes_for_SequenceSet {
 	# that is in the cloneSequence's SequenceNotes [].
 	$cs->truncate_SequenceNotes(); 
         if (my $notes = $ctg_notes{$cs->contig_id}) {
-            foreach my $sn (sort {$b->timestamp <=> $a->timestamp} @$notes) {
+            foreach my $sn (sort {$a->timestamp <=> $b->timestamp} @$notes) {
 		# logic in current_SequenceNote doesn't work
 		# unless this is done first
 		$cs->add_SequenceNote($sn); 
