@@ -1001,8 +1001,8 @@ sub ace_to_otter {
                   push @$keywords, $1;
                 }
                 elsif (/^Annotation_remark $STRING/x) {
-                  my $keywords = $curr_seq->{keyword} ||= [];
-                  push @$keywords, $1;
+                  my $remarks = $curr_seq->{remark} ||= [];
+                  push @$remarks, $1;
                 }
                 elsif (/^EMBL_dump_info\s+DE_line $STRING/x) {
                     $curr_seq->{EMBL_dump_info} = $1;
@@ -1457,7 +1457,7 @@ sub ace_to_otter {
     
     # Turn %frags into a path
     my $tile_path = [];
-    foreach my $ctg_name (keys %frag) {
+    foreach my $ctg_name (keys %frags) {
         my $fragment = $frag{$ctg_name};
         my $offset = $fragment->{offset}    or die "No offset for '$ctg_name'";
         my $start  = $fragment->{start}     or die "No start for '$ctg_name'";
@@ -1473,14 +1473,14 @@ sub ace_to_otter {
         my $info = Bio::Otter::CloneInfo->new;
         my $author = $authors{$auth} or die "No Author object called '$auth'";
         $info->author($author);
-        if (my $kw_list = $cln->{Keyword}) {
+        if (my $kw_list = $cln->{keyword}) {
             foreach my $word (@$kw_list) {
                 my $kw = Bio::Otter::Keyword->new;
                 $kw->name($word);
                 $info->remark($kw);
             }
         }
-        if (my $rem_list = $cln->{Remark}) {
+        if (my $rem_list = $cln->{remark}) {
             foreach my $txt (@$rem_list) {
                 my $remark = Bio::Otter::CloneRemark->new;
                 $remark->name("Annotation_remark- $txt");
