@@ -509,6 +509,12 @@ sub make_embl_ft {
 
 =head2 get_description
 
+Given an accession and sequence version, fetches thean Otter AnnotatedClone.
+Gets the CloneRemark objects from the CloneInfo object and returns the
+text of the one containing the description.
+
+Warns if no CloneRemarks are fetched for the clone, returning undef.
+
 =cut
 
 sub get_description {
@@ -539,6 +545,16 @@ sub get_description {
     return($description_txt);
 }
 
+=head2 get_keywords
+
+Given an accession and sequence version, fetches thean Otter AnnotatedClone.
+Gets the Keyword objects from the CloneInfo object and returns their text
+as a list.
+
+Warns if no Keyword objects are fetched for the clone, returning undef.
+
+=cut 
+
 sub get_keywords {
 	my ( $self, $accession, $sv ) = @_;
     
@@ -559,6 +575,11 @@ sub get_keywords {
     foreach my $keyword (@keywords) {
         push (@keywords_txt, $keyword->name);
     }
+    
+    unless (@keywords_txt) {
+        return;
+    }
+    
     return(@keywords_txt);
 }
 
@@ -579,7 +600,6 @@ These are stored in Otter as SimpleFeatures on the Slice
 sub _do_polyA {
     my ( $self, $slice, $set ) = @_;
     
-    #my $set = $self->FeatureSet;
     my $polyA_signal_feats = $slice->get_all_SimpleFeatures('polyA_signal');
     my $polyA_site_feats = $slice->get_all_SimpleFeatures('polyA_site');
 
