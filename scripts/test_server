@@ -149,10 +149,14 @@ for (my $i = 0 ; $i < $niter ; $i++) {
   #Turn it into objects
 
   print "Original range $requested_start $requested_end\n";
+  my $x2oslice;
   open FPXML, "$xmlfile1";
   my $fh = \*FPXML;
-  ($genes, $chrname, $chrstart, $chrend) = Bio::Otter::Converter::XML_to_otter($fh);
+  #($genes, $chrname, $chrstart, $chrend) = Bio::Otter::Converter::XML_to_otter($fh);
+  ($genes, $x2oslice) = Bio::Otter::Converter::XML_to_otter($fh);
   close FPXML;
+  $chrstart = $x2oslice->chr_start;
+  $chrend   = $x2oslice->chr_end;
   
   print "Original range  : $requested_start\t$requested_end\n";
   print "Slice range     : $chrstart\t$chrend\n\n";
@@ -215,11 +219,17 @@ for (my $i = 0 ; $i < $niter ; $i++) {
   my $comp_chrstart;
   my $comp_chrend;
   my $xml_comp_genes;
+  my $comp_slice;
 
   open FPXML, "$xmlfile2";
   my $fh2 = \*FPXML;
-  ($xml_comp_genes, $comp_chrname, $comp_chrstart, $comp_chrend) = Bio::Otter::Converter::XML_to_otter($fh2);
+  #($xml_comp_genes, $comp_chrname, $comp_chrstart, $comp_chrend) = Bio::Otter::Converter::XML_to_otter($fh2);
+  ($xml_comp_genes, $comp_slice) = Bio::Otter::Converter::XML_to_otter($fh2);
   close FPXML;
+ 
+  $comp_chrstart = $comp_slice->chr_start;
+  $comp_chrend = $comp_slice->chr_end;
+
   print "Second requested range : $chrstart\t$chrend\n";
   print "Second contig range    : $comp_chrstart\t$comp_chrend\n\n";
 
