@@ -540,7 +540,7 @@ sub populate_menus {
         -label          => 'Variant',
         -command        => $variant_command,
         -accelerator    => 'Ctrl+I',
-        -underline      => 4,
+        -underline      => 2,
         );
     $top->bind('<Control-i>', $variant_command);
     $top->bind('<Control-I>', $variant_command);
@@ -811,7 +811,7 @@ sub _make_search {
     #$search_frame->Frame(-width => 6)->pack(-side => 'left');
     
     my $search_box = $search_frame->Entry(
-        -width => 25,
+        -width => 22,
         );
     $search_box->pack(-side => 'left');
     
@@ -827,9 +827,18 @@ sub _make_search {
          -text      => 'Find',
          -command   => $hunter,
          -underline => 0,
-         );
-    $button->pack(-side => 'left');
-    $self->{'_search_box'} = 1;
+         )->pack(-side => 'left');
+
+    my $clear_command = sub {
+        $search_box->delete(0, 'end');
+        };
+    my $clear = $search_frame->Button(
+        -text      => 'Clear',
+        -command   => $clear_command,
+        -underline => 2,
+        )->pack(-side => 'left');
+    $top->bind('<Control-e>',   $clear_command);
+    $top->bind('<Control-E>',   $clear_command);
 
     $button->bind('<Destroy>', sub{
         $self = undef;

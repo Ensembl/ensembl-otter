@@ -145,8 +145,11 @@ sub recover_old_sessions {
         if (/^lace\.(\d+)/) {
             my $pid = $1;
             next if $existing_pid->{$pid};
-            my $lace_dir = $_;
-            push(@lace, "$tmp_dir/$lace_dir");
+            my $lace_dir = "$tmp_dir/$_";
+            # Skip if directory is not ours
+            my $owner = (stat($lace_dir))[4];
+            next unless $< == $owner;
+            push(@lace, $lace_dir);
         }
     }
     closedir VAR_TMP or die "Error closing directory '$tmp_dir' : $!";
