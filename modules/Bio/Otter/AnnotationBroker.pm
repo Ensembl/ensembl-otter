@@ -285,6 +285,9 @@ sub compare_genes {
     } # done comparisons - now need to build arrays
     
     my $time = time;
+
+
+
     
     foreach my $g (@$new) {
         print STDERR "Do I have a stableID? : " . $g->stable_id . "\n";
