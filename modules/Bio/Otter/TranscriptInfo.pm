@@ -431,7 +431,7 @@ sub toString{
 
     $str .= "Transcript evidence :-\n";
 
-    print STDERR "EV " . $self->evidence . "\n";
+    $str .= "EV " . $self->evidence . "\n";
     foreach my $ev ($self->evidence) {
 	$str .= $ev->toString() . "\n";
     }
