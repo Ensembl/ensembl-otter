@@ -396,18 +396,49 @@ sub XML_to_otter {
 }
 
 sub otter_to_ace {
-  my ($contig, $genes) = @_;
+  my ($contig, $genes, $path) = @_;
   
   my $str =  "Sequence : \"" . $contig->display_id . "\"\nGenomic_canonical\n";
+
+  print "Contig $contig\n";
+  if ($contig->isa("Bio::EnsEMBL::Slice")) {
+    my $slice = $contig;
+
+    $str .= "Assembly_name " . $path . "\n";
+
+  my @path  = @{ $slice->get_tiling_path };
+
+  my $chr      = $slice->chr_name;
+  my $chrstart = $slice->chr_start;
+  my $chrend   = $slice->chr_end;
+
+    foreach my $path (@path) {
+       my $start;
+       my $end;
+    
+       if ($path->component_ori == 1) {
+         $start = $chrstart + $path->assembled_start - 1;
+         $end   = $chrstart + $path->assembled_end - 1;
+       } else {
+         $end     = $chrstart + $path->assembled_start - 1 ;
+         $start   = $chrstart + $path->assembled_end - 1;
+       } 
+       $str .= "Feature TilePath " . $start . " " . $end . " 1.0 " . $path->component_Seq->name . "\n";
+    }
+  }
   foreach my $gene (@$genes) {
+  
     foreach my $tran (@{ $gene->get_all_Transcripts }) {
       $str .= "Subsequence   \"" . $tran->stable_id . "\" ";
       my @exons = @{ $tran->get_all_Exons };
-      @exons = sort {$a->start <=> $b->start} @exons;
       if ($exons[0]->strand == 1) {
-        $str .= $exons[0]->start . " " . $exons[$#exons]->end . "\n";
+        @exons = sort {$a->start <=> $b->start} @exons;
+        $tran->{_trans_exon_array} = \@exons;
+        $str .= $tran->start . " " . $tran->end . "\n";
       } else {
-        $str .= $exons[$#exons]->end . " " . $exons[0]->start. "\n";
+        @exons = sort {$b->start <=> $a->start} @exons;
+        $tran->{_trans_exon_array} = \@exons;
+        $str .= $tran->end . " " . $tran->start . "\n";
       }
     }
   }
@@ -519,11 +550,11 @@ sub otter_to_ace {
   }
 
   # Finally the dna
-#  $str .= "\nDNA \"" . $contig->display_id . "\"\n";
-  #my $seq = $contig->seq;
+  $str .= "\nDNA \"" . $contig->display_id . "\"\n";
+  my $seq = $contig->seq;
 
-#  $seq =~ s/(.{72})/$1\n/g;
-#  $str .= $seq;
+  $seq =~ s/(.{72})/$1\n/g;
+  $str .= $seq;
   return $str;
 }
 
@@ -563,9 +594,9 @@ sub rna_pos {
   foreach my $exon (@{ $tran->get_all_Exons }) {
 
     my $tmp = $exon->length;
-
+    print "Exon " . $exon->stable_id . " " . $exon->start . "\t" . $exon->end . "\t" . $exon->strand . "\t" . $exon->phase . "\t" . $exon->end_phase. "\n";
     if ($prev) {
-      if ($prev->end_phase != $exon->phase) {
+      if ($prev->end_phase != -1 && $prev->end_phase != $exon->phase) {
         print STDERR "Monkey exons in transcript\n";
       }
     }
