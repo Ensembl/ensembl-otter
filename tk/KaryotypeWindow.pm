@@ -83,6 +83,7 @@ sub draw {
     }
     
     $self->draw_legend($x, $y);
+    $self->canvas->raise('histogram_bar', 'all');
 }
 
 sub draw_legend {
@@ -99,7 +100,8 @@ sub draw_legend {
     my $font_size = $self->font_size;
     my $pad = $self->pad;
     my $canvas = $self->canvas;
-    my $font = ['Helvetica', $font_size, 'bold'];
+    my $font       = ['Helvetica',       $font_size, 'bold'];
+    my $small_font = ['Helvetica', 0.8 * $font_size, 'bold'];
     foreach my $graph (@graphs) {
         my $height = $graph->bin_size / (1_000_000 * $self->Mb_per_pixel);
         my $y_off = ($font_size - $height) / 2;
@@ -124,13 +126,13 @@ sub draw_legend {
             $x, $y+(1.5*$font_size),
             -anchor => 'n',
             -text   => '0',
-            -font   => $font,
+            -font   => $small_font,
             );
         $canvas->createText(
             $x+$width, $y+(1.5*$font_size),
             -anchor => 'n',
             -text   => $graph->max_x,
-            -font   => $font,
+            -font   => $small_font,
             );
         $canvas->createText(
             $x+$max_width+$font_size, $y,
@@ -139,10 +141,9 @@ sub draw_legend {
             -font   => $font,
             -tags   => 'scale_label',
             );
-        my @bbox = $canvas->bbox('scale_label');
         
         # Move pointer to the right for next label
-        $x = $bbox[2] + $pad;
+        $x = ($canvas->bbox('scale_label'))[2] + $pad;
     }
 }
 

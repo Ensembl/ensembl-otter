@@ -138,6 +138,7 @@ sub draw {
             -fill       => $color,
             -outline    => $color,
             -width      => 0.5,
+            -tags       => ['histogram_bar'],
             );
     }
 
