@@ -10,6 +10,7 @@ use LWP;
 use Bio::Otter::Lace::DataSet;
 use Bio::Otter::Lace::AceDatabase;
 use Bio::Otter::Lace::PersistentFile;
+use Bio::Otter::Lace::DasClient;
 use Bio::Otter::Converter;
 use Bio::Otter::Lace::TempFile;
 use URI::Escape qw{ uri_escape };
@@ -400,6 +401,22 @@ sub password_prompt{
         $self->{'_password_prompt_callback'} = $callback;
     }
     return $callback->($self);
+}
+
+sub dasClient{
+    my ($self) = @_;
+    my $das_on = $self->option_from_array([qw( client with-das )]);
+    my $dasObj;
+    if($das_on){
+        $dasObj = $self->{'_dasClient'};
+        unless($dasObj){
+            $dasObj = Bio::Otter::Lace::DasClient->new();
+            $self->{'_dasClient'} = $dasObj;
+        }
+    }else{
+        print STDERR "To use Das start '$0 -with-das'\n";
+    }
+    return $dasObj;
 }
 
 1;
