@@ -115,8 +115,8 @@ create table evidence (
 
 create table current_clone_info (
         clone_info_id int(10) unsigned default '0' not null,
-        clone_accession varchar(40),
-        clone_version varchar(40),  
+        clone_id varchar(40),
+        clone_version int(10),  
         PRIMARY KEY (clone_info_id)
         ) Type=InnoDB;
 
