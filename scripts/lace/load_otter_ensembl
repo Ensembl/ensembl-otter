@@ -60,7 +60,7 @@ use Bio::EnsEMBL::Analysis;
 use Bio::EnsEMBL::Clone;
 use Bio::EnsEMBL::RawContig;
 use Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor;
-use Bio::EnsEMBL::Pipeline::SeqFetcher::Pfetch;
+use Bio::EnsEMBL::Pipeline::SeqFetcher::Finished_Pfetch;
 use Bio::EnsEMBL::Chromosome;
 
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
@@ -122,8 +122,8 @@ use Bio::EnsEMBL::Clone;
             'priority=i'    => \$analysis_priority ,
             'chromosome=s'  => \$chromosome_name, 
             'set|name=s'        => \$set_name,
-            );
-    
+            ) || useage();
+    useage() if $help;
     my $otter_db = Bio::EnsEMBL::DBSQL::DBAdaptor->new (   
         -HOST   => $host,
         -PORT   => $port,
@@ -253,7 +253,7 @@ use Bio::EnsEMBL::Clone;
     my $superctg_ori = 1;  
 
     #### pfetch the details of a clone
-    my  $pfetch = Bio::EnsEMBL::Pipeline::SeqFetcher::Pfetch->new();
+    my  $pfetch = Bio::EnsEMBL::Pipeline::SeqFetcher::Finished_Pfetch->new();
     my $seq ; # stores the sequence (of each line entry) and name as a bio::seq object  
     
     # Get SubmitContig analysis object for priming the pipeline
@@ -635,3 +635,4 @@ sub save_pipeline_options {
     my $sth = $db->prepare("INSERT INTO meta(meta_key, meta_value) VALUES (?,?)");
     $sth->execute('pipeline_db', $opt_str);
 }
+sub useage{ exit(exec('perldoc', $0)); }
