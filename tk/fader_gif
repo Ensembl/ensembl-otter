@@ -28,6 +28,7 @@ sub rgb_to_hsl {
         $min = $v if $v < $min;
         $max = $v if $v > $max;
     }
+    warn "max=$max min=$min";
     my $lgt = ($min + $max) / 2;
     
     my( $hue, $sat ) = (0,0);
@@ -43,7 +44,7 @@ sub rgb_to_hsl {
         }
         
         # Calculate the hue
-        my $divisor = $max / $min;
+        my $divisor = $max - $min;
         if ($rgb[0] == $max) {
             $hue = ($rgb[1] - $rgb[2]) / $divisor;
         }
