@@ -87,6 +87,7 @@ sub execute_search{
         $self->fetch_Clones_containing_CloneNames($search_list) ;
     }
 }
+
 sub fetch_Clones_containing_stable_id{
     my ($self, $stable_ids) = @_;
 
@@ -412,7 +413,7 @@ sub get_context_and_intron_clones{
 
 sub context_size{
     my ($self, $context) = @_;
-    $self->{'_context'} = $context if $context;
+    $self->{'_context'} = $context if defined $context;
     return $self->{'_context'} || 0;
 }
 
