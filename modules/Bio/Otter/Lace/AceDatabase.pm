@@ -566,9 +566,14 @@ sub write_pipeline_data {
     
     # create file for output and add it to the acedb object
     $ace_file ||= $self->home . "/rawdata/pipeline.ace";
-    $self->add_acefile($ace_file);
-    my $fh = gensym();
-    open $fh, "> $ace_file" or confess "Can't write to '$ace_file' : $!";
+    my $fh;
+    if(ref($ace_file) eq 'GLOB'){
+        $fh = $ace_file;
+    }else{ 
+        $fh = gensym();
+        $self->add_acefile($ace_file);
+        open $fh, "> $ace_file" or confess "Can't write to '$ace_file' : $!";
+    }
     $factory->file_handle($fh);
 
     my $slice_adaptor = $ens_db->get_SliceAdaptor();
