@@ -165,6 +165,19 @@ __END__
 
 =head1 NAME - make_multi_clone_gene_lumps
 
+=head1 SYNOPSIS
+
+  make_multi_clone_gene_lumps -dataset <DATASET_NAME>
+
+=head1 DESCRIPTION
+
+Outputs an AGP with clones containing common
+genes separated by 10,000bp.  This allows them to
+be opened in a single contig, and the genes
+edited, because it avoids any of the genes being
+marked as truncated, and hence locked. 
+
+
 =head1 AUTHOR
 
 James Gilbert B<email> jgrg@sanger.ac.uk

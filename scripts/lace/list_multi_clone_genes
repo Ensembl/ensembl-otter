@@ -1,0 +1,96 @@
+#!/usr/local/bin/perl5.6.1 -w
+
+### list_multi_clone_genes
+
+use strict;
+use Getopt::Long 'GetOptions';
+use Hum::Tracking;
+use Bio::Otter::Lace::PipelineDB;
+use Bio::Otter::Lace::Defaults;
+
+{
+    my $dataset_name = undef;
+    my $usage = sub { exec 'perldoc', $0 };
+    my $show_clones = 1;
+    
+    Bio::Otter::Lace::Defaults::do_getopt(
+          'dataset=s'   => \$dataset_name,
+          'clones!'     => \$show_clones,
+          ) or die "Error processing command line";
+    $usage->() unless $dataset_name;
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    # Make a connection to the otter database
+    my $otter_db = $ds->get_cached_DBAdaptor;
+    
+    my $contig_to_clone = $otter_db->prepare(q{
+        SELECT g.contig_id
+          , c.name
+        FROM clone c
+          , contig g
+        WHERE c.clone_id = g.clone_id
+        });
+    $contig_to_clone->execute;
+    my( %ctg_clone );
+    while (my ($ctg, $clone) = $contig_to_clone->fetchrow) {
+        $ctg_clone{$ctg} = $clone;
+    }
+    
+    my $sth = $otter_db->prepare(q{
+        SELECT n.name
+          , e.contig_id
+        FROM gene g
+          , gene_stable_id gsid
+          , current_gene_info c
+          , gene_info i
+          , gene_name n
+          , transcript t
+          , exon_transcript et
+          , exon e
+        WHERE g.gene_id = gsid.gene_id
+          AND gsid.stable_id = c.gene_stable_id
+          AND c.gene_info_id = i.gene_info_id
+          AND i.gene_info_id = n.gene_info_id
+          AND g.gene_id = t.gene_id
+          AND t.transcript_id = et.transcript_id
+          AND et.exon_id = e.exon_id
+        GROUP BY n.name
+          , e.contig_id
+        });
+    $sth->execute;
+    
+    my( %gene_clone );
+    while (my ($name, $contig_id) = $sth->fetchrow) {
+        my $clone_name = $ctg_clone{$contig_id};
+        my $clone_list = $gene_clone{$name} ||= [];
+        push @$clone_list, $clone_name;
+    }
+    if ($show_clones) {
+        foreach my $name (sort keys %gene_clone) {
+            my $clone_list = $gene_clone{$name};
+            next if @$clone_list == 1;
+            print "$name\t@$clone_list\n";
+        }
+    } else {
+        foreach my $name (sort keys %gene_clone) {
+            my $clone_list = $gene_clone{$name};
+            next if @$clone_list == 1;
+            print "$name\n";
+        }
+    }
+}
+
+
+
+
+
+__END__
+
+=head1 NAME - list_multi_clone_genes
+
+    list_multi_clone_genes -dataset <NAME> [-[no]clones]
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+

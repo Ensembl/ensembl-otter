@@ -1,0 +1,64 @@
+#!/usr/local/bin/perl5.6.1 -w
+
+### show_modified_loci
+
+use strict;
+
+
+use Carp;
+use Getopt::Long 'GetOptions';
+use Hum::Tracking;
+use Bio::Otter::Lace::PipelineDB;
+use Bio::Otter::Lace::Defaults;
+
+{
+    my $dataset_name = undef;
+    my $since = undef;
+    my $usage = sub { exec 'perldoc', $0 };
+    
+    Bio::Otter::Lace::Defaults::do_getopt(
+          'dataset=s'   => \$dataset_name,
+          'since=s'     => \$since,
+          ) or die "Error processing command line";
+    $usage->() unless $dataset_name and $since;
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    # Make a connection to the otter database
+    my $otter_db = $ds->get_cached_DBAdaptor;
+    
+    my $sth = $otter_db->prepare(q{
+        SELECT n.name
+          , gsid.modified
+        FROM gene g
+          , gene_stable_id gsid
+          , current_gene_info c
+          , gene_info i
+          , gene_name n
+        WHERE g.gene_id = gsid.gene_id
+          AND gsid.stable_id = c.gene_stable_id
+          AND c.gene_info_id = i.gene_info_id
+          AND i.gene_info_id = n.gene_info_id
+          AND g.type != 'obsolete'
+          AND gsid.modified > ?
+        ORDER BY gsid.modified DESC
+        });
+    $sth->execute($since);
+    
+    while (my ($name, $when) = $sth->fetchrow) {
+        print "$when\t$name\n";
+    }
+}
+
+
+__END__
+
+=head1 NAME - show_modified_loci
+
+=head1 SYNOPSIS
+
+    show_modified_loci -dataset <NAME> -since <TIME>
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
