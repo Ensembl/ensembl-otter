@@ -141,6 +141,13 @@ create table transcript_synonym (
         PRIMARY KEY (transcript_name, transcript_synonym)
         );
 
+create table exon_synonym (
+        exon_name varchar(40) not null,
+        exon_synonym varchar(40) not null,
+        
+        PRIMARY KEY (exon_name, exon_synonym)
+        );
+
 create table evidence (
 	evidence_id int(10) unsigned not null auto_increment,
 	evidence_name varchar(40),
