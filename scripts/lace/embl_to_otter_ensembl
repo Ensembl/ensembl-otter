@@ -71,7 +71,7 @@ use Mail::Mailer;
 
 my $DOMAIN = 'sanger.ac.uk';
 my $EMAIL = 'anacode@'.$DOMAIN;
-my $DEBUG = 0;
+my $DEBUG = 1;
 my $embl_entries = {};
 
 # this script will read STDIN only if piped to
@@ -328,7 +328,7 @@ sub check_embl_input{
     while (my $entry = $parser->parse($fh)){
 	my $error    = 0;
 	my $id_line  = $entry->ID;
-	my $acc      = $id_line->entryname;
+	my $acc      = $entry->AC->primary;
 	my $molecule = $id_line->molecule;
 	my $seq_ver  = $entry->SV->version;
 	my $acc_sv   = $acc . ".". $seq_ver;
