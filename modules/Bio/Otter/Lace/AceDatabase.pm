@@ -545,10 +545,11 @@ sub write_pipeline_data {
     $dataset->selected_SequenceSet($ss);    # Not necessary?
     my $ens_db = $dataset->get_cached_DBAdaptor();
     my $pipe_db;
-#    warn "$ens_db                                                    not otter_human\n";
-#    warn $ens_db->dbname;
-#    warn $ens_db->dnadb->dbname;
-    if(Bio::Otter::Lace::Defaults::fetch_pipeline_switch()){
+    #warn "$ens_db                                                    not otter_human\n";
+    #warn $ens_db->dbname;
+    #warn $ens_db->dnadb->dbname;
+    my $fetch_pipe = Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
+    if($fetch_pipe){
 	$pipe_db = Bio::Otter::Lace::PipelineDB::get_DBAdaptor($dataset->get_cached_DBAdaptor);
 	$pipe_db->dnadb($ens_db->dnadb);
     }
@@ -599,7 +600,7 @@ sub write_pipeline_data {
     $factory->drop_file_handle;
     close $fh;
     
-    Bio::Otter::Lace::SatelliteDB::disconnect_DBAdaptor($ens_db);
+    Bio::Otter::Lace::SatelliteDB::disconnect_DBAdaptor($ens_db) if $fetch_pipe;
 }
 
 sub make_AceDataFactory {
@@ -657,13 +658,9 @@ sub make_AceDataFactory {
     }
 
     # If we aren't fetching all the analysis, we only need the DNA
-    
-    $logic_to_load->{'submitcontig'} = 1;
-    $module_options->{'submitcontig'}->{'module'} = 'Bio::EnsEMBL::Ace::Filter::DNA';
-
-#    my $submitcontig = $self->Client->option_from_array([qw!client dna!]);
-#    $logic_to_load->{$submitcontig} = 1;
-#    $module_options->{$submitcontig}->{'module'} = 'Bio::EnsEMBL::Ace::Filter::DNA';
+    my $submitcontig = $self->Client->option_from_array([qw!client dna!]) || 'submitcontig';
+    $logic_to_load->{$submitcontig} = 1;
+    $module_options->{$submitcontig}->{'module'} = 'Bio::EnsEMBL::Ace::Filter::DNA';
 
     foreach my $logic_name (keys %$logic_to_load){
 	next unless $logic_to_load->{$logic_name};
