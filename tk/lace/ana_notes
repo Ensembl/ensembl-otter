@@ -14,10 +14,18 @@ use Getopt::Long 'GetOptions';
 
 {
     my( $annotator );
+    my $list_sets = 0;
     GetOptions(
         'help!'     => \&useage,
         'user=s'    => \$annotator,
+        'list!'     => \$list_sets,
         ) or useage();
+    
+    if ($list_sets) {
+        list_sets();
+        exit;
+    }
+
     my $set_name = shift(@ARGV) || useage();
     die "Unknown elements on command line: '@ARGV'\n" if @ARGV;
     
@@ -54,7 +62,7 @@ use Getopt::Long 'GetOptions';
                 );
 
             my $comment_label = $button_frame->Label(
-                -text => 'Comment:',
+                -text => 'Note text:',
                 );
             $comment_label->pack(
                 -side => 'left',
@@ -85,7 +93,7 @@ use Getopt::Long 'GetOptions';
                 $gc->render;
                 $gc->fix_window_min_max_sizes
                 };
-            make_button($button_frame2, 'Set reviewed', $set_reviewed, 0);
+            make_button($button_frame2, 'Set note', $set_reviewed, 0);
             $mw->bind('<Control-s>', $set_reviewed);
             $mw->bind('<Control-S>', $set_reviewed);
         }
@@ -147,6 +155,39 @@ use Getopt::Long 'GetOptions';
     ###############
     Tk::MainLoop();
     ###############
+}
+
+sub list_sets {
+    my $sth = prepare_statement(q{
+        SELECT set_name
+          , set_description
+        FROM ana_set
+        });
+    $sth->execute;
+    
+    my $rows = $sth->fetchall_arrayref;
+    if (@$rows == 0) {
+        print "No sets found!\n";
+        return;
+    }
+    
+    my @head = ('Set name', 'Description');
+    my $max_l = length($head[0]);
+    foreach my $set_name (map $_->[0], @$rows) {
+        my $l = length($set_name);
+        if ($l > $max_l) {
+            $max_l = $l
+        }
+    }
+    my $pattern = "  \%${max_l}s  %-s\n";
+    
+    print "\n";
+    printf($pattern, @head);
+    print "\n";
+    foreach my $r (@$rows) {
+        printf($pattern, @$r);
+    }
+    print "\n";
 }
 
 sub set_name_to_set_id {
@@ -480,12 +521,15 @@ sub make_chooser_map {
         );
     
     my( @map );
+    my $last_ana_seq_id = 0;
     while ($sth->fetch) {
+        next if $ana_seq_id == $last_ana_seq_id;
         ($date) = $date =~ /(\d{4}-\d\d-\d\d)/ if $date;
         $status = status_name($status);
         push(@map,
             [ $ana_seq_id, $seq_name, $status, $uname, $date, $comment ]
             );
+        $last_ana_seq_id = $ana_seq_id;
     }
     
     print STDERR " got them.\n";
@@ -530,6 +574,78 @@ sub get_unplaced_clones {
 __END__
 
 =head1 NAME - ana_notes
+
+=head1 SYNOPSIS
+
+  ana_notes [-user USER_ID] SEQUENCE_SET_NAME
+  ana_notes -list
+  ana_notes -help
+
+=head1 DESCRIPTION
+
+Used to attach notes to sequences in sets of
+sequences during annotation.  A new note replaces
+the note seen in the display, but does not delete
+it from the central database.
+
+If run by non-annotators, it doesn't display the
+editing controls.
+
+=head1 PARAMETERS
+
+=over 4
+
+=item -list
+
+Lists all the sequence sets in the database to the
+terminal.
+
+=item SEQUENCE_SET_NAME
+
+The name of the sequence set.
+
+=item -user USERID
+
+If you are running ana_notes as a user other than
+yourself (eg: from a shared account), you can
+identify yourself with this option.  B<USERID> is
+your login name (email).
+
+=back
+
+=head1 KEYBOARD SHORT CUTS
+
+=over 4
+
+=item Control-H
+
+B<H>unts for the text in the clipboard.  Just
+highlight a piece of text in your terminal or
+editor, and press B<Control-H> in ana_notes to
+find it.
+
+=item Control-S
+
+B<S>ave the current text in the B<Note text>
+entry box to all the selected (pink)
+sequences.  This also re-synchronizes with the
+central database.
+
+=item Control-R or F5
+
+Re-synchronizes with the central database, so
+that you can see the changes to notes made by
+other annotators.
+
+=item Control-L
+
+Run B<lace> on the selected sequences.
+
+=item Control-E
+
+Run B<emblDump> on the selected sequences.
+
+=back
 
 =head1 AUTHOR
 
