@@ -172,7 +172,7 @@ sub render {
         # Move the band to the correct position if it
         # drew itself somewhere else
         $gc->draw_band_outline($band);
-        my $actual_y = ($canvas->bbox($tag))[1];
+        my $actual_y = ($canvas->bbox($tag))[1] || $y_offset;
         if ($actual_y < $y_offset) {
             my $y_move = $y_offset - $actual_y;
             $canvas->move($tag, 0, $y_move);
@@ -192,7 +192,8 @@ sub draw_band_outline {
     my $canvas = $gc->canvas;
     my @tags = $band->tags;
     my @rect = $canvas->bbox(@tags)
-        or confess "Can't get bbox for tags [@tags]";
+        #or confess "Can't get bbox for tags [@tags]";
+        or warn "Nothing drawn for [@tags]" and return;
     my $r = $canvas->createRectangle(
         @rect,
         -fill       => undef,
