@@ -1,0 +1,117 @@
+#!/usr/local/bin/perl -w
+
+### fetch_clone_EMBL
+
+use strict;
+
+use Getopt::Long 'GetOptions';
+use Bio::Otter::Lace::Defaults;
+use Bio::Otter::Lace::PipelineDB;
+
+{
+    my $dataset_name = undef;
+    my $sequence_set = undef;
+    
+    my $usage = sub { exec('perldoc', $0) };
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'   => $usage,
+        'dataset=s' => \$dataset_name,
+        'chr|set=s' => \$sequence_set,
+        ) or $usage->();
+    $usage->() unless $dataset_name and $sequence_set;
+
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    my $otter_db = $ds->make_DBAdaptor;
+    $otter_db->assembly_type($sequence_set);
+    my $slice_aptr = $otter_db->get_SliceAdaptor;
+    my $gene_aptr  = $otter_db->get_GeneAdaptor;
+
+    foreach my $acc (@ARGV) {
+        foreach my $chr_s_e (fetch_chr_start_end_for_accession($otter_db, $acc)) {
+            my $slice = $slice_aptr->fetch_by_chr_start_end(@$chr_s_e);
+            my $gene_id_list = $gene_aptr->list_current_dbIDs_for_Slice($slice);
+            my $tile_path = $slice->get_tiling_path;
+            if (@$tile_path != 1) {
+                my $count = @$tile_path;
+                die "Expected 1 component in tiling_path but have $count\n";
+            }
+
+            my $slice_contig = $tile_path->[0]->component_Seq;
+            my $contig_length = $slice_contig->length;
+            foreach my $gid (@$gene_id_list) {
+                my $gene = $gene_aptr->fetch_by_dbID($gid);
+                foreach my $transcript (@{$gene->get_all_Transcripts}) {
+                    my $sid = $transcript->stable_id;
+                    print "\nTranscript $sid\n";
+                    foreach my $exon (@{$transcript->get_all_Exons}) {
+                        my $contig  = $exon->contig;
+                        my $start   = $exon->start;
+                        my $end     = $exon->end;
+                        if ($exon->isa('Bio::Ensembl::StickyExon')) {
+                            # Deal with sticy exon
+                            warn "STICKY!\n";
+                        }
+                        elsif ($contig != $slice_contig) {
+                            my $acc = $contig->clone->embl_id;
+                            # Is not on Slice
+                            print "$acc:$start..$end\n";
+                        }
+                        else {
+                            # Is on Slice (ie: clone)
+                            if ($end < 1 or $start > $contig_length) {
+                                warn "Unexpected exon start '$start' end '$end' on contig of length '$contig_length'\n";
+                            }
+                            print "$start..$end\n";
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+sub fetch_chr_start_end_for_accession {
+    my( $db, $acc ) = @_;
+    
+    my $type = $db->assembly_type;
+    my $sth = $db->prepare(q{
+        SELECT chr.name
+          , a.chr_start
+          , a.chr_end
+        FROM assembly a
+          , contig c
+          , clone cl
+          , chromosome chr
+        WHERE c.clone_id = cl.clone_id
+          AND c.contig_id = a.contig_id
+          AND chr.chromosome_id = a.chromosome_id
+          AND cl.embl_acc = ?
+          AND a.type = ?
+        ORDER BY a.chr_start
+        });
+    $sth->execute($acc, $type);
+    
+    my( @chr_start_end );
+    while (my ($chr, $start, $end) = $sth->fetchrow) {
+        push(@chr_start_end, [$chr, $start, $end]);
+    }
+    if (@chr_start_end) {
+        return @chr_start_end;
+    } else {
+        die "Clone with accession '$acc' not found on assembly '$type'\n";
+    }
+}
+
+__END__
+
+=head1 NAME - fetch_clone_EMBL
+
+=head1 EXAMPLE
+
+  fetch_clone_EMBL -dataset human -chr chr1_07 AC114498 AL669831
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+

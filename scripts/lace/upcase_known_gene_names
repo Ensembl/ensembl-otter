@@ -1,0 +1,52 @@
+#!/usr/local/bin/perl -w
+
+### upcase_known_gene_names
+
+use strict;
+
+
+use Bio::Otter::Lace::PipelineDB;
+use Bio::Otter::Lace::Defaults;
+
+{
+    my $dataset_name = undef;
+    my $usage = sub { exec 'perldoc', $0 };
+    
+    Bio::Otter::Lace::Defaults::do_getopt(
+          'dataset=s'   => \$dataset_name,
+          ) or $usage->();
+    $usage->() unless $dataset_name;
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    # Make a connection to the otter database
+    my $otter_db = $ds->get_cached_DBAdaptor;
+
+    my $sth = $otter_db->prepare(q{
+        SELECT n.name
+        FROM gene_name n
+          , gene_info i
+        WHERE n.gene_info_id = i.gene_info_id
+          AND i.is_known = 'true'
+          AND binary n.name != upper(n.name)
+        GROUP BY n.name
+        });
+    $sth->execute;
+    
+    while (my ($name) = $sth->fetchrow) {
+        next if $name =~ /^em:/i;
+        next if $name =~ /orf/i;
+        next if $name =~ /\.\d/;
+        next if $name =~ /gi\d/;
+        print "$name\n";
+    }
+}
+
+
+__END__
+
+=head1 NAME - upcase_known_gene_names
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
