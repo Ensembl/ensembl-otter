@@ -96,7 +96,7 @@ open(OUT2,">test.xml");
 my $str = Bio::Otter::Converter::frags_to_XML($frags,$path,$chr,$start,$end);
 print OUT2 $str . "\n";
 
-@$genes = sort {$a->name cmp $b->name} @$genes;
+@$genes = sort {$a->gene_info->name cmp $b->gene_info->name} @$genes;
 
 foreach my $gene (@$genes) {
     print OUT2 $gene->toXMLString . "\n";

@@ -497,10 +497,10 @@ sub otter_to_ace {
       foreach my $exon (@exons) {
         if ($exons[0]->strand == 1) {
           $str .= "Source_Exons " . ($exon->start - $trans_off) . " "
-            . ($exon->end - $trans_off) . "\n";
+            . ($exon->end - $trans_off) . " " . $exon->stable_id . "\n";
         } else {
           $str .= "Source_Exons " . ($trans_off - $exon->end) . " "
-            . ($trans_off - $exon->start) . "\n";
+            . ($trans_off - $exon->start) .  " " . $exon->stable_id . "\n";
         }
       }
 
@@ -779,9 +779,10 @@ sub ace_to_otter {
           $sequence{$currname}{transcript} = $tran;
 
           #print STDERR "new tran  $currname [$tran][$val]\n";
-        } elsif (/^Source_Exons +(\d+) +(\d+)/) {
+        } elsif (/^Source_Exons +(\d+) +(\d+) +(\S+)/) {
           my $oldstart = $1;
           my $oldend   = $2;
+          my $stableid = $3;
 
           my $tstart  = $sequence{$currname}{start};
           my $tend    = $sequence{$currname}{end};
@@ -804,6 +805,8 @@ sub ace_to_otter {
             -end    => $end,
             -strand => $tstrand
           );
+          $exon->stable_id($stableid);
+
           $sequence{$currname}{transcript}->add_Exon($exon);
 
         } elsif (/^Continues_as +(\S+)/) {
