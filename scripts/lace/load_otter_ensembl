@@ -292,12 +292,12 @@ use Bio::Otter::Lace::SatelliteDB;
             ## all we have is the list of contigs/clones - need to give default values for agp
             
             $acc_ver = $file_line->[0];
-            $seq = pfetch_acc_sv($acc_ver);
+            $seq = pfetch_acc_sv($acc_ver) or next;
             $super_contig_name = $chromosome_name;  # should be available from the command line if we have a clone list as input (or we would have died earlier)       
             $n = 5;    # does this get used for anything? - don't think so
             $type = 'F' ;        
             $ctg_ori =  '+';
-            $chr_start =  $end_coord + 10000 ;
+            $chr_start =  $end_coord + 10001;
             $chr_end = ($chr_start + $seq->length - 1);
             $ctg_start = 1 ;
             $ctg_end =   $seq->length ; # $ctg_end = $ctg_start + length - 1 ; as we are starting at 1 just use length   
