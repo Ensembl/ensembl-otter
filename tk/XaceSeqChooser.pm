@@ -1,12 +1,12 @@
 
-### XaceSeqChooser
+### MenuCanvasWindow::XaceSeqChooser
 
-package XaceSeqChooser;
+package MenuCanvasWindow::XaceSeqChooser;
 
 use strict;
 use Carp;
 use CanvasWindow;
-use ExonCanvas;
+use MenuCanvasWindow::ExonCanvas;
 use vars ('@ISA');
 use Hum::Ace;
 
@@ -384,8 +384,8 @@ sub edit_subsequences {
             -title  => $sub_name,
             );
         
-        # Make new ExonCanvas object and initialize
-        my $ec = ExonCanvas->new($top);
+        # Make new MenuCanvasWindow::ExonCanvas object and initialize
+        my $ec = MenuCanvasWindow::ExonCanvas->new($top);
         $ec->name($sub_name);
         $ec->xace_seq_chooser($self);
         $ec->SubSeq($sub);
@@ -733,7 +733,7 @@ sub list_selected_subseq_names {
 
 __END__
 
-=head1 NAME - XaceSeqChooser
+=head1 NAME - MenuCanvasWindow::XaceSeqChooser
 
 =head1 AUTHOR
 

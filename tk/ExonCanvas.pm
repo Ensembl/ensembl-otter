@@ -1,7 +1,7 @@
 
-### ExonCanvas
+### MenuCanvasWindow::ExonCanvas
 
-package ExonCanvas;
+package MenuCanvasWindow::ExonCanvas;
 
 use strict;
 use Carp;
@@ -314,7 +314,7 @@ sub initialize {
         $self->window_close or return;
         
         # Have to specifically undef $self, or the
-        # ExonCanvas object doesn't get destroyed,
+        # MenuCanvasWindow::ExonCanvas object doesn't get destroyed,
         # because the other closures still reference it.
         $self = undef;
         };
@@ -1047,7 +1047,7 @@ sub DESTROY {
 
 __END__
 
-=head1 NAME - ExonCanvas
+=head1 NAME - MenuCanvasWindow::ExonCanvas
 
 =head1 AUTHOR
 

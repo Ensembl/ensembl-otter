@@ -3,8 +3,8 @@
 ### spandit
 
 use strict;
-use XaceSeqChooser;
-use ExonCanvas;
+use MenuCanvasWindow::XaceSeqChooser;
+use MenuCanvasWindow::ExonCanvas;
 use Ace;
 use Getopt::Long 'GetOptions';
 
@@ -29,7 +29,7 @@ use Getopt::Long 'GetOptions';
     }
     
     my $mw = CanvasWindow::MainWindow->new($title);
-    my $xc = XaceSeqChooser->new($mw);
+    my $xc = MenuCanvasWindow::XaceSeqChooser->new($mw);
     $xc->font_size($font_size) if $font_size;
     $xc->clone_list(@ARGV);
      
