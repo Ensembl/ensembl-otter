@@ -385,17 +385,21 @@ sub get_unplaced_clones {
             my $sql = qq{
                 SELECT s.sequence_name
                   , a.ana_seq_id
+                  , st.status_id
                   , r.annotator_uname
                   , r.review_time
                   , r.review_comment
                 FROM sequence s
                   , ana_sequence a
+                  , ana_status st
                   , species_chromosome c
                 LEFT JOIN ana_sequence_review r
                   ON a.ana_seq_id = r.ana_seq_id
                 WHERE s.seq_id = a.seq_id
+                  AND a.ana_seq_id = st.ana_seq_id
                   AND s.chromosome_id = c.chromosome_id
                   AND a.is_current = 'Y'
+                  AND st.is_current = 'Y'
                   AND c.chromosome_id = 20
                 };
             my $sth = prepare_statement($sql);
@@ -406,11 +410,33 @@ sub get_unplaced_clones {
             }
             print STDERR " got them\n";
         }
-        my ($most_recent) = sort {$b->[2] cmp $a->[2]} @{$seq_review_details{$seq_name}};
+        my ($most_recent) = sort {$b->[3] cmp $a->[3]} @{$seq_review_details{$seq_name}};
         confess "No review data for '$seq_name'" unless $most_recent;
-        my( $ana_seq_id, $uname, $date, $comment ) = @$most_recent;
+        my( $ana_seq_id, $status, $uname, $date, $comment ) = @$most_recent;
         ($date) = $date =~ /(\d{4}-\d\d-\d\d)/ if $date;
-        return( $ana_seq_id, $seq_name, $uname, $date, $comment );
+        $status = status_name($status);
+        return( $ana_seq_id, $seq_name, $status, $uname, $date, $comment );
+    }
+}
+
+{
+    my( %id_status );
+    
+    sub status_name {
+        my( $id ) = @_;
+        
+        unless (%id_status) {
+            my $sth = prepare_statement(q{
+                SELECT status_id
+                  , status_name
+                FROM ana_status_dict
+                });
+            $sth->execute;
+            while (my( $id, $name ) = $sth->fetchrow) {
+                $id_status{$id} = $name;
+            }
+        }
+        return $id_status{$id};
     }
 }
 
