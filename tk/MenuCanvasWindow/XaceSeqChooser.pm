@@ -65,7 +65,6 @@ sub initialize {
     my $title = 'lace '. $ss->name;
     $db->title($title);
     $db->error_flag(1);
-    ### Copy write_access flag from SequenceSet
 
     ### Candidate for Defaults module?
     $db->tar_file('/nfs/team71/analysis/jgrg/work/ace_skeleton/lace_acedb.tar');
@@ -103,20 +102,19 @@ sub initialize {
         GD_working               => [1,         1], 
 
         # Auto-analysis gene types (non-editable)
-        fgenesh                  => [0,         0],
-        FGENES                   => [0,         0],
-        GENSCAN                  => [0,         0],
+        fgenesh                  => [0,         1],
+        FGENES                   => [0,         1],
+        GENSCAN                  => [0,         1],
         HALFWISE                 => [0,         0],
         SPAN                     => [0,         0],
-        EnsEMBL                  => [0,         0],
-        genomewise               => [0,         0],
-        'WashU-Supported'        => [0,         0],
+        EnsEMBL                  => [0,         1],
+        genomewise               => [0,         1],
+        'WashU-Supported'        => [0,         1],
         'WashU-Putative'         => [0,         0],
         'WashU-Pseudogene'       => [0,         0],
         );
 
     $self->draw_clone_list;
-    #$self->save_command(\&otter_save);
     $self->fix_window_min_max_sizes;
 }
 
@@ -297,8 +295,8 @@ sub attach_xace {
     if (my $xwid = $self->get_xace_window_id) {
         my $xrem = Hum::Ace::XaceRemote->new($xwid);
         $self->xace_remote($xrem);
-        $xrem->send_command('save');
-        #$xrem->send_command('writeaccess -gain');
+        #$xrem->send_command('save');
+        $xrem->send_command('writeaccess -gain');
     } else {
         warn "no xwindow id: $xwid";
     }
@@ -457,7 +455,12 @@ sub populate_menus {
     $file->add('separator');
     
     # Quit
-    my $exit_command = sub { $menu_frame->toplevel->destroy };
+    my $exit_command = sub {
+        $self->save_data or return;
+        $self->AceDatabase->error_flag(0);
+        $self = undef;
+        $menu_frame->toplevel->destroy;
+        };
     $file->add('command',
         -label          => 'Exit',
         -command        => $exit_command,
@@ -466,6 +469,7 @@ sub populate_menus {
         );
     $top->bind('<Control-q>', $exit_command);
     $top->bind('<Control-Q>', $exit_command);
+    $top->protocol('WM_DELETE_WINDOW', $exit_command);
     
     # Show menu
     my $mode = $self->make_menu('Show');
@@ -597,33 +601,33 @@ sub bind_events {
     $canvas->Tk::bind('<Escape>',   sub{ $self->deselect_all        });    
     $canvas->Tk::bind('<Return>',   sub{ $self->edit_double_clicked });    
     $canvas->Tk::bind('<KP_Enter>', sub{ $self->edit_double_clicked });    
-    
+    $canvas->toplevel->bind('<Destroy>', sub{ $self = undef });
 }
 
 sub save_data {
     my( $self ) = @_;
 
-    if (my $save = $self->save_command) {
-        my @clone = $self->list_selected_clone_names;
-        if (@clone) {
-            foreach my $cl (@clone) {
-                $save->($self, $cl);
-            }
-        } else {
-            $self->message("First select a clone to save [@clone]");
-        }
-    } else {
-        $self->message('No save command');
+    my $ss = $self->SequenceSet;
+    unless ($ss->write_access) {
+        return 1;   # Can't save - but is OK
     }
-}
+    my $top = $self->canvas->toplevel;
 
-sub save_command {
-    my( $self, $save_command ) = @_;
+    $top->Busy;
+
+    my $db = $self->AceDatabase;
+    eval{
+        $db->save_all_slices;
+    };
     
-    if ($save_command) {
-        $self->{'_save_command'} = $save_command;
+    $top->Unbusy;
+    
+    if ($@) {
+        $self->exception_message('Error saving to otter', $@);
+        return 0;
+    } else {
+        return 1;
     }
-    return $self->{'_save_command'};
 }
 
 sub command_line_restart {
@@ -1558,6 +1562,11 @@ sub list_selected_subseq_names {
     return @names;
 }
 
+sub DESTROY {
+    my( $self ) = @_;
+    
+    warn "Destroying XaceSeqChooser for ", $self->ace_path, "\n";
+}
 
 1;
 

@@ -400,6 +400,7 @@ sub set_seleted_from_canvas {
 sub run_lace {
     my( $self ) = @_;
     
+    ### Prevent opening of sequences already in lace sessions
     return unless $self->set_seleted_from_canvas;
     my $ss = $self->SequenceSet;
 
