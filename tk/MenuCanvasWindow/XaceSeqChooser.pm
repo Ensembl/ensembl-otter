@@ -979,6 +979,7 @@ sub save_data {
         my $ace_data = $db->save_all_slices;
         ## update_ace should be true unless this object is exiting
         if($update_ace && ref($ace_data) eq 'SCALAR'){
+            $self->launch_xace;
             $self->update_ace_display($$ace_data);
             # resync here!
             $self->resync_with_db; # probably better to create a key event
