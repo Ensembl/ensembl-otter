@@ -11,243 +11,265 @@ use Bio::Seq;
 $| =1;
 
 {
-  my ($dataset, @sets, $vega);
+	my ($dataset, @sets, $vega);
 
-  my $help = sub { exec('perldoc', $0) };
+	my $help = sub { exec('perldoc', $0) };
 
-  Bio::Otter::Lace::Defaults::do_getopt('ds|dataset=s' => \$dataset,   # eg, human or mouse or zebrafish
-					's|set=s@'     => \@sets,      # sequence set(s) to check
-					'h|help'       => $help,
-					'v|vega'       => \$vega,       # this flags vega_set_id > 0. If !$vega: check all datasets
-					                               # for now, zebrafish defaults to !$vega
-				       ) or $help->();                 # plus default options
-  $help->() unless $dataset;
+	Bio::Otter::Lace::Defaults::do_getopt('ds|dataset=s' => \$dataset, # eg, human or mouse or zebrafish
+										  's|set=s@'     => \@sets,	   # sequence set(s) to check
+										  'h|help'       => $help,
+										  'v|vega'       => \$vega,	   # this flags vega_set_id > 0. If !$vega: check all datasets
+										                               # for now, zebrafish defaults to !$vega
+										 ) or $help->();               # plus default options
+	$help->() unless $dataset;
 
-  my $client    = Bio::Otter::Lace::Defaults::make_Client();           # Bio::Otter::Lace::Client
-  my $dset      = $client->get_DataSet_by_name($dataset);              # Bio::Otter::Lace::DataSet
-  my $otter_db  = $dset->get_cached_DBAdaptor;                         # Bio::EnsEMBL::Containerr
+	my $client    = Bio::Otter::Lace::Defaults::make_Client();         # Bio::Otter::Lace::Client
+	my $dset      = $client->get_DataSet_by_name($dataset);            # Bio::Otter::Lace::DataSet
+	my $otter_db  = $dset->get_cached_DBAdaptor;                       # Bio::EnsEMBL::Containerr
 
-  my ($chrom, $geneAd, $sliceAd, $slice, $gene, @positives);
-  my $name_and_shame = {};
+	my ($chrom, $geneAd, $sliceAd, $slice, $gene);
 
-  unless ( @sets ){
+	my $date = `date +%Y%m%d`; chomp $date;
+	my ($fh, $fh1);
 
-    # sql query to get all assembly types w/ diff. vega_set_id conditions
-    my $sql;
-
-    if ( $vega ){
-      $sql = q{SELECT assembly_type FROM sequence_set WHERE vega_set_id > 0};
-    }
-    else {
-      $sql = q{SELECT assembly_type FROM sequence_set};
-    }
-
-    my $sth = $otter_db->prepare($sql);
-    $sth->execute;
-    while ( my ($type) = $sth->fetchrow_array()) {
-      push (@sets, $type);
-    }
-    $sth->finish;
-  }
-
-  # loop thru all assembly types to fetch all annotated genes in it on otter
-  my $date = `date +%Y%m%d`; chomp $date;
-  my ($fh, $fh1);
-
-  unless ( $vega ){
-    open ( $fh, ">cds_start_end_not_found_updateInfo.$dataset.$date") || die $!;
-    open ( $fh1, ">cds_start_end_not_found_annotator.$dataset.$date") || die $!;
-  }
-  else {
-    open ( $fh, ">cds_start_end_not_found_updateInfo.${dataset}_vega.$date") || die $!;
-    open ( $fh1, ">cds_start_end_not_found_annotator.${dataset}_vega.$date") || die $!;
-  }
-
-  foreach my $set ( @sets ) {
-
-    @positives = ();
-
-    my $i = "\nExamining genes on '$set'\n";
-
-    $otter_db->assembly_type($set); # replace the default sequence set setting
-
-    my $seqSet    = $dset->get_SequenceSet_by_name($set);
-    $dset->fetch_all_CloneSequences_for_SequenceSet($seqSet);
-
-    undef $@;
-    eval {
-      $chrom     = $seqSet->CloneSequence_list()->[0]->chromosome;
-    };
-
-    next if $@;
-
-    $geneAd  = $otter_db->get_GeneAdaptor; # Bio::Otter::AnnotatedGeneAdaptor
-    $sliceAd = $otter_db->get_SliceAdaptor;
-    $slice = $sliceAd->fetch_by_chr_name($chrom->name);
-
-    my $latest_gene_id = $geneAd->list_current_dbIDs_for_Slice($slice);
-
-    foreach my $id ( @$latest_gene_id ) {
-
-      # transform contig coords of a gene into chrom. coords
-      my $gene = $geneAd->fetch_by_dbID($id)->transform($slice);
-
-      # always filter out gene type = "obsolete"
-      next if $gene->type eq "obsolete";
-
-      my $trans_list = $gene->get_all_Transcripts;
-
-      # now working on transcript translation
-      foreach my $trans ( @$trans_list ) {
-
-	next if $trans->transcript_info->class->name eq "Transposon";
-
-	if ( $trans->translation ) {
-	  push (@positives, $trans);
+	unless ( $vega ){
+		open ( $fh, ">cds_start_end_not_found_updateInfo.$dataset.$date") || die $!;
+		open ( $fh1, ">cds_start_end_not_found_annotator.$dataset.$date") || die $!;
 	}
-      }
-    }
+	else {
+		open ( $fh, ">cds_start_end_not_found_updateInfo.${dataset}_vega.$date") || die $!;
+		open ( $fh1, ">cds_start_end_not_found_annotator.${dataset}_vega.$date") || die $!;
+	}
 
-    my $trans_info_update = [];
+	print $fh1 "\nPlease check the protein sequence of transcript that has:\n";
+	print $fh1 "\t(1) no stop codon but 'cds_end_not_found' tag is not selected or\n";
+	print $fh1 "\t(2) non-ATG translation start but 'cds_start_not_found' tag is not selected.\n\n";
 
-    my $e = "\tFound " . scalar @positives . " transcripts w/ translation in $set. . .\n";
-    print $fh $e;
-    print STDERR $e;
+	unless ( @sets ){
 
-    my ($protein, $mrna);
+		# sql query to get all assembly types w/ diff. vega_set_id conditions
+		my $sql;
 
-    foreach my $t ( @positives ) {
+		if ( $vega )
+		{
+			$sql = q{SELECT assembly_type FROM sequence_set WHERE vega_set_id > 0};
+		}
+		else {
+			$sql = q{SELECT assembly_type FROM sequence_set};
+		}
 
-      my $tsi = $t->transcript_info->transcript_stable_id;
+		my $sth = $otter_db->prepare($sql);
+		$sth->execute;
+		while ( my ($type) = $sth->fetchrow_array()) {
+			push (@sets, $type);
+		}
+		$sth->finish;
+	}
 
-      my $annotator = $t->transcript_info->author->name;
+	my $name_and_shame = {};
+	my $seen           = {};
 
-      #-------------------------------
-      #   check non-ATG start codon
-      #-------------------------------
+	# loop thru all assembly types to fetch all annotated genes in it on otter
+	foreach my $set ( @sets ) {
 
-      my $start_codon;
-      eval {
+		my @positives = ();
+
+		my $i = "\nExamining genes on '$set'\n";
+		print $i;
+
+		$otter_db->assembly_type($set); # replace the default sequence set setting
+
+		my $seqSet    = $dset->get_SequenceSet_by_name($set);
+		$dset->fetch_all_CloneSequences_for_SequenceSet($seqSet);
+
+		
+		eval {
+			$chrom     = $seqSet->CloneSequence_list()->[0]->chromosome;
+		};
+
+		next if $@;
+
+		$geneAd  = $otter_db->get_GeneAdaptor; # Bio::Otter::AnnotatedGeneAdaptor
+		$sliceAd = $otter_db->get_SliceAdaptor;
+		$slice = $sliceAd->fetch_by_chr_name($chrom->name);
+
+		my $latest_gene_id = $geneAd->list_current_dbIDs_for_Slice($slice);
+
+		foreach my $id ( @$latest_gene_id ) {
+			
+			# transform contig coords of a gene into chrom. coords
+			my $gene = $geneAd->fetch_by_dbID($id)->transform($slice);
+
+			# always filter out gene type = "obsolete"
+			next if $gene->type eq "obsolete";
+
+			my $trans_list = $gene->get_all_Transcripts;
+
+			# now working on transcript translation
+			foreach my $trans ( @$trans_list ) {
+
+				next if $trans->transcript_info->class->name eq "Transposon";
+
+				if ( $trans->translation ) {
+					push (@positives, $trans);
+				}
+			}
+		}
+
+		my $trans_info_update = [];
+
+		my $e = "\tFound " . scalar @positives . " transcripts w/ translation in $set. . .\n";
+		print $fh $e;
+		print $e;
+
+		my ($protein, $mrna);
 	
-	$start_codon = check_start_codon($t->get_all_translateable_Exons->[0]->seq->seq);
+		foreach my $t ( @positives ) {
+
+			my $tsi = $t->transcript_info->transcript_stable_id;
+			$seen->{$t->transcript_info->name}++;
+			
+			my $annotator = $t->transcript_info->author->name;
+
+			#-------------------------------
+			#   check non-ATG start codon
+			#-------------------------------
+
+			my $start_codon;
+			eval {
 	
-	# length of $start_codon can be < 3 when the start_exon seqs are immediately followed by intron
-	# if so, fetch the rest bp of the start codon from the second exon
-	if ( length $start_codon < 3 ){
-	  my $bps = check_start_codon($t->get_all_translateable_Exons->[1]->seq->seq);
-	  $start_codon = uc($start_codon . substr($bps, 0, (3 - length $start_codon) ));
+				$start_codon = check_start_codon($t->get_all_translateable_Exons->[0]->seq->seq);
+	
+				# length of $start_codon can be < 3 when the start_exon seqs are immediately followed by intron
+				# if so, fetch the rest bp of the start codon from the second exon
+				if ( length $start_codon < 3 )
+				{
+					my $bps = check_start_codon($t->get_all_translateable_Exons->[1]->seq->seq);
+					$start_codon = uc($start_codon . substr($bps, 0, (3 - length $start_codon) ));
+				}
+			};
+
+			# cds_start_not_found tag should be selected in AceDB
+			
+			if ( !$@ && $start_codon ne "ATG" && $t->transcript_info->cds_start_not_found == 0 )
+			{
+				#$error->{$t->transcript_info->name} = sprintf("\t%-25s(%10s)\n", $t->transcript_info->name, "$tsi\t'$start_codon' as translation start");
+
+				# no need to duplicate mistakes from dataset of diff. versions
+				# but this takes the earlist version - not very good though
+		
+				if ( $seen->{$t->transcript_info->name} == 1 ){
+					my $error = sprintf("\t%-25s(%10s)\n", $t->transcript_info->name, "$tsi\t'$start_codon' as translation start");
+					push(@{$name_and_shame->{$annotator}}, $error);
+				}
+			}
+
+			#-------------------------------------------
+			#  check translation has stop codon at end
+			#-------------------------------------------
+
+			# calling translateable_seq first then call translate to preserve stop codon
+
+			eval{
+				$mrna       = $t->translateable_seq;
+				my $peptide = Bio::Seq->new( -seq      => $mrna,
+											 -alphabet => 'dna');
+
+				$protein = $peptide->translate->seq;
+			};
+
+			unless ( $@ ){
+
+				# grep only transcirpts with non-stop translation and cds_end_not_found tag should be selected in AceDB
+				if ( $protein !~ /\*$/ && $t->transcript_info->cds_end_not_found == 0 )
+				{
+
+					my $end_exon_end_30 = get_end_30_dna($t->get_all_translateable_Exons->[-1]->seq->seq); # last exon dna seq
+					my $trans_end_30    = get_end_30_dna( $mrna ); # full mrna dna seq
+
+					unless ( $end_exon_end_30 eq $trans_end_30 ){
+						printf $fh ("\t%-25s(%10s) - no stop codon - annotator to check\n", $t->transcript_info->name, $tsi);
+		
+						if ( $seen->{$t->transcript_info->name} == 1 ){
+							my $error = sprintf("\t%-25s(%10s)\n", $t->transcript_info->name, "$tsi\thas no stop codon");
+							push(@{$name_and_shame->{$annotator}}, $error);
+						}
+					}
+
+					else {
+						printf $fh ("\t%-25s(%10s) - no stop codon - fixed automatically\n", $t->transcript_info->name, $tsi);
+						push(@$trans_info_update, $tsi);
+					}
+				}
+			}
+		}
+
+		undef $@;
+		if ( $trans_info_update->[0] )
+		{
+
+			$otter_db->begin_work;
+
+			eval {
+				update_cds_end_not_found($otter_db, $trans_info_update);
+			};
+			unless ( $@ ){
+				$otter_db->commit;
+				printf $fh ("\tcds_end_not_found update successful (%d)\n\n", scalar @$trans_info_update);
+			}
+			else {
+				$otter_db->rollback;
+			}
+		}
+		else {
+			printf $fh ("\tNo cds_end_not_found to update automatically\n\n");
+		}
 	}
-      };
-
-      # cds_start_not_found tag should be selected in AceDB
-      if ( !$@ && $start_codon ne "ATG" && $t->transcript_info->cds_start_not_found == 0 ){
-	my $error = sprintf("\t%-25s(%10s)\n", $t->transcript_info->name, "$tsi\t'$start_codon' as translation start");
-	push(@{$name_and_shame->{$annotator}}, $error);
-      }
-
-      #-------------------------------------
-      #  check translation has stop codon
-      #-------------------------------------
-
-      # calling translateable_seq first then call translate to preserve stop codon
-      undef $@;
-      eval{
-	$mrna       = $t->translateable_seq;
-	my $peptide = Bio::Seq->new( -seq      => $mrna,
-  			             -alphabet => 'dna');
-
-	$protein = $peptide->translate->seq;
-      };
-
-      unless ( $@ ){
-	# grep only transcirpts with non-stop translation and cds_end_not_found tag should be selected in AceDB
-	if ( $protein !~ /\*$/ && $t->transcript_info->cds_end_not_found == 0 ){
-
-          my $end_exon_end_30 = get_end_30_dna($t->get_all_translateable_Exons->[-1]->seq->seq); # last exon dna seq
-	  my $trans_end_30    = get_end_30_dna( $mrna );                                         # full mrna dna seq
-
-	  unless ( $end_exon_end_30 eq $trans_end_30 ){
-	    printf $fh ("\t%-25s(%10s) - no stop codon - annotator to check\n", $t->transcript_info->name, $tsi);
-
-	    my $error = sprintf("\t%-25s(%10s)\n", $t->transcript_info->name, "$tsi\thas no stop codon");
-	    push(@{$name_and_shame->{$annotator}}, $error);
-	  }
-
-	  else {
-	    printf $fh ("\t%-25s(%10s) - no stop codon - fixed automatically\n", $t->transcript_info->name, $tsi);
-	    push(@$trans_info_update, $tsi);
-	  }
+	
+	# blame list
+	if ( keys %$name_and_shame )
+	{
+		foreach my $name ( sort keys %$name_and_shame )
+		{
+			printf $fh1 ("Annotator: %s (%d)\n", $name, scalar @{$name_and_shame->{$name}});
+			print $fh1 "@{$name_and_shame->{$name}}\n";
+		}
 	}
-      }
-    }
-
-    undef $@;
-    if ( $trans_info_update->[0] ){
-
-      $otter_db->begin_work;
-
-      eval {
-	#update_cds_end_not_found($otter_db, $trans_info_update);
-      };
-      unless ( $@ ){
-	$otter_db->commit;
-	printf $fh ("\tcds_end_not_found update successful (%d)\n\n", scalar @$trans_info_update);
-      }
-      else {
-	$otter_db->rollback;
-      }
-    }
-    else {
-      printf $fh ("\tNo cds_end_not_found to update automatically\n\n");
-    }
-  }
-
-  # blame list
-  if ( keys %$name_and_shame ){
-    print $fh1 "\nPlease check the following problems:\n";
-    print $fh1 "Protein sequence of transcript has:\n";
-    print $fh1 "\t(1) no stop codon but 'cds_end_not_found' tag is not selected or\n";
-    print $fh1 "\t(2) non-ATG translation start but 'cds_start_not_found' tag is not selected.\n\n";
-
-    foreach my $name ( sort keys %$name_and_shame ){
-      printf $fh1 ("Annotator: %s (%d)\n", $name, scalar @{$name_and_shame->{$name}});
-      print $fh1 "@{$name_and_shame->{$name}}\n";
-    }
-  }
 }
 
 sub check_start_codon {
-  my $start_exon_dna = shift;
-  return uc( substr($start_exon_dna, 0, 3) ); # just make sure to use uppercase here
+	my $start_exon_dna = shift;
+	return uc( substr($start_exon_dna, 0, 3) ); # just make sure to use uppercase here
 }
 
 sub get_end_30_dna {
 
-  # get end 30 or less dna
-  my $end_dna = shift;
+	# get end 30 or less dna
+	my $end_dna = shift;
 
-  my $end_30;
-  if ( length($end_dna) >= 30 ){
-    $end_30 = substr($end_dna, -(30-length($end_dna)), 30);
-  }
-  else {
-    $end_30 = substr($end_dna, 0, length($end_dna));
-  }
+	my $end_30;
+	if ( length($end_dna) >= 30 )
+	{
+		$end_30 = substr($end_dna, -(30-length($end_dna)), 30);
+	}
+	else {
+		$end_30 = substr($end_dna, 0, length($end_dna));
+	}
 
-  return $end_30;
+	return $end_30;
 }
 
 
 sub update_cds_end_not_found {
-  my ( $db, $trans_info_update ) = @_;
+	my ( $db, $trans_info_update ) = @_;
 
-  my $ids = join(',', map {"'".$_."'"} @$trans_info_update);
+	my $ids = join(',', map {"'".$_."'"} @$trans_info_update);
 
-  my $sth = $db->prepare( "UPDATE transcript_info "
-                         ."SET cds_end_not_found = 'true' "
-                         ."WHERE transcript_stable_id IN ($ids)" );
-  $sth->execute;
-  $sth->finish;
+	my $sth = $db->prepare( "UPDATE transcript_info "
+							."SET cds_end_not_found = 'true' "
+							."WHERE transcript_stable_id IN ($ids)" );
+	$sth->execute;
+	$sth->finish;
 }
 
 
