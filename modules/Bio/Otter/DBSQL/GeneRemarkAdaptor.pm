@@ -38,11 +38,11 @@ sub _generic_sql_fetch {
 
 	my @remark;
 
-	while (my $ref = $sth->fetchrow_hashref) {
+	while (my ($rem_id, $txt, $giid) = $sth->fetchrow) {
 	    my $remark = new Bio::Otter::GeneRemark;
-	    $remark->dbID($ref->{gene_remark_id});
-	    $remark->remark($ref->{remark});
-	    $remark->gene_info_id($ref->{gene_info_id});
+	    $remark->dbID($rem_id);
+	    $remark->remark($txt);
+	    $remark->gene_info_id($giid);
 		
 	    push(@remark,$remark);
 

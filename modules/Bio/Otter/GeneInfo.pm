@@ -300,7 +300,8 @@ sub equals {
 	    }
 	}
 	if ($found == 0) {
-            print STDERR "Differenct remark " . $rem->remark . " for  " . $self->gene_stable_id . " " . $self->name . "\n";
+            printf STDERR "Different remark for %s %s\n  '%s'\n",
+                $self->gene_stable_id, $self->name->name, $rem->remark, ;
 	    return 0;
 	}
     }

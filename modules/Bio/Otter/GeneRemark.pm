@@ -63,7 +63,7 @@ formal_parameter_name
 sub remark{
    my ($obj,$value) = @_;
    if( defined $value) {
-      $obj->{'remark'} = $value;
+      $obj->{'remark'} = "$value";
     }
     return $obj->{'remark'};
 
@@ -138,8 +138,10 @@ sub equals {
     }
     
     if ($self->remark eq $obj->remark) {
+        #print STDERR "The same:\n'", $obj->remark, "'\n";
 	return 1;
     } else {
+        #print STDERR "Different:\n  '", $self->remark, "'\n  '", $obj->remark, "'\n";
 	return 0;
     }
 }
