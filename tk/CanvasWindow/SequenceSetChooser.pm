@@ -7,6 +7,7 @@ use strict;
 use Carp;
 use base 'CanvasWindow';
 use CanvasWindow::SequenceNotes;
+use CanvasWindow::SequenceNotes::SearchedSequenceNotes ;
 use Hum::Sort 'ace_sort';
 
 sub new {
@@ -50,6 +51,14 @@ sub new {
             }
         },
         )->pack(-side => 'left');
+    
+    my $search = $button_frame->Button(
+        -text       => 'Search' ,
+        -command    => sub {
+                $self->search_window 
+            }
+    )->pack(-side =>'left') ;
+    
     
     my $quit = $button_frame->Button(
         -text       => 'Close',
@@ -241,24 +250,137 @@ sub open_sequence_set {
             my $top = $this_top->Toplevel(-title => "SequenceSet $name");
             my $ss = $self->DataSet->get_SequenceSet_by_name($name);
 
+
+            
             my $sn = CanvasWindow::SequenceNotes->new($top);
             $sn->name($name);
             $sn->Client($self->Client);
             $sn->SequenceSet($ss);
             $sn->SequenceSetChooser($self);
             $sn->initialise;
-            $sn->draw;
-            
-	    $self->add_SequenceNotes($sn);
-            
+            $sn->draw;   
+            $self->add_SequenceNotes($sn);
+           
             #$this_top->Unbusy;
             $this_top->configure(-cursor => undef);
             
+
+
             return 1;
         }
     }
     return;
 }
+
+# brings up a window for searching for loci / clones
+sub search_window{
+    my ($self) = @_ ;
+    
+    my $search_window = $self->{'_search_window'} ; 
+  
+    unless (defined ($search_window) ){
+        ## make a new window
+        my $master = $self->canvas->toplevel;
+        $search_window = $master->Toplevel(-title => 'Find Clones');
+        $search_window->transient($master);
+        
+        $search_window->protocol('WM_DELETE_WINDOW', sub{$search_window->withdraw});
+    
+        my $label           =   $search_window->Label(-text     =>  "Enter name of clone / locus below.\nUse spaces to seperate extra names"
+                )->pack(-side   =>  'top');
+        
+        my $search_entry    =   $search_window->Entry(   
+                                                    -width      => 30       ,
+                                                    -relief     => 'sunken' ,
+                                                    -borderwidth=> 4        ,
+                                                    -font       =>   'Helvetica',   
+                )->pack(    -side => 'top') ;
+        $search_entry->bind('<Return>' , sub {$self->search}) ;
+        $self->{'search_entry'} = $search_entry ;
+        
+        
+        ## radio buttons        
+        my $radio_variable = 'locus' ;         
+        my $radio_frame = $search_window->Frame(    
+                )->pack(    -side   =>  'top'   ,
+                            -fill   =>  'x'     ,) ; 
+        my $locus_radio = $radio_frame->Radiobutton(  -text       =>  'search for locus',
+                                                      -variable   =>  \$radio_variable  ,
+                                                      -value      =>  'locus' ,       
+                )->pack(    -side   =>  'left') ; 
+        my $clone_radio = $radio_frame->Radiobutton(    -text       =>  'search for clone'  , 
+                                                        -variable   =>  \$radio_variable    ,
+                                                        -value      =>  'clone'
+                )->pack(    -side   =>  'right');
+        
+        
+        ## search cancel buttons
+        my $search_cancel_frame = $search_window->Frame(
+                )->pack(-side => 'bottom'   , 
+                        -fill => 'x'        , ) ;   
+        my $find_button     =   $search_cancel_frame->Button(   -text       => 'Search' ,
+                                                                -command    =>  sub{$self->search($radio_variable)}    
+                )->pack(    -side    => 'left') ;
+        my $cancel_button   =   $search_cancel_frame->Button(   -text       => 'cancel'   ,
+                                                                -command    => sub { $search_window->withdraw }
+                )->pack(-side => 'right');
+           
+        $self->{'_search_window'} = $search_window ;
+    }
+    
+    $search_window->deiconify;
+    $search_window->raise;
+    $search_window->focus ;
+    $self->{'search_entry'}->focus;
+}
+
+sub search{
+    my ($self , $search_type ) = @_ ;
+    
+    ## create a new resultSet and pass it to dataset in query
+    ## if dataset  gives us results 
+    ##      create new  search result window  
+    ## else display message 
+    
+    $search_type = 'locus' unless defined $search_type ; # defaults to locus search 
+    
+    my $rs = Bio::Otter::Lace::ResultSet->new ; 
+    my $search = $self->{'search_entry'}->get ;
+    
+    my  @search_names = split /\s+/ ,  $search  ;
+    my $number_of_clones ;
+    if ($search_type eq 'locus' ){
+        print STDERR "searching for locus @search_names " ;
+        $number_of_clones = $self->DataSet->fetch_ResultSet_containing_Locus( $rs , \@search_names ) ;
+    }
+    else{
+        print STDERR "searching for clones  @search_names";
+        $number_of_clones = $self->DataSet->fetch_ResultSet_containing_CloneName( $rs , \@search_names ) ;
+    }
+       
+    print STDERR "number of clones found: $number_of_clones";
+    
+    if ($number_of_clones > 0){
+        my $top = $self->canvas->toplevel->Toplevel(  -title  =>  'Search results for ' . $self->{'search_entry'}->get);
+        my $sn = CanvasWindow::SequenceNotes::SearchedSequenceNotes->new($top);
+
+        $sn->name('Search Results'); ## do I need to change this to an ss name ? 
+        $sn->Client($self->Client);
+
+        $sn->ResultSet($rs);
+        $sn->SequenceSetChooser($self);
+        $sn->initialise;
+        $sn->draw;
+        $sn->raise ;
+    }else{
+        ## send mesasage to main window
+        $self->message("no clones matched your search criteria") ;
+    }
+    my $search_window = $self->{'_search_window'} ;
+    $search_window->withdraw();
+}
+
+
 
 sub DESTROY {
     my( $self ) = @_;
