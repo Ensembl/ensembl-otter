@@ -74,6 +74,7 @@
     description?,
     synonym*,
     remark*,
+    annotation_remark*,
     transcript+)>
 <!-- Note that stable_id attribute is of type ID, so can only appear once in a document -->
 <!ATTLIST locus
@@ -83,7 +84,7 @@
 <!ELEMENT type (#PCDATA)>
 <!ELEMENT truncated EMPTY>
 
-<!-- a brief summary of the annotation found in the object -->
+<!-- a brief (one line) summary of the annotation found in the object -->
 <!ELEMENT description (#PCDATA)>
 
 <!ELEMENT synonym (#PCDATA)>
