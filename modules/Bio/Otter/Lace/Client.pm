@@ -351,8 +351,10 @@ sub save_otter_xml {
         );
     my $response = $self->get_UserAgent->request($request);
     my $content  = $self->_check_for_error($response);
-    
-    return 1;
+
+    ## return $content;
+    ## possibly should be
+    return \$content;
 }
 
 
