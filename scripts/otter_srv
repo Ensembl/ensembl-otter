@@ -263,7 +263,7 @@ sub make_pid_file {
   print STDERR "OTTER_SERVER : Starting up Otter server on $HOSTNAME....\n" if $DEBUG;
   print STDERR "OTTER_SERVER : Using database configured from $HOME\n"      if $DEBUG;
   print STDERR "OTTER_SERVER : PID file at $pidfile\n"                      if $DEBUG;
-  open(PID, ">$pidfile") or die "Cannot create pid file: $!\n";
+  open(PID, "> $pidfile") or die "Cannot write to pid file '$pidfile': $!\n";
   print PID "$$\n";
   close(PID);
   print STDERR "OTTER_SERVER : [Parent pid on $HOSTNAME: $$]\n";
