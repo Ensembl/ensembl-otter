@@ -347,7 +347,7 @@ sub fetch_all_CloneSequences_for_SequenceSet {
           , a.chromosome_id, a.chr_start, a.chr_end
           , a.contig_start, a.contig_end, a.contig_ori
           , cl.clone_lock_id, t.author_id, t.author_name
-          , t.author_email, cl.hostname
+          , t.author_email, cl.hostname, a.superctg_name
         FROM assembly a
           , contig g
           , clone c
@@ -365,14 +365,15 @@ sub fetch_all_CloneSequences_for_SequenceSet {
          $chr_id,  $chr_start,  $chr_end,
          $contig_start,  $contig_end,  $strand,
          $clone_lock_id, $author_id, $author_name, 
-         $author_email, $hostname );
+         $author_email, $hostname, $superctg_name );
     $sth->bind_columns(
         \$name, \$acc, \$sv,
         \$ctg_id, \$ctg_name, \$ctg_length,
         \$chr_id, \$chr_start, \$chr_end,
         \$contig_start, \$contig_end, \$strand,
         \$clone_lock_id, \$author_id, 
-        \$author_name, \$author_email, \$hostname
+        \$author_name, \$author_email, \$hostname,
+        \$superctg_name
         );
     while ($sth->fetch) {
         my $cl = Bio::Otter::Lace::CloneSequence->new;
@@ -388,6 +389,7 @@ sub fetch_all_CloneSequences_for_SequenceSet {
         $cl->contig_strand($strand);
         $cl->contig_name($ctg_name);
         $cl->contig_id($ctg_id);
+        $cl->super_contig_name($superctg_name);
         if (defined $clone_lock_id){
             my $authorObj = Bio::Otter::Author->new(-dbid  => $author_id,
                                                     -name  => $author_name,
@@ -447,7 +449,6 @@ sub fetch_all_SequenceNotes_for_SequenceSet {
           , UNIX_TIMESTAMP(n.note_time)
           , n.is_current
           , au.author_name
-          , ass.superctg_name
         FROM assembly ass
           , sequence_note n
           , author au
@@ -457,15 +458,12 @@ sub fetch_all_SequenceNotes_for_SequenceSet {
         });
     $sth->execute($name);
     
-    my( $ctg_id, $text, $time, $is_current, $author, $super_contig );
-    $sth->bind_columns(\$ctg_id, \$text, \$time, \$is_current, \$author, \$super_contig);
+    my( $ctg_id, $text, $time, $is_current, $author);
+    $sth->bind_columns(\$ctg_id, \$text, \$time, \$is_current, \$author);
     
     my( %ctg_notes );
     while ($sth->fetch) {
         my $note = Bio::Otter::Lace::SequenceNote->new;
-        # use the super contig name as a prefix on the current sequence note
-        # this should only happen when the ame begins with an asterix (*).
-        $note->prefix($super_contig) if $super_contig =~ /^\*/;
         $note->text($text);
         $note->timestamp($time);
         $note->is_current($is_current eq 'Y' ? 1 : 0);
