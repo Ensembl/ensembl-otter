@@ -68,19 +68,6 @@ sub new {
     return bless {}, $pkg;
 }
 
-=head2 organism_lines
- 
-  Currently confesses if called.
-
-=cut
-
-#Unused
-sub organism_lines {
-
-    confess "Not written";
-}
-
-
 =head2 standard_comments
  
   Currently confesses if called.
@@ -156,16 +143,19 @@ sub embl_setup {
     my $data_class = $self->data_class or confess "data_class not set";
     my $mol_type = $self->mol_type or confess "mol_type not set";
     my $ac_star_id = $self->ac_star_id or confess "ac_star_id not set";
-    my $organism = $self->organism or confess "organism not set";
     my $clone_lib = $self->clone_lib or confess "clone_lib not set";
     my $clone_name = $self->clone_name or confess "clone_name not set";
     
     # EMBL Division    
     my $division;
+    my ($otter_division, $species) = $self->get_EMBL_division_from_otter_species;
     unless ($division = $self->division) {
-        $division = $self->get_EMBL_division_from_otter_species;
+        $division = $otter_division;
     }
     confess "division not set" unless $division;
+
+    # Species
+    
 
     my $id = $embl->newID;
     $id->entryname($entry_name);
@@ -226,9 +216,9 @@ sub embl_setup {
         $embl->newXX;
     }
 
-    # Organism
-    #add_Organism($embl, $species);
-    #$embl->newXX;
+    #Organism
+    add_Organism($embl, $species);
+    $embl->newXX;
 
     # Reference
     #$pdmp->add_Reference($embl, $seqlength);
@@ -248,7 +238,7 @@ sub embl_setup {
     $loc->strand('W');
         
     $source->addQualifierStrings('mol_type',  $mol_type);
-    $source->addQualifierStrings('organism',  "Homo sapiens");
+    $source->addQualifierStrings('organism',  species_binomial($species));
     $source->addQualifierStrings('chromosome',  $chromosome_name);
     $source->addQualifierStrings('clone',     $clone_name);
     $source->addQualifierStrings('clone_lib', $clone_lib);
@@ -320,7 +310,7 @@ sub embl_setup {
         unless ($species_division{lc($species)}) {
             confess "Dont know EMBL_division for: $species";
         }
-        return $species_division{$species};
+        return ($species_division{$species}, $species);
     }
 }
 
@@ -488,16 +478,6 @@ sub ac_star_id {
         $self->{'_bio_otter_embl_factory_ac_star_id'} = $value;
     }
     return $self->{'_bio_otter_embl_factory_ac_star_id'};
-}
-
-#Used
-sub organism {
-    my ( $self, $value ) = @_;
-    
-    if ($value) {
-        $self->{'_bio_otter_embl_factory_organism'} = $value;
-    }
-    return $self->{'_bio_otter_embl_factory_organism'};
 }
 
 #Used

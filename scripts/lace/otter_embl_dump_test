@@ -73,10 +73,8 @@ use Carp;
         $ft_factory->data_class('standard');
         $ft_factory->mol_type('genomic DNA');
         $ft_factory->ac_star_id('FAKE');
-        $ft_factory->organism('Homo sapiens');
         $ft_factory->clone_lib('to_be_provided');
         $ft_factory->clone_name('to_be_provided_2');
-        #$ft_factory->chromosome_name('11b');
         $ft_factory->keywords('HTG');
 
         #embl_setup sets $ft_factory->accession, and $ft_factory->sequence_version
