@@ -4,8 +4,6 @@
 package CanvasWindow::SequenceNotes::History;
 
 use strict;
-
-
 use Carp;
 
 use ChooserCanvas::HistoryCanvas;
@@ -14,11 +12,11 @@ use GenomeCanvas::Band::SeqChooser;
 {
     # new takes a mainwindow widget and creates a popup window, containg list of sequence notes
     sub new{
-        my ($class , $mw ) =  @_;
+        my ($class , $seq_chooser_window ) =  @_;
 
         my $self = bless {} , $class;
         
-        my $master_window = $mw->toplevel;  # returns the toplevel widget of the canvas
+        my $master_window = $seq_chooser_window->canvas->toplevel;  # returns the toplevel widget of the canvas
         my $new_toplevel = $master_window->Toplevel;   # creates a 'Toplevel' widget with parent 'master_window'
         $new_toplevel->title('Comment History');
         $self->toplevel($new_toplevel)  ;
@@ -31,12 +29,13 @@ use GenomeCanvas::Band::SeqChooser;
         
         my $string = '';
         $self->comment_string(\$string);
-        
-
-        
+                
         
         # close only unmaps it from the display
-        my $close_command = sub {$new_toplevel->withdraw };
+        my $close_command = sub {
+                                    $new_toplevel->withdraw;
+                                    $seq_chooser_window->draw;
+                                };
         $new_toplevel->bind(     '<Control-w>' , $close_command);    
         $new_toplevel->bind(     '<Control-W>' , $close_command);    
         $new_toplevel->bind(     '<Escape>' , $close_command);
