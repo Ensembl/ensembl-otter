@@ -1209,7 +1209,7 @@ sub edit_new_subsequence {
     
     my $clone = $self->get_CloneSeq($clone_name);
     my $region_name = $clone->clone_name_overlapping($most_3prime) || $clone_name;
-    warn "Looking for clone overlapping '$most_3prime' in '$clone_name' found '$region_name'";
+    #warn "Looking for clone overlapping '$most_3prime' in '$clone_name' found '$region_name'";
     
     # Trim sequence version from accession if clone_name ends .SV
     $region_name =~ s/\.\d+$//;
@@ -1237,7 +1237,7 @@ sub edit_new_subsequence {
         return;
     }
 
-    warn "Making '$seq_name'\n";
+    #warn "Making '$seq_name'\n";
     my( $new );
     if (@subseq) {
         $new = $subseq[0]->clone;
@@ -1274,7 +1274,7 @@ sub edit_new_subsequence {
         }
     }
     $new->name($seq_name);
-    #$new->Locus($self->get_Locus($loc_name));
+    $new->Locus($self->get_Locus($loc_name));
     my $gm = $self->get_default_mutable_GeneMethod or confess "No default mutable GeneMethod";
     $new->GeneMethod($gm);
 
