@@ -12,21 +12,27 @@ use base 'GenomeCanvas';
 
 sub toggle_current {
     my ($self) = shift; 
+   
     my $canvas = $self->canvas;
     
     my $ana_seq = get_current_ana_seq_id($canvas);
-    return unless $ana_seq;
+    return unless defined $ana_seq;
     
-    my ($rec) = $canvas->find('withtag', "ana_seq_id=$ana_seq&&contig_seq_rectangle");        
+    my ($rec) = $canvas->find('withtag', "unique_id=$ana_seq&&contig_seq_rectangle");        
+
     toggle_selection($canvas ,$rec);
 }
+
 
 sub get_current_ana_seq_id {
     my( $canvas ) = shift @_;
     
-    my ($ana_seq) = map /^ana_seq_id=(\d+)/, $canvas->gettags('current');
+    #  map function to return the value of the unique_id tag
+    my ($ana_seq) = map { s/^unique_id=// ? $_ : () } $canvas->gettags('current');   #
+    
     return $ana_seq;
-}
+    }
+
 
 sub toggle_selection {
     my ($canvas, $obj) =  @_;
@@ -52,7 +58,6 @@ sub deselect_all_selected_not_current {
     $canvas->selectClear;
     foreach my $obj ($canvas->find('withtag', 'selected&&!current')) {
         toggle_selection($canvas,  $obj);
-#        warn $obj->gettags;
     }
 }
 
