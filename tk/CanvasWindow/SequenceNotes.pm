@@ -59,6 +59,26 @@ sub get_CloneSequence_list {
     return $cs_list;
 }
 
+sub refresh_column{
+    my ($self, $col_no) = @_;
+    my $tag = "col=$col_no";
+    my $ss = $self->SequenceSet();
+    my $ds = $self->SequenceSetChooser->DataSet();
+    my $cs_list   = $self->get_CloneSequence_list;
+    $ds->status_refresh_for_SequenceSet($ss);
+    my $canvas = $self->canvas();
+    # fetch all members of column [$tag]
+    my @all_col_objs = $canvas->find('withtag', $tag);
+    foreach my $obj (@all_col_objs) {
+        # update the text
+	my @tags = $canvas->gettags($obj);
+	my ($tag) = map { /cs=(\d+)/ } @tags;
+	$tag =~ s/cs=(\d+)/$1/;
+	my $new_text = &_column_text_seq_note_status($cs_list->[$tag]);
+	$new_text->{'-tags'} = \@tags;
+	$canvas->itemconfigure($obj, %$new_text);
+    }
+}
 sub column_methods {
     my( $self, $methods ) = @_;
     
@@ -79,20 +99,21 @@ sub column_methods {
                 my $cs = shift;
                 my $acc = $cs->accession;
                 my $sv  = $cs->sv;
-                return("$acc.$sv", $bold, 'searchable');
-                },
+                return {-text => "$acc.$sv", -font => $bold, -tags => ['searchable']};
+            },
             sub{
                 # Use closure for font definition
                 my $cs = shift;
-                return($cs->clone_name, $bold, 'searchable');
-                },
-            sub{
+                return {-text => $cs->clone_name, -font => $bold, -tags => ['searchable'] };
+            },
+	    \&_column_text_seq_note_status,
+	    sub{
                 my $cs = shift;
                 if (my $sn = $cs->current_SequenceNote) {
                     my $time = $sn->timestamp;
                     my( $year, $month, $mday ) = (localtime($time))[5,4,3];
                     my $txt = sprintf "%04d-%02d-%02d", 1900 + $year, 1 + $month, $mday;
-                    return($txt, $norm, 'searchable');
+                    return { -text => $txt, -font => $norm, -tags => ['searchable']};
                 } else {
                     return;
                 }
@@ -107,16 +128,16 @@ sub column_methods {
 sub _column_text_row_number {
     my( $cs, $row ) = @_;
     
-    return 1 + $row;
+    return { -text => 1 + $row };
 }
 
 sub _column_text_seq_note_author {
     my( $cs ) = @_;
     
     if (my $sn = $cs->current_SequenceNote) {
-        return $sn->author;
+        return { -text => $sn->author };
     } else {
-        return;
+        return {};
     }
 }
 
@@ -124,12 +145,23 @@ sub _column_text_seq_note_text {
     my( $cs ) = @_;
     
     if (my $sn = $cs->current_SequenceNote) {
-        return($sn->text, undef, 'searchable');
+        return { -text => $sn->text, -tags => ['searchable']};
     } else {
-        return;
+        return {};
     }
 }
-
+sub _column_text_seq_note_status{
+    my $cs = shift;
+    my $missing = join(",\n" => keys(%{$cs->unfinished()}));    
+    my $color   = 'darkgreen';
+    if ($missing){
+	$missing = "missing";
+	$color   = 'red';
+    }else{
+	$missing = "complete";
+    }
+    return { -text => $missing, -fill => $color, -tags => ['searchable']};
+}
 sub max_column_width {
     my( $self, $max_column_width ) = @_;
     
@@ -245,6 +277,13 @@ sub initialise {
         $self->make_button($button_frame2, 'Run lace', $run_lace, 4);
         $top->bind('<Control-l>', $run_lace);
         $top->bind('<Control-L>', $run_lace);
+
+	my $refresh_status = sub {
+            $top->Busy;
+            $self->refresh_column(3);
+            $top->Unbusy;
+	};
+	$self->make_button($button_frame2, 'Refresh Ana Status', $refresh_status, undef);
 
         #if ($write) {
         #    
@@ -559,14 +598,24 @@ sub draw {
             my $col_tag = "col=$col";
             my $meth = $methods->[$col];
             
-            my ($text, $font, @tags) = $meth->($cs, $i);
+	    my $opt_hash = $meth->($cs, $i);
+	    $opt_hash->{'-anchor'} ||= 'nw';
+	    $opt_hash->{'-font'}   ||= $helv_def;
+	    $opt_hash->{'-width'}  ||= $max_width;
+	    $opt_hash->{'-tags'}   ||= [];
+	    push(@{$opt_hash->{'-tags'}}, $row_tag, $col_tag, "cs=$i");
+	    
+#            my ($text, $font, $color, @tags) = $meth->($cs, $i);
             $canvas->createText(
                 $x, $y,
-                -anchor => 'nw',
-                -font   => $font || $helv_def,
-                -width  => $max_width,
-                -tags   => [$row_tag, $col_tag, "cs=$i", @tags],
-                -text   => $text,
+		%$opt_hash
+#                -anchor => 'nw',
+#                -font   => $font || $helv_def,
+#		-fill   => $color || 'black',
+#                -width  => $max_width,
+#                -tags   => [$row_tag, $col_tag, "cs=$i", @tags],
+#                -text   => $text,
+#			       
                 );
         }
     }
