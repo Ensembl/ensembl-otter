@@ -884,7 +884,7 @@ foreach my $atype (keys %gsi){
 	if($dirt==1){
 	  if($last){
 	    if($last>=$ecst){
-	      print "ERR: $tsi exon $erank ($eid) out of order $ecst-$eced follows $last ($dirt)\n";
+	      print "ERR: $gsi $tsi exon $erank ($eid) out of order $ecst-$eced follows $last ($dirt)\n";
 	    }else{
 	      $last=$eced;
 	    }
@@ -894,7 +894,7 @@ foreach my $atype (keys %gsi){
 	}else{
 	  if($last){
 	    if($last<=$eced){
-	      print "ERR: $tsi exon $erank ($eid) out of order $ecst-$eced follows $last ($dirt)\n";
+	      print "ERR: $gsi $tsi exon $erank ($eid) out of order $ecst-$eced follows $last ($dirt)\n";
 	    }else{
 	      $last=$ecst;
 	    }
