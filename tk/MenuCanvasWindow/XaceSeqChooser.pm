@@ -1455,6 +1455,13 @@ sub edit_new_subsequence {
     $new->name($seq_name);
     $new->Locus($locus);
     my $gm = $self->get_default_mutable_GeneMethod or confess "No default mutable GeneMethod";
+    
+
+    ## problem where translation was not being set on newly created 'Coding' SubSeq's
+    if ($gm->is_coding){        
+        $new->translation_region( $new->start , $new->end) ;
+    }
+    
     $new->GeneMethod($gm);
 
     $clone->add_SubSeq($new);
