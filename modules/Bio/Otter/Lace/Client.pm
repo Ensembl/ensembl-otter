@@ -163,7 +163,7 @@ sub get_xml_for_contig_from_Dataset {
 	     'chrend='   . uri_escape($end),
              'type='     . uri_escape($ss->name),
 	     );
-    #warn "url <$url>\n";
+    warn "url <$url>\n";
 
     my $ua = $self->get_UserAgent;
     my $request = HTTP::Request->new;
