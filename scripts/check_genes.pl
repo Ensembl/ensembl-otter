@@ -460,7 +460,7 @@ if($make_cache){
     foreach my $sv (sort keys %{$gsi_a2_clone{$gsi}}){
       my $cid=$gsi_a2_clone{$gsi}->{$sv};
       my($cla2,$clv2,$atype2,$clv,$cid,$cname,$atype)=@{$a2{$cid}};
-      $type="$atype:$cname";
+      my $type="$atype:$cname";
       $sv{"$cla2.$clv"}=1;
       $type{$type}++;
     }
