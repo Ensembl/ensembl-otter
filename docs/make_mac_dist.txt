@@ -191,14 +191,23 @@ static char *get_relative_path(const char *path)
 
 Perl modules
 ==
+ rehash
  perl -MCPAN -e shell
  install Bundle::CPAN
+#Some interactive responses required
+
  quit
  perl -MCPAN -e shell
- install Compress::Zlib
+# Done by Bundle::CPAN - install Compress::Zlib
+
  install Bundle::LWP
+#Some interactive responses required
+#REMEMBER - No HEAD alias
+
  install DBI
- install File::Temp
+
+# Already done -  install File::Temp
+
  install File::PathConvert
  install Storable
  install Parse::RecDescent
@@ -212,15 +221,20 @@ Perl modules
 
 #Not with GIF
  install GD
+#Not with GIF
 
 #Useful to have path for GD
 #/Users/searle/longdir/lllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooonnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnggggggggggggggggggggggggggggggggggggggggggggggg/lllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooonnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnggggggggggggggggggggggggggggggggggggggggggggggg/long/long/long/lib
 
 For DBD::mysql
 ==
+ $LONGDIR/bin/mysqld_safe &
+
  perl -MCPAN -e shell
  force install DBD::mysql
 #Force because three of the tests fail
+
+ $LONGDIR/bin/mysqladmin -u root shutdown
 
 
 For CGI (want slightly older version)
@@ -285,6 +299,17 @@ For apreq
 See: http://www.macdevcenter.com/pub/a/mac/2002/11/05/apache_osx.html
 And: http://www.macdevcenter.com/pub/a/mac/2003/02/07/libapreq_update.html
  lynx -source 'http://www.apache.org/dist/httpd/libapreq/libapreq-1.1.tar.gz' > tarfiles/libapreq-1.1.tar.gz
+ gzip -dc tarfiles/libapreq-1.1.tar.gz | tar -xvf -
+ cd libapreq-1.1
+ ./configure --prefix=$LONGDIR --with-apache-includes=$LONGDIR/include
+ make
+ make install
+ 
+ perl Makefile.PL
+# Interactive responses required
+
+ make
+ make install
 
 
 
@@ -303,18 +328,22 @@ For GD (with GIF)
  lynx -source 'http://downloads.rhyme.com.au/gd/GD-2.041gif.tar.gz' > tarfiles/GD-2.041gif.tar.gz
  gzip -dc tarfiles/GD-2.041gif.tar.gz  | tar -xvf -
  cd GD-2.041gif
+#Useful to have path
+ echo $LONGDIR
+
  perl Makefile.PL
+# Interactive responses required
+
  make
  make install
 
-#Useful to have path
-#/Users/searle/longdir/lllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooonnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnggggggggggggggggggggggggggggggggggggggggggggggg/lllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooonnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnggggggggggggggggggggggggggggggggggggggggggggggg/long/long/long/lib
 
 
 For dotter
 ==
  lynx -source 'ftp://ftp.gtk.org/pub/gtk/v1.2/glib-1.2.10.tar.gz' > tarfiles/glib-1.2.10.tar.gz
  gzip -dc tarfiles/glib-1.2.10.tar.gz | tar -xvf -
+ rehash
  cd glib-1.2.10
  cp /sw/lib/fink/update/config.{guess,sub} .
  ./configure --prefix=$LONGDIR
@@ -324,6 +353,7 @@ For dotter
  lynx -source 'ftp://ftp.gtk.org/pub/gtk/v1.2/gtk+-1.2.10.tar.gz' > tarfiles/gtk+-1.2.10.tar.gz
  gzip -dc tarfiles/gtk+-1.2.10.tar.gz | tar -xvf -
  cd gtk+-1.2.10
+ rehash
  cp /sw/lib/fink/update/config.{guess,sub} .
  ./configure --prefix=$LONGDIR
  make
@@ -331,6 +361,7 @@ For dotter
 
  lynx -source 'ftp://gnu.teleglobe.net/ftp.gnu.org/readline/readline-4.3.tar.gz' > tarfiles/readline-4.3.tar.gz
  gzip -dc tarfiles/readline-4.3.tar.gz | tar -xvf -
+ rehash
  cd readline-4.3
  perl -i.bak -p -e \
      "s/SHLIB_LIBS='-lSystem'/SHLIB_LIBS='-lSystem -lncurses -lcc_dynamic'/g" \
@@ -341,12 +372,21 @@ For dotter
 
  lynx -source 'ftp://ftp.sanger.ac.uk/pub/acedb/SUPPORTED/ACEDB-source.4_9p.tar.gz' >tarfiles/ACEDB-source.4_9p.tar.gz
  mkdir ACEDB-source.4_9p
+ rehash
  cd ACEDB-source.4_9p
  gzip -dc ../tarfiles/ACEDB-source.4_9p.tar.gz | tar -xvf - 
  setenv ACEDB_MACHINE MACOSX_4
- make
+ chmod +w wmake/*
+ cp wmake/MACOSX_4_DEF wmake/MACOSX_4_DEF.orig
+ cp wmake/truemake wmake/truemake.orig
+ sed -e 's|-I/sw/include|-I'$LONGDIR'/include|' wmake/MACOSX_4_DEF > junk.jnk
+ mv junk.jnk wmake/MACOSX_4_DEF
+ perl -i.bak -p -e 's/-lm -lreadline/-ljpeg -liconv -lm -lreadline/' wmake/MACOSX_4_DEF
+ perl -i.bak -p -e 's/translate.o blxparser.o blixem.o -L./translate.o blxparser.o blixem.o \$(LIBGD_OBJS) -L./' wmake/truemake
+ make dotter
+ cp bin.MACOSX_4/dotter $LONGDIR/bin
 
- NOTE: Requires LOTS of fiddling with wmake/truemake to get this to go.
+ NOTE: Requires LOTS of fiddling to get this to go.
 
 Ensembl
 ==
