@@ -2113,7 +2113,7 @@ sub check_locus_window{
     else{
         $old_name = '' ;
     }
-    warn "names old , $old_name, new $new_name" ; 
+    #warn "names old , $old_name, new $new_name" ; 
     if ($old_name ne $new_name){
         
         if  ( grep {$new_name eq $_ }  @list){
@@ -2139,11 +2139,11 @@ sub check_locus_window{
                 return ;
             }
             elsif($answer eq 'rename'){
-                warn "renaming locus" ;
+                #warn "renaming locus" ;
                 $self->xace_seq_chooser->rename_loci($old_name , $new_name);
             }
             elsif($answer eq 'new'){
-                warn 'creating new locus'; 
+                #warn 'creating new locus'; 
 #                this should work from the old system - ie taking the values from tk and creating a new locus if it changed.                        
             }
         } 

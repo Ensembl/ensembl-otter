@@ -264,7 +264,7 @@ sub remove_Locus_if_not_in_use{
 sub remove_Locus{
     my ($self , $locus_name) = @_;
     if ($self->{'_locus_cache'}{$locus_name}){
-        print STDERR "removing " . $locus_name;
+        #print STDERR "removing " . $locus_name;
         # remove all associated windows first
         my $locus = $self->get_Locus($locus_name); 
         delete ($self->{'_locus_window_cache'}{$locus}) ;
@@ -279,7 +279,7 @@ sub remove_Locus{
 sub rename_loci{
     my ($self , $old_name , $new_name ) = @_ ; 
     
-    
+    #warn "renaming locus '$old_name' to '$new_name'\n";
     my $locus = $self->get_Locus($old_name);
     $self->remove_Locus($old_name) ; # otherwise we have two hash keys for the same locus.
     $locus->name($new_name); 
