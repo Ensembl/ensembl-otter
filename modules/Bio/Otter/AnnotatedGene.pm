@@ -206,8 +206,8 @@ sub toXMLString{
         my $tran_high = undef;
         if (defined($tran->translation)) {
           my $strand = $tran->translation->start_Exon->strand;
-          $tran_low  = $tran->coding_start;
-          $tran_high = $tran->coding_end;
+          $tran_low  = $tran->coding_region_start;
+          $tran_high = $tran->coding_region_end;
           $str .= "  <translation_start>" . (($strand == 1) ? ($tran_low+$offset) : ($tran_high+$offset)) . "</translation_start>\n";
           $str .= "  <translation_end>" . (($strand == 1) ? ($tran_high+$offset) : ($tran_low+$offset)) . "</translation_end>\n";
 
