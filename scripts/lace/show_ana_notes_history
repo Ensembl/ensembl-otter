@@ -1,0 +1,67 @@
+#!/usr/local/bin/perl5.6.1 -w
+
+use strict;
+use Carp;
+use Getopt::Long 'GetOptions';
+use Bio::Otter::Lace::Defaults;
+use Data::Dumper;
+
+{
+    my $dataset_name = undef;
+    my $help         = 0;
+    my $ss_name      = undef;
+    my $ss;
+    Bio::Otter::Lace::Defaults::do_getopt(
+					  'h|help!'     => \$help,
+					  'dataset=s'   => \$dataset_name,
+					  'set=s'       => \$ss_name
+					  ) || usage();
+    usage() if $help;
+    die "I need a dataset name\n"      unless $dataset_name;
+    die "I need a Sequence Set name\n" unless $ss_name;
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+
+    eval{
+	$ss = $ds->get_SequenceSet_by_name($ss_name);
+    };
+    die "I couldn't find Sequence Set with name $ss_name \n $@" if $@;
+
+    my $cs = $ds->fetch_all_CloneSequences_for_SequenceSet($ss);
+    $ds->fetch_all_SequenceNotes_for_SequenceSet($ss);
+
+    foreach my $cloneSequence(@$cs){
+	printf "\n%s.%s %s \n", $cloneSequence->accession(), $cloneSequence->sv, $cloneSequence->clone_name;
+	my $notes = $cloneSequence->get_all_SequenceNotes();
+	unless( $notes ){
+	    print "\tNo sequence notes for this clone.\n";
+	    next;
+	}
+	foreach my $seqNote(@$notes){
+	    printf "\t%s %s %s\n", scalar(localtime($seqNote->timestamp)), $seqNote->author, $seqNote->text;
+	}
+    }
+    
+}
+
+sub usage{ exit(exec('perldoc', $0)); }
+__END__
+
+=head1 NAME - show_ana_notes_history
+
+=head1 SYNOPSIS
+
+  show_ana_notes_history -dataset <DATASET_NAME> -set <SEQUENCE_SET_NAME>
+
+=head1 DESCRIPTION
+
+Shows the sequence notes history for a B<sequence set> in B<dataset>.
+
+=head1 USEAGE
+
+    show_ana_notes_history -dataset <DATASET_NAME> -set <SEQUENCE_SET_NAME>
+
+=head1 AUTHOR
+
+Roy Storey, B<email> rds@sanger.ac.uk
+
