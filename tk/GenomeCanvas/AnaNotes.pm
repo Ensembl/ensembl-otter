@@ -6,10 +6,6 @@ package GenomeCanvas::AnaNotes;
 use strict;
 use base 'GenomeCanvas';
 
-##use GenomeCanvas;
-##use vars '@ISA';
-##@ISA = ('GenomeCanvas');
-
 sub toggle_current {
     my ($self) = shift; 
    

@@ -1,0 +1,32 @@
+#!/usr/local/bin/perl5.6.1 -w
+
+### test_dataset_chooser
+
+use strict;
+use CanvasWindow::DataSetChooser;
+use Bio::Otter::Lace::Defaults;
+
+{
+    
+    Bio::Otter::Lace::Defaults::do_getopt();
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    
+    my $mw = CanvasWindow::MainWindow->new('Choose DataSet');
+    my $dc = CanvasWindow::DataSetChooser->new($mw);
+
+    $dc->Client($cl);
+    $dc->draw;
+    $dc->fix_window_min_max_sizes;
+    
+    Tk::MainLoop();
+}
+
+
+__END__
+
+=head1 NAME - test_dataset_chooser
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+

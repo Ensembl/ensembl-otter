@@ -11,7 +11,7 @@ use Tk;
 @ISA = ('MainWindow');
 
 sub new {
-    my( $pkg, $title ) = @_;
+    my( $pkg, $title, @command_line ) = @_;
     
     $title ||= 'Canvas Window';
     
@@ -24,6 +24,13 @@ sub new {
         -background     => '#bebebe',
         );
     $mw->scaling(1);    # Sets 1 screen pixel = 1 point
+    
+    if (@command_line) {
+        $mw->command([@command_line]);
+        #$mw->protocol('WM_SAVE_YOURSELF', sub{ warn "Saving myself..."; sleep 2; $mw->destroy });
+        $mw->protocol('WM_SAVE_YOURSELF', "");
+    }
+    
     #warn "Scaling = ", $mw->scaling, "\n";
     
     $mw->read_custom_option_file;

@@ -55,7 +55,6 @@ sub initialize {
         
         };
 
-    my $menu_bar  = $self->menu_bar;
     my $file_menu = $self->make_menu('File');
     
     # Show the subsequence in fMap

@@ -1,6 +1,8 @@
 #!/usr/local/bin/perl5.6.1 -w
 #!/nfs/humace2/hum/bin/perl -w
 
+use lib '/nfs/team71/analysis/jgrg/work/tk';
+
 ### spandit
 
 use strict;
@@ -33,11 +35,11 @@ use vars '@command_line';
         $title ||= "$cript: $host $port";
     }
     
-    my $mw = CanvasWindow::MainWindow->new($title);
+    my $mw = CanvasWindow::MainWindow->new($title, @command_line);
     my $xc = MenuCanvasWindow::XaceSeqChooser->new($mw);
     $xc->font_size($font_size) if $font_size;
     $xc->clone_list(@ARGV);
-     
+    
     if ($path) {
         $xc->ace_path($path);
     } else {
