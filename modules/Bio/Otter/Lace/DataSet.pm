@@ -438,6 +438,8 @@ sub fetch_pipeline_ctg_ids_for_SequenceSet{
     
     # Flag that we have fetched all the pipeline contig_ids that we can
     $ss->have_fetched_pipeline_contig_ids(1);
+    Bio::Otter::Lace::SatelliteDB::disconnect_DBAdaptor($pipeline_db);
+
 }
 
 sub fetch_all_SequenceNotes_for_SequenceSet {
