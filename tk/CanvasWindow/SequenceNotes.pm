@@ -8,7 +8,9 @@ use Carp;
 use base 'CanvasWindow';
 use MenuCanvasWindow::XaceSeqChooser;
 use CanvasWindow::SequenceNotes::History;
- 
+
+# An extra line
+
 sub name {
     my( $self, $name ) = @_;
     
