@@ -10,11 +10,64 @@ use Bio::Otter::Lace::Defaults;
     
     Bio::Otter::Lace::Defaults::do_getopt() || die $Bio::Otter::Lace::Defaults::GETOPT_ERRSTR . "\n";
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
+
     my $mw = CanvasWindow::MainWindow->new('Choose DataSet');
     my $dc = CanvasWindow::DataSetChooser->new($mw);
+    my $prompt_sub = sub {
+        my $self   = shift;
+        my $user   = $self->username();
+        my $pass   = '';
+        my $dialog = $mw->toplevel->DialogBox(
+                                              -title   => "Please enter your password ($user)", 
+                                              -buttons => [qw(Ok)], -default_button => 'Ok',
+                                              -width   => 100,
+                                              );
+        my $uframe = $dialog->add('Frame')->pack(-side => 'top');
+        $uframe->Label(-text => 'Username: ')->pack(-side => 'left');
+        $uframe->Entry(
+                       -textvariable => \$user,
+                       -width        => 20,
+                       -foreground   => 'black',
+                       -background   => 'white',
+                       -relief       => 'sunken',
+                                  #-state        => 'disabled',
+                       )->pack(
+                               -side => 'left',
+                               -expand => 1,
+                               -fill => 'x'
+                               );
+        my $pframe = $dialog->add('Frame')->pack(-side => 'top');
+        $pframe->Label(-text => 'Password: ')->pack(-side => 'left');
+        $pframe->Entry(
+                       -textvariable => \$pass,
+                       -show         => '*',
+                       -width        => 20,
+                       -foreground   => 'black',
+                       -background   => 'white',
+                       -relief       => 'sunken',
+                       )->pack(
+                               -side =>'left',
+                               -expand => 1,
+                               -fill => 'x'
+                               );
+        $dialog->resizable(1,0);
+        my $result = $dialog->Show();
+        if($result eq 'Ok'){
+            if($user ne $self->username){
+                warn "Changing user from '" . $self->username . "' to '$user' \n";
+                my $c = Bio::Otter::Lace::Defaults::get_config_list();
+                # this gets the last array member which is the command line options Config::IniFiles hash
+                $c->[$#$c]->{'client'}->{'author'} = $user;
+            }
+            $self->password($pass);
+        }
+        $self = undef;
+    };
+
+    $cl->password_prompt($prompt_sub);
     $dc->Client($cl);
     $dc->draw;
-    
+
     Tk::MainLoop();
 }
 
