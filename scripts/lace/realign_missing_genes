@@ -25,50 +25,109 @@ use Hum::Analysis::Factory::ExonLocator;
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
     my $ds = $cl->get_DataSet_by_name($dataset_name);
     my $ss = $ds->get_SequenceSet_by_name($sequence_set);
-    #$ds->fetch_all_CloneSequences_for_SequenceSet($ss);
+    $ds->fetch_all_CloneSequences_for_SequenceSet($ss);
+    #map printf(STDERR "  %s\n", $_->accession), @{$ss->CloneSequence_list};
 
-    my $otter_db = $ds->get_cached_DBAdaptor;
-    my $clone_aptr = $otter_db->get_CloneAdaptor;
-    my $gene_aptr  = $otter_db->get_GeneAdaptor;
+    my $dba = $ds->get_cached_DBAdaptor;
+    $dba->assembly_type($sequence_set);
+    my $clone_aptr = $dba->get_CloneAdaptor;
+    my $gene_aptr  = $dba->get_GeneAdaptor;
+    my $slice_aptr = $dba->get_SliceAdaptor;
     my $accs_missing_genes = @ARGV
         ? [@ARGV]
-        : list_exonless_accessions($otter_db, $sequence_set);
+        : list_exonless_accessions($dba, $sequence_set);
+    my $anal = $dba->get_AnalysisAdaptor->fetch_by_logic_name('otter');
     #print map "  $_\n", @$accs_missing_genes;
     
     foreach my $acc_sv (@$accs_missing_genes) {
         my ($acc, $sv) = @$acc_sv;
-        my $clid = clone_id_of_clone_with_greatest_sv_and_exons($otter_db, $acc)
+        my $clid = clone_id_of_clone_with_greatest_sv_and_exons($dba, $acc)
             or next;
         print STDERR "\n$acc\t$sv\n";
         my $old_clone = $clone_aptr->fetch_by_dbID($clid);
         my $old_contig = $old_clone->get_all_Contigs->[0];
         my $gene_id_list = $gene_aptr->list_current_dbIDs_for_Contig($old_contig);
-        my @other = other_contigs_sharing_genes($otter_db, $old_contig, $gene_id_list);
+        my @acc_list = accs_connected_to_genes($dba, $gene_id_list);
+        my $contig = cs_contig_from_acc_list($ss, [@acc_list]);
+        my ($chr, $start, $end) = $cl->chr_start_end_from_contig($contig);
+        #warn "Making slice from $chr, $start, $end";
+        my $slice = $slice_aptr->fetch_by_chr_start_end($chr, $start, $end);
+        my $dest_seq = hum_seq_from_contig($slice);
+        my $finder = Hum::Analysis::Factory::ExonLocator->new;
+        $finder->genomic_Sequence($dest_seq);
+        my $tiles = $slice->get_tiling_path;
+        foreach my $gene_id (@$gene_id_list) {
+            my $db_gene = $gene_aptr->fetch_by_dbID($gene_id);
+            if (remap_ens_Exons($finder, $db_gene->get_all_Exons, $slice)) {
+                warn "Remapped exons OK\n";
+                # otter > XML > otter
+                my $temp = Bio::Otter::Lace::TempFile->new;
+                $temp->name("realign_offtrack.$$.xml");
+                my $w_fh = $temp->write_file_handle;
+                print $w_fh
+                    "<otter>\n<sequence_set>\n"
+                    , Bio::Otter::Converter::path_to_XML($chr, $start, $end, $sequence_set, $tiles)
+                    , $db_gene->toXMLString
+                    , "</otter>\n</sequence_set>\n";
+                my $r_fh = $temp->read_file_handle;
+                my ($gene_list) = Bio::Otter::Converter::XML_to_otter($r_fh);
+                my $xml_gene = shift @$gene_list;
+                $xml_gene->analysis($anal);
+                #save_new_gene($dba, $gene_aptr, $db_gene, $xml_gene, $slice);
+            }
+        }
     }
 }
 
-sub other_contigs_sharing_genes {
-    my( $dba, $contig, $gene_id_list ) = @_;
+sub cs_contig_from_acc_list {
+    my( $ss, $acc_list ) = @_;
     
-    my $gene_id_str = join(', ', map "'$_'", @$gene_id_list);
+    my %acc_in_list = map {$_, 1} @$acc_list;
+    my $cs_ctg = [];
+    my $in_ctg = 0;
+    my($first_i, $last_i);
+    my $cs_list = $ss->CloneSequence_list or die "No CloneSequence_list";
+    for (my $i = 0; $i < @$cs_list; $i++) {
+        my $id = $cs_list->[$i]->accession;
+        if ($acc_in_list{$id}) {
+            $first_i ||= $i;
+            $last_i    = $i;
+            delete($acc_in_list{$id});
+        }
+    }
+    if (my @not_found = keys %acc_in_list) {
+        warn "Failed to find accessions: ", join(', ', @not_found), "\n";
+    }
+    unless ($first_i) {
+        die "Didn't find any of the accessions in SequenceSet";
+    }
+    return [ @$cs_list[$first_i .. $last_i] ];
+}
+
+sub accs_connected_to_genes {
+    my( $dba, $gene_id_list ) = @_;
+    
+    my $gene_id_str = join(', ', @$gene_id_list);
     my $sth = $dba->prepare(qq{
-        SELECT e.contig_id
+        SELECT DISTINCT c.embl_acc
         FROM transcript t
           , exon_transcript et
           , exon e
+          , contig g
+          , clone c
         WHERE t.transcript_id = et.transcript_id
           AND et.exon_id = e.exon_id
+          AND e.contig_id = g.contig_id
+          AND g.clone_id = c.clone_id
           AND t.gene_id IN ($gene_id_str)
-          AND e.contig_id != ?
-        GROUP BY e.contig_id
         });
-    $sth->execute($contig->dbID);
+    $sth->execute;
     
-    my( @contig_id );
-    while (my ($id) = $sth->fetchrow) {
-        push(@contig_id, $id);
+    my( @clone_acc );
+    while (my ($acc) = $sth->fetchrow) {
+        push(@clone_acc, $acc);
     }
-    return @contig_id;
+    return @clone_acc;
 }
 
 sub clone_id_of_clone_with_greatest_sv_and_exons {
@@ -123,6 +182,98 @@ sub list_exonless_accessions {
         push(@$acc_list, [$acc, $sv]);
     }
     return $acc_list;
+}
+
+sub save_new_gene {
+    my( $dba, $gene_aptr, $db_gene, $xml_gene, $slice ) = @_;
+
+    my $broker = Bio::Otter::AnnotationBroker->new($dba);
+    $broker->make_id_version_hash([$db_gene]);
+    $broker->increment_versions_in_gene($xml_gene);
+    $gene_aptr->attach_to_Slice($xml_gene, $slice);
+
+    eval {
+        $dba->begin_work;
+        $xml_gene->detach_DBAdaptors;
+        $gene_aptr->store($xml_gene);
+        $dba->commit;
+    };
+    if ($@) {
+        $dba->rollback;
+        warn "Error saving remapped gene: $@";
+    }
+}
+
+sub hum_seq_from_contig {
+    my( $ctg ) = @_;
+
+    my $seq = Hum::Sequence::DNA->new;
+    $seq->sequence_string($ctg->seq);
+    $seq->name($ctg->name);
+    return $seq;
+}
+
+sub hum_seq_from_exon {
+    my( $exon ) = @_;
+    
+    my $seq = Hum::Sequence::DNA->new;
+    $seq->sequence_string($exon->seq->seq);
+    $seq->name($exon->stable_id);
+    return $seq;
+}
+
+sub remap_ens_Exons {
+    my( $finder, $exons, $dest_ctg ) = @_;
+
+    # Make a Hum::Sequence object for each exon
+    my $exon_seq = [];
+    for (my $i = 0; $i < @$exons; $i++) {
+        push(@$exon_seq, hum_seq_from_exon($exons->[$i]));
+    }
+
+    # Find the exons (with cross_match)
+    my $fs = $finder->find_best_Feature_set($exon_seq);
+    
+    # Give Exons new coords
+    my $sub_strand = undef;
+    my $all_found = 1;
+    for (my $i = 0; $i < @$exons; $i++) {
+        my $exon  = $exons->[$i];
+        my $name  = $exon->stable_id;
+        my $e_len = $exon->length;
+        if (my $feat = $fs->[$i]) {
+            my $start  = $feat->seq_start;
+            my $end    = $feat->seq_end;
+            my $strand = $feat->seq_strand;
+            my $h_len  = $feat->seq_length;
+
+            if ($sub_strand and $strand != $sub_strand) {
+                # Should trap this in ExonLocator
+                warn "Exons on different strands from same feature set\n";
+            } else {
+                $sub_strand = $strand;
+            }
+
+            if ($h_len != $e_len) {
+                printf STDERR "Incomplete ($h_len of $e_len) to %10s %d %d %d\n",
+                    $name, $start, $end, $strand;
+            }
+            else {
+                printf STDERR "Found %10s %d %d %d\n",
+                    $name, $start, $end, $strand;
+            }
+            $exon->start($start);
+            $exon->end($end);
+            $exon->strand($strand);
+            $exon->contig($dest_ctg);
+        } else {
+            printf STDERR "Failed to find %d bp exon '%s'\n",
+                $exon->length,
+                $exon->stable_id;
+            $all_found = 0;
+        }
+    }
+    return $all_found;
 }
 
 

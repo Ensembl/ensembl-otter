@@ -255,7 +255,7 @@ my $DEBUG = 0;
     #--------------------------------finished reading input file ------------------------
 
     # Store the sequence set, returning a list of pipeline contigs
-    warn "Storing '$clone_sequence_list'";
+    #warn "Storing '$clone_sequence_list'";
     $SequenceSet->CloneSequence_list($clone_sequence_list);
     my $pipe_contigs = $ds->store_SequenceSet($SequenceSet, \&pfetch_acc_sv, $INPUT_TYPE eq 'LIST');
     # print STDERR join("\n", map { $_->name } @$pipe_contigs);

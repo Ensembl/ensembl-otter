@@ -68,6 +68,7 @@ use Hum::Analysis::Factory::ExonLocator;
         my $db_v = $db_gene->version;
         print STDERR "Found off track gene '$name' ($stable_id v$v dbv$db_v)\n";
         if (remap_ens_Exons($finder, $db_gene->get_all_Exons, $slice)) {
+            warn "Remapped exons OK\n";
             # otter > XML > otter
             my $temp = Bio::Otter::Lace::TempFile->new;
             $temp->name("realign_offtrack.$$.xml");
