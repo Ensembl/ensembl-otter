@@ -887,18 +887,19 @@ sub save_sequence_notes {
         $self->message("No clones selected");
         return;
     }
-
+    my $ds = $self->SequenceSetChooser->DataSet;
     my $note = Bio::Otter::Lace::SequenceNote->new;
     $note->text($text);
-
+    $note->author($self->Client->author);
     my $seq_list = $self->SequenceSet->selected_CloneSequences;
-    my $ds = $self->SequenceSetChooser->DataSet;
+    
+    $ds->save_author_if_new($self->Client);
+    
     foreach my $sequence (@$seq_list) {
         $sequence->add_SequenceNote($note);    
         $sequence->current_SequenceNote($note);
-        $ds->save_current_SequenceNote_for_CloneSequence($sequence);
+        $ds->save_current_SequenceNote_for_CloneSequence($sequence );
     } 
-
     $self->draw;
     $self->set_scroll_region_and_maxsize;
 }
