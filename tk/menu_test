@@ -4,10 +4,15 @@
 
 use strict;
 use CanvasWindow;
+use Tk::FileSelect;
 
 {
     my $mw = CanvasWindow::MainWindow->new;
     my $menu = $mw->Menu;
+    
+    my $f_selector = $mw->FileSelect(
+        -directory => '/nfs/disk84/jgrg',
+        );
     
     $mw->configure(-menu => $menu);
     
@@ -34,6 +39,20 @@ use CanvasWindow;
         -hidemargin     => 1,
         -command        => sub { warn "Called Resync" },
         -accelerator    => 'Ctrl-R',
+        -underline      => 0,
+        );
+    $chooser->add('command',
+        -label          => 'Save As',
+        -hidemargin     => 1,
+        -command        => sub {
+            my $file = $f_selector->Show;
+            if ($file) {
+                print STDERR "File = '$file'\n";
+            } else {
+                print STDERR "No file\n";
+            }
+        },
+        -accelerator    => 'Ctrl-S',
         -underline      => 0,
         );
     $chooser->add('separator');

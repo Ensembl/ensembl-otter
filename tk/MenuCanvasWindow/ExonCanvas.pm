@@ -5,34 +5,14 @@ package MenuCanvasWindow::ExonCanvas;
 
 use strict;
 use Carp;
-use CanvasWindow;
 use Hum::Ace::SubSeq;
+use MenuCanvasWindow;
 use vars ('@ISA');
+use Hum::Ace;
 
-@ISA = ('CanvasWindow');
+@ISA = ('MenuCanvasWindow');
 
-sub new {
-    my( $pkg, $tk ) = @_;
-    
-    my $button_frame = $tk->Frame;
-    $button_frame->pack(
-        -side   => 'top',
-        -fill   => 'x',
-        );
-    my $self = $pkg->SUPER::new($tk);
-    $self->button_frame($button_frame);
-    
-    return $self;
-}
-
-sub button_frame {
-    my( $self, $bf ) = @_;
-    
-    if ($bf) {
-        $self->{'_button_frame'} = $bf;
-    }
-    return $self->{'_button_frame'};
-}
+# "new" is in MenuCanvasWindow
 
 sub name {
     my( $self, $name ) = @_;
@@ -319,87 +299,110 @@ sub initialize {
         $self = undef;
         };
 
-    my $bf = $self->button_frame;
-   
-    my $show_sub_button = $bf->Button(
-        -text       => 'Show',
-        -command    => sub{
-                my $xr = $self->xace_seq_chooser->xace_remote;
-                if ($xr) {
-                    $xr->show_SubSeq($self->SubSeq);
-                } else {
-                    $self->message("No xace attached");
-                }
-            });
-    $show_sub_button->pack(
-        -side   => 'left',
+    my $menu_bar = $self->menu_bar;
+    my $file_menu = $self->make_menu('File');
+    
+    # Show the subsequence in fMap
+    my $show_subseq = sub{
+        my $xr = $self->xace_seq_chooser->xace_remote;
+        if ($xr) {
+            my $sub = $self->SubSeq;
+            if ($sub->get_all_Exons) {
+                $xr->show_SubSeq($sub);
+            } else {
+                $self->message("Can't show an empty SubSequence");
+            }
+        } else {
+            $self->message("No xace attached");
+        }
+    };
+    $file_menu->add('command',
+        -label          => 'Show SubSequence',
+        -command        => $show_subseq,
+        -accelerator    => 'Ctrl+H',
+        -underline      => 1,
         );
+    $canvas->Tk::bind('<Control-h>',   $show_subseq);
+    $canvas->Tk::bind('<Control-H>',   $show_subseq);
+    
+    # Trap window close
+    $top->protocol('WM_DELETE_WINDOW', $window_close);
+    $canvas->Tk::bind('<Control-w>',   $window_close);
+    $canvas->Tk::bind('<Control-W>',   $window_close);
+    $canvas->Tk::bind('<Control-q>',   $window_close);
+    $canvas->Tk::bind('<Control-Q>',   $window_close);
+
+    my $edit_menu = $self->make_menu('Edit');
+    # Select all positions
+    $edit_menu->add('command',
+        -label          => 'Select All',
+        -command        => $select_all_sub,
+        -accelerator    => 'Ctrl+A',
+        -underline      => 7,
+        );
+    $canvas->Tk::bind('<Control-a>', $select_all_sub);
+    $canvas->Tk::bind('<Control-A>', $select_all_sub);
     
     my $method = $sub->GeneMethod;
     if ($method->is_mutable) {
+
+        # Save into db via xace
+        $file_menu->add('command',
+            -label          => 'Save',
+            -command        => sub{ $self->xace_save },
+            -accelerator    => 'Ctrl+S',
+            -underline      => 0,
+            );
+        
         # Add editing facilities for editable SubSeqs
+        $edit_menu->add('separator');
 
         # Sort the positions
-        my $sort_button = $bf->Button(
-            -text       => 'Sort',
-            -command    => sub{ $self->sort_position_pairs },
-                );
-        $sort_button->pack(
-            -side   => 'left',
+        $edit_menu->add('command',
+            -label          => 'Sort',
+            -command        => sub{ $self->sort_position_pairs },
+            -accelerator    => 'Ctrl+O',
+            -underline      => 1,
             );
         
         # Merge overlapping exon coordinates
-        my $merge_button = $bf->Button(
-            -text       => 'Merge',
-            -command    => sub{ $self->merge_position_pairs },
-                );
-        $merge_button->pack(
-            -side   => 'left',
+        $edit_menu->add('command',
+            -label          => 'Merge',
+            -command        => sub{ $self->merge_position_pairs },
+            -accelerator    => 'Ctrl+M',
+            -underline      => 0,
             );
 
-        # Save in xace
-        my $save_button = $bf->Button(
-            -text       => 'Save',
-            -command    => sub{ $self->xace_save },
+        # Delete selected Exons
+        my $delete_exons = sub{ $self->delete_selected_exons };
+        $edit_menu->add('command',
+            -label          => 'Delete',
+            -command        => $delete_exons,
+            -accelerator    => 'Ctrl+D',
+            -underline      => 0,
             );
-        $save_button->pack(
-            -side   => 'left',
-            );
+        $canvas->Tk::bind('<Control-d>', $delete_exons);
+        $canvas->Tk::bind('<Control-D>', $delete_exons);
 
         # Choice of Method
-        {
-            require Tk::Optionmenu;
-            my $bottom_frame = $top->Frame;
-            $bottom_frame->pack(
-                -side => 'top',
-                -fill => 'x',
+        my @allowed_methods = map $_->name,
+            $self->xace_seq_chooser->get_all_mutable_GeneMethods;
+        my $current_method = $sub->GeneMethod->name;
+        my $change_method = sub {
+                my $meth = $self->xace_seq_chooser->get_GeneMethod($current_method);
+                $self->SubSeq->GeneMethod($meth);
+            };
+        my $method_menu = $self->make_menu('Method');
+        foreach my $method_name (@allowed_methods ) {
+            $method_menu->add('radiobutton',
+                -label      => $method_name,
+                -value      => $method_name,
+                -variable   => \$current_method,
+                -command    => $change_method,
                 );
             
-            # Label for option menu
-            my $label = $bottom_frame->Label(
-                -text   => '  Method:',
-                -anchor => 'e',
-                );
-            $label->pack(-side => 'left');
-            
-            # Menu to choose Method
-            my $initial_method = $sub->GeneMethod->name;
-            my @meth = map $_->name,
-                $self->xace_seq_chooser->get_all_mutable_GeneMethods;
-            my $method_chooser = $bottom_frame->Optionmenu(
-                -options    => [@meth],
-                -command    => sub {
-                    my $name = shift;
-                    my $meth = $self->xace_seq_chooser->get_GeneMethod($name);
-                    $self->SubSeq->GeneMethod($meth);
-                },
-                -variable   => \$initial_method,
-                );
-            $method_chooser->pack(-side => 'left');
         }
 
-        $canvas->Tk::bind('<Control-d>', sub{ $self->delete_selected_exons });
-        $canvas->Tk::bind('<Control-D>', sub{ $self->delete_selected_exons });
 
         # Keyboard editing commands
         $canvas->Tk::bind('<Left>',      sub{ $self->canvas_text_go_left   });
@@ -454,18 +457,16 @@ sub initialize {
         });
     }
     
+    $file_menu->add('separator');
+    
     # To close window
-    my $close_button = $bf->Button(
-        -text       => 'Close',
-        -command    => $window_close,
-            );
-    $close_button->pack(
-        -side   => 'right',
+    $file_menu->add('command',
+        -label          => 'Close',
+        -command        => $window_close,
+        -accelerator    => 'Ctrl-W',
+        -underline      => 1,
         );
     
-    ### Event bindings
-    $canvas->Tk::bind('<Control-a>', $select_all_sub);
-    $canvas->Tk::bind('<Control-A>', $select_all_sub);
     
     # For extending selection
     $canvas->Tk::bind('<Shift-Button-1>', sub{
@@ -474,14 +475,6 @@ sub initialize {
             $canvas->SelectionOwn( -command => $deselect_sub )
         }
     });
-    
-    # Trap window close
-    $top->protocol('WM_DELETE_WINDOW', $window_close);
-    $canvas->Tk::bind('<Control-q>',   $window_close);
-    $canvas->Tk::bind('<Control-Q>',   $window_close);
-    $canvas->Tk::bind('<Control-w>',   $window_close);
-    $canvas->Tk::bind('<Control-W>',   $window_close);
-    #$top->transient($top->parent);
     
     $self->fix_window_min_max_sizes;
 }
@@ -962,7 +955,7 @@ sub update_ace_subseq {
     my( $self ) = @_;
 
     $self->update_translation_region;
-    my @exons = $self->Exons_from_canvas or return;
+    my @exons = $self->Exons_from_canvas;
 
     my $sub = $self->SubSeq;
     $sub->replace_all_Exons(@exons);

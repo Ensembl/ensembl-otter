@@ -65,7 +65,7 @@ CanvasWindow*Scrollbar.width: 11
 CanvasWindow*font: -*-helvetica-medium-r-*-*-12-*-*-*-*-*-*-*
 CanvasWindow*selectColor: gold
 CanvasWindow*Menubutton.padX: 6
-CanvasWindow*Menubutton.padY: 8
+CanvasWindow*Menubutton.padY: 6
 
 
 };

@@ -82,13 +82,14 @@ __END__
         Exon coordinates
         CDS Start/End
         Start_not_found     CDS_Phase
-                            Next_left
-        End_not_found       Next_Right
+                            Continues_From
+        End_not_found       Continues_As
         Method  Supported
                 Supported_CDS
                 Supported_mRNA
                 Pseudogene
         Remark
+        Isoform
     
     Locus
         Name

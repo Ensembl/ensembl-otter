@@ -5,42 +5,23 @@ package MenuCanvasWindow::XaceSeqChooser;
 
 use strict;
 use Carp;
-use CanvasWindow;
+use MenuCanvasWindow;
 use MenuCanvasWindow::ExonCanvas;
 use vars ('@ISA');
 use Hum::Ace;
 
-@ISA = ('CanvasWindow');
+@ISA = ('MenuCanvasWindow');
 
 sub new {
     my( $pkg, $tk ) = @_;
-
-    my $menu_frame = $tk->Frame(
-        -borderwidth    => 1,
-        -relief         => 'raised',
-        );
-    $menu_frame->pack(
-        -side   => 'top',
-        -fill   => 'x',
-        );
     
     my $self = $pkg->SUPER::new($tk);
-    $self->menu_bar($menu_frame);
 
     $self->populate_menus;
     $self->bind_events;
     $self->current_state('clone');
     $self->minimum_scroll_bbox(0,0,200,200);
     return $self;
-}
-
-sub button_frame {
-    my( $self, $bf ) = @_;
-    
-    if ($bf) {
-        $self->{'_button_frame'} = $bf;
-    }
-    return $self->{'_button_frame'};
 }
 
 sub menu_bar {
@@ -96,7 +77,7 @@ sub get_all_mutable_GeneMethods {
         grep $_->is_mutable, $self->get_all_GeneMethods;
 }
 
-sub _make_menu {
+sub make_menu {
     my( $self, $name, $pos ) = @_;
     
     $pos ||= 0;
@@ -128,7 +109,7 @@ sub populate_menus {
         or confess "No menu_bar";
     
     # File menu
-    my $file = $self->_make_menu('File');
+    my $file = $self->make_menu('File');
     
     $file->add('command',
         -label          => 'Attach Xace',
@@ -141,26 +122,26 @@ sub populate_menus {
                 warn "no xwindow id: $xwid";
             }
         },
-        -accelerator    => 'Ctrl-X',
+        -accelerator    => 'Ctrl+X',
         -underline      => 0,
         );
     $file->add('command',
         -label          => 'Resync',
         -hidemargin     => 1,
-        -command        => sub { warn "Called Resync" },
-        -accelerator    => 'Ctrl-R',
+        -command        => sub { $self->resync_with_db },
+        -accelerator    => 'Ctrl+R',
         -underline      => 0,
         );
     $file->add('separator');
     $file->add('command',
         -label          => 'Exit',
         -command        => sub { $menu_frame->toplevel->destroy },
-        -accelerator    => 'Ctrl-Q',
+        -accelerator    => 'Ctrl+Q',
         -underline      => 0,
         );
     
     # Show menu
-    my $mode = $self->_make_menu('Show');
+    my $mode = $self->make_menu('Show');
     my $mode_var = 'clone';
     my $mode_switch = sub {
         $self->clone_sub_switch($mode_var);
@@ -172,50 +153,50 @@ sub populate_menus {
         -command        => $mode_switch,
         );
     $mode->add('radiobutton',
-        -label          => 'Sub-sequences',
+        -label          => 'SubSequences',
         -value          => 'subseq',
         -variable       => \$mode_var,
         -command        => $mode_switch,
         );
     
     # Subseq menu
-    my $subseq = $self->_make_menu('SubSeq');
+    my $subseq = $self->make_menu('SubSeq');
     
     $subseq->add('command',
         -label          => 'New',
         -command        => sub{ warn "Called New" },
-        -accelerator    => 'Ctrl-N',
+        -accelerator    => 'Ctrl+N',
         -underline      => 0,
         );
     $subseq->add('command',
         -label          => 'Edit',
-        -command        => sub{ warn "Called Edit" },
-        -accelerator    => 'Ctrl-E',
+        -command        => sub{ $self->edit_subsequences },
+        -accelerator    => 'Ctrl+E',
         -underline      => 0,
         );
     $subseq->add('separator');
     $subseq->add('command',
         -label          => 'Merge',
         -command        => sub{ warn "Called Merge" },
-        -accelerator    => 'Ctrl-M',
+        -accelerator    => 'Ctrl+M',
         -underline      => 0,
         );
     $subseq->add('command',
         -label          => 'AutoMerge',
         -command        => sub{ warn "Called AutoMerge" },
-        -accelerator    => 'Ctrl-U',
+        -accelerator    => 'Ctrl+U',
         -underline      => 0,
         );
     $subseq->add('command',
         -label          => 'Isoform',
         -command        => sub{ warn "Called Isoform" },
-        -accelerator    => 'Ctrl-I',
+        -accelerator    => 'Ctrl+I',
         -underline      => 0,
         );
     $subseq->add('command',
         -label          => 'Transcript',
         -command        => sub{ warn "Called Transcript" },
-        -accelerator    => 'Ctrl-T',
+        -accelerator    => 'Ctrl+T',
         -underline      => 0,
         );
 }
@@ -323,6 +304,27 @@ sub ace_handle {
         $adbh = $self->{'_ace_database_handle'};
     }
     return $adbh;
+}
+
+sub resync_with_db {
+    my( $self ) = @_;
+    
+    $self->canvas->Busy;
+    
+    # Disconnect aceperl
+    $self->{'_ace_database_handle'} = undef;
+
+    if (my $local = $self->local_server) {
+        $local->restart_server;
+    }
+    
+    $self->empty_CloneSeq_cache;
+    $self->empty_SubSeq_cache;
+    
+    # Redisplay
+    $self->clone_sub_switch($self->current_state);
+    
+    $self->canvas->Unbusy;
 }
 
 sub local_server {
@@ -513,6 +515,12 @@ sub get_CloneSeq {
     return $clone;
 }
 
+sub empty_CloneSeq_cache {
+    my( $self ) = @_;
+    
+    $self->{'_clone_sequences'} = undef;
+}
+
 sub express_clone_and_subseq_fetch {
     my( $self, $clone_name ) = @_;
     
@@ -532,7 +540,8 @@ sub express_clone_and_subseq_fetch {
     while ($sub_list =~ /^Subsequence\s+"([^"]+)"\s+(\d+)\s+(\d+)/mg) {
         my($name, $start, $end) = ($1, $2, $3);
         eval{
-            my $t_seq = $ace->fetch(Sequence => $name);
+            my $t_seq = $ace->fetch(Sequence => $name)
+                or die "No such Subsequence '$name'\n";
             my $sub = Hum::Ace::SubSeq
                 ->new_from_name_start_end_transcript_seq(
                     $name, $start, $end, $t_seq,
@@ -581,6 +590,12 @@ sub get_SubSeq {
     
     confess "no name given" unless $name;
     return $self->{'_subsequence_cache'}{$name};
+}
+
+sub empty_SubSeq_cache {
+    my( $self ) = @_;
+    
+    $self->{'_subsequence_cache'} = undef;
 }
 
 sub draw_sequence_list {
