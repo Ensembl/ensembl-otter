@@ -8,6 +8,7 @@ use Hum::EnsCmdLineDB;
 
 {
     my $mw = CanvasWindow::MainWindow->new;
+    $mw->title('Karyotype');
     my $kw = KaryotypeWindow->new($mw);
     
     Hum::EnsCmdLineDB::do_getopt();

@@ -17,6 +17,10 @@ use Getopt::Long 'GetOptions';
     $mw->title('Reminder');
     $mw->bind('<Control-q>', sub {$mw->destroy});
     $mw->bind('<Control-Q>', sub {$mw->destroy});
+    $mw->bind('<Control-h>', sub {$mw->withdraw});
+    $mw->bind('<Control-H>', sub {$mw->withdraw});
+    
+    $mw->protocol('WM_ICONIFY_WINDOW', sub {$mw->withdraw});
 
     my $one_day_in_sec = 24 * 60 * 60;
 
@@ -32,22 +36,29 @@ use Getopt::Long 'GetOptions';
     
     my @day = (localtime)[3,4,5];
     
-    # after, repeat
-    my @remind = qw{
+    # event, time, [delay]
+    my( @remind );
+    foreach (split /\n/, q{
         lunch   12:15
         tea     15:15
-        bus     17:30
+        bus     17:30  10
         bus     18:30
-        };
-    for (my $i = 0; $i < @remind; $i += 2) {
-        my ($rem, $when) = @remind[$i, $i + 1];
+        })
+    {
+        chomp;
+        next if /^\s*$/;    # Skip blank lines
+        push(@remind, [split]);
+    }
+    foreach my $row (@remind) {
+        my ($rem, $when, $delay) = @$row;
+        $delay = 5 unless defined($delay);
         my( $warn_time );
         if ($test_flag) {
             $warn_time = time + 5;
         } else {
             my ($hr, $min) = $when =~ /^(\d+):(\d+)$/
                 or die "Can't parse time from '$when'";
-            $min -= 5;  # Warn 5 min before
+            $min -= $delay;
             $warn_time = timelocal(0, $min, $hr, @day);
         }
         my $message = sub {
@@ -68,7 +79,6 @@ use Getopt::Long 'GetOptions';
     
     
     $gc->fix_window_min_max_sizes;
-    #$mw->iconify;
     $mw->withdraw;
     Tk::MainLoop();
 }

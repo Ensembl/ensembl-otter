@@ -96,6 +96,9 @@ use vars '@command_line';
         SPAN                => 0,
         EnsEMBL             => 0,
         genomewise          => 0,
+        'WashU-Supported'   => 0,
+        'WashU-Putative'    => 0,
+        'WashU-Pseudogene'  => 0,
         );
     $xc->set_known_GeneMethods(%methods_mutable);
     
