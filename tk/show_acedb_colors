@@ -1,0 +1,55 @@
+#!/nfs/humace2/hum/bin/perl -w
+
+### show_acedb_colors
+
+use strict;
+use CanvasWindow;
+use Hum::Ace::Colors;
+
+{
+    my $mw = CanvasWindow::MainWindow->new;
+    $mw->title('acedb colors');
+    my $cw = CanvasWindow->new($mw);
+    my $canvas = $cw->canvas;
+
+    my $size = 15;
+    my $pad = $size / 2;
+    my @color_name = Hum::Ace::Colors::list_all_color_names_by_value();
+    my $font = ['Helvetica', $size, 'normal'];
+    for (my $i = 0; $i < @color_name; $i++) {
+        my $name = $color_name[$i];
+        my $hex = Hum::Ace::Colors::acename_to_webhex($name);
+        my $x1 = $size;
+        my $x2 = $x1 + $size;
+        my $y1 = $size + (($size + $pad) * $i);
+        my $y2 = $y1 + $size;
+        $canvas->createRectangle(
+            $x1, $y1, $x2, $y2,
+            -fill       => $hex,
+            -outline    => 'black',
+            );
+        
+        $canvas->createText(
+            $x2 + $size, $y1,
+            -text   => $name,
+            -anchor => 'nw',
+            -font   => $font,
+            );
+    }
+
+    $cw->fix_window_min_max_sizes;
+
+    Tk::MainLoop();
+       
+}
+
+
+
+__END__
+
+=head1 NAME - show_acedb_colors
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
