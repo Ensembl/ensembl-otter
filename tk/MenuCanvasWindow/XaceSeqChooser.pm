@@ -970,7 +970,8 @@ sub draw_subseq_list {
     
     my( @subseq );
     foreach my $clone_name (@selected_clones) {
-        my $clone = $self->get_CloneSeq($clone_name);
+        my $clone = $self->get_CloneSeq($clone_name)
+            or confess "Can't get Clone '$clone_name'";
         foreach my $clust ($self->get_all_Subseq_clusters($clone)) {
             push(@subseq, "") if @subseq;
             push(@subseq, map($_->name, @$clust));
@@ -1059,6 +1060,7 @@ sub express_clone_and_subseq_fetch {
     if ($clone) {
         $self->exception_message($@) if $@;
     } else {
+        warn $@;
         $self->exception_message("Can't fetch CloneSeq '$clone_name' :\n$@");
         return;
     }

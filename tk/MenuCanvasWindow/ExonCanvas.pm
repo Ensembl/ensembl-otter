@@ -1872,6 +1872,7 @@ sub new_SubSeq_from_tk {
     my( $self ) = @_;
 
     my $sub = $self->SubSeq->clone;
+    $sub->unset_translation_region;
     $sub->translation_region     ( $self->translation_region_from_tk  );
     $sub->name                   ( $self->get_subseq_name             );
     $sub->replace_all_Exons      ( $self->Exons_from_canvas           );
