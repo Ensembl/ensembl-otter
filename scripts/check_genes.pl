@@ -821,6 +821,7 @@ foreach my $atype (keys %gsi){
 	$nl++;
       }
     }
+
     my $cl=new cluster();
     # link exons by transcripts
     foreach my $tsi (keys %{$t2e{$gsi}}){
@@ -845,7 +846,7 @@ foreach my $atype (keys %gsi){
 	    $tcl{$tsi}++;
 	  }
 	}
-	print " Cluster $ncid: ".join(',',(keys %tcl))."\n";
+	print " Cluster $ncid: ".join(',',(sort keys %tcl))."\n";
       }
 
       # analysis by overlap of transcripts
@@ -869,13 +870,13 @@ foreach my $atype (keys %gsi){
 	      $out.="    Boundary of $embl_acc ($name)\n";
 	    }
 	  }
-	  if($nc<=2){
+	  if($nc>0 && $nc<=2){
 	    print $out;
 	    $nmcb++;
 	  }
 	}
 	print "  $tsi ($tn): $st-$ed\n";
-	$last_ed=$ed;
+	$last_ed=$ed if $ed>$last_ed;
       }
       $nmc++;
     }
