@@ -56,9 +56,9 @@ sub fetch_by_stable_id{
              SELECT gsi1.gene_id
                FROM gene_stable_id gsi1 LEFT JOIN gene_stable_id gsi2 
                  ON gsi1.stable_id = gsi2.stable_id 
-                 && gsi1.version < gsi2.version
+                AND gsi1.version < gsi2.version
               WHERE gsi2.stable_id IS NULL
-                 && gsi1.stable_id = ?`
+                AND gsi1.stable_id = ?`
                             );
    $sth->execute($id);
 
@@ -116,7 +116,7 @@ sub fetch_by_dbID {
 sub annotate_gene {
    my ($self,$gene) = @_;
 
-   #Will this work - let's hope so
+   # Will this work - let's hope so
    bless $gene,"Bio::Otter::AnnotatedGene";
 
    my $gene_info_adaptor         = $self->db->get_GeneInfoAdaptor();
@@ -145,6 +145,52 @@ sub annotate_gene {
        }
    }
    
+}
+
+=head2 list_current_dbIDs_for_Slice_by_type
+
+  my $id_list = $self->list_current_dbIDs_for_Slice($slice, $gene_type);
+
+Given a slice and a gene type, lists the dbIDs of the genes with exons on the slice.
+
+=cut
+
+sub list_current_dbIDs_for_Slice_by_type {
+    my( $self, $slice, $gene_type ) = @_;
+    
+    $self->throw('Missing gene_type argument') unless $gene_type;
+    
+    my $tiling_path = $slice->get_tiling_path;
+    my $ctg_id_list = join(',', map($_->component_Seq->dbID, @$tiling_path));
+    my $sth = $self->db->prepare(qq{
+        SELECT gsid.stable_id
+          , g.gene_id
+          , g.type
+        FROM gene_stable_id gsid
+          , gene g
+          , transcript t
+          , exon_transcript et
+          , exon e
+          , assembly a
+        WHERE gsid.gene_id = g.gene_id
+          AND g.gene_id = t.gene_id
+          AND t.transcript_id = et.transcript_id
+          AND et.exon_id = e.exon_id
+          AND e.contig_id = a.contig_id
+          AND a.contig_id in ($ctg_id_list)
+          AND a.type = ?
+        GROUP BY gsid.stable_id
+          , gsid.version
+        ORDER BY gsid.version ASC
+        });
+    $sth->execute($slice->assembly_type);
+    
+    my( %sid_gid );
+    while (my ($sid, $gid, $type) = $sth->fetchrow) {
+        $sid_gid{$sid} = [$gid, $type];
+    }
+    my @gene_id = map $_->[0], grep $_->[1] eq $gene_type, values %sid_gid;
+    return [sort {$a <=> $b} @gene_id];
 }
 
 =head2 list_current_dbIDs_for_Slice
@@ -225,6 +271,16 @@ sub list_current_dbIDs_for_Contig {
     return [sort {$a <=> $b} values %sid_gid];
 }
 
+### fetch_by_Slice should have been called fetch_all_by_Slice
+### to override fetch_all_by_Slice in GeneAdaptor
+
+sub fetch_all_by_Slice {
+    my $self = shift;
+    
+    return $self->fetch_by_Slice(@_);
+}
+
+
 =head2 fetch_by_Slice
 
   Arg [1]    : Bio::EnsEMBL::Slice $slice
@@ -237,29 +293,20 @@ sub list_current_dbIDs_for_Contig {
 
 =cut
 
-sub fetch_by_Slice{
-    my ($self,$slice) = @_;
-
-    my $genes = $slice->get_all_Genes;
-
-    # Discard non-current versions of genes
-    my %genes;
-    foreach my $g (@$genes) {
-         my $stable_id = $g->stable_id;
-         if (my $other = $genes{$stable_id}) {
-             if ($g->version > $other->version) {
-                 $genes{$stable_id} = $g;
-             } 
-         } else {
-             $genes{$stable_id} = $g;
-         }
-    }
+sub fetch_by_Slice {
+    my ($self, $slice) = @_;
+    
+    my $latest_gene_id = $self->list_current_dbIDs_for_Slice($slice);
+    warn "Found ", scalar(@$latest_gene_id), " current gene IDs\n";
     my $latest_genes = [];
-    foreach my $g (values %genes) {
-        $self->annotate_gene($g);
-        push(@$latest_genes, $g);
+    foreach my $id (@$latest_gene_id) {
+        my $gene = $self->fetch_by_dbID($id)->transform($slice);
+        
+        # Skip any genes that are off slice
+        next unless $gene->start <= $slice->length and $gene->end >= 1;
+        
+        push(@$latest_genes, $gene);
     }
-    %genes = ();    # Don't need genes hash any more
 
     # Truncate gene components to Slice
     for (my $j = 0; $j < @$latest_genes;) {
@@ -304,6 +351,8 @@ sub fetch_by_Slice{
             splice(@$latest_genes, $j, 1);
         }
     }
+
+    warn "Returning ", scalar(@$latest_genes), " genes\n";
 
     return $latest_genes;
 }
