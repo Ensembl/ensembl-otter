@@ -631,7 +631,13 @@ sub exit_save_data {
     
     # Unlock and cleanup (lace dir gets
     # removed by AceDatabase->DESTROY)
-    $ace->unlock_all_slices;
+    eval{
+        $ace->unlock_all_slices;
+    };
+    if ($@) {
+        $self->exception_message($@);
+        return 0;
+    }
     $ace->error_flag(0);
     
     return 1;
@@ -640,10 +646,10 @@ sub exit_save_data {
 sub save_data {
     my( $self ) = @_;
 
-    warn "SAVING DATA";
+    #warn "SAVING DATA";
 
     if (my $xr = $self->xace_remote) {
-        warn "XACE SAVE";
+        #warn "XACE SAVE";
         # This will fail if xace has been
         # exited, so we ignore error.
         eval{ $xr->save; };
