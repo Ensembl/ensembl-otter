@@ -13,10 +13,7 @@ use vars '@ISA';
 sub render {
     my( $band ) = @_;
     
-    #while (my($vc, $x_offset) = $band->next_sub_VirtualContig) {
-    #    $band->draw_gene_features_on_sub_vc($vc, $x_offset);
-    #}
-    $band->draw_gene_features_on_sub_vc($band->virtual_contig, 0);
+    $band->draw_gene_features_on_vc($band->virtual_contig, 0);
 }
 
 sub draw_titles {
@@ -123,7 +120,7 @@ sub gene_type_color {
     return $hash->{$type};
 }
 
-sub draw_gene_features_on_sub_vc {
+sub draw_gene_features_on_vc {
     my( $band, $vc, $x_offset ) = @_;
 
     my $y_dir       = $band->tiling_direction;

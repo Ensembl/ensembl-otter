@@ -11,7 +11,7 @@ use GenomeCanvas::DensityBand::Gene;
 use GenomeCanvas::Band::Gene;
 use GenomeCanvas::Band::SNP;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
-use Bio::EnsEMBL::ExternalData::SNPSQL::WebSNPAdaptor;
+use Bio::EnsEMBL::ExternalData::SNPSQL::DBAdaptor;
 use Hum::Submission 'prepare_statement'; # For Sanger sequence names
 use Getopt::Long 'GetOptions';
 
@@ -91,7 +91,7 @@ use Getopt::Long 'GetOptions';
             );
 
         # Add database for SNPs
-        my $snpdba = Bio::EnsEMBL::ExternalData::SNPSQL::WebSNPAdaptor->new(       
+        my $snpdba = Bio::EnsEMBL::ExternalData::SNPSQL::DBAdaptor->new(       
             -dbname => 'snp110',
             -host   => 'ecs1a',
             -port   => '3306',
