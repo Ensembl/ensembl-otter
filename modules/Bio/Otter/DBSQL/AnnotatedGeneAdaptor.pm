@@ -133,6 +133,48 @@ sub annotate_gene {
    
 }
 
+=head2 list_current_dbIDs_for_Slice
+
+  my $id_list = $self->list_current_dbIDs_for_Slice($slice);
+
+Given a slice 
+
+=cut
+
+sub list_current_dbIDs_for_Slice {
+    my( $self, $slice ) = @_;
+    
+    my $tiling_path = $slice->get_tiling_path;
+    my $ctg_id_list = join(',', map($_->component_Seq->dbID, @$tiling_path));
+    my $sth = $self->db->prepare(qq{
+        SELECT gsid.stable_id
+          , g.gene_id
+        FROM gene_stable_id gsid
+          , gene g
+          , transcript t
+          , exon_transcript et
+          , exon e
+          , assembly a
+        WHERE gsid.gene_id = g.gene_id
+          AND g.gene_id = t.gene_id
+          AND t.transcript_id = et.transcript_id
+          AND et.exon_id = e.exon_id
+          AND e.contig_id = a.contig_id
+          AND a.contig_id in ($ctg_id_list)
+          AND a.type = ?
+        GROUP BY gsid.stable_id
+          , gsid.version
+        ORDER BY gsid.version ASC
+        });
+    $sth->execute($slice->assembly_type);
+    
+    my( %sid_gid );
+    while (my ($sid, $gid) = $sth->fetchrow) {
+        $sid_gid{$sid} = $gid;
+    }
+    return [sort {$a <=> $b} values %sid_gid];
+}
+
 =head2 fetch_by_Slice
 
   Arg [1]    : Bio::EnsEMBL::Slice $slice
