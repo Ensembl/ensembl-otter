@@ -236,7 +236,7 @@ while(<IN>){
     if($gt=~/^$excl/ && $gn!~/^$excl/){
       if(!$ngtgnerr2{$gsi}){
 	$ngtgnerr2{$gsi}=1;
-	print "WARN2 $gsi: type=\'$gt\' but name=\'$gn\'\n";
+	print "WARN2 $gsi: type=\'$gt\' but name=\'$gn\'\n" if $opt_v;
       }
     }
   }
@@ -270,10 +270,10 @@ while(<IN>){
   # warn for mislabelled genes
   foreach my $excl (split(/,/,$exclude)){
     if($gn=~/^$excl/){
+      $eflag=1;
       if(!$ngtgnerr{$gsi}){
 	$ngtgnerr{$gsi}=1;
-	print "WARN $gsi: type=\'$gt\' but name=\'$gn\'\n";
-	$eflag=1;
+	print "WARN $gsi: type=\'$gt\' but name=\'$gn\'\n" if $opt_v;
       }
     }
   }
