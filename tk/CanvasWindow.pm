@@ -156,9 +156,10 @@ sub bind_scroll_commands {
     my $canvas = $self->canvas;
     my $x_scroll = $canvas->parent->Subwidget('xscrollbar');
     my $y_scroll = $canvas->parent->Subwidget('yscrollbar');
-    $canvas->Tk::bind('<Enter>', sub{
-        $canvas->Tk::focus;
-        });
+    
+    foreach my $sequence ($x_scroll->Tk::bind(ref($x_scroll))) {
+        #print STDERR "seq=$sequence\n";
+    }
     
     # Don't want the scrollbars to take keyboard focus
     foreach my $widget ($x_scroll, $y_scroll) {
@@ -166,9 +167,14 @@ sub bind_scroll_commands {
             -takefocus => 0,
             );
     }
+    
+    # ... Want canvas to do this instead
     $canvas->configure(
         -takefocus => 1,
         );
+    $canvas->Tk::bind('<Enter>', sub{
+        $canvas->Tk::focus;
+        });
     
     # Home and End keys
     $canvas->Tk::bind('<Home>', sub{

@@ -1,5 +1,7 @@
 #!/usr/local/bin/perl -w
 
+#use lib '/nfs/disk84/jgrg/bin/Perl';
+
 ### spandit
 
 use strict;
@@ -36,6 +38,7 @@ use Getopt::Long 'GetOptions';
     my( $local_server, $ace );
     if ($path) {
         $local_server = Hum::Ace::LocalServer->new($path);
+        $local_server->server_type('SOCKET');
         $local_server->start_server;
         $xc->local_server($local_server);
     } else {
@@ -53,6 +56,7 @@ use Getopt::Long 'GetOptions';
     
     my %methods_mutable = (
       # Method name        Mutable?
+        #supported       => 1,
         supported_CDS   => 1,
         supported_mRNA  => 1,
         Pseudogene      => 1,

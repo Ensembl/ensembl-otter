@@ -509,7 +509,11 @@ sub get_CloneSeq {
     
     my( $clone );
     unless ($clone = $self->{'_clone_sequences'}{$clone_name}) {
+        use Time::HiRes 'gettimeofday';
+        my $before = gettimeofday();
         $clone = $self->express_clone_and_subseq_fetch($clone_name);
+        my $after  = gettimeofday();
+        printf "Express fetch for '%s' took %4.3f\n", $clone_name, $after - $before;
         $self->{'_clone_sequences'}{$clone_name} = $clone;
     }
     return $clone;
