@@ -328,16 +328,28 @@ sub initialize {
         
         # Widget for changing name
         $self->add_subseq_rename_widget($frame);
-        
+       
         # Widget for changing locus name
-        my $be = $self->add_locus_rename_widget($frame);
-        $be->configure(-listcmd => sub{
-            my @names = $self->xace_seq_chooser->list_Locus_names;
-            $be->configure(
-                -choices   => [@names],
-                #-listwidth => scalar @names,
-                );
-            });
+        my $button_frame = $frame->Frame()->pack ;
+        my $be = $self->add_locus_rename_widget($button_frame);    
+        
+        $self->_locus_combo($be);
+        $self->update_combo_list();
+        
+    
+#       my $button_frame = $frame->Frame()->pack(-side => '') ;
+        $button_frame->Button(  -text   =>   'new' ,
+                                -command=>  sub{ $self->modify_locus('new')})->pack(-side => 'left');
+
+        $button_frame->Button(  -text   =>   'edit' ,
+                                -command=>  sub{ $self->modify_locus('edit')})->pack(-side => 'left');
+                                
+
+       
+        ## this isnt needed as a keyboard command - it is needed as an event for when loci are merged
+        my $update_locus = sub {  $self->update_locus_display()  } ;
+        $top->bind( '<<update_locus>>' , $update_locus) ;
+        $top->bind('<<refresh_locus_display>>' , sub {$self->show_new_locus_name});            
         
         # Start not found and end not found and method widgets
         $self->add_start_end_method_widgets($frame);
@@ -374,9 +386,30 @@ sub initialize {
     
     $canvas->Tk::bind('<Destroy>', sub{ $self = undef });
     
+    $top->update;
     $self->fix_window_min_max_sizes;
 }
 
+sub _locus_combo{
+    my ($self , $combo) = @_    ;
+    if ($combo){
+        $self->{'_locus_combo'} = $combo ;
+    }
+    return $self->{'_locus_combo'};
+}
+
+sub update_combo_list{
+    my ($self) = @_ ;
+    
+    my $be = $self->_locus_combo ;
+    $be->configure(-listcmd => sub{
+            my @names = $self->xace_seq_chooser->list_Locus_names;
+            $be->configure(
+                -choices   => [@names],
+                #-listwidth => scalar @names,
+                );
+            });       
+}
 
 sub name {
     my( $self, $name ) = @_;
@@ -481,6 +514,7 @@ sub add_subseq_exons {
         $self->position_mobile_elements;
     }
 }
+
 
 sub all_position_pair_text {
     my( $self ) = @_;
@@ -856,7 +890,8 @@ sub window_close {
 sub show_subseq {
     my( $self ) = @_;
 
-    my $xr = $self->xace_seq_chooser->xace_remote;
+    
+    my $xr = $self->xace_sequence_chooser->xace_remote  || $self->xace_sequence_chooser->open_xace_dialogue;
     if ($xr) {
         my $sub = $self->SubSeq;
         unless ($sub->is_archival) {
@@ -940,6 +975,9 @@ sub show_peptide {
         $peptext->tagBind('goldmeth', '<Leave>',
             sub{ $peptext->configure(-cursor => 'xterm'); }
             );
+        $peptext->tagBind('goldmeth' , '<Button-3>' , 
+            sub{ $self->check_kozak} 
+            ); 
         
         # Frame for buttons
         my $frame = $top->Frame(
@@ -1050,6 +1088,147 @@ sub trim_cds_coord_to_current_methionine {
     $self->highlight('t_start') if $new != $original;
 }
 
+
+
+sub check_kozak{
+    my ($self ) = @_ ;
+    
+    my $kozak_window = $self->{'_kozak_window'} ;
+    # create a new window if none available
+    unless (defined $kozak_window){
+        my $master = $self->canvas->toplevel;
+        $kozak_window = $master->Toplevel(-title => 'Kozak Checker');
+        $kozak_window->transient($master);
+        
+        my $font = $self->font;
+        my $size = $self->font_size;
+
+        $kozak_window->Label(
+                -font           => [$font, $size, 'normal'],
+                -text           => "5'\n3'" ,    
+                -padx                   => 6,
+                -pady                   => 6, 
+                )->pack(-side   => 'left'); 
+        
+        my $kozak_txt = $kozak_window->ROText(
+                -font           => [$font, $size, 'normal'],
+                #-justify        => 'left',
+                -padx                   => 6,
+                -pady                   => 6,
+                -relief                 => 'groove',
+                -background             => 'white',
+                -border                 => 2,
+                -selectbackground       => 'gold',
+                #-exportselection => 1,
+                
+                -width                  => 10 ,
+                -height                 => 2 ,
+                )->pack(-side   => 'left' , 
+                        -expand => 1      ,
+                        -fill   => 'both' ,
+                        );
+                        
+                     
+        $kozak_window->Label(
+                -font           => [$font, $size, 'normal'],
+                -text           => "3'\n5'" ,    
+                -padx                   => 6,
+                -pady                   => 6, 
+                )->pack(-side   => 'left');                         
+        ##my $kozak_txt = $kozak_window->Label(  -padx                   => 6,
+        ##                                    -pady                   => 6,
+        ##                                    -relief                 => 'groove',
+        ##                                    -background             => 'white',
+        ##                                    -font           => [$font, $size, 'normal'],
+        ##                                   
+        ##                                    )->pack(-side => 'left' ,
+        ##                                            -padx =>6 ,
+        ##                                            -pady =>6) ;
+        
+        
+        my $close_kozak = sub { $kozak_window->withdraw } ;
+        my $kozak_butt = $kozak_window->Button( -text       => 'close' ,
+                                            -command    => $close_kozak ,
+                                            )->pack(-side => 'left')  ;
+        $self->{'_kozak_txt'} = $kozak_txt ;
+        $self->{'_kozak_window'} = $kozak_window;
+        
+    }
+    
+    my $kozak_txt = $self->{'_kozak_txt'} ;
+    
+    ### get index of selected methionine
+    my $peptext = $self->{'_pep_peptext'} or return;
+    my $pep_index = $peptext->index('current');  
+    my $seq_index = $self->{'_peptext_index_to_genomic_position'}{$pep_index} or return;
+
+    my $subseq = $self->SubSeq ;    
+    my $clone_seq = $subseq->clone_Sequence();
+    my $sequence_string = $clone_seq->sequence_string;
+    my $strand = $subseq->strand;
+    
+    my $k_start ;
+
+    if ($strand == 1){
+        $k_start = ($seq_index  - 7 ) ;
+    }else{    
+        $k_start = ($seq_index  - 4 ) ;
+    }
+  
+    my $kozak ;
+    if ( $k_start >= 0 ){
+        $kozak = substr($sequence_string ,  $k_start  , 10 ) ;  
+    }
+    else{
+        # if subseq  goes off start , this will pad it with '*'s to make it 10 chars long      
+        $kozak =  "*" x ( $k_start * -1) . substr($sequence_string ,  0  , 10 + $k_start ) ;    
+    }
+    
+    my $rev_kozak = $kozak ;
+    $rev_kozak =~ tr{acgtrymkswhbvdnACGTRYMKSWHBVDN}
+                    {tgcayrkmswdvbhnTGCAYRKMSWDVBHN}; 
+    $kozak  =~ s/t/u/g  ;
+    $rev_kozak =~ s/t/u/g  ;
+    
+    
+    $kozak_window->resizable( 1 , 1)  ;  
+    $kozak_txt->delete( '1.0' , 'end')  ;
+    $kozak_window->resizable(0 , 0)  ;
+        
+    # higlight parts of sequence that match 
+    # green for matches codons
+    $kozak_txt->tagConfigure('match',
+            -background => '#AAFF66',
+            );
+                
+    ## for some reason (bug?) tk would not display tags added to the second line when using the index system - hence two loops rather than one
+    my @template_kozak = ('(a|g)', 'c', 'c', 'a', 'c' , 'c' , 'a' , 'u' , 'g' , 'g') ;
+    
+    for( my $i = 0 ;  $i <= ( length($kozak) - 1) ; $i++ ){
+        my $pos_char = substr( $kozak , $i , 1) ;
+        my $template = $template_kozak[$i] ;       
+        if ($pos_char  =~ /$template/ && $strand == 1){    
+            $kozak_txt->insert('end' , "$pos_char" , 'match');
+        }else{
+            $kozak_txt->insert('end' , "$pos_char" );
+        } 
+    }
+    
+    for (my $i = 0 ;  $i <= ( length($rev_kozak) - 1) ; $i++ ){
+        my $template = $template_kozak[9 - $i] ;
+        my $neg_char = substr( $rev_kozak ,  $i   , 1) ;    
+        if ($neg_char  =~ /$template/  && $strand == -1){   
+            $kozak_txt->insert('end' , "$neg_char" , "match");
+        }else{
+            $kozak_txt->insert('end' , "$neg_char");
+        }
+    }
+            
+    $kozak_window->deiconify;
+    $kozak_window->raise ; 
+              
+}
+
 sub trim_cds_coord_to_first_stop {
     my( $self ) = @_;
 
@@ -1126,6 +1305,7 @@ sub translator {
 }
 
 sub add_locus_rename_widget {
+
     my( $self, $widget ) = @_;
     
     # Get the Locus name
@@ -1140,13 +1320,13 @@ sub add_locus_rename_widget {
         -label      => 'Locus: ',
         -width      => 18,
         -variable   => \$locus_name,
-        -text       => $locus_name,
+
         -exportselection    => 1,
         #-relief             => 'flat',
         -background         => 'white',
         -selectbackground   => 'gold',
         -font               => [$self->font, $self->font_size, 'normal'],
-        )->pack;
+        )->pack(-side => 'left');
     #$be->bind('<Leave>', sub{ print STDERR "Variable now: ", ${$self->{'_locus_name_variable'}}, "\n"; });
     return $be;
 }
@@ -1163,6 +1343,162 @@ sub get_Locus_from_tk {
     return $self->xace_seq_chooser->get_Locus($name);
 }
 
+sub update_locus_display{
+    my ($self ) = @_ ;
+        
+    my @window_list = $self->xace_seq_chooser->get_all_locus_windows;
+    foreach my $window (@window_list){
+
+        if ( $window->is_current){
+            # this is going to happen in every exon canvas that is open , make sure that the current window is supposed to get updated!
+            # only update the display if the current display == locus_window selected name                                   
+            my $old_name = $window->get_locus_old_name();
+            my $new_name = $window->get_locus_new_name();
+            
+            if ( (${$self->{'_locus_name_variable'}}) eq  $old_name) {
+                ${$self->{'_locus_name_variable'}}  = $new_name ;    
+                
+                unless ($window->state eq 'rename'){ 
+                    $self->save_if_changed;
+                }
+            }
+        } 
+    }
+}
+
+sub show_new_locus_name{
+    my ($self) = @_ ;
+    my $name = $self->SubSeq->Locus()->name;
+    ${$self->{'_locus_name_variable'}} = $name ;
+}
+
+
+sub locus_name_entry{
+    my ($self , $entry) = @_ ;
+    if ($entry){
+        $self->{'_locus_entry'} = $entry ;
+    } 
+    return $self->{'_locus_entry'} ;
+}
+
+
+sub get_locus_name_from_current_subseq{
+    my ($self) = @_ ;
+    # Get the Locus name
+    my( $locus_name );
+    eval{ $locus_name = $self->SubSeq->Locus->name };
+    $locus_name ||= '';
+    
+    $self->{'locus_name_variable'} = \$locus_name  ;
+}
+
+## this is called from the split / merge / new / buttons - realting to the Locus 
+## it passes the appropriate action type to the method in XaceSeqChooser (which is wher all the loci are stored)
+sub modify_locus{
+    my ($self , $type_of_modification) = @_ ;
+        
+    my $xace_seq = $self->xace_seq_chooser;
+    
+    ## just testing this with the split state just now
+    $xace_seq->show_LocusWindow($self, $type_of_modification);    
+}
+
+## this should get called from the LocusWindow when updating it (via a generated event bound to the toplevel)
+## also called from self when swapping a locus or 
+sub update_locus{
+    my ($self , $new_locus) = @_ ;
+
+    if ($new_locus) {
+        my $old_locus = $self->SubSeq->Locus;
+                
+        $self->SubSeq->Locus($new_locus);
+        my $locus_name = $new_locus->name ;
+        $locus_name ||= '';
+        ${$self->{'_locus_name_variable'}} = $locus_name ;  # updates the entry display (looks a bit mad)
+        
+        #remove old locus if this is the only excon canvas using it
+        my $xace = $self->xace_seq_chooser; 
+        $xace->remove_Locus_if_not_in_use($old_locus->name);
+        my @list = $self->xace_seq_chooser->list_Locus_names ;
+        warn "@list" ;
+        
+        $self->update_combo_list;
+    }else{
+        $self->message('need to supply a new locus');
+    }
+}
+
+
+##sub edit_locus{
+##    my ($self , @names) = @_ ;
+##    
+##    ### popup new window with edit / new  buttons
+###    my $locus_window = $self->{'_locus_window'};
+##    my $top = $self->{'_locus_window'};
+##    unless ($top) {
+##        my $master = $self->canvas->toplevel;
+##        $top = $master->Toplevel;
+##        $top->transient($master);
+##        $top->title('Edit locus') ;
+##        $self->{'_locus_window'} = $top;
+##        my $font = $self->font;
+##        my $size = $self->font_size;
+##        
+##        $top->protocol('WM_DELETE_WINDOW', sub{$top->withdraw});
+##        
+###        $top->Label(-text => 'Locus :')->pack(-side => 'left') ;        
+###        $top->Entry(-text => 'current_name')->pack(-side => 'left') ;
+##        my $locus_name ;
+##        eval{ $locus_name = $self->SubSeq->Locus->name };
+##        $locus_name ||= '';
+##        $self->{'_locus_name_variable'} = \$locus_name;
+##        my $combo_box = $top->ComboBox( -listheight => 10,
+##                                        -label      => 'Locus: ',
+##                                        -width      => 18,
+##                                        -variable   => \$locus_name,
+##                                        -text       => $locus_name,
+##                                        -exportselection    => 1,
+##                                        -background         => 'white',
+##                                        -selectbackground   => 'gold',
+##                                        -font               => [$self->font, $self->font_size, 'normal'],
+##                                        )->pack(-side => 'left');
+##        
+##        my $edit_locus = sub{$self->editing_locus};        
+##        $top->Button(   -text => 'Edit', 
+##                        -command => $edit_locus )->pack(-side => 'left');
+##
+##        my $new_locus = sub{$self->new_locus};
+##        $top->Button(   -text => 'New',
+##                        -command => $new_locus)->pack(-side => 'left');
+##    
+##        
+##        
+##        $combo_box->configure(
+##                -choices   => [@names],
+##                #-listwidth => scalar @names,
+##                );
+##        
+##        foreach (@names){
+##            print $_ ."\n";
+##        }
+##    }
+##    
+##    $top->deiconify;
+##    $top->raise;
+##}
+
+sub new_locus{
+    my ($self ) = @_ ;
+    $self->{'_new_locus'} = 1 ;    
+}
+
+sub editing_locus{ 
+    my ($self) = @_ ;
+    $self->{'_edit_locus'} = 1 ;   
+    
+}
+
+
 sub add_subseq_rename_widget {
     my( $self, $widget ) = @_;
     
@@ -1174,6 +1510,8 @@ sub add_subseq_rename_widget {
         $self->make_labelled_entry_widget($frame, 'Name', $self->SubSeq->name, 22)
         );
 }
+
+
 
 sub make_labelled_entry_widget {
     my( $self, $widget, $name, $value, $size, @pack ) = @_;
@@ -1953,6 +2291,7 @@ sub save_if_changed {
     my( $self ) = @_;
     
     eval {
+        $self->check_locus_window ;
         if (my $sub = $self->get_SubSeq_if_changed) {
             $sub->validate;
             $self->xace_save($sub);
@@ -1963,6 +2302,57 @@ sub save_if_changed {
     if ($@) {
         $self->exception_message($@, 'Error saving to acedb');
     }
+}
+
+#used to see if the locus has changed in the display
+sub check_locus_window{
+    my ($self ) = @_ ;
+    
+    my @list = $self->xace_seq_chooser->list_Locus_names ;
+    my $locus = $self->SubSeq->Locus;
+    my $new_name = ${$self->{'_locus_name_variable'}} || return;
+    my $old_name;
+    if ($locus){
+        $old_name = $locus->name ;  
+    }
+    else{
+        $old_name = '' ;
+    }
+    warn "names old , $old_name, new $new_name" ; 
+    if ($old_name ne $new_name){
+        
+        if  ( grep {$new_name eq $_ }  @list){
+
+            # the name must have been selected from the list - swap operation           
+            my $new_locus_name = ${$self->{'_locus_name_variable'}}; 
+                
+            my $new_locus = $self->xace_seq_chooser->get_Locus($new_locus_name);
+            # update exon canvas display.....
+            $self->update_locus($new_locus); 
+            # update ace display
+            my $ace = $self->SubSeq->ace_string;  
+            $self->xace_seq_chooser->update_ace_display($ace);  
+        } 
+        else{
+            # new or rename
+            my $answer = $self->canvas->toplevel->Dialog(
+                -title => 'Please Reply', 
+                -text => 'Rename current locus or create a new locus?', 
+                -default_button => 'rename', -buttons => ['new','rename','cancel'], 
+                -bitmap => 'question' )->Show(  );    
+            if ($answer eq 'cancel'){
+                return ;
+            }
+            elsif($answer eq 'rename'){
+                warn "renaming locus" ;
+                $self->xace_seq_chooser->rename_loci($old_name , $new_name);
+            }
+            elsif($answer eq 'new'){
+                warn 'creating new locus'; 
+#                this should work from the old system - ie taking the values from tk and creating a new locus if it changed.                        
+            }
+        } 
+    }  
 }
 
 sub xace_save {
