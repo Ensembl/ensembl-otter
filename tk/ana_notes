@@ -4,7 +4,7 @@
 
 use strict;
 use GenomeCanvas;
-use Hum::Submission 'prepare_statement';
+use Hum::Submission qw{ prepare_statement submission_user user_has_access };
 use Hum::AnaStatus qw{ annotator_full_name };
 use Hum::AnaStatus::Sequence;
 use Hum::AnaStatus::SequenceSet;
@@ -13,31 +13,51 @@ use GenomeCanvas::Band::SeqChooser;
 use Carp;
 use Getopt::Long 'GetOptions';
 
+my $user;
 {
     my $list_sets = 0;
     GetOptions(
         'help!'     => \&useage,
         'list!'     => \$list_sets,
+	'user:s'    => \$user,
         ) or useage();
     
+    # user is login unless overridden by 'user'
+    # (this would be place to put password check)
+    $user=submission_user($user);
+
+    # create subroutine that call be called from anywhere to return
+    # user
+    {
+	sub main_user {
+	    return $user;
+	}
+    }
+
+    # list based on R/RW permissions of user
     if ($list_sets) {
-        list_sets();
+        list_sets($user);
         exit;
     }
 
     my $set_name = shift(@ARGV) || useage();
     die "Unknown elements on command line: '@ARGV'\n" if @ARGV;
     
+    # annotator is set to user, if has RW access, else set to '' for R access
     my( $annotator );
-    my $user = (getpwuid($<))[0];
-    if (is_valid_annotator($user)) {
+    if (is_valid_annotator($user,$set_name)) {
         $annotator = $user;
     }
+
+    # debug
+    ##print "a: |$annotator|\n";
     
     # Set group writable
     umask(002);
     
     my $set_id = set_name_to_set_id($set_name);
+
+    ##exit 0;
     
     my $mw = CanvasWindow::MainWindow->new;
     $mw->title($set_name);
@@ -270,6 +290,7 @@ sub get_history_for_ana_seq_id {
 }
 
 sub list_sets {
+    my ( $user ) = @_;
     my $sth = prepare_statement(q{
         SELECT set_name
           , set_description
@@ -286,6 +307,10 @@ sub list_sets {
     my @head = ('Set name', 'Description');
     my $max_l = length($head[0]);
     foreach my $set_name (map $_->[0], @$rows) {
+
+	# check if user has access to this set
+	next if (user_has_access($user,$set_name) eq '');
+
         my $l = length($set_name);
         if ($l > $max_l) {
             $max_l = $l
@@ -297,6 +322,10 @@ sub list_sets {
     printf($pattern, @head);
     print "\n";
     foreach my $r (@$rows) {
+
+	# check if user has access to this set
+	next if (user_has_access($user,$r->[0]) eq '');
+
         printf($pattern, @$r);
     }
     print "\n";
@@ -361,7 +390,7 @@ sub default_cursor {
         }
         elsif (defined $pid) {
             #exec('lace', '-path', $lace_dir, '-view', '-noens', @seq_name_list);
-            exec('lace', '-path', $lace_dir, @seq_name_list);
+            exec('lace', '-path', $lace_dir, '-user', $user, @seq_name_list);
         }
         else {
             die "Error: Can't fork : $!";
@@ -558,21 +587,21 @@ sub make_button {
     return $button;
 }
 
+# return 1 if annotator has RW access; 0 if not;
 sub is_valid_annotator {
-    my( $annotator ) = @_;
+    my( $annotator, $set_name ) = @_;
 
-    my $sth = prepare_statement(q{
-        SELECT annotator_uname
-        FROM ana_person
-        });
-    $sth->execute;
+    my $access_type = user_has_access($annotator, $set_name);
 
-    while (my( $db_ann ) = $sth->fetchrow) {
-        return 1 if $db_ann eq $annotator;
+    # if access is restricted and this annotator has no access then report as if no such set
+    if($access_type eq ''){
+	die "No such set '$set_name'\n";
+    }elsif($access_type eq 'RW'){
+	return 1;
+    }else{
+	return 0;
     }
-    return 0;
 }
-
 
 sub toggle_current {
     my( $gc ) = @_;
