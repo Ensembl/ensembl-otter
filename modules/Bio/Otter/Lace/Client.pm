@@ -271,9 +271,9 @@ sub get_all_DataSets {
         my ($content, $response);
         for(my $i = 0 ; $i <= 3 ; $i++){
             if($i > 0){
-                my $pass = $self->password_prompt();
-                #warn "Attempting to connect using password '" . '*' x length($pass) . "'\n";
-                $self->password($pass);
+                $self->password_prompt()->($self);
+                my $pass = $self->password || '';
+                warn "Attempting to connect using password '" . '*' x length($pass) . "'\n";
             }
             my $request = $self->new_http_request('GET');
             $request->uri("$root/get_datasets?details=true");
@@ -396,11 +396,11 @@ sub password_prompt{
         $callback = sub {
             my $self = shift;
             my $user = $self->username();
-            return Hum::EnsCmdLineDB::prompt_for_password("Please enter your password ($user): ");
+            $self->password(Hum::EnsCmdLineDB::prompt_for_password("Please enter your password ($user): "));
         };
         $self->{'_password_prompt_callback'} = $callback;
     }
-    return $callback->($self);
+    return $callback;
 }
 
 sub dasClient{
