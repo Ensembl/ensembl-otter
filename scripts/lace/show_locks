@@ -49,6 +49,7 @@ $| = 1;
           , l.hostname
           , au.author_name
           , c.name
+          , c.embl_acc
           , a.type
         FROM author au
           , clone_lock l
@@ -83,11 +84,11 @@ $| = 1;
     
     my( %lock_id );
     while (my @row = $sth->fetchrow) {
-        my ($lid, $host, $author, $clone, $type) = @row;
+        my ($lid, $host, $author, $clone, $acc, $type) = @row;
         if (my $info = $lock_id{$lid}) {
             push(@$info, $type);
         } else {
-            $lock_id{$lid} = [$host, $author, $clone, $type];
+            $lock_id{$lid} = [$host, $author, $clone, $acc, $type];
         }
     }
     
@@ -97,10 +98,11 @@ $| = 1;
         my $host   = shift @$info;
         my $author = shift @$info;
         my $clone  = shift @$info;
-        my @type   = sort @$info;
+        my $acc    = shift @$info;
+        my @type   = sort  @$info;
         
-        printf  "  %6d  %12s  %-7s  %-12s  %s\n",
-            $lid, $host, $author, $clone, join(' ', @type);
+        printf  "  %6d  %12s  %-7s  %-12s  %-10s  %s\n",
+            $lid, $host, $author, $clone, $acc, join(' ', @type);
     }
     if ($do_delete and scalar keys %lock_id) {
         print STDERR "Delete all these locks? [y|N] ";
