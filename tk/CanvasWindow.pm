@@ -72,6 +72,7 @@ sub set_scroll_region {
     my $canvas = $self->canvas;
     my @bbox = $canvas->bbox('all');
     expand_bbox(\@bbox, 5);
+    warn "Setting scroll region to [@bbox]";
     $canvas->configure(
         -scrollregion => [@bbox],
         );
