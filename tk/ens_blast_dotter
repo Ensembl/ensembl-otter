@@ -24,9 +24,11 @@ my $font = ['Helvetica', 12, 'bold'];
 {
     my $chr_name = 'chr9';
     my $min_percent_id = 95;
+    my $logic_name = 'contig_vs_contig.exp';
     Hum::EnsCmdLineDB::do_getopt(
-        'chr=s'     => \$chr_name,
-        'percent=f' => \$min_percent_id,
+        'chr=s'         => \$chr_name,
+        'percent=f'     => \$min_percent_id,
+        'analysis=s'    => \$logic_name,
         );
     my $ensdb = Hum::EnsCmdLineDB::connect();
     
@@ -35,7 +37,6 @@ my $font = ['Helvetica', 12, 'bold'];
     my $vc = $ensdb->get_StaticGoldenPathAdaptor
         ->fetch_VirtualContig_by_chr_name($chr_name);
     
-    my $logic_name = 'contig_vs_contig';
     my ($ana) = $ensdb->get_AnalysisAdaptor
         ->fetch_by_logic_name($logic_name)
         or die "Can't get Analysis object for '$logic_name'";
