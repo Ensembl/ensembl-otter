@@ -8,7 +8,7 @@ use Bio::Otter::Lace::Defaults;
 
 {
     
-    Bio::Otter::Lace::Defaults::do_getopt();
+    Bio::Otter::Lace::Defaults::do_getopt() || die $Bio::Otter::Lace::Defaults::GETOPT_ERRSTR . "\n";
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
     my $mw = CanvasWindow::MainWindow->new('Choose DataSet');
     my $dc = CanvasWindow::DataSetChooser->new($mw);
