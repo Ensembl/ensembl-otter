@@ -609,7 +609,7 @@ sub message {
     my $y = $y1 + $pad + $pad;
     my $text_width = $message_width - ($pad * 2);
     
-    $self->message_at_x_y($x, $y, $text_width, @message);
+    return $self->message_at_x_y($x, $y, $text_width, @message);
 }
 
 sub message_at_x_y {
@@ -620,14 +620,14 @@ sub message_at_x_y {
     my $pad = 5;
 
     # Print the message
-    my $tag = 'message_id='. $self->next_message_id;
+    my $msg_id = 'message_id='. $self->next_message_id;
     my $canvas = $self->canvas;
     my $text = $canvas->createText(
         $x, $y,
         -anchor => 'nw',
         -text   => join("\n", @message),
         -width  => $text_width,
-        -tags   => [$tag],
+        -tags   => [$msg_id],
         );
     
     # Expand the bbox of the text
@@ -642,7 +642,7 @@ sub message_at_x_y {
         @bbox,
         -outline    => undef,
         -fill       => '#ffff66',
-        -tags       => [$tag],
+        -tags       => [$msg_id],
         );
     $canvas->lower($yellow_rec, $text);
     
@@ -651,18 +651,25 @@ sub message_at_x_y {
     my $grey_rec = $canvas->createRectangle(
         @bbox,
         -outline    => undef,
-        -fill       => '#999999',
-        -tags       => [$tag],
+        -fill       => '#666666',
+        -tags       => [$msg_id],
         );
     $canvas->lower($grey_rec, $yellow_rec);
+    $canvas->update;
+    
+    return $msg_id;
 }
 
 sub delete_message {
-    my( $self ) = @_;
+    my( $self, $msg_id ) = @_;
     
     my $canvas = $self->canvas;
-    my $obj = $canvas->find('withtag', 'current');
-    my ($msg_id) = grep /^message_id=/, $canvas->gettags($obj);
+    unless ($msg_id) {
+        my $obj = $canvas->find('withtag', 'current');
+        if ($obj) {
+            ($msg_id) = grep /^message_id=/, $canvas->gettags($obj);
+        }
+    }
     if ($msg_id) {
         $canvas->delete($msg_id);
         return 1;

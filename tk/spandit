@@ -40,7 +40,7 @@ use Getopt::Long 'GetOptions';
     my $mw = CanvasWindow::MainWindow->new($title);
     my $xc = XaceSeqChooser->new($mw);
     $xc->ace_handle($ace);
-    $xc->sequence_list(@seq_list);
+    $xc->clone_list(@seq_list);
     $xc->draw_clone_list;
     $xc->fix_window_min_max_sizes;
     
