@@ -56,21 +56,21 @@ sub initialize {
     
     ### Should not be hard coded in module
     $self->set_known_GeneMethods(
-        # Method name                Editable?  Coding?
+        # Method name                Editable?  Coding?  sub-category of?
         
         # New set of methods for Otter
-        Coding                   => [1,         1],
-        Transcript               => [1,         0],
-        Non_coding               => [1,         0],
-        Ambiguous_ORF            => [1,         0],
-        Immature                 => [1,         0],
-        Antisense                => [1,         0],
-        IG_segment               => [1,         1],
-        Putative                 => [1,         0],
-        Pseudogene               => [1,         0],
-        Processed_pseudogene     => [1,         0],
-        Unprocessed_pseudogene   => [1,         0],
-        Predicted                => [1,         0],
+        Coding                   => [1,         1,          0],
+        Transcript               => [1,         0,          0],
+        Non_coding               => [1,         0,          1],
+        Ambiguous_ORF            => [1,         0,          1],
+        Immature                 => [1,         0,          1],
+        Antisense                => [1,         0,          1],
+        IG_segment               => [1,         1,          0],
+        Putative                 => [1,         0,          0],
+        Pseudogene               => [1,         0,          0],
+        Processed_pseudogene     => [1,         0,          1],
+        Unprocessed_pseudogene   => [1,         0,          1],
+        Predicted                => [1,         0,          0],
         
         # Old methods
         #supported                => [1,         1], 
@@ -147,10 +147,11 @@ sub set_known_GeneMethods {
     
     for (my $i = 0; $i < @methods_mutable; $i+= 2) {
         my ($name, $flags) = @methods_mutable[$i, $i+1];
-        my ($is_mutable, $is_coding) = @$flags;
+        my ($is_mutable, $is_coding , $has_parent) = @$flags;
         my $meth = $self->fetch_GeneMethod($name);
         $meth->is_mutable($is_mutable);
         $meth->is_coding($is_coding);
+        $meth->has_parent($has_parent);
         $self->add_GeneMethod($meth);
     }
 }
@@ -608,7 +609,8 @@ sub populate_polyA_menu{
     my @clone_list = $self->clone_list;
     
     foreach my  $clone_name (@clone_list) {
-        #warn "should be adding $clone_name to polyA menu";
+
+        warn "adding $clone_name to polyA menu";
         $menu->add( 'command' ,
                     -label => $clone_name,    
                     -command => sub { $self->launch_polyA($clone_name) },
