@@ -259,7 +259,7 @@ int doFuncInp(char *fromName, char *toName, char *baseSrcName,
     chmod(toName,st.st_mode);
 
     
-    if (toNameLen > archExtLen) {
+    if (archExtLen && toNameLen > archExtLen) {
 
       //printf("toNameLen = %d archExtLen = %d toName bit = %s\n",
       //       toNameLen,archExtLen,&(toName[toNameLen-archExtLen])); 
