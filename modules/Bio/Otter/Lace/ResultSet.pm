@@ -326,7 +326,8 @@ sub get_context_and_intron_clones{
 
         my ($first_idx, $last_idx, $full_ss_size, @prefix_slice, @postfix_slice);
 
-        my $full_ss      = $ds->get_SequenceSet_by_name($ss_assembly);
+        # must do this to stop caching
+        my $full_ss      = $self->uncached_SequenceSet_by_name($ss_assembly);
         my $full_cs_list = $ds->fetch_all_CloneSequences_for_SequenceSet($full_ss);
         my $first        = $results_list->[0];
         my $last         = $results_list->[$#{$results_list}];
