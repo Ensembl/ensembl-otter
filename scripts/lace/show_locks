@@ -1,0 +1,116 @@
+#!/usr/local/bin/perl -w
+
+### show_locks
+
+use strict;
+use Getopt::Long 'GetOptions';
+use Bio::Otter::Lace::Defaults;
+use Bio::Otter::Lace::PipelineDB;
+
+$| = 1;
+
+{
+    
+    my $usage     = sub { exec('perldoc', $0) };
+    my $dataset_name = undef;
+    my $author    = undef;
+    my $assembly  = undef;
+    my $hostname  = undef;
+    my $do_delete = 0;
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'       => $usage,
+        'dataset=s'     => \$dataset_name,
+        'annotator=s'   => \$author,
+        'set=s'         => \$assembly,
+        'machine=s'     => \$hostname,
+        'delete!'       => \$do_delete,
+        ) or $usage->();
+    $usage->() unless $dataset_name;
+
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    my $otter_db = $ds->make_EnsEMBL_DBAdaptor;
+
+    my $sql = q{
+        SELECT l.clone_lock_id
+          , l.hostname
+          , au.author_name
+          , c.name
+          , a.type
+        FROM author au
+          , clone_lock l
+          , clone c
+          , contig g
+          , assembly a
+        WHERE au.author_id = l.author_id
+          AND l.clone_id = c.clone_id
+          AND c.clone_id = g.clone_id
+          AND g.contig_id = a.contig_id
+        };
+    my( @param );
+    if ($author) {
+        $sql .= ' AND au.author_name = ? ';
+        push(@param, $author);
+    }
+    if ($assembly) {
+        $sql .= ' AND a.type = ? ';
+        push(@param, $assembly);
+    }
+    if ($hostname) {
+        $sql .= ' AND l.hostname = ? ';
+        push(@param, $hostname);
+    }
+    my $sth = $otter_db->prepare($sql);
+    $sth->execute(@param);
+    
+    my( %lock_id );
+    while (my @row = $sth->fetchrow) {
+        my ($lid, $host, $author, $clone, $type) = @row;
+        if (my $info = $lock_id{$lid}) {
+            push(@$info, $type);
+        } else {
+            $lock_id{$lid} = [$host, $author, $clone, $type];
+        }
+    }
+    
+    foreach my $lid (sort {$a <=> $b} keys %lock_id) {
+        my $info = $lock_id{$lid};
+        
+        my $host   = shift @$info;
+        my $author = shift @$info;
+        my $clone  = shift @$info;
+        my @type   = sort @$info;
+        
+        printf  "  %6d  %12s  %-7s  %-12s  %s\n",
+            $lid, $host, $author, $clone, join(' ', @type);
+    }
+    if ($do_delete) {
+        print "Delete all these locks? [y|N]\n";
+        my $ans = <STDIN>;
+        if ($ans =~ /^y/i) {
+            my $del_sth = $otter_db->prepare(q{
+                DELETE FROM clone_lock
+                WHERE clone_lock_id = ?
+                });
+            foreach my $lid (sort {$a <=> $b} keys %lock_id) {
+                $del_sth->execute($lid);
+            }
+        }
+    }
+}
+
+
+
+
+__END__
+
+=head1 NAME - show_locks
+
+=head1 SYNOPSIS
+
+  show_locks -dataset <DATASET_NAME> [-delete] [-annotator <UNAME>] [-set <TYPE>] [-machine <HOSTNAME>]
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
