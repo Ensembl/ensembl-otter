@@ -17,7 +17,7 @@ sub toplevel {
 sub xace_seq_chooser{
     my ($self , $seq_chooser) = @_ ;
     if ($seq_chooser){
-        $self->{'_xace_seq_chooser'} = $seq_chooser ;
+        $self->{'_xace_seq_chooser'} = $seq_chooser;
     }
     return $self->{'_xace_seq_chooser'} ;
 }
@@ -30,91 +30,54 @@ sub slice_name {
     return $self->{'_slice_name'};
 }
 
-sub add_clone_sequence{
-    my ($self , $cs ) = @_ ;
+sub add_CloneSequence{
+    my ($self , $cs ) = @_;
+    warn "***************\n*Not sure this should be called!\n**************\n";
     push(@{$self->{'_cs_list'}},$cs);   
 }
 sub get_all_CloneSequences{
     my $self = shift;
-    if ($self->{'_cs_list'}){
-        return @{$self->{'_cs_list'}} ;
-    }
-    else {
-        return ();
-    }
-     
+    my $xaceSeqChooser = $self->xace_seq_chooser();
+    my $slice_name     = $self->slice_name();
+    return ($xaceSeqChooser->get_CloneSeq($slice_name));
+#    return $self->{'_cs_list'} ? @{$self->{'_cs_list'}} : (); 
 }
 
 ##-----------------------------------------
 # these arrays store the original values of 
 # the polyA sites / signals from the clone_seq
 # ie before they have been edited
-sub site_array_ref_stored{
-    my ($self, $array_ref) = @_;
-    
-    if ( $array_ref ){
-        $self->{'_site_array'} = $array_ref
+sub stored_array_refs{
+    my ($self, $type, $array_ref) = @_;
+    return [] unless $type;
+    if (ref($array_ref) eq 'ARRAY'){
+	$self->{'_stored_arrays'}->{$type} = $array_ref;
     }
-    return $self->{'_site_array'} ;
+    return $self->{'_stored_arrays'}->{$type};
 }
-
-sub signal_array_ref_stored{
-    my ($self, $array_ref) = @_;
-    
-    if ( $array_ref ){
-        $self->{'_signal_array'} = $array_ref;
-    }
-    return $self->{'_signal_array'} ;    
-}
-
-
 #-----------------------------------
 # entry box variable refs are stored (and retrieved from these routines)
-sub add_site_entry_pair{
-    my ($self , $entry_pair) = @_; 
-    push(@{$self->{'_site_entries'}},$entry_pair) ;   
-}
-sub get_all_site_entries{
-    my $self = shift;
-    if ($self->{'_site_entries'}){
-        return @{$self->{'_site_entries'}} ;
+sub entry_pairs{
+    my ($self, $type, $entry_pair) = @_;
+    return () unless $type;
+    if (ref($entry_pair) eq 'ARRAY'){
+	push(@{$self->{'_entry_pairs'}->{$type}}, $entry_pair);
     }
-    else {
-        return ();
-    } 
-}
-
-sub add_signal_entry_pair{
-    my ($self , $entry_pair) = @_; 
-    push(@{$self->{'_signal_entries'}},$entry_pair) ;   
-}
-sub get_all_signal_entries{
-    my $self = shift;
-    if ($self->{'_signal_entries'}){
-        return @{$self->{'_signal_entries'}} ;
-    }
-    else {
-        return ();
-    } 
+    return @{$self->{'_entry_pairs'}->{$type}};
 }
 
 ##-----------------------------------------
 ## store the frames used for each of the arrays of entry widgets
-sub signal_frame{
-    my ($self , $signal_frame) = @_ ;
-    if ($signal_frame){
-        $self->{'_signal_frame'} = $signal_frame ;
+sub sub_frame{
+    my ($self, $type, $frame) = @_;
+    return unless $type;
+    if($frame){
+	$frame->bind('<Destroy>', sub{ $self = undef; } );
+	$self->{'_sub_frame'}->{$type} = $frame;
     }
-    return $self->{'_signal_frame'};
+    return $self->{'_sub_frame'}->{$type};
 }
 
-sub site_frame{
-    my ($self , $site_frame ) = @_ ;
-    if ($site_frame){
-        $self->{'_site_frame'} = $site_frame;
-    }
-    return $self->{'_site_frame'};
-}
 #------------------------------------------
 
 #takes the clone_sequence(s) and generates the internal arrays based on them 
@@ -159,8 +122,8 @@ sub initialize{
             my $end = '' ;
             my @signal_array = ( [ \$start, \$end ]) ;
         }        
-        $self->site_array_ref_stored(\@site_array);
-        $self->signal_array_ref_stored(\@signal_array);
+        $self->stored_array_refs('site', \@site_array);
+        $self->stored_array_refs('signal', \@signal_array);
     }      
 }
 
@@ -184,6 +147,7 @@ sub draw{
     $tl->bind('<Control-W>',          $close_window);
     $tl->protocol('WM_DELETE_WINDOW', $close_window);
     
+    my $hide_window = sub { $self->hide_window  };
     
     my $canvas = $self->canvas();
     $canvas->configure(-background => 'light grey');
@@ -194,7 +158,7 @@ sub draw{
     my $sig_label = $top_frame->Label(-text => 'PolyA Signal')->pack(-side => 'left' , padx => 5) ;
     my $site_label = $top_frame->Label(-text => 'PolyA Site' )->pack(-side =>'right'  , padx => 5);
     
-    my $add_signal = sub {$self->add_entry_widget('signal')};
+    my $add_signal = sub { $self->add_entry_widget('signal') };
     $top_frame->Button( -text => 'Add Signal',
                         -underline => 6,
                         -relief => 'groove',
@@ -203,7 +167,7 @@ sub draw{
     $tl->bind('<Control-G>', $add_signal) ;
     $tl->bind('<Control-g>', $add_signal) ;
     
-    my $add_site = sub {$self->add_entry_widget('site')};
+    my $add_site = sub { $self->add_entry_widget('site') };
     $top_frame->Button( -text => 'Add Site',
                         -underline => 6,
                         -relief => 'groove',
@@ -225,9 +189,9 @@ sub draw{
     $Button_frame->Button(-text => 'Close' ,
                           -relief => 'groove',
                           -borderwidth => 2 ,  
-                          -command => $close_window  )->pack( -side => 'right' , padx=>45 );
-    $tl->bind('<Control-x>' , $close_window ) ;
-    $tl->bind('<Control-X>' , $close_window ) ;
+                          -command => $hide_window  )->pack( -side => 'right' , padx=>45 );
+    $tl->bind('<Control-x>' , $hide_window ) ;
+    $tl->bind('<Control-X>' , $hide_window ) ;
     
     $tl->bind('<Destroy>', sub{
         $self = undef;
@@ -235,8 +199,9 @@ sub draw{
     
     # get the arrays (or produce arrays with blank entries)
     ##my ($empty_1 , $empty_2 , $empty_3 , $empty_4) = ('' , '' , '', '' );
-    my @site  = @{$self->site_array_ref_stored}  ;
-    my @signal = @{$self->signal_array_ref_stored} ; 
+    ##my ($empty_1 , $empty_2 , $empty_3 , $empty_4) = ('') x 4;
+    my @site  = @{$self->stored_array_refs('site')};
+    my @signal = @{$self->stored_array_refs('signal')};
     
     if (scalar(@site )< 1){@site = $self->create_empty_array} ; 
     if (scalar( @signal) < 1){@signal = $self->create_empty_array} ; 
@@ -247,8 +212,8 @@ sub draw{
     my $site_frame = $canvas->Frame();
    
     
-    $self->signal_frame($signal_frame) ;
-    $self->site_frame($site_frame);
+    $self->sub_frame('signal', $signal_frame);
+    $self->sub_frame('site',   $site_frame);
     
     $self->populate_subframe('signal', @signal);
     $self->populate_subframe('site', @site) ;
@@ -277,14 +242,13 @@ sub create_empty_array{
 ## adds a set of Entry widgets and corresponding  radionbuttons to the frame for each variable in @array
 sub populate_subframe{
     my ($self , $frame_type , @array) = @_ ;
-    
-    my $frame_subroutine = $frame_type .'_frame' ;
-    my $frame = $self->$frame_subroutine(); 
+
+    my $frame = $self->sub_frame($frame_type); 
 
     foreach my $entry_pair (@array){
         my $entry_frame = $frame->Frame->pack(-side => 'top',
-                                            -fill => 'none'
-                                            );
+					      -fill => 'none'
+					      );
         my $coord_1 = ${$entry_pair->[0]};
         my $coord_2 = ${$entry_pair->[1]};
         my $coord_1_ref = \$coord_1;
@@ -292,73 +256,76 @@ sub populate_subframe{
 
 
         my $strand;
-        my $update_cmd = sub {$self->update_entry($coord_1_ref , $coord_2_ref , \$strand , $frame_type )};
+        my $update_cmd = sub { update_entry($coord_1_ref , $coord_2_ref , \$strand , $frame_type ); };
         
 
             
 
 
         my $start_entry = $entry_frame->Entry(
-                                            -textvariable => $coord_1_ref ,
-                                            -width => 10 ,
-                                            -relief => 'sunken' )->pack(-side => 'left' );
-        
+					      -textvariable => $coord_1_ref ,
+					      -width => 10 ,
+					      -relief => 'sunken' )->pack(-side => 'left' );
+
         my $end_entry = $entry_frame->Entry(
                                             -textvariable => $coord_2_ref ,
-                                            -width => 10 ,
-                                            -relief => 'sunken' )->pack(-side => 'left' );                            
+					    -width => 10 ,
+					    -relief => 'sunken' )->pack(-side => 'left' ); 
 
 
-        
-        $start_entry->bind('<Return>',  sub {
-            $self->update_entry($coord_1_ref , $coord_2_ref , \$strand , $frame_type, 'start' )
-            });
-        $end_entry->bind('<Return>',  sub {
-            $self->update_entry($coord_1_ref , $coord_2_ref , \$strand , $frame_type, 'end' )
-            });
-        $frame->bind('<Destroy>', sub{ $self = undef });
+
+       
+	$start_entry->bind('<Return>',  sub {
+	    update_entry($coord_1_ref , $coord_2_ref , \$strand , $frame_type, 'start' )
+	    });
+	$end_entry->bind('<Return>',  sub {
+	    update_entry($coord_1_ref , $coord_2_ref , \$strand , $frame_type, 'end' )
+	    });
+
+        $entry_frame->bind('<Destroy>', sub{ $self = undef; } );
 
 
 
 
             
-        my $pos_button = $entry_frame->Radiobutton(  -command => $update_cmd, 
-                                                -text => '+' ,
-                                                -variable => \$strand ,
-                                                -value => '+',
-                                                -borderwidth => 2 ,
-                                                -relief => 'groove')->pack(-side=> 'left') ;
-        my $neg_button = $entry_frame->Radiobutton(  -command => $update_cmd,
-                                                -text => '-' ,
-                                                -variable => \$strand , 
-                                                -value =>'-',
-                                                -borderwidth => 2 ,
-                                                -relief => 'groove')->pack(-side=> 'left' ) ;
-       
+	my $pos_button = $entry_frame->Radiobutton(
+						   -command => $update_cmd, 
+						   -text => '+' ,
+						   -variable => \$strand ,
+						   -value => '+',
+						   -borderwidth => 2 ,
+						   -relief => 'groove')->pack(-side=> 'left') ;
+	my $neg_button = $entry_frame->Radiobutton(
+						   -command => $update_cmd,
+						   -text => '-' ,
+						   -variable => \$strand , 
+						   -value =>'-',
+						   -borderwidth => 2 ,
+						   -relief => 'groove')->pack(-side=> 'left' ) ;
+      
 
 
 
 
 
 
-        my $delete = sub{ ${$coord_1_ref} = '' ; ${$coord_2_ref} = '' ;  } ; 
-        my $clear_buttton = $entry_frame->Button(   -text => 'Delete',
-                                                    -relief=> 'flat' ,
-                                                    -command => $delete ,
-                                                    -borderwidth => 1,
-                                                    )->pack(-side =>'left');
+	my $delete = sub{ ${$coord_1_ref} = '' ; ${$coord_2_ref} = '' ;  } ; 
+	my $clear_buttton = $entry_frame->Button(
+						 -text => 'Delete',
+						 -relief=> 'flat' ,
+						 -command => $delete ,
+						 -borderwidth => 1,
+						 )->pack(-side =>'left');
         
         ## add entry to an array , so values can be retrieved later
-        my $subroutine = 'add_'.$frame_type.'_entry_pair' ;
-        #$self->$subroutine([ $start_entry , $end_entry ]);
-        $self->$subroutine([ $coord_1_ref , $coord_2_ref ]);
+        $self->entry_pairs($frame_type, [ $coord_1_ref , $coord_2_ref ]);
 
 
         ## automatically select the button based on the given coords - gives the positive strand as the default 
         # 0's in brackets, so we dont get warnings when $coord's are non numeric 
         if (($coord_1 || 0) > ($coord_2 || 0)){
             $neg_button->select;
-        } else {
+	} else {
             $pos_button->select;
         }
         $start_entry->focus();
@@ -371,68 +338,67 @@ sub populate_subframe{
 sub add_entry_widget{
     my  ($self, $type) = @_;
     
-    # create appropriate subroutine name based on type (signal or site box)
-    my $subroutine = $type . '_array_ref_stored' ;
-    my @array = @{$self->$subroutine()};
-    
     my $start = '' ;
     my $end = '' ;
     #add element to array then redraw canvas
-    my $entry_variable = [\$start , \$end ];
-    $self->populate_subframe($type , $entry_variable );
-    $self->fix_window_min_max_sizes  
+    my $entry_pair = [\$start , \$end ];
+    $self->populate_subframe($type , $entry_pair);
+    $self->fix_window_min_max_sizes;
     
 }
 
 
 ## when a + or - radio button is pressed, this will automatically update the corresponding entry, based on strand
-sub update_entry {
-    my ($self , $start , $end , $strand_ref , $type, $entry) = @_;
-    # Remebmer that $start AND $end are REFERENCES - not values (lots of $$ in this subroutine)
-    
-    my $length;
-    if ($type eq 'signal'){
-        $length  = 5;  
-    }else{
-        $length  = 1 ;
+{
+    sub update_entry {
+	# my ($self , $start , $end , $strand_ref , $type, $entry) = @_;
+	my ($start , $end , $strand_ref , $type, $entry) = @_;
+	# Remebmer that $start AND $end are REFERENCES - not values (lots of $$ in this subroutine)
+	
+	my $length;
+	if ($type eq 'signal'){
+	    $length  = 5;  
+	}else{
+	    $length  = 1 ;
+	}
+	
+	## adds length to a +ve strand and subtracts from a -ve strand
+	my $multiplier;
+	if ($$strand_ref eq '-'){
+	    $multiplier = -1 ;
+	}else{
+	    $multiplier = 1 ;
+	}
+	
+	if ($entry) {
+	    if ($entry eq 'start') {
+		$$end = '';
+	    }
+	    elsif ($entry eq 'end') {
+		$$start = '';
+	    }
+	}
+	
+	## we have both coords - check strand orientation is correct. Otherwise we have one coord and can calculate other
+	if (($$start =~ /\d/) && ($$end =~ /\d/)) {
+	    if ( (($$start > $$end) && ($$strand_ref eq '+')) || (($$start < $$end) && ($$strand_ref eq '-')) ) {
+		($$start , $$end ) = ( $$end , $$start ) ;
+	    }   
+	}
+	elsif ( $$start =~ /\d/) { 
+	    $$end = $$start + ($length * $multiplier) ; 
+	}elsif( $$end =~ /\d/){
+	    $$start = $$end - ($length * $multiplier) ; 
+	}else{
+	    warn "nothing to update\n";
+	}
     }
-    
-    ## adds length to a +ve strand and subtracts from a -ve strand
-    my $multiplier;
-    if ($$strand_ref eq '-'){
-        $multiplier = -1 ;
-    }else{
-        $multiplier = 1 ;
-    }
-    
-    if ($entry) {
-        if ($entry eq 'start') {
-            $$end = '';
-        }
-        elsif ($entry eq 'end') {
-            $$start = '';
-        }
-    }
-    
-    ## we have both coords - check strand orientation is correct. Otherwise we have one coord and can calculate other
-    if (($$start =~ /\d/) && ($$end =~ /\d/)) {
-        if ( (($$start > $$end) && ($$strand_ref eq '+')) || (($$start < $$end) && ($$strand_ref eq '-')) ) {
-            ($$start , $$end ) = ( $$end , $$start ) ;
-        }   
-    }
-    elsif ( $$start =~ /\d/) { 
-        $$end = $$start + ($length * $multiplier) ; 
-    }elsif( $$end =~ /\d/){
-        $$start = $$end - ($length * $multiplier) ; 
-    }else{
-#        warn "nothing to update";
-    }
-}
 
+}
 #asks user if he/she wants to save coords (only when unsaved)
-sub close_window{
-    my ($self ) = @_ ;
-    
+sub save_window{
+    my ($self) = @_ ;
+#    warn "close_window called\n";
     #checks to see if any (ie an ace file is created) and it is not invalid
     my ($status , $ace) = $self->create_ace_file;
     if ($ace){
@@ -447,14 +413,32 @@ sub close_window{
         if ($save_changes eq "Yes"){
             my $result = $self->save_details($status ,$ace );
             return 0 if $result eq 'Cancel';
-        }    
-    }    
-
-    $self->xace_seq_chooser->delete_polyA_window($self->slice_name);
-    # incase xace has managed to close itself without this
+        }
+    }
+}
+sub close_window{
+    my ($self) = @_;
+    $self->save_window();
+#    warn "close_window calling clean_Xace\n";
+    $self->clean_XaceSeqChooser();
+#    warn "incase xace has managed to close itself without this\n";
     $self->toplevel->destroy;
+#    warn "making self undef\n";
+    $self = undef;
 }
 
+sub hide_window{
+    my ($self) = @_;
+    $self->save_window();
+    $self->xace_seq_chooser->withdraw_PolyAWindow($self);
+}
+
+sub clean_XaceSeqChooser{
+    my $self = shift;
+    my @caller = caller();
+#    warn "@caller deleting ref to xace before this polyA gets destroyed\n";
+    $self->{'_xace_seq_chooser'} = undef;
+}
 
 sub save_details{
     my ($self ,  $status , $ace ) =  @_ ;  
@@ -515,11 +499,9 @@ sub create_ace_file{
     my $status = 'good' ;    
     foreach my $type ( 'signal' , 'site' ){
         #compare the original array coords with the current coords in the widgets 
-        my $subroutine = $type.'_array_ref_stored' ;
-        my @original_array =  @{$self->$subroutine} ;    
+        my @original_array =  @{$self->stored_array_refs($type)} ;    
         
-        $subroutine = 'get_all_'.$type.'_entries' ;
-        my @new_array = $self->$subroutine;
+        my @new_array = $self->entry_pairs($type);
     
         foreach my $old_coord_pair (@original_array) {
             my $old_start_ref = $old_coord_pair->[0] ;
@@ -620,12 +602,11 @@ sub validate_coords{
 sub _update_arrays{
     my ($self) = @_ ;
     
-    my @site_entries = $self->get_all_site_entries();
-    my @signal_entries = $self->get_all_signal_entries();
+    my @site_entries = $self->entry_pairs('site');
+    my @signal_entries = $self->entry_pairs('signal');
     
-    foreach my $type ( 'signal' , 'site' ) {
-        my $subroutine = 'get_all_'.$type.'_entries';
-        my @old_array = $self->$subroutine;
+    foreach my $type ( qw(signal site) ) {
+        my @old_array = $self->entry_pairs($type);
         
         my @new_array;
         
@@ -637,13 +618,13 @@ sub _update_arrays{
            
         }
         
-        $subroutine = $type.'_array_ref_stored';
-        $self->$subroutine(\@new_array)
+        $self->stored_array_refs($type, \@new_array);
     }
 }
 
 sub DESTROY {
-    warn "Destroying polyA window";
+    my ($self) = @_;
+    warn "Destroying PolyAWindow for ".$self->slice_name."\n";
 }
 
 1;
