@@ -126,7 +126,9 @@ sub new_AceDatabase {
     $db->home("${home}_$i");
     return $db;
 }
-
+sub ace_readonly_tag{
+    return Bio::Otter::Lace::AceDatabase::readonly_tag();
+}
 sub get_UserAgent {
     my( $self ) = @_;
     
