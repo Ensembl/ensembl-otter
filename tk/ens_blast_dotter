@@ -5,6 +5,7 @@
 use strict;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Hum::Submission 'sanger_name';
+use Hum::EnsCmdLineDB;
 use CanvasWindow;
 
 my   $sel_tag = 'selected';
@@ -21,16 +22,14 @@ my $font = ['Helvetica', 12, 'bold'];
 
 
 {
-    my $db_name = 'Chr9_heterochromatin';
-    my $ensdb = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
-        -HOST   => 'ecs1b',
-        -DBNAME => $db_name,
-        -USER   => 'ensro',
+    my $chr_name = 'chr9';
+    Hum::EnsCmdLineDB::do_getopt(
+        'chr=s'     => \$chr_name,
         );
-    $ensdb->static_golden_path_type('TPF-REGION');
+    my $ensdb = Hum::EnsCmdLineDB::connect();
     
     my $vc = $ensdb->get_StaticGoldenPathAdaptor
-        ->fetch_VirtualContig_by_chr_name('chr9');
+        ->fetch_VirtualContig_by_chr_name($chr_name);
     
     my $logic_name = 'contig_vs_contig';
     my ($ana) = $ensdb->get_AnalysisAdaptor
@@ -43,8 +42,8 @@ my $font = ['Helvetica', 12, 'bold'];
         #print STDERR ".";
         my $start     = $map_c->start;
         my $end       = $map_c->end;
-        my $raw_start = $map_c->rawcontig_start;
-        my $raw_end   = $map_c->rawcontig_end;
+        #my $raw_start = $map_c->rawcontig_start;
+        #my $raw_end   = $map_c->rawcontig_end;
         my $contig    = $map_c->contig;
         my $length = $contig->length;
         my $name = $contig->id;
@@ -54,7 +53,7 @@ my $font = ['Helvetica', 12, 'bold'];
         push(@map, [$start, $end, $name, $id]);
     }
 
-    my $mw = CanvasWindow::MainWindow->new($db_name);
+    my $mw = CanvasWindow::MainWindow->new("$chr_name contig vs contig");
     my $cw = CanvasWindow->new($mw);
     my $canvas = $cw->canvas;
     $canvas->CanvasBind(              '<Button-1>', \&handle_button_1);
@@ -64,7 +63,7 @@ my $font = ['Helvetica', 12, 'bold'];
     my $print_to_file = sub {
             $cw->page_width(591);
             $cw->page_height(841);
-            my @files = $cw->print_postscript($db_name);
+            my @files = $cw->print_postscript("${chr_name}_ctg_v_ctg");
             warn "Printed to files:\n",
                 map "  $_\n", @files;
           };
