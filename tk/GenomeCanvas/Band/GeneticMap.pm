@@ -59,7 +59,8 @@ sub render {
         my $label = $canvas->createText(
             $x, $y_offset + ($font_size / 4),
             -text => $name,
-            -font => ['helvetica', $font_size],
+            #-font => ['helvetica', $font_size],
+	    -font => ['helvetica', $font_size + 2],
             -anchor => 'n',
             -tags => [@tags, $name],
             );

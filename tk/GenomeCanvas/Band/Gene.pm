@@ -18,7 +18,7 @@ sub render {
 
 sub draw_titles {
     my( $band ) = @_;
-    
+
     my $canvas      = $band->canvas;
     my $vc          = $band->virtual_contig;
     my $type_color  = $band->gene_type_color_hash;
@@ -36,32 +36,76 @@ sub draw_titles {
         -anchor     => 'ne',
         -tags       => [@tags],
         );
+
+    my $xright = ($band->band_bbox)[2] + 2 * $font_size;
+    if (($vc->length / $band->residues_per_pixel) + $square_side > $xright) {
+	$xright = ($vc->length / $band->residues_per_pixel) + $square_side;
+    }
+    $canvas->createText(
+        $xright, $y_offset + $font_size,
+        -text       => $band->title || 'Genes',
+        -font       => ['helvetica', $font_size * 1.2],
+        -anchor     => 'nw',
+        -tags       => [@tags],
+        );
+
     $y_offset += $font_size * 2.2;
     
-    # Print key
-    my $x2 = 0 - (2 * $font_size);
-    my $x1 = $x2 - $square_side;
-    my $label_type = $band->label_type_list;
-    for (my $i = 0; $i < @$label_type; $i++) {
-        my($label, $type) = @{$label_type->[$i]};
-        my $y1 = $y_offset + (2.5 * $font_size * $i) + $font_size;
-        my $y2 = $y1 + $square_side;
-        $canvas->createRectangle(
+    if (not $band->dont_show_key) {
+	# Print key
+	
+	# left
+	my $x2 = 0 - (2 * $font_size);
+	my $x1 = $x2 - $square_side;
+	my $label_type = $band->label_type_list;
+	for (my $i = 0; $i < @$label_type; $i++) {
+	    my($label, $type) = @{$label_type->[$i]};
+	    my $y1 = $y_offset + (2.5 * $font_size * $i) + $font_size;
+	    my $y2 = $y1 + $square_side;
+	    $canvas->createRectangle(
             $x1, $y1, $x2, $y2,
-            -fill       => $type_color->{$type},
-            -outline    => undef,
-            -tags       => [@tags],
-            );
-        
-        my $tx = $x1 - $font_size;
-        my $ty = $y2 - ($square_side / 2);# - ($font_size / 3);
-        $canvas->createText(
-            $tx, $ty,
-            -text       => $label,
-            -font       => ['helvetica', $font_size],
-            -anchor     => 'e',
-            -tags       => [@tags],
-            );
+				     -fill       => $type_color->{$type},
+				     -outline    => undef,
+				     -tags       => [@tags],
+				     );
+	    
+	    my $tx = $x1 - $font_size;
+	    my $ty = $y2 - ($square_side / 2);# - ($font_size / 3);
+	    $canvas->createText(
+				$tx, $ty,
+				-text       => $label,
+				-font       => ['helvetica', $font_size],
+				-anchor     => 'e',
+				-tags       => [@tags],
+				);
+	}
+	
+	# right
+	$x1 = $xright;
+	$x2 = $x1 + $square_side;
+	
+	$label_type = $band->label_type_list;
+	for (my $i = 0; $i < @$label_type; $i++) {
+	    my($label, $type) = @{$label_type->[$i]};
+	    my $y1 = $y_offset + (2.5 * $font_size * $i) + $font_size;
+	    my $y2 = $y1 + $square_side;
+	    $canvas->createRectangle(
+				     $x1, $y1, $x2, $y2,
+				     -fill       => $type_color->{$type},
+				     -outline    => undef,
+				     -tags       => [@tags],
+				     );
+	    
+	    my $tx = $x2 + $font_size;
+	    my $ty = $y2 - ($square_side / 2);# - ($font_size / 3);
+	    $canvas->createText(
+				$tx, $ty,
+				-text       => $label,
+				-font       => ['helvetica', $font_size],
+				-anchor     => 'w',
+				-tags       => [@tags],
+				);
+	}
     }
 }
 
@@ -70,7 +114,7 @@ sub current_color {
     
     if ($color) {
         confess "Invalid color '$color'"
-            unless $color =~ /^#[a-fA-F0-9]{6}$/;
+	    unless $color =~ /^#[a-fA-F0-9]{6}$/;
         $band->{'_current_color'} = $color;
     }
     return $band->{'_current_color'} || '#000000';
@@ -112,6 +156,16 @@ sub gene_type_color_hash {
     return $band->{'_gene_type_color_hash'};
 }
 
+sub gene_arrow_width {
+    my ($band, $width ) = @_;
+
+    if ($width) {
+	$band->{'_gene_arrow_width'} = $width;
+
+    }
+    return $band->{'_gene_arrow_width'} || $band->font_size;
+}
+
 sub gene_type_color {
     my( $band, $type ) = @_;
     
@@ -136,11 +190,27 @@ sub get_gene_span_data {
     
     my( @span );
     if (my $span_file = $self->span_file) {
-        local *SPANS;
+	my $global_offset = $vc->_global_start - 1;
+
         open SPANS, $span_file or die "Can't read '$span_file' : $!";
+	# assume GFF
         while (<SPANS>) {
+	    /^\#/ and next;
             my @s = split /\t/, $_;
-            push(@span, [@s]);
+
+	    my ($type, $st, $en, $str) = ($s[1], 
+					  $s[3] - $global_offset, 
+					  $s[4] - $global_offset, 
+					  $s[6] eq "+" ? 1 : -1);
+	    next if $st < 1;
+	    next if $en > $vc->length;
+	    
+	    my ($id, $desc);
+	    if ($s[8] =~ /ID\=\"([^\"]+)\"/) {
+		$id = $1;
+	    }
+
+	    push(@span, [$id, $type, $st, $en, $str]) if defined $id;
         }
         close SPANS;
     }
@@ -161,6 +231,15 @@ sub ignore_label_sub {
     return $self->{'_ignore_label_sub'};
 }
 
+sub dont_show_key {
+    my( $self, $dont_show_key) = @_;
+
+    if (defined $dont_show_key) {
+	$self->{'_dont_show_key'} = $dont_show_key;
+    }
+    return $self->{'_dont_show_key'}
+}
+
 sub draw_gene_features_on_vc {
     my( $band, $vc, $x_offset ) = @_;
 
@@ -171,12 +250,11 @@ sub draw_gene_features_on_vc {
     my $canvas      = $band->canvas;
     my $font_size   = $band->font_size;
 
-    my $rectangle_height = $font_size;
+    my $rectangle_height = $band->gene_arrow_width;
     my $nudge_distance = $rectangle_height * $y_dir;
 
     my @spans = $band->get_gene_span_data($vc);
 
-    my @genes = $vc->get_all_VirtualGenes;
     my( @ranked_genes );
     if (my $label_type = $band->label_type_list) {
         my @types = map $_->[1], @$label_type;
@@ -192,7 +270,8 @@ sub draw_gene_features_on_vc {
             push(@{$ranked_genes[$i]}, $sp);
         }
     } else {
-        @ranked_genes = [@genes];
+        # @ranked_genes = [@genes];
+	@ranked_genes = [@spans];
     }
     
     my $ignore_label_sub = $band->ignore_label_sub;
@@ -208,14 +287,14 @@ sub draw_gene_features_on_vc {
             my $color = $band->gene_type_color($sp->[1])
                 or next;
             $band->current_color($color);
-        
+
             my $id     =             $sp->[0];
             my $start  = $x_offset + $sp->[2];
             my $end    = $x_offset + $sp->[3];
             my $strand =             $sp->[4];
-            my $group = "gene_group-$id-$vc";
+	    my $type = $sp->[1];
+            my $group = "gene_group-$type-$id-$start-$vc";
             #warn "[$x_offset] $id: $start -> $end\n";
-
 
             my $x1 = $start / $rpp;
             my $x2 = $end   / $rpp;

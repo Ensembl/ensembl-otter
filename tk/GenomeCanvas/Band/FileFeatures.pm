@@ -37,15 +37,25 @@ sub start_end_column_indices {
     }
 }
 
+sub outline_color {
+    my ($self, $color) = @_;
+
+    if ($color) {
+	$self->{'_outline_color'} = $color;
+    }
+
+    return $self->{'_outline_color'};
+}
+
 sub render {
     my( $band ) = @_;
     
     my $vc = $band->virtual_contig
         or confess "No virtual contig attached";
-    my $global_offset = $vc->_global_start - 1
-        or confess "Can't get global_start from Virtual Contig";
     my $file = $band->feature_file
         or confess "feature_file not set";
+    my $global_offset = $vc->_global_start - 1;
+
     my $fh = gensym();
     open $fh, $file or confess "Can't open '$file' : $!";
     my @ind = $band->start_end_column_indices;
@@ -55,6 +65,7 @@ sub render {
     my $y_offset  = $band->y_offset;
     my $rpp       = $band->residues_per_pixel;
     my $color     = $band->band_color;
+    my $outline_color = defined($band->outline_color) ? $band->outline_color : $color;
     my @tags      = $band->tags;
     
     $canvas->createRectangle(
@@ -66,19 +77,23 @@ sub render {
 
     my $y1 = $y_offset + 1;
     my $y2 = $y_offset + $height - 1;
-    
+
     while (<$fh>) {
         # Cunning or what!
-        my ($start, $end) = map $_ -= $global_offset, (split)[@ind];
-        warn "Start End = $start\t$end\n";
+
+        my ($start, $end) = map $_ -= $global_offset, (split /\s+/, $_)[@ind];
+        #warn "Start End = $start\t$end\n";
+
+	next if $start < 1;
+	next if $end > $vc->length;
     
         my $x1 = $start / $rpp;
         my $x2 = $end   / $rpp;
-        
+
         $canvas->createRectangle(
             $x1, $y_offset, $x2, $y2,
             -fill       => $color,
-            -outline    => $color,
+            -outline    => $outline_color,
             -width      => 0.5,
             -tags       => [@tags],
             );
