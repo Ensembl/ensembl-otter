@@ -28,42 +28,42 @@ sub draw {
 
     my $save_y = $y;
 
-    my $scale  = $self->Mb_per_pixel;
-    my $canvas = $kw->canvas;
+    my $scale = $kw->Mb_per_pixel;
     foreach my $band ( $self->get_all_Bands ) {
-        $band->Mb_per_pixel($scale);
-        $band->draw( $self, $canvas, $x, $y );
-        $y += $band->height;
+        $band->draw( $self, $kw, $x, $y );
+        $y += $band->height($kw);
     }
 
     my ( $first, $last ) = $self->get_first_and_last_Bands;
+    my $canvas = $kw->canvas;
     my $outline = $canvas->createPolygon(
-        $self->get_outline_coordinates, -fill => undef,
+        $self->get_outline_coordinates,
+        -fill => undef,
         -outline   => 'black',
         -smooth    => 1,
         -joinstyle => 'round',
     );
-
-    $self->height('10000');
     
+    my $font_size = $kw->font_size;
     $canvas->createText(
-        $x + $self->width / 2, $save_y + $self->height + 20, -anchor => 'n',
+        $x + $self->chr_width($kw) / 2, $y + $font_size,
+        -anchor => 'n',
         -text => $self->name,
-        -font => [ 'Helvetica', $kw->font_size, 'bold' ],
+        -font => [ 'Helvetica', $font_size, 'bold' ],
     );
     
-    my $graph = $self->Graph;
-    $graph->chromosome($self); 
-    $graph->draw($kw, $x, $save_y );
-    
+    my $graph_x = $self->chr_width($kw) + $self->pad($kw);
+    foreach my $graph ($self->get_all_Graphs) {
+        $graph_x += $graph->draw($kw, $graph_x, $save_y);
+    }
 }
 
 sub height {
-    my ($self) = @_;
+    my( $self, $kw ) = @_;
 
     my ( $first, $last ) = $self->get_first_and_last_Bands;
     my $length = ( $last->end - $first->start + 1 ) / 1_000_000;
-    return $length / $self->Mb_per_pixel;
+    return(($kw->font_size * 2) + ($length / $kw->Mb_per_pixel));
 }
 
 sub get_outline_coordinates {
@@ -82,7 +82,7 @@ sub get_outline_coordinates {
 }
 
 sub set_initial_and_terminal_bands {
-    my ($self) = @_;
+    my( $self ) = @_;
 
     my @bands = $self->get_all_Bands;
     foreach my $band (@bands) {
@@ -101,10 +101,54 @@ sub get_first_and_last_Bands {
     return @bands[ 0, $#bands ];
 }
 
+sub chr_width {
+    my( $self, $kw ) = @_;
+
+    return $kw->Mb_per_pixel * 15;
+}
+
+sub pad {
+    my( $self, $kw ) = @_;
+
+    return $kw->pad / 2;
+}
+
 sub width {
+    my( $self, $kw ) = @_;
+    
+    my $graph_width = 0;
+    foreach my $graph ($self->get_all_Graphs) {
+        $graph_width += $graph->width($kw);
+    }
+    return $graph_width + $self->chr_width($kw);
+}
+
+sub get_all_Graphs {
     my ($self) = @_;
 
-    return $self->Mb_per_pixel * 15;
+    if ( my $lst = $self->{'_Graph_list'} ) {
+        return @$lst;
+    }
+    else {
+        return;
+    }
+}
+
+sub add_Graph {
+    my ( $self, $Graph ) = @_;
+
+    confess "Missing Graph argument" unless $Graph;
+    my $lst = $self->{'_Graph_list'} ||= [];
+    push ( @$lst, $Graph );
+}
+
+sub new_Graph {
+    my ( $self, $class ) = @_;
+
+    $class ||= 'KaryotypeWindow::Graph';
+    my $Graph = $class->new;
+    $self->add_Graph($Graph);
+    return $Graph;
 }
 
 sub get_all_Bands {
@@ -133,29 +177,6 @@ sub new_Band {
     my $band = $class->new;
     $self->add_Band($band);
     return $band;
-}
-
-
-sub Graph {
-    my ( $self, $graph ) = @_;
-    
-    unless ( $self->{'_graph'} ) {
-        $self->{'_graph'} = KaryotypeWindow::Graph->new;
-    
-    }
-    
-    return $self->{'_graph'};
-
-}
-
-
-sub Mb_per_pixel {
-    my ( $self, $Mb_per_pixel ) = @_;
-
-    if ($Mb_per_pixel) {
-        $self->{'_Mb_per_pixel'} = $Mb_per_pixel;
-    }
-    return $self->{'_Mb_per_pixel'} || confess "Scale not set";
 }
 
 1;

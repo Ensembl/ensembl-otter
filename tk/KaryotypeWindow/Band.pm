@@ -109,11 +109,11 @@ sub set_bottom_coordinates {
 }
 
 sub draw {
-    my( $self, $chr, $canvas, $x, $y ) = @_;
+    my( $self, $chr, $kw, $x, $y ) = @_;
     
-    my $scale = $self->Mb_per_pixel;
-    my $width = $chr->width;
-    my $height = $self->height;
+    my $scale = $kw->Mb_per_pixel;
+    my $width = $chr->chr_width($kw);
+    my $height = $self->height($kw);
     $self->set_top_coordinates(
         $x, $y,
         $x + $width, $y,
@@ -125,7 +125,7 @@ sub draw {
     my @args = ();
     my $smooth_flag = $self->_round_top || $self->_round_bottom ? 1 : 0;
     
-    $canvas->createPolygon(
+    $kw->canvas->createPolygon(
         $self->top_coordinates,
         $self->bottom_coordinates,
         -outline    => $self->outline || undef,
@@ -204,11 +204,11 @@ sub outline {
 }
 
 sub height {
-    my( $self ) = @_;
+    my( $self, $kw ) = @_;
     
     return(
         ($self->length / 1_000_000)
-        / $self->Mb_per_pixel);
+        / $kw->Mb_per_pixel);
 }
 
 sub start {
@@ -233,15 +233,6 @@ sub length {
     my( $self ) = @_;
     
     return $self->end - $self->start + 1;
-}
-
-sub Mb_per_pixel {
-    my( $self, $Mb_per_pixel ) = @_;
-    
-    if ($Mb_per_pixel) {
-        $self->{'_Mb_per_pixel'} = $Mb_per_pixel;
-    }
-    return $self->{'_Mb_per_pixel'} || confess "Scale not set";
 }
 
 

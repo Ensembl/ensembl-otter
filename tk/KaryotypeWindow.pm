@@ -76,16 +76,13 @@ sub draw {
 
     my $pad = $self->pad;
     my ( $x, $y ) = ( $pad, $pad );
-    my $y_pos;
     foreach my $set (@all_set) {
         next unless @$set;
-        $y = $self->draw_chromsome_set( $x, $y, $set );
-        #$y += $pad;
-        $y_pos += $y;
-       
+        $y += $self->draw_chromsome_set( $x, $y, $set );
+        $y += $pad;
     }
     
-    $self->_draw_scale( $x, $y_pos, scalar(@all_set), $max );
+    $self->_draw_scale( $x, $y, scalar(@all_set), $max );
 
 }
 
@@ -130,18 +127,17 @@ sub draw_chromsome_set {
     my $pad            = $self->pad;
     my $max_chr_height = 0;
     foreach my $chr (@$set) {
-        $chr->Mb_per_pixel($scale);
-        my $h = $chr->height;
+        my $h = $chr->height($self);
         $max_chr_height = $h if $h > $max_chr_height;
     }
 
     foreach my $chr (@$set) {
         $chr->set_initial_and_terminal_bands;
-        $chr->draw( $self, $x, $y + $max_chr_height - $chr->height );
-        $x += $chr->width + $pad;
+        $chr->draw( $self, $x, $y + $max_chr_height - $chr->height($self) );
+        $x += $chr->width($self) + $pad;
 
     }
-    return $max_chr_height + $self->pad + $self->font_size + 50;
+    return $max_chr_height;
 }
 
 sub Mb_per_pixel {
@@ -159,7 +155,7 @@ sub pad {
     if ($pad) {
         $self->{'_pad'} = $pad;
     }
-    return $self->{'_pad'} || 70;
+    return $self->{'_pad'} || 2 * $self->font_size;
 }
 
 sub data {
@@ -171,8 +167,8 @@ sub data {
     }
 
     return $self->{'_data'};
-
 }
+
 1;
 
 

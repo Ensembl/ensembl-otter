@@ -11,16 +11,16 @@ use base 'KaryotypeWindow::Band';
 sub is_rectangular { return 0 };
 
 sub draw {
-    my( $self, $chr, $canvas, $x, $y ) = @_;
+    my( $self, $chr, $kw, $x, $y ) = @_;
     
-    my $scale = $self->Mb_per_pixel;
-    my $width = $chr->width;
-    my $height = $self->height;
+    my $scale = $kw->Mb_per_pixel;
+    my $width = $chr->chr_width($kw);
+    my $height = $self->height($kw);
     my $name = $self->name;
 
     $self->set_stalk_coords($x, $y, $width, $height);
     
-    $canvas->createPolygon(
+    $kw->canvas->createPolygon(
         $self->top_coordinates,
         $self->bottom_coordinates,
         -outline    => $self->outline || undef,

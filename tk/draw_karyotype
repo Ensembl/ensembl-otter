@@ -8,12 +8,12 @@ use Hum::EnsCmdLineDB;
 
 my %chr_bin;
 
-while (<>) {
+#while (<>) {
+#
+    #my ( $chr, $data ) = split;
+    #push @{ $chr_bin{$chr} }, $data;
 
-    my ( $chr, $data ) = split;
-    push @{ $chr_bin{$chr} }, $data;
-
-}
+#}
 
 {
     my $mw = CanvasWindow::MainWindow->new;
@@ -80,7 +80,7 @@ while (<>) {
             #$band->set_fill_from_shade($1 / 100);
         }
     }
-    $kw->data(%chr_bin);
+    #$kw->data(%chr_bin);
     $kw->draw;
 
     foreach my $stain ( sort keys %stain_count ) {

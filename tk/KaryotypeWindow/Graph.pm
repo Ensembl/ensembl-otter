@@ -61,7 +61,6 @@ sub draw_histogram {
         $y1 = $y2;
         $x++;
     }
-
 }
 
 sub chromosome {
