@@ -1176,7 +1176,15 @@ sub _add_exons_to_exonlocation {
     my ( $self, $exonlocation, $exons ) = @_;
     
     my (@hum_embl_exons , $exons_on_slice);
+    my( @all_exons );
     foreach my $exon (@$exons) {
+        if ($exon->isa('Bio::EnsEMBL::StickyExon')) {
+            push(@all_exons, @{$exon->get_all_component_Exons});
+        } else {
+            push(@all_exons, $exon);
+        }
+    }
+    foreach my $exon (@all_exons) {
 
         my $hum_embl_exon = Hum::EMBL::Exon->new;
         $hum_embl_exon->strand($exon->strand);
@@ -1193,7 +1201,7 @@ sub _add_exons_to_exonlocation {
         $hum_embl_exon->end($end);
 
         # May be an is_sticky method?
-        if ($exon->isa('Bio::Ensembl::StickyExon')) {
+        if ($exon->isa('Bio::EnsEMBL::StickyExon')) {
             # Deal with sticy exon
             warn "STICKY!\n";
         }
