@@ -9,6 +9,7 @@ use Sys::Hostname qw{ hostname };
 use LWP;
 use Bio::Otter::Lace::DataSet;
 use Bio::Otter::Lace::AceDatabase;
+use Bio::Otter::Lace::PersistentFile;
 use Bio::Otter::Converter;
 use Bio::Otter::Lace::TempFile;
 use URI::Escape qw{ uri_escape };
@@ -72,7 +73,13 @@ sub email {
     }
     return $self->{'_options'}->{'client'}->{'email'} || (getpwuid($<))[0];
 }
+sub debug{
+    my ($self, $debug) = @_;
 
+    $self->{'_options'}->{'client'}->{'debug'} = $debug if defined($debug);
+
+    return $self->{'_options'}->{'client'}->{'debug'} ? 1 : 0;
+}
 sub lock {
     my $self = shift;
     
@@ -138,7 +145,38 @@ sub get_UserAgent {
     #}
     #return $ua;
 }
+sub lock_region_for_contig_from_Dataset{
+    my( $self, $ctg, $dataset ) = @_;
+    
+    my $chr_name  = $ctg->[0]->chromosome->name;
+    my $start     = $ctg->[0]->chr_start;
+    my $end       = $ctg->[$#$ctg]->chr_end;
+    my $ss = $dataset->selected_SequenceSet
+        or confess "no selected_SequenceSet attached to DataSet";
+    
+    my $root   = $self->url_root;
+    my $url = "$root/lock_region?" .
+        join('&',
+	     'author='   . uri_escape($self->author),
+	     'email='    . uri_escape($self->email),
+             'hostname=' . uri_escape($self->client_hostname),
+	     'dataset='  . uri_escape($dataset->name),
+	     'chr='      . uri_escape($chr_name),
+	     'chrstart=' . uri_escape($start),
+	     'chrend='   . uri_escape($end),
+             'type='     . uri_escape($ss->name),
+	     );
+    warn "url <$url>\n";
 
+    my $ua = $self->get_UserAgent;
+    my $request = $self->new_http_request('GET');
+    $request->uri($url);
+    my $response = $ua->request($request);
+
+    my $xml = $self->_check_for_error($response);
+
+    return $xml;
+}
 sub get_xml_for_contig_from_Dataset {
     my( $self, $ctg, $dataset ) = @_;
     
@@ -172,12 +210,16 @@ sub get_xml_for_contig_from_Dataset {
     my $response = $ua->request($request);
 
     my $xml = $self->_check_for_error($response);
-    #warn $xml;
-    
-    my $debug_file = "/var/tmp/otter-debug.$$.fetch.xml";
-    open DEBUG, "> $debug_file" or die;
-    print DEBUG $xml;
-    close DEBUG;
+
+    if($self->debug){
+        my $debug_file = Bio::Otter::Lace::PersistentFile->new();
+        $debug_file->name("otter-debug.$$.fetch.xml");
+        my $fh = $debug_file->write_file_handle();
+        print $fh $xml;
+        close $fh;
+    }else{
+        warn "Debug switch is false\n";
+    }
     
     return $xml;
 }
@@ -286,27 +328,10 @@ sub get_all_DataSets {
     return @$ds;
 }
 
-sub save_otter_ace {
-    my( $self, $ace_str, $dataset ) = @_;
+sub save_otter_xml {
+    my( $self, $xml, $dataset_name ) = @_;
     
     confess "Don't have write access" unless $self->write_access;
-    
-    local *DEBUG;
-    my $debug_file = "/var/tmp/otter-debug.$$.save.ace";
-    open DEBUG, "> $debug_file" or die;
-#    print DEBUG $ace_str;
-    close DEBUG;
-    
-    my $ace = Bio::Otter::Lace::TempFile->new;
-    $ace->name('lace_edited.ace');
-    my $write = $ace->write_file_handle;
-    print $write $ace_str;
-    my $xml = Bio::Otter::Converter::ace_to_XML($ace->read_file_handle);
-    
-    $debug_file = "/var/tmp/otter-debug.$$.save.xml";
-    open DEBUG, "> $debug_file" or die;
-    print DEBUG $xml;
-    close DEBUG;
     
     # Save to server with POST
     my $url = $self->url_root . '/write_region';
@@ -316,7 +341,7 @@ sub save_otter_ace {
         join('&',
             'author='   . uri_escape($self->author),
             'email='    . uri_escape($self->email),
-            'dataset='  . uri_escape($dataset->name),
+            'dataset='  . uri_escape($dataset_name),
             'data='     . uri_escape($xml),
             'unlock=false',     # We give the annotators the option to
             )                   # save during sessions, not just on exit.
@@ -328,28 +353,12 @@ sub save_otter_ace {
 }
 
 
-sub unlock_otter_ace {
-    my( $self, $ace_str, $dataset ) = @_;
+sub unlock_otter_xml {
+    my( $self, $xml, $dataset_name ) = @_;
     
-    #cluck "Unlocking ", substr($ace_str, 0, 80);
-    
-    my $ace = Bio::Otter::Lace::TempFile->new;
-    $ace->name('lace_unlock_contig.ace');
-    my $write = $ace->write_file_handle;
-    print $write $ace_str;
-    my $xml = Bio::Otter::Converter::ace_to_XML($ace->read_file_handle);
-    
-    #print STDERR $xml;
+    # print STDERR "<!-- BEGIN XML -->\n" . $xml . "<!-- END XML -->\n\n\n";
     
     # Save to server with POST
-    return $self->_send_to_server($xml , $dataset);
-
-}
-
-# saves some code replication between unlock_otter_ace and remove_stale_locks  
-sub _send_to_server{
-    my ($self , $xml , $dataset ) =@_ ;
-    
     my $url = $self->url_root . '/unlock_region';
     my $request = $self->new_http_request('POST');
     $request->uri($url);
@@ -358,7 +367,7 @@ sub _send_to_server{
         join('&',
             'author='   . uri_escape($self->author),
             'email='    . uri_escape($self->email),
-            'dataset='  . uri_escape($dataset->name),
+            'dataset='  . uri_escape($dataset_name),
             'data='     . uri_escape($xml),
             )
         );
@@ -366,41 +375,6 @@ sub _send_to_server{
     my $content  = $self->_check_for_error($response);
     return 1;
 }
-
-
-# this method is used when a lace session has failed to open, and has left locks behind
-# It takes the sequence set (with the 'locked' clones as the selected_CloneSequences)
-sub remove_stale_locks {
-    my( $self,  $ss , $dataset) = @_;
-
-    my $xml ;
-    foreach my $cs ( @{ $ss->selected_CloneSequences }){
-        $xml .= $self->_xml_string($cs , $ss->name);    
-    }
-    
-    return $self->_send_to_server($xml , $dataset) ;
-}
-
-## used to produce the relevant XML for the 'remove_stale_locks' method above
-sub _xml_string{
-    my ($self, $contig, $ss_name) = @_ ;
-       
-    my $xml_string = "<otter>
-    <sequence_set>
-      <assembly_type>" . $ss_name . "</assembly_type>
-        <sequence_fragment>
-            <id>" . $contig->contig_name . "</id>
-            <chromosome>" . $contig->chromosome->name . "</chromosome>
-            <accession>" . $contig->accession . "</accession>
-            <assembly_start>" . $contig->chr_start . "</assembly_start>
-            <assembly_end>" . $contig->chr_end ."</assembly_end>
-        </sequence_fragment> 
-    </sequence_set>
-    </otter>" ;
-
-    return $xml_string ;
-}
-
 sub new_http_request{
     my ($self, $method) = @_;
     my $request = HTTP::Request->new();
