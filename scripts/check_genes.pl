@@ -690,14 +690,15 @@ foreach my $atype (keys %gsi){
     my($gn,$gt)=@{$gsi_sum{$gsi}};
     my %eids;
     my %eidso;
+    my %ephases;
     # look for overlapping exons and group exons into transcripts
     # (one gene at a time)
-    foreach my $rt (@{$gsi{$atype}->{$gsi}}){
-#    foreach my $rt (sort {
-#                          $a->[0]<=>$b->[0] || 
-#                          $a->[1]<=>$b->[1] || 
-#                          $a->[5]<=>$b->[5]
-#			    } @{$gsi{$atype}->{$gsi}}){
+#    foreach my $rt (@{$gsi{$atype}->{$gsi}}){
+    foreach my $rt (sort {
+                          $a->[0]<=>$b->[0] || 
+                          $a->[1]<=>$b->[1] || 
+                          $a->[5]<=>$b->[5]
+			    } @{$gsi{$atype}->{$gsi}}){
       my($tsi,$erank,$eid,$ecst,$eced,$esr,$es,$ep,$eep,$trid)=@{$rt};
       if($e{$gsi}->{$eid}){
 	# either stored as sticky rank2 or this is sticky rank2
@@ -756,12 +757,23 @@ foreach my $atype (keys %gsi){
 	    }elsif($dup_exon{$eid}==$eid2 || $dup_exon{$eid2}==$eid){
 	      # don't report again
 	      print "should never happen $eid, $eid2\n";
-	    }else{
+	    }
+	    # if seen this phase before, duplicate, so delete; else save
+	    my $dflag;
+	    foreach my $rp (@{$ephases{$eid2}}){
+	      my($es3,$ep3,$eep3)=@$rp;
+	      if($es==$es3 && $ep==$ep3 && $eep==$eep3){
+		$dflag=1;
+	      }
+	    }
+	    if($dflag){
 	      $dup_exon{$eid}=$eid2;
 	      print OUT2 "$eid\t$eid2\t$st\t$ed\n";
-	      $flag=1;
-	      $eid=$eid2;
+	    }else{
+	      push(@{$ephases{$eid2}},[$es,$ep,$eep]);
 	    }
+	    $flag=1;
+	    $eid=$eid2;
 	  }else{
 	    my $mxst=$st;
 	    $mxst=$ecst if $ecst>$mxst;
