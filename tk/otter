@@ -8,6 +8,7 @@ use lib '/nfs/team71/analysis/jgrg/work/tk';
 ### otter
 
 use strict;
+use Carp;
 use CanvasWindow;
 use Bio::Otter::DBSQL::DBAdaptor;
 use LWP::Simple ();
@@ -27,10 +28,79 @@ use Getopt::Long 'GetOptions';
     my $cw = CanvasWindow->new($mw, 400, 300);
     
     my $datasets = get_dataset_details($host, $port);
+    set_details($datasets);
     show_dataset_list($cw, $datasets);
+    $cw->canvas->toplevel->bind( '<Return>', sub{ do_fetch($cw) } );
     
     $cw->fix_window_min_max_sizes;
     Tk::MainLoop();
+}
+
+{
+    my( $details );
+
+    sub set_details {
+        $details = shift;
+    }
+    
+    sub get_details {
+        my $name = shift || confess "Missing name argument";
+        return $details->{$name};
+    }
+}
+
+{
+    my( $state );
+    
+    sub set_state {
+        $state = shift;
+    }
+    
+    sub get_state {
+        return $state;
+    }
+}
+
+sub do_fetch {
+    my( $cw ) = @_;
+    
+    my $state = get_state();
+    if ($state eq 'sequences') {
+        run_lace($cw);
+    }
+    elsif ($state eq 'datasets') {
+        my ($obj) = $cw->list_selected;
+        warn "No obj" and return unless $obj;
+        my $prop = get_canvas_object_properties($cw, $obj);
+        if (my $name = $prop->{'name'}) {
+            my $details = get_details($name)
+                or confess "No details for '$name'";
+            draw_sequence_list($cw, $name, $details);
+        } else {
+            warn "No name property";
+        }
+    }
+    else {
+        confess "Unknown state '$state'";
+    }
+}
+
+sub run_lace {
+    my( $cw ) = @_;
+    
+    warn "Running lace";
+}
+
+sub get_canvas_object_properties {
+    my( $cw, $obj ) = @_;
+    
+    my $canvas = $cw->canvas;
+    my $prop = {};
+    foreach my $tag_val ($canvas->gettags($obj)) {
+        my ($tag, $val) = split /=/, $tag_val, 2;
+        $prop->{$tag} = $val;
+    }
+    return $prop;
 }
 
 sub show_dataset_list {
@@ -50,9 +120,15 @@ sub show_dataset_list {
             -text   => $sorted_name[$i],
             -font   => [$font, $size, 'bold'],
             -anchor => 'nw',
+            -tags   => ["name=$name"],
             );
         $canvas->bind($txt, '<Double-Button-1>', sub{ draw_sequence_list($cw, $name, $details) });
+        $canvas->bind($txt, '<Button-1>', sub{
+            $cw->deselect_all;
+            $cw->highlight($txt)
+            });
     }
+    set_state('datasets');
 }
 
 sub draw_sequence_list {
@@ -88,7 +164,7 @@ sub draw_sequence_list {
     my $last_end = 0;
     while ($sth->fetch) {
         if ($last_end + 1 != $chr_start) {
-            warn "$last_end + 1 != $chr_start\n";
+            #warn "$last_end + 1 != $chr_start\n";
             $i++;
         }
         my $seq_line = sprintf("%-10s  %2d", $acc, $sv);
@@ -102,11 +178,20 @@ sub draw_sequence_list {
                 "chr_end=$chr_end",
                 ],
             );
-        $canvas->bind($txt, '<Button-1>', sub{ $cw->highlight($txt) });
+        $canvas->bind($txt, '<Button-1>', sub{
+            $cw->deselect_all;
+            $cw->highlight($txt)
+            });
+        $canvas->bind($txt, '<Shift-Button-1>', sub{
+            $cw->highlight($txt)
+            });
         
         $last_end = $chr_end;
         $i++;
     }
+    
+    set_state('sequences');
+    
     $cw->fix_window_min_max_sizes;
 }
 
@@ -124,8 +209,10 @@ sub get_DBAdaptor_from_details {
 sub get_dataset_details {
     my( $host, $port ) = @_;
 
+    print STDERR "Fetching dataset list ...";
     my $datasets_url = "http://$host:$port/perl/get_datasets?details=true";
     my $sets = LWP::Simple::get($datasets_url);
+    print STDERR " got it\n";
     
     my( $in_details );
     my $datasets = {};
