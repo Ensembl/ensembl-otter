@@ -311,18 +311,21 @@ sub save_all_slices {
     ### we were exiting each the first with an exception
     ### so the iterator didn't get reset.
     #while (my ($name, $ds) = each %$sd_h) {
+    my $ace = '';
     foreach my $ds_name (keys %$sd_h) {
         my $slices = $sd_h->{$ds_name};
         foreach my $slice(@$slices){
             warn "SAVING SLICE '$slice' WITH DATASET '$ds_name' to the Otter Server\n";
-            $self->save_otter_slice($slice, $ds_name);
+            $ace .= $self->save_otter_slice($slice, $ds_name);
         }
     }
     $self->error_flag(0);
+    return \$ace;
 }
 
 sub save_otter_slice {
     my( $self, $name, $dataset_name ) = @_;
+
     $self->error_flag(1);
     confess "Missing slice name argument"   unless $name;
     confess "Missing DatsSet argument"      unless $dataset_name;
@@ -390,18 +393,18 @@ sub save_otter_slice {
     }
 
     my $success = $client->save_otter_xml($xml, $dataset_name);
+
     $self->error_flag($success ? 0 : 1); # not sure this is correct (check out).
-    $self->update_with_stable_ids($success);
-    return $success;
+
+    return $self->update_with_stable_ids($success);
 }
+
 
 sub update_with_stable_ids{
     my ($self, $xml, $anything_else) = @_;
-##    my ($self, $xml_ref, $anything_else) = @_; if Client->save_otter_xml changes to return a SCALAR ref.
-    ## set error_flag = 1
-    $self->error_flag(1);
     return unless $xml;
 
+    $self->error_flag(1);
     ## get an aceperl handle
     my $ace = $self->aceperl_db_handle();
 
@@ -409,54 +412,35 @@ sub update_with_stable_ids{
     my $fileObj;
     if($self->Client->debug){
         $fileObj = Bio::Otter::Lace::PersistentFile->new();
+        $fileObj->name(qq`otter_response_$$.xml`);
+        $fileObj->rm();
     }else{
         $fileObj = Bio::Otter::Lace::TempFile->new;
     }
-    $fileObj->name('otter_response.xml');
+
     my $write = $fileObj->write_file_handle();
     print $write (ref($xml) eq 'SCALAR' ? ${$xml} : $xml);
+
     my $read  = $fileObj->read_file_handle();
 
     ## convert the xml returned from the server into otter stuff
     my ($genes,$slice,$seqstr,$tiles) = Bio::Otter::Converter::XML_to_otter($read);
 
     ## this should only contain the CHANGED genes.
-
-    if(!$genes){
+    
+    unless($genes){
         warn "No genes changed\n";
-    }else{
-        my $kungFu = 40;
-        warn "Some genes changed, KungFu level set to '$kungFu'\n";
-
-        ## need to do genes, transcripts, translations and exons
-        
-        ## learn/ask James about aceperl
-        if($kungFu > 9){
-            ## do aceperl stuff
-            warn Bio::Otter::Converter::ace_transcript_seq_objs_from_genes($genes, $slice, {}, 1);
-        }elsif($kungFu > 5){
-            ## do print of what aceperl will get
-            
-        }elsif($kungFu > 3){
-            foreach my $gene(@$genes){
-                # do dump of gene stableids
-                warn "Gene with stable id " . $gene->stable_id . " changed \n";
-            }
-        }elsif($kungFu > 2){
-            ## do a dump of otter xml
-            foreach my $gene(@$genes){
-                warn "This is what I think changed " . $gene->toXMLString;
-            }
-        }else{
-            ## until then
-            warn qq`Didn't write anything \n`;
-        }
-        
+        return undef;
     }
+
+    warn "Some genes changed\n";
+    ## need to do genes, transcripts, translations and exons
+    my $ace_txt = Bio::Otter::Converter::ace_transcripts_locus_people($genes, $slice);
 
     ## everything went ok so error_flag = 0;
     $self->error_flag(0);
-    return 1;
+
+    return $ace_txt;
 }
 
 sub unlock_all_slices {
