@@ -335,15 +335,16 @@ sub update_current_SequenceNote{
         or confess 'author not set';  
     
     # sequence_note stores the username, we needto get the db id      
-    my $author_query = $dba->prepare(q{
-            SELECT author_id
-            FROM author
-            WHERE author_name = ?
-            }); 
-            
-    $author_query->execute($author); 
-    my $author_id = $author_query->fetchrow; 
+#    my $author_query = $dba->prepare(q{
+#            SELECT author_id
+#            FROM author
+#            WHERE author_name = ?
+#            });            
+#    $author_query->execute($author);
+#    my $author_id = $author_query->fetchrow; 
 
+    my $author_id = $self->_author_id ;
+    
     my $update = $dba->prepare(q{
         UPDATE  sequence_note
         SET     note    = ?
