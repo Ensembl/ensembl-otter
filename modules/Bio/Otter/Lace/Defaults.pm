@@ -334,6 +334,7 @@ sub cmd_line{
 sub options_from_file{
     my ($file, $previous) = @_;
     my $ini;
+    return undef unless -e $file;
     eval{
         print STDERR "Trying $file\n" if $DEBUG_CONFIG;
         tie %$ini, 'Config::IniFiles', ( -file => $file, %OPTIONS_TO_TIE) or die $!;
