@@ -15,7 +15,7 @@ swall=1
 est2Genome_other=1
 repeatmask=1
 est2genome_human=1
-eponine=0
+eponine=1
 refseq_human=1
 refseq_zebrafish=0
 halfwise=1
@@ -116,7 +116,7 @@ module=Bio::EnsEMBL::Ace::Filter::Gene::Predicted
 module=Bio::EnsEMBL::Ace::Filter::Gene::Predicted
 
 [default.filter.CpG]
-module=Bio::EnsEMBL::Ace::Filter::CpG
+module=Bio::EnsEMBL::Ace::Filter::SimpleFeature::CpG
 
 [default.filter.Halfwise]
 module=Bio::EnsEMBL::Ace::Filter::Gene::Halfwise
@@ -162,5 +162,5 @@ homol_tag=Pep_homol
 
 [default.filter.eponine]
 module=Bio::EnsEMBL::Ace::Filter::SimpleFeature::Eponine
-
+method_tag=EPONINE
 
