@@ -28,6 +28,9 @@ sub new {
 }
 
 
+# Need to override fetch_filled_by_dbIDs in Bio::EnsEMBL::DBSQL::RawContigAdaptor
+# because it makes Clones without going throught the CloneAdaptor
+
 sub fetch_filled_by_dbIDs {
    my ($self,@ids) = @_;
 
@@ -36,12 +39,14 @@ sub fetch_filled_by_dbIDs {
    foreach my $key (keys %$result) {
       my $clone = $result->{$key}->clone;
 
-      $clone = $self->db->get_AnnotatedCloneAdaptor->annotate_clone($clone);  
+      $clone = $self->db->get_CloneAdaptor->annotate_clone($clone);  
 
    }
 
    return $result;
 }
+
+
 1;
 
 	

@@ -10,6 +10,8 @@ use Getopt::Long 'GetOptions';
     GetOptions(
         'tag=s'     => \$tag,
         ) or die "Error processing command line";
+    die "Too many arguments:\n", map "  $_\n", @ARGV
+        if @ARGV > 2;
     my( $before_file, $after_file ) = @ARGV;
     
     my $before = get_file($before_file);
@@ -20,7 +22,7 @@ use Getopt::Long 'GetOptions';
     
     my $before_tmp = "/tmp/xml.$$.before";
     my  $after_tmp = "/tmp/xml.$$.after";
-    END{ unlink($before_tmp, $after_tmp); }
+    END{ unlink($before_tmp, $after_tmp) if $before_tmp; }
     
     print_xml($before_tmp, @before_tran);
     print_xml( $after_tmp,  @after_tran);

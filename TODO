@@ -6,9 +6,8 @@ CloneInfo
 
 Translations
 
-  - combining CDS and mRNA objects
-  - parsing the new CDS <start> <end> objects
-  - getting phase right from cds_start_not_found and cds_end_not_found
+  - combining CDS and mRNA objects - JGRG not needed I think becuase it will
+    be done by ace_genes2otter
   - translations in xml
 
 Genes across clones
@@ -30,7 +29,6 @@ Assembly Coordinates
 Authors on comments?
 
 Locking - locks clones and genes
-
 GeneLock ?
 
 Test for AnnotatedTranscript
@@ -45,7 +43,7 @@ Annotation walkthrough
 2) Get slice                            #  done
 3) Lock clones or die if already locked #  done
 4) Get xml from otter                   #  done (assembly info done)
-5) Flag partial genes                   #  Change type on these?
+5) Flag partial genes                   #  Change type on these? - yes so annotators can't annotate
 6) Get features from core db            #  not done - old stype db
 7) Load into apollo                     #  write file and read using Vivek's adapter
 

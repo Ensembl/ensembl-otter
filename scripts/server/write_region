@@ -156,6 +156,7 @@ foreach my $gene (@genes) {
 }
 
 my $ab = new Bio::Otter::AnnotationBroker($odb);
+$ab->current_author($author);
 my $oaga = $odb->get_GeneAdaptor();
 $odb->assembly_type($xmlslice->assembly_type);
 
@@ -178,7 +179,7 @@ print STDERR "Checking region is locked...\n";
 
 ### Why is this commented out?
 eval {
-  #$cb->check_locks_exist_by_slice($slice,$author);
+  $cb->check_locks_exist_by_slice($slice, $author);
 };
 if ($@) {
   print STDERR "\nFailed checking locks [$@]\n";
@@ -251,7 +252,7 @@ eval {
     my $oldgenes = trim_genes_to_slice($dbgenes, $slice);
     print STDERR "trimming new genes to slice:\n";
     my $newgenes = trim_genes_to_slice(\@genes,  $slice);
-    @events = $ab->compare_annotations($oldgenes, $newgenes);
+    @events = $ab->compare_genes($oldgenes, $newgenes);
 };
 if ($@) {
   print STDERR "Failed comparing annotations [$@]\n";

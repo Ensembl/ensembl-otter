@@ -156,7 +156,7 @@ if ($store) {
   }
 
 
-  my @events = $ab->compare_annotations($dbgenes,\@genes,$slice);
+  my @events = $ab->compare_genes($dbgenes,\@genes,$slice);
 
 # the magic happens!
 

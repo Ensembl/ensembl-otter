@@ -19,20 +19,22 @@ use vars qw(@ISA);
 # This is assuming the otter info and the ensembl genes are in the same database 
 # and so have the same adaptor
 
-sub new {
-    my ($class,$dbobj) = @_;
+### JGRG - no reason for this to be different to new() in BaseAdaptor?
+###        Commented out.
+#sub new {
+#    my ($class,$dbobj) = @_;
+#
+    #my $self = {};
+    #bless $self,$class;
 
-    my $self = {};
-    bless $self,$class;
+    #if( !defined $dbobj || !ref $dbobj ) {
+    #    $self->throw("Don't have a db [$dbobj] for new adaptor");
+    #}
 
-    if( !defined $dbobj || !ref $dbobj ) {
-        $self->throw("Don't have a db [$dbobj] for new adaptor");
-    }
+    #$self->db($dbobj);
 
-    $self->db($dbobj);
-
-    return $self;
-}
+#    return $self;
+#}
 
 =head2 fetch_by_accession_verion
 
@@ -107,8 +109,10 @@ sub fetch_by_dbID {
 sub annotate_clone {
    my ($self,$clone) = @_;
 
-   #Will this work - let's hope so
-   bless $clone,"Bio::Otter::AnnotatedClone";
+   # Make the clone an AnnotatedClone unless it is already
+   unless ($clone->isa('Bio::Otter::AnnotatedClone')) {
+       bless $clone, 'Bio::Otter::AnnotatedClone';
+   }
 
    my $clone_info_adaptor         = $self->db->get_CloneInfoAdaptor();
    my $current_clone_info_adaptor = $self->db->get_CurrentCloneInfoAdaptor();
@@ -209,6 +213,8 @@ sub store{
    $current_c_info_ad->store($obj);
 
 }
+
+
 1;
 
 	

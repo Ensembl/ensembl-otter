@@ -129,6 +129,8 @@ print STDERR "done. Length of xml " . length($xmlstr) . "\n";
 open (OUT,">test.xml");
 print OUT $xmlstr;
 close(OUT);
+
+# The response:
 print $xmlstr . "\n";
 
 ##################################################################################

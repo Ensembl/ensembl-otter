@@ -8,7 +8,27 @@ use Bio::Otter::AnnotationBroker::Event;
 @ISA = qw(Bio::EnsEMBL::DBSQL::BaseAdaptor);
 
 
-sub compare_annotations {
+# The name of the author writing changes into the database
+sub current_author {
+    my( $self, $current_author ) = @_;
+    
+    if ($current_author) {
+        my $class = 'Bio::Otter::Author';
+        my $ok = 0;
+        eval{ $ok = 1 if $current_author->isa($class) };
+        $self->throw("No a $class : '$current_author'") unless $ok;
+        $self->{'_current_author'} = $current_author;
+    }
+    return $self->{'_current_author'};
+}
+
+sub compare_clones {
+    my( $self, $old_clones, $new_clones ) = @_;
+    
+    
+}
+
+sub compare_genes {
     my ($self, $oldgenes, $newgenes) = @_;
 
     my %oldgenehash;

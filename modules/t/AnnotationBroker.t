@@ -81,7 +81,7 @@ foreach my $g (@$genes2) {
 # Genes1 - dbID 1
 # Genes2 - dbID 2
 print "Comparing *******\n";
-$ab->compare_annotations($genes1,$genes2,$slice1);
+$ab->compare_genes($genes1,$genes2,$slice1);
 
 #$testdb->pause;
 ok(11);
@@ -110,6 +110,6 @@ foreach my $g (@genes3) {
 }
 print "Comparing fetch ***********\n";
 
-$ab->compare_annotations($genes2,\@genes3,$slice1);
+$ab->compare_genes($genes2,\@genes3,$slice1);
 
 #$testdb->pause;

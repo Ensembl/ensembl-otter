@@ -235,7 +235,7 @@ for (my $i = 0 ; $i < $niter ; $i++) {
 
   #Check its the same as what we stored
   print "Comparing XML from server to local XML version...";
-  my @events = $ab->compare_annotations($genes, $xml_comp_genes, $slice);
+  my @events = $ab->compare_genes($genes, $xml_comp_genes, $slice);
   print "done\n";
   
   foreach my $event (@events) {
@@ -255,7 +255,7 @@ for (my $i = 0 ; $i < $niter ; $i++) {
 
 
   print "\nComparing to database annotations...";
-  my @events        = $ab->compare_annotations($genes, $db_comp_genes, $slice2);
+  my @events        = $ab->compare_genes($genes, $db_comp_genes, $slice2);
   print "done\n";
   
   print "Found " . scalar(@events) . " differences (should be 0)\n";

@@ -108,7 +108,7 @@ foreach my $gene ( @play_genes ) {
 }
 
 # the magic happens!
-my @events = $ab->compare_annotations(\@hard_genes,\@play_genes,$vcontig);
+my @events = $ab->compare_genes(\@hard_genes,\@play_genes,$vcontig);
 
 foreach my $event ( @events ) {
     print $event->to_string,"\n";

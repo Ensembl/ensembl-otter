@@ -4,7 +4,6 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
 
 @ISA = qw ( Bio::EnsEMBL::DBSQL::DBAdaptor);
 
-# new is inherieted
 sub new {
   my ($class,@args) = @_;
 
@@ -45,18 +44,17 @@ sub rollback {
     $self->db_handle->rollback();
 }
 
-# No longer needed now get_AnnotatedCloneAdaptor -> get_CloneAdaptor
-#sub get_RawContigAdaptor {
-#  my $self = shift;
-#
-#  return $self->_get_adaptor("Bio::Otter::DBSQL::RawContigAdaptor");
-#}
 
-# These next three methods override the methods in the core
+# These next methods override the methods in the core
 # Ensembl DBAdaptor, returning the otter Annotated versions
 # of the core adaptors, so that all clones, genes and transcripts
 # that come out of an Otter DBAdaptor have the extra annotation
 # information
+sub get_RawContigAdaptor {
+  my $self = shift;
+
+  return $self->_get_adaptor("Bio::Otter::DBSQL::RawContigAdaptor");
+}
 sub get_CloneAdaptor {
   my $self = shift;
 

@@ -134,7 +134,7 @@ sub make_new_child {
         open PRG, "$SCRIPTDIR/get_region|";
         while (<PRG>) {
           print $client $_;
-          print STDERR $_;
+          #print STDERR $_;
         }
         #$client->send_file(\*PRG);
         close PRG;
@@ -144,7 +144,7 @@ sub make_new_child {
         open PRG, "$SCRIPTDIR/get_sequence|";
         while (<PRG>) {
           print $client $_;
-          print STDERR $_;
+          #print STDERR $_;
         }
         close PRG;
       } elsif ($r->method eq 'GET' and $r->url->path eq "/perl/get_datasets") {
@@ -157,7 +157,7 @@ sub make_new_child {
           my $nline = 0;
           while (<PRG>) {
             print $client $_;
-            print STDERR $_;
+            #print STDERR $_;
             $nline++;
           }
           if (!$nline) {
@@ -179,7 +179,7 @@ sub make_new_child {
           my $nline = 0;     
           while (<PRG>) {    
             print $client $_;
-            print STDERR $_;    
+            #print STDERR $_;    
             $nline++;
           }
           if (!$nline) {
@@ -206,7 +206,7 @@ sub make_new_child {
         print "OTTER_SERVER : Printing response\n";
         while (<$out>) {
           print STDERR $_;
-          print $client $_;
+          #print $client $_;
         }
         print "OTTER_SERVER : End response\n";
         close $out;
@@ -222,7 +222,7 @@ sub make_new_child {
         print "OTTER_SERVER : Printing response\n";
         while (<$out>) {
           print STDERR $_;
-          print $client $_;
+          #print $client $_;
         }
         print "OTTER_SERVER : End response\n";
         close $out;

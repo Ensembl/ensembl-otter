@@ -1451,7 +1451,6 @@ sub ace_to_XML {
     #my( $genes, $frags, $type, $dna, $chr, $chrstart, $chrend ) = ace_to_otter($fh);
     my( $genes, $tile_path, $type, $dna, $chr, $chrstart, $chrend ) = ace_to_otter($fh);
     my $xml = "<otter>\n<sequenceset>\n"
-        #. frags_to_XML($frags, $type, $chr, $chrstart, $chrend);
         . path_to_XML($chr, $chrstart, $chrend, $type, $tile_path);
     foreach my $g (@$genes) {
         $xml .= $g->toXMLString;
@@ -1460,68 +1459,6 @@ sub ace_to_XML {
     return $xml;
 }
 
-sub make_translation_from_cds {
-  my ($tran, $cds_start, $cds_end) = @_;
-
-  my @exons = @{ $tran->get_all_Exons };
-
-  my $found_start = 0;
-  my $found_end   = 0;
-
-  my $start = 1;
-
-  my $phase       = $exons[0]->phase;
-  my $translation = $tran->translation;
-  while (my $exon = shift @exons) {
-    if ($found_start && !$found_end) {
-      my $len = $exon->end - $exon->start + 1;
-
-      my $endphase = ($len + $phase) % 3;
-      $exon->phase($phase);
-      $exon->end_phase($endphase);
-      $phase = $endphase;
-    }
-
-    my $end = $start + $exon->length - 1;
-
-    if ($cds_start >= $start && $cds_start <= $end) {
-      $translation->start_Exon($exon);
-      $translation->start($cds_start - $start + 1);
-      $found_start = 1;
-      my $len      = $end - $cds_start + 1;
-      my $endphase = ($len + $phase) % 3;
-      $exon->phase($phase);
-      $exon->end_phase($endphase);
-      $phase = $endphase;
-    }
-
-    if ($cds_end >= $start && $cds_end <= $end) {
-
-      $translation->end_Exon($exon);
-      $translation->end($cds_end - $start + 1);
-      $found_end = 1;
-    }
-    $start += $exon->length;
-  }
-
-  if ($found_start == 0) {
-    print STDERR
-      "ERROR: Didn't find exon for start at $cds_start in CDS in exons:\n";
-    my @exons = @{ $tran->get_all_Exons };
-    foreach my $exon (@exons) {
-      print STDERR "  Exon " . $exon->start . " " . $exon->end . "\n";
-    }
-  }
-
-  if ($found_end == 0) {
-    print STDERR
-      "ERROR: Didn't find exon for end at $cds_end in CDS in exons:\n";
-    my @exons = @{ $tran->get_all_Exons };
-    foreach my $exon (@exons) {
-      print STDERR "  Exon " . $exon->start . " " . $exon->end . "\n";
-    }
-  }
-}
 
 # From GeneBuilder (with added translation existence check)
 sub prune_Exons {
@@ -1608,24 +1545,6 @@ sub prune_Exons {
    }
 }
 
-sub frags_to_XML {
-    my( $frags, $type, $chr, $chrstart, $chrend ) = @_;
-
-    my $str = "  <assembly_type>" . $type . "</assembly_type>\n";
-
-    foreach my $name (sort {$frags->{$a}{start} <=> $frags->{$b}{start}} keys %$frags) {
-        my $tile = $frags->{$name};
-        $str .= "    <sequencefragment>\n"
-              . "      <id>"                 .  $name                            . "</id>\n"
-              . "      <chromosome>"         .  $chr                             . "</chromosome>\n"
-              . "      <assemblystart>"      . ($tile->{start} + $chrstart - 1)  . "</assemblystart>\n"
-              . "      <assemblyend>"        . ($tile->{end}   + $chrstart - 1)  . "</assemblyend>\n"
-              . "      <assemblyori>"        .  $tile->{strand}                  . "</assemblyori>\n"
-              . "      <assemblyoffset>"     .  $tile->{offset}                  . "</assemblyoffset>\n"
-              . "    </sequencefragment>\n";
-    }
-    return $str;
-}
 
 sub path_to_XML {
   my ($chr,$chrstart,$chrend,$type,$path) = @_;
@@ -1667,7 +1586,7 @@ sub clone_to_XML {
   $str .= "  <accession>" . $clone->id . "<\/accession>\n";
   $str .= "  <version>" . $clone->embl_version . "<\/version>\n";
 
-  if ($clone->isa("Bio::Otter::AnnotatedClone") && defined($clone->clone_info)) {
+  if ($clone->isa("Bio::Otter::AnnotatedClone") && $clone->clone_info) {
      
      my @remarks  = sort map $_->remark, $clone->clone_info->remark;
      my @keywords = sort map $_->name,   $clone->clone_info->keyword;
@@ -1678,6 +1597,8 @@ sub clone_to_XML {
      foreach my $key (@keywords) {
         $str .= "  <keyword>$key<\/keyword>\n";
      }
+   } else {
+    print STDERR "\n\nCLONE '$clone' is not a Bio::Otter::AnnotatedClone\n";
    }
    return $str;
 }
