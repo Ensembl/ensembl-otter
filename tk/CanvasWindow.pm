@@ -7,6 +7,8 @@ use strict;
 use Carp;
 use CanvasWindow::MainWindow;
 use CanvasWindow::Utils 'expand_bbox';
+use TransientWindow;
+use TransientWindow::LogWindow;
 
 sub new {
     my( $pkg, $tk, $x, $y ) = @_;
@@ -338,68 +340,6 @@ sub normalize_coords {
     }
     
     return ($x1, $y1, $x2, $y2);
-}
-
-
-sub TEST_fix_window_min_max_sizes {
-    my( $self ) = @_;
-    
-    my $mw = $self->canvas->toplevel;
-    $mw->update;
-    $mw->withdraw;
-    
-    
-    my( $max_x, $max_y, $display_max_x, $display_max_y )
-        = $self->set_scroll_region_and_maxsize;
-    
-    # Get the current screen offsets
-    my ($x, $y) = $mw->geometry =~ /^=?\d+x\d+\+?(-?\d+)\+?(-?\d+)/;
-
-    # Is there a set window size?
-    if (my($fix_x, $fix_y) = $self->set_window_size) {
-        $max_x = $fix_x;
-        $max_y = $fix_y;
-    } else {
-        # Leave at least 100 pixels
-        my $border = 100;
-        if ($max_x = $display_max_x - $border) {
-            $max_x = $display_max_x - $border;
-        }
-        if ($max_y = $display_max_y - $border) {
-            $max_y = $display_max_y - $border;
-        }
-    }
-    #else {
-    #    # Nudge the window onto the screen.
-    #    $x = 0 if $x < 0;
-    #    $y = 0 if $y < 0;
-
-    #    if (($x + $max_x) > $display_max_x) {
-    #        $x = $display_max_x - $max_x;
-    #    }
-    #    if (($y + $max_y) > $display_max_y) {
-    #        $y = $display_max_y - $max_y;
-    #    }
-    #}
-
-    #$x = $mw->screenwidth  - $x - $max_x;
-    #$y = $mw->screenheight - $y - $max_y;
-    $x = 0 if $x < 0;
-    $y = 0 if $y < 0;
-    #
-    #$mw->geometry($mw->geometry);
-    #my $geom = "${max_x}x$max_y-$x-$y";
-    my $geom = "${max_x}x$max_y+$x+$y";
-    $mw->geometry($geom);
-    #warn " Setting geometry: $geom";
-    #$mw->positionfrom('program');
-    #$mw->geometry("${max_x}x$max_y");
-    #$geom = $mw->geometry;
-    #warn "  Actual geometry: $geom";
-    
-    #$mw->geometry("+$x+$y");
-    $mw->update;
-    $mw->deiconify;
 }
 
 sub fix_window_min_max_sizes {
@@ -890,6 +830,20 @@ sub next_message_id {
     
     return ++$self->{'_last_message_id'};
 }
+
+sub show_log{
+    my $self = shift;
+
+    my $tw = $self->{'__tw_log'};
+    unless($tw){
+        $tw = TransientWindow::LogWindow->new($self->canvas->toplevel, 'log file - ' . $self->name);
+        $tw->initialise();
+        $tw->draw();
+        $self->{'__tw_log'} = $tw;
+    }
+    $tw->show_me();
+}
+
 
 {
     my $sel_tag = 'SelectedThing';
