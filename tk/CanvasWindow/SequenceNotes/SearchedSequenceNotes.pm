@@ -349,7 +349,35 @@ sub selected_CloneSequence_indices {
         return;
     }
 }
-
+sub popup_missing_analysis{
+    my ($self) = @_;
+    my $index = $self->get_current_CloneSequence_index ; 
+    unless (defined $index ){
+        return;
+    }
+    unless ( $self->check_for_Status($index) ){
+        # window has not been created already - create one
+        my $cs =  $self->get_CloneSequence_list->[$index];
+        my $using_no_pipeline = $cs->pipelineStatus->unavailable();
+        if (!$using_no_pipeline){
+            my $top = $self->canvas->Toplevel();
+            $top->transient($self->canvas->toplevel);
+            my $hp  = CanvasWindow::SequenceNotes::Status->new($top, 550 , 50);
+	    # $hp->SequenceNotes($self); # can't have reference to self if we're inheriting
+	    # clean up just won't work.
+            $hp->SequenceSet($self->current_SequenceSet);
+            $hp->SequenceSetChooser($self->SequenceSetChooser);
+            $hp->name($cs->contig_name);
+            $hp->clone_index($index) ;
+            $hp->initialise;
+            $hp->draw;
+            $self->add_Status($hp);
+        }
+        else{
+            $self->message( "You told me not to fetch this information with -nopipeline or pipeline=0." ); 
+        }
+    }
+}
 sub popup_ana_seq_history{
     my ($self) = @_;    
     my ($ss , $index) = $self->current_SequenceSet ; 
