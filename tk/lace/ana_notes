@@ -267,8 +267,11 @@ sub default_cursor {
             push(@embl_dump_command, '-path', $lace_dir);
         }
         warn "Running '@embl_dump_command'\n";
-        system(@embl_dump_command) == 0
-            or die "Error running : '@embl_dump_command'";
+        my $success = system(@embl_dump_command) == 0;
+        unless ($success) {
+            warn "Error running: '@embl_dump_command'\n";
+        }
+        return $success;
     }
 }
 
