@@ -2,7 +2,7 @@ use lib 't';
 use Test;
 use strict;
 
-BEGIN { $| = 1; plan tests => 28;}
+BEGIN { $| = 1; plan tests => 50;}
 
 use OtterTestDB;
 
@@ -57,3 +57,37 @@ while ( $i < 20) {
     }
     $i++;
 }
+
+ok(29);
+
+my $sth;
+$sth = $adaptor->db->prepare('insert into meta values(\N,"prefix.primary","TEST")');
+$sth->execute;
+
+$sth = $adaptor->db->prepare('insert into meta values(\N,"prefix.species","SPECIES")');
+$sth->execute;
+
+$sth = $adaptor->db->prepare('insert into meta values(\N,"stable_id.min","14000000")');
+$sth->execute;
+
+ok(30);
+
+my $i=0;
+while ( $i < 20) {
+
+    if ($i % 4 == 0) {
+	ok(my $gene_id = $adaptor->fetch_new_gene_stable_id);
+	print "Gene $gene_id\n";
+    }elsif ($i % 4 == 1) {
+	ok(my $tran_id = $adaptor->fetch_new_transcript_stable_id);
+	print "Tran $tran_id\n";
+    }elsif ($i % 4 == 2) {
+	ok(my $pep_id = $adaptor->fetch_new_translation_stable_id);
+	print "Ppe $pep_id\n";
+    }elsif ($i % 4 == 3) {
+	ok(my $exon_id = $adaptor->fetch_new_exon_stable_id);
+	print "Exon $exon_id\n";
+    }
+    $i++;
+}
+
