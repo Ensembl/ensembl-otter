@@ -1,0 +1,105 @@
+#!/usr/local/bin/perl -w
+
+### chk_gene_transcript_spans
+
+use strict;
+use Getopt::Long 'GetOptions';
+use Bio::Otter::Lace::Defaults;
+use Data::Dumper;
+
+my ($dataset, $verbose, $help, @a_types);
+
+Bio::Otter::Lace::Defaults::do_getopt('ds|dataset=s' => \$dataset,
+	                              'v|verbose'    => \$verbose,
+				      't|type=s@'     => \@a_types,
+				      'h|help'       =>	\$help);    # plus default options
+				
+exec('perldoc', $0) if !($dataset) || $help;
+
+my $client    = Bio::Otter::Lace::Defaults::make_Client();          # Bio::Otter::Lace::Client
+my $dset      = $client->get_DataSet_by_name($dataset);             # Bio::Otter::Lace::DataSet
+my $otter_db  = $dset->get_cached_DBAdaptor;                        # Bio::EnsEMBL::Containerr
+
+
+unless ( @a_types ){
+
+  # sql query to get all assembly types
+  my $sth = $otter_db->prepare(qq{SELECT count(*), type FROM assembly group by type});
+  $sth->execute;
+  while( my @row = $sth->fetchrow_array()) {
+    push (@a_types, $row[1]);
+  }
+  $sth->finish;
+}
+
+# loop thru all assembly types to fetch all annotated genes in it on otter
+
+my (@spans, @length, $error, $mRNA_snf, $mRNA_enf, %span_trans, $g_error, $total_error, $type);
+
+foreach $type ( @a_types ) {
+
+  $otter_db->assembly_type($type); # replace the default sequence set setting
+
+  warn $type;
+  my $seqSet    = $dset->get_SequenceSet_by_name($type);
+  $dset->fetch_all_CloneSequences_for_SequenceSet($seqSet);
+  my $chrom     = $seqSet->CloneSequence_list()->[0]->chromosome;
+
+  my $geneAd  = $otter_db->get_GeneAdaptor; # Bio::Otter::AnnotatedGeneAdaptor
+
+  my $sliceAd = $otter_db->get_SliceAdaptor;
+  my $slice = $sliceAd->fetch_by_chr_name($chrom->name);
+
+  my $latest_gene_id = $geneAd->list_current_dbIDs_for_Slice($slice);
+
+  foreach my $id ( @$latest_gene_id ) {
+
+    my $gene = $geneAd->fetch_by_dbID($id)->transform($slice);
+
+    my $g_start = $gene->start;
+    my $g_end   = $gene->end;
+    my $gid     = $gene->stable_id;
+
+    my $gene_span1 = "Gene span(dbID ".$gene->dbID."): $g_start-$g_end"; # gene span here is from the first exon to the last exon
+    print $gene_span1, "\n";
+
+    my $gene_span = $g_end - $g_start +1;
+
+    # get all transcripts of a gene
+
+    my $all_trans = $gene->get_all_Transcripts;
+
+    @length = ();
+    $error = ();
+
+    foreach my $trans ( @$all_trans) {
+
+      warn $trans->stable_id;
+
+      my $trans_id = $trans->transcript_info->{stable_id};
+
+      print $trans->start." => ".$trans->end." (start - end of $trans_id)\n";
+      push( @length, ($trans->end - $trans->start + 1) );
+     }
+
+    @length = sort { $a<=>$b } @length;
+
+    # compare longest transcript span with gene span
+    # problem spotted is the ratio not equal to 1
+
+    if ( $length[-1] != $gene_span ){
+      $error .= "$gid\t".$length[-1]/$gene_span."\n";
+      print "$gid\t".$length[-1]/$gene_span."\n";
+    }
+  }
+
+  if ( $error ) {
+    my $outfile = "/nfs/team71/analysis/ck1/OTTER/error/gene_span_check_".$type."_$dataset";
+    open (F, ">$outfile") || die $!;
+    print F $error;
+    close F;
+  }
+}
+
+__END__
+
