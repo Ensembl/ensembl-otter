@@ -32,6 +32,7 @@ sub SubSeq {
             confess "Expected a '$expected', but got a '$sub'";
         }
         $self->{'_SubSeq'} = $sub;
+        $self->canvas->toplevel->configure(-title => $sub->name);
     }
     return $self->{'_SubSeq'};
 }
@@ -272,9 +273,6 @@ sub initialize {
     my $canvas = $self->canvas;
     my $top = $canvas->toplevel;
 
-    unless (defined $self->archive_string) {
-        $self->archive_string($sub->ace_string);
-    }
     $self->draw_subseq;
 
     # Routines to handle the clipboard
@@ -307,19 +305,7 @@ sub initialize {
     my $file_menu = $self->make_menu('File');
     
     # Show the subsequence in fMap
-    my $show_subseq = sub{
-        my $xr = $self->xace_seq_chooser->xace_remote;
-        if ($xr) {
-            my $sub = $self->SubSeq;
-            if ($sub->get_all_Exons) {
-                $xr->show_SubSeq($sub);
-            } else {
-                $self->message("Can't show an empty SubSequence");
-            }
-        } else {
-            $self->message("No xace attached");
-        }
-    };
+    my $show_subseq = sub{ $self->show_subseq };
     $file_menu->add('command',
         -label          => 'Show SubSequence',
         -command        => $show_subseq,
@@ -349,29 +335,36 @@ sub initialize {
     $canvas->Tk::bind('<Control-A>', $select_all_sub);
     
     # Deselect all
-    $canvas->Tk::bind('<Escape>', sub{ $self->deselect_all});
+    $canvas->Tk::bind('<Escape>', sub{ $self->deselect_all });
     
-    my $method = $sub->GeneMethod;
-    if ($method->is_mutable) {
+    if ($self->is_mutable) {
 
         # Save into db via xace
+        my $save_command = sub{ $self->save_if_changed };
         $file_menu->add('command',
             -label          => 'Save',
-            -command        => sub{ $self->xace_save },
+            -command        => $save_command,
             -accelerator    => 'Ctrl+S',
             -underline      => 0,
             );
+        $top->bind('<Control-s>',   $save_command);
+        $top->bind('<Control-S>',   $save_command);
+        $top->bind('<Return>',      $save_command);
+        $top->bind('<KP_Enter>',    $save_command);
         
         # Add editing facilities for editable SubSeqs
         $edit_menu->add('separator');
 
         # Sort the positions
+        my $sort_command = sub{ $self->sort_position_pairs };
         $edit_menu->add('command',
             -label          => 'Sort',
-            -command        => sub{ $self->sort_position_pairs },
+            -command        => $sort_command,
             -accelerator    => 'Ctrl+O',
             -underline      => 1,
             );
+        $top->bind('<Control-o>',   $sort_command);
+        $top->bind('<Control-O>',   $sort_command);
         
         # Merge overlapping exon coordinates
         $edit_menu->add('command',
@@ -396,19 +389,15 @@ sub initialize {
         my @allowed_methods = map $_->name,
             $self->xace_seq_chooser->get_all_mutable_GeneMethods;
         my $current_method = $sub->GeneMethod->name;
-        my $change_method = sub {
-                my $meth = $self->xace_seq_chooser->get_GeneMethod($current_method);
-                $self->SubSeq->GeneMethod($meth);
-            };
+        $self->method_name_var(\$current_method);
+
         my $method_menu = $self->make_menu('Method');
         foreach my $method_name (@allowed_methods ) {
             $method_menu->add('radiobutton',
                 -label      => $method_name,
                 -value      => $method_name,
                 -variable   => \$current_method,
-                -command    => $change_method,
                 );
-            
         }
 
 
@@ -490,11 +479,17 @@ sub initialize {
     $self->fix_window_min_max_sizes;
 }
 
+sub is_mutable {
+    my( $self ) = @_;
+    
+    return $self->SubSeq->GeneMethod->is_mutable;
+}
+
 sub window_close {
     my( $self ) = @_;
     
     my $xc = $self->xace_seq_chooser;
-    if (my $ace = $self->get_ace_if_changed) {
+    if ($self->is_mutable and my $sub = $self->get_SubSeq_if_changed) {
         
         # Ask the user if changes should be saved
         require Tk::Dialog;
@@ -511,7 +506,7 @@ sub window_close {
             return; # Abandon window close
         }
         elsif ($ans eq 'Yes') {
-            $self->xace_save($ace) or return;
+            $self->xace_save($sub) or return;
         }
     }
     $self->delete_chooser_window_ref;
@@ -519,6 +514,28 @@ sub window_close {
     
     return 1;
 }
+
+sub show_subseq {
+    my( $self ) = @_;
+
+    my $xr = $self->xace_seq_chooser->xace_remote;
+    if ($xr) {
+        my $sub = $self->SubSeq;
+        unless ($sub->is_archival) {
+            $self->message("Not yet saved");
+            return;
+        }
+        
+        if ($sub->get_all_Exons) {
+            $xr->show_SubSeq($sub);
+        } else {
+            $self->message("Can't show an empty SubSequence");
+        }
+    } else {
+        $self->message("No xace attached");
+    }
+};
+
 
 sub add_subseq_rename_widget {
     my( $self ) = @_;
@@ -529,17 +546,9 @@ sub add_subseq_rename_widget {
         -anchor => 'nw',
         );
     
-    my $sub = $self->SubSeq;
-    my       $name = $sub->name;
-    my $clone_name = $sub->clone_Sequence->name;
-    my $root = '';
-    if ($name =~ /^($clone_name\.)(.+)/) {
-        $root = $1;
-        $name = $2;
-    }
-
     my $sub_name_label = $button_frame->Label(
-        -text => "Name: $root",
+        -text   => "Name:",
+        -anchor => 's',
         );
     $sub_name_label->pack(
         -side => 'left',
@@ -548,11 +557,12 @@ sub add_subseq_rename_widget {
     my $sub_name = $button_frame->Entry(
         -width              => 20,
         -exportselection    => 1,
+        -font               => [$self->font, $self->font_size, 'normal'],
         );
     $sub_name->pack(
         -side => 'left',
         );
-    $sub_name->insert(0, $name);
+    $sub_name->insert(0, $self->SubSeq->name);
     $self->subseq_name_Entry($sub_name);
 }
 
@@ -565,14 +575,26 @@ sub subseq_name_Entry {
     return $self->{'_subseq_name_entry'};
 }
 
-sub update_subseq_name {
+sub get_subseq_name {
     my( $self ) = @_;
     
-    my $name = $self->subseq_name_Entry->get;
-    $self->SubSeq->name($name);
-    $self->canvas->toplevel->configure(
-        -title  => $name,
-        );
+    return $self->subseq_name_Entry->get;
+}
+
+sub method_name_var {
+    my( $self, $var_ref ) = @_;
+    
+    if ($var_ref) {
+        $self->{'_method_name_var'} = $var_ref;
+    }
+    return $self->{'_method_name_var'};
+}
+
+sub get_GeneMethod_from_tk {
+    my( $self ) = @_;
+    
+    my $meth_name = ${$self->method_name_var};
+    return $self->xace_seq_chooser->get_GeneMethod($meth_name);
 }
 
 sub canvas_insert_character {
@@ -805,7 +827,7 @@ sub get_all_selected_text {
 sub export_ace_subseq_to_selection {
     my( $self, $offset, $max_bytes ) = @_;
         
-    my $sub = $self->update_ace_subseq;
+    my $sub = $self->new_SubSeq_from_tk;
     my $text = $sub->ace_string;
     if (length($text) > $max_bytes) {
         die "text too big";
@@ -984,7 +1006,7 @@ sub draw_translation_region {
         );
 }
 
-sub update_translation_region {
+sub get_translation_region {
     my( $self ) = @_;
     
     my $canvas = $self->canvas;
@@ -992,62 +1014,64 @@ sub update_translation_region {
     foreach my $obj ($canvas->find('withtag', 'translation_region')) {
         push(@region, $canvas->itemcget($obj, 'text'));
     }
-    $self->SubSeq->translation_region(@region);
+    return(@region);
 }
 
-sub get_ace_if_changed {
+sub get_SubSeq_if_changed {
     my( $self ) = @_;
     
-    my $sub = $self->update_ace_subseq;
-    my $new = $sub->ace_string;
-    my $old = $self->archive_string;
-    if ($new eq $old) {
+    my $new = $self->new_SubSeq_from_tk;
+    my $old = $self->SubSeq;
+    if ($old->is_archival and $new->ace_string eq $old->ace_string) {
         return;
     } else {
         return $new;
     }
 }
 
-sub archive_string {
-    my( $self, $string ) = @_;
-    
-    if (defined $string) {
-        $self->{'_archive_string'} = $string;
-    }
-    return $self->{'_archive_string'};
-}
-
-sub update_ace_subseq {
+sub new_SubSeq_from_tk {
     my( $self ) = @_;
 
-    $self->update_translation_region;
-    $self->update_subseq_name;
-    my @exons = $self->Exons_from_canvas;
-
-    my $sub = $self->SubSeq;
-    $sub->replace_all_Exons(@exons);
+    my $sub = $self->SubSeq->clone;
+    $sub->translation_region( $self->get_translation_region );
+    $sub->name              ( $self->get_subseq_name        );
+    $sub->replace_all_Exons ( $self->Exons_from_canvas      );
+    $sub->GeneMethod        ( $self->get_GeneMethod_from_tk );
     return $sub;
 }
 
-sub xace_save {
-    my( $self, $ace ) = @_;
+sub save_if_changed {
+    my( $self ) = @_;
     
-    # $ace can be supplied to avoid calculating it twice
-    my( $sub );
-    if ($ace) {
-        $sub = $self->SubSeq;
-    } else {
-        $sub = $self->update_ace_subseq;
-        $ace = $sub->ace_string;
+    if (my $sub = $self->get_SubSeq_if_changed) {
+        $self->xace_save($sub);
     }
+}
+
+sub xace_save {
+    my( $self, $sub ) = @_;
+    
+    confess "Missing SubSeq argument" unless $sub;
+    
+    my $ace = '';
+    
+    # Need to object if name has changed
+    my $old_name = $self->SubSeq->name;
+    my $new_name = $sub->name;
+    if ($new_name ne $old_name) {
+        $ace .= qq{\n-R Sequence "$old_name" "$new_name"\n};
+    }
+    
+    $ace .= $sub->ace_string;
     
     my $xc = $self->xace_seq_chooser;
     my $xr = $xc->xace_remote;
     if ($xr) {
         $xr->load_ace($ace);
         $xr->save;
-        $xc->replace_SubSeq($sub);
-        $self->archive_string($ace);
+        $xc->replace_SubSeq($sub, $old_name);
+        $self->SubSeq($sub);
+        $sub->is_archival(1);
         return 1;
     } else {
         $self->message("No xace attached");

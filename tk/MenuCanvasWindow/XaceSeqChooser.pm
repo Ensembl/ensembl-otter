@@ -332,7 +332,6 @@ sub edit_new_subsequence {
     $self->highlight_by_name('subseq', $seq_name);
     
     my $ec = $self->make_exoncanvas_edit_window($new);
-    $ec->archive_string('');
     $ec->initialize;
 }
 
@@ -532,6 +531,7 @@ sub edit_subsequences {
         
         # Get a copy of the subseq
         my $sub = $self->get_SubSeq($sub_name)->clone;
+        $sub->is_archival(1);
         
         $self->make_exoncanvas_edit_window($sub)
              ->initialize;
@@ -545,9 +545,7 @@ sub make_exoncanvas_edit_window {
     my $canvas = $self->canvas;
     
     # Make a new window
-    my $top = $canvas->Toplevel(
-        -title  => $sub_name,
-        );
+    my $top = $canvas->Toplevel;
     
     # Make new MenuCanvasWindow::ExonCanvas object and initialize
     my $ec = MenuCanvasWindow::ExonCanvas->new($top);
@@ -590,6 +588,14 @@ sub delete_subseq_edit_window {
     my( $self, $name ) = @_;
     
     delete($self->{'_subseq_edit_window'}{$name});
+}
+
+sub rename_subseq_edit_window {
+    my( $self, $old_name, $new_name ) = @_;
+    
+    my $win = $self->get_subseq_edit_window($old_name);
+    $self->delete_subseq_edit_window($old_name);
+    $self->save_subseq_edit_window($new_name, $win);
 }
 
 sub draw_clone_list {
@@ -724,6 +730,9 @@ sub express_clone_and_subseq_fetch {
                     );
             $sub->clone_Sequence($seq);
             
+            # Flag that the sequence is in the db
+            $sub->is_archival(1);
+            
             if (my $mt = $t_seq->at('Method[1]')) {
                 if (my $meth = $self->get_GeneMethod($mt->name)) {
                     $sub->GeneMethod($meth);
@@ -741,12 +750,17 @@ sub express_clone_and_subseq_fetch {
 }
 
 sub replace_SubSeq {
-    my( $self, $sub ) = @_;
+    my( $self, $sub, $old_name ) = @_;
     
     my $sub_name = $sub->name;
+    $old_name ||= $sub_name;
     my $clone_name = $sub->clone_Sequence->name;
     my $clone = $self->get_CloneSeq($clone_name);
-    $clone->replace_SubSeq($sub);
+    $clone->replace_SubSeq($sub, $old_name);
+    if ($old_name and $sub_name ne $old_name) {
+        $self->{'_subsequence_cache'}{$old_name} = undef;
+        $self->rename_subseq_edit_window($old_name, $sub_name);
+    }
     $self->{'_subsequence_cache'}{$sub_name} = $sub;
     $self->draw_current_state;
 }
