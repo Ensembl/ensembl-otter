@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <ctype.h>
+#include <errno.h>
 
 typedef enum FileTypeEnum {
   NONE,
@@ -22,65 +23,129 @@ char *typeStrings[] = {
   "TEXT"
 };
 
-char *copyAndReplace(char *fromBuf,char *toBuf,char *baseFromName, 
-                     char *baseToName, char *toName, int len, 
-                     int *toLen, FileType type);
+int isDirectory(char *name);
+int fileExists(char *name);
+void descendAndDo(DIR *dir, char *fromDirName, char *toDirName, char *baseSrcPath,
+                  char *baseFromName, char *baseToName, int allowAppend, 
+                  char *archiveExtension, int doFunc());
+char *copyAndReplace(char *fromBuf,char *toBuf,char *baseSrcName, char *baseToName, char *toName, 
+                     int fromLen, int *toLen, FileType type);
 FileType fileType(char *fileBuf,int len);
-void descendAndDo(DIR *dir, char *fromDirName, char *toDirName, 
-                  char *baseFromName, char *baseToName, int doFunc());
-int doFunc(char *fromName, char *toName, char *baseFromName, char *baseToName); 
+int doFuncInp(char *fromName, char *toName, char *baseSrcName, 
+           char *baseToName, int allowAppend, char *archiveExtension);
+void printUsageAndDie(void);
 
 int main(int argc, char *argv[]) {
   DIR *fromdir;
   char fullFromName[MAXPATHLEN];
   char fullDestName[MAXPATHLEN];
+  char baseSrcPath[MAXPATHLEN];
   char baseFromPath[MAXPATHLEN];
   char baseToPath[MAXPATHLEN];
   struct stat st;
+  int  allowAppend = 0;
+  char archiveExtension[MAXPATHLEN];
 
-  if (argc != 3) {
-    fprintf(stderr, "Usage: moveperl <fromdir> <todir>\n");
-    exit(1);
+  baseSrcPath[0] = '\0';
+  archiveExtension[0] = '\0';
+
+  argv++;
+  argc--;
+
+  while (argc && argv[0][0] == '-') {
+    if (strlen(argv[0]) != 2) printUsageAndDie();
+    switch (argv[0][1]) {
+      case 's':
+        argv++; argc--;
+        if (!argc || argv[0][0] == '-') printUsageAndDie();
+        strcpy(baseSrcPath,argv[0]);
+        printf("Source directory set to %s\n",baseSrcPath);
+        argv++; argc--;
+        break;
+      case 'a':
+        printf("Allowing append\n");
+        allowAppend = 1;
+        argv++; argc--;
+        break;
+      case 'r':
+        argv++; argc--;
+        if (!argc || argv[0][0] == '-') printUsageAndDie();
+        sprintf(archiveExtension,".%s",argv[0]);
+        printf("Archive extension set to %s\n",archiveExtension);
+        argv++; argc--;
+        break;
+      default:
+        fprintf(stderr,"Error: Unknown option %s\n",argv[0]);
+        printUsageAndDie();
+        break;
+    }
   }
 
-  if ((fromdir = opendir(argv[1])) == NULL) {
+  if (argc != 2) {
+    fprintf(stderr,"Error: Didn't end up with two dirs\n");
+    printUsageAndDie();
+  }
+ 
+
+  if ((fromdir = opendir(argv[0])) == NULL) {
     fprintf(stderr,"Error: Couldn't open source perl directory %s\n",argv[1]);
     exit(1);
   }
 
-  if ((opendir(argv[2])) != NULL) {
-    fprintf(stderr,"Error: Destination perl directory already exists\n");
-    exit(1);
+  if ((opendir(argv[1])) != NULL) {
+    if (!allowAppend) {
+      fprintf(stderr,"Error: Destination perl directory already exists\n");
+      exit(1);
+    }
+  } else if (allowAppend) {
+    fprintf(stderr,"Error: -a (append) specified but destination dir doesn't exist\n");
   }
+
 /*
-  if (!realpath(argv[1],fullFromName)) {
+  if (!realpath(argv[0],fullFromName)) {
     fprintf(stderr,"Error: Couldn't get realpath to fromdir\n");
     exit(1);
   }
-  if (!realpath(argv[2],fullDestName)) {
+  if (!realpath(argv[1],fullDestName)) {
     fprintf(stderr,"Error: Couldn't get realpath to destdir\n");
     exit(1);
   }
 */
-  strcpy(fullFromName,argv[1]);
-  strcpy(fullDestName,argv[2]);
+  strcpy(fullFromName,argv[0]);
+  strcpy(fullDestName,argv[1]);
 
   if (strlen(fullFromName) < strlen(fullDestName)) {
     fprintf(stderr,"Error: Length of to path can't be longer than from path\n");
     exit(1);
   }
 
-  stat(fullFromName,&st);
-  if (mkdir(fullDestName,st.st_mode)) {
-    fprintf(stderr, "Error: Failed making directory %s\n",fullDestName);
-    exit(1);
+  if (!allowAppend) {
+    stat(fullFromName,&st);
+    if (mkdir(fullDestName,st.st_mode)) {
+      fprintf(stderr, "Error: Failed making directory %s\n",fullDestName);
+      exit(1);
+    }
   }
+
   strcpy(baseFromPath,fullFromName);
   strcpy(baseToPath,fullDestName);
-  descendAndDo(fromdir,fullFromName,fullDestName,baseFromPath,baseToPath,doFunc);
+  if (baseSrcPath[0]=='\0') {
+    strcpy(baseSrcPath,fullFromName);
+  }
+
+  descendAndDo(fromdir,fullFromName,fullDestName,
+               baseSrcPath,baseFromPath,baseToPath,
+               allowAppend,archiveExtension,doFuncInp);
 }
 
-void descendAndDo(DIR *dir, char *fromDirName, char *toDirName, char *baseFromName, char *baseToName, int doFunc()) {
+void printUsageAndDie() {
+  fprintf(stderr, "Usage: moveperl [-a] [-s <srcdir>] [-r <libsuffix>] <fromdir> <todir>\n");
+  exit(1);
+}
+
+void descendAndDo(DIR *dir, char *fromDirName, char *toDirName, char *baseSrcName,
+                  char *baseFromName, char *baseToName, int allowAppend, 
+                  char *archiveExtension, int doFunc()) {
   struct dirent *dp;
   char fromName[MAXPATHLEN];
   char toName[MAXPATHLEN];
@@ -99,14 +164,17 @@ void descendAndDo(DIR *dir, char *fromDirName, char *toDirName, char *baseFromNa
           fprintf(stderr,"Error: Couldn't open directory %s\n",fromName);
           exit(1);
         }
-        if (!doFunc(fromName,toName,baseFromName,baseToName)) {
+        if (!doFunc(fromName,toName,baseSrcName,baseToName,
+                    allowAppend,archiveExtension)) {
           fprintf(stderr,"Error: Failed executing doFunc\n");
           exit(1);
         }
 /* Recurse here */
-        descendAndDo(childdir,fromName,toName,baseFromName,baseToName,doFunc);
+        descendAndDo(childdir,fromName,toName,baseSrcName,baseFromName,
+                     baseToName,allowAppend,archiveExtension,doFunc);
       } else {
-        if (!doFunc(fromName,toName,baseFromName,baseToName)) {
+        if (!doFunc(fromName,toName,baseSrcName,baseToName,
+                    allowAppend,archiveExtension)) {
           fprintf(stderr,"Error: Failed executing doFunc\n");
           exit(1);
         }
@@ -116,7 +184,8 @@ void descendAndDo(DIR *dir, char *fromDirName, char *toDirName, char *baseFromNa
   (void)closedir(dir);
 }
 
-int doFunc(char *fromName, char *toName, char *baseFromName, char *baseToName) {
+int doFuncInp(char *fromName, char *toName, char *baseSrcName, 
+           char *baseToName, int allowAppend, char *archiveExtension) {
   FILE *fp;
   char *fileBuf;
   char *toBuf;
@@ -126,16 +195,27 @@ int doFunc(char *fromName, char *toName, char *baseFromName, char *baseToName) {
   int count=0;
   FileType type;
   int toLen;
+  int toNameLen = strlen(toName);
+  int archExtLen = strlen(archiveExtension);
   
-  //printf("%s %s %s %s\n",fromName,toName,baseFromName,baseToName);
+  //printf("%s %s %s %s\n",fromName,toName,baseSrcName,baseToName);
 
   stat(fromName,&st);
   if (st.st_mode & S_IFDIR) {
-    if (mkdir(toName,st.st_mode)) {
-      fprintf(stderr,"Error: Failed making directory %s\n",toName);
+    if (!fileExists(toName)) {
+      if (mkdir(toName,st.st_mode)) {
+        fprintf(stderr,"Error: Failed making directory %s\n",toName);
+        exit(1);
+      }
+    } else if (!isDirectory(toName)) {
+      fprintf(stderr,"Error: %s is not a directory, but should be\n",toName);
       exit(1);
     }
   } else {
+    if (fileExists(toName)) {
+      fprintf(stderr,"Error: File %s already exists and I'm not going to overwrite it!",toName);
+      exit(1);
+    }
     if ((fileBuf = calloc(st.st_size+1,sizeof(char))) == NULL) {
       fprintf(stderr,"Error: Failed allocating space for file buffer\n");
       exit(1);
@@ -149,6 +229,8 @@ int doFunc(char *fromName, char *toName, char *baseFromName, char *baseToName) {
       fprintf(stderr,"Error: Failed opening from perl file %s\n",fromName);
       exit(1);
     }
+    fread(fileBuf,st.st_size,1,fp); 
+/*
     chP = fileBuf;
     
     while ((ch = getc(fp)) != EOF) {
@@ -156,17 +238,28 @@ int doFunc(char *fromName, char *toName, char *baseFromName, char *baseToName) {
       *chP = ch;
       chP++;
     }
+*/
     fclose(fp);
+
     if ((fp = fopen(toName,"w")) == NULL) {
       fprintf(stderr,"Error: Failed opening to perl file %s\n",toName);
       exit(1);
     }
     type = fileType(fileBuf,st.st_size);
     //printf("Type = %d (%s)\n",type,typeStrings[type]);
-    copyAndReplace(fileBuf,toBuf,baseFromName,baseToName,toName,st.st_size,&toLen,type);
+    copyAndReplace(fileBuf,toBuf,baseSrcName,baseToName,toName,st.st_size,&toLen,type);
     fwrite(toBuf,toLen,1,fp); 
     fclose(fp);
     chmod(toName,st.st_mode);
+
+    
+    if (toNameLen > archExtLen &&
+        !strcmp(&(toName[toNameLen-archExtLen-1]),archiveExtension)) {
+      char comStr[MAXPATHLEN + 1024];
+      sprintf(comStr,"ranlib %s",toName);
+      printf("%s\n",comStr);
+      system(comStr);
+    }
 
     free(fileBuf);
     free(toBuf);
@@ -174,12 +267,40 @@ int doFunc(char *fromName, char *toName, char *baseFromName, char *baseToName) {
   return 1;
 }
 
-char *copyAndReplace(char *fromBuf,char *toBuf,char *baseFromName, char *baseToName, char *toName, 
+
+int fileExists(char *name) {
+  struct stat st;
+
+  if (stat(name,&st)) {
+    if (errno == ENOENT) {
+      return 0;
+    } else {
+      fprintf(stderr,"Warning: Stat of %s failed for reason other than not found\n",name);
+      perror(NULL);
+      return 0;
+    }
+  }
+  return 1;
+}
+
+int isDirectory(char *name) {
+  struct stat st;
+
+  if (fileExists(name)) {
+    stat(name,&st);
+    if (st.st_mode & S_IFDIR) {
+      return 1;
+    }
+  }
+  return 0;
+}
+
+char *copyAndReplace(char *fromBuf,char *toBuf,char *baseSrcName, char *baseToName, char *toName, 
                      int fromLen, int *toLen, FileType type) {
   char *fromChP;
   char *toChP;
   int nToCopy = 0;
-  int lenBaseFromName = strlen(baseFromName);
+  int lenBaseSrcName = strlen(baseSrcName);
   int lenBaseToName = strlen(baseToName);
   int i;
   int printDone = 0;
@@ -190,31 +311,31 @@ char *copyAndReplace(char *fromBuf,char *toBuf,char *baseFromName, char *baseToN
   toChP = toBuf;
 
   while ((fromChP-fromBuf) < fromLen) {
-    if (*fromChP == baseFromName[0] && 
-        !strncmp(baseFromName,fromChP,lenBaseFromName)) {
+    if (*fromChP == baseSrcName[0] && 
+        !strncmp(baseSrcName,fromChP,lenBaseSrcName)) {
       strcpy(toChP,baseToName);
     
       if (!printDone) {
-        printf("Modifying %s\n",toName);
+        printf("Modifying %s type %s\n",toName,typeStrings[type]);
         printDone = 1;
       }
 
-      fromChP  += lenBaseFromName;
+      fromChP  += lenBaseSrcName;
       toChP    += lenBaseToName;
       while (!iscntrl(*fromChP) && !isspace(*fromChP)) {
-        //printf("%c",*fromChP);
+        printf("%c",*fromChP);
         *toChP = *fromChP;
         toChP++;
         fromChP++;
       }
       if (type == BINARY) {
-        //printf("padding with %d chars\n",lenBaseFromName-lenBaseToName);
-        for (i=0;i<lenBaseFromName-lenBaseToName;i++) {
+       // printf("padding with %d chars\n",lenBaseSrcName-lenBaseToName);
+        for (i=0;i<lenBaseSrcName-lenBaseToName;i++) {
           (*toChP)='\0';
           toChP++;
         }
       }
-      //printf("\n");
+      printf("\n");
     } else {
       *toChP = *fromChP;
       fromChP++;
@@ -231,6 +352,7 @@ FileType fileType(char *fileBuf,int len) {
   char *chP;
   int i;
   int nNewline = 0;
+  int nCntrl = 0;
   int nToGet=2000;
 
   if (!len) return EMPTY;
@@ -245,11 +367,15 @@ FileType fileType(char *fileBuf,int len) {
   for (i=0;i<nToGet;i++) {
     if (fileBuf[i] == '\n') {
       nNewline++;
+    } else if (iscntrl(fileBuf[i]) && fileBuf[i]!='\t') {
+      nCntrl++;
     }
   }
+  printf("nNewline = %d nCntrl = %d nToGet = %d\n",nNewline,nCntrl,nToGet);
   if (!nNewline) return BINARY;
+  if ((float)nCntrl/(float)nToGet > 0.15) return BINARY;
 
-  if ((float)nToGet/(float)nNewline < 60) {
+  if ((float)nToGet/(float)nNewline < 81) {
     return TEXT;
   }
 
