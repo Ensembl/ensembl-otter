@@ -3,12 +3,21 @@
 # Make sure files are group writable
 umask 0002
 
-cd ..
+### come find yourself
+THISSCRIPT=`basename $0`
+   ILIVEIN=`dirname $0` # this is where the script lives. can cd there.
+   CVSBASE=..
+    CALLED=`pwd`
+
+## get to cvs check outs directory
+cd $ILIVEIN/$CVSBASE/..
 
 root=`pwd`
 #echo "root=$root"
+
 pid_file=$root/ensembl-otter/otter_srv.pid
 pid_exist=0
+
 
 # set PERL5LIB
 PERL5LIB=\
@@ -30,7 +39,7 @@ start(){
 	echo "starting otter_srv..."
         exec ./otter_srv &
     else
-	echo "can't start '$pid_file' exists"
+	echo "can't start '$pid_file' exists" 1>&2
     fi
 }
 stop(){
@@ -42,11 +51,11 @@ stop(){
             rm $pid_file
 	    pid_exist=0
 	else
-	    echo "'$pid_file' is not a valid pid file"
+	    echo "'$pid_file' is not a valid pid file" 1>&2
 	    exit 1
 	fi
     else
-	echo "no pidfile exists can't stop"
+	echo "no pidfile [$pid_file] exists, so can't stop" 1>&2
 	exit 1
     fi
 }
@@ -57,10 +66,10 @@ rotate_log(){
 	    echo "rotating logs..."
             kill -1 $pid
 	else
-	    echo "'$pid_file' is not a valid pid file."
+	    echo "'$pid_file' is not a valid pid file." 1>&2
 	fi
     else
-	echo "no pidfile exists can't do rotate."	
+	echo "no pidfile [$pid_file] exists, so can't do rotate." 1>&2
     fi
 }
 restart(){
@@ -82,11 +91,6 @@ case "$1" in
     restart
     ;;
   *)
-    echo $"Usage: $0 {start|stop|logrotate|restart}"
+    echo $"Usage: $0 {start|stop|logrotate|restart}" 1>&2
     exit 1
 esac
-
-
-
-#exec ./otter_srv > ../../server.log 2>&1
-#exec ./otter_srv
