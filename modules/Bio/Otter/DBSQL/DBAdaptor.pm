@@ -84,6 +84,24 @@ sub get_ExonAdaptor {
   return $self->_get_adaptor("Bio::Otter::DBSQL::AnnotatedExonAdaptor");
 } 
 
+sub get_HitDescriptionAdaptor {
+    my $self = shift;
+    
+    return $self->_get_adaptor('Bio::Otter::DBSQL::HitDescriptionAdaptor');
+}
+
+sub get_DnaDnaAlignFeatureAdaptor {
+    my $self = shift;
+    
+    return $self->_get_adaptor('Bio::Otter::DBSQL::DnaDnaAlignFeatureAdaptor');
+}
+
+sub get_DnaPepAlignFeatureAdaptor {
+    my $self = shift;
+    
+    return $self->_get_adaptor('Bio::Otter::DBSQL::DnaPepAlignFeatureAdaptor');
+}
+
 sub get_AuthorAdaptor {
   my $self = shift;
 
