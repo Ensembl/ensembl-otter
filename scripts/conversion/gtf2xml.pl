@@ -141,6 +141,10 @@ my %map_category;
 	       'predicted'=>'Predicted',
 	       'putative'=>'Putative',
 	       'novel'=>'Novel_Transcript',
+	       'Gene_Segment'=>'Ig_Segment',
+	       'Pseudogene_Segment'=>'Ig_Pseudogene_Segment',
+	       'Experimental_Gene'=>'Novel_Transcript',
+	       'Partial_Gene'=>'Novel_Transcript',
 	       );
 
 my %map_key;
@@ -320,13 +324,13 @@ if($opt_v){
   print "\n";
 }
 
-#if($opt_v){
+if($opt_v){
   print "Distribution of intron lengths\n";
   foreach my $nintron (sort {$a<=>$b} keys %nintron){
     print "$nintron $nintron{$nintron}\n";
   }
   print "\n";
-#}
+}
 
 # look for entries in gene, not in genes
 foreach my $gene_id (keys %gene){

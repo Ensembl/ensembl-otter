@@ -83,7 +83,7 @@ use Hum::AnaStatus::Sequence;
             }
         };
         if ($@) {
-            print STDERR "ERROR '$name' : $@";
+            print STDERR "ERROR '$name' ($asid) : $@";
             $error++;
         }
     }
