@@ -19,14 +19,14 @@ use Data::Dumper;
         );
     my $dataset_name = 'human';
     Bio::Otter::Lace::Defaults::do_getopt(
-					  'h|help!'    => \$help,
-					  'key=s'      => \$key,
-					  'host=s'     => \$sathost,
-					  'port=s'     => \$satport,
-					  'user=s'     => \$satuser,
-					  'password=s' => \$satpass,
-					  'dbname=s'   => \$satdbname,
-					  'dataset=s'  => \$dataset_name
+					  'h|help!'     => \$help,
+					  'key=s'       => \$key,
+					  'sathost=s'   => \$sathost,
+					  'satport=s'   => \$satport,
+					  'satuser=s'   => \$satuser,
+					  'satpass=s'   => \$satpass,
+					  'satdbname=s' => \$satdbname,
+					  'dataset=s'   => \$dataset_name
 					  ) || usage();
     usage() if $help;
     die "Key not given" unless $key;
@@ -67,8 +67,8 @@ __END__
 =head1 DESCRIPTION
 
     Saves the connection hash for a satellite database for 
-the otter server under the key.  By default it uses the options 
-already stored in the database for the key.
+the otter server under the B<key>.  By default it uses the options 
+already stored in the database for the B<key>.
 
 =head1 USAGE
 
