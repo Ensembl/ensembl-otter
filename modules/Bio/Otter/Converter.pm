@@ -338,7 +338,7 @@ sub XML_to_otter {
       $frag{$currfragname}{chr} = $chr;
     } elsif (/<assembly_start>(.*)<\/assembly_start>/) {
       $frag{$currfragname}{start} = $1;
-    } elsif (/<accession>(.*)<\/accession>/) {
+    } elsif (/<id>(.*)<\/id>/) {
       $currfragname = $1;
 
       if ($currentobj eq 'frag') {
@@ -453,7 +453,7 @@ sub XML_to_otter {
   # print STDERR "chrname = " . $chrname . " chrstart = " . $chrstart . " chrend = "
   #  . $chrend . "\n";
 
-  # If we have a database connection, check that our tile path
+  # If we have a database connection, check that our tile 
   # is consistent with the assembly table in the database
   if (defined($db)) {
     if ($assembly_type) {
@@ -1600,7 +1600,7 @@ sub path_to_XML {
 
   foreach my $p (@$path) {
     $xmlstr .= "<sequence_fragment>\n";
-    $xmlstr .= "  <accession>" . $p->component_Seq->id . "</accession>\n";
+    $xmlstr .= "  <id>" . $p->component_Seq->id . "</id>\n";
     $xmlstr .= "  <chromosome>" . $chr . "</chromosome>\n";
 
     if (my $clone = $p->component_Seq->clone) {
