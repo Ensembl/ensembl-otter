@@ -26,7 +26,6 @@ $| = 1;
   'path:s'        => \$path,
   'port:n'        => \$port,
   'chromosomes:s' => \@chromosomes,
-  'dbentry_type:s'=> \$dbentry_type,
   'store'         => \$do_store,
 );
 
@@ -98,7 +97,7 @@ foreach my $chr (reverse sort bychrnum keys %$chrhash) {
       my $sth = $db->prepare("insert into gene_description(gene_id,description) values(" . 
                              $gene->dbID . ", ? )");
       print $sth->{Statement} . ";\n";
-      $sth->execute($fullname);
+      $sth->execute($fullname) if $do_store;
     } else {
       print "No $fullname for ". $gene->stable_id ." dbID " . $gene->dbID ."\n";
     }
