@@ -141,6 +141,8 @@ print " <response>";
 print " </response>";
 print "</otter>";
 
+close XML;
+
 sub error_exit {
   my ($q,$reason) = @_;
 
