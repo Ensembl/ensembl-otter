@@ -57,14 +57,12 @@ CanvasWindow*troughColor: #aaaaaa
 CanvasWindow*foreground: black
 CanvasWindow*activecolor: #ffd700
 CanvasWindow*color: #ffd700
-CanvasWindow*Entry.borderWidth: 1
-CanvasWindow*Button.borderWidth: 1
-CanvasWindow*Menu.borderWidth: 1
-CanvasWindow*Menubutton.borderWidth: 1
-CanvasWindow*Optionmenu.borderWidth: 1
-CanvasWindow*Scrollbar.borderWidth: 1
+CanvasWindow*borderWidth: 1
+CanvasWindow*activeborderWidth: 1
+CanvasWindow*Frame.borderWidth: 0
 CanvasWindow*Scrollbar.width: 11
 CanvasWindow*font: -*-helvetica-medium-r-*-*-12-*-*-*-*-*-*-*
+CanvasWindow*selectColor: gold
 
 };
             close XRES;

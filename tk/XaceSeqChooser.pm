@@ -28,25 +28,6 @@ sub new {
     $self->menu_bar($menu_frame);
 
     $self->populate_menus;
-
-    #$self->add_buttons;
-    $self->bind_events;
-    $self->current_state('clone');
-    $self->minimum_scroll_bbox(0,0,200,200);
-    return $self;
-}
-
-sub old_new {
-    my( $pkg, $tk ) = @_;
-    
-    my $button_frame = $tk->Frame;
-    $button_frame->pack(
-        -side   => 'top',
-        -fill   => 'x',
-        );
-    my $self = $pkg->SUPER::new($tk);
-    $self->button_frame($button_frame);
-    $self->add_buttons;
     $self->bind_events;
     $self->current_state('clone');
     $self->minimum_scroll_bbox(0,0,200,200);
@@ -146,10 +127,10 @@ sub populate_menus {
     my $menu_frame = $self->menu_bar
         or confess "No menu_bar";
     
-    # Chooser menu
-    my $chooser = $self->_make_menu('Chooser');
+    # File menu
+    my $file = $self->_make_menu('File');
     
-    $chooser->add('command',
+    $file->add('command',
         -label          => 'Attach Xace',
         -command        => sub {
             if (my $xwid = $self->get_xace_window_id) {
@@ -163,26 +144,26 @@ sub populate_menus {
         -accelerator    => 'Ctrl-X',
         -underline      => 0,
         );
-    $chooser->add('command',
+    $file->add('command',
         -label          => 'Resync',
         -hidemargin     => 1,
         -command        => sub { warn "Called Resync" },
         -accelerator    => 'Ctrl-R',
         -underline      => 0,
         );
-    $chooser->add('separator');
-    $chooser->add('command',
+    $file->add('separator');
+    $file->add('command',
         -label          => 'Exit',
         -command        => sub { $menu_frame->toplevel->destroy },
         -accelerator    => 'Ctrl-Q',
         -underline      => 0,
         );
     
-    # Mode menu
-    my $mode = $self->_make_menu('Mode');
+    # Show menu
+    my $mode = $self->_make_menu('Show');
     my $mode_var = 'clone';
     my $mode_switch = sub {
-        $self->clone_sub_switch($mode_var);        
+        $self->clone_sub_switch($mode_var);
     };
     $mode->add('radiobutton',
         -label          => 'Clones',
@@ -191,7 +172,7 @@ sub populate_menus {
         -command        => $mode_switch,
         );
     $mode->add('radiobutton',
-        -label          => 'Sub sequences',
+        -label          => 'Sub-sequences',
         -value          => 'subseq',
         -variable       => \$mode_var,
         -command        => $mode_switch,
@@ -239,54 +220,6 @@ sub populate_menus {
         );
 }
 
-sub add_buttons {
-    my( $self, $tk ) = @_;
-    
-    my $bf = $self->button_frame;
-    my $x_attach = $bf->Button(
-        -text       => 'Attach xace',
-        -command    => sub{
-            if (my $xwid = $self->get_xace_window_id) {
-                my $xrem = Hum::Ace::XaceRemote->new($xwid);
-                $self->xace_remote($xrem);
-                $xrem->send_command('save');
-            } else {
-                warn "no xwindow id: $xwid";
-            }
-            });
-    $x_attach->pack(
-        -side   => 'left',
-        );
-   
-    my $clone_sub = $bf->Button(
-        -text       => 'Show subseq',
-        -state      => 'disabled',
-        -command    => sub{
-            $self->clone_sub_switch;
-            });
-    $clone_sub->pack(
-        -side   => 'left',
-        );
-    $self->clone_sub_switch_button($clone_sub);
-    
-    my $edit_button = $bf->Button(
-        -text       => 'Edit',
-        -command    => sub{
-            $self->edit_subsequences;
-            });
-    $edit_button->pack(
-        -side   => 'left',
-        );
-    
-    my $quit_button = $bf->Button(
-        -text       => 'Quit',
-        -command    => sub{ $self->canvas->toplevel->destroy; },
-        );
-    $quit_button->pack(
-        -side   => 'right',
-        );
-}
-
 sub bind_events {
     my( $self ) = @_;
     
@@ -310,7 +243,7 @@ sub edit_double_clicked {
     my( $self ) = @_;
     
     if ($self->current_state eq 'clone') {
-        $self->clone_sub_switch;
+        $self->clone_sub_switch('subseq');
     } else {
         $self->edit_subsequences;
     }
@@ -353,7 +286,6 @@ sub clone_sub_switch {
     else {
         confess "Unknown state '$new_state'";
     }
-    #$self->set_window_size(1);
     $self->fix_window_min_max_sizes;
 }
 
@@ -376,15 +308,6 @@ sub switch_to_clone_display {
     $self->current_state('clone');
     $self->draw_clone_list;
     $self->highlight_by_name('clone', @clone_names);
-}
-
-sub clone_sub_switch_button {
-    my( $self, $button ) = @_;
-    
-    if ($button) {
-        $self->{'_clone_sub_switch_button'} = $button;
-    }
-    return $self->{'_clone_sub_switch_button'};
 }
 
 sub ace_handle {
