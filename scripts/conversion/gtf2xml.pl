@@ -312,6 +312,7 @@ foreach my $gene_id (keys %genes){
   my $gene_type=$values{'gene_category'};
   if(!$gene_type){$gene_type='Novel_Transcript';}
   # never actually gets into the XML... (transcript level)
+  if($prefix){$gene_type="$prefix:$gene_type";}
   $gene->type($gene_type);
 
   my $gene_name=$gene_id;
