@@ -112,6 +112,14 @@ sub toString{
 
 }
 
+sub toXMLString {
+    my( $self ) = @_;
+    
+    my $name  = $self->name  or $self->throw("name not set");
+    my $email = $self->email or $self->throw("email not set");
+    return "  <author>$name</author>\n  <author_email>$email</author_email>\n";
+}
+
 sub equals {
     my ($self,$obj) = @_;
 

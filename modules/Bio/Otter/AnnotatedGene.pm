@@ -86,14 +86,14 @@ sub toXMLString{
 
     my $info = $self->gene_info;
 
-    my $name = "";
-
-    if (defined($info->name)) {
-	$name = $info->name->name;
-    }
-
     if (defined($info)) {
+        my $name = "";
+        if (my $n = $info->name) {
+            $name = $n->name;
+        }
 	$str .= " <name>"      . $name      . "</name>\n";
+
+        $str .= '<known>' . $gene_info->is_known . '</known>';
 
 	my @syn = $info->synonym;
 
@@ -115,8 +115,7 @@ sub toXMLString{
         my $email;
 
         if (my $author = $info->author) {
-            $str .= " <author>" .       $author->name  . "</author>\n";
-            $str .= " <author_email>" . $author->email . "</author_email>\n";
+            $str .= $author->toXMLString;
         }
     }
 
@@ -130,23 +129,23 @@ sub toXMLString{
            $tranid = $tran->stable_id;
         }
 	$str .= " <transcript>\n";
-	$str .= "  <stable_id>" . $tranid . "</stable_id>\n";
+	$str .= "  <stable_id>$tranid</stable_id>\n";
 	
 	my $tinfo = $tran->transcript_info;
 
 	if (defined($tinfo)) {
-            my @rem = $tinfo->remark;
-            @rem = sort {$a->remark cmp $b->remark} @rem;
-	    foreach my $rem (@rem) {
-                my $remstr = $rem->remark;
+
+            if (my $author = $info->author) {
+                $str .= $author->toXMLString;
+            }
+
+	    foreach my $remstr (sort map $_->remark, $tinfo->remark) {
                 $remstr =~ s/\n/ /g;
-		$str .= "  <remark>" . $remstr . "</remark>\n";
+		$str .= "  <remark>$remstr</remark>\n";
 	    }
 	   
             my $classname = "";
 	    my $tname    = "";
-
-            
 
             if (defined($tinfo->class)) {
                if (defined($tinfo->class->name)) {
@@ -168,8 +167,8 @@ sub toXMLString{
                 $str .= "  <$method>" . ($tinfo->$method() || 0) . "</$method>\n";
             }
 	    
-	    $str .= "  <transcript_class>" . $classname . "</transcript_class>\n";
-	    $str .= "  <name>" . $tname . "</name>\n";
+	    $str .= "  <transcript_class>$classname</transcript_class>\n";
+	    $str .= "  <name>$tname</name>\n";
 	    
             $str .= "  <evidence_set>\n";
 
@@ -276,7 +275,8 @@ sub stable_id {
 
   return $self->SUPER::stable_id($arg);
 }
-   
+
+
 
 sub equals {
     my ($self,$obj) = @_;

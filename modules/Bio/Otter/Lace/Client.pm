@@ -158,6 +158,7 @@ sub get_all_DataSets {
         my $request = HTTP::Request->new;
         $request->method('GET');
         $request->uri("$root/get_datasets?details=true");
+        #warn $request->uri;
 
         my $content = $ua->request($request)->content;
         $self->_check_for_error(\$content);

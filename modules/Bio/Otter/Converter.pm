@@ -26,7 +26,6 @@ use Bio::EnsEMBL::Clone;
 use Bio::Seq;
 
 
-### Add parsing of authors to ace_to_otter
 ### Add authors to clones in XML_to_otter
 
 sub XML_to_otter {
@@ -104,6 +103,10 @@ sub XML_to_otter {
       }
     }
     
+    elsif (/<known>(.*)<\/known>/) {
+        $geneinfo->is_known($1);
+    }
+    
     elsif (/<remark>(.*)<\/remark>/) {
       my $remark = $1;
       if ($currentobj eq 'gene') {
@@ -116,7 +119,7 @@ sub XML_to_otter {
       } elsif ($currentobj eq 'frag') {
         push(@cloneremarks,$remark);
       } else {
-        print "ERROR: Current obj is $currentobj -can only add remarks to gene,tran\n";
+        print "ERROR: Current obj is $currentobj -can only add remarks to gene, transcript or sequence_fragment\n";
       }
     }
     elsif (/<translation_start>(.*)<\/translation_start>/) {
@@ -139,13 +142,9 @@ sub XML_to_otter {
         $tl_stable_id = $1;
     }
     elsif (/<author>(.*)<\/author>/) {
-      my $name = $1;
-
-      $author->name($name);
+      $author->name($1);
     } elsif (/<author_email>(.*)<\/author_email>/) {
-      my $email = $1;
-
-      $author->email($email);
+      $author->email($1);
     } elsif (/<dna>/) {
       # print STDERR "Found dna\n";
       if (defined($seqstr)) {
@@ -156,6 +155,7 @@ sub XML_to_otter {
 
       $tran     = new Bio::Otter::AnnotatedTranscript;
       $traninfo = new Bio::Otter::TranscriptInfo;
+      $author   = Bio::Otter::Author->new;
 
       $tran->transcript_info($traninfo);
       $traninfo->author($author);
@@ -274,9 +274,10 @@ sub XML_to_otter {
       } else {
         die "ERROR: type tag only associated with evidence - obj is $currentobj\n";
       }
-    } elsif (/<sequencefragment>/) {
+    } elsif (/<sequence_fragment>/) {
       $currentobj = 'frag';
-    } elsif (/<\/sequencefragment>/) {
+      $author = Bio::Otter::Author->new;
+    } elsif (/<\/sequence_fragment>/) {
        if (defined($clone) && defined($version)) {
 
          my $cloneobj = new Bio::Otter::AnnotatedClone;
@@ -299,6 +300,7 @@ sub XML_to_otter {
          }
          $cloneinfo->remark(@clonerem);
          $cloneinfo->keyword(@keyobj);
+         $cloneinfo->author($author);
 
          $cloneobj->clone_info($cloneinfo);
 
@@ -331,24 +333,22 @@ sub XML_to_otter {
       push(@keywords,$1);
     } elsif (/<assembly_type>(.*)<\/assembly_type>/) {
       $assembly_type = $1;
-    } elsif (/<assemblytype>(.*)<\/assemblytype>/) {
-      $assembly_type = $1;
     } elsif (/<chromosome>(.*)<\/chromosome>/) {
       my $chr = $1;
       $frag{$currfragname}{chr} = $chr;
-    } elsif (/<assemblystart>(.*)<\/assemblystart>/) {
+    } elsif (/<assembly_start>(.*)<\/assembly_start>/) {
       $frag{$currfragname}{start} = $1;
-    } elsif (/<id>(.*)<\/id>/) {
+    } elsif (/<accession>(.*)<\/accession>/) {
       $currfragname = $1;
 
       if ($currentobj eq 'frag') {
         $frag{$currfragname}{id} = $1;
       }
-    } elsif (/<assemblyend>(.*)<\/assemblyend>/) {
+    } elsif (/<assembly_end>(.*)<\/assembly_end>/) {
       $frag{$currfragname}{end} = $1;
-    } elsif (/<assemblyori>(.*)<\/assemblyori>/) {
+    } elsif (/<fragment_ori>(.*)<\/fragment_ori>/) {
       $frag{$currfragname}{strand} = $1;
-    } elsif (/<assemblyoffset>(.*)<\/assemblyoffset>/) {
+    } elsif (/<fragment_offset>(.*)<\/fragment_offset>/) {
       $frag{$currfragname}{offset} = $1;
     } elsif (/<.*?>.*<\/.*?>/) {
       print STDERR "ERROR: Unrecognised tag [$_]\n";
@@ -743,31 +743,37 @@ sub otter_to_ace {
 
     $str .= "\n";
 
+    # Locus objects for genes
     foreach my $gene (@$genes) {
+        my $info = $gene->gene_info;
         my $gene_name;
-        if ($gene->gene_info->name && $gene->gene_info->name->name) {
-            $gene_name = $gene->gene_info->name->name;
+        if ($info->name && $info->name->name) {
+            $gene_name = $info->name->name;
         } else {
             $gene_name = $gene->stable_id;
         }
 
         $str .= "Locus : \"" . $gene_name . "\"\n";
-        foreach my $synonym ($gene->gene_info->synonym) {
+        foreach my $synonym ($info->synonym) {
             $str .= "Alias \"" . $synonym->name . "\"\n";
         }
+        
+        $str .= "Known\n" if $gene->is_known;
 
-        if (my $author = $gene->gene_info->author) {
+        if (my $author = $info->author) {
             my $name  = $author->name;
             # email has a unique key in the database
             $authors{$author->email} ||= $author;
             $str .= qq{Locus_author "$name"\n};
         }
 
-        # Add gene type
-        if (my $type = $gene->type) {
-            ### Is this adequate?
-            $str .= "$type\n";
-        }
+        # We don't get type from the XML
+        ## Add gene type
+        #if (my $type = $gene->type) {
+        #    ### Is this adequate?
+        #    $str .= "$type\n";
+        #}
+        
         foreach my $tran (@{ $gene->get_all_Transcripts }) {
             my $tran_name;
             if ($tran->transcript_info->name) {
@@ -1090,21 +1096,29 @@ sub ace_to_otter {
 
                 ### Need to deal with polymorphic loci?
                 if (/^(Known|Novel_(CDS|Transcript)|Putative|Pseudogene)/) {
-                    $genes{$name}{GeneType} = $1;
+                    $cur_gene->{GeneType} = $1;
                 }
                 elsif (/((P|Unp)rocessed)/) {
-                    $genes{$name}{GeneType} = "Pseudogene-$1";
+                    $cur_gene->{GeneType} = "Pseudogene-$1";
                 }
                 elsif (/^((Non_o|O)rganism_supported)/) {
-                    $genes{$name}{GeneType} = "Novel_CDS-$1";
+                    $cur_gene->{GeneType} = "Novel_CDS-$1";
                 }
 
                 elsif (/^Positive_sequence $STRING/x) {
-                    my $tran_list = $genes{$name}{transcripts} ||= [];
+                    my $tran_list = $cur_gene->{transcripts} ||= [];
                     push @$tran_list, $1;
                 }
                 elsif (/^(Locus_(?:id|author)) $STRING/x) {
-                    $genes{$name}{$1} = $2;
+                    $cur_gene->{$1} = $2;
+                }
+                elsif (/^Remark $STRING/x) {
+                    my $remark_list = $cur_gene->{remarks} ||= [];
+                    push(@$remark_list, $1);
+                }
+                elsif (/^Alias $STRING/x) {
+                    my $alias_list = $cur_gene->{aliases} ||= [];
+                    push(@$alias_list, $1);
                 }
             }
         }
@@ -1151,8 +1165,9 @@ sub ace_to_otter {
     my %anntran;
 
     # Make transcripts and translations
-    SEQ: foreach my $seq (keys %sequence) {
-        my $seq_data = $sequence{$seq};
+    #SEQ: foreach my $seq (keys %sequence) {
+    #    my $seq_data = $sequence{$seq};
+    SEQ: while (my ($seq, $seq_data) = each %sequence) {
         my $transcript = $seq_data->{transcript} or next SEQ;
         next SEQ unless @{$transcript->get_all_Exons};
         print STDERR "Seq = $seq\n";
@@ -1166,6 +1181,7 @@ sub ace_to_otter {
         }
 
         my $traninfo = new Bio::Otter::TranscriptInfo;
+        $traninfo->name($seq);
         if (my $au_name = $seq_data->{Transcript_author}) {
             my $author = $authors{$au_name} or die "No author object '$au_name'";
             $traninfo->author($author);
@@ -1211,7 +1227,6 @@ sub ace_to_otter {
         my $class = Bio::Otter::TranscriptClass
             ->new(-name => $seq_data->{Method});
         $traninfo->class($class);
-        $traninfo->name($seq);
 
         #print STDERR "Defined $seq " . $seq_data->{transcript} . "\n";
         if (my $anntran = $seq_data->{transcript}) {
@@ -1357,7 +1372,28 @@ sub ace_to_otter {
                 my $author = $authors{$au_name} || die "No author object '$au_name'";
                 $ginfo->author($author);
         }
-        $ginfo->name(new Bio::Otter::GeneName(-name => $gname));
+        
+        # Names and aliases (synonyms)
+        $ginfo->name(
+            Bio::Otter::GeneName->new(
+                -name => $gname,
+            ));
+        if (my $list = $gene_data->{aliases}) {
+            foreach my $text (@$list) {
+                my $synonym = Bio::Otter::GeneSynonym->new;
+                $synonym->name($text);
+                $ginfo->synonym($synonym);
+            }
+        }
+        
+        # Gene remarks
+        if (my $list = $gene_data->{remarks}) {
+            foreach my $text (@$list) {
+                my $remark = Bio::Otter::GeneRemark->new;
+                $remark->remark($text);
+                $ginfo->remark($remark);
+            }
+        }
 
         print STDERR "Made gene $gname\n";
 
@@ -1459,12 +1495,12 @@ sub ace_to_XML {
     
     #my( $genes, $frags, $type, $dna, $chr, $chrstart, $chrend ) = ace_to_otter($fh);
     my( $genes, $tile_path, $type, $dna, $chr, $chrstart, $chrend ) = ace_to_otter($fh);
-    my $xml = "<otter>\n<sequenceset>\n"
+    my $xml = "<otter>\n<sequence_set>\n"
         . path_to_XML($chr, $chrstart, $chrend, $type, $tile_path);
     foreach my $g (@$genes) {
         $xml .= $g->toXMLString;
     }
-    $xml .= "\n</sequenceset>\n</otter>\n";
+    $xml .= "\n</sequence_set>\n</otter>\n";
     return $xml;
 }
 
@@ -1565,19 +1601,19 @@ sub path_to_XML {
   @$path = sort {$a->assembled_start <=> $b->assembled_start} @$path;
 
   foreach my $p (@$path) {
-    $xmlstr .= "<sequencefragment>\n";
-    $xmlstr .= "  <id>" . $p->component_Seq->id . "</id>\n";
+    $xmlstr .= "<sequence_fragment>\n";
+    $xmlstr .= "  <accession>" . $p->component_Seq->id . "</accession>\n";
     $xmlstr .= "  <chromosome>" . $chr . "</chromosome>\n";
 
     if (my $clone = $p->component_Seq->clone) {
         $xmlstr .= clone_to_XML($clone);
     }
 
-    $xmlstr .= "  <assemblystart>" . ($chrstart + $p->assembled_start() - 1) . "</assemblystart>\n";
-    $xmlstr .= "  <assemblyend>" . ($chrstart + $p->assembled_end() - 1) . "</assemblyend>\n";
-    $xmlstr .= "  <assemblyori>" . $p->component_ori() . "</assemblyori>\n";
-    $xmlstr .= "  <assemblyoffset>" . $p->component_start() . "</assemblyoffset>\n";
-    $xmlstr .= "</sequencefragment>\n";
+    $xmlstr .= "  <assembly_start>" . ($chrstart + $p->assembled_start() - 1) . "</assembly_start>\n";
+    $xmlstr .= "  <assembly_end>" . ($chrstart + $p->assembled_end() - 1) . "</assembly_end>\n";
+    $xmlstr .= "  <fragment_ori>" . $p->component_ori() . "</fragment_ori>\n";
+    $xmlstr .= "  <fragment_offset>" . $p->component_start() . "</fragment_offset>\n";
+    $xmlstr .= "</sequence_fragment>\n";
   }
 
   return $xmlstr;
@@ -1585,31 +1621,36 @@ sub path_to_XML {
 }
 
 sub clone_to_XML {
-  my ($clone) = @_;
+    my ($clone) = @_;
 
-  if (!defined($clone)) {
-     die "ERROR: clone needs to be entered to clone_to_XML\n";
-  }
-  my $str = "";
+    if (!defined($clone)) {
+        die "ERROR: clone needs to be entered to clone_to_XML\n";
+    }
+    my $str = "";
 
-  $str .= "  <accession>" . $clone->id . "<\/accession>\n";
-  $str .= "  <version>" . $clone->embl_version . "<\/version>\n";
+    $str .= "  <accession>" . $clone->id . "<\/accession>\n";
+    $str .= "  <version>" . $clone->embl_version . "<\/version>\n";
 
-  if ($clone->isa("Bio::Otter::AnnotatedClone") && $clone->clone_info) {
-     
-     my @remarks  = sort map $_->remark, $clone->clone_info->remark;
-     my @keywords = sort map $_->name,   $clone->clone_info->keyword;
-     foreach my $rem (@remarks) {
-        $rem =~ s/\n/ /g;
-        $str .= "  <remark>$rem<\/remark>\n";
+    if ($clone->isa("Bio::Otter::AnnotatedClone") && $clone->clone_info) {
+        my $info = $clone->clone_info;
+        if (my $author = $info->author) {
+            $str .= $author->toXMLString;
+        }
+
+        my @remarks  = sort map $_->remark, $info->remark;
+        foreach my $rem (@remarks) {
+            $rem =~ s/\n/ /g;
+            $str .= "  <remark>$rem<\/remark>\n";
+        }
+
+        my @keywords = sort map $_->name,   $info->keyword;
+        foreach my $key (@keywords) {
+            $str .= "  <keyword>$key<\/keyword>\n";
+        }
+     } else {
+      print STDERR "\n\nCLONE '$clone' is not a Bio::Otter::AnnotatedClone\n";
      }
-     foreach my $key (@keywords) {
-        $str .= "  <keyword>$key<\/keyword>\n";
-     }
-   } else {
-    print STDERR "\n\nCLONE '$clone' is not a Bio::Otter::AnnotatedClone\n";
-   }
-   return $str;
+     return $str;
 }
 
 sub genes_to_XML_with_Slice {
@@ -1620,7 +1661,7 @@ sub genes_to_XML_with_Slice {
   my $xmlstr = "";
 
   $xmlstr .= "<otter>\n";
-  $xmlstr .= "<sequenceset>\n";
+  $xmlstr .= "<sequence_set>\n";
 
   my @path;
 
@@ -1658,7 +1699,7 @@ sub genes_to_XML_with_Slice {
     }
   }
 
-  $xmlstr .= "</sequenceset>\n";
+  $xmlstr .= "</sequence_set>\n";
   $xmlstr .= "</otter>\n";
 
   return $xmlstr;
@@ -1672,7 +1713,7 @@ sub slice_to_XML {
   my $xmlstr = "";
 
   $xmlstr .= "<otter>\n";
-  $xmlstr .= "<sequenceset>\n";
+  $xmlstr .= "<sequence_set>\n";
 
   my @path  = @{ $slice->get_tiling_path };
   #my @genes = @{ $db->get_GeneAdaptor->fetch_by_Slice($slice) };
@@ -1681,6 +1722,7 @@ sub slice_to_XML {
   if ($db->isa("Bio::Otter::DBSQL::DBAdaptor")) {
      @genes = @{ $db->get_GeneAdaptor->fetch_by_Slice($slice) };
    } else {
+     # Is this ever used?  AnnotatedGenes from an non-otter database?
      my $tmpgenes = $db->get_GeneAdaptor->fetch_all_by_Slice($slice);
      foreach my $g (@$tmpgenes) {
          my $ann = bless $g,"Bio::Otter::AnnotatedGene";
@@ -1695,9 +1737,9 @@ sub slice_to_XML {
               my $tr = $t->translation;
               print STDERR "Tran " . $tr->start_Exon->stable_id . " " . $tr->end_Exon->stable_id. " " . $tr->start . " " . $tr->end . "\n";
 
-            foreach my $ex (@{$t->get_all_Exons}) {
-               print STDERR $ex->stable_id . "\t" . $ex->gffstring . "\n";
-            }
+              foreach my $ex (@{$t->get_all_Exons}) {
+                 print STDERR $ex->stable_id . "\t" . $ex->gffstring . "\n";
+              }
             }
             my $annt = bless $t, "Bio::Otter::AnnotatedTranscript";
             my $tinfo = new Bio::Otter::TranscriptInfo;
@@ -1717,6 +1759,7 @@ sub slice_to_XML {
   my $chrstart = $slice->chr_start;
   my $chrend   = $slice->chr_end;
 
+    ### Checking author fetching
   $xmlstr .= Bio::Otter::Converter::path_to_XML($chr, $chrstart, $chrend, 
                                                 $db->assembly_type, \@path);
 
@@ -1748,7 +1791,7 @@ sub slice_to_XML {
     $xmlstr .= $g->toXMLString . "\n";
   }
 
-  $xmlstr .= "</sequenceset>\n";
+  $xmlstr .= "</sequence_set>\n";
   $xmlstr .= "</otter>\n";
 
   return $xmlstr;

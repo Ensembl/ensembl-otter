@@ -110,7 +110,7 @@ sub annotate_transcript {
      $trans->transcript_info($info);
    };
    if ($@) {
-     print "Coulnd't fetch info for " . $trans->stable_id . " [$@]\n";
+     print STDERR "Coulnd't fetch info for " . $trans->stable_id . " [$@]\n";
    }
 }
 

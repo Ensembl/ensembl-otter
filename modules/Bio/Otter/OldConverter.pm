@@ -22,19 +22,19 @@ sub StaticGoldenPath_to_XML {
   @contig = sort {$a->start <=> $b->start} @contig;
 
   foreach my $p (@contig) {
-    $xmlstr .= "<sequencefragment>\n";
+    $xmlstr .= "<sequence_fragment>\n";
 
-    $xmlstr .= "  <id>" . $p->contig->id . "<\/id>\n";
+    $xmlstr .= "  <accession>" . $p->contig->id . "<\/id>\n";
     $xmlstr .= "  <chromosome>" . $chr . "<\/chromosome>\n";
-    $xmlstr .= "  <assemblystart>" . ($chrstart + $p->start() - 1)
-      . "<\/assemblystart>\n";
-    $xmlstr .= "  <assemblyend>" . ($chrstart + $p->end() - 1)
-      . "<\/assemblyend>\n";
-    $xmlstr .= "  <assemblyori>" . $p->orientation() . "<\/assemblyori>\n";
+    $xmlstr .= "  <assembly_start>" . ($chrstart + $p->start() - 1)
+      . "<\/assembly_start>\n";
+    $xmlstr .= "  <assembly_end>" . ($chrstart + $p->end() - 1)
+      . "<\/assembly_end>\n";
+    $xmlstr .= "  <fragment_ori>" . $p->orientation() . "<\/fragment_ori>\n";
     $xmlstr .=
-      "  <assemblyoffset>" . $p->rawcontig_start() . "<\/assemblyoffset>\n";
+      "  <fragment_offset>" . $p->rawcontig_start() . "<\/fragment_offset>\n";
 
-    $xmlstr .= "<\/sequencefragment>\n";
+    $xmlstr .= "<\/sequence_fragment>\n";
 
   }
 
@@ -48,7 +48,7 @@ sub VirtualContig_to_XML {
   my $xmlstr = "";
 
   $xmlstr .= "<otter>\n";
-  $xmlstr .= "<sequenceset>\n";
+  $xmlstr .= "<sequence_set>\n";
 
   $xmlstr .= Bio::Otter::OldConverter::StaticGoldenPath_to_XML($contig,$db->static_golden_path_type);
 
@@ -60,7 +60,7 @@ sub VirtualContig_to_XML {
     $xmlstr .= "</dna>\n";
   }
 
-  $xmlstr .= "</sequenceset>\n";
+  $xmlstr .= "</sequence_set>\n";
   $xmlstr .= "</otter>\n";
 
   return $xmlstr;

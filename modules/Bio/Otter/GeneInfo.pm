@@ -127,12 +127,12 @@ sub remark {
 sub synonym {
     my $self = shift @_;
 
-    while (my $rem = shift @_) {
-      if (defined($rem)) {
-        if ($rem->isa("Bio::Otter::GeneSynonym")) {
-          push(@{$self->{'_synonym'}},$rem);
+    while (my $syn = shift @_) {
+      if (defined($syn)) {
+        if ($syn->isa("Bio::Otter::GeneSynonym")) {
+          push(@{$self->{'_synonym'}},$syn);
         } else {
-          $self->throw("Argument [$rem] is not a Bio::Otter::GeneSynonym");
+          $self->throw("Argument [$syn] is not a Bio::Otter::GeneSynonym");
         }
       }
     }
@@ -197,6 +197,23 @@ sub name {
 	}
     }
     return $obj->{_name};
+}
+
+=head2 is_known
+
+Either TRUE or FALSE (1 or 0), it flags whether
+the gene is a previously known gene.  Defaults to
+0.
+
+=cut
+
+sub is_known {
+    my( $self, $flag ) = @_;
+    
+    if (defined $flag) {
+        $self->{'_is_known'} = $flag ? 1 : 0;
+    }
+    return $self->{'_is_known'} || 0;
 }
 
 =head2 toString
