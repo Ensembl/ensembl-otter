@@ -70,7 +70,7 @@ sub render {
         my $contig = $map_c->contig;
         my $length = $contig->length;
         my $name = $contig->id;
-        #print "$name length=$length ($raw_start->$raw_end) start=$start end=$end\n";
+        printf STDERR "%-10s  %2d %6d %6d %6d  %10d %10d\n", $name, $map_c->orientation, $raw_start, $raw_end, $length, $start, $end;
 
         my( $left_overhang, $right_overhang );
         if ($map_c->orientation == 1) {

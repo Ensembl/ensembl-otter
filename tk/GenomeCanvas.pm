@@ -125,10 +125,12 @@ sub fix_window_min_max_sizes {
     my $mw = $canvas->toplevel;
     $mw->update;
     $mw->minsize($mw->width, $mw->height);
-    $mw->maxsize(
-        $bbox[2] - $bbox[0] + $mw->width  - $gc->window_width,
-        $bbox[3] - $bbox[1] + $mw->height - $gc->window_height,
-        );
+    my( $screen_max_x, $screen_max_y ) = $mw->maxsize;
+    my $max_x = $bbox[2] - $bbox[0] + $mw->width  - $gc->window_width;
+    my $max_y = $bbox[3] - $bbox[1] + $mw->height - $gc->window_height;
+    $max_x = $screen_max_x if $max_x > $screen_max_x;
+    $max_y = $screen_max_y if $max_y > $screen_max_y;
+    $mw->maxsize($max_x, $max_y);
     $mw->resizable(1,1);
 }
 
