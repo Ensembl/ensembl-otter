@@ -495,10 +495,11 @@ sub window_close {
         # Ask the user if changes should be saved
         my $name = $self->name;
         my $dialog = $self->canvas->toplevel->Dialog(
-            -title  => 'Save changes?',
-            -text   => "Save changes to SubSequence '$name' ?",
+            -title          => 'Save changes?',
+            -bitmap         => 'question',
+            -text           => "Save changes to SubSequence '$name' ?",
             -default_button => 'Yes',
-            -buttons    => [qw{ Yes No Cancel }],
+            -buttons        => [qw{ Yes No Cancel }],
             );
         my $ans = $dialog->Show;
         
@@ -585,6 +586,14 @@ sub get_subseq_name {
     my( $self ) = @_;
     
     return $self->subseq_name_Entry->get;
+}
+
+sub set_subseq_name {
+    my( $self, $new ) = @_;
+    
+    my $entry = $self->subseq_name_Entry;
+    $entry->delete(0, 'end');
+    $entry->insert(0, $new);
 }
 
 sub method_name_var {
@@ -994,7 +1003,6 @@ sub draw_translation_region {
     my $font        = $self->font;
     my $font_size   = $self->font_size;
     my @trans       = $self->SubSeq->translation_region;
-    warn "trans = @trans\n";
     
     my $t1 = $canvas->createText(
         $half + $text_len, $size,
@@ -1065,6 +1073,14 @@ sub xace_save {
     my $old = $self->SubSeq;
     my $old_name = $old->name;
     my $new_name = $sub->name;
+    
+    my $clone_name = $sub->clone_Sequence->name;
+    if ($clone_name eq $new_name) {
+        $self->message("Can't have SubSequence with same name as clone!");
+        return;
+    }
+    
+    # Do we need to rename?
     if ($old->is_archival and $new_name ne $old_name) {
         $ace .= qq{\n-R Sequence "$old_name" "$new_name"\n};
     }

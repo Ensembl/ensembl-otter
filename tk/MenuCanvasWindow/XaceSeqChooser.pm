@@ -267,13 +267,15 @@ sub populate_menus {
         -state          => 'disabled',
         );
     
-    my $isoform_command = sub{ $self->make_isoform };
+    my $isoform_command = sub{ $self->make_isoform_subsequence };
     $subseq->add('command',
         -label          => 'Isoform',
         -command        => $isoform_command,
         -accelerator    => 'Ctrl+I',
         -underline      => 0,
         );
+    $top->bind('<Control-i>', $isoform_command);
+    $top->bind('<Control-I>', $isoform_command);
     
     # What did I intend this command to do?
     #$subseq->add('command',
@@ -282,92 +284,6 @@ sub populate_menus {
     #    -accelerator    => 'Ctrl+T',
     #    -underline      => 0,
     #    );
-}
-
-sub edit_new_subsequence {
-    my( $self ) = @_;
-    
-    my @sub_names = $self->list_selected_subseq_names;
-    my( %clone_names );
-    foreach my $sn (@sub_names) {
-        my $sub = $self->get_SubSeq($sn);
-        my $seq_name = $sub->clone_Sequence->name;
-        $clone_names{$seq_name} = 1;
-    }
-    my @clone_n = keys %clone_names;
-
-    my @selected_clone = $self->list_selected_clone_names;
-    my      @all_clone = $self->clone_list;
-    
-    my( $clone_name );
-    if (@clone_n == 1) {
-        $clone_name = $clone_n[0];
-    }
-    elsif (@selected_clone == 1) {
-        $clone_name = $selected_clone[0];
-    }
-    elsif (@all_clone == 1) {
-        $clone_name = $all_clone[0];
-    }
-    else {
-       $self->message("Unable to determine clone name");
-       return;
-    }
-    
-    # Now get the maximum transcript number for this root
-    my $clone = $self->get_CloneSeq($clone_name);
-    my $regex = qr{^$clone_name\.(\d+)}; # Perl 5.6 feature!
-    my $max = 0;
-    foreach my $sub_name (map $_->name, $clone->get_all_SubSeqs) {
-        my ($n) = $sub_name =~ /$regex/;
-        if ($n and $n > $max) {
-            $max = $n;
-        }
-    }
-    $max++;
-    
-    my $seq_name = "$clone_name.$max";
-    
-    # Check we don't already have a sequence of this name
-    if ($self->get_SubSeq($seq_name)) {
-        # Should be impossible!
-        confess "Already have SubSeq named '$seq_name'";
-    }
-
-    warn "Making '$seq_name'\n";
-    my( $new );
-    if (@sub_names) {
-        $new = $self->get_SubSeq($sub_names[0])->clone;
-        for (my $i = 1; $i < @sub_names; $i++) {
-            my $extra_sub = $self->get_SubSeq($sub_names[$i])->clone;
-            foreach my $ex ($extra_sub->get_all_Exons) {
-                $new->add_Exon($ex);
-            }
-        }
-    }
-    else {
-        $new = Hum::Ace::SubSeq->new;
-        $new->strand(1);
-        $new->clone_Sequence($clone->Sequence);
-        
-        # Need to have at least 1 exon
-        my $ex = $new->new_Exon;
-        $ex->start(1);
-        $ex->end  (2);
-        
-        my $gm = $self->get_default_mutable_GeneMethod
-            or return;
-        $new->GeneMethod($gm);
-    }
-    $new->name($seq_name);
-    $self->add_SubSeq($new);
-    $clone->add_SubSeq($new);
-
-    $self->do_subseq_display;
-    $self->highlight_by_name('subseq', $seq_name);
-    
-    my $ec = $self->make_exoncanvas_edit_window($new);
-    $ec->initialize;
 }
 
 sub bind_events {
@@ -493,6 +409,12 @@ sub ace_handle {
 sub resync_with_db {
     my( $self ) = @_;
     
+    
+    if ($self->list_all_subseq_edit_window_names) {
+        $self->message("All the Subsequence edit windows must be closed before a ReSync");
+        return;
+    }
+    
     $self->canvas->Busy(
         -recurse => 0,
         );
@@ -556,20 +478,106 @@ sub clone_list {
 }
 
 sub edit_subsequences {
-    my( $self ) = @_;
+    my( $self, @sub_names ) = @_;
     
-    my @sub_names = $self->list_selected_subseq_names;
+    @sub_names = $self->list_selected_subseq_names
+        unless @sub_names;
     foreach my $sub_name (@sub_names) {
         # Just show the edit window if present
         next if $self->raise_subseq_edit_window($sub_name);
         
         # Get a copy of the subseq
-        my $sub = $self->get_SubSeq($sub_name)->clone;
-        $sub->is_archival(1);
+        my $sub = $self->get_SubSeq($sub_name);
+        my $edit = $sub->clone;
+        $edit->is_archival($sub->is_archival);
         
-        $self->make_exoncanvas_edit_window($sub)
-             ->initialize;
+        $self->make_exoncanvas_edit_window($edit);
     }
+}
+
+sub edit_new_subsequence {
+    my( $self ) = @_;
+    
+    my @sub_names = $self->list_selected_subseq_names;
+    my( %clone_names );
+    foreach my $sn (@sub_names) {
+        my $sub = $self->get_SubSeq($sn);
+        my $seq_name = $sub->clone_Sequence->name;
+        $clone_names{$seq_name} = 1;
+    }
+    my @clone_n = keys %clone_names;
+
+    my @selected_clone = $self->list_selected_clone_names;
+    my      @all_clone = $self->clone_list;
+    
+    my( $clone_name );
+    if (@clone_n == 1) {
+        $clone_name = $clone_n[0];
+    }
+    elsif (@selected_clone == 1) {
+        $clone_name = $selected_clone[0];
+    }
+    elsif (@all_clone == 1) {
+        $clone_name = $all_clone[0];
+    }
+    else {
+       $self->message("Unable to determine clone name");
+       return;
+    }
+    
+    # Now get the maximum transcript number for this root
+    my $clone = $self->get_CloneSeq($clone_name);
+    my $regex = qr{^$clone_name\.(\d+)}; # Perl 5.6 feature!
+    my $max = 0;
+    foreach my $sub_name (map $_->name, $clone->get_all_SubSeqs) {
+        my ($n) = $sub_name =~ /$regex/;
+        if ($n and $n > $max) {
+            $max = $n;
+        }
+    }
+    $max++;
+    
+    my $seq_name = "$clone_name.$max";
+    
+    # Check we don't already have a sequence of this name
+    if ($self->get_SubSeq($seq_name)) {
+        # Should be impossible!
+        confess "Already have SubSeq named '$seq_name'";
+    }
+
+    warn "Making '$seq_name'\n";
+    my( $new );
+    if (@sub_names) {
+        $new = $self->get_SubSeq($sub_names[0])->clone;
+        for (my $i = 1; $i < @sub_names; $i++) {
+            my $extra_sub = $self->get_SubSeq($sub_names[$i])->clone;
+            foreach my $ex ($extra_sub->get_all_Exons) {
+                $new->add_Exon($ex);
+            }
+        }
+    }
+    else {
+        $new = Hum::Ace::SubSeq->new;
+        $new->strand(1);
+        $new->clone_Sequence($clone->Sequence);
+        
+        # Need to have at least 1 exon
+        my $ex = $new->new_Exon;
+        $ex->start(1);
+        $ex->end  (2);
+        
+        my $gm = $self->get_default_mutable_GeneMethod
+            or return;
+        $new->GeneMethod($gm);
+    }
+    $new->name($seq_name);
+    $self->add_SubSeq($new);
+    $clone->add_SubSeq($new);
+
+    $self->do_subseq_display;
+    $self->highlight_by_name('subseq', $seq_name);
+    
+    $self->make_exoncanvas_edit_window($new);
 }
 
 sub delete_subsequences {
@@ -605,14 +613,19 @@ sub delete_subsequences {
     
     # Check that the user really wants to delete them
     
-    my $question = join('',
-        "Really delete the following subsequence",
-        (@to_die > 1 ? 's' : ''),   # Pedantic plural!
-        "?\n\n",
-        map("  $_\n", map($_->name, @to_die)),
-        );
+    my( $question );
+    if (@to_die > 1) {
+        $question = join('',
+            "Really delete these subsequences?\n\n",
+            map("  $_\n", map($_->name, @to_die)),
+            );
+    } else {
+        $question = "Really delete this subsequence?\n\n  "
+            . $to_die[0]->name ."\n";
+    }
     my $dialog = $self->canvas->toplevel->Dialog(
         -title          => 'Delete subsequenes?',
+        -bitmap         => 'question',
         -text           => $question,
         -default_button => 'Yes',
         -buttons        => [qw{ Yes No }],
@@ -643,6 +656,102 @@ sub delete_subsequences {
     $self->draw_current_state;
 }
 
+sub make_isoform_subsequence {
+    my( $self ) = @_;
+    
+    my $xr = $self->xace_remote;
+    unless ($xr) {
+        $self->message("no xace attached");
+        return;
+    }
+    
+    my @sub_names = $self->list_selected_subseq_names;
+    unless (@sub_names) {
+        $self->message("No subsequence selected");
+        return;
+    }
+    elsif (@sub_names > 1) {
+        $self->message("Can't make more an Isoform from more than one selected sequence");
+        return;
+    }
+    my $name = $sub_names[0];
+    my $sub = $self->get_SubSeq($name);
+    
+    # Work out a name for the new isoform
+    my $clone_name = $sub->clone_Sequence->name;
+    my( $new_name, $iso_name );
+    if ($name =~ /^$clone_name\.(.+)/) {
+        my $suffix = $1;
+
+        my @numbers = $suffix =~ /(\d+)/g;
+        warn "numbers = [@numbers]";
+        my ($extn) = $suffix =~ /\.([_a-zA-Z]+)$/;
+
+        if (@numbers > 2) {
+            $self->message("Got too many numbers (@numbers) from extension");
+            return;
+        }
+        elsif (@numbers == 2) {
+            # Are making an isoform of an exisiting isoform
+            $new_name = $name;
+            for (my $i = $numbers[1] + 1; ; $i++) {
+                $iso_name = join('.', $clone_name, $numbers[0], $i);
+                $iso_name .= $3 if $3;
+                last unless $self->get_SubSeq($iso_name);
+            }
+        }
+        elsif (@numbers == 1) {
+            # Are making the first isoform
+            $new_name = join('.', $clone_name, $numbers[0], 1);
+            $iso_name = join('.', $clone_name, $numbers[0], 2);
+            if ($extn) {
+                $new_name .= ".$extn";
+                $iso_name .= ".$extn";
+            }
+        }
+        else {
+            $self->message("Extension contains no numbers");
+            return;
+        }
+    } else {
+        # We're dealing with a non-standard name
+        $self->message("SubSequence name doesn't match clone name '$clone_name'!");
+        $new_name = "$name.1";
+        $iso_name = "$name.2";
+    }
+    
+    # Check we don't already have the isoform we are trying to create
+    if ($self->get_SubSeq($iso_name)) {
+        $self->message("Tried to create isoform '$iso_name', but it already exists!");
+        return;
+    }
+    
+    # Rename the existing subseq
+    if ($new_name ne $name) {
+        if ($self->raise_subseq_edit_window($name)) {
+            $self->message("Please close the edit window for '$name' first");
+            return;
+        }
+        if ($self->get_SubSeq($new_name)) {
+            $self->message("Can't make isoform of '$name' because '$new_name' already exists!");
+            return;
+        }
+        my $ec = $self->make_exoncanvas_edit_window($sub);
+        $ec->set_subseq_name($new_name);
+        $ec->xace_save($ec->new_SubSeq_from_tk);
+    }
+    
+    # Make the isoform
+    my $iso = $sub->clone;
+    $iso->name($iso_name);
+    $self->add_SubSeq($iso);
+    $self->get_CloneSeq($clone_name)->add_SubSeq($iso);
+    
+    $self->draw_current_state;
+    $self->highlight_by_name('subseq', $new_name, $iso_name);
+    $self->edit_subsequences($iso_name);
+}
+
 sub make_exoncanvas_edit_window {
     my( $self, $sub ) = @_;
     
@@ -657,6 +766,7 @@ sub make_exoncanvas_edit_window {
     $ec->name($sub_name);
     $ec->xace_seq_chooser($self);
     $ec->SubSeq($sub);
+    $ec->initialize;
     
     $self->save_subseq_edit_window($sub_name, $top);
     
@@ -683,6 +793,12 @@ sub get_subseq_edit_window {
     return $self->{'_subseq_edit_window'}{$name};
 }
 
+sub list_all_subseq_edit_window_names {
+    my( $self ) = @_;
+    
+    return keys %{$self->{'_subseq_edit_window'}};
+}
+
 sub save_subseq_edit_window {
     my( $self, $name, $top ) = @_;
     
@@ -698,7 +814,8 @@ sub delete_subseq_edit_window {
 sub rename_subseq_edit_window {
     my( $self, $old_name, $new_name ) = @_;
     
-    my $win = $self->get_subseq_edit_window($old_name);
+    my $win = $self->get_subseq_edit_window($old_name)
+        or return;
     $self->delete_subseq_edit_window($old_name);
     $self->save_subseq_edit_window($new_name, $win);
 }
@@ -845,7 +962,7 @@ sub express_clone_and_subseq_fetch {
             }
             
             $clone->add_SubSeq($sub);
-            $self->add_SubSeq($sub);
+            $self ->add_SubSeq($sub);
         };
         if ($@) {
             warn("Error fetching '$name' ($start - $end):\n", $@);
@@ -862,7 +979,7 @@ sub replace_SubSeq {
     my $clone_name = $sub->clone_Sequence->name;
     my $clone = $self->get_CloneSeq($clone_name);
     $clone->replace_SubSeq($sub, $old_name);
-    if ($old_name and $sub_name ne $old_name) {
+    if ($sub_name ne $old_name) {
         $self->{'_subsequence_cache'}{$old_name} = undef;
         $self->rename_subseq_edit_window($old_name, $sub_name);
     }
