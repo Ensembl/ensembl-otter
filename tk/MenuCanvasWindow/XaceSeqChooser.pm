@@ -26,7 +26,7 @@ sub new {
 
     $self->populate_menus;
     $self->bind_events;
-    $self->minimum_scroll_bbox(0,0, 200,200);
+    $self->minimum_scroll_bbox(0,0, 300,200);
     return $self;
 }
 
@@ -92,7 +92,7 @@ sub initialize {
         );
 
     $self->draw_clone_list;
-    $self->_make_search();
+    $self->_make_search;
     $self->fix_window_min_max_sizes;
 }
 
@@ -400,7 +400,7 @@ sub populate_menus {
         -underline      => 0,
         );
     $top->bind('<Control-l>', $xace_launch_command);
-    $top->bind('<Control-l>', $xace_launch_command);
+    $top->bind('<Control-L>', $xace_launch_command);
      
     # Attach xace
     my $xace_attach_command = sub { $self->attach_xace };
@@ -798,20 +798,26 @@ sub do_subseq_display {
         $self->message('No clone selected');
     }
 }
-sub _make_search{
+
+sub _make_search {
     my ($self) = @_;
 
     my $top = $self->canvas->toplevel();
     my $search_frame = $top->Frame();
     $search_frame->pack(-side => 'top');
     
-    my $label = $search_frame->Label(-text => 'Search text:');
-    $label->pack(-side => 'left');
+    #my $label = $search_frame->Label(-text => 'Search text:');
+    #$label->pack(-side => 'left');
+    #$search_frame->Frame(-width => 6)->pack(-side => 'left');
+    
     my $search_box = $search_frame->Entry(
-					  -width => 35,
-					  -font  => ['Helvetica', $self->font_size, 'normal'],
-					  );
+        -width => 25,
+        #-font  => ['Helvetica', $self->font_size, 'normal'],
+        );
     $search_box->pack(-side => 'left');
+    
+    $search_frame->Frame(-width => 6)->pack(-side => 'left');
+    
     ## Is hunting in CanvasWindow?
     my $hunter = sub{
 	$top->Busy;
@@ -819,12 +825,21 @@ sub _make_search{
 	$top->Unbusy;
     };
     my $button = $search_frame->Button(
-				       -text    => 'Find',
-				       -command => $hunter,
-				       );
+         -text      => 'Find',
+         -command   => $hunter,
+         -underline => 0,
+         );
     $button->pack(-side => 'left');
     $self->{'_search_box'} = 1;
 
+    $button->bind('<Destroy>', sub{
+        $self = undef;
+        });
+    
+    $search_box->bind('<Return>',   $hunter);
+    $search_box->bind('<KP_Enter>', $hunter);
+    $top->bind('<Control-f>',       $hunter);
+    $top->bind('<Control-F>',       $hunter);
 }
 
 sub hunt_for_Entry_text{

@@ -56,7 +56,7 @@ sub read_custom_option_file {
     my $mtime = (stat($xres_file))[9] || 0;
 
     ### Change time int here if you modify the X resources
-    if ($mtime < 1065016446) {
+    if ($mtime < 1066664026) {
         warn "Writing new X resource file '$xres_file'\n";
         rename($xres_file, "$xres_file.bak") if $mtime;
 
@@ -64,26 +64,27 @@ sub read_custom_option_file {
         if (open XRES, "> $xres_file") {
             print XRES q{
 
-CanvasWindow*background: #bebebe
-CanvasWindow*selectBackground: gold
-CanvasWindow*TopLevel*background: #bebebe
-CanvasWindow*troughColor: #aaaaaa
-CanvasWindow*foreground: black
-CanvasWindow*activecolor: #ffd700
 CanvasWindow*color: #ffd700
+CanvasWindow*background: #bebebe
+CanvasWindow*foreground: black
+CanvasWindow*selectBackground: gold
+CanvasWindow*selectColor: gold
+CanvasWindow*activeBackground: #dfdfdf
+CanvasWindow*troughColor: #aaaaaa
+CanvasWindow*activecolor: #ffd700
 CanvasWindow*borderWidth: 1
 CanvasWindow*activeborderWidth: 1
-CanvasWindow*activeBackground: #dfdfdf
+CanvasWindow*font: -*-helvetica-medium-r-*-*-12-*-*-*-*-*-*-*
+
+CanvasWindow*TopLevel*background: #bebebe
 CanvasWindow*Frame.borderWidth: 0
 CanvasWindow*Scrollbar.width: 11
-CanvasWindow*font: -*-helvetica-medium-r-*-*-12-*-*-*-*-*-*-*
-CanvasWindow*selectColor: gold
 CanvasWindow*Menubutton.padX: 6
 CanvasWindow*Menubutton.padY: 6
-CanvasWindow*entry.relief: flat
-CanvasWindow*entry.font: -*-lucidatypewriter-medium-r-*-*-14-*-*-*-*-*-*-*
-CanvasWindow*entry.foreground: black
-CanvasWindow*entry.background: white
+CanvasWindow*Entry.relief: flat
+CanvasWindow*Entry.font: -*-lucidatypewriter-medium-r-*-*-14-*-*-*-*-*-*-*
+CanvasWindow*Entry.foreground: black
+CanvasWindow*Entry.background: white
 
 };
             close XRES;
