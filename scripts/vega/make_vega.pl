@@ -90,7 +90,7 @@ VEGA DB
   -pass2          char      passwd
 
   -t                        test
-  -set            set[,set] dump datasets listed only
+  -set            set[,set] dump datasets listed only (vega name)
 
   -o              file      output file for transcript script ($opt_o)
   -p              file      output file for transform sql ($opt_p)
@@ -293,8 +293,8 @@ while (my @row = $sth->fetchrow_array()){
 
 # check that target database has all sequence_sets to be transfered
 $sql = qq{
-  SELECT assembly_type
-    FROM sequence_set
+  SELECT distinct type
+    FROM assembly
   };
 my $sth = $dbh2->prepare($sql);
 $sth->execute;
@@ -314,9 +314,11 @@ my $sth = $dbh2->prepare($sql);
 foreach my $vega_set_id (sort {$a<=>$b} keys %vega_set){
   my($vega_author_id, $vega_type, $vega_name)=@{$vega_set{$vega_set_id}};
   next if ($vega_type eq 'N' || $vega_type eq 'P');
+  next if ($set && $set ne $vega_name);
   my $ss=$vega2ss{$vega_set_id};
   my $chr=$ss2chr{$ss};
   my $ss=$vega2ss{$vega_set_id};
+  # skip anything not in set list
   if($ss2{$ss}){
     $sth->execute($ss);
     while (my @row = $sth->fetchrow_array()){
