@@ -8,7 +8,7 @@
 # modify it under the terms of the GNU General Public License
 # as published by the Free Software Foundation
 #
-# $Header: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/conversion/Attic/change_otterid_namespace.pl,v 1.4 2004-01-26 03:46:25 th Exp $
+# $Header: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/conversion/Attic/change_otterid_namespace.pl,v 1.5 2004-01-27 12:27:55 th Exp $
 #
 # Function:
 # T: 
@@ -42,6 +42,7 @@ $|=1;
 my $opt_o='patch.sql';
 my $opt_O='HUM';
 my $opt_p='20';
+my $opt_f;
 
 $Getopt::Long::ignorecase=0;
 
@@ -62,6 +63,7 @@ GetOptions(
 	   'v', \$opt_v,
 	   'c', \$opt_c,
 	   'z', \$opt_z,
+	   'f:s', \$opt_f,
 	   't:n', \$opt_t,
 	   );
 
@@ -88,6 +90,7 @@ change_otterid_namespace.pl
   -v                      verbose
   -c                      order by row count
   -z                      omit tables with zero row count
+  -f              txt     filter on chromosome (can be same as $opt_p)
   -t              num     test (use 'limit X')
 ENDOFTEXT
     exit 0;
@@ -106,24 +109,42 @@ if($opt_t){$test="limit $opt_t";}
 # loop over list of tables requiring edits, extracting data, modifying and writing patch
 
 my %tables;
-$tables{'exon_stable_id'}=['exon_id','stable_id','E'];
-$tables{'gene_stable_id'}=['gene_id','stable_id','G'];
-$tables{'transcript_stable_id'}=['transcript_id','stable_id','T'];
+
+my $sqlf1=", exon e, assembly a, chromosome c where exon_stable_id.exon_id = e.exon_id and e.contig_id = a.contig_id and a.chromosome_id = c.chromosome_id and c.name = ";
+$tables{'exon_stable_id'}=['exon_id','stable_id','E',$sqlf1];
+
+my $sqlf3=", transcript t, exon_transcript et, exon e, assembly a, chromosome c where gene_stable_id.gene_id = t.gene_id and t.transcript_id = et.transcript_id and et.exon_id = e.exon_id and e.contig_id = a.contig_id and a.chromosome_id = c.chromosome_id and c.name = ";
+$tables{'gene_stable_id'}=['gene_id','stable_id','G',$sqlf3];
+
+my $sqlf2=", exon_transcript et, exon e, assembly a, chromosome c where transcript_stable_id.transcript_id = et.transcript_id and et.exon_id = e.exon_id and e.contig_id = a.contig_id and a.chromosome_id = c.chromosome_id and c.name = ";
+$tables{'transcript_stable_id'}=['transcript_id','stable_id','T',$sqlf2];
+
+my $sqlf4=", transcript t, exon_transcript et, exon e, assembly a, chromosome c where translation_stable_id.translation_id = t.translation_id and t.transcript_id = et.transcript_id and et.exon_id = e.exon_id and e.contig_id = a.contig_id and a.chromosome_id = c.chromosome_id and c.name = ";
 $tables{'translation_stable_id'}=['translation_id','stable_id','P'];
+
 $tables{'xref'}=['xref_id','dbprimary_acc','EGTP'];
 
 if($dbtype eq 'otter'){
+
+  my $sqlf5=", gene_stable_id g, transcript t, exon_transcript et, exon e, assembly a, chromosome c where current_gene_info.gene_stable_id = g.stable_id and g.gene_id and t.gene_id and t.transcript_id = et.transcript_id and et.exon_id = e.exon_id and e.contig_id = a.contig_id and a.chromosome_id = c.chromosome_id and c.name = ";
   $tables{'current_gene_info'}=['gene_info_id','gene_stable_id','G'];
+
   $tables{'current_transcript_info'}=['transcript_info_id','transcript_stable_id','T'];
   # exon_stable_id
   $tables{'exon_stable_id_pool'}=['exon_pool_id','exon_stable_id','E'];
+
+  my $sqlf6=", gene_stable_id g, transcript t, exon_transcript et, exon e, assembly a, chromosome c where gene_info.gene_stable_id = g.stable_id and g.gene_id = t.gene_id and t.transcript_id = et.transcript_id and et.exon_id = e.exon_id and e.contig_id = a.contig_id and a.chromosome_id = c.chromosome_id and c.name = ";
   $tables{'gene_info'}=['gene_info_id','gene_stable_id','G'];
+
   # gene_stable_id
+  my $sqlf7=", gene_stable_id g, transcript t, exon_transcript et, exon e, assembly a, chromosome c where gene_stable_id_pool.gene_stable_id = g.stable_id and g.gene_id = t.gene_id and t.transcript_id = et.transcript_id and et.exon_id = e.exon_id and e.contig_id = a.contig_id and a.chromosome_id = c.chromosome_id and c.name = ";
   $tables{'gene_stable_id_pool'}=['gene_pool_id','gene_stable_id','G'];
+
   $tables{'transcript_info'}=['transcript_info_id','transcript_stable_id','T'];
   # transcript_stable_id
   $tables{'transcript_stable_id_pool'}=['transcript_pool_id','transcript_stable_id','T'];
   # translation_stable_id
+  my $sqlf8=", translation_stable_id tsi, transcript t, exon_transcript et, exon e, assembly a, chromosome c where translation_stable_id_pool.translation_stable_id = tsi.stable_id and tsi.translation_id and t.translation_id and t.transcript_id = et.transcript_id and et.exon_id = e.exon_id and e.contig_id = a.contig_id and a.chromosome_id = c.chromosome_id and c.name = ";
   $tables{'translation_stable_id_pool'}=['translation_pool_id','translation_stable_id','P'];
   # xref
 }
@@ -136,8 +157,19 @@ foreach my $table (keys %tables){
   my $n2=0;
   my $n3=0;
   my $ns=0;
-  my($key,$val,$type)=@{$tables{$table}};
-  my $sth = $dbh->prepare("select $key,$val from $table $test");
+  my($key,$val,$type,$sqlfilter)=@{$tables{$table}};
+  my $sql;
+  if($opt_f){
+    if($sqlfilter){
+      $sql="$sqlfilter \'$opt_f\'";
+    }else{
+      print "no filter for $table - skip\n";
+      next;
+    }
+  }
+  my $sql2="select distinct $table.$key,$table.$val from $table $sql $test";
+  #print "EXE $sql2\n";
+  my $sth = $dbh->prepare($sql2);
   $sth->execute;
   while (my($key1,$val1)=$sth->fetchrow_array()){
     my $match='OTT'.$opt_O."[$type]".'000';

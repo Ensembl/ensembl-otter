@@ -156,6 +156,20 @@ while ($hashref = $sth->fetchrow_hashref()) {
 
     my $contig = $rca->fetch_by_name($hashref->{'name'});
    
+    # check for contigs with name without version (AC.V.ST.ED -> AC.ST.ED)
+    if (!defined($contig)) {
+      print STDOUT "Missing contig " . $hashref->{'name'} . " - trying without version\n";
+      my $acc = $hashref->{'name'};
+      $acc =~ s/(\S+)\.[0-9]+(\.[0-9]+\.[0-9]+)$/\1\2/;
+      #print $hashref->{'name'}." ".$acc."\n";
+      #exit 0;
+      $contig = $rca->fetch_by_name($acc);
+      if(defined($contig)){
+	print "Looking for $acc successful\n";
+      }
+    }
+
+    # check for contigs with without start-end (AC.V.ST.ED -> AC.V)
     if (!defined($contig)) {
       print STDOUT "Missing contig " . $hashref->{'name'} . " - trying clone\n";
       my $acc = $hashref->{'name'};
