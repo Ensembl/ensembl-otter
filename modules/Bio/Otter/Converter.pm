@@ -406,11 +406,11 @@ sub otter_to_ace {
 
     $str .= "Assembly_name " . $path . "\n";
 
-  my @path  = @{ $slice->get_tiling_path };
+    my @path  = @{ $slice->get_tiling_path };
 
-  my $chr      = $slice->chr_name;
-  my $chrstart = $slice->chr_start;
-  my $chrend   = $slice->chr_end;
+    my $chr      = $slice->chr_name;
+    my $chrstart = $slice->chr_start;
+    my $chrend   = $slice->chr_end;
 
     foreach my $path (@path) {
        my $start;
@@ -429,7 +429,7 @@ sub otter_to_ace {
   foreach my $gene (@$genes) {
   
     foreach my $tran (@{ $gene->get_all_Transcripts }) {
-      $str .= "Subsequence   \"" . $tran->stable_id . "\" ";
+      $str .= "Subsequence   \"" . $tran->transcript_info->name . "\" ";
       my @exons = @{ $tran->get_all_Exons };
       if ($exons[0]->strand == 1) {
         @exons = sort {$a->start <=> $b->start} @exons;
@@ -462,9 +462,10 @@ sub otter_to_ace {
 
   foreach my $gene (@$genes) {
     foreach my $tran (@{ $gene->get_all_Transcripts }) {
-      $str .= "Sequence : \"" . $tran->stable_id . "\"\n";
+      $str .= "Sequence : \"" . $tran->transcript_info->name . "\"\n";
+      $str .= "Otter_id \"" . $tran->stable_id . "\"\n";
       $str .= "Source \"" . $contig->display_id . "\"\n";
-      $str .= "Locus \"" . $gene->stable_id . "\"\n";
+      $str .= "Locus \"" . $gene->gene_info->name->name . "\"\n";
       $str .= "Method \"" . $tran->transcript_info->class->name . "\"\n";
 
       my @remark = $tran->transcript_info->remark;
@@ -540,12 +541,14 @@ sub otter_to_ace {
   $str .= "\n";
 
   foreach my $gene (@$genes) {
-    $str .= "Locus : \"" . $gene->stable_id . "\"\n";
+    $str .= "Locus : \"" . $gene->gene_info->name->name . "\"\n";
 
     #Need to add type here
+    $str .= $gene->type . "\n";
     foreach my $tran (@{ $gene->get_all_Transcripts }) {
-      $str .= "Positive_sequence  \"" . $tran->stable_id . "\"\n";
+      $str .= "Positive_sequence  \"" . $tran->transcript_info->name . "\"\n";
     }
+    $str .= "Otter_id \"" . $gene->stable_id . "\"\n";
     $str .= "\n";
   }
 
@@ -1384,7 +1387,10 @@ sub prune_Exons {
         }
       }
 
+        print " Phase " . $exon->phase . " EndPhase " . $exon->end_phase . "\n";
+        print " Strand " . $exon->strand . " Start " . $exon->start . " End ". $exon->end ."\n";
       if (defined($found)) {
+        print "Duplicate = " . $exon->stable_id . "\n";
         push (@newexons, $found);
         if ($tran->translation) {
           if ($exon == $tran->translation->start_Exon) {
@@ -1396,6 +1402,7 @@ sub prune_Exons {
           }
         }
       } else {
+        print "New = " . $exon->stable_id . "\n";
         push (@newexons,     $exon);
         push (@unique_Exons, $exon);
       }
