@@ -16,6 +16,7 @@ my $chrname  = 14;
 my $path     = 'GENOSCOPE';
 my $agpfile  = undef;
 my $logfile  = undef;
+my $outfile  = undef;
 my $startid  = 1;
 my $seqdir   = undef;
 my $chrid    = 1;
@@ -25,8 +26,9 @@ my $chrid    = 1;
              'path:s'  => \$path,
              'agp:s'   => \$agpfile,
              'log:s'   => \$logfile,
+             'out:s'   => \$outfile,
              'startid:n' => \$startid,
-             'seqdir:n'  => \$seqdir,
+             'seqdir:s'  => \$seqdir,
             );
 
 if (!defined($chrname) || !defined($agpfile) || !defined($path)) {
@@ -37,6 +39,12 @@ if (defined($logfile)) {
   open (FPERR, ">$logfile");
 } else {
   open (FPERR, ">&STDERR");
+}
+
+if (defined($outfile)) {
+  open (FPOUT, ">$outfile");
+} else {
+  open (FPERR, ">&STDOUT");
 }
 
 my %contigs;
@@ -119,6 +127,7 @@ while (<IN>) {
   if (!$found && $seqdir) {
     $seq = "";
     my $fname = "$seqdir/$accver.fa";
+    print FPERR "Doing seqdir search for $fname\n";
     if ( -e $fname ) {
       open(IN2,"<$fname");
       while (<IN2>) {
@@ -154,11 +163,11 @@ while (<IN>) {
     
     print FPERR "Length : $len\n";
 
-    print "insert into assembly(chromosome_id,chr_start,chr_end,superctg_name,superctg_start,superctg_end,superctg_ori,contig_id,contig_start,contig_end,contig_ori,type) values($chrid,$chrstart,$chrend,\'$chrname\',$chrstart,$chrend,1,$contignum,$accstart,$accend,$strand,\'$path\');\n";
-    print "insert into clone(clone_id,name,embl_acc,version,embl_version,htg_phase,created,modified) values($clonenum,'$acc','$acc',$version,$version,4,now(),now());\n";
-    print "insert into contig(contig_id,name,clone_id,length,embl_offset,dna_id) values($contignum,'$contigid',$clonenum,$len,1,$dnanum);\n";
+    print FPOUT "insert into assembly(chromosome_id,chr_start,chr_end,superctg_name,superctg_start,superctg_end,superctg_ori,contig_id,contig_start,contig_end,contig_ori,type) values($chrid,$chrstart,$chrend,\'$chrname\',$chrstart,$chrend,1,$contignum,$accstart,$accend,$strand,\'$path\');\n";
+    print FPOUT "insert into clone(clone_id,name,embl_acc,version,embl_version,htg_phase,created,modified) values($clonenum,'$acc','$acc',$version,$version,4,now(),now());\n";
+    print FPOUT "insert into contig(contig_id,name,clone_id,length,embl_offset,dna_id) values($contignum,'$contigid',$clonenum,$len,1,$dnanum);\n";
     
-    print "insert into dna(dna_id,sequence,created) values($dnanum,'$seq',now());\n";
+    print FPOUT "insert into dna(dna_id,sequence,created) values($dnanum,'$seq',now());\n";
     
     $contignum++;
     $clonenum++;
@@ -166,3 +175,4 @@ while (<IN>) {
   }
 }
 close FPERR;
+close FPOUT
