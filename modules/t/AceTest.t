@@ -86,5 +86,22 @@ print OUT $str;
 close(OUT);
 
 
+open(IN,"<test.ace");
+
+my ($genes,$frags,$path,$dna,$chr,$start,$end) = Bio::Otter::Converter::ace_to_otter(\*IN);
 
 
+open(OUT2,">test.xml");
+
+my $str = Bio::Otter::Converter::frags_to_XML($frags,$path,$chr,$start,$end);
+print OUT2 $str . "\n";
+
+@$genes = sort {$a->name cmp $b->name} @$genes;
+
+foreach my $gene (@$genes) {
+    print OUT2 $gene->toXMLString . "\n";
+}
+close OUT2;
+
+print "dna length " . length($dna) . "\n";
+ 
