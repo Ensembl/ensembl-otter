@@ -47,12 +47,26 @@ sub fetch_by_stable_id{
        $self->throw("Must enter a transcript id to fetch an AnnotatedTranscript");
    }
 
-   my  $trans = $self->SUPER::fetch_by_stable_id($id);
+   my $sth = $self->prepare(q`
+             SELECT tsi1.transcript_id
+               FROM transcript_stable_id tsi1 LEFT JOIN transcript_stable_id tsi2 
+                 ON tsi1.stable_id = tsi2.stable_id 
+                 && tsi1.version < tsi2.version
+              WHERE tsi2.stable_id IS NULL
+                 && tsi1.stable_id = ?`
+                            );
+   $sth->execute( $id );
 
-   $self->annotate_transcript($trans);
-   
+   my $trans;
+
+   if( my $arr = $sth->fetchrow_arrayref ) {
+       $trans = $self->fetch_by_dbID( $arr->[0] );
+   } else {
+       $self->warn( "No Transcript with this stable id found in the database." );
+       return undef;
+   }
+
    return $trans;
-   
 }
 
 
@@ -113,6 +127,42 @@ sub annotate_transcript {
      print STDERR "Coulnd't fetch info for " . $trans->stable_id . " [$@]\n";
    }
 }
+
+=head2 fetch_by_translation_stable_id
+
+ Title   : fetch_by_translation_stable_id
+ Usage   :
+ Function: fetches the latest translation version for a stable id 
+    and returns its annotated transcript
+ Example :
+ Returns : annotated transcript
+ Args    : translation stable id
+
+=cut
+
+sub fetch_by_translation_stable_id{
+      my ($self, $transl_stable_id) = @_;
+
+      my $sth = $self->prepare(q`
+                   SELECT t.transcript_id
+                     FROM transcript t,
+                          translation_stable_id tsi1 LEFT JOIN translation_stable_id tsi2 
+                       ON tsi1.stable_id = tsi2.stable_id 
+                       && tsi1.version < tsi2.version
+                    WHERE tsi2.stable_id IS NULL
+                       && t.translation_id = tsi1.translation_id
+                       && tsi1.stable_id = ?
+                          `);
+      $sth->execute($transl_stable_id);
+
+      my ($id) = $sth->fetchrow_array;
+      if ($id){
+          return $self->fetch_by_dbID($id);
+      } else {
+          return undef;
+      }
+}
+
 
 1;
 
