@@ -338,12 +338,17 @@ sub fetch_all_SequenceNotes_for_SequenceSet {
     }
     
     foreach my $cs (@$cs_list) {
+	# added so that the complete fresh set is ALL 
+	# that is in the cloneSequence's SequenceNotes [].
+	$cs->truncate_SequenceNotes(); 
         if (my $notes = $ctg_notes{$cs->contig_id}) {
             foreach my $sn (sort {$b->timestamp <=> $a->timestamp} @$notes) {
+		# logic in current_SequenceNote doesn't work
+		# unless this is done first
+		$cs->add_SequenceNote($sn); 
                 if ($sn->is_current) {
                     $cs->current_SequenceNote($sn);
                 }
-                $cs->add_SequenceNote($sn);
             }
         }
     }
