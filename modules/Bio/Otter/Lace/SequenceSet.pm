@@ -48,6 +48,26 @@ sub priority {
     return $self->{'_priority'};
 }
 
+sub is_hidden {
+    my( $self, $is_hidden ) = @_;
+    
+    if (defined $is_hidden) {
+        $self->{'_is_hidden'} = $is_hidden ? 1 : 0;
+    }
+    return $self->{'_is_hidden'};
+}
+
+sub vega_set_id {
+    my( $self, $vega_set_id ) = @_;
+    
+    if ($vega_set_id) {
+        die "Expected INT for vega_set_id, but got: '$vega_set_id'"
+            unless $vega_set_id =~ /^\d+$/;
+        $self->{'_vega_set_id'} = $vega_set_id;
+    }
+    return $self->{'_vega_set_id'} || 0;
+}
+
 sub have_fetched_pipeline_contig_ids {
     my( $self, $flag ) = @_;
     
@@ -60,7 +80,7 @@ sub have_fetched_pipeline_contig_ids {
 sub write_access {
     my( $self, $write_access ) = @_;
     
-    if ($write_access) {
+    if (defined $write_access) {
         $self->{'_write_access'} = $write_access ? 1 : 0;
     }
     $write_access = $self->{'_write_access'};

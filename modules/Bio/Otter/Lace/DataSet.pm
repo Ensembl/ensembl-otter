@@ -132,6 +132,17 @@ sub sequence_set_access_list {
     return $al;
 }
 
+sub get_all_visible_SequenceSets {
+    my( $self ) = @_;
+    
+    my $ss_list = $self->get_all_SequenceSets;
+    my $visible = [];
+    foreach my $ss (@$ss_list) {
+        push(@$visible, $ss) unless $ss->is_hidden;
+    }
+    return $visible;
+}
+
 sub get_all_SequenceSets {
     my( $self ) = @_;
     
@@ -148,13 +159,15 @@ sub get_all_SequenceSets {
             SELECT assembly_type
               , description
 	      , analysis_priority
+              , hide
+              , vega_set_id
             FROM sequence_set
             ORDER BY assembly_type
             });
         $sth->execute;
         
         my $ds_name = $self->name;
-        while (my ($name, $desc, $priority) = $sth->fetchrow) {
+        while (my ($name, $desc, $priority, $hide, $vega_id) = $sth->fetchrow) {
             my( $write_flag );
             if (%$ssal && $ssal->{$this_author}) {
                 $write_flag = $ssal->{$this_author}{$name};
@@ -172,6 +185,8 @@ sub get_all_SequenceSets {
             $set->dataset_name($ds_name);
             $set->description($desc);
 	    $set->priority($priority);
+            $set->is_hidden($hide eq 'Y');
+            $set->vega_set_id($vega_id);
             $set->write_access($write_flag);
             
             push(@$ss, $set);
