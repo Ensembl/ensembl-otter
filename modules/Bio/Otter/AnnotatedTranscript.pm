@@ -60,11 +60,65 @@ sub stable_id {
   return $self->SUPER::stable_id;
 }
 
+sub truncate_to_Slice {
+    my( $self, $slice ) = @_;
+                                                                                                                                       
+    # start and end exon are set to zero so that we can
+    # safely use them in "==" without generating warnings
+    # as we loop through the list of exons.
+    ### Not used until we enable translation truncating
+    my $start_exon = 0;
+    my $end_exon   = 0;
+    my( $tsl );
+    if ($tsl = $self->translation) {
+        $start_exon = $tsl->start_Exon;
+        $end_exon   = $tsl->end_Exon;
+    }
+                                                                                                                                       
+    my $is_truncated = 0;
+    my $in_translation_zone = 0;
+    my $slice_length = $slice->length;
+    my $ex_list = $self->get_all_Exons;
+    for (my $i = 0; $i < @$ex_list;) {
+        my $exon = $ex_list->[$i];
+        my $exon_start = $exon->start;
+        my $exon_end   = $exon->end;
+        if ($exon->contig != $slice or $exon_end < 1 or $exon_start > $slice_length) {
+            #warn "removing exon that is off slice";
+            ### This won't work if get_all_Exons() ceases to return
+            ### a ref to the actual array of exons in the transcript.
+            splice(@$ex_list, $i, 1);
+            $is_truncated = 1;
+        } else {
+            $i++;
+            if ($exon->start < 1) {
+                #warn "truncating exon that overlaps start of slice";
+                $is_truncated = 1;
+                $exon->start(1);
+            }
+            if ($exon->end > $slice_length) {
+                #warn "truncating exon that overlaps end of slice";
+                $is_truncated = 1;
+                $exon->end($slice_length);
+            }
+        }
+    }
+                                                                                                                                       
+    ### Hack until we fiddle with translation stuff
+    if ($is_truncated) {
+        $self->{'translation'}     = undef
+        $self->{'_translation_id'} = undef;
+    }
+                                                                                                                                       
+    return $is_truncated;
+}
+
+
 
 ## This method removes all exons from this transcript which lie outside the slice. 
 ## Exons overlapping the start and end are truncated and the $exon->start / end coordinates 
 ## and also $transcript->start/end are adjusted accordingly
-sub truncate_to_Slice{
+sub Colin_truncate_to_Slice{
     my ($self , $slice ) = @_ ;
     
     my $name = $self->transcript_info->name ;
