@@ -3,21 +3,17 @@
 ### save_xml
 
 use strict;
-use LWP;
-use URI::Escape qw{ uri_escape };
 use Bio::Otter::Lace::Defaults;
 
 {
-    my( $author, $email, $dataset, $seqsetname );
+    my( $dataset, $seqsetname );
     my $usage = sub{ exec('perldoc', $0) };
     Bio::Otter::Lace::Defaults::do_getopt(
-                                          'dataset=s' => \$dataset,
-                                          'seqset=s'  => \$seqsetname,
-                                          'author=s'  => \$author,
-                                          'email=s'   => \$email,
-                                          'h|help!'   => $usage,
-                                          );
-    $usage->() unless $dataset and $author and $email and $seqsetname;
+        'dataset=s'     => \$dataset,
+        'set|seqset=s'  => \$seqsetname,
+        'h|help!'       => $usage,
+        ) or $usage->();
+    $usage->() unless $dataset and $seqsetname;
     
     my( $xml );
     {
@@ -64,28 +60,6 @@ use Bio::Otter::Lace::Defaults;
 
     $cl->unlock_otter_xml($lock_xml, $dataset);
 
-
-    # Save to server with POST
-    # my $url = $cl->url_root . '/write_region';
-    # my $request = HTTP::Request->new;
-    # $request->method('POST');
-    # $request->uri($url);
-    # $request->content(
-    #     join('&',
-    #         'author='   . uri_escape($author),
-    #         'email='    . uri_escape($email),
-    #         'dataset='  . uri_escape($dataset),
-    #         'data='     . uri_escape($xml),
-    #         'lock_before_write=true',
-    #         'unlock=true',
-    #         )
-    #     );
-    
-    # my $content = $cl->get_UserAgent->request($request)->content;
-    # $cl->_check_for_error(\$content);
-
-    
-    
 }
 
 __END__
