@@ -13,6 +13,7 @@ use Bio::Otter::Lace::SequenceNote;
 use Bio::EnsEMBL::Pipeline::Monitor;
 use Bio::Otter::Lace::PipelineDB;
 use Bio::Otter::Lace::SatelliteDB;
+use Bio::Otter::Lace::Defaults;
 
 sub new {
     my( $pkg ) = @_;
@@ -38,7 +39,30 @@ sub author {
     }
     return $self->{'_author'};
 }
-
+sub taxon{
+    my ($self) = @_;
+    unless($self->{'_taxon_id'}){
+	my $dba      = $self->get_cached_DBAdaptor;
+	my $meta_con = $dba->get_MetaContainer;
+	$self->{'_taxon_id'} = $meta_con->get_taxonomy_id();
+    }
+    return $self->{'_taxon_id'};
+}
+sub species{
+    my ($self) = @_;
+    unless($self->{'_species'}){
+	my $dba      = $self->get_cached_DBAdaptor;
+	my $meta_con = $dba->get_MetaContainer;
+#	$self->{'_species'} = $meta_con->get_Species(); # this requires 'species.classification' meta key
+	my $t_species= $meta_con->list_value_by_key('species.common_name');
+	if ($t_species && scalar(@{$t_species})){
+	    $self->{'_species'} = $t_species->[0];
+	}else{
+	    warn "species unavailable, check <species.common_name> meta key\n";
+	}
+    }
+    return $self->{'_species'};
+}
 sub _author_id {
     my( $self ) = @_;
     
@@ -190,6 +214,7 @@ sub fetch_all_CloneSequences_for_selected_SequenceSet {
 sub status{
     my ($self, $dba, $type, $force_refresh) = @_;
     if(!$self->{'_dataset_status_hash'}->{$type} || $force_refresh){
+	return unless Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
 	my $pipeline_db = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($dba);
 	my $monitor     = Bio::EnsEMBL::Pipeline::Monitor->new(-dbobj => $pipeline_db);
 	my $unfin       = $monitor->get_unfinished_analyses_for_assembly_type($type);
@@ -321,6 +346,7 @@ sub fetch_all_SequenceNotes_for_SequenceSet {
             }
         }
     }
+    return %ctg_notes;
 }
 
 sub save_current_SequenceNote_for_CloneSequence {
@@ -538,7 +564,7 @@ sub store_SequenceSet{
     
     # get the previous sequence_set with the same name.
     eval { $self->get_SequenceSet_by_name($ss->name) };
-    if(!$@){ confess "update not allowed" unless $allow_update };
+    if(!$@){ confess "Adding to a previos AGP with another is not allowed" unless $allow_update };
     # write some sql
     my $tmp_tbl_assembly = $self->_tmp_table_by_name("assembly");
     my $create_tmp_tbl   = qq{CREATE TEMPORARY TABLE $tmp_tbl_assembly SELECT * FROM assembly WHERE 1 = 0};
@@ -553,9 +579,9 @@ sub store_SequenceSet{
     # database connections
     my $otter_db    = $self->get_cached_DBAdaptor;
     my $pipeline_db = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($otter_db)
-        or confess "Can't connect to pipeline db";;
+        or confess "Can't connect to pipeline db";
     my $ens_db      = $self->make_EnsEMBL_DBAdaptor()
-        or confess "Can't connect to 'self' db";;;
+        or confess "Can't connect to 'self' db";
 
     my $max_chr_length = $self->tmpstore_meta_info_for_SequenceSet($ss, [$ens_db, $pipeline_db]);
 
@@ -620,8 +646,8 @@ sub store_SequenceSet{
 			       );
     }
     ####################################################
-    $self->__dump_table("assembly", [$pipeline_db, $ens_db]);
-    $self->__dump_table("meta_info", [$pipeline_db, $ens_db]);
+#    $self->__dump_table("assembly", [$pipeline_db, $ens_db]);
+#    $self->__dump_table("meta_info", [$pipeline_db, $ens_db]);
     # if everythings ok "commit" sequence_set table and assembly table
     # insert into sequence_set select from temporary table
     my $tmp_tbl_mi    = $self->_tmp_table_by_name("meta_info");
@@ -732,7 +758,7 @@ sub delete_SequenceSet{
     my $delete_meta_info = qq{DELETE FROM sequence_set WHERE assembly_type = ?};
     my $delete_assembly  = qq{DELETE FROM assembly WHERE type = ?};
     my $name = $ss->name();
-    warn "DELETING sequence set with name: $name";
+    warn "DELETING sequence set with name: $name \n";
     foreach my $adaptor($otter_db, $pipeline_db){
 	my $sth = $adaptor->prepare($delete_meta_info);
 	$sth->execute($name);
@@ -771,7 +797,7 @@ sub _make_DBAdptor_with_class {
     my(@args);
     foreach my $prop ($self->list_all_db_properties) {
         if (my $val = $self->$prop()) {
-            #print STDERR "-$prop  $val\n";
+#            print STDERR "-$prop  $val\n";
             push(@args, "-$prop", $val);
         }
     }
