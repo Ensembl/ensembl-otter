@@ -1,0 +1,298 @@
+<html>
+<head>
+
+<title>Drawing Chromosome 20</title>
+
+<body bgcolor="#ccccff">
+
+<br /><br />
+
+<center>
+<table cellpadding=20 border=0 width="90%"><tr><td bgcolor="#ffffff">
+
+<font size=5>
+
+<center><h1>Chromosome 20</h1></center>
+
+<ul>
+    <li>Finished</li>
+    <li>620 Sanger Clones</li>
+    <li>9 External Clones</li>
+    <li>Neat data set</li>
+    <li>59.15Mbp of sequence with zero N's</li>
+</ul>
+
+<p>Analysed using standard human sequence
+analysis pipeline. </p>
+
+<p>Annotated twice, and checked by Chr. 20 group.
+</p>
+
+<p>Gene structures imported into EnsEMBL db. </p>
+
+<p>EnsEMBL analysis pipeline used to run
+RepeatMasker and CpG island prediction. </p>
+
+<p>EnsEMBL db used to generate the statistics for
+the paper. </p>
+
+<p>Need to make fold-out figure of the chromosome
+for the paper.  Chr. 22 was a big GIF.  Decided
+to use PostScript, and to use
+<b><code>Tk::Canvas</code></b> to generate it,
+rather than writing raw postscript.
+
+<hr /><br />
+
+<center><h1>Perl Tk</h1></center>
+
+<h2>Use Tk v8</h2>
+
+<p>Tried using the site installed Tk v4, but
+immediately found that I could not create a
+MainWindow via the OO interface:</p>
+
+<b><pre>
+    my $mw = MainWindow->new;
+</pre></b>
+
+<p>produces a fatal error. </p>
+
+<p>Installed Tk v800.022, which does what it
+says.</p>
+
+<hr /><br />
+
+<center><h1>Tk::Canvas</h1></center>
+
+<h2>Scaling</h2>
+
+<b><pre>
+    $mw->scaling(1);
+</pre></b>
+
+<p>X displays have a resolution which is set
+accoring to their size.  This affects the size of
+the fonts relative to the other objects in the
+PostScript output from <b>Tk::Canvas</b>, but
+setting <b><code>scaling</code></b> to 1 (1 pixel
+equals 1 point) fixes this. </p>
+
+<p>You need to call <b><code>scaling</code></b>
+before anything gets drawn on the screen. </p>
+
+<h2>Drawing objects</h2>
+
+<p>Objects are drawn on the canvas using the
+<b><code>create&lt;Type&gt;</code></b> methods. </p>
+
+<b><pre>
+    # Draw a red rectangle with no outline
+    my $rec = $canvas->createRectangle(
+        $x1, $y1, $x2, $y2,
+        -tags       => [@tags],
+        -fill       => 'red',
+        -outline    => undef,
+        );
+</pre></b>
+
+<p>Coordinates are 0,0 in top left of canvas, and
+are floating points. </p>
+
+<p>The return value, <b><code>$rec</code></b> is
+an integer.  This identifier can be used to
+address the object, and, for instance, change its
+size or colour. </p>
+
+<p><b>Tags</b>, which are strings, can be added
+to objects, and are used to group objects.  In
+many Canvas methods, they can be used
+interchangeably with the integer identifiers of
+the objects.  </p>
+
+<p>Canvas has lots of convenient methods, eg: </p>
+
+<b><pre>
+    # Find the bounding box of all the
+    # objects with the tag "gene"
+    my @bbox = $canvas->bbox('gene');
+</pre></b>
+
+<h2>Image data</h2>
+
+<p>We have about 90,000 repeat features on Chr.
+20.  Didn't want to draw a separate rectangle for
+each feature, because they would be too small,
+and would produce too big a PostScript file. </p>
+
+<p>Created images withLincoln Stein's <b>GD</b>
+module. Tried to place them without using file:</p>
+
+<b><pre>
+    my $image = $canvas->Photo(
+        '-format'   => 'gif',
+        -data       => $gd->gif,
+        );
+    $canvas->createImage(
+        $x, $y,
+        -anchor     => 'nw',
+        -image      => $image,
+        );
+</pre></b>
+
+<p>This fails.  The reason, which isn't in the
+documentation, is that the data needs to be
+base64 encoded:</p>
+
+<b><pre>
+    use MIME::Base64 'encode_base64';
+    my $image = $canvas->Photo(
+        '-format'   => 'gif',
+        -data       => encode_base64($gd->gif),
+        );
+</pre></b>
+
+<h2>What's Missing?</h2>
+
+<p>Biggest feature missing is the ability to
+rotate Canvas items. Particularly useful for
+text. </p>
+
+<hr /><br />
+
+<center><h1>GenomeCanvas</h1></center>
+
+<p>GenomeCanvas is a set of modules for drawing an
+overview of a genomic region. </p>
+
+<h2>GenomeCanvas::MainWindow</h2>
+
+<b><pre>
+    my $mw = GenomeCanvas::MainWindow->new;
+</b></pre>
+
+<p><b><code>GenomeCanvas::MainWindow</code></b>,
+inherits from <b><code>MainWindow</code></b>.
+</p>
+
+<p>Sets default background colour, X resources,
+key bindings and scaling. <p>
+
+<h2>GenomeCanvas</h2>
+
+<b><pre>
+    my $gc = GenomeCanvas->new($mw);
+    my $canvas = $gc->canvas;
+</pre></b>
+
+<p><b><code>GenomeCanvas</code></b>is the
+container object for the other modules in the
+system. </p>
+
+<p>The <b><code>new</code></b> method packs a
+scrolled Canvas into the
+<b><code>TopLevel</code></b> widget given as the
+argument, which is then returned by the canvas
+method. </p>
+
+<p>It is a container for a number of
+<b><code>GenomeCanvas::Band</code></b> objects,
+which are used to draw rows on the Canvas. </p>
+
+<b><pre>
+    $gc->add_Band($band);
+</pre></b>
+
+<p>Objects are drawn on the Canvas by calling the
+<b><code>render</code></b> method. </p>
+
+<b><pre>
+    $gc->render;
+</pre></b>
+
+<h2>GenomeCanvas::Band</h2>
+
+<p>There is a different
+<b><code>GenomeCanvas::Band</code></b> module for
+each type of row on the diagram (eg: 
+<b><code>GenomeCanvas::DensityBand::RepeatFeature</code></b>),
+which all inherit from the
+<b><code>GenomeCanvas::Band</code></b> base
+class. </p>
+
+<p>Each Band module implements a
+<b><code>render</code></b> method, which creates
+the objects on the Canvas.  This is called by the
+containing <b><code>GenomeCanvas</code></b>
+object on each band in turn. </p>
+
+<p>The GenomeCanvas object also gives each Band a
+tag, which the Band attaches to everything it
+draws. </p>
+
+<p>After calling the <b><code>render</code></b>
+on a band, the GenomeCanvas finds the bounding
+box of the objects the band has drawn, and
+calculates the y-axis offset for the next band.
+<p>
+
+<h2>Bio::EnsEMBL::Virtual::Contig</h2>
+
+<p>Each band typically holds a reference to an
+EnsEMBL VirtualContig object.</p>
+
+<p>This is a convenient data structure, which
+presents sequence features in arbitrary genomic
+coordinates via a number of methods. </p>
+
+<b><pre>
+    my @repeats = $vc->get_all_RepeatFeatures;
+</pre></b>
+
+<h2>GenomeCanvas::State</h2>
+
+<p>Both <b><code>GenomeCanvas</code></b> and
+<b><code>GenomeCanvas::Band</code></b> objects
+inherit from
+<b><code>GenomeCanvas::State</code></b>. </p>
+
+<p>State is used to hold information common to
+the whole GenomeCanvas, such as the current
+y-axis offset, and a reference to the Canvas
+object. </p>
+
+<p>The State is actually held in a single
+anonymous hash, which everything in a
+GenomeCanvas has a reference to.  Because
+everything inherits from the
+<b><code>GenomeCanvas::State</code></b> class,
+the same methods can be called on each
+object:</p>
+
+<b><pre>
+    # GenomeCanvas sets the y-axis offset
+    $gc->y_offset(203);
+  ...
+    # Which is retrieved by the Band object
+    my $y_offset = $band->y_offset;
+</pre></b>
+
+<hr /><br />
+
+<center><h1>EnsEMBL</h1></center>
+
+<p>GenomeCanvas can be pointed at any EnsEMBL
+database. </p>
+
+<p>The code will be released as an EnsEMBL CVS
+module, probably <b><code>ensembl-tk</code></b>.
+</p>
+
+</font>
+
+</td></tr></table>
+
+</center>
+
+</body>
+</html>
