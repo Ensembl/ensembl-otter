@@ -6,6 +6,7 @@ package XaceSeqChooser;
 use strict;
 use Carp;
 use CanvasWindow;
+use ExonCanvas;
 use vars ('@ISA');
 use Hum::Ace;
 

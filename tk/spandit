@@ -76,6 +76,30 @@ __END__
 
 =head1 NAME - spandit
 
+=head1 FEATURE
+
+    Sequence
+        Exon coordinates
+        CDS Start/End
+        Start_not_found     CDS_Phase
+                            Next_left
+        End_not_found       Next_Right
+        Method  Supported
+                Supported_CDS
+                Supported_mRNA
+                Pseudogene
+        Remark
+    
+    Locus
+        Name
+        Alias
+        Type    Pseudogene
+                Putative
+                Gene    Known
+                        Novel_CDS   Human_supported
+                                    Non_human_supported
+                        Novel_Transcript
+
 =head1 SYNOPSIS
 
     spandit <-path <ACE DATABASE DIR> | -host <SERVER> -port <NUMBER>>

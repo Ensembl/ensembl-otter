@@ -59,9 +59,11 @@ CanvasWindow*activecolor: #ffd700
 CanvasWindow*color: #ffd700
 CanvasWindow*Entry.borderWidth: 1
 CanvasWindow*Button.borderWidth: 1
+CanvasWindow*Menu.borderWidth: 1
+CanvasWindow*Menubutton.borderWidth: 1
+CanvasWindow*Optionmenu.borderWidth: 1
 CanvasWindow*Scrollbar.borderWidth: 1
 CanvasWindow*Scrollbar.width: 11
-CanvasWindow*Menu.borderWidth: 1
 CanvasWindow*font: -*-helvetica-medium-r-*-*-12-*-*-*-*-*-*-*
 
 };

@@ -1,0 +1,87 @@
+#!/usr/local/bin/perl -w
+
+### menu_test
+
+use strict;
+use CanvasWindow;
+
+{
+    my $mw = CanvasWindow::MainWindow->new;
+    my $menu = $mw->Menu;
+    
+    $mw->configure(-menu => $menu);
+    
+    # Chooser menu
+    my $chooser = $menu->Menu(
+        -tearoff    => 0,
+            );
+    $menu->add('cascade',
+        -label      => 'Chooser',
+        -menu       => $chooser,
+        );
+    
+    $menu->add('separator');
+    
+    $chooser->add('command',
+        -label      => 'Attach Xace',
+        -command    => sub { warn "Called Attach Xace" },
+        );
+    $chooser->add('command',
+        -label      => 'Resync',
+        -hidemargin => 1,
+        -command    => sub { warn "Called Resync" },
+        );
+    $chooser->add('separator');
+    $chooser->add('command',
+        -label      => 'Exit',
+        -command    => sub { $mw->destroy },
+        );
+    
+    # Subseq menu
+    my $subseq = $menu->Menu(
+        -tearoff    => 0,
+            );
+    $menu->add('cascade',
+        -label      => 'SubSeq',
+        -menu       => $subseq,
+        );
+    
+    $subseq->add('command',
+        -label      => 'New',
+        -command    => sub{ warn "Called New" },
+        );
+    $subseq->add('command',
+        -label      => 'Edit',
+        -command    => sub{ warn "Called Edit" },
+        );
+    $subseq->add('command',
+        -label      => 'Merge',
+        -command    => sub{ warn "Called Merge" },
+        );
+    $subseq->add('command',
+        -label      => 'AutoMerge',
+        -command    => sub{ warn "Called AutoMerge" },
+        );
+    $subseq->add('command',
+        -label      => 'Isoform',
+        -command    => sub{ warn "Called Isoform" },
+        );
+    $subseq->add('command',
+        -label      => 'Transcript',
+        -command    => sub{ warn "Called Transcript" },
+        );
+    
+    my $cw = CanvasWindow->new($mw);
+}
+
+Tk::MainLoop();
+
+
+__END__
+
+=head1 NAME - menu_test
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
