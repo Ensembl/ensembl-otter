@@ -287,7 +287,7 @@ sub save_otter_slice {
     my $ace_txt = $ace->raw_query('show -a');
 
     # ... its SubSequences ...
-    $ace->raw_query('Follow SubSequence');
+    $ace->raw_query('query follow SubSequence where ! CDS_predicted_by');
     $ace_txt .= $ace->raw_query('show -a');
 
     # ... and all the Loci attached to the SubSequences.

@@ -25,8 +25,8 @@ sub current_author {
 sub compare_clones {
     my( $self, $old_clones, $new_clones ) = @_;
     
-    my %new = map {$_->id . "." . $_->embl_version, $_} @$new_clones;
-    my %old = map {$_->id . "." . $_->embl_version, $_} @$old_clones;
+    my %new = map {$_->embl_id . "." . $_->embl_version, $_} @$new_clones;
+    my %old = map {$_->embl_id . "." . $_->embl_version, $_} @$old_clones;
     
     my( @changed );
     foreach my $acc_sv (keys %old) {

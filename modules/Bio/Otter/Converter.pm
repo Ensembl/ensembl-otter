@@ -1052,7 +1052,7 @@ sub ace_to_otter {
                         $start = $tend - $oldend + 1;
                     }
 
-                    print STDERR "Adding exon at $start $end to $currname\n";
+                    #print STDERR "Adding exon at $start $end to $currname\n";
                     my $exon = new Bio::EnsEMBL::Exon(
                         -start  => $start,
                         -end    => $end,
@@ -1142,7 +1142,7 @@ sub ace_to_otter {
         
         # Parse Person objects
         elsif (/^Person $OBJ_NAME/x) {
-            warn "Found Person '$1'";
+            #warn "Found Person '$1'";
             my $author_name = $1;
             my( $author_email );
             while (($_ = <$fh>) !~ /^\n$/) {
@@ -1251,7 +1251,7 @@ sub ace_to_otter {
             $anntran{$seq} = $anntran;
 
             # Sort the exons here just in case
-            print STDERR "Anntran $seq [$anntran]\n";
+            #print STDERR "Anntran $seq [$anntran]\n";
             die "No exons in transcript '$seq'" unless @{$anntran->get_all_Exons};
             $anntran->sort;
 
@@ -1582,7 +1582,9 @@ sub prune_Exons {
         push (@newexons,     $exon);
         push (@unique_Exons, $exon);
       }
-      $exonhash{$exon->stable_id} = 1;
+      if (my $stable = $exon->stable_id) {
+        $exonhash{$stable} = 1;
+      }
     }
     $tran->flush_Exons;
     foreach my $exon (@newexons) {
