@@ -257,7 +257,7 @@ sub store{
    if (!defined($obj->gene_info)) {
       $self->throw("Annotated Gene must have a gene info object");
    }
-   print STDERR "Ann id " . $obj->stable_id . "\n";
+   # print STDERR "Ann id " . $obj->stable_id . "\n";
 
    my $gene_info_adaptor = $self->db->get_GeneInfoAdaptor();
    my $current_g_info_ad = $self->db->get_CurrentGeneInfoAdaptor;

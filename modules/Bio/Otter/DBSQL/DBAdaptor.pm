@@ -157,4 +157,9 @@ sub get_StableIdAdaptor {
 
     return $self->_get_adaptor("Bio::Otter::DBSQL::StableIdAdaptor");
 }
+sub get_CloneRemarkAdaptor {
+    my $self = shift;
+
+    return $self->_get_adaptor("Bio::Otter::DBSQL::CloneRemarkAdaptor");
+}
 1;

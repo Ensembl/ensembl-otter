@@ -4,6 +4,8 @@ use strict;
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 use Bio::Otter::DBSQL::AuthorAdaptor;
 use Bio::Otter::CloneInfo;
+use Bio::Otter::CloneRemark;
+use Bio::Otter::Keyword;
 
 use vars qw(@ISA);
 
@@ -32,7 +34,6 @@ sub _generic_sql_fetch {
                        author_id,
                        timestamp,
                        is_active,
-                       embl_description,
                        database_source
 		FROM clone_info }
 	. $where_clause;
@@ -46,21 +47,25 @@ sub _generic_sql_fetch {
 		my $author_id = $ref->{author_id};
 		my $timestamp = $ref->{timestamp};
 		my $is_active = $ref->{is_active};
-		my $remark    = $ref->{embl_description};
 		my $source    = $ref->{database_source};
 
 		#  Should probably do this all in the sql           
 		my $aad = new Bio::Otter::DBSQL::AuthorAdaptor($self->db);
 		my $author = $aad->fetch_by_dbID($author_id);
 
+
+                my @remarks  = $self->db->get_CloneRemarkAdaptor->list_by_clone_info_id($ref->{'clone_info_id'});
+                my @keywords = $self->db->get_KeywordAdaptor->list_by_clone_info_id($ref->{'clone_info_id'});
+
 		my $cloneinfo = new Bio::Otter::CloneInfo(-dbId      => $info_id,
-																							-clone_id  => $clone_id,
-																							-author    => $author,
-																							-timestamp => $timestamp,
-																							-is_active => $is_active,
-																							-remark    => $remark,
-																							-source    => $source);
-		
+                                                          -clone_id  => $clone_id,
+                                                          -author    => $author,
+                                                          -timestamp => $timestamp,
+                                                          -is_active => $is_active,
+                                                          -remark    => \@remarks,
+                                                          -keyword   => \@keywords,
+                                                          -source    => $source);
+        
 		return $cloneinfo;	 	
 
 	} else {
@@ -111,13 +116,12 @@ sub store {
 
   $self->throw("Failed to update cloneinfo for clone " . $cloneinfo->clone_id) unless $update_rv;
 
-  my $sql = "insert into clone_info(clone_info_id,clone_id,author_id,timestamp,is_active,embl_description,database_source) values (null," . 
+  my $sql = "insert into clone_info(clone_info_id,clone_id,author_id,timestamp,is_active,database_source) values (null," . 
 		$cloneinfo->clone_id . "," . 
 		$cloneinfo->author->dbID . ",now(),\'true\',\'" . 
-		$cloneinfo->remark . "\',\'" . 
                 $cloneinfo->source . "\')";
 
-  print $sql . "\n";
+  # print $sql . "\n";
   my $sth = $self->prepare($sql);
   my $rv = $sth->execute();
 
@@ -129,6 +133,27 @@ sub store {
   $sth->finish;
 	
   $cloneinfo->dbID($row->{'last_insert_id()'});
+
+  if (defined($cloneinfo->keyword)) {
+    my @keywords = $cloneinfo->keyword;
+    if (scalar(@keywords) > 0) {
+        foreach my $keyword (@keywords) {
+            $keyword->clone_info_id($cloneinfo->dbID);
+            $self->db->get_KeywordAdaptor->store($keyword);
+        }
+    }
+  }
+
+  if (defined($cloneinfo->remark)) {
+    my @remarks = $cloneinfo->remark;
+    if (scalar(@remarks) > 0) {
+        foreach my $remark (@remarks) {
+            $remark->clone_info_id($cloneinfo->dbID);
+            $self->db->get_CloneRemarkAdaptor->store($remark);
+        }
+    }
+  }
+
 }
 
 1;
