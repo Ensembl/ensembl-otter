@@ -133,9 +133,49 @@ sub useage{ exit(exec('perldoc', $0)); }
 
 __END__
 
+=pod
+
 =head1 NAME - modify_sequence_set
+
+=head1 DESCRIPTION
+
+ Simple script to either B<delete>, B<update> or B<show> a sequence set from 
+an B<otter> and of B<pipeline> database. Connection details come from 
+$OTTER_HOME/.otter_config or ~/.otter_config or command line in a similar 
+manner to the rest of the scripts in this directory.
+
+=head2 -delete
+
+ This will delete the given B<dataset:set> from both otter and pipeline 
+databases
+
+=head2 -update
+
+ This will update the given B<dataset:set> with the supplied B<description>
+and/or B<priority> in bother otter and pipeline databases.
+
+=head2 -show
+
+ This will print to STDOUT the given B<dataset:set> in either B<agp> or a 
+B<list> format.  B<N.B.> This only uses the otter database.
+
+
+=head1 USEAGE
+
+    help         - display this pod
+    dataset      - set the dataset
+    set|name     - set the set name
+
+    delete       - delete the B<dataset:set>
+
+    update       - update the B<dataset:set> with desc &/| priority
+     description - set the description
+     priority    - set the priority
+
+    show         - show the B<dataset:set> defaults as agp
+     list        - use list format only
 
 =head1 AUTHOR
 
-Roy Storey,,,, B<email> rds@sanger.ac.uk
+Roy Storey, B<email> rds@sanger.ac.uk
 
