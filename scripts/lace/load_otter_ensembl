@@ -330,6 +330,7 @@ use Bio::Otter::Lace::SatelliteDB;
         
         #split ino accesion number and version number 
         my ($acc, $sv) = $acc_ver =~ /^(.+)\.(\d+)$/;
+        die "Can't parse '$acc_ver' into accession and sv" unless $acc and $sv;
         
         # translate orientation to integer
         if ($ctg_ori eq '-') {
