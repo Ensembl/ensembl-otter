@@ -140,7 +140,7 @@ sub is_sequence_name {
 
         ### Lock clones here
         eval{
-            #lock_clones($dba, $all_clones);
+            lock_clones($dba, $all_clones);
         };
         if ($@) {
             die "CLONES ARE LOCKED\n";
@@ -432,14 +432,13 @@ sub name_is_clone_based {
 sub get_class_and_name {
     my( $name ) = @_;
     
-    my $class_pattern = qr{GD|RI|C22|ERI|MPI};
     my $class = '';
-    if ($name =~ s/^($class_pattern)://) {
+    if ($name =~ s/^([A-Z]+)://) {
         $class = $1;
     }
-    elsif ($name =~ s/\.($class_pattern)\b//) {
-        $class = $1;
-    }
+    #elsif ($name =~ s/\.($class_pattern)\b//) {
+    #    $class = $1;
+    #}
     $class = '' if $class eq 'C22';
     $class .= ':' if $class;
     return( $class, $name );

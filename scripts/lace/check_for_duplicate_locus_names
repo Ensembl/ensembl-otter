@@ -1,0 +1,115 @@
+#!/usr/local/bin/perl -w
+
+### check_for_duplicate_locus_names
+
+use strict;
+use Bio::Otter::Lace::Defaults;
+
+{
+    my( $dataset_name, $set_name );
+    my $fix_flag = 0;
+    my $usage = sub { exec('perldoc', $0) };
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'dataset=s'     => \$dataset_name,
+        'set|chr=s'     => \$set_name,
+        'fix!'          => \$fix_flag,
+        ) or $usage->();
+    $usage->() unless $dataset_name;
+
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    
+    my $ss_list = undef;
+    if ($set_name) {
+        my $ss = $ds->get_SequenceSet_by_name($set_name);
+        $ss_list = [$ss];
+    } else {
+        $ss_list = $ds->get_all_SequenceSets;
+    }
+    
+    
+    my $dba = $ds->get_cached_DBAdaptor;
+    my $get_stable_name = $dba->prepare(q{
+        SELECT gsid.stable_id
+          , n.name
+          , g.type
+          , i.gene_info_id
+        FROM gene g
+          , gene_stable_id gsid
+          , current_gene_info i
+          , gene_name n
+        WHERE g.gene_id = gsid.gene_id
+          AND gsid.stable_id = i.gene_stable_id
+          AND i.gene_info_id = n.gene_info_id
+          AND gsid.gene_id = ?
+        });
+
+    my( %name_sid );
+    foreach my $ss (@$ss_list) {
+        my $set_name = $ss->name;
+        $dba->assembly_type($set_name);
+        $ds->fetch_all_CloneSequences_for_SequenceSet($ss);
+        my $chrom = $ss->CloneSequence_list()->[0]->chromosome;
+
+        my $geneAd = $dba->get_GeneAdaptor; # Bio::Otter::AnnotatedGeneAdaptor
+
+        my $sliceAd = $dba->get_SliceAdaptor;
+        my $slice = $sliceAd->fetch_by_chr_name($chrom->name);
+
+        my $latest_gene_id = $geneAd->list_current_dbIDs_for_Slice($slice);
+        
+        printf STDERR "Inspecting %d genes on %s\n", scalar(@$latest_gene_id), $set_name;
+
+        foreach my $id ( @$latest_gene_id ) {
+            $get_stable_name->execute($id);
+            my ($stable, $name, $type, $info_id) = $get_stable_name->fetchrow;
+            next if $type eq 'obsolete';
+            my $inf_hash = $name_sid{$name}{$info_id} = $stable;
+        }
+    }
+
+    if ($fix_flag) {
+        my $fix_name = $dba->prepare(q{
+            UPDATE gene_name
+            SET name = ?
+            WHERE gene_info_id = ?
+            });
+        foreach my $name (sort keys %name_sid) {
+            my $sid_hash = $name_sid{$name};
+            if (keys %$sid_hash > 1) {
+                my @sid_list = map [$sid_hash->{$_}, $_], keys %$sid_hash;
+                my ($first, @rest) = sort {$a->[0] cmp $b->[0]} @sid_list;
+                my ($first_stable, $first_info) = @$first;
+                print "\n$name\t$first_stable\n";
+                my $i = 1;
+                foreach my $other (@rest) {
+                    my( $stable, $info_id ) = @$other;
+                    $i++;
+                    my $new = "$name-$i";
+                    print "$new\t$stable\n";
+                    $fix_name->execute($new, $info_id);
+                }
+            }
+        }
+    } else {
+        foreach my $name (sort keys %name_sid) {
+            my $sid_hash = $name_sid{$name};
+            if (keys %$sid_hash > 1) {
+                my @sid_list = sort values %$sid_hash;
+                print "$name\t$set_name\t@sid_list\n";
+            }
+        }
+    }
+}
+
+
+
+
+__END__
+
+=head1 NAME - check_for_duplicate_locus_names
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
