@@ -10,11 +10,15 @@ use Symbol 'gensym';
 use Fcntl qw{ O_WRONLY O_CREAT };
 use Ace;
 use Bio::Otter::Lace::Defaults;
+use Bio::Otter::Lace::Blast;
 use Bio::Otter::Lace::PipelineDB;
 use Bio::Otter::Lace::SatelliteDB;
-use Bio::Otter::Converter;
 use Bio::Otter::Lace::PersistentFile;
+use Bio::Otter::Converter;
 
+use Bio::EnsEMBL::Pipeline::Analysis;
+
+use Bio::EnsEMBL::Ace::Filter::FPSimilarity;
 use Bio::EnsEMBL::Ace::DataFactory;
 use Bio::EnsEMBL::Ace::Filter::Gene;
 use Bio::EnsEMBL::Ace::Filter::DNA;
@@ -120,6 +124,92 @@ sub list_all_acefiles {
     }
 }
 
+sub write_local_blast{
+    my ($self, $ss) = @_;
+
+    my $cl         = $self->Client();
+    my $fasta_file = $cl->option_from_array(['local_blast', 'database'])     || return 0;
+    my $homol_tag  = $cl->option_from_array(['local_blast', 'homol_tag'])    || 'DNA_homol';
+    my $method_tag = $cl->option_from_array(['local_blast', 'method_tag'])   || substr("blast*$fasta_file*",0,39);
+    my $color      = $cl->option_from_array(['local_blast', 'method_color']) || 'ORANGE';
+    my $logic_name = $cl->option_from_array(['local_blast', 'logic_name'])   || "blast*$fasta_file*";
+    my $indicate   = $cl->option_from_array(['local_blast', 'indicate'])     || 'indicate';
+    my $parser     = $cl->option_from_array(['local_blast', 'indicate_parser']);
+    my $pressdb    = $cl->option_from_array(['local_blast', 'blast_indexer']);
+
+    my $ds = $cl->get_DataSet_by_name($ss->dataset_name());
+
+    my $ana_obj = Bio::EnsEMBL::Pipeline::Analysis->new(-LOGIC_NAME     => $logic_name,
+                                                        -INPUT_ID_TYPE  => 'CONTIG',
+                                                        -PARAMETERS     => 'cpus=1 E=1e-4 B=100000 Z=500000000 -hitdist=40 -wordmask=seg',
+                                                        -PROGRAM        => 'wublastn',
+                                                        -gff_source     => 'Est2Genome',
+                                                        -gff_feature    => 'similarity',
+                                                        -db_file        => $fasta_file,
+                                                        );
+    
+    my $blast = Bio::Otter::Lace::Blast->new(-analysis        => $ana_obj,
+                                             -indicate        => $indicate,
+                                             -blast_idx_prog  => $pressdb,
+                                             -indicate_parser => $parser);
+    $blast->initialise();
+    my $pipe_db = Bio::Otter::Lace::PipelineDB::get_DBAdaptor($ds->get_cached_DBAdaptor);
+    $pipe_db->assembly_type($ss->name);
+    eval{
+        $blast->hide_error(0);
+        $blast->run_on_selected_CloneSequences($ss, $pipe_db->get_SliceAdaptor);
+        my $factory   = Bio::EnsEMBL::Ace::DataFactory->new;       
+        my $filter    = Bio::EnsEMBL::Ace::Filter::FPSimilarity->new(-features => $blast->output());
+        $filter->analysis_object($ana_obj);
+        $filter->homol_tag($homol_tag);
+        $filter->method_tag($method_tag);
+        $filter->seqfetcher($blast->seqfetcher);
+        $filter->needs_method(1);
+        $filter->method_colour($color);
+        $factory->add_AceFilter($filter);
+
+        my $dir       = $self->home;
+        my $blast_ace = "$dir/rawdata/local_blast_search.ace";
+        open(my $fh, "> $blast_ace") or die "Can't write to '$blast_ace'";
+        $factory->file_handle($fh);
+
+        my $sel = $ss->selected_CloneSequences_as_contig_list();
+        foreach my $cs(@$sel){
+            my $first_ctg = $cs->[0];
+            my $last_ctg = $cs->[$#$cs];
+            
+            my $chr = $first_ctg->chromosome->name;  
+            my $chr_start = $first_ctg->chr_start;
+            my $chr_end = $last_ctg->chr_end;
+            
+            warn "fetching slice $chr $chr_start $chr_end \n";
+            my $slice = $pipe_db->get_SliceAdaptor->fetch_by_chr_start_end($chr, $chr_start, $chr_end);
+            
+            ### Check we got a slice
+            my $tp = $slice->get_tiling_path;
+            if(@$tp){
+                foreach my $tile(@$tp){
+                    warn "Getting " . $tile->component_Seq->name() . "\n";
+                }
+            }else{
+                warn "Didn't get slice\n";
+            }
+            $factory->ace_data_from_slice($slice);
+        }
+
+        $factory->drop_file_handle;
+        close $fh;
+        $self->add_acefile($blast_ace);
+
+    };
+    if($@){
+        warn "Arrrrrrrrrrrrrrrgh! $@ \n";
+    }else{
+        warn "Blast complete\n";
+    }
+
+}
+
 sub write_otter_acefile {
     my( $self, $ss ) = @_;
 
@@ -180,19 +270,15 @@ sub fetch_otter_ace_for_SequenceSet {
     return $self->ace_from_contig_list($ctg_list, $dsObj);
 }
 
+# this now just gets the ace via http/xml -> xml_to_otter -> otter_to_ace
+
 sub ace_from_contig_list {
     my( $self, $ctg_list, $dsObj ) = @_;
 
     my $client = $self->Client or confess "No otter Client attached";
     my $ace = '';
-    my $write_access = $client->write_access();
 
     foreach my $ctg (@$ctg_list) {
-        if($write_access){
-            # only lock the region if we have write access.
-            my $lock_xml = $client->lock_region_for_contig_from_Dataset($ctg, $dsObj);
-            $self->write_lock_xml($lock_xml, $dsObj->name);
-        }
         my $xml        = Bio::Otter::Lace::TempFile->new;
         $xml->name('lace.xml');
         my $write      = $xml->write_file_handle;
@@ -209,7 +295,7 @@ sub ace_from_contig_list {
         # from so that we know where to save it back to.
         # this gets done in the write_lock_xml so only need to do it here
         # if we haven't got write access.
-        $self->save_slice_dataset($slice->display_id, $dsObj->name) unless $write_access;
+#        $self->save_slice_dataset($slice->display_id, $dsObj->name) unless $write_access;
     }
     return $ace;
 }
