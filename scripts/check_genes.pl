@@ -32,6 +32,7 @@ my $opt_s=1000000;
 my $opt_t;
 my $exclude='GD:';
 my $ext;
+my $vega;
 my $stats;
 
 $Getopt::Long::ignorecase=0;
@@ -55,6 +56,7 @@ GetOptions(
 	   't:s',  \$opt_t,
 	   'exclude:s', \$exclude,
 	   'external',  \$ext,
+	   'vega',      \$vega,
 	   'stats',     \$stats,
 	   );
 
@@ -82,6 +84,7 @@ rename_genes.pl
   -make_cache               make cache file
   -exclude                  gene types prefixes to exclude ($exclude)
   -external                 external genes from vega_set only
+  -vega                     vega database (has only assembly)
 
   -stats                    calculate stats from cache file only
 ENDOFTEXT
@@ -101,7 +104,9 @@ if($make_cache){
   # get assemblies of interest
   my %a;
   my $sth;
-  if($ext){
+  if($vega){
+    $sth=$dbh->prepare("select a.contig_id, c.name, a.type, a.chr_start, a.chr_end, a.contig_start, a.contig_end, a.contig_ori, cl.embl_acc, cl.embl_version from contig ct, clone cl, chromosome c, assembly a where cl.clone_id=ct.clone_id and ct.contig_id=a.contig_id and a.chromosome_id=c.chromosome_id");
+  }elsif($ext){
     $sth=$dbh->prepare("select a.contig_id, c.name, a.type, a.chr_start, a.chr_end, a.contig_start, a.contig_end, a.contig_ori, cl.embl_acc, cl.embl_version from contig ct, clone cl, chromosome c, assembly a, sequence_set ss, vega_set vs where cl.clone_id=ct.clone_id and ct.contig_id=a.contig_id and a.chromosome_id=c.chromosome_id and a.type=ss.assembly_type and ss.vega_set_id=vs.vega_set_id and vs.vega_type = 'E'");
   }else{
     $sth=$dbh->prepare("select a.contig_id, c.name, a.type, a.chr_start, a.chr_end, a.contig_start, a.contig_end, a.contig_ori, cl.embl_acc, cl.embl_version from contig ct, clone cl, chromosome c, assembly a, sequence_set ss, vega_set vs where cl.clone_id=ct.clone_id and ct.contig_id=a.contig_id and a.chromosome_id=c.chromosome_id and a.type=ss.assembly_type and ss.vega_set_id=vs.vega_set_id and vs.vega_type != 'N'");
@@ -341,7 +346,12 @@ if($stats){
 
 # get clones from assemblies of interest
 my %a;
-my $sth=$dbh->prepare("select a.type, cl.embl_acc, a.chr_start, a.chr_end, cl.name from clone cl, contig ct, assembly a, sequence_set ss, vega_set vs where a.contig_id=ct.contig_id and ct.clone_id=cl.clone_id and a.type=ss.assembly_type and ss.vega_set_id=vs.vega_set_id and vs.vega_type != 'N'");
+my $sth;
+if($vega){
+  $sth=$dbh->prepare("select a.type, cl.embl_acc, a.chr_start, a.chr_end, cl.name from clone cl, contig ct, assembly a where a.contig_id=ct.contig_id and ct.clone_id=cl.clone_id");
+}else{
+  $sth=$dbh->prepare("select a.type, cl.embl_acc, a.chr_start, a.chr_end, cl.name from clone cl, contig ct, assembly a, sequence_set ss, vega_set vs where a.contig_id=ct.contig_id and ct.clone_id=cl.clone_id and a.type=ss.assembly_type and ss.vega_set_id=vs.vega_set_id and vs.vega_type != 'N'");
+}
 $sth->execute;
 my $n=0;
 while (my @row = $sth->fetchrow_array()){
