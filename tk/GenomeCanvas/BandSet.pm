@@ -29,12 +29,44 @@ sub band_list {
     return @{$set->{'_band_list'}};
 }
 
+sub bandset_tag {
+     my( $set, $tag ) = @_;
+     
+     if ($tag) {
+        if (my $old = $set->{'_bandset_tag'}) {
+            warn "Changing bandset_tag from '$old' to '$tag'";
+        }
+        $set->{'_bandset_tag'} = $tag;
+     }
+     return $set->{'_bandset_tag'};
+}
+
 sub render {
+    my( $set, $y_offset ) = @_;
+    
+    my( @bbox );
+    my $canvas = $set->canvas;
+    my $tag    = $set->bandset_tag;
+    $canvas->delete($tag);
+    foreach my $band ($set->band_list) {
+        $band->render($y_offset, $tag);
+    }
+    
+    $set->draw_set_outline;
+}
+
+sub draw_set_outline {
     my( $set ) = @_;
     
-    foreach my $band ($set->band_list) {
-        $band->render;
-    }
+    my $canvas = $set->canvas;
+    my $tag = $set->bandset_tag;
+    my @rect = $canvas->bbox($tag);
+    $canvas->createRectangle(
+        @rect,
+        -fill       => undef,
+        -outline    => 'red',
+        -tags       => [$tag],
+        );
 }
 
 1;

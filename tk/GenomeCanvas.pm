@@ -46,7 +46,17 @@ sub new {
     $gc->canvas($canvas);
     $gc->window_width($width);
     $gc->window_height($height);
+    
     return $gc;
+}
+
+sub screen_dimensions {
+    my( $gc, @max ) = @_;
+    
+    if (@max) {
+        $gc->{'_screen_dimensions'} = [@max];
+    }
+    return @{$gc->{'_screen_dimensions'}};
 }
 
 sub window_width {
@@ -71,28 +81,58 @@ sub window_height {
     return $gc->{'_window_height'};
 }
 
-sub band_padding {
+sub bandset_padding {
     my( $gc, $pixels ) = @_;
     
     if ($pixels) {
-        $gc->{'_band_padding'} = $pixels;
+        $gc->{'_bandset_padding'} = $pixels;
     }
-    return $gc->{'_band_padding'} || 20;
+    return $gc->{'_bandset_padding'} || 20;
 }
 
 sub render {
     my( $gc ) = @_;
     
+    $gc->delete_all_bandsets;
+    
     my $canvas = $gc->canvas;
-    my ($x_origin, $y_origin) = (0,0);
+    my $y_offset = 0;
+    my $c = 0;
     foreach my $set ($gc->band_sets) {
-        $set->render;
-        
-        # Expand the frame down the y axis by the
-        # amount given by band_padding
-        my @bbox = $gc->frame;
-        $bbox[3] += $gc->band_padding;
-        $gc->frame(@bbox);
+        if ($c > 0) {
+            # Increase y_offset by the amount
+            # given by bandset_padding
+            $y_offset += $gc->bandset_padding;
+        }
+        my $tag = $gc->bandset_tag($set);
+        warn "Rendering bandset '$tag' with offset $y_offset\n";
+        $set->render($y_offset, $tag);
+
+        warn "[", join(',', $canvas->bbox($tag)), "]\n";
+
+        # Move the band to the correct position if it
+        # drew itself somewhere else
+        my $actual_y = ($canvas->bbox($tag))[1];
+        if ($actual_y < $y_offset) {
+            my $y_move = $y_offset - $actual_y;
+            $canvas->move($tag, 0, $y_move);
+        }
+
+        warn "[", join(',', $canvas->bbox($tag)), "]\n";
+
+        $y_offset = ($canvas->bbox($tag))[3];
+        $c++;
+    }
+    
+}
+
+sub delete_all_bandsets {
+    my( $gc ) = @_;
+    
+    my $canvas = $gc->canvas;
+    foreach my $set ($gc->band_sets) {
+        my $tag = $gc->bandset_tag($set);
+        $canvas->delete($tag);
     }
 }
 
@@ -102,7 +142,24 @@ sub new_BandSet {
     my $band_set = GenomeCanvas::BandSet->new;
     push( @{$gc->{'_band_sets'}}, $band_set );
     $band_set->add_State($gc->state);
+
+    # Add a tag which identifies this set on the canvas
+    my $tag = 'set_'. scalar(@{$gc->{'_band_sets'}});
+    $band_set->bandset_tag($tag);
+    $gc->bandset_tag($band_set, $tag);
+    
     return $band_set;
+}
+
+sub bandset_tag {
+    my( $gc, $set, $tag ) = @_;
+    
+    confess "Missing argument: no bandset" unless $set;
+    
+    if ($tag) {
+        $gc->{'_bandset_tag_map'}{$set} = $tag;
+    }
+    return $gc->{'_bandset_tag_map'}{$set};
 }
 
 sub band_sets {
@@ -119,9 +176,7 @@ sub zoom {
     
     # Calculate the coordinate of the centre of the view
     my ($x1, $y1, $x2, $y2) = $canvas->cget('scrollregion');
-    #$canvas->configure(
-    #    -scrollregion => [$x1, $y1, $x2, $y2],
-    #    );
+    $canvas->configure(-scrollregion => [$x1, $y1, $x2, $y2]);
 
     # center on x axis
     my @x_view = $canvas->xview;
@@ -133,6 +188,9 @@ sub zoom {
     my $y_view_center_fraction = $y_view[0] + (($y_view[1] - $y_view[0]) / 2);
     my $y_view_center_coord = $y1 + (($y2 - $y1) * $y_view_center_fraction);
     
+
+    # Used for debugging, this drew a small red square
+    # in the centre of the visible canvas:
     #{
     #    my $x = $x_view_center_coord;
     #    my $y = $y_view_center_coord;
@@ -162,24 +220,33 @@ sub zoom {
     $canvas->scale('all', $x_view_center_coord, $y_view_center_coord, $x_zoom_factor, 1);
     
     $gc->residues_per_pixel($new_rpp);
-    $gc->fix_window_min_max_sizes;
+    $gc->set_scroll_region;
 }
 
-sub fix_window_min_max_sizes {
+sub set_scroll_region {
     my( $gc ) = @_;
     
     my $canvas = $gc->canvas;
-    
     my @bbox = $canvas->bbox('all');
     $gc->expand_bbox(\@bbox, 5);
     $canvas->configure(
         -scrollregion => [@bbox],
         );
+    return @bbox;
+}
+
+sub fix_window_min_max_sizes {
+    my( $gc ) = @_;
+    
+    my( $screen_max_x, $screen_max_y ) = $gc->screen_dimensions;
+
+    my $canvas = $gc->canvas;
+    my @bbox = $canvas->set_scroll_region;
 
     my $mw = $canvas->toplevel;
     $mw->update;
     $mw->minsize($mw->width, $mw->height);
-    my( $screen_max_x, $screen_max_y ) = $mw->maxsize;
+
     my $max_x = $bbox[2] - $bbox[0] + $mw->width  - $gc->window_width;
     my $max_y = $bbox[3] - $bbox[1] + $mw->height - $gc->window_height;
     $max_x = $screen_max_x if $max_x > $screen_max_x;

@@ -23,6 +23,16 @@ sub new {
     return $band;
 }
 
+sub direction {
+    my( $band, $dir ) = @_;
+    
+    if ($dir) {
+        confess "direction must be '1' or '-1'"
+            unless $dir == 1 or $dir == -1;
+        $band->{'_tiling_direction'} = $dir;
+    }
+    return $band->{'_tiling_direction'} || -1;
+}
 
 sub virtual_contig {
     my( $band, $vc ) = @_;
@@ -54,13 +64,18 @@ sub show_labels {
 }
 
 sub render {
-    my( $band ) = @_;
+    my( $band, $y_offset, @tags ) = @_;
     
-    my $y_offset = ($band->frame)[3];
-    
-    my $vc = $band->virtual_contig;
     my $canvas = $band->canvas;
-    my $scale = $band->residues_per_pixel;
+    my $vc     = $band->virtual_contig;
+    my $y_dir  = $band->direction;
+    my $rpp    = $band->residues_per_pixel;
+
+    if ($y_dir == -1) {
+        # We have to build above the other bands
+        $y_offset = ($canvas->bbox('all'))[1] - 100;
+    }
+
     foreach my $map_c ($vc->_vmap->each_MapContig) {
     
         my $start  = $map_c->start;
@@ -70,7 +85,8 @@ sub render {
         my $contig = $map_c->contig;
         my $length = $contig->length;
         my $name = $contig->id;
-        printf STDERR "%-10s  %2d %6d %6d %6d  %10d %10d\n", $name, $map_c->orientation, $raw_start, $raw_end, $length, $start, $end;
+        my $group = "$tags[0]::$name";
+        #printf STDERR "%-10s  %2d %6d %6d %6d  %10d %10d\n", $name, $map_c->orientation, $raw_start, $raw_end, $length, $start, $end;
 
         my( $left_overhang, $right_overhang );
         if ($map_c->orientation == 1) {
@@ -81,55 +97,62 @@ sub render {
             $right_overhang = $raw_start - 1;
         }
 
-        my $x1 = ($start - $left_overhang + 1) / $scale;
-        my $x2 = ($end   + $right_overhang)    / $scale;
+        my $x1 = ($start - $left_overhang + 1) / $rpp;
+        my $x2 = ($end   + $right_overhang)    / $rpp;
         
         my $rectangle_height = 8;
+        my @rectangle = ($x1, $y_offset, $x2, $y_offset + $rectangle_height);
         my $rec = $canvas->createRectangle(
-            $x1, 0, $x2, $rectangle_height,
+            @rectangle,
             -fill => 'black',
             -outline => undef,
-            -tags => ['contig', $name],
+            -tags => [@tags, 'contig', $group],
             );
         
         if ($band->gold) {
-            
-            
             # Render golden path segment in gold
             my $gold = $canvas->createRectangle(
-                ($start / $scale), 1,
-                ($end / $scale), $rectangle_height - 1,
+                ($start / $rpp), $rectangle[1] + 1,
+                ($end / $rpp),   $rectangle[3] - 1,
                 -fill => 'gold',
                 -outline => undef,
-                -tags => ['contig_gold', $name],
+                -tags => [@tags, 'contig_gold', $group],
                 );
         }
 
-        my $nudge_distance = $rectangle_height;
+        my $nudge_distance = $rectangle_height + 1;
+        my( $bkgd_rectangle );
         if ($band->show_labels) {
+            
+            my $label_space = 1;
+            my( $anchor, $y1 );
+            if ($y_dir == 1) {
+                $anchor = 'nw';
+                $y1 = $y_offset + $rectangle_height + $label_space;
+            } else {
+                $anchor = 'sw';
+                $y1 = $y_offset + (-1 * $label_space);
+            }
+            
             my $label = $canvas->createText(
-                $x1, -1,
+                $x1, $y1,
                 -text => $name,
                 -font => ['helvetica', 12],
-                -anchor => 'sw',
-                -tags => ['contig_label', $name],
+                -anchor => $anchor,
+                -tags => [@tags, 'contig_label', $group],
                 );
 
-            my @bbox = $canvas->bbox($name);
+            my @bkgd = $canvas->bbox($group);
 
             my $sp = 3;
-            $band->expand_bbox(\@bbox, $sp);
-            my $bkgd = $canvas->createRectangle(
-                @bbox,
-                -fill    => undef,
-                -outline => undef,
-                -tags => ['contig_bkgd', $name],
-                );
-            $canvas->lower($bkgd, $rec);
-            $nudge_distance = -10;
+            $band->expand_bbox(\@bkgd, $sp);
+            $bkgd_rectangle = $canvas->createRectangle(@bkgd);
+            $nudge_distance = 10;
         }
         
-        $band->nudge_into_free_space($name, $nudge_distance);
+        $nudge_distance *= $y_dir;
+        $band->nudge_into_free_space($group, $nudge_distance);
+        $canvas->delete($bkgd_rectangle) if $bkgd_rectangle;
     }
 }
 

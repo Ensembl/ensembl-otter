@@ -17,7 +17,9 @@ sub new {
 }
 
 sub render {
-    my( $band ) = @_;
+    my( $band, @tags ) = @_;
+    
+    $band->band_delete;
     
     my $color = 'red';
     warn "GenomeCanvas::Band : Drawing default $color rectangle\n";
@@ -29,12 +31,10 @@ sub render {
     
     my $canvas = $band->canvas;
     my $id = $canvas->createRectangle(@bbox,
-        -fill => $color,
-        -outline => undef,
-        -tags => ["$band"],
+        -fill       => $color,
+        -outline    => undef,
+        -tags       => [@tags],
         );
-    
-    $band->frame_union(@bbox);
 }
 
 sub nudge_into_free_space {
@@ -49,7 +49,6 @@ sub nudge_into_free_space {
         $canvas->move($tag_or_id, 0, $y_inc);
     }
 }
-
 
 1;
 

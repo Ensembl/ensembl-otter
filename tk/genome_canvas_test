@@ -31,6 +31,11 @@ use Getopt::Long 'GetOptions';
     my $gc = GenomeCanvas->new($mw);
     
     my $canvas = $gc->canvas;
+    #$canvas->createPolygon(
+    #    0,0, -20,0, 0,-20,
+    #    -fill   => 'red',
+    #    -outline => undef,
+    #    );
 
     if (1) {
         require Bio::EnsEMBL::DBSQL::Obj;
@@ -58,9 +63,16 @@ use Getopt::Long 'GetOptions';
         
         my $tiling = GenomeCanvas::Band::TilingPath->new($vc);
         $tiling->show_labels($labels);
-        
+        $tiling->direction(1);
         my $set = $gc->new_BandSet;
         $set->add_Band($tiling);
+        
+        my $tiling2 = GenomeCanvas::Band::TilingPath->new($vc);
+        $tiling2->show_labels($labels);
+        $tiling2->direction(-1);
+        my $set2 = $gc->new_BandSet;
+        $set2->add_Band($tiling2);
+
         $gc->residues_per_pixel($scale);
         $gc->render;
     }
@@ -130,12 +142,7 @@ use Getopt::Long 'GetOptions';
         }
     }
     
-    my @bbox = $canvas->bbox('all');
-    my $border = 5;
-    expand_bbox(\@bbox, $border);
-    $canvas->configure(
-        -scrollregion => [@bbox],
-        );
+    $gc->set_scroll_region;
 
     my $button_frame = $mw->Frame;
     $button_frame->pack(
@@ -148,6 +155,13 @@ use Getopt::Long 'GetOptions';
 
     make_button($button_frame, 'Zoom in', sub{ $gc->zoom(2) } );
     make_button($button_frame, 'Zoom out', sub{ $gc->zoom(-2) } );
+    make_button($button_frame, 'Redraw', sub{
+        $gc->render;
+        $gc->set_scroll_region;
+        $gc->set_scroll_region;
+        $gc->set_scroll_region;
+        #$gc->fix_window_min_max_sizes
+        } );
 
     make_button($button_frame, 'PostScript',
         sub {
@@ -176,7 +190,7 @@ use Getopt::Long 'GetOptions';
                     );
             }
         });
-    $gc->fix_window_min_max_sizes;
+    #$gc->fix_window_min_max_sizes;
 }
 
 
