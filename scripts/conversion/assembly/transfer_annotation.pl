@@ -36,6 +36,7 @@ my $filter_obs;
 my $gene_type;
 my @gene_names;
 my $opt_t;
+my $opt_o;
 
 &GetOptions( 'host:s'    => \$host,
              'user:s'    => \$user,
@@ -63,11 +64,25 @@ my $opt_t;
 	     'gene_type:s' => \$gene_type,
 	     'gene_name:s' => \@gene_names,
 	     't'           => \$opt_t,
+	     'o:s'         => \$opt_o,
             );
 
 my %gene_names;
 if (scalar(@gene_names)) {
-  @gene_names=split (/,/, join (',', @gene_names));
+  my $gene_name=$gene_names[0];
+  if(scalar(@gene_names)==1 && -e $gene_name){
+    # 'gene' is a file
+    @gene_names=();
+    open(IN,$gene_name) || die "cannot open $gene_name";
+    while(<IN>){
+      chomp;
+      push(@gene_names,$_);
+    }
+    close(IN);
+  }else{
+    @gene_names = split (/,/, join (',', @gene_names));
+  }
+  print scalar(@gene_names)." gene names found\n";
   %gene_names = map {$_,1} @gene_names;
 }
 
@@ -124,8 +139,10 @@ my %genehash;
 my $ngd=0;
 my $nobs=0;
 my $nskipped=0;
+open(OUT,">$opt_o") || die "cannot open $opt_o" if $opt_o;
 foreach my $gene (@$genes) {
     my $gsi=$gene->stable_id;
+    my $version=$gene->version;
     if(scalar(@gene_names)){
       next unless $gene_names{$gsi};
     }
@@ -153,7 +170,9 @@ foreach my $gene (@$genes) {
       }
     }
     $genehash{$gsi} = $gene;
+    print OUT "$gsi\t$version\n" if $opt_o;
 }
+close(OUT) if $opt_o;
 
 print "$ngd GD genes removed, $nobs obsolete genes removed, $nskipped skipped as incorrect type\n";
 print scalar(keys %genehash)." genes to transfer\n";

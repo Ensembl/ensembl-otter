@@ -137,6 +137,7 @@ if($lltmpl_file=~/\.gz$/){
   open(FPLLT,$lltmpl_file) or die "cannot open $lltmpl_file";
 }
 my %lltmp;
+my %lcmap;
 {
   my $nok=0;
   my $nworg=0;
@@ -169,6 +170,8 @@ my %lltmp;
     }elsif(/^OFFICIAL_SYMBOL: (\w+)/){
       if($flag_org==1){
 	$gene_name=$1;
+	my $lc_gene_name=lc($gene_name);
+	push(@{$lcmap{$lc_gene_name}},$gene_name);
 	$nok++;
       }elsif($flag_org==2){
 	# skip - wrong organism
@@ -211,8 +214,10 @@ foreach my $chr (reverse sort bychrnum keys %$chrhash) {
   print "Fetching genes\n";
   my $genes = $aga->fetch_by_Slice($slice);
   print "Fetched (".scalar(@$genes).") genes\n";
-  my $n=0;
-
+  my $nfound=0;
+  my $ncase=0;
+  my $nclone=0;
+  my $nmiss=0;
   foreach my $gene (@$genes) {
     my $gene_name;
     if ($gene->gene_info->name && $gene->gene_info->name->name) {
@@ -220,12 +225,13 @@ foreach my $chr (reverse sort bychrnum keys %$chrhash) {
     } else {
       die "Failed finding gene name for " .$gene->stable_id . "\n";
     }
+    my $lc_gene_name=lc($gene_name);
 
     # lookup this gene name
     if($lltmp{$gene_name}){
 
-      print "Found locuslink match for $gene_name\n";
-      $n++;
+      print "  Found locuslink match for $gene_name\n";
+      $nfound++;
       my($nm,$np,$locus_id,$desc)=@{$lltmp{$gene_name}};
 
       my $dbentry=Bio::EnsEMBL::DBEntry->new(-primary_id=>$locus_id,
@@ -234,7 +240,7 @@ foreach my $chr (reverse sort bychrnum keys %$chrhash) {
                                              -release=>1,
                                              -dbname=>"LocusLink",
                                             );
-      print " locus link = " .$locus_id . "\n";
+      print "   locus link = " .$locus_id . "\n" if $opt_v;
       $dbentry->status('KNOWN');
       $gene->add_DBEntry($dbentry);
       $adx->store($dbentry,$gene->dbID,'Gene') if $do_store;
@@ -242,11 +248,11 @@ foreach my $chr (reverse sort bychrnum keys %$chrhash) {
       # Display xref id update
       my $sth = $db->prepare("update gene set display_xref_id=" . 
                              $dbentry->dbID . " where gene_id=" . $gene->dbID);
-      print "  ". $sth->{Statement} . "\n";
+      print "    ". $sth->{Statement} . "\n" if $opt_v;
       $sth->execute if $do_store;
 
       if ($nm) {
-	print " RefSeq NM = " .$nm . "\n";
+	print "   RefSeq NM = " .$nm . "\n" if $opt_v;
         my $dbentry=Bio::EnsEMBL::DBEntry->new(-primary_id=>$nm,
                                                -display_id=>$nm,
                                                -version=>1,
@@ -257,11 +263,25 @@ foreach my $chr (reverse sort bychrnum keys %$chrhash) {
         $gene->add_DBEntry($dbentry);
         $adx->store($dbentry,$gene->dbID,'Gene') if $do_store;
       }
-    } else {
-      print "No locuslink match for $gene_name\n";
+    }elsif($lcmap{$lc_gene_name}){
+      # check if case in database might be wrong, by doing lc comparision
+	print "  WARN: Possible case error for $gene_name: ".
+	    join(',',(@{$lcmap{$lc_gene_name}}))."\n";
+	$ncase++;
+    }elsif($gene_name=~/^\w+\.\d+$/ || $gene_name=~/^\w+\-\w+\.\d+$/){
+      # probably a clone based genename - ok
+      print "  No locuslink match for $gene_name\n" if $opt_v;
+      $nclone++;
+    }else{
+      # doesn't look like a clone name, so perhaps mistyped 
+      print "  WARN: No locuslink match for $gene_name\n";
+      $nmiss++;
     }
   }
-  print "Locuslink information for $n genes added\n";
+  print " Locuslink information for $nfound genes added\n";
+  print " $ncase names mismatch because of possible wrong case\n";
+  print " $nclone names appear to be based on clonename - no match expected\n";
+  print " $nmiss other names - match expected\n";
 }
 close(FPLLT);
 
