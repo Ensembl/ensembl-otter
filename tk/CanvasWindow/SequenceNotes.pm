@@ -668,6 +668,7 @@ sub init_AceDatabase {
     $db->make_database_directory;
     $db->write_otter_acefile($ss);
     $db->write_pipeline_data($ss);
+    $db->write_ensembl_data($ss);
     $db->initialize_database;
 }
 
