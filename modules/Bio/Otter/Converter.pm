@@ -657,7 +657,7 @@ sub otter_to_ace {
 
             # Extra tags needed by ace
             if ($method =~ /supported_mRNA/) {
-                $str .= "Processed_mRNA\n";
+                $str .= "Processed_mRNA\n";     ### check this
             } elsif ($method eq "Pseudogene") {
                 $str .= "Pseudogene\nCDS\n";
             }
@@ -716,10 +716,17 @@ sub otter_to_ace {
                 }
             }
 
-            ### Need to fix for Start_not_found Int
             my $info = $tran->transcript_info;
             if ($info->cds_start_not_found) {
                 # Get start phase of first exon
+                my $first_exon_phase = $exons->[0]->phase;
+                my $ace_phase = $ens2ace_phase{$first_exon_phase};
+                if ($ace_phase) {
+                    $str .= "Start_not_found $ace_phase\n";
+                } else {
+                    warn "No ace phase for ensembl phase '$first_exon_phase' in '$tran_name'\n";
+                    $str .= "Start_not_found\n";
+                }
             }
             elsif ($info->mRNA_start_not_found) {
                 $str .= "Start_not_found\n";
@@ -1051,7 +1058,8 @@ sub ace_to_otter {
                 }
                 elsif (/^Start_not_found $INT/x) {
                     #print STDERR "start not found with $1\n";
-                    my $phase = $ace2ens_phase{$1} or die "Bad Start_not_found '$1'";
+                    my $phase = $ace2ens_phase{$1};
+                    die "Bad Start_not_found '$1'" unless defined($phase);
                     $curr_seq->{Start_not_found} = $1;
                 }
                 elsif (/^Start_not_found/) {
