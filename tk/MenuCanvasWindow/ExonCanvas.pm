@@ -922,7 +922,7 @@ sub show_peptide {
     my( $fasta );
     eval{ $sub->validate; };
     if ($@) {
-        $self->exception_message($@);
+        $self->exception_message($@, 'Invalid transcript');
         $fasta = "TRANSLATION ERROR";
     } else {
         # Put the new translation into the Text widget
@@ -1873,7 +1873,7 @@ sub save_if_changed {
     
     # Make sure the annotators see the messages!
     if ($@) {
-        $self->exception_message($@);
+        $self->exception_message($@, 'Error saving to acedb');
     }
 }
 
@@ -1981,7 +1981,7 @@ sub run_dotter {
         $cdna = $sub->mRNA_Sequence;
     };
     if ($@) {
-        $self->exception_message($@);
+        $self->exception_message($@, 'Error fetching mRNA sequence');
         return;
     }
     

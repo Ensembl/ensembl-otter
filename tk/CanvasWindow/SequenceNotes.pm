@@ -485,7 +485,7 @@ sub run_lace {
     };
     if ($@) {
         $db->error_flag(0);
-        $self->exception_message($@);
+        $self->exception_message($@, 'Error initialising database');
         ### This leaves clones locked if we have write_access
         return;
     }    

@@ -655,7 +655,7 @@ sub exit_save_data {
         $ace->unlock_all_slices;
     };
     if ($@) {
-        $self->exception_message($@);
+        $self->exception_message($@, 'Error unlocking clones');
         return 0;
     }
     $ace->error_flag(0);
@@ -1513,8 +1513,7 @@ sub express_clone_and_subseq_fetch {
     if ($clone) {
         $self->exception_message($@) if $@;
     } else {
-        warn $@;
-        $self->exception_message("Can't fetch CloneSeq '$clone_name' :\n$@");
+        $self->exception_message($@, "Can't fetch CloneSeq '$clone_name'");
         return;
     }
     

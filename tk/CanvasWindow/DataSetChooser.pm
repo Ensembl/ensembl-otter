@@ -176,7 +176,7 @@ sub recover_old_sessions {
                 $self->make_XaceSeqChooser_windows(@lace);
             };
             if ($@) {
-                $self->exception_message($@);
+                $self->exception_message($@, 'Error recovering lace sessions');
             }
             return 1;
         }
