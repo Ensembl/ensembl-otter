@@ -7,15 +7,22 @@ use Getopt::Long 'GetOptions';
 use Bio::Otter::Lace::Defaults;
 
 
-my ($dataset, $help, $infile, $outfile, $name, $gtype);
+my ($dataset, $help, $infile, $outfile, $sanger, $name, $gtype);
 
 Bio::Otter::Lace::Defaults::do_getopt('ds|dataset=s' => \$dataset,
 				      'i|infile=s'   => \$infile,
 				      'o|outfile=s'  => \$outfile,
+				      'sanger'       => \$sanger,   # parsing gene name update from Sanger
 				      'n|name'       => \$name,
 				      't|type'       => \$gtype);   # plus default options
 
-exec('perldoc', $0) if ( !($dataset && $infile && $outfile && ($name || $gtype)) );
+if ( !$sanger && !($dataset && $infile && $outfile && ($name || $gtype))  ){
+  exec('perldoc', $0);
+}
+elsif ( $sanger && !($dataset && $infile && $outfile) ){
+  exec('perldoc', $0);
+}
+
 
 warn "\nStarting gene TYPE update .......\n" if $gtype;
 warn "\nStarting gene NAME update .......\n" if $name;
@@ -33,171 +40,221 @@ my $geneSynonymAd = $otter_db->get_GeneSynonymAdaptor;
 open (F, ">$outfile") || die $!;
 open (FILE, $infile) || die $!;
 
-my $start = 0;
-
 eval {
 
   $otter_db->begin_work;	# get along with AutoCommit turning on, so that rollback is possible later
-
   my $changed;
-  my $line = 0;
-  my ($hugo_gname, $hugo_desc, $HGNC, $hugo_type, $otter_trans_stable_id);
 
-  while (<FILE>) {
-    chomp;
-    $line++;
-    if ( /^Approved Symbol/ ) {
-      $start = 1; next;
+  if ( $sanger ){
+    my (%sanger_id_name, @ids);
+
+    while(<FILE>){
+      my ($name, $id) = split(/\s+/, $_);
+      $sanger_id_name{$id} = $name;
+      push(@ids, "'".$id."'");
     }
 
-    elsif ( $start == 1 && $_ ne "") {
+    my $ids = join(',', @ids);
 
-      ($hugo_gname, $hugo_desc, $HGNC, $hugo_type, $otter_trans_stable_id) = split /\t/, $_;
+    my $sql = 
+    my $sth = $otter_db->prepare("SELECT gn.name, gi.gene_stable_id ".
+				 "FROM gene_info gi, gene_name gn ".
+				 "WHERE gi.gene_info_id = gn.gene_info_id ".
+				 "AND gi.gene_stable_id in ($ids)"
+				);
 
-      if ( !($hugo_gname && $hugo_desc && $HGNC && $hugo_type && $otter_trans_stable_id) ){
-	warn "\nERROR at line $line: raw data fields are not tab delimited [$_]\nThis needs to be fixed first.\n\n";
-	exit(1);
+    $sth->execute();
+
+    my %otter_id_name;
+    while ( my ($name, $id) = $sth->fetchrow_array()) {
+      $otter_id_name{$id} = $name;
+    }
+    $sth->finish;
+
+    # compare and update
+    foreach my $sid ( keys %sanger_id_name ){
+      my $new_name = $sanger_id_name{$sid};
+      my $old_name = $otter_id_name{$sid};
+
+      if ( $otter_id_name{$sid} ne $sanger_id_name{$sid} ){
+
+	$changed .= sprintf ("%-10s %10s ($sid) : old name ($old_name)\n", "Found NEW name", $new_name);
+
+	update_gene_name( $new_name, $old_name );
+	update_gene_synonym( $geneAd->fetch_by_stable_id($sid), $old_name );
       }
-      else {
-	foreach ($hugo_gname, $hugo_desc, $HGNC, $hugo_type, $otter_trans_stable_id) {
-	  s/(^\s+)|(\s+$)//g;	# Trim trailing or leading whitespace
+    }
+    print F "==============  SANGER gene name update ==============\n\n$changed" if $changed;
+    
+  }
+
+  else {
+
+    my $start = 0;
+    my $line = 0;
+    my ($hugo_gname, $hugo_desc, $HGNC, $hugo_type, $otter_trans_stable_id);
+
+    while (<FILE>) {
+      chomp;
+      $line++;
+      if ( /^Approved Symbol/ ) {
+	$start = 1; next;
+      } elsif ( $start == 1 && $_ ne "") {
+
+	($hugo_gname, $hugo_desc, $HGNC, $hugo_type, $otter_trans_stable_id) = split /\t/, $_;
+
+	if ( !($hugo_gname && $hugo_desc && $HGNC && $hugo_type && $otter_trans_stable_id) ) {
+	  warn "\nERROR at line $line: raw data fields are not tab delimited [$_]\nThis needs to be fixed first.\n\n";
+	  exit(1);
+	} else {
+	  foreach ($hugo_gname, $hugo_desc, $HGNC, $hugo_type, $otter_trans_stable_id) {
+	    s/(^\s+)|(\s+$)//g;	# Trim trailing or leading whitespace
+	  }
 	}
-      }
 
-      my $trans = $transAd->fetch_by_stable_id($otter_trans_stable_id);
-      # warn my $id_version = $trans->version;
+	my $trans = $transAd->fetch_by_stable_id($otter_trans_stable_id);
+	# warn my $id_version = $trans->version;
 
-      my $gene;
-      eval {
-	$gene = $geneAd->fetch_by_transcript_id($trans->dbID);
-      };
+	my $gene;
+	eval {
+	  $gene = $geneAd->fetch_by_transcript_id($trans->dbID);
+	};
 
-      if ( $@ ){
-	warn "ERROR: $otter_trans_stable_id at line $line not found in the database or bad format.\n".
-	     "       Check if the line is tab delimited or if transcript stable_id becomes obsolete . . . . . .skip to work on other genes. . .\n\n";
-      }
-      else {
-	undef $@;
-	my $otter_gname = $gene->gene_info->name->name;
+	if ( $@ ) {
+	  warn "ERROR: $otter_trans_stable_id at line $line not found in the database or bad format.\n".
+	    "       Check if the line is tab delimited or if transcript stable_id becomes obsolete . . . . . .skip to work on other genes. . .\n\n";
+	} else {
+	  undef $@;
+	  my $otter_gname = $gene->gene_info->name->name;
 	
-	my $sth;
+	  my $sth;
 
-	#---------------------------------------------------
-	#   DO ONLY GENE NAME AND GENE DESCRIPTION UPDATE
-	#---------------------------------------------------
-	if ( $name ) {
+	  #---------------------------------------------------
+	  #   DO ONLY GENE NAME AND GENE DESCRIPTION UPDATE
+	  #---------------------------------------------------
+	  if ( $name ) {
 
-	  my $otter_desc = $gene->description;
-	  $otter_desc = "NA" if !$otter_desc;
-	  $otter_desc  =~ s/\\//g if ($otter_desc =~ /\\/); # remove escape "\" if exists for later string comp
+	    my $otter_desc = $gene->description;
+	    $otter_desc = "NA" if !$otter_desc;
+	    $otter_desc  =~ s/\\//g if ($otter_desc =~ /\\/); # remove escape "\" if exists for later string comp
 	
-	  if ( $otter_gname ne $hugo_gname ) {
+	    if ( $otter_gname ne $hugo_gname ) {
 
-	    $changed .= "   Found <APPROVED SYMBOL> update: old symbol was \"$otter_gname\"\n";
+	      $changed .= "   Found <APPROVED SYMBOL> update: old symbol was \"$otter_gname\"\n";
 
-	    # ----- update gene_name table -----
+	      # ----- update gene_name table -----
+	      update_gene_name($hugo_gname, $otter_gname);
 	
-	    my $old_gName = $geneNameAd->fetch_by_name($otter_gname);
-	    foreach my $oname (@$old_gName) {
+	      # ----- update gene_synonym table -----
+	      update_gene_synonym($gene, $otter_gname);
 
-	      $oname->name($hugo_gname)    ; # replaced old name with new one
-
-	      # not using $geneNameAd->store() here as this method does only INSERT and no UPDATE
-	      $sth = $otter_db->prepare('update gene_name set name = ? where name = ? and gene_info_id = ?');
-	      $sth->execute($hugo_gname, $otter_gname, $oname->gene_info_id);
-	      $sth->finish();
 	    }
 
-	    # ----- update gene_synonym table -----
+	    # ----- update gene_description table  -----
 
-	    my $gsynonym = new Bio::Otter::GeneSynonym;
-	    $gsynonym->name($otter_gname);
-	    $gsynonym->gene_info_id($gene->gene_info->dbID);
+	    if ( $otter_desc ne $hugo_desc ) {
 
-	    $geneSynonymAd->store($gsynonym);
-	  }
+	      $changed .= "   Found <APPROVED NAME> update: old name was \"$otter_desc\"\n";
 
-	  # ----- update gene_description table  -----
+	      $gene->description($hugo_desc);
 
-	  if ( $otter_desc ne $hugo_desc ) {
+	      # update gene desccription and display(store) old description under Remark tag in AceDB
+	      my $rem = "old HUGO approved name was $otter_desc";
 
-	    $changed .= "   Found <APPROVED NAME> update: old name was \"$otter_desc\"\n";
+	      # add old description as a remark;
+	      $sth = $otter_db->prepare('Insert into gene_remark (gene_remark_id, remark, gene_info_id) values(null,?,?)');
+	      $sth->execute($rem, $gene->gene_info->dbID);
+	      $sth->finish();
 
-	    $gene->description($hugo_desc);
-
-	    # update gene desccription and display(store) old description under Remark tag in AceDB
-	    my $rem = "old HUGO approved name was $otter_desc";
-
-	    # add old description as a remark;
-	    $sth = $otter_db->prepare('Insert into gene_remark (gene_remark_id, remark, gene_info_id) values(null,?,?)');
-	    $sth->execute($rem, $gene->gene_info->dbID);
-	    $sth->finish();
-
-	    # allow only one description for each gene
-	    $sth = $otter_db->prepare('replace into gene_description (gene_id, description) values (?,?)');
-	    $sth->execute($gene->dbID, $hugo_desc);
-	    $sth->finish();
-	  }
-
-	  if ( $changed ) {
-	    print F "\nHUGO update: $hugo_gname\t$hugo_desc\t$HGNC\t$hugo_type\t$otter_trans_stable_id\n"
-	      ."   Gene_stable_id: ".$gene->stable_id."\n".$changed;
-	    $changed =();
-	  }
-	}
-
-	#-----------------------------
-	#   DO ONLY GENE TYPE UPDATE
-	#-----------------------------
-
-	elsif ( $gtype ) {
-
-	  my $otter_type  = $gene->type;
-
-	  # ----- update gene table -----
-	
-	  if ( lc($otter_type) ne lc($hugo_type) ) {
-
-	    $changed .= "   Found <TYPE> update: old gene type was \"$otter_type\"\n";
-
-	    # store previous gene type under Remark tag in AceDB
-	    my $rem = "old gene type was $otter_type";
-
-	    $sth = $otter_db->prepare('Insert into gene_remark (gene_remark_id, remark, gene_info_id) values(null,?,?)');
-	    $sth->execute($rem, $gene->gene_info->dbID);
-	    $sth->finish();
-
-	    # update gene type
-	    $sth = $otter_db->prepare('update gene set type = ? where gene_id = ?');
-	    $sth->execute($hugo_type, $gene->dbID);
-	    $sth->finish();
+	      # allow only one description for each gene
+	      $sth = $otter_db->prepare('replace into gene_description (gene_id, description) values (?,?)');
+	      $sth->execute($gene->dbID, $hugo_desc);
+	      $sth->finish();
+	    }
 
 	    if ( $changed ) {
 	      print F "\nHUGO update: $hugo_gname\t$hugo_desc\t$HGNC\t$hugo_type\t$otter_trans_stable_id\n"
 		."   Gene_stable_id: ".$gene->stable_id."\n".$changed;
 	      $changed =();
-	    } else {
-	      warn "\nNo gene type to update. Job terminated\n\n";
-	      exit(0);
+	    }
+	  }
+
+	  #-----------------------------
+	  #   DO ONLY GENE TYPE UPDATE
+	  #-----------------------------
+
+	  elsif ( $gtype ) {
+
+	    my $otter_type  = $gene->type;
+
+	    # ----- update gene table -----
+	
+	    if ( lc($otter_type) ne lc($hugo_type) ) {
+
+	      $changed .= "   Found <TYPE> update: old gene type was \"$otter_type\"\n";
+
+	      # store previous gene type under Remark tag in AceDB
+	      my $rem = "old gene type was $otter_type";
+
+	      $sth = $otter_db->prepare('Insert into gene_remark (gene_remark_id, remark, gene_info_id) values(null,?,?)');
+	      $sth->execute($rem, $gene->gene_info->dbID);
+	      $sth->finish();
+
+	      # update gene type
+	      $sth = $otter_db->prepare('update gene set type = ? where gene_id = ?');
+	      $sth->execute($hugo_type, $gene->dbID);
+	      $sth->finish();
+
+	      if ( $changed ) {
+		print F "\nHUGO update: $hugo_gname\t$hugo_desc\t$HGNC\t$hugo_type\t$otter_trans_stable_id\n"
+		  ."   Gene_stable_id: ".$gene->stable_id."\n".$changed;
+		$changed =();
+	      } else {
+		warn "\nNo gene type to update. Job terminated\n\n";
+		exit(0);
+	      }
 	    }
 	  }
 	}
       }
     }
   }
+  ;
+
+  if ( $@ ) {
+    warn $@;
+    warn "\nHUGO update was not successful.\n";
+  } else {
+    warn "\nGene name update is OK.\n" if $name || $sanger;
+    warn "\nGene type update is OK.\n" if $gtype;
+    $otter_db->commit;
+  }
 };
 
-if ( $@ ) {
-  warn $@;
-  warn "\nHUGO update was not successful.\n";
-}
-else {
-  warn "\nGene name update is OK.\n" if $name;
-  warn "\nGene type update is OK.\n" if $gtype;
-  $otter_db->commit;
+sub update_gene_name {
+  my ( $hugo_gname, $otter_gname ) = @_;
+
+  my $old_gName = $geneNameAd->fetch_by_name($otter_gname);
+  foreach my $oname (@$old_gName) {
+
+    $oname->name($hugo_gname)    ; # replaced old name with new one
+
+    # not using $geneNameAd->store() here as this method does only INSERT and no UPDATE
+    my $sth = $otter_db->prepare('update gene_name set name = ? where name = ? and gene_info_id = ?');
+    $sth->execute($hugo_gname, $otter_gname, $oname->gene_info_id);
+    $sth->finish();
+  }
 }
 
+sub update_gene_synonym {
+  my ( $gene, $otter_gname ) = @_;
 
+  my $gsynonym = new Bio::Otter::GeneSynonym;
+  $gsynonym->name($otter_gname);
+  $gsynonym->gene_info_id($gene->gene_info->dbID);
+
+  $geneSynonymAd->store($gsynonym);
+}
 
 __END__
 
@@ -208,8 +265,11 @@ __END__
 
 To run this script, you need to specify database_name, input_file <HUGO_REPORT_FILE>, output_file <if you want to keep an update_record_file, recommended>, -name (for gene name update) or -type (for gene type update).
 
-eg, perl B<HUGO_gene_name_to_otter -ds> human B<-infile> HUGO_update_file B<-outfile> your_favorite_name B<-name> (or B<-type>)
+eg, ./B<HUGO_gene_name_to_otter -ds> human B<-infile> HUGO_update_file B<-outfile> your_favorite_name B<-name> (or B<-type>)
 
+For updates from Sanger:
+
+eg, ./<HUGO_gene_name_to_otter -ds> human B<-infile> HUGO_update_file B<-outfile> your_favorite_name (defaults to do -name at the moment)
 
 =head1 DESCRIPTION
 
