@@ -12,7 +12,7 @@ use Bio::Otter::Lace::SequenceSet;
 use Bio::Otter::Lace::SequenceNote;
 use Bio::EnsEMBL::Pipeline::Monitor;
 use Bio::Otter::Lace::PipelineDB;
-
+use Bio::Otter::Lace::SatelliteDB;
 
 sub new {
     my( $pkg ) = @_;
@@ -99,13 +99,14 @@ sub get_all_SequenceSets {
         my $sth = $dba->prepare(q{
             SELECT assembly_type
               , description
+	      , analysis_priority
             FROM sequence_set
             ORDER BY assembly_type
             });
         $sth->execute;
         
         my $ds_name = $self->name;
-        while (my ($name, $desc) = $sth->fetchrow) {
+        while (my ($name, $desc, $priority) = $sth->fetchrow) {
             my( $write_flag );
             if (%$ssal) {
                 $write_flag = $ssal->{$name}{$this_author};
@@ -121,6 +122,7 @@ sub get_all_SequenceSets {
             $set->name($name);
             $set->dataset_name($ds_name);
             $set->description($desc);
+	    $set->priority($priority);
             $set->write_access($write_flag);
             
             push(@$ss, $set);
@@ -168,7 +170,7 @@ sub fetch_all_CloneSequences_for_selected_SequenceSet {
 sub status{
     my ($self, $dba, $type, $force_refresh) = @_;
     if(!$self->{'_dataset_status_hash'}->{$type} || $force_refresh){
-	my $pipeline_db = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($dba) ;
+	my $pipeline_db = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($dba);
 	my $monitor     = Bio::EnsEMBL::Pipeline::Monitor->new(-dbobj => $pipeline_db);
 	my $unfin       = $monitor->get_unfinished_analyses_for_assembly_type($type);
 	my $hash        = {};
@@ -459,6 +461,264 @@ sub get_all_Chromosomes {
     return @$ch;
 }
 
+sub _tmp_table_by_name{
+    my ($self, $id) = @_;
+    $self->{'temp_table_name_cache'}->{$id} ||= "storing_${id}_$$";
+    return $self->{'temp_table_name_cache'}->{$id};
+}
+
+sub tmpstore_meta_info_for_SequenceSet{
+    my ($self, $ss, $adaptors) = @_;
+    # check I'm a nice sequence set in $ss
+    confess("$ss says I'm not a sequence set") unless $ss->isa("Bio::Otter::Lace::SequenceSet");
+    # write some sql
+    my $tmp_tbl_meta   = $self->_tmp_table_by_name("meta_info");
+    my $create_tmp_tbl = qq{CREATE TEMPORARY TABLE $tmp_tbl_meta SELECT assembly_type, description, analysis_priority FROM sequence_set WHERE 1 = 0};
+    my $insert_ss      = qq{INSERT INTO $tmp_tbl_meta (assembly_type, description, analysis_priority) VALUES(?, ?, ?)};
+    my $max_chr_end_q  = qq{SELECT IFNULL(MAX(a.chr_end), 0) AS max_chr_end 
+				   FROM $tmp_tbl_meta ss, assembly a 
+				   WHERE ss.assembly_type = a.type 
+				   && ss.assembly_type = ?};
+    # some sequence set info
+    my $new_desc       = $ss->description();
+    my $new_name       = $ss->name();
+    my $new_priority   = $ss->priority() || 5;
+    my $max_chr_end    = 0;
+
+    # create/fill/read temporary table
+    foreach my $adaptor(@$adaptors){
+	my $sth = $adaptor->prepare($create_tmp_tbl);
+	$sth->execute();
+	$sth->finish();
+
+	$sth = $adaptor->prepare($insert_ss);
+	$sth->execute($new_name, $new_desc, $new_priority);
+	$sth->finish();
+
+	$sth = $adaptor->prepare($max_chr_end_q);
+	$sth->execute($new_name);
+	my ($tmp) = $sth->fetchrow();
+	$sth->finish();
+
+	$max_chr_end = ($tmp > $max_chr_end ? $tmp : $max_chr_end);
+    }
+
+    return $max_chr_end;
+}
+
+sub store_SequenceSet{
+    my ($self, $ss, $seqfetch_code, $allow_update) = @_;
+    
+    # check I'm a nice sequence set in $ss
+    confess("$ss says I'm not a sequence set") unless $ss->isa("Bio::Otter::Lace::SequenceSet");
+    
+    # get the previous sequence_set with the same name.
+    eval { $self->get_SequenceSet_by_name($ss->name) };
+    if(!$@){ confess "not allowed" unless $allow_update };
+    # write some sql
+    my $tmp_tbl_assembly = $self->_tmp_table_by_name("assembly");
+    my $create_tmp_tbl   = qq{CREATE TEMPORARY TABLE $tmp_tbl_assembly SELECT * FROM assembly WHERE 1 = 0};
+    my $insert_query     = qq{INSERT INTO $tmp_tbl_assembly (chromosome_id, chr_start,
+							     chr_end, superctg_name,
+							     superctg_start, superctg_end,
+							     superctg_ori,contig_id,
+							     contig_start, contig_end,
+							     contig_ori,type )
+				  VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+			      };
+    # database connections
+    my $otter_db    = $self->get_cached_DBAdaptor;
+    my $pipeline_db = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($otter_db);
+    my $ens_db      = Bio::Otter::Lace::SatelliteDB::get_DBAdaptor($otter_db, 'self');
+
+    my $max_chr_length = $self->tmpstore_meta_info_for_SequenceSet($ss, [$ens_db, $pipeline_db]);
+
+    # execute query to create temp
+    my $ens_sth = $ens_db->prepare($create_tmp_tbl);
+    $ens_sth->execute();
+    $ens_sth->finish();
+    my $pipeline_sth = $pipeline_db->prepare($create_tmp_tbl);
+    $pipeline_sth->execute();
+    $pipeline_sth->finish();
+
+    require Bio::EnsEMBL::Clone;
+    require Bio::EnsEMBL::RawContig;
+
+    # get clone_adaptors
+    my $ens_clone_adaptor  = $ens_db->get_CloneAdaptor;
+    my $pipe_clone_adaptor = $pipeline_db->get_CloneAdaptor;
+    my $adaptors           = [$ens_clone_adaptor, $pipe_clone_adaptor];
+    my @contigs            = (); # stores contig ids per adaptor/db
+    my $all_contigs        = [];
+    # prepare the assembly insert query for each db
+    $ens_sth      = $ens_db->prepare($insert_query);
+    $pipeline_sth = $pipeline_db->prepare($insert_query);
+
+    # go through the clones in the list storing them in the 
+    # clone/contig/dna tables
+    # temp assembly table
+    foreach my $cloneSeq(@{$ss->CloneSequence_list}){
+	my $acc    = $cloneSeq->accession();
+	my $sv     = $cloneSeq->sv();
+
+	my @clones = @{$self->_fetch_clones($adaptors, $acc, $sv, $seqfetch_code)};
+	for (my $i = 0; $i < @clones; $i++){
+	    my $clone  = $clones[$i];
+	    if(defined $clone->dbID){
+		my $contig = $clone->get_all_Contigs->[0];
+		$contigs[$i] = $contig;
+	    }else{
+		# store the clone
+		my ($contig) = $self->_store_clone($adaptors->[$i], $clone);
+		$contigs[$i] = $contig;
+	    }
+	    push(@{$all_contigs->[$i]}, $contigs[$i]);
+	}
+
+	# store the assembly
+	$ens_sth->execute($cloneSeq->chromosome, $cloneSeq->chr_start,
+			  $cloneSeq->chr_end, $cloneSeq->super_contig_name,
+			  $cloneSeq->chr_start, $cloneSeq->chr_end,
+			  1, # super_contig_orientation
+			  $contigs[0]->dbID, $cloneSeq->contig_start,
+			  $cloneSeq->contig_end, $cloneSeq->contig_strand,
+			  $ss->name
+			  );
+	$pipeline_sth->execute($cloneSeq->pipeline_chromosome, $cloneSeq->chr_start,
+			       $cloneSeq->chr_end, $cloneSeq->super_contig_name,
+			       $cloneSeq->chr_start, $cloneSeq->chr_end,
+			       1, # super_contig_orientation
+			       $contigs[1]->dbID, $cloneSeq->contig_start,
+			       $cloneSeq->contig_end, $cloneSeq->contig_strand,
+			       $ss->name
+			       );
+    }
+    ####################################################
+    $self->__dump_table("assembly", [$pipeline_db, $ens_db]);
+    $self->__dump_table("meta_info", [$pipeline_db, $ens_db]);
+    # if everythings ok "commit" sequence_set table and assembly table
+    # insert into sequence_set select from temporary table
+    my $tmp_tbl_mi    = $self->_tmp_table_by_name("meta_info");
+    my $copy_assembly = qq{INSERT IGNORE INTO assembly SELECT * FROM $tmp_tbl_assembly};
+    my $copy_seq_set  = qq{INSERT IGNORE INTO sequence_set SELECT * FROM $tmp_tbl_mi};
+    foreach my $dbA($ens_db, $pipeline_db){
+	my $sth = $dbA->prepare($copy_assembly);
+	$sth->execute();
+	$sth = $dbA->prepare($copy_seq_set);
+	$sth->execute();
+    }
+    return $all_contigs->[1]; # return the pipeline contigs
+}
+
+
+sub __dump_table{
+    my ($self, $name, $adaptors, $other) = @_;
+    my $tmp = ($other ? $other : $self->_tmp_table_by_name($name));
+    return unless defined $tmp;
+    my $query = "SELECT * FROM $tmp";
+    foreach my $adaptor(@$adaptors){
+	my $sth = $adaptor->prepare($query);
+	$sth->execute();
+	print STDERR "TABLE: $tmp\n";
+	while(my $row = $sth->fetchrow_arrayref){
+	    print STDERR join("\t", @$row) . "\n";
+	}
+    }
+}
+
+sub _fetch_clones{
+    my ($self, $clone_adaptors, $acc, $sv, $seqfetcher) = @_;
+    my $clones = [];
+    my $seq;
+    foreach my $clone_adaptor(@$clone_adaptors){
+	my $clone;
+	eval { $clone = $clone_adaptor->fetch_by_accession_version($acc, $sv) };
+	if($clone){
+	    warn "clone <".$clone->embl_id."> is already in the " . $clone_adaptor->db->dbname . " database\n" ;
+	    my $contigs = $clone->get_all_Contigs;
+	    die "more than 1 contig for clone " . $acc if (scalar(@$contigs) != 1);
+	}else{
+	    my $acc_sv = "$acc.$sv";
+	    $seq ||= &$seqfetcher($acc_sv);
+	    $clone = $self->_make_clone($seq, $acc, $sv);
+	}
+	push(@$clones, $clone);
+    }
+    return $clones;
+}
+sub _make_clone{
+    my ($self, $seq, $acc, $sv) = @_;
+    my $acc_sv = "$acc.$sv";
+    my $clone = Bio::EnsEMBL::Clone->new();
+    $clone->id("$acc_sv");    ### Should set to international clone name
+    $clone->embl_id($acc);
+    $clone->embl_version($sv);
+    $clone->htg_phase(3);
+    $clone->version(1);
+    $clone->created(time);
+    $clone->modified(time);
+    
+    # fetch sequences
+    my $contig = Bio::EnsEMBL::RawContig->new;
+    my $end = $seq->length;
+    $contig->name("$acc_sv.1." . $seq->length);
+    $contig->length($seq->length);
+    $contig->seq($seq->seq);
+    $clone->add_Contig($contig);
+    return $clone;
+}
+sub _store_clone{
+    my ($self, $clone_adaptor, $clone) = @_ ;
+
+    eval{ $clone_adaptor->store($clone);  };
+    if($@){
+	print STDERR "Problems writing " . $clone->id . " to database. \nProblem was " . $@;             
+    }
+    return $clone->get_all_Contigs->[0];
+}
+
+sub update_SequenceSet{
+    my ($self, $ss) = @_;
+    # get the previous sequence_set with the same name.
+    # eval { $self->get_SequenceSet_by_name($ss->name) };
+    # if(!$@){ confess "not allowed" unless $allow_update };
+    # database connections
+    my $otter_db    = $self->get_cached_DBAdaptor;
+    my $pipeline_db = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($otter_db);
+    # update sql
+    my $update_meta_info = qq{UPDATE sequence_set SET description = ?, analysis_priority = ? WHERE assembly_type = ?};
+    my $name = $ss->name();
+    my $desc = $ss->description();
+    my $pri  = $ss->priority();
+    foreach my $adaptor($otter_db, $pipeline_db){
+	my $sth = $adaptor->prepare($update_meta_info);
+	$sth->execute($desc, $pri, $name);
+    }
+}
+
+sub delete_SequenceSet{
+    my ($self, $ss) = @_;
+
+    # database connections
+    my $otter_db    = $self->get_cached_DBAdaptor;
+    my $pipeline_db = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($otter_db);
+    # delete sql
+    my $delete_meta_info = qq{DELETE FROM sequence_set WHERE assembly_type = ?};
+    my $delete_assembly  = qq{DELETE FROM assembly WHERE type = ?};
+    my $name = $ss->name();
+    warn "DELETING sequence set with name: $name";
+    foreach my $adaptor($otter_db, $pipeline_db){
+	my $sth = $adaptor->prepare($delete_meta_info);
+	$sth->execute($name);
+	$sth    = $adaptor->prepare($delete_assembly);
+	$sth->execute($name);
+    }
+}
+
+#
+# DB connection handling
+#-------------------------------------------------------------------------------
+#
 sub get_cached_DBAdaptor {
     my( $self ) = @_;
     
@@ -473,7 +733,7 @@ sub make_DBAdaptor {
     my(@args);
     foreach my $prop ($self->list_all_db_properties) {
         if (my $val = $self->$prop()) {
-            #print STDERR "-$prop  $val\n";
+            print STDERR "-$prop  $val\n";
             push(@args, "-$prop", $val);
         }
     }
