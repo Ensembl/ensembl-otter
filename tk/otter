@@ -1,9 +1,10 @@
 #!/usr/local/bin/perl5.6.1 -w
 
-use lib '/nfs/team71/analysis/jgrg/work/ensembl-otter/modules';
-use lib '/nfs/team71/analysis/jgrg/work/ensembl-otter/conf';
-use lib '/nfs/team71/analysis/jgrg/work/ensembl/modules';
-use lib '/nfs/team71/analysis/jgrg/work/tk';
+use lib '/home/jgrg/work/ensembl-otter/modules';
+use lib '/home/jgrg/work/ensembl-otter/conf';
+use lib '/home/jgrg/work/ensembl/modules';
+use lib '/home/jgrg/work/ensembl-ace';
+use lib '/home/jgrg/work/tk';
 
 ### otter
 
@@ -32,7 +33,8 @@ use Bio::EnsEMBL::Ace::Filter::DNA;
 
 {
     my $usage = sub{ exec('perldoc', $0) };
-    my $host = 'ecs1d.sanger.ac.uk';
+    #my $host = 'ecs1d.sanger.ac.uk';
+    my $host = 'vegadb.sanger.ac.uk';
     my $port = 19312;
     my $ace_tar = '/nfs/humace2/hum/data/lace_acedb.tar';
 
@@ -212,6 +214,24 @@ sub do_fetch {
 }
 
 sub fetch_pipeline_data {
+    my( $lace_files, @ana_seq ) = @_;
+    
+    my $ens_pipe_ace = 'rawdata/enspipe_data.ace';
+    push(@$lace_files, $ens_pipe_ace);
+
+    my( @seq_names );
+    foreach my $seq (@ana_seq) {
+        push(@seq_names, $seq->full_sequence_name);
+    }
+    
+    # Expect to find fetch_old_pipeline_data
+    # in same dir as this script.
+    my $pipe_data_fetch = $0;
+    $pipe_data_fetch =~ s{[^/]+$}{fetch_old_pipeline_data};
+    system("$pipe_data_fetch @seq_names > $ens_pipe_ace");
+}
+
+sub FUTURE_fetch_pipeline_data {
     my( $lace_files, @ana_seq ) = @_;
     
     my $ens_pipe_ace = 'rawdata/enspipe_data.ace';
@@ -408,7 +428,8 @@ sub get_otter_data {
     open OTTER_ACE, "> $ace_file"
         or confess "Can't write to '$ace_file' : $!";
     foreach my $ctg (@contig_list) {
-        print OTTER_ACE get_otter_ctg($cw, $ctg);
+        my ($name, $slice, $genes) = get_otter_ctg($cw, $ctg);
+        print OTTER_ACE Bio::Otter::Converter::otter_to_ace($vc, $genes, $name);
     }
     close OTTER_ACE or confess "Error writing to '$ace_file' : $!";
 }
@@ -429,7 +450,7 @@ sub get_otter_ctg {
         $oaga->annotate_gene($gene);
     }
 
-    return Bio::Otter::Converter::otter_to_ace($vc, $genes, "${chr_name}_$start-$end");
+    return("${chr_name}_$start-$end", $vc, $genes);
 }
 
 sub get_canvas_object_properties {

@@ -1713,6 +1713,7 @@ sub draw_plus {
         -tags       => [@tags, 'plus_strand'],
         -fill       => 'grey',
         -outline    => 'DimGrey',
+        -joinstyle  => 'miter',
         );
 }
 
