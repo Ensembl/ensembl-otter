@@ -114,12 +114,13 @@ sub draw {
     my @dsl = $self->Client->get_all_DataSets;
     my $font = $self->font;
     my $size = $self->font_size;
+    my $row_height = int $size * 1.5;
     my $canvas = $self->canvas;
     my $font_def = [$font, $size, 'bold'];
     for (my $i = 0; $i < @dsl; $i++) {
         my $set = $dsl[$i];
         my $x = $size;
-        my $y = $size * (1 + $i);
+        my $y = $row_height * (1 + $i);
         $canvas->createText(
             $x, $y,
             -text   => $set->name,
