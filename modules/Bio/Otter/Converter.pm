@@ -430,11 +430,10 @@ sub XML_to_otter {
     elsif (/<\/assembly_tag>/) {
       push(@$assembly_tag_set, $at);
     }
-
     elsif (/<.*?>.*<\/.*?>/) {
       print STDERR "ERROR: Unrecognised tag [$_]\n";
-
-    } elsif (!/</ && !/>/) {
+    }
+    elsif (!/</ && !/>/) {
       if ($currentobj eq 'dna') {
         s/^\s*//;
         s/\s*$//;
@@ -454,7 +453,6 @@ sub XML_to_otter {
     #else {
     #    warn "UNKNOWN TAG: $_";
     #}
-   
   }
 
   if (!$foundend) {
@@ -725,7 +723,7 @@ sub otter_to_ace {
     }
 
     # Features (polyA signals and sites etc...)
-    if ($feature_set) {
+    if (defined $feature_set->[0]) {
         foreach my $sf (@$feature_set) {
             my $start = $sf->start;
             my $end   = $sf->end;
@@ -744,7 +742,7 @@ sub otter_to_ace {
     }
 
     # assembly tag data
-    if ($assembly_tag_set) {
+    if (defined $assembly_tag_set->[0]) {
       foreach my $at (@$assembly_tag_set) {
 
         # coords are same as XML from otter db (ie, all -1 <-> 1 and all start coord <= end coord)
@@ -1748,7 +1746,7 @@ sub ace_to_XML {
 
     my $xml = "<otter>\n<sequence_set>\n"
         . path_to_XML($chr, $chrstart, $chrend, $type, $tile_path)
-        . ($feature_set ? features_to_XML($chrstart, $feature_set) : '')
+        . (defined $feature_set->[0] ? features_to_XML($chrstart, $feature_set) : '')
         . ($assembly_tag_set ? assembly_tags_to_XML($assembly_tag_set) : '');
 
     foreach my $g (@$genes) {
@@ -1912,16 +1910,15 @@ sub clone_to_XML {
 
 sub features_to_XML {
     my( $chrstart, $features ) = @_;
-    
+
     confess "No chrstart" unless $chrstart =~ /\d+/;
     confess "No features" unless $features;
-    
+
     my $offset = $chrstart - 1;
 
-  #print STDERR $chrstart, "===================== chrstart\n";
-  
     my $xml = "<feature_set>\n";
-    foreach my $sf (@$features) {
+
+      foreach my $sf (@$features) {
         $xml .= "  <feature>\n"
             . sprintf("    <type>%s</type>\n",      $sf->analysis->logic_name   )
             . sprintf("    <start>%s</start>\n",    $sf->start + $offset        )
@@ -1930,15 +1927,16 @@ sub features_to_XML {
             . sprintf("    <score>%s</score>\n",    $sf->score                  )
             . sprintf("    <label>%s</label>\n",    $sf->display_label          )
             . "  </feature>\n";
-    }
-    $xml .= "</feature_set>\n";
-    return $xml;
+      }
+
+      $xml .= "</feature_set>\n";
+      return $xml;
 }
 
 sub slice_to_XML {
   my ($slice, $db, $writeseq) = @_;
 
-  print STDERR "Slice $slice : $db-----------------------\n";
+  print STDERR "Slice $slice\n";
 
   my $xmlstr = "";
 
@@ -1993,7 +1991,9 @@ sub slice_to_XML {
 
     # Simple features for polyA signals and sites etc...
     if (my $feats = $slice->get_all_SimpleFeatures) {
+      if ( defined $feats->[0] ){
         $xmlstr .= features_to_XML($chrstart, $feats);
+      }
     }
 
     # get all assembly tag data
