@@ -32,42 +32,57 @@ if [ -e $pid_file ]; then
     pid_exist=1
 fi
 
+die(){
+    echo "$THISSCRIPT: $1" 1>&2
+    exit 1
+}
+message(){
+    echo "$THISSCRIPT: $1"
+}
+
 start(){
     if [ "$pid_exist" == "0" ]; then
-	echo "starting otter_srv..."
+	message "starting otter_srv..."
         exec ./otter_srv &
     else
-	echo "can't start '$pid_file' exists" 1>&2
+	die "can't start '$pid_file' exists"
     fi
 }
 stop(){
     if [ "$pid_exist" == "1" ]; then
 	pid=`cat $pid_file`
 	if [ $pid -gt 0 ]; then
-	    echo "pid exists so stopping $pid"
-            kill -INT $pid
-            rm -f $pid_file
-	    pid_exist=0
+	    message "pid exists so stopping $pid"
+            kill -INT $pid  2>/dev/null
+            if [ "$?" == "0" ]; then
+                rm -f $pid_file 2>/dev/null
+                pid_exist=0
+            else
+                die "Failed to 'kill -INT $pid' it is probably not owned by you."
+            fi
 	else
-	    echo "'$pid_file' is not a valid pid file" 1>&2
-	    exit 1
+	    die "'$pid_file' is not a valid pid file"
 	fi
     else
-	echo "no pidfile [$pid_file] exists, so can't stop" 1>&2
-	exit 1
+	die "no pidfile [$pid_file] exists, so can't stop"
     fi
 }
 rotate_log(){
     if [ "$pid_exist" == "1" ]; then
 	pid=`cat $pid_file`
 	if [ $pid -gt 0 ]; then
-	    echo "rotating logs..."
-            kill -HUP $pid
+	    message "rotating logs..."
+            kill -HUP $pid 2>dev/null
+            if [ "$?" == "0" ]; then
+                message "successfully rotated logs."
+            else
+                die "Failed to 'kill -HUP $pid' it is probably not owned by you."                
+            fi
 	else
-	    echo "'$pid_file' is not a valid pid file." 1>&2
+	    die "'$pid_file' is not a valid pid file."
 	fi
     else
-	echo "no pidfile [$pid_file] exists, so can't do rotate." 1>&2
+	die "no pidfile [$pid_file] exists, so can't do rotate."
     fi
 }
 restart(){
@@ -89,6 +104,6 @@ case "$1" in
     restart
     ;;
   *)
-    echo $"Usage: $0 {start|stop|logrotate|restart}" 1>&2
-    exit 1
+    die $"
+    Usage: $THISSCRIPT {start|stop|logrotate|restart}"
 esac
