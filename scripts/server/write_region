@@ -443,8 +443,8 @@ sub clones_from_path {
 
 sub attach_analysis_objects_and_transform_to_slice {
     my( $dba, $slice, $sf_list ) = @_;
-    
-    my $analysis_adaptor = $dba->fetch_AnalysisAdaptor;
+
+    my $analysis_adaptor = $dba->get_AnalysisAdaptor;
     
     my( %logic_ana );
     for (my $i = 0; $i < @$sf_list; $i++) {
