@@ -599,13 +599,11 @@ sub run_lace{
     $self->_open_SequenceSet($ss , $title) ;
 }
 sub run_lace_on_slice{
-    my ($self) = @_;
+    my ($self, $start, $end) = @_;
     
     ### doing the same as set_selected_from_canvas
     ### but from the user input instead
     my $ss    = $self->SequenceSet;
-    my $start = ${$self->slice_min_ref};
-    my $end   = ${$self->slice_max_ref};
 
     my $selected = [];
 
@@ -1490,83 +1488,25 @@ sub slice_window{
     unless (defined ($slice_window) ){
         ## make a new window
         my $master = $self->canvas->toplevel;
-        $slice_window = $master->Toplevel(-title => 'Open a slice');
-        $slice_window->transient($master);
-        
-        $slice_window->protocol('WM_DELETE_WINDOW', sub{$slice_window->withdraw});
-    
-        my $label = $slice_window->Label(-text => qq`Enter chromosome coordinates for the start and end of the slice` .
-                                                  qq` to open the clones contained.`
-                                         )->pack(-side => 'top');
-
+        use TransientWindow::OpenSlice;
+        $self->{'_slice_window'} = 
+            $slice_window = TransientWindow::OpenSlice->new($master, 'Open a slice');
         my $cs_list = $self->SequenceSet->CloneSequence_list();
-        my $entry_frame = $slice_window->Frame()->pack(-side => 'top', 
-                                                       -padx =>  5,
-                                                       -pady =>  5,
-                                                       -fill => 'x'
-                                                       );   
-        my $slice_start   ||= $cs_list->[0]->chr_start || 0;
-        $self->slice_min_ref(\$slice_start);
-        my $min_label       = $entry_frame->Label(-text => "Slice:  start")->pack(-side   =>  'left');
-        my $slice_min_entry = $entry_frame->Entry(-width        => 15,
-                                                  -relief       => 'sunken',
-                                                  -borderwidth  => 2,
-                                                  -textvariable => $self->slice_min_ref,
-                                                  #-font       =>   'Helvetica-14',   
-                                                  )->pack(-side => 'left', 
-                                                          -padx => 5,
-                                                          -fill => 'x'
-                                                           );
-        my $slice_end   ||= $slice_start + 1e6;
-        $self->slice_max_ref(\$slice_end);
-        my $max_label       = $entry_frame->Label(-text => " end ")->pack(-side => 'left');
-        my $slice_max_entry = $entry_frame->Entry(-width        => 15,
-                                                  -relief       => 'sunken',
-                                                  -borderwidth  => 2,
-                                                  -textvariable => $self->slice_max_ref,
-                                                  #-font       =>   'Helvetica-14',   
-                                                  )->pack(-side => 'left', 
-                                                          -padx => 5,
-                                                          -fill => 'x',
-                                                          );
-        my $run_cancel_frame = $slice_window->Frame()->pack(-side => 'bottom', 
-                                                               -padx =>  5,
-                                                               -pady =>  5,
-                                                               -fill => 'x'
-                                                               );   
-        my $run_button = $run_cancel_frame->Button(-text    => 'Run lace',
-                                                   -command => sub{ 
-                                                       $slice_window->withdraw;
-                                                       $self->run_lace_on_slice;
-                                                   }
-                                                   )->pack(-side => 'left');
-        
-#        my $info = $run_cancel_frame->Label(-text => qq`The clones will not be truncated.`)->pack(-side => 'left',
-#                                                                                                  -padx => 5,
-#                                                                                                  -pady => 5,
-#                                                                                                  -fill => 'x'
-#                                                                                                  );
-        my $cancel_button = $run_cancel_frame->Button(-text    => 'Cancel',
-                                                      -command => sub { $slice_window->withdraw }
-                                                      )->pack(-side => 'right');
-        $self->{'_slice_window'} = $slice_window;
-        $slice_window->bind('<Destroy>' , sub { $self = undef }  );
+        my $slice_start = $cs_list->[0]->chr_start       || 0;
+        my $set_end     = $cs_list->[$#$cs_list]->chr_end || 0;
+        $slice_window->text_variable_ref('slice_start', $slice_start, 1);
+        $slice_window->text_variable_ref('set_end'    , $set_end    , 1);
+        $slice_window->action('runLace', sub{
+            my $sw = shift;
+            $sw->hide_me;
+            $self->run_lace_on_slice(${$sw->text_variable_ref('slice_start')}, ${$sw->text_variable_ref('slice_end')});
+        });
+        $slice_window->initialise();
+        $slice_window->draw();
     }
-    
-    $slice_window->deiconify;
-    $slice_window->raise;
-    $slice_window->focus;
+    $slice_window->show_me();
 }
-sub slice_min_ref{
-    my ($self, $search) = @_;
-    $self->{'_search_text'} = $search if $search;
-    return $self->{'_search_text'};
-}
-sub slice_max_ref{
-    my ($self, $context) = @_;
-    $self->{'_context_size'} = $context if $context;
-    return $self->{'_context_size'};    
-}
+
 sub set_note_ref{
     my ($self, $search) = @_;
     $self->{'_set_note'} = $search if $search;
