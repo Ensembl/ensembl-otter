@@ -1933,7 +1933,9 @@ sub features_to_XML {
     confess "No features" unless $features;
     
     my $offset = $chrstart - 1;
-    
+
+  #print STDERR $chrstart, "===================== chrstart\n";
+  
     my $xml = "<feature_set>\n";
     foreach my $sf (@$features) {
         $xml .= "  <feature>\n"
@@ -1952,7 +1954,7 @@ sub features_to_XML {
 sub slice_to_XML {
   my ($slice, $db, $writeseq) = @_;
 
-  #print STDERR "Slice $slice : $db\n";
+  print STDERR "Slice $slice : $db-----------------------\n";
 
   my $xmlstr = "";
 
@@ -1991,7 +1993,7 @@ sub slice_to_XML {
                my $class = new Bio::Otter::TranscriptClass(-name => $g->type);
                $tinfo->class($class);
             }
- 
+
             $annt->transcript_info($tinfo);
           }
 
