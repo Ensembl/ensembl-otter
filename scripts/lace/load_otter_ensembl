@@ -83,7 +83,7 @@ my $DEBUG = 0;
     my $analysis_priority = 5; # hold the deafulat value for the analysis priority
     my $author            = (getpwuid($<))[0];
     my $description       = undef;   # "This is a default description, created by $author";
-    my $dataset_name      = 'human'; # dataset to get from otter server
+    my $dataset_name      = undef; # dataset to get from otter server
     my $chromosome_name   = undef;
     my $set_name          = undef;
     my $delete            = undef;
@@ -105,6 +105,7 @@ my $DEBUG = 0;
         'sanger!'       => \$at_sanger,
         ) or useage();
     useage() if $help;
+    useage() unless $dataset;
     $agp_file           = $ARGV[0]; # takes the remaining argument as the filename to be read
 
     # some options checking to make sure there's some sanity

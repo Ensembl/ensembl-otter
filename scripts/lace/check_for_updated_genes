@@ -1,0 +1,103 @@
+#!/usr/local/bin/perl -w
+
+### check_for_updated_genes
+
+use strict;
+use Getopt::Long 'GetOptions';
+use Bio::Otter::Lace::Defaults;
+
+# Set STDOUT to autoflush
+$| = 1;
+
+{
+    my $dataset_name = undef;
+    
+    my $usage = sub { exec('perldoc', $0) };
+    Bio::Otter::Lace::Defaults::do_getopt(
+        #'h|help'     => \$usage,
+        'dataset=s'   => \$dataset_name,
+        ) or $usage->();
+    $usage->() unless $dataset_name;
+
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    my $otter_db = $ds->get_cached_DBAdaptor;
+    my $ss_list = $ds->get_all_SequenceSets;
+    foreach my $ss (@$ss_list) {
+        check_for_updated_genes($otter_db, $ss);
+    }
+}
+
+sub check_for_updated_genes {
+    my( $dbh, $ss ) = @_;
+    
+    my $ass_type = $ss->name;
+    my $sth = $dbh->prepare(q{
+        SELECT count(distinct(g.gene_id))
+        FROM assembly a
+          , exon e
+          , exon_transcript et
+          , transcript t
+          , gene g
+          , gene_stable_id gsid
+        WHERE a.contig_id = e.contig_id
+          AND e.exon_id = et.exon_id
+          AND et.transcript_id = t.transcript_id
+          AND t.gene_id = g.gene_id
+          AND g.gene_id = gsid.gene_id
+          AND a.type = ?
+        GROUP BY gsid.stable_id
+        });
+    $sth->execute($ass_type);
+    
+    my $total_genes = 0;
+    my $total_versions = 0;
+    my $max = 0;
+    while (my ($count) = $sth->fetchrow) {
+        $total_genes++;
+        $total_versions += $count;
+        if ($max) {
+            $max = $count if $count > $max;
+        } else {
+            $max = $count;
+        }
+    }
+    
+    my $mean = $total_genes == 0 ? 0 : $total_versions / $total_genes;
+    printf "%24s  %6d  %6d  %3.2f  %d\n",
+        $ass_type, $total_genes, $total_versions, $mean, $max;
+}
+
+
+
+__END__
+
+=head1 NAME - check_for_updated_genes
+
+    SELECT n.name, i.*
+    FROM assembly a
+      , exon e
+      , exon_transcript et
+      , transcript t
+      , gene g
+      , gene_stable_id gsid
+      , current_gene_info c
+      , gene_info i
+      , gene_name n
+    WHERE a.contig_id = e.contig_id
+      AND e.exon_id = et.exon_id
+      AND et.transcript_id = t.transcript_id
+      AND t.gene_id = g.gene_id
+      AND g.gene_id = gsid.gene_id
+      and gsid.stable_id = c.gene_stable_id
+      and c.gene_info_id = i.gene_info_id
+      and i.gene_info_id = n.gene_info_id
+      and i.timestamp > '2003-12-05'
+      AND a.type = 'chr20-9'
+    GROUP BY gsid.stable_id
+
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+

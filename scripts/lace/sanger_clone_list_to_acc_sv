@@ -1,0 +1,55 @@
+#!/usr/local/bin/perl -w
+
+### sanger_clone_list_to_acc_sv
+
+use strict;
+use Getopt::Long 'GetOptions';
+use Bio::Otter::Lace::Defaults;
+use Hum::Submission 'accession_from_sanger_name';
+
+{
+    my $dataset_name = undef;
+    
+    my $usage = sub { exec('perldoc', $0) };
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'   => $usage,
+        'dataset=s' => \$dataset_name,
+        ) or $usage->();
+    $usage->() unless $dataset_name;
+
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    my $otter_db = $ds->get_cached_DBAdaptor;
+    
+    my $get_sv = $otter_db->prepare(q{
+        SELECT embl_version
+        FROM clone
+        WHERE embl_acc = ?
+        });
+    
+    while (defined(my $sanger = <>)) {
+        chomp($sanger);
+        my $acc = accession_from_sanger_name($sanger);
+        $get_sv->execute($acc);
+        my ($sv) = $get_sv->fetchrow;
+        die "No SV for 'acc' ('$sanger')\n" unless $sv;
+        print "$acc.$sv\n";
+    }
+}
+
+
+
+
+
+__END__
+
+=head1 NAME - sanger_clone_list_to_acc_sv
+
+=head1 SYNOPSIS
+
+  sanger_clone_list_to_acc_sv -dataset <DATASET> <FILE_OF_SANGER_NAMES>
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+

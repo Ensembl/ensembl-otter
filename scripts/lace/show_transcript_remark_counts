@@ -3,8 +3,6 @@
 ### show_transcript_remark_counts
 
 use strict;
-
-use Carp;
 use Getopt::Long 'GetOptions';
 use Hum::Tracking;
 use Bio::Otter::Lace::Defaults;
@@ -26,8 +24,16 @@ $| = 1;
     my $ds = $cl->get_DataSet_by_name($dataset_name);
     my $otter_db = $ds->get_cached_DBAdaptor;
     my $ss_list = $ds->get_all_SequenceSets;
-    foreach my $ss (@$ss_list) {
-        check_for_transcript_remarks($otter_db, $ss);
+    if (@ARGV) {
+        my %set_names = map {$_, 1} @ARGV;
+        foreach my $ss (@$ss_list) {
+            next unless $set_names{$ss->name};
+            check_for_transcript_remarks($otter_db, $ss);
+        }
+    } else {
+        foreach my $ss (@$ss_list) {
+            check_for_transcript_remarks($otter_db, $ss);
+        }
     }
 }
 
@@ -45,7 +51,7 @@ sub check_for_transcript_remarks {
         WHERE a.contig_id = e.contig_id
           AND e.exon_id = et.exon_id
           AND et.transcript_id = t.transcript_id
-          and t.gene_id = g.gene_id
+          AND t.gene_id = g.gene_id
           AND a.type = ?
           AND g.type != 'obsolete'
         });
@@ -67,8 +73,8 @@ sub check_for_transcript_remarks {
         WHERE a.contig_id = e.contig_id
           AND e.exon_id = et.exon_id
           AND et.transcript_id = t.transcript_id
-          and t.gene_id = g.gene_id
-          and t.transcript_id = tsid.transcript_id
+          AND t.gene_id = g.gene_id
+          AND t.transcript_id = tsid.transcript_id
           AND tsid.stable_id = c.transcript_stable_id
           AND c.transcript_info_id = r.transcript_info_id
           AND a.type = ?

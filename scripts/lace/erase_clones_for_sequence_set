@@ -1,0 +1,123 @@
+#!/usr/local/bin/perl -w
+
+### erase_clones_for_sequence_set
+
+use strict;
+use Getopt::Long 'GetOptions';
+use Bio::Otter::Lace::Defaults;
+use Bio::Otter::Lace::PipelineDB;
+use Hum::Submission 'accession_from_sanger_name';
+
+{
+    my $dataset_name = undef;
+    my $set_name = undef;
+    
+    my $usage = sub { exec('perldoc', $0) };
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'   => $usage,
+        'dataset=s' => \$dataset_name,
+        'set=s'     => \$set_name,
+        ) or $usage->();
+    $usage->() unless $dataset_name and $set_name;
+
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    my $otter_db = $ds->make_EnsEMBL_DBAdaptor;
+    my $pipe_db = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($otter_db);
+
+    foreach my $dba ($otter_db, $pipe_db) {
+        # delete:
+        # input_id_analsis table in pipeline db
+        # assembly and sequence_set tables
+        delete_clones($dba, $set_name);
+        delete_input_id_analysis($dba);
+        delete_assembly($dba, $set_name);
+    }
+}
+
+sub delete_clones {
+    my( $dba, $set_name ) = @_;
+    
+    warn ref($dba->_obj), "\n";
+    my $list_clone_db_ids = $dba->prepare(q{
+        SELECT g.clone_id
+        FROM assembly a
+          , contig g
+        WHERE a.contig_id = g.contig_id
+          AND a.type = ?
+        });
+    $list_clone_db_ids->execute($set_name);
+    my $clone_aptr = $dba->get_CloneAdaptor;
+    while (my ($clone_dbID) = $list_clone_db_ids->fetchrow) {
+        my $clone = $clone_aptr->fetch_by_dbID($clone_dbID);
+        printf STDERR "Deleting %s %s\n", $clone->embl_id, $clone->embl_version;
+        $clone_aptr->remove($clone);
+    }
+}
+
+sub delete_input_id_analysis {
+    my( $dba ) = @_;
+    
+    # Check that this is a pipeline database
+    return unless $dba->can('get_AnalysisAdaptor');
+
+    my $ana_daptr = $dba->get_AnalysisAdaptor;
+    my $input = $ana_daptr->fetch_by_logic_name('SubmitContig');
+    my $ana_id = $input->dbID;
+    
+    my $sth = $dba->prepare(q{
+        SELECT input_id
+        FROM input_id_analysis i
+        LEFT JOIN contig g
+          ON i.input_id = g.name
+        WHERE i.analysis_id = ?
+          AND g.name is null
+        });
+    eval{ $sth->execute($ana_id); };
+    return if $@;
+    
+    my $delete = $sth->prepare(q{
+        DELETE input_id_analysis
+        WHERE input_id = ?
+          AND analysis_id = ?
+        });
+    
+    while (my ($id) = $sth->fetchrow) {
+        $delete->execute($id, $ana_id);
+    }
+}
+
+sub delete_assembly {
+    my( $dba, $name ) = @_;
+    
+    my $sth = $dba->prepare(q{
+        DELETE FROM assembly
+        WHERE type = ?
+        });
+    $sth->execute($name);
+    
+    $sth = $dba->prepare(q{
+        DELETE FROM sequence_set
+        WHERE assembly_type = ?
+        });
+    $sth->execute($name);
+}
+
+
+__END__
+
+=head1 NAME - erase_clones_for_sequence_set
+
+=head1 DESCRIPTION
+
+Useful if you accidentally load a sequence_set
+into the wrong database.
+
+=head1 SYNOPSIS
+
+    erase_clones_for_sequence_set -dataset <DATASET_NAME> -set <SEQUENCE_SET_NAME>
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
