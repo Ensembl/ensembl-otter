@@ -25,7 +25,7 @@ $| = 1;
   my $dset      = $client->get_DataSet_by_name($dataset);    # Bio::Otter::Lace::DataSet
   my $otter_db  = $dset->get_cached_DBAdaptor;               # Bio::EnsEMBL::Containerr
 
-  my ($type, $chrom, $geneAd, $sliceAd, $slice, $tiles, $gene);
+  my ($chrom, $geneAd, $sliceAd, $slice, $tiles, $gene);
 
   unless ( @a_types ){
 
@@ -46,13 +46,13 @@ $| = 1;
   my $match_without_stop           = 0;
   my $match_if_without_stop_at_end = 0;
   my $copy                         = 0;
+  my $type;
+  my $rfile = "Redundant_transcripts_in_".$dataset;
+  open (R, ">$rfile") || die $!;
 
   foreach $type ( @a_types ) {
 
     print STDERR "\nExamining genes on '$type'\n";
-
-    my $file = "Redundant_transcript_".$dataset."_$type";
-    open (R, ">$file") || die $!;
 
     $otter_db->assembly_type($type); # replace the default sequence set setting
 
@@ -84,7 +84,7 @@ $| = 1;
 
       # first remove redundant transcript (ie, all exons (coding and nocoding) are identical) of a gene
       # $flag indicates if $gene needs update
-      my ($all_trans, $flag) = is_redundant($gene);
+      my ($all_trans, $flag) = is_redundant($gene, $type);
 
       # now working on transcript w/o translation
       if ( scalar @$all_trans > 1 ){
@@ -118,7 +118,7 @@ $| = 1;
 	      my ($start_Exon, $end_Exon, $start_Exon_start, $ATG_site, $start_Exon_end, $end_Exon_start, $STOP_site, $end_Exon_end) =
 	         coordinate_munging($t, $trans_CDS, $gene);
 
-	      if ( $start_Exon_start && $ATG_site && $start_Exon_end) {
+	      if ( $start_Exon ) {
 		$copy++;
 		
 		my $trln = make_new_translation($t, $start_Exon, $end_Exon, $ATG_site, $start_Exon_start, $STOP_site, $end_Exon_start, $otter_db);
@@ -139,7 +139,8 @@ $| = 1;
     		               . "start_Exon_start ATG start_Exon_end end_Exon_start STOP end_Exon_end\n"
              	               . "$start_Exon_start $ATG_site $start_Exon_end $end_Exon_start $STOP_site $end_Exon_end\n"
                                . "==== copied from ".$trans_CDS->transcript_info->name."\n"
-		               . $trans_CDS->translation->start_Exon->start."\t".$trans_CDS->translation->start."\t".$trans_CDS->translation->start_Exon->end."\t"
+		               . $trans_CDS->translation->start_Exon->start."\t".$trans_CDS->translation->start."\t"
+			       . $trans_CDS->translation->start_Exon->end."\t"
 		               . $trans_CDS->translation->end_Exon->start."\t".$trans_CDS->translation->end."\t"
 			       . $trans_CDS->translation->end_Exon->end."\n"
 		               . $t->translation->start_Exon."\n"
@@ -187,7 +188,8 @@ $| = 1;
 	      #  undo new translaton obj if $chkpnt is undef
 	      #-----------------------------------------------
 	      if ( !$chkpnt ){
-		
+		$t->flush_Translation;
+		print "Killed new translation obj ". $t->transcript_info->name . " (". $gene->stable_id. ")\n";
 	      }
 	    }
 	  }
@@ -210,7 +212,10 @@ $| = 1;
     my $outfile = $dataset."_data_error";	
     open (my $f, ">$outfile") || die $!;
     print $f $data_error;
+    warn "Check also the file $outfile\n";
   }
+
+  warn "\n\n* * The list of redundant transcritps is in $rfile* *\n\n" if (-s $rfile != 0);
 }
 
 sub trans_info {
@@ -247,64 +252,157 @@ sub make_new_translation {
   return $trln;
 }
 
-
 sub is_redundant {
-  my $gene = shift;
+  my ($gene, $type) = @_;
 
   my $trans_list = $gene->get_all_Transcripts;
-  my (%exonlist_trans, %trans_h);
+  my (%exonlist_transName, %name_trans, %trans_h);
 
   @$trans_list = sort @$trans_list;
 
   for (my $i = 0; $i < scalar @{$trans_list}; $i++ ){
     my @exon_list = get_exon_coords($trans_list->[$i]);
     my $exons = join('-', @exon_list);
-    push(@{ $exonlist_trans{$exons} }, $trans_list->[$i]);
+
+    push(@{ $exonlist_transName{$exons} }, $trans_list->[$i]->transcript_info->name);
+    $name_trans{$trans_list->[$i]->transcript_info->name} = $trans_list->[$i];
+
     $trans_h{$trans_list->[$i]} = $i;  # record index of transcript in array
   }
 
   my $count = @$trans_list;
-  #warn "ORIGINAL: @$trans_list";
 
-  # remove only redundant transcript which has no translation (should be no redundant ones that have translation)
-  foreach my $k ( keys %exonlist_trans ){
-    my $num = scalar @{$exonlist_trans{$k}};	
+  # remove only redundant transcript which has no translation (also takes care of redundant ones that have translation)
+  foreach my $k ( keys %exonlist_transName ){
+    my $num = scalar @{$exonlist_transName{$k}};	
 
     unless ( $num == 1 ){
+      my $index;
       my $delete = 0;
+      my $ref_t;
+      my $red_t;
 
-      foreach my $ea ( sort @{$exonlist_trans{$k}} ){
+      my @rev_nameList = reverse sort @{$exonlist_transName{$k}}; # intend to remove higher number transcript
+      print "\nNAME LIST: @rev_nameList\n";
+	
+      foreach my $ea ( @rev_nameList ){
+
+	# $ea is name of transcript obj
+	if ( $name_trans{$ea}->translation ){
+	  print $ref_t = $name_trans{$ea};
+	  next;
+	}
 
 	# in case > 1 transcripts do not have translation, leave only 1
-	if ( !$ea->translation && $num != 1 && $delete == 0 ){
+	if ( !$name_trans{$ea}->translation && $num != 1 && $delete == 0 ){
 	  $num--;
-	  #warn "----- redundant $ea index ($trans_h{$ea})";
-	  splice(@$trans_list, $trans_h{$ea}, 1);      #  single redundant transcript
-	  print R "Redundant transcript: ". $ea->transcript_info->name."\t".$gene->stable_id."\t".$gene->gene_info->name->name."\n";
-
+	  print "----- REMOVE redundant $ea index ($trans_h{$name_trans{$ea}}) ". $name_trans{$ea}->transcript_info->name."\n";
+	  splice(@$trans_list, $trans_h{$name_trans{$ea}}, 1);      #  single redundant transcript
+	  print R "$type - redundant transcript: $ea\t".$gene->stable_id."\t".$gene->gene_info->name->name."\n";
+	  $red_t = $name_trans{$ea};
+	  $index = $trans_h{$name_trans{$ea}};
 	  $delete++;
 	}
-	if ( !$ea->translation && $num != 1 && $delete >= 1 ){
+	elsif ( !$name_trans{$ea}->translation && $num != 1 && $delete >= 1 ){
 	  $num--;
-	  #warn "----- redundant $ea index ($trans_h{$ea}-1)";
-	  splice(@$trans_list, $trans_h{$ea}-1, 1);    #  > 1 redundant transcripts
-	  print R "Redundant transcript: ". $ea->transcript_info->name."\t".$gene->stable_id."\t".$gene->gene_info->name->name."\n";
+	  print "----- REMOVE redundant $ea index ($trans_h{$name_trans{$ea}}-1)". $name_trans{$ea}->transcript_info->name."\n";
+	  splice(@$trans_list, $trans_h{$name_trans{$ea}}-1, 1) if $trans_h{$name_trans{$ea}} > $index;   #  > 1 redundant transcripts
+	  splice(@$trans_list, $trans_h{$name_trans{$ea}},   1) if $trans_h{$name_trans{$ea}} < $index;
+	  print R "$type - redundant transcript: $ea\t".$gene->stable_id."\t".$gene->gene_info->name->name."\n";
+	  $red_t = $name_trans{$ea};
 	}
+	elsif ( !$ref_t && $red_t ) {
+	  $ref_t = $name_trans{$ea};
+	}
+      }
+
+      # add remark to $gene and its transcripts if associated transcript obj is deleted
+      # also note that there are cases where redundant transcripts have different translation annotations,
+      # flag as dubious annotation?
+
+      if ( $ref_t && $red_t ){
+	add_gene_trans_remark($gene, $ref_t, $red_t);
+      }
+      else {
+	print R "$type - check translation annotations of redundant transcripts: @rev_nameList (".$gene->gene_info->name->name.")\n";
       }
     }
   }
 
-  #warn @$trans_list;
+  print "NEW LIST: \n";
+  foreach (@$trans_list){
+    print $_->transcript_info->name, "\n";
+  }
 
   # Is trans_list changed? If yes, return $flag to indicate $gene needs update
   my $flag = 1;
   if ( $count ne scalar @$trans_list ){
+    warn "TRANS LIST changed";
     return $trans_list, $flag;
   }
   else {
     return $trans_list;
   }
 }
+
+sub add_gene_trans_remark {
+  my ($gene, $ref_t, $red_t) = @_;
+
+  my $remark = Bio::Otter::GeneRemark->new;
+
+  print $gene->stable_id."\n";
+
+  # for transcript obj to delete, ensure that it has no Remark and/or Evidence info attached:
+
+  if ( $ref_t->translation ) {
+
+    # move evidence over to the transcript with CDS if it has not one but the redundant transcript to delete has one
+    unless ( $ref_t->transcript_info->evidence ) {
+      $ref_t->transcript_info->evidence($red_t->transcript_info->evidence) if $red_t->transcript_info->evidence;
+    }
+
+    unless ( $ref_t->transcript_info->remark ) {
+      $ref_t->transcript_info->remark($red_t->transcript_info->remark) if $red_t->transcript_info->remark;
+    }
+
+    print "CDS: ".$ref_t." ".$ref_t->transcript_info->name."\n";
+    my $rem = "Annotation_remark- ".$red_t->transcript_info->name." is deleted as it is redundant to ".$ref_t->transcript_info->name.
+              ". Its evidence/remark is carried over to ". $ref_t->transcript_info->name;
+    print $rem, "\n";
+
+    $remark->remark($rem);
+    $gene->gene_info->remark($remark);
+  }
+
+  else {
+
+    if ( $red_t->transcript_info->evidence && !($ref_t->transcript_info->evidence) ){
+      print $red_t->transcript_info->name. " has EVIDENCE\n";
+
+      #  move evidence/remark from transcript with higher number to the one with lower number and delete the higher number one
+      #  attach also its evidence if available
+      #  this is trying to keep the numbering of transcripts
+
+      $ref_t->transcript_info->evidence( $red_t->transcript_info->evidence );
+
+      print "MOVE OVER\n";
+      my @evidence = map $_->name, $ref_t->transcript_info->evidence;
+      print "NEW: @evidence\n";
+    }
+
+    if ( $red_t->transcript_info->remark && !($ref_t->transcript_info->remark) ){
+      $ref_t->transcript_info->remark( $red_t->transcript_info->remark );
+    }
+
+    my $rem = "Annotation_remark- ".$red_t->transcript_info->name." is deleted as it is redundant to ".$ref_t->transcript_info->name.
+              ". Its evidence/remark is carried over to ". $ref_t->transcript_info->name;
+    print $rem, "\n";
+
+    $remark->remark($rem);
+    $gene->gene_info->remark($remark);
+  }
+}
+
 
 sub coordinate_munging {
  ## my ($trans, $trans_CDS, $gene, %array_order) = @_;
@@ -329,7 +427,10 @@ sub coordinate_munging {
       my $end_Exon_end   = $start_Exon_end   = $e->end;
 
       return ($start_Exon, $end_Exon, $start_Exon_start, get_ATG_site_coord($trans_CDS),
-	      $start_Exon_end, $end_Exon_start, get_STOP_site_coord($trans_CDS), $end_Exon_end);
+	      $start_Exon_end, $end_Exon_start, get_STOP_site_coord($trans_CDS), $end_Exon_end) if
+              $start_Exon && $end_Exon && $start_Exon_start && get_ATG_site_coord($trans_CDS) &&
+	      $start_Exon_end && $end_Exon_start && get_STOP_site_coord($trans_CDS) && $end_Exon_end;
+	
       last;
     }
 
@@ -360,7 +461,9 @@ sub coordinate_munging {
       my $end_Exon_end   = $e->end;
 
       return ($start_Exon, $end_Exon, $start_Exon_start, $ATG_site, $start_Exon_end,
-	      $end_Exon_start, get_STOP_site_coord($trans_CDS), $end_Exon_end);
+	      $end_Exon_start, get_STOP_site_coord($trans_CDS), $end_Exon_end) if
+	      $start_Exon && $end_Exon && $start_Exon_start && $ATG_site &&
+	      $start_Exon_end && $end_Exon_start && get_STOP_site_coord($trans_CDS) && $end_Exon_end;
       last;
     }
   }
@@ -399,15 +502,15 @@ sub otter_to_XML_to_otter {
   $temp->name("copy_translation.$$.xml");
   my $w_fh = $temp->write_file_handle;
 
-  # using Bio::Otter::Converter::path_to_XML to do XML conversion
-  # To update/modified a gene, the API cannot write to otterdb directly and needs XML converter,
-  # which assigns a new dbID and an incremented version number of the existent gene that needs update
-  # to a copied gene (in XML format). These dbIDs will have same gene_stable_id.
-  # Ie, the modified version out of XML converter is the $xml_gene (based on $gene);
-  # the original version of the same gene is $db_gene
-  # The save_new_gene() routine is then able to make the distintion between the original copy of gene
-  # ($db_gene) and the modified version of the same gene ($xml_gene) and save the modified version to
-  # the database.
+  #   using Bio::Otter::Converter::path_to_XML to do XML conversion
+  #   To update/modified a gene, the API cannot write to otterdb directly and needs XML converter,
+  #   which assigns a new dbID and an incremented version number of the existent gene that needs update
+  #   to a copied gene (in XML format). These dbIDs will have same gene_stable_id.
+  #   Ie, the modified version out of XML converter is the $xml_gene (based on $gene);
+  #   the original version of the same gene is $db_gene
+  #   The functions in save_new_gene() routine are then able to make the distintion between the original copy of gene
+  #   ($db_gene) and the modified version of the same gene ($xml_gene) and save the modified version to
+  #   the database.
 
   print $w_fh
     "<otter>\n<sequence_set>\n"
@@ -422,13 +525,13 @@ sub otter_to_XML_to_otter {
   my $anal = $otter_db->get_AnalysisAdaptor->fetch_by_logic_name('otter');
   $xml_gene->analysis($anal);
 
+  # effective changes (for debug)
   #warn  "\n". $xml_gene->stable_id;
   #warn "XG ".scalar @{$xml_gene->get_all_Transcripts};
   #warn "DG ".scalar @{$db_gene->get_all_Transcripts};
 
   save_new_gene($otter_db, $geneAd, $db_gene, $xml_gene, $slice);
 }
-
 
 # function from script realign_offtrack_genes
 sub save_new_gene {
@@ -451,8 +554,6 @@ sub save_new_gene {
   }
 }
 
-
-
 __END__
 
 =head1 NAME - copy_translation
@@ -465,18 +566,22 @@ copy_translation [-ds <dataset>] [-t <assembly_type>] -v > output_filename
 
 =head1 DESCRIPTION
 
-On chromosome 14, there are transcripts that do not have corresponding translations due to annotators who made only
-one of the transcripts (if multiple) of a gene into a tranlation object.
-This script corrects the problem by copying information of start_Exon, ATG site, end_Exon and STOP sites, when appropriate, from transcripts having UTR and CDS annotations.
+On chromosome 14, there are transcripts that do not have corresponding translations due to annotators creating only one tranlation object for
+one of the transcripts (if multiple) of a gene.
+This script corrects the problem by copying information of start_Exon, ATG site, end_Exon and STOP sites, when appropriate, from transcripts having UTR and CDS annotations, if the copied-over info leads to non-stop translation. Stop codon at end of translation is allowed.
+
+Redundant transcripts spotted by the script will be removed. Should there be any evidence/remark attached to the transcript to delete than its info is carried over to the transcript to keep.
+
+The script, if info is found, also creates 2 addtional files:
+(1) $dataset."_data_error,
+(2) Redundant_transcripts_in_".$dataset
+
+where $dataset is eg, test_human.
+(1) spots genes that have exons not mapped to chromosome coordinates.
+(2) list of redundancies of the format, eg,chr14 - redundant transcript: AL136501.2-002    OTTHUMG00000028646      GALC
+
 
 =head1 AUTHOR
 
 Chao-Kung Chen B<email> ck1@sanger.ac.uk
 
-      #test difference betw. $gene and $db_gene
-    #  if (scalar @{$gene->get_all_Transcripts} != scalar @{$db_gene->get_all_Transcripts}){
-#	warn "\n".$gene->stable_id;
-#	warn "_XG ".scalar @{$gene->get_all_Transcripts};
-#	warn "_DG ".scalar @{$db_gene->get_all_Transcripts};
-#	otter_to_XML_to_otter($chrom->name, $slice->chr_start, $slice->chr_end, $type, $tiles, $otter_db, $geneAd, $db_gene, $gene, $slice);
-#      }
