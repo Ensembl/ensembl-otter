@@ -70,6 +70,9 @@ sub new {
 
 =head2 comments
  
+For each block of CC lines pass a reference to an array of the text
+lines. Each block will be separated by an XX line.
+
 =cut
 
 #Used
@@ -155,17 +158,14 @@ sub embl_setup {
     my $clone_name = $self->clone_name or confess "clone_name not set";
     my $comments_ref = $self->comments;
     
-    # EMBL Division    
+    # EMBL Division, species    
     my $division;
     my ($otter_division, $species) = $self->get_EMBL_division_from_otter_species;
     unless ($division = $self->division) {
         $division = $otter_division;
     }
     confess "division not set" unless $division;
-
-    # Species
     
-
     my $id = $embl->newID;
     $id->entryname($entry_name);
     $id->dataclass($data_class);
@@ -240,9 +240,6 @@ sub embl_setup {
         }
     }
 
-    #$pdmp->add_Headers($embl, $contig_map);
-    #$embl->newXX;
-
     # Feature table header
     $embl->newFH;
 
@@ -313,8 +310,15 @@ sub embl_setup {
 
 =head2 get_EMBL_division_from_otter_species
 
+Using the Bio::Otter::Lace::Dataset->species, returns the 
+EMBL division code ('HUM', 'VRT' etc) and the lowercase
+species name. Confesses if the species retrieved doesnt
+correspond to one of those known about (i.e. hardcoded in
+the module).
+
 =cut
 
+    #Used
     sub get_EMBL_division_from_otter_species {
         my( $self ) = @_;
 
@@ -337,6 +341,7 @@ Confesses if there is more than one Contig in the Clone.
 
 =cut
 
+#Used
 sub add_sequence_from_otter {
     my ( $self, $embl ) = @_;
 
@@ -350,16 +355,10 @@ sub add_sequence_from_otter {
    $embl->newSequence->seq($contigs->[0]->seq);
 }
 
-
 sub references {
     my ( $self, $ref ) = @_;
-
-}
-
-
-sub CC_paragraphs {
-    my ( $self, $CC ) = @_;
-
+    
+    confess "Needs to be implemented";
 }
 
 #Used
@@ -507,6 +506,16 @@ sub clone_lib {
 }
 
 #Used
+sub contig_length {
+    my ( $self, $value ) = @_;
+    
+    if ($value) {
+        $self->{'_bio_otter_embl_factory_contig_length'} = $value;
+    }
+    return $self->{'_bio_otter_embl_factory_contig_length'};
+}
+
+#Used
 sub clone_name {
     my ( $self, $value ) = @_;
     
@@ -514,45 +523,6 @@ sub clone_name {
         $self->{'_bio_otter_embl_factory_clone_name'} = $value;
     }
     return $self->{'_bio_otter_embl_factory_clone_name'};
-}
-
-
-=head2 Embl
-
-Get/set method for the Hum::EMBL object being constructed by the factory object.
-Initially set by the make_embl method.
-     
-    my $embl = Hum::EMBL->new;
-    $embl_factory->EMBL($embl);
-
-    my $embl = $embl_factory->EMBL;
-
-=cut
-
-#Shall we keep this???
-sub EMBL {
-    my ( $self, $embl ) = @_;
-    
-    if ($embl) {
-        $self->{'_bio_otter_embl_factory_embl'} = $embl;
-    }
-    return $self->{'_bio_otter_embl_factory_embl'};
-}
-
-=head2 contig_length
-
-Get/set method for the contig_length of the Slice_contig on the tiling path 
-
-=cut
-
-#Shall we keep this???
-sub contig_length {
-    my ( $self, $contig_length )  = @_;
-
-    if ($contig_length) {
-        $self->{'_bio_otter_embl_factory_contig_length'} = $contig_length;
-    }
-    return $self->{'_bio_otter_embl_factory_contig_length'};
 }
 
 =head2 Slice
@@ -637,6 +607,7 @@ g)  Returns the populated Hum::EMBL object
 
 =cut
 
+#Used
 sub make_embl_ft {
     my ( $self, $acc, $embl, $sequence_version ) = @_;
 
@@ -707,6 +678,7 @@ Confesses if nothing is returned.
 
 =cut
 
+#Used
 sub get_chromosome_name_from_otter {
     my ( $self ) = @_;
     
@@ -728,6 +700,7 @@ previously set.
 
 =cut
 
+#Used
 sub _cache_annotated_clone {
     my ( $self ) = @_;
     
@@ -754,6 +727,7 @@ _cache_annotated_clone
 
 =cut
 
+#Used
 sub annotated_clone {
     my ( $self ) = @_;
     
@@ -773,6 +747,7 @@ Warns if no CloneRemarks are fetched for the clone, returning undef.
 
 =cut
 
+#Used
 sub get_description_from_otter {
 	my ( $self ) = @_;
     
@@ -806,6 +781,7 @@ Warns if no Keyword objects are fetched for the clone, returning undef.
 
 =cut 
 
+#Used
 sub get_keywords_from_otter {
 	my ( $self ) = @_;
     
@@ -843,6 +819,7 @@ These are stored in Otter as SimpleFeatures on the Slice
 
 =cut
 
+#Used
 sub _do_polyA {
     my ( $self, $slice, $set ) = @_;
     
