@@ -153,6 +153,7 @@ sub store_stable {
             });
         $get_max->execute($sid);
         my ($max) = $get_max->fetchrow;
+        $max ||= 0;
         
         my $this_version = $obj->version;
         $this_version = $max if $max > $this_version;
