@@ -346,53 +346,6 @@ sub search_window{
     $self->{'search_entry'}->focus;
 }
 
-sub OLD_search{
-    my ($self , $search_type ) = @_ ;
-    
-    ## create a new resultSet and pass it to dataset in query
-    ## if dataset  gives us results 
-    ##      create new  search result window  
-    ## else display message 
-    
-    $search_type = 'locus' unless defined $search_type ; # defaults to locus search 
-    
-    my $rs = Bio::Otter::Lace::ResultSet->new ; 
-    my $search = $self->{'search_entry'}->get ;
-    
-    my  @search_names = split /\s+/ ,  $search  ;
-    my $number_of_clones ;
-    if ($search_type eq 'locus' ){
-        print STDERR "searching for locus @search_names " ;
-        $number_of_clones = $self->DataSet->fetch_ResultSet_containing_Locus( $rs , \@search_names ) ;
-    }
-    else{
-        print STDERR "searching for clones  @search_names";
-        $number_of_clones = $self->DataSet->fetch_ResultSet_containing_CloneName( $rs , \@search_names ) ;
-    }
-       
-    
-    if ($number_of_clones > 0){
-        my $top = $self->canvas->toplevel->Toplevel(  -title  =>  'Search results for ' . $self->{'search_entry'}->get );
-        my $sn = CanvasWindow::SequenceNotes::SearchedSequenceNotes->new($top);
-
-        $sn->name('Search Results'); ## do I need to change this to an ss name ? 
-        $sn->Client($self->Client);
-
-        $sn->ResultSet($rs);
-        $sn->SequenceSetChooser($self);
-        $sn->initialise;
-        $sn->draw;
-        $top->raise ;
-        $self->add_SequenceNotes($sn) ;
-    }else{
-        ## send mesasage to main window
-        $self->message("no clones matched your search criteria") ;
-    }
-    my $search_window = $self->{'_search_window'} ;
-
-    $search_window->withdraw();
-
-}
 
 sub search{
     my ($self , $search_type) = @_ ;
