@@ -1,7 +1,7 @@
 
 # Extra tables used by Sanger otter/lace system
 
-# sequence set table for pipeline and otter databses 
+# sequence set table for pipeline and otter databases 
 
 create table sequence_set (
     assembly_type varchar (20) NOT NULL,
@@ -57,6 +57,7 @@ create table current_contig_annotation_status (
 );
 
 
+# Private contigs do not get copied to the external VEGA site.
 # This should be part of the contig table, but is not part of the core schema
 # Maybe: alter table contig add column is_private ENUM('Y', 'N') DEFAULT 'N';
 
@@ -66,25 +67,42 @@ create table private_contig {
     PRIMARY KEY(contig_id)
 }
 
-create table contig_vega_status (
-    contig_vega_status_id  INT(10) unsigned DEFAULT '0' NOT NULL  auto_increment,
-    contig_id INT(10) unsigned DEFAULT '0' NOT NULL,
-    author_id INT(10) unsigned DEFAULT '0' NOT NULL,
-    vega_status_date DATETIME,
-    vega_status ENUM(
-        'unpublished',
-        'marked_for_publication',
-        'published'
-        ),
+create table vega_snap {
+    vega_snap_id    INT(10) unsigned DEFAULT '0' NOT NULL  auto_increment,
+    vega_snap_date  DATETIME,
+    author_id       INT(10) unsigned DEFAULT '0' NOT NULL,
     
-    PRIMARY KEY (contig_vega_status_id),
-    KEY cln_stat_date (contig_id, vega_status, status_date)
-);
+    primary key (vega_snap_id)
+    key (vega_snap_date)
+}
 
-create table current_contig_vega_status (
-    contig_vega_status_id  INT(10) unsigned DEFAULT '0' NOT NULL,
-    contig_id INT(10) unsigned DEFAULT '0' NOT NULL,
+create table vega_set_snap {
+    vega_snap_id    INT(10) unsigned DEFAULT '0' NOT NULL,
+    set_snap_id     INT(10) unsigned DEFAULT '0' NOT NULL,
     
-    PRIMARY KEY (contig_status_id),
-    KEY (contig_id)
-);
+    primary key (vega_snap_id, set_snap_id)
+}
+
+create table set_snap {
+    set_snap_id     INT(10) unsigned DEFAULT '0' NOT NULL  auto_increment,
+    set_snap_date   DATETIME,
+    author_id       INT(10) unsigned DEFAULT '0' NOT NULL,
+    is_current      ENUM('Y', 'N') DEFAULT 'N' NOT NULL,
+    
+    primary key (set_snap_id)
+    key (set_snap_date)
+}
+
+create table set_snap_gene {
+    set_snap_id     INT(10) unsigned DEFAULT '0' NOT NULL,
+    gene_id         INT(10) unsigned DEFAULT '0' NOT NULL,
+    
+    primary key (set_snap_id, gene_id)
+}
+
+create table set_snap_clone_info {
+    set_snap_id     INT(10) unsigned DEFAULT '0' NOT NULL,
+    clone_info_id   INT(10) unsigned DEFAULT '0' NOT NULL,
+    
+    primary key (set_snap_id, clone_info_id)
+}
