@@ -34,7 +34,7 @@ use Getopt::Long 'GetOptions';
         -HOST   => $host,
         );
     
-    my $mw = GenomeCanvas::MainWindow->new;
+    my $mw = CanvasWindow::MainWindow->new;
     $mw->title($fpc);
     my $gc = GenomeCanvas->new($mw);
     my $chooser = GenomeCanvas::Band::SeqChooser->new;
