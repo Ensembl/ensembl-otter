@@ -9,7 +9,9 @@ use GenomeCanvas::Band::Plot;
 use GenomeCanvas::DensityBand::RepeatFeature;
 use GenomeCanvas::DensityBand::Gene;
 use GenomeCanvas::Band::Gene;
+use GenomeCanvas::Band::SNP;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
+use Bio::EnsEMBL::ExternalData::SNPSQL::WebSNPAdaptor;
 use Hum::Submission 'prepare_statement'; # For Sanger sequence names
 use Getopt::Long 'GetOptions';
 
@@ -29,6 +31,7 @@ use Getopt::Long 'GetOptions';
     my $sanger_names = 0;
     my $landscape = 1;
     my $portrait = 0;
+    my $gene_labels = 1;
     GetOptions(
         'host=s'        => \$host,
         'db=s'          => \$db,
@@ -45,6 +48,7 @@ use Getopt::Long 'GetOptions';
         'sanger!'       => \$sanger_names,
         'landscape!'    => \$landscape,
         'portrait!'     => \$portrait,
+        'gene_labels!'  => \$gene_labels
         ) or die "Error processing command line options";
 
     if ($chr_start) {
@@ -85,6 +89,15 @@ use Getopt::Long 'GetOptions';
             -USER   => $user,
             -HOST   => $host,
             );
+
+        # Add database for SNPs
+        my $snpdba = Bio::EnsEMBL::ExternalData::SNPSQL::WebSNPAdaptor->new(       
+            -dbname => 'snp110',
+            -host   => 'ecs1a',
+            -port   => '3306',
+            -user   => 'ensadmin',
+            ); 
+        $db->add_ExternalFeatureFactory($snpdba);
 
         $chr_name ||= $fpc;
         if ($chr_start and ! $chr_end) {
@@ -152,7 +165,7 @@ use Getopt::Long 'GetOptions';
         $gc->add_Band($plot);
 
         my $gene_names = GenomeCanvas::Band::Gene->new;
-        $gene_names->show_labels(0);
+        $gene_names->show_labels($gene_labels);
         $gene_names->label_type_color_list(
             [ 'Known',              'HUMACE-Known',             '#4169e7' ],
             [ 'Novel CDS',          'HUMACE-Novel_CDS',         '#86ceff' ],
@@ -163,6 +176,11 @@ use Getopt::Long 'GetOptions';
         $gene_names->virtual_contig($vc);
         $gene_names->tiling_direction(1);
         $gc->add_Band($gene_names);
+
+        #my $snps = GenomeCanvas::Band::SNP->new;
+        #$snps->virtual_contig($vc);
+        #$snps->tiling_direction(-1);
+        #$gc->add_Band($snps);
 
         print STDERR "Rendering canvas\n";
         $gc->residues_per_pixel($scale);

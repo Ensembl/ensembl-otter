@@ -560,19 +560,19 @@ sub print_postscript {
     # Foreach row ...
     my( @ps_files );
     for (my $i = 0; $i < $vert_tile; $i++) {
-        my $h_num = $vert_tile == 1 ? '' : sprintf($h_format, $i + 1);
+        my $v_num = $vert_tile == 1 ? '' : sprintf($v_format, $i + 1);
         my $y = $bbox->[1] + ($i * $tile_height) - ($i * $canvas_tile_pad);
         
         # ... print each column
         for (my $j = 0; $j < $horiz_tile; $j++) {
             my $x = $bbox->[0] + ($j * $tile_width) - ($j * $canvas_tile_pad);
-            my $v_num = $horiz_tile == 1 ? '' : sprintf($v_format, $j + 1);
+            my $h_num = $horiz_tile == 1 ? '' : sprintf($h_format, $j + 1);
             my( $ps_file_name );
             if ($horiz_tile == 1 and $vert_tile == 1) {
                 $ps_file_name = "$file_root.ps";
             } else {
                 my $join = ($v_num && $h_num) ? '-' : '';
-                $ps_file_name = "$file_root-$v_num$join$h_num.ps";
+                $ps_file_name = "$file_root-$h_num$join$v_num.ps";
             }
             
 #            warn "\nps args =

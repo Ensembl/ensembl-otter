@@ -52,7 +52,7 @@ sub render {
     # Draw the plot where there is sequence
     $band->create_plot;
     
-    $band->draw_cpg_islands;
+    #$band->draw_cpg_islands;
     
     # Draw the axes on top of the plot
     $band->draw_plot_axes;
