@@ -136,7 +136,7 @@ sub get_all_Loci {
 sub list_Locus_names {
     my( $self ) = @_;
     
-    return sort {$a cmp $b} map $_->name, $self->get_all_Loci;
+    return sort {lc $a cmp lc $b} map $_->name, $self->get_all_Loci;
 }
 
 sub make_menu {

@@ -8,7 +8,7 @@ use Carp;
 use Tk::Dialog;
 use Tk::ROText;
 use Tk::LabFrame;
-use Tk::BrowseEntry;
+use Tk::ComboBox;
 use Hum::Ace::SubSeq;
 use Hum::Translator;
 use MenuCanvasWindow;
@@ -323,8 +323,11 @@ sub add_coordinate_pair {
 sub draw_subseq {
     my( $self ) = @_;
     
-    $self->add_subseq_exons($self->SubSeq);
-    $self->draw_translation_region;
+    my $sub = $self->SubSeq;
+    $self->add_subseq_exons($sub);
+    if ($sub->GeneMethod->is_coding) {
+        $self->draw_translation_region($sub);
+    }
 }
 
 sub initialize {
@@ -692,7 +695,9 @@ sub show_peptide {
 
     my( $peptext );
     unless ($peptext = $self->{'_pep_peptext'}) {
-        my $top = $self->canvas->Toplevel;
+        my $master = $self->canvas->toplevel;
+        my $top = $master->Toplevel;
+        $top->transient($master);
         my $font = $self->font;
         my $size = $self->font_size;
         
@@ -867,27 +872,20 @@ sub add_locus_rename_widget {
     eval{ $locus_name = $self->SubSeq->Locus->name };
     $locus_name ||= '';
     $self->{'_locus_name_variable'} = \$locus_name;
-
-    my $frame = $widget->Frame(
-        -borderwidth    => 6,
-        )->pack;
-    $frame->Label(
-        -text   => 'Locus:',
-        -anchor => 's',
-        -padx   => 6,
-        )->pack(-side => 'left');
     
-    my $be = $frame->BrowseEntry(
+    my $be = $widget->ComboBox(
         #-listwidth  => 18,
+        -listheight => 10,
+        -label      => 'Locus: ',
         -width      => 18,
         -variable   => \$locus_name,
         -text       => $locus_name,
         -exportselection    => 1,
-        -relief             => 'flat',
+        #-relief             => 'flat',
         -background         => 'white',
         -selectbackground   => 'gold',
         -font               => [$self->font, $self->font_size, 'normal'],
-        )->pack(-side => 'left');
+        )->pack;
     return $be;
 }
 
@@ -896,6 +894,10 @@ sub get_Locus_from_tk {
     
     my $name = ${$self->{'_locus_name_variable'}}
         or return;
+    if ($name =~ /\s/) {
+        $self->message("Error: whitespace in Locus name '$name'");
+        return;
+    }
     return $self->xace_seq_chooser->get_Locus($name);
 }
 
