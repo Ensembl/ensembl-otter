@@ -501,7 +501,7 @@ sub equals {
      my $obj_rnas = $obj->mRNA_start_not_found;
      my $obj_rnae = $obj->mRNA_end_not_found;
      if( $cdss != $obj_cdss ) {
-       print STDERR "FOUND DIFF : Cds start not found different $cdse : $obj_cdss\n";
+       print STDERR "FOUND DIFF : Cds start not found different $cdss : $obj_cdss\n";
        return 0;
      }
      if( $cdse != $obj_cdse ) {

@@ -222,7 +222,8 @@ sub toXMLString{
             if (defined($tran_low) && defined($tran_high) && 
                 $ex->end >= $tran_low && $ex->start <= $tran_high)
             {
-                my $frame = (3 - $ex->phase) % 3;
+                my $phase = $ex->phase;
+                my $frame = $phase == -1 ? 0 : (3 - $phase) % 3;
                 $str .= "        <frame>" . $frame . "</frame>\n";
             }
 	    $str .= "      </exon>\n";

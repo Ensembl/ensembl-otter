@@ -317,7 +317,9 @@ sub save_otter_slice {
     # ... and all the Loci attached to the SubSequences.
     $ace->raw_query('Follow Locus');
     $ace_txt .= $ace->raw_query('show -a');
-    $ace->find(Person => '*');  # For Authors
+    $ace->find(Person => '*');
+    
+    # List of people for Authors
     $ace_txt .= $ace->raw_query('show -a');
 
     # Then get the information for the TilePath
