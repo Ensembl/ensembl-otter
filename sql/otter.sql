@@ -72,6 +72,7 @@ create table gene_info (
 	gene_info_id int(10) unsigned DEFAULT '0' NOT NULL auto_increment,
 	gene_stable_id varchar(40),
 	author_id int(10) unsigned DEFAULT '0' NOT NULL,
+        is_known enum('true', 'false') not null default 'false',
         timestamp datetime DEFAULT '0000-00-00 00:00:00' NOT NULL,
         PRIMARY KEY (gene_info_id)
 );
