@@ -1,0 +1,47 @@
+#!/usr/local/bin/perl -w
+
+### fetch_assembly_tags
+
+use strict;
+use Hum::Submission 'prepare_statement';
+use Hum::AnaStatus::Sequence;
+
+foreach my $acc_sv (@ARGV) {
+    my ($acc, $sv) = $acc_sv =~ /(.+)\.(\d+)$/
+        or die "Can't parse '$acc_sv'";
+    my $seq_name = sanger_name($acc);
+    my $seq = Hum::AnaStatus::Sequence->new_from_seqname_sv($seq_name, $sv);
+    my $dir = $seq->analysis_directory;
+    my $humace_file = "$dir/rawdata/$seq_name.humace.ace";
+    print "$acc.$sv\t$humace_file\n";
+}
+
+
+sub sanger_name {
+    my( $acc ) = @_;
+
+    my $sth = prepare_statement(qq{
+        SELECT s.sequence_name
+        FROM project_acc a
+          , project_dump d
+          , sequence s
+        WHERE a.sanger_id = d.sanger_id
+          AND d.seq_id = s.seq_id
+          AND a.accession = '$acc'
+        ORDER BY s.seq_id DESC
+        LIMIT 1
+        });
+    $sth->execute;
+    my ($name) = $sth->fetchrow;
+    $name ||= $acc;
+    return $name;
+}
+
+__END__
+
+=head1 NAME - fetch_assembly_tags
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+

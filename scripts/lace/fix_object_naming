@@ -167,11 +167,11 @@ sub is_sequence_name {
 
         my $is_int_end = 0;
         my $int_end_gene_number = undef;
-        if ($old_gene_name =~ /[A-Za-z-](\d+)$/) {
-            print STDERR "  INT_END\n";
-            $is_int_end = 1;
-            $int_end_gene_number = $1;
-        }
+        #if ($old_gene_name =~ /[A-Za-z-](\d+)$/) {
+        #    print STDERR "  INT_END\n";
+        #    $is_int_end = 1;
+        #    $int_end_gene_number = $1;
+        #}
 
         # grep the gene number from the transcript if it wasn't in the name
         $gene_number ||= transcript_gene_number($gene);
@@ -211,7 +211,7 @@ sub is_sequence_name {
             $variant_number ||= '001';
 
             my $is_clone_based = name_is_clone_based($name, $all_clone_names);
-            if ($is_int_end and $gene_number == $int_end_gene_number) {
+            if ($is_int_end and $gene_number and $gene_number == $int_end_gene_number) {
                 $gene_number = undef if ! $gene_clone_root;
                 $fix_int_end = 1;
             }
