@@ -924,7 +924,7 @@ if($ngcl>1){
       my $is2e=$dg2s{$gsi};
       my %tsi;
       foreach my $eid (@s2e[$is2e]){
-	foreach my $tsi (@{$t2e{$gsi}->{$eid}}){
+	foreach my $tsi (@{$e2t{$gsi}->{$eid}}){
 	  $tsi{$tsi}++;
 	}
       }
