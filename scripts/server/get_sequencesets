@@ -6,6 +6,7 @@ use warnings;
 use CGI;
 use OtterDefs;
 use Bio::Otter::DBSQL::DBAdaptor;
+use Bio::Otter::Version;
 use Bio::Otter::ServerSide qw(error_exit
                               send_response
                               set_nph);
@@ -53,42 +54,65 @@ if ($@) {
 }
 
 my $auth_adapt = $odb->get_AuthorAdaptor();
-my $author_obj = $auth_adapt->fetch_by_name($author) || error_exit($q,"No author with name '$author'.");
+my ($author_obj, $saved_err);
+eval{
+    $author_obj = $auth_adapt->fetch_by_name($author);
+};
+if($@){
+    $saved_err  = $@;
+    eval{
+        $author_obj = $auth_adapt->fetch_by_name($OTTER_GLOBAL_ACCESS_USER);
+    };
+    if($@){
+        error_exit($q,"Failed to get an author.\n$@") unless $author_obj;
+    }
+}
+
+my $author_id  = $author_obj->dbID();
 my $a_email    = $author_obj->email();
-#print STDERR "$a_email $email";
-#error_exit($q,"'$author' doesn't have email '$email'") unless $email eq $a_email;
-
-
 
 # Needs some work.  change the xml or Bio::Otter::Lace::SequenceSet methods
 # sort out logic for sequence set access list
 # other stuff
 
 my $sth = $odb->prepare(q{
-            SELECT assembly_type
-              , description
-	      , analysis_priority
-              , vega_set_id
-            FROM sequence_set
-            WHERE hide != 'Y'
-            ORDER BY assembly_type
-            });
-$sth->execute;
-my $xml = qq`<otter>\n`;
-$xml   .= qq`  <sequencesets>\n`;
+    SELECT ss.assembly_type
+         , ss.description
+         , ss.analysis_priority
+         , ss.vega_set_id
+         , ss.hide
+         , ssa.access_level
+      FROM sequence_set ss 
+         , sequence_set_access ssa 
+         , access_author aa
+         , author a 
+     WHERE a.author_id = a.author_id
+       AND ss.assembly_type LIKE ssa.access_spec
+       AND aa.access_id = ssa.access_id
+       AND a.author_id = ?
+       });
+$sth->execute($author_id);
+
+
+my $xml = qq`<otter schemaVersion="$SCHEMA_VERSION" xmlVersion="$XML_VERSION">\n`;
+$xml   .= qq`  <dataset name="$dataset">\n`;
+$xml   .= qq`    <sequencesets>\n`;
 
 while(my $row = $sth->fetchrow_hashref){
-    #print "SequenceSet||@$row \n";
     my $name  = $row->{'assembly_type'};
-    $xml .= qq`    <sequenceset name="$name" hidden="0">\n`;
+    my $auth  = $row->{'access_level'} eq 'RW' ? 1 : 0;
+    my $hide  = $row->{'hide'}  eq 'Y' ? 1 : 0; 
+
+    $xml .= qq`      <sequenceset name="$name" hide="$hide" write_access="$auth">\n`;
     foreach my $p(qw/description analysis_priority vega_set_id/){
         # should escape xml here
-        $xml .= qq`      <$p>$row->{$p}</$p>\n`;
+        $xml .= qq`        <$p>$row->{$p}</$p>\n`;
     }
-    $xml .= qq`    </sequenceset>\n`;
+    $xml .= qq`      </sequenceset>\n`;
 }
 
-$xml .= qq`  </sequencesets>\n`;
+$xml .= qq`    </sequencesets>\n`;
+$xml .= qq`  </dataset>\n`;
 $xml .= qq`</otter>\n`;
 
 print $xml;
@@ -98,7 +122,13 @@ __END__
 
 =head1 NAME - get_sequencesets
 
+
+=head1 DESCRIPTION
+
+return xml for sequence sets
+
 =head1 AUTHOR
 
 Roy Storey,,,, B<email> rds@sanger.ac.uk
+
 
