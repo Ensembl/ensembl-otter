@@ -30,14 +30,7 @@ sub host {
     }
     return $self->{'_options'}{'client'}{'host'};
 }
-sub readonly_tag {
-    my( $self, $ro ) = @_;
-    
-    if ($ro) {
-        $self->{'_options'}{'client'}{'readonly_tag'} = $ro;
-    }
-    return $self->{'_options'}{'client'}{'readonly_tag'} || '';
-}
+
 sub port {
     my( $self, $port ) = @_;
     
@@ -180,22 +173,20 @@ sub lock_region_for_contig_from_Dataset{
 sub get_xml_for_contig_from_Dataset {
     my( $self, $ctg, $dataset ) = @_;
     
-    my $chr_name  = $ctg->[0]->chromosome->name;
-    my $start     = $ctg->[0]->chr_start;
-    my $end       = $ctg->[$#$ctg]->chr_end;
+    my ($chr_name, $start, $end) = $self->chr_start_end_from_contig($ctg);
     my $ss = $dataset->selected_SequenceSet
         or confess "no selected_SequenceSet attached to DataSet";
     
-    printf STDERR "Fetching data from chr %s %s-%s (lock='%s')\n",
-        $chr_name, $start, $end, $self->lock;
+    printf STDERR "Fetching data from chr %s %s-%s\n",
+        $chr_name, $start, $end;
     
     my $root   = $self->url_root;
     my $url = "$root/get_region?" .
         join('&',
 	     'author='   . uri_escape($self->author),
 	     'email='    . uri_escape($self->email),
-	     'lock='     . uri_escape($self->lock),
-             'hostname=' . uri_escape($self->client_hostname),
+	     #'lock='     . uri_escape($self->lock),
+             #'hostname=' . uri_escape($self->client_hostname),
 	     'dataset='  . uri_escape($dataset->name),
 	     'chr='      . uri_escape($chr_name),
 	     'chrstart=' . uri_escape($start),
@@ -222,6 +213,16 @@ sub get_xml_for_contig_from_Dataset {
     }
     
     return $xml;
+}
+
+sub chr_start_end_from_contig {
+    my( $self, $ctg ) = @_;
+    
+    my $chr_name  = $ctg->[0]->chromosome->name;
+    my $start     = $ctg->[0]->chr_start;
+    my $end       = $ctg->[$#$ctg]->chr_end;
+    
+    return($chr_name, $start, $end);
 }
 
 =pod 

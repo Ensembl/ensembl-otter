@@ -92,7 +92,6 @@ sub do_getopt {
     $DEFAULTS->{$CLIENT_STANZA}->{'author'}       ||= $this_user;
     $DEFAULTS->{$CLIENT_STANZA}->{'email'}        ||= $this_user;
     $DEFAULTS->{$CLIENT_STANZA}->{'write_access'} ||= 0;
-    $DEFAULTS->{$CLIENT_STANZA}->{'readonly_tag'} ||= '.ro';
     $DEFAULTS->{$CLIENT_STANZA}->{'pipeline'}       = 1 
 	unless defined($DEFAULTS->{$CLIENT_STANZA}->{'pipeline'});
 

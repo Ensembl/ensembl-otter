@@ -127,7 +127,7 @@ sub annotate_gene {
 	   $tran->transcript_info($info);
        };
        if ($@) {
-	   print "Coulnd't fetch info for " . $tran->stable_id . " [$@]\n";
+	   print "Couldn't fetch info for " . $tran->stable_id . " [$@]\n";
        }
    }
    
@@ -226,13 +226,7 @@ sub list_current_dbIDs_for_Contig {
 sub fetch_by_Slice{
     my ($self,$slice) = @_;
 
-    #my @genes = @{$self->_fetch_by_Slice($slice)};
-
     my $genes = $slice->get_all_Genes;
-
-    #my @genes = @{$self->SUPER::fetch_all_by_slice($slice)};
-    #my @genes = @{$self->_fetch_by_Slice($slice)};
-
 
     # Discard non-current versions of genes
     my %genes;
@@ -298,70 +292,6 @@ sub fetch_by_Slice{
     }
 
     return $latest_genes;
-}
-
-sub _fetch_by_Slice {
-  my ( $self, $slice) = @_;
-
-  my @out;
-
-  my $mapper = $self->db->get_AssemblyMapperAdaptor->fetch_by_type
-    ( $slice->assembly_type() );
-
-  $mapper->register_region( $slice->chr_name(),
-			    $slice->chr_start(),
-			    $slice->chr_end());
-  
-  my @cids = $mapper->list_contig_ids( $slice->chr_name(),
-				       $slice->chr_start(),
-				       $slice->chr_end());
-  # no contigs found so return
-  if ( scalar (@cids) == 0 ) {
-    return [];
-  }
-  
-  my $str = "(".join( ",",@cids ).")";
-  
-  my $sql = "
-    SELECT gsi.stable_id,gsi.version,t.gene_id
-    FROM   transcript t,exon_transcript et,exon e ,gene_stable_id gsi
-    WHERE  e.contig_id in $str 
-    AND    et.exon_id = e.exon_id 
-    AND    et.transcript_id = t.transcript_id
-    AND    gsi.gene_id = t.gene_id";
-
-  my $sth = $self->db->prepare($sql);
-
-  $sth->execute;
-  
-  my %genes;
-  my %versions;
-
-  while( my ($stableid,$version,$geneid) = $sth->fetchrow ) {
-      if (!defined($genes{$stableid})) {
-	  $genes   {$stableid} = $geneid;
-	  $versions{$stableid} = $version;
-      } elsif ($versions{$stableid} < $version) {
-	  $genes{$stableid} = $geneid;
-	  $versions{$stableid} = $version;
-          # print "Gene $stableid version now $version\n";
-      }
-  }
-  foreach my $stableid (keys %genes) {
-      my $geneid = $genes{$stableid};
-
-      my $version = $versions{$stableid};
-
-      my $gene = $self->fetch_by_dbID( $geneid );
-      my $newgene = $gene->transform( $slice );  
-      
-      push( @out, $newgene );
-  }
-
-  #place the results in an LRU cache
-  #$self->{'_slice_gene_cache'}{$slice->name} = \@out;
-  #print "OUT @out\n";
-  return \@out;
 }
 
 

@@ -42,15 +42,13 @@ sub home {
         $self->{'_home'} = $home;
     }
     elsif (! $self->{'_home'}) {
-	my $readonly_tag = '';
-	if($self->Client){
-            $readonly_tag = $self->Client->readonly_tag() unless $self->Client->write_access;
-        }
+	my $readonly_tag = $self->Client->write_access ? '' : '.ro';
 	# warn "readonly_tag '$readonly_tag'\n";
         $self->{'_home'} = "/var/tmp/lace.${$}${readonly_tag}";
     }
     return $self->{'_home'};
 }
+
 sub title {
     my( $self, $title ) = @_;
     
