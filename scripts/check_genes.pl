@@ -853,7 +853,7 @@ foreach my $atype (keys %gsi){
 	  }else{
 	    print "WARN: cannot merge sticky exons $tsi: $eid:$ecst-$eced, $eid2:$ecst2-$eced2\n";
 	  }
-	  $tsi{$tsi}->[$erank]=[$eid,$ecst,$eced,$esr,$es,$ep,$eep];
+	  $tsi{$tsi}->[$erank]=[$eid,$ecst,$eced,$esr3,$es,$ep,$eep];
 	}else{
 	  print "WARN: Duplicate rank for $tsi, $erank\n";
 	}
