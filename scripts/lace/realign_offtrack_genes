@@ -59,13 +59,14 @@ use Hum::Analysis::Factory::ExonLocator;
             #print STDERR "Found entire gene '$name' ($stable_id)\n";
             next;
         }
-        my $db_gene = $gene_aptr->fetch_by_stable_id($slice_gene->stable_id);
+        my $db_gene = $gene_aptr->fetch_by_dbID($slice_gene->dbID);
         unless (gene_is_off_track($db_gene, $acc_list)) {
             #print STDERR "Found truncated gene '$name' ($stable_id)\n";
             next;
         }
         my $v = $slice_gene->version;
-        print STDERR "Found off track gene '$name' ($stable_id v$v)\n";
+        my $db_v = $db_gene->version;
+        print STDERR "Found off track gene '$name' ($stable_id v$v dbv$db_v)\n";
         if (remap_ens_Exons($finder, $db_gene->get_all_Exons, $slice)) {
             # otter > XML > otter
             my $temp = Bio::Otter::Lace::TempFile->new;
