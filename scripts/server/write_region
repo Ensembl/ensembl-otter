@@ -260,8 +260,8 @@ eval {
     $gene->detach_DBAdaptors;
     print STDERR "Done attaching";
 
-    $oaga->store($gene);
     $output_xml .= $gene->toXMLString() unless $event->type eq 'deleted';
+    $oaga->store($gene);
     print STDERR "Stored gene";
     $outputstr .= " " . $gene->version . " " . $gene->gene_info->name->name . "";
   }
