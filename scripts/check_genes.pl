@@ -363,10 +363,10 @@ foreach my $atype (keys %gsi){
     my $cl=new cluster();
     # link exons by transcripts
     foreach my $tsi (keys %t2e){
-      if(scalar(@{$t2e{$tsi}})>1){
+      #if(scalar(@{$t2e{$tsi}})>1){
 	$cl->link([@{$t2e{$tsi}}]);
 	print "D: $tsi ".join(',',@{$t2e{$tsi}})."\n" if $flag_v;
-      }
+      #}
     }
     # link exons by overlap
     foreach my $eid (keys %elink){
