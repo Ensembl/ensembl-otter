@@ -82,6 +82,8 @@ sub open_dataset {
     return unless $obj;
     
     my $canvas = $self->canvas;
+    my $this_top = $canvas->toplevel;
+    $canvas->Busy;
     foreach my $tag ($canvas->gettags($obj)) {
         if ($tag =~ /^DataSet=(.+)/) {
             my $name = $1;
@@ -97,9 +99,11 @@ sub open_dataset {
             $sc->DataSetChooser($self);
             $sc->draw;
             $canvas->toplevel->withdraw;
+            $canvas->Unbusy;
             return 1;
         }
     }
+    $canvas->Unbusy;
 }
 
 sub draw {
