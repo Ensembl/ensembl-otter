@@ -58,7 +58,7 @@ sub XML_to_otter {
   my @keywords;
   my @tiles;
   my $slice; 
-  my $clone;
+  my $accession;
   my $version;
 
   while (<$fh>) {
@@ -286,11 +286,11 @@ sub XML_to_otter {
       $currentobj = 'frag';
       $author = Bio::Otter::Author->new;
     } elsif (/<\/sequence_fragment>/) {
-       if (defined($clone) && defined($version)) {
+       if (defined($accession) && defined($version)) {
 
          my $cloneobj = new Bio::Otter::AnnotatedClone;
 
-         $cloneobj->id($clone);
+         $cloneobj->embl_id($accession);
          $cloneobj->embl_version($version);
 
          my $cloneinfo = new Bio::Otter::CloneInfo;
@@ -315,7 +315,7 @@ sub XML_to_otter {
          $frag{$currfragname}{clone} = $cloneobj;
 
        }
-       $clone = undef;
+       $accession = undef;
        $version = undef;
 
        @cloneremarks = ();
@@ -323,7 +323,7 @@ sub XML_to_otter {
 
     } elsif (/<accession>(.*)<\/accession>/) {
       if ($currentobj eq 'frag') {
-         $clone = $1;
+         $accession = $1;
       } else {
          die "ERROR: accession tag only allowed for sequence fragments.  Current obj is [$currentobj]\n";
       }
@@ -578,7 +578,7 @@ sub otter_to_ace {
         my $name            = $tile->component_Seq->name;
 
         if (my $clone = $tile->component_Seq->clone) {
-            my $id = $clone->id;
+            my $id = $clone->embl_id;
             $str .= qq{Clone_left_end "$id" $start\n}
                  . qq{Clone_right_end "$id" $end\n};
         }
@@ -614,7 +614,7 @@ sub otter_to_ace {
     foreach my $tile (@$path) {
         my $clone = $tile->component_Seq->clone;
         my $name  = $tile->component_Seq->name;
-        my $accession  = $clone->id            or die "No embl_id on clone attached to '$name' in tile";
+        my $accession  = $clone->embl_id       or die "No embl_id on clone attached to '$name' in tile";
         my $sv         = $clone->embl_version  or die "No embl_version on clone attached to '$name' in tile";;
         my $clone_info = $clone->clone_info;
         $str .= qq{\nSequence : "$name"\nSource "$slice_name"\nAccession "$accession"\nSequence_version $sv\n};
@@ -1481,7 +1481,7 @@ sub ace_to_otter {
 
         # Make new clone and attatch CloneInfo
         my $clone = Bio::Otter::AnnotatedClone->new;
-        $clone->id($acc);
+        $clone->embl_id($acc);
         $clone->embl_version($sv);
         $clone->clone_info($info);
         
@@ -1644,7 +1644,7 @@ sub clone_to_XML {
     }
     my $str = "";
 
-    $str .= "  <accession>" . $clone->id . "<\/accession>\n";
+    $str .= "  <accession>" . $clone->embl_id . "<\/accession>\n";
     $str .= "  <version>" . $clone->embl_version . "<\/version>\n";
 
     if ($clone->isa("Bio::Otter::AnnotatedClone") && $clone->clone_info) {
@@ -1891,7 +1891,7 @@ sub frags_to_slice {
     # Create clone
 
       my $clone = new Bio::EnsEMBL::Clone();
-      $clone->id($f);
+      #$clone->id($f);
       $clone->embl_id($f);
       $clone->version(1);
       $clone->embl_version(1);
