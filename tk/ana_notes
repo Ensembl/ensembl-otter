@@ -13,6 +13,7 @@ use GenomeCanvas::Band::SeqChooser;
 use Carp;
 use Getopt::Long 'GetOptions';
 use Hum::SubmissionVersion;
+use Tk::ROText;
 
 my $user;
 my $nospangle;
@@ -193,7 +194,8 @@ my $nospangle;
                     
 
         
-        make_button($button_frame2, 'Quit', sub{ $mw->destroy }, 0);
+        $mw->bind('<Control-Button-1>', sub{ popup_ana_seq_history($gc) });
+        make_button($button_frame2, 'Quit',    sub{ $mw->destroy }, 0);
     }
     $gc->render;
     $gc->fix_window_min_max_sizes;
@@ -261,6 +263,7 @@ my $nospangle;
         
         my $lines = $text =~ tr/\n//;
         $hist->delete('1.0', 'end');
+        $hist->insert('1.0', $text);
 
         # Size widget to fit
         $hist->configure(
@@ -281,19 +284,26 @@ sub get_history_for_ana_seq_id {
     my( $asid ) = @_;
     
     my $sth = prepare_statement(qq{
-        SELECT ass.rank
-          , s.sequence_name
+        SELECT s.sequence_name
           , r.review_time
           , r.annotator_uname
           , r.review_comment
         FROM sequence s
           , ana_sequence a
+          , ana_sequence_review r
         WHERE s.seq_id = a.seq_id
           AND a.ana_seq_id = r.ana_seq_id
-          AND s.ana_seq_id = $asid
+          AND a.ana_seq_id = $asid
         ORDER BY r.review_time        
         });
     $sth->execute;
+    
+    my( $txt );
+    while (my @row = $sth->fetchrow) {
+        $txt .= join("\t", @row) . "\n";
+    }
+    warn $txt;
+    return $txt;
 }
 
 sub list_sets {
