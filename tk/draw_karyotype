@@ -81,6 +81,11 @@ my %chr_bin;
         }
     }
     #$kw->data(%chr_bin);
+    
+    foreach my $chr ($kw->get_all_Chromosomes) {
+        $chr->new_Graph;
+    }
+    
     $kw->draw;
 
     foreach my $stain ( sort keys %stain_count ) {

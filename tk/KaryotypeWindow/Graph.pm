@@ -39,6 +39,13 @@ sub max_y {
     return $self->{'_max_y'} || confess "max_y not set";
 }
 
+sub height {
+    my( $self, $kw ) = @_;
+    
+    return( ($self->max_y / 1_000_000)
+        / $kw->Mb_per_pixel );
+}
+
 sub width {
     my( $self, $width ) = @_;
     
@@ -54,11 +61,10 @@ sub scale {
     return $self->max_x / $self->width;
 }
 
-
-sub get_all_Graphs {
+sub get_all_Bins {
     my ($self) = @_;
 
-    if ( my $lst = $self->{'_Graph_list'} ) {
+    if ( my $lst = $self->{'_Bin_list'} ) {
         return @$lst;
     }
     else {
@@ -66,40 +72,49 @@ sub get_all_Graphs {
     }
 }
 
-sub add_Graph {
-    my ( $self, $Graph ) = @_;
+sub add_Bin {
+    my ( $self, $Bin ) = @_;
 
-    confess "Missing Graph argument" unless $Graph;
-    my $lst = $self->{'_Graph_list'} ||= [];
-    push ( @$lst, $Graph );
+    confess "Missing Bin argument" unless $Bin;
+    my $lst = $self->{'_Bin_list'} ||= [];
+    push ( @$lst, $Bin );
 }
 
-sub new_Graph {
+sub new_Bin {
     my ( $self, $class ) = @_;
 
-    $class ||= 'KaryotypeWindow::Graph';
-    my $Graph = $class->new;
-    $self->add_Graph($Graph);
-    return $Graph;
+    $class ||= 'KaryotypeWindow::Bin';
+    my $Bin = $class->new;
+    $self->add_Bin($Bin);
+    return $Bin;
 }
 
 sub draw {
     my ( $self, $kw, $x, $y ) = @_;
 
-    my $chr = $self->chromosome;
+    warn "args = [$self, $kw, $x, $y]";
 
-    my $x1 = $x + $chr->width + 8;
-    my $y1 = $y;
+    my @coords = ($x, $y, $x + $self->width, $y + $self->height($kw));
+    $kw->canvas->createRectangle(
+        @coords,
+        -fill       => undef,
+        -outline    => 'red',
+        );
 
-    my $x2 = $x1;
-    my $y2 = $y1 + $chr->height;
+    #my $chr = $self->chromosome;
 
-    $self->draw_histogram( $kw, $x1, $y1 );
+    #my $x1 = $x + $chr->width + 8;
+    #my $y1 = $y;
 
-    $kw->{'_canvas'}->createLine(
-        $x1, $y1, $x2, $y2, -fill => 'black',
-        -width => 0.25,
-    );
+    #my $x2 = $x1;
+    #my $y2 = $y1 + $chr->height;
+
+    #$self->draw_histogram( $kw, $x1, $y1 );
+
+    #$kw->{'_canvas'}->createLine(
+    #    $x1, $y1, $x2, $y2, -fill => 'black',
+    #    -width => 0.25,
+    #);
 
 }
 

@@ -52,9 +52,16 @@ sub draw {
         -font => [ 'Helvetica', $font_size, 'bold' ],
     );
     
-    my $graph_x = $self->chr_width($kw) + $self->pad($kw);
+    my $max_y = $last->end;
+    my $pad = $self->pad($kw);
+    my $graph_x = $x + $self->chr_width($kw) + $self->pad($kw);
     foreach my $graph ($self->get_all_Graphs) {
-        $graph_x += $graph->draw($kw, $graph_x, $save_y);
+        $graph->max_y($max_y);
+        warn "Drawing graph at [$graph_x, $save_y]";
+        $graph->draw($kw, $graph_x, $save_y);
+        warn sprintf "%s += %s + %s", $graph_x, $pad, $graph->width;;
+        $graph_x += $pad + $graph->width;
+        warn "graph_x now $graph_x";
     }
 }
 
@@ -116,8 +123,9 @@ sub pad {
 sub width {
     my( $self, $kw ) = @_;
     
-    my $graph_width = 0;
-    foreach my $graph ($self->get_all_Graphs) {
+    my @graphs = $self->get_all_Graphs;
+    my $graph_width = $self->pad($kw) * $#graphs;
+    foreach my $graph (@graphs) {
         $graph_width += $graph->width($kw);
     }
     return $graph_width + $self->chr_width($kw);

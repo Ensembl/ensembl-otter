@@ -155,18 +155,7 @@ sub pad {
     if ($pad) {
         $self->{'_pad'} = $pad;
     }
-    return $self->{'_pad'} || 2 * $self->font_size;
-}
-
-sub data {
-    my ( $self, %data ) = @_;
-
-    if (%data) {
-        $self->{'_data'} = {%data};
-
-    }
-
-    return $self->{'_data'};
+    return $self->{'_pad'} || 4 * $self->font_size;
 }
 
 1;
