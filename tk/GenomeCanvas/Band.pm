@@ -16,6 +16,47 @@ sub new {
     return bless {}, $pkg;
 }
 
+sub title {
+    my( $band, $title ) = @_;
+    
+    if ($title) {
+        $band->{'_title'} = $title;
+    }
+    return $band->{'_title'};
+}
+
+sub draw_titles {
+    my( $band ) = @_;
+    
+    my $title       = $band->title or return;
+    my $font_size   = $band->font_size * 1.2;
+    my @tags        = $band->tags;
+    my @bbox        = $band->band_bbox;
+    
+    # Left title
+    my $x = $bbox[0] - $font_size;
+    my $y = $bbox[1] + (($bbox[3] - $bbox[1]) / 2);
+    $band->canvas->createText(
+        $x, $y,
+        -text       => $title,
+        -font       => ['helvetica', $font_size],
+        -anchor     => 'e',
+        -justify    => 'right',
+        -tags       => [@tags],
+        );
+
+    # Right title
+    $x = $bbox[2] + $font_size;
+    $band->canvas->createText(
+        $x, $y,
+        -text       => $title,
+        -font       => ['helvetica', $font_size],
+        -anchor     => 'w',
+        -justify    => 'left',
+        -tags       => [@tags],
+        );
+}
+
 sub tags {
     my( $band, @tags ) = @_;
     
@@ -27,6 +68,34 @@ sub tags {
     } else {
         return;
     }
+}
+
+sub tiling_direction {
+    my( $band, $dir ) = @_;
+    
+    if ($dir) {
+        confess "direction must be '1' or '-1'"
+            unless $dir == 1 or $dir == -1;
+        $band->{'_tiling_direction'} = $dir;
+    }
+    return $band->{'_tiling_direction'} || -1;
+}
+
+sub show_labels {
+    my( $band, $flag ) = @_;
+    
+    if (defined $flag) {
+        $band->{'_show_labels'} = $flag;
+    }
+    $flag = $band->{'_show_labels'};
+    return defined($flag) ? $flag : 1;
+}
+
+sub band_bbox {
+    my( $band ) = @_;
+    
+    my ($tag) = $band->tags;
+    return $band->canvas->bbox($tag);
 }
 
 sub render {
@@ -304,10 +373,10 @@ sub merge_sort_Features {
             my $new_this_start = $prev->end + 1;
             if ($new_this_start > $this->end) {
                 # $prev engulfs $this
-                warn "Removing engulfed feature:\n  ",
-                    $this->gff_string, "\n",
-                    "Which is engulfed by:\n  ",
-                    $prev->gff_string, "\n";
+                #warn "Removing engulfed feature:\n  ",
+                #    $this->gff_string, "\n",
+                #    "Which is engulfed by:\n  ",
+                #    $prev->gff_string, "\n";
                 splice(@feature, $i, 1);
                 next;   # Don't increment $i
             } else {

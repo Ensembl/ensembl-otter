@@ -15,13 +15,13 @@ use vars '@ISA';
 sub render {
     my( $band ) = @_;
     
-    print STDERR "Drawing gene features... ";
+    #print STDERR "Drawing gene features... ";
     $band->draw_gene_features;
-    print STDERR "done\nDrawing sequence gaps... ";
+    #print STDERR "done\nDrawing sequence gaps... ";
     $band->draw_sequence_gaps;
-    print STDERR "done\nDrawing labels... ";
+    #print STDERR "done\nDrawing labels... ";
     $band->draw_outline_and_labels;
-    print STDERR "done\n";
+    #print STDERR "done\n";
 }
 
 sub strip_labels {
@@ -51,7 +51,6 @@ sub draw_gene_features {
     my( $band ) = @_;
     
     while (my($vc, $x_offset) = $band->next_sub_VirtualContig) {
-        print STDERR "sub_vc ";
         $band->draw_gene_features_on_sub_vc($vc, $x_offset);
     }    
 }

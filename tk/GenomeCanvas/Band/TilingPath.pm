@@ -14,24 +14,12 @@ use vars '@ISA';
 sub new {
     my( $pkg, $vc ) = @_;
     
-    
     confess "usage new(<virtual_contig>)" unless $vc;
     my $band = bless {}, $pkg;
     $band->virtual_contig($vc);
     $band->show_labels(1);
     $band->gold(1);
     return $band;
-}
-
-sub tiling_direction {
-    my( $band, $dir ) = @_;
-    
-    if ($dir) {
-        confess "direction must be '1' or '-1'"
-            unless $dir == 1 or $dir == -1;
-        $band->{'_tiling_direction'} = $dir;
-    }
-    return $band->{'_tiling_direction'} || -1;
 }
 
 sub gold {
@@ -54,15 +42,6 @@ sub name_morpher {
     return $band->{'_name_morpher'};
 }
 
-sub show_labels {
-    my( $band, $flag ) = @_;
-    
-    if (defined $flag) {
-        $band->{'_show_labels'} = $flag;
-    }
-    return $band->{'_show_labels'};
-}
-
 sub render {
     my( $band ) = @_;
     
@@ -82,8 +61,8 @@ sub render {
     }
 
     my $map_contig_count = 0;
-    my $rectangle_height = $band->font_size * 10 / 12;
-    my $rectangle_border = $band->font_size * 1 / 12;
+    my $rectangle_height = $font_size * 10 / 12;
+    my $rectangle_border = $font_size * 1 / 12;
     my $nudge_distance = ($rectangle_height + 1) * $y_dir;
     my $text_nudge_flag = 0;
     foreach my $map_c ($vc->_vmap->each_MapContig) {
@@ -133,7 +112,6 @@ sub render {
                 );
         }
 
-        my( $bkgd_rectangle );
         if ($band->show_labels) {
             
             my $label_space = 1;
@@ -158,7 +136,7 @@ sub render {
 
             my $sp = $font_size / 5;
             $band->expand_bbox(\@bkgd, $sp);
-            $bkgd_rectangle = $canvas->createRectangle(
+            my $bkgd_rectangle = $canvas->createRectangle(
                 @bkgd,
                 -outline    => '#cccccc',
                 -tags       => [@tags, 'bkgd_rec', $group],

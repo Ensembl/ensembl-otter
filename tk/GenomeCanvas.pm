@@ -124,15 +124,9 @@ sub scroll_to_obj {
     my $canvas = $gc->canvas;
     my ($x1, $y1, $x2, $y2) = $gc->normalize_coords($canvas->bbox($obj));
     
-    my @scroll = $canvas->cget('scrollregion');
-    #warn "scroll=[@scroll]\n";
-    # Need to put back scrollregion for some reason
-    # cget seems to clear it!
-    $canvas->configure(
-        -scrollregion   => [@scroll],
-        );
-    
-    @scroll = $gc->normalize_coords(@scroll);
+    my $scroll_ref = $canvas->cget('scrollregion')
+        or confess "No scrollregion";
+    my @scroll = $gc->normalize_coords(@$scroll_ref);
 
     my $width  = $scroll[2] - $scroll[0];
     my $height = $scroll[3] - $scroll[1];
@@ -239,6 +233,7 @@ sub render {
         $gc->y_offset($y_offset);
         $band->tags($tag);
         $band->render;
+        $band->draw_titles if $band->can('draw_titles');
 
         #warn "[", join(',', $canvas->bbox($tag)), "]\n";
 
@@ -304,8 +299,9 @@ sub zoom {
     my $canvas = $gc->canvas;
     
     # Calculate the coordinate of the centre of the view
-    my ($x1, $y1, $x2, $y2) = $canvas->cget('scrollregion');
-    $canvas->configure(-scrollregion => [$x1, $y1, $x2, $y2]);
+    my $scroll_ref = $canvas->cget('scrollregion')
+        or confess "No scrollregion";
+    my ($x1, $y1, $x2, $y2) = @$scroll_ref;
 
     # center on x axis
     my @x_view = $canvas->xview;

@@ -90,7 +90,7 @@ sub gif {
     my ($x,$y) = $self->dimensions;
     confess "Missing dimensions (x='$x', y='$y')"
         unless $x and $y;
-    warn "x='$x', y='$y'\n";
+    #warn "x='$x', y='$y'\n";
     my $img = GD::Image->new($x,$y);
     
     # Allocate colors in the image

@@ -8,6 +8,7 @@ use GenomeCanvas::Band::TilingPath;
 use GenomeCanvas::Band::Plot;
 use GenomeCanvas::DensityBand::RepeatFeature;
 use GenomeCanvas::DensityBand::Gene;
+use GenomeCanvas::Band::Gene;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Hum::Submission 'prepare_statement'; # For Sanger sequence names
 use Getopt::Long 'GetOptions';
@@ -81,10 +82,9 @@ use Getopt::Long 'GetOptions';
             print STDERR "Fetching virtual contig for all of fpc contig '$fpc'\n";
             $vc = $stadp->fetch_VirtualContig_by_fpc_name($fpc);
         }
-        
-        warn "Got a ", ref($vc);
-        
+                
         my $tiling = GenomeCanvas::Band::TilingPath->new($vc);
+        $tiling->title("Contig\nTiling\nPath");
         if ($sanger_names) {
             $tiling->name_morpher(\&get_sanger_name);
         } else {
@@ -98,29 +98,43 @@ use Getopt::Long 'GetOptions';
         #$tiling2->tiling_direction(1);
         #$gc->add_Band($tiling2);
 
-        my $gene_density = GenomeCanvas::DensityBand::Gene->new;
-        $gene_density->virtual_contig($vc);
-        $gene_density->strip_labels(qw{
-            HUMACE-Pseudogene      
-            HUMACE-Putative        
-            HUMACE-Novel_CDS       
-            HUMACE-Novel_Transcript
-            HUMACE-Known           
-            merged                 
-            });
-        $gene_density->band_color('#6600cc');
-        $gc->add_Band($gene_density);
-
-        my $repeat = GenomeCanvas::DensityBand::RepeatFeature->new;
-        $repeat->virtual_contig($vc);
-        $repeat->repeat_classifier(\&repeat_class);
-        $gc->add_Band($repeat);
+        #my $gene_density = GenomeCanvas::DensityBand::Gene->new;
+        #$gene_density->virtual_contig($vc);
+        #$gene_density->strip_labels(qw{
+        #    HUMACE-Pseudogene      
+        #    HUMACE-Putative        
+        #    HUMACE-Novel_CDS       
+        #    HUMACE-Novel_Transcript
+        #    HUMACE-Known           
+        #    merged                 
+        #    });
+        #$gene_density->band_color('#6600cc');
+        #$gc->add_Band($gene_density);
 
         my $plot = GenomeCanvas::Band::Plot->new;
+        $plot->title('gc Content');
         $plot->virtual_contig($vc);
         $plot->range(0.3,0.7);
         $plot->x_major(0.2);
         $gc->add_Band($plot);
+
+        my $gene_names = GenomeCanvas::Band::Gene->new;
+        $gene_names->show_labels(1);
+        $gene_names->label_type_color_list(
+            [ 'Known',              'HUMACE-Known',             '#4169e7' ],
+            [ 'Novel CDS',          'HUMACE-Novel_CDS',         '#6196ef' ],
+            [ 'Novel Transcript',   'HUMACE-Novel_Transcript',  '#00ced7' ],
+            [ 'Pseudogene',         'HUMACE-Pseudogene',        '#31ce31' ],
+            [ 'Putative',           'HUMACE-Putative',          '#cccccc' ],
+            );
+        $gene_names->virtual_contig($vc);
+        $gene_names->tiling_direction(1);
+        $gc->add_Band($gene_names);
+
+        #my $repeat = GenomeCanvas::DensityBand::RepeatFeature->new;
+        #$repeat->virtual_contig($vc);
+        #$repeat->repeat_classifier(\&repeat_class);
+        #$gc->add_Band($repeat);
 
         print STDERR "Rendering canvas\n";
         $gc->residues_per_pixel($scale);
