@@ -143,14 +143,15 @@ sub draw{
     
     # hope xace_seq_chooser exists
     my $write_acces = $self->xace_seq_chooser->write_access();
-
-    my $close_window = sub { $self->close_window };
-    $tl->bind('<Control-w>',          $close_window);
-    $tl->bind('<Control-W>',          $close_window);
-    $tl->protocol('WM_DELETE_WINDOW', $close_window);
     
     my $hide_window = sub { $self->hide_window  };
-    
+
+    #my $close_window = sub { $self->close_window, $self = undef };
+    $tl->bind('<Control-w>',          $hide_window);
+    $tl->bind('<Control-W>',          $hide_window);
+    $tl->protocol('WM_DELETE_WINDOW', $hide_window);
+
+  
     my $canvas = $self->canvas();
     $canvas->configure(-background => 'light grey');
     
