@@ -37,7 +37,6 @@ sub XML_to_otter {
   my $traninfo;
   my $evidence;
   my $currentobj;
-  my $slice;
   my $seqstr        = undef;
   my $tl_start      = undef;
   my $tl_end        = undef;
@@ -510,7 +509,7 @@ sub otter_to_ace {
   if ($contig->isa("Bio::EnsEMBL::Slice")) {
     my $slice = $contig;
 
-    $str .= "Assembly_name " . $path . "\n";
+    $str .= qq{Assembly_name "$path"\n};
 
     my @path  = @{ $slice->get_tiling_path };
 
@@ -519,32 +518,33 @@ sub otter_to_ace {
     my $chrend   = $slice->chr_end;
 
     foreach my $path (@path) {
-       my $start;
-       my $end;
-    
-       if ($path->component_ori == 1) {
-         $start = $chrstart + $path->assembled_start - 1;
-         $end   = $chrstart + $path->assembled_end - 1;
-       } else {
-         $end     = $chrstart + $path->assembled_start - 1 ;
-         $start   = $chrstart + $path->assembled_end - 1;
-       } 
-       $str .= "Feature TilePath " . $start . " " . $end . " 1.0 " . $path->component_Seq->name . "\n";
+        my $start;
+        my $end;
+
+        if ($path->component_ori == 1) {
+          $start = $chrstart + $path->assembled_start - 1;
+          $end   = $chrstart + $path->assembled_end - 1;
+        } else {
+          $end     = $chrstart + $path->assembled_start - 1 ;
+          $start   = $chrstart + $path->assembled_end - 1;
+        } 
+        $str .= sprintf qq{Feature TilePath %d %d %f "%s"\n},
+            $start, $end, 1, $path->component_Seq->name;
     }
 
     foreach my $path (@path) {
-       my $start;
-       my $end;
-    
-       if ($path->component_ori == 1) {
-         $start = $chrstart + $path->assembled_start - 1;
-         $end   = $chrstart + $path->assembled_end - 1;
-       } else {
-         $end     = $chrstart + $path->assembled_start - 1 ;
-         $start   = $chrstart + $path->assembled_end - 1;
-       } 
-       $str .= "SubSequence   \"" .$path->component_Seq->clone->embl_id . "\" ";
-       $str .= "$start $end\n";
+        my $start;
+        my $end;
+
+        if ($path->component_ori == 1) {
+          $start = $chrstart + $path->assembled_start - 1;
+          $end   = $chrstart + $path->assembled_end - 1;
+        } else {
+          $end     = $chrstart + $path->assembled_start - 1 ;
+          $start   = $chrstart + $path->assembled_end - 1;
+        }
+        $str .= sprintf qq{SubSequence "%s" %d %d\n},
+            $path->component_Seq->clone->embl_id, $start, $end;
     }
   }
  
@@ -592,26 +592,25 @@ sub otter_to_ace {
          foreach my $remark ($clone_info->remark) {
            if ($remark->remark =~ /^Annotation_remark- /) {
              my $rem = $remark->remark;
-             $rem =~ s/\n/ /g;
              $rem =~ s/^Annotation_remark- //;
-             $str .= "Annotation_remark \"" . $rem . "\"\n";
+             $str .= "Annotation_remark \"" . ace_escape($rem) . "\"\n";
            } elsif ($remark->remark =~ /^EMBL_dump_info.DE_line- /) {
              my $rem = $remark->remark;
-             $rem =~ s/\n/ /g;
              $rem =~ s/^EMBL_dump_info.DE_line- //;
-             $str .= "EMBL_dump_info DE_line \"" . $rem . "\"\n";
+             $str .= "EMBL_dump_info DE_line \"" . ace_escape($rem) . "\"\n";
            } else {
-             $str .= "Annotation_remark \"" . $remark->remark . "\"\n";
+             $str .= "Annotation_remark \"" . ace_escape($remark->remark) . "\"\n";
            }
          }
          foreach my $sf (@{$path->component_Seq->get_all_SimpleFeatures}) {
-           $str .= "Feature \"" . $sf->analysis->logic_name . "\" " ;
-           if ($sf->strand == 1) {
-             $str .= $sf->start . " " . $sf->end . " ";
-           } else {
-             $str .= $sf->end . " " . $sf->start . " ";
-           }
-           $str .= "\"" . $sf->display_label . "\"\n";
+            my( $start, $end );
+            if ($sf->strand == 1) {
+                ($start, $end) = ($sf->start, $sf->end);
+            } else {
+                ($start, $end) = ($sf->end, $sf->start);
+            }
+            $str .= sprintf qq{Feature "%s" %d %d %f "%s"\n},
+                $sf->analysis->logic_name, $start, $end, $sf->score, $sf->display_label;
          }
          $str .= "\n";
       }
@@ -671,9 +670,9 @@ sub otter_to_ace {
         if ($remark->remark =~ /^Annotation_remark- /) {
           my $rem = $remark->remark;
           $rem =~ s/^Annotation_remark- //;
-          $str .= "Annotation_remark \"" . $rem . "\"\n";
+          $str .= "Annotation_remark \"" . ace_escape($rem) . "\"\n";
         } else {
-          $str .= "Remark \"" . $remark->remark . "\"\n";
+          $str .= "Remark \"" . ace_escape($remark->remark) . "\"\n";
         }
       }
 
@@ -702,11 +701,15 @@ sub otter_to_ace {
 
       foreach my $exon (@exons) {
         if ($exons[0]->strand == 1) {
-          $str .= "Source_Exons " . ($exon->start - $trans_off) . " "
-            . ($exon->end - $trans_off) . " " . $exon->stable_id . "\n";
+            $str .= sprintf qq{Source_Exons %d %d "%s"\n},
+                $exon->start - $trans_off,
+                $exon->end   - $trans_off,
+                $exon->stable_id;
         } else {
-          $str .= "Source_Exons " . ($trans_off - $exon->end) . " "
-            . ($trans_off - $exon->start) .  " " . $exon->stable_id . "\n";
+            $str .= sprintf qq{Source_Exons %d %d "%s"\n},
+                $trans_off - $exon->end,
+                $trans_off - $exon->start,
+                $exon->stable_id;
         }
       }
 
@@ -1993,9 +1996,21 @@ sub frags_to_slice {
     my $res = $sth->execute;
 
     $sth->finish;
-    
-    
   }
+}
+
+sub ace_escape {
+    my $str = shift;
+    
+    $str =~ s/\s+$//;       # Trim trailing whitespace.
+    $str =~ s/\n/\\n/g;     # Backslash escape newlines
+    $str =~ s/\t/\\t/g;     # and tabs.
+
+    # Escape quotes, back and forward slashes,
+    # % signs, and semi-colons.
+    $str =~ s/([\/"%;\\])/\\$1/g;
+
+    return $str;
 }
 
 1;
