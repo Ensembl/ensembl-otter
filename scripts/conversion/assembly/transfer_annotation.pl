@@ -31,6 +31,8 @@ my $path     = 'GENOSCOPE';
 my $c_path   = 'NCBI31';
 my $t_path   = 'NCBI31';
 
+my $filter_gd;
+
 &GetOptions( 'host:s'    => \$host,
              'user:s'    => \$user,
              'pass:s'    => \$pass,
@@ -52,6 +54,7 @@ my $t_path   = 'NCBI31';
              'path:s'      => \$path,
              'c_path:s'    => \$c_path,
              't_path:s'    => \$t_path,
+	     'filter_gd'   => \$filter_gd,
             );
 
 
@@ -100,11 +103,19 @@ my $t_vcontig = $t_sgp->fetch_by_chr_start_end($chr,$chrstart,$chrend);
 print "Fetched target vcontig\n";
 
 my $genes = $aga->fetch_by_Slice($vcontig);
-print "Fetched genes\n";
+print "Fetched ".scalar(@$genes)." genes\n";
 
 my %genehash;
 foreach my $gene (@$genes) {
-  $genehash{$gene->stable_id} = $gene;
+    my $gsi=$gene->stable_id;
+    if($filter_gd){
+	my $name=$gene->gene_info->name->name;
+	if($name=~/\.GD$/){
+	    print "GD gene $gsi $name was ignored\n";
+	    next;
+	}
+    }
+    $genehash{$gsi} = $gene;
 }
 
 my $c_genes = $c_aga->fetch_by_Slice($c_vcontig);

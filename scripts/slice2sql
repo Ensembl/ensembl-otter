@@ -10,21 +10,20 @@ use Bio::Otter::EnsEMBL2SQL::Core;
 use Bio::Otter::EnsEMBL2SQL::Compara;
 use Bio::Otter::EnsEMBL2SQL::Base;
 
-my $host   = 'kaka.sanger.ac.uk';
+my $host   = 'ensembldb.ensembl.org';
 my $user   = 'anonymous';
 my $pass   = '';
 my $port   = 3306;
 
-my $core_name    = 'homo_sapiens_core_13_31';
-my $est_name     = 'homo_sapiens_est_13_31';
-my $estgene_name = 'homo_sapiens_estgene_13_31';
-my $compara_name = 'ensembl_compara_13_1';
-my $disease_name = 'homo_sapiens_disease_13_31';
-#my $family_name  = 'ensembl_family_13_1';
-
+my $core_name    = 'homo_sapiens_core_19_34b';
+my $est_name     = 'homo_sapiens_est_19_34b';
+my $estgene_name = 'homo_sapiens_estgene_19_34b';
+my $disease_name = 'homo_sapiens_disease_19_34b';
+my $compara_name = 'ensembl_compara_19_2';
+# should include ensembl_go_19_1?
 
 my $species = 'Homo sapiens';
-my $type    = 'NCBI31';
+my $type    = 'NCBI34';
 my $chr;
 my $start;
 my $end;
