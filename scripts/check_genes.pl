@@ -867,7 +867,7 @@ foreach my $atype (keys %gsi){
       my $dirt=0;
       for(my $i=0;$i<scalar(@{$tsi{$tsi}});$i++){
 	my($eid,$ecst,$eced,$esr,$es,$ep,$eep)=@{$tsi{$tsi}->[$i]};
-	$erank=$i+1;
+	my $erank=$i+1;
 	print "WARN $tsi: unresolved sticky in $eid $esr\n" if $esr>1;
 
 	# check consistent direction
