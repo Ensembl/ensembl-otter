@@ -310,7 +310,6 @@ eval {
     
     # Store SimpleFeature changes
     my $sfa = $odb->get_SimpleFeatureAdaptor;
-    my $ana = $odb->get_AnalysisAdaptor;
     if (@$del_sf) {
         printf STDERR "Deleting %d SimpleFeatures\n", scalar @$del_sf;
         foreach my $sf (@$del_sf) {
@@ -318,7 +317,7 @@ eval {
         }
     }
     if (@$save_sf) {
-        attach_analysis_objects($ana, $save_sf);
+        attach_analysis_objects_and_transform_to_slice($odb, $slice, $save_sf);
         printf STDERR "Saving %d SimpleFeatures\n", scalar @$save_sf;
         $sfa->store(@$save_sf);
     }
@@ -442,14 +441,30 @@ sub clones_from_path {
     return $clones;
 }
 
-sub attach_analysis_objects {
-    my( $analysis_adaptor, $sf_list ) = @_;
+sub attach_analysis_objects_and_transform_to_slice {
+    my( $dba, $slice, $sf_list ) = @_;
+    
+    my $analysis_adaptor = $dba->fetch_AnalysisAdaptor;
     
     my( %logic_ana );
-    foreach my $sf (@$sf_list) {
+    for (my $i = 0; $i < @$sf_list; $i++) {
+        my $sf = $sf_list->[$i];
+        my $class = ref($sf);
         my $logic_name = $sf->analysis->logic_name;
         my $ana = $logic_ana{$logic_name}
             ||= $analysis_adaptor->fetch_by_logic_name($logic_name);
         $sf->analysis($ana);
+        $sf->contig($slice);
+        my @mapped = $sf->transform;
+        if (@mapped == 1) {
+            unless ($mapped[0]->isa($class)) {
+                die "Error, got '$mapped[0]' from transform";
+            }
+            $sf_list->[$i] = $mapped[0];
+        } else {
+            die "transform returned ", scalar(@mapped), " features: (@mapped)";
+        }
     }
 }
+
+
