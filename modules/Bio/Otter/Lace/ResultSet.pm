@@ -14,30 +14,36 @@ sub new {
     return bless {}, $pkg;
 }
 
+# possibly the most evil thing I've done in this module.
+# extends the CloneSequence obj
+sub Bio::Otter::Lace::CloneSequence::is_match{
+    my ($self, $is_match) = @_;
+    $self->{'_is_match'} = $is_match if defined($is_match);
+    return $self->{'_is_match'};
+}
 
 sub add_SequenceSet{
     my ($self, $ss) = @_ ;
-    
-    unshift @{$self->{'sequence_set'} }  , $ss ;  
+    $self->{'_rs_sequence_sets'} ||= [];
+    push(@{$self->{'_rs_sequence_sets'}}, $ss);
 }
 
 sub get_SequenceSet_by_name{
     my ($self , $name ) = @_ ;
-    
-    foreach my $ss ( @{$self->{'sequence_set'}} ){
 
+    confess "I can't fetch without a name" unless $name;
+
+    foreach my $ss ( @{$self->get_all_SequenceSets} ){
         if ($ss->name eq $name) {
             return $ss;
         }
     }
+    return;
 }
 
 sub get_all_SequenceSets{
-    my ($self) = @_ ;
-    
-    my $list  = $self->{'sequence_set'} ;
-    
-    return $list
+    my ($self) = @_;
+    return $self->{'_rs_sequence_sets'};
 }
 
 sub search_array{
@@ -92,8 +98,8 @@ sub fetch_Clones_containing_stable_id{
 
     my $stable_id_types = {};
     foreach my $id(@$stable_ids){
-        if($id =~ /^$prefix_primary$prefix_species([TPG])\d+/){
-            push(@{$stable_id_types->{$1}}, $id);
+        if($id =~ /^$prefix_primary$prefix_species([TPG])\d+/i){
+            push(@{$stable_id_types->{uc $1}}, $id);
         }else{
             print STDERR "'$id' doesn't look like a stable id. It doesn't start with '$prefix_primary$prefix_species'\n";
         }
@@ -275,6 +281,7 @@ sub fetch_Clones_containing_CloneNames{
         $cl->contig_strand($strand);
         $cl->contig_name($ctg_name);
         $cl->contig_id($ctg_id);
+        $cl->is_match(1);
         if (defined $clone_lock_id){
             $cl->set_lock_status(1) ;
         }   
@@ -287,14 +294,85 @@ sub fetch_Clones_containing_CloneNames{
         my $ss = $self->uncached_SequenceSet_by_name($type);
         $ss->CloneSequence_list($cs_list);
         $self->DataSet->status_refresh_for_SequenceSet($ss);
-        $self->add_SequenceSet($ss); 
+        $self->add_SequenceSet($ss);
     }
+
+    $self->get_context_clones();
     ## sets the things in ResultSet, but the return value is the number of clones returned
     return $results ;
 }
 
+sub get_context_clones{
+    my ($self) = @_;
 
+    my $context_size = $self->context_size();
+    return unless $context_size;
+    
+    my $ss_list = $self->get_all_SequenceSets ;  
+    my $ds = $self->DataSet;
 
+    foreach my $ss (@$ss_list){ 
+        my @cs_assembly_list = ();
+        my $ss_assembly = $ss->name();
+        $ds->fetch_all_SequenceNotes_for_SequenceSet($ss);
+        my $results_list = $ss->CloneSequence_list;
+
+        my ($first_idx, $last_idx, $full_ss_size, @prefix_slice, @postfix_slice);
+
+        if($context_size){
+            my $full_ss      = $ds->get_SequenceSet_by_name($ss_assembly);
+            my $full_cs_list = $ds->fetch_all_CloneSequences_for_SequenceSet($full_ss);
+            my $first        = $results_list->[0];
+            my $last         = $results_list->[$#{$results_list}];
+            $full_ss_size    = scalar(@$full_cs_list) ;
+            $full_ss_size--; # make it the last array index
+
+            # search for the indices of the matches in the full seq set.
+            for my $i(0..$full_ss_size){
+                my $cs = $full_cs_list->[$i];
+                # needs to be 2 if statements in case there's only one match
+                # only check the accession is this wise? I think it'll be enough
+                if($cs->accession eq $first->accession){
+                    $first_idx = $i;
+                }
+                if($cs->accession eq $last->accession){
+                    $last_idx = $i;
+                }
+                last if $last_idx; # not need to keep on searching
+            }
+            warn "first = $first_idx, last = $last_idx, lower = 0, upper = $full_ss_size\n";
+
+            # make this faster easier to read
+            my $prefix_start = ($first_idx - $context_size < 0 ? 0 : $first_idx - $context_size);
+            my $postfix_end  = ($last_idx + $context_size > $full_ss_size ? $full_ss_size : $last_idx + $context_size);
+            
+            @prefix_slice  = @{$full_cs_list}[$prefix_start..--$first_idx];
+            @postfix_slice = @{$full_cs_list}[++$last_idx..$postfix_end];
+
+        }
+        # add the context before
+        push (@cs_assembly_list, @prefix_slice) if @prefix_slice;
+
+        # add the matches
+        push (@cs_assembly_list, @$results_list);
+        # add the context after
+        push (@cs_assembly_list, @postfix_slice) if @postfix_slice;
+        $ss->drop_CloneSequence_list();
+        $ss->CloneSequence_list(\@cs_assembly_list);
+    }
+}
+
+sub context_size{
+    my ($self, $context) = @_;
+    $self->{'_context'} = $context if $context;
+    return $self->{'_context'} || 0;
+}
+
+sub matching_assembly_types{
+    my ($self) = @_;
+    my @types  = map { $_->name } @{$self->get_all_SequenceSets};
+    return \@types;
+}
 
 #this creates a SequenceSet object, but does NOT cache the results (the method in DataSet does cache results))
 sub uncached_SequenceSet_by_name{
