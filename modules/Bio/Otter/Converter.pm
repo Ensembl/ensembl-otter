@@ -125,7 +125,7 @@ sub XML_to_otter {
 
       $author->email($email);
     } elsif (/<dna>/) {
-       print STDERR "Found dna\n";
+      # print STDERR "Found dna\n";
       if (defined($seqstr)) {
         die "ERROR: Got more than one dna record\n";
       } 
@@ -287,7 +287,7 @@ sub XML_to_otter {
         s/\s*$//;
         $seqstr .= $_;
         if (length($seqstr)%1000000 < 100) {
-          print STDERR "Found seq " . length($seqstr) . "\n";
+          #print STDERR "Found seq " . length($seqstr) . "\n";
         }
       }
     } elsif (/<\/otter>/) {
@@ -396,11 +396,10 @@ sub XML_to_otter {
 }
 
 sub otter_to_ace {
-  my ($fh, $contig, $genes) = @_;
+  my ($contig, $genes) = @_;
 
-  my $str = "";
-
-  $str .= "Sequence : \"" . $contig->display_id . "\"\nGenomic_canonical\n";
+  
+  my $str =  "Sequence : \"" . $contig->display_id . "\"\nGenomic_canonical\n";
   foreach my $gene (@$genes) {
     foreach my $tran (@{ $gene->get_all_Transcripts }) {
       $str .= "Subsequence   \"" . $tran->stable_id . "\" ";
@@ -518,7 +517,7 @@ sub otter_to_ace {
     }
     $str .= "\n";
   }
-  print $str;
+  return $str;
 }
 
 sub rna_pos {
@@ -1600,7 +1599,7 @@ sub frags_to_slice {
       if ($fstart == 9947971) {
         print "*****************************\n";
       }
-      print STDERR "Contigseq " . $contigseq->length . " " . length($seqstr) . " " . $fstart . " " . $fend . "\n";
+      #print STDERR "Contigseq " . $contigseq->length . " " . length($seqstr) . " " . $fstart . " " . $fend . "\n";
   
       if ($fori == -1) {
         $contigseq = $contigseq->revcom;
@@ -1608,11 +1607,11 @@ sub frags_to_slice {
   
       my $padstr = 'N' x ($foff-1);
       
-      print STDERR "Foff [$foff-1]\n";
+      #print STDERR "Foff [$foff-1]\n";
   
       my $newseq = $padstr . $contigseq->seq;
   
-      print STDERR "newseq " . length($newseq) ."\n";
+      #print STDERR "newseq " . length($newseq) ."\n";
   
       $contig->seq($newseq);
   
@@ -1631,7 +1630,7 @@ sub frags_to_slice {
 
     my $sqlstr = "insert into assembly(chromosome_id,chr_start,chr_end,superctg_name,superctg_start,superctg_end,superctg_ori,contig_id,contig_start,contig_end,contig_ori,type) values($chrid,$fstart,$fend,\'$f\',1,$length,1,$rawid,$foff,$raw_end,$fori,\'$assembly_type\')\n";
 
-    print "SQL $sqlstr\n";
+    #print "SQL $sqlstr\n";
 
     my $sth = $db->prepare($sqlstr);
     my $res = $sth->execute;
