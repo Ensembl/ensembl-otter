@@ -70,12 +70,12 @@ sub initialize {
         Predicted                => [1,         0],
         
         # Old methods
-        supported                => [1,         1], 
-        supported_CDS            => [1,         1], 
-        supported_mRNA           => [1,         0], 
-        GD_supported             => [1,         1], 
-        GD_supported_mRNA        => [1,         0], 
-        GD_working               => [1,         1], 
+        #supported                => [1,         1], 
+        #supported_CDS            => [1,         1], 
+        #supported_mRNA           => [1,         0], 
+        #GD_supported             => [1,         1], 
+        #GD_supported_mRNA        => [1,         0], 
+        #GD_working               => [1,         1], 
 
         # Auto-analysis gene types (non-editable)
         fgenesh                  => [0,         1],
@@ -605,6 +605,7 @@ sub exit_save_data {
     my $ace = $self->AceDatabase;
     unless ($self->write_access) {
         $ace->error_flag(0);
+        $self->kill_xace;
         return 1;
     }
 
@@ -877,7 +878,7 @@ sub list_genome_sequences {
     my $adbh = $self->ace_handle;
     my $max = $self->max_seq_list_length;
     my @gen_seq_list = map $_->name,
-        $adbh->fetch(Genome_Sequence => '*');
+        $adbh->fetch(Assembly => '*');
     my $total = @gen_seq_list;
     my $end = $offset + $max - 1;
     $end = $total - 1 if $end > $total;
