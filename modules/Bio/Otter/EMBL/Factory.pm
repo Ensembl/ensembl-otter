@@ -96,7 +96,8 @@ sub standard_comments {
 Providing $self->DataSet has been set, retrieves the cached DBAdaptor
 from the DataSet, together with Slice and Gene adaptors.
 
-    my ($otter_db, $slice_aptr, $gene_aptr) = get_DBAdaptors();
+    my ($otter_db, $slice_aptr, $gene_aptr
+        , $annotated_clone_aptr) = get_DBAdaptors();
 
 =cut
 
@@ -118,18 +119,131 @@ sub get_DBAdaptors {
     my $gene_aptr  = $otter_db->get_GeneAdaptor
         or confess "get_GeneAdaptor failed";
 
-    return ($otter_db, $slice_aptr, $gene_aptr);
+    my $annotated_clone_aptr = $otter_db->get_CloneAdaptor
+        or confess "get_CloneAdaptor failed";
+
+    return ($otter_db, $slice_aptr, $gene_aptr, $annotated_clone_aptr);
 }
 
 
+=head2 embl_setup
+
+Sets a lot of the attributes in the Hum::EMBL object from those stored
+in Factory.pm, and creates the source FT. Will confess if required
+attributes have not been set.
+
+As this requires the Hum::EMBL object, it needs to be called after
+or by make_embl.
+
+=cut 
+
 sub embl_setup {
     
-    my ( $self, $acc, $entry_name, $data_class, $mol_type, $division, $seq_length
-        , $ac_star_id, $organism, $clone_lib, $clone_name ) = @_;
-        
-    my $embl = $self->EMBL;
+    my ( $self ) = @_;
     
-    #Not sure this is the way to go passing these parameters.
+    my $embl = $self->EMBL or confess "EMBL not set";
+    my $acc = $self->accession or confess "accession not set";
+    my @sec;
+    if ($self->secondary_accs) {
+        @sec = @{$self->secondary_accs};
+    }
+    my $entry_name = $self->entry_name or confess "entry_name not set";
+    my $data_class = $self->data_class or confess "data_class not set";
+    my $mol_type = $self->mol_type or confess "mol_type not set";
+    my $division = $self->division or confess "division not set";
+    my $seq_length = $self->seq_length or confess "seq_length not set";
+    my $ac_star_id = $self->ac_star_id or confess "ac_star_id not set";
+    my $organism = $self->organism or confess "organism not set";
+    my $clone_lib = $self->clone_lib or confess "clone_lib not set";
+    my $clone_name = $self->clone_name or confess "clone_name not set";
+    
+    my $id = $embl->newID;
+    $id->entryname($entry_name);
+    $id->dataclass($data_class);
+    $id->molecule($mol_type);
+    $id->division($division); #such as 'hum'
+    $id->seqlength($seq_length);
+    $embl->newXX;
+    
+    # AC line
+    my $ac = $embl->newAC;
+    if (@sec) {
+        $ac->secondaries(@sec);
+        $ac->primary($acc);
+    } else {
+        $ac->primary($acc);
+    }
+    $embl->newXX;
+
+    # AC * line
+    my $ac_star = $embl->newAC_star;
+    $ac_star->identifier($ac_star_id);
+    $embl->newXX;
+
+    # DE line
+    #$pdmp->add_Description($embl);
+
+    # KW line
+    #$pdmp->add_Keywords($embl);
+
+    # Organism
+    #add_Organism($embl, $species);
+    #$embl->newXX;
+
+    # Reference
+    #$pdmp->add_Reference($embl, $seqlength);
+
+    # CC lines
+    #$pdmp->add_Headers($embl, $contig_map);
+    #$embl->newXX;
+
+    # Feature table header
+    $embl->newFH;
+
+    my $source = $embl->newFT;
+    $source->key('source');
+
+    my $loc = $source->newLocation;
+    $loc->exons([1, 20000]);
+    $loc->strand('W');
+        
+    $source->addQualifierStrings('mol_type',  $mol_type);
+    $source->addQualifierStrings('organism',  "Homo sapiens");
+    $source->addQualifierStrings('clone_lib', $clone_lib);
+    $source->addQualifierStrings('clone',     $clone_name);
+
+    # Feature table source feature
+    #my( $libraryname ) = library_and_vector( $project );
+    #add_source_FT( $embl, $seqlength, $binomial, $ext_clone,
+    #               $chr, $map, $libraryname );
+}
+
+sub accession {
+    my ( $self, $value ) = @_;
+    
+    if ($value) {
+        $self->{'_bio_otter_embl_factory_accession'} = $value;
+    }
+    return $self->{'_bio_otter_embl_factory_accession'};
+}
+
+=head2 secondary_accs
+
+Get/set method for secondary accessions of the Clone being dumped.
+The list is passed as an array reference (checked). Returns an arrayref or undef.
+
+=cut 
+
+sub secondary_accs {
+    my ( $self, $value ) = @_;
+    
+    if ($value) {
+        unless (ref($value) =~ /ARRAY/) {
+            confess "Must pass an array reference";
+        }
+        $self->{'_bio_otter_embl_factory_secondary_accs'} = $value;
+    }
+    return $self->{'_bio_otter_embl_factory_secondary_accs'};
 }
 
 sub entry_name {
@@ -150,11 +264,22 @@ sub data_class {
     return $self->{'_bio_otter_embl_factory_data_class'};
 }
 
+=head2 mol_type
+
+Get/set method for the embl mol_type. Defaults to 'genomic DNA' unless
+set explicitly.
+
+=cut
+
 sub mol_type {
     my ( $self, $value ) = @_;
     
     if ($value) {
         $self->{'_bio_otter_embl_factory_mol_type'} = $value;
+    } else {
+        unless ($self->{'_bio_otter_embl_factory_mol_type'}) {
+            $self->{'_bio_otter_embl_factory_mol_type'} = 'genomic DNA';
+        }
     }
     return $self->{'_bio_otter_embl_factory_mol_type'};
 }
@@ -445,6 +570,8 @@ sub FeatureSet {
 
 
 =head2 make_embl
+
+**This Documentation is wrong.
  
 This is the principal method of the module. When passed an EMBL accession
 creates a Hum::EMBL object, which can be subsequently dumped. Does this by
@@ -484,20 +611,18 @@ g)  Returns the populated Hum::EMBL object
 =cut
 
 sub make_embl {
-    my ( $self, $acc, $embl ) = @_;
+    my ( $self, $acc, $embl, $sequence_version ) = @_;
 
     confess "Must pass an accession" unless $acc;
+    $self->accession($acc);
 
     my $ds = $self->DataSet
         or confess "DataSet must be set before calling make_embl";
 
-    my ($otter_db, $slice_aptr, $gene_aptr) = $self->get_DBAdaptors();
-    #my $embl = Hum::EMBL->new;
-    #$self->EMBL($embl);
-    #$self->fake_embl_setup($embl, $acc); #Debug
+    my ($otter_db, $slice_aptr, $gene_aptr, $annotated_clone_aptr) 
+        = $self->get_DBAdaptors();
 
     my $set = 'Hum::EMBL::FeatureSet'->new;
-    #$self->FeatureSet($set);
     
     foreach my $chr_s_e ($self->fetch_chr_start_end_for_accession($otter_db, $acc)) {
 
@@ -525,6 +650,58 @@ sub make_embl {
     $set->addToEntry($embl);
     return $embl;
 }
+
+sub get_description {
+	my ( $self, $accession, $embl, $sv ) = @_;
+    
+    my ($otter_db, $slice_aptr, $gene_aptr, $annotated_clone_aptr) 
+        = $self->get_DBAdaptors();
+
+    my $annotated_clone = $annotated_clone_aptr->fetch_by_accession_version(
+        $accession, $sv) or confess "Could not fetch AnnotatedClone by accession_version"
+        . "acc: $accession sv: $sv";
+        
+    my $clone_info = $annotated_clone->clone_info
+        or confess "could not get: CloneInfo object";
+        
+    my @clone_remarks = $clone_info->remark
+        or warn "No CloneRemarks for acc: $accession sv: $sv";
+
+    my ($description_txt);
+    foreach my $clone_remark (@clone_remarks) {
+
+        my $txt = $clone_remark->remark;
+        if ($txt =~ s/^EMBL_dump_info.DE_line- //) {
+            $description_txt = $txt;
+            last;
+        }
+    }
+    return($description_txt);
+}
+
+sub get_keywords {
+	my ( $self, $accession, $embl, $sv ) = @_;
+    
+    my ($otter_db, $slice_aptr, $gene_aptr, $annotated_clone_aptr) 
+        = $self->get_DBAdaptors();
+
+    my $annotated_clone = $annotated_clone_aptr->fetch_by_accession_version(
+        $accession, $sv) or confess "Could not fetch AnnotatedClone by accession_version"
+        . "acc: $accession sv: $sv";
+        
+    my $clone_info = $annotated_clone->clone_info
+        or confess "could not get: CloneInfo object";
+        
+    my @keywords = $clone_info->keyword
+        or warn "No Keyword objects for acc: $accession sv: $sv";
+
+    my @keywords_txt;
+    foreach my $keyword (@keywords) {
+        push (@keywords_txt, $keyword->name);
+    }
+    return(@keywords_txt);
+}
+
 
 =head2 _do_polyA
 
