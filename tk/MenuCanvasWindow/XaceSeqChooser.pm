@@ -204,7 +204,7 @@ sub show_LocusWindow{
         
     unless($window){
        
-        #print STDERR "creating LocusWindow" ;
+        print STDERR "creating LocusWindow from Xace\n" ;
         $top = $self->canvas->Toplevel(-width => 500);
        
         $window = CanvasWindow::LocusWindow->new($top);        
@@ -218,11 +218,7 @@ sub show_LocusWindow{
 
 sub close_all_LocusWindows{ 
     my ($self) = @_ ;
-#    while (my ($locus , $lw) = each (%{$self->{'_locus_window_cache'}} )){        
-#    $self->{'_locus_window_cache'}{$locus} = undef;     
-#    }
     $self->{'_locus_window_cache'} = undef ;
-    
 }
 
 sub get_all_locus_windows{
