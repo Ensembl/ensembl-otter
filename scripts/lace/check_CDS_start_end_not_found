@@ -18,7 +18,7 @@ $| =1;
   Bio::Otter::Lace::Defaults::do_getopt('ds|dataset=s' => \$dataset,   # eg, human or mouse or zebrafish
 					's|set=s@'     => \@sets,      # sequence set(s) to check
 					'h|help'       => $help,
-					'v|vega'       => $vega,       # this flags vega_set_id > 0. If !$vega: check all datasets
+					'v|vega'       => \$vega,       # this flags vega_set_id > 0. If !$vega: check all datasets
 					                               # for now, zebrafish defaults to !$vega
 				       ) or $help->();                 # plus default options
   $help->() unless $dataset;
@@ -35,7 +35,7 @@ $| =1;
     # sql query to get all assembly types w/ diff. vega_set_id conditions
     my $sql;
 
-    if ( $vega ){
+    if ( defined $vega ){
       $sql = q{SELECT assembly_type FROM sequence_set WHERE vega_set_id > 0};
     }
     else {
