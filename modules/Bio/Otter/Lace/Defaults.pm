@@ -101,7 +101,7 @@ sub do_getopt {
                    'cfgstr=s'      => $save_deep_option,
                    # this is just a synonym feel free to add more
                    'view'          => sub { $DEFAULTS->{$CLIENT_STANZA}->{'write_access'} = 0 },
-                   'local_fasta'   => sub { $DEFAULTS->{'local_blast'}->{'database'} = $_[1] },
+                   'local_fasta=s' => sub { $DEFAULTS->{'local_blast'}->{'database'} = $_[1] },
                    # 'cfgfile=s'     => sub { add_config_file($_[1]) },
                    # these are the caller script's options
                    @script_args,
