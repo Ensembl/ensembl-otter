@@ -12,9 +12,12 @@ use TransientWindow::LogWindow;
 use Tk::HeadedCanvas;
 
 sub new {
-    my( $pkg, $tk, $x, $y, $construct_method ) = @_;
+    my( $pkg, $tk, $x, $y, $where_scrollbars, $canvas_class) = @_;
     
-    $construct_method ||= 'make_canvas';
+	if(!defined($where_scrollbars)) { # NB: not just empty, but undefined
+		$where_scrollbars = 'se';
+	}
+	$canvas_class ||= 'Canvas';	# or 'HeadedCanvas', for example
     
     unless ($tk) {
         confess "Error usage: $pkg->new(<Tk::Widget object>)";
@@ -25,8 +28,31 @@ sub new {
     ($x, $y) = $self->initial_canvas_size($x, $y);
     
     # Make and pack a canvas of the specified type
-    my $canvas = $self->$construct_method($tk, $x, $y);
-    
+
+	my @creation_params = (
+        -highlightthickness => 1,
+        -background         => 'white',
+        -width              => $x,
+        -height             => $y,
+	);
+	my @packing_params = (
+        -side => 'top',
+        -fill => 'both',
+        -expand => 1,
+	);
+
+	my $scrolled = $where_scrollbars
+		? $tk->Scrolled( $canvas_class,
+							-scrollbars => $where_scrollbars,
+							@creation_params)
+		: $tk->$canvas_class( @creation_params );
+
+	$scrolled->pack( @packing_params );
+
+	my $canvas = $where_scrollbars
+		? $scrolled->Subwidget('canvas')
+		: $scrolled;
+
     # Make a new CanvasWindow object, and return
     $self->canvas($canvas);
     $self->bind_scroll_commands;
@@ -38,43 +64,6 @@ sub new {
     }
     
     return $self;
-}
-
-sub make_canvas {
-    my( $self, $tk, $x, $y ) = @_;
-    
-    # Create and store the canvas object
-    my $scrolled = $tk->Scrolled('Canvas',
-        -highlightthickness => 1,
-        -background         => 'white',
-        -scrollbars         => 'se',
-        -width              => $x,
-        -height             => $y,
-        );
-    $scrolled->pack(
-        -side => 'top',
-        -fill => 'both',
-        -expand => 1,
-        );
-        
-    return $scrolled->Subwidget('canvas');
-}
-
-sub make_headed_canvas {
-    my( $self, $tk, $x, $y ) = @_;
-
-    my $hc = $tk->HeadedCanvas(
-        -highlightthickness => 1,
-        -background         => 'white',
-        -width              => $x,
-        -height             => $y,
-    )->pack(
-        -side => 'top',
-        -fill => 'both',
-        -expand => 1,
-    );
-
-    return $hc;
 }
 
 sub icon_pixmap {
@@ -199,9 +188,14 @@ sub minimum_scroll_bbox {
 sub bind_scroll_commands {
     my( $self ) = @_;
     
-    my $canvas = $self->canvas;
-    my $x_scroll = $canvas->can('Subwidget') ? $canvas->Subwidget('xscrollbar') : $canvas->parent->Subwidget('xscrollbar');
-    my $y_scroll = $canvas->can('Subwidget') ? $canvas->Subwidget('yscrollbar') : $canvas->parent->Subwidget('yscrollbar');
+    my $canvas = $self->canvas; # whether a self-managing or Scrolled
+
+	my $scrolled = $canvas->can('Subwidget') # the owner of scrollbars
+		? $canvas			# self-managing
+		: $canvas->parent;	# Scrolled
+
+    my $x_scroll = $scrolled->Subwidget('xscrollbar');
+    my $y_scroll = $scrolled->Subwidget('yscrollbar');
 
 	my $canvas_components = $canvas->can('Subwidget')
 			? [ $canvas->Subwidget('main_canvas'),

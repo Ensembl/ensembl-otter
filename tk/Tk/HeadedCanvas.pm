@@ -2,7 +2,7 @@ package HeadedCanvas;
 
 # a double-headed canvas with scrolls
 #
-# 24.Feb'2005, lg4
+# 10.Mar'2005, lg4
 
 use strict;
 use Tk;
@@ -82,15 +82,22 @@ sub Populate {
 	);
 }
 
+sub canvases {
+	my $self = shift @_;
+
+	return [ map { $self->Subwidget($_); }
+				('main_canvas','left_canvas','top_canvas','topleft_canvas')
+	];
+}
+
 # overrriding the existing canvas methods:
 
 sub delete { # override the standard method
 	my $self = shift @_;
 
-	$self->Subwidget('main_canvas')->delete(@_);
-	$self->Subwidget('left_canvas')->delete(@_);
-	$self->Subwidget('top_canvas')->delete(@_);
-	$self->Subwidget('topleft_canvas')->delete(@_);
+	for my $c (@{$self->canvases()}) {
+		$c->delete(@_);
+	}
 }
 
 sub scrollregion {
@@ -182,14 +189,10 @@ sub fit_everything {
 		-scrollregion =>[$e_x1,$s_y1,$e_x2,$s_y2],
 	);
 
-	$self->Subwidget('topleft_canvas')->xviewMoveto(0);
-	$self->Subwidget('topleft_canvas')->yviewMoveto(0);
-	$self->Subwidget('top_canvas')->xviewMoveto(0);
-	$self->Subwidget('top_canvas')->yviewMoveto(0);
-	$self->Subwidget('left_canvas')->xviewMoveto(0);
-	$self->Subwidget('left_canvas')->yviewMoveto(0);
-	$self->Subwidget('main_canvas')->xviewMoveto(0);
-	$self->Subwidget('main_canvas')->yviewMoveto(0);
+	for my $c (@{ $self->canvases() }) {
+		$c->xviewMoveto(0);
+		$c->yviewMoveto(0);
+	}
 }
 
 sub DESTROY {
