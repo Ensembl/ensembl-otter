@@ -9,7 +9,6 @@ use HTTPD::Authen;
 use Bio::Otter::Version;
 use Bio::Otter::ServerSide qw(error_exit
                               send_response
-                              send_xml_response
                               set_nph);
 
 $|             = 1;
@@ -71,7 +70,7 @@ $xml .= qq`  </datasets>\n`;
 $xml .= qq`</otter>\n`;
 
 
-send_xml_response($q, $xml);
+send_response($q, $xml);
 
 #End main
 
