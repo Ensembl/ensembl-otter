@@ -249,6 +249,21 @@ sub bind_scroll_commands {
         #warn "Shift-Down";
         $y_scroll->ScrlByUnits('v', 1);
         });
+
+    if($^0 eq 'MSWin32'){
+        #$canvas->Tk::bind('<MouseWheel>',sub{
+            #warn "Someone's scrolling with the mousewheel\n";
+        #});
+    }else{
+        $canvas->Tk::bind('<4>', sub{
+            #warn "Someone's scrolling up with the mousewheel\n";
+            $y_scroll->ScrlByUnits('v', -3);
+        });
+        $canvas->Tk::bind('<5>', sub{
+            #warn "Someone's scrolling down with the mousewheel\n";
+            $y_scroll->ScrlByUnits('v',  +3);
+        });
+    }
 }
 
     #foreach my $key_seq ($x_scroll->bind($class)) {
