@@ -30,8 +30,9 @@ use Hum::Ace::GeneMethod;
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
     my $ds = $cl->get_DataSet_by_name($dataset_name);
     my $ss = $ds->get_SequenceSet_by_name($sequence_set);
+    $ds->selected_SequenceSet($ss);
     $ds->fetch_all_CloneSequences_for_SequenceSet($ss);
-    my $gene_aptr = $ds->fetch_cached_DBAdaptor->get_GeneAdaptor;
+    my $gene_aptr = $ds->get_cached_DBAdaptor->get_GeneAdaptor;
     
     select_CloneSequence_contig($ss, $start_acc, $end_acc);
     my ($genes, $tiles) = otter_objects_from_contig($cl, $ds, $ss);
@@ -41,8 +42,8 @@ use Hum::Ace::GeneMethod;
         next unless $slice_gene->gene_info->truncated_flag;
         my $whole_gene = $gene_aptr->fetch_by_stable_id($slice_gene->stable_id);
         next unless gene_is_off_track($whole_gene, $acc_list);
-        my $name = $gene->gene_info->name->name;
-        my $stable_id = $gene->stable_id;
+        my $name = $whole_gene->gene_info->name->name;
+        my $stable_id = $whole_gene->stable_id;
         print STDERR "Found off track gene '$name' ($stable_id)\n";
     }
 }
@@ -52,7 +53,7 @@ sub gene_is_off_track {
     
     foreach my $exon (@{$gene->get_all_Exons}) {
         my $exon_list = $exon->isa('Bio::EnsEMBL::StickyExon')
-            ? $exon->get_all_component_Exons[]
+            ? $exon->get_all_component_Exons
             : [$exon];
         foreach my $exon (@$exon_list) {
             my $clone_acc = $exon->contig->clone->embl_id;
@@ -100,7 +101,7 @@ sub select_CloneSequence_contig {
     my $in_contig = 0;
     my $cs_list = $ss->CloneSequence_list;
     foreach my $cs (@$cs_list) {
-        my $acc = $cs->accesssion;
+        my $acc = $cs->accession;
         if ($acc eq $start_acc) {
             $in_contig = 1;
         }
