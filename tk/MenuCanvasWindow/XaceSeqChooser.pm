@@ -19,9 +19,6 @@ use Data::Dumper;
 use base 'MenuCanvasWindow';
 use MenuCanvasWindow::ExonCanvas;
 use CanvasWindow::DotterWindow;
-
-#use Scalar::Util 'weaken';
-
 use CanvasWindow::PolyAWindow;
 use CanvasWindow::LocusWindow;
 use Bio::Otter::Lace::Defaults;

@@ -15,7 +15,6 @@ use MenuCanvasWindow;
 use Hum::Ace::DotterLauncher;
 use vars ('@ISA');
 use Hum::Ace;
-use Scalar::Util 'weaken';
 @ISA = ('MenuCanvasWindow');
 
 # "new" is in MenuCanvasWindow

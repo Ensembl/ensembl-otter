@@ -6,7 +6,6 @@ use strict ;
 use Carp;
 use Tk ;
   
-use Scalar::Util 'weaken';
 use base 'CanvasWindow';
 
 sub toplevel {

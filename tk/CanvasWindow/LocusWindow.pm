@@ -6,7 +6,6 @@ use strict;
 use Tk;
 use base 'CanvasWindow';
 use Data::Dumper;
-use Scalar::Util 'weaken';
 
 sub new{
     my ($pkg , $toplevel ,$locus ) = @_ ;
@@ -44,7 +43,6 @@ sub last_exon_canvas{
     my ($self , $canv) =@_ ;
     if ($canv){
         $self->{'_exon_canvas'} = $canv ;
-        weaken $self->{'_exon_canvas'};
     }
     return $self->{'_exon_canvas'} ;
 }
