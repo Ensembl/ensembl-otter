@@ -357,8 +357,8 @@ sub add_gene_trans_remark {
   if ( $ref_t->translation ) {
 
     # move evidence over to the transcript with CDS if it has not one but the redundant transcript to delete has one
-    unless ( $ref_t->transcript_info->evidence ) {
-      $ref_t->transcript_info->evidence($red_t->transcript_info->evidence) if $red_t->transcript_info->evidence;
+    unless ( @{$ref_t->transcript_info->get_all_Evidence} ) {
+      $ref_t->transcript_info->add_Evidence(@{$red_t->transcript_info->get_all_Evidence}) if @{$red_t->transcript_info->get_all_Evidence};
     }
 
     unless ( $ref_t->transcript_info->remark ) {
@@ -376,17 +376,17 @@ sub add_gene_trans_remark {
 
   else {
 
-    if ( $red_t->transcript_info->evidence && !($ref_t->transcript_info->evidence) ){
+    if ( @{$red_t->transcript_info->get_all_Evidence} && !(@{$ref_t->transcript_info->get_all_Evidence}) ){
       print $red_t->transcript_info->name. " has EVIDENCE\n";
 
       #  move evidence/remark from transcript with higher number to the one with lower number and delete the higher number one
       #  attach also its evidence if available
       #  this is trying to keep the numbering of transcripts
 
-      $ref_t->transcript_info->evidence( $red_t->transcript_info->evidence );
+      $ref_t->transcript_info->add_Evidence( @{$red_t->transcript_info->get_all_Evidence} );
 
       print "MOVE OVER\n";
-      my @evidence = map $_->name, $ref_t->transcript_info->evidence;
+      my @evidence = map $_->name, @{$ref_t->transcript_info->get_all_Evidence};
       print "NEW: @evidence\n";
     }
 

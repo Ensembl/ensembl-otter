@@ -1128,7 +1128,7 @@ sub _supporting_evidence {
     my ( $self, $transcript_info, $ft, @evidence_types ) = @_;
 
     my %evidence_hash;
-    foreach my $evidence ($transcript_info->evidence) {
+    foreach my $evidence (@{$transcript_info->get_all_Evidence}) {
         
         foreach my $evidence_type (@evidence_types) {
         

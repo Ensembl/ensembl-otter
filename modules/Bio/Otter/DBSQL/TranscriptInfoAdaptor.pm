@@ -228,14 +228,9 @@ sub store {
         $rem->transcript_info_id($traninfo->dbID);
         $self->db->get_TranscriptRemarkAdaptor->store($rem);
     }  
-    if (defined($traninfo->evidence)) {
-        my @ev = $traninfo->evidence;
-        if (scalar(@ev) > 0) { 
-	    foreach my $ev (@ev) {
-	 	$ev->transcript_info_id($traninfo->dbID);
-	        $self->db->get_EvidenceAdaptor->store($ev);
-	    }
-        }
+    foreach my $ev (@{$traninfo->get_all_Evidence}) {
+	$ev->transcript_info_id($traninfo->dbID);
+	$self->db->get_EvidenceAdaptor->store($ev);
     }
 }
 

@@ -159,7 +159,7 @@ foreach my $geneid (keys %genes) {
 # Was type genoscope
           my $evidence = new Bio::Otter::Evidence(-name => $ev, -type => 'Genomic');
           print "Adding evidence $ev\n";
-          $traninfo->evidence($evidence);
+          $traninfo->add_Evidence($evidence);
         }
         
         # Finally the CDS lines

@@ -93,7 +93,7 @@ my $ti1 = Bio::Otter::TranscriptInfo->new(
 	-author => $author,
 	-remark => \@rem2);
 
-$ti1->evidence($ev);
+$ti1->add_Evidence($ev);
 
 $transcript1->transcript_info($ti1);
 

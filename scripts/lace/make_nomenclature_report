@@ -128,7 +128,7 @@ use Bio::SeqIO;
                 if ($gene->gene_info->known_flag) {
                     push(@ele, qq{SYMBOL "$name"});
                 }
-                my @evidence = map $_->name, $tscript->transcript_info->evidence;
+                my @evidence = map $_->name, @{$tscript->transcript_info->get_all_Evidence};
                 if (@evidence) {
                     push(@ele, qq{AC "@evidence"});
                 }

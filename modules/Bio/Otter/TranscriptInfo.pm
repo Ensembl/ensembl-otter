@@ -33,14 +33,15 @@ sub new {
   $self->timestamp($timestamp);
 
   $self->{_remark}   = [];
-  $self->flush_Evidence();
 
   if (defined($evidence)) {
       if (ref($evidence) eq "ARRAY") {
-		  $self->add_Evidence(@$evidence);
+	  $self->add_Evidence(@$evidence);
       } else {
-		  $self->throw("Argument to evidence must be an array ref. Currently [$evidence]");
+	  $self->throw("Argument to evidence must be an array ref. Currently [$evidence]");
       }
+  } else {
+    $self->flush_Evidence;
   }
   
   if (defined($remark)) {
@@ -347,48 +348,29 @@ sub remark{
 }
 
 
-
-=head2 evidence
-
- Title   : evidence
- Usage   : $obj->evidence($newval)
- Function: 
- Example : 
- Returns : value of evidence
- Args    : newvalue (optional)
-
-
-=cut
-
-sub evidence {
-    my $obj = shift @_;
-
-    while (my $rem = shift @_) {
-		if ($rem->isa("Bio::Otter::Evidence")) {
-			push(@{$obj->{'_evidence'}},$rem);
-		} else {
-			$obj->throw("Object [$rem] is not an Evidence object");
-		}
-    }
-   return @{$obj->{'_evidence'}};
-}
-
 sub add_Evidence {
-	my $self = shift @_;
+    my $self = shift;
 
-	$self->evidence(@_);
+    my $list = $self->{'_evidence'};
+    while (my $ev = shift) {
+	if ($ev->isa("Bio::Otter::Evidence")) {
+	    push(@$list, $ev);
+	} else {
+	    $obj->throw("Object [$ev] is not an Evidence object");
+	}
+    }
 }
 
 sub get_all_Evidence {
-	my $self = shift @_;
+    my $self = shift @_;
 
-	return [ $self->evidence() ];
+    return $self->{'_evidence'};
 }
 
 sub flush_Evidence {
-	my $self = shift @_;
+    my $self = shift;
 
-	$self->{_evidence} = [];
+    $self->{'_evidence'} = [];
 }
 
 
@@ -448,9 +430,9 @@ sub toString{
 
     $str .= "Transcript evidence :-\n";
 
-    $str .= "EV " . $self->evidence . "\n";
-    foreach my $ev ($self->evidence) {
-		$str .= $ev->toString() . "\n";
+    $str .= "EV:\n";
+    foreach my $ev (@{$self->get_all_Evidence}) {
+	$str .= $ev->toString() . "\n";
     }
     return $str;
 
@@ -556,18 +538,18 @@ sub equals {
 	}
     }
 	
-    my @ev1 = $self->evidence;
-    my @ev2 = $obj->evidence;
+    my $ev_list1 = $self->get_all_Evidence;
+    my $ev_list2 = $obj->get_all_Evidence;
 
-    if (scalar(@ev1) != scalar(@ev2)) {
-        print STDERR "FOUND DIFF : Different evidence numbers " . scalar(@ev1) . " : " . scalar(@ev2) . "\n";
+    if (@$ev_list1 != @$ev_list2) {
+        print STDERR "FOUND DIFF : Different evidence numbers " . scalar(@$ev_list1) . " : " . scalar(@$ev_list2) . "\n";
 	return 0;
     }
-    foreach my $ev1 (@ev1) {
+    foreach my $ev1 (@$ev_list1) {
 	my $found = 0;
 	
-	foreach my $ev2 (@ev2) {
-	    if ($ev2->equals($ev2)) {
+	foreach my $ev2 (@$ev_list2) {
+	    if ($ev1->equals($ev2)) {
 		$found = 1;
 	    }
 	}

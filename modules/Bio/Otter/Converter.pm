@@ -246,7 +246,7 @@ sub XML_to_otter {
     } elsif (/<evidence>/) {
       $evidence = new Bio::Otter::Evidence;
       $evidence->type('UNKNOWN');
-      $traninfo->evidence($evidence);
+      $traninfo->add_Evidence($evidence);
       $currentobj = 'evidence';
     } elsif (/<\/evidence>/) {
       $currentobj = 'tran';
@@ -893,7 +893,7 @@ sub ace_transcript_seq_objs_from_genes{
             }
 
             # Supporting evidence
-            my @ev = sort {$a->name cmp $b->name} $tran->transcript_info->evidence;
+            my @ev = sort {$a->name cmp $b->name} @{$tran->transcript_info->get_Evidence};
             foreach my $ev (@ev) {
                 my $type = $ev->type;
                 my $name = $ev->name;
@@ -1447,7 +1447,7 @@ sub ace_to_otter {
 	}
       }
     }
-    $traninfo->evidence(@evidence);
+    $traninfo->add_Evidence(@evidence);
 
     # Type of transcript (Method tag)
     my $class = Bio::Otter::TranscriptClass

@@ -72,13 +72,13 @@ my $ev3 = new Bio::Otter::Evidence(-name           => 'pog',
                                    -xref_id        => 3,
                                    -type           => 'EST');
 
-ok($ti->evidence($ev1));
+ok($ti->add_Evidence($ev1));
 
 my @ev = ($ev2,$ev3);
 
-ok($ti->evidence(@ev));
+ok($ti->add_Evidence(@ev));
 
-my @newev = $ti->evidence;
+my @newev = @{$ti->get_all_Evidence};
 
 ok(scalar(@newev) == 3);
 

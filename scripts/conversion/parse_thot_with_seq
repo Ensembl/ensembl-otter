@@ -235,7 +235,7 @@ foreach my $geneid (keys %genes) {
         my $evidence =
           new Bio::Otter::Evidence(-name => $ev, -type => 'Genomic');
         # print "Adding evidence $ev\n";
-        $traninfo->evidence($evidence);
+        $traninfo->add_Evidence($evidence);
       }
 
       # Finally the CDS lines

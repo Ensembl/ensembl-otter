@@ -74,10 +74,10 @@ my $ev2 = new Bio::Otter::Evidence(-name           => 'pog2',
                                    -transcript_info_id  => 2,
                                    -type           => 'EST');
 
-$ti->evidence($ev1);
-$ti->evidence($ev2);
+$ti->add_Evidence($ev1);
+$ti->add_Evidence($ev2);
 
-ok(scalar($ti->evidence) == 2);
+ok(scalar(@{$ti->get_all_Evidence}) == 2);
 
 $adaptor->store($ti);
 
@@ -85,7 +85,7 @@ ok(1);
 
 my $newti = $adaptor->fetch_by_stable_id('yadda');
 
-ok(scalar($newti->evidence) == 2);
+ok(scalar(@{$newti->get_all_Evidence}) == 2);
 
 ok($ti->name eq 'name');
 ok($ti->cds_start_not_found == 1);

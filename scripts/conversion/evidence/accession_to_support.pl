@@ -131,9 +131,9 @@ foreach my $chr (@chr){
 
   OUTER:
     foreach my $trans (@{$gene->get_all_Transcripts}) {
-      my @evidence = $trans->transcript_info->evidence;
+      my $evidence = @{$trans->transcript_info->get_all_Evidence};
 
-      foreach my $evi (@evidence) {
+      foreach my $evi (@$evidence) {
 	my $acc = $evi->name;
 	$acc =~ s/.*://;
 	$acc =~ s/\.[0-9]*$//;

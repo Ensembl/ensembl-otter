@@ -282,7 +282,7 @@ foreach my $geneid (keys %exons) {
     my $traninfo = new Bio::Otter::TranscriptInfo;
 
     #foreach my $evi (@evidence) {
-    #  $traninfo->evidence($evi);
+    #  $traninfo->add_Evidence($evi);
     #}
 
     $gene->add_Transcript($tran);

@@ -196,8 +196,8 @@ my $ev = new Bio::Otter::Evidence(-name           => 'pog',
                                   -xref_id        => 3,
                                   -type           => 'EST');
 
-$ti1->evidence($ev);
-$ti2->evidence($ev);
+$ti1->add_Evidence($ev);
+$ti2->add_Evidence($ev);
 
 $transcript1->transcript_info($ti1);
 $transcript2->transcript_info($ti2);

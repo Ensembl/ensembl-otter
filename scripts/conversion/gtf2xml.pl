@@ -539,7 +539,7 @@ foreach my $gene_id (keys %genes){
     if(0){
       if(scalar(@evidence)){
 	foreach my $evi (@evidence){
-	  $traninfo->evidence($evi);
+	  $traninfo->add_Evidence($evi);
 	}
       }
     }

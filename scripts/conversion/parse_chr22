@@ -202,7 +202,7 @@ foreach my $geneid (keys %genes) {
       my $traninfo = new Bio::Otter::TranscriptInfo;
  
       foreach my $evi (@evidence) {
-        $traninfo->evidence($evi);
+        $traninfo->add_Evidence($evi);
       }
 
       $gene->add_Transcript($tran);
@@ -239,7 +239,7 @@ foreach my $geneid (keys %genes) {
 #      foreach my $ev (keys %evidence) {
 #        my $evidence = new Bio::Otter::Evidence(name => $ev, -type => 'EST');
 #        print STDERR "Adding evidence $ev\n";
-#        $traninfo->evidence($evidence);
+#        $traninfo->add_Evidence($evidence);
 #      }
 
       # Finally the CDS lines
