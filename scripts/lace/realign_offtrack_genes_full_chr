@@ -1,0 +1,91 @@
+#!/usr/local/bin/perl -w
+
+### realign_offtrack_genes
+
+use strict;
+use POSIX qw(ceil floor);
+use Bio::Otter::Lace::Defaults;
+
+{
+    my( $dataset_name,
+        $sequence_set,
+        $no_of_clones,
+        $dir,
+        );
+    
+    my $usage = sub { exec('perldoc', $0) };
+    Bio::Otter::Lace::Defaults::do_getopt(
+                                          'h|help!'       => $usage,
+                                          'dataset=s'     => \$dataset_name,
+                                          'chr|set=s'     => \$sequence_set,
+                                          'clones=i'      => \$no_of_clones,
+                                          'dir=s'         => \$dir,
+        ) or $usage->();
+    $usage->() unless $dataset_name and $sequence_set;
+    $dir ||= 'output';
+
+    # Connect to Ensembl/Otter database and fetch adaptors
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    my $ss = $ds->get_SequenceSet_by_name($sequence_set);
+    $ds->selected_SequenceSet($ss);
+    my $cs_list = $ds->fetch_all_CloneSequences_for_SequenceSet($ss);
+    my @list = get_list_of_slices(scalar(@$cs_list), $no_of_clones);
+    my $ds_chr = "-dataset $dataset_name -chr $sequence_set";
+    mkdir $dir || die "Couldn't mkdir $dir";
+    my $ds_chr_file = "$dir/${$}_${dataset_name}_${sequence_set}";
+    foreach my $range(@list){
+        my @clSeqs = @{$cs_list}[@$range];
+        my $start = $clSeqs[0]->accession();
+        my $end   = $clSeqs[-1]->accession();
+        my $cmd   = qq`./realign_offtrack_genes $ds_chr -start_acc $start -end_acc $end > ${ds_chr_file}_${start}.out 2> ${ds_chr_file}_${start}.err`;
+        warn "running $cmd \n";
+        system($cmd) == 0 || warn "Couldn't run $cmd : $! : $?";
+    }
+}
+
+sub get_list_of_slices{
+    my ($count, $n) = @_;
+    $n ||= 10;
+    $count--;
+    my $max = ceil($count/$n);
+    my $total;
+    my @list;
+    for my $i(0..$max){
+        my $start = $i * $n;
+        my $end   = ($i + 1) * $n - 1;
+        
+        my $half_start = $start - floor($n / 2);
+        my $half_end   = $end   - floor($n / 2);
+
+        #$end = ($end > $count ? $count : $end);
+
+        push(@list, [$start .. $end]) unless $end > $count;
+        push(@list, [$half_start .. $half_end]) if $half_end > 0 && !($half_end > $count);
+    }
+    return @list;
+}
+
+
+=pod
+
+=head1 DESCRIPTION
+
+ wrapper to call realign_offtrack_genes on a whole chromosome n clones at a time.
+
+ ----------------------------------------  = full chr
+ |-----|                                   = realign_offtrack_genes call 1
+    |-----|                                = realign_offtrack_genes call 2
+       |-----|                             = realign_offtrack_genes call 3
+
+    ...
+
+./realign_offtrack_genes_full_chr -dataset human -set Chr1 -clones slice_size -dir output_dir
+
+ -dataset  The Dataset
+ -set      The Sequence Set
+ -clones   The number of clones in the region in each call to realign_offtrack_genes
+ -dir      The directory where the output gets put.
+
+
+=cut
