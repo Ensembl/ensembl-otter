@@ -48,6 +48,15 @@ sub _refresh_SequenceSet{
 
 }
 
+sub save_sequence_notes{
+    my ($self, $comment) = @_;
+    my ($ss , $index) = $self->get_SequenceSet_index_list_of_selected();
+    return unless $ss;
+    $self->SequenceSet($ss);
+    $self->SUPER::save_sequence_notes($comment);
+    $self->{'_SequenceSet'} = undef;
+}
+
 sub _write_access{
     my ($self) = @_ ;
     my $rs = $self->ResultSet or confess "no ResultSet attached" ;
@@ -331,6 +340,8 @@ sub get_SequenceSet_index_of_current{
 
         warn "Found type '$name' and index $adjusted_idx \n";
         return ($ss, $adjusted_idx);
+    }else{
+        warn "$self->get_current_CloneSequence_index found nothing\n";
     }
     return ();
 }
