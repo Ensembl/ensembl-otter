@@ -18,6 +18,7 @@ use File::Path 'rmtree';
     # Can add password with netrc if needed
     my $socket = '/tmp/mysql4.sock';
     my $archive = '/nfs/disk100/humpub/data/mysql_backup/otter';
+    my $archive_host = 'cbi1';
     my $root_dir = '/humsql/otter';
     my $date_dir = date_dir();
     my $working_dir = "$root_dir/$date_dir";
@@ -49,7 +50,7 @@ use File::Path 'rmtree';
     printf STDERR "otter backup took %d minutes\n", ($backup_end - $backup_start) / 60;
     
     chdir($root_dir) or die "Can't chdir to '$root_dir' : $!";
-    my $copy = "gtar cf - $date_dir | ssh cbi1 gtar xf - -C $archive";
+    my $copy = "gtar cf - $date_dir | ssh $archive_host gtar xf - -C $archive";
     if (system($copy) == 0) {
         rmtree($date_dir);
     } else {
@@ -57,7 +58,7 @@ use File::Path 'rmtree';
         $err_count++;
     }
     my $copy_end = time;
-    printf STDERR "otter copy took %d minutes\n", ($copy_end - $backup_end) / 60;
+    printf STDERR "otter copy took %.0f minutes\n", ($copy_end - $backup_end) / 60;
     
     ### Might want to remove old backups here, which could be
     ### done via an ssh command to take NFS out of the loop.

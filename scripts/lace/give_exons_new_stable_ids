@@ -1,0 +1,78 @@
+#!/usr/local/bin/perl -w
+
+### give_exons_new_stable_ids
+
+use strict;
+use Bio::Otter::Lace::Defaults;
+
+{
+    my( $dataset_name );
+
+    my $usage = sub { exec('perldoc', $0) };
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'       => $usage,
+        'dataset=s'     => \$dataset_name,
+        ) or $usage->();
+    $usage->() unless $dataset_name;
+    
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+
+    my $otter_dba = $ds->get_cached_DBAdaptor;
+    my $exon_aptr = $otter_dba->get_ExonAdaptor;
+    my $stab_aptr = $otter_dba->get_StableIdAdaptor;
+    
+    my $change_stable = $otter_dba->prepare(q{
+        UPDATE exon_stable_id
+        SET stable_id = ?
+          , version = 1
+        WHERE exon_id = ?
+        });
+    
+    $otter_dba->begin_work;
+    eval {
+        foreach my $stable_id (@ARGV) {
+            my $exon = $exon_aptr->fetch_by_stable_id($stable_id);
+            my $version = $exon->version;
+            my $new_stable = $stab_aptr->fetch_new_exon_stable_id;
+            print STDERR "Changing '$stable_id.$version' to '$new_stable.1'\n";
+            $change_stable->execute($new_stable, $exon->dbID);
+        }
+    };
+    if ($@) {
+        warn $@;
+        $otter_dba->rollback;
+    } else {
+        $otter_dba->commit;
+    }
+}
+
+
+
+__END__
+
+=head1 NAME - give_exons_new_stable_ids
+
+  SELECT distinct es.stable_id
+  FROM gene_name n
+    , current_gene_info c
+    , gene_stable_id gs
+    , transcript t
+    , exon_transcript et
+    , exon_stable_id es
+  WHERE n.gene_info_id = c.gene_info_id
+    AND c.gene_stable_id = gs.stable_id
+    AND gs.gene_id = t.gene_id
+    AND t.transcript_id = et.transcript_id
+    AND et.exon_id = es.exon_id
+    AND n.name IN ('GD:CD34'
+        , 'GD:PLXNA2')
+  ORDER BY es.stable_id
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
