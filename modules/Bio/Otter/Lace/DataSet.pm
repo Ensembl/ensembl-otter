@@ -191,7 +191,6 @@ sub get_SequenceSet_by_name {
     }
     confess "No SequenceSet called '$name'";
 }
-
 sub selected_SequenceSet {
     my( $self, $selected_SequenceSet ) = @_;
     
@@ -267,6 +266,7 @@ sub status_refresh_for_SequenceSet{
 	my $ctg_name = $cs->contig_name();
 	$cs->pipelineStatus($hash->{$ctg_name});
     }
+    Bio::Otter::Lace::SatelliteDB::disconnect_DBAdaptor($pipeline_db);
 }
 
 # used when the locks column on sequence notes needs to be refereshed , rather than query for every detail
