@@ -219,7 +219,12 @@ eval {
   ($del_sf, $save_sf) = $ab->compare_feature_sets($old_feature_set, $new_feature_set);
 
   my $atag_Ad = $odb->get_AssemblyTagAdaptor;
-  my $old_assembly_tag_set = $atag_Ad->fetch_AssemblyTags_by_Slice($slice);
+
+  # $atags_Ad in inherits from Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor,
+  # which inherits from Bio::EnsEMBL::DBSQL:BaseAdaptor
+  # This also allows fetching AssemblyTag features by passing a RowContig obj
+
+  my $old_assembly_tag_set = $atag_Ad->fetch_all_by_Slice($slice);
 
   ($del_at, $save_at) = $ab->compare_assembly_tag_sets($old_assembly_tag_set, $new_assembly_tag_set);
 };
