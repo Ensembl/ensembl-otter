@@ -50,12 +50,19 @@ sub get_pipe_dbh {
 sub list_missing_ana {
     my( $fix, $dbh, $ana_id, $logic_name, $align_table ) = @_;
     
+    warn "Looking for zero count '$logic_name' in '$align_table'\n";
+    
     my $count_features = $dbh->prepare(qq{
-        SELECT count(*)
+        SELECT contig_id, count(*)
         FROM $align_table
-        WHERE contig_id = ?
-          AND analysis_id = $ana_id
+        WHERE analysis_id = $ana_id
+        GROUP BY contig_id
         });
+    $count_features->execute;
+    my( %ctg_cnt );
+    while (my ($ctg_id, $count) = $count_features->fetchrow) {
+        $ctg_cnt{$ctg_id} = $count;
+    }
     
     my $list_contig_id = $dbh->prepare(q{
         SELECT g.contig_id
@@ -75,9 +82,7 @@ sub list_missing_ana {
         });
     
     while (my ($ctg_id, $name) = $list_contig_id->fetchrow) {
-        $count_features->execute($ctg_id);
-        my ($count) = $count_features->fetchrow;
-        if ($count == 0) {
+        unless ($ctg_cnt{$ctg_id}) {
             print "$logic_name\t$ctg_id\n";
             if ($fix) {
                 $delete_input_id->execute($name, $ana_id);
