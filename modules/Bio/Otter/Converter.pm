@@ -602,7 +602,7 @@ sub otter_to_ace {
         my $accession  = $clone->id            or die "No embl_id on clone attached to '$name' in tile";
         my $sv         = $clone->embl_version  or die "No embl_version on clone attached to '$name' in tile";;
         my $clone_info = $clone->clone_info;
-        $str .= qq{\nSequence : "$name"\nSource "$slice_name"\nAccession "$accession"\nSequence_version "$sv"\n};
+        $str .= qq{\nSequence : "$name"\nSource "$slice_name"\nAccession "$accession"\nSequence_version $sv\n};
 
         foreach my $keyword ($clone_info->keyword) {
             $str .= sprintf qq{Keyword "%s"\n}, ace_escape($keyword->name);
@@ -885,8 +885,8 @@ sub exon_pos {
 }
 
 # Setup regular expression components for parsing ace file format
-my $OBJ_NAME  = qr/[\s:]+"?([^"]+)"?/;
-my $STRING    = qr/\s+"?([^"]+)"?/;
+my $OBJ_NAME  = qr/[\s:]+"?([^"\n]+)"?/;
+my $STRING    = qr/\s+"?([^"\n]+)"?/;
 my $INT       = qr/\s+(\d+)/;
 my $FLOAT     = qr/\s+([\d\.]+)/;
 
@@ -1091,6 +1091,7 @@ sub ace_to_otter {
                     $curr_seq->{Start_not_found} = $1;
                 }
                 elsif (/^Start_not_found/) {
+                    ### May be cause of exon phase problem?  Is zero correct?
                     $curr_seq->{Start_not_found} = 0;
                 }
                 elsif (/^Method $STRING/x) {
@@ -1099,8 +1100,11 @@ sub ace_to_otter {
                 elsif (/^(Processed_mRNA|Pseudogene)/) {
                     $curr_seq->{$1} = 1;
                 }
-                elsif (/^(Transcript_id|Translation_id|Transcript_author|Accession|Sequence_version) $STRING/x) {
+                elsif (/^(Transcript_id|Translation_id|Transcript_author|Accession) $STRING/x) {
                     $curr_seq->{$1} = $2;
+                }
+                elsif (/^Sequence_version $INT/x) {
+                    $curr_seq->{Sequence_version} = $1;
                 }
             }
         }
@@ -1465,13 +1469,15 @@ sub ace_to_otter {
 
         my $cln  = $sequence{$ctg_name}     or die "No clone information for '$ctg_name'";
         my $acc  = $cln->{Accession}        or die "No Accession for '$ctg_name'";
-        my $sv   = $cln->{Sequence_version} or die "No Accession for '$ctg_name'";
-        my $auth = $cln->{author}           or die "No author for '$ctg_name'";
+        my $sv   = $cln->{Sequence_version} or die "No Sequence_version for '$ctg_name'";
+        my $auth = $cln->{author};
 
         # Make CloneInfo object
         my $info = Bio::Otter::CloneInfo->new;
-        my $author = $authors{$auth} or die "No Author object called '$auth'";
-        $info->author($author);
+        if ($auth) {
+            my $author = $authors{$auth} or die "No Author object called '$auth'";
+            $info->author($author);
+        }
         if (my $kw_list = $cln->{keyword}) {
             foreach my $word (@$kw_list) {
                 my $kw = Bio::Otter::Keyword->new;

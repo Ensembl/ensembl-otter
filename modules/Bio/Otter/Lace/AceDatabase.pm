@@ -226,8 +226,14 @@ sub save_otter_slice {
     
     $ace->find(Genome_Sequence => $name);
     my $ace_txt = $ace->raw_query('show -a');
+
     $ace->raw_query('Follow SubSequence');
     $ace_txt .= $ace->raw_query('show -a');
+
+    $ace->find(Genome_Sequence => $name);
+    $ace->raw_query('Follow AGP_Fragment');
+    $ace_txt .= $ace->raw_query('show -a');
+
     $ace->raw_query('Follow Locus');
     $ace_txt .= $ace->raw_query('show -a');
     $ace->find(Person => '*');  # For Authors
