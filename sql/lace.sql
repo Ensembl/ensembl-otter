@@ -15,7 +15,7 @@ create table sequence_set (
 create table vega_set (
     vega_set_id int(10) unsigned DEFAULT '0' NOT NULL auto_increment,
     vega_author_id int(10) unsigned DEFAULT '0' NOT NULL,
-    vega_type ENUM ('E', 'I', 'N') DEFAULT 'N' NOT NULL,
+    vega_type ENUM ('E', 'I', 'N', 'P') DEFAULT 'N' NOT NULL,
     vega_name varchar (20),
     PRIMARY KEY(vega_set_id),
     UNIQUE (vega_name)
