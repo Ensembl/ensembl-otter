@@ -30,6 +30,8 @@ my $font = ['Helvetica', 12, 'bold'];
         );
     my $ensdb = Hum::EnsCmdLineDB::connect();
     
+    print STDERR "Ignoring hits below $min_percent_id% identity\n";
+    
     my $vc = $ensdb->get_StaticGoldenPathAdaptor
         ->fetch_VirtualContig_by_chr_name($chr_name);
     
