@@ -430,7 +430,7 @@ sub get_all_ensembl_chromosome_names{
 # look for contigs for this sv
 sub get_ensembl_contigs_by_sv{
     my($dba,$ch,$acc,$sv,$type)=@_;
-    print "DEBUG: checking $acc,$sv\n" if $opt_d;
+    print "DEBUG: checking $acc,$sv,$type\n" if $opt_d;
     my %id_chr = map {$_->chromosome_id, $_} @$ch;
     my $sth = $dba->prepare(q{
         SELECT a.chromosome_id
