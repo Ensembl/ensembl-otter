@@ -236,7 +236,7 @@ sub popup_missing_analysis{
         if (!$using_no_pipeline){
             my $top = $self->canvas->Toplevel();
             $top->transient($self->canvas->toplevel);
-            my $hp  = CanvasWindow::SequenceNotes::Status->new($top, 550 , 50);
+            my $hp  = CanvasWindow::SequenceNotes::Status->new($top, 650 , 50);
 	    # $hp->SequenceNotes($self); # can't have reference to self if we're inheriting
 	    # clean up just won't work.
             $hp->SequenceSet($ss);
@@ -299,6 +299,22 @@ sub check_for_History{
     $hist_win->canvas->toplevel->raise;
     return 1;
 }
+# so we dont bring up copies of the same window
+sub check_for_Status{
+    my ($self, $ss, $index) = @_;
+    return 0 unless defined($index); # 0 is valid index
+
+    my $status_win = $self->{'_Status_win'};
+    return 0 unless $status_win;
+    $status_win->clone_index($index);
+    $status_win->SequenceSet($ss);
+    $status_win->draw();
+    $status_win->canvas->toplevel->deiconify;
+    $status_win->canvas->toplevel->raise;
+    return 1;
+}
+
+
 sub get_SequenceSet_index_of_current{
     my ($self) = @_;
     warn "get_SequenceSet_index_of_current called \n";
