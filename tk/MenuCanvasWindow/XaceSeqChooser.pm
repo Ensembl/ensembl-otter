@@ -928,18 +928,11 @@ sub exit_save_data {
     
     # Unlock and cleanup (lace dir gets
     # removed by AceDatabase->DESTROY)
-    eval{
-        $ace->unlock_all_slices;
-    };
-    if ($@) {
-        $self->exception_message($@, 'Error unlocking clones');
-        return 0;
-    }
-    
-    if (my $sn = $self->SequenceNotes){
-        delete $self->{'_sequence_notes'} ;
-        $sn ->refresh_column(7) ; ## locks column
-    }
+
+    # no need to unlock this gets done by 
+    # AceDatabase->DESTROY now.
+
+    # sequenceNotes clean up and lock refresh.
     
     $ace->error_flag(0);
     
@@ -2131,9 +2124,20 @@ sub run_dotter {
     return 1;
 }
 
-
 sub DESTROY {
     my( $self ) = @_;
+    # need to undef AceDatabase for it's clean up.
+    # warn "AceDatabase->unlock should now happen\n";
+    delete $self->{'_AceDatabase'}; # unlock will now happen
+    # warn "AceDatabase->unlock should have happened\n";
+    if (my $sn = $self->SequenceNotes){
+        # then refresh locks
+        # warn "lock refresh should now happen\n";
+        $sn->refresh_column(7) ; ## locks column
+        # warn "lock refresh should have happened\n";
+        # need to clean up the sequenceNotes reference
+        delete $self->{'_sequence_notes'} ;
+    }
     warn "Destroying XaceSeqChooser for ", $self->ace_path, "\n";
 }
 
