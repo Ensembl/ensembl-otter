@@ -1785,7 +1785,7 @@ sub slice_to_XML {
   my $chrend   = $slice->chr_end;
 
   $xmlstr .= Bio::Otter::Converter::path_to_XML($chr, $chrstart, $chrend, 
-                                                $db->assembly_type, @path);
+                                                $db->assembly_type, \@path);
 
   if (defined($writeseq)) {
     $xmlstr .= "<dna>\n";
