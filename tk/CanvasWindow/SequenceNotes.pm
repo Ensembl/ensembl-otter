@@ -717,7 +717,7 @@ sub save_sequence_notes{
         foreach my $seq_index (@sequence_id_list){
             $seq_index =~ s/^row=// ;
             warn "\n\n" . $seq_index ." of " . scalar(@seq_list)  ; 
-            my $sequence = @seq_list->[$seq_index] ;
+            my $sequence = $seq_list[$seq_index] ;
             $sequence->add_SequenceNote($note);    
             $sequence->current_SequenceNote($note);
             $self->SequenceSetChooser->DataSet->save_current_SequenceNote_for_CloneSequence($sequence);

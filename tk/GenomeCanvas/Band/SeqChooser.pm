@@ -95,13 +95,13 @@ sub draw_seq_row {
     
     while (my($tag_key, $row_index) = each(%newtags))
     {
-        my $fulltag = $tag_key . @$row->[$row_index] ;
+        my $fulltag = $tag_key . $row->[$row_index] ;
         push (@tags , $fulltag ); 
     } 
  
-    my $id = "unique_id=@$row[0]";
+    my $id = "unique_id=$row->[0]";
     
-#    my $db_id = "dbid=@$row[6]";
+#    my $db_id = "dbid=$row->[6]";
     
     my $canvas = $band->canvas;
     my $font   = $band->column_font; 
@@ -254,7 +254,7 @@ sub text_from_row{
     
     my $count = 0;
     foreach my $i( @$meta ){
-        @text->[$count] = @row->[$i];        
+        $text[$count] = $row[$i];        
         $count ++;
     }   
     

@@ -210,7 +210,7 @@ use GenomeCanvas::Band::SeqChooser;
                 
         my $cs_list = $self->get_CloneSequence_list_ref;
 #        warn $cs_list;    
-        my $cs = @$cs_list->[$self->current_index || 0] ;
+        my $cs = $cs_list->[$self->current_index || 0] ;
               
         return $cs;
     }
@@ -261,7 +261,7 @@ use GenomeCanvas::Band::SeqChooser;
         else{
             if ($hc){
                 my @bl = $hc->sequence_chooser ;              
-                $sequence_chooser = @bl->[0] ;   
+                $sequence_chooser = $bl[0] ;   
             }
             else{
                 carp "couldnt return sequence_chooser, as no genome canvas object";
@@ -364,7 +364,7 @@ use GenomeCanvas::Band::SeqChooser;
         }
         
              
-        my $current_note = @{$clone_sequence->get_all_SequenceNotes}->[$row_id];
+        my $current_note = $clone_sequence->get_all_SequenceNotes->[$row_id];
         
               
         # check that author is valid to update note
