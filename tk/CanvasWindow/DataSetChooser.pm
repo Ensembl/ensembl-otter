@@ -210,17 +210,23 @@ sub make_XaceSeqChooser_windows {
     
     my $i = 1;
     
-     
+    my $cl_write_setting = $cl->write_access();
     foreach my $dir (@dirs) {
+
+	my $readonly_tag = $cl->readonly_tag();
+        my $write = ($dir =~ /$readonly_tag/ ? 0 : 1);
+	$cl->write_access($write);
+
         ### Can recover title from wspec/displays.wrm
         #my $title = "Recover $i";
         my $db = $cl->new_AceDatabase;
         $db->error_flag(1);
-        
+
+	
         my $home = $db->home;
         rename($dir, $home) or die "Cannot move '$dir' to '$home' : $!";
         
-        #warn "home directory $home";
+        # warn "home directory $home";
         
         my $title = "Recover ". $self->add_title($db);
         
@@ -234,11 +240,13 @@ sub make_XaceSeqChooser_windows {
             );
         my $xc = MenuCanvasWindow::XaceSeqChooser->new($top);
         $xc->AceDatabase($db);
-        $xc->write_access(1);
+        $xc->write_access($write);
         $xc->initialize;
-        
+
         $i++;
     }
+    # restore client's original setting
+    $cl->write_access($cl_write_setting);
 }
 
 sub add_title{
