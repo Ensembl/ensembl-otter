@@ -10,15 +10,6 @@ sub new {
     
     return bless {}, $pkg;
 }
-sub prefix {
-    my( $self, $text ) = @_;
-    
-    if ($text) {
-        $text =~ s/^\*//;
-        $self->{'_prefix'} = $text;
-    }
-    return $self->{'_prefix'} || '';
-}
 
 sub text {
     my( $self, $text ) = @_;
