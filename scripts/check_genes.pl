@@ -928,15 +928,20 @@ if($ngcl>1){
 	  $tsi{$tsi}++;
 	}
       }
+      print "D: $gsi->$is2e->".join(',',(keys %tsi))."\n";
       $tcl->link([(keys %tsi)]);
     }
     my @ctsi=$tcl->cluster_ids;
     print " Cluster $igcl: ".scalar(@gsi)." genes; ".scalar(@ctsi)." sets of duplicated transcripts\n";
+    print "  ".join(',',@gsi)."\n";
 
     my $itcl=0;
     foreach my $tcid (@ctsi){
+      $itcl++;
       my @tsi=$tcl->cluster_members($tcid);
-      print "  Cluster $itcl: ".scalar(@tsi)." transcripts\n";
+      print "  Transcript set $itcl: ".scalar(@tsi)." transcripts\n";
+      foreach my $tsi (@tsi){
+      }
     }
   }
 }
