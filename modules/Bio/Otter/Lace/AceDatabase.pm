@@ -677,8 +677,9 @@ sub make_AceDataFactory {
 	    # warn " AceDatabase.pm: requiring $file \n";
 	    eval{  require "$file"  };
 	    if($@){
-		delete $logic_to_load->{$_};
-		warn "Couldn't find file $file $@ \n";
+		delete $logic_to_load->{$s};
+		warn "AceDatabase couldn't find file $file\n";
+                warn $@ if $self->Client->debug();
 	    }
 	}
     }
