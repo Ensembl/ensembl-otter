@@ -52,13 +52,13 @@ sub new {
         },
         )->pack(-side => 'left');
     
+    my $search_command = sub { $self->search_window };
     my $search = $button_frame->Button(
         -text       => 'Search' ,
-        -command    => sub {
-                $self->search_window 
-            }
+        -command    => $search_command,
     )->pack(-side =>'left') ;
-    
+    $canvas->Tk::bind('<Control-f>', $search_command);
+    $canvas->Tk::bind('<Control-F>', $search_command);
     
     my $quit = $button_frame->Button(
         -text       => 'Close',
@@ -281,12 +281,12 @@ sub search_window{
     unless (defined ($search_window) ){
         ## make a new window
         my $master = $self->canvas->toplevel;
-        $search_window = $master->Toplevel(-title => 'Find Clones');
+        $search_window = $master->Toplevel(-title => 'Find loci or clones');
         $search_window->transient($master);
         
         $search_window->protocol('WM_DELETE_WINDOW', sub{$search_window->withdraw});
     
-        my $label           =   $search_window->Label(-text     =>  "Enter name of clone / locus below.\nUse spaces to seperate extra names"
+        my $label           =   $search_window->Label(-text     =>  "Use spaces to separate multiple names"
                 )->pack(-side   =>  'top');
         
         my $search_entry    =   $search_window->Entry(   
@@ -309,13 +309,13 @@ sub search_window{
                 )->pack(    -side   =>  'top'   ,
                             -pady   =>  5       ,
                             -fill   =>  'x'     ,) ; 
-        my $locus_radio = $radio_frame->Radiobutton(  -text       =>  'search for locus',
+        my $locus_radio = $radio_frame->Radiobutton(  -text       =>  'locus',
                                                       -variable   =>  \$radio_variable  ,
                                                       -value      =>  'locus' ,       
                 )->pack(    -side    =>  'left' ,
                             -padx    =>   5  ,
                         ) ; 
-        my $clone_radio = $radio_frame->Radiobutton(    -text       =>  'search for clone'  , 
+        my $clone_radio = $radio_frame->Radiobutton(    -text       =>  'intl. clone name or accession'  , 
                                                         -variable   =>  \$radio_variable    ,
                                                         -value      =>  'clone'
                 )->pack(    -side   =>  'right' ,

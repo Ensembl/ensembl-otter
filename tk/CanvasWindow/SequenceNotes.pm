@@ -110,7 +110,7 @@ sub _refresh_SequenceSet{
     my $ss = $self->SequenceSet;
     my $force_refresh = 0 ;
     if ($column_number == 3){
-        # this is the ana_status column - we have a seperate (faster) query for this
+        # this is the ana_status column - we have a separate (faster) query for this
         $ds->status_refresh_for_SequenceSet($ss);
     }
     elsif($column_number == 7){
