@@ -12,11 +12,11 @@ create table sequence_set (
     );
 
 create table sequence_note (
-    contig_id INT(10) unsigned DEFAULT '0' NOT NULL,
-    author_id INT(10) unsigned DEFAULT '0' NOT NULL,
-    is_current ENUM('Y','N') DEFAULT 'N',
-    note_time DATETIME,
-    note TEXT,
+    contig_id   INT (10) unsigned DEFAULT '0' NOT NULL,
+    author_id   INT (10) unsigned DEFAULT '0' NOT NULL,
+    is_current  ENUM ('Y', 'N') DEFAULT 'N' NOT NULL,
+    note_time   DATETIME NOT NULL,
+    note        TEXT,
     
     KEY(contig_id, is_current),
     PRIMARY KEY(contig_id, author_id, note_time)
