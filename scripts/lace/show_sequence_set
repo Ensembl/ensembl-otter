@@ -91,6 +91,17 @@ __END__
 
 =head1 NAME - show_sequence_set
 
+=head1 EXAMPLE
+
+  ./show_sequence_set -dataset human
+  
+will list the sequence sets for the "human" dataset.
+
+  ./show_sequence_set -dataset human -set chr1-07
+
+will print out the "chr1-07" set, much as it
+appears in the SequenceNotes window.
+
 =head1 AUTHOR
 
 James Gilbert B<email> jgrg@sanger.ac.uk
