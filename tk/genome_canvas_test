@@ -10,7 +10,46 @@ use GenomeCanvas;
     my $gc = GenomeCanvas->new($mw);
     
     my $canvas = $gc->canvas;
+
     if (1) {
+        require Bio::EnsEMBL::DBSQL::Obj;
+        
+        my $db = Bio::EnsEMBL::DBSQL::Obj->new(
+            -DBNAME => 'brca2',
+            -USER   => 'ensro',
+            -HOST   => 'localhost',
+            );
+
+        $db->static_golden_path_type("ACE");
+        my $stadp = $db->get_StaticGoldenPathAdaptor();
+
+        my( $vc, $chr, $chrstart, $chrend );
+        my $fpc = '13q';
+        if (defined($fpc)) {
+            $vc = $stadp->fetch_VirtualContig_by_fpc_name($fpc);
+        } else {
+            print STDERR "Fetching region $chr, $chrstart - $chrend\n";
+            $vc = $stadp->fetch_VirtualContig_by_chr_start_end(
+                $chr,
+                $chrstart,
+                $chrend,
+                );
+        }
+        
+        foreach my $map_c ($vc->_vmap->each_MapContig) {
+            my $start  = $map_c->start;
+            my $end    = $map_c->end;
+            my $raw_start = $map_c->rawcontig_start;
+            my $raw_end   = $map_c->rawcontig_end;
+            my $contig = $map_c->contig;
+            my $length = $contig->length;
+            my $name = $contig->id;
+            print "$name length=$length ($raw_start->$raw_end) start=$start end=$end\n";
+            
+        }
+        die "DEVEL EXIT";
+    }
+    elsif (0) {
         my $band = GenomeCanvas::Band->new;
         for (0..2) {
             my $set = $gc->new_BandSet;
@@ -88,7 +127,9 @@ use GenomeCanvas;
         -side => 'top',
         );
 
-    make_button($button_frame, 'Exit', sub{ kill 'INT', $$ } );
+    make_button($button_frame, 'Exit',
+        #sub{ kill 'INT', $$ } );
+        sub{ exit } );
 
     make_button($button_frame, 'PostScript',
         sub {
