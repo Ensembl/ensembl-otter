@@ -183,9 +183,7 @@ sub initialise {
 
             $comment = $button_frame->Entry(
                 -width              => 55,
-                -background         => 'white',
-                -selectbackground   => 'gold',
-
+                -font               => ['Helvetica', $self->font_size, 'normal'],
                 );
             $comment->pack(
                 -side => 'left',

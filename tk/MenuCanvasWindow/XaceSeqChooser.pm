@@ -11,14 +11,13 @@ use Hum::Ace::SubSeq;
 use Hum::Ace::Locus;
 use Hum::Ace::GeneMethod;
 use Hum::Ace::XaceRemote;
+use Hum::Ace::DotterLauncher;
 use Hum::Sequence::DNA;
-use MenuCanvasWindow;
+use base 'MenuCanvasWindow';
 use MenuCanvasWindow::ExonCanvas;
-use vars ('@ISA');
+use CanvasWindow::DotterWindow;
 use Hum::Ace;
 use Data::Dumper;
-
-@ISA = ('MenuCanvasWindow');
 
 sub new {
     my( $pkg, $tk ) = @_;
@@ -452,16 +451,17 @@ sub populate_menus {
     #    #-underline      => 0,
     #    );
     
-    ## Spawn dotter Ctrl . ?????
+    ## Spawn dotter Ctrl .
+    my $run_dotter_command = sub { $self->run_dotter };
     $file->add('command',
-        -label          => 'Spawn me a dotter!',
+        -label          => 'Dotter fMap hit',
         -hidemargin     => 1,
-        -command        => sub { $self->spawn_dotter },
-	#-command        => sub { $self->command_line_restart },
-        -accelerator    => 'Ctrl+B.',
-#	-state          => 'disabled',
+        -command        => $run_dotter_command,
+        -accelerator    => 'Ctrl+.',
         -underline      => 0,
         );
+    $top->bind('<Control-period>',  $run_dotter_command);
+    $top->bind('<Control-greater>', $run_dotter_command);
     
     $file->add('separator');
 
@@ -937,6 +937,23 @@ sub edit_subsequences {
     }
 }
 
+sub current_clone_name {
+    my( $self ) = @_;
+    
+    my $clone_name;
+    my @selected_clone = $self->list_selected_clone_names;
+    my      @all_clone = $self->clone_list;
+
+    if (@selected_clone == 1) {
+        $clone_name = $selected_clone[0];
+    }
+    elsif (@all_clone == 1) {
+        $clone_name = $all_clone[0];
+    }
+    
+    return $clone_name;
+}
+
 sub edit_new_subsequence {
     my( $self ) = @_;
     
@@ -956,20 +973,10 @@ sub edit_new_subsequence {
         push(@subseq, $sub);
     }
     
+    $clone_name ||= $self->current_clone_name;
     unless ($clone_name) {
-        my @selected_clone = $self->list_selected_clone_names;
-        my      @all_clone = $self->clone_list;
-
-        if (@selected_clone == 1) {
-            $clone_name = $selected_clone[0];
-        }
-        elsif (@all_clone == 1) {
-            $clone_name = $all_clone[0];
-        }
-        else {
-           $self->message("Unable to determine clone name");
-           return;
-        }
+       $self->message("Unable to determine clone name");
+       return;
     }
     
     my( $most_3prime, @ints );
@@ -1659,70 +1666,33 @@ sub list_selected_subseq_names {
     return @names;
 }
 
-sub spawn_dotter{
-    my ($self) = @_;
-    my $matching = {feature_name => [ qr/(\w+):(.+)/, 0 ],
-		    gen_start      => [ qr/(\d+)/, 1 ],
-		    gen_end        => [ qr/(\d+)/, 2 ]
-		};
-    my $matched = $self->hash_from_clipboard($matching);
-#    warn Dumper($matched);
-    return undef unless @{$matched->{feature_name}}; # don't need to do anything
-    # now we can require the Dotter Launcher Class
-    require CanvasWindow::DotterLauncher;
-
-    # Dotter Launcher will take care of most of stuff.
-    my $subj_name  = $matched->{feature_name}->[1];
-    my $geno_start = $matched->{gen_start}->[0];
-    my $geno_end   = $matched->{gen_end}->[0];
-    my $geno_name  = $self->save_selected_clone_names()->[0]; # can only get first one!
-
-    warn "my sub name is : <$subj_name>";
-    warn "my gen name is : <$geno_name>";
-
-    # now fetch sequence objects, they're Hum::Sequence::DNA objects
-    my $subj_Sequence = $self->fetch_Sequence($subj_name, 'pfetch');
-    my $geno_Sequence = $self->get_CloneSeq($geno_name)->Sequence();
-
+sub get_Sequences_of_all_clones {
+    my( $self ) = @_;
     
-    warn "I'm spawning a dotter launcher";
-    # everything's gone ok so far
-    my $canvas = $self->canvas;
-    my $this_top = $canvas->toplevel;
-    $this_top->configure(-cursor => 'watch');
-    my $top =  $this_top->Toplevel(-title => "Dotter Launcher"); # store this?
-    # make the DotterLauncher
-    my $launcher  = CanvasWindow::DotterLauncher->new($top);
-    $launcher->subject($subj_Sequence);
-    $launcher->genomic($geno_Sequence);
-    $launcher->start($geno_start);
-    $launcher->end($geno_end);
-#    $launcher->initialise();    # what does this do in CanvasWindow
-#    $launcher->Client();        # Do we need this?
-    $launcher->draw();
+    my( @seq );
+    foreach my $name ($self->clone_list) {
+        push(@seq, $self->get_CloneSeq($name)->Sequence);
+    }
+    return @seq;
 }
 
-sub fetch_Sequence{
-    my ($self, $seqname, $program, $options, $seq) = @_;
-    $program ||= 'pfetch';
-    $seqname || confess "No Seqname given";
-    $options ||= [];
-    my @args = @$options;
-    push @args, $seqname;
-    open (my $fh, "$program @args |") || confess "can't pipe to <$program @args>";
-    local $/ = "";
-    while (<$fh>){
-	$seq .= $_;
+sub run_dotter {
+    my( $self ) = @_;
+    
+    my $dw = $self->{'_dotter_window'};
+    unless ($dw) {
+        my $parent = $self->canvas->toplevel;
+        my $top = $parent->Toplevel(-title => 'run dotter');
+        $top->transient($parent);
+        $dw = CanvasWindow::DotterWindow->new($top);
+        $dw->initialise;
+        $self->{'_dotter_window'} = $dw;
     }
-    close $fh;
-    confess("$program can't find $seqname") if $seq =~ /No match/;
-    my ($name, $dna) = $seq =~ m/^\>([^\n]+)\n(.+)/s;
-    my $seqObj = Hum::Sequence::DNA->new();
-    $seqObj->name($seqname);
-    $seqObj->description($name);
-    $seqObj->sequence_string($dna);
-    return $seqObj;
+    $dw->update_from_XaceSeqChooser($self);
+    
+    return 1;
 }
+
 
 sub DESTROY {
     my( $self ) = @_;
@@ -1740,11 +1710,3 @@ __END__
 
 James Gilbert B<email> jgrg@sanger.ac.uk
 
->gi|1760411|gb|AA179042.1|AA179042 zp11a08.r1 Stratagene fetal retina 937202 Homo sapiens cDNA clone IMAGE:609110 5'
-GGAGCCTCTCCCCCTGACATCTCCACACACCTCTGCCGTCTCGCTTCCCCTCCCTCTAGC
-ATCCTGTGGACTTTGGGTGCTGGACAGTTATGGGCCCCAGTCCCAGCCCTGCCACCTCGT
-AGCTGTGTGACTTGGTAGAGTTAAACTCTTTGAGTCTCAATTTCCCTTTTCTACAGAAGA
-GGAATAGCAAGACTCCCTGCCTCAGAAGGCTGCTGAGAGGATGAAGTGAGTTCAGGCATG
-TTAAGCCCTTAAAACTGTACCTGGTACATATCAGGACTTAATAAATTTGAGTATTGTGTG
-TGCCCCCCACACACGTAAGCATGTGCACACCTACACCCTGCAAACAACGTGTTCCTCTGT
-GGGACCCATGCCTGGAACTGGGTCATAA

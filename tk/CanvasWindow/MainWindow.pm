@@ -53,12 +53,19 @@ sub read_custom_option_file {
     
     my $xres_file = (getpwuid($<))[7] . "/.CanvasWindow.Xres";
     my $no_file = 0;
-    unless (-e $xres_file) {
+    my $mtime = (stat($xres_file))[9] || 0;
+
+    ### Change time int here if you modify the X resources
+    if ($mtime < 1065016446) {
+        warn "Writing new X resource file '$xres_file'\n";
+        rename($xres_file, "$xres_file.bak") if $mtime;
+
         local *XRES;
         if (open XRES, "> $xres_file") {
             print XRES q{
 
 CanvasWindow*background: #bebebe
+CanvasWindow*selectBackground: gold
 CanvasWindow*TopLevel*background: #bebebe
 CanvasWindow*troughColor: #aaaaaa
 CanvasWindow*foreground: black
@@ -69,11 +76,14 @@ CanvasWindow*activeborderWidth: 1
 CanvasWindow*activeBackground: #dfdfdf
 CanvasWindow*Frame.borderWidth: 0
 CanvasWindow*Scrollbar.width: 11
-!CanvasWindow*font: -*-lucidabright-medium-r-*-*-14-*-*-*-*-*-*-*
 CanvasWindow*font: -*-helvetica-medium-r-*-*-12-*-*-*-*-*-*-*
 CanvasWindow*selectColor: gold
 CanvasWindow*Menubutton.padX: 6
 CanvasWindow*Menubutton.padY: 6
+CanvasWindow*entry.relief: flat
+CanvasWindow*entry.font: -*-lucidatypewriter-medium-r-*-*-14-*-*-*-*-*-*-*
+CanvasWindow*entry.foreground: black
+CanvasWindow*entry.background: white
 
 };
             close XRES;

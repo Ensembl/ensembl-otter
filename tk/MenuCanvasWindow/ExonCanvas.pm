@@ -1078,10 +1078,6 @@ sub make_labelled_entry_widget {
     my $entry = $widget->Entry(
         -width              => $size,
         -exportselection    => 1,
-        -relief             => 'flat',
-        -background         => 'white',
-        -selectbackground   => 'gold',
-        -font               => [$self->font, $self->font_size, 'normal'],
         );
     $entry->pack(@pack);
     $entry->insert(0, $value) if $value;
