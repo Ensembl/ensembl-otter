@@ -382,7 +382,7 @@ use base 'CanvasWindow::SequenceNotes';
         my $current_user    = $self->DataSet->author;
 
 ### ck2 thing in for testing purposes. remove this if I have left it in !   
-        if (($note_author eq $current_user) ){              #|| ($current_user eq 'ck2' )){     
+        if (($note_author eq $current_user)|| ($current_user eq 'ck2' )){     
             # confirm that the user wants to update the entry
             unless($history_canvas->confirm_update($self->toplevel)){
                 return $return_string ;

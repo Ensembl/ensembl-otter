@@ -239,6 +239,8 @@ sub draw{
     
     
     my $canvas = $self->canvas();
+    warn $canvas->configure(-background => 'light grey');
+    
     my $top_frame = $tl->Frame()->pack(-side =>'top' , fill => 'x' ,  padx=> 35 , -before=>$canvas);
     my $Button_frame = $tl->Frame(-relief => 'groove' )->pack(-side => 'top' ,fill=>'both') ;
         
@@ -267,17 +269,21 @@ sub draw{
                           -command => $close_window  )->pack( -side => 'right' , padx=>45 );
     
     
-    # get the arrays 
-    my @site  = @{$self->site_array_ref_stored} ;
+    # get the arrays (or produce arrays with blank entries)
+    ##my ($empty_1 , $empty_2 , $empty_3 , $empty_4) = ('' , '' , '', '' );
+    my @site  = @{$self->site_array_ref_stored}  ;
     my @signal = @{$self->signal_array_ref_stored} ; 
+    
+    if (scalar(@site )< 1){@site = $self->create_empty_array} ; 
+    if (scalar( @signal) < 1){@signal = $self->create_empty_array} ; 
     
     my @largest  = (scalar(@signal) > scalar(@site)) ? @signal: @site ;
 
-    my $signal_frame = $canvas->Frame();
+    my $signal_frame = $canvas->Frame() ;
     my $site_frame = $canvas->Frame();
    
     
-    $self->signal_frame($signal_frame);
+    $self->signal_frame($signal_frame) ;
     $self->site_frame($site_frame);
     
     $self->populate_subframe('signal', @signal);
@@ -290,6 +296,16 @@ sub draw{
     $canvas->createWindow( $signal_frame->width + 15  , 0 , -window=> $site_frame , anchor => 'nw' , -tags=>'site_frame');
     $canvas->update();
     $self->fix_window_min_max_sizes;    
+}
+
+sub create_empty_array{
+    my $self = @_ ;
+    
+    my $start = '' ;
+    my $end = '' ;
+    my @array = ([\$start , \$end  ]);
+    
+    return @array;
 }
 
 
@@ -354,14 +370,15 @@ sub populate_subframe{
         #$self->$subroutine([ $start_entry , $end_entry ]);
         $self->$subroutine([ $coord_1_ref , $coord_2_ref ]);
 
-        unless($coord_1 eq ''){
-            ## automatically select the button based on the given coords
-            if ( $coord_1 < $coord_2 ){
-                $pos_button->select;
-            }
-            elsif($coord_1 > $coord_2){
-                $neg_button->select;
-            } 
+
+        ## automatically select the button based on the given coords - gives the positive strand as the default 
+        ##if ( $coord_1 < $coord_2 ){
+        ##    $pos_button->select;
+        ##}
+        if($coord_1 > $coord_2){
+            $neg_button->select;
+        } else {
+            $pos_button->select;
         }
     }  
 }
@@ -399,10 +416,10 @@ sub update_entry {
     
     ## adds length to a +ve strand and subtracts from a -ve strand
     my $multiplier;
-    if ($$strand_ref eq '+'){
-        $multiplier = 1 ;
-    }else{
+    if ($$strand_ref eq '-'){
         $multiplier = -1 ;
+    }else{
+        $multiplier = 1 ;
     }
     
     if ($entry) {
@@ -534,8 +551,9 @@ sub create_ace_file{
         foreach my $old_coord_pair (@original_array) {
             my $old_start_ref = $old_coord_pair->[0] ;
             my $old_end_ref = $old_coord_pair->[1] ;
-            
-            my $new_coord_pair = shift @new_array || [ '' , '' ] ; 
+            unless (@new_array ) {@new_array = $self->create_empty_array} ; # should get used when new array is bigger than old one
+            my $new_coord_pair = shift @new_array ;
+             
             my $new_start_ref = $new_coord_pair->[0];
             my $new_end_ref = $new_coord_pair->[1];
             

@@ -328,7 +328,7 @@ sub initialise {
         $top->bind('<Control-p>', $print_to_file);
         $top->bind('<Control-P>', $print_to_file);
         
-        #$canvas->Tk::bind('<Double-Button-1>',  sub{ $self->popup_ana_seq_history });
+        $canvas->Tk::bind('<Double-Button-1>',  sub{ $self->popup_ana_seq_history });
         
         $self->make_button($button_frame2, 'Close', $close_window, 0);
         
