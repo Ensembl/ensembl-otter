@@ -1,0 +1,403 @@
+last updated 6.12.04 Kerstin Jekosch
+
+the complete guide to building zfish_vega from otter_zebrafish and zebrafish_finished
+make sure that
+- all necessary agps are loaded and the analyses have completed successfully on all clones
+- all clones that you want to display as annotated are doublechecked and have the remark 'annotated' 
+
+
+
+make sets for otter
+===================
+
+important: check that all clones are unique in the genome
+           check that no clone has contig_start > contig_end
+           check that the clones that need it have the clone_remark '%annotated%'
+           
+
+copy databases
+==============
+
+    check that the analyses are complete
+    check contig_start < contig_end for all clones
+    check clones are not redundant (without the additional types, in assembly count(contig_id) has to be count(distinct contig_id) 
+    create new database
+    (see above)
+    
+        mysqldump --opt -hecs4 -P3352 -uensro zebrafish_finished | mysql -hecs4 -P3351 -uensadmin -pensembl zfish_vega_1104
+    
+    load necessary additional tables:
+        mysql -hecs4 -P3351 -uensadmin -pensembl zfish_vega_1104 < /nfs/team71/zfish/kj2/cvs_bin/ensembl-otter/sql/otter.sql
+
+    delete halfwise genes and clean up tables (e.g. delete from job etc.)
+        delete from job; job_status; job_bak; gene; transcript; exon; exon_transcript; translation; xref; object_xref; external_db;
+
+
+    
+tidy up
+=======
+    
+        delete from assembly where type in ('chr22_041109','gw2_on_agp', 'gw2_not_on_agp', 'nitr');
+    get rid of chromosomes that are not needed:     
+        select distinct c.name,c.chromosome_id from chromosome c left join assembly a on (c.chromosome_id=a.chromosome_id) where a.type is NULL;
+   
+    get rid of contigs not on golden path
+        select contig.contig_id from contig left join assembly on assembly.contig_id=contig.contig_id where  assembly.contig_id is NULL into outfile '/ecs4/work4/kj2/vega/041123/trials/nonex_ctgs.txt';
+
+    do the delete for
+        delete from dna_align_feature     where contig_id in 
+        delete from repeat_feature        where contig_id in 
+        delete from protein_align_feature where contig_id in     
+        delete from simple_feature        where contig_id in 
+        delete from prediction_transcript where contig_id in 
+
+        select clone_id from contig       where contig_id in 
+
+        delete from clone                 where clone_id in  
+        delete from contig                where contig_id in 
+    
+    check whether there are orphan genes left:
+        select e.contig_id from exon e left join contig c on e.contig_id=c.contig_id where  c.contig_id is NULL;
+    
+        select i.input_id from input_id_analysis i left join contig c on c.name = i.input_id where i.analysis_id = 1 and c.name is NULL into outfile '/ecs4/work4/kj2/vega/040908/delete.txt';
+    and delete them
+        delete from input_id_analysis where input_id in 
+        
+
+transfer clone_remarks
+======================
+
+        perl /ecs4/work4/kj2/vega/scripts/transfer_clone_remark.pl -dbname zfish_vega_0904 -dbhost ecs4 -dbport 3352 -dbuser ensadmin -dbpass ensembl -otname otter_zebrafish -othost humsrv1 -otuser ensro
+    
+    compare counts of clones with remark like
+        select count(distinct cl.clone_id) from clone cl, clone_info ci, clone_remark cr, assembly a, contig c where cr.remark like '%annotated%' and cr.clone_info_id = ci.clone_info_id and ci.clone_id = cl.clone_id and cl.clone_id = c.clone_id and c.contig_id = a.contig_id and a.type like 'chrAB%';   
+    
+    check what you've transferred
+        select chr.name, count(distinct ctg.contig_id) from chromosome chr, assembly a, contig ctg, clone_info ci, clone_remark cr where chr.chromosome_id =
+        a.chromosome_id and a.contig_id = ctg.contig_id and ctg.clone_id = ci.clone_id and ci.clone_info_id = cr.clone_info_id and cr.remark like '%annotated%' group by chr.name order by chr.name;
+
+
+transfer genes 
+==============
+
+    ***CAVEAT: Just transfer annotation from clones with Annotation_remark 'annotated' and do not change assembly.type to VEGA just yet***
+
+    for all chromosomes, do:
+        /nfs/team71/zfish/kj2/cvs_bin/ensembl-otter/scripts/conversion/assembly/transfer_annotation(_test).pl -host humsrv1 -user ensadmin -pass ensembl -dbname otter_zebrafish 
+        -c_host humsrv1 -c_user ensadmin -c_pass ensembl -c_dbname otter_zebrafish 
+        -t_host ecs4 -t_user ensadmin -t_pass ensembl -t_port 3351 -t_dbname zfish_vega_1104 
+        -chr 1 -path chr1_040518 -t_path chr1_041108 -c_path chr1_041108 -filter_gd -filter_obs -filter_annotation > & transfer1.log &
+    
+    check whether genes are split over different chromosomes
+        select gsi.stable_id, count(distinct a.type) as n from gene_stable_id gsi, transcript t, exon_transcript et, exon e, assembly a where gsi.gene_id = t.gene_id and t.transcript_id = et.transcript_id and et.exon_id = e.exon_id and e.contig_id = a.contig_id and a.type like '%_040518' group by gsi.stable_id having n > 1;
+        
+    in case something goes wrong delete from the following tables    
+
+    delete from author;
+    delete from current_gene_info;
+    delete from current_transcript_info;
+    delete from evidence;
+    delete from exon;
+    delete from exon_stable_id;
+    delete from exon_stable_id_pool;
+    delete from exon_transcript;
+    delete from gene;
+    delete from gene_description;
+    delete from gene_info;
+    delete from gene_remark;
+    delete from gene_name;
+    delete from gene_stable_id;
+    delete from gene_stable_id_pool;
+    delete from gene_synonym;
+    delete from transcript;
+    delete from transcript_class;
+    delete from transcript_info;
+    delete from transcript_remark;
+    delete from transcript_stable_id;
+    delete from transcript_stable_id_pool;
+    delete from translation;
+    delete from translation_stable_id;
+    delete from translation_stable_id_pool;
+
+    compare numbers of gene reported as transferred in the transfer logs with the genes ending up in the database. this time, tra1 on chromosome AB is missing.
+
+    after gene transfer, check that all went fine with 
+        select distinct ctg.name from exon e left join contig ctg on e.contig_id = ctg.contig_id left join clone_info ci on ctg.clone_id = ci.clone_id where ci.clone_id is null;
+    not all reported here might really be missing 'annotated', some will come from genes reaching over from neighbouring clones)
+    in this case it said
+    AL935319.8 (gene comes from overlap with annotated clone next to it)
+
+
+load marker data
+================     
+
+    load data into map, marker, marker_synonym and marker_map_location
+    
+    insert into analysis values (22,now(),'Marker','',1,'','e-PCR',1,'','M=50,N=1','EPCR',1,'e-PCR','sts');
+    insert into rule_conditions values (22,'SubmitContig');
+    insert into rule_goal values (22,22);
+    insert into input_id_type_analysis values (22,'CONTIG');
+    
+    perl RuleManager3.pl -dbname zfish_vega_1104 -dbhost ecs4 -dbport 3351 -dbuser ensadmin -dbpass ensembl -start_from SubmitContig -analysis 22
+    perl $FENS/load_map_weight.pl -dbhost ecs4 -dbport 3351 -dbuser ensadmin -dbpass ensembl -dbname zfish_vega_1104
+    
+    
+polyA_features
+==============
+
+    load data infile '/ecs4/work4/kj2/vega/ana_otter.sql' into table analysis;
+    edit /ecs4/work4/kj2/vega/scripts/get_polyAfeatures.pl
+    perl /ecs4/work4/kj2/vega/scripts/get_polyAfeatures.pl > /ecs4/work4/kj2/vega/041201/simple_features.sql
+    load data infile '/ecs4/work4/kj2/vega/041201/simple_features.sql' into table simple_feature;
+    
+
+supporting evidence
+===================
+    
+    change assembly.type to VEGA 
+    insert into meta values (3,'assembly.default','VEGA');
+    edit database entries in script and run 
+    /nfs/team71/zfish/kj2/cvs_bin/ensembl-otter/scripts/conversion/evidence/accession_to_support.pl -chr 1,2,3 etc. inkl. AB and U
+    
+
+get rid of transposons
+======================
+    
+    insert into repeat_consensus (repeat_name, repeat_class,repeat_consensus) values ('novel_transposon','novel_transposon','N');
+    insert into analysis (created, logic_name) values (now(),'manual_identification');
+    get the repeat_consensus_id and the analysis_id (75664 and 2002);
+    
+    here are the transcripts:
+    select et.transcript_id, e.exon_id from transcript_class tc, transcript_info ti, transcript_stable_id tsi, exon_transcript et, exon e where tc.name = 'Transposon' and tc.transcript_class_id = ti.transcript_class_id and ti.transcript_stable_id = tsi.stable_id and tsi.transcript_id = et.transcript_id and et.exon_id = e.exon_id;
+    
+    here are the genes:
+    select t.gene_id, count(e.exon_id)  from transcript_class tc, transcript_info ti, transcript_stable_id tsi, transcript t, exon_transcript et, exon e where tc.name = 'Transposon' and tc.transcript_class_id = ti.transcript_class_id and ti.transcript_stable_id = tsi.stable_id and tsi.transcript_id = t.transcript_id and t.transcript_id = et.transcript_id and et.exon_id = e.exon_id group by t.gene_id;
+    
+    run $FENS/convert_transposons_into_vega_repeats.pl (don't forget to change the parameters in the script, esp. the repeat_class and analysis!)
+    part output into what has to be read into repeat_feature table and genes to be deleted
+    use ensembl-pipeline/scripts/GeneBuild/delete_genes.pl to get rid of them
+    perl /nfs/farm/Fish/kj2/branch-ensembl-25/ensembl-pipeline/scripts/GeneBuild/delete_genes.pl -dbname zfish_vega_1104 -dbhost ecs4 -dbuser ensadmin -dbpass ensembl -dbport 3351 genes2delete.txt
+    
+    then:  
+    with the gene_ids also do:
+    delete from gene_description where gene_id in 
+    
+    
+    select gi.gene_stable_id from gene_info gi left join gene_stable_id gsi on gi.gene_stable_id = gsi.stable_id where gsi.stable_id is null;
+    select gi.gene_info_id   from gene_info gi left join gene_stable_id gsi on gi.gene_stable_id = gsi.stable_id where gsi.stable_id is null;
+    keep lists of both and use them for deletes in:
+    
+    gene_info:
+    delete from gene_name where gene_info_id  in  
+    delete from gene_remark where gene_info_id  in 
+    delete from gene_info where gene_info_id in        
+
+    gene_stable_id:
+    delete from gene_stable_id_pool where gene_stable_id in 
+    delete from gene_stable_id where stable_id in           
+            
+    select * from transcript_class where name = 'Transposon';   => 46
+    select transcript_info_id  from transcript_info where transcript_class_id = 46 into outfile '/ecs4/work4/kj2/vega/041201/transcript_info_transposons.txt';
+    select transcript_stable_id  from transcript_info where transcript_class_id = 46 into outfile '/ecs4/work4/kj2/vega/041201/transcript_stable_id_transposons.txt';
+    delete from transcript_info where transcript_class_id = 46;
+    delete from transcript_remark where transcript_info_id in     
+    delete from transcript_stable_id where stable_id in     
+    delete from transcript_stable_id_pool where transcript_stable_id in 
+        
+    probably requires another scipt...
+    
+
+
+deal with pseudogenes
+=====================
+
+    remove pseudogenes translations from db and delete stable_ids for these (to stop them appearing in AltaVista searches)
+
+    select t.translation_id from transcript t, gene g where g.gene_id = t.gene_id and g.type = 'Pseudogene' and t.translation_id != 0; => 39362,40707,40994,41113
+    select t.transcript_id from transcript t, gene g where g.gene_id = t.gene_id and g.type = 'Pseudogene' and t.translation_id != 0;40027,41573,41906,42040
+    update transcript set translation_id = 0 where transcript_id in (40027,41573,41906,42040);
+    delete from translation where translation_id in                 (39362,40707,40994,41113);
+    delete from translation_stable_id where translation_id in       (39362,40707,40994,41113);
+    
+    
+rename non-translatable transcripts    
+==========================================
+
+    insert into transcript_class values (38,'Known_in_progress','');
+    insert into transcript_class values (39,'Novel_CDS_in_progress','');
+
+    select t.transcript_id, tsi.stable_id, g.type from transcript t, gene g, gene_stable_id gsi, transcript_stable_id tsi, transcript_info ti, transcript_class tc where t.translation_id = 0 and t.gene_id= g.gene_id and g.gene_id = gsi.gene_id and
+    t.transcript_id = tsi.transcript_id and tsi.stable_id = ti.transcript_stable_id and ti.transcript_class_id = tc.transcript_class_id  and tc.name = 'Coding''
+
+    gets you all transcript_ids and stable_ids that should be grey objects.
+    
+    select that into outfile, and rename all the known ones to known_in_progress, the novel ones to novelCDS_in_progress
+
+    known:
+    update transcript_info set transcript_class_id  = 38 where transcript_stable_id in ();
+
+    novel:
+    update transcript_info set transcript_class_id = 39 where transcript_stable_id in ();
+
+    check whether genes need to change type:
+    select g.gene_id, g.type from gene g, transcript t, transcript_stable_id tsi, transcript_info ti where g.gene_id = t.gene_id and t.transcript_id = tsi.transcript_id and tsi.stable_id = ti.transcript_stable_id and ti.transcript_class_id = 38;
+    select gene_id, count(transcript_id) from transcript where gene_id in (54709,54709,55884,56240,56668,56669) group by gene_id;
+    update gene set type = 'Known_in_progress' where gene_id in (55884,56240,56668,56669);
+    
+    select g.gene_id, g.type from gene g, transcript t, transcript_stable_id tsi, transcript_info ti where g.gene_id = t.gene_id and t.transcript_id = tsi.transcript_id and tsi.stable_id = ti.transcript_stable_id and ti.transcript_class_id = 39 
+    none (otherwise
+          select gene_id, count(transcript_id) from transcript where gene_id in (54431,54680,54800,54877,54898,55047,55127,55143,55176,55188,55219,55248,55250,55456,55497,55541,55543,55628,55671,55775,56074,56222,56241,56254,56408,56418,56428,56444,56450,56474,56477,56498,56503,56643,56655) group by gene_id;
+          update gene set type = 'Novel_CDS_in_Progress' where gene_id in (54431,54680,54800,54877,55047,55127,55143,55176,55188,55219,55248,55250,55456,55497,55541,55543,55628,55775,56074,56222,56241,56254,56408,56418,56428,56444,56450,56474,56477,56498,56503,56643,56655);)
+ 
+
+xrefs
+=====
+    
+    insert into external_db values (1,'Vega_gene', 1,'KNOWN');
+    insert into external_db values (2,'Vega_transcript', 1,'KNOWN');
+    insert into external_db values (3,'Vega_translation', 1,'KNOWN');
+    
+    modify and run
+    /nfs/team71/zfish/kj2/cvs_bin/ensembl-otter/scripts/conversion/xref/add_vega_xrefs.pl -chromosomes 1,.... -store
+        in case this goes wrong:
+        update gene and transcript set display_xref_id = 0 where display_xref_id != 0
+        delete from object_xref where external_db_id = 1,2 or 3; 
+
+    insert into external_db values (4,'ZFIN',1,'KNOWNXREF');
+    update script and then run
+    perl /ecs4/work4/kj2/vega/scripts/zfin_to_xrefs.pl -chromosomes 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,AB,U -store > & zfin.log
+
+
+    check:
+    mysql> select * from gene where display_xref_id = 0;
+
+    last step, compare to Tom's vega/zfin data:
+    download file from http://zfin.org/data_transfer/Downloads/vega.txt as zfin_vega.txt
+    edit and run
+    perl ../scripts/missing_zfin_to_xrefs.pl -chromosomes 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,AB,U -store -zfinfile zfin_vega.txt > & zfin2.log
+
+
+
+protein annotation 
+==================
+
+    perl /nfs/farm/Fish/kj2/branch-ensembl-19/ensembl-pipeline/scripts/protein_pipeline/dump_translations.pl -dbhost ecs4 -dbname zfish_vega_1104 -dbuser ensro -dbport 3351 -db_id 1 -genetype Known > /ecs4/work4/kj2/vega/041201/dumped_known.fa
+    perl /nfs/farm/Fish/kj2/branch-ensembl-19/ensembl-pipeline/scripts/protein_pipeline/dump_translations.pl -dbhost ecs4 -dbname zfish_vega_1104 -dbuser ensro -dbport 3351 -db_id 1 -genetype Novel_CDS > /ecs4/work4/kj2/vega/041201/dumped_novel.fa
+    cat dumped_known.fa dumped_novel.fa >! vega_peptides.fa
+    
+    load analysis entries from zfish_vega_0904, dumped in 
+        /ecs4/work4/kj2/vega/040908/additional_analysis.sql, 
+        /ecs4/work4/kj2/vega/040908/additional_rule_goal.sql,
+        /ecs4/work4/kj2/vega/040908/additional_rule_conditions.sql , 
+    modify /nfs/farm/Fish/kj2/branch-ensembl-19/ensembl-pipeline/modules/Bio/EnsEMBL/Pipeline/Config/Protein_Annotation/General.pm
+    in vega directory: mkdir chunks
+    /nfs/farm/Fish/kj2/branch-ensembl-19/ensembl-pipeline/scripts/protein_pipeline/chunk_protein_file.pl
+    
+    perl $FENS/fillin_ids.pl -dbname zfish_vega_1104 -dbhost ecs4 -dbport 3351 -dbuser ensadmin -dbpass ensembl -id 1000 -translation  
+    perl $FENS/fillin_ids.pl -dbname zfish_vega_1104 -dbhost ecs4 -dbport 3351 -dbuser ensadmin -dbpass ensembl -id 1001 -file /ecs4/work4/kj2/vega/041201/chunks
+    insert into input_id_analysis values ('proteome','PROTEOME',1002,now(),'','',0);
+
+    insert into input_id_type_analysis values (1046,'FILENAME');
+    insert into input_id_type_analysis values (1047,'FILENAME');
+    insert into input_id_type_analysis values (1048,'PROTEOME');
+    insert into input_id_type_analysis values (1049,'FILENAME');
+    insert into input_id_type_analysis values (1050,'PROTEOME');
+    insert into input_id_type_analysis values (1051,'FILENAME');
+    insert into input_id_type_analysis values (1052,'FILENAME');
+    insert into input_id_type_analysis values (1053,'TRANSLATIONID');
+    insert into input_id_type_analysis values (1000,'TRANSLATIONID');
+    insert into input_id_type_analysis values (1001,'FILENAME');
+    insert into input_id_type_analysis values (1002,'PROTEOME');
+    insert into external_db values (1200,'Interpro',1,'XREF');
+    
+    load data infile '/acari/analysis/iprscan/interpro_update/interpro.txt' into table interpro;
+    load data infile '/acari/analysis/iprscan/interpro_update/interpro_desc.txt' into table xref;
+    
+    there might be more translation ids than real proteins as some are just pseudogenes/transposons
+    dump translation_id from translation and dump translation_id from dumped proteins, do the following to them:
+    they all came from one clone that looked fine (DKEY-7C18)
+    delete from input_id_analysis where input_id in  (40372,40373,40375,40376,40377,40378,40379,40380,40381,40382,40383,40384,40389,40391,40393,40394)
+    perl RuleManager3.pl -dbname zfish_vega_1104 -dbhost ecs4 -dbport 3351 -dbuser ensadmin -dbpass ensembl -analysis ... -start_from ... -once for all of them
+
+    submitted
+    1046
+    1047
+    1048
+    1049
+    1050
+    1053 
+    1051
+    1052
+
+    fix PFAM names
+    update protein_feature set hit_id = substring_index(hit_id,'.',1) where analysis_id = 1053;
+
+    Healthchecks identified some protein features with no hit_id or an incorrect seq_start.
+    Fixes - 
+    mysql> delete from protein_feature where seq_start < 0;
+    mysql> delete from protein_feature where hit_id = '';
+
+
+some final checks
+=================
+
+    delete from supporting_evidence where genes are in progress:
+    select e.evidence_id from gene g, transcript t, transcript_stable_id tsi, transcript_info ti, evidence e where g.gene_id = t.gene_id and t.transcript_id = tsi.transcript_id and tsi.stable_id = ti.transcript_stable_id and e.transcript_info_id = ti.transcript_info_id and g.type like '%_in_progress' and e.type = 'Protein' order by tsi.stable_id into outfile '/ecs4/work4/kj2/vega/041201/todelete';
+    then delete from evidence with these ids.
+   
+    truncate names of contigs to make them similar to ensembl:
+    update contig set name = substring_index(name,'.',2);
+
+    protein_features:
+    select * from protein_feature pf left join translation t on pf.translation_id = t.translation_id where t.translation_id is null;
+    get rid of leftovers from deleted genes: protein_feature, gene_info, gene_stable_id, gene_name, gene_description, gene_remark, gene_stable_id_pool, gene_synonym
+ 
+    meta data:
+    load data infile '/ecs4/work4/kj2/vega/meta.sql' into table meta;
+
+    author:
+    insert into author values (1000,'zfish-help@sanger.ac.uk','zfish');
+    update gene_info set author_id = 1000 where author_id != 1000;
+    update transcript_info set author_id = 1000 where author_id != 1000;
+
+    translateability:
+    check whether things translate that shouldn't and the other way round
+    select g.type, if(isnull(tr.translation_id),'non-trans','trans') as state,count(*) as C from gene as g, transcript as t left join translation as tr on tr.translation_id=t.translation_id where g.gene_id = t.gene_id group by type,state;
+    pseudogenes and transposons shouldn't have a translation    
+
+things for Tom
+==============
+
+    clonelist
+    select cl.name, cl.embl_acc, c.name from clone cl, contig ct, assembly a, chromosome c where cl.clone_id = ct.clone_id and ct.contig_id = a.contig_id and a.chromosome_id = c.chromosome_id into outfile'/ecs4/work4/kj2/vega/041201/clonelist_for_Tom.txt';
+    
+    genes
+    perl /ecs4/work4/kj2/vega/scripts/get_list_for_tom.pl -dbname zfish_vega_1104 -dbhost ecs4 -dbport 3351 -dbuser ensro > ! genes_for_tom.txt
+    
+    transcripts
+    perl /ecs4/work4/kj2/vega/scripts/dump_translations.pl -dbhost ecs4 -dbname zfish_vega_1104 -dbuser ensro -dbport 3351 -db_id 1> /ecs4/work4/kj2/vega/041201/transcripts_for_tom.fa
+
+    assembly
+    select chr.name, a.chr_start, a.chr_end, cl.name, substring_index(c.name,'.',2), a.contig_start, a.contig_end,a.contig_ori from assembly a, chromosome chr, contig c, clone cl where chr.chromosome_id = a.chromosome_id and a.contig_id = c.contig_id and c.clone_id = cl.clone_id into outfile '/ecs4/work4/kj2/vega/041201/for_tom/assembly_for_tom.txt';
+
+    annotated clones
+    select ctg.name, cl.name from chromosome chr, assembly a, contig ctg, clone cl, clone_info ci, clone_remark cr where chr.chromosome_id =a.chromosome_id and a.contig_id = ctg.contig_id and ctg.clone_id = cl.clone_id and ctg.clone_id = ci.clone_id and ci.clone_info_id = cr.clone_info_id and cr.remark like '%annotated%' into outfile '/ecs4/work4/kj2/vega/041201/for_tom/annotated_clones.txt';;
+
+things that turned out to be wrong
+==================================
+
+    
+
+    select chr.name, chr.length, max(a.superctg_end), ( max(a.superctg_end) -  chr.length) as diff from chromosome chr, assembly a where chr.chromosome_id = a.chromosome_id group by chr.name having diff != 0;
+    +------+----------+---------------------+----------+
+    | name | length   | max(a.superctg_end) | diff     |
+    +------+----------+---------------------+----------+
+    | 15   | 15143279 |            15141279 |    -2000 |
+    | 16   | 18482790 |            18409725 |   -73065 |
+    | 23   | 18815247 |            18644714 |  -170533 |
+    | 24   | 13156055 |            12079676 | -1076379 |
+    | 25   | 10431473 |            10431221 |     -252 |
+    | 4    | 22549761 |            21107559 | -1442202 |
+    +------+----------+---------------------+----------+
+    this is propagated from otter.
+  
