@@ -32,6 +32,7 @@ my $opt_s=1000000;
 my $opt_t;
 my $exclude='GD:';
 my $ext;
+my $inprogress;
 my $vega;
 my $stats;
 
@@ -56,6 +57,7 @@ GetOptions(
 	   't:s',  \$opt_t,
 	   'exclude:s', \$exclude,
 	   'external',  \$ext,
+	   'progress',  \$inprogress,
 	   'vega',      \$vega,
 	   'stats',     \$stats,
 	   );
@@ -84,6 +86,7 @@ rename_genes.pl
   -make_cache               make cache file
   -exclude                  gene types prefixes to exclude ($exclude)
   -external                 external genes from vega_set only
+  -progress                 also consider vega_sets tagged as 'in progress'
   -vega                     vega database (has only assembly)
 
   -stats                    calculate stats from cache file only
@@ -119,12 +122,20 @@ if($make_cache){
     my $other;
     if(!$vega){
       my $vega_type=pop @row;
+      # consider types:
       if($ext){
+	# E only
 	if($vega_type ne 'E'){
 	  $other=1;
 	}
       }elsif($vega_type eq 'N' || $vega_type eq ''){
+	# exclude N
 	$other=1;
+      }elsif($vega_type eq 'P'){
+	# exclude P, unless -progress
+	if(!$inprogress){
+	  $other=1;
+	}
       }
     }
     if($other){
