@@ -6,7 +6,7 @@ use warnings;
 
 our @ISA   = qw(TransientWindow);
 
-my $DEFAULT_SEARCH_TEXT  = 'OTTHUMT00000039975';
+my $DEFAULT_SEARCH_TEXT  = '';
 my $DEFAULT_SEARCH_TYPE  = 'locus';
 my $DEFAULT_CONTEXT_SIZE = 1;
 
