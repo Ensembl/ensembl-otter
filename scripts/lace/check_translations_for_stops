@@ -57,4 +57,21 @@ sub check_for_stops {
 
 __END__
 
+=head1 NAME - check_translations_for_stops
+
+=head1 SYNOPSIS
+
+  ./check_translations_for_stops -dataset <NAME>
+
+=head1 DESCRIPTION
+
+Checks all the translations of the genes in an
+otter database, printing a report to STDOUT of
+those that have internal stop codons.
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
+
 
