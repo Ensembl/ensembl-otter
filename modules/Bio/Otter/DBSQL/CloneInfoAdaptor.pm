@@ -92,10 +92,35 @@ sub fetch_by_dbID {
 		$self->throw("Id must be entered to fetch a CloneInfo object");
 	}
 
-	my $author = $self->_generic_sql_fetch("where clone_info_id = $id");
+	my $cloneinfo = $self->_generic_sql_fetch("where clone_info_id = $id");
 
-	return $author;
+	return $cloneinfo;
 }
+
+=head2 fetch_by_cloneID
+
+ Title   : fetch_by_cloneID
+ Usage   :
+ Function:
+ Example :
+ Returns : 
+ Args    :
+
+
+=cut
+
+sub fetch_by_cloneID {
+	my ($self,$id) = @_;
+
+	if (!defined($id)) {
+		$self->throw("Id must be entered to fetch a CloneInfo object");
+	}
+
+	my $cloneinfo = $self->_generic_sql_fetch("where clone_id = $id");
+
+	return $cloneinfo;
+}
+
 
 sub store {
   my ($self,$cloneinfo) = @_;
