@@ -125,14 +125,18 @@ sub remark {
 =cut
 
 sub synonym {
-    my $obj = shift @_;
+    my $self = shift @_;
 
     while (my $rem = shift @_) {
       if (defined($rem)) {
-          push(@{$obj->{'_synonym'}},$rem);
+        if ($rem->isa("Bio::Otter::GeneSynonym")) {
+          push(@{$self->{'_synonym'}},$rem);
+        } else {
+          $self->throw("Argument [$rem] is not a Bio::Otter::GeneSynonym");
+        }
       }
     }
-    return @{$obj->{'_synonym'}};
+    return @{$self->{'_synonym'}};
 
 }
 
