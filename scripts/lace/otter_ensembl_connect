@@ -1,0 +1,51 @@
+#!/usr/local/bin/perl5.6.1 -w
+
+### otter_ensembl_connect
+
+use strict;
+use Bio::Otter::Lace::Defaults;
+
+{
+    my $dataset_name = 'human';
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'dataset=s' => \$dataset_name,
+        );
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    my $ens_db = $ds->get_cached_DBAdaptor;
+    
+    my $sth = $ens_db->prepare(q{
+        SELECT n.name
+        FROM gene g
+          , gene_stable_id gsid
+          , current_gene_info c
+          , gene_info i
+          , gene_name n
+        WHERE g.gene_id = gsid.gene_id
+          AND gsid.stable_id = c.gene_stable_id
+          AND c.gene_info_id = i.gene_info_id
+          AND i.gene_info_id = n.gene_info_id
+          AND g.type != 'obsolete'
+        });
+    $sth->execute;
+    while (my ($name) = $sth->fetchrow) {
+        print "$name\n";
+    }
+}
+
+
+
+
+__END__
+
+=head1 NAME - otter_ensembl_connect
+
+=head1 DESCRIPTION
+
+Demonstrates how to get a DBAdaptor for the otter
+ensembl database behind a particular otter dataset.
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
