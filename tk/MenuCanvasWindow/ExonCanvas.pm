@@ -6,6 +6,7 @@ package MenuCanvasWindow::ExonCanvas;
 use strict;
 use Carp;
 use Tk::Dialog;
+use Tk::ROText;
 use Hum::Ace::SubSeq;
 use Hum::Translator;
 use MenuCanvasWindow;
@@ -322,11 +323,12 @@ sub initialize {
     $file_menu->add('command',
         -label          => 'Show Peptide',
         -command        => $show_pep_command,
-        -accelerator    => 'Ctrl+P',
+        -accelerator    => 'Spacebar',
         -underline      => 5,
         );
     $top->bind('<Control-p>',   $show_pep_command);
     $top->bind('<Control-P>',   $show_pep_command);
+    $top->bind('<space>',       $show_pep_command);
     
     # Trap window close
     $top->protocol('WM_DELETE_WINDOW', $window_close);
@@ -563,8 +565,117 @@ sub show_peptide {
     } else {
         $sub = $self->SubSeq;
     }
-    my $pep = $self->translator->translate($sub->translateable_Sequence);
-    print $pep->fasta_string;
+
+    my( $peptext );
+    unless ($peptext = $self->{'_pep_peptext'}) {
+        my $top = $self->canvas->Toplevel;
+        
+        $self->{'_pep_peptext'} = $peptext = $top->ROText(
+            -font           => [$self->font, $self->font_size, 'normal'],
+            #-justify        => 'left',
+            -padx                   => 6,
+            -pady                   => 6,
+            -relief                 => 'groove',
+            -background             => 'white',
+            -border                 => 2,
+            -selectbackground       => 'gold',
+            #-exportselection => 1,
+            )->pack(
+                -expand => 1,
+                -fill   => 'both',
+                );
+        
+        my $frame = $top->Frame(
+            -border => 6,
+            )->pack(
+                -anchor => 'sw',
+                );
+        my $close_command = sub{ $top->withdraw };
+        my $exit = $frame->Button(
+            -text => 'Close',
+            -command => $close_command ,
+            )->pack;
+        $top->bind(    '<Control-w>',      $close_command);
+        $top->bind(    '<Control-W>',      $close_command);
+        $top->bind(    '<Escape>',         $close_command);
+        $top->protocol('WM_DELETE_WINDOW', $close_command);
+    }
+    
+    # Put the new translation into the Text widget,
+    # and size it to fit.
+    my $pep = $self->translator->translate($sub->translatable_Sequence);
+    my $fasta = $pep->fasta_string;
+    my $lines = $fasta =~ tr/\n//;
+    $fasta =~ s/\n$//s;
+    $peptext->delete('1.0', 'end');
+    $peptext->insert('1.0', $fasta);
+    $peptext->configure(
+        -width  => 60,
+        -height => $lines,
+        );
+    
+    # Set the window title, and make it visible
+    my $win = $peptext->toplevel;
+    $win->configure( -title => $pep->name . " translation" );
+    $win->deiconify;
+    $win->raise;
+}
+
+sub OLD_show_peptide {
+    my( $self ) = @_;
+    
+    my( $sub );
+    if ($self->is_mutable) {
+        $sub = $self->new_SubSeq_from_tk;
+        return unless $sub->GeneMethod->is_coding;
+    } else {
+        $sub = $self->SubSeq;
+    }
+    my $pep = $self->translator->translate($sub->translatable_Sequence);
+    
+    my $fasta = $pep->fasta_string;
+    $fasta =~ s/\n$//s;
+
+    my( $label );
+    if ($label = $self->{'_pep_label'}) {
+        $label->configure( -text => $fasta );
+    } else {
+        my $top = $self->canvas->Toplevel;
+        
+        $self->{'_pep_label'} = $label = $top->Label(
+            -text           => $fasta,
+            -font           => [$self->font, $self->font_size, 'normal'],
+            -justify        => 'left',
+            -padx           => 6,
+            -pady           => 6,
+            -relief         => 'groove',
+            -background     => 'white',
+            -border         => 2,
+            #-exportselection => 1,
+            )->pack(
+                -expand => 'both',
+                );
+        
+        my $frame = $top->Frame(
+            -border => 6,
+            )->pack(
+                -anchor => 'sw',
+                );
+        my $close_command = sub{ $top->withdraw };
+        my $exit = $frame->Button(
+            -text => 'Close',
+            -command => $close_command ,
+            )->pack;
+        $top->bind(    '<Control-w>',      $close_command);
+        $top->bind(    '<Control-W>',      $close_command);
+        $top->bind(    '<Escape>',         $close_command);
+        $top->protocol('WM_DELETE_WINDOW', $close_command);
+    }
+    my $win = $label->toplevel;
+    $win->configure( -title => $pep->name . " translation" );
+    
+    $win->deiconify;
+    $win->raise;
 }
 
 sub translator {
@@ -619,23 +730,23 @@ sub add_start_not_found_widgets {
         -borderwidth    => 3,
         )->pack( -anchor => 'nw' );
     
+    $frame->Label(
+        -text       => 'Start: ',
+        )->pack( -side => 'left' );
+    
     my( $snf );
     my $om = $frame->Optionmenu(
         -variable   => \$snf,
         -options    => [
-                ['No' => 0],
-                ['1'  => 1],
-                ['2'  => 2],
-                ['3'  => 3],
+                ['found'          => 0],
+                ['not found - 1'  => 1],
+                ['not found - 2'  => 2],
+                ['not found - 3'  => 3],
             ],
         )->pack( -side => 'left' );
     $snf = $self->SubSeq->start_not_found;
     $om->menu->invoke($snf);
     warn "snf = $snf";
-    
-    $frame->Label(
-        -text       => 'Start not found',
-        )->pack( -side => 'left' );
 
     $self->{'_start_not_found_variable'} = \$snf;
 }
@@ -647,6 +758,32 @@ sub start_not_found_from_tk {
 }
 
 sub add_end_not_found_widgets {
+    my( $self ) = @_;
+    
+    my $frame = $self->canvas->toplevel->Frame(
+        -borderwidth    => 3,
+        )->pack( -anchor => 'nw' );
+    
+    $frame->Label(
+        -text       => 'End: ',
+        )->pack( -side => 'left' );
+    
+    my( $enf );
+    my $om = $frame->Optionmenu(
+        -variable   => \$enf,
+        -options    => [
+                ['found'        => 0],
+                ['not found'    => 1],
+            ],
+        )->pack( -side => 'left' );
+    $enf = $self->SubSeq->end_not_found;
+    $om->menu->invoke($enf);
+    warn "enf = $enf";
+
+    $self->{'_end_not_found_variable'} = \$enf;
+}
+
+sub OLD_add_end_not_found_widgets {
     my( $self ) = @_;
     
     my $frame = $self->canvas->toplevel->Frame(
@@ -683,6 +820,7 @@ sub get_subseq_name {
     my( $self ) = @_;
     
     my $name = $self->subseq_name_Entry->get;
+    $name =~ s/\s+//g;
     return $name || 'NO-NAME';
 }
 
