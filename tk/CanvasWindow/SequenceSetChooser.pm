@@ -187,10 +187,22 @@ sub open_sequence_set {
                 $win->raise;
                 return 1;
             }
-            #my $this_top = $canvas->toplevel;
-            #$this_top->Busy;   ### in this case Busy() seems to globally grab pointer - why?
+            
+            my $this_top = $canvas->toplevel;
+            
+            ### in this case Busy() seems to globally grab pointer - why?
+            ### grabStatus reports 'local' - but it is a global grab.
+            #$this_top->Busy(
+            #    -recurse    => 1,
+            #    );   
+            #my $status = $this_top->grabStatus;
+            #warn "grab = $status\n";
+            
+            ## Using this instead:
+            $this_top->configure(-cursor => 'watch');
+            
             my $top = $self->{'_sequence_notes_window'}{$name} =
-                $canvas->Toplevel(-title => "SequenceSet $name");
+                $this_top->Toplevel(-title => "SequenceSet $name");
             my $ss = $self->DataSet->get_SequenceSet_by_name($name);
 
             my $sn = CanvasWindow::SequenceNotes->new($top);
@@ -200,7 +212,11 @@ sub open_sequence_set {
             $sn->SequenceSetChooser($self);
             $sn->initialise;
             $sn->draw;
+            
+            
             #$this_top->Unbusy;
+            $this_top->configure(-cursor => undef);
+            
             return 1;
         }
     }

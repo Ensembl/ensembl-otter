@@ -95,7 +95,7 @@ sub font {
         my( $self, $font_size ) = @_;
 
         if ($font_size) {
-            $_default_font_size   = $font_size;
+            #$_default_font_size   = $font_size;
             $self->{'_font_size'} = $font_size;
             $self->{'_font_unit_width'} = undef;
         }
@@ -184,7 +184,7 @@ sub bind_scroll_commands {
             $canvas->Tk::bind($class, $sequence, '');
         }
     }
-        
+
     # Don't want the scrollbars to take keyboard focus
     foreach my $widget ($x_scroll, $y_scroll) {
         $widget->configure(

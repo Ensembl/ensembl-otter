@@ -348,8 +348,7 @@ sub get_xwindow_id_from_readlock {
     my $lock_dir = "$path/database/readlocks";
     my( $lock_file );
     my $wait_seconds = 20;
-    for (my $i = 0; $i < $wait_seconds; $i++) {
-        sleep 1;
+    for (my $i = 0; $i < $wait_seconds; $i++, sleep 1) {
         opendir LOCK_DIR, $lock_dir or confess "Can't opendir '$lock_dir' : $!";
         ($lock_file) = grep /\.$pid$/, readdir LOCK_DIR;
         closedir LOCK_DIR;
@@ -363,17 +362,21 @@ sub get_xwindow_id_from_readlock {
         return 0;
     }
     
-    # Extract the WindowID from the readlock file
-    open LOCK_FILE, $lock_file or confess "Can't read '$lock_file' : $!";
     my( $xwid );
-    while (<LOCK_FILE>) {
-        if (/WindowID: (\w+)/) {
-            $xwid = $1;
-            last;
+    for (my $i = 0; $i < $wait_seconds; $i++, sleep 1) {
+        # Extract the WindowID from the readlock file
+        open LOCK_FILE, $lock_file or confess "Can't read '$lock_file' : $!";
+        while (<LOCK_FILE>) {
+            #warn "Looking at: $_";
+            if (/WindowID: (\w+)/) {
+                $xwid = $1;
+                last;
+            }
         }
+        close LOCK_FILE;
+        
+        last if $xwid;
     }
-    close LOCK_FILE;
-    
     if ($xwid) {
         my $xrem = Hum::Ace::XaceRemote->new($xwid);
         $self->xace_remote($xrem);
@@ -562,7 +565,7 @@ sub populate_menus {
         -underline      => 0,
         -state          => 'disabled',
         );
-    
+        
     # What did I intend this command to do?
     #$subseq->add('command',
     #    -label          => 'Transcript',
