@@ -505,10 +505,10 @@ sub print_postscript {
     my $page_border = $self->page_border;
     my $page_width  = $self->page_width  - (2 * $page_border);
     my $page_height = $self->page_height - (2 * $page_border);
-    #if ($page_width > $page_height) {
-    #    confess "Page width must be greater than page height:\n",
-    #        "  width = '$page_width', height = '$page_height'";
-    #}
+    if ($page_width > $page_height) {
+        confess "Page width must be greater than page height:\n",
+            "  width = '$page_width', height = '$page_height'";
+    }
     
     my $horiz_tile      = $self->horizontal_tile;
     my $vert_tile       = $self->vertical_tile;
@@ -566,6 +566,8 @@ sub print_postscript {
         $vert_tile  = 1;
         $print_width  = $page_width;
         $print_height = $page_height;
+        warn "print width = $print_width  print height = $print_height\n",
+            "canvas width = $canvas_width  canvas height = $canvas_height\n";
         $tile_height = $canvas_height;
         $tile_width  = $canvas_width;
         $canvas_tile_pad = 0;

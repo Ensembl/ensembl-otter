@@ -34,6 +34,7 @@ use Hum::EnsCmdLineDB;
     my $show_repeats    = 1;
     my $show_snps       = 0;
     my $show_cpg        = 1;
+    my $big_picture     = 0;
     my( $span_file );
     Hum::EnsCmdLineDB::do_getopt(
         'fpc=s'         => \$fpc,
@@ -53,6 +54,7 @@ use Hum::EnsCmdLineDB;
         'snps!'         => \$show_snps,
         'cpg!'          => \$show_cpg,
         'gene_spans=s'  => \$span_file,
+        'big!'          => \$big_picture,
         ) or die "Error processing command line options";
 
     if    ($chr_name and ! $fpc) {$fpc = $chr_name}
@@ -211,21 +213,28 @@ use Hum::EnsCmdLineDB;
         sub {
             warn "Printed to files:\n",
                 map "  $_\n", $gc->print_postscript($fpc);
-            my $htile = $gc->horizontal_tile || 1;
-            my $vtile = $gc->vertical_tile   || 1;
-            if ($gc->landscape) {
-                $gc->page_width ($gc->page_width  * $htile);
-                $gc->page_height($gc->page_height * $vtile);
-            } else {
-                $gc->page_width ($gc->page_width  * $vtile);
-                $gc->page_height($gc->page_height * $htile);
+            if ($big_picture) {
+                my $htile = $gc->horizontal_tile || 1;
+                my $vtile = $gc->vertical_tile   || 1;
+                my( $pwidth, $pheight );
+                if ($gc->landscape) {
+                    $pwidth  = $gc->page_width  * $htile;
+                    $pheight = $gc->page_height * $vtile;
+                } else {
+                    $pwidth  = $gc->page_width  * $vtile;
+                    $pheight = $gc->page_height * $htile;
+                }
+                if ($pwidth > $pheight) {
+                    ($pwidth, $pheight) = ($pheight, $pwidth);
+                }
+                $gc->page_width ($pwidth);
+                $gc->page_height($pheight);
+                $gc->horizontal_tile(0);
+                $gc->vertical_tile(0);
+
+                warn "Whole diagram printed to:\n",
+                    map "  $_\n", $gc->print_postscript($fpc);
             }
-            $gc->horizontal_tile(0);
-            $gc->vertial_tile(0);
-            
-            warn "Printed to files:\n",
-                map "  $_\n", $gc->print_postscript($fpc);
-            
         });
     $gc->fix_window_min_max_sizes;
 }

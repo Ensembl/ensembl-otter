@@ -5,12 +5,14 @@
 use strict;
 
 use GenomeCanvas;
+use Tk::WinPhoto;
 
 {
     my $mw = CanvasWindow::MainWindow->new;
     $mw->title('Drag line');
-    $mw->bind(<Control-q>, sub {$mw->destroy});
-    $mw->bind(<Control-Q>, sub {$mw->destroy});
+    $mw->bind('<Control-q>', sub {$mw->destroy});
+    $mw->bind('<Control-Q>', sub {$mw->destroy});
+    
     
     my $gc = CanvasWindow->new($mw);
     
@@ -39,6 +41,14 @@ use GenomeCanvas;
     $canvas->Tk::bind('<ButtonRelease-1>',    \&delete_current                           );
 
     $gc->fix_window_min_max_sizes;
+
+    $mw->bind('<Control-g>', sub{
+        print STDERR "Grabbing window ...";
+        $mw->update;
+        my $img = $canvas->Photo(-format => 'Window', -data => oct($canvas->id));
+        $img->write('drag_line.gif', -format => 'GIF');
+        print STDERR " done\n";
+        });
     
     Tk::MainLoop();
 }
