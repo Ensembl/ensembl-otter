@@ -252,9 +252,7 @@ sub open_sequence_set {
             
             my $top = $this_top->Toplevel(-title => "SequenceSet $name");
             my $ss = $self->DataSet->get_SequenceSet_by_name($name);
-
-
-            
+          
             my $sn = CanvasWindow::SequenceNotes->new($top);
             $sn->name($name);
             $sn->Client($self->Client);
@@ -262,7 +260,7 @@ sub open_sequence_set {
             $sn->SequenceSetChooser($self);
             $sn->initialise;
             #$sn->draw;   
-            $sn->draw_range;   
+            $sn->draw_range;    
             $self->add_SequenceNotes($sn);
            
             #$this_top->Unbusy;
@@ -283,12 +281,12 @@ sub search_window{
     unless (defined ($search_window) ){
         ## make a new window
         my $master = $self->canvas->toplevel;
-        $search_window = $master->Toplevel(-title => 'Find loci or clones');
+        $search_window = $master->Toplevel(-title => 'Find loci, stable_ids or clones');
         $search_window->transient($master);
         
         $search_window->protocol('WM_DELETE_WINDOW', sub{$search_window->withdraw});
     
-        my $label           =   $search_window->Label(-text     =>  "Use spaces to separate multiple names"
+        my $label           =   $search_window->Label(-text     =>  "Use spaces to separate multiple terms"
                 )->pack(-side   =>  'top');
         
         my $search_entry    =   $search_window->Entry(   
@@ -314,6 +312,13 @@ sub search_window{
         my $locus_radio = $radio_frame->Radiobutton(  -text       =>  'locus',
                                                       -variable   =>  \$radio_variable  ,
                                                       -value      =>  'locus' ,       
+                )->pack(    -side    =>  'left' ,
+                            -padx    =>   5  ,
+                        ) ; 
+        # make the horses breath more easily
+        my $stable_radio = $radio_frame->Radiobutton(  -text       =>  'stable id',
+                                                      -variable   =>  \$radio_variable  ,
+                                                      -value      =>  'stable_id' ,       
                 )->pack(    -side    =>  'left' ,
                             -padx    =>   5  ,
                         ) ; 
@@ -361,6 +366,8 @@ sub search{
         
     if ($search_type eq 'clone') {
         $rs->search_type('clone') ;
+    }elsif($search_type eq 'stable_id'){
+        $rs->search_type('stable_id');
     } else {
         $rs->search_type('locus') ; # defaults to locus 
     }
@@ -368,7 +375,7 @@ sub search{
     my $clones_found = $rs->execute_search(\@search_names) ;
     
     if ( $clones_found > 0 ){
-    my $top = $self->canvas->toplevel->Toplevel(  -title  =>  'Search results for ' . $self->{'search_entry'}->get );
+        my $top = $self->canvas->toplevel->Toplevel(  -title  =>  'Search results for ' . $search );
         my $sn = CanvasWindow::SequenceNotes::SearchedSequenceNotes->new($top);
 
         $sn->name('Search Results'); 
@@ -382,7 +389,7 @@ sub search{
     }
     else{
         ## send mesasage to main window
-        $self->message("no $search_type matched your search criteria") ;
+        $self->message("no clones where found with $search_type of $search") ;
     }
     
     # remove the window from viewing
