@@ -39,6 +39,8 @@ use vars qw(
    $OTTER_DNA_PASS
    $OTTER_DEFAULT_SPECIES
    $OTTER_SPECIES_FILE
+
+   $OTTER_GLOBAL_ACCESS_USER
 );
 
 use Sys::Hostname;
@@ -66,6 +68,8 @@ $OTTER_GET_SCRIPTS          = {'/perl/get_region'     => "get_region",
 $OTTER_POST_SCRIPTS         = {'/perl/write_region'   => "write_region",
                                '/perl/unlock_region'  => "unlock_region",
                               };
+$OTTER_GLOBAL_ACCESS_USER   = 'GLOBAL_READONLY'; 
+
 ################################################################################################
 #
 # Nothing below here should need to be edited
@@ -118,6 +122,8 @@ $OTTER_DNA_PASS       = $OTTER_SPECIES->{$OTTER_DEFAULT_SPECIES}{DNA_PASS} || $O
    $OTTER_DNA_HOST
    $OTTER_DNA_PORT
    $OTTER_DNA_PASS
+
+   $OTTER_GLOBAL_ACCESS_USER
 );
 
 sub read_species {
