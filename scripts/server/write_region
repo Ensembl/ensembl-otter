@@ -295,7 +295,7 @@ eval {
   
   my $ocia = $odb->get_CloneInfoAdaptor;
   foreach my $clone (@changed_clones) {
-    printf STDERR "Storing new version of clone '%s'\n", $clone->id;
+    printf STDERR "Storing new version of clone '%s.%s'\n", $clone->embl_id, $clone->embl_version;
     $ocia->store($clone->clone_info);
   }
   

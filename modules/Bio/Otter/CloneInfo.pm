@@ -255,9 +255,9 @@ sub equals {
         $self->throw("[$obj] is not a Bio::Otter::CloneInfo");
     }
 
-    if ($self->author->equals($obj->author) == 0) {
-        return 0;
-    }      
+    #if ($self->author->equals($obj->author) == 0) {
+    #    return 0;
+    #}      
 
     if ($self->source ne $obj->source) {
        return 0;

@@ -25,6 +25,9 @@ sub current_author {
 sub compare_clones {
     my( $self, $old_clones, $new_clones ) = @_;
     
+    my $current_author = $self->current_author
+        or $self->throw("current_author not set");
+    
     my %new = map {$_->embl_id . "." . $_->embl_version, $_} @$new_clones;
     my %old = map {$_->embl_id . "." . $_->embl_version, $_} @$old_clones;
     
@@ -36,6 +39,7 @@ sub compare_clones {
                 "No such clone '$acc_sv' in new annotation:\n"
                 . join('', map "$_\n", keys %new));
         unless ($old_clone->clone_info->equals($new_clone->clone_info)) {
+            $new_clone->author($current_author);
             push(@changed, $new_clone);
         }
     }
