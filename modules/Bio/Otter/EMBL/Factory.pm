@@ -121,6 +121,98 @@ sub get_DBAdaptors {
     return ($otter_db, $slice_aptr, $gene_aptr);
 }
 
+
+sub embl_setup {
+    
+    my ( $self, $acc, $entry_name, $data_class, $mol_type, $division, $seq_length
+        , $ac_star_id, $organism, $clone_lib, $clone_name ) = @_;
+        
+    my $embl = $self->EMBL;
+    
+    #Not sure this is the way to go passing these parameters.
+}
+
+sub entry_name {
+    my ( $self, $value ) = @_;
+    
+    if ($value) {
+        $self->{'_bio_otter_embl_factory_entry_name'} = $value;
+    }
+    return $self->{'_bio_otter_embl_factory_entry_name'};
+}
+
+sub data_class {
+    my ( $self, $value ) = @_;
+    
+    if ($value) {
+        $self->{'_bio_otter_embl_factory_data_class'} = $value;
+    }
+    return $self->{'_bio_otter_embl_factory_data_class'};
+}
+
+sub mol_type {
+    my ( $self, $value ) = @_;
+    
+    if ($value) {
+        $self->{'_bio_otter_embl_factory_mol_type'} = $value;
+    }
+    return $self->{'_bio_otter_embl_factory_mol_type'};
+}
+
+sub division {
+    my ( $self, $value ) = @_;
+    
+    if ($value) {
+        $self->{'_bio_otter_embl_factory_division'} = $value;
+    }
+    return $self->{'_bio_otter_embl_factory_division'};
+}
+
+sub seq_length {
+    my ( $self, $value ) = @_;
+    
+    if ($value) {
+        $self->{'_bio_otter_embl_factory_seq_length'} = $value;
+    }
+    return $self->{'_bio_otter_embl_factory_seq_length'};
+}
+
+sub ac_star_id {
+    my ( $self, $value ) = @_;
+    
+    if ($value) {
+        $self->{'_bio_otter_embl_factory_ac_star_id'} = $value;
+    }
+    return $self->{'_bio_otter_embl_factory_ac_star_id'};
+}
+
+sub organism {
+    my ( $self, $value ) = @_;
+    
+    if ($value) {
+        $self->{'_bio_otter_embl_factory_organism'} = $value;
+    }
+    return $self->{'_bio_otter_embl_factory_organism'};
+}
+
+sub clone_lib {
+    my ( $self, $value ) = @_;
+    
+    if ($value) {
+        $self->{'_bio_otter_embl_factory_clone_lib'} = $value;
+    }
+    return $self->{'_bio_otter_embl_factory_clone_lib'};
+}
+
+sub clone_name {
+    my ( $self, $value ) = @_;
+    
+    if ($value) {
+        $self->{'_bio_otter_embl_factory_clone_name'} = $value;
+    }
+    return $self->{'_bio_otter_embl_factory_clone_name'};
+}
+
 =head2 fake_embl_setup
 
 Debugging routine to be removed later.
@@ -175,6 +267,18 @@ sub fake_embl_setup {
 
     # Feature table header
     $embl->newFH;
+
+    my $source = $embl->newFT;
+    $source->key('source');
+
+    my $loc = $source->newLocation;
+    $loc->exons([1, 20000]);
+    $loc->strand('W');
+        
+    $source->addQualifierStrings('mol_type',  'genomic DNA');
+    $source->addQualifierStrings('organism',  "Homo sapiens");
+    $source->addQualifierStrings('clone_lib', 'RPCI-4');
+    $source->addQualifierStrings('clone',     'RP4-734C18');
 
     # Feature table source feature
     #my( $libraryname ) = library_and_vector( $project );

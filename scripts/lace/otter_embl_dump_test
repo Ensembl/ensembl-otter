@@ -49,6 +49,9 @@ use Bio::Otter::EMBL::Factory;
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
     my $ds = $cl->get_DataSet_by_name($dataset_name); #Bio::Otter::Lace::DataSet
 
+    #print "species: ", $ds->species, "\n"; # human
+    #print "taxon  : ", $ds->taxon, "\n";   # 9606
+
     my $otter_db = $ds->get_cached_DBAdaptor; #Bio::EnsEMBL::Container
     $otter_db->assembly_type($sequence_set);  #e.g. 'chr1-07'
     
