@@ -274,7 +274,7 @@ sub save_current_SequenceNote_for_CloneSequence {
     confess "Missing CloneSequence argument" unless $cs;
     my $dba = $self->get_cached_DBAdaptor;
     my $author_id = $self->_author_id;
-    warn "author name and id " . $self->author . $self->_author_id ;
+    #warn "author name and id " . $self->author . $self->_author_id ;
    
     my $contig_id = $cs->contig_id
         or confess "contig_id not set";
