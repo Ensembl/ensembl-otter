@@ -1,0 +1,106 @@
+#!/usr/local/bin/perl -w
+
+### list_missing_pipeline_dna
+
+use strict;
+use Getopt::Long 'GetOptions';
+use Bio::Otter::Lace::Defaults;
+use Bio::Otter::Lace::PipelineDB;
+
+$| = 1;
+
+{
+    my $dataset_name = undef;
+    
+    my $usage = sub { exec('perldoc', $0) };
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'   => $usage,
+        'dataset=s' => \$dataset_name,
+        ) or $usage->();
+    $usage->() unless $dataset_name;
+
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    my $otter_db = $ds->make_EnsEMBL_DBAdaptor;
+    my $pipe_db = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($otter_db);
+
+    my $list_accessions_versions = $otter_db->prepare(q{
+        SELECT a.type
+          , c.embl_acc
+          , c.embl_version
+        FROM contig g
+          , clone c
+        LEFT JOIN assembly a
+        ON g.contig_id = a.contig_id
+        WHERE g.clone_id = c.clone_id
+        });
+    $list_accessions_versions->execute;
+    
+    my( %ass_acc_sv );
+    while (my ($set, $acc, $sv) = $list_accessions_versions->fetchrow) {
+        $set = 'NONE' unless defined $set;
+        my $list = $ass_acc_sv{$set} ||= [];
+        push(@$list, [$acc, $sv]);
+    }
+    
+    my $in_pipe = $pipe_db->prepare(q{
+        SELECT count(*)
+        FROM clone
+        WHERE embl_acc = ?
+          AND embl_version = ?
+        });
+    SET: foreach my $set (sort keys %ass_acc_sv) {
+        #print STDERR "Checking set '$set'\n";
+        unless ($set eq 'NONE') {
+            my $otter_str = get_assembly($otter_db, $set);
+            my $pipe_str  = get_assembly($pipe_db, $set);
+            if (! $pipe_str) {
+                print STDERR "$set missing from pipeline\n";
+            }
+            elsif ($otter_str ne $pipe_str) {
+                print STDERR "$set different in pipeline\n";
+                #print STDERR "OTTER:\n'$otter_str'\nPIPE:\n'$pipe_str'\n";
+            }
+        }
+        my $list = $ass_acc_sv{$set};
+        foreach my $acc_sv (@$list) {
+            $in_pipe->execute(@$acc_sv);
+            my ($count) = $in_pipe->fetchrow;
+            unless ($count) {
+                print STDERR "$set missing one or more clones in pipeline\n";
+                next SET;
+            }
+        }
+    }
+}
+
+sub get_assembly {
+    my( $dba, $name ) = @_;
+    
+    my $sth = $dba->prepare(q{
+        SELECT chr_start
+          , chr_end
+          , contig_start
+          , contig_end
+          , contig_ori
+        FROM assembly
+        WHERE type = ?
+        ORDER BY chr_start
+        });
+    $sth->execute($name);
+    my $str = '';
+    while (my (@row) = $sth->fetchrow) {
+        $str .= "@row\n";
+    }
+    #die "assembly = $str";
+    return $str;
+}
+
+__END__
+
+=head1 NAME - list_missing_pipeline_dna
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
