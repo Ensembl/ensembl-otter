@@ -185,39 +185,43 @@ sub initialize {
         $canvas->Tk::bind('<Control-d>', $delete_exons);
         $canvas->Tk::bind('<Control-D>', $delete_exons);
 
-        ## For finding PolyA signals and sites
-        #my $polyA_menu = $self->make_menu('Poly-A');
-        #
-        #my $auto_find_sub = sub { $self->auto_find_PolyA };
-        #$polyA_menu->add('command',
-        #    -label          => 'Auto find',
-        #    -command        => $auto_find_sub,
-        #    -accelerator    => 'Ctrl+U',
-        #    -underline      => 1,
-        #    );
-        #$canvas->Tk::bind('<Control-U>', $auto_find_sub);
-        #$canvas->Tk::bind('<Control-u>', $auto_find_sub);
-        #
-        #my $polyA_search_sub = sub { $self->open_PolyA_search_window };
-        #$polyA_menu->add('command',
-        #    -label          => 'Edit...',
-        #    -command        => $polyA_search_sub,
-        #    -accelerator    => 'Ctrl+Y',
-        #    -underline      => 0,
-        #    -state          => 'disabled',
-        #    );
-        #$canvas->Tk::bind('<Control-Y>', $polyA_search_sub);
-        #$canvas->Tk::bind('<Control-y>', $polyA_search_sub);
+##
 
-        #my $polyA_delete_sub = sub { $self->delete_selected_PolyA };
-        #$polyA_menu->add('command',
-        #    -label          => 'Delete',
-        #    -command        => $polyA_delete_sub,
-        #    -accelerator    => 'Ctrl+K',
-        #    -underline      => 0,
-        #    );
-        #$canvas->Tk::bind('<Control-K>', $polyA_delete_sub);
-        #$canvas->Tk::bind('<Control-k>', $polyA_delete_sub);
+        ## For finding PolyA signals and sites
+        my $polyA_menu = $self->make_menu('Poly-A');
+        
+        my $auto_find_sub = sub { $self->auto_find_PolyA };
+        $polyA_menu->add('command',
+            -label          => 'Auto find',
+            -command        => $auto_find_sub,
+            -accelerator    => 'Ctrl+U',
+            -underline      => 1,
+            );
+        $canvas->Tk::bind('<Control-U>', $auto_find_sub);
+        $canvas->Tk::bind('<Control-u>', $auto_find_sub);
+        
+        my $polyA_search_sub = sub { $self->open_PolyA_search_window };
+        $polyA_menu->add('command',
+            -label          => 'Edit...',
+            -command        => $polyA_search_sub,
+            -accelerator    => 'Ctrl+Y',
+            -underline      => 0,
+            -state          => 'disabled',
+            );
+        $canvas->Tk::bind('<Control-Y>', $polyA_search_sub);
+        $canvas->Tk::bind('<Control-y>', $polyA_search_sub);
+
+        my $polyA_delete_sub = sub { $self->delete_selected_PolyA };
+        $polyA_menu->add('command',
+            -label          => 'Delete',
+            -command        => $polyA_delete_sub,
+            -accelerator    => 'Ctrl+K',
+            -underline      => 0,
+            );
+        $canvas->Tk::bind('<Control-K>', $polyA_delete_sub);
+        $canvas->Tk::bind('<Control-k>', $polyA_delete_sub);
+
+##
 
         # Keyboard editing commands
         $canvas->Tk::bind('<Left>',      sub{ $self->canvas_text_go_left   });
@@ -848,7 +852,7 @@ sub show_peptide {
     my( $self ) = @_;
     
     my $peptext = $self->{'_pep_peptext'};
-    
+
     my( $sub );
     if ($self->is_mutable) {
         $sub = $self->new_SubSeq_from_tk;
@@ -896,6 +900,12 @@ sub show_peptide {
             -background => '#0000ef',
             -foreground => 'white',
             );
+        # Gold for methionine codons
+        $peptext->tagConfigure('goldmeth' ,
+            -background => '#ffd700'  ,
+            -foreground => 'black' , 
+        );
+        
         
         # Make a Close button inside a frame
         my $frame = $top->Frame(
@@ -928,6 +938,7 @@ sub show_peptide {
         # Put the new translation into the Text widget
         my $pep = $self->translator->translate($sub->translatable_Sequence);
         $fasta = $pep->fasta_string;
+
     }
     #$fasta =~ s/\n$//s;
     my $lines = $fasta =~ tr/\n//;
@@ -943,7 +954,16 @@ sub show_peptide {
                 if ($xstr =~ /X/) {
                     $peptext->insert('end', $xstr, 'blueunk');
                 } else {
-                    $peptext->insert('end', $xstr);
+                    # highlight methionines in gold
+                    foreach my $meth_str (split /(M+)/, $xstr)
+                    { 
+                       if ($meth_str =~ /M/){                 
+                            $peptext->insert('end', $meth_str, 'goldmeth');
+                        }
+                        else{
+                            $peptext->insert('end', $meth_str);
+                        }
+                    }
                 }
             }
         }
