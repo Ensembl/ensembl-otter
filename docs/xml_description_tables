@@ -175,12 +175,13 @@ contains        sequence_set
 description     a genomic region - part or whole of a chromosome
 contains        sequence_fragment
 contains        gene
+contains        dna
 mandatory
 multiple
 
 <sequence_fragment>
 description     a genomic region - part or whole of a chromosome
-contains        id
+contains        accession
 contains        version
 contains        assembly_start
 contains        assembly_end
@@ -188,10 +189,12 @@ contains        fragment_ori
 contains        fragment_offset
 contains        keyword
 contains        remark
+contains        author
+contains        author_email
 multiple
 mandatory
 
-<id>
+<accession>
 description     EMBL/Genbank/DDBJ accession number for this sequence
 value           string
 mandatory
@@ -222,11 +225,21 @@ value           integer
 mandatory
 
 <keyword>
-description     keyword used in the keyword field in EMBL/Genbank/DDBJ
+description     keyword(s) used in the keyword list in EMBL/Genbank/DDBJ entries
 value           string
+multiple
 
 <remark>
-description     remark added by an annotator about the clone
+description     remark(s) added by an annotator about the clone
+value           string
+multiple
+
+<author>
+description     name of the author who created or last modified the remarks or keywords attached to this fragment
+value           string
+
+<author_email>
+description     email address of the author who created or last modified the remarks or keywords attached to this fragment
 value           string
 
 
@@ -238,6 +251,7 @@ contains        author
 contains        author_email
 contains        synonym
 contains        remark
+contains        known
 contains        transcript
 multiple
 
@@ -259,12 +273,18 @@ description     email address of the author who created or last modified the gen
 value           string
 
 <synonym>
-description     alternative name for the gene
+description     alternative name(s) for the gene
 value           string
+multiple
 
 <remark>
-description     remark about the gene added by an annotator
+description     remark(s) about the gene added by an annotator
 value           string
+multiple
+
+<known>
+description     whether the gene is know, or is novel
+value           0 if novel or\n1 if known
 
 <transcript>
 description     structure of a mRNA or CDS, possibly partial
@@ -308,8 +328,9 @@ description     email address of the author who created or last modified the tra
 value           string
 
 <remark>
-description     remark about the gene added by an annotator
+description     remark(s) about the gene added by an annotator
 value           string
+multiple
 
 <translation_start>
 description     assembly coordinate where the translation begins
@@ -320,24 +341,24 @@ description     assembly coordinate where the translation ends
 value           integer
 
 <mRNA_start_not_found>
-description     transcript is incomplete - set to 1 if start is missing
+description     set to 1 if the 5' UTR is incomplete
 value           0 or 1
 
 <mRNA_end_not_found>
-description     transcript is incomplete - set to 1 if end is missing
+description     set to 1 if the 3' UTR is incomplete
 value           0 or 1
 
 <cds_start_not_found>
-description     coding region is incomplete - set to 1 if start is missing
+description     set to 1 if the translation start is missing
 value           0 or 1
 
 <cds_end_not_found>
-description     coding region is incomplete - set to 1 if end is missing
+description     set to 1 if the translation stop is missing
 value           0 or 1
 
 <transcript_class>
 description     type of transcript - part of a resticted vocabulary of transcript categories used by the annotation center
-value           Known or\nNovel_CDS or\nNovel_Transcript or\nPseudogene
+value           Coding or\nNon_coding or\nImmature or\nIG_segment or\nPutative or\nPseudogene or\nProcessed_pseudogene or\nUnprocessed_pseudogene
 
 
 <evidence_set>
@@ -350,6 +371,7 @@ description     a sequence database entry
 contains        name
 contains        type
 multiple
+mandatory
 
 <name>
 description     accession of database sequence
@@ -398,3 +420,7 @@ mandatory
 <frame>
 description     Where to begin translation of exon. This tag is omitted for a non-coding exon.
 value           0 = translation begins at first base of exon (or first base of the translation region within the exon)\n1 = translation begins at second base of exon\n2 = translation begins at third base of exon
+
+<dna>
+description     a string of single letter nucleotide codes - whitespace is stripped out before use. For convenience or where sequence data is not available from the public databases
+value           string
