@@ -1,4 +1,3 @@
-
 <!-- Otter XML -->
 
 <!-- Root element of an otter XML document.
@@ -15,12 +14,10 @@
 
 <!-- a genomic region - part or whole of a chromosome -->
 <!ELEMENT sequence_set (
-    assembly_type
-    chromosome,
+    assembly_type,
     sequence_fragment+,
+    feature_set?,
     locus*,
-    polyA_signal*,
-    polyA_site*,
     dna?)>
 
 <!-- name that identifies the assembly from
@@ -33,19 +30,18 @@
 
 <!-- A genomic nucleotide entry in EMBL/Genbank -->
 <!ELEMENT sequence_fragment (
+    id?,
+    chromosome,
     accession,
     version,
-    id?,
+    author?,
+    author_email?,
+    remark*,
+    keyword*,
     assembly_start,
     assembly_end,
     fragment_ori,
-    fragment_offset,
-    author?,
-    author_email?,
-    description?,
-    keyword*,
-    remark*,
-    annotation_remark*)>
+    fragment_offset)>
 <!ELEMENT accession (#PCDATA)>
 <!ELEMENT version (#PCDATA)>
 <!ELEMENT id (#PCDATA)>
@@ -60,90 +56,75 @@
 <!-- Remark intended for display to end users -->
 <!ELEMENT remark (#PCDATA)>
 
-<!-- Remarks about the process that
-     led to the current annotation -->
-<!ELEMENT annotation_remark (#PCDATA)>
-
 <!ELEMENT locus (
+    stable_id?,
+    description?,
     name,
     type?,
     known?,
     truncated?,
-    author?,
-    author_email?,
-    description?,
     synonym*,
     remark*,
-    transcript+)>
+    author?,
+    author_email?,
+    transcript+
+    )>
 <!-- Note that stable_id attribute is of type ID, so can only appear once in a document -->
-<!ATTLIST locus
-    stable_id ID #IMPLIED
-    >
+
 <!ELEMENT name (#PCDATA)>
+<!ELEMENT stable_id (#PCDATA)>
 <!ELEMENT type (#PCDATA)>
-<!ELEMENT truncated EMPTY>
+<!ELEMENT truncated (#PCDATA)>
 
 <!-- a brief summary of the annotation found in the object -->
 <!ELEMENT description (#PCDATA)>
 
 <!ELEMENT synonym (#PCDATA)>
-<!ELEMENT known EMPTY>
+<!ELEMENT known (#PCDATA)>
 <!ELEMENT transcript (
-    name,
-    transcript_class,
-    translation_start?,
-    translation_end?,
-    mRNA_start_not_found?,
-    mRNA_end_not_found?,
-    cds_start_not_found?,
-    cds_end_not_found?,
+    stable_id,
     author?,
     author_email?,
     remark*,
+    cds_start_not_found?,
+    cds_end_not_found?,
+    mRNA_start_not_found?,
+    mRNA_end_not_found?,
+    transcript_class,
+    name,
+    evidence_set?,
+    translation_start?,
+    translation_end?,
+    translation_stable_id?,
     annotation_remark*,
-    evidence*,
-    exon+
+    exon_set
     )>
-<!ATTLIST transcript
-    stable_id ID #IMPLIED
-    translation_stable_id CDATA #IMPLIED
-    >
+
+<!ELEMENT translation_stable_id (#PCDATA)>
 <!ELEMENT translation_start (#PCDATA)>
 <!ELEMENT translation_end (#PCDATA)>
-<!ELEMENT mRNA_start_not_found EMPTY>
-<!ELEMENT mRNA_end_not_found EMPTY>
-<!ELEMENT cds_start_not_found EMPTY>
-<!ELEMENT cds_end_not_found EMPTY>
+<!ELEMENT mRNA_start_not_found (#PCDATA)>
+<!ELEMENT mRNA_end_not_found (#PCDATA)>
+<!ELEMENT cds_start_not_found (#PCDATA)>
+<!ELEMENT cds_end_not_found (#PCDATA)>
 <!ELEMENT transcript_class (#PCDATA)>
 
 <!-- Supporting evidence used to construct the transcript.
      It is a sequence database entry.
-     Data is usually "ACCESSION.SV", but "SV" may be unknown -->
-<!ELEMENT evidence (#PCDATA)>
-<!ATTLIST evidence type (EST | cDNA | Genomic | Protein | UNKNOWN) "UNKNOWN">
+     <name> is usually "ACCESSION.SV", but "SV" may be unknown -->
+<!ELEMENT evidence_set (evidence*)>
+<!ELEMENT evidence (name, type)>
 
-<!-- Could also model it this way:
 
-    <!ELEMENT type (est|c-dna|genomic|protein|unknown)>
-    <!ELEMENT est EMPTY>
-    <!ELEMENT c-dna EMPTY>
-    <!ELEMENT genomic EMPTY>
-    <!ELEMENT protein EMPTY>
-    <!ELEMENT unknown EMPTY>
--->
+<!ELEMENT exon_set (exon+)>
 
 <!-- exons with coordinates in the sequence-set -->
 <!ELEMENT exon (
+    stable_id?,
     start,
     end,
     strand,
     frame?)>
-<!-- Unlike for locus and transcript the stable_id attribute
-     cannot be of type ID since the same exon can appear in
-     multiple transcripts in the document -->
-<!ATTLIST exon
-    stable_id CDATA #IMPLIED
-    >
 
 <!-- start is integer greater than zero and less than end
      and is in chromosomal (sequence-set) coordinates -->
@@ -167,17 +148,18 @@
 
 <!-- we have dropped the old <feature> element and now have
      explicit polyA signal and site elements -->
-<!ELEMENT polyA_signal (
+<!ELEMENT feature_set (feature+)>
+<!ELEMENT feature (
+    type,
     start,
     end,
-    strand)>
-<!ELEMENT polyA_site (
-    start,
-    end,
-    strand)>
+    strand,
+    score,
+    label)>
+
+<!ELEMENT score (#PCDATA)>
+<!ELEMENT label (#PCDATA)>
 
 <!-- Can contain the whole DNA string of the sequence-set if
      desired to make a self-contained annotation -->
 <!ELEMENT dna (#PCDATA)>
-
-
