@@ -56,6 +56,7 @@ sub get_CloneSequence_list {
         my $ds = $self->SequenceSetChooser->DataSet;
         $ds->fetch_all_CloneSequences_for_SequenceSet($ss);
         $ds->fetch_all_SequenceNotes_for_SequenceSet($ss);
+        $self->status_refresh_for_SequenceSet($ss);
         $cs_list = $ss->CloneSequence_list;
     }
     return $cs_list;
