@@ -12,6 +12,7 @@ use Bio::Otter::Lace::Client;
 our $CLIENT_STANZA  = 'client';
 our $DEFAULT_TAG    = 'default';
 our $DEFAULTS       = {};
+our $GETOPT_ERRSTR  = undef;
 my @CLIENT_OPTIONS = qw(
     host=s
     port=s
@@ -58,6 +59,13 @@ sub fetch_pipeline_switch {
      - hardwired defaults (in this subroutine)
     overriding as we go.
 
+ Returns true on success, false otherwise, in the latter case 
+the Bio::Otter::Lace::Defaults::GETOPT_ERRSTR variable is populated.
+
+Suggested usage:
+ @options = (-dataset => \$dataset);
+ Bio::Otter::Lace::Defaults::do_getopt(@options) || die $Bio::Otter::Lace::Defaults::GETOPT_ERRSTR;
+
 =cut
 
 sub do_getopt {
@@ -76,20 +84,32 @@ sub do_getopt {
     }
 
     $DEFAULTS = merge_options_for_stanzas($file_options);
-
-    GetOptions(
-	       # map {} makes these lines dynamically from @CLIENT_OPTIONS
-	       # 'host=s'        => $save_option,
-	       ( map { $_ => $save_option } @CLIENT_OPTIONS ),
-	       # this allows setting of options as in the config file
-	       'cfgstr=s'      => $save_deep_option,
-	       # this is just a synonym feel free to add more
-	       'view'          => sub { $DEFAULTS->{$CLIENT_STANZA}->{'write_access'} = 0 },
-               # 'cfgfile=s'     => sub { add_config_file($_[1]) },
-	       # these are the caller script's options
-	       @script_args,
-	       ) or return 0;
-
+    
+    {   ############################################################################
+        ############################################################################
+        my $start = "Called as:\n\t$0 @ARGV\nGetOptions() Error parsing options:";
+        local $SIG{__WARN__} = sub { 
+            my $err = shift; 
+            $GETOPT_ERRSTR .= ( $GETOPT_ERRSTR ? "\t$err" : "$start\n\t$err" );
+        };
+        $GETOPT_ERRSTR = undef; # in case this gets called more than once
+        GetOptions(
+                   # map {} makes these lines dynamically from @CLIENT_OPTIONS
+                   # 'host=s'        => $save_option,
+                   ( map { $_ => $save_option } @CLIENT_OPTIONS ),
+                   # this allows setting of options as in the config file
+                   'cfgstr=s'      => $save_deep_option,
+                   # this is just a synonym feel free to add more
+                   'view'          => sub { $DEFAULTS->{$CLIENT_STANZA}->{'write_access'} = 0 },
+                   'local_fasta'   => sub { $DEFAULTS->{'local_blast'}->{'database'} = $_[1] },
+                   # 'cfgfile=s'     => sub { add_config_file($_[1]) },
+                   # these are the caller script's options
+                   @script_args,
+                   ) or return 0;
+        ############################################################################
+        ############################################################################
+    }
+    
     merge_all_optionals();
     check_spelling(); # only does client ATM
 
