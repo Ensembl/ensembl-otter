@@ -60,7 +60,7 @@ sub add_subseq_exons {
     }
     
     my $strand = $subseq->strand;
-    foreach my $ex ($subseq->get_all_Exons) {
+    foreach my $ex ($subseq->get_all_Exons_in_transcript_order) {
         $self->add_exon_holder($ex->start, $ex->end, $strand);
     }
 }
@@ -145,9 +145,12 @@ sub set_position_pair_text {
     my( $self, $pp, $text_pair ) = @_;
     
     my $canvas = $self->canvas;
+    my $strand = $self->strand_from_tk;
+    my @txt = @$text_pair;
+    @txt = reverse @txt if $self->strand_from_tk == -1;
     foreach my $i (0,1) {
         my $obj = $pp->[$i];
-        my $pos = $text_pair->[$i] || $self->empty_string;
+        my $pos = $txt[$i] || $self->empty_string;
         $canvas->itemconfigure($obj, -text => $pos);
     }
 }
@@ -165,6 +168,13 @@ sub set_all_position_pair_text {
     }
 }
 
+sub sort_all_coordinates {
+    my( $self ) = @_;
+    
+    $self->sort_position_pairs;
+    $self->sort_translation_region;
+}
+
 sub sort_position_pairs {
     my( $self ) = @_;
 
@@ -173,15 +183,24 @@ sub sort_position_pairs {
 
     my $empty  = $self->empty_string;
     my $canvas = $self->canvas;
+    my $strand = $self->strand_from_tk;
 
-    my @sort = sort {$a->[0] <=> $b->[0] || $a->[1] <=> $b->[1]}
-        $self->all_position_pair_text;
+    my( @sort );
+    if ($strand == 1) {
+        @sort = sort {$a->[0] <=> $b->[0] || $a->[1] <=> $b->[1]}
+            $self->all_position_pair_text;
+    } else {
+        @sort = sort {$b->[0] <=> $a->[0] || $b->[1] <=> $a->[1]}
+            $self->all_position_pair_text;
+    }
 
     my $n = 0;
     my( @select );
     foreach my $pp ($self->position_pairs) {
+        my @num = @{$sort[$n]};
+        @num = reverse @num if $strand == -1;
         foreach my $i (0,1) {
-            my $pos = $sort[$n][$i] || $empty;
+            my $pos = $num[$i] || $empty;
             my $obj = $pp->[$i];
             push(@select, $obj) if $was_selected{$pos};
             $canvas->itemconfigure($obj, -text => $pos);
@@ -191,9 +210,24 @@ sub sort_position_pairs {
     $self->highlight(@select) if @select;
 }
 
+sub sort_translation_region {
+    my( $self ) = @_;
+
+    my $strand  = $self->strand_from_tk;
+    my @region  = $self->translation_region_from_tk;
+    if ($strand == 1) {
+        $self->tk_t_start($region[0]);
+        $self->tk_t_end  ($region[1]);
+    } else {
+        $self->tk_t_start($region[1]);
+        $self->tk_t_end  ($region[0]);
+    }
+}
+
 sub merge_position_pairs {
     my( $self ) = @_;
     
+    $self->deselect_all;
     $self->sort_position_pairs;
     my @pos = $self->all_position_pair_text;
     my $i = 0;
@@ -355,17 +389,6 @@ sub initialize {
     $canvas->Tk::bind('<Control-A>', $select_all_sub);
     
     
-    # Trim CDS coords to first stop character
-    my $trim_cds_sub = sub { $self->trim_cds_coord_to_first_stop };
-    $edit_menu->add('command',
-        -label          => 'Trim CDS',
-        -command        => $trim_cds_sub,
-        -accelerator    => 'Ctrl+T',
-        -underline      => 1,
-        );
-    $canvas->Tk::bind('<Control-t>', $trim_cds_sub);
-    $canvas->Tk::bind('<Control-T>', $trim_cds_sub);
-    
     # Deselect all
     $canvas->Tk::bind('<Escape>', sub{ $self->deselect_all });
     
@@ -383,12 +406,36 @@ sub initialize {
         $top->bind('<Control-S>',   $save_command);
         $top->bind('<Return>',      $save_command);
         $top->bind('<KP_Enter>',    $save_command);
+
+        ### Additions to Edit menu
+
+        # Flip strands
+        my $reverse_command = sub { $self->toggle_tk_strand };
+        $edit_menu->add('command',
+            -label          => 'Reverse',
+            -command        => $reverse_command,
+            -accelerator    => 'Ctrl+R',
+            -underline      => 1,
+            );
+        $canvas->Tk::bind('<Control-r>', $reverse_command);
+        $canvas->Tk::bind('<Control-R>', $reverse_command);
+
+        # Trim CDS coords to first stop character
+        my $trim_cds_sub = sub { $self->trim_cds_coord_to_first_stop };
+        $edit_menu->add('command',
+            -label          => 'Trim CDS',
+            -command        => $trim_cds_sub,
+            -accelerator    => 'Ctrl+T',
+            -underline      => 1,
+            );
+        $canvas->Tk::bind('<Control-t>', $trim_cds_sub);
+        $canvas->Tk::bind('<Control-T>', $trim_cds_sub);
         
         # Add editing facilities for editable SubSeqs
         $edit_menu->add('separator');
 
         # Sort the positions
-        my $sort_command = sub{ $self->sort_position_pairs };
+        my $sort_command = sub{ $self->sort_all_coordinates };
         $edit_menu->add('command',
             -label          => 'Sort',
             -command        => $sort_command,
@@ -517,7 +564,7 @@ sub initialize {
     $file_menu->add('command',
         -label          => 'Close',
         -command        => $window_close,
-        -accelerator    => 'Ctrl-W',
+        -accelerator    => 'Ctrl+W',
         -underline      => 1,
         );
     
@@ -679,11 +726,18 @@ sub show_peptide {
         $top->protocol('WM_DELETE_WINDOW', $close_command);
     }
     
-    # Put the new translation into the Text widget
-    my $pep = $self->translator->translate($sub->translatable_Sequence);
-    my $fasta = $pep->fasta_string;
+    my( $fasta );
+    eval{ $sub->validate; };
+    if ($@) {
+        $self->exception_message($@);
+        $fasta = "TRANSLATION ERROR";
+    } else {
+        # Put the new translation into the Text widget
+        my $pep = $self->translator->translate($sub->translatable_Sequence);
+        $fasta = $pep->fasta_string;
+    }
+    #$fasta =~ s/\n$//s;
     my $lines = $fasta =~ tr/\n//;
-    $fasta =~ s/\n$//s;
     $peptext->delete('1.0', 'end');
     
     # Markup stop codons
@@ -710,7 +764,7 @@ sub show_peptide {
     
     # Set the window title, and make it visible
     my $win = $peptext->toplevel;
-    $win->configure( -title => $pep->name . " translation" );
+    $win->configure( -title => $sub->name . " translation" );
     $win->deiconify;
     $win->raise;
 }
@@ -1177,39 +1231,49 @@ sub control_left_button_handler {
     my( $self ) = @_;
     
     my $canvas = $self->canvas;
-    my $obj = $canvas->find('withtag', 'current')
-        or return;
-    return unless $canvas->type($obj) eq 'line';
-    my $exon_arrow_tag = 'exon_arrow';
-    if (grep $_ eq $exon_arrow_tag, $canvas->gettags($obj)) {
-        if (my $head_end = $canvas->itemcget($obj, 'arrow')) {
-            my $new_end = ($head_end eq 'first') ? 'last' : 'first';
-            $canvas->itemconfigure($exon_arrow_tag, 
-                -arrow   => $new_end,
-                );
-        }
+    my $obj = $canvas->find('withtag', 'current') or return;
+    my %tags = map {$_, 1} $canvas->gettags($obj);
+    if ($tags{'plus_strand'}) {
+        $self->set_tk_strand(-1);
+    }
+    elsif ($tags{'minus_strand'}) {
+        $self->set_tk_strand(1);
     }
 }
 
-sub strand_from_tk {
-    my( $self ) = @_;
+sub set_tk_strand {
+    my( $self, $strand ) = @_;
     
-    my $canvas = $self->canvas;
-    my( $dir );
-    foreach my $arrow ($canvas->find('withtag', 'exon_arrow')) {
-        my $end = $canvas->itemcget($arrow, 'arrow');
-        my $exon_dir = ($end eq 'first') ? 'reverse' : 'forward';
-        if ($dir) {
-            if ($exon_dir ne $dir) {
-                $self->message("Inconsistent exon directions.  Guessing '$dir'");
-                last;
-            }
-        } else {
-            $dir = $exon_dir;
-        }
+    my( $del_tag, $draw_method );
+    if ($strand == 1) {
+        $del_tag = 'minus_strand';
+        $draw_method = 'draw_plus';
+    } else {
+        $del_tag = 'plus_strand';
+        $draw_method = 'draw_minus';
     }
     
-    return ($dir eq 'forward') ? 1 : -1;
+    my $canvas = $self->canvas;
+    foreach my $obj ($canvas->find('withtag', $del_tag)) {
+        my @tags = grep $_ ne $del_tag, $canvas->gettags($obj);
+        $canvas->delete($obj);
+        my ($i) = map /exon_id-(\d+)/, @tags;
+        my( $size, $half, $pad,
+            $x1, $y1, $x2, $y2 ) = $self->exon_holder_coords($i - 1);
+        $self->$draw_method($x1 + $half, $y1, $size, @tags);
+    }
+    
+    $self->sort_all_coordinates;
+}
+
+sub toggle_tk_strand {
+    my( $self ) = @_;
+    
+    if ($self->strand_from_tk == 1) {
+        $self->set_tk_strand(-1);
+    } else {
+        $self->set_tk_strand(1);
+    }
 }
 
 sub empty_string {
@@ -1241,7 +1305,6 @@ sub export_highlighted_text_to_selection {
     my( $self, $offset, $max_bytes ) = @_;
     
     my @text = $self->get_all_selected_text;
-    my $strand = $self->SubSeq->strand;
     my $clip = '';
     if (@text == 1) {
         $clip = $text[0];
@@ -1249,9 +1312,6 @@ sub export_highlighted_text_to_selection {
         for (my $i = 0; $i < @text; $i += 2) {
             my($start, $end) = @text[$i, $i + 1];
             $end ||= $self->empty_string;
-            if ($strand == -1) {
-                ($start, $end) = ($end, $start);
-            }
             $clip .= "$start  $end\n";
         }
     }
@@ -1328,7 +1388,8 @@ sub middle_button_paste {
         for (my $i = 0; $i < @ints; $i += 2) {
             $self->add_coordinate_pair(@ints[$i, $i + 1]);
         }
-        $self->fix_window_min_max_sizes;
+        $self->set_scroll_region_and_maxsize;
+        #$self->fix_window_min_max_sizes;
     }
 }
 
@@ -1336,6 +1397,12 @@ sub next_exon_holder_coords {
     my( $self ) = @_;
     
     my $i = $self->next_position_pair_index;
+    return $self->exon_holder_coords($i);
+}
+
+sub exon_holder_coords {
+    my( $self, $i ) = @_;
+    
     my( $size, $half, $pad, $text_len, @bbox ) = $self->_coord_matrix;
     my $y_offset = $i * ($size + (2 * $pad));
     $bbox[1] += $y_offset;
@@ -1391,14 +1458,17 @@ sub add_exon_holder {
     $start ||= $self->empty_string;
     $end   ||= $self->empty_string;
     
+    my $arrow = ($strand == 1) ? 'last' : 'first';
+    if ($strand == -1) {
+        ($start, $end) = ($end, $start);
+    }
+    
     my $canvas  = $self->canvas;
     my $font    = $self->font;
     my $exon_id = 'exon_id-'. $self->next_exon_number;
     my( $size, $half, $pad,
         $x1, $y1, $x2, $y2 ) = $self->next_exon_holder_coords;
     my $arrow_size = $half - $pad;
-    
-    my $arrow = ($strand == 1) ? 'last' : 'first';
     
     my $start_text = $canvas->createText(
         $x1, $y1 + $half,
@@ -1408,14 +1478,11 @@ sub add_exon_holder {
         -tags       => [$exon_id, 'exon_start', 'exon_pos'],
         );
     
-    my $strand_arrow = $canvas->createLine(
-        $x1 + $half, $y1 + $half,
-        $x2 - $half, $y1 + $half,
-        -width      => 1,
-        -arrow      => $arrow,
-        -arrowshape => [$arrow_size, $arrow_size, $arrow_size - $pad],
-        -tags       => [$exon_id, 'exon_furniture', 'exon_arrow'],
-        );
+    if ($strand == 1) {
+        $self->draw_plus ($x1 + $half, $y1, $size, $exon_id, 'exon_furniture');
+    } else {
+        $self->draw_minus($x1 + $half, $y1, $size, $exon_id, 'exon_furniture');
+    }
     
     my $end_text = $canvas->createText(
         $x2, $y1 + $half,
@@ -1440,6 +1507,69 @@ sub add_exon_holder {
     return $size + $pad;
 }
 
+sub draw_plus {
+    my( $self, $x, $y, $size, @tags ) = @_;
+    
+    my $third = $size / 3;
+    
+    $self->canvas->createPolygon(
+        $x +     $third,  $y             ,
+        $x + 2 * $third,  $y             ,
+        $x + 2 * $third,  $y +     $third,
+        $x + $size     ,  $y +     $third,
+        $x + $size     ,  $y + 2 * $third,
+        $x + 2 * $third,  $y + 2 * $third,
+        $x + 2 * $third,  $y + $size,
+        $x +     $third,  $y + $size,
+        $x +     $third,  $y + 2 * $third,
+        $x             ,  $y + 2 * $third,
+        $x             ,  $y +     $third,
+        $x +     $third,  $y +     $third,
+        -tags       => [@tags, 'plus_strand'],
+        -fill       => 'grey',
+        -outline    => undef,
+        );
+}
+
+sub draw_minus {
+    my( $self, $x, $y, $size, @tags ) = @_;
+    
+    my $third = $size / 3;
+    
+    $self->canvas->createRectangle(
+        $x        ,  $y +     $third,
+        $x + $size,  $y + 2 * $third,
+        -tags       => [@tags, 'minus_strand'],
+        -fill       => 'grey',
+        -outline    => undef,
+        );
+}
+
+sub strand_from_tk {
+    my( $self ) = @_;
+    
+    my $canvas = $self->canvas;
+    my @fwd = $canvas->find('withtag', 'plus_strand' );
+    my @rev = $canvas->find('withtag', 'minus_strand');
+    
+    my $guess = 0;
+    my( $strand );
+    if (@fwd >= @rev) {
+        $strand = 1;
+        $guess = 1 if @rev;
+    } else {
+        $strand = -1;
+        $guess = 1 if @fwd;
+    }
+    
+    if ($guess) {
+        my $dir = $strand == 1 ? 'forward' : 'reverse';
+        $self->message("Inconsistent exon directions.  Guessing '$dir'");
+    }
+    
+    return $strand;
+}
+
 sub draw_translation_region {
     my( $self ) = @_;
     
@@ -1448,7 +1578,12 @@ sub draw_translation_region {
     my $canvas      = $self->canvas;
     my $font        = $self->font;
     my $font_size   = $self->font_size;
-    my @trans       = $self->SubSeq->translation_region;
+    
+    my $sub = $self->SubSeq;
+    my @trans       = $sub->translation_region;
+    if ($sub->strand == -1) {
+        @trans = reverse @trans;
+    }
     
     my $t1 = $canvas->createText(
         $half + $text_len, $size,
@@ -1466,7 +1601,7 @@ sub draw_translation_region {
         );
 }
 
-sub get_translation_region {
+sub translation_region_from_tk {
     my( $self ) = @_;
     
     my $canvas = $self->canvas;
@@ -1474,7 +1609,7 @@ sub get_translation_region {
     foreach my $obj ($canvas->find('withtag', 'translation_region')) {
         push(@region, $canvas->itemcget($obj, 'text'));
     }
-    return(@region);
+    return(sort {$a <=> $b} @region);
 }
 
 sub tk_t_start {
@@ -1526,16 +1661,16 @@ sub new_SubSeq_from_tk {
     my( $self ) = @_;
 
     my $sub = $self->SubSeq->clone;
-    $sub->translation_region     ( $self->get_translation_region  );
-    $sub->name                   ( $self->get_subseq_name         );
-    $sub->replace_all_Exons      ( $self->Exons_from_canvas       );
-    $sub->GeneMethod             ( $self->get_GeneMethod_from_tk  );
-    $sub->Locus                  ( $self->get_Locus_from_tk       );
-    $sub->strand                 ( $self->strand_from_tk          );
-    $sub->start_not_found        ( $self->start_not_found_from_tk );
-    $sub->end_not_found          ( $self->end_not_found_from_tk   );
-    $sub->upstream_subseq_name   ( $self->continued_from_from_tk  );
-    $sub->downstream_subseq_name ( $self->continues_as_from_tk    );
+    $sub->translation_region     ( $self->translation_region_from_tk  );
+    $sub->name                   ( $self->get_subseq_name             );
+    $sub->replace_all_Exons      ( $self->Exons_from_canvas           );
+    $sub->GeneMethod             ( $self->get_GeneMethod_from_tk      );
+    $sub->Locus                  ( $self->get_Locus_from_tk           );
+    $sub->strand                 ( $self->strand_from_tk              );
+    $sub->start_not_found        ( $self->start_not_found_from_tk     );
+    $sub->end_not_found          ( $self->end_not_found_from_tk       );
+    $sub->upstream_subseq_name   ( $self->continued_from_from_tk      );
+    $sub->downstream_subseq_name ( $self->continues_as_from_tk        );
     #warn "Start not found ", $self->start_not_found_from_tk, "\n",
     #    "End not found ", $self->end_not_found_from_tk, "\n";
     return $sub;

@@ -322,9 +322,42 @@ sub fix_window_min_max_sizes {
     $mw->update;
     $mw->withdraw;
     
+    my( $max_x, $max_y, $display_max_x, $display_max_y )
+        = $self->set_scroll_region_and_maxsize;
+    
+    # Get the current screen offsets
+    my($x, $y) = $mw->geometry =~ /^=?\d+x\d+\+?(-?\d+)\+?(-?\d+)/;
+
+    # Is there a set window size?
+    if (my($fix_x, $fix_y) = $self->set_window_size) {
+        $max_x = $fix_x;
+        $max_y = $fix_y;
+    } else {
+        # Nudge the window onto the screen.
+        $x = 0 if $x < 0;
+        $y = 0 if $y < 0;
+
+        if (($x + $max_x) > $display_max_x) {
+            $x = $display_max_x - $max_x;
+        }
+        if (($y + $max_y) > $display_max_y) {
+            $y = $display_max_y - $max_y;
+        }
+    }
+
+    my $geom = "${max_x}x$max_y+$x+$y";
+    $mw->geometry($geom);
+    $mw->deiconify;
+}
+
+sub set_scroll_region_and_maxsize {
+    my( $self ) = @_;
+
     my @bbox = $self->set_scroll_region;
     my $canvas_width  = $bbox[2] - $bbox[0];
     my $canvas_height = $bbox[3] - $bbox[1];
+    
+    my $mw = $self->canvas->toplevel;
     
     my( $other_x, # other_x and other_y record the space occupied
         $other_y, # by the widgets other than the canvas in the
@@ -354,29 +387,7 @@ sub fix_window_min_max_sizes {
     $max_y = $display_max_y if $max_y > $display_max_y;
     $mw->maxsize($max_x, $max_y);
     
-    # Get the current screen offsets
-    my($x, $y) = $mw->geometry =~ /^=?\d+x\d+\+?(-?\d+)\+?(-?\d+)/;
-
-    # Is there a set window size?
-    if (my($fix_x, $fix_y) = $self->set_window_size) {
-        $max_x = $fix_x;
-        $max_y = $fix_y;
-    } else {
-        # Nudge the window onto the screen.
-        $x = 0 if $x < 0;
-        $y = 0 if $y < 0;
-
-        if (($x + $max_x) > $display_max_x) {
-            $x = $display_max_x - $max_x;
-        }
-        if (($y + $max_y) > $display_max_y) {
-            $y = $display_max_y - $max_y;
-        }
-    }
-
-    my $geom = "${max_x}x$max_y+$x+$y";
-    $mw->geometry($geom);
-    $mw->deiconify;
+    return($max_x, $max_y, $display_max_x, $display_max_y);
 }
 
 sub set_window_size {
@@ -667,7 +678,7 @@ sub exception_message {
     my ($except_first) = $except =~ /^(.+)$/m;
     
     # Put the message on the terminal
-    warn $except_first;
+    warn "$except_first\n";
 
     push(@message, $except_first);
     $self->message(@message);
