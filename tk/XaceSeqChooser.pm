@@ -370,10 +370,12 @@ sub get_CloneSeq {
 sub express_clone_and_subseq_fetch {
     my( $self, $clone_name ) = @_;
     
+    my $ace = $self->ace_handle;
+    
     my $clone = Hum::Ace::CloneSeq->new;
     $clone->ace_name($clone_name);
-    
-    my $ace = $self->ace_handle;
+    # Get the DNA
+    my $seq = $clone->store_Sequence_from_ace_handle($ace);
 
     # These raw_queries are much faster than
     # fetching the whole Genome_Sequence object!
@@ -389,7 +391,7 @@ sub express_clone_and_subseq_fetch {
                 ->new_from_name_start_end_transcript_seq(
                     $name, $start, $end, $t_seq,
                     );
-            $sub->clone_seq_name($clone_name);
+            $sub->clone_Sequence($seq);
             
             # Mark the subsequence as coming from the db
             $sub->is_archival(1);

@@ -291,7 +291,7 @@ sub add_buttons_and_event_bindings {
         -command    => sub{
                 my $xr = $self->xace_seq_chooser->xace_remote;
                 if ($xr) {
-                    $xr->show_sequence($self->name);
+                    $xr->show_SubSeq($self->subseq);
                 } else {
                     $self->message("No xace attached");
                 }
