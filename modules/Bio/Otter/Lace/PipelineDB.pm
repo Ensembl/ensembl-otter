@@ -15,10 +15,18 @@ sub get_DBAdaptor {
 }
 
 sub get_pipeline_DBAdaptor {
-    my( $otter_db ) = @_;
+    my( $otter_db, $rw ) = @_;
 
     require Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor;
-    return Bio::Otter::Lace::SatelliteDB::_get_DBAdaptor($otter_db, 'pipeline_db', 'Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor');
+    if ($rw){
+        return Bio::Otter::Lace::SatelliteDB::_get_DBAdaptor($otter_db, 
+                                                             'pipeline_db_rw', 
+                                                             'Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor');
+    }else{
+        return Bio::Otter::Lace::SatelliteDB::_get_DBAdaptor($otter_db, 
+                                                             'pipeline_db', 
+                                                             'Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor');
+    }
 }
 
 

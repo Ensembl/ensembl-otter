@@ -118,7 +118,7 @@ my $DEBUG = 0;
     my $otter_db = $ds->get_cached_DBAdaptor;
 
     # Make a connection to the pipeline database
-    my $pipeline_db = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($otter_db);
+    my $pipeline_db = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($otter_db, 1);
     $pipeline_db->db_handle->{'PrintError'} = 0; # turn off error writing for this db handle
     # Get SubmitContig analysis object for priming the pipeline
     $pipe_analysis = $pipeline_db->get_AnalysisAdaptor;
