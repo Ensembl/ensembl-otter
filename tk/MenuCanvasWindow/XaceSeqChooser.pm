@@ -812,7 +812,6 @@ sub _make_search {
     
     my $search_box = $search_frame->Entry(
         -width => 25,
-        #-font  => ['Helvetica', $self->font_size, 'normal'],
         );
     $search_box->pack(-side => 'left');
     

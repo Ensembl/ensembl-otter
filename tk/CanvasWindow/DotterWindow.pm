@@ -24,15 +24,7 @@ sub initialise {
     
     my $dotter = Hum::Ace::DotterLauncher->new;
     $self->dotter($dotter);
-    
-    ### X resource defaults only worked for some
-    ### entry boxes - so hard coded here.
-    my @std_entry_args = (
-        -font       => [$self->font, $self->font_size],
-        -relief     => 'flat',  
-        -background => 'white',
-        );
-    
+        
     # Entry box for match at top
     my $match_frame = $top->Frame(
         -border => 3,
@@ -47,7 +39,6 @@ sub initialise {
     $self->match(
         $match_frame->Entry(
             -width  => 16,
-            @std_entry_args,
             )->pack(-side => 'left')
         );
     
@@ -88,7 +79,6 @@ sub initialise {
     $self->genomic(
         $name_frame->Entry(
             -width  => 30,
-            @std_entry_args,
             )->pack(-side => 'left')
         );
 
@@ -104,7 +94,6 @@ sub initialise {
         $frame->Entry(
             -width      => 6,
             -justify    => 'right',
-            @std_entry_args,
             )->pack(-side => 'left')
         );
     
@@ -121,7 +110,6 @@ sub initialise {
         $frame->Entry(
             -width      => 9,
             -justify    => 'right',
-            @std_entry_args,
             )->pack(-side => 'left')
         );
     
@@ -138,7 +126,6 @@ sub initialise {
         $frame->Entry(
             -width      => 9,
             -justify    => 'right',
-            @std_entry_args,
             )->pack(-side => 'left')
         );
     
