@@ -7,11 +7,29 @@ use strict;
 use Carp;
 use Getopt::Long 'GetOptions';
 use Symbol 'gensym';
+use Config::IniFiles;
+use Data::Dumper;
 use Bio::Otter::Lace::Client;
 
-our $CLIENT_STANZA  = 'client';
-our $DEFAULT_TAG    = 'default';
-our $DEFAULTS       = {};
+my $CLIENT_STANZA   = 'client';
+my $DEFAULT_TAG     = 'default';
+my $DEBUG_CONFIG    = 0;
+#-------------------------------
+my $CONFIG_INIFILES = [];
+my %OPTIONS_TO_TIE  = (
+                       -default => $DEFAULT_TAG, 
+                       -nocase  => 1
+                       );
+
+my $HARDWIRED = {};
+tie %$HARDWIRED, 'Config::IniFiles', (-file => \*DATA, %OPTIONS_TO_TIE);
+# Make these accessible without call to do_getopt()
+push(@$CONFIG_INIFILES, $HARDWIRED); 
+
+# The tied hash for the GetOptions variables
+my $DEFAULTS = {};
+tie %$DEFAULTS, 'Config::IniFiles', %OPTIONS_TO_TIE;
+
 our $GETOPT_ERRSTR  = undef;
 my @CLIENT_OPTIONS = qw(
     host=s
@@ -30,28 +48,27 @@ my @CLIENT_OPTIONS = qw(
 # $DEFAULTS->{$CLIENT_STANZA} hash.  To add another client option just include in above
 # and if necessary add to hardwired defaults in do_getopt().
 
-our $save_option = sub {
+my $save_option = sub {
     my( $option, $value ) = @_;
     $DEFAULTS->{$CLIENT_STANZA}->{$option} = $value;
 };
-our $save_deep_option = sub {
+my $save_deep_option = sub {
     my $getopt = $_[1];
     my ($option, $value) = split(/=/, $getopt,2);
     $option = [split(/\./, $option)];
-    set_hash_val($DEFAULTS, $option, $value);
+    my $param = pop @$option;
+    return unless @$option;
+    $DEFAULTS->{join(".", @$option)} = { $param => $value };
 };
+my $CALLED = "$0 @ARGV";
 
-sub fetch_gene_type_prefix {
-    return $DEFAULTS->{$CLIENT_STANZA}->{'gene_type_prefix'};
-}
 
-sub fetch_pipeline_switch {
-    return $DEFAULTS->{$CLIENT_STANZA}->{'pipeline'} ? 1 : 0;
-}
+################################################
+#
+## PUBLIC METHODS
+#
+################################################
 
-sub misc_acefile {
-    return $DEFAULTS->{$CLIENT_STANZA}->{'misc_acefile'};
-}
 
 =head1 do_getopt
 
@@ -79,23 +96,23 @@ sub do_getopt {
     
     my @conf_files = list_config_files();
 
+    $CONFIG_INIFILES = []; # clear and add in case of multiple calls
+    push(@$CONFIG_INIFILES, $HARDWIRED);
+
     my $file_options = [];
     foreach my $file(@conf_files){
-	# warn "Getting options from '$file'\n";
 	if (my $file_opts = options_from_file($file)) {
-	    push(@$file_options, $file_opts);
+	    push(@$CONFIG_INIFILES, $file_opts);
 	}
     }
 
-    $DEFAULTS = merge_options_for_stanzas($file_options);
-    
     {   ############################################################################
         ############################################################################
-        my $start = "Called as:\n\t$0 @ARGV\nGetOptions() Error parsing options:";
+        my $start = "Called as:\n\t$CALLED\nGetOptions() Error parsing options:";
         local $SIG{__WARN__} = sub { 
             my $err = shift; 
             $GETOPT_ERRSTR .= ( $GETOPT_ERRSTR ? "\t$err" : "$start\n\t$err" );
-        };
+        } unless $DEBUG_CONFIG;
         $GETOPT_ERRSTR = undef; # in case this gets called more than once
         GetOptions(
                    # map {} makes these lines dynamically from @CLIENT_OPTIONS
@@ -106,129 +123,74 @@ sub do_getopt {
                    # this is just a synonym feel free to add more
                    'view'          => sub { $DEFAULTS->{$CLIENT_STANZA}->{'write_access'} = 0 },
                    'local_fasta=s' => sub { $DEFAULTS->{'local_blast'}->{'database'} = $_[1] },
-                   # 'cfgfile=s'     => sub { add_config_file($_[1]) },
+                   'noblast'       => sub { map { $_->{'local_blast'} = {} if exists $_->{'local_blast'} } @$CONFIG_INIFILES ; },
+                   # this allows multiple extra config file to be used
+                   'cfgfile=s'     => sub { my $opts = options_from_file($_[1]); push(@$CONFIG_INIFILES, $opts) if $opts },
                    # these are the caller script's options
                    @script_args,
                    ) or return 0;
         ############################################################################
         ############################################################################
     }
-    
-    merge_all_optionals();
-    check_spelling(); # only does client ATM
 
-    # Fallback on hardwired defaults
-    $DEFAULTS->{$CLIENT_STANZA}->{'host'}         ||= 'localhost';
-    $DEFAULTS->{$CLIENT_STANZA}->{'port'}         ||= 39312;
-    $DEFAULTS->{$CLIENT_STANZA}->{'author'}       ||= $this_user;
-    $DEFAULTS->{$CLIENT_STANZA}->{'email'}        ||= $this_user;
-    $DEFAULTS->{$CLIENT_STANZA}->{'write_access'} ||= 0;
-    $DEFAULTS->{$CLIENT_STANZA}->{'debug'}          = 1
-        unless defined($DEFAULTS->{$CLIENT_STANZA}->{'debug'});
-    $DEFAULTS->{$CLIENT_STANZA}->{'pipeline'}       = 1 
-	unless defined($DEFAULTS->{$CLIENT_STANZA}->{'pipeline'});
-
+    push(@$CONFIG_INIFILES, $DEFAULTS);
+#    die Dumper $CONFIG_INIFILES;
     return 1;
 }
 
-# merge_options_for_stanza 
-# this goes through the hashes over writing earlier
-# option/values with later ones. 
-# so $array->[0]->{option} is overwritten by $array->[1]->{option}
-# and so on...
-# wants array ref of hash refs
-
-sub merge_options_for_stanzas{
-    my ( $array ) = @_;
-    my $return_hash = {};
-    foreach my $hash(@$array){
-	$return_hash = merge($return_hash, $hash);
-    }
-    return $return_hash;
-}
-
 sub make_Client {
-    my $client = Bio::Otter::Lace::Client->new;
-
-    $client->all_options($DEFAULTS);
-
-    return $client;
+    return Bio::Otter::Lace::Client->new;
 }
 
-# options_from_file
-# reads the whole file into a hash
-# $hash->{stanza}->{option}->{value}
+sub option_from_array{
+    my ($array) = @_;
+    $array    ||= [];
+    my $value   = undef;
+    warn "option from array called // @$array //\n" if $DEBUG_CONFIG;
 
-sub options_from_file {
-    my( $file ) = @_;
-    
-    my $fh = gensym();
-    
-    # Just return if file does not exist or is unreadable
-    open $fh, $file or return;
-    
-    my $current_stanza = '';
-    my $all_opts = {};
+    my @arr_copy = @{$array};
+    my $first    = shift @arr_copy;
 
-    while (<$fh>) {
-        chomp;
-        next if /^\#/ || /^$/; # ignore comments and blank
-        s/\s$//;
-        # Only look at client stanza
-        if (/^\[([\w\._]+)\]/) {
-            $current_stanza = $1;
-	    set_hash_val($all_opts, [ split(/\./, $current_stanza)], {});
+    my $allow_hash = 1; # allow hash for first call to set_value
+
+    my $set_value = sub {
+        my ($conf_val, $found) = @_;
+        my $value_is_hash    = ref($value)    eq 'HASH';
+        my $conf_val_is_hash = ref($conf_val) eq 'HASH';
+        warn "got // $conf_val $found //\n" if $DEBUG_CONFIG;
+        return unless $found;
+        if(($value_is_hash || $allow_hash) && $conf_val_is_hash){
+            # initialise as first time it will be undef
+            $value ||= {};
+            # overwrite the previous $value
+            $value   = { %$value, %$conf_val };
+        }else{
+            $value = $conf_val;
         }
+        $allow_hash = 0;
+    };
 
-        if (/([^=]+)\s*=\s*([^\n]+)/) {
-            # warn "Got '$1' = '$2' \n";
-	    set_hash_val($all_opts, [ split(/\./, $current_stanza), lc $1 ], $2);
-        }
+    # get first file
+    #    - get default option from that
+    #    - get option from that (if exists) and overwrite
+    # get next file
+    #    - get default option from that and overwrite
+    #    - get option from that (if exists) and overwrite
+
+    foreach my $conf(@$CONFIG_INIFILES){
+        $set_value->( __internal_option_from_array($conf, [ ( $DEFAULT_TAG, @arr_copy ) ]) );
+        $set_value->( __internal_option_from_array($conf, [ ($first, @arr_copy) ]) );
     }
-    
-    close $fh;
 
-    return $all_opts;
-}
-
-sub merge_all_optionals{
-    my @overrides = keys(%{$DEFAULTS->{$DEFAULT_TAG}});
-    my @toplevels = grep { !(/$DEFAULT_TAG/ || /$CLIENT_STANZA/) }  keys(%$DEFAULTS);
-
-    foreach my $i(@toplevels){
-
-	# this check is pretty crude and ONLY handles two levels
-	my $check = { map{ $_, 1} keys(%{$DEFAULTS->{$i}}) };
-	foreach my $j(@overrides){
-	    delete $check->{$j};
-	    # warn " ***** merging \$DEFAULTS->{'$DEFAULT_TAG'}->{'$j'} with \$DEFAULTS->{'$i'}->{'$j'}\n";
-	    $DEFAULTS->{$i}->{$j} = merge($DEFAULTS->{$DEFAULT_TAG}->{$j},
-					  $DEFAULTS->{$i}->{$j});
-	}
-	my @poss_errs = map{"<$_>"} keys(%$check);
-	warn "Are you sure <$i> has sublevel(s): " . join(" ", @poss_errs) . 
-	    " *** PLEASE CHECK CONFIG FILES ***\n" if @poss_errs;
-    }
-}
-
-# this checks spelling for all @CLIENT_OPTIONS
-# an easy mistake to make in config files which 
-# would otherwise be ignored. E.G.
-# [client]
-# pipleine=0
-sub check_spelling{
-    my $actuals = { map {$_, 1} keys(%{$DEFAULTS->{$CLIENT_STANZA}})};
-    map { m/^(\w+)/; delete $actuals->{$1} } @CLIENT_OPTIONS;
-    my @poss_errs =  map{"<$_>"} keys(%$actuals);
-    warn "Possible typo for option(s): " . join(" ", @poss_errs ) . 
-	" *** PLEASE CHECK CONFIG FILES ***\n" if @poss_errs;
+    return $value;
 }
 
 sub list_config_files{
     #   ~/.otter_config
     #   $ENV{'OTTER_HOME'}/otter_config
     #   /etc/otter_config
-    my @conf_files = ("/etc/otter_config");
+    my @conf_files = ();
+    push(@conf_files, "/etc/otter_config") if -e "/etc/otter_config";
 
     if ($ENV{'OTTER_HOME'}) {
         # Only add if OTTER_HOME environment variable is set
@@ -239,69 +201,23 @@ sub list_config_files{
     return @conf_files;
 }
 
-################################################
-sub set_hash_val{
-    my ($hash, $keys, $value) = @_;
-    my $lastKey = lc(pop @$keys);
-    
-    foreach my $key (@$keys) {
-	$key = lc $key;
-	if (not exists($hash->{$key})) {
-	    $hash->{$key} = {};
-	} elsif (ref($hash->{$key}) ne 'HASH') {
-	    my $oldVal = $hash->{$key};
-	    $hash->{$key} = {};
-	    warn "Looks like something's been defined twice\n";
-	    $hash->{$key}{'_setHashVal_'} = $oldVal;
-	}
-	# Traverse hash
-	$hash = $hash->{$key};
-    }
-    if(not exists($hash->{$lastKey})){
-        $hash->{$lastKey} = $value;
-    }elsif(ref($hash->{$lastKey}) eq 'HASH'){
-        #warn "Having to use '_setHashVal_' as key and $lastKey $value in hash THIS IS BAD!\n";
-        warn "Key '$lastKey' already existed with a hash below. Using '_setHashval_' instead\n";
-        $hash->{'_setHashVal_'} = $value;
-    }else{
-        warn "You've set '@$keys $lastKey' twice. This should be ok\n";
-        #use Data::Dumper;
-        #warn Dumper $hash->{$lastKey};
-        $hash->{$lastKey} = $value;
+sub save_all_config_files{
+    eval{
+        foreach my $config(@$CONFIG_INIFILES){
+            my $obj = tied(%$config);
+            next unless $obj;
+            my $filename = $obj->GetFileName();
+            warn "Saving '$filename' \n";
+            next unless -w $filename;
+            warn "       '$filename' is writeable\n";
+            $obj->WriteConfig($filename) or die "Error Writing '$filename'";
+            warn "Wrote '$filename'\n";
+        }
+    };
+    if($@){
+        warn "Failed Saving Config:\n$@";
     }
 }
-
-################################################
-# slightly modified from the guts of Hash::Merge
-# works on a right precedence behaviour
-# as would $hash = { %$first, %$second } in perl.
-#
-sub merge {
-    my ( $left, $right ) = @_;
-    return _merge_hashes( $left, $right ) if UNIVERSAL::isa( $right, 'HASH' );
-    return defined $right ? $right : $left;
-}	
-sub _merge_hashes {
-    my ( $left, $right ) = @_;
-    die "Arguments for _merge_hashes must be hash references" unless 
-	UNIVERSAL::isa( $left, 'HASH' ) && UNIVERSAL::isa( $right, 'HASH' );
-
-    my $newhash;
-    foreach my $leftkey( keys %$left ) {
-	if ( exists $right->{ $leftkey } ) {
-	    $newhash->{ $leftkey } = merge ( $left->{ $leftkey }, $right->{ $leftkey } );
-	}else{
-	    $newhash->{ $leftkey } = $left->{ $leftkey };
-	}
-    }
-    foreach my $rightkey( keys %$right ){ 
-	if( !exists $left->{ $rightkey } ){
-	    $newhash->{ $rightkey } = $right->{ $rightkey };
-	}
-    }
-    return $newhash;
-}
-
 
 
 ## sets the known gene methods for a particular XaceSeqChooser
@@ -381,11 +297,130 @@ sub get_default_GeneMethods{
 
 }
 
+################################################
+#
+## UTILITY METHODS - MADE FOR YOU
+#
+################################################
+
+sub fetch_gene_type_prefix {
+    return option_from_array([ $CLIENT_STANZA, 'gene_type_prefix' ]);
+}
+
+sub fetch_pipeline_switch {
+    return option_from_array([ $CLIENT_STANZA, 'pipeline' ]) ? 1 : 0;
+}
+
+sub misc_acefile {
+    return option_from_array([ $CLIENT_STANZA, 'misc_acefile' ]);
+}
+
+sub get_config_list{
+    return $CONFIG_INIFILES;
+}
+
+sub cmd_line{
+    return $CALLED;
+}
+
+
+################################################
+#
+## INTERNAL METHODS - NOT MADE FOR YOU
+#
+################################################
+# options_from_file
+
+sub options_from_file{
+    my ($file, $previous) = @_;
+    my $ini;
+    eval{
+        print STDERR "Trying $file\n" if $DEBUG_CONFIG;
+        tie %$ini, 'Config::IniFiles', ( -file => $file, %OPTIONS_TO_TIE) or die $!;
+    };
+    if($@){
+        print STDERR "Tie Failed for '$file': \n". $@;
+        return undef;
+    }
+    return $ini;
+}
+
+sub __internal_option_from_array{
+    my ($inifiles, $array) = @_;
+    return unless tied( %$inifiles );
+    my $filename = tied( %$inifiles )->GetFileName();
+    warn "option from array inifile called // $inifiles @$array // looking at $filename\n" if $DEBUG_CONFIG;
+    my $param = pop @$array;
+    my $value = undef;
+    my $found = 0;
+    my $section = join(".", @$array);
+
+    my $stem_finder = sub {
+        my ($s, $p) = @_;
+        my $val  = {};
+        my $stem = "$s.$p";
+        foreach my $k(keys(%$inifiles)){
+            $val = { %$val, ($1 => $inifiles->{$k}) } if $k =~ /^$stem\.(.+)/;
+        }
+        return (scalar(keys(%$val)) ? $val : undef);
+    };
+    # get the explicit call for a parameter client host
+    if(exists $inifiles->{$section} && exists $inifiles->{$section}->{$param}){
+        $value = $inifiles->{$section}->{$param};
+        $found = 1;
+    # get the hash for a block [default.use_filters]
+    }elsif(exists $inifiles->{$section. ".$param"}){
+        $value = $inifiles->{$section. ".$param"};
+        $found = 1;
+    # get the hash for a group of blocks [default.filter]
+    # will include [default.filter.repeatmask], [default.filter.cpg] ...
+    }elsif(my $stem = $stem_finder->($section, $param)){
+        $value = $stem;
+        $found = 1;
+    # all the above failed to find the specified node of tree
+    }else{ 
+        $found = 0; 
+    }
+    return ($value, $found);
+}
+
+sub set_hash_val{
+    my ($hash, $keys, $value) = @_;
+    my $lastKey = lc(pop @$keys);
+    
+    foreach my $key (@$keys) {
+	$key = lc $key;
+	if (not exists($hash->{$key})) {
+	    $hash->{$key} = {};
+	} elsif (ref($hash->{$key}) ne 'HASH') {
+	    my $oldVal = $hash->{$key};
+	    $hash->{$key} = {};
+	    warn "Looks like something's been defined twice\n";
+	    $hash->{$key}{'_setHashVal_'} = $oldVal;
+	}
+	# Traverse hash
+	$hash = $hash->{$key};
+    }
+    if(not exists($hash->{$lastKey})){
+        $hash->{$lastKey} = $value;
+    }elsif(ref($hash->{$lastKey}) eq 'HASH'){
+        #warn "Having to use '_setHashVal_' as key and $lastKey $value in hash THIS IS BAD!\n";
+        warn "Key '$lastKey' already existed with a hash below. Using '_setHashval_' instead\n";
+        $hash->{'_setHashVal_'} = $value;
+    }else{
+        warn "You've set '@$keys $lastKey' twice. This should be ok\n";
+        #use Data::Dumper;
+        #warn Dumper $hash->{$lastKey};
+        $hash->{$lastKey} = $value;
+    }
+}
+
+
 
 
 1;
 
-__END__
+
 
 =head1 NAME - Bio::Otter::Lace::Defaults
 
@@ -501,4 +536,19 @@ above does.
 =head1 AUTHOR
 
 James Gilbert B<email> jgrg@sanger.ac.uk
+
+=cut
+
+
+__DATA__
+##########
+## This is where the HARDWIRED ABSOLUTE DEFAULTS are stored
+[client]
+host=localhost
+port=33999
+author=
+email=
+write_access=0
+debug=1
+pipeline=1 
 
