@@ -65,9 +65,12 @@ sub read_file_handle {
 sub write_file_handle {
     my( $self ) = @_;
     
+    if (my $fh = $self->{'_read_file_handle'}) {
+        close($fh) or confess "Error closing filehandle: $!";
+        $self->{'_read_file_handle'} = undef;
+    }
     my( $fh );
     unless ($fh = $self->{'_write_file_handle'}) {
-        $self->{'_read_file_handle'} = undef;
         $fh = gensym();
         my $full = $self->full_name;
         sysopen($fh, $full, O_WRONLY | O_CREAT)

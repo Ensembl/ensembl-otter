@@ -97,11 +97,13 @@ sub new_AceDatabase {
 sub get_UserAgent {
     my( $self ) = @_;
     
-    my( $ua );
-    unless ($ua = $self->{'_user_agent'}) {
-        $ua = $self->{'_user_agent'} = LWP::UserAgent->new;
-    }
-    return $ua;
+    return LWP::UserAgent->new;
+    
+    #my( $ua );
+    #unless ($ua = $self->{'_user_agent'}) {
+    #    $ua = $self->{'_user_agent'} = LWP::UserAgent->new;
+    #}
+    #return $ua;
 }
 
 sub get_xml_for_contig_from_Dataset {
