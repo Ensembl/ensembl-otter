@@ -184,6 +184,18 @@ sub current_SequenceNote {
     return $self->{'_current_SequenceNote'};
 }
 
+sub set_lock_status{
+    my ($self , $lock) = @_ ;
+    if (defined $lock ){
+        $self->{'_lock_status'} = $lock ;
+    }
+}
+
+sub get_lock_status{
+    my ($self) = @_ ;
+    return $self->{'_lock_status'} || 0 ;
+}
+
 
 1;
 
