@@ -57,20 +57,19 @@ use Carp;
     my $otter_db = $ds->get_cached_DBAdaptor; #Bio::EnsEMBL::Container
     $otter_db->assembly_type($sequence_set);  #e.g. 'chr1-07'
     
-    my $ft_factory = Bio::Otter::EMBL::Factory->new;
-    $ft_factory->DataSet($ds);
     
     foreach my $acc (@ARGV) {
         
         my ($accession, $seq_version) = $acc =~ /(^.*)\.(\d+)/ 
             or confess "Error parsing accession and version for: $acc\n";
         
+        my $ft_factory = Bio::Otter::EMBL::Factory->new;
+        $ft_factory->DataSet($ds);
         $ft_factory->accession($accession);
         $ft_factory->sequence_version($seq_version);
         $ft_factory->entry_name($accession);
         $ft_factory->data_class('standard');
         $ft_factory->mol_type('genomic DNA');
-        $ft_factory->division('HUM');
         $ft_factory->ac_star_id('FAKE');
         $ft_factory->organism('Homo sapiens');
         $ft_factory->clone_lib('to_be_provided');
@@ -78,8 +77,9 @@ use Carp;
         $ft_factory->keywords('HTG');
 
         #embl_setup sets $ft_factory->accession, and $ft_factory->sequence_version
-        my $embl = $ft_factory->embl_setup($accession, $seq_version);
+        my $embl = $ft_factory->embl_setup();
         $ft_factory->make_embl_ft($accession, $embl, $seq_version);
+        $ft_factory->add_sequence_from_otter($embl);
         print $embl->compose();
     }
 }

@@ -156,19 +156,25 @@ sub embl_setup {
     my $entry_name = $self->entry_name or confess "entry_name not set";
     my $data_class = $self->data_class or confess "data_class not set";
     my $mol_type = $self->mol_type or confess "mol_type not set";
-    my $division = $self->division or confess "division not set";
     my $ac_star_id = $self->ac_star_id or confess "ac_star_id not set";
     my $organism = $self->organism or confess "organism not set";
     my $clone_lib = $self->clone_lib or confess "clone_lib not set";
     my $clone_name = $self->clone_name or confess "clone_name not set";
-        
+    
+    # EMBL Division    
+    my $division;
+    unless ($division = $self->division) {
+        $division = $self->get_EMBL_division_from_otter_species;
+    }
+    confess "division not set" unless $division;
+
     my $id = $embl->newID;
     $id->entryname($entry_name);
     $id->dataclass($data_class);
     $id->molecule($mol_type);
-    $id->division($division); #such as 'hum'
+    $id->division($division);
 
-    #Sequence length
+    # Sequence length
     my $seq_length;
     unless ($seq_length = $self->seq_length) {
         $seq_length = $self->get_clone_length_from_otter;
@@ -246,6 +252,90 @@ sub embl_setup {
     #               $chr, $map, $libraryname );
     return $embl;
 }
+
+=pod
+
+=head2 EMBL Database Divisions
+
+    Division                Code
+    -----------------       ----
+    ESTs                    EST
+    Bacteriophage           PHG
+    Fungi                   FUN
+    Genome survey           GSS
+    High Throughput cDNA    HTC
+    High Throughput Genome  HTG
+    Human                   HUM
+    Invertebrates           INV
+    Mus musculus            MUS
+    Organelles              ORG
+    Other Mammals           MAM
+    Other Vertebrates       VRT
+    Plants                  PLN
+    Prokaryotes             PRO
+    Rodents                 ROD
+    STSs                    STS
+    Synthetic               SYN
+    Unclassified            UNC
+    Viruses                 VRL
+
+=cut
+
+{
+    my %species_division = (
+        'human'         => 'HUM',
+        'gibbon'        => 'PRI',
+        'mouse'         => 'MUS',
+        'rat'           => 'ROD',
+        'dog'           => 'MAM',
+
+        'fugu'          => 'VRT',
+        'zebrafish'     => 'VRT',
+        'b.floridae'    => 'VRT',
+
+        'drosophila'    => 'INV',
+        
+        'arabidopsis'   => 'PLN',
+        );
+
+=head2 get_EMBL_division_from_otter_species
+
+=cut
+
+    sub get_EMBL_division_from_otter_species {
+        my( $self ) = @_;
+
+        my $ds = $self->DataSet or confess "DataSet not set";
+        my $species = $ds->species
+            or confess "Could not get species from DataSet";
+        
+        $species = lc($species);    
+        unless ($species_division{lc($species)}) {
+            confess "Dont know EMBL_division for: $species";
+        }
+        return $species_division{$species};
+    }
+}
+
+=head2 add_sequence_from_otter
+
+
+
+=cut
+
+sub add_sequence_from_otter {
+    my ( $self, $embl ) = @_;
+
+    my $annotated_clone = $self->annotated_clone();
+    my $contigs = $annotated_clone->get_all_Contigs();
+    if (@$contigs > 1) {
+        confess "More than one contig". $self->accession
+            . $self->sequence_version;
+    }
+    $embl->newXX;
+   $embl->newSequence->seq($contigs->[0]->seq);
+}
+
 
 sub references {
     my ( $self, $ref ) = @_;
@@ -425,6 +515,7 @@ Initially set by the make_embl method.
 
 =cut
 
+#Shall we keep this???
 sub EMBL {
     my ( $self, $embl ) = @_;
     
@@ -440,6 +531,7 @@ Get/set method for the contig_length of the Slice_contig on the tiling path
 
 =cut
 
+#Shall we keep this???
 sub contig_length {
     my ( $self, $contig_length )  = @_;
 
@@ -574,7 +666,8 @@ sub make_embl_ft {
 
 =head2 get_clone_length_from_otter
 
-??Needs to be written
+Gets the length of the clone sequence DNA from Otter. Checks
+there is only one contig in the clone, otherwise confesses.
 
 =cut
 
@@ -585,7 +678,7 @@ sub get_clone_length_from_otter {
     my $annotated_clone = $self->annotated_clone();
     my $contigs = $annotated_clone->get_all_Contigs();
     if (@$contigs > 1) {
-        confess warn "Can't work clone length for ". $self->accession
+        confess "Can't work clone length for ". $self->accession
             . $self->sequence_version;
     }
     my $length = length($contigs->[0]->seq);
