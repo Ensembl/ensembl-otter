@@ -796,6 +796,8 @@ sub add_start_end_widgets {
         -expand => 0,
         );
     
+    my $top = $widget->toplevel;
+    
     ### The Start frame ###
     {
         my $frame = $start_end_frame->LabFrame(
@@ -816,7 +818,8 @@ sub add_start_end_widgets {
                     ['Not found - 2'  => 2],
                     ['Not found - 3'  => 3],
                 ],
-            -takefocus  => 0,
+            -takefocus  => 0,   # Doesn't work
+            -command    => sub{ $top->focus },  # Need this
             )->pack(
                 -side => 'top',
                 );
@@ -858,7 +861,8 @@ sub add_start_end_widgets {
                     ['Found'        => 0],
                     ['Not found'    => 1],
                 ],
-            -takefocus => 0,
+            -takefocus  => 0,   # Doesn't work
+            -command    => sub{ $top->focus },  # Need this
             )->pack( -side => 'top' );
         $enf = $self->SubSeq->end_not_found;
         $om->menu->invoke($enf);
