@@ -188,7 +188,7 @@ sub _write_text{
 }
 
 sub _draw_image{
-    my ($canvas ,  @args) = @_ ;
+    my ($canvas, $x, $y, @args) = @_ ;
     
     ## need to remove some tags -as they are for create_text 
     my %hash = @args ;
@@ -196,7 +196,7 @@ sub _draw_image{
     delete $hash{'-font'} ;
     delete $hash{'-anchor'} ; 
 
-    $canvas->createImage(%hash , -anchor => 'n');
+    $canvas->createImage($x, $y, %hash , -anchor => 'n');
 }
 
 sub _column_text_row_number {

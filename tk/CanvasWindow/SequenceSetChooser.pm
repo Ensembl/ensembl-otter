@@ -119,7 +119,7 @@ sub draw {
     my $row_height = int $size * 1.5;
     my $x = $size;
 
-    $ss_list = [ sort { &ace_sort($a->name, $b->name) } @$ss_list];
+    $ss_list = [ sort { ace_sort($a->name, $b->name) } @$ss_list];
 
     for (my $i = 0; $i < @$ss_list; $i++) {
         my $set = $ss_list->[$i];
