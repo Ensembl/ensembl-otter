@@ -610,16 +610,13 @@ sub otter_to_ace {
 
     # Add SMap tags for assembly
     foreach my $tile (@$path) {
+        ### I think assembled_start should not need chr start taking away
+        ### - probably should have been done already
         my $start           = $tile->assembled_start - $chrstart + 1;
         my $end             = $tile->assembled_end   - $chrstart + 1;
+
         my $contig_start    = $tile->component_start;
         my $name            = $tile->component_Seq->name;
-
-        if (my $clone = $tile->component_Seq->clone) {
-            my $id = $clone->embl_id;
-            $str .= qq{Clone_left_end "$id" $start\n}
-                 . qq{Clone_right_end "$id" $end\n};
-        }
 
         if ($tile->component_ori == 1) {
             $str .= qq{AGP_Fragment "$name" $start $end Align $start $contig_start\n};

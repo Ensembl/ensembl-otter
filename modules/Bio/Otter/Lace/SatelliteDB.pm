@@ -69,6 +69,32 @@ sub save_options_hash {
     $sth->execute($key, $opt_str);    
 }
 
+sub disconnect_DBAdaptor {
+    my( $dba ) = @_;
+    
+    $dba->db_handle->disconnect;
+    #destroy_hash($dba, {});
+}
+
+#sub destroy_hash {
+#    my( $hash, $seen ) = @_;
+#    
+#    $seen->{$hash} = 1;
+#    
+#    foreach my $key (keys %$hash) {
+#        my $val = $hash->{$key};
+#        $hash->{$key} = undef;
+#        next if $seen->{$val};
+#        
+#        my $is_hash = 0;
+#        eval{
+#            if (keys %$val) {
+#                $is_hash = 1;
+#            }
+#        };
+#        destroy_hash($val, $seen) if $is_hash;
+#    }
+#}
 
 1;
 

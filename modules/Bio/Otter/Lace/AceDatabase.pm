@@ -286,7 +286,9 @@ sub save_all_slices {
     my $sd_h = $self->slice_dataset_hash;
     #warn "HASH = '$sd_h' has ", scalar(keys %$sd_h), " elements";
     ### This call to each was failing to return anything
-    ### the second time it was called!!!
+    ### the second time it was called, proabably because
+    ### we were exiting each the first with an exception
+    ### so the iterator didn't get reset.
     #while (my ($name, $ds) = each %$sd_h) {
     foreach my $name (keys %$sd_h) {
         my $ds = $sd_h->{$name};
@@ -578,6 +580,8 @@ sub write_pipeline_data {
     }
     $factory->drop_file_handle;
     close $fh;
+    
+    Bio::Otter::Lace::SatelliteDB::disconnect_DBAdaptor($ens_db);
 }
 
 sub make_AceDataFactory {
@@ -630,15 +634,24 @@ sub make_AceDataFactory {
 ## currently only the uncommented ones seem to be in the database   
     my %logic_tag_method = (
 #        'Est2Genome'        => [qw{             EST_homol  EST_eg           }],
-        'Est2Genome_human'  => [qw{             EST_homol  EST_Human     }],
-        'Est2Genome_mouse'  => [qw{             EST_homol  EST_Mouse     }],
-        'Est2Genome_other'  => [qw{             EST_homol  EST           }],
+
+        #'Est2Genome_human'  => [qw{             EST_homol  EST_Human     }],
+        #'Est2Genome_mouse'  => [qw{             EST_homol  EST_Mouse     }],
+        #'Est2Genome_other'  => [qw{             EST_homol  EST           }],
+
+        'Est_human_test'  => [qw{             EST_homol  EST_Human     }],
+        'Est_mouse_test'  => [qw{             EST_homol  EST_Mouse     }],
+        'Est_other_test'  => [qw{             EST_homol  EST           }],
+
 #        'Full_dbGSS'        => [qw{             GSS_homol  GSS_eg           }],
 #        'Full_dbSTS'        => [qw{             STS_homol  STS_eg           }],
 #        'sccd'              => [qw{             EST_homol  egag             }],
 #        'riken_mouse_cdnal' => [qw{             EST_homol  riken_mouse_cdna }],
 #        'primer'            => [qw{             DNA_homol  primer           }],
-        'vertrna'           => [qw{ vertebrate_mRNA_homol  vertebrate_mRNA 0 }],
+
+        #'vertrna'           => [qw{ vertebrate_mRNA_homol  vertebrate_mRNA 0 }],
+        'vertrna_test'           => [qw{ vertebrate_mRNA_homol  vertebrate_mRNA 0 }],
+
 #        'zfishEST'          => [qw{             EST_homol  EST_eg-fish      }],
         );
         
@@ -853,6 +866,9 @@ sub write_ensembl_data_for_key {
 	}
     }
     close $fh;
+    
+    ### Disconnect Ensembl DBAdaptor
+    Bio::Otter::Lace::SatelliteDB::disconnect_DBAdaptor($ens_db);
 }
 
 

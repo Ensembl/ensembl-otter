@@ -447,6 +447,14 @@ sub make_DBAdaptor {
     return Bio::Otter::DBSQL::DBAdaptor->new(@args);
 }
 
+sub disconnect_DBAdaptor {
+    my( $self ) = @_;
+    
+    if (my $dba = $self->{'_dba_cache'}) {
+        $self->{'_dba_cache'} = undef;
+    }
+}
+
 sub list_all_db_properties {
     return qw{
         HOST
