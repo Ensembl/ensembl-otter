@@ -103,7 +103,7 @@ sub add_subseq_exons {
     }
     
     sub trim_position_pairs {
-        my( $self, $length ) = @_;
+        my( $self, $length, $strand ) = @_;
         
         if (my $pp = $self->{$pp_field}) {
             my @del = splice(@$pp, -1 * $length, $length);
@@ -117,6 +117,7 @@ sub add_subseq_exons {
         } else {
             confess "No pairs to trim";
         }
+        $self->set_tk_strand($strand) if $strand;
     }
 }
 
@@ -142,12 +143,13 @@ sub all_position_pair_text {
 }
 
 sub set_position_pair_text {
-    my( $self, $pp, $text_pair ) = @_;
+    my( $self, $pp, $text_pair, $strand ) = @_;
     
+    $strand ||= $self->strand_from_tk;
+
     my $canvas = $self->canvas;
-    my $strand = $self->strand_from_tk;
     my @txt = @$text_pair;
-    @txt = reverse @txt if $self->strand_from_tk == -1;
+    @txt = reverse @txt if $strand == -1;
     foreach my $i (0,1) {
         my $obj = $pp->[$i];
         my $pos = $txt[$i] || $self->empty_string;
@@ -266,7 +268,8 @@ sub delete_selected_exons {
             $del_exon{$exon_id}++;
         }
     }
-    
+
+    my $strand = 0;
     my @text    = $self->all_position_pair_text;
     my @pp_list = $self->position_pairs;
     my $trim = 0;
@@ -277,19 +280,32 @@ sub delete_selected_exons {
         if ($count and $count == 2) {
             $trim++;
         } else {
-            ### FIXME Preserve strand of kept exons!
+            $strand += $self->exon_strand_from_tk($exon_id);
             push(@keep, $text[$i]);
         }
     }
     
     return unless $trim;
     
-    $self->trim_position_pairs($trim);
+    $strand = $strand < 0 ? -1 : 1;
+    
+    $self->trim_position_pairs($trim, $strand);
     $self->set_all_position_pair_text(@keep);
     
     # Put in an empty exon holder if we have deleted them all
     unless ($self->position_pairs) {
         $self->add_exon_holder(undef, undef, 1);
+    }
+}
+
+sub exon_strand_from_tk {
+    my( $self, $exon_id ) = @_;
+    
+    confess "exon_id not given" unless $exon_id;
+    if ($self->canvas->find('withtag', "plus_strand&&$exon_id")) {
+        return 1;
+    } else {
+        return -1;
     }
 }
 
@@ -594,7 +610,9 @@ sub window_close {
     if ($self->is_mutable) {
         my( $sub );
         eval{
-            $sub = $self->get_SubSeq_if_changed;  
+            if ($sub = $self->get_SubSeq_if_changed) {
+                $sub->validate;
+            }
         };
         
         my $name = $self->name;
@@ -1371,6 +1389,7 @@ sub middle_button_paste {
             @ints = grep ! /\./, $text =~ /([\.\d]+)/g;
         }
     }
+    return unless @ints;
     
     if (my $obj  = $canvas->find('withtag', 'current')) {
         $self->deselect_all;
@@ -1379,8 +1398,9 @@ sub middle_button_paste {
             $canvas->itemconfigure($obj, 
                 -text   => $ints[0],
                 );
+            $self->highlight($obj);
         }
-        $self->highlight($obj);
+        ### Could set coordinates with middle button on strand indicator
     } else {
         for (my $i = 0; $i < @ints; $i += 2) {
             $self->add_coordinate_pair(@ints[$i, $i + 1]);
@@ -1543,7 +1563,7 @@ sub draw_minus {
 }
 
 sub strand_from_tk {
-    my( $self ) = @_;
+    my( $self, $keep_quiet ) = @_;
     
     my $canvas = $self->canvas;
     my @fwd = $canvas->find('withtag', 'plus_strand' );
@@ -1561,7 +1581,8 @@ sub strand_from_tk {
     
     if ($guess) {
         my $dir = $strand == 1 ? 'forward' : 'reverse';
-        $self->message("Inconsistent exon directions.  Guessing '$dir'");
+        $self->message("Inconsistent exon directions.  Guessing '$dir'")
+            unless $keep_quiet;
     }
     
     return $strand;
@@ -1678,6 +1699,7 @@ sub save_if_changed {
     
     eval {
         if (my $sub = $self->get_SubSeq_if_changed) {
+            $sub->validate;
             $self->xace_save($sub);
         }
     };
@@ -1739,7 +1761,7 @@ sub Exons_from_canvas {
     my( @exons );
     foreach my $pp ($self->all_position_pair_text) {
         if (grep $_ == 0, @$pp)  {
-            $self->message("Error: Empty coordinate");
+            confess("Error: Empty coordinate");
             return;
         }
         my $ex = Hum::Ace::Exon->new;

@@ -387,6 +387,8 @@ sub command_line_restart {
 sub edit_double_clicked {
     my( $self ) = @_;
     
+    return unless $self->list_selected;
+    
     my $canvas = $self->canvas;
     $canvas->Busy;
     if ($self->current_state eq 'clone') {
