@@ -38,14 +38,14 @@ use Hum::EnsCmdLineDB;
         }
         
         my $class = undef;
-        if ($stain eq 'gcen') {
-            $class = 'Karyotype::Band::Centromere';
+        if ($stain eq 'acen') {
+            $class = 'KaryotypeWindow::Band::Centromere';
         }
-        elsif ($stain eq 'gstalk') {
-            $class = 'Karyotype::Band::Stalk';
+        elsif ($stain eq 'stalk') {
+            $class = 'KaryotypeWindow::Band::Stalk';
         }
         my $band = $chr->new_Band($class);
-        $band->fill('#333399'); # Default fill
+        $band->fill('#cccccc'); # Default fill 10% grey
         $band->start($start);
         $band->end($end);
         $band->name($band_name);

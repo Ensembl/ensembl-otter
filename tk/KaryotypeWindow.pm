@@ -62,6 +62,7 @@ sub draw {
     my $pad = $self->pad;
     my ($x, $y) = ($pad, $pad);
     foreach my $set (@all_set) {
+        next unless @$set;
         $y = $self->draw_chromsome_set($x, $y, $set);
         $y += $pad * 2;
     }
@@ -79,7 +80,6 @@ sub draw_chromsome_set {
     foreach my $chr (@$set) {
         $chr->Mb_per_pixel($scale);
         my $h = $chr->height;
-        warn "height = $h";
         $max_chr_height = $h if $h > $max_chr_height;
     }
     

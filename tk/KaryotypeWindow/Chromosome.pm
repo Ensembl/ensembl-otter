@@ -36,11 +36,12 @@ sub draw {
     }
     
     my ($first, $last) = $self->get_first_and_last_Bands;
-    $canvas->createPolygon(
+    my $outline = $canvas->createPolygon(
         $self->get_outline_coordinates,
-        -fill    => undef,
-        -outline => 'black',
-        -smooth  => 1,
+        -fill       => undef,
+        -outline    => 'black',
+        -smooth     => 1,
+        -joinstyle  => 'round',
         );
     
     $canvas->createText(
