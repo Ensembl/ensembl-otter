@@ -542,7 +542,7 @@ sub initialize_database {
 }
 
 sub write_pipeline_data {
-    my( $self, $ss ) = @_;
+    my( $self, $ss, $ace_file ) = @_;
 
     my $dataset = $self->Client->get_DataSet_by_name($ss->dataset_name);
     $dataset->selected_SequenceSet($ss);    # Not necessary?
@@ -561,7 +561,7 @@ sub write_pipeline_data {
     my $factory = $self->{'_pipeline_data_factory'} ||= $self->make_AceDataFactory($ens_db, $species);
     
     # create file for output and add it to the acedb object
-    my $ace_file = $self->home . "/rawdata/pipeline.ace";
+    $ace_file ||= $self->home . "/rawdata/pipeline.ace";
     $self->add_acefile($ace_file);
     my $fh = gensym();
     open $fh, "> $ace_file" or confess "Can't write to '$ace_file' : $!";
@@ -611,28 +611,6 @@ sub make_AceDataFactory {
     # $factory->add_all_Filters($ensdb);   
     my $ana_adaptor = $ens_db->get_AnalysisAdaptor;
 
-    ## note: most of the list here is taken from the previous version, 
-    ## currently only the uncommented ones seem to be in the database   
-    ## N.B. keys should be lowercase!!
-    my %logic_tag_method = (
-        'est2genome_human'  => [qw{             EST_homol  EST_Human     }],
-        'est2genome_mouse'  => [qw{             EST_homol  EST_Mouse     }],
-        'est2genome_fish'   => [qw{             EST_homol  EST_Fish      }],
-        'est2genome_other'  => [qw{             EST_homol  EST           }],
-        'refseq_human'      => [qw{             DNA_homol  REFSEQ           }],
-        'vertrna'           => [qw{ vertebrate_mRNA_homol  vertebrate_mRNA  }],
-        'swall'             => [qw{                 swall  BLASTX           }],
-#        'eponine'           => [qw{                     0  EPONINE          }],
-
-#        'Full_dbGSS'        => [qw{             GSS_homol  GSS_eg           }],
-#        'Full_dbSTS'        => [qw{             STS_homol  STS_eg           }],
-#        'sccd'              => [qw{             EST_homol  egag             }],
-#        'riken_mouse_cdnal' => [qw{             EST_homol  riken_mouse_cdna }],
-#        'primer'            => [qw{             DNA_homol  primer           }],
-
-#        'zfishEST'          => [qw{             EST_homol  EST_eg-fish      }],
-        );
-    
     ##----------code to add all of the ace filters to data factory-----------------------------------
 
     my $fetch_all_pipeline_data = Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
@@ -666,17 +644,17 @@ sub make_AceDataFactory {
 	next unless $logic_to_load->{$logic_name};
 	# class successfully required already.
 	my $class = $module_options->{$logic_name}->{'module'};
+        my $filt;
 	# check there is an analysis
         if (my $ana = $ana_adaptor->fetch_by_logic_name($logic_name)) {
-            my $filt = $class->new;
+            $filt = $class->new;
             $filt->analysis_object($ana);
-
-	    # Does the logic_name have a tag & method?
-	    $filt->homol_tag($logic_tag_method{$logic_name}->[0]) 
-		if $logic_tag_method{$logic_name}->[0];
-            $filt->method_tag($logic_tag_method{$logic_name}->[1])
-		if $logic_tag_method{$logic_name}->[1];
-
+        } elsif($module_options->{$logic_name}->{'create_without_ana'}){
+            $filt = $class->new();
+        } else {
+            warn "No analysis called '$logic_name'\n";
+        }
+        if($filt){
 	    # find the options for the filter?
 	    foreach my $option(keys (%{$module_options->{"$logic_name"}})){
 		# warn "checking $filt for method $option\n";
@@ -688,8 +666,6 @@ sub make_AceDataFactory {
 
 	    # add the filter to the factory
             $factory->add_AceFilter($filt);
-        } else {
-            warn "No analysis called '$logic_name'\n";
         }
     }
         
