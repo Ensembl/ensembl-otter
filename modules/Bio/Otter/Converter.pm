@@ -1313,7 +1313,7 @@ sub ace_to_otter {
         my $offset = $chr_start - 1;
         foreach my $transcript (values %anntran) {
             foreach my $exon (@{$transcript->get_all_Exons}) {
-                warn "got '$exon'\n";
+                #warn "got '$exon'\n";
                 $exon->start($exon->start + $offset);
                 $exon->end  ($exon->end   + $offset);
             }
@@ -1525,6 +1525,8 @@ sub ace_to_otter {
         push(@$tile_path, $tile);
     }
 
+    warn "Made ", scalar(@genes), " genes";
+    
     
     #return(\@genes, \%frags, $assembly_type, $dna, $chr_name, $chr_start, $chr_end);
     return(\@genes, $tile_path, $assembly_type, $dna, $chr_name, $chr_start, $chr_end);
@@ -1535,13 +1537,13 @@ sub ace_to_XML {
     
     #my( $genes, $frags, $type, $dna, $chr, $chrstart, $chrend ) = ace_to_otter($fh);
     my( $genes, $tile_path, $type, $dna, $chr, $chrstart, $chrend ) = ace_to_otter($fh);
-    my $xml = "<otter>\n"
+    my $xml = "<otter>\n<sequence_set>\n"
         #. frags_to_XML($frags, $type, $chr, $chrstart, $chrend);
         . path_to_XML($chr, $chrstart, $chrend, $type, $tile_path);
     foreach my $g (@$genes) {
         $xml .= $g->toXMLString;
     }
-    $xml .= "\n</otter>\n";
+    $xml .= "\n</sequence_set>\n</otter>\n";
     return $xml;
 }
 

@@ -224,19 +224,23 @@ sub save_otter_slice {
     my $ace    = $self->aceperl_db_handle;
     my $client = $self->OtterClient or confess "No OtterClient attached";
     
+    # Get the Genome_Sequence object ...
     $ace->find(Genome_Sequence => $name);
     my $ace_txt = $ace->raw_query('show -a');
 
+    # ... its SubSequences ...
     $ace->raw_query('Follow SubSequence');
     $ace_txt .= $ace->raw_query('show -a');
 
-    $ace->find(Genome_Sequence => $name);
-    $ace->raw_query('Follow AGP_Fragment');
-    $ace_txt .= $ace->raw_query('show -a');
-
+    # ... and all the Loci attached to the SubSequences.
     $ace->raw_query('Follow Locus');
     $ace_txt .= $ace->raw_query('show -a');
     $ace->find(Person => '*');  # For Authors
+    $ace_txt .= $ace->raw_query('show -a');
+
+    # Then get the information for the TilePath
+    $ace->find(Genome_Sequence => $name);
+    $ace->raw_query('Follow AGP_Fragment');
     $ace_txt .= $ace->raw_query('show -a');
     
     # Cleanup text

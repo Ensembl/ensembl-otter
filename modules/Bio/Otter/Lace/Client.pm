@@ -204,7 +204,7 @@ sub save_otter_ace {
     confess "Don't have write access" unless $self->write_access;
     
     my $debug_file = "/tmp/otter-debug.$$.save.ace";
-    open DEBUG, "> $debug_file" or die;
+    open DEBUG, ">> $debug_file" or die;
     print DEBUG $ace_str;
     close DEBUG;
     
@@ -213,6 +213,11 @@ sub save_otter_ace {
     my $write = $ace->write_file_handle;
     print $write $ace_str;
     my $xml = Bio::Otter::Converter::ace_to_XML($ace->read_file_handle);
+    
+    $debug_file = "/tmp/otter-debug.$$.save.xml";
+    open DEBUG, ">> $debug_file" or die;
+    print DEBUG $xml;
+    close DEBUG;
     
     # Save to server with POST
     my $url = $self->url_root . '/write_region';
