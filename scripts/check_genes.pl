@@ -921,15 +921,14 @@ if($ngcl>1){
     # for each gene cluster, identify transcripts involved and how they are linked
     my $tcl=new cluster();
     foreach my $gsi (@gsi){
-      foreach my $is2e (keys %{$dg2s{$gsi}}){
-	my %tsi;
-	foreach my $eid (@s2e[$is2e]){
-	  foreach my $tsi (@{$t2e{$gsi}->{$eid}}){
-	    $tsi{$tsi}++;
-	  }
+      my $is2e=$dg2s{$gsi};
+      my %tsi;
+      foreach my $eid (@s2e[$is2e]){
+	foreach my $tsi (@{$t2e{$gsi}->{$eid}}){
+	  $tsi{$tsi}++;
 	}
-	$tcl->link([(keys %tsi)]);
       }
+      $tcl->link([(keys %tsi)]);
     }
     my @ctsi=$tcl->cluster_ids;
     print " Cluster $igcl: ".scalar(@gsi)." genes; ".scalar(@ctsi)." sets of duplicated transcripts\n";
