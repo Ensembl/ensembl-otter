@@ -120,7 +120,9 @@ use Hum::SubmissionVersion;
 
 	# find extent of selected clones
 	# (build a slice containing any unselected clones)
-	my($ist,$ied,$first);
+	my $ist=-1;
+	my $ied=-1;
+	my $first=0;
 	my %accessions=map{$_,1}@accessions;
 	for(my $i=0;$i<scalar(@$cs_list);$i++){
 	    my $acc=$cs_list->[$i]->accession;
@@ -132,6 +134,8 @@ use Hum::SubmissionVersion;
 		$ied=$i;
 	    }
 	}
+	die "None of accessions passed to otter found in slice" if $ist==-1 || $ied==-1;
+
         $ds->selected_CloneSequences([@$cs_list[$ist..$ied]]);
         #$ds->selected_CloneSequences([@$cs_list[3..4]]);
         #$ds->selected_CloneSequences([@$cs_list[6..6]]);
