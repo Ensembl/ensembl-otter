@@ -505,7 +505,7 @@ sub _do_Gene {
 
 Internal method called  by _do_gene. 
 
-Passed a Gene object and a feature:
+Passed a Gene object and a Feature:
 
     /gene="text2        #For known genes
     /product="text"

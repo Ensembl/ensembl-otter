@@ -50,7 +50,7 @@ use Bio::Otter::EMBL::Factory;
     my $ds = $cl->get_DataSet_by_name($dataset_name); #Bio::Otter::Lace::DataSet
 
     my $otter_db = $ds->get_cached_DBAdaptor; #Bio::EnsEMBL::Container
-    $otter_db->assembly_type($sequence_set); #e.g. 'chr1-07'
+    $otter_db->assembly_type($sequence_set);  #e.g. 'chr1-07'
     
     my $embl_factory = Bio::Otter::EMBL::Factory->new;
     $embl_factory->Dataset($ds);
