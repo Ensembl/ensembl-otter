@@ -249,7 +249,7 @@ sub XML_to_otter {
       $traninfo->evidence($evidence);
       $currentobj = 'evidence';
     } elsif (/<\/evidence>/) {
-      $currentobj = 'transcript';
+      $currentobj = 'tran';
     } elsif (/<name>(.*)<\/name>/) {
 
       if ($currentobj eq 'evidence') {
@@ -537,7 +537,7 @@ sub otter_to_ace {
 
     $str .= qq{Assembly_name "$path"\n};
 
-    if (!defined(@path)) {
+    if (!(@path)) {
       @path = @{$slice->get_tiling_path};
     }
 
@@ -607,7 +607,7 @@ sub otter_to_ace {
   if ($contig->isa("Bio::EnsEMBL::Slice")) {
     my $slice = $contig;
 
-    if (!defined(@path)) {
+    if (!(@path)) {
       @path  = @{ $slice->get_tiling_path };
     }
   }
