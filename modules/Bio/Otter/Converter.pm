@@ -1488,7 +1488,7 @@ sub frags_to_slice {
     ($chrid) = $sth->fetchrow_array;
     $sth->finish;
   } else {
-    print "Using existing chromosome " . $chr->dbID . "\n";
+    print STDERR "Using existing chromosome " . $chr->dbID . "\n";
     $chrid = $chr->dbID;
   }
 
