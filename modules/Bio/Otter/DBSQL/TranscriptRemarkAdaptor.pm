@@ -117,7 +117,16 @@ sub list_by_transcript_info_id {
 sub store {
     my $self = shift @_;
 
+    return unless @_;
+    
+    #my $store = $self->db->db_handle->prepare(q{
+    #    INSERT INTO transcript_remark(remark
+    #          , transcript_info_id)
+    #    VALUES (?,?)
+    #    });
+    
     while (my $remark = shift @_) {
+        warn "Going to store remark ", $remark->remark, "\n";
 	if (!defined($remark)) {
 		$self->throw("Must provide a TranscriptRemark object to the store method");
 	} elsif (! $remark->isa("Bio::Otter::TranscriptRemark")) {
@@ -128,7 +137,7 @@ sub store {
 
 	if ($tmp) { 
    	   $remark->dbID($tmp->dbID);
-	   return;
+	   next;
 	}
 
         my $quoted_remark = $self->db->db_handle->quote($remark->remark);
@@ -190,7 +199,7 @@ sub exists {
         if (scalar(@newremark) > 0) {
 	   return $newremark[0];
         } else {
-           return "";
+           return;
         }
 }
 
