@@ -68,7 +68,7 @@ use Bio::EnsEMBL::Clone;
 
 my $input_type; 
 {
-    my $t0 = new Benchmark; # test the time taken for the script to run.
+#    my $t0 = new Benchmark; # test the time taken for the script to run.
     
     # some important variables (and some less inportant ones that look neater up here) 
     my $sth ;                 # used as a variable for storing the various statement handles used through the script
@@ -182,8 +182,6 @@ my $input_type;
 
 
 
-
-
     #------------------------- read input file -----------------------------------------    
     # first go through file , check that the file contains the same chromosome for each entry store values an an array
 
@@ -233,8 +231,7 @@ my $input_type;
             next; 
         }
         ## store all values in this array, so that the file does not need to be re-read
-        push (@file_values , [@line_in_array]); 
-    
+        push (@file_values , [@line_in_array]);     
     }
     #--------------------------------finished reading input file ------------------------
 
@@ -420,9 +417,9 @@ my $input_type;
 
      
     # benchmarking 
-    my $t1 = new Benchmark;
-    my $td = timediff($t1, $t0);
-    print STDERR "code took: ", timestr($td) , "\n";
+#    my $t1 = new Benchmark;
+#    my $td = timediff($t1, $t0);
+#    print STDERR "code took: ", timestr($td) , "\n";
 
 }
 #------------------end of main script -------------------------------------------------------
@@ -561,9 +558,6 @@ sub clone_to_db{
     my ( $adaptor, $seq , $acc , $seq_ver) = @_ ; 
     my $clone;
     
-#    my ($super_contig_name, $chr_start, $chr_end, $n , $type, $acc, $seq_ver , $ctg_start, $ctg_end, $ctg_ori, $length ) = @clone_values;
-    
-    
     eval { $clone = $adaptor->fetch_by_accession_version($acc , $seq_ver); };
     if (! $@){
         warn "this clone is already in the " . $adaptor->db->dbname . " database" ;
@@ -585,7 +579,6 @@ sub clone_to_db{
  
         #    create and add contig(s) to the clone
         ##   now we only expect one contig per clone
-#        my $seq = $pfetch->get_Seq_by_acc($acc.$ver);
         my $contig = Bio::EnsEMBL::RawContig->new;
         my $end = $seq->length;
 
