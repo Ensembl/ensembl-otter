@@ -7,7 +7,7 @@ use Bio::Otter::DBSQL::StableIdAdaptor;
 
 use strict;
 
-my %dbinfo   = %{$OTTER_SPECIES->{'human_chr22'}};
+my %dbinfo   = %{$OTTER_SPECIES->{'human_chr6'}};
 my %defaults = %{$OTTER_SPECIES->{'defaults'}};
 
 my $db = new Bio::Otter::DBSQL::DBAdaptor(-host   => $dbinfo{HOST} || $defaults{HOST},

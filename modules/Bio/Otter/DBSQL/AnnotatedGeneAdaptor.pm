@@ -345,7 +345,7 @@ sub attach_to_Slice {
            push @new_transcript_exons,$transformed_exons{$exon};
        }
 
-       $trans->flush_Exon;
+       $trans->flush_Exons;
 
        foreach my $exon (@new_transcript_exons) {
           $trans->add_Exon($exon);

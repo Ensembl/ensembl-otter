@@ -43,16 +43,16 @@ use Exporter();
 
 @ISA=qw(Exporter);
 
-$OTTER_SERVER_ROOT 	    = '/nfs/acari/michele/cvs/ensembl-otter';
-$OTTER_ALTROOT    	    = '/nfs/acari/michele/cvs/ensembl-otter/otter_alt';
-$OTTER_SCRIPTDIR            = '/nfs/acari/michele/cvs/ensembl-otter/scripts/server';
-$OTTER_SERVER		    = 'localhost';#Sys::Hostname::hostname();  # Local machine name
+$OTTER_SERVER_ROOT 	    = '/ecs2/scratch1/michele/rat/ensembl-otter';
+$OTTER_ALTROOT    	    = '/ecs2/scratch1/michele/rat/ensembl-otter/otter_alt';
+$OTTER_SCRIPTDIR            = $OTTER_SERVER_ROOT . '/scripts/server';
+$OTTER_SERVER		    = 'ecs2a.internal.sanger.ac.uk';#Sys::Hostname::hostname();  # Local machine name
 $OTTER_MAX_CLIENTS          = 5;
 $OTTER_SERVER_PORT          = 19312;
 
 $OTTER_SPECIES_FILE         = $OTTER_SERVER_ROOT . "/conf/species.dat";
 $OTTER_SPECIES              = read_species($OTTER_SPECIES_FILE);
-$OTTER_DEFAULT_SPECIES      = 'human_chr22';
+$OTTER_DEFAULT_SPECIES      = 'human_chr6';
 $OTTER_PREFIX               = 'OTT';
 
 ################################################################################################

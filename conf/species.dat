@@ -1,12 +1,12 @@
 [defaults]
-USER     root 
-PASS     
-HOST     ecs1c 
-PORT     3307
-DNA_USER root
-DNA_PORT 3307 
-DNA_PASS 
-DNA_HOST ecs1c 
+USER     ensadmin
+PASS     ensembl 
+HOST     ecs2b.internal.sanger.ac.uk 
+PORT     3306
+DNA_USER ensadmin
+DNA_PORT 3306 
+DNA_PASS ensembl 
+DNA_HOST ecs2b.internal.sanger.ac.uk
 
 [human_chr14]
 DBNAME     otter_chr14

@@ -62,7 +62,7 @@ if ($fastafile) {
    my $cloneid = $contig->contig->cloneid;
    my $clone = $db->get_Clone($cloneid);
 
-   print OUT $contig->contig->id . " clone_id " . $clone->id . " clone_version " . $clone->version . " embl_version " . $clone->embl_version . " htg_phase " . $clone->htg_phase. "\n";
+   print OUT ">" . $contig->contig->id . " clone_id " . $clone->id . " clone_version " . $clone->version . " embl_id " . $clone->embl_id . " embl_version " . $clone->embl_version . " htg_phase " . $clone->htg_phase. "\n";
    my $seq = $contig->contig->seq;
    $seq =~ s/(.{72})/$1\n/g;
    print OUT $seq . "\n";

@@ -322,7 +322,7 @@ sub XML_to_otter {
     }
   }
 
-  if (defined($db) && $seqstr ne "") {
+  if (defined($db)) {
     Bio::Otter::Converter::frags_to_slice($chrname,$chrstart,$chrend,$assembly_type,$seqstr,\%frag,$db);
   }
   @fragnames = sort { $frag{$a}{start} <=> $frag{$b}{start} } @fragnames;
@@ -1303,7 +1303,7 @@ sub prune_Exons {
       }
 
     }
-    $tran->flush_Exon;
+    $tran->flush_Exons;
     foreach my $exon (@newexons) {
       $tran->add_Exon($exon);
     }
@@ -1502,7 +1502,7 @@ sub frags_to_slice {
     my $fori   = $frags{$f}{strand};
     my $foff   = $frags{$f}{offset};
 
-
+    if ($seqstr) {
     # Create clone
 
     my $clone = new Bio::EnsEMBL::Clone();
@@ -1552,11 +1552,12 @@ sub frags_to_slice {
     # Now store the clone
 
     $db->get_CloneAdaptor->store($clone);
-
     # Now for the assembly stuff
+    } 
 
+    my $contig = $db->get_RawContigAdaptor->fetch_by_name($f);
     my $rawid   = $contig->dbID;
-    my $length  = $contig->length;
+    my $length  = ($fend-$fstart+1);
     my $raw_end = $foff + ($fend-$fstart);
 
     my $sqlstr = "insert into assembly(chromosome_id,chr_start,chr_end,superctg_name,superctg_start,superctg_end,superctg_ori,contig_id,contig_start,contig_end,contig_ori,type) values($chrid,$fstart,$fend,\'$f\',1,$length,1,$rawid,$foff,$raw_end,$fori,\'$assembly_type\')\n";

@@ -6,14 +6,15 @@ use strict;
 use Getopt::Long;
 
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
-use Bio::Otter::OldConverter;
+use Bio::EnsEMBL::Clone;
+use Bio::EnsEMBL::RawContig;
 use Bio::SeqIO;
 
-my $otterhost     = 'ecs1b';
-my $otteruser     = 'ensro';
-my $otterpass     = '';
+my $otterhost     = 'ecs2b';
+my $otteruser     = 'ensadmin';
+my $otterpass     = 'ensembl';
 my $otterport     = 3306;
-my $ottername     = 'human_chr6_fin';
+my $ottername     = 'otter_chr6';
 
 my $fastafile;
 
@@ -42,7 +43,7 @@ if ($fastafile) {
    while (my $seq = $seqio->next_seq) {
     my $contigid = $seq->id;
 
-    my $desc = $seq->description;
+    my $desc = $seq->desc;
     my $clone;
     my $embl_version;
     my $embl_id;
@@ -97,9 +98,10 @@ if ($fastafile) {
     $contig->clone($clone);
     $contig->embl_offset(1);
     $contig->length($seq->length);
+    $contig->seq($seq->seq);
 
     $clone->add_Contig($contig);
-
+    
     $db->get_CloneAdaptor->store($clone);
   }
 }
