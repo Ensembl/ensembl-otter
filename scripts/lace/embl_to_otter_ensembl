@@ -10,12 +10,17 @@ embl_to_otter_ensembl [options] EMBL_Entries_File
 
 =head1 DESCRIPTION
 
-This script reads the assembly information from
-an agp file and pfetches the clone and contig
-details based on the accession.  It then
-populates the assembly table in both databases.
+This script reads the EMBL Entries file supplied
+and using this as the source for all sequence 
+information populates the B<Otter> and B<Pipeline>
+databases.
 
-BEWARE! It assumes 1 contig for each clone.
+A B<Sequence Set> is then created of the sequences 
+in the order they were specified in the EMBL file.
+
+The EMBL file I<MUST> only contain B<DNA> sequences 
+from a single species which must match the species
+for which the dataset resolves.
 
 =head1 USEAGE
 
@@ -62,7 +67,10 @@ use Bio::Otter::Lace::Defaults;
 use Hum::EMBL;
 use Data::Dumper;
 
-my $email = 'anacode@sanger.ac.uk';
+use Mail::Mailer;
+
+my $DOMAIN = 'sanger.ac.uk';
+my $EMAIL = 'anacode@'.$DOMAIN;
 my $DEBUG = 0;
 my $embl_entries = {};
 
@@ -254,8 +262,39 @@ my $PIPED_TO = (-p STDIN ? 1 : 0);
     my $elapsed = tv_interval ( $t0, [gettimeofday]);
     print STDERR "code took: $elapsed seconds\n" if $DEBUG;
 
-}
+    # check for pipeline.lock
+    # mail me if not running
+    unless($pipeline_db->pipeline_lock){
+	
+	my $subj = 'User Submission of Clones for Analysis ';
+	$subj   .= '**JUST A TEST**' if $DEBUG;
+	my $mess = "$author submitted set <$set_name> in dataset <$dataset_name>.";
+	$mess   .= "\nIt contains " . scalar(@{$clone_sequence_list}) . " clone(s) on Chromosome <$chromosome_name>.";
+	$mess   .= "\n";
+	$mess   .= "\nDescription : <$description>";
+	$mess   .= "\nPriority    : <$analysis_priority>";
+	$mess   .= "\n";
+	$mess   .= "\nPlease start the pipeline running on this set.";
+	$mess   .= "\n";
+	$mess   .= "\n" . join(" ", (-dbhost, $pipeline_db->host,
+				     -dbport, $pipeline_db->port,
+				     -dbname, $pipeline_db->dbname,
+				     -dbuser, $pipeline_db->username,
+				     -dbpass, $pipeline_db->password || undef));
 
+	warn "Sending Mail to $EMAIL\n";
+	my $mail = Mail::Mailer->new('smtp', Server => 'mail.sanger.ac.uk');
+	my $mfh = $mail->open({
+	    From    => "$author\@$DOMAIN",
+	    To      => [ $EMAIL ],
+	    Subject => $subj,
+        });
+	print $mfh $mess;
+	$mfh->close;
+
+    }
+    
+}
 
 #------------------end of main script ------------------------------------------
 #                     Subroutines
@@ -321,9 +360,9 @@ sub check_embl_input{
 			 "\nEntry %s isn't good. Not written." .
                          "\nI wanted molecule <%s>, but got <%s>" . 
 			 "\nand species taxon ID <%s>, but got <%s>" . 
-			 "\nPlease email %s for further info." .
+			 "\nPlease email %s if you need further info." .
 			 "\n*****************************************************\n",
-			 $acc_sv, $mol, $molecule, $sp, $taxon_id, $email)
+			 $acc_sv, $mol, $molecule, $sp, $taxon_id, $EMAIL)
 		 );
 	    next;
 	}
