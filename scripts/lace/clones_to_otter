@@ -7,37 +7,29 @@ use Carp;
 use Getopt::Long 'GetOptions';
 use Hum::Tracking;
 use Bio::Otter::Lace::PipelineDB;
+use Bio::Otter::Lace::Defaults;
 
 {
-    my $host = 'localhost'; 
-    my $port = 3306; 
-    my( $dbname, $dbuser, $dbpass );
-
-    GetOptions(
-        'host=s'    => \$host,
-        'port=i'    => \$port,
-        'dbname=s'  => \$dbname,
-        'user=s'    => \$dbuser,
-        'password=s'=> \$dbpass,
-         ) or die "Error processing command line";    
-
+    my $dataset_name = undef;
+    my $help         = 0;
+    Bio::Otter::Lace::Defaults::do_getopt(
+					  'h|help!'     => \$help,
+					  'dataset=s'   => \$dataset_name
+					  ) || usage();
+    die "I need a dataset name, is that too much to ask?\n" unless $dataset_name;
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
     # Make a connection to the otter database
-    my $otter_db = Bio::EnsEMBL::DBSQL::DBAdaptor->new (   
-        -HOST   => $host,
-        -PORT   => $port,
-        -DBNAME => $dbname,
-        -USER   => $dbuser,
-        -PASS   => $dbpass,
-        );
+    my $otter_db = $ds->get_cached_DBAdaptor;
     my $pipe_db = Bio::Otter::Lace::PipelineDB::get_DBAdaptor($otter_db);
-    
+
     my $list_acc_sv_clones = $otter_db->prepare(q{
         SELECT embl_acc
           , embl_version
         FROM clone
-        WHERE concat(embl_acc
-              , '.'
-              , embl_version) = name
+        WHERE name = concat(embl_acc
+			    , '.'
+			    , embl_version)
         });
     $list_acc_sv_clones->execute;
     
@@ -105,6 +97,20 @@ use Bio::Otter::Lace::PipelineDB;
 __END__
 
 =head1 NAME - clones_to_otter
+
+=head DESCRIPTION
+
+ Fills in the international clone names for the otter and pipeline dbs.  
+It uses the tracking database to find the int. clone name for those clones 
+that have name = embl_acc.embl_version.  Connection details come from 
+$OTTER_HOME/.otter_config or ~/.otter_config or command line in a similar 
+manner to the rest of the scripts in this directory.
+
+=head1 USEAGE
+
+ just give it a dataset name that occurs in the db you want to "fix".
+N.B. It will not limit itself to that dataset, but instead go through
+all of the clone table.
 
 =head1 AUTHOR
 
