@@ -1,5 +1,7 @@
 ### Bio::Otter::Lace:ResultSet
 ## this object is used to store the results of a search for a particular clone.
+## sequence sets are now stored in an array 
+## so they should come out in order, but there is no check that for an existing sequence set
 
 package Bio::Otter::Lace::ResultSet;
 use Data::Dumper ;
@@ -12,39 +14,30 @@ sub new {
     return bless {}, $pkg;
 }
 
-my $number ;
+
 sub add_SequenceSet{
     my ($self, $ss) = @_ ;
     
-    my $name = $ss->name ;     
-    $number = 1 unless defined $number  ;
-    $number ++ ;
-    
-    $self->{'sequence_set'}->{$name}  = $ss  ;
-    
+    unshift @{$self->{'sequence_set'} }  , $ss ;  
 }
 
 sub get_SequenceSet_by_name{
     my ($self , $name ) = @_ ;
     
-    my $hash = $self->{'sequence_set'} ;
-    
-    my $ss = $hash->{$name} ;
-    
-    if (defined $ss) {
-        return $ss;
-    }else{ 
-        return ;
+    foreach my $ss ( @{$self->{'sequence_set'}} ){
+
+        if ($ss->name eq $name) {
+            return $ss;
+        }
     }
 }
 
 sub get_all_SequenceSets{
     my ($self) = @_ ;
-    my @list ;
-    while (my ($name, $ss) = each (%{$self->{'sequence_set'}})){
-        push(@list , $ss) ;
-    }
-    return \@list
+    
+    my $list  = $self->{'sequence_set'} ;
+    
+    return $list
 }
 
 sub search_array{
@@ -62,6 +55,10 @@ sub search_type{
         $self->{'search_type'} = $type ;
     }
     return $self->{'search_type'};
+}
+
+sub DESTROY{
+    warn "Destroying ResultSet" ;
 }
 
 1 ;
