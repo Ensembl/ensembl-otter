@@ -11,6 +11,7 @@ use Bio::Otter::Lace::DataSet;
 use Bio::Otter::Lace::AceDatabase;
 use Bio::Otter::Lace::PersistentFile;
 use Bio::Otter::Lace::DasClient;
+use Bio::Otter::Transform::DataSets;
 use Bio::Otter::Converter;
 use Bio::Otter::Lace::TempFile;
 use URI::Escape qw{ uri_escape };
@@ -283,33 +284,12 @@ sub get_all_DataSets {
         }
         $self->_check_for_error($response);
         $response = undef;
-        $ds = $self->{'_datasets'} = [];
 
-        my $in_details = 0;
-        # Split the string into blocks of text which
-        # are separated by two or more newlines.
-        foreach (split /\n{2,}/, $content) {
-            if (/Details/) {
-                $in_details = 1;
-                next;
-            }
-            next unless $in_details;
-
-            my $set = Bio::Otter::Lace::DataSet->new;
-            $set->author($self->author);
-            my ($name) = /(\S+)/;
-            $set->name($name);
-            my $property_count = 0;
-            while (/^\s+(\S+)\s+(\S+)/mg) {
-                $property_count++;
-                #warn "$name: $1 => $2\n";
-                $set->$1($2);
-            }
-            confess "No properties in dataset '$name'" unless $property_count;
-            push(@$ds, $set);
-        }
-        ### Would prefer to keep order found in species.dat
-        @$ds = sort {$a->name cmp $b->name} @$ds;
+        my $dsp = Bio::Otter::Transform::DataSets->new();
+        $dsp->set_property('author', $self->author);
+        my $p = $dsp->my_parser();
+        $p->parse($content);
+        $ds = $self->{'_datasets'} = $dsp->objects;
     }
     return @$ds;
 }
