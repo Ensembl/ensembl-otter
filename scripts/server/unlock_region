@@ -154,6 +154,12 @@ $cb->remove_by_slice($slice,$author);
 print STDERR "done\n";
 #####################################################################################
 
+print $q->header();
+print "<otter>";
+print " <response>";
+print " </response>";
+print "</otter>";
+
 sub error_exit {
   my ($q,$reason) = @_;
 
