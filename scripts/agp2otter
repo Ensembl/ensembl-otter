@@ -28,6 +28,11 @@ if (!defined($chrname) || !defined($agpfile) || !defined($path)) {
 
 my %contigs;
 
+my $chrid;
+if ($chrname =~ /^[0-9]*$/) {
+  $chrid = $chrname;
+}
+
 my $chrid = 1;
 open(IN,"<$agpfile");
 
@@ -82,26 +87,42 @@ while (<IN>) {
   close(IN2);
 
   if ($found == 0) {
-    open(IN2,"pfetch -A $acc |");
-    $seq = "";
-    
+    open(IN2,"pfetch -A $accver |");
     while (<IN2>) {
-      
+  
       if (/^>(\S+) (\S+)/) {
-	print STDERR "Found title line $1 : $2\n";
-	if ($found) {
-	  last;
-	}
-	$seq = "";
-	if ($2 eq $accver) {
-	  $found = 1;
-	}
+        print STDERR "Found title line $1 : $2\n";
+  
+        if ($2 eq $accver) {
+  	  $found = 1;
+        }
       } else {
-	chomp;
-	$seq .= $_;
+        chomp;
+        $seq .= $_;
       }
     }
+    close(IN2);
   }
+#    open(IN2,"pfetch -A $acc |");
+#    $seq = "";
+#    
+#    while (<IN2>) {
+#      
+#      if (/^>(\S+) (\S+)/) {
+#	print STDERR "Found title line $1 : $2\n";
+#	if ($found) {
+#	  last;
+#	}
+#	$seq = "";
+#	if ($2 eq $accver) {
+#	  $found = 1;
+#	}
+#      } else {
+#	chomp;
+#	$seq .= $_;
+#      }
+#    }
+#  }
   if ($found != 1) {
     print STDERR "ERROR: Can't find right sequence version for $acc $version\n";
   } else {
