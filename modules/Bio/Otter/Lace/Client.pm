@@ -12,6 +12,7 @@ use Bio::Otter::Lace::AceDatabase;
 use Bio::Otter::Lace::PersistentFile;
 use Bio::Otter::Lace::DasClient;
 use Bio::Otter::Transform::DataSets;
+use Bio::Otter::Transform::SequenceSets;
 use Bio::Otter::Converter;
 use Bio::Otter::Lace::TempFile;
 use URI::Escape qw{ uri_escape };
@@ -294,6 +295,38 @@ sub get_all_DataSets {
     return @$ds;
 }
 
+sub get_all_SequenceSets_for_DataSet{
+    my( $self, $dsObj ) = @_;
+
+    return [] unless $dsObj;
+    my $cache = $dsObj->get_all_SequenceSets();
+    return $cache if scalar(@$cache);
+ 
+    # go get the cache
+    my $ua      = $self->get_UserAgent;
+    my $root    = $self->url_root;
+    my $request = $self->new_http_request('GET');
+    $request->uri("$root/get_sequencesets?".
+                  join('&',                  
+                       "dataset="  . uri_escape($dsObj->name),
+                       "author="   . uri_escape($self->author),
+                       "email="    . uri_escape($self->email),
+                       "hostname=" . uri_escape($self->client_hostname),
+                       )
+                  );
+    # warn $request->uri();
+    my $response = $ua->request($request);
+    my $content  = $self->_check_for_error($response);
+    # stream parsing ????
+    $response    = undef;
+
+    my $ssp = Bio::Otter::Transform::SequenceSets->new();
+    $ssp->set_property('dataset_name', $dsObj->name);
+    my $p   = $ssp->my_parser();
+    $p->parse($content);
+    $dsObj->get_all_SequenceSets($ssp->objects);
+    
+}
 sub save_otter_xml {
     my( $self, $xml, $dataset_name ) = @_;
     
