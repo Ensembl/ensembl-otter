@@ -225,10 +225,16 @@ sub make_XaceSeqChooser_windows {
     my $i = 1;
     
     my $cl_write_setting = $cl->write_access();
+    my $readonly_tag     = $cl->ace_readonly_tag();
+    $readonly_tag        =~ s{(\W)}{\\$1}g;
+
     foreach my $dir (@dirs) {
 
-	my $readonly_tag = $cl->readonly_tag();
         my $write = ($dir =~ /$readonly_tag/ ? 0 : 1);
+        # Has to be set before call to $cl->new_AceDatabase
+        # as that calls $db->home which sets the home using whatever
+        # $cl_write_setting is NOT the write status of the
+        # db being recovered!
 	$cl->write_access($write);
 
         ### Can recover title from wspec/displays.wrm
