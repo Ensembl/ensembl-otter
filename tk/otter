@@ -5,80 +5,153 @@
 
 use strict;
 use Carp;
-use CanvasWindow;
-use MenuCanvasWindow::XaceSeqChooser;
-use Bio::Otter::DBSQL::DBAdaptor;
-use Bio::Otter::Converter;
 use Hum::AnaStatus::Sequence;
 use Hum::AnaStatus::EnsAnalysis;
-use LWP::Simple ();
+use Bio::Otter::Lace::AceDatabase;
+use Bio::Otter::Lace::Client;
 use Getopt::Long 'GetOptions';
+use Symbol 'gensym';
 
 {
     my $usage = sub{ exec('perldoc', $0) };
     my $host = 'ecs1d';
     my $port = 39312;
-    my $ace_tar = '/nfs/humace2/hum/data/lace_acedb.tar';
-
-    if($ENV{"LACE_LOCAL"}){
-	$ace_tar=$ENV{"LACE_LOCAL"}."/lace_acedb.tar";
-    }
+    my $ace_tar = '/nfs/team71/analysis/jgrg/work/ace_skeleton/lace_acedb.tar';
+    my $recover = '';
+    my $write_flag  = 0;
+    my $unlock_flag = 0;
 
     GetOptions(
+        'view'      => sub{ $write_flag = 0 },
         'host=s'    => \$host,
         'port=i'    => \$port,
         'tar=s'     => \$ace_tar,
         'h|help'    => $usage,
+        'write!'    => \$write_flag,
+        'recover=s' => \$recover,
+        'unlock!'   => \$unlock_flag,
         ) or $usage->();
+    die "Can't specify both write and unlock\n"
+        if $unlock_flag and $write_flag;
 
-    set_ace_tar($ace_tar);
+    my $cl = Bio::Otter::Lace::Client->new;
+    $cl->host('ecs1d');
+    $cl->port(39312);
+    $cl->write_access($write_flag);
+    
+    my $db = $cl->new_AceDatabase;
+    $db->title('lace test');
+    $db->error_flag(1);
+    $db->tar_file($ace_tar);
 
-    my $mw = CanvasWindow::MainWindow->new('Otter: datasets');
-    my $cw = CanvasWindow->new($mw, 400, 300);
+    if ($recover) {
+        $db->home($recover);
+        $db->recover_slice_dataset_hash;
+    } else {
+        ### Need a Dataset chooser
+        my $ds = $cl->get_DataSet_by_name('otter_chr9p12');
+        
+        ### Need a CloneSequence chooser
+        my $cs_list = $ds->get_all_CloneSequences;
+        $ds->selected_CloneSequences([@$cs_list[2..7]]);
+
+
+        $db->make_database_directory;
+        $db->write_otter_acefile;
+
+        ### Fetch data for CloneSequences
+        fetch_sanger_data($ds, $db);
+        #debug_print_sequence($ds, $db);
+
+        unless ($db->initialize_database) {
+            die "Error initialzing database";
+        }
+    }
     
-    my $datasets = get_dataset_details($host, $port);
-    set_details($datasets);
-    show_dataset_list($cw, $datasets);
-    $cw->canvas->toplevel->bind( '<Return>', sub{ do_fetch($cw) } );
+    warn "Database is in '", $db->home, "'\n";
     
-    $cw->fix_window_min_max_sizes;
-    Tk::MainLoop();
+    if ($unlock_flag) {
+        $db->unlock_all_slices;
+    } else {
+        system('xace', $db->home);
+    }
+
+    if ($write_flag) {
+        $db->save_all_slices;
+    }
+
+    #my $mw = CanvasWindow::MainWindow->new('Otter: datasets');
+    #my $cw = CanvasWindow->new($mw, 400, 300);
+    #
+    #my $datasets = get_dataset_details($host, $port);
+    #set_details($datasets);
+    #show_dataset_list($cw, $datasets);
+    #$cw->canvas->toplevel->bind( '<Return>', sub{ do_fetch($cw) } );
+    #
+    #$cw->fix_window_min_max_sizes;
+    #Tk::MainLoop();
+    
+    $db->error_flag(0);     # OK to cleanup now
 }
 
-{
-    my( $ace_tar );
+sub fetch_sanger_data {
+    my( $dataset, $acedb ) = @_;
 
-    sub set_ace_tar {
-        $ace_tar = shift;
+    my $ace_file = $acedb->home . "/rawdata/sanger.ace";
+    my $fh = gensym();
+    open $fh, "> $ace_file" or confess "Can't write to '$ace_file' : $!";
+    $acedb->add_acefile($ace_file);
+    
+    my $sel = $dataset->selected_CloneSequences;
+    foreach my $cs (@$sel) {
+        my $ana = Hum::AnaStatus::Sequence->new_from_accession($cs->accession);
+        my ($acc, $sv) = $ana->get_accession_and_sv;
+        unless ($cs->accession eq $acc and $cs->sv == $sv) {
+            confess sprintf("Ana sequence '%s.%d' doesn't match otter '%s.%d'",
+                $acc, $sv, $cs->accession, $cs->sv);
+        }
+        
+        ### Could add in clone end info here - but does not have the
+        ### correct name
+        #my $ana_dir  = $ana->analysis_directory;
+        #my $seq_name = $ana->sequence_name;
+        #foreach my $humace (map "$ana_dir/rawdata/$seq_name.humace.$_", qw{ ace ace.gz }) {
+        #    if (-e $humace) {
+        #        $acedb->add_acefile($humace);
+        #        last;
+        #    }
+        #}
+        
+        my $seq = $ana->hum_Sequence;
+        my $full = $seq->name;
+        my $ctg_name = $cs->contig_name;
+        $seq->name($ctg_name);
+        print $fh
+            $seq->ace_string,
+            qq{\nSequence "$ctg_name"\nClone "$full"\n};
     }
     
-    sub get_ace_tar {
-        return $ace_tar;
-    }
+    close $fh;
 }
 
-{
-    my( $details );
-
-    sub set_details {
-        $details = shift;
-    }
+sub debug_print_sequence {
+    my( $dataset, $acedb ) = @_;
     
-    sub get_details {
-        my $name = shift || confess "Missing name argument";
-        return $details->{$name};
-    }
-}
-
-{
-    my( $state );
-    
-    sub set_state {
-        $state = shift;
-    }
-    
-    sub get_state {
-        return $state;
+    my $sa = $dataset->get_cached_DBAdaptor->get_SliceAdaptor;
+    foreach my $ctg (@{$dataset->selected_CloneSequences_as_contig_list}) {
+        my $chr_name  = $ctg->[0]->chromosome->name;
+        my $start     = $ctg->[0]->chr_start;
+        my $end       = $ctg->[$#$ctg]->chr_end;
+        
+        my $slice = $sa->fetch_by_chr_start_end($chr_name, $start, $end);
+        my $file = $acedb->home . "/" . $slice->display_id . ".ace";
+        my $seqfh = gensym();
+        open $seqfh, "> $file" or die;
+        my $humseq = Hum::Sequence->new;
+        $humseq->sequence_string($slice->seq);
+        $humseq->name($slice->display_id);
+        print $seqfh $humseq->ace_string;
+        close $seqfh;
     }
 }
 
@@ -199,38 +272,6 @@ sub do_fetch {
 }
 
 
-sub otter_save {
-    my( $self, $name ) = @_;
-    
-    # Disconnect aceperl
-    $self->{'_ace_database_handle'} = undef;
-    
-    # Get new handle
-    my $ace = $self->ace_handle;
-    
-    ### This code should be in a data only module
-    $ace->find(Genome_Sequence => $name);
-    my $ace_txt = $ace->raw_query('show -a');
-    $ace->raw_query('Follow SubSequence');
-    $ace_txt .= $ace->raw_query('show -a');
-    $ace->raw_query('Follow Locus');
-    $ace_txt .= $ace->raw_query('show -a');
-    
-    # Cleanup text
-    $ace_txt =~ s/\0//g;            # Remove nulls
-    $ace_txt =~ s{^\s*//.+}{\n}mg;  # Strip comments
-    
-    ### Should really use IO::Scalar (or IO::String?)
-    my $otter_file = 'otter_out.ace';
-    local *OTT;
-    open OTT, "> $otter_file" or confess "Can't write to '$otter_file' : $!";
-    print OTT $ace_txt;
-    close OTT;
-    open OTT, $otter_file or confess "Can't read '$otter_file' : $!";
-    my $xml =  Bio::Otter::Converter::ace_to_XML(\*OTT);
-    print $xml;
-}
-
 sub launch_XaceSeqChooser {
     my( $cw, $home ) = @_;
     
@@ -261,50 +302,6 @@ sub launch_XaceSeqChooser {
     $xc->fix_window_min_max_sizes;
 }
 
-sub write_sMap_assembly_info {
-    my( $name_ctg, $lace_acefiles, $acc_anaseq ) = @_;
-    
-    my $ace_file = 'rawdata/otter_sMap.ace';
-    push(@$lace_acefiles, $ace_file);
-    local *LACE_SMAP;
-    open LACE_SMAP, "> $ace_file" or die "Can't write to '$ace_file' : $!";
-    
-    while (my ($name, $ctg) = each %$name_ctg) {
-        print LACE_SMAP qq{\nSequence : "$name"\n};
-        my $offset = $ctg->[0]{'chr_start'} - 1;
-        foreach my $prop (@$ctg) {
-            ### Should make $prop into a proper object
-            my $acc             = $prop->{'accession'};
-            my $chr_start       = $prop->{'chr_start'}  - $offset;
-            my $chr_end         = $prop->{'chr_end'}    - $offset;
-            my $contig_start    = $prop->{'contig_start'};
-            my $contig_end      = $prop->{'contig_end'};
-            my $strand          = $prop->{'contig_ori'};
-            
-            my $ana = $acc_anaseq->{$acc} or confess "No ana_seq for '$acc'";
-            my $name = $ana->full_sequence_name;
-            
-            # Clone in reverse orientaton in AGP is indicated
-            # to acedb by chr_start > chr_end
-            if ($strand == 1) {
-                print LACE_SMAP qq{AGP_Fragment "$name" $chr_start $chr_end Align $chr_start $contig_start\n};
-            }
-            elsif ($strand == -1) {
-                print LACE_SMAP qq{AGP_Fragment "$name" $chr_end $chr_start Align $chr_start $contig_end\n};
-            } else {
-                confess "Unrecognized strand '$strand'";
-            }
-            ## The length of the fragment is needed where the same sequence ($name)
-            ## appears twice in the assembly.  If this happens and length is not
-            ## filled in, then acedb gets confused!
-            #my $len = $contig_end - $contig_start + 1;
-        }
-        print LACE_SMAP "\n";
-    }
-    
-    close LACE_SMAP or die "Error writing to '$ace_file' : $!";
-}
-
 sub fetch_pipeline_data {
     my( $lace_files, @ana_seq ) = @_;
     
@@ -323,26 +320,6 @@ sub fetch_pipeline_data {
     warn $fetch_cmd;
     system($fetch_cmd) == 0
         or warn "Error from '$fetch_cmd' : exit($?)";
-}
-
-sub make_acedb_dir_structure {
-    my( $home, $lace_files, $title ) = @_;
-
-    my $ace_tar = get_ace_tar();
-    warn "tar = '$ace_tar'";
-
-    # Make acedb directory structure (includes methods.ace in rawdata)
-    my $make_ace_tar = "tar xf $ace_tar";
-    system($make_ace_tar) == 0
-        or die "Error running '$make_ace_tar' : $!";
-
-    push(@$lace_files, 'rawdata/methods.ace');
-
-    # Create password file
-    makePasswdWrm($title);
-
-    # Add title to displays.wrm
-    editDisplaysWrm( $home, $title );
 }
 
 sub get_anastatus_sequences {
@@ -602,160 +579,6 @@ sub get_nearest {
     }
     
     return $closest;
-}
-
-sub get_chr_name {
-    my( $dba, $chr_id ) = @_;
-    
-    my $sth = $dba->prepare(q{
-        SELECT name
-        FROM chromosome
-        WHERE chromosome_id = ?
-        });
-    $sth->execute($chr_id);
-    
-    my ($name) = $sth->fetchrow;
-    return $name || confess "No name for chromosome_id '$chr_id'";
-}
-
-sub get_DBAdaptor_from_details {
-    my( $details ) = @_;
-    
-    my( @args );
-    while (my ($key, $val) = each %$details) {
-        #warn "  -$key  => $val\n";
-        push(@args, "-$key", $val);
-    }
-    return Bio::Otter::DBSQL::DBAdaptor->new(@args);
-}
-
-sub get_dataset_details {
-    my( $host, $port ) = @_;
-
-    print STDERR "Fetching dataset list ...";
-    my $datasets_url = "http://$host:$port/perl/get_datasets?details=true";
-    my $sets = LWP::Simple::get($datasets_url);
-    print STDERR " got it\n";
-    
-    my( $in_details );
-    my $datasets = {};
-    
-    # Split the string into blocks of text which
-    # are separated by two or more newlines.
-    foreach (split /\n{2,}/, $sets) {
-        if (/Details/) {
-            $in_details = 1;
-            next;
-        }
-        next unless $in_details;
-        my ($name) = /(\S+)/;
-        my $opt = $datasets->{$name} = {};
-        while (/^\s+(\S+)\s+(\S+)/mg) {
-            #warn "$name: $1 => $2\n";
-            $opt->{$1} = $2;
-        }
-    }
-    return $datasets;
-}
-
-
-sub makePasswdWrm {
-    my( $prog ) = @_;
-
-    my $passWrm       = 'wspec/passwd.wrm';
-    my $realNAME      = ( getpwuid($<) )[0];
-    my $effectiveNAME = ( getpwuid($>) )[0];
-
-    open PASSWD, ">$passWrm" or die;
-    print PASSWD "// passwd.wrm generated by $prog\n",
-      "// \"root\" added to cope with weird acedb bug under lstcsh\n\n";
-
-    # acedb looks at the real user ID, but some
-    # versions of the code seem to behave differently
-    if ( $realNAME ne $effectiveNAME ) {
-        print PASSWD "root\n\n$realNAME\n\n$effectiveNAME\n\n";
-    }
-    else {
-        print PASSWD "root\n\n$realNAME\n\n";
-    }
-
-    close PASSWD;    # Must close to ensure buffer is flushed into file
-    chmod 0644, $passWrm;
-}
-
-sub editDisplaysWrm {
-    my ( $home, $title ) = @_;
-    my $displays = "$home/wspec/displays.wrm";
-
-    open DISP, "< $displays" or die "Can't open '$displays' : $!";
-    my @disp = <DISP>;
-    close DISP;
-
-    foreach (@disp) {
-        next unless /^_DDtMain/;
-
-        # Add our title onto the Main window
-        s/\s-t\s*"[^"]+/ -t "$title/i and last;
-    }
-
-    open DISPOUT, "> $displays" or die;
-    print DISPOUT @disp;
-    close DISPOUT;
-}
-
-sub initializeDatabase {
-    my ( $tace, $dbDir, $acefiles ) = @_;
-
-    my @parse_commands = map "parse $_\n", @$acefiles;
-
-    my $parse_log = 'init_parse.log';
-    
-    return tace_parse_and_check($tace, $dbDir, $parse_log, "y\n", @parse_commands);
-}
-
-sub tace_parse_and_check {
-    my( $tace, $dbDir, $parse_log, @parse_commands ) = @_;
-
-    my $pipe = "| $tace $dbDir > $parse_log";
-    open TACE, $pipe
-        or die "Can't open pipe '$pipe' : $!";
-    foreach my $com (@parse_commands) {
-        print TACE $com;
-    }
-    close TACE or die "Error initializing database ($?)\n";
-
-    # This works as well:
-    #system("echo 'y\nparse $source' | $tace $dbDir >/dev/null") == 0
-    #  or die "Error: Can't initialise database\n";
-
-    local *PARSELOG;
-    open PARSELOG, $parse_log or die "Can't open '$parse_log' : $!";
-    my $file_log = '';
-    my $in_parse = 0;
-    my $errors = 0;
-    while (<PARSELOG>) {
-        if (/parsing/i) {
-            $file_log = "  $_";
-            $in_parse = 1;
-        }
-        
-        if (/(\d+) (errors|parse failed)/i) {
-            if ($1) {
-                warn "\nParse error detected:\n$file_log  $_\n";
-                $errors++;
-            }
-        }
-        elsif (/Sorry/) {
-            warn "Apology detected:\n$file_log  $_\n";
-            $errors++;
-        }
-        elsif ($in_parse) {
-            $file_log .= "  $_";
-        }
-    }
-    close PARSELOG;
-
-    return $errors;
 }
 
 

@@ -92,9 +92,10 @@ use Getopt::Long 'GetOptions';
     #    printf "  %8s  %4d\n", $stain, $stain_count{$stain};
     #}
 
-    $kw->landscape(1);
+    $kw->landscape(0);
     my $ps_dump = sub {
-        print STDERR "Printed to:", map( "  $_\n", $kw->print_postscript );
+        print STDERR "Printed to:", map( "  $_\n",
+            $kw->print_postscript );
     };
     $mw->bind( '<Control-p>', $ps_dump );
     $mw->bind( '<Control-P>', $ps_dump );
