@@ -20,6 +20,7 @@ $| = 1;
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
     my $ds = $cl->get_DataSet_by_name($dataset_name);
     my $dba = $ds->get_cached_DBAdaptor;
+    my $gene_aptr = $dba->get_GeneAdaptor;
     
     my $list_gene_names = $dba->prepare(q{
         SELECT DISTINCT g.gene_id
@@ -39,7 +40,7 @@ $| = 1;
         $gid_name{$gid} = $name;
     }
     
-    my $current_gene_id = fetch_all_current_gene_ids($dba);
+    my $current_gene_id = $gene_aptr->list_current_dbIDs;
     
     my( %name_gid );
     foreach my $gid (@$current_gene_id) {
@@ -54,7 +55,6 @@ $| = 1;
         WHERE gene_id = ?
         });
     
-    my $gene_aptr = $dba->get_GeneAdaptor;
     my $names_examined = 0;
     my $genes_fixed    = 0;
     $dba->begin_work;
@@ -125,33 +125,6 @@ sub gene_str {
     return sprintf "%s\t%s\t%s\n", $gene->stable_id, $gene->version, scalar localtime($gene->modified);
 }
 
-sub fetch_all_current_gene_ids {
-    my( $dba ) = @_;
-    
-    my $list_current_genes = $dba->prepare(q{
-        SELECT s.stable_id
-          , g.gene_id
-          , g.type
-        FROM gene g
-          , gene_stable_id s
-        WHERE g.gene_id = s.gene_id
-        ORDER BY s.version ASC
-       });
-    $list_current_genes->execute;
-    
-    my( %stable_gid_type );
-    while (my ($stable, $gid, $type) = $list_current_genes->fetchrow) {
-        $stable_gid_type{$stable} = [$gid, $type];
-    }
-    my $current_gene_id = [];
-    foreach my $gid_type (values %stable_gid_type) {
-        my ($gid, $type) = @$gid_type;
-        next if $type eq 'obsolete';
-        push(@$current_gene_id, $gid);
-    }
-    
-    return $current_gene_id;
-}
 
 sub group_by_contigs {
     my( @genes ) = @_;

@@ -1,0 +1,204 @@
+#!/usr/local/bin/perl -w
+
+### fix_object_naming
+
+use strict;
+use Bio::Otter::Lace::Defaults;
+use Hum::Submission 'accession_from_sanger_name';
+
+{
+    my $dataset_name = undef;
+    
+    my $usage = sub { exec('perldoc', $0) };
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'   => $usage,
+        'dataset=s' => \$dataset_name,
+        ) or $usage->();
+    $usage->() unless $dataset_name;
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    my $dba = $ds->get_cached_DBAdaptor;
+    my $gene_aptr = $dba->get_GeneAdaptor;
+    my $gene_db_id = $gene_aptr->list_current_dbIDs;
+    
+    save_gene_numbers($dba);
+    save_tsct_names($dba);
+    
+    foreach my $id (@$gene_db_id) {
+        eval{
+            fix_names($gene_aptr, $id);
+        };
+        print STDERR "ERROR: $@" if $@;  ### Commit or rollback here
+    }
+}
+
+sub fix_names {
+    my( $gene_aptr, $id ) = @_;
+
+    my $gene = $gene_aptr->fetch_by_dbID($id);
+    my $gene_name = $gene->gene_info->name->name;
+    print STDERR "GENE: $gene_name\n";
+
+    ### Lock clones here
+
+    my $is_sanger_gene_name = 0;
+    my $gene_number = undef;
+    if ($gene_name =~ /^(?:[Ee][Mm]:)?([^\.]+)\.(\d+)$/) {
+        my $clone_root = $1;
+        $gene_number = $2;
+        if (my $acc = accession_from_sanger_name($clone_root)) {
+            $is_sanger_gene_name = 1;
+        }
+    }
+
+    my $tsct_list = $gene->get_all_Transcripts;
+    my $longest = [];
+    foreach my $tsct (@$tsct_list) {
+        my $clone_list = [map $_->contig->clone->id, @{$tsct->get_all_Exons}];
+        for (my $i = 1; $i < @$clone_list;) {
+            if ($clone_list->[$i] eq $clone_list->[$i-1]) {
+                splice(@$clone_list, $i, 1);
+            } else {
+                $i++;
+            }
+        }
+        #print STDERR "   @$clone_list\n";
+        $longest = $clone_list if @$clone_list > @$longest;
+    }
+    #print STDERR " + @$longest\n";
+    die "No clone list!" unless @$longest;
+    my $clone3prime = pop @$longest;
+    $clone3prime =~ s/\.\d+$//;
+    #print STDERR "   end = $clone3prime\n";
+
+    ### Deal with C22, RI, and GD genes and transcripts.
+    ### Fix gene classes here too?
+
+    my( $new_gene_name );
+    foreach my $tsct (@$tsct_list) {
+        my $name = $tsct->transcript_info->name;
+        print STDERR "  TSCT: $name\n";
+        if ($name =~ /^(?:[Ee][Mm]:)?([^\.]+)(?:\.(\d+))?-(\d{3})$/) {
+            my $clone_root     = $1;
+            my $t_gene_number  = $2;
+            my $variant_number = $3;
+
+            if ($clone_root ne $clone3prime and $clone_root !~ /^[A-Z0-9]+-[A-Z0-9]+$/) {
+                # Transcript is not named by 3' most clone and clone
+                # name is not an international clone name.
+                if ($t_gene_number and $gene_number and ($t_gene_number ne $gene_number)) {
+                    warn "  GENE# MISMATCH: '$gene_number' vs '$t_gene_number'\n";
+                }
+                unless ($new_gene_name) {
+                    $gene_number ||= $t_gene_number || new_gene_number($clone3prime);
+                    $new_gene_name = "$clone3prime.$gene_number";
+                    while (gene_exists($new_gene_name)) {
+                        $gene_number++;
+                        $new_gene_name = "$clone3prime.$gene_number";
+                        print STDERR "  INCREMENT GENE: $gene_number\n";
+                    }
+                    save_gene_name($new_gene_name);
+                }
+                my $new_tsct_name = "$clone3prime.$gene_number-$variant_number";
+                while (transcript_name_exists($new_tsct_name)) {
+                    $variant_number++;
+                    $new_tsct_name = "$clone3prime.$gene_number-$variant_number";
+                    print STDERR "    INCREMENT VARIANT: $variant_number\n";
+                }
+                save_transcript_name($new_tsct_name);
+                print STDERR "    RENAME: $name > $clone3prime.$gene_number-$variant_number\n";
+            }
+        }
+    }
+
+    if ($is_sanger_gene_name) {
+        die "no new gene name created" unless $new_gene_name;
+        print STDERR "  GENE RENAME: $gene_name > $new_gene_name\n";
+    }
+
+    # Need to fix transcript and gene remarks.
+}
+
+
+{
+    my( %gene_max, %gene_name );
+
+    sub save_gene_numbers {
+        my( $dba ) = @_;
+        
+        foreach my $table (qw{ gene_name gene_synonym }) {
+            my $sth = $dba->prepare(qq{ SELECT DISTINCT name FROM $table });
+            $sth->execute;
+            while (my ($name) = $sth->fetchrow) {
+                $gene_name{$name}++;
+                if (my ($root, $n) = $name =~ /(.+)\.(\d+)/) {
+                    if (my $max = $gene_max{$root}) {
+                        $gene_max{$root} = $n if $n > $max;
+                    } else {
+                        $gene_max{$root} = $n;
+                    }
+                }
+            }
+        }
+    }
+    
+    sub gene_exists {
+        my( $name ) = @_;
+        
+        return $gene_name{$name};
+    }
+    
+    sub save_gene_name {
+        my( $name ) = @_;
+        
+        $gene_name{$name}++;
+    }
+    
+    sub new_gene_number {
+        my( $root ) = @_;
+        
+        my( $n );
+        if ($n = $gene_max{$root}) {
+            $n++;
+        } else {
+            $n = 1;
+        }
+        $gene_max{$root} = $n;
+        return $n;
+    }
+}
+
+{
+    my( %tsct_name );
+    
+    sub save_tsct_names {
+        my( $dba ) = @_;
+        
+        my $sth = $dba->prepare(q{ SELECT distinct name FROM transcript_info });
+        $sth->execute;
+        while (my ($name) = $sth->fetchrow) {
+            $tsct_name{$name}++;
+        }
+    }
+    
+    sub save_transcript_name {
+        my( $name ) = @_;
+        
+        $tsct_name{$name}++;
+    }
+    
+    sub transcript_name_exists {
+        my( $name ) = @_;
+        
+        return $tsct_name{$name};
+    }
+}
+
+__END__
+
+=head1 NAME - fix_object_naming
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
