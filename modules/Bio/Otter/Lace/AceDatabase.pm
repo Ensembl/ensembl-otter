@@ -227,7 +227,7 @@ sub slice_dataset_hash {
     
     my $h = $self->{'_slice_name_dataset'};
     unless ($h) {
-        warn "Creating empty hash";
+        #warn "Creating empty hash";
         $h = $self->{'_slice_name_dataset'} = {};
     }
     return $h;
