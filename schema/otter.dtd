@@ -24,7 +24,7 @@
 <!-- a that identifies the assembly from which the genomic region is taken -->
 <!ELEMENT assembly-type #PCDATA>
 
-<!--  -->
+<!-- A genomic nucleotide entry in EMBL/Genbank -->
 <!ELEMENT sequence-fragment (
     accession,
     version,
@@ -94,8 +94,9 @@
 <!ELEMENT cds-end-not-found EMPTY>
 <!ELEMENT transcript-class #PCDATA>
 
-<!-- Supporting evidence used to construct transcripts
-     Usually "ACCESSION.SV", but "SV" may be unknown -->
+<!-- Supporting evidence used to construct the transcript.
+     It is a sequence database entry.
+     Data is usually "ACCESSION.SV", but "SV" may be unknown -->
 <!ELEMENT evidence #PCDATA>
 <!ATTLIST type (EST | cDNA | Genomic | Protein | UNKNOWN) "UNKNOWN" #REQUIRED>
 
