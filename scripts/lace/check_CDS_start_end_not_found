@@ -1,0 +1,308 @@
+#!/usr/local/bin/perl -w
+
+### check_CDS_end_not_found
+
+use strict;
+use Getopt::Long 'GetOptions';
+use Bio::Otter::Lace::Defaults;
+use Bio::Seq;
+
+
+$| =1;
+
+{
+  my ($dataset, @sets);
+
+  my $help = sub { exec('perldoc', $0) };
+
+  Bio::Otter::Lace::Defaults::do_getopt('ds|dataset=s' => \$dataset,
+					's|set=s@'    =>  \@sets,
+					'h|help'       => $help,
+				       ) or $help->(); # plus default options
+  $help->() unless $dataset;
+
+  my $client    = Bio::Otter::Lace::Defaults::make_Client(); # Bio::Otter::Lace::Client
+  my $dset      = $client->get_DataSet_by_name($dataset);    # Bio::Otter::Lace::DataSet
+  my $otter_db  = $dset->get_cached_DBAdaptor;               # Bio::EnsEMBL::Containerr
+
+  my ($chrom, $geneAd, $sliceAd, $slice, $gene, @positives);
+  my $name_and_shame = {};
+
+  unless ( @sets ){
+
+    # sql query to get all assembly types
+    my $sql = q{SELECT assembly_type FROM sequence_set};
+    my $sth = $otter_db->prepare($sql);
+    $sth->execute;
+    while ( my ($type) = $sth->fetchrow_array()) {
+      push (@sets, $type);
+    }
+    $sth->finish;
+  }
+
+  # loop thru all assembly types to fetch all annotated genes in it on otter
+  my $date = `date +%Y%m%d`; chomp $date;
+  open (my $fh, ">cds_end_not_found_updateInfo.$dataset.$date") || die $!;
+  open (my $fh1, ">cds_end_not_found_annotator.$dataset.$date") || die $!;
+
+  foreach my $set ( @sets ) {
+
+    @positives = ();
+
+    my $i = "\nExamining genes on '$set'\n";
+
+    $otter_db->assembly_type($set); # replace the default sequence set setting
+
+    my $seqSet    = $dset->get_SequenceSet_by_name($set);
+    $dset->fetch_all_CloneSequences_for_SequenceSet($seqSet);
+    $chrom     = $seqSet->CloneSequence_list()->[0]->chromosome;
+
+    $geneAd  = $otter_db->get_GeneAdaptor; # Bio::Otter::AnnotatedGeneAdaptor
+    $sliceAd = $otter_db->get_SliceAdaptor;
+    $slice = $sliceAd->fetch_by_chr_name($chrom->name);
+
+    my $latest_gene_id = $geneAd->list_current_dbIDs_for_Slice($slice);
+
+    foreach my $id ( @$latest_gene_id ) {
+
+      # transform contig coords of a gene into chrom. coords
+      my $gene = $geneAd->fetch_by_dbID($id)->transform($slice);
+
+      # always filter out gene type = "obsolete"
+      next if $gene->type eq "obsolete";
+
+      my $trans_list = $gene->get_all_Transcripts;
+
+      # now working on transcript translation
+      foreach my $trans ( @$trans_list ) {
+
+	next if $trans->transcript_info->class->name eq "Transposon";
+
+	if ( $trans->translation ) {
+	  push (@positives, $trans);
+	}
+      }
+    }
+
+    my $trans_info_update = [];
+
+    my $e = "\tFound " . scalar @positives . " transcripts w/ translation in $set. . .\n";
+    print $fh $e;
+    print STDERR $e;
+
+    my ($protein, $mrna);
+
+    foreach my $t ( @positives ) {
+
+      my $tsi = $t->transcript_info->transcript_stable_id;
+
+      my $annotator = $t->transcript_info->author->name;
+
+      #-------------------------------
+      #   check non-ATG start codon
+      #-------------------------------
+
+      my $start_codon;
+      eval {
+	
+	$start_codon = check_start_codon($t->get_all_translateable_Exons->[0]->seq->seq);
+	
+	# length of $start_codon can be < 3, as the start exon seqs are immediately followed by intron
+	# if so, fetch the rest bp of the start codon from the second exon
+	if ( length $start_codon < 3 ){
+	  my $bps = check_start_codon($t->get_all_translateable_Exons->[1]->seq->seq);
+	  $start_codon = uc($start_codon . substr($bps, 0, (3 - length $start_codon) ));
+	}
+
+	print $fh $tsi, "\n";
+	print $fh $t->get_all_translateable_Exons->[0]->seq->seq."\n";
+	print $fh $start_codon;
+	print $fh "-----------\n";
+      };
+
+      # cds_start_not_found tag should be selected in AceDB
+      if ( !$@ && $start_codon ne "ATG" && $t->transcript_info->cds_start_not_found == 0 ){
+	my $error = sprintf("\t%-25s(%10s)\n", $t->transcript_info->name, "$tsi\t'$start_codon' as translation start");
+	push(@{$name_and_shame->{$annotator}}, $error);
+      }
+
+      #-------------------------------------
+      #  check translation has stop codon
+      #-------------------------------------
+
+      # calling translateable_seq first then call translate to preserve stop codon
+      undef $@;
+      eval{
+	$mrna       = $t->translateable_seq;
+	my $peptide = Bio::Seq->new( -seq      => $mrna,
+  			             -alphabet => 'dna');
+
+	$protein = $peptide->translate->seq;
+      };
+
+      unless ( $@ ){
+	# grep only transcirpts with non-stop translation and cds_end_not_found tag should be selected in AceDB
+	if ( $protein !~ /\*$/ && $t->transcript_info->cds_end_not_found == 0 ){
+
+          my $end_exon_end_30 = get_end_30_dna($t->get_all_translateable_Exons->[-1]->seq->seq); # last exon dna seq
+	  my $trans_end_30    = get_end_30_dna( $mrna );                                         # full mrna dna seq
+
+	  unless ( $end_exon_end_30 eq $trans_end_30 ){
+	    printf $fh ("\t%-25s(%10s) - no stop codon - annotator to check\n", $t->transcript_info->name, $tsi);
+
+	    my $error = sprintf("\t%-25s(%10s)\n", $t->transcript_info->name, "$tsi\thas no stop codon");
+	    push(@{$name_and_shame->{$annotator}}, $error);
+	  }
+
+	  else {
+	    printf $fh ("\t%-25s(%10s) - no stop codon - fixed automatically\n", $t->transcript_info->name, $tsi);
+	    push(@$trans_info_update, $tsi);
+	  }
+	}
+      }
+    }
+
+    undef $@;
+    if ( $trans_info_update->[0] ){
+
+      $otter_db->begin_work;
+
+      eval {
+	#update_cds_end_not_found($otter_db, $trans_info_update);
+      };
+      unless ( $@ ){
+	$otter_db->commit;
+	printf $fh ("\tcds_end_not_found update successful (%d)\n\n", scalar @$trans_info_update);
+      }
+      else {
+	$otter_db->rollback;
+      }
+    }
+    else {
+      printf $fh ("\tNo cds_end_not_found to update automatically\n\n");
+    }
+  }
+
+  # blame list
+  if ( keys %$name_and_shame ){
+    print $fh1 "\nPlease check the following problems:\n";
+    print $fh1 "Protein sequence of transcript has:\n";
+    print $fh1 "\t(1) no stop codon but 'cds_end_not_found' tag is not selected or\n";
+    print $fh1 "\t(2) non-ATG translation start but 'cds_start_not_found' tag is not selected.\n\n";
+
+    foreach my $name ( sort keys %$name_and_shame ){
+      printf $fh1 ("Annotator: %s (%d)\n", $name, scalar @{$name_and_shame->{$name}});
+      print $fh1 "@{$name_and_shame->{$name}}\n";
+    }
+  }
+}
+
+sub check_start_codon {
+  my $start_exon_dna = shift;
+  return uc( substr($start_exon_dna, 0, 3) ); # just make sure to use uppercase here
+}
+
+sub get_end_30_dna {
+
+  # get end 30 or less dna
+  my $end_dna = shift;
+
+  my $end_30;
+  if ( length($end_dna) >= 30 ){
+    $end_30 = substr($end_dna, -(30-length($end_dna)), 30);
+  }
+  else {
+    $end_30 = substr($end_dna, 0, length($end_dna));
+  }
+
+  return $end_30;
+}
+
+
+sub update_cds_end_not_found {
+  my ( $db, $trans_info_update ) = @_;
+
+  my $ids = join(',', map {"'".$_."'"} @$trans_info_update);
+
+  my $sth = $db->prepare( "UPDATE transcript_info "
+                         ."SET cds_end_not_found = 'true' "
+                         ."WHERE transcript_stable_id IN ($ids)" );
+  $sth->execute;
+  $sth->finish;
+}
+
+
+
+__END__
+
+=head1 NAME - check_CDS_end_not_found
+
+=head1 SYNOPSIS
+
+check_CDS_end_not_found [-dataset <dataset>] [-set <assembly_type>]
+
+Two info fles are created at run dir, eg, for dataset human:
+
+(1) cds_end_not_found_updateInfo.human.yyymmdd => what is fixed automatically, what requires annotator attention
+
+(2) cds_end_not_found_annotator.human.yyyymmdd => transcripts to fix for each annotator
+
+
+=head1 DESCRIPTION
+
+Look for protein sequence of transcripts which does not have stop codon but cds_end_not_found is set to false.
+This causes EMBL file submission errors. Normally such errors are from annotators not setting the value accordingly.
+
+This script also reset the value of cds_end_not_found column in otter to "true" for those transcripts found when
+the end protein sequence of a transcript is in the end exon.
+
+
+Human sequence_set to submit
+
+select assembly_type, description from otter_human.sequence_set where vega_set_id > 0;
++---------------+---------------------------------------------------+
+| assembly_type | description                                       |
++---------------+---------------------------------------------------+
+| chr10_06      | Human Chromosome 10 in SANGER 06 Assembly         |
+| chr13-10      | Human Chr13-10 AGP                                |
+| chr14         | Human Chromosome 14                               |
+| chr19         | Human Chr19 NCBI34                                |
+| Chr1_final    | Final version of Chromosome 1                     |
+| chr20-9       | Human Chr20-09 AGP                                |
+| chr22-02      | chr 22 AGP corresponds to NCBI 35                 |
+| chr6-14       | Chromosome 6 with single haplotype MHC region     |
+| chr7          | Human Chr7 NCBI31                                 |
+| chr9-12       | Human Chr9-12 AGP                                 |
+| ChrX-07       | ChrX-07 AGP                                       |
+| chr_Y_01      | Y agp from Kym Pepin                              |
+| MHC_COX       | COX Haplotype                                     |
+| MHC_NCBI34.1  | Region 1 of NCBI34 chr6 replaced by PGF haplotype |
+| MHC_NCBI34.2  | Region 2 of NCBI34 chr6 replaced by PGF haplotype |
+| MHC_PGF       | PGF Haplotype                                     |
+| MHC_QBL       | Human Chromosome 6 Haplotype QBL                  |
+| MHC_SSTO      | Human Chromosome 6 Haplotype SSTO                 |
++---------------+---------------------------------------------------+
+
+Mouse sequence_set to sumbit
+
+select assembly_type, description from sequence_set where vega_set_id > 0;
++---------------+--------------------------------------------+
+| assembly_type | description                                |
++---------------+--------------------------------------------+
+| black6_IDD5.1 | black 6 strain IDD5.1 region on chr 1      |
+| chr11         | Chromosome 11 agp from chromoview 20/02/04 |
+| del36H_set    | del36H region (chromosome 13)              |
+| mrc4-2        | loaded 23/04/2004                          |
+| NOD_IDD10     | NOD strain IDD10 region on chr 3           |
+| NOD_IDD3      | NOD strain IDD3 region on chr 3            |
+| NOD_IDD5.1    | NOD strain IDD5.1 region on chr 1          |
++---------------+--------------------------------------------+
+
+-set black6_IDD5.1 -set chr11 -set del36H_set -set mrc4-2 -set NOD_IDD10 -set NOD_IDD3 -set NOD_IDD5.1
+
+=head1 AUTHOR
+
+Chao-Kung Chen B<email> ck1@sanger.ac.uk
+
+
+
