@@ -295,8 +295,12 @@ eval {
   
   my $oaca = $odb->get_CloneAdaptor;
   foreach my $clone (@changed_clones) {
-    printf STDERR "Storing new version of clone '%s.%s'\n", $clone->embl_id, $clone->embl_version;
-    $oaca->store($clone);
+    my $acc = $clone->embl_id;
+    my $sv  = $clone->embl_version;
+    printf STDERR "Storing new version of clone '$acc.$sv'\n";
+    my $db_clone = $oaca->fetch_by_accession_version($acc, $sv);
+    $db_clone->clone_info($clone->clone_info);
+    $oaca->store($db_clone);
   }
   
   $odb->commit();

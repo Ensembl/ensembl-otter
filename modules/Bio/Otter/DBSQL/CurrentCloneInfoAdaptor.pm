@@ -148,7 +148,7 @@ sub store {
 	if (!defined($clone->clone_info->dbID)) {
 	    $self->throw("Clone info must have a dbID to be stored in the current_info table");
 	}
-	if (!defined($clone->id)) {
+	if (!defined($clone->embl_id)) {
 	    $self->throw("Clone must have an accession to be stored in the current_info table");
 	}
 	if (!defined($clone->embl_version)) {
@@ -162,7 +162,7 @@ sub store {
 
 	    my $sql = "insert into current_clone_info(clone_info_id,clone_id,clone_version) values(" . 
 		$clone->clone_info->dbID . ",\'" . 
-		$clone->id . "\'," . 
+		$clone->embl_id . "\'," . 
                 $clone->embl_version . ")";
 
 	    my $sth = $self->prepare($sql);

@@ -190,30 +190,47 @@ sub fetch_by_Slice {
 =cut
 
 sub store{
-   my ($self,$obj) = @_;
+    my ($self,$clone) = @_;
 
-   if (!defined($obj)) {
-       $self->throw("Must enter an AnnotatedClone object to the store method");
-   }
-   if (!$obj->isa("Bio::Otter::AnnotatedClone")) {
-       $self->throw("Object must be an AnnotatedClone object. Currently [$obj]");
-   }
+    if (!defined($clone)) {
+        $self->throw("Must enter an AnnotatedClone object to the store method");
+    }
+    if (!$clone->isa("Bio::Otter::AnnotatedClone")) {
+        $self->throw("Object must be an AnnotatedClone object. Currently [$clone]");
+    }
 
-   if (!defined($obj->clone_info)) {
-      $self->throw("Annotated clone must have a clone info object");
-   }
+    my $info = $clone->clone_info
+        || $self->throw("Annotated clone must have a clone info object");
 
-   # print STDERR "Ann id " . $obj->stable_id . "\n";
+    # print STDERR "Ann id " . $clone->stable_id . "\n";
 
-   my $clone_info_adaptor = $self->db->get_CloneInfoAdaptor();
-   my $current_c_info_ad = $self->db->get_CurrentCloneInfoAdaptor;
+    my $clone_info_adaptor = $self->db->get_CloneInfoAdaptor();
+    my $current_c_info_ad = $self->db->get_CurrentCloneInfoAdaptor;
 
-   $self->SUPER::store      ($obj);
-   $clone_info_adaptor->store($obj->clone_info);
-   $current_c_info_ad->store($obj);
-
+    my $clone_id = $clone->dbID
+        || $self->throw('clone does not have a dbID');
+    $clone->dbID($clone_id);
+    $info->clone_id($clone_id);
+    $clone_info_adaptor->store($info);
+    $current_c_info_ad->store($clone);
 }
 
+#sub _fetch_clone_id {
+#    my( $self, $clone ) = @_;
+#    
+#    my $acc = $clone->embl_id      or $self->throw('embl_id missing from Clone');
+#    my $sv  = $clone->embl_version or $self->throw('embl_version missing from Clone');
+#    
+#    my $sth = $self->prepare(q{
+#        SELECT clone_id
+#        FROM clone
+#        WHERE embl_acc = ?
+#          AND embl_version = ?
+#        });
+#    $sth->execute($acc, $sv);
+#    my ($clone_id) = $sth->fetchrow;
+#    return $clone_id;
+#}
 
 1;
 

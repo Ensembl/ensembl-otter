@@ -86,15 +86,15 @@ sub _generic_sql_fetch {
 =cut
 
 sub fetch_by_dbID {
-	my ($self,$id) = @_;
+    my ($self,$id) = @_;
 
-	if (!defined($id)) {
-		$self->throw("Id must be entered to fetch a CloneInfo object");
-	}
+    unless ($id) {
+        $self->throw("Id must be entered to fetch a CloneInfo object");
+    }
 
-	my $cloneinfo = $self->_generic_sql_fetch("where clone_info_id = $id");
+    my $cloneinfo = $self->_generic_sql_fetch("where clone_info_id = $id");
 
-	return $cloneinfo;
+    return $cloneinfo;
 }
 
 =head2 fetch_by_cloneID
@@ -110,75 +110,74 @@ sub fetch_by_dbID {
 =cut
 
 sub fetch_by_cloneID {
-	my ($self,$id) = @_;
+    my ($self,$id) = @_;
 
-	if (!defined($id)) {
-		$self->throw("Id must be entered to fetch a CloneInfo object");
-	}
+    if (!defined($id)) {
+        $self->throw("Id must be entered to fetch a CloneInfo object");
+    }
 
-	my $cloneinfo = $self->_generic_sql_fetch("where clone_id = $id");
+    my $cloneinfo = $self->_generic_sql_fetch("where clone_id = $id");
 
-	return $cloneinfo;
+    return $cloneinfo;
 }
 
 
 sub store {
-  my ($self,$cloneinfo) = @_;
+    my( $self, $cloneinfo ) = @_;
 
-  if (!defined($cloneinfo)) {
-     $self->throw("Must provide a cloneinfo object to the store method");
-  } elsif (! $cloneinfo->isa("Bio::Otter::CloneInfo")) {
-    $self->throw("Argument must be a CloneInfo object to the store method.  Currently is [$cloneinfo]");
-  }
+    unless ($cloneinfo) {
+        $self->throw("Must provide a CloneInfo object to the store method");
+    } elsif (! $cloneinfo->isa("Bio::Otter::CloneInfo")) {
+        $self->throw("Argument '$cloneinfo' to the store method must be a CloneInfo object.");
+    }
+    my $clone_id = $cloneinfo->clone_id
+        || $self->throw('Cannot store clone_info without clone_id');
 
-  my $authad = new Bio::Otter::DBSQL::AuthorAdaptor($self->db);
-  $authad->store($cloneinfo->author);
+    my $authad = new Bio::Otter::DBSQL::AuthorAdaptor($self->db);
+    $authad->store($cloneinfo->author);
 
-  my $update_sql = "update clone_info set is_active = \'false\'  where clone_id = " . $cloneinfo->clone_id;
 
-  my $update_sth = $self->prepare($update_sql);
-  my $update_rv = $update_sth->execute();
+    my $update_sth = $self->prepare(q{
+        UPDATE clone_info
+        SET is_active = 'false'
+        WHERE clone_id = ?
+        });
+    $update_sth->execute($cloneinfo->clone_id);
 
-  $self->throw("Failed to update cloneinfo for clone " . $cloneinfo->clone_id) unless $update_rv;
+    my $sth = $self->prepare(q{
+    INSERT INTO clone_info(clone_info_id
+          , clone_id
+          , author_id
+          , timestamp
+          , is_active
+          , database_source)
+    VALUES (NULL,?,?,NOW(),'true',?)
+        });
+    $sth->execute(
+        $cloneinfo->clone_id,
+        $cloneinfo->author->dbID,
+        $cloneinfo->source,
+        );
+    my $clone_info_id = $sth->{'mysql_insertid'} or $self->throw("No insert id");
+    $cloneinfo->dbID($clone_info_id);
 
-  my $sql = "insert into clone_info(clone_info_id,clone_id,author_id,timestamp,is_active,database_source) values (null," . 
-		$cloneinfo->clone_id . "," . 
-		$cloneinfo->author->dbID . ",now(),\'true\',\'" . 
-                $cloneinfo->source . "\')";
-
-  # print $sql . "\n";
-  my $sth = $self->prepare($sql);
-  my $rv = $sth->execute();
-
-  $self->throw("Failed to insert cloneinfo for clone " . $cloneinfo->clone_id) unless $rv;
-
-  $sth = $self->prepare("select last_insert_id()");
-  my $res = $sth->execute;
-  my $row = $sth->fetchrow_hashref;
-  $sth->finish;
-	
-  $cloneinfo->dbID($row->{'last_insert_id()'});
-
-  if (defined($cloneinfo->keyword)) {
-    my @keywords = $cloneinfo->keyword;
-    if (scalar(@keywords) > 0) {
+    # Store Keywords
+    if (my @keywords = $cloneinfo->keyword) {
+        my $key_aptr = $self->db->get_KeywordAdaptor;
         foreach my $keyword (@keywords) {
-            $keyword->clone_info_id($cloneinfo->dbID);
-            $self->db->get_KeywordAdaptor->store($keyword);
+            $keyword->clone_info_id($clone_info_id);
+            $key_aptr->store($keyword);
         }
     }
-  }
 
-  if (defined($cloneinfo->remark)) {
-    my @remarks = $cloneinfo->remark;
-    if (scalar(@remarks) > 0) {
+    # Store Remarks
+    if (my @remarks = $cloneinfo->remark) {
+        my $rem_aptr = $self->db->get_CloneRemarkAdaptor;
         foreach my $remark (@remarks) {
-            $remark->clone_info_id($cloneinfo->dbID);
-            $self->db->get_CloneRemarkAdaptor->store($remark);
+            $remark->clone_info_id($clone_info_id);
+            $rem_aptr->store($remark);
         }
     }
-  }
-
 }
 
 1;

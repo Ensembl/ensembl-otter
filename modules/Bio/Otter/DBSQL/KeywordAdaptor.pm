@@ -8,20 +8,6 @@ use vars qw(@ISA);
 
 @ISA = qw ( Bio::EnsEMBL::DBSQL::BaseAdaptor);
 
-# new is inherieted
-
-=head2 _generic_sql_fetch
-
- Title   : _generic_sql_fetch
- Usage   :
- Function:
- Example :
- Returns : 
- Args    :
-
-
-=cut
-
 sub _generic_sql_fetch {
 	my( $self, $where_clause ) = @_;
 
@@ -51,18 +37,6 @@ sub _generic_sql_fetch {
 	return @obj;
 }
 
-=head2 fetch_by_dbID
-
- Title   : fetch_by_dbID
- Usage   :
- Function:
- Example :
- Returns : 
- Args    :
-
-
-=cut
-
 sub fetch_by_dbID {
     my ($self,$id) = @_;
     
@@ -86,19 +60,6 @@ sub list_by_clone_info_id {
     
     return @obj;
 }
-
-=head2 fetch_by_name
-
- Title   : fetch_by_name
- Usage   :
- Function:
- Example :
- Returns : 
- Args    :
-
-
-=cut
-
 
 sub list_by_name {
     my ($self,$name) = @_;
@@ -129,19 +90,6 @@ sub get_all_Keyword_names {
     return @names;
 }
 
-
-=head2 store
-
- Title   : store
- Usage   :
- Function:
- Example :
- Returns : 
- Args    :
-
-
-=cut
-    
 sub store {
     my $self = shift @_;
 	
@@ -156,66 +104,31 @@ sub store {
 	    $self->throw("Must provide a clone_info_id value to the keyword object when trying to store");
 	}
 	
-	my $tmpkey = $self->exists($keyword);
+	my ($keyword_id, $is_stored) = $self->exists($keyword);
 	
-	if (defined($tmpkey)) {
-	    $keyword->dbID($tmpkey->dbID);
-
-	    if (defined($tmpkey->clone_info_id)) {
-		$keyword->clone_info_id($tmpkey->clone_info_id);
-		return;
-	    }
+	next if $is_stored;
+	
+	unless ($keyword_id) {
+	    my $sth = $self->prepare(q{
+                INSERT INTO keyword(keyword_id, keyword_name)
+                VALUES (NULL, ?)
+                });
+	    $sth->execute();
+	    $keyword_id = $sth->{'mysql_insertid'} or $self->throw('No insert id');
 	}
+	$keyword->dbID($keyword_id);
 	
-	if (!defined($keyword->dbID)) {
-
-	    my $sql = "insert into keyword(keyword_id,keyword_name) values (null,\'" . 
-		$keyword->name . "\')";
-	    
-	    my $sth = $self->prepare($sql);
-	    my $rv = $sth->execute();
-	    
-	    $self->throw("Failed to insert keyword " . $keyword->name) unless $rv;
-	    
-	    $sth = $self->prepare("select last_insert_id()");
-	    my $res = $sth->execute;
-	    my $row = $sth->fetchrow_hashref;
-	    $sth->finish;
-	
-	    $keyword->dbID($row->{'last_insert_id()'});
-	}
-	
-	# Now the clone bit
-
-	my $sql2 = "insert into clone_info_keyword(clone_info_id,keyword_id) values(" .
-	    $keyword->clone_info_id . "," . 
-	    $keyword->dbID . ")";
-
-	my $sth2 = $self->prepare($sql2);
-	my $rv2  = $sth2->execute;
-	
-	$self->throw("Failed to insert keyword ". $keyword->name . " for clone_info " . $keyword->clone_info_id) unless $rv2;
-	
-	$sth2->finish;
-	
+	# Insert link to clone_info
+	my $sth = $self->prepare(q{
+            INSERT INTO clone_info_keyword(clone_info_id, keyword_id)
+            VALUES(?,?)
+            });
+	$sth->execute($keyword->clone_info_id, $keyword_id);
     }
-    
 }
 
-=head2 exists
-
- Title   : exists
- Usage   :
- Function:
- Example :
- Returns : 
- Args    :
-
-
-=cut
-
 sub exists {
-    my ($self,$keyword) = @_;
+    my ($self, $keyword) = @_;
 
     if (!defined($keyword)) {
 	$self->throw("Must provide a keyword object to the exists method");
@@ -223,44 +136,34 @@ sub exists {
 	$self->throw("Argument must be a keyword object to the exists method.  Currently is [$keyword]");
     }
 
-    if (!defined($keyword->name)) {
-	$self->throw("Can't check if a keyword exists without a name");
-    }
+    my $keyword_name = $keyword->name
+        || $self->throw("Can't check if a keyword exists without a name");
 
-    my $sql = "select * from keyword where keyword_name = \'"  . $keyword->name . "\'";
-
-    my $sth = $self->prepare($sql);
-    my $rv  = $sth->execute;
-
-    $self->throw("Could not check if keyword " . $keyword->name . " exists") unless $rv;
-
-    my $newkey = new Bio::Otter::Keyword(-name => $keyword->name);
-
-    if (my $ref = $sth->fetchrow_hashref) {
-	
-	my $dbid = $ref->{keyword_id};
-
-	$newkey->dbID($dbid);
-
-    } else {
-	return $newkey;
+    # Get the id for this keyword if it is in the db.
+    my $sth = $self->prepare(q{ SELECT keyword_id FROM keyword WHERE keyword_name = ? });
+    $sth->execute($keyword_name);
+    my ($keyword_id) = $sth->fetchrow;
+    
+    if ($keyword_id) {
+        # They keyword is in the database, but is it linked to the clone_info?
+        if (my $clone_info_id = $keyword->clone_info_id) {
+	    my $sth = $self->prepare(q{
+                SELECT count(*)
+                FROM clone_info_keyword
+                WHERE keyword_id = ?
+                  AND clone_info_id = ?
+                });
+	    $sth->execute($keyword_id, $clone_info_id);
+            my ($count) = $sth->fetchrow;
+	    if ($count) {
+                # keyword is in the database, and is already linked to the clone_info
+                return($keyword_id, 1);
+	    }
+        }
     }
     
-    if (defined($keyword->clone_info_id)) {
-	my $sql2 = "select * from clone_info_keyword where keyword_id = " . $newkey->dbID . " and clone_info_id = " . $keyword->clone_info_id;
-	my $sth2 = $self->prepare($sql2);
-	my $rv2  = $sth2->execute;
-
-	$self->throw("Can't find link between keyword and clone_info for keyword " . $keyword->name . " and info " . $keyword->clone_info_id) unless $rv2;
-
-	if (my $ref = $sth2->fetchrow_hashref) {
-	    my $clone_info_id = $ref->{clone_info_id};
-	    $newkey->clone_info_id($clone_info_id);
-	}
-    }
-
-    return $newkey;
-    
+    # keyword_id will be undef if it is not in the database
+    return($keyword_id);
 }
 
 1;

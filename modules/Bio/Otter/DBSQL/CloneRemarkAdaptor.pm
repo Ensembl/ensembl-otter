@@ -8,119 +8,60 @@ use vars qw(@ISA);
 
 @ISA = qw ( Bio::EnsEMBL::DBSQL::BaseAdaptor);
 
-# new is inherieted
-
-=head2 _generic_sql_fetch
-
- Title   : _generic_sql_fetch
- Usage   :
- Function:
- Example :
- Returns : 
- Args    :
-
-
-=cut
-
 sub _generic_sql_fetch {
-	my( $self, $where_clause ) = @_;
+    my( $self, $where_clause, @param ) = @_;
 
-	my $sql = q{
-		SELECT clone_remark_id,
-		       remark,
-		       clone_info_id 
-		FROM clone_remark }
-	. $where_clause;
+    my $sth = $self->prepare(q{
+        SELECT clone_remark_id
+          , remark
+          , clone_info_id
+        FROM clone_remark
+        } . $where_clause);
+    $sth->execute(@param);
 
-	my $sth = $self->prepare($sql);
-	$sth->execute;
+    my @remark;
 
-	my @remark;
+    while (my $row = $sth->fetch) {
+        my $remark = new Bio::Otter::CloneRemark;
+        $remark->dbID(         $row->[0]);
+        $remark->remark(       $row->[1]);
+        $remark->clone_info_id($row->[2]);
 
-	while (my $ref = $sth->fetchrow_hashref) {
-	    my $remark = new Bio::Otter::CloneRemark;
-	    $remark->dbID($ref->{clone_remark_id});
-	    $remark->remark($ref->{remark});
-	    $remark->clone_info_id($ref->{clone_info_id});
-		
-	    push(@remark,$remark);
+        push(@remark,$remark);
 
-	}
+    }
 
-	return @remark;
+    return @remark;
 }
-
-=head2 fetch_by_dbID
-
- Title   : fetch_by_dbID
- Usage   :
- Function:
- Example :
- Returns : 
- Args    :
-
-
-=cut
 
 sub fetch_by_dbID {
-	my ($self,$id) = @_;
+    my ($self, $id) = @_;
 
-	if (!defined($id)) {
-		$self->throw("Id must be entered to fetch a CloneRemark object");
-	}
+    $self->throw("Id must be entered to fetch a CloneRemark object")
+        unless $id;
 
-	my @remark = $self->_generic_sql_fetch("where clone_remark_id = $id");
-
-	# Not sure about this
-	if (scalar(@remark) == 1) {
-	    return $remark[0];
-	}
+    my ($remark) = $self->_generic_sql_fetch("where clone_remark_id = ? ", $id);
+    return $remark;
 }
-
-=head2 list_by_CloneInfo_id
-
- Title   : list_by_CloneInfo_id
- Usage   : $obj->list_by_CloneInfo_id($newval)
- Function: 
- Example : 
- Returns : value of list_by_CloneInfo_id
- Args    : newvalue (optional)
-
-
-=cut
 
 sub list_by_clone_info_id {
-   my ($self,$id) = @_;
+    my ($self, $id) = @_;
 
-   if (!defined($id)) {
-       $self->throw("CloneInfo id must be entered to fetch a CloneRemark object");
-   }
+    $self->throw("CloneInfo id must be entered to fetch a CloneRemark object")
+        unless $id;
 
-   my @remark = $self->_generic_sql_fetch("where clone_info_id = $id");
-
-   return @remark;
+    my ($remark) = $self->_generic_sql_fetch("where clone_info_id = ? ", $id);
+    return $remark;
 }
-
-=head2 store
-
- Title   : store
- Usage   :
- Function:
- Example :
- Returns : 
- Args    :
-
-
-=cut
 
 sub store {
     my $self = shift @_;
 
     while (my $remark = shift @_) {
 	if (!defined($remark)) {
-		$self->throw("Must provide a CloneRemark object to the store method");
+	    $self->throw("Must provide a CloneRemark object to the store method");
 	} elsif (! $remark->isa("Bio::Otter::CloneRemark")) {
-		$self->throw("Argument must be a CloneRemark object to the store method.  Currently is [$remark]");
+	    $self->throw("Argument must be a CloneRemark object to the store method.  Currently is [$remark]");
 	}
 
 	my $tmp = $self->exists($remark);
@@ -130,67 +71,39 @@ sub store {
 	   return;
 	}
 
-        my $quoted_remark = $self->db->db_handle->quote($remark->remark);
-        my $sql = "insert into clone_remark(clone_remark_id,remark,clone_info_id) values (null," .
-                        $quoted_remark . "," .
-                        $remark->clone_info_id . ")";
-
-#	my $sql = "insert into clone_remark(clone_remark_id,remark,clone_info_id) values (null,\'" . 
-#		$remark->remark . "\',".
-#		$remark->clone_info_id . ")";
-
-	my $sth = $self->prepare($sql);
-	my $rv = $sth->execute();
-
-	$self->throw("Failed to insert clone remark " . $remark->remark) unless $rv;
-
-	$sth = $self->prepare("select last_insert_id()");
-	my $res = $sth->execute;
-	my $row = $sth->fetchrow_hashref;
-	$sth->finish;
-	
-	$remark->dbID($row->{'last_insert_id()'});
+	my $sth = $self->prepare(q{
+            INSERT INTO clone_remark(clone_remark_id
+                  , remark
+                  , clone_info_id)
+            VALUES (NULL,?,?)
+            });
+	$sth->execute($remark->remark, $remark->clone_info_id);
+        my $clone_remark_id = $sth->{'mysql_insertid'} or $self->throw('No insert id');
+	$remark->dbID($clone_remark_id);
     }
     return 1;
 }
 
-=head2 exists
-
- Title   : exists
- Usage   :
- Function:
- Example :
- Returns : 
- Args    :
-
-
-=cut
-
 sub exists {
-	my ($self,$remark) = @_;
+    my ($self,$remark) = @_;
 
-	if (!defined($remark)) {
-		$self->throw("Must provide a CloneRemark object to the exists method");
-	} elsif (! $remark->isa("Bio::Otter::CloneRemark")) {
-		$self->throw("Argument must be an CloneRemark object to the exists method.  Currently is [$remark]");
-	}
+    if (!defined($remark)) {
+        $self->throw("Must provide a CloneRemark object to the exists method");
+    } elsif (! $remark->isa("Bio::Otter::CloneRemark")) {
+	$self->throw("Argument must be an CloneRemark object to the exists method.  Currently is [$remark]");
+    }
 
-	if (!defined($remark->remark)) {
-		$self->throw("Can't check if a clone remark exists without remark text");
-	}
-	if (!defined($remark->clone_info_id)) {
-		$self->throw("Can't check if a clone remark exists without a clone info id");
-	}
+    my $remark_text = $remark->remark
+        || $self->throw("Can't check if a clone remark exists without remark text");
+    my $clone_info_id = $remark->clone_info_id
+        || $self->throw("Can't check if a clone remark exists without a clone info id");
 
-        my $quoted_remark = $self->db->db_handle->quote($remark->remark);
-	my @newremark = $self->_generic_sql_fetch("where remark = " .   $quoted_remark .
-						 " and clone_info_id = " . $remark->clone_info_id);
+    my ($newremark) = $self->_generic_sql_fetch(
+        "WHERE remark = ? AND clone_info_id = ? ",
+        $remark_text, $clone_info_id,
+        );
 
-        if (scalar(@newremark) > 0) {
-	   return $newremark[0];
-        } else {
-           return "";
-        }
+    return $newremark;
 }
 
 1;
