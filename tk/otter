@@ -1,3 +1,4 @@
+#!/nfs/humace2/hum/bin/perl -w
 #!/usr/local/bin/perl5.6.1 -w
 
 
@@ -35,8 +36,8 @@ use Symbol 'gensym';
         if $unlock_flag and $write_flag;
 
     my $cl = Bio::Otter::Lace::Client->new;
-    $cl->host('ecs1d');
-    $cl->port(39312);
+    $cl->host($host);
+    $cl->port($port);
     $cl->write_access($write_flag);
     
     my $db = $cl->new_AceDatabase;
