@@ -66,8 +66,8 @@ sub draw_seq_row {
     my ($id, @text) = @$row;
     $id = "ana_seq_id=$id";
     my $canvas = $band->canvas;
-    my $font_size = $band->font_size;
-    my @tags = $band->tags;
+    my $font   = $band->column_font;
+    my @tags   = $band->tags;
     my $x1 = 3;
     my $y1 = $y_offset + 3;
     for (my $i = 0; $i < @text; $i++) {
@@ -75,7 +75,7 @@ sub draw_seq_row {
         my $label = $canvas->createText(
             ($x1 + $x_offsets[$i]), $y1,
             -text       => $t,
-            -font       => ['courier', $font_size],
+            -font       => $font,
             -anchor     => 'nw',
             -tags       => [@tags, 'contig_gap', $id],
             );
@@ -101,6 +101,12 @@ sub chooser_map {
         $band->{'_chooser_map'} = [@map];
     }
     return @{$band->{'_chooser_map'}};
+}
+
+sub column_font {
+    my( $band ) = @_;
+    
+    return ['courier', $band->font_size];
 }
 
 sub column_offsets {
@@ -145,9 +151,11 @@ sub column_widths {
             }
         }
     }
-    my $font_size = $band->font_size;
-    foreach my $i (@widths) {
-        $i *= $font_size;
+    my $font = $band->column_font;
+    my $canvas = $band->canvas;
+    for (my $i = 0; $i < @widths; $i++) {
+        my $text = $longest[$i] . 'XX';
+        $widths[$i] = $canvas->fontMeasure($font, $text);
     }
     return @widths;
 }
