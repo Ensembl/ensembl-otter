@@ -310,10 +310,9 @@ sub draw_repeat_class {
     open GIF, "> $tmp_img" or die;
     print GIF $gif;
     close GIF;
-    my $image = $canvas->toplevel->Photo('IMG',
-        #'-format'   => 'gif',
-        #-file       => $tmp_img,
-        -data       => $gif,
+    my $image = $canvas->toplevel->Photo(
+        '-format'   => 'gif',
+        -file       => $tmp_img,
         );
     $canvas->createImage(
         $x, $y1 + 1,    # Off-by-1 error in placing images?
