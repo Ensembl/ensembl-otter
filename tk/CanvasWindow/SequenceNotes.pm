@@ -937,8 +937,8 @@ sub popup_ana_seq_history{
     unless ( $self->check_for_History($index) ){
         # window has not been created already - create one
         my $cs =  $self->get_CloneSequence_list->[$index];
-        my $clone_list = $cs->get_all_SequenceNotes ;
-        if ($clone_list ){
+        my $clone_list = $cs->get_all_SequenceNotes;
+        if (@$clone_list){
             my $top = $self->canvas->Toplevel();
             $top->transient($self->canvas->toplevel);
             my $hp  = CanvasWindow::SequenceNotes::History->new($top, 550 , 50);
@@ -953,7 +953,7 @@ sub popup_ana_seq_history{
             $self->add_History($hp);
         }
         else{
-            $self->message( "no History for sequence " . $cs->contig_name . "  " . $cs->clone_name); 
+            $self->message( "No History for sequence " . $cs->contig_name . "  " . $cs->clone_name); 
         }
     }  
 }
