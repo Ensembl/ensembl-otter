@@ -34,52 +34,53 @@ use Hum::Submission 'prepare_cached_statement';
     save_gene_numbers($dba);
     save_tsct_names($dba);
 
-    my( %root_gid_name );
-    my $count = 0;
-    foreach my $gid (@$gene_db_id) {
-        $count++;
-        print STDERR " $count" unless $count % 100;
-        my $gene = $gene_aptr->fetch_by_dbID($gid);
-        my $gene_name = $gene->gene_info->name->name;
-        
-        my $tsct_list = $gene->get_all_Transcripts;
-        my $fix_flag = 1;
-        foreach my $tsct (@$tsct_list) {
-            my $name = $tsct->transcript_info->name;
-            my ($root) = $name =~ /^(.+)-\d{3}$/
-                or next;
-            $root_gid_name{$root}{$gid} = $gene_name;
-        }
-    }
-    
-    my( %fix_gid );
-    while (my ($root, $gene_hash) = each %root_gid_name) {
-        next if keys(%$gene_hash) == 1;
-        # Choose which gids should get renamed
-        # The one that isn't clone based, or the one with the largest gid.
-        my $found_keep = 0;
-        foreach my $gid (keys %$gene_hash) {
-            my $name = $gene_hash->{$gid};
-            if (index($name, $root) == 0) {
-                delete($gene_hash->{$gid});
-                $found_keep = 1;
-            }
-        }
-        unless ($found_keep) {
-            my ($oldest) = sort {$a <=> $b} keys %$gene_hash;
-            delete($gene_hash->{$oldest});
-        }
-        foreach my $gid (keys %$gene_hash) {
-            $fix_gid{$gid} = 1;
-        }
-    }
+    #my( %root_gid_name );
+    #my $count = 0;
+    #foreach my $gid (@$gene_db_id) {
+    #    $count++;
+    #    print STDERR " $count" unless $count % 100;
+    #    my $gene = $gene_aptr->fetch_by_dbID($gid);
+    #    my $gene_name = $gene->gene_info->name->name;
+    #    
+    #    my $tsct_list = $gene->get_all_Transcripts;
+    #    my $fix_flag = 1;
+    #    foreach my $tsct (@$tsct_list) {
+    #        my $name = $tsct->transcript_info->name;
+    #        my ($root) = $name =~ /^(.+)-\d{3}$/
+    #            or next;
+    #        $root_gid_name{$root}{$gid} = $gene_name;
+    #    }
+    #}
+    #
+    #my( %fix_gid );
+    #while (my ($root, $gene_hash) = each %root_gid_name) {
+    #    next if keys(%$gene_hash) == 1;
+    #    # Choose which gids should get renamed
+    #    # The one that isn't clone based, or the one with the largest gid.
+    #    my $found_keep = 0;
+    #    foreach my $gid (keys %$gene_hash) {
+    #        my $name = $gene_hash->{$gid};
+    #        if (index($name, $root) == 0) {
+    #            delete($gene_hash->{$gid});
+    #            $found_keep = 1;
+    #        }
+    #    }
+    #    unless ($found_keep) {
+    #        my ($oldest) = sort {$a <=> $b} keys %$gene_hash;
+    #        delete($gene_hash->{$oldest});
+    #    }
+    #    foreach my $gid (keys %$gene_hash) {
+    #        $fix_gid{$gid} = 1;
+    #    }
+    #}
 
-    printf STDERR "Found %d bad transcript roots to fix\n", scalar(keys %fix_gid);
+    #printf STDERR "Found %d bad transcript roots to fix\n", scalar(keys %fix_gid);
     
     foreach my $gid (@$gene_db_id) {
         $dba->begin_work;
         eval{
-            fix_names($dba, $gene_aptr, $gid, $ren_hash, $fix_gid{$gid} ? 1 : 0);
+            #fix_names($dba, $gene_aptr, $gid, $ren_hash, $fix_gid{$gid} ? 1 : 0);
+            fix_names($dba, $gene_aptr, $gid, $ren_hash, 0);
         };
         if ($@) {
             $dba->rollback;
@@ -164,12 +165,12 @@ sub is_sequence_name {
             $fix_names = 1;
         }
 
-        my $is_corf = 0;
-        my $corf_gene_number = undef;
-        if ($old_gene_name =~ /^C([0-9XY]{1,2})orf(\d+)$/) {
-            print STDERR "  CORF\n";
-            $is_corf = 1;
-            $corf_gene_number = $2;
+        my $is_int_end = 0;
+        my $int_end_gene_number = undef;
+        if ($old_gene_name =~ /[A-Za-z](\d+)$/) {
+            print STDERR "  INT_END\n";
+            $is_int_end = 1;
+            $int_end_gene_number = $1;
         }
 
         # grep the gene number from the transcript if it wasn't in the name
@@ -187,7 +188,7 @@ sub is_sequence_name {
         ### Fix gene classes here too?
 
         my $tsct_rename_map = [];
-        my $fix_corf = 0;
+        my $fix_int_end = 0;
         my $tsct_list = $gene->get_all_Transcripts;
         foreach my $tsct (sort {$a->transcript_info->name cmp $b->transcript_info->name} @$tsct_list) {
             my $old_tsct_name = $tsct->transcript_info->name;
@@ -205,9 +206,9 @@ sub is_sequence_name {
             $gene_name_root ||= '';
             $variant_number ||= '001';
 
-            if ($is_corf and $gene_number == $corf_gene_number) {
+            if ($is_int_end and $gene_number == $int_end_gene_number) {
                 $gene_number = undef if ! $gene_clone_root;
-                $fix_corf = 1;
+                $fix_int_end = 1;
             }
             elsif ($fix_root) {
                 $gene_name_root = '';
@@ -215,13 +216,14 @@ sub is_sequence_name {
             }
             elsif ("$class$name" eq $old_tsct_name and name_is_clone_based($name, $all_clone_names)) {
                 # Already has intl gene name
-                next unless $fix_corf;
+                next unless $fix_int_end;
             }
 
             # Rename transcript:
             unless ($gene_clone_root) {
                 ($gene_number, $gene_clone_root) = make_new_gene_name($gene_number, $gene_class . $clone3prime);
             }
+            next if ($fix_int_end and $gene_number >= $int_end_gene_number);
 
             my $new_tsct_name = "$gene_clone_root-$variant_number";
             while (transcript_name_exists($new_tsct_name)) {
