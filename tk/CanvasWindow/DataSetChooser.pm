@@ -111,12 +111,18 @@ sub open_dataset {
 
 sub draw {
     my( $self ) = @_;
-    
+
+    my $canvas = $self->canvas;
+
+    $canvas->toplevel->withdraw;
     my @dsl = $self->Client->get_all_DataSets;
+    $canvas->toplevel->deiconify;
+    $canvas->toplevel->raise;
+    $canvas->toplevel->focus;
+
     my $font = $self->font;
     my $size = $self->font_size;
     my $row_height = int $size * 1.5;
-    my $canvas = $self->canvas;
     my $font_def = [$font, $size, 'bold'];
     for (my $i = 0; $i < @dsl; $i++) {
         my $set = $dsl[$i];
