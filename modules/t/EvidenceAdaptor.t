@@ -31,7 +31,6 @@ my $obj2 = new Bio::Otter::Evidence(-name => 'pog',
 				   -type           => 'Protein');
 my $obj = new Bio::Otter::Evidence(-name => 'AC897312',
                                    -transcript_info_id  => 2,
-                                   -db_name        => 'dbEST',
 				   -type           => 'EST');
 
 my @ev = ($obj,$obj2);

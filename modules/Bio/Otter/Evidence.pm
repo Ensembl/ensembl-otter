@@ -11,17 +11,15 @@ sub new {
 
   my $self = bless {}, $class;
 
-  my ($dbid,$name,$db_name,$transcript_info_id,$type)  = $self->_rearrange([qw(
+  my ($dbid,$name,$transcript_info_id,$type)  = $self->_rearrange([qw(
 							  DBID
                                                           NAME
-                                                          DB_NAME
 							  TRANSCRIPT_INFO_ID
 							  TYPE
 							  )],@args);
 
   $self->dbID($dbid);
   $self->name($name);
-  $self->db_name($db_name);
   $self->transcript_info_id($transcript_info_id);
   $self->type($type);
 
@@ -70,29 +68,6 @@ sub dbID{
     }
 
     return $obj->{'dbID'};
-
-}
-
-=head2 db_name
-
- Title   : db_name
- Usage   : $obj->db_name($newval)
- Function: 
- Example : 
- Returns : value of db_name
- Args    : newvalue (optional)
-
-
-=cut
-
-sub db_name{
-   my ($obj,$value) = @_;
-
-   if( defined $value) {
-      $obj->{'db_name'} = $value;
-    }
-
-    return $obj->{'db_name'};
 
 }
 
@@ -166,7 +141,6 @@ sub toString{
        if ($arg->isa("Bio::Otter::Evidence")) {
            my $dbID = "";
            my $infoid = "";
-           my $db_name = "";
 
            if (defined($arg->dbID)) {
 	     $dbID = $arg->dbID;
@@ -174,12 +148,8 @@ sub toString{
            if (defined($arg->transcript_info_id)) {
 	     $infoid = $arg->transcript_info_id;
            }
-           if (defined($arg->db_name)) {
-	     $infoid = $arg->db_name;
-           }
 	   $str = $str . "DbID                : " . $dbID . "\n";
 	   $str = $str . "Name                : " . $arg->name . "\n";
-	   $str = $str . "DBName              : " . $db_name . "\n";
 	   $str = $str . "Transcript info id  : " . $infoid . "\n";
 	   $str = $str . "Type                : " . $arg->type . "\n";
        } else {

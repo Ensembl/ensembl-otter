@@ -635,20 +635,6 @@ sub otter_to_ace {
         $str .= "\n";
     } 
 
-    my %ev_types = (
-        'EST'     => "EST_match",
-        'cDNA'    => "cDNA_match",
-        'Protein' => "Protein_match",
-        'Genomic' => "Genomic_match"
-        );
-
-    # Need correct TR and WP mappings
-    my %dbhash = (
-        "EMBL"       => "EM",
-        "SWISSPROT"  => "SW",
-        "protein_id" => "UNK",
-        );
-
     # Add Sequence objects for Transcripts
     foreach my $gene (@$genes) {
         my $gene_name;
@@ -690,18 +676,12 @@ sub otter_to_ace {
                 }
             }
 
-            my @ev = $tran->transcript_info->evidence;
-
-            @ev = sort {$a->name cmp $b->name} @ev;
-
+            # Supporting evidence
+            my @ev = sort {$a->name cmp $b->name} $tran->transcript_info->evidence;
             foreach my $ev (@ev) {
-                if ($ev->db_name and $dbhash{$ev->db_name}) {
-                    $str .= $ev_types{ $ev->type }
-                        . " \"" . $dbhash{ $ev->db_name } . ":"
-                        . $ev->name . "\"\n";
-                } else {
-                    $str .= $ev_types{ $ev->type } . " \"" . $ev->name . "\"\n";
-                }
+                my $type = $ev->type;
+                my $name = $ev->name;
+                $str .= qq{${type}_match "$name"\n};
             }
 
             my $trans_off;
@@ -730,7 +710,7 @@ sub otter_to_ace {
             $str .= "Predicted_gene\n";
 
             if (my $translation = $tran->translation) {
-                $str .= sprintf qq{Translation_id "%s"\n}, $tran->stable_id;
+                $str .= sprintf qq{Translation_id "%s"\n}, $translation->stable_id;
                 $str .= "CDS ";
                 if ($strand == 1) {
                     $str .= rna_pos($tran, $tran->coding_region_start) . " ";
@@ -1179,40 +1159,50 @@ sub ace_to_otter {
     my %anntran;
 
     SEQ: foreach my $seq (keys %sequence) {
-        my $transcript = $sequence{$seq}{transcript} or next SEQ;
+        my $seq_data = $sequence{$seq};
+        my $transcript = $seq_data->{transcript} or next SEQ;
         next SEQ unless @{$transcript->get_all_Exons};
         print STDERR "Seq = $seq\n";
 
-        my $source = $sequence{$seq}{Source};
+        my $source = $seq_data->{Source};
         print STDERR "Key $seq    $source    $slice_name\n";
         next SEQ unless $source and $source eq $slice_name;
 
-        if (my $tsid = $sequence{$seq}{Transcript_id}) {
+        if (my $tsid = $seq_data->{Transcript_id}) {
             $transcript->stable_id($tsid);
         }
 
         my $traninfo = new Bio::Otter::TranscriptInfo;
-        if (my $au_name = $sequence{$seq}{Transcript_author}) {
+        if (my $au_name = $seq_data->{Transcript_author}) {
             my $author = $authors{$au_name} or die "No author object '$au_name'";
             $traninfo->author($author);
         }
 
+        if (my $rem_list = $seq_data->{remark}) {
+            foreach my $txt (@$rem_list) {
+                my $remark = Bio::Otter::TranscriptRemark->new;
+                # Method should be called "name" for symetry with CloneRemark
+                $remark->remark("Annotation_remark- $txt");
+                $traninfo->remark($remark);
+            }
+        }
+
         # Start not found and end not found (should it ever be mRNA_start_not_found?)
-        if ($sequence{$seq}{Method} =~ /RNA/) {
+        if ($seq_data->{Method} =~ /RNA/) {
             $traninfo->mRNA_start_not_found(
-                $sequence{$seq}{Start_not_found} ? 1 : 0);
+                $seq_data->{Start_not_found} ? 1 : 0);
             $traninfo->mRNA_end_not_found(
-                $sequence{$seq}{End_not_found}     ? 1 : 0);
+                $seq_data->{End_not_found}     ? 1 : 0);
         } else {
             $traninfo->cds_start_not_found(
-                $sequence{$seq}{Start_not_found} ? 1 : 0);
+                $seq_data->{Start_not_found} ? 1 : 0);
             $traninfo->cds_end_not_found(
-                $sequence{$seq}{End_not_found}     ? 1 : 0);
+                $seq_data->{End_not_found}     ? 1 : 0);
         }
 
         # Remarks for the transcript
-        if (defined($sequence{$seq}{Remark})) {
-            my @rem = @{ $sequence{$seq}{Remark} };
+        if (defined($seq_data->{Remark})) {
+            my @rem = @{ $seq_data->{Remark} };
 
             foreach my $rem (@rem) {
                 my $remark = new Bio::Otter::TranscriptRemark(-remark => $rem);
@@ -1222,31 +1212,15 @@ sub ace_to_otter {
 
         # Evidence for the transcript
         my @evidence;
-
-        # TR should probably be trembl but its an enum in the db
-        # WP should probably be wormpep but its an enum in the db
-        my %dbhash = (
-            "EM" => "EMBL",
-            "SW" => "SWISSPROT",
-            "TR" => "protein_id",
-            "WP" => "protein_id",
-        );
-
         foreach my $type (qw{ EST cDNA Protein Genomic }) {
             my $match_type = "${type}_match";
-            if (my $ev_array = $sequence{$seq}{$match_type}) {
+            if (my $ev_array = $seq_data->{$match_type}) {
 
-                foreach my $ev (@$ev_array) {
-                    my ($db_abbrev, $name) = split /:/, $ev;
-
-                    my $db_name = $dbhash{uc $db_abbrev};
-
-                    #print STDERR "dbname = $db_name name = $name\n";
+                foreach my $name (@$ev_array) {
                     my $obj = new Bio::Otter::Evidence(
                         -type        => $type,
                         -name        => $name,
-                        -db_name => $db_name,
-                    );
+                        );
 
                     push (@evidence, $obj);
                 }
@@ -1256,14 +1230,14 @@ sub ace_to_otter {
 
         # Type of transcript (Method tag)
         my $class = Bio::Otter::TranscriptClass
-            ->new(-name => $sequence{$seq}{Method});
+            ->new(-name => $seq_data->{Method});
 
         $traninfo->class($class);
         $traninfo->name($seq);
 
-        #print STDERR "Defined $seq " . $sequence{$seq}{transcript} . "\n";
-        if (defined($sequence{$seq}{transcript})) {
-            my $anntran = bless $sequence{$seq}{transcript},
+        #print STDERR "Defined $seq " . $seq_data->{transcript} . "\n";
+        if (defined($seq_data->{transcript})) {
+            my $anntran = bless $seq_data->{transcript},
                 "Bio::Otter::AnnotatedTranscript";
 
             $anntran->transcript_info($traninfo);
@@ -1278,7 +1252,7 @@ sub ace_to_otter {
             # Set the translation start and end
 
             # Set the phase of the transcript
-            my $phase = $sequence{$seq}{Start_not_found};
+            my $phase = $seq_data->{Start_not_found};
 
             if (defined($phase) && $phase != 0) {
                 $phase--;
@@ -1349,10 +1323,10 @@ sub ace_to_otter {
         TRAN: foreach my $tranname (@{ $genes{$gname}{transcripts} }) {
             my $tran = $anntran{$tranname};
 
-                unless ($tran) {
-                        warn "Transcript '$tranname' in Locus '$gname' does not exist\n";
-                        next TRAN;
-                }
+            unless ($tran) {
+                warn "Transcript '$tranname' in Locus '$gname' does not exist\n";
+                next TRAN;
+            }
 
             # If we have mRNA in the name look for a CDS
             # with the same name without the .mRNA
@@ -1412,9 +1386,9 @@ sub ace_to_otter {
                     }
                 }
                 if (my $translation = $tran->translation) {
-                        if (my $tl_id = $sequence{$tranname}{Translation_id}) {
-                                $translation->stable_id($tl_id);
-                        }
+                    if (my $tl_id = $sequence{$tranname}{Translation_id}) {
+                        $translation->stable_id($tl_id);
+                    }
                 }
             }
 
@@ -1523,10 +1497,7 @@ sub ace_to_otter {
         $tile->component_Seq  ($contig);
 
         push(@$tile_path, $tile);
-    }
-
-    warn "Made ", scalar(@genes), " genes";
-    
+    }    
     
     #return(\@genes, \%frags, $assembly_type, $dna, $chr_name, $chr_start, $chr_end);
     return(\@genes, $tile_path, $assembly_type, $dna, $chr_name, $chr_start, $chr_end);
