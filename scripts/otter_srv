@@ -125,7 +125,8 @@ sub make_new_child {
       my $client = $server->accept() or last;
 
       sigprocmask(SIG_BLOCK, $sigset2) or die "Can't block SIGHUP for request: $!\n";
-      $SIG{CHLD} = 'IGNORE';
+      my $sigset_CHLD = POSIX::SigSet->new(&POSIX::SIGCHLD);
+      sigprocmask(SIG_BLOCK, $sigset_CHLD) or die "Can't block SIGCHLD for THIS BIT: $!\n";
 
       my $r = $client->get_request;
 
@@ -195,7 +196,8 @@ sub make_new_child {
         print STDERR $message;
       }
       $client->close;
-      $SIG{CHLD} = \&REAPER;
+      sigprocmask(SIG_UNBLOCK, $sigset_CHLD) or die "Can't unblock SIGCHLD after request: $!\n";
+#      $SIG{CHLD} = \&REAPER;
       sigprocmask(SIG_UNBLOCK, $sigset2) or die "Can't unblock SIGHUP after request: $!\n";
     }
 
