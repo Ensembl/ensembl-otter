@@ -34,17 +34,6 @@ sub tiling_direction {
     return $band->{'_tiling_direction'} || -1;
 }
 
-sub virtual_contig {
-    my( $band, $vc ) = @_;
-    
-    if ($vc) {
-        confess "Not a Bio::EnsEMBL::Virtual::Contig : '$vc'"
-            unless ref($vc) and $vc->isa('Bio::EnsEMBL::Virtual::Contig');
-        $band->{'_virtual_contig'} = $vc;
-    }
-    return $band->{'_virtual_contig'};
-}
-
 sub gold {
     my( $band, $flag ) = @_;
     

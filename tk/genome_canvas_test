@@ -7,6 +7,7 @@ use lib '/nfs/disk84/jgrg/temp/ensembl/modules';
 use strict;
 use GenomeCanvas;
 use GenomeCanvas::Band::TilingPath;
+use GenomeCanvas::Band::Plot;
 use Getopt::Long 'GetOptions';
 
 {
@@ -75,6 +76,12 @@ use Getopt::Long 'GetOptions';
         #$tiling2->tiling_direction(1);
         #my $set2 = $gc->new_BandSet;
         #$set2->add_Band($tiling2);
+
+        my $plot = GenomeCanvas::Band::Plot->new;
+        $plot->virtual_contig($vc);
+        $plot->height(100);
+        my $plot_set = $gc->new_BandSet;
+        $plot_set->add_Band($plot);
 
         $gc->residues_per_pixel($scale);
         $gc->render;

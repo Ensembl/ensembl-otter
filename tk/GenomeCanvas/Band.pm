@@ -17,24 +17,89 @@ sub new {
 }
 
 sub render {
-    my( $band, @tags ) = @_;
-    
-    $band->band_delete;
+    my( $band, $y_offset, @tags ) = @_;
     
     my $color = 'red';
     warn "GenomeCanvas::Band : Drawing default $color rectangle\n";
-    my @bbox = $band->frame;
-    my $width = ($bbox[2] - $bbox[0]) || 600;
-    $bbox[1] = $bbox[3] + 3;
-    $bbox[2] = $bbox[0] + $width;
-    $bbox[3] = $bbox[1] + 10;
-    
+
     my $canvas = $band->canvas;
-    my $id = $canvas->createRectangle(@bbox,
+    my @bbox = $canvas->bbox;
+    my( $width );
+    if (@bbox) {
+        $width = $bbox[2] - $bbox[0];
+    } else {
+        $width = 600;
+    }
+    
+    my @rect = (0, $y_offset, $width, $y_offset + 10);
+    my $id = $canvas->createRectangle(
+        @rect,
         -fill       => $color,
         -outline    => undef,
         -tags       => [@tags],
         );
+}
+
+sub tick_label {
+    my( $band, $text, $dir, $start_pos, @tags ) = @_;
+    
+    my @line_start = @$start_pos;
+    confess "line_start array must have 2 elements" unless @line_start == 2;
+    
+    my $tick_length = 4;
+    my $label_pad   = 3;
+    my( $anchor, $justify, @line_end, @text_start );
+    if ($dir eq 'n') {
+        $anchor = 's';
+        $justify = 'center';
+        @line_end = ($line_start[0], $line_start[1] - $tick_length);
+        @text_start = ($line_end[0], $line_end[1]   - $label_pad);
+    }
+    elsif ($dir eq 'e') {
+        $anchor = 'w';
+        $justify = 'left';
+        @line_end = ($line_start[0] + $tick_length, $line_start[1]);
+        @text_start = ($line_end[0] + $label_pad,   $line_end[1]);
+    }
+    elsif ($dir eq 's') {
+        $anchor = 'n';
+        $justify = 'center';
+        @line_end = ($line_start[0], $line_start[1] + $tick_length);
+        @text_start = ($line_end[0], $line_end[1]   + $label_pad);
+    }
+    elsif ($dir eq 'w') {
+        $anchor = 'e';
+        $justify = 'right';
+        @line_end = ($line_start[0] - $tick_length, $line_start[1]);
+        @text_start = ($line_end[0] - $label_pad,   $line_end[1]);
+    }
+    else {
+        confess "unknown direction '$dir'";
+    }
+    
+    my $canvas = $band->canvas;
+    $canvas->createLine(
+        @line_start, @line_end,
+        -tags       => [@tags],
+        );
+    $canvas->createText(
+        @text_start,
+        -text       => $text,
+        -anchor     => $anchor,
+        -justify    => $justify,
+        -tags       => [@tags],
+        );
+}
+
+sub virtual_contig {
+    my( $band, $vc ) = @_;
+    
+    if ($vc) {
+        confess "Not a Bio::EnsEMBL::Virtual::Contig : '$vc'"
+            unless ref($vc) and $vc->isa('Bio::EnsEMBL::Virtual::Contig');
+        $band->{'_virtual_contig'} = $vc;
+    }
+    return $band->{'_virtual_contig'};
 }
 
 sub nudge_into_free_space {
