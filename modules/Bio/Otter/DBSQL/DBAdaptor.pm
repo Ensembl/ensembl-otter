@@ -64,8 +64,13 @@ sub get_CloneAdaptor {
 sub get_GeneAdaptor {
   my $self = shift;
 
+  # get a core db adaptor
+  my $core_adaptor = $self->_get_adaptor("Bio::Otter::DBSQL::AnnotatedGeneAdaptor");
+  
+  # use a proxy gene adaptor, capable of making decisions with regards to the
+  # database that it uses (core or lite)
   return
-    $self->_get_adaptor("Bio::Otter::DBSQL::AnnotatedGeneAdaptor");
+    $self->get_adaptor("ProxyGene", $core_adaptor);
 } 
 sub get_TranscriptAdaptor {
   my $self = shift;
