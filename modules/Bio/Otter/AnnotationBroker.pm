@@ -142,6 +142,19 @@ sub make_id_version_hash {
     $self->{'_id_version_hash'} = $stable_version;
 }
 
+sub store_stable {
+    my( $self, $sid_v, $obj ) = @_;
+
+    if (my $sid = $obj->stable_id) {
+        my $this_version = $obj->version;
+        if (my $version = $sid_v->{$sid}) {
+            $sid_v->{$sid} = $this_version if $this_version > $version;
+        } else {
+            $sid_v->{$sid} = $this_version;
+        }
+    }
+}
+
 sub increment_obj_version {
     my( $self, $obj ) = @_;
 
@@ -165,19 +178,6 @@ sub drop_id_version_hash {
     my( $self ) = @_;
 
     $self->{'_id_version_hash'} = undef;
-}
-
-sub store_stable {
-    my( $self, $sid_v, $obj ) = @_;
-
-    if (my $sid = $obj->stable_id) {
-        my $this_version = $obj->version;
-        if (my $version = $sid_v->{$sid}) {
-            $sid_v->{$sid} = $this_version if $this_version > $version;
-        } else {
-            $sid_v->{$sid} = $this_version;
-        }
-    }
 }
 
 sub compare_genes {

@@ -131,7 +131,7 @@ sub toXMLString{
 
 	if (defined($tinfo)) {
 
-            if (my $author = $info->author) {
+            if (my $author = $tinfo->author) {
                 $str .= $author->toXMLString;
             }
 
@@ -267,7 +267,7 @@ sub stable_id {
     $self->gene_info->gene_stable_id($arg);
   }
 
-  return $self->SUPER::stable_id($arg);
+  return $self->SUPER::stable_id;
 }
 
 
@@ -304,6 +304,13 @@ sub detach_DBAdaptors {
             $transl->adaptor(undef);
         }
     }
+}
+
+sub pretty_string {
+    my( $self ) = @_;
+    
+    my $str = 'Locus ';
+    
 }
 
 1;
