@@ -238,7 +238,7 @@ sub list_current_dbIDs_for_Slice {
 
 =head2 list_current_dbIDs_for_Contig
 
-  my $id_list $self->list_current_dbIDs_for_Contig($contig);
+  my $id_list = $self->list_current_dbIDs_for_Contig($contig);
 
 =cut
 
@@ -270,6 +270,42 @@ sub list_current_dbIDs_for_Contig {
         $sid_gid{$sid} = $gid;
     }
     return [sort {$a <=> $b} values %sid_gid];
+}
+
+=head2 list_current_dbIDs
+
+    my $id_list = $self->list_current_dbIDs;
+
+Returns a ref to a list of all the current non-obsolete gene dbIDs.
+
+=cut
+
+sub list_current_dbIDs {
+    my( $self ) = @_;
+    
+    my $sth = $self->db->prepare(q{
+        SELECT s.stable_id
+          , g.gene_id
+          , g.type
+        FROM gene g
+          , gene_stable_id s
+        WHERE g.gene_id = s.gene_id
+        ORDER BY s.version ASC
+        });
+    $sth->execute;
+    
+    my( %stable_gid_type );
+    while (my ($stable, $gid, $type) = $sth->fetchrow) {
+        $stable_gid_type{$stable} = [$gid, $type];
+    }
+
+    my $current_gene_id = [];
+    foreach my $gid_type (values %stable_gid_type) {
+        my ($gid, $type) = @$gid_type;
+        next if $type eq 'obsolete';
+        push(@$current_gene_id, $gid);
+    }
+    return $current_gene_id;
 }
 
 ### fetch_by_Slice should have been called fetch_all_by_Slice

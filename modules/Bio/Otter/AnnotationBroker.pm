@@ -494,37 +494,34 @@ sub compare_transcripts {
 sub compare_exons {
     my ($self,$ex1,$ex2) = @_;
 
-#    print " ---- Comparing 1 " . $ex1->start . "\t" . $ex1->end . "\t" . $ex1->phase . "\t" . $ex1->end_phase . "\n";
-#    print " ---- Comparing 2 " . $ex2->start . "\t" . $ex2->end . "\t" . $ex2->phase . "\t" . $ex2->end_phase . "\n";
-
     if ($ex1->start != $ex2->start) {
         print STDERR "Exon start coords differ " . $ex1->start . " " . $ex2->start . "\n";
         return 0;
-    } elsif ($ex1->end  != $ex2->end)  {
+    }
+    elsif ($ex1->end != $ex2->end)  {
         print STDERR "Exon end coords differ " . $ex1->end . " " . $ex2->end . "\n";
         return 0;
-    } elsif (defined($ex1->phase) && defined($ex2->phase))  {
-        if ($ex1->phase != $ex2->phase) {
-          print STDERR "Different phases " . $ex1->phase . " " . $ex2->phase . "\n";
-          return 0;
+    }
+    elsif ($ex1->strand != $ex2->strand) {
+        print STDERR "Exon strands differ " . $ex1->strand . " " . $ex2->strand . "\n";
+        return 0;
+    }
+    else {
+        my $phase1 = $ex1->phase || 'undef';
+        my $phase2 = $ex2->phase || 'undef';
+        if ($phase1 ne $phase2) {
+            print STDERR "Different phases $phase1 $phase2\n";
+            return 0;
         }
-    } elsif (defined($ex1->end_phase) && defined($ex2->end_phase)) {
-        if ($ex1->end_phase != $ex2->end_phase) {
-          print STDERR "Different end phases " . $ex1->end_phase . " " . $ex2->end_phase . "\n";
-          return 0;
+        else {
+            my $end_phase1 = $ex1->end_phase || 'undef';
+            my $end_phase2 = $ex2->end_phase || 'undef';
+            if ($end_phase1 ne $end_phase2) {
+                print STDERR "Different end phases $end_phase1 $end_phase2\n";
+                return 0;
+            }
         }
-    } elsif (defined($ex1->phase) && !defined($ex2->phase)) {
-       print STDERR "Phase not defined on exon 2\n";
-       return 0;
-    } elsif (!defined($ex1->phase) && defined($ex2->phase)) {
-       print STDERR "Phase not defined on exon 1\n";
-    } elsif (defined($ex1->end_phase) && !defined($ex2->end_phase)) {
-       print STDERR "End phase not defined on exon 2\n";
-       return 0;
-    } elsif (!defined($ex1->end_phase) && defined($ex2->end_phase)) {
-       print STDERR "End phase not defined on exon 1\n";
-       return 0;
-    } 
+    }
     return 1;
 }
 
