@@ -1,0 +1,15 @@
+#!/usr/bin/perl
+
+# This will take a fasta file  - read sequence or sequences
+
+# Connect to mysql server and find which databases are available
+
+# Ask the user which database to use
+
+# Ask the user which assembly to call this sequence
+
+# Ask the user whether a fake assembly should be created
+
+# Write the sequence
+
+
