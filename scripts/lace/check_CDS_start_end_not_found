@@ -35,7 +35,7 @@ $| =1;
     # sql query to get all assembly types w/ diff. vega_set_id conditions
     my $sql;
 
-    if ( defined $vega ){
+    if ( $vega ){
       $sql = q{SELECT assembly_type FROM sequence_set WHERE vega_set_id > 0};
     }
     else {
@@ -54,7 +54,7 @@ $| =1;
   my $date = `date +%Y%m%d`; chomp $date;
   my ($fh, $fh1);
 
-  if ( $vega ){
+  unless ( $vega ){
     open ( $fh, ">cds_start_end_not_found_updateInfo.$dataset.$date") || die $!;
     open ( $fh1, ">cds_start_end_not_found_annotator.$dataset.$date") || die $!;
   }
