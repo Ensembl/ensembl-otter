@@ -166,7 +166,7 @@ foreach my $chr (reverse sort bychrnum keys %$chrhash) {
       my $sth = $db->prepare("update gene set display_xref_id=" . 
                              $dbentry->dbID . " where gene_id=" . $gene->dbID);
       print $sth->{Statement} . "\n";
-      #$sth->execute if $do_store;
+      $sth->execute if $do_store;
 
       if ($crossrefs{$gene_name}->{nm}) {
         my $dbentry=Bio::EnsEMBL::DBEntry->new(-primary_id=>$crossrefs{$gene_name}->{nm},
@@ -175,7 +175,7 @@ foreach my $chr (reverse sort bychrnum keys %$chrhash) {
                                                -release=>1,
                                                -dbname=>"RefSeq",
                                               );
-        $dbentry->status('KNOWN');
+        $dbentry->status('KNOWNXREF');
         $gene->add_DBLink($dbentry);
         $adx->store($dbentry,$gene->dbID,'Gene') if $do_store;
       }

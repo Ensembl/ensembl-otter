@@ -158,7 +158,7 @@ foreach my $chr (reverse sort bychrnum keys %$chrhash) {
           if ($fieldnames[$i] eq "SWISSPROT") {
             $dbentry->status('XREF');
           } else {
-            $dbentry->status('KNOWN');
+            $dbentry->status('KNOWNXREF');
           }
           $gene->add_DBLink($dbentry);
           #print "Would have added $convhash{$fieldnames[$i]} with $xid\n"
