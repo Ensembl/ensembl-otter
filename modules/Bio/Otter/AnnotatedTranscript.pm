@@ -69,6 +69,7 @@ sub stable_id {
 sub truncate_to_Slice{
     my ($self , $slice ) = @_ ;
    
+    warn "doing truncate to slice bit!!!!" ;
     my $is_truncated    = 0;
     my $exon_list       = $self->get_all_Exons;
     
@@ -122,7 +123,7 @@ sub truncate_to_Slice{
         my $exon_start = $exon->start ;
         my $exon_end = $exon->end ;
         my $strand = $exon->strand;
-        
+; 
 
         if ($exon_start > $slice->length || $exon->end < 1 ){
             # exon lies before/after slice ends - should be removed 
@@ -184,7 +185,7 @@ sub truncate_to_Slice{
                                     $new_start = $slice->length if  ($new_start > $slice->length) ;
                                     $translation->start($new_start);
                                     $is_truncated = 1 ;
-                                    $self->reset_end_phase($exon , $difference) ;
+                                    $self->_reset_end_phase($exon , $difference) ;
                                 }
                                 #else{ ## this is the original start exon, but hasnt been truncated - leave start as it is }     
                             }
@@ -192,7 +193,7 @@ sub truncate_to_Slice{
                                 if ($exon->end > $slice->length){
                                     my $difference = $slice->length - $exon->end ;
                                     $exon->end($slice->length) ;
-                                    $self->reset_end_phase($exon , $difference) ;
+                                    $self->_reset_end_phase($exon , $difference) ;
                                 }
                                 $translation->start(1);
                                 $is_truncated = 1;
@@ -286,8 +287,10 @@ sub truncate_to_Slice{
 
 
 sub _reset_start_phase{
-    my ($self , $exon , $difference ) = @_ ;   
+    my ($self , $exon , $difference ) = @_ ;       
     my $new_phase = ($exon->phase + $difference) % 3 ;
+    warn ">>>>resetting start - old : " . $exon->phase ."  new : $new_phase "  .$self->transcript_info->name ;
+    
     $exon->phase($new_phase) ;
 }
 
@@ -295,7 +298,9 @@ sub _reset_start_phase{
 sub _reset_end_phase {
     my ($self , $exon , $difference) = @_ ;
     my $new_phase = ($exon->end_phase - $difference) % 3 ;
-    $exon->phase($new_phase) ; 
+    $exon->phase($new_phase) ;
+    
+    warn ">>>>restting end" ; 
 }
 
 
