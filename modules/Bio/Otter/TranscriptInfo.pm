@@ -185,7 +185,7 @@ sub class {
        if ($value->isa("Bio::Otter::TranscriptClass")) {
 	   $obj->{'class'} = $value;
        } else {
-	   $obj->throw("Argument to class should be a Transcriptclas object.  Currently [$value]");
+	   $obj->throw("Argument to class should be a Transcriptclass object.  Currently [$value]");
        }
    }
    return $obj->{'class'};

@@ -2104,7 +2104,7 @@ sub ace_unescape {
 
 =head1 gene_type_from_transcript_set
 
-    my $type = gene_type_from_transcript_set(\@trasncripts, $known_flag);
+    my $type = gene_type_from_transcript_set(\@transcripts, $known_flag);
 
 See the section on transcript classes in the
 otter XML documentation.

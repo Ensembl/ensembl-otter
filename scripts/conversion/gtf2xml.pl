@@ -17,6 +17,7 @@ use Bio::Otter::TranscriptInfo;
 use Bio::Otter::GeneName;
 use Bio::Otter::TranscriptClass;
 use Bio::Otter::Evidence;
+use Bio::Otter::Converter;
 
 use Bio::EnsEMBL::Gene;
 use Bio::EnsEMBL::Exon;
@@ -109,10 +110,12 @@ my %standard_category;
 		    'Polymorphic'=>1,
 		    'Ig_Pseudogene_Segment'=>1,
 		    'Ig_Segment'=>1,
+		    'Predicted_Gene',
 		    );
 my %map_category;
 %map_category=(
 	       'known'=>'Known',
+	       'Known_Gene'=>'Known',
 	       'novel_CDS'=>'Novel_CDS',
 	       'novel_transcript'=>'Novel_Transcript',
 	       'pseudogene'=>'Pseudogene',
@@ -122,8 +125,16 @@ my %map_category;
 	       'polymorphic'=>'Polymorphic',
 	       'ig_pseudogene_segment'=>'Ig_Pseudogene_Segment',
 	       'ig_segment'=>'Ig_Segment',
-	       'predicted'=>'Predicted',
+	       'predicted'=>'Predicted_Gene',
 	       );
+
+my %map_key;
+# DEF: gene_category (chr21, riken) 
+#  Class (chr7, sickkids)
+%map_key=(
+	  'Class'=>'gene_category',
+	  'Gene'=>'gene_id',
+	  );
 
 my $nok=0;
 my $n1=0;
@@ -154,6 +165,20 @@ while(<IN>){
       $val=~s/\t/ /g;
     }
     $gtf_keys{$key}++;
+
+    # special advanced processing for some keys
+    if($key eq 'Gene'){
+      $hashy{'transcript_id'}=$val;
+      if($val=~/(\S+)\_transcript\_variant/){
+	$val=$1;
+      }
+    }
+
+    # remap keys if known
+    if($map_key{$key}){
+      $key=$map_key{$key};
+    }
+
     if($key eq 'gene_category'){
       if($map_category{$val}){
 	$val=$map_category{$val};
@@ -252,7 +277,11 @@ foreach my $gene_id (keys %gene){
 
 print "Following keys were found\n";
 foreach my $key (keys %gtf_keys){
-  print "  $key: $gtf_keys{$key}\n";
+  my $standard;
+  if($map_key{$key}){
+    $standard=$map_key{$key};
+  }
+  print "  $key: $gtf_keys{$key} ($standard)\n";
 }
 print "\n\n";
 

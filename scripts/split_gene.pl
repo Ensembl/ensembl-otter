@@ -1,7 +1,8 @@
 #!/usr/local/bin/perl
 
-# script to manage db_history table in mysql which records
-# history of database
+# script to carry out most of changes required (by SQL) to create
+# a new gene and move some of the transcripts to it - see help for
+# more details.
 
 use strict;
 use Getopt::Long;
@@ -308,7 +309,7 @@ Displays this help message
 
 =over 4
 
-=item 16-JAN-2003
+=item 15-MAR-2003
 
 B<th> released first version
 

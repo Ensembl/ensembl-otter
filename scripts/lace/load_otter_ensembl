@@ -146,6 +146,7 @@ my $DEBUG = 0;
 
     while(!$INPUT_TYPE && defined (my $first = <$fh>)){
 	chomp($first);
+	next if $first=~/^\#/;
 	($INPUT_TYPE, $agp_chr_name) = check_line($first, $chromosome_name);
         $INPUT_TYPE = undef if $INPUT_TYPE eq 'SKIP';
     }
@@ -167,6 +168,7 @@ my $DEBUG = 0;
     while(<$fh>){
         # Skip comment lines
         chomp;
+	next if $_=~/^\#/;
 	my ($input_type, 
 	    $super_contig_name,
 	    $chr_start,
