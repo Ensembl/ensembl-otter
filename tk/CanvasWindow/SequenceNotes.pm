@@ -8,6 +8,7 @@ use Carp;
 use base 'CanvasWindow';
 use MenuCanvasWindow::XaceSeqChooser;
 use CanvasWindow::SequenceNotes::History;
+use CanvasWindow::SequenceNotes::Status;
 
 sub name {
     my( $self, $name ) = @_;
@@ -228,17 +229,24 @@ sub _column_text_seq_note_text {
 
 sub _column_text_seq_note_status{
     my $cs = shift;
-    my $missing = join(", " => keys(%{$cs->unfinished()}));
-    my $color   = 'darkgreen';
-    if ($missing){
-        warn $cs->accession . " is missing analyses:\t $missing\n";
-	$missing = "missing";
-	$color   = 'red';
+    my $pipeStatus = $cs->pipelineStatus();
+    my $text    = $pipeStatus->short_display();
+    my $color   = 'darkgreen'; # default color
+
+    
+    if($pipeStatus->unavailable()){
+        $color = 'blue';
+        $text  = '-nopipeline used';
     }else{
-	$missing = "complete";
+        if ($text eq 'missing'){
+            my $missing = $pipeStatus->list_unfinished();
+            warn $cs->accession . " is missing analyses:\t $missing\n";
+            $color   = 'red';
+        }
     }
+
     return {
-        -text => $missing,
+        -text => $text,
         -fill => $color,
         -tags => ['searchable'],
         };
@@ -703,7 +711,8 @@ sub draw {
             my $last = $cs_list->[$i - 1];
             
             my $gap = 0; # default for non SequenceNotes methods inheriting this method
-            if ($cs->can('chr_start')){
+            #if ($cs->can('chr_start')){
+            if (UNIVERSAL::can($cs,'chr_start')){
                 $gap = $cs->chr_start - $last->chr_end - 1;
             }            
             if ($gap > 0) {
@@ -1005,14 +1014,27 @@ sub popup_missing_analysis{
     unless (defined $index ){
         return;
     }
-    $self->canvas->delete('msg');
-    my $cs =  $self->get_CloneSequence_list->[$index];
-    my $missing = join(", " => keys(%{$cs->unfinished()}));
-    my $clone = $cs->accession . "." . $cs->sv;
-    if($missing){
-	$self->message("$clone is missing : $missing");
-    }else{
-	$self->message("$clone has a complete set of analyses");
+    unless ( $self->check_for_Status($index) ){
+        # window has not been created already - create one
+        my $cs =  $self->get_CloneSequence_list->[$index];
+        my $using_no_pipeline = $cs->pipelineStatus->unavailable();
+        if (!$using_no_pipeline){
+            my $top = $self->canvas->Toplevel();
+            $top->transient($self->canvas->toplevel);
+            my $hp  = CanvasWindow::SequenceNotes::Status->new($top, 550 , 50);
+	    # $hp->SequenceNotes($self); # can't have reference to self if we're inheriting
+	    # clean up just won't work.
+            $hp->SequenceSet($self->SequenceSet);
+            $hp->SequenceSetChooser($self->SequenceSetChooser);
+            $hp->name($cs->contig_name);
+            $hp->clone_index($index) ;
+            $hp->initialise;
+            $hp->draw;
+            $self->add_Status($hp);
+        }
+        else{
+            $self->message( "You told me not to fetch this information with -nopipeline or pipeline=0." ); 
+        }
     }
 }
 
@@ -1046,7 +1068,14 @@ sub popup_ana_seq_history{
         }
     }  
 }
-
+sub add_Status{
+    my ($self , $status) = @_ ;
+    #add a new element to the hash
+    if ($status){
+	$self->{'_Status_win'} = $status;
+    }
+    return $self->{'_Status_win'};
+}
 sub add_History{
     my ($self , $history) = @_ ;
     #add a new element to the hash
@@ -1067,6 +1096,19 @@ sub check_for_History{
     $hist_win->draw();
     $hist_win->canvas->toplevel->deiconify;
     $hist_win->canvas->toplevel->raise;
+    return 1;
+}
+# so we dont bring up copies of the same window
+sub check_for_Status{
+    my ($self , $index) = @_;
+    return 0 unless defined($index); # 0 is valid index
+
+    my $status_win = $self->{'_Status_win'};
+    return 0 unless $status_win;
+    $status_win->clone_index($index);
+    $status_win->draw();
+    $status_win->canvas->toplevel->deiconify;
+    $status_win->canvas->toplevel->raise;
     return 1;
 }
 
