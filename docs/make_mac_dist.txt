@@ -1,6 +1,10 @@
 REMEMBER
 source ~/otterdistprep/setenv.csh
 
+which does:
+setenv LONGDIR <LONG_DIRECTORY_NAME>
+setenv PATH $LONGDIR/bin:/usr/bin:/bin:/usr/sbin:/sbin:/sw/bin
+
 Then if you havent done it:
 mkdir -p $LONGDIR
 
@@ -9,28 +13,48 @@ You may want to move /usr/local temporarily to stop things from there being used
 You need to recompile tar and install it to stop the LongLink file
 truncation.
 
-For tar
+For libiconv
 ==
- lynx -source 'ftp://gnu.teleglobe.net/ftp.gnu.org/tar/tar-1.13.tar.gz' > tar-1.13.tar.gz
- gzip -dc tarfiles/tar-1.13.tar.gz | tar -xvf -
- cd tar-1.13
- chmod +w *
- cp /sw/lib/fink/update/config.{guess,sub} .
+ lynx -source 'ftp://gnu.teleglobe.net/ftp.gnu.org/libiconv/libiconv-1.8.tar.gz' > tarfiles/libiconv-1.8.tar.gz
+ gzip -dc tarfiles/libiconv-1.8.tar.gz | tar -xvf -
+ cd libiconv-1.8
+ rehash
  ./configure --prefix=$LONGDIR
  make
  make install
 
 
+For tar
+==
+ lynx -source 'ftp://gnu.teleglobe.net/ftp.gnu.org/tar/tar-1.13.tar.gz' > tarfiles/tar-1.13.tar.gz
+ gzip -dc tarfiles/tar-1.13.tar.gz | tar -xvf -
+ cd tar-1.13
+ chmod +w config.{guess,sub}
+ cp /sw/lib/fink/update/config.{guess,sub} .
+ ./configure --prefix=$LONGDIR
+ make
+ make install
+
+For cvs
+==
+ lynx -source 'http://www.cvshome.org/files/19/10/cvs-1.11.5.tar.gz' > tarfiles/cvs-1.11.5.tar.gz
+ gzip -dc tarfiles/cvs-1.11.5.tar.gz | tar -xvf -
+ cd cvs-1.11.5
+ rehash
+ ./configure --prefix=$LONGDIR
+ make
+ make install
+
 For GD
 ==
  For zlib
  =
-  lynx -source 'http://umn.dl.sourceforge.net/libpng/zlib-1.1.4.tar.gz' >zlib-1.1.4.tar.gz
+  lynx -source 'http://umn.dl.sourceforge.net/libpng/zlib-1.1.4.tar.gz' >tarfiles/zlib-1.1.4.tar.gz
   NOTE ZLIB DOESN'T WORK - just use the Apple provided one
 
  For libpng
  =
-  lynx -source 'http://umn.dl.sourceforge.net/sourceforge/libpng/libpng-1.2.5.tar.gz' >libpng-1.2.5.tar.gz
+  lynx -source 'http://umn.dl.sourceforge.net/sourceforge/libpng/libpng-1.2.5.tar.gz' >tarfiles/libpng-1.2.5.tar.gz
   gzip -dc tarfiles/libpng-1.2.5.tar.gz | tar -xvf -
   cd libpng-1.2.5
   cp scripts/makefile.macosx ./Makefile
@@ -47,7 +71,7 @@ For GD
  
  For jpeg
  =
-  lynx -source 'http://www.ijg.org/files/jpegsrc.v6b.tar.gz' > jpegsrc.v6b.tar.gz
+  lynx -source 'http://www.ijg.org/files/jpegsrc.v6b.tar.gz' > tarfiles/jpegsrc.v6b.tar.gz
   gzip -dc tarfiles/jpegsrc.v6b.tar.gz | tar -xvf -
   cd jpeg-6b
   cp /sw/lib/fink/update/config.{guess,sub} .
@@ -61,7 +85,7 @@ For GD
 
  For freetype
  =
-  lynx -source 'http://umn.dl.sourceforge.net/sourceforge/freetype/freetype-2.1.4.tar.gz' >freetype-2.1.4.tar.gz
+  lynx -source 'http://umn.dl.sourceforge.net/sourceforge/freetype/freetype-2.1.4.tar.gz' >tarfiles/freetype-2.1.4.tar.gz
   gzip -dc tarfiles/freetype-2.1.4.tar.gz | tar -xvf -
   cd freetype-2.1.4
   rehash
@@ -71,7 +95,8 @@ For GD
   make install
   ranlib $LONGDIR/lib/libfreetype.a
 
- lynx -source 'http://www.boutell.com/gd/http/gd-2.0.12.tar.gz' > gd-2.0.12.tar.gz
+EITHER without gif support:
+ lynx -source 'http://www.boutell.com/gd/http/gd-2.0.12.tar.gz' > tarfiles/gd-2.0.12.tar.gz
  gzip -dc tarfiles/gd-2.0.12.tar.gz | tar -xvf -
  cd gd-2.0.12
  rehash
@@ -81,7 +106,7 @@ For GD
  ranlib $LONGDIR/lib/libgd.a
 
 OR with GIF support (must remove existing libraries first)
- lynx -source 'http://downloads.rhyme.com.au/gd/gd-2.0.12gif.tar.gz' > gd-2.0.12gif.tar.gz
+ lynx -source 'http://downloads.rhyme.com.au/gd/gd-2.0.12gif.tar.gz' > tarfiles/gd-2.0.12gif.tar.gz
  gzip -dc tarfiles/gd-2.0.12gif.tar.gz | tar -xvf -
  cd gd-2.0.12gif
  rehash
@@ -95,7 +120,7 @@ OR with GIF support (must remove existing libraries first)
 
 For expat
 ==
- lynx -source 'http://umn.dl.sourceforge.net/sourceforge/expat/expat-1.95.6.tar.gz' >expat-1.95.6.tar.gz
+ lynx -source 'http://umn.dl.sourceforge.net/sourceforge/expat/expat-1.95.6.tar.gz' >tarfiles/expat-1.95.6.tar.gz
  gzip -dc tarfiles/expat-1.95.6.tar.gz | tar -xvf -
  cd expat-1.95.6
  rehash
@@ -107,7 +132,7 @@ For expat
 
 For Perl
 ==
- lynx -source 'http://www.cpan.org/src/stable.tar.gz' > perl58.tar.gz
+ lynx -source 'http://www.cpan.org/src/stable.tar.gz' > tarfiles/perl58.tar.gz
  gzip -dc tarfiles/perl58.tar.gz | tar -xvf -
  cd perl-5.8.0
  rm -f config.sh Policy.sh
@@ -120,7 +145,7 @@ For Perl
 
 For mysql
 ==
- lynx -source 'http://mysql.mirror.anlx.net/Downloads/MySQL-4.0/mysql-4.0.12.tar.gz' > mysql-4.0.12.tar.gz
+ lynx -source 'http://mysql.mirror.anlx.net/Downloads/MySQL-4.0/mysql-4.0.12.tar.gz' > tarfiles/mysql-4.0.12.tar.gz
  gzip -dc tarfiles/mysql-4.0.12.tar.gz | tar -xvf -
  cd mysql-4.0.12
  ./configure --prefix=$LONGDIR
@@ -152,6 +177,7 @@ static char *get_relative_path(const char *path)
 
  make
  make install
+ rehash
  $LONGDIR/bin/mysql_install_db
  $LONGDIR/bin/mysqld_safe &
 
@@ -199,7 +225,7 @@ For DBD::mysql
 
 For CGI (want slightly older version)
 ==
- lynx -source 'http://www.cpan.org/modules/by-authors/id/LDS/CGI.pm-2.89.tar.gz' > CGI.pm-2.89.tar.gz
+ lynx -source 'http://www.cpan.org/modules/by-authors/id/LDS/CGI.pm-2.89.tar.gz' > tarfiles/CGI.pm-2.89.tar.gz
  gzip -dc tarfiles/CGI.pm-2.89.tar.gz | tar -xvf -
  cd CGI.pm-2.89
  perl Makefile.PL
@@ -209,22 +235,61 @@ For CGI (want slightly older version)
 
 For Apache
 ==
- lynx -source 'http://www.cpan.org/authors/id/D/DO/DOUGM/mod_perl-1.27.tar.gz' > mod_perl-1.27.tar.gz
- lynx -source 'http://apache.ttlhost.com/httpd/apache_1.3.27.tar.gz' > apache_1.3.27.tar.gz
+ lynx -source 'http://www.cpan.org/authors/id/D/DO/DOUGM/mod_perl-1.27.tar.gz' > tarfiles/mod_perl-1.27.tar.gz
+ lynx -source 'http://apache.ttlhost.com/httpd/apache_1.3.27.tar.gz' > tarfiles/apache_1.3.27.tar.gz
  gzip -dc tarfiles/apache_1.3.27.tar.gz | tar -xvf -
  gzip -dc tarfiles/mod_perl-1.27.tar.gz | tar -xvf -
+ rehash
  cd apache_1.3.27
- ./configure --prefix=$LONGDIR --with-layout=GNU
+ ./configure --prefix=$LONGDIR --with-layout=Apache
  cd ../mod_perl-1.27
- perl Makefile.PL APACHE_SRC=../apache_1.3.27/src DO_HTTPD=1 USE_APACI=1 \
-       EVERYTHING=1 PREFIX=$LONGDIR
+# perl Makefile.PL APACHE_SRC=../apache_1.3.27/src DO_HTTPD=1 USE_APACI=1 \
+#       EVERYTHING=1 PREFIX=$LONGDIR
+ perl Makefile.PL APACHE_SRC=../apache_1.3.27/src NO_HTTPD=1 USE_APACI=1 \
+       PREP_HTTPD=1 EVERYTHING=1 PREFIX=$LONGDIR
+
+NOTE: Interactive response needed here
+
  make
  make install
  cd ../apache_1.3.27
- ./configure --enable-module=include --activate-module=src/modules/perl/libperl.a \
-             --enable-module=perl --prefix=$LONGDIR --with-layout=GNU
+# ./configure --enable-module=include --activate-module=src/modules/perl/libperl.a \
+#             --enable-module=perl --prefix=$LONGDIR --with-layout=GNU
+ ./configure \
+    --with-layout=Apache \
+    --enable-module=include \
+    --enable-module=so \
+    --activate-module=src/modules/perl/libperl.a \
+    --disable-shared=perl \
+    --without-execstrip \
+    --prefix=$LONGDIR
+
  make
  make install
+
+ Testing
+ =
+ Add to $LONGDIR/conf/httpd.conf:-
+PerlModule Apache::Status
+<Location /perl-status>
+  SetHandler  perl-script
+  PerlHandler Apache::Status
+</Location>
+
+ $LONGDIR/bin/apachectl start
+ lynx 'http://localhost:8080/perl-status'
+ $LONGDIR/bin/apachectl stop
+
+For apreq
+==
+See: http://www.macdevcenter.com/pub/a/mac/2002/11/05/apache_osx.html
+And: http://www.macdevcenter.com/pub/a/mac/2003/02/07/libapreq_update.html
+ lynx -source 'http://www.apache.org/dist/httpd/libapreq/libapreq-1.1.tar.gz' > tarfiles/libapreq-1.1.tar.gz
+
+
+
+
+
 
 For Apache::DBI
 ==
@@ -235,7 +300,7 @@ For Apache::DBI
 
 For GD (with GIF)
 ==
- lynx -source 'http://downloads.rhyme.com.au/gd/GD-2.041gif.tar.gz' > GD-2.041gif.tar.gz
+ lynx -source 'http://downloads.rhyme.com.au/gd/GD-2.041gif.tar.gz' > tarfiles/GD-2.041gif.tar.gz
  gzip -dc tarfiles/GD-2.041gif.tar.gz  | tar -xvf -
  cd GD-2.041gif
  perl Makefile.PL
@@ -248,7 +313,7 @@ For GD (with GIF)
 
 For dotter
 ==
- lynx -source 'ftp://ftp.gtk.org/pub/gtk/v1.2/glib-1.2.10.tar.gz' > glib-1.2.10.tar.gz
+ lynx -source 'ftp://ftp.gtk.org/pub/gtk/v1.2/glib-1.2.10.tar.gz' > tarfiles/glib-1.2.10.tar.gz
  gzip -dc tarfiles/glib-1.2.10.tar.gz | tar -xvf -
  cd glib-1.2.10
  cp /sw/lib/fink/update/config.{guess,sub} .
@@ -256,7 +321,7 @@ For dotter
  make
  make install
 
- lynx -source 'ftp://ftp.gtk.org/pub/gtk/v1.2/gtk+-1.2.10.tar.gz' > gtk+-1.2.10.tar.gz
+ lynx -source 'ftp://ftp.gtk.org/pub/gtk/v1.2/gtk+-1.2.10.tar.gz' > tarfiles/gtk+-1.2.10.tar.gz
  gzip -dc tarfiles/gtk+-1.2.10.tar.gz | tar -xvf -
  cd gtk+-1.2.10
  cp /sw/lib/fink/update/config.{guess,sub} .
@@ -264,7 +329,7 @@ For dotter
  make
  make install
 
- lynx -source 'ftp://gnu.teleglobe.net/ftp.gnu.org/readline/readline-4.3.tar.gz' > readline-4.3.tar.gz
+ lynx -source 'ftp://gnu.teleglobe.net/ftp.gnu.org/readline/readline-4.3.tar.gz' > tarfiles/readline-4.3.tar.gz
  gzip -dc tarfiles/readline-4.3.tar.gz | tar -xvf -
  cd readline-4.3
  perl -i.bak -p -e \
@@ -274,14 +339,14 @@ For dotter
  make
  make install
 
- lynx -source 'ftp://ftp.sanger.ac.uk/pub/acedb/SUPPORTED/ACEDB-source.4_9p.tar.gz' >ACEDB-source.4_9p.tar.gz
+ lynx -source 'ftp://ftp.sanger.ac.uk/pub/acedb/SUPPORTED/ACEDB-source.4_9p.tar.gz' >tarfiles/ACEDB-source.4_9p.tar.gz
  mkdir ACEDB-source.4_9p
  cd ACEDB-source.4_9p
  gzip -dc ../tarfiles/ACEDB-source.4_9p.tar.gz | tar -xvf - 
  setenv ACEDB_MACHINE MACOSX_4
  make
 
- NOTE: Requires LOTS of fiddling to get this to go.
+ NOTE: Requires LOTS of fiddling with wmake/truemake to get this to go.
 
 Ensembl
 ==
