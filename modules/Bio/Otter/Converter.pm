@@ -1146,7 +1146,7 @@ sub ace_to_otter {
             my $author_name = $1;
             my( $author_email );
             while (($_ = <$fh>) !~ /^\n$/) {
-                print STDERR "Person: $_";
+                #print STDERR "Person: $_";
                 if (/^Email $STRING/x) {
                     $author_email = $1;
                 }
@@ -1182,15 +1182,13 @@ sub ace_to_otter {
     my %anntran;
 
     # Make transcripts and translations
-    #SEQ: foreach my $seq (keys %sequence) {
-    #    my $seq_data = $sequence{$seq};
     SEQ: while (my ($seq, $seq_data) = each %sequence) {
         my $transcript = $seq_data->{transcript} or next SEQ;
         next SEQ unless @{$transcript->get_all_Exons};
-        print STDERR "Seq = $seq\n";
+        #print STDERR "Seq = $seq\n";
 
         my $source = $seq_data->{Source};
-        print STDERR "Key $seq    $source    $slice_name\n";
+        #print STDERR "Key $seq    $source    $slice_name\n";
         next SEQ unless $source and $source eq $slice_name;
 
         if (my $tsid = $seq_data->{Transcript_id}) {
@@ -1368,7 +1366,7 @@ sub ace_to_otter {
     # Make gene objects
     my @genes;
     while (my ($gname, $gene_data) = each %genes) {
-        print STDERR "Gene name = $gname\n";
+        #print STDERR "Gene name = $gname\n";
         my $gene  = Bio::Otter::AnnotatedGene->new;
         my $ginfo = Bio::Otter::GeneInfo->new;
         $gene->gene_info($ginfo);
@@ -1405,7 +1403,7 @@ sub ace_to_otter {
         }
         $ginfo->truncated_flag(1) if $gene_data->{'Truncated'};
 
-        print STDERR "Made gene $gname\n";
+        #print STDERR "Made gene $gname\n";
 
         push (@genes, $gene);
 
@@ -1596,15 +1594,15 @@ sub prune_Exons {
 
   %exonhash = ();
 
-  foreach my $ex (@exons) {
-      $exonhash{$ex->stable_id}++;
-  }
+    foreach my $ex (@exons) {
+        if (my $stable = $ex->stable_id) {
+            $exonhash{$stable}++;
+        }
+    }
 
-  foreach my $id (keys %exonhash) {
-     if ($exonhash{$id} > 1) {
-      print STDERR "Exon id seen twice $id " . $exonhash{$id} . "\n";
-     }
-   }
+    while (my ($id, $count) = each %exonhash) {
+        print STDERR "Exon id $id seen $count times\n" if $count > 1;
+    }
 }
 
 
