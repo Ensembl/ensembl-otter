@@ -4,6 +4,9 @@ source ~/otterdistprep/setenv.csh
 which does:
 setenv LONGDIR <LONG_DIRECTORY_NAME>
 setenv PATH $LONGDIR/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/X11R6/bin
+setenv BRANCH 16
+setenv SUBBRANCH 1
+setenv ASSEMBLY 33
 
 Then if you havent done it:
 mkdir -p $LONGDIR
@@ -201,6 +204,32 @@ static char *get_relative_path(const char *path)
 
  $LONGDIR/bin/mysqladmin -u root shutdown
 
+Loading help and web user dbs
+==
+ setenv ENSWEBDB ensembl_web_user_db_${BRANCH}_${SUBBRANCH}
+ lynx -source "ftp://ftp.ensembl.org/pub/multi-species-${BRANCH}/data/mysql/multi-species/$ENSWEBDB.tar" > $ENSWEBDB.tar
+ tar -xvf $ENSWEBDB.tar
+ mv pub/multi-species-${BRANCH}/data/mysql/multi-species/$ENSHELPDB .
+ rm -r pub
+
+ $LONGDIR/bin/mysqld_safe &
+ $LONGDIR/bin/mysql -u otteradmin -potter -e "create database $ENSWEBDB"
+ $LONGDIR/bin/mysql -u otteradmin -potter -D$ENSWEBDB < $ENSWEBDB/$ENSWEBDB.sql
+
+ setenv ENSHELPDB ensembl_help_${BRANCH}_${SUBBRANCH}
+ lynx -source "ftp://ftp.ensembl.org/pub/multi-species-${BRANCH}/data/mysql/multi-species/$ENSHELPDB.tar" > $ENSHELPDB.tar
+ tar -xvf $ENSHELPDB.tar
+ mv pub/multi-species-${BRANCH}/data/mysql/multi-species/$ENSHELPDB .
+ rm -r pub
+
+ $LONGDIR/bin/mysql -u otteradmin -potter -e "create database $ENSHELPDB"
+ $LONGDIR/bin/mysql -u otteradmin -potter -D$ENSHELPDB < $ENSHELPDB/$ENSHELPDB.sql
+ foreach file ($ENSHELPDB/*.txt.table)
+  set table=`echo $file:t | sed -e 's/\..*//'`
+  echo $file
+  $LONGDIR/bin/mysql -u otteradmin -potter -D$ENSHELPDB -e "load data  infile '$PWD/$file' into table $table" 
+ end
+
 Perl modules
 ==
  rehash
@@ -386,8 +415,8 @@ Ensembl
  cd cvsdis/cvs
  cvs -d :pserver:cvsuser@cvsro.sanger.ac.uk:/cvsroot/CVSmaster login
 password CVSUSER
- cvs -z3 -d :pserver:cvsuser@cvsro.sanger.ac.uk:/cvsroot/CVSmaster co -r branch-ensembl-16 ensembl-api
- cvs -z3 -d :pserver:cvsuser@cvsro.sanger.ac.uk:/cvsroot/CVSmaster co -r branch-ensembl-16-1 ensembl-web
+ cvs -z3 -d :pserver:cvsuser@cvsro.sanger.ac.uk:/cvsroot/CVSmaster co -r branch-ensembl-$BRANCH ensembl-api
+ cvs -z3 -d :pserver:cvsuser@cvsro.sanger.ac.uk:/cvsroot/CVSmaster co -r branch-ensembl-$BRANCH-$SUBBRANCH ensembl-web
  cvs -z3 -d :pserver:cvsuser@cvsro.sanger.ac.uk:/cvsroot/CVSmaster co ensembl-otter
 
 Bioperl
@@ -404,6 +433,37 @@ Perl script #! munging in cvs
                                     -print \
                                     -exec perl -p -i.bak -e 's/^#\!.*perl/#\!\/usr\/local\/bin\/perl/' {} \;
 
+Conf file munging
+==
+WARNING: This is likely to change for each release 
+
+ cd cvsdis/cvs/conf
+ sed -e 's:/usr/local/ensembl:/usr/local/cvs:' SiteDefs.pm > junk.jnk
+ mv junk.jnk SiteDefs.pm
+ sed -e 's:80:8080:' SiteDefs.pm > junk.jnk
+ mv junk.jnk SiteDefs.pm
+ sed -e 's:mysqluser:otteradmin:' SiteDefs.pm > junk.jnk
+ mv junk.jnk SiteDefs.pm
+ sed -e "s:ensembl_web_user_db:${ENSWEBDB}:" SiteDefs.pm > junk.jnk
+ mv junk.jnk SiteDefs.pm
+ sed -e "s:ENSEMBL_USERDB_PASS            = '':ENSEMBL_USERDB_PASS='otter':" SiteDefs.pm > junk.jnk
+ mv junk.jnk SiteDefs.pm
+ 
+ 
+ sed -e "s:ensembl_help_11:${ENSHELPDB}:" DEFAULTS.ini > junk.jnk
+ mv junk.jnk DEFAULTS.ini
+ sed -e "s:3307:3306:" DEFAULTS.ini > junk.jnk
+ mv junk.jnk DEFAULTS.ini
+ sed -e "s:admin-user::" DEFAULTS.ini > junk.jnk
+ mv junk.jnk DEFAULTS.ini
+ sed -e "s:secret::" DEFAULTS.ini > junk.jnk
+ mv junk.jnk DEFAULTS.ini
+ sed -e "s:readonly-user:anonymous:" DEFAULTS.ini > junk.jnk
+ mv junk.jnk DEFAULTS.ini
+ sed -e "s:ENSEMBL_HOST            = localhost:ENSEMBL_HOST            = kaka.sanger.ac.uk:" DEFAULTS.ini > junk.jnk
+ mv junk.jnk DEFAULTS.ini
+
+
 Moveperl
 ==
  cd cvsdis/cvs/ensembl-otter/c/moveperl
@@ -414,6 +474,12 @@ Copying ensembl and bioperl files to $LONGDIR
 ==
  rehash
  moveperl -l -a -s /usr/local cvsdis $LONGDIR
+
+Making tmp dirs for website
+==
+ mkdir $LONGDIR/cvs/tmp
+ mkdir $LONGDIR/cvs/img-tmp
+ mkdir $LONGDIR/cvs/logs
 
 Adding apollo
 ==
@@ -435,13 +501,43 @@ tar -cvf otterinstall.tar otterdist.0.1.tar.gz moveperl installotter tar
 gzip otterinstall.tar
 
 
+
 Loading data (after install)
 ==
-~/otterinst/bin/mysql -u otteradmin -potter -e 'create database homo_sapiens_core_16_33'
-~/otterinst/bin/mysql -u otteradmin -potter -Dhomo_sapiens_core_16_33 < homo_sapiens_core_16_33/homo_sapiens_core_16_33.sql
 
-foreach file (homo_sapiens_core_16_33/*.txt.table)
+bin/mysqld_safe --user=searle \
+                --set-variable=max_connections=1500 \
+                --set-variable=wait_timeout=267820 \
+                --set-variable=net_buffer_length=16M \
+                --set-variable=max_allowed_packet=16M \
+                --set-variable=key_buffer=128M \
+                --set-variable=table_cache=512 \
+                --set-variable=sort_buffer=8M \
+                --set-variable=record_buffer=2M \
+                --set-variable=thread_cache=4 \
+                --set-variable=thread_concurrency=4 \
+                --set-variable=tmp_table_size=10048576 &
+
+setenv $ENSCOREDB homo_sapiens_core_${BRANCH}_${ASSEMBLY}
+# If you're redoing it ~/otterinst/bin/mysql -u otteradmin -potter -e "drop database $ENSCOREDB"
+~/otterinst/bin/mysql -u otteradmin -potter -e "create database $ENSCOREDB"
+~/otterinst/bin/mysql -u otteradmin -potter -D$ENSCOREDB < $ENSCOREDB/$ENSCOREDB.sql
+
+foreach file ($ENSCOREDB/*.txt.table)
  set table=`echo $file:t | sed -e 's/\..*//'`
  echo $file
- ~/otterinst/bin/mysql -u otteradmin -potter -Dhomo_sapiens_core_16_33 -e "load data  infile '$PWD/$file' into table $table" 
+ ~/otterinst/bin/mysql -u otteradmin -potter -D$ENSCOREDB -e "load data  infile '$PWD/$file' into table $table" 
 end
+
+
+setenv $ENSMARTDB $ensembl_mart_${BRANCH}_${SUBBRANCH}
+# If you're redoing it ~/otterinst/bin/mysql -u otteradmin -potter -e "drop database $ENSMARTDB"
+~/otterinst/bin/mysql -u otteradmin -potter -e "create database $ENSMARTDB"
+~/otterinst/bin/mysql -u otteradmin -potter -D$ENSMARTDB < $ENSMARTDB/$ENSMARTDB.sql
+
+foreach file ($ENSMARTDB/*.txt.table)
+ set table=`echo $file:t | sed -e 's/\..*//'`
+ echo $file
+ ~/otterinst/bin/mysql -u otteradmin -potter -D$ENSMARTDB -e "load data  infile '$PWD/$file' into table $table" 
+end
+
