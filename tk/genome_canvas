@@ -1,4 +1,4 @@
-#!/nfs/humace2/hum/bin/perl -w
+#!/usr/local/bin/perl5.6.1 -w
 
 ### genome_canvas
 
@@ -55,6 +55,7 @@ use Hum::EnsCmdLineDB;
         'cpg!'          => \$show_cpg,
         'gene_spans=s'  => \$span_file,
         'big!'          => \$big_picture,
+        'help'          => sub{ exec('perldoc', $0) },
         ) or die "Error processing command line options";
 
     if    ($chr_name and ! $fpc) {$fpc = $chr_name}
@@ -454,6 +455,12 @@ sub list_repeat_names {
 __END__
 
 =head1 NAME - genome_canvas
+
+=head1 SYNOPSIS
+
+  # Show the region of chromosome 6 from position 1 to 2Mbp
+  # but don't show the repeats
+  genome_canvas -chr chr6 -start 1 -end 2m -norepeats
 
 =head1 AUTHOR
 

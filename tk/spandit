@@ -1,4 +1,4 @@
-#!/nfs/humace2/hum/bin/perl -w
+#!/usr/local/bin/perl5.6.1 -w
 
 ### spandit
 
