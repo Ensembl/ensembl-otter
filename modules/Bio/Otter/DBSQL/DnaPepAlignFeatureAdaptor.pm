@@ -12,7 +12,7 @@ use base 'Bio::EnsEMBL::DBSQL::ProteinAlignFeatureAdaptor';
 sub _objs_from_sth {
     my $self = shift;
     
-    my $hd_aptr = $self->get_HitDescriptionAdaptor;
+    my $hd_aptr = $self->db->get_HitDescriptionAdaptor;
     
     my $features = $self->SUPER::_objs_from_sth(@_);
     
