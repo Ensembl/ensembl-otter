@@ -141,6 +141,7 @@ my %map_category;
 	       'predicted'=>'Predicted',
 	       'putative'=>'Putative',
 	       'novel'=>'Novel_Transcript',
+	       'putative_transcript'=>'Putative',
 	       'Gene_Segment'=>'Ig_Segment',
 	       'Pseudogene_Segment'=>'Ig_Pseudogene_Segment',
 	       'Experimental_Gene'=>'Novel_Transcript',
@@ -180,6 +181,7 @@ while(<IN>){
       $val=~s/^ +//;
       $val=~s/ +$//;
       $val=~s/\t//g;
+      $val=~s/,,/;/g;
     }else{
       # don't process description lines as much
       $val=~s/\t/ /g;
@@ -227,8 +229,7 @@ while(<IN>){
   # check gene_id is sensible and change if necessary
   my $gene_id = $hashy{'gene_id'};
   if($gene_id=~/(RNA|CDS)$/){
-    print "gene_id ends in $1 - check parsing ".join(',',@arr)."\n";
-    exit 0 unless $opt_P;
+    print "WARN gene_id ends in $1 - check parsing ".join(',',@arr)."\n";
   }
   $hashy{'gene_id'} = $gene_id;
 
@@ -307,6 +308,9 @@ foreach my $gene_id (keys %genes){
     foreach my $st (sort {$a<=>$b} keys %ex){
       if($last){
 	my $lintron=$st-$last;
+	if($lintron<0){
+	  print "WARN -ve intron $gene_id: $transcript_id: $last..$st\n";
+	}
 	#print "$st $last $lintron\n";
 	$nintron{$lintron}++;
       }
