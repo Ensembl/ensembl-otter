@@ -230,6 +230,12 @@ sub add_coordinate_pair {
     $self->add_exon_holder($start, $end, $strand);
 }
 
+sub draw_subseq {
+    my( $self ) = @_;
+    
+    $self->add_SubSeq_exons($self->SubSeq);
+    $self->draw_translation_region;
+}
 
 sub initialize {
     my( $self ) = @_;
@@ -239,7 +245,7 @@ sub initialize {
     my $top = $canvas->toplevel;
 
     $self->archive_string($sub->as_ace_file_format_text);
-    $self->add_SubSeq_exons($sub);
+    $self->draw_subseq;
 
     # Routines to handle the clipboard
     my $deselect_sub = sub{ $self->deselect_all };
@@ -257,7 +263,7 @@ sub initialize {
 
     # Save changes on window close
     my $window_close = sub {
-        $self->window_close;
+        $self->window_close or return;
         
         # Have to specifically undef $self, or the
         # ExonCanvas object doesn't get destroyed,
@@ -324,7 +330,7 @@ sub initialize {
             
             # Label for option menu
             my $label = $bottom_frame->Label(
-                -text   => 'Method:',
+                -text   => '  Method:',
                 -anchor => 'e',
                 );
             $label->pack(-side => 'left');
@@ -427,8 +433,9 @@ sub window_close {
     my( $self ) = @_;
     
     my $xc = $self->xace_seq_chooser;
-    my $sub = $self->SubSeq;
     if (my $ace = $self->get_ace_if_changed) {
+        
+        # Ask the user if changes should be saved
         require Tk::Dialog;
         my $name = $self->name;
         my $dialog = $self->canvas->toplevel->Dialog(
@@ -438,8 +445,9 @@ sub window_close {
             -buttons    => [qw{ Yes No Cancel }],
             );
         my $ans = $dialog->Show;
+        
         if ($ans eq 'Cancel') {
-            return;
+            return; # Abandon window close
         }
         elsif ($ans eq 'Yes') {
             $self->xace_save($ace) or return;
@@ -447,6 +455,8 @@ sub window_close {
     }
     $self->delete_chooser_window_ref;
     $self->canvas->toplevel->destroy;
+    
+    return 1;
 }
 
 sub canvas_insert_character {
@@ -596,12 +606,18 @@ sub control_left_button_handler {
     my $obj = $canvas->find('withtag', 'current')
         or return;
     return unless $canvas->type($obj) eq 'line';
-    if (grep $_ eq 'exon_furniture', $canvas->gettags($obj)) {
+    my $exon_arrow_tag = 'exon_arrow';
+    if (grep $_ eq $exon_arrow_tag, $canvas->gettags($obj)) {
         if (my $head_end = $canvas->itemcget($obj, 'arrow')) {
             my $new_end = ($head_end eq 'first') ? 'last' : 'first';
-            $canvas->itemconfigure($obj, 
+            $canvas->itemconfigure($exon_arrow_tag, 
                 -arrow   => $new_end,
                 );
+            if ($new_end eq 'first') {
+                $self->SubSeq->strand(-1);
+            } else {
+                $self->SubSeq->strand(1);
+            }
         }
     }
 }
@@ -715,9 +731,19 @@ sub middle_button_paste {
 sub next_exon_holder_coords {
     my( $self ) = @_;
     
+    my $i = $self->next_position_pair_index;
+    my( $size, $half, $pad, $text_len, @bbox ) = $self->_coord_matrix;
+    my $y_offset = $i * ($size + (2 * $pad));
+    $bbox[1] += $y_offset;
+    $bbox[3] += $y_offset;
+    return( $size, $half, $pad, @bbox );
+}
+
+sub _coord_matrix {
+    my( $self ) = @_;
+    
     my( $m );
     unless ($m = $self->{'_coord_matrix'}) {
-        $m = [];
         my $uw      = $self->font_unit_width;
         my $size    = $self->font_size;
         my $max_chars = 8;  # For coordinates up to 99_999_999
@@ -725,32 +751,26 @@ sub next_exon_holder_coords {
         my $half = int($size / 2);
         my $pad  = int($size / 6);
         
-        my $x1 = $half + $text_len;
+        my $x1 = $half + $size + (2 * $text_len);
         my $y1 = $half;
-        push(@$m,
-            $size, $half, $pad,
+        $m = [
+            $size, $half, $pad, $text_len,
             $x1,               $y1,
             $x1 + ($size * 2), $y1 + $size,
-            );
+            ];
         $self->{'_coord_matrix'} = $m;
         
         # Create rectangle to pad canvas to max number width
         my $canvas = $self->canvas;
         $canvas->createRectangle(
             $half, $half,
-            $half + (2 * ($text_len + $size)), $half + $size,
+            $half + (4 * ($size + $text_len)), $half + $size,
             -fill       => undef,
             -outline    => undef,
             -tags       => ['max_width_rectangle'],
             );
     }
-    
-    my $i = $self->next_position_pair_index;
-    my( $size, $half, $pad, @bbox ) = @$m;
-    my $y_offset = $i * ($size + (2 * $pad));
-    $bbox[1] += $y_offset;
-    $bbox[3] += $y_offset;
-    return( $size, $half, $pad, @bbox );
+    return @$m;
 }
 
 sub add_exon_holder {
@@ -808,6 +828,43 @@ sub add_exon_holder {
     return $size + $pad;
 }
 
+sub draw_translation_region {
+    my( $self ) = @_;
+    
+    my( $size, $half, $pad, $text_len )
+                    = $self->_coord_matrix;
+    my $canvas      = $self->canvas;
+    my $font        = $self->font;
+    my $font_size   = $self->font_size;
+    my @trans       = $self->SubSeq->translation_region;
+    
+    my $t1 = $canvas->createText(
+        $half + $text_len, $size,
+        -anchor => 'e',
+        -text   => $trans[0],
+        -font   => [$font, $size, 'bold'],
+        -tags   => ['t_start', 'translation_region'],
+        );
+    my $t2 = $canvas->createText(
+        (3 * $text_len) + (4 * $size), $size,
+        -anchor => 'w',
+        -text   => $trans[1],
+        -font   => [$font, $size, 'bold'],
+        -tags   => ['t_end', 'translation_region'],
+        );
+}
+
+sub update_translation_region {
+    my( $self ) = @_;
+    
+    my $canvas = $self->canvas;
+    my( @region );
+    foreach my $obj ($canvas->find('withtag', 'translation_region')) {
+        push(@region, $canvas->itemcget($obj, 'text'));
+    }
+    $self->SubSeq->translation_region(@region);
+}
+
 sub get_ace_if_changed {
     my( $self ) = @_;
     
@@ -834,6 +891,7 @@ sub archive_string {
 sub update_ace_subseq {
     my( $self ) = @_;
 
+    $self->update_translation_region;
     my @exons = $self->Exons_from_canvas or return;
 
     my $sub = $self->SubSeq;
@@ -858,6 +916,7 @@ sub xace_save {
     if ($xr) {
         $xr->load_ace($ace);
         $xr->save;
+        $xc->replace_SubSeq($sub);
         $self->archive_string($ace);
         return 1;
     } else {
