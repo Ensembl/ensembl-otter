@@ -27,12 +27,13 @@ sub new {
     $canvas->Tk::bind('<Escape>', sub{ $self->deselect_all });
     
     my $close_window = sub{
-        my $top = $self->DataSetChooser->canvas->toplevel;
-        $top->deiconify;
-        $top->raise;
-        $self->canvas->toplevel->destroy;
-        $self = undef;  # $self will not get DESTROY'd without this
-        };
+	my $top = $self->DataSetChooser->canvas->toplevel;
+	$top->deiconify;
+	$top->raise;
+	$self->canvas->toplevel->destroy;
+	$self->clean_SequenceNotes();
+	$self = undef;  # $self will not get DESTROY'd without this
+    };
     $canvas->Tk::bind('<Control-w>',                $close_window);
     $canvas->Tk::bind('<Control-W>',                $close_window);
     $canvas->toplevel->protocol('WM_DELETE_WINDOW', $close_window);
@@ -174,6 +175,40 @@ sub select_sequence_set {
     }
 }
 
+sub add_SequenceNotes{
+    my ($self, $sn) = @_;
+    if ($sn){
+	$self->{'_sequence_notes'}->{"$sn"} = $sn;
+    }
+    return $self->{'_sequence_notes'}->{"$sn"};
+}
+
+sub get_SequenceNotes_by_name{
+    my ($self, $name) = @_;
+    my $seqNotes = $self->{'_sequence_notes'} || {};
+    foreach my $hash_id(keys %$seqNotes){
+	next unless $seqNotes->{$hash_id};
+	my $sn = $seqNotes->{$hash_id};
+	my $sn_name = $sn->name();
+	next unless $name eq $sn_name;
+	# See bind_close_window method of SequenceNotes.
+	# $sn->SequenceSetChooser($self);
+	$sn->canvas->toplevel->deiconify();
+	$sn->canvas->toplevel->raise();
+	return 1;
+    }
+    return 0;
+}
+sub clean_SequenceNotes{
+    my ($self) = @_;
+    my $seqNotes = $self->{'_sequence_notes'} || {};
+    foreach my $hash_id(keys %$seqNotes){
+	$seqNotes->{"$hash_id"} = undef;
+	delete $seqNotes->{"$hash_id"};
+    }
+    return 0;
+}
+
 sub open_sequence_set {
     my( $self ) = @_;
     
@@ -182,12 +217,10 @@ sub open_sequence_set {
     foreach my $tag ($canvas->gettags($obj)) {
         if ($tag =~ /^SequenceSet=(.+)/) {
             my $name = $1;
-            if (my $win = $self->{'_sequence_notes_window'}{$name}) {
-                $win->deiconify;
-                $win->raise;
-                return 1;
-            }
-            
+
+	    # there's already a SequenceNotes obj available.
+            return 1 if $self->get_SequenceNotes_by_name($name);
+
             my $this_top = $canvas->toplevel;
             
             ### in this case Busy() seems to globally grab pointer - why?
@@ -201,8 +234,7 @@ sub open_sequence_set {
             ## Using this instead:
             $this_top->configure(-cursor => 'watch');
             
-            my $top = $self->{'_sequence_notes_window'}{$name} =
-                $this_top->Toplevel(-title => "SequenceSet $name");
+            my $top = $this_top->Toplevel(-title => "SequenceSet $name");
             my $ss = $self->DataSet->get_SequenceSet_by_name($name);
 
             my $sn = CanvasWindow::SequenceNotes->new($top);
@@ -213,6 +245,7 @@ sub open_sequence_set {
             $sn->initialise;
             $sn->draw;
             
+	    $self->add_SequenceNotes($sn);
             
             #$this_top->Unbusy;
             $this_top->configure(-cursor => undef);
