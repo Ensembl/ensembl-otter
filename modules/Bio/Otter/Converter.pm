@@ -1732,7 +1732,7 @@ sub slice_to_XML {
   $xmlstr .= "<otter>\n";
   $xmlstr .= "<sequence_set>\n";
 
-  my @path  = @{ $slice->get_tiling_path };
+  my $path  = $slice->get_tiling_path;
   #my @genes = @{ $db->get_GeneAdaptor->fetch_by_Slice($slice) };
   my @genes;
 
@@ -1778,7 +1778,7 @@ sub slice_to_XML {
 
     ### Checking author fetching
   $xmlstr .= Bio::Otter::Converter::path_to_XML($chr, $chrstart, $chrend, 
-                                                $db->assembly_type, \@path);
+                                                $db->assembly_type, $path);
 
   if (defined($writeseq)) {
     $xmlstr .= "<dna>\n";
