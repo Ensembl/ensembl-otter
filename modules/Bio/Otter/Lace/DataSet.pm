@@ -984,6 +984,7 @@ sub _make_clone{
     my $end = $seq->length;
     $contig->name("$acc_sv.1." . $seq->length);
     $contig->length($seq->length);
+    $contig->embl_offset(1);
     $contig->seq($seq->seq);
     $clone->add_Contig($contig);
     return $clone;
