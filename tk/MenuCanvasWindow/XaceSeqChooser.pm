@@ -522,6 +522,20 @@ sub populate_menus {
     $top->bind('<Control-e>', $edit_command);
     $top->bind('<Control-E>', $edit_command);
     
+    my $close_subseq_command = sub{
+        return unless $self->current_state eq 'subseq';
+        $self->close_all_subseq_edit_windows;
+        };
+    $subseq->add('command',
+        -label          => 'Close all',
+        -command        => $close_subseq_command,
+        -accelerator    => 'F4',
+        -underline      => 0,
+        );
+    $top->bind('<F4>', $close_subseq_command);
+    $top->bind('<F4>', $close_subseq_command);
+
+    
     #### Separator ####
     $subseq->add('separator');
     
@@ -567,25 +581,25 @@ sub populate_menus {
     $top->bind('<Control-d>', $delete_command);
     $top->bind('<Control-D>', $delete_command);
 
-    ## Unimplemented methods
-    $subseq->add('command',
-        -label          => 'Merge',
-        -command        => sub{ warn "Called Merge" },
-        -accelerator    => 'Ctrl+M',
-        -underline      => 0,
-        -state          => 'disabled',
-        );
-    $subseq->add('command',
-        -label          => 'AutoMerge',
-        -command        => sub{ warn "Called AutoMerge" },
-        -accelerator    => 'Ctrl+U',
-        -underline      => 0,
-        -state          => 'disabled',
-        );
-    
-    $subseq->bind('<Destroy>', sub{
-        $self = undef;
-        });
+    ### Unimplemented methods
+    #$subseq->add('command',
+    #    -label          => 'Merge',
+    #    -command        => sub{ warn "Called Merge" },
+    #    -accelerator    => 'Ctrl+M',
+    #    -underline      => 0,
+    #    -state          => 'disabled',
+    #    );
+    #$subseq->add('command',
+    #    -label          => 'AutoMerge',
+    #    -command        => sub{ warn "Called AutoMerge" },
+    #    -accelerator    => 'Ctrl+U',
+    #    -underline      => 0,
+    #    -state          => 'disabled',
+    #    );
+    #
+    #$subseq->bind('<Destroy>', sub{
+    #    $self = undef;
+    #    });
 
     
     # What did I intend this command to do?
@@ -1506,17 +1520,22 @@ sub rename_subseq_edit_window {
 sub close_all_subseq_edit_windows {
     my( $self ) = @_;
 
+    my $mw = $self->canvas->toplevel;
     foreach my $name ($self->list_all_subseq_edit_window_names) {
         my $top = $self->get_subseq_edit_window($name) or next;
         # Tell window to close
-        warn "Closing edit window for '$name'\n";
+        #warn "Closing edit window for '$name'\n";
         $top->deiconify;
         $top->raise;
+        $top->update;
         $top->focus;
         $top->eventGenerate('<Control-w>');
         
         # User pressed "Cancel" if window is till there
-        return 0 if $self->get_subseq_edit_window($name);
+        if ($self->get_subseq_edit_window($name)) {
+            #warn "window for '$name' was not closed\n";
+            return 0;
+        }
     }
     
     return 1;

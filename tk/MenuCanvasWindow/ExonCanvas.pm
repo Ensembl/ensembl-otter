@@ -263,76 +263,68 @@ sub initialize {
         my $frame = $canvas->toplevel->Frame->pack( -side => 'top', );
 
         # Choice of Method
-        my @mutable_gene_methods = $self->xace_seq_chooser->get_all_mutable_GeneMethods ;
-        my @allowed_methods = map $_->name, @mutable_gene_methods;
-        my @parent_child = map $_->has_parent, @mutable_gene_methods;
-        my $method_i = 0;
         my $current_method = $self->SubSeq->GeneMethod->name;
         $self->method_name_var(\$current_method);
-        #warn "Looking for '$current_method'";
-        my $width = 0;
-        for (my $i = 0; $i < @allowed_methods; $i++) {
-            if ($width < length($allowed_methods[$i])) { $width = length($allowed_methods[$i]) } ;
-            if ($current_method eq $allowed_methods[$i]) {    
-                #warn "Found at '$i'";
-                $method_i = $i;
-            }          
+        my @mutable_gene_methods = $self->xace_seq_chooser->get_all_mutable_GeneMethods;
+        my( @menu_items );
+        my $label_width = 0;
+        for (my $i = 0; $i < @mutable_gene_methods; $i++) {
+            my $gm = $mutable_gene_methods[$i];
+            my $name = $gm->name;
+            $label_width = length($name) if length($name) > $label_width;
+            my( $display_name );
+            if ($gm->has_parent) {
+                $display_name = '    ' . $name;
+            } else {
+                $display_name = $name;
+                unless ($i == 0) {
+                    push @menu_items , '-' ;
+                }
+            }
+            push(@menu_items,
+                ['command' => $display_name, 
+                    -command => sub{
+                        my $txt = $self->method_name_var;
+                        $$txt = $name;
+                        $self->draw_translation_region;
+                        $top->focus;  # Need this
+                    }]
+                );
         }
 
         my $type_frame = $frame->Frame(
             -border => 6,
             )->pack( -side => 'top' );
-        my $type = $type_frame->Label(
+        $type_frame->Label(
             -padx => 6,
             -text => 'Type:',
             )->pack( -side => 'left' );
-        my $tf_label = $type_frame->Label(
+        $type_frame->Label(
             -padx => 3,
             -pady => 3,
             -anchor => 'w',
             -relief => 'sunken',
-            -textvariable => \$current_method ,
-            -width => $width,
-            #-font   => [$self->font, $self->font_size],
+            -textvariable => $self->method_name_var,
+            -width => $label_width,
             )->pack(
                 -side => 'left',
                 -expand => 'x',
                 );
         
-        my $length = 0;
-        my ($prev ,@menu_items) ;
-        foreach my $gm ( @mutable_gene_methods ){
-                        
-            my $orig_name = $gm->name;
-            my $display_name = $orig_name;
-            if ($gm->has_parent){
-                $display_name = "    " . $orig_name ;
-            }
-            else{
-                unless ($gm == $mutable_gene_methods[0]){
-                    push @menu_items , '-' ;    
-                }
-            }
-            my $item = ['command' => $display_name , 
-                        -command => sub{    ${\$current_method} = $orig_name ;
-                                            $self->draw_translation_region;
-                                            $top->focus;  # Need this
-                                            my $txt = $self->method_name_var; 
-                                        }
-                        ];
-                        
-            push @menu_items, $item ;
-        }
-           
-        
-        my $om = $type_frame->Menubutton(   -bitmap => '@' . Tk->findINC('cbxarrow.xbm'),
-                                            -relief     =>  'groove' ,
-                                            -tearoff    =>  0 ,
-                                            -direction  => 'left',
-                                            -menuitems  => [@menu_items]   
-        )->pack(-side => 'right', -padx => 1, -fill => 'y', -expand => 1 , -ipady => 3 , -ipadx => 1, -padx =>2);
-   
-        $om->menu->invoke($method_i);
+        $type_frame->Menubutton(
+            -bitmap => '@' . Tk->findINC('cbxarrow.xbm'),
+            -relief     =>  'groove' ,
+            -tearoff    =>  0 ,
+            -direction  => 'left',
+            -menuitems  => [@menu_items]   
+            )->pack(
+                -side   => 'left',
+                -fill   => 'y',
+                -expand => 1,
+                -ipady  => 3,
+                -ipadx  => 1,
+                -padx   => 2,
+                );
         
         # Widget for changing name
         $self->add_subseq_rename_widget($frame);
@@ -811,9 +803,7 @@ sub is_mutable {
 
 sub window_close {
     my( $self ) = @_;
-    
-    warn "Closing window";
-    
+        
     my $xc = $self->xace_seq_chooser;
     if ($self->is_mutable) {
         my( $sub );
