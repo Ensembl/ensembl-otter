@@ -562,7 +562,7 @@ sub populate_menus {
     $top->bind('<Control-X>', $xace_attach_command);
     
     # Save annotations to otter
-    my $save_command = sub { $self->save_data };
+    my $save_command = sub { $self->save_data(1) };
     $file->add('command',
         -label          => 'Save',
         -command        => $save_command,
@@ -940,8 +940,9 @@ sub exit_save_data {
 }
 
 sub save_data {
-    my( $self ) = @_;
-
+    my( $self, $update_ace ) = @_;
+    ## update_ace should be true unless object is exiting 
+    ## i.e. when called from ->exit_save_data()
     #warn "SAVING DATA";
 
     if (my $xr = $self->xace_remote) {
@@ -962,7 +963,13 @@ sub save_data {
 
     my $db = $self->AceDatabase;
     eval{
-        $db->save_all_slices;
+        my $ace_data = $db->save_all_slices;
+        ## update_ace should be true unless this object is exiting
+        if($update_ace && ref($ace_data) eq 'SCALAR'){
+            $self->update_ace_display($$ace_data);
+            # resync here!
+            $self->resync_with_db; # probably better to create a key event
+        }
     };
     my $err = $@;
     
