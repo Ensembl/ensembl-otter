@@ -20,9 +20,9 @@ use GenomeCanvas;
         );
     
     # Look at the "Tk::bind" man page for the Ev subroutine's documenation
-    $canvas->Tk::bind('<Double-Button-1>',  [ \&deal_with_double_click, Tk::Ev('x'), Tk::Ev('y') ] );
     $canvas->Tk::bind('<Button-1>',         [ \&deal_with_button_1,     Tk::Ev('x'), Tk::Ev('y') ] );
     $canvas->Tk::bind('<Button-2>',         [ \&paste_into_text,        Tk::Ev('x'), Tk::Ev('y') ] );
+    $canvas->Tk::bind('<Double-Button-1>',  [ \&deal_with_double_click, Tk::Ev('x'), Tk::Ev('y') ] );
     $canvas->Tk::bind('<BackSpace>',          \&backspace                                          );
     $canvas->Tk::bind('<Left>',               \&go_left                                            );
     $canvas->Tk::bind('<Right>',              \&go_right                                           );

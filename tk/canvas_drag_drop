@@ -1,0 +1,107 @@
+#!/usr/local/bin/perl -w
+
+### canvas_drag_drop
+
+use strict;
+use GenomeCanvas;
+
+{
+    my $mw = GenomeCanvas::MainWindow->new;
+    $mw->title('Drag & Drop');
+    $mw->bind(<Control-q>, sub {exit 0});
+    $mw->bind(<Control-Q>, sub {exit 0});
+    
+    my $gc = GenomeCanvas->new($mw);
+    
+    my $canvas = $gc->canvas;
+
+    #$canvas->Tk::bind('<ButtonPress-1>',    [ \&save_current, Tk::Ev('x'), Tk::Ev('y') ] );
+    $canvas->Tk::bind('<ButtonPress-1>',    \&save_current );
+    $canvas->Tk::bind('<Button1-Motion>',   [ \&move_current, Tk::Ev('x'), Tk::Ev('y') ] );
+    $canvas->Tk::bind('<ButtonRelease-1>',   [ \&snap_to_canvas, Tk::Ev('x'), Tk::Ev('y') ] );
+
+    my $rec = $canvas->createRectangle(1,1,500,200,
+        -fill       => '#ffffff',
+        -outline    => '#999999',
+        -tags       => ['bkgd_rec'],
+        );
+
+
+    my @xy = (
+        10,10,
+        20,200,
+        30,300,
+        );
+    for (my $i = 0; $i < @xy; $i += 2) {
+        my ($x,$y) = @xy[$i, $i+1];
+        $canvas->createRectangle(
+            $x, $y, $x+20, $y+8,
+            -fill   => 'black',
+            );
+    }
+
+
+    $gc->fix_window_min_max_sizes;
+    
+    Tk::MainLoop();
+}
+
+{
+    my( $last_x, $last_y, $current_obj );
+    
+    sub save_current {
+        my( $canvas ) = @_;
+        
+        ($last_x, $last_y) = $canvas->pointerxy;
+        $current_obj = $canvas->find('withtag', 'current');
+    }
+    
+    sub move_current {
+        my( $canvas ) = @_;
+        
+        my ($x, $y) = $canvas->pointerxy;
+
+        my $x_diff = $x - $last_x;
+        my $y_diff = $y - $last_y;
+
+        ($last_x, $last_y) = ($x, $y);
+
+
+        #$canvas->move('current', 0, $y_diff);
+        #$canvas->move('current', $x_diff, 0);
+        $canvas->move($current_obj, $x_diff, $y_diff);
+    }
+    
+    sub snap_to_canvas {
+        my( $canvas ) = @_;
+        
+        my @bkgd = $canvas->bbox('bkgd_rec');
+        my @curr = $canvas->bbox($current_obj);
+        
+        my($x_diff, $y_diff) = (0,0);
+        if ($curr[0] < $bkgd[0]) {
+            $x_diff = $bkgd[0] - $curr[0];
+        }
+        elsif ($curr[2] > $bkgd[2]) {
+            $x_diff = $bkgd[2] - $curr[2];
+        }
+        
+        if ($curr[1] < $bkgd[1]) {
+            $y_diff = $bkgd[1] - $curr[1];
+        }
+        elsif ($curr[3] > $bkgd[3]) {
+            $y_diff = $bkgd[3] - $curr[3];
+        }
+        
+        $canvas->move('current', $x_diff, $y_diff);
+    }
+}
+
+__END__
+
+=head1 NAME - canvas_drag_drop
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+

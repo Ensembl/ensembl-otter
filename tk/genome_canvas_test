@@ -148,8 +148,8 @@ use Getopt::Long 'GetOptions';
         $gene_names->show_labels(1);
         $gene_names->label_type_color_list(
             [ 'Known',              'HUMACE-Known',             '#4169e7' ],
-            [ 'Novel CDS',          'HUMACE-Novel_CDS',         '#6196ef' ],
-            [ 'Novel Transcript',   'HUMACE-Novel_Transcript',  '#00ced7' ],
+            [ 'Novel CDS',          'HUMACE-Novel_CDS',         '#86ceff' ],
+            [ 'Novel Transcript',   'HUMACE-Novel_Transcript',  '#ffa600' ],
             [ 'Pseudogene',         'HUMACE-Pseudogene',        '#31ce31' ],
             [ 'Putative',           'HUMACE-Putative',          '#cccccc' ],
             );
