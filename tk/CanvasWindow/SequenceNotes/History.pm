@@ -155,14 +155,13 @@ sub get_rows_list{
     print STDERR "Fetching SequenceNotes list...";
     my $clone = $self->current_clone;
     my $note_list = $clone->get_all_SequenceNotes;
-    unless (@$note_list){
-	$self->delete_message();
-	$self->message( "No History for sequence " . $clone->contig_name . "  " .$clone->clone_name );
-	return [];
-    }
     return $note_list;
 }  
-
+sub empty_canvas_message{
+    my ($self) = @_;
+    my $clone = $self->current_clone;
+    return "No History for sequence " . $clone->contig_name . "  " . $clone->clone_name;
+}
 
 sub column_methods{
     my $self = shift @_ ;
