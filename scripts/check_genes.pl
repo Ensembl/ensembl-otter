@@ -73,6 +73,7 @@ rename_genes.pl
   -v                        verbose
   -o              file      output file ($opt_o)
   -p              file      output file ($opt_p)
+  -q              file      output file ($opt_q)
   -c              char      chromosome ($opt_c)
   -make_cache               make cache file
   -exclude                  gene types prefixes to exclude ($exclude)
@@ -235,6 +236,7 @@ foreach my $atype (keys %gsi){
     # debug:
     if($gsi eq 'OTTHUMG00000032751' && $opt_v){
       $flag_v=1;
+      print "debug mode\n";
     }else{
       $flag_v=0;
     }
@@ -260,9 +262,6 @@ foreach my $atype (keys %gsi){
 	  if($eids{$eid}){
 	    $esro=$eids{$eid};
 	  }
-	  $eidso{$eid}->{$esro}=[$st,$ed] unless $eidso{$eid}->{$esro};
-	  $eidso{$eid}->{$esr}=[$ecst,$eced] unless $eidso{$eid}->{$esr};
-	  $eids{$eid}=1;
 
 	  # skip if identical match to old original
 	  my $match;
@@ -272,6 +271,12 @@ foreach my $atype (keys %gsi){
 	      $match=1;
 	    }
 	  }
+
+	  # save original before modify so don't check twice
+	  $eidso{$eid}->{$esro}=[$st,$ed] unless $eidso{$eid}->{$esro};
+	  $eidso{$eid}->{$esr}=[$ecst,$eced] unless $eidso{$eid}->{$esr};
+	  $eids{$eid}=1;
+
 	  if($match){
 	    # if identical, check for sticky
 	  }elsif($ed+1==$ecst){
@@ -298,7 +303,7 @@ foreach my $atype (keys %gsi){
 	    }elsif($ep!=$ep2){
 	      print OUT3 "NON-DUP: $eid, $eid2 identical but on diff phases ($ep,$ep2)\n";
 	    }elsif($eep!=$eep2){
-	      print OUT3 "WARN NON-DUP: $eid, $eid2 identical but diff end phases ($eep,$eep2)\n";
+	      print OUT3 "WARN NON-DUP: $eid, $eid2 identical but diff end phases ($eep,$eep2) [$ep,$ep2]\n";
 	    }elsif($dup_exon{$eid}==$eid2 || $dup_exon{$eid2}==$eid){
 	      # don't report again
 	    }else{
