@@ -193,9 +193,12 @@ sub make_new_child {
         close $out;
         waitpid $pid, 0;
       } else {
+
         my $message = "Unknown command " . $r->method . " " . $r->url->path . "\n";
-        print $client $message;
         print STDERR $message;
+        # $client->send_status_line(400);
+        $client->send_error(400, $message);
+        # print $client $message;
       }
       $client->close;
       sigprocmask(SIG_UNBLOCK, $sigset_CHLD) or die "Can't unblock SIGCHLD after request: $!\n";
