@@ -130,12 +130,11 @@ sub draw_gene_features_on_sub_vc {
     my $rpp         = $band->residues_per_pixel;
     my $y_offset    = $band->y_offset;
     my @tags        = $band->tags;
-    my $font_size   = $band->font_size;
     my $canvas      = $band->canvas;
-    
-    my $rectangle_height = $font_size * 10 / 12;
-    my $rectangle_border = $font_size * 1  / 12;
-    my $nudge_distance = ($rectangle_height + 1) * $y_dir;
+    my $font_size   = $band->font_size;
+
+    my $rectangle_height = $font_size;
+    my $nudge_distance = $rectangle_height * $y_dir;
 
     my @genes = $vc->get_all_VirtualGenes;
     my( @ranked_genes );
@@ -164,7 +163,6 @@ sub draw_gene_features_on_sub_vc {
         
             my $id    = $vg->id;
             my $group = "gene_group-$id-$vc";
-            #$band->draw_gene($vg, $x_offset, $y_offset, $color, $group);
         
             $band->current_color($color);
             my $start = $x_offset + $vg->start;
@@ -174,22 +172,12 @@ sub draw_gene_features_on_sub_vc {
 
             my $x1 = $start / $rpp;
             my $x2 = $end   / $rpp;
-            $canvas->createRectangle(
-                $x1, $y_offset, $x2, $y_offset + $rectangle_height,
-                -fill => $color,
-                -outline => undef,
-                -tags => [@tags, 'gene_rectangle', $group],
-                );
 
-            if ($vg->strand == 1) {
-                $band->forward_arrow($x2, $rectangle_height, @tags, $group);
-            } else {
-                $band->reverse_arrow($x1, $rectangle_height, @tags, $group);
-            }
+            $band->draw_gene_arrow($x1, $x2, $vg->strand, $rectangle_height, @tags, $group);
 
             if ($band->show_labels) {
 
-                my $label_space = $rectangle_height * (3 / 4);
+                my $label_space = $rectangle_height / 4;
                 my( $anchor, $y1 );
                 if ($y_dir == 1) {
                     $anchor = 'nw';
@@ -209,8 +197,9 @@ sub draw_gene_features_on_sub_vc {
 
                 my @bkgd = $canvas->bbox($group);
 
-                my $sp = $font_size / 5;
-                $band->expand_bbox(\@bkgd, $sp);
+                my $sp = $font_size / 4;
+                $bkgd[0] -= $sp;
+                $bkgd[2] += $sp;
                 my $bkgd_rectangle = $canvas->createRectangle(
                     @bkgd,
                     -outline    => '#cccccc',
@@ -218,8 +207,9 @@ sub draw_gene_features_on_sub_vc {
                     );
 
                 unless ($text_nudge_flag) {
-                    my( $small, $big ) = sort {$a <=> $b} map abs($_), @bkgd[1,3];
-                    $nudge_distance = ($big - $small + 3) * $y_dir;
+                    #my( $small, $big ) = sort {$a <=> $b} map abs($_), @bkgd[1,3];
+                    #$nudge_distance = ($big - $small + 3) * $y_dir;
+                    $nudge_distance *= 2;
                     $text_nudge_flag = 1;
                 }
             }
@@ -231,54 +221,71 @@ sub draw_gene_features_on_sub_vc {
     $canvas->delete('bkgd_rec');
 }
 
-sub draw_gene {
-    my( $band, $vg, $x_offset, $y_offset, $color, $group ) = @_;
+sub draw_gene_arrow {
+    my( $band, $x1, $x2, $strand, $rectangle_height, @tags ) = @_;
 
-    my $canvas  = $band->canvas;
-    my @tags    = $band->tags;
-    my $strand  = $vg->strand;
-    
-    
-}
-
-sub forward_arrow {
-    my( $band, $x1, $size, @tags ) = @_;
-    
     my $y_offset = $band->y_offset;
-    my $canvas   = $band->canvas;
     
-    my $x_dist = $size * (2 / 3);
-    my $y1 = $y_offset + ($size / 2);
-    my @coords = (
-        $x1,            $y1,
-        $x1 - $x_dist,  $y1 + $size,
-        $x1 + $x_dist,  $y1,
-        $x1 - $x_dist,  $y1 - $size,
-        );
-    
-    return $canvas->createPolygon(
-        @coords,
-        -fill   => $band->current_color,
-        -tags   => ['gene_arrow', @tags],
-        );
-}
+    my $u = $rectangle_height / 8;
+    my $length = $x2 - $x1;
+    my $head_center = 2 * $u;
 
-sub reverse_arrow {
-    my( $band, $x1, $size, @tags ) = @_;
-    
-    my $y_offset = $band->y_offset;
-    my $canvas   = $band->canvas;
-    
-    my $x_dist = $size * (2 / 3);
-    my $y1 = $y_offset + ($size / 2);
-    my @coords = (
-        $x1,            $y1,
-        $x1 + $x_dist,  $y1 + $size,
-        $x1 - $x_dist,  $y1,
-        $x1 + $x_dist,  $y1 - $size,
+    # I draw a reverse strand gene, and then flip
+    # the x coordinates if it is a forward strand gene.
+    # This is beacause I only have to adjust 3 coordinates
+    # by the gene length to get the arrow for a reverse
+    # strand gene.
+
+    # These coordinates are the same, whether or
+    # not the gene is longer than the arrowhead.
+    my @arrow_head_start = map $u * $_, (
+        -2,  0,
+         3,  5,
+         5,  5,
+        );
+    my @arrow_head_end = map $u * $_, (
+         5, -5,
+         3, -5,
         );
     
-    return $canvas->createPolygon(
+    my( @coords );
+    if ($length < $head_center) {
+        # Gene is within arrowhead
+        @coords = (
+            @arrow_head_start,
+            $head_center,    0,
+            @arrow_head_end,
+            );
+    } else {
+        # Gene is longer then arrowhead
+        my $tail_x_start = $u * 1.8;
+        @coords = (
+            @arrow_head_start,
+            $tail_x_start + $head_center,     3 * $u,
+            $tail_x_start + $length,          3 * $u,
+                          + $length,          0,
+            $tail_x_start + $length,         -3 * $u,
+            $tail_x_start + $head_center,    -3 * $u,
+            @arrow_head_end,
+            );
+    }
+
+    # Flip coordinates for forward strand gene
+    if ($strand == 1) {
+        for (my $i = 0; $i < @coords; $i += 2) {
+            my $x = $coords[$i];
+            $coords[$i] = (-1 * $x) + $length;
+        }
+    }
+
+    # Adjust x and y coordinates to put the gene
+    # in the correct place.
+    for (my $i = 0; $i < @coords; $i += 2) {
+        $coords[$i]   += $x1;
+        $coords[$i+1] += $y_offset;
+    }
+    
+    return $band->canvas->createPolygon(
         @coords,
         -fill   => $band->current_color,
         -tags   => ['gene_arrow', @tags],

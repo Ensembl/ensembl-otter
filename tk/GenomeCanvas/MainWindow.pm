@@ -17,6 +17,7 @@ sub new {
     my $mw = $pkg->SUPER::new(
         -class => 'GenomeCanvas',
         -title => $title,
+        -colormap   => 'new',
         );
     $mw->configure(
         -background     => '#bebebe',

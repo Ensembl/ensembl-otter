@@ -145,7 +145,7 @@ use Getopt::Long 'GetOptions';
         $gc->add_Band($plot);
 
         my $gene_names = GenomeCanvas::Band::Gene->new;
-        $gene_names->show_labels(0);
+        $gene_names->show_labels(1);
         $gene_names->label_type_color_list(
             [ 'Known',              'HUMACE-Known',             '#4169e7' ],
             [ 'Novel CDS',          'HUMACE-Novel_CDS',         '#86ceff' ],
