@@ -776,13 +776,11 @@ sub trim_cds_coord_to_first_stop {
     
     my $sub = $self->new_SubSeq_from_tk;
     my $strand = $sub->strand;
-    my $original;
+    my $original = $self->tk_t_end;
     if ($strand == 1) {
-        $original = $self->tk_t_end;
         $self->tk_t_end($sub->end);
     } else {
-        $original = $self->tk_t_start;
-        $self->tk_t_start($sub->start);
+        $self->tk_t_end($sub->start);
     }
     
     # Translate the subsequence
@@ -812,21 +810,19 @@ sub trim_cds_coord_to_first_stop {
     my $pos = 0;
     foreach my $ex (@exons) {
         my $exon_end = $pos + $ex->length;
-        if ($cds_coord < $exon_end) {
+        if ($cds_coord <= $exon_end) {
             my $exon_offset = $cds_coord - $pos;
+            my( $new );
             if ($strand == 1) {
-                my $new = $ex->start + $exon_offset - 1;
-                $self->tk_t_end($new);
-                # Highlight the translation end if we have changed it
-                $self->highlight('t_end') if $new != $original;
-                return 1;
+                $new = $ex->start + $exon_offset - 1;
             } else {
-                my $new = $ex->end + 1 - $exon_offset;
-                $self->tk_t_start($new);
-                # Highlight the translation start if we have changed it
-                $self->highlight('t_start') if $new != $original;
-                return 1;
+                $new = $ex->end + 1 - $exon_offset;
             }
+            $self->tk_t_end($new);
+
+            # Highlight the translation end if we have changed it
+            $self->highlight('t_end') if $new != $original;
+            return 1;
         }
         $pos = $exon_end;
     }
@@ -1782,6 +1778,7 @@ sub DESTROY {
     #my $name = $self->name;
     #warn "Destroying: '$name'\n";
 }
+
 sub icon_pixmap {
 
     return <<'END_OF_PIXMAP';
@@ -1813,33 +1810,33 @@ static char * exoncanvas_xpm[] = {
 "   .............o.......XX         O.....O      ",
 "   ...........oo........XX        O.......O     ",
 "   ...ooooooooooooooo...XX       O.........O    ",
-"   ...o.............o...XX      OOOOOO.OOOOOO   ",
+"   ...o.............o...XX       OOOOO.OOOOO    ",
 "   ...o.............o...XX          XO.OXXX     ",
 "   ...o.............o...XX         XXO.OXXXX    ",
 "   ...o.............o...XX        XXXO.OXXXXX   ",
-"   ...o.............o...XX       XXXXO.OXXXXXX  ",
+"   ...o.............o...XX        XXXO.OXXXXX   ",
 "   ...o.............o...XX           O.OX       ",
 "   ...o.............o...XX           O.OX       ",
-"   ...o.............o.OOOOOOOOOOOOOOOO.OOOOOOO  ",
-"   ...ooooooooooooooo........................O  ",
-"   ...ooooooooooooooo.OOOOOOOOOOOOOOOOOOOOOOOO  ",
-"   ...ooooooooooooooo..XXX            XXX       ",
-"   ...ooooooooooooooo...XXXXXXXXXXXXXXXXXXXXXXX ",
-"   ...ooooooooooooooo...XXXXXXXXXXXXXXXXXXXXXXX ",
-"   ...ooooooooooooooo...XXXXXXXXXXXXXXXXXXXXXXX ",
-"   ...ooooooooooooooo...XX                      ",
-"   ...ooooooooooooooo...XX                      ",
-"   ...ooooooooooooooo...XX                      ",
-"   ...ooooooooooooooo...XX                      ",
-"   ...ooooooooooooooo...XX                      ",
-"   ...ooooooooooooooo...XX                      ",
-"   ...ooooooooooooooo...XX                      ",
-"   ...ooooooooooooooo...XX                      ",
-"   ...ooooooooooooooo...XX                      ",
-"   ...ooooooooooooooo...XX                      ",
-"   ...ooooooooooooooo...XX                      ",
-"   ...........o.........XX                      ",
-"   ...........o.........XX                      ",
+"   ...o.............OOOOOOOOOOOOOOOOOO.OX       ",
+"   ...ooooooooooooooo..................OX       ",
+"   ...ooooooooooooooOOOOOOOOOOOOOOOOOO.OX       ",
+"   ...ooooooooooooooo..XXX           O.OX       ",
+"   ...ooooooooooooooo...XXXXXXXXXXXXXO.OX       ",
+"   ...ooooooooooooooo...XXXXXXXXXXXXXO.OX       ",
+"   ...ooooooooooooooo...XXXXXXXXXXXXXO.OX       ",
+"   ...ooooooooooooooo...XX           O.OX       ",
+"   ...ooooooooooooooo...XX           O.OX       ",
+"   ...ooooooooooooooo...XX       OOOOO.OOOOO    ",
+"   ...ooooooooooooooo...XX       O.........O    ",
+"   ...ooooooooooooooo...XX        O.......O     ",
+"   ...ooooooooooooooo...XX         O.....O      ",
+"   ...ooooooooooooooo...XX        XXO...OXXXX   ",
+"   ...ooooooooooooooo...XX        XXXO.OXXXXX   ",
+"   ...ooooooooooooooo...XX         XXXOXXXXX    ",
+"   ...ooooooooooooooo...XX          XXXXXXX     ",
+"   ...ooooooooooooooo...XX           XXXXX      ",
+"   ...........o.........XX            XXX       ",
+"   ...........o.........XX             X        ",
 "   ............o........XX                      ",
 "   ............o........XX                      ",
 "    XXXXXXXXXXXXXXXXXXXXXX                      ",
