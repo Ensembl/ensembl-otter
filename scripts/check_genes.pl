@@ -665,6 +665,8 @@ my $nl=0;
 my $flag_v;
 my $nip=0;
 my $npntr=0;
+my $npstr=0;
+my $nos=0;
 my %t2e;
 my %e2t;
 my %e;
@@ -691,6 +693,7 @@ foreach my $atype (keys %gsi){
     my %eids;
     my %eidso;
     my %ephases;
+    my %etrans;
     # look for overlapping exons and group exons into transcripts
     # (one gene at a time)
 #    foreach my $rt (@{$gsi{$atype}->{$gsi}}){
@@ -743,6 +746,34 @@ foreach my $atype (keys %gsi){
 	}
       }else{
 	my $flag;
+	
+	# check consistency of phase of exon
+	# and consistency wrt to translation of each instance of each exon
+	my($t,$p);
+	if($trid==0){
+	  $t=1;
+	  $p=0;
+	}else{
+	  $t=0;
+	  $p=1;
+	}
+	if(!$etrans{$eid}){
+	  my $flag_noncoding=0;
+	  if($ep==-1 || $eep==-1){
+	    $flag_noncoding=1 if $ep==-1;
+	    if($ep+$eep!=-2){
+	      print OUT3 "ERR1 $eid $ep $eep inconsistent noncoding phases\n";
+	      $nip++;
+	    }
+	  }
+	  $etrans{$eid}=[$flag_noncoding,$t,$p];
+	}else{
+	  my($f,$t1,$p1)=@{$etrans{$eid}};
+	  $t1+=$t;
+	  $p1+=$p;
+	  $etrans{$eid}=[$f,$t1,$p1];
+	}
+
 	# compare current exon to all existing ones...
 	foreach my $eid2 (keys %{$e{$gsi}}){
 	  my($st,$ed,$es2,$ep2,$eep2,$trid2)=@{$e{$gsi}->{$eid2}};
@@ -750,6 +781,7 @@ foreach my $atype (keys %gsi){
 	    # duplicate exons
 	    if($es!=$es2){
 	      print OUT3 "NON-DUP: $eid, $eid2 identical but on opposite strands!\n";
+	      $nos++;
 	    }elsif($ep!=$ep2){
 	      print OUT3 "NON-DUP: $eid, $eid2 identical but on diff phases ($ep,$ep2)\n";
 	    }elsif($eep!=$eep2){
@@ -787,20 +819,6 @@ foreach my $atype (keys %gsi){
 	  }
 	}
 	if(!$flag){
-	  # check for phase consistency and warn
-	  # if trid==0; $ep=$eep=-1; else either $ep=$eep=-1 or any positive
-	  my $flag_noncoding=0;
-	  if($ep==-1 || $eep==-1){
-	    $flag_noncoding=1 if $ep==-1;
-	    if($ep+$eep!=-2){
-	      print OUT3 "ERR1 $eid $ep $eep inconsistent noncoding phases\n";
-	      $nip++;
-	    }
-	  }
-	  if($trid==0 && $flag_noncoding==0){
-	    print OUT3 "ERR2 $eid $ep $eep exon has phase when no translation\n";
-	    $npntr++;
-	  }
 	  $e{$gsi}->{$eid}=[$ecst,$eced,$es,$ep,$eep,$trid];
 	  push(@{$ephases{$eid}},[$eid,$es,$ep,$eep]);
 	  push(@{$eall{$ecst}->{$eced}},$eid);
@@ -815,6 +833,20 @@ foreach my $atype (keys %gsi){
 	print "FATAL $eid part of $gsi and $e2g{$eid}\n";
       }else{
 	$e2g{$eid}=$gsi;
+      }
+    }
+
+    # report consistency of exon phase wrt translation
+    foreach my $eid (keys %etrans){
+      my($f,$t,$p)=@{$etrans{$eid}};
+      if($f==0 && $t){
+	if($p){
+	  print OUT3 "ERR3 $eid $ep $eep exon has phase when sometimes translation\n";
+	  $npstr++;
+	}else{
+	  print OUT3 "ERR2 $eid $ep $eep exon has phase when never translation\n";
+	  $npntr++;
+	}
       }
     }
 
@@ -900,7 +932,8 @@ foreach my $atype (keys %gsi){
 print scalar(keys %dup_exon)." duplicate exons\n";
 print "$nmc genes with non overlapping transcripts; $nmcb cases gap crosses single clone boudary\n";
 print "found $nexon exons; $nsticky sticky exons\n";
-print "$nip exons have inconsistent noncoding phases; $npntr exons have phase when no translation\n";
+print "$nip exons have inconsistent noncoding phases;\n";
+print "$npstr exons have phase when sometimes translation; $npntr exons have phase when never translation\n";
 print "$nl large transcripts found (see $opt_o)\n\n";
 close(OUT);
 close(OUT2);

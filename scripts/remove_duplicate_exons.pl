@@ -81,25 +81,45 @@ $dbh = new Bio::EnsEMBL::DBSQL::DBConnection(-host => $host,
 					     -driver=>'mysql');
 
 # build max version for stable_id in exon_stable_id
-my $sql=qq{SELECT stable_id,version
-	     FROM exon_stable_id
-	   };
-my $sth = $dbh->prepare($sql);
-$sth->execute();
-my $n=0;
-my $ne=0;
 my %seid;
-while (my @row = $sth->fetchrow_array()){
-  my($seid,$ver)=@row;
-  if($seid{$seid}){
-    $seid{$seid}=$ver if $seid{$seid}<$ver;
-  }else{
-    $seid{$seid}=$ver;
-    $ne++;
+{
+  my $sql=qq{SELECT stable_id,version
+	       FROM exon_stable_id
+	     };
+  my $sth = $dbh->prepare($sql);
+  $sth->execute();
+  my $n=0;
+  my $ne=0;
+  while (my @row = $sth->fetchrow_array()){
+    my($seid,$ver)=@row;
+    if($seid{$seid}){
+      $seid{$seid}=$ver if $seid{$seid}<$ver;
+    }else{
+      $seid{$seid}=$ver;
+      $ne++;
+    }
+    $n++;
   }
-  $n++;
+  print "read $n entries, $ne exons from exon_stable_id table\n" if $opt_v;
 }
-print "read $n entries, $ne exons\n";
+
+# build lists of exon_id's used in translations table
+my %tle;
+{
+  my $sql=qq{SELECT *
+	       FROM translation
+	     };
+  my $sth = $dbh->prepare($sql);
+  $sth->execute();
+  my $n=0;
+  while (my @row = $sth->fetchrow_array()){
+    my($tlid,$est,$estid,$eed,$eedid)=@row;
+    push(@{$tle{$estid}},[$tlid,0]);
+    push(@{$tle{$eedid}},[$tlid,1]);
+    $n++;
+  }
+  print "read $n entries from translation table\n" if $opt_v;
+}
 
 my $cl=new cluster();
 my $n=0;
@@ -234,6 +254,17 @@ foreach my $cid ($cl->cluster_ids){
     # skip match
     next if($rtid==$tid);
     print OUT "update exon_transcript set exon_id=$reid where transcript_id=$tid and exon_id=$eid;\n";
+    if($tle{$eid}){
+      # exon used in translation
+      foreach my $rtle (@{$tle{$eid}}){
+	my($tlid,$type)=@$rtle;
+	if($type==0){
+	  print OUT "update translation set start_exon_id=$reid where translation_id=$tlid;\n";
+	}else{
+	  print OUT "update translation set end_exon_id=$reid where translation_id=$tlid;\n";
+	}
+      }
+    }
     print OUT "delete from exon where exon_id=$eid;\n";
     print OUT "delete from exon_stable_id where exon_id=$eid;\n";
     my $rsv="$rseid.$rsev";
