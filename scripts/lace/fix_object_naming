@@ -263,7 +263,7 @@ sub rename_transcript {
               , transcript_synonym)
         VALUES (?,?)
         });
-    $ren->execute($new, $old);
+    $arch->execute($new, $old);
 }
 
 sub rename_gene {
@@ -283,7 +283,7 @@ sub rename_gene {
               , gene_info_id )
         VALUES (?,?)
         });
-    $ren->execute($old, $g_info_id);
+    $arch->execute($old, $g_info_id);
     
     fix_gene_remarks($dba, $gene, $tsct_rename_map);
 }
