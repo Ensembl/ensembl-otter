@@ -43,7 +43,7 @@ use Carp;
 use Hum::EMBL;
 use Hum::EMBL::FeatureSet;
 use Hum::EMBL::Exon;
-use Hum::EMBL::ExonCollection;
+use Hum::EMBL::ExonLocation;
 use Hum::EMBL::LocationUtils qw( simple_location locations_from_subsequence
     location_from_homol_block );
 use Hum::EmblUtils qw( add_source_FT add_Organism );
@@ -384,7 +384,6 @@ sub make_embl {
     my ( $self, $acc ) = @_;
 
     confess "Must pass an accession" unless $acc;
-    warn "sortByPosition and removeDuplicateFeatures not being called\n";
 
     my $ds = $self->Dataset
         or confess "Dataset must be set before calling make_embl";
@@ -414,10 +413,9 @@ sub make_embl {
         }
     }
     
-    #Finish up, add the genes and other features into the entry
-    
-    #$set->sortByPosition;
-    #$set->removeDuplicateFeatures;
+    #Finish up
+    $set->sortByPosition;
+    $set->removeDuplicateFeatures;
     $set->addToEntry($embl);
     return $embl;
 }
@@ -432,8 +430,8 @@ lines are added.
 The mRNA is built up by iterating over all Exons ($transcript->get_all_Exons),
 the CDS by Exons fetched with $transcript->get_all_translateable_Exons
 
-For each mRNA, or CDS a Hum::EMBL::ExonCollection object is created to which
-a number of Hum::EMBL::Exon objects are added (by _add_exons_to_exoncollection).
+For each mRNA, or CDS a Hum::EMBL::ExonLocation object is created to which
+a number of Hum::EMBL::Exon objects are added (by _add_exons_to_exonlocation).
 
 By checking if the Contig the Exon is located on is the same as the
 Slice_contig, we determine whether the Exon is on the Slice (ie: clone)
@@ -444,7 +442,7 @@ Currently flags a warning, if StickyExon(s) are found.
 
 =cut
 
-sub do_Gene {
+sub _do_Gene {
     my ( $self, $gene ) = @_;
 
     #Bio::Otter::AnnotatedGene, isa Bio::EnsEMBL::Gene
@@ -466,18 +464,18 @@ sub do_Gene {
         if ($all_transcript_Exons) {
             my $ft = $set->newFeature;
             $ft->key('mRNA');
-            my $mRNA_exoncollection = Hum::EMBL::ExonCollection->new;
-            $ft->location($mRNA_exoncollection);
+            my $mRNA_exonlocation = Hum::EMBL::ExonLocation->new;
+            $ft->location($mRNA_exonlocation);
 
-            $self->_add_exons_to_exoncollection($mRNA_exoncollection
+            $self->_add_exons_to_exonlocation($mRNA_exonlocation
                 , $all_transcript_Exons);
 
-            $mRNA_exoncollection->start_not_found($transcript_info->mRNA_start_not_found);
-            $mRNA_exoncollection->end_not_found($transcript_info->mRNA_end_not_found);
+            $mRNA_exonlocation->start_not_found($transcript_info->mRNA_start_not_found);
+            $mRNA_exonlocation->end_not_found($transcript_info->mRNA_end_not_found);
             
             #For debugging
-            #$mRNA_exoncollection->start_not_found(1);
-            #$mRNA_exoncollection->end_not_found(1);
+            #$mRNA_exonlocation->start_not_found(1);
+            #$mRNA_exonlocation->end_not_found(1);
         } else {
             warn "No mRNA exons\n";
         }
@@ -488,18 +486,18 @@ sub do_Gene {
             if ($all_CDS_Exons) {
                 my $ft = $set->newFeature;
                 $ft->key('CDS');
-                my $CDS_exoncollection = Hum::EMBL::ExonCollection->new;
-                $ft->location($CDS_exoncollection);
+                my $CDS_exonlocation = Hum::EMBL::ExonLocation->new;
+                $ft->location($CDS_exonlocation);
 
-                $self->_add_exons_to_exoncollection($CDS_exoncollection
+                $self->_add_exons_to_exonlocation($CDS_exonlocation
                     , $all_CDS_Exons);
 
-                $CDS_exoncollection->start_not_found($transcript_info->cds_start_not_found);
-                $CDS_exoncollection->end_not_found($transcript_info->cds_end_not_found);
+                $CDS_exonlocation->start_not_found($transcript_info->cds_start_not_found);
+                $CDS_exonlocation->end_not_found($transcript_info->cds_end_not_found);
 
                 #For debugging
-                #$CDS_exoncollection->start_not_found(1);
-                #$CDS_exoncollection->end_not_found(1);
+                #$CDS_exonlocation->start_not_found(1);
+                #$CDS_exonlocation->end_not_found(1);
             } else {
                 warn "No CDS exons\n";
             }
@@ -507,14 +505,14 @@ sub do_Gene {
     }
 }
 
-=head2 _add_exons_to_exoncollection
+=head2 _add_exons_to_exonlocation
 
 Internal method called by _do_gene. See the latter for doumentation.
 
 =cut
 
-sub _add_exons_to_exoncollection {
-    my ( $self, $exoncollection, $exons ) = @_;
+sub _add_exons_to_exonlocation {
+    my ( $self, $exonlocation, $exons ) = @_;
     
     my @hum_embl_exons;
     foreach my $exon (@$exons) {
@@ -553,11 +551,11 @@ sub _add_exons_to_exoncollection {
         }
         push(@hum_embl_exons, $hum_embl_exon);
     }
-    $exoncollection->exons(@hum_embl_exons);
+    $exonlocation->exons(@hum_embl_exons);
 
-    #Set the start and end for the Hum::EMBL::ExonCollection
-    $exoncollection->start($hum_embl_exons[0]->start);
-    $exoncollection->end($hum_embl_exons[-1]->end);
+    #Set the start and end for the Hum::EMBL::exonlocation
+    $exonlocation->start($hum_embl_exons[0]->start);
+    $exonlocation->end($hum_embl_exons[-1]->end);
 }
     
 
