@@ -239,7 +239,7 @@ sub draw{
     
     
     my $canvas = $self->canvas();
-    warn $canvas->configure(-background => 'light grey');
+    $canvas->configure(-background => 'light grey');
     
     my $top_frame = $tl->Frame()->pack(-side =>'top' , fill => 'x' ,  padx=> 35 , -before=>$canvas);
     my $Button_frame = $tl->Frame(-relief => 'groove' )->pack(-side => 'top' ,fill=>'both') ;
@@ -374,10 +374,8 @@ sub populate_subframe{
 
 
         ## automatically select the button based on the given coords - gives the positive strand as the default 
-        ##if ( $coord_1 < $coord_2 ){
-        ##    $pos_button->select;
-        ##}
-        if($coord_1 > $coord_2){
+        # 0's in brackets, so we dont get warnings when $coord's are non numeric 
+        if (($coord_1 || 0) > ($coord_2 || 0)){
             $neg_button->select;
         } else {
             $pos_button->select;
