@@ -1,4 +1,3 @@
-
 package Bio::Otter::LogFile;
 
 use strict;
@@ -44,11 +43,23 @@ sub WRITE{
     my $fh = $_[0];
     print $fh substr($_[1],0,$_[2])
 }
-
+sub PRINTF{
+    my $fh  = shift;
+    my $fmt = shift;
+    $fh->_print(&_log_prefix . sprintf($fmt, @_) . "\n");
+}
 sub PRINT {
     my $fh = shift;
     $fh->_print(&_log_prefix . " @_ \n");
 }
+
+sub DESTROY{
+    my $fh = shift;
+    # just implementing this method like this seemed to clean up some weird (!!!) errors
+    # not sure if we need UNTIE too....
+    $fh->_print(&_log_prefix . " DESTROY method of LogFile.pm\n");
+}
+
 sub _print{
     my ($fh, $message) = @_;
     print $fh $message;
