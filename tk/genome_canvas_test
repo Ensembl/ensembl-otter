@@ -8,7 +8,7 @@ use GenomeCanvas::Band::TilingPath;
 use GenomeCanvas::Band::Plot;
 use GenomeCanvas::DensityBand::RepeatFeature;
 use GenomeCanvas::DensityBand::Gene;
-use Bio::EnsEMBL::DBSQL::Obj;
+use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Hum::Submission 'prepare_statement'; # For Sanger sequence names
 use Getopt::Long 'GetOptions';
 
@@ -59,7 +59,7 @@ use Getopt::Long 'GetOptions';
     my $canvas = $gc->canvas;
 
     {
-        my $db = Bio::EnsEMBL::DBSQL::Obj->new(
+        my $db = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
             -DBNAME => $db,
             -USER   => $user,
             -HOST   => $host,
