@@ -42,6 +42,15 @@ sub x_padding {
     return $band->{'_x_padding'} || 10;
 }
 
+sub max_width {
+    my( $band, $width ) = @_;
+    
+    if (defined $width) {
+        $band->{'_max_width'} = $width;
+    }
+    return $band->{'_max_width'} || 40 * $band->font_size;
+}
+
 sub draw_spacer {
     my( $band, $row, $y_offset ) = @_;
     
@@ -81,6 +90,7 @@ sub draw_seq_row {
     my $canvas = $band->canvas;
     my $font   = $band->column_font;
     my @tags   = $band->tags;
+    my $width  = $band->max_width;
     push(@tags, $id, "sequence_name=$text[0]");
     my $y1 = $y_offset + 3;
     for (my $i = 0; $i < @text; $i++) {
@@ -90,6 +100,7 @@ sub draw_seq_row {
             -text       => $t,
             -font       => $font,
             -anchor     => 'nw',
+            -width      => $width,
             -tags       => [@tags, 'contig_gap'],
             );
     }
@@ -149,6 +160,7 @@ sub column_widths {
     # Get the longest ascii string for each column
     my(@longest);
     my(@widths);
+    my $max = $band->max_width;
     foreach my $row ($band->chooser_map) {
         my( $id, @text ) = @$row;
         for (my $i = 0; $i < @text; $i++) {
@@ -167,10 +179,13 @@ sub column_widths {
     }
     my $font = $band->column_font;
     my $canvas = $band->canvas;
+    my $max = $band->max_width;
     for (my $i = 0; $i < @widths; $i++) {
-        my $text = $longest[$i] . 'XX';
-        $widths[$i] = $canvas->fontMeasure($font, $text);
+        my $text = substr($longest[$i], 0, $max) . 'XX';
+        my $w = $canvas->fontMeasure($font, $text);
+        $widths[$i] = ($w > $max) ? $max : $w;
     }
+    
     return @widths;
 }
 
