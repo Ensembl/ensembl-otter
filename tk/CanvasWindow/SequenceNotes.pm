@@ -934,7 +934,7 @@ sub draw_range{
                                                        -padx => 5,
                                                        -fill => 'x'
                                                        );
-        $search_entry1->bind('<Tab>', sub {
+        $search_entry1->bind('<FocusOut>', sub {
             $self->{'_user_max_element'} = ($self->{'_user_min_element'} + 100 > $no_of_cs ? $no_of_cs : $self->{'_user_min_element'} + 100)
             }
                              );
