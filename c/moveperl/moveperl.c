@@ -259,12 +259,17 @@ int doFuncInp(char *fromName, char *toName, char *baseSrcName,
     chmod(toName,st.st_mode);
 
     
-    if (toNameLen > archExtLen &&
-        !strcmp(&(toName[toNameLen-archExtLen-1]),archiveExtension)) {
-      char comStr[MAXPATHLEN + 1024];
-      sprintf(comStr,"ranlib %s",toName);
-      //printf("%s\n",comStr);
-      system(comStr);
+    if (toNameLen > archExtLen) {
+
+      //printf("toNameLen = %d archExtLen = %d toName bit = %s\n",
+      //       toNameLen,archExtLen,&(toName[toNameLen-archExtLen])); 
+
+      if (!strcmp(&(toName[toNameLen-archExtLen]),archiveExtension)) {
+        char comStr[MAXPATHLEN + 1024];
+        sprintf(comStr,"ranlib %s",toName);
+        printf("%s\n",comStr);
+        system(comStr);
+      }
     }
 
     free(fileBuf);
