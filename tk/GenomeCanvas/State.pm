@@ -58,7 +58,7 @@ sub residues_per_pixel {
     return $self->{'_residues_per_pixel'} || 2000;
 }
 
-sub expand_frame {
+sub frame_union {
     my( $self, @new_bbox ) = @_;
     
     my @bbox = $self->frame;
@@ -67,6 +67,15 @@ sub expand_frame {
     $bbox[2] = $new_bbox[2] if $new_bbox[2] > $bbox[2];
     $bbox[3] = $new_bbox[3] if $new_bbox[3] > $bbox[3];
     return $self->frame(@bbox);
+}
+
+sub expand_bbox {
+    my( $self, $bbox, $pad ) = @_;
+    
+    $bbox->[0] -= $pad;
+    $bbox->[1] -= $pad;
+    $bbox->[2] += $pad;
+    $bbox->[3] += $pad;
 }
 
 

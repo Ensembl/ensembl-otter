@@ -16,7 +16,10 @@ use vars '@ISA';
 @ISA = 'GenomeCanvas::State';
 
 sub new {
-    my( $pkg, $tk ) = @_;
+    my( $pkg, $tk, $width, $height ) = @_;
+    
+    $width  ||= 500;
+    $height ||= 200;
     
     unless ($tk) {
         confess "Error usage: GenomeCanvas->new(<Tk::Widget object>)";
@@ -30,8 +33,8 @@ sub new {
         -highlightthickness => 1,
         -background         => 'white',
         -scrollbars         => 'se',
-        -width              => 500,
-        -height             => 200,
+        -width              => $width,
+        -height             => $height,
         );
     $scrolled->pack(
         -side => 'top',
@@ -41,7 +44,31 @@ sub new {
         
     my $canvas = $scrolled->Subwidget('canvas');
     $gc->canvas($canvas);
+    $gc->window_width($width);
+    $gc->window_height($height);
     return $gc;
+}
+
+sub window_width {
+    my( $gc, $n ) = @_;
+    
+    if ($n) {
+        confess "Can't reset window_width"
+            if $gc->{'_window_width'};
+        $gc->{'_window_width'} = $n;
+    }
+    return $gc->{'_window_width'};
+}
+
+sub window_height {
+    my( $gc, $n ) = @_;
+    
+    if ($n) {
+        confess "Can't reset window_height"
+            if $gc->{'_window_height'};
+        $gc->{'_window_height'} = $n;
+    }
+    return $gc->{'_window_height'};
 }
 
 sub band_padding {
@@ -82,6 +109,27 @@ sub band_sets {
     my( $gc ) = @_;
     
     return @{$gc->{'_band_sets'}};
+}
+
+sub fix_window_min_max_sizes {
+    my( $gc ) = @_;
+    
+    my $canvas = $gc->canvas;
+    
+    my @bbox = $canvas->bbox('all');
+    $gc->expand_bbox(\@bbox, 5);
+    $canvas->configure(
+        -scrollregion => [@bbox],
+        );
+
+    my $mw = $canvas->toplevel;
+    $mw->update;
+    $mw->minsize($mw->width, $mw->height);
+    $mw->maxsize(
+        $bbox[2] - $bbox[0] + $mw->width  - $gc->window_width,
+        $bbox[3] - $bbox[1] + $mw->height - $gc->window_height,
+        );
+    $mw->resizable(1,1);
 }
 
 1;

@@ -59,7 +59,6 @@ GenomeCanvas*font: -*-helvetica-medium-r-*-*-12-*-*-*-*-*-*-*
     $mw->optionReadfile($xres_file);
 }
 
-
 1;
 
 __END__

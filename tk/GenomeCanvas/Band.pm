@@ -19,33 +19,34 @@ sub new {
 sub render {
     my( $band ) = @_;
     
-    warn "GenomeCanvas::Band : Using default drawing method\n";
+    my $color = 'red';
+    warn "GenomeCanvas::Band : Drawing default $color rectangle\n";
     my @bbox = $band->frame;
     my $width = ($bbox[2] - $bbox[0]) || 600;
     $bbox[1] = $bbox[3] + 3;
     $bbox[2] = $bbox[0] + $width;
-    $bbox[3] = $bbox[1] + 4;
+    $bbox[3] = $bbox[1] + 10;
     
     my $canvas = $band->canvas;
     my $id = $canvas->createRectangle(@bbox,
-        -fill => 'red',
+        -fill => $color,
+        -outline => undef,
         -tags => ["$band"],
         );
     
-    $band->expand_frame(@bbox);
-    #$band->nudge_into_free_space($id);
+    $band->frame_union(@bbox);
 }
 
 sub nudge_into_free_space {
-    my( $band, $tag_or_id, $x_inc ) = @_;
+    my( $band, $tag_or_id, $y_inc ) = @_;
     
     confess "No tagOrId" unless $tag_or_id;
-    $x_inc ||= 10;
+    $y_inc ||= 10;
     
     my $canvas = $band->canvas;
     my %self = map {$_, 1} $canvas->find('withtag', $tag_or_id);
     while (grep ! $self{$_}, $canvas->find('overlapping', $canvas->bbox($tag_or_id))) {
-        $canvas->move($tag_or_id, 0, $x_inc);
+        $canvas->move($tag_or_id, 0, $y_inc);
     }
 }
 
