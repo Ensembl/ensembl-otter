@@ -269,7 +269,7 @@ sub initialise {
 
 #    my $ss     = $self->SequenceSet or confess "No SequenceSet attached";
 #    my $write  = $ss->write_access;
-    my $write = $self->_write_access;
+    my $write  = $self->Client->write_access;
     my $canvas = $self->canvas;
     my $top    = $canvas->toplevel;
     
@@ -314,6 +314,9 @@ sub initialise {
 
     }else{
 	$button_frame_2 = $top->Frame->pack(-side => 'top');
+        $button_frame_2->Label(-text => 'Read Only   ', 
+                               -foreground => 'red')->pack(-side => 'left');
+	$button_frame_2->bind('<Destroy>', sub { $self = undef });
     }
 
     ### Is hunting in CanvasWindow?
@@ -1259,6 +1262,7 @@ sub popup_missing_analysis{
     unless (defined $index ){
         return;
     }
+    $index += $self->_user_first_clone_seq() - 1;
     unless ( $self->check_for_Status($index) ){
         # window has not been created already - create one
         my $cs =  $self->get_CloneSequence_list->[$index];
@@ -1266,7 +1270,7 @@ sub popup_missing_analysis{
         if (!$using_no_pipeline){
             my $top = $self->canvas->Toplevel();
             $top->transient($self->canvas->toplevel);
-            my $hp  = CanvasWindow::SequenceNotes::Status->new($top, 550 , 50);
+            my $hp  = CanvasWindow::SequenceNotes::Status->new($top, 650 , 50);
 	    # $hp->SequenceNotes($self); # can't have reference to self if we're inheriting
 	    # clean up just won't work.
             $hp->SequenceSet($self->SequenceSet);
@@ -1290,6 +1294,7 @@ sub popup_ana_seq_history{
     unless (defined $index ){
         return;
     }
+    $index += $self->_user_first_clone_seq() - 1;
     unless ( $self->check_for_History($index) ){
         # window has not been created already - create one
         my $cs =  $self->get_CloneSequence_list->[$index];
@@ -1297,7 +1302,7 @@ sub popup_ana_seq_history{
         if (@$clone_list){
             my $top = $self->canvas->Toplevel();
             $top->transient($self->canvas->toplevel);
-            my $hp  = CanvasWindow::SequenceNotes::History->new($top, 550 , 50);
+            my $hp  = CanvasWindow::SequenceNotes::History->new($top, 650 , 50);
 	    # $hp->SequenceNotes($self); # can't have reference to self if we're inheriting
 	    # clean up just won't work.
             $hp->SequenceSet($self->SequenceSet);
