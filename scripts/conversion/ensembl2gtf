@@ -165,7 +165,7 @@ sub make_start_codon_features {
 
 
   if (!$trans->translation) {
-    return (undef);
+    return (());
   }
 
   my @translateable = @{$trans->get_all_translateable_Exons};
@@ -200,8 +200,8 @@ sub make_start_codon_features {
                              -end   => $pepgencoord->end,
                              -phase => $phase,
                              -strand => $translateable[0]->strand);
-    $phase = 3 - ($pepgencoord->end-$pepgencoord->start+1);
-    # print "New phase = $phase given " . $pepgencoord->start . " " . $pepgencoord->end . " " . ($pepgencoord->end-$pepgencoord->start+1) . "\n";
+    $phase = 3 - ($pepgencoord->end - $pepgencoord->start + 1);
+    # print "New phase = $phase given " . $pepgencoord->start . " " . $pepgencoord->end . " " . ( $pepgencoord->end - $pepgencoord->start+1) . "\n";
   }
   if ($translateable[0]->strand == 1) {
     @startc_feat = sort {$a->start <=> $b->start } @startc_feat;
@@ -216,7 +216,7 @@ sub make_stop_codon_features {
   my ($trans,$id) = @_;
 
   if (!$trans->translation) {
-    return (undef);
+    return (());
   }
   my @translateable = @{$trans->get_all_translateable_Exons};
 
@@ -260,6 +260,7 @@ sub make_stop_codon_features {
   } else {
     @stopc_feat = sort {$b->start <=> $a->start } @stopc_feat;
   }
+  print "Ended with " . scalar(@stopc_feat) . " stop codon features\n";
   return @stopc_feat;
 }
 
@@ -293,6 +294,7 @@ sub write_transcript_gtf {
 
   my $count=1;
   my $intrans = 0;
+  my $instop = 0;
   foreach my $exon (@{$transcript->get_all_Exons}) {
     my $strand = $exon->strand;
     if ($exon->strand == -1) {
@@ -337,18 +339,20 @@ sub write_transcript_gtf {
       my $exon_start = $cdsexon->start;
       my $exon_end   = $cdsexon->end;
       if ($transcript->translation && 
-          $exon == $transcript->translation->end_Exon &&
-          $hasend) {
+          # $exon == $transcript->translation->end_Exon &&
+          $hasend && 
+          $exon->overlaps($endcs[0])) {
 
         if ($cdsexon->strand == 1) {
-          $exon_end = $cdsexon->end-3;
+          $exon_end = $cdsexon->end - $endcs[0]->length;
         } else {
-          $exon_start = $cdsexon->start+3;
+          $exon_start = $cdsexon->start + $endcs[0]->length;
         }
       }
 
       if ($exon_start <= $cdsexon->end &&
-          $exon_end >= $cdsexon->start) {
+          $exon_end >= $cdsexon->start &&
+          !$instop) {
         print $fh $idstr . "\t" . 
                  $gene->type . "\t" . 
                  'CDS' . "\t" . 
@@ -372,7 +376,7 @@ sub write_transcript_gtf {
                  ($startc->end+$sliceoffset) . "\t". 
                  "." . "\t". 
                  $strand . "\t". 
-                 "0" . "\t";
+                 $startc->phase . "\t";
         print_attribs($fh,$gene,$transcript,$tmpcnt++,'start_codon');
         print $fh "\n";
       }
@@ -389,12 +393,16 @@ sub write_transcript_gtf {
                     ($endc->end+$sliceoffset) . "\t". 
                     "." . "\t". 
                     $strand . "\t". 
-                    "0" . "\t";
+                    $endc->phase . "\t";
           print_attribs($fh,$gene,$transcript,$tmpcnt++,'stop_codon');
           print $fh "\n";
         }
       }
       $intrans = 0;
+    }
+
+    if (scalar(@endcs) && $exon->overlaps($endcs[0])) {
+      $instop = 1;
     }
 
     $count++;
