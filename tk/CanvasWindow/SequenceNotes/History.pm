@@ -217,9 +217,7 @@ sub current_clone{
             return;
         }
         unless ( $self->selected_CloneSequence_indices){
-            $self->canvas->toplevel->messageBox(-title => 'Error', 
-                -message => "You need to have a row selected to update the note", 
-                -type => 'OK' );
+            $self->message('you need to select a note to update');
             $self->Unbusy;
             return ;
         }
