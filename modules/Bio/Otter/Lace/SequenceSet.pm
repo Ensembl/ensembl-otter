@@ -39,6 +39,15 @@ sub description {
     return $self->{'_description'};
 }
 
+sub priority {
+    my( $self, $priority ) = @_;
+    
+    if ($priority) {
+        $self->{'_priority'} = $priority;
+    }
+    return $self->{'_priority'};
+}
+
 sub write_access {
     my( $self, $write_access ) = @_;
     
@@ -52,7 +61,6 @@ sub write_access {
         return 1;
     }
 }
-
 sub CloneSequence_list {
     my( $self, $CloneSequence_list ) = @_;
     
