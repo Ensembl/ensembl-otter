@@ -8,6 +8,7 @@ use Getopt::Long;
 
 use Bio::Otter::EnsEMBL2SQL::Core;
 use Bio::Otter::EnsEMBL2SQL::Compara;
+use Bio::Otter::EnsEMBL2SQL::Base;
 
 my $host   = 'kaka.sanger.ac.uk';
 my $user   = 'anonymous';
@@ -37,6 +38,7 @@ my $dir;
              'est_name:s' => \$est_name,
              'estgene_name:s'=> \$estgene_name,
              'compara_name:s'=> \$compara_name,
+	     'disease_name:s'=> \$disease_name,
              'chr:s'     => \$chr,
              'start:n'   => \$start,
              'end:n'     => \$end,
@@ -95,11 +97,22 @@ my $compara2sql =  new Bio::Otter::EnsEMBL2SQL::Core(-host   => $host,
 						     -species => $species);
 
 
-dump_database($core2sql,$dir);
-dump_database($est2sql,$dir);
+my $disease2sql = new  Bio::Otter::EnsEMBL2SQL::Base(-host   => $host,
+						     -user   => $user,
+						     -pass   => $pass,
+						     -port   => $port,
+						     -dbname => $disease_name,
+						     -chr    => $chr,
+						     -start  => $start,
+						     -end    => $end,
+						     -type   => $type);
+
+			
+dump_database($core2sql,   $dir);
+dump_database($est2sql,    $dir);
 dump_database($estgene2sql,$dir);
 dump_database($compara2sql,$dir);
-
+dump_database($disease2sql,$dir);
 
 sub dump_database {
     my ($db,$dir) = @_;
