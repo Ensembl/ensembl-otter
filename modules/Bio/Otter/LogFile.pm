@@ -16,7 +16,7 @@ sub TIEHANDLE{
     }else{
 	$fh = geniosym();
     }
-    $SIG{__WARN__} = sub { $fh->_warning(@_); };
+    $SIG{__WARN__} = sub { $fh->_warning(@_) unless $^S; };
     # $^S is true only when in an eval{}
     # see 'perldoc -f eval' and 'man perlvar'
     $SIG{__DIE__}  = sub { $fh->_death(@_) unless $^S; };
