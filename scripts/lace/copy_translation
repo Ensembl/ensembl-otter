@@ -471,6 +471,9 @@ sub coordinate_munging {
 
 sub get_ATG_site_coord {
   my ($trans_CDS) = @_;
+
+  # $trans_CDS->translation->start_Exon->start is chrom coord (eg, 6569554)
+  # $trans_CDS->translation->start             is coord of first bp of ATG site of that start_Exon (eg, 58)
   my $ATG_site_coord = $trans_CDS->translation->start_Exon->start + $trans_CDS->translation->start - 1 if $trans_CDS->translation->start  > 1;
      $ATG_site_coord = $trans_CDS->translation->start_Exon->start                                      if $trans_CDS->translation->start == 1;
 
@@ -479,6 +482,9 @@ sub get_ATG_site_coord {
 
 sub get_STOP_site_coord {
   my ($trans_CDS) = @_;
+
+  # $trans_CDS->translation->end_Exon->start is chrom coord (eg, 9633292)
+  # $trans_CDS->translation->end             is first bp of stop codon in that end_Exon (eg, 24)
   return my $STOP_site_coord = $trans_CDS->translation->end_Exon->start + $trans_CDS->translation->end - 1;
 }
 
