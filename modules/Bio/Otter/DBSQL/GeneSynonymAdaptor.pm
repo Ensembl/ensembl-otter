@@ -86,7 +86,7 @@ sub fetch_by_dbID {
 =cut
 
 
-sub list_by_name {
+sub fetch_by_name {
 	my ($self,$name) = @_;
 
 	if (!defined($name)) {
@@ -95,7 +95,7 @@ sub list_by_name {
 
 	my @obj = $self->_generic_sql_fetch("where name = \'$name\'");
 
-	return @obj;
+	return \@obj;
 }
 
 
