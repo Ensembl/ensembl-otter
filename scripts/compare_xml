@@ -26,7 +26,8 @@ use Getopt::Long 'GetOptions';
     print_xml( $after_tmp,  @after_tran);
     
     print `diff -c $before_tmp $after_tmp`;
-    die "Error running diff: exit($?)" if $? > 1;
+    my $exit = $? >> 8;
+    die "Error running diff: exit($exit)" if $exit > 1;
 }
 
 sub print_xml {
