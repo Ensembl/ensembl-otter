@@ -727,8 +727,8 @@ sub otter_to_ace {
             # Extra tags needed by ace
             if ($method =~ /supported_mRNA/) {
                 $str .= "Processed_mRNA\n";     ### check this
-            } elsif ($method eq "Pseudogene") {
-                $str .= "Pseudogene\nCDS\n";
+            } elsif ($method =~ /pseudo/i) {
+                $str .= "$method\nCDS\n";
             }
 
             my @remarks = $tran->transcript_info->remark;
