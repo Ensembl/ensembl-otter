@@ -689,7 +689,7 @@ sub make_AceDataFactory {
             if ( defined($percent_identity_cutoff) ) {
                 $sim->percent_identity_cutoff($percent_identity_cutoff);
             }
-#            $factory->add_AceFilter($sim);
+            $factory->add_AceFilter($sim);
 #            warn 'logic_tag:' , $tag , "\n" ;
         } else{
             warn "No analysis called '$logic_name'\n";
@@ -706,7 +706,7 @@ sub make_AceDataFactory {
         if( defined($percent_identity_cutoff)  ){
             $prot_sim->percent_identity_cutoff($percent_identity_cutoff);
         }
-#        $factory->add_AceFilter($prot_sim);    
+        $factory->add_AceFilter($prot_sim);    
     } else {
         warn "No analysis called 'swall'\n";
     }
