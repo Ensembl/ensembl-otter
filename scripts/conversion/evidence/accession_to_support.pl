@@ -29,6 +29,10 @@ my $t_dbname  = 'otter_merged_chrs_with_anal';
 my $chr      = 14;
 my $path     = 'GENOSCOPE';
 
+$|=1;
+
+my $elist;
+
 &GetOptions( 't_host:s'=> \$t_host,
              't_user:s'=> \$t_user,
              't_pass:s'=> \$t_pass,
@@ -36,10 +40,25 @@ my $path     = 'GENOSCOPE';
              't_dbname:s'  => \$t_dbname,
              'chr:s'     => \$chr,
              'path:s'  => \$path,
+	     'elist:s' => \$elist,
             );
 
 if (!defined($chr)) {
   die "Missing required args\n";
+}
+
+# script can fail when not enough memory.  Rerunning it will
+# add duplicate features (since supporting features are written into tables)
+# possible to add a list of gene_stable_id's that have already been added
+my %elist;
+if(-e $elist){
+    open(IN,$elist) || die "cannot open $elist";
+    while(<IN>){
+	chomp;
+	$elist{$_}=1;
+    }
+    close(IN);
+    print scalar(keys %elist)." gene stable id loaded\n";
 }
 
 my $tdb = new Bio::Otter::DBSQL::DBAdaptor(-host => $t_host,
@@ -62,7 +81,9 @@ my $padding = 1000;
 my %analyses;
 
 foreach my $ens_gene (@$ens_genes) {
-  my $gene_slice = $tdb->get_SliceAdaptor()->fetch_by_chr_start_end($chr,$ens_gene->start-$padding,$ens_gene->end+$padding);
+  my $slice_start=$ens_gene->start-$padding;
+  my $slice_end=$ens_gene->end+$padding;
+  my $gene_slice = $tdb->get_SliceAdaptor()->fetch_by_chr_start_end($chr,$slice_start,$slice_end);
 
   my $ott_genes = $tdb->get_GeneAdaptor()->fetch_by_Slice($gene_slice);
 
@@ -76,7 +97,22 @@ foreach my $ens_gene (@$ens_genes) {
   if (!defined($gene)) {
     die "Failed finding gene which should have been there for " . $ens_gene->stable_id ."\n";
   }
-  print "Looking for matches to " . $gene->stable_id . "\n";
+  my $gsi=$gene->stable_id;
+  print "Slice for $gsi is ".
+      $slice_start.
+      "-".
+      $slice_end.
+      " (".
+      $slice_end-$slice_start.
+      ")\n";
+
+  # don't process slices no list again
+  if($elist{$gsi}){
+      print "$gsi in exclusion list - skipped\n";
+      next;
+  }else{
+      print "Looking for matches to $gsi\n";
+  }
   my $has_support = 0;
 
   my $fps = $gene_slice->get_all_SimilarityFeatures;
