@@ -330,34 +330,60 @@ sub fix_window_min_max_sizes {
     
     my $mw = $self->canvas->toplevel;
     $mw->update;
-    $mw->withdraw;
+    #$mw->withdraw;
+    
     
     my( $max_x, $max_y, $display_max_x, $display_max_y )
         = $self->set_scroll_region_and_maxsize;
     
     # Get the current screen offsets
-    my($x, $y) = $mw->geometry =~ /^=?\d+x\d+\+?(-?\d+)\+?(-?\d+)/;
+    my ($x, $y) = $mw->geometry =~ /^=?\d+x\d+\+?(-?\d+)\+?(-?\d+)/;
 
     # Is there a set window size?
     if (my($fix_x, $fix_y) = $self->set_window_size) {
         $max_x = $fix_x;
         $max_y = $fix_y;
     } else {
-        # Nudge the window onto the screen.
-        $x = 0 if $x < 0;
-        $y = 0 if $y < 0;
-
-        if (($x + $max_x) > $display_max_x) {
-            $x = $display_max_x - $max_x;
+        # Leave at least 100 pixels
+        my $border = 100;
+        if ($max_x = $display_max_x - $border) {
+            $max_x = $display_max_x - $border;
         }
-        if (($y + $max_y) > $display_max_y) {
-            $y = $display_max_y - $max_y;
+        if ($max_y = $display_max_y - $border) {
+            $max_y = $display_max_y - $border;
         }
     }
+    #else {
+    #    # Nudge the window onto the screen.
+    #    $x = 0 if $x < 0;
+    #    $y = 0 if $y < 0;
 
+    #    if (($x + $max_x) > $display_max_x) {
+    #        $x = $display_max_x - $max_x;
+    #    }
+    #    if (($y + $max_y) > $display_max_y) {
+    #        $y = $display_max_y - $max_y;
+    #    }
+    #}
+
+    #$x = $mw->screenwidth  - $x - $max_x;
+    #$y = $mw->screenheight - $y - $max_y;
+    $x = 0 if $x < 0;
+    $y = 0 if $y < 0;
+    #
+    #$mw->geometry($mw->geometry);
+    #my $geom = "${max_x}x$max_y-$x-$y";
     my $geom = "${max_x}x$max_y+$x+$y";
     $mw->geometry($geom);
-    $mw->deiconify;
+    #warn " Setting geometry: $geom";
+    #$mw->positionfrom('program');
+    #$mw->geometry("${max_x}x$max_y");
+    #$geom = $mw->geometry;
+    #warn "  Actual geometry: $geom";
+    
+    #$mw->update;
+    #$mw->geometry("+$x+$y");
+    #$mw->deiconify;
 }
 
 sub set_scroll_region_and_maxsize {
@@ -383,8 +409,8 @@ sub set_scroll_region_and_maxsize {
         $mw->minsize($width, $height);
 
         my ($visible_x, $visible_y) = $self->visible_canvas_x_y;
-        $other_x = $width  - $visible_x;
-        $other_y = $height - $visible_y;
+        $other_x = int $width  - $visible_x;
+        $other_y = int $height - $visible_y;
 
         ($display_max_x, $display_max_y) = $mw->maxsize;
         $self->{'_toplevel_other_max'} = [$other_x, $other_y, $display_max_x, $display_max_y];

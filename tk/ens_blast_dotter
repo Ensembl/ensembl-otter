@@ -54,7 +54,7 @@ my $font = ['Helvetica', 12, 'bold'];
         push(@map, [$start, $end, $name, $id]);
     }
 
-    my $mw = CanvasWindow::MainWindow->new;
+    my $mw = CanvasWindow::MainWindow->new($db_name);
     my $cw = CanvasWindow->new($mw);
     my $canvas = $cw->canvas;
     $canvas->CanvasBind(              '<Button-1>', \&handle_button_1);
@@ -152,7 +152,7 @@ my $font = ['Helvetica', 12, 'bold'];
                 }
             }
         }
-        if (0 and $row > 10) {
+        if (1 and $row > 10) {
             warn "DEBUG BAILOUT";
             last;
         }

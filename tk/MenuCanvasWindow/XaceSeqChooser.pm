@@ -753,6 +753,7 @@ sub delete_subsequences {
     # Delete from acedb database
     $xr->load_ace($ace);
     $xr->save;
+    #$xr->send_command('gif ; seqrecalc');
     
     # Remove from our objects
     foreach my $sub (@to_die) {
@@ -1068,6 +1069,8 @@ sub express_clone_and_subseq_fetch {
                     $name, $start, $end, $t_seq,
                     );
             $sub->clone_Sequence($seq);
+            # Adding PolyA depends on having the clone Sequence
+            $sub->add_all_PolyA_from_ace($t_seq);
             
             # Flag that the sequence is in the db
             $sub->is_archival(1);

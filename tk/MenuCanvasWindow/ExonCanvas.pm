@@ -19,316 +19,6 @@ use Hum::Ace;
 
 # "new" is in MenuCanvasWindow
 
-sub name {
-    my( $self, $name ) = @_;
-    
-    if ($name) {
-        $self->{'_name'} = $name;
-    }
-    return $self->{'_name'};
-}
-
-sub SubSeq {
-    my( $self, $sub ) = @_;
-    
-    if ($sub) {
-        my $expected = 'Hum::Ace::SubSeq';
-        unless ($sub->isa($expected)) {
-            confess "Expected a '$expected', but got a '$sub'";
-        }
-        $self->{'_SubSeq'} = $sub;
-        $self->canvas->toplevel->configure(-title => $sub->name);
-    }
-    return $self->{'_SubSeq'};
-}
-
-sub xace_seq_chooser {
-    my( $self, $chooser ) = @_;
-    
-    if ($chooser) {
-        $self->{'_xace_seq_chooser'} = $chooser;
-    }
-    return $self->{'_xace_seq_chooser'};
-}
-
-sub add_subseq_exons {
-    my( $self, $subseq ) = @_;
-    
-    my $expected = 'Hum::Ace::SubSeq';
-    unless ($subseq->isa($expected)) {
-        warn "Unexpected object '$subseq', expected a '$expected'";
-    }
-    
-    my $strand = $subseq->strand;
-    foreach my $ex ($subseq->get_all_Exons_in_transcript_order) {
-        $self->add_exon_holder($ex->start, $ex->end, $strand);
-    }
-}
-
-{
-    my $pp_field = '_position_pairs';
-
-    sub position_pairs {
-        my( $self, @pairs ) = @_;
-
-        if (@pairs) {
-            $self->{$pp_field} = [@pairs];
-        }
-
-        if (my $pp = $self->{$pp_field}) {
-            return @$pp;
-        } else {
-            return;
-        }
-    }
-
-    sub add_position_pair {
-        my( $self, @pair_and_id ) = @_;
-
-        unless (@pair_and_id == 3) {
-            confess "Expecting 2 numbers and exon_id";
-        }
-        $self->{$pp_field} ||= [];
-        push(@{$self->{$pp_field}}, [@pair_and_id]);
-    }
-    
-    sub next_position_pair_index {
-        my( $self ) = @_;
-        
-        if (my $pp = $self->{$pp_field}) {
-            return scalar @$pp;
-        } else {
-            return 0;
-        }
-    }
-    
-    sub trim_position_pairs {
-        my( $self, $length, $strand ) = @_;
-        
-        if (my $pp = $self->{$pp_field}) {
-            my @del = splice(@$pp, -1 * $length, $length);
-            if (@del != $length) {
-                confess "only got ", scalar(@del), " elements, not '$length'";
-            }
-            my $canvas = $self->canvas;
-            foreach my $exon_id (map $_->[2], @del) {
-                $canvas->delete($exon_id);
-            }
-        } else {
-            confess "No pairs to trim";
-        }
-        $self->set_tk_strand($strand) if $strand;
-    }
-}
-
-sub all_position_pair_text {
-    my( $self ) = @_;
-
-    my $canvas = $self->canvas;
-    my $empty  = $self->empty_string;
-    my( @pos );
-    foreach my $pair ($self->position_pairs) {
-        my $start = $canvas->itemcget($pair->[0], 'text');
-        my $end   = $canvas->itemcget($pair->[1], 'text');
-        foreach my $p ($start, $end) {
-            $p = 0 if $p eq $empty;
-        }
-        if ($start < $end) {
-            push(@pos, [$start, $end]);
-        } else {
-            push(@pos, [$end, $start]);
-        }
-    }
-    return @pos;
-}
-
-sub set_position_pair_text {
-    my( $self, $pp, $text_pair, $strand ) = @_;
-    
-    $strand ||= $self->strand_from_tk;
-
-    my $canvas = $self->canvas;
-    my @txt = @$text_pair;
-    @txt = reverse @txt if $strand == -1;
-    foreach my $i (0,1) {
-        my $obj = $pp->[$i];
-        my $pos = $txt[$i] || $self->empty_string;
-        $canvas->itemconfigure($obj, -text => $pos);
-    }
-}
-
-sub set_all_position_pair_text {
-    my( $self, @coord ) = @_;
-
-    my @pp_list = $self->position_pairs;
-    if (@pp_list != @coord) {
-        confess "position pair number '", scalar(@pp_list),
-            "' doesn't match number of coordinates '", scalar(@coord), "'";
-    }
-    for (my $i = 0; $i < @pp_list; $i++) {
-        $self->set_position_pair_text($pp_list[$i], $coord[$i]);
-    }
-}
-
-sub sort_all_coordinates {
-    my( $self ) = @_;
-    
-    $self->sort_position_pairs;
-    $self->sort_translation_region;
-}
-
-sub sort_position_pairs {
-    my( $self ) = @_;
-
-    my %was_selected = map {$_, 1} $self->get_all_selected_text;
-    $self->deselect_all;
-
-    my $empty  = $self->empty_string;
-    my $canvas = $self->canvas;
-    my $strand = $self->strand_from_tk;
-
-    my( @sort );
-    if ($strand == 1) {
-        @sort = sort {$a->[0] <=> $b->[0] || $a->[1] <=> $b->[1]}
-            $self->all_position_pair_text;
-    } else {
-        @sort = sort {$b->[0] <=> $a->[0] || $b->[1] <=> $a->[1]}
-            $self->all_position_pair_text;
-    }
-
-    my $n = 0;
-    my( @select );
-    foreach my $pp ($self->position_pairs) {
-        my @num = @{$sort[$n]};
-        @num = reverse @num if $strand == -1;
-        foreach my $i (0,1) {
-            my $pos = $num[$i] || $empty;
-            my $obj = $pp->[$i];
-            push(@select, $obj) if $was_selected{$pos};
-            $canvas->itemconfigure($obj, -text => $pos);
-        }
-        $n++;
-    }
-    $self->highlight(@select) if @select;
-}
-
-sub sort_translation_region {
-    my( $self ) = @_;
-
-    my $strand  = $self->strand_from_tk;
-    my @region  = $self->translation_region_from_tk;
-    if ($strand == 1) {
-        $self->tk_t_start($region[0]);
-        $self->tk_t_end  ($region[1]);
-    } else {
-        $self->tk_t_start($region[1]);
-        $self->tk_t_end  ($region[0]);
-    }
-}
-
-sub merge_position_pairs {
-    my( $self ) = @_;
-    
-    $self->deselect_all;
-    $self->sort_position_pairs;
-    my @pos = $self->all_position_pair_text;
-    my $i = 0;
-    while (1) {
-        my $this = $pos[$i];
-        my $next = $pos[$i + 1] or last;
-        if ($this->[0] <= $next->[1] and $this->[1] >= $next->[0]) {
-            $this->[0] = ($this->[0] < $next->[0]) ? $this->[0] : $next->[0];
-            $this->[1] = ($this->[1] > $next->[1]) ? $this->[1] : $next->[1];
-            splice(@pos, $i + 1, 1);
-        } else {
-            $i++;
-        }
-    }
-    
-    my @pairs  = $self->position_pairs;
-    for (my $i = 0; $i < @pos; $i++) {
-        $self->set_position_pair_text($pairs[$i], $pos[$i]);
-    }
-    if (my $over = @pairs - @pos) {
-        $self->trim_position_pairs($over);
-        $self->fix_window_min_max_sizes;
-    }
-}
-
-sub delete_selected_exons {
-    my( $self ) = @_;
-    
-    my $canvas = $self->canvas;
-    my @selected = $self->list_selected;
-    $self->deselect_all;
-    my( %del_exon );
-    foreach my $obj (@selected) {
-        my ($exon_id) = grep /^exon_id/, $canvas->gettags($obj);
-        if ($exon_id) {
-            $del_exon{$exon_id}++;
-        }
-    }
-
-    my $strand = 0;
-    my @text    = $self->all_position_pair_text;
-    my @pp_list = $self->position_pairs;
-    my $trim = 0;
-    my( @keep );
-    for (my $i = 0; $i < @pp_list; $i++) {
-        my $exon_id = $pp_list[$i][2];
-        my $count = $del_exon{$exon_id};
-        if ($count and $count == 2) {
-            $trim++;
-        } else {
-            $strand += $self->exon_strand_from_tk($exon_id);
-            push(@keep, $text[$i]);
-        }
-    }
-    
-    return unless $trim;
-    
-    $strand = $strand < 0 ? -1 : 1;
-    
-    $self->trim_position_pairs($trim, $strand);
-    $self->set_all_position_pair_text(@keep);
-    
-    # Put in an empty exon holder if we have deleted them all
-    unless ($self->position_pairs) {
-        $self->add_exon_holder(undef, undef, 1);
-    }
-}
-
-sub exon_strand_from_tk {
-    my( $self, $exon_id ) = @_;
-    
-    confess "exon_id not given" unless $exon_id;
-    if ($self->canvas->find('withtag', "plus_strand&&$exon_id")) {
-        return 1;
-    } else {
-        return -1;
-    }
-}
-
-sub add_coordinate_pair {
-    my( $self, $start, $end ) = @_;
-    
-    my $strand = 1;
-    if ($start and $end and $start > $end) {
-        $strand = -1;
-        ($start, $end) = ($end, $start);
-    }
-    $self->add_exon_holder($start, $end, $strand);
-}
-
-sub draw_subseq {
-    my( $self ) = @_;
-    
-    my $sub = $self->SubSeq;
-    $self->add_subseq_exons($sub);
-    if ($sub->GeneMethod->is_coding) {
-        $self->draw_translation_region($sub);
-    }
-}
 
 sub initialize {
     my( $self ) = @_;
@@ -490,15 +180,50 @@ sub initialize {
         my $current_method = $sub->GeneMethod->name;
         $self->method_name_var(\$current_method);
 
-        my $method_menu = $self->make_menu('Method');
+        my $method_menu = $self->make_menu('Gene Type');
+        my $redraw_tr = sub { $self->draw_translation_region };
         foreach my $method_name (@allowed_methods ) {
             $method_menu->add('radiobutton',
                 -label      => $method_name,
                 -value      => $method_name,
                 -variable   => \$current_method,
+                -command    => $redraw_tr,
                 );
         }
 
+        # For finding PolyA signals and sites
+        my $polyA_menu = $self->make_menu('Poly-A');
+        
+        my $auto_find_sub = sub { $self->auto_find_PolyA };
+        $polyA_menu->add('command',
+            -label          => 'Auto find',
+            -command        => $auto_find_sub,
+            -accelerator    => 'Ctrl+U',
+            -underline      => 1,
+            );
+        $canvas->Tk::bind('<Control-U>', $auto_find_sub);
+        $canvas->Tk::bind('<Control-u>', $auto_find_sub);
+        
+        my $polyA_search_sub = sub { $self->open_PolyA_search_window };
+        $polyA_menu->add('command',
+            -label          => 'Edit...',
+            -command        => $polyA_search_sub,
+            -accelerator    => 'Ctrl+Y',
+            -underline      => 0,
+            -state          => 'disabled',
+            );
+        $canvas->Tk::bind('<Control-Y>', $polyA_search_sub);
+        $canvas->Tk::bind('<Control-y>', $polyA_search_sub);
+
+        my $polyA_delete_sub = sub { $self->delete_selected_PolyA };
+        $polyA_menu->add('command',
+            -label          => 'Delete',
+            -command        => $polyA_delete_sub,
+            -accelerator    => 'Ctrl+K',
+            -underline      => 0,
+            );
+        $canvas->Tk::bind('<Control-K>', $polyA_delete_sub);
+        $canvas->Tk::bind('<Control-k>', $polyA_delete_sub);
 
         # Keyboard editing commands
         $canvas->Tk::bind('<Left>',      sub{ $self->canvas_text_go_left   });
@@ -600,6 +325,423 @@ sub initialize {
     $self->fix_window_min_max_sizes;
 }
 
+
+sub name {
+    my( $self, $name ) = @_;
+    
+    if ($name) {
+        $self->{'_name'} = $name;
+    }
+    return $self->{'_name'};
+}
+
+sub SubSeq {
+    my( $self, $sub ) = @_;
+    
+    if ($sub) {
+        my $expected = 'Hum::Ace::SubSeq';
+        unless ($sub->isa($expected)) {
+            confess "Expected a '$expected', but got a '$sub'";
+        }
+        $self->{'_SubSeq'} = $sub;
+        $self->canvas->toplevel->configure(-title => $sub->name);
+    }
+    return $self->{'_SubSeq'};
+}
+
+sub xace_seq_chooser {
+    my( $self, $chooser ) = @_;
+    
+    if ($chooser) {
+        $self->{'_xace_seq_chooser'} = $chooser;
+    }
+    return $self->{'_xace_seq_chooser'};
+}
+
+sub add_subseq_exons {
+    my( $self, $subseq ) = @_;
+    
+    my $expected = 'Hum::Ace::SubSeq';
+    unless ($subseq->isa($expected)) {
+        warn "Unexpected object '$subseq', expected a '$expected'";
+    }
+    
+    my $strand = $subseq->strand;
+    foreach my $ex ($subseq->get_all_Exons_in_transcript_order) {
+        $self->add_exon_holder($ex->start, $ex->end, $strand);
+    }
+}
+
+{
+    my $pp_field = '_position_pairs';
+
+    sub position_pairs {
+        my( $self, @pairs ) = @_;
+
+        if (@pairs) {
+            $self->{$pp_field} = [@pairs];
+        }
+
+        if (my $pp = $self->{$pp_field}) {
+            return @$pp;
+        } else {
+            return;
+        }
+    }
+
+    sub add_position_pair {
+        my( $self, @pair_and_id ) = @_;
+
+        unless (@pair_and_id == 3) {
+            confess "Expecting 2 numbers and exon_id";
+        }
+        $self->{$pp_field} ||= [];
+        push(@{$self->{$pp_field}}, [@pair_and_id]);
+    }
+    
+    sub next_position_pair_index {
+        my( $self ) = @_;
+        
+        if (my $pp = $self->{$pp_field}) {
+            return scalar @$pp;
+        } else {
+            return 0;
+        }
+    }
+    
+    sub trim_position_pairs {
+        my( $self, $length, $strand ) = @_;
+        
+        if (my $pp = $self->{$pp_field}) {
+            my @del = splice(@$pp, -1 * $length, $length);
+            if (@del != $length) {
+                confess "only got ", scalar(@del), " elements, not '$length'";
+            }
+            my $canvas = $self->canvas;
+            foreach my $exon_id (map $_->[2], @del) {
+                $canvas->delete($exon_id);
+            }
+        } else {
+            confess "No pairs to trim";
+        }
+        $self->set_tk_strand($strand) if $strand;
+        $self->position_mobile_elements;
+    }
+}
+
+sub all_position_pair_text {
+    my( $self ) = @_;
+
+    my $canvas = $self->canvas;
+    my $empty  = $self->empty_string;
+    my( @pos );
+    foreach my $pair ($self->position_pairs) {
+        my $start = $canvas->itemcget($pair->[0], 'text');
+        my $end   = $canvas->itemcget($pair->[1], 'text');
+        foreach my $p ($start, $end) {
+            $p = 0 if $p eq $empty;
+        }
+        if ($start < $end) {
+            push(@pos, [$start, $end]);
+        } else {
+            push(@pos, [$end, $start]);
+        }
+    }
+    return @pos;
+}
+
+sub set_position_pair_text {
+    my( $self, $pp, $text_pair, $strand ) = @_;
+    
+    $strand ||= $self->strand_from_tk;
+
+    my $canvas = $self->canvas;
+    my @txt = @$text_pair;
+    @txt = reverse @txt if $strand == -1;
+    foreach my $i (0,1) {
+        my $obj = $pp->[$i];
+        my $pos = $txt[$i] || $self->empty_string;
+        $canvas->itemconfigure($obj, -text => $pos);
+    }
+}
+
+sub set_all_position_pair_text {
+    my( $self, @coord ) = @_;
+
+    my @pp_list = $self->position_pairs;
+    if (@pp_list != @coord) {
+        confess "position pair number '", scalar(@pp_list),
+            "' doesn't match number of coordinates '", scalar(@coord), "'";
+    }
+    for (my $i = 0; $i < @pp_list; $i++) {
+        $self->set_position_pair_text($pp_list[$i], $coord[$i]);
+    }
+}
+
+sub sort_all_coordinates {
+    my( $self ) = @_;
+    
+    $self->sort_position_pairs;
+    $self->sort_translation_region;
+}
+
+sub sort_position_pairs {
+    my( $self ) = @_;
+
+    my %was_selected = map {$_, 1} $self->get_all_selected_text;
+    $self->deselect_all;
+
+    my $empty  = $self->empty_string;
+    my $canvas = $self->canvas;
+    my $strand = $self->strand_from_tk;
+
+    my( @sort );
+    if ($strand == 1) {
+        @sort = sort {$a->[0] <=> $b->[0] || $a->[1] <=> $b->[1]}
+            $self->all_position_pair_text;
+    } else {
+        @sort = sort {$b->[0] <=> $a->[0] || $b->[1] <=> $a->[1]}
+            $self->all_position_pair_text;
+    }
+
+    my $n = 0;
+    my( @select );
+    foreach my $pp ($self->position_pairs) {
+        my @num = @{$sort[$n]};
+        @num = reverse @num if $strand == -1;
+        foreach my $i (0,1) {
+            my $pos = $num[$i] || $empty;
+            my $obj = $pp->[$i];
+            push(@select, $obj) if $was_selected{$pos};
+            $canvas->itemconfigure($obj, -text => $pos);
+        }
+        $n++;
+    }
+    $self->highlight(@select) if @select;
+}
+
+sub sort_translation_region {
+    my( $self ) = @_;
+
+    my @region  = $self->translation_region_from_tk or return;
+    my $strand  = $self->strand_from_tk;
+    if ($strand == 1) {
+        $self->tk_t_start($region[0]);
+        $self->tk_t_end  ($region[1]);
+    } else {
+        $self->tk_t_start($region[1]);
+        $self->tk_t_end  ($region[0]);
+    }
+}
+
+sub merge_position_pairs {
+    my( $self ) = @_;
+    
+    $self->deselect_all;
+    $self->sort_position_pairs;
+    my @pos = $self->all_position_pair_text;
+    my $i = 0;
+    while (1) {
+        my $this = $pos[$i];
+        my $next = $pos[$i + 1] or last;
+        if ($this->[0] <= $next->[1] and $this->[1] >= $next->[0]) {
+            $this->[0] = ($this->[0] < $next->[0]) ? $this->[0] : $next->[0];
+            $this->[1] = ($this->[1] > $next->[1]) ? $this->[1] : $next->[1];
+            splice(@pos, $i + 1, 1);
+        } else {
+            $i++;
+        }
+    }
+    
+    my @pairs  = $self->position_pairs;
+    for (my $i = 0; $i < @pos; $i++) {
+        $self->set_position_pair_text($pairs[$i], $pos[$i]);
+    }
+    if (my $over = @pairs - @pos) {
+        $self->trim_position_pairs($over);
+        $self->fix_window_min_max_sizes;
+    }
+}
+
+sub delete_selected_exons {
+    my( $self ) = @_;
+    
+    my $canvas = $self->canvas;
+    my @selected = $self->list_selected;
+    $self->deselect_all;
+    my( %del_exon );
+    foreach my $obj (@selected) {
+        my ($exon_id) = grep /^exon_id/, $canvas->gettags($obj);
+        if ($exon_id) {
+            $del_exon{$exon_id}++;
+        }
+    }
+
+    my $strand = 0;
+    my @text    = $self->all_position_pair_text;
+    my @pp_list = $self->position_pairs;
+    my $trim = 0;
+    my( @keep );
+    for (my $i = 0; $i < @pp_list; $i++) {
+        my $exon_id = $pp_list[$i][2];
+        my $count = $del_exon{$exon_id};
+        if ($count and $count == 2) {
+            $trim++;
+        } else {
+            $strand += $self->exon_strand_from_tk($exon_id);
+            push(@keep, $text[$i]);
+        }
+    }
+    
+    return unless $trim;
+    
+    $strand = $strand < 0 ? -1 : 1;
+    
+    $self->trim_position_pairs($trim, $strand);
+    $self->set_all_position_pair_text(@keep);
+    
+    # Put in an empty exon holder if we have deleted them all
+    unless ($self->position_pairs) {
+        $self->add_exon_holder(undef, undef, 1);
+    }
+}
+
+sub exon_strand_from_tk {
+    my( $self, $exon_id ) = @_;
+    
+    confess "exon_id not given" unless $exon_id;
+    if ($self->canvas->find('withtag', "plus_strand&&$exon_id")) {
+        return 1;
+    } else {
+        return -1;
+    }
+}
+
+sub add_coordinate_pair {
+    my( $self, $start, $end ) = @_;
+    
+    my $strand = 1;
+    if ($start and $end and $start > $end) {
+        $strand = -1;
+        ($start, $end) = ($end, $start);
+    }
+    $self->add_exon_holder($start, $end, $strand);
+}
+
+sub draw_subseq {
+    my( $self ) = @_;
+    
+    my $sub = $self->SubSeq;
+    $self->add_subseq_exons($sub);
+    $self->draw_translation_region($sub);
+    $self->draw_PolyA($sub->get_all_PolyA);
+}
+
+sub draw_PolyA {
+    my( $self, @poly ) = @_;
+    
+    my %uniq_poly = map {$_->hash_key, $_} @poly;
+    if ($self->strand_from_tk == 1) {
+        @poly = sort {$a->signal_position <=> $b->signal_position
+            || $a->site_position <=> $b->site_position} values %uniq_poly;
+    } else {
+        @poly = sort {$b->signal_position <=> $a->signal_position
+            || $b->site_position <=> $a->site_position} values %uniq_poly;
+    }
+    
+    my $canvas = $self->canvas;
+    $canvas->delete('polyA');
+    
+    my $font = $self->font;
+    my $size = $self->font_size;
+    my @rec = $canvas->coords('max_width_rectangle');
+    my $x = $rec[0];
+    #my $x = int($size / 2);
+    
+    for (my $i = 0; $i < @poly; $i++) {
+        my $p = $poly[$i];
+        my $y = $size * ($i + 1);
+        my $txt = sprintf("polyA  %6s  %6d  %6d  %.2f%%",
+            $p->consensus->signal,
+            $p->signal_position,
+            $p->site_position,
+            $p->score,
+            );
+        $canvas->createText(
+            $x, $y,
+            -anchor => 'nw',
+            -text   => $txt,
+            -font   => [$font, $size, 'normal'],
+            -tags   => ['polyA', 'mobile'],
+            );
+    }
+    
+    $self->position_mobile_elements;
+}
+
+sub auto_find_PolyA {
+    my( $self ) = @_;
+    
+    my $sub = $self->new_SubSeq_from_tk
+        or return;
+    my @poly = $self->get_PolyA_from_tk;
+    push(@poly, $sub->find_PolyA_above_score(0));
+    if (@poly) {
+        $self->draw_PolyA(@poly);
+        $self->fix_window_min_max_sizes;
+    } else {
+        $self->message("No PolyA signals found")
+    }
+}
+
+sub open_PolyA_search_window {
+    my( $self ) = @_;
+    
+    $self->message('Not yet implemented');
+}
+
+sub get_PolyA_from_tk {
+    my( $self ) = @_;
+    
+    my( @poly );
+    my $canvas = $self->canvas;
+    foreach my $obj ($canvas->find('withtag', 'polyA')) {
+        push(@poly, $self->_PolyA_from_obj($obj));
+    }
+    return @poly;
+}
+
+sub _PolyA_from_obj {
+    my( $self, $obj ) = @_;
+    
+    my $canvas = $self->canvas;
+    my $txt = $canvas->itemcget($obj, 'text');
+    my( $cons_str, $sig_start, $site_end ) = $txt =~
+        /^polyA  (\S+)\s+(\d+)\s+(\d+)/
+        or confess "Can't parse text '$txt'";
+    my $cons = Hum::Ace::PolyA::Consensus->fetch_by_signal($cons_str);
+    my $p = Hum::Ace::PolyA->new;
+    $p->signal_position($sig_start);
+    $p->site_position($site_end);
+    $p->consensus($cons);
+    return $p;
+}
+
+sub delete_selected_PolyA {
+    my( $self ) = @_;
+    
+    my $canvas = $self->canvas;
+    my %to_delete = map {$_, 1} $self->list_selected;
+    $self->deselect_all;
+    my( @poly );
+    foreach my $obj ($canvas->find('withtag', 'polyA')) {
+        next if $to_delete{$obj};
+        push(@poly, $self->_PolyA_from_obj($obj));
+    }
+    $self->draw_PolyA(@poly);
+    $self->fix_window_min_max_sizes;
+}
+
 sub is_mutable {
     my( $self ) = @_;
     
@@ -682,10 +824,15 @@ sub show_subseq {
 sub show_peptide {
     my( $self ) = @_;
     
+    my $peptext = $self->{'_pep_peptext'};
+    
     my( $sub );
     if ($self->is_mutable) {
         $sub = $self->new_SubSeq_from_tk;
         unless ($sub->GeneMethod->is_coding) {
+            if ($peptext) {
+                $peptext->toplevel->withdraw;
+            }
             $self->message("non-coding method");
             return;
         }
@@ -693,8 +840,7 @@ sub show_peptide {
         $sub = $self->SubSeq;
     }
 
-    my( $peptext );
-    unless ($peptext = $self->{'_pep_peptext'}) {
+    unless ($peptext) {
         my $master = $self->canvas->toplevel;
         my $top = $master->Toplevel;
         $top->transient($master);
@@ -795,9 +941,13 @@ sub show_peptide {
 
 sub trim_cds_coord_to_first_stop {
     my( $self ) = @_;
+
+    unless ($self->get_GeneMethod_from_tk->is_coding) {
+        $self->message('non-coding method');
+        return;
+    }
     
     $self->deselect_all;
-    
     my $sub = $self->new_SubSeq_from_tk;
     my $strand = $sub->strand;
     my $original = $self->tk_t_end;
@@ -1195,8 +1345,7 @@ sub focus_on_current_text {
     
     my $canvas = $self->canvas;
     my $obj  = $canvas->find('withtag', 'current')  or return;
-    my $type = $canvas->type($obj)                  or return;
-    if ($type eq 'text') {
+    if (grep /translation_region|exon_pos/, $canvas->gettags($obj) ) {
         $canvas->focus($obj);
 
         # Position the icursor at the end of the text
@@ -1393,8 +1542,8 @@ sub middle_button_paste {
     }
     return unless @ints;
     
+    $self->deselect_all;
     if (my $obj  = $canvas->find('withtag', 'current')) {
-        $self->deselect_all;
         my $type = $canvas->type($obj) or return;
         if ($type eq 'text') {
             $canvas->itemconfigure($obj, 
@@ -1521,9 +1670,24 @@ sub add_exon_holder {
         );
     $canvas->lower($bkgd, $start_text);
     
+    $self->position_mobile_elements;
     
     # Return how big we were
     return $size + $pad;
+}
+
+sub position_mobile_elements {
+    my( $self ) = @_;
+    
+    my $canvas = $self->canvas;
+    return unless $canvas->find('withtag', 'mobile');
+    my $size = $self->font_size;
+    my $pad  = int($size / 2);
+
+    my $mobile_top   = ($canvas->bbox( 'mobile'))[1];
+    my $fixed_bottom = ($canvas->bbox('!mobile'))[3] + $pad;
+    
+    $canvas->move('mobile', 0, $fixed_bottom - $mobile_top);
 }
 
 sub draw_plus {
@@ -1590,46 +1754,73 @@ sub strand_from_tk {
     return $strand;
 }
 
-sub draw_translation_region {
-    my( $self ) = @_;
-    
-    my( $size, $half, $pad, $text_len )
-                    = $self->_coord_matrix;
-    my $canvas      = $self->canvas;
-    my $font        = $self->font;
-    my $font_size   = $self->font_size;
-    
-    my $sub = $self->SubSeq;
-    my @trans       = $sub->translation_region;
-    if ($sub->strand == -1) {
-        @trans = reverse @trans;
-    }
-    
-    my $t1 = $canvas->createText(
-        $half + $text_len, $size,
-        -anchor => 'e',
-        -text   => $trans[0],
-        -font   => [$font, $size, 'bold'],
-        -tags   => ['t_start', 'translation_region'],
-        );
-    my $t2 = $canvas->createText(
-        (3 * $text_len) + (4 * $size), $size,
-        -anchor => 'w',
-        -text   => $trans[1],
-        -font   => [$font, $size, 'bold'],
-        -tags   => ['t_end', 'translation_region'],
-        );
-}
+{
+    my $tr_tag = 'translation_region';
 
-sub translation_region_from_tk {
-    my( $self ) = @_;
-    
-    my $canvas = $self->canvas;
-    my( @region );
-    foreach my $obj ($canvas->find('withtag', 'translation_region')) {
-        push(@region, $canvas->itemcget($obj, 'text'));
+    sub draw_translation_region {
+        my( $self, $sub ) = @_;
+
+        # Get the translation region from the
+        # canvas or the SubSequence
+        my( @trans );
+        if ($sub) {
+            @trans = $sub->translation_region;
+        } else {
+            @trans = $self->translation_region_from_tk ||
+                $self->SubSeq->translation_region;
+        }
+
+        # Delete the existing translation region
+        my $canvas      = $self->canvas;
+        $canvas->delete($tr_tag);
+
+        # Don't draw anything if it isn't coding
+        my( $meth, $strand );
+        if ($sub) {
+            $meth = $sub->GeneMethod;
+            $strand = $sub->strand;
+        } else {
+            $meth = $self->get_GeneMethod_from_tk;
+            $strand = $self->strand_from_tk;
+        }
+        return unless $meth->is_coding;
+        my $color = $meth->cds_color;
+
+        my( $size, $half, $pad, $text_len )
+                        = $self->_coord_matrix;
+        my $font        = $self->font;
+        my $font_size   = $self->font_size;
+
+        if ($strand == -1) {
+            @trans = reverse @trans;
+        }
+
+        my $t1 = $canvas->createText(
+            $half + $text_len, $size,
+            -anchor => 'e',
+            -text   => $trans[0],
+            -font   => [$font, $size, 'bold'],
+            -tags   => ['t_start', $tr_tag],
+            );
+        my $t2 = $canvas->createText(
+            (3 * $text_len) + (4 * $size), $size,
+            -anchor => 'w',
+            -text   => $trans[1],
+            -font   => [$font, $size, 'bold'],
+            -tags   => ['t_end', $tr_tag],
+            );
     }
-    return(sort {$a <=> $b} @region);
+
+    sub translation_region_from_tk {
+        my( $self ) = @_;
+
+        my $canvas = $self->canvas;
+        my( @region );
+        foreach my $obj ($canvas->find('withtag', $tr_tag)) {
+            push(@region, $canvas->itemcget($obj, 'text'));
+        }
+        return(sort {$a <=> $b} @region);
+    }
 }
 
 sub tk_t_start {
@@ -1691,6 +1882,7 @@ sub new_SubSeq_from_tk {
     $sub->end_not_found          ( $self->end_not_found_from_tk       );
     $sub->upstream_subseq_name   ( $self->continued_from_from_tk      );
     $sub->downstream_subseq_name ( $self->continues_as_from_tk        );
+    $sub->replace_all_PolyA      ( $self->get_PolyA_from_tk           );
     #warn "Start not found ", $self->start_not_found_from_tk, "\n",
     #    "End not found ", $self->end_not_found_from_tk, "\n";
     return $sub;
@@ -1744,7 +1936,7 @@ sub xace_save {
     if ($xr) {
         $xr->load_ace($ace);
         $xr->save;
-        #$xr->send_command('gif ; seqrecalc');
+        $xr->send_command('gif ; seqrecalc');
         $xc->replace_SubSeq($sub, $old_name);
         $self->SubSeq($sub);
         $self->name($new_name);
