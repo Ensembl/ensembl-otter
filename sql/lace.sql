@@ -13,7 +13,7 @@ create table sequence_set (
     );
 
 create table vega_set (
-    vega_set_id int(10) unsigned DEFAULT '0' NOT NULL auto_increment,
+    vega_set_id int(10) unsigned NOT NULL auto_increment,
     vega_author_id int(10) unsigned DEFAULT '0' NOT NULL,
     vega_type ENUM ('E', 'I', 'N', 'P') DEFAULT 'N' NOT NULL,
     vega_name varchar (20),
@@ -22,7 +22,7 @@ create table vega_set (
     );
 
 create table vega_author (
-    vega_author_id  int(10) unsigned DEFAULT '0' NOT NULL auto_increment,
+    vega_author_id  int(10) unsigned NOT NULL auto_increment,
     author_email varchar(50),
     author_name  varchar(50),
     PRIMARY KEY (vega_author_id),
@@ -49,7 +49,7 @@ create table sequence_set_access (
 );
 
 create table contig_annotation_status (
-    conitg_ann_status_id  INT(10) unsigned DEFAULT '0' NOT NULL  auto_increment,
+    conitg_ann_status_id  INT(10) unsigned NOT NULL  auto_increment,
     contig_id INT(10) unsigned DEFAULT '0' NOT NULL,
     author_id INT(10) unsigned DEFAULT '0' NOT NULL,
     status_date DATETIME,
@@ -86,7 +86,7 @@ create table private_contig (
 );
 
 create table vega_snap (
-    vega_snap_id    INT(10) unsigned DEFAULT '0' NOT NULL  auto_increment,
+    vega_snap_id    INT(10) unsigned NOT NULL auto_increment,
     vega_snap_date  DATETIME,
     author_id       INT(10) unsigned DEFAULT '0' NOT NULL,
     
@@ -102,7 +102,7 @@ create table vega_set_snap (
 );
 
 create table set_snap (
-    set_snap_id     INT(10) unsigned DEFAULT '0' NOT NULL  auto_increment,
+    set_snap_id     INT(10) unsigned NOT NULL auto_increment,
     set_snap_date   DATETIME,
     author_id       INT(10) unsigned DEFAULT '0' NOT NULL,
     is_current      ENUM('Y', 'N') DEFAULT 'N' NOT NULL,
