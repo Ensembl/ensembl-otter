@@ -354,6 +354,18 @@ sub initialize {
     $canvas->Tk::bind('<Control-a>', $select_all_sub);
     $canvas->Tk::bind('<Control-A>', $select_all_sub);
     
+    
+    # Trim CDS coords to first stop character
+    my $trim_cds_sub = sub { $self->trim_cds_coord_to_first_stop };
+    $edit_menu->add('command',
+        -label          => 'Trim CDS',
+        -command        => $trim_cds_sub,
+        -accelerator    => 'Ctrl+T',
+        -underline      => 1,
+        );
+    $canvas->Tk::bind('<Control-t>', $trim_cds_sub);
+    $canvas->Tk::bind('<Control-T>', $trim_cds_sub);
+    
     # Deselect all
     $canvas->Tk::bind('<Escape>', sub{ $self->deselect_all });
     
@@ -604,7 +616,10 @@ sub show_peptide {
     my( $sub );
     if ($self->is_mutable) {
         $sub = $self->new_SubSeq_from_tk;
-        return unless $sub->GeneMethod->is_coding;
+        unless ($sub->GeneMethod->is_coding) {
+            $self->message("non-coding method");
+            return;
+        }
     } else {
         $sub = $self->SubSeq;
     }
@@ -698,6 +713,70 @@ sub show_peptide {
     $win->configure( -title => $pep->name . " translation" );
     $win->deiconify;
     $win->raise;
+}
+
+sub trim_cds_coord_to_first_stop {
+    my( $self ) = @_;
+    
+    $self->deselect_all;
+    
+    my $sub = $self->new_SubSeq_from_tk;
+    my $strand = $sub->strand;
+    my $original;
+    if ($strand == 1) {
+        $original = $self->tk_t_end;
+        $self->tk_t_end($sub->end);
+    } else {
+        $original = $self->tk_t_start;
+        $self->tk_t_start($sub->start);
+    }
+    
+    # Translate the subsequence
+    $sub = $self->new_SubSeq_from_tk;
+    my $pep = $self->translator->translate($sub->translatable_Sequence);
+    my $pep_str = $pep->sequence_string;
+    
+    # Find the first stop character
+    my $stop_pos = index($pep_str, '*', 0);
+    if ($stop_pos == -1) {
+        $self->message("No stop codon found");
+        return;
+    }
+    
+    # Convert from peptide to CDS coordinates
+    $stop_pos++;
+    my $cds_coord = ($stop_pos * 3) + $sub->start_phase - 1;
+    
+    # Get a list of exons in translation order
+    my @exons = $sub->get_all_CDS_Exons;
+    if ($strand == -1) {
+        @exons = reverse @exons;
+    }
+    
+    # Find the exon that contains the stop, and use its
+    # coordinates to map back to genomic coordinates
+    my $pos = 0;
+    foreach my $ex (@exons) {
+        my $exon_end = $pos + $ex->length;
+        if ($cds_coord < $exon_end) {
+            my $exon_offset = $cds_coord - $pos;
+            if ($strand == 1) {
+                my $new = $ex->start + $exon_offset - 1;
+                $self->tk_t_end($new);
+                # Highlight the translation end if we have changed it
+                $self->highlight('t_end') if $new != $original;
+                return 1;
+            } else {
+                my $new = $ex->end + 1 - $exon_offset;
+                $self->tk_t_start($new);
+                # Highlight the translation start if we have changed it
+                $self->highlight('t_start') if $new != $original;
+                return 1;
+            }
+        }
+        $pos = $exon_end;
+    }
+    $self->message("Failed to map coordinate");
 }
 
 sub translator {
@@ -1396,6 +1475,34 @@ sub get_translation_region {
         push(@region, $canvas->itemcget($obj, 'text'));
     }
     return(@region);
+}
+
+sub tk_t_start {
+    my( $self, $start ) = @_;
+    
+    my $canvas = $self->canvas;
+    my ($t_txt) = $canvas->find('withtag', 't_start')   
+        or confess "Can't get t_start";
+    if ($start) {
+        $canvas->itemconfigure($t_txt, -text => $start);
+    } else {
+        ($start) = $canvas->itemcget($t_txt, 'text');
+    }
+    return $start;
+}
+
+sub tk_t_end {
+    my( $self, $end ) = @_;
+    
+    my $canvas = $self->canvas;
+    my ($t_txt) = $canvas->find('withtag', 't_end')   
+        or confess "Can't get t_end";
+    if ($end) {
+        $canvas->itemconfigure($t_txt, -text => $end);
+    } else {
+        ($end) = $canvas->itemcget($t_txt, 'text');
+    }
+    return $end;
 }
 
 sub get_SubSeq_if_changed {
