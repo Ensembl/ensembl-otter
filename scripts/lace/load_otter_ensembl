@@ -188,6 +188,7 @@ use Bio::EnsEMBL::Clone;
     my $line_counter = 0;
     my $prev_chr_name ='';
     while(<AGP>){
+        chomp;
         print STDERR "reading line ". ($line_counter + 1) ."\n";
         $line_counter ++;    
     
@@ -195,9 +196,9 @@ use Bio::EnsEMBL::Clone;
         # chr_20  2808333 2934911 29      F       AL121905.0      101     126679  +     Optional comment
         # splits each line into its component parts - puts line in a temporary array (splits the line on whitespace)
         my @line_in_array = split /\s+/, $_, 10;
+        #warn 'line: ', join(', ', map "'$_'", @line_in_array), "\n";
     
- 
-        if (@line_in_array == 1) { 
+        if (scalar(@line_in_array) == 1) { 
             # cant think of anything to check  here yet
             # we will end up here if the input file has only a list of contigs in it. 
             $input_type = "LIST";
@@ -281,7 +282,9 @@ use Bio::EnsEMBL::Clone;
         my @value_array ;            
         if ($input_type eq 'LIST'){
             ## all we have is the list of contigs/clones - need to give default values for agp
+            
             $acc_ver = $file_line->[0];
+            $seq = $pfetch->get_Seq_by_acc($acc_ver);
             $super_contig_name = $chromosome_name;  # should be available from the command line if we have a clone list as input (or we would have died earlier)       
             $n = 5;    # does this get used for anything? - don't think so
             $type = 'F' ;        
@@ -308,8 +311,9 @@ use Bio::EnsEMBL::Clone;
             $ctg_end,
             $ctg_ori,
             ) = @$file_line;    
+            $seq = $pfetch->get_Seq_by_acc($acc_ver);
         }
-        $seq = $pfetch->get_Seq_by_acc($acc_ver);
+        
         
         next unless ($type eq 'F');
 
@@ -481,6 +485,9 @@ sub check_and_save_sequence_set {
         $sth->execute($name, $description, 5);
         
     }
+    if (! defined  $max_chr_end){
+        $max_chr_end = 0;
+    } 
  
     return $max_chr_end;
 }
