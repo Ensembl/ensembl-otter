@@ -20,7 +20,6 @@ sub new {
     $band->virtual_contig($vc);
     $band->show_labels(1);
     $band->gold(1);
-    $band->trim_labels(1);
     return $band;
 }
 
@@ -44,13 +43,15 @@ sub gold {
     return $band->{'_show_gold'};
 }
 
-sub trim_labels {
-    my( $band, $flag ) = @_;
+sub name_morpher {
+    my( $band, $morpher ) = @_;
     
-    if (defined $flag) {
-        $band->{'_trim_labels'} = $flag;
+    if ($morpher) {
+        confess "Not a subroutine ref '$morpher'"
+            unless ref($morpher) eq 'CODE';
+        $band->{'_name_morpher'} = $morpher;
     }
-    return $band->{'_trim_labels'};
+    return $band->{'_name_morpher'};
 }
 
 sub show_labels {
@@ -65,13 +66,14 @@ sub show_labels {
 sub render {
     my( $band ) = @_;
     
-    my $canvas      = $band->canvas;
-    my $vc          = $band->virtual_contig;
-    my $y_dir       = $band->tiling_direction;
-    my $rpp         = $band->residues_per_pixel;
-    my $y_offset    = $band->y_offset;
-    my @tags        = $band->tags;
-    my $font_size   = $band->font_size;
+    my $canvas         = $band->canvas;
+    my $vc             = $band->virtual_contig;
+    my $y_dir          = $band->tiling_direction;
+    my $rpp            = $band->residues_per_pixel;
+    my $y_offset       = $band->y_offset;
+    my @tags           = $band->tags;
+    my $font_size      = $band->font_size;
+    my $name_morpher = $band->name_morpher;
 
     if ($y_dir == -1) {
         # We have to build above the other bands
@@ -93,8 +95,8 @@ sub render {
         my $contig = $map_c->contig;
         my $length = $contig->length;
         my $name = $contig->id;
-        if ($band->trim_labels) {
-            $name =~ s/\.\d+$//;
+        if ($name_morpher) {
+            $name = &$name_morpher($name);
         }
         my $group = "$tags[0]::$name";
         #printf STDERR "%-10s  %2d %6d %6d %6d  %10d %10d\n", $name, $map_c->orientation, $raw_start, $raw_end, $length, $start, $end;

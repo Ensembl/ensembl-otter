@@ -6,6 +6,7 @@ use strict;
 use GenomeCanvas;
 use GenomeCanvas::Band::TilingPath;
 use GenomeCanvas::Band::Plot;
+use Hum::Submission 'prepare_statement'; # For Sanger sequence names
 use Getopt::Long 'GetOptions';
 
 {
@@ -15,12 +16,12 @@ use Getopt::Long 'GetOptions';
     my $fpc = 'chr20';
     my $static_type = 'SANGER';
     my $scale = 2000;
-    my $labels = 1;
     my $n_tiles = 1;
     my $chr_name = '';
     my $chr_start = 0;
     my $chr_end = 0;
     my $font_size = 12;
+    my $sanger_names = 0;
     GetOptions(
         'host=s'        => \$host,
         'db=s'          => \$db,
@@ -28,14 +29,25 @@ use Getopt::Long 'GetOptions';
         'fpc=s'         => \$fpc,
         'scale=s'       => \$scale,
         'type=s'        => \$static_type,
-        'label!'        => \$labels,
         'tiles=i'       => \$n_tiles,
         'chr=s'         => \$chr_name,
-        'start=i'       => \$chr_start,
-        'end=i'         => \$chr_end,
+        'start=s'       => \$chr_start,
+        'end=s'         => \$chr_end,
         'font_size=i'   => \$font_size,
+        'sanger!'       => \$sanger_names,
         ) or die "Error processing command line options";
 
+    if ($chr_start) {
+        my $chr_start_num = parse_num($chr_start)
+            or die "Bad chr_start '$chr_start'";
+        $chr_start = $chr_start_num;
+    }
+    if ($chr_end) {
+        my $chr_end_num = parse_num($chr_end)
+            or die "Bad chr_end '$chr_end'";
+        $chr_end = $chr_end_num;
+    }
+    
     my $mw = GenomeCanvas::MainWindow->new;
     $mw->title($fpc);
     my $gc = GenomeCanvas->new($mw);
@@ -75,7 +87,11 @@ use Getopt::Long 'GetOptions';
         }
         
         my $tiling = GenomeCanvas::Band::TilingPath->new($vc);
-        $tiling->show_labels($labels);
+        if ($sanger_names) {
+            $tiling->name_morpher(\&get_sanger_name);
+        } else {
+            $tiling->name_morpher(\&trim_name);
+        }
         $tiling->tiling_direction(-1);
         my $set = $gc->new_BandSet;
         $set->add_Band($tiling);
@@ -225,11 +241,66 @@ use Getopt::Long 'GetOptions';
 }
 
 
-
-
                             ###############
                             Tk::MainLoop();
                             ###############
+
+sub parse_num {
+    my( $string ) = @_;
+    
+    my ($int, $mod) = $string =~ /^([\d\.]+)(.?)/ or return;
+    if ($mod) {
+        $mod = lc $mod;
+        if ($mod eq 'k') {
+            $int *= 1e3;
+        }
+        elsif ($mod eq 'm') {
+            $int *= 1e6
+        }
+        else {
+            return;
+        }
+    }
+    return $int;
+}
+
+sub get_sanger_name {
+    my( $name ) = @_;
+    
+    my $acc = trim_name($name);
+    return seq_name_from_acc($acc) || $acc;
+}
+
+{
+    my( $sth );
+    
+    sub seq_name_from_acc {
+        my( $acc ) = @_;
+        
+        $sth ||= prepare_statement(q{
+            SELECT s.sequence_name
+            FROM project_acc a
+              , project_dump d
+              , sequence s
+            WHERE a.sanger_id = d.sanger_id
+              AND d.seq_id = s.seq_id
+              AND d.is_current = 'Y'
+              AND a.accession = ?
+            });
+        $sth->execute($acc);
+        my ($seq_name) = $sth->fetchrow;
+        return $seq_name;
+    }
+}
+
+sub trim_name {
+    my( $name ) = @_;
+    
+    my ($trim) = $name =~ /^([^\.]+)/
+        or confess("Can't get trimmed name from '$name'");
+    return $trim;
+}
+
 
 sub make_button {
     my( $parent, $label, $command ) = @_;

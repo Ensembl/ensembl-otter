@@ -237,24 +237,43 @@ sub draw_sequence_gaps {
     my $y_max = $y_offset + $height;
     my @tags = $band->tags;
     
+    my( @gap_map );
     my $prev_end = 0;
-    foreach my $map_c ($vc->_vmap->each_MapContig) {
-        my $start  = $map_c->start;
-        my $end    = $map_c->end;
+    my @map_contig_list = $vc->_vmap->each_MapContig;
+    for (my $i = 0; $i < @map_contig_list; $i++) {
+        my $map_c = $map_contig_list[$i];
+        my $start = $map_c->start;
+        my $end   = $map_c->end;
+        
+        # Gap at the start?
+        if ($i == 0 and $start > 1) {
+            push(@gap_map, [1, $start - 1]);
+        }
+        
+        # Gap after previous MapContig?
         my $gap = ($start - $prev_end - 1);
         if ($gap) {
-            my $x1 = $prev_end / $rpp;
-            my $x2 = ($start - 1) / $rpp;
-            $canvas->createRectangle(
-                $x1, $y_offset, $x2, $y_max,
-                -fill       => 'grey',
-                -outline    => undef,
-                -tags       => [@tags],
-                );
+            push(@gap_map, [$prev_end + 1, $start - 1]);
         }
         $prev_end = $end;
     }
     
+    # Gap at end?
+    my $vc_length = $vc->length;
+    if ($prev_end < $vc_length) {
+        push(@gap_map, [$prev_end + 1, $vc_length]);
+    }
+
+    # Draw the gaps    
+    foreach my $gap (@gap_map) {
+        my ($x1, $x2) = map $_ / $rpp, @$gap;
+        $canvas->createRectangle(
+            $x1, $y_offset, $x2, $y_max,
+            -fill       => 'grey',
+            -outline    => undef,
+            -tags       => [@tags],
+            );
+    }
 }
 
 sub sequence_chunk_coords {
