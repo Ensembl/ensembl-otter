@@ -10,7 +10,6 @@ use Symbol 'gensym';
 use Fcntl qw{ O_WRONLY O_CREAT };
 use Ace;
 use Bio::Otter::Lace::Defaults;
-use Bio::Otter::Lace::Blast;
 use Bio::Otter::Lace::PipelineDB;
 use Bio::Otter::Lace::SatelliteDB;
 use Bio::Otter::Lace::PersistentFile;
@@ -139,6 +138,9 @@ sub write_local_blast{
 
     return 0 unless -e $fasta_file;
 
+    eval "use Bio::Otter::Lace::Blast;";
+    if($@){ warn $@; return 0;}
+
     my $ds = $cl->get_DataSet_by_name($ss->dataset_name());
 
     my $ana_obj = Bio::EnsEMBL::Pipeline::Analysis->new(-LOGIC_NAME     => $logic_name,
@@ -203,6 +205,7 @@ sub write_local_blast{
         $self->add_acefile($blast_ace);
 
     };
+    Bio::Otter::Lace::SatelliteDB::disconnect_DBAdaptor($pipe_db) if $pipe_db;
     if($@){
         warn "Arrrrrrrrrrrrrrrgh! $@ \n";
     }else{
@@ -823,7 +826,7 @@ sub make_AceDataFactory {
 	    # warn " AceBatabase.pm: $s\n";
 	    my $file = $module_options->{$s}->{module}.".pm";
 	    $file =~ s{::}{/}g;
-	    # warn " AceDatabase.pm: requiring $file \n";
+	    warn " AceDatabase.pm: requiring $file \n" if $self->Client->debug();
 	    eval{  require "$file"  };
 	    if($@){
 		delete $logic_to_load->{$s};
