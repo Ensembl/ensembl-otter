@@ -12,14 +12,14 @@ sub get_DBAdaptor {
     my( $otter_db, $rw ) = @_;
 
     return Bio::Otter::Lace::SatelliteDB::_get_DBAdaptor(
-        $otter_db, 'pipeline_db', 'Bio::EnsEMBL::DBSQL::DBAdaptor');
+        $otter_db, 'pipeline_db', 'Bio::Otter::DBSQL::DBAdaptor');
 }
 
 sub get_rw_DBAdaptor {
     my( $otter_db ) = @_;
     
     return Bio::Otter::Lace::SatelliteDB::_get_DBAdaptor(
-        $otter_db, 'pipeline_db_rw', 'Bio::EnsEMBL::DBSQL::DBAdaptor');
+        $otter_db, 'pipeline_db_rw', 'Bio::Otter::DBSQL::DBAdaptor');
 }
 
 sub get_pipeline_DBAdaptor {
