@@ -24,6 +24,7 @@ use Scalar::Util 'weaken';
 
 use CanvasWindow::PolyAWindow;
 use CanvasWindow::LocusWindow;
+use Bio::Otter::Lace::Defaults;
 
 sub new {
     my( $pkg, $tk ) = @_;
@@ -41,7 +42,8 @@ sub Client {
     
     if ($Client) {
         $self->{'_Client'} = $Client;
-    }
+    } 
+
     return $self->{'_Client'};
 }
 
@@ -75,7 +77,19 @@ sub initialize {
         Processed_pseudogene     => [1,         0,          1],
         Unprocessed_pseudogene   => [1,         0,          1],
         Predicted                => [1,         0,          0],
-        
+        # newly added - truncated versions of above methods        
+        Coding_trunc                    => [0,         1,          1],
+        Transcript_trunc                => [0,         0,          0],
+        Non_coding_trunc                => [0,         0,          1],
+        Ambiguous_ORF_trunc             => [0,         0,          1],
+        Immature_trunc                  => [0,         0,          1],
+        Antisense_trunc                 => [0,         0,          1],
+        IG_segment_trunc                => [0,         1,          0],
+        Putative_trunc                  => [0,         0,          0],
+        Pseudogene_trunc                => [0,         0,          0],
+        Processed_pseudogene_trunc      => [0,         0,          1],
+        Unprocessed_pseudogene_trunc    => [0,         0,          1],
+        Predicted_trunc                 => [0,         0,          0],  
         # Old methods
         #supported                => [1,         1], 
         #supported_CDS            => [1,         1], 
@@ -154,7 +168,7 @@ sub set_known_GeneMethods {
         my ($is_mutable, $is_coding , $has_parent) = @$flags;
         my $meth = $self->fetch_GeneMethod($name);
         $meth->is_mutable($is_mutable);
-        $meth->is_coding($is_coding);
+        $meth->is_coding($is_coding); 
         $meth->has_parent($has_parent);
         $self->add_GeneMethod($meth);
     }
@@ -214,7 +228,7 @@ sub get_all_mutable_GeneMethods {
 
 sub get_default_mutable_GeneMethod {
     my( $self ) = @_;
-    
+   
     my @possible = grep $_->is_coding, $self->get_all_mutable_GeneMethods;
     if (my ($supp) = grep $_->name eq 'Coding', @possible) {
         # "Coding" is the default method, if it is there
@@ -1785,10 +1799,9 @@ sub OLD_draw_subseq_list {
 sub draw_subseq_list {
     my( $self, @selected_clones ) = @_;
 
-    ## new bit to create  a polya editing window. probaly put it in a seperate routine later - just to test it now
+    
     my $canvas = $self->canvas;
     
-
     my( @subseq );
     my $counter = 1;
     foreach my $clone_name (@selected_clones) {
