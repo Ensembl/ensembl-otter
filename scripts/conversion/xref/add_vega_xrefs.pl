@@ -129,6 +129,8 @@ foreach my $chr (reverse sort bychrnum keys %$chrhash) {
       $sth->execute;
       print $sth->{Statement} . ";\n";
 
+      print "processing $tran_name\n";
+
       my $translation = $trans->translation;
       if (defined($translation)) {
         my $dbentry=Bio::EnsEMBL::DBEntry->new(-primary_id=>$translation->stable_id,
