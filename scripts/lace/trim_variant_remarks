@@ -1,0 +1,67 @@
+#!/usr/local/bin/perl -w
+
+### trim_variant_remarks
+
+use strict;
+
+use Bio::Otter::Lace::Defaults;
+
+{
+    my( $dataset_name );
+    my $usage = sub { exec('perldoc', $0) };
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'dataset=s'     => \$dataset_name,
+        ) or $usage->();
+    $usage->() unless $dataset_name;
+
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    my $dba = $ds->get_cached_DBAdaptor;
+    
+    my $sth = $dba->prepare(q{
+        SELECT transcript_remark_id
+          , remark
+        FROM transcript_remark
+        });
+    $sth->execute;
+    
+    my $update = $dba->prepare(q{
+        UPDATE transcript_remark
+        SET remark = ?
+        WHERE transcript_remark_id = ?
+        });
+        
+    my $delete = $dba->prepare(q{
+        DELETE FROM transcript_remark
+        WHERE transcript_remark_id = ?
+        });
+    
+    while (my ($id, $db_rem) = $sth->fetchrow) {
+        my $new_rem = $db_rem;
+        if (   $new_rem =~ s/,\s*variant \d+\.?\s*$//i
+            or $new_rem =~ s/\)\s*variant \d+\.?\s*$/\)/i) 
+        {
+            print "\n$db_rem\n$new_rem\n";
+            $update->execute($new_rem, $id);
+        }
+        elsif ($db_rem =~ /^(novel\W*(protein|transcript))?\W*variant\W*\d+\W*$/) {
+            print "DEL: $db_rem\n";
+            $delete->execute($id);
+        }
+        elsif ($db_rem =~ /\bvariant\s+\d+/i) {
+            print "\nOK: $db_rem\n";
+        }
+        
+    }
+}
+
+
+
+__END__
+
+=head1 NAME - trim_variant_remarks
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+

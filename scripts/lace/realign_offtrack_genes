@@ -25,7 +25,7 @@ use Hum::Analysis::Factory::ExonLocator;
         'end_acc=s'     => \$end_acc,
         'liberal!'      => \$liberal,
         ) or $usage->();
-    $usage->() unless $dataset_name and $sequence_set and $start_acc and $end_acc;
+    $usage->() unless $dataset_name and $sequence_set;# and $start_acc and $end_acc;
     
 
     # Connect to Ensembl/Otter database and fetch adaptors

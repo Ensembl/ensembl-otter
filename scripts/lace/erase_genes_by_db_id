@@ -8,11 +8,13 @@ use Bio::Otter::Lace::Defaults;
 use Bio::Otter::DBUtils 'delete_genes_by_exon_id_list';
 
 {
+    my $test_flag = 0;
     my $dataset_name = undef;
     my $usage = sub { exec 'perldoc', $0 };
     
     Bio::Otter::Lace::Defaults::do_getopt(
           'dataset=s'   => \$dataset_name,
+          'test!'       => \$test_flag,
           ) or die "Error processing command line";
     $usage->() unless $dataset_name and @ARGV;
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
@@ -26,8 +28,11 @@ use Bio::Otter::DBUtils 'delete_genes_by_exon_id_list';
     if ($@) {
         warn "Error doing delete: $@";
         $otter_db->rollback;
-    } else {
-        #$otter_db->rollback;
+    }
+    elsif ($test_flag) {
+        $otter_db->rollback;
+    }
+    else {
         $otter_db->commit;
     }
 }

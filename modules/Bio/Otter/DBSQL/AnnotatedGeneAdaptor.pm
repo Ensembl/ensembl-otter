@@ -308,6 +308,34 @@ sub list_current_dbIDs {
     return $current_gene_id;
 }
 
+=head2 Gene_is_current_version
+
+    if ($self->Gene_is_current_version($gene)) {
+        ...
+    }
+
+Returns TRUE if the gene given is the current
+version of that gene, ie: it has the maximum
+version in the database of its stable_id.
+
+=cut
+
+sub Gene_is_current_version {
+    my( $self, $gene ) = @_;
+    
+    my $stable  = $gene->stable_id;
+    my $version = $gene->version;
+    my $sth = $self->db->prepare(q{
+        SELECT MAX(version)
+        FROM gene_stable_id
+        WHERE stable_id = ?
+        });
+    $sth->execute($stable);
+    my ($max_version) = $sth->fetchrow;
+    
+    return $version == $max_version;
+}
+
 ### fetch_by_Slice should have been called fetch_all_by_Slice
 ### to override fetch_all_by_Slice in GeneAdaptor
 

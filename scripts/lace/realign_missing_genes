@@ -58,11 +58,19 @@ use Hum::Analysis::Factory::ExonLocator;
         my $tiles = $slice->get_tiling_path;
         foreach my $gene_id (@$gene_id_list) {
             my $db_gene = $gene_aptr->fetch_by_dbID($gene_id);
+            next unless $gene_aptr->Gene_is_current_version($db_gene);
+            #print STDERR "\nGene: $gene_id\n";
+            #foreach my $t (@{$db_gene->get_all_Transcripts}) {
+            #    printf STDERR "  Transcript: %s %s %d\n",
+            #        $t->stable_id,
+            #        $t->transcript_info->name,
+            #        $t->dbID;
+            #}
             if (remap_ens_Exons($finder, $db_gene->get_all_Exons, $slice)) {
                 warn "Remapped exons OK\n";
                 # otter > XML > otter
                 my $temp = Bio::Otter::Lace::TempFile->new;
-                $temp->name("realign_offtrack.$$.xml");
+                $temp->name("realign_missing.$$.xml");
                 my $w_fh = $temp->write_file_handle;
                 print $w_fh
                     "<otter>\n<sequence_set>\n"
@@ -73,7 +81,7 @@ use Hum::Analysis::Factory::ExonLocator;
                 my ($gene_list) = Bio::Otter::Converter::XML_to_otter($r_fh);
                 my $xml_gene = shift @$gene_list;
                 $xml_gene->analysis($anal);
-                #save_new_gene($dba, $gene_aptr, $db_gene, $xml_gene, $slice);
+                save_new_gene($dba, $gene_aptr, $db_gene, $xml_gene, $slice);
             }
         }
     }

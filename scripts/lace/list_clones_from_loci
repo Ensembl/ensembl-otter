@@ -11,9 +11,11 @@ use Bio::Otter::Lace::Defaults;
 {
     my $dataset_name = undef;
     my $usage = sub { exec 'perldoc', $0 };
+    my $show_accs = 0;
     
     Bio::Otter::Lace::Defaults::do_getopt(
           'dataset=s'   => \$dataset_name,
+          'accession!'  => \$show_accs,
           ) or $usage->();
     $usage->() unless $dataset_name;
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
@@ -34,8 +36,9 @@ use Bio::Otter::Lace::Defaults;
         $ctg_clone{$ctg} = $clone;
     }
 
-    my $sth = $otter_db->prepare(q{
-        SELECT cl.name
+    my $column = $show_accs ? 'cl.embl_acc' : 'cl.name';
+    my $sth = $otter_db->prepare(qq{
+        SELECT $column
         FROM gene g
           , gene_stable_id gsid
           , current_gene_info c
