@@ -58,14 +58,10 @@ CREATE TABLE analysis (
 CREATE TABLE chromosome (
   chromosome_id     int unsigned NOT NULL auto_increment,
   name              varchar(40) NOT NULL,
-  known_genes       int(11) NULL,
-  unknown_genes     int(11) NULL,
-  snps              int(11) NULL,
   length            int(11) NULL,
   
   PRIMARY KEY (chromosome_id)
 ) TYPE=InnoDB;
-# Statistics for the web site
 
 
 #
@@ -289,7 +285,7 @@ CREATE TABLE repeat_consensus (
     KEY name (repeat_name),
     KEY class (repeat_class)
 ) TYPE=InnoDB;
-#  Removed for InnoDB  KEY consensus(repeat_consensus(10))
+# Removed for InnoDB    KEY consensus(repeat_consensus(10))
 
 
 CREATE TABLE repeat_feature (
@@ -490,7 +486,7 @@ CREATE TABLE interpro (
 
 CREATE TABLE gene_description (
   gene_id     int unsigned NOT NULL,
-  description varchar(255),
+  description text,
   PRIMARY KEY (gene_id)
 ) TYPE=InnoDB;
 
@@ -565,9 +561,9 @@ CREATE TABLE external_synonym(
 
 CREATE TABLE external_db(
          external_db_id INT not null auto_increment,
-         db_name ENUM ('gene_name','Celera_Pep','Celera_Trans','Celera_Gene','HumanGenscans','protein_id','SCOP','HUGO','GO','SPTREMBL','EMBL','MarkerSymbol','SWISSPROT','PDB','MIM','RefSeq','LocusLink','Interpro','Superfamily','Anopheles_symbol','Anopheles_paper','wormbase_gene','wormbase_transcript','wormpep_id','flybase_gene','flybase_transcript','flybase_symbol','drosophila_gene_id','GKB', 'BRIGGSAE_HYBRID','AFFY_HG_U133','AFFY_HG_U95','sanger_probe','Vega') not null,
+         db_name ENUM ('gene_name','Celera_Pep','Celera_Trans','Celera_Gene','HumanGenscans','protein_id','SCOP','HUGO','GO','SPTREMBL','EMBL','MarkerSymbol','SWISSPROT','PDB','MIM','RefSeq','LocusLink','Interpro','Superfamily','Anopheles_symbol','Anopheles_paper','wormbase_gene','wormbase_transcript','wormpep_id','flybase_gene','flybase_transcript','flybase_symbol','drosophila_gene_id','GKB', 'BRIGGSAE_HYBRID','AFFY_HG_U133','AFFY_HG_U95','sanger_probe','Vega_gene','Vega_transcript','Vega_translation','Sanger_Mver1_1_1','AFFY_MG_U74','AFFY_MG_U74v2','AFFY_Mu11Ksub','AFFY_RG_U34','AFFY_RN_U34','AFFY_RT_U34') not null,
 	 release VARCHAR(40) DEFAULT '' NOT NULL,
-	 status  ENUM ('KNOWN','XREF','PRED') not null,
+	 status  ENUM ('KNOWNXREF','KNOWN','XREF','PRED','ORTH') not null,
          PRIMARY KEY( external_db_id ) 
 ) TYPE=InnoDB;
 
@@ -585,7 +581,7 @@ CREATE TABLE meta (
 
 
 # Auto add schema version to database
-insert into meta (meta_key, meta_value) values ("schema_version", "$Revision: 1.4 $");
+insert into meta (meta_key, meta_value) values ("schema_version", "$Revision: 1.5 $");
 
 
 CREATE TABLE prediction_transcript (
@@ -613,7 +609,9 @@ CREATE TABLE marker_synonym (
     name              varchar(30),    
 
     PRIMARY KEY (marker_synonym_id),
-    KEY marker_synonym_idx (marker_synonym_id, name)
+    KEY marker_synonym_idx (marker_synonym_id, name),
+    KEY marker_idx (marker_id)
+
 ) TYPE=InnoDB;
 
 CREATE TABLE marker (
