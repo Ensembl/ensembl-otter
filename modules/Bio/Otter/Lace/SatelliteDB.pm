@@ -5,7 +5,7 @@ package Bio::Otter::Lace::SatelliteDB;
 
 use strict;
 use Carp;
-use Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor;
+use Bio::EnsEMBL::DBSQL::DBAdaptor;
 
 
 ## takes in an otter_db adaptor and optionally a meta_key value.
@@ -69,6 +69,8 @@ sub save_options_hash {
     $sth->execute($key, $opt_str);    
 }
 
+# Here as insurance in case more circular references that
+# are not cleaned up are introduced into the Ensembl API
 sub disconnect_DBAdaptor {
     my( $dba ) = @_;
     
