@@ -37,7 +37,9 @@ use Bio::Otter::Lace::Defaults;
     my $ctg_list = $seqSet->selected_CloneSequences_as_contig_list;
     # need to lock the region first
     my $lock_xml;
+    my $n=0;
     foreach my $ctg(@$ctg_list){
+      $n++;
         eval{
             $lock_xml .= 
                 $cl->lock_region_for_contig_from_Dataset($ctg,
@@ -50,6 +52,8 @@ use Bio::Otter::Lace::Defaults;
         }
     }
     # save the xml
+    print "locked $n contigs\n";
+
     my $success;
     eval{
         $success  = $cl->save_otter_xml($xml, $dataset);
