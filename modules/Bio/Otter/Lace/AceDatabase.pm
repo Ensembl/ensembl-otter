@@ -13,26 +13,19 @@ use Bio::Otter::Lace::Defaults;
 use Bio::Otter::Lace::PipelineDB;
 use Bio::Otter::Lace::SatelliteDB;
 use Bio::Otter::Converter;
+use Bio::Otter::Lace::PersistentFile;
 
 use Bio::EnsEMBL::Ace::DataFactory;
-
-use Bio::EnsEMBL::Ace::Filter::Repeatmasker;
-use Bio::EnsEMBL::Ace::Filter::CpG;
-use Bio::EnsEMBL::Ace::Filter::DNA;
-use Bio::EnsEMBL::Ace::Filter::TRF;
 use Bio::EnsEMBL::Ace::Filter::Gene;
-use Bio::EnsEMBL::Ace::Filter::Gene::Halfwise;
-use Bio::EnsEMBL::Ace::Filter::Gene::Predicted;
-use Bio::EnsEMBL::Ace::Filter::Similarity::DnaSimilarity;
-use Bio::EnsEMBL::Ace::Filter::Similarity::ProteinSimilarity;
-use Bio::EnsEMBL::Ace::Filter::SimpleFeature;
+
+my $DATASET_HASH_FILE    = '.slice_dataset';
+my $LOCK_REGION_XML_FILE = '.lock_region.xml';
 
 sub new {
     my( $pkg ) = @_;
     
     return bless {}, $pkg;
 }
-
 sub Client {
     my( $self, $client ) = @_;
     
@@ -58,7 +51,6 @@ sub home {
     }
     return $self->{'_home'};
 }
-
 sub title {
     my( $self, $title ) = @_;
     
@@ -106,9 +98,8 @@ sub error_flag {
     if (defined $error_flag) {
         $self->{'_error_flag'} = $error_flag;
     }
-    return $self->{'_error_flag'};
+    return ($self->{'_error_flag'} ? 1 : 0);
 }
-
 sub add_acefile {
     my( $self, $ace ) = @_;
     
@@ -145,17 +136,17 @@ sub write_otter_acefile {
 
 sub fetch_otter_ace_for_SequenceSet {
     my( $self, $ss ) = @_;
-
+    
     my $client = $self->Client
         or confess "No otter client attached";
-    my $ds = $client->get_DataSet_by_name($ss->dataset_name);
+    my $dsObj = $client->get_DataSet_by_name($ss->dataset_name);
     confess "Can't find DataSet that SequenceSet belongs to"
-        unless $ds;
+        unless $dsObj;
 
-    $ds->selected_SequenceSet($ss);
+    $dsObj->selected_SequenceSet($ss);
     my $ctg_list = $ss->selected_CloneSequences_as_contig_list
         or confess "No CloneSequences selected";
-    return $self->ace_from_contig_list($ctg_list, $ds);
+    return $self->ace_from_contig_list($ctg_list, $dsObj);
 }
 
 sub fetch_otter_ace {
@@ -165,12 +156,12 @@ sub fetch_otter_ace {
     
     my $ace = '';
     my $selected_count = 0;
-    foreach my $ds ($client->get_all_DataSets) {
-        my $ss_list = $ds->get_all_SequenceSets;
+    foreach my $dsObj ($client->get_all_DataSets) {
+        my $ss_list = $dsObj->get_all_SequenceSets;
         foreach my $ss (@$ss_list) {
             if (my $ctg_list = $ss->selected_CloneSequences_as_contig_list) {
-                $ds->selected_SequenceSet($ss);
-                $ace .= $self->ace_from_contig_list($ctg_list, $ds);
+                $dsObj->selected_SequenceSet($ss);
+                $ace .= $self->ace_from_contig_list($ctg_list, $dsObj);
                 foreach my $ctg (@$ctg_list) {
                     $selected_count += @$ctg;
                 }
@@ -186,47 +177,70 @@ sub fetch_otter_ace {
 }
 
 sub ace_from_contig_list {
-    my( $self, $ctg_list, $ds ) = @_;
-    
-    my $client = $self->Client or confess "No otter Client attached";
+    my( $self, $ctg_list, $dsObj ) = @_;
 
+    my $client = $self->Client or confess "No otter Client attached";
     my $ace = '';
+    my $write_access = $client->write_access();
+
     foreach my $ctg (@$ctg_list) {
-        my $xml = Bio::Otter::Lace::TempFile->new;
+        if($write_access){
+            # only lock the region if we have write access.
+            my $lock_xml = $client->lock_region_for_contig_from_Dataset($ctg, $dsObj);
+            $self->write_lock_xml($lock_xml, $dsObj->name);
+        }
+        my $xml        = Bio::Otter::Lace::TempFile->new;
         $xml->name('lace.xml');
-        my $write = $xml->write_file_handle;
-        my $xml_string = $client->get_xml_for_contig_from_Dataset($ctg, $ds);
+        my $write      = $xml->write_file_handle;
+        my $xml_string = $client->get_xml_for_contig_from_Dataset($ctg, $dsObj);
         print $write $xml_string ;
-       
+        # If we're here we now have all the locks!!!
+
         ### Nasty that genes and slice arguments are in
         ### different order in these two subroutines
-                
-      
         my ($genes, $slice, $sequence, $tiles, $feature_set) =
             Bio::Otter::Converter::XML_to_otter($xml->read_file_handle);
-        
         $ace .= Bio::Otter::Converter::otter_to_ace($slice, $genes, $tiles, $sequence, $feature_set);
         # We need to record which dataset each slice came
         # from so that we know where to save it back to.
-        my $slice_name = $slice->display_id;
-        $self->save_slice_dataset($slice_name, $ds);
+        # this gets done in the write_lock_xml so only need to do it here
+        # if we haven't got write access.
+        $self->save_slice_dataset($slice->display_id, $dsObj->name) unless $write_access;
     }
-    
     return $ace;
 }
+sub write_lock_xml{
+    my ($self, $xml, $ds_name) = @_;
 
+    if($xml && $ds_name){
+        my $lock_xml = Bio::Otter::Lace::PersistentFile->new();
+        $lock_xml->root($self->home);
+        $lock_xml->name($LOCK_REGION_XML_FILE);
+        my $write = $lock_xml->write_file_handle();
 
+        print $write $xml;
+
+        my $read = $lock_xml->read_file_handle();
+        my ($genes,$slice,$seqstr,$tiles) = Bio::Otter::Converter::XML_to_otter($read);
+        my $slice_name = $slice->display_id();
+        $self->save_slice_dataset($slice_name, $ds_name);
+        $lock_xml->mv("${slice_name}${ds_name}${LOCK_REGION_XML_FILE}");
+    }
+}
 sub save_slice_dataset {
-    my( $self, $slice_name, $dataset ) = @_;
-    
-    $self->{'_slice_name_dataset'}{$slice_name} = $dataset;
+    my( $self, $slice_name, $ds_name ) = @_;
+
+    if($slice_name && $ds_name){
+        print STDERR "Saving $slice_name under $ds_name \n";
+        $self->{'_slice_name_dataset'}->{$ds_name} ||= [];
+        push(@{$self->{'_slice_name_dataset'}->{$ds_name}}, $slice_name);
+    }
 }
 
 sub slice_dataset_hash {
     my $self = shift;
-    
     confess "slice_dataset_hash method is read-only" if @_;
-    
+
     my $h = $self->{'_slice_name_dataset'};
     unless ($h) {
         #warn "Creating empty hash";
@@ -239,50 +253,48 @@ sub slice_dataset_hash {
 # (Could store in Dataset_name tag in database?)
 sub save_slice_dataset_hash {
     my( $self ) = @_;
-    
+
     my $h    = $self->slice_dataset_hash;
-    my $file = $self->slice_dataset_hash_file;
     
-    my $fh = gensym();
-    open $fh, "> $file" or confess "Can't write to file '$file' : $!";
-    while (my ($slice, $ds) = each %$h) {
-        my $ds_name = $ds->name;
-        $slice =~ s/\t/\\t/g;   # Escape tab characterts in slice name (v. unlikely)
-        print $fh "$slice\t$ds_name\n";
+    my $hash_file = Bio::Otter::Lace::PersistentFile->new;
+    $hash_file->root($self->home);
+    $hash_file->name($DATASET_HASH_FILE);
+    my $write = $hash_file->write_file_handle;
+
+    while (my ($ds_name, $slices) = each %$h) {
+        $ds_name =~ s/\t/\\t/g;      # Escape tab characterts in dataset name (likely ?)
+        map { s/\t/\\t/g } @$slices; # Escape tab characterts in slice   name (v. unlikely)
+        print $write "$ds_name\t@$slices\n";
     }
-    close $fh;
 }
 
 sub recover_slice_dataset_hash {
     my( $self ) = @_;
-    
+
     my $cl   = $self->Client or confess "No Otter Client attached";
     my $h    = $self->slice_dataset_hash;
-    my $file = $self->slice_dataset_hash_file;
     
-    my $fh = gensym();
-    open $fh, $file or confess "Can't read file '$file' : $!";
-    while (<$fh>) {
+    my $hash_file = Bio::Otter::Lace::PersistentFile->new;
+    $hash_file->root($self->home);
+    $hash_file->name($DATASET_HASH_FILE);
+    my $read = $hash_file->read_file_handle;
+    
+    while (<$read>) {
         chomp;
-        my ($slice, $ds_name) = split /\t/, $_, 2;
-        $slice =~ s/\\t/\t/g;   # Unscape tab characterts in slice name (v. unlikely)
-        my $ds = $cl->get_DataSet_by_name($ds_name);
-        $h->{$slice} = $ds;
+        my ($ds_name, @slices) = split(/\t/, $_);
+        $ds_name =~ s/\\t/\t/g;     # Unscape tab characterts in dataset name (v. unlikely)
+        map { s/\\t/\t/g } @slices; # Unscape tab characterts in slice   name (v. unlikely)
+        $h->{$ds_name} = \@slices;
     }
-    close $fh;
 }
 
-sub slice_dataset_hash_file {
-    my( $self ) = @_;
-    
-    return $self->home . '/.slice_dataset';
-}
 
 sub save_all_slices {
     my( $self ) = @_;
     
     #warn "SAVING ALL SLICES";
-    
+    $self->error_flag(1);
+
     # Make sure we don't have a stale database handle
     $self->drop_aceperl_db_handle;
 
@@ -293,18 +305,21 @@ sub save_all_slices {
     ### we were exiting each the first with an exception
     ### so the iterator didn't get reset.
     #while (my ($name, $ds) = each %$sd_h) {
-    foreach my $name (keys %$sd_h) {
-        my $ds = $sd_h->{$name};
-        #warn "SAVING SLICE '$name'";
-        $self->save_otter_slice($name, $ds);
+    foreach my $ds_name (keys %$sd_h) {
+        my $slices = $sd_h->{$ds_name};
+        foreach my $slice(@$slices){
+            warn "SAVING SLICE '$slice' WITH DATASET $ds_name\n";
+            $self->save_otter_slice($slice, $ds_name);
+        }
     }
+    $self->error_flag(0);
 }
 
 sub save_otter_slice {
-    my( $self, $name, $dataset ) = @_;
-    
+    my( $self, $name, $dataset_name ) = @_;
+    $self->error_flag(1);
     confess "Missing slice name argument"   unless $name;
-    confess "Missing DatsSet argument"      unless $dataset;
+    confess "Missing DatsSet argument"      unless $dataset_name;
 
     my $ace    = $self->aceperl_db_handle;
     my $client = $self->Client or confess "No Client attached";
@@ -338,63 +353,79 @@ sub save_otter_slice {
         $ace_txt .= $ace->raw_query("show -a $tag");
     }
 
-    #my $debug_file = "/tmp/otter-debug.$$.raw.ace";
-    #open DEBUG, ">> $debug_file" or die;
-    #print DEBUG $ace_txt;
-    #close DEBUG;
-    
     # Cleanup text
     $ace_txt =~ s/\0//g;            # Remove nulls
     $ace_txt =~ s{^\s*//.+}{\n}mg;  # Strip comments
     
+    if($self->Client->debug){
+        my $debug_file = "/var/tmp/otter-debug.$$.save.ace";
+        open my $fh, "> $debug_file" or die;
+        print $fh $ace_txt;
+        close $fh;
+    }else{
+        warn "Debug switch is false\n";
+    }
+
+    my $ace_file = Bio::Otter::Lace::TempFile->new;
+    $ace_file->name('lace_edited.ace');
+    my $write = $ace_file->write_file_handle;
+    print $write $ace_txt;
+    my $xml = Bio::Otter::Converter::ace_to_XML($ace_file->read_file_handle);
     
-    return $client->save_otter_ace($ace_txt, $dataset);
+    if($self->Client->debug){
+        my $debug_file = "/var/tmp/otter-debug.$$.save.xml";
+        open my $fh, "> $debug_file" or die;
+        print $fh $xml;
+        close $fh;
+    }else{
+        warn "Debug switch is false\n";
+    }
+
+    my $success = $client->save_otter_xml($xml, $dataset_name);
+    $self->error_flag($success ? 0 : 1);
+    return $success;
 }
 
 sub unlock_all_slices {
     my( $self ) = @_;
-    
+
     my $sd_h = $self->slice_dataset_hash;
-    foreach my $name (keys %$sd_h) {
-        my $ds = $sd_h->{$name};
-        $self->unlock_otter_slice($name, $ds);
+
+    # if the unlock otter slice goes wrong half way through
+    # the recover will try to unlock the clones again.
+    foreach my $ds_name (keys %$sd_h) {
+        my $slices = $sd_h->{$ds_name};
+        foreach my $slice(splice(@$slices)){
+            $self->unlock_otter_slice($slice, $ds_name);
+        }
     }
 }
 
-# name argument is the name of the slice in format [chr_name].[start_coord]-[end_coord] , 
-sub unlock_otter_slice {
-    my( $self, $name, $dataset ) = @_;
-       
-    confess "Missing slice name argument"   unless $name;
-    confess "Missing DatsSet argument"      unless $dataset;
+sub unlock_otter_slice{
+    my( $self, $slice_name, $dataset_name ) = @_;
 
-    my $ace    = $self->aceperl_db_handle;
-    my $client = $self->Client or confess "No Client attached";
-    
-    $ace->raw_query(qq{find Assembly "$name"});
-    my $ace_txt = $ace->raw_query('show -a');
-    $ace->raw_query('Follow AGP_Fragment');
-    # Do show -a on a restricted list of tags
-    foreach my $tag (qw{
-        Otter
-        DB_info
-        Annotation
-        })
-    {
-        $ace_txt .= $ace->raw_query("show -a $tag");
+    confess "Missing slice name argument"   unless $slice_name;
+    confess "Missing DatsSet name argument" unless $dataset_name;
+
+    my $client   = $self->Client or confess "No Client attached";
+
+    my $xml_file = Bio::Otter::Lace::PersistentFile->new;
+    $xml_file->root($self->home);
+    $xml_file->name("${slice_name}${dataset_name}${LOCK_REGION_XML_FILE}");
+    my $xml = '';
+    my $read = $xml_file->read_file_handle;
+    while(<$read>){
+        $xml .= $_;
     }
-    
-    # Cleanup text
-    $ace_txt =~ s/\0//g;            # Remove nulls
-    $ace_txt =~ s{^\s*//.+}{\n}mg;  # Strip comments
-    
-    return $client->unlock_otter_ace($ace_txt, $dataset);
+    return unless $xml;
+
+    return $client->unlock_otter_xml($xml, $dataset_name);
     
 }
 
 sub aceperl_db_handle {
     my( $self ) = @_;
-    
+
     my( $dbh );
     unless ($dbh = $self->{'_aceperl_db_handle'}) {
         my $home = $self->home;
@@ -411,6 +442,7 @@ sub aceperl_db_handle {
             = Ace->connect(-PATH => $home, -PROGRAM => $tace)
                 or confess "Can't connect to database in '$home': ", Ace->error;
     }
+
     return $dbh;
 }
 
@@ -495,7 +527,7 @@ sub edit_displays_wrm {
 
 sub initialize_database {
     my( $self ) = @_;
-    
+
     my $home = $self->home;
     my $tace = $self->tace;
     my @parse_commands = map "parse $_\n",
@@ -943,23 +975,17 @@ sub get_all_LaceChromosomes {
 
 sub DESTROY {
     my( $self ) = @_;
-    
     my $home = $self->home;
+    print STDERR "DESTROY has been called for AceDatabase.pm with home $home\n";
     if ($self->error_flag) {
         warn "Not cleaning up '$home' because error flag is set\n";
         return;
     }
-
+    my $client = $self->Client;
+    if($client){
+        $self->unlock_all_slices();
+    }
     rmtree($home);
 }
 
 1;
-
-__END__
-
-=head1 NAME - Bio::Otter::Lace::AceDatabase
-
-=head1 AUTHOR
-
-James Gilbert B<email> jgrg@sanger.ac.uk
-
