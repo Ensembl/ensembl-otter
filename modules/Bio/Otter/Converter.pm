@@ -180,7 +180,7 @@ sub XML_to_otter {
         my ($end_exon,   $end_pos)   = exon_pos($tran, $tl_end);
 
         if (!defined($start_exon) || !defined($end_exon)) {
-          warn $tran->transcript_info->name;
+
           if (!defined($start_exon)) {warn "no start exon"};
           if (!defined($end_exon)) {warn "no end exon"};
 
@@ -1726,8 +1726,6 @@ sub prune_Exons {
     my @newexons;
     my @unique_Exons;
     my %exonhash;
-    print $tran->transcript_info->name, "\n";
-    print "All exons: ". "@{$tran->get_all_Exons}\n";
 
     foreach my $exon (@{$tran->get_all_Exons}) {
       my $found;
@@ -1749,7 +1747,7 @@ sub prune_Exons {
         ### print  " Strand " . $exon->strand . " Start " . $exon->start . " End ". $exon->end ."\n";
 
       if (defined($found)) {
-        print  " Duplicate: $found\n";
+
         push (@newexons, $found);
         if ($tran->translation) {
           if ($exon == $tran->translation->start_Exon) {
@@ -1761,7 +1759,6 @@ sub prune_Exons {
           }
         }
       } else {
-        print  "New = " . $exon->stable_id . "\n";
 
         ### This is nasty for the phases - sometimes exons come back with 
         ### the same stable id and different phases - we need to strip off
@@ -1769,7 +1766,7 @@ sub prune_Exons {
         ### already seen the stable_id
 
         if (defined($exon->stable_id) && defined($exonhash{$exon->stable_id})) {
-           print  "Already seen stable id " . $exon->stable_id . " - removing stable_id\n";
+
            $exon->{_stable_id} = undef;
           # print STDERR  "Exon id " .$exon->stable_id . "\n";
         }
@@ -1799,7 +1796,6 @@ sub prune_Exons {
     }
 
     while (my ($id, $count) = each %exonhash) {
-        print  "Exon id $id seen $count times\n" if $count > 1;
     }
 }
 
@@ -2068,10 +2064,7 @@ sub frags_to_slice {
       my $subseq    = substr($seqstr,($fstart-$chrstart),($fend-$fstart+1));
   
       my $contigseq = new Bio::Seq(-seq => $subseq);
-  
-      if ($fstart == 9947971) {
-        print STDERR "*****************************\n";
-      }
+
       #print STDERR "Contigseq " . $contigseq->length . " " . length($seqstr) . " " . $fstart . " " . $fend . "\n";
   
       if ($fori == -1) {
