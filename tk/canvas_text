@@ -19,7 +19,7 @@ use GenomeCanvas;
         -outline    => '#999999',
         );
     
-    $canvas->eventAdd('<<alpha_num>>', "a".."z", "A".."Z", 0..9);
+    $canvas->eventAdd('<<alpha_num>>', '<KeyPress- >', "a".."z", "A".."Z", 0..9);
     my $size = 15;
     my $x = 10;
     my $y_begin = $x;
@@ -49,12 +49,42 @@ sub make_editable_label {
         );
     $canvas->bind($t, '<Enter>',        \&make_text_bold);
     $canvas->bind($t, '<Leave>',        \&make_text_normal);
+    $canvas->bind($t, '<BackSpace>',    \&backspace);
+    $canvas->bind($t, '<Left>',         \&go_left);
+    $canvas->bind($t, '<Right>',        \&go_right);
     $canvas->bind($t, '<<alpha_num>>',  [\&insert_character, Tk::Ev('A')]);
 }
 
 BEGIN {
 
     my $rec_tag = 'SelectedTextBkgd';
+
+    sub backspace {
+        my( $canvas ) = @_;
+
+        my $text = $canvas->find('withtag', 'current');
+
+        my $pos = $canvas->index($text, 'insert');
+        $canvas->dchars($text, $pos - 1);
+    }
+
+    sub go_left {
+        my( $canvas ) = @_;
+
+        my $text = $canvas->find('withtag', 'current');
+
+        my $pos = $canvas->index($text, 'insert');
+        $canvas->icursor($text, $pos - 1);
+    }
+
+    sub go_right {
+        my( $canvas ) = @_;
+
+        my $text = $canvas->find('withtag', 'current');
+
+        my $pos = $canvas->index($text, 'insert');
+        $canvas->icursor($text, $pos + 1);
+    }
 
     sub make_text_bold {
         my( $canvas ) = @_;
@@ -85,13 +115,14 @@ BEGIN {
         my( $canvas ) = @_;
 
         $canvas->delete($rec_tag);
+        $canvas->focus("");
     }
     
     sub insert_character {
         my( $canvas, $char ) = @_;
         
         my $text = $canvas->find('withtag', 'current');
-        $canvas->insert($text, 'insert', $char);
+        $canvas->insert('current', 'insert', $char);
         
         $canvas->delete($rec_tag);
         make_highlight_rectangle($canvas, $text);
