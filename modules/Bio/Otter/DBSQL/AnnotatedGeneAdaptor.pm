@@ -51,14 +51,28 @@ sub fetch_by_stable_id{
        $self->throw("Must enter a gene id to fetch an AnnotatedGene");
    }
 
-   my  $gene = $self->SUPER::fetch_by_stable_id     ($id);
+   # all this just to override this query
+   my $sth = $self->prepare(q`
+             SELECT gsi1.gene_id
+               FROM gene_stable_id gsi1 LEFT JOIN gene_stable_id gsi2 
+                 ON gsi1.stable_id = gsi2.stable_id 
+                 && gsi1.version < gsi2.version
+              WHERE gsi2.stable_id IS NULL
+                 && gsi1.stable_id = ?`
+                            );
+   $sth->execute($id);
 
-   $self->annotate_gene($gene);
-   
+   my ($dbID) = $sth->fetchrow_array();
+
+   if( !defined $dbID ) {
+       $self->throw("No stable id with $id, cannot fetch");
+   }
+
+   my $gene = $self->fetch_by_dbID($dbID);
+
    return $gene;
-   
+    
 }
-
 
 =head2 fetch_by_dbID
 
