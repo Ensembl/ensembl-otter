@@ -581,7 +581,7 @@ CREATE TABLE meta (
 
 
 # Auto add schema version to database
-insert into meta (meta_key, meta_value) values ("schema_version", "$Revision: 1.7 $");
+insert into meta (meta_key, meta_value) values ("schema_version", "$Revision: 1.8 $");
 
 
 CREATE TABLE prediction_transcript (
@@ -772,32 +772,4 @@ CREATE TABLE qtl_feature (
   key( qtl_id ),
   key loc_idx( chromosome_id, start )
 ) TYPE=InnoDB;
-
-
-#
-# Tables for qtls
-#
-
-CREATE TABLE qtl (
-  qtl_id int unsigned auto_increment not null,
-  source_database enum("rat genome database") not null,
-  source_primary_id varchar(255) not null,
-  trait varchar(255) not null,
-  lod_score float,
-  flank_marker_id_1 int,
-  flank_marker_id_2 int,
-  peak_marker_id int,
-  primary key ( qtl_id ),
-  key trait_idx( trait )
-) Type=InnoDB;
-
-CREATE TABLE qtl_feature (
-  chromosome_id int not null,
-  start int not null,
-  end int not null,
-  qtl_id int not null,
-  analysis_id int not null,
-  key( qtl_id ),
-  key loc_idx( chromosome_id, start )
-) Type=InnoDB;
 
