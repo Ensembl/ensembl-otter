@@ -414,7 +414,7 @@ sub dasClient{
             $self->{'_dasClient'} = $dasObj;
         }
     }else{
-        print STDERR "To use Das start '$0 -with-das'\n";
+        print STDERR "To use Das start '$0 -with-das' (currently in development)\n";
     }
     return $dasObj;
 }
