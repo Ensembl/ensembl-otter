@@ -4,7 +4,7 @@
 package MenuCanvasWindow::XaceSeqChooser;
 
 use strict;
-use Carp;
+use Carp qw{ confess cluck };
 use Hum::Ace::SubSeq;
 use Hum::Ace::Locus;
 use Hum::Ace::GeneMethod;
@@ -172,6 +172,7 @@ sub attach_xace {
         my $xrem = Hum::Ace::XaceRemote->new($xwid);
         $self->xace_remote($xrem);
         $xrem->send_command('save');
+        #$xrem->send_command('writeaccess -gain');
     } else {
         warn "no xwindow id: $xwid";
     }
@@ -470,16 +471,36 @@ sub do_clone_display {
 sub ace_handle {
     my( $self, $adbh ) = @_;
     
+    #cluck "Called ace_handle";
+    
     if ($adbh) {
         $self->{'_ace_database_handle'} = $adbh;
+    } else {
+        unless ($adbh = $self->{'_ace_database_handle'}) {
+            if (my $local = $self->local_server) {
+                $adbh = $self->{'_ace_database_handle'} 
+                      = $local->ace_handle;
+            }
+            elsif (my $path = $self->ace_path) {
+                $adbh = $self->{'_ace_database_handle'}
+                      = Ace->connect(
+                    -PATH   => $path,
+                    ) or die "Can't connect to db '$path' :\n", Ace->error;
+                $adbh->auto_save(0);
+            }
+        }
     }
-    elsif (my $local = $self->local_server) {
-        $adbh = $local->ace_handle;
-    }
-    else {
-        $adbh = $self->{'_ace_database_handle'};
-    }
+
     return $adbh;
+}
+
+sub ace_path {
+    my( $self, $path ) = @_;
+    
+    if ($path) {
+        $self->{'_ace_path'} = $path;
+    }
+    return $self->{'_ace_path'};
 }
 
 sub resync_with_db {

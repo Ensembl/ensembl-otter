@@ -38,34 +38,37 @@ use vars '@command_line';
     $xc->font_size($font_size) if $font_size;
     $xc->clone_list(@ARGV);
      
-    my( $local_server, $ace );
     if ($path) {
-        #$local_server = Hum::Ace::LocalServer->new($path);
-        $local_server = Hum::Ace::LocalServer::RPC->new($path);
-        
-        $local_server->start_server;
-        $xc->local_server($local_server);
-        
-        #if (ref($local_server) eq 'Hum::Ace::LocalServer') {
-        #    my $sock = $xc->ace_handle->{'database'}->socket;
+        if (1) {
+            $xc->ace_path($path);
+        } else {
+            #my $local_server = Hum::Ace::LocalServer->new($path);
+            my $local_server = Hum::Ace::LocalServer::RPC->new($path);
 
-            ##$sock->sockopt(SO_SNDLOWAT, 1);
-            #$sock->sockopt(SO_SNDBUF, 128);
-            ##$sock->sockopt(SO_RCVBUF, 128 * 1024);
+            $local_server->start_server;
+            $xc->local_server($local_server);
 
-        #    my %opt_num = (
-        #        'SO_SNDLOWAT'   => SO_SNDLOWAT,
-        #        'SO_RCVLOWAT'   => SO_RCVLOWAT,
-        #        'SO_SNDBUF'     => SO_SNDBUF,
-        #        'SO_RCVBUF'     => SO_RCVBUF,
-        #        );
-        #    foreach my $opt (keys %opt_num) {
-        #        my $n = $opt_num{$opt};
-        #        print "$opt = ", $sock->sockopt($n), "\n";
-        #    }
-        #}
+            #if (ref($local_server) eq 'Hum::Ace::LocalServer') {
+            #    my $sock = $xc->ace_handle->{'database'}->socket;
+
+                ##$sock->sockopt(SO_SNDLOWAT, 1);
+                #$sock->sockopt(SO_SNDBUF, 128);
+                ##$sock->sockopt(SO_RCVBUF, 128 * 1024);
+
+            #    my %opt_num = (
+            #        'SO_SNDLOWAT'   => SO_SNDLOWAT,
+            #        'SO_RCVLOWAT'   => SO_RCVLOWAT,
+            #        'SO_SNDBUF'     => SO_SNDBUF,
+            #        'SO_RCVBUF'     => SO_RCVBUF,
+            #        );
+            #    foreach my $opt (keys %opt_num) {
+            #        my $n = $opt_num{$opt};
+            #        print "$opt = ", $sock->sockopt($n), "\n";
+            #    }
+            #}
+        }
     } else {
-        $ace = Ace->connect(
+        my $ace = Ace->connect(
             -HOST       => $host,
             -PORT       => $port,
             -TIMEOUT    => 60,

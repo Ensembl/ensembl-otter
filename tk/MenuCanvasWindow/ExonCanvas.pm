@@ -1588,6 +1588,7 @@ sub xace_save {
     if ($xr) {
         $xr->load_ace($ace);
         $xr->save;
+        #$xr->send_command('gif ; seqrecalc');
         $xc->replace_SubSeq($sub, $old_name);
         $self->SubSeq($sub);
         $self->name($new_name);

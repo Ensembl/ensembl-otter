@@ -377,7 +377,6 @@ sub fix_window_min_max_sizes {
     my $geom = "${max_x}x$max_y+$x+$y";
     $mw->geometry($geom);
     $mw->deiconify;
-    $mw->raise;
 }
 
 sub set_window_size {

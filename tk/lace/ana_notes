@@ -252,7 +252,7 @@ sub default_cursor {
             return 1;
         }
         elsif (defined $pid) {
-            exec('lace', '-path', $lace_dir, @seq_name_list);
+            exec('lace', '-path', $lace_dir, '-view', '-noens', @seq_name_list);
         }
         else {
             die "Error: Can't fork : $!";
