@@ -1,8 +1,9 @@
 #!/nfs/humace2/hum/bin/perl -w
 
-### genome_canvas_test
+### genome_canvas
 
 use strict;
+
 use GenomeCanvas;
 use GenomeCanvas::Band::TilingPath;
 use GenomeCanvas::Band::Plot;
@@ -11,7 +12,6 @@ use GenomeCanvas::DensityBand::Gene;
 use GenomeCanvas::Band::Gene;
 use GenomeCanvas::Band::SNP;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
-#use Bio::EnsEMBL::ExternalData::SNPSQL::DBAdaptor;
 use Hum::Submission 'prepare_statement'; # For Sanger sequence names
 use Getopt::Long 'GetOptions';
 
@@ -32,6 +32,9 @@ use Getopt::Long 'GetOptions';
     my $landscape = 1;
     my $portrait = 0;
     my $gene_labels = 1;
+    my $show_genes      = 0;
+    my $show_repeats    = 0;
+    my $show_snps       = 0;
     GetOptions(
         'host=s'        => \$host,
         'db=s'          => \$db,
@@ -48,7 +51,10 @@ use Getopt::Long 'GetOptions';
         'sanger!'       => \$sanger_names,
         'landscape!'    => \$landscape,
         'portrait!'     => \$portrait,
-        'gene_labels!'  => \$gene_labels
+        'gene_labels!'  => \$gene_labels,
+        'genes!'        => \$show_genes,
+        'repeats!'      => \$show_repeats,
+        'snps!'         => \$show_snps,
         ) or die "Error processing command line options";
 
     if ($chr_start) {
@@ -90,15 +96,6 @@ use Getopt::Long 'GetOptions';
             -HOST   => $host,
             );
 
-        ## Add database for SNPs
-        #my $snpdba = Bio::EnsEMBL::ExternalData::SNPSQL::DBAdaptor->new(       
-        #    -dbname => 'snp110',
-        #    -host   => 'ecs1a',
-        #    -port   => '3306',
-        #    -user   => 'ensadmin',
-        #    ); 
-        #$db->add_ExternalFeatureFactory($snpdba);
-
         $chr_name ||= $fpc;
         if ($chr_start and ! $chr_end) {
             $chr_end = get_chr_end($db, $static_type, $chr_name);
@@ -132,31 +129,16 @@ use Getopt::Long 'GetOptions';
         }
         $tiling->tiling_direction(-1);
         $gc->add_Band($tiling);
+
+        if ($show_repeats) {
+            my $repeat = GenomeCanvas::DensityBand::RepeatFeature->new;
+            $repeat->virtual_contig($vc);
+            $repeat->title('Repeats');
+            $repeat->repeat_classifier(\&repeat_class);
+            $gc->add_Band($repeat);
+        }
+
         
-        #my $tiling2 = GenomeCanvas::Band::TilingPath->new($vc);
-        #$tiling2->show_labels($labels);
-        #$tiling2->tiling_direction(1);
-        #$gc->add_Band($tiling2);
-
-        #my $gene_density = GenomeCanvas::DensityBand::Gene->new;
-        #$gene_density->virtual_contig($vc);
-        #$gene_density->strip_labels(qw{
-        #    HUMACE-Pseudogene      
-        #    HUMACE-Putative        
-        #    HUMACE-Novel_CDS       
-        #    HUMACE-Novel_Transcript
-        #    HUMACE-Known           
-        #    merged                 
-        #    });
-        #$gene_density->band_color('#6600cc');
-        #$gc->add_Band($gene_density);
-
-        #my $repeat = GenomeCanvas::DensityBand::RepeatFeature->new;
-        #$repeat->virtual_contig($vc);
-        #$repeat->title('Repeats');
-        #$repeat->repeat_classifier(\&repeat_class);
-        #$gc->add_Band($repeat);
-
         my $plot = GenomeCanvas::Band::Plot->new;
         $plot->title('gc Content');
         $plot->virtual_contig($vc);
@@ -164,23 +146,28 @@ use Getopt::Long 'GetOptions';
         $plot->x_major(0.2);
         $gc->add_Band($plot);
 
-        #my $gene_names = GenomeCanvas::Band::Gene->new;
-        #$gene_names->show_labels($gene_labels);
-        #$gene_names->label_type_color_list(
-        #    [ 'Known',              'HUMACE-Known',             '#4169e7' ],
-        #    [ 'Novel CDS',          'HUMACE-Novel_CDS',         '#86ceff' ],
-        #    [ 'Novel Transcript',   'HUMACE-Novel_Transcript',  '#ffa600' ],
-        #    [ 'Pseudogene',         'HUMACE-Pseudogene',        '#31ce31' ],
-        #    [ 'Putative',           'HUMACE-Putative',          '#cccccc' ],
-        #    );
-        #$gene_names->virtual_contig($vc);
-        #$gene_names->tiling_direction(1);
-        #$gc->add_Band($gene_names);
 
-        #my $snps = GenomeCanvas::Band::SNP->new;
-        #$snps->virtual_contig($vc);
-        #$snps->tiling_direction(-1);
-        #$gc->add_Band($snps);
+        if ($show_genes) {
+            my $gene_names = GenomeCanvas::Band::Gene->new;
+            $gene_names->show_labels($gene_labels);
+            $gene_names->label_type_color_list(
+                [ 'Known',              'HUMACE-Known',             '#4169e7' ],
+                [ 'Novel CDS',          'HUMACE-Novel_CDS',         '#86ceff' ],
+                [ 'Novel Transcript',   'HUMACE-Novel_Transcript',  '#ffa600' ],
+                [ 'Pseudogene',         'HUMACE-Pseudogene',        '#31ce31' ],
+                [ 'Putative',           'HUMACE-Putative',          '#cccccc' ],
+                );
+            $gene_names->virtual_contig($vc);
+            $gene_names->tiling_direction(1);
+            $gc->add_Band($gene_names);
+        }
+
+        if ($show_snps) {
+            my $snps = GenomeCanvas::Band::SNP->new;
+            $snps->virtual_contig($vc);
+            $snps->tiling_direction(-1);
+            $gc->add_Band($snps);
+        }
 
         print STDERR "Rendering canvas\n";
         $gc->residues_per_pixel($scale);
@@ -430,9 +417,11 @@ sub list_repeat_names {
 }
 
 
+
+
 __END__
 
-=head1 NAME - genome_canvas_test
+=head1 NAME - genome_canvas
 
 =head1 AUTHOR
 

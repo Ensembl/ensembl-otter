@@ -971,9 +971,11 @@ sub draw_subseq_list {
 sub get_all_Subseq_clusters {
     my( $self, $clone ) = @_;
     
-    my @subseq = sort {$a->strand <=> $b->strand
-        || $a->start <=> $b->start
-        || $a->end <=> $b->end} $clone->get_all_SubSeqs;
+    my @subseq = sort {
+           $a->start  <=> $b->start
+        || $a->end    <=> $b->end
+        || $a->strand <=> $b->strand
+        } $clone->get_all_SubSeqs;
     my $first = $subseq[0] or return;
     my( @clust );
     my $ci = 0;
@@ -998,6 +1000,11 @@ sub get_all_Subseq_clusters {
             $strand = $this->strand;
         }
     }
+    
+    foreach my $c (@clust) {
+        $c = [sort {$a->name cmp $b->name} @$c];
+    }
+    
     return sort {$a->[0]->start <=> $b->[0]->start} @clust;
 }
 

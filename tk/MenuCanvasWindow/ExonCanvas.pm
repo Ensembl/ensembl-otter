@@ -1388,8 +1388,8 @@ sub middle_button_paste {
         for (my $i = 0; $i < @ints; $i += 2) {
             $self->add_coordinate_pair(@ints[$i, $i + 1]);
         }
-        $self->set_scroll_region_and_maxsize;
-        #$self->fix_window_min_max_sizes;
+        #$self->set_scroll_region_and_maxsize;
+        $self->fix_window_min_max_sizes;
     }
 }
 
@@ -1527,7 +1527,7 @@ sub draw_plus {
         $x +     $third,  $y +     $third,
         -tags       => [@tags, 'plus_strand'],
         -fill       => 'grey',
-        -outline    => undef,
+        -outline    => 'DimGrey',
         );
 }
 
@@ -1541,7 +1541,7 @@ sub draw_minus {
         $x + $size,  $y + 2 * $third,
         -tags       => [@tags, 'minus_strand'],
         -fill       => 'grey',
-        -outline    => undef,
+        -outline    => 'DimGrey',
         );
 }
 
