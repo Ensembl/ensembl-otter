@@ -1,0 +1,869 @@
+// Methods from database hosted by humsrv1 on port 410000
+// Created by /nfs/disk84/jgrg/testbed/aceMethods
+
+Method : "NonGolden"
+Colour	 MAGENTA
+Width	 3.0
+Right_priority 0.001
+
+Method : "Assembly_Tags"
+Colour	 WHITE
+Overlap
+Max_mag	 4000.000000
+
+Method : "VC_tail"
+Colour	 RED
+Width	 10.000000
+Right_priority 0.020
+Show_text
+
+Method : "hand_built"
+Colour	 DARKBLUE
+Right_priority 0.060
+
+Method : "TilePath"
+Colour	YELLOW 
+Show_up_strand
+Width	 1.000000
+Right_priority 0.080
+
+Method : "RNA"
+Colour	 GREEN
+Show_up_strand
+Width	 2.000000
+Right_priority 0.080
+Max_mag	 4000.000000
+
+Method : "Coding"
+Colour	 BLUE
+Show_up_strand
+Width	 2.000000
+Right_priority 0.100
+Max_mag	 4000.000000
+
+Method : "Transposon"
+Colour	 DARKGRAY
+Width	 2.000000
+Right_priority 0.120
+Max_mag	 4000.000000
+
+Method : "TRANSCRIPT"
+Colour	 DARKGRAY
+Width	 2.000000
+Right_priority 0.140
+Max_mag	 4000.000000
+
+Method : "SPLICED_cDNA"
+Colour	 DARKGRAY
+Width	 2.000000
+Right_priority 0.160
+Max_mag	 4000.000000
+
+Method : "GC"
+Colour	 BLACK
+Score_by_histogram	 0.500000
+Score_bounds	 0.200000 0.800000
+Width	 7.000000
+Right_priority 0.180
+Max_mag	 4000.000000
+
+Method : "vector_etc"
+Remark	 "Vector, Tn1000 and other contaminants"
+Colour	 CERISE
+Score_bounds	 100.000000 400.000000
+Right_priority 0.200
+Max_mag	 4000.000000
+BlastN
+Blixem_N
+
+Method : "5prime_UTR"
+Colour	 RED
+Show_up_strand
+Right_priority 0.220
+Max_mag	 4000.000000
+Show_text
+EMBL_feature	 "5'UTR"
+
+Method : "3prime_UTR"
+Colour	 RED
+Show_up_strand
+Right_priority 0.240
+Max_mag	 4000.000000
+Show_text
+EMBL_feature	 "3'UTR"
+EMBL_qualifier	 "\/note=\"match: \%s\"" "note"
+
+Method : "exon"
+Colour	 LIGHTRED
+Right_priority 0.260
+Max_mag	 4000.000000
+Show_text
+EMBL_feature	 "exon"
+
+Method : "GD_mRNA"
+Remark	 "Based on Sanger Centre experimental evidence and homologies"
+Colour	 DARKRED
+Show_up_strand
+Bumpable
+Right_priority 0.280
+Show_text
+EMBL_feature	 "mRNA"
+
+Method : "GD_CDS"
+Remark	 "Based on Sanger Centre experimental evidence and homologies"
+Colour	 MAGENTA
+Show_up_strand
+Bumpable
+Width	 1.250000
+Right_priority 0.300
+Show_text
+EMBL_feature	 "CDS"
+
+Method : "GD_in_progress"
+Remark	 "Possible coding sequence to be investigated"
+Colour	 PURPLE
+Show_up_strand
+Bumpable
+Right_priority 0.320
+
+Method : "Pseudogene"
+Colour	 GREEN
+CDS_Colour	 GREEN
+Show_up_strand
+Width	 1.000000
+Right_priority 0.340
+Max_mag	 4000.000000
+Show_text
+EMBL_feature	 "CDS"
+
+Method : "supported_mRNA"
+Colour	 RED
+CDS_Colour	 RED
+Show_up_strand
+Bumpable
+Width	 2.000000
+Right_priority 0.360
+Show_text
+EMBL_feature	 "mRNA"
+
+Method : "supported_CDS"
+Colour	 DARKGREEN
+CDS_Colour	 DARKGREEN
+Show_up_strand
+Bumpable
+Width	 2.000000
+Right_priority 0.380
+Show_text
+EMBL_feature	 "CDS"
+
+Method : "supported"
+Colour	 RED
+CDS_Colour	 DARKGREEN
+Show_up_strand
+Bumpable
+Width	 2.000000
+Right_priority 0.400
+Show_text
+EMBL_feature	 "CDS"
+
+Method : "supported"
+Colour	 RED
+CDS_Colour	 DARKGREEN
+Show_up_strand
+Bumpable
+Width	 2.000000
+Right_priority 0.420
+Show_text
+EMBL_feature	 "CDS"
+
+Method : "GD_supported"
+Colour	 DARKBLUE
+CDS_Colour	 ORANGE
+Show_up_strand
+Bumpable
+Width	 2.000000
+Right_priority 0.440
+Show_text
+EMBL_feature	 "CDS"
+
+Method : "GD_supported_mRNA"
+Colour	 DARKBLUE
+Show_up_strand
+Bumpable
+Width	 2.000000
+Right_priority 0.460
+Show_text
+EMBL_feature	 "CDS"
+
+Method : "polyA"
+Colour	 BLACK
+Score_by_width
+Score_bounds	 1 10
+Show_up_strand
+Right_priority 0.480
+Max_mag	 4000.000000
+Show_text
+
+Method : "polyA_site"
+Colour	 BLACK
+Show_up_strand
+Right_priority 0.500
+Max_mag	 4000.000000
+Show_text
+EMBL_feature	 "polyA_site"
+
+Method : "polyA_signal"
+Colour	 BLACK
+Show_up_strand
+Right_priority 0.520
+Max_mag	 4000.000000
+Show_text
+EMBL_feature	 "polyA_signal"
+
+Method : "RepeatMasker"
+Colour	 BLUE
+Score_by_width
+Score_bounds	 50.000000 400.000000
+Right_priority 0.540
+Max_mag	 4000.000000
+EMBL_feature	 "repeat_region"
+EMBL_qualifier	 "\/note=\"\%s repeat:" "target"
+EMBL_qualifier	 " matches \%d" "y1" ""
+EMBL_qualifier	 "..\%d of consensus\"" "y2"
+
+Method : "RepeatMasker_SINE"
+Colour	 GREEN
+Right_priority 0.560
+Max_mag	 4000.000000
+Min_score	 20.000000
+EMBL_feature	 "repeat_region"
+EMBL_qualifier	 "\/note=\"\%s repeat:" "target"
+EMBL_qualifier	 " matches \%d" "y1"
+EMBL_qualifier	 "..\%d of consensus\"" "y2"
+
+Method : "RepeatMasker_LINE"
+Colour	 BLUE
+Score_by_width
+Score_bounds	 50.000000 400.000000
+Right_priority 0.580
+Max_mag	 4000.000000
+
+// These two methods are for the supplementary Zebrafish repeats
+
+Method : "RepeatMasker_Recon"
+Colour	 BLUE
+Score_by_width
+Score_bounds	 50.000000 400.000000
+Right_priority 0.600
+Max_mag	 4000.000000
+EMBL_feature	 "repeat_region"
+
+Method : "RepeatMasker_Waterman"
+Colour	 BLUE
+Score_by_width
+Score_bounds	 50.000000 400.000000
+Right_priority 0.620
+Max_mag	 4000.000000
+EMBL_feature	 "repeat_region"
+
+Method : "tandem"
+Colour	 DARKRED
+Score_by_width
+Score_bounds	 50.000000 100.000000
+Percent
+Right_priority 0.640
+Max_mag	 4000.000000
+EMBL_feature	 "repeat_region"
+EMBL_qualifier	 "\/note=\"\%s" "note"
+EMBL_qualifier	 " \%.0f\%\% conserved\"" "score"
+
+Method : "trf"
+Colour	 RED
+Score_by_width
+Score_bounds	 50.000000 100.000000
+Percent
+Right_priority 0.660
+Max_mag	 4000.000000
+EMBL_feature	 "repeat_region"
+
+Method : "nseg"
+Colour	 ORANGE
+Score_by_width
+Score_bounds	 0 1.0
+Right_priority 0.680
+Max_mag	 4000.000000
+
+Method : "nseg_masked"
+Colour	 ORANGE
+Score_by_width
+Score_bounds	 0 1.0
+Right_priority 0.700
+Max_mag	 4000.000000
+
+Method : "RepeatMasker_simple"
+Colour	 DARKRED
+Score_by_width
+Score_bounds	 50.000000 100.000000
+Percent
+Right_priority 0.720
+Max_mag	 4000.000000
+
+Method : "Inverted"
+Colour	 GRAY
+Score_by_width
+Score_bounds	 50.000000 100.000000
+Percent
+Right_priority 0.740
+Max_mag	 4000.000000
+
+Method : "EMBL_CDS"
+Colour	 DARKGREEN
+Show_up_strand
+Width	 1.000000
+Right_priority 0.760
+Max_mag	 4000.000000
+
+Method : "Genewise"
+Colour	 ORANGE
+Show_up_strand
+Width	 1.000000
+Right_priority 0.780
+Max_mag	 4000.000000
+
+Method : "HALFWISE"
+Colour	 DARKGRAY
+CDS_Colour	 DARKGRAY
+Show_up_strand
+Bumpable
+Width	 1.500000
+Right_priority 0.800
+Max_mag	 4000.000000
+Show_text
+
+Method : "GENSCAN"
+Colour	 LIGHTBLUE
+CDS_Colour	 LIGHTBLUE
+Show_up_strand
+Bumpable
+Width	 1.000000
+Right_priority 0.820
+Max_mag	 4000.000000
+
+Method : "fgenesh"
+Colour	 LIGHTRED
+CDS_Colour	 LIGHTRED
+Show_up_strand
+Width	 1.000000
+Right_priority 0.840
+Max_mag	 4000.000000
+
+Method : "FGENES"
+Colour	 LIGHTRED
+Show_up_strand
+Width	 0.500000
+Right_priority 0.860
+Max_mag	 4000.000000
+
+Method : "transcription_start"
+Colour	 VIOLET
+Score_by_width
+Score_bounds	 0.000000 1.000000
+Width	 1.300000
+Right_priority 0.880
+Max_mag	 4000.000000
+
+Method : "Predicted_CpG_island"
+Colour	 YELLOW
+Score_by_width
+Score_bounds	 0.000000 1.000000
+Right_priority 0.900
+Max_mag	 4000.000000
+EMBL_dump
+
+Method : "supported_tRNA"
+Remark	 "Transfer RNA genes"
+Colour	 VIOLET
+Show_up_strand
+Bumpable
+Right_priority 0.920
+Max_mag	 4000.000000
+Show_text
+EMBL_feature	 "tRNA"
+
+Method : "EnsEMBL"
+Colour	 MAGENTA
+CDS_Colour	 DARKBLUE
+Show_up_strand
+Bumpable
+Width	 1.000000
+Right_priority 0.940
+
+Method : "genomewise"
+Colour	 VIOLET
+CDS_Colour	 BLUE
+Show_up_strand
+Bumpable
+Width	 1.000000
+Right_priority 0.960
+
+Method : "cgidb_blastn"
+Colour	 RED
+Score_by_width
+Score_bounds	 60.000000 100.000000
+Right_priority 0.980
+Max_mag	 4000.000000
+BlastN
+Blixem_N
+
+Method : "cgidb_eg"
+Colour	 RED
+Score_by_width
+Score_bounds	 60.000000 100.000000
+Right_priority 1.000
+Max_mag	 4000.000000
+BlastN
+Blixem_N
+
+Method : "cgidb_hmmfs"
+Colour	 RED
+Score_by_width
+Score_bounds	 60.000000 100.000000
+Right_priority 1.020
+Max_mag	 4000.000000
+BlastN
+Blixem_N
+
+Method : "CLUSTER"
+Colour	 DARKGREEN
+Bumpable
+Width	 1.000000
+Right_priority 1.040
+Max_mag	 4000.000000
+
+Method : "BLASTWISE"
+Colour	 PURPLE
+CDS_Colour	 PURPLE
+Bumpable
+Width	 1.000000
+Right_priority 1.060
+Max_mag	 4000.000000
+
+// 3.2 to 3.9 may be bad values, due to the "oligo twilight zone"
+
+Method : "SPAN"
+Colour	 ORANGE
+CDS_Colour	 ORANGE
+Show_up_strand
+Bumpable
+Width	 1.000000
+Right_priority 4.000
+Max_mag	 4000.000000
+
+Method : "ATG"
+Colour	 YELLOW
+Frame_sensitive
+Strand_sensitive
+Right_priority 4.020
+
+Method : "GF_ATG"
+Colour	 ORANGE
+Frame_sensitive
+Strand_sensitive
+Score_by_width
+Score_bounds	 0.000000 3.000000
+Right_priority 4.040
+
+Method : "GF_coding_seg"
+Colour	 LIGHTGRAY
+Frame_sensitive
+Strand_sensitive
+Score_by_width
+Score_bounds	 2.000000 8.000000
+Width	 2.000000
+Symbol	 "C"
+Right_priority 4.060
+
+Method : "BLASTX"
+Colour	 MIDBLUE
+Frame_sensitive
+Show_up_strand	 MIDBLUE
+Score_by_width
+Score_bounds	 50.000000 100.000000
+Overlap_mode
+Right_priority 4.080
+Max_mag	 4000.000000
+Blixem_X
+
+Method : "TSS"
+Colour	 CERISE
+Show_up_strand
+Score_by_width
+Score_bounds	 5.000000 10.000000
+Right_priority 4.100
+Max_mag	 4000.000000
+
+Method : "exofish"
+Colour	 PALEVIOLET
+Right_priority 4.120
+Max_mag	 4000.000000
+Blixem_N
+
+Method : "HEXON"
+Remark	 "HEXON predicted exons"
+Colour	 PALEVIOLET
+Frame_sensitive
+Strand_sensitive
+Score_by_width
+Score_bounds	 1.000000 15.000000
+Right_priority 4.140
+Max_mag	 4000.000000
+Version	 "0"
+
+Method : "FEXH"
+Remark	 "FEXH predicted exons"
+Colour	 PALERED
+Frame_sensitive
+Strand_sensitive
+Score_by_width
+Score_bounds	 1.000000 15.000000
+Right_priority 4.160
+Max_mag	 4000.000000
+Version	 "0"
+
+Method : "Grail2"
+Remark	 "Grail2 predicted exons"
+Colour	 LIGHTGREEN
+Frame_sensitive
+Strand_sensitive
+Score_by_width
+Score_bounds	 25.000000 100.000000
+Right_priority 4.180
+Max_mag	 4000.000000
+Version	 "0"
+
+Method : "Grail1"
+Remark	 "Grail1  predicted exons"
+Colour	 LIGHTGREEN
+Frame_sensitive
+Strand_sensitive
+Score_by_width
+Score_bounds	 25.000000 100.000000
+Right_priority 4.200
+Max_mag	 4000.000000
+Version	 "0"
+
+Method : "hexExon"
+Colour	 ORANGE
+Frame_sensitive
+Strand_sensitive
+Score_by_width
+Score_bounds	 10.000000 50.000000
+Width	 2.000000
+Symbol	 "H"
+Right_priority 4.220
+
+Method : "Grail1.3"
+Remark	 "Grail1.3  predicted exons"
+Colour	 LIGHTGREEN
+Frame_sensitive
+Strand_sensitive
+Score_by_width
+Score_bounds	 25.000000 100.000000
+Right_priority 4.240
+Max_mag	 4000.000000
+Version	 "0"
+
+Method : "Xpound"
+Colour	 PALEORANGE
+Frame_sensitive
+Strand_sensitive
+Score_by_width
+Score_bounds	 50.000000 100.000000
+Right_priority 4.260
+Max_mag	 4000.000000
+
+Method : "embl_blastn"
+Colour	 YELLOW
+Score_by_width
+Score_bounds	 90.000000 400.000000
+Right_priority 5.000
+Max_mag	 4000.000000
+BlastN
+Blixem_N
+
+Method : "finished_blastn"
+Colour	 YELLOW
+Score_by_width
+Score_bounds	 90.000000 400.000000
+Right_priority 5.020
+Max_mag	 4000.000000
+BlastN
+Blixem_N
+
+Method : "BLASTN"
+Colour	 YELLOW
+Score_by_width
+Score_bounds	 90.000000 400.000000
+Right_priority 5.040
+Max_mag	 4000.000000
+BlastN
+Blixem_N
+
+Method : "embl_eg"
+Colour	 YELLOW
+Score_by_width
+Score_bounds	 90.000000 400.000000
+Right_priority 5.060
+Max_mag	 4000.000000
+BlastN
+Blixem_N
+
+Method : "Telomere Tag Sequences"
+Colour	 CYAN
+Score_by_width
+Score_bounds	 90.000000 400.000000
+Right_priority 5.080
+Max_mag	 4000.000000
+BlastN
+Blixem_N
+
+Method : "genoest_eg"
+Colour	 RED
+Show_up_strand
+Score_by_width
+Score_bounds	 20.000000 100.000000
+Right_priority 5.100
+Max_mag	 4000.000000
+BlastN
+Blixem_N
+
+Method : "riken_mouse_cdna_eg"
+Colour	 RED
+Show_up_strand
+Score_by_width
+Score_bounds	 20.000000 100.000000
+Right_priority 5.120
+Max_mag	 4000.000000
+BlastN
+Blixem_N
+
+Method : "Oligo"
+Colour	 RED
+Right_priority 5.140
+Max_mag	 4000.000000
+
+Method : "riken_mouse_cdna"
+Colour	 RED
+Score_by_width
+Score_bounds	 20.000000 100.000000
+Right_priority 5.160
+Max_mag	 4000.000000
+BlastN
+Blixem_N
+
+Method : "genoest"
+Colour	 RED
+Score_by_width
+Score_bounds	 20.000000 100.000000
+Right_priority 5.180
+Max_mag	 4000.000000
+BlastN
+Blixem_N
+
+Method : "hexIntron"
+Colour	 BROWN
+Strand_sensitive
+Score_by_width
+Score_bounds	 10.000000 40.000000
+Width	 2.000000
+Symbol	 "I"
+Right_priority 5.200
+
+Method : "EST_eg-human"
+Colour	 PURPLE
+Score_by_width
+Score_bounds	 60 150
+Right_priority 5.220
+Max_mag	 4000.000000
+BlastN
+Blixem_N
+
+Method : "EST_eg-mouse"
+Colour	 PURPLE
+Score_by_width
+Score_bounds	 60 150
+Right_priority 5.240
+Max_mag	 4000.000000
+BlastN
+Blixem_N
+
+Method : "EST_eg-fish"
+Colour	 PURPLE
+Score_by_width
+Score_bounds	 60 150
+Right_priority 5.260
+Max_mag	 4000.000000
+BlastN
+Blixem_N
+
+Method : "EST_eg"
+Colour	 PURPLE
+Score_by_width
+Score_bounds	 60 150
+Right_priority 5.280
+Max_mag	 4000.000000
+BlastN
+Blixem_N
+
+Method : "EST_blastn"
+Colour	 PURPLE
+Score_by_width
+Score_bounds	 60 150
+Right_priority 5.300
+Max_mag	 4000.000000
+BlastN
+Blixem_N
+
+Method : "EST_clusters"
+Colour	 PALEVIOLET
+Score_by_offset
+Score_by_width
+Score_bounds	 100.000000 400.000000
+Right_priority 5.320
+Max_mag	 4000.000000
+BlastN
+Blixem_N
+
+Method : "vertebrate_mRNA_blastn"
+Colour	 BROWN
+Score_by_width
+Score_bounds	 60 150
+Right_priority 5.340
+Max_mag	 4000.000000
+BlastN
+Blixem_N
+
+Method : "vertebrate_mRNA_eg"
+Colour	 BROWN
+Score_by_width
+Score_bounds	 60 150
+Right_priority 5.360
+Max_mag	 4000.000000
+BlastN
+Blixem_N
+
+Method : "vertebrate_mRNA"
+Colour	 BROWN
+Score_by_width
+Score_bounds	 60 150
+Right_priority 5.380
+Max_mag	 4000.000000
+BlastN
+Blixem_N
+
+Method : "egag"
+Colour	 CERISE
+Score_by_width
+Score_bounds	 60 150
+Right_priority 5.400
+Max_mag	 4000.000000
+BlastN
+Blixem_N
+
+Method : "other_misc_feature"
+Colour	 GREEN
+Right_priority 5.420
+Max_mag	 4000.000000
+Show_text
+EMBL_feature	 "misc_feature"
+EMBL_qualifier	 "\/note=\"\%s\"" "note"
+
+Method : "STS_blastn"
+Colour	 DARKRED
+Score_by_width
+Score_bounds	 60.000000 100.000000
+Right_priority 5.440
+Max_mag	 4000.000000
+BlastN
+Blixem_N
+
+Method : "sts_hmmfs_annotated"
+Colour	 RED
+Score_by_width
+Score_bounds	 60.000000 100.000000
+Right_priority 5.460
+Max_mag	 4000.000000
+BlastN
+Blixem_N
+
+Method : "GSS_blastn"
+Colour	 DARKRED
+Score_by_width
+Score_bounds	 60.000000 100.000000
+Right_priority 5.480
+Max_mag	 4000.000000
+BlastN
+Blixem_N
+
+Method : "STS_eg_annotated"
+Colour	 RED
+Score_by_width
+Score_bounds	 60.000000 100.000000
+Right_priority 5.500
+Max_mag	 4000.000000
+BlastN
+Blixem_N
+
+Method : "GSS_eg"
+Colour	 DARKRED
+Score_by_width
+Score_bounds	 60.000000 100.000000
+Right_priority 5.520
+Max_mag	 4000.000000
+BlastN
+Blixem_N
+
+Method : "STS_eg"
+Colour	 DARKRED
+Score_by_width
+Score_bounds	 60.000000 100.000000
+Right_priority 5.540
+Max_mag	 4000.000000
+BlastN
+Blixem_N
+
+Method : "sanger_sts_blastn"
+Colour	 DARKRED
+Score_by_width
+Score_bounds	 60.000000 100.000000
+Right_priority 5.560
+Max_mag	 4000.000000
+BlastN
+Blixem_N
+
+Method : "sanger_sts_eg"
+Colour	 DARKRED
+Score_by_width
+Score_bounds	 60.000000 100.000000
+Right_priority 5.580
+Max_mag	 4000.000000
+BlastN
+Blixem_N
+
+Method : "primer"
+Colour	 DARKGRAY
+Right_priority 5.600
+Max_mag	 4000.000000
+
+Method : "GeneID_splice"
+Right_priority 5.620
+Max_mag	 4000.000000
+
+Method : "GF_splice"
+Strand_sensitive
+Score_bounds	 -1.000000 4.000000
+Width	 10.000000
+Right_priority 5.640
+
+// End of methods file
+

@@ -1,0 +1,283 @@
+// humace models
+// Simplified by James Gilbert
+
+
+// #Acefile#
+//
+// Used to record which ace files have been read into acedb
+
+?Acefile    Time DateType
+
+
+// #URL#
+// Is URL handling broken in acedb?
+
+?Url    Url UNIQUE Text // Simple, text of URL
+        Reference_tag Text Text // tag class(optional)
+        Use_name Text // class(optional)
+        Rewrite Text UNIQUE Text Text UNIQUE Text
+
+
+// #Clone#
+
+?Clone  Sequence        ?Sequence XREF Clone
+
+
+// #Locus#
+
+?Locus  Full_name Text
+        Alias Text
+        Remark Text
+        Type UNIQUE Gene UNIQUE Known
+                                Novel_CDS   UNIQUE  Organism_supported
+                                                    Non_organism_supported
+                                Novel_Transcript
+                    Polymorphic Known_in        ?Sequence XREF Locus
+                                Novel_CDS_in    ?Sequence XREF Locus
+                                Pseudogene_in   ?Sequence XREF Locus
+                    Pseudogene  UNIQUE  Processed
+                                        Unprocessed
+                    Putative
+                    Transposon
+        Positive Positive_sequence        ?Sequence XREF Locus
+        Molecular_information        Sequence ?Sequence XREF Gene        
+
+// #Chromosome#
+ 
+?Chromosome Genomic_sequence ?Sequence
+
+
+// #Project#
+
+?Project Sequence ?Sequence XREF Project_name
+
+
+// #Sequence#
+
+?Sequence DNA UNIQUE ?DNA UNIQUE Int                    // Int is the length
+	  Assembly_name UNIQUE Text                     // Genome assembly name
+          External_refs External_library UNIQUE Text    // Real, world unique library identifier
+                        External_clone UNIQUE Text      // Real, world unique clone identifier
+          Method UNIQUE ?Method
+          Structure  From   Source UNIQUE ?Sequence
+                            Source_Exons Int UNIQUE Int Text // start at 1
+                     Subsequence ?Sequence XREF Source UNIQUE Int UNIQUE Int
+                     Trim_left  UNIQUE Int              // 5' most nucleotide not overlapping adjacent
+                                                        // clone in link
+                     Trim_right UNIQUE Int              // 3' most nucleotide not overlapping adjacent
+                                                        // clone in link
+                     True_left_end   ?Sequence UNIQUE Int //
+                     True_right_end  ?Sequence UNIQUE Int // Removed XREFs to avoid parsing bug
+                     Clone_left_end  ?Sequence UNIQUE Int // in certain versions of Acedb
+                     Clone_right_end ?Sequence UNIQUE Int //
+                        // The above end tags are for keeping track of the ends of genomic clones 
+                        // in a contig that is being sequenced.
+                        // The object ?Sequence's ends are marked with True_(left|right)_end
+                        // while any ends (including its own), are marked with Clone_(left|right)_end
+                     Overlap_right UNIQUE ?Sequence XREF Overlap_left UNIQUE Int    //
+                     Overlap_left UNIQUE ?Sequence XREF Overlap_right               // These four tags are
+                     Next_right UNIQUE ?Sequence XREF Next_left UNIQUE Int          // probably obselete.
+                     Next_left UNIQUE ?Sequence XREF Next_right                     //
+                     Continues_as ?Sequence XREF Continued_from  // for subsequences (genes)
+                     Continued_from ?Sequence XREF Continues_as  // spanning more than one clone
+          DB_info       Database ?Database UNIQUE Text UNIQUE Text  // ID, Accession_number
+                        Sequence_version UNIQUE Int     // The EMBL sequence version
+                        Keyword ?Keyword                // EMBL & Genbank keywords
+                        EMBL_dump_info #EMBL_dump_info
+          Web_location  ?URL
+          Annotation    Sequence_matches  Protein_match     ?Protein  XREF Match_found_with
+                                          EST_match         ?Sequence XREF Match_found_with
+                                          cDNA_match        ?Sequence XREF Match_found_with
+                                          Genomic_match     ?Sequence XREF Match_found_with
+                        Match_found_with  ?Sequence // for xref purposes only; don't use
+                        Annotation_remark Text
+          Origin  From_Author ?Person
+                  From_Laboratory ?Laboratory
+                  Finishing_group UNIQUE Text
+                  Species ?Species
+                  Chromosome  UNIQUE ?Chromosome XREF Genomic_sequence
+                  Linkage_group UNIQUE ?Linkage_group XREF Genomic_sequence  // added for zebrafish 2002-03-27 kj
+                  Sequenced_by UNIQUE ?Laboratory
+          Status    FISHed UNIQUE DateType UNIQUE Text
+                    Finished UNIQUE DateType UNIQUE Text
+                    Analysis UNIQUE DateType UNIQUE Text
+                    Submitted UNIQUE DateType UNIQUE Text 
+          Gene ?Locus XREF Sequence
+          Analysis_details  Analysis_directory UNIQUE Text
+                            Seq_contig ?Sequence XREF Seq_contig_parent
+                            Seq_contig_parent ?Sequence XREF Seq_contig
+                            Analysis_files Text DateType
+                            Re_analysis DateType UNIQUE Text
+                            Re_submission DateType UNIQUE Text
+          Analysis_summary Average_gc_fraction UNIQUE Float
+          Project       Project_name UNIQUE ?Project XREF Sequence    // Name of project in oracle tracking database
+                                                                      // which this sequence is derived from
+                        Project_suffix UNIQUE Text  // Suffix (A, B, C etc...) given when a single
+                                                    // oracle project gives rise to multiple
+                                                    // finished sequences
+                        Finisher UNIQUE ?Person XREF Finisher
+          Visible       Title UNIQUE Text
+                        Matching_Genomic ?Sequence XREF Matching_cDNA
+                        Matching_cDNA ?Sequence XREF Matching_Genomic
+                        Clone ?Clone XREF Sequence 
+                        Locus ?Locus XREF Positive_sequence
+                        Remark Text
+                        Variant Text
+          Properties    Pseudogene Text
+                        Transposon Text
+                        Genomic_canonical
+                        Link
+                        Predicted_gene
+                        cDNA    // "Display cDNA in new window" in fMap fails without this in
+                                // the model, even though we don't actually set it anywhere.
+                        RNA        // If set then use U in place of T
+                        Repeat_consensus
+                        Putative_coding_sequence
+                        Coding  CDS UNIQUE Int UNIQUE Int
+                                CDS_predicted_by ?Method Float // score of method
+                        End_not_found
+                        Start_not_found Int
+                        Transcript  mRNA    Processed_mRNA
+                                            Unprocessed_mRNA
+                                    tRNA Text
+                                    rRNA Text
+                                    snRNA Text
+                                    scRNA Text
+          Assembly_tags Text Int Int Text // type, start, stop, comment
+          Paired_read ?Sequence XREF Paired_read
+          Homol DNA_homol ?Sequence ?Method Float Int UNIQUE Int Int UNIQUE Int
+                EST_homol ?Sequence ?Method Float Int UNIQUE Int Int UNIQUE Int
+                STS_homol ?Sequence ?Method Float Int UNIQUE Int Int UNIQUE Int
+                Sanger_STS_homol ?Sequence ?Method Float Int UNIQUE Int Int UNIQUE Int
+                GSS_homol ?Sequence ?Method Float Int UNIQUE Int Int UNIQUE Int
+                Mouse_homol ?Sequence ?Method Float Int UNIQUE Int Int UNIQUE Int
+                vertebrate_mRNA_homol ?Sequence ?Method Float Int UNIQUE Int Int UNIQUE Int
+                cgidb_homol ?Sequence ?Method Float Int UNIQUE Int Int UNIQUE Int
+                Pep_homol ?Protein ?Method Float Int UNIQUE Int Int UNIQUE Int
+                Motif_homol ?Motif ?Method Float Int UNIQUE Int Int UNIQUE Int
+                        // We will generate a column for each distinct ?Method.  So for
+                        // distinct Worm_EST and Worm_genomic columns, use ?Method objects
+                        // Worm_EST_Blastn and Worm_genomic_Blastn.
+                ad_hoc_EST_homol ?Sequence ?Method Float Int UNIQUE Int Int UNIQUE Int
+                ad_hoc_mRNA_homol ?Sequence ?Method Float Int UNIQUE Int Int UNIQUE Int 
+          Feature ?Method Int Int UNIQUE Float UNIQUE Text
+                // Float is score
+                // Text is shown on select, and same Text are neighbours
+                // again, each method has a column
+                // double-click shows the method
+                // absorb TSL_site, TSL, Inverted, Tandem as features
+                // and probably Assembly_tags (not yet)
+          S_Child AGP_Fragment ?Sequence Int Int #SMap_info
+                  Homol_data ?Homol_data Int Int #SMap_info
+                  Feature_data ?Feature_data Int Int #Smap_info
+
+
+// #SMap_info#
+
+?SMap_info  Align Int UNIQUE Int UNIQUE Int
+            Mismatch Int UNIQUE Int
+
+
+
+// #Protein#
+
+?Protein  Title UNIQUE Text
+          Annotation  Match_found_with ?Sequence  // for xref purposes only, don't use
+          Swiss_feature Text Int Int Text // feature name, start, stop, note
+          Homol DNA_homol ?Sequence XREF Pep_homol ?Method Float Int UNIQUE Int Int UNIQUE Int
+
+
+// #Database#
+
+?Database Name  Text    // Full name of the database
+
+
+// #Method#
+
+?Method Remark Text
+        Display Colour #Colour      // The Display information controls how the column looks.
+                CDS_Colour #Colour  // CDS outlined in this colour.
+                Frame_sensitive
+                Strand_sensitive Show_up_strand #Colour
+                Score   Score_by_offset                         // Has priority over width, for Jean
+                        Score_by_width
+                        Score_by_histogram UNIQUE Float         // Baseline value
+                        Score_bounds UNIQUE Float UNIQUE Float  // Limits for squashing
+                        Percent // '%' in text, + default bounds 25, 100
+                Overlap_mode UNIQUE Overlap                 // Draw on top - default
+                                    Bumpable                // Bump to avoid overlap
+                                    Cluster                 // One column per homol target
+                Width UNIQUE Float
+                Symbol UNIQUE Text      // first char only is used
+                Right_priority UNIQUE Float                     // The greater the further right.
+                Max_mag        UNIQUE Float                            // Don't show if more bases per line
+                Min_mag        UNIQUE Float                            // Don't show if fewer bases per line
+                Show_text                                       // Only put text in right-hand column if set
+        BlastN                                                  // Can calculate percent from score if blastn
+        Blixem  Blixem_X
+                Blixem_N
+                Blixem_P
+        Version Text
+        Min_score UNIQUE Float        // Used in plotting (Plotting what?)
+        EMBL_dump_info #EMBL_dump_info
+        EMBL_dump EMBL_feature UNIQUE Text              // require this
+                  EMBL_qualifier Text UNIQUE Text REPEAT
+                // very ambitious - 1st Text is an sprintf format, remaining ones are
+                // names of tags.  If "Score" or "Note" get from these fields of Feature.
+                // otherwise bsPushObj() after note, and bsGetData(tag).
+
+
+// #Embl_dump_info
+
+?EMBL_dump_info EMBL_dump_method UNIQUE ?Method
+                EMBL_chromosome UNIQUE Text
+                EMBL_map UNIQUE Text
+                DE_line Text  
+                CC_line Text           
+
+
+// #Motif#
+
+?Motif  Match_sequence  UNIQUE Text             // Text is the DNA or protein sequence
+        Restriction     Isoschizomer ?Motif XREF Isoschizomer REPEAT
+                        Offset UNIQUE Int   
+                        Cleavage UNIQUE Text    // will show the cleavage points ex: G_ACGT'C
+                        Overhang UNIQUE Int
+                        Company UNIQUE Text
+        Remark Text
+        Title Text
+        DB_info Database ?Database Text Text    // ID  Accession_number
+        Substrate UNIQUE DNA
+                         Peptide
+        Length UNIQUE Int
+        Homol DNA_homol ?Sequence XREF Motif_homol ?Method Float Int UNIQUE Int Int UNIQUE Int
+
+
+// #Person#
+
+?Person Finisher ?Sequence XREF Finisher
+
+
+// #Laboratory#
+
+?Laboratory Remark  Text
+
+
+// #Species#
+
+?Species    Common_name Text
+
+
+// #Accession#
+
+?Accession        Sequence    ?Sequence
+
+
+// #Chromosome#
+
+?Chromosome Genomic_sequence ?Sequence
+
+
+// #Linkage_group#
+
+?Linkage_group	Genomic_sequence ?Sequence  // added for zebrafish 2002-03-27 kj
