@@ -146,7 +146,7 @@ CREATE TABLE dna (
   created   datetime NOT NULL,
   
   PRIMARY KEY (dna_id)
-) MAX_ROWS = 750000 AVG_ROW_LENGTH = 19000;
+) MAX_ROWS = 750000 AVG_ROW_LENGTH = 19000 TYPE=InnoDB;
 
 #
 # Table structure for table 'exon'
@@ -289,8 +289,8 @@ CREATE TABLE repeat_consensus (
     KEY name (repeat_name),
     KEY class (repeat_class)
 ) TYPE=InnoDB;
+#  Removed for InnoDB  KEY consensus(repeat_consensus(10))
 
-#KEY consensus(repeat_consensus(10))
 
 CREATE TABLE repeat_feature (
   repeat_feature_id int unsigned NOT NULL auto_increment,
@@ -311,7 +311,7 @@ CREATE TABLE repeat_feature (
   KEY contig_idx( contig_id, contig_start ),
   KEY repeat_idx( repeat_consensus_id, contig_id, contig_start ),
   KEY analysis_idx( analysis_id )
-) MAX_ROWS=100000000 AVG_ROW_LENGTH=80;
+) MAX_ROWS=100000000 AVG_ROW_LENGTH=80 TYPE=InnoDB;
 
 #
 # Table structure for table 'gene'
@@ -349,7 +349,7 @@ CREATE TABLE supporting_feature (
   feature_id int(11) DEFAULT '0' NOT NULL,
   UNIQUE all_idx (exon_id,feature_type,feature_id),
   KEY feature_idx (feature_type,feature_id)
-) MAX_ROWS=100000000 AVG_ROW_LENGTH=80;
+) MAX_ROWS=100000000 AVG_ROW_LENGTH=80 TYPE=InnoDB;
 
  
 
@@ -565,7 +565,7 @@ CREATE TABLE external_synonym(
 
 CREATE TABLE external_db(
          external_db_id INT not null auto_increment,
-         db_name ENUM ('gene_name','Celera_Pep','Celera_Trans','Celera_Gene','HumanGenscans','protein_id','SCOP','HUGO','GO','SPTREMBL','EMBL','MarkerSymbol','SWISSPROT','PDB','MIM','RefSeq','LocusLink','Interpro','Superfamily','ANOSUB','wormbase_gene','wormbase_transcript','flybase_gene','flybase_transcript','flybase_symbol') not null,
+         db_name ENUM ('gene_name','Celera_Pep','Celera_Trans','Celera_Gene','HumanGenscans','protein_id','SCOP','HUGO','GO','SPTREMBL','EMBL','MarkerSymbol','SWISSPROT','PDB','MIM','RefSeq','LocusLink','Interpro','Superfamily','Anopheles_symbol','Anopheles_paper','wormbase_gene','wormbase_transcript','wormpep_id','flybase_gene','flybase_transcript','flybase_symbol','drosophila_gene_id','GKB', 'BRIGGSAE_HYBRID','AFFY_HG_U133','AFFY_HG_U95','sanger_probe','Vega') not null,
 	 release VARCHAR(40) DEFAULT '' NOT NULL,
 	 status  ENUM ('KNOWN','XREF','PRED') not null,
          PRIMARY KEY( external_db_id ) 
@@ -582,6 +582,11 @@ CREATE TABLE meta (
     KEY meta_key_index ( meta_key ),
     KEY meta_value_index ( meta_value )
 ) TYPE=InnoDB;
+
+
+# Auto add schema version to database
+insert into meta (meta_key, meta_value) values ("schema_version", "$Revision: 1.4 $");
+
 
 CREATE TABLE prediction_transcript (
     prediction_transcript_id int unsigned not null auto_increment,
@@ -600,17 +605,64 @@ CREATE TABLE prediction_transcript (
     KEY contig_idx( contig_id, contig_start )
 ) TYPE=InnoDB;
 
+
+CREATE TABLE marker_synonym (
+    marker_synonym_id int unsigned not null auto_increment,
+    marker_id         int unsigned not null,  #foreign key marker:marker_id
+    source            varchar(20),
+    name              varchar(30),    
+
+    PRIMARY KEY (marker_synonym_id),
+    KEY marker_synonym_idx (marker_synonym_id, name)
+) TYPE=InnoDB;
+
+CREATE TABLE marker (
+    marker_id                  int unsigned not null auto_increment,
+    display_marker_synonym_id  int unsigned, #foreign key marker_synonym:marker_synonym_id
+    left_primer                varchar(100) not null,
+    right_primer               varchar(100) not null,
+    min_primer_dist            int(10) unsigned not null,
+    max_primer_dist            int(10) unsigned not null,
+    type                       enum('est', 'microsatellite'),
+    priority                   int,
     
+    PRIMARY KEY (marker_id),
+    KEY marker_idx (marker_id, priority)
+) TYPE=InnoDB;
 
-# Auto add schema version to database
-insert into meta (meta_key, meta_value) values ("schema_version", "$Revision: 1.3 $");
 
+CREATE TABLE marker_feature (
+    marker_feature_id         int unsigned not null auto_increment,
+    marker_id                 int unsigned not null,     #foreign key marker:marker_id
+    contig_id                 int(10) unsigned NOT NULL, #foreign key contig:contig_id
+    contig_start              int(10) unsigned NOT NULL,
+    contig_end                int(10) unsigned NOT NULL,
+    analysis_id               int(10) unsigned NOT NULL, #foreign key analysis:analysis_id
+    map_weight                int(10) unsigned,
 
-# MySQL dump 8.12
-#
-# Host: localhost    Database: mus_musculus_core_5_2
-#--------------------------------------------------------
-# Server version	3.23.32-log
+    PRIMARY KEY (marker_feature_id),
+    KEY contig_idx (contig_id, contig_start)
+) TYPE=InnoDB;
+    
+CREATE TABLE marker_map_location (
+    marker_id                int unsigned not null, #foreign key marker:marker_id
+    map_id                   int unsigned not null, #foreign key map:map_id
+    chromosome_id            int unsigned not null, #foreign key chromosome:chromosome_id
+    marker_synonym_id        int unsigned not null, #foreign key marker_synonym:marker_synonym_id
+    position                 varchar(15) not null,
+    lod_score                double,
+    
+    PRIMARY KEY (marker_id, map_id),
+    KEY map_idx( map_id, chromosome_id, position) 
+) TYPE=InnoDB;
+
+CREATE TABLE map (
+    map_id                   int unsigned not null auto_increment, 
+    map_name                 varchar(30) not null,
+
+    PRIMARY KEY (map_id)
+) TYPE=InnoDB;
+    
 
 #
 # Table structure for table 'mapfrag'
@@ -640,6 +692,8 @@ CREATE TABLE dnafrag (
   PRIMARY KEY (dnafrag_id),
   UNIQUE KEY name(name)
 ) TYPE=InnoDB;
+
+
 
 #
 # Table structure for table 'mapannotation'
