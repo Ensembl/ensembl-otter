@@ -192,36 +192,6 @@ use Getopt::Long 'GetOptions';
             my @files = $gc->print_postscript($fpc);
             warn "Printed to files:\n",
                 map "  $_\n", @files;
-            #my $page_width  = 591;
-            #my $page_height = 841;
-            #my $border = 36;
-
-            #my $bbox = $canvas->cget('scrollregion');
-            #my $canvas_width  = $bbox->[2] - $bbox->[0];
-            #my $canvas_height = $bbox->[3] - $bbox->[1];
-            #my $tile_width = $canvas_width / $n_tiles;
-            #for (my $i = 0; $i < $n_tiles; $i++) {
-            #    my( $file );
-            #    if ($n_tiles == 1) {
-            #        $file = "$fpc.ps";
-            #    } else {
-            #        my $n = ('01'..'99')[$i];
-            #        $file = "${fpc}_$n.ps";
-            #    }
-            #    $canvas->postscript(
-            #        -file => $file,
-            #        '-x' => $bbox->[0] + ($i * $tile_width),
-            #        '-y' => $bbox->[1],
-            #        -width  => $tile_width,
-            #        -height => $canvas_height,
-            #        -pageanchor => 'nw',
-            #        -pagex => $border,
-            #        -pagey => $border,
-            #        -pagewidth => $page_height - ($border * 2),
-            #        -rotate => 1,   # landscape
-            #        );
-            #    warn "Printed to file '$file'"
-            #}
         });
     $gc->fix_window_min_max_sizes;
 }
