@@ -55,7 +55,14 @@ sub chromosome {
     }
     return $self->{'_chromosome'};
 }
-
+sub pipeline_chromosome {
+    my( $self, $chromosome ) = @_;
+    
+    if ($chromosome) {
+        $self->{'_pipeline_chromosome'} = $chromosome;
+    }
+    return $self->{'_pipeline_chromosome'};
+}
 sub chr_start {
     my( $self, $chr_start ) = @_;
     
@@ -82,7 +89,6 @@ sub contig_id {
     }
     return $self->{'_contig_id'};
 }
-
 sub contig_name {
     my( $self, $contig_name ) = @_;
     
@@ -91,7 +97,14 @@ sub contig_name {
     }
     return $self->{'_contig_name'};
 }
-
+sub super_contig_name {
+    my( $self, $contig_name ) = @_;
+    
+    if ($contig_name) {
+        $self->{'_super_contig_name'} = $contig_name;
+    }
+    return $self->{'_super_contig_name'};
+}
 sub contig_start {
     my( $self, $contig_start ) = @_;
     
