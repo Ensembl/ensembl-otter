@@ -7,8 +7,12 @@ use Bio::Otter::Lace::Defaults;
 
 {
     my $dataset_name = 'zebrafish';
+    my $intra_set_gap = 10_000;
+    my $inter_set_gap = 200_000;
     Bio::Otter::Lace::Defaults::do_getopt(
         'dataset=s' => \$dataset_name,
+        'intra=i'   => \$intra_set_gap,
+        'inter=i'   => \$inter_set_gap,
         );
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
     my $ds = $cl->get_DataSet_by_name($dataset_name);
@@ -18,6 +22,7 @@ use Bio::Otter::Lace::Defaults;
         SELECT g.gene_id
           , c.embl_acc
           , c.embl_version
+          , ctg.length
         FROM gene g
           , transcript t
           , exon_transcript et
@@ -34,10 +39,12 @@ use Bio::Otter::Lace::Defaults;
         });
     $sth->execute;
     
-    my( %gene2acc_sv );
-    while (my ($gene_id, $acc, $sv) = $sth->fetchrow) {
+    my( %acc_sv_length, %gene2acc_sv );
+    while (my ($gene_id, $acc, $sv, $length) = $sth->fetchrow) {
         my $list = $gene2acc_sv{$gene_id} ||= [];
-        push(@$list, "$acc.$sv");
+        my $acc_sv = "$acc.$sv";
+        $acc_sv_length{$acc_sv} = $length;
+        push(@$list, $acc_sv);
     }
     
     my $get_gene_name = $ens_db->prepare(q{
@@ -56,11 +63,16 @@ use Bio::Otter::Lace::Defaults;
     my( %acc_sv2pool, @all_pools );
     while (my ($id, $accs) = each %gene2acc_sv) {
         if (@$accs > 1) {
-            my( $pool );
+            my( %pool_pool );
             foreach my $acc_sv (@$accs) {
-                last if $pool = $acc_sv2pool{$acc_sv};
+                my $pool = $acc_sv2pool{$acc_sv} or next;
+                $pool_pool{$pool} = $pool;
             }
-            unless ($pool) {
+            my @existing = values %pool_pool;
+            my( $pool );
+            if (@existing) {
+                $pool = merge_pools(@existing);
+            } else {
                 $pool = {
                     'acc_sv'    => {},
                     'gene_id'   => [],
@@ -69,7 +81,9 @@ use Bio::Otter::Lace::Defaults;
             }
             push(@{$pool->{'gene_id'}}, $id);
             foreach my $acc_sv (@$accs) {
+                # Keep a count of how many shared genes are in this clone
                 $pool->{'acc_sv'}{$acc_sv}++;
+                
                 $acc_sv2pool{$acc_sv} = $pool;
             }
         } else {
@@ -77,6 +91,17 @@ use Bio::Otter::Lace::Defaults;
         }
     }
     
+    # Remove the pools that have been merged with others
+    for (my $i = 0; $i < @all_pools;) {
+        if ($all_pools[$i]->{'is_dead'}) {
+            splice(@all_pools, $i, 1);
+        } else {
+            $i++;
+        }
+    }
+    
+    my $chr_pos = 0;
+    my $row = 0;
     foreach my $pool (@all_pools) {
         my $genes = $pool->{'gene_id'};
         my $accs  = $pool->{'acc_sv'};
@@ -87,17 +112,53 @@ use Bio::Otter::Lace::Defaults;
             push(@gene_name, $name);
         }
         @gene_name = sort @gene_name;
-        print "\nGENES: @gene_name\n";
+        print "# GENES: @gene_name\n";
+        my $gap_size = 0;
         foreach my $acc_sv (sort keys %$accs) {
+            if ($gap_size) {
+                my $chr_start = $chr_pos + 1;
+                $chr_pos += $gap_size;
+                print join("\t",
+                    'chrUNK', $chr_start, $chr_pos, ++$row, 'N', $gap_size,
+                    ), "\n";
+            }
+        
+            my $length = $acc_sv_length{$acc_sv};
             my $count = $accs->{$acc_sv};
-            printf "  %-14s  %d\n", $acc_sv, $count;
+            my $chr_start = $chr_pos + 1;
+            $chr_pos += $length;
+            print join("\t",
+                'chrUNK', $chr_start, $chr_pos, ++$row, 'F', $acc_sv, 1, $length,
+                ), "\n";
+            $gap_size = $intra_set_gap;
         }
+        $gap_size = $inter_set_gap;
+        my $chr_start = $chr_pos + 1;
+        $chr_pos += $gap_size;
+        print join("\t",
+            'chrUNK', $chr_start, $chr_pos, ++$row, 'N', $gap_size,
+            ), "\n";
     }
     
     $get_gene_name->finish;
 }
 
-
+sub merge_pools {
+    my( $primary, @others ) = @_;
+    
+    my $gene_list = $primary->{'gene_id'};
+    my $acc_hash  = $primary->{'acc_sv'};
+    
+    foreach my $pool (@others) {
+        $pool->{'is_dead'} = 1;
+        push(@$gene_list, @{$pool->{'gene_id'}});
+        while (my ($acc_sv, $count) = each %{$pool->{'acc_sv'}}) {
+            $acc_hash->{$acc_sv} += $count;
+        }
+    }
+    
+    return $primary;
+}
 
 
 __END__

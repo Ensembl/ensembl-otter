@@ -17,8 +17,9 @@ populates the assembly table in both databases.
 
 BEWARE! It assumes 1 contig for each clone.
 
-example;
- ./Load_otter_ensembl -host ecs1d -user ensadmin -pass "ensembl" -dbname otter_test -name mySequenceSet -description 'test description' -chromosome chr12 clone_list
+example:
+
+ ./load_otter_ensembl -host ecs1d -user ensadmin -pass "ensembl" -dbname otter_test -name mySequenceSet -description 'test description' -chromosome chr12 clone_list
 
 =head1 OPTIONS
 

@@ -28,8 +28,8 @@ use Bio::Otter::Lace::Defaults;
           , embl_version
         FROM clone
         WHERE name = concat(embl_acc
-			    , '.'
-			    , embl_version)
+              , '.'
+              , embl_version)
         });
     $list_acc_sv_clones->execute;
     
@@ -98,19 +98,25 @@ __END__
 
 =head1 NAME - clones_to_otter
 
+=head1 SYNOPSIS
+
+  clones_to_otter -dataset <DATASET_NAME>
+
 =head DESCRIPTION
 
- Fills in the international clone names for the otter and pipeline dbs.  
-It uses the tracking database to find the int. clone name for those clones 
-that have name = embl_acc.embl_version.  Connection details come from 
-$OTTER_HOME/.otter_config or ~/.otter_config or command line in a similar 
-manner to the rest of the scripts in this directory.
+Fills in the international clone names for the
+otter and pipeline dbs.   It uses the tracking
+database to find the int. clone name for those
+clones  that have name = embl_acc.embl_version. 
+Connection details come from 
+$OTTER_HOME/.otter_config or ~/.otter_config or
+command line in a similar  manner to the rest of
+the scripts in this directory.
 
 =head1 USEAGE
 
- just give it a dataset name that occurs in the db you want to "fix".
-N.B. It will not limit itself to that dataset, but instead go through
-all of the clone table.
+Just give it a dataset name that occurs in the db
+you want to "fix". eg: "human" or "zebrafish"
 
 =head1 AUTHOR
 
