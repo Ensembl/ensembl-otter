@@ -7,17 +7,25 @@ $| = 1;
 use Getopt::Long;
 
 use Bio::Otter::EnsEMBL2SQL::Core;
+use Bio::Otter::EnsEMBL2SQL::Compara;
 
 my $host   = 'kaka.sanger.ac.uk';
 my $user   = 'anonymous';
 my $pass   = '';
 my $port   = 3306;
-#my $dbname = 'homo_sapiens_core_13_31';
-my $dbname = 'homo_sapiens_estgene_13_31';
-my $chr    = '6';
-my $start  = 1;
-my $end    = 1000000;
-my $type   = 'NCBI31';
+
+my $core_name    = 'homo_sapiens_core_13_31';
+my $est_name     = 'homo_sapiens_est_13_31';
+my $estgene_name = 'homo_sapiens_estgene_13_31';
+my $compara_name = 'ensembl_compara_13_1';
+my $disease_name = 'ensembl_disease_13_1';
+#my $family_name  = 'ensembl_family_13_1';
+
+my $species = 'Homo sapiens';
+my $chr     = '13';
+my $start   = 1;
+my $end     = 5000000;
+my $type    = 'NCBI31';
 my $dir;
 
 &GetOptions( 
@@ -25,42 +33,94 @@ my $dir;
              'user:s'    => \$user,
              'pass:s'    => \$pass,
              'port:s'    => \$port,
-             'dbname:s'  => \$dbname,
+             'core_name:s'=> \$core_name,
+             'est_name:s' => \$est_name,
+             'estgene_name:s'=> \$estgene_name,
+             'compara_name:s'=> \$compara_name,
              'chr:s'     => \$chr,
              'start:n'   => \$start,
              'end:n'     => \$end,
              'type:s'    => \$type,
 	     'dir:s'     => \$dir,
+	     'species:s' => \$species,
              );
 
-
-my $e2sql = new Bio::Otter::EnsEMBL2SQL::Core(-host   => $host,
-					      -user   => $user,
-					      -pass   => $pass,
-                                              -port   => $port,
-					      -dbname => $dbname,
-					      -chr    => $chr,
-					      -start  => $start,
-					      -end    => $end,
-					      -type   => $type);
-
-
 if (!defined($dir)) {
-    $dir = "/tmp/$dbname.$chr.$start-$end.$type";
-} 
+    $dir = "/tmp";
+}
 
-if (-e $dir) {
-    print "Directory $dir exists - exiting\n";
-} else {
+if (! -e $dir) {
     mkdir $dir;
 }
 
-print "Dumping to directory $dir\n";
+my $core2sql = new Bio::Otter::EnsEMBL2SQL::Core(-host   => $host,
+						 -user   => $user,
+						 -pass   => $pass,
+						 -port   => $port,
+						 -dbname => $core_name,
+						 -chr    => $chr,
+						 -start  => $start,
+						 -end    => $end,
+						 -type   => $type);
 
-my @tables = @{$e2sql->get_tables};
+my $est2sql =  new Bio::Otter::EnsEMBL2SQL::Core(-host   => $host,
+						 -user   => $user,
+						 -pass   => $pass,
+						 -port   => $port,
+						 -dbname => $est_name,
+						 -chr    => $chr,
+						 -start  => $start,
+						 -end    => $end,
+						 -type   => $type);
 
-foreach my $table (@tables) {
-    print "Getting table $table\n";
+my $estgene2sql =  new Bio::Otter::EnsEMBL2SQL::Core(-host   => $host,
+						     -user   => $user,
+						     -pass   => $pass,
+						     -port   => $port,
+						     -dbname => $estgene_name,
+						     -chr    => $chr,
+						     -start  => $start,
+						     -end    => $end,
+						     -type   => $type);
 
-    $e2sql->dump_SQL_to_file($dir,$table);
+my $compara2sql =  new Bio::Otter::EnsEMBL2SQL::Core(-host   => $host,
+						     -user   => $user,
+						     -pass   => $pass,
+						     -port   => $port,
+						     -dbname => $compara_name,
+						     -chr    => $chr,
+						     -start  => $start,
+						     -end    => $end,
+						     -type   => $type,
+						     -species => $species);
+
+
+dump_database($core2sql,$dir);
+dump_database($est2sql,$dir);
+dump_database($estgene2sql,$dir);
+dump_database($compara2sql,$dir);
+
+
+sub dump_database {
+    my ($db,$dir) = @_;
+    
+    if (!defined($dir)) {
+	$dir = '/tmp/';
+    }
+    $dir = "/tmp/". $db->dbname . "." . $db->chromosome . "." . $db->start . "-" . $db->end ."." . $db->type;
+
+    if (-e $dir) {
+	print "Directory $dir exists - exiting\n";
+	exit(0);
+    } else {
+	mkdir $dir;
+    }
+
+    print "\n\nDumping " . $db->dbname . " chromosome " . $db->chromosome . " " . $db->start . "-" . $db->end . " to directory $dir\n\n";
+
+    my @tables = @{$db->get_tables};
+
+    foreach my $table (@tables) {
+	$db->dump_SQL_to_file($dir,$table);
+    }
 }
