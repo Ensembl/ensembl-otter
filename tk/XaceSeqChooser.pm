@@ -389,6 +389,7 @@ sub express_clone_and_subseq_fetch {
                 ->new_from_name_start_end_transcript_seq(
                     $name, $start, $end, $t_seq,
                     );
+            $sub->clone_seq_name($clone_name);
             
             # Mark the subsequence as coming from the db
             $sub->is_archival(1);

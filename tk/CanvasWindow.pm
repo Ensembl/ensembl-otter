@@ -817,7 +817,8 @@ sub next_message_id {
         my( $self ) = @_;
 
         if (my $sel = $self->{'_selected_list'}) {
-            return sort {$a <=> $b} keys %$sel;
+            my @selected = sort {$a <=> $b} keys %$sel;
+            return @selected;
         } else {
             return;
         }

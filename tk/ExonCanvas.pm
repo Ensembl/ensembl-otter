@@ -70,19 +70,10 @@ sub add_ace_subseq {
         warn "Unexpected object '$subseq', expected a '$expected_class'";
     }
     
-    my $y_offset = $self->drawing_y_max;
-    
     my $strand = $subseq->strand;
     foreach my $ex ($subseq->get_all_Exons) {
-        $y_offset += $self->add_exon_holder($ex->start, $ex->end, $strand, $x_offset, $y_offset);
+        $self->add_exon_holder($ex->start, $ex->end, $strand);
     }
-}
-
-sub drawing_y_max {
-    my( $self ) = @_;
-    
-    # Get the offset underneath everthing else
-    return ($self->canvas->bbox('all'))[3];
 }
 
 {
@@ -103,57 +94,13 @@ sub drawing_y_max {
     }
 
     sub add_position_pair {
-        my( $self, @pair ) = @_;
+        my( $self, @pair_and_id ) = @_;
 
-        unless (@pair == 2) {
-            confess "Expecting 2 numbers, but got ", scalar(@pair);
+        unless (@pair_and_id == 3) {
+            confess "Expecting 2 numbers and exon_id";
         }
         $self->{$pp_field} ||= [];
-        push(@{$self->{$pp_field}}, [@pair]);
-    }
-    
-    sub all_postion_pair_text {
-        my( $self ) = @_;
-        
-        my $canvas = $self->canvas;
-        my $empty  = $self->empty_string;
-        my( @pos );
-        foreach my $pair ($self->position_pairs) {
-            my $start = $canvas->itemcget($pair->[0], 'text');
-            my $end   = $canvas->itemcget($pair->[1], 'text');
-            if ($start < $end) {
-                push(@pos, [$start, $end]);
-            } else {
-                push(@pos, [$end, $start]);
-            }
-        }
-        return @pos;
-    }
-    
-    sub sort_position_pairs {
-        my( $self ) = @_;
-        
-        my %was_selected = map {$_, 1} $self->get_all_selected_text;
-        $self->deselect_all;
-        
-        my $empty  = $self->empty_string;
-        my $canvas = $self->canvas;
-        
-        my @sort = sort {$a->[0] <=> $b->[0] || $a->[1] <=> $b->[1]}
-            $self->all_postion_pair_text;
-        
-        my $n = 0;
-        my( @select );
-        foreach my $pp ($self->position_pairs) {
-            foreach my $i (0,1) {
-                my $pos = $sort[$n][$i] || $empty;
-                my $obj = $pp->[$i];
-                push(@select, $obj) if $was_selected{$pos};
-                $canvas->itemconfigure($obj, -text => $pos);
-            }
-            $n++;
-        }
-        $self->highlight(@select) if @select;
+        push(@{$self->{$pp_field}}, [@pair_and_id]);
     }
     
     sub next_position_pair_index {
@@ -164,6 +111,108 @@ sub drawing_y_max {
         } else {
             return 0;
         }
+    }
+    
+    sub trim_position_pairs {
+        my( $self, $length ) = @_;
+        
+        if (my $pp = $self->{$pp_field}) {
+            my @del = splice(@$pp, -1 * $length, $length);
+            if (@del != $length) {
+                confess "only got ", scalar(@del), " elements, not '$length'";
+            }
+            my $canvas = $self->canvas;
+            foreach my $exon_id (map $_->[2], @del) {
+                $canvas->delete($exon_id);
+            }
+        } else {
+            confess "No pairs to trim";
+        }
+    }
+}
+
+sub all_position_pair_text {
+    my( $self ) = @_;
+
+    my $canvas = $self->canvas;
+    my $empty  = $self->empty_string;
+    my( @pos );
+    foreach my $pair ($self->position_pairs) {
+        my $start = $canvas->itemcget($pair->[0], 'text');
+        my $end   = $canvas->itemcget($pair->[1], 'text');
+        foreach my $p ($start, $end) {
+            $p = 0 if $p eq $empty;
+        }
+        if ($start < $end) {
+            push(@pos, [$start, $end]);
+        } else {
+            push(@pos, [$end, $start]);
+        }
+    }
+    return @pos;
+}
+
+sub sort_position_pairs {
+    my( $self ) = @_;
+
+    my %was_selected = map {$_, 1} $self->get_all_selected_text;
+    $self->deselect_all;
+
+    my $empty  = $self->empty_string;
+    my $canvas = $self->canvas;
+
+    my @sort = sort {$a->[0] <=> $b->[0] || $a->[1] <=> $b->[1]}
+        $self->all_position_pair_text;
+
+    my $n = 0;
+    my( @select );
+    foreach my $pp ($self->position_pairs) {
+        foreach my $i (0,1) {
+            my $pos = $sort[$n][$i] || $empty;
+            my $obj = $pp->[$i];
+            push(@select, $obj) if $was_selected{$pos};
+            $canvas->itemconfigure($obj, -text => $pos);
+        }
+        $n++;
+    }
+    $self->highlight(@select) if @select;
+}
+
+sub merge_position_pairs {
+    my( $self ) = @_;
+    
+    $self->sort_position_pairs;
+    my @pos = $self->all_position_pair_text;
+    my $i = 0;
+    while (1) {
+        my $this = $pos[$i];
+        my $next = $pos[$i + 1] or last;
+        if ($this->[0] <= $next->[1] and $this->[1] >= $next->[0]) {
+            $this->[0] = ($this->[0] < $next->[0]) ? $this->[0] : $next->[0];
+            $this->[1] = ($this->[1] > $next->[1]) ? $this->[1] : $next->[1];
+            splice(@pos, $i + 1, 1);
+        } else {
+            $i++;
+        }
+    }
+    
+    my $canvas = $self->canvas;
+    my $empty  = $self->empty_string;
+    my @pairs  = $self->position_pairs;
+    for (my $n = 0; $n < @pairs; $n++) {
+        foreach my $i (0,1) {
+            my $num;
+            if ($pos[$n]) {
+                $num = $pos[$n][$i];
+            }
+            $num ||= $empty;
+            my $obj = $pairs[$n][$i];
+            $canvas->itemconfigure($obj, -text => $num);
+        }
+    }
+    if (my $over = @pairs - @pos) {
+        $self->trim_position_pairs($over);
+        $self->fix_window_min_max_sizes;
     }
 }
 
@@ -178,6 +227,7 @@ sub add_coordinate_pair {
     $self->add_exon_holder($start, $end, $strand);
 }
 
+
 sub add_buttons_and_event_bindings {
     my( $self ) = @_;
     
@@ -188,16 +238,46 @@ sub add_buttons_and_event_bindings {
         );
     my $select_all_sub = sub{
         $self->select_all_exon_pos;
-        $canvas->SelectionOwn( -command => $deselect_sub )
-            if $self->list_selected;
-        };
+        if ($self->list_selected) {
+            $canvas->SelectionOwn( -command => $deselect_sub );
+        } else {
+            warn "Nothing selected";
+        }
+    };
 
     my $top = $canvas->toplevel;
     my $window_close = sub {
-        my $so = $canvas->SelectionOwner;
+        my ($sub, $ace) = $self->to_ace_subseq;
+        unless ($sub and $sub->is_archival) {
+            require Tk::Dialog;
+            my $name = $self->name;
+            my $dialog = $self->canvas->toplevel->Dialog(
+                -title  => 'Save changes?',
+                -text   => "Save changes to SubSequence '$name' ?",
+                -default_button => 'Yes',
+                -buttons    => [qw{ Yes No Cancel }],
+                );
+            my $ans = $dialog->Show;
+            if ($ans eq 'Cancel') {
+                return;
+            }
+            elsif ($ans eq 'Yes') {
+                return unless $sub;
+                my $xr = $self->xace_seq_chooser->xace_remote;
+                if ($xr) {
+                    $xr->load_ace($ace);
+                    $xr->save;
+                    $sub->is_archival(1);
+                } else {
+                    $self->message("No xace attached");
+                    return;
+                }
+            }
+        }
         $self->delete_chooser_window_ref;
-        # Have to specifically undef $self, or the ExonCanvas object
-        # doesn't get destroyed.  (Due to closures?)
+        # Have to specifically undef $self, or the
+        # ExonCanvas object doesn't get destroyed,
+        # because the other closures still reference it.
         $self = undef;
         $top->destroy;
     };
@@ -225,6 +305,32 @@ sub add_buttons_and_event_bindings {
         -command    => sub{ $self->sort_position_pairs },
             );
     $sort_button->pack(
+        -side   => 'left',
+        );
+    
+    my $merge_button = $bf->Button(
+        -text       => 'Merge',
+        -command    => sub{ $self->merge_position_pairs },
+            );
+    $merge_button->pack(
+        -side   => 'left',
+        );
+    
+    my $save_button = $bf->Button(
+        -text       => 'Save',
+        -command    => sub{
+            my ($sub, $ace) = $self->to_ace_subseq;
+            #warn $ace;
+            my $xr = $self->xace_seq_chooser->xace_remote;
+            if ($xr) {
+                $xr->load_ace($ace);
+                $xr->save;
+                $sub->is_archival(1);
+            } else {
+                $self->message("No xace attached");
+            }
+        });
+    $save_button->pack(
         -side   => 'left',
         );
     
@@ -519,7 +625,7 @@ sub export_ace_subseq_to_selection {
     my( $self, $offset, $max_bytes ) = @_;
         
     my $sub = $self->to_ace_subseq;
-    my $text = $sub->as_ace_file_format_text;
+    my $text = $sub->as_ace_file_text;
     if (length($text) > $max_bytes) {
         die "text too big";
     }
@@ -540,10 +646,9 @@ sub middle_button_paste {
     
     my @ints = $text =~ /(\d+)/g;
     
-    if (@ints == 1) {
+    if (my $obj  = $canvas->find('withtag', 'current')) {
         $self->deselect_all;
-        my $obj  = $canvas->find('withtag', 'current')  or return;
-        my $type = $canvas->type($obj)                  or return;
+        my $type = $canvas->type($obj) or return;
         if ($type eq 'text') {
             $canvas->itemconfigure($obj, 
                 -text   => $ints[0],
@@ -566,7 +671,7 @@ sub next_exon_holder_coords {
         $m = [];
         my $uw      = $self->font_unit_width;
         my $size    = $self->font_size;
-        my $max_chars = 8;  # For numbers up to 99_999_999
+        my $max_chars = 8;  # For coordinates up to 99_999_999
         my $text_len = $max_chars * $uw;
         my $half = int($size / 2);
         my $pad  = int($size / 6);
@@ -593,7 +698,7 @@ sub next_exon_holder_coords {
     
     my $i = $self->next_position_pair_index;
     my( $size, $half, $pad, @bbox ) = @$m;
-    my $y_offset = $i * ($size + $pad);
+    my $y_offset = $i * ($size + (2 * $pad));
     $bbox[1] += $y_offset;
     $bbox[3] += $y_offset;
     return( $size, $half, $pad, @bbox );
@@ -639,8 +744,7 @@ sub add_exon_holder {
         -tags       => [$exon_id, 'normal', 'exon_end', 'exon_pos'],
         );
     
-    $self->record_exon_inf($exon_id, $start_text, $strand_arrow, $end_text);
-    $self->add_position_pair($start_text, $end_text);
+    $self->add_position_pair($start_text, $end_text, $exon_id);
     
     my $bkgd = $canvas->createRectangle(
         $x1, $y1, $x2, $y2,
@@ -655,47 +759,60 @@ sub add_exon_holder {
     return $size + $pad;
 }
 
-sub record_exon_inf {
-    my( $self, $exon_id, @inf ) = @_;
-    
-    $self->{'_exons'}{$exon_id} = [@inf];
-}
-
 sub to_ace_subseq {
     my( $self ) = @_;
 
-    my $e = $self->{'_exons'};
-    my $canvas = $self->canvas;
-    
-    my $subseq = Hum::Ace::SubSeq->new;
-    $subseq->name($self->name);
-    #$subseq->name($canvas->toplevel->cget('title'));
-
-    my $subseq_strand = $self->subseq->strand;
-    my $done_message = 0;
-    foreach my $exid (keys %$e) {
-        my ($start_id, $strand_arrow, $end_id) = @{$e->{$exid}};
-                
-        my $start  =  $canvas->itemcget($start_id, 'text');
-        my $strand = ($canvas->itemcget($strand_arrow, 'arrow') eq 'last')
-            ? 1 : -1;
-        my $end    =  $canvas->itemcget(  $end_id, 'text');
-        
-        unless ($done_message) {
-            $self->message("inconsistent strands")
-                unless $strand == $subseq_strand;
-            $done_message = 1;
-        }
-        
-        my $exon = Hum::Ace::Exon->new;
-        $exon->start($start);
-        $exon->end($end);
-        
-        $subseq->add_Exon($exon);
+    my @exons = $self->Exons_from_canvas or return;
+    my $arch_str = $self->archive_string;
+    my $subseq = $self->subseq;
+    $subseq->replace_all_Exons(@exons);
+    my $new_str = $subseq->as_ace_file_format_text;
+    if ($new_str eq $arch_str) {
+        $subseq->is_archival(1);
+    } else {
+        $subseq->is_archival(0);
     }
-    $subseq->strand($subseq_strand);
+    return($subseq, $new_str);
+}
+
+sub archive_string {
+    my( $self ) = @_;
     
-    return $subseq;
+    my( $arch );
+    unless ($arch = $self->{'_archive_string'}) {
+        my $subseq = $self->subseq;
+        $arch = $subseq->as_ace_file_format_text;
+        $self->{'_archive_string'} = $arch;
+    }
+    return $arch;
+}
+
+sub Exons_from_canvas {
+    my( $self ) = @_;
+    
+    my $done_message = 0;
+    my( @exons );
+    foreach my $pp ($self->all_position_pair_text) {
+        if (grep $_ == 0, @$pp)  {
+            $self->message("Error: Empty coordinate");
+            return;
+        }
+        my $ex = Hum::Ace::Exon->new;
+        $ex->start($pp->[0]);
+        $ex->end  ($pp->[1]);
+        push(@exons, $ex);
+    }
+    
+    for (my $i = 0; $i < @exons; $i++) {
+        my $this = $exons[$i];
+        my $next = $exons[$i + 1] or last;
+        if ($this->start <= $next->end and $this->end >= $next->start) {
+            $self->message("Error: overlapping coordinates");
+            return;
+        }
+    }
+    
+    return @exons;
 }
 
 sub max_exon_number {
