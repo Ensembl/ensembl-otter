@@ -19,7 +19,6 @@ use Data::Dumper;
 use base 'MenuCanvasWindow';
 use MenuCanvasWindow::ExonCanvas;
 use CanvasWindow::DotterWindow;
-
 use CanvasWindow::PolyAWindow;
 use CanvasWindow::LocusWindow;
 use Bio::Otter::Lace::Defaults;
@@ -191,22 +190,18 @@ sub get_default_mutable_GeneMethod {
     }
 }
 
-
-
-
-# sequence called from 
+ # called from ExonCanvas. $state should be either 'new' or 'edit'
 sub show_LocusWindow{
-    my ($self , $exon_canv , $state) = @_ ;
-
-    my $locus ;
+    my ($self , $exon_canv , $state) = @_ ;  
     
+    my $locus ;
     $locus = $exon_canv->SubSeq->Locus ;  
   
     my $top;
     my $window ;
 
     $window = $self->{'_locus_window_cache'}{$locus};
-
+        
     unless($window){
        
         #print STDERR "creating LocusWindow" ;
@@ -221,10 +216,13 @@ sub show_LocusWindow{
     $window->show($state); 
 }
 
-sub remove_locus_window{
-    my ($self , $locus) = @_ ;
-    print STDERR "deleting " . $locus->name ;
-    delete $self->{'_locus_window_cache'}{$locus} || warn "problems deleteing locus window " . $locus->name ;
+sub close_all_LocusWindows{ 
+    my ($self) = @_ ;
+#    while (my ($locus , $lw) = each (%{$self->{'_locus_window_cache'}} )){        
+#    $self->{'_locus_window_cache'}{$locus} = undef;     
+#    }
+    $self->{'_locus_window_cache'} = undef ;
+    
 }
 
 sub get_all_locus_windows{
@@ -389,7 +387,6 @@ sub get_Locus {
         unless ($locus) {
             $locus = Hum::Ace::Locus->new;
             $locus->name($name);
-#            warn "Creating new locus!!!!!!" ;
         }
         $self->{'_locus_cache'}{$name} = $locus;
         return $locus;
@@ -913,8 +910,9 @@ sub exit_save_data {
 
     # Are there unsaved changes in open ExonCanvas windows?
     $self->close_all_subseq_edit_windows or return;
-    $self->close_all_PolyAWindows       or return;
-
+    $self->close_all_LocusWindows ;
+    $self->close_all_PolyAWindows        or return;
+    
     # Ask the user if any changes should be saved
     my $dialog = $self->canvas->toplevel->Dialog(
         -title          => 'Otter save?',
@@ -947,6 +945,7 @@ sub exit_save_data {
     }
     
     if (my $sn = $self->SequenceNotes){
+        delete $self->{'_sequence_notes'} ;
         $sn ->refresh_column(7) ; ## locks column
     }
     
