@@ -39,9 +39,7 @@ sub TIEHANDLE{
     }else{
 	$fh = gensym();
     }
-    print STDOUT "LogFile sees " . $SIG{__WARN__} . "\n";
     $SIG{__WARN__} = sub { $^S ? $fh->PRINT("(\$^S true) @_" ) : $fh->_warning(@_); };
-    print STDOUT "LogFile now sees " . $SIG{__WARN__} . "\n";
     # $^S is true only when in an eval{}
     # see 'perldoc -f eval' and 'man perlvar'
     $SIG{__DIE__}  = sub { $fh->_death(@_) unless $^S; };
