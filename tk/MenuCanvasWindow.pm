@@ -91,6 +91,44 @@ sub integers_from_clipboard {
     return @ints;
 }
 
+=head2 hash_from_clipboard
+
+       Args: hash of arrays
+             {key_name => [qr/(reg)(ex)/, array_index]...}
+   Function: Parse the AceDB clipboard
+Description: clipboard is split on space for the processing by supplied
+             regular expressions. Arrays returned will be empty if no
+             matches are found so a quick die unless @{$returned->{key_name}} 
+             will check that a match was found.
+     return: hash of arrays
+             {key_name => [ 'reg', 'ex' ]}
+
+=cut
+
+sub hash_from_clipboard {
+    my( $self, $regex_hash ) = @_;
+    warn "please pass me a nice hash" unless $regex_hash;
+    my $results = { map { $_ => 0 } keys %$regex_hash };
+
+    my $canvas = $self->canvas;
+
+    my( $text );
+    eval {
+        $text = $canvas->SelectionGet;
+    };
+    return if $@;
+#    warn "Trying to parse: [$text]\n";
+
+    my @s = split(/\s+/, $text);
+
+    foreach my $k(keys(%$regex_hash)){
+	my $regex = $regex_hash->{$k}->[0];
+	my $index = $regex_hash->{$k}->[1];
+	$results->{$k} = [ $s[$index] =~ $regex ] || [];
+    }
+
+    return $results;
+}
 
 1;
 
