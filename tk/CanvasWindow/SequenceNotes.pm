@@ -447,6 +447,7 @@ sub run_lace {
     if ($@) {
         $db->error_flag(0);
         $self->exception_message($@);
+        ### This leaves clones locked if we have write_access
         return;
     }    
 
