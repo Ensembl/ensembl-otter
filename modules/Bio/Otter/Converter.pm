@@ -177,9 +177,13 @@ sub XML_to_otter {
         my ($end_exon,   $end_pos)   = exon_pos($tran, $tl_end);
 
         if (!defined($start_exon) || !defined($end_exon)) {
+          warn $tran->transcript_info->name;
+          if (!defined($start_exon)) {warn "no start exon"};
+          if (!defined($end_exon)) {warn "no end exon"};
+
+
           print STDERR "ERROR: Failed mapping translation to transcript\n";
         } else {
-          #print STDERR "Translation id " . $tran->transcript_info->name . " " . $tran->stable_id . "\n";
           my $translation = new Bio::EnsEMBL::Translation;
           $translation->stable_id($tl_stable_id);
           $translation->version(1);
