@@ -74,6 +74,7 @@ sub new {
 
 =cut
 
+#Unused
 sub organism_lines {
 
     confess "Not written";
@@ -86,6 +87,7 @@ sub organism_lines {
 
 =cut
 
+#Unused
 sub standard_comments {
 
     confess "Not written";
@@ -101,6 +103,7 @@ from the DataSet, together with Slice and Gene adaptors.
 
 =cut
 
+#Used
 sub get_DBAdaptors {
     my ( $self ) = @_;
 
@@ -127,12 +130,17 @@ sub get_DBAdaptors {
 
 =head2 embl_setup
 
+Used when creating EMBL annotation, by accessing an Otter database only, i.e.
+independent of the Oracle tracking database. (Use humscripts/emblDump if
+you want to dump a Sanger project in the tracking db from Otter).
+
 Creates a Hum::EMBL object, and sets many of its attributes based on those
 stored in the Hum::EMBL object. Will confess if required attributes have
 not been set. Fetches some information from the Otter database, as necessary.
 
 =cut 
 
+#Used
 sub embl_setup {
     
     my ( $self, $accession, $seq_version ) = @_;
@@ -185,7 +193,7 @@ sub embl_setup {
     # DE line
     my $description;
     unless ($description = $self->description) {
-        $description = $self->get_description($accession, $seq_version);
+        $description = $self->get_description_from_otter($accession, $seq_version);
     }
     my $de = $embl->newDE;
     $de->list($description);
@@ -196,7 +204,7 @@ sub embl_setup {
     if ($self->keywords) {
         push(@keywords, $self->keywords);
     }
-    push (@keywords, $self->get_keywords($accession, $seq_version));
+    push (@keywords, $self->get_keywords_from_otter($accession, $seq_version));
     if (@keywords) {
         my $kw = $embl->newKW;
         $kw->list(@keywords);
@@ -247,6 +255,7 @@ sub CC_paragraphs {
 
 }
 
+#Used
 sub secondary_accs {
     my ( $self, $value ) = @_;
     
@@ -259,6 +268,7 @@ sub secondary_accs {
     return $self->{'_bio_otter_embl_factory_secondary_accs'};
 }
 
+#Used
 sub description {
     my ( $self, $value ) = @_;
     
@@ -268,6 +278,7 @@ sub description {
     return $self->{'_bio_otter_embl_factory_description'};
 }
 
+#Used
 sub keywords {
     my ( $self, $value ) = @_;
     
@@ -277,6 +288,7 @@ sub keywords {
     return $self->{'_bio_otter_embl_factory_keywords'};
 }
 
+#Used
 sub entry_name {
     my ( $self, $value ) = @_;
     
@@ -286,6 +298,7 @@ sub entry_name {
     return $self->{'_bio_otter_embl_factory_entry_name'};
 }
 
+#Used
 sub data_class {
     my ( $self, $value ) = @_;
     
@@ -302,6 +315,7 @@ set explicitly.
 
 =cut
 
+#Used
 sub mol_type {
     my ( $self, $value ) = @_;
     
@@ -315,6 +329,7 @@ sub mol_type {
     return $self->{'_bio_otter_embl_factory_mol_type'};
 }
 
+#Used
 sub division {
     my ( $self, $value ) = @_;
     
@@ -324,6 +339,7 @@ sub division {
     return $self->{'_bio_otter_embl_factory_division'};
 }
 
+#Used
 sub seq_length {
     my ( $self, $value ) = @_;
     
@@ -333,6 +349,7 @@ sub seq_length {
     return $self->{'_bio_otter_embl_factory_seq_length'};
 }
 
+#Used
 sub ac_star_id {
     my ( $self, $value ) = @_;
     
@@ -342,6 +359,7 @@ sub ac_star_id {
     return $self->{'_bio_otter_embl_factory_ac_star_id'};
 }
 
+#Used
 sub organism {
     my ( $self, $value ) = @_;
     
@@ -351,6 +369,7 @@ sub organism {
     return $self->{'_bio_otter_embl_factory_organism'};
 }
 
+#Used
 sub clone_lib {
     my ( $self, $value ) = @_;
     
@@ -360,6 +379,7 @@ sub clone_lib {
     return $self->{'_bio_otter_embl_factory_clone_lib'};
 }
 
+#Used
 sub clone_name {
     my ( $self, $value ) = @_;
     
@@ -535,6 +555,7 @@ sub make_embl_ft {
 
 =cut
 
+#Used
 sub get_clone_length_from_otter {
     my ( $self, $accession, $sv ) = @_;
     
@@ -554,7 +575,7 @@ sub get_clone_length_from_otter {
     return $length;
 }
 
-=head2 get_description
+=head2 get_description_from_otter
 
 Given an accession and sequence version, fetches thean Otter AnnotatedClone.
 Gets the CloneRemark objects from the CloneInfo object and returns the
@@ -564,7 +585,7 @@ Warns if no CloneRemarks are fetched for the clone, returning undef.
 
 =cut
 
-sub get_description {
+sub get_description_from_otter {
 	my ( $self, $accession, $sv ) = @_;
     
     my ($otter_db, $slice_aptr, $gene_aptr, $annotated_clone_aptr) 
@@ -592,7 +613,7 @@ sub get_description {
     return($description_txt);
 }
 
-=head2 get_keywords
+=head2 get_keywords_from_otter
 
 Given an accession and sequence version, fetches thean Otter AnnotatedClone.
 Gets the Keyword objects from the CloneInfo object and returns their text
@@ -602,7 +623,7 @@ Warns if no Keyword objects are fetched for the clone, returning undef.
 
 =cut 
 
-sub get_keywords {
+sub get_keywords_from_otter {
 	my ( $self, $accession, $sv ) = @_;
     
     my ($otter_db, $slice_aptr, $gene_aptr, $annotated_clone_aptr) 
@@ -949,6 +970,7 @@ used to access the Otter database.
 
 =cut
 
+#Used 
 sub DataSet {
     my ( $self, $obj ) = @_;
     

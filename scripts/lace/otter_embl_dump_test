@@ -24,6 +24,12 @@ annotation.
 One should be able to customise this script to dump
 EMBL from Otter for practically any purpose.
 
+Expects acc.sv for the clones to be dumped:
+
+e.g. 
+
+otter_embl_dump_test -dataset human -chr chr1-07 AC114498.2
+
 =cut
 
 use strict;
@@ -63,7 +69,6 @@ use Carp;
         $ft_factory->data_class('standard');
         $ft_factory->mol_type('genomic DNA');
         $ft_factory->division('HUM');
-        #$ft_factory->seq_length(10000);
         $ft_factory->ac_star_id('FAKE');
         $ft_factory->organism('Homo sapiens');
         $ft_factory->clone_lib('to_be_provided');
