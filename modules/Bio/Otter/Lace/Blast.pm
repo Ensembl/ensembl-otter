@@ -96,7 +96,7 @@ sub import {
 
     # had to put this inline here.
     my %Config = (
-                  DB_CONFIG => [{}],
+                  DB_CONFIG => [{name =>'empty'}],
                   UNKNOWN_ERROR_STRING => 'WHAT',
                   );
 
@@ -140,7 +140,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.2 $ ';
+$revision='$Revision: 1.3 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
@@ -289,7 +289,7 @@ sub initialise{
         }
     }
 
-    Bio::EnsEMBL::Pipeline::Runnable::Finished_Blast::add_regex($self->analysis->db_file, '(\S+)');
+    Bio::EnsEMBL::Pipeline::Runnable::Finished_Blast->add_regex($self->analysis->db_file, '(\S+)');
 
     return 1;
 }
