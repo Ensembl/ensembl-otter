@@ -425,7 +425,7 @@ sub hunt_for_selection {
         $query_str = $canvas->SelectionGet;
     };
     return if $@;
-    warn "Looking for '$query_str'";
+    #warn "Looking for '$query_str'";
     my $matcher = $self->make_matcher($query_str);
     
     my $current_obj;

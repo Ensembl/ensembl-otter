@@ -2312,7 +2312,7 @@ sub run_dotter {
     };
     my( $hit_name );
     if ($txt) {
-        ($hit_name) = $txt =~ /(?:Sequence:)?(\S+)/;
+        ($hit_name) = $txt =~ /(?:(?:Protein|Sequence):)?(\S+)/;
     }
     unless ($hit_name) {
         $self->message('Cannot see a hit name on the clipboard');
