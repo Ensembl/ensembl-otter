@@ -21,6 +21,7 @@ use Tk::ROText;
 my $user;
 my $write;
 my $set_name;
+my $opt_d;
 {
     my $list_sets = 0;
     GetOptions(
@@ -28,6 +29,7 @@ my $set_name;
         'list!'     => \$list_sets,
 	'user:s'    => \$user,
 	'write'	    => \$write,
+	'd!'        => \$opt_d,
         ) or useage();
 
     # check global access to database
@@ -478,6 +480,9 @@ sub default_cursor {
 		    push(@lace, '-write',);
 		}	
 	    }
+	    if($opt_d){
+                push($opt_d,'-d');
+            }
 	    exec(@lace, @seq_name_list);
         }
         else {
