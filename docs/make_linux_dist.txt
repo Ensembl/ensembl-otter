@@ -48,7 +48,12 @@ For GD
  For zlib
  =
   lynx -source 'http://umn.dl.sourceforge.net/libpng/zlib-1.1.4.tar.gz' >tarfiles/zlib-1.1.4.tar.gz
-  NOTE ZLIB DOESN'T WORK - just use the Apple provided one
+  gzip -dc tarfiles/zlib-1.1.4.tar.gz | tar -xvf -
+  cd zlib-1.1.4
+  rehash
+  ./configure --prefix=$LONGDIR
+  make
+  make install
 
  For libpng
  =
@@ -148,9 +153,9 @@ For Perl
 
 For mysql
 ==
- lynx -source 'http://mysql.mirror.anlx.net/Downloads/MySQL-4.0/mysql-4.0.12.tar.gz' > tarfiles/mysql-4.0.12.tar.gz
- gzip -dc tarfiles/mysql-4.0.12.tar.gz | tar -xvf -
- cd mysql-4.0.12
+ lynx -source 'http://mysql.mirror.anlx.net/Downloads/MySQL-4.0/mysql-4.0.14.tar.gz' > tarfiles/mysql-4.0.14.tar.gz
+ gzip -dc tarfiles/mysql-4.0.14.tar.gz | tar -xvf -
+ cd mysql-4.0.14
  rehash
  ./configure --prefix=$LONGDIR
 
@@ -179,9 +184,12 @@ static char *get_relative_path(const char *path)
   return (char*) path;
 }
 
+ 
  make
  make install
  rehash
+# Remember to check if there's a /etc/my.cnf before doing this
+ cd $LONGDIR
  $LONGDIR/bin/mysql_install_db
  $LONGDIR/bin/mysqld_safe &
 
@@ -258,23 +266,23 @@ For CGI (want slightly older version)
 For Apache
 ==
  lynx -source 'http://www.cpan.org/authors/id/D/DO/DOUGM/mod_perl-1.27.tar.gz' > tarfiles/mod_perl-1.27.tar.gz
- lynx -source 'http://apache.ttlhost.com/httpd/apache_1.3.27.tar.gz' > tarfiles/apache_1.3.27.tar.gz
- gzip -dc tarfiles/apache_1.3.27.tar.gz | tar -xvf -
+ lynx -source 'http://ftp.plig.net/pub/apache/dist/httpd/apache_1.3.28.tar.gz' > tarfiles/apache_1.3.28.tar.gz
+ gzip -dc tarfiles/apache_1.3.28.tar.gz | tar -xvf -
  gzip -dc tarfiles/mod_perl-1.27.tar.gz | tar -xvf -
  rehash
- cd apache_1.3.27
+ cd apache_1.3.28
  ./configure --prefix=$LONGDIR --with-layout=Apache
  cd ../mod_perl-1.27
-# perl Makefile.PL APACHE_SRC=../apache_1.3.27/src DO_HTTPD=1 USE_APACI=1 \
+# perl Makefile.PL APACHE_SRC=../apache_1.3.28/src DO_HTTPD=1 USE_APACI=1 \
 #       EVERYTHING=1 PREFIX=$LONGDIR
- perl Makefile.PL APACHE_SRC=../apache_1.3.27/src NO_HTTPD=1 USE_APACI=1 \
+ perl Makefile.PL APACHE_SRC=../apache_1.3.28/src NO_HTTPD=1 USE_APACI=1 \
        PREP_HTTPD=1 EVERYTHING=1 PREFIX=$LONGDIR
 
 NOTE: Interactive response needed here
 
  make
  make install
- cd ../apache_1.3.27
+ cd ../apache_1.3.28
 # ./configure --enable-module=include --activate-module=src/modules/perl/libperl.a \
              --enable-module=perl --prefix=$LONGDIR --with-layout=GNU
 #Edit src/modules/perl/perl_config to #!/usr/bin/env perl
@@ -359,14 +367,14 @@ For dotter
  make
  make install
 
- lynx -source 'ftp://ftp.sanger.ac.uk/pub/acedb/SUPPORTED/ACEDB-source.4_9p.tar.gz' >tarfiles/ACEDB-source.4_9p.tar.gz
- mkdir ACEDB-source.4_9p
+ lynx -source 'ftp://ftp.sanger.ac.uk/pub/acedb/SUPPORTED/ACEDB-source.4_9t.tar.gz' >tarfiles/ACEDB-source.4_9t.tar.gz
+ mkdir ACEDB-source.4_9t
  rehash
- cd ACEDB-source.4_9p
- gzip -dc ../tarfiles/ACEDB-source.4_9p.tar.gz | tar -xvf - 
+ cd ACEDB-source.4_9t
+ gzip -dc ../tarfiles/ACEDB-source.4_9t.tar.gz | tar -xvf - 
  setenv ACEDB_MACHINE LINUX_4
  chmod +w wmake/*
- cp wmake/LINUX_4_DEF wmake/MACOSX_4_DEF.orig
+ cp wmake/LINUX_4_DEF wmake/LINUX_4_DEF.orig
  cp wmake/truemake wmake/truemake.orig
  make dotter
  cp bin.LINUX_4/dotter $LONGDIR/bin
@@ -375,19 +383,19 @@ For dotter
 Ensembl
 ==
  mkdir -p cvsdis/cvs
- cd cvs
+ cd cvsdis/cvs
  cvs -d :pserver:cvsuser@cvsro.sanger.ac.uk:/cvsroot/CVSmaster login
 password CVSUSER
- cvs -d :pserver:cvsuser@cvsro.sanger.ac.uk:/cvsroot/CVSmaster co -r branch-ensembl-13 ensembl-api
- cvs -d :pserver:cvsuser@cvsro.sanger.ac.uk:/cvsroot/CVSmaster co -r branch-ensembl-13-1 ensembl-web
- cvs -d :pserver:cvsuser@cvsro.sanger.ac.uk:/cvsroot/CVSmaster co ensembl-otter
+ cvs -z3 -d :pserver:cvsuser@cvsro.sanger.ac.uk:/cvsroot/CVSmaster co -r branch-ensembl-16 ensembl-api
+ cvs -z3 -d :pserver:cvsuser@cvsro.sanger.ac.uk:/cvsroot/CVSmaster co -r branch-ensembl-16-1 ensembl-web
+ cvs -z3 -d :pserver:cvsuser@cvsro.sanger.ac.uk:/cvsroot/CVSmaster co ensembl-otter
 
 Bioperl
 ==
  cd cvsdis/cvs
  cvs -d :pserver:cvs@cvs.open-bio.org:/home/repository/bioperl login
 password cvs
- cvs -d :pserver:cvs@cvs.open-bio.org:/home/repository/bioperl co -r branch-1-2 bioperl-live
+ cvs -z3 -d :pserver:cvs@cvs.open-bio.org:/home/repository/bioperl co -r branch-1-2 bioperl-live
 
 Perl script #! munging in cvs
 ==
@@ -411,7 +419,7 @@ Adding apollo
 ==
  mkdir apollodis
  
- Then install apollo from fruitfly into apollodis
+ Then install apollo from fruitfly into apollodis/Apollo
 
  Then:
  moveperl -l -a $PWD/apollodis $LONGDIR 
@@ -426,3 +434,14 @@ cp $LONGDIR/cvs/ensembl-otter/dist/scripts/installotter .
 tar -cvf otterinstall.tar otterdist.0.1.tar.gz moveperl installotter tar
 gzip otterinstall.tar
 
+
+Loading data (after install)
+==
+~/otterinst/bin/mysql -u otteradmin -potter -e 'create database homo_sapiens_core_16_33'
+~/otterinst/bin/mysql -u otteradmin -potter -Dhomo_sapiens_core_16_33 < homo_sapiens_core_16_33/homo_sapiens_core_16_33.sql
+
+foreach file (homo_sapiens_core_16_33/*.txt.table)
+ set table=`echo $file:t | sed -e 's/\..*//'`
+ echo $file
+ ~/otterinst/bin/mysql -u otteradmin -potter -Dhomo_sapiens_core_16_33 -e "load data  infile '$PWD/$file' into table $table" 
+end
