@@ -34,6 +34,7 @@ my $exclude='GD:';
 my $ext;
 my $inprogress;
 my $vega;
+my $set;
 my $stats;
 
 $Getopt::Long::ignorecase=0;
@@ -59,6 +60,7 @@ GetOptions(
 	   'external',  \$ext,
 	   'progress',  \$inprogress,
 	   'vega',      \$vega,
+	   'set:s',     \$set,
 	   'stats',     \$stats,
 	   );
 
@@ -85,9 +87,12 @@ check_genes.pl
   -c              char      chromosome ($opt_c)
   -make_cache               make cache file
   -exclude                  gene types prefixes to exclude ($exclude)
+
+Select sets:
   -external                 external genes from vega_set only
   -progress                 also consider vega_sets tagged as 'in progress'
-  -vega                     vega database (has only assembly)
+  -vega                     vega database (all sets in assembly table)
+  -set            set       specified set only
 
   -stats                    calculate stats from cache file only
 ENDOFTEXT
@@ -108,7 +113,10 @@ if($make_cache){
   my %a;
   my %ao;
   my $sth;
-  if($vega){
+  if($set){
+    # all assemblies - assume only contains assemblies of interest
+    $sth=$dbh->prepare("select a.contig_id, c.name, a.type, a.chr_start, a.chr_end, a.contig_start, a.contig_end, a.contig_ori, cl.embl_acc, cl.embl_version from contig ct, clone cl, chromosome c, assembly a where cl.clone_id=ct.clone_id and ct.contig_id=a.contig_id and a.chromosome_id=c.chromosome_id and a.type=\'$set\'");
+  }elsif($vega){
     # all assemblies - assume only contains assemblies of interest
     $sth=$dbh->prepare("select a.contig_id, c.name, a.type, a.chr_start, a.chr_end, a.contig_start, a.contig_end, a.contig_ori, cl.embl_acc, cl.embl_version from contig ct, clone cl, chromosome c, assembly a where cl.clone_id=ct.clone_id and ct.contig_id=a.contig_id and a.chromosome_id=c.chromosome_id");
   }else{
@@ -142,11 +150,62 @@ if($make_cache){
       $ao{$cid}=[@row];
       $no++;
     }else{
+      # if -vega, all will be stored here
       $a{$cid}=[@row];
       $n++;
     }
   }
   print "$n contigs read from selected assemblies; $no from other assemblies\n";
+
+  # build list of all contigs, grouped by clone
+  # and use to create a2, which points from old or new to current version
+  my %a2;
+  my %ct;
+  {
+    my $nn=0;
+    my $no=0;
+    my $nc=0;
+    my $nd=0;
+    my $ns=0;
+    my %cl;
+    my $sth=$dbh->prepare("select cl.embl_acc, cl.embl_version, ct.contig_id, a.type from contig ct, clone cl left join assembly a on (a.contig_id=ct.contig_id) where cl.clone_id=ct.clone_id");
+    $sth->execute();
+    while (my @row = $sth->fetchrow_array()){
+      my($cla,$clv,$cid,$atype)=@row;
+      $ct{$cid}=[$cla,$clv,$atype];
+      push(@{$cl{$cla}},$cid);
+      $nc++;
+    }
+    # loop over current set of contigs
+    # make a subset (a2) of other versions of these clones
+    foreach my $cid (keys %a){
+      my($cname,$atype)=(@{$a{$cid}});
+      if($ct{$cid}){
+	my($cla,$clv)=@{$ct{$cid}};
+	foreach my $cid2 (@{$cl{$cla}}){
+	  if($cid2!=$cid){
+	    my($cla2,$clv2,$atype2)=@{$ct{$cid2}};
+	    $a2{$cid2}=[$cla2,$clv2,$atype2,$clv,$cid,$cname,$atype];
+	    if($clv2<$clv){
+	      $no++;
+	      print "contig $cid2 is older ($cid)\n" if $opt_v;
+	    }else{
+	      $nn++;
+	      print "contig $cid2 is newer ($cid)\n" if $opt_v;
+	    }
+	  }else{
+	    $ns++;
+	  }
+	}
+      }else{
+	print "FATAL: contig $cid not found\n";
+	exit 0;
+      }
+    }
+    $nd=$nc-($ns+$no+$nn);
+    print "$nc contigs found; $nd different\n";
+    print "$ns are current; $no older; $nn newer versions\n";
+  }
 
   # get exons of current genes
   my $sth=$dbh->prepare("select gsi1.stable_id,gn.name,g.type,tsi.stable_id,ti.name,et.rank,e.exon_id,e.contig_id,e.contig_start,e.contig_end,e.sticky_rank,e.contig_strand,e.phase,e.end_phase from exon e, exon_transcript et, transcript t, current_gene_info cgi, gene_stable_id gsi1, gene_name gn, gene g, transcript_stable_id tsi, current_transcript_info cti, transcript_info ti left join gene_stable_id gsi2 on (gsi1.stable_id=gsi2.stable_id and gsi1.version<gsi2.version) where gsi2.stable_id IS NULL and cgi.gene_stable_id=gsi1.stable_id and cgi.gene_info_id=gn.gene_info_id and gsi1.gene_id=g.gene_id and g.gene_id=t.gene_id and t.transcript_id=tsi.transcript_id and tsi.stable_id=cti.transcript_stable_id and cti.transcript_info_id=ti.transcript_info_id and t.transcript_id=et.transcript_id and et.exon_id=e.exon_id and e.contig_id");
@@ -157,7 +216,9 @@ if($make_cache){
   my %onagp_gsi;
   my %reported_gsi;
   my %reported_gsi_cid;
+  my %gsi_a2_clone;
   my %gsi_ao_clone;
+  my %gsi_au_clone;
   my %gsi_clone;
   my %atype_gsi;
   my %gsi2gn;
@@ -168,6 +229,8 @@ if($make_cache){
     # transform to chr coords
     my($gsi,$gn,$gt,$tsi,$tn,$erank,$eid,$ecid,$est,$eed,$esr,$es,$ep,$eep)=@row;
     $gsi2gn{$gsi}=$gn;
+
+    # look for contig for this exon in selected assembly regions
     if($a{$ecid}){
 
       my($cname,$atype,$acst,$aced,$ast,$aed,$ao,$cla,$clv)=@{$a{$ecid}};
@@ -204,13 +267,24 @@ if($make_cache){
     }else{
       $nexclude++;
       push(@{$excluded_gsi{$gsi}},join(',',@row));
-      if($ao{$ecid}){
+      # check other contigs
+      if($a2{$ecid}){
+	# different version of a contig in $a
+	my($cla,$clv,$atype)=@{$a2{$ecid}};
+	$gsi_a2_clone{$gsi}->{"$cla.$clv"}=$ecid;
+      }elsif($ao{$ecid}){
+	# contig in set not selected
 	my($cname,$atype,$acst,$aced,$ast,$aed,$ao,$cla,$clv)=@{$ao{$ecid}};
-	$gsi_ao_clone{$gsi}->{"$cla.$clv"}=1;
+	$gsi_ao_clone{$gsi}->{"$cla.$clv"}=$ecid;
+      }elsif($ct{$ecid}){
+	# another contig
+	my($cla,$clv,$atype)=@{$ct{$ecid}};
+	$gsi_au_clone{$gsi}->{"$cla.$clv"}=$ecid;
       }else{
+	# an unknown contig
 	if(!$reported_gsi_cid{$gsi}->{$ecid}){
 	  $reported_gsi_cid{$gsi}->{$ecid}=1;
-	  print "WARN: $gsi attached to contig $ecid not in assembly table\n";
+	  print "WARN: $gsi attached to contig $ecid (unknown)\n" if $opt_v;
 	}
       }
     }
@@ -223,18 +297,38 @@ if($make_cache){
   my %orphan_gsi;
   foreach my $atype (sort keys %atype_gsi){
     print "sequence_set $atype\n";
-    # report 
+
+    # report partial genes:
     my %sv;
     foreach my $gsi (sort keys %{$atype_gsi{$atype}}){
       if($excluded_gsi{$gsi}){
 	$orphan_gsi{$gsi}=1;
-	foreach my $sv (keys %{$gsi_clone{$gsi}}){$sv{$sv}=1;}
+	# record all sv's that these genes are on in the sequence_set
+	foreach my $sv (keys %{$gsi_clone{$gsi}}){
+	  if($sv{$sv}){
+	    $sv{$sv}.=";$gsi";
+	  }else{
+	    $sv{$sv}=$gsi;
+	  }
+	}
 	my $gn=$gsi2gn{$gsi};
-	print " ERR $gsi ($gn) ss=\'$atype\' has exon(s) off assembly:\n";
-	print "  on clones: ".join(",",(keys %{$gsi_ao_clone{$gsi}}))."\n";
+	print " ERR1 $gsi ($gn) ss=\'$atype\' has exon(s) off assembly:\n";
+	# 3 diff classes of clones:
+	# V = different version of clone in assembly
+	# O = clone in another specified set
+	# U = unknown (orphan?) clone
+	my $a2c=join(",",(keys %{$gsi_a2_clone{$gsi}}));
+	my $aoc=join(",",(keys %{$gsi_ao_clone{$gsi}}));
+	my $auc=join(",",(keys %{$gsi_au_clone{$gsi}}));
+	if($a2c){$a2c="V:$a2c";}
+	if($aoc){$a2c="O:$a2c";}
+	if($auc){$a2c="U:$a2c";}
+	print "  on clones: $a2c $aoc $auc\n";
 	print "  ".join("\n  ",@{$excluded_gsi{$gsi}})."\n" if $opt_v;
       }
     }
+
+    # report the clones in the sequence set, in order, which truncated genes are annotated on
     my $n=0;
     foreach my $cid (sort {$a{$a}->[2]<=>$a{$b}->[2]} keys %a){
       my($cname,$atype2,$acst,$aced,$ast,$aed,$ao,$cla,$clv)=@{$a{$cid}};
@@ -242,18 +336,27 @@ if($make_cache){
       $n++;
       my $sv="$cla.$clv";
       if($sv{$sv}){
-	print " [$n] $sv\n";
+	my $glist=$sv{$sv};
+	print " [$n] $sv [$glist]\n";
       }
     }
+    
+    # repeat for genes where an exon is on a valid clone, but off AGP
     my %sv2;
     foreach my $gsi (sort keys %{$atype_gsi{$atype}}){
       if($offagp_gsi{$gsi}){
-	foreach my $sv (keys %{$gsi_clone{$gsi}}){$sv2{$sv}=1;}
+	foreach my $sv (keys %{$gsi_clone{$gsi}}){
+	  if($sv2{$sv}){
+	    $sv2{$sv}.=";$gsi";
+	  }else{
+	    $sv2{$sv}=$gsi;
+	  }
+	}
 	my $gn=$gsi2gn{$gsi};
 	if($onagp_gsi{$gsi}){
-	  print " ERR $gsi ($gn) ss=\'$atype\' some exon(s) off agp:\n";
+	  print " ERR2 $gsi ($gn) ss=\'$atype\' some exon(s) off agp:\n";
 	}else{
-	  print " ERR $gsi ($gn) ss=\'$atype\' all exon(s) off agp:\n";
+	  print " ERR2 $gsi ($gn) ss=\'$atype\' all exon(s) off agp:\n";
 	}
 	print "  ".join("\n  ",@{$offagp_gsi{$gsi}})."\n" if $opt_v;
       }
@@ -265,22 +368,44 @@ if($make_cache){
       $n++;
       my $sv="$cla.$clv";
       if($sv2{$sv}){
-	print " [$n] $sv\n";
+	my $glist=$sv2{$sv};
+	print " [$n] $sv [$glist]\n";
       }
     }
+
   }
 
   # big problem with orphans - how to tell which elements of assembly
-  # are historical?
+  # are historical?  Partly dealt with by tracking versions...
 
-  if(0){
-    foreach my $gsi (keys %excluded_gsi){
-      next if $orphan_gsi{$gsi};
-      my $atype='ORPHAN';
-      my $gn=$gsi2gn{$gsi};
-      print "WARN $gsi ($gn) ss=\'$atype\' has exon(s) off assembly:\n  ".
-	  join("\n  ",@{$excluded_gsi{$gsi}})."\n";
+  foreach my $gsi (sort keys %excluded_gsi){
+    # ignore if tagged as not orphan elsewhere
+    next if $orphan_gsi{$gsi};
+    # ignore unless in another version of clone in current assembly
+    next unless $gsi_a2_clone{$gsi};
+    my $gn=$gsi2gn{$gsi};
+    my %atype;
+    my %sv;
+    foreach my $sv (sort keys %{$gsi_a2_clone{$gsi}}){
+      my $cid=$gsi_a2_clone{$gsi}->{$sv};
+      my($cla2,$clv2,$atype2,$clv,$cid,$cname,$atype)=@{$a2{$cid}};
+      $sv{"$cla2.$clv"}=1;
+      $atype{$atype}++;
     }
+    print " ERR3 $gsi ($gn) linked to =\'".join("\',\'",(keys %atype))."\'; clones: ".
+	join(",",(keys %sv))."\n";
+    # 3 diff classes of clones:
+    # V = different version of clone in assembly
+    # O = clone in another specified set
+    # U = unknown (orphan?) clone
+    my $a2c=join(",",(keys %{$gsi_a2_clone{$gsi}}));
+    my $aoc=join(",",(keys %{$gsi_ao_clone{$gsi}}));
+    my $auc=join(",",(keys %{$gsi_au_clone{$gsi}}));
+    if($a2c){$a2c="V:$a2c";}
+    if($aoc){$a2c="O:$a2c";}
+    if($auc){$a2c="U:$a2c";}
+    print "  found on clones: $a2c $aoc $auc\n";
+    print "  ".join("\n  ",@{$excluded_gsi{$gsi}})."\n" if $opt_v;
   }
 
   print "wrote $n records to cache file $cache_file\n";
