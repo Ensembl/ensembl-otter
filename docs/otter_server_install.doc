@@ -1,0 +1,5 @@
+Otter : An interactive sequence annotation database
+
+Introduction
+
+Raw genome sequence (ATTCGATGCT etc) is by itself of limited use to biologists and bioinformaticians.  To become meaningful the genomic sequence needs to have extra information attached to it descibing the possible function and relationship of different regions.  This extra information is called annotation and 

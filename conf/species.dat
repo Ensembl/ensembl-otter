@@ -1,0 +1,29 @@
+[defaults]
+USER     root 
+PASS     
+HOST     ecs1c 
+PORT     3307
+DNA_USER root
+DNA_PORT 3307 
+DNA_PASS 
+DNA_HOST ecs1c 
+
+[human_chr14]
+DBNAME     otter_chr14
+#DNA_DBNAME michele_test_otter
+TYPE       GENOSCOPE 
+
+[human_chr22]
+DBNAME     otter_chr22
+#DNA_DBNAME otter_chr22
+TYPE       SANGER
+
+[human_chr20]
+DBNAME     otter_chr20
+#DNA_DBNAME otter_chr20
+TYPE       SANGER
+
+[human_chr6]
+DBNAME     otter_chr6
+#DNA_DBNAME otter_chr6
+TYPE       SANGER 

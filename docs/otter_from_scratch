@@ -1,0 +1,107 @@
+
+
+1)  Mysql installed and server running.
+
+    Need - username and password
+
+1a) Perl installed
+    Perl DBD and DBI for mysql installed
+
+2)  Web server running
+
+    su - root
+
+    /sw/sbin/httpd
+
+    Logs are in /sw/var/httpd
+    Conf is in /sw/etc/httpd
+
+    cgi-bin is in /sw/share/httpd/cgi-bin (look in httpd.conf)
+
+    setenv PERL5LIB
+    setenv OTTER_DIR
+
+    in httpd.conf add in the following lines :
+
+    ScriptAlias /perl/ "/Users/michele/cvs/otter/scripts/server"
+
+    <Directory "/Users/michele/cvs/otter/scripts/server">
+      AllowOverride None
+      Options None
+      PassEnv PERL5LIB
+      PassEnv OTTER_DIR
+      Order allow,deny
+      Allow from all
+    </Directory>
+
+    chmod 755 get_region
+    chmod 755 write_region
+
+    Edit the $OTTER_DIR/data/otter_config.dat so it points at the right
+    mysql database, username, hostname, password etc.
+
+    Try connecting to the server and look in the error logs for oddness.
+
+    http://localhost:80/cgi-bin/get_region?chr=CHR&chrstart=438000000&chrend=439000000&dataset=human&type=test_otter&seq=1
+
+    This should return some debug and some xml.
+
+
+3)  cvs checkout the perl code
+
+# Otter
+
+cvs -d :ext:adnah.sanger.ac.uk:/nfs/acari/michele/localcvs co otter
+
+# Ensembl
+
+cvs -d :ext:cvs.sanger.ac.uk:/nfs/ensembl/cvsroot co ensembl
+
+# Bioperl 0.7
+
+cvs -d :ext:bio.perl.org:/home/repository/bioperl co -r bioperl-07-ensembl-120 bioperl-live
+
+# Apollo installed
+
+cvs -d  etc
+
+
+4) Set up environment
+
+  PERL5LIB
+  CLASSPATH
+
+5) Load up the sql for the database
+
+   Load up the golden path
+
+   Load up the contigs/clones
+
+   Load up the dna (or configure to a remote node)
+
+   Edit the otter_config.dat in the otter/data directory
+
+6) Start the otter server
+
+8) Query for a region using the perl script
+
+9) Annotate in apollo
+
+10) Write out xml
+
+11) Write back to server
+
+
+--------------------------------------------------------
+
+Distribution notes :
+
+mysql distributions
+
+perl distributions
+
+bioperl/ensembl/otter distributions
+
+apollo distributions
+
+apache/mod-perl?

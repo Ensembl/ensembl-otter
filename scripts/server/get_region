@@ -1,0 +1,145 @@
+#!/usr/local/bin/perl
+
+use OtterDefs;
+use strict;
+
+use CGI;
+
+use Bio::Otter::DBSQL::DBAdaptor;
+use Bio::Otter::CloneLockBroker;
+use Bio::Otter::Converter;
+use Bio::Otter::Author;
+
+$| = 1;
+
+my $q = new CGI;
+print STDERR "\n\n************* Getting region ************\n\n";
+
+if ($ENV{SERVER_SOFTWARE} =~ /libwww-perl-daemon/) {
+  print STDERR "NOTE : Setting nph to 1\n";
+  $q->nph(1);
+}
+ 
+print $q->header('text/plain');
+
+my %params   = $q->Vars;
+
+if (!defined($OTTER_SPECIES->{$params{'dataset'}})) {
+  error_exit($q, "Unknown data set " . $params{'dataset'} . " in get_region\n");
+}
+
+my %defaults = %{$OTTER_SPECIES->{'defaults'}};
+my %dbinfo   = %{$OTTER_SPECIES->{$params{'dataset'}}};
+
+my $chr      = $params{chr}       || error_exit("No chromosome entered");
+my $chrstart = $params{chrstart}  || error_exit("No chromosome start coordinate entered");
+my $chrend   = $params{chrend}    || error_exit("No chromosome end coordinate entered");
+my $type     = $params{type}      || $dbinfo{TYPE} || $defaults{TYPE};
+
+my $odb;
+my $dnadb;
+
+
+if (defined($params{lock}) && (!defined($params{author}) || !defined($params{email}))) {
+  error_exit($q, "Need author and email to lock");
+}
+ 
+
+my $host = $dbinfo{HOST}   || $defaults{HOST},
+my $user = $dbinfo{USER}   || $defaults{USER},
+my $pass = $dbinfo{PASS}   || $defaults{PASS},
+my $port = $dbinfo{PORT}   || $defaults{PORT},
+my $dbname = $dbinfo{DBNAME};
+
+print STDERR "\nDatabase dbname : [$dbname] host : [$host] user : [$user] pass : [$pass] port : [$port]\n";
+
+my $dnahost = $dbinfo{DNA_HOST}    || $defaults{DNA_HOST},
+my $dnauser = $dbinfo{DNA_USER}    || $defaults{DNA_USER},
+my $dnapass = $dbinfo{DNA_PASS}    || $defaults{DNA_PASS},
+my $dnaport = $dbinfo{DNA_PORT}    || $defaults{DNA_PORT},
+my $dna_dbname = $dbinfo{DNA_DBNAME};
+  
+eval {
+  $odb = new Bio::Otter::DBSQL::DBAdaptor(-host => $host,
+                                          -user => $user,
+                                          -pass => $pass,
+                                          -port => $port,
+                                          -dbname => $dbname);
+};
+if ($@) {
+  error_exit($q, "Failed opening otter database [$@]");
+}
+
+print STDERR "Connected to database\n";
+
+if (defined($dbinfo{DNA_DBNAME})) {
+  eval {
+    $dnadb = new Bio::EnsEMBL::DBSQL::DBAdaptor(-host   => $dnahost,
+                                                -user   => $dnauser,
+                                                -pass   => $dnapass,
+                                                -port   => $dnaport,
+                                                -dbname => $dna_dbname);
+  };
+  if ($@) {
+    error_exit($q, "Failed opening dna database [$@]");
+  }
+  $odb->dnadb($dnadb);
+  
+  print STDERR "Connected to dna database\n";
+}
+
+
+$odb->assembly_type($type);
+
+print STDERR "Assembly type $type\n";
+
+my $sgp  = $odb->get_SliceAdaptor;
+my $aga  = $odb->get_AnnotatedGeneAdaptor;
+
+my $cb   = new Bio::Otter::CloneLockBroker($odb);
+
+print STDERR "\nGetting slice...";
+
+my $slice = $sgp->fetch_by_chr_start_end($chr,
+                                         $chrstart,
+                                         $chrend);
+print STDERR "done\n";
+
+print STDERR "Got slice [$chr] [$chrstart] [$chrend]\n";
+
+my $author = new Bio::Otter::Author(-name  => $params{author},
+                                    -email => $params{email});
+
+
+if (defined($params{lock}) && $params{lock} ne 'false') {  
+  print STDERR "\nLocking clones...";
+  
+  eval {
+    my @locks = $cb->lock_clones_by_slice($slice,$author);
+  }; 
+
+  if ($@) {  error_exit($q, "\nClones locked - exiting [$@]"); }
+}
+print STDERR "done\n";
+print STDERR "\nConverting slice to XML...";
+
+my $xmlstr = Bio::Otter::Converter::slice_to_XML($slice,$odb);
+print STDERR "done. Length of xml " . length($xmlstr) . "\n";
+
+print $xmlstr . "\n";
+
+##################################################################################
+
+sub error_exit {
+  my ($q,$reason) = @_;
+
+  print "<otter>\n";
+  print "  <response>\n";
+  print "    ERROR: $reason\n";
+  print "  </response>\n";
+  print "</otter>\n";
+
+  print STDERR "ERROR: $reason\n";
+  
+  exit;
+}

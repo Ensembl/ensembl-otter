@@ -1,0 +1,55 @@
+#!/usr/local/bin/perl
+#<sequencefragment>
+#  <id>AL035696.14.1.124034</id>
+#  <chromosome>6</chromosome>
+#  <assemblystart>131702</assemblystart>
+#  <assemblyend>253735</assemblyend>
+#  <assemblyori>1</assemblyori>
+#  <assemblyoffset>2001</assemblyoffset>
+#</sequencefragment>
+
+#chr14       415988          582668        5     F       AL512310.3          168774            2094      -
+#chr14       582669          719153        6     F       AL391156.3          136600             116      -
+#chr14       719154          875145        7     F       AL359218.4          156320             329      -
+
+my $chr = $ARGV[0];
+open (IN,"<$ARGV[1]");
+
+while (<IN>) {
+  chomp;
+  $_ =~ s/ //g;
+
+  next if (/^#/);
+
+  my @arr = split(/\t/,$_);
+ 
+  next if ($arr[4] eq "N");
+ 
+  my ($acc,$ver) = split(/\./,$arr[5]);
+  
+  my $start = $arr[6];
+  my $end   = $arr[7];
+  
+  if ($end < $start) {
+    my $tmp = $end;
+    $end = $start;
+    $start = $tmp;
+  }
+  
+  my $id = $acc . "." . $ver . "." . $start . "." . $end;
+  
+  my $ori = -1;
+  
+  if ($arr[8] eq "+") {
+     $ori = 1;
+  } 
+  
+  print "<sequencefragment>\n";
+  print "  <id>$id</id>\n";
+  print "  <chromosome>$chr</chromosome>\n";
+  print "  <assemblystart>" . $arr[1] . "</assemblystart>\n";
+  print "  <assemblyend>"   . $arr[2] . "</assemblyend>\n";
+  print "  <assemblyori>"   . $ori    . "</assemblyori>\n";
+  print "  <assemblyoffset>" . $start . "</assemblyoffset>\n";
+  print "<sequencefragment>\n";
+}

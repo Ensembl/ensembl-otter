@@ -1,0 +1,346 @@
+<sequencefragment>
+  <id>AB000878.1.1.33983</id>
+  <chromosome>CHR</chromosome>
+  <assemblystart>1</assemblystart>
+  <assemblyend>33983</assemblyend>
+  <assemblyori>1/assemblyori>
+</sequencefragment>
+<sequencefragment>
+  <id>AB000879.1.1.39436</id>
+  <chromosome>CHR</chromosome>
+  <assemblystart>33984</assemblystart>
+  <assemblyend>73419</assemblyend>
+  <assemblyori>1/assemblyori>
+</sequencefragment>
+<sequencefragment>
+  <id>AB000880.1.1.22973</id>
+  <chromosome>CHR</chromosome>
+  <assemblystart>73420</assemblystart>
+  <assemblyend>96392</assemblyend>
+  <assemblyori>1/assemblyori>
+</sequencefragment>
+<sequencefragment>
+  <id>AB014077.1.1.30452</id>
+  <chromosome>CHR</chromosome>
+  <assemblystart>96393</assemblystart>
+  <assemblyend>126844</assemblyend>
+  <assemblyori>1/assemblyori>
+</sequencefragment>
+<sequencefragment>
+  <id>AB014078.1.1.22738</id>
+  <chromosome>CHR</chromosome>
+  <assemblystart>126845</assemblystart>
+  <assemblyend>149582</assemblyend>
+  <assemblyori>1/assemblyori>
+</sequencefragment>
+<sequencefragment>
+  <id>AB014079.1.1.13976</id>
+  <chromosome>CHR</chromosome>
+  <assemblystart>149583</assemblystart>
+  <assemblyend>163558</assemblyend>
+  <assemblyori>1/assemblyori>
+</sequencefragment>
+<sequencefragment>
+  <id>AB014080.1.1.32114</id>
+  <chromosome>CHR</chromosome>
+  <assemblystart>163559</assemblystart>
+  <assemblyend>195672</assemblyend>
+  <assemblyori>1/assemblyori>
+</sequencefragment>
+<sequencefragment>
+  <id>AB014081.1.1.13829</id>
+  <chromosome>CHR</chromosome>
+  <assemblystart>195673</assemblystart>
+  <assemblyend>209501</assemblyend>
+  <assemblyori>1/assemblyori>
+</sequencefragment>
+<sequencefragment>
+  <id>AB014082.1.1.29591</id>
+  <chromosome>CHR</chromosome>
+  <assemblystart>209502</assemblystart>
+  <assemblyend>239092</assemblyend>
+  <assemblyori>1/assemblyori>
+</sequencefragment>
+<sequencefragment>
+  <id>AB014083.1.1.22715</id>
+  <chromosome>CHR</chromosome>
+  <assemblystart>239093</assemblystart>
+  <assemblyend>261807</assemblyend>
+  <assemblyori>1/assemblyori>
+</sequencefragment>
+<sequencefragment>
+  <id>AB014084.1.1.19844</id>
+  <chromosome>CHR</chromosome>
+  <assemblystart>261808</assemblystart>
+  <assemblyend>281651</assemblyend>
+  <assemblyori>1/assemblyori>
+</sequencefragment>
+<sequencefragment>
+  <id>AB014085.1.1.38093</id>
+  <chromosome>CHR</chromosome>
+  <assemblystart>281652</assemblystart>
+  <assemblyend>319744</assemblyend>
+  <assemblyori>1/assemblyori>
+</sequencefragment>
+<sequencefragment>
+  <id>AB014086.1.1.28771</id>
+  <chromosome>CHR</chromosome>
+  <assemblystart>319745</assemblystart>
+  <assemblyend>348515</assemblyend>
+  <assemblyori>1/assemblyori>
+</sequencefragment>
+<sequencefragment>
+  <id>AB014087.1.1.27356</id>
+  <chromosome>CHR</chromosome>
+  <assemblystart>348516</assemblystart>
+  <assemblyend>375871</assemblyend>
+  <assemblyori>1/assemblyori>
+</sequencefragment>
+<sequencefragment>
+  <id>AB014088.1.1.32797</id>
+  <chromosome>CHR</chromosome>
+  <assemblystart>375872</assemblystart>
+  <assemblyend>408668</assemblyend>
+  <assemblyori>1/assemblyori>
+</sequencefragment>
+<sequencefragment>
+  <id>AB023048.1.1.192650</id>
+  <chromosome>CHR</chromosome>
+  <assemblystart>408669</assemblystart>
+  <assemblyend>601318</assemblyend>
+  <assemblyori>1/assemblyori>
+</sequencefragment>
+<sequencefragment>
+  <id>AB023049.1.1.123554</id>
+  <chromosome>CHR</chromosome>
+  <assemblystart>601319</assemblystart>
+  <assemblyend>724872</assemblyend>
+  <assemblyori>1/assemblyori>
+</sequencefragment>
+<sequencefragment>
+  <id>AB023050.1.1.112018</id>
+  <chromosome>CHR</chromosome>
+  <assemblystart>724873</assemblystart>
+  <assemblyend>836890</assemblyend>
+  <assemblyori>1/assemblyori>
+</sequencefragment>
+<sequencefragment>
+  <id>AB023051.1.1.90244</id>
+  <chromosome>CHR</chromosome>
+  <assemblystart>836891</assemblystart>
+  <assemblyend>927134</assemblyend>
+  <assemblyori>1/assemblyori>
+</sequencefragment>
+<sequencefragment>
+  <id>AB023052.1.1.28719</id>
+  <chromosome>CHR</chromosome>
+  <assemblystart>927135</assemblystart>
+  <assemblyend>955853</assemblyend>
+  <assemblyori>1/assemblyori>
+</sequencefragment>
+<sequencefragment>
+  <id>AB023053.1.1.14868</id>
+  <chromosome>CHR</chromosome>
+  <assemblystart>955854</assemblystart>
+  <assemblyend>970721</assemblyend>
+  <assemblyori>1/assemblyori>
+</sequencefragment>
+<sequencefragment>
+  <id>AB023055.1.1.162383</id>
+  <chromosome>CHR</chromosome>
+  <assemblystart>970722</assemblystart>
+  <assemblyend>1000000</assemblyend>
+  <assemblyori>1/assemblyori>
+</sequencefragment>
+
+<locus>
+ <locus_type>gene</locus_type>
+ <stable_id>OTTG00000000001</stable_id>
+ <name>ABCF1</name>
+ <synonym>pog1</synonym>
+ <synonym>pog2</synonym>
+ <synonym>pog3</synonym>
+ <author>michele</author>
+ <author_email>michele@sanger.ac.uk</author_email>
+ <transcript>
+  <stable_id>Em:AB023052.1.mRNA</stable_id>
+  <cds_start_not_found>0</cds_start_not_found>
+  <cds_end_not_found>0</cds_end_not_found>
+  <mRNA_start_not_found>0</mRNA_start_not_found>
+  <mRNA_end_not_found>0</mRNA_end_not_found>
+  <transcript_class>supported_mRNA</transcript_class>
+  <name>Em:AB023052.1.mRNA</name>
+  <evidence_set>
+  </evidence_set>
+  <exon_set>
+   <exon>
+    <stable_id>ABCF1.20</stable_id>
+    <start>927245</start>
+    <end>928023</end>
+    <strand>-1</strand>
+    <frame>2</frame>
+   </exon>
+   <exon>
+    <stable_id>ABCF1.2</stable_id>
+    <start>928180</start>
+    <end>928252</end>
+    <strand>-1</strand>
+    <frame>0</frame>
+   </exon>
+   <exon>
+    <stable_id>ABCF1.24</stable_id>
+    <start>928345</start>
+    <end>928409</end>
+    <strand>-1</strand>
+    <frame>2</frame>
+   </exon>
+   <exon>
+    <stable_id>ABCF1.12</stable_id>
+    <start>928584</start>
+    <end>928752</end>
+    <strand>-1</strand>
+    <frame>0</frame>
+   </exon>
+   <exon>
+    <stable_id>ABCF1.18</stable_id>
+    <start>928838</start>
+    <end>928870</end>
+    <strand>-1</strand>
+    <frame>0</frame>
+   </exon>
+   <exon>
+    <stable_id>ABCF1.21</stable_id>
+    <start>931840</start>
+    <end>931910</end>
+    <strand>-1</strand>
+    <frame>2</frame>
+   </exon>
+   <exon>
+    <stable_id>ABCF1.7</stable_id>
+    <start>932003</start>
+    <end>932077</end>
+    <strand>-1</strand>
+    <frame>2</frame>
+   </exon>
+   <exon>
+    <stable_id>ABCF1.16</stable_id>
+    <start>932246</start>
+    <end>932417</end>
+    <strand>-1</strand>
+    <frame>0</frame>
+   </exon>
+   <exon>
+    <stable_id>ABCF1.8</stable_id>
+    <start>932560</start>
+    <end>932672</end>
+    <strand>-1</strand>
+    <frame>2</frame>
+   </exon>
+   <exon>
+    <stable_id>ABCF1.3</stable_id>
+    <start>932869</start>
+    <end>932993</end>
+    <strand>-1</strand>
+    <frame>1</frame>
+   </exon>
+   <exon>
+    <stable_id>ABCF1.10</stable_id>
+    <start>933208</start>
+    <end>933291</end>
+    <strand>-1</strand>
+    <frame>1</frame>
+   </exon>
+   <exon>
+    <stable_id>ABCF1.1</stable_id>
+    <start>933985</start>
+    <end>934133</end>
+    <strand>-1</strand>
+    <frame>0</frame>
+   </exon>
+   <exon>
+    <stable_id>ABCF1.13</stable_id>
+    <start>934220</start>
+    <end>934359</end>
+    <strand>-1</strand>
+    <frame>2</frame>
+   </exon>
+   <exon>
+    <stable_id>ABCF1.15</stable_id>
+    <start>934661</start>
+    <end>934746</end>
+    <strand>-1</strand>
+    <frame>1</frame>
+   </exon>
+   <exon>
+    <stable_id>ABCF1.14</stable_id>
+    <start>934843</start>
+    <end>934943</end>
+    <strand>-1</strand>
+    <frame>0</frame>
+   </exon>
+   <exon>
+    <stable_id>ABCF1.6</stable_id>
+    <start>935363</start>
+    <end>935485</end>
+    <strand>-1</strand>
+    <frame>0</frame>
+   </exon>
+   <exon>
+    <stable_id>ABCF1.19</stable_id>
+    <start>938032</start>
+    <end>938145</end>
+    <strand>-1</strand>
+    <frame>0</frame>
+   </exon>
+   <exon>
+    <stable_id>ABCF1.17</stable_id>
+    <start>938545</start>
+    <end>938619</end>
+    <strand>-1</strand>
+    <frame>0</frame>
+   </exon>
+   <exon>
+    <stable_id>ABCF1.22</stable_id>
+    <start>939973</start>
+    <end>940080</end>
+    <strand>-1</strand>
+    <frame>0</frame>
+   </exon>
+   <exon>
+    <stable_id>ABCF1.11</stable_id>
+    <start>940165</start>
+    <end>940202</end>
+    <strand>-1</strand>
+    <frame>2</frame>
+   </exon>
+   <exon>
+    <stable_id>ABCF1.23</stable_id>
+    <start>940348</start>
+    <end>940474</end>
+    <strand>-1</strand>
+    <frame>0</frame>
+   </exon>
+   <exon>
+    <stable_id>ABCF1.5</stable_id>
+    <start>940637</start>
+    <end>940732</end>
+    <strand>-1</strand>
+    <frame>0</frame>
+   </exon>
+   <exon>
+    <stable_id>ABCF1.4</stable_id>
+    <start>941095</start>
+    <end>941141</end>
+    <strand>-1</strand>
+    <frame>2</frame>
+   </exon>
+   <exon>
+    <stable_id>ABCF1.9</stable_id>
+    <start>946987</start>
+    <end>947154</end>
+    <strand>-1</strand>
+   </exon>
+  </exon_set>
+ </transcript>
+</locus>
+

@@ -1,0 +1,13 @@
+[defaults]
+user root
+pass ''
+host localhost
+port 3306
+dna_user root
+dna_port 3306
+dna_pass ''
+dna_host localhost
+
+[human]
+dbname     test_otter
+dna_dbname test_otter

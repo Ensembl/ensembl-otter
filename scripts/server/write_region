@@ -1,0 +1,324 @@
+#!/usr/local/bin/perl
+
+use OtterDefs;
+use strict;
+use CGI;
+
+use Bio::Otter::DBSQL::DBAdaptor;
+use Bio::Otter::AnnotationBroker;
+use Bio::Otter::CloneLockBroker;
+use Bio::Otter::Converter;
+use Bio::Otter::Author;
+
+$| = 1;
+
+print STDERR "\n\n******* Starting to write region *********\n\n";
+
+my $q = new CGI;
+
+if ($ENV{SERVER_SOFTWARE} =~ /libwww-perl-daemon/) {
+  print STDERR "NOTE NOTE NOTE Setting nph to 1\n";
+  $q->nph(1);
+}
+
+my %params = $q->Vars;
+
+my $dataset = $params{dataset} || error_exit($q,"No dataset type entered. Can't write region");
+my $data    = $params{data}    || error_exit($q,"No xml data entered. Can't write region");
+my $author  = $params{author}  || error_exit($q,"Author must defined to write a region");
+my $email   = $params{email}   || error_exit($q,"Email must defined to write a region");
+
+print STDERR "Length of data " . length($data) . "\n";
+
+if (!defined($OTTER_SPECIES->{$params{'dataset'}})) {
+  print STDERR "Unknown data set\n";
+  error_exit($q, "Unknown data set " . $params{'dataset'} . " in write_region\n");
+}
+
+my %dbinfo   = %{$OTTER_SPECIES->{$params{'dataset'}}};
+my %defaults = %{$OTTER_SPECIES->{'defaults'}};
+
+my $odb;
+my $dnadb;
+
+my $author = Bio::Otter::Author->new(-name  => $params{author},
+                                     -email => $params{email});
+
+my $host = $dbinfo{HOST}   || $defaults{HOST},
+my $user = $dbinfo{USER}   || $defaults{USER},
+my $pass = $dbinfo{PASS}   || $defaults{PASS},
+my $port = $dbinfo{PORT}   || $defaults{PORT},
+my $dbname = $dbinfo{DBNAME};
+
+print STDERR "\nDatabase [$dbname][$host][$user][$pass][$port]\n";
+
+my $dnahost = $dbinfo{DNA_HOST}    || $defaults{DNA_HOST},
+my $dnauser = $dbinfo{DNA_USER}    || $defaults{DNA_USER},
+my $dnapass = $dbinfo{DNA_PASS}    || $defaults{DNA_PASS},
+my $dnaport = $dbinfo{DNA_PORT}    || $defaults{DNA_PORT},
+my $dna_dbname = $dbinfo{DNA_DBNAME};
+  
+eval {
+  $odb = new Bio::Otter::DBSQL::DBAdaptor(-host => $host,
+                                          -user => $user,
+                                          -pass => $pass,
+                                          -port => $port,
+                                          -dbname => $dbname);
+};
+if ($@) {
+  error_exit($q, "Failed opening otter database [$@]");
+}
+
+print STDERR "Connected to database\n";
+
+if (defined($dbinfo{DNA_DBNAME})) {
+  eval {
+    $dnadb = new Bio::EnsEMBL::DBSQL::DBAdaptor(-host   => $dnahost,
+                                                -user   => $dnauser,
+                                                -pass   => $dnapass,
+                                                -port   => $dnaport,
+                                                -dbname => $dna_dbname);
+  };
+  if ($@) {
+    error_exit($q, "Failed opening dna database [$@]");
+  }
+  $odb->dnadb($dnadb);
+  
+  print STDERR "Connected to dna database\n";
+}
+my $tmp_xmlfile = get_tmp_file("/tmp","otter","xml");
+
+print STDERR "\nWriting xml to tmp file [" . $tmp_xmlfile . "]\n\n";
+
+open FPOUT,">$tmp_xmlfile" or error_exit($q, "Failed opening temp file for write");
+
+print FPOUT $params{'data'};
+close FPOUT;
+
+open(XML,"<$tmp_xmlfile");
+my $fh = \*XML;
+
+my @genes;
+my $chrname;
+my $chrstart;
+my $chrend;
+my $genes;
+
+my $sa  = $odb->get_SliceAdaptor;
+
+print STDERR "\nConverting xml to otter...\n";
+
+eval {
+  ($genes,$chrname,$chrstart,$chrend) = Bio::Otter::Converter::XML_to_otter($fh,$odb);
+};
+if ($@) {
+  print STDERR "Failed converting XML [$genes,$chrname,$chrstart,$chrend][$@]\n";
+  error_exit($q, "Failed converting XML to otter [$@]");
+}
+print STDERR "done\n";
+
+@genes = @$genes;
+print STDERR "\nFound " . scalar(@genes) . " genes on region $chrname $chrstart-$chrend\n";
+
+ my $sida = $odb->get_StableIdAdaptor();
+ foreach my $gene (@genes) {
+   if (!defined($gene->stable_id) || $gene->stable_id eq "") {
+     $gene->stable_id($sida->fetch_new_gene_stable_id);
+   }
+   foreach my $trans (@{$gene->get_all_Transcripts}) {
+     if (!defined($trans->stable_id) || $trans->stable_id eq "") {
+       $trans->stable_id($sida->fetch_new_transcript_stable_id);
+     }
+     foreach my $exon (@{$trans->get_all_Exons}) {
+       if (!defined($exon->stable_id) || $exon->stable_id eq "") {
+         $exon->stable_id($sida->fetch_new_exon_stable_id);
+       }
+     }
+   }
+ }
+
+
+
+my $ab = new Bio::Otter::AnnotationBroker($odb);
+my $oaga = $odb->get_AnnotatedGeneAdaptor();
+
+my $slice;
+
+print STDERR "\nFetching slice $chrname $chrname $chrend...";
+
+eval {
+  $slice = $sa->fetch_by_chr_start_end($chrname,$chrstart,$chrend);
+};
+if ($@) {
+  print STDERR "\nFailed fetching slice [$@]\n";
+  error_exit($q, "Failed fetching slice [$@]");
+}
+
+print STDERR "done\n";
+
+my $cb   = new Bio::Otter::CloneLockBroker($odb);
+
+print STDERR "Checking region is locked...\n";
+
+eval {
+  $cb->check_locks_exist_by_slice($slice,$author);
+};
+if ($@) {
+  print STDERR "\nFailed checking locks [$@]\n";
+  error_exit($q, "Failed checking locks [$@]");
+}
+print STDERR "done\n";
+
+my $anal;
+
+eval {
+  $anal = $odb->get_AnalysisAdaptor()->fetch_by_logic_name('otter');
+};
+
+if ($@) {
+  print STDERR "Failed fetching analysis [$@]\n";
+  error_exit($q, "Failed fetching analysis [$@]");
+}
+if( !defined($anal)) {
+  error_exit($q, "No analysis object associated with otter");
+}
+
+my $dbgenes;
+
+print STDERR "\nFetching database genes for comparison...";
+eval {
+  $dbgenes = $oaga->fetch_by_Slice($slice);
+};
+if ($@) {
+  print STDERR "Failed fetching genes [$@]\n";
+  error_exit($q, "Failed fetching genes [$@]");
+}
+
+print STDERR "done\n";
+
+foreach my $gene (@genes) {
+  $gene->analysis($anal);
+  $gene->type('otter');
+}
+
+
+# These lines force loads from the database to stop attempted lazy
+# loading during the write
+eval {
+  foreach my $gene (@$dbgenes) {
+    $gene->stable_id;
+    my $transcripts = $gene->get_all_Transcripts;
+    foreach my $tran (@$transcripts) {
+      $tran->translation;
+      $tran->stable_id;
+      my $exons =  $tran->get_all_Exons;
+      foreach my $exon (@$exons) {
+        $exon->stable_id;
+      }
+    }
+  }
+};
+if ($@) {
+  print STDERR "Failed fully loading genes before write [$@]\n";
+  error_exit($q, "Failed fully loading genes before write [$@]");
+}
+
+
+my @events;
+print STDERR "\nComparing annotations " . scalar(@$dbgenes) . " " . scalar(@genes) . "...";
+
+eval {
+  @events = $ab->compare_annotations($dbgenes,\@genes,$slice);
+};
+if ($@) {
+  print STDERR "Failed comparing annotations [$@]\n";
+  error_exit($q, "Failed comparing annotations [$@]");
+}
+print STDERR "done\n";
+
+# the magic happens!
+
+my $outputstr;
+eval {
+  $odb->begin_work();
+
+  print STDERR "\nFound " . scalar(@events) . " changed annotations\n";
+  
+  foreach my $event ( @events ) {
+    $outputstr .= $event->to_string."\n";
+    print STDERR $event->to_string,"\n";
+
+    my $gene;
+    if ($event->type eq 'deleted') {
+      $gene = $event->old_gene;
+    } else {
+      $gene = $event->new_gene;
+    }
+    $oaga->attach_to_Slice($gene,$slice);
+    print STDERR "\nAttaching gene to slice " . $gene->stable_id . " " . $gene->version. "\n";
+    $oaga->store($gene);
+    print STDERR "Stored gene\n";
+  }
+  $odb->commit();
+};
+
+if ($@) {
+  error_exit($q, "Failed writing annotations [$@]");
+}
+
+unlink($tmp_xmlfile);
+
+print STDERR "About to write success response\n";
+print $q->header();
+print("<otter>\n");
+print("  <response>\n");
+print($outputstr);
+print("  </response>\n");
+print("</otter>\n");
+
+print STDERR "\nUnlocking clones...";
+
+if (defined($params{unlock})) {
+  $cb->remove_by_slice($slice,$author);
+}
+
+print STDERR "done\n";
+#####################################################################################
+
+sub error_exit {
+  my ($q,$reason) = @_;
+
+  print $q->header();
+
+  print "<otter>\n";
+  print "  <response>\n";
+  print "    ERROR: $reason\n";
+  print "  </response>\n";
+  print "</otter>\n";
+
+  print STDERR "ERROR: $reason\n";
+
+  exit(1);
+}
+
+
+sub get_tmp_file {
+  my ($dir,$stub,$ext) = @_;
+
+
+  if ($dir !~ /\/$/) {
+    $dir = $dir . "/";
+  }
+
+  # This is not good
+
+  my $num = int(rand(10000));
+  my $file = $dir . $stub . "." . $num . "." . $ext;
+
+  while (-e $file) {
+    $num = int(rand(10000));
+    $file = $stub . "." . $num . "." . $ext;
+  }
+
+  return $file;
+}

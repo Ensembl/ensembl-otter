@@ -1,0 +1,58 @@
+#!/usr/local/bin/perl
+
+use strict;
+
+use CGI;
+
+use Bio::Otter::DBSQL::DBAdaptor;
+use Bio::Otter::CloneLockBroker;
+use Bio::Otter::Converter;
+use Bio::Otter::Author;
+use OtterDefs;
+
+$| = 1;
+
+my $q = new CGI;
+
+my %params = $q->Vars;
+ 
+if ($ENV{SERVER_SOFTWARE} =~ /libwww-perl-daemon/) {
+  print STDERR "NOTE NOTE NOTE Setting nph to 1\n";
+  $q->nph(1);
+}
+
+print $q->header('text/plain');
+
+print "Datasets\n\n";
+foreach my $dataset (keys %$OTTER_SPECIES) {
+  next if ($dataset =~ /defaults/);
+  print "$dataset\n";
+}
+
+if (defined($params{details})) {
+  print "\nDetails\n";
+  foreach my $dataset (keys %$OTTER_SPECIES) {
+    next if ($dataset =~ /defaults/);
+    print "\n$dataset\n";
+    foreach my $key (keys %{$OTTER_SPECIES->{$dataset}}) {
+      print " $key " . $OTTER_SPECIES->{$dataset}->{$key} . "\n";
+    }
+  }
+}
+
+
+#End main
+
+sub error_exit {
+  my ($q,$reason) = @_;
+
+  print "<otter>\n";
+  print "  <response>\n";
+  print "    ERROR: $reason\n";
+  print "  </response>\n";
+  print "</otter>\n";
+
+  print STDERR "ERROR: $reason\n";
+  
+  exit;
+}

@@ -1,0 +1,629 @@
+
+Annotation Exchange Format
+--------------------------
+
+Motivation
+
+When multiple centres start annotating the human genome we will need an agreed upon format to exchange data between ourselves.   Commonly used formats (gff,DAS,gtf), although extremely useful, are only really designed to transfer gene structures and are not easily extended to include all the extra textual information that annotators provide.  
+
+XML is a good solution for this kind of structured textural data.  It is well defined,  easily extended if need be and relatively easily parsed. 
+
+GAME xml - has been used.  Why don't we - simplify it.  Has all the GAME information in a simpler format.
+
+Description of stored annotations
+---------------------------------
+
+We are proposing an xml format to store the following information 
+
+ - The chromosomal region that is being transferred.  As we are working with a clone based assembly this contains information on which clone accessions make up this region and how they are joined together (the golden path information if you will).  Thus checks can be made that the golden path in the xml is *exactly* the same as the golden path in the database being written to, avoiding many tears.
+
+ - The dna.  This is *optional* as it will be quite large and most centres should have the dna in house anyway.  But it's there as I suspect it will be quite useful for small, one off, analyses.
+
+ - The gene annotation.  We have followed the annotation information provided by the Sanger annotators and information from the Hawk consortium as well as the apollo (drosophila) annotation model.   
+
+Genes contain a group of transcripts and transcripts contain a group of exons so we have three levels of objects we can annotate
+
+Gene annotations :
+  
+   Author    - name and email (affiliation?) 
+   Name      - official HUGO name for the gene
+   Stable_id - a unique database identifier (shit! stable ids - gah!)
+   Synonym   - alternative names for the gene
+   Remark    - Text comment (can be multiple)
+
+Versions?
+
+These are quite general annotations.  Most of the detailed annotation occurs in the transcripts and the exons.
+
+Transcript annotations :
+
+   Name      - Name for the transcript.  Pretty much up to the annotator
+   Stable_id - Unique database identifier
+   Remark    - Text comment (can be multiple)
+
+These are general annotations (similar to the gene annotations).  Transcripts also have extra information describing its completeness (or otherwise) arise from the annotators detailed evaluation of the exon structure
+
+  cds_start_not_found   0 or 1
+  cds_end_not_found     0 or 1
+  mRNA_start_not_found  0 or 1
+  mRNA_start_not_found  0 or 1
+  translation_start     cdna coordinate of the start of translation
+  translation_end       cdna coordinate of the end of translation
+  transcript_class      class of gene (Known, novel CDS, pseudogene etc)
+
+As most annotations will arise from an alignment of a known or similar protein or cdna sequence each transcript has attached a set of evidence identifiers.  These identifiers are accessions (and versions?) and also have a type associated with them (EST,PROTEIN,CDNA)
+
+ evidence           name and type
+
+Finally of course we need to have the exon coordinates for each transcript.  The information provided about exons is as follows
+
+  stable_id    - database identifier
+  start        - start coordinate (in *chromosomal* coordinates)
+  end          - end coordinate (in *chromosomal* coordinates)
+  strand       - 1/-1
+  phase        - 0,1,2 (0 - splits between codons,1 - splits at the first base, 2 = splits at the second base)
+  end_phase    - 0,1,2
+
+
+
+Detailed description of the xml
+-------------------------------
+
+1. To signify the start of an annotation region
+
+<otter>
+
+This is needed to start off all annotation documents
+
+1a. Organism?
+
+ <sequenceset>
+   <author>michele</author>
+   <author_email>michele@sanger.ac.uk</author_email>
+
+2. Chromosomal region tags
+
+Next the chromosomal region has to be defined complete with golden path information.
+
+   <sequencefragment>
+
+      <name>??????</name>
+      <remark>?????</remark>
+      <chromosome>1</chromosome>
+      <id>AC003660</id>
+      <version>4</version>
+      <assemblystart>400232</assemblystart>
+      <assemblyend>600542</assemblystart> 
+      <assemblyori>1</assemblyori>
+      <assemblyoffset>100</assemblyoffset>
+
+   </sequencefragment>
+
+   <sequencefragment>
+
+      <name>dJ301K4</name>
+      <remark>Contains SCL gene</remark>
+      <chromosome>1</chromosome>
+      <id>AC003661</id>
+      <version>4</version>
+      <assemblystart>600643</assemblystart>
+      <assemblyend>75612</assemblystart> 
+      <assemblyori>-1</assemblyori>
+      <assemblyoffset>101</assemblyoffset>
+
+  </sequencefragment>
+
+Here we have a small golden path with two accessions (sequencefragments).  Each different element of the golden path has a separate <sequencefragment> set of tags.
+
+ <sequencefragment>      # Start of accession coordinate definition
+
+   <name>dJ302K4</name>  # Name of the clone (text)
+   <remark>Contains SCL gene </remark>  # Text remark per clone entered by the annotators
+   <chromosome>1</chomosome>  # Name of the chromosome (Text)
+   <id>AC003661</id>     # Embl/genbank accession number of the clone
+   <version>4</version>  # Embl/genbank versio of the clone
+   <assemblystart>       # Where in the chromosomal region this accession starts
+   <assemblyend>         # Where in the chromosomal region this accession ends
+   <assemblyori>         # 1 accession is forward in the region.
+                         # -1 accession is reversed in this region
+   <assemblyoffset>      # Where in the *clone* the dna starts from (i.e. a value of 101 means that only bases from position 101 in the clone are taken for the golden path and the first 100 bases are missed)
+
+ </sequencefragment>     # Finished info for this accession
+
+
+3. Dna
+
+This is an optional tag as the information in the <sequencefragment> tags is enough to define the dna but we can see situations where transferring the dna will be necessary.
+
+Example :
+
+<dna>
+AAAGGACTAGTACGGACTGAC
+AGGCGAGACTAGCGACTAGGCTA
+GACTAGCGACACTAGCGACGTA
+</dna>
+
+All the dna characters are within the <dna>..</dna> tags.  Newlines are ignored.
+
+
+4.  Genes/Transcripts/Exons
+
+As described in the first section all the gene structure information is contained within the transcripts.  In the gene section only text information is stored.
+
+4.1 Genes
+
+Example
+
+ <gene>
+   <stable_id>OTTG00000000001</stable_id>
+   <name>SCL</name>
+   <remark>Some sensible remark here</remark>
+   <synonym>scl</synonym>
+   <synonym>scl-1</synonym>
+   <author>michele</author>
+   <author_email>michele@sanger.ac.uk</author>
+
+
+<gene>            Needed to say - here comes a gene annotation
+<stable_id>       Stable identifier for a gene.   These are generated automatically when a new gene is greated.  When a gene is reannotated the version is incremented.  This can be left blank for a new gene.
+<name>            Official HUGO name for a gene.  Can be left blank or default to the stable id.
+<synonym>         Alternative name for the gene.  Could be a swissprot id or refseq id or an alternative gene name.
+<author>          Name of the author who last edited the gene
+<author>email>    Email of the author who last edited the gene
+
+4.2 Transcripts
+
+Like genes transcripts contain textual information.  They also contain inforamtion about the completeness of the transcript.
+
+Example
+   <transcript>
+      <stable_id>OTTT0000000432</stable_id>
+      <name>dJ30241.1</name>
+      <remark>SCL gene.  Isoform 3.</remark>
+      <cds_start_not_found>0</cds_start_not_found>
+      <cds_end_not_found>1</cds_end_not_found>
+      <mRNA_start_not_found>1</mRNA_start_not_found>
+      <mRNA_end_not_found>1</mRNA_end_not_found>
+      <translation_start>312</translation_start>
+      <translation_end>1045</translation_end>
+      <transcript_class>Novel CDS</transcript_class>
+
+<transcript> Compulsory - says here comes a transcript
+<stable_id>  Automatically generated database identifier.  New transcripts can leave this blank and it will be filled in automatically.  Reannotated transcripts will keep the same stable id and increase their versions.
+<name>       Transcript name - entered by the annotator.  Can derived from the clone or the gene name.  
+<remark>     Text remark entered by the annotator.  Can have multiple remark lines.
+<cds_start_not_found>  1 =  The start of the transcript's CDS been identified.  0 = no start of translation has been found - partial transcript.
+<cds_end_not_found>    1 = The end of translation has been found. 0 - no end of translation has been found and therefore is a partial transcript
+<mRNA_start_not_found> 1 = The start of transcription has been found. 0 = no start of transcription found and therefore is a partial transcript
+<mRNA_end_not_found>   1 = The end of transcript has been found.  0 = no end of transcript found and is therefor a partial transcript.
+<translation_start>    The start of translation (in *chromosomal* coordinates)
+<translation_end>      The end of translation (in *chromosomla* coordinates)
+<transcript_class>     What type of transcript this is.  Commonly used classes are KNOWN, NOVEL_CDS, NOVEL_MRNA, PUTATIVE, PSEUDOGENE.
+
+4.3 Transcript evidence
+
+Each transcript has a set of evidence tags associated with it.  These specify the accessions of the sequences used to build up the transcript.
+
+Example : 
+
+<evidence_set>
+
+  <evidence>
+    <name>X98301</name>
+    <type>EST</type>
+  </evidence>
+
+  <evidence>
+     <name>BI549854</name>
+     <type>EST</type>
+  </evidence>
+
+  <evidence>
+     <name>AK024828</name>
+     <type>cDNA</type>
+  </evidence>
+
+  <evidence>
+     <name>EPO_HUMAN</name>
+     <type>Protein</type>
+  </evidence>
+
+</evidence_set>
+
+Here we have 4 pieces of evidence for a transcript.  Each piece of evidence is within its own <evidence>...</evidence> tags.
+
+<evidence_set>   Signifies the start of a set of trasncript evidence ids
+
+  <evidence>     Signifies the start of one peice of evidence
+    <name>       The accessio of the sequence that makes up this evidence
+    <type>       The type of evidence.  Commonly used types are EST, cDNA, Protein
+  </evidence>    the end of this piece of evidence
+</evidence_set>  The end ot the set of evidence
+
+4.4 The Exons
+
+Finally!  We get to describe the exon structure of a transcript.  This peice of the xml describes each exon, its coordinates and phase.
+
+Example
+
+<exon_set>
+
+  <exon>
+    <stable_id>OTTE0000034782</stable_id>
+    <start>4080</start>
+    <end>4197</end>
+    <strand>-1</strand>
+    <phase>0</phase>
+    <end_phase>2</end_phase>
+  </exon>
+
+   <exon>
+    <stable_id></stable_id>
+    <start>5058</start>
+    <end>5149</end>
+    <strand>-1</strand>
+    <phase>1</phase>
+    <end_phase>0</end_phase>
+   </exon> 
+</exon_set>
+
+Here we have the exon structure for a transcript.  It contains 2 exons, both on the reverse strand.  One has already been given a stable_id.  One has no stable_id meaning it is new and will be given one when stored in the database.
+
+<exon_set>     Signifies the start of a set of exons.
+<exon>         Signifies the start of a new exon
+<stable_id>    The automatically generated database stable id for an exon
+<start>        The start of the exon in *chromosomal* coords
+<end>          The end of the exon in *chromosomal* coords
+<strand>       1 or -1 (forward or reverse)
+<phase>        0,1,2  0 = intron occurst between codons
+                      1 = intron starts after the first base in the codon
+                      2 = intron starts after the second base in the codon
+<end_phase>    Needed for completeness.  0,1,2 and defined as for <phase>
+</exon>        End of one exon.
+</exon_set>    End of a set of exons
+
+4.5 Finishing up a transcript
+
+After all remarks, evidence and exons have been described we can finish our transcript using the following tag.
+
+</transcript>
+
+If there are more transcripts in the gene a new one can be started using
+<transcript>
+
+4.6 Finishing up a gene
+
+After describing all our transcripts in a gene we can finish off our gene by using the tag
+
+</gene>  
+
+If we have more genes to describe in this region a new one be started using the <gene> tag.
+
+5. Finishing the document
+
+</sequenceset>
+
+This tag says we've finished describing all the annotations on this region.
+
+</otter>
+
+Finally we sign off completely with this tag.
+
+
+Appendix A
+----------
+
+Example full xml taken from the Sanger Institute's internal ace database:
+
+Need assembly info here
+<gene>
+ <stable_id>dJ72E17.1</stable_id>
+ <name></name>
+ <author>michele</author>
+ <author_email>michele@sanger.ac.uk</author_email>
+ <transcript>
+  <stable_id>bA420L9.1.1</stable_id>
+  <remark>continues as dJ72E17.1.1 in Em:AL033523</remark>
+  <remark>novel protein, variant 1</remark>
+  <cds_start_not_found>0</cds_start_not_found>
+  <cds_end_not_found>1</cds_end_not_found>
+  <mRNA_start_not_found></mRNA_start_not_found>
+  <mRNA_end_not_found></mRNA_end_not_found>
+  <transcript_class>supported</transcript_class>
+  <name>bA420L9.1.1</name>
+  <evidence_set>
+    <evidence>
+      <name>BE159143</name>
+      <type>EST</type>
+    </evidence>
+    <evidence>
+      <name>BI686272</name>
+      <type>EST</type>
+    </evidence>
+    <evidence>
+      <name>BG518575</name>
+      <type>EST</type>
+    </evidence>
+    <evidence>
+      <name>BG700513</name>
+      <type>EST</type>
+    </evidence>
+    <evidence>
+      <name>AL533952</name>
+      <type>EST</type>
+    </evidence>
+    <evidence>
+      <name>BI549854</name>
+      <type>EST</type>
+    </evidence>
+    <evidence>
+      <name>AK024828.1</name>
+      <type>cDNA</type>
+    </evidence>
+    <evidence>
+      <name>BC018520.1</name>
+      <type>cDNA</type>
+    </evidence>
+  </evidence_set>
+  <translation_start>18532</translation_start>
+  <translation_end>4080</translation_end>
+  <exon_set>
+   <exon>
+    <stable_id></stable_id>
+    <start>4080</start>
+    <end>4197</end>
+    <strand>-1</strand>
+    <phase>0</phase>
+    <end_phase>1</end_phase>
+   </exon>
+   <exon>
+    <stable_id></stable_id>
+    <start>5058</start>
+    <end>5149</end>
+    <strand>-1</strand>
+    <phase>1</phase>
+    <end_phase>0</end_phase>
+   </exon>
+   <exon>
+    <stable_id></stable_id>
+    <start>18277</start>
+    <end>19027</end>
+    <strand>-1</strand>
+    <phase>0</phase>
+    <end_phase>1</end_phase>
+   </exon>
+  </exon_set>
+ </transcript>
+ <transcript>
+  <stable_id>bA420L9.1.3</stable_id>
+  <remark>continues as dJ72E17.1.1 in Em:AL033523</remark>
+  <remark>novel protein, variant 3</remark>
+  <cds_start_not_found>1</cds_start_not_found>
+  <cds_end_not_found>0</cds_end_not_found>
+  <mRNA_start_not_found></mRNA_start_not_found>
+  <mRNA_end_not_found></mRNA_end_not_found>
+  <transcript_class>supported</transcript_class>
+  <name>bA420L9.1.3</name>
+  <evidence_set>
+    <evidence>
+      <name>BE539071</name>
+      <type>EST</type>
+    </evidence>
+  </evidence_set>
+  <translation_start>5895</translation_start>
+  <translation_end>4080</translation_end>
+  <exon_set>
+   <exon>
+    <stable_id></stable_id>
+    <start>4080</start>
+    <end>4197</end>
+    <strand>-1</strand>
+    <phase>0</phase>
+    <end_phase>1</end_phase>
+   </exon>
+   <exon>
+    <stable_id></stable_id>
+    <start>5058</start>
+    <end>5149</end>
+    <strand>-1</strand>
+    <phase>1</phase>
+    <end_phase>0</end_phase>
+   </exon>
+   <exon>
+    <stable_id></stable_id>
+    <start>5797</start>
+    <end>5895</end>
+    <strand>-1</strand>
+    <phase>1</phase>
+    <end_phase>1</end_phase>
+   </exon>
+  </exon_set>
+ </transcript>
+</gene>
+
+<gene>
+ <stable_id>bA420l9.3</stable_id>
+ <name></name>
+ <author>michele</author>
+ <author_email>michele@sanger.ac.uk</author_email>
+ <transcript>
+  <stable_id>bA420L9.3.1</stable_id>
+  <remark>DNA segment on chromosome 6 (unique) 2654 expressed sequence (D6S2654E) (XAP-5-like protein, X5L), variant 1</remark>
+  <cds_start_not_found>0</cds_start_not_found>
+  <cds_end_not_found>0</cds_end_not_found>
+  <mRNA_start_not_found></mRNA_start_not_found>
+  <mRNA_end_not_found></mRNA_end_not_found>
+  <transcript_class>supported</transcript_class>
+  <name>bA420L9.3.1</name>
+  <evidence_set>
+    <evidence>
+      <name>BI488606</name>
+      <type>EST</type>
+    </evidence>
+    <evidence>
+      <name>BI258091</name>
+      <type>EST</type>
+    </evidence>
+    <evidence>
+      <name>BI820514</name>
+      <type>EST</type>
+    </evidence>
+    <evidence>
+      <name>BI523689</name>
+      <type>EST</type>
+    </evidence>
+    <evidence>
+      <name>BI768136</name>
+      <type>EST</type>
+    </evidence>
+    <evidence>
+      <name>BI769243</name>
+      <type>EST</type>
+    </evidence>
+    <evidence>
+      <name>AI936359</name>
+      <type>EST</type>
+    </evidence>
+    <evidence>
+      <name>AA830135</name>
+      <type>EST</type>
+    </evidence>
+    <evidence>
+      <name>AW591060</name>
+      <type>EST</type>
+    </evidence>
+    <evidence>
+      <name>BE857173</name>
+      <type>EST</type>
+    </evidence>
+    <evidence>
+      <name>BC001261.1</name>
+      <type>cDNA</type>
+    </evidence>
+    <evidence>
+      <name>Y18503.1</name>
+      <type>cDNA</type>
+    </evidence>
+    <evidence>
+      <name>Q9WTJ8</name>
+      <type>Protein</type>
+    </evidence>
+    <evidence>
+      <name>Q9WV03</name>
+      <type>Protein</type>
+    </evidence>
+    <evidence>
+      <name>Q14320</name>
+      <type>Protein</type>
+    </evidence>
+    <evidence>
+      <name>Q18691</name>
+      <type>Protein</type>
+    </evidence>
+    <evidence>
+      <name>Q9Y247</name>
+      <type>Protein</type>
+    </evidence>
+    <evidence>
+      <name>O16128</name>
+      <type>Protein</type>
+    </evidence>
+  </evidence_set>
+  <translation_start>116813</translation_start>
+  <translation_end>117790</translation_end>
+  <exon_set>
+   <exon>
+    <stable_id></stable_id>
+    <start>116389</start>
+    <end>116487</end>
+    <strand>1</strand>
+    <phase>0</phase>
+    <end_phase>0</end_phase>
+   </exon>
+   <exon>
+    <stable_id></stable_id>
+    <start>116790</start>
+    <end>118318</end>
+    <strand>1</strand>
+    <phase>0</phase>
+    <end_phase>0</end_phase>
+   </exon>
+  </exon_set>
+ </transcript>
+ <transcript>
+  <stable_id>bA420L9.3.2</stable_id>
+  <remark>DNA segment on chromosome 6 (unique) 2654 expressed sequence (D6S2654E) (XAP-5-like protein, X5L), variant 2</remark>
+  <remark>alternatively spliced 5' UTR</remark>
+  <cds_start_not_found>0</cds_start_not_found>
+  <cds_end_not_found>0</cds_end_not_found>
+  <mRNA_start_not_found></mRNA_start_not_found>
+  <mRNA_end_not_found></mRNA_end_not_found>
+  <transcript_class>supported</transcript_class>
+  <name>bA420L9.3.2</name>
+  <evidence_set>
+    <evidence>
+      <name>BI765909</name>
+      <type>EST</type>
+    </evidence>
+    <evidence>
+      <name>BE745423</name>
+      <type>EST</type>
+    </evidence>
+    <evidence>
+      <name>Q9WTJ8</name>
+      <type>Protein</type>
+    </evidence>
+    <evidence>
+      <name>Q9WV03</name>
+      <type>Protein</type>
+    </evidence>
+    <evidence>
+      <name>Q14320</name>
+      <type>Protein</type>
+    </evidence>
+    <evidence>
+      <name>Q18691</name>
+      <type>Protein</type>
+    </evidence>
+    <evidence>
+      <name>Q9Y247</name>
+      <type>Protein</type>
+    </evidence>
+    <evidence>
+      <name>O16128</name>
+      <type>Protein</type>
+    </evidence>
+  </evidence_set>
+  <translation_start>116813</translation_start>
+  <translation_end>117790</translation_end>
+  <exon_set>
+   <exon>
+    <stable_id></stable_id>
+    <start>116387</start>
+    <end>118318</end>
+    <strand>1</strand>
+    <phase>0</phase>
+    <end_phase>0</end_phase>
+   </exon>
+  </exon_set>
+ </transcript>
+</gene>
+</sequenceset>
+</otter>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,113 @@
+#!/usr/local/bin/perl
+
+use strict;
+$| = 1;
+#chr14            1          106333        1     F       AL603712.1          130305           23973      -
+#chr14       106334          169641        2     F       AL589743.4          125813           62506      -
+#chr14       169642          318764        3     F       AL589182.2          149723             601      -
+#chr14       318765          415987        4     F       AL512624.4           55924          153146      +
+#chr14       415988          582668        5     F       AL512310.3          168774            2094      -
+#chr14       582669          719153        6     F       AL391156.3          136600             116      -
+
+
+my %contigs;
+my $chrname = $ARGV[0];
+
+my $chrid = 1;
+open(IN,"<$ARGV[1]");
+
+my $contignum = 1;
+my $clonenum  = 1;
+my $dnanum    = 1;
+while (<IN>) {
+  chomp;
+  $_ =~ s/\ //g;
+  my @arr = split(/\t/,$_);
+
+  next if ($arr[4] eq "N");
+  next if (/^#/);
+
+  my $chrstart = $arr[1];
+  my $chrend   = $arr[2];
+  my $accver   = $arr[5];
+  my $accstart = $arr[6];
+  my $accend   = $arr[7];
+  my $accori   = $arr[8];
+
+  if ($accend < $accstart) {
+    my $tmp = $accend;
+    $accend = $accstart;
+    $accstart = $tmp;
+  }
+ 
+ print STDERR "Accver $accver\n"; 
+  my ($acc,$version)  = split(/\./,$accver);
+
+  print STDERR "Found $acc : $version\n";
+
+  open(IN2,"pfetch $acc |");
+
+  my $seq;
+  my $found;
+
+  while (<IN2>) {
+
+    if (/^>(\S+) (\S+)/) {
+      print STDERR "Found title line $1 : $2\n";
+
+      if ($2 eq $accver) {
+	$found = 1;
+      }
+    } else {
+      chomp;
+      $seq .= $_;
+    }
+  }
+
+  close(IN2);
+
+  if ($found == 0) {
+    open(IN2,"pfetch -A $acc |");
+    $seq = "";
+    
+    while (<IN2>) {
+      
+      if (/^>(\S+) (\S+)/) {
+	print STDERR "Found title line $1 : $2\n";
+	if ($found) {
+	  last;
+	}
+	$seq = "";
+	if ($2 eq $accver) {
+	  $found = 1;
+	}
+      } else {
+	chomp;
+	$seq .= $_;
+      }
+    }
+  }
+  if ($found != 1) {
+    print STDERR "ERROR: Can't find right sequence version for $acc $version\n";
+  } else {
+    my $contigid = $acc . "." . $version . "." . $accstart . "." . $accend;
+    my $len = length($seq);
+    
+    my $strand = 1;
+    if ($accori eq "-") {
+      $strand = -1;
+    }
+    
+    print STDERR "Length : $len\n";
+
+    print "insert into assembly(chromosome_id,chr_start,chr_end,superctg_name,superctg_start,superctg_end,superctg_ori,contig_id,contig_start,contig_end,contig_ori,type) values($chrid,$chrstart,$chrend,\'$chrname\',$chrstart,$chrend,1,$contignum,$accstart,$accend,$strand,\'GENOSCOPE\');\n";
+    print "insert into clone(clone_id,name,embl_acc,version,embl_version,htg_phase,created,modified) values($clonenum,'$acc','$acc',$version,$version,4,now(),now());\n";
+    print "insert into contig(contig_id,name,clone_id,length,embl_offset,dna_id) values($contignum,'$contigid',$clonenum,$len,1,$dnanum);\n";
+    
+    print "insert into dna(dna_id,sequence,created) values($dnanum,'$seq',now());\n";
+    
+    $contignum++;
+    $clonenum++;
+    $dnanum++;
+  }
+}

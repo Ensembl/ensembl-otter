@@ -1,0 +1,170 @@
+
+Sequence : "bA420L9"
+Genomic_canonical
+Subsequence "bA420L9.1.1" 19027 4080
+Subsequence "bA420L9.3.1" 116389 118318
+Subsequence "bA420L9.1.3" 5895 4080
+Subsequence "bA420L9.1.4" 18530 5797
+Subsequence "bA420L9.1.2" 18533 4080
+Subsequence "bA420L9.3.2" 116387 118318
+Clone_left_end "dJ140K8" 116190
+Clone_right_end "bA420L9" 138221
+Clone_right_end "dJ72E17" 2000
+Keyword "XAP-5-like"
+Keyword "X5L"
+Keyword "DNA segment on chromosome 6 (unique)"
+Keyword "D6S2654E"
+Keyword "CpG island"
+EMBL_dump_info DE_line "Contains the 5' end of a novel gene, a novel pseudogene, the gene for XAP-5-like protein (X5L) (DNA segment on chromosome 6 (unique) 2654 expressed sequence) (D6S2654E) a novel gene and CpG islands."
+Feature "polyA_signal" 118296 118301 0.500000 "polyA_signal"
+Feature "polyA_site" 118317 118318 0.500000 "polyA_site"
+
+
+Sequence : "bA420L9.1.1"
+Source "bA420L9"
+Source_Exons 1 751
+Source_Exons 13879 13970
+Source_Exons 14831 14948
+Continues_as "dJ72E17.1"
+EST_match "Em:BE159143"
+EST_match "Em:BI686272"
+EST_match "Em:BG518575"
+EST_match "Em:BG700513"
+EST_match "Em:AL533952"
+EST_match "Em:BI549854"
+cDNA_match "Em:AK024828.1"
+cDNA_match "Em:BC018520.1"
+Locus "dJ72E17.1"
+Remark "novel protein, variant 1"
+Remark "continues as dJ72E17.1.1 in Em:AL033523"
+Isoform "1"
+Predicted_gene
+CDS 496 961
+End_not_found
+Method "supported"
+
+
+
+Sequence : "bA420L9.1.2"
+Source "bA420L9"
+Source_Exons 1 257
+Source_Exons 13385 13471
+Source_Exons 14337 14454
+Continues_as "dJ72E17.1"
+cDNA_match "Em:AK005003.1"
+Locus "dJ72E17.1"
+Remark "novel transcript, variant 2"
+Remark "continues as dJ72E17.1.2 in Em:AL033523"
+Isoform "2"
+Predicted_gene
+Processed_mRNA
+Method "supported_mRNA"
+
+
+
+Sequence : "bA420L9.1.3"
+Source "bA420L9"
+Source_Exons 1 99
+Source_Exons 747 838
+Source_Exons 1699 1816
+Continues_as "dJ72E17.1"
+EST_match "Em:BE539071"
+Locus "dJ72E17.1"
+Remark "novel protein, variant 3"
+Remark "continues as dJ72E17.1.1 in Em:AL033523"
+Isoform "3"
+Predicted_gene
+CDS 1 309
+Start_not_found 3
+Method "supported"
+
+
+
+Sequence : "bA420L9.1.4"
+Source "bA420L9"
+Source_Exons 1 254
+Source_Exons 12369 12472
+Source_Exons 12561 12734
+EST_match "Em:BF568259"
+EST_match "Em:BG829895"
+Locus "dJ72E17.1"
+Remark "novel transcript, variant 4"
+Isoform "4"
+Predicted_gene
+Processed_mRNA
+Method "supported_mRNA"
+
+
+
+Sequence : "bA420L9.3.1"
+Source "bA420L9"
+Source_Exons 1 99
+Source_Exons 402 1930
+Protein_match "Tr:Q9WTJ8"
+Protein_match "Tr:Q9WV03"
+Protein_match "Sw:Q14320"
+Protein_match "Tr:Q18691"
+Protein_match "Tr:Q9Y247"
+Protein_match "Tr:O16128"
+EST_match "Em:BI488606"
+EST_match "Em:BI258091"
+EST_match "Em:BI820514"
+EST_match "Em:BI523689"
+EST_match "Em:BI768136"
+EST_match "Em:BI769243"
+EST_match "Em:AI936359"
+EST_match "Em:AA830135"
+EST_match "Em:AW591060"
+EST_match "Em:BE857173"
+cDNA_match "Em:BC001261.1"
+cDNA_match "Em:Y18503.1"
+Locus "bA420l9.3"
+Remark "DNA segment on chromosome 6 (unique) 2654 expressed sequence (D6S2654E) (XAP-5-like protein, X5L), variant 1"
+Isoform "1"
+Predicted_gene
+CDS 123 1100
+Method "supported"
+
+
+
+Sequence : "bA420L9.3.2"
+Method "supported"
+Source "bA420L9"
+Source_Exons 1 1932
+Protein_match "Tr:Q9WTJ8"
+Protein_match "Tr:Q9WV03"
+Protein_match "Sw:Q14320"
+Protein_match "Tr:Q18691"
+Protein_match "Tr:Q9Y247"
+Protein_match "Tr:O16128"
+EST_match "Em:BI765909"
+EST_match "Em:BE745423"
+Locus "bA420l9.3"
+Remark "DNA segment on chromosome 6 (unique) 2654 expressed sequence (D6S2654E) (XAP-5-like protein, X5L), variant 2"
+Remark "alternatively spliced 5' UTR"
+Isoform "2"
+Predicted_gene
+CDS 427 1404
+
+
+
+
+Locus : "dJ72E17.1"
+Organism_supported
+Positive_sequence "bA420L9.1.1"
+Positive_sequence "dJ72E17.1.1"
+Positive_sequence "dJ72E17.1.2"
+Positive_sequence "bA420L9.1.3"
+Positive_sequence "bA420L9.1.4"
+Positive_sequence "bA420L9.1.2"
+
+
+
+Locus : "bA420l9.3"
+Known
+Positive_sequence "bA420L9.3.2"
+Positive_sequence "bA420L9.3.1"
+
+
+
+

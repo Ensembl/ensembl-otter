@@ -1,0 +1,57 @@
+
+<otter>
+ <sequenceset>
+  <author>xxxx</author>
+  <sequencefragment>
+    <name>name</name>
+    <remark>remark</remark>
+    <chromosome>xxx</chromosome>
+    <id>xx</id>
+    <version>xx</version>
+    <assemblystart>xxx</assemblystart>
+    <assemblyend>xxx</assemblyend>
+    <assemblyori> </assemblyori>
+    <assemblyoffset>  </assemblyoffset>
+  </sequencefragment>
+  <dna>
+  AAGGGCCCC
+  AGCGGGCC
+  </dna>
+  <locus>
+   <locus_type>type</locus_type>
+   <stable_id>gene_stable_id</stable_id>
+   <name>name</name>
+   <remark>remark</remark>
+   <synonym>synonym</synonym>
+   <author>author</author>
+   <author_email>address</author_email>
+   <transcript>
+     <stable_id>transcript_stable_id</stable_id>
+     <name>name</name>
+     <remark>remark</remark>
+     <cds_start_not_found>0</cds_start_not_found>
+     <cds_end_not_found>0</cds_end_not_found>
+     <mRNA_start_not_found>0</mRNA_start_not_found>
+     <mRNA_end_not_found>0</mRNA_end_not_found>
+     <translation_start>#</translation_start>
+     <translation_end>#</translation_end>
+     <transcript_class>class</transcript_class>
+       <evidence_set>
+         <evidence>
+            <name>##</name>
+            <type>##</type>
+         </evidence>
+       </evidence_set>
+       <exon_set>
+         <exon>
+          <stable_id>exon_stable_id</stable_id>
+          <start>xxx</start>
+          <end>xxxx</end>
+          <strand>x</strand>
+          <frame>x</frame>
+         <exon>
+       </exon_set>
+   </transcript>
+ </locus>
+ </sequenceset>
+</otter>
