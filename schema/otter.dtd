@@ -10,8 +10,8 @@
 <!-- Author names and email addresses can be optionally attached
      to many of the elements in an otter XML document to flag
      who last modified that element -->
-<!ELEMENT author #PCDATA>
-<!ELEMENT author_email #PCDATA>
+<!ELEMENT author (#PCDATA)>
+<!ELEMENT author_email (#PCDATA)>
 
 <!-- a genomic region - part or whole of a chromosome -->
 <!ELEMENT sequence_set (
@@ -23,7 +23,7 @@
     dna?)>
 
 <!-- a that identifies the assembly from which the genomic region is taken -->
-<!ELEMENT assembly_type #PCDATA>
+<!ELEMENT assembly_type (#PCDATA)>
 
 <!-- A genomic nucleotide entry in EMBL/Genbank -->
 <!ELEMENT sequence_fragment (
@@ -36,17 +36,28 @@
     fragment_offset,
     author?,
     author_email?,
+    description?,
     keyword*,
-    remark*)>
-<!ELEMENT accession #PCDATA>
-<!ELEMENT version #PCDATA>
-<!ELEMENT id #PCDATA>
-<!ELEMENT assembly_start #PCDATA>
-<!ELEMENT assembly_end #PCDATA>
-<!ELEMENT fragment_ori #PCDATA>
-<!ELEMENT fragment_offset #PCDATA>
-<!ELEMENT keyword #PCDATA>
-<!ELEMENT remark #PCDATA>
+    remark*,
+    annotation_remark*)>
+<!ELEMENT accession (#PCDATA)>
+<!ELEMENT version (#PCDATA)>
+<!ELEMENT id (#PCDATA)>
+<!ELEMENT assembly_start (#PCDATA)>
+<!ELEMENT assembly_end (#PCDATA)>
+<!ELEMENT fragment_ori (#PCDATA)>
+<!ELEMENT fragment_offset (#PCDATA)>
+
+<!-- Keyword such as those that appear in the KW line of EMBL / Genbank files -->
+<!ELEMENT keyword (#PCDATA)>
+
+<!-- Remark intended for display to end users -->
+<!ELEMENT remark (#PCDATA)>
+
+<!-- Remarks about the process that
+     led to the current annotation -->
+<!ELEMENT annotation_remark (#PCDATA)>
+
 <!ELEMENT locus (
     name,
     type?,
@@ -56,19 +67,21 @@
     author_email?,
     description?,
     synonym*,
-    remark*
+    remark*,
     transcript+)>
 <!ATTLIST locus
-    stable_id CDATA #IMPLIED
+    stable_id ID #IMPLIED
     >
-<!ELEMENT name #PCDATA>
-<!ELEMENT type #PCDATA>
+<!ELEMENT name (#PCDATA)>
+<!ELEMENT type (#PCDATA)>
 <!ELEMENT truncated EMPTY>
-<!ELEMENT description #PCDATA>
-<!ELEMENT synonym #PCDATA>
-<!ELEMENT remark #PCDATA>
+
+<!-- a brief summary of the annotation found in the object -->
+<!ELEMENT description (#PCDATA)>
+
+<!ELEMENT synonym (#PCDATA)>
 <!ELEMENT known EMPTY>
-<!ELEMENT transcrpt (
+<!ELEMENT transcript (
     name,
     transcript_class,
     translation_start?,
@@ -80,26 +93,27 @@
     author?,
     author_email?,
     remark*,
+    annotation_remark*,
     evidence*,
-    exon+,
+    exon+
     )>
-<!ATTLIST locus
-    stable_id CDATA #IMPLIED,
-    translation_stable_id CDATA #IMPLIED
+<!ATTLIST transcript
+    stable_id ID #IMPLIED
+    translation_stable_id ID #IMPLIED
     >
-<!ELEMENT translation_start #PCDATA>
-<!ELEMENT translation_end #PCDATA>
+<!ELEMENT translation_start (#PCDATA)>
+<!ELEMENT translation_end (#PCDATA)>
 <!ELEMENT mRNA_start_not_found EMPTY>
 <!ELEMENT mRNA_end_not_found EMPTY>
 <!ELEMENT cds_start_not_found EMPTY>
 <!ELEMENT cds_end_not_found EMPTY>
-<!ELEMENT transcript_class #PCDATA>
+<!ELEMENT transcript_class (#PCDATA)>
 
 <!-- Supporting evidence used to construct the transcript.
      It is a sequence database entry.
      Data is usually "ACCESSION.SV", but "SV" may be unknown -->
-<!ELEMENT evidence #PCDATA>
-<!ATTLIST type (EST | cDNA | Genomic | Protein | UNKNOWN) "UNKNOWN" #REQUIRED>
+<!ELEMENT evidence (#PCDATA)>
+<!ATTLIST evidence type (EST | cDNA | Genomic | Protein | UNKNOWN) "UNKNOWN">
 
 <!-- Could also model it this way:
 
@@ -123,13 +137,13 @@
 
 <!-- start is integer greater than zero and less than end
      and is in chromosomal (sequence-set) coordinates -->
-<!ELEMENT start #PCDATA>
+<!ELEMENT start (#PCDATA)>
 
 <!-- like start, but greater than or equal to start -->
-<!ELEMENT end #PCDATA>
+<!ELEMENT end (#PCDATA)>
 
 <!-- is "1" for forward strand or "-1" for reverse strand -->
-<!ELEMENT strand #PCDATA>
+<!ELEMENT strand (#PCDATA)>
 
 
 <!-- we have dropped the old <feature> element and now have
@@ -145,6 +159,6 @@
 
 <!-- Can contain the whole DNA string of the sequence-set if
      desired to make a self-contained annotation -->
-<!ELEMENT dna #PCDATA>
+<!ELEMENT dna (#PCDATA)>
 
 
