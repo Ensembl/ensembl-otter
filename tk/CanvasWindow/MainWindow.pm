@@ -13,10 +13,10 @@ use Tk;
 sub new {
     my( $pkg, $title ) = @_;
     
-    $title ||= 'Genome Canvas';
+    $title ||= 'Canvas Window';
     
     my $mw = $pkg->SUPER::new(
-        -class => 'GenomeCanvas',
+        -class => 'CanvasWindow',
         -title => $title,
         -colormap   => 'new',
         );
@@ -44,25 +44,25 @@ sub add_default_bindings {
 sub read_custom_option_file {
     my( $mw ) = @_;
     
-    my $xres_file = (getpwuid($<))[7] . "/.GenomeCanvas.Xres";
+    my $xres_file = (getpwuid($<))[7] . "/.CanvasWindow.Xres";
     my $no_file = 0;
     unless (-e $xres_file) {
         local *XRES;
         if (open XRES, "> $xres_file") {
             print XRES q{
 
-GenomeCanvas*background: #bebebe
-GenomeCanvas*TopLevel*background: #bebebe
-GenomeCanvas*troughColor: #aaaaaa
-GenomeCanvas*foreground: black
-GenomeCanvas*activecolor: #ffd700
-GenomeCanvas*color: #ffd700
-GenomeCanvas*Entry.borderWidth: 1
-GenomeCanvas*Button.borderWidth: 1
-GenomeCanvas*Scrollbar.borderWidth: 1
-GenomeCanvas*Scrollbar.width: 11
-GenomeCanvas*Menu.borderWidth: 1
-GenomeCanvas*font: -*-helvetica-medium-r-*-*-12-*-*-*-*-*-*-*
+CanvasWindow*background: #bebebe
+CanvasWindow*TopLevel*background: #bebebe
+CanvasWindow*troughColor: #aaaaaa
+CanvasWindow*foreground: black
+CanvasWindow*activecolor: #ffd700
+CanvasWindow*color: #ffd700
+CanvasWindow*Entry.borderWidth: 1
+CanvasWindow*Button.borderWidth: 1
+CanvasWindow*Scrollbar.borderWidth: 1
+CanvasWindow*Scrollbar.width: 11
+CanvasWindow*Menu.borderWidth: 1
+CanvasWindow*font: -*-helvetica-medium-r-*-*-12-*-*-*-*-*-*-*
 
 };
             close XRES;

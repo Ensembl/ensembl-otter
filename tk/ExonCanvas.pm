@@ -31,8 +31,7 @@ sub add_ace_subseq {
         warn "Unexpected object '$subseq', expected a '$expected_class'";
     }
     
-    # Get the offset underneath everthing else
-    my $y_offset = ($self->canvas->bbox('all'))[3];
+    my $y_offset = $self->drawing_y_max;
     
     my $strand = $subseq->strand;
     foreach my $ex ($subseq->get_all_Exons) {
@@ -40,15 +39,25 @@ sub add_ace_subseq {
     }
 }
 
+sub drawing_y_max {
+    my( $self ) = @_;
+    
+    # Get the offset underneath everthing else
+    return ($self->canvas->bbox('all'))[3];
+}
+
 sub add_coordinate_pair {
     my( $self, $start, $end, $x_offset ) = @_;
     
     $x_offset ||= 0;
     
-    # Get the offset underneath everthing else
-    my $y_offset = ($self->canvas->bbox('all'))[3];
-    
-    
+    my $y_offset = $self->drawing_y_max;
+    my $strand = 1;
+    if ($start > $end) {
+        $strand = -1;
+        ($start, $end) = ($end, $start);
+    }
+    $self->add_exon_holder($start, $end, $strand, $x_offset, $y_offset);
 }
 
 sub bind_edit_commands {
@@ -119,6 +128,17 @@ sub left_button_handle {
             $selected = $obj;
         }
     }
+    elsif (my ($exon_id) = grep /^exon/, $canvas->gettags($obj)) {
+        $self->maintain_highlight_rectangle($exon_id);
+    }
+    elsif ($type eq 'line') {
+        if (my $head_end = $canvas->itemcget($obj, 'arrow')) {
+            $head_end = ($head_end eq 'first') ? 'last' : 'first';
+            $canvas->itemconfigure($obj, 
+                -arrow   => $head_end,
+                );
+        }
+    }
 }
 
 sub maintain_highlight_rectangle {
@@ -135,7 +155,7 @@ sub maintain_highlight_rectangle {
     $bbox[3] += 1;
     my $rec = $canvas->createRectangle(
         @bbox,
-        -fill       => '#ffff00',
+        -fill       => '#ffd700',
         -outline    => undef,
         -tags       => [$sel_tag],
         );
@@ -218,12 +238,18 @@ sub middle_button_paste {
         }
         $self->maintain_highlight_rectangle($obj);
     } else {
-        warn "mulitple integers: @ints\n";
+        for (my $i = 0; $i < @ints; $i += 2) {
+            $self->add_coordinate_pair(@ints[$i, $i + 1]);
+        }
+        $self->fix_window_min_max_sizes;
     }
 }
 
 sub add_exon_holder {
     my( $self, $start, $end, $strand, $x_offset, $y_offset ) = @_;
+    
+    $start ||= $self->empty_string;
+    $end   ||= $self->empty_string;
     
     my $canvas  =          $self->canvas;
     my $font    =          $self->font;
@@ -264,6 +290,14 @@ sub add_exon_holder {
         );
     
     $self->record_exon_inf($exon_id, $start_text, $strand_arrow, $end_text);
+    
+    my $bkgd = $canvas->createRectangle(
+        $canvas->bbox($exon_id),
+        -fill       => 'white',
+        -outline    => undef,
+        -tags       => [$exon_id],
+        );
+    $canvas->lower($bkgd, $start_text);
     
     # Return how big we were
     return $size + $pad;

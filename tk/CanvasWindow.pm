@@ -306,7 +306,7 @@ sub print_postscript {
     
     unless ($file_root) {
         $file_root = $self->TopLevel->cget('title')
-            || 'GenomeCanvas';
+            || 'CanvasWindow';
         $file_root =~ s/\s/_/g;
     }
     $file_root =~ s/\.ps$//i;

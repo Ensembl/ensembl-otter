@@ -1,0 +1,62 @@
+#!/usr/local/bin/perl -w
+
+### spandit
+
+use strict;
+use XaceSeqChooser;
+use ExonCanvas;
+use Ace;
+use Getopt::Long 'GetOptions';
+
+{
+    my ($cript) = $0 =~ m{([^/]+)$};
+    my($host, $port, $path, $title);
+    GetOptions(
+        'host=s'    => \$host,
+        'port=i'    => \$port,
+        'path=s'    => \$path,
+        'title=s'   => \$title,
+        'help!'     => \&useage,
+        ) or useage();
+    
+    my @seq_list = @ARGV;
+    
+    my( $ace );
+    if ($path) {
+        $ace = Ace->connect(
+            -PATH   => $path
+            ) or die "Can't connect to db in '$path' :\n", Ace->error;
+        $title ||= "$cript: $path";
+    } else {
+        useage() unless $host and $port;
+        $ace = Ace->connect(
+            -HOST       => $host,
+            -PORT       => $port,
+            -TIMEOUT    => 60,
+            ) or die "Can't connect to db on '$host' port '$port' :\n", Ace->error;
+        $title ||= "$cript: $host $port";
+    }
+    
+    my $mw = CanvasWindow::MainWindow->new($title);
+    my $xc = XaceSeqChooser->new($mw);
+    $xc->ace_handle($ace);
+    $xc->sequence_list(@seq_list);
+    $xc->draw_sequence_list;
+    $xc->fix_window_min_max_sizes;
+    
+    Tk::MainLoop();
+}
+
+
+sub useage {
+    exec('perldoc', $0);
+}
+
+__END__
+
+=head1 NAME - spandit
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
