@@ -335,5 +335,43 @@ i.e. checkboxes to show/hide different panels
 total 3.5 days - lets say Friday 15th
 
 
+9th May 2003
+------------
 
+Plan for otter/ensembl/apollo installation.
 
+Otter server distribution :
+
+  
+  - code checkout
+  - startup and shutdown scripts
+  - installation scripts
+  - mysql binaries for linux/osx
+  - java for linux/osx
+
+  - loading scripts (get Keiths script for embl/genbank)
+  - gtf loading
+  - gff loading
+  - Otter XML loading
+  - GAME XML loading
+
+  - configuration? mysql port, otter server port,  database names and ports.
+
+  - Docs for installation 
+  - Docs for loading in test data
+
+  - Otter web page describing what it is/how to get it 
+
+  - Website install - Steve?
+
+  - perl binary (also needed for otter of course)
+     - perl modules
+     - GD and other things.
+
+  - website code
+  - website configuratin
+  - Install docs
+
+ How to distribute?  tarball?  - How does the java install.sh stuff work?
+
+Webstart for apollo - needs public pfetch server/cigar strings/reverse strand bug.
