@@ -721,7 +721,7 @@ sub draw_subseq {
     my $sub = $self->SubSeq;
     $self->add_subseq_exons($sub);
     $self->draw_translation_region($sub);
-    $self->draw_PolyA($sub->get_all_PolyA);
+#    $self->draw_PolyA($sub->get_all_PolyA);
 }
 
 sub draw_PolyA {
@@ -911,7 +911,7 @@ sub show_subseq {
 
 sub show_peptide {
     my( $self ) = @_;
-    
+
     my $peptext = $self->{'_pep_peptext'};
 
     my( $sub );
@@ -921,11 +921,31 @@ sub show_peptide {
             if ($peptext) {
                 $peptext->toplevel->withdraw;
             }
+            warn "is mutable" ;
             $self->message("non-coding method");
             return;
         }
     } else {
+    # the gene is not mutable - maybe truncated, check if it gets translation start and end set
+        warn "isnt mutable" ;
         $sub = $self->SubSeq;
+        
+        eval { $self->tk_t_start ;
+                $self->tk_t_end  } ;
+                
+        if ($@){
+            $self->message("Truncated transcript - this part doesn't contain coding region ");
+            return ;
+        }        
+        # gene is not mutable - check if it is truncated, if so fix cds
+        ##if ($sub->Locus && $sub->Locus->is_truncated){
+        ##    my $start = $self->tk_t_start + 1 ;
+        ##    my $name = $sub->name ;
+        ##    warn "$name \nstart $start : phase " . $sub->start_phase;
+        ##
+        ##    warn "\nnothing" unless ($sub->translatable_Sequence->ace_string);
+        ##    $sub->start_not_found(1) ;
+        ##}  ### down to here added by ck for testing
     }
 
     unless ($peptext) {
@@ -1028,6 +1048,7 @@ sub show_peptide {
         $peptext->insert('end', "TRANSLATION ERROR");
     } else {
         # Put the new translation into the Text widget
+       
         my $pep = $self->translator->translate($sub->translatable_Sequence);
         $peptext->insert('end', sprintf(">%s\n", $pep->name));
 
@@ -1420,7 +1441,7 @@ sub update_locus{
         my $xace = $self->xace_seq_chooser; 
         $xace->remove_Locus_if_not_in_use($old_locus->name);
         my @list = $self->xace_seq_chooser->list_Locus_names ;
-        warn "@list" ;
+#        warn "@list" ;
         
         $self->update_combo_list;
     }else{
@@ -2154,7 +2175,10 @@ sub strand_from_tk {
 
     sub draw_translation_region {
         my( $self, $sub ) = @_;
-
+    
+        if ($sub) {
+            return unless $sub->translation_region_is_set;
+        }
         # Get the translation region from the
         # canvas or the SubSequence
         my( @trans );
@@ -2177,12 +2201,13 @@ sub strand_from_tk {
             $meth = $sub->GeneMethod;
             $strand = $sub->strand;
         } else {
-            $meth = $self->get_GeneMethod_from_tk;
+            $meth = $self->get_GeneMethod_from_tk;#no
             $strand = $self->strand_from_tk;
         }
-        return unless $meth->is_coding;
-        my $color = $meth->cds_color;
+        return unless $meth->is_coding  ; 
 
+        my $color = $meth->cds_color;
+        
         my( $size, $half, $pad, $text_len )
                         = $self->_coord_matrix;
         my $font        = $self->font;
