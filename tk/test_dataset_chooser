@@ -12,8 +12,8 @@ use Bio::Otter::Lace::Defaults;
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
     
     my $mw = CanvasWindow::MainWindow->new('Choose DataSet');
-    my $dc = CanvasWindow::DataSetChooser->new($mw);
 
+    my $dc = CanvasWindow::DataSetChooser->new($mw);
     $dc->Client($cl);
     $dc->draw;
     

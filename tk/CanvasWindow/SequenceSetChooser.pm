@@ -187,16 +187,20 @@ sub open_sequence_set {
                 $win->raise;
                 return 1;
             }
+            #my $this_top = $canvas->toplevel;
+            #$this_top->Busy;   ### in this case Busy() seems to globally grab pointer - why?
             my $top = $self->{'_sequence_notes_window'}{$name} =
                 $canvas->Toplevel(-title => "SequenceSet $name");
-            my $sn = CanvasWindow::SequenceNotes->new($top);
             my $ss = $self->DataSet->get_SequenceSet_by_name($name);
 
+            my $sn = CanvasWindow::SequenceNotes->new($top);
             $sn->name($name);
             $sn->Client($self->Client);
             $sn->SequenceSet($ss);
             $sn->SequenceSetChooser($self);
+            $sn->initialise;
             $sn->draw;
+            #$this_top->Unbusy;
             return 1;
         }
     }

@@ -27,6 +27,98 @@ sub new {
     return $self;
 }
 
+sub SequenceSet {
+    my( $self, $SequenceSet ) = @_;
+    
+    if ($SequenceSet) {
+        $self->{'_SequenceSet'} = $SequenceSet;
+    }
+    return $self->{'_SequenceSet'};
+}
+
+sub Client {
+    my( $self, $Client ) = @_;
+    
+    if ($Client) {
+        $self->{'_Client'} = $Client;
+    }
+    return $self->{'_Client'};
+}
+
+sub AceDatabase {
+    my( $self, $AceDatabase ) = @_;
+    
+    if ($AceDatabase) {
+        $self->{'_AceDatabase'} = $AceDatabase;
+        $self->ace_path($AceDatabase->home);
+    }
+    return $self->{'_AceDatabase'};
+}
+
+sub initialize {
+    my( $self ) = @_;
+    
+    my $ss = $self->SequenceSet
+        or confess "No SequenceSet attached";
+    my $db = $self->Client->new_AceDatabase;
+    $self->AceDatabase($db);
+    my $title = 'lace '. $ss->name;
+    $db->title($title);
+    $db->error_flag(1);
+    ### Copy write_access flag from SequenceSet
+
+    ### Candidate for Defaults module?
+    $db->tar_file('/nfs/team71/analysis/jgrg/work/ace_skeleton/lace_acedb.tar');
+
+    $db->make_database_directory;
+    $db->write_otter_acefile($ss);
+    $db->write_pipeline_data($ss);
+    $db->initialize_database;
+
+    ### Should not be hard coded in module
+    $self->set_known_GeneMethods(
+        # Method name                Editable?  Coding?
+        
+        # New set of methods for Otter
+        Coding                   => [1,         1],
+        Transcript               => [1,         0],
+        Non_coding               => [1,         0],
+        Ambiguous_ORF            => [1,         0],
+        Immature                 => [1,         0],
+        Antisense                => [1,         0],
+        IG_segment               => [1,         1],
+        Putative                 => [1,         0],
+        Pseudogene               => [1,         0],
+        Processed_pseudogene     => [1,         0],
+        Unprocessed_pseudogene   => [1,         0],
+        Predicted                => [1,         0],
+        
+        # Old methods
+        supported                => [1,         1], 
+        supported_CDS            => [1,         1], 
+        supported_mRNA           => [1,         0], 
+        GD_supported             => [1,         1], 
+        GD_supported_mRNA        => [1,         0], 
+        GD_working               => [1,         1], 
+
+        # Auto-analysis gene types (non-editable)
+        fgenesh                  => [0,         0],
+        FGENES                   => [0,         0],
+        GENSCAN                  => [0,         0],
+        HALFWISE                 => [0,         0],
+        SPAN                     => [0,         0],
+        EnsEMBL                  => [0,         0],
+        genomewise               => [0,         0],
+        'WashU-Supported'        => [0,         0],
+        'WashU-Putative'         => [0,         0],
+        'WashU-Pseudogene'       => [0,         0],
+        );
+
+    $self->draw_clone_list;
+    #$self->save_command(\&otter_save);
+    $self->fix_window_min_max_sizes;
+}
+
 sub menu_bar {
     my( $self, $bf ) = @_;
     
@@ -657,6 +749,9 @@ sub ace_handle {
                     -PATH       => $path,
                     -PROGRAM    => 'tace',
                     ) or die "Can't connect to db '$path' :\n", Ace->error;
+            }
+            else {
+                confess "I don't know where the database is";
             }
         }
         $adbh->auto_save(0);
