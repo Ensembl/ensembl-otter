@@ -16,8 +16,8 @@ use Getopt::Long 'GetOptions';
 
 {
     my $usage = sub{ exec('perldoc', $0) };
-    my $host = 'localhost';
-    my $port = 19312;
+    my $host = 'ecs1d';
+    my $port = 39312;
     my $ace_tar = '/nfs/humace2/hum/data/lace_acedb.tar';
 
     if($ENV{"LACE_LOCAL"}){
@@ -382,6 +382,29 @@ sub write_otter_data {
 }
 
 sub get_otter_ctg {
+    my( $cw, $ctg, $fh ) = @_;
+    
+    my $chr_name  = $ctg->[0]{'chr_name'};
+    my $start     = $ctg->[0]{'chr_start'};
+    my $end       = $ctg->[$#$ctg]{'chr_end'};
+    
+    my $dba = current_dba();
+    my $aa = $dba->get_SliceAdaptor;
+    my $vc = $aa->fetch_by_chr_start_end($chr_name, $start, $end);
+    my $genes = $vc->get_all_Genes;
+    my $oaga = $dba->get_AnnotatedGeneAdaptor;
+    foreach my $gene (@$genes) {
+        $oaga->annotate_gene($gene);
+    }
+
+    my $name = "${chr_name}_$start-$end";
+    $vc->display_id($name);
+    print $fh Bio::Otter::Converter::otter_to_ace($vc, $genes,
+        $vc->get_tiling_path, $vc->seq);
+    return $vc->display_id;
+}
+
+sub old_get_otter_ctg {
     my( $cw, $ctg, $fh ) = @_;
     
     my $chr_name  = $ctg->[0]{'chr_name'};

@@ -36,6 +36,7 @@ use Hum::EnsCmdLineDB;
     my $show_cpg        = 1;
     my $big_picture     = 0;
     my( $span_file );
+    my $usage = sub{ exec('perldoc', $0) };
     Hum::EnsCmdLineDB::do_getopt(
         'fpc=s'         => \$fpc,
         'scale=s'       => \$scale,
@@ -55,11 +56,12 @@ use Hum::EnsCmdLineDB;
         'cpg!'          => \$show_cpg,
         'gene_spans=s'  => \$span_file,
         'big!'          => \$big_picture,
-        'help'          => sub{ exec('perldoc', $0) },
-        ) or die "Error processing command line options";
+        'help'          => $usage,
+        ) or $usage->();
 
-    if    ($chr_name and ! $fpc) {$fpc = $chr_name}
-    elsif ($fpc and ! $chr_name) {$chr_name = $fpc};
+    if    (! $fpc and   $chr_name) {$fpc = $chr_name}
+    elsif (  $fpc and ! $chr_name) {$chr_name = $fpc}
+    elsif (! $fpc and ! $chr_name) {   $usage->()   }
 
     if ($chr_start) {
         my $chr_start_num = parse_num($chr_start)

@@ -154,6 +154,7 @@ sub render {
     $canvas->delete('bkgd_rec');
     
     my @bbox = $band->band_bbox;
+    confess "failed to get bounding box for band" unless grep /\d/, @bbox;
     $bbox[0] = 0;
     $bbox[2] = $band->width;
     $canvas->createRectangle(
