@@ -1055,8 +1055,20 @@ sub check_kozak{
     $kozak_txt->tagConfigure('match',
             -background => '#AAFF66',
             );
-                
-    my @template_kozak = ('(a|g)', 'c', 'c', 'a', 'c' , 'c' , 'a' , 'u' , 'g' , 'g') ;
+
+    # from an email from [cas]
+    # shows how the template matches various recognised Kozak consensi.
+    ############################  perfect, strong, adequate, chr22 version
+    my @template_kozak = ('(a|g)',   # G   
+                          'c',       # C
+                          'c',       # C
+                          'a',       # A    A   G   G  Y     G
+                          'c',       # C    n   n   n  n     n
+                          'c',       # C    n   n   n  n     n
+                          'a',       # A    A   A   A  A     A
+                          'u',       # T    T   T   T  T     T
+                          'g',       # G    G   G   G  G     G
+                          'g');      # G    n   G   Y  G     A
     
     ## for some reason (tk bug?) tk would not display tags added to the second line when using the index system - hence two loops rather than one
     for( my $i = 0 ;  $i <= ( length($kozak) - 1) ; $i++ ){
