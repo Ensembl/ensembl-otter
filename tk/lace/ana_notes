@@ -247,7 +247,7 @@ sub default_cursor {
 
         if (my $pid = fork) {
             $SIG{'CHLD'} = 'IGNORE';
-            sleep 15;   # Prevent multiple button presses
+            #sleep 15;   # Prevent multiple button presses
             return 1;
         }
         elsif (defined $pid) {
@@ -596,7 +596,7 @@ __END__
 
 =head1 SYNOPSIS
 
-  ana_notes [-user USER_ID] SEQUENCE_SET_NAME
+  ana_notes SEQUENCE_SET_NAME
   ana_notes -list
   ana_notes -help
 
