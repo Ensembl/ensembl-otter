@@ -109,28 +109,12 @@ eval {
 error_exit($q, "Failed checking locks [$@]") if $@;
 print STDERR "done";
 
+strip_incomplete_genes($genes);
 
 # Get stable IDs for any genes, transcripts, translations and exons that don't have them
 my $sida = $odb->get_StableIdAdaptor();
-strip_incomplete_genes($genes);
-
 foreach my $gene (@$genes) {
-  $gene->stable_id($sida->fetch_new_gene_stable_id)
-    unless $gene->stable_id;
-
-  foreach my $trans (@{$gene->get_all_Transcripts}) {
-    $trans->stable_id($sida->fetch_new_transcript_stable_id)
-      unless $trans->stable_id;
-    if (my $translation = $trans->translation) {
-      $translation->stable_id($sida->fetch_new_translation_stable_id)
-	unless $translation->stable_id;
-    }
-
-    foreach my $exon (@{$trans->get_all_Exons}) {
-      $exon->stable_id($sida->fetch_new_exon_stable_id)
-	unless $exon->stable_id;
-    }
-  }
+    $sida->fetch_new_stable_ids_for_Gene($gene);
 }
 
 my $ab = new Bio::Otter::AnnotationBroker($odb);
