@@ -566,13 +566,14 @@ sub otter_to_ace {
         my $end;
 
         if ($path->component_ori == 1) {
-          $start = $chrstart + $path->assembled_start - 1;
-          $end   = $chrstart + $path->assembled_end - 1;
+          $start = $path->assembled_start;
+          $end   = $path->assembled_end;
         } else {
-          $end     = $chrstart + $path->assembled_start - 1 ;
-          $start   = $chrstart + $path->assembled_end - 1;
+          $end   = $path->assembled_start ;
+          $start = $path->assembled_end;
         }
-        $str .= sprintf qq{SubSequence "%s" %d %d\n}, $path->component_Seq->clone->embl_id, $start, $end;
+        $str .= sprintf qq{SubSequence "%s" %d %d\n}, 
+                      $path->component_Seq->clone->embl_id, $start, $end;
     }
   }
 
