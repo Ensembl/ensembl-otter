@@ -10,11 +10,12 @@ use Bio::Otter::Lace::Client;
 
 {
     my $usage = sub{ exec 'perldoc', $0 };
-
-    my $write_flag = 1;
+    my $write_flag  = 1;
+    my $recover;
     GetOptions(
-        'view!'     => sub{ $write_flag = 0 },
-        'h|help!'   => $usage,
+        'view!'         => sub{ $write_flag = 0 },
+        'h|help!'       => $usage,
+        'recover=s'     => \$recover,
         ) or $usage->();
 
     my $cl = Bio::Otter::Lace::Client->new;
@@ -23,26 +24,31 @@ use Bio::Otter::Lace::Client;
     $cl->write_access($write_flag);
     
     #my ($ds) = grep $_->name eq 'human_chr20_with_anal_end_feb',
-    my ($ds) = grep $_->name eq 'otter_chr9p12',
-        $cl->get_all_DataSets;
-    
-    #foreach my $chr ($ds->get_all_Chromosomes) {
-    #    print "chr: ", Dumper($chr);
-    #}
-    
-    my $cs_list = $ds->get_all_CloneSequences;
-    
-    $ds->selected_CloneSequences([@$cs_list[2..7]]);
-    #print Dumper( $ds->selected_CloneSequences );
-    
     my $db = $cl->new_AceDatabase;
     $db->title('lace test');
-    $db->make_database_directory;
-    $db->write_otter_acefile;
-    
-    unless ($db->initialize_database) {
-        $db->error_flag(1);
-        die "Error initialzing database";
+
+    if ($recover) {
+        $db->home($recover);
+        $db->recover_slice_dataset_hash;
+    } else {
+        my $ds = $cl->get_DataSet_by_name('otter_chr9p12');
+
+        #foreach my $chr ($ds->get_all_Chromosomes) {
+        #    print "chr: ", Dumper($chr);
+        #}
+
+        my $cs_list = $ds->get_all_CloneSequences;
+
+        $ds->selected_CloneSequences([@$cs_list[2..7]]);
+        #print Dumper( $ds->selected_CloneSequences );
+
+        $db->make_database_directory;
+        $db->write_otter_acefile;
+
+        unless ($db->initialize_database) {
+            $db->error_flag(1);
+            die "Error initialzing database";
+        }
     }
     
     system('xace', $db->home);

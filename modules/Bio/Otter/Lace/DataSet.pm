@@ -191,10 +191,7 @@ sub get_all_CloneSequences {
 sub get_cached_DBAdaptor {
     my( $self ) = @_;
     
-    my( $dba );
-    unless ($dba = $self->{'_dba_cache'}) {
-        $dba = $self->{'_dba_cache'} = $self->make_DBAdaptor;
-    }
+    my $dba = $self->{'_dba_cache'} ||= $self->make_DBAdaptor;
     return $dba;
 }
 

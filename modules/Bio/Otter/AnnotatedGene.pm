@@ -117,13 +117,10 @@ sub toXMLString{
         my $name;
         my $email;
 
-        if (defined($info->author)) {
-            $name  = $info->author->name;
-            $email = $info->author->email;
+        if (my $author = $info->author) {
+            $str .= " <author>" .       $author->name  . "</author>\n";
+            $str .= " <author_email>" . $author->email . "</author_email>\n";
         }
-	
-	$str .= " <author>" . $name . "</author>\n";
-	$str .= " <author_email>" . $email . "</author_email>\n";
     }
 
     my @tran = @{$self->get_all_Transcripts};

@@ -29,9 +29,12 @@ my $author  = $params{author}  || error_exit($q,"Author must defined to write a 
 my $email   = $params{email}   || error_exit($q,"Email must defined to write a region");
 
 print STDERR "Length of data " . length($data) . "\n";
+
+# Is this just for debugging?
 open OTT,">/tmp/apollo.$$.xml";
 print OTT $data;
 close(OTT);
+
 if (!defined($OTTER_SPECIES->{$params{'dataset'}})) {
   print STDERR "Unknown data set\n";
   error_exit($q, "Unknown data set " . $params{'dataset'} . " in write_region\n");
@@ -357,10 +360,8 @@ sub trim_genes_to_slice {
 sub find_gene_ends {
   my ($g) = @_;
 
-  my $min;
-  my $max;
-
-  my @exons = @{$g->get_all_Exons};
+  my @exons = @{$g->get_all_Exons}
+    or die "No exons in gene '", $g->gene_info->name->name, "'";
 
   @exons = sort {$a->start <=> $b->start} @exons;
 

@@ -100,7 +100,7 @@ sub get_xml_for_contig_from_Dataset {
                 'chrend='   . $end,
             )
         );
-    warn "url <$url>\n";
+    #warn "url <$url>\n";
     
     my $ua = $self->get_UserAgent;
     my $request = HTTP::Request->new;
@@ -130,6 +130,17 @@ sub url_root {
     my $host = $self->host or confess "host not set";
     my $port = $self->port or confess "port not set";
     return "http://$host:$port/perl";
+}
+
+sub get_DataSet_by_name {
+    my( $self, $name ) = @_;
+    
+    foreach my $ds ($self->get_all_DataSets) {
+        if ($ds->name eq $name) {
+            return $ds;
+        }
+    }
+    confess "No such DataSet '$name'";
 }
 
 sub get_all_DataSets {
@@ -222,7 +233,7 @@ sub unlock_otter_ace {
     my $write = $ace->write_file_handle;
     print $write $ace_str;
     my $xml = Bio::Otter::Converter::ace_to_XML($ace->read_file_handle);
-    print STDERR $xml;
+    #print STDERR $xml;
     
     # Save to server with POST
     my $url = $self->url_root . '/unlock_region';

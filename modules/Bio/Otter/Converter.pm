@@ -917,7 +917,7 @@ sub ace_to_otter {
 
     if (/^Sequence $OBJ_NAME/x) {
       my $currname = $1;
-      print STDERR "Found sequence [$currname]\n";
+      #print STDERR "Found sequence [$currname]\n";
 
       while (($_ = <$fh>) !~ /^\n$/) {
         chomp;
@@ -1051,10 +1051,10 @@ sub ace_to_otter {
           $sequence{$currname}{transcript} = $tran;
 
           #print STDERR "new tran  $currname [$tran][$val]\n";
-        } elsif (/^Source_Exons $INT $INT $STRING/x) {
+        } elsif (/^Source_Exons $INT $INT (?:$STRING)?/x) {
           my $oldstart = $1;
           my $oldend   = $2;
-          my $stableid = $3;
+          my $stableid = $3;    # Will not always have a stable_id
 
           my $tstart  = $sequence{$currname}{start};
           my $tend    = $sequence{$currname}{end};

@@ -63,7 +63,6 @@ sub tar_file {
     return $self->{'_tar_file'};
 }
 
-
 sub tace {
     my( $self, $tace ) = @_;
     
@@ -72,7 +71,6 @@ sub tace {
     }
     return $self->{'_tace'} || 'tace';
 }
-
 
 sub error_flag {
     my( $self, $error_flag ) = @_;
@@ -110,6 +108,7 @@ sub write_otter_acefile {
     print $fh $self->fetch_otter_ace;
     close $fh or confess "Error writing to '$otter_ace' : $!";
     $self->add_acefile($otter_ace);
+    $self->save_slice_dataset_hash;
 }
 
 sub fetch_otter_ace {
@@ -160,6 +159,45 @@ sub slice_dataset_hash {
     
     my $h = $self->{'_slice_name_dataset'} ||= {};
     return $h;
+}
+
+sub save_slice_dataset_hash {
+    my( $self ) = @_;
+    
+    my $h    = $self->slice_dataset_hash;
+    my $file = $self->slice_dataset_hash_file;
+    
+    my $fh = gensym();
+    open $fh, "> $file" or confess "Can't write to file '$file' : $!";
+    while (my ($slice, $ds) = each %$h) {
+        my $ds_name = $ds->name;
+        print $fh "$slice\t$ds_name\n";
+    }
+    close $fh;
+}
+
+sub recover_slice_dataset_hash {
+    my( $self ) = @_;
+    
+    my $cl   = $self->OtterClient or confess "No Otter Client attached";
+    my $h    = $self->slice_dataset_hash;
+    my $file = $self->slice_dataset_hash_file;
+    
+    my $fh = gensym();
+    open $fh, $file or confess "Can't read file '$file' : $!";
+    while (<$fh>) {
+        chomp;
+        my ($slice, $ds_name) = split /\t/, $_, 2;
+        my $ds = $cl->get_DataSet_by_name($ds_name);
+        $h->{$slice} = $ds;
+    }
+    close $fh;
+}
+
+sub slice_dataset_hash_file {
+    my( $self ) = @_;
+    
+    return $self->home . '/.slice_dataset';
 }
 
 sub save_all_slices {
@@ -381,7 +419,7 @@ sub DESTROY {
         return;
     }
     
-    $self->unlock_all_slices;
+    $self->unlock_all_slices if $self->OtterClient->write_access;
     rmtree($home);
 }
 
