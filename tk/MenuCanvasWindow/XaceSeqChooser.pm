@@ -60,57 +60,9 @@ sub AceDatabase {
 sub initialize {
     my( $self ) = @_;
     
-    ### Should not be hard coded in module
-    $self->set_known_GeneMethods(
-        # Method name                Editable?  Coding?  sub-category of?
-        
-        # New set of methods for Otter
-        Coding                   => [1,         1,          0],
-        Transcript               => [1,         0,          0],
-        Non_coding               => [1,         0,          1],
-        Ambiguous_ORF            => [1,         0,          1],
-        Immature                 => [1,         0,          1],
-        Antisense                => [1,         0,          1],
-        IG_segment               => [1,         1,          0],
-        Putative                 => [1,         0,          0],
-        Pseudogene               => [1,         0,          0],
-        Processed_pseudogene     => [1,         0,          1],
-        Unprocessed_pseudogene   => [1,         0,          1],
-        Predicted                => [1,         0,          0],
-        # newly added - truncated versions of above methods        
-        Coding_trunc                    => [0,         1,          1],
-        Transcript_trunc                => [0,         0,          0],
-        Non_coding_trunc                => [0,         0,          1],
-        Ambiguous_ORF_trunc             => [0,         0,          1],
-        Immature_trunc                  => [0,         0,          1],
-        Antisense_trunc                 => [0,         0,          1],
-        IG_segment_trunc                => [0,         1,          0],
-        Putative_trunc                  => [0,         0,          0],
-        Pseudogene_trunc                => [0,         0,          0],
-        Processed_pseudogene_trunc      => [0,         0,          1],
-        Unprocessed_pseudogene_trunc    => [0,         0,          1],
-        Predicted_trunc                 => [0,         0,          0],  
-        # Old methods
-        #supported                => [1,         1], 
-        #supported_CDS            => [1,         1], 
-        #supported_mRNA           => [1,         0], 
-        #GD_supported             => [1,         1], 
-        #GD_supported_mRNA        => [1,         0], 
-        #GD_working               => [1,         1], 
-
-        # Auto-analysis gene types (non-editable)
-        fgenesh                  => [0,         1],
-        FGENES                   => [0,         1],
-        GENSCAN                  => [0,         1],
-        HALFWISE                 => [0,         0],
-        SPAN                     => [0,         0],
-        EnsEMBL                  => [0,         1],
-        genomewise               => [0,         1],
-        'WashU-Supported'        => [0,         1],
-        'WashU-Putative'         => [0,         0],
-        'WashU-Pseudogene'       => [0,         0],
-        );
-
+    # take GeneMethods from Defaults.pm file
+    Bio::Otter::Lace::Defaults->set_known_GeneMethods($self) ;
+    
     $self->draw_clone_list;
     
     ## populate polyA menu here
@@ -157,21 +109,11 @@ sub clone_sub_switch_var {
     return $self->{'_clone_sub_switch_var'};
 }
 
-sub set_known_GeneMethods {
-    my $self = shift;
-    my @methods_mutable = @_;
-    
-    confess "uneven number of arguments" if @methods_mutable % 2;
-    
-    for (my $i = 0; $i < @methods_mutable; $i+= 2) {
-        my ($name, $flags) = @methods_mutable[$i, $i+1];
-        my ($is_mutable, $is_coding , $has_parent) = @$flags;
-        my $meth = $self->fetch_GeneMethod($name);
-        $meth->is_mutable($is_mutable);
-        $meth->is_coding($is_coding); 
-        $meth->has_parent($has_parent);
-        $self->add_GeneMethod($meth);
-    }
+# this method has been moved to Bio::Otter::Lace::Defaults.pm
+# but this has been left for backwards compatibility
+sub set_known_GeneMethods{
+    my  ($self) = @_ ;
+    Bio::Otter::Lace::Defaults->set_known_GeneMethods($self) ;
 }
 
 sub fetch_GeneMethod {
@@ -248,9 +190,9 @@ sub get_default_mutable_GeneMethod {
 # sequence called from 
 sub show_LocusWindow{
     my ($self , $exon_canv , $state) = @_ ;
-    
-    my $locus ;
 
+    my $locus ;
+    
     $locus = $exon_canv->SubSeq->Locus ;  
   
     my $top;
