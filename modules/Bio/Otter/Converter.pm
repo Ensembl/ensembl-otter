@@ -2129,11 +2129,18 @@ sub gene_type_from_transcript_set {
     my( $transcripts, $known_flag ) = @_;
     
     my $pseudo_count = 0;
+    my $has_artifact = 0;
     my $class_set = {};
     foreach my $transcript (@$transcripts) {
         my $class = $transcript->transcript_info->class->name;
         $class =~ s/^([^:]+)://;    # Strip leading GD. etc ...
         $class =~ s/_trunc$//;
+        if ($class eq 'Artifact') {
+            $has_artifact = 1;
+            next;   # Artifact type is silent and doesn't influence
+                    # the gene type unless it is the only transcript
+                    # class in the gene.
+        }
         $class_set->{$class}++;
         if ($class =~ /pseudo/i) {
             $pseudo_count++;
@@ -2179,13 +2186,20 @@ sub gene_type_from_transcript_set {
         $type = 'Novel_Transcript';
     }
     # All remaining gene types are only expected to have one class of transcript
-    elsif (@class_list != 1) {
+    elsif (@class_list > 1) {
         confess("Have mix of transcript classes in gene where not expected:\n"
             . join('', map "  $_\n", @class_list));
     }
     else {
         # Gene type is the same as the transcript type
-        ($type) = @class_list;
+        unless ($type = $class_list[0]) {
+            if ($has_artifact) {
+                # Artifact it the only transcript type in the gene
+                $type = 'Artifact';
+            } else {
+                confess "No transcript classes";
+            }
+        }
     }
     return $type;
 }
