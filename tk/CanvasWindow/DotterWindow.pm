@@ -350,9 +350,10 @@ sub name_start_end_from_fMap_blue_box {
     };
     return if $@;
     
-    warn "clipboard: $text";
+    #warn "clipboard: $text";
     
-    if ($text =~ /^(?:<?(?:Protein|Sequence)[:>]?)?(\S+)\s+-?(\d+)\s+-?(\d+)\s+\(\d+\)/) {
+    # Match fMap "blue box"
+    if ($text =~ /^(?:<?(?:Protein|Sequence)[:>]?)?\"?([^\"\s]+)\"?\s+-?(\d+)\s+-?(\d+)\s+\(\d+\)/) {
         my $name  = $1;
         my $start = $2;
         my $end   = $3;

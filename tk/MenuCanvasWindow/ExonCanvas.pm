@@ -2247,7 +2247,8 @@ sub run_dotter {
     };
     my( $hit_name );
     if ($txt) {
-        ($hit_name) = $txt =~ /^(?:<?(?:Protein|Sequence)[:>]?)?(\S+)/;
+        # Match fMap "blue box"
+        ($hit_name) = $txt =~ /^(?:<?(?:Protein|Sequence)[:>]?)?\"?([^\"\s]+)\"?/;
     }
     unless ($hit_name) {
         $self->message('Cannot see a hit name on the clipboard');
