@@ -91,11 +91,6 @@ sub draw_legend {
     
     my @graphs = ($self->get_all_Chromosomes)[0]
         ->get_all_Graphs;
-    my $max_width;
-    foreach my $graph (@graphs) {
-        my $width = $graph->width;
-        $max_width = $width if $width > $max_width;
-    }
     
     my $font_size = $self->font_size;
     my $pad = $self->pad;
@@ -135,7 +130,7 @@ sub draw_legend {
             -font   => $small_font,
             );
         $canvas->createText(
-            $x+$max_width+$font_size, $y,
+            $x+$width+$font_size, $y,
             -anchor => 'nw',
             -text   => $graph->label,
             -font   => $font,

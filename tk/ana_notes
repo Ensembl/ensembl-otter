@@ -198,6 +198,7 @@ my $nospangle;
 
         
         $mw->bind('<Control-Button-1>', sub{ popup_ana_seq_history($gc) });
+        $mw->bind('<Double-Button-1>',  sub{ popup_ana_seq_history($gc) });
         make_button($button_frame2, 'Quit',    sub{ $mw->destroy }, 0);
     }
     $gc->render;
@@ -219,64 +220,70 @@ my $nospangle;
             or return;
         
         unless ($top) {
+            # Make a new Toplevel object which is a transient of $master
             my $master = $canvas->toplevel;
             $top = $master->Toplevel;
-            
             $top->transient($master);
+            
+            # create new GenomeCanvas object
+            $hist_gen_canv = GenomeCanvas::AnaNotes::History->new($top);
+            # create new SeqChooser object
+            $hist_chooser = GenomeCanvas::Band::HistChooser->new;
+            # add band to history canvas
+            $hist_gen_canv->add_Band($hist_chooser);
+
+            # Close only unmaps it from the display
+            my $close_command = sub{ $top->withdraw };
+            $top->bind(    '<Control-w>',      $close_command);
+            $top->bind(    '<Control-W>',      $close_command);
+            $top->bind(    '<Escape>',         $close_command);
+            $top->protocol('WM_DELETE_WINDOW', $close_command);
+            
             my $font = 'helvetica';
             my $size = $gc->font_size;
 
-            $hist_gen_canv = GenomeCanvas::AnaNotes::History->new($top);            # create new GenomeCanvas object
-            $hist_chooser = GenomeCanvas::Band::HistChooser->new;     # create new SeqChooser object            
-           
-            $hist_gen_canv->add_Band($hist_chooser);                  #     add band to history canvas 
             my $canv = $hist_gen_canv->canvas;
             $canv->configure(-selectbackground => 'gold');
 
             # Make a buttons inside a frame
-            my $frame = $top->Frame(
-                -border => 6, 
-                )->pack(
-                    -anchor => 's',
-                    -fill   => 'x',                  
+            my $frame = $top->Frame->pack(
+                    -side   => 'top',
                     );
                     
-            # entry widget to update comment
-            my $comment_entry = $frame->Entry(
-                -background => '#ffffff' ,
-                -foreground => '#000000' ,
-                -textvariable => \$comment_string ,
-                )->pack(-side   => 'top',
-                        -expand => 1,
-                        -fill   => 'x', 
-                        );      
-
-            # Close only unmaps it from the display
-            my $close_command = sub{ $top->withdraw };
-
             my $exit = $frame->Button(
                 -text => 'Close',
                 -command => $close_command ,
-                )->pack(-side => 'left');
-            $top->bind(    '<Control-w>',      $close_command);
-            $top->bind(    '<Control-W>',      $close_command);
-            $top->bind(    '<Escape>',         $close_command);
-                
-            # Closing with window manager only unmaps window
-            $top->protocol('WM_DELETE_WINDOW', $close_command);
+                )->pack(
+                    -side   => 'left',
+                    );
             
-             
-            #button to update database and refresh remark history
+            $frame->Label(
+                -text   => ' Note text:',
+                )->pack(-side => 'left');
+            
+            # entry widget to update comment
+            my $comment_entry = $frame->Entry(
+                -width              => 55,
+                -background         => 'white',
+                -selectbackground   => 'gold',
+                -textvariable       => \$comment_string ,
+                )->pack(
+                    -side   => 'left',
+                    -padx   => 4,
+                    -fill   => 'x',
+                    );      
+
+            # button to update database and refresh remark history
             my $update_button = $frame->Button(-text=> 'Update Comment',
                 -command => sub {
-                                    update_db_comment($canv , $hist_chooser, $comment_entry->get());
-                                    update_window($hist_chooser, $asid);
-                                    $comment_string = "";
-                                    $hist_gen_canv->render;
-                                }
-                )->pack(-side => 'right');
-       
-
+                    update_db_comment($canv , $hist_chooser, $comment_entry->get());
+                    update_window($hist_chooser, $asid);
+                    $comment_string = "";
+                    $hist_gen_canv->render;
+                    })->pack(
+                        -side   => 'left',
+                        -padx   => 4,
+                        );
             
             $canv->CanvasBind('<Button-1>',
                 sub {
@@ -296,12 +303,11 @@ my $nospangle;
                     $comment_string = @choosermap[$id[0]]->[4]; 
                     @choosermap[$id[0]]->[4] = $comment_entry->get();
                     
-                    $comment_entry->focusForce;
+                    #$comment_entry->focusForce;
                     
                     });
-        }
-        else  # window is already present, just need to clear textbox and 
-        {
+        } else {
+            # window is already present, just need to clear textbox
             $comment_string = '';
         }   
         my @text = get_history_for_ana_seq_id($asid);
@@ -309,8 +315,8 @@ my $nospangle;
         $hist_chooser->chooser_map(@text);
         $hist_gen_canv->render;
         
-#        $top->deiconify;
-#        $top->raise;
+        $top->deiconify;
+        $top->raise;
                     
 #        my $lines = $text =~ tr/\n//;
 #        $hist->delete('1.0', 'end');                   #
@@ -322,8 +328,6 @@ my $nospangle;
         # Set the window title, and make it visible
         my $win = $hist_gen_canv->canvas->toplevel; #$hist->toplevel;
         $win->configure( -title => "Remark history" );
-#        $win->deiconify;
-#        $win->raise;
         
         # code to update entry widget when band is clicked.
         
