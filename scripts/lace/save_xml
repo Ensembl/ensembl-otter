@@ -33,19 +33,28 @@ use Bio::Otter::Lace::Defaults;
 
     # this means they ALL get locked.
     $seqSet->selected_CloneSequences($csObjs);
-    
-    # need to lock the region first
-    my $lock_xml = 
-        $client->lock_region_for_contig_from_Dataset($seqSet->selected_CloneSequences_as_contig_list, 
-                                                     $dsObj
-                                                     );
 
+    my $ctg_list = $seqSet->selected_CloneSequences_as_contig_list;
+    # need to lock the region first
+    my $lock_xml;
+    foreach my $ctg(@$ctg_list){
+        eval{
+            $lock_xml .= 
+                $cl->lock_region_for_contig_from_Dataset($ctg,
+                                                         $dsObj
+                                                         );
+        };
+        if($@){
+            $cl->unlock_otter_xml($lock_xml, $dataset) if $lock_xml;
+            die $@;
+        }
+    }
     # save the xml
     my $success  = $cl->save_otter_xml($xml, $dataset);
 
     # need to unlock if all was ok
     if($success){
-        $client->unlock_otter_xml($lock_xml);
+        $cl->unlock_otter_xml($lock_xml, $dataset);
     }else{
         warn "$lock_xml";
     }
@@ -84,3 +93,4 @@ __END__
 
 James Gilbert B<email> jgrg@sanger.ac.uk
 
+=cut
