@@ -538,7 +538,16 @@ sub otter_to_ace {
       $str .= "Otter_id \"" . $tran->stable_id . "\"\n";
       $str .= "Source \"" . $contig->display_id . "\"\n";
       $str .= "Locus \"" . $gene_name . "\"\n";
-      $str .= "Method \"" . $tran->transcript_info->class->name . "\"\n";
+
+      my $method = $tran->transcript_info->class->name;
+      $str .= "Method \"" . $method . "\"\n";
+
+      # Extra tags needed by ace
+      if ($method =~ /supported_mRNA/) {
+        $str .= "Processed_mRNA\n";
+      } elsif ($method eq "Pseudogene") {
+        $str .= "Pseudogene\nCDS\n";
+      }
 
       my @remark = $tran->transcript_info->remark;
 
