@@ -19,12 +19,14 @@ sub start_handler{
     my $xml  = shift;
     my $ele  = lc shift;
     my $attr = {@_};
+    $self->_check_version(@_) if $ele eq 'otter';
 
     if($ele eq 'sequenceset'){
         my $ss = Bio::Otter::Lace::SequenceSet->new();
         $ss->name($attr->{'name'});
-        $ss->is_hidden($attr->{'hidden'});
+        $ss->is_hidden($attr->{'hide'});
         $ss->dataset_name($self->get_property('dataset_name'));
+        $ss->write_access($attr->{'write_access'});
         $self->add_object($ss);
     }elsif($SUB_ELE->{$ele}){
      #   print "* Interesting $ele\n";
@@ -33,6 +35,7 @@ sub start_handler{
     }
     
 }
+
 sub end_handler{ }
 sub char_handler{
     my $self = shift;
@@ -48,7 +51,7 @@ sub char_handler{
         if($current->can($context_method)){
             $current->$context_method($data);
         }else{
-            print STDERR "$current can't $context_method\n";
+#            print STDERR "$current can't $context_method\n";
         }
     }
 }
