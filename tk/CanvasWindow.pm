@@ -85,7 +85,7 @@ sub font_size {
         $self->{'_font_size'} = $font_size;
         $self->{'_font_unit_width'} = undef;
     }
-    return $self->{'_font_size'} || 15;
+    return $self->{'_font_size'} || 14;
 }
 
 sub font_unit_width {

@@ -160,7 +160,7 @@ sub add_buttons {
     
     my $quit_button = $bf->Button(
         -text       => 'Quit',
-        -command    => sub{ exit 0; },
+        -command    => sub{ $self->canvas->toplevel->destroy; },
         );
     $quit_button->pack(
         -side   => 'right',
