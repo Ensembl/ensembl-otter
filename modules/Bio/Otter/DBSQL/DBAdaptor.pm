@@ -90,13 +90,13 @@ sub get_HitDescriptionAdaptor {
     return $self->_get_adaptor('Bio::Otter::DBSQL::HitDescriptionAdaptor');
 }
 
-sub get_DnaDnaAlignFeatureAdaptor {
+sub get_DnaAlignFeatureAdaptor {
     my $self = shift;
     
     return $self->_get_adaptor('Bio::Otter::DBSQL::DnaDnaAlignFeatureAdaptor');
 }
 
-sub get_DnaPepAlignFeatureAdaptor {
+sub get_ProteinAlignFeatureAdaptor {
     my $self = shift;
     
     return $self->_get_adaptor('Bio::Otter::DBSQL::DnaPepAlignFeatureAdaptor');

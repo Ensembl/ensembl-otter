@@ -6,7 +6,7 @@ package Bio::Otter::DBSQL::DnaDnaAlignFeatureAdaptor;
 use strict;
 
 use Bio::Otter::DnaDnaAlignFeature;
-use base 'Bio::EnsEMBL::DBSQL::DnaDnaAlignFeatureAdaptor';
+use base 'Bio::EnsEMBL::DBSQL::DnaAlignFeatureAdaptor';
 
 
 sub _objs_from_sth {

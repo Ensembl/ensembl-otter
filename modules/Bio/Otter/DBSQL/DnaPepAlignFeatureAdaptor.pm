@@ -6,7 +6,7 @@ package Bio::Otter::DBSQL::DnaPepAlignFeatureAdaptor;
 use strict;
 
 use Bio::Otter::DnaPepAlignFeature;
-use base 'Bio::EnsEMBL::DBSQL::DnaPepAlignFeatureAdaptor';
+use base 'Bio::EnsEMBL::DBSQL::ProteinAlignFeatureAdaptor';
 
 
 sub _objs_from_sth {
@@ -33,6 +33,13 @@ sub _objs_from_sth {
 __END__
 
 =head1 NAME - Bio::Otter::DBSQL::DnaPepAlignFeatureAdaptor
+
+=head1 DESCRIPTION
+
+Extends its Bio::Otter::DnaPepAlignFeature
+baseclass to add Bio::Otter::HitDescription
+objects to the features it fetches, which become
+Bio::Otter::DnaPepAlignFeatures.
 
 =head1 AUTHOR
 
