@@ -65,6 +65,7 @@ use Bio::EnsEMBL::Chromosome;
 
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Clone;
+use Bio::Otter::Lace::SatelliteDB;
 
 {
 #    my $t0 = new Benchmark; # test the time taken for the script to run.
@@ -133,7 +134,7 @@ use Bio::EnsEMBL::Clone;
         );
         
     
-    my $pipe_options = get_pipeline_options($otter_db);
+    my $pipe_options = Bio::Otter::Lace::SatelliteDB::get_options_for_key($otter_db, 'pipeline_db');
     if ($pipe_options) {
         # Check none of the pipe options are set on command line
         if ($pipehost or $pipeport or $pipedbname or $pipedbuser or $pipedbpass) {
@@ -155,7 +156,7 @@ use Bio::EnsEMBL::Clone;
             -DBNAME => $pipedbname,
             };
             
-        save_pipeline_options($otter_db, $pipe_options);
+        Bio::Otter::Lace::SatelliteDB::save_options_hash($otter_db, 'pipeline_db', $pipe_options);
     }
     
   
@@ -174,8 +175,8 @@ use Bio::EnsEMBL::Clone;
     }
 
 
-    ## takes the last arguments as the filename to be read
-    $agp_file = @ARGV->[0];
+    ## takes the remaining argument as the filename to be read
+    $agp_file = $ARGV[0];
     if (! defined $agp_file ) {warn 'cannot load assembly details, as there is no agp file';}
     open AGP, "$agp_file" or die "couldnt open $agp_file";
 
@@ -228,6 +229,9 @@ use Bio::EnsEMBL::Clone;
     #--------------------------------finished reading input file ------------------------
 
 
+    if ($chromosome_name =~ /chr/i) {
+        die "Chromosome names containing 'chr' are illegal: '$chromosome_name'\n";
+    }
     
 
     # die on INT signal    - should clean things up a bit , if program terminates early
@@ -593,47 +597,7 @@ sub clone_to_db {
               
     return($contig->dbID, $contig->display_id);
 }  
-    
-#------------------------------------------------------------------------------------------
 
 
-sub get_pipeline_options {
-    my( $db ) = @_;
-    
-    my $sth = $db->prepare("SELECT meta_value FROM meta WHERE meta_key = 'pipeline_db'");
-    $sth->execute;
-    my ($opt_str) = $sth->fetchrow;
-    if ($opt_str) {
-        my $options_hash = {eval $opt_str};
-        if ($@) {
-            die "Error evaluating '$opt_str' : $@";
-        }
-        return $options_hash
-    } else {
-        return;
-    }
-}
-
-sub save_pipeline_options {
-    my( $db, $options_hash ) = @_;
-    
-    my $host    = $options_hash->{-HOST};
-    my $port    = $options_hash->{-PORT};
-    my $user    = $options_hash->{-USER};
-    my $pass    = $options_hash->{-PASS};
-    my $dbname  = $options_hash->{-DBNAME};
-   
-   
-       
-    my $opt_str = qq{
-        -HOST   => '$host',
-        -PORT   => '$port',
-        -USER   => '$user',
-        -PASS   => '$pass',
-        -DBNAME => '$dbname',
-        };
-    my $sth = $db->prepare("INSERT INTO meta(meta_key, meta_value) VALUES (?,?)");
-    $sth->execute('pipeline_db', $opt_str);
-}
 sub useage{ exit(exec('perldoc', $0)); }
 

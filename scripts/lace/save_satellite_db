@@ -1,0 +1,81 @@
+#!/usr/local/bin/perl5.6.1 -w
+
+### save_satellite_db
+
+use strict;
+use Getopt::Long;
+use Bio::Otter::Lace::SatelliteDB;
+
+{
+    my $usage = sub{ exec('perldoc', $0) };
+
+    my(
+        $host,
+        $port,
+        $user,
+        $pass,
+        $dbname,
+        
+        $key,
+        
+        $sathost,
+        $satport,
+        $satuser,
+        $satpass,
+        $satdbname,
+        
+        );
+
+    GetOptions(
+        'h|help!'       => $usage,
+
+        'host=s'        => \$host,
+	'port=i'        => \$port,
+	'user=s'        => \$user,
+	'password=s'    => \$pass,
+        'dbname=s'      => \$dbname,
+
+        'key=s'         => \$key,
+
+        'sathost=s'     => \$sathost,
+	'satport=i'     => \$satport,
+	'satuser=s'     => \$satuser,
+	'satpassword=s' => \$satpass,
+        'satdbname=s'   => \$satdbname, 
+        ) or $usage->();
+    
+    die "Key not given" unless $key;
+    
+    # DB were the key will be written
+    my $otter_db = Bio::EnsEMBL::DBSQL::DBAdaptor->new(   
+        -HOST   => $host,
+        -PORT   => $port,
+        -USER   => $user,
+        -PASS   => $pass,
+        -DBNAME => $dbname,
+        );
+    
+    my $sat_opts = {};
+    $sat_opts->{'-HOST'}    = $sathost      if $sathost;
+    $sat_opts->{'-PORT'}    = $satport      if $satport;
+    $sat_opts->{'-USER'}    = $satuser      if $satuser;
+    $sat_opts->{'-PASS'}    = $satpass      if $satpass;
+    $sat_opts->{'-DBNAME'}  = $satdbname    if $satdbname;
+
+    # Check we can connect to the Satellite database
+    my $sat_db = Bio::EnsEMBL::DBSQL::DBAdaptor->new(%$sat_opts);
+    $sat_db = undef;
+    
+    Bio::Otter::Lace::SatelliteDB::save_options_hash($otter_db, $key, $sat_opts);
+}
+
+
+
+__END__
+
+=head1 NAME - save_satellite_db
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
