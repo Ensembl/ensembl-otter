@@ -405,31 +405,38 @@ sub XML_to_otter {
 
     elsif (/<assembly_tag>/) {
       $at = Bio::Otter::AssemblyTag->new;
+      while (<$fh>) {
+	if (/<contig_strand>(.+)<\/contig_strand>/) {
+	  $at->strand($1);
+	}
+	elsif (/<tag_type>(.+)<\/tag_type>/) {
+	  $at->tag_type($1);
+	}
+	elsif (/<contig_start>(.+)<\/contig_start>/) {
+	  $at->start($1);
+	}
+	elsif (/<contig_end>(.+)<\/contig_end>/) {
+	  $at->end($1);
+	}
+	elsif (/<tag_info>(.+)<\/tag_info>/) {
+	  $at->tag_info($1);
+	}
+	elsif (/<tag_id>(.+)<\/tag_id>/) {
+	  $at->tag_id($1);
+	}
+	elsif (/<contig_id>(.+)<\/contig_id>/) {
+	  $at->contig_id($1);
+	}
+	elsif (/<\/assembly_tag>/) {
+	  push(@$assembly_tag_set, $at);
+	  last;
+	}
+	else {
+	  die "Unexpected line: $_";
+	}
+      }
     }
-    elsif (/<contig_strand>(.+)<\/contig_strand>/){
-      $at->strand($1);
-    }
-    elsif (/<tag_type>(.+)<\/tag_type>/) {
-      $at->tag_type($1);
-    }
-    elsif (/<contig_start>(.+)<\/contig_start>/) {
-      $at->start($1);
-    }
-    elsif (/<contig_end>(.+)<\/contig_end>/) {
-      $at->end($1);
-    }
-    elsif (/<tag_info>(.+)<\/tag_info>/) {
-      $at->tag_info($1);
-    }
-    elsif (/<tag_id>(.+)<\/tag_id>/){
-      $at->tag_id($1);
-    }
-    elsif (/<contig_id>(.+)<\/contig_id>/){
-      $at->contig_id($1);
-    }
-    elsif (/<\/assembly_tag>/) {
-      push(@$assembly_tag_set, $at);
-    }
+
     elsif (/<.*?>.*<\/.*?>/) {
       print STDERR "ERROR: Unrecognised tag [$_]\n";
     }
@@ -588,14 +595,14 @@ sub XML_to_otter {
     }
   }
 
-    # Features need similarly to be fixed
-    {
-        my $offset = 1 - $chrstart;
-        foreach my $feat (@$feature_set) {
-            $feat->start($feat->start + $offset);
-            $feat->end(  $feat->end   + $offset);
-        }
+  # Features need similarly to be fixed
+  {
+    my $offset = 1 - $chrstart;
+    foreach my $feat (@$feature_set) {
+      $feat->start($feat->start + $offset);
+      $feat->end(  $feat->end   + $offset);
     }
+  }
 
   foreach my $gene (@genes) {
     prune_Exons($gene);
@@ -747,7 +754,7 @@ sub otter_to_ace {
 
         # coords are same as XML from otter db (ie, all -1 <-> 1 and all start coord <= end coord)
 	my ($start, $end);
-        ($at->strand == -1) ? ($start = $at->start, $end = $at->end) : ($start=$at->end, $end=$at->start);
+        ($at->strand == 1) ? ($start = $at->start, $end = $at->end) : ($start=$at->end, $end=$at->start);
 	
 	my $tag_type = $at->tag_type;
 	my $tag_info = $at->tag_info;
@@ -1219,9 +1226,8 @@ sub ace_to_otter {
 	  my $at = Bio::Otter::AssemblyTag->new;
 	  $at->tag_type($1);
 	  $at->tag_info($4);
-	  $at->start($2);
-	  $at->end($2);
-	  $2 > $3 ? ( $at->strand(1), $at->start($3), $at->end($2) ) : ( $at->strand(-1), $at->start($2), $at->end($3) );
+
+	  $2 < $3 ? ( $at->strand(1), $at->start($2), $at->end($3) ) : ( $at->strand(-1), $at->start($3), $at->end($2) );
 
 	  my $assembly_tag_set = $curr_seq->{'assembly_tag_set'} ||= [];
 	  push @$assembly_tag_set, $at;
