@@ -1,4 +1,5 @@
-#!/usr/local/bin/perl5.6.1 -w
+#!/nfs/humace2/hum/bin/perl -w
+#  !/usr/local/bin/perl5.6.1 -w
 
 ### genome_canvas
 
@@ -405,7 +406,6 @@ sub nudge_into_free_space {
         my( $band ) = @_;
         
         my $dbobj = $band->virtual_contig->dbobj;
-        my %is_ens_repeat = map {$_, 1} list_repeat_names($dbobj);
         my %valid_classes = map {$_, 1} $band->repeat_classes;
 
         local *LIB;
@@ -417,7 +417,7 @@ sub nudge_into_free_space {
             while (<FA>) {
                 if (/^>(\S+)/) {
                     my ($rep, $class) = split /#/, $1, 2;
-                    next unless $is_ens_repeat{$rep};
+                    next unless $class;
                     $class =~ s{/.+}{};
                     if (my $stored_class = $repeat_class{$rep}) {
                         warn "$rep: class '$class' doesn't match stored '$stored_class'"
@@ -433,22 +433,6 @@ sub nudge_into_free_space {
         close LIB;
     }
 }
-
-sub list_repeat_names {
-    my( $dbobj ) = @_;
-    
-    my $sth = $dbobj->prepare(q{
-        SELECT DISTINCT hid
-        FROM repeat_feature
-        });
-    $sth->execute;
-    my( @repeat );
-    while (my ($r) = $sth->fetchrow) {
-        push(@repeat, $r);
-    }
-    return @repeat;
-}
-
 
 
 
