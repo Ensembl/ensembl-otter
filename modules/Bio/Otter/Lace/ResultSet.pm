@@ -69,12 +69,12 @@ sub DataSet{
 }
 
 sub execute_search{
-    my ( $self , $search_string ) = @_ ;
+    my ( $self , $search_list ) = @_ ;
 
     if ($self->search_type eq 'locus'){
-        $self->fetch_Clones_containing_locus($search_string) ;
+        $self->fetch_Clones_containing_locus($search_list) ;
     }else{
-        $self->fetch_Clones_conataining_CloneNames($search_string) ;
+        $self->fetch_Clones_containing_CloneNames($search_list) ;
     }
 }
 
@@ -83,8 +83,7 @@ sub fetch_Clones_containing_locus{
     
     confess "Missing locus name argument " unless ($locus_names);
     
-    my $locus_names_string = "'" . (join "', '" ,  @$locus_names) . "'" ;
-
+    my $locus_names_string = join(',', map "'$_'", @$locus_names);
 
     my $dba = $self->DataSet->get_cached_DBAdaptor ;    
     my %id_chr = map {$_->chromosome_id, $_} $self->DataSet->get_all_Chromosomes;
@@ -135,7 +134,7 @@ sub fetch_Clones_containing_CloneNames{
     }
     confess "Missing clone names argument " unless $clone_names ;
     
-    my $clone_names_string = "'" . (join "', '" ,  @$clone_names) . "'" ;
+    my $clone_names_string = join(',', map "'$_'", @$clone_names);
     warn "looking for clone names $clone_names_string";
  
     
@@ -155,7 +154,8 @@ sub fetch_Clones_containing_CloneNames{
         LEFT JOIN clone_lock lk ON lk.clone_id = cl.clone_id
         WHERE cl.clone_id = c.clone_id
         AND a.contig_id = c.contig_id
-        AND cl.name IN ($clone_names_string)
+        AND (cl.name IN ($clone_names_string)
+            OR cl.embl_acc IN ($clone_names_string))
         ORDER BY a.chromosome_id , a.chr_start
     });
 

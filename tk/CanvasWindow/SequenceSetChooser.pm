@@ -357,9 +357,9 @@ sub search{
     my $search = $self->{'search_entry'}->get   ;
     my @search_names = split /\s+/ ,  $search ;
         
-    if  ($search_type eq 'clone') {
+    if ($search_type eq 'clone') {
         $rs->search_type('clone') ;
-    }else{
+    } else {
         $rs->search_type('locus') ; # defaults to locus 
     }
     
@@ -380,7 +380,7 @@ sub search{
     }
     else{
         ## send mesasage to main window
-        $self->message("no clones matched your search criteria") ;
+        $self->message("no $search_type matched your search criteria") ;
     }
     
     # remove the window from viewing
