@@ -71,11 +71,11 @@ if (scalar(@chromosomes)) {
   }
 }
 
-open(IN,$gff_file) || die "cannot open $gff_file";
+open(IN,$gff_file) or die "cannot open $gff_file";
 my %locus;
 my %seqname;
 
-open FPLLT,"</nfs/acari/searle/LL_tmpl";
+open FPLLT,"</nfs/acari/searle/progs/otter/scripts/convdata/xref/LL_tmpl" or die "Couldn't open LL_tmpl";
 my %loctmplindex;
 my $pos =0;
 while (<FPLLT>) {
@@ -116,6 +116,7 @@ while(<IN>){
             
       print $line;
       print "Gene $gene_id locuslink $locus_id\n";
+      if ($off_sym) { print " offsym = $off_sym\n"; }
       $locus{$locus_id}++;
       $crossrefs{$gene_id}->{locus_id} = $locus_id;
       $crossrefs{$gene_id}->{off_sym} = ($off_sym ? $off_sym : $locus_id);
@@ -127,6 +128,7 @@ while(<IN>){
 close(IN);
 close(FPLLT);
 print scalar(keys %locus)." locus ids found\n";
+
 
 foreach my $chr (reverse sort bychrnum keys %$chrhash) {
   print STDERR "Chr $chr from 1 to " . $chrhash->{$chr} . " on " . $path . "\n";
@@ -155,6 +157,7 @@ foreach my $chr (reverse sort bychrnum keys %$chrhash) {
                                              -release=>1,
                                              -dbname=>"LocusLink",
                                             );
+      print " locus link = " .$crossrefs{$gene_name}->{off_sym} . "\n";
       $dbentry->status('KNOWN');
       $gene->add_DBLink($dbentry);
       $adx->store($dbentry,$gene->dbID,'Gene') if $do_store;
@@ -163,7 +166,7 @@ foreach my $chr (reverse sort bychrnum keys %$chrhash) {
       my $sth = $db->prepare("update gene set display_xref_id=" . 
                              $dbentry->dbID . " where gene_id=" . $gene->dbID);
       print $sth->{Statement} . "\n";
-      $sth->execute if $do_store;
+      #$sth->execute if $do_store;
 
       if ($crossrefs{$gene_name}->{nm}) {
         my $dbentry=Bio::EnsEMBL::DBEntry->new(-primary_id=>$crossrefs{$gene_name}->{nm},
