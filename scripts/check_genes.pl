@@ -759,7 +759,7 @@ foreach my $atype (keys %gsi){
 	      print "should never happen $eid, $eid2\n";
 	    }
 	    # if seen this phase before, duplicate, so delete; else save
-	    my $dflag;
+	    my $dflag=0;
 	    foreach my $rp (@{$ephases{$eid2}}){
 	      my($es3,$ep3,$eep3)=@$rp;
 	      if($es==$es3 && $ep==$ep3 && $eep==$eep3){
@@ -767,8 +767,10 @@ foreach my $atype (keys %gsi){
 	      }
 	    }
 	    if($dflag){
-	      $dup_exon{$eid}=$eid2;
-	      print OUT2 "$eid\t$eid2\t$st\t$ed\n";
+	      if($dup_exon{$eid}!=$eid2){
+		$dup_exon{$eid}=$eid2;
+		print OUT2 "$eid\t$eid2\t$st\t$ed\n";
+	      }
 	    }else{
 	      push(@{$ephases{$eid2}},[$es,$ep,$eep]);
 	    }
@@ -800,6 +802,7 @@ foreach my $atype (keys %gsi){
 	    $npntr++;
 	  }
 	  $e{$gsi}->{$eid}=[$ecst,$eced,$es,$ep,$eep,$trid];
+	  push(@{$ephases{$eid}},[$es,$ep,$eep]);
 	  push(@{$eall{$ecst}->{$eced}},$eid);
 	  $eids{$eid}=$esr if $esr>1;
 	  $nexon++;
