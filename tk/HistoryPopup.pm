@@ -11,12 +11,12 @@ use Bio::EnsEMBL::Pipeline::AnaSubmission qw{ set_db_args sub_db prepare_stateme
 
 {
     sub new{
-        my ($class , $choosermap_variables  ) = @_;
+        my ($class , @choosermap_variables  ) = @_;
 
         my $self = bless {} , $class;
         
-        if ($choosermap_variables){
-            $self->set_choosermap_variables(1, 3 , 5);
+        if (@choosermap_variables){
+            $self->set_choosermap_variables(@choosermap_variables);
             
         }else{
             ## default values - work for the choosermap used at time of writing
@@ -83,16 +83,6 @@ use Bio::EnsEMBL::Pipeline::AnaSubmission qw{ set_db_args sub_db prepare_stateme
         
     }    
 
-    ##sub comment_string{
-    ##    my ($self , $string_ref) = @_;
-
-        ##if ($string_ref){
-        ##    $self->{'_comment_string'} = $string_ref;
-        ##}
-       
-        ##return $self->{'_comment_string'} ;
-
-    ##};
 
 
 my $comment_string ; # used as a variable for the text entry widget
@@ -270,13 +260,6 @@ my $comment_string ; # used as a variable for the text entry widget
 
         }
     }
-
-    ##sub update_window{
-    ##    warn "dont forget to update this subroutine" ;
-    ##    my ($self) = @_;
-    ##    
-    ##}
-  
     
     sub display{
         my $self = shift @_;
