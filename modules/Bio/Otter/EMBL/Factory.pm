@@ -949,7 +949,7 @@ sub _do_polyA {
     my ( $self, $slice, $set ) = @_;
     
     my $polyA_signal_feats = $slice->get_all_SimpleFeatures('polyA_signal');
-    my $polyA_site_feats = $slice->get_all_SimpleFeatures('polyA_site');
+    my $polyA_site_feats   = $slice->get_all_SimpleFeatures('polyA_site');
 
     foreach my $polyA_signal (@$polyA_signal_feats) {
 
