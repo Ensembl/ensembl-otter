@@ -887,9 +887,9 @@ sub write_ensembl_data {
     my $ensembl_sources = $self->Client->option_from_array([$species, 'ensembl_sources']);
     ### Analysis logic name should not be hard coded, so now they're not.
     foreach my $key(keys(%$ensembl_sources)){
-        my $logic = $ensembl_sources->{$key};
-        warn "I'm gonna fetch using key '$key' in meta table and set logic to '$logic'\n";
-        $self->write_ensembl_data_for_key($ss, $key, $logic);
+        my $logic = [ split(',', $ensembl_sources->{$key}) ];
+        warn "I'm gonna fetch using key '$key' in meta table and set logic to '@$logic'\n";
+        map { $self->write_ensembl_data_for_key($ss, $key, $_) } @$logic;
     }
 }
 
