@@ -206,6 +206,7 @@ sub get_SequenceNotes_by_name{
 	next unless $name eq $sn_name;
 	# See bind_close_window method of SequenceNotes.
 	# $sn->SequenceSetChooser($self);
+        $sn->canvas->find('withtag', 'all') || return ($sn->draw_range() + 1);
 	$sn->canvas->toplevel->deiconify();
 	$sn->canvas->toplevel->raise();
 	return 1;
