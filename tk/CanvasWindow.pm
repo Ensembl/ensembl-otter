@@ -250,9 +250,10 @@ sub bind_scroll_commands {
         $y_scroll->ScrlByUnits('v', 1);
         });
 
-    if($^0 eq 'MSWin32'){
+    if($^O eq 'MSWin32'){
         #$canvas->Tk::bind('<MouseWheel>',sub{
             #warn "Someone's scrolling with the mousewheel\n";
+            #$y_scroll->ScrlByUnits('v', 3);
         #});
     }else{
         $canvas->Tk::bind('<4>', sub{
