@@ -200,10 +200,11 @@ sub ace_from_contig_list {
 
         ### Nasty that genes and slice arguments are in
         ### different order in these two subroutines
+                
+      
         my ($genes, $slice, $sequence, $tiles, $feature_set) =
             Bio::Otter::Converter::XML_to_otter($xml->read_file_handle);
         $ace .= Bio::Otter::Converter::otter_to_ace($slice, $genes, $tiles, $sequence, $feature_set);
-
         # We need to record which dataset each slice came
         # from so that we know where to save it back to.
         my $slice_name = $slice->display_id;

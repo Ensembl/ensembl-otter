@@ -258,9 +258,11 @@ sub fetch_all_CloneSequences_for_SequenceSet {
           , g.contig_id, g.name, g.length
           , a.chromosome_id, a.chr_start, a.chr_end
           , a.contig_start, a.contig_end, a.contig_ori
+          , cl.clone_lock_id
         FROM assembly a
           , contig g
           , clone c
+        LEFT JOIN clone_lock cl ON cl.clone_id = c.clone_id
         WHERE a.contig_id = g.contig_id
           AND g.clone_id = c.clone_id
           AND a.type = ?
@@ -272,12 +274,13 @@ sub fetch_all_CloneSequences_for_SequenceSet {
          $ctg_id,  $ctg_name,  $ctg_length,
          $chr_id,  $chr_start,  $chr_end,
          $contig_start,  $contig_end,  $strand,
-         );
+         $clone_lock_id );
     $sth->bind_columns(
         \$name, \$acc, \$sv,
         \$ctg_id, \$ctg_name, \$ctg_length,
         \$chr_id, \$chr_start, \$chr_end,
         \$contig_start, \$contig_end, \$strand,
+        \$clone_lock_id
         );
     while ($sth->fetch) {
         my $cl = Bio::Otter::Lace::CloneSequence->new;
@@ -294,6 +297,9 @@ sub fetch_all_CloneSequences_for_SequenceSet {
         $cl->contig_name($ctg_name);
         $cl->contig_id($ctg_id);
 	$cl->unfinished($lookup->{$ctg_name});
+        if (defined $clone_lock_id){
+            $cl->set_lock_status(1) ;
+        }
         push(@$cs, $cl);
     }
 
@@ -755,6 +761,47 @@ sub update_SequenceSet{
 	my $sth = $adaptor->prepare($update_meta_info);
 	$sth->execute($desc, $pri, $name);
     }
+}
+
+sub refresh_locks{
+    my ($self , $ss ) = @_ ;
+    
+    my $cs_list = $ss->CloneSequence_list ;
+    my @contig_ids ; # or could use embl acc / version combo - but this seems simpler
+    foreach my $cs (@$cs_list){
+        push @contig_ids , $cs->contig_id ;
+    }
+    my $comma_list = join ',' , @contig_ids  ;
+    
+    my $dba = $self->get_cached_DBAdaptor ;
+    my $sth = $dba->prepare(qq{
+        SELECT  cg.clone_id
+            ,   cg.contig_id
+        FROM    clone_lock cl
+            ,   contig cg 
+        WHERE   cl.clone_id = cg.clone_id
+        AND     cg.contig_id IN ($comma_list)     
+        } ) ;
+    $sth->execute() ;
+    
+    my ($clone_id , $contig_id) ;
+    $sth->bind_columns(\$clone_id , \$contig_id) ;
+    
+    my @locked_ids;
+    while ($sth->fetch){
+        push @locked_ids , $contig_id ;
+    }
+    
+    # go through each clone_sequence, setting the status to unlocked, unless the id matches one in the list 
+    foreach my $cs (@$cs_list){
+        $cs->set_lock_status(0) ;
+        foreach my $id (@locked_ids){
+            if ($id == $cs->contig_id){
+                $cs->set_lock_status(1) ;
+                last ;
+            }
+        }
+    }    
 }
 
 sub delete_SequenceSet{
