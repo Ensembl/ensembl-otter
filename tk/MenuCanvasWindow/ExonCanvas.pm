@@ -540,7 +540,9 @@ sub show_subseq {
 sub add_subseq_rename_widget {
     my( $self ) = @_;
     
-    my $button_frame = $self->canvas->toplevel->Frame;
+    my $button_frame = $self->canvas->toplevel->Frame(
+        -borderwidth    => 6,
+        );
     $button_frame->pack(
         #-side => 'top',
         -anchor => 'nw',
@@ -549,6 +551,7 @@ sub add_subseq_rename_widget {
     my $sub_name_label = $button_frame->Label(
         -text   => "Name:",
         -anchor => 's',
+        -padx   => 6,
         );
     $sub_name_label->pack(
         -side => 'left',
@@ -557,6 +560,9 @@ sub add_subseq_rename_widget {
     my $sub_name = $button_frame->Entry(
         -width              => 20,
         -exportselection    => 1,
+        -relief             => 'flat',
+        -background         => 'white',
+        -selectbackground   => 'gold',
         -font               => [$self->font, $self->font_size, 'normal'],
         );
     $sub_name->pack(
