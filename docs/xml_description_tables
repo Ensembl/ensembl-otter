@@ -417,6 +417,7 @@ multiple
 description     a genomic region - part or whole of a chromosome
 contains        accession
 contains        version
+contains        id
 contains        assembly_start
 contains        assembly_end
 contains        fragment_ori
@@ -437,6 +438,10 @@ mandatory
 description     EMBL/Genbank/DDBJ sequence version for this accession
 value           integer
 mandatory
+
+<id>
+description     Name of the fragment inside the otter database
+value           string
 
 <assembly_start>
 description     start position of this sequence in the genomic assembly (chromosome)
