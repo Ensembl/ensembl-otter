@@ -6,9 +6,18 @@ package CanvasWindow::SequenceNotes::History;
 use strict;
 use Carp;
 
-use ChooserCanvas::HistoryCanvas;
-use Bio::Otter::Lace::SequenceNote;
-use GenomeCanvas::Band::SeqChooser;
+use base 'CanvasWindow::SequenceNotes';
+
+### choose between multiple windows or previous/next buttons
+
+### override initialise - factor out common code into separate subroutines
+
+### give list of appropriate column_methods in History object creation in SequenceNotes
+
+### override get_CloneSequence_list to provide
+### list of the same CloneSequence object with
+### different SequenceNotes attached
+
 {
     # new takes a mainwindow widget and creates a popup window, containg list of sequence notes
     sub new{
