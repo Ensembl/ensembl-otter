@@ -318,6 +318,7 @@ sub mRNA_end_not_found {
     }
     return $obj->{'mRNA_end_not_found'} || 0;
 }
+
 =head2 remark
   
  Title   : remark
@@ -518,7 +519,7 @@ sub equals {
      }
 
     my @remark1 = $self->remark;
-    my @remark2 = $self->remark;
+    my @remark2 = $obj->remark;
 
     if (scalar(@remark1) != scalar(@remark2)) {
         print STDERR "Different numbers of remarks " . scalar(@remark1) . " : " . scalar(@remark2) . "\n";

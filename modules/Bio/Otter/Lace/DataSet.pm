@@ -158,7 +158,8 @@ sub get_all_SequenceSets {
                 # table for this set, then it is invisible to them.
                 next unless defined $write_flag;
             } else {
-                # No entries in sequence_set_access table - everyone can write
+                # No entries in sequence_set_access table - everyone
+                # can write and see everything.
                 $write_flag = 1;
             }
         
@@ -688,7 +689,10 @@ sub _fetch_clones{
 	if($clone){
 	    warn "clone <".$clone->embl_id."> is already in the " . $clone_adaptor->db->dbname . " database\n" ;
 	    my $contigs = $clone->get_all_Contigs;
-	    die "more than 1 contig for clone " . $acc if (scalar(@$contigs) != 1);
+            my $count = @$contigs;
+            unless ($count == 1) {
+                die "Clone '$acc' has $count contigs";
+            }
 	}else{
 	    my $acc_sv = "$acc.$sv";
 	    $seq ||= &$seqfetcher($acc_sv);

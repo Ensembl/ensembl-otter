@@ -35,7 +35,7 @@ use strict;
 human genome we will need an agreed upon format
 to exchange data.   Commonly used formats (GFF,
 DAS, GTF), although extremely useful, are only
-really designed to sequence features and are not
+really designed for sequence features and are not
 easily extended to include gene structures the
 extra textual information that manual annotation
 provides.</p>
