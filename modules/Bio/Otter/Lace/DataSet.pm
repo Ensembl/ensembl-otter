@@ -326,7 +326,6 @@ sub fetch_all_CloneSequences_for_SequenceSet {
     
     my $dba = $self->get_cached_DBAdaptor;
     my $type = $ss->name;
-    my $ass_table_name = $ss->fake_assembly_table_name();
 
     my $sth = $dba->prepare(qq{
         SELECT c.name, c.embl_acc, c.embl_version
@@ -334,7 +333,7 @@ sub fetch_all_CloneSequences_for_SequenceSet {
           , a.chromosome_id, a.chr_start, a.chr_end
           , a.contig_start, a.contig_end, a.contig_ori
           , cl.clone_lock_id
-        FROM $ass_table_name a
+        FROM assembly a
           , contig g
           , clone c
         LEFT JOIN clone_lock cl ON cl.clone_id = c.clone_id
@@ -394,7 +393,7 @@ sub fetch_pipeline_ctg_ids_for_SequenceSet{
                                join(', ' => keys %ctg_names) .q{)};
     #                           join(', ' => @ctg_names) .q{)};
     my $sth            = $pipeline_db->prepare($sql);
-    warn $sql;
+    # warn $sql;
     $sth->execute();
     # my $hash;
     while(my $row = $sth->fetchrow_arrayref()){
