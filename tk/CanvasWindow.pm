@@ -755,13 +755,12 @@ sub exception_message {
     my( $self, $except, @message ) = @_;
     
     # Take just the first line of the exception message
-    my ($except_first) = $except =~ /^(.+)$/m;
+    #my ($except_first) = $except =~ /^(.+)$/m;
     
     # Put the message on the terminal
-    warn "$except_first\n";
+    print STDERR $except;
 
-    push(@message, $except_first);
-    $self->message(@message);
+    $self->message(@message, $except);
 }
 
 sub message {

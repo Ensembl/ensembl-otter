@@ -671,11 +671,12 @@ sub save_data {
     eval{
         $db->save_all_slices;
     };
+    my $err = $@;
     
     $top->Unbusy;
     
-    if ($@) {
-        $self->exception_message('Error saving to otter', $@);
+    if ($err) {
+        $self->exception_message($err, 'Error saving to otter');
         return 0;
     } else {
         return 1;
