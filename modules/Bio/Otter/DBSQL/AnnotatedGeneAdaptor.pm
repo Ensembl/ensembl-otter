@@ -471,7 +471,7 @@ sub fetch_by_Slice {
             };
             if ($@) {
                 die sprintf("Missing transcript_info on transcript %s (%d)", 
-                    $transcript->stable_id || $transcript->dbID);
+                    $transcript->stable_id, $transcript->dbID);
             }
             my $exons_truncated = $transcript->truncate_to_Slice($slice);
             my $ex_list = $transcript->get_all_Exons;
