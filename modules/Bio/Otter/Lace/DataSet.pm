@@ -11,7 +11,7 @@ use Bio::Otter::Lace::Chromosome;
 use Bio::Otter::Lace::SequenceSet;
 use Bio::Otter::Lace::ResultSet;
 use Bio::Otter::Lace::SequenceNote;
-use Bio::EnsEMBL::Pipeline::Monitor;
+#use Bio::EnsEMBL::Pipeline::Monitor;
 use Bio::Otter::Lace::PipelineDB;
 use Bio::Otter::Lace::SatelliteDB;
 use Bio::Otter::Lace::Defaults;
