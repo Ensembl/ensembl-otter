@@ -435,7 +435,8 @@ a number of Hum::EMBL::Exon objects are added (by _add_exons_to_exonlocation).
 By checking if the Contig the Exon is located on is the same as the
 Slice_contig, we determine whether the Exon is on the Slice (ie: clone)
 or the adjacent one (in which case accession.sequence_version) needs to be
-added to the newFeature being built up.
+added to the newFeature being built up. At least one Exon must be on the
+mRNA/CDS for it to be added.
 
 Currently flags a warning, if StickyExon(s) are found.
 
@@ -463,39 +464,20 @@ sub _do_Gene {
         if ($all_transcript_Exons) {
         
             my $mRNA_exonlocation = Hum::EMBL::ExonLocation->new;
+            
+            #This will only return true if one or more Exons are on the Slice.
             if ($self->_add_exons_to_exonlocation($mRNA_exonlocation
                 , $all_transcript_Exons)) {
                     
                 my $ft = $set->newFeature;
                 $ft->key('mRNA');
                 $ft->location($mRNA_exonlocation);
-
                 $mRNA_exonlocation->start_not_found($transcript_info->mRNA_start_not_found);
                 $mRNA_exonlocation->end_not_found($transcript_info->mRNA_end_not_found);
             
                 $self->_add_gene_qualifiers($gene, $ft);
-
-                #Add EST, cDNA supporting evidence
-                my ($EST_string, $cDNA_string);
-                foreach my $evidence ($transcript_info->evidence) {
-
-                    my $type = $evidence->type;
-                    if ($type eq 'EST') {
-                        $EST_string .= $evidence->name . ' ';
-                    } elsif ($type eq 'cDNA') {   
-                        $cDNA_string .= $evidence->name . ' ';
-                    }
-                }
-                if ($EST_string) {
-                    chop($EST_string);
-                    $ft->addQualifierStrings('note', 'match: ESTs: ' . $EST_string);
-                }
-                if ($cDNA_string) {
-                    chop($cDNA_string);
-                    $ft->addQualifierStrings('note', 'match: cDNAs: ' . $cDNA_string);
-                }
+                $self->_supporting_evidence($transcript_info, $ft, 'EST', 'cDNA');
             }
-            
         } else {
             warn "No mRNA exons\n";
         }
@@ -506,34 +488,17 @@ sub _do_Gene {
             if ($all_CDS_Exons) {
             
                 my $CDS_exonlocation = Hum::EMBL::ExonLocation->new;
-                #This only returns true, 
                 if ($self->_add_exons_to_exonlocation($CDS_exonlocation
                     , $all_CDS_Exons)) {
             
                     my $ft = $set->newFeature;
                     $ft->key('CDS');
                     $ft->location($CDS_exonlocation);
-
                     $CDS_exonlocation->start_not_found($transcript_info->cds_start_not_found);
                     $CDS_exonlocation->end_not_found($transcript_info->cds_end_not_found);
 
                     $self->_add_gene_qualifiers($gene, $ft);
-
-                    #Add the Protein supporting evidence
-                    my ($protein_string);
-                    foreach my $evidence ($transcript_info->evidence) {
-
-                        my $type = $evidence->type;
-                        if ($type eq 'Protein') {
-                            $protein_string .= $evidence->name . ' ';
-                        }
-                    }
-
-                    if ($protein_string) {
-                        chop($protein_string);
-                        $ft->addQualifierStrings('note', 'match: proteins: ' . $protein_string);
-                    }
-                    
+                    $self->_supporting_evidence($transcript_info, $ft, 'Protein');
                     $ft->addQualifierStrings('standard_name', $transcript->translation->stable_id);
                 }
             } else {
@@ -543,42 +508,71 @@ sub _do_Gene {
     }
 }
 
+=head2 _supporting_evidence
 
-#Currently not used
+Internal method called by  _do_Gene. Passed a transcript_info object
+(Bio::Otter::TranscriptInfo), and a feature object (Hum::EMBL::Line::FT)
+and one or more evidence types, adds these to the feature object.
+
+Evidence types understood: 'EST', 'cDNA' and 'Protein'.
+
+Lines added to the EMBL entry generated will look like:
+
+FT                   /note="match: ESTs: Em:BQ776835.1"
+FT                   /note="match: cDNAs: Em:AK094249.1"
+FT                   /note="match: proteins: Sw:P26367"
+
+=cut
+
 sub _supporting_evidence {
-    my ($evidence_hash_ref, $transcript_info) = @_;
-    
-    my @evidence_types = keys(%{$evidence_hash_ref});
+    my ( $self, $transcript_info, $ft, @evidence_types ) = @_;
 
+    my %evidence_hash;
     foreach my $evidence ($transcript_info->evidence) {
         
         foreach my $evidence_type (@evidence_types) {
+        
             if ($evidence->type eq $evidence_type) {
-                $evidence_hash_ref->{$evidence_type} .= $evidence->name;
+                $evidence_hash{$evidence_type} .= $evidence->name .' ';
                 last;
             }
         }
     }
+    
+    foreach my $evidence_type (keys(%evidence_hash)) {
+        
+        chop ($evidence_hash{$evidence_type});
+        if ($evidence_type eq 'EST') {
+            $evidence_hash{$evidence_type} = 'match: ESTs: ' . $evidence_hash{$evidence_type};
+        } elsif ($evidence_type eq 'cDNA') {
+            $evidence_hash{$evidence_type} = 'match: cDNAs: ' . $evidence_hash{$evidence_type};
+        } elsif ($evidence_type eq 'Protein') {
+            $evidence_hash{$evidence_type} = 'match: proteins: ' . $evidence_hash{$evidence_type};
+        } else {
+            confess "Unrecognised evidence_type: $evidence_type";
+        }
+        $ft->addQualifierStrings('note', $evidence_hash{$evidence_type});
+    }
 }
-
 
 =head2 _add_gene_qualifiers
 
 Internal method called  by _do_gene. 
 
-Passed a Gene object and a Feature:
+Passed a Gene object (Bio::Otter::AnnotatedGene) and a Feature
+(Hum::EMBL::Line::FT)
 
-    /gene="text2        #For known genes
-    /product="text"
-    /pseudo
+FT                   /gene="PAX6"
+FT                   /product="paired box gene 6 (aniridia, keratitis)"
+FT                   /pseudo
 
-by checking the gene and gene_info properties.
+by checking the Gene and Gene->gene_info properties.
 
 =cut 
 
 sub _add_gene_qualifiers {
     my ( $self, $gene, $ft ) = @_;
-    
+
     my $gene_info = $gene->gene_info; #Bio::Otter::GeneInfo object
 
     if ($gene_info->known_flag) {
