@@ -792,6 +792,7 @@ sub launch_polyA{
 	    $mw = $polyAs->{"$hash_id"}->toplevel;
 	    $mw->deiconify;
 	    $mw->raise;
+            $mw->eventGenerate('<<redraw_polya>>'); ## redraw important part from saved data, rather than use potentially unsaved data from previous use 
 	}
 	unless ($mw){
 	    my $clone = $self->get_CloneSeq($clone_name) ;
