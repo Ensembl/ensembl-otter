@@ -246,7 +246,7 @@ foreach my $tran (@{$gene->get_all_Transcripts}) {
     $tran->version($version);
 }
 $ag_adaptor->store($gene);
-$testdb->pause;
+#$testdb->pause;
 ok(12);
 
 my $newtrans2 = $at_adaptor->fetch_by_stable_id('ENST000000100002');
