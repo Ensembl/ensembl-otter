@@ -22,13 +22,14 @@ my $help;
 my $phelp;
 my $opt_v;
 my $opt_i='';
-my $opt_o='check_genes.lis';
+my $opt_o='large_transcripts.lis';
 my $opt_p='duplicate_exons.lis';
 my $cache_file='check_genes.cache';
 my $make_cache;
 my $opt_c='';
 my $opt_s=1000000;
 my $opt_t;
+my $exclude='GD:';
 
 $Getopt::Long::ignorecase=0;
 
@@ -48,6 +49,7 @@ GetOptions(
 	   'c:s',  \$opt_c,
 	   'make_cache',\$make_cache,
 	   't:s',  \$opt_t,
+	   'exclude:s', \$exclude,
 	   );
 
 # help
@@ -71,6 +73,7 @@ rename_genes.pl
   -p              file      output file ($opt_p)
   -c              char      chromosome ($opt_c)
   -make_cache               make cache file
+  -exclude                  gene types prefixes to exclude ($exclude)
 ENDOFTEXT
     exit 0;
 }
@@ -155,6 +158,7 @@ my %tsi_sum;
 my %atype;
 my $n=0;
 my $nobs=0;
+my $nexclude=0;
 open(IN,"$cache_file") || die "cannot open $opt_i";
 while(<IN>){
   chomp;
@@ -164,6 +168,12 @@ while(<IN>){
   if($gt eq 'obsolete'){
     $nobs++;
     next;
+  }
+  foreach my $excl (split(/,/,$exclude)){
+    if($gt=~/^$excl/){
+      $nexclude++;
+      next;
+    }
   }
 
   # expect transcripts to stay on same assembly
@@ -187,7 +197,7 @@ while(<IN>){
   $n++;
 }
 close(IN);
-print scalar(keys %gsi_sum)." genes read; $nobs obsolete skipped\n";
+print scalar(keys %gsi_sum)." genes read; $nobs obsolete skipped; $nexclude excluded\n";
 print "$n name relationships read\n\n";
 
 # get clones from assemblies of interest
@@ -208,12 +218,21 @@ my $nexon=0;
 my %dup_exon;
 my $nmc=0;
 my $nl=0;
+my $flag_v;
 open(OUT,">$opt_o") || die "cannot open $opt_o";
 open(OUT2,">$opt_p") || die "cannot open $opt_p";
 foreach my $atype (keys %gsi){
   my $cname=$atype{$atype};
   print "Checking \'$atype\' (chr \'$cname\')\n";
   foreach my $gsi (keys %{$gsi{$atype}}){
+
+    # debug:
+    if($gsi eq 'OTTHUMG00000015202' && $opt_v){
+      $flag_v=1;
+    }else{
+      $flag_v=0;
+    }
+    
     my($gn,$gt)=@{$gsi_sum{$gsi}};
     my %t2e;
     my %e;
@@ -326,11 +345,13 @@ foreach my $atype (keys %gsi){
     foreach my $tsi (keys %t2e){
       if(scalar(@{$t2e{$tsi}})>1){
 	$cl->link([@{$t2e{$tsi}}]);
+	print "D: $tsi ".join(',',@{$t2e{$tsi}})."\n" if $flag_v;
       }
     }
     # link exons by overlap
     foreach my $eid (keys %elink){
       $cl->link([$eid,@{$elink{$eid}}]);
+      print "D: $eid ".join(',',@{$elink{$eid}})."\n" if $flag_v;
     }
     if($cl->cluster_count>1){
       print "$gsi ($gt,$gn) has multiple clusters\n";
