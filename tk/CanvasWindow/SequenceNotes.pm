@@ -482,7 +482,7 @@ sub hunt_for_selection {
     
     unless (@all_text_obj) {
         ### Sometimes a weird error occurs where the first call to find
-        ### doesn't return anything - warn user if this happens.
+        ### doesn't return anything - warn user if this happens. 
         $self->message('No searchable text on canvas - is it empty?');
         return;
     }
@@ -559,7 +559,6 @@ sub set_selected_from_canvas {
     if (my $sel_i = $self->selected_CloneSequence_indices) {
         my $cs_list = $ss->CloneSequence_list;
         my $selected = [ @{$cs_list}[@$sel_i] ];
-#        warn "SELECTED INDICES " . join " , " , @$sel_i  ;
         $ss->selected_CloneSequences($selected);
         return 1;
     } else {
@@ -568,29 +567,28 @@ sub set_selected_from_canvas {
     }
 }
 
-
-
-sub run_lace {
-    my( $self ) = @_;
+sub run_lace{
+    my ($self) = @_ ;
     
     ### Prevent opening of sequences already in lace sessions
     return unless $self->set_selected_from_canvas;
     my $ss = $self->SequenceSet;
-    my $cl = $self->Client;
-
     my $title = 'lace '. $self->name . $self->selected_sequence_string;
-    
-    ## For debugging to check selection OK:
-    #foreach my $cs (@$selected) {
-    #    printf "%s.%s\n", $cs->accession, $cs->sv;
-    #}
+    $self->_open_SequenceSet($ss , $title) ;
+}
+
+## allows Searched SequenceNotes.pm to inherit the main part of the run_lace method
+sub _open_SequenceSet{
+    my ($self , $ss , $title) = @_ ;
+        
+    my $cl = $self->Client;
+#    my $title = $self->selected_sequence_string($ss);
 
     my $db = $self->Client->new_AceDatabase;
     $db->title($title);
     $db->error_flag(1);
     eval{
-        my $non_fatal_errors = $self->init_AceDatabase($db, $ss);
-        $self->message($non_fatal_errors) if $non_fatal_errors ; 
+        $self->init_AceDatabase($db, $ss);
     };
     if ($@) {
         $db->error_flag(0);
@@ -608,21 +606,21 @@ sub run_lace {
         }
         else{
             $self->exception_message($@, 'Error initialising database');
-            my $ds = $self->SequenceSetChooser->DataSet ;
-            $self->Client->remove_stale_locks($ss , $self->SequenceSetChooser->DataSet) ;         
         }
         return;
     }    
 
     my $xc = $self->make_XaceSeqChooser($title);
     ### Maybe: $xc->SequenceNotes($self);
-    $xc->SequenceNotes($self); 
+    $xc->SequenceNotes($self) ;
     $xc->AceDatabase($db);
     my $write_flag = $cl->write_access ? $ss->write_access : 0;
     $xc->write_access($write_flag);  ### Can be part of interface in future
     $xc->Client($self->Client);
     $xc->initialize;
-    $self->refresh_column(7) ; # locks column
+    $self->refresh_column(7) ; # 7 is the locks column
+
+
 }
 
 # creates a string based on the selected clones, with commas seperating individual values or dots to represent a continous sequence
@@ -666,13 +664,11 @@ sub selected_sequence_string{
 
 sub init_AceDatabase {
     my( $self, $db, $ss ) = @_;
-
+    
     $db->make_database_directory;
     $db->write_otter_acefile($ss);
-    my $non_fatal_errors = $db->write_ensembl_data($ss);
     $db->write_pipeline_data($ss);
     $db->initialize_database;
-    return $non_fatal_errors ;
 }
 
 sub make_XaceSeqChooser {
