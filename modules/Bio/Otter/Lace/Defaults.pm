@@ -247,6 +247,76 @@ sub _merge_hashes {
 
 
 
+## sets the known gene methods for a particular XaceSeqChooser
+sub set_known_GeneMethods{
+    my ($self , $xace ) = @_ ;
+    my @methods_mutable =  $self->get_default_GeneMethods ;
+    
+    confess "uneven number of arguments" if @methods_mutable % 2;
+         
+    for (my $i = 0; $i < @methods_mutable; $i+= 2) {
+        my ($name, $flags) = @methods_mutable[$i, $i+1];
+        my ($is_mutable, $is_coding , $has_parent) = @$flags;
+        my $meth = $xace->fetch_GeneMethod($name);
+        $meth->is_mutable($is_mutable);
+        $meth->is_coding($is_coding); 
+        $meth->has_parent($has_parent);
+        $xace->add_GeneMethod($meth);
+    }
+}
+
+## this method stores the defualt GeneMethod values. 
+sub get_default_GeneMethods{
+    my ($self ) = @_ ;       
+    my @methods = (
+
+    # Method name                Editable?  Coding?  sub-category of?
+        
+        # New set of methods for Otter
+        Coding                   => [1,         1,          0],
+        Transcript               => [1,         0,          0],
+        Non_coding               => [1,         0,          1],
+        Ambiguous_ORF            => [1,         0,          1],
+        Immature                 => [1,         0,          1],
+        Antisense                => [1,         0,          1],
+        IG_segment               => [1,         1,          0],
+        Putative                 => [1,         0,          0],
+        Pseudogene               => [1,         0,          0],
+        Processed_pseudogene     => [1,         0,          1],
+        Unprocessed_pseudogene   => [1,         0,          1],
+        Predicted                => [1,         0,          0],
+        # newly added - truncated versions of above methods        
+        Coding_trunc                    => [0,         1,          1],
+        Transcript_trunc                => [0,         0,          0],
+        Non_coding_trunc                => [0,         0,          1],
+        Ambiguous_ORF_trunc             => [0,         0,          1],
+        Immature_trunc                  => [0,         0,          1],
+        Antisense_trunc                 => [0,         0,          1],
+        IG_segment_trunc                => [0,         1,          0],
+        Putative_trunc                  => [0,         0,          0],
+        Pseudogene_trunc                => [0,         0,          0],
+        Processed_pseudogene_trunc      => [0,         0,          1],
+        Unprocessed_pseudogene_trunc    => [0,         0,          1],
+        Predicted_trunc                 => [0,         0,          0],  
+        
+        # Auto-analysis gene types (non-editable)
+        fgenesh                  => [0,         1],
+        FGENES                   => [0,         1],
+        GENSCAN                  => [0,         1],
+        HALFWISE                 => [0,         0],
+        SPAN                     => [0,         0],
+        EnsEMBL                  => [0,         1],
+        genomewise               => [0,         1],
+        'WashU-Supported'        => [0,         1],
+        'WashU-Putative'         => [0,         0],
+        'WashU-Pseudogene'       => [0,         0],
+    );
+    return @methods;
+
+}
+
+
+
 1;
 
 __END__
