@@ -9,6 +9,20 @@ use File::Path 'rmtree';
 use Symbol 'gensym';
 use Fcntl qw{ O_WRONLY O_CREAT };
 use Ace;
+use Bio::Otter::Lace::PipelineDB;
+
+use Bio::EnsEMBL::Ace::DataFactory;
+
+use Bio::EnsEMBL::Ace::Filter::Repeatmasker;
+use Bio::EnsEMBL::Ace::Filter::CpG;
+use Bio::EnsEMBL::Ace::Filter::DNA;
+use Bio::EnsEMBL::Ace::Filter::TRF;
+use Bio::EnsEMBL::Ace::Filter::Gene;
+use Bio::EnsEMBL::Ace::Filter::Gene::Halfwise;
+use Bio::EnsEMBL::Ace::Filter::Gene::Predicted;
+use Bio::EnsEMBL::Ace::Filter::Similarity::DnaSimilarity;
+use Bio::EnsEMBL::Ace::Filter::Similarity::ProteinSimilarity;
+use Bio::EnsEMBL::Ace::Filter::SimpleFeature;
 
 sub new {
     my( $pkg ) = @_;
@@ -16,13 +30,13 @@ sub new {
     return bless {}, $pkg;
 }
 
-sub OtterClient {
+sub Client {
     my( $self, $client ) = @_;
     
     if ($client) {
-        $self->{'_OtterClient'} = $client;
+        $self->{'_Client'} = $client;
     }
-    return $self->{'_OtterClient'};
+    return $self->{'_Client'};
 }
 
 sub home {
@@ -99,22 +113,48 @@ sub list_all_acefiles {
 }
 
 sub write_otter_acefile {
-    my( $self ) = @_;
+    my( $self, $ss ) = @_;
 
     my $dir = $self->home;
     my $otter_ace = "$dir/rawdata/otter.ace";
     my $fh = gensym();
     open $fh, "> $otter_ace" or die "Can't write to '$otter_ace'";
-    print $fh $self->fetch_otter_ace;
+    if ($ss) {
+        print $fh $self->fetch_otter_ace_for_SequenceSet($ss);
+    } else {
+        print $fh $self->fetch_otter_ace;
+    }
     close $fh or confess "Error writing to '$otter_ace' : $!";
     $self->add_acefile($otter_ace);
     $self->save_slice_dataset_hash;
 }
 
+sub fetch_otter_ace_for_SequenceSet {
+    my( $self, $ss ) = @_;
+    
+    my $client = $self->Client
+        or confess "No otter client attached";
+    my( $ds );
+  SEARCH: foreach my $this_ds ($client->get_all_DataSets) {
+        my $ss_list = $this_ds->get_all_SequenceSets;
+        foreach my $this_ss (@$ss_list) {
+            if ($this_ss == $ss) {
+                $ds = $this_ds;
+                last SEARCH;
+            }
+        }
+    }
+    confess "Can't find DataSet that SequenceSet belongs to"
+        unless $ds;
+    my $ctg_list = $ss->selected_CloneSequences_as_contig_list
+        or confess "No CloneSequences selected";
+    return $self->ace_from_contig_list($ctg_list, $ds);
+}
+
 sub fetch_otter_ace {
     my( $self ) = @_;
 
-    my $client = $self->OtterClient or confess "No otter client attached";
+    my $client = $self->Client or confess "No otter Client attached";
     
     my $ace = '';
     my $selected_count = 0;
@@ -122,20 +162,9 @@ sub fetch_otter_ace {
         my $ss_list = $ds->get_all_SequenceSets;
         foreach my $ss (@$ss_list) {
             if (my $ctg_list = $ss->selected_CloneSequences_as_contig_list) {
+                $ace .= $self->ace_from_contig_list($ctg_list, $ds);
                 foreach my $ctg (@$ctg_list) {
                     $selected_count += @$ctg;
-                    my $xml = Bio::Otter::Lace::TempFile->new;
-                    $xml->name('lace.xml');
-                    my $write = $xml->write_file_handle;
-                    print $write $client->get_xml_for_contig_from_Dataset($ctg, $ss);
-                    my ($genes, $slice, $sequence, $tiles) =
-                        Bio::Otter::Converter::XML_to_otter($xml->read_file_handle);
-                    $ace .= Bio::Otter::Converter::otter_to_ace($slice, $genes, $tiles, $sequence);
-
-                    # We need to record which dataset each slice came
-                    # from so that we can save it back.
-                    my $slice_name = $slice->display_id;
-                    $self->save_slice_dataset($slice_name, $ds);
                 }
             }
         }
@@ -146,6 +175,29 @@ sub fetch_otter_ace {
     } else {
         return;
     }
+}
+
+sub ace_from_contig_list {
+    my( $self, $ctg_list, $ds ) = @_;
+    
+    my $client = $self->Client or confess "No otter Client attached";
+    
+    my $ace = '';
+    foreach my $ctg (@$ctg_list) {
+        my $xml = Bio::Otter::Lace::TempFile->new;
+        $xml->name('lace.xml');
+        my $write = $xml->write_file_handle;
+        print $write $client->get_xml_for_contig_from_Dataset($ctg, $ds);
+        my ($genes, $slice, $sequence, $tiles) =
+            Bio::Otter::Converter::XML_to_otter($xml->read_file_handle);
+        $ace .= Bio::Otter::Converter::otter_to_ace($slice, $genes, $tiles, $sequence);
+
+        # We need to record which dataset each slice came
+        # from so that we can save it back.
+        my $slice_name = $slice->display_id;
+        $self->save_slice_dataset($slice_name, $ds);
+    }
+    return $ace;
 }
 
 sub save_slice_dataset {
@@ -184,7 +236,7 @@ sub save_slice_dataset_hash {
 sub recover_slice_dataset_hash {
     my( $self ) = @_;
     
-    my $cl   = $self->OtterClient or confess "No Otter Client attached";
+    my $cl   = $self->Client or confess "No Otter Client attached";
     my $h    = $self->slice_dataset_hash;
     my $file = $self->slice_dataset_hash_file;
     
@@ -225,7 +277,7 @@ sub save_otter_slice {
     confess "Missing DatsSet argument"      unless $dataset;
 
     my $ace    = $self->aceperl_db_handle;
-    my $client = $self->OtterClient or confess "No OtterClient attached";
+    my $client = $self->Client or confess "No Client attached";
     
     # Get the Genome_Sequence object ...
     $ace->find(Genome_Sequence => $name);
@@ -274,7 +326,7 @@ sub unlock_otter_slice {
     confess "Missing DatsSet argument"      unless $dataset;
 
     my $ace    = $self->aceperl_db_handle;
-    my $client = $self->OtterClient or confess "No OtterClient attached";
+    my $client = $self->Client or confess "No Client attached";
     
     $ace->find(Genome_Sequence => $name);
     my $ace_txt = $ace->raw_query('show -a');
@@ -435,6 +487,143 @@ sub initialize_database {
     return $errors ? 0 : 1;
 }
 
+sub write_pipeline_data {
+    my( $self, $ss ) = @_;
+
+    my $dataset = $self->Client->get_DataSet_by_name($ss->dataset_name);
+    my $ens_db = Bio::Otter::Lace::PipelineDB::get_DBAdaptor(
+        $dataset->get_cached_DBAdaptor
+        );
+    my $factory = $self->make_AceDataFactory($ens_db);
+    
+    # create file for output and add it to the acedb object
+    my $ace_file = $self->home . "/rawdata/pipeline.ace";
+    $self->add_acefile($ace_file);
+    my $fh = gensym();
+    open $fh, "> $ace_file" or confess "Can't write to '$ace_file' : $!";
+    $factory->file_handle($fh);
+
+    my $slice_adaptor = $ens_db->get_SliceAdaptor();
+    
+    # note: the next line returns a 2 dimensional array (not a one dimensional array)
+    # each subarray contains a list of clones that are together on the golden path
+    my $sel = $ss->selected_CloneSequences_as_contig_list ;
+    foreach my $cs (@$sel) {
+
+        my $first_ctg = $cs->[0];
+        my $last_ctg = $cs->[$#$cs];
+
+        my $chr = $first_ctg->chromosome->name;  
+        my $chr_start = $first_ctg->chr_start;
+        my $chr_end = $last_ctg->chr_end;
+
+        my $slice = $slice_adaptor->fetch_by_chr_start_end($chr, $chr_start, $chr_end);
+
+        $factory->ace_data_from_slice($slice);
+    }
+    $factory->drop_file_handle;
+    close $fh;
+}
+
+sub make_AceDataFactory {
+    my( $self, $ens_db ) = @_;
+
+    my $percent_identity_cutoff = undef; ## change this if a cutoff value is reqired
+
+    # create new datafactory object - cotains all ace filters and produces the data from these
+    my $factory = Bio::EnsEMBL::Ace::DataFactory->new;       
+#    $factory->add_all_Filters($ensdb);   
+   
+    
+   my $ana_adaptor = $ens_db->get_AnalysisAdaptor;
+   
+   ##----------code to add all of the ace filters to data factory-----------------------------------
+    
+    my @logic_class = (
+        [qw{ SubmitContig   Bio::EnsEMBL::Ace::Filter::DNA              }],
+        [qw{ RepeatMask     Bio::EnsEMBL::Ace::Filter::Repeatmasker     }],
+        [qw{ trf            Bio::EnsEMBL::Ace::Filter::TRF              }],
+        [qw{ genscan        Bio::EnsEMBL::Ace::Filter::Gene::Predicted  }],
+        [qw{ Fgenesh        Bio::EnsEMBL::Ace::Filter::Gene::Predicted  }],
+        [qw{ CpG            Bio::EnsEMBL::Ace::Filter::CpG              }],
+        );
+
+    foreach my $lc (@logic_class) {
+        my ($logic_name, $class) = @$lc;
+        if (my $ana = $ana_adaptor->fetch_by_logic_name($logic_name)) {
+            my $filt = $class->new;
+            $filt->analysis_object($ana);
+            $factory->add_AceFilter($filt);
+        } else {
+            warn "No analysis called '$logic_name'\n";
+        }
+    }
+    
+    #halfwise
+    if (my $ana = $ana_adaptor->fetch_by_logic_name('Pfam')) {
+        my $halfwise = Bio::EnsEMBL::Ace::Filter::Gene::Halfwise->new;
+        $halfwise->url_string('http\\:\\/\\/www.sanger.ac.uk\\/cgi-bin\\/Pfam\\/getacc?%s');   ##??is this still correct?
+        $halfwise->analysis_object($ana);
+        $factory->add_AceFilter($halfwise);
+    } else {
+        warn "No analysis called 'Pfam'\n";
+    }
+
+## big list for DNASimilarity / Protein_similarity
+
+## note: most of the list here is taken from the previous version, 
+## currently only the uncommented ones seem to be in the database   
+    my %logic_tag_method = (
+#        'Est2Genome'        => [qw{             EST_homol  EST_eg           }],
+        'Est2Genome_human'  => [qw{             EST_homol  EST_Human     }],
+        'Est2Genome_mouse'  => [qw{             EST_homol  EST_Mouse     }],
+        'Est2Genome_other'  => [qw{             EST_homol  EST           }],
+#        'Full_dbGSS'        => [qw{             GSS_homol  GSS_eg           }],
+#        'Full_dbSTS'        => [qw{             STS_homol  STS_eg           }],
+#        'sccd'              => [qw{             EST_homol  egag             }],
+#        'riken_mouse_cdnal' => [qw{             EST_homol  riken_mouse_cdna }],
+#        'primer'            => [qw{             DNA_homol  primer           }],
+        'vertrna'           => [qw{ vertebrate_mRNA_homol  vertebrate_mRNA 0 }],
+#        'zfishEST'          => [qw{             EST_homol  EST_eg-fish      }],
+        );
+        
+    foreach my $logic_name (keys %logic_tag_method) {
+        if (my $ana = $ana_adaptor->fetch_by_logic_name($logic_name)) {
+            my( $tag, $meth, $coverage ) = @{$logic_tag_method{$logic_name}};
+            my $sim = Bio::EnsEMBL::Ace::Filter::Similarity::DnaSimilarity->new;
+            #warn "setting analysis object to '$ana' for '$logic_name'\n";
+            $sim->analysis_object($ana);
+            $sim->homol_tag($tag);
+            $sim->method_tag($meth);
+            $sim->hseq_prefix('Em:');
+            $sim->max_coverage($coverage);
+            if ( defined($percent_identity_cutoff) ) {
+                $sim->percent_identity_cutoff($percent_identity_cutoff);
+            }
+            $factory->add_AceFilter($sim);
+#            warn 'logic_tag:' , $tag , "\n" ;
+        } else{
+            warn "No analysis called '$logic_name'\n";
+        }
+    }
+    
+    
+    ## protein similarity
+    if (my $ana = $ana_adaptor->fetch_by_logic_name('swall')) {
+        my $prot_sim = Bio::EnsEMBL::Ace::Filter::Similarity::ProteinSimilarity->new;
+        $prot_sim->analysis_object($ana);
+        $prot_sim->homol_tag('swall');
+        $prot_sim->method_tag('BLASTX');
+        if( defined($percent_identity_cutoff)  ){
+            $prot_sim->percent_identity_cutoff($percent_identity_cutoff);
+        }
+        $factory->add_AceFilter($prot_sim);    
+    } else {
+        warn "No analysis called 'swall'\n";
+    }
+    
+    return $factory;
+}
 
 
 sub DESTROY {
@@ -446,7 +635,7 @@ sub DESTROY {
         return;
     }
     
-    $self->unlock_all_slices if $self->OtterClient->write_access;
+    $self->unlock_all_slices if $self->Client->write_access;
     rmtree($home);
 }
 

@@ -7,6 +7,7 @@ use strict;
 use Carp;
 use LWP;
 use Bio::Otter::Lace::DataSet;
+use Bio::Otter::Lace::AceDatabase;
 use Bio::Otter::Converter;
 use Bio::Otter::Lace::TempFile;
 use URI::Escape qw{ uri_escape };
@@ -73,7 +74,7 @@ sub new_AceDatabase {
     my( $self ) = @_;
     
     my $db = Bio::Otter::Lace::AceDatabase->new;
-    $db->OtterClient($self);
+    $db->Client($self);
     return $db;
 }
 
@@ -158,7 +159,7 @@ sub get_all_DataSets {
         my $request = HTTP::Request->new;
         $request->method('GET');
         $request->uri("$root/get_datasets?details=true");
-        #warn $request->uri;
+        warn $request->uri;
 
         my $content = $ua->request($request)->content;
         $self->_check_for_error(\$content);

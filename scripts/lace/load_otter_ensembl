@@ -636,3 +636,4 @@ sub save_pipeline_options {
     $sth->execute('pipeline_db', $opt_str);
 }
 sub useage{ exit(exec('perldoc', $0)); }
+

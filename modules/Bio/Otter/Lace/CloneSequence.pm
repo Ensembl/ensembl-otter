@@ -65,6 +65,15 @@ sub chr_end {
     return $self->{'_chr_end'};
 }
 
+sub contig_id {
+    my( $self, $contig_id ) = @_;
+    
+    if ($contig_id) {
+        $self->{'_contig_id'} = $contig_id;
+    }
+    return $self->{'_contig_id'};
+}
+
 sub contig_name {
     my( $self, $contig_name ) = @_;
     
@@ -100,6 +109,41 @@ sub contig_strand {
     }
     return $self->{'_contig_strand'};
 }
+
+sub add_SequenceNote {
+    my( $self, $note ) = @_;
+    
+    my $sn_list = $self->{'_SequenceNote_list'} ||= [];
+    push(@$sn_list, $note);
+}
+
+sub get_all_SequenceNotes {
+    my( $self ) = @_;
+    
+    return $self->{'_SequenceNote_list'};
+}
+
+sub current_SequenceNote {
+    my( $self, $current_SequenceNote ) = @_;
+    
+    if ($current_SequenceNote) {
+        
+        # Add this SequenceNote to the list if it
+        # isn't one of the ones on the list
+        my $sn_list = $self->get_all_SequenceNotes;
+        my $found = 0;
+        foreach my $note (@$sn_list) {
+            $found = 1 if $note == $current_SequenceNote;
+        }
+        unless ($found) {
+            push(@$sn_list, $current_SequenceNote);
+        }
+        
+        $self->{'_current_SequenceNote'} = $current_SequenceNote;
+    }
+    return $self->{'_current_SequenceNote'};
+}
+
 
 1;
 

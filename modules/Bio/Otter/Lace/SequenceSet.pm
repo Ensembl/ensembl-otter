@@ -21,6 +21,15 @@ sub name {
     return $self->{'_name'};
 }
 
+sub dataset_name {
+    my( $self, $dataset_name ) = @_;
+    
+    if ($dataset_name) {
+        $self->{'_dataset_name'} = $dataset_name;
+    }
+    return $self->{'_dataset_name'};
+}
+
 sub description {
     my( $self, $description ) = @_;
     
@@ -44,17 +53,19 @@ sub write_access {
     }
 }
 
-sub get_all_CloneSequences {
-    my( $self ) = @_;
+sub CloneSequence_list {
+    my( $self, $CloneSequence_list ) = @_;
     
-    return $self->{'_CloneSequence_list'}
-        || confess "CloneSequences not set (need to call fetch_all_CloneSequences_for_SequenceSet in DataSet)";
+    if ($CloneSequence_list) {
+        $self->{'_CloneSequence_list'} = $CloneSequence_list;
+    }
+    return $self->{'_CloneSequence_list'};
 }
 
-sub set_CloneSequence_list {
-    my( $self, $cs ) = @_;
+sub drop_CloneSequence_list {
+    my( $self ) = @_;
     
-    $self->{'_CloneSequence_list'} = $cs;
+    $self->{'_CloneSequence_list'} = undef;
 }
 
 sub selected_CloneSequences {
@@ -102,6 +113,8 @@ sub selected_CloneSequences_as_contig_list {
     return $ctg_list;
 }
 
+### Method for fetching completeness of analysis
+### for all the CloneSequences in a SequenceSet
 
 1;
 
