@@ -68,6 +68,13 @@ sub set_known_GeneMethods {
         $meth->is_coding($is_coding);
         $self->add_GeneMethod($meth);
     }
+    # add to this list a hard wired 'truncated' method, which cannot be edited
+    # used to attach to transcripts that have gone out of bounds and can't be edited
+    my $meth = Hum::Ace::GeneMethod->new;
+    $meth->name('truncated');
+    $meth->color('RED');
+    $meth->is_mutable(0);
+    $self->add_GeneMethod($meth);
 }
 
 sub fetch_GeneMethod {
@@ -299,7 +306,7 @@ sub populate_menus {
     # Launce xace
     my $xace_launch_command = sub { $self->launch_xace };
     $file->add('command',
-        -label          => 'Lanuch Xace',
+        -label          => 'Launch Xace',
         -command        => $xace_launch_command,
         -accelerator    => 'Ctrl+L',
         -underline      => 0,
@@ -1126,7 +1133,25 @@ sub draw_subseq_list {
             or confess "Can't get Clone '$clone_name'";
         foreach my $clust ($self->get_all_Subseq_clusters($clone)) {
             push(@subseq, "") if @subseq;
-            push(@subseq, map($_->name, @$clust));
+            #push(@subseq, map($_->name, @$clust));
+	    foreach my $sub (@$clust){
+		my $text=$sub->name;
+		if($sub->is_truncated){
+		    # truncated genes are red (they also have a
+		    # truncated method, which is not mutable)
+		    if($sub->GeneMethod->name eq 'truncated'){
+			$text.=':red';
+		    }else{
+			$text.=':purple';
+		    }
+		}elsif($sub->GeneMethod->is_mutable){
+		    # black can be edited
+		}else{
+		    # blue can't be edited
+		    $text.=':blue';
+		}
+		push(@subseq,$text);
+	    }
         }
     }
     $self->draw_sequence_list('subseq', @subseq);
@@ -1220,8 +1245,13 @@ sub express_clone_and_subseq_fetch {
     foreach my $sub ($clone->get_all_SubSeqs) {
         $self->add_SubSeq($sub);
             
-        if (my $s_meth = $sub->GeneMethod) {
+	if (my $s_meth = $sub->GeneMethod) {
             my $meth = $self->get_GeneMethod($s_meth->name);
+	    if($sub->is_truncated && $meth->is_mutable){
+		# if subsequence is truncated, give it a fake 'truncated method'
+		# to ensure it can't be edited if it had a mutable method
+		$meth = $self->get_GeneMethod('truncated');
+	    }
             $sub->GeneMethod($meth);
         }
 
@@ -1306,13 +1336,28 @@ sub draw_sequence_list {
     my $y = 0;
     for (my $i = 0; $i < @slist; $i++) {
         if (my $text = $slist[$i]) {
-            $canvas->createText(
-                $x, $y,
-                -anchor     => 'nw',
-                -text       => $text,
-                -font       => [$font, $size, 'bold'],
-                -tags       => [$tag],
-                );
+
+	    # extract embedded colour from text
+	    if($text=~/^(.*):(blue|green|red|purple)$/){
+		$text=$1;
+		my $colour=$2;
+		$canvas->createText(
+				    $x, $y,
+				    -anchor     => 'nw',
+				    -text       => $text,
+				    -font       => [$font, $size, 'bold'],
+				    -tags       => [$tag],
+				    -fill       => $colour,
+				    );
+	    }else{
+		$canvas->createText(
+				    $x, $y,
+				    -anchor     => 'nw',
+				    -text       => $text,
+				    -font       => [$font, $size, 'bold'],
+				    -tags       => [$tag],
+				    );
+	    }
         }
         
         if (($i + 1) % 20) {
