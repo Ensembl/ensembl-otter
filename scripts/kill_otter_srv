@@ -1,3 +1,5 @@
 #!/bin/sh
 
-ps -e | grep otter_srv | awk '{print $1}' | xargs kill
+pid_file=otter_srv.pid
+kill `cat $pid_file`
+rm $pid_file
