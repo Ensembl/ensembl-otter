@@ -5,10 +5,10 @@ use strict;
 use Bio::Otter::DBSQL::DBAdaptor;
 use Bio::Otter::Converter;
 
-my $host    = '127.0.0.1';
+my $host    = 'ecs1d';
 my $user    = 'ensro';
 my $pass    = undef;
-my $port    = 3322;
+my $port    = 19322;
 my $dbname  = 'otter_chr9p12';
 
 my $chr      = 'virt_chrom_1';
@@ -29,6 +29,6 @@ my $slice = $sa->fetch_by_chr_start_end($chr,$chrstart,$chrend);
 my @genes = @{$db->get_AnnotatedGeneAdaptor->fetch_by_Slice($slice)};
 my @path  = @{$slice->get_tiling_path};
 
-my $xmlstr = Bio::Otter::Converter::genes_to_XML_with_Slice($slice,\@genes,$db->assembly_type,1);
+my $xmlstr = Bio::Otter::Converter::genes_to_XML_with_Slice($slice,\@genes,1,\@path,$slice->seq);
 
 print $xmlstr . "\n";
