@@ -26,59 +26,59 @@ sub host {
     my( $self, $host ) = @_;
     
     if ($host) {
-        $self->{'_options'}->{'client'}->{'host'} = $host;
+        $self->{'_options'}{'client'}{'host'} = $host;
     }
-    return $self->{'_options'}->{'client'}->{'host'};
+    return $self->{'_options'}{'client'}{'host'};
 }
 sub readonly_tag {
     my( $self, $ro ) = @_;
     
     if ($ro) {
-        $self->{'_options'}->{'client'}->{'readonly_tag'} = $ro;
+        $self->{'_options'}{'client'}{'readonly_tag'} = $ro;
     }
-    return $self->{'_options'}->{'client'}->{'readonly_tag'} || '';
+    return $self->{'_options'}{'client'}{'readonly_tag'} || '';
 }
 sub port {
     my( $self, $port ) = @_;
     
     if ($port) {
-        $self->{'_options'}->{'client'}->{'port'} = $port;
+        $self->{'_options'}{'client'}{'port'} = $port;
     }
-    return $self->{'_options'}->{'client'}->{'port'};
+    return $self->{'_options'}{'client'}{'port'};
 }
 
 sub write_access {
     my( $self, $write_access ) = @_;
     
     if (defined $write_access) {
-        $self->{'_options'}->{'client'}->{'write_access'} = $write_access;
+        $self->{'_options'}{'client'}{'write_access'} = $write_access;
     }
-    return $self->{'_options'}->{'client'}->{'write_access'} || 0;
+    return $self->{'_options'}{'client'}{'write_access'} || 0;
 }
 
 sub author {
     my( $self, $author ) = @_;
     
     if ($author) {
-        $self->{'_options'}->{'client'}->{'author'} = $author;
+        $self->{'_options'}{'client'}{'author'} = $author;
     }
-    return $self->{'_options'}->{'client'}->{'author'} || (getpwuid($<))[6];
+    return $self->{'_options'}{'client'}{'author'} || (getpwuid($<))[6];
 }
 
 sub email {
     my( $self, $email ) = @_;
     
     if ($email) {
-        $self->{'_options'}->{'client'}->{'email'} = $email;
+        $self->{'_options'}{'client'}{'email'} = $email;
     }
-    return $self->{'_options'}->{'client'}->{'email'} || (getpwuid($<))[0];
+    return $self->{'_options'}{'client'}{'email'} || (getpwuid($<))[0];
 }
 sub debug{
     my ($self, $debug) = @_;
 
-    $self->{'_options'}->{'client'}->{'debug'} = $debug if defined($debug);
+    $self->{'_options'}{'client'}{'debug'} = $debug if defined($debug);
 
-    return $self->{'_options'}->{'client'}->{'debug'} ? 1 : 0;
+    return $self->{'_options'}{'client'}{'debug'} ? 1 : 0;
 }
 sub lock {
     my $self = shift;
@@ -393,8 +393,8 @@ sub username{
 }
 sub password{
     my ($self, $pass) = @_;
-    $self->{'_options'}->{'client'}->{'password'} = $pass if defined($pass);
-    return $self->{'_options'}->{'client'}->{'password'};
+    $self->{'_options'}{'client'}{'password'} = $pass if defined($pass);
+    return $self->{'_options'}{'client'}{'password'};
 }
 sub password_prompt{
     my $self = shift;

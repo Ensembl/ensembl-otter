@@ -134,21 +134,6 @@ sub write_otter_acefile {
     $self->save_slice_dataset_hash;
 }
 
-sub fetch_otter_ace_for_SequenceSet {
-    my( $self, $ss ) = @_;
-    
-    my $client = $self->Client
-        or confess "No otter client attached";
-    my $dsObj = $client->get_DataSet_by_name($ss->dataset_name);
-    confess "Can't find DataSet that SequenceSet belongs to"
-        unless $dsObj;
-
-    $dsObj->selected_SequenceSet($ss);
-    my $ctg_list = $ss->selected_CloneSequences_as_contig_list
-        or confess "No CloneSequences selected";
-    return $self->ace_from_contig_list($ctg_list, $dsObj);
-}
-
 sub fetch_otter_ace {
     my( $self ) = @_;
 
@@ -174,6 +159,21 @@ sub fetch_otter_ace {
     } else {
         return;
     }
+}
+
+sub fetch_otter_ace_for_SequenceSet {
+    my( $self, $ss ) = @_;
+    
+    my $client = $self->Client
+        or confess "No otter client attached";
+    my $dsObj = $client->get_DataSet_by_name($ss->dataset_name);
+    confess "Can't find DataSet that SequenceSet belongs to"
+        unless $dsObj;
+
+    $dsObj->selected_SequenceSet($ss);
+    my $ctg_list = $ss->selected_CloneSequences_as_contig_list
+        or confess "No CloneSequences selected";
+    return $self->ace_from_contig_list($ctg_list, $dsObj);
 }
 
 sub ace_from_contig_list {
@@ -209,6 +209,7 @@ sub ace_from_contig_list {
     }
     return $ace;
 }
+
 sub write_lock_xml{
     my ($self, $xml, $ds_name) = @_;
 
@@ -227,6 +228,7 @@ sub write_lock_xml{
         $lock_xml->mv(".${slice_name}${ds_name}${LOCK_REGION_XML_FILE}");
     }
 }
+
 sub save_slice_dataset {
     my( $self, $slice_name, $ds_name ) = @_;
 

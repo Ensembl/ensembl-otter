@@ -47,9 +47,9 @@ print "<otter>\n";
 print "<sequence_set>\n";
 
 
-my @path  = $vcontig->get_tiling_path;
+my $path  = $vcontig->get_tiling_path;
 
-my $xmlstr = Bio::Otter::Converter::path_to_XML($chr,$chrstart,$chrend,@path); 
+my $xmlstr = Bio::Otter::Converter::path_to_XML($chr,$chrstart,$chrend,$vcontig->assembly_type,$path); 
 
 print $xmlstr . "\n";
 
