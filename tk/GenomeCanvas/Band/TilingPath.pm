@@ -87,6 +87,7 @@ sub render {
     my $nudge_distance = ($rectangle_height + 1) * $y_dir;
     my $text_nudge_flag = 0;
     foreach my $map_c ($vc->_vmap->each_MapContig) {
+        #print STDERR ".";
         $map_contig_count++;
         my $start     = $map_c->start;
         my $end       = $map_c->end;
@@ -173,6 +174,7 @@ sub render {
     }
     $canvas->delete('bkgd_rec');
     #confess "No mapcontigs in virtual contig" unless $map_contig_count;
+    #print STDERR "Done render tilingpath\n";
 }
 
 1;

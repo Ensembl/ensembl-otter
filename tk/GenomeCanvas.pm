@@ -116,7 +116,7 @@ sub bind_scroll_commands {
         });
 }
 
-sub move_to_obj {
+sub scroll_to_obj {
     my( $gc, $obj ) = @_;
     
     confess "No object index given" unless $obj;
@@ -124,8 +124,7 @@ sub move_to_obj {
     my $canvas = $gc->canvas;
     my ($x1, $y1, $x2, $y2) = $gc->normalize_coords($canvas->bbox($obj));
     
-    my @scroll = $gc->normalize_coords(
-        $canvas->cget('scrollregion'));
+    my @scroll = $canvas->cget('scrollregion');
     #warn "scroll=[@scroll]\n";
     # Need to put back scrollregion for some reason
     # cget seems to clear it!

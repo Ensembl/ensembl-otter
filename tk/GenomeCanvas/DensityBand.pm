@@ -158,22 +158,11 @@ sub draw_density_segment {
     }
     $stepmap->values(@values);
 
-    # Print the GIF to a temporary file
-    #my $tmp_img = "/tmp/DensityBand.$$.gif";
-    my $tmp_img = "DensityBand.$$.gif";
-    local *GIF;
-    open GIF, "> $tmp_img" or die;
-    print GIF $stepmap->gif;
-    close GIF;
-    END {
-        #unlink($tmp_img) if $tmp_img;
-    }
-
     # Add the gif to the image
     my $x = $x_offset / $rpp;
     my $image = $canvas->Photo(
         '-format'   => 'gif',
-        -file       => $tmp_img,
+        -data       => $stepmap->base64_gif,
         );
     $canvas->createImage(
         $x, $y->[0] + 0.5,    # Off-by-1 error when placing images?

@@ -7,6 +7,7 @@ use strict;
 use Carp;
 use GD;
 use GenomeCanvas::FadeMap;
+use MIME::Base64 'encode_base64';
 
 sub new {
     my $pkg = shift;
@@ -122,6 +123,15 @@ sub gif {
     }
     
     return $img->gif;
+}
+
+# To pass to the Canvas's "-data" parameter, the
+# gif image has to be base64 encoded.
+
+sub base64_gif {
+    my( $self ) = @_;
+    
+    return encode_base64($self->gif);
 }
 
 1;

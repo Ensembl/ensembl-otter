@@ -269,7 +269,7 @@ sub hunt_for_selection {
         return;
     }
     
-    $gc->move_to_obj($found);
+    $gc->scroll_to_obj($found);
     
     my @overlapping = $canvas->find('overlapping', $canvas->bbox($found));
     foreach my $obj (@overlapping) {
