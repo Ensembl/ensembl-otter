@@ -2,25 +2,194 @@
 
 ### fetch_assembly_tags
 
+
 use strict;
 use Hum::Submission 'prepare_statement';
 use Hum::AnaStatus::Sequence;
 
-foreach my $acc_sv (@ARGV) {
-    my ($acc, $sv) = $acc_sv =~ /(.+)\.(\d+)$/
-        or die "Can't parse '$acc_sv'";
-    my $seq_name = sanger_name($acc);
-    my $seq = Hum::AnaStatus::Sequence->new_from_seqname_sv($seq_name, $sv);
-    my $dir = $seq->analysis_directory;
-    my $humace_file = "$dir/rawdata/$seq_name.humace.ace";
-    print "$acc.$sv\t$humace_file\n";
+use Bio::EnsEMBL::Slice;
+use Bio::Otter::Lace::Defaults;
+
+use Getopt::Long 'GetOptions';
+
+$| = 1;
+
+{
+  my ($dataset, $verbose, @a_types);
+
+  my $help = sub { exec('perldoc', $0) };
+
+  Bio::Otter::Lace::Defaults::do_getopt('ds|dataset=s' => \$dataset,
+					'v|verbose'    => \$verbose,
+					't|type=s@'    => \@a_types,
+					'h|help'       => $help,
+				       ) or $help->(); # plus default options
+  $help->() unless $dataset;
+
+  my $client      = Bio::Otter::Lace::Defaults::make_Client();
+  my $dset        = $client->get_DataSet_by_name($dataset);
+  my $otter_db    = $dset->get_cached_DBAdaptor;
+  my $asmblyTagAd = $otter_db->get_AssemblyTagAdaptor;
+  my $cloneAd     = $otter_db->get_CloneAdaptor;
+
+  unless ( @a_types ){
+
+    # get all assembly types
+    my $sql = q{SELECT assembly_type FROM sequence_set};
+    my $sth = $otter_db->prepare($sql);
+    $sth->execute;
+    while ( my ($type) = $sth->fetchrow_array()) {
+      push (@a_types, $type);
+      print $type, "\n";
+    }
+    $sth->finish;
+  }
+
+  # loop thru all assembly types to fetch all clones in it in otter db
+  my $type;
+
+  foreach $type ( @a_types ) {
+
+    $otter_db->begin_work;
+
+    print "Working on $type .....\n\n";
+    warn "Working on $type";
+
+    $otter_db->assembly_type($type); # replace the default sequence set setting
+    my $seqSet = $dset->get_SequenceSet_by_name($type);
+    my $clones = $dset->fetch_all_CloneSequences_for_SequenceSet($seqSet);
+
+    my %seq_acefile_clone;
+
+    foreach my $clnseqobj (@$clones){
+
+      # get Bio::Otter::AnnotatedClone obj via Bio::Otter::Lace::CloneSequence obj
+      my $clone = $cloneAd->fetch_by_accession_version($clnseqobj->accession,$clnseqobj->sv);
+
+      my $ctg_name   = $clnseqobj->contig_name;
+      my $ctg_id     = $clnseqobj->contig_id;
+      my $seq_name = sanger_name($clnseqobj->accession);
+
+      # skip clones in otter db where there is no corresponding accession in the submissions database
+      eval {
+	Hum::AnaStatus::Sequence->new_from_seqname_sv($seq_name, $clnseqobj->sv);
+      };
+
+      # work out path to acefile with assembly_tags info of a Sanger clone
+      unless ( $@ ){
+	my $seq = Hum::AnaStatus::Sequence->new_from_seqname_sv($seq_name, $clnseqobj->sv);
+	my $dir = $seq->analysis_directory;
+
+	# double check existence of acefile
+	if ( -e "$dir/rawdata/$seq_name.humace.ace" ){
+	  my $humace_file = "$dir/rawdata/$seq_name.humace.ace";
+	  push(@{$seq_acefile_clone{$ctg_name}}, $humace_file, $clone, $ctg_id);
+	}
+      }
+    }
+    undef $@;
+
+    # parsing acefile for all Sanger clones of an assembly type in one go
+    parse_ace(\%seq_acefile_clone, $otter_db, $type, $asmblyTagAd);
+  }
 }
 
+sub parse_ace {
+  my ($href, $otter_db, $type, $asmblyTagAd)  = @_;
+  my %seq_acefile_clone = %$href;
+  my ($fh, $line);
+  my $counter = 0;
+  my %contig_tag_data;
+  my $ctg_strand;
+
+  # go thru each contig of an assembly type
+  foreach my $ctg_name ( keys %seq_acefile_clone ){
+
+    my @values;
+    open( $fh, $seq_acefile_clone{$ctg_name}->[0] ) || die "Failed to read ".$seq_acefile_clone{$ctg_name}->[0];
+
+    print "\n", $ctg_name, " => ",  $seq_acefile_clone{$ctg_name}->[0], "\n";
+
+    my $clone      = $seq_acefile_clone{$ctg_name}->[1];
+    #my $ctg_strand# = $seq_acefile_clone{$ctg_name}->[2];
+    my $ctg_id     = $seq_acefile_clone{$ctg_name}->[2];
+
+    while ( $line = <$fh> ){
+
+      my ( $tag_type, $tag_start, $tag_end, $tag_info);
+
+      if ( $line =~ /^Assembly_[Tt]ags\s+\"(-)\"\s+(\d+)\s+(\d+)\s+\"(.+)\"/ ||
+	   $line =~ /^Assembly_[Tt]ags\s+(Oligo)\s+(\d+)\s+(\d+)\s+\"(.+)\"/ ){
+
+	$counter++;
+
+	($1 eq "-") ? ($tag_type = "Misc") : ($tag_type = $1);
+
+	# convertion for Ensembl/otter_db: starting coord is always smaller, so flip if not so
+        #                                   starting coord > end coord means minus strand
+
+	($3 && $2 > $3) ? ($tag_start = $3, $tag_end = $2, $ctg_strand = -1)
+                        : ($tag_start = $2, $tag_end = $3, $ctg_strand =  1);
+	
+	$4 ? ($tag_info = $4) : ($tag_info = "Null");
+   	$tag_info = trim($tag_info);
+
+	print "flip\n" if $2>$3;
+	print "$ctg_id : $tag_type : $ctg_strand : $tag_start : $tag_end : $tag_info\n";
+	push(@{$contig_tag_data{$ctg_name}}, $ctg_id, $tag_start, $tag_end, $ctg_strand, $tag_type, $tag_info, $clone);
+      }
+      if ( $line =~ /^(Clone_\w+_end)\s+(.+)\s+(\d+)/ ){
+
+	$counter++;
+
+	$tag_type  = $1;
+	$tag_start = $3;
+	$tag_end   = $3;  # set end value to start value where no end value present
+	$tag_info  = $2; 
+	$tag_info =~ s/\"//g;
+	$tag_info = trim($tag_info);
+	$ctg_strand = 1;
+
+	print "$ctg_id : $tag_type : $ctg_strand : $tag_start : $tag_end : $tag_info\n";
+	push(@{$contig_tag_data{$ctg_name}}, $ctg_id, $tag_start, $tag_end, $ctg_strand, $tag_type, $tag_info, $clone);
+      }
+    }
+  }
+
+  if ( $counter != 0 ){
+    store(\%contig_tag_data);
+  }
+
+  # commit/rollback for each assembly type
+  if ( $counter != 0){
+    unless ( $@ ){
+      printf("> %-35s successful: $counter\n\n", $type);
+      $otter_db->commit;
+    }
+    else {
+      print $@;
+      printf("> %-35s failed\n\n", $type);
+      $otter_db->rollback;
+    }
+  }
+  else {
+    printf("> %-35s no info\n\n", $type);
+    $otter_db->commit;
+  }
+  undef $@;
+}
+
+sub trim {
+  my $st = shift;
+  $st =~ s/\\n/ /g;
+  $st =~ s/\s{1,}/ /g;
+  return $st;
+}
 
 sub sanger_name {
-    my( $acc ) = @_;
+  my( $acc ) = @_;
 
-    my $sth = prepare_statement(qq{
+  my $sth = prepare_statement(qq{
         SELECT s.sequence_name
         FROM project_acc a
           , project_dump d
@@ -31,17 +200,66 @@ sub sanger_name {
         ORDER BY s.seq_id DESC
         LIMIT 1
         });
-    $sth->execute;
-    my ($name) = $sth->fetchrow;
-    $name ||= $acc;
-    return $name;
+
+  $sth->execute;
+  my $sanger_name = $sth->fetchrow;
+
+  return $sanger_name if $sanger_name;
+
 }
+
+sub store {
+
+  my ($ctg_tag_data) = @_;
+
+  my %ctg_tag_data = %$ctg_tag_data;
+  my ($sth, @vals, $sql);
+
+  eval {
+    foreach my $ctg_name ( keys %ctg_tag_data ) {
+
+      my @values = @{$ctg_tag_data{$ctg_name}};
+
+      for ( my $i = 0; $i < scalar @values; $i=$i+7 ) {
+
+	# column contig_end/tag_info can be null for tag_type = clone_left_end or clone_right_end
+
+	$values[$i+5] = '' if  $values[$i+5] eq "Null";
+
+	$sql = "INSERT IGNORE INTO assembly_tag (tag_id, contig_id, contig_start, contig_end, contig_strand, tag_type, tag_info) VALUES (?,?,?,?,?,?,?)";
+	@vals = ('', $values[$i], $values[$i+1], $values[$i+2], $values[$i+3], $values[$i+4], $values[$i+5]);
+
+	$sth = $values[-1]->adaptor->db->prepare($sql);
+	$sth->execute(@vals);
+      }
+    }
+    $sth->finish;
+  };
+}
+
 
 __END__
 
+
 =head1 NAME - fetch_assembly_tags
+
+=head1 SYNOPSIS
+
+To run this script, specify database_name [-ds dataset] and/or assembly_type [-t chr14] (optional).
+If -t option is omitted, all assembly types of the dataset is processed.
+
+eg, fetch_assembly_tags B<-ds> human B<-t> chr14 (would be practical to pipe the output to external file)
+
+
+=head1 DESCRIPTION
+
+There are assembly_tags info for Sanger clones submitted to EMBL which is stored in "submissions" database,
+and can be found in acefiles, eg, /nfs/disk100/humpub/analysis/projects/Chr_20/yR31BE7/20001221/rawdata/yR31BE7.humace.ace.
+
+The Assembly_tags info is shown in AceDB under the Assembly_tags tag of a Sequence object.
+
 
 =head1 AUTHOR
 
-James Gilbert B<email> jgrg@sanger.ac.uk
+Chao-Kung Chen B<email> ck1@sanger.ac.uk
 
