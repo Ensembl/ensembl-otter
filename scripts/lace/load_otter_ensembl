@@ -401,7 +401,7 @@ my $input_type;
         ## store_input_id_analysis($pipeline_db, $clone->embl_id) ;
         ## update input_id_analysis table
         my $ana_obj = $pipe_analysis->fetch_by_logic_name('SubmitContig');
-        $ana_obj->input_id_type('typetest');
+        $ana_obj->input_id_type('CONTIG');
         my $state_info = $pipeline_db->get_StateInfoContainer;
         $state_info->store_input_id_analysis( $acc_ver.".$chr_start.$chr_end" , $ana_obj );
     
@@ -524,11 +524,7 @@ sub check_sequence_set{
         @values->[0] = $name;
         @values->[1] = "description test" ; # need to get this from the command line
         @values->[2] = 5 ;
-        
-        foreach my $value (@values){
-            print STDERR $value ;
-        }
-        
+                
         $sth->execute(@values) or warn "could not enter information into the sequence set table of otter" ; 
         
     }
