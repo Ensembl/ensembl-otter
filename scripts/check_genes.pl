@@ -906,7 +906,7 @@ foreach my $atype (keys %gsi){
       }
 
       if($dirg){
-	if($dirt!=$dirg){
+	if($dirt ne $dirg){
 	  print "ERR: $gsi has direction $dirg, but $tsi has direction $dirt\n";
 	}
       }else{
