@@ -51,7 +51,9 @@ sub home {
     }
     elsif (! $self->{'_home'}) {
 	my $readonly_tag = '';
-	$readonly_tag = $self->Client->readonly_tag() if $self->Client;
+	if($self->Client){
+            $readonly_tag = $self->Client->readonly_tag() unless $self->Client->write_access;
+        }
 	# warn "readonly_tag '$readonly_tag'\n";
         $self->{'_home'} = "/var/tmp/lace.${$}${readonly_tag}";
     }

@@ -34,7 +34,7 @@ sub readonly_tag {
     if ($ro) {
         $self->{'_options'}->{'client'}->{'readonly_tag'} = $ro;
     }
-    return !$self->write_access ? $self->{'_options'}->{'client'}->{'readonly_tag'} : '';
+    return $self->{'_options'}->{'client'}->{'readonly_tag'} || '';
 }
 sub port {
     my( $self, $port ) = @_;
