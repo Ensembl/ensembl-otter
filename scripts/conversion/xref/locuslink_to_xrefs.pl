@@ -5,20 +5,19 @@ use strict;
 use Bio::Otter::DBSQL::DBAdaptor;
 use Getopt::Long;
 
-my $host   = 'ecs2a';
+my $host   = 'ecs4';
 my $user   = 'ensadmin';
-my $pass   = 'ensembl';
-my $port   = 3306;
-my $dbname = 'otter_merged_chrs_with_anal';
-#my $gff_file='/nfs/acari/searle/progs/otter/scripts/convdata/chr14/v1/thot.311002.res_sanger';
-my $gff_file = '/acari/work7a/keenan/ensembl-otter/scripts/convdata/chr14/v2/NN.240203.res_sanger';
-#my $gff_file = '/acari/work7a/keenan/ensembl-otter/scripts/convdata/chr7/chr7.build31.gff';
+my $pass   = ;
+my $port   = 3352;
+my $dbname = 'mouse_vega040719_xref';
 
-my $lltmpl_file = "/ecs2/scratch6/ensembl/keenan/LL_tmpl";
+my $lltmpl_file = "/acari/work2/th/work/vega/files/LL_tmpl.gz";
 
 my @chromosomes;
 my $path = 'VEGA';
 my $do_store = 0;
+
+my $organism='human';
 
 $| = 1;
 
@@ -31,12 +30,30 @@ $| = 1;
   'port:n'        => \$port,
   'chromosomes:s' => \@chromosomes,
   'gfffile:s'     => \$gff_file,
-  'lltmpl_file:s'   => \$lltmpl_file,
+  'lltmpl_file:s' => \$lltmpl_file,
+  'organism:s'    => \$organism,
   'store'         => \$do_store,
 );
 
 if (scalar(@chromosomes)) {
   @chromosomes = split (/,/, join (',', @chromosomes));
+}
+
+# translate organism to correct name used by LLtmpl file
+my $org;
+{
+  my %org;
+  %org=(
+	'human'=>'Homo sapiens',
+	'mouse'=>'Mus musculus',
+	'zebrafish'=>'Danio rerio',
+	);
+  if($org{$organism}){
+    $org=$org{$organism};
+  }else{
+    print "ERR organism \'$organism\' not recognised\n";
+    exit 0;
+  }
 }
 
 my $db = new Bio::Otter::DBSQL::DBAdaptor(
@@ -76,22 +93,69 @@ if (scalar(@chromosomes)) {
   }
 }
 
-open(IN,$gff_file) or die "cannot open $gff_file";
 my %locus;
 my %seqname;
 
-#open FPLLT,"</nfs/acari/searle/progs/otter/scripts/convdata/xref/LL_tmpl" or die "Couldn't open LL_tmpl";
-open(FPLLT,$lltmpl_file) or die "cannot open $lltmpl_file";
+# parse and index LLtmpl file:
+# pos -> set to >>
+# index off OFFICIAL_SYMBOL
+if($lltmpl_file=~/\.gz$/){
+  open(FPLLT,"gzip -d -c $lltmpl_file |") or die "cannot open $lltmpl_file";
+}else{
+  open(FPLLT,$lltmpl_file) or die "cannot open $lltmpl_file";
+}
 my %loctmplindex;
-my $pos =0;
-while (<FPLLT>) {
-  if (/^LOCUSID: (.*)/){
-    $loctmplindex{$1} = $pos;
+{
+  my $nok=0;
+  my $nworg=0;
+  my $nmorg=0;
+  my $nmsym=0;
+  my $llid;
+  my $pos=0;
+  my $flag_found=0;
+  my $flag_org=0;
+  while(<FPLLT>){
+    if(/^LOCUSID: (.*)/){
+    }elsif(/^ORGANISM: (.*)/){
+      my $org2=$1;
+      if($org eq $org2){
+	$flag_org=1;
+      }else{
+	$flag_org=2;
+      }
+    }elsif(/^OFFICIAL_SYMBOL: (\w+)/){
+      if($flag_org==1){
+	$loctmplindex{$1}=$pos;
+	$nok++;
+      }elsif($flag_org==2){
+	# skip - wrong organism
+	$nworg++;
+      }elsif($flag_org==0){
+	print "WARN: organism not found for $llid\n";
+	$nmorg++;
+      }
+      $flag_org=0;
+      $flag=0;
+    }elsif(/\>\>(\d+)/){
+      $pos = tell FPLLT;
+      if($flag){
+	$nmsym++;
+	print "WARN: $llid was not saved\n";
+      }
+      $flag=1;
+      $llid=$1;
+    }
   }
-  $pos = tell FPLLT;
+  print "$nok entries indexed ok\n";
+  print "$nworg entries skipped - not \'$organism\'\n";
+  print "$nmorg entries skipped - no organism label\n";
+  print "$nmsym entries skipped - no official symbol\n";
+  exit 0;
 }
 
 my %crossrefs;
+
+open(IN,$gff_file) or die "cannot open $gff_file";
 while(<IN>){
   if(/locus_id\s+\"([^\"]+)\"/){
     my $locus_id = $1;
