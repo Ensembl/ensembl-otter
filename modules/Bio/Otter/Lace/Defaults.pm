@@ -62,6 +62,20 @@ my $save_deep_option = sub {
     $DEFAULTS->{"@$option"} ||= { };
     $DEFAULTS->{"@$option"}->{param} = $value ;
 };
+
+my $init_log = sub{
+    my $filename = $_[1];
+    return unless $filename;
+    my $module = "Bio::Otter::Lace::LogFile";
+    eval "use $module;";
+    return if $@;
+    close STDERR;
+    open (STDERR, "> $filename") or die "Can't dup stdout: $!";
+    my $tail_size = 20;
+    Bio::Otter::Lace::LogFile::set_tail_size($tail_size);
+    print STDERR "Start of log file tail size is $tail_size\n";
+    return 1;
+};
 my $CALLED = "$0 @ARGV";
 
 
@@ -107,37 +121,49 @@ sub do_getopt {
 	    push(@$CONFIG_INIFILES, $file_opts);
 	}
     }
-
-    {   ############################################################################
-        ############################################################################
-        my $start = "Called as:\n\t$CALLED\nGetOptions() Error parsing options:";
-        local $SIG{__WARN__} = sub { 
+    ############################################################################
+    ############################################################################
+    my $start = "Called as:\n\t$CALLED\nGetOptions() Error parsing options:";
+    my $warn;
+    unless($DEBUG_CONFIG){
+        $warn = $SIG{__WARN__};
+        $SIG{__WARN__} = sub { 
             my $err = shift; 
             $GETOPT_ERRSTR .= ( $GETOPT_ERRSTR ? "\t$err" : "$start\n\t$err" );
-        } unless $DEBUG_CONFIG;
-        $GETOPT_ERRSTR = undef; # in case this gets called more than once
-        GetOptions(
-                   # map {} makes these lines dynamically from @CLIENT_OPTIONS
-                   # 'host=s'        => $save_option,
-                   ( map { $_ => $save_option } @CLIENT_OPTIONS ),
-                   # this allows setting of options as in the config file
-                   'cfgstr=s'      => $save_deep_option,
-                   # this is just a synonym feel free to add more
-                   'view'          => sub { $DEFAULTS->{$CLIENT_STANZA}->{'write_access'} = 0 },
-                   'local_fasta=s' => sub { $DEFAULTS->{'local_blast'}->{'database'} = $_[1] },
-                   'noblast'       => sub { map { $_->{'local_blast'} = {} if exists $_->{'local_blast'} } @$CONFIG_INIFILES ; },
-                   # this allows multiple extra config file to be used
-                   'cfgfile=s'     => sub { my $opts = options_from_file($_[1]); push(@$CONFIG_INIFILES, $opts) if $opts },
-                   'with-das!'     => sub { $DEFAULTS->{$CLIENT_STANZA}->{'with-das'} = $_[1] },
-                   # these are the caller script's options
-                   @script_args,
-                   ) or return 0;
-        ############################################################################
-        ############################################################################
+        };
     }
+    $GETOPT_ERRSTR = undef; # in case this gets called more than once
+    GetOptions(
+               # map {} makes these lines dynamically from @CLIENT_OPTIONS
+               # 'host=s'        => $save_option,
+               ( map { $_ => $save_option } @CLIENT_OPTIONS ),
+               # this allows setting of options as in the config file
+               'cfgstr=s'      => $save_deep_option,
+               # this is just a synonym feel free to add more
+               'view'          => sub { $DEFAULTS->{$CLIENT_STANZA}->{'write_access'} = 0 },
+               'local_fasta=s' => sub { $DEFAULTS->{'local_blast'}->{'database'} = $_[1] },
+               'noblast'       => sub { map { $_->{'local_blast'} = {} if exists $_->{'local_blast'} } @$CONFIG_INIFILES ; },
+               # this allows multiple extra config file to be used
+               'cfgfile=s'     => sub { my $opts = options_from_file($_[1]); push(@$CONFIG_INIFILES, $opts) if $opts },
+               'with-das!'     => sub { $DEFAULTS->{$CLIENT_STANZA}->{'with-das'} = $_[1] },
+               'log-file=s'    => $init_log,
+               # these are the caller script's options
+               @script_args,
+               ) or return 0;
+    ############################################################################
+    ############################################################################
+    $SIG{__WARN__} = $warn unless $INC{'Bio/Otter/Lace/LogFile.pm'};
+    
 
     push(@$CONFIG_INIFILES, $DEFAULTS);
-#    die Dumper $CONFIG_INIFILES;
+    # now safe to call any subs which are required to setup stuff
+
+    # setup the log file if it was specified in otter_config files
+    my $llf = option_from_array([ $CLIENT_STANZA, 'log-file']);
+    $init_log->('log-file', $llf) if $llf;
+
+    # die Dumper $CONFIG_INIFILES;
+
     return 1;
 }
 
@@ -274,6 +300,7 @@ sub save_all_config_files{
 
         # make the objects for the base file
         foreach my $meth_file(split(",", $base_methods_files)){
+            # so this just needs to find the methods somehow.
             $methods = { %$methods, %{read_Methods($meth_file)} };
         }
         
@@ -290,9 +317,21 @@ sub save_all_config_files{
 
         # add further (DAS) objects here, setting right priority to big number (10000)
         # this means they end up at the end of the @sorted list below
-        my @userMethods = (); # 
-        foreach my $userObj(@userMethods){
-            
+        my %userMethods = %{option_from_array([qw(ace method)])};
+        # [ace_method.specialDASAnalysis] stanzas?
+        foreach my $user_meth_name(keys %userMethods){
+            my ($methdObj, $meth_group) = _create_ace_method($user_meth_name, $userMethods{$user_meth_name});
+            # $meth_group should be one of @order members
+            # check with 
+            unless(grep { /^$meth_group$/ } @order){
+                print STDERR " *** Method '$user_meth_name' cannot be added to '$meth_group', $meth_group doesn't exist. try one of [@order]\n";
+                next;
+            }
+            # add the meth name to the appropriate grp
+            print STDERR "Method '$user_meth_name' WILL be added to '$meth_group', $meth_group doesn't exist. try one of [@order]\n";
+            push(@{$grps->{$meth_group}}, $user_meth_name);
+            # add the object to 
+            #push(@)
         }
 
         # set up right_priority
@@ -303,7 +342,7 @@ sub save_all_config_files{
         for my $i(0..scalar(@order)-1){
             my $group   = $order[$i];
             my $members = $grps->{$group};
-            print STDERR "@$members\n";
+            print STDERR "members of grp '$group' are @$members\n";
             my $g_min   = $sep * $i;
             my $g_max   = $sep * ($i + 1);
             # get the method objects from the hash
@@ -319,6 +358,9 @@ sub save_all_config_files{
         }
 
         return $methods;
+    }
+    sub _create_ace_method{
+        return (0,0);
     }
 }
 
@@ -442,24 +484,29 @@ sub __internal_option_from_array{
     };
     # get the explicit call for a parameter client host
     if(exists $inifiles->{$section} && exists $inifiles->{$section}->{$param}){
+        #print STDERR "1\n";
         $value = $inifiles->{$section}->{$param};
         $found = 1;
     # get the hash for a block [default.use_filters]
     }elsif(exists $inifiles->{$section. ".$param"}){
+        #print STDERR "2\n";
         $value = $inifiles->{$section. ".$param"};
         $found = 1;
     # get the hash for a block [default]. this is same as the above but for only single named stanzas!
     }elsif((!$section) && exists $inifiles->{"$param"}){
+        #print STDERR "3\n";
         $value = $inifiles->{"$param"};
         $found = 1;
     # get the hash for a group of blocks [default.filter]
     # will include [default.filter.repeatmask], [default.filter.cpg] ...
     # this can be a pain, not sure stem finder is working as expected
     }elsif(my $stem = $stem_finder->($section, $param)){
+        #print STDERR "4\n";
         $value = $stem;
         $found = 1;
     # all the above failed to find the specified node of tree
     }else{ 
+        #print STDERR "5\n";
         $found = 0; 
     }
     return ($value, $found);
@@ -565,35 +612,8 @@ Here's an example config file:
   max_coverage=12
 
 
-which will make this hash:
-
-    $Bio::Otter::Lace::DEFAULTS = {
-        'client' => {
-            'port' => 33999,
-            },       
-        'default' => {
-            'use_filters' => {
-                'trf' => 1,
-                'est2genome_mouse' => 1
-                },
-            'filter' => {
-                'est2genome_mouse' => {
-                    'module' => 'Bio::EnsEMBL::Ace::Filter::Similarity::DnaSimilarity',
-                    'max_coverage' => 12
-                },
-            },
-        },
-        'zebrafish' => {
-            'use_filters' => {
-                'trf' => 1,
-                'est2genome_mouse' => 0,
-            },
-        },
-    };
-
-N.B. ALL hash keys are lower cased to ensure ease
-of look up.  You can also specify options on the
-command line using the B<cfgstr> option.  Thus:
+You can also specify options on the command line 
+using the B<cfgstr> option.  Thus:
 
     -cfgstr zebrafish.use_filters.est2genome_mouse=0
 
@@ -632,6 +652,7 @@ email=
 write_access=0
 debug=1
 pipeline=1 
+methods_files=/nfs/team71/analysis/rds/workspace/ace_skeleton/rawdata/methods.ace
 #####################################################
 # method groups
 # annotation - this is manually annotated stuff
@@ -642,7 +663,7 @@ use_method_groups=annotation,prediction,simple,alignments
 
 [method_groups]
 annotation=Transcript
-prediction=ensembl,est_genes,fgenesh,genscan
+prediction=ensembl,est_genes,fgenesh,genscan,HALFWISE
 simple=repeats,cpg_islands
 alignments=BLASTN,BLASTX,Uniprot
 
@@ -677,3 +698,6 @@ WashU-Supported=0,1
 WashU-Putative=0,0
 WashU-Pseudogene=0,0
  
+[ace.method.specialDASAnalysis]
+group=simple
+other=name
