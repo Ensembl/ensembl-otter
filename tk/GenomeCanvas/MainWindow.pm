@@ -19,13 +19,24 @@ sub new {
         -title => $title,
         );
     $mw->configure(
-        -background     => 'grey',
+        -background     => '#bebebe',
         );
     $mw->scaling(1);    # Sets 1 screen pixel = 1 point
     #warn "Scaling = ", $mw->scaling, "\n";
     
     $mw->read_custom_option_file;
+    
+    $mw->add_default_bindings;
+    
     return $mw;
+}
+
+sub add_default_bindings {
+    my( $mw ) = @_;
+    
+    my $exit = sub{ exit; };
+    $mw->bind('<Control-q>', $exit);
+    $mw->bind('<Control-Q>', $exit);
 }
 
 sub read_custom_option_file {
@@ -39,6 +50,7 @@ sub read_custom_option_file {
             print XRES q{
 
 GenomeCanvas*background: #bebebe
+GenomeCanvas*TopLevel*background: #bebebe
 GenomeCanvas*troughColor: #aaaaaa
 GenomeCanvas*foreground: black
 GenomeCanvas*activecolor: #ffd700

@@ -32,6 +32,7 @@ sub new {
         -scrollbars         => 'se',
         -width              => $DEFAULT_CANVAS_SIZE[0],
         -height             => $DEFAULT_CANVAS_SIZE[1],
+        -takefocus          => 0,
         );
     $scrolled->pack(
         -side => 'top',
@@ -42,7 +43,29 @@ sub new {
     my $canvas = $scrolled->Subwidget('canvas');
     $gc->canvas($canvas);
     
+    $gc->bind_scroll_commands;
+    
     return $gc;
+}
+
+sub bind_scroll_commands {
+    my( $gc ) = @_;
+    
+    my $class = 'Tk::Scrollbar';
+    my $x_scroll = $gc->canvas->parent->Subwidget('xscrollbar');
+    my $y_scroll = $gc->canvas->parent->Subwidget('yscrollbar');
+    my $top = $x_scroll->toplevel;
+    foreach my $key_seq ($x_scroll->bind($class)) {
+        my $com_ref = $x_scroll->bind($class, $key_seq);
+        if ($com_ref =~ /ARRAY/) {
+            my($method, @args) = @$com_ref;
+            #warn "[$method, @args]";
+            $top->bind($key_seq, sub{
+                $x_scroll->$method(@args);
+                $y_scroll->$method(@args);
+                });
+        }
+    }
 }
 
 sub band_padding {
