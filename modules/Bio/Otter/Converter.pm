@@ -1791,7 +1791,7 @@ sub genes_to_XML_with_Slice {
   $xmlstr .= Bio::Otter::Converter::path_to_XML($chr, $chrstart, $chrend, 
                                                 $slice->assembly_type, \@path);
   print "XML $xmlstr\n";  
-  if (defined($writeseq)) {
+  if (defined($writeseq) && defined($slice->adaptor)) {
     $xmlstr .= "<dna>\n";
     $seqstr = $slice->seq unless $seqstr;
     $seqstr =~ s/(.{72})/  $1\n/g;
