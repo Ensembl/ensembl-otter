@@ -10,6 +10,10 @@ use GenomeCanvas::MainWindow;
 use GenomeCanvas::Band;
 use GenomeCanvas::BandSet;
 use GenomeCanvas::Drawable;
+use GenomeCanvas::State;
+
+use vars '@ISA';
+@ISA = 'GenomeCanvas::State';
 
 sub new {
     my( $pkg, $tk ) = @_;
@@ -19,13 +23,13 @@ sub new {
     }
     
     my $gc = bless {}, $pkg;
+    $gc->new_State;
     
     # Create and store the canvas object
     my $scrolled = $tk->Scrolled('Canvas',
         -highlightthickness => 1,
         -background         => 'white',
-        #-scrollbars         => 'se',
-        -scrollbars         => 's',
+        -scrollbars         => 'se',
         -width              => 500,
         -height             => 200,
         );
@@ -36,25 +40,17 @@ sub new {
         );
         
     my $canvas = $scrolled->Subwidget('canvas');
-    $gc->canvas($canvas);    
+    $gc->canvas($canvas);
     return $gc;
 }
 
-sub canvas {
-    my( $gc, $canvas ) = @_;
-    
-    if ($canvas) {
-        confess("Not a Tk::Canvas object '$canvas'")
-            unless ref($canvas) and $canvas->isa('Tk::Canvas');
-        $gc->{'_canvas'} = $canvas;
-    }
-    return $gc->{'_canvas'};
-}
-
 sub band_padding {
-    my( $gc ) = @_;
+    my( $gc, $pixels ) = @_;
     
-    return 20;
+    if ($pixels) {
+        $gc->{'_band_padding'} = $pixels;
+    }
+    return $gc->{'_band_padding'} || 20;
 }
 
 sub render {
@@ -63,10 +59,13 @@ sub render {
     my $canvas = $gc->canvas;
     my ($x_origin, $y_origin) = (0,0);
     foreach my $set ($gc->band_sets) {
-        $set->render($canvas, $x_origin, $y_origin);
-        my @bbox = $canvas->bbox("$set");
-        $x_origin = $bbox[0];
-        $y_origin = $bbox[1] + $gc->band_padding;
+        $set->render;
+        
+        # Expand the frame down the y axis by the
+        # amount given by band_padding
+        my @bbox = $gc->frame;
+        $bbox[3] += $gc->band_padding;
+        $gc->frame(@bbox);
     }
 }
 
@@ -75,6 +74,7 @@ sub new_BandSet {
     
     my $band_set = GenomeCanvas::BandSet->new;
     push( @{$gc->{'_band_sets'}}, $band_set );
+    $band_set->add_State($gc->state);
     return $band_set;
 }
 
