@@ -108,15 +108,6 @@ print "Fetched comparison slice\n";
 my $t_vcontig = $t_sgp->fetch_by_chr_start_end($chr,$chrstart,$chrend);
 print "Fetched target vcontig\n";
 
-# get simple features and transfer them
-my $features = $sfa->fetch_all_by_Slice($vcontig);
-foreach my $feature (@$features){
-  $feature->attach_seq($t_vcontig);
-  $t_sfa->store($feature);
-}
-
-exit 0;
-
 my $genes = $aga->fetch_by_Slice($vcontig);
 print "Fetched ".scalar(@$genes)." genes\n";
 
@@ -128,7 +119,7 @@ foreach my $gene (@$genes) {
     my $gsi=$gene->stable_id;
     if($filter_gd){
 	my $name=$gene->gene_info->name->name;
-	if($name=~/\.GD$/){
+	if($name=~/\.GD$/ || $name=~/^GD:/){
 	    print "GD gene $gsi $name was ignored\n";
 	    $ngd++;
 	    next;

@@ -45,6 +45,7 @@ my $author='Riken';
 my $email='taylor@gsc.riken.go.jp';
 
 my $opt_P;
+my $opt_v;
 
 GetOptions(
 	   'chr:s',      \$chr,
@@ -57,6 +58,7 @@ GetOptions(
 	   'email:s',    \$email,
 	   'prefix:s',   \$prefix,
 	   'P',          \$opt_P,
+	   'v',          \$opt_v,
 
 	   'help', \$phelp,
 	   'h', \$help,
@@ -80,10 +82,11 @@ gtf2xml.pl
   -email           char   email address for feedback on database ($email)
   -prefix          char   group prefix to prepend to gene_names and types ($prefix)
 
+  -P                      parse input file only
+
+  -v                      verbose
   -h                      this help
   -help                   perldoc help
-
-  -P                      parse input file only
 ENDOFTEXT
     exit 0;
 }
@@ -95,9 +98,13 @@ my %other;
 my %gtf_keys;
 my %category;
 
-# assumes gtf has categories labelled by GENE
-# (otter now stores data with option to label
-# TRANSCRIPT by transcript_class)
+# assumes gtf
+# EITHER labels gene type
+#   (map TRANSCRIPT CLASS accordingly)
+# OR labels transcript class
+#   (map this onto otter TRANSCRIPT CLASS using Converter.pm call)
+
+# known gene types
 my %standard_category;
 %standard_category=(
 		    'Known'=>1,
@@ -110,7 +117,8 @@ my %standard_category;
 		    'Polymorphic'=>1,
 		    'Ig_Pseudogene_Segment'=>1,
 		    'Ig_Segment'=>1,
-		    'Predicted_Gene',
+		    'Predicted'=>1,
+		    'Non_coding'=>1,
 		    );
 my %map_category;
 %map_category=(
@@ -118,6 +126,7 @@ my %map_category;
 	       'Known_Gene'=>'Known',
 	       'novel_CDS'=>'Novel_CDS',
 	       'novel_transcript'=>'Novel_Transcript',
+	       'Novel_Gene'=>'Novel_Transcript',
 	       'pseudogene'=>'Pseudogene',
 	       'processed_pseudogene'=>'Processed_pseudogene',
 	       'unprocessed_pseudogene'=>'Unprocessed_pseudogene',
@@ -125,7 +134,9 @@ my %map_category;
 	       'polymorphic'=>'Polymorphic',
 	       'ig_pseudogene_segment'=>'Ig_Pseudogene_Segment',
 	       'ig_segment'=>'Ig_Segment',
-	       'predicted'=>'Predicted_Gene',
+	       'Predicted_Gene'=>'Predicted',
+	       'ncRNA'=>'Non_coding',
+	       'Putative_Gene'=>'Putative',
 	       );
 
 my %map_key;
@@ -162,16 +173,21 @@ while(<IN>){
       $val=~s/ +$//;
       $val=~s/\t//g;
     }else{
+      # don't process description lines as much
       $val=~s/\t/ /g;
     }
     $gtf_keys{$key}++;
 
     # special advanced processing for some keys
+    # 1. where Gene merges Gene and Transcript label
     if($key eq 'Gene'){
       $hashy{'transcript_id'}=$val;
       if($val=~/(\S+)\_transcript\_variant/){
 	$val=$1;
       }
+    }elsif($key ne 'Description'){
+      # store unrecognised keys as remarks
+      $hashy{'remark'}.="$key: $val; ";
     }
 
     # remap keys if known
@@ -229,22 +245,29 @@ while(<IN>){
     if(!defined($genes{$gene_id}->{$transcript_id}->{'values'})){
       $genes{$gene_id}->{$transcript_id}->{'values'}=\%hashy;
     }
-    if(!defined($genes{$gene_id}->{$transcript_id}->{exons})){
+    if(!defined($genes{$gene_id}->{$transcript_id}->{'exons'})){
       $genes{$gene_id}->{$transcript_id}->{'exons'}=[];
     }
     push(@{$genes{$gene_id}->{$transcript_id}->{'exons'}},\%exonhash);
   }elsif($arr[2] eq "CDS"){
-    if(!defined($genes{$gene_id}->{$transcript_id}->{cds})){
-      $genes{$gene_id}->{$transcript_id}->{cds}=[];
+    if(!defined($genes{$gene_id}->{$transcript_id}->{'cds'})){
+      $genes{$gene_id}->{$transcript_id}->{'cds'}=[];
     }
     push(@{$genes{$gene_id}->{$transcript_id}->{'cds'}},\%exonhash);
   }elsif($arr[2] eq "gene"){
     # don't expect to see this line, but in ERI GTF, seems to have
     # some extra information
-    if(!defined($gene{$gene_id}->{$transcript_id}->{gene})){
-      $gene{$gene_id}->{$transcript_id}->{gene}=[];
+    if(!defined($gene{$gene_id}->{$transcript_id}->{'gene'})){
+      $gene{$gene_id}->{$transcript_id}->{'gene'}=[];
     }
     push(@{$gene{$gene_id}->{$transcript_id}->{'gene'}},\%exonhash);
+  }elsif($arr[2] eq "Transcript"){
+    # don't expect to see this line, but in TCAG GTF, seems to have
+    # some extra information
+    if(!defined($gene{$gene_id}->{$transcript_id}->{'transcript'})){
+      $gene{$gene_id}->{$transcript_id}->{'transcript'}=[];
+    }
+    push(@{$gene{$gene_id}->{$transcript_id}->{'transcript'}},\%hashy);
   }else{
     # count occurances of other gtf types
     $other{$arr[2]}++;
@@ -330,15 +353,44 @@ my $author = new Bio::Otter::Author(
     -email => $email
 );
 
+my $nmm=0;
 foreach my $gene_id (keys %genes){
   my $gene     = new Bio::Otter::AnnotatedGene;
   my $geneinfo = new Bio::Otter::GeneInfo;   
   $gene->gene_info($geneinfo);
 
   my @transcript_ids = keys %{ $genes{$gene_id} };
-  my %values = %{ $genes{$gene_id}{$transcript_ids[0]}{values} };
+  my %values = %{ $genes{$gene_id}{$transcript_ids[0]}{'values'} };
 
+  # if going to set 'gene type' on basis of label by transcript, must
+  # all agree
   my $gene_type=$values{'gene_category'};
+  # if cds lines, 'Novel_Transcript'->'Novel_CDS'
+  if($gene_type eq 'Novel_Transcript' && 
+     $genes{$gene_id}{$transcript_ids[0]}{'cds'}){
+    $gene_type='Novel_CDS';
+  }
+  my $flag;
+  foreach my $transcript_id (@transcript_ids){
+    my $gene_type2=$genes{$gene_id}{$transcript_id}{'values'}{'gene_category'};
+    # if cds lines, 'Novel_Transcript'->'Novel_CDS'
+    if($gene_type2 eq 'Novel_Transcript' && 
+       $genes{$gene_id}{$transcript_id}{'cds'}){
+      $gene_type2='Novel_CDS';
+    }
+    if($gene_type ne $gene_type2){
+      print "WARN: genetype mismatch for $gene_id: $gene_type; $gene_type2\n";
+      # ranking
+      if($gene_type2 eq 'Known'){
+	$gene_type=$gene_type2;
+      }elsif($gene_type ne 'Known' && $gene_type2 eq 'Novel_CDS'){
+	$gene_type=$gene_type2;
+      }
+      $flag=1;
+    }
+  }
+  $nmm++ if $flag;
+
   if(!$gene_type){$gene_type='Novel_Transcript';}
   # never actually gets into the XML... (transcript level)
   if($prefix){$gene_type="$prefix:$gene_type";}
@@ -353,7 +405,7 @@ foreach my $gene_id (keys %genes){
       $gene_name=$values{'Locus'};
     }
   }
-  print STDERR "Gene id $gene_name ($gene_id)\n";
+  print STDERR "Gene id $gene_name ($gene_id)\n" if $opt_v;
 
   $geneinfo->name(new Bio::Otter::GeneName(-name=>$gene_name));
 
@@ -381,7 +433,10 @@ foreach my $gene_id (keys %genes){
   }
 
   if($values{'Description'}){
-    my $remark=new Bio::Otter::GeneRemark(-remark=>$values{'Description'});
+    $gene->description($values{'Description'});
+  }
+  if($values{'remark'}){
+    my $remark=new Bio::Otter::GeneRemark(-remark=>$values{'remark'});
     $geneinfo->remark($remark);
   }
    
@@ -394,7 +449,7 @@ foreach my $gene_id (keys %genes){
     $gene->add_Transcript($tran);
 
     my %tvalues = %{$genes{$gene_id}{$transcript_id}{values}};
-      
+    my $transcript_type=$tvalues{'gene_category'};
 
     # NOT WORKING
     if(0){
@@ -408,7 +463,7 @@ foreach my $gene_id (keys %genes){
     # transcript_name is create from gene_name;
     # original transcript_id is stored in remark
     my $transcript_name=next_transcript_name($gene_name,\$t_index);
-    print STDERR " Transcript id $transcript_name ($transcript_id)\n";
+    print STDERR " Transcript id $transcript_name ($transcript_id)\n" if $opt_v;
     $traninfo->name($transcript_name);
     my $remark;
     if($prefix){
@@ -417,6 +472,7 @@ foreach my $gene_id (keys %genes){
       $remark="GTF name: $transcript_id";
     }
     $traninfo->remark(new Bio::Otter::TranscriptRemark(-remark=>$remark));
+
     # recognise some tags and save as remarks
     if($values{'complete_CDS'}){
       my $remark;
@@ -436,6 +492,8 @@ foreach my $gene_id (keys %genes){
       }
       $traninfo->remark(new Bio::Otter::TranscriptRemark(-remark=>$remark));
     }
+
+    # other remarks stored in description
 
     $traninfo->author($author);
 
@@ -529,16 +587,26 @@ foreach my $gene_id (keys %genes){
     }
 
     # map gene type onto transcript class
-    if($gene->type =~ /seudogene/){
-      $traninfo->class( new Bio::Otter::TranscriptClass(-name=>$gene_type));
-    }elsif($gene->type =~ /utative/){
-      $traninfo->class( new Bio::Otter::TranscriptClass(-name=>"Putative"));
+    my $gene_type=$transcript_type;
+    # remove prefix ('transcript class' labels do not have prefix)
+    $gene_type=~s/\w+://;
+    my $tc_name;
+    if($gene_type =~ /seudogene/){
+      if($gene_type =~ /nprocessed_pseudogene/){
+	$tc_name="Unprocessed_pseudogene";
+      }elsif($gene_type =~ /processed_pseudogene/){
+	$tc_name="Processed_pseudogene";
+      }else{
+	$tc_name="Pseudogene";
+      }
+    }elsif($gene_type =~ /utative/){
+      $tc_name="Putative";
     }elsif($tran->translation){
-      $traninfo->class( new Bio::Otter::TranscriptClass(-name=>"Coding"));
+      $tc_name="Coding";
     }else{
-      $traninfo->class( new Bio::Otter::TranscriptClass(-name =>"Transcript"));
+      $tc_name="Transcript";
     }
-
+    $traninfo->class( new Bio::Otter::TranscriptClass(-name=>$tc_name));
   }
   
   $gene->gene_info->known_flag(1) if $gene->type eq 'Known';
@@ -555,6 +623,8 @@ print OUT qq{
 </sequence_set>
 </otter>
 };
+
+print "$nmm genes have type mismatches\n";
 
 exit 0;
 
