@@ -287,8 +287,8 @@ sub XML_to_otter {
         s/\s*$//;
         $seqstr .= $_;
         if (length($seqstr)%1000000 < 100) {
-        print "Found seq " . length($seqstr) . "\n";
-         }
+          print STDERR "Found seq " . length($seqstr) . "\n";
+        }
       }
     } elsif (/<\/otter>/) {
       $foundend = 1;
@@ -327,9 +327,6 @@ sub XML_to_otter {
     }
   }
 
-  if (defined($db)) {
-    Bio::Otter::Converter::frags_to_slice($chrname,$chrstart,$chrend,$assembly_type,$seqstr,\%frag,$db);
-  }
   @fragnames = sort { $frag{$a}{start} <=> $frag{$b}{start} } @fragnames;
 
   # print STDERR "chrname = " . $chrname . " chrstart = " . $chrstart . " chrend = "
@@ -342,6 +339,17 @@ sub XML_to_otter {
     my $slice = $sa->fetch_by_chr_start_end($chrname, $chrstart, $chrend);
 
     my @path = @{ $slice->get_tiling_path };
+  
+# Only store slice if no tiling path returned
+# Then refetch slice
+    if (!scalar(@path)) {
+      Bio::Otter::Converter::frags_to_slice($chrname,$chrstart,$chrend,$assembly_type,$seqstr,\%frag,$db);
+      $sa    = $db->get_SliceAdaptor;
+      $slice = $sa->fetch_by_chr_start_end($chrname, $chrstart, $chrend);
+
+      @path = @{ $slice->get_tiling_path };
+    }
+
 
     foreach my $p (@path) {
       my $fragname = shift @fragnames;
@@ -1477,7 +1485,7 @@ sub frags_to_slice {
   my $chr = $db->get_ChromosomeAdaptor->fetch_by_chr_name($chrname);
 
   if (!defined($chr)) {
-    print "Storing chromosome $chrname\n";
+    print STDERR "Storing chromosome $chrname\n";
     my $chrsql = "insert into chromosome(chromosome_id,name) values(null,'$chrname')";
     my $sth    = $db->prepare($chrsql);
     my $res    = $sth->execute;
@@ -1492,7 +1500,7 @@ sub frags_to_slice {
     $chrid = $chr->dbID;
   }
 
-  print "Chromosome id $chrid\n";
+  print STDERR "Chromosome id $chrid\n";
 
   foreach my $f (keys %frags) {
     
@@ -1510,53 +1518,53 @@ sub frags_to_slice {
     if ($seqstr) {
     # Create clone
 
-    my $clone = new Bio::EnsEMBL::Clone();
-    $clone->id($f);
-    $clone->embl_id($f);
-    $clone->version(1);
-    $clone->embl_version(1);
-    $clone->htg_phase(-1);
-    $clone->created($time);
-    $clone->modified($time);
-
-
-    # Create contig
-
-    my $contig = new Bio::EnsEMBL::RawContig;
-
-    $contig->name($f);
-    $contig->clone($clone);
-    $contig->embl_offset(1);
-    $contig->length($fend-$fstart+$foff);
-
-    my $subseq    = substr($seqstr,($fstart-$chrstart),($fend-$fstart+1));
-
-    my $contigseq = new Bio::Seq(-seq => $subseq);
-
-    if ($fstart == 9947971) {
-      print "*****************************\n";
-    }
-    print "Contigseq " . $contigseq->length . " " . length($seqstr) . " " . $fstart . " " . $fend . "\n";
-
-    if ($fori == -1) {
-      $contigseq = $contigseq->revcom;
-    }
-
-    my $padstr = 'N' x ($foff-1);
-    
-    print "Foff [$foff-1]\n";
-
-    my $newseq = $padstr . $contigseq->seq;
-
-    print "newseq " . length($newseq) ."\n";
-
-    $contig->seq($newseq);
-
-    $clone->add_Contig($contig);
-
-    # Now store the clone
-
-    $db->get_CloneAdaptor->store($clone);
+      my $clone = new Bio::EnsEMBL::Clone();
+      $clone->id($f);
+      $clone->embl_id($f);
+      $clone->version(1);
+      $clone->embl_version(1);
+      $clone->htg_phase(-1);
+      $clone->created($time);
+      $clone->modified($time);
+  
+  
+      # Create contig
+  
+      my $contig = new Bio::EnsEMBL::RawContig;
+  
+      $contig->name($f);
+      $contig->clone($clone);
+      $contig->embl_offset(1);
+      $contig->length($fend-$fstart+$foff);
+  
+      my $subseq    = substr($seqstr,($fstart-$chrstart),($fend-$fstart+1));
+  
+      my $contigseq = new Bio::Seq(-seq => $subseq);
+  
+      if ($fstart == 9947971) {
+        print "*****************************\n";
+      }
+      print STDERR "Contigseq " . $contigseq->length . " " . length($seqstr) . " " . $fstart . " " . $fend . "\n";
+  
+      if ($fori == -1) {
+        $contigseq = $contigseq->revcom;
+      }
+  
+      my $padstr = 'N' x ($foff-1);
+      
+      print STDERR "Foff [$foff-1]\n";
+  
+      my $newseq = $padstr . $contigseq->seq;
+  
+      print STDERR "newseq " . length($newseq) ."\n";
+  
+      $contig->seq($newseq);
+  
+      $clone->add_Contig($contig);
+  
+      # Now store the clone
+  
+      $db->get_CloneAdaptor->store($clone);
     # Now for the assembly stuff
     } 
 
