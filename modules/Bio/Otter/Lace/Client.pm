@@ -252,7 +252,7 @@ sub _check_for_error {
             confess $err;
         }
     }elsif($response->is_error()){
-        my $err = $response->message();
+        my $err = $response->message() . "\nServer replied:\n" . $response->content();
         confess $err;
     }
     return $xml;
