@@ -1,0 +1,87 @@
+#!/usr/local/bin/perl5.6.1 -w
+
+### draw_karyotype
+
+use strict;
+use KaryotypeWindow;
+use Hum::EnsCmdLineDB;
+
+{
+    my $mw = CanvasWindow::MainWindow->new;
+    my $kw = KaryotypeWindow->new($mw);
+    
+    Hum::EnsCmdLineDB::do_getopt();
+    my $dba = Hum::EnsCmdLineDB::connect();
+    my $sth = $dba->prepare(q{
+        SELECT c.name
+          , k.chr_start
+          , k.chr_end
+          , k.band
+          , k.stain
+        FROM karyotype k
+          , chromosome c
+        WHERE k.chromosome_id = c.chromosome_id
+        ORDER BY k.chromosome_id
+          , k.chr_start
+        });
+    $sth->execute();
+    
+    my( $chr );
+    my $current_name = '';
+    my( %stain_count );
+    while (my ($chr_name, $start, $end, $band_name, $stain) = $sth->fetchrow) {
+        $stain_count{$stain}++;
+        if ($chr_name ne $current_name) {
+            $chr = $kw->new_Chromosome;
+            $chr->name($chr_name);
+            $current_name = $chr_name;
+        }
+        
+        my $class = undef;
+        if ($stain eq 'gcen') {
+            $class = 'Karyotype::Band::Centromere';
+        }
+        elsif ($stain eq 'gstalk') {
+            $class = 'Karyotype::Band::Stalk';
+        }
+        my $band = $chr->new_Band($class);
+        $band->fill('#333399'); # Default fill
+        $band->start($start);
+        $band->end($end);
+        $band->name($band_name);
+        
+        if ($stain eq 'gneg') {
+            $band->fill('#ffffff');
+        }
+        elsif ($stain =~ /(\d+)/) {
+            $band->set_fill_from_shade($1 / 100);
+        }
+    }
+    $kw->draw;
+    
+    foreach my $stain (sort keys %stain_count) {
+        printf "  %8s  %4d\n", $stain, $stain_count{$stain};
+    }
+    
+    my $ps_dump = sub {
+        print STDERR "Printed to:", 
+            map("  $_\n", $kw->print_postscript);
+        };
+    $mw->bind('<Control-p>', $ps_dump);
+    $mw->bind('<Control-P>', $ps_dump);
+    
+    $kw->fix_window_min_max_sizes;
+    Tk::MainLoop();
+}
+
+
+
+
+__END__
+
+=head1 NAME - draw_karyotype
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+

@@ -490,7 +490,7 @@ sub print_postscript {
     my( $self, $file_root ) = @_;
     
     unless ($file_root) {
-        $file_root = $self->TopLevel->cget('title')
+        $file_root = $self->canvas->toplevel->cget('title')
             || 'CanvasWindow';
         $file_root =~ s/\s/_/g;
     }
