@@ -127,24 +127,10 @@ sub annotate_gene {
 
    $gene->gene_info($info);
 
-   my $transcript_info_adaptor = $self->db->get_TranscriptInfoAdaptor();
-   my $ctia                    = $self->db->get_CurrentTranscriptInfoAdaptor;
-
-   foreach my  $tran (@{$gene->get_all_Transcripts}) {
-       
-       bless $tran, "Bio::Otter::AnnotatedTranscript";
-
-       eval {
-	   my $infoid = $ctia->fetch_by_transcript_id($tran->stable_id);
-	   my $info = $transcript_info_adaptor->fetch_by_dbID($infoid);
-	   
-	   $tran->transcript_info($info);
-       };
-       if ($@) {
-	   print "Couldn't fetch info for " . $tran->stable_id . " [$@]\n";
-       }
+   my $ata = $self->db->get_TranscriptAdaptor();
+   foreach my $tran (@{$gene->get_all_Transcripts}) {
+       $ata->annotate_transcript($tran);
    }
-   
 }
 
 =head2 list_current_dbIDs_for_Slice_by_type
@@ -470,8 +456,8 @@ sub fetch_by_Slice {
                 $t_name = $transcript->transcript_info->name;
             };
             if ($@) {
-                die sprintf("Missing transcript_info on transcript %s (%d)", 
-                    $transcript->stable_id, $transcript->dbID);
+                die sprintf("Error getting name of %s %s (%d):\n$@", 
+                    ref($transcript), $transcript->stable_id, $transcript->dbID);
             }
             my $exons_truncated = $transcript->truncate_to_Slice($slice);
             my $ex_list = $transcript->get_all_Exons;
