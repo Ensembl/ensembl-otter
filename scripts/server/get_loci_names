@@ -42,7 +42,7 @@ if (defined($params{type})) {
   $db->assembly_type($params{type});  
 }
 
-my @names = $db->get_GeneNameAdaptor->fetch_all;
+my @names = @{$db->get_GeneNameAdaptor->fetch_all};
 my @syn   = $db->get_GeneSynonymAdaptor->fetch_all;
 
 foreach my $n (@names) {
