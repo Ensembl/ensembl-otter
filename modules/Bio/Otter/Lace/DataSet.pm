@@ -8,6 +8,7 @@ use Carp;
 use Bio::Otter::DBSQL::DBAdaptor;
 use Bio::Otter::Lace::CloneSequence;
 use Bio::Otter::Lace::Chromosome;
+use Bio::Otter::Lace::SequenceSet;
 
 sub new {
     my( $pkg ) = @_;
@@ -24,46 +25,153 @@ sub name {
     return $self->{'_name'};
 }
 
-sub selected_CloneSequences {
-    my( $self, $selected_CloneSequences ) = @_;
+sub author {
+    my( $self, $author ) = @_;
     
-    if ($selected_CloneSequences) {
-        $self->{'_selected_CloneSequences'} = $selected_CloneSequences;
+    if ($author) {
+        $self->{'_author'} = $author;
     }
-    return $self->{'_selected_CloneSequences'};
+    return $self->{'_author'};
 }
 
-sub unselect_all_CloneSequences {
+sub sequence_set_access_list {
     my( $self ) = @_;
     
-    $self->{'_selected_CloneSequences'} = undef;
-}
-
-sub selected_CloneSequences_as_contig_list {
-    my( $self ) = @_;
-    
-    my $cs_list = $self->selected_CloneSequences
-        or return;
-    my $ctg = [];
-    my $ctg_list = [$ctg];
-    foreach my $this (sort {
-        $a->chromosome->chromosome_id <=> $b->chromosome->chromosome_id ||
-        $a->chr_start <=> $b->chr_start
-        } @$cs_list)
-    {
-        my $last = $ctg->[$#$ctg];
-        if ($last) {
-            if ($last->chr_end + 1 == $this->chr_start) {
-                push(@$ctg, $this);
-            } else {
-                $ctg = [$this];
-                push(@$ctg_list, $ctg);
-            }
-        } else {
-            push(@$ctg, $this);
+    my( $al );
+    unless ($al = $self->{'_sequence_set_access_list'}) {
+        $al = $self->{'_sequence_set_access_list'} = {};
+        
+        my $dba = $self->get_cached_DBAdaptor;
+        my $sth = $dba->prepare(q{
+            SELECT ssa.assembly_type
+              , ssa.access_type
+              , au.author_name
+            FROM sequence_set_access ssa
+              , author au
+            WHERE ssa.author_id = au.author_id
+            });
+        $sth->execute;
+        
+        while (my ($set_name, $access, $author) = $sth->fetchrow) {
+            $al->{$set_name}{$author} = $access eq 'RW' ? 1 : 0;
         }
     }
-    return $ctg_list;
+    
+    return $al;
+}
+
+sub get_all_SequenceSets {
+    my( $self ) = @_;
+    
+    my( $ss );
+    unless ($ss = $self->{'_sequence_sets'}) {
+        $ss = $self->{'_sequence_sets'} = [];
+        
+        my $this_author = $self->author or confess "author not set";
+        my $ssal = $self->sequence_set_access_list;
+        
+        my $dba = $self->get_cached_DBAdaptor;
+        my $sth = $dba->prepare(q{
+            SELECT assemmbly_type
+              , description
+            FROM sequence_set
+            ORDER BY assemmbly_type
+            });
+        $sth->execute;
+        
+        while (my ($name, $desc) = $sth->fetchrow) {
+            my( $write_flag );
+            if ($ssal) {
+                $write_flag = $ssal->{$name}{$this_author};
+                # If an author doesn't have an entry in the sequence_set_access
+                # table for this set, then it is invisible to them.
+                next unless defined $write_flag;
+            } else {
+                # No entries in sequence_set_access table - everyone can write
+                $write_flag = 1;
+            }
+        
+            my $set = Bio::Otter::SequenceSet->new;
+            $set->name($name);
+            $set->description($desc);
+            $set->write_access($write_flag);
+            
+            push(@$ss, $set);
+        }
+    }
+    return $ss;
+}
+
+sub selected_SequenceSet {
+    my( $self, $selected_SequenceSet ) = @_;
+    
+    if ($selected_SequenceSet) {
+        $self->{'_selected_SequenceSet'} = $selected_SequenceSet;
+    }
+    return $self->{'_selected_SequenceSet'};
+}
+
+sub unselect_SequenceSet {
+    my( $self ) = @_;
+    
+    $self->{'_selected_SequenceSet'} = undef;
+}
+
+sub fetch_all_CloneSequences_for_SequenceSet {
+    my( $self, $ss ) = @_;
+    
+    confess "Missing SequenceSet argument" unless $ss;
+    
+    my %id_chr = map {$_->chromosome_id, $_} $self->get_all_Chromosomes;
+    my $cs = [];
+    
+    my $dba = $self->get_cached_DBAdaptor;
+    my $type = $ss->name;
+    my $sth = $dba->prepare(q{
+        SELECT c.embl_acc
+          , c.embl_version
+          , g.length
+          , g.name
+          , a.chromosome_id
+          , a.chr_start
+          , a.chr_end
+          , a.contig_start
+          , a.contig_end
+          , a.contig_ori
+        FROM assembly a
+          , contig g
+          , clone c
+        WHERE a.contig_id = g.contig_id
+          AND g.clone_id = c.clone_id
+          AND a.type = ?
+        ORDER BY a.chromosome_id
+          , a.chr_start
+        });
+    $sth->execute($type);
+    my( $acc, $sv,
+        $ctg_length, $ctg_name, $chr_id,
+        $chr_start, $chr_end,
+        $contig_start, $contig_end, $strand );
+    $sth->bind_columns( \$acc, \$sv,
+        \$ctg_length, \$ctg_name, \$chr_id,
+        \$chr_start, \$chr_end,
+        \$contig_start, \$contig_end, \$strand );
+    while ($sth->fetch) {
+        my $cl = Bio::Otter::Lace::CloneSequence->new;
+        $cl->accession($acc);
+        $cl->sv($sv);
+        $cl->length($ctg_length);
+        $cl->chromosome($id_chr{$chr_id});
+        $cl->chr_start($chr_start);
+        $cl->chr_end($chr_end);
+        $cl->contig_start($contig_start);
+        $cl->contig_end($contig_end);
+        $cl->contig_strand($strand);
+        $cl->contig_name($ctg_name);
+        push(@$cs, $cl);
+    }
+
+    $ss->set_CloneSequence_list($cs);
 }
 
 sub get_all_Chromosomes {
@@ -131,63 +239,6 @@ sub get_all_Chromosomes {
             } @$ch;
     }
     return @$ch;
-}
-
-sub get_all_CloneSequences {
-    my( $self ) = @_;
-    
-    my( $cs );
-    unless ($cs = $self->{'_clone_sequences'}) {
-        my %id_chr = map {$_->chromosome_id, $_} $self->get_all_Chromosomes;
-    
-        $cs = $self->{'_clone_sequences'} = [];
-        my $dba = $self->get_cached_DBAdaptor;
-        my $type = $dba->assembly_type;
-        my $sth = $dba->prepare(q{
-            SELECT c.embl_acc
-              , c.embl_version
-              , g.length
-              , g.name
-              , a.chromosome_id
-              , a.chr_start
-              , a.chr_end
-              , a.contig_start
-              , a.contig_end
-              , a.contig_ori
-            FROM assembly a
-              , contig g
-              , clone c
-            WHERE a.contig_id = g.contig_id
-              AND g.clone_id = c.clone_id
-              AND a.type = ?
-            ORDER BY a.chromosome_id
-              , a.chr_start
-            });
-        $sth->execute($type);
-        my( $acc, $sv,
-            $ctg_length, $ctg_name, $chr_id,
-            $chr_start, $chr_end,
-            $contig_start, $contig_end, $strand );
-        $sth->bind_columns( \$acc, \$sv,
-            \$ctg_length, \$ctg_name, \$chr_id,
-            \$chr_start, \$chr_end,
-            \$contig_start, \$contig_end, \$strand );
-        while ($sth->fetch) {
-            my $cl = Bio::Otter::Lace::CloneSequence->new;
-            $cl->accession($acc);
-            $cl->sv($sv);
-            $cl->length($ctg_length);
-            $cl->chromosome($id_chr{$chr_id});
-            $cl->chr_start($chr_start);
-            $cl->chr_end($chr_end);
-            $cl->contig_start($contig_start);
-            $cl->contig_end($contig_end);
-            $cl->contig_strand($strand);
-            $cl->contig_name($ctg_name);
-            push(@$cs, $cl);
-        }
-    }
-    return $cs;
 }
 
 sub get_cached_DBAdaptor {
