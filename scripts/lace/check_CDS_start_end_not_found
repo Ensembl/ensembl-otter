@@ -252,7 +252,7 @@ This script also reset the value of cds_end_not_found column in otter to "true" 
 the end protein sequence of a transcript is in the end exon.
 
 
-Human sequence_set to submit
+### Human sequence_set to submit
 
 select assembly_type, description from otter_human.sequence_set where vega_set_id > 0;
 +---------------+---------------------------------------------------+
@@ -279,7 +279,7 @@ select assembly_type, description from otter_human.sequence_set where vega_set_i
 +---------------+---------------------------------------------------+
 -set chr10_06 -set chr13-10 -set chr14 -set chr19 -set Chr1_final -set chr20-9 -set chr22-02 -set chr6-14 -set chr7 -set chr9-12 -set ChrX-07 -set chr_Y_01 -set MHC_COX -set MHC_NCBI34.1 -set MHC_NCBI34.2 -set MHC_PGF -set MHC_QBL -set MHC_SSTO
 
-Mouse sequence_set to sumbit
+### Mouse sequence_set to sumbit
 
 select assembly_type, description from sequence_set where vega_set_id > 0;
 +---------------+--------------------------------------------+
@@ -295,6 +295,12 @@ select assembly_type, description from sequence_set where vega_set_id > 0;
 +---------------+--------------------------------------------+
 
 -set black6_IDD5.1 -set chr11 -set del36H_set -set mrc4-2 -set NOD_IDD10 -set NOD_IDD3 -set NOD_IDD5.1
+
+### zebrafish squence_set to submit
+
+This is filter by clones_to_submit() in run_emblDump script. Just run the script without -set to check for all sequence sets.
+
+
 
 =head1 AUTHOR
 
