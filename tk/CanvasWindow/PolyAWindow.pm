@@ -348,13 +348,13 @@ sub populate_subframe{
                                                 -variable => \$strand ,
                                                 -value => '+',
                                                 -borderwidth => 2 ,
-                                                -relief => 'groove')->pack(-side=> 'left' ) ;
+                                                -relief => 'groove')->pack(-side=> 'left') ;
         my $neg_button = $entry_frame->Radiobutton(  -command => $update_cmd,
                                                 -text => '-' ,
                                                 -variable => \$strand , 
                                                 -value =>'-',
                                                 -borderwidth => 2 ,
-                                                -relief => 'groove')->pack(-side=> 'left' ) ; # -before - bcause -side is right
+                                                -relief => 'groove')->pack(-side=> 'left' ) ;
        
 
 
