@@ -28,12 +28,14 @@ my $font = ['Helvetica', 12, 'bold'];
     my $chr_start = 0;
     my $min_percent_id = 95;
     my $logic_name = 'contig_vs_contig';
+    my $scale = 1_000;
     Hum::EnsCmdLineDB::do_getopt(
         'chr=s'         => \$chr_name,
         'chr_start=s'   => \$chr_start,
         'assembly_name' => \$assembly_name,
         'percent=f'     => \$min_percent_id,
         'analysis=s'    => \$logic_name,
+        'scale=i'       => \$scale,
         );
     my $ensdb = Hum::EnsCmdLineDB::connect();
     
@@ -87,7 +89,6 @@ my $font = ['Helvetica', 12, 'bold'];
     $canvas->CanvasBind('<Control-P>', $print_to_file);
     #$canvas->configure(-cursor => 'plus');
 
-    my $scale = 1_000;
     my $col_max = 1;
     my $feature_count = 0;
     my $x_offset = 200;
