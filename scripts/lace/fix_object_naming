@@ -167,7 +167,7 @@ sub is_sequence_name {
 
         my $is_int_end = 0;
         my $int_end_gene_number = undef;
-        if ($old_gene_name =~ /[A-Za-z](\d+)$/) {
+        if ($old_gene_name =~ /[A-Za-z-](\d+)$/) {
             print STDERR "  INT_END\n";
             $is_int_end = 1;
             $int_end_gene_number = $1;
@@ -206,6 +206,7 @@ sub is_sequence_name {
             $gene_name_root ||= '';
             $variant_number ||= '001';
 
+            my $is_clone_based = name_is_clone_based($name, $all_clone_names);
             if ($is_int_end and $gene_number == $int_end_gene_number) {
                 $gene_number = undef if ! $gene_clone_root;
                 $fix_int_end = 1;
@@ -214,7 +215,7 @@ sub is_sequence_name {
                 $gene_name_root = '';
                 $variant_number = '001';
             }
-            elsif ("$class$name" eq $old_tsct_name and name_is_clone_based($name, $all_clone_names)) {
+            elsif ("$class$name" eq $old_tsct_name and $is_clone_based) {
                 # Already has intl gene name
                 next unless $fix_int_end;
             }
@@ -223,7 +224,7 @@ sub is_sequence_name {
             unless ($gene_clone_root) {
                 ($gene_number, $gene_clone_root) = make_new_gene_name($gene_number, $gene_class . $clone3prime);
             }
-            next if ($fix_int_end and $gene_number >= $int_end_gene_number);
+            next if ($fix_int_end and $is_clone_based and $gene_number >= $int_end_gene_number);
 
             my $new_tsct_name = "$gene_clone_root-$variant_number";
             while (transcript_name_exists($new_tsct_name)) {
@@ -425,11 +426,12 @@ sub name_is_clone_based {
 sub get_class_and_name {
     my( $name ) = @_;
     
+    my $class_pattern = qr{GD|RI|C22|ERI|MPI};
     my $class = '';
-    if ($name =~ s/^(GD|RI|C22)://) {
+    if ($name =~ s/^($class_pattern)://) {
         $class = $1;
     }
-    elsif ($name =~ s/\.(GD|RI|C22)\b//) {
+    elsif ($name =~ s/\.($class_pattern)\b//) {
         $class = $1;
     }
     $class = '' if $class eq 'C22';
