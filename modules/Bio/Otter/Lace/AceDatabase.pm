@@ -500,7 +500,7 @@ sub update_with_stable_ids{
     my $fileObj;
     if($self->Client->debug){
         $fileObj = Bio::Otter::Lace::PersistentFile->new();
-        $fileObj->name(qq`otter_response_$$.xml`);
+        $fileObj->name(qq`otter_response.$$.xml`);
         $fileObj->rm();
     }else{
         $fileObj = Bio::Otter::Lace::TempFile->new;

@@ -181,19 +181,25 @@ sub get_xml_for_contig_from_Dataset {
     
     printf STDERR "Fetching data from chr %s %s-%s\n",
         $chr_name, $start, $end;
+
+    return $self->get_xml_from_Dataset_type_chr_start_end(
+        $dataset, $ss->name, $chr_name, $start, $end,
+        );
+}
+
+sub get_xml_from_Dataset_type_chr_start_end {
+    my( $self, $dataset, $type, $chr_name, $start, $end ) = @_;
     
-    my $root   = $self->url_root;
+    my $root = $self->url_root;
     my $url = "$root/get_region?" .
         join('&',
 	     'author='   . uri_escape($self->author),
 	     'email='    . uri_escape($self->email),
-	     #'lock='     . uri_escape($self->lock),
-             #'hostname=' . uri_escape($self->client_hostname),
 	     'dataset='  . uri_escape($dataset->name),
 	     'chr='      . uri_escape($chr_name),
 	     'chrstart=' . uri_escape($start),
 	     'chrend='   . uri_escape($end),
-             'type='     . uri_escape($ss->name),
+             'type='     . uri_escape($type),
 	     );
     warn "url <$url>\n";
 
@@ -204,7 +210,7 @@ sub get_xml_for_contig_from_Dataset {
 
     my $xml = $self->_check_for_error($response);
 
-    if($self->debug){
+    if ($self->debug){
         my $debug_file = Bio::Otter::Lace::PersistentFile->new();
         $debug_file->name("otter-debug.$$.fetch.xml");
         my $fh = $debug_file->write_file_handle();
