@@ -296,11 +296,16 @@ sub initialise {
 
 	$comment_label = $button_frame_1->Label(-text => 'Note text:',);
 	$comment_label->pack(-side => 'left',);
-	
-	$comment = $button_frame_1->Entry(-width  => 55,
-					  -font   => ['Helvetica', $self->font_size, 'normal'],
+	my $comment_text = '';
+        $self->set_note_ref(\$comment_text);
+	$comment = $button_frame_1->Entry(-width        => 55,
+                                          -textvariable => $self->set_note_ref(),
+					  -font         => ['Helvetica', $self->font_size, 'normal'],
 					  );
-	$comment->pack(-side => 'left',);
+	$comment->pack(-side => 'left');
+        my $clear_button = $button_frame_1->Button(-text    => 'clear'   ,
+                                                   -command => sub { my $ref = $self->set_note_ref(); $$ref = undef; }
+                                                   )->pack(-side => 'right');
 	
 	# Remove Control-H binding from Entry
 	$comment->bind(ref($comment), '<Control-h>', '');
@@ -310,7 +315,7 @@ sub initialise {
 	my $set_reviewed = sub{
 	    $self->save_sequence_notes($comment);
 	};
-	$self->make_button($button_frame_2, 'Set note', $set_reviewed, 0);
+	$self->make_button($button_frame_1, 'Set note', $set_reviewed, 0);
 	$top->bind('<Control-s>', $set_reviewed);
 	$top->bind('<Control-S>', $set_reviewed);
 
@@ -1294,7 +1299,7 @@ sub layout_columns_and_rows {
 sub save_sequence_notes {
     my( $self, $comment ) = @_;
 
-    my $text = $comment->get;
+    my $text = ${$self->set_note_ref()};
     $text =~ s/\s/ /g;
     $text =~ s/\s+$//;
     $text =~ s/^\s+//;
@@ -1608,7 +1613,11 @@ sub slice_max_ref{
     $self->{'_context_size'} = $context if $context;
     return $self->{'_context_size'};    
 }
-
+sub set_note_ref{
+    my ($self, $search) = @_;
+    $self->{'_set_note'} = $search if $search;
+    return $self->{'_set_note'};
+}
 1;
 
 __END__
