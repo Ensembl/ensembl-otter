@@ -6,7 +6,7 @@ submssion_to_otter
 
 =head1  SYNOPSIS 
     
-submission_to_otter [-host] [-port] [-user] [-dbname] [-dbpass]
+submission_to_otter -dataset <DATASET NAME> [-domain <DOMAIN NAME>]
 
 =head1 DESCRIPTION         
     
@@ -19,33 +19,28 @@ use strict ;
 use Carp;
 use Hum::Submission qw{sub_db prepare_statement};
 use DBI;
-use Getopt::Long 'GetOptions';
+use Bio::Otter::Lace::PipelineDB;
+use Bio::Otter::Lace::Defaults;
 
 my $otter_db;
 
 {
-    my $host = 'localhost'; 
-    my $port = 3306; 
-    my $count = 0;
+    my $dataset_name = undef;
+    my $help         = 0;
     my $domain = 'sanger.ac.uk';
-    my( $dbname, $dbpass, $user );
-
-    GetOptions(
-        'password=s'=> \$dbpass,
-        'dbname=s'  => \$dbname,
-        'port=i'    => \$port,
-        'host=s'    => \$host,
-        'user=s'    => \$user,
-        'domain=s'  => \$domain,
-         ) or die "Error processing command line"; 
-
-    $otter_db = DBI->connect("DBI:mysql:host=$host;port=$port;database=$dbname",
-                                   $user, $dbpass, {RaiseError => 1, PrintError => 0})
-                    or die "Can't connect to submissions database as '$user' ",
-                    DBI::errstr();
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'     => \$help,
+        'dataset=s'   => \$dataset_name,
+        'domain=s'    => \$domain,
+        ) || usage();
+    die "I need a dataset name, is that too much to ask?\n" unless $dataset_name;
     if ($domain) {
         $domain = "\@$domain";
     }
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    # Make a connection to the otter database
+    $otter_db = $ds->get_cached_DBAdaptor;
     
     my $fetch_notes_sanger = prepare_statement(q{
         SELECT r.annotator_uname
@@ -107,6 +102,7 @@ my $otter_db;
         }) ;
     $otter_sth->execute;
 
+    my $count = 0;
     while (my ($accession, $version, $contig_id) = $otter_sth->fetchrow){
         foreach my $sth ($fetch_notes_sanger, $fetch_notes_external) {
             $sth->execute($accession, $version);
