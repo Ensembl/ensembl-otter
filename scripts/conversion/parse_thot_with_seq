@@ -83,11 +83,11 @@ my %trans;
 
 my %type_hash;
 $type_hash{"KNOWN GENE"} = "Known";
-$type_hash{"KNOWN SEGMENT"} = "Known_Segment";
+$type_hash{"KNOWN SEGMENT"} = "Ig_Segment";
 $type_hash{"NOVEL GENE"} = "Novel_CDS";
 $type_hash{"NOVEL TRANSCRIPT"} = "Novel_Transcript";
 $type_hash{"PREDICTED GENE"} = "Predicted_Gene";
-$type_hash{"PSEUDOGENE SEGMENT"} = "Pseudogene_Segment";
+$type_hash{"PSEUDOGENE SEGMENT"} = "Ig_Pseudogene_Segment";
 $type_hash{"PUTATIVE GENE"} = "Putative";
 $type_hash{Pseudogene} = "Pseudogene";
 
@@ -146,7 +146,7 @@ while (<FPGTF>) {
 
 my $author = new Bio::Otter::Author(
   -name  => 'Genoscope',
-  -email => 'root@genoscope.com'
+  -email => 'ralph@genoscope.cns.fr',
 );
 
 foreach my $geneid (keys %genes) {
@@ -213,7 +213,7 @@ foreach my $geneid (keys %genes) {
         $newexon->phase(-1);
         if (defined($exon->{values}{AC})) {
           if ($exon->{values}{AC} ne "NO_AC" && 
-              exon->{values}{AC} ne "undef") {
+              $exon->{values}{AC} ne "undef") {
             my $acc = $exon->{values}{AC};
             # print "found evidence $acc\n";
             $evidence{$acc} = 1;
@@ -341,6 +341,17 @@ foreach my $geneid (keys %genes) {
           $cds_transcript = $tran;
         }
       }
+      if ($gene->type =~ /seudogene/) {
+        $traninfo->class(
+          new Bio::Otter::TranscriptClass(-name => "Pseudogene"));
+      } elsif (defined($cds_transcript)) {
+        $traninfo->class(
+          new Bio::Otter::TranscriptClass(-name => "supported"));
+      } else {
+        $traninfo->class(
+          new Bio::Otter::TranscriptClass(-name => "supported_mRNA"));
+      }
+
     }
 
     my $sumkey = $gene->start . "_" . $gene->end . "_" . ($gene->strand == 1 ? "f" : "r");

@@ -342,7 +342,7 @@ foreach my $geneid (keys %genes) {
           new Bio::Otter::TranscriptClass(-name => "supported"));
       } else {
         $traninfo->class(
-          new Bio::Otter::TranscriptClass(-name => "supported"));
+          new Bio::Otter::TranscriptClass(-name => "supported_mRNA"));
       }
     }
 
