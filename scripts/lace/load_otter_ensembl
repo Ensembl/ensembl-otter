@@ -148,11 +148,13 @@ use Data::Dumper;
     $SequenceSet->dataset_name($dataset_name); # data set from command line
     $SequenceSet->description($description);   # description from command line
 
-    my $first = <$fh>;
-    chomp($first);
-    ($INPUT_TYPE, $agp_chr_name) = check_line($first, $chromosome_name);
+
+    while(!$INPUT_TYPE && (my $first = <$fh>)){
+	chomp($first);
+	($INPUT_TYPE, $agp_chr_name) = check_line($first, $chromosome_name);
+    }
     seek($fh, 0, 0);
-    die "check first line of file" unless $INPUT_TYPE;
+    die "check format of file" unless $INPUT_TYPE;
     
     # Chr prefix causes problems for Apollo
     $chromosome_name ||= $agp_chr_name;
@@ -299,7 +301,7 @@ sub check_line{
 	$line_in_array[9] = "FROM LIST OF CLONES";
 	$line_in_array[0] = $chromosome_name;
     }
-    elsif ($line_in_array[4] eq 'F') {
+    elsif ($line_in_array[4] && $line_in_array[4] eq 'F') {
 	# we must have the full file rather than just clone names
 	$input_type = "AGP";
 	
@@ -309,7 +311,7 @@ sub check_line{
 	}
     }
     else {
-	warn "Skipping: $_";
+	warn "Skipping: $line \n";
 	return (); 
     } 
     return $input_type, @line_in_array;
