@@ -9,61 +9,42 @@ use Bio::Otter::AnnotationBroker::Event;
 
 
 sub compare_annotations {
-    my ($self,$oldgenes,$newgenes) = @_;
+    my ($self, $oldgenes, $newgenes) = @_;
 
     my %oldgenehash;
     my %newgenehash;
 
     foreach my $g (@$oldgenes) {
-	  $oldgenehash{$g->stable_id} = $g;
+	$oldgenehash{$g->stable_id} = $g;
     }
     foreach my $g (@$newgenes) {
-	  $newgenehash{$g->stable_id} = $g;
+	$newgenehash{$g->stable_id} = $g;
     }
 
     # Find deleted genes
     # Change type on deleted genes
 
-    my ($del,$new,$mod) = $self->compare_obj($oldgenes,$newgenes);
+    my ($del,$new,$mod) = $self->compare_obj($oldgenes, $newgenes);
     
-    my @modgenes = keys %$mod;
-
-    my %modids;
-
+    my %modified_gene_ids;
     my @events;
-
-    #print STDERR "GENE : del @$del\n";
-    #print STDERR "GENE : new @$new\n";
-    #print STDERR "GENE : mod @modgenes\n";
-
-    #foreach my $del (@$del) {
-    #   print $del;
-    #} 
-    #foreach my $del (@$new) {
-    #   print $del;
-    #} 
-    #foreach my $del (@modgenes) {
-    #   print $del;
-    #} 
-
     foreach my $geneid (keys %$mod) {
-       my $ismodified   = 0;
-       my $infomodified = 0;
+        my $ismodified   = 0;
+        my $infomodified = 0;
 
-       my $oldg = $mod->{$geneid}{old};
-       my $newg = $mod->{$geneid}{new};
+        my $oldg = $mod->{$geneid}{old};
+        my $newg = $mod->{$geneid}{new};
 
-      # Genes which were deleted but have now been restored
-      if (defined ($oldg->type) && $oldg->type eq 'obsolete') {
-        $modids{$geneid} = 1;
-        print STDERR "Found restored gene " . $geneid . "\n";
-      }
+        # Genes which were deleted but have now been restored
+        if (defined ($oldg->type) && $oldg->type eq 'obsolete') {
+          $modified_gene_ids{$geneid} = 1;
+          print STDERR "Found restored gene " . $geneid . "\n";
+        }
 
-      # Compare the gene infos to see which have changed
-	
+        # Compare the gene infos to see which have changed
 	if ($oldg->gene_info->equals($newg->gene_info) == 0) {
 	    $infomodified = 1;
-            $modids{$geneid} = 1;
+            $modified_gene_ids{$geneid} = 1;
 	    print STDERR "Found modified gene info " . $geneid . "\n";
 	} else {
 	    #print STDERR "found same gene info\n";
@@ -73,8 +54,6 @@ sub compare_annotations {
 	my @tran2 = @{$newg->get_all_Transcripts};
 
 	my ($tdel,$tnew,$tmod) = $self->compare_obj(\@tran1,\@tran2);
-
-        my @modtran = keys %$tmod;
 
         if (scalar(@$tdel)) {
             print STDERR "Deleted transcripts ";
@@ -91,14 +70,14 @@ sub compare_annotations {
             print STDERR "\n";
         }
         if (scalar(@$tdel) || scalar(@$tnew)) {
-          $modids{$geneid} = 1;
+            $modified_gene_ids{$geneid} = 1;
         } 
 
         # Compare the transcripts to see which ones have changed structure
         # and which ones have changed info.
         # Actually - maybe this should be in the store.
 
-        foreach my $tranid (@modtran) {
+        foreach my $tranid (keys %$tmod) {
            
             my $istranmodified = 0;
             my $istraninfomodified = 0;
@@ -121,19 +100,21 @@ sub compare_annotations {
                  #print STDERR "Found same transcript info $tranid\n";
             }
 
-            if ($self->compare_transcripts($tmod->{$tranid}{old},
-                			   $tmod->{$tranid}{new}) == 0) {
+            if ($self->compare_transcripts($oldt, $newt) == 0) {
 
                 #print STDERR "Increasing transcript version $tranid\n";
 
-                my $newversion = $tmod->{$tranid}{old}->version()+1;
-                 $tmod->{$tranid}{new}->version($newversion);
+                my $newversion = $oldt->version + 1;
+                $newt->version($newversion);
 
-                if (defined($tmod->{$tranid}{new}->translation)) {
-                   my $tnv = $tmod->{$tranid}{new}->translation->version;
-                   $tnv++;
-                   #print STDERR "Increasing translation version $tnv\n";
-                   $tmod->{$tranid}{new}->translation->version($tnv);
+                if ($newt->translation) {
+                    my $tnv = 0;
+                    if (my $old_tl = $oldt->translation) {
+                        $tnv = $old_tl->version;
+                    }
+                    $tnv++;
+                    #print STDERR "Increasing translation version $tnv\n";
+                    $newt->translation->version($tnv);
                 }
                 $istranmodified = 1;
                 $ismodified = 1;
@@ -142,7 +123,7 @@ sub compare_annotations {
             }
             
             if ($ismodified == 1) {
-                $modids{$geneid} = 1;
+                $modified_gene_ids{$geneid} = 1;
             }
         }
 
@@ -168,7 +149,7 @@ sub compare_annotations {
 
                 #print STDERR " Exon 1 " . $emod->{$ex}{old}->start . " " . $emod->{$ex}{old}->end . " " . $emod->{$ex}{old}->phase . " " . $emod->{$ex}{old}->end_phase . "\n"; 
                 #print STDERR " Exon 2 " . $emod->{$ex}{new}->start . " " . $emod->{$ex}{new}->end . " " . $emod->{$ex}{new}->phase . " " . $emod->{$ex}{new}->end_phase . "\n";
-                $modids{$geneid} = 1;
+                $modified_gene_ids{$geneid} = 1;
 	    } else {
 		# print "Found same exon\n";
 	    }
@@ -300,7 +281,7 @@ sub compare_annotations {
     
     
     # Modified genes :
-    foreach my $id (keys %modids) {
+    foreach my $id (keys %modified_gene_ids) {
 	my $old_gene = $oldgenehash{$id};
         my $new_gene = $newgenehash{$id};
 	

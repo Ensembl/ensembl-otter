@@ -26,7 +26,6 @@ use Bio::EnsEMBL::Clone;
 use Bio::Seq;
 
 
-### Add accession and version to ace
 ### Add parsing of authors to ace_to_otter
 ### Add authors to clones in XML_to_otter
 
@@ -1135,7 +1134,7 @@ sub ace_to_otter {
         }
         
         # Parse Person objects
-        elsif (/^Person $OBJ_NAME/) {
+        elsif (/^Person $OBJ_NAME/x) {
             warn "Found Person '$1'";
             my $author_name = $1;
             my( $author_email );
@@ -1153,7 +1152,7 @@ sub ace_to_otter {
             my $author = $authors{$author_name} = Bio::Otter::Author->new;
             $author->name($author_name);
             $author->email($author_email);
-            warn "Made '$author_name' $authors{$author_name}";
+            #warn "Made '$author_name' $authors{$author_name}";
         }
     
         # Parse DNA objects

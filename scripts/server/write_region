@@ -25,7 +25,8 @@ my %params = $q->Vars;
 
 my $dataset = $params{dataset} || error_exit($q,"No dataset type entered. Can't write region");
 my $data    = $params{data}    || error_exit($q,"No xml data entered. Can't write region");
-error_exit($q,"Author must defined to write a region") unless $params{author};
+error_exit($q,"Author must defined to write a region")
+       unless $params{author};
 my $email   = $params{email}   || error_exit($q,"Email must defined to write a region");
 
 print STDERR "Length of data " . length($data) . "\n";
@@ -214,7 +215,7 @@ print STDERR "done\n";
 
 foreach my $gene (@genes) {
   $gene->analysis($anal);
-  $gene->type('otter');
+  $gene->type('otter');     # Is this where Novel_transcript etc... is stored?
 }
 
 
@@ -250,7 +251,7 @@ eval {
     my $oldgenes = trim_genes_to_slice($dbgenes, $slice);
     print STDERR "trimming new genes to slice:\n";
     my $newgenes = trim_genes_to_slice(\@genes,  $slice);
-    @events = $ab->compare_annotations($oldgenes,$newgenes);
+    @events = $ab->compare_annotations($oldgenes, $newgenes);
 };
 if ($@) {
   print STDERR "Failed comparing annotations [$@]\n";
@@ -277,9 +278,6 @@ eval {
     } else {
       $gene = $event->new_gene;
     }
-
-    ### Attach Author to gene?
-    #$gene->attach_Author_to_all_components($author);
 
     print STDERR "\nAttaching gene to slice " . $gene->stable_id . " " . $gene->version. "\n";
     $oaga->attach_to_Slice($gene,$slice);
