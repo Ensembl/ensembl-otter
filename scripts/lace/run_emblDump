@@ -157,9 +157,8 @@ sub clones_to_submit {
 
   $sql = q{
            SELECT concat(cl.embl_acc,'.', cl.embl_version)
-           FROM clone_remark cr, clone_info ci, clone cl, assembly_tagged_clone atc
-           WHERE atc.transferred='yes'
-           AND cr.remark = 'Annotation_remark- annotated'
+           FROM clone_remark cr, clone_info ci, clone cl
+           WHERE cr.remark = 'Annotation_remark- annotated'
            AND cr.clone_info_id=ci.clone_info_id
            AND ci.clone_id=cl.clone_id
           };
@@ -167,14 +166,14 @@ sub clones_to_submit {
   $sth = $db->prepare($sql);
   $sth->execute;
 
-  my %ctg_to_submit;
+  my %cln_to_submit;
   while ( my $accver = $sth->fetchrow_array ){
 
-    $ctg_to_submit{$accver} = 1 unless $ctg_to_submit{$accver};
+    $cln_to_submit{$accver} = 1 unless $cln_to_submit{$accver};
   }
   $sth->finish;
 
-  return %ctg_to_submit;
+  return %cln_to_submit;
 }
 
 sub sanger_name {
