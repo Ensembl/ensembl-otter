@@ -748,7 +748,7 @@ sub make_ensembl_gene_DataFactory {
     my $factory = Bio::EnsEMBL::Ace::DataFactory->new;
     my $ana_adaptor = $ens_db->get_AnalysisAdaptor;
     my $ensembl = Bio::EnsEMBL::Ace::Filter::Gene->new;
-    $ensembl->url_string('http\:\/\/www.ensembl.org\/Homo_sapiens\/contigview?chr=%s&vc_start=%s&vc_end=%s&highlight=%s');    
+    $ensembl->url_string('http\:\/\/www.ensembl.org\/Homo_sapiens\/contigview?highlight=%s&chr=%s&vc_start=%s&vc_end=%s');    
     $ensembl->analysis_object( $ana_adaptor->fetch_by_logic_name($logic_name) );
     $factory->add_AceFilter($ensembl);
     return $factory;
