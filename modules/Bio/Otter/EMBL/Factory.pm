@@ -68,16 +68,24 @@ sub new {
     return bless {}, $pkg;
 }
 
-=head2 standard_comments
+=head2 comments
  
-  Currently confesses if called.
-
 =cut
 
-#Unused
-sub standard_comments {
-
-    confess "Not written";
+#Used
+sub comments {
+    my ( $self, $value ) = @_;
+    
+    if ($value) {
+        unless (ref($value) eq 'ARRAY') {
+            confess "Must pass an array reference";
+        }
+        unless ($self->{'_bio_otter_embl_factory_comments'}) {
+            $self->{'_bio_otter_embl_factory_comments'} = [];
+        }
+        push(@{$self->{'_bio_otter_embl_factory_comments'}}, $value);
+    }
+    return $self->{'_bio_otter_embl_factory_comments'};
 }
 
 =head2 get_DBAdaptors
@@ -145,6 +153,7 @@ sub embl_setup {
     my $ac_star_id = $self->ac_star_id or confess "ac_star_id not set";
     my $clone_lib = $self->clone_lib or confess "clone_lib not set";
     my $clone_name = $self->clone_name or confess "clone_name not set";
+    my $comments_ref = $self->comments;
     
     # EMBL Division    
     my $division;
@@ -224,6 +233,13 @@ sub embl_setup {
     #$pdmp->add_Reference($embl, $seqlength);
 
     # CC lines
+    if ($comments_ref) {
+        foreach my $comment_para (@{$comments_ref}) {
+            $embl->newCC->list(@{$comment_para});
+            $embl->newXX;
+        }
+    }
+
     #$pdmp->add_Headers($embl, $contig_map);
     #$embl->newXX;
 

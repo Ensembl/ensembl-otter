@@ -58,6 +58,16 @@ use Carp;
     my $otter_db = $ds->get_cached_DBAdaptor; #Bio::EnsEMBL::Container
     $otter_db->assembly_type($sequence_set);  #e.g. 'chr1-07'
     
+    my @comments = (
+        '-------------- Project Information'      
+        , 'Here are some comments'
+        , 'To go in the EMBL record'
+    );
+
+    my @comments2 = (
+        'Second paragraph of comments'      
+        , 'To go in the EMBL record'
+    );
     
     foreach my $acc (@ARGV) {
         
@@ -76,6 +86,8 @@ use Carp;
         $ft_factory->clone_lib('to_be_provided');
         $ft_factory->clone_name('to_be_provided_2');
         $ft_factory->keywords('HTG');
+        $ft_factory->comments(\@comments);
+        $ft_factory->comments(\@comments2);
 
         #embl_setup sets $ft_factory->accession, and $ft_factory->sequence_version
         my $embl = $ft_factory->embl_setup();
