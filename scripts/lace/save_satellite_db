@@ -6,7 +6,6 @@ use strict;
 use Getopt::Long;
 use Bio::Otter::Lace::SatelliteDB;
 use Bio::Otter::Lace::Defaults;
-use Data::Dumper;
 
 {
     my( $help,
@@ -16,6 +15,7 @@ use Data::Dumper;
         $satuser,
         $satpass,
         $satdbname, 
+        $view,
         );
     my $dataset_name = 'human';
     Bio::Otter::Lace::Defaults::do_getopt(
@@ -26,7 +26,8 @@ use Data::Dumper;
 					  'satuser=s'   => \$satuser,
 					  'satpass=s'   => \$satpass,
 					  'satdbname=s' => \$satdbname,
-					  'dataset=s'   => \$dataset_name
+					  'dataset=s'   => \$dataset_name,
+                                          'view'      => \$view,
 					  ) || usage();
     usage() if $help;
     die "Key not given" unless $key;
@@ -36,6 +37,10 @@ use Data::Dumper;
     my $otter_db = $ds->get_cached_DBAdaptor;
 
     my $current = Bio::Otter::Lace::SatelliteDB::get_options_for_key($otter_db, $key);
+    if($view){ 
+        print show_current($current, $key); 
+        exit; 
+    }
     my $sat_opts = $current || {};
     $sat_opts->{'-HOST'}    = $sathost      if $sathost;
     $sat_opts->{'-PORT'}    = $satport      if $satport;
@@ -53,7 +58,7 @@ use Data::Dumper;
 	my $sat_db = Bio::EnsEMBL::DBSQL::DBAdaptor->new(%$sat_opts);
 	$sat_db = undef;
     };
-    if ($@){ die "Couldn't connect to SatelliteDB selected:\n" . Dumper($sat_opts) . $@ }
+    if ($@){ die "Couldn't connect to SatelliteDB selected:\n" . show_current($sat_opts, 'SatelliteDB') . $@ }
 
     # delete the key
     Bio::Otter::Lace::SatelliteDB::remove_options_hash_for_key($otter_db, $key);
@@ -62,12 +67,25 @@ use Data::Dumper;
 
 }
 
+sub show_current{
+    my ($settings, $name, $ret) = @_;
+    $ret = "Settings for $name:\n";
+    foreach my $key(keys(%$settings)){
+        $ret .= "$key   =  ". $settings->{$key} . "\n";
+    }
+    return $ret;
+}
+
 #---------
 sub usage{ exit(exec("perldoc", $0)) }
 
 __END__
 
 =head1 NAME - save_satellite_db
+
+=head1 SYNOPSIS
+
+ ./save_satellite_db -key <key> -dataset <dataset> [-view] [-satdb* options]
 
 =head1 DESCRIPTION
 
@@ -79,12 +97,13 @@ already stored in the database for the B<key>.
 
     help           - print this pod
     key (required) - meta_key to use in the meta table
+    dataset (req)  - otter dataset to use [human]
+    view           - view the current settings
     sathost        - host for the satellite DB
     satport        - port for the satellite DB
     satuser        - user for the satellite DB
     satpassword    - pass for the satellite DB
     satdbname      - dbname for the satellite DB
-    dataset        - otter dataset to use [human]
 
 =head1 EXAMPLE
 
