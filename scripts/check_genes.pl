@@ -944,7 +944,8 @@ if($ngcl>1){
       $tcl->link([(keys %tsi)]);
     }
     my @ctsi=$tcl->cluster_ids;
-    my($tn,$cname,$atype)=@{$tsi_sum{$ctsi[0]}};
+    my @tsi=$tcl->cluster_members($ctsi[0]);
+    my($tn,$cname,$atype)=@{$tsi_sum{$tsi[0]}};
     print " Cluster $igcl: ".scalar(@gsi)." genes; ".scalar(@ctsi)." sets of duplicated transcripts [$cname,$atype]\n";
 
     my $itcl=0;
