@@ -180,7 +180,7 @@ sub initialise {
                 -width              => 55,
                 -background         => 'white',
                 -selectbackground   => 'gold',
-#                -textvariable       => $self->comment_string ,
+
                 );
             $comment->pack(
                 -side => 'left',
@@ -196,8 +196,16 @@ sub initialise {
         if ($write) {
             my $set_reviewed = sub{
                 my $c = $comment->get;
-                my @ana_seq_id_list = @{$self->list_selected_unique_ids()};
-                return unless @ana_seq_id_list;
+                my @ana_seq_id_list;
+                if (defined $self->list_selected_unique_ids){
+                    @ana_seq_id_list = @{$self->list_selected_unique_ids()} ;
+                }
+                else{ 
+                    $top->messageBox(-title => 'Error', 
+                    -message => "You need to select one or more contigs to set the note!", 
+                    -type => 'OK');
+                    return ; #unless @ana_seq_id_list;
+                }
                 
                 ### Save sequence note
                 $self->save_sequence_notes($comment->get , @ana_seq_id_list);
@@ -595,7 +603,7 @@ sub draw_row_backgrounds {
         # Don't draw a rectangle behind gaps
         next if $gap_pos->{$i};
         
-        my $row_tag = "row=$i";
+         my $row_tag = "row=$i";
         my ($y1, $y2) = ($canvas->bbox($row_tag))[1,3];
         $y1--; $y2++;
         my $rec = $canvas->createRectangle(
@@ -677,14 +685,13 @@ sub popup_ana_seq_history{
     
     $canv->toplevel->Busy;
     
-#    my $hp  = HistoryPopup->new($canv);
-    my $hp  = CanvasWindow::SequenceNotes::History->new($canv);
+    #my $hp  = CanvasWindow::SequenceNotes::History->new($canv);
+    my $hp  = CanvasWindow::SequenceNotes::History->new($self);
+    
     $hp->sequence_set($self->SequenceSet );
     $hp->DataSet($self->SequenceSetChooser->DataSet);
     
-    my $index = $self->current_CloneSequence_index();
-
-# change next line (or better,  method name in popup code) 
+    my $index = $self->current_CloneSequence_index(); 
     $hp->current_index($index);  
     $hp->display;
     $canv->toplevel->Unbusy;   
@@ -703,12 +710,9 @@ sub save_sequence_notes{
         my @seq_list = @{$self->SequenceSet->CloneSequence_list} ;
         
         my $note = Bio::Otter::Lace::SequenceNote->new();
-        
         $note->text($comment);
-#        $note->timestamp = ;
-#        $note->is_current = '';
+
         $note->author(getlogin) ;
-        warn $note->author ;
         foreach my $seq_index (@sequence_id_list){
             $seq_index =~ s/^row=// ;
             warn "\n\n" . $seq_index ." of " . scalar(@seq_list)  ; 
@@ -720,16 +724,6 @@ sub save_sequence_notes{
     }
 }
 
-# stores the reference for the string in the text entry widget
-    sub comment_string(\$){
-        my ($self , $string_ref) = @_ ;
-    
-        if ($string_ref){
-            $self->{'_string_ref'} = $string_ref;
-
-        }
-        return $self->{'_string_ref'};
-    }
 
 
 1;
