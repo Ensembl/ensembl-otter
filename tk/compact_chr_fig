@@ -23,8 +23,12 @@ use Getopt::Long 'GetOptions';
 
 {
     my $test_flag = 0;
+    my( $start, $end, $ps_file_name );
     GetOptions(
-        'test!' => \$test_flag,
+        'test!'     => \$test_flag,
+        'start=i'   => \$start,
+        'end=i'     => \$end,
+        'ps_file=s' => \$ps_file_name,
         ) or die "error processing command line";
 
     my $host            = 'ensrv3';
@@ -55,7 +59,11 @@ use Getopt::Long 'GetOptions';
             [1, 3_000_000],
             [60_000_000, 62_500_000],
             );
-    } else {
+    }
+    elsif ($start and $end) {
+        @chr_parts = ([$start, $end]);
+    }
+    else {
         @chr_parts = (
             [1, 27_500_000],
             [27_500_000, get_chr_end($db, $static_type, $chr_name)]);
@@ -146,25 +154,25 @@ use Getopt::Long 'GetOptions';
         sub {
             
             # A4 is 841 x 591 points
-            $gc->page_height(841);
-            $gc->page_width(591 * 4);
-            my @files = $gc->print_postscript('chr_20-single');
+            $gc->page_width(841);
+            $gc->page_height(591);
+            my @files = $gc->print_postscript($ps_file_name);
             warn "Printed to files:\n",
                 map "  $_\n", @files;
         
-            $gc->page_height(841);
-            $gc->page_width(591);
-            $gc->horizontal_tile(4);
-            my @files = $gc->print_postscript('chr_20-4-page');
-            warn "Printed to files:\n",
-                map "  $_\n", @files;
+            #$gc->page_height(841);
+            #$gc->page_width(591);
+            #$gc->horizontal_tile(4);
+            #@files = $gc->print_postscript('chr_20-4-page');
+            #warn "Printed to files:\n",
+            #    map "  $_\n", @files;
         
-            $gc->page_height(841);
-            $gc->page_width(591);
-            $gc->horizontal_tile(5);
-            my @files = $gc->print_postscript('chr_20-5-page');
-            warn "Printed to files:\n",
-                map "  $_\n", @files;
+            #$gc->page_height(841);
+            #$gc->page_width(591);
+            #$gc->horizontal_tile(5);
+            #@files = $gc->print_postscript('chr_20-5-page');
+            #warn "Printed to files:\n",
+            #    map "  $_\n", @files;
         
         });
     $gc->fix_window_min_max_sizes;

@@ -85,18 +85,97 @@ sub drawing_y_max {
     return ($self->canvas->bbox('all'))[3];
 }
 
+{
+    my $pp_field = '_position_pairs';
+
+    sub position_pairs {
+        my( $self, @pairs ) = @_;
+
+        if (@pairs) {
+            $self->{$pp_field} = [@pairs];
+        }
+
+        if (my $pp = $self->{$pp_field}) {
+            return @$pp;
+        } else {
+            return;
+        }
+    }
+
+    sub add_position_pair {
+        my( $self, @pair ) = @_;
+
+        unless (@pair == 2) {
+            confess "Expecting 2 numbers, but got ", scalar(@pair);
+        }
+        $self->{$pp_field} ||= [];
+        push(@{$self->{$pp_field}}, [@pair]);
+    }
+    
+    sub all_postion_pair_text {
+        my( $self ) = @_;
+        
+        my $canvas = $self->canvas;
+        my $empty  = $self->empty_string;
+        my( @pos );
+        foreach my $pair ($self->position_pairs) {
+            my $start = $canvas->itemcget($pair->[0], 'text');
+            my $end   = $canvas->itemcget($pair->[1], 'text');
+            if ($start < $end) {
+                push(@pos, [$start, $end]);
+            } else {
+                push(@pos, [$end, $start]);
+            }
+        }
+        return @pos;
+    }
+    
+    sub sort_position_pairs {
+        my( $self ) = @_;
+        
+        my %was_selected = map {$_, 1} $self->get_all_selected_text;
+        $self->deselect_all;
+        
+        my $empty  = $self->empty_string;
+        my $canvas = $self->canvas;
+        
+        my @sort = sort {$a->[0] <=> $b->[0] || $a->[1] <=> $b->[1]}
+            $self->all_postion_pair_text;
+        
+        my $n = 0;
+        my( @select );
+        foreach my $pp ($self->position_pairs) {
+            foreach my $i (0,1) {
+                my $pos = $sort[$n][$i] || $empty;
+                my $obj = $pp->[$i];
+                push(@select, $obj) if $was_selected{$pos};
+                $canvas->itemconfigure($obj, -text => $pos);
+            }
+            $n++;
+        }
+        $self->highlight(@select) if @select;
+    }
+    
+    sub next_position_pair_index {
+        my( $self ) = @_;
+        
+        if (my $pp = $self->{$pp_field}) {
+            return scalar @$pp;
+        } else {
+            return 0;
+        }
+    }
+}
+
 sub add_coordinate_pair {
-    my( $self, $start, $end, $x_offset ) = @_;
+    my( $self, $start, $end ) = @_;
     
-    $x_offset ||= 0;
-    
-    my $y_offset = $self->drawing_y_max;
     my $strand = 1;
     if ($start and $end and $start > $end) {
         $strand = -1;
         ($start, $end) = ($end, $start);
     }
-    $self->add_exon_holder($start, $end, $strand, $x_offset, $y_offset);
+    $self->add_exon_holder($start, $end, $strand);
 }
 
 sub add_buttons_and_event_bindings {
@@ -141,12 +220,20 @@ sub add_buttons_and_event_bindings {
         -side   => 'left',
         );
     
+    my $sort_button = $bf->Button(
+        -text       => 'Sort',
+        -command    => sub{ $self->sort_position_pairs },
+            );
+    $sort_button->pack(
+        -side   => 'left',
+        );
+    
     my $close_button = $bf->Button(
         -text       => 'Close',
         -command    => $window_close,
             );
     $close_button->pack(
-        -side   => 'left',
+        -side   => 'right',
         );
     
     ### Event bindings
@@ -392,14 +479,7 @@ sub deselect_all {
 sub export_highlighted_text_to_selection {
     my( $self, $offset, $max_bytes ) = @_;
     
-    my $canvas = $self->canvas;
-    my( @text );
-    foreach my $obj ($self->list_selected) {
-        if ($canvas->type($obj) eq 'text') {
-            my $t = $canvas->itemcget($obj, 'text');
-            push(@text, $t);
-        }
-    }
+    my @text = $self->get_all_selected_text;
     my $strand = $self->subseq->strand;
     my $clip = '';
     if (@text == 1) {
@@ -419,6 +499,20 @@ sub export_highlighted_text_to_selection {
         die "Text string longer than $max_bytes: ", length($clip);
     }
     return $clip;
+}
+
+sub get_all_selected_text {
+    my( $self ) = @_;
+
+    my $canvas = $self->canvas;
+    my( @text );
+    foreach my $obj ($self->list_selected) {
+        if ($canvas->type($obj) eq 'text') {
+            my $t = $canvas->itemcget($obj, 'text');
+            push(@text, $t);
+        }
+    }
+    return @text;
 }
 
 sub export_ace_subseq_to_selection {
@@ -464,31 +558,64 @@ sub middle_button_paste {
     }
 }
 
+sub next_exon_holder_coords {
+    my( $self ) = @_;
+    
+    my( $m );
+    unless ($m = $self->{'_coord_matrix'}) {
+        $m = [];
+        my $uw      = $self->font_unit_width;
+        my $size    = $self->font_size;
+        my $max_chars = 8;  # For numbers up to 99_999_999
+        my $text_len = $max_chars * $uw;
+        my $half = int($size / 2);
+        my $pad  = int($size / 6);
+        
+        my $x1 = $half + $text_len;
+        my $y1 = $half;
+        push(@$m,
+            $size, $half, $pad,
+            $x1,               $y1,
+            $x1 + ($size * 2), $y1 + $size,
+            );
+        $self->{'_coord_matrix'} = $m;
+        
+        # Create rectangle to pad canvas to max number width
+        my $canvas = $self->canvas;
+        $canvas->createRectangle(
+            $half, $half,
+            $half + (2 * ($text_len + $size)), $half + $size,
+            -fill       => undef,
+            -outline    => undef,
+            -tags       => ['max_width_rectangle'],
+            );
+    }
+    
+    my $i = $self->next_position_pair_index;
+    my( $size, $half, $pad, @bbox ) = @$m;
+    my $y_offset = $i * ($size + $pad);
+    $bbox[1] += $y_offset;
+    $bbox[3] += $y_offset;
+    return( $size, $half, $pad, @bbox );
+}
+
 sub add_exon_holder {
-    my( $self, $start, $end, $strand, $x_offset, $y_offset ) = @_;
+    my( $self, $start, $end, $strand ) = @_;
     
     $start ||= $self->empty_string;
     $end   ||= $self->empty_string;
     
     my $canvas  = $self->canvas;
     my $font    = $self->font;
-    my $size    = $self->font_size;
-    my $uw      = $self->font_unit_width;
     my $exon_id = 'exon_id-'. $self->next_exon_number;
-    my $max_chars = 8;  # Max length of a number in chars]
-    my $text_len = $max_chars * $uw;
-    my $pad  = int($size / 6);
-    my $half = int($size / 2);
+    my( $size, $half, $pad,
+        $x1, $y1, $x2, $y2 ) = $self->next_exon_holder_coords;
     my $arrow_size = $half - $pad;
-    
-    $y_offset += $half + $pad;
-    
-    my $line_length = $size;
     
     my $arrow = ($strand == 1) ? 'last' : 'first';
     
     my $start_text = $canvas->createText(
-        $x_offset + $text_len, $y_offset,
+        $x1, $y1 + $half,
         -anchor     => 'e',
         -text       => $start,
         -font       => [$font, $size, 'normal'],
@@ -496,8 +623,8 @@ sub add_exon_holder {
         );
     
     my $strand_arrow = $canvas->createLine(
-        $x_offset + $text_len + $half,         $y_offset,
-        $x_offset + $text_len + $half + $size, $y_offset,
+        $x1 + $half, $y1 + $half,
+        $x2 - $half, $y1 + $half,
         -width      => 1,
         -arrow      => $arrow,
         -arrowshape => [$arrow_size, $arrow_size, $arrow_size - $pad],
@@ -505,7 +632,7 @@ sub add_exon_holder {
         );
     
     my $end_text = $canvas->createText(
-        $x_offset + $text_len + (2 * $size), $y_offset,
+        $x2, $y1 + $half,
         -anchor     => 'w',
         -text       => $end,
         -font       => [$font, $size],
@@ -513,17 +640,16 @@ sub add_exon_holder {
         );
     
     $self->record_exon_inf($exon_id, $start_text, $strand_arrow, $end_text);
+    $self->add_position_pair($start_text, $end_text);
     
-    my @bbox = $canvas->bbox($exon_id);
-    $bbox[0] = $x_offset;
-    $bbox[2] = $x_offset + (2 * $text_len) + (2 * $size);
     my $bkgd = $canvas->createRectangle(
-        @bbox,
+        $x1, $y1, $x2, $y2,
         -fill       => 'white',
         -outline    => undef,
         -tags       => [$exon_id, 'exon_furniture'],
         );
     $canvas->lower($bkgd, $start_text);
+    
     
     # Return how big we were
     return $size + $pad;
