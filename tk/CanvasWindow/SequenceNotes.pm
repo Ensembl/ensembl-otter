@@ -281,10 +281,13 @@ sub initialise {
         return if $self->delete_message;
         $self->extend_selection;
         });
-    $canvas->CanvasBind('<Control-Button-1>', sub {
-        return if $self->delete_message;
-        $self->toggle_current;
-        });
+    
+    # Don't need now that non-contiguous selections in
+    # SequenceNotes don't open in multiple contigs
+    #$canvas->CanvasBind('<Control-Button-1>', sub {
+    #    return if $self->delete_message;
+    #    $self->toggle_current;
+    #    });
 
     my ( $comment, $comment_label );
     my ( $button_frame_1, $button_frame_2 );
