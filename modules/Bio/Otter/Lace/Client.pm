@@ -169,10 +169,10 @@ sub get_xml_for_contig_from_Dataset {
     my $ua = $self->get_UserAgent;
     my $request = $self->new_http_request('GET');
     $request->uri($url);
+    my $response = $ua->request($request);
 
-    my $xml = $ua->request($request)->content;
+    my $xml = $self->_check_for_error($response);
     #warn $xml;
-    $self->_check_for_error(\$xml);
     
     my $debug_file = "/var/tmp/otter-debug.$$.fetch.xml";
     open DEBUG, "> $debug_file" or die;
@@ -182,18 +182,36 @@ sub get_xml_for_contig_from_Dataset {
     return $xml;
 }
 
+=pod 
+
+=head1 _check_for_error
+
+     Args: HTTP::Response Obj, $dont_confess Boolean
+  Returns: HTTP::Response->content after checking it for errors
+    and "otter" errors.  It will confess (see B<Carp>) the 
+    error if there is an error unless Boolean is true, in which 
+    case it returns undef. 
+
+=cut
+
 sub _check_for_error {
-    my( $self, $xml_ref, $return_instead_of_confessing ) = @_;
+    my( $self, $response, $return_instead_of_confessing ) = @_;
+
+    my $xml = $response->content();
     
-    if ($$xml_ref =~ m{<response>(.+?)</response>}s) {
+    if ($xml =~ m{<response>(.+?)</response>}s) {
         # response can be empty on success
         my $err = $1;
         if($err =~ /\w/){
-            return 0 if $return_instead_of_confessing;
+            return if $return_instead_of_confessing;
             confess $err;
         }
+    }elsif($response->is_error()){
+        my $err = $response->message();
+        return if $return_instead_of_confessing;
+        confess $err;
     }
-    return 1;
+    return $xml;
 }
 
 sub url_root {
@@ -201,6 +219,7 @@ sub url_root {
     
     my $host = $self->host or confess "host not set";
     my $port = $self->port or confess "port not set";
+    $port =~ s/\D//g; # port only wants to be a number! no spaces etc
     return "http://$host:$port/perl";
 }
 
@@ -231,11 +250,10 @@ sub get_all_DataSets {
             }
             my $request = $self->new_http_request('GET');
             $request->uri("$root/get_datasets?details=true");
-            #warn $request->uri();
-            $content = $ua->request($request)->content;
-            last if $self->_check_for_error(\$content,1);
+            # warn $request->uri();
+            my $response = $ua->request($request);
+            last if $content = $self->_check_for_error($response, 1);
         }
-        $self->_check_for_error(\$content);
         $ds = $self->{'_datasets'} = [];
 
         my $in_details = 0;
@@ -302,9 +320,9 @@ sub save_otter_ace {
             'unlock=false',     # We give the annotators the option to
             )                   # save during sessions, not just on exit.
         );
+    my $response = $self->get_UserAgent->request($request);
+    my $content  = $self->_check_for_error($response);
     
-    my $content = $self->get_UserAgent->request($request)->content;
-    $self->_check_for_error(\$content);
     return 1;
 }
 
@@ -343,10 +361,8 @@ sub _send_to_server{
             'data='     . uri_escape($xml),
             )
         );
-    
-    my $content = $self->get_UserAgent->request($request)->content;
-    
-    $self->_check_for_error(\$content);
+    my $response = $self->get_UserAgent->request($request);
+    my $content  = $self->_check_for_error($response);
     return 1;
 }
 
