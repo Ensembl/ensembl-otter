@@ -370,7 +370,7 @@ e)  Iterates of the chr_start_ends
       Iterates over the Gene ids
 
         Fetches Gene
-        Calls $embl_factory->do_Gene   
+        Calls $embl_factory->_do_Gene   
 
 f)  Finishes up by calling Hum::EMBL::FeatureSet->sortByPosition
                            Hum::EMBL::FeatureSet->removeDuplicateFeatures
@@ -410,7 +410,7 @@ sub make_embl {
         foreach my $gid (@$gene_id_list) {
 
             my $gene = $gene_aptr->fetch_by_dbID($gid);
-            $self->do_Gene($gene);
+            $self->_do_Gene($gene);
         }
     }
     
@@ -423,20 +423,20 @@ sub make_embl {
 }
 
 
-=head2 do_Gene
+=head2 _do_Gene
 
-Method to add FT lines to the Hum::EMBL object being built, according to the
-passed Gene object. For each Transcript in the Gene object mRNA and CDS lines
-are added.
+Internal method to add FT lines to the Hum::EMBL object being built, according
+to the passed Gene object. For each Transcript in the Gene object mRNA and CDS
+lines are added.
 
 The mRNA is built up by iterating over all Exons ($transcript->get_all_Exons),
-the CDS by Exons fetched with $transcript->get_???
+the CDS by Exons fetched with $transcript->get_all_translateable_Exons
 
 For each mRNA, or CDS a Hum::EMBL::ExonCollection object is created to which
-a number of Hum::EMBL::Exon objects are added.
+a number of Hum::EMBL::Exon objects are added (by _add_exons_to_exoncollection).
 
-By checking whether the Contig the Exon is located on is the same as the
-Slice_contig, can determin whether the Exon is on the Slice (ie: clone)
+By checking if the Contig the Exon is located on is the same as the
+Slice_contig, we determine whether the Exon is on the Slice (ie: clone)
 or the adjacent one (in which case accession.sequence_version) needs to be
 added to the newFeature being built up.
 
@@ -450,11 +450,10 @@ sub do_Gene {
     #Bio::Otter::AnnotatedGene, isa Bio::EnsEMBL::Gene
     return if $gene->type eq 'obsolete'; # Deleted genes
 
-    my $contig_length = $self->contig_length;
+    #my $contig_length = $self->contig_length;
     my $embl = $self->EMBL;
     my $set = $self->FeatureSet;
     
-
     #Bio::Otter::AnnotatedTranscript, isa Bio::EnsEMBL::Transcript
     #Transcript here give an mRNA, potentially + a CDS in EMBL record.
     foreach my $transcript (@{$gene->get_all_Transcripts}) {
@@ -462,7 +461,7 @@ sub do_Gene {
         my $transcript_info = $transcript->transcript_info;
         my $sid = $transcript->stable_id; #Currently not used
         
-        #Do the mRNA fist
+        #Do the mRNA
         my $all_transcript_Exons = $transcript->get_all_Exons;
         if ($all_transcript_Exons) {
             my $ft = $set->newFeature;
@@ -470,55 +469,97 @@ sub do_Gene {
             my $mRNA_exoncollection = Hum::EMBL::ExonCollection->new;
             $ft->location($mRNA_exoncollection);
 
-            my @mRNA_exons;
-            foreach my $exon (@{$all_transcript_Exons}) {
+            $self->_add_exons_to_exoncollection($mRNA_exoncollection
+                , $all_transcript_Exons);
 
-                my $mRNA_exon = Hum::EMBL::Exon->new;
-                $mRNA_exon->strand($exon->strand);
-                
-                #Bio::EnsEMBL::RawContig, each exon knows its contig
-                my $contig  = $exon->contig;
-                my $start   = $exon->start;
-                my $end     = $exon->end;
-
-                my $slice_contig = $self->Slice_contig;
-
-                $mRNA_exon->start($start);
-                $mRNA_exon->end($end);
-                
-                # May be an is_sticky method?
-                if ($exon->isa('Bio::Ensembl::StickyExon')) {
-                    # Deal with sticy exon
-                    warn "STICKY!\n";
-                }
-                elsif ($contig->dbID != $slice_contig->dbID) {
-                    # Is not on the Slice
-                    my $acc = $contig->clone->embl_id;
-                    my $sv  = $contig->clone->embl_version;
-                    $mRNA_exon->accession_version("$acc.$sv");
-                }
-                else {
-                    # Is on Slice (ie: clone)
-                    if ($end < 1 or $start > $contig_length) {
-                        carp "Unexpected exon start '$start' end '$end' "
-                            . "on contig of length '$contig_length'\n";
-                    }
-                }
-                push(@mRNA_exons, $mRNA_exon);
-            }
-            $mRNA_exoncollection->exons(@mRNA_exons);
-            
-            #Set the start and end for the Hum::EMBL::ExonCollection
-            $mRNA_exoncollection->start($mRNA_exons[0]->start);
-            $mRNA_exoncollection->end($mRNA_exons[-1]->end);
-            $mRNA_exoncollection->start_not_found(1);
-            #$mRNA_exoncollection->start_not_found($transcript_info->mRNA_start_not_found);
+            $mRNA_exoncollection->start_not_found($transcript_info->mRNA_start_not_found);
             $mRNA_exoncollection->end_not_found($transcript_info->mRNA_end_not_found);
             
+            #For debugging
+            #$mRNA_exoncollection->start_not_found(1);
+            #$mRNA_exoncollection->end_not_found(1);
+        } else {
+            warn "No mRNA exons\n";
+        }
+        
+        #Do the CDS, if it has a translation
+        if ($transcript->translation) {
+            my $all_CDS_Exons = $transcript->get_all_translateable_Exons;
+            if ($all_CDS_Exons) {
+                my $ft = $set->newFeature;
+                $ft->key('CDS');
+                my $CDS_exoncollection = Hum::EMBL::ExonCollection->new;
+                $ft->location($CDS_exoncollection);
+
+                $self->_add_exons_to_exoncollection($CDS_exoncollection
+                    , $all_CDS_Exons);
+
+                $CDS_exoncollection->start_not_found($transcript_info->cds_start_not_found);
+                $CDS_exoncollection->end_not_found($transcript_info->cds_end_not_found);
+
+                #For debugging
+                #$CDS_exoncollection->start_not_found(1);
+                #$CDS_exoncollection->end_not_found(1);
+            } else {
+                warn "No CDS exons\n";
+            }
         }
     }
 }
 
+=head2 _add_exons_to_exoncollection
+
+Internal method called by _do_gene. See the latter for doumentation.
+
+=cut
+
+sub _add_exons_to_exoncollection {
+    my ( $self, $exoncollection, $exons ) = @_;
+    
+    my @hum_embl_exons;
+    foreach my $exon (@$exons) {
+
+        my $hum_embl_exon = Hum::EMBL::Exon->new;
+        $hum_embl_exon->strand($exon->strand);
+
+        #Bio::EnsEMBL::RawContig, each exon knows its contig
+        my $contig  = $exon->contig;
+        my $start   = $exon->start;
+        my $end     = $exon->end;
+
+        my $slice_contig = $self->Slice_contig;
+        my $contig_length = $self->contig_length;
+        
+        $hum_embl_exon->start($start);
+        $hum_embl_exon->end($end);
+
+        # May be an is_sticky method?
+        if ($exon->isa('Bio::Ensembl::StickyExon')) {
+            # Deal with sticy exon
+            warn "STICKY!\n";
+        }
+        elsif ($contig->dbID != $slice_contig->dbID) {
+            # Is not on the Slice
+            my $acc = $contig->clone->embl_id;
+            my $sv  = $contig->clone->embl_version;
+            $hum_embl_exon->accession_version("$acc.$sv");
+        }
+        else {
+            # Is on Slice (ie: clone)
+            if ($end < 1 or $start > $contig_length) {
+                carp "Unexpected exon start '$start' end '$end' "
+                    . "on contig of length '$contig_length'\n";
+            }
+        }
+        push(@hum_embl_exons, $hum_embl_exon);
+    }
+    $exoncollection->exons(@hum_embl_exons);
+
+    #Set the start and end for the Hum::EMBL::ExonCollection
+    $exoncollection->start($hum_embl_exons[0]->start);
+    $exoncollection->end($hum_embl_exons[-1]->end);
+}
+    
 
 =head2 get_tiling_path_for_Slice
 
