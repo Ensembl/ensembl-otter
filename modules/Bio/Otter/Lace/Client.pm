@@ -12,7 +12,8 @@ use Bio::Otter::Lace::AceDatabase;
 use Bio::Otter::Converter;
 use Bio::Otter::Lace::TempFile;
 use URI::Escape qw{ uri_escape };
-
+use MIME::Base64;
+use Hum::EnsCmdLineDB;
 
 sub new {
     my( $pkg ) = @_;
@@ -166,10 +167,8 @@ sub get_xml_for_contig_from_Dataset {
     warn "url <$url>\n";
 
     my $ua = $self->get_UserAgent;
-    my $request = HTTP::Request->new;
-    $request->method('GET');
-    $request->uri($url);
-    
+    my $request = $self->new_http_request('GET');
+
     my $xml = $ua->request($request)->content;
     #warn $xml;
     $self->_check_for_error(\$xml);
@@ -183,12 +182,15 @@ sub get_xml_for_contig_from_Dataset {
 }
 
 sub _check_for_error {
-    my( $self, $xml_ref ) = @_;
+    my( $self, $xml_ref, $return_instead_of_confessing ) = @_;
     
     if ($$xml_ref =~ m{<response>(.+?)</response>}s) {
         # response can be empty on success
         my $err = $1;
-        confess $err if $err =~ /\w/;
+        if($err =~ /\w/){
+            return 0 if $return_instead_of_confessing;
+            confess $err;
+        }
     }
     return 1;
 }
@@ -219,14 +221,20 @@ sub get_all_DataSets {
     unless ($ds = $self->{'_datasets'}) {    
         my $ua   = $self->get_UserAgent;
         my $root = $self->url_root;
-        my $request = HTTP::Request->new;
-        $request->method('GET');
-        $request->uri("$root/get_datasets?details=true");
-        #warn $request->uri;
-
-        my $content = $ua->request($request)->content;
+        my $content;
+        for(my $i = 0 ; $i <= 3 ; $i++){
+            if($i > 0){
+                my $pass = $self->password_prompt();
+                #warn "Attempting to connect using password '" . '*' x length($pass) . "'\n";
+                $self->password($pass);
+            }
+            my $request = $self->new_http_request('GET');
+            $request->uri("$root/get_datasets?details=true");
+            #warn $request->uri();
+            $content = $ua->request($request)->content;
+            last if $self->_check_for_error(\$content,1);
+        }
         $self->_check_for_error(\$content);
-
         $ds = $self->{'_datasets'} = [];
 
         my $in_details = 0;
@@ -282,8 +290,7 @@ sub save_otter_ace {
     
     # Save to server with POST
     my $url = $self->url_root . '/write_region';
-    my $request = HTTP::Request->new;
-    $request->method('POST');
+    my $request = $self->new_http_request('POST');
     $request->uri($url);
     $request->content(
         join('&',
@@ -314,8 +321,7 @@ sub unlock_otter_ace {
     
     # Save to server with POST
     my $url = $self->url_root . '/unlock_region';
-    my $request = HTTP::Request->new;
-    $request->method('POST');
+    my $request = $self->new_http_request('POST');
     $request->uri($url);
     $request->content(
         join('&',
@@ -329,6 +335,33 @@ sub unlock_otter_ace {
     my $content = $self->get_UserAgent->request($request)->content;
     $self->_check_for_error(\$content);
     return 1;
+}
+
+sub new_http_request{
+    my ($self, $method) = @_;
+    my $request = HTTP::Request->new();
+    $request->method($method || 'GET');
+
+    if(defined(my $password = $self->password())){
+        my $encoded = MIME::Base64::encode_base64($self->username() . ":$password");
+        $request->header(Authorization => qq`Basic $encoded`);
+    }
+    return $request;
+}
+sub username{
+    my $self = shift;
+    warn "GET only, user author() method to set" if @_;
+    return $self->author();
+}
+sub password{
+    my ($self, $pass) = @_;
+    $self->{'_options'}->{'client'}->{'password'} = $pass if defined($pass);
+    return $self->{'_options'}->{'client'}->{'password'};
+}
+sub password_prompt{
+    my $self = shift;
+    my $user = $self->username();
+    return Hum::EnsCmdLineDB::prompt_for_password("Please enter your password ($user): ");
 }
 
 1;
