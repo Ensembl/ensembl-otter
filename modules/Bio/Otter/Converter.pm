@@ -378,15 +378,17 @@ sub XML_to_otter {
   if (!$foundend) {
      print STDERR "Didn't find end tag <\/otter>\n";
   }
+  
+  ### End of XML parsing ###
+  
   # Make the sequence fragments
-  my @fragnames = keys %frag;
   my @contigs;
 
   my $chrname  = "";
   my $chrstart = 2000000000;
   my $chrend   = -1;
 
-  foreach my $f (@fragnames) {
+  foreach my $f (keys %frag) {
     if ($chrname eq "") {
       $chrname = $frag{$f}{chr};
     } elsif ($chrname ne $frag{$f}{chr}) {
@@ -414,16 +416,16 @@ sub XML_to_otter {
     my $strand = $frag{$f}{strand};
 
     if (!defined($start)) {
-       print "ERROR: No start defined for $f\n";
+       print STDERR "ERROR: No start defined for $f\n";
     }
     if (!defined($end)) {
-       print "ERROR : No end defined for $f\n";
+       print STDERR "ERROR : No end defined for $f\n";
     }
     if (!defined($strand)) {
-       print "ERROR : No strand defined for $f\n";
+       print STDERR "ERROR : No strand defined for $f\n";
     }
     if (!defined($offset)) {
-       print "ERROR : No offset defined for $f\n";
+       print STDERR "ERROR : No offset defined for $f\n";
     }
     # print STDERR "START $f:$start:$end:$offset:$strand\n";
 
@@ -455,42 +457,47 @@ sub XML_to_otter {
 
   #$slice->seq($seqstr);
 
-  @fragnames = sort { $frag{$a}{start} <=> $frag{$b}{start} } @fragnames;
   @tiles     = sort { $a->assembled_start <=> $b->assembled_start} @tiles;
 
   # print STDERR "chrname = " . $chrname . " chrstart = " . $chrstart . " chrend = "
   #  . $chrend . "\n";
 
+  # If we have a database connection, check that our tile path
+  # is consistent with the assembly table in the database
   if (defined($db)) {
     if ($assembly_type) {
       $db->assembly_type($assembly_type);
     }
     my $sa    = $db->get_SliceAdaptor;
-    my $slice = $sa->fetch_by_chr_start_end($chrname, $chrstart, $chrend);
+    $slice = $sa->fetch_by_chr_start_end($chrname, $chrstart, $chrend)
+        or confess "Can't get slice for chr '$chrname' $chrstart-$chrend on $assembly_type";
 
-    my @path = @{ $slice->get_tiling_path };
+    my $path = $slice->get_tiling_path;
   
-    # Only store slice if no tiling path returned
-    # Then refetch slice
+    ## Only store slice if no tiling path returned
+    ## Then refetch slice
+    #
+    #unless (@$path) {
+    #  
+    #  Bio::Otter::Converter::frags_to_slice($chrname,$chrstart,$chrend,$assembly_type,$seqstr,\%frag,$db);
+    #  
+    #  $sa    = $db->get_SliceAdaptor;
+    #  $slice = $sa->fetch_by_chr_start_end($chrname, $chrstart, $chrend);
+    #  
+    #  $path = $slice->get_tiling_path;
+    #}
 
-    if (!scalar(@path)) {
-
-      Bio::Otter::Converter::frags_to_slice($chrname,$chrstart,$chrend,$assembly_type,$seqstr,\%frag,$db);
-
-      $sa    = $db->get_SliceAdaptor;
-      $slice = $sa->fetch_by_chr_start_end($chrname, $chrstart, $chrend);
-
-      @path = @{ $slice->get_tiling_path };
+    unless (@$path) {
+        die "Can't get tiling path for chr '$chrname' $chrstart-$chrend on $assembly_type";
     }
 
-
-    foreach my $p (@path) {
+    my @fragnames = sort { $frag{$a}{start} <=> $frag{$b}{start} } keys %frag;
+    foreach my $tile (@$path) {
       my $fragname = shift @fragnames;
-      if ($p->component_Seq->name ne $fragname
-        || ($slice->chr_start + $p->assembled_start - 1) !=
-        $frag{$fragname}{start}
-        || ($slice->chr_start + $p->assembled_end - 1) != $frag{$fragname}{end})
-      {
+      if ($tile->component_Seq->name ne $fragname
+        || ($slice->chr_start + $tile->assembled_start - 1) != $frag{$fragname}{start}
+        || ($slice->chr_start + $tile->assembled_end   - 1) != $frag{$fragname}{end}
+      ) {
         die "Assembly doesn't match for contig $fragname";
       }
     }
@@ -530,55 +537,49 @@ sub XML_to_otter {
 }
 
 sub otter_to_ace {
-  my ($contig, $genes, $path, $seq) = @_;
+  my ($slice, $genes, $path, $seq) = @_;
   
-  my $str =  "\n\nSequence : \"" . $contig->display_id . "\"\nGenomic_canonical\n";
+  my $str =  "\n\nSequence : \"" . $slice->display_id . "\"\nGenomic_canonical\n";
 
-  my @path;
+    ### Don't seem to do anything if it isn't a Slice
+  if ($slice->isa("Bio::EnsEMBL::Slice")) {
 
-  if (defined($path)) {
-     @path = @$path;
-  }
+    $str .= sprintf qq{Assembly_name "%s"\n}, $slice->assembly_type;
 
-  if ($contig->isa("Bio::EnsEMBL::Slice")) {
-    my $slice = $contig;
-
-    $str .= sprintf qq{Assembly_name "%s"\n}, $contig->assembly_type;
-
-    if (!(@path)) {
-      @path = @{$slice->get_tiling_path};
+    unless (@$path) {
+      $path = $slice->get_tiling_path;
     }
 
     my $chr      = $slice->chr_name;
     my $chrstart = $slice->chr_start;
     my $chrend   = $slice->chr_end;
 
-    foreach my $path (@path) {
+    foreach my $tile (@$path) {
         my $start;
         my $end;
 
-        if ($path->component_ori == 1) {
-          $start = $chrstart + $path->assembled_start - 1;
-          $end   = $chrstart + $path->assembled_end - 1;
+        if ($tile->component_ori == 1) {
+          $start = $chrstart + $tile->assembled_start - 1;
+          $end   = $chrstart + $tile->assembled_end - 1;
         } else {
-          $end     = $chrstart + $path->assembled_start - 1 ;
-          $start   = $chrstart + $path->assembled_end - 1;
+          $end     = $chrstart + $tile->assembled_start - 1 ;
+          $start   = $chrstart + $tile->assembled_end - 1;
         } 
-        $str .= sprintf qq{Feature TilePath %d %d %f "%s"\n}, $start, $end, 1, $path->component_Seq->name;
+        $str .= sprintf qq{Feature TilePath %d %d %f "%s"\n}, $start, $end, 1, $tile->component_Seq->name;
     }
-    foreach my $path (@path) {
+    foreach my $tile (@$path) {
         my $start;
         my $end;
 
-        if ($path->component_ori == 1) {
-          $start = $path->assembled_start;
-          $end   = $path->assembled_end;
+        if ($tile->component_ori == 1) {
+          $start = $tile->assembled_start;
+          $end   = $tile->assembled_end;
         } else {
-          $end   = $path->assembled_start ;
-          $start = $path->assembled_end;
+          $end   = $tile->assembled_start ;
+          $start = $tile->assembled_end;
         }
         $str .= sprintf qq{SubSequence "%s" %d %d\n}, 
-                      $path->component_Seq->name, $start, $end;
+                      $tile->component_Seq->name, $start, $end;
     }
   }
 
@@ -613,17 +614,11 @@ sub otter_to_ace {
 
 
   #Clone features, keywords
-  if ($contig->isa("Bio::EnsEMBL::Slice")) {
-    my $slice = $contig;
-
-    if (!(@path)) {
-      @path  = @{ $slice->get_tiling_path };
-    }
-  }
-    foreach my $path (@path) {
-       my $clone = $path->component_Seq->clone; 
+  if ($slice->isa("Bio::EnsEMBL::Slice")) {
+    foreach my $tile (@$path) {
+       my $clone = $tile->component_Seq->clone; 
        $str .= "Sequence : \"". $clone->id . "." . $clone->embl_version . "\"\n";
-       $str .= "Source " . $contig->display_id . "\n";
+       $str .= "Source " . $slice->display_id . "\n";
 
        my $clone_info = $clone->clone_info;
        foreach my $keyword ($clone_info->keyword) {
@@ -642,26 +637,26 @@ sub otter_to_ace {
            $str .= "Annotation_remark \"" . ace_escape($remark->remark) . "\"\n";
          }
        }
-       if (defined($path->component_Seq->adaptor)) {
-       foreach my $sf (@{$path->component_Seq->get_all_SimpleFeatures}) {
-          my( $start, $end );
-          if ($sf->strand == 1) {
-              ($start, $end) = ($sf->start, $sf->end);
-          } else {
-              ($start, $end) = ($sf->end, $sf->start);
-          }
-          $str .= sprintf qq{Feature "%s" %d %d %f "%s"\n}, $sf->analysis->logic_name, $start, $end, $sf->score, $sf->display_label;
-       } 
+       if (defined($tile->component_Seq->adaptor)) {
+         foreach my $sf (@{$tile->component_Seq->get_all_SimpleFeatures}) {
+            my( $start, $end );
+            if ($sf->strand == 1) {
+                ($start, $end) = ($sf->start, $sf->end);
+            } else {
+                ($start, $end) = ($sf->end, $sf->start);
+            }
+            $str .= sprintf qq{Feature "%s" %d %d %f "%s"\n}, $sf->analysis->logic_name, $start, $end, $sf->score, $sf->display_label;
+         }
        }
        $str .= "\n";
     } 
-
+  }
     my %ev_types = (
-    'EST'     => "EST_match",
-    'cDNA'    => "cDNA_match",
-    'Protein' => "Protein_match",
-    'Genomic' => "Genomic_match"
-    );
+        'EST'     => "EST_match",
+        'cDNA'    => "cDNA_match",
+        'Protein' => "Protein_match",
+        'Genomic' => "Genomic_match"
+        );
 
     # Need correct TR and WP mappings
     my %dbhash = (
@@ -688,7 +683,7 @@ sub otter_to_ace {
 
         $str .= "Sequence : \"" . $tran_name . "\"\n";
         $str .= "Otter_id \"" . $tran->stable_id . "\"\n";
-        $str .= "Source \"" . $contig->display_id . "\"\n";
+        $str .= "Source \"" . $slice->display_id . "\"\n";
         $str .= "Locus \"" . $gene_name . "\"\n";
 
         my $method = $tran->transcript_info->class->name;
@@ -761,11 +756,11 @@ sub otter_to_ace {
 
         $str .= "CDS ";
         if ($exons[0]->strand == 1) {
-          $str .= rna_pos($tran, $tran->coding_start) . " ";
-          $str .= rna_pos($tran, $tran->coding_end) . "\n";
+          $str .= rna_pos($tran, $tran->coding_region_start) . " ";
+          $str .= rna_pos($tran, $tran->coding_region_end) . "\n";
         } else {
-          $str .= rna_pos($tran, $tran->coding_end) . " ";
-          $str .= rna_pos($tran, $tran->coding_start) . "\n";
+          $str .= rna_pos($tran, $tran->coding_region_end) . " ";
+          $str .= rna_pos($tran, $tran->coding_region_start) . "\n";
         }
       }
 
@@ -819,12 +814,14 @@ sub otter_to_ace {
     $str .= "\n";
   }
 
-  # Finally the dna
-  $str .= "\nDNA \"" . $contig->display_id . "\"\n";
 
-  while ($seq =~ /(.{1,72})/g) {
-    $str .= $1 . "\n";
-  }
+    if ($seq) {
+      # Finally the dna
+      $str .= "\nDNA \"" . $slice->display_id . "\"\n";
+      while ($seq =~ /(.{1,72})/g) {
+        $str .= $1 . "\n";
+      }
+    }
   return $str;
 }
 
@@ -846,9 +843,9 @@ sub rna_pos {
     $end = $tran->end_Exon->start;
   }
 
-  print "start = " . $start;
-  print " end = " . $end;
-  print " loc = " . $loc . "\n";
+  #print STDERR "start = " . $start;
+  #print STDERR " end = " . $end;
+  #print STDERR " loc = " . $loc . "\n";
 
   if ($tran->start_Exon->strand == 1) {
     return undef if $loc < $start;
@@ -864,7 +861,7 @@ sub rna_pos {
   foreach my $exon (@{ $tran->get_all_Exons }) {
 
     my $tmp = $exon->length;
-    print "Exon " . $exon->stable_id . " " . $exon->start . "\t" . $exon->end . "\t" . $exon->strand . "\t" . $exon->phase . "\t" . $exon->end_phase. "\n";
+    #print STDERR "Exon " . $exon->stable_id . " " . $exon->start . "\t" . $exon->end . "\t" . $exon->strand . "\t" . $exon->phase . "\t" . $exon->end_phase. "\n";
     if ($prev) {
       if ($prev->end_phase != -1 && $prev->end_phase != $exon->phase) {
         print STDERR "Monkey exons in transcript\n";
@@ -908,7 +905,7 @@ my $INT       = qr/\s+(\d+)/;
 my $FLOAT     = qr/\s+([\d\.]+)/;
 
 sub ace_to_otter {
-  my ($fh) = shift;
+  my( $fh ) = @_;
 
   my %sequence;
 
@@ -942,7 +939,7 @@ sub ace_to_otter {
           my $start = $2;
           my $end   = $3;
 
-          print STDERR "Name $name $start $end\n";
+          #print STDERR "Name $name $start $end\n";
 
           my $strand = 1;
 
@@ -961,21 +958,20 @@ sub ace_to_otter {
         } elsif (/Assembly_name $STRING/x) {
           $type = $1;
         } elsif (/TilePath"? $INT $INT $STRING $STRING/x) {
+            confess "chrstart not set" unless $chrstart;
           # TilePath is part of a feature line
           my $assstart  = $1;
           my $assend    = $2;
           my $assname   = $4;
 
-          # Hmm - no offset
           if (defined($frags{$assname})) {
-             print "ERROR: Fragment name [$assname] appears more than once in the tiling path\n";
+             print STDERR "ERROR: Fragment name [$assname] appears more than once in the tiling path\n";
           }
           $frags{$assname}{start} = $assstart;
           $frags{$assname}{end}   = $assend;
-          $frags{$assname}{offset} = 1;  # SHOULD BE SET
-
+          # Hmm - no offset
         } elsif (/^Genomic_canonical/) {
-          if ($currname =~ /(\S+).(\d+)-(\d+)/) {
+          if ($currname =~ /(\S+)\.(\d+)-(\d+)/) {
              $chr      = $1;
              $chrstart = $2;
              $chrend   = $3;
@@ -1053,7 +1049,7 @@ sub ace_to_otter {
             $start = $tend - $oldend + 1;
           }
 
-          print "Adding exon at $start $end to $currname\n";
+          print STDERR "Adding exon at $start $end to $currname\n";
           my $exon = new Bio::EnsEMBL::Exon(
             -start  => $start,
             -end    => $end,
@@ -1144,7 +1140,7 @@ sub ace_to_otter {
       }
     }
   }
-
+  
   #print "Contig pog $contig\n";
   my $contig_name = "";
 
@@ -1395,6 +1391,13 @@ sub ace_to_otter {
     }
     prune_Exons($gene);
   }
+  
+  # Adjust the start and end of each fragment
+  foreach my $name (keys %frags) {
+    $frags{$name}{start} -= $chrstart - 1;
+    $frags{$name}{end}   -= $chrstart - 1;
+  }
+  
   return \@genes,\%frags,$type,$dna,$chr,$chrstart,$chrend;
 }
 
@@ -1592,12 +1595,12 @@ sub prune_Exons {
           last UNI;
         }
       }
-        print STDERR " Exon " . $exon->stable_id . "\n";
-        print STDERR " Phase " . $exon->phase . " EndPhase " . $exon->end_phase . "\n";
-        print STDERR " Strand " . $exon->strand . " Start " . $exon->start . " End ". $exon->end ."\n";
+        #print STDERR " Exon " . $exon->stable_id . "\n";
+        #print STDERR " Phase " . $exon->phase . " EndPhase " . $exon->end_phase . "\n";
+        #print STDERR " Strand " . $exon->strand . " Start " . $exon->start . " End ". $exon->end ."\n";
 
       if (defined($found)) {
-        print STDERR " Duplicate\n";
+        #print STDERR " Duplicate\n";
         push (@newexons, $found);
         if ($tran->translation) {
           if ($exon == $tran->translation->start_Exon) {
@@ -1609,7 +1612,7 @@ sub prune_Exons {
           }
         }
       } else {
-        print STDERR "New = " . $exon->stable_id . "\n";
+        #print STDERR "New = " . $exon->stable_id . "\n";
 
         ### This is nasty for the phases - sometimes exons come back with 
         ### the same stable id and different phases - we need to strip off
@@ -1617,9 +1620,9 @@ sub prune_Exons {
         ### already seen the stable_id
 
         if (defined($exon->stable_id) && defined($exonhash{$exon->stable_id})) {
-           print STDERR "Already seen stable id " . $exon->stable_id . " - removing stable_id\n";
+           #print STDERR "Already seen stable id " . $exon->stable_id . " - removing stable_id\n";
            $exon->{_stable_id} = undef;
-           print STDERR "Exon id " .$exon->stable_id . "\n";
+           #print STDERR "Exon id " .$exon->stable_id . "\n";
         }
         push (@newexons,     $exon);
         push (@unique_Exons, $exon);
@@ -1660,19 +1663,19 @@ sub path_to_XML {
 
   foreach my $p (@path) {
     $xmlstr .= "<sequencefragment>\n";
-    $xmlstr .= "  <id>" . $p->component_Seq->id . "<\/id>\n";
-    $xmlstr .= "  <chromosome>" . $chr . "<\/chromosome>\n";
+    $xmlstr .= "  <id>" . $p->component_Seq->id . "</id>\n";
+    $xmlstr .= "  <chromosome>" . $chr . "</chromosome>\n";
 
     if (defined($p->component_Seq->clone)) {
         my $clone = $p->component_Seq->clone;
         $xmlstr .= Bio::Otter::Converter::clone_to_XML($clone);
     }
 
-    $xmlstr .= "  <assemblystart>" . ($chrstart + $p->assembled_start() - 1) . "<\/assemblystart>\n";
-    $xmlstr .= "  <assemblyend>" . ($chrstart + $p->assembled_end() - 1) . "<\/assemblyend>\n";
-    $xmlstr .= "  <assemblyori>" . $p->component_ori() . "<\/assemblyori>\n";
-    $xmlstr .= "  <assemblyoffset>" . $p->component_start() . "<\/assemblyoffset>\n";
-    $xmlstr .= "<\/sequencefragment>\n";
+    $xmlstr .= "  <assemblystart>" . ($chrstart + $p->assembled_start() - 1) . "</assemblystart>\n";
+    $xmlstr .= "  <assemblyend>" . ($chrstart + $p->assembled_end() - 1) . "</assemblyend>\n";
+    $xmlstr .= "  <assemblyori>" . $p->component_ori() . "</assemblyori>\n";
+    $xmlstr .= "  <assemblyoffset>" . $p->component_start() . "</assemblyoffset>\n";
+    $xmlstr .= "</sequencefragment>\n";
   }
 
   return $xmlstr;
@@ -1708,6 +1711,7 @@ sub clone_to_XML {
    }
    return $str;
 }
+
 sub frags_to_XML {
   my ($frags,$type,$chr,$start,$end) = @_;
 
@@ -1725,14 +1729,15 @@ sub frags_to_XML {
      my $end   = $frags->{$name}{end};
 
      if ($start < $end) {
-     $str .= "      <assemblystart>" . $start . "<\/assemblystart>\n";
-     $str .= "      <assemblyend>" . $end . "<\/assemblyend>\n";
-     $str .= "      <assemblyori>1<\/assemblyori>\n";
+         $str .= "      <assemblystart>" . $start . "<\/assemblystart>\n";
+         $str .= "      <assemblyend>" . $end . "<\/assemblyend>\n";
+         $str .= "      <assemblyori>1<\/assemblyori>\n";
      } else {
-     $str .= "      <assemblystart>" . $end . "<\/assemblystart>\n";
-     $str .= "      <assemblyend>" . $start . "<\/assemblyend>\n";
-     $str .= "      <assemblyori>-1<\/assemblyori>\n";
+         $str .= "      <assemblystart>" . $end . "<\/assemblystart>\n";
+         $str .= "      <assemblyend>" . $start . "<\/assemblyend>\n";
+         $str .= "      <assemblyori>-1<\/assemblyori>\n";
      }
+     $str .= "    </sequencefragment>\n";
   }
   return $str;
 }
@@ -2001,20 +2006,35 @@ sub frags_to_slice {
       # Now store the clone
   
       $db->get_CloneAdaptor->store($clone);
-    # Now for the assembly stuff
     } 
 
+    # Now for the assembly stuff
     my $contig = $db->get_RawContigAdaptor->fetch_by_name($f);
     my $rawid   = $contig->dbID;
     my $length  = ($fend-$fstart+1);
     my $raw_end = $foff + ($fend-$fstart);
 
-    my $sqlstr = "insert into assembly(chromosome_id,chr_start,chr_end,superctg_name,superctg_start,superctg_end,superctg_ori,contig_id,contig_start,contig_end,contig_ori,type) values($chrid,$fstart,$fend,\'$f\',1,$length,1,$rawid,$foff,$raw_end,$fori,\'$assembly_type\')\n";
+    #my $sqlstr = "insert into assembly(chromosome_id,chr_start,chr_end,superctg_name,superctg_start,superctg_end,superctg_ori,contig_id,contig_start,contig_end,contig_ori,type) values($chrid,$fstart,$fend,\'$f\',1,$length,1,$rawid,$foff,$raw_end,$fori,\'$assembly_type\')\n";
 
+    my $sqlstr = q{
+        INSERT INTO assembly(
+            chromosome_id, chr_start, chr_end
+          , superctg_name, superctg_start, superctg_end, superctg_ori
+          , contig_id, contig_start, contig_end, contig_ori
+          , type )
+        VALUES( ?,?,?
+            ,?,1,?,1
+            ,?,?,?,?
+            ,? ) 
+        };
     #print "SQL $sqlstr\n";
 
     my $sth = $db->prepare($sqlstr);
-    my $res = $sth->execute;
+    my $res = $sth->execute(
+        $chrid, $fstart, $fend,
+        $f, $length,
+        $rawid, $foff, $raw_end, $fori,
+        $assembly_type);
 
     $sth->finish;
   }

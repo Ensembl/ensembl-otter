@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/local/bin/perl5.6.1 -w
 
 use OtterDefs;
 use strict;
@@ -22,9 +22,10 @@ if ($ENV{SERVER_SOFTWARE} =~ /libwww-perl-daemon/) {
 
 my %params = $q->Vars;
 
-my $dataset = $params{dataset} || error_exit($q,"No dataset type entered. Can't unlock region");
-my $data    = $params{data}    || error_exit($q,"No xml data entered. Can't unlock region");
-my $author  = $params{author}  || error_exit($q,"Author must defined to unlock a region");
+my $dataset = $params{dataset} || error_exit($q, "No dataset name entered. Can't unlock region");
+my $author  = $params{author}  || error_exit($q, "Author must defined to unlock a region");
+my $data    = $params{data}    || error_exit($q, "No xml data entered. Can't unlock region");
+warn $data;
 
 print STDERR "Length of data " . length($data) . "\n";
 
@@ -88,13 +89,12 @@ my $tmp_xmlfile = get_tmp_file("/tmp","otter","xml");
 
 print STDERR "\nWriting xml to tmp file [" . $tmp_xmlfile . "]\n\n";
 
-open FPOUT,">$tmp_xmlfile" or error_exit($q, "Failed opening temp file for write");
+open FPOUT,"> $tmp_xmlfile" or error_exit($q, "Failed opening temp file for write");
 
-print FPOUT $params{'data'};
+print FPOUT $data;
 close FPOUT;
 
-open(XML,"<$tmp_xmlfile");
-my $fh = \*XML;
+open(XML, $tmp_xmlfile) or error_exit($q, "Can't read '$tmp_xmlfile' : $!");
 
 my @genes;
 my $chrname;
@@ -109,7 +109,7 @@ print STDERR "\nConverting xml to otter...\n";
 my( $slice );
 eval {
   my( $genes, $seqstr, $tiles );
-  ($genes,$slice,$seqstr,$tiles) = Bio::Otter::Converter::XML_to_otter($fh,$odb);
+  ($genes,$slice,$seqstr,$tiles) = Bio::Otter::Converter::XML_to_otter(\*XML, $odb);
 };
 if ($@) {
   print STDERR "Failed converting XML [$@]\n";

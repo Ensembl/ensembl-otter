@@ -135,7 +135,7 @@ sub fetch_otter_ace {
                 # from so that we can save it back.
                 $self->save_slice_name_dataset($slice_name, $ds);
                 $ace .= Bio::Otter::Converter::otter_to_ace($slice, $genes, $tiles, $sequence);
-                $ace .= $client->sMap_assembly_info_from_contig($ctg, $slice_name);
+                $ace .= $self->sMap_assembly_info_from_contig($ctg, $slice_name);
             }
         }
     }
@@ -187,6 +187,7 @@ sub save_slice_name_dataset {
     $self->{'_slice_name_dataset'}{$slice_name} = $dataset;
 }
 
+### Need some way to make this persistent for "lace -recover"
 sub slice_dataset_hash {
     my $self = shift;
     
@@ -229,6 +230,34 @@ sub save_otter_slice {
     $ace_txt =~ s{^\s*//.+}{\n}mg;  # Strip comments
     
     return $client->save_otter_ace($ace_txt, $dataset);
+}
+
+sub unlock_all_slices {
+    my( $self ) = @_;
+
+    my $sd_h = $self->slice_dataset_hash;
+    while (my ($name, $ds) = each %$sd_h) {
+        $self->unlock_otter_slice($name, $ds);
+    }
+}
+
+sub unlock_otter_slice {
+    my( $self, $name, $dataset ) = @_;
+    
+    confess "Missing slice name argument"   unless $name;
+    confess "Missing DatsSet argument"      unless $dataset;
+
+    my $ace    = $self->aceperl_db_handle;
+    my $client = $self->OtterClient or confess "No OtterClient attached";
+    
+    $ace->find(Genome_Sequence => $name);
+    my $ace_txt = $ace->raw_query('show -a');
+    
+    # Cleanup text
+    $ace_txt =~ s/\0//g;            # Remove nulls
+    $ace_txt =~ s{^\s*//.+}{\n}mg;  # Strip comments
+    
+    return $client->unlock_otter_ace($ace_txt, $dataset);
 }
 
 sub aceperl_db_handle {
@@ -387,6 +416,7 @@ sub DESTROY {
         return;
     }
     
+    $self->unlock_all_slices;
     rmtree($home);
 }
 

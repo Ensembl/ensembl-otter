@@ -1,35 +1,18 @@
+
 [defaults]
-USER     root
-PASS     
-HOST     127.0.0.1
-PORT     4444
-DNA_USER root
-DNA_PORT 4444
-DNA_PASS 
-DNA_HOST 127.0.0.1
+USER     ensadmin
+PASS     ensembl
+HOST     ecs1d
+PORT     19322 
+DNA_USER ensadmin 
+DNA_PORT 19322
+DNA_PASS ensembl
+DNA_HOST ecs1d
 
-[human_9p12]
-DBNAME     otter_9p12
-TYPE       fake_gp_1 
+[human_chr20_with_anal_end_feb]
+DBNAME         otter_chr20_with_anal_end_feb
+TYPE           SANGER
 
-[human_chr14]
-DBNAME     otter_chr14
-#DNA_DBNAME michele_test_otter
-TYPE       GENOSCOPE 
-
-[human_chr22]
-DBNAME     otter_chr22
-#DNA_DBNAME otter_chr22
-TYPE       SANGER
-SPECIES_PREFIX HUM
-STABLE_ID_MIN  22000000
-
-[human_chr20]
-DBNAME     otter_chr20
-#DNA_DBNAME otter_chr20
-TYPE       SANGER
-
-[human_chr6]
-DBNAME     otter_chr6
-#DNA_DBNAME otter_chr6
-TYPE       SANGER 
+[otter_chr9p12]
+DBNAME         otter_chr9p12
+TYPE           SANGER

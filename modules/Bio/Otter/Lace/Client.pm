@@ -83,6 +83,9 @@ sub get_xml_for_contig_from_Dataset {
     my $chr_name  = $ctg->[0]->chromosome->name;
     my $start     = $ctg->[0]->chr_start;
     my $end       = $ctg->[$#$ctg]->chr_end;
+    
+    warn "Fetching data from chr $chr_name $start-$end\n";
+    
     my $root   = $self->url_root;
     my $script = 'get_region';
     my $url = "$root/$script?" .
@@ -105,6 +108,7 @@ sub get_xml_for_contig_from_Dataset {
     $request->uri($url);
     
     my $content = $ua->request($request)->content;
+    #warn $content;
     $self->_check_for_error(\$content);
     return $content;
 }
@@ -195,27 +199,48 @@ sub save_otter_ace {
     $request->method('POST');
     $request->uri($url);
     $request->content(
-        uri_escape(
-            join('&',
-                'author='   . $self->author,
-                'email='    . $self->email,
-                'dataset='  . $dataset->name,
-                'data='     . $xml,
-                'unlock=true',  ### May want to provide annotators with
-                )               ### option to save during sessions, not
-            )                   ### just on exit.
+        join('&',
+            'author='   . uri_escape($self->author),
+            'email='    . uri_escape($self->email),
+            'dataset='  . uri_escape($dataset->name),
+            'data='     . uri_escape($xml),
+            'unlock=false',     ### May want to provide annotators with
+            )                   ### option to save during sessions, not
+                                ### just on exit.
         );
     
     my $content = $self->get_UserAgent->request($request)->content;
     $self->_check_for_error(\$content);
-    $self->write_access(0);
     return 1;
 }
 
 sub unlock_otter_ace {
     my( $self, $ace_str, $dataset ) = @_;
     
+    my $ace = Bio::Otter::Lace::TempFile->new;
+    $ace->name('lace_unlock_contig.ace');
+    my $write = $ace->write_file_handle;
+    print $write $ace_str;
+    my $xml = Bio::Otter::Converter::ace_to_XML($ace->read_file_handle);
+    print STDERR $xml;
     
+    # Save to server with POST
+    my $url = $self->url_root . '/unlock_region';
+    my $request = HTTP::Request->new;
+    $request->method('POST');
+    $request->uri($url);
+    $request->content(
+        join('&',
+            'author='   . uri_escape($self->author),
+            'email='    . uri_escape($self->email),
+            'dataset='  . uri_escape($dataset->name),
+            'data='     . uri_escape($xml),
+            )
+        );
+    
+    my $content = $self->get_UserAgent->request($request)->content;
+    $self->_check_for_error(\$content);
+    return 1;
 }
 
 1;

@@ -199,6 +199,7 @@ sub make_new_child {
         my $out;
         my $pid = open2($out,$in,"$SCRIPTDIR/write_region");
         print $in $r->content;
+        close $in;
         open FPDBG,">../data/test_server_wr.xml";
         print FPDBG $r->content;
         close FPDBG;
@@ -209,7 +210,22 @@ sub make_new_child {
         }
         print "OTTER_SERVER : End response\n";
         close $out;
+        waitpid $pid, 0;
+      } elsif ($r->method eq 'POST' and $r->url->path eq "/perl/unlock_region") {
+        print "OTTER_SERVER : Doing write_region\n";
+        $ENV{SCRIPT_FILENAME} = "$SCRIPTDIR/unlock_region";
+        my $in;
+        my $out;
+        my $pid = open2($out,$in,"$SCRIPTDIR/unlock_region");
+        print $in $r->content;
         close $in;
+        print "OTTER_SERVER : Printing response\n";
+        while (<$out>) {
+          print STDERR $_;
+          print $client $_;
+        }
+        print "OTTER_SERVER : End response\n";
+        close $out;
         waitpid $pid, 0;
       } else {
         my $message = "Unknown command " . $r->method . " " . $r->url->path . "\n";
