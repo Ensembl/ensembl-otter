@@ -8,95 +8,159 @@ use Hum::Submission 'prepare_statement';
 use Hum::AnaStatus::Sequence;
 
 use Bio::EnsEMBL::Slice;
+
 use Bio::Otter::Lace::Defaults;
+use Bio::Otter::AnnotatedClone;
 
 use Getopt::Long 'GetOptions';
 
 $| = 1;
 
 {
-  my ($dataset, $verbose, @a_types);
+  my ($dataset, $verbose, @sets, @clones, $clone_list );
 
   my $help = sub { exec('perldoc', $0) };
 
+
   Bio::Otter::Lace::Defaults::do_getopt('ds|dataset=s' => \$dataset,
 					'v|verbose'    => \$verbose,
-					't|type=s@'    => \@a_types,
+					's|set=s@'     => \@sets,
+					'c|clone=s@'   => \@clones,
+					'clist=s'      => \$clone_list,
 					'h|help'       => $help,
 				       ) or $help->(); # plus default options
-  $help->() unless $dataset;
 
-  my $client      = Bio::Otter::Lace::Defaults::make_Client();
-  my $dset        = $client->get_DataSet_by_name($dataset);
-  my $otter_db    = $dset->get_cached_DBAdaptor;
-  my $asmblyTagAd = $otter_db->get_AssemblyTagAdaptor;
-  my $cloneAd     = $otter_db->get_CloneAdaptor;
+  $help->() unless ($dataset && (@sets || @clones || $clone_list));
 
-  unless ( @a_types ){
+  my $client   = Bio::Otter::Lace::Defaults::make_Client();
+  my $dset     = $client->get_DataSet_by_name($dataset);
+  my $otter_db = $dset->get_cached_DBAdaptor;
 
-    # get all assembly types
-    my $sql = q{SELECT assembly_type FROM sequence_set};
-    my $sth = $otter_db->prepare($sql);
-    $sth->execute;
-    while ( my ($type) = $sth->fetchrow_array()) {
-      push (@a_types, $type);
-      print $type, "\n";
+  $otter_db->begin_work;
+
+  # options to populate assembly_tag table, see also POD
+
+  if ( @sets ) {
+
+    my @tmp;
+    if ( $sets[0] eq "all" ){
+      warn "Working on all assembly types";
+      my $sql = q{SELECT assembly_type FROM sequence_set};
+      my $sth = $otter_db->prepare($sql);
+      $sth->execute;
+      while ( my ($type) = $sth->fetchrow_array()) {
+	push (@tmp, $type);
+      }
+      $sth->finish;
+      @sets = @tmp;
     }
-    $sth->finish;
+
+    my $type;
+    foreach $type ( @sets ) {
+      print "Working on $type .....\n\n";
+      warn "Working on $type";
+
+      $otter_db->assembly_type($type); # replace the default sequence set setting
+      my $seqSet = $dset->get_SequenceSet_by_name($type);
+      my $clones = $dset->fetch_all_CloneSequences_for_SequenceSet($seqSet);
+
+      fetch_by_clone_obj($clones, $otter_db, $type);
+    }
   }
 
-  # loop thru all assembly types to fetch all clones in it in otter db
-  my $type;
+  elsif ( @clones ) {
 
-  foreach $type ( @a_types ) {
+    fetch_by_clone_name(\@clones, $otter_db);
+  }
 
-    $otter_db->begin_work;
+  elsif ( $clone_list ){
 
-    print "Working on $type .....\n\n";
-    warn "Working on $type";
-
-    $otter_db->assembly_type($type); # replace the default sequence set setting
-    my $seqSet = $dset->get_SequenceSet_by_name($type);
-    my $clones = $dset->fetch_all_CloneSequences_for_SequenceSet($seqSet);
-
-    my %seq_acefile_clone;
-
-    foreach my $clnseqobj (@$clones){
-
-      # get Bio::Otter::AnnotatedClone obj via Bio::Otter::Lace::CloneSequence obj
-      my $clone = $cloneAd->fetch_by_accession_version($clnseqobj->accession,$clnseqobj->sv);
-
-      my $ctg_name   = $clnseqobj->contig_name;
-      my $ctg_id     = $clnseqobj->contig_id;
-      my $seq_name = sanger_name($clnseqobj->accession);
-
-      # skip clones in otter db where there is no corresponding accession in the submissions database
-      eval {
-	Hum::AnaStatus::Sequence->new_from_seqname_sv($seq_name, $clnseqobj->sv);
-      };
-
-      # work out path to acefile with assembly_tags info of a Sanger clone
-      unless ( $@ ){
-	my $seq = Hum::AnaStatus::Sequence->new_from_seqname_sv($seq_name, $clnseqobj->sv);
-	my $dir = $seq->analysis_directory;
-
-	# double check existence of acefile
-	if ( -e "$dir/rawdata/$seq_name.humace.ace" ){
-	  my $humace_file = "$dir/rawdata/$seq_name.humace.ace";
-	  push(@{$seq_acefile_clone{$ctg_name}}, $humace_file, $clone, $ctg_id);
-	}
-      }
+    my $clones = [];
+    open(my $fh, $clone_list) || die $!;
+    while (<$fh>){
+      chomp;
+      push(@$clones, $_) if $_; # ignore empty lines
     }
-    undef $@;
 
-    # parsing acefile for all Sanger clones of an assembly type in one go
-    parse_ace(\%seq_acefile_clone, $otter_db, $type, $asmblyTagAd);
+    fetch_by_clone_name($clones, $otter_db);
   }
 }
 
+sub fetch_by_clone_name {
+
+  my ($clones, $otter_db) = @_;
+  my $cloneAd = $otter_db->get_CloneAdaptor;
+  my $cl_obj = [];
+
+  foreach ( @$clones ){
+    push( @$cl_obj, $cloneAd->fetch_by_accession_version(split(/\./, $_)) );
+  }
+
+  fetch_by_clone_obj($cl_obj, $otter_db);
+}
+
+sub fetch_by_clone_obj {
+
+  my ($clones, $otter_db, $fetched) = @_;
+
+  my $cloneAd = $otter_db->get_CloneAdaptor;
+  my %seq_acefile_clone;
+  my ($clone, $ctg_name, $ctg_id, $seq_name, $version);
+
+  foreach my $obj (@$clones) {
+
+    if ( ref($obj) eq "Bio::Otter::AnnotatedClone" ){
+
+      $clone = $obj;
+      $ctg_name = $obj->get_all_Contigs->[0]->name;
+      $ctg_id   = $obj->get_all_Contigs->[0]->dbID;
+      $seq_name = sanger_name($obj->embl_id);
+      $version  = $obj->embl_version;
+    }
+    elsif ( ref($obj) eq "Bio::Otter::Lace::CloneSequence" ){
+
+      # get Bio::Otter::AnnotatedClone obj via Bio::Otter::Lace::CloneSequence obj
+      $clone = $cloneAd->fetch_by_accession_version($obj->accession, $obj->sv);
+
+      $ctg_name = $obj->contig_name;
+      $ctg_id   = $obj->contig_id;
+      $seq_name = sanger_name($obj->accession);
+      $version  = $obj->sv;
+      if ( $seq_name) {print $obj->accession.".".$version. "\n";}
+    }
+
+    # skip clones in otter db where there is no corresponding accession in the submissions database
+    eval {
+      Hum::AnaStatus::Sequence->new_from_seqname_sv($seq_name, $version);
+    };
+
+    # work out path to acefile with assembly_tags info of a Sanger clone
+    unless ( $@ ){
+      my $seq = Hum::AnaStatus::Sequence->new_from_seqname_sv($seq_name, $version);
+      my $dir = $seq->analysis_directory;
+
+      # double check existence of acefile
+      if ( -e "$dir/rawdata/$seq_name.humace.ace" ) {
+	my $humace_file = "$dir/rawdata/$seq_name.humace.ace";
+	push(@{$seq_acefile_clone{$ctg_name}}, $humace_file, $clone, $ctg_id);
+      }
+    }
+  }
+  undef $@;
+
+  $fetched = "Clone fetch" unless $fetched;
+
+  # parsing acefile for all Sanger clones of an assembly type in one go
+  parse_ace(\%seq_acefile_clone, $otter_db, $clones, $fetched);
+}
+
+
 sub parse_ace {
-  my ($href, $otter_db, $type, $asmblyTagAd)  = @_;
+  my ($href, $otter_db, $clones, $fetched)  = @_;
+
   my %seq_acefile_clone = %$href;
+  my $asmblyTagAd = $otter_db->get_AssemblyTagAdaptor;
+
   my ($fh, $line);
   my $counter = 0;
   my %contig_tag_data;
@@ -126,7 +190,7 @@ sub parse_ace {
 	($1 eq "-") ? ($tag_type = "Misc") : ($tag_type = $1);
 
 	# convertion for Ensembl/otter_db: starting coord is always smaller, so flip if not so
-        #                                   starting coord > end coord means minus strand
+        #                                  starting coord > end coord means minus strand
 
 	($3 && $2 > $3) ? ($tag_start = $3, $tag_end = $2, $ctg_strand = -1)
                         : ($tag_start = $2, $tag_end = $3, $ctg_strand =  1);
@@ -160,20 +224,20 @@ sub parse_ace {
     store(\%contig_tag_data);
   }
 
-  # commit/rollback for each assembly type
+  # commit/rollback for each assembly type / clones / clone_list
   if ( $counter != 0){
     unless ( $@ ){
-      printf("> %-35s successful: $counter\n\n", $type);
+      printf("> %-35s successful: $counter\n\n", $fetched);
       $otter_db->commit;
     }
     else {
       print $@;
-      printf("> %-35s failed\n\n", $type);
+      printf("> %-35s failed\n\n", $fetched);
       $otter_db->rollback;
     }
   }
   else {
-    printf("> %-35s no info\n\n", $type);
+    printf("> %-35s no info\n\n", $fetched);
     $otter_db->commit;
   }
   undef $@;
@@ -245,10 +309,15 @@ __END__
 
 =head1 SYNOPSIS
 
-To run this script, specify database_name [-ds dataset] and/or assembly_type [-t chr14] (optional).
-If -t option is omitted, all assembly types of the dataset is processed.
+Script parameters: database_name [-ds dataset] followed by one of the 4 options, eg:
 
-eg, fetch_assembly_tags B<-ds> human B<-t> chr14 (would be practical to pipe the output to external file)
+1. B<-set> chr4 B<-set> -chr20  (fetch from one or more chromosomes)
+
+2. B<-set> all (fetch from all chromosomes)
+
+3. B<-clone> AC000094.x B<-clone> AC000095.x  (fetch single or multiple clones [accession.version])
+
+4. B<-clist> filename (fetch from list of clones as [accession.version] from file, one clone per line)
 
 
 =head1 DESCRIPTION
@@ -256,10 +325,33 @@ eg, fetch_assembly_tags B<-ds> human B<-t> chr14 (would be practical to pipe the
 There are assembly_tags info for Sanger clones submitted to EMBL which is stored in "submissions" database,
 and can be found in acefiles, eg, /nfs/disk100/humpub/analysis/projects/Chr_20/yR31BE7/20001221/rawdata/yR31BE7.humace.ace.
 
-The Assembly_tags info is shown in AceDB under the Assembly_tags tag of a Sequence object.
+The Assembly_tags info is shown in AceDB under the Assembly_tags tag of a Sequence object and is stored in otterlace in assembly_tag table
 
 
 =head1 AUTHOR
 
 Chao-Kung Chen B<email> ck1@sanger.ac.uk
 
+#sub fetch_by_assembly_type {
+
+#  my ($sets, $otter_db, $dset) = @_;
+
+#  # loop thru all assembly types to fetch all clones in it in otter db
+#  my $type;
+
+#  foreach $type ( @$sets ) {
+
+#    $otter_db->begin_work;
+
+#    print "Working on $type .....\n\n";
+#    warn "Working on $type";
+
+#    $otter_db->assembly_type($type); # replace the default sequence set setting
+#    my $seqSet = $dset->get_SequenceSet_by_name($type);
+#    my $clones = $dset->fetch_all_CloneSequences_for_SequenceSet($seqSet);
+
+##    my %seq_acefile_clone;
+
+#    fetch_by_clone($type, ); #$clones, $cloneAd, $otter_db, $sets);
+#  }
+#}
