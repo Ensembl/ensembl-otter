@@ -733,7 +733,7 @@ sub otter_to_ace {
         $target_start = $tile->assembled_start  - $original_start + 1;
         $contig_length = $tile->assembled_end - $tile->assembled_start  + 1;  
         
-        $clone_context .= qq{\nSequence "$name" \n} ;
+        $clone_context .= qq{\nSequence "CloneCtxt-$name" \n} ;
         if ($orientation == 1 ){
             $clone_context .= qq{AGP_Fragment "$slice_name" $contig_start $contig_end Align $gp_start $target_start $contig_length\n} ;
         }else{
@@ -742,8 +742,7 @@ sub otter_to_ace {
         $clone_context .= qq{CloneContext\n} ;
                     
         
-        $str .= "\n" ;
-        $str .= "$clone_context\n" ;        
+        $str .= "\n$clone_context\n";
     } 
 
     # Add Sequence objects for Transcripts
