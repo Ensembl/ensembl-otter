@@ -39,19 +39,17 @@ sub get_CloneSequence_list {
     return \@cs_list;
 }
 
+## needs to refresh each of the sequencesets in the resultset
+sub _refresh_SequenceSet{
+    my ($self , $col_number) = @_ ;
 
-sub refresh_column{
-    my ($self , $column_number)  = @_ ;
-
-    my $clone_number = 0 ;
     foreach my $ss (@{$self->ResultSet->get_all_SequenceSets}){
         $self->SequenceSet($ss) ;
-        $self->SUPER::refresh_column($column_number , $clone_number) ;
-        $self->{'_SequenceSet'} = undef ;   
-        $clone_number += scalar($ss->CloneSequence_list);
+        $self->SUPER::_refresh_SequenceSet($col_number) ;
+        $self->{'_SequenceSet'} = undef ;
     }
-}
 
+}
 
 # returns a list. Each elemnt of the list is an annonymous array with 2 elements.
 # the first element is the CloneSequence and the second element is the assembly type
@@ -111,6 +109,8 @@ sub draw {
     
     my $gaps = 0;
     my $gap_pos = {};
+    my $assembly_indices = {} ;
+    
     for (my $i = 0; $i < @$cs_assembly_list; $i++) {   # go through each clone sequence
         my $row = $i + $gaps;
         my $cs = $cs_assembly_list->[$i]->[0];
@@ -199,7 +199,7 @@ sub draw {
 	    $opt_hash->{'-font'}   ||= $norm_font;
 	    $opt_hash->{'-width'}  ||= $max_width;
 	    $opt_hash->{'-tags'}   ||= [];
-	    push(@{$opt_hash->{'-tags'}}, $row_tag, $col_tag, $assembly_tag,  $assembly_index_tag ,   "cs=$i");
+	    push(@{$opt_hash->{'-tags'}}, $row_tag, $col_tag, $assembly_tag,  $assembly_index_tag , "cs=$i");
 	    
             $calling_method->($canvas,  $x , $y ,  %$opt_hash);  ## in most cases $calling_method will be $canvas->createText   
         } 
@@ -226,11 +226,16 @@ sub run_lace {
     return unless $self->set_selected_from_canvas; # sets the selected clones on the canvas as selected in the ss object!
     my $rs = $self->ResultSet ;
     my $ss_list = $self->selected_SequenceSets ;
+    return unless $self->check_for_duplicates($ss_list);
     
     ## going to spawn a new Lace session for each diff SequenceSet    
-    foreach my $ss ( @$ss_list){ 
+    foreach my $ss ( @$ss_list){
+        my $number_selected = scalar( $ss->selected_CloneSequences) ;
+#        warn $ss->name . " number selected $number_selected " ; 
+        next unless $number_selected ;  # dont want to try and open ss with unselected clones
+           
         my $cl = $self->Client;
-        my $title = 'lace '. $self->name . $self->selected_sequence_string;
+        my $title = $self->selected_sequence_string($ss);
 
         my $db = $self->Client->new_AceDatabase;
         $db->title($title);
@@ -266,14 +271,14 @@ sub run_lace {
         $xc->write_access($write_flag);  ### Can be part of interface in future
         $xc->Client($self->Client);
         $xc->initialize;
-        $self->refresh_column(7) ;
+        $self->refresh_column(7) ; # 7 is the locks column
     }
 }
 
-# sets the CloneSequence list in SequenceSet object with the cs's selected on the canvas
+# sets the CloneSequence list in each SequenceSet object ( cs's selected on the canvas)
 sub set_selected_from_canvas{
     my ($self) = @_ ;
-    
+
     my $rs = $self->ResultSet;
     my $cs_pair_list = $self->get_CloneSequence_list_with_assembly  ;
     if (my $sel_i = $self->selected_CloneSequence_indices){
@@ -288,14 +293,32 @@ sub set_selected_from_canvas{
         
             push ( @{ $selected_hash{$ss_name} } , $cs ) ;
         }    
-        # go through each element of the hash and store         
+        
+        # remove previous selected sequences
+        foreach my $ss (@{$rs->get_all_SequenceSets}){
+            $ss->unselect_all_CloneSequences ;
+        }
+        
+        # go through each element of the hash and store selected ones in SS object        
         while (my ($cs_name , $selected) = each (%selected_hash)) {
             if ( my $ss = $rs->get_SequenceSet_by_name($cs_name)){
+                warn "setting SS now" ;
                 $ss->selected_CloneSequences($selected);
             }else{
                 confess "Could not find SequenceSet with name $cs_name";
             }
         }
+        
+        foreach my $ss (@{$rs->get_all_SequenceSets}){
+            my $cs_list = $ss->selected_CloneSequences;
+            if ($cs_list){
+                warn "assembly ". $ss->name . "number selected :" . scalar(@$cs_list) ;
+            }
+            else{
+                warn "nowt selected for " . $ss->name ;
+            }
+        }
+        
         return 1 ;   
     }
     else{
@@ -306,7 +329,7 @@ sub set_selected_from_canvas{
     }  
 }
 
-##returns the indeces of the selected clones
+##returns the indices of the selected clones
 sub selected_CloneSequence_indices {
     my( $self ) = @_;
     
@@ -420,17 +443,86 @@ sub selected_SequenceSets{
     return \@ss_list ; 
 } 
 
-sub refresh_locks_column{
-    my ($self) = @_ ;
+
+# creates a string based on the selected clones, with commas seperating individual values or dots to represent a continous sequence
+sub selected_sequence_string{
+    my ($self , $ss) = @_ ;
     
-    my $sequence_sets = $self->ResultSet->get_all_SequenceSets() ;
-    my $dataset = $self->SequenceSetChooser->DataSet ;
+    my $assembly_type = $ss->name ;
+    my $canvas = $self->canvas;
+    my @selected  ;
+    foreach my $obj ($canvas->find('withtag', 'selected&&clone_seq_rectangle')) {
+
+        my ($i ) = map /^row=(\d+)/, $canvas->gettags($obj);
+        unless (defined $i) {
+            die "Can't see cs=# in tags: ", join(', ', map "'$_'", $canvas->gettags($obj));
+        }
+        my $ass_index = undef;
+        my $ass_type = undef ;
+
+        foreach my $obj2 ( $canvas->find('withtag' , "row=$i&&!clone_seq_rectangle")  ){
+            my @tags =  $canvas->gettags($obj2) ;
+            last if defined $ass_index ;   
+            ($ass_index) = map /^assembly_index=(\d+)/ , $canvas->gettags($obj2) ;
+            ($ass_type) = map /^assembly=(\S+)/ , $canvas->gettags($obj2) ;           
+        }
+        if( ! defined ($ass_index)){
+            die "cant find the assembly_index of clone " . ($i + 1) . " in the list" ;
+        }
+        push(@selected, $ass_index) if $ass_type eq $ss->name;
+    }   
     
-    foreach my $ss (@$sequence_sets){
-        $dataset->refresh_locks($ss) ;
+    my $prev = shift @selected;
+    my $string = "Assembly " . $ss->name ;
+    
+    if (scalar(@selected) == 0){ 
+        $string .= ", clone " . ($prev + 1);
     }
+    else{
+        $string .= ", clones " . ($prev + 1);
+        my $continous = 0 ;
+
+        foreach my $element (@selected){
+            if (($element  eq ($prev + 1))){
+                if ($element == $selected[$#selected]){
+                    $string .= (".." . ($element + 1));
+                }
+                $continous = 1;
+            }
+            else{                                       
+                if ($continous){
+                    $string .= (".." . ($prev + 1)) ;
+                    $continous = 0;
+                }
+                $string .= (", " . ($element + 1)) ; 
+            }
+            $prev = $element ;
+        }
+    }
+    return $string ;
 }
 
+
+# checks that the same clone has not been selected twice (as this object may display the same Clone under different assemblies)
+# return value of 1 signifies no duplicates;
+sub check_for_duplicates{
+    my ($self , $ss_list) = @_;
+    my %hash ; 
+    foreach my $ss ( @$ss_list){          
+        my $cs_list = $ss->selected_CloneSequences ;
+
+        foreach my $cs (@$cs_list){
+            if (defined $hash{$cs->clone_name}){
+                $self->message('You appear to be trying to open the same clone ' . $cs->clone_name . ' on different assemblies. Please select one version to open' );     
+                return 0 ;
+            }
+            else{
+                $hash{$cs->clone_name} = $cs ;
+            }
+        }
+    }
+    return 1 ;
+}
 
 
 1;
