@@ -15,6 +15,7 @@ sub new {
     
     my $canvas = $self->canvas;
     $canvas->Tk::bind('<Button-1>', sub{
+            $self->deselect_all;
             $self->select_dataset;
         });
     my $edit_command = sub{ $self->open_dataset; };
@@ -25,9 +26,14 @@ sub new {
     $canvas->Tk::bind('<Control-O>',        $edit_command);
     $canvas->Tk::bind('<Escape>', sub{ $self->deselect_all });
     
-    my $close_window = sub{ $self->canvas->toplevel->destroy };
-    $canvas->Tk::bind('<Control-q>',  $close_window);
-    $canvas->Tk::bind('<Control-Q>',  $close_window);
+    my $close_window = sub{
+        $self->canvas->toplevel->destroy;
+        $self = undef;  # $self gets nicely DESTROY'd with this
+        };
+    $canvas->Tk::bind('<Control-q>',    $close_window);
+    $canvas->Tk::bind('<Control-Q>',    $close_window);
+    $canvas->toplevel
+        ->protocol('WM_DELETE_WINDOW',  $close_window);
         
     my $top = $canvas->toplevel;
     my $button_frame = $top->Frame->pack(-side => 'top', -fill => 'x');
@@ -77,13 +83,19 @@ sub open_dataset {
     
     my $canvas = $self->canvas;
     foreach my $tag ($canvas->gettags($obj)) {
-        if ($tag =~ /DataSet=(.+)/) {
+        if ($tag =~ /^DataSet=(.+)/) {
             my $name = $1;
+            my $client = $self->Client;
+            my $ds = $client->get_DataSet_by_name($name);
+
             my $top = $canvas->Toplevel(-title => "DataSet $name");
             my $sc = CanvasWindow::SequenceSetChooser->new($top);
+
             $sc->name($name);
-            $sc->Client($self->Client);
+            $sc->Client($client);
+            $sc->DataSet($ds);
             $sc->DataSetChooser($self);
+            $sc->draw;
             $canvas->toplevel->withdraw;
             return 1;
         }
@@ -106,9 +118,11 @@ sub draw {
             $x, $y,
             -text   => $set->name,
             -font   => $font_def,
+            -anchor => 'nw',
             -tags   => ['DataSet=' . $set->name],
             );
     }
+    $self->fix_window_min_max_sizes;
 }
 
 1;

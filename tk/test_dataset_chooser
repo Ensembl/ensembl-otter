@@ -16,7 +16,6 @@ use Bio::Otter::Lace::Defaults;
 
     $dc->Client($cl);
     $dc->draw;
-    $dc->fix_window_min_max_sizes;
     
     Tk::MainLoop();
 }
