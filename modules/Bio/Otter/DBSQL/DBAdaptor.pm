@@ -191,7 +191,7 @@ sub get_CloneRemarkAdaptor {
 
 sub get_MetaContainer {
     my( $self ) = @_;
-    
+
     my( $mc );
     unless ($mc = $self->{'_meta_container'}) {
         require Bio::Otter::DBSQL::MetaContainer;
@@ -199,6 +199,12 @@ sub get_MetaContainer {
         $self->{'_meta_container'} = $mc;
     }
     return $mc;
+}
+
+sub get_AssemblyTagAdaptor {
+   my $self = shift;
+
+   return $self->_get_adaptor("Bio::Otter::DBSQL::AssemblyTagAdaptor");
 }
 
 1;
