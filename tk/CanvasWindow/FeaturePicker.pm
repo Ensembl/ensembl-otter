@@ -113,7 +113,8 @@ sub show_selected_in_zmap {
         "q_end = $ftr->{query_end}",
         "t_start = $ftr->{subject_start}",
         "t_end = $ftr->{subject_end}",
-        );
+        "strand = $ftr->{strand}",
+       );
     warn $command;
     eval {
         $zmap_rem->send_command($command);
@@ -342,7 +343,7 @@ The program will have to take a list item that looks essentially like this:
 
 and send it to zmap in a form something like this:
 
-"method = readpairs ; type = homol ; sequence = 20SNP45079-1505c12.p1c ;
+"method = readpairs ; type = homol ; sequence = 20SNP45079-1505c12.p1c ; strand = F ;
 q_start = 40 ; q_end = 387 ; t_start = 2613255 ; t_end = 2613598"
 
 
