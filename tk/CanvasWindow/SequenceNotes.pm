@@ -101,7 +101,7 @@ sub refresh_column {
 # this method activates the appropriate one 
 sub _refresh_SequenceSet{
     my ($self , $column_number ) = @_ ;
-
+    $column_number ||= 0;
     my $ds = $self->SequenceSetChooser->DataSet();
     my $ss = $self->SequenceSet;
     if ($column_number == 3){
@@ -214,7 +214,7 @@ sub _column_text_seq_note_text {
 
     if (my $sn = $cs->current_SequenceNote) {
         my $ctg_name = $cs->super_contig_name();
-        my $prefix   = ($ctg_name =~ s/^\*// ? "$ctg_name " : '');
+        my $prefix   = ($ctg_name && $ctg_name =~ s/^\*// ? "$ctg_name " : '');
         return { -text => $prefix . $sn->text, -tags => ['searchable']};
     } else {
         return {};
