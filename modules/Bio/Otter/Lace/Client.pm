@@ -94,6 +94,16 @@ sub new_AceDatabase {
     return $db;
 }
 
+sub get_UserAgent {
+    my( $self ) = @_;
+    
+    my( $ua );
+    unless ($ua = $self->{'_user_agent'}) {
+        $ua = $self->{'_user_agent'} = LWP::UserAgent->new;
+    }
+    return $ua;
+}
+
 sub get_xml_for_contig_from_Dataset {
     my( $self, $ctg, $dataset ) = @_;
     
@@ -130,7 +140,7 @@ sub get_xml_for_contig_from_Dataset {
     #warn $xml;
     $self->_check_for_error(\$xml);
     
-    my $debug_file = "/tmp/otter-debug.$$.fetch.xml";
+    my $debug_file = "/var/tmp/otter-debug.$$.fetch.xml";
     open DEBUG, "> $debug_file" or die;
     print DEBUG $xml;
     close DEBUG;
@@ -212,22 +222,12 @@ sub get_all_DataSets {
     return @$ds;
 }
 
-sub get_UserAgent {
-    my( $self ) = @_;
-    
-    my( $ua );
-    unless ($ua = $self->{'_user_agent'}) {
-        $ua = $self->{'_user_agent'} = LWP::UserAgent->new;
-    }
-    return $ua;
-}
-
 sub save_otter_ace {
     my( $self, $ace_str, $dataset ) = @_;
     
     confess "Don't have write access" unless $self->write_access;
     
-    my $debug_file = "/tmp/otter-debug.$$.save.ace";
+    my $debug_file = "/var/tmp/otter-debug.$$.save.ace";
     open DEBUG, ">> $debug_file" or die;
     print DEBUG $ace_str;
     close DEBUG;
@@ -238,7 +238,7 @@ sub save_otter_ace {
     print $write $ace_str;
     my $xml = Bio::Otter::Converter::ace_to_XML($ace->read_file_handle);
     
-    $debug_file = "/tmp/otter-debug.$$.save.xml";
+    $debug_file = "/var/tmp/otter-debug.$$.save.xml";
     open DEBUG, ">> $debug_file" or die;
     print DEBUG $xml;
     close DEBUG;

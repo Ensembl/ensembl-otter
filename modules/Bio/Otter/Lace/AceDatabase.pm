@@ -218,7 +218,11 @@ sub slice_dataset_hash {
     
     confess "slice_dataset_hash method is read-only" if @_;
     
-    my $h = $self->{'_slice_name_dataset'} ||= {};
+    my $h = $self->{'_slice_name_dataset'};
+    unless ($h) {
+        warn "Creating empty hash";
+        $h = $self->{'_slice_name_dataset'} = {};
+    }
     return $h;
 }
 
@@ -268,11 +272,19 @@ sub slice_dataset_hash_file {
 sub save_all_slices {
     my( $self ) = @_;
     
+    warn "SAVING ALL SLICES";
+    
     # Make sure we don't have a stale database handle
     $self->drop_aceperl_db_handle;
 
     my $sd_h = $self->slice_dataset_hash;
-    while (my ($name, $ds) = each %$sd_h) {
+    #warn "HASH = '$sd_h' has ", scalar(keys %$sd_h), " elements";
+    ### This call to each was failing to return anything
+    ### the second time it was called!!!
+    #while (my ($name, $ds) = each %$sd_h) {
+    foreach my $name (keys %$sd_h) {
+        my $ds = $sd_h->{$name};
+        warn "SAVING SLICE '$name'";
         $self->save_otter_slice($name, $ds);
     }
 }
@@ -304,6 +316,7 @@ sub save_otter_slice {
     $ace->find(Genome_Sequence => $name);
     $ace->raw_query('Follow AGP_Fragment');
     $ace_txt .= $ace->raw_query('show -a');
+    ### Do show -a on a restricted list of tags
     
     # Cleanup text
     $ace_txt =~ s/\0//g;            # Remove nulls

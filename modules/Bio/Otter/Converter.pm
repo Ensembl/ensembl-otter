@@ -23,6 +23,7 @@ use Bio::EnsEMBL::Slice;
 use Bio::EnsEMBL::RawContig;
 use Bio::EnsEMBL::Translation;
 use Bio::EnsEMBL::Clone;
+use Bio::EnsEMBL::SimpleFeature;
 use Bio::Seq;
 
 
@@ -948,6 +949,7 @@ sub ace_to_otter {
         %genenames,     # Links Sequence names to Locus names
         %authors,       # Bio::Otter::Author objects keyed by author name
         %frags,         # hashes used to capture genomic fragment tiling data
+        %logic_ana,     # Analysis objects for SimpleFeatures keyed by logic name
         $slice_name,    # Name of the parent Genomic sequence
         $assembly_type,
         $chr_name,
@@ -1048,13 +1050,13 @@ sub ace_to_otter {
                     $curr_seq->{EMBL_dump_info} = ace_unescape($1);
                 }
                 elsif (/^Feature $STRING $INT $INT $FLOAT (?:$STRING)?/x) {
-                    my $name  = $1;
+                    my $type  = $1;
                     my $start = $2;
                     my $end   = $3;
                     my $score = $4;
                     my $label = $5;
 
-                    my $strand = 0;
+                    my $strand = 0;  # Will stay 0 if start == end
                     if ($start < $end) {
                         $strand = 1;
                     }
@@ -1063,18 +1065,18 @@ sub ace_to_otter {
                         ($start, $end) = ($end, $start);
                     }
 
-                    my $f = Bio::EnsEMBL::SimpleFeature->new(
-                        -NAME       => $name,
+                    my $ana = $logic_ana{$type} ||= Bio::EnsEMBL::Analysis->new(-LOGIC_NAME => $type);
+                    my $sf = Bio::EnsEMBL::SimpleFeature->new(
+                        -ANALYSIS   => $ana,
                         -START      => $start,
                         -END        => $end,
                         -STRAND     => $strand,
                         -SCORE      => $score,
                     );
-                    $f->display_label($label) if $label;
+                    $sf->display_label($label) if $label;
 
-                    ### We don't actually do anything with the features after this!
-                    my $features = $curr_seq->{feature} ||= [];
-                    push @$features, $f;
+                    my $feature_set = $curr_seq->{'feature_set'} ||= [];
+                    push @$feature_set, $sf;
                 }
                 elsif (/^Source $STRING/x) {
                     # We have a gene and not a contig.
@@ -1552,16 +1554,19 @@ sub ace_to_otter {
         push(@$tile_path, $tile);
     }    
     
-    return(\@genes, $tile_path, $assembly_type, $dna, $chr_name, $chr_start, $chr_end);
+    my $feature_set = $sequence{$slice_name}{'feature_set'};
+    
+    return(\@genes, $tile_path, $assembly_type, $dna, $chr_name, $chr_start, $chr_end, $feature_set);
 }
 
 sub ace_to_XML {
     my( $fh ) = @_;
     
     #my( $genes, $frags, $type, $dna, $chr, $chrstart, $chrend ) = ace_to_otter($fh);
-    my( $genes, $tile_path, $type, $dna, $chr, $chrstart, $chrend ) = ace_to_otter($fh);
+    my( $genes, $tile_path, $type, $dna, $chr, $chrstart, $chrend, $feature_set ) = ace_to_otter($fh);
     my $xml = "<otter>\n<sequence_set>\n"
-        . path_to_XML($chr, $chrstart, $chrend, $type, $tile_path);
+        . path_to_XML($chr, $chrstart, $chrend, $type, $tile_path)
+        . features_to_XML($feature_set);
     foreach my $g (@$genes) {
         $xml .= $g->toXMLString;
     }
