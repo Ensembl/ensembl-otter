@@ -1,0 +1,179 @@
+#!/usr/local/bin/perl -w
+
+### genome_canvas_test
+
+use strict;
+use GenomeCanvas;
+use Bio::EnsEMBL::DBSQL::Obj;
+
+{
+    my $db = Bio::EnsEMBL::DBSQL::Obj->new(
+        -DBNAME => 'chr_20',
+        -USER   => 'ensadmin',
+        -HOST   => 'localhost',
+        );
+
+    my $mw = GenomeCanvas::MainWindow->new;
+    my $gc = GenomeCanvas->new($mw);
+    
+    my $canvas = $gc->canvas;
+    
+    my $get_map = $db->prepare(q{
+        SELECT s.map_position
+          , s.sanger_name
+          , c.id
+          , c.htg_phase
+          , ctg.length
+        FROM clone c
+          , simple_map s
+          , contig ctg
+        WHERE c.internal_id = s.clone_internal_id
+          AND ctg.clone = c.internal_id
+          AND s.map_name = 'chr_20'
+        ORDER BY s.map_position ASC
+        });
+    $get_map->execute;
+    my $ans = $get_map->fetchall_arrayref;
+
+    my $last_pos = 0;
+    for (my $i = 0; $i < @$ans;) {
+        my($pos, $sname, $acc, $phase, $length) = @{$ans->[$i]};
+        
+        for ($i++; $i < @$ans and $ans->[$i][2] eq $acc; $i++) {
+            $length += $ans->[$i][4];
+        }
+        #print "$pos, $sname, $acc, $phase, $length\n";
+        my $gap = $pos - $last_pos - 1;
+        my $name = $sname || $acc;
+        add_contig($canvas, $name, $length, $phase, $gap);
+        $last_pos = $pos;
+    }
+    
+    my @bbox = $canvas->bbox('all');
+    my $border = 5;
+    expand_bbox(\@bbox, $border);
+    $canvas->configure(
+        -scrollregion => [@bbox],
+        );
+
+    my $button_frame = $mw->Frame;
+    $button_frame->pack(
+        -side => 'top',
+        );
+
+    #     
+    make_button($button_frame, 'Exit', sub{ exit; });
+
+    make_button($button_frame, 'PostScript',
+        sub {
+            my $n_tiles = 6;
+            my $page_width = 841;
+            my ($cript) = $0 =~ m{([^/]+)$};
+
+            my @bbox = $canvas->cget('scrollregion');
+            warn "@bbox\n";
+            my $canvas_width  = $bbox[2] - $bbox[0];
+            my $canvas_height = $bbox[3] - $bbox[1];
+            my $tile_width = $canvas_width / $n_tiles;
+            for (my $i = 0; $i < $n_tiles; $i++) {
+                
+                $canvas->postscript(
+                    -file => "${cript}_$i.ps",
+                    '-x' => $bbox[0] + ($i * $tile_width),
+                    '-y' => $bbox[1],
+                    -width  => $tile_width,
+                    -height => $canvas_height,
+                    -pageanchor => 'nw',
+                    -pagex => 36,
+                    -pagey => 36,
+                    -pagewidth => $page_width - 72,
+                    -rotate => 1,   # landscape
+                    );
+            }
+        });
+}
+
+###############
+Tk::MainLoop();
+###############
+
+sub make_button {
+    my( $parent, $label, $command ) = @_;
+    
+    my $button = $parent->Button(
+        -text => $label,
+        -command => $command,
+        );
+    $button->pack(
+        -side => 'left',
+        );
+    return $button;
+}
+
+sub add_contig {
+    my( $canvas, $name, $length, $phase, $gap ) = @_;
+
+    my $fill_color = $phase == 3 ? 'black' : 'grey';
+
+    my ($right_most) = ($canvas->bbox('contig'))[2] || 0;
+
+    my $size = $length / 2000;  # 1 pixel = 2 kbp
+    my $x1 = $right_most - 1;
+    $x1 += $gap * 7.5;
+    my $rec = $canvas->createRectangle(
+        $x1, 0, $x1 + $size, 8,
+        -fill => $fill_color,
+        -outline => undef,
+        -tags => ['contig', $name],
+        );
+
+    my $label = $canvas->createText(
+        $x1, -1,
+        -text => $name,
+        #-font => '-*-helvetica-medium-r-*-*-24-*-*-*-*-*-*-*',
+        -font => ['helvetica', 25],
+        -anchor => 'sw',
+        -tags => ['contig_label', $name],
+        );
+
+    my @bbox = $canvas->bbox($name);
+
+    my $sp = 5;
+    expand_bbox(\@bbox, $sp);
+    my $bkgd = $canvas->createRectangle(
+        @bbox,
+        -fill    => undef,
+        -outline => undef,
+        -tags => ['contig_bkgd', $name],
+        );
+    $canvas->lower($bkgd, $rec);
+    nudge_into_free_space($canvas, $name);
+}
+
+sub expand_bbox {
+    my( $bbox, $pad ) = @_;
+    
+    $bbox->[0] -= $pad;
+    $bbox->[1] -= $pad;
+    $bbox->[2] += $pad;
+    $bbox->[3] += $pad;
+}
+
+sub nudge_into_free_space {
+    my( $canvas, $ac ) = @_;
+    
+    my %self = map {$_, 1} $canvas->find('withtag', $ac);
+    while (grep ! $self{$_}, $canvas->find('overlapping', $canvas->bbox($ac))) {
+        $canvas->move($ac, 0, -5);
+    }
+}
+
+
+__END__
+
+=head1 NAME - genome_canvas_test
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+

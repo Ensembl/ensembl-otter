@@ -7,16 +7,16 @@ use lib '/nfs/disk84/jgrg/bin/Perl';
 use strict;
 use Tk;
 
-{
-    my $mw = MainWindow->new(
-        -class => 'JamesTk',
-        -title => 'Contig test',
-        );
-    $mw->optionReadfile("$0.xdef");
-    $mw->configure(
-        -background     => 'grey',
-        );
+my $mw = MainWindow->new(
+    -class => 'JamesTk',
+    -title => 'Contig test',
+    );
+$mw->optionReadfile("$0.xdef");
+$mw->configure(
+    -background     => 'grey',
+    );
 
+{
     my $canvas = $mw->Scrolled('Canvas',
         -highlightthickness => 1,
         -background         => 'white',
@@ -24,8 +24,6 @@ use Tk;
         -width              => 400,
         -height             => 100,
         );
-
-    $canvas->bind($name, '<1>', [\&clipboard_place_name, $canvas, $name]);
 
     #foreach my $num ('000001'..'000625') {
     #    my $ac = "AC$num";
@@ -56,9 +54,46 @@ use Tk;
         -fill => 'both',
         -expand => 1,
         );
+
+    my $button_frame = $mw->Frame;
+    $button_frame->pack(
+        -side => 'top',
+        );
     
-    MainLoop();
+    make_button($button_frame, 'Exit', \&exit);
+    make_button($button_frame, 'PostScript',
+        sub {
+            my ($cript) = $0 =~ m{([^/]+)$};
+            my $file = "$cript.ps";
+            my @bbox = $canvas->cget('scrollregion');
+            $canvas->postscript(
+                -file => $file,
+                -width  => $bbox[2] - $bbox[0],
+                -height => $bbox[3] - $bbox[1],
+                -pageanchor => 'nw',
+                -pagex => 36,
+                -pagey => 36,
+                -pagewidth => 841 - 72,
+                -rotate => 1,   # landscape
+                );
+            },
+        );
 }
+
+sub make_button {
+    my( $parent, $label, $command ) = @_;
+    
+    my $button = $parent->Button(
+        -text => $label,
+        -command => $command,
+        );
+    $button->pack(
+        -side => 'left',
+        );
+    return $button;
+}
+
+MainLoop();
 
 BEGIN {
 

@@ -65,8 +65,16 @@ for (my $offset = 0; $offset < $seq_length; $offset += $sample_interval) {
 
 $canvas->createLine(
     @line_coords,
-    -width => 0.5,
+    -width  => 2,
     -smooth => 1,
+    -fill   => 'red',
+    );
+
+$canvas->createLine(
+    @line_coords,
+    -width  => 0.5,
+    -smooth => 0,
+    -fill   => 'black',
     );
 
 if (-t STDOUT) {
