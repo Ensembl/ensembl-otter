@@ -4,6 +4,9 @@ port=33999
 host=humsrv1
 write_access=1
 
+[default.ensembl_sources]
+ensembl_core_db=ensembl
+ensembl_estgene_db=genomewise
 
 [default.filters]
 genscan=1
