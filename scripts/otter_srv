@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl5.6.1
+#!/usr/bin/perl
 
 # Shamelessly ripped off from pfetch_srv
 package OtterServer;
@@ -168,6 +168,29 @@ sub make_new_child {
           print STDERR "ERROR: ". $@ . "\n";
         }
         print "Done sending file\n";
+      } elsif ($r->method eq 'GET' and $r->url->path eq "/perl/get_loci_names") {
+        print "Doing get_loci_names\n";
+        $ENV{SCRIPT_FILENAME} = "$SCRIPTDIR/get_loci_names";
+        eval {      
+          open PRG, "$SCRIPTDIR/get_loci_names|";
+
+          # $client->send_file(\*PRG);
+          my $nline = 0;     
+          while (<PRG>) {    
+            print $client $_;
+            print STDERR $_;    
+            $nline++;
+          }
+          if (!$nline) {
+            print STDERR "ERROR: Failed\n";
+          }
+          close PRG;       
+        };
+        if ($@) {
+          print STDERR "ERROR: ". $@ . "\n";
+        }
+        print "Done sending file\n";
+   
       } elsif ($r->method eq 'POST' and $r->url->path eq "/perl/write_region") {
         print "OTTER_SERVER : Doing write_region\n";
         $ENV{SCRIPT_FILENAME} = "$SCRIPTDIR/write_region";
