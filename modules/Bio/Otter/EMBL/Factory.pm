@@ -27,7 +27,8 @@ use strict;
 use Carp;
 use Hum::EMBL;
 use Hum::EMBL::FeatureSet;
-use Hum::EMBL::Location::Exon;
+use Hum::EMBL::Exon;
+use Hum::EMBL::ExonCollection;
 use Hum::EMBL::LocationUtils qw( simple_location locations_from_subsequence
     location_from_homol_block );
 use Hum::EmblUtils qw( add_source_FT add_Organism );
@@ -279,6 +280,7 @@ sub make_embl {
     
     foreach my $chr_s_e ($self->fetch_chr_start_end_for_accession($otter_db, $acc)) {
 
+        #Debug stuff
         print "ACC: $acc ";  
         print "Chr: ", $chr_s_e->[0], " Start: "
             , $chr_s_e->[1], " End: ", $chr_s_e->[2], "\n";
@@ -385,23 +387,22 @@ sub do_Gene {
         if ($all_transcript_Exons) {
             my $ft = $set->newFeature;
             $ft->key('mRNA');
-            my $loc = Hum::EMBL::Location->new;
+            my $loc = Hum::EMBL::ExonCollection->new;
             $ft->location($loc);
-            $loc->strand('W'); #By default, Exons may vary
 
-            my @location_Exons;
+            my @hum_exons;
             foreach my $exon (@{$all_transcript_Exons}) {
 
-                my $location_Exon = Hum::EMBL::Location::Exon->new;
-                $location_Exon->strand($exon->strand);
+                my $hum_exon = Hum::EMBL::Exon->new;
+                $hum_exon->strand($exon->strand);
                 
                 #Bio::EnsEMBL::RawContig, each exon knows its contig
                 my $contig  = $exon->contig;
                 my $start   = $exon->start;
                 my $end     = $exon->end;
 
-                $location_Exon->start($start);
-                $location_Exon->end($end);
+                $hum_exon->start($start);
+                $hum_exon->end($end);
 
                 # May be an is_sticky method?
                 if ($exon->isa('Bio::Ensembl::StickyExon')) {
@@ -412,6 +413,7 @@ sub do_Gene {
                     # Is not on the Slice
                     my $acc = $contig->clone->embl_id;
                     my $sv  = $contig->clone->embl_version;
+                    $hum_exon->accession_version("$acc.$sv");
                 }
                 else {
                     # Is on Slice (ie: clone)
@@ -420,9 +422,9 @@ sub do_Gene {
                             . "on contig of length '$contig_length'\n";
                     }
                 }
-                push(@location_Exons, $location_Exon);
+                push(@hum_exons, $hum_exon);
             }
-            $loc->exons(@location_Exons);
+            $loc->exons(@hum_exons);
         }
     }
 }
