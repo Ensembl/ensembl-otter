@@ -266,7 +266,7 @@ sub save_all_config_files{
                 my $class = $table->class;
                 my $name  = $table->name;
                 next unless $class && $name;
-                print STDERR "have $class $name from $file\n";
+                #print STDERR "have $class $name from $file\n";
                 if($class eq 'Method'){
                     # rebless as a Bio::EnsEMBL::Ace::Method
                     $table = bless $table, 'Bio::EnsEMBL::Ace::Method';
@@ -311,7 +311,7 @@ sub save_all_config_files{
         # keep the order from there!
         my $grps  = {map { $_ => [] } @order};
         foreach my $group(@order){
-            print STDERR "looking at method_groups for '$group'\n";
+            #print STDERR "looking at method_groups for '$group'\n";
             my $group_members =  option_from_array(['method_groups', $group]);
             $grps->{$group}   = [ split(',', $group_members) ];
         }
@@ -326,11 +326,11 @@ sub save_all_config_files{
             # $meth_group should be one of @order members
             # check with 
             unless(grep { /^$meth_group$/ } @order){
-                print STDERR " *** Method '$user_meth_name' cannot be added to '$meth_group', $meth_group doesn't exist. try one of [@order]\n";
+                #print STDERR " *** Method '$user_meth_name' cannot be added to '$meth_group', $meth_group doesn't exist. try one of [@order]\n";
                 next;
             }
             # add the meth name to the appropriate grp
-            print STDERR "Method '$user_meth_name' WILL be added to '$meth_group', $meth_group doesn't exist. try one of [@order]\n";
+            #print STDERR "Method '$user_meth_name' WILL be added to '$meth_group', $meth_group doesn't exist. try one of [@order]\n";
             push(@{$grps->{$meth_group}}, $user_meth_name);
             # add the object to 
             #push(@)
@@ -344,7 +344,7 @@ sub save_all_config_files{
         for my $i(0..scalar(@order)-1){
             my $group   = $order[$i];
             my $members = $grps->{$group};
-            print STDERR "members of grp '$group' are @$members\n";
+            #print STDERR "members of grp '$group' are @$members\n";
             my $g_min   = $sep * $i;
             my $g_max   = $sep * ($i + 1);
             # get the method objects from the hash
