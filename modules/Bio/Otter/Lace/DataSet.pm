@@ -59,6 +59,26 @@ sub _author_id {
     return $id;
 }
 
+sub save_author_if_new{
+    my ($self , $client) = @_;
+    
+    my( $id );   
+    eval{ $id =  $self->_author_id } ;
+    return if  $id ; 
+    my $username =  $self->author;
+    my $email = $client->email ;
+    my $dba = $self->get_cached_DBAdaptor;
+    my $add_author = $dba->prepare(q{
+        INSERT author ( author_email,
+                        author_name)
+        VALUES ( ?, ?)          
+    });    
+    $add_author->execute($email , $username);
+    $id = $add_author->{'mysql_insertid'}
+        or confess "Failed to get insertid";
+    $self->_author_id($id);
+}
+
 sub sequence_set_access_list {
     my( $self ) = @_;
     
@@ -308,13 +328,16 @@ sub save_current_SequenceNote_for_CloneSequence {
     
     confess "Missing CloneSequence argument" unless $cs;
     my $dba = $self->get_cached_DBAdaptor;
-    my $author_id = $self->_author_id;
-    #warn "author name and id " . $self->author . $self->_author_id ;
-   
+    my $author_id = $self->_author_id ;
+    warn "author name and id " . $self->author . "  ". $author_id ;
     my $contig_id = $cs->contig_id
         or confess "contig_id not set";
     my $current_note = $cs->current_SequenceNote
         or confess "current_SequenceNote not set";
+    unless($current_note->author){
+        $current_note->author($self->author);
+    }
+    
     
     my $text = $current_note->text
         or confess "no text set for note";
@@ -354,6 +377,7 @@ sub save_current_SequenceNote_for_CloneSequence {
     $current_note->is_current(1);
 }
 
+
 # takes an existing sequence_note object and update the comment
 sub update_current_SequenceNote{
     
@@ -378,9 +402,9 @@ sub update_current_SequenceNote{
 #            });            
 #    $author_query->execute($author);
 #    my $author_id = $author_query->fetchrow; 
-
-    my $author_id = $self->_author_id ;
     
+    my $author_id = $self->_author_id ;
+        
     my $update = $dba->prepare(q{
         UPDATE  sequence_note
         SET     note    = ?
@@ -390,8 +414,8 @@ sub update_current_SequenceNote{
         });
      
      my $rows = $update->execute($new_text , $contig_id , $author_id, $timestamp);
-     
-    
+     ##warn "\ntext $new_text ,CONTIG ID: $contig_id ,author $author_id,time $timestamp";
+     ##warn  "$rows";   
 }
 
 sub get_all_Chromosomes {
