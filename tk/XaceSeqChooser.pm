@@ -24,6 +24,7 @@ sub new {
     $self->add_buttons;
     $self->bind_events;
     $self->current_state('clone');
+    $self->minimum_scroll_bbox(0,0,200,200);
     return $self;
 }
 
@@ -98,6 +99,15 @@ sub add_buttons {
         );
     $self->clone_sub_switch_button($clone_sub);
     
+    my $edit_button = $bf->Button(
+        -text       => 'Edit',
+        -command    => sub{
+            $self->edit_subsequences;
+            });
+    $edit_button->pack(
+        -side   => 'left',
+        );
+    
     my $quit_button = $bf->Button(
         -text       => 'Quit',
         -command    => sub{ exit 0; },
@@ -155,6 +165,8 @@ sub clone_sub_switch {
     } else {
         $self->switch_to_clone_display;
     }
+    $self->set_window_size(1);
+    $self->fix_window_min_max_sizes;
 }
 
 sub switch_to_subseq_display {
@@ -229,16 +241,19 @@ sub clone_list {
     }
 }
 
-sub subseq_list {
-    my( $self, @subseqs ) = @_;
+sub edit_subsequences {
+    my( $self ) = @_;
     
-    if (@subseqs) {
-        $self->{'_subseq_list'} = [@subseqs];
-    }
-    if (my $slist = $self->{'_subseq_list'}) {
-        return @$slist;
-    } else {
-        return;
+    my @sub_names = $self->list_selected_subseq_names;
+    my $canvas = $self->canvas;
+    foreach my $sub_name (@sub_names) {
+        my $sub = $self->get_SubSeq($sub_name);
+        my $top = $canvas->Toplevel(
+            -title  => $sub_name,
+            );
+        my $ec = ExonCanvas->new($top);
+        $ec->add_ace_subseq($sub);
+        $ec->fix_window_min_max_sizes;
     }
 }
 
@@ -256,15 +271,17 @@ sub draw_clone_list {
 }
 
 sub draw_subseq_list {
-    my( $self, @selected ) = @_;
+    my( $self, @selected_clones ) = @_;
     
     my( @subseq );
-    foreach my $clone_name (@selected) {
+    foreach my $clone_name (@selected_clones) {
         warn "Fetching sequence for '$clone_name'\n";
         my $clone = $self->get_CloneSeq($clone_name);
+        my( @gensub );
         foreach my $sub ($clone->get_all_SubSeqs) {
-            push(@subseq, $sub->name);
+            push(@gensub, $sub->name);
         }
+        push(@subseq, sort @gensub);
     }
     $self->draw_sequence_list('subseq', @subseq);
 }
@@ -296,14 +313,33 @@ sub express_clone_and_subseq_fetch {
     
     while ($sub_list =~ /^Subsequence\s+"([^"]+)"\s+(\d+)\s+(\d+)/mg) {
         my($name, $start, $end) = ($1, $2, $3);
-        my $t_seq = $ace->fetch(Sequence => $name);
-        my $sub = Hum::Ace::SubSeq
-            ->new_from_name_start_end_transcript_seq(
-                $name, $start, $end, $t_seq,
-                );
-        $clone->add_SubSeq($sub);
+        eval{
+            my $t_seq = $ace->fetch(Sequence => $name);
+            my $sub = Hum::Ace::SubSeq
+                ->new_from_name_start_end_transcript_seq(
+                    $name, $start, $end, $t_seq,
+                    );
+            $clone->add_SubSeq($sub);
+            $self->add_SubSeq($sub);
+        };
+        if ($@) {
+            warn("Error fetching '$name' ($start - $end):\n", $@);
+        }
     }
     return $clone;
+}
+
+sub add_SubSeq {
+    my( $self, $sub ) = @_;
+    
+    my $name = $sub->name;
+    $self->{'_subsequence_cache'}{$name} = $sub;
+}
+
+sub get_SubSeq {
+    my( $self, $name ) = @_;
+    
+    return $self->{'_subsequence_cache'}{$name};
 }
 
 sub draw_sequence_list {
@@ -371,8 +407,11 @@ sub get_xace_window_id {
             }
         }
     }
-    close XWID or confess "Error running xwininfo : $!";
-    return $xwid;
+    if (close XWID) {
+        return $xwid;
+    } else {
+        $self->message("Error running xwininfo : $!");
+    }
 }
 
 sub list_selected_names {
@@ -383,6 +422,20 @@ sub list_selected_names {
     foreach my $obj ($self->list_selected) {
         my $n = $canvas->itemcget($obj, 'text');
         push(@names, $n);
+    }
+    return @names;
+}
+
+sub list_selected_subseq_names {
+    my( $self ) = @_;
+    
+    my $canvas = $self->canvas;
+    my( @names );
+    foreach my $obj ($self->list_selected) {
+        if (grep 'subseq', $canvas->gettags($obj)) {
+            my $n = $canvas->itemcget($obj, 'text');
+            push(@names, $n);
+        }
     }
     return @names;
 }

@@ -51,7 +51,7 @@ sub initial_canvas_size {
     if (my $in = $self->{'_initial_canvas_size'}) {
         return @$in;
     } else {
-        return (500,50); # Default
+        return (50,50); # Default
     }
 }
 
@@ -92,11 +92,38 @@ sub set_scroll_region {
     my $canvas = $self->canvas;
     my @bbox = $canvas->bbox('all');
     expand_bbox(\@bbox, 5);
-    warn "Setting scroll region to [@bbox]";
+    if (my @min_bbox = $self->minimum_scroll_bbox) {
+        $bbox[0] = $min_bbox[0] if $min_bbox[0] < $bbox[0];
+        $bbox[1] = $min_bbox[1] if $min_bbox[1] < $bbox[1];
+        $bbox[2] = $min_bbox[2] if $min_bbox[2] > $bbox[2];
+        $bbox[3] = $min_bbox[3] if $min_bbox[3] > $bbox[3];
+    }
+    #warn "Setting scroll region to [@bbox]";
     $canvas->configure(
         -scrollregion => [@bbox],
         );
     return @bbox;
+}
+
+sub minimum_scroll_bbox {
+    my( $self, @min_scroll ) = @_;
+    
+    if (@min_scroll) {
+        my $count = @min_scroll;
+        confess "Wrong number of coordinates '$count' not '4'"
+            unless $count == 4;
+        foreach my $i (@min_scroll) {
+            confess("Non-integer value in: (",
+                join(', ', map "'$_'", @min_scroll), ")")
+                unless $i =~ /^-?\d+$/;
+        }
+        $self->{'_min_scroll_bbox'} = [@min_scroll];
+    }
+    if (my $m = $self->{'_min_scroll_bbox'}) {
+        return @$m;
+    } else {
+        return;
+    }
 }
 
 sub bind_scroll_commands {
