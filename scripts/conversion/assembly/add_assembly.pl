@@ -55,6 +55,22 @@ my $tdb = new Bio::EnsEMBL::DBSQL::DBAdaptor(-host => $t_host,
 					       -port => $t_port,
 					       -dbname => $t_dbname);
 
+my $chr_sth = $tdb->prepare( qq {
+   select chromosome_id from chromosome 
+   where chromosome.name='$chr'
+});
+
+$chr_sth->execute;
+
+my $chr_hashref = $chr_sth->fetchrow_hashref;
+if (!defined $chr_hashref) {
+  die "Couldn't find chromosome $chr in target database\n";
+}
+
+my $t_chrid = $chr_hashref->{'chromosome_id'};
+
+print "Target chromosome id = $t_chrid\n";
+
 # First check for duplicate clones used in contigs
 my $dup_sth = $sdb->prepare( qq {
   select contig.name from 
@@ -70,6 +86,7 @@ my $dup_sth = $sdb->prepare( qq {
 });
         
 $dup_sth->execute;
+
 
 my %clones;
 my %dupclones;
@@ -202,7 +219,7 @@ while ($hashref = $sth->fetchrow_hashref()) {
                                contig_ori,
                                type) 
                        values( 
-                           $hashref->{chromosome_id},
+                           $t_chrid,
                            $hashref->{chr_start},
                            $hashref->{chr_end},
                            "$hashref->{superctg_name}",
