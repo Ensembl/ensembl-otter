@@ -150,6 +150,7 @@ sub do_getopt {
                'cfgfile=s'     => sub { my $opts = options_from_file($_[1]); push(@$CONFIG_INIFILES, $opts) if $opts },
                'with-das!'     => sub { $DEFAULTS->{$CLIENT_STANZA}->{'with-das'} = $_[1] },
                'log-file=s'    => $init_log,
+               'help'          => sub { exit(exec('perldoc', $0)); },
                # these are the caller script's options
                @script_args,
                ) or return 0;
