@@ -185,7 +185,6 @@ sub exists {
 						 " and gene_info_id = " . $remark->gene_info_id);
 
         if (scalar(@newremark) > 0) {
-          print STDERR "New [@newremark] @newremark\n";
 	   return $newremark[0];
         } else {
            return "";

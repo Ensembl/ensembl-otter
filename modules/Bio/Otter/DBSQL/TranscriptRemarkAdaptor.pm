@@ -187,7 +187,6 @@ sub exists {
 						 " and transcript_info_id = " . $remark->transcript_info_id);
 
         if (scalar(@newremark) > 0) {
-          print STDERR "New [@newremark] @newremark\n";
 	   return $newremark[0];
         } else {
            return "";
