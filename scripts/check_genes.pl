@@ -844,7 +844,7 @@ foreach my $atype (keys %gsi){
 
       # analysis by overlap of transcripts
       my $last_ed;
-      foreach my $tsi (sort {$tse{$gsi}->{$a}->[0]<=>$tse{$gsi}->{$b}->[0]} keys %tse){
+      foreach my $tsi (sort {$tse{$gsi}->{$a}->[0]<=>$tse{$gsi}->{$b}->[0]} keys %{$tse{$gsi}}){
 	my($st,$ed)=@{$tse{$gsi}->{$tsi}};
 	my($tn)=@{$tsi_sum{$tsi}};
 	if($last_ed && $last_ed<$st){
@@ -939,7 +939,6 @@ if($ngcl>1){
     }
     my @ctsi=$tcl->cluster_ids;
     print " Cluster $igcl: ".scalar(@gsi)." genes; ".scalar(@ctsi)." sets of duplicated transcripts\n";
-    print "  ".join(',',@gsi)."\n";
 
     my $itcl=0;
     foreach my $tcid (@ctsi){
@@ -947,7 +946,7 @@ if($ngcl>1){
       my @tsi=$tcl->cluster_members($tcid);
       print "  Transcript set $itcl: ".scalar(@tsi)." transcripts\n";
       my %tsi=map{$_,1}@tsi;
-      foreach my $gsi (@gsi){
+      foreach my $gsi (sort @gsi){
 	my @gtsi=(keys %{$t2e{$gsi}});
 	my $nt=scalar(@gtsi);
 	my $ntd=0;
@@ -956,7 +955,8 @@ if($ngcl>1){
 	    $ntd++;
 	  }
 	}
-	foreach my $tsi (@gtsi){
+	print "   $gsi ($ntd/$nt):\n";
+	foreach my $tsi (sort @gtsi){
 	  if($tsi{$tsi}){
 	    my @e=@{$t2e{$gsi}->{$tsi}};
 	    my $ne=scalar(@e);
@@ -965,7 +965,7 @@ if($ngcl>1){
 	      ###
 	      $ned++;
 	    }
-	    print "   $gsi ($ntd/$nt): $tsi ($ned/$ne)\n";
+	    print "    $tsi ($ned/$ne)\n";
 	  }
 	}
       }
