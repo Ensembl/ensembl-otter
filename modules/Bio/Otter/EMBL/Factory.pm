@@ -15,25 +15,30 @@
 
 =head2 Description
 
-Factory object used to create Hum::EMBL objects in order to dump EMBL flatfiles
-from an Otter finished & annotated genomic sequence database. Uses a variety of
-of the Hum::EMBL modules.
+Factory object used by:
 
-First pass a Bio::Otter::Lace::DataSet object by a call to the DataSet method,
-then call make_embl with an EMBL accession.
+/humscripts/emblDump
 
-Typical usage:
- 
-  my $embl_factory = Bio::Otter::EMBL::Factory->new;
-  $embl_factory->DataSet($ds);
-    
-  foreach my $acc (@ARGV) {
-        
-    my $embl = $embl_factory->make_embl($acc);
-    print $embl->compose();
+embDump uses the factory object to make the FT lines for the supplied
+Hum::EMBL object (using the 'make_embl_ft' method). The EMBL entry
+constructed and populated by other modules using information retrieved
+from the Oracle Tracking database.
 
-  }
- 
+and 
+
+/ensembl-otter/scripts/lace/otter_embl_dump_generic
+
+otter_embl_dump_generic does not access the tracking database, so embl
+entries can be dumped from any (potentially external) project. It uses
+the 'embl_setup' method to construct and populate the Hum::EMBL object,
+which is later used by'make_embl_ft'. Where Factory attributes are not
+set specifically by the otter_embl_dump_generic script, where possible
+they are fetched from the Otter database.
+
+Note, many of the object attributes only need to be set if using the
+'embl_setup' method of the module; they are not neccesary for
+'make_embl_ft'.
+
 =cut
 
 package Bio::Otter::EMBL::Factory;
@@ -70,12 +75,11 @@ sub new {
 
 =head2 comments
  
-For each block of CC lines pass a reference to an array of the text
+For each block of CC lines, pass a reference to an array of the text
 lines. Each block will be separated by an XX line.
 
 =cut
 
-#Used
 sub comments {
     my ( $self, $value ) = @_;
     
@@ -91,17 +95,50 @@ sub comments {
     return $self->{'_bio_otter_embl_factory_comments'};
 }
 
+=head2 reference
+
+To add a reference of the type:
+
+RN   [1]
+RP   1-146328
+RA   McMurray A.;
+RT   ;
+RL   Submitted (13-JUL-2004) to the EMBL/Genbank/DDBJ databases.
+RL   Wellcome Trust Sanger Institute, Hinxton, Cambridgeshire, CB10 1SA, UK.
+RL   E-mail enquiries: vega@sanger.ac.uk
+RL   Clone requests: clonerequest@sanger.ac.uk
+
+Pass a reference to an array of four elements:
+
+    $reference_ref = ['1',  ' 1-146328', 'McMurray A.', \@text]
+
+=cut
+
+sub references {
+    my ( $self, $value ) = @_;
+    
+    if ($value) {
+        unless (ref($value) eq 'ARRAY' and scalar(@$value == 4)) {
+            confess "Must pass an array reference pointing to 4 elements";
+        }
+        unless ($self->{'_bio_otter_embl_factory_references'}) {
+            $self->{'_bio_otter_embl_factory_references'} = [];
+        }
+        push(@{$self->{'_bio_otter_embl_factory_references'}}, $value);
+    }
+    return $self->{'_bio_otter_embl_factory_references'};
+}
+
 =head2 get_DBAdaptors
 
 Providing $self->DataSet has been set, retrieves the cached DBAdaptor
-from the DataSet, together with Slice and Gene adaptors.
+from the DataSet, together with Slice, Gene and Clone adaptors.
 
     my ($otter_db, $slice_aptr, $gene_aptr
         , $annotated_clone_aptr) = get_DBAdaptors();
 
 =cut
 
-#Used
 sub get_DBAdaptors {
     my ( $self ) = @_;
 
@@ -133,11 +170,10 @@ you want to dump a Sanger project in the tracking db from Otter).
 
 Creates a Hum::EMBL object, and sets many of its attributes based on those
 stored in the Hum::EMBL object. Will confess if required attributes have
-not been set. Fetches some information from the Otter database, as necessary.
+not been set. Fetches information from the Otter database, as necessary.
 
 =cut 
 
-#Used
 sub embl_setup {
     
     my ( $self, $accession, $seq_version ) = @_;
@@ -153,10 +189,10 @@ sub embl_setup {
     my $entry_name = $self->entry_name or confess "entry_name not set";
     my $data_class = $self->data_class or confess "data_class not set";
     my $mol_type = $self->mol_type or confess "mol_type not set";
-    my $ac_star_id = $self->ac_star_id or confess "ac_star_id not set";
     my $clone_lib = $self->clone_lib or confess "clone_lib not set";
     my $clone_name = $self->clone_name or confess "clone_name not set";
     my $comments_ref = $self->comments;
+    my $references_ref = $self->references;
     
     # EMBL Division, species    
     my $division;
@@ -199,11 +235,6 @@ sub embl_setup {
     }
     $embl->newXX;
 
-    # AC * line
-    my $ac_star = $embl->newAC_star;
-    $ac_star->identifier($ac_star_id);
-    $embl->newXX;
-
     # DE line
     my $description;
     unless ($description = $self->description) {
@@ -230,8 +261,17 @@ sub embl_setup {
     $embl->newXX;
 
     # Reference
-    #$pdmp->add_Reference($embl, $seqlength);
-
+    if ($references_ref) {
+        foreach my $reference (@{$references_ref}) {
+            my $ref = $embl->newReference;
+            $ref->number($reference->[0]);
+            $ref->positions($reference->[1]);
+            $ref->authors($reference->[2]);
+            $ref->locations(@{$reference->[3]});
+        $embl->newXX;
+        }
+    }
+    
     # CC lines
     if ($comments_ref) {
         foreach my $comment_para (@{$comments_ref}) {
@@ -256,10 +296,6 @@ sub embl_setup {
     $source->addQualifierStrings('clone',     $clone_name);
     $source->addQualifierStrings('clone_lib', $clone_lib);
 
-    # Feature table source feature
-    #my( $libraryname ) = library_and_vector( $project );
-    #add_source_FT( $embl, $seqlength, $binomial, $ext_clone,
-    #               $chr, $map, $libraryname );
     return $embl;
 }
 
@@ -318,7 +354,6 @@ the module).
 
 =cut
 
-    #Used
     sub get_EMBL_division_from_otter_species {
         my( $self ) = @_;
 
@@ -341,7 +376,6 @@ Confesses if there is more than one Contig in the Clone.
 
 =cut
 
-#Used
 sub add_sequence_from_otter {
     my ( $self, $embl ) = @_;
 
@@ -355,13 +389,13 @@ sub add_sequence_from_otter {
    $embl->newSequence->seq($contigs->[0]->seq);
 }
 
-sub references {
-    my ( $self, $ref ) = @_;
-    
-    confess "Needs to be implemented";
-}
+=head2 secondary_accs
 
-#Used
+Get/set method for secondary accessions. Expects and returns an
+array reference.
+
+=cut 
+
 sub secondary_accs {
     my ( $self, $value ) = @_;
     
@@ -374,7 +408,13 @@ sub secondary_accs {
     return $self->{'_bio_otter_embl_factory_secondary_accs'};
 }
 
-#Used
+=head2 accession
+
+Get/set method for the accession of the clone. Must be set for
+embl_setup to succeed.
+
+=cut
+
 sub accession {
     my ( $self, $value ) = @_;
     
@@ -384,7 +424,13 @@ sub accession {
     return $self->{'_bio_otter_embl_factory_accession'};
 }
 
-#Used
+=head2 chromosome_name
+
+Get/set method for the name of the chromosome to which the clone
+belongs.
+
+=cut
+
 sub chromosome_name {
     my ( $self, $value ) = @_;
     
@@ -394,7 +440,13 @@ sub chromosome_name {
     return $self->{'_bio_otter_embl_factory_chromosome_name'};
 }
 
-#Used
+=head2 sequence_version
+
+Get/set method for the sequence version of the clone. Must be set for
+embl_setup to succeed.
+
+=cut
+
 sub sequence_version {
     my ( $self, $value ) = @_;
     
@@ -404,7 +456,12 @@ sub sequence_version {
     return $self->{'_bio_otter_embl_factory_sequence_version'};
 }
 
-#Used
+=head2 desciption
+
+Get/set method for the EMBL DE line description.
+
+=cut
+
 sub description {
     my ( $self, $value ) = @_;
     
@@ -414,7 +471,14 @@ sub description {
     return $self->{'_bio_otter_embl_factory_description'};
 }
 
-#Used
+
+=head2 keywords
+
+Get/set method for the EMBL KW line description. Expects a string of
+the keywords separated by spaces.
+
+=cut
+
 sub keywords {
     my ( $self, $value ) = @_;
     
@@ -424,7 +488,13 @@ sub keywords {
     return $self->{'_bio_otter_embl_factory_keywords'};
 }
 
-#Used
+=head2 entry_name
+
+Get/set method for the EMBL entry name (shown in the ID line).
+Generally the same as the accession.
+
+=cut
+
 sub entry_name {
     my ( $self, $value ) = @_;
     
@@ -434,7 +504,13 @@ sub entry_name {
     return $self->{'_bio_otter_embl_factory_entry_name'};
 }
 
-#Used
+=head2 data_class
+
+Get/set method for the EMBL data class. Generally set to
+'standard'.
+
+=cut
+
 sub data_class {
     my ( $self, $value ) = @_;
     
@@ -446,12 +522,11 @@ sub data_class {
 
 =head2 mol_type
 
-Get/set method for the embl mol_type. Defaults to 'genomic DNA' unless
+Get/set method for the EMBL mol_type. Defaults to 'genomic DNA' unless
 set explicitly.
 
 =cut
 
-#Used
 sub mol_type {
     my ( $self, $value ) = @_;
     
@@ -465,7 +540,13 @@ sub mol_type {
     return $self->{'_bio_otter_embl_factory_mol_type'};
 }
 
-#Used
+
+=head2 division
+
+Get/set method for the EMBL divison.
+
+=cut
+
 sub division {
     my ( $self, $value ) = @_;
     
@@ -475,7 +556,13 @@ sub division {
     return $self->{'_bio_otter_embl_factory_division'};
 }
 
-#Used
+
+=head2 division
+
+Get/set method for the EMBL divison.
+
+=cut
+
 sub seq_length {
     my ( $self, $value ) = @_;
     
@@ -485,17 +572,13 @@ sub seq_length {
     return $self->{'_bio_otter_embl_factory_seq_length'};
 }
 
-#Used
-sub ac_star_id {
-    my ( $self, $value ) = @_;
-    
-    if ($value) {
-        $self->{'_bio_otter_embl_factory_ac_star_id'} = $value;
-    }
-    return $self->{'_bio_otter_embl_factory_ac_star_id'};
-}
 
-#Used
+=head2 clone_lib
+
+Get/set method for the clone library name.
+
+=cut
+
 sub clone_lib {
     my ( $self, $value ) = @_;
     
@@ -505,7 +588,12 @@ sub clone_lib {
     return $self->{'_bio_otter_embl_factory_clone_lib'};
 }
 
-#Used
+=head2 contig_length
+
+Get/set method for the contig_length.
+
+=cut
+
 sub contig_length {
     my ( $self, $value ) = @_;
     
@@ -515,7 +603,12 @@ sub contig_length {
     return $self->{'_bio_otter_embl_factory_contig_length'};
 }
 
-#Used
+=head2 clone_name
+
+Get/set method for the clone name.
+
+=cut
+
 sub clone_name {
     my ( $self, $value ) = @_;
     
@@ -558,22 +651,6 @@ sub Slice_contig {
     return $self->{'_bio_otter_embl_factory_slice_contig'};
 }
 
-=head2 FeatureSet
- 
-Get/set method for the Hum::EMBL::FeatureSet object being constructed as part of the
-Hum::EMBL object creation. Initially set by the make_embl method.
-
-=cut
-
-sub FeatureSet {
-    my ( $self, $FeatureSet ) = @_;
-    
-    if ($FeatureSet) {
-        $self->{'_bio_otter_embl_factory_feature_set'} = $FeatureSet;
-    }
-    return $self->{'_bio_otter_embl_factory_feature_set'};
-}
-
 =head2 make_embl_ft
 
 This is the principal method of the module. When passed an EMBL accession,
@@ -607,7 +684,6 @@ g)  Returns the populated Hum::EMBL object
 
 =cut
 
-#Used
 sub make_embl_ft {
     my ( $self, $acc, $embl, $sequence_version ) = @_;
 
@@ -656,7 +732,6 @@ there is only one contig in the clone, otherwise confesses.
 
 =cut
 
-#Used
 sub get_clone_length_from_otter {
     my ( $self ) = @_;
     
@@ -678,7 +753,6 @@ Confesses if nothing is returned.
 
 =cut
 
-#Used
 sub get_chromosome_name_from_otter {
     my ( $self ) = @_;
     
@@ -700,7 +774,6 @@ previously set.
 
 =cut
 
-#Used
 sub _cache_annotated_clone {
     my ( $self ) = @_;
     
@@ -727,7 +800,6 @@ _cache_annotated_clone
 
 =cut
 
-#Used
 sub annotated_clone {
     my ( $self ) = @_;
     
@@ -739,7 +811,7 @@ sub annotated_clone {
 
 =head2 get_description_from_otter
 
-Given an accession and sequence version, fetches thean Otter AnnotatedClone.
+Given an accession and sequence version, fetches the Otter AnnotatedClone.
 Gets the CloneRemark objects from the CloneInfo object and returns the
 text of the one containing the description.
 
@@ -747,7 +819,6 @@ Warns if no CloneRemarks are fetched for the clone, returning undef.
 
 =cut
 
-#Used
 sub get_description_from_otter {
 	my ( $self ) = @_;
     
@@ -773,7 +844,7 @@ sub get_description_from_otter {
 
 =head2 get_keywords_from_otter
 
-Given an accession and sequence version, fetches thean Otter AnnotatedClone.
+Given an accession and sequence version, fetches the Otter AnnotatedClone.
 Gets the Keyword objects from the CloneInfo object and returns their text
 as a list.
 
@@ -781,7 +852,6 @@ Warns if no Keyword objects are fetched for the clone, returning undef.
 
 =cut 
 
-#Used
 sub get_keywords_from_otter {
 	my ( $self ) = @_;
     
@@ -819,7 +889,6 @@ These are stored in Otter as SimpleFeatures on the Slice
 
 =cut
 
-#Used
 sub _do_polyA {
     my ( $self, $slice, $set ) = @_;
     
@@ -953,9 +1022,6 @@ sub _do_Gene {
                 warn "No CDS exons\n";
             }
         }
-        
-        #If gene->type =~ /pseudo/i
-        
     }
 }
 
@@ -1125,7 +1191,6 @@ used to access the Otter database.
 
 =cut
 
-#Used 
 sub SequenceSet {
     my ( $self, $obj ) = @_;
     
@@ -1145,7 +1210,6 @@ used to access the Otter database.
 
 =cut
 
-#Used 
 sub DataSet {
     my ( $self, $obj ) = @_;
     

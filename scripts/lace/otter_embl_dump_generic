@@ -1,10 +1,10 @@
 #!/usr/local/bin/perl -w
 
-### otter_embl_dump_test
+### otter_embl_dump_generic
 
 =pod
 
-=head1 NAME - otter_embl_dump_test
+=head1 NAME - otter_embl_dump_generic
 
 =head1 COMMAND LINE PARAMETERS
 
@@ -17,23 +17,27 @@ Optional parameters
 
 =head1 DESCRIPTION
 
-Test script to for dumping of EMBL files from an
-Otter database containing finished genomic sequence
-annotation.
+Generic script for dumping EMBL files from an Otter database
+containing finished genomic sequence annotation.
 
-One should be able to customise this script to dump
-EMBL from Otter for practically any purpose.
+otter_embl_dump_generic does not access the Oracle tracking
+database, so embl entries can be dumped from any (potentially
+external) project. It uses 'embl_setup' to construct and populate
+the Hum::EMBL object, which is later used by 'make_embl_ft'. Where
+Factory attributes are not set specifically by the 
+otter_embl_dump_generic script, where possible they are fetched
+from the Otter database.
+
+One should be able to customise this script to dump EMBL from Otter
+for practically any purpose.
 
 Expects acc.sv for the clones to be dumped:
 
 e.g. 
 
-otter_embl_dump_test -dataset human -chr chr1-07 AC114498.2
+otter_embl_dump_generic -dataset human -chr chr1-07 AC114498.2
 
-Where possible, when data is not explicitly provided in the
-script, it is obtained from Otter.
-
-Currently does this for:
+Data that can be obtained from Otter:
 
   Species
   EMBL divsion
@@ -82,6 +86,28 @@ use Carp;
         , 'To go in the EMBL record'
     );
     
+    
+    my @reference1_text = (
+        'Submitted (13-JUL-2004) to the EMBL/Genbank/DDBJ databases.'
+        , 'Wellcome Trust Sanger Institute, Hinxton, Cambridgeshire, CB10 1SA, UK.'
+        , 'E-mail enquiries: vega@sanger.ac.uk'
+        , 'Clone requests: clonerequest@sanger.ac.uk'
+    );
+
+    my @reference2_text = (
+        'Text for reference 2 goes here.'
+    );
+    
+    my $reference_1 = ['1'
+        , ''
+        , 'Tracey A.'
+        , \@reference1_text];
+
+    my $reference_2 = ['2'
+        , ''
+        , 'Another A.N.'
+        , \@reference2_text];
+        
     foreach my $acc (@ARGV) {
         
         my ($accession, $seq_version) = $acc =~ /(^.*)\.(\d+)/ 
@@ -92,15 +118,19 @@ use Carp;
         $ft_factory->SequenceSet($ss);
         $ft_factory->accession($accession);
         $ft_factory->sequence_version($seq_version);
+        
+        my $clone_length = $ft_factory->get_clone_length_from_otter;
+        $reference_1->[1] = "1-$clone_length";
+        $reference_2->[1] = "1-$clone_length";
         $ft_factory->entry_name($accession);
         $ft_factory->data_class('standard');
-        $ft_factory->mol_type('genomic DNA');
-        $ft_factory->ac_star_id('FAKE');
         $ft_factory->clone_lib('to_be_provided');
         $ft_factory->clone_name('to_be_provided_2');
         $ft_factory->keywords('HTG');
         $ft_factory->comments(\@comments);
         $ft_factory->comments(\@comments2);
+        $ft_factory->references($reference_1);
+        $ft_factory->references($reference_2);
 
         my $embl = $ft_factory->embl_setup();
         $ft_factory->make_embl_ft($accession, $embl, $seq_version);
