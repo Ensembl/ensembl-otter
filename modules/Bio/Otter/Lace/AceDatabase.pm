@@ -135,7 +135,6 @@ sub fetch_otter_ace {
                 # from so that we can save it back.
                 $self->save_slice_name_dataset($slice_name, $ds);
                 $ace .= Bio::Otter::Converter::otter_to_ace($slice, $genes, $tiles, $sequence);
-                $ace .= $self->sMap_assembly_info_from_contig($ctg, $slice_name);
             }
         }
     }
@@ -145,41 +144,6 @@ sub fetch_otter_ace {
     } else {
         return;
     }
-}
-
-sub sMap_assembly_info_from_contig {
-    my( $self, $ctg, $slice_name ) = @_;
-    
-    my $ace = qq{\nSequence : "$slice_name"\n};
-    my $offset = $ctg->[0]->chr_start - 1;
-    foreach my $cs (@$ctg) {
-        my $acc             = $cs->accession;
-        my $sv              = $cs->sv;
-        my $chr_start       = $cs->chr_start  - $offset;
-        my $chr_end         = $cs->chr_end    - $offset;
-        my $contig_start    = $cs->contig_start;
-        my $contig_end      = $cs->contig_end;
-        my $strand          = $cs->contig_strand;
-
-        my $name = "$acc.$sv";
-    
-        # Clone in reverse orientaton in AGP is indicated
-        # to acedb by chr_start > chr_end
-        if ($strand == 1) {
-            $ace .= qq{AGP_Fragment "$name" $chr_start $chr_end Align $chr_start $contig_start\n};
-        }
-        elsif ($strand == -1) {
-            #$ace .= qq{AGP_Fragment "$name" $chr_end $chr_start Align $chr_start $contig_end\n};
-            $ace .= qq{AGP_Fragment "$name" $chr_end $chr_start Align $chr_end $contig_start\n};
-        } else {
-            confess "Unrecognized strand '$strand'";
-        }
-        ## The length of the fragment is needed where the same sequence ($name)
-        ## appears twice in the assembly.  If this happens and length is not
-        ## filled in, then acedb gets confused!
-        #my $len = $contig_end - $contig_start + 1;
-    }
-    return $ace;
 }
 
 sub save_slice_name_dataset {

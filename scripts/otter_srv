@@ -212,7 +212,7 @@ sub make_new_child {
         close $out;
         waitpid $pid, 0;
       } elsif ($r->method eq 'POST' and $r->url->path eq "/perl/unlock_region") {
-        print "OTTER_SERVER : Doing write_region\n";
+        print "OTTER_SERVER : Doing unlock_region\n";
         $ENV{SCRIPT_FILENAME} = "$SCRIPTDIR/unlock_region";
         my $in;
         my $out;

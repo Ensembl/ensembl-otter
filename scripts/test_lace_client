@@ -45,7 +45,7 @@ use Bio::Otter::Lace::Client;
         die "Error initialzing database";
     }
     
-    #system('xace', $db->home);
+    system('xace', $db->home);
     
     $db->save_all_slices if $write_flag;
 }

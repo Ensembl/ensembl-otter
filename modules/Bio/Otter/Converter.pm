@@ -498,7 +498,7 @@ sub XML_to_otter {
         || ($slice->chr_start + $tile->assembled_start - 1) != $frag{$fragname}{start}
         || ($slice->chr_start + $tile->assembled_end   - 1) != $frag{$fragname}{end}
       ) {
-        die "Assembly doesn't match for contig $fragname";
+        die "Assembly doesn't match for contig $fragname\n";
       }
     }
   }
@@ -554,32 +554,20 @@ sub otter_to_ace {
     my $chrstart = $slice->chr_start;
     my $chrend   = $slice->chr_end;
 
+    # Add SMap tags for assembly
     foreach my $tile (@$path) {
-        my $start;
-        my $end;
+        my $start           = $tile->assembled_start - $chrstart + 1;
+        my $end             = $tile->assembled_end   - $chrstart + 1;
+        my $contig_start    = $tile->component_start;
+        my $name            = $tile->component_Seq->name;
 
         if ($tile->component_ori == 1) {
-          $start = $chrstart + $tile->assembled_start - 1;
-          $end   = $chrstart + $tile->assembled_end - 1;
+            $str .= qq{AGP_Fragment "$name" $start $end Align $start $contig_start\n};
         } else {
-          $end     = $chrstart + $tile->assembled_start - 1 ;
-          $start   = $chrstart + $tile->assembled_end - 1;
-        } 
-        $str .= sprintf qq{Feature TilePath %d %d %f "%s"\n}, $start, $end, 1, $tile->component_Seq->name;
-    }
-    foreach my $tile (@$path) {
-        my $start;
-        my $end;
-
-        if ($tile->component_ori == 1) {
-          $start = $tile->assembled_start;
-          $end   = $tile->assembled_end;
-        } else {
-          $end   = $tile->assembled_start ;
-          $start = $tile->assembled_end;
+            # Clone in reverse orientaton in AGP is indicated
+            # to acedb by first coordinate > second
+            $str .= qq{AGP_Fragment "$name" $end $start Align $end $contig_start\n};
         }
-        $str .= sprintf qq{SubSequence "%s" %d %d\n}, 
-                      $tile->component_Seq->name, $start, $end;
     }
   }
 
@@ -971,7 +959,7 @@ sub ace_to_otter {
             my $name   = $1;
             my $start  = $2;
             my $end    = $3;
-            # Do we need $4?
+            # Don't need $4
             my $offset = $5;
             
             ### Not tested for reverse strand!
@@ -979,7 +967,6 @@ sub ace_to_otter {
             if ($start > $end) {
                 $strand = -1;
                 ($start, $end) = ($end, $start);
-                $offset -= ($end - $start);
             }
             
             $frags{$name} = {
