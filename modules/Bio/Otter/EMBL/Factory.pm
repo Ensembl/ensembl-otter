@@ -11,9 +11,7 @@
 # preceded with a _
 #
 
-=head1 NAME
- 
-Bio::Otter::EMBL::Factory
+=head1 NAME Bio::Otter::EMBL::Factory
 
 =head2 Description
 
@@ -188,6 +186,61 @@ sub fake_embl_setup {
 
 }
 
+=head2 fake_features
+
+Debugging method, just to see how features are made
+To be removed later
+
+=cut
+
+sub fake_features {
+    my ( $self ) = @_;
+    
+    my $set = $self->FeatureSet;
+    
+    #Hum::EMBL::Line::FT
+    my $ft = $set->newFeature;
+    my $key = 'mRNA'; # or 'CDS'
+    $ft->key($key);
+    
+    my $loc = Hum::EMBL::Location->new;
+    $loc->strand('W');
+    $loc->exons([1000, 1024], [1048, 1100], [1112, 1196]);
+    $ft->location($loc);
+    $ft->addQualifierStrings('gene', "fcuk");
+    $ft->addQualifierStrings('standard_name', "assmapper");
+    $ft->addQualifierStrings('evidence','NOT_EXPERIMENTAL');
+    
+    my $ft2 = $set->newFeature;
+    my $key2 = 'mRNA'; # or 'CDS'
+    $ft2->key($key2);
+    my $loc2 = Hum::EMBL::Location->new;
+    $loc2->strand('C');
+    $loc2->exons([2000, 2024], [2048, 2100], [2112, 2196]);
+    $ft2->location($loc2);
+    $ft2->addQualifierStrings('gene', "blows_chunks");
+    $ft2->addQualifierStrings('standard_name', "badass");
+    $ft2->addQualifierStrings('evidence','EXPERIMENTAL');
+
+    my $ft3 = $set->newFeature;
+    my $key3 = 'mRNA'; # or 'CDS'
+    $ft3->key($key3);
+    my $loc3 = Hum::EMBL::Location->new;
+    $loc3->strand('C');
+    $loc3->exons(34);
+    $ft3->location($loc3);
+    $ft3->addQualifierStrings('gene', "blows_chunks");
+    $ft3->addQualifierStrings('standard_name', "badass");
+    $ft3->addQualifierStrings('evidence','EXPERIMENTAL');
+
+    #locations_from_subsequence ??
+
+    #$ft->addQualifier($product);
+
+
+  #  my $loc = simple_location(6104,7000);
+}
+
 =head2 Embl
 
 Get/set method for the Hum::EMBL object being constructed by the factory object.
@@ -209,7 +262,6 @@ sub EMBL {
     return $self->{'_bio_otter_embl_factory_embl'};
 }
 
-
 =head2 contig_length
 
 Get/set method for the contig_length of the Slice_contig on the tiling path 
@@ -224,7 +276,6 @@ sub contig_length {
     }
     return $self->{'_bio_otter_embl_factory_contig_length'};
 }
-
 
 =head2 Slice
 
@@ -254,6 +305,7 @@ sub Slice_contig {
     
     if ($slice_contig) {
         $self->{'_bio_otter_embl_factory_slice_contig'} = $slice_contig;
+        $self->contig_length($slice_contig->length);
     }
     return $self->{'_bio_otter_embl_factory_slice_contig'};
 }
@@ -332,6 +384,7 @@ sub make_embl {
     my ( $self, $acc ) = @_;
 
     confess "Must pass an accession" unless $acc;
+    warn "sortByPosition and removeDuplicateFeatures not being called\n";
 
     my $ds = $self->Dataset
         or confess "Dataset must be set before calling make_embl";
@@ -346,19 +399,13 @@ sub make_embl {
     
     foreach my $chr_s_e ($self->fetch_chr_start_end_for_accession($otter_db, $acc)) {
 
-        #Debug stuff
-        print "ACC: $acc ";  
-        print "Chr: ", $chr_s_e->[0], " Start: "
-            , $chr_s_e->[1], " End: ", $chr_s_e->[2], "\n";
-
         #Get the Bio::EnsEMBL::Slice
         my $slice = $self->Slice($slice_aptr->fetch_by_chr_start_end(@$chr_s_e));
         my $tile_path = $self->get_tiling_path_for_Slice($slice);
 
         #Bio::EnsEMBL::RawContig
-        my $slice_contig = $self->Slice_contig($tile_path->[0]->component_Seq);
-        my $contig_length = $self->contig_length($slice_contig->length);
-
+        $self->Slice_contig($tile_path->[0]->component_Seq);
+ 
         my $gene_id_list = $gene_aptr->list_current_dbIDs_for_Slice($slice);
         foreach my $gid (@$gene_id_list) {
 
@@ -367,75 +414,33 @@ sub make_embl {
         }
     }
     
-    $self->fake_features;
-    
     #Finish up, add the genes and other features into the entry
-    $set->sortByPosition;
-    $set->removeDuplicateFeatures;
+    
+    #$set->sortByPosition;
+    #$set->removeDuplicateFeatures;
     $set->addToEntry($embl);
     return $embl;
-}
-
-=head2 fake_features
-
-Debugging method, just to see how features are made
-To be removed later
-
-=cut
-
-sub fake_features {
-    my ( $self ) = @_;
-    
-    my $set = $self->FeatureSet;
-    
-    #Hum::EMBL::Line::FT
-    my $ft = $set->newFeature;
-    my $key = 'mRNA'; # or 'CDS'
-    $ft->key($key);
-    
-    my $loc = Hum::EMBL::Location->new;
-    $loc->strand('W');
-    $loc->exons([1000, 1024], [1048, 1100], [1112, 1196]);
-    $ft->location($loc);
-    $ft->addQualifierStrings('gene', "fcuk");
-    $ft->addQualifierStrings('standard_name', "assmapper");
-    $ft->addQualifierStrings('evidence','NOT_EXPERIMENTAL');
-    
-    my $ft2 = $set->newFeature;
-    my $key2 = 'mRNA'; # or 'CDS'
-    $ft2->key($key2);
-    my $loc2 = Hum::EMBL::Location->new;
-    $loc2->strand('C');
-    $loc2->exons([2000, 2024], [2048, 2100], [2112, 2196]);
-    $ft2->location($loc2);
-    $ft2->addQualifierStrings('gene', "blows_chunks");
-    $ft2->addQualifierStrings('standard_name', "badass");
-    $ft2->addQualifierStrings('evidence','EXPERIMENTAL');
-
-    my $ft3 = $set->newFeature;
-    my $key3 = 'mRNA'; # or 'CDS'
-    $ft3->key($key3);
-    my $loc3 = Hum::EMBL::Location->new;
-    $loc3->strand('C');
-    $loc3->exons(34);
-    $ft3->location($loc3);
-    $ft3->addQualifierStrings('gene', "blows_chunks");
-    $ft3->addQualifierStrings('standard_name', "badass");
-    $ft3->addQualifierStrings('evidence','EXPERIMENTAL');
-
-    #locations_from_subsequence ??
-
-    #$ft->addQualifier($product);
-
-
-  #  my $loc = simple_location(6104,7000);
 }
 
 
 =head2 do_Gene
 
-Method to add ?? to the Hum::EMBL object being 
-Passed a Bio::Otter::AnnotatedGene object, 
+Method to add FT lines to the Hum::EMBL object being built, according to the
+passed Gene object. For each Transcript in the Gene object mRNA and CDS lines
+are added.
+
+The mRNA is built up by iterating over all Exons ($transcript->get_all_Exons),
+the CDS by Exons fetched with $transcript->get_???
+
+For each mRNA, or CDS a Hum::EMBL::ExonCollection object is created to which
+a number of Hum::EMBL::Exon objects are added.
+
+By checking whether the Contig the Exon is located on is the same as the
+Slice_contig, can determin whether the Exon is on the Slice (ie: clone)
+or the adjacent one (in which case accession.sequence_version) needs to be
+added to the newFeature being built up.
+
+Currently flags a warning, if StickyExon(s) are found.
 
 =cut
 
@@ -461,33 +466,35 @@ sub do_Gene {
         if ($all_transcript_Exons) {
             my $ft = $set->newFeature;
             $ft->key('mRNA');
-            my $loc = Hum::EMBL::ExonCollection->new;
-            $ft->location($loc);
+            my $mRNA_exoncollection = Hum::EMBL::ExonCollection->new;
+            $ft->location($mRNA_exoncollection);
 
-            my @hum_exons;
+            my @mRNA_exons;
             foreach my $exon (@{$all_transcript_Exons}) {
 
-                my $hum_exon = Hum::EMBL::Exon->new;
-                $hum_exon->strand($exon->strand);
+                my $mRNA_exon = Hum::EMBL::Exon->new;
+                $mRNA_exon->strand($exon->strand);
                 
                 #Bio::EnsEMBL::RawContig, each exon knows its contig
                 my $contig  = $exon->contig;
                 my $start   = $exon->start;
                 my $end     = $exon->end;
 
-                $hum_exon->start($start);
-                $hum_exon->end($end);
+                my $slice_contig = $self->Slice_contig;
+
+                $mRNA_exon->start($start);
+                $mRNA_exon->end($end);
 
                 # May be an is_sticky method?
                 if ($exon->isa('Bio::Ensembl::StickyExon')) {
                     # Deal with sticy exon
                     warn "STICKY!\n";
                 }
-                elsif ($contig != $self->Slice_contig()) {
+                elsif ($contig->dbID != $slice_contig->dbID) {
                     # Is not on the Slice
                     my $acc = $contig->clone->embl_id;
                     my $sv  = $contig->clone->embl_version;
-                    $hum_exon->accession_version("$acc.$sv");
+                    $mRNA_exon->accession_version("$acc.$sv");
                 }
                 else {
                     # Is on Slice (ie: clone)
@@ -496,9 +503,14 @@ sub do_Gene {
                             . "on contig of length '$contig_length'\n";
                     }
                 }
-                push(@hum_exons, $hum_exon);
+                push(@mRNA_exons, $mRNA_exon);
             }
-            $loc->exons(@hum_exons);
+            $mRNA_exoncollection->exons(@mRNA_exons);
+            
+            #Set the start and end for the Hum::EMBL::ExonCollection
+            $mRNA_exoncollection->start($mRNA_exons[0]->start);
+            $mRNA_exoncollection->end($mRNA_exons[-1]->end);
+            
         }
     }
 }
