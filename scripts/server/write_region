@@ -323,9 +323,9 @@ print STDERR "About to write success response\n";
 print $q->header();
 #print("<otter>\n");
 #print("  <response>\n");
-if ($outputstr eq "") {
-   $outputstr = "No changes to annotations";
-}
+#if ($outputstr && $outputstr eq "") {
+   $outputstr ||= "No changes to annotations";
+#}
 print($outputstr);
 #print("  </response>\n");
 #print("</otter>\n");
