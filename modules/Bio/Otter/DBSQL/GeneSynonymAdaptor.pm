@@ -25,7 +25,6 @@ use vars qw(@ISA);
 
 sub _generic_sql_fetch {
 	my( $self, $where_clause ) = @_;
-
 	my $sql = q{
 		SELECT synonym_id,
 		       name,
@@ -40,14 +39,20 @@ sub _generic_sql_fetch {
 	my @out;
 
 	while  (my $ref = $sth->fetchrow_hashref) {
+
 	    my $obj = new Bio::Otter::GeneSynonym;
+	    eval {
 		$obj->dbID($ref->{synonym_id});
-		$obj->name($ref->{name});
-		$obj->gene_info_id($ref->{gene_info_id});
-		
+	        $obj->name($ref->{name});
+	        $obj->gene_info_id($ref->{gene_info_id});
+	    };
+	    if ($@){
+	      warn "No dbID: can't fetch synonym_id";
+              warn "Can't fetch name";
+	      warn "Cant' fetch gene info";
+            }
 	    push(@out,$obj);
-	    
-	}
+	  }
 	return @out;
 
 }
@@ -122,7 +127,6 @@ sub list_by_gene_info_id{
 	}
 
    my @obj = $self->_generic_sql_fetch("where gene_info_id = $id");
-
    return @obj;
 
 }

@@ -4,7 +4,9 @@ use vars qw(@ISA);
 use strict;
 use Bio::EnsEMBL::Gene;
 
+
 @ISA = qw(Bio::EnsEMBL::Gene);
+
 
 sub new {
   my($class,@args) = @_;

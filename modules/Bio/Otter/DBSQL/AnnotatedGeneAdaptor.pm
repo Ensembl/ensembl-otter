@@ -206,6 +206,7 @@ sub list_current_dbIDs_for_Slice {
     
     my $tiling_path = $slice->get_tiling_path;
     my $ctg_id_list = join(',', map($_->component_Seq->dbID, @$tiling_path));
+
     my $sth = $self->db->prepare(qq{
         SELECT gsid.stable_id
           , g.gene_id
@@ -227,7 +228,7 @@ sub list_current_dbIDs_for_Slice {
         ORDER BY gsid.version ASC
         });
     $sth->execute($slice->assembly_type);
-    
+
     my( %sid_gid );
     while (my ($sid, $gid) = $sth->fetchrow) {
         $sid_gid{$sid} = $gid;

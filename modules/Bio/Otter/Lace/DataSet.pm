@@ -663,7 +663,7 @@ sub tmpstore_meta_info_for_SequenceSet{
     confess("$ss says I'm not a sequence set") unless $ss->isa("Bio::Otter::Lace::SequenceSet");
     # write some sql
     my $tmp_tbl_meta   = $self->_tmp_table_by_name("meta_info");
-    my $create_tmp_tbl = qq{CREATE TEMPORARY TABLE $tmp_tbl_meta SELECT assembly_type, description, analysis_priority FROM sequence_set WHERE 1 = 0};
+    my $create_tmp_tbl = qq{CREATE TEMPORARY TABLE $tmp_tbl_meta SELECT * FROM sequence_set WHERE 1 = 0};
     my $insert_ss      = qq{INSERT INTO $tmp_tbl_meta (assembly_type, description, analysis_priority) VALUES(?, ?, ?)};
     my $max_chr_end_q  = qq{SELECT IFNULL(MAX(a.chr_end), 0) AS max_chr_end 
 				   FROM $tmp_tbl_meta ss, assembly a 
@@ -960,7 +960,6 @@ sub get_cached_DBAdaptor {
     unless($self->{'_dba_cache'}){
 	$self->{'_dba_cache'} = $self->make_DBAdaptor;
 	$self->_attach_DNA_DBAdaptor($self->{'_dba_cache'});
-	#warn $self->{'_dba_cache'}->dnadb->dbname;
     }
     #warn "OTTER DBADAPTOR = '$dba'";
     return $self->{'_dba_cache'};
@@ -974,7 +973,7 @@ sub make_EnsEMBL_DBAdaptor {
 
 sub make_DBAdaptor {
     my( $self ) = @_;
-    
+
     return $self->_make_DBAdptor_with_class('Bio::Otter::DBSQL::DBAdaptor');
 }
 

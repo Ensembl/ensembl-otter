@@ -141,7 +141,7 @@ sub fetch_by_gene_info_id{
 =cut
 
 sub store {
-    my ($self,$obj) = @_;
+    my ($self, $obj) = @_;
 
     if (!defined($obj)) {
 	$self->throw("Must provide a GeneName object to the store method");
@@ -150,20 +150,21 @@ sub store {
 	}
 
     my $tmp = $self->exists($obj);
-
     if (defined($tmp)) {
 	$obj->dbID($tmp->dbID);
 	return;
     }
 
+
     my $sql = "insert into gene_name(gene_name_id,name,gene_info_id) values (null,\'" . 
-	$obj->name . "\',".
-	$obj->gene_info_id . ")";
+	 $obj->name . "\',".
+	 $obj->gene_info_id . ");";  
+ 
 
     my $sth = $self->prepare($sql);
-    my $rv = $sth->execute();
+    my $rv = $sth->execute();    
 
-    $self->throw("Failed to insert gene_name " . $obj->name) unless $rv;
+    $self->throw("Failed to insert gene_name " . $obj->name) unless $rv; 
 
     $sth = $self->prepare("select last_insert_id()");
     my $res = $sth->execute;
@@ -193,8 +194,9 @@ sub exists {
     } elsif (! $obj->isa("Bio::Otter::GeneName")) {
 	$self->throw("Argument must be a GeneName object to the exists method.  Currently is [$obj]");
     }
-
+      warn $obj->name, "  NEW";
     if (!defined($obj->name)) {
+
 	$self->throw("Can't check if a GeneName exists without a name");
     }
     if (!defined($obj->gene_info_id)) {
@@ -202,7 +204,7 @@ sub exists {
     }
 
     my $geneNames = $self->_generic_sql_fetch("where name = ? and gene_info_id = ?", [$obj->name, $obj->gene_info_id]);
-
+ 
     return @$geneNames ? $geneNames->[0] : undef; # not sure this is right, previous behaviour though
 
 }

@@ -113,7 +113,6 @@ sub annotate_clone {
 
 sub fetch_by_Slice {
   my ( $self, $slice) = @_;
-
   my @out;
   my $mapper = $self->db->get_AssemblyMapperAdaptor->fetch_by_type
     ( $slice->assembly_type() );
