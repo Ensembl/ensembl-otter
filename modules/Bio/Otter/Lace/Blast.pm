@@ -13,6 +13,7 @@
 ## BEGIN Block to avoid some hassle with pipeline configuration
 
 BEGIN{
+# or put %Config here and modify symbol table as below
 #     *{"Bio::EnsEMBL::Pipeline::Config::General::Config"} = \%Config;
 #     *{"Bio::EnsEMBL::Pipeline::Config::Blast::Config"} = \%Config;
 
@@ -140,7 +141,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.3 $ ';
+$revision='$Revision: 1.4 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
