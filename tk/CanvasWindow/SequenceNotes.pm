@@ -632,29 +632,54 @@ sub _open_SequenceSet{
     my $cl = $self->Client;
 #    my $title = $self->selected_sequence_string($ss);
 
-    my $db = $self->Client->new_AceDatabase;
+    my $db = $cl->new_AceDatabase;
+    $db->make_database_directory;
     $db->title($title);
     $db->error_flag(1);
+    my $write_access = $cl->write_access();
+
+    if($write_access){
+        # only lock the region if we have write access.
+        eval{
+            my $dsObj = $cl->get_DataSet_by_name($ss->dataset_name);
+            confess "Can't find DataSet that SequenceSet belongs to"
+                unless $dsObj;
+            $dsObj->selected_SequenceSet($ss);
+            my $ctg_list = $ss->selected_CloneSequences_as_contig_list()
+                or confess "No CloneSequences selected";
+            foreach my $ctg(@$ctg_list){
+                my $lock_xml = $cl->lock_region_for_contig_from_Dataset($ctg, $dsObj);
+                $db->write_lock_xml($lock_xml, $dsObj->name);
+            }
+        };
+        
+        if($@){ 
+            $db->error_flag(0);
+            if ($@ =~ /Clones locked/){
+                # if our error is because of locked clones, display these to the user
+                my $message = "Some of the clones you are trying to open are locked\n";
+                my @lines = split /\n/ , $@ ;
+                print STDERR $@ ;
+                foreach my $line (@lines ){
+                    if (my ($clone_name , $author) = $line =~ m/(\S+) has been locked by \'(\S+)\'/ ){            
+                        $message  .= "$clone_name is locked by $author \n" ;
+                    }
+                }
+                $self->message( $message  );
+            }else{
+                $self->exception_message($@, 'Error initialising database');
+                print $@;
+            }
+            return;
+        }
+    }
+    # now initialise the database
     eval{
         $self->init_AceDatabase($db, $ss);
     };
     if ($@) {
         $db->error_flag(0);
-        if ($@ =~ /Clones locked/){
-            # if our error is because of locked clones, display these to the user
-            my $message = "Some of the clones you are trying to open are locked\n";
-            my @lines = split /\n/ , $@ ;
-            print STDERR $@ ;
-            foreach my $line (@lines ){
-                if (my ($clone_name , $author) = $line =~ m/(\S+) has been locked by \'(\S+)\'/ ){            
-                    $message  .= "$clone_name is locked by $author \n" ;
-                }
-            }
-            $self->message( $message  );
-        }
-        else{
-            $self->exception_message($@, 'Error initialising database');
-        }
+        $self->exception_message($@, 'Error initialising database');
         return;
     }    
 
@@ -667,8 +692,7 @@ sub _open_SequenceSet{
     $xc->Client($self->Client);
     $xc->initialize;
     $self->refresh_column(7) ; # 7 is the locks column
-
-
+    
 }
 
 # creates a string based on the selected clones, with commas seperating individual values or dots to represent a continous sequence
@@ -713,8 +737,8 @@ sub selected_sequence_string{
 sub init_AceDatabase {
     my( $self, $db, $ss ) = @_;
     
-    $db->make_database_directory;
     $db->write_otter_acefile($ss);
+    $db->write_local_blast($ss);
     $db->write_pipeline_data($ss);
     $db->write_ensembl_data($ss);
     $db->initialize_database;
@@ -909,6 +933,11 @@ sub draw_range{
                                                        -padx => 5,
                                                        -fill => 'x'
                                                        );
+        $search_entry1->bind('<Tab>', sub {
+            $self->{'_user_max_element'} = ($self->{'_user_min_element'} + 100 > $no_of_cs ? $no_of_cs : $self->{'_user_min_element'} + 100)
+            }
+                             );
+
         my $label2 = $entry_frame->Label(-text => "Last Clone: ($no_of_cs)"
                                          )->pack(
                                                  -side   =>  'left'
