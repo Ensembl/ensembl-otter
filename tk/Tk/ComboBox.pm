@@ -6,7 +6,7 @@ package Tk::ComboBox;
 use strict;
 
 use vars qw($VERSION);
-$VERSION = '0.1'; # $Id: ComboBox.pm,v 1.2 2002-06-25 14:27:46 jgrg Exp $
+$VERSION = '0.1'; # $Id: ComboBox.pm,v 1.3 2002-08-12 13:38:38 jgrg Exp $
 
 use Tk qw(Ev);
 use Carp;
@@ -289,14 +289,16 @@ sub choices {
    $w->delete( qw/0 end/ );
    my %hash;
    my $var = $w->cget('-textvariable');
-   my $old = $$var;
+   #my $old = $$var;
    foreach my $val (@$choices)
     {
      $w->insert( 'end', $val);
      $hash{$val} = 1;
     }
-   $old = (@$choices) ? $choices->[0] : undef unless exists $hash{$old};
-   $$var = $old;
+   #unless (defined($old) and exists $hash{$old}) {
+   #    $old = (@$choices) ? $choices->[0] : undef;
+   #}
+   #$$var = $old;
   }
  else
   {

@@ -1,0 +1,236 @@
+#!/nfs/humace2/hum/bin/perl -w
+
+### ana_status
+
+use strict;
+use CanvasWindow;
+use Hum::Submission 'prepare_statement';
+use Tk::ComboBox;
+use POSIX 'ceil';
+
+my  $prop_font = ['helvetica',        12, 'normal'];
+my $fixed_font = ['lucidatypewriter', 15, 'normal'];
+
+{
+    my $mw = CanvasWindow::MainWindow->new('Analysis Status');
+    my $cw = CanvasWindow->new($mw);
+    
+    add_query_widgets($mw, $cw);
+    
+    $cw->fix_window_min_max_sizes;
+    Tk::MainLoop();
+}
+
+{
+    my( $set_name, $cb );
+
+    sub add_query_widgets {
+        my( $mw, $cw ) = @_;
+
+        my $q_frame = $mw->Frame->pack(-side => 'bottom');
+        $cb = $q_frame->ComboBox(
+            -label      => 'Set name',
+            -background         => 'white',
+            -selectbackground   => 'gold',
+            -width              => 20,
+            -font               => $fixed_font,
+            -variable           => \$set_name,
+            -listcmd            => \&list_sets,
+            )->pack(-side => 'left');
+        my $search = $q_frame->Button(
+            -text       => 'Show',
+            -command    => sub { show_status_for_set($cw) },
+            )->pack(-side => 'left');
+    }
+    
+    sub get_set_name {
+        return $set_name;
+    }
+
+    sub list_sets {
+        my $sth = prepare_statement(q{ SELECT set_name FROM ana_set ORDER BY set_name});
+        $sth->execute;
+
+        my( @sets );
+        while (my ($name) = $sth->fetchrow) {
+            push(@sets, $name);
+        }
+        
+        $cb->configure(-choices => [@sets]);
+    }
+}
+
+sub show_status_for_set {
+    my( $cw ) = @_;
+    
+    my $set_name = get_set_name() or return;
+    
+    my $sth = prepare_statement(qq{
+        SELECT ass.rank num
+          , a.is_current
+          , s.sequence_name
+          , sens.ensembl_contig_id num
+          , sens.ensembl_db_id
+        FROM ana_set aset
+          , ana_sequence_set ass
+          , ana_sequence a
+          , sequence s
+        LEFT JOIN ana_sequence_ensembl sens
+          ON a.ana_seq_id = sens.ana_seq_id
+        WHERE aset.set_id = ass.set_id
+          AND ass.ana_seq_id = a.ana_seq_id
+          AND a.seq_id = s.seq_id
+          AND aset.set_name = '$set_name'
+        ORDER BY ass.rank
+        });
+        
+    print_results_from_sth($cw, $sth);
+    #$sth->execute;
+    #while (my @row = $sth->fetchrow) {
+    #    print join("\t", map $_ || 'NULL', @row), "\n";
+    #}
+}
+
+sub print_results_from_sth {
+    my( $cw, $sth ) = @_;
+    
+    $sth->execute;
+    my $col_name = $sth->{'NAME'};
+    my $canvas = $cw->canvas;
+    $canvas->delete('all');
+    my $render_subs = get_render_subroutines();
+    my( @render );
+    foreach my $name (@$col_name) {
+        push(@render, $render_subs->{$name} || \&default_render);
+    }
+    
+    my $row = 0;
+    while (my @data = $sth->fetchrow) {
+        my $row_tag = "row$row";
+        for (my $col = 0; $col < @data; $col++) {
+            my $dat = $data[$col];
+            $dat = '' unless defined($dat);
+            my $col_tag = "col$col";
+            my $rend = $render[$col];
+            &$rend($canvas, $dat, [$row_tag, $col_tag]);
+        }
+        $row++;
+    }
+    
+    layout_canvas($canvas, $row, scalar @render);
+    $cw->fix_window_min_max_sizes;
+}
+
+sub layout_canvas {
+    my( $canvas, $max_row, $max_col ) = @_;
+    
+    my $pad = ceil(($prop_font->[1] * 2) / 3);
+    my $x_pad = $pad * 2;
+    
+    # Put all the columns in the right place
+    my $x = $x_pad;
+    for (my $c = 0; $c < $max_col; $c++) {
+        my $col_tag = "col$c";
+        my ($x1, $x2) = ($canvas->bbox($col_tag))[0,2];
+        my $x_shift = $x - $x1;
+        $canvas->move($col_tag, $x_shift, 0);
+        $x = $x2 + $x_shift + $x_pad;
+    }
+
+    # Put the rows in the right place
+    my $y = $pad;
+    for (my $r = 0; $r < $max_row; $r++) {
+        my $row_tag = "row$r";
+        my ($y1, $y2) = ($canvas->bbox($row_tag))[1,3];
+        my $y_shift = $y - $y1;
+        $canvas->move($row_tag, 0, $y_shift);
+        $y = $y2 + $y_shift + $pad;
+    }
+}
+
+sub default_render {
+    my ($canvas, $dat, $tags) = @_;
+    
+    my $txt = $canvas->createText(10,10,
+        -text => $dat,
+        -font => $prop_font,
+        -anchor => 'nw',
+        #-width  => $max_txt_width,
+        -tags => $tags,
+        );
+    
+}
+
+{
+    my( %id_desc );
+
+    sub get_ens_db_description {
+        my( $id ) = @_;
+        
+        unless (%id_desc) {
+            my $sth = prepare_statement(q{
+                SELECT ensembl_db_id
+                  , db_name
+                  , host
+                FROM ana_ensembl_db
+                });
+            $sth->execute;
+            while (my ($id, $name, $host) = $sth->fetchrow) {
+                $id_desc{$id} = "$name ($host)";
+            }
+        }
+        return $id_desc{$id} || '';
+    }
+}
+
+sub ens_db_render {
+    my( $canvas, $dat, $tags) = @_;
+
+    my $db_description = get_ens_db_description($dat);
+
+    my $txt = $canvas->createText(10,10,
+        -text => $db_description,
+        -font => $prop_font,
+        -anchor => 'nw',
+        #-width  => $max_txt_width,
+        -tags => $tags,
+        );
+}
+
+sub is_current_render {
+    my( $canvas, $dat, $tags) = @_;
+
+    my $size = $prop_font->[1];
+
+    my $color = $dat eq 'Y' ? '#9ecf30' : '#ff4500';
+
+    my $txt = $canvas->createRectangle(10,10, 10+$size, 10+$size,
+        -fill       => $color,
+        -outline    => undef,
+        -tags       => $tags,
+        );
+}
+
+{
+    my( $render_subs );
+
+    sub get_render_subroutines {
+        unless ($render_subs) {
+            $render_subs = {
+                'ensembl_db_id' => \&ens_db_render,
+                'is_current'    => \&is_current_render,
+                };
+        }
+        return $render_subs;
+    }
+}
+
+
+__END__
+
+=head1 NAME - ana_status
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
