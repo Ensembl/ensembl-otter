@@ -8,55 +8,6 @@ use Tk ;
 
 use base 'CanvasWindow';
 
-
-#sub new {
-#    my( $pkg, $tk, $x, $y ) = @_;
-#    
-#    unless ($tk) {
-#        confess "Error usage: $pkg->new(<Tk::Widget object>)";
-#    }
-#
-    ## Make new object and set-get initial canvas size
-    #my $self = bless {}, $pkg;
-    #($x, $y) = $self->initial_canvas_size($x, $y);
-
-#    # Create and store the canvas object
-#    my $scrolled = $tk->Scrolled('Canvas',
-#        -highlightthickness => 1,
-#        -scrollbars         => 'e',
-#        -width              => $x,
-#        -height             => $y,
-#        );
-#    $scrolled->pack(
-#        -side => 'top',
-#        -fill => 'both',
-#        -expand => 1,
-#        );
-#        
-#    my $canvas = $scrolled->Subwidget('canvas');
-#    
-#    # Make a new CanvasWindow object, and return
-#    $self->canvas($canvas);
-#    $self->bind_scroll_commands;
-#        
-#    my $top = $canvas->toplevel;
-#    $self->toplevel($top);
-#    
-#   
-#    return $self;
-#}
-
-
-
-
-#sub toplevel {
-#    my ($self , $tl) = @_ ;
-#    if ($tl){
-#        $self->{'_toplevel'} = $tl ;
-#    }
-#    return $self->{'_toplevel'} ;
-#}
-
 sub toplevel {
     my( $self ) = @_;
     
@@ -69,12 +20,6 @@ sub xace_seq_chooser{
         $self->{'_xace_seq_chooser'} = $seq_chooser ;
     }
     return $self->{'_xace_seq_chooser'} ;
-}
-#for avoiding circular refs when closing
-sub delete_xace_chooser{
-    my $self = shift @_ ;
-    
-    $self->{'_xace_seq_chooser'} = undef;
 }
 
 sub slice_name {
@@ -234,7 +179,9 @@ sub draw{
     $tl->title("Poly A sites / signals for : $slice_name");
     
     
-    my $close_window = sub { $self->close_window};
+    my $close_window = sub { $self->close_window };
+    $tl->bind('<Control-w>',          $close_window);
+    $tl->bind('<Control-W>',          $close_window);
     $tl->protocol('WM_DELETE_WINDOW', $close_window);
     
     
@@ -281,6 +228,10 @@ sub draw{
                           -command => $close_window  )->pack( -side => 'right' , padx=>45 );
     $tl->bind('<Control-x>' , $close_window ) ;
     $tl->bind('<Control-X>' , $close_window ) ;
+    
+    $tl->bind('<Destroy>', sub{
+        $self = undef;
+        });
     
     # get the arrays (or produce arrays with blank entries)
     ##my ($empty_1 , $empty_2 , $empty_3 , $empty_4) = ('' , '' , '', '' );
@@ -365,6 +316,7 @@ sub populate_subframe{
         $end_entry->bind('<Return>',  sub {
             $self->update_entry($coord_1_ref , $coord_2_ref , \$strand , $frame_type, 'end' )
             });
+        $frame->toplevel->bind('<Destroy>', sub{ $self = undef });
 
 
 
@@ -477,40 +429,30 @@ sub update_entry {
     }
 }
 
-
-## used to show 'withdrawn windows'
-sub show{
-    my $self = shift @_ ;
-    my $tl = $self->toplevel();
-    $tl->deiconify();
-    $tl->raise();
-}
-
-
 #asks user if he/she wants to save coords (only when unsaved)
 sub close_window{
     my ($self ) = @_ ;
     
-    # incase xace has managed to close itself without this
-    unless (my $xace = $self->xace_seq_chooser) {
-        $self->toplevel->destroy;
-    }
-    
     #checks to see if any (ie an ace file is created) and it is not invalid
-    my $result = '' ;
     my ($status , $ace) = $self->create_ace_file;
     if ($ace){
-        my $save_changes = $self->toplevel->messageBox(    -title => "Save PolyA's for " , 
-                                        -message => "Do you wish to save the changes" . $self->toplevel->title, 
-                                        -type => 'YesNoCancel', -icon => 'question', -default => 'Yes');
+        my $save_changes = $self->toplevel->messageBox(
+            -title      => "Save PolyA's for " , 
+            -message    => "Do you wish to save the changes for '" . $self->slice_name . "'?", 
+            -type       => 'YesNoCancel',
+            -icon       => 'question',
+            -default    => 'Yes',
+            );
 
         if ($save_changes eq "Yes"){
-            $result = $self->save_details($status ,$ace );
+            my $result = $self->save_details($status ,$ace );
+            return 0 if $result eq 'Cancel';
         }    
     }    
-    unless ($result eq 'Cancel' ){
-        $self->toplevel->withdraw;
-    }
+
+    $self->xace_seq_chooser->delete_polyA_window($self->slice_name);
+    # incase xace has managed to close itself without this
+    $self->toplevel->destroy;
 }
 
 
@@ -529,6 +471,7 @@ sub save_details{
         if ($xace_remote){
             my $result = 'Yes' ;
             if ($status  eq 'errors'){
+                ### This is too complicated - we should do something simpler
                 $result = $self->toplevel->messageBox(    -title => 'Sequence '. $self->slice_name , 
                                             -message => "Some coordinates were invalid.\nSave the Valid coords?", 
                                             -type => 'YesNoCancel', -default => 'Yes');
@@ -541,7 +484,6 @@ sub save_details{
             $xace_remote->save;
             $xace_remote->send_command('gif ; seqrecalc');
             print STDERR "saved polyA's to xace"; 
-   #        $sub->is_archival(1);
             
             if ($status ne 'errors' ){
                 $self->_update_arrays();
@@ -698,6 +640,10 @@ sub _update_arrays{
         $subroutine = $type.'_array_ref_stored';
         $self->$subroutine(\@new_array)
     }
+}
+
+sub DESTROY {
+    warn "Destroying polyA window";
 }
 
 1;

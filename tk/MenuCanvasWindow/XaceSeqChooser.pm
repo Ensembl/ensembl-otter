@@ -13,12 +13,12 @@ use Hum::Ace::GeneMethod;
 use Hum::Ace::XaceRemote;
 use Hum::Ace::DotterLauncher;
 use Hum::Sequence::DNA;
-use base 'MenuCanvasWindow';
-use MenuCanvasWindow::ExonCanvas;
-use CanvasWindow::DotterWindow;
 use Hum::Ace;
 use Data::Dumper;
 
+use base 'MenuCanvasWindow';
+use MenuCanvasWindow::ExonCanvas;
+use CanvasWindow::DotterWindow;
 use CanvasWindow::PolyAWindow;
 
 sub new {
@@ -581,6 +581,10 @@ sub populate_menus {
     $top->bind('<Control-d>', $delete_command);
     $top->bind('<Control-D>', $delete_command);
 
+    $subseq->bind('<Destroy>', sub{
+        $self = undef;
+        });
+
     ### Unimplemented methods
     #$subseq->add('command',
     #    -label          => 'Merge',
@@ -597,11 +601,6 @@ sub populate_menus {
     #    -state          => 'disabled',
     #    );
     #
-    #$subseq->bind('<Destroy>', sub{
-    #    $self = undef;
-    #    });
-
-    
     # What did I intend this command to do?
     #$subseq->add('command',
     #    -label          => 'Transcript',
@@ -619,6 +618,7 @@ sub populate_polyA_menu{
     my $menu_frame = $self->menu_bar
             or confess 'No menu Bar';
     my $menu = $self->make_menu("PolyA");
+    $menu->bind('<Destroy>', sub{ $self = undef });
     
     my @clone_list = $self->clone_list;
     
@@ -630,55 +630,69 @@ sub populate_polyA_menu{
                     -command => sub { $self->launch_polyA($clone_name) },
         );
     } 
+    
 }
 
 sub launch_polyA{
-    my ($self , $clone_name) = @_ ;
+    my( $self, $clone_name ) = @_;
        
         eval {
-            unless ($self->check_polyA_list($clone_name) ){
+            if (my $mw = $self->get_polyA_window($clone_name)) {
+                $mw->deiconify;
+                $mw->raise;
+            } else {
                 my $clone = $self->get_CloneSeq($clone_name) ;
-                my $canvas = $self->canvas; 
-                my $mw = $self->canvas->Toplevel;
+                $mw = $self->canvas->Toplevel;
                 my $polyA = CanvasWindow::PolyAWindow->new($mw);
-                $self->add_polyA_window($polyA);
                 $polyA->add_clone_sequence( $clone ) ; # added for polya
-
                 $polyA->xace_seq_chooser($self);
                 $polyA->slice_name($clone_name);
                 $polyA->initialize;
                 $polyA->draw;
+
+                $self->add_polyA_window($clone_name, $mw);
             }
         };
-        if($@) {
-            warn "problems creating the PolyA menu";
-            warn $@;
+        if ($@) {
+            $self->exception_message("Error creating PolyA window for '$clone_name'", $@);
         }
 }
 
 sub add_polyA_window{
-    my ($self, $polyA) = @_;
-    if ($polyA){
-        push (@{ $self->{'_polyA'} },  $polyA );
-    }
+    my ($self, $clone_name, $polyA) = @_;
+
+    $self->{'_polyA_window'}{$clone_name} = $polyA;
 }
 
-sub check_polyA_list{
-    my ($self , $clone_name ) =  @_;
+sub get_polyA_window {
+    my ( $self, $clone_name ) =  @_;
     
-    if ($self->{'_polyA'}){
-        my @list = @{   $self->{'_polyA'}   } ;
-        foreach my $window (@list){
-            if ( $clone_name eq $window->slice_name){
-                $window->show;
-                return 1;
-            }
+    return $self->{'_polyA_window'}{$clone_name};
+}
+
+sub delete_polyA_window {
+    my( $self, $clone_name ) = @_;
+    
+    $self->{'_polyA_window'}{$clone_name} = undef;
+}
+
+sub close_all_polyA_windows {
+    my( $self ) = @_;
+    
+    foreach my $name (keys %{$self->{'_polyA'}}) {
+        my $top = $self->get_polyA_window($name);
+        # Send save message
+        $top->deiconify;
+        $top->raise;
+        $top->update;
+        $top->focus;
+        $top->eventGenerate('<Control-w>');
+        if ($self->get_polyA_window($name)) {
+            warn "polyA edit window '$name' was not closed\n";
+            return 0;
         }
-        return 0;
     }
-    else{
-        return 0;
-    }
+    return 1;
 }
 
 
@@ -723,6 +737,7 @@ sub exit_save_data {
 
     # Are there unsaved changes in open ExonCanvas windows?
     $self->close_all_subseq_edit_windows or return;
+    $self->close_all_polyA_windows       or return;
 
     # Ask the user if any changes should be saved
     my $dialog = $self->canvas->toplevel->Dialog(
@@ -741,7 +756,6 @@ sub exit_save_data {
         # Return false if there is a problem saving
         $self->save_data or return;
     }
-    $self->close_polyAs;
 
     # Will not want xace any more
     $self->kill_xace;
@@ -773,7 +787,6 @@ sub save_data {
         eval{ $xr->save; };
     }
 
-    $self->save_polyAs ;
     unless ($self->write_access) {
         warn "Read only session - not saving\n";
         return 1;   # Can't save - but is OK
@@ -795,34 +808,6 @@ sub save_data {
         return 0;
     } else {
         return 1;
-    }
-}
-
-sub save_polyAs{
-    my ($self) = @_;
-    if ($self->{'_polyA'}){
-        my @polyA_list = @{$self->{'_polyA'}};
-
-        my $xr = $self->xace_remote; 
-
-        foreach my $window  ( @polyA_list){
-            if ($xr){        
-                warn "saving " . $window->toplevel->title;
-                eval{ $window->close_window;};
-            }
-        }
-    }    
-
-}
-
-sub close_polyAs{
-    my $self = shift @_ ;
-    if ($self->{'_polyA'}){
-        my @list = @{$self->{'_polyA'}} ;
-        foreach my $window ( @list){
-            $window->delete_xace_chooser;
-            $window->toplevel->destroy ;   
-        }
     }
 }
 
@@ -967,15 +952,15 @@ sub _make_search {
         )->pack(-side => 'left');
     $top->bind('<Control-e>',   $clear_command);
     $top->bind('<Control-E>',   $clear_command);
-
-    $button->bind('<Destroy>', sub{
-        $self = undef;
-        });
     
     $search_box->bind('<Return>',   $hunter);
     $search_box->bind('<KP_Enter>', $hunter);
     $top->bind('<Control-f>',       $hunter);
     $top->bind('<Control-F>',       $hunter);
+
+    $button->bind('<Destroy>', sub{
+        $self = undef;
+        });
 }
 
 sub hunt_for_Entry_text{
