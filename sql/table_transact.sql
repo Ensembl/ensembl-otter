@@ -245,7 +245,7 @@ CREATE TABLE protein_align_feature (
   KEY hit_idx( hit_name ),
   KEY ctg_idx( contig_id, contig_start ),
   KEY ana_idx( analysis_id )
-) MAX_ROWS=100000000 AVG_ROW_LENGTH=80 TYPE=InnoDB;
+) MAX_ROWS=100000000 AVG_ROW_LENGTH=80 TYPE=MyISAM;
 
 
 CREATE TABLE dna_align_feature (
@@ -271,7 +271,7 @@ CREATE TABLE dna_align_feature (
   KEY hit_idx( hit_name ),
   KEY ctg_idx( contig_id, contig_start ),
   KEY ana_idx( analysis_id )
-) MAX_ROWS=100000000 AVG_ROW_LENGTH=80 TYPE=InnoDB;
+) MAX_ROWS=100000000 AVG_ROW_LENGTH=80 TYPE=MyISAM;
 
 
 CREATE TABLE repeat_consensus (
@@ -307,7 +307,7 @@ CREATE TABLE repeat_feature (
   KEY contig_idx( contig_id, contig_start ),
   KEY repeat_idx( repeat_consensus_id, contig_id, contig_start ),
   KEY analysis_idx( analysis_id )
-) MAX_ROWS=100000000 AVG_ROW_LENGTH=80 TYPE=InnoDB;
+) MAX_ROWS=100000000 AVG_ROW_LENGTH=80 TYPE=MyISAM;
 
 #
 # Table structure for table 'gene'
@@ -561,7 +561,7 @@ CREATE TABLE external_synonym(
 
 CREATE TABLE external_db(
          external_db_id INT not null auto_increment,
-         db_name ENUM ('gene_name','Celera_Pep','Celera_Trans','Celera_Gene','HumanGenscans','protein_id','SCOP','HUGO','GO','SPTREMBL','EMBL','MarkerSymbol','SWISSPROT','PDB','MIM','RefSeq','LocusLink','Interpro','Superfamily','Anopheles_symbol','Anopheles_paper','wormbase_gene','wormbase_transcript','wormpep_id','flybase_gene','flybase_transcript','flybase_symbol','drosophila_gene_id','GKB', 'BRIGGSAE_HYBRID','AFFY_HG_U133','AFFY_HG_U95','sanger_probe','Vega_gene','Vega_transcript','Vega_translation','Sanger_Mver1_1_1','AFFY_MG_U74','AFFY_MG_U74v2','AFFY_Mu11Ksub','AFFY_RG_U34','AFFY_RN_U34','AFFY_RT_U34') not null,
+         db_name ENUM ('gene_name','Celera_Pep','Celera_Trans','Celera_Gene','HumanGenscans','protein_id','SCOP','HUGO','GO','SPTREMBL','EMBL','MarkerSymbol','SWISSPROT','PDB','MIM','RefSeq','LocusLink','Interpro','Superfamily','Anopheles_symbol','Anopheles_paper','wormbase_gene','wormbase_transcript','wormpep_id','flybase_gene','flybase_transcript','flybase_symbol','drosophila_gene_id','GKB', 'BRIGGSAE_HYBRID','AFFY_HG_U133','AFFY_HG_U95','sanger_probe','Vega','Sanger_Mver1_1_1','Sanger_Hver1_2_1','AFFY_MG_U74','AFFY_MG_U74v2','AFFY_Mu11Ksub','AFFY_RG_U34','AFFY_RN_U34','AFFY_RT_U34','DROS_ORTH','Vega_transcript','Vega_gene','Vega_translation') not null,
 	 release VARCHAR(40) DEFAULT '' NOT NULL,
 	 status  ENUM ('KNOWNXREF','KNOWN','XREF','PRED','ORTH') not null,
          PRIMARY KEY( external_db_id ) 
@@ -581,7 +581,7 @@ CREATE TABLE meta (
 
 
 # Auto add schema version to database
-insert into meta (meta_key, meta_value) values ("schema_version", "$Revision: 1.5 $");
+insert into meta (meta_key, meta_value) values ("schema_version", "$Revision: 1.6 $");
 
 
 CREATE TABLE prediction_transcript (
@@ -744,6 +744,33 @@ CREATE TABLE mapfrag_mapset (
   mapfrag_id int(10) unsigned NOT NULL default '0',
   mapset_id smallint(5) unsigned NOT NULL default '0',
   PRIMARY KEY (mapset_id,mapfrag_id)
+) TYPE=InnoDB;
+
+#
+# Tables for qtls 
+#
+
+CREATE TABLE qtl (
+  qtl_id int unsigned auto_increment not null,
+  source_database enum("rat genome database") not null,
+  source_primary_id varchar(255) not null,
+  trait varchar(255) not null,
+  lod_score float,
+  flank_marker_id_1 int,
+  flank_marker_id_2 int,
+  peak_marker_id int,
+  primary key ( qtl_id ),
+  key trait_idx( trait )
+) TYPE=InnoDB;
+
+CREATE TABLE qtl_feature (
+  chromosome_id int not null,
+  start int not null,
+  end int not null,
+  qtl_id int not null,
+  analysis_id int not null,
+  key( qtl_id ),
+  key loc_idx( chromosome_id, start )
 ) TYPE=InnoDB;
 
 
