@@ -16,9 +16,9 @@ my $help = sub { exec('perldoc', $0) };
 
 Bio::Otter::Lace::Defaults::do_getopt('ds|dataset=s' => \$dataset,
 	                              'v|verbose'    => \$verbose,
-				      't|type=s@'     => \@a_types,
+				      't|type=s@'    => \@a_types,
 				      'h|help'       =>	$help,
-                                      'vega!'       => \$check_vega,
+                                      'vega!'        => \$check_vega,
                                       ) or $help->();    # plus default options
 $help->() unless $dataset;
 
@@ -44,9 +44,11 @@ unless ( @a_types ){
 
 # loop thru all assembly types to fetch all annotated genes in it on otter
 
+open(F, ">vega_data_error") || die $!;
+
 foreach my $type ( @a_types ) {
 
-    print STDERR "\nExamining genes on '$type'\n";
+  print STDERR "\nExamining genes on '$type'\n";
 
   $otter_db->assembly_type($type); # replace the default sequence set setting
 
@@ -61,16 +63,26 @@ foreach my $type ( @a_types ) {
 
   my $latest_gene_id = $geneAd->list_current_dbIDs_for_Slice($slice);
 
-    my $i = 0;
-  foreach my $id ( @$latest_gene_id ) {
+  my $i = 0;
+  GENE: foreach my $id ( @$latest_gene_id ) {
     $i++;
     my $gene = $geneAd->fetch_by_dbID($id)->transform($slice);
+
+    my $all_exons = $gene->get_all_Exons;
+    foreach ( @$all_exons ){
+      if ( $_->contig != $slice ){
+	print F "$type\t". $gene->stable_id ."\t". $gene->gene_info->name->name. " has no exons within the slice\n" if ( $_->contig != $slice );
+	next GENE;
+      }
+    }
+
     my $gene_length = $gene->end - $gene->start + 1;
-    
+
     my $all_trans = $gene->get_all_Transcripts;
     my( $longest );
     my $longest_length = 0;
     foreach my $tsct (@$all_trans) {
+
         my $length = $tsct->end - $tsct->start + 1;
         if ($length > $longest_length) {
             $longest_length = $length;
@@ -79,12 +91,10 @@ foreach my $type ( @a_types ) {
     }
 
     unless ($longest) {
-        my $msg = sprintf "\nFAILED TO GET LONGEST TRANSCRIPT FOR '%s'\n", $gene->stable_id;
-        print $msg;
-        print STDERR $msg;
+	print F "\n$type\tFAILED TO GET LONGEST TRANSCRIPT FOR ", $gene->stable_id, "\n";
         next;
     }
-    
+
     my $ratio = $longest_length / $gene_length;
     if ($ratio != 1) {
         print STDERR "+";
@@ -102,6 +112,7 @@ foreach my $type ( @a_types ) {
     }
   }
 }
+
 
 __END__
 
