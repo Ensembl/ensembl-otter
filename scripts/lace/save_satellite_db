@@ -44,7 +44,9 @@ use Data::Dumper;
     $sat_opts->{'-DBNAME'}  = $satdbname    if $satdbname;
 
     # so we can use undefined password
-    foreach(qw(-PASS)){ delete $sat_opts->{$_} if $sat_opts->{$_} eq 'undef'; }
+    foreach(qw(-PASS)){ 
+	delete $sat_opts->{$_} if($sat_opts->{$_} && $sat_opts->{$_} eq 'undef');
+    }
 
     # Check we can connect to the Satellite database with options supplied
     eval {
@@ -77,16 +79,16 @@ already stored in the database for the B<key>.
 
     help           - print this pod
     key (required) - meta_key to use in the meta table
-    host           - host for the satellite DB
-    port           - port for the satellite DB
-    user           - user for the satellite DB
-    password       - pass for the satellite DB
-    dbname         - dbname for the satellite DB
+    sathost        - host for the satellite DB
+    satport        - port for the satellite DB
+    satuser        - user for the satellite DB
+    satpassword    - pass for the satellite DB
+    satdbname      - dbname for the satellite DB
     dataset        - otter dataset to use [human]
 
 =head1 EXAMPLE
 
-    ./save_satellite_db -dataset zebrafish -key pipeline_db -host ecs2 -port 3310 -user ensro
+    ./save_satellite_db -dataset zebrafish -key pipeline_db -sathost ecs2 -satport 3310 -satuser ensro
 
 =head1 AUTHOR
 
