@@ -3,7 +3,7 @@
 ### canvas_drag_drop
 
 use strict;
-use GenomeCanvas;
+use CanvasWindow;
 
 {
     my $mw = CanvasWindow::MainWindow->new;

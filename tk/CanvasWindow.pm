@@ -11,7 +11,9 @@ use TransientWindow;
 use TransientWindow::LogWindow;
 
 sub new {
-    my( $pkg, $tk, $x, $y ) = @_;
+    my( $pkg, $tk, $x, $y, $construct_method ) = @_;
+    
+    $construct_method ||= 'make_canvas';
     
     unless ($tk) {
         confess "Error usage: $pkg->new(<Tk::Widget object>)";
@@ -20,7 +22,26 @@ sub new {
     # Make new object and set-get initial canvas size
     my $self = bless {}, $pkg;
     ($x, $y) = $self->initial_canvas_size($x, $y);
+    
+    # Make and pack a canvas of the specified type
+    my $canvas = $self->$construct_method($tk, $x, $y);
+    
+    # Make a new CanvasWindow object, and return
+    $self->canvas($canvas);
+    $self->bind_scroll_commands;
+    
+    # Does the module define a Pixmap for the icon?
+    if (my $pix = $pkg->icon_pixmap) {
+        my $mw = $canvas->toplevel;
+        $mw->Icon(-image => $mw->Pixmap(-data => $pix));
+    }
+    
+    return $self;
+}
 
+sub make_canvas {
+    my( $self, $tk, $x, $y ) = @_;
+    
     # Create and store the canvas object
     my $scrolled = $tk->Scrolled('Canvas',
         -highlightthickness => 1,
@@ -35,19 +56,11 @@ sub new {
         -expand => 1,
         );
         
-    my $canvas = $scrolled->Subwidget('canvas');
-    
-    # Make a new CanvasWindow object, and return
-    $self->canvas($canvas);
-    $self->bind_scroll_commands;
-    
-    # Does the module define a Pixmap for the icon?
-    if (my $pix = $pkg->icon_pixmap) {
-        my $mw = $canvas->toplevel;
-        $mw->Icon(-image => $mw->Pixmap(-data => $pix));
-    }
-    
-    return $self;
+    return $scrolled->Subwidget('canvas');
+}
+
+sub make_headed_canvas {
+    die "not yet implemented";
 }
 
 sub icon_pixmap {
