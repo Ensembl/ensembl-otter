@@ -43,9 +43,9 @@ use Exporter();
 
 @ISA=qw(Exporter);
 
-$OTTER_SERVER_ROOT 	    = '/nfs/acari/michele/cvs/otter';
-$OTTER_ALTROOT    	    = '/nfs/acari/michele/cvs/otter_alt';
-$OTTER_SCRIPTDIR            = '/nfs/acari/michele/cvs/otter/scripts/server';
+$OTTER_SERVER_ROOT 	    = '/nfs/acari/michele/cvs/ensembl-otter';
+$OTTER_ALTROOT    	    = '/nfs/acari/michele/cvs/ensembl-otter/otter_alt';
+$OTTER_SCRIPTDIR            = '/nfs/acari/michele/cvs/ensembl-otter/scripts/server';
 $OTTER_SERVER		    = 'localhost';#Sys::Hostname::hostname();  # Local machine name
 $OTTER_MAX_CLIENTS          = 5;
 $OTTER_SERVER_PORT          = 19312;

@@ -48,7 +48,6 @@ sub XML_to_otter {
     chomp;
 
     if (/<locus>/) {
-      print STDERR "Found gene\n";
       if (defined($gene)) {
         $gene->gene_info->author($author);
       }
