@@ -3,7 +3,7 @@
 ### canvas_text
 
 use strict;
-use GenomeCanvas;
+use CanvasWindow;
 
 {
     my $mw = CanvasWindow::MainWindow->new;
@@ -11,9 +11,9 @@ use GenomeCanvas;
     $mw->bind(<Control-q>, sub {exit 0});
     $mw->bind(<Control-Q>, sub {exit 0});
     
-    my $gc = GenomeCanvas->new($mw);
+    my $cw = CanvasWindow->new($mw);
     
-    my $canvas = $gc->canvas;
+    my $canvas = $cw->canvas;
     my $rec = $canvas->createRectangle(1,1,500,200,
         -fill       => '#ffffff',
         -outline    => '#999999',
@@ -33,7 +33,7 @@ use GenomeCanvas;
 
     $canvas->SelectionHandle( sub{ put_selection($canvas, @_) } );
 
-    my $size = 14;
+    my $size = 15;
     my $x = 10;
     my $y_begin = $x;
     for (my $i = 0; $i < 11; $i++) {
@@ -43,7 +43,7 @@ use GenomeCanvas;
         make_editable_label($canvas, $x, $y, $text, $size);
     }
     
-    $gc->fix_window_min_max_sizes;
+    $cw->fix_window_min_max_sizes;
     
     Tk::MainLoop();
 }
@@ -92,7 +92,7 @@ BEGIN {
             return;
         }
         
-        unless ($obj == $selected) {
+        if ($obj != $selected) {
             deselect($canvas);
         }
 

@@ -5,6 +5,9 @@ package CanvasWindow;
 
 use strict;
 use Carp;
+use CanvasWindow::MainWindow;
+use CanvasWindow::Utils 'expand_bbox';
+
 use vars ('@DEFAULT_CANVAS_SIZE');
 
 @DEFAULT_CANVAS_SIZE = (500,50);
@@ -56,7 +59,7 @@ sub set_scroll_region {
     
     my $canvas = $self->canvas;
     my @bbox = $canvas->bbox('all');
-    $self->expand_bbox(\@bbox, 5);
+    expand_bbox(\@bbox, 5);
     $canvas->configure(
         -scrollregion => [@bbox],
         );

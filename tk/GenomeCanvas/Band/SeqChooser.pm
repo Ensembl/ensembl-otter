@@ -6,6 +6,7 @@ package GenomeCanvas::Band::SeqChooser;
 use strict;
 use Carp;
 use GenomeCanvas::Band;
+use CanvasWindow::Utils 'expand_bbox';
 
 use vars '@ISA';
 @ISA = ('GenomeCanvas::Band');
@@ -107,7 +108,7 @@ sub draw_seq_row {
     my @rect = $canvas->bbox($id);
     $rect[0] = 0;
     $rect[2] = $x_offsets[$#x_offsets];
-    $band->expand_bbox(\@rect, 1);
+    expand_bbox(\@rect, 1);
     $rect[0] = 0;
     my $bkgd = $canvas->createRectangle(
         @rect,

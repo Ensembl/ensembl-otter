@@ -64,7 +64,6 @@ sub render {
             -tags => [@tags, $name],
             );
         my @bkgd = $canvas->bbox($name);
-        #$band->expand_bbox(\@bkgd, 2);
         my $bkgd_rectangle = $canvas->createRectangle(
             @bkgd,
             -outline    => '#cccccc',

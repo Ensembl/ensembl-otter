@@ -6,6 +6,7 @@ package GenomeCanvas::Band::TilingPath;
 use strict;
 use Carp;
 use GenomeCanvas::Band;
+use CanvasWindow::Utils 'expand_bbox';
 
 use vars '@ISA';
 @ISA = ('GenomeCanvas::Band');
@@ -135,7 +136,7 @@ sub render {
             my @bkgd = $canvas->bbox($group);
 
             my $sp = $font_size / 5;
-            $band->expand_bbox(\@bkgd, $sp);
+            expand_bbox(\@bkgd, $sp);
             my $bkgd_rectangle = $canvas->createRectangle(
                 @bkgd,
                 -outline    => '#cccccc',
