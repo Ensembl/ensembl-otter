@@ -63,12 +63,14 @@ sub show_labels {
 }
 
 sub render {
-    my( $band, $y_offset, @tags ) = @_;
+    my( $band ) = @_;
     
-    my $canvas = $band->canvas;
-    my $vc     = $band->virtual_contig;
-    my $y_dir  = $band->tiling_direction;
-    my $rpp    = $band->residues_per_pixel;
+    my $canvas   = $band->canvas;
+    my $vc       = $band->virtual_contig;
+    my $y_dir    = $band->tiling_direction;
+    my $rpp      = $band->residues_per_pixel;
+    my $y_offset = $band->y_offset;
+    my @tags     = $band->tags;
 
     if ($y_dir == -1) {
         # We have to build above the other bands

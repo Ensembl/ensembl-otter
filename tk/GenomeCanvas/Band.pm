@@ -16,13 +16,29 @@ sub new {
     return bless {}, $pkg;
 }
 
+sub tags {
+    my( $band, @tags ) = @_;
+    
+    if (@tags) {
+        $band->{'_tags'} = [@tags];
+    }
+    if (my $tags = $band->{'_tags'}) {
+        return @$tags;
+    } else {
+        return;
+    }
+}
+
 sub render {
-    my( $band, $y_offset, @tags ) = @_;
+    my( $band ) = @_;
     
     my $color = 'red';
     warn "GenomeCanvas::Band : Drawing default $color rectangle\n";
 
-    my $canvas = $band->canvas;
+    my $canvas   = $band->canvas;
+    my $y_offset = $band->y_offset;
+    my @tags     = $band->tags;
+
     my @bbox = $canvas->bbox;
     my( $width );
     if (@bbox) {
@@ -36,14 +52,14 @@ sub render {
         @rect,
         -fill       => $color,
         -outline    => undef,
-        -tags       => [@tags],
+        '-tags'     => [@tags],
         );
 }
 
 sub tick_label {
-    my( $band, $text, $dir, $start_pos, @tags ) = @_;
+    my( $band, $text, $dir, @line_start ) = @_;
     
-    my @line_start = @$start_pos;
+    my @tags = $band->tags;
     confess "line_start array must have 2 elements" unless @line_start == 2;
     
     my $tick_length = 4;
@@ -80,14 +96,14 @@ sub tick_label {
     my $canvas = $band->canvas;
     $canvas->createLine(
         @line_start, @line_end,
-        -tags       => [@tags],
+        '-tags'     => [@tags],
         );
     $canvas->createText(
         @text_start,
         -text       => $text,
         -anchor     => $anchor,
         -justify    => $justify,
-        -tags       => [@tags],
+        '-tags'     => [@tags],
         );
 }
 
@@ -113,6 +129,24 @@ sub nudge_into_free_space {
     while (grep ! $self{$_}, $canvas->find('overlapping', $canvas->bbox($tag_or_id))) {
         $canvas->move($tag_or_id, 0, $y_inc);
     }
+}
+
+sub width {
+    my( $band ) = @_;
+    
+    my $vc = $band->virtual_contig
+        or confess "No virtual contig attached";
+    my $seq_length = $vc->length;
+    my $rpp = $band->residues_per_pixel;
+    return $seq_length / $rpp;
+}
+
+sub y_max {
+    my( $band ) = @_;
+    
+    my $y_offset = $band->y_offset;
+    my $height = $band->height;
+    return $y_offset + $height;
 }
 
 1;

@@ -70,9 +70,11 @@ sub render {
             # given by bandset_padding
             $y_offset += $gc->bandset_padding;
         }
+        $gc->y_offset($y_offset);
         my $tag = $gc->bandset_tag($set);
         #warn "Rendering bandset '$tag' with offset $y_offset\n";
-        $set->render($y_offset, $tag);
+        
+        $set->render($tag);
 
         #warn "[", join(',', $canvas->bbox($tag)), "]\n";
 

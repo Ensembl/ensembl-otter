@@ -42,14 +42,16 @@ sub bandset_tag {
 }
 
 sub render {
-    my( $set, $y_offset ) = @_;
+    my( $set ) = @_;
     
     my( @bbox );
-    my $canvas = $set->canvas;
-    my $tag    = $set->bandset_tag;
+    my $canvas   = $set->canvas;
+    my $tag      = $set->bandset_tag;
+    my $y_offset = $set->y_offset;
     $canvas->delete($tag);
     foreach my $band ($set->band_list) {
-        $band->render($y_offset, $tag);
+        $band->tags($tag);
+        $band->render();
     }
     
     $set->draw_set_outline;
