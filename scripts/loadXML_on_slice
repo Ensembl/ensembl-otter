@@ -1,0 +1,181 @@
+#!/usr/local/bin/perl
+
+use strict;
+
+use Getopt::Long;
+
+use Bio::Otter::DBSQL::DBAdaptor;
+use Bio::Otter::DBSQL::AnnotatedGeneAdaptor;
+use Bio::Otter::Converter;
+use Bio::Otter::Author;
+
+my $host     = 'ecs1d';
+my $user     = 'ensadmin';
+my $pass     = 'ensembl';
+my $port     = 19322;
+my $dbname   = 'otter_chr22';
+my $dataset  = 'hum_chr22';
+my $path     = 'GENOSCOPE';
+
+my $dna_host   = 'ecs1d';
+my $dna_user   = 'ensro';
+my $dna_port   = 19322;
+my $dna_pass   = undef;
+my $dna_dbname = undef;
+
+my $chr      = '22';
+my $chrstart = 1;
+my $chrend   = 100000000;
+
+my $store = 0;
+my $print = 0;
+
+my $xmlfile;
+
+&GetOptions( 'host:s'    => \$host,
+             'user:s'    => \$user,
+             'pass:s'    => \$pass,
+             'port:s'    => \$port,
+             'dbname:s'  => \$dbname,
+             'dna_host:s'=> \$dna_host,
+             'dna_user:s'=> \$dna_user,
+             'dna_pass:s'=> \$dna_pass,
+             'dna_port:s'=> \$dna_port,
+             'dna_dbname:s'  => \$dna_dbname,
+             'chr:s'     => \$chr,
+             'chrstart:n'=> \$chrstart,
+             'chrend:n'  => \$chrend,
+             'xmlfile:s' => \$xmlfile,
+             'store'     => \$store,
+             'print'     => \$print,
+             'dataset:s' => \$dataset,
+             'path:s'    => \$path,
+             );
+
+if (!defined($xmlfile)) {
+  die("Need an xml file name to read");
+
+}
+
+open(XML,"<$xmlfile") or die "Couldn't open $xmlfile\n";
+my $fh = \*XML;
+
+my $odb = new Bio::Otter::DBSQL::DBAdaptor(-host => $host,
+                                           -user => $user,
+                                           -pass => $pass,
+                                           -port => $port,
+                                           -dbname => $dbname,
+                                           -dataset => $dataset);
+if (defined($dna_dbname)) {
+  my $dnadb = new Bio::EnsEMBL::DBSQL::DBAdaptor(-host => $dna_host,
+                                                 -user => $dna_user,
+                                                 -pass => $dna_pass,
+                                                 -port => $dna_port,
+                                                 -dbname => $dna_dbname);
+  $odb->dnadb($dnadb);
+}
+
+
+
+my $sgp = $odb->get_SliceAdaptor;
+my $ga  = $odb->get_GeneAdaptor;
+my $ea  = $odb->get_ExonAdaptor;
+my $ta  = $odb->get_TranscriptAdaptor;
+
+$odb->begin_work;
+$odb->assembly_type($path);
+
+my @genes;
+my $genes;
+
+my $junk;
+($genes,$junk,$junk,$junk) = Bio::Otter::Converter::XML_to_otter($fh);
+@genes = @$genes;
+
+
+if ($print) {
+  #print "Printing @genes\n";
+  foreach my $gene (@genes) {
+    print $gene->toXMLString . "\n";
+  }
+}
+if ($store) {
+
+  print "slice fetched for: ".$chr." ".$chrstart." ".$chrend;
+
+  my $slice = $sgp->fetch_by_chr_start_end($chr,$chrstart,$chrend);
+
+  my $anal = $odb->get_AnalysisAdaptor()->fetch_by_logic_name('otter');
+  my $oaga = $odb->get_AnnotatedGeneAdaptor();
+
+  my $name = `whoami`; chomp($name);
+
+  my $email = $name . "\@sanger.ac.uk";
+
+  my $author = new Bio::Otter::Author(-name => $name, -email => $email);
+  my $time = time;
+
+  foreach my $gene (@genes) {
+    print "Stable id " . $gene->stable_id . "\n";
+
+    $gene->adaptor($ga);
+    $gene->analysis($anal);
+    # NO $gene->type('otter');
+    $gene->gene_info->author($author);
+    $gene->created($time);
+    $gene->modified($time);
+    $gene->version(1);
+
+    foreach my $tran (@{$gene->get_all_Transcripts}) {
+      $tran->adaptor($ta);
+      $tran->transcript_info->author($author);
+
+#HACK
+      $gene->type("Chr$chr-" . $tran->transcript_info->class->name);
+
+      $tran->created($time);
+      $tran->modified($time);
+      $tran->version(1);
+
+    }
+    foreach my $exon (@{$gene->get_all_Exons}) {
+
+      #$exon->contig($slice);
+      $exon->adaptor($ea);
+      $exon->created($time);
+      $exon->modified($time);
+      $exon->version(1);
+    }
+    my $id = $odb->get_StableIdAdaptor->_fetch_new_by_type('gene');
+    print "Id $id\n";
+    $gene->stable_id($id);
+    print "Gene " . $gene->stable_id . "\n";
+   
+    foreach my $tran (@{$gene->get_all_Transcripts}) {
+       if (defined($tran->translation)) {
+       #  print "Translate " . $tran->translate->seq . "\n";
+       }
+       my $id = $odb->get_StableIdAdaptor->_fetch_new_by_type('transcript');
+       $tran->stable_id($id);
+       print "Id $id\n";
+       print "Tran " . $tran->stable_id . "\n";
+    }
+    foreach my $exon (@{$gene->get_all_Exons}) {
+       my $id = $odb->get_StableIdAdaptor->_fetch_new_by_type('exon');
+       $exon->stable_id($id);
+       print "Id $id\n";
+       print "Exon " . $exon->stable_id . "\n";
+    }
+    print "Attaching to slice\n";
+    $oaga->attach_to_Slice($gene,$slice);
+    foreach my $trans (@{$gene->get_all_Transcripts}) {
+      if ($trans->translation) {
+        if ($trans->translate->seq =~ /\*/) {
+          print "Didn't translate\n";
+        }
+      }
+    }
+    $oaga->store($gene);
+  }
+}
+$odb->commit;
