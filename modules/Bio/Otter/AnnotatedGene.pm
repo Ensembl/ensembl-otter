@@ -293,6 +293,29 @@ sub equals {
     }
 }
 
+=head1 set_gene_type_from_transcript_classes
+
+    $gene->set_gene_type_from_transcript_classes;
+
+See the section on transcript classes in the
+otter XML documentation.
+
+Sets the C<type> on the gene using a decision
+tree based on a list of known transcript classes.
+
+If there is an transcript class which is unknown
+by the method, but this is the only class in the
+gene, then this class name is used as the gene
+C<type>.  If, however, the gene contains a mix of
+unknown transcript classes the method throws an
+exception.
+
+Exceptions are also thrown when the gene contains
+more than one class of pseudogene transcript, and
+when there are no transcript in the gene.
+
+=cut
+
 sub set_gene_type_from_transcript_classes {
     my( $self ) = @_;
     
@@ -350,6 +373,40 @@ sub set_gene_type_from_transcript_classes {
     else {
         # Gene type is the same as the transcript type
         $self->type(@class_list);
+    }
+}
+
+=head1 detach_DBAdaptors
+
+    $gene_adaptor->attach_to_Slice($gene, $slice);
+    $gene->detach_DBAdaptors;
+    $gene_adaptor->store($gene);
+
+Call after C<attach_to_Slice()> and before the
+C<store> gene adaptor methods so that lazy
+loading methods in the gene components don't
+attempt to do lazy loading during the store due
+to the presence of adaptors.
+
+=cut
+
+sub detach_DBAdaptors {
+    my( $self ) = @_;
+    
+    # Removes adaptors from genes, transcripts,
+    # exons and translations.  May need to add
+    # more components it removes adaptors from
+    # if we find more lazy loading problems.
+
+    $self->adaptor(undef);
+    foreach my $tran (@{$self->get_all_Transcripts}) {
+        $tran->adaptor(undef);
+        foreach my $exon (@{$self->get_all_Exons}) {
+            $exon->adaptor(undef);
+        }
+        if (my $transl = $tran->translation) {
+            $transl->adaptor(undef);
+        }
     }
 }
 

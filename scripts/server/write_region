@@ -286,6 +286,7 @@ eval {
 
     print STDERR "\nAttaching gene to slice " . $gene->stable_id . " " . $gene->version. "\n";
     $oaga->attach_to_Slice($gene,$slice);
+    $gene->detach_DBAdaptors;
     print STDERR "Done attaching\n";
     $oaga->store($gene);
     print STDERR "Stored gene\n";

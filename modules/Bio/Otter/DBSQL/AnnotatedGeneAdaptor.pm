@@ -291,12 +291,7 @@ sub store{
    my $gene_info_adaptor = $self->db->get_GeneInfoAdaptor();
    my $current_g_info_ad = $self->db->get_CurrentGeneInfoAdaptor;
 
-   #$obj->adaptor(undef);
-
-   #foreach my $tran (@{$obj->get_all_Transcripts}) {
-   #    $tran->adaptor(undef);
-   #}
-   $self->SUPER::store      ($obj);
+   $self->SUPER::store($obj);
 
    $self->db->get_StableIdAdaptor->store_by_type($obj->stable_id,'gene');
    $gene_info_adaptor->store($obj->gene_info);
