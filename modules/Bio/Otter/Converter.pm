@@ -1458,7 +1458,7 @@ sub ace_to_otter {
     # Turn %frags into a path
     my $tile_path = [];
     foreach my $ctg_name (keys %frags) {
-        my $fragment = $frag{$ctg_name};
+        my $fragment = $frags{$ctg_name};
         my $offset = $fragment->{offset}    or die "No offset for '$ctg_name'";
         my $start  = $fragment->{start}     or die "No start for '$ctg_name'";
         my $end    = $fragment->{end}       or die "No end for '$ctg_name'";
