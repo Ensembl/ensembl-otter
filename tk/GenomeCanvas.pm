@@ -117,12 +117,13 @@ sub draw_band_outline {
     my @tags = $band->tags;
     my @rect = $canvas->bbox(@tags)
         or confess "Can't get bbox for tags [@tags]";
-    $canvas->createRectangle(
+    my $r = $canvas->createRectangle(
         @rect,
         -fill       => undef,
         -outline    => undef,
         -tags       => [@tags],
         );
+    $canvas->lower($r, 'all');
 }
 
 sub delete_all_bands {

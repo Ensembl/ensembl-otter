@@ -39,14 +39,13 @@ sub render {
     my $y_offset = $band->y_offset;
     my @tags     = $band->tags;
 
-    my @bbox = $canvas->bbox;
+    my @bbox = $canvas->bbox(@tags);
     my( $width );
     if (@bbox) {
         $width = $bbox[2] - $bbox[0];
     } else {
         $width = 600;
     }
-    
     my @rect = (0, $y_offset, $width, $y_offset + 10);
     my $id = $canvas->createRectangle(
         @rect,
