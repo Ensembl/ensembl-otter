@@ -15,7 +15,7 @@ use MenuCanvasWindow;
 use Hum::Ace::DotterLauncher;
 use vars ('@ISA');
 use Hum::Ace;
-
+use Scalar::Util 'weaken';
 @ISA = ('MenuCanvasWindow');
 
 # "new" is in MenuCanvasWindow
@@ -44,6 +44,12 @@ sub initialize {
         }
     };
 
+    my $delete_xace_ref = sub   {   warn "doing delete thing" ;
+                                    $self->{'_xace_seq_chooser'} = undef ;
+                                    warn  $self->{'_xace_seq_chooser'}  . "reference should have been deleted ";                                       
+                                }; 
+    $top->bind('<<delete_xace_ref>>',   $delete_xace_ref);
+    
     # Save changes on window close
     my $window_close = sub {
         $self->window_close or return;
@@ -112,7 +118,7 @@ sub initialize {
     # Deselect all
     $canvas->Tk::bind('<Escape>', sub{ $self->deselect_all });
     
-    if ($self->is_mutable) {
+    if ($self->is_mutable ) {
 
         # Save into db via xace
         my $save_command = sub{ $self->save_if_changed };
@@ -320,7 +326,7 @@ sub initialize {
         # Start not found and end not found and method widgets
         $self->add_start_end_method_widgets($frame);
     } else {
-        # SubSeq with an immutable method
+        # SubSeq with an immutable method - wont display entry widgets for updating things
         
         # Only select current text - no focus
         $canvas->Tk::bind('<Button-1>', sub{
@@ -374,7 +380,8 @@ sub update_combo_list{
                 -choices   => [@names],
                 #-listwidth => scalar @names,
                 );
-            });       
+            });   
+    $be->Tk::bind('<Destroy>', sub{ $self = undef });    
 }
 
 sub name {
@@ -697,8 +704,9 @@ sub is_mutable {
 
 sub window_close {
     my( $self ) = @_;
-        
+    
     my $xc = $self->xace_seq_chooser;
+    
     if ($self->is_mutable) {
         my( $sub );
         eval{
@@ -743,7 +751,7 @@ sub window_close {
     }
     $self->delete_chooser_window_ref;
     $self->canvas->toplevel->destroy;
-    
+   
     return 1;
 }
 
@@ -1008,16 +1016,6 @@ sub check_kozak{
                 -padx                   => 6,
                 -pady                   => 6, 
                 )->pack(-side   => 'left');                         
-        ##my $kozak_txt = $kozak_window->Label(  -padx                   => 6,
-        ##                                    -pady                   => 6,
-        ##                                    -relief                 => 'groove',
-        ##                                    -background             => 'white',
-        ##                                    -font           => [$font, $size, 'normal'],
-        ##                                   
-        ##                                    )->pack(-side => 'left' ,
-        ##                                            -padx =>6 ,
-        ##                                            -pady =>6) ;
-        
         
         my $close_kozak = sub { $kozak_window->withdraw } ;
         my $kozak_butt = $kozak_window->Button( -text       => 'close' ,
@@ -1074,9 +1072,9 @@ sub check_kozak{
             -background => '#AAFF66',
             );
                 
-    ## for some reason (bug?) tk would not display tags added to the second line when using the index system - hence two loops rather than one
     my @template_kozak = ('(a|g)', 'c', 'c', 'a', 'c' , 'c' , 'a' , 'u' , 'g' , 'g') ;
     
+    ## for some reason (tk bug?) tk would not display tags added to the second line when using the index system - hence two loops rather than one
     for( my $i = 0 ;  $i <= ( length($kozak) - 1) ; $i++ ){
         my $pos_char = substr( $kozak , $i , 1) ;
         my $template = $template_kozak[$i] ;       
@@ -1265,7 +1263,7 @@ sub get_locus_name_from_current_subseq{
     $self->{'locus_name_variable'} = \$locus_name  ;
 }
 
-## this is called from the split / merge / new / buttons - realting to the Locus 
+
 ## it passes the appropriate action type to the method in XaceSeqChooser (which is wher all the loci are stored)
 sub modify_locus{
     my ($self , $type_of_modification) = @_ ;
@@ -1605,7 +1603,7 @@ sub canvas_backspace {
 }
 
 sub select_all_exon_pos {
-    my( $self ) = @_;
+    my( $self ) = @_ ;
     
     my $canvas = $self->canvas;
     return $self->highlight($canvas->find('withtag', 'exon_pos'));
@@ -2370,8 +2368,8 @@ sub decrement_exon_counter {
 sub DESTROY {
     my( $self ) = @_;
     
-    #my $name = $self->name;
-    #warn "Destroying: '$name'\n";
+    my $name = $self->name;
+    warn "Destroying: '$name'\n";
 }
 
 sub icon_pixmap {
