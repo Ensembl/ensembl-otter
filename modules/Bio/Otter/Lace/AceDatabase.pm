@@ -271,6 +271,10 @@ sub unlock_otter_slice {
     
     $ace->find(Genome_Sequence => $name);
     my $ace_txt = $ace->raw_query('show -a');
+
+    $ace->find(Genome_Sequence => $name);
+    $ace->raw_query('Follow AGP_Fragment');
+    $ace_txt .= $ace->raw_query('show -a');
     
     # Cleanup text
     $ace_txt =~ s/\0//g;            # Remove nulls

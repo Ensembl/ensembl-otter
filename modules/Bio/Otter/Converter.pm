@@ -1472,6 +1472,9 @@ sub ace_to_otter {
         my $sv   = $cln->{Sequence_version} or die "No Sequence_version for '$ctg_name'";
         my $auth = $cln->{author};
 
+        $start -= $chr_start - 1;
+        $end   -= $chr_start - 1;
+
         # Make CloneInfo object
         my $info = Bio::Otter::CloneInfo->new;
         if ($auth) {
