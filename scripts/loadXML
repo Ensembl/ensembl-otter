@@ -40,7 +40,7 @@ foreach my $gene (@$genes) {
   eval {
      $db->get_GeneAdaptor->attach_to_Slice($gene,$slice);
      if ($stable_id) {
-       my $id = $db->get_StableIdAdaptor->_fetch_new_by_type('gene');
+       my $id = $db->get_StableIdAdaptor->_fetch_new_by_type('gene','G');
        print "Id $id\n";
        $gene->stable_id($id);
      }
@@ -53,7 +53,7 @@ foreach my $gene (@$genes) {
        print "Translate " . $tran->translate->seq . "\n";
      }
      if ($stable_id) {
-       my $id = $db->get_StableIdAdaptor->_fetch_new_by_type('transcript');
+       my $id = $db->get_StableIdAdaptor->_fetch_new_by_type('transcript','T');
        $tran->stable_id($id);
        print "Id $id\n";
      }
@@ -61,7 +61,7 @@ foreach my $gene (@$genes) {
   }
   foreach my $exon (@{$gene->get_all_Exons}) {
      if ($stable_id) {
-       my $id = $db->get_StableIdAdaptor->_fetch_new_by_type('exon');
+       my $id = $db->get_StableIdAdaptor->_fetch_new_by_type('exon','E');
        $exon->stable_id($id);
        print "Id $id\n";
      }

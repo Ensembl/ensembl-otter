@@ -148,7 +148,7 @@ if ($store) {
       $exon->modified($time);
       $exon->version(1);
     }
-    my $id = $odb->get_StableIdAdaptor->_fetch_new_by_type('gene');
+    my $id = $odb->get_StableIdAdaptor->_fetch_new_by_type('gene','G');
     print "Id $id\n";
     $gene->stable_id($id);
     print "Gene " . $gene->stable_id . "\n";
@@ -157,13 +157,13 @@ if ($store) {
        if (defined($tran->translation)) {
        #  print "Translate " . $tran->translate->seq . "\n";
        }
-       my $id = $odb->get_StableIdAdaptor->_fetch_new_by_type('transcript');
+       my $id = $odb->get_StableIdAdaptor->_fetch_new_by_type('transcript','T');
        $tran->stable_id($id);
        print "Id $id\n";
        print "Tran " . $tran->stable_id . "\n";
     }
     foreach my $exon (@{$gene->get_all_Exons}) {
-       my $id = $odb->get_StableIdAdaptor->_fetch_new_by_type('exon');
+       my $id = $odb->get_StableIdAdaptor->_fetch_new_by_type('exon','E');
        $exon->stable_id($id);
        print "Id $id\n";
        print "Exon " . $exon->stable_id . "\n";

@@ -54,8 +54,7 @@ sub _fetch_new_by_type {
   if (defined($species_prefix)) {
     $stableid .= $species_prefix;
   }
-
-  $stableid .= $type_prefix . sprintf('%011d', $num);
+  $stableid .= ($type_prefix . sprintf('%011d', $num));
     
   $sth = $self->prepare("update $table set ${type}_stable_id = '$stableid' where $poolid = $num");
   $res = $sth->execute;
