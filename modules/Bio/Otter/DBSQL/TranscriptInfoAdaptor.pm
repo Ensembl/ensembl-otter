@@ -122,14 +122,14 @@ sub fetch_by_dbID {
 sub fetch_by_stable_id {
    my ($self,$id) = @_;
 
-
-   if (!defined($id)) {
-       $self->throw("Stable id must be entered to fetch a TranscriptInfo object");
-   }
-   
-   my ($ti) = $self->_generic_sql_fetch("where transcript_stable_id = \'$id\'");
-   
-   return $ti;
+    $self->throw("this method does not work");
+   #if (!defined($id)) {
+   #    $self->throw("Stable id must be entered to fetch a TranscriptInfo object");
+   #}
+   #
+   #my ($ti) = $self->_generic_sql_fetch("where transcript_stable_id = \'$id\'");
+   #
+   #return $ti;
    
 }
 
