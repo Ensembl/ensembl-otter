@@ -165,3 +165,8 @@ homol_tag=Pep_homol
 module=Bio::EnsEMBL::Ace::Filter::SimpleFeature::Eponine
 method_tag=EPONINE
 
+[local_blast]
+database=
+method_color=ORANGE
+method_tag=
+homol_tag=DNA_homol
