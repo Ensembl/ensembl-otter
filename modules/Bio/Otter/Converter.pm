@@ -1030,7 +1030,7 @@ sub ace_locus_objs_from_genes{
 	    }
 	}
         if ($gene->type =~ /^([^:]+):/) {
-            $str .= qq{Type_prefix "$1"\n};
+            $str .= qq{Type_prefix ace_unescape($1)\n};
         }
 
         $str .= "\n";
@@ -1150,7 +1150,7 @@ sub ace_to_otter {
       while (($_ = <$fh>) !~ /^\n$/) {
 
 	if (/^Subsequence $STRING $INT $INT/x) {
-	  my $name  = "$1";
+	  my $name  = ace_unescape($1);
 	  my $start = $2;
 	  my $end   = $3;
 
@@ -1170,7 +1170,7 @@ sub ace_to_otter {
 	  $sequence{$name}{parent} = $currname;
 	  $sequence{$name}{strand} = $strand;
 	} elsif (/Assembly_name $STRING/x) {
-	  $assembly_type = "$1";
+	  $assembly_type = ace_unescape($1);
 	  #print STDERR $1, "\n";
 	}
 
@@ -1184,7 +1184,7 @@ sub ace_to_otter {
 	#  AGP_Fragment "AL353662.19" 514440 680437 Align 514440 2001
 
 	elsif (/^AGP_Fragment $STRING $INT $INT \s+Align $INT $INT/x) {
-	  my $name   = "$1";
+	  my $name   = ace_unescape($1);
 	  my $start  = $2;
 	  my $end    = $3;
 	  # Don't need $4
@@ -1222,9 +1222,9 @@ sub ace_to_otter {
 	}
 
 	elsif (/^Assembly_tags $STRING $INT $INT $STRING/x) {
-            my $type    = "$1";
+            my $type    = ace_unescape($1);
             my ($start, $end, $strand) = decide_strand($2, $3);
-            my $info    = "$4";
+            my $info    = ace_unescape($4);
 
 	    my $at = Bio::Otter::AssemblyTag->new;
 	    $at->tag_type($type);
@@ -1239,14 +1239,14 @@ sub ace_to_otter {
 
 	elsif (/^(Keyword|Remark|Annotation_remark) $STRING/x) {
 	  my $anno_txts = $curr_seq->{$1} ||= [];
-	  push @$anno_txts, "$2";
+	  push @$anno_txts, ace_unescape($2);
 	} elsif (/^EMBL_dump_info\s+DE_line $STRING/x) {
-	  $curr_seq->{EMBL_dump_info} = "$1";
+	  $curr_seq->{EMBL_dump_info} = ace_unescape($1);
 	} elsif (/^Feature $STRING $INT $INT $FLOAT (?:$STRING)?/x) {
-	  my $type  = "$1";
+	  my $type  = ace_unescape($1);
 	  my ($start, $end, $strand) = decide_strand($2, $3);
 	  my $score = $4;
-	  my $label = "$5";
+	  my $label = ace_unescape($5);
 
 	  my $ana = $logic_ana{$type} ||= Bio::EnsEMBL::Analysis->new(-LOGIC_NAME => $type);
 	  my $sf = Bio::EnsEMBL::SimpleFeature->new(
@@ -1264,7 +1264,7 @@ sub ace_to_otter {
 
 	elsif (/^Source $STRING/x) {
 	  # We have a gene and not a contig.
-	  $curr_seq->{Source} = "$1";
+	  $curr_seq->{Source} = ace_unescape($1);
 
 	  my $tran = Bio::Otter::AnnotatedTranscript->new;
 	  $curr_seq->{transcript} = $tran;
@@ -1273,7 +1273,7 @@ sub ace_to_otter {
 	} elsif (/^Source_Exons $INT $INT (?:$STRING)?/x) {
 	  my $oldstart = $1;
 	  my $oldend   = $2;
-	  my $stableid = "$3";    # Will not always have a stable_id
+	  my $stableid = ace_unescape($3);    # Will not always have a stable_id
 
 	  my $tstart  = $curr_seq->{start};
 	  my $tend    = $curr_seq->{end};
@@ -1302,9 +1302,9 @@ sub ace_to_otter {
 	  $curr_seq->{transcript}->add_Exon($exon);
 	} elsif (/^(cDNA_match|Protein_match|Genomic_match|EST_match) $STRING/x) {
 	  my $matches = $curr_seq->{$1} ||= [];
-	  push @$matches, "$2";
+	  push @$matches, ace_unescape($2);
 	} elsif (/^Locus $STRING/x) {
-	  $genenames{$currname} = "$1";
+	  $genenames{$currname} = ace_unescape($1);
 	} elsif (/^CDS $INT $INT/x) {
 	  $curr_seq->{CDS_start} = $1;
 	  $curr_seq->{CDS_end}   = $2;
@@ -1318,11 +1318,11 @@ sub ace_to_otter {
 	} elsif (/^Start_not_found/) {
 	  $curr_seq->{Start_not_found} = -1;
 	} elsif (/^Method $STRING/x) {
-	  $curr_seq->{Method} = "$1";
+	  $curr_seq->{Method} = ace_unescape($1);
 	} elsif (/^(Processed_mRNA|Pseudogene)/) {
 	  $curr_seq->{$1} = 1;
 	} elsif (/^(Transcript_id|Translation_id|Transcript_author|Accession) $STRING/x) {
-	  $curr_seq->{$1} = "$2";
+	  $curr_seq->{$1} = ace_unescape($2);
 	} elsif (/^Sequence_version $INT/x) {
 	  $curr_seq->{Sequence_version} = $1;
 	}
@@ -1345,21 +1345,21 @@ sub ace_to_otter {
 	  $cur_gene->{GeneType} = "Novel_CDS-$1";
 	} elsif (/^Positive_sequence $STRING/x) {
 	  my $tran_list = $cur_gene->{transcripts} ||= [];
-	  push @$tran_list, "$1";
+	  push @$tran_list, ace_unescape($1);
 	} elsif (/^(Locus_(?:id|author)) $STRING/x) {
-	  $cur_gene->{$1} = "$2";
+	  $cur_gene->{$1} = ace_unescape($2);
 	} elsif (/^Truncated/) {
 	  $cur_gene->{Truncated} = 1;
 	} elsif (/^Remark $STRING/x || /^Annotation_remark $STRING/x ) {
 	  my $remark_list = $cur_gene->{'remarks'} ||= [];
-	  push(@$remark_list, "$1");
+	  push(@$remark_list, ace_unescape($1));
 	} elsif (/^Alias $STRING/x) {
 	  my $alias_list = $cur_gene->{'aliases'} ||= [];
-	  push(@$alias_list, "$1");
+	  push(@$alias_list, ace_unescape($1));
 	} elsif (/^Full_name $STRING/x) {
-	  $cur_gene->{'description'} = "$1";
+	  $cur_gene->{'description'} = ace_unescape($1);
 	} elsif (/^(Type_prefix) $STRING/x) {
-	  $cur_gene->{$1} = "$2";
+	  $cur_gene->{$1} = ace_unescape($2);
 	}
       }
     }
@@ -1372,7 +1372,7 @@ sub ace_to_otter {
       while (($_ = <$fh>) !~ /^\n$/) {
 	#print STDERR "Person: $_";
 	if (/^Email $STRING/x) {
-	  $author_email = "$1";
+	  $author_email = ace_unescape($1);
 	}
       }
 
@@ -2226,6 +2226,7 @@ sub frags_to_slice {
 sub ace_escape {
     my $str = shift;
     
+    $str =~ s/^\s+//;       # Trim leading whitespace.
     $str =~ s/\s+$//;       # Trim trailing whitespace.
     $str =~ s/\n/\\n/g;     # Backslash escape newlines
     $str =~ s/\t/\\t/g;     # and tabs.
@@ -2240,6 +2241,7 @@ sub ace_escape {
 sub ace_unescape {
     my $str = shift;
     
+    $str =~ s/^\s+//;       # Trim leading whitespace.
     $str =~ s/\s+$//;       # Trim trailing whitespace.
 
     # Unescape quotes, back and forward slashes,
