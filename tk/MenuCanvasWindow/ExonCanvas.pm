@@ -746,7 +746,7 @@ sub delete_selected_PolyA {
 sub is_mutable {
     my( $self ) = @_;
     
-    return $self->SubSeq->GeneMethod->is_mutable;
+    return $self->SubSeq->is_mutable;
 }
 
 sub window_close {

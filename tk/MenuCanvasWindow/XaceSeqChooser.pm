@@ -4,7 +4,7 @@
 package MenuCanvasWindow::XaceSeqChooser;
 
 use strict;
-use Carp qw{ confess cluck };
+use Carp;
 use Hum::Ace::SubSeq;
 use Hum::Ace::Locus;
 use Hum::Ace::GeneMethod;
@@ -68,13 +68,6 @@ sub set_known_GeneMethods {
         $meth->is_coding($is_coding);
         $self->add_GeneMethod($meth);
     }
-    # add to this list a hard wired 'truncated' method, which cannot be edited
-    # used to attach to transcripts that have gone out of bounds and can't be edited
-    my $meth = Hum::Ace::GeneMethod->new;
-    $meth->name('truncated');
-    $meth->color('RED');
-    $meth->is_mutable(0);
-    $self->add_GeneMethod($meth);
 }
 
 sub fetch_GeneMethod {
@@ -148,11 +141,19 @@ sub get_default_mutable_GeneMethod {
 sub get_Locus {
     my( $self, $name ) = @_;
     
-    if (my $locus = $self->{'_locus_cache'}{$name}) {
-        return $locus;
+    my( $locus );
+    if (ref($name)) {
+        $locus = $name;
+        $name = $locus->name;
+    }
+    
+    if (my $cached = $self->{'_locus_cache'}{$name}) {
+        return $cached;
     } else {
-        $locus = Hum::Ace::Locus->new;
-        $locus->name($name);
+        unless ($locus) {
+            $locus = Hum::Ace::Locus->new;
+            $locus->name($name);
+        }
         $self->{'_locus_cache'}{$name} = $locus;
         return $locus;
     }
@@ -766,39 +767,59 @@ sub edit_new_subsequence {
     my( $self ) = @_;
     
     my @sub_names = $self->list_selected_subseq_names;
-    my( %clone_names );
+    my( $clone_name, @subseq );
     foreach my $sn (@sub_names) {
         my $sub = $self->get_SubSeq($sn);
-        my $seq_name = $sub->clone_Sequence->name;
-        $clone_names{$seq_name} = 1;
+        my $this_clone = $sub->clone_Sequence->name;
+        if ($clone_name) {
+            if ($clone_name ne $this_clone) {
+                $self->message("ERROR: selected SubSequences are attached to different Sequences");
+                return;
+            }
+        } else {
+            $clone_name = $this_clone;
+        }
+        push(@subseq, $sub);
     }
-    my @clone_n = keys %clone_names;
-
-    my @selected_clone = $self->list_selected_clone_names;
-    my      @all_clone = $self->clone_list;
     
-    my( $clone_name );
-    if (@clone_n == 1) {
-        $clone_name = $clone_n[0];
+    unless ($clone_name) {
+        my @selected_clone = $self->list_selected_clone_names;
+        my      @all_clone = $self->clone_list;
+
+        if (@selected_clone == 1) {
+            $clone_name = $selected_clone[0];
+        }
+        elsif (@all_clone == 1) {
+            $clone_name = $all_clone[0];
+        }
+        else {
+           $self->message("Unable to determine clone name");
+           return;
+        }
     }
-    elsif (@selected_clone == 1) {
-        $clone_name = $selected_clone[0];
+    
+    # Find 3' most coordinate in subsequences
+    my( $most_3prime );
+    foreach my $sub (@subseq) {
+        my $this_3prime = $sub->strand == 1 ? $sub->end : $sub->start;
+        if ($most_3prime) {
+            next unless $this_3prime < $most_3prime;
+        }
+        $most_3prime = $this_3prime;
     }
-    elsif (@all_clone == 1) {
-        $clone_name = $all_clone[0];
-    }
-    else {
-       $self->message("Unable to determine clone name");
-       return;
-    }
+    
+    my $clone = $self->get_CloneSeq($clone_name);
+    my $region_name = $clone->clone_name_overlapping($most_3prime) || $clone_name;
+    
+    # Trim sequence version from accession if clone_name ends .SV
+    $region_name =~ s/\.\d+$//;
     
     # Now get the maximum transcript number for this root
-    my $clone = $self->get_CloneSeq($clone_name);
-    my $regex = qr{^(SC:)?$clone_name\.(\d+)}; # Perl 5.6 feature!
+    my $regex = qr{^(SC:)?$region_name\.(\d+)}; # qr is a Perl 5.6 feature
     my $max = 0;
     my $prefix = '';
-    foreach my $sub_name (map $_->name, $clone->get_all_SubSeqs) {
-        my ($sc, $n) = $sub_name =~ /$regex/;
+    foreach my $sub ($clone->get_all_SubSeqs) {
+        my ($sc, $n) = $sub->name =~ /$regex/;
         $prefix = $sc if $sc;
         if ($n and $n > $max) {
             $max = $n;
@@ -806,20 +827,21 @@ sub edit_new_subsequence {
     }
     $max++;
     
-    my $seq_name = "$prefix$clone_name.$max";
+    my $seq_name = "$prefix$region_name.$max-001";
     
     # Check we don't already have a sequence of this name
     if ($self->get_SubSeq($seq_name)) {
-        # Should be impossible!
-        confess "Already have SubSeq named '$seq_name'";
+        # Should be impossible, I hope!
+        $self->message("Tried to make new SubSequence name but already have SubSeq named '$seq_name'");
+        return;
     }
 
     warn "Making '$seq_name'\n";
     my( $new );
-    if (@sub_names) {
-        $new = $self->get_SubSeq($sub_names[0])->clone;
-        for (my $i = 1; $i < @sub_names; $i++) {
-            my $extra_sub = $self->get_SubSeq($sub_names[$i])->clone;
+    if (@subseq) {
+        $new = $subseq[0]->clone;
+        for (my $i = 1; $i < @subseq; $i++) {
+            my $extra_sub = $subseq[$i]->clone;
             foreach my $ex ($extra_sub->get_all_Exons) {
                 $new->add_Exon($ex);
             }
@@ -941,89 +963,54 @@ sub make_variant_subsequence {
         return;
     }
     elsif (@sub_names > 1) {
-        $self->message("Can't make more an variant from more than one selected sequence");
+        $self->message("Can't make a variant from more than one selected sequence");
         return;
     }
     my $name = $sub_names[0];
     my $sub = $self->get_SubSeq($name);
+    my $clone = $self->get_CloneSeq($sub->clone_Sequence->name);
     
     # Work out a name for the new variant
-    my $clone_name = $sub->clone_Sequence->name;
-    my( $new_name, $iso_name );
-    if ($name =~ /^$clone_name\.(.+)/) {
-        my $suffix = $1;
+    my $var_name = $name;
+    if ($var_name =~ s/-(\d{3,})$//) {
+        my $root = $var_name;
 
-        my @numbers = $suffix =~ /(\d+)/g;
-        warn "numbers = [@numbers]";
-        my ($extn) = $suffix =~ /\.([_a-zA-Z]+)$/;
-
-        if (@numbers > 2) {
-            $self->message("Got too many numbers (@numbers) from extension");
-            return;
-        }
-        elsif (@numbers == 2) {
-            # Making an variant of an exisiting variant
-            $new_name = $name;
-            for (my $i = $numbers[1] + 1; ; $i++) {
-                $iso_name = join('.', $clone_name, $numbers[0], $i);
-                $iso_name .= $3 if $3;
-                my $have_iso = 0;
-                foreach my $n ($iso_name, "$iso_name.mRNA") {
-                    $have_iso = 1 if $self->get_SubSeq($n);
-                }
-                last unless $have_iso;
+        # Now get the maximum variant number for this root
+        my $regex = qr{^$root-(\d{3,})$};
+        my $max = 0;
+        my $prefix = '';
+        foreach my $sub ($clone->get_all_SubSeqs) {
+            my ($n) = $sub->name =~ /$regex/;
+            if ($n and $n > $max) {
+                $max = $n;
             }
         }
-        elsif (@numbers == 1) {
-            # Making the first variant
-            $new_name = join('.', $clone_name, $numbers[0], 1);
-            $iso_name = join('.', $clone_name, $numbers[0], 2);
-            if ($extn) {
-                $new_name .= ".$extn";
-                $iso_name .= ".$extn";
-            }
-        }
-        else {
-            $self->message("Extension contains no numbers");
+
+        $var_name = sprintf "%s-%03d", $root, $max + 1;
+    
+        # Check we don't already have the variant we are trying to create
+        if ($self->get_SubSeq($var_name)) {
+            $self->message("Tried to create variant '$var_name', but it already exists! (Should be impossible)");
             return;
         }
     } else {
-        # We're dealing with a non-standard name
-        $self->message("SubSequence name doesn't match clone name '$clone_name'!");
-        $new_name = "$name.1";
-        $iso_name = "$name.2";
-    }
-    
-    # Check we don't already have the variant we are trying to create
-    if ($self->get_SubSeq($iso_name)) {
-        $self->message("Tried to create variant '$iso_name', but it already exists!");
+        $self->message(
+            "SubSequence name '$name' is not in the expected format " .
+            "(ending with a dash followed by three or more digits).",
+            "Perhaps you want to use the \"New\" funtion instead?",
+            );
         return;
     }
     
-    # Rename the existing subseq
-    if ($new_name ne $name) {
-        if ($self->raise_subseq_edit_window($name)) {
-            $self->message("Please close the edit window for '$name' first");
-            return;
-        }
-        if ($self->get_SubSeq($new_name)) {
-            $self->message("Can't make variant of '$name' because '$new_name' already exists!");
-            return;
-        }
-        my $ec = $self->make_exoncanvas_edit_window($sub);
-        $ec->set_subseq_name($new_name);
-        $ec->xace_save($ec->new_SubSeq_from_tk);
-    }
-    
     # Make the variant
-    my $iso = $sub->clone;
-    $iso->name($iso_name);
-    $self->add_SubSeq($iso);
-    $self->get_CloneSeq($clone_name)->add_SubSeq($iso);
+    my $var = $sub->clone;
+    $var->name($var_name);
+    $self->add_SubSeq($var);
+    $clone->add_SubSeq($var);
     
     $self->draw_current_state;
-    $self->highlight_by_name('subseq', $new_name, $iso_name);
-    $self->edit_subsequences($iso_name);
+    $self->highlight_by_name('subseq', $name, $var_name);
+    $self->edit_subsequences($var_name);
 }
 
 sub make_exoncanvas_edit_window {
@@ -1133,26 +1120,7 @@ sub draw_subseq_list {
             or confess "Can't get Clone '$clone_name'";
         foreach my $clust ($self->get_all_Subseq_clusters($clone)) {
             push(@subseq, "") if @subseq;
-            #push(@subseq, map($_->name, @$clust));
-            ### This logic can be moved to the draw_sequence_list method
-	    foreach my $sub (@$clust){
-		my $text=$sub->name;
-		if($sub->is_truncated){
-		    # truncated genes are red (they also have a
-		    # truncated method, which is not mutable)
-		    if($sub->GeneMethod->name eq 'truncated'){
-			$text.=':red';
-		    }else{
-			$text.=':purple';
-		    }
-		}elsif($sub->GeneMethod->is_mutable){
-		    # black can be edited
-		}else{
-		    # blue can't be edited
-		    $text.=':blue';
-		}
-		push(@subseq,$text);
-	    }
+            push(@subseq, map($_->name, @$clust));
         }
     }
     $self->draw_sequence_list('subseq', @subseq);
@@ -1248,16 +1216,11 @@ sub express_clone_and_subseq_fetch {
             
 	if (my $s_meth = $sub->GeneMethod) {
             my $meth = $self->get_GeneMethod($s_meth->name);
-	    if($sub->is_truncated && $meth->is_mutable){
-		# if subsequence is truncated, give it a fake 'truncated method'
-		# to ensure it can't be edited if it had a mutable method
-		$meth = $self->get_GeneMethod('truncated');
-	    }
             $sub->GeneMethod($meth);
         }
 
         if (my $s_loc = $sub->Locus) {
-            my $locus = $self->get_Locus($s_loc->name);
+            my $locus = $self->get_Locus($s_loc);
             $sub->Locus($locus);
         }
     }
@@ -1338,27 +1301,31 @@ sub draw_sequence_list {
     for (my $i = 0; $i < @slist; $i++) {
         if (my $text = $slist[$i]) {
 
-	    # extract embedded colour from text
-	    if($text=~/^(.*):(blue|green|red|purple)$/){
-		$text=$1;
-		my $colour=$2;
-		$canvas->createText(
-				    $x, $y,
-				    -anchor     => 'nw',
-				    -text       => $text,
-				    -font       => [$font, $size, 'bold'],
-				    -tags       => [$tag],
-				    -fill       => $colour,
-				    );
-	    }else{
-		$canvas->createText(
-				    $x, $y,
-				    -anchor     => 'nw',
-				    -text       => $text,
-				    -font       => [$font, $size, 'bold'],
-				    -tags       => [$tag],
-				    );
-	    }
+            my $style = 'bold';
+            my $color = 'black';
+            
+            # Special rules for SubSequences
+            if ($tag eq 'subseq') {
+                my $sub = $self->get_SubSeq($text);
+                if ($sub->is_mutable) {
+                    $color = 'black';
+                }
+                elsif (my $locus = $sub->Locus) {
+                    $color = '#999999';
+                }
+                else {
+                    $style = 'normal';
+                }
+            }
+
+	    $canvas->createText(
+		$x, $y,
+		-anchor     => 'nw',
+		-text       => $text,
+		-font       => [$font, $size, $style],
+		-tags       => [$tag],
+		-fill       => $color,
+		);
         }
         
         if (($i + 1) % 20) {
