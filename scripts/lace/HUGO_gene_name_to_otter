@@ -178,10 +178,10 @@ eval {
 
 if ( $@ ) {
   warn $@;
-  print "\nGene symbol update was not successful.\n";
+  warn "\nHUGO update was not successful.\n";
 } else {
-  print "\nGene name update is OK.\n" if $name;
-  print "\nGene type update is OK.\n" if $gtype;
+  warn "\nGene name update is OK.\n" if $name;
+  warn "\nGene type update is OK.\n" if $gtype;
   $otter_db->commit;
 }
 
