@@ -82,6 +82,17 @@ sub refresh_column {
     }
 }
 
+sub refresh_locks_column{
+    my ($self) = @_ ;
+    my $sequence_set = $self->SequenceSet ;
+    my $dataset = $self->SequenceSetChooser->DataSet ;
+    $dataset->refresh_locks($sequence_set) ;
+}
+
+# this method returns an anonymous array. Each element of the array consists of another annonymous array of two elements.
+# the first of the two elements is the method to be called on the canvas, 
+# and the second method that will produce the arguments for the first method
+# in most cases the first method will be createText , as that is what is being displayed
 sub column_methods {
     my( $self, $methods ) = @_;
     
@@ -93,24 +104,29 @@ sub column_methods {
     }
     elsif (! $self->{'_column_methods'}) {
         # Setup some default column methods
+        my $method = \&_write_text ;
+        
         my $norm = [$self->font, $self->font_size, 'normal'];
         my $bold = [$self->font, $self->font_size, 'bold'];
         $self->{'_column_methods'} = [
-            \&_column_text_row_number,
+            [$method, \&_column_text_row_number],
+            [$method, 
             sub{
                 # Use closure for font definition
                 my $cs = shift;
                 my $acc = $cs->accession;
                 my $sv  = $cs->sv;
                 return {-text => "$acc.$sv", -font => $bold, -tags => ['searchable']};
-            },
+            }],
+            [$method, 
             sub{
                 # Use closure for font definition
                 my $cs = shift;
                 return {-text => $cs->clone_name, -font => $bold, -tags => ['searchable'] };
-            },
-	    \&_column_text_seq_note_status,
-	    sub{
+            }],
+            [$method, \&_column_text_seq_note_status],
+	    [$method , 
+            sub{
                 my $cs = shift;
                 if (my $sn = $cs->current_SequenceNote) {
                     my $time = $sn->timestamp;
@@ -120,12 +136,23 @@ sub column_methods {
                 } else {
                     return;
                 }
-            },
-            \&_column_text_seq_note_author,
-            \&_column_text_seq_note_text,
+            }],
+            [$method, \&_column_text_seq_note_author],
+            [$method, \&_column_text_seq_note_text],
+            [\&draw_padlock_icon , 
+            sub { 
+                my $cs = shift;
+                my $is_locked = $cs->get_lock_status ;
+                return { -locked => $is_locked} ;
+            } ] 
             ];
     }
     return $self->{'_column_methods'};
+}
+
+sub _write_text{
+    my ($canvas ,  @args) = @_ ;
+    $canvas->createText(@args) ;
 }
 
 sub _column_text_row_number {
@@ -153,6 +180,7 @@ sub _column_text_seq_note_text {
         return {};
     }
 }
+
 
 sub _column_text_seq_note_status{
     my $cs = shift;
@@ -254,7 +282,8 @@ sub initialise {
 	my $ds = $self->SequenceSetChooser->DataSet;
 	my $ss = $self->SequenceSet;
 	$ds->fetch_all_SequenceNotes_for_SequenceSet($ss);
-	$self->draw;
+	$self->refresh_locks_column;
+        $self->draw;
 	$self->set_scroll_region_and_maxsize;
 	$top->Unbusy;
     };
@@ -376,7 +405,7 @@ sub hunt_for_selection {
         $query_str = $canvas->SelectionGet;
     };
     return if $@;
-    #warn "Looking for '$query_str'";
+    warn "Looking for '$query_str'";
     my $matcher = $self->make_matcher($query_str);
     
     my $current_obj;
@@ -505,8 +534,21 @@ sub run_lace {
     };
     if ($@) {
         $db->error_flag(0);
-        $self->exception_message($@, 'Error initialising database');
-        ### This leaves clones locked if we have write_access
+        if ($@ =~ /Clones locked/){
+            # if our error is because of locked clones, display these to the user
+            my $message = "Some of the clones you are trying to open are locked\n";
+            my @lines = split /\n/ , $@ ;
+            print STDERR $@ ;
+            foreach my $line (@lines ){
+                if (my ($clone_name , $author) = $line =~ m/(\S+) has been locked by \'(\S+)\'/ ){            
+                    $message  .= "$clone_name is locked by $author \n" ;
+                }
+            }
+            $self->message( $message  );
+        }
+        else{
+            $self->exception_message($@, 'Error initialising database');
+        }
         return;
     }    
 
@@ -589,11 +631,15 @@ sub get_rows_list{
 sub draw {
     my( $self ) = @_;
     
+    # gets a list of CloneSequence objects.
+    # draws a row for each of them
+    
     my $cs_list   = $self->get_rows_list;
     print STDERR " done\n";
     my $size      = $self->font_size;
     my $canvas    = $self->canvas;
     my $methods   = $self->column_methods;
+
     my $max_width = $self->max_column_width;
 
     $canvas->delete('all');
@@ -602,7 +648,7 @@ sub draw {
     print STDERR "Drawing list...";
     my $gaps = 0;
     my $gap_pos = {};
-    for (my $i = 0; $i < @$cs_list; $i++) {
+    for (my $i = 0; $i < @$cs_list; $i++) {   # go thorugh each clone sequence
         my $row = $i + $gaps;
         my $cs = $cs_list->[$i];
         my $row_tag = "row=$row";
@@ -636,35 +682,29 @@ sub draw {
 
         $row_tag = "row=$row";
         $y = $row * $size;
-
-        for (my $col = 0; $col < @$methods; $col++) {
+        
+        for (my $col = 0; $col < @$methods; $col++) { # go through each method
             my $x = $col * $size;
+
             my $col_tag = "col=$col";
-            my $meth = $methods->[$col];
+            my $meth_pair = $methods->[$col];
+            my $calling_method = @$meth_pair[0]; 
+            my $arg_method = @$meth_pair[1] ;
             
-	    my $opt_hash = $meth->($cs, $i);
+	    my $opt_hash = $arg_method->($cs, $i) if $arg_method ;
 	    $opt_hash->{'-anchor'} ||= 'nw';
 	    $opt_hash->{'-font'}   ||= $helv_def;
 	    $opt_hash->{'-width'}  ||= $max_width;
 	    $opt_hash->{'-tags'}   ||= [];
 	    push(@{$opt_hash->{'-tags'}}, $row_tag, $col_tag, "cs=$i");
 	    
-#            my ($text, $font, $color, @tags) = $meth->($cs, $i);
-            $canvas->createText(
-                $x, $y,
-		%$opt_hash
-#                -anchor => 'nw',
-#                -font   => $font || $helv_def,
-#		-fill   => $color || 'black',
-#                -width  => $max_width,
-#                -tags   => [$row_tag, $col_tag, "cs=$i", @tags],
-#                -text   => $text,
-#			       
-                );
+            $calling_method->($canvas,  $x , $y ,  %$opt_hash);  ## in most cases this will be $canvas->createText
+            
         }
+        
     }
     print STDERR " done\n";
-    my $col_count = scalar @$methods;
+    my $col_count = scalar @$methods  + 1; # +1 fopr the padlock (non text column)
     my $row_count = scalar @$cs_list + $gaps;
     
     print STDERR "Laying out table...";
@@ -676,6 +716,8 @@ sub draw {
     $self->message($self->empty_canvas_message) unless scalar @$cs_list;
     $self->fix_window_min_max_sizes;
 }
+
+
 
 sub deselect_all_selected_not_current {
     my( $self ) = @_;
@@ -982,6 +1024,50 @@ sub check_for_History{
 sub empty_canvas_message{
     return "No Clone Sequences found";
 }
+
+
+
+sub draw_padlock_icon{
+    my ($canvas , $x, $y , %opt_hash) = @_ ;
+    # %opt_hash should contain the lock status of the clone as well as the canvas tags (ie row and column)
+    
+    my $mw = $canvas->toplevel ;
+    my $data = padlock_pixmap()  ;
+    my $pixmap = $canvas->toplevel->Pixmap( -data => $data ) ;
+    push(@{$opt_hash{-tags}}, 'padlock');  # not used yet- but may be useful
+    
+    if ($opt_hash{-locked}){
+        $canvas->createImage( $x , $y , -image => $pixmap , -tags => $opt_hash{-tags} , -anchor => 'n'  ) ;
+    }
+}
+
+sub padlock_pixmap {    
+    
+    return <<'END_OF_PIXMAP' ;
+/* XPM */    
+static char * padlock[] = {
+"11 13 3 1",
+"     c None",
+".    c #FFFFFF",
+"+    c #000000",
+"           ",
+"    +++    ",
+"   +++++   ",
+"  ++   ++  ",
+"  +     +  ",
+"  +     +  ",
+" +++++++++ ",
+" +++++++++ ",
+" +++++++++ ",
+" +++++++++ ",
+" +++++++++ ",
+"  +++++++  ",
+"           "};
+END_OF_PIXMAP
+
+}
+
+
 
 1;
 
