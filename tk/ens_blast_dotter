@@ -7,16 +7,24 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Hum::Submission 'sanger_name';
 use CanvasWindow;
 
-my $sel_tag = 'selected';
-my $lab_tag = 'seq_label';
-my $sel_color = 'LemonChiffon';
-my $match_color = '#284d49';
-my $seq_tag = 'seq_rect';
+my   $sel_tag = 'selected';
+my   $lab_tag = 'seq_label';
+my   $seq_tag = 'seq_rect';
+my $match_tag = 'match';
+
+my    $sel_color = 'LemonChiffon';
+my  $match_color = '#284d49';
+my $active_color = '#ff0000';
+
+my $pad = 5;
+my $font = ['Helvetica', 12, 'bold'];
+
 
 {
+    my $db_name = 'Chr9_heterochromatin';
     my $ensdb = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
         -HOST   => 'ecs1b',
-        -DBNAME => 'Chr9_heterochromatin',
+        -DBNAME => $db_name,
         -USER   => 'ensro',
         );
     $ensdb->static_golden_path_type('TPF-REGION');
@@ -49,23 +57,44 @@ my $seq_tag = 'seq_rect';
     my $mw = CanvasWindow::MainWindow->new;
     my $cw = CanvasWindow->new($mw);
     my $canvas = $cw->canvas;
-    $canvas->CanvasBind('<Button-1>', \&handle_button_1);
+    $canvas->CanvasBind(              '<Button-1>', \&handle_button_1);
+    $canvas->CanvasBind(        '<Shift-Button-1>', \&handle_shift_button_1);
+    $canvas->CanvasBind(      '<Control-Button-1>', sub{ zoom_in( $cw) });
+    $canvas->CanvasBind('<Control-Shift-Button-1>', sub{ zoom_out($cw) });
+    my $print_to_file = sub {
+            $cw->page_width(591);
+            $cw->page_height(841);
+            my @files = $cw->print_postscript($db_name);
+            warn "Printed to files:\n",
+                map "  $_\n", @files;
+          };
+    $canvas->CanvasBind('<Control-p>', $print_to_file);
+    $canvas->CanvasBind('<Control-P>', $print_to_file);
     #$canvas->configure(-cursor => 'plus');
 
-    my $scale = 2_000;
+    my $scale = 5_000;
     my $col_max = 1;
     my $feature_count = 0;
+    my $x_offset = 200;
     for (my $row = 0; $row < @map; $row++, $col_max++) {
         my $row_data = $map[$row];
         my $y1       = $row_data->[0] / $scale;
         my $y2       = $row_data->[1] / $scale;
         my $row_name = $row_data->[2];
+        my $row_label = $canvas->createText(
+            $x_offset - $pad, ($y1 + (($y2 - $y1) / 2)),
+            -text       => sanger_name_from_contig_id($row_name),
+            -anchor     => 'e',
+            -justify    => 'right',
+            -tags       => ['y_label'],
+            );
+        
         for (my $col = 0; $col < $col_max; $col++) {
             my $col_data = $map[$col];
-            my $x1       = $col_data->[0] / $scale;
-            my $x2       = $col_data->[1] / $scale;
-            my $col_name = $col_data->[2];
-            my $col_id   = $col_data->[3];
+            my $x1       = $x_offset + ($col_data->[0] / $scale);
+            my $x2       = $x_offset + ($col_data->[1] / $scale);
+            my $col_name =              $col_data->[2];
+            my $col_id   =              $col_data->[3];
             
             my $seq_rect = $canvas->createRectangle($x1, $y1, $x2, $y2,
                 -outline    => 'grey',
@@ -96,6 +125,7 @@ my $seq_tag = 'seq_rect';
             while (my ($col_start, $col_end, $col_strand,
                 $row_start, $row_end, $pid) = $sth->fetchrow)
             {
+                my $length = $col_end - $col_start + 1;
                 if ($col_strand == -1) {
                     ($col_start, $col_end) = ($col_end, $col_start);
                 }
@@ -104,8 +134,14 @@ my $seq_tag = 'seq_rect';
                     $y1 + ($row_start / $scale),
                     $x1 + ($col_end   / $scale),
                     $y1 + ($row_end   / $scale),
-                    -width  => 2,
-                    -fill   => pid_color($pid, $match_color),
+                    -width      => 2,
+                    -fill       => pid_color($pid, $match_color),
+                    -activefill => pid_color($pid, $active_color),
+                    -tags       => [
+                        $match_tag,
+                        "pid=$pid",
+                        "length=$length",
+                        ],
                     );
                 $feature_count++;
                 unless ($feature_count % 10) {
@@ -116,7 +152,7 @@ my $seq_tag = 'seq_rect';
                 }
             }
         }
-        if ($row > 10) {
+        if (0 and $row > 10) {
             warn "DEBUG BAILOUT";
             last;
         }
@@ -127,7 +163,7 @@ my $seq_tag = 'seq_rect';
     $canvas->lower($seq_tag, 'all');
     
     my $rec = $canvas->createRectangle(
-        $canvas->bbox('all'),
+        $canvas->bbox($seq_tag),
         -outline    => undef,
         -fill       => 'grey',
         );
@@ -138,6 +174,22 @@ my $seq_tag = 'seq_rect';
     
     
     Tk::MainLoop();
+}
+
+sub zoom_in {
+    my( $cw ) = @_;
+    
+    $cw->canvas->scale('all', 0,0,2,2);
+    #$cw->set_scroll_region_and_maxsize;
+    $cw->fix_window_min_max_sizes;
+}
+
+sub zoom_out {
+    my( $cw ) = @_;
+    
+    $cw->canvas->scale('all', 0,0,0.5,0.5);
+    #$cw->set_scroll_region_and_maxsize;
+    $cw->fix_window_min_max_sizes;
 }
 
 sub handle_button_1 {
@@ -153,9 +205,33 @@ sub handle_button_1 {
         }
     }
 
+    handle_shift_button_1($canvas);
+}
+
+sub handle_shift_button_1 {
+    my( $canvas ) = @_;
+    
     if (my $area = $canvas->find('withtag', "$seq_tag&&current")) {
         highlight_sequence_rectangle($canvas, $area);
     }
+    elsif (my $match = $canvas->find('withtag', "$match_tag&&current")) {
+        print_match_info($canvas, $match);
+    }
+}
+
+sub print_match_info {
+    my( $canvas, $match ) = @_;
+    
+    my $inf = get_canvas_item_info($canvas, $match);
+    my @bbox = $canvas->bbox($match);
+    my $txt = "$inf->{length}bp at $inf->{pid}\%";
+    $canvas->createText(
+        $bbox[0], $bbox[1],
+        -text   => $txt,
+        -font   => $font,
+        -anchor => 'sw',
+        -tags   => [$lab_tag],
+        );
 }
 
 sub highlight_sequence_rectangle {
@@ -166,11 +242,9 @@ sub highlight_sequence_rectangle {
     
     my $inf = get_canvas_item_info($canvas, $area);
     
-    my $pad = 5;
     my ($x1, $y1, $x2, $y2) = $canvas->coords($area);
     my $x_pos = $x1 + (($x2 - $x1) / 2);
     my $y_pos = $y1 + (($y2 - $y1) / 2);
-    my $font = ['Helvetica', 12, 'bold'];
     my $col_label = $canvas->createText(
         $x_pos, $y1 - $pad,
         -text       => $inf->{'sanger_col'},
@@ -233,16 +307,22 @@ sub get_canvas_item_info {
 {
     my( %contig_sanger );
     
-    sub sanger_tag {
-        my( $prefix, $contig_id ) = @_;
+    sub sanger_name_from_contig_id {
+        my( $contig_id ) = @_;
         
         my( $sanger_name );
         unless ($sanger_name = $contig_sanger{$contig_id}) {
             my ($acc) = $contig_id =~ /^([^.]+)/;
             $sanger_name = $contig_sanger{$contig_id} = sanger_name($acc);
         }
-        return "$prefix=$sanger_name";
+        return $sanger_name;
     }
+}
+
+sub sanger_tag {
+    my( $prefix, $contig_id ) = @_;
+
+    return "$prefix=" . sanger_name_from_contig_id($contig_id);
 }
 
 {
