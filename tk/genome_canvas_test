@@ -86,12 +86,19 @@ use Getopt::Long 'GetOptions';
             -HOST   => $host,
             );
 
+        $chr_name ||= $fpc;
+        if ($chr_start and ! $chr_end) {
+            $chr_end = get_chr_end($db, $static_type, $chr_name);
+        }
+        elsif ($chr_end and ! $chr_start) {
+            $chr_start = 1;
+        }
+
         $db->static_golden_path_type($static_type);
         my $stadp = $db->get_StaticGoldenPathAdaptor();
 
         my( $vc );
         if ($chr_start) {
-            $chr_name ||= $fpc;
             print STDERR "Fetching region of chr '$chr_name' from $chr_start to $chr_end\n";
             $vc = $stadp->fetch_VirtualContig_by_chr_start_end(
                 $chr_name,
@@ -200,6 +207,22 @@ use Getopt::Long 'GetOptions';
                             ###############
                             Tk::MainLoop();
                             ###############
+
+
+sub get_chr_end {
+    my( $db, $static_type, $chr_name ) = @_;
+    
+    my $get_max = $db->prepare(q{
+        SELECT MAX(chr_end)
+        FROM static_golden_path
+        WHERE type = ?
+          AND chr_name = ?
+        });
+    $get_max->execute($static_type, $chr_name);
+    my ($max) = $get_max->fetchrow;
+    die "No max for type = '$static_type' and chr_name = '$chr_name'" unless $max;
+    return $max;
+}
 
 sub parse_num {
     my( $string ) = @_;

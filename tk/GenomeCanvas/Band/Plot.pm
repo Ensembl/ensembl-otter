@@ -52,10 +52,50 @@ sub render {
     # Draw the plot where there is sequence
     $band->create_plot;
     
+    $band->draw_cpg_islands;
+    
     # Draw the axes on top of the plot
     $band->draw_plot_axes;
 }
 
+
+sub draw_cpg_islands {
+    my( $band ) = @_;
+    
+    my $vc = $band->virtual_contig
+        or confess "No virtual contig attached";
+
+    my $height    = $band->height;
+    my $canvas    = $band->canvas;
+    my $y_offset  = $band->y_offset;
+    my $rpp       = $band->residues_per_pixel;
+    my @tags      = $band->tags;
+
+    my $half_height = $height / 2;
+    my $y_middle = $y_offset + $half_height;
+    
+    my $color = '#4169e7';
+    #my $max_score = log(5000);
+    my $max_score = 5000;
+    foreach my $cpg ($vc->get_all_SimpleFeatures_by_feature_type('cpg_island')) {
+        my $x1 = $cpg->start / $rpp;
+        my $x2 = $cpg->end   / $rpp;
+        #my $score = log($cpg->score);
+        my $score = $cpg->score;
+        my $cpg_height = $half_height * ($score / $max_score);
+        
+        my $y1 = $y_middle - $cpg_height;
+        my $y2 = $y_middle + $cpg_height;
+        
+        $canvas->createRectangle(
+            $x1, $y1, $x2, $y2,
+            -fill       => $color,
+            -outline    => $color,
+            -width      => 0,
+            -tags       => [@tags],
+            );
+    }
+}
 
 
 sub create_plot {
@@ -111,14 +151,6 @@ sub create_plot {
             -width      => 2,
             -tags       => [@tags],
             );
-        ## Draw plot
-        #$canvas->createLine(
-        #    @plot,
-        #    -fill       => 'black',
-        #    -width      => 1,
-        #    -smooth     => 1,
-        #    -tags       => [@tags],
-        #    );
     }
 }
 
