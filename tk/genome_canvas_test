@@ -11,7 +11,7 @@ use GenomeCanvas::DensityBand::Gene;
 use GenomeCanvas::Band::Gene;
 use GenomeCanvas::Band::SNP;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
-use Bio::EnsEMBL::ExternalData::SNPSQL::DBAdaptor;
+#use Bio::EnsEMBL::ExternalData::SNPSQL::DBAdaptor;
 use Hum::Submission 'prepare_statement'; # For Sanger sequence names
 use Getopt::Long 'GetOptions';
 
@@ -151,11 +151,11 @@ use Getopt::Long 'GetOptions';
         #$gene_density->band_color('#6600cc');
         #$gc->add_Band($gene_density);
 
-        my $repeat = GenomeCanvas::DensityBand::RepeatFeature->new;
-        $repeat->virtual_contig($vc);
-        $repeat->title('Repeats');
-        $repeat->repeat_classifier(\&repeat_class);
-        $gc->add_Band($repeat);
+        #my $repeat = GenomeCanvas::DensityBand::RepeatFeature->new;
+        #$repeat->virtual_contig($vc);
+        #$repeat->title('Repeats');
+        #$repeat->repeat_classifier(\&repeat_class);
+        #$gc->add_Band($repeat);
 
         my $plot = GenomeCanvas::Band::Plot->new;
         $plot->title('gc Content');
@@ -164,18 +164,18 @@ use Getopt::Long 'GetOptions';
         $plot->x_major(0.2);
         $gc->add_Band($plot);
 
-        my $gene_names = GenomeCanvas::Band::Gene->new;
-        $gene_names->show_labels($gene_labels);
-        $gene_names->label_type_color_list(
-            [ 'Known',              'HUMACE-Known',             '#4169e7' ],
-            [ 'Novel CDS',          'HUMACE-Novel_CDS',         '#86ceff' ],
-            [ 'Novel Transcript',   'HUMACE-Novel_Transcript',  '#ffa600' ],
-            [ 'Pseudogene',         'HUMACE-Pseudogene',        '#31ce31' ],
-            [ 'Putative',           'HUMACE-Putative',          '#cccccc' ],
-            );
-        $gene_names->virtual_contig($vc);
-        $gene_names->tiling_direction(1);
-        $gc->add_Band($gene_names);
+        #my $gene_names = GenomeCanvas::Band::Gene->new;
+        #$gene_names->show_labels($gene_labels);
+        #$gene_names->label_type_color_list(
+        #    [ 'Known',              'HUMACE-Known',             '#4169e7' ],
+        #    [ 'Novel CDS',          'HUMACE-Novel_CDS',         '#86ceff' ],
+        #    [ 'Novel Transcript',   'HUMACE-Novel_Transcript',  '#ffa600' ],
+        #    [ 'Pseudogene',         'HUMACE-Pseudogene',        '#31ce31' ],
+        #    [ 'Putative',           'HUMACE-Putative',          '#cccccc' ],
+        #    );
+        #$gene_names->virtual_contig($vc);
+        #$gene_names->tiling_direction(1);
+        #$gc->add_Band($gene_names);
 
         #my $snps = GenomeCanvas::Band::SNP->new;
         #$snps->virtual_contig($vc);

@@ -515,24 +515,45 @@ sub window_close {
     my( $self ) = @_;
     
     my $xc = $self->xace_seq_chooser;
-    if ($self->is_mutable and my $sub = $self->get_SubSeq_if_changed) {
+    if ($self->is_mutable) {
+        my( $sub );
+        eval{
+            $sub = $self->get_SubSeq_if_changed;  
+        };
         
-        # Ask the user if changes should be saved
         my $name = $self->name;
-        my $dialog = $self->canvas->toplevel->Dialog(
-            -title          => 'Save changes?',
-            -bitmap         => 'question',
-            -text           => "Save changes to SubSequence '$name' ?",
-            -default_button => 'Yes',
-            -buttons        => [qw{ Yes No Cancel }],
-            );
-        my $ans = $dialog->Show;
-        
-        if ($ans eq 'Cancel') {
-            return; # Abandon window close
+
+        if ($@) {
+            my ($msg) = $@ =~ /^(.+)$/m;
+            $self->message($msg);
+            my $dialog = $self->canvas->toplevel->Dialog(
+                -title          => 'Abandon?',
+                -bitmap         => 'question',
+                -text           => "SubSequence '$name' has errors.\nAbandon changes?",
+                -default_button => 'No',
+                -buttons        => [qw{ Yes No }],
+                );
+            my $ans = $dialog->Show;
+            return if $ans eq 'No';
         }
-        elsif ($ans eq 'Yes') {
-            $self->xace_save($sub) or return;
+        elsif ($sub) {
+        
+            # Ask the user if changes should be saved
+            my $dialog = $self->canvas->toplevel->Dialog(
+                -title          => 'Save changes?',
+                -bitmap         => 'question',
+                -text           => "Save changes to SubSequence '$name' ?",
+                -default_button => 'Yes',
+                -buttons        => [qw{ Yes No Cancel }],
+                );
+            my $ans = $dialog->Show;
+
+            if ($ans eq 'Cancel') {
+                return; # Abandon window close
+            }
+            elsif ($ans eq 'Yes') {
+                $self->xace_save($sub) or return;
+            }
         }
     }
     $self->delete_chooser_window_ref;
