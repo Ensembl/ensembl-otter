@@ -112,6 +112,14 @@ create table evidence (
         PRIMARY KEY (evidence_id)
 	);
 
+create table current_clone_info (
+        clone_info_id int(10) unsigned default '0' not null,
+        clone_accession varchar(40),   
+        clone_version varchar(40),   
+        PRIMARY KEY (clone_info_id)   
+        );
+
+
 create table current_gene_info (
 	gene_info_id int(10) unsigned default '0' not null,
 	gene_stable_id varchar(40),
