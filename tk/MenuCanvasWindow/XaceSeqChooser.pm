@@ -182,6 +182,38 @@ sub attach_xace {
     }
 }
 
+sub xace_process_id {
+    my( $self, $xace_process_id ) = @_;
+    
+    if ($xace_process_id) {
+        $self->{'_xace_process_id'} = $xace_process_id;
+    }
+    return $self->{'_xace_process_id'};
+}
+
+sub launch_xace {
+    my( $self ) = @_;
+    
+    if (my $pid = $self->xace_process_id) {
+        warn "Killing xace process '$pid'\n";
+        kill 9, $pid;
+    }
+    
+    if (my $path = $self->ace_path) {
+        if (my $pid = fork) {
+            $self->xace_process_id($pid);
+        }
+        elsif (defined($pid)) {
+            exec('xace', '-fmapcutcoords', $path);
+        }
+        else {
+            confess "Error: can't fork : $!";
+        }
+    } else {
+        warn "Error: ace_path not set";
+    }
+}
+
 sub populate_menus {
     my( $self ) = @_;
     
@@ -192,6 +224,17 @@ sub populate_menus {
     # File menu
     my $file = $self->make_menu('File');
     
+    # Launce xace
+    my $xace_launch_command = sub { $self->launch_xace };
+    $file->add('command',
+        -label          => 'Lanuch Xace',
+        -command        => $xace_launch_command,
+        -accelerator    => 'Ctrl+L',
+        -underline      => 0,
+        );
+    $top->bind('<Control-l>', $xace_launch_command);
+    $top->bind('<Control-l>', $xace_launch_command);
+     
     # Attach xace
     my $xace_attach_command = sub { $self->attach_xace };
     $file->add('command',
@@ -202,7 +245,18 @@ sub populate_menus {
         );
     $top->bind('<Control-x>', $xace_attach_command);
     $top->bind('<Control-X>', $xace_attach_command);
-   
+    
+    # Save annotations to otter
+    my $save_command = sub { $self->save_data };
+    $file->add('command',
+        -label          => 'Save',
+        -command        => $save_command,
+        -accelerator    => 'Ctrl+S',
+        -underline      => 0,
+        );
+    $top->bind('<Control-s>', $save_command);
+    $top->bind('<Control-S>', $save_command);
+  
     # Resync with database
     my $resync_command = sub { $self->resync_with_db };
     $file->add('command',
@@ -368,6 +422,25 @@ sub bind_events {
     $canvas->Tk::bind('<Return>',   sub{ $self->edit_double_clicked });    
     $canvas->Tk::bind('<KP_Enter>', sub{ $self->edit_double_clicked });    
     
+}
+
+sub save_data {
+    my( $self ) = @_;
+
+    if (my $save = $self->save_command) {
+        $save->($self);
+    } else {
+        $self->message('No save command');
+    }
+}
+
+sub save_command {
+    my( $self, $save_command ) = @_;
+    
+    if ($save_command) {
+        $self->{'_save_command'} = $save_command;
+    }
+    return $self->{'_save_command'};
 }
 
 sub command_line_restart {

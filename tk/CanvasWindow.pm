@@ -391,7 +391,7 @@ sub fix_window_min_max_sizes {
     
     my $mw = $self->canvas->toplevel;
     $mw->update;
-    $mw->withdraw;
+    #$mw->withdraw;
     
     my( $max_x, $max_y, $display_max_x, $display_max_y )
         = $self->set_scroll_region_and_maxsize;
@@ -426,7 +426,7 @@ sub fix_window_min_max_sizes {
 
     my $geom = "${max_x}x$max_y+$x+$y";
     $mw->geometry($geom);
-    $mw->deiconify;
+    #$mw->deiconify;
 }
 sub set_scroll_region_and_maxsize {
     my( $self ) = @_;

@@ -1,16 +1,12 @@
 #!/usr/local/bin/perl5.6.1 -w
 
-use lib '/home/jgrg/work/ensembl-otter/modules';
-use lib '/home/jgrg/work/ensembl-otter/conf';
-use lib '/home/jgrg/work/ensembl/modules';
-use lib '/home/jgrg/work/ensembl-ace';
-use lib '/home/jgrg/work/tk';
 
 ### otter
 
 use strict;
 use Carp;
 use CanvasWindow;
+use MenuCanvasWindow::XaceSeqChooser;
 use Bio::Otter::DBSQL::DBAdaptor;
 use Bio::Otter::Converter;
 use Hum::AnaStatus::Sequence;
@@ -18,23 +14,9 @@ use Hum::AnaStatus::EnsAnalysis;
 use LWP::Simple ();
 use Getopt::Long 'GetOptions';
 
-use Bio::EnsEMBL::Ace::Filter;
-use Bio::EnsEMBL::Ace::DataFactory;
-use Bio::EnsEMBL::Ace::Filter::Gene;
-use Bio::EnsEMBL::Ace::Filter::Gene::Predicted;
-use Bio::EnsEMBL::Ace::Filter::Gene::Halfwise;
-use Bio::EnsEMBL::Ace::Filter::Repeatmasker;
-use Bio::EnsEMBL::Ace::Filter::TRF;
-use Bio::EnsEMBL::Ace::Filter::Similarity;
-use Bio::EnsEMBL::Ace::Filter::SimpleFeature;
-use Bio::EnsEMBL::Ace::Filter::CpG;
-use Bio::EnsEMBL::Ace::Filter::DNA;
-
-
 {
     my $usage = sub{ exec('perldoc', $0) };
-    #my $host = 'ecs1d.sanger.ac.uk';
-    my $host = 'vegadb.sanger.ac.uk';
+    my $host = 'localhost';
     my $port = 19312;
     my $ace_tar = '/nfs/humace2/hum/data/lace_acedb.tar';
 
@@ -148,6 +130,7 @@ sub do_fetch {
             push(@prop, get_canvas_object_properties($cw, $obj));
         }
 
+        ### stick this in a subroutine
         my $ctg = [];
         my @contig_list = ($ctg);
         foreach my $this (sort {$a->{'chr_start'} <=> $b->{'chr_start'}} @prop) {
@@ -176,11 +159,13 @@ sub do_fetch {
         make_acedb_dir_structure($home, $lace_files, 'otter');
        
         # Get annotatons and dna from otter database.
-        get_otter_data($cw, $lace_files, @contig_list);
+        my $name_ctg = write_otter_data($cw, $lace_files, @contig_list);
         
         # Make AnaStatus::Sequence objects
-        my @ana_seq = get_anastatus_sequences(@prop);
-        #fetch_pipeline_data($lace_files, @ana_seq);
+        my $acc_anaseq = get_anastatus_sequences(@prop);
+        fetch_pipeline_data($lace_files, values %$acc_anaseq);
+        
+        write_sMap_assembly_info($name_ctg, $lace_files, $acc_anaseq);
         
         # Parse all the acefiles into the database
         my $errors = initializeDatabase( 'tace', $home, $lace_files );
@@ -192,7 +177,7 @@ sub do_fetch {
         }
 
         ### launch XaceSeqChooser here ###
-        system('xace', '-fmapcutcoords', $home);
+        launch_XaceSeqChooser($cw, $home);
         
         ### ace to otter:
         
@@ -213,6 +198,113 @@ sub do_fetch {
     }
 }
 
+
+sub otter_save {
+    my( $self ) = @_;
+    
+    # Disconnect aceperl
+    $self->{'_ace_database_handle'} = undef;
+    
+    # Get new handle
+    my $ace = $self->ace_handle;
+    
+    ### This code should be in a non-graphical module
+    $ace->raw_query('find Genome_Sequence *');
+    my $ace_txt = $ace->raw_query('show -a');
+    $ace->raw_query('Follow SubSequence');
+    $ace_txt .= $ace->raw_query('show -a');
+    $ace->raw_query('Follow Locus');
+    $ace_txt .= $ace->raw_query('show -a');
+    
+    # Cleanup text
+    $ace_txt =~ s/\0//g;            # Remove nulls
+    $ace_txt =~ s{^\s*//.+}{\n}mg;  # Strip comments
+    
+    ### Should really use IO::Scalar (or IO::String?)
+    my $otter_file = 'otter_out.ace';
+    local *OTT;
+    open OTT, "> $otter_file" or confess "Can't write to '$otter_file' : $!";
+    print OTT $ace_txt;
+    close OTT;
+    open OTT, $otter_file or confess "Can't read '$otter_file' : $!";
+    my( $genes, $frags, $type, $dna, $chr, $chrstart, $chrend) = 
+        Bio::Otter::Converter::ace_to_otter(\*OTT);
+}
+
+sub launch_XaceSeqChooser {
+    my( $cw, $home ) = @_;
+    
+    my $top = $cw->canvas->toplevel->Toplevel(
+        -title  => "lace $home",
+        );
+    my $xc = MenuCanvasWindow::XaceSeqChooser->new($top);
+    my %methods_mutable = (
+      # Method name            Mutable?
+        supported           => 1,
+        supported_CDS       => 1,
+        supported_mRNA      => 1,
+        GD_supported        => 1,
+        GD_supported_mRNA   => 1,
+        Pseudogene          => 1,
+        fgenesh             => 0,
+        FGENES              => 0,
+        GENSCAN             => 0,
+        HALFWISE            => 0,
+        SPAN                => 0,
+        EnsEMBL             => 0,
+        genomewise          => 0,
+        );
+    $xc->ace_path($home);
+    $xc->draw_clone_list;
+    $xc->set_known_GeneMethods(%methods_mutable);
+    $xc->save_command(\&otter_save);
+    $xc->fix_window_min_max_sizes;
+}
+
+sub write_sMap_assembly_info {
+    my( $name_ctg, $lace_acefiles, $acc_anaseq ) = @_;
+    
+    my $ace_file = 'rawdata/otter_sMap.ace';
+    push(@$lace_acefiles, $ace_file);
+    local *LACE_SMAP;
+    open LACE_SMAP, "> $ace_file" or die "Can't write to '$ace_file' : $!";
+    
+    while (my ($name, $ctg) = each %$name_ctg) {
+        print LACE_SMAP qq{\nSequence : "$name"\n};
+        my $offset = $ctg->[0]{'chr_start'} - 1;
+        foreach my $prop (@$ctg) {
+            ### Should make $prop into a proper object
+            my $acc             = $prop->{'accession'};
+            my $chr_start       = $prop->{'chr_start'}  - $offset;
+            my $chr_end         = $prop->{'chr_end'}    - $offset;
+            my $contig_start    = $prop->{'contig_start'};
+            my $contig_end      = $prop->{'contig_end'};
+            my $strand          = $prop->{'contig_ori'};
+            
+            my $ana = $acc_anaseq->{$acc} or confess "No ana_seq for '$acc'";
+            my $name = $ana->full_sequence_name;
+            
+            # Clone in reverse orientaton in AGP is indicated
+            # to acedb by chr_start > chr_end
+            if ($strand == 1) {
+                print LACE_SMAP qq{AGP_Fragment "$name" $chr_start $chr_end Align $chr_start $contig_start\n};
+            }
+            elsif ($strand == -1) {
+                print LACE_SMAP qq{AGP_Fragment "$name" $chr_end $chr_start Align $chr_start $contig_end\n};
+            } else {
+                confess "Unrecognized strand '$strand'";
+            }
+            ## The length of the fragment is needed where the same sequence ($name)
+            ## appears twice in the assembly.  If this happens and length is not
+            ## filled in, then acedb gets confused!
+            #my $len = $contig_end - $contig_start + 1;
+        }
+        print LACE_SMAP "\n";
+    }
+    
+    close LACE_SMAP or die "Error writing to '$ace_file' : $!";
+}
+
 sub fetch_pipeline_data {
     my( $lace_files, @ana_seq ) = @_;
     
@@ -226,159 +318,11 @@ sub fetch_pipeline_data {
     
     # Expect to find fetch_old_pipeline_data
     # in same dir as this script.
-    my $pipe_data_fetch = $0;
-    $pipe_data_fetch =~ s{[^/]+$}{fetch_old_pipeline_data};
-    system("$pipe_data_fetch @seq_names > $ens_pipe_ace");
-}
-
-sub FUTURE_fetch_pipeline_data {
-    my( $lace_files, @ana_seq ) = @_;
-    
-    my $ens_pipe_ace = 'rawdata/enspipe_data.ace';
-    local *ENSPIPEACE;
-    open ENSPIPEACE, "> $ens_pipe_ace"
-        or die "Can't write to '$ens_pipe_ace' : $!";
-    push(@$lace_files, $ens_pipe_ace);
-
-    foreach my $seq (@ana_seq) {
-        my $name = $seq->full_sequence_name;
-        my @ens_ana = Hum::AnaStatus::EnsAnalysis
-            ->fetch_all_complete_for_ana_seq_id($seq->ana_seq_id);
-
-        # Always parse humace.ace file
-        find_humace_acefile($lace_files, $seq);
-
-        if (@ens_ana > 1) {
-            warn "Got ", scalar(@ens_ana), " complete ensembl analyses!\n",
-                " -- choosing the first";
-        }
-        warn "Using Ensembl pipeline data for '$name'\n";
-        write_enspipe_ace_data($ens_ana[0], \*ENSPIPEACE, $name);
-        
-        ### Need to add in:
-        ###write_ensembl_genes(\*ENSPIPEACE, $seq);
-    }
-    
-    #Hum::AnaStatus::EnsAnalysisDB->disconnect_all_ensembl_dbs;
-    close ENSPIPEACE or die "Error writing ensembl pipe ace data : $!";;
-    
-}
-
-sub write_enspipe_ace_data {
-    my( $ens_ana, $fh, $name ) = @_;
-    
-    my $ens_db = $ens_ana->get_EnsAnalysisDB;
-           
-    my( $factory );
-    unless ($factory = $ens_db->ace_data_factory) {
-        $factory = make_ace_filter_factory($ens_db->db_adaptor);
-        $ens_db->ace_data_factory($factory);
-    }
-    
-    my $vcontig = $ens_ana->get_EnsEMBL_VirtualContig_of_contig;
-    $vcontig->id($name);
-    
-    print $fh $factory->ace_data_from_contig($vcontig);
-}
-
-
-sub make_ace_filter_factory {
-    my( $ens_db ) = @_;
-
-    warn "Making ace filter factory\n";
-
-    my $ana_adaptor = $ens_db->get_AnalysisAdaptor;
-
-    my $factory = Bio::EnsEMBL::Ace::DataFactory->new;
-
-    my $DNA = Bio::EnsEMBL::Ace::Filter::DNA->new;
-    $DNA->analysis_object( $ana_adaptor->fetch_by_logic_name('SubmitContig') );
-    $factory->add_AceFilter($DNA);
-
-    my $halfwise = Bio::EnsEMBL::Ace::Filter::Gene::Halfwise->new;
-    $halfwise->analysis_object( $ana_adaptor->fetch_by_logic_name('Halfwise') );
-    $halfwise->url_string('http\\:\\/\\/www.sanger.ac.uk\\/cgi-bin\\/Pfam\\/getacc?%s');
-    $factory->add_AceFilter($halfwise);
-
-    my $genscan = Bio::EnsEMBL::Ace::Filter::Gene::Predicted->new;
-    $genscan->is_off_by_one(1);
-    $genscan->analysis_object( $ana_adaptor->fetch_by_logic_name('genscan') );
-    $factory->add_AceFilter( $genscan );
-
-    my $fgenesh = Bio::EnsEMBL::Ace::Filter::Gene::Predicted->new;
-    $fgenesh->is_off_by_one(1);
-    $fgenesh->analysis_object( $ana_adaptor->fetch_by_logic_name('fgenesh') );
-    $factory->add_AceFilter($fgenesh);
-
-    my $repeatmasker = Bio::EnsEMBL::Ace::Filter::Repeatmasker->new;
-    my $repeat_lib_dir='/nfs/humace2/RepeatMasker_2001-06-19';
-    if($ENV{"LACE_LOCAL"}){
-	$repeat_lib_dir=$ENV{"LACE_LOCAL"}."/RepeatMasker_2001-06-19";
-    }
-    $repeatmasker->repeatmasker_home($repeat_lib_dir);
-    $repeatmasker->analysis_object( $ana_adaptor->fetch_by_logic_name('RepeatMask') );
-    $factory->add_AceFilter($repeatmasker);
-
-    my $trf = Bio::EnsEMBL::Ace::Filter::TRF->new;
-    $trf->analysis_object($ana_adaptor->fetch_by_logic_name('trf'));
-    $factory->add_AceFilter($trf);
-
-    my %logic_tag_method = (
-        'Est2Genome'        => [qw{             EST_homol  EST_eg           }],
-        'Est2Genome_human'  => [qw{             EST_homol  EST_eg-human     }],
-        'Est2Genome_mouse'  => [qw{             EST_homol  EST_eg-mouse     }],
-        'Est2Genome_other'  => [qw{             EST_homol  EST_eg           }],
-        'Full_dbGSS'        => [qw{             GSS_homol  GSS_eg           }],
-        'Full_dbSTS'        => [qw{             STS_homol  STS_eg           }],
-        'sccd'              => [qw{             EST_homol  egag             }],
-        'riken_mouse_cdna'  => [qw{             EST_homol  riken_mouse_cdna }],
-        'primer'            => [qw{             DNA_homol  primer           }],
-        'vertrna'           => [qw{ vertebrate_mRNA_homol  vertebrate_mRNA  }],
-        'Swall'             => [qw{             Pep_homol  BLASTX           }],
-        'zfishEST'          => [qw{             EST_homol  EST_eg-fish      }],
-        );
-    foreach my $logic_name (keys %logic_tag_method) {
-        if (my ($ana) = $ana_adaptor->fetch_by_logic_name($logic_name)) {
-            my( $tag, $meth ) = @{$logic_tag_method{$logic_name}};
-            my $sim = Bio::EnsEMBL::Ace::Filter::Similarity->new;
-            $sim->analysis_object($ana);
-            $sim->homol_tag($tag);
-            $sim->method_tag($meth);
-            $sim->hseq_prefix('Em:') unless $logic_name eq 'Swall';
-            #if ($percent_identity_cutoff) {
-            #    $sim->percent_identity_cutoff($percent_identity_cutoff);
-            #}
-            $factory->add_AceFilter($sim);
-        }
-    }
-
-    my $GC = Bio::EnsEMBL::Ace::Filter::SimpleFeature->new;
-    $GC->analysis_object( $ana_adaptor->fetch_by_logic_name('GC') );
-    $factory->add_AceFilter($GC);
-
-    my $CpG = Bio::EnsEMBL::Ace::Filter::CpG->new;
-    $CpG->analysis_object( $ana_adaptor->fetch_by_logic_name('CpG') );
-    $factory->add_AceFilter($CpG);
-
-    return $factory;
-}
-
-
-sub find_humace_acefile {
-    my( $lace_files, $seq ) = @_;
-
-    my $seq_name = $seq->sequence_name
-        or die "No sequence_name";
-
-    # Get a list of paths to existing and (possibly) missing acefiles
-    my $ana_dir = $seq->analysis_directory or die "No analysis_directory";
-    my $humace = "$ana_dir/rawdata/$seq_name.humace.ace";
-
-    if (-e $humace) {
-        push(@$lace_files, $humace);
-    } else {
-        warn "Error: humace ace file '$humace' is missing\n",
-    }
+    my $pipe_data_fetch = 'fetch_old_pipeline_data';
+    my $fetch_cmd = "$pipe_data_fetch @seq_names > $ens_pipe_ace";
+    warn $fetch_cmd;
+    system($fetch_cmd) == 0
+        or warn "Error from '$fetch_cmd' : exit($?)";
 }
 
 sub make_acedb_dir_structure {
@@ -404,21 +348,22 @@ sub make_acedb_dir_structure {
 sub get_anastatus_sequences {
     my( @prop ) = @_;
     
-    my( @ana_seq );
+    my $acc_anaseq = {};
     foreach my $pr (@prop) {
         my $acc = $pr->{'accession'};
         my $sv  = $pr->{'sv'};
         my $ana = Hum::AnaStatus::Sequence->new_from_accession($acc);
+        ### Should check sv - do so when new ana_status db is implemented
         unless ($ana) {
             warn "No AnaStatus::Sequence for '$acc'\n";
             next;
         }
-        push(@ana_seq, $ana);
+        $acc_anaseq->{$acc} = $ana;
     }
-    return @ana_seq;
+    return $acc_anaseq
 }
 
-sub get_otter_data {
+sub write_otter_data {
     my( $cw, $lace_files, @contig_list ) = @_;
     
     my $ace_file = "rawdata/otter.ace";
@@ -427,15 +372,17 @@ sub get_otter_data {
     local *OTTER_ACE;
     open OTTER_ACE, "> $ace_file"
         or confess "Can't write to '$ace_file' : $!";
+    my $name_ctg = {};
     foreach my $ctg (@contig_list) {
-        my ($name, $slice, $genes) = get_otter_ctg($cw, $ctg);
-        print OTTER_ACE Bio::Otter::Converter::otter_to_ace($vc, $genes, $name);
+        my $name = get_otter_ctg($cw, $ctg, \*OTTER_ACE);
+        $name_ctg->{$name} = $ctg;
     }
     close OTTER_ACE or confess "Error writing to '$ace_file' : $!";
+    return $name_ctg;
 }
 
 sub get_otter_ctg {
-    my( $cw, $ctg ) = @_;
+    my( $cw, $ctg, $fh ) = @_;
     
     my $chr_name  = $ctg->[0]{'chr_name'};
     my $start     = $ctg->[0]{'chr_start'};
@@ -450,7 +397,11 @@ sub get_otter_ctg {
         $oaga->annotate_gene($gene);
     }
 
-    return("${chr_name}_$start-$end", $vc, $genes);
+    my $name = "${chr_name}_$start-$end";
+    $vc->display_id($name);
+    print $fh Bio::Otter::Converter::otter_to_ace($vc, $genes,
+        $vc->get_tiling_path, $vc->seq);
+    return $vc->display_id;
 }
 
 sub get_canvas_object_properties {
@@ -522,6 +473,9 @@ sub draw_sequence_list {
           , a.chromosome_id
           , a.chr_start
           , a.chr_end
+          , a.contig_start
+          , a.contig_end
+          , a.contig_ori
         FROM assembly a
           , contig g
           , clone c
@@ -531,8 +485,12 @@ sub draw_sequence_list {
         ORDER BY a.chr_start
         });
     $sth->execute($type);
-    my( $acc, $sv, $chr_id, $chr_start, $chr_end );
-    $sth->bind_columns( \$acc, \$sv, \$chr_id, \$chr_start, \$chr_end );
+    my( $acc, $sv, $chr_id,
+        $chr_start, $chr_end,
+        $contig_start, $contig_end, $strand );
+    $sth->bind_columns( \$acc, \$sv, \$chr_id,
+        \$chr_start, \$chr_end,
+        \$contig_start, \$contig_end, \$strand );
 
     my $font = $cw->font;
     my $size = $cw->font_size;
@@ -549,15 +507,18 @@ sub draw_sequence_list {
             #warn "$last_end + 1 != $chr_start\n";
             $i++;
         }
-        my $seq_line = sprintf("%-10s  %2d", $acc, $sv);
+        my $contig_line = sprintf("%-10s  %2d", $acc, $sv);
         my $txt = $canvas->createText(
             $x, $i * (1.2 * $size),
-            -text   => $seq_line,
+            -text   => $contig_line,
             -font   => [$font, $size, 'bold'],
             -anchor => 'nw',
             -tags   => [
                 "chr_start=$chr_start",
                 "chr_end=$chr_end",
+                "contig_start=$contig_start",
+                "contig_end=$contig_end",
+                "contig_ori=$strand",
                 "accession=$acc",
                 "sv=$sv",
                 "chr_name=$chr_name",
@@ -570,6 +531,7 @@ sub draw_sequence_list {
         $canvas->bind($txt, '<Shift-Button-1>', sub{
             $cw->highlight($txt)
             });
+        $canvas->bind($txt, '<Double-Button-1>', sub{ do_fetch($cw) });
         
         $last_end = $chr_end;
         $i++;
@@ -627,6 +589,7 @@ sub get_dataset_details {
         my ($name) = /(\S+)/;
         my $opt = $datasets->{$name} = {};
         while (/^\s+(\S+)\s+(\S+)/mg) {
+            #warn "$name: $1 => $2\n";
             $opt->{$1} = $2;
         }
     }
