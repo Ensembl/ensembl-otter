@@ -40,7 +40,7 @@ ok($adaptor->store($obj1));
 ok($adaptor->store($obj2));
 ok($adaptor->store($obj3));
 
-my @newobj = $adaptor->list_by_name('pog1');
+my @newobj = $adaptor->fetch_by_name('pog1');
 
 ok(print $newobj[0]->toString . "\n");
 
