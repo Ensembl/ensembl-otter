@@ -10,13 +10,9 @@ use Symbol 'gensym';
 use Bio::Otter::Lace::Client;
 
 
-# List of options which correspond to methods in Lace::Client
-# and which are needed to create the client.
-my @option_fields = qw{ host port author email write_access };
+my @option_fields = qw{ host port author email write_access pipeline };
 
-my $defaults = {
-    'pipeline'  => 1,
-    };
+my $defaults = {};
 my $save_option = sub {
     my( $option, $value ) = @_;
 
@@ -76,6 +72,7 @@ sub do_getopt {
     $defaults->{'author'}       ||= $this_user;
     $defaults->{'email'}        ||= $this_user;
     $defaults->{'write_access'} ||= 0;
+    $defaults->{'pipeline'} = 1 unless defined($defaults->{'pipeline'});
     
     return 1;
 }
@@ -84,6 +81,7 @@ sub make_Client {
     my $client = Bio::Otter::Lace::Client->new;
     
     foreach my $meth (@option_fields) {
+        next unless $client->can($meth);
         my $value = $defaults->{$meth};
         $client->$meth($value);
     }
