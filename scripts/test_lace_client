@@ -3,6 +3,7 @@
 ### test_lace_client
 
 use strict;
+use Bio::Otter::Lace::AceDatabase;
 use Bio::Otter::Lace::Client;
 use Data::Dumper;   # For debugging
 
@@ -22,9 +23,20 @@ use Data::Dumper;   # For debugging
     #print Dumper($cs_list);
     
     $ds->selected_CloneSequences([@$cs_list[50..55]]);
-    my $ace = $cl->get_otter_ace;
     
-    $cl->save_otter_ace($ace);
+    my $db = Bio::Otter::Lace::AceDatabase->new;
+    $db->error_flag(1);
+    $db->title('lace test');
+    $db->make_database_directory;
+    
+    my $dir = $db->home;
+    my $otter_ace = "$dir/rawdata/otter.ace";
+    open OTT_ACE, "> $otter_ace" or die "Can't write to '$otter_ace'";
+    print OTT_ACE $cl->get_otter_ace;
+    close OTT_ACE;
+    $db->add_acefile($otter_ace);
+    $db->initialize_database;
+    exec('xace', $db->home);
 }
 
 

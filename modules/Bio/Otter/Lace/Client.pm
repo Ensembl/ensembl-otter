@@ -90,7 +90,7 @@ sub get_otter_ace {
 }
 
 sub save_otter_AcePerl {
-    my( $self, $ace_handle, $name ) = @_;
+    my( $self, $ace, $name ) = @_;
     
     confess "Missing name argument" unless $name;
     
@@ -151,6 +151,7 @@ sub get_xml_for_contig_from_Dataset {
     unless ($response->is_success) {
         confess "get datasets request failed: ", $response->status_line;
     }
+    warn $response->content;
     return $response->content;
 }
 
