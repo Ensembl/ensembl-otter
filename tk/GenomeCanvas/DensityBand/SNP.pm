@@ -32,7 +32,7 @@ sub draw_snps {
 
     my $rpp = $band->residues_per_pixel;
     my $vc  = $band->virtual_contig;    
-    my $offset      = $vc->_global_start - 1;
+    my $offset      = $vc->chr_start - 1;
     my $seq_length  = $vc->length;
         
     my $snp_file = $band->chr_snp_file or confess "chr_snp_file not set";
@@ -42,7 +42,7 @@ sub draw_snps {
     local *SNP_FILE;
     open SNP_FILE, $snp_file or confess "Can't read '$snp_file' : $!";
     while (<SNP_FILE>) {
-        my ($start, $end) = map $_ - $offset, (split)[0,1];
+        my ($start, $end) = map $_ - $offset, (split)[3,4];
         next if $end < 1;
         next if $start > $seq_length;
         my $i = int($start / $binsize);

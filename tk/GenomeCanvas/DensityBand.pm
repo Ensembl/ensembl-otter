@@ -36,9 +36,13 @@ sub strip_labels {
 }
 
 sub strip_height {
-    my( $band ) = @_;
+    my( $band, $height ) = @_;
     
-    return $band->font_size * 2;
+    if ($height) {
+	$band->{'_densband_strip_height'} = $height;
+    }
+
+    return $band->{'_densband_strip_height'} ||  $band->font_size * 2;
 }
 
 sub strip_padding {

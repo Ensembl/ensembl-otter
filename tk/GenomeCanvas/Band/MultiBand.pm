@@ -34,23 +34,27 @@ sub strip_labels {
     }
 }
 
-sub strip_colours {
-    my( $band, @colours ) = @_;
+sub strip_colors {
+    my( $band, @colors ) = @_;
     
-    if (@colours) {
-        $band->{'_strip_colours'} = [@colours];
+    if (@colors) {
+        $band->{'_strip_colors'} = [@colors];
     }
-    if (my $l = $band->{'_strip_colours'}) {
+    if (my $l = $band->{'_strip_colors'}) {
         return @$l;
     } else {
-        confess "no colours";
+        confess "no colors";
     }
 }
 
 sub strip_height {
-    my( $band ) = @_;
+    my( $band, $height ) = @_;
     
-    return $band->font_size;
+    if ($height) {
+	$band->{'_multiband_strip_height'} = $height;
+    }
+
+    return $band->{'_multiband_strip_height'} ||  $band->font_size;    
 }
 
 sub strip_padding {
@@ -93,20 +97,39 @@ sub draw_multi_segment {
     my @tags      = $band->tags;
 
     my ($y1, $y2) = @{($band->strip_y_map)[$level]};
-    my ($color) = ($band->strip_colours)[$level];
+    my ($color) = ($band->strip_colors)[$level];
 
     foreach my $f (@feats) {
 	
 	my $x1 = ($f->{'start'} - 1) / $rpp;
 	my $x2 = ($f->{'end'} - 1)  / $rpp;
+	my $local_color = $color;
+
+	if (exists($f->{'color'})) {
+	    # overrides strip color
+	    $local_color = $f->{'color'};
+	}
 
         $canvas->createRectangle(
 	    $x1, $y1, $x2, $y2,
-	    -fill       => $color,
+	    -fill       => $local_color,
 	    -outline    => undef, #$color,
           #  -width      => 0.2,
             -tags       => [@tags],
 	);
+
+	if (exists($f->{'label'})) {
+	    $canvas->createText(int(($x1 + $x2) / 2),
+				int(($y1 + $y2) / 2), 
+				-text       => $f->{'label'},
+				-anchor     => 'w',
+				-justify    => 'right',
+				-font       => ['right', $band->font_size],
+				'-tags'     => [@tags],
+            );
+
+	}
+
     }
 }
 

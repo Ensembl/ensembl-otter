@@ -81,7 +81,7 @@ sub draw_SNPs_on_virtual_contig {
     $band->tick_label(0,                    'e', $width,  $y_offset);
     $band->tick_label($max_expected_snps,   'e', $width,  $y_offset + $half_height);
     
-    my $offset = $vc->_global_start - 1;
+    my $offset = $vc->chr_start - 1;
     my $length = $vc->length;
     
     my $snp_file = $band->chr_snp_file;
@@ -96,7 +96,7 @@ sub draw_SNPs_on_virtual_contig {
 	while(<SNPS>) {
 	    /^\#/ and next;
 	    my ($start) = (split)[3];
-	    next if $start < $vc->_global_start or $start > $vc->_global_end;
+	    next if $start < $vc->chr_start or $start > $vc->chr_end;
 	    $start -= $offset;
 
 	    my $i = int($start / $binsize);

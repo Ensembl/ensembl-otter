@@ -190,7 +190,8 @@ sub get_gene_span_data {
     
     my( @span );
     if (my $span_file = $self->span_file) {
-	my $global_offset = $vc->_global_start - 1;
+
+	my $global_offset = $vc->chr_start - 1;
 
         open SPANS, $span_file or die "Can't read '$span_file' : $!";
 	# assume GFF
@@ -201,7 +202,7 @@ sub get_gene_span_data {
 	    my ($type, $st, $en, $str) = ($s[1], 
 					  $s[3] - $global_offset, 
 					  $s[4] - $global_offset, 
-					  $s[6] eq "+" ? 1 : -1);
+					  $s[6] eq "+" ? 1 : ($s[6] eq "-" ? -1 : undef));
 	    next if $st < 1;
 	    next if $en > $vc->length;
 	    
@@ -215,8 +216,8 @@ sub get_gene_span_data {
         close SPANS;
     }
     else {
-        foreach my $vg ($vc->get_all_VirtualGenes) {
-            push(@span, [$vg->id, $vg->gene->type, $vg->start, $vg->end, $vg->strand]);
+        foreach my $vg (@{$vc->get_all_Genes}) {
+	    push(@span, [$vg->stable_id, $vg->type, $vg->start, $vg->end, $vg->strand]);
         }
     }
     return @span;
@@ -299,7 +300,12 @@ sub draw_gene_features_on_vc {
             my $x1 = $start / $rpp;
             my $x2 = $end   / $rpp;
 
-            $band->draw_gene_arrow($x1, $x2, $strand, $rectangle_height, @tags, $group);
+	    if (defined($strand) and ($strand == -1 or $strand == 1)) {
+		$band->draw_gene_arrow($x1, $x2, $strand, $rectangle_height, @tags, $group);
+	    }
+	    else {
+		$band->draw_gene_rectangle($x1, $x2, $rectangle_height, @tags, $group);
+	    }
 
             #if ($i <= 1 and $band->show_labels) {
                 #warn "Hack to only show labels for certain classes of gene";
@@ -421,6 +427,27 @@ sub draw_gene_arrow {
         -tags   => ['gene_arrow', @tags],
         );
 }
+
+
+sub draw_gene_rectangle {
+    my( $band, $x1, $x2, $rectangle_height, @tags ) = @_;
+    
+    my $length = $x2 - $x1;
+    if ($length < 6) {
+        $x2 = $x1 + 6;
+    }
+    
+    my $y_offset = $band->y_offset;
+    
+    return $band->canvas->createRectangle($x1, $y_offset,
+                                          $x2, $y_offset + $rectangle_height,
+                                          -outline => $band->current_color,
+                                          -fill   => $band->current_color,
+                                          -tags   => ['gene_rectangle', @tags],
+					  );    
+}
+
+
 
 1;
 

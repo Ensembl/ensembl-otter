@@ -41,7 +41,7 @@ sub render {
 
     my $y1 = $y_offset + 1;
     my $y2 = $y_offset + $height - 1;
-    foreach my $cpg ($vc->get_all_SimpleFeatures_by_feature_type('cpg_island')) {
+    foreach my $cpg (@{$vc->get_all_SimpleFeatures('CpG')}) {
         my $x1 = $cpg->start / $rpp;
         my $x2 = $cpg->end   / $rpp;
         

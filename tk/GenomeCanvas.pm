@@ -12,7 +12,7 @@ use GenomeCanvas::State;
 use CanvasWindow;
 
 use vars qw{@ISA};
-@ISA = ('CanvasWindow', 'GenomeCanvas::State');
+@ISA = ('GenomeCanvas::State', 'CanvasWindow');
 
 sub new {
     my( $pkg, $tk ) = @_;

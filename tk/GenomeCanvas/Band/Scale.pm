@@ -22,7 +22,7 @@ sub render {
     my $y_max = $y_offset;
 
     my $vc = $band->virtual_contig;
-    my $chr_start  = $vc->_global_start;
+    my $chr_start  = $vc->chr_start;
     my $seq_length = $vc->length;
     my $seq_end = $chr_start + $seq_length;
     my $rpp = $band->residues_per_pixel;

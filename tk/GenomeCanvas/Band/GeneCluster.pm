@@ -44,6 +44,8 @@ sub get_gene_cluster_data {
     }
     my $file = $band->cluster_file;
 
+    my $ignored_clusters = 0;
+
     open(CLUST, $band->cluster_file) or die "Could not open Cluster file $file\n";
     while(<CLUST>) {
 	/^\"(.+)\"\s+(.+)$/ and do {
@@ -74,7 +76,14 @@ sub get_gene_cluster_data {
 		
 		push @clusters, $cluster;
 	    }
+	    else {
+		$ignored_clusters++;
+	    }
 	}
+    }
+
+    if ($ignored_clusters != 0) {
+	print STDERR "GeneCluster: ignored $ignored_clusters clusters (at least one gene could not be positioned)\n"; 
     }
 
     return (sort {$a->{'start'} <=> $b->{'start'}} @clusters);
@@ -87,7 +96,7 @@ sub get_gene_span_data {
     my( @span );
     if (my $span_file = $self->span_file) {
 
-	my $global_offset = $vc->_global_start - 1;
+	my $global_offset = $vc->chr_start - 1;
 
         open SPANS, $span_file or die "Can't read '$span_file' : $!";
 	# assume GFF
@@ -112,8 +121,8 @@ sub get_gene_span_data {
         close SPANS;
     }
     else {
-        foreach my $vg ($vc->get_all_VirtualGenes) {
-            push(@span, [$vg->id, $vg->gene->type, $vg->start, $vg->end, $vg->strand]);
+        foreach my $vg (@{$vc->get_all_Genes}) {
+            push(@span, [$vg->stable_id, $vg->type, $vg->start, $vg->end, $vg->strand]);
         }
     }
     return @span;
@@ -189,7 +198,7 @@ sub render {
 
 	my $label = $canvas->createText($x1, $y1,
 					-text => $id,
-					-font => ['helvetica', $font_size + 2],
+					-font => ['helvetica', $font_size],
 					-anchor => "n",
 					-tags => [@tags, 'gene_cluster_label', $group],
 					);

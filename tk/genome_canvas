@@ -8,10 +8,15 @@ use GenomeCanvas;
 use GenomeCanvas::Band::TilingPath;
 use GenomeCanvas::Band::Plot;
 use GenomeCanvas::DensityBand::RepeatFeature;
-use GenomeCanvas::DensityBand::Gene;
+#use GenomeCanvas::DensityBand::Gene;
 use GenomeCanvas::Band::Gene;
 use GenomeCanvas::Band::SNP;
 use GenomeCanvas::Band::CpG;
+use GenomeCanvas::Band::GeneticMap;
+use GenomeCanvas::Band::FileFeatures;
+use GenomeCanvas::Band::HomolFeature;
+use GenomeCanvas::Band::GeneCluster;
+use GenomeCanvas::Band::Scale;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Hum::Submission 'prepare_statement'; # For Sanger sequence names
 use Getopt::Long 'GetOptions';
@@ -32,12 +37,17 @@ use Hum::EnsCmdLineDB;
     my $gene_labels     = 1;
     my $show_genes      = 1;
     my $show_repeats    = 1;
-    my $show_snps       = 0;
     my $show_cpg        = 1;
-    my $big_picture     = 0;
+    my $homologies =    '';
+    my $markers    =    '';
+    my $clusters   =    '';
+    my $snps       =    '';
+    my $psdir      =    '.';
+    my $big_picture     = 0;    
     my( $span_file );
+    
     my $usage = sub{ exec('perldoc', $0) };
-    Hum::EnsCmdLineDB::do_getopt(
+    Hum::EnsCmdLineDB::do_getopt(				 
         'fpc=s'         => \$fpc,
         'scale=s'       => \$scale,
         'htiles=i'      => \$h_tiles,
@@ -51,10 +61,14 @@ use Hum::EnsCmdLineDB;
         'portrait!'     => \$portrait,
         'gene_labels!'  => \$gene_labels,
         'genes!'        => \$show_genes,
-        'repeats!'      => \$show_repeats,
-        'snps!'         => \$show_snps,
-        'cpg!'          => \$show_cpg,
         'gene_spans=s'  => \$span_file,
+        'repeats!'      => \$show_repeats,
+        'cpg!'          => \$show_cpg,
+	'homologies=s'  => \$homologies,
+	'markers=s'     => \$markers,
+	'clusters=s'    => \$clusters,
+        'snps=s'        => \$snps,
+        'psdir=s'       => \$psdir,
         'big!'          => \$big_picture,
         'help'          => $usage,
         ) or $usage->();
@@ -77,7 +91,9 @@ use Hum::EnsCmdLineDB;
     my $mw = CanvasWindow::MainWindow->new;
     $mw->title($fpc);
     my $gc = GenomeCanvas->new($mw);
-    $gc->font_size($font_size);
+
+    $gc->font_size( $font_size );
+    
     if ($h_tiles and $v_tiles) {
         die "Can't set both htiles and vtiles";
     }
@@ -92,9 +108,7 @@ use Hum::EnsCmdLineDB;
     if ($portrait) {
         $gc->landscape(0);
     }
-    
 
-    
     my $canvas = $gc->canvas;
 
     {
@@ -102,25 +116,25 @@ use Hum::EnsCmdLineDB;
 
         $chr_name ||= $fpc;
         if ($chr_start and ! $chr_end) {
-            $chr_end = get_chr_end($db, $db->static_golden_path_type, $chr_name);
+            $chr_end = get_chr_end($db, $db->assembly_type, $chr_name);
         }
         elsif ($chr_end and ! $chr_start) {
             $chr_start = 1;
         }
 
-        my $stadp = $db->get_StaticGoldenPathAdaptor();
+	my $stadp = $db->get_SliceAdaptor();
 
         my( $vc );
         if ($chr_start) {
             print STDERR "Fetching region of chr '$chr_name' from $chr_start to $chr_end\n";
-            $vc = $stadp->fetch_VirtualContig_by_chr_start_end(
+	    $vc = $stadp->fetch_by_chr_start_end(
                 $chr_name,
                 $chr_start,
                 $chr_end,
                 );
         } else {
             print STDERR "Fetching virtual contig for all of fpc contig '$fpc'\n";
-            $vc = $stadp->fetch_VirtualContig_by_fpc_name($fpc);
+	    $vc = $stadp->fetch_by_supercontig_name($fpc);
         }
                 
         my $tiling = GenomeCanvas::Band::TilingPath->new($vc);
@@ -132,6 +146,13 @@ use Hum::EnsCmdLineDB;
         }
         $tiling->tiling_direction(-1);
         $gc->add_Band($tiling);
+	# gentic markers
+	if ($markers) {
+	    my $m = GenomeCanvas::Band::GeneticMap->new;
+	    $m->virtual_contig($vc);
+	    $m->results_file($markers);
+	    $gc->add_Band($m);
+	}
 
         if ($show_repeats) {
             my $repeat = GenomeCanvas::DensityBand::RepeatFeature->new;
@@ -143,11 +164,32 @@ use Hum::EnsCmdLineDB;
 
         
         my $plot = GenomeCanvas::Band::Plot->new;
-        $plot->title('gc Content');
+        $plot->title('C+G Content');
         $plot->virtual_contig($vc);
-        $plot->range(0.3,0.7);
-        $plot->x_major(0.2);
+        $plot->range(0.1,0.7);
+        $plot->x_major(0.3);
+	$plot->show_horizontal_scale(0);
         $gc->add_Band($plot);
+
+        
+        my $cpg_plot = GenomeCanvas::Band::Plot->new;
+        $cpg_plot->title('CpG Content');
+        $cpg_plot->virtual_contig($vc);
+        $cpg_plot->plot_method('cpg_profile');
+        $cpg_plot->range(0.0,0.08);
+        $cpg_plot->x_major(0.02);
+	$cpg_plot->show_horizontal_scale(0);
+        $gc->add_Band($cpg_plot);
+
+        if ($snps) {
+            my $snp = GenomeCanvas::Band::SNP->new;
+            $snp->virtual_contig($vc);
+            $snp->tiling_direction(-1);
+	    $snp->chr_snp_file($snps);
+	    $snp->max_snp_density(30);
+	    $snp->title("Total SNPs");
+            $gc->add_Band($snp);
+        }
 
         if ($show_cpg) {
             my $cpg = GenomeCanvas::Band::CpG->new;
@@ -155,15 +197,42 @@ use Hum::EnsCmdLineDB;
             $gc->add_Band($cpg);
         }
 
+	if ($homologies) {
+	    my $track = GenomeCanvas::Band::HomolFeature->new();
+	    $track->feature_file( $homologies );
+	    $track->type_start_end_column_indices(2, 3, 4);
+	    $track->virtual_contig($vc);
+	    $track->title("Similarity");
+	    $gc->add_Band($track);
+	}
+
+	my $scale_track = GenomeCanvas::Band::Scale->new;
+	# $scale_track->title("scale");
+	$scale_track->virtual_contig($vc);
+	$gc->add_Band($scale_track);
+
+	if ($clusters) {
+	    my $track = GenomeCanvas::Band::GeneCluster->new();
+	    $track->cluster_file($clusters);
+	    $track->span_file($span_file);
+	    $track->virtual_contig($vc);
+	    $track->title("Clusters");
+            $track->tiling_direction(1);
+	    $gc->add_Band($track);
+
+	}
+
         if ($show_genes) {
             my $gene_names = GenomeCanvas::Band::Gene->new;
             $gene_names->show_labels($gene_labels);
             $gene_names->label_type_color_list(
-                [ 'Known',              'HUMACE-Known',             '#4169e7' ],
-                [ 'Novel CDS',          'HUMACE-Novel_CDS',         '#86ceff' ],
-                [ 'Novel Transcript',   'HUMACE-Novel_Transcript',  '#ffa600' ],
-                [ 'Pseudogene',         'HUMACE-Pseudogene',        '#31ce31' ],
-                [ 'Putative',           'HUMACE-Putative',          '#cccccc' ],
+                [ 'Known',              'Known',                   '#4169e7' ],
+                [ 'Novel CDS',          'Novel_CDS',               '#86ceff' ],
+                [ 'Novel Transcript',   'Novel_Transcript',        '#ffa600' ],
+                [ 'Putative',           'Putative',                '#cccccc' ],
+                [ 'Processed Pseudogene',   'Processed_pseudogene',   '#31ce31' ],
+                [ 'Unprocessed Pseudogene', 'Unprocessed_pseudogene', '#006400' ],
+
                 #[ 'Known',              'Known',             '#4169e7' ],
                 #[ 'Novel CDS',          'Novel_CDS',         '#86ceff' ],
                 #[ 'Novel Transcript',   'Novel_Transcript',  '#ffa600' ],
@@ -172,21 +241,7 @@ use Hum::EnsCmdLineDB;
             $gene_names->virtual_contig($vc);
             $gene_names->span_file($span_file);
             $gene_names->tiling_direction(1);
-            $gene_names->ignore_label_sub(
-                sub{
-                    my $id = shift;
-                    #warn "Checking '$id'\n";
-                    # Ignore sanger format loci names
-                    return $id =~ /^[a-z][0-9A-Z]+\.\d+$/;
-                });
             $gc->add_Band($gene_names);
-        }
-
-        if ($show_snps) {
-            my $snps = GenomeCanvas::Band::SNP->new;
-            $snps->virtual_contig($vc);
-            $snps->tiling_direction(-1);
-            $gc->add_Band($snps);
         }
 
         print STDERR "Rendering canvas\n";
@@ -222,7 +277,8 @@ use Hum::EnsCmdLineDB;
     make_button($button_frame, 'PostScript',
         sub {
             warn "Printed to files:\n",
-                map "  $_\n", $gc->print_postscript($fpc);
+                map "  $_\n", $gc->print_postscript("$psdir/$fpc");
+
             if ($big_picture) {
                 my $htile = $gc->horizontal_tile || 1;
                 my $vtile = $gc->vertical_tile   || 1;
@@ -399,47 +455,23 @@ sub nudge_into_free_space {
 }
 
 {
-    my( %repeat_class );
+    my %class_hash;
 
     sub repeat_class {
-        my( $band, $repeat_name ) = @_;
+        my( $band, $repeat_feature ) = @_;
         
-        make_repeat_class($band) unless %repeat_class;
-        return $repeat_class{$repeat_name};
+	if (not %class_hash) {
+	    %class_hash = map { $_ , 1 } $band->repeat_classes;
+	}
+
+	my $name = $repeat_feature->repeat_consensus->name;
+	my $class = $repeat_feature->repeat_consensus->repeat_class;
+	$class =~ s{/.+}{};
+	$class = "Other" if not exists $class_hash{$class};
+
+        return $class;
     }
     
-    ### Yuk!  I look through the headers of the RepeatMasker
-    ### libraries for the classes of each repeat.
-    sub make_repeat_class {
-        my( $band ) = @_;
-        
-        my $dbobj = $band->virtual_contig->dbobj;
-        my %valid_classes = map {$_, 1} $band->repeat_classes;
-
-        local *LIB;
-        my $dir = '/nfs/team71/analysis/jgrg/work/repeatmasker/RepeatMasker08142000/Libraries';
-        opendir LIB, $dir or die "Can't opendir '$dir' : $!";
-        foreach my $file (map "$dir/$_", grep /\.lib$/, readdir LIB) {
-            local *FA;
-            open FA, $file or die "Can't read '$file' : $!";
-            while (<FA>) {
-                if (/^>(\S+)/) {
-                    my ($rep, $class) = split /#/, $1, 2;
-                    next unless $class;
-                    $class =~ s{/.+}{};
-                    if (my $stored_class = $repeat_class{$rep}) {
-                        warn "$rep: class '$class' doesn't match stored '$stored_class'"
-                            if $stored_class ne $class;
-                    } else {
-                        $repeat_class{$rep} = $class;
-                        #printf STDERR "%12s  %-s\n", $class, $rep;
-                    }
-                }
-            }
-            close FA;
-        }
-        close LIB;
-    }
 }
 
 

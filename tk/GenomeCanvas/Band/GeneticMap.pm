@@ -23,7 +23,7 @@ sub render {
     my( $band ) = @_;
     
     my $vc = $band->virtual_contig;
-    my $offset = $vc->_global_start - 1;
+    my $offset = $vc->chr_start - 1;
     my $length = $vc->length;
     
     my $canvas    = $band->canvas;
@@ -36,13 +36,14 @@ sub render {
     my $triangle_height = $band->font_size;
     
     local *EPCR;
-    my $file = $band->epcr_results_file
-        or confess("epcr_results_file not set");
+    my $file = $band->results_file
+        or confess("results_file not set");
     open EPCR, $file or confess("Can't read '$file' : $!");
     my $nudge_distance = $font_size * 3;
     while (<EPCR>) {
-        my ($start_end, $name) = (split)[1,3];
-        my ($start, $end) = split /\.\./, $start_end;
+	/^\#/ and next; 
+        my ($start, $end, $name_str) = (split)[3,4,8];
+	my ($name) = $name_str =~ /ID\=\"([^\"]+)\"/;
         my $pos = $start + (($end - $start) / 2) - $offset;
         next if $pos < 1;
         next if $pos > $length;
@@ -59,8 +60,7 @@ sub render {
         my $label = $canvas->createText(
             $x, $y_offset + ($font_size / 4),
             -text => $name,
-            #-font => ['helvetica', $font_size],
-	    -font => ['helvetica', $font_size + 2],
+	    -font => ['helvetica', $font_size],
             -anchor => 'n',
             -tags => [@tags, $name],
             );
@@ -91,13 +91,13 @@ sub render {
         );
 }
 
-sub epcr_results_file {
+sub results_file {
     my( $band, $file ) = @_;
     
     if ($file) {
-        $band->{'_epcr_results_file'} = $file;
+        $band->{'_results_file'} = $file;
     }
-    return $band->{'_epcr_results_file'};
+    return $band->{'_results_file'};
 }
 
 

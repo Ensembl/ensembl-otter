@@ -18,23 +18,23 @@ sub render {
     $band->draw_outline_and_labels;
 }
 
-sub homol_classes {
-    my( $band, @classes ) = @_;
+sub homol_tracks {
+    my( $band, @tracks ) = @_;
     
-    if (@classes) {
-        $band->{'_homol_classes'} = [@classes];
+    if (@tracks) {
+        $band->{'_homol_tracks'} = [@tracks];
     }
-    if (my $c = $band->{'_homol_classes'}) {
-        @classes = @$c;
+    if (my $c = $band->{'_homol_tracks'}) {
+        @tracks = @$c;
     } else {
-        @classes = ( { name => "Mouse", gff_key => "Mouse", colour => "#a0522d"}, 
-		     { name => "Rat", gff_key => "Rat", colour => "#a0522d"}, 
-		     { name => "Fugu", gff_key => "Fugu", colour => "#2e8b57"}, 
-		     { name => "Tetraodon", gff_key => "Tetraodon", colour => "#2e8b57"}, 
-		     { name => "Zebrafish", gff_key => "Zebrafish", colour => "#2e8b57"} );
+        @tracks = ( { name => "Mouse",     color => "#a0522d"}, 
+		    { name => "Rat",       color => "#a0522d"}, 
+		    { name => "Fugu",      color => "#2e8b57"}, 
+		    { name => "Tetraodon", color => "#2e8b57"}, 
+		    { name => "Zebrafish", color => "#2e8b57"} );
     }
 
-    return @classes;
+    return @tracks;
 }
 
 
@@ -46,9 +46,9 @@ sub draw_homol_features {
 
     my $feats = $band->get_features;
 
-    my @class_list = $band->homol_classes;
-    $band->strip_labels(map { $_->{'name'} } @class_list);
-    $band->strip_colours(map { $_->{'colour'} } @class_list);
+    my @track_list = $band->homol_tracks;
+    $band->strip_labels(map { $_->{'name'} } @track_list);
+    $band->strip_colors(map { $_->{'color'} } @track_list);
 
     my $height    = $band->height;
     my $canvas    = $band->canvas;
@@ -64,8 +64,8 @@ sub draw_homol_features {
 #         -tags       => [@tags],
 #        );
 
-    for(my $x = 0; $x < @class_list; $x++) {
-	$band->draw_multi_segment( $x, @{$feats->{$class_list[$x]->{'gff_key'}}} );
+    for(my $x = 0; $x < @track_list; $x++) {
+	$band->draw_multi_segment( $x, @{$feats->{$track_list[$x]->{'name'}}} );
     }
 
 }
@@ -77,7 +77,7 @@ sub get_features {
         or confess "No virtual contig attached";
     my $file = $band->feature_file
         or confess "feature_file not set";
-    my $global_offset = $vc->_global_start - 1;
+    my $global_offset = $vc->chr_start - 1;
 
     my @ind = $band->type_start_end_column_indices;
 

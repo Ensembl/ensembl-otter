@@ -33,17 +33,13 @@ sub strip_labels {
     if (my $l = $band->{'_strip_labels'}) {
         return @$l;
     } else {
-        my $get_types = $band->virtual_contig->dbobj->prepare(q{
-            SELECT DISTINCT type
-            FROM genetype
-            });
-        $get_types->execute;
-        my( @gene_types );
-        while (my ($t) = $get_types->fetchrow) {
-            push(@gene_types, $t);
-        }
-        $band->{'_strip_labels'} = [sort @gene_types];
-        return @gene_types;
+	my %type_hash;
+	foreach my $g (@{$band->virtual_contig->get_all_Genes}) {
+	    $type_hash{$g->type} = 1;
+	}
+
+        $band->{'_strip_labels'} = [sort keys %type_hash];
+        return @{$band->{'_strip_labels'}};
     }
 }
 
@@ -61,7 +57,7 @@ sub draw_gene_features_on_sub_vc {
     my @types = $band->strip_labels;
 
     my %gene_types = map {$_, []} @types;
-    foreach my $vg ($vc->get_all_VirtualGenes) {
+    foreach my $vg (@{$vc->get_all_Genes}) {
         my $type = $vg->gene->type;
         if (my $strip = $gene_types{$type}) {
             push(@$strip, $vg);

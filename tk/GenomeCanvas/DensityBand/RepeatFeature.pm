@@ -60,12 +60,11 @@ sub draw_repeat_features_on_sub_vc {
     my @class_list = $band->repeat_classes;
     my $other_class = $class_list[$#class_list];
     my %class = map {$_, []} @class_list;
-    foreach my $r ($vc->get_all_RepeatFeatures) {
-        my $hseqname = $r->hseqname;
-        next if $hseqname =~ /^tRNA/;
-        #print STDERR $hseqname, "\n";
-        my $c = &$repeat_classifier($band, $hseqname) || $other_class;
-        push @{$class{$c}}, $r;
+    foreach my $r (@{$vc->get_all_RepeatFeatures}) {
+        my $c = &$repeat_classifier($band, $r) || $other_class;
+	if (defined $c) {
+	    push @{$class{$c}}, $r;
+	}
     }
     
     my $vc_length = $vc->length;

@@ -36,10 +36,11 @@ sub y_offset {
 
 sub font_size {
     my( $self, $font_size ) = @_;
-    
+
     if ($font_size) {
         $self->{'_state_hash'}{'_font_size'} = $font_size;
     }
+
     return $self->{'_state_hash'}{'_font_size'} || 12;
 }
 

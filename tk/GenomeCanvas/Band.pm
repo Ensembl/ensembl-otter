@@ -36,6 +36,18 @@ sub canvas {
     return $self->{'_canvas'};
 }
 
+#sub font_size {
+#    my ($band, $font_size) = @_;
+
+#    if ($font_size) {
+#	$band->{'_band_font_size'} = $font_size;
+#    }
+
+#    return exists($band->{'band_font_size'}) ? $band->{'band_font_size'} : $band->SUPER::font_size;
+
+#}
+
+
 sub draw_titles {
     my( $band ) = @_;
     
@@ -211,8 +223,10 @@ sub virtual_contig {
     my( $band, $vc ) = @_;
     
     if ($vc) {
-        confess "Not a Bio::EnsEMBL::Virtual::Contig : '$vc'"
-            unless ref($vc) and $vc->isa('Bio::EnsEMBL::Virtual::Contig');
+        #confess "Not a Bio::EnsEMBL::Virtual::Contig : '$vc'"
+        #    unless ref($vc) and $vc->isa('Bio::EnsEMBL::Virtual::Contig');
+        confess "Not a Bio::EnsEMBL::Slice : '$vc'"
+            unless ref($vc) and $vc->isa('Bio::EnsEMBL::Slice');
         $band->{'_virtual_contig'} = $vc;
     }
     return $band->{'_virtual_contig'};
@@ -294,11 +308,12 @@ sub sequence_gap_map {
     
     my( @gap_map );
     my $prev_end = 0;
-    my @map_contig_list = $vc->_vmap->each_MapContig;
+    #my @map_contig_list = $vc->_vmap->each_MapContig;
+    my @map_contig_list = @{$vc->get_tiling_path};
     for (my $i = 0; $i < @map_contig_list; $i++) {
         my $map_c = $map_contig_list[$i];
-        my $start = $map_c->start;
-        my $end   = $map_c->end;
+        my $start = $map_c->assembled_start;
+        my $end   = $map_c->assembled_end;
         
         # Gap at the start?
         if ($i == 0 and $start > 1) {
@@ -339,7 +354,7 @@ sub zone_color {
     my( $band, $start, $end ) = @_;
 
     my $vc = $band->virtual_contig or return;
-    my $offset = $vc->_global_start - 1;
+    my $offset = $vc->chr_start - 1;
     $start += $offset;
     $end   += $offset;
     
@@ -373,9 +388,9 @@ sub next_sub_VirtualContig {
         return;
     }
     
-    my $global_chr_start = $big_vc->_global_start;
-    my $sgp_adapt        = $big_vc->dbobj->get_StaticGoldenPathAdaptor;
-    my $chr_name         = $big_vc->_chr_name;
+    my $global_chr_start = $big_vc->chr_start;
+    my $sgp_adapt        = $big_vc->adaptor;
+    my $chr_name         = $big_vc->chr_name;
     
     my $max_vc_length = $band->sub_vc_size;
     my $end = $i + $max_vc_length;
@@ -401,7 +416,8 @@ sub next_sub_VirtualContig {
     my $chr_start = $global_chr_start + $i;
     my $chr_end   = $global_chr_start + $end - 1;
     #warn "Drawing repeat features from $chr_start to $chr_end\n";
-    my $vc = $sgp_adapt->fetch_VirtualContig_by_chr_start_end(
+    #my $vc = $sgp_adapt->fetch_VirtualContig_by_chr_start_end(
+    my $vc = $sgp_adapt->fetch_by_chr_start_end(
         $chr_name,
         $chr_start,
         $chr_end,

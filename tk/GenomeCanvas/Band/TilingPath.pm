@@ -43,6 +43,26 @@ sub name_morpher {
     return $band->{'_name_morpher'};
 }
 
+sub rectangle_height {
+    my ($band, $height) = @_;
+    if ($height) {
+	$band->{'_tp_rec_height'} = $height;
+    }
+
+    return $band->{'_tp_rec_height'} || $band->font_size * 10 / 12;
+}
+
+
+sub rectangle_border {
+    my ($band, $border) = @_;
+    if ($border) {
+	$band->{'_tp_rec_border'} = $border;
+    }
+
+    return $band->{'_tp_rec_border'} || $band->font_size / 12;
+}
+
+
 sub render {
     my( $band ) = @_;
     
@@ -62,20 +82,30 @@ sub render {
     }
 
     my $map_contig_count = 0;
-    my $rectangle_height = $font_size * 10 / 12;
-    my $rectangle_border = $font_size * 1 / 12;
+    my $rectangle_height = $band->rectangle_height;
+    my $rectangle_border = $band->rectangle_border;
     my $nudge_distance = ($rectangle_height + 1) * $y_dir;
     my $text_nudge_flag = 0;
-    foreach my $map_c ($vc->_vmap->each_MapContig) {
+    #foreach my $map_c ($vc->_vmap->each_MapContig) {
+    foreach my $map_c (@{$vc->get_tiling_path}) {
         #print STDERR ".";
         $map_contig_count++;
-        my $start     = $map_c->start;
-        my $end       = $map_c->end;
-        my $raw_start = $map_c->rawcontig_start;
-        my $raw_end   = $map_c->rawcontig_end;
-        my $contig    = $map_c->contig;
+        #my $start     = $map_c->start;
+        #my $end       = $map_c->end;
+        my $start     = $map_c->assembled_start;
+        my $end       = $map_c->assembled_end;
+
+        #my $raw_start = $map_c->rawcontig_start;
+        #my $raw_end   = $map_c->rawcontig_end;
+        my $raw_start = $map_c->component_start;
+        my $raw_end   = $map_c->component_end;
+	my $raw_ori = $map_c->component_ori;
+
+        #my $contig    = $map_c->contig;
+	my $contig    = $map_c->component_Seq;
         my $length = $contig->length;
-        my $name = $contig->id;
+        #my $name = $contig->id;
+	my $name = $contig->name;
         if ($name_morpher) {
             $name = &$name_morpher($name);
         }
@@ -83,7 +113,8 @@ sub render {
         #printf STDERR "%-10s  %2d %6d %6d %6d  %10d %10d\n", $name, $map_c->orientation, $raw_start, $raw_end, $length, $start, $end;
 
         my( $left_overhang, $right_overhang );
-        if ($map_c->orientation == 1) {
+        #if ($map_c->orientation == 1) {
+	if ($raw_ori == 1) {
             $left_overhang  = $raw_start - 1;
             $right_overhang = $length - $raw_end;
         } else {

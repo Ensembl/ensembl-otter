@@ -54,7 +54,7 @@ sub render {
         or confess "No virtual contig attached";
     my $file = $band->feature_file
         or confess "feature_file not set";
-    my $global_offset = $vc->_global_start - 1;
+    my $global_offset = $vc->chr_start - 1;
 
     my $fh = gensym();
     open $fh, $file or confess "Can't open '$file' : $!";

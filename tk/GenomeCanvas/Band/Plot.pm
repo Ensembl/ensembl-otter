@@ -295,7 +295,7 @@ sub draw_plot_axes {
 	# Scale along bottom of plot
 
 	my $vc = $band->virtual_contig;
-	my $chr_start  = $vc->_global_start;
+	my $chr_start  = $vc->chr_start;
 	my $seq_length = $vc->length;
 	my $seq_end = $chr_start + $seq_length;
 	my $rpp = $band->residues_per_pixel;
@@ -348,9 +348,9 @@ sub sequence_chunk_coords {
     my $vc = $band->virtual_contig;
     # Make a map of the chunks of sequence
     my( @seq_coord );
-    foreach my $map_c ($vc->_vmap->each_MapContig) {
-        my $start  = $map_c->start;
-        my $end    = $map_c->end;
+    foreach my $map_c (@{$vc->get_tiling_path}) {
+        my $start  = $map_c->assembled_start;
+        my $end    = $map_c->assembled_end;
 
         if (@seq_coord) {
             if ($seq_coord[$#seq_coord] == $start - 1) {
