@@ -18,57 +18,78 @@ use CanvasWindow;
     $menu->add('cascade',
         -label      => 'Chooser',
         -menu       => $chooser,
+        -underline  => 0,
         );
     
     $menu->add('separator');
     
     $chooser->add('command',
-        -label      => 'Attach Xace',
-        -command    => sub { warn "Called Attach Xace" },
+        -label          => 'Attach Xace',
+        -command        => sub { warn "Called Attach Xace" },
+        -accelerator    => 'Ctrl-X',
+        -underline      => 0,
         );
     $chooser->add('command',
-        -label      => 'Resync',
-        -hidemargin => 1,
-        -command    => sub { warn "Called Resync" },
+        -label          => 'Resync',
+        -hidemargin     => 1,
+        -command        => sub { warn "Called Resync" },
+        -accelerator    => 'Ctrl-R',
+        -underline      => 0,
         );
     $chooser->add('separator');
     $chooser->add('command',
-        -label      => 'Exit',
-        -command    => sub { $mw->destroy },
+        -label          => 'Exit',
+        -command        => sub { $mw->destroy },
+        -accelerator    => 'Ctrl-Q',
+        -underline      => 0,
         );
     
     # Subseq menu
     my $subseq = $menu->Menu(
-        -tearoff    => 0,
+        -tearoff        => 0,
             );
     $menu->add('cascade',
-        -label      => 'SubSeq',
-        -menu       => $subseq,
+        -label          => 'SubSeq',
+        -menu           => $subseq,
+        -underline      => 0,
         );
     
     $subseq->add('command',
-        -label      => 'New',
-        -command    => sub{ warn "Called New" },
+        -label          => 'New',
+        -command        => sub{ warn "Called New" },
+        -accelerator    => 'Ctrl-N',
+        -underline      => 0,
         );
     $subseq->add('command',
-        -label      => 'Edit',
-        -command    => sub{ warn "Called Edit" },
+        -label          => 'Edit',
+        -command        => sub{ warn "Called Edit" },
+        -accelerator    => 'Ctrl-E',
+        -underline      => 0,
+        );
+    $subseq->add('separator');
+    $subseq->add('command',
+        -label          => 'Merge',
+        -command        => sub{ warn "Called Merge" },
+        -accelerator    => 'Ctrl-M',
+        -underline      => 0,
         );
     $subseq->add('command',
-        -label      => 'Merge',
-        -command    => sub{ warn "Called Merge" },
+        -label          => 'AutoMerge',
+        -command        => sub{ warn "Called AutoMerge" },
+        -accelerator    => 'Ctrl-U',
+        -underline      => 0,
         );
     $subseq->add('command',
-        -label      => 'AutoMerge',
-        -command    => sub{ warn "Called AutoMerge" },
+        -label          => 'Isoform',
+        -command        => sub{ warn "Called Isoform" },
+        -accelerator    => 'Ctrl-I',
+        -underline      => 0,
         );
     $subseq->add('command',
-        -label      => 'Isoform',
-        -command    => sub{ warn "Called Isoform" },
-        );
-    $subseq->add('command',
-        -label      => 'Transcript',
-        -command    => sub{ warn "Called Transcript" },
+        -label          => 'Transcript',
+        -command        => sub{ warn "Called Transcript" },
+        -accelerator    => 'Ctrl-T',
+        -underline      => 0,
         );
     
     my $cw = CanvasWindow->new($mw);
