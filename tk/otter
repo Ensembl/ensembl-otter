@@ -178,7 +178,7 @@ sub do_fetch {
         
         # Make AnaStatus::Sequence objects
         my @ana_seq = get_anastatus_sequences(@prop);
-        fetch_pipeline_data($lace_files, @ana_seq);
+        #fetch_pipeline_data($lace_files, @ana_seq);
         
         # Parse all the acefiles into the database
         my $errors = initializeDatabase( 'tace', $home, $lace_files );
@@ -189,6 +189,7 @@ sub do_fetch {
             die "Error: Local database creation failed\n";
         }
 
+        ### launch XaceSeqChooser here ###
         system('xace', '-fmapcutcoords', $home);
     }
 }
@@ -347,6 +348,7 @@ sub make_acedb_dir_structure {
     my( $home, $lace_files, $title ) = @_;
 
     my $ace_tar = get_ace_tar();
+    warn "tar = '$ace_tar'";
 
     # Make acedb directory structure (includes methods.ace in rawdata)
     my $make_ace_tar = "tar xf $ace_tar";
@@ -639,9 +641,9 @@ sub editDisplaysWrm {
 }
 
 sub initializeDatabase {
-    my ( $tace, $dbDir, @acefiles ) = @_;
+    my ( $tace, $dbDir, $acefiles ) = @_;
 
-    my @parse_commands = map "parse $_\n", @acefiles;
+    my @parse_commands = map "parse $_\n", @$acefiles;
 
     my $parse_log = 'init_parse.log';
     
