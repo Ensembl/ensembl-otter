@@ -1,0 +1,79 @@
+#!/usr/local/bin/perl -w
+
+### otter_embl_dump_test
+
+=pod
+
+=head1 NAME - otter_embl_dump_test
+
+=head1 COMMAND LINE PARAMETERS
+
+Required parameters
+  -dataset              
+  -chrlibrary_name
+  
+Optional parameters
+  -h|--help
+
+=head1 DESCRIPTION
+
+Test script to for dumping of EMBL files from an
+Otter database containing finished genomic sequence
+annotation.
+
+The principal module used for the dumping is
+Bio::Otter::EMBL::Factory.pm, which creates of the
+classes Hum::EMBL::Exon, and Hum::EMBL::ExonCollection
+from the retrieved data.
+
+=cut
+
+use strict;
+
+use Bio::Otter::Lace::Defaults;
+use Bio::Otter::EMBL::Factory;
+
+{
+    my $dataset_name = undef;
+    my $sequence_set = undef;
+    
+    my $usage = sub { exec('perldoc', $0) };
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'   => $usage,
+        'dataset=s' => \$dataset_name,
+        'chr|set=s' => \$sequence_set,
+        ) or $usage->();
+    $usage->() unless $dataset_name and $sequence_set;
+
+    # Connect to Ensembl/Otter database and fetch adaptors
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    my $ds = $cl->get_DataSet_by_name($dataset_name); #Bio::Otter::Lace::DataSet
+
+    my $otter_db = $ds->get_cached_DBAdaptor; #Bio::EnsEMBL::Container
+    $otter_db->assembly_type($sequence_set); #e.g. 'chr1-07'
+    
+    my $embl_factory = Bio::Otter::EMBL::Factory->new;
+    $embl_factory->Dataset($ds);
+    
+    foreach my $acc (@ARGV) {
+        
+        my $embl = $embl_factory->make_embl($acc);
+        print $embl->compose();
+        print "\n\n";
+    }
+}
+
+
+
+__END__
+
+=head1 NAME - otter_embl_dump_test
+
+=head1 EXAMPLE
+
+  otter_embl_dump_test -dataset human -chr chr1-07 AC114498 AL669831
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+Mike Croning B<email> mdr@sanger.ac.uk

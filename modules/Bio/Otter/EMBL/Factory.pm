@@ -459,6 +459,7 @@ sub do_Gene {
     #Transcript here give an mRNA, potentially + a CDS in EMBL record.
     foreach my $transcript (@{$gene->get_all_Transcripts}) {
 
+        my $transcript_info = $transcript->transcript_info;
         my $sid = $transcript->stable_id; #Currently not used
         
         #Do the mRNA fist
@@ -484,7 +485,7 @@ sub do_Gene {
 
                 $mRNA_exon->start($start);
                 $mRNA_exon->end($end);
-
+                
                 # May be an is_sticky method?
                 if ($exon->isa('Bio::Ensembl::StickyExon')) {
                     # Deal with sticy exon
@@ -510,6 +511,9 @@ sub do_Gene {
             #Set the start and end for the Hum::EMBL::ExonCollection
             $mRNA_exoncollection->start($mRNA_exons[0]->start);
             $mRNA_exoncollection->end($mRNA_exons[-1]->end);
+            $mRNA_exoncollection->start_not_found(1);
+            #$mRNA_exoncollection->start_not_found($transcript_info->mRNA_start_not_found);
+            $mRNA_exoncollection->end_not_found($transcript_info->mRNA_end_not_found);
             
         }
     }
