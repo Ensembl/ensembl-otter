@@ -97,8 +97,8 @@ sub new_AceDatabase {
 sub get_UserAgent {
     my( $self ) = @_;
     
-    return LWP::UserAgent->new;
-    
+    return LWP::UserAgent->new(timeout => 9000);
+
     #my( $ua );
     #unless ($ua = $self->{'_user_agent'}) {
     #    $ua = $self->{'_user_agent'} = LWP::UserAgent->new;
