@@ -32,6 +32,7 @@ my $c_path   = 'NCBI31';
 my $t_path   = 'NCBI31';
 
 my $filter_gd;
+my $filter_obs;
 
 &GetOptions( 'host:s'    => \$host,
              'user:s'    => \$user,
@@ -55,6 +56,7 @@ my $filter_gd;
              'c_path:s'    => \$c_path,
              't_path:s'    => \$t_path,
 	     'filter_gd'   => \$filter_gd,
+	     'filter_obs'  => \$filter_obs,
             );
 
 
@@ -106,17 +108,30 @@ my $genes = $aga->fetch_by_Slice($vcontig);
 print "Fetched ".scalar(@$genes)." genes\n";
 
 my %genehash;
+my $ngd=0;
+my $nobs=0;
 foreach my $gene (@$genes) {
     my $gsi=$gene->stable_id;
     if($filter_gd){
 	my $name=$gene->gene_info->name->name;
 	if($name=~/\.GD$/){
 	    print "GD gene $gsi $name was ignored\n";
+	    $ngd++;
+	    next;
+	}
+    }
+    if($filter_obs){
+	my $type=$gene->type;
+	if($type eq 'obsolete'){
+	    print "Gene $gsi is type obsolete\n";
+	    $nobs++;
 	    next;
 	}
     }
     $genehash{$gsi} = $gene;
 }
+
+print "$ngd GD genes removed, $nobs obsolete genes removed\n";
 
 my $c_genes = $c_aga->fetch_by_Slice($c_vcontig);
 print "Fetched comparison genes\n";
