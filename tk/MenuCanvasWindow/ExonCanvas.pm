@@ -1551,7 +1551,7 @@ sub focus_on_current_text {
     my( $self ) = @_;
     
     my $canvas = $self->canvas;
-    my $obj  = $canvas->find('withtag', 'current')  or return;
+    my ($obj)  = $canvas->find('withtag', 'current')  or return;
     if (grep /translation_region|exon_pos/, $canvas->gettags($obj) ) {
         $canvas->focus($obj);
 
@@ -1573,9 +1573,9 @@ sub shift_left_button_handler {
     my $canvas = $self->canvas;
     $canvas->focus("");
 
-    my $obj  = $canvas->find('withtag', 'current')  or return;
-    my $type = $canvas->type($obj)                  or return;
-    my @tags = $canvas->gettags($obj);
+    my ($obj) = $canvas->find('withtag', 'current')  or return;
+    my $type  = $canvas->type($obj)                  or return;
+    my @tags  = $canvas->gettags($obj);
 
     if ($self->is_selected($obj)) {
         $self->remove_selected($obj);
@@ -1604,7 +1604,7 @@ sub control_left_button_handler {
     my( $self ) = @_;
     
     my $canvas = $self->canvas;
-    my $obj = $canvas->find('withtag', 'current') or return;
+    my ($obj) = $canvas->find('withtag', 'current') or return;
     my %tags = map {$_, 1} $canvas->gettags($obj);
     if ($tags{'plus_strand'}) {
         $self->set_tk_strand(-1);
@@ -1730,7 +1730,7 @@ sub middle_button_paste {
     return unless @ints;
     
     $self->deselect_all;
-    if (my $obj  = $canvas->find('withtag', 'current')) {
+    if (my ($obj)  = $canvas->find('withtag', 'current')) {
         my $type = $canvas->type($obj) or return;
         if ($type eq 'text') {
             $canvas->itemconfigure($obj, 

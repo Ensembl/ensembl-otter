@@ -877,7 +877,7 @@ sub selected_CloneSequence_indices {
 sub get_current_CloneSequence_index {
     my $self = shift @_ ;
     my $canvas = $self->canvas;
-    my $obj = $canvas->find('withtag', 'current') or return;
+    my ($obj) = $canvas->find('withtag', 'current') or return;
      
     my ($i) = map /^cs=(\d+)/, $canvas->gettags($obj);  
     return $i;
@@ -888,7 +888,7 @@ sub get_current_row_tag {
     my( $self ) = @_;
     
     my $canvas = $self->canvas;
-    my $obj = $canvas->find('withtag', 'current') or return;
+    my ($obj) = $canvas->find('withtag', 'current') or return;
 
     my( $row_tag );
     foreach my $tag ($canvas->gettags($obj)) {

@@ -1024,7 +1024,7 @@ sub left_button_handler {
     return if $self->delete_message;
 
     $self->deselect_all;
-    if (my $obj = $canvas->find('withtag', 'current')) {
+    if (my ($obj) = $canvas->find('withtag', 'current')) {
         $self->highlight($obj);
     }
 }
@@ -1034,7 +1034,7 @@ sub shift_left_button_handler {
 
     return if $self->delete_message;
 
-    if (my $obj = $canvas->find('withtag', 'current')) {
+    if (my ($obj) = $canvas->find('withtag', 'current')) {
         if ($self->is_selected($obj)) {
             $self->remove_selected($obj);
         } else {

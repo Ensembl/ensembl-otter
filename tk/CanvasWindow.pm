@@ -855,7 +855,7 @@ sub delete_message {
     
     my $canvas = $self->canvas;
     unless ($msg_id) {
-        my $obj = $canvas->find('withtag', 'current');
+        my ($obj) = $canvas->find('withtag', 'current');
         if ($obj) {
             ($msg_id) = grep /^message_id=/, $canvas->gettags($obj);
         }

@@ -172,7 +172,7 @@ sub select_sequence_set {
     
     return if $self->delete_message;
     my $canvas = $self->canvas;
-    if (my $current = $canvas->find('withtag', 'current')) {
+    if (my ($current) = $canvas->find('withtag', 'current')) {
         my( $ss_tag );
         foreach my $tag ($canvas->gettags($current)) {
             if ($tag =~ /^SequenceSet=/) {

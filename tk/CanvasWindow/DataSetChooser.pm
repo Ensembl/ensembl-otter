@@ -69,7 +69,7 @@ sub select_dataset {
     
     return if $self->delete_message;
     my $canvas = $self->canvas;
-    if (my $current = $canvas->find('withtag', 'current')) {
+    if (my ($current) = $canvas->find('withtag', 'current')) {
         $self->highlight($current);
     } else {
         $self->deselect_all;
