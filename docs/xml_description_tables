@@ -217,7 +217,7 @@ value           1 if forward or\n-1 if reverse
 mandatory
 
 <fragment_offset>
-description     the first base in the fragemnt that contributes to the assembled sequence
+description     the first base in the fragment that contributes to the assembled sequence
 value           integer
 mandatory
 
