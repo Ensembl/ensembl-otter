@@ -458,7 +458,7 @@ sub fetch_all_SequenceNotes_for_SequenceSet {
     $sth->execute($name);
     
     my( $ctg_id, $text, $time, $is_current, $author, $super_contig );
-    $sth->bind_columns(\$ctg_id, \$text, \$time, \$is_current, \$author, $super_contig);
+    $sth->bind_columns(\$ctg_id, \$text, \$time, \$is_current, \$author, \$super_contig);
     
     my( %ctg_notes );
     while ($sth->fetch) {
