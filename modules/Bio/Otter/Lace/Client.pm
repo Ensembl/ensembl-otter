@@ -24,11 +24,18 @@ sub host {
     my( $self, $host ) = @_;
     
     if ($host) {
-        $self->{'_options'}->{'client'}->{'_host'} = $host;
+        $self->{'_options'}->{'client'}->{'host'} = $host;
     }
     return $self->{'_options'}->{'client'}->{'host'};
 }
-
+sub readonly_tag {
+    my( $self, $ro ) = @_;
+    
+    if ($ro) {
+        $self->{'_options'}->{'client'}->{'readonly_tag'} = $ro;
+    }
+    return !$self->write_access ? $self->{'_options'}->{'client'}->{'readonly_tag'} : '';
+}
 sub port {
     my( $self, $port ) = @_;
     
@@ -112,10 +119,10 @@ sub new_AceDatabase {
     my( $self ) = @_;
     
     my $db = Bio::Otter::Lace::AceDatabase->new;
+    $db->Client($self);
     my $home = $db->home;
     my $i = ++$self->{'_last_db'};
     $db->home("${home}_$i");
-    $db->Client($self);
     return $db;
 }
 

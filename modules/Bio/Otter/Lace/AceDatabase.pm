@@ -50,7 +50,10 @@ sub home {
         $self->{'_home'} = $home;
     }
     elsif (! $self->{'_home'}) {
-        $self->{'_home'} = "/var/tmp/lace.$$";
+	my $readonly_tag = '';
+	$readonly_tag = $self->Client->readonly_tag() if $self->Client;
+	# warn "readonly_tag '$readonly_tag'\n";
+        $self->{'_home'} = "/var/tmp/lace.${$}${readonly_tag}";
     }
     return $self->{'_home'};
 }
