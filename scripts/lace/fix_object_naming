@@ -80,7 +80,8 @@ use Hum::Submission 'prepare_cached_statement';
         $dba->begin_work;
         eval{
             #fix_names($dba, $gene_aptr, $gid, $ren_hash, $fix_gid{$gid} ? 1 : 0);
-            fix_names($dba, $gene_aptr, $gid, $ren_hash, 0);
+            #fix_names($dba, $gene_aptr, $gid, $ren_hash, 0);
+            fix_chr7_transcript_names($dba, $gene_aptr, $gid, $ren_hash, 0);
         };
         if ($@) {
             $dba->rollback;
@@ -124,144 +125,193 @@ sub is_sequence_name {
     return $count;
 }
 
-{
-    my( %root_gid );
+sub fix_chr7_transcript_names {
+    my( $dba, $gene_aptr, $id, $ren_hash, $fix_root ) = @_;
 
-    sub fix_names {
-        my( $dba, $gene_aptr, $id, $ren_hash, $fix_root ) = @_;
+    my $gene = $gene_aptr->fetch_by_dbID($id);
+    my $old_gene_name = $gene->gene_info->name->name;
+    my( $gene_num );
+    if ($old_gene_name =~ /^Hs_7_c(\d+)$/) {
+        $gene_num = $1;
+    } else {
+        return;
+    }
+    printf STDERR "\nGENE: $old_gene_name\n";
+    printf STDERR "  ROOT FIX\n" if $fix_root;
+    
+    my ($clone3prime, $all_clone_names, $all_clones) = three_prime_clone_name($gene);
+    
+    ### Lock clones here
+    eval{
+        lock_clones($dba, $all_clones);
+    };
+    if ($@) {
+        die "CLONES ARE LOCKED\n";
+    }
 
-        my $gene = $gene_aptr->fetch_by_dbID($id);
-        my $old_gene_name = $gene->gene_info->name->name;
-        printf STDERR "\nGENE: $old_gene_name\n";
-        printf STDERR "  ROOT FIX\n" if $fix_root;
-
-        my ($gene_class, $gene_name) = get_class_and_name($old_gene_name);
-        my ($clone3prime, $all_clone_names, $all_clones) = three_prime_clone_name($gene);
-
-        ### Lock clones here
-        eval{
-            lock_clones($dba, $all_clones);
-        };
-        if ($@) {
-            die "CLONES ARE LOCKED\n";
+    my $tsct_rename_map = [];
+    my $tsct_list = $gene->get_all_Transcripts;
+    foreach my $tsct (sort {$a->transcript_info->name cmp $b->transcript_info->name} @$tsct_list) {
+        my $old_tsct_name = $tsct->transcript_info->name;
+        print STDERR "  TSCT: $old_tsct_name\n";
+        my ($gene_clone_root, $variant_number) = $old_tsct_name =~ /^(.+)-(\d{3})$/;
+        next unless $variant_number == $gene_num;
+        $variant_number = '001';
+        my $new_tsct_name = "$gene_clone_root-$variant_number";
+        while (transcript_name_exists($new_tsct_name)) {
+            $variant_number++;
+            $new_tsct_name = "$gene_clone_root-$variant_number";
+            print STDERR "    INCREMENT TSCT: $variant_number\n";
         }
+        save_transcript_name($new_tsct_name);
+        print STDERR "    TSCT RENAME: $new_tsct_name\n";
+        push(@$tsct_rename_map, [$old_tsct_name, $new_tsct_name]);
+        rename_transcript($dba, $tsct, $old_tsct_name, $new_tsct_name);
+    }
 
-        my $fix_names = 0;
-        my $gene_number = undef;
-        if (my $new = $ren_hash->{$gene_name}) {
-            print STDERR "  HASH RENAME: $new\n";
-            #$fix_names = 1;
-            $gene_name = $new;
-        }
-        elsif ($gene_name =~ /^(?:[Ee][Mm]:)?([^\.]+)\.(\d+)$/) {
-            my $clone_root = $1;
-            $gene_number   = $2;
-            if (is_sequence_name($clone_root)) {
-              $fix_names = 1;
-            }
-        }
-        # Chromosome 14 gene names
-        elsif ($gene_name =~ /^K14_.+_\d+$/) {
-            $fix_names = 1;
-        }
+    fix_transcript_remarks($dba, $tsct_list, $tsct_rename_map);
 
-        my $is_int_end = 0;
-        my $int_end_gene_number = undef;
-        #if ($old_gene_name =~ /[A-Za-z-](\d+)$/) {
-        #    print STDERR "  INT_END\n";
-        #    $is_int_end = 1;
-        #    $int_end_gene_number = $1;
+    unlock_clones($dba, $all_clones);
+}
+
+sub fix_names {
+    my( $dba, $gene_aptr, $id, $ren_hash, $fix_root ) = @_;
+
+    my $gene = $gene_aptr->fetch_by_dbID($id);
+    my $old_gene_name = $gene->gene_info->name->name;
+    printf STDERR "\nGENE: $old_gene_name\n";
+    printf STDERR "  ROOT FIX\n" if $fix_root;
+
+    my ($gene_class, $gene_name) = get_class_and_name($old_gene_name);
+    my ($clone3prime, $all_clone_names, $all_clones) = three_prime_clone_name($gene);
+
+    ### Lock clones here
+    eval{
+        lock_clones($dba, $all_clones);
+    };
+    if ($@) {
+        die "CLONES ARE LOCKED\n";
+    }
+
+    my $fix_names = 0;
+    my $gene_number = undef;
+    if (my $new = $ren_hash->{$gene_name}) {
+        print STDERR "  HASH RENAME: $new\n";
+        #$fix_names = 1;
+        $gene_name = $new;
+    }
+    elsif ($gene_name =~ /^(?:[Ee][Mm]:)?([^\.]+)\.(\d+)$/) {
+        my $clone_root = $1;
+        $gene_number   = $2;
+        if (is_sequence_name($clone_root)) {
+          $fix_names = 1;
+        }
+    }
+    # Chromosome 14 gene names
+    elsif ($gene_name =~ /^K14_.+_\d+$/) {
+        $fix_names = 1;
+    }
+    elsif ($gene_name =~ /^Hs_7_c\d+$/) {
+        $fix_names = 1;
+    }
+
+    my $is_int_end = 0;
+    my $int_end_gene_number = undef;
+    #if ($old_gene_name =~ /[A-Za-z-](\d+)$/) {
+    #    print STDERR "  INT_END\n";
+    #    $is_int_end = 1;
+    #    $int_end_gene_number = $1;
+    #}
+
+    # grep the gene number from the transcript if it wasn't in the name
+    $gene_number ||= transcript_gene_number($gene);
+
+    my $gene_clone_root = undef;
+    if (! $fix_root and name_is_clone_based($gene_name, $all_clone_names)) {
+        print STDERR "  GENE NAME OK\n";
+        $gene_clone_root = $gene_name;
+    }
+    #else {
+    #    ($gene_number, $gene_clone_root) = make_new_gene_name($gene_number, $gene_class . $clone3prime);
+    #}
+
+    ### Fix gene classes here too?
+
+    my $tsct_rename_map = [];
+    my $fix_int_end = 0;
+    my $tsct_list = $gene->get_all_Transcripts;
+    foreach my $tsct (sort {$a->transcript_info->name cmp $b->transcript_info->name} @$tsct_list) {
+        my $old_tsct_name = $tsct->transcript_info->name;
+        my ($class, $name) = get_class_and_name($old_tsct_name);
+        #if ($class ne $gene_class) {
+        #    print STDERR "  CLASS POLLUTION: gene=$gene_class tsct=$class\n";
         #}
-
-        # grep the gene number from the transcript if it wasn't in the name
-        $gene_number ||= transcript_gene_number($gene);
-
-        my $gene_clone_root = undef;
-        if (! $fix_root and name_is_clone_based($gene_name, $all_clone_names)) {
-            print STDERR "  GENE NAME OK\n";
-            $gene_clone_root = $gene_name;
-        }
-        #else {
-        #    ($gene_number, $gene_clone_root) = make_new_gene_name($gene_number, $gene_class . $clone3prime);
-        #}
-
-        ### Fix gene classes here too?
-
-        my $tsct_rename_map = [];
-        my $fix_int_end = 0;
-        my $tsct_list = $gene->get_all_Transcripts;
-        foreach my $tsct (sort {$a->transcript_info->name cmp $b->transcript_info->name} @$tsct_list) {
-            my $old_tsct_name = $tsct->transcript_info->name;
-            my ($class, $name) = get_class_and_name($old_tsct_name);
-            #if ($class ne $gene_class) {
-            #    print STDERR "  CLASS POLLUTION: gene=$gene_class tsct=$class\n";
-            #}
-            print STDERR "  TSCT: $old_tsct_name\n";
-            my $bad_tsct_name = 0;
-            my ($variant_number) = $name =~ /^.+-(\d{3})$/;
-            unless ($variant_number) {
-                $bad_tsct_name = 1;
-                if (index($name, $gene_name) == 0 and $name =~ /(\d+)$/) {
-                    my $num = $1;
-                    if ($num < (10 + @$tsct_list)) {
-                        $variant_number = sprintf "%03d", $num;
-                    }
+        print STDERR "  TSCT: $old_tsct_name\n";
+        my $bad_tsct_name = 0;
+        my ($variant_number) = $name =~ /^.+-(\d{3})$/;
+        unless ($variant_number) {
+            $bad_tsct_name = 1;
+            if (index($name, $gene_name) == 0 and $name =~ /(\d+)$/) {
+                my $num = $1;
+                if ($num < (10 + @$tsct_list)) {
+                    $variant_number = sprintf "%03d", $num;
                 }
             }
-            $variant_number ||= '001';
+        }
+        $variant_number ||= '001';
 
-            my $is_clone_based = name_is_clone_based($name, $all_clone_names);
-            if ($is_int_end and $gene_number and $gene_number == $int_end_gene_number) {
-                $gene_number = undef if ! $gene_clone_root;
-                $fix_int_end = 1;
-            }
-            elsif ($bad_tsct_name) {
-                # Transcript name must be fixed
-            }
-            elsif ($fix_root) {
-                $variant_number = '001';
-            }
-            elsif ("$class$name" eq $old_tsct_name and $is_clone_based) {
-                # Already has intl gene name
-                next unless $fix_int_end;
-            }
-
-            # Rename transcript:
-            unless ($gene_clone_root) {
-                ($gene_number, $gene_clone_root) = make_new_gene_name($gene_number, $gene_class . $clone3prime);
-            }
-            next if ($fix_int_end and $is_clone_based and $gene_number >= $int_end_gene_number);
-
-            my $new_tsct_name = "$gene_clone_root-$variant_number";
-            while (transcript_name_exists($new_tsct_name)) {
-                $variant_number++;
-                $new_tsct_name = "$gene_clone_root-$variant_number";
-                print STDERR "    INCREMENT TSCT: $variant_number\n";
-            }
-            save_transcript_name($new_tsct_name);
-            print STDERR "    TSCT RENAME: $new_tsct_name\n";
-            push(@$tsct_rename_map, [$old_tsct_name, $new_tsct_name]);
-            rename_transcript($dba, $tsct, $old_tsct_name, $new_tsct_name);
+        my $is_clone_based = name_is_clone_based($name, $all_clone_names);
+        if ($is_int_end and $gene_number and $gene_number == $int_end_gene_number) {
+            $gene_number = undef if ! $gene_clone_root;
+            $fix_int_end = 1;
+        }
+        elsif ($bad_tsct_name) {
+            # Transcript name must be fixed
+        }
+        elsif ($fix_root) {
+            $variant_number = '001';
+        }
+        elsif ("$class$name" eq $old_tsct_name and $is_clone_based) {
+            # Already has intl gene name
+            next unless $fix_int_end;
         }
 
-        fix_transcript_remarks($dba, $tsct_list, $tsct_rename_map);
-
-        if ($fix_names and $gene_name ne $gene_clone_root) {
-            unless ($gene_clone_root) {
-                print STDERR "  NO NEW GENE NAME\n";
-                ($gene_number, $gene_clone_root) = make_new_gene_name($gene_number, $gene_class . $clone3prime);
-            }
-            print STDERR "  GENE RENAME: $gene_clone_root\n";
-            rename_gene($dba, $gene, $old_gene_name, $gene_clone_root, $tsct_rename_map);
+        # Rename transcript:
+        unless ($gene_clone_root) {
+            ($gene_number, $gene_clone_root) = make_new_gene_name($gene_number, $gene_class . $clone3prime);
         }
-        elsif ("$gene_class$gene_name" ne $old_gene_name) {
-            print STDERR "  GENE CLASS RENAME: $gene_class$gene_name\n";
-            rename_gene($dba, $gene, $old_gene_name, "$gene_class$gene_name", $tsct_rename_map);
-        }
+        next if ($fix_int_end and $is_clone_based and $gene_number >= $int_end_gene_number);
 
-        unlock_clones($dba, $all_clones);
+        my $new_tsct_name = "$gene_clone_root-$variant_number";
+        while (transcript_name_exists($new_tsct_name)) {
+            $variant_number++;
+            $new_tsct_name = "$gene_clone_root-$variant_number";
+            print STDERR "    INCREMENT TSCT: $variant_number\n";
+        }
+        save_transcript_name($new_tsct_name);
+        print STDERR "    TSCT RENAME: $new_tsct_name\n";
+        push(@$tsct_rename_map, [$old_tsct_name, $new_tsct_name]);
+        rename_transcript($dba, $tsct, $old_tsct_name, $new_tsct_name);
     }
+
+    fix_transcript_remarks($dba, $tsct_list, $tsct_rename_map);
+
+    if ($fix_names and $gene_name ne $gene_clone_root) {
+        unless ($gene_clone_root) {
+            print STDERR "  NO NEW GENE NAME\n";
+            ($gene_number, $gene_clone_root) = make_new_gene_name($gene_number, $gene_class . $clone3prime);
+        }
+        print STDERR "  GENE RENAME: $gene_clone_root\n";
+        rename_gene($dba, $gene, $old_gene_name, $gene_clone_root, $tsct_rename_map);
+    }
+    elsif ("$gene_class$gene_name" ne $old_gene_name) {
+        print STDERR "  GENE CLASS RENAME: $gene_class$gene_name\n";
+        rename_gene($dba, $gene, $old_gene_name, "$gene_class$gene_name", $tsct_rename_map);
+    }
+
+    unlock_clones($dba, $all_clones);
 }
+
 
 {
     my( $author_id );
