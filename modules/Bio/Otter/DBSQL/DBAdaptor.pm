@@ -1,7 +1,6 @@
 package Bio::Otter::DBSQL::DBAdaptor;
 
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
-use OtterDefs;
 
 @ISA = qw ( Bio::EnsEMBL::DBSQL::DBAdaptor);
 
@@ -22,9 +21,6 @@ sub dataset {
   my ($self,$dataset) = @_;
 
   if (defined($dataset)) {
-    if (!defined($OTTER_SPECIES->{$dataset})) {
-      $self->throw("Unknown dataset $dataset. You should edit your species.dat file to include this dataset");
-    }
     $self->{_dataset} = $dataset;
   }
 
@@ -184,4 +180,17 @@ sub get_CloneRemarkAdaptor {
 
     return $self->_get_adaptor("Bio::Otter::DBSQL::CloneRemarkAdaptor");
 }
+
+sub get_MetaContainer {
+    my( $self ) = @_;
+    
+    my( $mc );
+    unless ($mc = $self->{'_meta_container'}) {
+        require Bio::Otter::DBSQL::MetaContainer;
+        $mc = Bio::Otter::DBSQL::MetaContainer->new($self);
+        $self->{'_meta_container'} = $mc;
+    }
+    return $mc;
+}
+
 1;
