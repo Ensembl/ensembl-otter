@@ -7,6 +7,7 @@ use strict;
 use IPC::Open2;
 use IO::Socket;
 use POSIX qw(:signal_h);
+#use POSIX qw(:signal_h setsid);
 use Sys::Hostname;
 use Getopt::Long;
 use HTTP::Daemon;
@@ -22,20 +23,23 @@ my $ALT_HOME              = $OTTER_ALTROOT;
 my $SCRIPTDIR             = $OTTER_SCRIPTDIR;
 my $HOME                  = $DEFAULT_HOME;
 my $SCRIPT_TIMEOUT        = int($OTTER_SCRIPT_TIMEOUT) || 60;
-my $PIDFILE               = $DEFAULT_HOME . "/$0.pid";
+my $PIDFILE               = $DEFAULT_HOME . "/otter_srv.pid";
+my $LOGFILE               = $DEFAULT_HOME . "/otter_srv.log";
 my $OTTER_INFO            = undef;
 my $PREFORK               = 5;
 my $MAX_CLIENTS_PER_CHILD = $OTTER_MAX_CLIENTS;
 my $SOCKET                = $OTTER_SERVER_PORT;
 my $DEBUG                 = 1;
 my $VERSION               = "0.1";
-my $GET_SCRIPTS           = $OTTER_GET_SCRIPTS || {};
+my $GET_SCRIPTS           = $OTTER_GET_SCRIPTS  || {};
 my $POST_SCRIPTS          = $OTTER_POST_SCRIPTS || {};
 
 #--------------------- global variables ----------------------#
 my %CHILDREN = ();  # keys are current child process IDs
 my $CHILDREN = 0;   # current number of children
 #-------------------------------------------------------------#
+
+
 
 if ($ARGV[0] eq '--alt') {
   $HOME = $ALT_HOME;
@@ -58,7 +62,7 @@ my $server = HTTP::Daemon->new(
 ) or die "making socket: $@\n";
 
 make_pid_file($PIDFILE);
-
+make_log_file($LOGFILE);
 # Fork off  children.
 for (1 .. $PREFORK) {
   make_new_child();
@@ -69,6 +73,7 @@ $SIG{CHLD} = \&REAPER;
 $SIG{INT}  = \&HUNTSMAN;
 $SIG{USR1} = \&DEF_HOME;
 $SIG{USR2} = \&ALT_HOME;
+$SIG{HUP}  = \&ROTATE_LOGS;
 
 # And maintain the population.
 while (1) {
@@ -292,6 +297,38 @@ sub HUNTSMAN {    # signal handler for SIGINT
   exit;                             # clean up with dignity
 }
 
+sub ROTATE_LOGS{
+    # local ($SIG{CHLD}) = 'IGNORE';
+    my $rotate_time = time;
+    my $new_logfile = $LOGFILE . "_rotated_at_" . $rotate_time;
+    print "OTTER_SERVER: Rotating logs...\n";
+#    print "              this might go wrong...\n";
+    rename $LOGFILE, $new_logfile;
+    my @kids = keys %CHILDREN;    # get child PIDs
+    foreach (@kids) {
+	kill 'HUP', $_;    # ...and tell them
+	print STDERR "OTTER_SERVER : \tkilled $_\n" if $DEBUG;
+	sleep 5; # good idea ??????
+    }
+    print STDERR "OTTER_SERVER : Sent ALT HUP to children: ", join (",", @kids), "\n" if $DEBUG;
+    # reopen the log files
+    make_log_file($LOGFILE);
+    # note to log file reader
+    print STDERR "OTTER SERVER : using this log file now as from $rotate_time\n";
+    # wake this script up a bit, and make children
+    &{$SIG{CHLD}};
+
+    $SIG{HUP} = \&ROTATE_LOGS;
+}
+
+sub make_log_file{
+    my $output = shift;
+    close STDOUT;
+    open (STDOUT, ">$output")   or die "Can't write to $output: $!";
+#    setsid			or die "Can't start a new session: $!";
+    close STDERR;
+    open (STDERR, '>&STDOUT')   or die "Can't dup stdout: $!";
+}
 ###########################################################
 sub terminate_client {
   my ($c) = @_;
