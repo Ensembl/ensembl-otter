@@ -103,19 +103,33 @@ if($make_cache){
 
   # get assemblies of interest
   my %a;
+  my %ao;
   my $sth;
   if($vega){
     $sth=$dbh->prepare("select a.contig_id, c.name, a.type, a.chr_start, a.chr_end, a.contig_start, a.contig_end, a.contig_ori, cl.embl_acc, cl.embl_version from contig ct, clone cl, chromosome c, assembly a where cl.clone_id=ct.clone_id and ct.contig_id=a.contig_id and a.chromosome_id=c.chromosome_id");
-  }elsif($ext){
-    $sth=$dbh->prepare("select a.contig_id, c.name, a.type, a.chr_start, a.chr_end, a.contig_start, a.contig_end, a.contig_ori, cl.embl_acc, cl.embl_version from contig ct, clone cl, chromosome c, assembly a, sequence_set ss, vega_set vs where cl.clone_id=ct.clone_id and ct.contig_id=a.contig_id and a.chromosome_id=c.chromosome_id and a.type=ss.assembly_type and ss.vega_set_id=vs.vega_set_id and vs.vega_type = 'E'");
   }else{
-    $sth=$dbh->prepare("select a.contig_id, c.name, a.type, a.chr_start, a.chr_end, a.contig_start, a.contig_end, a.contig_ori, cl.embl_acc, cl.embl_version from contig ct, clone cl, chromosome c, assembly a, sequence_set ss, vega_set vs where cl.clone_id=ct.clone_id and ct.contig_id=a.contig_id and a.chromosome_id=c.chromosome_id and a.type=ss.assembly_type and ss.vega_set_id=vs.vega_set_id and vs.vega_type != 'N'");
+    $sth=$dbh->prepare("select a.contig_id, c.name, a.type, a.chr_start, a.chr_end, a.contig_start, a.contig_end, a.contig_ori, cl.embl_acc, cl.embl_version, vs.vega_type from contig ct, clone cl, chromosome c, assembly a, sequence_set ss left join vega_set vs on (vs.vega_set_id=ss.vega_set_id) where cl.clone_id=ct.clone_id and ct.contig_id=a.contig_id and a.chromosome_id=c.chromosome_id and a.type=ss.assembly_type");
   }
   $sth->execute();
   my $n=0;
   while (my @row = $sth->fetchrow_array()){
     my $cid=shift @row;
-    $a{$cid}=[@row];
+    my $other;
+    if(!$vega){
+      my $vega_type=pop @row;
+      if($ext){
+	if($vega_type ne 'E'){
+	  $other=1;
+	}
+      }elsif($vega_type eq 'N'){
+	$other=1;
+      }
+    }
+    if($other){
+      $ao{$cid}=[@row];
+    }else{
+      $a{$cid}=[@row];
+    }
     $n++;
   }
   print "$n contigs read from assembly\n";
@@ -128,6 +142,7 @@ if($make_cache){
   my %offagp_gsi;
   my %onagp_gsi;
   my %reported_gsi;
+  my %gsi_ao_clone;
   my %gsi_clone;
   my %atype_gsi;
   my %gsi2gn;
@@ -174,6 +189,12 @@ if($make_cache){
     }else{
       $nexclude++;
       push(@{$excluded_gsi{$gsi}},join(',',@row));
+      if(ao{$ecid}){
+	my($cname,$atype,$acst,$aced,$ast,$aed,$ao,$cla,$clv)=@{$ao{$ecid}};
+	$gsi_ao_clone{$gsi}->{"$cla.$clv"}=1;
+      }else{
+	print "FATAL: $gsi attached to contig $ecid not in assembly table\n";
+      }
     }
     last if ($opt_t && $n>=$opt_t);
   }
@@ -211,9 +232,9 @@ if($make_cache){
 	foreach my $sv (keys %{$gsi_clone{$gsi}}){$sv2{$sv}=1;}
 	my $gn=$gsi2gn{$gsi};
 	if($onagp_gsi{$gsi}){
-	  print "ERR $gsi ($gn) ss=\'$atype\' all exon(s) off agp:\n";
+	  print " ERR $gsi ($gn) ss=\'$atype\' some exon(s) off agp:\n";
 	}else{
-	  print "ERR $gsi ($gn) ss=\'$atype\' some exon(s) off agp:\n";
+	  print " ERR $gsi ($gn) ss=\'$atype\' all exon(s) off agp:\n";
 	}
 	print "  ".join("\n  ",@{$offagp_gsi{$gsi}})."\n" if $opt_v;
       }
