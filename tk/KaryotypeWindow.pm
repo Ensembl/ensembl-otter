@@ -8,6 +8,26 @@ use Carp;
 use base 'CanvasWindow';
 use KaryotypeWindow::Chromosome;
 
+sub new {
+    my $pkg = shift;
+    
+    my $self = $pkg->SUPER::new(@_);
+    
+    #$self->canvas->DefineBitmap(
+    #    'gvar', 4, 1, pack('b4', '..11')
+    #    );
+    $self->canvas->DefineBitmap(
+        'gvar', 2, 2, pack('b2' x 2,
+            '.1',
+            '1.',
+            )
+        );
+    $self->canvas->DefineBitmap(
+        'gcen', 2, 1, pack('b2', '.1')
+        );
+    return $self;
+}
+
 sub get_all_Chromosomes {
     my( $self ) = @_;
     
@@ -17,7 +37,6 @@ sub get_all_Chromosomes {
         return;
     }
 }
-
 
 sub chromosomes_per_row {
     my( $self, $chromosomes_per_row ) = @_;

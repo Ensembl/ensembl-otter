@@ -45,13 +45,16 @@ use Hum::EnsCmdLineDB;
             $class = 'KaryotypeWindow::Band::Stalk';
         }
         my $band = $chr->new_Band($class);
-        $band->fill('#cccccc'); # Default fill 10% grey
         $band->start($start);
         $band->end($end);
         $band->name($band_name);
         
         if ($stain eq 'gneg') {
             $band->fill('#ffffff');
+        }
+        elsif ($stain eq 'gvar') {
+            $band->stipple('gvar');
+            $band->fill('#000000');
         }
         elsif ($stain =~ /(\d+)/) {
             $band->set_fill_from_shade($1 / 100);

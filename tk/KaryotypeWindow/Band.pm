@@ -131,6 +131,7 @@ sub draw {
         -outline    => $self->outline || undef,
         -fill       => $self->fill    || undef,
         -smooth     => $smooth_flag,
+        -stipple    => $self->stipple || '',
         );
 }
 
@@ -182,6 +183,15 @@ sub fill {
         $self->{'_fill'} = $fill;
     }
     return $self->{'_fill'};
+}
+
+sub stipple {
+    my( $self, $stipple ) = @_;
+    
+    if (defined $stipple) {
+        $self->{'_stipple'} = $stipple;
+    }
+    return $self->{'_stipple'};
 }
 
 sub outline {

@@ -12,8 +12,6 @@ sub is_rectangular { return 0 };
 sub draw {
     my( $self, $chr, $canvas, $x, $y ) = @_;
     
-    warn "drawing a centromere";
-    
     my $scale = $self->Mb_per_pixel;
     my $width = $chr->width;
     my $height = $self->height;
@@ -31,10 +29,27 @@ sub draw {
         -outline    => $self->outline || undef,
         -fill       => $self->fill    || undef,
         -smooth     => 1,
+        -stipple    => $self->stipple,
         );
 }
 
-sub fill { return '#ffffff' }
+sub fill {
+    my( $self, $fill ) = @_;
+    
+    if ($fill) {
+        $self->{'_fill'} = $fill;
+    }
+    return $self->{'_fill'} || '#000000';
+}
+
+sub stipple {
+    my( $self, $stipple ) = @_;
+    
+    if (defined $stipple) {
+        $self->{'_stipple'} = $stipple;
+    }
+    return $self->{'_stipple'} || 'gvar';
+}
 
 sub set_p_centromere_coords {
     my( $self, $x, $y, $width, $height ) = @_;
