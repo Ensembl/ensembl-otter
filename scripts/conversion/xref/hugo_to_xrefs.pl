@@ -142,10 +142,10 @@ while (<FPNOM>) {
 }
 
 my %convhash;
-$convhash{MIM} = "MIM";
-$convhash{"Ref Seq"} = "RefSeq";
-$convhash{"Locus Link"},"LocusLink";
-$convhash{"SWISSPROT"},"SWISSPROT";
+$convhash{MIM}="MIM";
+$convhash{"Ref Seq"}="RefSeq";
+$convhash{"Locus Link"}="LocusLink";
+$convhash{"SWISSPROT"}="SWISSPROT";
 
 foreach my $chr (reverse sort bychrnum keys %$chrhash) {
   print STDERR "Chr $chr from 1 to " . $chrhash->{$chr} . " on " . $path . "\n";
