@@ -2015,10 +2015,19 @@ sub get_xace_window_id {
     my( $xwid );
     while (<XWID>) {
         # xwininfo: Window id: 0x7c00026 "ACEDB 4_9c, lace bA314N13"
-        if (/Window id: (\w+) "([^"]+)/) {
+
+      # HACK
+      # above format NOT returnd by xwininfo on Sun OS 5.7:
+      #  tace version:
+      #  ACEDB 4_9r,  build dir: RELEASE.2003_05_01
+      # 2 lines before modified to support xace at RIKEN
+
+        # BEFORE: if (/Window id: (\w+) "([^"]+)/) {
+        if (/Window id: (\w+) "([^"]+)/ || /Window id: (\w+)/) {
             my $id   = $1;
             my $name = $2;
-            if ($name =~ /^ACEDB/) {
+	    # BEFORE: if ($name =~ /^ACEDB/){
+            if ($name =~ /^ACEDB/ || $name eq '') {
                 $xwid = $id;
                 $self->message("Attached to:\n$name");
             } else {

@@ -203,7 +203,18 @@ sub list_all_current_pid {
     my $current = {};
     
     local *PID;
+
+    # HACK
+    # 'ps ax |' does not work on Sun OS 5.7
+    # equivalent command seems to be 'ps -A |'
+    # hard to generically detect this, so as a hack,
+    # look for ENV OTTER_SUNOS
+    # (add 'setenv OTTER_SUNOS 1' to launch shell script)
+
     my $pipe = "ps ax |";
+    if($ENV{'OTTER_SUNOS'}){
+      $pipe = "ps -A |";
+    }
     open PID, $pipe or die "Cannot open pipe '$pipe' : $!";
     while (<PID>) {
         my ($pid) = split;
