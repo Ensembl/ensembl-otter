@@ -1,34 +1,72 @@
+
 package Bio::Otter::CloneLock;
 
-# clone info file
+### Maybe simpler for each Lock to have-a Clone and an Author
+### (instead of a clone_id)?
 
-use vars qw(@ISA);
 use strict;
-
-use Bio::Otter::Lock;
-
-@ISA = qw(Bio::Otter::Lock);
+use Bio::EnsEMBL::Root;
+use vars qw(@ISA);
+@ISA = qw(Bio::EnsEMBL::Root);
 
 sub new {
   my($class,@args) = @_;
 
-  my $self = $class->SUPER::new(@args);
+  my $self = bless {}, $class;
 
+  my ($dbid, $clone_id, $author, $timestamp)  = 
+      $self->_rearrange([qw(DBID CLONE_ID AUTHOR TIMESTAMP 
+                            )],@args);
 
-  bless $self,$class;
-  
+  $self->dbID($dbid);
+  $self->clone_id($clone_id);
+  $self->author($author);
+  $self->timestamp($timestamp);
+
   return $self;
 }
 
-sub type {
-  my ($self,$arg) = @_;
+sub dbID{
+   my ($obj,$value) = @_;
+   if( defined $value) {
+      $obj->{'dbID'} = $value;
+    }
+    return $obj->{'dbID'};
 
-  if (defined($arg)) {
-    $self->throw("Can't set type to [$arg] on CloneLock - is always CLONE")
-  }
- 
-  return "CLONE";
 }
+
+sub clone_id {
+    my( $self, $clone_id ) = @_;
+    
+    if ($clone_id) {
+        $self->{'_clone_id'} = $clone_id;
+    }
+    return $self->{'_clone_id'};
+}
+
+sub author{
+   my ($self,$value) = @_;
+
+   if( defined $value) {
+		 if ($value->isa("Bio::Otter::Author")) {
+			 $self->{'author'} = $value;
+		 } else {
+			 $self->throw("Argument [$value] is not a Bio::Otter::Author");
+		 }
+	 }
+    return $self->{'author'};
+}
+
+sub timestamp{
+   my ($obj,$value) = @_;
+   if( defined $value) {
+      $obj->{'timestamp'} = $value;
+    }
+    return $obj->{'timestamp'};
+
+}
+
+
 1;
 
 

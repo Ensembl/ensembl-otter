@@ -421,6 +421,7 @@ description     a genomic region - part or whole of a chromosome
 contains        assembly_type
 contains        sequence_fragment
 contains        locus
+contains        feature_list
 contains        dna
 mandatory
 multiple
@@ -503,6 +504,7 @@ value           string
 description     structure and annotations of a gene
 contains        name
 contains        stable_id
+contains        type
 contains        truncated
 contains        author
 contains        author_email
@@ -511,6 +513,10 @@ contains        remark
 contains        known
 contains        transcript
 multiple
+
+<type>
+description     a center specific class of gene
+value           string
 
 <name>
 description     official HUGO name for the gene, or an interim name assigned by the annotation center
@@ -663,6 +669,23 @@ mandatory
 description     accession number for the exon if it has been stored in the annotation database
 value           string
 
+<frame>
+description     where to begin translation of exon. This tag is omitted for a non-coding exon
+value           0 = translation begins at first base of exon (or first base of the translation region within the exon)\n1 = translation begins at second base of exon\n2 = translation begins at third base of exon
+
+<feature_list>
+description     list of simple features, such as PolyA sites, that form an essential part of the gene annotation
+contains        feature
+
+<feature>
+description     A simple annotated feature
+contains        type
+contains        start
+contains        end
+contains        strand
+contains        label
+multiple
+
 <start>
 description     start coordinate of the exon in the assembly
 value           integer greater than zero and less than <end>
@@ -678,9 +701,14 @@ description     strand of the assembly that the exon is on
 value           1 if forward or\n-1 if reverse
 mandatory
 
-<frame>
-description     Where to begin translation of exon. This tag is omitted for a non-coding exon.
-value           0 = translation begins at first base of exon (or first base of the translation region within the exon)\n1 = translation begins at second base of exon\n2 = translation begins at third base of exon
+<type>
+description     the kind of feature (eg: PolyA-signal)
+value           string       
+mandatory
+
+<label>
+description     extra information to display about the feature
+value           string
 
 <dna>
 description     a string of single letter nucleotide codes - whitespace is stripped out before use. For convenience or where sequence data is not available from the public databases

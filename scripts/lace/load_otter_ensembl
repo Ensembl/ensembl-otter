@@ -6,13 +6,16 @@ load_otter_ensembl
 
 =head1 SYNOPSIS
  
-  load_otter_ensembl (-pipe) 
+  load_otter_ensembl <AGP>
 
 =head1 DESCRIPTION
 
-This script reads the assembly information from an agp file and pfetches the clone and contig details based on the accession. 
-It then populates the assembly table in both databases ;
-BEWARE! It is for gunshot sequencing projects like fugu, where one clone = one contig is the rule (and they are usually referred to as scaffolds. It does not deal with multiple contigs per clone.
+This script reads the assembly information from
+an agp file and pfetches the clone and contig
+details based on the accession.  It then
+populates the assembly table in both databases.
+
+BEWARE! It assumes 1 contig for each clone.
 
 example;
 ./Load_otter_ensembl -host ecs1d -user ensadmin -pass "ensembl" -dbname otter_test -name mySequenceSet -description 'test description' -chromosome chr12 clone_list
@@ -20,27 +23,27 @@ example;
 =head1 OPTIONS
 
     
-    -host      host name for the otter database (gets put as host= in locator)
-    -port      port number of the otter database
-    -user      username for the otter database
-    -pass      password for the otter databases   
-    -dbname    what the name of otter database to connect is (dbname= in locator)
+    -host           host name for the otter database (gets put as host= in locator)
+    -port           port number of the otter database
+    -user           username for the otter database
+    -pass           password for the otter databases
+    -dbname         what the name of otter database to connect is (dbname= in locator)
     
-    -pipehost   host name for the pipeline database
-    -pipeport   port for the pipeline databases 
-    -pipeuser   username for the pipeline database 
-    -pipepass   password fro the pipeline database 
-    -pipedbname name of the pipeline database to connect to
+    -pipehost       host name for the pipeline database
+    -pipeport       port for the pipeline databases
+    -pipeuser       username for the pipeline database
+    -pipepass       password fro the pipeline database
+    -pipedbname     name of the pipeline database to connect to
     
-    -name         name of the set of clones
-    -description  description of thesequence set 
-    -priority     analysis priority of the sequnce set
-    -chromosome   name of the chromosome the set comes from 
+    -name           name of the set of clones
+    -description    description of thesequence set 
+    -priority       analysis priority of the sequnce set
+    -chromosome     name of the chromosome the set comes from
        
        
-    -module    Module name to load (Defaults to Bio::EnsEMBL::DBSQL::DBAdaptor)
+    -module         Module name to load (Defaults to Bio::EnsEMBL::DBSQL::DBAdaptor)
     
-    -help      displays this documentation with PERLDOC
+    -help           displays this documentation with PERLDOC
 
     user should also supply either a list of accession numbers (one per line) or a .agp (golden path) file.
     
@@ -125,6 +128,16 @@ use Bio::Otter::Lace::SatelliteDB;
             'set|name=s'        => \$set_name,
             ) || useage();
     useage() if $help;
+    
+    # Chr prefix causes problems for Apollo
+    $chromosome_name =~ s/^chr//i if $chromosome_name;
+
+    ## takes the remaining argument as the filename to be read
+    $agp_file = $ARGV[0];
+    if (! defined $agp_file ) {warn 'cannot load assembly details, as there is no agp file';}
+    open AGP, "$agp_file" or die "Can't read '$agp_file' : $!";
+
+    # Make a connection to the otter database
     my $otter_db = Bio::EnsEMBL::DBSQL::DBAdaptor->new (   
         -HOST   => $host,
         -PORT   => $port,
@@ -175,11 +188,6 @@ use Bio::Otter::Lace::SatelliteDB;
     }
 
 
-    ## takes the remaining argument as the filename to be read
-    $agp_file = $ARGV[0];
-    if (! defined $agp_file ) {warn 'cannot load assembly details, as there is no agp file';}
-    open AGP, "$agp_file" or die "couldnt open $agp_file";
-
 
 
 
@@ -190,7 +198,7 @@ use Bio::Otter::Lace::SatelliteDB;
     my $prev_chr_name ='';
     while(<AGP>){
         chomp;
-        print STDERR "reading line ". ($line_counter + 1) ."\n";
+        #print STDERR "reading line ". ($line_counter + 1) ."\n";
         $line_counter ++;    
     
         # 0       1       2       3       4       5               6       7       8     9
@@ -211,7 +219,11 @@ use Bio::Otter::Lace::SatelliteDB;
         elsif ($line_in_array[4] eq 'F') {
             # we must have the full file rather than just clone names
             $input_type = "AGP";
-            $chromosome_name = $line_in_array[0]; 
+            $chromosome_name = $line_in_array[0];
+            
+            # chr prefixes cause problems
+            $chromosome_name =~ s/^chr//i;
+            
             if ($prev_chr_name) {
                 die "clones on different chromosomes: '$chromosome_name' and '$prev_chr_name'"
                     unless $chromosome_name eq $prev_chr_name;
@@ -256,8 +268,7 @@ use Bio::Otter::Lace::SatelliteDB;
     ## default value for just now. - true value will be added by a different script
     my $superctg_ori = 1;  
 
-    #### pfetch the details of a clone
-    my  $pfetch = Bio::EnsEMBL::Pipeline::SeqFetcher::Finished_Pfetch->new();
+    
     my $seq ; # stores the sequence (of each line entry) and name as a bio::seq object  
     
     # Get SubmitContig analysis object for priming the pipeline
@@ -288,7 +299,7 @@ use Bio::Otter::Lace::SatelliteDB;
             ## all we have is the list of contigs/clones - need to give default values for agp
             
             $acc_ver = $file_line->[0];
-            $seq = $pfetch->get_Seq_by_acc($acc_ver);
+            $seq = pfetch_acc_sv($acc_ver);
             $super_contig_name = $chromosome_name;  # should be available from the command line if we have a clone list as input (or we would have died earlier)       
             $n = 5;    # does this get used for anything? - don't think so
             $type = 'F' ;        
@@ -315,12 +326,15 @@ use Bio::Otter::Lace::SatelliteDB;
             $ctg_end,
             $ctg_ori,
             ) = @$file_line;    
-            $seq = $pfetch->get_Seq_by_acc($acc_ver);
+            $seq = pfetch_acc_sv($acc_ver);
         }
         
+        if ($seq) {
+            print STDERR "Sequence: $acc_ver\n";
+        } else {
+            die "Can't fetch sequence '$acc_ver'";
+        }
         
-        next unless ($type eq 'F');
-
         #split ino accesion number and version number 
         my ($acc, $sv) = $acc_ver =~ /^(.+)\.(\d+)$/;
         
@@ -449,6 +463,19 @@ sub store_clone{
 
 }
 
+{
+    my( $pfetch, $pfetch_archive );
+
+    sub pfetch_acc_sv {
+        my( $acc_ver ) = @_;
+        
+        $pfetch         ||= Bio::EnsEMBL::Pipeline::SeqFetcher::Finished_Pfetch->new;
+        $pfetch_archive ||= Bio::EnsEMBL::Pipeline::SeqFetcher::Finished_Pfetch->new(
+            -PORT => 23100,
+            );
+        return $pfetch->get_Seq_by_acc($acc_ver) || $pfetch_archive->get_Seq_by_acc($acc_ver);
+    }
+}
 
 #------------------------------------------------------------------------------
 

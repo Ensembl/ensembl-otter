@@ -10,212 +10,118 @@ use vars qw(@ISA);
 
 @ISA = qw ( Bio::EnsEMBL::DBSQL::BaseAdaptor);
 
-=head2 _generic_sql_fetch
-
- Title   : _generic_sql_fetch
- Usage   :
- Function:
- Example :
- Returns : 
- Args    :
-
-
-=cut
-
 sub _generic_sql_fetch {
-	my( $self, $where_clause ) = @_;
+    my( $self, $where_clause, @param ) = @_;
 
-	my $sql = q{
-		SELECT clone_lock_id,
-                       clone_id,
-                       clone_version,
-                       author_id,
-                       timestamp
-		FROM clone_lock }
-	. $where_clause;
+    my $sth = $self->prepare(q{
+        SELECT clone_lock_id
+          , clone_id
+          , author_id
+          , UNIX_TIMESTAMP(timestamp)
+        FROM clone_lock
+        } . $where_clause);
+    $sth->execute(@param);
 
+    my $aad = $self->db->get_AuthorAdaptor;
 
-	my $sth = $self->prepare($sql);
-	$sth->execute;
+    my( @clonelock );
+    while (my $row = $sth->fetch) {
+        my $author = $aad->fetch_by_dbID($row->[2]);
 
-	my $aad = new Bio::Otter::DBSQL::AuthorAdaptor($self->db);
+        my $clonelock = new Bio::Otter::CloneLock(
+            -DBID      => $row->[0],
+            -CLONE_ID  => $row->[1],
+            -AUTHOR    => $author,
+            -TIMESTAMP => $row->[3],
+            );
 
-	my @clonelock;
-
-	while (my $ref = $sth->fetchrow_hashref) {
-	    my $lock_id   = $ref->{clone_lock_id};
-	    my $clone_id  = $ref->{clone_id};
-            my $version   = $ref->{clone_version};
-	    my $author_id = $ref->{author_id};
-	    my $timestamp = $ref->{timestamp};
-
-	    my $author = $aad->fetch_by_dbID($author_id);
-	    
-	    my $clonelock = new Bio::Otter::CloneLock(-dbId      => $lock_id,
-						      -id        => $clone_id,
-                                                      -version   => $version,
-						      -author    => $author,
-						      -timestamp => $timestamp
-						      );
-
-	    push(@clonelock,$clonelock);
-
-	    
-	}
-
-	return @clonelock;
+        push(@clonelock, $clonelock);
     }
-
-=head2 fetch_by_dbID
-
- Title   : fetch_by_dbID
- Usage   :
- Function:
- Example :
- Returns : 
- Args    :
-
-
-=cut
+    return @clonelock;
+}
 
 sub fetch_by_dbID {
-    my ($self,$id) = @_;
+    my( $self, $id ) = @_;
     
     if (!defined($id)) {
 	$self->throw("Id must be entered to fetch a CloneLock object");
     }
     
-    my ($obj) = $self->_generic_sql_fetch("where clone_lock_id = $id");
+    my ($obj) = $self->_generic_sql_fetch("where clone_lock_id = ? ", $id);
 
     return $obj;
 }
 
-=head2 fetch_by_clone_id
+sub fetch_by_clone_id {
+    my( $self, $id ) = @_;
 
- Title   : fetch_by_clone_id
- Usage   :
- Function:
- Example :
- Returns : 
- Args    :
-
-
-=cut
-
-sub fetch_by_clone_id{
-   my ($self,$id) = @_;
-
-    if (!defined($id)) {
-	$self->throw("Clone id must be entered to fetch a CloneLock object");
-    }
+    $self->throw("Clone id must be entered to fetch a CloneLock object")
+        unless $id;
     
-    my @obj = $self->_generic_sql_fetch("where clone_id = \'$id\'");
+    my ($obj) = $self->_generic_sql_fetch("where clone_id = ? ", $id);
 
-   return @obj;
+    return $obj;
 }
 
 
-sub fetch_by_clone_id_version{
-   my ($self,$id,$version) = @_;
+sub list_by_author {
+    my( $self, $auth ) = @_;
 
-    if (!defined($id)) {
-	$self->throw("Clone id must be entered to fetch a CloneLock object");
-    }
-    if (!defined($version)) {
-	$self->throw("Clone version must be entered to fetch a CloneLock object");
-    }
+    $self->throw("Author must be entered to fetch a CloneLock object")
+        unless $auth;
     
-    my ($obj) = $self->_generic_sql_fetch("where clone_id = \'$id\' and clone_version = $version");
-
-   return $obj;
-}
-
-=head2 list_by_author
-
- Title   : list_by_author
- Usage   :
- Function:
- Example :
- Returns : 
- Args    :
-
-
-=cut
-
-sub list_by_author{
-    my ($self,$auth) = @_;
-
-    if (!defined($auth)) {
-	$self->throw("Author must be entered to fetch a CloneLock object");
-    }
-    
-    my @locks = $self->_generic_sql_fetch("where author_id = ". $auth->dbID);
+    my @locks = $self->_generic_sql_fetch("where author_id = ? ", $auth->dbID);
 
     return @locks;
-    
-
 }
 
 
 sub store {
-  my ($self,$clonelock) = @_;
+    my( $self, $clone_lock ) = @_;
 
-  if (!defined($clonelock)) {
-     $self->throw("Must provide a CloneLock object to the store method");
- } elsif (! $clonelock->isa("Bio::Otter::CloneLock")) {
-     $self->throw("Argument must be a CloneLock object to the store method.  Currently is [$clonelock");
-  }
+    $self->throw("Must provide a CloneLock object to the store method")
+        unless $clone_lock;
+    $self->throw("Argument must be a CloneLock object to the store method.  Currently is [$clone_lock]")
+        unless $clone_lock->isa("Bio::Otter::CloneLock");
 
-  my $authad = new Bio::Otter::DBSQL::AuthorAdaptor($self->db); 
-  $authad->store($clonelock->author); 
-  
-  my $sql = "insert into clone_lock(clone_lock_id,clone_id,clone_version,author_id,timestamp) values (null,\'" . 
-      $clonelock->id . "\'," . $clonelock->version . "," . 
-      $clonelock->author->dbID . ",now())";
+    my $clone_id = $clone_lock->clone_id or $self->throw('clone_id not set on CloneLock object');
+    my $author   = $clone_lock->author   or $self->throw(  'author not set on CloneLock object');
 
-  #print $sql . "\n";
+    my $author_id = $author->dbID;
+    unless ($author_id) {
+        my $authad = $self->db->get_AuthorAdaptor;
+        $authad->store($author);
+        $author_id = $author->dbID;
+    }
 
-  my $sth = $self->prepare($sql);
-  my $rv = $sth->execute();
-  
-  $self->throw("Failed to insert CloneLock for clone " . $clonelock->clone_id) unless $rv;
-  
-  $sth = $self->prepare("select last_insert_id()");
-  my $res = $sth->execute;
-  my $row = $sth->fetchrow_hashref;
-  $sth->finish;
-  
-  $clonelock->dbID($row->{'last_insert_id()'});
+    my $authad = new Bio::Otter::DBSQL::AuthorAdaptor($self->db); 
+    $authad->store($clone_lock->author); 
+
+    my $sth = $self->prepare(q{
+        INSERT INTO clone_lock( clone_lock_id
+              , clone_id
+              , author_id
+              , timestamp)
+        VALUES (NULL, ?, ?, NOW())
+        });
+    $sth->execute($clone_id, $author_id);
+
+    my $clone_lock_id = $sth->{'mysql_insertid'}
+        or $self->throw('Failed to get new autoincremented ID for lock');
+    $clone_lock->dbID($clone_lock_id);
 }
 
-=head2 remove
+sub remove {
+    my( $self, $clone_lock ) = @_;
 
- Title   : remove
- Usage   :
- Function:
- Example :
- Returns : 
- Args    :
+    $self->throw("Must provide a CloneLock to the remove method")
+        unless $clone_lock;
+    my $clone_id = $clone_lock->clone_id
+        or $self->throw('clone_id not set on CloneLock object');
 
-
-=cut
-
-sub remove_by_clone_id_version {
-   my ($self,$cloneid,$version) = @_;
-
-   if (!defined($cloneid)) {
-       $self->throw("Must provide a clone id to the remove method");
-   }
-   if (!defined($version)) {
-       $self->throw("Must provide a version to the remove method");
-   }
-  
-   my $sql = "delete from clone_lock where clone_id = \'$cloneid\' and clone_version = $version";
-
-   my $sth = $self->prepare($sql);
-   my $rv = $sth->execute();
-   
-   $self->throw("Failed to remove CloneLock for clone " . $cloneid) unless $rv;
+    my $sth = $self->prepare("DELETE FROM clone_lock WHERE clone_id = ?");
+    $sth->execute($clone_id);
+    $self->throw("Failed to remove CloneLock for clone " . $clone_id) unless $sth->rows;
 }
 
 

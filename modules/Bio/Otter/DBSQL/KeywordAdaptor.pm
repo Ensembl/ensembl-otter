@@ -113,7 +113,7 @@ sub store {
                 INSERT INTO keyword(keyword_id, keyword_name)
                 VALUES (NULL, ?)
                 });
-	    $sth->execute();
+	    $sth->execute($keyword->name);
 	    $keyword_id = $sth->{'mysql_insertid'} or $self->throw('No insert id');
 	}
 	$keyword->dbID($keyword_id);

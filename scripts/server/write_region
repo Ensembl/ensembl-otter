@@ -324,7 +324,7 @@ print($outputstr);
 #print("</otter>\n");
 
 
-if ($params{unlock} eq 'true') {
+if ($params{'unlock'} eq 'true') {
   print STDERR "\nUnlocking clones...";
   $cb->remove_by_slice($slice,$author);
   print STDERR "done\n";

@@ -527,7 +527,7 @@ sub write_pipeline_data {
         ### Check we got a slice
         my $tp = $slice->get_tiling_path;
         my $type = $slice->assembly_type;
-        warn "assembly type = $type";
+        #warn "assembly type = $type";
         if (@$tp) {
             foreach my $tile (@$tp) {
                 print STDERR "contig: ", $tile->component_Seq->name, "\n";

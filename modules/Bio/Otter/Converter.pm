@@ -1004,22 +1004,32 @@ sub ace_to_otter {
                 elsif (/^EMBL_dump_info\s+DE_line $STRING/x) {
                     $curr_seq->{EMBL_dump_info} = ace_unescape($1);
                 }
-                elsif (/^Feature $STRING $INT $INT $FLOAT $STRING/x) {
-                    my $val   = $1;
+                elsif (/^Feature $STRING $INT $INT $FLOAT (?:$STRING)?/x) {
+                    my $name  = $1;
                     my $start = $2;
                     my $end   = $3;
                     my $score = $4;
-                    my $val2  = $5;
+                    my $label = $5;
 
-                    # strand
-                    my $f = new Bio::EnsEMBL::SeqFeature(
-                        -name       => $val,
-                        -start      => $start,
-                        -end        => $end,
-                        -score      => $score,
-                        -gff_source => $val2
+                    my $strand = 0;
+                    if ($start < $end) {
+                        $strand = 1;
+                    }
+                    elsif ($start > $end) {
+                        $strand = -1;
+                        ($start, $end) = ($end, $start);
+                    }
+
+                    my $f = Bio::EnsEMBL::SimpleFeature->new(
+                        -NAME       => $name,
+                        -START      => $start,
+                        -END        => $end,
+                        -STRAND     => $strand,
+                        -SCORE      => $score,
                     );
+                    $f->display_label($label) if $label;
 
+                    ### We don't actually do anything with the features after this!
                     my $features = $curr_seq->{feature} ||= [];
                     push @$features, $f;
                 }
@@ -1081,7 +1091,7 @@ sub ace_to_otter {
                     #print STDERR "start not found with $1\n";
                     my $phase = $ace2ens_phase{$1};
                     die "Bad Start_not_found '$1'" unless defined($phase);
-                    $curr_seq->{Start_not_found} = $1;
+                    $curr_seq->{Start_not_found} = $phase;
                 }
                 elsif (/^Start_not_found/) {
                     $curr_seq->{Start_not_found} = -1;
@@ -1278,7 +1288,6 @@ sub ace_to_otter {
                 my $in_cds = 0;
                 my $found_cds = 0;
                 my $cds_pos = 0;
-                #foreach my $exon (@{$anntran->get_all_Exons}) {
                 my $exon_list = $anntran->get_all_Exons;
                 for (my $i = 0; $i < @$exon_list; $i++) {
                     my $exon = $exon_list->[$i];
@@ -1488,7 +1497,7 @@ sub ace_to_otter {
         $contig->name($ctg_name);
         $contig->clone($clone);
 
-        # Make new Tile and 
+        # Make new Tile
         my $tile = Bio::EnsEMBL::Tile->new;
         $tile->assembled_start($start + $chr_start - 1);
         $tile->assembled_end  ($end   + $chr_start - 1);
@@ -1623,6 +1632,9 @@ sub path_to_XML {
     if (my $clone = $p->component_Seq->clone) {
         $xmlstr .= clone_to_XML($clone);
     }
+    
+    
+    ### Features via $tile->component_Seq->get_all_SimpleFeatures
 
     $xmlstr .= "  <assembly_start>" . ($chrstart + $p->assembled_start() - 1) . "</assembly_start>\n";
     $xmlstr .= "  <assembly_end>" . ($chrstart + $p->assembled_end() - 1) . "</assembly_end>\n";
@@ -1775,7 +1787,6 @@ sub slice_to_XML {
   my $chrstart = $slice->chr_start;
   my $chrend   = $slice->chr_end;
 
-    ### Checking author fetching
   $xmlstr .= Bio::Otter::Converter::path_to_XML($chr, $chrstart, $chrend, 
                                                 $db->assembly_type, $path);
 

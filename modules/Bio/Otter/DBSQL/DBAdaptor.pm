@@ -157,11 +157,6 @@ sub get_KeywordAdaptor {
     return $self->_get_adaptor("Bio::Otter::DBSQL::KeywordAdaptor");
 }
 
-sub get_CurrentCloneInfoAdaptor {
-    my $self = shift;
-
-    return $self->_get_adaptor("Bio::Otter::DBSQL::CurrentCloneInfoAdaptor");
-}
 sub get_CurrentGeneInfoAdaptor {
     my $self = shift;
 

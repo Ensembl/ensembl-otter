@@ -37,7 +37,7 @@ my $otter_db;
         'host=s'    => \$host,
         'user=s'    => \$user,
         'domain=s'  => \$domain,
-         ) ; 
+         ) or die "Error processing command line"; 
 
     $otter_db = DBI->connect("DBI:mysql:host=$host;port=$port;database=$dbname",
                                    $user, $dbpass, {RaiseError => 1, PrintError => 0})

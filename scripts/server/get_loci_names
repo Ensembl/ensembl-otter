@@ -6,7 +6,6 @@ use CGI;
 use OtterDefs;
 
 use Bio::Otter::DBSQL::DBAdaptor;
-use Bio::Otter::CloneLockBroker;
 use Bio::Otter::Converter;
 use Bio::Otter::Author;
 

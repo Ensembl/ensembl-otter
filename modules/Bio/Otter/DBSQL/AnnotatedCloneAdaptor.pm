@@ -9,7 +9,6 @@ use Bio::Otter::AnnotatedClone;
 use Bio::EnsEMBL::DBSQL::CloneAdaptor;
 use Bio::Otter::DBSQL::AnnotatedCloneAdaptor;
 use Bio::Otter::CloneInfo;
-use Bio::Otter::DBSQL::CurrentCloneInfoAdaptor;
 
 use vars qw(@ISA);
 
@@ -51,13 +50,6 @@ use vars qw(@ISA);
 sub fetch_by_accession_version {
    my ($self,$accession,$version) = @_;
 
-   if (!defined($accession)) {
-       $self->throw("Must enter an accession to fetch an AnnotatedClone");
-   }
-   if (!defined($version)) {
-       $self->throw("Must enter a version to fetch an AnnotatedClone");
-   }
-
    my  $clone = $self->SUPER::fetch_by_accession_version($accession,$version);
 
    $self->annotate_clone($clone);
@@ -82,10 +74,6 @@ sub fetch_by_accession_version {
 sub fetch_by_dbID {
    my ($self,$id) = @_;
 
-   if (!defined($id)) {
-       $self->throw("Must enter a clone dbID to fetch an AnnotatedGene");
-   }
-
    my  $clone = $self->SUPER::fetch_by_dbID($id);
 
    $self->annotate_clone($clone);
@@ -94,39 +82,21 @@ sub fetch_by_dbID {
    
 }
 
-=head2 annotate_clone
-
- Title   : annotate_clone
- Usage   :
- Function:
- Example :
- Returns : 
- Args    :
-
-
-=cut
-
 sub annotate_clone {
-   my ($self,$clone) = @_;
+    my( $self, $clone ) = @_;
 
-   # Make the clone an AnnotatedClone unless it is already
-   unless ($clone->isa('Bio::Otter::AnnotatedClone')) {
-       bless $clone, 'Bio::Otter::AnnotatedClone';
-   }
+    # Make the clone an AnnotatedClone unless it is already
+    unless ($clone->isa('Bio::Otter::AnnotatedClone')) {
+        bless $clone, 'Bio::Otter::AnnotatedClone';
+    }
 
-   my $clone_info_adaptor         = $self->db->get_CloneInfoAdaptor();
-   my $current_clone_info_adaptor = $self->db->get_CurrentCloneInfoAdaptor();
-
-   my $infoid = $current_clone_info_adaptor->fetch_by_accession_version($clone->id,$clone->embl_version);
-   my $info;
-
-   if ($infoid) {
-     $info = $clone_info_adaptor->fetch_by_dbID($infoid);
-   } else {
-     $info = new Bio::Otter::CloneInfo;
-   }
-   $clone->clone_info($info);
-
+    my $clone_info_adaptor = $self->db->get_CloneInfoAdaptor();
+    my( $info );
+    if (my $clone_id = $clone->dbID) {
+        $info = $clone_info_adaptor->fetch_by_cloneID($clone_id);
+    }
+    $info ||= Bio::Otter::CloneInfo->new;
+    $clone->clone_info($info);
 }
 
 =head2 fetch_by_Slice
@@ -176,19 +146,6 @@ sub fetch_by_Slice {
       
 }
 
-
-=head2 store
-
- Title   : store
- Usage   :
- Function:
- Example :
- Returns : 
- Args    :
-
-
-=cut
-
 sub store{
     my ($self,$clone) = @_;
 
@@ -205,32 +162,15 @@ sub store{
     # print STDERR "Ann id " . $clone->stable_id . "\n";
 
     my $clone_info_adaptor = $self->db->get_CloneInfoAdaptor();
-    my $current_c_info_ad = $self->db->get_CurrentCloneInfoAdaptor;
 
+    ### Could SUPER::store if it doesn't have a dbID
     my $clone_id = $clone->dbID
         || $self->throw('clone does not have a dbID');
     $clone->dbID($clone_id);
     $info->clone_id($clone_id);
     $clone_info_adaptor->store($info);
-    $current_c_info_ad->store($clone);
 }
 
-#sub _fetch_clone_id {
-#    my( $self, $clone ) = @_;
-#    
-#    my $acc = $clone->embl_id      or $self->throw('embl_id missing from Clone');
-#    my $sv  = $clone->embl_version or $self->throw('embl_version missing from Clone');
-#    
-#    my $sth = $self->prepare(q{
-#        SELECT clone_id
-#        FROM clone
-#        WHERE embl_acc = ?
-#          AND embl_version = ?
-#        });
-#    $sth->execute($acc, $sv);
-#    my ($clone_id) = $sth->fetchrow;
-#    return $clone_id;
-#}
 
 1;
 

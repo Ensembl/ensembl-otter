@@ -9,6 +9,8 @@ use Bio::Otter::CloneLock;
 # Shouldn't have this
 @ISA = qw(Bio::EnsEMBL::DBSQL::BaseAdaptor);
 
+### CloneLockBroker should have an Author and a CloneLockAdaptor attached
+### so it doesn't need to inherit from BaseAdaptor
 
 sub check_locks_exist_by_slice {
     my ($self,$slice,$author) = @_;
@@ -27,23 +29,17 @@ sub check_locks_exist_by_slice {
 	$self->throw("[$author] is not a Bio::Otter::Author");
     }
 
-    my @locks;
-    my %clones = $self->get_clones_versions($slice);
+    my $clone_list = $self->Clone_listref_from_Slice($slice);
+    my $aptr = $self->get_CloneLockAdaptor;
 
-    while (my ($clone, $version) = each %clones) {
-	
-	my $lock = $self->get_CloneLockAdaptor->fetch_by_clone_id_version($clone,$version);
-	
-	if (defined($lock)) {
-	    if ($lock->author->name ne $author->name ||
-		$lock->author->email ne $author->email) {
-		$self->throw("Author [" . $author->name . "] doesn't own lock for $clone");
-	    } else {
-		push(@locks,$lock);
-	    }
-	} else {
-	    $self->throw("Clone [$clone $version] not locked\n");
-	}
+    my( @locks );
+    foreach my $clone (@$clone_list) {
+	my $lock = $aptr->fetch_by_clone_id($clone->dbID)   
+            or $self->throw(sprintf "Clone [%s] not locked\n", $clone->id);
+	unless ($lock->author->equals($author)) {
+	    $self->throw("Author [" . $author->name . "] doesn't own lock for $clone");
+        }
+        push(@locks, $lock);
     }
     return @locks;
 }
@@ -65,20 +61,14 @@ sub check_no_locks_exist_by_slice {
 	$self->throw("[$author] is not a Bio::Otter::Author");
     }
 
-    my @locks;
+    my $clone_list = $self->Clone_listref_from_Slice($slice);
+    my $aptr       = $self->get_CloneLockAdaptor;
 
-    my %clones = $self->get_clones_versions($slice);
-    
-    foreach my $clone (keys %clones) {
-
-	my $lock = $self->get_CloneLockAdaptor->fetch_by_clone_id_version($clone,$clones{$clone});
-	
-	if (defined($lock)) {
-	    $self->throw("Clone lock already exists for clone $clone");
-	}
+    foreach my $clone (@$clone_list) {
+        $self->throw("Clone '". $clone->embl_id .'.'. $clone->embl_version ."' is locked\n")
+            if $aptr->fetch_by_clone_id($clone->dbID);
     }
-
-    return @locks;
+    return 1;
 }
 
 
@@ -99,41 +89,45 @@ sub lock_clones_by_slice {
 	$self->throw("[$author] is not a Bio::Otter::Author");
     }
 
-    my %clones = $self->get_clones_versions($slice);
+    my $clone_list = $self->Clone_listref_from_Slice($slice);
+    my $aptr       = $self->get_CloneLockAdaptor;
 
-    my %locks;
-    my %newlocks;
-
-    foreach my $clone (keys %clones) {
-	my $lock = new Bio::Otter::CloneLock(-author => $author, 
-					     -id     => $clone, 
-					     -version => $clones{$clone});
+    my( @new,               # locks we manange to create
+        @existing,          # locks that already existed
+        %existing_clone,    # clones that had locks existing (for nice error message)
+         );
+    foreach my $clone (@$clone_list) {
+        my $clone_id = $clone->dbID
+            or $self->throw('Clone does not have dbID set');
+	my $lock = Bio::Otter::CloneLock->new(
+            -author     => $author, 
+	    -clone_id   => $clone_id, 
+            );
 	eval {
 	    $self->get_CloneLockAdaptor->store($lock); 
 	};  
 	if ($@) {
-	    my $exlock = $self->get_CloneLockAdaptor->fetch_by_clone_id_version($clone,$clones{$clone});
-	    $locks{$clone} = $exlock;   
-            #last;
+	    my $exlock = $self->get_CloneLockAdaptor->fetch_by_clone_id($clone_id);
+	    push(@existing, $exlock);
+            $existing_clone{$clone_id} = $clone;
 	} else {
-	    $newlocks{$clone} = $lock;  
+	    push(@new, $lock);
 	}   
     }
 
-    my @lock = keys %locks;
-
-    if (scalar(@lock)) {
-        my $lock_error_str = "Can't lock clones because some are already locked\n";
-	foreach my $l (@lock) {
-	    $lock_error_str .= "Clone $l locked by " . $locks{$l}->author->name . " at " . $locks{$l}->timestamp . "\n";
+    if (@existing) {
+        # Unlock any that we just locked (could do this with rollback?)
+	foreach my $lock (@new) {
+	    $aptr->remove($lock);
 	}
 
-	foreach my $clone (keys %clones) {
-	    if (!defined($locks{$clone})) {
-		$self->get_CloneLockAdaptor->remove_by_clone_id_version($clone,$clones{$clone});
-	    }
+        # Give a nicely formatted error message about what is already locked
+        my $lock_error_str = "Can't lock clones because some are already locked:\n";
+	foreach my $lock (@existing) {
+            my $clone = $existing_clone{$lock->clone_id};
+	    $lock_error_str .= sprintf "  '%s' has been locked by '%s' since %s\n",
+                $clone->id, $lock->author->name, scalar localtime($lock->timestamp);
 	}
-
 	$self->throw($lock_error_str);
     }
 }
@@ -142,47 +136,31 @@ sub lock_clones_by_slice {
 sub remove_by_slice {
     my ($self,$slice,$author) = @_;
 
-    my %clones = $self->get_clones_versions($slice);
+    my $clone_list = $self->Clone_listref_from_Slice($slice);
+    my $aptr       = $self->get_CloneLockAdaptor;
 
-    foreach my $clone (keys %clones) {
-	my $lock = $self->get_CloneLockAdaptor->fetch_by_clone_id_version($clone,$clones{$clone});
-
-	if (defined($lock)) {
-            if (!defined($lock->author)) {
-                $self->throw("Lock " . $lock->id . " " . "doesn't have author attached");
+    foreach my $clone (@$clone_list) {
+	if (my $lock = $self->get_CloneLockAdaptor->fetch_by_clone_id($clone->dbID)) {
+	    unless ($lock->author->equals($author)) {
+	        $self->throw("Author [" . $author->name . "] doesn't own lock for $clone");
             }
-            if (!defined($author)) {
-                $self->throw("Author doesn't exist. Can't remove lock");
-            }
-	    if (
-                
-		$lock->author->name eq $author->name && 
-		$lock->author->email eq $author->email) {
-		
-		$self->get_CloneLockAdaptor->remove_by_clone_id_version($clone,$clones{$clone});
-	    } else {
-		$self->warn("Can't unlock clone [$clone]. Owned by author " . $lock->author->name . "\n");
-	    }
+            $aptr->remove($lock);
 	} else {
 	    $self->warn("Can't unlock clone [$clone]. Lock doesn't exist");
 	}
     }
 }
 	 
-	
-sub get_clones_versions {
-    my ($self,$slice) = @_;
 
-    my @path = @{$slice->get_tiling_path};
-
-    my %clones;
+sub Clone_listref_from_Slice {
+    my( $self, $slice ) = @_;
     
-    foreach my $p (@path) {
-	$clones{$p->component_Seq->clone->id} = $p->component_Seq->clone->version;
+    my $clone_list = [];
+    my $path = $slice->get_tiling_path;
+    foreach my $tile (@$path) {
+        push(@$clone_list, $tile->component_Seq->clone);
     }
-
-    return %clones;
-
+    return $clone_list;
 }
 
 sub get_CloneLockAdaptor {

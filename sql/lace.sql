@@ -18,7 +18,8 @@ create table sequence_note (
     note_time DATETIME,
     note TEXT,
     
-    KEY(contig_id, is_current)
+    KEY(contig_id, is_current),
+    PRIMARY KEY(contig_id, author_id, note_time)
 );
 
 create table sequence_set_access (

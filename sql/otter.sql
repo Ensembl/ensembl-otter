@@ -32,20 +32,19 @@ create table clone_info (
         clone_id int(10) unsigned default '0' not null,
 	author_id int(10),
         timestamp datetime DEFAULT '0000-00-00 00:00:00' NOT NULL,
-	is_active enum('true','false'),
-	embl_description varchar(255),
-	database_source varchar(255),
+
         PRIMARY KEY (clone_info_id) 
 );
 
 create table clone_lock (
 	clone_lock_id int(10) unsigned DEFAULT '0' NOT NULL auto_increment,
-	clone_id varchar(40) NOT NULL,
-	clone_version int(10) unsigned DEFAULT '0' NOT NULL,
+	clone_id int(10) unsigned default '0' not null,
         timestamp datetime DEFAULT '0000-00-00 00:00:00' NOT NULL,
 	author_id int(10) DEFAULT '0' NOT NULL,
+        hostname varchar(80),
+        
         PRIMARY KEY (clone_lock_id),
-        UNIQUE INDEX clone_index (clone_id,clone_version)
+        UNIQUE INDEX clone_index (clone_id)
 );
 
 create table gene_name (
@@ -116,12 +115,10 @@ create table evidence (
 	);
 
 create table current_clone_info (
+        clone_id      int(10) unsigned default '0' not null,
         clone_info_id int(10) unsigned default '0' not null,
-        clone_id   varchar(40),   
-        clone_version int(10),   
-        PRIMARY KEY (clone_info_id)   
+        PRIMARY KEY (clone_id)   
         );
-
 
 create table current_gene_info (
 	gene_info_id int(10) unsigned default '0' not null,
@@ -134,6 +131,7 @@ create table current_transcript_info (
 	transcript_stable_id varchar(40),
 	PRIMARY KEY (transcript_info_id)
 	);
+
 create table gene_stable_id_pool (
         gene_pool_id  int(10) unsigned default '0' not null auto_increment,
         gene_stable_id varchar(40),

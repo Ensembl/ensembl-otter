@@ -13,112 +13,77 @@ use vars qw(@ISA);
 
 # new is inherieted
 
-=head2 _generic_sql_fetch
-
- Title   : _generic_sql_fetch
- Usage   :
- Function:
- Example :
- Returns : 
- Args    :
-
-
-=cut
-
-sub _generic_sql_fetch {
-	my( $self, $where_clause ) = @_;
-
-	my $sql = q{
-		SELECT clone_info_id,
-		       clone_id,
-                       author_id,
-                       timestamp,
-                       is_active,
-                       database_source
-		FROM clone_info }
-	. $where_clause;
-
-	my $sth = $self->prepare($sql);
-	$sth->execute;
-
-	if (my $ref = $sth->fetchrow_hashref) {
-		my $info_id   = $ref->{clone_info_id};
-		my $clone_id  = $ref->{clone_id};
-		my $author_id = $ref->{author_id};
-		my $timestamp = $ref->{timestamp};
-		my $is_active = $ref->{is_active};
-		my $source    = $ref->{database_source};
-
-		#  Should probably do this all in the sql           
-		my $aad = new Bio::Otter::DBSQL::AuthorAdaptor($self->db);
-		my $author = $aad->fetch_by_dbID($author_id);
-
-
-                my @remarks  = $self->db->get_CloneRemarkAdaptor->list_by_clone_info_id($ref->{'clone_info_id'});
-                my @keywords = $self->db->get_KeywordAdaptor->list_by_clone_info_id($ref->{'clone_info_id'});
-
-		my $cloneinfo = new Bio::Otter::CloneInfo(-dbId      => $info_id,
-                                                          -clone_id  => $clone_id,
-                                                          -author    => $author,
-                                                          -timestamp => $timestamp,
-                                                          -is_active => $is_active,
-                                                          -remark    => \@remarks,
-                                                          -keyword   => \@keywords,
-                                                          -source    => $source);
-        
-		return $cloneinfo;	 	
-
-	} else {
-		return;
-	}
-}
-
-=head2 fetch_by_dbID
-
- Title   : fetch_by_dbID
- Usage   :
- Function:
- Example :
- Returns : 
- Args    :
-
-
-=cut
-
 sub fetch_by_dbID {
-    my ($self,$id) = @_;
+    my( $self, $id ) = @_;
 
     unless ($id) {
         $self->throw("Id must be entered to fetch a CloneInfo object");
     }
 
-    my $cloneinfo = $self->_generic_sql_fetch("where clone_info_id = $id");
+    my $sth = $self->prepare(q{
+        SELECT clone_info_id
+          , clone_id
+          , author_id
+          , FROM_UNIXTIME(timestamp)
+        FROM clone_info
+        WHERE clone_info_id = ?
+        });
+    $sth->execute($id);
 
-    return $cloneinfo;
+    return $self->_obj_from_sth($sth);
 }
 
-=head2 fetch_by_cloneID
-
- Title   : fetch_by_cloneID
- Usage   :
- Function:
- Example :
- Returns : 
- Args    :
-
-
-=cut
-
 sub fetch_by_cloneID {
-    my ($self,$id) = @_;
+    my( $self, $id ) = @_;
 
     if (!defined($id)) {
         $self->throw("Id must be entered to fetch a CloneInfo object");
     }
 
-    my $cloneinfo = $self->_generic_sql_fetch("where clone_id = $id");
+    my $sth = $self->prepare(q{
+        SELECT i.clone_info_id
+          , i.clone_id
+          , i.author_id
+          , FROM_UNIXTIME(i.timestamp)
+        FROM clone_info i
+          , current_clone_info c
+        WHERE c.clone_info_id = i.clone_info_id
+          AND c.clone_id = ?
+        });
+    $sth->execute($id);
 
-    return $cloneinfo;
+    return $self->_obj_from_sth($sth);
+}
+
+sub _obj_from_sth {
+    my( $self, $sth ) = @_;
+
+
+    if (my $row = $sth->fetch) {
+	my $info_id   = $row->[0];
+	my $author_id = $row->[2];
+
+	#  Should probably do this all in the sql           
+	my $aad = new Bio::Otter::DBSQL::AuthorAdaptor($self->db);
+	my $author = $aad->fetch_by_dbID($author_id);
+
+
+        my @remarks  = $self->db->get_CloneRemarkAdaptor->list_by_clone_info_id($info_id);
+        my @keywords = $self->db->get_KeywordAdaptor    ->list_by_clone_info_id($info_id);
+
+	my $cloneinfo = new Bio::Otter::CloneInfo(
+            -dbId      => $info_id,
+            -clone_id  => $row->[1],
+            -author    => $author,
+            -timestamp => $row->[3],
+            -remark    => \@remarks,
+            -keyword   => \@keywords,
+            );
+
+	return $cloneinfo;	 	
+    } else {
+	return;
+    }
 }
 
 
@@ -136,30 +101,19 @@ sub store {
     my $authad = new Bio::Otter::DBSQL::AuthorAdaptor($self->db);
     $authad->store($cloneinfo->author);
 
-
-    my $update_sth = $self->prepare(q{
-        UPDATE clone_info
-        SET is_active = 'false'
-        WHERE clone_id = ?
-        });
-    $update_sth->execute($cloneinfo->clone_id);
-
+    # Store a new row in the clone_info table and get clone_info_id
     my $sth = $self->prepare(q{
     INSERT INTO clone_info(clone_info_id
           , clone_id
           , author_id
-          , timestamp
-          , is_active
-          , database_source)
-    VALUES (NULL,?,?,NOW(),'true',?)
+          , timestamp)
+    VALUES (NULL,?,?,NOW())
         });
     $sth->execute(
         $cloneinfo->clone_id,
         $cloneinfo->author->dbID,
-        $cloneinfo->source,
         );
     my $clone_info_id = $sth->{'mysql_insertid'} or $self->throw("No insert id");
-    $cloneinfo->dbID($clone_info_id);
 
     # Store Keywords
     if (my @keywords = $cloneinfo->keyword) {
@@ -178,6 +132,16 @@ sub store {
             $rem_aptr->store($remark);
         }
     }
+    
+    # Set as current
+    my $set_current = $self->prepare(q{
+        REPLACE INTO current_clone_info(clone_id
+              , clone_info_id)
+        VALUES (?,?)
+        });
+    $set_current->execute($cloneinfo->clone_id, $clone_info_id);
+    
+    $cloneinfo->dbID($clone_info_id);
 }
 
 1;

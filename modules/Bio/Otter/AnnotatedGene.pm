@@ -127,7 +127,7 @@ sub toXMLString{
            $tranid = $tran->stable_id;
         }
 	$str .= "  <transcript>\n";
-	$str .= "  <stable_id>$tranid</stable_id>\n";
+	$str .= "    <stable_id>$tranid</stable_id>\n";
 	
 	my $tinfo = $tran->transcript_info;
 
@@ -139,7 +139,7 @@ sub toXMLString{
 
 	    foreach my $remstr (sort map $_->remark, $tinfo->remark) {
                 $remstr =~ s/\n/ /g;
-		$str .= "  <remark>$remstr</remark>\n";
+		$str .= "    <remark>$remstr</remark>\n";
 	    }
 	   
             my $classname = "";
@@ -165,21 +165,21 @@ sub toXMLString{
                 $str .= "  <$method>" . ($tinfo->$method() || 0) . "</$method>\n";
             }
 	    
-	    $str .= "  <transcript_class>$classname</transcript_class>\n";
-	    $str .= "  <name>$tname</name>\n";
+	    $str .= "    <transcript_class>$classname</transcript_class>\n";
+	    $str .= "    <name>$tname</name>\n";
 	    
-            $str .= "  <evidence_set>\n";
+            $str .= "    <evidence_set>\n";
 
             my @evidence = $tinfo->evidence;
             @evidence = sort {$a->name cmp $b->name} @evidence;
 
             foreach my $ev (@evidence) {
-              $str .= "    <evidence>\n";
-              $str .= "      <name>" . $ev->name . "</name>\n";
-              $str .= "      <type>" . $ev->type . "</type>\n";
-              $str .= "    </evidence>\n";
+              $str .= "      <evidence>\n";
+              $str .= "        <name>" . $ev->name . "</name>\n";
+              $str .= "        <type>" . $ev->type . "</type>\n";
+              $str .= "      </evidence>\n";
             }
-            $str .= "  </evidence_set>\n";
+            $str .= "    </evidence_set>\n";
 	}
 
 
@@ -189,14 +189,14 @@ sub toXMLString{
           my $strand = $tl->start_Exon->strand;
           $tran_low  = $tran->coding_region_start;
           $tran_high = $tran->coding_region_end;
-          $str .= "  <translation_start>" . (($strand == 1) ? ($tran_low  + $offset) : ($tran_high + $offset)) . "</translation_start>\n";
-          $str .= "  <translation_end>"   . (($strand == 1) ? ($tran_high + $offset) : ($tran_low  + $offset)) . "</translation_end>\n";
+          $str .= "    <translation_start>" . (($strand == 1) ? ($tran_low  + $offset) : ($tran_high + $offset)) . "</translation_start>\n";
+          $str .= "    <translation_end>"   . (($strand == 1) ? ($tran_high + $offset) : ($tran_low  + $offset)) . "</translation_end>\n";
             if (my $tl_id = $tl->stable_id) {
-                $str .= "  <translation_stable_id>$tl_id</translation_stable_id>\n";
+                $str .= "    <translation_stable_id>$tl_id</translation_stable_id>\n";
             }
         }
 
-	$str .= "  <exon_set>\n";
+	$str .= "    <exon_set>\n";
 
         my @exon = @{$tran->get_all_Exons;};
 
@@ -211,28 +211,25 @@ sub toXMLString{
             if (defined($ex->stable_id)) {
                $stable_id = $ex->stable_id;
             }
-	    $str .= "   <exon>\n";
-	    $str .= "    <stable_id>" . $stable_id . "</stable_id>\n";
-	    $str .= "    <start>"     . ($ex->start+$offset)     . "</start>\n";
-	    $str .= "    <end>"       . ($ex->end+$offset)       . "</end>\n";
-	    $str .= "    <strand>"    . $ex->strand    . "</strand>\n";
+	    $str .= "      <exon>\n";
+	    $str .= "        <stable_id>" . $stable_id . "</stable_id>\n";
+	    $str .= "        <start>"     . ($ex->start+$offset)     . "</start>\n";
+	    $str .= "        <end>"       . ($ex->end+$offset)       . "</end>\n";
+	    $str .= "        <strand>"    . $ex->strand    . "</strand>\n";
             # Only coding exons have frame set
+            ### Do we need to test for translation region - why not
+            ### just rely on phase of exon, which will be -1 if non-coding?
             if (defined($tran_low) && defined($tran_high) && 
-                $ex->end >= $tran_low && $ex->start <= $tran_high) {
-              my $frame;
-              # Frame for first coding exon is set to 0 - no good if truncated!
-              if ($ex == $tran->translation->start_Exon) {
-	        $frame = 0;
-              } else {
-	        $frame = ((3-$ex->phase)%3);
-              }
-	      $str .= "    <frame>" . $frame . "</frame>\n";
+                $ex->end >= $tran_low && $ex->start <= $tran_high)
+            {
+                my $frame = (3 - $ex->phase) % 3;
+                $str .= "        <frame>" . $frame . "</frame>\n";
             }
-	    $str .= "   </exon>\n";
+	    $str .= "      </exon>\n";
 	}
-	$str .= "  </exon_set>\n";
+	$str .= "    </exon_set>\n";
 
-	$str .= " </transcript>\n";
+	$str .= "  </transcript>\n";
     }
     $str .= "</locus>\n";
     
