@@ -63,7 +63,6 @@ $| = 1;
     my $slice_accs = accession_list_hash_from_tile_path($tiles);
 
     my $gene_id_list = $gene_aptr->list_current_dbIDs_linked_by_accession_for_Slice($slice);
-    die "debug exit";
     foreach my $gene_dbid (@$gene_id_list) {
         my $db_gene = $gene_aptr->fetch_by_dbID($gene_dbid);
         next if $db_gene->type eq 'obsolete';
