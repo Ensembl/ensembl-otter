@@ -1520,7 +1520,9 @@ sub ace_to_otter {
         if (my $type = $gene_data->{GeneType}) {
             $ginfo->known_flag(1) if $type eq 'Known';
         }
-        $gene->set_gene_type_from_transcript_classes;
+        unless ($ginfo->truncated_flag) {
+            $gene->set_gene_type_from_transcript_classes;
+        }
     }
     
     # Turn %frags into a Tiling Path
