@@ -935,7 +935,6 @@ if($ngcl>1){
 	  }
 	}
       }
-      print "D: ".join(',',(keys %tsi))."\n";
       $tcl->link([(keys %tsi)]);
     }
     my @ctsi=$tcl->cluster_ids;
@@ -947,7 +946,28 @@ if($ngcl>1){
       $itcl++;
       my @tsi=$tcl->cluster_members($tcid);
       print "  Transcript set $itcl: ".scalar(@tsi)." transcripts\n";
-      foreach my $tsi (@tsi){
+      my %tsi=map{$_,1}@tsi;
+      foreach my $gsi (@gsi){
+	my @gtsi=(keys %{$t2e{$gsi}});
+	my $nt=scalar(@gtsi);
+	my $ntd=0;
+	foreach my $tsi (@gtsi){
+	  if($tsi{$tsi}){
+	    $ntd++;
+	  }
+	}
+	foreach my $tsi (@gtsi){
+	  if($tsi{$tsi}){
+	    my @e=@{$t2e{$gsi}->{$tsi}};
+	    my $ne=scalar(@e);
+	    my $ned=0;
+	    foreach my $eid (@e){
+	      ###
+	      $ned++;
+	    }
+	    print "   $gsi ($ntd/$nt): $tsi ($ned/$ed)\n";
+	  }
+	}
       }
     }
   }
