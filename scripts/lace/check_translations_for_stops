@@ -1,0 +1,60 @@
+#!/usr/local/bin/perl -w
+
+### check_translations_for_stops
+
+use strict;
+use Getopt::Long 'GetOptions';
+use Bio::Otter::Lace::Defaults;
+use Bio::Seq;
+
+$| = 1;
+
+{
+    my ($dataset, @sets, $vega);
+
+    my $help = sub { exec('perldoc', $0) };
+
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'ds|dataset=s' => \$dataset,
+        'h|help'       => $help,
+        ) or $help->();
+    $help->() unless $dataset;
+
+    my $client    = Bio::Otter::Lace::Defaults::make_Client();
+    my $dset      = $client->get_DataSet_by_name($dataset);
+    my $otter_db  = $dset->get_cached_DBAdaptor;
+    my $gene_aptr = $otter_db->get_GeneAdaptor;
+
+    my $gene_id_list = $gene_aptr->list_current_dbIDs;
+    printf STDERR "Found %d current genes\n", scalar(@$gene_id_list);
+    my $i = 0;
+    foreach my $id (@$gene_id_list) {
+        $i++; print STDERR '.'; print STDERR " $i\n" unless $i % 50;
+        my $gene = $gene_aptr->fetch_by_dbID($id);
+        foreach my $trans (@{$gene->get_all_Transcripts}) {
+            next unless $trans->translation;
+            check_for_stops($gene, $trans);
+        }
+    }
+    print STDERR " $i\n";
+}
+
+sub check_for_stops {
+    my( $gene, $trans ) = @_;
+    
+    # Translate method trims stops from sequence end
+    my $peptide = $trans->translate;
+    if ($peptide->seq =~ /\*/) {
+        printf "%-24s  %-24s  %18s  %2d  %12s\n",
+            $gene->gene_info->name->name,
+            $trans->transcript_info->name,
+            $trans->stable_id,
+            $trans->version,
+            $trans->transcript_info->class->name;
+    }
+}
+
+
+__END__
+
+
