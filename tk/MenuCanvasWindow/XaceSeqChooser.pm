@@ -1190,7 +1190,7 @@ sub edit_new_subsequence {
                     next unless $this_3prime > $most_3prime;
                 }
             } else {
-                my $this_3prime = $sub->start;
+                $this_3prime = $sub->start;
                 if ($most_3prime) {
                     next unless $this_3prime < $most_3prime;
                 }
@@ -1209,6 +1209,7 @@ sub edit_new_subsequence {
     
     my $clone = $self->get_CloneSeq($clone_name);
     my $region_name = $clone->clone_name_overlapping($most_3prime) || $clone_name;
+    warn "Looking for clone overlapping '$most_3prime' in '$clone_name' found '$region_name'";
     
     # Trim sequence version from accession if clone_name ends .SV
     $region_name =~ s/\.\d+$//;
