@@ -22,15 +22,22 @@ sub ResultSet {
     return $self->{'result_set'}  ;
 }
 
+sub initialise{
+    my ($self) = shift;
+    $self->get_CloneSequence_list(1);
+    $self->SUPER::initialise(@_);
+}
+
 sub get_CloneSequence_list{
-    my ($self) = @_;
-    
+    my ($self, $force_update) = @_;
+
     my $rs = $self->ResultSet();
     my $ss_list = $rs->get_all_SequenceSets();
     my @cs_list;
     foreach my $ss(@$ss_list){
         my $ds = $self->SequenceSetChooser->DataSet();
         $ds->fetch_all_SequenceNotes_for_SequenceSet($ss);
+        $ds->status_refresh_for_SequenceSet($ss) if $force_update;
         push(@cs_list, @{$ss->CloneSequence_list});
     }
     return \@cs_list;
@@ -40,12 +47,19 @@ sub get_CloneSequence_list{
 sub _refresh_SequenceSet{
     my ($self , $col_number) = @_ ;
 
-    foreach my $ss (@{$self->ResultSet->get_all_SequenceSets}){
-        $self->SequenceSet($ss) ;
-        $self->SUPER::_refresh_SequenceSet($col_number) ;
-        $self->{'_SequenceSet'} = undef ;
+    unless($col_number){
+        # otherwise get_CloneSequence_list gets called multiple times.
+        # once per iteration of @{$self->ResultSet->get_all_SequenceSets}
+        # see $self->SUPER::_refresh_SequenceSet();
+        $self->get_CloneSequence_list(1);
+        return undef;
     }
 
+    foreach my $ss (@{$self->ResultSet->get_all_SequenceSets}){
+        $self->SequenceSet($ss) ;
+        $self->SUPER::_refresh_SequenceSet($col_number);
+        $self->{'_SequenceSet'} = undef ;
+    }
 }
 
 sub save_sequence_notes{
