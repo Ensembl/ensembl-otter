@@ -834,7 +834,34 @@ foreach my $atype (keys %gsi){
       my($tsi,$erank,$eid,$ecst,$eced,$esr,$es,$ep,$eep)=@$re;
       $erank--;
       # id, st, ed, esr, strand, phase, endphase
-      $tsi{$tsi}->[$erank]=[$eid,$ecst,$eced,$esr,$es,$ep,$eep];
+      if($tsi{$tsi}->[$erank]){
+	# assume merging a sticky...
+	my($eid2,$ecst2,$eced2,$esr2,$es2,$ep2,$eep2)=$tsi{$tsi}->[$erank];
+	if($esr==2 || $esr2==2){
+	  my $esr3;
+	  if($esr==1 || $esr2==1){
+	    # 1,2=>1
+	    $esr3=1;
+	  }else{
+	    # 2,3=>2
+	    $esr3=2;
+	  }
+	  if($eced+1==$ecst2){
+	    $eced=$eced2;
+	  }elsif($eced2+1==$ecst){
+	    $ecst=$ecst2;
+	  }else{
+	    print "FATAL: cannot merge stick exons $tsi: $eid:$ecst-$eced, $eid2:$ecst2-$eced2\n";
+	    exit 0;
+	  }
+	  $tsi{$tsi}->[$erank]=[$eid,$ecst,$eced,$esr,$es,$ep,$eep];
+	}else{
+	  print "FATAL: Duplicate rank for $tsi, $erank\n";
+	  exit 0;
+	}
+      }else{
+	$tsi{$tsi}->[$erank]=[$eid,$ecst,$eced,$esr,$es,$ep,$eep];
+      }
     }
     my $dirg=0;
     foreach my $tsi (keys %tsi){
@@ -842,6 +869,7 @@ foreach my $atype (keys %gsi){
       my $dirt=0;
       for(my $i=0;$i<scalar(@{$tsi{$tsi}});$i++){
 	my($eid,$ecst,$eced,$esr,$es,$ep,$eep)=@{$tsi{$tsi}->[$i]};
+	print "WARN $tsi: unresolved sticky in $eid $esr\n" if $esr>1;
 
 	# check consistent direction
 	if($dirt){
@@ -856,36 +884,20 @@ foreach my $atype (keys %gsi){
 	# check order in sequence
 	if($dirt==1){
 	  if($last){
-	    if($esr>1){
-	      if($last+1!=$ecst){
-		print "ERR: $tsi exon $eid out of order $ecst-$eced follows $last ($dirt) (sticky)\n";
-	      }else{
-		$last=$eced;
-	      }
+	    if($last>=$ecst){
+	      print "ERR: $tsi exon $eid out of order $ecst-$eced follows $last ($dirt)\n";
 	    }else{
-	      if($last>=$ecst){
-		print "ERR: $tsi exon $eid out of order $ecst-$eced follows $last ($dirt)\n";
-	      }else{
-		$last=$eced;
-	      }
+	      $last=$eced;
 	    }
 	  }else{
 	    $last=$eced;
 	  }
 	}else{
 	  if($last){
-	    if($esr>1){
-	      if($last-1!=$eced){
-		print "ERR: $tsi exon $eid out of order $ecst-$eced follows $last ($dirt) (sticky)\n";
-	      }else{
-		$last=$ecst;
-	      }
+	    if($last<=$eced){
+	      print "ERR: $tsi exon $eid out of order $ecst-$eced follows $last ($dirt)\n";
 	    }else{
-	      if($last<=$eced){
-		print "ERR: $tsi exon $eid out of order $ecst-$eced follows $last ($dirt)\n";
-	      }else{
-		$last=$ecst;
-	      }
+	      $last=$ecst;
 	    }
 	  }else{
 	    $last=$ecst;
