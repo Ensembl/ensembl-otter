@@ -180,7 +180,7 @@ sub initialize {
         my $current_method = $sub->GeneMethod->name;
         $self->method_name_var(\$current_method);
 
-        my $method_menu = $self->make_menu('Gene Type');
+        my $method_menu = $self->make_menu('Gene type');
         my $redraw_tr = sub { $self->draw_translation_region };
         foreach my $method_name (@allowed_methods ) {
             $method_menu->add('radiobutton',
@@ -1766,8 +1766,10 @@ sub strand_from_tk {
         if ($sub) {
             @trans = $sub->translation_region;
         } else {
-            @trans = $self->translation_region_from_tk ||
-                $self->SubSeq->translation_region;
+            @trans = $self->translation_region_from_tk;
+            unless (@trans) {
+                @trans = $self->SubSeq->translation_region;
+            }
         }
 
         # Delete the existing translation region
