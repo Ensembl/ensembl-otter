@@ -79,6 +79,7 @@ sub do_getopt {
     $DEFAULTS->{$CLIENT_STANZA}->{'author'}       ||= $this_user;
     $DEFAULTS->{$CLIENT_STANZA}->{'email'}        ||= $this_user;
     $DEFAULTS->{$CLIENT_STANZA}->{'write_access'} ||= 0;
+    $DEFAULTS->{$CLIENT_STANZA}->{'readonly_tag'} ||= '.ro';
     $DEFAULTS->{$CLIENT_STANZA}->{'pipeline'}       = 1 
 	unless defined($DEFAULTS->{$CLIENT_STANZA}->{'pipeline'});
 
@@ -171,7 +172,7 @@ sub merge_all_optionals{
 # pipleine=0
 sub check_spelling{
     my $actuals = { map {$_, 1} keys(%{$DEFAULTS->{$CLIENT_STANZA}})};
-    map { s/^(\w+).+/$1/g; delete $actuals->{$_} } @CLIENT_OPTIONS;
+    map { m/^(\w+)/; delete $actuals->{$1} } @CLIENT_OPTIONS;
     my @poss_errs =  map{"<$_>"} keys(%$actuals);
     warn "Possible typo for option(s): " . join(" ", @poss_errs ) . 
 	" *** PLEASE CHECK CONFIG FILES ***\n" if @poss_errs;
