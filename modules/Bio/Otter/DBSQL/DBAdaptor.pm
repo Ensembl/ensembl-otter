@@ -67,6 +67,12 @@ sub get_AnnotatedGeneAdaptor {
   return
     $self->_get_adaptor("Bio::Otter::DBSQL::AnnotatedGeneAdaptor");
 } 
+sub get_AnnotatedTranscriptAdaptor {
+  my $self = shift;
+
+  return
+    $self->_get_adaptor("Bio::Otter::DBSQL::AnnotatedTranscriptAdaptor");
+} 
 
 sub get_AuthorAdaptor() {
   my $self = shift;
