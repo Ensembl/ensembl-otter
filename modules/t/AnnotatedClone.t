@@ -78,7 +78,7 @@ while (my $seq = $seqio->next_seq) {
 
     # Create clone
 
-    my $clone = new Bio::EnsEMBL::Clone();
+    my $clone = new Bio::Otter::AnnotatedClone();
     $clone->id($tmpseq->id);
     $clone->embl_id($tmpseq->id);
     $clone->version(1);
@@ -99,7 +99,6 @@ while (my $seq = $seqio->next_seq) {
 
     $clone->add_Contig($contig);
 
-    $clone = bless($clone,"Bio::Otter::AnnotatedClone");
     $clone->clone_info($cloneinfo);
  
  }
