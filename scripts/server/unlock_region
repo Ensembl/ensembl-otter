@@ -2,123 +2,83 @@
 
 use OtterDefs;
 use strict;
+
 use CGI;
 
-use Bio::Otter::DBSQL::DBAdaptor;
 use Bio::Otter::CloneLockBroker;
 use Bio::Otter::Converter;
-use Bio::Otter::Author;
+use Bio::Otter::Lace::TempFile;
+
+use Bio::Otter::ServerSide qw(:all);
+
+####################################################################
+################ COMMON POST CGI SCRIPT BEGIN ######################
+####################################################################
 
 $| = 1;
 
-print STDERR "\n\n******* Starting to unlock region *********\n\n";
-
 my $q = new CGI;
+set_nph($q);
 
-if ($ENV{SERVER_SOFTWARE} =~ /libwww-perl-daemon/) {
-  print STDERR "NOTE NOTE NOTE Setting nph to 1\n";
-  $q->nph(1);
-}
+print STDERR "******* Starting to unlock region *********";
+
+my $odb    = get_DBAdaptor_from_CGI_species($q, $OTTER_SPECIES);
+my $author = get_Author_from_CGI($q);
+####################################################################
+####################################################################
+####################################################################
+# Get all the params in nice variables
 
 my %params = $q->Vars;
 
-my $dataset = $params{dataset} || error_exit($q, "No dataset name entered. Can't unlock region");
-error_exit($q, "Author must defined to unlock a region") unless $params{author};
-my $data    = $params{data}    || error_exit($q, "No xml data entered. Can't unlock region");
-#warn $data;
+my $xml_data  = $params{'data'}   || error_exit($q,"No xml data entered. Can't write region");
+delete $params{'data'};
+print STDERR "Length of data " . length($xml_data) . "";
 
-print STDERR "Length of data " . length($data) . "\n";
+my $auth_name = $author->name();
+my $tmp_xml = Bio::Otter::Lace::TempFile->new;
+$tmp_xml->root('/tmp');
+$tmp_xml->name(qq`unlock_region_${auth_name}.xml`);
+my $tmp_xml_name = $tmp_xml->full_name();
+print STDERR "Writing xml to tmp file [$tmp_xml_name]";
 
-if (!defined($OTTER_SPECIES->{$dataset})) {
-  print STDERR "Unknown data set\n";
-  error_exit($q, "Unknown data set '$dataset' in unlock_region\n");
-}
+my $xml_fh = eval{
+    $tmp_xml->write_file_handle();
+} || error_exit($q, "Can't write to '$tmp_xml_name' : $!");
+print $xml_fh $xml_data;
 
-my %dbinfo   = %{$OTTER_SPECIES->{$dataset}};
-my %defaults = %{$OTTER_SPECIES->{'defaults'}};
+# Save a bit of memory
+$xml_data = undef;
 
-my $odb;
-my $dnadb;
+print STDERR "Converting xml to otter...";
+my $fh = $tmp_xml->read_file_handle();
 
-my $author = Bio::Otter::Author->new(-name  => $params{author},
-                                     -email => $params{email});
+####################################################################
+################ COMMON POST CGI SCRIPT _END_ ######################
+####################################################################
 
-my $host = $dbinfo{HOST}   || $defaults{HOST},
-my $user = $dbinfo{USER}   || $defaults{USER},
-my $pass = $dbinfo{PASS}   || $defaults{PASS},
-my $port = $dbinfo{PORT}   || $defaults{PORT},
-my $dbname = $dbinfo{DBNAME};
 
-print STDERR "\nDatabase [$dbname][$host][$user][$pass][$port]\n";
+####################################################################
 
-my $dnahost = $dbinfo{DNA_HOST}    || $defaults{DNA_HOST},
-my $dnauser = $dbinfo{DNA_USER}    || $defaults{DNA_USER},
-my $dnapass = $dbinfo{DNA_PASS}    || $defaults{DNA_PASS},
-my $dnaport = $dbinfo{DNA_PORT}    || $defaults{DNA_PORT},
-my $dna_dbname = $dbinfo{DNA_DBNAME};
-  
+my( $genes, $slice );
+
 eval {
-  $odb = new Bio::Otter::DBSQL::DBAdaptor(-host => $host,
-                                          -user => $user,
-                                          -pass => $pass,
-                                          -port => $port,
-                                          -dbname => $dbname);
-};
-if ($@) {
-  error_exit($q, "Failed opening otter database [$@]");
-}
+    ($genes,$slice) = Bio::Otter::Converter::XML_to_otter($fh, $odb);
+    
+    my $chrname  = $slice->chr_name;
+    my $chrstart = $slice->chr_start;
+    my $chrend   = $slice->chr_end;
 
-print STDERR "Connected to database\n";
-
-if (defined($dbinfo{DNA_DBNAME})) {
-  eval {
-    $dnadb = new Bio::EnsEMBL::DBSQL::DBAdaptor(-host   => $dnahost,
-                                                -user   => $dnauser,
-                                                -pass   => $dnapass,
-                                                -port   => $dnaport,
-                                                -dbname => $dna_dbname);
-  };
-  if ($@) {
-    error_exit($q, "Failed opening dna database [$@]");
-  }
-  $odb->dnadb($dnadb);
-  
-  print STDERR "Connected to dna database\n";
-}
-my $tmp_xmlfile = get_tmp_file("/tmp","otter","xml");
-
-print STDERR "\nWriting xml to tmp file [" . $tmp_xmlfile . "]\n\n";
-
-open FPOUT,"> $tmp_xmlfile" or error_exit($q, "Failed opening temp file for write");
-
-print FPOUT $data;
-close FPOUT;
-
-open(XML, $tmp_xmlfile) or error_exit($q, "Can't read '$tmp_xmlfile' : $!");
-
-my @genes;
-my $chrname;
-my $chrstart;
-my $chrend;
-my $genes;
-
-my $sa  = $odb->get_SliceAdaptor;
-
-print STDERR "\nConverting xml to otter...\n";
-
-my( $slice );
-eval {
-  my( $genes, $seqstr, $tiles );
-  ($genes,$slice,$seqstr,$tiles) = Bio::Otter::Converter::XML_to_otter(\*XML, $odb);
+    print STDERR "Processed incoming xml file with slice: [$chrname] [$chrstart] [$chrend]";
 };
 if ($@) {
   error_exit($q, "Failed converting XML to otter [$@]");
 }
-print STDERR "done\n";
+print STDERR "done";
 
 my $cb   = new Bio::Otter::CloneLockBroker($odb);
 
-print STDERR "Checking region is locked...\n";
+print STDERR "Checking region is locked...";
 
 eval {
   $cb->check_locks_exist_by_slice($slice,$author);
@@ -126,57 +86,17 @@ eval {
 if ($@) {
   error_exit($q, "Failed checking locks [$@]");
 }
-print STDERR "done\n";
+print STDERR "done";
 
-print STDERR "\nUnlocking clones...";
+print STDERR "Unlocking clones...";
+eval{
+    $cb->remove_by_slice($slice,$author);
+};
+error_exit($q, "Failed to unlock clones") if $@;
 
-$cb->remove_by_slice($slice,$author);
+print STDERR "done";
+####################################################################
 
-print STDERR "done\n";
-#####################################################################################
-
-print $q->header();
-print "<otter>";
-print " <response>";
-print " </response>";
-print "</otter>";
-
-close XML;
-
-sub error_exit {
-  my ($q,$reason) = @_;
-
-  print $q->header();
-
-  print "<otter>\n";
-  print "  <response>\n";
-  print "    ERROR: $reason\n";
-  print "  </response>\n";
-  print "</otter>\n";
-
-  print STDERR "ERROR: $reason\n";
-
-  exit(1);
-}
+send_response($q, "<otter>\n<response>\n</response>\n</otter>\n");
 
 
-sub get_tmp_file {
-  my ($dir,$stub,$ext) = @_;
-
-
-  if ($dir !~ /\/$/) {
-    $dir = $dir . "/";
-  }
-
-  # This is not good
-
-  my $num = int(rand(10000));
-  my $file = $dir . $stub . "." . $num . "." . $ext;
-
-  while (-e $file) {
-    $num = int(rand(10000));
-    $file = $stub . "." . $num . "." . $ext;
-  }
-
-  return $file;
-}

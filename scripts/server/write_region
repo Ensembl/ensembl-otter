@@ -2,115 +2,61 @@
 
 use OtterDefs;
 use strict;
-use Symbol 'gensym';
+
 use CGI;
 
-use Bio::Otter::DBSQL::DBAdaptor;
 use Bio::Otter::AnnotationBroker;
-use Bio::Otter::CloneLockBroker;
 use Bio::Otter::Converter;
-use Bio::Otter::Author;
+use Bio::Otter::Lace::TempFile;
+use Bio::Otter::CloneLockBroker;
+
+use Bio::Otter::ServerSide qw(:all);
+
+####################################################################
+################ COMMON POST CGI SCRIPT BEGIN ######################
+####################################################################
 
 $| = 1;
 
-print STDERR "\n\n******* Starting to write region *********\n\n";
-
 my $q = new CGI;
+set_nph($q);
 
-if ($ENV{SERVER_SOFTWARE} =~ /libwww-perl-daemon/) {
-  print STDERR "NOTE NOTE NOTE Setting nph to 1\n";
-  $q->nph(1);
-}
+print STDERR "******* Starting to write region *********";
+
+my $odb    = get_DBAdaptor_from_CGI_species($q, $OTTER_SPECIES);
+my $author = get_Author_from_CGI($q);
+####################################################################
+####################################################################
+####################################################################
+# Get all the params in nice variables
 
 my %params = $q->Vars;
 
-my $dataset = $params{'dataset'} || error_exit($q,"No dataset type entered. Can't write region");
-error_exit($q,"No xml data entered. Can't write region")
-    unless $params{'data'};
-error_exit($q,"Author must defined to write a region")
-    unless $params{'author'};
-my $email = $params{email} || error_exit($q,"Email must defined to write a region");
+my $xml_data  = $params{'data'}   || error_exit($q,"No xml data entered. Can't write region");
+delete $params{'data'};
+print STDERR "Length of data " . length($xml_data) . "";
 
-print STDERR "Length of data " . length($params{'data'}) . "\n";
+my $auth_name = $author->name();
+my $tmp_xml = Bio::Otter::Lace::TempFile->new;
+$tmp_xml->root('/tmp');
+$tmp_xml->name(qq`write_region_${auth_name}.xml`);
+my $tmp_xml_name = $tmp_xml->full_name();
+print STDERR "Writing xml to tmp file [$tmp_xml_name]";
 
-### Is this just for debugging?
-#open OTT,">/tmp/apollo.$$.xml";
-#print OTT $params{'data'};
-#close(OTT);
-
-unless ($OTTER_SPECIES->{$dataset}) {
-  print STDERR "Unknown data set\n";
-  error_exit($q, "Unknown data set '$dataset' in write_region\n");
-}
-
-
-
-my $author = Bio::Otter::Author->new(-name  => $params{author},
-                                     -email => $params{email});
-
-my $dbinfo   = $OTTER_SPECIES->{$dataset};
-my $defaults = $OTTER_SPECIES->{'defaults'};
-
-my $host   = $dbinfo->{HOST} || $defaults->{HOST};
-my $user   = $dbinfo->{USER} || $defaults->{USER};
-my $pass   = $dbinfo->{PASS} || $defaults->{PASS};
-my $port   = $dbinfo->{PORT} || $defaults->{PORT};
-my $dbname = $dbinfo->{DBNAME};
-
-#print STDERR "\nDatabase [$dbname][$host][$user][$pass][$port]\n";
-#print STDERR "\nAuthor $author email $email dataset $dataset\n";
-
-my $dnahost    = $dbinfo->{DNA_HOST} || $defaults->{DNA_HOST};
-my $dnauser    = $dbinfo->{DNA_USER} || $defaults->{DNA_USER};
-my $dnapass    = $dbinfo->{DNA_PASS} || $defaults->{DNA_PASS};
-my $dnaport    = $dbinfo->{DNA_PORT} || $defaults->{DNA_PORT};
-my $dna_dbname = $dbinfo->{DNA_DBNAME};
-  
-my( $odb );
-eval {
-  $odb = new Bio::Otter::DBSQL::DBAdaptor(-host => $host,
-                                          -user => $user,
-                                          -pass => $pass,
-                                          -port => $port,
-                                          -dbname => $dbname);
-};
-if ($@) {
-  error_exit($q, "Failed opening otter database [$@]");
-}
-
-print STDERR "Connected to local database\n";
-
-my( $dnadb );
-if ($dna_dbname) {
-  eval {
-    $dnadb = new Bio::EnsEMBL::DBSQL::DBAdaptor(-host   => $dnahost,
-                                                -user   => $dnauser,
-                                                -pass   => $dnapass,
-                                                -port   => $dnaport,
-                                                -dbname => $dna_dbname);
-  };
-  if ($@) {
-    error_exit($q, "Failed opening dna database [$@]");
-  }
-  $odb->dnadb($dnadb);
-  
-  print STDERR "Connected to dna database\n";
-}
-my $tmp_xmlfile = get_tmp_file("/tmp","otter","xml");
-
-print STDERR "\nWriting xml to tmp file [" . $tmp_xmlfile . "]\n\n";
-
-open FPOUT,">$tmp_xmlfile" or error_exit($q, "Can't write to '$tmp_xmlfile' : $!");
-print FPOUT $params{'data'};
-close FPOUT;
+my $xml_fh = eval{
+    $tmp_xml->write_file_handle();
+} || error_exit($q, "Can't write to '$tmp_xml_name' : $!");
+print $xml_fh $xml_data;
 
 # Save a bit of memory
-$params{'data'} = undef;
+$xml_data = undef;
 
-my $fh = gensym();
-open $fh, $tmp_xmlfile or die "Can't read '$tmp_xmlfile' : $!";
+print STDERR "Converting xml to otter...";
+my $fh = $tmp_xml->read_file_handle();
 
-print STDERR "\nConverting xml to otter...\n";
+####################################################################
+################ COMMON POST CGI SCRIPT _END_ ######################
+####################################################################
 
 my( $genes, 
     $slice, # The slice is fetched from the database by XML_to_otter
@@ -130,39 +76,27 @@ eval {
     $chrstart = $slice->chr_start;
     $chrend   = $slice->chr_end;
 
-    print STDERR "Processed incoming xml file :  Chr start end $chrname $chrstart $chrend\n"; 
+    print STDERR "Processed incoming xml file with slice: [$chrname] [$chrstart] [$chrend]"; 
 };
 if ($@) {
-  print STDERR "Failed converting XML [$genes,$chrname,$chrstart,$chrend][$@]\n";
+  print STDERR "Failed converting XML [$genes,$chrname,$chrstart,$chrend][$@]";
   error_exit($q, "Failed converting XML to otter [$@]");
 }
-print STDERR "done\n";
+print STDERR "done";
 
-print STDERR "\nFound " . scalar(@$genes) . " genes on region $chrname $chrstart-$chrend\n";
+print STDERR "Found " . scalar(@$genes) . " genes on slice [$chrname] [$chrstart] [$chrend]";
 
 
 my $cb = new Bio::Otter::CloneLockBroker($odb);
 
-if($params{'lock_before_write'} eq 'true'){
-  print STDERR "Locking region...\n";
-  eval {
-    my @locks = $cb->lock_clones_by_slice($slice,$author);
-  }; 
-  
-  if ($@) { 
-    error_exit($q, "Failed to lock clones - exiting [$@]");
-  }
-  
-}else{
-  print STDERR "Checking region is locked...\n";
-  eval {
+
+print STDERR "Checking region is locked...";
+eval {
     $cb->check_locks_exist_by_slice($slice, $author);
-  };
-  if ($@) {
-    error_exit($q, "Failed checking locks [$@]");
-  }
-}
-print STDERR "done\n";
+};
+error_exit($q, "Failed checking locks [$@]") if $@;
+print STDERR "done";
+
 
 # Get stable IDs for any genes, transcripts, translations and exons that don't have them
 my $sida = $odb->get_StableIdAdaptor();
@@ -190,7 +124,6 @@ $ab->current_author($author);
 my $oaga = $odb->get_GeneAdaptor();
 $odb->assembly_type($slice->assembly_type);
 
-
 my $anal;
 
 eval {
@@ -200,13 +133,13 @@ eval {
 if ($@) {
   error_exit($q, "Failed fetching analysis [$@]");
 }
-if( !defined($anal)) {
+if(!defined($anal)) {
   error_exit($q, "No analysis object associated with otter");
 }
 
 my $dbgenes;
 
-print STDERR "\nFetching database genes for comparison...";
+print STDERR "Fetching database genes for comparison...";
 eval {
   $dbgenes = $oaga->fetch_by_Slice($slice);
   strip_incomplete_genes($dbgenes);
@@ -214,8 +147,7 @@ eval {
 if ($@) {
   error_exit($q, "Failed fetching genes [$@]");
 }
-
-print STDERR "done\n";
+print STDERR "done";
 
 foreach my $gene (@$genes) {
   $gene->analysis($anal);
@@ -248,13 +180,13 @@ if ($@) {
 my( @gene_events, @changed_clones );
 
 
-print STDERR "\nComparing " . scalar(@$dbgenes) . " old to " . scalar(@$genes) . " new gene(s)... ";
+print STDERR "Comparing " . scalar(@$dbgenes) . " old to " . scalar(@$genes) . " new gene(s)... ";
 
 my( $del_sf, $save_sf );
 eval {
-    print STDERR "New clones\n";
+    print STDERR "New clones";
     my $new_clones = clones_from_path($path);
-    print STDERR "Old clones\n";
+    print STDERR "Old clones";
     my $old_clones = clones_from_path($slice->get_tiling_path);
 
     @gene_events = $ab->compare_genes($dbgenes, $genes);
@@ -265,9 +197,9 @@ eval {
     ($del_sf, $save_sf) = $ab->compare_feature_sets($old_feature_set, $new_feature_set);
 };
 if ($@) {
-  error_exit($q, "Failed comparing annotations [$@]");
+    error_exit($q, "Failed comparing annotations [$@]");
 }
-print STDERR "done\n";
+print STDERR "done";
 
 # the magic happens!
 
@@ -275,7 +207,7 @@ my $outputstr;
 eval {
   $odb->begin_work();
 
-  print STDERR "\nFound " . scalar(@gene_events) . " changed gene annotations\n";
+  print STDERR "Found " . scalar(@gene_events) . " changed gene annotations";
   
   foreach my $event ( @gene_events ) {
     $outputstr .= $event->to_string;
@@ -289,20 +221,20 @@ eval {
       $gene = $event->new_gene;
     }
 
-    print STDERR "\nAttaching gene to slice " . $gene->stable_id . " " . $gene->version. "\n";
+    print STDERR "Attaching gene to slice " . $gene->stable_id . " " . $gene->version. "";
     $oaga->attach_to_Slice($gene,$slice);
     $gene->detach_DBAdaptors;
-    print STDERR "Done attaching\n";
+    print STDERR "Done attaching";
     $oaga->store($gene);
-    print STDERR "Stored gene\n";
-    $outputstr .= " " . $gene->version . " " . $gene->gene_info->name->name . "\n";
+    print STDERR "Stored gene";
+    $outputstr .= " " . $gene->version . " " . $gene->gene_info->name->name . "";
   }
   
   my $oaca = $odb->get_CloneAdaptor;
   foreach my $clone (@changed_clones) {
     my $acc = $clone->embl_id;
     my $sv  = $clone->embl_version;
-    printf STDERR "Storing new version of clone '$acc.$sv'\n";
+    printf STDERR "Storing new version of clone '$acc.$sv'";
     my $db_clone = $oaca->fetch_by_accession_version($acc, $sv);
     $db_clone->clone_info($clone->clone_info);
     $oaca->store($db_clone);
@@ -311,14 +243,14 @@ eval {
     # Store SimpleFeature changes
     my $sfa = $odb->get_SimpleFeatureAdaptor;
     if (@$del_sf) {
-        printf STDERR "Deleting %d SimpleFeatures\n", scalar @$del_sf;
+        printf STDERR "Deleting %d SimpleFeatures", scalar @$del_sf;
         foreach my $sf (@$del_sf) {
             $sfa->remove($sf);
         }
     }
     if (@$save_sf) {
         attach_analysis_objects_and_transform_to_slice($odb, $slice, $save_sf);
-        printf STDERR "Saving %d SimpleFeatures\n", scalar @$save_sf;
+        printf STDERR "Saving %d SimpleFeatures", scalar @$save_sf;
         $sfa->store(@$save_sf);
     }
   
@@ -329,66 +261,10 @@ if ($@) {
   error_exit($q, "Failed writing annotations [$@]");
 }
 
-#unlink($tmp_xmlfile);
-
-print STDERR "About to write success response\n";
-print $q->header();
-#print("<otter>\n");
-#print("  <response>\n");
-#if ($outputstr && $outputstr eq "") {
-   $outputstr ||= "No changes to annotations";
-#}
-print($outputstr);
-#print("  </response>\n");
-#print("</otter>\n");
-
-
-if ($params{'unlock'} eq 'true') {
-  print STDERR "\nUnlocking clones...";
-  $cb->remove_by_slice($slice,$author);
-  print STDERR "done\n";
-}
+$outputstr ||= "No changes to annotations";
+send_response($q, $outputstr);
 
 #####################################################################################
-
- 
-sub error_exit {
-  my ($q,$reason) = @_;
-
-  print $q->header();
-
-  print "<otter>\n";
-  print "  <response>\n";
-  print "ERROR:\n$reason\n";
-  print "  </response>\n";
-  print "</otter>\n";
-
-  print STDERR "ERROR: $reason\n";
-
-  exit(1);
-}
-
-
-sub get_tmp_file {
-  my ($dir,$stub,$ext) = @_;
-
-
-  if ($dir !~ /\/$/) {
-    $dir = $dir . "/";
-  }
-
-  # This is not good
-
-  my $num = int(rand(10000));
-  my $file = $dir . $stub . "." . $num . "." . $ext;
-
-  while (-e $file) {
-    $num = int(rand(10000));
-    $file = $stub . "." . $num . "." . $ext;
-  }
-
-  return $file;
-}
 
 sub clones_from_path {
     my( $path ) = @_;
@@ -397,7 +273,7 @@ sub clones_from_path {
     foreach my $rawcontig (map $_->component_Seq, @$path) {
         my $clone = $rawcontig->clone;
         unless ($clone) {
-            printf STDERR "No clone attached to '%s'\n", $rawcontig->id;
+            printf STDERR "No clone attached to '%s'", $rawcontig->id;
             next;
         }
         push(@$clones, $clone);
@@ -437,7 +313,7 @@ sub strip_incomplete_genes {
     for (my $i = 0; $i < @$gene_list;) {
         my $gene = $gene_list->[$i];
         if ($gene->gene_info->truncated_flag) {
-            printf STDERR "Splicing out incomplete gene '%s'\n", $gene->gene_info->name->name;
+            printf STDERR "Splicing out incomplete gene '%s'", $gene->gene_info->name->name;
             splice(@$gene_list, $i, 1);
             next;
         } else {
