@@ -4,7 +4,7 @@ use strict;
 use Bio::Otter::AssemblyTag;
 use Bio::Otter::DBSQL::RawContigAdaptor;
 use vars qw(@ISA);
-@ISA = qw (BSQL::BaseAdaptor Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor);
+@ISA = qw (Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor);
 
 
 sub _tables {
