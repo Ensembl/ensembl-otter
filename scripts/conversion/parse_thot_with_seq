@@ -49,7 +49,10 @@ $| = 1;
 
 open FPSEQ, "$seqfile" or die "Failed opening $seqfile";
 open FPGTF, "$gtffile" or die "Failed opening $gtffile";
-open FPSUM, "$sumfile" or die "Failed opening $sumfile";
+
+if (defined($sumfile)) {
+  open FPSUM, "$sumfile" or die "Failed opening $sumfile";
+}
 
 my $seqstr;
 my $header = <FPSEQ>;
@@ -66,14 +69,16 @@ $contig->length(length($seqstr));
 $contig->seq($seqstr);
 
 my %sumhash;
-while (<FPSUM>) {
-  my @words = split;
-  if (scalar(@words) != 8) {
-    die "Failed reading summary file\n";
+if (defined($sumfile)) {
+  while (<FPSUM>) {
+    my @words = split;
+    if (scalar(@words) != 8) {
+      die "Failed reading summary file\n";
+    }
+    my $strand = $words[0];
+    $strand =~ s/.*_//;
+    $sumhash{ $words[1] . "_" . $words[2] . "_" . $strand } = $_;
   }
-  my $strand = $words[0];
-  $strand =~ s/.*_//;
-  $sumhash{ $words[1] . "_" . $words[2] . "_" . $strand } = $_;
 }
 
 my %cds;
@@ -356,7 +361,9 @@ foreach my $geneid (keys %genes) {
 
     my $sumkey = $gene->start . "_" . $gene->end . "_" . ($gene->strand == 1 ? "f" : "r");
     if (!exists($sumhash{$sumkey})) {
-      print "NOTE NOTE NOTE: Failed finding in summary hash\n";
+      if (defined($sumfile)) {
+        print "NOTE NOTE NOTE: Failed finding in summary hash\n";
+      }
     } else {
       print $sumhash{$sumkey} . "\n";
       if (defined($cds_transcript)) {
