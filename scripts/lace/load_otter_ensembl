@@ -149,10 +149,7 @@ use Data::Dumper;
     $SequenceSet->description($description);   # description from command line
 
     
-    # Chr prefix causes problems for Apollo
-    $chromosome_name ||= $agp_chr_name;
-    die "you need to specify a chromosome name" unless $chromosome_name;
-    $chromosome_name =~ s/^chr//i; # recheck chromosome name as it may have changed [AGP]
+    
 
     while(!$INPUT_TYPE && (my $first = <$fh>)){
 	chomp($first);
@@ -161,10 +158,14 @@ use Data::Dumper;
     seek($fh, 0, 0);
     die "check format of file" unless $INPUT_TYPE;
 
+    # Chr prefix causes problems for Apollo
+    $chromosome_name ||= $agp_chr_name;
+    die "you need to specify a chromosome name" unless $chromosome_name;
+    $chromosome_name =~ s/^chr//i; # recheck chromosome name as it may have changed [AGP]
+
     my $otter_chromosome = get_chromosome($otter_db    , $chromosome_name);
     my $pipe_chromosome  = get_chromosome($pipeline_db , $chromosome_name);
     
-
     $end_coord = $ds->tmpstore_meta_info_for_SequenceSet($SequenceSet, [$otter_db, $pipeline_db]);
     # $ds->__dump_table("meta_info", [$otter_db, $pipeline_db]);
     # warn "This is end_coord: $end_coord";
@@ -180,7 +181,7 @@ use Data::Dumper;
 	    $acc_ver,
 	    $ctg_start,
 	    $ctg_end,
-	    $ctg_ori) = check_line($_, $agp_chr_name);
+	    $ctg_ori) = check_line($_, $chromosome_name);
 	next unless $input_type && $input_type eq $INPUT_TYPE;
 	if($input_type eq 'AGP'){
 	    # input file must be in AGP format
