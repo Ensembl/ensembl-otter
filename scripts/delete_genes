@@ -28,4 +28,7 @@ delete from clone_info_keyword;
 delete from current_clone_info;
 delete from gene_info;
 delete from transcript_info; 
+delete from gene_description;
+
 delete from simple_feature;
+
