@@ -44,7 +44,7 @@ use Bio::Otter::Converter;
 my $vcontig = $sgp->fetch_by_chr_start_end($chr,$chrstart,$chrend);
 
 print "<otter>\n";
-print "<sequenceset>\n";
+print "<sequence_set>\n";
 
 
 my @path  = $vcontig->get_tiling_path;
@@ -54,7 +54,7 @@ my $xmlstr = Bio::Otter::Converter::path_to_XML($chr,$chrstart,$chrend,@path);
 print $xmlstr . "\n";
 
 
-print "</sequenceset>\n";
+print "</sequence_set>\n";
 
 
 

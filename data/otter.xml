@@ -1,20 +1,20 @@
 
 <otter>
- <sequenceset>
+ <sequence_set>
   <assembly_type>type</assembly_type>
   <author>xxxx</author>
-  <sequencefragment>
-    <id>name</id>
+  <sequence_fragment>
+    <accession>name</accession>
     <chromosome>xxx</chromosome>
     <accession>xx</accession>
     <version>xx</version>
     <remark>remark</remark>
     <keyword>keyword</keyword>
-    <assemblystart>xxx</assemblystart>
-    <assemblyend>xxx</assemblyend>
-    <assemblyori> </assemblyori>
-    <assemblyoffset>  </assemblyoffset>
-  </sequencefragment>
+    <assembly_start>xxx</assembly_start>
+    <assembly_end>xxx</assembly_end>
+    <fragment_ori> </fragment_ori>
+    <fragment_offset>  </fragment_offset>
+  </sequence_fragment>
   <dna>
   AAGGGCCCC
   AGCGGGCC
@@ -55,5 +55,5 @@
        </exon_set>
    </transcript>
  </locus>
- </sequenceset>
+ </sequence_set>
 </otter>

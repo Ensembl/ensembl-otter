@@ -93,7 +93,7 @@ sub toXMLString{
         }
 	$str .= " <name>"      . $name      . "</name>\n";
 
-        $str .= '<known>' . $gene_info->is_known . '</known>';
+        $str .= '<known>' . $info->is_known . '</known>';
 
 	my @syn = $info->synonym;
 
@@ -111,8 +111,6 @@ sub toXMLString{
             $remstr =~ s/\n/ /g;
 	    $str .= " <remark>" . $remstr . "</remark>\n";
 	}
-        my $name;
-        my $email;
 
         if (my $author = $info->author) {
             $str .= $author->toXMLString;
@@ -294,5 +292,65 @@ sub equals {
 	print " - Equal gene info\n";
     }
 }
+
+sub set_gene_type_from_transcript_classes {
+    my( $self ) = @_;
     
+    my( %class_set );
+    my $pseudo_count = 0;
+    my $transcripts = $self->get_all_Transcripts;
+    $self->throw('No transcripts') unless @$transcripts;
+    foreach my $transcript (@$transcripts) {
+        my $class = $transcript->transcript_info->class->name;
+        $class_set{$class}++;
+        $pseudo_count++ if $class =~ /pseudo/i;
+    }
+    
+    my @class_list = keys %class_set;
+    # If there are any Pseudogene transcripts, the gene is either
+    # a Pseudogene, or it is a Polymorphic locus if there are other
+    # classes of transcripts present.
+    if ($pseudo_count) {
+        if ($pseudo_count == @$transcripts) {
+            if (@class_list > 1) {
+                $self->throw("Have mix of pseudogene classes in gene:\n"
+                    . join('', map "  $_\n", @class_list));
+            } else {
+                $self->type(@class_list);
+            }
+        } else {
+            $self->type('Polymorphic');
+        }
+    }
+    # All genes containing protein coding transcripts are either Known or Novel_CDS
+    elsif ($class_set{'Coding'}) {
+        # Check for the is_known flag on the GeneInfo object
+        if ($self->gene_info->is_known) {
+            $self->type('Known');
+        }
+        else {
+            $self->type('Novel_CDS');
+        }
+    }
+    # Gene type is Novel_Transcript if any of these are present
+    elsif ($class_set{'Transcript'}
+        or $class_set{'Non_coding'}
+        or $class_set{'Ambiguous_ORF'}
+        or $class_set{'Immature'}
+        or $class_set{'Antisense'}
+        )
+    {
+        $self->type('Novel_Transcript');
+    }
+    # All remaining gene types are only expected to have one class of transcript
+    elsif (@class_list != 1) {
+        $self->throw("Have mix of transcript classes in gene where not expected:\n"
+            . join('', map "  $_\n", @class_list));
+    }
+    else {
+        # Gene type is the same as the transcript type
+        $self->type(@class_list);
+    }
+}
+
 1;

@@ -1,5 +1,5 @@
 <otter>
-<sequenceset>
+<sequence_set>
 <locus>
  <locus_type>gene</locus_type>
  <stable_id></stable_id>
@@ -285,5 +285,5 @@
  </transcript>
 </locus>
 
-</sequenceset>
+</sequence_set>
 </otter>

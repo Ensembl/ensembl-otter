@@ -1,8 +1,8 @@
 <otter>
-<sequenceset>
+<sequence_set>
   <assembly_type>fake_gp_1</assembly_type>
-<sequencefragment>
-  <id>AL356218.22.1.142839</id>
+<sequence_fragment>
+  <accession>AL356218.22.1.142839</accession>
   <chromosome>virt_chrom_1</chromosome>
   <accession>AL356218</accession>
   <version>22</version>
@@ -13,13 +13,13 @@
   <keyword>CpG island</keyword>
   <keyword>NFX1</keyword>
   <keyword>aquaporin</keyword>
-  <assemblystart>1</assemblystart>
-  <assemblyend>142839</assemblyend>
-  <assemblyori>1</assemblyori>
-  <assemblyoffset>1</assemblyoffset>
-</sequencefragment>
-<sequencefragment>
-  <id>AL139008.10.1.159974</id>
+  <assembly_start>1</assembly_start>
+  <assembly_end>142839</assembly_end>
+  <fragment_ori>1</fragment_ori>
+  <fragment_offset>1</fragment_offset>
+</sequence_fragment>
+<sequence_fragment>
+  <accession>AL139008.10.1.159974</accession>
   <chromosome>virt_chrom_1</chromosome>
   <accession>AL139008</accession>
   <version>10</version>
@@ -33,13 +33,13 @@
   <keyword>annexin</keyword>
   <keyword>immunoglobulin domain</keyword>
   <keyword>trypsin</keyword>
-  <assemblystart>146840</assemblystart>
-  <assemblyend>306813</assemblyend>
-  <assemblyori>1</assemblyori>
-  <assemblyoffset>1</assemblyoffset>
-</sequencefragment>
-<sequencefragment>
-  <id>AL356489.14.1.130639</id>
+  <assembly_start>146840</assembly_start>
+  <assembly_end>306813</assembly_end>
+  <fragment_ori>1</fragment_ori>
+  <fragment_offset>1</fragment_offset>
+</sequence_fragment>
+<sequence_fragment>
+  <accession>AL356489.14.1.130639</accession>
   <chromosome>virt_chrom_1</chromosome>
   <accession>AL356489</accession>
   <version>14</version>
@@ -58,13 +58,13 @@
   <keyword>mesotrypsin</keyword>
   <keyword>protease</keyword>
   <keyword>trypsin</keyword>
-  <assemblystart>310814</assemblystart>
-  <assemblyend>441452</assemblyend>
-  <assemblyori>1</assemblyori>
-  <assemblyoffset>1</assemblyoffset>
-</sequencefragment>
-<sequencefragment>
-  <id>AL358573.25.1.14998</id>
+  <assembly_start>310814</assembly_start>
+  <assembly_end>441452</assembly_end>
+  <fragment_ori>1</fragment_ori>
+  <fragment_offset>1</fragment_offset>
+</sequence_fragment>
+<sequence_fragment>
+  <accession>AL358573.25.1.14998</accession>
   <chromosome>virt_chrom_1</chromosome>
   <accession>AL358573</accession>
   <version>25</version>
@@ -73,13 +73,13 @@
   <keyword>T-cell receptor</keyword>
   <keyword>mesotrypsin</keyword>
   <keyword>protease</keyword>
-  <assemblystart>445453</assemblystart>
-  <assemblyend>460450</assemblyend>
-  <assemblyori>1</assemblyori>
-  <assemblyoffset>1</assemblyoffset>
-</sequencefragment>
-<sequencefragment>
-  <id>AL139113.21.1.193280</id>
+  <assembly_start>445453</assembly_start>
+  <assembly_end>460450</assembly_end>
+  <fragment_ori>1</fragment_ori>
+  <fragment_offset>1</fragment_offset>
+</sequence_fragment>
+<sequence_fragment>
+  <accession>AL139113.21.1.193280</accession>
   <chromosome>virt_chrom_1</chromosome>
   <accession>AL139113</accession>
   <version>21</version>
@@ -102,13 +102,13 @@
   <keyword>UBC3B</keyword>
   <keyword>mesotrypsin</keyword>
   <keyword>protease</keyword>
-  <assemblystart>464451</assemblystart>
-  <assemblyend>657730</assemblyend>
-  <assemblyori>1</assemblyori>
-  <assemblyoffset>1</assemblyoffset>
-</sequencefragment>
-<sequencefragment>
-  <id>AL354989.13.1.151990</id>
+  <assembly_start>464451</assembly_start>
+  <assembly_end>657730</assembly_end>
+  <fragment_ori>1</fragment_ori>
+  <fragment_offset>1</fragment_offset>
+</sequence_fragment>
+<sequence_fragment>
+  <accession>AL354989.13.1.151990</accession>
   <chromosome>virt_chrom_1</chromosome>
   <accession>AL354989</accession>
   <version>13</version>
@@ -124,23 +124,23 @@
   <keyword>KIAA1892</keyword>
   <keyword>KIAA491</keyword>
   <keyword>tubulin</keyword>
-  <assemblystart>661731</assemblystart>
-  <assemblyend>813720</assemblyend>
-  <assemblyori>1</assemblyori>
-  <assemblyoffset>1</assemblyoffset>
-</sequencefragment>
-<sequencefragment>
-  <id>AL160051.22.1.30632</id>
+  <assembly_start>661731</assembly_start>
+  <assembly_end>813720</assembly_end>
+  <fragment_ori>1</fragment_ori>
+  <fragment_offset>1</fragment_offset>
+</sequence_fragment>
+<sequence_fragment>
+  <accession>AL160051.22.1.30632</accession>
   <chromosome>virt_chrom_1</chromosome>
   <accession>AL160051</accession>
   <version>22</version>
-  <assemblystart>817721</assemblystart>
-  <assemblyend>848352</assemblyend>
-  <assemblyori>1</assemblyori>
-  <assemblyoffset>1</assemblyoffset>
-</sequencefragment>
-<sequencefragment>
-  <id>AL353662.19.1.167998</id>
+  <assembly_start>817721</assembly_start>
+  <assembly_end>848352</assembly_end>
+  <fragment_ori>1</fragment_ori>
+  <fragment_offset>1</fragment_offset>
+</sequence_fragment>
+<sequence_fragment>
+  <accession>AL353662.19.1.167998</accession>
   <chromosome>virt_chrom_1</chromosome>
   <accession>AL353662</accession>
   <version>19</version>
@@ -152,13 +152,13 @@
   <keyword>RPS8</keyword>
   <keyword>SERPINH1</keyword>
   <keyword>UBAP</keyword>
-  <assemblystart>852353</assemblystart>
-  <assemblyend>1020350</assemblyend>
-  <assemblyori>1</assemblyori>
-  <assemblyoffset>1</assemblyoffset>
-</sequencefragment>
-<sequencefragment>
-  <id>AL356494.13.1.83750</id>
+  <assembly_start>852353</assembly_start>
+  <assembly_end>1020350</assembly_end>
+  <fragment_ori>1</fragment_ori>
+  <fragment_offset>1</fragment_offset>
+</sequence_fragment>
+<sequence_fragment>
+  <accession>AL356494.13.1.83750</accession>
   <chromosome>virt_chrom_1</chromosome>
   <accession>AL356494</accession>
   <version>13</version>
@@ -171,13 +171,13 @@
   <keyword>KIAA1161</keyword>
   <keyword>NUDT2</keyword>
   <keyword>NYD-SP22</keyword>
-  <assemblystart>1024351</assemblystart>
-  <assemblyend>1108100</assemblyend>
-  <assemblyori>1</assemblyori>
-  <assemblyoffset>1</assemblyoffset>
-</sequencefragment>
-<sequencefragment>
-  <id>AL160270.19.1.199114</id>
+  <assembly_start>1024351</assembly_start>
+  <assembly_end>1108100</assembly_end>
+  <fragment_ori>1</fragment_ori>
+  <fragment_offset>1</fragment_offset>
+</sequence_fragment>
+<sequence_fragment>
+  <accession>AL160270.19.1.199114</accession>
   <chromosome>virt_chrom_1</chromosome>
   <accession>AL160270</accession>
   <version>19</version>
@@ -191,13 +191,13 @@
   <keyword>PCD</keyword>
   <keyword>dynactin</keyword>
   <keyword>dynein</keyword>
-  <assemblystart>1112101</assemblystart>
-  <assemblyend>1311214</assemblyend>
-  <assemblyori>1</assemblyori>
-  <assemblyoffset>1</assemblyoffset>
-</sequencefragment>
-<sequencefragment>
-  <id>AL450283.16.1.34008</id>
+  <assembly_start>1112101</assembly_start>
+  <assembly_end>1311214</assembly_end>
+  <fragment_ori>1</fragment_ori>
+  <fragment_offset>1</fragment_offset>
+</sequence_fragment>
+<sequence_fragment>
+  <accession>AL450283.16.1.34008</accession>
   <chromosome>virt_chrom_1</chromosome>
   <accession>AL450283</accession>
   <version>16</version>
@@ -208,13 +208,13 @@
   <keyword>SR-BP1</keyword>
   <keyword>SR31747</keyword>
   <keyword>dynactin</keyword>
-  <assemblystart>1315215</assemblystart>
-  <assemblyend>1349222</assemblyend>
-  <assemblyori>1</assemblyori>
-  <assemblyoffset>1</assemblyoffset>
-</sequencefragment>
-<sequencefragment>
-  <id>AL162231.20.1.186433</id>
+  <assembly_start>1315215</assembly_start>
+  <assembly_end>1349222</assembly_end>
+  <fragment_ori>1</fragment_ori>
+  <fragment_offset>1</fragment_offset>
+</sequence_fragment>
+<sequence_fragment>
+  <accession>AL162231.20.1.186433</accession>
   <chromosome>virt_chrom_1</chromosome>
   <accession>AL162231</accession>
   <version>20</version>
@@ -226,17 +226,17 @@
   <keyword>SCYA21</keyword>
   <keyword>SCYA27</keyword>
   <keyword>galactose-1-phosphate uridylytransferase</keyword>
-  <assemblystart>1353223</assemblystart>
-  <assemblyend>1539655</assemblyend>
-  <assemblyori>1</assemblyori>
-  <assemblyoffset>1</assemblyoffset>
-</sequencefragment>
+  <assembly_start>1353223</assembly_start>
+  <assembly_end>1539655</assembly_end>
+  <fragment_ori>1</fragment_ori>
+  <fragment_offset>1</fragment_offset>
+</sequence_fragment>
 
 <otter>
-<sequenceset>
+<sequence_set>
   <assembly_type>fake_gp_1</assembly_type>
-<sequencefragment>
-  <id>AL356218.22.1.142839</id>
+<sequence_fragment>
+  <accession>AL356218.22.1.142839</accession>
   <chromosome>virt_chrom_1</chromosome>
   <accession>AL356218</accession>
   <version>22</version>
@@ -247,13 +247,13 @@
   <keyword>CpG island</keyword>
   <keyword>NFX1</keyword>
   <keyword>aquaporin</keyword>
-  <assemblystart>1</assemblystart>
-  <assemblyend>142839</assemblyend>
-  <assemblyori>1</assemblyori>
-  <assemblyoffset>1</assemblyoffset>
-</sequencefragment>
-<sequencefragment>
-  <id>AL139008.10.1.159974</id>
+  <assembly_start>1</assembly_start>
+  <assembly_end>142839</assembly_end>
+  <fragment_ori>1</fragment_ori>
+  <fragment_offset>1</fragment_offset>
+</sequence_fragment>
+<sequence_fragment>
+  <accession>AL139008.10.1.159974</accession>
   <chromosome>virt_chrom_1</chromosome>
   <accession>AL139008</accession>
   <version>10</version>
@@ -267,13 +267,13 @@
   <keyword>annexin</keyword>
   <keyword>immunoglobulin domain</keyword>
   <keyword>trypsin</keyword>
-  <assemblystart>146840</assemblystart>
-  <assemblyend>306813</assemblyend>
-  <assemblyori>1</assemblyori>
-  <assemblyoffset>1</assemblyoffset>
-</sequencefragment>
-<sequencefragment>
-  <id>AL356489.14.1.130639</id>
+  <assembly_start>146840</assembly_start>
+  <assembly_end>306813</assembly_end>
+  <fragment_ori>1</fragment_ori>
+  <fragment_offset>1</fragment_offset>
+</sequence_fragment>
+<sequence_fragment>
+  <accession>AL356489.14.1.130639</accession>
   <chromosome>virt_chrom_1</chromosome>
   <accession>AL356489</accession>
   <version>14</version>
@@ -292,13 +292,13 @@
   <keyword>mesotrypsin</keyword>
   <keyword>protease</keyword>
   <keyword>trypsin</keyword>
-  <assemblystart>310814</assemblystart>
-  <assemblyend>441452</assemblyend>
-  <assemblyori>1</assemblyori>
-  <assemblyoffset>1</assemblyoffset>
-</sequencefragment>
-<sequencefragment>
-  <id>AL358573.25.1.14998</id>
+  <assembly_start>310814</assembly_start>
+  <assembly_end>441452</assembly_end>
+  <fragment_ori>1</fragment_ori>
+  <fragment_offset>1</fragment_offset>
+</sequence_fragment>
+<sequence_fragment>
+  <accession>AL358573.25.1.14998</accession>
   <chromosome>virt_chrom_1</chromosome>
   <accession>AL358573</accession>
   <version>25</version>
@@ -307,13 +307,13 @@
   <keyword>T-cell receptor</keyword>
   <keyword>mesotrypsin</keyword>
   <keyword>protease</keyword>
-  <assemblystart>445453</assemblystart>
-  <assemblyend>460450</assemblyend>
-  <assemblyori>1</assemblyori>
-  <assemblyoffset>1</assemblyoffset>
-</sequencefragment>
-<sequencefragment>
-  <id>AL139113.21.1.193280</id>
+  <assembly_start>445453</assembly_start>
+  <assembly_end>460450</assembly_end>
+  <fragment_ori>1</fragment_ori>
+  <fragment_offset>1</fragment_offset>
+</sequence_fragment>
+<sequence_fragment>
+  <accession>AL139113.21.1.193280</accession>
   <chromosome>virt_chrom_1</chromosome>
   <accession>AL139113</accession>
   <version>21</version>
@@ -336,13 +336,13 @@
   <keyword>UBC3B</keyword>
   <keyword>mesotrypsin</keyword>
   <keyword>protease</keyword>
-  <assemblystart>464451</assemblystart>
-  <assemblyend>657730</assemblyend>
-  <assemblyori>1</assemblyori>
-  <assemblyoffset>1</assemblyoffset>
-</sequencefragment>
-<sequencefragment>
-  <id>AL354989.13.1.151990</id>
+  <assembly_start>464451</assembly_start>
+  <assembly_end>657730</assembly_end>
+  <fragment_ori>1</fragment_ori>
+  <fragment_offset>1</fragment_offset>
+</sequence_fragment>
+<sequence_fragment>
+  <accession>AL354989.13.1.151990</accession>
   <chromosome>virt_chrom_1</chromosome>
   <accession>AL354989</accession>
   <version>13</version>
@@ -358,23 +358,23 @@
   <keyword>KIAA1892</keyword>
   <keyword>KIAA491</keyword>
   <keyword>tubulin</keyword>
-  <assemblystart>661731</assemblystart>
-  <assemblyend>813720</assemblyend>
-  <assemblyori>1</assemblyori>
-  <assemblyoffset>1</assemblyoffset>
-</sequencefragment>
-<sequencefragment>
-  <id>AL160051.22.1.30632</id>
+  <assembly_start>661731</assembly_start>
+  <assembly_end>813720</assembly_end>
+  <fragment_ori>1</fragment_ori>
+  <fragment_offset>1</fragment_offset>
+</sequence_fragment>
+<sequence_fragment>
+  <accession>AL160051.22.1.30632</accession>
   <chromosome>virt_chrom_1</chromosome>
   <accession>AL160051</accession>
   <version>22</version>
-  <assemblystart>817721</assemblystart>
-  <assemblyend>848352</assemblyend>
-  <assemblyori>1</assemblyori>
-  <assemblyoffset>1</assemblyoffset>
-</sequencefragment>
-<sequencefragment>
-  <id>AL353662.19.1.167998</id>
+  <assembly_start>817721</assembly_start>
+  <assembly_end>848352</assembly_end>
+  <fragment_ori>1</fragment_ori>
+  <fragment_offset>1</fragment_offset>
+</sequence_fragment>
+<sequence_fragment>
+  <accession>AL353662.19.1.167998</accession>
   <chromosome>virt_chrom_1</chromosome>
   <accession>AL353662</accession>
   <version>19</version>
@@ -386,13 +386,13 @@
   <keyword>RPS8</keyword>
   <keyword>SERPINH1</keyword>
   <keyword>UBAP</keyword>
-  <assemblystart>852353</assemblystart>
-  <assemblyend>1020350</assemblyend>
-  <assemblyori>1</assemblyori>
-  <assemblyoffset>1</assemblyoffset>
-</sequencefragment>
-<sequencefragment>
-  <id>AL356494.13.1.83750</id>
+  <assembly_start>852353</assembly_start>
+  <assembly_end>1020350</assembly_end>
+  <fragment_ori>1</fragment_ori>
+  <fragment_offset>1</fragment_offset>
+</sequence_fragment>
+<sequence_fragment>
+  <accession>AL356494.13.1.83750</accession>
   <chromosome>virt_chrom_1</chromosome>
   <accession>AL356494</accession>
   <version>13</version>
@@ -405,13 +405,13 @@
   <keyword>KIAA1161</keyword>
   <keyword>NUDT2</keyword>
   <keyword>NYD-SP22</keyword>
-  <assemblystart>1024351</assemblystart>
-  <assemblyend>1108100</assemblyend>
-  <assemblyori>1</assemblyori>
-  <assemblyoffset>1</assemblyoffset>
-</sequencefragment>
-<sequencefragment>
-  <id>AL160270.19.1.199114</id>
+  <assembly_start>1024351</assembly_start>
+  <assembly_end>1108100</assembly_end>
+  <fragment_ori>1</fragment_ori>
+  <fragment_offset>1</fragment_offset>
+</sequence_fragment>
+<sequence_fragment>
+  <accession>AL160270.19.1.199114</accession>
   <chromosome>virt_chrom_1</chromosome>
   <accession>AL160270</accession>
   <version>19</version>
@@ -425,13 +425,13 @@
   <keyword>PCD</keyword>
   <keyword>dynactin</keyword>
   <keyword>dynein</keyword>
-  <assemblystart>1112101</assemblystart>
-  <assemblyend>1311214</assemblyend>
-  <assemblyori>1</assemblyori>
-  <assemblyoffset>1</assemblyoffset>
-</sequencefragment>
-<sequencefragment>
-  <id>AL450283.16.1.34008</id>
+  <assembly_start>1112101</assembly_start>
+  <assembly_end>1311214</assembly_end>
+  <fragment_ori>1</fragment_ori>
+  <fragment_offset>1</fragment_offset>
+</sequence_fragment>
+<sequence_fragment>
+  <accession>AL450283.16.1.34008</accession>
   <chromosome>virt_chrom_1</chromosome>
   <accession>AL450283</accession>
   <version>16</version>
@@ -442,13 +442,13 @@
   <keyword>SR-BP1</keyword>
   <keyword>SR31747</keyword>
   <keyword>dynactin</keyword>
-  <assemblystart>1315215</assemblystart>
-  <assemblyend>1349222</assemblyend>
-  <assemblyori>1</assemblyori>
-  <assemblyoffset>1</assemblyoffset>
-</sequencefragment>
-<sequencefragment>
-  <id>AL162231.20.1.186433</id>
+  <assembly_start>1315215</assembly_start>
+  <assembly_end>1349222</assembly_end>
+  <fragment_ori>1</fragment_ori>
+  <fragment_offset>1</fragment_offset>
+</sequence_fragment>
+<sequence_fragment>
+  <accession>AL162231.20.1.186433</accession>
   <chromosome>virt_chrom_1</chromosome>
   <accession>AL162231</accession>
   <version>20</version>
@@ -460,11 +460,11 @@
   <keyword>SCYA21</keyword>
   <keyword>SCYA27</keyword>
   <keyword>galactose-1-phosphate uridylytransferase</keyword>
-  <assemblystart>1353223</assemblystart>
-  <assemblyend>1539655</assemblyend>
-  <assemblyori>1</assemblyori>
-  <assemblyoffset>1</assemblyoffset>
-</sequencefragment>
+  <assembly_start>1353223</assembly_start>
+  <assembly_end>1539655</assembly_end>
+  <fragment_ori>1</fragment_ori>
+  <fragment_offset>1</fragment_offset>
+</sequence_fragment>
 <dna>
   TGAATCCTACTCAGGAGATGGCTAAGACTAAAGGAGACTTTTCCAGGCCTCACAGTAACCGAAGGAAGCAGA
   GACCTATAGGTGTTTAGCTTAACCCATATGAGAATAGAGAACCCAGAGAGGTGGCCATCTCTGGAGAGGGAG
@@ -40747,6 +40747,6 @@ NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN
  </transcript>
 </locus>
 
-</sequenceset>
+</sequence_set>
 </otter>
 

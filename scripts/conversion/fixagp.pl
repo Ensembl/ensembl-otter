@@ -12,14 +12,14 @@ use Bio::EnsEMBL::Clone;
 use Bio::Seq;
 use Bio::SeqIO;
 
-#<sequencefragment>
-#  <id>AL035696.14.1.124034</id>
+#<sequence_fragment>
+#  <accession>AL035696.14.1.124034</accession>
 #  <chromosome>6</chromosome>
-#  <assemblystart>131702</assemblystart>
-#  <assemblyend>253735</assemblyend>
-#  <assemblyori>1</assemblyori>
-#  <assemblyoffset>2001</assemblyoffset>
-#</sequencefragment>
+#  <assembly_start>131702</assembly_start>
+#  <assembly_end>253735</assembly_end>
+#  <fragment_ori>1</fragment_ori>
+#  <fragment_offset>2001</fragment_offset>
+#</sequence_fragment>
 
 #chr14       415988          582668        5     F       AL512310.3          168774            2094      -
 #chr14       582669          719153        6     F       AL391156.3          136600             116      -
@@ -199,14 +199,14 @@ while (<AGP>) {
     print "Not writing $idstr to database\n";
   }
 
-  print "<sequencefragment>\n";
-  print "  <id>$idstr</id>\n";
+  print "<sequence_fragment>\n";
+  print "  <accession>$idstr</accession>\n";
   print "  <chromosome>$chr</chromosome>\n";
-  print "  <assemblystart>" . $arr[1] . "</assemblystart>\n";
-  print "  <assemblyend>"   . $arr[2] . "</assemblyend>\n";
-  print "  <assemblyori>"   . $ori    . "</assemblyori>\n";
-  print "  <assemblyoffset>" . $start . "</assemblyoffset>\n";
-  print "<sequencefragment>\n";
+  print "  <assembly_start>" . $arr[1] . "</assembly_start>\n";
+  print "  <assembly_end>"   . $arr[2] . "</assembly_end>\n";
+  print "  <fragment_ori>"   . $ori    . "</fragment_ori>\n";
+  print "  <fragment_offset>" . $start . "</fragment_offset>\n";
+  print "<sequence_fragment>\n";
 
   $prev_acc = $acc;
   $prev_tpf = $tpf[$count];

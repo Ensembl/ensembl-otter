@@ -34,7 +34,7 @@ foreach my $gene (@$genes1) {
 
 ok(4);
 
-my $str1 = "<otter>\n<sequenceset>\n";
+my $str1 = "<otter>\n<sequence_set>\n";
 
 foreach my $gene (@$genes1) {
   $str1 .=  $gene->toXMLString . "\n";
@@ -44,7 +44,7 @@ if (-e "../data/annotation.xml") {
 }
 open XML,">../data/annotation.xml";
 
-$str1 .= "</sequenceset>\n</otter>\n";
+$str1 .= "</sequence_set>\n</otter>\n";
 print XML $str1;
 
 close(XML);
@@ -55,14 +55,14 @@ open(IN,"<../data/annotation.xml");
 
 my ($genes2,$chr,$chrstart,$chrend) = Bio::Otter::Converter::XML_to_otter(\*IN);
 
-my $str2 = "<otter>\n<sequenceset>\n";
+my $str2 = "<otter>\n<sequence_set>\n";
 
 ok(6);
 
 foreach my $gene (@$genes2) {
   $str2 .=  $gene->toXMLString . "\n";
 }
-$str2 .= "</sequenceset>\n</otter>\n";
+$str2 .= "</sequence_set>\n</otter>\n";
 ok(7);
 open (XML2,">../data/annotation.new.xml");
 print XML2 $str2;

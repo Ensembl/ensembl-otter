@@ -31,14 +31,14 @@ use strict;
 
 <h2>Motivation</h2>
 
-<p>When multiple centres start annotating the human
-genome we will need an agreed upon format to
-exchange data between ourselves.   Commonly used
-formats (GFF, DAS, GTF), although extremely
-useful, are only really designed to sequence
-features structures and are not easily extended
-to include gene structures the extra textual
-information that annotators provide.</p>
+<p>When multiple centres start annotating the
+human genome we will need an agreed upon format
+to exchange data.   Commonly used formats (GFF,
+DAS, GTF), although extremely useful, are only
+really designed to sequence features and are not
+easily extended to include gene structures the
+extra textual information that manual annotation
+provides.</p>
 
 <p>XML is a good solution for this kind of
 structured textural data.  It is well defined, 
@@ -135,7 +135,7 @@ name.</p>
 
 <p>In addition to the names described above, there
 are tags under gene for storing synonyms and
-anotator's remarks. The structure of the gene is
+annotator's remarks. The structure of the gene is
 described by its constituent transcripts.</p>
 
 
@@ -182,52 +182,73 @@ annotation.  A suggested list is:</p>
     <b>Coding</b> - a protein coding transcript.
   </li>
   <li>
-    <b>Non_coding</b> - transcript which is not protein
-    coding or has ambiguous ORFs.
+    <b>Transcript</b> - unclassified non-coding transcript
   </li>
+    <ul>
+      <li>
+        <b>Non_coding</b> - transcript which is not protein
+        coding.
+      </li>
+      <li>
+        <b>Ambiguous_ORF</b> - transcript believed to be protein
+        coding, but with more than one possible open reading frame.
+      </li>
+      <li>
+        <b>Immature</b> - transcript retaining large introns
+        and which is therefore believed to be an immature splice
+        product.
+      </li>
+      <li>
+        <b>Antisense</b> - transcript believed to be an
+        antisense product used in the regulation of
+        the gene to which it belongs.
+      </li>
+    </ul>
   <li>
-    <b>Antisense</b> - transcript believed to be an
-    antisense product used in the regulation of
-    the gene to which it belongs.
-  </li>
-  <li>
-    <b>Immature</b> - transcript based on evidence
-    believed to be an immature splice product.
+    <b>Putative</b> - transcript supported by very little
+    sequence data, but the data does indicate splicing.
   </li>
   <li>
     <b>IG_segment</b> - an immunogobulin variable chain
     region.
   </li>
   <li>
-    <b>Putative</b> - transcript based on a very little
-    sequence data, but which does show splicing.
-  </li>
-  <li>
     <b>Pseudogene</b> - gene with homology to other
     genes and products, but which is believed to
     have lost its function.
   </li>
-  <li>
-    <b>Processed_pseudogene</b> - pseudogene that
-    appears to have been produced by integration
-    of a reverse transcribed mRNA into the
-    genome.
-  </li>
-  <li>
-    <b>Unprocessed_pseudogene</b> - pseudogene that
-    shows evidence of loss of function, but has
-    exon-intron structure.
-  </li>
+    <ul>
+      <li>
+        <b>Processed_pseudogene</b> - pseudogene that
+        appears to have been produced by integration
+        of a reverse transcribed mRNA into the
+        genome.
+      </li>
+      <li>
+        <b>Unprocessed_pseudogene</b> - pseudogene that
+        shows evidence of loss of function, but has
+        exon-intron structure.
+      </li>
+    </ul>
   <li>
     <b>Predicted</b> - transcript partly based on
-    ab-initio predictions.
+    <i>ab-initio</i> predictions.
+  </li>
+  <li>
+    <b>Transposon</b> - an intact, and therefore potentially,
+    active trasposon.
   </li>
 </ul>
 
 <h2>Exon annotations</h2>
 
 <p>The exon's coordinates are given in the
-coordinate system of the assembly described.</p>
+coordinate system of the assembly described.  The
+coordinates are tagged with &lt;start&gt; and
+&lt;end&gt;, where start is less than (or equal
+to) the end, and the &lt;strand&gt; tag is used
+to indicate which strand of the DNA the exon lies
+on.</p>
 
 
 <h1>$title</h1>
@@ -571,7 +592,7 @@ value           0 or 1
 
 <transcript_class>
 description     type of transcript - part of a resticted vocabulary of transcript categories used by the annotation center
-value           Coding or\nNon_coding or\nImmature or\nIG_segment or\nAntisense or\nPutative or\nPseudogene or\nProcessed_pseudogene or\nUnprocessed_pseudogene or\nPredicted
+value           string - see suggested list above
 
 
 <evidence_set>

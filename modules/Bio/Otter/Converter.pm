@@ -255,7 +255,7 @@ sub XML_to_otter {
       } elsif ($currentobj eq 'gene') {
         $geneinfo->name(new Bio::Otter::GeneName(-name => $1));
       } else {
-        die "ERROR: name tag only associated with evidence or transcript - obj is $currentobj\n";
+        die "ERROR: name tag only associated with evidence, transcript or gene - obj is $currentobj\n";
       }
     } elsif (/<\/evidence_set>/) {
       $currentobj = 'tran';
@@ -1196,11 +1196,9 @@ sub ace_to_otter {
                 $traninfo->remark($remark);
             }
         }
-        if (defined($seq_data->{Remark})) {
-            my @rem = @{ $seq_data->{Remark} };
-
-            foreach my $rem (@rem) {
-                my $remark = new Bio::Otter::TranscriptRemark(-remark => $rem);
+        if (my $remark_list = $seq_data->{Remark}) {
+            foreach my $rem (@$remark_list) {
+                my $remark = Bio::Otter::TranscriptRemark->rem(-remark => $rem);
                 $traninfo->remark($remark);
             }
         }

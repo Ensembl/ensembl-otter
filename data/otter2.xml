@@ -1,93 +1,93 @@
 <otter>
-<sequenceset>
+<sequence_set>
   <assembly_type>fake_gp</assembly_type>
-  <sequencefragment>
-    <id>AL356218.22.1.142839</id>
+  <sequence_fragment>
+    <accession>AL356218.22.1.142839</accession>
     <chromosome>virt_chrom_1</chromosome>
-    <assemblystart>1</assemblystart>
-    <assemblyend>142839</assemblyend>
-    <assemblyori>1</assemblyori>
-    <assemblyoffset>1</assemblyoffset>
+    <assembly_start>1</assembly_start>
+    <assembly_end>142839</assembly_end>
+    <fragment_ori>1</fragment_ori>
+    <fragment_offset>1</fragment_offset>
     <accession>AL356218.22.1.142839</accession>
     <version>1</version>
-  </sequencefragment>
+  </sequence_fragment>
 
-  <sequencefragment>
-    <id>AL139008.10.1.159974</id>
+  <sequence_fragment>
+    <accession>AL139008.10.1.159974</accession>
     <chromosome>virt_chrom_1</chromosome>
-    <assemblystart>146840</assemblystart>
-    <assemblyend>306813</assemblyend>
-    <assemblyori>1</assemblyori>
-    <assemblyoffset>1</assemblyoffset>
+    <assembly_start>146840</assembly_start>
+    <assembly_end>306813</assembly_end>
+    <fragment_ori>1</fragment_ori>
+    <fragment_offset>1</fragment_offset>
     <accession>AL139008.10.1.159974</accession>
     <version>1</version>
-  </sequencefragment>
+  </sequence_fragment>
 
-  <sequencefragment>
-    <id>AL356489.14.1.130639</id>
+  <sequence_fragment>
+    <accession>AL356489.14.1.130639</accession>
     <chromosome>virt_chrom_1</chromosome>
-    <assemblystart>310814</assemblystart>
-    <assemblyend>441452</assemblyend>
-    <assemblyori>1</assemblyori>
-    <assemblyoffset>1</assemblyoffset>
+    <assembly_start>310814</assembly_start>
+    <assembly_end>441452</assembly_end>
+    <fragment_ori>1</fragment_ori>
+    <fragment_offset>1</fragment_offset>
     <accession>AL356489.14.1.130639</accession>
     <version>1</version>
-  </sequencefragment>
+  </sequence_fragment>
 
-  <sequencefragment>
-    <id>AL358573.25.1.14998</id>
+  <sequence_fragment>
+    <accession>AL358573.25.1.14998</accession>
     <chromosome>virt_chrom_1</chromosome>
-    <assemblystart>445453</assemblystart>
-    <assemblyend>460450</assemblyend>
-    <assemblyori>1</assemblyori>
-    <assemblyoffset>1</assemblyoffset>
+    <assembly_start>445453</assembly_start>
+    <assembly_end>460450</assembly_end>
+    <fragment_ori>1</fragment_ori>
+    <fragment_offset>1</fragment_offset>
     <accession>AL358573.25.1.14998</accession>
     <version>1</version>
-  </sequencefragment>
+  </sequence_fragment>
 
-  <sequencefragment>
-    <id>AL139113.21.1.193280</id>
+  <sequence_fragment>
+    <accession>AL139113.21.1.193280</accession>
     <chromosome>virt_chrom_1</chromosome>
-    <assemblystart>464451</assemblystart>
-    <assemblyend>657730</assemblyend>
-    <assemblyori>1</assemblyori>
-    <assemblyoffset>1</assemblyoffset>
+    <assembly_start>464451</assembly_start>
+    <assembly_end>657730</assembly_end>
+    <fragment_ori>1</fragment_ori>
+    <fragment_offset>1</fragment_offset>
     <accession>AL139113.21.1.193280</accession>
     <version>1</version>
-  </sequencefragment>
+  </sequence_fragment>
 
-  <sequencefragment>
-    <id>AL354989.13.1.151990</id>
+  <sequence_fragment>
+    <accession>AL354989.13.1.151990</accession>
     <chromosome>virt_chrom_1</chromosome>
-    <assemblystart>661731</assemblystart>
-    <assemblyend>813720</assemblyend>
-    <assemblyori>1</assemblyori>
-    <assemblyoffset>1</assemblyoffset>
+    <assembly_start>661731</assembly_start>
+    <assembly_end>813720</assembly_end>
+    <fragment_ori>1</fragment_ori>
+    <fragment_offset>1</fragment_offset>
     <accession>AL354989.13.1.151990</accession>
     <version>1</version>
-  </sequencefragment>
+  </sequence_fragment>
 
-  <sequencefragment>
-    <id>AL160051.22.1.30632</id>
+  <sequence_fragment>
+    <accession>AL160051.22.1.30632</accession>
     <chromosome>virt_chrom_1</chromosome>
-    <assemblystart>817721</assemblystart>
-    <assemblyend>848352</assemblyend>
-    <assemblyori>1</assemblyori>
-    <assemblyoffset>1</assemblyoffset>
+    <assembly_start>817721</assembly_start>
+    <assembly_end>848352</assembly_end>
+    <fragment_ori>1</fragment_ori>
+    <fragment_offset>1</fragment_offset>
     <accession>AL160051.22.1.30632</accession>
     <version>1</version>
-  </sequencefragment>
+  </sequence_fragment>
 
-  <sequencefragment>
-    <id>AL353662.19.1.167998</id>
+  <sequence_fragment>
+    <accession>AL353662.19.1.167998</accession>
     <chromosome>virt_chrom_1</chromosome>
-    <assemblystart>852353</assemblystart>
-    <assemblyend>1000000</assemblyend>
-    <assemblyori>1</assemblyori>
-    <assemblyoffset>1</assemblyoffset>
+    <assembly_start>852353</assembly_start>
+    <assembly_end>1000000</assembly_end>
+    <fragment_ori>1</fragment_ori>
+    <fragment_offset>1</fragment_offset>
     <accession>AL353662.19.1.167998</accession>
     <version>1</version>
-  </sequencefragment>
+  </sequence_fragment>
 
   <locus>
     <locus_type>otter</locus_type>
@@ -1064,5 +1064,5 @@
 </locus>
 
 
-</sequenceset>
+</sequence_set>
 </otter>

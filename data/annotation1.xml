@@ -1,160 +1,160 @@
 <otter>
-<sequenceset>
+<sequence_set>
 <assembly_type>test_assembly</assembly_type>
-<sequencefragment>
-  <id>AB000878.1.1.33983</id>
+<sequence_fragment>
+  <accession>AB000878.1.1.33983</accession>
   <chromosome>CHR</chromosome>
-  <assemblystart>1</assemblystart>
-  <assemblyend>33983</assemblyend>
-  <assemblyori>1/assemblyori>
-</sequencefragment>
-<sequencefragment>
-  <id>AB000879.1.1.39436</id>
+  <assembly_start>1</assembly_start>
+  <assembly_end>33983</assembly_end>
+  <fragment_ori>1/fragment_ori>
+</sequence_fragment>
+<sequence_fragment>
+  <accession>AB000879.1.1.39436</accession>
   <chromosome>CHR</chromosome>
-  <assemblystart>33984</assemblystart>
-  <assemblyend>73419</assemblyend>
-  <assemblyori>1/assemblyori>
-</sequencefragment>
-<sequencefragment>
-  <id>AB000880.1.1.22973</id>
+  <assembly_start>33984</assembly_start>
+  <assembly_end>73419</assembly_end>
+  <fragment_ori>1/fragment_ori>
+</sequence_fragment>
+<sequence_fragment>
+  <accession>AB000880.1.1.22973</accession>
   <chromosome>CHR</chromosome>
-  <assemblystart>73420</assemblystart>
-  <assemblyend>96392</assemblyend>
-  <assemblyori>1/assemblyori>
-</sequencefragment>
-<sequencefragment>
-  <id>AB014077.1.1.30452</id>
+  <assembly_start>73420</assembly_start>
+  <assembly_end>96392</assembly_end>
+  <fragment_ori>1/fragment_ori>
+</sequence_fragment>
+<sequence_fragment>
+  <accession>AB014077.1.1.30452</accession>
   <chromosome>CHR</chromosome>
-  <assemblystart>96393</assemblystart>
-  <assemblyend>126844</assemblyend>
-  <assemblyori>1/assemblyori>
-</sequencefragment>
-<sequencefragment>
-  <id>AB014078.1.1.22738</id>
+  <assembly_start>96393</assembly_start>
+  <assembly_end>126844</assembly_end>
+  <fragment_ori>1/fragment_ori>
+</sequence_fragment>
+<sequence_fragment>
+  <accession>AB014078.1.1.22738</accession>
   <chromosome>CHR</chromosome>
-  <assemblystart>126845</assemblystart>
-  <assemblyend>149582</assemblyend>
-  <assemblyori>1/assemblyori>
-</sequencefragment>
-<sequencefragment>
-  <id>AB014079.1.1.13976</id>
+  <assembly_start>126845</assembly_start>
+  <assembly_end>149582</assembly_end>
+  <fragment_ori>1/fragment_ori>
+</sequence_fragment>
+<sequence_fragment>
+  <accession>AB014079.1.1.13976</accession>
   <chromosome>CHR</chromosome>
-  <assemblystart>149583</assemblystart>
-  <assemblyend>163558</assemblyend>
-  <assemblyori>1/assemblyori>
-</sequencefragment>
-<sequencefragment>
-  <id>AB014080.1.1.32114</id>
+  <assembly_start>149583</assembly_start>
+  <assembly_end>163558</assembly_end>
+  <fragment_ori>1/fragment_ori>
+</sequence_fragment>
+<sequence_fragment>
+  <accession>AB014080.1.1.32114</accession>
   <chromosome>CHR</chromosome>
-  <assemblystart>163559</assemblystart>
-  <assemblyend>195672</assemblyend>
-  <assemblyori>1/assemblyori>
-</sequencefragment>
-<sequencefragment>
-  <id>AB014081.1.1.13829</id>
+  <assembly_start>163559</assembly_start>
+  <assembly_end>195672</assembly_end>
+  <fragment_ori>1/fragment_ori>
+</sequence_fragment>
+<sequence_fragment>
+  <accession>AB014081.1.1.13829</accession>
   <chromosome>CHR</chromosome>
-  <assemblystart>195673</assemblystart>
-  <assemblyend>209501</assemblyend>
-  <assemblyori>1/assemblyori>
-</sequencefragment>
-<sequencefragment>
-  <id>AB014082.1.1.29591</id>
+  <assembly_start>195673</assembly_start>
+  <assembly_end>209501</assembly_end>
+  <fragment_ori>1/fragment_ori>
+</sequence_fragment>
+<sequence_fragment>
+  <accession>AB014082.1.1.29591</accession>
   <chromosome>CHR</chromosome>
-  <assemblystart>209502</assemblystart>
-  <assemblyend>239092</assemblyend>
-  <assemblyori>1/assemblyori>
-</sequencefragment>
-<sequencefragment>
-  <id>AB014083.1.1.22715</id>
+  <assembly_start>209502</assembly_start>
+  <assembly_end>239092</assembly_end>
+  <fragment_ori>1/fragment_ori>
+</sequence_fragment>
+<sequence_fragment>
+  <accession>AB014083.1.1.22715</accession>
   <chromosome>CHR</chromosome>
-  <assemblystart>239093</assemblystart>
-  <assemblyend>261807</assemblyend>
-  <assemblyori>1/assemblyori>
-</sequencefragment>
-<sequencefragment>
-  <id>AB014084.1.1.19844</id>
+  <assembly_start>239093</assembly_start>
+  <assembly_end>261807</assembly_end>
+  <fragment_ori>1/fragment_ori>
+</sequence_fragment>
+<sequence_fragment>
+  <accession>AB014084.1.1.19844</accession>
   <chromosome>CHR</chromosome>
-  <assemblystart>261808</assemblystart>
-  <assemblyend>281651</assemblyend>
-  <assemblyori>1/assemblyori>
-</sequencefragment>
-<sequencefragment>
-  <id>AB014085.1.1.38093</id>
+  <assembly_start>261808</assembly_start>
+  <assembly_end>281651</assembly_end>
+  <fragment_ori>1/fragment_ori>
+</sequence_fragment>
+<sequence_fragment>
+  <accession>AB014085.1.1.38093</accession>
   <chromosome>CHR</chromosome>
-  <assemblystart>281652</assemblystart>
-  <assemblyend>319744</assemblyend>
-  <assemblyori>1/assemblyori>
-</sequencefragment>
-<sequencefragment>
-  <id>AB014086.1.1.28771</id>
+  <assembly_start>281652</assembly_start>
+  <assembly_end>319744</assembly_end>
+  <fragment_ori>1/fragment_ori>
+</sequence_fragment>
+<sequence_fragment>
+  <accession>AB014086.1.1.28771</accession>
   <chromosome>CHR</chromosome>
-  <assemblystart>319745</assemblystart>
-  <assemblyend>348515</assemblyend>
-  <assemblyori>1/assemblyori>
-</sequencefragment>
-<sequencefragment>
-  <id>AB014087.1.1.27356</id>
+  <assembly_start>319745</assembly_start>
+  <assembly_end>348515</assembly_end>
+  <fragment_ori>1/fragment_ori>
+</sequence_fragment>
+<sequence_fragment>
+  <accession>AB014087.1.1.27356</accession>
   <chromosome>CHR</chromosome>
-  <assemblystart>348516</assemblystart>
-  <assemblyend>375871</assemblyend>
-  <assemblyori>1/assemblyori>
-</sequencefragment>
-<sequencefragment>
-  <id>AB014088.1.1.32797</id>
+  <assembly_start>348516</assembly_start>
+  <assembly_end>375871</assembly_end>
+  <fragment_ori>1/fragment_ori>
+</sequence_fragment>
+<sequence_fragment>
+  <accession>AB014088.1.1.32797</accession>
   <chromosome>CHR</chromosome>
-  <assemblystart>375872</assemblystart>
-  <assemblyend>408668</assemblyend>
-  <assemblyori>1/assemblyori>
-</sequencefragment>
-<sequencefragment>
-  <id>AB023048.1.1.192650</id>
+  <assembly_start>375872</assembly_start>
+  <assembly_end>408668</assembly_end>
+  <fragment_ori>1/fragment_ori>
+</sequence_fragment>
+<sequence_fragment>
+  <accession>AB023048.1.1.192650</accession>
   <chromosome>CHR</chromosome>
-  <assemblystart>408669</assemblystart>
-  <assemblyend>601318</assemblyend>
-  <assemblyori>1/assemblyori>
-</sequencefragment>
-<sequencefragment>
-  <id>AB023049.1.1.123554</id>
+  <assembly_start>408669</assembly_start>
+  <assembly_end>601318</assembly_end>
+  <fragment_ori>1/fragment_ori>
+</sequence_fragment>
+<sequence_fragment>
+  <accession>AB023049.1.1.123554</accession>
   <chromosome>CHR</chromosome>
-  <assemblystart>601319</assemblystart>
-  <assemblyend>724872</assemblyend>
-  <assemblyori>1/assemblyori>
-</sequencefragment>
-<sequencefragment>
-  <id>AB023050.1.1.112018</id>
+  <assembly_start>601319</assembly_start>
+  <assembly_end>724872</assembly_end>
+  <fragment_ori>1/fragment_ori>
+</sequence_fragment>
+<sequence_fragment>
+  <accession>AB023050.1.1.112018</accession>
   <chromosome>CHR</chromosome>
-  <assemblystart>724873</assemblystart>
-  <assemblyend>836890</assemblyend>
-  <assemblyori>1/assemblyori>
-</sequencefragment>
-<sequencefragment>
-  <id>AB023051.1.1.90244</id>
+  <assembly_start>724873</assembly_start>
+  <assembly_end>836890</assembly_end>
+  <fragment_ori>1/fragment_ori>
+</sequence_fragment>
+<sequence_fragment>
+  <accession>AB023051.1.1.90244</accession>
   <chromosome>CHR</chromosome>
-  <assemblystart>836891</assemblystart>
-  <assemblyend>927134</assemblyend>
-  <assemblyori>1/assemblyori>
-</sequencefragment>
-<sequencefragment>
-  <id>AB023052.1.1.28719</id>
+  <assembly_start>836891</assembly_start>
+  <assembly_end>927134</assembly_end>
+  <fragment_ori>1/fragment_ori>
+</sequence_fragment>
+<sequence_fragment>
+  <accession>AB023052.1.1.28719</accession>
   <chromosome>CHR</chromosome>
-  <assemblystart>927135</assemblystart>
-  <assemblyend>955853</assemblyend>
-  <assemblyori>1/assemblyori>
-</sequencefragment>
-<sequencefragment>
-  <id>AB023053.1.1.14868</id>
+  <assembly_start>927135</assembly_start>
+  <assembly_end>955853</assembly_end>
+  <fragment_ori>1/fragment_ori>
+</sequence_fragment>
+<sequence_fragment>
+  <accession>AB023053.1.1.14868</accession>
   <chromosome>CHR</chromosome>
-  <assemblystart>955854</assemblystart>
-  <assemblyend>970721</assemblyend>
-  <assemblyori>1/assemblyori>
-</sequencefragment>
-<sequencefragment>
-  <id>AB023055.1.1.162383</id>
+  <assembly_start>955854</assembly_start>
+  <assembly_end>970721</assembly_end>
+  <fragment_ori>1/fragment_ori>
+</sequence_fragment>
+<sequence_fragment>
+  <accession>AB023055.1.1.162383</accession>
   <chromosome>CHR</chromosome>
-  <assemblystart>970722</assemblystart>
-  <assemblyend>1000000</assemblyend>
-  <assemblyori>1/assemblyori>
-</sequencefragment>
+  <assembly_start>970722</assembly_start>
+  <assembly_end>1000000</assembly_end>
+  <fragment_ori>1/fragment_ori>
+</sequence_fragment>
 
 <locus>
  <locus_type>gene</locus_type>
@@ -346,5 +346,5 @@
   </exon_set>
  </transcript>
 </locus>
-</sequenceset>
+</sequence_set>
 </otter>
