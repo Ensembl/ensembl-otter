@@ -40,7 +40,6 @@ sub _generic_sql_fetch {
 	my @obj;
 
 	while (my $ref = $sth->fetchrow_hashref) {
-            print "OBJ $ref\n";
 	    my $obj = new Bio::Otter::Evidence;
 	    $obj->dbID($ref->{evidence_id});
 	    $obj->name($ref->{evidence_name});
