@@ -89,7 +89,7 @@ my $otter_db;
         $submission_sth->execute($accession , $accession, $version );
         my ( $username , $comment , $time);
         $submission_sth->bind_columns( \$username , \$comment , \$time );
-
+        
 
 
         my $is_current = 'Y';               ## set initaially to 'Y' for the first note (most recent) copied over, then set to 'N'
@@ -122,7 +122,7 @@ sub insert_note{
    # args should be in order : $contig_id , $is_current , $comment , $time , $username
    
    my $sth = $otter_db->prepare(qq{
-                                    INSERT INTO sequence_note ( author_id , contig_id , is_current , note_time , note) 
+                                    INSERT INTO sequence_note ( author_id , contig_id , is_current , note , note_time ) 
                                     SELECT author_id , ?, ? , ? , ?
                                     FROM  author 
                                     WHERE author_email = ?
