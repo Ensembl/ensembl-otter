@@ -59,7 +59,7 @@ sub do_getopt {
         #warn "Getting options from '$file'";
         if (my $file_opts = options_from_file($file)) {
             foreach my $field (@option_fields) {
-                if (! $defaults->{$field} and $file_opts->{$field}) {
+                if (! defined $defaults->{$field} and defined $file_opts->{$field}) {
                     $defaults->{$field} = $file_opts->{$field};
                 }
             }
@@ -113,7 +113,7 @@ sub options_from_file {
         }
         
         if (/([^=]+)\s*=\s*([^=]+)/) {
-            #warn "Got '$1' = '$2'";
+            #warn "Got '$1' = '$2'\n";
             $opts->{$1} = $2;
         }
     }
@@ -125,8 +125,8 @@ sub options_from_file {
 
 sub all_options_are_filled {
     foreach my $field (@option_fields) {
-        unless ($defaults->{$field}) {
-            #warn "Missing '$field'";
+        unless (defined $defaults->{$field}) {
+            #warn "Missing '$field'\n";
             return 0;
         }
     }

@@ -307,8 +307,8 @@ sub save_otter_slice {
     my $ace    = $self->aceperl_db_handle;
     my $client = $self->Client or confess "No Client attached";
     
-    # Get the Genome_Sequence object ...
-    $ace->raw_query(qq{find Genome_Sequence "$name"});
+    # Get the Assembly object ...
+    $ace->raw_query(qq{find Assembly "$name"});
     my $ace_txt = $ace->raw_query('show -a');
 
     # ... its SubSequences ...
@@ -324,7 +324,7 @@ sub save_otter_slice {
     $ace_txt .= $ace->raw_query('show -a');
 
     # Then get the information for the TilePath
-    $ace->raw_query(qq{find Genome_Sequence "$name"});
+    $ace->raw_query(qq{find Assembly "$name"});
     $ace->raw_query('Follow AGP_Fragment');
     # Do show -a on a restricted list of tags
     foreach my $tag (qw{
@@ -368,7 +368,7 @@ sub unlock_otter_slice {
     my $ace    = $self->aceperl_db_handle;
     my $client = $self->Client or confess "No Client attached";
     
-    $ace->raw_query(qq{find Genome_Sequence "$name"});
+    $ace->raw_query(qq{find Assembly "$name"});
     my $ace_txt = $ace->raw_query('show -a');
     $ace->raw_query('Follow AGP_Fragment');
     $ace_txt .= $ace->raw_query('show -a');

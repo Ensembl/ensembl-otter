@@ -596,7 +596,7 @@ sub otter_to_ace {
 
     my $slice_name = $slice->display_id;
 
-    my $str =  qq{\n\nSequence : "$slice_name"\nGenomic_canonical\n};
+    my $str =  qq{\n\nSequence : "$slice_name"\nAssembly\n};
     $str .= sprintf qq{Assembly_name "%s"\n}, $slice->assembly_type;
 
     unless (@$path) {
@@ -1023,18 +1023,18 @@ sub ace_to_otter {
                         }
                 }
 
-                elsif (/^Genomic_canonical/) {
+                elsif (/^Assembly/) {
                     if ($currname =~ /(\S+)\.(\d+)-(\d+)/) {
                         $chr_name  = $1;
                         $chr_start = $2;
                         $chr_end   = $3;
                     } else {
-                       print STDERR "Warning: Genomic_canonical sequence is not in the 6.1-10000 format [$currname].  Can't convert to chr, start,end\n";
+                       print STDERR "Warning: Assembly sequence is not in the 6.1-10000 format [$currname].  Can't convert to chr, start,end\n";
                     }
                     #print STDERR "Found contig\n";
 
                     if ($slice_name) {
-                        die "Only one Genomic_canonical sequence allowed\n";
+                        die "Only one Assembly sequence allowed\n";
                     } else {
                         $slice_name = $currname;
                     }
