@@ -481,7 +481,7 @@ sub default_cursor {
 		}	
 	    }
 	    if($opt_d){
-                push($opt_d,'-d');
+                push(@lace,'-d');
             }
 	    exec(@lace, @seq_name_list);
         }
