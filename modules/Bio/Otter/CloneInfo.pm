@@ -174,7 +174,7 @@ sub equals {
             }
         }
         if ($found == 0) {
-            warn "Different keywords\n";
+            warn "Different keywords: '$rem' not found\n";
             return 0;
         }
     }
