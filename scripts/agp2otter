@@ -1,7 +1,5 @@
 #!/usr/local/bin/perl
 
-use strict;
-$| = 1;
 #chr14            1          106333        1     F       AL603712.1          130305           23973      -
 #chr14       106334          169641        2     F       AL589743.4          125813           62506      -
 #chr14       169642          318764        3     F       AL589182.2          149723             601      -
@@ -9,12 +7,29 @@ $| = 1;
 #chr14       415988          582668        5     F       AL512310.3          168774            2094      -
 #chr14       582669          719153        6     F       AL391156.3          136600             116      -
 
+use strict;
+use Getopt::Long;
+
+$| = 1;
+
+my $chrname  = 14;
+my $path     = 'GENOSCOPE';
+my $agpfile  = undef;
+
+&GetOptions( 'chr:s'   => \$chrname,
+             'path:s'  => \$path,
+             'agp:s'   => \$agpfile,
+            );
+
+if (!defined($chrname) || !defined($agpfile) || !defined($path)) {
+  die "Missing required args\n";
+}
+
 
 my %contigs;
-my $chrname = $ARGV[0];
 
 my $chrid = 1;
-open(IN,"<$ARGV[1]");
+open(IN,"<$agpfile");
 
 my $contignum = 1;
 my $clonenum  = 1;
@@ -100,7 +115,7 @@ while (<IN>) {
     
     print STDERR "Length : $len\n";
 
-    print "insert into assembly(chromosome_id,chr_start,chr_end,superctg_name,superctg_start,superctg_end,superctg_ori,contig_id,contig_start,contig_end,contig_ori,type) values($chrid,$chrstart,$chrend,\'$chrname\',$chrstart,$chrend,1,$contignum,$accstart,$accend,$strand,\'GENOSCOPE\');\n";
+    print "insert into assembly(chromosome_id,chr_start,chr_end,superctg_name,superctg_start,superctg_end,superctg_ori,contig_id,contig_start,contig_end,contig_ori,type) values($chrid,$chrstart,$chrend,\'$chrname\',$chrstart,$chrend,1,$contignum,$accstart,$accend,$strand,\'$path\');\n";
     print "insert into clone(clone_id,name,embl_acc,version,embl_version,htg_phase,created,modified) values($clonenum,'$acc','$acc',$version,$version,4,now(),now());\n";
     print "insert into contig(contig_id,name,clone_id,length,embl_offset,dna_id) values($contignum,'$contigid',$clonenum,$len,1,$dnanum);\n";
     
