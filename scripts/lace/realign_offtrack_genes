@@ -1,0 +1,140 @@
+#!/usr/local/bin/perl -w
+
+### realign_offtrack_genes
+
+use strict;
+
+use Bio::Otter::Lace::Defaults;
+use Hum::Analysis::Factory::ExonLocator;
+use Hum::Ace::SubSeq;
+use Hum::Ace::GeneMethod;
+
+{
+    my( $dataset_name,
+        $sequence_set,
+        $start_acc,
+        $end_acc,
+        );
+
+    my $usage = sub { exec('perldoc', $0) };
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'       => $usage,
+        'dataset=s'     => \$dataset_name,
+        'chr|set=s'     => \$sequence_set,
+        'start_acc=s'   => \$start_acc,
+        'end_acc=s'     => \$end_acc,
+        ) or $usage->();
+    $usage->() unless $dataset_name and $sequence_set and $start_acc and $end_acc;
+
+    # Connect to Ensembl/Otter database and fetch adaptors
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    my $ss = $ds->get_SequenceSet_by_name($sequence_set);
+    $ds->fetch_all_CloneSequences_for_SequenceSet($ss);
+    my $gene_aptr = $ds->fetch_cached_DBAdaptor->get_GeneAdaptor;
+    
+    select_CloneSequence_contig($ss, $start_acc, $end_acc);
+    my ($genes, $tiles) = otter_objects_from_contig($cl, $ds, $ss);
+    
+    my $acc_list = accession_list_hash_from_tile_path($tiles);
+    foreach my $slice_gene (@$genes) {
+        next unless $slice_gene->gene_info->truncated_flag;
+        my $whole_gene = $gene_aptr->fetch_by_stable_id($slice_gene->stable_id);
+        next unless gene_is_off_track($whole_gene, $acc_list);
+        my $name = $gene->gene_info->name->name;
+        my $stable_id = $gene->stable_id;
+        print STDERR "Found off track gene '$name' ($stable_id)\n";
+    }
+}
+
+sub gene_is_off_track {
+    my( $gene, $slice_acc_list ) = @_;
+    
+    foreach my $exon (@{$gene->get_all_Exons}) {
+        my $exon_list = $exon->isa('Bio::EnsEMBL::StickyExon')
+            ? $exon->get_all_component_Exons[]
+            : [$exon];
+        foreach my $exon (@$exon_list) {
+            my $clone_acc = $exon->contig->clone->embl_id;
+            unless ($slice_acc_list->{$clone_acc}) {
+                # Exon is attached to a clone who's accession is
+                # not in the slice, so gene is really truncated.
+                return 0;
+            }
+        }
+    }
+    # We found all the accessions the gene is attached to
+    # in the list of accessions from the tile_path
+    return 1;
+}
+
+sub accession_list_hash_from_tile_path {
+    my( $tile_path ) = @_;
+    
+    my $acc_list = {};
+    foreach my $tile (@$tile_path) {
+        my $acc = $tile->component_Seq->clone->embl_id;
+        $acc_list->{$acc} = 1;
+    }
+    return $acc_list;
+}
+
+sub otter_objects_from_contig {
+    my( $cl, $ds, $ss ) = @_;
+    
+    my $tmp = Bio::Otter::Lace::TempFile->new;
+    $tmp->name("realign-$$.xml");
+    my $write = $tmp->write_file_handle;
+    my $xml_string = $cl->get_xml_for_contig_from_Dataset($ss->selected_CloneSequences, $ds);
+    print $write $xml_string ;
+    
+    my ($genes, $slice, $sequence, $tiles, $feature_set) =
+        Bio::Otter::Converter::XML_to_otter($tmp->read_file_handle);
+    return ($genes, $tiles);
+}
+
+sub select_CloneSequence_contig {
+    my( $ss, $start_acc, $end_acc ) = @_;
+    
+    my $ctg = [];
+    my $in_contig = 0;
+    my $cs_list = $ss->CloneSequence_list;
+    foreach my $cs (@$cs_list) {
+        my $acc = $cs->accesssion;
+        if ($acc eq $start_acc) {
+            $in_contig = 1;
+        }
+        if ($in_contig) {
+            push(@$ctg, $cs);
+        }
+        if ($acc eq $end_acc) {
+            if ($in_contig) {
+                $in_contig = 0;
+            } else {
+                die "Found end '$end_acc' but not start '$start_acc'\n";
+            }
+        }
+    }
+    if (@$ctg == 0) {
+        die "Failed to find start '$start_acc'\n";
+    }
+    elsif ($in_contig) {
+        die "Failed to find end '$end_acc'\n";
+    }
+    
+    $ss->selected_CloneSequences($ctg);
+}
+
+
+__END__
+
+=head1 NAME - realign_offtrack_genes
+
+=head1 SYNOPSIS
+
+  realign_offtrack_genes -dataset <NAME> -set <NAME> -start_acc <ACCESSION> -end_acc <ACCESSION>
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
