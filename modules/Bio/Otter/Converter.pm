@@ -160,11 +160,16 @@ sub XML_to_otter {
           $translation->start($start_pos);
           if ($start_exon->strand == 1 && $start_exon->start != $tl_start) {
             $start_exon->phase(-1);
+            $start_exon->end_phase(($start_exon->length-$start_pos+1)%3);
           } elsif ($start_exon->strand == -1 && $start_exon->end != $tl_start) {
             $start_exon->phase(-1);
+            $start_exon->end_phase(($start_exon->length-$start_pos+1)%3);
           }
           $translation->end_Exon($end_exon);
           $translation->end($end_pos);
+          if ($end_exon->length != $end_pos) {
+            $end_exon->end_phase(-1);
+          }
           $tran->translation($translation);
         }
        } elsif (defined($tl_start) || defined($tl_end)) {
