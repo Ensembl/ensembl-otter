@@ -11,9 +11,9 @@ use DBI;
 #Make DB connection
 
     my $user = 'ensro';
-    my $host   = 'humsrv1';
-    my $dbname = 'submissions';
-    my $port   = 3399;
+    my $host   = 'ecs1g';
+    my $dbname = 'tropicalis_est';
+    my $port   = 3306;
     my $password = undef;
     
     my $dbh = DBI->connect(
