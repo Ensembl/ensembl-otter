@@ -1,0 +1,220 @@
+#!/nfs/humace2/hum/bin/perl -w
+
+### canvas_drag_drop
+
+use strict;
+use CanvasWindow;
+use DBI;
+
+{
+
+#Make DB connection
+
+    my $user = 'ensro';
+    my $host   = 'humsrv1';
+    my $dbname = 'submissions';
+    my $port   = 3399;
+    my $password = undef;
+    
+    my $dbh = DBI->connect(
+        "DBI:mysql:host=$host;port=$port;database=$dbname",
+        $user, $password, {RaiseError => 1}
+        );
+    
+    my $query;
+    my $sth;
+    
+    $query = "show tables";
+    $sth = $dbh->prepare($query);
+    $sth->execute();
+    my @tablelist;
+    my @table_titles;
+    
+    while ( my $each_table = $sth->fetchrow ){
+    
+    my $fieldlist;
+
+        $query = "describe $each_table";
+        my $table_sth = $dbh->prepare($query);
+        $table_sth->execute();
+
+        push @table_titles,$each_table;
+
+        while ( my @desc = $table_sth->fetchrow ) {
+            my ($field,$type,$null,$key,$default,$extra) = @desc;
+            $fieldlist .= qq{$field\n};
+        }
+        
+         push @tablelist,$fieldlist;
+    
+    }
+    
+    my $mw = CanvasWindow::MainWindow->new;
+    $mw->title('Drag & Drop');
+    $mw->bind(<Control-q>, sub {$mw->destroy});
+    $mw->bind(<Control-Q>, sub {$mw->destroy});
+    
+    my $cw = CanvasWindow->new($mw);
+    
+    my $canvas = $cw->canvas;
+
+    #$canvas->Tk::bind('<ButtonPress-1>',    [ \&save_current, Tk::Ev('x'), Tk::Ev('y') ] );
+    $canvas->Tk::bind('<ButtonPress-1>' => \&save_current );
+    $canvas->Tk::bind('<Button1-Motion>' => [ \&move_current, Tk::Ev('x'), Tk::Ev('y') ] );
+    $canvas->Tk::bind('<ButtonRelease-1>' => [ \&snap_to_canvas, Tk::Ev('x'), Tk::Ev('y') ] );
+
+    
+
+    my $i = 0; 
+    my ($xpos,$ypos, $xmax, $ymax) = 10;
+
+
+    for ( my $y = 0 ; $y<= sqrt(scalar(@tablelist)) ; $y++ ) {
+        for (my $x = 0; $x <= sqrt(scalar(@tablelist)); $x++) {
+            my $group = "group-$i";
+            my $title_tag = "group-$i";
+                if ( defined $tablelist[$i] ){
+                    #chomp $tablelist[$i];
+                    my $text = $canvas ->createText(
+                    $xpos+50, $ypos+50,    
+                    -text => $table_titles[$i],
+                    -font => ['helvetica','14','bold'],
+                    -tag => $title_tag,
+                    );
+
+                    my ( $tx1, $ty1, $tx2, $ty2 ) = $canvas->bbox($title_tag);
+
+                    $text = $canvas ->createText(
+                    $tx1, $ty1+30,    
+                    -text => $tablelist[$i],
+                    -anchor => 'nw',
+                    -font => ['helvetica','14','normal'],
+                    -tag => $group,
+                    ); 
+
+                    my ( $x1, $y1, $x2, $y2 ) = $canvas->bbox($group);
+
+                    my $col_rec = $canvas->createRectangle(
+                        $tx1-5, $ty1+25, $x2+5, $y2-5 ,
+                        -tag => $group,
+                        -fill => 'white',
+                        -outline => undef,
+                        );
+
+
+                    $canvas->lower($col_rec, 'all');
+
+                    my $rec = $canvas->createRectangle(
+                    $tx1-10, $ty1-10, $x2+10, $y2,
+                    -tag => $group,
+                    -fill => 'lightgrey',
+                    );
+
+                    $canvas->lower($rec, 'all');
+                    $canvas->raise($group, 'all');
+
+                    $xpos = ($xpos + ( $x2-$x1 )) + 100;
+
+                    if ( ($y2 - $y1) > $ymax ) { $ymax = ( $y2 - $y1 ) };
+
+                    $i++;
+
+        }                  
+
+        }
+        $xpos = 1;
+        $ypos =$ypos+$ymax + 50;
+    }
+    #my $rec = $canvas->createRectangle(1,1,2000,4000,
+    #        -fill       => 'white',
+    #        -outline    => '#999999',
+    #        -tags       => ['bkgd_rec'],
+    #        );
+
+    #$canvas->lower($rec, 'all');
+    
+    
+    $cw->fix_window_min_max_sizes;
+    
+    $canvas->toplevel->bind('<Control-p>', sub{
+        $cw->page_width(591);
+        $cw->page_height(841);
+        $cw->landscape(1);
+        my @files = $cw->print_postscript("$dbname-schema");
+        warn "Printed to files:\n",
+            map "  $_\n", @files;
+        });
+    
+    Tk::MainLoop();
+    
+}
+
+{
+    my( $last_x, $last_y, $current_obj );
+    
+    sub save_current {
+        my( $canvas ) = @_;
+        
+        ($last_x, $last_y) = $canvas->pointerxy;
+        my $i = $canvas->find('withtag', 'current');
+        my ($group) = grep /^group-/, $canvas->gettags($i);
+        if ($group) {
+            $current_obj = $group;
+        } else {
+            $current_obj = undef;
+        }
+    }
+    
+    sub move_current {
+        my( $canvas ) = @_;
+        
+        my ($x, $y) = $canvas->pointerxy;
+
+        my $x_diff = $x - $last_x;
+        my $y_diff = $y - $last_y;
+
+        ($last_x, $last_y) = ($x, $y);
+
+
+        #$canvas->move('current', 0, $y_diff);
+        #$canvas->move('current', $x_diff, 0);
+        $canvas->move($current_obj, $x_diff, $y_diff);
+        
+        
+        snap_to_canvas($canvas);     
+    }
+    
+    sub snap_to_canvas {
+        my( $canvas ) = @_;
+        
+        my @bkgd = $canvas->bbox('all');
+        my @curr = $canvas->bbox($current_obj);
+        
+        my($x_diff, $y_diff) = (0,0);
+        if ($curr[0] < $bkgd[0]) {
+            $x_diff = $bkgd[0] - $curr[0];
+        }
+        elsif ($curr[2] > $bkgd[2]) {
+            $x_diff = $bkgd[2] - $curr[2];
+        }
+        
+        if ($curr[1] < $bkgd[1]) {
+            $y_diff = $bkgd[1] - $curr[1];
+        }
+        elsif ($curr[3] > $bkgd[3]) {
+            $y_diff = $bkgd[3] - $curr[3];
+        }
+        
+        $canvas->move($current_obj, $x_diff, $y_diff);
+        
+    }
+}
+
+__END__
+
+=head1 NAME - canvas_drag_drop
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
