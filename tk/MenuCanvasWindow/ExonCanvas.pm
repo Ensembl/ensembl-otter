@@ -2063,9 +2063,13 @@ sub get_SubSeq_if_changed {
     
     my $new = $self->new_SubSeq_from_tk;
     my $old = $self->SubSeq;
+        
+    # Preserve Otter ids
+    $new->take_otter_ids($old);
     if ($old->is_archival and $new->ace_string eq $old->ace_string) {
         return;
     }
+    warn $new->ace_string, $old->ace_string;
     my $new_name = $new->name;
     if ($new_name ne $self->name) {
         if ($self->xace_seq_chooser->get_SubSeq($new_name)) {
@@ -2170,9 +2174,6 @@ sub xace_save {
     my $old = $self->SubSeq;
     my $old_name = $old->name;
     my $new_name = $sub->name;
-    
-    # Preserve Otter ids
-    $sub->take_otter_ids($old);
     
     my $clone_name = $sub->clone_Sequence->name;
     if ($clone_name eq $new_name) {

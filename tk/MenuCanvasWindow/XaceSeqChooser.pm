@@ -216,8 +216,9 @@ sub show_LocusWindow{
     $window->show($state); 
 }
 
-sub close_all_LocusWindows{ 
+sub close_all_LocusWindows { 
     my ($self) = @_ ;
+
     $self->{'_locus_window_cache'} = undef ;
 }
 
@@ -562,7 +563,13 @@ sub populate_menus {
     $top->bind('<Control-X>', $xace_attach_command);
     
     # Save annotations to otter
-    my $save_command = sub { $self->save_data(1) };
+    my $save_command = sub {
+        unless ($self->close_all_edit_windows) {
+            $self->message('No saving because some editing windows are still open');
+            return;
+        }
+        $self->save_data(1);
+        };
     $file->add('command',
         -label          => 'Save',
         -command        => $save_command,
@@ -899,11 +906,8 @@ sub exit_save_data {
         $self->kill_xace;
         return 1;
     }
-
-    # Are there unsaved changes in open ExonCanvas windows?
-    $self->close_all_subseq_edit_windows or return;
-    $self->close_all_LocusWindows ;
-    $self->close_all_PolyAWindows        or return;
+    
+    $self->close_all_edit_windows or return;
     
     # Ask the user if any changes should be saved
     my $dialog = $self->canvas->toplevel->Dialog(
@@ -936,6 +940,15 @@ sub exit_save_data {
     
     $ace->error_flag(0);
     
+    return 1;
+}
+
+sub close_all_edit_windows {
+    my( $self ) = @_;
+    
+    $self->close_all_subseq_edit_windows or return;
+    $self->close_all_LocusWindows ;
+    $self->close_all_PolyAWindows        or return;
     return 1;
 }
 
@@ -1228,8 +1241,8 @@ sub resync_with_db {
     my( $self ) = @_;
     
     
-    if ($self->list_all_subseq_edit_window_names) {
-        $self->message("All the Subsequence edit windows must be closed before a ReSync");
+    unless ($self->close_all_edit_windows) {
+        $self->message("All editor windows must be closed before a ReSync");
         return;
     }
     
