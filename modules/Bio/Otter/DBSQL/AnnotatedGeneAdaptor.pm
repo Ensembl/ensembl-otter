@@ -407,7 +407,6 @@ sub fetch_all_by_DBEntry {
                     AND x.display_label = '$external_id'
                     AND oxr.ensembl_object_type='Gene'");
 
-  print $sth->{Statement} . "\n";
   $sth->execute();
 
    while( ($a) = $sth->fetchrow_array ) {
@@ -424,10 +423,3 @@ sub fetch_all_by_DBEntry {
 }
 
 1;
-
-	
-
-
-
-
-
