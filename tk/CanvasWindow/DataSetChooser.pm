@@ -78,6 +78,8 @@ sub select_dataset {
 sub open_dataset {
     my( $self ) = @_;
     
+    return if $self->recover_old_sessions;
+    
     my ($obj) = $self->list_selected;
     return unless $obj;
     
@@ -127,6 +129,103 @@ sub draw {
             );
     }
     $self->fix_window_min_max_sizes;
+}
+
+sub recover_old_sessions {
+    my( $self ) = @_;
+    
+    my $existing_pid = $self->list_all_current_pid;
+    
+    my $tmp_dir = '/var/tmp';
+    local *VAR_TMP;
+    opendir VAR_TMP, $tmp_dir or die "Cannot read '$tmp_dir' : $!";
+    my( @lace );
+    foreach (readdir VAR_TMP) {
+        if (/^lace\.(\d+)/) {
+            my $pid = $1;
+            next if $existing_pid->{$pid};
+            my $lace_dir = $_;
+            push(@lace, "$tmp_dir/$lace_dir");
+        }
+    }
+    closedir VAR_TMP or die "Error closing directory '$tmp_dir' : $!";
+    
+    if (@lace) {
+        my $text = "Recover these lace sessions?\n"
+            . join('', map "$_\n", @lace);
+        
+        # Ask the user if changes should be saved
+        my $dialog = $self->canvas->toplevel->Dialog(
+            -title          => 'Recover sessions?',
+            -bitmap         => 'question',
+            -text           => $text,
+            -default_button => 'Yes',
+            -buttons        => [qw{ Yes No }],
+            );
+        my $ans = $dialog->Show;
+
+        if ($ans eq 'No') {
+            return 0;
+        }
+        elsif ($ans eq 'Yes') {
+            eval{
+                $self->make_XaceSeqChooser_windows(@lace);
+            };
+            if ($@) {
+                $self->exception_message($@);
+            }
+            return 1;
+        }
+    } else {
+        return 0;
+    }
+}
+
+sub list_all_current_pid {
+    my( $self ) = @_;
+    
+    my $current = {};
+    
+    local *PID;
+    my $pipe = "ps ax |";
+    open PID, $pipe or die "Cannot open pipe '$pipe' : $!";
+    while (<PID>) {
+        my ($pid) = split;
+        $current->{$pid} = 1;
+    }
+    close PID or die "Error running '$pipe' : exit $?";
+    
+    return $current;
+}
+
+sub make_XaceSeqChooser_windows {
+    my( $self, @dirs ) = @_;
+    
+    my $canvas = $self->canvas;
+    my $cl     = $self->Client;
+    
+    my $i = 1;
+    foreach my $dir (@dirs) {
+        ### Can recover title from wspec/displays.wrm
+        my $title = "Recover $i";
+        my $db = $cl->new_AceDatabase;
+        $db->error_flag(1);
+        $db->title($title);
+        my $home = $db->home;
+        rename($dir, $home) or die "Cannot move '$dir' to '$home' : $!";
+        $db->recover_slice_dataset_hash;
+
+        # Bring up GUI
+        my $top = $canvas->Toplevel(
+            -title  => $title,
+            );
+        my $xc = MenuCanvasWindow::XaceSeqChooser->new($top);
+        $xc->AceDatabase($db);
+        $xc->write_access(1);
+        $xc->initialize;
+        
+        $i++;
+    }
 }
 
 1;

@@ -29,15 +29,6 @@ sub new {
     return $self;
 }
 
-sub SequenceSet {
-    my( $self, $SequenceSet ) = @_;
-    
-    if ($SequenceSet) {
-        $self->{'_SequenceSet'} = $SequenceSet;
-    }
-    return $self->{'_SequenceSet'};
-}
-
 sub Client {
     my( $self, $Client ) = @_;
     
@@ -60,20 +51,6 @@ sub AceDatabase {
 sub initialize {
     my( $self ) = @_;
     
-    my $ss = $self->SequenceSet
-        or confess "No SequenceSet attached";
-    my $db = $self->Client->new_AceDatabase;
-    $self->AceDatabase($db);
-    my $title = 'lace '. $ss->name;
-    $db->title($title);
-    $db->error_flag(1);
-
-    $db->make_database_directory;
-    $db->write_otter_acefile($ss);
-    $db->write_ensembl_data($ss);
-    $db->write_pipeline_data($ss);
-    $db->initialize_database;
-
     ### Should not be hard coded in module
     $self->set_known_GeneMethods(
         # Method name                Editable?  Coding?

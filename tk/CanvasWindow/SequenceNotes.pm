@@ -426,13 +426,35 @@ sub run_lace {
     #    printf "%s.%s\n", $cs->accession, $cs->sv;
     #}
 
+    my $db = $self->Client->new_AceDatabase;
+    $db->title($title);
+    $db->error_flag(1);
+    eval{
+        $self->init_AceDatabase($db, $ss);
+    };
+    if ($@) {
+        $db->error_flag(0);
+        $self->exception_message($@);
+        return;
+    }    
+
     my $xc = $self->make_XaceSeqChooser($title);
     ### Maybe: $xc->SequenceNotes($self);
-    $xc->SequenceSet($ss);
+    $xc->AceDatabase($db);
     my $write_flag = $cl->write_access ? $ss->write_access : 0;
     $xc->write_access($write_flag);  ### Can be part of interface in future
     $xc->Client($self->Client);
     $xc->initialize;
+}
+
+sub init_AceDatabase {
+    my( $self, $db, $ss ) = @_;
+
+    $db->make_database_directory;
+    $db->write_otter_acefile($ss);
+    $db->write_ensembl_data($ss);
+    $db->write_pipeline_data($ss);
+    $db->initialize_database;
 }
 
 sub make_XaceSeqChooser {
@@ -444,8 +466,6 @@ sub make_XaceSeqChooser {
     my $xc = MenuCanvasWindow::XaceSeqChooser->new($top);
     return $xc;
 }
-
-
 
 sub draw {
     my( $self ) = @_;

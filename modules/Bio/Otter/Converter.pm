@@ -1265,7 +1265,7 @@ sub ace_to_otter {
         }
         if (my $remark_list = $seq_data->{Remark}) {
             foreach my $rem (@$remark_list) {
-                my $remark = Bio::Otter::TranscriptRemark->rem(-remark => $rem);
+                my $remark = Bio::Otter::TranscriptRemark->new(-remark => $rem);
                 $traninfo->remark($remark);
             }
         }
