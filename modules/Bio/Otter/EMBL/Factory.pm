@@ -53,6 +53,7 @@ use Hum::EMBL::LocationUtils qw( simple_location locations_from_subsequence
     location_from_homol_block );
 use Hum::EmblUtils qw( add_Organism add_source_FT species_binomial );
 
+
 Hum::EMBL->import(
     'AC *' => 'Hum::EMBL::Line::AC_star',
     'BQ *' => 'Hum::EMBL::Line::BQ_star',
@@ -902,7 +903,7 @@ sub _do_assembly_tag {
 
     my $feat = $set->newFeature;
 
-    # assembly_tag types: Oligo, Clone_left_end, Clone_right_end and Misc
+    # assembly_tag types: Clone_left_end, Clone_right_end and Misc
     #                     are assigned "misc_feature" key,
     #                     whereas type "unsure" is assigned "unsure" key
 
@@ -921,7 +922,12 @@ sub _do_assembly_tag {
     }
 
     # add qualifier
-    $feat->addQualifierStrings('note', $atag->tag_info);
+    if ( $atag->tag_type =~ /^Clone.+/ ){
+      $feat->addQualifierStrings('note', $&.": ".$atag->tag_info)
+    }
+    else {
+      $feat->addQualifierStrings('note', $atag->tag_info)
+    }
   }
 }
 
