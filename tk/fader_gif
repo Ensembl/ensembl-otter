@@ -1,34 +1,94 @@
-#!/usr/local/bin/perl -w
+#!/usr/local/bin/perl -Tw
 
 ### fader_gif
 
 use strict;
 use GD;
+use CGI;
+use CGI::Carp 'fatalsToBrowser';
+use vars qw{ $n_steps $step_width $img_width $img_height };
 
-#my $img = GD::Image->new(256,20);
-foreach my $rgb (
-    [0x00, 0x00, 0x00],
-    [0xff, 0x00, 0x00],
-    [0x00, 0xff, 0x00],
-    [0x00, 0x00, 0xff],
-    [0xff, 0xff, 0xff],
-    ) {
-    my @hsl = rgb_to_hsl(@$rgb);
-    printf "[%3d, %3d, %3d] -> [%3.2f, %3.2f, %3.2f]\n", @$rgb, @hsl;    
+$n_steps = 256;
+$step_width = 2;
+$img_width = $n_steps * $step_width;
+$img_height = 200;
+
+{
+    my $q = CGI->new;
+    if ($q->param('get_gif')) {
+        print_gif($q);
+    } else {
+        print_form($q);
+    }
+}
+
+sub print_gif {
+    my( $q ) = @_;
+    
+    my $rgb_param = $q->param('rgb')
+        or die "No rgb paramter given";
+    my @rgb = $rgb_param =~ /^#?([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})$/
+        or die "Illegal rgb parameter '$rgb_param'";
+    @rgb = map hex($_), @rgb;
+
+    my $img = GD::Image->new($img_width,$img_height);
+    
+    my ($hue, $sat, $lgt) = rgb_to_hsl(@rgb);
+    my($y1, $y2) = (0, $img_height - 1);
+    for (my $i = 0; $i < $n_steps; $i++) {
+        my $lgt_fade = $lgt + (((1 - $lgt) / $n_steps) * $i);
+        my $sat_fade = $sat - (($sat / $n_steps) * $i);
+        my @rgb = hsl_to_rgb($hue, $sat_fade, $lgt_fade);
+        my $color = $img->colorAllocate(@rgb);
+        my $x = $i * $step_width;
+        $img->filledRectangle($x,$y1,$x + $step_width - 1,$y2, $color);
+    }
+    print $q->header(
+        -type => 'image/gif',
+        ),
+        $img->gif;
+}
+
+sub print_form {
+    my( $q ) = @_;
+    
+    print $q->header,
+        $q->start_html(
+            -title => 'Fading a color to white',
+            -bgcolor => '#999999',
+            ),
+        $q->start_form(
+            -method => 'GET',
+            ),
+        "<br>Colour to fade (rgb):&nbsp\n",
+        $q->textfield(
+            -name => 'rgb',
+            -size => 7,
+            -default => '#ff0000',
+            ),
+        "&nbsp\n",
+        $q->submit,
+        $q->end_form,
+        "<hr><br>\n";
+    if ($q->param('rgb')) {
+        my $url = $q->self_url;
+        print qq{<img src="$url&get_gif=fader.gif" height=$img_height width=$img_width>};
+    }
+    print $q->end_html;
 }
 
 sub rgb_to_hsl {
-    my( @rgb ) = @_;
+    my( $r, $g, $b ) = @_;
     
-    @rgb = map $_ / 0xff, @rgb;
+    ($r,$g,$b) = map $_ / 0xff, ($r,$g,$b);
     
     # Calculate the lightness
-    my($min, $max) = (255,0);
-    foreach my $v (@rgb) {
+    my($min, $max) = (1,0);
+    foreach my $v ($r,$g,$b) {
         $min = $v if $v < $min;
         $max = $v if $v > $max;
     }
-    warn "max=$max min=$min";
+    #warn "max=$max min=$min";
     my $lgt = ($min + $max) / 2;
     
     my( $hue, $sat ) = (0,0);
@@ -45,14 +105,14 @@ sub rgb_to_hsl {
         
         # Calculate the hue
         my $divisor = $max - $min;
-        if ($rgb[0] == $max) {
-            $hue = ($rgb[1] - $rgb[2]) / $divisor;
+        if ($r == $max) {
+            $hue = ($g - $b) / $divisor;
         }
-        elsif ($rgb[1] == $max) {
-            $hue = (2 + $rgb[2] - $rgb[0]) / $divisor;
+        elsif ($g == $max) {
+            $hue = (2 + $b - $r) / $divisor;
         }
-        elsif ($rgb[2] == $max) {
-            $hue = (4 + $rgb[0] - $rgb[1]) / $divisor;
+        elsif ($b == $max) {
+            $hue = (4 + $r - $g) / $divisor;
         }
     }
     
@@ -61,9 +121,56 @@ sub rgb_to_hsl {
 }
 
 sub hsl_to_rgb {
+    my( $hue, $sat, $lgt ) = @_;
     
+    $hue = $hue / 6;
+    
+    my($r,$g,$b) = (0,0,0);
+    if ($sat == 0) {
+        $r = $g = $b = $lgt;
+    } else {
+        my( $t1, $t2 );
+        if ($lgt < 0.5) {
+            $t2 = $lgt * ($sat + 1);
+        } else {
+            $t2 = $lgt + $sat - ($lgt * $sat);
+        }
+        $t1 = (2 * $lgt) - $t2;
+        
+        $r = _temp_to_rgb_value($t1, $t2, $hue + (1/3));
+        $g = _temp_to_rgb_value($t1, $t2, $hue        );
+        $b = _temp_to_rgb_value($t1, $t2, $hue - (1/3));
+    }
+    
+    return map $_ * 0xff, ($r,$g,$b);
 }
 
+sub _temp_to_rgb_value {
+    my( $t1, $t2, $t3 ) = @_;
+    
+    if ($t3 < 0) {
+        $t3 += 1;
+    }
+    elsif ($t3 > 1) {
+        $t3 -= 1;
+    }
+    
+    my( $v );
+    if (6 * $t3 < 1) {
+        $v = $t1 + (($t2 - $t1) * 6 * $t3);
+    }
+    elsif (2 * $t3 < 1) {
+        $v = $t2;
+    }
+    elsif (3 * $t3 < 2) {
+        $v = $t1 + (($t2 - $t1) * ((2/3) - $t3) * 6);
+    }
+    else {
+        $v = $t1;
+    }
+    
+    return $v;
+}
 
 __END__
 
