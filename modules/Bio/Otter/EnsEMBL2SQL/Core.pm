@@ -80,7 +80,7 @@ sub get_clone_SQL {
     my $contigstr = $self->get_raw_contig_string;
 
     if ($contigstr ne "") {
-	my $str = $self->query("select clone.* from clone,contig where clone.clone_id = contig.clone_id and contig.contig_id in $contigstr");
+	my $str = $self->query("select distinct clone.* from clone,contig where clone.clone_id = contig.clone_id and contig.contig_id in $contigstr");
 
 	return $str;
     }
