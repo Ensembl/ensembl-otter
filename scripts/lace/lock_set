@@ -8,14 +8,17 @@ use Bio::Otter::Lace::Defaults;
 {
     my( $author, $email, $dataset, $seqsetname );
     my $unlock_flag = 0;
+    my $lock_file = undef;
     my $usage = sub{ exec('perldoc', $0) };
     Bio::Otter::Lace::Defaults::do_getopt(
-                                          'dataset=s'   => \$dataset,
-                                          'set=s'       => \$seqsetname,
-                                          'h|help!'     => $usage,
-                                          'unlock!'    => \$unlock_flag,
-                                          );
+        'dataset=s'     => \$dataset,
+        'set=s'         => \$seqsetname,
+        'h|help!'       => $usage,
+        'unlock!'       => \$unlock_flag,
+        'file=s'        => \$lock_file,
+        );
     $usage->() unless $dataset and ($seqsetname or $unlock_flag);
+    $lock_file ||= "$seqsetname-lock.xml";
     
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
     my $ds = $cl->get_DataSet_by_name($dataset);
@@ -26,6 +29,7 @@ use Bio::Otter::Lace::Defaults;
         my $lock_xml = <>;
         $cl->unlock_otter_xml($lock_xml, $dataset);
     } else {
+        open LOCK, "> $lock_file" or die "Can't write to '$lock_file' : $!";
         my $seqSet   = $dsObj->get_SequenceSet_by_name($seqsetname);
         $dsObj->selected_SequenceSet($seqSet);
         my $csObjs   = $dsObj->fetch_all_CloneSequences_for_selected_SequenceSet();
@@ -44,7 +48,9 @@ use Bio::Otter::Lace::Defaults;
                 die $@;
             }
         }
-        print $lock_xml;
+        print LOCK $lock_xml;
+        close LOCK or die "Error writing to '$lock_file' : $!";
+        warn "Wrote lock to '$lock_file'\n";
     }
 }
 
