@@ -1,9 +1,11 @@
 #!/usr/local/bin/perl
 
-# script to take a list of HUGO names current gene labels and write
-# sql required to change them.  ONLY SUITABLE FOR VEGA DATABASEs which
-# only one assembly for each clone and the most recent version of each
-# gene.
+# script to process otter or vega database and check for gene problems.
+
+# checks carried out are 1) genes either partially or completely off
+# current sequence_set(s) (require realign_offtrack_genes run); 2)
+# list duplicate exons (can be resolved with
+# remove_duplicate_exons.pl); 3) list other potential problems.
 
 use strict;
 use Getopt::Long;
@@ -21,10 +23,12 @@ my $db='otter_human';
 my $help;
 my $phelp;
 my $opt_v;
+my $opt_V;
 my $opt_i='';
 my $opt_o='large_transcripts.lis';
 my $opt_p='duplicate_exons.lis';
 my $opt_q='near_duplicate_exons.lis';
+my $opt_r='missing_remarks.lis';
 my $cache_file='check_genes.cache';
 my $make_cache;
 my $opt_c='';
@@ -49,10 +53,12 @@ GetOptions(
 	   'help', \$phelp,
 	   'h',    \$help,
 	   'v',    \$opt_v,
+	   'V',    \$opt_V,
 	   'i:s',  \$opt_i,
 	   'o:s',  \$opt_o,
 	   'p:s',  \$opt_p,
 	   'q:s',  \$opt_q,
+	   'r:s',  \$opt_r,
 	   'c:s',  \$opt_c,
 	   'make_cache',\$make_cache,
 	   't:s',  \$opt_t,
@@ -81,9 +87,11 @@ check_genes.pl
   -h                        this help
   -help                     perldoc help
   -v                        verbose
+  -V                        really verbose
   -o              file      output file ($opt_o)
   -p              file      output file ($opt_p)
   -q              file      output file ($opt_q)
+  -r              file      output file ($opt_r)
   -c              char      chromosome ($opt_c)
   -make_cache               make cache file
   -exclude                  gene types prefixes to exclude ($exclude)
@@ -157,6 +165,15 @@ if($make_cache){
   }
   print "$n contigs read from selected assemblies; $no from other assemblies\n";
 
+  # build a list of transcript_info_id's of all transcript remarks
+  my %trii;
+  my $sth=$dbh->prepare("select transcript_info_id from transcript_remark");
+  $sth->execute();
+  while (my @row = $sth->fetchrow_array()){
+    my($trii)=@row;
+    $trii{$trii}++;
+  }
+
   # build list of all contigs, grouped by clone
   # and use to create a2, which points from old or new to current version
   my %a2;
@@ -188,10 +205,10 @@ if($make_cache){
 	    $a2{$cid2}=[$cla2,$clv2,$atype2,$clv,$cid,$cname,$atype];
 	    if($clv2<$clv){
 	      $no++;
-	      print "contig $cid2 is older ($cid)\n" if $opt_v;
+	      print "contig $cid2 is older ($cid)\n" if $opt_V;
 	    }else{
 	      $nn++;
-	      print "contig $cid2 is newer ($cid)\n" if $opt_v;
+	      print "contig $cid2 is newer ($cid)\n" if $opt_V;
 	    }
 	  }else{
 	    $ns++;
@@ -223,14 +240,14 @@ if($make_cache){
   my $nobs=0;
 
   # get exons of current genes
-  my $sth=$dbh->prepare("select gsi1.stable_id,gn.name,g.type,tsi.stable_id,ti.name,et.rank,e.exon_id,e.contig_id,e.contig_start,e.contig_end,e.sticky_rank,e.contig_strand,e.phase,e.end_phase,tr.remark from exon e, exon_transcript et, transcript t, current_gene_info cgi, gene_stable_id gsi1, gene_name gn, gene g, transcript_stable_id tsi, current_transcript_info cti, transcript_info ti left join gene_stable_id gsi2 on (gsi1.stable_id=gsi2.stable_id and gsi1.version<gsi2.version) left join transcript_remark tr on (ti.transcript_info_id=tr.transcript_info_id) where gsi2.stable_id IS NULL and cgi.gene_stable_id=gsi1.stable_id and cgi.gene_info_id=gn.gene_info_id and gsi1.gene_id=g.gene_id and g.gene_id=t.gene_id and t.transcript_id=tsi.transcript_id and tsi.stable_id=cti.transcript_stable_id and cti.transcript_info_id=ti.transcript_info_id and t.transcript_id=et.transcript_id and et.exon_id=e.exon_id and e.contig_id");
+  my $sth=$dbh->prepare("select gsi1.stable_id,gn.name,g.type,tsi.stable_id,ti.name,et.rank,e.exon_id,e.contig_id,e.contig_start,e.contig_end,e.sticky_rank,e.contig_strand,e.phase,e.end_phase,cti.transcript_info_id from exon e, exon_transcript et, transcript t, current_gene_info cgi, gene_stable_id gsi1, gene_name gn, gene g, transcript_stable_id tsi, current_transcript_info cti, transcript_info ti left join gene_stable_id gsi2 on (gsi1.stable_id=gsi2.stable_id and gsi1.version<gsi2.version) where gsi2.stable_id IS NULL and cgi.gene_stable_id=gsi1.stable_id and cgi.gene_info_id=gn.gene_info_id and gsi1.gene_id=g.gene_id and g.gene_id=t.gene_id and t.transcript_id=tsi.transcript_id and tsi.stable_id=cti.transcript_stable_id and cti.transcript_info_id=ti.transcript_info_id and t.transcript_id=et.transcript_id and et.exon_id=e.exon_id and e.contig_id");
   $sth->execute;
   open(OUT,">$cache_file") || die "cannot open cache file $cache_file";
   while (my @row = $sth->fetchrow_array()){
     $n++;
 
     # transform to chr coords
-    my($gsi,$gn,$gt,$tsi,$tn,$erank,$eid,$ecid,$est,$eed,$esr,$es,$ep,$eep,$tr)=@row;
+    my($gsi,$gn,$gt,$tsi,$tn,$erank,$eid,$ecid,$est,$eed,$esr,$es,$ep,$eep,$ti)=@row;
 
     # skip obs genes
     if($gt eq 'obsolete'){
@@ -275,7 +292,7 @@ if($make_cache){
       print OUT join("\t",@row2)."\n";
 
       # record genes with no gene_remark
-      if($tr eq ''){
+      if(!$trii{$ti}){
 	$missing_tr{$gt}->{$tsi}="$gsi:$gn";
       }
       
@@ -313,8 +330,8 @@ if($make_cache){
   $dbh->disconnect();
 
   # report all genes with missing remarks
-  open (MOUT,">missing_remarks.lis") || die "cannot open remarks file";
-  print "Transcripts with missing remarks\n\n";
+  print "Transcripts with missing remarks (see $opt_r):\n";
+  open (MOUT,">$opt_r") || die "cannot open remarks file";
   foreach my $gt (sort keys %missing_tr){
     my $n=0;
     my $out='';
@@ -323,8 +340,10 @@ if($make_cache){
       $n++;
       $out.="  $tsi ($gname)\n";
     }
+    print " $n transcripts of gene type $gt have missing remarks\n";
     print MOUT " $n transcripts of gene type $gt have missing remarks:\n$out";
   }
+  print "\n";
   close(MOUT);
 
   my %n_offtrack;
@@ -453,6 +472,7 @@ if($make_cache){
   print "wrote $nexclude exons ignored as not in selected assembly\n";
   print "skipped $nobs exons marked as obsolete\n";
 
+  print "\nNumber of offtrack gene problems by sequence_set and type (ERR1, ERR2, ERR3)\n";
   foreach my $atype (sort keys %n_offtrack){
     printf "%-20s %4d %4d %4d\n",$atype,@{$n_offtrack{$atype}};
   }
@@ -817,7 +837,7 @@ foreach my $atype (keys %gsi){
 print scalar(keys %dup_exon)." duplicate exons\n";
 print "$nmc genes with non overlapping transcripts\n";
 print "found $nexon exons; $nsticky sticky exons\n";
-print "$nl large transcripts\n";
+print "$nl large transcripts found (see $opt_o)\n";
 close(OUT);
 close(OUT2);
 close(OUT3);
