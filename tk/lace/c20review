@@ -407,7 +407,7 @@ sub get_unplaced_clones {
         my( $ensdb, $ctg_name ) = @_;
 
         unless (@map) {
-            print STDERR "Getting ftp contig map...";
+            print STDERR "Getting contig map...";
             my $sth = $ensdb->prepare(qq{
                 SELECT c.id
                   , sgp.chr_start
