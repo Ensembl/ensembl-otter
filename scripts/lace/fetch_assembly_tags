@@ -93,7 +93,7 @@ sub fetch_by_clone_name {
   my $cl_obj = [];
 
   foreach ( @$clones ){
-    push( @$cl_obj, $cloneAd->fetch_by_accession_version(split(/\./, $_)) );
+    push( @$cl_obj, $cloneAd->fetch_by_accession_version( split(/\./, $_)) );
   }
 
   fetch_by_clone_obj($cl_obj, $otter_db, $atagged_ctgs);
@@ -107,14 +107,14 @@ sub fetch_by_clone_obj {
   my %seq_acefile_clone;
   my ($clone, $ctg_name, $ctg_strand, $ctg_id, $seq_name, $version);
   my %atagged_ctgs = %$atagged_ctgs;
-  my $done;
+  my $to_do;
 
   foreach my $obj (@$clones) {
 
     # does only clones not yet assembly_tag tagged
     if ( ref($obj) eq "Bio::Otter::AnnotatedClone" && !exists $atagged_ctgs{$obj->get_all_Contigs->[0]->dbID} ){
 
-      $done = 1;
+      $to_do = 1;
 
       $clone = $obj;
       $ctg_name   = $obj->get_all_Contigs->[0]->name;
@@ -126,7 +126,7 @@ sub fetch_by_clone_obj {
 
     elsif ( ref($obj) eq "Bio::Otter::Lace::CloneSequence" && !exists $atagged_ctgs{$obj->contig_id} ){
 
-      $done = 1;
+      $to_do = 1;
 
       # get Bio::Otter::AnnotatedClone obj via Bio::Otter::Lace::CloneSequence obj
       $clone = $cloneAd->fetch_by_accession_version($obj->accession, $obj->sv);
@@ -144,7 +144,7 @@ sub fetch_by_clone_obj {
     };
 
     # work out path to acefile with assembly_tags info of a Sanger clone
-    if (!$@ && $done){
+    if (!$@ && $to_do){
       my $seq = Hum::AnaStatus::Sequence->new_from_seqname_sv($seq_name, $version);
       my $dir = $seq->analysis_directory;
 
