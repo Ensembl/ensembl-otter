@@ -321,15 +321,19 @@ sub compare_genes {
         # Already deleted in old set
         if ($gene->type ne 'obsolete') {
             $gene->type('obsolete');
-            $gene->version($gene->version + 1);
-          
+	    # Think we should all be using increment_obj_version()
+            # $gene->version($gene->version + 1);
+	    $self->increment_obj_version($gene);
             foreach my $tran (@{$gene->get_all_Transcripts}) {
-                $tran->version($tran->version + 1);
+                # $tran->version($tran->version + 1);
+		$self->increment_obj_version($tran);
                 if (my $translation = $tran->translation) {
-                    $translation->version($translation->version + 1);
+                    # $translation->version($translation->version + 1);
+		    $self->increment_obj_version($translation);
                 }
                 foreach my $exon (@{$gene->get_all_Exons}) {
-                    $exon->version($exon->version + 1);
+                    # $exon->version($exon->version + 1);
+		    $self->increment_obj_version($exon);
                 }
             }
           
