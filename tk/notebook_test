@@ -1,0 +1,51 @@
+#!/nfs/humace2/hum/bin/perl -w
+
+### notebook_test
+
+use strict;
+use CanvasWindow::MainWindow;
+use CanvasWindow;
+use Tk::NoteBook;
+
+{
+    my $mw = CanvasWindow::MainWindow->new;
+    my $nb = $mw->NoteBook->pack(
+        -expand => 1,
+        -fill   => 'both',
+        );
+    
+    my $cl = $nb->add('clone',
+        -label => 'Clone Sequences',
+        );
+
+    my $cw = CanvasWindow->new($cl);
+    my $canvas = $cw->canvas;
+    $canvas->createRectangle(
+        0,0, 200,300,
+        -fill => 'red',
+        -outline => 'white',
+        );
+    $cw->fix_window_min_max_sizes;
+
+    my $ss = $nb->add('subseq',
+        -label => 'SubSeqs',
+        -anchor => 'center',
+        );
+    
+    my $lo = $nb->add('locus',
+        -label => 'Loci',
+        -anchor => 'center',
+        );
+    
+    Tk::MainLoop();
+}
+
+
+__END__
+
+=head1 NAME - notebook_test
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
