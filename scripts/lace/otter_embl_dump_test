@@ -21,10 +21,8 @@ Test script to for dumping of EMBL files from an
 Otter database containing finished genomic sequence
 annotation.
 
-The principal module used for the dumping is
-Bio::Otter::EMBL::Factory.pm, which creates of the
-classes Hum::EMBL::Exon, and Hum::EMBL::ExonCollection
-from the retrieved data.
+One should be able to customise this script to dump
+EMBL from Otter for practically any purpose.
 
 =cut
 
@@ -65,7 +63,7 @@ use Carp;
         $ft_factory->data_class('standard');
         $ft_factory->mol_type('genomic DNA');
         $ft_factory->division('HUM');
-        $ft_factory->seq_length(10000);
+        #$ft_factory->seq_length(10000);
         $ft_factory->ac_star_id('FAKE');
         $ft_factory->organism('Homo sapiens');
         $ft_factory->clone_lib('to_be_provided');
@@ -76,98 +74,6 @@ use Carp;
         $ft_factory->make_embl_ft($accession, $embl, $seq_version);
         print $embl->compose();
     }
-}
-
-sub make_embl {
-    my( $pdmp ) = @_;
-
-    my $project     = $pdmp->project_name;
-    my $acc         = $pdmp->accession || '';
-    my @sec         = $pdmp->secondary;
-    my $embl_id     = $pdmp->embl_name || 'ENTRYNAME';
-    my $species     = $pdmp->species;
-    my $chr         = $pdmp->chromosome;
-    my $map         = $pdmp->fish_map;
-    my $ext_clone   = $pdmp->external_clone_name;
-    my $binomial    = $pdmp->species_binomial;
-    my $division    = $pdmp->EMBL_division;
-
-    # Get the DNA, base quality string,
-    # and map of contig positions.
-    my($dna, $base_quality, $contig_map) = $pdmp->embl_sequence_and_contig_map;
-    my $seqlength = length($dna);
-
-    # New embl file object
-    my $embl = Hum::EMBL->new();
-
-    # ID line
-    my $id = $embl->newID;
-    $id->entryname($embl_id);
-    $id->dataclass('standard');
-    $id->molecule('genomic DNA');
-    $id->division($division);
-    $id->seqlength($seqlength);
-    $embl->newXX;
-
-    # AC line
-    my $ac = $embl->newAC;
-    if (@sec) {
-        $ac->secondaries(@sec);
-        # We need the placeholder "ACCESSION"
-        # if we don't have an accession
-        $ac->primary($acc || 'ACCESSION');
-    } else {
-        $ac->primary($acc);
-    }
-    $embl->newXX;
-
-    # AC * line
-    my $ac_star = $embl->newAC_star;
-    $ac_star->identifier($pdmp->sanger_id);
-    $embl->newXX;
-
-    # Making Bio::Otter::EMBL::Factory object
-    # As required to be able to get DE and KW information for for clone
-    my $ft_factory = $pdmp->make_ft_factory();
-    
-    # DE line
-    $pdmp->add_Description($embl, $ft_factory);
-    
-    # KW line
-    $pdmp->add_Keywords($embl, $ft_factory);
-
-    # Organism
-    add_Organism($embl, $species);
-    $embl->newXX;
-
-    # Reference
-    $pdmp->add_Reference($embl, $seqlength);
-
-    # CC lines
-    $pdmp->add_Headers($embl, $contig_map);
-    $embl->newXX;
-
-    # Feature table header
-    $embl->newFH;
-
-    # Feature table source feature
-    my( $libraryname ) = library_and_vector( $project );
-    add_source_FT( $embl, $seqlength, $binomial, $ext_clone,
-                   $chr, $map, $libraryname );
-
-    # Feature table assembly fragments
-    $pdmp->add_FT_entries($embl, $ft_factory);
-    $embl->newXX;
-
-    # Sequence
-    $embl->newSequence->seq($dna);
-
-    # Base Quality
-    $embl->newBQ_star->quality($base_quality) if $base_quality;
-
-    $embl->newEnd;
-
-    return $embl;
 }
 
 

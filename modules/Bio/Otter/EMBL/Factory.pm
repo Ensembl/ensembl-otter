@@ -127,12 +127,9 @@ sub get_DBAdaptors {
 
 =head2 embl_setup
 
-Sets a lot of the attributes in the Hum::EMBL object from those stored
-in Factory.pm, and creates the source FT. Will confess if required
-attributes have not been set.
-
-As this requires the Hum::EMBL object, it needs to be called after
-or by make_embl.
+Creates a Hum::EMBL object, and sets many of its attributes based on those
+stored in the Hum::EMBL object. Will confess if required attributes have
+not been set. Fetches some information from the Otter database, as necessary.
 
 =cut 
 
@@ -149,7 +146,6 @@ sub embl_setup {
     my $data_class = $self->data_class or confess "data_class not set";
     my $mol_type = $self->mol_type or confess "mol_type not set";
     my $division = $self->division or confess "division not set";
-    my $seq_length = $self->seq_length or confess "seq_length not set";
     my $ac_star_id = $self->ac_star_id or confess "ac_star_id not set";
     my $organism = $self->organism or confess "organism not set";
     my $clone_lib = $self->clone_lib or confess "clone_lib not set";
@@ -160,6 +156,14 @@ sub embl_setup {
     $id->dataclass($data_class);
     $id->molecule($mol_type);
     $id->division($division); #such as 'hum'
+
+    #Sequence length
+    my $seq_length;
+    unless ($seq_length = $self->seq_length) {
+        $seq_length = $self->get_clone_length_from_otter($accession, $seq_version);
+    }
+    confess "Could not get clone length\n" unless $seq_length;
+
     $id->seqlength($seq_length);
     $embl->newXX;
     
@@ -217,13 +221,13 @@ sub embl_setup {
     $source->key('source');
 
     my $loc = $source->newLocation;
-    $loc->exons([1, 20000]);
+    $loc->exons([1, $seq_length]);
     $loc->strand('W');
         
     $source->addQualifierStrings('mol_type',  $mol_type);
     $source->addQualifierStrings('organism',  "Homo sapiens");
-    $source->addQualifierStrings('clone_lib', $clone_lib);
     $source->addQualifierStrings('clone',     $clone_name);
+    $source->addQualifierStrings('clone_lib', $clone_lib);
 
     # Feature table source feature
     #my( $libraryname ) = library_and_vector( $project );
@@ -232,6 +236,16 @@ sub embl_setup {
     return $embl;
 }
 
+sub references {
+    my ( $self, $ref ) = @_;
+
+}
+
+
+sub CC_paragraphs {
+    my ( $self, $CC ) = @_;
+
+}
 
 sub secondary_accs {
     my ( $self, $value ) = @_;
@@ -515,6 +529,31 @@ sub make_embl_ft {
     $set->addToEntry($embl);
 }
 
+=head2 get_clone_length_from_otter
+
+??Needs to be written
+
+=cut
+
+sub get_clone_length_from_otter {
+    my ( $self, $accession, $sv ) = @_;
+    
+    my ($otter_db, $slice_aptr, $gene_aptr, $annotated_clone_aptr) 
+        = $self->get_DBAdaptors();
+    
+    my $annotated_clone = $annotated_clone_aptr->fetch_by_accession_version(
+        $accession, $sv) or confess "Could not fetch AnnotatedClone by accession_version"
+        . "acc: $accession sv: $sv";
+
+    my $contigs = $annotated_clone->get_all_Contigs();
+    if (@$contigs > 1) {
+        warn "Can't work clone length for: $accession . $sv\n";
+        return;
+    }
+    my $length = length($contigs->[0]->seq);
+    return $length;
+}
+
 =head2 get_description
 
 Given an accession and sequence version, fetches thean Otter AnnotatedClone.
@@ -534,7 +573,7 @@ sub get_description {
     my $annotated_clone = $annotated_clone_aptr->fetch_by_accession_version(
         $accession, $sv) or confess "Could not fetch AnnotatedClone by accession_version"
         . "acc: $accession sv: $sv";
-        
+
     my $clone_info = $annotated_clone->clone_info
         or confess "could not get: CloneInfo object";
         
