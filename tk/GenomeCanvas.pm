@@ -32,7 +32,6 @@ sub new {
         -scrollbars         => 'se',
         -width              => $DEFAULT_CANVAS_SIZE[0],
         -height             => $DEFAULT_CANVAS_SIZE[1],
-        -takefocus          => 0,
         );
     $scrolled->pack(
         -side => 'top',
@@ -52,8 +51,9 @@ sub bind_scroll_commands {
     my( $gc ) = @_;
     
     my $class = 'Tk::Scrollbar';
-    my $x_scroll = $gc->canvas->parent->Subwidget('xscrollbar');
-    my $y_scroll = $gc->canvas->parent->Subwidget('yscrollbar');
+    my $canvas = $gc->canvas;
+    my $x_scroll = $canvas->parent->Subwidget('xscrollbar');
+    my $y_scroll = $canvas->parent->Subwidget('yscrollbar');
     my $top = $x_scroll->toplevel;
     foreach my $key_seq ($x_scroll->bind($class)) {
         my $com_ref = $x_scroll->bind($class, $key_seq);
@@ -65,6 +65,12 @@ sub bind_scroll_commands {
                 $y_scroll->$method(@args);
                 });
         }
+    }
+    
+    foreach my $widget ($canvas, $x_scroll, $y_scroll) {
+        $widget->configure(
+            -takefocus => 0,
+            );
     }
 }
 
