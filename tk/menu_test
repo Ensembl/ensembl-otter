@@ -52,6 +52,7 @@ use CanvasWindow;
         -label          => 'SubSeq',
         -menu           => $subseq,
         -underline      => 0,
+        -state          => 'disabled',
         );
     
     $subseq->add('command',

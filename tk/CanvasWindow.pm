@@ -79,7 +79,7 @@ sub font {
 }
 
 {
-    my $_default_font_size = 14;
+    my $_default_font_size = 15;
 
     sub font_size {
         my( $self, $font_size ) = @_;

@@ -14,6 +14,30 @@ use Hum::Ace;
 
 sub new {
     my( $pkg, $tk ) = @_;
+
+    my $menu_frame = $tk->Frame(
+        -borderwidth    => 1,
+        -relief         => 'raised',
+        );
+    $menu_frame->pack(
+        -side   => 'top',
+        -fill   => 'x',
+        );
+    
+    my $self = $pkg->SUPER::new($tk);
+    $self->menu_bar($menu_frame);
+
+    $self->populate_menus;
+
+    #$self->add_buttons;
+    $self->bind_events;
+    $self->current_state('clone');
+    $self->minimum_scroll_bbox(0,0,200,200);
+    return $self;
+}
+
+sub old_new {
+    my( $pkg, $tk ) = @_;
     
     my $button_frame = $tk->Frame;
     $button_frame->pack(
@@ -38,42 +62,13 @@ sub button_frame {
     return $self->{'_button_frame'};
 }
 
-{
-    my %state_label = (
-        'clone'     => 'Show subseq',
-        'subseq'    => 'Show clones',
-        );
-
-    sub current_state {
-        my( $self, $state ) = @_;
-
-        if ($state) {
-            unless (my $label = $state_label{$state}) {
-                confess "Not a permitted state '$state'";
-            }
-            $self->{'_current_state'} = $state;
-            $self->update_clone_sub_switch_button;
-        }
-        return $self->{'_current_state'};
+sub menu_bar {
+    my( $self, $bf ) = @_;
+    
+    if ($bf) {
+        $self->{'_menu_bar'} = $bf;
     }
-
-    sub update_clone_sub_switch_button {
-        my( $self ) = @_;
-
-        my $state  = $self->current_state;
-        my $button = $self->clone_sub_switch_button;
-        if (my @selected = $self->list_selected or $state eq 'subseq') {
-            $button->configure(
-                -state  => 'normal',
-                -text   => $state_label{$state},
-                );
-        } else {
-            $button->configure(
-                -state  => 'disabled',
-                -text   => $state_label{$state},
-                );
-        }
-    }
+    return $self->{'_menu_bar'};
 }
 
 sub set_known_GeneMethods {
@@ -118,6 +113,130 @@ sub get_all_mutable_GeneMethods {
     
     return sort {lc($a->name) cmp lc($b->name)}
         grep $_->is_mutable, $self->get_all_GeneMethods;
+}
+
+sub _make_menu {
+    my( $self, $name, $pos ) = @_;
+    
+    $pos ||= 0;
+    
+    my $menu_frame = $self->menu_bar
+        or confess "No menu_bar";
+    my $button = $menu_frame->Menubutton(
+        -text       => $name,
+        -underline  => $pos,
+        #-padx       => 6,
+        -pady       => 6,
+        );
+    $button->pack(
+        -side       => 'left',
+        );
+    my $menu = $button->Menu(
+        -tearoff    => 0,
+        );
+    $button->configure(
+        -menu       => $menu,
+        );
+    return $menu;
+}
+
+sub populate_menus {
+    my( $self ) = @_;
+    
+    my $menu_frame = $self->menu_bar
+        or confess "No menu_bar";
+    
+    # Chooser menu
+    my $chooser = $self->_make_menu('Chooser');
+    
+    $chooser->add('command',
+        -label          => 'Attach Xace',
+        -command        => sub {
+            if (my $xwid = $self->get_xace_window_id) {
+                my $xrem = Hum::Ace::XaceRemote->new($xwid);
+                $self->xace_remote($xrem);
+                $xrem->send_command('save');
+            } else {
+                warn "no xwindow id: $xwid";
+            }
+        },
+        -accelerator    => 'Ctrl-X',
+        -underline      => 0,
+        );
+    $chooser->add('command',
+        -label          => 'Resync',
+        -hidemargin     => 1,
+        -command        => sub { warn "Called Resync" },
+        -accelerator    => 'Ctrl-R',
+        -underline      => 0,
+        );
+    $chooser->add('separator');
+    $chooser->add('command',
+        -label          => 'Exit',
+        -command        => sub { $menu_frame->toplevel->destroy },
+        -accelerator    => 'Ctrl-Q',
+        -underline      => 0,
+        );
+    
+    # Mode menu
+    my $mode = $self->_make_menu('Mode');
+    my $mode_var = 'clone';
+    my $mode_switch = sub {
+        $self->clone_sub_switch($mode_var);        
+    };
+    $mode->add('radiobutton',
+        -label          => 'Clones',
+        -value          => 'clone',
+        -variable       => \$mode_var,
+        -command        => $mode_switch,
+        );
+    $mode->add('radiobutton',
+        -label          => 'Sub sequences',
+        -value          => 'subseq',
+        -variable       => \$mode_var,
+        -command        => $mode_switch,
+        );
+    
+    # Subseq menu
+    my $subseq = $self->_make_menu('SubSeq');
+    
+    $subseq->add('command',
+        -label          => 'New',
+        -command        => sub{ warn "Called New" },
+        -accelerator    => 'Ctrl-N',
+        -underline      => 0,
+        );
+    $subseq->add('command',
+        -label          => 'Edit',
+        -command        => sub{ warn "Called Edit" },
+        -accelerator    => 'Ctrl-E',
+        -underline      => 0,
+        );
+    $subseq->add('separator');
+    $subseq->add('command',
+        -label          => 'Merge',
+        -command        => sub{ warn "Called Merge" },
+        -accelerator    => 'Ctrl-M',
+        -underline      => 0,
+        );
+    $subseq->add('command',
+        -label          => 'AutoMerge',
+        -command        => sub{ warn "Called AutoMerge" },
+        -accelerator    => 'Ctrl-U',
+        -underline      => 0,
+        );
+    $subseq->add('command',
+        -label          => 'Isoform',
+        -command        => sub{ warn "Called Isoform" },
+        -accelerator    => 'Ctrl-I',
+        -underline      => 0,
+        );
+    $subseq->add('command',
+        -label          => 'Transcript',
+        -command        => sub{ warn "Called Transcript" },
+        -accelerator    => 'Ctrl-T',
+        -underline      => 0,
+        );
 }
 
 sub add_buttons {
@@ -206,7 +325,6 @@ sub left_button_handler {
     if (my $obj = $canvas->find('withtag', 'current')) {
         $self->highlight($obj);
     }
-    $self->update_clone_sub_switch_button;
 }
 
 sub shift_left_button_handler {
@@ -221,16 +339,19 @@ sub shift_left_button_handler {
             $self->highlight($obj);
         }
     }
-    $self->update_clone_sub_switch_button;
 }
 
 sub clone_sub_switch {
-    my( $self ) = @_;
+    my( $self, $new_state ) = @_;
     
-    if ($self->current_state eq 'clone') {
-        $self->switch_to_subseq_display;   
-    } else {
+    if ($new_state eq 'clone') {
         $self->switch_to_clone_display;
+    }
+    elsif ($new_state eq 'subseq') {
+        $self->switch_to_subseq_display;   
+    }
+    else {
+        confess "Unknown state '$new_state'";
     }
     #$self->set_window_size(1);
     $self->fix_window_min_max_sizes;
@@ -255,7 +376,6 @@ sub switch_to_clone_display {
     $self->current_state('clone');
     $self->draw_clone_list;
     $self->highlight_by_name('clone', @clone_names);
-    $self->update_clone_sub_switch_button;
 }
 
 sub clone_sub_switch_button {
@@ -612,6 +732,25 @@ sub get_xace_window_id {
         return $xwid;
     } else {
         $self->message("Error running xwininfo: $?");
+    }
+}
+
+{
+    my %state_label = (
+        'clone'     => 1,
+        'subseq'    => 1,
+        );
+
+    sub current_state {
+        my( $self, $state ) = @_;
+
+        if ($state) {
+            unless ($state_label{$state}) {
+                confess "Not a permitted state '$state'";
+            }
+            $self->{'_current_state'} = $state;
+        }
+        return $self->{'_current_state'};
     }
 }
 
