@@ -10,27 +10,33 @@ use Carp;
 
 sub get_DBAdaptor {
     my( $otter_db, $rw ) = @_;
-    if($rw){
-        return Bio::Otter::Lace::SatelliteDB::_get_DBAdaptor($otter_db, 'pipeline_db_rw', 'Bio::EnsEMBL::DBSQL::DBAdaptor');
-    }else{
-        return Bio::Otter::Lace::SatelliteDB::_get_DBAdaptor($otter_db, 'pipeline_db', 'Bio::EnsEMBL::DBSQL::DBAdaptor');
-    }
+
+    return Bio::Otter::Lace::SatelliteDB::_get_DBAdaptor(
+        $otter_db, 'pipeline_db', 'Bio::EnsEMBL::DBSQL::DBAdaptor');
 }
+
+sub get_rw_DBAdaptor {
+    my( $otter_db ) = @_;
+    
+    return Bio::Otter::Lace::SatelliteDB::_get_DBAdaptor(
+        $otter_db, 'pipeline_db_rw', 'Bio::EnsEMBL::DBSQL::DBAdaptor');
+}
+
 sub get_pipeline_DBAdaptor {
     my( $otter_db, $rw ) = @_;
 
     require Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor;
-    if ($rw){
-        return Bio::Otter::Lace::SatelliteDB::_get_DBAdaptor($otter_db, 
-                                                             'pipeline_db_rw', 
-                                                             'Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor');
-    }else{
-        return Bio::Otter::Lace::SatelliteDB::_get_DBAdaptor($otter_db, 
-                                                             'pipeline_db', 
-                                                             'Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor');
-    }
+    return Bio::Otter::Lace::SatelliteDB::_get_DBAdaptor(
+        $otter_db, 'pipeline_db', 'Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor');
 }
 
+sub get_pipeline_rw_DBAdaptor {
+    my( $otter_db ) = @_;
+    
+    require Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor;
+    return Bio::Otter::Lace::SatelliteDB::_get_DBAdaptor(
+        $otter_db, 'pipeline_db_rw', 'Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor');
+}
 
 1;
 

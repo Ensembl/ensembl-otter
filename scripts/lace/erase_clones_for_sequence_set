@@ -23,7 +23,7 @@ use Hum::Submission 'accession_from_sanger_name';
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
     my $ds = $cl->get_DataSet_by_name($dataset_name);
     my $otter_db = $ds->make_EnsEMBL_DBAdaptor;
-    my $pipe_db = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($otter_db);
+    my $pipe_db = Bio::Otter::Lace::PipelineDB::get_pipeline_rw_DBAdaptor($otter_db);
 
     foreach my $dba ($otter_db, $pipe_db) {
         # delete:

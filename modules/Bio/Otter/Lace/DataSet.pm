@@ -739,7 +739,7 @@ sub store_SequenceSet{
 			      };
     # database connections
     my $otter_db    = $self->get_cached_DBAdaptor;
-    my $pipeline_db = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($otter_db,1)
+    my $pipeline_db = Bio::Otter::Lace::PipelineDB::get_pipeline_rw_DBAdaptor($otter_db)
         or confess "Can't connect to pipeline db";
     my $ens_db      = $self->make_EnsEMBL_DBAdaptor()
         or confess "Can't connect to 'self' db";
@@ -901,7 +901,7 @@ sub update_SequenceSet{
     # if(!$@){ confess "not allowed" unless $allow_update };
     # database connections
     my $otter_db    = $self->get_cached_DBAdaptor;
-    my $pipeline_db = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($otter_db);
+    my $pipeline_db = Bio::Otter::Lace::PipelineDB::get_pipeline_rw_DBAdaptor($otter_db);
     # update sql
     my $update_meta_info = qq{UPDATE sequence_set SET description = ?, analysis_priority = ? WHERE assembly_type = ?};
     my $name = $ss->name();
@@ -957,7 +957,7 @@ sub delete_SequenceSet{
 
     # database connections
     my $otter_db    = $self->get_cached_DBAdaptor;
-    my $pipeline_db = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($otter_db,1);
+    my $pipeline_db = Bio::Otter::Lace::PipelineDB::get_pipeline_rw_DBAdaptor($otter_db);
     # delete sql
     my $delete_meta_info = qq{DELETE FROM sequence_set WHERE assembly_type = ?};
     my $delete_assembly  = qq{DELETE FROM assembly WHERE type = ?};

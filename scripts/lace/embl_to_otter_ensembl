@@ -138,7 +138,7 @@ my $PIPED_TO = (-p STDIN ? 1 : 0);
     ($order, $embl_entries)  = check_embl_input($embl_file, $species, $molecule_type);
 
     # Make a connection to the pipeline database
-    my $pipeline_db = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($otter_db);
+    my $pipeline_db = Bio::Otter::Lace::PipelineDB::get_pipeline_rw_DBAdaptor($otter_db);
     $pipeline_db->db_handle->{'PrintError'} = 0; # turn off error writing for this db handle
     # Get SubmitContig analysis object for priming the pipeline
     $pipe_analysis = $pipeline_db->get_AnalysisAdaptor;
