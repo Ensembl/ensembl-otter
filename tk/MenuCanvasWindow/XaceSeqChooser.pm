@@ -566,10 +566,11 @@ sub edit_new_subsequence {
         $ex->start(1);
         $ex->end  (2);
         
-        my $gm = $self->get_default_mutable_GeneMethod
-            or return;
-        $new->GeneMethod($gm);
     }
+    my $gm = $self->get_default_mutable_GeneMethod
+        or return;
+    $new->GeneMethod($gm);
+
     $new->name($seq_name);
     $self->add_SubSeq($new);
     $clone->add_SubSeq($new);
