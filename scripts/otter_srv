@@ -146,7 +146,9 @@ sub make_new_child {
       $ENV{REMOTE_PORT} = $client->peerport;
       $ENV{SERVER_ADDR} = $client->sockhost;
       $ENV{SERVER_PORT} = $client->sockport;
-
+      $ENV{AUTHUSERFILE}  = "$OTTER_SERVER_ROOT/.htpasswd" if -e "$OTTER_SERVER_ROOT/.htpasswd";
+      $ENV{AUTHGROUPFILE} = "$OTTER_SERVER_ROOT/.htgroups" if -e "$OTTER_SERVER_ROOT/.htgroups";
+      
       my $uri = $r->url->path;
       if ($r->method eq 'GET' and $GET_SCRIPTS->{$uri}) {
         my $program = $ENV{SCRIPT_FILENAME} = "$SCRIPTDIR/" . $GET_SCRIPTS->{$uri};
