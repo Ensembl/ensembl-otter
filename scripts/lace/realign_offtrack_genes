@@ -39,11 +39,6 @@ use Hum::Analysis::Factory::ExonLocator;
     my $gene_aptr  = $dba->get_GeneAdaptor;
     
     my $anal = $dba->get_AnalysisAdaptor->fetch_by_logic_name('otter');
-    
-    #my $author = Bio::Otter::Author->new(
-    #    -NAME  => $client->author,
-    #    -EMAIL => $client->email,
-    #    );
 
     select_CloneSequence_contig($ss, $start_acc, $end_acc);
     my ($chr, $start, $end) = $cl->chr_start_end_from_contig($ss->selected_CloneSequences);
