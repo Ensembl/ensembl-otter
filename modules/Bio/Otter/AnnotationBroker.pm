@@ -55,7 +55,8 @@ sub SimpleFeature_key {
         $sf->start,
         $sf->end,
         $sf->strand,
-        $sf->score,
+        # sprintf ensures that 0.5 and 0.5000 become the same string
+        sprintf('%g', $sf->score),
         $sf->display_label || '',
         );
 }

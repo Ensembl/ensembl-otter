@@ -429,6 +429,7 @@ sub get_cached_DBAdaptor {
     my( $self ) = @_;
     
     my $dba = $self->{'_dba_cache'} ||= $self->make_DBAdaptor;
+    #warn "OTTER DBADAPTOR = '$dba'";
     return $dba;
 }
 

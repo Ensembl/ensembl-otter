@@ -310,6 +310,7 @@ eval {
     
     # Store SimpleFeature changes
     my $sfa = $odb->get_SimpleFeatureAdaptor;
+    my $ana = $odb->get_AnalysisAdaptor;
     if (@$del_sf) {
         printf STDERR "Deleting %d SimpleFeatures\n", scalar @$del_sf;
         foreach my $sf (@$del_sf) {
@@ -317,6 +318,7 @@ eval {
         }
     }
     if (@$save_sf) {
+        attach_analysis_objects($ana, $save_sf);
         printf STDERR "Saving %d SimpleFeatures\n", scalar @$save_sf;
         $sfa->store(@$save_sf);
     }
@@ -438,4 +440,16 @@ sub clones_from_path {
         push(@$clones, $clone);
     }
     return $clones;
+}
+
+sub attach_analysis_objects {
+    my( $analysis_adaptor, $sf_list ) = @_;
+    
+    my( %logic_ana );
+    foreach my $sf (@$sf_list) {
+        my $logic_name = $sf->analysis->logic_name;
+        my $ana = $logic_ana{$logic_name}
+            ||= $analysis_adaptor->fetch_by_logic_name($logic_name);
+        $sf->analysis($ana);
+    }
 }
