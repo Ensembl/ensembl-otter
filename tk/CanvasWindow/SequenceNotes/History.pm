@@ -259,7 +259,7 @@ sub get_message{
 
 sub indexed_note_text{
     my ($self , $index , $text) = @_ ;
-    return '' unless $index;
+    return '' unless defined $index;
     $text = $self->current_clone->get_all_SequenceNotes->[$index]->text ; 
     return $text;
 }
@@ -323,7 +323,6 @@ sub Unbusy{
     my $self= shift;
     $self->canvas->toplevel->Unbusy;
 };
-   
 
 
 
