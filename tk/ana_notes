@@ -159,7 +159,7 @@ my $nospangle;
             watch_cursor($mw);
             my @sequence_name_list = list_selected_sequence_names($canvas);
             return unless @sequence_name_list;
-            fork_lace_process(@sequence_name_list);
+            fork_lace_process($annotator, @sequence_name_list);
             default_cursor($mw);
             };
         make_button($button_frame2, 'Run lace', $run_lace, 4);
@@ -374,7 +374,7 @@ sub default_cursor {
     my( %lace_dir );
 
     sub fork_lace_process {
-        my( @seq_name_list ) = @_;
+        my( $annotator, @seq_name_list ) = @_;
 
         # Record the lace db directory of each
         # of the sequences.
@@ -396,12 +396,16 @@ sub default_cursor {
             return 1;
         }
         elsif (defined $pid) {
-	    my $other_param;
-	    if($nospangle){
-	    	$other_param.=" -ns ";
+           my @lace = ('lace', '-path', $lace_dir);
+            push(@lace, '-ns') if $nospangle;
+            if ($annotator) {
+                push(@lace, '-user', $user);
+            } else {
+                push(@lace, '-view');
             }
+            exec(@lace, @seq_name_list);
             #exec('lace', '-path', $lace_dir, '-view', '-noens', @seq_name_list);
-            exec('lace', '-path', $lace_dir, '-user', $user, $other_param, @seq_name_list);
+            #exec('lace', '-path', $lace_dir, '-user', $user, $other_param, @seq_name_list);
         }
         else {
             die "Error: Can't fork : $!";
