@@ -27,11 +27,11 @@ sub homol_classes {
     if (my $c = $band->{'_homol_classes'}) {
         @classes = @$c;
     } else {
-        @classes = ( { name => "Mouse", gff_key => "MouseBlastzTight", colour => "#a0522d"}, 
-		     { name => "Rat", gff_key => "RatBlastzTight", colour => "#a0522d"}, 
-		     { name => "Fugu", gff_key => "FuguEcore", colour => "#2e8b57"}, 
-		     { name => "Tetraodon", gff_key => "TetraodonEcore", colour => "#2e8b57"}, 
-		     { name => "Zebrafish", gff_key => "ZebrafishEcore", colour => "#2e8b57"} );
+        @classes = ( { name => "Mouse", gff_key => "Mouse", colour => "#a0522d"}, 
+		     { name => "Rat", gff_key => "Rat", colour => "#a0522d"}, 
+		     { name => "Fugu", gff_key => "Fugu", colour => "#2e8b57"}, 
+		     { name => "Tetraodon", gff_key => "Tetraodon", colour => "#2e8b57"}, 
+		     { name => "Zebrafish", gff_key => "Zebrafish", colour => "#2e8b57"} );
     }
 
     return @classes;
