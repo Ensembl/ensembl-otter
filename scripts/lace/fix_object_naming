@@ -140,7 +140,7 @@ sub is_sequence_name {
 
         ### Lock clones here
         eval{
-            lock_clones($dba, $all_clones);
+            #lock_clones($dba, $all_clones);
         };
         if ($@) {
             die "CLONES ARE LOCKED\n";
@@ -197,13 +197,17 @@ sub is_sequence_name {
             #    print STDERR "  CLASS POLLUTION: gene=$gene_class tsct=$class\n";
             #}
             print STDERR "  TSCT: $old_tsct_name\n";
-            my ($gene_name_root, $variant_number) = $name =~ /^(.+)-(\d{3})$/;
+            my $bad_tsct_name = 0;
+            my ($variant_number) = $name =~ /^.+-(\d{3})$/;
             unless ($variant_number) {
+                $bad_tsct_name = 1;
                 if (index($name, $gene_name) == 0 and $name =~ /(\d+)$/) {
-                    $variant_number = sprintf "%03d", $1;
+                    my $num = $1;
+                    if ($num < (10 + @$tsct_list)) {
+                        $variant_number = sprintf "%03d", $num;
+                    }
                 }
             }
-            $gene_name_root ||= '';
             $variant_number ||= '001';
 
             my $is_clone_based = name_is_clone_based($name, $all_clone_names);
@@ -211,8 +215,10 @@ sub is_sequence_name {
                 $gene_number = undef if ! $gene_clone_root;
                 $fix_int_end = 1;
             }
+            elsif ($bad_tsct_name) {
+                # Transcript name must be fixed
+            }
             elsif ($fix_root) {
-                $gene_name_root = '';
                 $variant_number = '001';
             }
             elsif ("$class$name" eq $old_tsct_name and $is_clone_based) {

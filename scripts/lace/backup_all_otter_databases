@@ -116,7 +116,7 @@ sub list_otter_databases {
     
     my $dbs = [];
     while (my ($db_name) = $sth->fetchrow) {
-        if ($db_name =~ /otter/i) {
+        if ($db_name =~ /^otter/i) {
             push(@$dbs, $db_name);
         } else {
             print STDERR "Skipping database '$db_name'\n";
