@@ -3,6 +3,7 @@
 
 package GenomeCanvas;
 
+
 use strict;
 use Carp;
 use Tk;

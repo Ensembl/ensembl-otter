@@ -14,13 +14,15 @@ use GenomeCanvas;
     my $gc = GenomeCanvas->new($mw);
     
     my $canvas = $gc->canvas;
-    $canvas->createRectangle(1,1,500,200,
+    my $rec = $canvas->createRectangle(1,1,500,200,
         -fill       => '#ffffff',
         -outline    => '#999999',
         );
+    warn $rec;
+    $canvas->bind($rec, '<Button-1>', \&deselect_text);
     
-    $canvas->eventAdd('<<alpha_num>>', '<KeyPress- >', "a".."z", "A".."Z", 0..9);
-    my $size = 15;
+    $canvas->eventAdd('<<alpha_num>>', map "<KeyPress-$_>", ' ', "a".."z", "A".."Z", 0..9);
+    my $size = 14;
     my $x = 10;
     my $y_begin = $x;
     for (my $i = 0; $i < 11; $i++) {
@@ -47,8 +49,7 @@ sub make_editable_label {
         -font   => ['lucidatypewriter', $size, 'normal'],
         -tags   => ['test text'],
         );
-    $canvas->bind($t, '<Enter>',        \&make_text_bold);
-    $canvas->bind($t, '<Leave>',        \&make_text_normal);
+    $canvas->bind($t, '<Button-1>',     \&select_text);
     $canvas->bind($t, '<BackSpace>',    \&backspace);
     $canvas->bind($t, '<Left>',         \&go_left);
     $canvas->bind($t, '<Right>',        \&go_right);
@@ -58,6 +59,7 @@ sub make_editable_label {
 BEGIN {
 
     my $rec_tag = 'SelectedTextBkgd';
+    my $current_text = 0;
 
     sub backspace {
         my( $canvas ) = @_;
@@ -86,15 +88,20 @@ BEGIN {
         $canvas->icursor($text, $pos + 1);
     }
 
-    sub make_text_bold {
+    sub select_text {
         my( $canvas ) = @_;
 
         my $text = $canvas->find('withtag', 'current');
+        if ($text == $current_text) {
+            # position pointer
+        } else {
+            deselect_text();
+            make_highlight_rectangle($canvas, $text);
 
-        make_highlight_rectangle($canvas, $text);
-
-        $canvas->focus($text);
-        $canvas->icursor($text, 'end');
+            $canvas->focus($text);
+            $canvas->icursor($text, 'end');
+        }
+        $current_text = $text;
     }
 
     sub make_highlight_rectangle {
@@ -111,15 +118,19 @@ BEGIN {
         $canvas->lower($rec, $obj);
     }
 
-    sub make_text_normal {
+    sub deselect_text {
         my( $canvas ) = @_;
 
+        return unless $current_text;
         $canvas->delete($rec_tag);
         $canvas->focus("");
+        $current_text = 0;
     }
     
     sub insert_character {
         my( $canvas, $char ) = @_;
+        
+        return unless $char =~ /^[a-zA-Z0-9 ]$/;
         
         my $text = $canvas->find('withtag', 'current');
         $canvas->insert('current', 'insert', $char);
