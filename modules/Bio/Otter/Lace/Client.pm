@@ -303,6 +303,18 @@ __END__
 
 =head1 NAME - Bio::Otter::Lace::Client
 
+=head1 DESCRIPTION
+
+A B<Client> object Communicates with an otter
+HTTP server on a particular host and port.  It
+has methods to fetch annotated gene information
+in otter XML, lock and unlock clones, and save
+"ace" formatted annotation back.  It also returns
+lists of B<DataSet> objects provided by the
+server, and creates B<AceDatabase> objects (which
+mangage the acedb database directory structure
+for a lace session).
+
 =head1 AUTHOR
 
 James Gilbert B<email> jgrg@sanger.ac.uk

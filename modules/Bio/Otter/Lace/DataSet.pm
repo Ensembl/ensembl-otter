@@ -757,7 +757,7 @@ sub make_DBAdaptor {
     my(@args);
     foreach my $prop ($self->list_all_db_properties) {
         if (my $val = $self->$prop()) {
-            print STDERR "-$prop  $val\n";
+            #print STDERR "-$prop  $val\n";
             push(@args, "-$prop", $val);
         }
     }
@@ -884,6 +884,63 @@ sub PORT {
 __END__
 
 =head1 NAME - Bio::Otter::Lace::DataSet
+
+=head1 DESCRIPTION
+
+The B<Bio::Otter::Lace> objects are designed for
+use with the annotators' B<otterlace> interface,
+where simple data objects for use behind the
+graphical interface of the long-running client
+are needed.  The standard Ensembl DBAdaptor
+scheme was not used so that the database handle
+can be dropped.  (Because of the DBAdaptor system
+design, the database connection is usually only
+dropped when all the data objects go out of
+scope.)
+
+There are also objects to represent the extra
+tables found in the B<lace.sql> file in the otter
+distribution (such as sequence sets and notes).
+
+=head2 DataSet
+
+The B<DataSet> object represents an entry in the
+B<species.dat> file, which is, usually, a species
+served by the otter server.
+
+The DataSet object has an Ensembl B<DBAdaptor> -
+it is the only object in the Lace system that
+does, and there is a method
+(B<disconnect_DBAdaptor>) to drop the database
+connection.  It contains methods for saving data
+to the extra tables defined in B<lace.sql>, and
+which are represented by the other Lace data
+objects.
+
+Each DataSet contains one or more
+B<SequenceSet>s.
+
+=head2 SequenceSet
+
+A SequenceSet is any list of clones that
+annotators are working on, most often a
+contiguous region of a genome.  Each SequenceSet
+has a list of B<CloneSequence> objects.
+
+=head2 CloneSequence
+
+A CloneSequence is a container for some of the
+data found in the Ensembl B<Clone> and B<Contig>
+objects and in the B<assembly> table.  It has
+zero or more B<SequenceNotes>, and, if there are
+any, one of them is designated the current (most
+recent) SeqeuenceNote.
+
+=head2 SequenceNote
+
+This is a remark added by an annotator to the
+annotation interface to aid tracking the progress
+of annotation.
 
 =head1 AUTHOR
 
