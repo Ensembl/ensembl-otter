@@ -914,8 +914,10 @@ sub DESTROY {
 
 sub popup_ana_seq_history{
     my $self = shift @_ ;
-    my $index = $self->get_current_CloneSequence_index or return; 
-
+    my $index = $self->get_current_CloneSequence_index ; 
+    unless (defined $index ){
+        return;
+    }
     unless ( $self->check_for_history_window($index) ){
         # window has not been created already - create one
         my $top = $self->canvas->Toplevel();
