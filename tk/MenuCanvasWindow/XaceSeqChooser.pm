@@ -4,7 +4,7 @@
 package MenuCanvasWindow::XaceSeqChooser;
 
 use strict;
-use Carp;
+use Carp qw{ cluck confess };
 use Tk::Dialog;
 use Hum::Ace::SubSeq;
 use Hum::Ace::Locus;
@@ -623,8 +623,8 @@ sub bind_events {
     $canvas->Tk::bind('<KP_Enter>', sub{ $self->edit_double_clicked });    
     
     # Object won't get DESTROY'd without:
-    $canvas->toplevel->bind('<Destroy>', sub{
-        #warn "Dealing with <Destroy> call";
+    $canvas->Tk::bind('<Destroy>', sub{
+        #cluck "Dealing with <Destroy> call";
         $self = undef;
         });
 }
@@ -648,12 +648,6 @@ sub exit_save_data {
         return;
     }
     elsif ($ans eq 'Yes') {
-        if (my $xr = $self->xace_remote) {
-            # This will fail if xace has been
-            # exited, so we ignore error.
-            eval{ $xr->save; };
-        }
-
         # Return false if there is a problem saving
         $self->save_data or return;
     }
@@ -673,11 +667,21 @@ sub exit_save_data {
 sub save_data {
     my( $self ) = @_;
 
+    warn "SAVING DATA";
+
+    if (my $xr = $self->xace_remote) {
+        warn "XACE SAVE";
+        # This will fail if xace has been
+        # exited, so we ignore error.
+        eval{ $xr->save; };
+    }
+
     unless ($self->write_access) {
         warn "Read only session - not saving\n";
         return 1;   # Can't save - but is OK
     }
     my $top = $self->canvas->toplevel;
+
 
     $top->Busy;
 
