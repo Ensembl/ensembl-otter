@@ -5,9 +5,8 @@
 use strict;
 
 use Bio::Otter::Lace::Defaults;
+use Bio::Otter::AnnotationBroker;
 use Hum::Analysis::Factory::ExonLocator;
-#use Hum::Ace::SubSeq;
-#use Hum::Ace::GeneMethod;
 
 {
     my( $dataset_name,
@@ -25,6 +24,7 @@ use Hum::Analysis::Factory::ExonLocator;
         'end_acc=s'     => \$end_acc,
         ) or $usage->();
     $usage->() unless $dataset_name and $sequence_set and $start_acc and $end_acc;
+    
 
     # Connect to Ensembl/Otter database and fetch adaptors
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
@@ -38,6 +38,13 @@ use Hum::Analysis::Factory::ExonLocator;
     my $slice_aptr = $dba->get_SliceAdaptor;
     my $gene_aptr  = $dba->get_GeneAdaptor;
     
+    my $anal = $dba->get_AnalysisAdaptor->fetch_by_logic_name('otter');
+    
+    #my $author = Bio::Otter::Author->new(
+    #    -NAME  => $client->author,
+    #    -EMAIL => $client->email,
+    #    );
+
     select_CloneSequence_contig($ss, $start_acc, $end_acc);
     my ($chr, $start, $end) = $cl->chr_start_end_from_contig($ss->selected_CloneSequences);
     my $slice = $slice_aptr->fetch_by_chr_start_end($chr, $start, $end);
@@ -57,26 +64,44 @@ use Hum::Analysis::Factory::ExonLocator;
             #print STDERR "Found entire gene '$name' ($stable_id)\n";
             next;
         }
-        my $whole_gene = $gene_aptr->fetch_by_stable_id($slice_gene->stable_id);
-        unless (gene_is_off_track($whole_gene, $acc_list)) {
+        my $db_gene = $gene_aptr->fetch_by_stable_id($slice_gene->stable_id);
+        unless (gene_is_off_track($db_gene, $acc_list)) {
             #print STDERR "Found truncated gene '$name' ($stable_id)\n";
             next;
         }
         my $v = $slice_gene->version;
         print STDERR "Found off track gene '$name' ($stable_id v$v)\n";
-        if (remap_ens_Exons($finder, $whole_gene->get_all_Exons, $slice)) {
-            #save_new_gene($dba, $gene_aptr, $whole_gene);
+        if (remap_ens_Exons($finder, $db_gene->get_all_Exons, $slice)) {
+            # otter > XML > otter
+            my $temp = Bio::Otter::Lace::TempFile->new;
+            $temp->name("realign_offtrack.$$.xml");
+            my $w_fh = $temp->write_file_handle;
+            print $w_fh
+                "<otter>\n<sequence_set>\n"
+                , Bio::Otter::Converter::path_to_XML($chr, $start, $end, $sequence_set, $tiles)
+                , $db_gene->toXMLString
+                , "</otter>\n</sequence_set>\n";
+            my $r_fh = $temp->read_file_handle;
+            my ($gene_list) = Bio::Otter::Converter::XML_to_otter($r_fh);
+            my $xml_gene = shift @$gene_list;
+            $xml_gene->analysis($anal);
+            save_new_gene($dba, $gene_aptr, $db_gene, $xml_gene, $slice);
         }
     }
 }
 
 sub save_new_gene {
-    my( $dba, $gene_aptr, $gene ) = @_;
+    my( $dba, $gene_aptr, $db_gene, $xml_gene, $slice ) = @_;
+
+    my $broker = Bio::Otter::AnnotationBroker->new($dba);
+    $broker->make_id_version_hash([$db_gene]);
+    $broker->increment_versions_in_gene($xml_gene);
+    $gene_aptr->attach_to_Slice($xml_gene, $slice);
 
     eval {
         $dba->begin_work;
-        $gene_aptr->increment_versions($gene);
-        $gene_aptr->store($gene);
+        $xml_gene->detach_DBAdaptors;
+        $gene_aptr->store($xml_gene);
         $dba->commit;
     };
     if ($@) {

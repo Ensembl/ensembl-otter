@@ -242,43 +242,9 @@ sub compare_genes {
 
 	# We only need to look through all the exons if the gene is modified
         if ($gene_modified == 1) {
-            $self->increment_obj_version($newg);
             $newg->gene_info->author($current_author);
+            $self->increment_versions_in_gene($newg);
             $modified_gene_ids{$geneid} = 1;
-
-            foreach my $tn (@{$newg->get_all_Transcripts}) {
-                print STDERR "Transcript: ", $tn->stable_id, "\n";
-                $self->increment_obj_version($tn);
-                if (my $tp = $tn->translation) {
-                    $self->increment_obj_version($tp);
-                }
-            }
-
-	    # This is wrong - should we increase the version of modified exons?
-            ### No - we don't need to store new versions of unchanged exons.
-            ### Need to fix.
-
-            foreach my $exon (@{$newg->get_all_Exons}) {
-                $self->increment_obj_version($exon);
-            }
-
-            #my ($edel, $enew, $emod) = $self->compare_obj(
-            #        $newg->get_all_Exons,
-            #        $oldg->get_all_Exons,
-            #        );
-            #my @modexon = keys %$emod;
-
-            #foreach my $ex (@modexon) {
-            #    if ($self->compare_exons($emod->{$ex}{old},$emod->{$ex}{new}) == 0) {
-            #            print STDERR "Found modified exon " . $ex ."\n";
-
-            #            #print STDERR " Exon 1 " . $emod->{$ex}{old}->start . " " . $emod->{$ex}{old}->end . " " . $emod->{$ex}{old}->phase . " " . $emod->{$ex}{old}->end_phase . "\n"; 
-            #            #print STDERR " Exon 2 " . $emod->{$ex}{new}->start . " " . $emod->{$ex}{new}->end . " " . $emod->{$ex}{new}->phase . " " . $emod->{$ex}{new}->end_phase . "\n";
-            #            $gene_modified = 1;
-            #    } else {
-            #    # print STDERR "Found same exon\n";
-            #    }
-            #}
         }
 
     } # done comparisons - now need to build arrays
@@ -361,6 +327,28 @@ sub compare_genes {
     $self->drop_id_version_hash;
 
     return @events;
+}
+
+sub increment_versions_in_gene {
+    my( $self, $gene ) = @_;
+    
+    $self->increment_obj_version($gene);
+
+    foreach my $tn (@{$gene->get_all_Transcripts}) {
+        print STDERR "Transcript: ", $tn->stable_id, "\n";
+        $self->increment_obj_version($tn);
+        if (my $tp = $tn->translation) {
+            $self->increment_obj_version($tp);
+        }
+    }
+
+    # This is wrong - should we increase the version of modified exons?
+    ### No - we don't need to store new versions of unchanged exons.
+    ### Need to fix.
+
+    foreach my $exon (@{$gene->get_all_Exons}) {
+        $self->increment_obj_version($exon);
+    }
 }
 
 sub set_gene_created_version_modified {

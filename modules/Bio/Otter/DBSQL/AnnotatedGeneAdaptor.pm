@@ -358,28 +358,6 @@ sub store{
    $obj->adaptor($self);
 }
 
-sub increment_versions {
-    my( $self, $gene ) = @_;
-    
-    $self->_increment_obj_version($gene);
-    $self->_increment_obj_version(@{$gene->get_all_Exons});
-    foreach my $tran (@{$gene->get_all_Transcripts}) {
-        $self->_increment_obj_version($tran);
-        if (my $tsl = $tran->translation) {
-            $self->_increment_obj_version($tsl);
-        }
-    }
-}
-
-sub _increment_obj_version {
-    my $self = shift;
-    
-    foreach my $obj (@_) {
-        my $version = ($obj->version || 0) + 1;
-        $obj->version($version);
-    }
-}
-
 sub attach_to_Slice {
     my ($self,$gene,$slice) = @_;
 
