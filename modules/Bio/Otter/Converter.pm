@@ -1887,13 +1887,13 @@ sub slice_to_XML {
   foreach my $g (@genes) {
     #print STDERR "Gene type " . $g->type . "\n";
     if ($g->type ne 'obsolete') {
-    if (!defined($genehash{$g->stable_id})) {
-       $genehash{$g->stable_id} = $g;
-    } else {
-      if ($g->version > $genehash{$g->stable_id}->version) {
+      if (!defined($genehash{$g->stable_id})) {
          $genehash{$g->stable_id} = $g;
+      } else {
+        if ($g->version > $genehash{$g->stable_id}->version) {
+           $genehash{$g->stable_id} = $g;
+        }
       }
-    }
     }
   }
   foreach my $g (values %genehash) {

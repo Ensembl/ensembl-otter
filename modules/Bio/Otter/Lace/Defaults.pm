@@ -68,7 +68,7 @@ sub do_getopt {
 	       'view'          => sub{ $DEFAULTS->{$CLIENT_STANZA}->{'write_access'} = 0 },
 	       # these are the caller script's options
 	       @script_args,
-	       ) or confess "Error processing command line";
+	       ) or return 0;
 
     merge_all_optionals();
     check_spelling(); # only does client ATM

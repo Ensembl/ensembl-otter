@@ -64,8 +64,11 @@ sub _death{
 }
 
 sub _log_prefix{
-    return sprintf('%s %s %s', $ENV{SCRIPT_NAME}, scalar(localtime), $ENV{REMOTE_ADDR}) if $ENV{REMOTE_ADDR};
-    return sprintf('%s %s',    $ENV{SCRIPT_NAME}, scalar(localtime));
+    if ($ENV{REMOTE_ADDR}) {
+        return join(' ', $ENV{SCRIPT_NAME}, scalar(localtime), $ENV{REMOTE_ADDR});
+    } else {
+        return join(' ', $ENV{SCRIPT_NAME}, scalar(localtime));
+    }
 }
 sub import{
     tie(*STDERR, __PACKAGE__, \*STDERR);

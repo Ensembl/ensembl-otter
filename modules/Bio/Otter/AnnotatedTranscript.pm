@@ -72,14 +72,20 @@ sub truncate_to_Slice{
     my $is_truncated    = 0;
     my $exon_list       = $self->get_all_Exons;
     
-    my $translation     = undef;
-    unless($translation = $self->translation ){
-        print STDERR "no translation for " . $self->transcript_info->name ."\n" ;   
-        if ( ($$exon_list[0]->start < 1) || ($$exon_list[$#$exon_list]->end) > $slice->length ){
-            $is_truncated = 1;
-        }
-        return $is_truncated ;
-    } 
+    my $translation     = $self->translation;
+
+    my( $transcript_start, $transcript_end );
+    if ($exon_list->[0]->strand == 1) {
+        $transcript_start = $exon_list->[0]->start;
+        $transcript_end   = $exon_list->[$#$exon_list]->end;
+    } else {
+        $transcript_start = $exon_list->[$#$exon_list]->start;
+        $transcript_end   = $exon_list->[0]->end;
+    }
+    if ($transcript_end < 1 or $transcript_start > $slice->length) {
+        $self->flush_Exons;
+        return 1;   # is_truncated
+    }
     
     my $coding_region_start    = $self->coding_region_start ;
     my $coding_region_end      = $self->coding_region_end ;
@@ -95,10 +101,10 @@ sub truncate_to_Slice{
     
     my $strand = $$exon_list[0]->strand ;
 
-    if ( $coding_region_start > $slice->length  ||  $coding_region_end < 1 ){
-        # remove transcript if the entire transcript lies outside the slice
-         $self->{'translation'} = undef;
-         $self->{'_translation_id'} = undef;
+    if ($coding_region_start > $slice->length  ||  $coding_region_end < 1 ){
+        # remove translation if the entire translation lies outside the slice
+        $self->{'translation'} = undef;
+        $self->{'_translation_id'} = undef;
     } 
 
     #   for each exon ( working in a 5' to 3 ' direction)
@@ -118,13 +124,12 @@ sub truncate_to_Slice{
     my ($start_removed, $end_removed) ;
     my $five_prime_is_set  ;
     for (my $i = 0 ; $i < @$exon_list ;){
-        my $exon = @$exon_list[$i] ;
+        my $exon = $exon_list->[$i] ;
         my $exon_start = $exon->start ;
         my $exon_end = $exon->end ;
         my $strand = $exon->strand;
-; 
 
-        if ($exon_start > $slice->length || $exon->end < 1 ){
+        if ($exon->end < 1 or $exon_start > $slice->length) {
             # exon lies before/after slice ends - should be removed 
             splice(@$exon_list, $i, 1);
             $is_truncated = 1;  

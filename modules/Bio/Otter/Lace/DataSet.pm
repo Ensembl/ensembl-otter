@@ -974,7 +974,7 @@ sub _make_clone{
     $clone->id("$acc_sv");    ### Should set to international clone name
     $clone->embl_id($acc);
     $clone->embl_version($sv);
-    $clone->htg_phase(3);
+    $clone->htg_phase(3);   ### Not all are "Finished" (phase 3)
     $clone->version(1);
     $clone->created(time);
     $clone->modified(time);

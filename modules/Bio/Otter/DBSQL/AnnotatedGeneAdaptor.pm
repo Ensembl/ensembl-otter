@@ -156,6 +156,7 @@ sub fetch_by_Slice{
     #my @genes = @{$self->_fetch_by_Slice($slice)};
 
 
+    # Discard non-current versions of genes
     my %genes;
     foreach my $g (@$genes) {
          my $stable_id = $g->stable_id;
@@ -172,6 +173,7 @@ sub fetch_by_Slice{
         $self->annotate_gene($g);
         push(@$latest_genes, $g);
     }
+    %genes = ();
 
     # Truncate gene components to Slice
     foreach my $g (@$latest_genes) {
