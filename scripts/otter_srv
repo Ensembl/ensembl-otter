@@ -43,7 +43,7 @@ if ($ARGV[0] eq '--alt') {
 
 if ($SOCKET != 19312) {
   $PREFORK               = 3;
-  $MAX_CLIENTS_PER_CHILD = 5;
+  $MAX_CLIENTS_PER_CHILD = 25;
 }
 #  $MAX_CLIENTS_PER_CHILD = 500;
 
