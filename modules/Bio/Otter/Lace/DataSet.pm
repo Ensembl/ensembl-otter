@@ -7,11 +7,12 @@ use strict;
 use Carp;
 use Bio::Otter::DBSQL::DBAdaptor;
 use Bio::Otter::Lace::CloneSequence;
+use Bio::Otter::CloneLock;
+use Bio::Otter::Author;
 use Bio::Otter::Lace::Chromosome;
 use Bio::Otter::Lace::SequenceSet;
 use Bio::Otter::Lace::ResultSet;
 use Bio::Otter::Lace::SequenceNote;
-#use Bio::EnsEMBL::Pipeline::Monitor;
 use Bio::Otter::Lace::PipelineDB;
 use Bio::Otter::Lace::SatelliteDB;
 use Bio::Otter::Lace::Defaults;
@@ -284,11 +285,13 @@ sub lock_refresh_for_SequenceSet{
     my $id_string =  '"'  .  ( join "\" , \"" , @id_list )  .  '"' ;    
     
     my $sth = $dba->prepare(qq{
-        SELECT cl.clone_lock_id , g.contig_id
+        SELECT cl.clone_lock_id , g.contig_id, t.author_id
+            , t.author_name, t.author_email, cl.hostname
         FROM assembly a
           , contig g
           , clone c
         LEFT JOIN clone_lock cl ON cl.clone_id = c.clone_id
+        LEFT JOIN author t ON t.author_id = cl.author_id
         WHERE a.contig_id = g.contig_id
           AND g.clone_id = c.clone_id
           AND a.type = "$type"
@@ -298,16 +301,25 @@ sub lock_refresh_for_SequenceSet{
         }) ;
              
     $sth->execute;
-    my ($clone_lock_id , $contig_id) ;
-    $sth->bind_columns( \$clone_lock_id , \$contig_id );
+    my ($clone_lock_id , $contig_id, $author_id,
+        $author_name, $author_email, $hostname);
+    $sth->bind_columns( \$clone_lock_id , \$contig_id, \$author_id,
+                        \$author_name, \$author_email, \$hostname );
     my %lock_hash ;
     while($sth->fetch) {
-        $lock_hash{$contig_id} = 1 if defined $clone_lock_id ;
+        if(defined($clone_lock_id)){
+            my $authorObj = Bio::Otter::Author->new(-dbid  => $author_id,
+                                                    -name  => $author_name,
+                                                    -email => $author_email);            
+            $lock_hash{$contig_id} = Bio::Otter::CloneLock->new(-author   => $authorObj,
+                                                                -hostname => $hostname,
+                                                                -dbID     => $clone_lock_id);
+        }
     }
     
     foreach my  $clone (@{$ss->CloneSequence_list}){
-        if (defined  $lock_hash{$clone->contig_id} ){
-            $clone->set_lock_status(1);
+        if (my $cloneLock = $lock_hash{$clone->contig_id} ){
+            $clone->set_lock_status($cloneLock);
         }else{
             $clone->set_lock_status(0);
         }
@@ -333,11 +345,13 @@ sub fetch_all_CloneSequences_for_SequenceSet {
           , g.contig_id, g.name, g.length
           , a.chromosome_id, a.chr_start, a.chr_end
           , a.contig_start, a.contig_end, a.contig_ori
-          , cl.clone_lock_id
+          , cl.clone_lock_id, t.author_id, t.author_name
+          , t.author_email, cl.hostname
         FROM assembly a
           , contig g
           , clone c
         LEFT JOIN clone_lock cl ON cl.clone_id = c.clone_id
+        LEFT JOIN author t ON t.author_id = cl.author_id
         WHERE a.contig_id = g.contig_id
           AND g.clone_id = c.clone_id
           AND a.type = ?
@@ -349,13 +363,15 @@ sub fetch_all_CloneSequences_for_SequenceSet {
          $ctg_id,  $ctg_name,  $ctg_length,
          $chr_id,  $chr_start,  $chr_end,
          $contig_start,  $contig_end,  $strand,
-         $clone_lock_id );
+         $clone_lock_id, $author_id, $author_name, 
+         $author_email, $hostname );
     $sth->bind_columns(
         \$name, \$acc, \$sv,
         \$ctg_id, \$ctg_name, \$ctg_length,
         \$chr_id, \$chr_start, \$chr_end,
         \$contig_start, \$contig_end, \$strand,
-        \$clone_lock_id
+        \$clone_lock_id, \$author_id, 
+        \$author_name, \$author_email, \$hostname
         );
     while ($sth->fetch) {
         my $cl = Bio::Otter::Lace::CloneSequence->new;
@@ -372,7 +388,13 @@ sub fetch_all_CloneSequences_for_SequenceSet {
         $cl->contig_name($ctg_name);
         $cl->contig_id($ctg_id);
         if (defined $clone_lock_id){
-            $cl->set_lock_status(1) ;
+            my $authorObj = Bio::Otter::Author->new(-dbid  => $author_id,
+                                                    -name  => $author_name,
+                                                    -email => $author_email);
+            my $cloneLock = Bio::Otter::CloneLock->new(-author   => $authorObj,
+                                                       -hostname => $hostname,
+                                                       -dbID     => $clone_lock_id);
+            $cl->set_lock_status($cloneLock);
         }
         push(@$cs, $cl);
     }
