@@ -67,6 +67,7 @@ if (scalar(@gene_stable_ids)) {
   print scalar(@gene_stable_ids)." gene names found\n";
   %gene_stable_ids = map {$_,1} @gene_stable_ids;
 }
+exit 0;
 
 my $tdb = new Bio::Otter::DBSQL::DBAdaptor(-host => $t_host,
                                            -user => $t_user,
