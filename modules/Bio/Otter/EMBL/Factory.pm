@@ -14,11 +14,28 @@
 =head1 NAME
  
 Bio::Otter::EMBL::Factory
+
+=head2 Description
+
+Factory object used to create Hum::EMBL objects in order to dump EMBL flatfiles
+from an Otter finished & annotated genomic sequence database. Uses a variety of
+of the Hum::EMBL modules.
+
+First pass a Bio::Otter::Lace::DataSet object by a call to the Dataset method,
+then call make_embl with an EMBL accession.
+
+Typical usage:
  
-=head2 Constructor:
+  my $embl_factory = Bio::Otter::EMBL::Factory->new;
+  $embl_factory->Dataset($ds);
+    
+  foreach my $acc (@ARGV) {
+        
+    my $embl = $embl_factory->make_embl($acc);
+    print $embl->compose();
 
-my $factory = Bio::Otter::EMBL::Factory->new;
-
+  }
+ 
 =cut
 
 package Bio::Otter::EMBL::Factory;
@@ -41,7 +58,9 @@ Hum::EMBL->import(
 
 =head2 new
 
-my $factory = Bio::Otter::EMBL::Factory->new;
+Constructor for the class.
+
+    my $factory = Bio::Otter::EMBL::Factory->new;
 
 =cut
 	
@@ -54,33 +73,33 @@ sub new {
 
 =head2 organism_lines
  
-?? 
+  Currently confesses if called.
 
 =cut
 
 sub organism_lines {
 
+    confess "Not written";
 }
 
 
 =head2 standard_comments
  
-?? 
+  Currently confesses if called.
 
 =cut
 
 sub standard_comments {
 
+    confess "Not written";
 }
-
-
 
 =head2 get_DBAdaptors
 
-    my ($otter_db, $slice_aptr, $gene_aptr) = get_DBAdaptors();
-
 Providing $self->Dataset has been set, retrieves the cached DBAdaptor
 from the Dataset, together with Slice and Gene adaptors.
+
+    my ($otter_db, $slice_aptr, $gene_aptr) = get_DBAdaptors();
 
 =cut
 
@@ -105,6 +124,11 @@ sub get_DBAdaptors {
     return ($otter_db, $slice_aptr, $gene_aptr);
 }
 
+=head2 fake_embl_setup
+
+Debugging routine to be removed later.
+
+=cut
 
 sub fake_embl_setup {
     my ( $self, $embl, $acc, @sec ) = @_;
@@ -165,8 +189,14 @@ sub fake_embl_setup {
 }
 
 =head2 Embl
- 
-?? 
+
+Get/set method for the Hum::EMBL object being constructed by the factory object.
+Initially set by the make_embl method.
+     
+    my $embl = Hum::EMBL->new;
+    $embl_factory->EMBL($embl);
+
+    my $embl = $embl_factory->EMBL;
 
 =cut
 
@@ -181,8 +211,8 @@ sub EMBL {
 
 
 =head2 contig_length
- 
-?? 
+
+Get/set method for the contig_length of the Slice_contig on the tiling path 
 
 =cut
 
@@ -197,8 +227,9 @@ sub contig_length {
 
 
 =head2 Slice
- 
-?? 
+
+Get/set method for the Bio::EnsEMBL::Slice object being used to create the
+annotation for the EMBL accession. Initially set by make_embl.
 
 =cut
 
@@ -212,8 +243,9 @@ sub Slice {
 }
 
 =head2 Slice_contig
- 
-?? 
+
+Get/set method for Slice_contig (a Bio::EnsEMBL::RawContig object) fetched
+from the tiling path.
 
 =cut
 
@@ -228,7 +260,8 @@ sub Slice_contig {
 
 =head2 FeatureSet
  
-Holds the Hum::EMBL::FeatureSet object.
+Get/set method for the Hum::EMBL::FeatureSet object being constructed as part of the
+Hum::EMBL object creation. Initially set by the make_embl method.
 
 =cut
 
@@ -258,7 +291,40 @@ sub FeatureSet {
 
 =head2 make_embl
  
-This is the big one!
+This is the principal method of the module. When passed an EMBL accession
+creates a Hum::EMBL object, which can be subsequently dumped. Does this by
+interrogating the Otter database and using various Hum::EMBL modules,
+returning the populated Hum::EMBL object, which can be dumped with
+print $embl->compose()
+
+Brief outline:
+
+a) Creates Hum::EMBL object, setting $embl_factory->EMBL;
+
+b)  Does initial setup of EMBL properties with $embl_factory->fake_embl_setup
+
+c)  Creates a Hum::EMBL::FeatureSet, setting $embl_factory->FeatureSet
+
+d)  Calls $embl_factory->fetch_chr_start_end_for_accession to get a list of
+    listrefs such as [1, 561232, 672780]
+
+e)  Iterates of the chr_start_ends
+    
+      Fetches Slice by chr_start_end
+      Gets tiling path for fetched slice
+      Gets Slice_contig from tiling_path
+      Gets a list of dbIDS for the Slice
+    
+      Iterates over the Gene ids
+
+        Fetches Gene
+        Calls $embl_factory->do_Gene   
+
+f)  Finishes up by calling Hum::EMBL::FeatureSet->sortByPosition
+                           Hum::EMBL::FeatureSet->removeDuplicateFeatures
+                           Hum::EMBL::FeatureSet->addToEntry
+
+g)  Returns the populated Hum::EMBL object
 
 =cut
 
@@ -273,7 +339,7 @@ sub make_embl {
     my ($otter_db, $slice_aptr, $gene_aptr) = $self->get_DBAdaptors();
     my $embl = Hum::EMBL->new;
     $self->EMBL($embl);
-    $self->fake_embl_setup($embl, $acc);
+    $self->fake_embl_setup($embl, $acc); #Debug
 
     my $set = 'Hum::EMBL::FeatureSet'->new;
     $self->FeatureSet($set);
@@ -310,7 +376,13 @@ sub make_embl {
     return $embl;
 }
 
-#Debugging just to see how features are made
+=head2 fake_features
+
+Debugging method, just to see how features are made
+To be removed later
+
+=cut
+
 sub fake_features {
     my ( $self ) = @_;
     
@@ -362,6 +434,8 @@ sub fake_features {
 
 =head2 do_Gene
 
+Method to add ?? to the Hum::EMBL object being 
+Passed a Bio::Otter::AnnotatedGene object, 
 
 =cut
 
@@ -452,7 +526,7 @@ sub get_tiling_path_for_Slice {
 
 =head2 Dataset
  
-Get/set method for the 'Bio::Otter::Lace::Dataset' object
+Get/set method for the Bio::Otter::Lace::Dataset object
 used to access the Otter database.
 
 =cut
