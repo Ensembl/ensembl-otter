@@ -316,7 +316,7 @@ sub scroll_to_obj {
     
     my $scroll_ref = $canvas->cget('scrollregion')
         or confess "No scrollregion";
-    my ($scr_left,$scr_top,$scr_right,$src_bottom) = @$scroll_ref;
+    my ($scr_left,$scr_top,$scr_right,$scr_bottom) = @$scroll_ref;
 
     my $width  = $scr_right  - $scr_left;
     my $height = $scr_bottom - $scr_top;
