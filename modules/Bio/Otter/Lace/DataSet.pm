@@ -724,7 +724,7 @@ sub store_SequenceSet{
 			      };
     # database connections
     my $otter_db    = $self->get_cached_DBAdaptor;
-    my $pipeline_db = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($otter_db)
+    my $pipeline_db = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($otter_db,1)
         or confess "Can't connect to pipeline db";
     my $ens_db      = $self->make_EnsEMBL_DBAdaptor()
         or confess "Can't connect to 'self' db";
