@@ -51,7 +51,7 @@ sub initial_canvas_size {
     if (my $in = $self->{'_initial_canvas_size'}) {
         return @$in;
     } else {
-        return (250,50); # Default
+        return (300,50); # Default
     }
 }
 

@@ -7,6 +7,7 @@ use strict;
 use Carp;
 use Tk::Dialog;
 use Tk::ROText;
+use Tk::LabFrame;
 use Hum::Ace::SubSeq;
 use Hum::Translator;
 use MenuCanvasWindow;
@@ -332,10 +333,8 @@ sub initialize {
     
     # Trap window close
     $top->protocol('WM_DELETE_WINDOW', $window_close);
-    $canvas->Tk::bind('<Control-w>',   $window_close);
-    $canvas->Tk::bind('<Control-W>',   $window_close);
-    $canvas->Tk::bind('<Control-q>',   $window_close);
-    $canvas->Tk::bind('<Control-Q>',   $window_close);
+    $top->bind('<Control-w>',   $window_close);
+    $top->bind('<Control-W>',   $window_close);
 
     my $edit_menu = $self->make_menu('Edit');
     
@@ -458,12 +457,20 @@ sub initialize {
             }
         });
         
+        my $frame = $canvas->toplevel->Frame(
+            #-relief => 'groove',
+            #-border => 2,
+            )->pack(
+                -side => 'top',
+                #-expand => 1,
+                #-fill => 'x',
+                );
+        
         # Widget for changing name
-        $self->add_subseq_rename_widget;
+        $self->add_subseq_rename_widget($frame);
         
         # Start not found and end not found widgets
-        $self->add_start_not_found_widgets;
-        $self->add_end_not_found_widgets;
+        $self->add_start_end_widgets($frame);
     } else {
         # SubSeq with an immutable method
         
@@ -589,7 +596,7 @@ sub show_peptide {
         
         # Make a bold style
         $peptext->tagConfigure('bold',
-            -background => '#ff3333',
+            -background => '#ef0000',
             -foreground => 'white',
             #-font => [$font, $size, 'bold'],
             );
@@ -612,7 +619,7 @@ sub show_peptide {
         $top->bind(    '<Control-W>',      $close_command);
         $top->bind(    '<Escape>',         $close_command);
         
-        # Closing with window manager only unmaps it
+        # Closing with window manager only unmaps window
         $top->protocol('WM_DELETE_WINDOW', $close_command);
     }
     
@@ -644,63 +651,6 @@ sub show_peptide {
     $win->raise;
 }
 
-sub OLD_show_peptide {
-    my( $self ) = @_;
-    
-    my( $sub );
-    if ($self->is_mutable) {
-        $sub = $self->new_SubSeq_from_tk;
-        return unless $sub->GeneMethod->is_coding;
-    } else {
-        $sub = $self->SubSeq;
-    }
-    my $pep = $self->translator->translate($sub->translatable_Sequence);
-    
-    my $fasta = $pep->fasta_string;
-    $fasta =~ s/\n$//s;
-
-    my( $label );
-    if ($label = $self->{'_pep_label'}) {
-        $label->configure( -text => $fasta );
-    } else {
-        my $top = $self->canvas->Toplevel;
-        
-        $self->{'_pep_label'} = $label = $top->Label(
-            -text           => $fasta,
-            -font           => [$self->font, $self->font_size, 'normal'],
-            -justify        => 'left',
-            -padx           => 6,
-            -pady           => 6,
-            -relief         => 'groove',
-            -background     => 'white',
-            -border         => 2,
-            #-exportselection => 1,
-            )->pack(
-                -expand => 'both',
-                );
-        
-        my $frame = $top->Frame(
-            -border => 6,
-            )->pack(
-                -anchor => 'sw',
-                );
-        my $close_command = sub{ $top->withdraw };
-        my $exit = $frame->Button(
-            -text => 'Close',
-            -command => $close_command ,
-            )->pack;
-        $top->bind(    '<Control-w>',      $close_command);
-        $top->bind(    '<Control-W>',      $close_command);
-        $top->bind(    '<Escape>',         $close_command);
-        $top->protocol('WM_DELETE_WINDOW', $close_command);
-    }
-    my $win = $label->toplevel;
-    $win->configure( -title => $pep->name . " translation" );
-    
-    $win->deiconify;
-    $win->raise;
-}
-
 sub translator {
     my( $self ) = @_;
     
@@ -713,65 +663,131 @@ sub translator {
 }
 
 sub add_subseq_rename_widget {
-    my( $self ) = @_;
+    my( $self, $widget ) = @_;
     
-    my $frame = $self->canvas->toplevel->Frame(
+    my $frame = $widget->Frame(
         -borderwidth    => 6,
-        );
-    $frame->pack(
-        -anchor => 'nw',
-        );
+        )->pack;
     
-    my $sub_name_label = $frame->Label(
-        -text   => "Name:",
+    $self->subseq_name_Entry(
+        $self->make_labelled_entry_widget($frame, 'Name', $self->SubSeq->name)
+        );
+}
+
+sub make_labelled_entry_widget {
+    my( $self, $widget, $name, $value, @pack ) = @_;
+    
+    @pack = (-side => 'left') unless @pack;
+    
+    my $entry_label = $widget->Label(
+        -text   => "$name:",
         -anchor => 's',
         -padx   => 6,
         );
-    $sub_name_label->pack(
-        -side => 'left',
-        );
+    $entry_label->pack(@pack);
 
-    my $sub_name = $frame->Entry(
-        -width              => 20,
+    my $entry = $widget->Entry(
+        -width              => 15,
         -exportselection    => 1,
         -relief             => 'flat',
         -background         => 'white',
         -selectbackground   => 'gold',
         -font               => [$self->font, $self->font_size, 'normal'],
         );
-    $sub_name->pack(
-        -side => 'left',
-        );
-    $sub_name->insert(0, $self->SubSeq->name);
-    $self->subseq_name_Entry($sub_name);
+    $entry->pack(@pack);
+    $entry->insert(0, $value) if $value;
+    return $entry;
 }
 
-sub add_start_not_found_widgets {
-    my( $self ) = @_;
+sub add_start_end_widgets {
+    my( $self, $widget ) = @_;
     
-    my $frame = $self->canvas->toplevel->Frame(
-        -borderwidth    => 3,
-        )->pack( -anchor => 'nw' );
+    my $start_end_frame = $widget->Frame->pack(
+        -side => 'top',
+        -expand => 0,
+        );
     
-    $frame->Label(
-        -text       => 'Start: ',
-        )->pack( -side => 'left' );
-    
-    my( $snf );
-    my $om = $frame->Optionmenu(
-        -variable   => \$snf,
-        -options    => [
-                ['found'          => 0],
-                ['not found - 1'  => 1],
-                ['not found - 2'  => 2],
-                ['not found - 3'  => 3],
-            ],
-        )->pack( -side => 'left' );
-    $snf = $self->SubSeq->start_not_found;
-    $om->menu->invoke($snf);
-    warn "snf = $snf";
+    ### The Start frame ###
+    {
+        my $frame = $start_end_frame->LabFrame(
+            -borderwidth    => 3,
+            -label          => 'Start',
+            -labelside      => 'acrosstop',
+            )->pack(
+                -side => 'left',
+                );
 
-    $self->{'_start_not_found_variable'} = \$snf;
+        # Menu
+        my( $snf );
+        my $om = $frame->Optionmenu(
+            -variable   => \$snf,
+            -options    => [
+                    ['Found'          => 0],
+                    ['Not found - 1'  => 1],
+                    ['Not found - 2'  => 2],
+                    ['Not found - 3'  => 3],
+                ],
+            -takefocus  => 0,
+            )->pack(
+                -side => 'top',
+                );
+        $snf = $self->SubSeq->start_not_found;
+        $om->menu->invoke($snf);
+        warn "snf = $snf";
+
+        $self->{'_start_not_found_variable'} = \$snf;
+
+        # Continued from
+        my $e_frame = $frame->Frame(
+            -border => 6,
+            )->pack( -side => 'bottom' );
+        $self->{'_continued_from_Entry'} = 
+            $self->make_labelled_entry_widget(
+                $e_frame,
+                'Continued from',
+                $self->SubSeq->upstream_subseq_name,
+                -anchor => 'nw',
+                );
+    }
+    
+    ### End frame ###
+    {
+        my $frame = $start_end_frame->LabFrame(
+            -borderwidth    => 3,
+            -label          => 'End',
+            -labelside      => 'acrosstop',
+            )->pack(
+                -side => 'right',
+                );
+
+        # Menu
+        my( $enf );
+        my $om = $frame->Optionmenu(
+            -variable   => \$enf,
+            -options    => [
+                    ['Found'        => 0],
+                    ['Not found'    => 1],
+                ],
+            -takefocus => 0,
+            )->pack( -side => 'top' );
+        $enf = $self->SubSeq->end_not_found;
+        $om->menu->invoke($enf);
+        warn "enf = $enf";
+
+        $self->{'_end_not_found_variable'} = \$enf;
+
+        # Continues as
+        my $e_frame = $frame->Frame(
+            -border => 6,
+            )->pack( -side => 'bottom' );
+        $self->{'_continues_as_Entry'} = 
+            $self->make_labelled_entry_widget(
+                $e_frame,
+                'Continues as',
+                $self->SubSeq->downstream_subseq_name,
+                -anchor => 'nw',
+                );
+    }
 }
 
 sub start_not_found_from_tk {
@@ -780,48 +796,20 @@ sub start_not_found_from_tk {
     return ${$self->{'_start_not_found_variable'}} || 0;
 }
 
-sub add_end_not_found_widgets {
+sub continued_from_from_tk {
     my( $self ) = @_;
     
-    my $frame = $self->canvas->toplevel->Frame(
-        -borderwidth    => 3,
-        )->pack( -anchor => 'nw' );
-    
-    $frame->Label(
-        -text       => 'End: ',
-        )->pack( -side => 'left' );
-    
-    my( $enf );
-    my $om = $frame->Optionmenu(
-        -variable   => \$enf,
-        -options    => [
-                ['found'        => 0],
-                ['not found'    => 1],
-            ],
-        )->pack( -side => 'left' );
-    $enf = $self->SubSeq->end_not_found;
-    $om->menu->invoke($enf);
-    warn "enf = $enf";
-
-    $self->{'_end_not_found_variable'} = \$enf;
+    my $txt = $self->{'_continued_from_Entry'}->get;
+    $txt =~ s/\s+//g;
+    return $txt || '';
 }
 
-sub OLD_add_end_not_found_widgets {
+sub continues_as_from_tk {
     my( $self ) = @_;
     
-    my $frame = $self->canvas->toplevel->Frame(
-        -borderwidth    => 3,
-        )->pack( -anchor => 'nw' );
-    
-    my $enf = $self->SubSeq->end_not_found;
-    $frame->Checkbutton(
-        -text       => 'End not found',
-        -variable   => \$enf,
-        )->pack( -side => 'left' );
-
-    warn "enf = $enf";
-
-    $self->{'_end_not_found_variable'} = \$enf;
+    my $txt = $self->{'_continues_as_Entry'}->get;
+    $txt =~ s/\s+//g;
+    return $txt || '';
 }
 
 sub end_not_found_from_tk {
@@ -1323,15 +1311,17 @@ sub new_SubSeq_from_tk {
     my( $self ) = @_;
 
     my $sub = $self->SubSeq->clone;
-    $sub->translation_region( $self->get_translation_region  );
-    $sub->name              ( $self->get_subseq_name         );
-    $sub->replace_all_Exons ( $self->Exons_from_canvas       );
-    $sub->GeneMethod        ( $self->get_GeneMethod_from_tk  );
-    $sub->strand            ( $self->strand_from_tk          );
-    $sub->start_not_found   ( $self->start_not_found_from_tk );
-    $sub->end_not_found     ( $self->end_not_found_from_tk   );
-    warn "Start not found ", $self->start_not_found_from_tk, "\n",
-        "End not found ", $self->end_not_found_from_tk, "\n";
+    $sub->translation_region     ( $self->get_translation_region  );
+    $sub->name                   ( $self->get_subseq_name         );
+    $sub->replace_all_Exons      ( $self->Exons_from_canvas       );
+    $sub->GeneMethod             ( $self->get_GeneMethod_from_tk  );
+    $sub->strand                 ( $self->strand_from_tk          );
+    $sub->start_not_found        ( $self->start_not_found_from_tk );
+    $sub->end_not_found          ( $self->end_not_found_from_tk   );
+    $sub->upstream_subseq_name   ( $self->continued_from_from_tk  );
+    $sub->downstream_subseq_name ( $self->continues_as_from_tk    );
+    #warn "Start not found ", $self->start_not_found_from_tk, "\n",
+    #    "End not found ", $self->end_not_found_from_tk, "\n";
     return $sub;
 }
 
@@ -1367,6 +1357,8 @@ sub xace_save {
     }
     
     $ace .= $sub->ace_string;
+    
+    #print STDERR "Sending:\n$ace";
     
     my $xc = $self->xace_seq_chooser;
     my $xr = $xc->xace_remote;
