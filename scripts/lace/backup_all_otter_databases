@@ -12,7 +12,7 @@ use Hum::FileUtils 'mirror_copy_dir';
     my $host = 'humsrv1';
     # Can add password with netrc if needed
     my $socket = '/tmp/mysql4.sock';
-    my $archive = '/nfs/disk100/humpub/data/otter_backup';
+    my $archive = '/nfs/disk100/humpub/data/mysql_backup/otter';
     my $root_dir = '/humsql/otter';
     my $date_dir = date_dir();
     my $working_dir = "$root_dir/$date_dir";
