@@ -255,11 +255,15 @@ if($make_cache){
       my $ecst;
       my $eced;
       if($ao==1){
+	# clone is same direction of assembly
 	$ecst=$acst+$est-$ast;
 	$eced=$acst+$eed-$ast;
       }else{
+	# clone is reverse direction of assembly
 	$ecst=$aced-$est+$ast;
 	$eced=$aced-$eed+$ast;
+	# exon orientation is reversed
+	$es=-$es;
       }
       # constant direction - easier later
       if($ecst>$eced){
