@@ -63,7 +63,7 @@ create table gene_synonym (
 
 create table gene_remark (
 	gene_remark_id int(10) unsigned DEFAULT '0' NOT NULL auto_increment,
-	remark VARCHAR(255), 
+	remark TEXT, 
 	gene_info_id int(10) unsigned DEFAULT '0' NOT NULL,
         PRIMARY KEY (gene_remark_id)
 );
@@ -78,7 +78,7 @@ create table gene_info (
 
 create table transcript_remark (
 	transcript_remark_id int(10) unsigned DEFAULT '0' NOT NULL auto_increment,
-	remark varchar(255),
+	remark TEXT,
 	transcript_info_id int(10) unsigned DEFAULT '0' NOT NULL,
         PRIMARY KEY (transcript_remark_id)
 );
