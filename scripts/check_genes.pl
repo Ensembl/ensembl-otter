@@ -359,14 +359,16 @@ foreach my $atype (keys %gsi){
       print "$gsi ($gt,$gn) has multiple clusters\n";
 
       # analysis by overlap of exons
+      my $ncid=0;
       foreach my $cid ($cl->cluster_ids){
+	$ncid++;
 	my %tcl;
 	foreach my $eid ($cl->cluster_members($cid)){
 	  foreach my $tsi (@{$e2t{$eid}}){
 	    $tcl{$tsi}++;
 	  }
 	}
-	print "Cluster $cid: ".join(',',(keys %tcl))."\n";
+	print " Cluster $ncid: ".join(',',(keys %tcl))."\n";
       }
 
       # analysis by overlap of transcripts
