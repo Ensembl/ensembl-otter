@@ -900,6 +900,7 @@ sub draw_translation_region {
     my $font        = $self->font;
     my $font_size   = $self->font_size;
     my @trans       = $self->SubSeq->translation_region;
+    warn "trans = @trans\n";
     
     my $t1 = $canvas->createText(
         $half + $text_len, $size,

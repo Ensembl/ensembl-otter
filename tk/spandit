@@ -1,6 +1,4 @@
-#!/usr/local/bin/perl -w
-
-#use lib '/nfs/disk84/jgrg/bin/Perl';
+#!/nfs/humace2/hum/bin/perl -w
 
 ### spandit
 
@@ -9,6 +7,7 @@ use MenuCanvasWindow::XaceSeqChooser;
 use MenuCanvasWindow::ExonCanvas;
 use Ace;
 use Getopt::Long 'GetOptions';
+use Socket;
 
 {
     my ($cript) = $0 =~ m{([^/]+)$};
@@ -37,10 +36,30 @@ use Getopt::Long 'GetOptions';
      
     my( $local_server, $ace );
     if ($path) {
-        $local_server = Hum::Ace::LocalServer->new($path);
-        $local_server->server_type('SOCKET');
+        #$local_server = Hum::Ace::LocalServer->new($path);
+        $local_server = Hum::Ace::LocalServer::RPC->new($path);
+        
         $local_server->start_server;
         $xc->local_server($local_server);
+        
+        #if (ref($local_server) eq 'Hum::Ace::LocalServer') {
+        #    my $sock = $xc->ace_handle->{'database'}->socket;
+
+            ##$sock->sockopt(SO_SNDLOWAT, 1);
+            #$sock->sockopt(SO_SNDBUF, 128);
+            ##$sock->sockopt(SO_RCVBUF, 128 * 1024);
+
+        #    my %opt_num = (
+        #        'SO_SNDLOWAT'   => SO_SNDLOWAT,
+        #        'SO_RCVLOWAT'   => SO_RCVLOWAT,
+        #        'SO_SNDBUF'     => SO_SNDBUF,
+        #        'SO_RCVBUF'     => SO_RCVBUF,
+        #        );
+        #    foreach my $opt (keys %opt_num) {
+        #        my $n = $opt_num{$opt};
+        #        print "$opt = ", $sock->sockopt($n), "\n";
+        #    }
+        #}
     } else {
         $ace = Ace->connect(
             -HOST       => $host,
@@ -65,6 +84,7 @@ use Getopt::Long 'GetOptions';
         GENSCAN         => 0,
         HALFWISE        => 0,
         SPAN            => 0,
+        EnsEMBL         => 0,
         );
     $xc->set_known_GeneMethods(%methods_mutable);
     
