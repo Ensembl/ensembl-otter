@@ -73,6 +73,7 @@ sub initialise {
     $self->font_size(12);
 
     my $ss = $self->SequenceSet or confess "No SequenceSet or SequenceNotes attached";
+    
     my $write = $ss->write_access;
     
     my $canvas = $self->canvas;
