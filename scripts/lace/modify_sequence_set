@@ -5,6 +5,7 @@
 use strict;
 
 use Bio::Otter::Lace::Defaults;
+use Hum::Submission qw(accession_from_sanger_name);
 
 {
     my $priority          = 0;
@@ -12,9 +13,11 @@ use Bio::Otter::Lace::Defaults;
     my $description       = undef;   # "This is a default description, created by $author";
     my $dataset_name      = 'human'; # dataset to get from otter server
     my $set_name          = undef;
-    my $delete            = undef;
+    my $delete            = 0;
+    my $modify            = 0;
+    my $show              = 0;
     my $help              = 0;
-    
+    my $list              = 0;
     #---------------------------------------------------------------------------
     Bio::Otter::Lace::Defaults::do_getopt(
         'dataset=s'     => \$dataset_name,
@@ -22,11 +25,16 @@ use Bio::Otter::Lace::Defaults;
         'description=s' => \$description,
         'priority=i'    => \$priority,
         'set|name=s'    => \$set_name,
-	'delete'        => \$delete
+	'delete'        => \$delete,
+	'update'        => \$modify,
+	'show'          => \$show,
+	'list'          => \$list,
         );
     useage() if $help;
 
     die "you need to give the set name as an argument" if (! defined $set_name);
+    die "only one of -delete, -update, -show please" if $delete + $modify + $show > 1;
+    die "please use one of -delete, -update, -show " if $delete + $modify + $show < 1;
 
     # make otter client and connect to database
     my $cl       = Bio::Otter::Lace::Defaults::make_Client();
@@ -35,7 +43,7 @@ use Bio::Otter::Lace::Defaults;
 
     my $SequenceSet = $ds->get_SequenceSet_by_name($set_name);
 
-    if($description || $priority){ # if we're updating
+    if($modify){ # if we're updating
 	print STDERR "Changing from:\n";
 	print STDERR join("  |  ", $SequenceSet->name, $SequenceSet->description, $SequenceSet->priority) . "\nto:\n";
 	$description ||= $SequenceSet->description();
@@ -46,8 +54,79 @@ use Bio::Otter::Lace::Defaults;
 	print STDERR join("  |  ", $SequenceSet->name, $SequenceSet->description, $SequenceSet->priority) . "\n";
     }elsif($delete){
 	$ds->delete_SequenceSet($SequenceSet);
+    }elsif($show){
+#	$ds->export_SequenceSet();
+	my ($gaps, $found) = export_SequenceSet($otter_db, $SequenceSet, $list, $ARGV[0]);
+	if(scalar(keys(%$found))){
+	    print STDERR "Couldn't find:\n" . (join("\n", map{ !$found->{$_} ? $_ : $_ } (each %$found)[0])) . "\n";
+	}
+	print STDERR "Found $gaps gaps.\n";
     }
+}
 
+
+# ------------------------------------------------------------------------------
+# SUBROUTINES
+
+sub export_SequenceSet{
+    my ($dba, $ss, $only_list, $file) = @_;
+    my $name = $ss->name();
+    my $fh;
+    my $found = {};
+    my $columns = $only_list ? "CONCAT(c.embl_acc, '.', c.embl_version)" : "a.superctg_name, a.chr_start, a.chr_end, a.contig_id, 'F', 
+		 CONCAT(c.embl_acc, '.', c.embl_version), a.contig_start, a.contig_end, IF(a.contig_ori = '1', '+','-'), a.type";
+    my $sql = qq{SELECT $columns
+		     FROM assembly a, contig g, clone c 
+		     WHERE c.clone_id = g.clone_id 
+		     &&   a.contig_id = g.contig_id
+		     &&   a.type = ?
+		     };
+    if($file && -e $file){
+	open($fh, $file) or die $!;
+	my @accessions;
+	while(<$fh>){
+	    my ($cl) = split;
+	    my $acc = accession_from_sanger_name($cl);
+	    $acc  ||= $cl;
+	    push(@accessions, $dba->db_handle->quote($acc));
+	    $found->{$acc} = 0;
+	}
+	close $fh;
+	my $accession_str  = join(",", @accessions);
+	$sql .= qq{&&   c.embl_acc IN ($accession_str) ORDER BY a.chr_start} if $accession_str;
+    }else{
+	$sql .= qq{ORDER BY a.chr_start};
+    }
+    my ($gaps, $f) = show_agp($dba, $sql, $name);
+    $found = {%$found, %$f} if scalar(keys(%$found));
+    return $gaps, $found;
+}
+
+sub show_agp{
+    my ($dba, $sql, $set_name) = @_;
+    my $sth = $dba->prepare($sql);
+    $sth->execute($set_name);
+    my $chr_end = 0;
+    my $gaps    = 0;
+    my $found   = {};
+    while(my $row = $sth->fetchrow_arrayref()){
+	if ($chr_end && ($chr_end + 2) < $row->[1]){
+	    $gaps++;
+	    print STDERR $row->[0] . "\t--- GAP ---\t--- GAP ---\n";
+	    print join("\t", ($row->[0], 
+			      $chr_end + 1, 
+			      $row->[1] - 1, 
+			      $gaps, 
+			      'N', 
+			      $row->[1] - $chr_end - 1, 
+			      "Unfinished Sequence\n"));
+	}
+	$chr_end = $row->[2];
+	print join("\t",  @$row) . "\n";
+	my ($acc) = split(/\./, $row->[5]) if $row->[5];
+	$found->{$acc || $row->[0]} = 1;
+    }
+    return $gaps, $found;
 }
 
 sub useage{ exit(exec('perldoc', $0)); }
