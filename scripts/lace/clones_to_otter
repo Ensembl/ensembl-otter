@@ -23,7 +23,7 @@ use Bio::Otter::Lace::Defaults;
     my $ds = $cl->get_DataSet_by_name($dataset_name);
     # Make a connection to the otter database
     my $otter_db = $ds->get_cached_DBAdaptor;
-    my $pipe_db = Bio::Otter::Lace::PipelineDB::get_DBAdaptor($otter_db);
+    my $pipe_db = Bio::Otter::Lace::PipelineDB::get_DBAdaptor($otter_db,1);
     
     if ($reverse) {
         ($otter_db, $pipe_db) = ($pipe_db, $otter_db);
