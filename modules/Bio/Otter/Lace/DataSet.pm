@@ -538,7 +538,7 @@ sub store_SequenceSet{
     
     # get the previous sequence_set with the same name.
     eval { $self->get_SequenceSet_by_name($ss->name) };
-    if(!$@){ confess "not allowed" unless $allow_update };
+    if(!$@){ confess "update not allowed" unless $allow_update };
     # write some sql
     my $tmp_tbl_assembly = $self->_tmp_table_by_name("assembly");
     my $create_tmp_tbl   = qq{CREATE TEMPORARY TABLE $tmp_tbl_assembly SELECT * FROM assembly WHERE 1 = 0};
@@ -552,8 +552,10 @@ sub store_SequenceSet{
 			      };
     # database connections
     my $otter_db    = $self->get_cached_DBAdaptor;
-    my $pipeline_db = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($otter_db);
-    my $ens_db      = Bio::Otter::Lace::SatelliteDB::get_DBAdaptor($otter_db, 'self');
+    my $pipeline_db = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($otter_db)
+        or confess "Can't connect to pipeline db";;
+    my $ens_db      = $self->make_EnsEMBL_DBAdaptor()
+        or confess "Can't connect to 'self' db";;;
 
     my $max_chr_length = $self->tmpstore_meta_info_for_SequenceSet($ss, [$ens_db, $pipeline_db]);
 
@@ -751,18 +753,30 @@ sub get_cached_DBAdaptor {
     return $dba;
 }
 
+sub make_EnsEMBL_DBAdaptor {
+    my( $self ) = @_;
+    
+    return $self->_make_DBAdptor_with_class('Bio::EnsEMBL::DBSQL::DBAdaptor');
+}
+
 sub make_DBAdaptor {
     my( $self ) = @_;
+    
+    return $self->_make_DBAdptor_with_class('Bio::Otter::DBSQL::DBAdaptor');
+}
+
+sub _make_DBAdptor_with_class {
+    my( $self, $class ) = @_;
     
     my(@args);
     foreach my $prop ($self->list_all_db_properties) {
         if (my $val = $self->$prop()) {
-            #print STDERR "-$prop  $val\n";
+            print STDERR "-$prop  $val\n";
             push(@args, "-$prop", $val);
         }
     }
 
-    return Bio::Otter::DBSQL::DBAdaptor->new(@args);
+    return $class->new(@args);
 }
 
 sub disconnect_DBAdaptor {

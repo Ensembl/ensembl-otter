@@ -32,7 +32,7 @@ sub _get_DBAdaptor {
     my $pipeline_db = $class->new(%$pipe_options);
 
     if ($pipeline_db) {
-        return $pipeline_db
+        return $pipeline_db;
     } else {
         confess "Couldn't connect to pipeline db";
     } 
