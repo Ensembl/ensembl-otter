@@ -410,6 +410,9 @@ sub make_embl {
             my $gene = $gene_aptr->fetch_by_dbID($gid);
             $self->_do_Gene($gene);
         }
+        
+        #PolyA signals and sites for the slice
+        $self->_do_polyA($slice);   
     }
     
     #Finish up
@@ -417,6 +420,61 @@ sub make_embl {
     $set->removeDuplicateFeatures;
     $set->addToEntry($embl);
     return $embl;
+}
+
+=head2 _do_polyA
+
+Internal method called by make_embl to add lines of the type:
+
+FT   polyA_site      156874
+FT   polyA_signal    156832..156837
+FT   polyA_site      complement(170534)
+FT   polyA_signal    complement(170549..170554)
+
+These are stored in Otter as SimpleFeatures on the Slice
+
+=cut
+
+sub _do_polyA {
+    my ( $self, $slice ) = @_;
+    
+    my $set = $self->FeatureSet;
+    my $polyA_signal_feats = $slice->get_all_SimpleFeatures('polyA_signal');
+    my $polyA_site_feats = $slice->get_all_SimpleFeatures('polyA_site');
+
+    foreach my $polyA_signal (@$polyA_signal_feats) {
+
+        my $ft = $set->newFeature;
+        $ft->key('polyA_signal');
+
+        my $loc = Hum::EMBL::Location->new;
+        if ($polyA_signal->strand == 1) {
+            $ft->location(simple_location($polyA_signal->start, $polyA_signal->end));
+        } elsif ($polyA_signal->strand == -1) {
+            $ft->location(simple_location($polyA_signal->end, $polyA_signal->start));
+        } else {
+            confess "Bad strand: ", $polyA_signal->strand;
+        }
+    }
+
+    foreach my $polyA_site (@$polyA_site_feats) {
+        
+        my $ft = $set->newFeature;
+        $ft->key('polyA_site');
+        
+        my $loc = Hum::EMBL::Location->new;
+        $ft->location($loc);
+        
+        if ($polyA_site->strand == 1) {
+            $loc->exons($polyA_site->end);
+            $loc->strand('W');
+        } elsif ($polyA_site->strand == -1) {
+            $loc->exons($polyA_site->start);
+            $loc->strand('C');
+        } else {
+            confess "Bad strand: ", $polyA_site->strand;
+        }
+    }
 }
 
 
