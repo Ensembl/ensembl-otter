@@ -1,0 +1,136 @@
+#!/usr/local/bin/perl -w
+
+### realign_missing_genes
+
+use strict;
+
+use Bio::Otter::Lace::Defaults;
+use Bio::Otter::AnnotationBroker;
+use Hum::Analysis::Factory::ExonLocator;
+
+{
+    my( $dataset_name,
+        $sequence_set,
+        );
+
+    my $usage = sub { exec('perldoc', $0) };
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'       => $usage,
+        'dataset=s'     => \$dataset_name,
+        'chr|set=s'     => \$sequence_set,
+        ) or $usage->();
+    $usage->() unless $dataset_name and $sequence_set;
+
+    # Connect to Ensembl/Otter database and fetch adaptors
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    my $ss = $ds->get_SequenceSet_by_name($sequence_set);
+    #$ds->fetch_all_CloneSequences_for_SequenceSet($ss);
+
+    my $otter_db = $ds->get_cached_DBAdaptor;
+    my $clone_aptr = $otter_db->get_CloneAdaptor;
+    my $gene_aptr  = $otter_db->get_GeneAdaptor;
+    my $accs_missing_genes = @ARGV
+        ? [@ARGV]
+        : list_exonless_accessions($otter_db, $sequence_set);
+    #print map "  $_\n", @$accs_missing_genes;
+    
+    foreach my $acc_sv (@$accs_missing_genes) {
+        my ($acc, $sv) = @$acc_sv;
+        my $clid = clone_id_of_clone_with_greatest_sv_and_exons($otter_db, $acc)
+            or next;
+        print STDERR "\n$acc\t$sv\n";
+        my $old_clone = $clone_aptr->fetch_by_dbID($clid);
+        my $old_contig = $old_clone->get_all_Contigs->[0];
+        my $gene_id_list = $gene_aptr->list_current_dbIDs_for_Contig($old_contig);
+        my @other = other_contigs_sharing_genes($otter_db, $old_contig, $gene_id_list);
+    }
+}
+
+sub other_contigs_sharing_genes {
+    my( $dba, $contig, $gene_id_list ) = @_;
+    
+    my $gene_id_str = join(', ', map "'$_'", @$gene_id_list);
+    my $sth = $dba->prepare(qq{
+        SELECT e.contig_id
+        FROM transcript t
+          , exon_transcript et
+          , exon e
+        WHERE t.transcript_id = et.transcript_id
+          AND et.exon_id = e.exon_id
+          AND t.gene_id IN ($gene_id_str)
+          AND e.contig_id != ?
+        GROUP BY e.contig_id
+        });
+    $sth->execute($contig->dbID);
+    
+    my( @contig_id );
+    while (my ($id) = $sth->fetchrow) {
+        push(@contig_id, $id);
+    }
+    return @contig_id;
+}
+
+sub clone_id_of_clone_with_greatest_sv_and_exons {
+    my( $dbh, $acc ) = @_;
+    
+    my $sth = $dbh->prepare(q{
+        SELECT c.clone_id
+          , c.embl_version
+        FROM clone c
+          , contig g
+          , exon e
+        WHERE c.clone_id = g.clone_id
+          AND g.contig_id = e.contig_id
+          AND c.embl_acc = ?
+        GROUP BY c.clone_id
+        });
+    $sth->execute($acc);
+    
+    my $prev_list = [];
+    while (my ($clid, $sv) = $sth->fetchrow) {
+        push(@$prev_list, [$clid, $sv]);
+    }
+    if (@$prev_list) {
+        my ($first) = sort {$b->[1] <=> $a->[1]} @$prev_list;
+        return $first->[0];
+    } else {
+        return;
+    }
+}
+
+sub list_exonless_accessions {
+    my( $dbh, $set_name ) = @_;
+    
+    my $sth = $dbh->prepare(q{
+        SELECT c.embl_acc
+          , c.embl_version
+        FROM clone c
+          , contig g
+          , assembly a
+        LEFT JOIN exon e
+          ON g.contig_id = e.contig_id
+        WHERE c.clone_id = g.clone_id
+          AND g.contig_id = a.contig_id
+          AND e.contig_id IS NULL
+          AND a.type = ?
+        GROUP BY c.clone_id
+        });
+    $sth->execute($set_name);
+    
+    my $acc_list = [];
+    while (my ($acc, $sv) = $sth->fetchrow) {
+        push(@$acc_list, [$acc, $sv]);
+    }
+    return $acc_list;
+}
+
+
+__END__
+
+=head1 NAME - realign_missing_genes
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
