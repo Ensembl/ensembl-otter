@@ -25,7 +25,6 @@ use Bio::EnsEMBL::Ace::Filter::Gene::Halfwise;
 use Bio::EnsEMBL::Ace::Filter::Gene::Predicted;
 use Bio::EnsEMBL::Ace::Filter::Similarity::DnaSimilarity;
 use Bio::EnsEMBL::Ace::Filter::Similarity::ProteinSimilarity;
-use Bio::EnsEMBL::Ace::Filter::Similarity::RefSeq;
 use Bio::EnsEMBL::Ace::Filter::SimpleFeature;
 
 sub new {
@@ -428,9 +427,8 @@ sub make_database_directory {
         confess "Error running '$tar_command' exit($?)";
     }
     
-    # These two acefiles from the tar file need to get parsed
+    # This acefile from the tar file needs to get parsed
     $self->add_acefile("$home/rawdata/methods.ace");
-    $self->add_acefile("$home/rawdata/misc.ace");
     
     $self->make_passwd_wrm;
     $self->edit_displays_wrm;

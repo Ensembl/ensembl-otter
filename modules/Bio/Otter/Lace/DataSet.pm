@@ -378,7 +378,6 @@ sub fetch_all_CloneSequences_for_SequenceSet {
     }
 
     $ss->CloneSequence_list($cs);
-    $self->status_refresh_for_SequenceSet($ss);
 }
 
 sub fetch_pipeline_ctg_ids_for_SequenceSet{
