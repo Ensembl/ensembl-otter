@@ -527,7 +527,8 @@ sub initialize_database {
     }
     close $fh;
 
-    return $errors ? 0 : 1;
+    confess "Error initializing database\n" if $errors;
+    return 1;
 }
 
 sub write_pipeline_data {

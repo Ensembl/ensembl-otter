@@ -29,6 +29,15 @@ sub sv {
     return $self->{'_sv'};
 }
 
+sub clone_name {
+    my( $self, $clone_name ) = @_;
+    
+    if ($clone_name) {
+        $self->{'_clone_name'} = $clone_name;
+    }
+    return $self->{'_clone_name'};
+}
+
 sub length {
     my( $self, $length ) = @_;
     

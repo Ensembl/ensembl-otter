@@ -174,7 +174,7 @@ sub fetch_all_CloneSequences_for_SequenceSet {
     my $dba = $self->get_cached_DBAdaptor;
     my $type = $ss->name;
     my $sth = $dba->prepare(q{
-        SELECT c.embl_acc, c.embl_version
+        SELECT c.name, c.embl_acc, c.embl_version
           , g.contig_id, g.name, g.length
           , a.chromosome_id, a.chr_start, a.chr_end
           , a.contig_start, a.contig_end, a.contig_ori
@@ -188,19 +188,20 @@ sub fetch_all_CloneSequences_for_SequenceSet {
           , a.chr_start
         });
     $sth->execute($type);
-    my(  $acc,  $sv,
+    my(  $name, $acc,  $sv,
          $ctg_id,  $ctg_name,  $ctg_length,
          $chr_id,  $chr_start,  $chr_end,
          $contig_start,  $contig_end,  $strand,
          );
     $sth->bind_columns(
-        \$acc, \$sv,
+        \$name, \$acc, \$sv,
         \$ctg_id, \$ctg_name, \$ctg_length,
         \$chr_id, \$chr_start, \$chr_end,
         \$contig_start, \$contig_end, \$strand,
         );
     while ($sth->fetch) {
         my $cl = Bio::Otter::Lace::CloneSequence->new;
+        $cl->clone_name($name);
         $cl->accession($acc);
         $cl->sv($sv);
         $cl->length($ctg_length);
