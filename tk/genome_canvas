@@ -14,16 +14,13 @@ use GenomeCanvas::Band::SNP;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Hum::Submission 'prepare_statement'; # For Sanger sequence names
 use Getopt::Long 'GetOptions';
+use Hum::EnsCmdLineDB;
 
 {
-    my $host = 'ensrv3';
-    my $db   = 'chr20';
-    my $user = 'ensro';
-    my $fpc = 'chr20';
-    my $static_type = 'SANGER';
     my $scale = 2000;
     my $v_tiles = 0;
     my $h_tiles = 0;
+    my $fpc      = '';
     my $chr_name = '';
     my $chr_start = 0;
     my $chr_end = 0;
@@ -35,13 +32,9 @@ use Getopt::Long 'GetOptions';
     my $show_genes      = 0;
     my $show_repeats    = 0;
     my $show_snps       = 0;
-    GetOptions(
-        'host=s'        => \$host,
-        'db=s'          => \$db,
-        'user=s'        => \$user,
+    Hum::EnsCmdLineDB::do_getopt(
         'fpc=s'         => \$fpc,
         'scale=s'       => \$scale,
-        'type=s'        => \$static_type,
         'htiles=i'      => \$h_tiles,
         'vtiles=i'      => \$v_tiles,
         'chr=s'         => \$chr_name,
@@ -90,21 +83,16 @@ use Getopt::Long 'GetOptions';
     my $canvas = $gc->canvas;
 
     {
-        my $db = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
-            -DBNAME => $db,
-            -USER   => $user,
-            -HOST   => $host,
-            );
+        my $db = Hum::EnsCmdLineDB::connect();
 
         $chr_name ||= $fpc;
         if ($chr_start and ! $chr_end) {
-            $chr_end = get_chr_end($db, $static_type, $chr_name);
+            $chr_end = get_chr_end($db, $db->static_golden_path_type, $chr_name);
         }
         elsif ($chr_end and ! $chr_start) {
             $chr_start = 1;
         }
 
-        $db->static_golden_path_type($static_type);
         my $stadp = $db->get_StaticGoldenPathAdaptor();
 
         my( $vc );
