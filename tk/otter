@@ -191,6 +191,23 @@ sub do_fetch {
 
         ### launch XaceSeqChooser here ###
         system('xace', '-fmapcutcoords', $home);
+        
+        ### ace to otter:
+        
+        ## via acedb:
+        # find GenomeSequence
+        # show -a
+        # follow SubSequence
+        # show -a
+        # follow Locus
+        # show -a
+        
+        ## or via spandit:
+        # express clone subseq fetch followed by ace_string
+        
+        ## or to xml from spandit?
+        
+        ### cf Fox::Session
     }
 }
 
