@@ -40,8 +40,7 @@ sub fetch_by_dbID {
     $self->throw("Id must be entered to fetch a CloneRemark object")
         unless $id;
 
-    my ($remark) = $self->_generic_sql_fetch("where clone_remark_id = ? ", $id);
-    return $remark;
+    return $self->_generic_sql_fetch("where clone_remark_id = ? ", $id);
 }
 
 sub list_by_clone_info_id {
@@ -50,8 +49,7 @@ sub list_by_clone_info_id {
     $self->throw("CloneInfo id must be entered to fetch a CloneRemark object")
         unless $id;
 
-    my ($remark) = $self->_generic_sql_fetch("where clone_info_id = ? ", $id);
-    return $remark;
+    return $self->_generic_sql_fetch("where clone_info_id = ? ", $id);
 }
 
 sub store {

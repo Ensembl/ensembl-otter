@@ -69,7 +69,6 @@ sub _obj_from_sth {
 
 
         my @remarks  = $self->db->get_CloneRemarkAdaptor->list_by_clone_info_id($info_id);
-        warn "Found ", scalar(@remarks), " remarks";
         my @keywords = $self->db->get_KeywordAdaptor    ->list_by_clone_info_id($info_id);
 
 	my $cloneinfo = new Bio::Otter::CloneInfo(
