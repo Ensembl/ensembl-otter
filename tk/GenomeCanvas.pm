@@ -50,6 +50,28 @@ sub canvas {
     return $gc->{'_canvas'};
 }
 
+sub render {
+    my( $gc ) = @_;
+    
+    foreach my $set ($gc->band_sets) {
+        $set->render($gc->canvas);
+    }
+}
+
+sub new_BandSet {
+    my( $gc ) = @_;
+    
+    my $band_set = GenomeCanvas::BandSet->new;
+    push( @{$gc->{'_band_sets'}}, $band_set );
+    return $band_set;
+}
+
+sub band_sets {
+    my( $gc ) = @_;
+    
+    return @{$gc->{'_band_sets'}};
+}
+
 1;
 
 __END__

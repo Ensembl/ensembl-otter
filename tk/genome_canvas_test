@@ -61,7 +61,6 @@ use Bio::EnsEMBL::DBSQL::Obj;
         -side => 'top',
         );
 
-    #     
     make_button($button_frame, 'Exit', sub{ exit; });
 
     make_button($button_frame, 'PostScript',

@@ -5,6 +5,11 @@ package GenomeCanvas::Band;
 
 use strict;
 
+sub new {
+    my( $pkg ) = @_;
+    
+    return bless {}, $pkg;
+}
 
 
 
