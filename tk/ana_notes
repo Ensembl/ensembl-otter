@@ -155,17 +155,18 @@ my $nospangle;
         $mw->bind('<Control-R>', $refesher);
         $mw->bind('<F5>', $refesher);
 
+        my $run_lace = sub{
+            watch_cursor($mw);
+            my @sequence_name_list = list_selected_sequence_names($canvas);
+            return unless @sequence_name_list;
+            fork_lace_process(@sequence_name_list);
+            default_cursor($mw);
+            };
+        make_button($button_frame2, 'Run lace', $run_lace, 4);
+        $mw->bind('<Control-l>', $run_lace);
+        $mw->bind('<Control-L>', $run_lace);
+
         if ($annotator) {
-            my $run_lace = sub{
-                watch_cursor($mw);
-                my @sequence_name_list = list_selected_sequence_names($canvas);
-                return unless @sequence_name_list;
-                fork_lace_process(@sequence_name_list);
-                default_cursor($mw);
-                };
-            make_button($button_frame2, 'Run lace', $run_lace, 4);
-            $mw->bind('<Control-l>', $run_lace);
-            $mw->bind('<Control-L>', $run_lace);
             
             my $do_embl_dump = sub{
                 watch_cursor($mw);
