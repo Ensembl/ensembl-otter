@@ -716,6 +716,12 @@ sub make_embl_ft {
         foreach my $gid (@$gene_id_list) {
 
             my $gene = $gene_aptr->fetch_by_dbID($gid);
+            my $type = $gene->type;
+            
+            # Don't dump deleted or non-Havana genes
+            next if $type eq 'obsolete';
+            next if $type =~ /^[A-Z]+:/;
+            
             $self->_do_Gene($gene, $set);
         }
 
@@ -833,9 +839,7 @@ sub get_description_from_otter {
     my $clone_info = $annotated_clone->clone_info
         or confess "could not get: CloneInfo object";
         
-    my @clone_remarks = $clone_info->remark
-        or warn "No CloneRemarks for annotated clone " . $self->accession
-            . "." . $self->sequence_version;
+    my @clone_remarks = $clone_info->remark;
     
     my ($description_txt);
     foreach my $clone_remark (@clone_remarks) {
@@ -1024,9 +1028,6 @@ my %ens2embl_phase = (
 sub _do_Gene {
     my ( $self, $gene, $set ) = @_;
 
-    #Bio::Otter::AnnotatedGene, isa Bio::EnsEMBL::Gene
-    return if $gene->type eq 'obsolete'; # Deleted genes
-
     #Bio::Otter::AnnotatedTranscript, isa Bio::EnsEMBL::Transcript
     #Transcript here give an mRNA, potentially + a CDS in EMBL record.
     foreach my $transcript (@{$gene->get_all_Transcripts}) {
@@ -1034,6 +1035,11 @@ sub _do_Gene {
         my $transcript_info = $transcript->transcript_info;
         my $locus_tag = $transcript->transcript_info->name
             or warn "No transcript_info->name for locus_tag\n";
+        if ($locus_tag =~ /^[A-Z]+:/) {
+            # There are some GD: transcripts in Havana genes!
+            warn "Skipping non-Havana transcript '$locus_tag'\n";
+            next;
+        }
  
         #Do the mRNA
         my $all_transcript_Exons = $transcript->get_all_Exons;
@@ -1170,6 +1176,7 @@ sub _add_gene_qualifiers {
     my $gene_info = $gene->gene_info; #Bio::Otter::GeneInfo object
 
     if ($gene_info->known_flag) {
+        #printf STDERR "Adding transcript of gene '%s'\n", $gene_info->name->name;
         $ft->addQualifierStrings('gene', $gene_info->name->name);
     }
     if ($gene->description) {
