@@ -16,6 +16,7 @@ my $lltmpl_file = "/acari/work2/th/work/vega/files/LL_tmpl.gz";
 my @chromosomes;
 my $path = 'VEGA';
 my $do_store = 0;
+my @gene_stable_ids;
 
 my $organism='human';
 
@@ -27,20 +28,21 @@ my $opt_o;
 $| = 1;
 
 &GetOptions(
-  'host:s'        => \$host,
-  'user:s'        => \$user,
-  'dbname:s'      => \$dbname,
-  'pass:s'        => \$pass,
-  'path:s'        => \$path,
-  'port:n'        => \$port,
-  'chromosomes:s' => \@chromosomes,
-  'lltmpl_file:s' => \$lltmpl_file,
-  'organism:s'    => \$organism,
-  'store'         => \$do_store,
-  'h'             => \$opt_h,
-  'v'             => \$opt_v,
-  't'             => \$opt_t,
-  'o:s'           => \$opt_o,
+	    'host:s'              => \$host,
+	    'user:s'              => \$user,
+	    'dbname:s'            => \$dbname,
+	    'pass:s'              => \$pass,
+	    'path:s'              => \$path,
+	    'port:n'              => \$port,
+	    'chromosomes:s'       => \@chromosomes,
+	    'lltmpl_file:s'       => \$lltmpl_file,
+	    'organism:s'          => \$organism,
+	    'gene_stable_id:s'    => \@gene_stable_ids,
+	    'store'               => \$do_store,
+	    'h'                   => \$opt_h,
+	    'v'                   => \$opt_v,
+	    't'                   => \$opt_t,
+	    'o:s'                 => \$opt_o,
 );
 
 if($opt_h){
@@ -48,7 +50,7 @@ if($opt_h){
 locuslink_to_xrefs.pl
 
   -host           host    host of mysql instance ($host)
-  -db             dbname  database ($dbname)
+  -dbname         dbname  database ($dbname)
   -port           port    port ($port)
   -user           user    user ($user)
   -pass           pass    password 
@@ -66,6 +68,25 @@ ENDOFTEXT
 
 if (scalar(@chromosomes)) {
   @chromosomes = split (/,/, join (',', @chromosomes));
+}
+
+my %gene_stable_ids;
+if (scalar(@gene_stable_ids)) {
+  my $gene_stable_id=$gene_stable_ids[0];
+  if(scalar(@gene_stable_ids)==1 && -e $gene_stable_id){
+    # 'gene' is a file
+    @gene_stable_ids=();
+    open(IN,$gene_stable_id) || die "cannot open $gene_stable_id";
+    while(<IN>){
+      chomp;
+      push(@gene_stable_ids,$_);
+    }
+    close(IN);
+  }else{
+    @gene_stable_ids = split (/,/, join (',', @gene_stable_ids));
+  }
+  print "Using list of ".scalar(@gene_stable_ids)." gene stable ids\n";
+  %gene_stable_ids = map {$_,1} @gene_stable_ids;
 }
 
 # translate organism to correct name used by LLtmpl file
@@ -219,6 +240,10 @@ foreach my $chr (reverse sort bychrnum keys %$chrhash) {
   my $nclone=0;
   my $nmiss=0;
   foreach my $gene (@$genes) {
+    my $gsi=$gene->stable_id;
+    if(scalar(@gene_stable_ids)){
+      next unless $gene_stable_ids{$gsi};
+    }
     my $gene_name;
     if ($gene->gene_info->name && $gene->gene_info->name->name) {
       $gene_name = $gene->gene_info->name->name;

@@ -15,23 +15,69 @@ my @chromosomes;
 my $path = 'VEGA';
 my $do_store = 0;
 my $nomeid_file = undef;
+my @gene_stable_ids;
+
+my $opt_h;
 
 $| = 1;
 
 &GetOptions(
-  'host:s'        => \$host,
-  'user:s'        => \$user,
-  'dbname:s'      => \$dbname,
-  'pass:s'        => \$pass,
-  'path:s'        => \$path,
-  'port:n'        => \$port,
-  'chromosomes:s' => \@chromosomes,
-  'nomeidfile:s'  => \$nomeid_file,
-  'store'         => \$do_store,
+	    'host:s'              => \$host,
+	    'dbname:s'            => \$dbname,
+	    'port:n'              => \$port,
+	    'user:s'              => \$user,
+	    'pass:s'              => \$pass,
+	    'path:s'              => \$path,
+	    'chromosomes:s'       => \@chromosomes,
+	    'nomeidfile:s'        => \$nomeid_file,
+	    'gene_stable_id:s'    => \@gene_stable_ids,
+	    'store'               => \$do_store,
+	    'h'                   => \$opt_h,
 );
+
+if($opt_h){
+  print<<ENDOFTEXT;
+hugo_to_xrefs.pl
+
+  -host           host    host of mysql instance ($host)
+  -dbname         dbname  database ($dbname)
+  -port           port    port ($port)
+  -user           user    user ($user)
+  -pass           pass    password 
+
+  -path           path    path ($path)
+  -chromosomes    chr,[chr]
+  -nomeidfile     file    HUGO nomenclature file
+  -store                  write xrefs to database
+
+  -gene_stable_id gsi[,gsi] (list or file containing list)
+
+  -h                      this help
+ENDOFTEXT
+  exit 0;
+}
 
 if (scalar(@chromosomes)) {
   @chromosomes = split (/,/, join (',', @chromosomes));
+}
+
+my %gene_stable_ids;
+if (scalar(@gene_stable_ids)) {
+  my $gene_stable_id=$gene_stable_ids[0];
+  if(scalar(@gene_stable_ids)==1 && -e $gene_stable_id){
+    # 'gene' is a file
+    @gene_stable_ids=();
+    open(IN,$gene_stable_id) || die "cannot open $gene_stable_id";
+    while(<IN>){
+      chomp;
+      push(@gene_stable_ids,$_);
+    }
+    close(IN);
+  }else{
+    @gene_stable_ids = split (/,/, join (',', @gene_stable_ids));
+  }
+  print "Using list of ".scalar(@gene_stable_ids)." gene stable ids\n";
+  %gene_stable_ids = map {$_,1} @gene_stable_ids;
 }
 
 my $db = new Bio::Otter::DBSQL::DBAdaptor(
@@ -114,6 +160,10 @@ foreach my $chr (reverse sort bychrnum keys %$chrhash) {
 
   my $nhugo=0;
   foreach my $gene (@$genes) {
+    my $gsi=$gene->stable_id;
+    if(scalar(@gene_stable_ids)){
+      next unless $gene_stable_ids{$gsi};
+    }
     my $gene_name;
     if ($gene->gene_info->name && $gene->gene_info->name->name) {
       $gene_name = $gene->gene_info->name->name;

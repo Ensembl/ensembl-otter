@@ -82,7 +82,7 @@ if (scalar(@gene_stable_ids)) {
   }else{
     @gene_stable_ids = split (/,/, join (',', @gene_stable_ids));
   }
-  print scalar(@gene_stable_ids)." gene names found\n";
+  print "Using list of ".scalar(@gene_stable_ids)." gene stable ids\n";
   %gene_stable_ids = map {$_,1} @gene_stable_ids;
 }
 
