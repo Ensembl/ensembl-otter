@@ -66,15 +66,18 @@ use DBI;
     
 
     my $i = 0; 
-    my ($xpos,$ypos, $xmax, $ymax) = 10;
-
-
-    for ( my $y = 0 ; $y<= sqrt(scalar(@tablelist)) ; $y++ ) {
-        for (my $x = 0; $x <= sqrt(scalar(@tablelist)); $x++) {
+    my ($xpos,$ypos, $xmax, $ymax) = (10,10,10,10);
+    my ( $x1, $y1, $x2, $y2 );
+    my ( $tx1, $ty1, $tx2, $ty2 ); 
+    
+    for ( my $y = 0 ; $y<= int(sqrt(scalar(@tablelist))) ; $y++ ) {
+        for (my $x = 0; $x <= int(sqrt(scalar(@tablelist))); $x++) {
+            
             my $group = "group-$i";
             my $title_tag = "group-$i";
-                if ( defined $tablelist[$i] ){
-                    #chomp $tablelist[$i];
+             
+            if ( defined $tablelist[$i] ){
+                    chomp $tablelist[$i];
                     my $text = $canvas ->createText(
                     $xpos+50, $ypos+50,    
                     -text => $table_titles[$i],
@@ -82,7 +85,7 @@ use DBI;
                     -tag => $title_tag,
                     );
 
-                    my ( $tx1, $ty1, $tx2, $ty2 ) = $canvas->bbox($title_tag);
+                    ( $tx1, $ty1, $tx2, $ty2 ) = $canvas->bbox($title_tag);
 
                     $text = $canvas ->createText(
                     $tx1, $ty1+30,    
@@ -92,10 +95,10 @@ use DBI;
                     -tag => $group,
                     ); 
 
-                    my ( $x1, $y1, $x2, $y2 ) = $canvas->bbox($group);
+                    ( $x1, $y1, $x2, $y2 ) = $canvas->bbox($group);
 
                     my $col_rec = $canvas->createRectangle(
-                        $tx1-5, $ty1+25, $x2+5, $y2-5 ,
+                        $tx1-5, $ty1+25, $x2+5, $y2+5 ,
                         -tag => $group,
                         -fill => 'white',
                         -outline => undef,
@@ -105,7 +108,7 @@ use DBI;
                     $canvas->lower($col_rec, 'all');
 
                     my $rec = $canvas->createRectangle(
-                    $tx1-10, $ty1-10, $x2+10, $y2,
+                    $tx1-10, $ty1-10, $x2+10, $y2+10,
                     -tag => $group,
                     -fill => 'lightgrey',
                     );
@@ -116,8 +119,8 @@ use DBI;
                     $xpos = ($xpos + ( $x2-$x1 )) + 100;
 
                     if ( ($y2 - $y1) > $ymax ) { $ymax = ( $y2 - $y1 ) };
-
                     $i++;
+
 
         }                  
 
