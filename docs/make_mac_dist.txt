@@ -429,8 +429,8 @@ Making a distribution tar
 rm -f otterdist.0.1.tar.gz otterinstall.tar.gz
 tar -cvf otterdist.0.1.tar -C $LONGDIR .
 gzip otterdist.0.1.tar
-cp $LONGDIR/bin/moveperl .
+cp $LONGDIR/bin/{moveperl,tar} .
 cp $LONGDIR/cvs/ensembl-otter/dist/scripts/installotter .
-tar -cvf otterinstall.tar otterdist.0.1.tar.gz moveperl installotter
+tar -cvf otterinstall.tar otterdist.0.1.tar.gz moveperl installotter tar
 gzip otterinstall.tar
 
