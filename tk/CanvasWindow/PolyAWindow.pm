@@ -161,11 +161,16 @@ sub draw{
     my $canvas = $self->canvas();
     $canvas->configure(-background => 'light grey');
     
-    my $top_frame = $tl->Frame()->pack(-side =>'top' , fill => 'x' ,  padx=> 35 , -before=>$canvas);
-    my $Button_frame = $tl->Frame(-relief => 'groove' )->pack(-side => 'top' ,fill=>'both') ;
+    my $top_frame = $tl->Frame()->pack(
+        -side   => 'top',
+        -fill   => 'x',
+        -padx   => 35,
+        -before => $canvas,
+        );
+    my $Button_frame = $tl->Frame(-relief => 'groove' )->pack(-side => 'top' ,-fill=>'both') ;
         
-    my $sig_label = $top_frame->Label(-text => 'PolyA Signal')->pack(-side => 'left' , padx => 5) ;
-    my $site_label = $top_frame->Label(-text => 'PolyA Site' )->pack(-side =>'right'  , padx => 5);
+    my $sig_label = $top_frame->Label(-text => 'PolyA Signal')->pack(-side => 'left', -padx => 5) ;
+    my $site_label = $top_frame->Label(-text => 'PolyA Site' )->pack(-side =>'right', -padx => 5);
     
     my $add_signal = $write_acces ? sub { $self->add_entry_widget('signal') } : sub { return 1 };
     $top_frame->Button( -text => 'Add Signal',
@@ -192,7 +197,7 @@ sub draw{
                           -underline => 0 ,
                           -relief => 'groove',
                           -borderwidth => 2 ,  
-                          -command => sub {$self->save_details }  )->pack( -side => 'left' , padx=> 45);
+                          -command => sub {$self->save_details }  )->pack( -side => 'left' , -padx=> 45);
     $tl->bind('<Control-S>' , sub {$self->save_details} ) ;
     $tl->bind('<Control-s>' , sub {$self->save_details} ) ;
     
@@ -200,7 +205,7 @@ sub draw{
     $Button_frame->Button(-text => 'Close' ,
                           -relief => 'groove',
                           -borderwidth => 2 ,  
-                          -command => $hide_window  )->pack( -side => 'right' , padx=>45 );
+                          -command => $hide_window  )->pack( -side => 'right' , -padx=>45 );
     $tl->bind('<Control-x>' , $hide_window ) ;
     $tl->bind('<Control-X>' , $hide_window ) ;
     
