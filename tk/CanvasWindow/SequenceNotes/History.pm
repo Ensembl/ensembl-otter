@@ -163,30 +163,40 @@ sub empty_canvas_message{
     return "No History for sequence " . $clone->contig_name . "  " . $clone->clone_name;
 }
 
+#already have this method in SequenceNotes.pm, but perl doesnt seem to like inheritance with anonymous subroutines
+sub _write_text{
+    my ($canvas ,  @args) = @_ ;
+    $canvas->createText(@args) ;
+}
+
 sub column_methods{
     my $self = shift @_ ;
     my $norm = [$self->font, $self->font_size, 'normal'];
     my $bold = [$self->font, $self->font_size, 'bold'];   
     unless(ref($self->{'_column_methods'}) eq 'ARRAY'){
-	my $methods =[
-		      sub{
+	my $calling_method  = \&_write_text ;
+        my $methods =[
+		      [ $calling_method,
+                      sub{
 			  my $sn = shift;
 			  my $time = $sn->timestamp;
 			  my( $year, $month, $mday ) = (localtime($time))[5,4,3];
 			  my $txt = sprintf "%04d-%02d-%02d", 1900 + $year, 1 + $month, $mday;
 			  return { -text => $txt, -font => $norm, -tags => ['searchable']}; 
-		      },
+		      }],
+                      [$calling_method , 
 		      sub{
 			  # Use closure for font definition
 			  my $note = shift;
 			  my $author = $note->author;
 			  return {-text => "$author", -font => $bold, -tags => ['searchable']};
-		      },
-		      sub{
+		      }],
+		      [$calling_method, 
+                      sub{
 			  # Use closure for font definition
 			  my $note = shift;
 			  return {-text => $note->text , -font => $norm, -tags => ['searchable'] };
-		      }            
+		      }]            
 		      ];
 	$self->{'_column_methods'} = $methods;
     }
