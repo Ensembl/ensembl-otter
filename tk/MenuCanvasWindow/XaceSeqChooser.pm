@@ -19,6 +19,7 @@ use Data::Dumper;
 use base 'MenuCanvasWindow';
 use MenuCanvasWindow::ExonCanvas;
 use CanvasWindow::DotterWindow;
+
 use CanvasWindow::PolyAWindow;
 use CanvasWindow::LocusWindow;
 use Bio::Otter::Lace::Defaults;
@@ -52,6 +53,15 @@ sub AceDatabase {
         $self->ace_path($AceDatabase->home);
     }
     return $self->{'_AceDatabase'};
+}
+
+sub SequenceNotes{
+    my ($self , $sn) = @_ ;
+    
+    if ($sn){
+        $self->{'_sequence_notes'} = $sn ;
+    }
+    return $self->{'_sequence_notes'} ;
 }
 
 sub initialize {
@@ -363,8 +373,6 @@ sub open_xace_dialogue{
     }
     return $self->xace_remote;
 }
-
-#----------------------------------------- current way of doing things is based on name - might change this ----------------
 
 sub get_Locus {
     my( $self, $name ) = @_;
@@ -937,6 +945,11 @@ sub exit_save_data {
         $self->exception_message($@, 'Error unlocking clones');
         return 0;
     }
+    
+    if (my $sn = $self->SequenceNotes){
+        $sn ->refresh_column(7) ; ## locks column
+    }
+    
     $ace->error_flag(0);
     
     return 1;
@@ -1679,13 +1692,11 @@ sub close_all_subseq_edit_windows {
     foreach my $name ($self->list_all_subseq_edit_window_names) {
         my $top = $self->get_subseq_edit_window($name) or next;
         # Tell window to close
-        #warn "Closing edit window for '$name'\n";
         $top->deiconify;
         $top->raise;
         $top->update;
         $top->focus;
         $top->eventGenerate('<Control-w>');
-        
         # User pressed "Cancel" if window is still there
         return 0 if $self->get_subseq_edit_window($name);
     }
@@ -2132,7 +2143,6 @@ sub run_dotter {
 
 sub DESTROY {
     my( $self ) = @_;
-
     warn "Destroying XaceSeqChooser for ", $self->ace_path, "\n";
 }
 
