@@ -1,0 +1,944 @@
+#!/usr/local/bin/perl -w
+
+=head1 NAME
+
+parse_pathogen
+
+=head1 SYNOPSIS
+
+ parse_embl -dbname <db name> [-host <db host>] [-port <db port>]
+  [-user <db user>] [-pass <db pass>] [-assemblytype <type>]
+  [-genetype <gene type>] [-nameprefix <name prefix>]
+  [-contigsize <integer>] -codontable <int> -emblfile <file name>
+
+=head1 DESCRIPTION
+
+This script will peform simple loading of an annotated genome in EMBL
+flat file format into an Otter database. The script is aimed at
+loading bacterial and small eukaryotic genomes published by the
+Pathogen Sequencing Unit at the Sanger Institue, but should be able to
+load most suitable pre-processed EMBL files.
+
+Be aware that the script creates gene objects for tRNA, and rRNA genes
+which is not the typical mode of storage.
+
+Certain assumptions are made about the format of the EMBL file such
+that it may require pre-processing before loading - these are listed
+below. A number of non-standard tags (EMBL qualifiers) are used. I
+recommend using BioPerl to write a suitable pre-processor.
+
+=over
+
+=item *
+
+There may be multiple chromosomes/plasmids per EMBL file.
+
+=item *
+
+Each chromosome/plasmid must have a source feature defining the
+chromosome/plasmid name and type. They must all have different
+names. See EMBL feature table definition for 'chromosome' and
+'plasmid' tags.
+
+=item *
+
+Protein coding genes are annotated as CDS features.
+
+=item *
+
+RNA coding genes are annotated as tRNA, rRNA or misc_RNA features.
+
+=item *
+
+All genes have a 'systematic_id' tag with a single value which is the
+gene ID.
+
+=item *
+
+All gene synonyms are defined by multiple 'gene' and/or 'synonym' tags.
+
+=item *
+
+The frame of a CDS feature is defined by a 'codon_start' tag if it is
+not in frame 0.
+
+=item *
+
+If a CDS feature has a 'pseudo' tag it is taken to be a pseudogene.
+
+=item *
+
+If a CDS feature has a 'partial' tag but fuzzy ends are not defined in
+its location it is assumed the ends have not been found.
+
+=item *
+
+The standard EnsEMBL translation mechanism is not used because it is
+hardwired for eukaryotes. The codon table is specified in the command
+line and affects all protein coding genes. The 'translation_table' tag
+of a feature is ignored, if present.
+
+=item *
+
+Annotator remarks about genes are taken from 'note' tags of
+features. Remarks about transcripts are taken from 'product', 'class'
+and 'EC_number' tags of features.
+
+=back
+
+Redirect STDERR to a file to obtain a rough log of the loading
+operations.
+
+Some functions in the script are simply stubs which may be implemented
+later. Some user assembly may be required.
+
+=head1 AUTHOR - Keith James
+
+Email kdj@sanger.ac.uk
+
+=head1 CONTRIBUTORS
+
+Stephen Searle, sjms@sanger.ac.uk
+
+=head1 APPENDIX
+
+The rest of the documentation details each of the object methods.
+Internal methods are usually preceded with a _
+
+=cut
+
+use strict;
+use English;
+use Getopt::Long;
+
+use Bio::SeqIO;
+use Bio::Location::Simple;
+
+use Bio::Otter::AnnotatedGene;
+use Bio::Otter::AnnotatedTranscript;
+use Bio::Otter::Author;
+use Bio::Otter::Evidence;
+use Bio::Otter::GeneInfo;
+use Bio::Otter::GeneName;
+use Bio::Otter::GeneRemark;
+use Bio::Otter::GeneSynonym;
+use Bio::Otter::TranscriptClass;
+use Bio::Otter::TranscriptInfo;
+use Bio::Otter::TranscriptRemark;
+
+use Bio::Otter::DBSQL::DBAdaptor;
+
+use Bio::EnsEMBL::Clone;
+use Bio::EnsEMBL::Exon;
+use Bio::EnsEMBL::Gene;
+use Bio::EnsEMBL::RawContig;
+use Bio::EnsEMBL::Transcript;
+use Bio::EnsEMBL::Translation;
+
+$OUTPUT_AUTOFLUSH = 1;
+
+###
+### Script globals.
+###
+
+# Some of these are a bit hacky because Otter classes describing state
+# of knowledge, protein vs. RNA coding and pseudogene status are not
+# always orthogonal e.g. 'NovelCDS'.
+my $KNOWN_CLASS        = 'Known';
+my $PSEUDO_CLASS       = 'Pseudogene';
+my $NOVEL_CLASS        = 'NovelCDS';
+my $PUTATIVE_CLASS     = 'Putative';
+my $RRNA_CLASS         = 'RibosomalRNA';
+my $TRNA_CLASS         = 'TransferRNA';
+my $PSEUDO_TRNA_CLASS  = 'PseudoTransferRNA';
+my $MISC_RNA_CLASS     = 'MiscellaneousRNA';
+
+my $CHROMOSOME_TYPE    = 'chr';
+my $PLASMID_TYPE       = 'pla';
+my $FAKE_ASSEMBLY_TYPE = 'split';
+my $AUTHOR_NAME        = 'pathogen';
+my $AUTHOR_EMAIL       = 'pathogen@sanger.ac.uk';
+my $CURATED_LOGIC_NAME = 'curated';
+
+my $FAKE_CONTIG_SIZE  = 50000;
+
+# Global counters
+my $CLONE_ID_COUNT  = 1;
+my $CONTIG_ID_COUNT = 1;
+
+###
+### Command line options
+###
+my $emblfile      = undef;
+my $host          = 'localhost';
+my $user          = 'pathogen';
+my $pass          = '';
+my $port          = 3306;
+my $dbname        = undef;
+my $gene_type     = $KNOWN_CLASS;
+my $assembly_type = $FAKE_ASSEMBLY_TYPE;
+my $name_prefix   = '';
+my $contig_size   = $FAKE_CONTIG_SIZE;
+my $codon_table   = 1;
+
+GetOptions('emblfile:s'     => \$emblfile,
+           'dbname:s'       => \$dbname,
+           'user:s'         => \$user,
+           'pass:s'         => \$pass,
+           'port:n'         => \$port,
+           'host:s'         => \$host,
+           'assemblytype:s' => \$assembly_type,
+           'genetype:s'     => \$gene_type,
+           'nameprefix:s'   => \$name_prefix,
+           'contigsize:n'   => \$contig_size,
+           'codontable:n'   => \$codon_table);
+
+unless (defined $dbname)      { die "-dbname required\n"; }
+unless (defined $emblfile)    { die "-emblfile required\n"; }
+unless (defined $codon_table) { die "-codontable required\n"; }
+
+###
+### Get Otter DB adaptor
+###
+my $db = Bio::Otter::DBSQL::DBAdaptor->new(-host   => $host,
+                                           -user   => $user,
+                                           -pass   => $pass,
+                                           -port   => $port,
+                                           -dbname => $dbname);
+
+insert_assembly_metadata($db, $assembly_type);
+
+$db->assembly_type($assembly_type);
+
+###
+### Create new analysis object indicating a curated origin
+###
+my $analysis = Bio::EnsEMBL::Analysis->new(-logic_name => $CURATED_LOGIC_NAME);
+
+my $author = Bio::Otter::Author->new(-name  => $AUTHOR_NAME,
+                                     -email => $AUTHOR_EMAIL);
+
+###
+### Create sequence object and load it
+###
+my $seqi = Bio::SeqIO->new(-file   => $emblfile,
+                           -format => 'embl');
+###
+### Main loading loop
+###
+while (my $seq = $seqi->next_seq)
+{
+    # Split sequence and return a slice DB adaptor
+    my $slice = split_seq($db, $seq, $contig_size,
+                          $name_prefix, $assembly_type);
+
+    foreach my $f ($seq->get_SeqFeatures)
+    {
+        if ($f->primary_tag =~ /CDS|RNA/)
+        {
+            store_gene($f, $slice);
+        }
+
+        if ($f->primary_tag =~ /repeat/)
+        {
+            # store_repeat($f, $slice);
+        }
+    }
+}
+
+=head2 insert_assembly_metadata
+
+ Title    : insert_assembly_metadata
+ Function : Inserts metadata for assembly
+ Returns  : void
+ Argument : Bio::Otter::DBSQL::DBAdaptor, assembly type string
+
+=cut
+
+sub insert_assembly_metadata
+{
+    my ($db, $assembly_type) = @_;
+
+    eval
+    {
+        my $sth = $db->prepare(sprintf("insert into meta values(\\N,\"assembly.default\",\"%s\")",
+                                       $assembly_type));
+        $sth->execute;
+    };
+
+    if ($@) { die "Failed doing meta table insert $@\n"; }
+}
+
+=head2 store_gene
+
+ Title    : store_gene
+ Function : Stores a gene feature (both protein- and RNA-coding)
+ Returns  : void
+ Argument : Bio::SeqFeatureI, Bio::EnsEMBL::DBSQL::SliceAdaptor
+
+=cut
+
+sub store_gene
+{
+    my ($f, $slice) = @_;
+    my $time = time;
+
+    my $gene_id = get_systematic_id($f);
+    my @gene_synonyms = create_synonyms($f);
+    my @gene_remarks = create_gene_remarks($f);
+
+    my $gene_info =
+        Bio::Otter::GeneInfo->new(-author  => $author,
+                                  -synonym => \@gene_synonyms,
+                                  -remark  => \@gene_remarks);
+    $gene_info->name(Bio::Otter::GeneName->new(-name => $gene_id));
+
+    my $gene = Bio::Otter::AnnotatedGene->new;
+    $gene->analysis($analysis);
+    $gene->gene_info($gene_info);
+    $gene->type($gene_type);
+    $gene->stable_id($gene_id);
+    $gene->created($time);
+    $gene->modified($time);
+    $gene->version(1);
+
+    print STDERR sprintf("Found CDS with ID %s\n", $gene_id);
+
+    my $tcount = 0;
+    my $transcript_id = sprintf("%s.%d", $gene_id, $tcount++);
+    my $transcript_class = create_transcript_class($f);
+    my @transcript_remarks = create_transcript_remarks($f);
+
+    print STDERR sprintf("Transcript class is %s\n", $transcript_class->name);
+
+    my $transcript_info =
+        Bio::Otter::TranscriptInfo->new(-name   => $transcript_id,
+                                        -author => $author,
+                                        -class  => $transcript_class,
+                                        -remark => \@transcript_remarks);
+
+    my $transcript = Bio::Otter::AnnotatedTranscript->new;
+    $transcript->transcript_info($transcript_info);
+    $transcript->stable_id($transcript_id);
+    $transcript->created($time);
+    $transcript->modified($time);
+    $transcript->version(1);
+    $gene->add_Transcript($transcript);
+
+    my @locations;
+    foreach my $loc ($f->location->each_Location)
+    {
+        push(@locations, $loc);
+    }
+
+    # Add the exons
+    my @exons = create_exons($f);
+    my $ecount = 0;
+    foreach my $exon (@exons)
+    {
+        $exon->stable_id(sprintf("%s.%d", $gene_id, $ecount++));
+        $exon->created($time);
+        $exon->modified($time);
+        $exon->version(1);
+        $exon->contig($slice);
+        $transcript->add_Exon($exon);
+    }
+
+    # Sort exons on transcript by strand
+    $transcript->sort;
+
+    if ($f->primary_tag =~ /RNA/)
+    {
+        foreach my $exon (@exons)
+        {
+            $exon->phase(-1);
+            $exon->end_phase(-1);
+        }
+    }
+
+    # Handle protein CDS features
+    if ($f->primary_tag eq 'CDS' and
+        $transcript_class->name ne $PSEUDO_CLASS)
+    {
+        # Based on /codon_start EMBL qualifier
+        my $frame = get_initial_frame($f);
+        unless ($frame == 0) { $transcript_info->cds_start_not_found(1); }
+
+        @exons = @{ $transcript->get_all_Exons };
+
+        # If we have /partial we don't know which end(s) we do or
+        # don't have, so we are pessimistic and assume we don't have
+        # either end
+        if ($f->has_tag('partial'))
+        {
+            $transcript_info->cds_start_not_found(1);
+            $transcript_info->cds_end_not_found(1);
+            print STDERR sprintf("CDS is partial in an undefined manner at %s\n",
+                                 $f->location->to_FTstring);
+        }
+
+        # Based on fuzzy location (if present)
+        if ($locations[0]->start_pos_type eq 'BEFORE')
+        {
+            $transcript_info->cds_start_not_found(1);
+            print STDERR sprintf("CDS start not found at %s\n",
+                                 $f->location->to_FTstring);
+        }
+        if ($locations[$#locations]->end_pos_type eq 'AFTER')
+        {
+            $transcript_info->cds_end_not_found(1);
+            print STDERR sprintf("CDS end not found at %s\n",
+                                 $f->location->to_FTstring);
+        }
+
+        my $translation = Bio::EnsEMBL::Translation->new;
+        my $rcount = 0;
+        $translation->stable_id(sprintf("%s.%d", $gene_id, $rcount++));
+        $translation->version(1);
+        $translation->start_Exon($exons[0]);
+        $translation->start(1 + $frame);
+        $translation->end_Exon($exons[$#exons]);
+        $translation->end($translation->end_Exon->length);
+
+        set_exon_phases($translation, @exons);
+
+        foreach my $exon (@exons)
+        {
+            print STDERR sprintf("Added exon start: %d end: %d strand: %d phase: %d\n",
+                                 $exon->start, $exon->end, $exon->strand, $exon->phase);
+        }
+
+        $transcript->translation($translation);
+
+        my $mrna_seq =
+            Bio::Seq->new(-seq      => $transcript->translateable_seq,
+                          -moltype  => "dna",
+                          -alphabet => 'dna',
+                          -id       => $translation->stable_id);
+
+        # Translate args: stop char, unknown aa char, frame,
+        # table, full CDS, throw
+        my $aa_seq =
+          $mrna_seq->translate("*", "X", 0, $codon_table, 1, 0)->seq;
+
+        print STDERR sprintf("Translation is: %s\n", $aa_seq);
+
+        if ($aa_seq =~ /\*/)
+        {
+            print STDERR sprintf("Failed translating %s after phase setting\n",
+                                 $translation->stable_id);
+        }
+    }
+
+    $gene->transform;
+
+    eval { $db->get_AnnotatedGeneAdaptor->store($gene); };
+
+    if ($@) { die sprintf("Failed loading %s\n%s\n", $gene_id, $@); }
+}
+
+=head2 store_repeat
+
+ Title    : store_repeat
+ Function : Stores a repeat feature. Currently just a stub.
+ Returns  : void
+ Argument : Bio::SeqFeatureI, Bio::EnsEMBL::DBSQL::SliceAdaptor
+
+=cut
+
+sub store_repeat
+{
+     my ($f, $slice) = @_;
+
+     # my $repeat;
+
+     # eval { $db->get_RepeatFeatureAdaptor->store($repeat); };
+
+     # if ($@) { die sprintf("Failed loading %s\n%s\n", $repeat, $@); }
+ }
+
+=head2 get_systematic_id
+
+ Title    : get_systematic_id
+ Function : Returns the systematic identifier of the feature which
+            is expected to be under the tag systematic_id or
+            temporary_systematic_id.
+ Returns  : Identifier string
+ Argument : Bio::SeqFeatureI
+
+=cut
+
+sub get_systematic_id
+{
+    my $f = shift;
+
+    my $id;
+
+    if ($f->has_tag('systematic_id'))
+    {
+        my @vals = $f->get_tag_values('systematic_id');
+        $id = $vals[0];
+    }
+    elsif ($f->has_tag('temporary_systematic_id'))
+    {
+        my @vals = $f->get_tag_values('temporary_systematic_id');
+        $id = $vals[0];
+    }
+    else
+    {
+        die "Unable to find systematic identifier\n";
+    }
+
+    return $id;
+}
+
+=head2 create_synonyms
+
+ Title    : create_synonyms
+ Function : Returns a list of synonyms for the feature which are all
+            the values under the tags gene and synonym.
+ Returns  : List of Bio::Otter::GeneSynonyms
+ Argument : Bio::SeqFeatureI
+
+=cut
+
+  sub create_synonyms
+{
+    my $f = shift;
+    my @synonyms;
+
+    if ($f->has_tag('gene'))
+    {
+        my @vals = $f->get_tag_values('gene');
+        foreach my $val (@vals)
+        {
+            push(@synonyms, Bio::Otter::GeneSynonym->new(-name => $val));
+        }
+    }
+
+    if ($f->has_tag('synonym'))
+    {
+        my @vals = $f->get_tag_values('synonym');
+        foreach my $val (@vals)
+        {
+            push(@synonyms, Bio::Otter::GeneSynonym->new(-name => $val));
+        }
+    }
+
+    return @synonyms;
+}
+
+=head2 create_transcript_class
+
+ Title    : create_transcript_class
+ Function : Heuristic which tries to guess the correct class from the
+            product tag of the feature.
+ Returns  : Bio::Otter::TranscriptClass
+ Argument : Bio::SeqFeatureI
+
+=cut
+
+sub create_transcript_class
+{
+    my $f = shift;
+
+    my $class_name;
+
+    if ($f->primary_tag eq 'CDS')
+    {
+        if ($f->has_tag('pseudo'))
+        {
+                $class_name = $PSEUDO_CLASS;
+            }
+        elsif ($f->has_tag('product'))
+        {
+            my @products = $f->get_tag_values('product');
+            foreach my $product (@products)
+            {
+                if ($product =~ /ypothetical/)
+                {
+                    $class_name = $NOVEL_CLASS;
+                }
+                elsif ($product =~ /putative|possible|probable/)
+                {
+                    $class_name = $PUTATIVE_CLASS;
+                }
+                else
+                {
+                    $class_name = $KNOWN_CLASS;
+                }
+            }
+        }
+    }
+
+    if ($f->primary_tag eq 'rRNA')
+    {
+        $class_name = $RRNA_CLASS;
+    }
+
+    if ($f->primary_tag eq 'tRNA')
+    {
+        if ($f->has_tag('pseudo'))
+        {
+            $class_name = $PSEUDO_TRNA_CLASS;
+        }
+        else
+        {
+            $class_name = $TRNA_CLASS;
+        }
+    }
+
+    if ($f->primary_tag eq 'misc_RNA')
+    {
+        $class_name = $MISC_RNA_CLASS;
+    }
+
+    return Bio::Otter::TranscriptClass->new(-name => $class_name);
+}
+
+=head2 create_gene_remarks
+
+ Title    : create_gene_remarks
+ Function : Returns a list of remarks extracted from the freetext note
+            tags of feature.
+ Returns  : List of Bio::Otter::GeneRemarks
+ Argument : Bio::SeqFeatureI
+
+=cut
+
+sub create_gene_remarks
+{
+    my $f = shift;
+
+    my @remarks;
+
+    if ($f->has_tag('note'))
+    {
+        my @notes = $f->get_tag_values('note');
+
+        foreach my $note (@notes)
+        {
+            push(@remarks,
+                 Bio::Otter::GeneRemark->new(-remark => $note));
+        }
+    }
+
+    return @remarks;
+}
+
+=head2 create_transcript_remarks
+
+ Title    : create_transcript_remarks
+ Function : Returns a list of remarks extracted from the product,
+            functional class and EC_number tags of feature.
+ Returns  : List of Bio::Otter::TranscriptRemarks
+ Argument : Bio::SeqFeatureI
+
+=cut
+
+sub create_transcript_remarks
+{
+    my $f = shift;
+
+    my @remarks;
+
+    if ($f->has_tag('product'))
+    {
+        my @products = $f->get_tag_values('product');
+
+        foreach my $product (@products)
+        {
+            push(@remarks, Bio::Otter::TranscriptRemark->new(-remark => $product));
+        }
+    }
+
+    if ($f->has_tag('class'))
+    {
+        my @classes = $f->get_tag_values('class');
+
+        foreach my $class (@classes)
+        {
+            push(@remarks,
+                 Bio::Otter::TranscriptRemark->new(-remark => "Functional class: $class"));
+        }
+    }
+
+    if ($f->has_tag('EC_number'))
+    {
+        my @ec_nums = $f->get_tag_values('EC_number');
+
+        foreach my $ec_num (@ec_nums)
+        {
+            push(@remarks,
+                 Bio::Otter::TranscriptRemark->new(-remark => "EC number: $ec_num"));
+        }
+    }
+
+    return @remarks;
+}
+
+=head2 create_exons
+
+ Title    : create_exons
+ Function : Returns a list of exons created from the location of
+            feature.
+ Returns  : List of Bio::EnsEMBL::Exons
+ Argument : Bio::SeqFeatureI
+
+=cut
+
+sub create_exons
+{
+    my $f = shift;
+
+    my @exons;
+
+    foreach my $loc ($f->location->each_Location)
+    {
+        push(@exons, Bio::EnsEMBL::Exon->new(-start  => $loc->start,
+                                             -end    => $loc->end,
+                                             -strand => $loc->strand));
+
+        print STDERR sprintf("Creating exon at %d..%d on strand %d\n",
+                             $loc->start, $loc->end, $loc->strand);
+    }
+
+    if ($f->has_tag('pseudo'))
+    {
+        foreach my $exon (@exons)
+        {
+            $exon->phase(-1);
+            $exon->end_phase(-1);
+        }
+    }
+    else
+    {
+        foreach my $exon (@exons)
+        {
+            $exon->end_phase(0);
+        }
+    }
+
+    return @exons;
+}
+
+=head2 get_initial_frame
+
+ Title    : get_initial_frame
+ Function : Returns the frame specified by the codon_start tag of
+            feature.
+ Returns  : int
+ Argument : Bio::SeqFeatureI
+
+=cut
+
+sub get_initial_frame
+{
+    my $f = shift;
+
+    my $frame = 0;
+
+    if ($f->has_tag('codon_start'))
+    {
+        my @vals = $f->get_tag_values('codon_start');
+        $frame = $vals[0] - 1;
+    }
+
+    return $frame;
+}
+
+=head2 set_exon_phases
+
+ Title    : set_exon_phases
+ Function : Sets the start and end phases of exons.
+ Returns  : void
+ Argument : Bio::Otter::AnnotatedTranscript, Bio::EnsEMBL::Exons
+
+=cut
+
+sub set_exon_phases
+{
+    my $translation = shift;
+    my @exons = @_;
+
+    my $found_start = 0;
+    my $found_end   = 0;
+    my $phase       = 0;
+
+    foreach my $exon (@exons)
+    {
+        # Internal and end exons
+        if ($found_start && ! $found_end)
+        {
+            $exon->phase($phase);
+            $exon->end_phase(($exon->length + $exon->phase) % 3);
+            $phase = $exon->end_phase;
+        }
+
+        if ($translation->start_Exon == $exon)
+        {
+            $exon->phase($phase);
+            $exon->end_phase((($exon->length - $translation->start + 1)
+                              + $exon->phase) % 3);
+            $phase = $exon->end_phase;
+            $found_start = 1;
+        }
+
+        if ($translation->end_Exon == $exon)
+        {
+            $found_end = 1;
+        }
+    }
+}
+
+=head2 get_source_data
+
+ Title    : get_source_data
+ Function : Returns the chromosome type (CHROMOSOME_TYPE or PLASMID_TYPE)
+            and name specified in the chromosome tag of the source
+            feature of the sequence.
+ Returns  : List of type string (one of CHROMOSOME_TYPE or PLASMID_TYPE),
+            and chromosome name string
+ Argument : Bio::SeqI
+
+=cut
+
+sub get_source_data
+{
+    my $seq = shift;
+    my $type;
+    my $name;
+
+    foreach my $f ($seq->get_SeqFeatures)
+    {
+        if ($f->primary_tag eq 'source')
+        {
+            if ($f->start == 1 and $f->end == $seq->length)
+            {
+                if ($f->has_tag('chromosome'))
+                {
+                    $type = $CHROMOSOME_TYPE;
+                    my @vals = $f->get_tag_values('chromosome');
+                    $name = $vals[0];
+                    last;
+                }
+
+                if ($f->has_tag('plasmid'))
+                {
+                    $type = $PLASMID_TYPE;
+                    my @vals = $f->get_tag_values('plasmid');
+                    $name = $vals[0];
+                    last;
+                }
+            }
+        }
+    }
+
+    return ($type, $name);
+}
+
+=head2 split_seq
+
+ Title    : split_seq
+ Function : Splits a chromosome/plasmid up into a series of fake
+            clones, loads them and returns the new chromosome object.
+ Returns  : Bio::EnsEMBL::Slice
+ Argument : Otter::DBSQL::DBAdaptor, Bio::SeqI, int split size,
+            string chromosome name prefix, string assembly type
+
+=cut
+
+sub split_seq
+{
+    my ($db, $seq, $split_size, $prefix, $assembly_type) = @_;
+
+    # Distinguish between bacterial chromosome and plasmids etc.
+    my ($type, $id) = get_source_data($seq);
+
+    print STDERR sprintf("Got source type: %s %d\n", $type, $id);
+
+    my $len = $seq->length;
+
+    my $chr_id = sprintf("%s_%s_%s%d", $type, $prefix, $id);
+    my $chr_dbID;
+
+    eval
+    {
+        my $sth = $db->prepare(sprintf("insert into chromosome set name=\"%s\", length=%d",
+                                       $chr_id, $len));
+        $sth->execute;
+        $chr_dbID = $sth->{'mysql_insertid'};
+    };
+
+    if ($@) { die "Failed adding chromosome $chr_id"; }
+
+    print STDERR sprintf("contig_size = %d\n", $split_size);
+
+    for (my $start = 1; $start < $len; $start += $split_size)
+    {
+        my $end = $start + $split_size - 1;
+        if ($end > $len)
+        {
+            $end = $len;
+        }
+
+        my $contig_id = sprintf("contig_%s_%d", $prefix, $CONTIG_ID_COUNT++);
+        my $clone_id = sprintf("clone_%s_%d", $prefix, $CLONE_ID_COUNT++);
+        my $piece = $seq->subseq($start, $end);
+        my $time = time;
+
+        # Create fake clone
+        my $clone = Bio::EnsEMBL::Clone->new;
+        $clone->id($clone_id);
+        $clone->embl_id($clone_id);
+        $clone->version(1);
+        $clone->embl_version(1);
+        $clone->htg_phase(-1);
+        $clone->created($time);
+        $clone->modified($time);
+
+        # Create contig
+        my $contig = Bio::EnsEMBL::RawContig->new;
+
+        $contig->name($contig_id);
+        $contig->clone($clone);
+        $contig->embl_offset(1);
+        $contig->length(length($piece));
+        $contig->seq($piece);
+
+        $clone->add_Contig($contig);
+        $db->get_CloneAdaptor->store($clone);
+
+        my $contig_len = $contig->length;
+        my $contig_dbID = $contig->dbID;
+        my $sth2 = $db->prepare(qq:
+        insert into assembly(chromosome_id,
+                             chr_start,
+                             chr_end,
+                             superctg_name,
+                             superctg_start,
+                             superctg_end,
+                             superctg_ori,
+                             contig_id,
+                             contig_start,
+                             contig_end,
+                             contig_ori,
+                             type)
+                    values($chr_dbID,
+                           $start,
+                           $end,
+                           "$contig_id",
+                           1,
+                           $contig_len,
+                           1,
+                           $contig_dbID,
+                           1,
+                           $contig_len,
+                           1,
+                           "$assembly_type"
+                         ):);
+        $sth2->execute;
+    }
+
+    return $db->get_SliceAdaptor->fetch_by_chr_name($chr_id);
+}
