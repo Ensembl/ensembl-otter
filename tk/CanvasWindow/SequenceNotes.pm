@@ -365,6 +365,11 @@ sub initialise {
     $top->bind('<Control-A>', $refresh_status);
     $top->bind('<F6>',        $refresh_status);
     
+    my $run_lace_on_slice = sub{
+	$self->slice_window;
+    };
+    $self->make_button($button_frame_2, 'Open from chr coords', $run_lace_on_slice);
+    
     my $run_lace = sub{
 	$top->Busy;
 	$self->run_lace;
@@ -374,7 +379,6 @@ sub initialise {
     $top->bind('<Control-l>', $run_lace);
     $top->bind('<Control-L>', $run_lace);
 
-    
     #if ($write) {
     #    
     #    my $do_embl_dump = sub{
@@ -584,7 +588,42 @@ sub run_lace{
     my $title = 'lace '. $self->name . $self->selected_sequence_string;
     $self->_open_SequenceSet($ss , $title) ;
 }
+sub run_lace_on_slice{
+    my ($self) = @_;
+    
+    ### doing the same as set_selected_from_canvas
+    ### but from the user input instead
+    my $ss    = $self->SequenceSet;
+    my $start = ${$self->slice_min_ref};
+    my $end   = ${$self->slice_max_ref};
 
+    my $selected = [];
+
+    if ($start && $end) {
+        ($start, $end) = ($end, $start) if $start > $end;
+        my $cs_list = $ss->CloneSequence_list;
+        my @selection = ();
+        for my $i(0..scalar(@$cs_list)-1){
+            my $cs = $cs_list->[$i];
+            my $cur_s = $cs->chr_start;
+            my $cur_e = $cs->chr_end;
+            my $minOK = $cur_e >= $start || 0;
+            my $maxOK = $cur_s <= $end   || 0;
+            my $both  = $minOK & $maxOK;
+            warn "Comparing $cur_s to (<) $end and $cur_e to (>) $start, Found: $minOK, $maxOK, $both \n";
+            push(@selection, $i) if $both;                                      
+        }
+        $selected = [ @{$cs_list}[@selection] ];
+    }
+    if(@$selected){
+        $ss->selected_CloneSequences($selected);
+    } else {
+        $ss->unselect_all_CloneSequences;
+        return;
+    }
+    my $title = qq`lace for SLICE $start - $end ` . $self->name;
+    $self->_open_SequenceSet($ss, $title);
+}
 ## allows Searched SequenceNotes.pm to inherit the main part of the run_lace method
 sub _open_SequenceSet{
     my ($self , $ss , $title) = @_ ;
@@ -1450,6 +1489,93 @@ END_OF_PIXMAP
         $pix = $self->{'_open_padlock_pixmap'} = $self->canvas->Pixmap( -data => $data );
     }
     return $pix;
+}
+
+# brings up a window for searching for loci / clones
+sub slice_window{
+    my ($self) = @_;
+    
+    my $slice_window = $self->{'_slice_window'};
+
+    unless (defined ($slice_window) ){
+        ## make a new window
+        my $master = $self->canvas->toplevel;
+        $slice_window = $master->Toplevel(-title => 'Open a slice');
+        $slice_window->transient($master);
+        
+        $slice_window->protocol('WM_DELETE_WINDOW', sub{$slice_window->withdraw});
+    
+        my $label = $slice_window->Label(-text => qq`Enter chromosome coordinates for the start and end of the slice` .
+                                                  qq` to open the clones contained.`
+                                         )->pack(-side => 'top');
+
+        my $cs_list = $self->SequenceSet->CloneSequence_list();
+        my $entry_frame = $slice_window->Frame()->pack(-side => 'top', 
+                                                       -padx =>  5,
+                                                       -pady =>  5,
+                                                       -fill => 'x'
+                                                       );   
+        my $slice_start   ||= $cs_list->[0]->chr_start || 0;
+        $self->slice_min_ref(\$slice_start);
+        my $min_label       = $entry_frame->Label(-text => "Slice:  start")->pack(-side   =>  'left');
+        my $slice_min_entry = $entry_frame->Entry(-width        => 15,
+                                                  -relief       => 'sunken',
+                                                  -borderwidth  => 2,
+                                                  -textvariable => $self->slice_min_ref,
+                                                  #-font       =>   'Helvetica-14',   
+                                                  )->pack(-side => 'left', 
+                                                          -padx => 5,
+                                                          -fill => 'x'
+                                                           );
+        my $slice_end   ||= $slice_start + 1e6;
+        $self->slice_max_ref(\$slice_end);
+        my $max_label       = $entry_frame->Label(-text => " end ")->pack(-side => 'left');
+        my $slice_max_entry = $entry_frame->Entry(-width        => 15,
+                                                  -relief       => 'sunken',
+                                                  -borderwidth  => 2,
+                                                  -textvariable => $self->slice_max_ref,
+                                                  #-font       =>   'Helvetica-14',   
+                                                  )->pack(-side => 'left', 
+                                                          -padx => 5,
+                                                          -fill => 'x',
+                                                          );
+        my $run_cancel_frame = $slice_window->Frame()->pack(-side => 'bottom', 
+                                                               -padx =>  5,
+                                                               -pady =>  5,
+                                                               -fill => 'x'
+                                                               );   
+        my $run_button = $run_cancel_frame->Button(-text    => 'Run lace',
+                                                   -command => sub{ 
+                                                       $slice_window->withdraw;
+                                                       $self->run_lace_on_slice;
+                                                   }
+                                                   )->pack(-side => 'left');
+        
+#        my $info = $run_cancel_frame->Label(-text => qq`The clones will not be truncated.`)->pack(-side => 'left',
+#                                                                                                  -padx => 5,
+#                                                                                                  -pady => 5,
+#                                                                                                  -fill => 'x'
+#                                                                                                  );
+        my $cancel_button = $run_cancel_frame->Button(-text    => 'Cancel',
+                                                      -command => sub { $slice_window->withdraw }
+                                                      )->pack(-side => 'right');
+        $self->{'_slice_window'} = $slice_window;
+        $slice_window->bind('<Destroy>' , sub { $self = undef }  );
+    }
+    
+    $slice_window->deiconify;
+    $slice_window->raise;
+    $slice_window->focus;
+}
+sub slice_min_ref{
+    my ($self, $search) = @_;
+    $self->{'_search_text'} = $search if $search;
+    return $self->{'_search_text'};
+}
+sub slice_max_ref{
+    my ($self, $context) = @_;
+    $self->{'_context_size'} = $context if $context;
+    return $self->{'_context_size'};    
 }
 
 1;
