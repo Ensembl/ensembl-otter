@@ -156,28 +156,35 @@ sub mail_contents{
     my $pre    = '';
     my $to     = $email . '@' . $domain;
     my $subj   = "[otterlace] user's error log";
-    my $dialog = $self->window->toplevel->DialogBox(-title   => "Email $to?", 
-                                                    -buttons => [qw(Ok Cancel)], -default_button => 'Cancel');
-    $dialog->add('Label',-text => "Really this error log to $to?")->pack();
+    my $dialog = $self->window->toplevel->DialogBox(
+        -title   => "Email $to?", 
+        -buttons => [qw(Ok Cancel)], -default_button => 'Cancel');
+    
+    my @defaults = (
+                 -width         => 30,
+                 -background    => 'white',
+                 -labelPack     => [-side => 'left']
+        );
     $dialog->add('LabEntry', 
-                 -textvariable => \$subj,
-                 -label        => 'Subject: ',
-                 -width        => 30,
-                 -labelPack    => [-side => 'left']
+                 -textvariable  => \$subj,
+                 -label         => 'Subject: ',
+                 @defaults,
                  )->pack();
     $dialog->add('LabEntry', 
-                 -textvariable => \$pre, 
-                 -label        => 'Problem: ', 
-                 -width        => 30,
-                 -labelPack    => [-side => 'left']
+                 -textvariable  => \$pre, 
+                 -label         => 'Problem: ',
+                 @defaults,
                  )->pack();
+    $dialog->add('Label',
+        -text => "Really send this error log to $to?")->pack();
     my $result = $dialog->Show();
     return unless $result eq 'Ok';
 
     my $mess = $self->get_log_contents();
     if($allow_mailing){
+        $subj =~ s/(['"\$])/\\$1/g;
         my $fh = gensym();
-        my $mail_pipe = "| Mail -s '$subj' $to";
+        my $mail_pipe = qq{| Mail -s "$subj" $to};
         open $fh, $mail_pipe or die "Error opening '$mail_pipe' : $!";
         print $fh "$pre $mess";
         close $fh or warn "Error emailing with pipe '$mail_pipe' : exit($?)";
