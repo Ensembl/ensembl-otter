@@ -67,10 +67,11 @@ my $init_log = sub{
     my $filename = $_[1];
     return if $LOGGING_INITIALISED;           # only do it once
     return unless $filename;                  # need a filename
+    my ($home_dir) = (getpwuid($<))[7];
+    $filename  =~ s!^~!$home_dir!;
     my $module = "Bio::Otter::Lace::LogFile"; # this is the module
     eval "use $module;";                      # use and tie STDERR
     return if $@;                             # no point continuing 
-    close STDERR                 or die "Can't close stdout: $!";
     open (STDERR, "> $filename") or die "Can't dup stdout: $!";
     my $tail_size = 20;
     Bio::Otter::Lace::LogFile::set_tail_size($tail_size);
