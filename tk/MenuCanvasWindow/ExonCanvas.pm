@@ -569,9 +569,11 @@ sub show_peptide {
     my( $peptext );
     unless ($peptext = $self->{'_pep_peptext'}) {
         my $top = $self->canvas->Toplevel;
+        my $font = $self->font;
+        my $size = $self->font_size;
         
         $self->{'_pep_peptext'} = $peptext = $top->ROText(
-            -font           => [$self->font, $self->font_size, 'normal'],
+            -font           => [$font, $size, 'normal'],
             #-justify        => 'left',
             -padx                   => 6,
             -pady                   => 6,
@@ -585,12 +587,23 @@ sub show_peptide {
                 -fill   => 'both',
                 );
         
+        # Make a bold style
+        $peptext->tagConfigure('bold',
+            -background => '#ff3333',
+            -foreground => 'white',
+            #-font => [$font, $size, 'bold'],
+            );
+        
+        # Make a Close button inside a frame
         my $frame = $top->Frame(
             -border => 6,
             )->pack(
                 -anchor => 'sw',
                 );
+        
+        # Close only unmaps it from the display
         my $close_command = sub{ $top->withdraw };
+        
         my $exit = $frame->Button(
             -text => 'Close',
             -command => $close_command ,
@@ -598,17 +611,27 @@ sub show_peptide {
         $top->bind(    '<Control-w>',      $close_command);
         $top->bind(    '<Control-W>',      $close_command);
         $top->bind(    '<Escape>',         $close_command);
+        
+        # Closing with window manager only unmaps it
         $top->protocol('WM_DELETE_WINDOW', $close_command);
     }
     
-    # Put the new translation into the Text widget,
-    # and size it to fit.
+    # Put the new translation into the Text widget
     my $pep = $self->translator->translate($sub->translatable_Sequence);
     my $fasta = $pep->fasta_string;
     my $lines = $fasta =~ tr/\n//;
     $fasta =~ s/\n$//s;
     $peptext->delete('1.0', 'end');
-    $peptext->insert('1.0', $fasta);
+    
+    foreach my $bit (split /(\*+)/, $fasta) {
+        if ($bit =~ /\*/) {
+            $peptext->insert('end', $bit, 'bold');
+        } else {
+            $peptext->insert('end', $bit);
+        }
+    }
+    
+    # Size widget to fit
     $peptext->configure(
         -width  => 60,
         -height => $lines,
