@@ -67,7 +67,7 @@ sub initialize {
     my( $self ) = @_;
     
     # take GeneMethods from Defaults.pm file
-    Bio::Otter::Lace::Defaults->set_known_GeneMethods($self) ;
+    $self->set_known_GeneMethods();
     
     $self->draw_clone_list;
     
@@ -117,10 +117,28 @@ sub clone_sub_switch_var {
 
 # this method has been moved to Bio::Otter::Lace::Defaults.pm
 # but this has been left for backwards compatibility
-sub set_known_GeneMethods{
-    my  ($self) = @_ ;
+sub set_known_GeneMethods_via_Defaults{
+    my ($self) = @_ ;
     Bio::Otter::Lace::Defaults->set_known_GeneMethods($self) ;
 }
+
+sub set_known_GeneMethods{
+    my ($self) = @_ ;
+    my @methods_mutable = Bio::Otter::Lace::Defaults::get_default_GeneMethods();
+    
+    confess "uneven number of arguments" if @methods_mutable % 2;
+
+    for (my $i = 0; $i < @methods_mutable; $i+= 2) {
+        my ($name, $flags) = @methods_mutable[$i, $i+1];
+        my ($is_mutable, $is_coding , $has_parent) = @$flags;
+        my $meth = $self->fetch_GeneMethod($name);
+        $meth->is_mutable($is_mutable);
+        $meth->is_coding($is_coding); 
+        $meth->has_parent($has_parent);
+        $self->add_GeneMethod($meth);
+    }
+}
+
 
 sub fetch_GeneMethod {
     my( $self, $name ) = @_;
