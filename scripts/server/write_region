@@ -16,7 +16,7 @@ use Bio::Otter::ServerSide qw(:all);
 ################ COMMON POST CGI SCRIPT BEGIN ######################
 ####################################################################
 
-$| = 1;
+local $| = 1;
 
 my $q = new CGI;
 set_nph($q);
@@ -64,6 +64,7 @@ my( $genes,
     $new_feature_set,   # Arrayref of SimpleFeature objects
     $chrname, $chrstart, $chrend,
     );
+my $path_as_XML;
 eval {
     my( $seqstr );  # Don't need outside block
     ($genes, $slice, $seqstr, $path, $new_feature_set) =
@@ -75,6 +76,8 @@ eval {
     $chrname  = $slice->chr_name;
     $chrstart = $slice->chr_start;
     $chrend   = $slice->chr_end;
+
+    $path_as_XML = Bio::Otter::Converter::path_to_XML($chrname, $chrstart, $chrend, $slice->assembly_type, $slice->get_tiling_path);
 
     print STDERR "Processed incoming xml file with slice: [$chrname] [$chrstart] [$chrend]"; 
 };
@@ -203,7 +206,7 @@ print STDERR "done";
 
 # the magic happens!
 
-my $outputstr;
+my ($outputstr, $output_xml);
 eval {
   $odb->begin_work();
 
@@ -226,6 +229,7 @@ eval {
     $gene->detach_DBAdaptors;
     print STDERR "Done attaching";
     $oaga->store($gene);
+    $output_xml .= $gene->toXMLString();
     print STDERR "Stored gene";
     $outputstr .= " " . $gene->version . " " . $gene->gene_info->name->name . "";
   }
@@ -262,7 +266,9 @@ if ($@) {
 }
 
 $outputstr ||= "No changes to annotations";
-send_response($q, $outputstr);
+#send_response($q, $outputstr);
+$output_xml = "<otter>\n" . $path_as_XML . $output_xml . "</otter>\n";
+send_response($q, $output_xml);
 
 #####################################################################################
 
