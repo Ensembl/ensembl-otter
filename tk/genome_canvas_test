@@ -82,6 +82,8 @@ use Getopt::Long 'GetOptions';
             $vc = $stadp->fetch_VirtualContig_by_fpc_name($fpc);
         }
         
+        warn "Got a ", ref($vc);
+        
         my $tiling = GenomeCanvas::Band::TilingPath->new($vc);
         if ($sanger_names) {
             $tiling->name_morpher(\&get_sanger_name);
@@ -98,7 +100,14 @@ use Getopt::Long 'GetOptions';
 
         my $gene_density = GenomeCanvas::DensityBand::Gene->new;
         $gene_density->virtual_contig($vc);
-        $gene_density->strip_labels('merged');
+        $gene_density->strip_labels(qw{
+            HUMACE-Pseudogene      
+            HUMACE-Putative        
+            HUMACE-Novel_CDS       
+            HUMACE-Novel_Transcript
+            HUMACE-Known           
+            merged                 
+            });
         $gene_density->band_color('#6600cc');
         $gc->add_Band($gene_density);
 

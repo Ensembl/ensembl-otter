@@ -62,15 +62,12 @@ sub draw_gene_features_on_sub_vc {
     my @types = $band->strip_labels;
 
     my %gene_types = map {$_, []} @types;
-    print STDERR "Getting virtual genes... ";
     foreach my $vg ($vc->get_all_VirtualGenes) {
-        print "x";
         my $type = $vg->gene->type;
         if (my $strip = $gene_types{$type}) {
             push(@$strip, $vg);
         }
     }
-    print STDERR " done\n";
     my $vc_length = $vc->length;
     for (my $i = 0; $i < @types; $i++) {
         my $type = $types[$i];

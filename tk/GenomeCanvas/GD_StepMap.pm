@@ -125,7 +125,7 @@ sub gif {
     return $img->gif;
 }
 
-# To pass to the Canvas's "-data" parameter, the
+# To pass to the Canvas' "-data" parameter, the
 # gif image has to be base64 encoded.
 
 sub base64_gif {
