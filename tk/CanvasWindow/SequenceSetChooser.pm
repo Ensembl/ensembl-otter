@@ -7,6 +7,7 @@ use strict;
 use Carp;
 use base 'CanvasWindow';
 use CanvasWindow::SequenceNotes;
+use Hum::Sort 'ace_sort';
 
 sub new {
     my( $pkg, @args ) = @_;
@@ -108,6 +109,9 @@ sub draw {
     my $ss_list = $ds->get_all_SequenceSets;
     my $row_height = int $size * 1.5;
     my $x = $size;
+
+    $ss_list = [ sort { &ace_sort($a->name, $b->name) } @$ss_list];
+
     for (my $i = 0; $i < @$ss_list; $i++) {
         my $set = $ss_list->[$i];
         my $row = $i + 1;
