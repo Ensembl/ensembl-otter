@@ -58,7 +58,9 @@ my $save_deep_option = sub {
     $option = [split(/\./, $option)];
     my $param = pop @$option;
     return unless @$option;
-    $DEFAULTS->{join(".", @$option)} = { $param => $value };
+    local $" = '.';
+    $DEFAULTS->{"@$option"} ||= { };
+    $DEFAULTS->{"@$option"}->{param} = $value ;
 };
 my $CALLED = "$0 @ARGV";
 
@@ -126,6 +128,7 @@ sub do_getopt {
                    'noblast'       => sub { map { $_->{'local_blast'} = {} if exists $_->{'local_blast'} } @$CONFIG_INIFILES ; },
                    # this allows multiple extra config file to be used
                    'cfgfile=s'     => sub { my $opts = options_from_file($_[1]); push(@$CONFIG_INIFILES, $opts) if $opts },
+                   'with-das!'     => sub { $DEFAULTS->{$CLIENT_STANZA}->{'with-das'} = $_[1] },
                    # these are the caller script's options
                    @script_args,
                    ) or return 0;
@@ -157,7 +160,7 @@ sub option_from_array{
         my ($conf_val, $found) = @_;
         my $value_is_hash    = ref($value)    eq 'HASH';
         my $conf_val_is_hash = ref($conf_val) eq 'HASH';
-        warn "got // $conf_val $found //\n" if $DEBUG_CONFIG;
+        warn sprintf("got // value '%s', found '%s' //\n",$conf_val||'undef', $found) if $DEBUG_CONFIG;
         return unless $found;
         if(($value_is_hash || $allow_hash) && $conf_val_is_hash){
             # initialise as first time it will be undef
@@ -220,82 +223,105 @@ sub save_all_config_files{
 }
 
 
-## sets the known gene methods for a particular XaceSeqChooser
-sub set_known_GeneMethods{
-    my ($self , $xace ) = @_ ;
-    my @methods_mutable =  $self->get_default_GeneMethods ;
+{
+    my $METHODS_CACHE = {};
     
-    confess "uneven number of arguments" if @methods_mutable % 2;
-         
-    for (my $i = 0; $i < @methods_mutable; $i+= 2) {
-        my ($name, $flags) = @methods_mutable[$i, $i+1];
-        my ($is_mutable, $is_coding , $has_parent) = @$flags;
-        my $meth = $xace->fetch_GeneMethod($name);
-        $meth->is_mutable($is_mutable);
-        $meth->is_coding($is_coding); 
-        $meth->has_parent($has_parent);
-        $xace->add_GeneMethod($meth);
+    use AceParse qw(aceParse);
+    
+    sub read_Methods{
+        my ($file) = @_;
+        return unless $file;
+        unless(exists($METHODS_CACHE->{$file})){
+            my $tables = {};
+            open my $fh, $file || return $tables;
+            while(my $table = AceParse->aceTableFromStream($fh)){
+                my $class = $table->class;
+                my $name  = $table->name;
+                next unless $class && $name;
+                print STDERR "have $class $name from $file\n";
+                if($class eq 'Method'){
+                    # rebless as a Bio::EnsEMBL::Ace::Method
+                    $table = bless $table, 'Bio::EnsEMBL::Ace::Method';
+                    $tables->{$name} = $table;
+                }
+            }
+            close $fh;
+            $METHODS_CACHE->{$file} = $tables;
+        }
+        my $ace_tables = $METHODS_CACHE->{$file};
+        return $ace_tables; # these are the methods, keyed on their names
+    }
+
+    sub Bio::EnsEMBL::Ace::Method::right_priority{
+        return rand(100);
+    }
+
+
+
+# returns a hash of method objects 
+# keyed on Method name.
+# The methods are sourced from files held on disk accessed by the operating system
+    sub make_ace_methods{
+
+        my $methods = {};
+
+        # get the required options from the config
+        my $base_methods_files = option_from_array([qw(client methods_files)]);
+        my $groups             = option_from_array([qw(client use_method_groups)]);
+        return $methods unless $base_methods_files;
+        return $methods unless $groups;
+        my @order              = split(',', $groups); # need to keep the order
+
+        # make the objects for the base file
+        foreach my $meth_file(split(",", $base_methods_files)){
+            $methods = { %$methods, %{read_Methods($meth_file)} };
+        }
+        
+        # need to sort into groups
+        # groups defined in the otter_conf
+        # keep the order from there!
+        my $grps  = {map { $_ => [] } @order};
+        foreach my $group(@order){
+            print STDERR "looking at method_groups for '$group'\n";
+            my $group_members =  option_from_array(['method_groups', $group]);
+            $grps->{$group}   = [ split(',', $group_members) ];
+        }
+        print STDERR Dumper $grps;
+
+        # add further (DAS) objects here, setting right priority to big number (10000)
+        # this means they end up at the end of the @sorted list below
+        my @userMethods = (); # 
+        foreach my $userObj(@userMethods){
+            
+        }
+
+        # set up right_priority
+        # need floor() here somewhere I think
+        my $min = 1;
+        my $max = 100;
+        my $sep = ($max - $min + 1) / (scalar(@order) + 1);
+        for my $i(0..scalar(@order)-1){
+            my $group   = $order[$i];
+            my $members = $grps->{$group};
+            print STDERR "@$members\n";
+            my $g_min   = $sep * $i;
+            my $g_max   = $sep * ($i + 1);
+            # get the method objects from the hash
+            my @g_Objs  = grep { defined } @$methods{@$members};
+            # sort them on their current right_priority
+            my @sorted  = sort {$a->right_priority <=> $b->right_priority } @g_Objs;
+            my $g_sep   = ($g_max - $g_min + 1) / (scalar(@sorted) + 1);
+            my $c_rghtp = $g_min;
+            foreach my $obj(@sorted){
+                $obj->right_priority($g_min);
+                $g_min += $g_sep;
+            }
+        }
+
+        return $methods;
     }
 }
 
-## this method stores the defualt GeneMethod values.
-### I intended Colin to add this to the config file in order
-### to get it out of the code, but he added it here.
-sub get_default_GeneMethods{
-    my ($self ) = @_ ;       
-    my @methods = (
-
-        # note: if the sub category field is 0 it is a parent if it is 1 it is a child of the last parent listed 
-        # Method name              Editable?    Coding?  sub-category of?        
-        # New set of methods for Otter
-        Coding                         => [1,         1,          0],
-        Transcript                     => [1,         0,          0],
-        Non_coding                     => [1,         0,          1],
-        Ambiguous_ORF                  => [1,         0,          1],
-        Immature                       => [1,         0,          1],
-        Antisense                      => [1,         0,          1],
-        IG_segment                     => [1,         1,          0],
-        Putative                       => [1,         0,          0],
-        Pseudogene                     => [1,         0,          0],
-        Processed_pseudogene           => [1,         0,          1],
-        Unprocessed_pseudogene         => [1,         0,          1],
-        Predicted                      => [1,         0,          0],
-        Transposon                     => [1,         1,          0],
-	Artifact                       => [1,         0,          0],
-	TEC                            => [1,         0,          0],
-        # newly added - truncated versions of above methods        
-        Coding_trunc                   => [0,         1,          1],
-        Transcript_trunc               => [0,         0,          0],
-        Non_coding_trunc               => [0,         0,          1],
-        Ambiguous_ORF_trunc            => [0,         0,          1],
-        Immature_trunc                 => [0,         0,          1],
-        Antisense_trunc                => [0,         0,          1],
-        IG_segment_trunc               => [0,         1,          0],
-        Putative_trunc                 => [0,         0,          0],
-        Pseudogene_trunc               => [0,         0,          0],
-        Processed_pseudogene_trunc     => [0,         0,          1],
-        Unprocessed_pseudogene_trunc   => [0,         0,          1],
-        Predicted_trunc                => [0,         0,          0],
-	Transposon_trunc               => [0,         1,          0],
-	Artifact_trunc                 => [0,         0,          0],
-	TEC_trunc                      => [0,         0,          0],
-        
-        # Auto-analysis gene types (non-editable)
-        fgenesh                        => [0,         1],
-        FGENES                         => [0,         1],
-        GENSCAN                        => [0,         1],
-        HALFWISE                       => [0,         0],
-        SPAN                           => [0,         0],
-        EnsEMBL                        => [0,         1],
-        genomewise                     => [0,         1],
-        ncbigene                       => [0,         1],
-        'WashU-Supported'              => [0,         1],
-        'WashU-Putative'               => [0,         0],
-        'WashU-Pseudogene'             => [0,         0],
-    );
-    return @methods;
-
-}
 
 ################################################
 #
@@ -317,6 +343,54 @@ sub misc_acefile {
 
 sub get_config_list{
     return $CONFIG_INIFILES;
+}
+
+sub get_default_GeneMethods{
+
+    my $stanza = 'gene_methods';
+    my %defaults_hash = %{option_from_array([$stanza])};
+    my @methods = ();
+    # 
+    my $EDITABLE   = 0; # is the gene method editable?
+    my $CODING     = 1; # is the gene method coding?
+    my $IS_SUB_CAT = 2; # is the method a sub category?
+    my $TRUNC_VER  = 3; # should I make a truncated version?
+    my $ORDER      = 4; # ORDER THE EDITABLE TO MAKE THE TREE WORK
+
+    foreach my $method(keys(%defaults_hash)){
+        my $properties = $defaults_hash{$method};
+        my $prop_array = [ split(',', $properties) ];
+        $defaults_hash{$method} = [ @$prop_array[$EDITABLE..$IS_SUB_CAT], undef, 0];
+        if($prop_array->[$TRUNC_VER]){
+            $defaults_hash{"${method}_trunc"} = [ 0, @$prop_array[$CODING..$IS_SUB_CAT], undef, 0];
+        }
+    }
+    # there must be a better way.
+    foreach my $method(sort { $defaults_hash{$a}->[$ORDER] <=> $defaults_hash{$b}->[$ORDER] } keys(%defaults_hash)){
+        my $prop_array = $defaults_hash{$method};
+        push(@methods, ($method => [ @$prop_array[$EDITABLE..$IS_SUB_CAT] ]));
+    }
+
+    return @methods;
+}
+
+sub get_dot_otter_config{
+    my $configs = get_config_list();
+    my $dot_otter_config;
+    my ($home_dir) = (getpwuid($<))[7];
+    my $location   = "$home_dir/.otter_config";
+    foreach my $c(@{$configs}){
+        my $obj = tied(%$c);
+        next unless $obj;
+        $dot_otter_config = $obj if $obj->FileName eq $location;
+        last if $dot_otter_config;
+    }
+    unless($dot_otter_config){
+        open(my $fh, ">>$location") || die "ERROR $!";
+        close $fh;
+        $dot_otter_config = options_from_file($location);
+    }
+    return $dot_otter_config;
 }
 
 sub cmd_line{
@@ -351,10 +425,11 @@ sub __internal_option_from_array{
     return unless tied( %$inifiles );
     my $filename = tied( %$inifiles )->GetFileName();
     warn "option from array inifile called // $inifiles @$array // looking at $filename\n" if $DEBUG_CONFIG;
-    my $param = pop @$array;
-    my $value = undef;
-    my $found = 0;
+    my $param   = pop @$array;
     my $section = join(".", @$array);
+    warn sprintf "param '%s' and section '%s'", $param, $section if $DEBUG_CONFIG;
+    my $value   = undef;
+    my $found   = 0;
 
     my $stem_finder = sub {
         my ($s, $p) = @_;
@@ -373,8 +448,13 @@ sub __internal_option_from_array{
     }elsif(exists $inifiles->{$section. ".$param"}){
         $value = $inifiles->{$section. ".$param"};
         $found = 1;
+    # get the hash for a block [default]. this is same as the above but for only single named stanzas!
+    }elsif((!$section) && exists $inifiles->{"$param"}){
+        $value = $inifiles->{"$param"};
+        $found = 1;
     # get the hash for a group of blocks [default.filter]
     # will include [default.filter.repeatmask], [default.filter.cpg] ...
+    # this can be a pain, not sure stem finder is working as expected
     }elsif(my $stem = $stem_finder->($section, $param)){
         $value = $stem;
         $found = 1;
@@ -552,4 +632,48 @@ email=
 write_access=0
 debug=1
 pipeline=1 
+#####################################################
+# method groups
+# annotation - this is manually annotated stuff
+# prediction - automatic annotation
+# simple     - simple features repeats etc...
+# alignments - Blast results etc...
+use_method_groups=annotation,prediction,simple,alignments
 
+[method_groups]
+annotation=Transcript
+prediction=ensembl,est_genes,fgenesh,genscan
+simple=repeats,cpg_islands
+alignments=BLASTN,BLASTX,Uniprot
+
+
+[gene_methods]
+#Method name=Editable?,Coding?,Is sub-category?,Has truncated version?, Order (only for editables)
+Coding=1,1,0,1,1
+Transcript=1,0,0,1,2
+Non_coding=1,0,1,1,3
+Ambiguous_ORF=1,0,1,1,4
+Immature=1,0,1,1,5
+Antisense=1,0,1,1,6
+IG_segment=1,1,0,1,7
+Putative=1,0,0,1,8
+Pseudogene=1,0,0,1,9
+Processed_pseudogene=1,0,1,1,10
+Unprocessed_pseudogene=1,0,1,1,11
+Predicted= 1,0,0,1,12
+Transposon=1,1,0,1,13
+Artifact=1,0,0,1,14
+TEC=1,0,0,1,15
+# Auto-analysis gene types (non-editable)
+fgenesh=0,1
+FGENES=0,1
+GENSCAN=0,1
+HALFWISE=0,0
+SPAN=0,0
+EnsEMBL=0,1
+genomewise=1,1
+ncbigene=0,1
+WashU-Supported=0,1
+WashU-Putative=0,0
+WashU-Pseudogene=0,0
+ 
