@@ -9,6 +9,7 @@ use strict;
 use Getopt::Long;
 use DBI;
 use Sys::Hostname;
+use cluster;
 
 # hard wired
 my $driver="mysql";
@@ -22,9 +23,11 @@ my $phelp;
 my $opt_v;
 my $opt_i='';
 my $opt_o='check_genes.lis';
+my $opt_p='duplicate_exons.lis';
 my $cache_file='check_genes.cache';
 my $make_cache;
 my $opt_c='';
+my $opt_s=1000000;
 my $opt_t;
 
 $Getopt::Long::ignorecase=0;
@@ -41,6 +44,7 @@ GetOptions(
 	   'v',    \$opt_v,
 	   'i:s',  \$opt_i,
 	   'o:s',  \$opt_o,
+	   'p:s',  \$opt_p,
 	   'c:s',  \$opt_c,
 	   'make_cache',\$make_cache,
 	   't:s',  \$opt_t,
@@ -64,6 +68,7 @@ rename_genes.pl
   -help                     perldoc help
   -v                        verbose
   -o              file      output file ($opt_o)
+  -p              file      output file ($opt_p)
   -c              char      chromosome ($opt_c)
   -make_cache               make cache file
 ENDOFTEXT
@@ -93,30 +98,28 @@ if($make_cache){
   print "$n contigs read from assembly\n";
 
   # get exons of current genes
-  my $sth=$dbh->prepare("select gsi1.stable_id,gn.name,g.type,tsi.stable_id,ti.name,et.rank,e.exon_id,e.contig_id,e.contig_start,e.contig_end from exon e, exon_transcript et, transcript t, current_gene_info cgi, gene_stable_id gsi1, gene_name gn, gene g, transcript_stable_id tsi, current_transcript_info cti, transcript_info ti left join gene_stable_id gsi2 on (gsi1.stable_id=gsi2.stable_id and gsi1.version<gsi2.version) where gsi2.stable_id IS NULL and cgi.gene_stable_id=gsi1.stable_id and cgi.gene_info_id=gn.gene_info_id and gsi1.gene_id=g.gene_id and g.gene_id=t.gene_id and t.transcript_id=tsi.transcript_id and tsi.stable_id=cti.transcript_stable_id and cti.transcript_info_id=ti.transcript_info_id and t.transcript_id=et.transcript_id and et.exon_id=e.exon_id and e.contig_id");
+  my $sth=$dbh->prepare("select gsi1.stable_id,gn.name,g.type,tsi.stable_id,ti.name,et.rank,e.exon_id,e.contig_id,e.contig_start,e.contig_end,e.sticky_rank from exon e, exon_transcript et, transcript t, current_gene_info cgi, gene_stable_id gsi1, gene_name gn, gene g, transcript_stable_id tsi, current_transcript_info cti, transcript_info ti left join gene_stable_id gsi2 on (gsi1.stable_id=gsi2.stable_id and gsi1.version<gsi2.version) where gsi2.stable_id IS NULL and cgi.gene_stable_id=gsi1.stable_id and cgi.gene_info_id=gn.gene_info_id and gsi1.gene_id=g.gene_id and g.gene_id=t.gene_id and t.transcript_id=tsi.transcript_id and tsi.stable_id=cti.transcript_stable_id and cti.transcript_info_id=ti.transcript_info_id and t.transcript_id=et.transcript_id and et.exon_id=e.exon_id and e.contig_id");
   $sth->execute;
   my $nexclude=0;
   my %excluded_gsi;
+  my %reported_gsi;
   open(OUT,">$cache_file") || die "cannot open cache file $cache_file";
   while (my @row = $sth->fetchrow_array()){
     $n++;
 
     # transform to chr coords
-    my($gsi,$gn,$gt,$tsi,$tn,$erank,$eid,$ecid,$est,$eed)=@row;
+    my($gsi,$gn,$gt,$tsi,$tn,$erank,$eid,$ecid,$est,$eed,$esr)=@row;
     if($a{$ecid}){
-      if($excluded_gsi{$gsi}){
-	print "WARN $gsi already had exon excluded: ".$excluded_gsi{$gsi}."\n";
-      }
 
       my($cname,$atype,$acst,$aced,$ast,$aed,$ao)=@{$a{$ecid}};
       my $ecst;
       my $eced;
       if($ao==1){
 	$ecst=$acst+$est-$ast;
-	$eced=$aced+$eed-$ast;
+	$eced=$acst+$eed-$ast;
       }else{
-	$ecst=$acst-$est+$aed;
-	$eced=$aced-$eed+$aed;
+	$ecst=$aced-$est+$ast;
+	$eced=$aced-$eed+$ast;
       }
       # constant direction - easier later
       if($ecst>$eced){
@@ -124,11 +127,18 @@ if($make_cache){
 	$ecst=$eced;
 	$eced=$t;
       }
-      my @row2=($gsi,$gn,$gt,$tsi,$tn,$erank,$eid,$ecst,$eced,$cname,$atype);
+      my @row2=($gsi,$gn,$gt,$tsi,$tn,$erank,$eid,$ecst,$eced,$cname,$atype,$esr);
       print OUT join("\t",@row2)."\n";
+
+      if($excluded_gsi{$gsi} && !$reported_gsi{$gsi}){
+	print "WARN $gsi ($gn) chr=\'$cname\' ss=\'$atype\' has exon(s) off assembly:\n  ".
+	    join("\n  ",@{$excluded_gsi{$gsi}})."\n";
+	$reported_gsi{$gsi}=1;
+      }
+
     }else{
       $nexclude++;
-      $excluded_gsi{$gsi}=join(',',@row);
+      push(@{$excluded_gsi{$gsi}},join(',',@row));
     }
     last if ($opt_t && $n>=$opt_t);
   }
@@ -140,15 +150,227 @@ if($make_cache){
 }
 
 my %gsi;
+my %gsi_sum;
+my %tsi_sum;
+my %atype;
 my $n=0;
+my $nobs=0;
 open(IN,"$cache_file") || die "cannot open $opt_i";
 while(<IN>){
   chomp;
-  my($gsi,$gii,$gn,$chr,$atype,$gtype)=split(/\t/);
+  my($gsi,$gn,$gt,$tsi,$tn,$erank,$eid,$ecst,$eced,$cname,$atype,$esr)=split(/\t/);
+
+  # skip obs genes
+  if($gt eq 'obsolete'){
+    $nobs++;
+    next;
+  }
+
+  # expect transcripts to stay on same assembly
+  if($tsi_sum{$tsi}){
+    my($tn2,$cname2,$atype2)=@{$tsi_sum{$tsi}};
+    if($cname2 ne $cname){
+      print "ERR: $gsi ($gn): $tsi ($tn) on chr $cname and $cname2\n";
+    }elsif($atype ne $atype2){
+      print "ERR: $gsi ($gn): $tsi ($tn) on chr $atype and $atype2\n";
+    }
+  }else{
+    $tsi_sum{$tsi}=[$tn,$cname,$atype];
+  }
+
+  push(@{$gsi{$atype}->{$gsi}},[$tsi,$erank,$eid,$ecst,$eced,$esr]);
+
+  # these relationships should be fixed
+  $atype{$atype}=$cname;
+  $gsi_sum{$gsi}=[$gn,$gt];
+
   $n++;
 }
 close(IN);
-print "$n name relationships read\n";
+print scalar(keys %gsi_sum)." genes read; $nobs obsolete skipped\n";
+print "$n name relationships read\n\n";
+
+# get clones from assemblies of interest
+my %a;
+my $sth=$dbh->prepare("select a.type, cl.embl_acc, a.chr_start, a.chr_end, cl.name from clone cl, contig ct, assembly a, sequence_set ss, vega_set vs where a.contig_id=ct.contig_id and ct.clone_id=cl.clone_id and a.type=ss.assembly_type and ss.vega_set_id=vs.vega_set_id and vs.vega_type != 'N'");
+$sth->execute;
+my $n=0;
+while (my @row = $sth->fetchrow_array()){
+  my $type=shift @row;
+  my $embl_acc=shift @row;
+  $a{$type}->{$embl_acc}=[@row];
+  $n++;
+  }
+print "$n contigs read from assembly\n";
+
+my $nsticky=0;
+my $nexon=0;
+my %dup_exon;
+my $nmc=0;
+my $nl=0;
+open(OUT,">$opt_o") || die "cannot open $opt_o";
+open(OUT2,">$opt_p") || die "cannot open $opt_p";
+foreach my $atype (keys %gsi){
+  my $cname=$atype{$atype};
+  print "Checking \'$atype\' (chr \'$cname\')\n";
+  foreach my $gsi (keys %{$gsi{$atype}}){
+    my($gn,$gt)=@{$gsi_sum{$gsi}};
+    my %t2e;
+    my %e;
+    my %eids;
+    my %eidso;
+    my %elink;
+    # look for overlapping exons and group exons into transcripts
+    foreach my $rt (@{$gsi{$atype}->{$gsi}}){
+      my($tsi,$erank,$eid,$ecst,$eced,$esr)=@{$rt};
+      if($e{$eid}){
+	# either stored as sticky rank2 or this is sticky rank2
+	if($eids{$eid} || $esr>1){
+
+	  my($st,$ed)=@{$e{$eid}};
+
+	  # save originals
+	  my $esro=1;
+	  if($eids{$eid}){
+	    $esro=$eids{$eid};
+	  }
+	  $eidso{$eid}->{$esro}=[$st,$ed] unless $eidso{$eid}->{$esro};
+	  $eidso{$eid}->{$esr}=[$ecst,$eced] unless $eidso{$eid}->{$esr};
+	  $eids{$eid}=1;
+
+	  # skip if identical match to old original
+	  my $match;
+	  foreach my $esr2 (keys %{$eidso{$eid}}){
+	    my($st2,$ed2)=@{$eidso{$eid}->{$esr2}};
+	    if($st2==$ecst && $ed2==$eced){
+	      $match=1;
+	    }
+	  }
+	  if($match){
+	    # if identical, check for sticky
+	  }elsif($ed+1==$ecst){
+	    $eids{"$eid.$esr"}=[$ecst,$eced];
+	    $ed=$eced;
+	    $e{$eid}=[$st,$ed];
+	    $nsticky++;
+	  }elsif($eced+1==$st){
+	    $st=$ecst;
+	    $e{$eid}=[$st,$ed];
+	    $nsticky++;
+	  }else{
+	    print "ERR: duplicate exon id $eid, but no sticky alignment\n";
+	  }
+	}
+      }else{
+	my $flag;
+	foreach my $eid2 (keys %e){
+	  my($st,$ed)=@{$e{$eid2}};
+	  if($st==$ecst && $ed==$eced){
+	    # duplicate exons
+	    if($dup_exon{$eid}==$eid2 || $dup_exon{$eid2}==$eid){
+	    }else{
+	      $dup_exon{$eid}=$eid2;
+	      print OUT2 "$eid\t$eid2\t$st\t$ed\n";
+	    }
+	    $flag=1;
+	    $eid=$eid2;
+	  }else{
+	    my $mxst=$st;
+	    $mxst=$ecst if $ecst>$mxst;
+	    my $mied=$ed;
+	    $mied=$eced if $eced<$mied;
+	    if($mxst<=$mied){
+	      if(1){
+		push(@{$elink{$eid}},$eid2);
+	      }else{
+	      # overlapping exons
+		my $mist=$st;
+		$mist=$ecst if $ecst<$mist;
+		my $mxed=$ed;
+		$mxed=$eced if $eced>$mxed;
+		$e{$eid2}=[$mist,$mxed];
+		$eid=$eid2;
+		$flag=1;
+	      }
+	    }
+	  }
+	}
+	if(!$flag){
+	  $e{$eid}=[$ecst,$eced];
+	  $eids{$eid}=$esr if $esr>1;
+	  $nexon++;
+	}
+      }
+      push(@{$t2e{$tsi}},$eid);
+    }
+    # get size of transcripts and warn of large ones
+    my %tse;
+    foreach my $tsi (keys %t2e){
+      my $mist=1000000000000;
+      my $mxed=-1000000000000;
+      foreach my $eid (@{$t2e{$tsi}}){
+	my($st,$ed)=@{$e{$eid}};
+	$mist=$st if $st<$mist;
+	$mxed=$ed if $ed>$mxed;
+      }
+      $tse{$tsi}=[$mist,$mxed];
+      my $tsize=$mxed-$mist;
+      if($tsize>$opt_s){
+	my($tn)=@{$tsi_sum{$tsi}};
+	print OUT "WARN $tsize is size of $tsi ($tn), $gsi ($gn,$gt)\n";
+	$nl++;
+      }
+    }
+    my $cl=new cluster();
+    # link exons by transcripts
+    foreach my $tsi (keys %t2e){
+      if(scalar(@{$t2e{$tsi}})>1){
+	$cl->link([@{$t2e{$tsi}}]);
+      }
+    }
+    # link exons by overlap
+    foreach my $eid (keys %elink){
+      $cl->link([$eid,@{$elink{$eid}}]);
+    }
+    if($cl->cluster_count>1){
+      print "$gsi ($gt,$gn) has multiple clusters\n";
+      my $last_ed;
+      foreach my $tsi (sort {$tse{$a}->[0]<=>$tse{$b}->[0]} keys %tse){
+	my($st,$ed)=@{$tse{$tsi}};
+	my($tn)=@{$tsi_sum{$tsi}};
+	if($last_ed && $last_ed<$st){
+	  my $gap=$st-$last_ed;
+	  print "  **GAP of $gap bases\n";
+	  my $nc=0;
+	  my $out='';
+	  foreach my $embl_acc (keys %{$a{$atype}}){
+	    my($st2,$ed2,$name)=@{$a{$atype}->{$embl_acc}};
+	    if($st2>=$last_ed && $st2<=$st){
+	      $nc++;
+	      $out.="    Boundary of $embl_acc ($name)\n";
+	    }
+	    if($ed2>=$last_ed && $ed2<=$st){
+	      $nc++;
+	      $out.="    Boundary of $embl_acc ($name)\n";
+	    }
+	  }
+	  if($nc<=2){
+	    print $out;
+	  }
+	}
+	print "  $tsi ($tn): $st-$ed\n";
+	$last_ed=$ed;
+      }
+      $nmc++;
+    }
+  }
+}
+print scalar(keys %dup_exon)." duplicate exons\n";
+print "$nmc genes with non overlapping transcripts\n";
+print "found $nexon exons; $nsticky sticky exons\n";
+print "$nl large transcripts\n";
+close(OUT);
+close(OUT2);
 
 exit 0;
 
