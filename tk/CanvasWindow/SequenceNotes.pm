@@ -163,10 +163,6 @@ sub initialise {
         });
     $canvas->CanvasBind('<Shift-Button-1>', sub {
         return if $self->delete_message;
-        $self->extend_selection;
-        });
-    $canvas->CanvasBind('<Control-Button-1>', sub {
-        return if $self->delete_message;
         $self->toggle_current;
         });
     
@@ -618,13 +614,6 @@ sub toggle_current {
 
     my ($rect) = $self->canvas->find('withtag', "$row_tag&&clone_seq_rectangle") or return;        
     $self->toggle_selection($rect);
-}
-
-sub extend_selection {
-    my( $self ) = @_;
-    
-    my $row_tag = $self->get_current_row_tag or return;
-    
 }
 
 sub selected_CloneSequence_indices {

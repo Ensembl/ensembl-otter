@@ -1491,12 +1491,18 @@ sub empty_SubSeq_cache {
 sub draw_sequence_list {
     my( $self, $tag, @slist ) = @_;
 
+    my $total_name_length = 0;
+    foreach my $name (@slist) {
+        $total_name_length += length($name);
+    }
+    my $rows = int sqrt($total_name_length);
+    $rows = 20 if $rows < 20;
+
     my $canvas = $self->canvas;
     my $font = $self->font;
     my $size = $self->font_size;
     my $pad  = int($size / 6);
     my $half = int($size / 2);
-
     
     # Delete everything apart from messages
     $canvas->delete('all&&!msg');
@@ -1528,12 +1534,12 @@ sub draw_sequence_list {
 		-anchor     => 'nw',
 		-text       => $text,
 		-font       => [$font, $size, $style],
-		-tags       => [$tag],
+		-tags       => [$tag, 'searchable'],
 		-fill       => $color,
 		);
         }
         
-        if (($i + 1) % 20) {
+        if (($i + 1) % $rows) {
             $y += $size + $pad;
         } else {
             $y = 0;
