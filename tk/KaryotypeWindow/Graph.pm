@@ -4,11 +4,83 @@ package KaryotypeWindow::Graph;
 
 use strict;
 use Carp;
+use KaryotypeWindow::Graph::Bin;
 
 sub new {
     my ($pkg) = @_;
 
     return bless {}, $pkg;
+}
+
+sub label {
+    my( $self, $label ) = @_;
+    
+    if ($label) {
+        $self->{'_label'} = $label;
+    }
+    return $self->{'_label'} || confess "label not set";
+}
+
+sub max_x {
+    my( $self, $max_x ) = @_;
+    
+    if ($max_x) {
+        $self->{'_max_x'} = $max_x;
+    }
+    return $self->{'_max_x'} || confess "max_x not set";
+}
+
+sub max_y {
+    my( $self, $max_y ) = @_;
+    
+    if ($max_y) {
+        $self->{'_max_y'} = $max_y;
+    }
+    return $self->{'_max_y'} || confess "max_y not set";
+}
+
+sub width {
+    my( $self, $width ) = @_;
+    
+    if ($width) {
+        $self->{'_width'} = $width;
+    }
+    return $self->{'_width'} || 100;
+}
+
+sub scale {
+    my( $self ) = @_;
+    
+    return $self->max_x / $self->width;
+}
+
+
+sub get_all_Graphs {
+    my ($self) = @_;
+
+    if ( my $lst = $self->{'_Graph_list'} ) {
+        return @$lst;
+    }
+    else {
+        return;
+    }
+}
+
+sub add_Graph {
+    my ( $self, $Graph ) = @_;
+
+    confess "Missing Graph argument" unless $Graph;
+    my $lst = $self->{'_Graph_list'} ||= [];
+    push ( @$lst, $Graph );
+}
+
+sub new_Graph {
+    my ( $self, $class ) = @_;
+
+    $class ||= 'KaryotypeWindow::Graph';
+    my $Graph = $class->new;
+    $self->add_Graph($Graph);
+    return $Graph;
 }
 
 sub draw {
@@ -63,16 +135,6 @@ sub draw_histogram {
     }
 }
 
-sub chromosome {
-    my ( $self, $chromosome ) = @_;
-
-    if ($chromosome) {
-        $self->{'_chromosome'} = $chromosome;
-
-    }
-
-    return $self->{'_chromosome'};
-}
 
 1;
 
