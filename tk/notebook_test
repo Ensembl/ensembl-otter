@@ -18,24 +18,45 @@ use Tk::NoteBook;
         -label => 'Clone Sequences',
         );
 
-    my $cw = CanvasWindow->new($cl);
-    my $canvas = $cw->canvas;
+    my $cw1 = CanvasWindow->new($cl);
+    my $canvas = $cw1->canvas;
     $canvas->createRectangle(
-        0,0, 200,300,
+        0,0, 600,400,
         -fill => 'red',
         -outline => 'white',
         );
-    $cw->fix_window_min_max_sizes;
+    $cw1->fix_window_min_max_sizes;
 
     my $ss = $nb->add('subseq',
         -label => 'SubSeqs',
         -anchor => 'center',
         );
     
+    my $cw2 = CanvasWindow->new($ss);
+    my $canvas2 = $cw2->canvas;
+    $canvas2->createRectangle(
+        0,0, 100,200,
+        -fill => 'red',
+        -outline => 'white',
+        );
+    $cw2->set_scroll_region;
+    #$cw2->fix_window_min_max_sizes;
+
+    
     my $lo = $nb->add('locus',
         -label => 'Loci',
         -anchor => 'center',
         );
+    
+    my $cw3 = CanvasWindow->new($lo);
+    my $canvas3 = $cw3->canvas;
+    $canvas3->createRectangle(
+        0,0, 50,100,
+        -fill => 'red',
+        -outline => 'white',
+        );
+    $cw3->set_scroll_region;
+    #$cw3->fix_window_min_max_sizes;
     
     Tk::MainLoop();
 }
