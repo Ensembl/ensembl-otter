@@ -15,30 +15,41 @@ $| = 1;
 my $chrname  = 14;
 my $path     = 'GENOSCOPE';
 my $agpfile  = undef;
+my $logfile  = undef;
+my $startid  = 1;
+my $seqdir   = undef;
+my $chrid    = 1;
 
-&GetOptions( 'chr:s'   => \$chrname,
+&GetOptions( 'chromosome:s'   => \$chrname,
+             'chrid:n'  => \$chrid,
              'path:s'  => \$path,
              'agp:s'   => \$agpfile,
+             'log:s'   => \$logfile,
+             'startid:n' => \$startid,
+             'seqdir:n'  => \$seqdir,
             );
 
 if (!defined($chrname) || !defined($agpfile) || !defined($path)) {
   die "Missing required args\n";
 }
 
+if (defined($logfile)) {
+  open (FPERR, ">$logfile");
+} else {
+  open (FPERR, ">&STDERR");
+}
 
 my %contigs;
 
-my $chrid;
 if ($chrname =~ /^[0-9]*$/) {
   $chrid = $chrname;
 }
 
-my $chrid = 1;
 open(IN,"<$agpfile");
 
-my $contignum = 1;
-my $clonenum  = 1;
-my $dnanum    = 1;
+my $contignum = $startid;
+my $clonenum  = $startid;
+my $dnanum    = $startid;
 while (<IN>) {
   chomp;
   $_ =~ s/\ //g;
@@ -60,10 +71,10 @@ while (<IN>) {
     $accstart = $tmp;
   }
  
- print STDERR "Accver $accver\n"; 
+ print FPERR "Accver $accver\n"; 
   my ($acc,$version)  = split(/\./,$accver);
 
-  print STDERR "Found $acc : $version\n";
+  print FPERR "Looking for $acc : $version\n";
 
   open(IN2,"pfetch $acc |");
 
@@ -73,7 +84,7 @@ while (<IN>) {
   while (<IN2>) {
 
     if (/^>(\S+) (\S+)/) {
-      print STDERR "Found title line $1 : $2\n";
+      print FPERR "Found title line $1 : $2\n";
 
       if ($2 eq $accver) {
 	$found = 1;
@@ -87,11 +98,13 @@ while (<IN>) {
   close(IN2);
 
   if ($found == 0) {
+    $seq = "";
+    print FPERR "Doing archive pfetch for $accver\n";
     open(IN2,"pfetch -A $accver |");
     while (<IN2>) {
   
       if (/^>(\S+) (\S+)/) {
-        print STDERR "Found title line $1 : $2\n";
+        print FPERR "Found title line $1 : $2\n";
   
         if ($2 eq $accver) {
   	  $found = 1;
@@ -103,28 +116,33 @@ while (<IN>) {
     }
     close(IN2);
   }
-#    open(IN2,"pfetch -A $acc |");
-#    $seq = "";
-#    
-#    while (<IN2>) {
-#      
-#      if (/^>(\S+) (\S+)/) {
-#	print STDERR "Found title line $1 : $2\n";
-#	if ($found) {
-#	  last;
-#	}
-#	$seq = "";
-#	if ($2 eq $accver) {
-#	  $found = 1;
-#	}
-#      } else {
-#	chomp;
-#	$seq .= $_;
-#      }
-#    }
-#  }
+  if (!$found && $seqdir) {
+    $seq = "";
+    my $fname = "$seqdir/$accver.fa";
+    if ( -e $fname ) {
+      open(IN2,"<$fname");
+      while (<IN2>) {
+        
+        if (/^>(\S+) (\S+)/) {
+          print FPERR "Found title line $1 : $2\n";
+          if ($found) {
+            last;
+          }
+          $seq = "";
+          if ($2 eq $accver) {
+            $found = 1;
+          }
+        } else {
+          chomp;
+          $seq .= $_;
+        }
+      }
+      close(IN2);
+    }
+  }
+
   if ($found != 1) {
-    print STDERR "ERROR: Can't find right sequence version for $acc $version\n";
+    print FPERR "ERROR: Can't find right sequence version for $acc $version\n";
   } else {
     my $contigid = $acc . "." . $version . "." . $accstart . "." . $accend;
     my $len = length($seq);
@@ -134,7 +152,7 @@ while (<IN>) {
       $strand = -1;
     }
     
-    print STDERR "Length : $len\n";
+    print FPERR "Length : $len\n";
 
     print "insert into assembly(chromosome_id,chr_start,chr_end,superctg_name,superctg_start,superctg_end,superctg_ori,contig_id,contig_start,contig_end,contig_ori,type) values($chrid,$chrstart,$chrend,\'$chrname\',$chrstart,$chrend,1,$contignum,$accstart,$accend,$strand,\'$path\');\n";
     print "insert into clone(clone_id,name,embl_acc,version,embl_version,htg_phase,created,modified) values($clonenum,'$acc','$acc',$version,$version,4,now(),now());\n";
@@ -147,3 +165,4 @@ while (<IN>) {
     $dnanum++;
   }
 }
+close FPERR;
