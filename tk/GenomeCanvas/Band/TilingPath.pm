@@ -23,7 +23,7 @@ sub new {
     return $band;
 }
 
-sub direction {
+sub tiling_direction {
     my( $band, $dir ) = @_;
     
     if ($dir) {
@@ -68,12 +68,13 @@ sub render {
     
     my $canvas = $band->canvas;
     my $vc     = $band->virtual_contig;
-    my $y_dir  = $band->direction;
+    my $y_dir  = $band->tiling_direction;
     my $rpp    = $band->residues_per_pixel;
 
     if ($y_dir == -1) {
         # We have to build above the other bands
-        $y_offset = ($canvas->bbox('all'))[1] - 100;
+        my $y_top = ($canvas->bbox('all'))[1] || 0;
+        $y_offset = $y_top - 100;
     }
 
     foreach my $map_c ($vc->_vmap->each_MapContig) {

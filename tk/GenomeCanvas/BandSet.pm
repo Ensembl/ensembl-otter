@@ -64,7 +64,7 @@ sub draw_set_outline {
     $canvas->createRectangle(
         @rect,
         -fill       => undef,
-        -outline    => 'red',
+        -outline    => undef,
         -tags       => [$tag],
         );
 }

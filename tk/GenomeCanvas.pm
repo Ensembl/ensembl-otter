@@ -12,14 +12,13 @@ use GenomeCanvas::BandSet;
 use GenomeCanvas::Drawable;
 use GenomeCanvas::State;
 
-use vars '@ISA';
+use vars qw{@ISA @DEFAULT_CANVAS_SIZE};
 @ISA = ('GenomeCanvas::State');
 
+@DEFAULT_CANVAS_SIZE = (500,50);
+
 sub new {
-    my( $pkg, $tk, $width, $height ) = @_;
-    
-    $width  ||= 500;
-    $height ||= 200;
+    my( $pkg, $tk ) = @_;
     
     unless ($tk) {
         confess "Error usage: GenomeCanvas->new(<Tk::Widget object>)";
@@ -33,8 +32,8 @@ sub new {
         -highlightthickness => 1,
         -background         => 'white',
         -scrollbars         => 'se',
-        -width              => $width,
-        -height             => $height,
+        -width              => $DEFAULT_CANVAS_SIZE[0],
+        -height             => $DEFAULT_CANVAS_SIZE[1],
         );
     $scrolled->pack(
         -side => 'top',
@@ -44,41 +43,8 @@ sub new {
         
     my $canvas = $scrolled->Subwidget('canvas');
     $gc->canvas($canvas);
-    $gc->window_width($width);
-    $gc->window_height($height);
     
     return $gc;
-}
-
-sub screen_dimensions {
-    my( $gc, @max ) = @_;
-    
-    if (@max) {
-        $gc->{'_screen_dimensions'} = [@max];
-    }
-    return @{$gc->{'_screen_dimensions'}};
-}
-
-sub window_width {
-    my( $gc, $n ) = @_;
-    
-    if ($n) {
-        confess "Can't reset window_width"
-            if $gc->{'_window_width'};
-        $gc->{'_window_width'} = $n;
-    }
-    return $gc->{'_window_width'};
-}
-
-sub window_height {
-    my( $gc, $n ) = @_;
-    
-    if ($n) {
-        confess "Can't reset window_height"
-            if $gc->{'_window_height'};
-        $gc->{'_window_height'} = $n;
-    }
-    return $gc->{'_window_height'};
 }
 
 sub bandset_padding {
@@ -105,10 +71,10 @@ sub render {
             $y_offset += $gc->bandset_padding;
         }
         my $tag = $gc->bandset_tag($set);
-        warn "Rendering bandset '$tag' with offset $y_offset\n";
+        #warn "Rendering bandset '$tag' with offset $y_offset\n";
         $set->render($y_offset, $tag);
 
-        warn "[", join(',', $canvas->bbox($tag)), "]\n";
+        #warn "[", join(',', $canvas->bbox($tag)), "]\n";
 
         # Move the band to the correct position if it
         # drew itself somewhere else
@@ -118,7 +84,7 @@ sub render {
             $canvas->move($tag, 0, $y_move);
         }
 
-        warn "[", join(',', $canvas->bbox($tag)), "]\n";
+        #warn "[", join(',', $canvas->bbox($tag)), "]\n";
 
         $y_offset = ($canvas->bbox($tag))[3];
         $c++;
@@ -217,10 +183,11 @@ sub zoom {
     warn "rpp=$new_rpp\n";
     
     my $x_zoom_factor = $rpp / $new_rpp;
-    $canvas->scale('all', $x_view_center_coord, $y_view_center_coord, $x_zoom_factor, 1);
+    #$canvas->scale('all', $x_view_center_coord, $y_view_center_coord, $x_zoom_factor, 1);
+    $canvas->scale('all', 0,0, $x_zoom_factor, 1);
     
     $gc->residues_per_pixel($new_rpp);
-    $gc->set_scroll_region;
+    $gc->fix_window_min_max_sizes;
 }
 
 sub set_scroll_region {
@@ -235,24 +202,75 @@ sub set_scroll_region {
     return @bbox;
 }
 
+#sub screen_dimensions {
+#    my( $gc, @max ) = @_;
+#    
+#    if (@max) {
+#        $gc->{'_screen_dimensions'} = [@max];
+#    }
+#    return @{$gc->{'_screen_dimensions'}};
+#}
+#
+#sub other_widgets_size {
+#    my( $gc, @other ) = @_;
+#    
+#    if (@other) {
+#        $gc->{'_other_widgets_size'} = [@other];
+#    }
+#    return @{$gc->{'_other_widgets_size'}};
+#}
+
 sub fix_window_min_max_sizes {
     my( $gc ) = @_;
     
-    my( $screen_max_x, $screen_max_y ) = $gc->screen_dimensions;
-
-    my $canvas = $gc->canvas;
-    my @bbox = $canvas->set_scroll_region;
-
-    my $mw = $canvas->toplevel;
+    my $mw = $gc->canvas->toplevel;
     $mw->update;
-    $mw->minsize($mw->width, $mw->height);
 
-    my $max_x = $bbox[2] - $bbox[0] + $mw->width  - $gc->window_width;
-    my $max_y = $bbox[3] - $bbox[1] + $mw->height - $gc->window_height;
-    $max_x = $screen_max_x if $max_x > $screen_max_x;
-    $max_y = $screen_max_y if $max_y > $screen_max_y;
+    my( $other_x, # other_x and other_y record the space occupied
+        $other_y, # by the widgets other than the canvas in the
+                  # window.
+        $display_max_x, # display_max_x and display_max_y record
+        $display_max_y, # the dimensions of the display.
+        );
+    if (my $mm = $gc->{'_toplevel_other_max'}) {
+        ($other_x, $other_y, $display_max_x, $display_max_y) = @$mm;
+    } else {
+        my $width  = $mw->width;
+        my $height = $mw->height;
+        $mw->minsize($width, $height);
+
+        $other_x = $width  - $DEFAULT_CANVAS_SIZE[0];
+        $other_y = $height - $DEFAULT_CANVAS_SIZE[1];
+
+        ($display_max_x, $display_max_y) = $mw->maxsize;
+        $gc->{'_toplevel_other_max'} = [$other_x, $other_y, $display_max_x, $display_max_y];
+        $mw->resizable(1,1);
+    }
+    
+    my @bbox = $gc->set_scroll_region;
+    my $canvas_width  = $bbox[2] - $bbox[0];
+    my $canvas_height = $bbox[3] - $bbox[1];
+
+    my $max_x = $canvas_width  + $other_x;
+    my $max_y = $canvas_height + $other_y;
+    $max_x = $display_max_x if $max_x > $display_max_x;
+    $max_y = $display_max_y if $max_y > $display_max_y;
     $mw->maxsize($max_x, $max_y);
-    $mw->resizable(1,1);
+    
+
+    # Nudge the window onto the screen.
+    my($x, $y) = $mw->geometry =~ /^\d+x\d+\+?(-?\d+)\+?(-?\d+)/;
+    $x = 0 if $x < 0;
+    $y = 0 if $y < 0;
+
+    if (($x + $max_x) > $display_max_x) {
+        $x = $display_max_x - $max_x;
+    }
+    if (($y + $max_y) > $display_max_y) {
+        $y = $display_max_y - $max_y;
+    }
+
+    $mw->geometry("${max_x}x$max_y+$x+$y");
 }
 
 1;

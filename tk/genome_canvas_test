@@ -17,6 +17,7 @@ use Getopt::Long 'GetOptions';
     my $static_type = 'ACE';
     my $scale = 2000;
     my $labels = 1;
+    my $n_tiles = 1;
     GetOptions(
         'host=s'    => \$host,
         'db=s'      => \$db,
@@ -25,9 +26,11 @@ use Getopt::Long 'GetOptions';
         'scale=s'   => \$scale,
         'type=s'    => \$static_type,
         'label!'    => \$labels,
+        'tiles=i'   => \$n_tiles,
         );
 
     my $mw = GenomeCanvas::MainWindow->new;
+    $mw->title($fpc);
     my $gc = GenomeCanvas->new($mw);
     
     my $canvas = $gc->canvas;
@@ -63,15 +66,15 @@ use Getopt::Long 'GetOptions';
         
         my $tiling = GenomeCanvas::Band::TilingPath->new($vc);
         $tiling->show_labels($labels);
-        $tiling->direction(1);
+        $tiling->tiling_direction(-1);
         my $set = $gc->new_BandSet;
         $set->add_Band($tiling);
         
-        my $tiling2 = GenomeCanvas::Band::TilingPath->new($vc);
-        $tiling2->show_labels($labels);
-        $tiling2->direction(-1);
-        my $set2 = $gc->new_BandSet;
-        $set2->add_Band($tiling2);
+        #my $tiling2 = GenomeCanvas::Band::TilingPath->new($vc);
+        #$tiling2->show_labels($labels);
+        #$tiling2->tiling_direction(1);
+        #my $set2 = $gc->new_BandSet;
+        #$set2->add_Band($tiling2);
 
         $gc->residues_per_pixel($scale);
         $gc->render;
@@ -157,27 +160,36 @@ use Getopt::Long 'GetOptions';
     make_button($button_frame, 'Zoom out', sub{ $gc->zoom(-2) } );
     make_button($button_frame, 'Redraw', sub{
         $gc->render;
-        $gc->set_scroll_region;
-        $gc->set_scroll_region;
-        $gc->set_scroll_region;
-        #$gc->fix_window_min_max_sizes
+        $gc->fix_window_min_max_sizes
+        } );
+    make_button($button_frame, 'Show outline', sub{
+            foreach my $obj ($canvas->find('withtag', 'all')) {
+                if ($canvas->type($obj) eq 'text') {
+                    $canvas->itemconfigure($obj, -fill => 'red');
+                } else {
+                    $canvas->itemconfigure($obj, -outline => 'red');
+                }
+            }
         } );
 
     make_button($button_frame, 'PostScript',
         sub {
-            my $n_tiles = 6;
             my $page_width = 841;
-            my ($cript) = $0 =~ m{([^/]+)$};
 
             my @bbox = $canvas->cget('scrollregion');
-            warn "@bbox\n";
             my $canvas_width  = $bbox[2] - $bbox[0];
             my $canvas_height = $bbox[3] - $bbox[1];
             my $tile_width = $canvas_width / $n_tiles;
             for (my $i = 0; $i < $n_tiles; $i++) {
-                
+                my( $file );
+                if ($n_tiles == 1) {
+                    $file = "$fpc.ps";
+                } else {
+                    my $n = ('01'..'99')[$i];
+                    $file = "${fpc}_$n.ps";
+                }
                 $canvas->postscript(
-                    -file => "${cript}_$i.ps",
+                    -file => $file,
                     '-x' => $bbox[0] + ($i * $tile_width),
                     '-y' => $bbox[1],
                     -width  => $tile_width,
@@ -188,9 +200,10 @@ use Getopt::Long 'GetOptions';
                     -pagewidth => $page_width - 72,
                     -rotate => 1,   # landscape
                     );
+                warn "Printed to file '$file'"
             }
         });
-    #$gc->fix_window_min_max_sizes;
+    $gc->fix_window_min_max_sizes;
 }
 
 
