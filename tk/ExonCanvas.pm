@@ -90,10 +90,9 @@ sub bind_events {
     
     my $canvas = $self->canvas;
     $canvas->SelectionHandle(
-        sub {
-            $self->export_highlighted_text_to_selection(@_);
-        });
-    my $select_sub = sub{
+        sub { $self->export_highlighted_text_to_selection(@_); }
+        );
+    my $select_all_sub = sub{
         $self->select_all_exon_pos;
         $canvas->SelectionOwn(
             -command => sub{
@@ -101,15 +100,19 @@ sub bind_events {
             },
             );
         };
-    $canvas->Tk::bind('<Control-a>', $select_sub);
-    $canvas->Tk::bind('<Control-A>', $select_sub);
+    $canvas->Tk::bind('<Control-a>', $select_all_sub);
+    $canvas->Tk::bind('<Control-A>', $select_all_sub);
 
-    $canvas->Tk::bind('<Button-1>', [
-        sub{ $self->left_button_handler(@_); },
-        Tk::Ev('x'), Tk::Ev('y') ]);
+    $canvas->Tk::bind('<Button-1>', sub{
+        $self->left_button_handler;
+        });
+
+    $canvas->Tk::bind('<Shift-Button-1>', sub{
+        $self->shift_left_button_handler;
+        });
 
     $canvas->Tk::bind('<Control-Button-1>', sub{
-        $self->control_left_button_handler(@_);
+        $self->control_left_button_handler;
         });
 
     $canvas->Tk::bind('<Button-2>', sub{
@@ -127,6 +130,22 @@ sub bind_events {
     #$top->transient($top->parent);
 }
 
+sub highlight {
+    my $self = shift;
+    
+    $self->SUPER::highlight(@_);
+    $self->canvas->SelectionOwn(
+        -command => sub{ $self->deselect_all; }
+        );
+}
+
+sub select_all_exon_pos {
+    my( $self ) = @_;
+    
+    my $canvas = $self->canvas;
+    $self->highlight($canvas->find('withtag', 'exon_pos'));
+}
+
 sub delete_chooser_window_ref {
     my( $self ) = @_;
     
@@ -136,25 +155,24 @@ sub delete_chooser_window_ref {
 }
 
 sub left_button_handler {
-    my( $self, $canvas, $x, $y ) = @_;
-    
-    #warn "\n before: x=$x y=$y\n";
-    #$x = $canvas->canvasx($x);
-    #$y = $canvas->canvasy($y);
-    #warn   "  after: x=$x y=$y\n";
+    my( $self ) = @_;
     
     return if $self->delete_message;
     $self->deselect_all;
+    $self->shift_left_button_handler;
+    $self->focus_on_current_text;
+}
+
+sub focus_on_current_text {
+    my( $self ) = @_;
     
+    my $canvas = $self->canvas;
     my $obj  = $canvas->find('withtag', 'current')  or return;
     my $type = $canvas->type($obj)                  or return;
-    my @tags = $canvas->gettags($obj);
-
     if ($type eq 'text') {
+        $canvas->focus($obj);
 
-        # Position the icursor in the text
-        #my $pos = $canvas->index($obj, [$x, $y]) + 1;
-        #$canvas->icursor($obj, $pos);
+        # Position the icursor at the end of the text
         $canvas->icursor($obj, 'end');
 
         if ($canvas->itemcget($obj, 'text') eq $self->empty_string) {
@@ -162,21 +180,40 @@ sub left_button_handler {
                 -text   => '',
                 );
         }
-
-        # Hightlight and focus if it isn't the
-        # current object
         $canvas->focus($obj);
+    }
+}
+
+sub shift_left_button_handler {
+    my( $self ) = @_;
+    
+    my $canvas = $self->canvas;
+    $canvas->focus("");
+
+    my $obj  = $canvas->find('withtag', 'current')  or return;
+    my $type = $canvas->type($obj)                  or return;
+    my @tags = $canvas->gettags($obj);
+
+    if ($self->is_selected($obj)) {
+        $self->remove_selected($obj);
+    }
+    elsif ($type eq 'text') {
         $self->highlight($obj);
     }
     elsif (grep $_ eq 'exon_furniture', @tags) {
         my ($exon_id) = grep /^exon_id/, @tags;
-        my( @exon_text );
+        my( @select, @deselect );
         foreach my $ex_obj ($canvas->find('withtag', $exon_id)) {
             if ($canvas->type($ex_obj) eq 'text') {
-                push(@exon_text, $ex_obj);
+                if ($self->is_selected($ex_obj)) {
+                    push(@deselect, $ex_obj);
+                } else {
+                    push(@select,   $ex_obj);
+                }
             }
         }
-        $self->highlight(@exon_text);
+        $self->remove_selected(@deselect) if @deselect;
+        $self->highlight(@select)         if @select;
     }
 }
 
@@ -244,7 +281,7 @@ sub export_highlighted_text_to_selection {
         $clip .= "$start  $end\n";
     }
     
-    if (length($clip) > $max_bytes)) {
+    if (length($clip) > $max_bytes) {
         die "Text string longer than $max_bytes: ", length($clip);
     }
     return $clip;
@@ -317,7 +354,7 @@ sub add_exon_holder {
         -anchor     => 'e',
         -text       => $start,
         -font       => [$font, $size, 'normal'],
-        -tags       => [$exon_id],
+        -tags       => [$exon_id, 'exon_start', 'exon_pos'],
         );
     
     my $strand_arrow = $canvas->createLine(
@@ -333,8 +370,8 @@ sub add_exon_holder {
         $x_offset + $size, $y_offset,
         -anchor     => 'w',
         -text       => $end,
-        -font       => [$font, $size, 'normal'],
-        -tags       => [$exon_id],
+        -font       => [$font, $size],
+        -tags       => [$exon_id, 'normal', 'exon_end', 'exon_pos'],
         );
     
     $self->record_exon_inf($exon_id, $start_text, $strand_arrow, $end_text);

@@ -754,8 +754,8 @@ sub next_message_id {
 
         my $canvas = $self->canvas;
         foreach my $o (@obj) {
-            if (my $d = $self->{'_selected_list'}{$o}) {
-                $canvas->delete($d);
+            if (my $r = $self->{'_selected_list'}{$o}) {
+                $canvas->delete($r);
                 delete($self->{'_selected_list'}{$o});
             }
         }
