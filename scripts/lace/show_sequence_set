@@ -69,10 +69,10 @@ sub print_agp {
     {
         $row++;
         if (my $gap = ($chr_start - ($pos + 1))) {
-            print join("\t", $pos + 1, $pos + $gap, $row, 'N', $gap), "\n";
+            print join("\t", $chr_name, $pos + 1, $pos + $gap, $row, 'N', $gap), "\n";
             $row++;
         }
-        print join("\t", $chr_start, $chr_end, $row, 'F',
+        print join("\t", $chr_name, $chr_start, $chr_end, $row, 'F',
             "$acc.$sv", $contig_start, $contig_end,
             $strand eq '1' ? '+' : '-',
             "# $superctg_name"), "\n";

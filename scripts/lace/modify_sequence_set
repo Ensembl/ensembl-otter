@@ -128,7 +128,7 @@ sub show_agp{
     my $chr_end = 0;
     my $gaps    = 0;
     my $found   = {};
-    while(my $row = $sth->fetchrow_arrayref()){
+    while (my $row = $sth->fetchrow_arrayref()) {
 	if ($chr_end && ($chr_end + 2) < $row->[1]){
 	    $gaps++;
 	    #print STDERR $row->[0] . "\t--- GAP ---\t--- GAP ---\n";
