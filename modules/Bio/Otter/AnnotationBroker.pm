@@ -224,9 +224,35 @@ sub compare_genes {
 
         # Compare the gene infos to see which have changed
 	if ($oldg->gene_info->equals($newg->gene_info) == 0) {
-	    $gene_modified = 1;
-	    print STDERR "Found modified gene info '$geneid'\n";
-	} else {
+	  $gene_modified = 1;
+	  print STDERR "Found modified gene info '$geneid'\n";
+
+	  # See if gene name has changed, and if it has add
+	  # old as alias unless it is already an alias
+
+	  if ( $oldg->gene_info->name->name ne $newg->gene_info->name->name ){
+
+	    my $exist = 0;
+
+	    if ( $oldg->gene_info->synonym ){
+	      foreach my $sym ( $oldg->gene_info->synonym ){
+		$exist++ if $sym->name eq $oldg->gene_info->name->name;
+	      }
+	    }
+
+	    if ( $exist == 0 ){
+
+	      my $gsynonym = new Bio::Otter::GeneSynonym;
+	      $gsynonym->gene_info_id($newg->gene_info->dbID);
+	      $gsynonym->name($oldg->gene_info->name->name);
+	      $newg->gene_info->synonym($gsynonym);
+	    }
+	    else {
+	      print STDERR "Synonym " . $oldg->gene_info->name->name . " already exists - no action\n";
+	    }
+	  }
+	}
+	else {
 	    #print STDERR "found same gene info\n";
 	}
 	
@@ -296,6 +322,8 @@ sub compare_genes {
         $self->set_gene_created_version_modified($gene, $time);
         $gene->gene_info->author($current_author);
         $gene->stable_id($gene_stable_id);
+
+
 
         foreach my $tran (@{$g->get_all_Transcripts}) {
            my $tid = $self->db->get_StableIdAdaptor->fetch_new_transcript_stable_id;
