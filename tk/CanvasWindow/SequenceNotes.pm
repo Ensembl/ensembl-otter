@@ -29,7 +29,7 @@ sub Client {
 
 sub SequenceSet {
     my( $self, $SequenceSet ) = @_;
-    
+
     if ($SequenceSet) {
         $self->{'_SequenceSet'} = $SequenceSet;
     }
@@ -46,11 +46,12 @@ sub SequenceSetChooser {
 }
 
 sub get_CloneSequence_list {
-    my( $self ) = @_;
+    my( $self , $force_update ) = @_;
     
+    #if $force_update is set to 1, then it should re-query the db rather than us the old list
     my $ss = $self->SequenceSet;
     my $cs_list = $ss->CloneSequence_list;
-    unless ($cs_list) {
+    if ($force_update || !$cs_list ) {
         my $ds = $self->SequenceSetChooser->DataSet;
         $ds->fetch_all_CloneSequences_for_SequenceSet($ss);
         $ds->fetch_all_SequenceNotes_for_SequenceSet($ss);
@@ -59,40 +60,48 @@ sub get_CloneSequence_list {
     return $cs_list;
 }
 
-### Might be able to make this a bit more general
-sub refresh_column {
-    my ($self, $col_no) = @_;
 
+## now takes the column number to be refreshed (image or text) and refreshes it
+sub refresh_column{
+    my ($self, $col_no , $i) = @_ ;
+    
     my $col_tag = "col=$col_no";
-    my $ss = $self->SequenceSet();
     my $ds = $self->SequenceSetChooser->DataSet();
-    my $cs_list   = $self->get_CloneSequence_list;
-    $ds->status_refresh_for_SequenceSet($ss);
+    my $ss = $self->SequenceSet();
+    my $cs_list ;
+    if ($col_no == 3 ){
+        # ana-status column -has it's own query # should be faster
+        $ds->status_refresh_for_SequenceSet($ss);
+        $cs_list   = $self->get_CloneSequence_list();
+    }elsif($col_no == 7 ) {
+        # locks also has its own query should be faster
+        $ds->lock_refresh_for_SequenceSet($ss) ;
+        $cs_list   = $self->get_CloneSequence_list();
+    }else{
+        # forces requery of databases
+        $cs_list   = $self->get_CloneSequence_list(1);
+    }
+    
     my $canvas = $self->canvas();
     
-    for (my $i = 0; $i < @$cs_list; $i++) {
+    for ( $i ||= 0; $i < @$cs_list; $i++) {
         my $cs = $cs_list->[$i];
-        if (my ($status_text) = $canvas->find('withtag', "$col_tag&&cs=$i")) {
-            my $new_text = _column_text_seq_note_status($cs);
-	    delete $new_text->{'-tags'};    # Don't want to alter tags
-	    $canvas->itemconfigure($status_text, %$new_text);
+        if (my ($old_content) = $canvas->find('withtag', "$col_tag&&cs=$i")) {
+            my $method_list = $self->column_methods;
+	    my $new_content = $method_list->[$col_no]->[1]->($cs, $i , $self);
+            delete $new_content->{'-tags'};    # Don't want to alter tags
+	    $canvas->itemconfigure($old_content, %$new_content);
         } else {
             warn "No object withtag '$col_tag&&cs=$i'";
         }
     }
 }
 
-sub refresh_locks_column{
-    my ($self) = @_ ;
-    my $sequence_set = $self->SequenceSet ;
-    my $dataset = $self->SequenceSetChooser->DataSet ;
-    $dataset->refresh_locks($sequence_set) ;
-}
 
 # this method returns an anonymous array. Each element of the array consists of another annonymous array of two elements.
 # the first of the two elements is the method to be called on the canvas, 
 # and the second method that will produce the arguments for the first method
-# in most cases the first method will be createText , as that is what is being displayed
+# the first method will _write_text ($canvas->createText) or _draw_image ($canvas->createImage) 
 sub column_methods {
     my( $self, $methods ) = @_;
     
@@ -104,7 +113,8 @@ sub column_methods {
     }
     elsif (! $self->{'_column_methods'}) {
         # Setup some default column methods
-        my $method = \&_write_text ;
+        my $method = \&_write_text ;   # this is the default method to be used  to display text (rather than drawing s graphic)
+        my $draw_method = \&_draw_image ;
         
         my $norm = [$self->font, $self->font_size, 'normal'];
         my $bold = [$self->font, $self->font_size, 'bold'];
@@ -139,12 +149,7 @@ sub column_methods {
             }],
             [$method, \&_column_text_seq_note_author],
             [$method, \&_column_text_seq_note_text],
-            [\&draw_padlock_icon , 
-            sub { 
-                my $cs = shift;
-                my $is_locked = $cs->get_lock_status ;
-                return { -locked => $is_locked} ;
-            } ] 
+            [$draw_method ,  \&_padlock_icon ]
             ];
     }
     return $self->{'_column_methods'};
@@ -153,6 +158,18 @@ sub column_methods {
 sub _write_text{
     my ($canvas ,  @args) = @_ ;
     $canvas->createText(@args) ;
+}
+
+sub _draw_image{
+    my ($canvas ,  @args) = @_ ;
+    
+    ## need to remove some tags -as they are for create_text 
+    my %hash = @args ;
+    delete $hash{'-width'} ;
+    delete $hash{'-font'} ;
+    delete $hash{'-anchor'} ; 
+
+    $canvas->createImage(%hash , -anchor => 'n');
 }
 
 sub _column_text_row_number {
@@ -209,14 +226,22 @@ sub max_column_width {
     return $self->{'_max_column_width'} || 40 * $self->font_size;
 }
 
+sub _write_access{
+    my ($self) = @_ ;
+    my $ss = $self->SequenceSet or confess "No SequenceSet attached";
+    return $ss->write_access;
+}
+
+
 sub initialise {
     my( $self ) = @_;
 
     # Use a slightly smaller font so that more info fits on the screen
     $self->font_size(12);
 
-    my $ss     = $self->SequenceSet or confess "No SequenceSet attached";
-    my $write  = $ss->write_access;
+#    my $ss     = $self->SequenceSet or confess "No SequenceSet attached";
+#    my $write  = $ss->write_access;
+    my $write = $self->_write_access;
     my $canvas = $self->canvas;
     my $top    = $canvas->toplevel;
     
@@ -279,15 +304,10 @@ sub initialise {
     
     my $refesher = sub{
 	$top->Busy;
-	my $ds = $self->SequenceSetChooser->DataSet;
-	my $ss = $self->SequenceSet;
-	$ds->fetch_all_SequenceNotes_for_SequenceSet($ss);
-	$self->refresh_locks_column;
-        $self->draw;
-	$self->set_scroll_region_and_maxsize;
-	$top->Unbusy;
+	$self->refresh_column(7) ;
+        $top->Unbusy;
     };
-    $self->make_button($button_frame_2, 'Refresh', $refesher, 0);
+    $self->make_button($button_frame_2, 'Refresh Locks', $refesher, 0);
     $top->bind('<Control-r>', $refesher);
     $top->bind('<Control-R>', $refesher);
     $top->bind('<F5>',        $refesher);
@@ -490,7 +510,7 @@ sub make_button {
     return $button;
 }
 
-sub set_seleted_from_canvas {
+sub set_selected_from_canvas {
     my( $self ) = @_;
     
     my $ss = $self->SequenceSet;
@@ -507,15 +527,11 @@ sub set_seleted_from_canvas {
 
 
 
-
-
 sub run_lace {
     my( $self ) = @_;
     
     ### Prevent opening of sequences already in lace sessions
-    
-    
-    return unless $self->set_seleted_from_canvas;
+    return unless $self->set_selected_from_canvas;
     my $ss = $self->SequenceSet;
     my $cl = $self->Client;
 
@@ -554,11 +570,13 @@ sub run_lace {
 
     my $xc = $self->make_XaceSeqChooser($title);
     ### Maybe: $xc->SequenceNotes($self);
+    $xc->SequenceNotes($self); 
     $xc->AceDatabase($db);
     my $write_flag = $cl->write_access ? $ss->write_access : 0;
     $xc->write_access($write_flag);  ### Can be part of interface in future
     $xc->Client($self->Client);
     $xc->initialize;
+    $self->refresh_column(7) ; # locks column
 }
 
 # creates a string based on the selected clones, with commas seperating individual values or dots to represent a continous sequence
@@ -566,9 +584,7 @@ sub selected_sequence_string{
     my ($self ) = @_ ;
     
     my $selected = $self->selected_CloneSequence_indices;
-    
-
-    
+   
     my $prev = shift @$selected;
     my $string;
     
@@ -622,6 +638,8 @@ sub make_XaceSeqChooser {
     return $xc;
 }
 
+
+## this returns the rows to be displayed - havent used get_CloneSequence_list directly, as this allows for easier inheritence of the module
 sub get_rows_list{
     my ($self) = @_;
     print STDERR "Fetching CloneSequence list...";
@@ -635,6 +653,7 @@ sub draw {
     # draws a row for each of them
     
     my $cs_list   = $self->get_rows_list;
+    warn "COMING FROM " . $self->isa('CanvasWindow::SequenceNotes::SearchHistory');
     print STDERR " done\n";
     my $size      = $self->font_size;
     my $canvas    = $self->canvas;
@@ -648,9 +667,10 @@ sub draw {
     print STDERR "Drawing list...";
     my $gaps = 0;
     my $gap_pos = {};
-    for (my $i = 0; $i < @$cs_list; $i++) {   # go thorugh each clone sequence
+    for (my $i = 0; $i < @$cs_list; $i++) {   # go through each clone sequence
         my $row = $i + $gaps;
         my $cs = $cs_list->[$i];
+#        warn "cs? " . $cs->isa('Hum::Ace::CloneSequence') ;
         my $row_tag = "row=$row";
         my $y = $row * $size;
 
@@ -691,8 +711,8 @@ sub draw {
             my $calling_method = @$meth_pair[0]; 
             my $arg_method = @$meth_pair[1] ;
             
-	    my $opt_hash = $arg_method->($cs, $i) if $arg_method ;
-	    $opt_hash->{'-anchor'} ||= 'nw';
+	    my $opt_hash =  $arg_method->($cs, $i ,  $self ) if $arg_method ;
+            $opt_hash->{'-anchor'} ||= 'nw';
 	    $opt_hash->{'-font'}   ||= $helv_def;
 	    $opt_hash->{'-width'}  ||= $max_width;
 	    $opt_hash->{'-tags'}   ||= [];
@@ -925,7 +945,7 @@ sub save_sequence_notes {
     $text =~ s/\s/ /g;
     $text =~ s/\s+$//;
     $text =~ s/^\s+//;
-    unless ($self->set_seleted_from_canvas) {
+    unless ($self->set_selected_from_canvas) {
         $self->message("No clones selected");
         return;
     }
@@ -953,6 +973,8 @@ sub DESTROY {
     my $name = $self->name;
     warn "Destroying $type $name\n";
 }
+
+
 sub popup_missing_analysis{
     my ($self) = @_;
     my $index = $self->get_current_CloneSequence_index ; 
@@ -969,6 +991,8 @@ sub popup_missing_analysis{
 	$self->message("$clone has a complete set of analyses");
     }
 }
+
+
 sub popup_ana_seq_history{
     my ($self) = @_;
     my $index = $self->get_current_CloneSequence_index ; 
@@ -1021,27 +1045,31 @@ sub check_for_History{
     $hist_win->canvas->toplevel->raise;
     return 1;
 }
+
 sub empty_canvas_message{
     return "No Clone Sequences found";
 }
 
 
+sub _padlock_icon{
+    my ($cs ,$i ,  $self) = @_ ;
 
-sub draw_padlock_icon{
-    my ($canvas , $x, $y , %opt_hash) = @_ ;
-    # %opt_hash should contain the lock status of the clone as well as the canvas tags (ie row and column)
+    my $canvas = $self->canvas ;
+    my $is_locked = $cs->get_lock_status ;
+    my $data;
     
-    my $mw = $canvas->toplevel ;
-    my $data = padlock_pixmap()  ;
-    my $pixmap = $canvas->toplevel->Pixmap( -data => $data ) ;
-    push(@{$opt_hash{-tags}}, 'padlock');  # not used yet- but may be useful
-    
-    if ($opt_hash{-locked}){
-        $canvas->createImage( $x , $y , -image => $pixmap , -tags => $opt_hash{-tags} , -anchor => 'n'  ) ;
+    if ($is_locked){
+        $data = closed_padlock_pixmap()  ;
     }
-}
+    else{
+        $data = open_padlock_pixmap()  ;
+    }
+    my $pixmap = $canvas->toplevel->Pixmap( -data => $data ) ;
+    
+    return { -image => $pixmap } ;
+}    
 
-sub padlock_pixmap {    
+sub closed_padlock_pixmap {    
     
     return <<'END_OF_PIXMAP' ;
 /* XPM */    
@@ -1062,6 +1090,35 @@ static char * padlock[] = {
 " +++++++++ ",
 " +++++++++ ",
 "  +++++++  ",
+"           "};
+END_OF_PIXMAP
+
+}
+
+
+### blank at the moment - perhaps put an "unlocked" icon in there later
+### Need an image of some sort in place of the "locked" icon - for the refresh columns methods 
+sub open_padlock_pixmap {    
+    
+    return <<'END_OF_PIXMAP' ;
+/* XPM */    
+static char * padlock[] = {
+"17 13 3 1",
+"     c None",
+".    c #FFFFFF",
+"+    c #000000",
+"           ",
+"           ",
+"           ",
+"           ",                    
+"           ",                    
+"           ",                    
+"           ",             
+"           ",
+"           ",     
+"           ",     
+"           ",     
+"           ",
 "           "};
 END_OF_PIXMAP
 
