@@ -1,0 +1,118 @@
+#!/usr/local/bin/perl
+
+use OtterDefs;
+use strict;
+
+use CGI;
+
+use Bio::Otter::DBSQL::DBAdaptor;
+use Bio::Otter::CloneLockBroker;
+use Bio::Otter::Converter;
+use Bio::Otter::Author;
+
+$| = 1;
+
+my $q = new CGI;
+
+print STDERR "************* Locking region ************";
+
+if ($ENV{SERVER_SOFTWARE} =~ /libwww-perl-daemon/) {
+  print STDERR "NOTE : Setting nph to 1";
+  $q->nph(1);
+}
+
+print $q->header('text/plain');
+
+my %params   = $q->Vars;
+
+if (!defined($OTTER_SPECIES->{$params{'dataset'}})) {
+    error_exit($q, "Unknown data set " . $params{'dataset'} . " in lock_region\n");
+}
+
+my %defaults = %{$OTTER_SPECIES->{'defaults'}};
+my %dbinfo   = %{$OTTER_SPECIES->{$params{'dataset'}}};
+
+####################################################################
+####################################################################
+####################################################################
+# Get all the params in nice variables
+
+my $chr       = $params{chr}      || error_exit($q, "No chromosome entered");
+my $chrstart  = $params{chrstart} || error_exit($q, "No chromosome start coordinate entered");
+my $chrend    = $params{chrend}   || error_exit($q, "No chromosome end coordinate entered");
+my $type      = $params{type}     || $dbinfo{TYPE} || $defaults{TYPE};
+my $cl_host   = $params{hostname} || $ENV{REMOTE_ADDR};
+my $auth_name = $params{author}   || error_exit($q, "Need author and email to lock clones...");
+my $email     = $params{email}    || error_exit($q, "Need author and email to lock clones...");
+my $dataset   = $params{dataset};
+my $author    = Bio::Otter::Author->new(-name  => $auth_name,
+                                        -email => $email);
+########## AND DB CONNECTION #######################################
+my $dbhost    = $dbinfo{HOST}     || $defaults{HOST},
+my $dbuser    = $dbinfo{USER}     || $defaults{USER},
+my $dbpass    = $dbinfo{PASS}     || $defaults{PASS},
+my $dbport    = $dbinfo{PORT}     || $defaults{PORT},
+my $dbname    = $dbinfo{DBNAME}   || error_exit($q, "Failed opening otter database [No database name]");
+
+my $odb;
+
+print STDERR "Database dbname : [$dbname] host : [$dbhost] user : [$dbuser] pass : [$dbpass] port : [$dbport]";
+
+eval {
+  $odb = Bio::Otter::DBSQL::DBAdaptor->new(-host   => $dbhost,
+                                           -user   => $dbuser,
+                                           -pass   => $dbpass,
+                                           -port   => $dbport,
+                                           -dbname => $dbname);
+};
+error_exit($q, "Failed opening otter database [$@]") if $@;
+
+print STDERR "Connected to database";
+print STDERR "Assembly type " . $odb->assembly_type($type);
+
+
+my $sgp  = $odb->get_SliceAdaptor;
+my $cb   = Bio::Otter::CloneLockBroker->new($odb);
+$cb->client_hostname($cl_host);
+
+
+print STDERR "Getting slice [$chr] [$chrstart] [$chrend]";
+my $slice = $sgp->fetch_by_chr_start_end($chr,
+                                         $chrstart,
+                                         $chrend);
+print STDERR "Got the slice [$chr] [$chrstart] [$chrend]";
+
+
+####################################################################
+# Now actually do the locking
+print STDERR "Attempting to lock clones...";
+
+eval {
+    $cb->lock_clones_by_slice($slice,$author);
+};
+error_exit($q, "Clones locked - exiting [$@]") if $@;
+
+print STDERR "Obtained the locks";
+
+my $tp         = $slice->get_tiling_path();
+my $xml_string = Bio::Otter::Converter::path_to_XML($chr, $chrstart, $chrend, $type, $tp);
+
+print STDERR "Sending xml response";
+print "<otter>\n${xml_string}</otter>";
+
+
+##################################################################################
+
+sub error_exit {
+  my ($q,$reason) = @_;
+
+  print "<otter>\n";
+  print "  <response>\n";
+  print "    ERROR: $reason\n";
+  print "  </response>\n";
+  print "</otter>\n";
+
+  print STDERR "ERROR: $reason\n";
+  
+  exit;
+}
