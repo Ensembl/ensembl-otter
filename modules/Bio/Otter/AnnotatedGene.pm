@@ -85,6 +85,10 @@ sub toXMLString{
 
     my $info = $self->gene_info;
 
+    if (my $desc = $self->description) {
+        $str .= "  <description>$desc</description>\n";
+    }
+
     if (defined($info)) {
         my $name = "";
         if (my $n = $info->name) {
@@ -95,21 +99,13 @@ sub toXMLString{
         $str .= "  <known>" . $info->known_flag . "</known>\n";
         $str .= "  <truncated>" . $info->truncated_flag . "</truncated>\n";
 
-	my @syn = $info->synonym;
 
-	@syn = sort {$a->name cmp $b->name} @syn;
-
-	foreach my $syn (@syn) {
+	foreach my $syn ($info->synonym) {
 	    $str .= "  <synonym>" . $syn->name . "<\/synonym>\n";
 	}
 
-        my @rem = $info->remark;
-        @rem = sort {$a->remark cmp $b->remark} @rem;
-
-	foreach my $rem (@rem) {
-            my $remstr = $rem->remark;
-            $remstr =~ s/\n/ /g;
-	    $str .= "  <remark>" . $remstr . "</remark>\n";
+	foreach my $rem ($info->remark) {
+	    $str .= "  <remark>" . $rem->remark . "</remark>\n";
 	}
 
         if (my $author = $info->author) {
@@ -272,24 +268,6 @@ sub stable_id {
   return $self->SUPER::stable_id($arg);
 }
 
-
-
-sub equals {
-    my ($self,$obj) = @_;
-
-    if (!defined($obj)) {
-	$self->throw("Need an object to compare with");
-    }
-    if (!$obj->isa("Bio::Otter::AnnotatedGene")) {
-	$self->throw("[$obj] not a Bio::Otter::AnnotatedGene");
-    }
-    
-    if ($self->gene_info->equals($obj->gene_info) == 0 ) {
-	print "Gene info different\n";
-    } else {
-	print " - Equal gene info\n";
-    }
-}
 
 =head1 set_gene_type_from_transcript_classes
 

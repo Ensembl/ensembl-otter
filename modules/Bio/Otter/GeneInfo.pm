@@ -85,18 +85,6 @@ sub gene_stable_id{
 
 }
 
-=head2 remark
-
- Title   : remark
- Usage   : $obj->remark($newval)
- Function: 
- Example : 
- Returns : value of remark
- Args    : newvalue (optional)
-
-
-=cut
-
 sub remark {
     my $obj = shift @_;
 
@@ -112,17 +100,6 @@ sub remark {
     return @{$obj->{'_remark'}};
 
 }
-=head2 remark
-
- Title   : remark
- Usage   : $obj->remark($newval)
- Function: 
- Example : 
- Returns : value of remark
- Args    : newvalue (optional)
-
-
-=cut
 
 sub synonym {
     my $self = shift @_;

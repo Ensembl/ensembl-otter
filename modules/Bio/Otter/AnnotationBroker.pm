@@ -120,6 +120,11 @@ sub compare_genes {
           print STDERR "Found restored gene '$geneid'\n";
         }
 
+        if ($oldg->description ne $newg->description) {
+            warn "Gene descriptions differ in '$geneid'\n";
+            return 0;
+        }
+
         # Compare the gene infos to see which have changed
 	if ($oldg->gene_info->equals($newg->gene_info) == 0) {
 	    $gene_modified = 1;

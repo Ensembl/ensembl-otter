@@ -270,6 +270,14 @@ sub XML_to_otter {
         die "ERROR: synonym tag only associated with gene objects. Object is [$currentobj]\n";
       }
     }
+    elsif (/<description>(.*)<\/description>/) {
+
+      if ($currentobj eq 'gene') {
+        $gene->description($1);
+      } else {
+        die "ERROR: description tag only associated with gene objects. Object is [$currentobj]\n";
+      }
+    }
     elsif (/<truncated>(.*)<\/truncated>/) {
 
       if ($currentobj eq 'gene') {
@@ -839,6 +847,15 @@ sub otter_to_ace {
             $str .= qq{Positive_sequence "$tran_name"\n};
         }
         $str .= "Locus_id \"" . $gene->stable_id . "\"\n";
+        
+        if (my $desc = $gene->description) {
+            $str .= qq{Full_name "$desc"\n};
+        }
+        foreach my $rem ($info->remark) {
+            my $txt = $rem->remark;
+            $str .= qq{Remark "$txt"\n};
+        }
+        
         $str .= "\n";
     }
 
@@ -1182,12 +1199,15 @@ sub ace_to_otter {
                     $cur_gene->{Truncated} = 1;
                 }
                 elsif (/^Remark $STRING/x) {
-                    my $remark_list = $cur_gene->{remarks} ||= [];
+                    my $remark_list = $cur_gene->{'remarks'} ||= [];
                     push(@$remark_list, $1);
                 }
                 elsif (/^Alias $STRING/x) {
-                    my $alias_list = $cur_gene->{aliases} ||= [];
+                    my $alias_list = $cur_gene->{'aliases'} ||= [];
                     push(@$alias_list, $1);
+                }
+                elsif (/^Full_name $STRING/x) {
+                    $cur_gene->{'description'} = $1;
                 }
             }
         }
@@ -1437,12 +1457,17 @@ sub ace_to_otter {
                 $ginfo->author($author);
         }
         
+        # Gene description (from the Full_name tag)
+        if (my $desc = $gene_data->{'description'}) {
+            $gene->description($desc);
+        }
+        
         # Names and aliases (synonyms)
         $ginfo->name(
             Bio::Otter::GeneName->new(
                 -name => $gname,
             ));
-        if (my $list = $gene_data->{aliases}) {
+        if (my $list = $gene_data->{'aliases'}) {
             foreach my $text (@$list) {
                 my $synonym = Bio::Otter::GeneSynonym->new;
                 $synonym->name($text);
@@ -1451,7 +1476,7 @@ sub ace_to_otter {
         }
         
         # Gene remarks
-        if (my $list = $gene_data->{remarks}) {
+        if (my $list = $gene_data->{'remarks'}) {
             foreach my $text (@$list) {
                 my $remark = Bio::Otter::GeneRemark->new;
                 $remark->remark($text);

@@ -508,6 +508,7 @@ contains        type
 contains        truncated
 contains        author
 contains        author_email
+contains        description
 contains        synonym
 contains        remark
 contains        known
@@ -537,6 +538,10 @@ value           string
 
 <author_email>
 description     email address of the author who created or last modified the gene
+value           string
+
+<description>
+description     brief description of the gene - this is an official description if the gene is known
 value           string
 
 <synonym>

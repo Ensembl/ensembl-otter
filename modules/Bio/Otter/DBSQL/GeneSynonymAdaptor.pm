@@ -31,7 +31,8 @@ sub _generic_sql_fetch {
 		       name,
 		       gene_info_id
 		FROM gene_synonym }
-	. $where_clause;
+	. $where_clause
+        . q{ ORDER BY synonym_id };
 
 	my $sth = $self->prepare($sql);
 	$sth->execute;

@@ -32,6 +32,7 @@ create table clone_info (
         clone_id int(10) unsigned default '0' not null,
 	author_id int(10),
         timestamp datetime DEFAULT '0000-00-00 00:00:00' NOT NULL,
+        description TEXT,
 
         PRIMARY KEY (clone_info_id) 
 );
@@ -75,6 +76,7 @@ create table gene_info (
 	author_id int(10) unsigned DEFAULT '0' NOT NULL,
         is_known enum('true', 'false') not null default 'false',
         timestamp datetime DEFAULT '0000-00-00 00:00:00' NOT NULL,
+        
         PRIMARY KEY (gene_info_id)
 );
 
@@ -103,6 +105,8 @@ create table transcript_info (
 	mRNA_end_not_found enum('true','false') not null,
 	author_id int(10) unsigned default '0' not null,
         timestamp datetime DEFAULT '0000-00-00 00:00:00' NOT NULL,
+        description TEXT,
+
         PRIMARY KEY (transcript_info_id)
 	);
 

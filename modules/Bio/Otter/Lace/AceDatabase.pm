@@ -371,7 +371,15 @@ sub unlock_otter_slice {
     $ace->raw_query(qq{find Assembly "$name"});
     my $ace_txt = $ace->raw_query('show -a');
     $ace->raw_query('Follow AGP_Fragment');
-    $ace_txt .= $ace->raw_query('show -a');
+    # Do show -a on a restricted list of tags
+    foreach my $tag (qw{
+        Otter
+        DB_info
+        Annotation
+        })
+    {
+        $ace_txt .= $ace->raw_query("show -a $tag");
+    }
     
     # Cleanup text
     $ace_txt =~ s/\0//g;            # Remove nulls
