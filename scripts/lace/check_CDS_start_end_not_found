@@ -11,27 +11,37 @@ use Bio::Seq;
 $| =1;
 
 {
-  my ($dataset, @sets);
+  my ($dataset, @sets, $vega);
 
   my $help = sub { exec('perldoc', $0) };
 
-  Bio::Otter::Lace::Defaults::do_getopt('ds|dataset=s' => \$dataset,
-					's|set=s@'    =>  \@sets,
+  Bio::Otter::Lace::Defaults::do_getopt('ds|dataset=s' => \$dataset,   # eg, human or mouse or zebrafish
+					's|set=s@'     => \@sets,      # sequence set(s) to check
 					'h|help'       => $help,
-				       ) or $help->(); # plus default options
+					'v|vega'       => $vega,       # this flags vega_set_id > 0. If !$vega: check all datasets
+					                               # for now, zebrafish defaults to !$vega
+				       ) or $help->();                 # plus default options
   $help->() unless $dataset;
 
-  my $client    = Bio::Otter::Lace::Defaults::make_Client(); # Bio::Otter::Lace::Client
-  my $dset      = $client->get_DataSet_by_name($dataset);    # Bio::Otter::Lace::DataSet
-  my $otter_db  = $dset->get_cached_DBAdaptor;               # Bio::EnsEMBL::Containerr
+  my $client    = Bio::Otter::Lace::Defaults::make_Client();           # Bio::Otter::Lace::Client
+  my $dset      = $client->get_DataSet_by_name($dataset);              # Bio::Otter::Lace::DataSet
+  my $otter_db  = $dset->get_cached_DBAdaptor;                         # Bio::EnsEMBL::Containerr
 
   my ($chrom, $geneAd, $sliceAd, $slice, $gene, @positives);
   my $name_and_shame = {};
 
   unless ( @sets ){
 
-    # sql query to get all assembly types
-    my $sql = q{SELECT assembly_type FROM sequence_set};
+    # sql query to get all assembly types w/ diff. vega_set_id conditions
+    my $sql;
+
+    if ( $vega ){
+      $sql = q{SELECT assembly_type FROM sequence_set WHERE vega_set_id > 0};
+    }
+    else {
+      $sql = q{SELECT assembly_type FROM sequence_set};
+    }
+
     my $sth = $otter_db->prepare($sql);
     $sth->execute;
     while ( my ($type) = $sth->fetchrow_array()) {
@@ -42,8 +52,16 @@ $| =1;
 
   # loop thru all assembly types to fetch all annotated genes in it on otter
   my $date = `date +%Y%m%d`; chomp $date;
-  open (my $fh, ">cds_start_end_not_found_updateInfo.$dataset.$date") || die $!;
-  open (my $fh1, ">cds_start_end_not_found_annotator.$dataset.$date") || die $!;
+  my ($fh, $fh1);
+
+  if ( $vega ){
+    open ( $fh, ">cds_start_end_not_found_updateInfo.$dataset.$date") || die $!;
+    open ( $fh1, ">cds_start_end_not_found_annotator.$dataset.$date") || die $!;
+  }
+  else {
+    open ( $fh, ">cds_start_end_not_found_updateInfo.${dataset}_vega.$date") || die $!;
+    open ( $fh1, ">cds_start_end_not_found_annotator.${dataset}_vega.$date") || die $!;
+  }
 
   foreach my $set ( @sets ) {
 
@@ -55,7 +73,13 @@ $| =1;
 
     my $seqSet    = $dset->get_SequenceSet_by_name($set);
     $dset->fetch_all_CloneSequences_for_SequenceSet($seqSet);
-    $chrom     = $seqSet->CloneSequence_list()->[0]->chromosome;
+
+    undef $@;
+    eval {
+      $chrom     = $seqSet->CloneSequence_list()->[0]->chromosome;
+    };
+
+    next if $@;
 
     $geneAd  = $otter_db->get_GeneAdaptor; # Bio::Otter::AnnotatedGeneAdaptor
     $sliceAd = $otter_db->get_SliceAdaptor;
@@ -254,7 +278,7 @@ the end protein sequence of a transcript is in the end exon.
 
 ### Human sequence_set to submit
 
-select assembly_type, description from otter_human.sequence_set where vega_set_id > 0;
+select assembly_type, description from sequence_set where vega_set_id > 0;
 +---------------+---------------------------------------------------+
 | assembly_type | description                                       |
 +---------------+---------------------------------------------------+
