@@ -293,7 +293,7 @@ eval {
     $outputstr .= " " . $gene->version . " " . $gene->gene_info->name->name . "\n";
   }
   
-  my $oaca = $odb->get_AnnotatedCloneAdaptor;
+  my $oaca = $odb->get_CloneAdaptor;
   foreach my $clone (@changed_clones) {
     printf STDERR "Storing new version of clone '%s.%s'\n", $clone->embl_id, $clone->embl_version;
     $oaca->store($clone);
