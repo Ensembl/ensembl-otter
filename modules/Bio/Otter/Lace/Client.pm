@@ -24,86 +24,62 @@ sub new {
 
 sub host {
     my( $self, $host ) = @_;
-    
-    if ($host) {
-        $self->{'_options'}{'client'}{'host'} = $host;
-    }
-    return $self->{'_options'}{'client'}{'host'};
+
+    warn "Set using the Config file please.\n" if $host;
+
+    return $self->option_from_array([qw( client host )]);
 }
 
 sub port {
     my( $self, $port ) = @_;
     
-    if ($port) {
-        $self->{'_options'}{'client'}{'port'} = $port;
-    }
-    return $self->{'_options'}{'client'}{'port'};
+    warn "Set using the Config file please.\n" if $port;
+
+    return $self->option_from_array([qw( client port )]);
 }
 
 sub write_access {
     my( $self, $write_access ) = @_;
     
-    if (defined $write_access) {
-        $self->{'_options'}{'client'}{'write_access'} = $write_access;
-    }
-    return $self->{'_options'}{'client'}{'write_access'} || 0;
+    warn "Set using the Config file please.\n" if $write_access;
+
+    return $self->option_from_array([qw( client write_access )]) || 0;
 }
 
 sub author {
     my( $self, $author ) = @_;
     
-    if ($author) {
-        $self->{'_options'}{'client'}{'author'} = $author;
-    }
-    return $self->{'_options'}{'client'}{'author'} || (getpwuid($<))[6];
+    warn "Set using the Config file please.\n" if $author;
+
+    return $self->option_from_array([qw( client author )]) || (getpwuid($<))[6];
 }
 
 sub email {
     my( $self, $email ) = @_;
     
-    if ($email) {
-        $self->{'_options'}{'client'}{'email'} = $email;
-    }
-    return $self->{'_options'}{'client'}{'email'} || (getpwuid($<))[0];
+    warn "Set using the Config file please.\n" if $email;
+
+    return $self->option_from_array([qw( client email )]) || (getpwuid($<))[0];
 }
 sub debug{
     my ($self, $debug) = @_;
 
-    $self->{'_options'}{'client'}{'debug'} = $debug if defined($debug);
+    warn "Set using the Config file please.\n" if $debug;
 
-    return $self->{'_options'}{'client'}{'debug'} ? 1 : 0;
+    return $self->option_from_array([qw( client debug )]) ? 1 : 0;
 }
 sub lock {
     my $self = shift;
     
     confess "lock takes no arguments" if @_;
+
     return $self->write_access ? 'true' : 'false';
 }
-sub all_options{
-    my ($self, $hash) = @_;
-    $self->{'_options'} = $hash if ref($hash) eq 'HASH';
-    return $self->{'_options'};
-}
-
 sub option_from_array{
     my ($self, $array) = @_;
-    my $options = $self->all_options();
-    my $opt     = $options;
-    my $key     = pop @$array;
-    my $value   = undef;
-
-    foreach my $k(@$array){
-	if(exists $opt->{$k}){
-	    $opt = $opt->{$k};
-	}else{
-	    warn "Couldn't find $k. Please check otter_config file\n";
-	    next;
-	}
-    }
-    $value = $opt->{$key};
-    return $value;
+    return unless $array;
+    return Bio::Otter::Lace::Defaults::option_from_array($array);
 }
-
 sub client_hostname {
     my( $self, $client_hostname ) = @_;
     
@@ -399,18 +375,31 @@ sub new_http_request{
 }
 sub username{
     my $self = shift;
-    warn "GET only, user author() method to set" if @_;
+    warn "GET only, use author() method to set" if @_;
     return $self->author();
 }
 sub password{
     my ($self, $pass) = @_;
-    $self->{'_options'}{'client'}{'password'} = $pass if defined($pass);
-    return $self->{'_options'}{'client'}{'password'};
+    if($pass){
+        $self->{'__password'} = $pass;
+    }
+    return $self->{'__password'} || $self->option_from_array([qw( client password )]);
 }
 sub password_prompt{
-    my $self = shift;
-    my $user = $self->username();
-    return Hum::EnsCmdLineDB::prompt_for_password("Please enter your password ($user): ");
+    my ($self, $callback) = @_;
+    if($callback){
+        $self->{'_password_prompt_callback'} = $callback;
+    }
+    $callback = $self->{'_password_prompt_callback'};
+    unless($callback){
+        $callback = sub {
+            my $self = shift;
+            my $user = $self->username();
+            return Hum::EnsCmdLineDB::prompt_for_password("Please enter your password ($user): ");
+        };
+        $self->{'_password_prompt_callback'} = $callback;
+    }
+    return $callback->($self);
 }
 
 1;
