@@ -48,6 +48,19 @@ use Getopt::Long 'GetOptions';
     $xc->draw_clone_list;
     $xc->fix_window_min_max_sizes;
     
+    my %methods_mutable = (
+      # Method name        Mutable?
+        supported_CDS   => 1,
+        supported_mRNA  => 1,
+        Pseudogene      => 1,
+        fgenesh         => 0,
+        FGENES          => 0,
+        GENSCAN         => 0,
+        HALFWISE        => 0,
+        SPAN            => 0,
+        );
+    $xc->set_known_GeneMethods(%methods_mutable);
+    
     Tk::MainLoop();
 }
 

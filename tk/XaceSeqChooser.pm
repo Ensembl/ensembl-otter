@@ -75,6 +75,37 @@ sub button_frame {
     }
 }
 
+sub set_known_GeneMethods {
+    my $self = shift;
+    my %methods_mutable = @_;
+    
+    my $ace = $self->ace_handle;
+    while (my($name, $is_mutable) = each %methods_mutable) {
+        my $meth_tag = $ace->fetch(Method => $name)
+            or confess "Can't get Method '$name'";
+        my $meth = Hum::Ace::GeneMethod->new_from_ace_tag($meth_tag);
+        $meth->is_mutable($is_mutable);
+        $self->add_GeneMethod($meth);
+    }
+}
+
+sub add_GeneMethod {
+    my( $self, $meth ) = @_;
+    
+    my $name = $meth->name;
+    $self->{'_gene_methods'}{$name} = $meth;
+}
+
+sub get_GeneMethod {
+    my( $self, $name ) = @_;
+    
+    if (my $meth = $self->{'_gene_methods'}{$name}) {
+        return $meth;
+    } else {
+        confess "No such method '$name'";
+    }
+}
+
 sub add_buttons {
     my( $self, $tk ) = @_;
     
@@ -294,8 +325,7 @@ sub edit_subsequences {
         my $ec = ExonCanvas->new($top);
         $ec->name($sub_name);
         $ec->xace_seq_chooser($self);
-        $ec->add_ace_subseq($sub);
-        $ec->fix_window_min_max_sizes;
+        $ec->initialize;
         
         $self->save_subseq_edit_window($sub_name, $top);
     }
@@ -340,7 +370,7 @@ sub draw_clone_list {
     $self->draw_sequence_list('clone', @slist);
 }
 
-sub draw_subseq_list {
+sub OLD_draw_subseq_list {
     my( $self, @selected_clones ) = @_;
     
     my( @subseq );
@@ -354,6 +384,58 @@ sub draw_subseq_list {
         push(@subseq, sort @gensub);
     }
     $self->draw_sequence_list('subseq', @subseq);
+}
+
+sub draw_subseq_list {
+    my( $self, @selected_clones ) = @_;
+    
+    my( @subseq );
+    foreach my $clone_name (@selected_clones) {
+        my $clone = $self->get_CloneSeq($clone_name);
+        foreach my $clust ($self->get_all_Subseq_clusters($clone)) {
+            push(@subseq, "") if @subseq;
+            push(@subseq, map($_->name, @$clust));
+        }
+    }
+    $self->draw_sequence_list('subseq', @subseq);
+}
+
+sub draw_sequence_cluster {
+    my( $self, $clust ) = @_;
+    
+}
+
+sub get_all_Subseq_clusters {
+    my( $self, $clone ) = @_;
+    
+    my @subseq = sort {$a->strand <=> $b->strand
+        || $a->start <=> $b->start
+        || $a->end <=> $b->end} $clone->get_all_SubSeqs;
+    my $first = $subseq[0] or return;
+    my( @clust );
+    my $ci = 0;
+    $clust[$ci] = [$first];
+    my $x      = $first->start;
+    my $y      = $first->end;
+    my $strand = $first->strand;
+    for (my $i = 1; $i < @subseq; $i++) {
+        my $this = $subseq[$i];
+        if ($this->strand == $strand
+            and $this->start <= $y
+            and $this->end   >= $x)
+        {
+            push(@{$clust[$ci]}, $this);
+            $x = $this->start if $this->start < $x;
+            $y = $this->end   if $this->end   > $y;
+        } else {
+            $ci++;
+            $clust[$ci] = [$this];
+            $x      = $this->start;
+            $y      = $this->end;
+            $strand = $this->strand;
+        }
+    }
+    return sort {$a->[0]->start <=> $b->[0]->start} @clust;
 }
 
 sub get_CloneSeq {
@@ -392,6 +474,12 @@ sub express_clone_and_subseq_fetch {
                     $name, $start, $end, $t_seq,
                     );
             $sub->clone_Sequence($seq);
+            
+            if (my $mt = $t_seq->at('Method[1]')) {
+                if (my $meth = $self->get_GeneMethod($mt->name)) {
+                    $sub->GeneMethod($meth);
+                }
+            }
             
             # Mark the subsequence as coming from the db
             $sub->is_archival(1);
@@ -433,13 +521,16 @@ sub draw_sequence_list {
     my $x = 0;
     my $y = 0;
     for (my $i = 0; $i < @slist; $i++) {
-        my $start_text = $canvas->createText(
-            $x, $y,
-            -anchor     => 'nw',
-            -text       => $slist[$i],
-            -font       => [$font, $size, 'bold'],
-            -tags       => [$tag],
-            );
+        if (my $text = $slist[$i]) {
+            $canvas->createText(
+                $x, $y,
+                -anchor     => 'nw',
+                -text       => $text,
+                -font       => [$font, $size, 'bold'],
+                -tags       => [$tag],
+                );
+        }
+        
         if (($i + 1) % 20) {
             $y += $size + $pad;
         } else {

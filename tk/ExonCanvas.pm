@@ -21,7 +21,6 @@ sub new {
         );
     my $self = $pkg->SUPER::new($tk);
     $self->button_frame($button_frame);
-    $self->add_buttons_and_event_bindings;
     
     return $self;
 }
@@ -47,7 +46,8 @@ sub name {
 sub subseq {
     my( $self ) = @_;
     
-    my $name = $self->name;
+    my $name = $self->name
+        or confess "name not set";
     return $self->xace_seq_chooser->get_SubSeq($name);
 }
 
@@ -60,10 +60,8 @@ sub xace_seq_chooser {
     return $self->{'_xace_seq_chooser'};
 }
 
-sub add_ace_subseq {
-    my( $self, $subseq, $x_offset ) = @_;
-    
-    $x_offset ||= 0;
+sub add_SubSeq_exons {
+    my( $self, $subseq ) = @_;
     
     my $expected_class = 'Hum::Ace::SubSeq';
     unless ($subseq->isa($expected_class)) {
@@ -228,10 +226,16 @@ sub add_coordinate_pair {
 }
 
 
-sub add_buttons_and_event_bindings {
+sub initialize {
     my( $self ) = @_;
     
-    my $canvas          = $self->canvas;
+    my $sub    = $self->subseq;
+    my $canvas = $self->canvas;
+
+    my $method = $sub->GeneMethod;
+    $self->add_SubSeq_exons($sub);
+
+    # Routines to handle the clipboard
     my $deselect_sub = sub{ $self->deselect_all };
     $canvas->SelectionHandle(
         sub { $self->export_highlighted_text_to_selection(@_); }
@@ -245,6 +249,7 @@ sub add_buttons_and_event_bindings {
         }
     };
 
+    # Save changes on window close
     my $top = $canvas->toplevel;
     my $window_close = sub {
         my ($sub, $ace) = $self->to_ace_subseq;
@@ -300,40 +305,92 @@ sub add_buttons_and_event_bindings {
         -side   => 'left',
         );
     
-    my $sort_button = $bf->Button(
-        -text       => 'Sort',
-        -command    => sub{ $self->sort_position_pairs },
+    if ($method->is_mutable) {
+
+        # Sort the postions
+        my $sort_button = $bf->Button(
+            -text       => 'Sort',
+            -command    => sub{ $self->sort_position_pairs },
+                );
+        $sort_button->pack(
+            -side   => 'left',
             );
-    $sort_button->pack(
-        -side   => 'left',
-        );
-    
-    my $merge_button = $bf->Button(
-        -text       => 'Merge',
-        -command    => sub{ $self->merge_position_pairs },
+        
+        # Merge overlapping positions
+        my $merge_button = $bf->Button(
+            -text       => 'Merge',
+            -command    => sub{ $self->merge_position_pairs },
+                );
+        $merge_button->pack(
+            -side   => 'left',
             );
-    $merge_button->pack(
-        -side   => 'left',
-        );
-    
-    my $save_button = $bf->Button(
-        -text       => 'Save',
-        -command    => sub{
-            my ($sub, $ace) = $self->to_ace_subseq;
-            #warn $ace;
-            my $xr = $self->xace_seq_chooser->xace_remote;
-            if ($xr) {
-                $xr->load_ace($ace);
-                $xr->save;
-                $sub->is_archival(1);
-            } else {
-                $self->message("No xace attached");
+
+        # Save in xace
+        my $save_button = $bf->Button(
+            -text       => 'Save',
+            -command    => sub{
+                my ($sub, $ace) = $self->to_ace_subseq;
+                #warn $ace;
+                my $xr = $self->xace_seq_chooser->xace_remote;
+                if ($xr) {
+                    $xr->load_ace($ace);
+                    $xr->save;
+                    $sub->is_archival(1);
+                } else {
+                    $self->message("No xace attached");
+                }
+            });
+        $save_button->pack(
+            -side   => 'left',
+            );
+
+        # Keyboard editing commands
+        $canvas->Tk::bind('<Left>',      sub{ $self->canvas_text_go_left   });
+        $canvas->Tk::bind('<Right>',     sub{ $self->canvas_text_go_right  });
+        $canvas->Tk::bind('<Up>',        sub{ $self->increment_int    });
+        $canvas->Tk::bind('<Down>',      sub{ $self->decrement_int    });
+        $canvas->Tk::bind('<BackSpace>', sub{ $self->canvas_backspace });
+
+        $canvas->Tk::bind('<<digit>>', [sub{ $self->canvas_insert_character(@_) }, Tk::Ev('A')]);
+        $canvas->eventAdd('<<digit>>', map "<KeyPress-$_>", 0..9);
+
+        # Control-Left for switching strand
+        $canvas->Tk::bind('<Control-Button-1>', sub{
+            $self->control_left_button_handler;
+            if ($self->count_selected) {
+                $canvas->SelectionOwn( -command => $deselect_sub )
             }
         });
-    $save_button->pack(
-        -side   => 'left',
-        );
+
+        # For pasting in coords from clipboard
+        $canvas->Tk::bind('<Button-2>', sub{
+            $self->middle_button_paste;
+            if ($self->count_selected) {
+                $canvas->SelectionOwn( -command => $deselect_sub )
+            }
+        });
+        
+        # Focus on current text
+        $canvas->Tk::bind('<Button-1>', sub{
+            $self->left_button_handler;
+            $self->focus_on_current_text;
+            if ($self->count_selected) {
+                $canvas->SelectionOwn( -command => $deselect_sub )
+            }
+        });
+    } else {
+        # SubSeq with an immutable method
+        
+        # Only select current text - no focus
+        $canvas->Tk::bind('<Button-1>', sub{
+            $self->left_button_handler;
+            if ($self->count_selected) {
+                $canvas->SelectionOwn( -command => $deselect_sub )
+            }
+        });
+    }
     
+    # To close window
     my $close_button = $bf->Button(
         -text       => 'Close',
         -command    => $window_close,
@@ -346,48 +403,13 @@ sub add_buttons_and_event_bindings {
     $canvas->Tk::bind('<Control-a>', $select_all_sub);
     $canvas->Tk::bind('<Control-A>', $select_all_sub);
     
-    $canvas->Tk::bind('<Control-v>', sub{ $self->message('verbose') });
-
-    $canvas->Tk::bind('<Button-1>', sub{
-        $self->left_button_handler;
-        if ($self->count_selected) {
-            $canvas->SelectionOwn( -command => $deselect_sub )
-        }
-    });
-
+    # For extending selection
     $canvas->Tk::bind('<Shift-Button-1>', sub{
         $self->shift_left_button_handler;
         if ($self->count_selected) {
             $canvas->SelectionOwn( -command => $deselect_sub )
         }
     });
-
-    $canvas->Tk::bind('<Control-Button-1>', sub{
-        $self->control_left_button_handler;
-        if ($self->count_selected) {
-            $canvas->SelectionOwn( -command => $deselect_sub )
-        }
-    });
-
-    $canvas->Tk::bind('<Button-2>', sub{
-        $self->middle_button_paste;
-        if ($self->count_selected) {
-            $canvas->SelectionOwn( -command => $deselect_sub )
-        }
-    });
-
-    $canvas->Tk::bind('<Left>',      sub{ $self->canvas_go_left   });
-    $canvas->Tk::bind('<Right>',     sub{ $self->canvas_go_right  });
-    $canvas->Tk::bind('<Up>',        sub{ $self->increment_int    });
-    $canvas->Tk::bind('<Down>',      sub{ $self->decrement_int    });
-    $canvas->Tk::bind('<BackSpace>', sub{ $self->canvas_backspace });
-    
-    $canvas->Tk::bind('<<digit>>', [sub{ $self->canvas_insert_character(@_) }, Tk::Ev('A')]);
-    
-    
-    $canvas->eventAdd('<<digit>>', map "<KeyPress-$_>", 0..9);
-    
-    
     
     # Trap window close
     $top->protocol('WM_DELETE_WINDOW', $window_close);
@@ -396,6 +418,8 @@ sub add_buttons_and_event_bindings {
     $canvas->Tk::bind('<Control-w>',   $window_close);
     $canvas->Tk::bind('<Control-W>',   $window_close);
     #$top->transient($top->parent);
+    
+    $self->fix_window_min_max_sizes;
 }
 
 sub canvas_insert_character {
@@ -404,15 +428,6 @@ sub canvas_insert_character {
     my $text = $canvas->focus or return;
     $canvas->insert($text, 'insert', $char);
     $self->re_highlight($text);
-}
-
-sub canvas_go_left {
-    my( $self ) = @_;
-    
-    my $canvas = $self->canvas;
-    my $text = $canvas->focus or return;
-    my $pos = $canvas->index($text, 'insert');
-    $canvas->icursor($text, $pos - 1);
 }
 
 sub increment_int {
@@ -441,8 +456,16 @@ sub decrement_int {
     }
 }
 
+sub canvas_text_go_left {
+    my( $self ) = @_;
+    
+    my $canvas = $self->canvas;
+    my $text = $canvas->focus or return;
+    my $pos = $canvas->index($text, 'insert');
+    $canvas->icursor($text, $pos - 1);
+}
 
-sub canvas_go_right {
+sub canvas_text_go_right {
     my( $self ) = @_;
     
     my $canvas = $self->canvas;
@@ -483,7 +506,6 @@ sub left_button_handler {
     return if $self->delete_message;
     $self->deselect_all;
     $self->shift_left_button_handler;
-    $self->focus_on_current_text;
 }
 
 sub focus_on_current_text {
