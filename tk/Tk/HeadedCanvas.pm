@@ -66,10 +66,18 @@ sub Populate {
 	$self->Advertise('left_canvas'     => $left_canvas);
 	$self->Advertise('top_canvas'      => $top_canvas);
 	$self->Advertise('topleft_canvas'  => $topleft_canvas);
+	$self->Advertise('xscrollbar'      => $sh);
+	$self->Advertise('yscrollbar'      => $sv);
 
-		# delegate everything by default to the main canvas:
+		# delegate configuration to the main canvas:
+	$self->ConfigSpecs(
+		-background => [['DESCENDANTS','SELF'],'background','Background','white'],
+		-foreground => [['DESCENDANTS','SELF'],'foreground','Foreground','black'],
+		'DEFAULT' => [$main_canvas],
+	);
+		# delegate methods to the main canvas:
 	$self->Delegates(
-		'DEFAULT' => 'main_canvas'
+		'DEFAULT' => $main_canvas,
 	);
 }
 

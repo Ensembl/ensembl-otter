@@ -98,8 +98,6 @@ sub canvas {
     my( $self, $canvas ) = @_;
     
     if ($canvas) {
-        confess("Not a Tk::Canvas object '$canvas'")
-            unless ref($canvas) and $canvas->isa('Tk::Canvas');
         $self->{'_canvas'} = $canvas;
     }
     return $self->{'_canvas'};
@@ -202,8 +200,8 @@ sub bind_scroll_commands {
     my( $self ) = @_;
     
     my $canvas = $self->canvas;
-    my $x_scroll = $canvas->parent->Subwidget('xscrollbar');
-    my $y_scroll = $canvas->parent->Subwidget('yscrollbar');
+    my $x_scroll = $canvas->Subwidget('xscrollbar') || $canvas->parent->Subwidget('xscrollbar');
+    my $y_scroll = $canvas->Subwidget('yscrollbar') || $canvas->parent->Subwidget('yscrollbar');
     
     # Unbind the scrollbar keyboard events from the canvas
     my $class = ref($canvas);
