@@ -9,6 +9,7 @@ use File::Path 'rmtree';
 use Symbol 'gensym';
 use Fcntl qw{ O_WRONLY O_CREAT };
 use Ace;
+
 use Bio::Otter::Lace::Defaults;
 use Bio::Otter::Lace::PipelineDB;
 use Bio::Otter::Lace::SatelliteDB;
@@ -207,9 +208,9 @@ sub write_local_blast{
     };
     Bio::Otter::Lace::SatelliteDB::disconnect_DBAdaptor($pipe_db) if $pipe_db;
     if($@){
-        warn "Arrrrrrrrrrrrrrrgh! $@ \n";
+        warn "Blast failed!\n$@\n";
     }else{
-        warn "Blast complete\n";
+        warn "Blast completed succesfully\n";
     }
 
 }
@@ -469,12 +470,13 @@ sub save_otter_slice {
     }else{
         warn "Debug switch is false\n";
     }
-
+    
     my $ace_file = Bio::Otter::Lace::TempFile->new;
     $ace_file->name('lace_edited.ace');
     my $write = $ace_file->write_file_handle;
     print $write $ace_txt;
     my $xml = Bio::Otter::Converter::ace_to_XML($ace_file->read_file_handle);
+    close $write;
 
     if($self->Client->debug){
         my $debug_file = Bio::Otter::Lace::PersistentFile->new();
@@ -680,6 +682,7 @@ sub add_misc_acefile {
     my( $self ) = @_;
     
     return unless my $file = Bio::Otter::Lace::Defaults::misc_acefile();
+    
     confess "No such file '$file'" unless -e $file;
     $self->add_acefile($file);
 }
@@ -816,6 +819,7 @@ sub make_AceDataFactory {
     my $fetch_all_pipeline_data = Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
     my $logic_to_load = {};
     my $module_options = {};
+    my $debug = $self->Client->debug();
     if ($fetch_all_pipeline_data) {
 	$logic_to_load = $self->Client->option_from_array([$species, 'use_filters']);
 	$module_options = $self->Client->option_from_array([$species, 'filter']);
@@ -823,15 +827,15 @@ sub make_AceDataFactory {
 	# require them
 	for my $s (keys %$logic_to_load){
 	    next unless $logic_to_load->{$s};
-	    # warn " AceBatabase.pm: $s\n";
+	    warn " AceBatabase.pm: $s\n" if $debug;
 	    my $file = $module_options->{$s}->{module}.".pm";
 	    $file =~ s{::}{/}g;
-	    warn " AceDatabase.pm: requiring $file \n" if $self->Client->debug();
+	    warn " AceDatabase.pm: requiring $file \n" if $debug;
 	    eval{  require "$file"  };
 	    if($@){
 		delete $logic_to_load->{$s};
-		warn "AceDatabase couldn't find file $file\n";
-                warn $@ if $self->Client->debug();
+		warn " AceDatabase couldn't find file $file\n";
+                warn $@ if $debug;
 	    }
 	}
     }
@@ -842,6 +846,8 @@ sub make_AceDataFactory {
     $logic_to_load->{$submitcontig} = 1;
     $module_options->{$submitcontig}->{'module'} = 'Bio::EnsEMBL::Ace::Filter::DNA';
 
+    my $aceMethods_cache = Bio::Otter::Lace::Defaults::make_ace_methods();
+
     foreach my $logic_name (keys %$logic_to_load){
 	next unless $logic_to_load->{$logic_name};
 	# class successfully required already.
@@ -851,8 +857,6 @@ sub make_AceDataFactory {
         if (my $ana = $ana_adaptor->fetch_by_logic_name($logic_name)) {
             $filt = $class->new;
             $filt->analysis_object($ana);
-        } elsif($module_options->{$logic_name}->{'create_without_ana'}){
-            $filt = $class->new();
         } else {
             warn "No analysis called '$logic_name'\n";
         }
@@ -865,6 +869,14 @@ sub make_AceDataFactory {
 		# warn "setting $option : $value \n";
 		$filt->$option($value);
 	    }
+            # does the filter need a method?
+            my $tag = $filt->method_tag();
+            print STDERR "Trying to get a method Object with tag '$tag' ... filter '$class' ... " if $debug;
+            my $methObj = $aceMethods_cache->{$tag};
+            print STDERR "Found one" if $debug && $methObj;
+            print STDERR "\n" if $debug;
+
+            $filt->method_object($methObj); # or some other place
 
 	    # add the filter to the factory
             $factory->add_AceFilter($filt);
@@ -900,7 +912,8 @@ sub make_ensembl_gene_DataFactory {
     my $ana_adaptor = $ens_db->get_AnalysisAdaptor;
     my $ensembl = Bio::EnsEMBL::Ace::Filter::Gene->new;
     $ensembl->url_string('http\:\/\/www.ensembl.org\/Homo_sapiens\/contigview?highlight=%s&chr=%s&vc_start=%s&vc_end=%s');    
-    $ensembl->analysis_object( $ana_adaptor->fetch_by_logic_name($logic_name) );
+    my $ana_obj = $ana_adaptor->fetch_by_logic_name($logic_name) || return undef;
+    $ensembl->analysis_object( $ana_obj );
     $factory->add_AceFilter($ensembl);
     return $factory;
 }
@@ -927,7 +940,7 @@ sub write_ensembl_data_for_key {
     my $ch = get_all_LaceChromosomes($ens_db);
 
     my $factory = $self->{'_ensembl_gene_data_factory'}{$logic_name}
-        ||= $self->make_ensembl_gene_DataFactory($ens_db, $logic_name);
+        ||= $self->make_ensembl_gene_DataFactory($ens_db, $logic_name) || return undef;;
 
     my $slice_adaptor = $ens_db->get_SliceAdaptor();
 
@@ -1133,6 +1146,119 @@ sub get_all_LaceChromosomes {
     return($ch);
 }
 
+=pod
+ 
+=head1
+
+    I want a dialog from SequenceNotes to pop up saying
+ ----------------------------
+ | Which Das do you want?
+ | 
+ | [ ] ensembl genes
+ | [ ] ensembl estgenes
+ | [ ] other das source 1
+ | [ ] other das source 2
+ | [ ] other das source 3
+ |
+ | [ Ok ] [ Cancel ] [ Add ]
+ ---------------------------
+
+These will be populated from otter_config
+There will be source_is_compulsory flag
+There will be option to add
+
+=cut
+
+
+sub write_das{
+    my ($self, $ss) = @_;
+    return unless $ss;
+    my $Client      = $self->Client();
+    my $dasClient   = $Client->dasClient();
+    return unless $dasClient;
+    my $datasetObj  = $Client->get_DataSet_by_name($ss->dataset_name);
+    my $otter_db    = $datasetObj->get_cached_DBAdaptor();
+    $otter_db->assembly_type($ss->name);
+    my $sources  = [];
+    my $avail    = [];
+    my $ace_file = $self->home . '/rawdata/das.ace';
+    my $locators = $dasClient->locatorObjs() || [];
+    my $DasAceDataFactory = Bio::EnsEMBL::Ace::DataFactory->new();
+    my $method_objects    = Bio::Otter::Lace::Defaults::make_ace_methods();
+    use Data::Dumper;
+    foreach my $locObj(@$locators){
+        my $dasObj = $locObj->get_DasObj();
+        print STDERR "url: $dasObj\n";
+        push(@$sources, @{$locObj->selected_sources});
+        
+        # get the class for the Filter
+        # this is just a quick fix
+        # please change for something more friendly!!
+        my $child = eval { return $locObj->filterclass() } || 'NULL';
+        my $class = "Bio::EnsEMBL::Ace::Filter::Das" . ($child ? "::$child" : '');
+        eval " use $class; "; warn "$class Load ".($@ ? "Error: $@": "OK"). ", PLEASE CHANGE THIS LOGIC 'aceDatabase.pm'\n";
+        # make the filter object
+        my $DasLocatorFilter = $class->new();
+
+        # get the method object for the Filter
+        my $current_tag      = $locObj->method_tag;
+        print STDERR "current tag is '$current_tag' \n";
+        my $current_method   = $method_objects->{$current_tag};
+        print STDERR Dumper $current_method;
+        $locObj->method_object($current_method);
+        $DasLocatorFilter->locator($locObj);
+        $DasLocatorFilter->helper_ace_filter(); # call this 
+        $DasAceDataFactory->add_AceFilter($DasLocatorFilter);
+        # check the sources
+        #foreach my $source(@{$locObj->selected_sources()}){
+            #my $dsnObj = $dasObj->fetch_dsn_by_id($source);
+            #$dasObj->fetch_features_for_dsn($dsnObj);
+        #}
+    }
+    my $fh;
+    if(ref($ace_file) eq 'GLOB'){
+        $fh = $ace_file;
+    }else{ 
+        $fh = gensym();
+        $self->add_acefile($ace_file);
+        open $fh, "> $ace_file" or confess "Can't write to '$ace_file' : $!";
+    }
+    $DasAceDataFactory->file_handle($fh);
+    my $slice_adaptor = $otter_db->get_SliceAdaptor();
+
+    # note: the next line returns a 2 dimensional array (not a one dimensional array)
+    # each subarray contains a list of clones that are together on the golden path
+    my $sel = $ss->selected_CloneSequences_as_contig_list ;
+    foreach my $cs (@$sel) {
+
+        my $first_ctg = $cs->[0];
+        my $last_ctg = $cs->[$#$cs];
+
+        my $chr = $first_ctg->chromosome->name;  
+        my $chr_start = $first_ctg->chr_start;
+        my $chr_end = $last_ctg->chr_end;
+
+        my $slice = $slice_adaptor->fetch_by_chr_start_end($chr, $chr_start, $chr_end);
+
+        ### Check we got a slice
+        my $tp = $slice->get_tiling_path;
+        my $type = $slice->assembly_type;
+        #warn "assembly type = $type";
+        if (@$tp) {
+            foreach my $tile (@$tp) {
+                print STDERR "contig: ", $tile->component_Seq->name, "\n";
+            }
+        } else {
+            warn "No components in tiling path";
+        }
+
+        $DasAceDataFactory->ace_data_from_slice($slice);
+    }
+    $DasAceDataFactory->drop_file_handle;
+    close $fh;
+
+    
+}
 
 sub DESTROY {
     my( $self ) = @_;
@@ -1150,5 +1276,7 @@ sub DESTROY {
     };
     rmtree($home) unless $@;
 }
+
+
 
 1;
