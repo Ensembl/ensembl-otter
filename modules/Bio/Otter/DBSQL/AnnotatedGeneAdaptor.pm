@@ -252,6 +252,7 @@ sub list_current_dbIDs_for_Slice {
     return [sort {$a <=> $b} values %sid_gid];
 }
 
+
 sub list_current_dbIDs_linked_by_accession_for_Slice {
     my( $self, $slice ) = @_;
     
@@ -281,13 +282,11 @@ sub list_current_dbIDs_linked_by_accession_for_Slice {
           , transcript t
           , exon_transcript et
           , exon e
-          , assembly a
         WHERE gsid.gene_id = g.gene_id
           AND g.gene_id = t.gene_id
           AND t.transcript_id = et.transcript_id
           AND et.exon_id = e.exon_id
-          AND e.contig_id = a.contig_id
-          AND a.contig_id in ($ctg_id_list)
+          AND e.contig_id IN ($ctg_id_list)
         GROUP BY gsid.stable_id
           , gsid.version
         ORDER BY gsid.version ASC
