@@ -32,6 +32,8 @@ use Getopt::Long 'GetOptions';
     
     # after, repeat
     my %remind = qw{
+        lunch   12:15
+        tea     15:15
         bus     17:30
         };
     while (my ($rem, $when) = each %remind) {
@@ -56,6 +58,7 @@ use Getopt::Long 'GetOptions';
     }
     
     $gc->fix_window_min_max_sizes;
+    $mw->iconify;
     Tk::MainLoop();
 }
 
