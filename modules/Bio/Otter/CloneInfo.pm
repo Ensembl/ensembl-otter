@@ -132,11 +132,14 @@ sub equals {
     #    return 0;
     #}      
 
+    ### These could be made quicker with hashes instead of loops within loops
+
     my @remark1 = $self->remark;
     my @remark2 = $obj->remark;
 
     if (scalar(@remark1) != scalar(@remark2)) {
-      return 0;
+        warn "Different numbers of remarks\n";
+        return 0;
     }
 
     foreach my $rem (@remark1) {
@@ -148,6 +151,7 @@ sub equals {
             }
         }
         if ($found == 0) {
+            warn "Different remarks\n";
             return 0;
         }
     }
@@ -157,7 +161,8 @@ sub equals {
     my @key2 = $obj->keyword;
 
     if (scalar(@key1) != scalar(@key2)) {
-      return 0;
+        warn "Different numbers of keywords\n";
+        return 0;
     }
 
     foreach my $rem (@key1) {
@@ -169,6 +174,7 @@ sub equals {
             }
         }
         if ($found == 0) {
+            warn "Different keywords\n";
             return 0;
         }
     }
