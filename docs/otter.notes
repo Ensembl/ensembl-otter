@@ -1,0 +1,84 @@
+accession
+locus_type
+
+If no translation - all phases should be -1 and not zero when writing the 
+xml.
+
+Does apollo *always* set the translation correctly including the phases?
+
+
+When xml is coming in  apollo resets all the phases.  This is called in setTranslationEnd.
+
+This mucks up the transcript for monkey exons.
+
+If setPhases is commented out of course the phases don't get reset when the gene structure changes.
+
+
+setTranslationEnd is called from : FeatureSet and Transcript
+
+
+When are the phases recalculated? Cases I can think of
+
+ - when translation start is set
+
+ - when an exon is deleted
+                   added
+                   modified
+
+Why is apollo screwing up on loading?
+
+- Adding genes.  Complains that can't find transcript for exon - why isn't transcript there?  Also throws exception where in AnnotationMenu findGenes - there is no transcript;
+
+
+Distribution
+------------
+
+1) code needed
+
+cvs/ensembl
+cvs/ensembl-otter
+cvs/bioperl-0.7
+cvs/apollo
+
+2) OS specific binaries
+
+perl
+mysql
+blixem
+
+3) data
+
+mysql  - features
+         annots
+
+
+4) scripts
+
+start_otter
+kill_otter
+start_apollo
+
+5) user config
+
+start_otter
+cvs/ensembl-otter/conf/OtterDefs.conf
+
+
+
+
+Linux
+
+ - starting up mysql
+ - edit start_mysql for paths
+ - add user access to 127.0.0.1
+
+perl paths in otter_srv
+
+apollo java path - in apollo.cfg
+
+set paths for perl,javals
+
+full source for ensjcdA
+
+
+server scripts need perl hard coding.
