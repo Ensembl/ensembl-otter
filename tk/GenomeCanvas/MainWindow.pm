@@ -38,11 +38,12 @@ sub read_custom_option_file {
         if (open XRES, "> $xres_file") {
             print XRES q{
 
-GenomeCanvas*background: grey
-GenomeCanvas*troughColor: DarkGrey
+GenomeCanvas*background: #bebebe
+GenomeCanvas*troughColor: #aaaaaa
 GenomeCanvas*foreground: black
-GenomeCanvas*activecolor: Gold
-GenomeCanvas*color: Gold
+GenomeCanvas*activecolor: #ffd700
+GenomeCanvas*color: #ffd700
+GenomeCanvas*Entry.borderWidth: 1
 GenomeCanvas*Button.borderWidth: 1
 GenomeCanvas*Scrollbar.borderWidth: 1
 GenomeCanvas*Scrollbar.width: 11

@@ -68,7 +68,7 @@ use Getopt::Long 'GetOptions';
                 );
 
             $comment = $button_frame->Entry(
-                -width => 50,
+                -width => 55,
                 );
             $comment->pack(
                 -side => 'left',
