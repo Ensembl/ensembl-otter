@@ -32,7 +32,9 @@ sub _fetch_new_by_type {
 	my $num = $row->{'last_insert_id()'};
 
         if (defined($self->db->dataset)) {
+
           my $min_id = $OTTER_SPECIES->{$self->db->dataset}->{STABLE_ID_MIN};
+
           if (defined($min_id) && $min_id > $num) {
 	    my $sql = "update $table set $poolid=$min_id where $poolid=$num";
 	    my $sth = $self->prepare($sql);
@@ -83,6 +85,68 @@ sub _fetch_new_by_type {
 	return $stableid;
 }
 
+sub _exists_stable_id_by_type {
+    my ($self,$id,$type) = @_;
+
+    my $table  = $type . "_stable_id_pool";
+    my $column = $type . "_stable_id";
+
+    my $sql = "select * from $table where $column = '$id'";
+    my $sth = $self->prepare($sql);
+
+    my $res = $sth->execute;
+
+    my $row = $sth->fetchrow_hashref;
+
+    if ($sth->rows > 0) {
+       return 1;
+    } else {
+       return 0;
+    }
+}
+
+sub store_by_type {
+  my ($self,$id,$type)  = @_;
+
+  my $table  = $type . "_stable_id_pool";
+
+  if (! $self->_exists_stable_id_by_type($id,$type)) {
+
+     my $sql = "insert into $table values(null,'$id',now())";
+
+     my $sth = $self->prepare($sql);
+     my $res = $sth->execute;
+
+     $sth->finish;
+
+     $self->throw("Couldn't update the $table table for $id [$type]") unless $res;
+   }
+}
+
+sub exists_gene_stable_id {
+    my ($self,$id) = @_;
+
+    return $self->_exists_stable_id_by_type($id,'gene');
+
+}
+sub exists_transcript_stable_id {
+    my ($self,$id) = @_;
+
+    return $self->_exists_stable_id_by_type($id,'transcript');
+
+}
+sub exists_tranlation_stable_id {
+    my ($self,$id) = @_;
+
+    return $self->_exists_stable_id_by_type($id,'translation');
+
+}
+sub exists_exon_stable_id {
+    my ($self,$id) = @_;
+
+    return $self->_exists_stable_id_by_type($id,'exon');
+
+}
 sub fetch_new_gene_stable_id {
     my ($self) = @_;
 

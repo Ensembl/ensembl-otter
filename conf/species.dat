@@ -1,12 +1,16 @@
 [defaults]
-USER     ensadmin
-PASS     ensembl 
-HOST     ecs2b.internal.sanger.ac.uk 
-PORT     3306
-DNA_USER ensadmin
-DNA_PORT 3306 
-DNA_PASS ensembl 
-DNA_HOST ecs2b.internal.sanger.ac.uk
+USER     root
+PASS     
+HOST     127.0.0.1
+PORT     4444
+DNA_USER root
+DNA_PORT 4444
+DNA_PASS 
+DNA_HOST 127.0.0.1
+
+[human_9p12]
+DBNAME     otter_9p12
+TYPE       fake_gp_1 
 
 [human_chr14]
 DBNAME     otter_chr14

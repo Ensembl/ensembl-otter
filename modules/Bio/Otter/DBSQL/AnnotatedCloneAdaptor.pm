@@ -7,6 +7,8 @@ use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 use Bio::Otter::AnnotatedClone;
 
 use Bio::EnsEMBL::DBSQL::CloneAdaptor;
+use Bio::Otter::DBSQL::AnnotatedCloneAdaptor;
+use Bio::Otter::CloneInfo;
 use Bio::Otter::DBSQL::CurrentCloneInfoAdaptor;
 
 use vars qw(@ISA);
@@ -112,9 +114,13 @@ sub annotate_clone {
    my $current_clone_info_adaptor = $self->db->get_CurrentCloneInfoAdaptor();
 
    my $infoid = $current_clone_info_adaptor->fetch_by_accession_version($clone->id,$clone->embl_version);
+   my $info;
 
-   my $info = $clone_info_adaptor->fetch_by_dbID($infoid);
-
+   if ($infoid) {
+     $info = $clone_info_adaptor->fetch_by_dbID($infoid);
+   } else {
+     $info = new Bio::Otter::CloneInfo;
+   }
    $clone->clone_info($info);
 
 }

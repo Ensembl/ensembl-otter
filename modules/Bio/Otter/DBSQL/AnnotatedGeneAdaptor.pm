@@ -123,12 +123,13 @@ sub annotate_gene {
 
        eval {
 	   my $infoid = $ctia->fetch_by_transcript_id($tran->stable_id);
+           print STDERR "Info id $infoid\n";
 	   my $info = $transcript_info_adaptor->fetch_by_dbID($infoid);
 	   
 	   $tran->transcript_info($info);
        };
        if ($@) {
-	   print "Coulnd't fetch info for " . $tran->stable_id . "\n";
+	   print "Coulnd't fetch info for " . $tran->stable_id . " [$@]\n";
        }
    }
    
@@ -150,13 +151,33 @@ sub annotate_gene {
 sub fetch_by_Slice{
    my ($self,$slice) = @_;
 
-   my @genes = @{$self->_fetch_by_Slice($slice)};
+   #my @genes = @{$self->_fetch_by_Slice($slice)};
+
+   my @genes = @{$slice->get_all_Genes};
    
+   my %genes; 
+
    foreach my $g (@genes) {
-       $self->annotate_gene($g);
+      print STDERR "Gene " . $g->stable_id . " " . $g->version . "\n";
+      if (defined($genes{$g->stable_id})) {
+        if ($g->version > $genes{$g->stable_id}->version) {
+          print STDERR "Found greater version\n";
+          $genes{$g->stable_id} = $g;
+        } 
+      } else {
+        print STDERR "Found initial version\n";
+        $genes{$g->stable_id} = $g;
+      }
    }
-   
-   return \@genes;
+   foreach my $g (keys %genes) {
+       $self->annotate_gene($genes{$g});
+   }
+  
+   my @latest_genes = values(%genes); 
+   foreach my $g (@latest_genes)  {
+      print $g->stable_id . " " . $g->version . "\n";
+   }
+   return \@latest_genes;
 
 }
 
@@ -174,9 +195,12 @@ sub fetch_by_Slice{
 
 sub _fetch_by_Slice {
   my ( $self, $slice) = @_;
+
   my @out;
+
   my $mapper = $self->db->get_AssemblyMapperAdaptor->fetch_by_type
     ( $slice->assembly_type() );
+
   $mapper->register_region( $slice->chr_name(),
 			    $slice->chr_start(),
 			    $slice->chr_end());
@@ -200,6 +224,7 @@ sub _fetch_by_Slice {
     AND    gsi.gene_id = t.gene_id";
 
   my $sth = $self->db->prepare($sql);
+
   $sth->execute;
   
   my %genes;
@@ -217,14 +242,15 @@ sub _fetch_by_Slice {
   }
   foreach my $stableid (keys %genes) {
       my $geneid = $genes{$stableid};
+
       my $version = $versions{$stableid};
 
       my $gene = $self->fetch_by_dbID( $geneid );
       my $newgene = $gene->transform( $slice );  
-
       
       push( @out, $newgene );
   }
+
   #place the results in an LRU cache
   #$self->{'_slice_gene_cache'}{$slice->name} = \@out;
   #print "OUT @out\n";
@@ -262,16 +288,30 @@ sub store{
    my $gene_info_adaptor = $self->db->get_GeneInfoAdaptor();
    my $current_g_info_ad = $self->db->get_CurrentGeneInfoAdaptor;
 
+   $obj->adaptor(undef);
+
+   foreach my $tran (@{$obj->get_all_Transcripts}) {
+       $tran->adaptor(undef);
+   }
    $self->SUPER::store      ($obj);
+
+   $self->db->get_StableIdAdaptor->store_by_type($obj->stable_id,'gene');
    $gene_info_adaptor->store($obj->gene_info);
    $current_g_info_ad->store($obj);
 
+   foreach my $exon (@{$obj->get_all_Exons}) {
+       $self->db->get_StableIdAdaptor->store_by_type($exon->stable_id,'exon');
+   }
    # Now let's store all the transcript info
 
    my $transcript_info_adaptor = $self->db->get_TranscriptInfoAdaptor();
    my $current_tran_info_adapt  =$self->db->get_CurrentTranscriptInfoAdaptor();
 
    foreach my $tran (@{$obj->get_all_Transcripts}) {
+       $self->db->get_StableIdAdaptor->store_by_type($tran->stable_id,'transcript');
+       if (defined($tran->translation)) {
+         $self->db->get_StableIdAdaptor->store_by_type($tran->translation->stable_id,'translation');
+       }
        $transcript_info_adaptor->store($tran->transcript_info);
        $current_tran_info_adapt->store($tran);
    }

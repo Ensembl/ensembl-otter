@@ -231,6 +231,240 @@
   <assemblyori>1</assemblyori>
   <assemblyoffset>1</assemblyoffset>
 </sequencefragment>
+
+<otter>
+<sequenceset>
+  <assembly_type>fake_gp_1</assembly_type>
+<sequencefragment>
+  <id>AL356218.22.1.142839</id>
+  <chromosome>virt_chrom_1</chromosome>
+  <accession>AL356218</accession>
+  <version>22</version>
+  <remark>Annotation_remark- P52760 hit at 95406 and 110280: definately something pseudoish (dotter).</remark>
+  <remark>EMBL_dump_info.DE_line- Contains the 3' end of the NFX1 gene for X-box binding nuclear transcription factor 1,  the AQP7 and AQP3 genes for aquaporin 7 and 3, a novel gene, the gene for nucleolar RNA-associated protein alpha, beta and gamma and a CpG island.</remark>
+  <keyword>AQP3</keyword>
+  <keyword>AQP7</keyword>
+  <keyword>CpG island</keyword>
+  <keyword>NFX1</keyword>
+  <keyword>aquaporin</keyword>
+  <assemblystart>1</assemblystart>
+  <assemblyend>142839</assemblyend>
+  <assemblyori>1</assemblyori>
+  <assemblyoffset>1</assemblyoffset>
+</sequencefragment>
+<sequencefragment>
+  <id>AL139008.10.1.159974</id>
+  <chromosome>virt_chrom_1</chromosome>
+  <accession>AL139008</accession>
+  <version>10</version>
+  <remark>Annotation_remark- ests AL521968 and BG492429 can't be properly assembled</remark>
+  <remark>EMBL_dump_info.DE_line- Contains four novel genes, the gene for a novel protein similar to suppressor of G2 allele of SKP1 homolog, the gene for a novel protein similar to KIAA1074, a melanoma antigen pseudogene, a sorting nexin 18 (SNX18) pseudogene, a trypsin domain pseudogene, two genes for novel immunoglobulin domain containing proteins, the gene for a novel protein similar to annexin A2 (ANXA2), the gene for a novel protein similar to T-cell receptor beta chain V region proteins, a T-cell receptor beta chain V region protein LB2 pseudogene and two CpG islands.</remark>
+  <keyword>ANXA2</keyword>
+  <keyword>CpG island</keyword>
+  <keyword>KIAA1074</keyword>
+  <keyword>SKP1</keyword>
+  <keyword>T cell receptor</keyword>
+  <keyword>annexin</keyword>
+  <keyword>immunoglobulin domain</keyword>
+  <keyword>trypsin</keyword>
+  <assemblystart>146840</assemblystart>
+  <assemblyend>306813</assemblyend>
+  <assemblyori>1</assemblyori>
+  <assemblyoffset>1</assemblyoffset>
+</sequencefragment>
+<sequencefragment>
+  <id>AL356489.14.1.130639</id>
+  <chromosome>virt_chrom_1</chromosome>
+  <accession>AL356489</accession>
+  <version>14</version>
+  <remark>EMBL_dump_info.DE_line- Contains the TRBV25OR9-2 gene for T cell receptor beta variable 25/OR9-2 (TRBV25/OR9-2, T-cell receptor beta variable region 11 orphan (TCRBV110)), the PTENP1 gene for phosphatase and tensin homolog (mutated in multiple advanced cancers 1) pseudogene 1 (PTH2, PTEN2, PSIPTEN), a T-cell receptor beta chain V region protein pseudogene, two novel genes, the 5' end of the PRSS3 gene for serine protease 3 (mesotrypsin) and two CpG islands.</remark>
+  <keyword>CpG island</keyword>
+  <keyword>MTG</keyword>
+  <keyword>PRSS3</keyword>
+  <keyword>PSIPTEN</keyword>
+  <keyword>PTEN2</keyword>
+  <keyword>PTENP1</keyword>
+  <keyword>T cell receptor</keyword>
+  <keyword>TCRBV11O</keyword>
+  <keyword>TRBV25/OR9-2</keyword>
+  <keyword>TRBV25OR9-2</keyword>
+  <keyword>TRY4</keyword>
+  <keyword>mesotrypsin</keyword>
+  <keyword>protease</keyword>
+  <keyword>trypsin</keyword>
+  <assemblystart>310814</assemblystart>
+  <assemblyend>441452</assemblyend>
+  <assemblyori>1</assemblyori>
+  <assemblyoffset>1</assemblyoffset>
+</sequencefragment>
+<sequencefragment>
+  <id>AL358573.25.1.14998</id>
+  <chromosome>virt_chrom_1</chromosome>
+  <accession>AL358573</accession>
+  <version>25</version>
+  <remark>EMBL_dump_info.DE_line- Contains a T-cell receptor beta chain V region protein pseudogene, the 3' end of a novel gene and part of the PRSS3 gene for serine protease 3 (mesotrypsin).</remark>
+  <keyword>PRSS3</keyword>
+  <keyword>T-cell receptor</keyword>
+  <keyword>mesotrypsin</keyword>
+  <keyword>protease</keyword>
+  <assemblystart>445453</assemblystart>
+  <assemblyend>460450</assemblyend>
+  <assemblyori>1</assemblyori>
+  <assemblyoffset>1</assemblyoffset>
+</sequencefragment>
+<sequencefragment>
+  <id>AL139113.21.1.193280</id>
+  <chromosome>virt_chrom_1</chromosome>
+  <accession>AL139113</accession>
+  <version>21</version>
+  <remark>Annotation_remark- Em:AF157327 and Em:AV601567 ignored due to poor homology</remark>
+  <remark>Annotation_remark- Em:BI791801 appears to splice but has bases missing between the 1st and 2nd exons in this clone.</remark>
+  <remark>Annotation_remark- bA176F3.SPAN.5 does not have a canonical splice site at the first exon.</remark>
+  <remark>EMBL_dump_info.DE_line- Contains the 3' end of the PRSS3 gene for serine protease 3 (mesotrypsin) (MTG, TRY3, TRY4, PRSS4), the 5' end of a novel gene, three novel pseudogenes, the UBC3B gene for ubiquitin-conjugating enzyme, two novel genes, the 3' end of a novel gene (KIAA1491, FLJ22435, FLJ21704, FLJ22148, FLJ33002) and a CpG island.</remark>
+  <keyword>CpG island</keyword>
+  <keyword>FLJ20154</keyword>
+  <keyword>FLJ21704</keyword>
+  <keyword>FLJ22148</keyword>
+  <keyword>FLJ22435</keyword>
+  <keyword>FLJ33002</keyword>
+  <keyword>KIAA491</keyword>
+  <keyword>MTG</keyword>
+  <keyword>PRSS3</keyword>
+  <keyword>PRSS4</keyword>
+  <keyword>TRY3</keyword>
+  <keyword>TRY4</keyword>
+  <keyword>UBC3B</keyword>
+  <keyword>mesotrypsin</keyword>
+  <keyword>protease</keyword>
+  <assemblystart>464451</assemblystart>
+  <assemblyend>657730</assemblyend>
+  <assemblyori>1</assemblyori>
+  <assemblyoffset>1</assemblyoffset>
+</sequencefragment>
+<sequencefragment>
+  <id>AL354989.13.1.151990</id>
+  <chromosome>virt_chrom_1</chromosome>
+  <accession>AL354989</accession>
+  <version>13</version>
+  <remark>Annotation_remark- Em:BM536562 ignored due to poor match of spice sites.</remark>
+  <remark>EMBL_dump_info.DE_line- Contains the 5' end of a novel gene (KIAA1491, FLJ22435 FLJ21704, FLJ22148), two novel genes (including DKFZP434O125 (KIAA1892, FLJ20347)), a tubulin beta pseudogene, an IMP (inosine monophosphate) dehydrogenase 1 (IMPDH1) pseudogene and four CpG islands.</remark>
+  <keyword>CpG island</keyword>
+  <keyword>DKFZP434O125</keyword>
+  <keyword>FLJ20347</keyword>
+  <keyword>FLJ21704</keyword>
+  <keyword>FLJ22148</keyword>
+  <keyword>FLJ22435</keyword>
+  <keyword>IMPDH1</keyword>
+  <keyword>KIAA1892</keyword>
+  <keyword>KIAA491</keyword>
+  <keyword>tubulin</keyword>
+  <assemblystart>661731</assemblystart>
+  <assemblyend>813720</assemblyend>
+  <assemblyori>1</assemblyori>
+  <assemblyoffset>1</assemblyoffset>
+</sequencefragment>
+<sequencefragment>
+  <id>AL160051.22.1.30632</id>
+  <chromosome>virt_chrom_1</chromosome>
+  <accession>AL160051</accession>
+  <version>22</version>
+  <assemblystart>817721</assemblystart>
+  <assemblyend>848352</assemblyend>
+  <assemblyori>1</assemblyori>
+  <assemblyoffset>1</assemblyoffset>
+</sequencefragment>
+<sequencefragment>
+  <id>AL353662.19.1.167998</id>
+  <chromosome>virt_chrom_1</chromosome>
+  <accession>AL353662</accession>
+  <version>19</version>
+  <remark>Annotation_remark- span 4 ests dodgy: missing homology</remark>
+  <remark>EMBL_dump_info.DE_line- Contains the UBAP gene for ubiquitin associated protein, the gene for a novel protein similar to kinesin-like proteins, ribosomal protein S8 (RPS8) and L35A (RPL35A) pseudogenes, a serine (or cysteine) proteinase inhibitor (collagen binding protein 1) (SERPINH1) pseudogene, the 5' end of the NUDT2 gene for nudix (nucleoside diphosphate linked moiety X)-type motif 2 and three CpG islands.</remark>
+  <keyword>CpG island</keyword>
+  <keyword>NUDT2</keyword>
+  <keyword>RPL35A</keyword>
+  <keyword>RPS8</keyword>
+  <keyword>SERPINH1</keyword>
+  <keyword>UBAP</keyword>
+  <assemblystart>852353</assemblystart>
+  <assemblyend>1020350</assemblyend>
+  <assemblyori>1</assemblyori>
+  <assemblyoffset>1</assemblyoffset>
+</sequencefragment>
+<sequencefragment>
+  <id>AL356494.13.1.83750</id>
+  <chromosome>virt_chrom_1</chromosome>
+  <accession>AL356494</accession>
+  <version>13</version>
+  <remark>EMBL_dump_info.DE_line- Contains the 3' end of the NUDT2 gene for nudix (nucleoside diphosphate linked moiety X)-type motif 2, the gene for KIAA1161, the gene for testes development-related NYD-SP22, a novel gene and four CpG islands.</remark>
+  <keyword>APAH1</keyword>
+  <keyword>CpG island</keyword>
+  <keyword>FLJ12757</keyword>
+  <keyword>FLJ22434</keyword>
+  <keyword>FLJ25358</keyword>
+  <keyword>KIAA1161</keyword>
+  <keyword>NUDT2</keyword>
+  <keyword>NYD-SP22</keyword>
+  <assemblystart>1024351</assemblystart>
+  <assemblyend>1108100</assemblyend>
+  <assemblyori>1</assemblyori>
+  <assemblyoffset>1</assemblyoffset>
+</sequencefragment>
+<sequencefragment>
+  <id>AL160270.19.1.199114</id>
+  <chromosome>virt_chrom_1</chromosome>
+  <accession>AL160270</accession>
+  <version>19</version>
+  <remark>EMBL_dump_info.DE_line- Contains the 5' end of a novel gene, the DNAI1 gene for dynein axonemal intermediate polypeptide 1, the CNTFR gene for ciliary neurotrophic factor receptor, two novel genes, the 3' end of the DCTN3 gene for dynactin (p22) and five CpG islands.</remark>
+  <keyword>CILD1</keyword>
+  <keyword>CNTFR</keyword>
+  <keyword>CpG island</keyword>
+  <keyword>DCTN3</keyword>
+  <keyword>DNAI1</keyword>
+  <keyword>ICS</keyword>
+  <keyword>PCD</keyword>
+  <keyword>dynactin</keyword>
+  <keyword>dynein</keyword>
+  <assemblystart>1112101</assemblystart>
+  <assemblyend>1311214</assemblyend>
+  <assemblyori>1</assemblyori>
+  <assemblyoffset>1</assemblyoffset>
+</sequencefragment>
+<sequencefragment>
+  <id>AL450283.16.1.34008</id>
+  <chromosome>virt_chrom_1</chromosome>
+  <accession>AL450283</accession>
+  <version>16</version>
+  <remark>EMBL_dump_info.DE_line- Contains the DCTN3 gene for dynactin 3 (p22), a dead ringer like-1 (Drosophila) protein (DRIL1) pseudogene, the SR-BP1 gene for sigma receptor (SR31747 binding protein 1), the 5' end of a variant of the GALT gene for  galactose-1-phosphate uridylytransferase and three CpG islands.</remark>
+  <keyword>CpG island</keyword>
+  <keyword>DCTN3</keyword>
+  <keyword>DRIL1</keyword>
+  <keyword>SR-BP1</keyword>
+  <keyword>SR31747</keyword>
+  <keyword>dynactin</keyword>
+  <assemblystart>1315215</assemblystart>
+  <assemblyend>1349222</assemblyend>
+  <assemblyori>1</assemblyori>
+  <assemblyoffset>1</assemblyoffset>
+</sequencefragment>
+<sequencefragment>
+  <id>AL162231.20.1.186433</id>
+  <chromosome>virt_chrom_1</chromosome>
+  <accession>AL162231</accession>
+  <version>20</version>
+  <remark>EMBL_dump_info.DE_line- Contains the GALT gene for galactose-1-phosphate uridylytransferase, the IL11RA gene for interleukin 11 receptor, alpha, the SCYA27, SCYA19 and SCYA21 genes for small inducible cytokine subfamily A (Cys-Cys) members 27, 19 and 21, four novel genes and four CpG islands.</remark>
+  <keyword>CpG island</keyword>
+  <keyword>GALT</keyword>
+  <keyword>IL11RA</keyword>
+  <keyword>SCYA19</keyword>
+  <keyword>SCYA21</keyword>
+  <keyword>SCYA27</keyword>
+  <keyword>galactose-1-phosphate uridylytransferase</keyword>
+  <assemblystart>1353223</assemblystart>
+  <assemblyend>1539655</assemblyend>
+  <assemblyori>1</assemblyori>
+  <assemblyoffset>1</assemblyoffset>
+</sequencefragment>
 <dna>
   TGAATCCTACTCAGGAGATGGCTAAGACTAAAGGAGACTTTTCCAGGCCTCACAGTAACCGAAGGAAGCAGA
   GACCTATAGGTGTTTAGCTTAACCCATATGAGAATAGAGAACCCAGAGAGGTGGCCATCTCTGGAGAGGGAG

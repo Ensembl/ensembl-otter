@@ -1,5 +1,6 @@
 <otter>
 <sequenceset>
+<assembly_type>test_assembly</assembly_type>
 <sequencefragment>
   <id>AB000878.1.1.33983</id>
   <chromosome>CHR</chromosome>

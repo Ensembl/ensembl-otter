@@ -19,20 +19,24 @@ ok($testdb);
 my $db = $testdb->get_DBSQL_Obj;
 
 $testdb->do_sql_file("../data/assembly.sql");
+
 ok(3);
 
 open(XML1,"<../data/annotation1.xml");
 
 ok(4);
 
-my ($genes1,$chr,$start,$end) = Bio::Otter::Converter::XML_to_otter(\*XML1);
+my ($genes1,$slice,$seqstr,$tiles) = Bio::Otter::Converter::XML_to_otter(\*XML1);
 
+print "Done converstion\n";
+my $xmlstr = Bio::Otter::Converter::genes_to_XML_with_Slice($slice, $genes1, 1,$tiles);
+
+print $xmlstr . "\n";
 $db->assembly_type('test_otter');
 
 my $sa = $db->get_SliceAdaptor;
-print "Chr $chr $start $end\n";
 
-my $slice1 = $sa->fetch_by_chr_start_end($chr,$start,$end);
+my $slice1 = $sa->fetch_by_chr_start_end($slice->chr_name,$slice->chr_start,$slice->chr_end);
 
 close(XML1);
 
@@ -40,10 +44,10 @@ open(XML2,"<../data/annotation2.xml");
 
 ok(5);
 
-my ($genes2,$chr2,$start2,$end2) = Bio::Otter::Converter::XML_to_otter(\*XML2);
+my ($genes2,$slice2) = Bio::Otter::Converter::XML_to_otter(\*XML2);
 
 
-ok($chr2 eq $chr && $start2 == $start && $end2 == $end);
+ok($slice->chr_name eq $slice2->chr_name && $slice->chr_start == $slice2->chr_start && $slice->chr_end == $slice2->chr_end);
 
 close(XML2);
 

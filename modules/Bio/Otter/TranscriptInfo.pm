@@ -475,6 +475,7 @@ sub equals {
     }
 
     my ($cdss,$cdse,$rnas,$rnae) = ("","","","");
+
     if (defined($self->cds_start_not_found))  { $cdss = $self->cds_start_not_found; }
     if (defined($self->cds_end_not_found))    { $cdse = $self->cds_end_not_found; }
     if (defined($self->mRNA_start_not_found)) { $rnas = $self->mRNA_start_not_found; } 
@@ -489,28 +490,48 @@ sub equals {
     $self->validate;
     $obj->validate;
 
-    if ($self->transcript_stable_id ne $obj->transcript_stable_id ||
-	($self->author->equals($obj->author) == 0)     ||
-	($self->class->equals ($obj->class) == 0)     ||
-	$self->name                ne $obj->name          ||
-        $cdss != $obj_cdss ||
-        $cdse != $obj_cdse ||
-        $rnas != $obj_rnas ||
-        $rnae != $obj_rnae) 
+    print STDERR "Validating......\n";
+
+    if ($self->transcript_stable_id ne $obj->transcript_stable_id) {
+        print STDERR " FOUND DIFF : Stable id different " . $self->transcript_stable_id . " : " . $obj->transcript_stable_id . "\n";
+        return 0;
+     }
+     if ($self->class->equals ($obj->class) == 0) {
+        print STDERR "FOUND DIFF : Different class " . $self->class . " : " . $obj->class . "\n";
+        return 0;
+     }
+     if ($self->name ne $obj->name) {      
+        print STDERR "FOUND DIFF : Name different " . $self->name . " : " . $obj->name . "\n";
+        return 0;
+     }
+    
+     if( $cdss != $obj_cdss ) {
+       print STDERR "FOUND DIFF : Cds start different $cdse : $obj_cdss\n";
+     }
+     if( $cdse != $obj_cdse ) {
+       print STDERR "FOUND DIFF : Cds end different $cdse : $obj_cdse\n";
+     }
+     if( $rnas != $obj_rnas ) {
+       print STDERR "FOUND DIFF : Rna start different $rnas : $obj_rnas\n";
+     }
+     if( $rnae != $obj_rnae ) {
+       print STDERR "FOUND DIFF : Rna end different $rnae : $obj_rnae\n";
+     }
         
 #	$self->cds_start_not_found  != $obj->cds_start_not_found   ||
 #	$self->cds_end_not_found    != $obj->cds_end_not_found   ||
 #	$self->mRNA_start_not_found != $obj->mRNA_start_not_found   ||
 #	$self->mRNA_end_not_found   != $obj->mRNA_end_not_found) 
 	
-    {          
-	return 0;
-    }
+    #{          
+#	return 0;
+    #}
 
     my @remark1 = $self->remark;
     my @remark2 = $self->remark;
 
     if (scalar(@remark1) != scalar(@remark2)) {
+        print STDERR "Different numbers of remarks " . scalar(@remark1) . " : " . scalar(@remark2) . "\n";
 	return 0;
     }
 
@@ -523,6 +544,7 @@ sub equals {
 	    }
 	}
 	if ($found == 0) {
+            print "FOUND DIFF in remark\n"; 
 	    return 0;
 	}
     }
@@ -531,6 +553,7 @@ sub equals {
     my @ev2 = $obj->evidence;
 
     if (scalar(@ev1) != scalar(@ev2)) {
+        print STDERR "FOUND DIFF : Different evidence numbers " . scalar(@ev1) . " : " . scalar(@ev2) . "\n";
 	return 0;
     }
     foreach my $ev1 (@ev1) {
@@ -542,10 +565,12 @@ sub equals {
 	    }
 	}
 	if ($found == 0) {
+            print STDERR "FOUND DIFF : in evidence\n";
 	    return 0;
 	}
     }
 
+    print STDERR "Transcript info is fine**************\n";
     return 1;
 }
 

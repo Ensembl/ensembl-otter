@@ -132,7 +132,7 @@ sub type{
    my ($obj,$value) = @_;
    if( defined $value) {
 
-       if ($value eq 'EST' || $value eq 'Protein' || $value eq 'cDNA' || $value eq 'Genomic') {
+       if ($value eq 'EST' || $value eq 'Protein' || $value eq 'cDNA' || $value eq 'Genomic' || $value eq 'UNKNOWN') {
 	   $obj->{'type'} = $value;
        } else {
 	   $obj->throw("Invalid type [$value]. Must be one of EST,Protein,cDNA,Genomic");
@@ -201,10 +201,11 @@ sub equals {
 	$self->throw("Can only compare with a Bio::Otter::Evidence object");
     }
     
-    if ($self->name eq $obj->name &&
-	$self->type eq $obj->type) {
+    if ($self->name eq $obj->name)  {
+#	$self->type eq $obj->type) {
 	return 1;
     } else {
+        print STDERR "FOUND DIFF : " . $self->name  . " : " . $obj->name . "\n";
 	return 0;
     }
 }

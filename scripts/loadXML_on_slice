@@ -9,23 +9,23 @@ use Bio::Otter::DBSQL::AnnotatedGeneAdaptor;
 use Bio::Otter::Converter;
 use Bio::Otter::Author;
 
-my $host     = 'ecs1d';
-my $user     = 'ensadmin';
-my $pass     = 'ensembl';
-my $port     = 19322;
-my $dbname   = 'otter_chr22';
-my $dataset  = 'hum_chr22';
-my $path     = 'GENOSCOPE';
+my $host     = '127.0.0.1';
+my $user     = 'root';
+my $pass     = '';
+my $port     = 4444;
+my $dbname   = 'otter_9p12';
+my $dataset  = 'human_9p12';
+my $path     = 'fake_gp_1';
 
-my $dna_host   = 'ecs1d';
-my $dna_user   = 'ensro';
-my $dna_port   = 19322;
+my $dna_host   = '127.0.0.1';
+my $dna_user   = 'root';
+my $dna_port   = 4444;
 my $dna_pass   = undef;
 my $dna_dbname = undef;
 
-my $chr      = '22';
-my $chrstart = 1;
-my $chrend   = 100000000;
+my $chr;
+my $chrstart;
+my $chrend;
 
 my $store = 0;
 my $print = 0;

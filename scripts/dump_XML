@@ -15,11 +15,11 @@ my $chr      = 'virt_chrom_1';
 my $chrstart = 1;
 my $chrend   = 2000000;
 
-my $db = new Bio::Otter::DBSQL::DBAdaptor(-host => $host,
-	         		       -user => $user,
-				       -pass => $pass,
-				       -port => $port,
-				       -dbname => $dbname);
+my $db = new Bio::Otter::DBSQL::DBAdaptor(-host   => $host,
+	         		          -user   => $user,
+				          -pass   => $pass,
+				          -port   => $port,
+				          -dbname => $dbname);
 
 
 my $sa = $db->get_SliceAdaptor;

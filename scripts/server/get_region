@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl
+#!/usr/bin/perl
 
 use OtterDefs;
 use strict;
@@ -124,8 +124,11 @@ print STDERR "done\n";
 print STDERR "\nConverting slice to XML...";
 
 my $xmlstr = Bio::Otter::Converter::slice_to_XML($slice,$odb);
-print STDERR "done. Length of xml " . length($xmlstr) . "\n";
 
+print STDERR "done. Length of xml " . length($xmlstr) . "\n";
+open (OUT,">test.xml");
+print OUT $xmlstr;
+close(OUT);
 print $xmlstr . "\n";
 
 ##################################################################################

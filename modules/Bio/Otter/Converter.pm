@@ -161,7 +161,7 @@ sub XML_to_otter {
       # exons 
       if (defined($tl_start) && defined($tl_end)) {
 
-        #print "Setting translation to $tl_start and $tl_end\n";
+        print STDERR  "Setting translation to $tl_start and $tl_end\n";
         my ($start_exon, $start_pos) = exon_pos($tran, $tl_start);
         my ($end_exon,   $end_pos)   = exon_pos($tran, $tl_end);
 
@@ -170,7 +170,8 @@ sub XML_to_otter {
         } else {
 
           my $translation = new Bio::EnsEMBL::Translation;
-
+          $translation->stable_id($tran->stable_id);
+          $translation->version(1);
           $translation->start_Exon($start_exon);
           $translation->start($start_pos);
 
@@ -246,6 +247,7 @@ sub XML_to_otter {
       $tran->add_Exon($exon);
     } elsif (/<evidence>/) {
       $evidence = new Bio::Otter::Evidence;
+      $evidence->type('UNKNOWN');
       $traninfo->evidence($evidence);
       $currentobj = 'evidence';
     } elsif (/<\/evidence>/) {
@@ -437,6 +439,7 @@ sub XML_to_otter {
         
   }
   
+  $assembly_type = 'fake_gp_1' if (!defined($assembly_type));
 
   $slice = new Bio::EnsEMBL::Slice(-chr_name  => $chrname,
                                    -chr_start => $chrstart,
@@ -1294,6 +1297,7 @@ sub ace_to_otter {
               -name    => $name,
               -db_name => $db_name,
             );
+
             push (@evidence, $obj);
           }
         }
@@ -1441,6 +1445,9 @@ sub ace_to_otter {
 
         $tran->translation($translation);
 
+        $translation->stable_id($tran->stable_id);
+        $translation->version(1);
+
         my $cds_start = $sequence{$tranname}{CDS_start};
         my $cds_end   = $sequence{$tranname}{CDS_end};
 
@@ -1542,7 +1549,8 @@ sub make_translation {
   my $translation = new Bio::EnsEMBL::Translation;
 
   $mrna->translation($translation);
-
+  $translation->stable_id($mrna->stable_id);
+  $translation->version(1);
   my @exons = @{ $mrna->get_all_Exons };
 
   my $found_start = 0;
@@ -1648,9 +1656,9 @@ sub prune_Exons {
           last UNI;
         }
       }
-        print " Exon " . $exon->stable_id . "\n";
-        print " Phase " . $exon->phase . " EndPhase " . $exon->end_phase . "\n";
-        print " Strand " . $exon->strand . " Start " . $exon->start . " End ". $exon->end ."\n";
+        print STDERR " Exon " . $exon->stable_id . "\n";
+        print STDERR " Phase " . $exon->phase . " EndPhase " . $exon->end_phase . "\n";
+        print STDERR " Strand " . $exon->strand . " Start " . $exon->start . " End ". $exon->end ."\n";
       if (defined($found)) {
         print "Duplicate = " . $exon->stable_id . "\n";
         push (@newexons, $found);
@@ -1664,7 +1672,7 @@ sub prune_Exons {
           }
         }
       } else {
-        print "New = " . $exon->stable_id . "\n";
+        print STDERR "New = " . $exon->stable_id . "\n";
         push (@newexons,     $exon);
         push (@unique_Exons, $exon);
       }
@@ -1832,7 +1840,7 @@ sub slice_to_XML {
   my @genes;
 
   if ($db->isa("Bio::Otter::DBSQL::DBAdaptor")) {
-     @genes = @{ $db->get_AnnotatedGeneAdaptor->fetch_all_by_Slice($slice) };
+     @genes = @{ $db->get_AnnotatedGeneAdaptor->fetch_by_Slice($slice) };
    } else {
      my @tmpgenes = @{ $db->get_GeneAdaptor->fetch_all_by_Slice($slice) };
      foreach my $g (@tmpgenes) {

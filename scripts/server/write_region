@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl
+#!/usr/bin/perl
 
 use OtterDefs;
 use strict;
@@ -51,7 +51,7 @@ my $port = $dbinfo{PORT}   || $defaults{PORT},
 my $dbname = $dbinfo{DBNAME};
 
 print STDERR "\nDatabase [$dbname][$host][$user][$pass][$port]\n";
-print STDERR "\nAuthor $authorname email $email dataset $dataset\n";
+print STDERR "\nAuthor $author email $email dataset $dataset\n";
 
 my $dnahost = $dbinfo{DNA_HOST}    || $defaults{DNA_HOST},
 my $dnauser = $dbinfo{DNA_USER}    || $defaults{DNA_USER},
@@ -70,7 +70,7 @@ if ($@) {
   error_exit($q, "Failed opening otter database [$@]");
 }
 
-print STDERR "Connected to database\n";
+print STDERR "Connected to local database\n";
 
 if (defined($dbinfo{DNA_DBNAME})) {
   eval {
@@ -104,13 +104,21 @@ my $chrname;
 my $chrstart;
 my $chrend;
 my $genes;
-
+my $xmlslice;
+my $path;
+my $seqstr;
 my $sa  = $odb->get_SliceAdaptor;
 
 print STDERR "\nConverting xml to otter...\n";
 
 eval {
-  ($genes,$chrname,$chrstart,$chrend) = Bio::Otter::Converter::XML_to_otter($fh,$odb);
+  ($genes,$xmlslice,$path,$seqstr) = Bio::Otter::Converter::XML_to_otter($fh,$odb);
+
+  $chrname  = $xmlslice->chr_name;
+  $chrstart = $xmlslice->chr_start;
+  $chrend   = $xmlslice->chr_end;
+ 
+  print STDERR "Processing incoming xml file :  Chr start end $chrname $chrstart $chrend\n"; 
 };
 if ($@) {
   print STDERR "Failed converting XML [$genes,$chrname,$chrstart,$chrend][$@]\n";
@@ -142,10 +150,10 @@ print STDERR "\nFound " . scalar(@genes) . " genes on region $chrname $chrstart-
 
 my $ab = new Bio::Otter::AnnotationBroker($odb);
 my $oaga = $odb->get_AnnotatedGeneAdaptor();
-
+$odb->assembly_type($xmlslice->assembly_type);
 my $slice;
 
-print STDERR "\nFetching slice $chrname $chrname $chrend...";
+print STDERR "\nFetching slice $chrname $chrstart $chrend...";
 
 eval {
   $slice = $sa->fetch_by_chr_start_end($chrname,$chrstart,$chrend);
@@ -162,7 +170,7 @@ my $cb   = new Bio::Otter::CloneLockBroker($odb);
 print STDERR "Checking region is locked...\n";
 
 eval {
-  $cb->check_locks_exist_by_slice($slice,$author);
+  #$cb->check_locks_exist_by_slice($slice,$author);
 };
 if ($@) {
   print STDERR "\nFailed checking locks [$@]\n";
@@ -207,7 +215,7 @@ foreach my $gene (@genes) {
 # loading during the write
 eval {
   foreach my $gene (@$dbgenes) {
-    $gene->stable_id;
+    print STDERR "Local genes : " . $gene->stable_id . "\n";
     my $transcripts = $gene->get_all_Transcripts;
     foreach my $tran (@$transcripts) {
       $tran->translation;
@@ -226,7 +234,7 @@ if ($@) {
 
 
 my @events;
-print STDERR "\nComparing annotations " . scalar(@$dbgenes) . " " . scalar(@genes) . "...";
+print STDERR "\nComparing annotations " . scalar(@$dbgenes) . " " . scalar(@genes) . "...\n";
 
 eval {
   @events = $ab->compare_annotations($dbgenes,\@genes,$slice);

@@ -108,7 +108,7 @@ create table evidence (
 	evidence_id int(10) unsigned default '0' not null auto_increment,
 	evidence_name varchar(40),
 	transcript_info_id  int(10) unsigned,
-	type enum('EST','cDNA','Protein','Genomic'),
+	type enum('EST','cDNA','Protein','Genomic','UNKNOWN'),
         PRIMARY KEY (evidence_id)
 	);
 

@@ -48,11 +48,11 @@ $OTTER_ALTROOT    	    = '/nfs/team71/analysis/jgrg/work/ensembl-otter/otter_alt
 $OTTER_SCRIPTDIR            = $OTTER_SERVER_ROOT . '/scripts/server';
 $OTTER_SERVER		    = 'ecs2a.internal.sanger.ac.uk';#Sys::Hostname::hostname();  # Local machine name
 $OTTER_MAX_CLIENTS          = 5;
-$OTTER_SERVER_PORT          = 19312;
+$OTTER_SERVER_PORT          = 39312;
 
 $OTTER_SPECIES_FILE         = $OTTER_SERVER_ROOT . "/conf/species.dat";
 $OTTER_SPECIES              = read_species($OTTER_SPECIES_FILE);
-$OTTER_DEFAULT_SPECIES      = 'human_chr6';
+$OTTER_DEFAULT_SPECIES      = 'human_9p12';
 $OTTER_PREFIX               = 'OTT';
 
 ################################################################################################

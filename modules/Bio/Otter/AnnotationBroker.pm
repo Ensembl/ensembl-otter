@@ -32,16 +32,25 @@ sub compare_annotations {
 
     my @events;
 
-    #print "GENE : del @$del\n";
-    #print "GENE : new @$new\n";
-    # print "GENE : mod @modgenes\n";
+    print STDERR "GENE : del @$del\n";
+    print STDERR "GENE : new @$new\n";
+    print STDERR "GENE : mod @modgenes\n";
 
+    foreach my $del (@$del) {
+       print $del;
+    } 
+    foreach my $del (@$new) {
+       print $del;
+    } 
+    foreach my $del (@modgenes) {
+       print $del;
+    } 
     foreach my $geneid (keys %$mod) {
-	  my $ismodified = 0;
-	  my $infomodified = 0;
+       my $ismodified   = 0;
+       my $infomodified = 0;
 
-	  my $oldg = $mod->{$geneid}{old};
-	  my $newg = $mod->{$geneid}{new};
+       my $oldg = $mod->{$geneid}{old};
+       my $newg = $mod->{$geneid}{new};
 
       # Genes which were deleted but have now been restored
       if (defined ($oldg->type) && $oldg->type eq 'obsolete') {
@@ -53,9 +62,9 @@ sub compare_annotations {
 	if ($oldg->gene_info->equals($newg->gene_info) == 0) {
 	    $infomodified = 1;
             $modids{$geneid} = 1;
-	    # print "Found modified gene info\n";
+	    print STDERR "Found modified gene info\n";
 	} else {
-	    # print "found same gene info\n";
+	    print STDERR "found same gene info\n";
 	}
 	
 	my @tran1 = @{$oldg->get_all_Transcripts};
@@ -68,11 +77,13 @@ sub compare_annotations {
         if (scalar(@$tdel) || scalar(@$tnew)) {
           $modids{$geneid} = 1;
         } 
+
         # Compare the transcripts to see which ones have changed structure
         # and which ones have changed info.
         # Actually - maybe this should be in the store.
 
         foreach my $tranid (@modtran) {
+           
             my $istranmodified = 0;
             my $istraninfomodified = 0;
 
@@ -87,11 +98,11 @@ sub compare_annotations {
                 $istraninfomodified = 1;
                 $infomodified = 1;
                 $ismodified = 1;
-                print STDERR "Tran 1\n" . $oldt->transcript_info->toString() . "\n";
-                print STDERR "Tran 2\n" . $newt->transcript_info->toString() . "\n";
+                #print STDERR "Tran 1\n" . $oldt->transcript_info->toString() . "\n";
+                #print STDERR "Tran 2\n" . $newt->transcript_info->toString() . "\n";
                 print STDERR "Transcript info $tranid modified\n";
             } else {
-                # print "Found same transcript info $tranid\n";
+                 print STDERR "Found same transcript info $tranid\n";
             }
 
             if ($self->compare_transcripts($tmod->{$tranid}{old},
@@ -105,7 +116,7 @@ sub compare_annotations {
                 $istranmodified = 1;
                 $ismodified = 1;
             } else {
-                # print "Found same transcript $tranid\n";
+                print STDERR "Found same transcript $tranid\n";
             }
             
             if ($ismodified == 1) {
@@ -113,9 +124,9 @@ sub compare_annotations {
             }
         }
 
-	# print "TRAN : del @$tdel\n";
-	# print "TRAN : new @$tnew\n";
-	# print "TRAN : mod @modtran\n";
+	 print STDERR "TRAN : del @$tdel\n";
+	 print STDERR "TRAN : new @$tnew\n";
+	 print STDERR "TRAN : mod @modtran\n";
 
 	my @newexons = @{$newg->get_all_Exons};
 	my @oldexons = @{$oldg->get_all_Exons};
@@ -269,6 +280,7 @@ sub increment_versions {
       $ev = $exon->version;
     }
     $ev++;
+    print STDERR "Incrementing version to $ev for " . $exon->stable_id . "\n";
     $exon->version($ev);
   }
   my %oldtranshash;
@@ -284,6 +296,10 @@ sub increment_versions {
     }
     $tv++;
     $tran->version($tv);
+
+    if (defined($tran->translation)) {
+      $tran->translation->version($tv);
+    }
   }
 }
 
@@ -295,7 +311,6 @@ sub compare_obj {
     my %mod;
 
     foreach my $oldobj (@$oldobjs) {
-
 	my $found = 0;
 
 	foreach my $newobj (@$newobjs) {
@@ -303,7 +318,6 @@ sub compare_obj {
 	    if ($newobj->stable_id eq $oldobj->stable_id) {
 
 		$found = 1;
-		
 		$mod{$newobj->stable_id}{old} = $oldobj;
 		$mod{$newobj->stable_id}{new} = $newobj;
 	    }
@@ -347,6 +361,7 @@ sub compare_transcripts {
 
     my $tl1 = $tran1->translation;
     my $tl2 = $tran2->translation;
+
     if (defined($tl1) && defined($tl2)) {
       if ($self->compare_translations($tl1,$tl2) == 0) {
         print STDERR "Translations different\n";
