@@ -98,10 +98,12 @@ use Getopt::Long 'GetOptions';
         }
         
         my $refesher = sub{
+            watch_cursor($mw);
             $chooser->chooser_map(make_chooser_map());
             $gc->set_window_size(1);
             $gc->render;
             $gc->fix_window_min_max_sizes;
+            default_cursor($mw);
             };
         make_button($button_frame2, 'Refresh', $refesher, 0);
         $mw->bind('<Control-r>', $refesher);
@@ -110,19 +112,23 @@ use Getopt::Long 'GetOptions';
 
         if ($annotator) {
             my $run_lace = sub{
+                watch_cursor($mw);
                 my @sequence_name_list = list_selected_sequence_names($canvas);
                 return unless @sequence_name_list;
                 fork_lace_process(@sequence_name_list);
+                default_cursor($mw);
                 };
             make_button($button_frame2, 'Run lace', $run_lace, 4);
             $mw->bind('<Control-l>', $run_lace);
             $mw->bind('<Control-L>', $run_lace);
             
             my $do_embl_dump = sub{
+                watch_cursor($mw);
                 my @sequence_name_list = list_selected_sequence_names($canvas);
                 foreach my $seq (@sequence_name_list) {
                     do_embl_dump($seq);
                 }
+                default_cursor($mw);
                 };
             make_button($button_frame2, 'EMBL dump', $do_embl_dump, 0);
             $mw->bind('<Control-e>', $do_embl_dump);
@@ -135,6 +141,20 @@ use Getopt::Long 'GetOptions';
     ###############
     Tk::MainLoop();
     ###############
+}
+
+sub watch_cursor {
+    my( $w ) = @_;
+    
+    $w->configure( -cursor => 'watch' );
+    $w->update;
+}
+
+sub default_cursor {
+    my( $w ) = @_;
+    
+    $w->configure( -cursor => undef );
+    $w->update;
 }
 
 {
