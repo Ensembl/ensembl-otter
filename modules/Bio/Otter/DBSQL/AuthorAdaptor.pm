@@ -144,7 +144,7 @@ sub store {
 	$self->throw("Argument must be an author object to the store method.  Currently is [$author]");
     }
 
-    my $author_name  = $author->name  or confess "Author doesn't have a name";
+    my $author_name  = $author->name  or confess "Author does not have a name";
     my $author_email = $author->email or confess "Author does not have an email address";
 
     # Is this author already in the database?

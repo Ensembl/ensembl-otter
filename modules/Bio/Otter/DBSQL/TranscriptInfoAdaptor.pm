@@ -180,57 +180,63 @@ sub list_by_author {
 =cut
 
 sub store {
-  my ($self,$traninfo) = @_;
+    my ($self,$traninfo) = @_;
 
-  if (!defined($traninfo)) {
-      $self->throw("Must provide a TranscriptInfo object to the store method");
-  } elsif (! $traninfo->isa("Bio::Otter::TranscriptInfo")) {
-      $self->throw("Argument must be a TranscriptInfo object to the store method.  Currently is [$traninfo]");
-  }
-  
-  # Now lets store the author and class info - adds in the dbID if it doesn't exist
-  $self->db->get_AuthorAdaptor->store         ($traninfo->author);
-  $self->db->get_TranscriptClassAdaptor->store($traninfo->class);
-
-  #print "Author dbid is " . $traninfo->author->dbID . "\n";
-  #print "Class dbid is " . $traninfo->class->dbID . "\n";
-
-  my $sql = "insert into transcript_info(transcript_info_id,transcript_stable_id,name,transcript_class_id,cds_start_not_found,cds_end_not_found,mRNA_start_not_found,mRNA_end_not_found,author_id,timestamp) values (null,\'" . 
-      $traninfo->transcript_stable_id . "\',\'" . 
-      $traninfo->name                 . "\'," . 
-      $traninfo->class->dbID          . "," . 
-      ($traninfo->cds_start_not_found ? "\'true\'" : "\'false\'")  . "," . 
-      ($traninfo->cds_end_not_found  ? "\'true\'" : "\'false\'")   . "," . 
-      ($traninfo->mRNA_start_not_found  ? "\'true\'" : "\'false\'"). "," . 
-      ($traninfo->mRNA_end_not_found  ? "\'true\'" : "\'false\'")  . "," . 
-      $traninfo->author->dbID . ",now() )";
-  
-    my $sth = $self->prepare($sql);
-  my $rv  = $sth->execute();
-  
-  $self->throw("Failed to insert TranscriptInfo for transcript " . $traninfo->transcript_stable_id) unless $rv;
-
-  $sth = $self->prepare("select last_insert_id()");
-  my $res = $sth->execute;
-  my $row = $sth->fetchrow_hashref;
-  
-  $sth->finish;
-  
-  $traninfo->dbID($row->{'last_insert_id()'});
-  
-  foreach my $rem ($traninfo->remark) {
-      $rem->transcript_info_id($traninfo->dbID);
-      $self->db->get_TranscriptRemarkAdaptor->store($rem);
-  }  
-  if (defined($traninfo->evidence)) {
-    my @ev = $traninfo->evidence;
-    if (scalar(@ev) > 0) { 
-	foreach my $ev (@ev) {
-	 	    $ev->transcript_info_id($traninfo->dbID);
-	    $self->db->get_EvidenceAdaptor->store($ev);
-	}
+    if (!defined($traninfo)) {
+        $self->throw("Must provide a TranscriptInfo object to the store method");
+    } elsif (! $traninfo->isa("Bio::Otter::TranscriptInfo")) {
+        $self->throw("Argument must be a TranscriptInfo object to the store method.  Currently is [$traninfo]");
     }
-  }
+
+    printf STDERR "About to store TranscriptInfo '%s'\n", $traninfo->name;
+
+    # Now lets store the author and class info - adds in the dbID if it doesn't exist
+    $self->db->get_AuthorAdaptor->store         ($traninfo->author);
+    $self->db->get_TranscriptClassAdaptor->store($traninfo->class);
+
+    #print "Author dbid is " . $traninfo->author->dbID . "\n";
+    #print "Class dbid is " . $traninfo->class->dbID . "\n";
+
+    my $sth = $self->prepare(q{
+        INSERT INTO transcript_info (transcript_info_id
+              , transcript_stable_id
+              , name
+              , transcript_class_id
+              , cds_start_not_found
+              , cds_end_not_found
+              , mRNA_start_not_found
+              , mRNA_end_not_found
+              , author_id
+              , timestamp)
+        VALUES (NULL,?,?,?,?,?,?,?,?,NOW())
+        });
+    $sth->execute(
+        $traninfo->transcript_stable_id,
+        $traninfo->name,
+        $traninfo->class->dbID,
+        $traninfo->cds_start_not_found  ? 'true' : 'false',
+        $traninfo->cds_end_not_found    ? 'true' : 'false',
+        $traninfo->mRNA_start_not_found ? 'true' : 'false',
+        $traninfo->mRNA_end_not_found   ? 'true' : 'false',
+        $traninfo->author->dbID,
+        );
+    my $db_id = $sth->{'mysql_insertid'}
+        or $self->throw('Failed to get autoincremented ID from transcript_info insert');
+    $traninfo->dbID($db_id);
+  
+    foreach my $rem ($traninfo->remark) {
+        $rem->transcript_info_id($traninfo->dbID);
+        $self->db->get_TranscriptRemarkAdaptor->store($rem);
+    }  
+    if (defined($traninfo->evidence)) {
+        my @ev = $traninfo->evidence;
+        if (scalar(@ev) > 0) { 
+	    foreach my $ev (@ev) {
+	 	$ev->transcript_info_id($traninfo->dbID);
+	        $self->db->get_EvidenceAdaptor->store($ev);
+	    }
+        }
+    }
 }
 
 
