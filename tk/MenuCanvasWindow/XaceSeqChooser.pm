@@ -299,10 +299,8 @@ sub bind_events {
         Tk::Ev('x'), Tk::Ev('y') ]);
     $canvas->Tk::bind('<Double-Button-1>', [
         sub{
-            $canvas->Busy;
             $self->left_button_handler(@_);
             $self->edit_double_clicked;
-            $canvas->Unbusy;
             },
         Tk::Ev('x'), Tk::Ev('y') ]);
     
@@ -315,6 +313,8 @@ sub bind_events {
 sub edit_double_clicked {
     my( $self ) = @_;
     
+    my $canvas = $self->canvas;
+    $canvas->Busy;
     if ($self->current_state eq 'clone') {
         $self->save_selected_clone_names;
         $self->current_state('subseq');
@@ -322,6 +322,7 @@ sub edit_double_clicked {
     } else {
         $self->edit_subsequences;
     }
+    $canvas->Unbusy;
 }
 
 sub left_button_handler {
