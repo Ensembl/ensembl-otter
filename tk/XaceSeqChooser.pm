@@ -156,7 +156,7 @@ sub shift_left_button_handler {
         my( $self ) = @_;
 
         if (my $a = $self->{'_selected_list'}) {
-            return sort keys %$a;
+            return sort {$a <=> $b} keys %$a;
         } else {
             return;
         }

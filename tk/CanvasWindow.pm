@@ -555,6 +555,127 @@ sub vertical_tile {
     return $self->{'_print_vertical_tile'} || 0;
 }
 
+sub visible_canvas_bbox {
+    my( $self ) = @_;
+    
+    my $canvas = $self->canvas;
+    
+    my $scroll      = $canvas->cget('scrollregion');
+    my ($xf1, $xf2) = $canvas->xview;
+    my ($yf1, $yf2) = $canvas->yview;
+    
+    # Calculate corners of rectangle of visible area of canvas
+    my $scroll_width  = $scroll->[2] - $scroll->[0];
+    my $scroll_height = $scroll->[3] - $scroll->[1];
+
+    my $x1 = ($xf1 * $scroll_width)  + $scroll->[0];
+    my $x2 = ($xf2 * $scroll_width)  + $scroll->[0];
+
+    my $y1 = ($yf1 * $scroll_height) + $scroll->[1];
+    my $y2 = ($yf2 * $scroll_height) + $scroll->[1];
+    
+    return($x1, $y1, $x2, $y2);
+}
+
+sub message {
+    my( $self, @message ) = @_;
+    
+    my ($x1, $y1, $x2, $y2) = $self->visible_canvas_bbox;
+    warn "visible corners = ($x1, $y1, $x2, $y2)\n";
+    
+    # Width and height of visible area
+    my $visible_width  = $x2 - $x1;
+    my $visible_height = $y2 - $y1;
+    
+    # We have to make the message narrower if the
+    # visible area of the canvas is smaller than
+    # the desired message width.
+    my $message_width = 200;
+    my $smallest_width = 100;
+    if ($visible_width < $message_width) {
+        $message_width = $visible_width - 10;
+        if ($message_width < $smallest_width) {
+            $message_width = $smallest_width;
+        }
+    }
+    
+    # Calculate where to draw the text
+    my $pad = 5;
+    my $x_offset = int(($visible_width - $message_width) / 2);
+    if ($x_offset < 0) {
+        $x_offset = 0;
+    }
+    my $x = $x1 + $pad + $x_offset;
+    my $y = $y1 + $pad + $pad;
+    my $text_width = $message_width - ($pad * 2);
+    
+    $self->message_at_x_y($x, $y, $text_width, @message);
+}
+
+sub message_at_x_y {
+    my( $self, $x, $y, $text_width, @message ) = @_;
+
+    confess "Bad message width '$text_width'"
+        unless $text_width =~ /^[\.\d]+$/;
+    my $pad = 5;
+
+    # Print the message
+    my $tag = 'message_id='. $self->next_message_id;
+    my $canvas = $self->canvas;
+    my $text = $canvas->createText(
+        $x, $y,
+        -anchor => 'nw',
+        -text   => join("\n", @message),
+        -width  => $text_width,
+        -tags   => [$tag],
+        );
+    
+    # Expand the bbox of the text
+    my @bbox = $canvas->bbox($text);
+    $bbox[0] -= $pad;
+    $bbox[1] -= $pad;
+    $bbox[2] += $pad;
+    $bbox[3] += $pad;
+    
+    # Put a yellow rectangle under the text
+    my $yellow_rec = $canvas->createRectangle(
+        @bbox,
+        -outline    => undef,
+        -fill       => '#ffff66',
+        -tags       => [$tag],
+        );
+    $canvas->lower($yellow_rec, $text);
+    
+    # Put a shadow under the yellow rectangle
+    @bbox = map {$_ += 3} @bbox;
+    my $grey_rec = $canvas->createRectangle(
+        @bbox,
+        -outline    => undef,
+        -fill       => '#999999',
+        -tags       => [$tag],
+        );
+    $canvas->lower($grey_rec, $yellow_rec);
+}
+
+sub delete_message {
+    my( $self ) = @_;
+    
+    my $canvas = $self->canvas;
+    my $obj = $canvas->find('withtag', 'current');
+    my ($msg_id) = grep /^message_id=/, $canvas->gettags($obj);
+    if ($msg_id) {
+        $canvas->delete($msg_id);
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+sub next_message_id {
+    my( $self ) = @_;
+    
+    return ++$self->{'_last_message_id'};
+}
 
 1;
 
