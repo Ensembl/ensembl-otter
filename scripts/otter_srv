@@ -13,6 +13,7 @@ use Getopt::Long;
 use HTTP::Daemon;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use OtterDefs;
+use Bio::Otter::LogFile;
 
 $| = 1;
 
@@ -33,7 +34,7 @@ my $DEBUG                 = 1;
 my $VERSION               = "0.1";
 my $GET_SCRIPTS           = $OTTER_GET_SCRIPTS  || {};
 my $POST_SCRIPTS          = $OTTER_POST_SCRIPTS || {};
-
+$ENV{SCRIPT_NAME}         = 'OTTER_SERVER';
 #--------------------- global variables ----------------------#
 my %CHILDREN = ();  # keys are current child process IDs
 my $CHILDREN = 0;   # current number of children
@@ -61,9 +62,10 @@ my $server = HTTP::Daemon->new(
   Listen    => 10
 ) or die "making socket: $@\n";
 
-make_pid_file($PIDFILE);
 make_log_file($LOGFILE);
+make_pid_file($PIDFILE);
 # Fork off  children.
+print "\nCreating Children...\n";
 for (1 .. $PREFORK) {
   make_new_child();
 }
@@ -132,15 +134,22 @@ sub make_new_child {
       my $vegadbsrc = $ENV{VEGADBSRC};
 
       %ENV = ();
+      $ENV{PERL5OPT}  = 'MBio::Otter::LogFile';
       $ENV{PERL5LIB}  = $perl5lib;
       $ENV{PATH}      = $path;
       $ENV{VEGADBSRC} = $vegadbsrc;
       set_cgi_env($r);
 
-      
 
-      if ($r->method eq 'GET' and $GET_SCRIPTS->{$r->url->path}) {
-        my $program = $ENV{SCRIPT_FILENAME} = "$SCRIPTDIR/" . $GET_SCRIPTS->{$r->url->path};
+      $ENV{REMOTE_ADDR} = $client->peerhost;
+      $ENV{REMOTE_PORT} = $client->peerport;
+      $ENV{SERVER_ADDR} = $client->sockhost;
+      $ENV{SERVER_PORT} = $client->sockport;
+
+      my $uri = $r->url->path;
+      if ($r->method eq 'GET' and $GET_SCRIPTS->{$uri}) {
+        my $program = $ENV{SCRIPT_FILENAME} = "$SCRIPTDIR/" . $GET_SCRIPTS->{$uri};
+	print STDERR "*************  BEGIN $uri  *************";
         my @args = ();
         if( my $pid = open (my $fh, '-|') ){
             eval{
@@ -161,9 +170,8 @@ sub make_new_child {
             die q{Something went wrong here $!: } . $! . "\n";
         }
             
-      } elsif ($r->method eq 'POST' and $POST_SCRIPTS->{$r->url->path}) {
-        print "OTTER_SERVER : Doing " . $POST_SCRIPTS->{$r->url->path} . "\n";
-        my $program = $ENV{SCRIPT_FILENAME} = "$SCRIPTDIR/" . $POST_SCRIPTS->{$r->url->path};
+      } elsif ($r->method eq 'POST' and $POST_SCRIPTS->{$uri}) {
+        my $program = $ENV{SCRIPT_FILENAME} = "$SCRIPTDIR/" . $POST_SCRIPTS->{$uri};
         my ($in, $out);
         my $pid = open2($out,$in,$program);
         print $in $r->content;
@@ -171,27 +179,27 @@ sub make_new_child {
         open  FPDBG,">../data/test_server_wr.xml";
         print FPDBG $r->content;
         close FPDBG;
-        print "OTTER_SERVER : Printing response\n";
+        print STDERR "********** Printing response ***********";
         
         while (<$out>) {
           #print STDERR $_;
           print $client $_;
         }
         #print $client $r->content;
-        print "OTTER_SERVER : End response\n";
+        print STDERR "************* End response *************";
         close $out;
         waitpid $pid, 0;
       } else {
         my $message = "Unknown command " . $r->method . " " . $r->url->path . "\n";
         print $client $message;
-        print $message;
+        print STDERR $message;
       }
       $client->close;
       $SIG{CHLD} = \&REAPER;
       sigprocmask(SIG_UNBLOCK, $sigset2) or die "Can't unblock SIGHUP after request: $!\n";
     }
 
-    print STDERR "Child $$: reached max client count - exiting.\n";
+    print STDERR "Child $$: reached max client count - exiting.";
     exit;    ## very, very important exit!
   }
 }
@@ -299,37 +307,36 @@ sub HUNTSMAN {    # signal handler for SIGINT
 }
 
 sub ROTATE_LOGS{
-    # local ($SIG{CHLD}) = 'IGNORE';
     my $rotate_time = time;
     my $new_logfile = $LOGFILE . "_rotated_at_" . $rotate_time;
-    print "OTTER_SERVER: Rotating logs...\n";
-#    print "              this might go wrong...\n";
+    print STDOUT "OTTER_SERVER : Rotating logs...\n" if $DEBUG;
+    # sideways move of current log, handles should still point to new one.
     rename $LOGFILE, $new_logfile;
     my @kids = keys %CHILDREN;    # get child PIDs
     foreach (@kids) {
 	kill 'HUP', $_;    # ...and tell them
-	print STDERR "OTTER_SERVER : \tkilled $_\n" if $DEBUG;
+	print STDERR "Killed Child $_" if $DEBUG;
 	sleep 5; # good idea ??????
     }
-    print STDERR "OTTER_SERVER : Sent ALT HUP to children: ", join (",", @kids), "\n" if $DEBUG;
+    print STDOUT "OTTER_SERVER : Sent ALT HUP to children: ". join (",", @kids). "\n" if $DEBUG;
     # reopen the log files
     make_log_file($LOGFILE);
     # note to log file reader
-    print STDERR "OTTER SERVER : using this log file now as from $rotate_time\n";
+    print STDERR "using this log file now as from $rotate_time\n";
     # wake this script up a bit, and make children
     &{$SIG{CHLD}};
 
     $SIG{HUP} = \&ROTATE_LOGS;
 }
 
+##################
+# log file stuff, only for STDERR.  Do we need something for STDOUT?
 sub make_log_file{
     my $output = shift;
-    close STDOUT;
-    open (STDOUT, ">$output")   or die "Can't write to $output: $!";
-#    setsid			or die "Can't start a new session: $!";
-    close STDERR;
-    open (STDERR, '>&STDOUT')   or die "Can't dup stdout: $!";
+    close STDERR; 
+    open (STDERR, ">$output")   or die "Can't dup stdout: $!";
 }
+
 ###########################################################
 sub terminate_client {
   my ($c) = @_;
