@@ -34,10 +34,10 @@
     assembly_end,
     fragment_ori,
     fragment_offset,
-    keyword*,
-    remark*,
     author?,
-    author_email?)>
+    author_email?,
+    keyword*,
+    remark*)>
 <!ELEMENT accession #PCDATA>
 <!ELEMENT version #PCDATA>
 <!ELEMENT id #PCDATA>
@@ -50,13 +50,13 @@
 <!ELEMENT locus (
     name,
     type?,
+    known?,
     truncated?,
     author?,
     author_email?,
     description?,
     synonym*,
     remark*
-    known?,
     transcript+)>
 <!ATTLIST locus
     stable_id CDATA #IMPLIED
@@ -70,16 +70,16 @@
 <!ELEMENT known EMPTY>
 <!ELEMENT transcrpt (
     name,
-    author?,
-    author_email?,
-    remark*,
+    transcript_class,
     translation_start?,
     translation_end?,
     mRNA_start_not_found?,
     mRNA_end_not_found?,
     cds_start_not_found?,
     cds_end_not_found?,
-    transcript_class,
+    author?,
+    author_email?,
+    remark*,
     evidence*,
     exon+,
     )>
