@@ -58,55 +58,34 @@ sub render {
         my @seq_coord = $band->sequence_chunk_coords;
         
         my $y_middle = $y_offset + ($height / 2);
-        my $y_bottom = $y_offset + $height;
+        my $y_max = $band->y_max;
+        my( $low, $high ) = $band->range;
+        my $scale = $height / ($high - $low);
         for (my $i = 0; $i < @seq_coord; $i += 2) {
             my( $start, $end ) = @seq_coord[$i, $i+1];
+
+            my( @plot );
+            my( $pos, $value ) = $band->seqpos_value($start, $end);
+            for (my $j = 0; $j < @$pos; $j++) {
+                my $p = $pos->[$j];
+                my $x = $p / $rpp;
+
+                my $v = $value->[$j];
+                my $y = $y_max - (($v - $low) * $scale);
+                push(@plot, $x, $y);
+            }
+            
+            # Draw midline
             my $x1 = $start / $rpp;
             my $x2 = $end   / $rpp;
-            my $seq_length = $end - $start + 1;
-            
-            # Get the sequence for this chunk, and
-            # check that it's the correct length.
-            my $seq_str = $vc->subseq($start, $end);
-            unless ($seq_length == length($seq_str)) {
-                confess "sequence string is ", length($seq_str), " long, not $seq_length";
-            }
-            $seq_str = lc $seq_str;
-            
-            my $tile_incr = $rpp * 5;
-            my $tile_length = $tile_incr * 2;
-            my( @plot );
-            for (my $j = 0; $j < $seq_length; $j += $tile_incr) {
-                my $tile_seq = substr($seq_str, $j, $tile_length);
-                my $length = length($tile_seq);
-                if ($length < $tile_length) {
-                    # Probably at the end of the sequence
-                    my $last_tile_seq = substr($seq_str, -1 * $tile_length, $tile_length);
-                    $length = length($last_tile_seq);
-                    if ($length == $tile_length) {
-                        my $x = $x1 + (($seq_length - $tile_incr) / $rpp);
-                        my $gc_count = $last_tile_seq =~ tr/gc/gc/;
-                        my $gc_fraction = $gc_count / $length;
-                        my $y = $y_bottom - ($height * $gc_fraction);
-                        push(@plot, $x, $y);
-                    } else {
-                        warn "Didn't get full tile ($length != $tile_length)";
-                    }
-                } else {
-                    my $x = $x1 + (($j + $tile_incr) / $rpp);
-                    my $gc_count = $tile_seq =~ tr/gc/gc/;
-                    my $gc_fraction = $gc_count / $length;
-                    my $y = $y_bottom - ($height * $gc_fraction);
-                    push(@plot, $x, $y);
-                }
-            }
-
             $canvas->createLine(
                 $x1, $y_middle, $x2, $y_middle,
                 -fill       => 'red',
                 -width      => 1,
                 -tags       => [@tags],
                 );
+            
+            # Draw plot
             $canvas->createLine(
                 @plot,
                 -fill       => 'black',
@@ -121,7 +100,7 @@ sub render {
     #my $seq_string = lc $vc->seq;
 }
 
-sub pos_value {
+sub seqpos_value {
     my( $band, $start, $end ) = @_;
     
     my $rpp = $band->residues_per_pixel;
@@ -139,8 +118,28 @@ sub pos_value {
     my( @pos, @value );
     my $tile_incr = $rpp * 5;
     my $tile_length = $tile_incr * 2;
-    
-    
+    for (my $j = 0; $j < $seq_length; $j += $tile_incr) {
+        my $tile_seq = substr($seq_str, $j, $tile_length);
+        my $length = length($tile_seq);
+        if ($length < $tile_length) {
+            # Probably at the end of the sequence
+            my $last_tile_seq = substr($seq_str, -1 * $tile_length, $tile_length);
+            $length = length($last_tile_seq);
+            if ($length == $tile_length) {
+                my $gc_count = $last_tile_seq =~ tr/gc/gc/;
+                my $gc_fraction = $gc_count / $length;
+                push(@pos, $start + $seq_length - $tile_incr);
+                push(@value, $gc_fraction);
+            } else {
+                warn "Didn't get full tile ($length != $tile_length)";
+            }
+        } else {
+            my $gc_count = $tile_seq =~ tr/gc/gc/;
+            my $gc_fraction = $gc_count / $length;
+            push(@pos, $start + $j + $tile_incr);
+            push(@value, $gc_fraction);
+        }
+    }
     
     return (\@pos, \@value);
 }

@@ -86,6 +86,8 @@ use Getopt::Long 'GetOptions';
         my $plot = GenomeCanvas::Band::Plot->new;
         $plot->virtual_contig($vc);
         $plot->height(100);
+        $plot->range(0.35,0.65);
+        $plot->x_major(0.15);
         my $plot_set = $gc->new_BandSet;
         $plot_set->add_Band($plot);
 
