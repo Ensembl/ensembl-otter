@@ -185,7 +185,7 @@ sub toXMLString{
             my @evidence = $tinfo->evidence;
             @evidence = sort {$a->name cmp $b->name} @evidence;
 
-            foreach my $ev ($tinfo->evidence) {
+            foreach my $ev (@evidence) {
               $str .= "    <evidence>\n";
               $str .= "      <name>" . $ev->name . "</name>\n";
               $str .= "      <type>" . $ev->type . "</type>\n";
