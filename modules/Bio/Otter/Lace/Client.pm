@@ -75,13 +75,13 @@ sub get_otter_ace {
     foreach my $ds ($self->get_all_DataSets) {
         if (my $ctg_list = $ds->selected_CloneSequences_as_contig_list) {
             foreach my $ctg (@$ctg_list) {
-                ### It is rather tempting here not to go through the XML layer
                 my $xml = Bio::Otter::Lace::TempFile->new;
                 $xml->name('lace.xml');
                 my $write = $xml->write_file_handle;
                 print $write $self->get_xml_for_contig_from_Dataset($ctg, $ds);
                 my ($genes, $slice, $sequence, $tiles) =
                     Bio::Otter::Converter::XML_to_otter($xml->read_file_handle);
+                $self->add_slice_name($slice->display_id);
                 $ace .= Bio::Otter::Converter::otter_to_ace($slice, $genes, $tiles, $sequence);
             }
         }
@@ -89,12 +89,41 @@ sub get_otter_ace {
     return $ace;
 }
 
+sub add_slice_name {
+    my( $self, $ace ) = @_;
+    
+    my $af = $self->{'_slice_name_list'} ||= [];
+    push(@$af, $ace);
+}
+
+sub list_all_slice_names {
+    my( $self ) = @_;
+    
+    if (my $af = $self->{'_slice_name_list'}) {
+        return @$af;
+    } else {
+        return;
+    }
+}
+
+sub save_all_slices {
+    my( $self, $adb ) = @_;
+    
+    confess "Missing AceDatabase argument" unless $adb;
+    
+    # Make sure we don't have a stale database handle
+    $adb->drop_aceperl_db_handle;
+    my $ace = $adb->aceperl_db_handle;
+    foreach my $name ($self->list_all_slice_names) {
+        $self->save_otter_AcePerl($ace, $name);
+    }
+}
+
 sub save_otter_AcePerl {
     my( $self, $ace, $name ) = @_;
     
     confess "Missing name argument" unless $name;
     
-    ### This code should be in a data only module
     $ace->find(Genome_Sequence => $name);
     my $ace_txt = $ace->raw_query('show -a');
     $ace->raw_query('Follow SubSequence');
@@ -117,7 +146,7 @@ sub save_otter_ace {
     my $write = $ace->write_file_handle;
     print $write $ace_str;
     my $xml = Bio::Otter::Converter::ace_to_XML($ace->read_file_handle);
-    return $xml;
+    print $xml;
     
     ### Save to server with POST
 }
@@ -151,7 +180,6 @@ sub get_xml_for_contig_from_Dataset {
     unless ($response->is_success) {
         confess "get datasets request failed: ", $response->status_line;
     }
-    warn $response->content;
     return $response->content;
 }
 

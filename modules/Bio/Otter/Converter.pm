@@ -366,7 +366,7 @@ sub XML_to_otter {
         s/^\s*//;
         s/\s*$//;
         $seqstr .= $_;
-        if (length($seqstr)%1000000 < 100) {
+        if (length($seqstr)%1_000_000 < 100) {
           #print STDERR "Found seq " . length($seqstr) . "\n";
         }
       }
@@ -901,6 +901,12 @@ sub exon_pos {
   return (undef, undef);
 }
 
+# Setup regular expression components for parsing ace file format
+my $OBJ_NAME  = qr/[\s:]+"?([^"]+)"?/;
+my $STRING    = qr/\s+"?([^"]+)"?/;
+my $INT       = qr/\s+(\d+)/;
+my $FLOAT     = qr/\s+([\d\.]+)/;
+
 sub ace_to_otter {
   my ($fh) = shift;
 
@@ -922,24 +928,19 @@ sub ace_to_otter {
   my @tiles;
 
   while (<$fh>) {
-
     chomp;
-    $_ =~ s/\t//g;
 
-    if (/^Sequence[\s:]+"?([^"]+)/) {
+    if (/^Sequence $OBJ_NAME/x) {
       my $currname = $1;
       print STDERR "Found sequence [$currname]\n";
 
       while (($_ = <$fh>) !~ /^\n$/) {
         chomp;
-        $_ =~ s/\t//g;
 
-        if (/^Subsequence\s+"?([^"]+)"?\s+(\d+)\s+(\d+)/) {
+        if (/^Subsequence $STRING $INT $INT/x) {
           my $name  = $1;
           my $start = $2;
           my $end   = $3;
-
-          $name =~ s/\"//g;
 
           print STDERR "Name $name $start $end\n";
 
@@ -957,9 +958,10 @@ sub ace_to_otter {
           $sequence{$name}{parent} = $currname;
           $sequence{$name}{strand} = $strand;
 
-        } elsif (/Assembly_name\s+"?([^"]+)/) {
+        } elsif (/Assembly_name $STRING/x) {
           $type = $1;
-        } elsif (/TilePath"?\s+(\d+)\s+(\d+)\s+(\S+)\s+"?([^"]+)/) {
+        } elsif (/TilePath"? $INT $INT $STRING $STRING/x) {
+          # TilePath is part of a feature line
           my $assstart  = $1;
           my $assend    = $2;
           my $assname   = $4;
@@ -988,42 +990,27 @@ sub ace_to_otter {
 
           $contig = new Bio::EnsEMBL::RawContig;
           $contig->name($currname);
-        } elsif (/^Clone_left_end\s+(\S+)\s+(\d+)/) {
-          my $val = $1;
-          my $cle = $2;
 
-          $val =~ s/\"//g;
-          $sequence{$currname}{Clone_left_end}{$val} = $cle;
+        } elsif (/^(Clone_right_end|Clone_left_end) $STRING $INT/x) {
 
-        } elsif (/^Clone_right_end\s+(\S+)\s+(\d+)/) {
+          $sequence{$currname}{$1}{$2} = $3;
 
-          my $val = $1;
-          my $cre = $2;
+        } elsif (/^Keyword $STRING/x) {
 
-          $val =~ s/\"//g;
-          $sequence{$currname}{Clone_right_end}{$val} = $cre;
+          my $keywords = $sequence{$currname}{keyword} ||= [];
+          push @$keywords, $1;
 
-        } elsif (/^Keyword\s+"?([^"]+)/) {
-
-          if (!defined($sequence{$currname}{keyword})) {
-            $sequence{$currname}{keyword} = [];
-          }
-          push (@{ $sequence{$currname}{keyword} }, $1);
-
-        } elsif (/^EMBL_dump_info\s+DE_line"?([^"]+)/) {
+        } elsif (/^EMBL_dump_info\s+DE_line $STRING/x) {
 
           $sequence{$currname}{EMBL_dump_info} = $1;
 
-        } elsif (/^Feature\s+(\S+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\S+)/) {
+        } elsif (/^Feature $STRING $INT $INT $FLOAT $STRING/x) {
 
           my $val   = $1;
-          my $val2  = $5;
           my $start = $2;
           my $end   = $3;
           my $score = $4;
-
-          $val  =~ s/\"//g;
-          $val2 =~ s/\"//g;
+          my $val2  = $5;
 
           # strand
           my $f = new Bio::EnsEMBL::SeqFeature(
@@ -1034,25 +1021,19 @@ sub ace_to_otter {
             -gff_source => $val2
           );
 
-          if (!defined($sequence{$currname}{feature})) {
-            $sequence{$currname}{feature} = [];
-          }
-          push (@{ $sequence{$currname}{feature} }, $f);
+          my $features = $sequence{$currname}{feature} ||= [];
+          push @$features, $f;
 
-        } elsif (/^Source\s+"?([^"]+)/) {
+        } elsif (/^Source $STRING/x) {
 
           # We have a gene and not a contig.
-
-          my $val = $1;
-          $val =~ s/\"//g;
-
-          $sequence{$currname}{Source} = $val;
+          $sequence{$currname}{Source} = $1;
 
           my $tran = new Bio::EnsEMBL::Transcript();
           $sequence{$currname}{transcript} = $tran;
 
           #print STDERR "new tran  $currname [$tran][$val]\n";
-        } elsif (/^Source_Exons\s+(\d+)\s+(\d+)\s+"?([^"]+)/) {
+        } elsif (/^Source_Exons $INT $INT $STRING/x) {
           my $oldstart = $1;
           my $oldend   = $2;
           my $stableid = $3;
@@ -1072,7 +1053,7 @@ sub ace_to_otter {
             $start = $tend - $oldend + 1;
           }
 
-          # print "Adding exon at $start $end to $currname\n";
+          print "Adding exon at $start $end to $currname\n";
           my $exon = new Bio::EnsEMBL::Exon(
             -start  => $start,
             -end    => $end,
@@ -1082,75 +1063,25 @@ sub ace_to_otter {
 
           $sequence{$currname}{transcript}->add_Exon($exon);
 
-        } elsif (/^Continues_as\s+"?([^"]+)/) {
+        } elsif (/^Continues_as $STRING/x) {
 
           $sequence{$currname}{Continues_as} = $1;
 
-        } elsif (/^EST_match\s+"?([^"]+)/) {
+        } elsif (/^(cDNA_match|Protein_match|Genomic_match|EST_match) $STRING/x) {
 
-          my $val = $1;
-          $val =~ s/\"//g;
+          my $matches = $sequence{$currname}{$1} ||= [];
+          push @$matches, $2;
 
-          if (!defined($sequence{$currname}{EST_match})) {
-            $sequence{$currname}{EST_match} = [];
-          }
-          push (@{ $sequence{$currname}{EST_match} }, $val);
-        } elsif (/^cDNA_match\s+"?([^"]+)/) {
+        } elsif (/^Locus $STRING/x) {
 
-          my $val = $1;
-          $val =~ s/\"//g;
+          $genenames{$currname} = $1;
 
-          if (!defined($sequence{$currname}{cDNA_match})) {
-            $sequence{$currname}{cDNA_match} = [];
-          }
-          push (@{ $sequence{$currname}{cDNA_match} }, $val);
+        } elsif (/^(Remark|Isoform|Predicted_gene) $STRING/x) {
 
-        } elsif (/^Protein_match\s+"?([^"]+)/) {
+          my $remarks = $sequence{$currname}{$1} ||= [];
+          push @$remarks, $2;
 
-          my $val = $1;
-          $val =~ s/\"//g;
-
-          if (!defined($sequence{$currname}{Protein_match})) {
-            $sequence{$currname}{Protein_match} = [];
-          }
-          push (@{ $sequence{$currname}{Protein_match} }, $val);
-
-        } elsif (/^Genomic_match\s+"?([^"]+)/) {
-
-          my $val = $1;
-          $val =~ s/\"//g;
-
-          if (!defined($sequence{$currname}{Genomic_match})) {
-            $sequence{$currname}{Genomic_match} = [];
-          }
-          push (@{ $sequence{$currname}{Genomic_match} }, $val);
-
-        } elsif (/^Locus\s+"?([^"]+)/) {
-
-          my $val = $1;
-          $val =~ s/\"//g;
-
-          $genenames{$currname} = $val;
-
-        } elsif (/^Remark\s+"?([^"]+)/) {
-
-          if (!defined($sequence{$currname}{Remark})) {
-            $sequence{$currname}{Remark} = [];
-          }
-          push (@{ $sequence{$currname}{Remark} }, $1);
-
-        } elsif (/^Isoform\s+"?([^"]+)/) {
-
-          my $val = $1;
-          $val =~ s/\"//g;
-
-          $sequence{$currname}{Isoform} = $val;
-
-        } elsif (/^Predicted_gene/) {
-
-          $sequence{$currname}{Predicted_gene} = 1;
-
-        } elsif (/^CDS\s+(\d+)\s+(\d+)/) {
+        } elsif (/^CDS $INT $INT/x) {
 
           $sequence{$currname}{CDS_start} = $1;
           $sequence{$currname}{CDS_end}   = $2;
@@ -1159,7 +1090,7 @@ sub ace_to_otter {
 
           $sequence{$currname}{End_not_found} = 0;
 
-        } elsif (/^Start_not_found\s+(\d+)/) {
+        } elsif (/^Start_not_found $INT/x) {
 
           #print "start not found with $1\n";    
           $sequence{$currname}{Start_not_found} = $1;
@@ -1168,25 +1099,18 @@ sub ace_to_otter {
 
           $sequence{$currname}{Start_not_found} = 0;
 
-        } elsif (/^Method\s+"?([^"]+)/) {
+        } elsif (/^Method $STRING/x) {
 
-          my $val = $1;
-          $val =~ s/\"//g;
-          $sequence{$currname}{Method} = $val;
+          $sequence{$currname}{Method} = $1;
 
-        } elsif (/^Processed_mRNA/) {
+        } elsif (/^(Processed_mRNA|Pseudogene)/) {
 
-          $sequence{$currname}{Processed_mRNA} = 1;
-
-        } elsif (/^Pseudogene/) {
-
-          $sequence{$currname}{Pseudogene} = 1;
+          $sequence{$currname}{$1} = 1;
 
         }
       }
-    } elsif (/^DNA[\s:]+"?([^"]+)/) {
+    } elsif (/^DNA $OBJ_NAME/x) {
       my $name = $1;
-      $name =~ s/\"//g;
       my $seq;
       my $line;
 
@@ -1195,11 +1119,10 @@ sub ace_to_otter {
         $seq .= $line;
       }
       $dna = $seq;
-    } elsif (/^Locus\s+:\s+"?([^"]+)/) {
+    } elsif (/^Locus $OBJ_NAME/x) {
       my $name = $1;
 
       while (($_ = <$fh>) !~ /^\n$/) {
-        $_ =~ s/\t//g;
         if (/^Known/) {
           $genes{$name}{GeneType} = "Known";
         } elsif (/^Putative/) {
@@ -1208,15 +1131,14 @@ sub ace_to_otter {
           $genes{$name}{GeneType} = "Pseudogene";
         } elsif (/^Organism_supported/) {
           $genes{$name}{GeneType} = "Organism_supported";
-        } elsif (/^Positive_sequence\s+"?([^"]+)/) {
+        } elsif (/^Positive_sequence $STRING/x) {
           my $tranname = $1;
-          $tranname =~ s/\"//g;
 
           if (!defined($genes{$name}{transcripts})) {
             $genes{$name}{transcripts} = [];
           }
           push (@{ $genes{$name}{transcripts} }, $tranname);
-        } elsif (/^Otter_id\s+"?([^"]+)/) {
+        } elsif (/^Otter_id $STRING/x) {
             $genes{$name}{StableID} = $1;
         }
       }
@@ -1233,135 +1155,123 @@ sub ace_to_otter {
   my %anntran;
 
   SEQ: foreach my $seq (keys %sequence) {
-    next SEQ unless (defined($sequence{$seq}{transcript}));
-
+    my $transcript = $sequence{$seq}{transcript} or next SEQ;
+    next SEQ unless @{$transcript->get_all_Exons};
     print STDERR "Seq = $seq\n";
 
-    print STDERR "Key $seq " . $sequence{$seq}{Source} . " " . $contig_name . "\n";
-    if (defined($sequence{$seq}{Source})
-      && $sequence{$seq}{Source} eq $contig_name)
-    {
-      my $traninfo = new Bio::Otter::TranscriptInfo;
+    my $source = $sequence{$seq}{Source};
+    print STDERR "Key $seq  $source  $contig_name\n";
+    next SEQ unless $source and $source eq $contig_name;
 
-      # Start not found and end not found (should it ever be mRNA_start_not_found?)
-      if ($sequence{$seq}{Method} =~ /RNA/) {
-        $traninfo->mRNA_start_not_found(
-          exists($sequence{$seq}{Start_not_found}) ? 1 : 0);
-        $traninfo->mRNA_end_not_found(
-          exists($sequence{$seq}{End_not_found}) ? 1 : 0);
+    my $traninfo = new Bio::Otter::TranscriptInfo;
+
+    # Start not found and end not found (should it ever be mRNA_start_not_found?)
+    if ($sequence{$seq}{Method} =~ /RNA/) {
+      $traninfo->mRNA_start_not_found(
+        exists($sequence{$seq}{Start_not_found}) ? 1 : 0);
+      $traninfo->mRNA_end_not_found(
+        exists($sequence{$seq}{End_not_found}) ? 1 : 0);
+    } else {
+      $traninfo->cds_start_not_found(
+        exists($sequence{$seq}{Start_not_found}) ? 1 : 0);
+      $traninfo->cds_end_not_found(
+        exists($sequence{$seq}{End_not_found}) ? 1 : 0);
+    }
+
+    # Remarks for the transcript
+    if (defined($sequence{$seq}{Remark})) {
+      my @rem = @{ $sequence{$seq}{Remark} };
+
+      foreach my $rem (@rem) {
+        my $remark = new Bio::Otter::TranscriptRemark(-remark => $rem);
+        $traninfo->remark($remark);
+      }
+    }
+
+    # Evidence for the transcript
+    my @evidence;
+
+    # TR should probably be trembl but its an enum in the db
+    # WP should probably be wormpep but its an enum in the db
+    my %dbhash = (
+      "EM" => "EMBL",
+      "SW" => "SWISSPROT",
+      "TR" => "protein_id",
+      "WP" => "protein_id",
+    );
+
+    foreach my $type (qw{ EST cDNA Protein Genomic }) {
+      my $match_type = "${type}_match";
+      if (my $ev_array = $sequence{$seq}{$match_type}) {
+
+        foreach my $ev (@$ev_array) {
+          my ($db_abbrev, $name) = split /:/, $ev;
+
+          my $db_name = $dbhash{uc $db_abbrev};
+
+          #print "dbname = $db_name name = $name\n";
+          my $obj = new Bio::Otter::Evidence(
+            -type    => $type,
+            -name    => $name,
+            -db_name => $db_name,
+          );
+
+          push (@evidence, $obj);
+        }
+      }
+    }
+    $traninfo->evidence(@evidence);
+
+    # Type of transcript (Method tag)
+    my $class =
+      new Bio::Otter::TranscriptClass(-name => $sequence{$seq}{Method});
+
+    $traninfo->class($class);
+    $traninfo->name($seq);
+
+    #print "Defined $seq " . $sequence{$seq}{transcript} . "\n";
+    if (defined($sequence{$seq}{transcript})) {
+      my $anntran = bless $sequence{$seq}{transcript},
+        "Bio::Otter::AnnotatedTranscript";
+
+      $anntran->transcript_info($traninfo);
+
+      $anntran{$seq} = $anntran;
+
+      # Sort the exons here just in case
+      print ("Anntran $seq [$anntran]\n");
+      die "No exons in transcript" unless @{$anntran->get_all_Exons};
+      $anntran->sort;
+
+      # Set the translation start and end
+
+      # Set the phase of the transcript
+      my $phase = $sequence{$seq}{Start_not_found};
+
+      if (defined($phase) && $phase != 0) {
+        $phase--;
       } else {
-        $traninfo->cds_start_not_found(
-          exists($sequence{$seq}{Start_not_found}) ? 1 : 0);
-        $traninfo->cds_end_not_found(
-          exists($sequence{$seq}{End_not_found}) ? 1 : 0);
+        $phase = 0;
       }
 
-      # Remarks for the transcript
-      if (defined($sequence{$seq}{Remark})) {
-        my @rem = @{ $sequence{$seq}{Remark} };
-
-        foreach my $rem (@rem) {
-          my $remark = new Bio::Otter::TranscriptRemark(-remark => $rem);
-          $traninfo->remark($remark);
-        }
+      #SMJS Added
+      if ($phase == 1) {
+        $phase = 2;
+      } elsif ($phase == 2) {
+        $phase = 1;
       }
 
-      # Evidence for the transcript
-      my @evidence;
+      #SMJS End added
+      # print "Phase for $seq exon = $phase\n";
 
-      # TR should probably be trembl but its an enum in the db
-      # WP should probably be wormpep but its an enum in the db
-      my %dbhash = (
-        "EM" => "EMBL",
-        "Em" => "EMBL",
-        "SW" => "SWISSPROT",
-        "Sw" => "SWISSPROT",
-        "sw" => "SWISSPROT",
-        "TR" => "protein_id",
-        "Tr" => "protein_id",
-        "tr" => "protein_id",
-        "WP" => "protein_id",
-        "Wp" => "protein_id",
-        "wp" => "protein_id"
-      );
+      foreach my $exon (@{ $anntran->get_all_Exons }) {
+        my $len      = $exon->end - $exon->start + 1;
+        my $endphase = ($len + $phase) % 3;
 
-      foreach
-        my $i (("EST_match", "cDNA_match", "Protein_match", "Genomic_match"))
-      {
+        $exon->phase($phase);
+        $exon->end_phase($endphase);
 
-        if (defined($sequence{$seq}{$i})) {
-          my @ev   = @{ $sequence{$seq}{$i} };
-          my $type = $i;
-          $type =~ s/_match//;
-
-          foreach my $ev (@ev) {
-            my ($db_abbrev, $name) = split /:/, $ev;
-
-            my $db_name = $dbhash{$db_abbrev};
-
-            #print "dbname = $db_name name = $name\n";
-            my $obj = new Bio::Otter::Evidence(
-              -type    => $type,
-              -name    => $name,
-              -db_name => $db_name,
-            );
-
-            push (@evidence, $obj);
-          }
-        }
-      }
-      $traninfo->evidence(@evidence);
-
-      # Type of transcript (Method tag)
-      my $class =
-        new Bio::Otter::TranscriptClass(-name => $sequence{$seq}{Method});
-
-      $traninfo->class($class);
-      $traninfo->name($seq);
-
-      #print "Defined $seq " . $sequence{$seq}{transcript} . "\n";
-      if (defined($sequence{$seq}{transcript})) {
-        my $anntran = bless $sequence{$seq}{transcript},
-          "Bio::Otter::AnnotatedTranscript";
-
-        $anntran->transcript_info($traninfo);
-
-        $anntran{$seq} = $anntran;
-
-        # Sort the exons here just in case 
-        $anntran->sort;
-
-        #print ("Anntran $seq [$anntran]\n");
-        # Set the translation start and end
-
-        # Set the phase of the transcript
-        my $phase = $sequence{$seq}{Start_not_found};
-
-        if (defined($phase) && $phase != 0) {
-          $phase--;
-        } else {
-          $phase = 0;
-        }
-
-        #SMJS Added
-        if ($phase == 1) {
-          $phase = 2;
-        } elsif ($phase == 2) {
-          $phase = 1;
-        }
-
-        #SMJS End added
-        # print "Phase for $seq exon = $phase\n";
-
-        foreach my $exon (@{ $anntran->get_all_Exons }) {
-          my $len      = $exon->end - $exon->start + 1;
-          my $endphase = ($len + $phase) % 3;
-
-          $exon->phase($phase);
-          $exon->end_phase($endphase);
-
-          $phase = $endphase;
-        }
+        $phase = $endphase;
       }
     }
   }
@@ -1492,8 +1402,6 @@ sub ace_to_XML {
     my( $fh ) = @_;
     
     my( $genes, $frags, $type, $dna, $chr, $chrstart, $chrend) = ace_to_otter($fh);
-    use Data::Dumper;
-    print Dumper($genes, $frags);
     my $xml = "<otter>\n" . frags_to_XML($frags, $type, $chr, $chrstart, $chrend);
     foreach my $g (@$genes) {
         $xml .= $g->toXMLString;

@@ -8,6 +8,7 @@ use Carp;
 use File::Path 'rmtree';
 use Symbol 'gensym';
 use Fcntl qw{ O_WRONLY O_CREAT };
+use Ace;
 
 sub new {
     my( $pkg ) = @_;
@@ -90,15 +91,24 @@ sub list_all_acefiles {
     }
 }
 
-sub list_all_acefiles_fully_qualified {
+sub aceperl_db_handle {
     my( $self ) = @_;
     
-    my $home = $self->home;
-    my @acefiles = $self->list_all_acefiles;
-    foreach (@acefiles) {
-        $_ = "$home/$_" unless m{^/};
+    my( $dbh );
+    unless ($dbh = $self->{'_aceperl_db_handle'}) {
+        my $home = $self->home;
+        my $tace = $self->tace;
+        $dbh = $self->{'_aceperl_db_handle'}
+            = Ace->connect(-PATH => $home, -PROGRAM => $tace)
+                or confess "Can't connect to database in '$home': ", Ace->error;
     }
-    return @acefiles;
+    return $dbh;
+}
+
+sub drop_aceperl_db_handle {
+    my( $self ) = @_;
+    
+    $self->{'_aceperl_db_handle'} = undef;
 }
 
 sub make_database_directory {
@@ -108,12 +118,13 @@ sub make_database_directory {
     my $tar  = $self->tar_file;
     mkdir($home, 0777) or die "Can't mkdir('$home') : $!\n";
     
-    my $tar_command = "cd $home ; tar xvf $tar";
+    my $tar_command = "cd $home ; tar xf $tar";
     if (system($tar_command) != 0) {
         $self->error_flag(1);
         confess "Error running '$tar_command' exit($?)";
     }
     
+    # These two acefiles from the tar file need to get parsed
     $self->add_acefile("$home/rawdata/methods.ace");
     $self->add_acefile("$home/rawdata/misc.ace");
     
@@ -180,7 +191,7 @@ sub initialize_database {
     my $home = $self->home;
     my $tace = $self->tace;
     my @parse_commands = map "parse $_\n",
-        $self->list_all_acefiles_fully_qualified;
+        $self->list_all_acefiles;
 
     my $parse_log = "$home/init_parse.log";
     my $pipe = "| $tace $home > $parse_log";
@@ -222,7 +233,7 @@ sub initialize_database {
     }
     close $fh;
 
-    return $errors;
+    return $errors ? 0 : 1;
 }
 
 
