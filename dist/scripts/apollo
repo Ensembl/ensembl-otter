@@ -1,0 +1,5 @@
+#!/bin/tcsh
+
+cd cvs/apollo/src/java
+
+../../bin/apollo -s
