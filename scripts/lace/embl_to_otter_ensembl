@@ -121,6 +121,7 @@ my $PIPED_TO = (-p STDIN ? 1 : 0);
     die "Please specify a chromosome name using -chr 'name'\n"         if (! defined $chromosome_name);
     warn "Chr names containing 'chr' are illegal. Removing\n"          if ($chromosome_name =~ /chr/i);
 
+    # Chr prefix causes problems for Apollo
     $chromosome_name =~ s/chr//gi;
 
 
@@ -160,11 +161,6 @@ my $PIPED_TO = (-p STDIN ? 1 : 0);
 
     
     $INPUT_TYPE = "EMBL";
-
-    # Chr prefix causes problems for Apollo
-#    $chromosome_name ||= $agp_chr_name;
-    
-    $chromosome_name =~ s/^chr//i; # recheck chromosome name as it may have changed [AGP]
 
     my $otter_chromosome = get_chromosome($otter_db    , $chromosome_name);
     my $pipe_chromosome  = get_chromosome($pipeline_db , $chromosome_name);
@@ -400,7 +396,8 @@ sub get_chromosome{
         return $chr;
     }
     else{
-        ## put a new chromosome into the db to get its id # note that the length value is a default value and will be set later 
+        # put a new chromosome into the db to get its id
+        # note that the length value is a default value and will be set later 
         my $chr = Bio::EnsEMBL::Chromosome->new(
                                                 -chr_name      => $chr_name,
                                                 -adaptor       => $chr_adp,

@@ -1,0 +1,106 @@
+#!/usr/local/bin/perl -w
+
+### show_transcript_remark_counts
+
+use strict;
+
+use Carp;
+use Getopt::Long 'GetOptions';
+use Hum::Tracking;
+use Bio::Otter::Lace::Defaults;
+
+# Set STDOUT to autoflush
+$| = 1;
+
+{
+    my $dataset_name = undef;
+    
+    my $usage = sub { exec('perldoc', $0) };
+    Bio::Otter::Lace::Defaults::do_getopt(
+        #'h|help'     => \$usage,
+        'dataset=s'   => \$dataset_name,
+        ) or $usage->();
+    $usage->() unless $dataset_name;
+
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    my $otter_db = $ds->get_cached_DBAdaptor;
+    my $ss_list = $ds->get_all_SequenceSets;
+    foreach my $ss (@$ss_list) {
+        check_for_transcript_remarks($otter_db, $ss);
+    }
+}
+
+sub check_for_transcript_remarks {
+    my( $dbh, $ss ) = @_;
+    
+    my $ass_type = $ss->name;
+    my $sth = $dbh->prepare(q{
+        SELECT count(distinct(t.transcript_id))
+        FROM assembly a
+          , exon e
+          , exon_transcript et
+          , transcript t
+          , gene g
+        WHERE a.contig_id = e.contig_id
+          AND e.exon_id = et.exon_id
+          AND et.transcript_id = t.transcript_id
+          and t.gene_id = g.gene_id
+          AND a.type = ?
+          AND g.type != 'obsolete'
+        });
+    $sth->execute($ass_type);
+    my ($total) = $sth->fetchrow;
+    $sth->finish;
+    
+    $sth = $dbh->prepare(q{
+        SELECT r.transcript_info_id
+          , count(distinct(r.transcript_remark_id))
+        FROM assembly a
+          , exon e
+          , exon_transcript et
+          , transcript t
+          , gene g
+          , transcript_stable_id tsid
+          , current_transcript_info c
+          , transcript_remark r
+        WHERE a.contig_id = e.contig_id
+          AND e.exon_id = et.exon_id
+          AND et.transcript_id = t.transcript_id
+          and t.gene_id = g.gene_id
+          and t.transcript_id = tsid.transcript_id
+          AND tsid.stable_id = c.transcript_stable_id
+          AND c.transcript_info_id = r.transcript_info_id
+          AND a.type = ?
+          AND g.type != 'obsolete'
+        GROUP BY r.transcript_info_id
+        });
+    $sth->execute($ass_type);
+    
+    my $remark_transcripts = 0;
+    my $remark_count = 0;
+    my $max   = 0;
+    while (my ($iid, $count) = $sth->fetchrow) {
+        $remark_transcripts++;
+        $remark_count += $count;
+        if ($max and $max < $count) {
+            $max = $count;
+        } else {
+            $max = $count;
+        }
+    }
+    my $mean = $total == 0 ? 0 : $remark_count / $total;
+    printf "              assembly  transcripts  with_remarks  remarks  mean  max\n"
+        . "%22s  %11d  %12d  %7d  %4.1f  %3d\n",
+        $ass_type, $total, $remark_transcripts, $remark_count, $mean, $max;
+}
+
+
+__END__
+
+=head1 NAME - show_transcript_remark_counts
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+

@@ -264,7 +264,7 @@ my $DEBUG = 0;
 
     # Get sequence notes and clone names from fox and oracle
     if ($at_sanger) {
-        my ($root) = $0 =~ m{(.+?)[^/]+};
+        my ($root) = $0 =~ m{^(.+?)[^/]+$};
         $root =~ s{/$}{};
         system("$root/submissions_to_otter",        '-dataset', $dataset_name);
         system("$root/clones_to_otter", '-reverse', '-dataset', $dataset_name);
@@ -340,9 +340,17 @@ sub check_line{
             $seq = $pfetch_archive->get_Seq_by_acc($acc_ver);
         }
 	unless ($seq){
+            my $seq_file = "$acc_ver.seq";
 	    warn "Attempting to read fasta file <$acc_ver.seq> in current dir.\n";
-	    $seq = Bio::SeqIO->new(-file   => "$acc_ver.seq",
-				   -format => 'FASTA');
+	    my $in = Bio::SeqIO->new(
+                -file   => $seq_file,
+                -format => 'FASTA',
+                );
+            $seq = $in->next_seq;
+            my $name = $seq->display_id;
+            unless ($name eq $acc_ver) {
+                die "Sequence in '$seq_file' is called '$name' not '$acc_ver'";
+            }
 	}
         return $seq;
     }
