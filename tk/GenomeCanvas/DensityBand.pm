@@ -165,7 +165,6 @@ sub draw_density_segment {
     open GIF, "> $tmp_img" or die;
     print GIF $stepmap->gif;
     close GIF;
-    die $tmp_img;
     END {
         #unlink($tmp_img) if $tmp_img;
     }
