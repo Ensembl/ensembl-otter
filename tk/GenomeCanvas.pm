@@ -115,7 +115,75 @@ sub bind_scroll_commands {
         $y_scroll->ScrlByUnits('v', 1);
         });
 }
+
+sub move_to_obj {
+    my( $gc, $obj ) = @_;
     
+    confess "No object index given" unless $obj;
+    
+    my $canvas = $gc->canvas;
+    my ($x1, $y1, $x2, $y2) = $gc->normalize_coords($canvas->bbox($obj));
+    
+    my @scroll = $gc->normalize_coords(
+        $canvas->cget('scrollregion'));
+    #warn "scroll=[@scroll]\n";
+    # Need to put back scrollregion for some reason
+    # cget seems to clear it!
+    $canvas->configure(
+        -scrollregion   => [@scroll],
+        );
+    
+    @scroll = $gc->normalize_coords(@scroll);
+
+    my $width  = $scroll[2] - $scroll[0];
+    my $height = $scroll[3] - $scroll[1];
+    #warn "width=$width, height=$height\n";
+    
+    my ($l_frac, $r_frac) = $canvas->xview;
+    my $left  = $width * $l_frac;
+    my $right = $width * $r_frac;
+    #warn "left=$left, right=$right\n";
+    if ($x2 < $left) {
+        $canvas->xviewMoveto(($x1 - 10) / $width);
+    }
+    elsif ($x1 > $right) {
+        my $visible_width = $right - $left;
+        $canvas->xviewMoveto(($x2 + 10 - $visible_width) / $width);
+    }
+    else {
+        #warn "object is visible in x axis\n";
+    }
+    
+    my ($t_frac, $b_frac) = $canvas->yview;
+    my $top  =   $height * $t_frac;
+    my $bottom = $height * $b_frac;
+    #warn "top=$top, bottom=$bottom\n";
+    if ($y2 < $top) {
+        $canvas->yviewMoveto(($y1 - 10) / $height);
+    }
+    elsif ($y1 > $bottom) {
+        my $visible_height = $bottom - $top;
+        $canvas->yviewMoveto(($y2 + 10 - $visible_height) / $height);
+    } else {
+        #warn "object is visible in x axis\n";
+    }
+}
+
+sub normalize_coords {
+    my( $gc, $x1, $y1, $x2, $y2 ) = @_;
+    
+    if ($x1 < 0) {
+        $x1 = 0;
+        $x2 = $x1 + $x2;
+    }
+    if ($y1 < 0) {
+        $y1 = 0;
+        $y2 = $y1 + $y2;
+    }
+    
+    return ($x1, $y1, $x2, $y2);
+}
+
     #foreach my $key_seq ($x_scroll->bind($class)) {
     #    my $x_com_ref = $x_scroll->bind($class, $key_seq);
     #    my $y_com_ref = $y_scroll->bind($class, $key_seq);

@@ -101,7 +101,7 @@ sub draw_seq_row {
             -font       => $font,
             -anchor     => 'nw',
             -width      => $width,
-            -tags       => [@tags, 'contig_gap'],
+            -tags       => [@tags, 'contig_text'],
             );
     }
     my @rect = $canvas->bbox($id);

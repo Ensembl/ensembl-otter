@@ -8,7 +8,7 @@ use Hum::Submission 'prepare_statement';
 use Hum::AnaStatus::Sequence;
 use Hum::Conf qw{ HUMACESERVER_HOST HUMGIFACESERVER_PORT };
 use GenomeCanvas::Band::SeqChooser;
-use Bio::EnsEMBL::DBSQL::Obj;
+use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Carp;
 use Getopt::Long 'GetOptions';
 
@@ -28,7 +28,7 @@ use Getopt::Long 'GetOptions';
         die "Invalid annotator '$annotator'" unless is_valid_annotator($annotator);
     }
     
-    my $ensdb = Bio::EnsEMBL::DBSQL::Obj->new(
+    my $ensdb = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
         -DBNAME => $db,
         -USER   => $user,
         -HOST   => $host,
@@ -96,6 +96,19 @@ use Getopt::Long 'GetOptions';
             $mw->bind('<Control-s>', $set_reviewed);
             $mw->bind('<Control-S>', $set_reviewed);
         }
+        
+        my $hunter = sub{
+            watch_cursor($mw);
+            hunt_for_selection($gc);
+            default_cursor($mw);
+            };
+        
+        # First call to this returns empty list!
+        my @all_text_obj = $canvas->find('withtag', 'contig_text');
+        
+        make_button($button_frame2, 'Hunt selection', $hunter, 0);
+        $mw->bind('<Control-h>', $hunter);
+        $mw->bind('<Control-H>', $hunter);
         
         my $refesher = sub{
             watch_cursor($mw);
@@ -197,6 +210,94 @@ sub default_cursor {
         warn "Running '@embl_dump_command'\n";
         system(@embl_dump_command) == 0
             or die "Error running : '@embl_dump_command'";
+    }
+}
+
+sub hunt_for_selection {
+    my( $gc ) = @_;
+    
+    my $canvas = $gc->canvas;
+    
+    my( $query_str );
+    eval {
+        $query_str = $canvas->SelectionGet;
+    };
+    return if $@;
+    #warn "Looking for '$query_str'";
+    my $matcher = make_matcher($query_str);
+    
+    my $current_obj;
+    foreach my $obj ($canvas->find('withtag', 'selected')) {
+        $current_obj ||= $obj;
+        toggle_selection($gc, $obj);
+    }
+    
+    my $selected_text_obj = $canvas->selectItem;
+    my @all_text_obj = $canvas->find('withtag', 'contig_text');
+    if ($selected_text_obj) {
+        if ($selected_text_obj == $all_text_obj[$#all_text_obj]) {
+            # selected obj is last on list, so is to leave at end
+        } else {
+            for (my $i = 0; $i < @all_text_obj; $i++) {
+                if ($all_text_obj[$i] == $selected_text_obj) {
+                    my @tail = @all_text_obj[$i + 1 .. $#all_text_obj];
+                    my @head = @all_text_obj[0 .. $i];
+                    @all_text_obj = (@tail, @head);
+                    last;
+                }
+            }
+        }
+    }
+
+    my $found = 0;
+    foreach my $obj (@all_text_obj) {
+        my $text = $canvas->itemcget($obj, 'text');
+        my $hit = &$matcher($text);
+        if ($hit) {
+            $canvas->selectClear;
+            my $start = index($text, $hit);
+            die "Can't find '$hit' in '$text'" if $start == -1;
+            $canvas->selectFrom($obj, $start);
+            $canvas->selectTo  ($obj, $start + length($hit) - 1);
+            $found = $obj;
+            last;
+        }
+    }
+    
+    unless ($found) {
+        warn "Can't find '$query_str'\n";
+        return;
+    }
+    
+    $gc->move_to_obj($found);
+    
+    my @overlapping = $canvas->find('overlapping', $canvas->bbox($found));
+    foreach my $obj (@overlapping) {
+        my @tags = $canvas->gettags($obj);
+        if (grep $_ eq 'contig_seq_rectangle', @tags) {
+            unless (grep $_ eq 'selected', @tags) {
+                toggle_selection($gc, $obj);
+            }
+        }
+    }
+}
+
+sub make_matcher {
+    my( $pattern ) = @_;
+    
+    # Escape non word characters
+    $pattern =~ s{(\W)}{\\$1}g;
+    
+    my $matcher = eval "sub {
+        my( \$text ) = \@_;
+        
+        \$text =~ /($pattern)/i;
+        return \$1;
+        }";
+    if ($@) {
+        die "Error in pattern '$pattern' \n$@";
+    } else {
+        return $matcher;
     }
 }
 
