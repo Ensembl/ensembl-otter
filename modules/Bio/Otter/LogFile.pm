@@ -17,7 +17,9 @@ sub TIEHANDLE{
 	$fh = geniosym();
     }
     $SIG{__WARN__} = sub { $fh->_warning(@_); };
-    $SIG{__DIE__}  = sub { $fh->_death(@_); };
+    # $^S is true only when in an eval{}
+    # see 'perldoc -f eval' and 'man perlvar'
+    $SIG{__DIE__}  = sub { $fh->_death(@_) unless $^S; };
     bless $fh, ref($class) || $class;
     $fh->OPEN($file, @_) unless ref($file) eq 'GLOB';
     return $fh;
@@ -53,11 +55,11 @@ sub _print{
 }
 sub _warning{
     my $fh = shift;
-    $fh->_print(&_log_prefix . Carp::longmess(" Carping..."));
+    $fh->_print(&_log_prefix . Carp::longmess(' Carping from warn()...'));
 }
 sub _death{
     my $fh = shift;
-    $fh->_print(&_log_prefix . Carp::longmess(" Carping..."));
+    $fh->_print(&_log_prefix . Carp::longmess(' Carping from die()...'));
     exit 2;
 }
 
