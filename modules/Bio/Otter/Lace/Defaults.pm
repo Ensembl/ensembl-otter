@@ -29,6 +29,9 @@ our $save_deep_option = sub {
     set_hash_val($DEFAULTS, $option, $value);
 };
 
+sub fetch_gene_type_prefix {
+    return $DEFAULTS->{$CLIENT_STANZA}->{'gene_type_prefix'};
+}
 
 sub fetch_pipeline_switch {
     return $DEFAULTS->{$CLIENT_STANZA}->{'pipeline'} ? 1 : 0;

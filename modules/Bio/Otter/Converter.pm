@@ -309,8 +309,12 @@ sub XML_to_otter {
 
       if ($currentobj eq 'evidence') {
         $evidence->type($1);
-      } else {
-        die "ERROR: type tag only associated with evidence - obj is $currentobj\n";
+      }
+      elsif ($currentobj eq 'gene') {
+        $gene->type($1);
+      }
+      else {
+        die "ERROR: <type> tag only valid with evidence or gene - obj is $currentobj\n";
       }
     } elsif (/<sequence_fragment>/) {
       $currentobj = 'frag';
@@ -557,7 +561,6 @@ sub XML_to_otter {
         }
         $tran->{_trans_exon_array} = \@exons;
     }
-    $gene->set_gene_type_from_transcript_classes;
   }
 
   #return (\@genes, \@clones,$chrname, $chrstart, $chrend,$assembly_type,$seqstr,);
@@ -1262,6 +1265,9 @@ sub ace_to_otter {
                 elsif (/^Full_name $STRING/x) {
                     $cur_gene->{'description'} = $1;
                 }
+                elsif (/^(Type_prefix) $STRING/x) {
+                    $cur_gene->{$1} = $2;
+                }
             }
         }
         
@@ -1561,11 +1567,14 @@ sub ace_to_otter {
 
         prune_Exons($gene);
         
-        # Determine type of gene
-        if (my $type = $gene_data->{GeneType}) {
-            $ginfo->known_flag(1) if $type eq 'Known';
+        my $ace_type = $gene_data->{GeneType};
+        if ($ace_type and $ace_type =~ /known/i) {
+            $ginfo->known_flag(1);
         }
-        $gene->set_gene_type_from_transcript_classes;
+        my $type = gene_type_from_transcript_set($gene->get_all_Transcripts, $ginfo->known_flag) || $ace_type;
+        if (my $prefix   = $gene_data->{Type_prefix}) {
+            $type = "$prefix.$type";
+        }
     }
     
     # Turn %frags into a Tiling Path
@@ -2102,6 +2111,95 @@ sub ace_unescape {
     
     return $str;
 }
- 
+
+
+=head1 gene_type_from_transcript_set
+
+    my $type = gene_type_from_transcript_set(\@trasncripts, $known_flag);
+
+See the section on transcript classes in the
+otter XML documentation.
+
+Sets the C<type> on the gene using a decision
+tree based on a list of known transcript classes.
+
+If there is an transcript class which is unknown
+by the method, but this is the only class in the
+gene, then this class name is used as the gene
+C<type>.  If, however, the gene contains a mix of
+unknown transcript classes the method throws an
+exception.
+
+Exceptions are also thrown when the gene contains
+more than one class of pseudogene transcript, and
+when there are no transcript in the gene.
+
+=cut
+
+sub gene_type_from_transcript_set {
+    my( $transcripts, $known_flag ) = @_;
+    
+    my $pseudo_count = 0;
+    my $class_set = {};
+    foreach my $transcript (@$transcripts) {
+        my $class = $transcript->transcript_info->class->name;
+        $class =~ s/^.+\.//;    # Strip leading GD. etc ...
+        $class =~ s/_trunc$//;
+        $class_set->{$class}++;
+        if ($class =~ /pseudo/i) {
+            $pseudo_count++;
+        }
+    }
+    
+    my( $type );
+    my @class_list = keys %$class_set;
+    # If there are any Pseudogene transcripts, the gene is either
+    # a Pseudogene, or it is a Polymorphic locus if there are other
+    # classes of transcripts present.
+    if ($pseudo_count) {
+        if ($pseudo_count == @$transcripts) {
+            if (@class_list > 1) {
+                confess("Have mix of pseudogene classes in gene:\n"
+                    . join('', map "  $_\n", @class_list));
+            } else {
+                ($type) = @class_list;
+            }
+        } else {
+            ### May not have this any more now we have 1 gene object per haplotype.
+            $type = 'Polymorphic';
+        }
+    }
+    # All genes containing protein coding transcripts are either Known or Novel_CDS
+    elsif ($class_set->{'Coding'}) {
+        # Check for the known_flag flag on the GeneInfo object
+        if ($known_flag) {
+            $type = 'Known';
+        }
+        else {
+            $type = 'Novel_CDS';
+        }
+    }
+    # Gene type is Novel_Transcript if any of these are present
+    elsif ($class_set->{'Transcript'}
+        or $class_set->{'Non_coding'}
+        or $class_set->{'Ambiguous_ORF'}
+        or $class_set->{'Immature'}
+        or $class_set->{'Antisense'}
+        )
+    {
+        $type = 'Novel_Transcript';
+    }
+    # All remaining gene types are only expected to have one class of transcript
+    elsif (@class_list != 1) {
+        confess("Have mix of transcript classes in gene where not expected:\n"
+            . join('', map "  $_\n", @class_list));
+    }
+    else {
+        # Gene type is the same as the transcript type
+        ($type) = @class_list;
+    }
+    return $type;
+}
+
 1;
 

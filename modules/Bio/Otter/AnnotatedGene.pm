@@ -94,11 +94,11 @@ sub toXMLString{
         if (my $n = $info->name) {
             $name = $n->name;
         }
-	$str .= "  <name>"      . $name      . "</name>\n";
+	$str .= "  <name>" . $name . "</name>\n";
+        $str .= "  <type>" . $self->type . "</type>\n";
 
         $str .= "  <known>" . $info->known_flag . "</known>\n";
         $str .= "  <truncated>" . $info->truncated_flag . "</truncated>\n";
-
 
 	foreach my $syn ($info->synonym) {
 	    $str .= "  <synonym>" . $syn->name . "<\/synonym>\n";
@@ -269,89 +269,6 @@ sub stable_id {
 }
 
 
-=head1 set_gene_type_from_transcript_classes
-
-    $gene->set_gene_type_from_transcript_classes;
-
-See the section on transcript classes in the
-otter XML documentation.
-
-Sets the C<type> on the gene using a decision
-tree based on a list of known transcript classes.
-
-If there is an transcript class which is unknown
-by the method, but this is the only class in the
-gene, then this class name is used as the gene
-C<type>.  If, however, the gene contains a mix of
-unknown transcript classes the method throws an
-exception.
-
-Exceptions are also thrown when the gene contains
-more than one class of pseudogene transcript, and
-when there are no transcript in the gene.
-
-=cut
-
-sub set_gene_type_from_transcript_classes {
-    my( $self ) = @_;
-    
-    my( %class_set );
-    my $pseudo_count = 0;
-    my $transcripts = $self->get_all_Transcripts;
-    $self->throw('No transcripts') unless @$transcripts;
-    foreach my $transcript (@$transcripts) {
-        my $class = $transcript->transcript_info->class->name;
-        $class =~ s/_trunc$//;
-        $class_set{$class}++;
-        $pseudo_count++ if $class =~ /pseudo/i;
-    }
-    
-    my @class_list = keys %class_set;
-    # If there are any Pseudogene transcripts, the gene is either
-    # a Pseudogene, or it is a Polymorphic locus if there are other
-    # classes of transcripts present.
-    if ($pseudo_count) {
-        if ($pseudo_count == @$transcripts) {
-            if (@class_list > 1) {
-                $self->throw("Have mix of pseudogene classes in gene:\n"
-                    . join('', map "  $_\n", @class_list));
-            } else {
-                $self->type(@class_list);
-            }
-        } else {
-            $self->type('Polymorphic');
-        }
-    }
-    # All genes containing protein coding transcripts are either Known or Novel_CDS
-    elsif ($class_set{'Coding'}) {
-        # Check for the known_flag flag on the GeneInfo object
-        if ($self->gene_info->known_flag) {
-            $self->type('Known');
-        }
-        else {
-            $self->type('Novel_CDS');
-        }
-    }
-    # Gene type is Novel_Transcript if any of these are present
-    elsif ($class_set{'Transcript'}
-        or $class_set{'Non_coding'}
-        or $class_set{'Ambiguous_ORF'}
-        or $class_set{'Immature'}
-        or $class_set{'Antisense'}
-        )
-    {
-        $self->type('Novel_Transcript');
-    }
-    # All remaining gene types are only expected to have one class of transcript
-    elsif (@class_list != 1) {
-        $self->throw("Have mix of transcript classes in gene where not expected:\n"
-            . join('', map "  $_\n", @class_list));
-    }
-    else {
-        # Gene type is the same as the transcript type
-        $self->type(@class_list);
-    }
-}
 
 =head1 detach_DBAdaptors
 
