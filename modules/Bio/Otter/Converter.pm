@@ -1762,94 +1762,67 @@ sub ace_to_XML {
     return $xml;
 }
 
-# From GeneBuilder (with added translation existence check)
 sub prune_Exons {
-  my ($gene) = @_;
+    my ($gene) = @_;
 
-  #my @unique_Exons;
+    # keep track of all unique exons found so far to avoid making duplicates
+    # need to be very careful about translation->start_exon and translation->end_Exon
 
-  # keep track of all unique exons found so far to avoid making duplicates
-  # need to be very careful about translation->start_exon and translation->end_Exon
+    #print STDERR "Pruning exons\n";
 
-  #print STDERR "Pruning exons\n";
+    my( %stable_key, %unique_exons );
 
-  #my %exonhash;
+    foreach my $tran (@{ $gene->get_all_Transcripts }) {
+        my( @transcript_exons );
+        foreach my $exon (@{$tran->get_all_Exons}) {
+            my $key = exon_hash_key($exon);
+            if (my $found = $unique_exons{$key}) {
+                # Use the found exon in the translation
+                if ($tran->translation) {
+                    if ($exon == $tran->translation->start_Exon) {
+                        $tran->translation->start_Exon($found);
+                    }
+                    if ($exon == $tran->translation->end_Exon) {
+                        $tran->translation->end_Exon($found);
+                    }
+                }
+                $exon = $found;
+            } else {
+                $unique_exons{$key} = $exon;
+            }
+            push (@transcript_exons, $exon);
 
-  foreach my $tran (@{ $gene->get_all_Transcripts }) {
-    my @newexons;
-    my @unique_Exons;
-    my %exonhash;
-
-    foreach my $exon (@{$tran->get_all_Exons}) {
-      my $found;
-      #always empty
-
-      UNI: foreach my $uni (@unique_Exons) {
-        if ($uni->start  == $exon->start  && 
-            $uni->end    == $exon->end    &&
-            $uni->strand == $exon->strand && 
-            $uni->phase  == $exon->phase   &&
-            $uni->end_phase == $exon->end_phase)
-        {
-          $found = $uni;
-          last UNI;
+            # Make sure we don't have the same stable IDs
+            # for different exons (different keys).
+            if (my $stable = $exon->stable_id) {
+                if (my $seen_key = $stable_key{$stable}) {
+                    if ($seen_key ne $key) {
+                        $exon->{_stable_id} = undef;
+                        printf STDERR  "Already seen exon_id '$stable' on different exon\n";
+                    }
+                } else {
+                    $stable_key{$stable} = $seen_key;
+                }
+            }
         }
-      }
-        ### print  " Exon " . $exon->stable_id . "\n";
-        ### print  " Phase " . $exon->phase . " EndPhase " . $exon->end_phase . "\n";
-        ### print  " Strand " . $exon->strand . " Start " . $exon->start . " End ". $exon->end ."\n";
-
-      if (defined($found)) {
-
-        push (@newexons, $found);
-        if ($tran->translation) {
-          if ($exon == $tran->translation->start_Exon) {
-            $tran->translation->start_Exon($found);
-          }
-
-          if ($exon == $tran->translation->end_Exon) {
-            $tran->translation->end_Exon($found);
-          }
-        }
-      } else {
-
-        ### This is nasty for the phases - sometimes exons come back with 
-        ### the same stable id and different phases - we need to strip off
-        ### the stable id if we think we have a new exon but we've
-        ### already seen the stable_id
-
-        if (defined($exon->stable_id) && defined($exonhash{$exon->stable_id})) {
-
-           $exon->{_stable_id} = undef;
-          # print STDERR  "Exon id " .$exon->stable_id . "\n";
-        }
-        push (@newexons,     $exon);
-        push (@unique_Exons, $exon);
-      }
-      if (my $stable = $exon->stable_id) {
-        $exonhash{$stable} = 1;
-      }
-    }
-    $tran->flush_Exons;
-    #foreach my $exon (@newexons) {
-    foreach my $exon (@unique_Exons) {
-      $tran->add_Exon($exon);
-    }
-  }
-
-  my @exons = @{$gene->get_all_Exons};
-
- # %exonhash = ();
-  my %exonhash = ();
-
-    foreach my $ex (@exons) {
-        if (my $stable = $ex->stable_id) {
-            $exonhash{$stable}++;
+        $tran->flush_Exons;
+        foreach my $exon (@transcript_exons) {
+            $tran->add_Exon($exon);
         }
     }
+}
 
-    while (my ($id, $count) = each %exonhash) {
-    }
+sub exon_hash_key {
+    my( $exon ) = @_;
+    
+    # This assumes that all the exons we
+    # compare will be on the same contig
+    return join(" ",
+        $exon->start,
+        $exon->end,
+        $exon->strand,
+        $exon->phase,
+        $exon->end_phase);
 }
 
 sub path_to_XML {
