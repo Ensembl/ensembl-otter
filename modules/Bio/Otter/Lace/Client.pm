@@ -240,9 +240,8 @@ sub save_otter_ace {
             'email='    . uri_escape($self->email),
             'dataset='  . uri_escape($dataset->name),
             'data='     . uri_escape($xml),
-            'unlock=false',     ### May want to provide annotators with
-            )                   ### option to save during sessions, not
-                                ### just on exit.
+            'unlock=false',     # We give the annotators the option to
+            )                   # save during sessions, not just on exit.
         );
     
     my $content = $self->get_UserAgent->request($request)->content;
