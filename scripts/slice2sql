@@ -2,6 +2,8 @@
 
 use strict;
 
+$| = 1;
+
 use Getopt::Long;
 
 use Bio::Otter::EnsEMBL2SQL::Core;
@@ -10,10 +12,11 @@ my $host   = 'kaka.sanger.ac.uk';
 my $user   = 'anonymous';
 my $pass   = '';
 my $port   = 3306;
-my $dbname = 'homo_sapiens_core_13_31';
+#my $dbname = 'homo_sapiens_core_13_31';
+my $dbname = 'homo_sapiens_estgene_13_31';
 my $chr    = '6';
 my $start  = 1;
-my $end    = 10000000;
+my $end    = 1000000;
 my $type   = 'NCBI31';
 my $dir;
 
@@ -34,6 +37,7 @@ my $dir;
 my $e2sql = new Bio::Otter::EnsEMBL2SQL::Core(-host   => $host,
 					      -user   => $user,
 					      -pass   => $pass,
+                                              -port   => $port,
 					      -dbname => $dbname,
 					      -chr    => $chr,
 					      -start  => $start,
@@ -53,40 +57,10 @@ if (-e $dir) {
 
 print "Dumping to directory $dir\n";
 
-my @tables = ('meta',
-	      'karyotype',
-	      'chromosome',
-	      'analysis',
-	      'map',
-	      'mapset',
-	      'interpro',
-	      'dnafrag',
-	      'external_db',
-	      'assembly',
-	      'contig',
-	      'clone',
-	      'dna',
-	      'exon',
-	      'exon_transcript',
-	      'transcript',
-	      'translation',
-	      'gene',
-	      'exon_stable_id',
-	      'transcript_stable_id',
-	      'translation_stable_id',
-	      'gene_stable_id',
-	      'dna_align_feature',
-	      'protein_align_feature',
-	      'simple_feature',
-	      'prediction_transcript',
-	      'protein_feature',
-	      'repeat_feature',
-	      'repeat_consensus',
-	      'xref',
-	      'object_xref',
-	      'identity_xref',
-	      'external_synonym');
+my @tables = @{$e2sql->get_tables};
 
 foreach my $table (@tables) {
+    print "Getting table $table\n";
+
     $e2sql->dump_SQL_to_file($dir,$table);
 }
