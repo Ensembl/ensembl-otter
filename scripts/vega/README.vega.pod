@@ -1,0 +1,32 @@
+=head1 Notes on scripts to create vega database from otter/pipeline
+
+Update which vega_set is dumped
+
+	mysql> select ss.vega_set_id,assembly_type,vega_name from vega_set vs, sequence_set ss where ss.vega_set_id=vs.vega_set_id and vega_name='6';
++-------------+---------------+-----------+
+| vega_set_id | assembly_type | vega_name |
++-------------+---------------+-----------+
+|           2 | chr6-13       | 6         |
++-------------+---------------+-----------+
+1 row in set (0.02 sec)
+
+	mysql> select ss.vega_set_id,assembly_type from sequence_set ss where assembly_type like 'chr6-%';
++-------------+---------------+
+| vega_set_id | assembly_type |
++-------------+---------------+
+|           2 | chr6-13       |
+|           0 | chr6-14       |
++-------------+---------------+
+2 rows in set (0.00 sec)
+
+	update sequence_set set vega_set_id=2 where assembly_type='chr6-14';
+	update sequence_set set vega_set_id=0 where assembly_type='chr6-13';
+
+mysql> select ss.vega_set_id,assembly_type from sequence_set ss where assembly_type like 'chr6-%';
++-------------+---------------+
+| vega_set_id | assembly_type |
++-------------+---------------+
+|           0 | chr6-13       |
+|           2 | chr6-14       |
++-------------+---------------+
+2 rows in set (0.00 sec)

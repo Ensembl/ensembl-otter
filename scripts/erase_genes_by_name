@@ -1,0 +1,346 @@
+#!/usr/local/bin/perl
+
+# script to carry out most of changes required (by SQL) to create
+# a new gene and move some of the transcripts to it - see help for
+# more details.
+
+use strict;
+use Getopt::Long;
+use DBI;
+use Sys::Hostname;
+
+# hard wired
+my $driver="mysql";
+my $port=3352;
+my $password;
+my $host='ecs4';
+my $user='ensadmin';
+my $db='mouse_vega040714_tmp';
+my $help;
+my $phelp;
+my $opt_v;
+my $opt_t;
+my @gene_names;
+
+$Getopt::Long::ignorecase=0;
+
+GetOptions(
+	   'port:s', \$port,
+	   'pass:s', \$password,
+	   'host:s', \$host,
+	   'user:s', \$user,
+	   'db:s', \$db,
+
+	   'help', \$phelp,
+	   'h', \$help,
+	   'v', \$opt_v,
+	   't', \$opt_t,
+	   'gene:s', \@gene_names,
+	   );
+
+# help
+if($help || scalar(@gene_names)==0){
+    print<<ENDOFTEXT;
+split_gene.pl
+  -host           char      host of mysql instance ($host)
+  -db             char      database ($db)
+  -port           num       port ($port)
+  -user           char      user ($user)
+  -pass           char      passwd
+
+  -gene           char      gene name,[gene_name] (or file)
+
+  -h                        this help
+  -help                     perldoc help
+  -v                        verbose
+
+ENDOFTEXT
+    exit 0;
+}elsif($phelp){
+    exec('perldoc', $0);
+    exit 0;
+}
+
+if (scalar(@gene_names)) {
+  my $gene_name=$gene_names[0];
+  if(scalar(@gene_names)==1 && -e $gene_name){
+    # 'gene' is a file
+    @gene_names=();
+    open(IN,$gene_name) || die "cannot open $gene_name";
+    while(<IN>){
+      chomp;
+      push(@gene_names,$_);
+    }
+    close(IN);
+  }else{
+    @gene_names = split (/,/, join (',', @gene_names));
+  }
+  print scalar(@gene_names)." gene names found\n";
+}
+
+# connect
+my $dbh;
+if(my $err=&_db_connect(\$dbh,$host,$db,$user,$password)){
+    print "failed to connect $err\n";
+    exit 0;
+}
+
+delete_genes_by_name($dbh, @gene_names);
+
+sub delete_genes_by_name {
+    my( $dbh, @gene_names ) = @_;
+    
+    my $name_str = join(',', map "'$_'", @gene_names);
+    ### Get exon IDs then use Stephen's delete genes by chromosome script
+    
+    # if contains OTT, assume names are stable id's
+    my $sql;
+    if($name_str=~/OTT/){
+      $sql= qq{
+        SELECT e.exon_id
+        FROM gene g
+          , gene_stable_id gsid
+          , transcript t
+          , exon_transcript et
+          , exon e
+        WHERE g.gene_id = gsid.gene_id
+          AND g.gene_id = t.gene_id
+          AND t.transcript_id = et.transcript_id
+          AND et.exon_id = e.exon_id
+          AND gsid.stable_id in ($name_str)
+        GROUP BY e.exon_id
+        };
+    }else{
+      $sql= qq{
+        SELECT e.exon_id
+        FROM gene g
+          , gene_stable_id gsid
+          , gene_info i
+          , gene_name n
+          , transcript t
+          , exon_transcript et
+          , exon e
+        WHERE g.gene_id = gsid.gene_id
+          AND gsid.stable_id = i.gene_stable_id
+          AND i.gene_info_id = n.gene_info_id
+          AND g.gene_id = t.gene_id
+          AND t.transcript_id = et.transcript_id
+          AND et.exon_id = e.exon_id
+          AND n.name in ($name_str)
+        GROUP BY e.exon_id
+        };
+    }
+    my $sth = $dbh->prepare($sql);
+    $sth->execute;    
+
+    my( $exon_id );
+    $sth->bind_columns(\$exon_id);
+    
+    my( @exon );
+    while ($sth->fetch) {
+        push(@exon, $exon_id);
+    }
+    print "Deleting ",scalar(@exon)," distinct exon ids\n";
+
+    exit if $opt_t;
+
+    foreach my $e_id (@exon) {
+        foreach my $table (qw{ exon supporting_feature exon_transcript exon_stable_id }) {
+            $dbh->do(qq{DELETE FROM $table WHERE exon_id = $e_id});
+        }
+    }
+
+    print "Done\n"; 
+
+
+
+    my $transcript_ids = $dbh->selectall_arrayref(qq{
+    SELECT t.transcript_id
+    FROM transcript t
+    LEFT JOIN exon_transcript et
+      ON t.transcript_id = et.transcript_id
+    WHERE et.transcript_id IS NULL});
+
+    print "Deleting ",scalar(@$transcript_ids)," distinct transcript ids\n"; 
+
+    foreach my $t_id (@$transcript_ids) {
+
+       $dbh->do(qq{delete from transcript where transcript_id = $t_id->[0]}); 
+       $dbh->do(qq{delete from transcript_stable_id where transcript_id = $t_id->[0]});
+
+    }
+
+    print "Done\n"; 
+
+
+    my $translation_ids = $dbh->selectall_arrayref(qq{
+    SELECT trans.translation_id
+    FROM translation trans
+    LEFT JOIN transcript t
+      ON trans.translation_id = t.translation_id
+    WHERE  t.translation_id IS NULL});
+
+    print "Deleting ",scalar(@$translation_ids)," distinct translation ids\n"; 
+
+
+    foreach my $trans_id (@$translation_ids) {
+
+       $dbh->do(qq{delete from translation where translation_id = $trans_id->[0]}); 
+       $dbh->do(qq{delete from translation_stable_id where translation_id = $trans_id->[0]});
+       $dbh->do(qq{delete from protein_feature where translation_id = $trans_id->[0]})
+    }
+
+
+    print "Done\n"; 
+
+
+
+    my $gene_ids = $dbh->selectall_arrayref(qq{
+    SELECT g.gene_id
+    FROM gene g
+    LEFT JOIN transcript t
+      ON g.gene_id = t.gene_id
+    WHERE  t.gene_id IS NULL});
+
+
+    print "Deleting ",scalar(@$gene_ids)," distinct gene ids\n"; 
+
+
+    foreach my $gene_id (@$gene_ids) {
+
+       $dbh->do(qq{delete from gene where gene_id = $gene_id->[0]});
+       $dbh->do(qq{delete from gene_stable_id where gene_id = $gene_id->[0]});
+       $dbh->do(qq{delete from gene_description where gene_id = $gene_id->[0]});
+
+    }
+
+    print "Done\n\n"; 
+
+
+    print "Deleting Annotation info\n";
+
+    my $gene_info_ids = $dbh->selectall_arrayref(qq{
+    SELECT gi.gene_info_id
+    FROM gene_info gi
+    LEFT JOIN gene_stable_id gsi
+      ON gsi.stable_id = gi.gene_stable_id
+      WHERE  gsi.stable_id IS NULL});
+
+
+
+    print "Deleting ",scalar(@$gene_info_ids)," distinct gene_info ids\n"; 
+
+
+    foreach my $gene_info_id(@$gene_info_ids) {
+
+       $dbh->do(qq{delete from gene_info where gene_info_id = $gene_info_id->[0]});
+       $dbh->do(qq{delete from gene_name where gene_info_id = $gene_info_id->[0]});
+       $dbh->do(qq{delete from gene_remark where gene_info_id = $gene_info_id->[0]});
+       $dbh->do(qq{delete from gene_synonym where gene_info_id = $gene_info_id->[0]});
+       $dbh->do(qq{delete from current_gene_info where gene_info_id = $gene_info_id->[0]});
+
+    }
+
+    print "Done\n";
+
+
+    my $trans_info_ids = $dbh->selectall_arrayref(qq{
+    SELECT ti.transcript_info_id
+    FROM transcript_info ti
+    LEFT JOIN transcript_stable_id tsi
+      ON  tsi.stable_id = ti.transcript_stable_id
+      WHERE  tsi.stable_id IS NULL});
+
+
+    print "Deleting ",scalar(@$trans_info_ids)," distinct transcript_info ids\n"; 
+
+    foreach my $trans_info_id(@$trans_info_ids) {
+
+       $dbh->do(qq{delete from transcript_info where transcript_info_id = $trans_info_id->[0]});
+       $dbh->do(qq{delete from transcript_remark where transcript_info_id = $trans_info_id->[0]});
+       $dbh->do(qq{delete from current_transcript_info where transcript_info_id = $trans_info_id->[0]});
+       $dbh->do(qq{delete from evidence where transcript_info_id = $trans_info_id->[0]});
+
+    }
+
+    print "Done\n";
+
+
+    print "Deleting Xrefs\n";
+
+
+    my $gene_xref_ids = $dbh->selectall_arrayref(qq{
+    SELECT ox.xref_id,
+    ox.ensembl_id,
+    ox.object_xref_id
+    FROM object_xref ox
+    LEFT JOIN gene g
+      ON  ox.ensembl_id = g.gene_id
+      WHERE 
+      ox.ensembl_object_type = 'Gene'
+      AND  g.gene_id IS NULL});
+
+
+
+
+    foreach my $gene_xref_id (@$gene_xref_ids) {
+
+        $dbh->do(qq{DELETE FROM xref WHERE xref_id = $gene_xref_id->[0]});
+        $dbh->do(qq{DELETE FROM object_xref WHERE ensembl_object_type = 'Gene' AND ensembl_id = $gene_xref_id->[1]});
+        $dbh->do(qq{DELETE FROM external_synonym WHERE xref_id = $gene_xref_id->[0]});
+        $dbh->do(qq{DELETE FROM identity_xref WHERE object_xref_id = $gene_xref_id->[2]});
+
+    }
+
+
+
+    my $trans_xref_ids = $dbh->selectall_arrayref(qq{
+    SELECT ox.xref_id,
+    ox.ensembl_id,
+    ox.object_xref_id
+    FROM object_xref ox
+    LEFT JOIN transcript t
+      ON  ox.ensembl_id = t.transcript_id
+      WHERE 
+      ox.ensembl_object_type = 'Transcript'
+      AND  t.transcript_id IS NULL});
+
+
+    foreach my $trans_xref_id (@$trans_xref_ids) {
+
+        $dbh->do(qq{DELETE FROM xref WHERE xref_id = $trans_xref_id->[0]});
+        $dbh->do(qq{DELETE FROM object_xref WHERE ensembl_object_type = 'Transcript' AND ensembl_id = $trans_xref_id->[1]});
+        $dbh->do(qq{DELETE FROM external_synonym WHERE xref_id = $trans_xref_id->[0]});
+        $dbh->do(qq{DELETE FROM identity_xref WHERE object_xref_id = $trans_xref_id->[2]});
+
+    }
+
+    
+}
+
+# connect to db with error handling
+sub _db_connect{
+    my($rdbh,$host,$database,$user,$password)=@_;
+    my $dsn = "DBI:$driver:database=$database;host=$host;port=$port";
+
+    # try to connect to database
+    eval{
+	$$rdbh = DBI->connect($dsn, $user, $password,
+			    { RaiseError => 1, PrintError => 0 });
+    };
+    if($@){
+	print "$database not on $host\n$@\n" if $opt_v;
+	return -2;
+    }
+}
+
+__END__
+
+=head1 NAME - erase_genes_by_name
+
+    erase_genes_by_name -dataset <NAME> <GENE_NAME_LIST>
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
