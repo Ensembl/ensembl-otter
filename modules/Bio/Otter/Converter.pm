@@ -702,7 +702,8 @@ sub otter_to_ace {
     # Add Sequence objects for Transcripts
     foreach my $gene (@$genes) {
         my $gene_name;
-        if (my $gn = $gene->gene_info->name) {
+        my $info = $gene->gene_info;
+        if (my $gn = $info->name) {
             $gene_name = $gn->name;
         }
         $gene_name ||= $gene->stable_id;
@@ -722,8 +723,11 @@ sub otter_to_ace {
             }
 
             my $method = $tran->transcript_info->class->name;
-            $str .= "Method \"" . $method . "\"\n";
-
+            #$str .= "Method \"" . $method . "\"\n";
+            $str .= "Method \"" . $method ;
+            $str .= "_trunc" if $info->truncated_flag ;
+            $str .=  "\"\n";
+            
             # Extra tags needed by ace
             if ($method =~ /supported_mRNA/) {
                 $str .= "Processed_mRNA\n";     ### check this
