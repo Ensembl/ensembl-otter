@@ -371,13 +371,15 @@ sub search{
         $sn->SequenceSetChooser($self);
         $sn->initialise;
         $sn->draw;
-        $sn->raise ;
+        $top->raise ;
     }else{
         ## send mesasage to main window
         $self->message("no clones matched your search criteria") ;
     }
     my $search_window = $self->{'_search_window'} ;
+    warn "trying to with draw" ;
     $search_window->withdraw();
+    warn "withdrawing!";
 }
 
 
