@@ -105,7 +105,11 @@ sub get_default_mutable_GeneMethod {
     my( $self ) = @_;
     
     my @possible = grep $_->is_coding, $self->get_all_mutable_GeneMethods;
-    if (@possible)  {
+    if (my ($supp) = grep $_->name eq 'supported', @possible) {
+        # "supported" is the default method, if it is there
+        return $supp;
+    }
+    elsif (@possible)  {
         return $possible[0];
     } else {
         $self->message("Unable to get a default GeneMethod");

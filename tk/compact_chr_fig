@@ -5,8 +5,6 @@ use lib '/nfs/disk84/jgrg/work/tk';
 ### compact_chr_fig
 
 use strict;
-
-use strict;
 use GenomeCanvas;
 use GenomeCanvas::Band::TilingPath;
 use GenomeCanvas::Band::Plot;
@@ -34,7 +32,7 @@ use Getopt::Long 'GetOptions';
         ) or die "error processing command line";
 
     my $host            = 'ecs1b';
-    my $db_name         = 'chr20';
+    my $db_name         = 'human_chr20_fin';
     my $user            = 'ensro';
     my $chr_name        = 'chr20';
     my $static_type     = 'SANGER';
@@ -89,10 +87,10 @@ use Getopt::Long 'GetOptions';
         $tiling->tiling_direction(-1);
         $gc->add_Band($tiling);
 
-        my $genetic = GenomeCanvas::Band::GeneticMap->new;
-        $genetic->virtual_contig($vc);
-        $genetic->epcr_results_file('/nfs/disk84/jgrg/work/chr_20/genetic_map/epcr-new_SANGER.out');
-        $gc->add_Band($genetic);
+        #my $genetic = GenomeCanvas::Band::GeneticMap->new;
+        #$genetic->virtual_contig($vc);
+        #$genetic->epcr_results_file('/nfs/disk84/jgrg/work/chr_20/genetic_map/epcr-new_SANGER.out');
+        #$gc->add_Band($genetic);
 
         my $repeat = GenomeCanvas::DensityBand::RepeatFeature->new;
         $repeat->virtual_contig($vc);
@@ -107,9 +105,9 @@ use Getopt::Long 'GetOptions';
         $plot->x_major(0.2);
         $gc->add_Band($plot);
 
-        my $snps = GenomeCanvas::Band::SNP->new;
-        $snps->virtual_contig($vc);
-        $gc->add_Band($snps);
+        #my $snps = GenomeCanvas::Band::SNP->new;
+        #$snps->virtual_contig($vc);
+        #$gc->add_Band($snps);
 
         my $cpg = GenomeCanvas::Band::CpG->new;
         $cpg->virtual_contig($vc);
