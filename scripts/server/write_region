@@ -154,18 +154,9 @@ print STDERR "done\n";
 
 # Get stable IDs for any genes, transcripts, translations and exons that don't have them
 my $sida = $odb->get_StableIdAdaptor();
-for (my $i = 0; $i < @$genes;) {
-    my $gene = $genes->[$i];
+strip_incomplete_genes($genes);
 
-    # Can't write incomplete genes
-    if ($gene->gene_info->truncated_flag) {
-        printf STDERR "Skipping incomplete gene '%s'\n", $gene->gene_info->name->name;
-        splice(@$genes, $i, 1);
-        next;
-    } else {
-        $i++;
-    }
-    
+foreach my $gene (@$genes) {    
     $gene->stable_id($sida->fetch_new_gene_stable_id)
         unless $gene->stable_id;
     foreach my $trans (@{$gene->get_all_Transcripts}) {
@@ -206,6 +197,7 @@ my $dbgenes;
 print STDERR "\nFetching database genes for comparison...";
 eval {
   $dbgenes = $oaga->fetch_by_Slice($slice);
+  strip_incomplete_genes($dbgenes);
 };
 if ($@) {
   error_exit($q, "Failed fetching genes [$@]");
@@ -244,7 +236,7 @@ if ($@) {
 my( @gene_events, @changed_clones );
 
 
-print STDERR "\nComparing annotations " . scalar(@$dbgenes) . " " . scalar(@$genes) . "...\n";
+print STDERR "\nComparing " . scalar(@$dbgenes) . " old to " . scalar(@$genes) . " genes...\n";
 
 my( $del_sf, $save_sf );
 eval {
@@ -253,11 +245,7 @@ eval {
     print STDERR "Old clones\n";
     my $old_clones = clones_from_path($slice->get_tiling_path);
 
-    print STDERR "trimming old genes to slice:\n";
-    my $old_genes = trim_genes_to_slice($dbgenes, $slice);
-    print STDERR "trimming new genes to slice:\n";
-    my $new_genes = trim_genes_to_slice($genes,  $slice);
-    @gene_events = $ab->compare_genes($old_genes, $new_genes);
+    @gene_events = $ab->compare_genes($dbgenes, $genes);
     @changed_clones = $ab->compare_clones($old_clones, $new_clones);
     
     # $slice was fetched from the database by XML_to_otter, so we can simply:
@@ -351,43 +339,7 @@ if ($params{'unlock'} eq 'true') {
 
 #####################################################################################
 
-sub trim_genes_to_slice {
-    my( $genes, $slice ) = @_;
-
-    my $start = $slice->chr_start;
-    my $end   = $slice->chr_end;
-
-    my $new_genes = [];
-
-    print STDERR "Start end $start $end\n";
-
-    foreach my $g (@$genes) {
-        my ($gstart,$gend) = find_gene_ends($g);
-
-        $gstart = $gstart + $start -1;
-        $gend   = $gend   + $start -1;
-
-        if ($gstart >= $start and $gend <= $end) {
-            print STDERR "Gene inside region " . $gstart . " " . $gend . "\t" . $g->stable_id . "\n";
-            push(@$new_genes,$g);
-        } else {
-            print STDERR "Gene outside region " . $gstart . " " . $gend . "\t" . $g->stable_id . "\n";
-        }
-    }
-    return $new_genes;
-}
-
-sub find_gene_ends {
-  my ($g) = @_;
-
-  my @exons = @{$g->get_all_Exons}
-    or die "No exons in gene '", $g->gene_info->name->name, "'";
-
-  @exons = sort {$a->start <=> $b->start} @exons;
-
-  return ($exons[0]->start,$exons[$#exons]->end);
-}
-    
+ 
 sub error_exit {
   my ($q,$reason) = @_;
 
@@ -467,4 +419,17 @@ sub attach_analysis_objects_and_transform_to_slice {
     }
 }
 
-
+sub strip_incomplete_genes {
+    my( $gene_list ) = @_;
+    
+    for (my $i = 0; $i < @$gene_list;) {
+        my $gene = $gene_list->[$i];
+        if ($gene->gene_info->truncated_flag) {
+            printf STDERR "Splicing out incomplete gene '%s'\n", $gene->gene_info->name->name;
+            splice(@$gene_list, $i, 1);
+            next;
+        } else {
+            $i++;
+        }
+    }
+}
