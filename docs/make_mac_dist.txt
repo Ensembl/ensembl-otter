@@ -423,6 +423,14 @@ Copying ensembl and bioperl files to $LONGDIR
  rehash
  moveperl -l -a -s /usr/local cvsdis $LONGDIR
 
+Adding apollo
+==
+ mkdir apollodis
+ 
+ Then install apollo from fruitfly into apollodis
+
+ Then:
+ moveperl -l -a $PWD/apollodis $LONGDIR 
 
 Making a distribution tar
 ==
