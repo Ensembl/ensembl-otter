@@ -8,6 +8,8 @@ use Data::Dumper ;
 use strict;
 use Carp;
 
+my $DEBUG = 0;
+
 sub new {
     my $pkg = shift;
     
@@ -114,6 +116,7 @@ sub fetch_Clones_containing_stable_id{
         eval{
             print STDERR "Looking for '$stable_id' and assuming it's a gene\n";
             my $geneObj     = $geneAdapt->fetch_by_stable_id($stable_id);
+            # print STDERR "Found '$stable_id' with version " . $geneObj->version . "\n";
             foreach my $exonObj(@{$geneObj->get_all_Exons}){
                 my $clone_name = $exonObj->contig->clone->id();
                 #print STDERR "Found '$clone_name'\n";
@@ -131,6 +134,7 @@ sub fetch_Clones_containing_stable_id{
         eval{
             print STDERR "Looking for '$stable_id' and assuming it's a transcript\n";
             my $transcriptObj     = $transcriptAdapt->fetch_by_stable_id($stable_id);
+            # print STDERR "Found '$stable_id' with version " . $transcriptObj->version . "\n";
             foreach my $exonObj(@{$transcriptObj->get_all_Exons}){
                 my $clone_name = $exonObj->contig->clone->id();
                 #print STDERR "Found '$clone_name'\n";
@@ -148,6 +152,7 @@ sub fetch_Clones_containing_stable_id{
         eval{
             print STDERR "Looking for '$stable_id' and assuming it's a translation\n";
             my $transcriptObj     = $transcriptAdapt->fetch_by_translation_stable_id($stable_id);
+            print STDERR "Found transcript with id '".$transcriptObj->stable_id."' & version " . $transcriptObj->version . "\n";
             foreach my $exonObj(@{$transcriptObj->get_all_Exons}){
                 my $clone_name = $exonObj->contig->clone->id();
                 #print STDERR "Found '$clone_name'\n";
@@ -227,7 +232,7 @@ sub fetch_Clones_containing_CloneNames{
     confess "Missing clone names argument " unless $clone_names ;
     
     my $clone_names_string = join(',', map "'$_'", @$clone_names);
-    warn "looking for clone names $clone_names_string";
+    warn "looking for clone names $clone_names_string" if $DEBUG;
  
     
     my $dba= $self->DataSet->get_cached_DBAdaptor ;
@@ -236,18 +241,21 @@ sub fetch_Clones_containing_CloneNames{
 
     my $results = 0;
     my $sth = $dba->prepare (qq{
-        SELECT DISTINCT cl.name, cl.embl_acc, cl.embl_version 
+        SELECT 
+--            DISTINCT 
+            cl.name, cl.embl_acc, cl.embl_version 
             , c.contig_id, c.name, c.length	
             , a.chromosome_id, a.chr_start, a.chr_end
             , a.contig_start, a.contig_end, a.contig_ori
             , a.type
             , lk.clone_lock_id
-        FROM   contig c ,  assembly a , clone cl
+        FROM assembly a, contig c STRAIGHT_JOIN clone cl
         LEFT JOIN clone_lock lk ON lk.clone_id = cl.clone_id
         WHERE cl.clone_id = c.clone_id
         AND a.contig_id = c.contig_id
         AND (cl.name IN ($clone_names_string)
-            OR cl.embl_acc IN ($clone_names_string))
+             OR cl.embl_acc IN ($clone_names_string)
+             OR CONCAT(cl.embl_acc, '.', cl.embl_version) IN ($clone_names_string))
         ORDER BY a.chromosome_id , a.chr_start
     });
 
@@ -340,7 +348,7 @@ sub get_context_clones{
                 }
                 last if $last_idx; # not need to keep on searching
             }
-            warn "first = $first_idx, last = $last_idx, lower = 0, upper = $full_ss_size\n";
+            warn "first = $first_idx, last = $last_idx, lower = 0, upper = $full_ss_size\n" if $DEBUG;
 
             # make this faster easier to read
             my $prefix_start = ($first_idx - $context_size < 0 ? 0 : $first_idx - $context_size);
