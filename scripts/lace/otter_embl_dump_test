@@ -53,7 +53,8 @@ use Carp;
     # Connect to Ensembl/Otter database and fetch adaptors
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
     my $ds = $cl->get_DataSet_by_name($dataset_name); #Bio::Otter::Lace::DataSet
-
+    my $ss = $ds->get_SequenceSet_by_name($sequence_set);
+    
     my $otter_db = $ds->get_cached_DBAdaptor; #Bio::EnsEMBL::Container
     $otter_db->assembly_type($sequence_set);  #e.g. 'chr1-07'
     
@@ -65,6 +66,7 @@ use Carp;
         
         my $ft_factory = Bio::Otter::EMBL::Factory->new;
         $ft_factory->DataSet($ds);
+        $ft_factory->SequenceSet($ss);
         $ft_factory->accession($accession);
         $ft_factory->sequence_version($seq_version);
         $ft_factory->entry_name($accession);
@@ -74,6 +76,7 @@ use Carp;
         $ft_factory->organism('Homo sapiens');
         $ft_factory->clone_lib('to_be_provided');
         $ft_factory->clone_name('to_be_provided_2');
+        #$ft_factory->chromosome_name('11b');
         $ft_factory->keywords('HTG');
 
         #embl_setup sets $ft_factory->accession, and $ft_factory->sequence_version

@@ -46,7 +46,7 @@ use Hum::EMBL::Exon;
 use Hum::EMBL::ExonLocation;
 use Hum::EMBL::LocationUtils qw( simple_location locations_from_subsequence
     location_from_homol_block );
-use Hum::EmblUtils qw( add_source_FT add_Organism );
+use Hum::EmblUtils qw( add_Organism add_source_FT species_binomial );
 
 Hum::EMBL->import(
     'AC *' => 'Hum::EMBL::Line::AC_star',
@@ -107,8 +107,7 @@ from the DataSet, together with Slice and Gene adaptors.
 sub get_DBAdaptors {
     my ( $self ) = @_;
 
-    my $ds = $self->DataSet
-        or confess "DataSet not set";
+    my $ds = $self->DataSet or confess "DataSet not set";
 
     #Bio::EnsEMBL::Container    
     my $otter_db = $ds->get_cached_DBAdaptor
@@ -179,10 +178,17 @@ sub embl_setup {
     unless ($seq_length = $self->seq_length) {
         $seq_length = $self->get_clone_length_from_otter;
     }
-    confess "Could not get clone length\n" unless $seq_length;
+    confess "Could not get clone length" unless $seq_length;
 
     $id->seqlength($seq_length);
     $embl->newXX;
+    
+    #Chromosome;
+    my $chromosome_name;
+    unless ($chromosome_name = $self->chromosome_name) {
+        $chromosome_name = $self->get_chromosome_name_from_otter;
+    }
+    confess "Could not get chromosome name" unless $chromosome_name;
     
     # AC line
     my $ac = $embl->newAC;
@@ -243,6 +249,7 @@ sub embl_setup {
         
     $source->addQualifierStrings('mol_type',  $mol_type);
     $source->addQualifierStrings('organism',  "Homo sapiens");
+    $source->addQualifierStrings('chromosome',  $chromosome_name);
     $source->addQualifierStrings('clone',     $clone_name);
     $source->addQualifierStrings('clone_lib', $clone_lib);
 
@@ -319,7 +326,8 @@ sub embl_setup {
 
 =head2 add_sequence_from_otter
 
-
+Gets the Clone dna sequence from the Contig attached to the Clone.
+Confesses if there is more than one Contig in the Clone.
 
 =cut
 
@@ -369,6 +377,16 @@ sub accession {
         $self->{'_bio_otter_embl_factory_accession'} = $value;
     }
     return $self->{'_bio_otter_embl_factory_accession'};
+}
+
+#Used
+sub chromosome_name {
+    my ( $self, $value ) = @_;
+    
+    if ($value) {
+        $self->{'_bio_otter_embl_factory_chromosome_name'} = $value;
+    }
+    return $self->{'_bio_otter_embl_factory_chromosome_name'};
 }
 
 #Used
@@ -685,6 +703,27 @@ sub get_clone_length_from_otter {
     return $length;
 }
 
+=head2 get_chromosome_name_from_otter
+
+Gets the chromosome name from Otter by fetching the SequenceSet,
+all and CloneSequences for it, then inspecting the first one.
+Confesses if nothing is returned.
+
+=cut
+
+sub get_chromosome_name_from_otter {
+    my ( $self ) = @_;
+    
+    my $ds = $self->DataSet or confess "DataSet not set";
+    my $ss = $self->SequenceSet or confess "SequencSet not set";
+    
+    $ds->fetch_all_CloneSequences_for_SequenceSet($ss);
+    
+    my $name = $ss->CloneSequence_list->[0]->chromosome->name
+        or confess "Cloud not get chromosome name from Otter\n";
+    return $name;
+}
+
 =head2  _cache_annotated_clone
 
 Internal method, to fetch clone from Otter using accession and
@@ -748,7 +787,7 @@ sub get_description_from_otter {
     my @clone_remarks = $clone_info->remark
         or warn "No CloneRemarks for annotated clone " . $self->accession
             . "." . $self->sequence_version;
-
+    
     my ($description_txt);
     foreach my $clone_remark (@clone_remarks) {
 
@@ -1104,6 +1143,26 @@ sub get_tiling_path_for_Slice {
     }
     
     return $tile_path;
+}
+
+=head2 SequenceSet
+ 
+Get/set method for the Bio::Otter::Lace::SequenceSet object
+used to access the Otter database.
+
+=cut
+
+#Used 
+sub SequenceSet {
+    my ( $self, $obj ) = @_;
+    
+    if ($obj) {
+        unless ($obj->isa('Bio::Otter::Lace::SequenceSet')) {
+            confess "Must pass a 'Bio::Otter::Lace::SequenceSet' object\n";
+        }
+        $self->{'_bio_otter_embl_factory_SequenceSet'} = $obj;
+    }
+    return $self->{'_bio_otter_embl_factory_SequenceSet'};
 }
 
 =head2 DataSet
