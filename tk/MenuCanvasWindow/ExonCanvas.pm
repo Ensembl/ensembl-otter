@@ -421,6 +421,7 @@ sub add_subseq_exons {
             foreach my $exon_id (map $_->[2], @del) {
                 $canvas->delete($exon_id);
             }
+            $self->decrement_exon_counter($length);
         } else {
             confess "No pairs to trim";
         }
@@ -1424,6 +1425,7 @@ sub set_tk_strand {
         my @tags = grep $_ ne $del_tag, $canvas->gettags($obj);
         $canvas->delete($obj);
         my ($i) = map /exon_id-(\d+)/, @tags;
+        #warn "Drawing strand indicator for exon $i\n";
         my( $size, $half, $pad,
             $x1, $y1, $x2, $y2 ) = $self->exon_holder_coords($i - 1);
         $self->$draw_method($x1 + $half, $y1, $size, @tags);
@@ -1990,6 +1992,13 @@ sub next_exon_number {
     
     $self->{'_max_exon_number'}++;
     return $self->{'_max_exon_number'};
+}
+
+sub decrement_exon_counter {
+    my( $self, $count ) = @_;
+    
+    confess "No count given" unless defined $count;
+    $self->{'_max_exon_number'} -= $count;
 }
 
 sub DESTROY {

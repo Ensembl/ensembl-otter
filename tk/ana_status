@@ -13,7 +13,7 @@ my $fixed_font = ['lucidatypewriter', 15, 'normal'];
 
 {
     my $mw = CanvasWindow::MainWindow->new('Analysis Status');
-    my $cw = CanvasWindow->new($mw);
+    my $cw = CanvasWindow->new($mw, 400, 200);
     
     add_query_widgets($mw, $cw);
     
@@ -66,8 +66,8 @@ sub show_status_for_set {
     my $set_name = get_set_name() or return;
     
     my $sth = prepare_statement(qq{
-        SELECT ass.rank num
-          , a.is_current
+        SELECT a.is_current
+          , ass.rank num
           , s.sequence_name
           , sens.ensembl_contig_id num
           , sens.ensembl_db_id
