@@ -135,43 +135,63 @@ sub make_menu {
     return $menu;
 }
 
+sub attach_xace {
+    my( $self ) = @_;
+    
+    if (my $xwid = $self->get_xace_window_id) {
+        my $xrem = Hum::Ace::XaceRemote->new($xwid);
+        $self->xace_remote($xrem);
+        $xrem->send_command('save');
+    } else {
+        warn "no xwindow id: $xwid";
+    }
+}
+
 sub populate_menus {
     my( $self ) = @_;
     
     my $menu_frame = $self->menu_bar
         or confess "No menu_bar";
+    my $top = $menu_frame->toplevel;
     
     # File menu
     my $file = $self->make_menu('File');
     
+    # Attach xace
+    my $xace_attach_command = sub { $self->attach_xace };
     $file->add('command',
         -label          => 'Attach Xace',
-        -command        => sub {
-            if (my $xwid = $self->get_xace_window_id) {
-                my $xrem = Hum::Ace::XaceRemote->new($xwid);
-                $self->xace_remote($xrem);
-                $xrem->send_command('save');
-            } else {
-                warn "no xwindow id: $xwid";
-            }
-        },
+        -command        => $xace_attach_command,
         -accelerator    => 'Ctrl+X',
         -underline      => 0,
         );
+    $top->bind('<Control-x>', $xace_attach_command);
+    $top->bind('<Control-X>', $xace_attach_command);
+   
+    # Resync with database
+    my $resync_command = sub { $self->resync_with_db };
     $file->add('command',
         -label          => 'Resync',
         -hidemargin     => 1,
-        -command        => sub { $self->resync_with_db },
+        -command        => $resync_command,
         -accelerator    => 'Ctrl+R',
         -underline      => 0,
         );
+    $top->bind('<Control-r>', $resync_command);
+    $top->bind('<Control-R>', $resync_command);
+    
     $file->add('separator');
+    
+    # Quit
+    my $exit_command = sub { $menu_frame->toplevel->destroy };
     $file->add('command',
         -label          => 'Exit',
-        -command        => sub { $menu_frame->toplevel->destroy },
+        -command        => $exit_command,
         -accelerator    => 'Ctrl+Q',
         -underline      => 0,
         );
+    $top->bind('<Control-q>', $exit_command);
+    $top->bind('<Control-Q>', $exit_command);
     
     # Show menu
     my $mode = $self->make_menu('Show');
@@ -198,25 +218,39 @@ sub populate_menus {
     my $subseq = $self->make_menu('SubSeq');
     $self->subseq_menubutton($subseq->parent);
     
+    # New subsequence
+    my $new_command = sub{ $self->edit_new_subsequence };
     $subseq->add('command',
         -label          => 'New',
-        -command        => sub{ $self->edit_new_subsequence },
+        -command        => $new_command,
         -accelerator    => 'Ctrl+N',
         -underline      => 0,
         );
+    $top->bind('<Control-n>', $new_command);
+    $top->bind('<Control-N>', $new_command);
+    
+    # Edit subsequence
+    my $edit_command = sub{ $self->edit_subsequences };
     $subseq->add('command',
         -label          => 'Edit',
-        -command        => sub{ $self->edit_subsequences },
+        -command        => $edit_command,
         -accelerator    => 'Ctrl+E',
         -underline      => 0,
         );
+    $top->bind('<Control-e>', $edit_command);
+    $top->bind('<Control-E>', $edit_command);
+    
+    # Delete subsequence
+    my $delete_command = sub { $self->delete_subsequences };
     $subseq->add('command',
         -label          => 'Delete',
-        -command        => sub{ warn "Called Delete" },
+        -command        => $delete_command,
         -accelerator    => 'Ctrl+D',
         -underline      => 0,
-        -state          => 'disabled',
         );
+    $top->bind('<Control-d>', $delete_command);
+    $top->bind('<Control-D>', $delete_command);
+    
     $subseq->add('separator');
     $subseq->add('command',
         -label          => 'Merge',
@@ -232,12 +266,13 @@ sub populate_menus {
         -underline      => 0,
         -state          => 'disabled',
         );
-    my $I = $subseq->add('command',
+    
+    my $isoform_command = sub{ $self->make_isoform };
+    $subseq->add('command',
         -label          => 'Isoform',
-        -command        => sub{ warn "Called Isoform" },
+        -command        => $isoform_command,
         -accelerator    => 'Ctrl+I',
         -underline      => 0,
-        -state          => 'disabled',
         );
     
     # What did I intend this command to do?
@@ -524,7 +559,6 @@ sub edit_subsequences {
     my( $self ) = @_;
     
     my @sub_names = $self->list_selected_subseq_names;
-    my $canvas = $self->canvas;
     foreach my $sub_name (@sub_names) {
         # Just show the edit window if present
         next if $self->raise_subseq_edit_window($sub_name);
@@ -536,6 +570,77 @@ sub edit_subsequences {
         $self->make_exoncanvas_edit_window($sub)
              ->initialize;
     }
+}
+
+sub delete_subsequences {
+    my( $self ) = @_;
+    
+    my $xr = $self->xace_remote;
+    unless ($xr) {
+        $self->message('No xace attached');
+        return;
+    }
+    
+    # Make a list of editable SubSeqs from those selected,
+    # which we are therefore allowed to delete.
+    my @sub_names = $self->list_selected_subseq_names;
+    my( @to_die );
+    foreach my $sub_name (@sub_names) {
+        my $sub = $self->get_SubSeq($sub_name);
+        if ($sub->GeneMethod->is_mutable) {
+            push(@to_die, $sub);
+        }
+    }
+    return unless @to_die;
+
+    # Check that none of the sequences to be deleted are being edited    
+    my $in_edit = 0;
+    foreach my $sub (@to_die) {
+        $in_edit += $self->raise_subseq_edit_window($sub->name);
+    }
+    if ($in_edit) {
+        $self->message("Must close edit windows before calling delete");
+        return;
+    }
+    
+    # Check that the user really wants to delete them
+    
+    my $question = join('',
+        "Really delete the following subsequence",
+        (@to_die > 1 ? 's' : ''),   # Pedantic plural!
+        "?\n\n",
+        map("  $_\n", map($_->name, @to_die)),
+        );
+    my $dialog = $self->canvas->toplevel->Dialog(
+        -title          => 'Delete subsequenes?',
+        -text           => $question,
+        -default_button => 'Yes',
+        -buttons        => [qw{ Yes No }],
+        );
+    my $ans = $dialog->Show;
+
+    return if $ans eq 'No';
+    
+    # Make ace delete command for subsequences
+    my $ace = '';
+    foreach my $sub (@to_die) {
+        my $sub_name   = $sub->name;
+        my $clone_name = $sub->clone_Sequence->name;
+        $ace .= qq{\n\-D Sequence "$sub_name"\n}
+            . qq{\nSequence "$clone_name"\n}
+            . qq{-D Subsequence "$sub_name"\n};
+    }
+    
+    # Delete from acedb database
+    $xr->load_ace($ace);
+    $xr->save;
+    
+    # Remove from our objects
+    foreach my $sub (@to_die) {
+        $self->delete_SubSeq($sub);
+    }
+    
+    $self->draw_current_state;
 }
 
 sub make_exoncanvas_edit_window {
@@ -773,6 +878,22 @@ sub add_SubSeq {
         confess "already have SubSeq '$name'";
     } else {
         $self->{'_subsequence_cache'}{$name} = $sub;
+    }
+}
+
+sub delete_SubSeq {
+    my( $self, $sub ) = @_;
+    
+    my $name = $sub->name;
+    my $clone_name = $sub->clone_Sequence->name;
+    my $clone = $self->get_CloneSeq($clone_name);
+    $clone->delete_SubSeq($name);
+    
+    if ($self->{'_subsequence_cache'}{$name}) {
+        $self->{'_subsequence_cache'}{$name} = undef;
+        return 1;
+    } else {
+        return 0;
     }
 }
 

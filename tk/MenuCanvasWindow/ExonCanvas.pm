@@ -5,6 +5,7 @@ package MenuCanvasWindow::ExonCanvas;
 
 use strict;
 use Carp;
+use Tk::Dialog;
 use Hum::Ace::SubSeq;
 use MenuCanvasWindow;
 use vars ('@ISA');
@@ -492,7 +493,6 @@ sub window_close {
     if ($self->is_mutable and my $sub = $self->get_SubSeq_if_changed) {
         
         # Ask the user if changes should be saved
-        require Tk::Dialog;
         my $name = $self->name;
         my $dialog = $self->canvas->toplevel->Dialog(
             -title  => 'Save changes?',
@@ -1062,9 +1062,10 @@ sub xace_save {
     my $ace = '';
     
     # Need to object if name has changed
-    my $old_name = $self->SubSeq->name;
+    my $old = $self->SubSeq;
+    my $old_name = $old->name;
     my $new_name = $sub->name;
-    if ($new_name ne $old_name) {
+    if ($old->is_archival and $new_name ne $old_name) {
         $ace .= qq{\n-R Sequence "$old_name" "$new_name"\n};
     }
     
@@ -1077,6 +1078,7 @@ sub xace_save {
         $xr->save;
         $xc->replace_SubSeq($sub, $old_name);
         $self->SubSeq($sub);
+        $self->name($new_name);
         $sub->is_archival(1);
         return 1;
     } else {
