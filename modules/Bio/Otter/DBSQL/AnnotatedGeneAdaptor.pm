@@ -133,49 +133,6 @@ sub annotate_gene {
    
 }
 
-
-=head2 get_all_Genes
-
- Title   : get_all_Genes
- Usage   :
- Function:
- Example :
- Returns : 
- Args    :
-
-
-=cut
-
-sub fetch_by_Slice{
-   my ($self,$slice) = @_;
-
-   #my @genes = @{$self->_fetch_by_Slice($slice)};
-
-   my @genes = @{$slice->get_all_Genes};
-
-   #my @genes = @{$self->SUPER::fetch_all_by_slice($slice)};
-   #my @genes = @{$self->_fetch_by_Slice($slice)};
- 
-   my %genes; 
-
-   foreach my $g (@genes) {
-      if (defined($genes{$g->stable_id})) {
-        if ($g->version > $genes{$g->stable_id}->version) {
-          $genes{$g->stable_id} = $g;
-        } 
-      } else {
-        $genes{$g->stable_id} = $g;
-      }
-   }
-   foreach my $g (keys %genes) {
-       $self->annotate_gene($genes{$g});
-   }
-  
-   my @latest_genes = values(%genes); 
-   return \@latest_genes;
-
-}
-
 =head2 fetch_by_Slice
 
   Arg [1]    : Bio::EnsEMBL::Slice $slice
@@ -187,6 +144,58 @@ sub fetch_by_Slice{
   Caller     : Bio::EnsEMBL::Slice
 
 =cut
+
+sub fetch_by_Slice{
+    my ($self,$slice) = @_;
+
+    #my @genes = @{$self->_fetch_by_Slice($slice)};
+
+    my $genes = $slice->get_all_Genes;
+
+    #my @genes = @{$self->SUPER::fetch_all_by_slice($slice)};
+    #my @genes = @{$self->_fetch_by_Slice($slice)};
+
+
+    my %genes;
+    foreach my $g (@$genes) {
+         my $stable_id = $g->stable_id;
+         if (my $other = $genes{$stable_id}) {
+             if ($g->version > $other->version) {
+                 $genes{$stable_id} = $g;
+             } 
+         } else {
+             $genes{$stable_id} = $g;
+         }
+    }
+    my $latest_genes = [];
+    foreach my $g (values %genes) {
+        $self->annotate_gene($g);
+        push(@$latest_genes, $g);
+    }
+
+    # Truncate gene components to Slice
+    foreach my $g (@$latest_genes) {
+        my $tsct_list = $g->get_all_Transcripts;
+        
+        for (my $i = 0; $i < @$tsct_list;) {
+            my $transcript = $tsct_list->[$i];
+            if ($transcript->truncate_to_Slice($slice)) {
+                $g->gene_info->truncated_flag(1);
+            }
+            my $ex_list = $transcript->get_all_Exons;
+            if (@$ex_list) {
+                $i++;
+            } else {
+                # This will fail if get_all_Transcripts() ceases to return a ref
+                # to the actual list of Transcripts inside the Gene object
+                splice(@$tsct_list, $i, 1);
+                $g->gene_info->truncated_flag(1);
+            }
+        }
+    }
+
+    return $latest_genes;
+}
 
 sub _fetch_by_Slice {
   my ( $self, $slice) = @_;

@@ -51,7 +51,8 @@ create table gene_name (
 	gene_name_id int(10) unsigned DEFAULT '0' NOT NULL auto_increment,
 	name varchar(100),
 	gene_info_id int(10) unsigned DEFAULT '0' NOT NULL,
-        PRIMARY KEY (gene_name_id)
+        PRIMARY KEY (gene_name_id),
+        KEY (name)
 );
 
 create table gene_synonym (

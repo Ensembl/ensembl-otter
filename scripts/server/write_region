@@ -139,7 +139,18 @@ print STDERR "\nFound " . scalar(@$genes) . " genes on region $chrname $chrstart
 
 # Get stable IDs for any genes, transcripts, translations and exons that don't have them
 my $sida = $odb->get_StableIdAdaptor();
-foreach my $gene (@$genes) {
+for (my $i = 0; $i < @$genes;) {
+    my $gene = $genes->[$i];
+
+    # Can't write incomplete genes
+    if ($gene->gene_info->truncated_flag) {
+        printf STDERR "Skipping incomplete gene '%s'\n", $gene->gene_info->name->name;
+        splice(@$genes, $i, 1);
+        next;
+    } else {
+        $i++;
+    }
+    
     $gene->stable_id($sida->fetch_new_gene_stable_id)
         unless $gene->stable_id;
     foreach my $trans (@{$gene->get_all_Transcripts}) {

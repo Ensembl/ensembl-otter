@@ -81,8 +81,7 @@ sub toXMLString{
 
     if (defined($self->stable_id)) { $stableid = $self->stable_id;}
    
-    $str .= " <locus_type>" . $self->type . "</locus_type>\n";
-    $str .= " <stable_id>" . $stableid . "</stable_id>\n";
+    $str .= "  <stable_id>" . $stableid . "</stable_id>\n";
 
     my $info = $self->gene_info;
 
@@ -91,16 +90,17 @@ sub toXMLString{
         if (my $n = $info->name) {
             $name = $n->name;
         }
-	$str .= " <name>"      . $name      . "</name>\n";
+	$str .= "  <name>"      . $name      . "</name>\n";
 
-        $str .= '<known>' . $info->is_known . '</known>';
+        $str .= "  <known>" . $info->known_flag . "</known>\n";
+        $str .= "  <truncated>" . $info->truncated_flag . "</truncated>\n";
 
 	my @syn = $info->synonym;
 
 	@syn = sort {$a->name cmp $b->name} @syn;
 
 	foreach my $syn (@syn) {
-	    $str .= " <synonym>" . $syn->name . "<\/synonym>\n";
+	    $str .= "  <synonym>" . $syn->name . "<\/synonym>\n";
 	}
 
         my @rem = $info->remark;
@@ -109,7 +109,7 @@ sub toXMLString{
 	foreach my $rem (@rem) {
             my $remstr = $rem->remark;
             $remstr =~ s/\n/ /g;
-	    $str .= " <remark>" . $remstr . "</remark>\n";
+	    $str .= "  <remark>" . $remstr . "</remark>\n";
 	}
 
         if (my $author = $info->author) {
@@ -126,7 +126,7 @@ sub toXMLString{
         if (defined($tran->stable_id)) {
            $tranid = $tran->stable_id;
         }
-	$str .= " <transcript>\n";
+	$str .= "  <transcript>\n";
 	$str .= "  <stable_id>$tranid</stable_id>\n";
 	
 	my $tinfo = $tran->transcript_info;
@@ -220,7 +220,7 @@ sub toXMLString{
             if (defined($tran_low) && defined($tran_high) && 
                 $ex->end >= $tran_low && $ex->start <= $tran_high) {
               my $frame;
-              # Frame for first coding exon is set to 0 
+              # Frame for first coding exon is set to 0 - no good if truncated!
               if ($ex == $tran->translation->start_Exon) {
 	        $frame = 0;
               } else {
@@ -324,8 +324,8 @@ sub set_gene_type_from_transcript_classes {
     }
     # All genes containing protein coding transcripts are either Known or Novel_CDS
     elsif ($class_set{'Coding'}) {
-        # Check for the is_known flag on the GeneInfo object
-        if ($self->gene_info->is_known) {
+        # Check for the known_flag flag on the GeneInfo object
+        if ($self->gene_info->known_flag) {
             $self->type('Known');
         }
         else {

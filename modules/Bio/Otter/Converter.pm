@@ -80,8 +80,6 @@ sub XML_to_otter {
       $currentobj = 'gene';
 
       undef($tran);
-    } elsif (/<locus_type>(.*)<\/locus_type>/) {
-      $gene->type($1);
     } elsif (/<stable_id>(.*)<\/stable_id>/) {
       my $stable_id = $1;
 
@@ -104,7 +102,7 @@ sub XML_to_otter {
     }
     
     elsif (/<known>(.*)<\/known>/) {
-        $geneinfo->is_known($1);
+        $geneinfo->known_flag($1);
     }
     
     elsif (/<remark>(.*)<\/remark>/) {
@@ -176,7 +174,7 @@ sub XML_to_otter {
         my ($end_exon,   $end_pos)   = exon_pos($tran, $tl_end);
 
         if (!defined($start_exon) || !defined($end_exon)) {
-          print "ERROR: Failed mapping translation to transcript\n";
+          print STDERR "ERROR: Failed mapping translation to transcript\n";
         } else {
           #print STDERR "Translation id " . $tran->transcript_info->name . " " . $tran->stable_id . "\n";
           my $translation = new Bio::EnsEMBL::Translation;
@@ -259,7 +257,8 @@ sub XML_to_otter {
       }
     } elsif (/<\/evidence_set>/) {
       $currentobj = 'tran';
-    } elsif (/<synonym>(.*)<\/synonym>/) {
+    }
+    elsif (/<synonym>(.*)<\/synonym>/) {
 
       if ($currentobj eq 'gene') {
         my $syn = new Bio::Otter::GeneSynonym(-name => $1);
@@ -267,7 +266,16 @@ sub XML_to_otter {
       } else {
         die "ERROR: synonym tag only associated with gene objects. Object is [$currentobj]\n";
       }
-    } elsif (/<type>(.*)<\/type>/) {
+    }
+    elsif (/<truncated>(.*)<\/truncated>/) {
+
+      if ($currentobj eq 'gene') {
+        $geneinfo->truncated_flag($1);
+      } else {
+        die "ERROR: truncated tag only associated with gene objects. Object is [$currentobj]\n";
+      }
+    }
+    elsif (/<type>(.*)<\/type>/) {
 
       if ($currentobj eq 'evidence') {
         $evidence->type($1);
@@ -375,36 +383,35 @@ sub XML_to_otter {
   # Make the sequence fragments
   my @contigs;
 
-  my $chrname  = "";
-  my $chrstart = 2000000000;
-  my $chrend   = -1;
+  my $chrname  = undef;
+  my $chrstart = undef;
+  my $chrend   = undef;
 
   foreach my $f (keys %frag) {
-    if ($chrname eq "") {
-      $chrname = $frag{$f}{chr};
-    } elsif ($chrname ne $frag{$f}{chr}) {
+    my $frag_data = $frag{$f};
+    if ($chrname and $chrname ne $frag_data->{chr}) {
       print STDERR "fname = " . $f . "\n";
-      print STDERR "frag id = " . $frag{$f}{id} . "\n";
+      print STDERR "frag id = " . $frag_data->{id} . "\n";
       die " Chromosome names are different - can't make slice [$chrname]["
-        . $frag{$f}{chr} . "]\n";
+        . $frag_data->{chr} . "]\n";
+    } else {
+        $chrname = $frag_data->{chr};
     }
 
-    if (!defined($chrstart)) {
-      $chrstart = $frag{$f}{start};
-    } elsif ($frag{$f}{start} < $chrstart) {
-      $chrstart = $frag{$f}{start};
+    if (!defined($chrstart) or $frag_data->{start} < $chrstart) {
+      $chrstart = $frag_data->{start};
     }
 
-    if ($frag{$f}{end} > $chrend) {
-      $chrend = $frag{$f}{end};
+    if (!defined($chrend) or $frag_data->{end} > $chrend) {
+      $chrend = $frag_data->{end};
     }
 
     my $tile = new Bio::EnsEMBL::Tile();
 
-    my $offset = $frag{$f}{offset};
-    my $start  = $frag{$f}{start};
-    my $end    = $frag{$f}{end};
-    my $strand = $frag{$f}{strand};
+    my $offset = $frag_data->{offset};
+    my $start  = $frag_data->{start};
+    my $end    = $frag_data->{end};
+    my $strand = $frag_data->{strand};
 
     if (!defined($start)) {
        print STDERR "ERROR: No start defined for $f\n";
@@ -429,7 +436,7 @@ sub XML_to_otter {
     my $contig = new Bio::EnsEMBL::RawContig();
 
     $contig->name($f);
-    $contig->clone($frag{$f}{clone});
+    $contig->clone($frag_data->{clone});
 
     $tile->component_Seq($contig);
 
@@ -438,6 +445,11 @@ sub XML_to_otter {
   }
   
   #$assembly_type = 'fake_gp_1' if (!defined($assembly_type));
+
+  unless ($chrname and $chrstart and $chrend) {
+      die "XML does not contain information needed to create slice:\n",
+        "chr name='$chrname'  chr start='$chrstart'  chr end='$chrend'";
+  }
 
   $slice = new Bio::EnsEMBL::Slice(-chr_name  => $chrname,
                                    -chr_start => $chrstart,
@@ -521,6 +533,8 @@ sub XML_to_otter {
         }
         $tran->{_trans_exon_array} = \@exons;
     }
+    
+    $gene->set_gene_type_from_transcript_classes;
   }
 
   #return (\@genes, \@clones,$chrname, $chrstart, $chrend,$assembly_type,$seqstr,);
@@ -562,6 +576,12 @@ sub otter_to_ace {
         my $end             = $tile->assembled_end   - $chrstart + 1;
         my $contig_start    = $tile->component_start;
         my $name            = $tile->component_Seq->name;
+
+        if (my $clone = $tile->component_Seq->clone) {
+            my $id = $clone->id;
+            $str .= qq{Clone_left_end "$id" $start\n}
+                 . qq{Clone_right_end "$id" $end\n};
+        }
 
         if ($tile->component_ori == 1) {
             $str .= qq{AGP_Fragment "$name" $start $end Align $start $contig_start\n};
@@ -758,7 +778,8 @@ sub otter_to_ace {
             $str .= "Alias \"" . $synonym->name . "\"\n";
         }
         
-        $str .= "Known\n" if $gene->is_known;
+        $str .= "Known\n"     if $info->known_flag;
+        $str .= "Truncated\n" if $info->truncated_flag;
 
         if (my $author = $info->author) {
             my $name  = $author->name;
@@ -766,13 +787,6 @@ sub otter_to_ace {
             $authors{$author->email} ||= $author;
             $str .= qq{Locus_author "$name"\n};
         }
-
-        # We don't get type from the XML
-        ## Add gene type
-        #if (my $type = $gene->type) {
-        #    ### Is this adequate?
-        #    $str .= "$type\n";
-        #}
         
         foreach my $tran (@{ $gene->get_all_Transcripts }) {
             my $tran_name;
@@ -1112,6 +1126,9 @@ sub ace_to_otter {
                 elsif (/^(Locus_(?:id|author)) $STRING/x) {
                     $cur_gene->{$1} = $2;
                 }
+                elsif (/^Truncated/) {
+                    $cur_gene->{Truncated} = 1;
+                }
                 elsif (/^Remark $STRING/x) {
                     my $remark_list = $cur_gene->{remarks} ||= [];
                     push(@$remark_list, $1);
@@ -1356,12 +1373,6 @@ sub ace_to_otter {
         my $ginfo = Bio::Otter::GeneInfo->new;
         $gene->gene_info($ginfo);
         
-        if (my $type = $gene_data->{GeneType}) {
-            $gene->type($type);
-        } else {
-            warn "No gene type for gene '$gname' - setting type to 'Gene'\n";
-            $gene->type('Gene');
-        }
 
         if (my $gsid = $gene_data->{Locus_id}) {
                 $gene->stable_id($gsid);
@@ -1392,6 +1403,7 @@ sub ace_to_otter {
                 $ginfo->remark($remark);
             }
         }
+        $ginfo->truncated_flag(1) if $gene_data->{'Truncated'};
 
         print STDERR "Made gene $gname\n";
 
@@ -1415,6 +1427,12 @@ sub ace_to_otter {
         }
 
         prune_Exons($gene);
+        
+        # Determine type of gene
+        if (my $type = $gene_data->{GeneType}) {
+            $ginfo->known_flag(1) if $type eq 'Known';
+        }
+        $gene->set_gene_type_from_transcript_classes;
     }
     
     # Turn %frags into a Tiling Path
@@ -1651,6 +1669,7 @@ sub clone_to_XML {
      return $str;
 }
 
+### Don't think this is used for anything - probably dead
 sub genes_to_XML_with_Slice {
   my ($slice, $genes, $writeseq,$path,$seqstr) = @_;
 
@@ -1825,6 +1844,7 @@ sub by_stable_id_or_name {
 # and then store it.  We have to create insert statements
 # for the assembly and a
 
+### Not used
 sub frags_to_slice {
   my ($chrname,$chrstart,$chrend,$assembly_type,$seqstr,$frags,$db) = @_;
  

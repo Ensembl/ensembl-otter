@@ -63,7 +63,7 @@ sub _fetch_new_by_type {
   $sth->finish;
   $self->throw("Couldn't update $table with new stable id $stableid") unless $res;
 
-  print STDERR "Got new stable id '" . $stableid . "'\n";
+  #print STDERR "Got new stable id '" . $stableid . "'\n";
   return $stableid;
 }
 

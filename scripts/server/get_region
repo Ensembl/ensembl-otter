@@ -94,7 +94,6 @@ $odb->assembly_type($type);
 print STDERR "Assembly type $type\n";
 
 my $sgp  = $odb->get_SliceAdaptor;
-my $aga  = $odb->get_GeneAdaptor;
 
 my $cb   = new Bio::Otter::CloneLockBroker($odb);
 

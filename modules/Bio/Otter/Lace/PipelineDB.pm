@@ -12,19 +12,32 @@ use Carp;
 sub get_pipeline_DBAdaptor {
     my( $otter_db ) = @_;
 
+    require 'Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor';
+    return _get_DBAdaptor($otter_db, 'Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor');
+}
+
+sub get_DBAdaptor {
+    my( $otter_db ) = @_;
+
+    return _get_DBAdaptor($otter_db, 'Bio::EnsEMBL::DBSQL::DBAdaptor');
+}
+
+sub _get_DBAdaptor {
+    my( $otter_db, $class ) = @_;
+
     confess "Missing otter_db argument" unless $otter_db;
 
     my $pipe_options = get_pipeline_options($otter_db);
-    my $pipeline_db = Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor->new(%$pipe_options);
+    my $pipeline_db = $class->new(%$pipe_options);
 
     if ($pipeline_db) {
+        $pipeline_db->assembly_type($otter_db->get_MetaContainer->get_default_assembly);
         return $pipeline_db
     } else {
-        confess "Couln't connect to pipeline db";
+        confess "Couldn't connect to pipeline db";
     } 
 }
- 
- 
+
 sub get_pipeline_options {
     my( $db ) = @_;
     
@@ -41,7 +54,7 @@ sub get_pipeline_options {
         return;
     }
 }
- 
+
 
 
 

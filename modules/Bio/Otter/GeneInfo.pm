@@ -199,7 +199,7 @@ sub name {
     return $obj->{_name};
 }
 
-=head2 is_known
+=head2 known_flag
 
 Either TRUE or FALSE (1 or 0), it flags whether
 the gene is a previously known gene.  Defaults to
@@ -207,13 +207,31 @@ the gene is a previously known gene.  Defaults to
 
 =cut
 
-sub is_known {
+sub known_flag {
     my( $self, $flag ) = @_;
     
     if (defined $flag) {
-        $self->{'_is_known'} = $flag ? 1 : 0;
+        $self->{'_known_flag'} = $flag ? 1 : 0;
     }
-    return $self->{'_is_known'} || 0;
+    return $self->{'_known_flag'} || 0;
+}
+
+=head2 truncated_flag
+
+Either TRUE or FALSE (1 or 0), it flags whether
+the gene contains all its components that are
+stored in the database, and hence whether it is
+editable in the client.  Defaults to 0.
+
+=cut
+
+sub truncated_flag {
+    my( $self, $flag ) = @_;
+    
+    if (defined $flag) {
+        $self->{'_truncated_flag'} = $flag ? 1 : 0;
+    }
+    return $self->{'_truncated_flag'} || 0;
 }
 
 =head2 toString

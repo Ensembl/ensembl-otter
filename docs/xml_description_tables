@@ -486,6 +486,7 @@ value           string
 description     structure and annotations of a gene
 contains        name
 contains        stable_id
+contains        truncated
 contains        author
 contains        author_email
 contains        synonym
@@ -502,6 +503,10 @@ mandatory
 <stable_id>
 description     accession number for the gene if it has been stored in the annotation database
 value           string
+
+<truncated>
+description     set to true if some of the components of a gene stored in the database are missing from the sequence_set.  This is to flag that the gene should not be edited because saving it would cause the absent components to be lost
+value           0 if complete or\n1 if truncated
 
 <author>
 description     name of the author who created or last modified the gene
