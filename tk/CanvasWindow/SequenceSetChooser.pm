@@ -285,128 +285,33 @@ sub open_sequence_set {
 sub search_window{
     my ($self) = @_ ;
     
-    my $search_window = $self->{'_search_window'} ; 
+    my $search_window = $self->{'_search_window'};
   
     unless (defined ($search_window) ){
         ## make a new window
-        my $master = $self->canvas->toplevel;
-        $search_window = $master->Toplevel(-title => 'Find loci, stable_ids or clones');
-        $search_window->transient($master);
-        
-        $search_window->protocol('WM_DELETE_WINDOW', sub{$search_window->withdraw});
-    
-        my $label           =   $search_window->Label(-text     =>  "Use spaces to separate multiple terms"
-                )->pack(-side   =>  'top');
-
-        my $search_text     ||= '';
-        $self->search_text_ref(\$search_text);
-        my $search_entry    =   $search_window->Entry(
-                                                      -width        => 30       ,
-                                                      -relief       => 'sunken' ,
-                                                      -borderwidth  => 2        ,
-                                                      -textvariable => $self->search_text_ref,
-                                                    #-font       =>   'Helvetica-14',   
-                )->pack(    -side => 'top' , 
-                            -padx => 5 ,
-                            -fill => 'x'    
-                            ) ;
-                            
-        $search_entry->bind('<Return>' , sub {$self->search}) ;
-        $self->{'search_entry'} = $search_entry ;
-        
-        
-        ## radio buttons        
-        my $radio_variable = 'locus' ;         
-        my $radio_frame = $search_window->Frame(    
-                )->pack(    -side   =>  'top'   ,
-                            -pady   =>  5       ,
-                            -fill   =>  'x'     ,) ; 
-        my $locus_radio = $radio_frame->Radiobutton(  -text       =>  'locus',
-                                                      -variable   =>  \$radio_variable  ,
-                                                      -value      =>  'locus' ,       
-                )->pack(    -side    =>  'left' ,
-                            -padx    =>   5  ,
-                        ) ; 
-        # make the horses breath more easily
-        my $stable_radio = $radio_frame->Radiobutton(  -text       =>  'stable id',
-                                                      -variable   =>  \$radio_variable  ,
-                                                      -value      =>  'stable_id' ,       
-                )->pack(    -side    =>  'left' ,
-                            -padx    =>   5  ,
-                        ) ; 
-        my $clone_radio = $radio_frame->Radiobutton(    -text       =>  'intl. clone name or accession[.version]'  , 
-                                                        -variable   =>  \$radio_variable    ,
-                                                        -value      =>  'clone'
-                )->pack(    -side   =>  'right' ,
-                            -padx   =>  5
-                        );
-
-
-        
-        
-        ## search cancel buttons
-        my $search_cancel_frame = $search_window->Frame(
-                )->pack(-side => 'bottom'   , 
-                        -padx =>  5         ,
-                        -pady =>  5         , 
-                        -fill => 'x'        , ) ;   
-        my $find_button     =   $search_cancel_frame->Button(   -text       => 'Search' ,
-                                                                -command    =>  sub{$self->search($radio_variable)}    
-                )->pack(    -side    => 'left') ;
-
-        my $context_label   =   $search_cancel_frame->Label(-text       => ' with context:' ,
-                                                            )->pack(    -side    => 'left') ;
-
-
-        my $context_size ||= 1;
-        $self->context_size_ref(\$context_size);
-        my $context_entry    =   $search_cancel_frame->Entry(
-                                                      -width        => 5       ,
-                                                      -relief       => 'sunken' ,
-                                                      -borderwidth  => 2        ,
-                                                      -textvariable => $self->context_size_ref,
-                                                    #-font       =>   'Helvetica-14',   
-                )->pack(    -side => 'left' , 
-                            -padx => 5 ,
-                            ) ;
-
-        my $cancel_button   =   $search_cancel_frame->Button(   -text       => 'cancel'   ,
-                                                                -command    => sub { $search_window->withdraw }
-                )->pack(-side => 'right');
-           
-        my $reset_button    =   $search_cancel_frame->Button(   -text       => 'reset',
-                                                                -command    => sub { my $ref         = $self->search_text_ref(); 
-                                                                                     $$ref           = undef; 
-                                                                                     $radio_variable = 'locus';
-                                                                                     my $cont        = $self->context_size_ref();
-                                                                                     $$cont          = 1;
-                                                                                 }
-                )->pack(-side => 'right');
-        my $clear_button    =   $search_cancel_frame->Button(-text       => 'clear',
-                                                             -command    => sub { my $ref         = $self->search_text_ref(); 
-                                                                                  $$ref           = undef; 
-                                                                              }
-                                                             )->pack(-side => 'right');
-           
-        $self->{'_search_window'} = $search_window ;
-        $search_window->bind('<Destroy>' , sub { $self = undef }  ) ;
-    }
-    
-    $search_window->deiconify;
-    $search_window->raise ;
-    $search_window->focus ;
-    $self->{'search_entry'}->focus;
+        use TransientWindow::SearchWindow;
+        use ProxyObject;
+        $self->{'_search_window'} =
+            $search_window = TransientWindow::SearchWindow->new($self->canvas->toplevel, 'Find loci, stable_ids or clones');
+        $search_window->action('doSearch', sub{ my ($sw) = @_; $self->search($sw); });
+        $search_window->initialise();
+        $search_window->draw();
+    }    
+    $search_window->show_me;
+    return $search_window;
 }
 
 
 sub search{
-    my ($self , $search_type) = @_ ;
-    
-    $search_type = 'locus' unless defined $search_type ; # defaults to locus search 
+    my $self          = shift;
+    my $search_window = shift;
+
+    my $search_type   = ${$search_window->text_variable_ref('search_type')};
+    $search_type      = 'locus' unless defined $search_type; # defaults to locus search 
     
     my $rs = Bio::Otter::Lace::ResultSet->new ;
     $rs->DataSet($self->DataSet) ;
-    my $search = ${$self->search_text_ref()}; #$self->{'search_entry'}->get;
+    my $search = ${$search_window->text_variable_ref('search_text')}; #$self->{'search_entry'}->get;
     my @search_names = split(/\s+/, $search);
     
     if ($search_type eq 'clone') {
@@ -416,7 +321,7 @@ sub search{
     } else {
         $rs->search_type('locus') ; # defaults to locus 
     }
-    $rs->context_size(${$self->context_size_ref});
+    $rs->context_size(${$search_window->text_variable_ref('context_size')});
 
     my $clones_found = $rs->execute_search(\@search_names) ;
     
@@ -439,21 +344,8 @@ sub search{
     }
     
     # remove the window from viewing
-    my $search_window = $self->{'_search_window'} ;
-    $search_window->withdraw();   
+    $self->search_window->hide_me;   
 
-}
-
-
-sub search_text_ref{
-    my ($self, $search) = @_;
-    $self->{'_search_text'} = $search if $search;
-    return $self->{'_search_text'};
-}
-sub context_size_ref{
-    my ($self, $context) = @_;
-    $self->{'_context_size'} = $context if $context;
-    return $self->{'_context_size'};    
 }
 
 sub DESTROY {
