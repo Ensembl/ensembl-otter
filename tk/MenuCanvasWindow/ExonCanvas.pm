@@ -50,7 +50,7 @@ sub xace_seq_chooser {
     return $self->{'_xace_seq_chooser'};
 }
 
-sub add_SubSeq_exons {
+sub add_subseq_exons {
     my( $self, $subseq ) = @_;
     
     my $expected = 'Hum::Ace::SubSeq';
@@ -266,7 +266,7 @@ sub add_coordinate_pair {
 sub draw_subseq {
     my( $self ) = @_;
     
-    $self->add_SubSeq_exons($self->SubSeq);
+    $self->add_subseq_exons($self->SubSeq);
     $self->draw_translation_region;
 }
 
@@ -594,11 +594,16 @@ sub show_peptide {
                 -fill   => 'both',
                 );
         
-        # Make a bold style
-        $peptext->tagConfigure('bold',
+        # Red for stop codons
+        $peptext->tagConfigure('redstop',
             -background => '#ef0000',
             -foreground => 'white',
-            #-font => [$font, $size, 'bold'],
+            );
+        
+        # Blue for "X", the unknown amino acid
+        $peptext->tagConfigure('blueunk',
+            -background => '#0000ef',
+            -foreground => 'white',
             );
         
         # Make a Close button inside a frame
@@ -630,11 +635,19 @@ sub show_peptide {
     $fasta =~ s/\n$//s;
     $peptext->delete('1.0', 'end');
     
+    # Markup stop codons
     foreach my $bit (split /(\*+)/, $fasta) {
         if ($bit =~ /\*/) {
-            $peptext->insert('end', $bit, 'bold');
+            $peptext->insert('end', $bit, 'redstop');
         } else {
-            $peptext->insert('end', $bit);
+            # Highlight "X", the unknown amino acid
+            foreach my $xstr (split /(X+)/, $bit) {
+                if ($xstr =~ /X/) {
+                    $peptext->insert('end', $xstr, 'blueunk');
+                } else {
+                    $peptext->insert('end', $xstr);
+                }
+            }
         }
     }
     
@@ -670,12 +683,12 @@ sub add_subseq_rename_widget {
         )->pack;
     
     $self->subseq_name_Entry(
-        $self->make_labelled_entry_widget($frame, 'Name', $self->SubSeq->name)
+        $self->make_labelled_entry_widget($frame, 'Name', $self->SubSeq->name, 22)
         );
 }
 
 sub make_labelled_entry_widget {
-    my( $self, $widget, $name, $value, @pack ) = @_;
+    my( $self, $widget, $name, $value, $size, @pack ) = @_;
     
     @pack = (-side => 'left') unless @pack;
     
@@ -687,7 +700,7 @@ sub make_labelled_entry_widget {
     $entry_label->pack(@pack);
 
     my $entry = $widget->Entry(
-        -width              => 15,
+        -width              => $size,
         -exportselection    => 1,
         -relief             => 'flat',
         -background         => 'white',
@@ -746,6 +759,7 @@ sub add_start_end_widgets {
                 $e_frame,
                 'Continued from',
                 $self->SubSeq->upstream_subseq_name,
+                15,
                 -anchor => 'nw',
                 );
     }
@@ -785,6 +799,7 @@ sub add_start_end_widgets {
                 $e_frame,
                 'Continues as',
                 $self->SubSeq->downstream_subseq_name,
+                15,
                 -anchor => 'nw',
                 );
     }
@@ -1172,6 +1187,9 @@ sub next_exon_holder_coords {
 sub _coord_matrix {
     my( $self ) = @_;
     
+    #my $old = $self->font_size;
+    #$self->font_size($old * 1.2);
+    
     my( $m );
     unless ($m = $self->{'_coord_matrix'}) {
         my $uw      = $self->font_unit_width;
@@ -1192,14 +1210,19 @@ sub _coord_matrix {
         
         # Create rectangle to pad canvas to max number width
         my $canvas = $self->canvas;
+        my $max_width = 4 * ($size + $text_len);
+        warn "max_width = $max_width\n";
         $canvas->createRectangle(
             $half, $half,
-            $half + (4 * ($size + $text_len)), $half + $size,
+            $half + $max_width, $half + $size,
             -fill       => undef,
             -outline    => undef,
             -tags       => ['max_width_rectangle'],
             );
     }
+    
+    #$self->font_size($old);
+    
     return @$m;
 }
 
@@ -1239,7 +1262,7 @@ sub add_exon_holder {
         $x2, $y1 + $half,
         -anchor     => 'w',
         -text       => $end,
-        -font       => [$font, $size],
+        -font       => [$font, $size, 'normal'],
         -tags       => [$exon_id, 'normal', 'exon_end', 'exon_pos'],
         );
     

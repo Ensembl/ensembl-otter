@@ -782,7 +782,7 @@ sub make_exoncanvas_edit_window {
     my $top = $canvas->Toplevel;
     
     # Make new MenuCanvasWindow::ExonCanvas object and initialize
-    my $ec = MenuCanvasWindow::ExonCanvas->new($top);
+    my $ec = MenuCanvasWindow::ExonCanvas->new($top, 345, 50);
     $ec->name($sub_name);
     $ec->xace_seq_chooser($self);
     $ec->SubSeq($sub);

@@ -51,7 +51,7 @@ sub initial_canvas_size {
     if (my $in = $self->{'_initial_canvas_size'}) {
         return @$in;
     } else {
-        return (300,50); # Default
+        return (250,50); # Default
     }
 }
 
@@ -122,6 +122,15 @@ sub set_scroll_region {
         $bbox[2] = $min_bbox[2] if $min_bbox[2] > $bbox[2];
         $bbox[3] = $min_bbox[3] if $min_bbox[3] > $bbox[3];
     }
+    
+    my ($init_x, $init_y) = $self->initial_canvas_size;
+    if (($bbox[2] - $bbox[0]) < $init_x) {
+        $bbox[2] = $bbox[0] + $init_x;
+    }
+    if (($bbox[3] - $bbox[1]) < $init_y) {
+        $bbox[3] = $bbox[1] + $init_y;
+    }
+    
     #warn "Setting scroll region to [@bbox]";
     $canvas->configure(
         -scrollregion => [@bbox],
@@ -312,6 +321,10 @@ sub fix_window_min_max_sizes {
     my $mw = $self->canvas->toplevel;
     $mw->update;
     
+    my @bbox = $self->set_scroll_region;
+    my $canvas_width  = $bbox[2] - $bbox[0];
+    my $canvas_height = $bbox[3] - $bbox[1];
+    
     my( $other_x, # other_x and other_y record the space occupied
         $other_y, # by the widgets other than the canvas in the
                   # window.
@@ -325,18 +338,14 @@ sub fix_window_min_max_sizes {
         my $height = $mw->height;
         $mw->minsize($width, $height);
 
-        my @init = $self->initial_canvas_size;
-        $other_x = $width  - $init[0];
-        $other_y = $height - $init[1];
+        my ($visible_x, $visible_y) = $self->visible_canvas_x_y;
+        $other_x = $width  - $visible_x;
+        $other_y = $height - $visible_y;
 
         ($display_max_x, $display_max_y) = $mw->maxsize;
         $self->{'_toplevel_other_max'} = [$other_x, $other_y, $display_max_x, $display_max_y];
         $mw->resizable(1,1);
     }
-    
-    my @bbox = $self->set_scroll_region;
-    my $canvas_width  = $bbox[2] - $bbox[0];
-    my $canvas_height = $bbox[3] - $bbox[1];
 
     my $max_x = $canvas_width  + $other_x;
     my $max_y = $canvas_height + $other_y;
@@ -345,7 +354,7 @@ sub fix_window_min_max_sizes {
     $mw->maxsize($max_x, $max_y);
     
     # Get the current screen offsets
-    my($x, $y) = $mw->geometry =~ /^\d+x\d+\+?(-?\d+)\+?(-?\d+)/;
+    my($x, $y) = $mw->geometry =~ /^=?\d+x\d+\+?(-?\d+)\+?(-?\d+)/;
 
     # Is there a set window size?
     if (my($fix_x, $fix_y) = $self->set_window_size) {
@@ -640,6 +649,13 @@ sub visible_canvas_bbox {
     my $y2 = ($yf2 * $scroll_height) + $scroll->[1];
     
     return($x1, $y1, $x2, $y2);
+}
+
+sub visible_canvas_x_y {
+    my( $self ) = @_;
+    
+    my @bbox = $self->visible_canvas_bbox;
+    return( $bbox[2] - $bbox[0], $bbox[3] - $bbox[1] );
 }
 
 sub message {
