@@ -10,9 +10,7 @@ use Bio::Otter::Lace::Defaults;
     
     Bio::Otter::Lace::Defaults::do_getopt();
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
-    
     my $mw = CanvasWindow::MainWindow->new('Choose DataSet');
-
     my $dc = CanvasWindow::DataSetChooser->new($mw);
     $dc->Client($cl);
     $dc->draw;
@@ -24,6 +22,34 @@ use Bio::Otter::Lace::Defaults;
 __END__
 
 =head1 NAME - otterlace
+
+=head1 DESCRIPTION
+
+B<otterlace> is a graphical client for the otter
+annotation database that uses a local acedb
+database with xace and perl/Tk tools to provide a
+gene annotation interface.
+
+=head1 COMMAND LINE
+
+The standard parameters controlled by the
+B<Bio::Otter::Lace::Defaults> module can be given
+on the command line, but the user will not
+usually need to give them.  See its documentation
+for details.
+
+=head1 FLAGS
+
+=over 4
+
+=item B<view>
+
+Turns off write access to the database, providing
+a safe read-only session.  It is still possible
+to edit gene structures, but they will not be
+saved to the otter server.
+
+=back
 
 =head1 AUTHOR
 
