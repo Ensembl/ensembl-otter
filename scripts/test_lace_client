@@ -1,0 +1,36 @@
+#!/usr/local/bin/perl5.6.1 -w
+
+### test_lace_client
+
+use strict;
+use Bio::Otter::Lace::Client;
+use Data::Dumper;   # For debugging
+
+{
+    my $cl = Bio::Otter::Lace::Client->new;
+    $cl->host('ecs1d');
+    $cl->port(39312);
+    
+    my ($ds) = grep $_->name eq 'human_chr20_with_anal_end_feb',
+        $cl->get_all_DataSets;
+    
+    foreach my $chr ($ds->get_all_Chromosomes) {
+        print "chr: ", Dumper($chr);
+    }
+    
+    my $cs_list = $ds->get_all_CloneSequences;
+    #print Dumper($cs_list);
+    
+    $ds->selected_CloneSequences([@$cs_list[50..55]]);
+    print $cl->get_otter_ace;
+}
+
+
+__END__
+
+=head1 NAME - test_lace_client
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
