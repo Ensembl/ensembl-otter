@@ -80,7 +80,7 @@ sub render {
             my $x2 = $end   / $rpp;
             $canvas->createLine(
                 $x1, $y_middle, $x2, $y_middle,
-                -fill       => 'red',
+                -fill       => '#ff6666',
                 -width      => 1,
                 -tags       => [@tags],
                 );
@@ -88,11 +88,18 @@ sub render {
             # Draw plot
             $canvas->createLine(
                 @plot,
-                -fill       => 'black',
-                -width      => 1,
-                #-smooth     => 1,
+                -fill       => 'red',
+                -width      => 2,
                 -tags       => [@tags],
                 );
+            ## Draw plot
+            #$canvas->createLine(
+            #    @plot,
+            #    -fill       => 'black',
+            #    -width      => 1,
+            #    -smooth     => 1,
+            #    -tags       => [@tags],
+            #    );
         }
     }
     $band->draw_plot_axes;
@@ -116,7 +123,7 @@ sub seqpos_value {
     $seq_str = lc $seq_str;
     
     my( @pos, @value );
-    my $tile_incr = $rpp * 5;
+    my $tile_incr = $rpp * 2;
     my $tile_length = $tile_incr * 2;
     for (my $j = 0; $j < $seq_length; $j += $tile_incr) {
         my $tile_seq = substr($seq_str, $j, $tile_length);
@@ -178,7 +185,8 @@ sub draw_plot_axes {
     # Scale along bottom of plot
     my $seq_length  = $band->virtual_contig->length;
     my $rpp = $band->residues_per_pixel;
-    my $min_interval = $rpp * 50;   # Minumum space between labeled ticks
+    # Choose minumum space between labeled ticks based on font size
+    my $min_interval = $rpp * $band->font_size * 4;
     my $interval = 1;
     my $multiplier = 5;
     while ($interval < $min_interval) {

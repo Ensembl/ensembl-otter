@@ -62,8 +62,13 @@ sub tick_label {
     my @tags = $band->tags;
     confess "line_start array must have 2 elements" unless @line_start == 2;
     
-    my $tick_length = 4;
-    my $label_pad   = 3;
+    # Choose an appropriate size for the ticks
+    my $font_size = $band->font_size;
+    my $tick_length = $font_size / 3;
+    $tick_length = 3 if $tick_length < 3;
+    my $label_pad = $font_size / 4;
+    $label_pad = 2 if $tick_length < 2;
+    
     my( $anchor, $justify, @line_end, @text_start );
     if ($dir eq 'n') {
         $anchor = 's';
@@ -103,6 +108,7 @@ sub tick_label {
         -text       => $text,
         -anchor     => $anchor,
         -justify    => $justify,
+        -font       => ['helvetica', $band->font_size],
         '-tags'     => [@tags],
         );
 }

@@ -65,12 +65,13 @@ sub show_labels {
 sub render {
     my( $band ) = @_;
     
-    my $canvas   = $band->canvas;
-    my $vc       = $band->virtual_contig;
-    my $y_dir    = $band->tiling_direction;
-    my $rpp      = $band->residues_per_pixel;
-    my $y_offset = $band->y_offset;
-    my @tags     = $band->tags;
+    my $canvas      = $band->canvas;
+    my $vc          = $band->virtual_contig;
+    my $y_dir       = $band->tiling_direction;
+    my $rpp         = $band->residues_per_pixel;
+    my $y_offset    = $band->y_offset;
+    my @tags        = $band->tags;
+    my $font_size   = $band->font_size;
 
     if ($y_dir == -1) {
         # We have to build above the other bands
@@ -79,6 +80,10 @@ sub render {
     }
 
     my $map_contig_count = 0;
+    my $rectangle_height = $band->font_size * 10 / 12;
+    my $rectangle_border = $band->font_size * 1 / 12;
+    my $nudge_distance = ($rectangle_height + 1) * $y_dir;
+    my $text_nudge_flag = 0;
     foreach my $map_c ($vc->_vmap->each_MapContig) {
         $map_contig_count++;
         my $start  = $map_c->start;
@@ -106,7 +111,6 @@ sub render {
         my $x1 = ($start - $left_overhang + 1) / $rpp;
         my $x2 = ($end   + $right_overhang)    / $rpp;
         
-        my $rectangle_height = 8;
         my @rectangle = ($x1, $y_offset, $x2, $y_offset + $rectangle_height);
         my $rec = $canvas->createRectangle(
             @rectangle,
@@ -118,15 +122,14 @@ sub render {
         if ($band->gold) {
             # Render golden path segment in gold
             my $gold = $canvas->createRectangle(
-                ($start / $rpp), $rectangle[1] + 1,
-                ($end / $rpp),   $rectangle[3] - 1,
+                ($start / $rpp), $rectangle[1] + $rectangle_border,
+                ($end / $rpp),   $rectangle[3] - $rectangle_border,
                 -fill => 'gold',
                 -outline => undef,
                 -tags => [@tags, 'contig_gold', $group],
                 );
         }
 
-        my $nudge_distance = $rectangle_height + 1;
         my( $bkgd_rectangle );
         if ($band->show_labels) {
             
@@ -143,23 +146,30 @@ sub render {
             my $label = $canvas->createText(
                 $x1, $y1,
                 -text => $name,
-                -font => ['helvetica', 12],
+                -font => ['helvetica', $font_size],
                 -anchor => $anchor,
                 -tags => [@tags, 'contig_label', $group],
                 );
 
             my @bkgd = $canvas->bbox($group);
 
-            my $sp = 3;
+            my $sp = $font_size / 5;
             $band->expand_bbox(\@bkgd, $sp);
-            $bkgd_rectangle = $canvas->createRectangle(@bkgd);
-            $nudge_distance = 10;
+            $bkgd_rectangle = $canvas->createRectangle(
+                @bkgd,
+                -outline    => '#cccccc',
+                -tags       => [@tags, 'bkgd_rec', $group],
+                );
+            unless ($text_nudge_flag) {
+                my( $small, $big ) = sort {$a <=> $b} map abs($_), @bkgd[1,3];
+                $nudge_distance = ($big - $small + 3) * $y_dir;
+                $text_nudge_flag = 1;
+            }
         }
         
-        $nudge_distance *= $y_dir;
         $band->nudge_into_free_space($group, $nudge_distance);
-        $canvas->delete($bkgd_rectangle) if $bkgd_rectangle;
     }
+    $canvas->delete('bkgd_rec');
     confess "No mapcontigs in virtual contig" unless $map_contig_count;
 }
 
