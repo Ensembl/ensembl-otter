@@ -1,0 +1,152 @@
+#!/usr/local/bin/perl -w
+
+### col_head_widget
+
+use strict;
+
+use strict;
+use CanvasWindow;
+
+{
+    my $mw = CanvasWindow::MainWindow->new('col. row. head widget');
+    my $heading_width   =  50;
+    my $heading_height  =  50;
+    my $canvas_width    = 300;
+    my $canvas_height   = 300;
+    my $canvas_scroll_x = 600;
+    my $canvas_scroll_y = 600;
+    my $scrollbar_width =  10;  # Should get from X resources
+
+    # Top row
+    my $top_frame = $mw->Frame->pack(
+        -expand => 1,
+        -fill   => 'x',
+        -side   => 'top',
+        -anchor => 'n',
+        );
+    $top_frame->Frame(
+        -width  => $heading_width,
+        -height => $heading_height,
+        -background   => 'blue',
+        )->pack(
+            -expand => 0,
+            -side   => 'left',
+            );
+    my $col_head = $top_frame->Canvas(
+        -width          => $canvas_width,
+        -height         => $heading_height,
+        -scrollregion   => [0,0,$heading_height,$canvas_scroll_x],
+        )->pack(
+            -expand => 1,
+            -fill   => 'x',
+            -side   => 'left',
+            );
+    $top_frame->Frame(
+        -width  => $scrollbar_width,
+        -height => $heading_height,
+        -background => 'red',
+        )->pack(
+            -expand => 0,
+            -side   => 'left',
+            );
+    
+    # Middle row
+    my $middle_frame = $mw->Frame(
+        -bg => 'green',
+        )->pack(
+            -expand => 1,
+            -fill   => 'both',
+            -side   => 'top',
+            );
+    my $row_head = $middle_frame->Canvas(
+        -width          => $heading_width,
+        -height         => $canvas_height,
+        -scrollregion   => [0,0,$heading_width,$canvas_scroll_y],
+        )->pack(
+            -expand => 1,
+            -fill   => 'y',
+            -side   => 'left',
+            -anchor => 'w',
+            );
+    my $main_canvas = $middle_frame->Canvas(
+        -width          => $canvas_width,
+        -height         => $canvas_height,
+        -scrollregion   => [0,0,$canvas_scroll_x, $canvas_scroll_y],
+        )->pack(
+            -expand => 1,
+            -fill   => 'both',
+            -side   => 'left',
+            );
+    my $vert_scroll = $middle_frame->Scrollbar(
+        -orient     => 'vertical',
+        -width      => $scrollbar_width,
+        -command    => sub {
+            $row_head->yview(@_);
+            $main_canvas->yview(@_);
+            },
+       )->pack(
+            -expand => 1,
+            -fill   => 'y',
+            -side   => 'left',
+            -anchor => 'e',
+            );
+    
+    # Bottom row
+    my $bottom_frame = $mw->Frame->pack(
+        -expand => 1,
+        -fill   => 'x',
+        -side   => 'top',
+        -anchor => 's',
+        );
+    $bottom_frame->Frame(
+        -width  => $heading_width,
+        -height => $scrollbar_width,
+        )->pack(
+            -expand => 0,
+            -side   => 'left',
+            );
+    my $horiz_scroll = $bottom_frame->Scrollbar(
+        -orient     => 'horizontal',
+        -width     => $scrollbar_width,
+        -command    => sub {
+            $main_canvas->xview(@_);
+            $col_head->xview(@_);
+            },
+       )->pack(
+            -expand => 1,
+            -fill   => 'x',
+            -side   => 'left',
+            );
+    $bottom_frame->Frame(
+        -width  => $scrollbar_width,
+        -height => $scrollbar_width,
+        )->pack(
+            -expand => 0,
+            -side   => 'left',
+            );
+    
+    $col_head->configure(
+        -xscrollcommand => ['set', $horiz_scroll],
+        );
+    $main_canvas->configure(
+        -xscrollcommand => ['set', $horiz_scroll],
+        -yscrollcommand => ['set', $vert_scroll],
+        );
+    $row_head->configure(
+        -yscrollcommand => ['set', $vert_scroll],
+        );
+    
+    Tk::MainLoop();
+}
+
+
+
+
+__END__
+
+=head1 NAME - col_head_widget
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
