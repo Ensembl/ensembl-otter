@@ -1,0 +1,58 @@
+#!/usr/bin/perl
+
+
+use Bio::Otter::EnsEMBL2SQL::Core;
+
+
+my $e2sql = new Bio::Otter::EnsEMBL2SQL::Core(-host   => 'kaka.sanger.ac.uk',
+					      -user   => 'anonymous',
+					      -pass   => '',
+					      -dbname => 'homo_sapiens_core_13_31',
+					      -chr    => '6',
+					      -start  => 1,
+					      -end    => 10000000,
+					      -type   => 'NCBI31');
+
+
+my $dir = "/tmp/test_dump$$";
+
+print "Directory is $dir\n";
+
+mkdir $dir;
+
+my @tables = ('meta',
+	      'karyotype',
+	      'chromosome',
+	      'analysis',
+	      'map',
+	      'mapset',
+	      'interpro',
+	      'dnafrag',
+	      'external_db',
+	      'assembly',
+	      'contig',
+	      'clone',
+	      'dna',
+	      'exon',
+	      'exon_transcript',
+	      'transcript',
+	      'translation',
+	      'gene',
+	      'exon_stable_id',
+	      'transcript_stable_id',
+	      'translation_stable_id',
+	      'gene_stable_id',
+	      'dna_align_feature',
+	      'protein_align_feature',
+	      'simple_feature',
+	      'protein_feature',
+	      'repeat_feature',
+	      'repeat_consensus',
+	      'xref',
+	      'object_xref',
+	      'identity_xref',
+	      'external_synonym');
+
+foreach my $table (@tables) {
+    $e2sql->dump_SQL_to_file($dir,$table);
+}
