@@ -14,20 +14,22 @@ Construct Tk::Widget 'HeadedCanvas';
 sub _multiscrollx { # callback, not a method
 	my ($sb,$widgets,@args) = @_;
 
-	if($args[1]>=0) {
-		foreach my $w (@$widgets) {
-			$w->xview(@args);
-		}
+	if(($args[0] eq 'moveto')&&($args[1]<0)) {
+		$args[1] = 0;
+	}
+	foreach my $w (@$widgets) {
+		$w->xview(@args);
 	}
 }
 
 sub _multiscrolly { # callback, not a method
 	my ($sb,$widgets,@args) = @_;
 
-	if($args[1]>=0) {
-		foreach my $w (@$widgets) {
-			$w->yview(@args);
-		}
+	if(($args[0] eq 'moveto')&&($args[1]<0)) {
+		$args[1] = 0;
+	}
+	foreach my $w (@$widgets) {
+		$w->yview(@args);
 	}
 }
 
