@@ -5,6 +5,7 @@ package MenuCanvasWindow::XaceSeqChooser;
 
 use strict;
 use Carp;
+use Tk::Dialog;
 use Hum::Ace::SubSeq;
 use Hum::Ace::Locus;
 use Hum::Ace::GeneMethod;
@@ -319,10 +320,7 @@ sub xace_process_id {
 sub launch_xace {
     my( $self ) = @_;
     
-    if (my $pid = $self->xace_process_id) {
-        warn "Killing xace process '$pid'\n";
-        kill 9, $pid;
-    }
+    $self->kill_xace;
     
     if (my $path = $self->ace_path) {
         if (my $pid = fork) {
@@ -337,6 +335,15 @@ sub launch_xace {
         }
     } else {
         warn "Error: ace_path not set";
+    }
+}
+
+sub kill_xace {
+    my( $self ) = @_;
+    
+    if (my $pid = $self->xace_process_id) {
+        warn "Killing xace process '$pid'\n";
+        kill 9, $pid;
     }
 }
 
@@ -384,8 +391,8 @@ sub get_xwindow_id_from_readlock {
     if ($xwid) {
         my $xrem = Hum::Ace::XaceRemote->new($xwid);
         $self->xace_remote($xrem);
-        $xrem->send_command('save');
-        #$xrem->send_command('writeaccess -gain');
+        #$xrem->send_command('save');
+        $xrem->send_command('writeaccess -gain');
         return 1;
     } else {
         warn "WindowID was not found in lock file - outdated version of xace?";
@@ -448,32 +455,31 @@ sub populate_menus {
     $top->bind('<Control-r>', $resync_command);
     $top->bind('<Control-R>', $resync_command);
     
-    # Respawn
-    $file->add('command',
-        -label          => 'Restart',
-        -hidemargin     => 1,
-        -command        => sub { $self->command_line_restart },
-        #-accelerator    => 'Ctrl+R',
-        #-underline      => 0,
-        );
+    ## Respawn
+    #$file->add('command',
+    #    -label          => 'Restart',
+    #    -hidemargin     => 1,
+    #    -command        => sub { $self->command_line_restart },
+    #    #-accelerator    => 'Ctrl+R',
+    #    #-underline      => 0,
+    #    );
     
     $file->add('separator');
     
-    # Quit
+    # Close window
     my $exit_command = sub {
-        $self->save_data or return;
-        $self->AceDatabase->error_flag(0);
+        $self->exit_save_data or return;
         $self = undef;
         $menu_frame->toplevel->destroy;
         };
     $file->add('command',
-        -label          => 'Exit',
+        -label          => 'Close',
         -command        => $exit_command,
-        -accelerator    => 'Ctrl+Q',
+        -accelerator    => 'Ctrl+W',
         -underline      => 0,
         );
-    $top->bind('<Control-q>', $exit_command);
-    $top->bind('<Control-Q>', $exit_command);
+    $top->bind('<Control-w>', $exit_command);
+    $top->bind('<Control-W>', $exit_command);
     $top->protocol('WM_DELETE_WINDOW', $exit_command);
     
     # Show menu
@@ -606,14 +612,55 @@ sub bind_events {
     $canvas->Tk::bind('<Escape>',   sub{ $self->deselect_all        });    
     $canvas->Tk::bind('<Return>',   sub{ $self->edit_double_clicked });    
     $canvas->Tk::bind('<KP_Enter>', sub{ $self->edit_double_clicked });    
+    
+    # Object won't get DESTROY'd without:
     $canvas->toplevel->bind('<Destroy>', sub{ $self = undef });
+}
+
+sub exit_save_data {
+    my( $self ) = @_;
+
+    # Ask the user if any changes should be saved
+    my $dialog = $self->canvas->toplevel->Dialog(
+        -title          => 'Save changes?',
+        -bitmap         => 'question',
+        -text           => "Save any changes to otter server?",
+        -default_button => 'Yes',
+        -buttons        => [qw{ Yes No Cancel }],
+        );
+    my $ans = $dialog->Show;
+
+    if ($ans eq 'Cancel') {
+        return; # Abandon window close
+    }
+    elsif ($ans eq 'Yes') {
+        if (my $xr = $self->xace_remote) {
+            # This will fail if xace has been
+            # exited, so we ignore error.
+            eval{ $xr->save; };
+        }
+
+        # Return false if there is a problem saving
+        $self->save_data or return;
+    }
+
+    # Will not want xace any more
+    $self->kill_xace;
+    
+    # Unlock and cleanup (lace dir gets
+    # removed by AceDatabase->DESTROY)
+    my $ace = $self->AceDatabase;
+    $ace->unlock_all_slices;
+    $ace->error_flag(0);
+    
+    return 1;
 }
 
 sub save_data {
     my( $self ) = @_;
 
-    my $ss = $self->SequenceSet;
-    unless ($ss->write_access) {
+    unless ($self->SequenceSet->write_access) {
+        warn "Read only session - not saving\n";
         return 1;   # Can't save - but is OK
     }
     my $top = $self->canvas->toplevel;
