@@ -1,0 +1,105 @@
+#!/usr/local/bin/perl5.6.1 -w
+
+### embl_fetch_set
+
+=pod
+
+=head1 NAME
+
+embl_fetch_set
+
+=head1 SYNOPSIS
+ 
+embl_fetch_set [options] [ ACC_list | ACC_list_file]
+
+=head1 DESCRIPTION
+
+This script reads the list of accessions from the 
+
+=head1 USEAGE
+
+embl_fetch_set [options] [ ACC_list | ACC_list_file]
+
+Where options are:
+
+ option       default   comment
+ --------------------------------
+ -set                   file to read accessions from
+ -embl                  file to write embl entries to rather than screen
+ -help                  prints this help
+  
+
+examples:
+
+./embl_fetch_set -set embl.acc -embl entries.embl
+
+./embl_fetch_set -embl entries.embl AL133226.16 AL157825.12
+
+./embl_fetch_set AL133226.16 AL157825.12 > entries.embl
+
+./embl_fetch_set AL133226.16 | ./embl_to_otter_ensembl -dataset human -chr X -name 'example' -desc 'just an example'
+
+=cut
+
+package main;
+
+use strict;
+use Getopt::Long;
+use Hum::NetFetch qw(wwwfetch);
+
+my $exe    = undef;
+my @lib    = ();
+my $infile = undef;
+my $output = undef;
+my $help   = 0;
+
+GetOptions(
+	   'set:s'  => \$infile,
+	   'embl:s' => \$output,
+	   'help'   => \$help,
+) or useage();
+useage() if $help;
+
+my @embl;
+if($infile){
+    open(my $fh, $infile) or die "Couldn't open $infile\n";
+    @embl = readFile($fh);
+}elsif(-e $ARGV[0]){
+    @embl = readFile(\*ARGV);
+}else{
+    @embl = @ARGV;
+}
+
+my $ofh = tempFile($output) || \*STDOUT;
+
+foreach my $ver(@embl){
+    print $ofh wwwfetch($ver);
+}
+
+
+sub tempFile{
+    my ($location) = @_;
+    return undef unless $location;
+    open(my $fh, $location) or die "Couldn't find $location \n";
+    return $fh;
+}
+sub readFile{
+    my ($fh) = @_;
+    my @embl = ();
+    while(<$fh>){
+ 	chomp;
+ 	push(@embl, split(" ", $_));
+    }
+    close $fh;
+    return @embl;
+}
+sub useage{ exit(exec('perldoc', $0)); }
+
+__END__
+
+=head1 NAME - embl_fetch_set
+
+=head1 AUTHOR
+
+Roy Storey,,,, B<email> rds@sanger.ac.uk
+
