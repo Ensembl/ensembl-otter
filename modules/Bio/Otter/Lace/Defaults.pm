@@ -8,7 +8,6 @@ use Carp;
 use Getopt::Long 'GetOptions';
 use Symbol 'gensym';
 use Bio::Otter::Lace::Client;
-# use Data::Dumper;
 
 our $CLIENT_STANZA  = 'client';
 our $DEFAULT_TAG    = 'default';
@@ -22,6 +21,7 @@ my @CLIENT_OPTIONS = qw(
     write_access!
     group=s
     gene_type_prefix=s
+    debug!
     );
 
 # @CLIENT_OPTIONS is Getopt::GetOptions() keys which will be included in the 
@@ -92,6 +92,8 @@ sub do_getopt {
     $DEFAULTS->{$CLIENT_STANZA}->{'author'}       ||= $this_user;
     $DEFAULTS->{$CLIENT_STANZA}->{'email'}        ||= $this_user;
     $DEFAULTS->{$CLIENT_STANZA}->{'write_access'} ||= 0;
+    $DEFAULTS->{$CLIENT_STANZA}->{'debug'}          = 1
+        unless defined($DEFAULTS->{$CLIENT_STANZA}->{'debug'});
     $DEFAULTS->{$CLIENT_STANZA}->{'pipeline'}       = 1 
 	unless defined($DEFAULTS->{$CLIENT_STANZA}->{'pipeline'});
 
@@ -140,6 +142,7 @@ sub options_from_file {
     while (<$fh>) {
         chomp;
         next if /^\#/ || /^$/; # ignore comments and blank
+        s/\s$//;
         # Only look at client stanza
         if (/^\[([\w\._]+)\]/) {
             $current_stanza = $1;
@@ -223,7 +226,12 @@ sub set_hash_val{
 	# Traverse hash
 	$hash = $hash->{$key};
     }
-    $hash->{$lastKey} = $value;
+    if(not exists($hash->{$lastKey})){
+        $hash->{$lastKey} = $value;
+    }else{
+        warn "Having to use '_setHashVal_' as key and value in hash THIS IS BAD!\n";
+        $hash->{'_setHashVal_'} = $value;
+    }
 }
 
 ################################################
