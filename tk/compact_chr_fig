@@ -31,7 +31,7 @@ use Getopt::Long 'GetOptions';
         'ps_file=s' => \$ps_file_name,
         ) or die "error processing command line";
 
-    my $host            = 'ensrv3';
+    my $host            = 'ecs1b';
     my $db_name         = 'chr20';
     my $user            = 'ensro';
     my $chr_name        = 'chr20';
@@ -56,8 +56,9 @@ use Getopt::Long 'GetOptions';
     my( @chr_parts );
     if ($test_flag) {
         @chr_parts = (
-            [27_000_000, 30_000_000],
-            [60_000_000, 62_500_000],
+            [7_500_000, 9_500_000],
+            #[27_000_000, 30_000_000],
+            #[60_000_000, 62_500_000],
             );
     }
     elsif ($start and $end) {
@@ -182,12 +183,30 @@ use Getopt::Long 'GetOptions';
         
         });
     $gc->fix_window_min_max_sizes;
+    
+    unless ($test_flag) {
+        $mw->update;
+
+        # A4 is 841 x 591 points
+        $gc->page_width(591 * 4);
+        $gc->page_height(841);
+        my @files = $gc->print_postscript('chr_20');
+        warn "Printed to files:\n",
+            map "  $_\n", @files;
+
+        $gc->page_height(841);
+        $gc->page_width(591);
+        $gc->horizontal_tile(4);
+        @files = $gc->print_postscript('chr_20-4-page');
+        warn "Printed to files:\n",
+            map "  $_\n", @files;
+    }
 }
 
 
-                            ###############
-                            Tk::MainLoop();
-                            ###############
+                    ###############
+                    Tk::MainLoop();
+                    ###############
 
 
 sub get_chr_end {

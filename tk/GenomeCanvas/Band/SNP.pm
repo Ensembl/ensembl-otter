@@ -23,7 +23,6 @@ sub new {
 sub render {
     my( $band ) = @_;
     
-    $band->draw_sequence_gaps;
     my $vc = $band->virtual_contig;
     $band->draw_SNPs_on_virtual_contig($vc);
 }
@@ -60,14 +59,8 @@ sub draw_SNPs_on_virtual_contig {
     my $color       = $band->band_color;
     my $canvas      = $band->canvas;
     my $width       = $band->width;
-    $canvas->createRectangle(
-        0, $y_offset, $width, $y_offset + $height,
-        -outline    => 'black',
-        -width      => 1,
-        -fill       => undef,
-        -tags       => [@tags],
-        );
 
+    my @outline = (0, $y_offset, $width, $y_offset + $height);
     $y_offset += $half_height;
 
     # Left axis
@@ -137,6 +130,17 @@ sub draw_SNPs_on_virtual_contig {
             @rev_coords = ();
         }
     }
+
+    $band->draw_sequence_gaps;
+
+    $canvas->createRectangle(
+        @outline,
+        -outline    => 'black',
+        -width      => 1,
+        -fill       => undef,
+        -tags       => [@tags],
+        );
+
     warn "max snp count = $max\n";
 }
 
