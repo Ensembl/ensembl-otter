@@ -9,6 +9,7 @@ use base 'CanvasWindow';
 use MenuCanvasWindow::XaceSeqChooser;
 use CanvasWindow::SequenceNotes::History;
 use CanvasWindow::SequenceNotes::Status;
+use TransientWindow::OpenRange;
 use POSIX qw(ceil);
 
 sub name {
@@ -773,7 +774,7 @@ sub get_rows_list{
     if($self->_allow_paging()){
         my ($offset, $length) = $self->_sanity_check_paging($max_cs_list);
         warn "slice $offset .. $length\n";
-        $cs_list = [ @{ $cs_list } [$offset..$length] ];
+        $cs_list = [ @{$cs_list}[$offset..$length] ];
     }
     return $cs_list;
 }
@@ -848,6 +849,8 @@ sub draw_paging_buttons{
 
     my $canvas   = $self->canvas();
     my $pg_frame = $canvas->Frame(-background => 'white');
+    # fix a leak.....
+    $pg_frame->bind('<Destroy>', sub {$self = undef});
 
     my $top  = $canvas->toplevel();
 
@@ -895,9 +898,10 @@ sub draw_paging_buttons{
 }
 
 sub draw_range{
-    my ($self) = @_;
-    my $cs_list = $self->get_CloneSequence_list;
+    my ($self)   = @_;
+    my $cs_list  = $self->get_CloneSequence_list;
     my $no_of_cs = scalar(@$cs_list);
+    my $max_pp   = $self->max_per_page;
 
     unless($self->_allow_paging()){
         $self->_user_first_clone_seq(1);
@@ -908,94 +912,41 @@ sub draw_range{
     my $trim_window = $self->{'_trim_window'}; 
 
     $self->_user_first_clone_seq(1);
-    $self->_user_last_clone_seq($self->max_per_page);
+    $self->_user_last_clone_seq($max_pp);
 
-    unless (defined ($trim_window)){
-        ## make a new window
+    unless ($trim_window){
         my $master = $self->canvas->toplevel;
-        $master->withdraw(); # only do this first time.
-        $trim_window = $master->Toplevel(-title => 'Open Range');
-        $trim_window->transient($master);
-        $trim_window->protocol('WM_DELETE_WINDOW', sub{ $trim_window->withdraw });
-    
-        my $label = $trim_window->Label(-text => "It looks as though you are about to open" .
-                                        " a large sequence set. Would you like to restrict" .
-                                        " the number of clones visible in the ana_notes window?" .
-                                        " If so please enter the number of the first and last" .
-                                        " clones you would like to see.",
-                                        -wraplength => 400, ####????
-                                        -justify    => 'center'
-                                        )->pack(-side   =>  'top');
+        $master->withdraw(); # only do this first time
+        $self->{'_trim_window'} = $trim_window = TransientWindow::OpenRange->new($master, 'Open Range');
         
-        my $entry_frame = $trim_window->Frame()->pack(-side   =>  'top',
-                                                      -pady   =>  5,
-                                                      -fill   =>  'x'
-                                                      ); 
-        my $label1 = $entry_frame->Label(-text => "First Clone: (1)"
-                                         )->pack(-side   =>  'left');
-        my $search_entry1 = $entry_frame->Entry(
-                                                -width        => 5,
-                                                -relief       => 'sunken',
-                                                -borderwidth  => 2,
-                                                -textvariable => \ ($self->{'_user_min_element'}),
-                                               )->pack(-side => 'left',
-                                                       -padx => 5,
-                                                       -fill => 'x'
-                                                       );
-        $search_entry1->bind('<FocusOut>', sub {
-            $self->{'_user_max_element'} = ($self->{'_user_min_element'} + 100 > $no_of_cs ? $no_of_cs : $self->{'_user_min_element'} + 100)
-            }
-                             );
-
-        my $label2 = $entry_frame->Label(-text => "Last Clone: ($no_of_cs)"
-                                         )->pack(
-                                                 -side   =>  'left'
-                                                 );
-        my $search_entry2 = $entry_frame->Entry(-width        => 5,
-                                                -relief       => 'sunken',
-                                                -borderwidth  => 2,
-                                                -textvariable => \ ($self->{'_user_max_element'}),
-                                                )->pack(-side => 'left',
-                                                        -padx => 5,
-                                                        -fill => 'x',
-                                                        );
-        ## search cancel buttons
-        my $limit_cancel_frame = $trim_window->Frame()->pack(-side => 'bottom',
-                                                                     -padx =>  5,
-                                                                     -pady =>  5,
-                                                                     -fill => 'x'
-                                                                     );   
-        my $limit_button = $limit_cancel_frame->Button(-text => 'Open Range',
-                                                       -command =>  sub{ 
-                                                           $trim_window->withdraw();
-                                                           $master->deiconify();
-                                                           $master->raise();
-                                                           $master->focus();
-                                                           $self->draw();
-                                                       }
-                                                       )->pack(
-                                                               -side  => 'right'
-                                                               );
-        my $cancel_button = $limit_cancel_frame->Button(-text    => 'Open All',
-                                                        -command => sub { 
-                                                            $trim_window->withdraw();
-                                                            $self->_user_first_clone_seq(0);
-                                                            $self->_user_last_clone_seq($no_of_cs);
-                                                            $master->deiconify();
-                                                            $master->raise();
-                                                            $master->focus();
-                                                            $self->draw();
-                                                            }
-                                                        )->pack(
-                                                                -side => 'right'
-                                                                );
-        $self->{'_trim_window'} = $trim_window;
-        $trim_window->bind('<Destroy>' , sub { $self = undef }  ) ;
+        $trim_window->text_variable_ref('user_min', 1                  , 1);
+        $trim_window->text_variable_ref('user_max', $max_pp            , 1);
+        $trim_window->text_variable_ref('total'   , $no_of_cs          , 1);
+        $trim_window->text_variable_ref('per_page', $max_pp            , 1);
+        $trim_window->action('openRange', sub{ 
+            my ($tw) = @_;
+            $tw->hide_me;
+            my $tl = $self->canvas->toplevel;
+            $tl->deiconify; $tl->raise; $tl->focus;
+            # need to copy input across.
+            $self->_user_first_clone_seq(${$tw->text_variable_ref('user_min')});
+            $self->_user_last_clone_seq (${$tw->text_variable_ref('user_max')});
+            $self->draw() ;
+        });
+        $trim_window->action('openAll', sub { 
+            my ($tw) = @_;
+            $tw->hide_me;
+            $self->_user_first_clone_seq(0);
+            $self->_user_last_clone_seq(${$tw->text_variable_ref('total')});
+            my $tl = $self->canvas->toplevel;
+            $tl->deiconify; $tl->raise; $tl->focus;
+            $self->draw();
+        });
+        $trim_window->initialise();
+        $trim_window->draw();
     }
-    
-    $trim_window->deiconify;
-    $trim_window->raise;
-    $trim_window->focus;
+    $trim_window->show_me;
+
     return 1;
 }
 
