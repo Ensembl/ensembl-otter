@@ -68,7 +68,6 @@ sub new {
     return bless {}, $pkg;
 }
 
-
 =head2 organism_lines
  
   Currently confesses if called.
@@ -473,9 +472,7 @@ sub _do_Gene {
             $mRNA_exonlocation->start_not_found($transcript_info->mRNA_start_not_found);
             $mRNA_exonlocation->end_not_found($transcript_info->mRNA_end_not_found);
             
-            #For debugging
-            #$mRNA_exonlocation->start_not_found(1);
-            #$mRNA_exonlocation->end_not_found(1);
+            $self->_add_gene_qualifiers($gene, $ft);
         } else {
             warn "No mRNA exons\n";
         }
@@ -495,15 +492,45 @@ sub _do_Gene {
                 $CDS_exonlocation->start_not_found($transcript_info->cds_start_not_found);
                 $CDS_exonlocation->end_not_found($transcript_info->cds_end_not_found);
 
-                #For debugging
-                #$CDS_exonlocation->start_not_found(1);
-                #$CDS_exonlocation->end_not_found(1);
+                $self->_add_gene_qualifiers($gene, $ft);
             } else {
                 warn "No CDS exons\n";
             }
         }
     }
 }
+
+
+=head2 _add_gene_qualifiers
+
+Internal method called  by _do_gene. 
+
+Passed a Gene object and a feature:
+
+    /gene="text2        #For known genes
+    /product="text"
+    /pseudo
+
+by checking the gene and gene_info properties.
+
+=cut 
+
+sub _add_gene_qualifiers {
+    my ( $self, $gene, $ft ) = @_;
+    
+    my $gene_info = $gene->gene_info; #Bio::Otter::GeneInfo object
+
+    if ($gene_info->known_flag) {
+        $ft->addQualifierStrings('gene', $gene_info->name);
+    }
+    if ($gene->description) {
+        $ft->addQualifierStrings('product', $gene->description);
+    }
+    if ($gene->type =~ /pseudo/i) {
+        $ft->addQualifierStrings('pseudo');
+    }            
+} 
+
 
 =head2 _add_exons_to_exonlocation
 
@@ -553,7 +580,7 @@ sub _add_exons_to_exonlocation {
     }
     $exonlocation->exons(@hum_embl_exons);
 
-    #Set the start and end for the Hum::EMBL::exonlocation
+    #Set the start and end for the Hum::EMBL::ExonLocation
     $exonlocation->start($hum_embl_exons[0]->start);
     $exonlocation->end($hum_embl_exons[-1]->end);
 }
