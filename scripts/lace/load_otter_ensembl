@@ -38,13 +38,13 @@ use Bio::SeqIO;
 use Bio::EnsEMBL::Clone;
 use Bio::EnsEMBL::RawContig;
 #use Bio::EnsEMBL::DBLoader;
-use Bio::Otter::DBSQL::DBAdaptor;
+#use Bio::Otter::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Pipeline::SeqFetcher::Pfetch;
 use Bio::EnsEMBL::Chromosome;
 
-
-
+use Bio::EnsEMBL::DBSQL::DBAdaptor;
+use Bio::EnsEMBL::Clone;
 
 my $input_type; 
 {
@@ -106,9 +106,7 @@ my $input_type;
             'name=s'        => \$set_name,
             );
     
-    print STDERR "host=$host\n";
-    
-    my $otter_db = Bio::Otter::DBSQL::DBAdaptor->new(
+    my $otter_db = Bio::EnsEMBL::DBSQL::DBAdaptor->new (   
         -HOST   => $host,
         -PORT   => $port,
         -USER   => $dbuser,
@@ -138,6 +136,7 @@ my $input_type;
             -PASS   => $pipedbpass,
             -DBNAME => $pipedbname,
             };
+            
         save_pipeline_options($otter_db, $pipe_options);
     }
     
@@ -227,30 +226,31 @@ my $input_type;
 
 
     ## change the conection parameters if a password is given or not then connect to otter db
-    my $otter_locator;
-    if ($dbpass) {
-       $otter_locator = "$module/host=$host;port=$port;dbname=$dbname;user=$dbuser;pass=$dbpass";
-    }
-    else {
-        $otter_locator = "$module/host=$host;port=$port;dbname=$dbname;user=$dbuser;pass=";
-    }
-    $otter_db  =  Bio::EnsEMBL::Pipeline::DBAdaptor->new($otter_locator);
+    ##my $otter_locator;
+    ##if ($dbpass) {
+    ##   $otter_locator = "$module/host=$host;port=$port;dbname=$dbname;user=$dbuser;pass=$dbpass";
+    ##}
+    ##else {
+    ##    $otter_locator = "$module/host=$host;port=$port;dbname=$dbname;user=$dbuser;pass=";
+    ##}
+    ##print STDERR $otter_locator;
+    ##$otter_db  =  Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor->new($otter_locator);
 
     ## query otter database for details of pipelinedb
-    $sth = $otter_db->prepare("SELECT meta_value FROM meta WHERE meta_key ='pipeline_db' ");
-    unless ($sth->execute){
-        die "could not execute statement on otter database";
-    } else {
-        ## the row returned should contain the following piece of code or something equivalent
-        ## $pipeline_db = Bio::EnsEMBL::DBLoader->new('Bio::EnsEMBL::DBSQL::DBAdaptor/host=ecs1b;port=3306;dbname=roy_test_new;user=ensadmin;pass=ensembl');
-        
-        
-        my $pipeline_connecting_code = $sth->fetchrow  ;
-        eval  $pipeline_connecting_code  ;    
-        if ($@) {
-            warn "errors when fetching details of pipeline database from otter meta table:  ";
-        }
-    }
+    ##$sth = $otter_db->prepare("SELECT meta_value FROM meta WHERE meta_key ='pipeline_db' ");
+##    unless ($sth->execute){
+##        die "could not execute statement on otter database";
+##    } else {
+##        ## the row returned should contain the following piece of code or something equivalent
+##        ## $pipeline_db = Bio::EnsEMBL::DBLoader->new('Bio::EnsEMBL::DBSQL::DBAdaptor/host=ecs1b;port=3306;dbname=roy_test_new;user=ensadmin;pass=ensembl');
+##        
+##        
+##        my $pipeline_connecting_code = $sth->fetchrow  ;
+##        eval  $pipeline_connecting_code  ;    
+##        if ($@) {
+##            warn "errors when fetching details of pipeline database from otter meta table:  ";
+##        }
+##    }
 
 
     # update the sequence sets table and return the coord of the last contig
@@ -267,9 +267,9 @@ my $input_type;
     if ($#otter_analysis != 0) {
         die ("More than one or none SubmitContig logic name in otter . Eeek! [@otter_analysis]");
     }
-    my @pipe_analysis = $pipe_analysis->fetch_by_logic_name('SubmitContig');
-    if ($#pipe_analysis != 0){
-        die ("More than one or none SubmitContig logic name in pipeline db. Eeek! [@pipe_analysis]");
+    my @pipe_analysis_obj = $pipe_analysis->fetch_by_logic_name('SubmitContig');
+    if ($#pipe_analysis_obj != 0){
+        die ("More than one or none SubmitContig logic name in pipeline db. Eeek! [@pipe_analysis_obj]");
     }
 
     ## default value for just now. - true value will be added by a different script
@@ -358,8 +358,8 @@ my $input_type;
             
         }
         else{
-                 
             $clone= Bio::EnsEMBL::Clone->new();
+                 
             $clone->htg_phase(3);
             $clone->id($acc_ver);
             $clone->embl_id($acc);
@@ -416,8 +416,10 @@ my $input_type;
         
         ## store_input_id_analysis($pipeline_db, $clone->embl_id) ;
         ## update input_id_analysis table
-        my $state_info = $pipeline_db->get_StateInfoContainer;
-        $state_info->store_input_id_analysis($ctg_id, $pipe_analysis->fetch_by_logic_name('SubmitContig') );
+#        my $state_info = $pipeline_db->get_StateInfoContainer;
+#        use Data::Dumper;
+#        print STDERR Dumper($pipe_analysis->fetch_by_logic_name('SubmitContig'));
+#        $state_info->store_input_id_analysis( $ctg_id , $pipe_analysis->fetch_by_logic_name('SubmitContig') );
     
         ##-------------------------------------
     }  #-----end of read in file loop
@@ -455,7 +457,7 @@ my $input_type;
             unshift(@$line, $otter_chromosome->dbID);             
             $otter_sth->execute(@$line) or warn "Couldn\'t execute \"INSERT assembly ...\" statement in otterdb";
             $line->[0] = $pipe_chromosome->dbID ;
-            $line->[7] = shift @alternative_id;  
+            $line->[8] = shift @alternative_id;  
             $sth->execute(@$line) or warn "Couldn\'t execute statement in pipeline db " 
         } ;
         if ($@){
@@ -506,7 +508,7 @@ sub store_clone{
 #    {
 #        print STDERR "Clone " . $clone->id . " (version " . $sv . ")  exists in the databases already\n";
 #    }       
-    warn "->>>>>>".$clone->get_all_Contigs->[0]->dbID . " : " . $clone_adaptor->db->dbname;
+#    warn "->>>>>>".$clone->get_all_Contigs->[0]->dbID . " : " . $clone_adaptor->db->dbname;
 }
 
 
@@ -540,7 +542,7 @@ sub check_sequence_set{
     else{
         
         ## so there is no entry in the sequence set table- create an entry then
-        $sth = $db->prepare(q{INSERT sequence_set (assembly_type , description , analysis_priority) VALUES (?,?,?)});
+        $sth = $db->prepare(q{INSERT INTO sequence_set (assembly_type , description , analysis_priority) VALUES (?,?,?)});
         my @values;
         @values->[0] = $name;
         @values->[1] = "description test" ; # need to get this from the command line
@@ -611,36 +613,35 @@ sub update_chromosome_length{
 }
 
 ##--------------------------------------------------------------------------------------------------
-## should be using the API, and this isnt needed then.
-sub store_input_id_analysis{
-    my ($db , $input_id ) = @_;
-    
-    my $sth = $db->prepare (qq{ SELECT * FROM input_id_analysis WHERE input_id = '$input_id' }) ;
-    
-    $sth->execute;
-    
-    if ($sth->fetchrow){
-        #there is an entry already - not allowed
-        warn "there is already an input analysis of $input_id";
-    }
-    else{
-    
-        my $analysis_id = $db->get_AnalysisAdaptor->fetch_by_logic_name('SubmitContig');
-        my $time = time;
-        my $result = 0;
-        
-        $sth= $db->prepare(qq{INSERT input_id_analysis (input_id , analysis_id , created , result ) 
-                         VALUES ($input_id , $analysis_id , $time , $result ) });
-    }
-    
-    
-    
-}
+#### should be using the API, and this isnt needed then.
+##sub store_input_id_analysis{
+##    my ($db , $input_id ) = @_;
+##    
+##    my $sth = $db->prepare (qq{ SELECT * FROM input_id_analysis WHERE input_id = '$input_id' }) ;
+##    
+##    $sth->execute;
+##    
+##    if ($sth->fetchrow){
+##        #there is an entry already - not allowed
+##        warn "there is already an input analysis of $input_id";
+##    }
+##    else{
+##    
+##        my $analysis_id = $db->get_AnalysisAdaptor->fetch_by_logic_name('SubmitContig');
+##        my $time = time;
+##        my $result = 0;
+##        
+##        $sth= $db->prepare(qq{INSERT input_id_analysis (input_id , analysis_id , created , result ) 
+##                         VALUES ($input_id , $analysis_id , $time , $result ) });
+##    }
+##    
+##}
 
 #------------------------------------------------------------------------------------------------------------------------------------
 
 # check if clone is in db already not used yet, but will be when i tidy up the code.
 # takes the db adaptor and accession and version number
+
 
 sub clone_to_db{
     
@@ -688,7 +689,7 @@ sub clone_to_db{
     my $ctg_id = @$contigs->[0]->dbID;
               
     return $ctg_id;
-}    
+}  
     
 #------------------------------------------------------------------------------------------
 
@@ -718,8 +719,9 @@ sub save_pipeline_options {
     my $user    = $options_hash->{-USER};
     my $pass    = $options_hash->{-PASS};
     my $dbname  = $options_hash->{-DBNAME};
-    
-    
+   
+   
+       
     my $opt_str = qq{
         -HOST   => '$host',
         -PORT   => '$port',
