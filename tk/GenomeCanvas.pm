@@ -233,6 +233,24 @@ sub set_scroll_region {
 #    return @{$gc->{'_other_widgets_size'}};
 #}
 
+sub set_window_size {
+    my( $gc, $set_flag ) = @_;
+    
+    if ($set_flag) {
+        my $mw = $gc->canvas->toplevel;
+        my($x, $y) = $mw->geometry =~ /^(\d+)x(\d+)/;
+        my ($display_max_x, $display_max_y) = $mw->maxsize;
+        $x = $display_max_x if $x > $display_max_x;
+        $y = $display_max_y if $y > $display_max_y;
+        $gc->{'_set_window_size'} = [$x, $y];
+    }
+    if (my $xy = $gc->{'_set_window_size'}) {
+        return @$xy;
+    } else {
+        return;
+    }
+}
+
 sub fix_window_min_max_sizes {
     my( $gc ) = @_;
     
@@ -270,17 +288,24 @@ sub fix_window_min_max_sizes {
     $max_y = $display_max_y if $max_y > $display_max_y;
     $mw->maxsize($max_x, $max_y);
     
-
-    # Nudge the window onto the screen.
+    # Get the current screen offsets
     my($x, $y) = $mw->geometry =~ /^\d+x\d+\+?(-?\d+)\+?(-?\d+)/;
-    $x = 0 if $x < 0;
-    $y = 0 if $y < 0;
 
-    if (($x + $max_x) > $display_max_x) {
-        $x = $display_max_x - $max_x;
-    }
-    if (($y + $max_y) > $display_max_y) {
-        $y = $display_max_y - $max_y;
+    # Is there a set window size?
+    if (my($fix_x, $fix_y) = $gc->set_window_size) {
+        $max_x = $fix_x;
+        $max_y = $fix_y;
+    } else {
+        # Nudge the window onto the screen.
+        $x = 0 if $x < 0;
+        $y = 0 if $y < 0;
+
+        if (($x + $max_x) > $display_max_x) {
+            $x = $display_max_x - $max_x;
+        }
+        if (($y + $max_y) > $display_max_y) {
+            $y = $display_max_y - $max_y;
+        }
     }
 
     $mw->geometry("${max_x}x$max_y+$x+$y");

@@ -1,10 +1,12 @@
 #!/usr/local/bin/perl -w
 
-### chr_20_ana_review
+### c20review
 
 use strict;
 use GenomeCanvas;
 use Hum::Submission 'prepare_statement';
+use Hum::AnaStatus::Sequence;
+use Hum::Conf qw{ HUMACESERVER_HOST HUMGIFACESERVER_PORT };
 use GenomeCanvas::Band::SeqChooser;
 use Bio::EnsEMBL::DBSQL::Obj;
 use Carp;
@@ -41,7 +43,13 @@ use Getopt::Long 'GetOptions';
     $gc->fix_window_min_max_sizes;
     
     my $canvas = $gc->canvas;
-    $canvas->CanvasBind('<1>', sub { selection_manager($gc) });
+    $canvas->CanvasBind('<Button-1>', sub {
+        deselect_all_selected_not_current($gc);
+        toggle_current($gc);
+        });
+    $canvas->CanvasBind('<Shift-Button-1>', sub {
+        toggle_current($gc);
+        });
     
     {
         my $button_frame = $mw->Frame;
@@ -74,14 +82,29 @@ use Getopt::Long 'GetOptions';
             return unless @ana_seq_id_list;
             set_reviewed($annotator, $c, @ana_seq_id_list);
             $chooser->chooser_map(make_chooser_map());
+            $gc->set_window_size(1);
+            $gc->render;
+            $gc->fix_window_min_max_sizes;
+        });
+
+        make_button($button_frame2, 'Refresh', sub{
+            $chooser->chooser_map(make_chooser_map());
+            $gc->set_window_size(1);
             $gc->render;
             $gc->fix_window_min_max_sizes;
         });
 
         make_button($button_frame2, 'Run lace', sub{
-            my @ana_seq_id_list = list_selected_ana_seq_ids($canvas);
-            return unless @ana_seq_id_list;
-            fork_lace_process(@ana_seq_id_list);
+            my @sequence_name_list = list_selected_sequence_names($canvas);
+            return unless @sequence_name_list;
+            fork_lace_process(@sequence_name_list);
+        });
+
+        make_button($button_frame2, 'EMBL dump', sub{
+            my @sequence_name_list = list_selected_sequence_names($canvas);
+            foreach my $seq (@sequence_name_list) {
+                do_embl_dump($seq);
+            }
         });
         
         make_button($button_frame2, 'Exit', sub{ exit } );
@@ -92,41 +115,46 @@ use Getopt::Long 'GetOptions';
     ###############
 }
 
-sub fork_lace_process {
-    my( @ana_seq_ids ) = @_;
+{
+    my( %lace_dir );
+
+    sub fork_lace_process {
+        my( @seq_name_list ) = @_;
+
+        # Record the lace db directory of each
+        # of the sequences.
+        my $lace_dir = (getpwuid($<))[7] . '/.lace';
+        my $lace_dir_suffix = "_${HUMACESERVER_HOST}_$HUMGIFACESERVER_PORT";
+        my $lace_seq_home = "$lace_dir/$seq_name_list[0]$lace_dir_suffix";
+        foreach my $seq (@seq_name_list) {
+            $lace_dir{$seq} = $lace_seq_home;
+        }
+
+        if (my $pid = fork) {
+            $SIG{'CHLD'} = 'IGNORE';
+            sleep 15;   # Prevent multiple button presses
+            return 1;
+        }
+        elsif (defined $pid) {
+            exec('lace', '-noacetmp', @seq_name_list);
+        }
+        else {
+            die "Error: Can't fork : $!";
+        }
+    }
     
-    my $ana_seq_in_clause = join(',', map "'$_'", @ana_seq_ids);
-    my $sql = qq{
-        SELECT a.ana_seq_id
-          , s.sequence_name
-        FROM sequence s
-          , ana_sequence a
-        WHERE s.seq_id = a.seq_id
-          AND a.ana_seq_id IN ($ana_seq_in_clause)
-        };
-    my $sth = prepare_statement($sql);
-    $sth->execute;
-    my( %seq_name );
-    while (my($as_id, $seq_name) = $sth->fetchrow) {
-        $seq_name{$as_id} = $seq_name;
-    }
-    my( @seq_name_list );
-    foreach my $as_id (@ana_seq_ids) {
-        my $seq_name = $seq_name{$as_id}
-            or die "Didn't find sequence name for ana_seq_id '$as_id'";
-        push(@seq_name_list, $seq_name);
-    }
-    
-    if (my $pid = fork) {
-        $SIG{'CHLD'} = 'IGNORE';
-        sleep 15;
-        return 1;
-    }
-    elsif (defined $pid) {
-        exec('lace', @seq_name_list);
-    }
-    else {
-        die "Error: Can't fork : $!";
+    sub do_embl_dump {
+        my( $sequence_name ) = @_;
+        
+        my $ana_seq = Hum::AnaStatus::Sequence->new_from_sequence_name($sequence_name);
+        my $ana_dir = $ana_seq->analysis_directory;
+        my @embl_dump_command = ('emblDump', '-dump', $ana_dir, $sequence_name);
+        if (my $lace_dir = $lace_dir{$sequence_name}) {
+            push(@embl_dump_command, '-path', $lace_dir);
+        }
+        warn "Running '@embl_dump_command'\n";
+        system(@embl_dump_command) == 0
+            or die "Error running : '@embl_dump_command'";
     }
 }
 
@@ -141,6 +169,19 @@ sub list_selected_ana_seq_ids {
         push(@ana_seq_id_list, $ana_seq_id);
     }
     return @ana_seq_id_list;
+}
+
+sub list_selected_sequence_names {
+    my( $canvas ) = @_;
+    
+    my @selected_objects = $canvas->find('withtag', 'selected');
+    my( @sequence_name_list );
+    foreach my $obj (@selected_objects) {
+        my ($sequence_name) = map /sequence_name=(.+)/, $canvas->gettags($obj); 
+        die "Found selected object without sequence_name" unless $sequence_name;
+        push(@sequence_name_list, $sequence_name);
+    }
+    return @sequence_name_list;
 }
 
 sub set_reviewed {
@@ -199,7 +240,7 @@ sub is_valid_annotator {
 }
 
 
-sub selection_manager {
+sub toggle_current {
     my( $gc ) = @_;
     
     my $canvas = $gc->canvas;
@@ -211,20 +252,29 @@ sub selection_manager {
     toggle_selection($gc, $rec);
 }
 
-sub toggle_selection {
-    my( $gc, $tag ) = @_;
+sub deselect_all_selected_not_current {
+    my( $gc ) = @_;
     
     my $canvas = $gc->canvas;
-    my $colour = $canvas->itemcget($tag, '-fill');
-    my( $new_colour ); 
-    if ($colour eq '#ccccff') {
-        $new_colour = '#ffcccc';
-        $canvas->addtag('selected', 'withtag', $tag);
-    } else {
-        $new_colour = '#ccccff';
-        $canvas->dtag($tag, 'selected');
+    foreach my $obj ($canvas->find('withtag', 'selected&&!current')) {
+        toggle_selection($gc, $obj);
     }
-    $canvas->itemconfigure($tag,
+}
+
+sub toggle_selection {
+    my( $gc, $obj ) = @_;
+    
+    my $canvas = $gc->canvas;
+    my $is_selected = grep $_ eq 'selected', $canvas->gettags($obj);
+    my( $new_colour ); 
+    if ($is_selected) {
+        $new_colour = '#aaaaff';
+        $canvas->dtag($obj, 'selected');
+    } else {
+        $new_colour = '#ffcccc';
+        $canvas->addtag('selected', 'withtag', $obj);
+    }
+    $canvas->itemconfigure($obj,
         -fill => $new_colour,
         );
 }
@@ -386,11 +436,11 @@ sub get_unplaced_clones {
 
 __END__
 
-=head1 NAME - chr_20_ana_review
+=head1 NAME - c20review
 
 =head1 SYNOPISS
 
-    chr_20_ana_review -user <username>
+    c20review -user <username>
 
 =head1 AUTHOR
 

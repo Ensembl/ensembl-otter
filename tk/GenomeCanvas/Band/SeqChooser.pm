@@ -40,17 +40,21 @@ sub draw_spacer {
     my $canvas = $band->canvas;
     my $font_size = $band->font_size;
     my @tags = $band->tags;
-    my $x1 = 0;
-    my $y1 = $y_offset + 10;
+    my $border = 3;
+    my $y_space = 10;
+    my $x1 = $border;
+    my $y1 = $y_offset + $y_space;
     my $label = $canvas->createText(
         $x1, $y1,
         -text       => "@$row",
-        -font       => ['helvetica', $font_size],
+        -font       => ['helvetica', $font_size, 'bold'],
         -anchor     => 'nw',
         -tags       => [@tags, 'contig_gap', $name],
         );
     my @rect = $canvas->bbox($name);
-    $band->expand_bbox(\@rect, 10);
+    $rect[0] -= $border;
+    $rect[2] += $border;
+    $rect[3] += $y_space;
     my $outline = $canvas->createRectangle(
         @rect,
         -fill       => undef,
@@ -68,6 +72,7 @@ sub draw_seq_row {
     my $canvas = $band->canvas;
     my $font   = $band->column_font;
     my @tags   = $band->tags;
+    push(@tags, $id, "sequence_name=$text[0]");
     my $x1 = 3;
     my $y1 = $y_offset + 3;
     for (my $i = 0; $i < @text; $i++) {
@@ -77,7 +82,7 @@ sub draw_seq_row {
             -text       => $t,
             -font       => $font,
             -anchor     => 'nw',
-            -tags       => [@tags, 'contig_gap', $id],
+            -tags       => [@tags, 'contig_gap'],
             );
     }
     my @rect = $canvas->bbox($id);
@@ -88,7 +93,7 @@ sub draw_seq_row {
         @rect,
         -fill       => '#ccccff',
         -outline    => undef,
-        -tags       => [@tags, 'contig_seq_rectangle', $id],
+        -tags       => [@tags, 'contig_seq_rectangle'],
         );
     $canvas->lower($bkgd, $id);
     return $rect[3];
