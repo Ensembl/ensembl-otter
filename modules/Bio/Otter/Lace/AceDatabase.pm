@@ -870,14 +870,15 @@ sub make_AceDataFactory {
 		$filt->$option($value);
 	    }
             # does the filter need a method?
-            my $tag = $filt->method_tag();
-            print STDERR "Trying to get a method Object with tag '$tag' ... filter '$class' ... " if $debug;
-            my $methObj = $aceMethods_cache->{$tag};
-            print STDERR "Found one" if $debug && $methObj;
-            print STDERR "\n" if $debug;
-
-            $filt->method_object($methObj); # or some other place
-
+            #my $tag = $filt->method_tag();
+            my @required_ace_methods = @{ $filt->required_ace_method_names() };
+            foreach my $tag(@required_ace_methods){
+                print STDERR "Trying to get a method Object with tag '$tag' ... filter '$class' ... " if $debug;
+                my $methObj = $aceMethods_cache->{$tag};
+                print STDERR "Found one" if $debug && $methObj;
+                print STDERR "\n" if $debug;
+                $filt->add_method_object($methObj); # or some other place
+            }
 	    # add the filter to the factory
             $factory->add_AceFilter($filt);
         }
