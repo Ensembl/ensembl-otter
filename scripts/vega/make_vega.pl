@@ -39,6 +39,7 @@ my $phelp;
 my $opt_v;
 my $opt_t;
 my $opt_e;
+my $opt_I;
 
 my $opt_o='vega_transfer.csh';
 my $opt_p='vega_transform.sql';
@@ -67,6 +68,7 @@ GetOptions(
 	   'help', \$phelp,
 	   'h', \$help,
 	   'v', \$opt_v,
+	   'I', \$opt_I,
 	   );
 
 # help
@@ -280,8 +282,8 @@ my $sth = $dbh2->prepare($sql);
 $sth->execute;
 while (my @row = $sth->fetchrow_array()){
   if($row[0]>0){
-    $err=1;
-    print "FATAL target database already contains ".$row[0]." genes\n";
+    $err=1 unless $opt_I;
+    print "WARN target database already contains ".$row[0]." genes\n";
   }
 }
 
