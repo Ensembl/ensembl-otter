@@ -122,7 +122,7 @@ sub compare_genes {
 
         if ($oldg->description ne $newg->description) {
             warn "Gene descriptions differ in '$geneid'\n";
-            return 0;
+            $gene_modified = 1;
         }
 
         # Compare the gene infos to see which have changed
