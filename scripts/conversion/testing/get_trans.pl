@@ -13,6 +13,12 @@ my $file = 'stdout';
 my $path = 'NCBI_30';
 my $port = 19322;
 
+my $dna_host   = 'ecs2f';
+my $dna_user   = 'ensro';
+my $dna_dbname = '';
+my $dna_port   = 3306;
+
+
 $| = 1;
 
 &GetOptions(
@@ -21,6 +27,10 @@ $| = 1;
   'dbname:s' => \$dbname,
   'path:s'   => \$path,
   'port:n'   => \$port,
+  'dna_host:s'   => \$dna_host,
+  'dna_user:s'   => \$dna_user,
+  'dna_port:n'   => \$dna_port,
+  'dna_dbname:s' => \$dna_dbname,
   'chromosomes:s' => \@chromosomes,
   'file:s' => \$file
 );
@@ -33,10 +43,21 @@ my $db = new Bio::EnsEMBL::DBSQL::DBAdaptor(
   -host   => $host,
   -user   => $user,
   -port   => $port,
-  -dbname => $dbname
+  -dbname => $dbname,
 );
 $db->assembly_type($path);
 
+if ($dna_dbname ne '') {
+  my $dna_db = new Bio::EnsEMBL::DBSQL::DBAdaptor(
+    -host   => $dna_host,
+    -user   => $dna_user,
+    -port   => $dna_port,
+    -dbname => $dna_dbname,
+  );
+  $dna_db->assembly_type($path);
+
+  $db->dnadb($dna_db);
+}
 
 my $sa = $db->get_SliceAdaptor();
 my $ga = $db->get_GeneAdaptor();
