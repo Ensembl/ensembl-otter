@@ -780,7 +780,7 @@ sub strand_from_tk {
         my $exon_dir = ($end eq 'first') ? 'reverse' : 'forward';
         if ($dir) {
             if ($exon_dir ne $dir) {
-                $self->message("Inconsistent exon directions.  I chose '$dir'");
+                $self->message("Inconsistent exon directions.  Guessing '$dir'");
                 last;
             }
         } else {
@@ -877,6 +877,7 @@ sub middle_button_paste {
         $text = $canvas->SelectionGet;
     };
     return if $@;
+    #warn "Trying to parse: [$text]\n";
     
     my( @ints );
     # match fMap "blue box" DNA selection
@@ -887,7 +888,7 @@ sub middle_button_paste {
         }
     } else {
         # match general fMap "blue box" pattern
-        unless (@ints = $text =~ /^\S+\s+(\d+)\s+(\d+)\s+\(\d+\)/) {
+        unless (@ints = $text =~ /^\S+\s+-?(\d+)\s+-?(\d+)\s+\(\d+\)/) {
             # or just get all the integers
             @ints = grep ! /\./, $text =~ /([\.\d]+)/g;
         }

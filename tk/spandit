@@ -19,7 +19,7 @@ use Socket;
         'path=s'        => \$path,
         'title=s'       => \$title,
         'fontsize=i'    => \$font_size,
-        'help!'         => \&useage,
+        'h|help!'       => \&useage,
         ) or useage();
     
     if ($path) {
@@ -100,6 +100,34 @@ __END__
 
 =head1 NAME - spandit
 
+=head1 SYNOPSIS
+
+    spandit -path <ACE DATABASE DIR>
+    spandit -host <SERVER> -port <NUMBER>
+
+=head1 DESCRIPTION
+
+B<spandit> (the name is a contraction of "span
+edit") is designed to make the creation and
+editing of gene structures in an acedb database
+as easy as possible.  An aim of the design was to
+reduce the number of mouse and keyboard actions
+the annotator needs to perform as much as
+possible.
+
+spandit has to be manually attached to xace to
+work correctly.  This is with the B<Attach Xace>
+option in the file menu (or by typing B<Ctrl-X>),
+and clicking on the xace main window with the
+cross-hairs that appear.  Make sure your xace
+main window is visible first!
+
+The main window initailly displays a list of all
+the Genome_Sequence objects (B<clones>) which it
+finds in the database.  A clone can be selected
+with the left mouse button.  More than one can be
+selected by pressing B<Shift> when selecting.
+
 =head1 FEATURE
 
     Sequence
@@ -124,10 +152,6 @@ __END__
                         Novel_CDS   Human_supported
                                     Non_human_supported
                         Novel_Transcript
-
-=head1 SYNOPSIS
-
-    spandit <-path <ACE DATABASE DIR> | -host <SERVER> -port <NUMBER>>
 
 =head1 AUTHOR
 

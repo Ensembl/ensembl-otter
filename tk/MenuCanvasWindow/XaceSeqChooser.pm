@@ -215,7 +215,7 @@ sub populate_menus {
         );
     
     # Subseq menu
-    my $subseq = $self->make_menu('SubSeq');
+    my $subseq = $self->make_menu('SubSeq', 1);
     $self->subseq_menubutton($subseq->parent);
     
     # Edit subsequence
