@@ -6,8 +6,8 @@ use strict;
 
 use Bio::Otter::Lace::Defaults;
 use Hum::Analysis::Factory::ExonLocator;
-use Hum::Ace::SubSeq;
-use Hum::Ace::GeneMethod;
+#use Hum::Ace::SubSeq;
+#use Hum::Ace::GeneMethod;
 
 {
     my( $dataset_name,
@@ -42,11 +42,10 @@ use Hum::Ace::GeneMethod;
     my ($chr, $start, $end) = $cl->chr_start_end_from_contig($ss->selected_CloneSequences);
     my $slice = $slice_aptr->fetch_by_chr_start_end($chr, $start, $end);
     my $tiles = $slice->get_tiling_path;
-    my $genes = $slice->get_all_Genes;
-    ###
-    my ($genes, $tiles) = otter_objects_from_contig($cl, $ds, $ss);
-    
+    my $genes = $gene_atpr->fetch_by_Slice($slice);
+    #my ($genes, $tiles) = otter_objects_from_contig($cl, $ds, $ss);
     my $acc_list = accession_list_hash_from_tile_path($tiles);
+
     foreach my $slice_gene (@$genes) {
         my $name = $slice_gene->gene_info->name->name;
         my $stable_id = $slice_gene->stable_id;

@@ -27,7 +27,7 @@ use Bio::Otter::Lace::Defaults;
 					  'satpass=s'   => \$satpass,
 					  'satdbname=s' => \$satdbname,
 					  'dataset=s'   => \$dataset_name,
-                                          'view'      => \$view,
+                                          'show'        => \$view,
 					  ) || usage();
     usage() if $help;
     die "Key not given" unless $key;

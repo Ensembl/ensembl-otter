@@ -1,0 +1,97 @@
+#!/usr/local/bin/perl -w
+
+### show_sequence_set
+
+use strict;
+
+use Bio::Otter::Lace::Defaults;
+use Hum::Sort 'ace_sort';
+
+{
+    my( $dataset_name,
+        $sequence_set,
+        );
+
+    my $usage = sub { exec('perldoc', $0) };
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'       => $usage,
+        'dataset=s'     => \$dataset_name,
+        'chr|set=s'     => \$sequence_set,
+        ) or $usage->();
+    unless ($dataset_name) {
+        $usage->();
+    }
+
+    # Connect to Ensembl/Otter database and fetch adaptors
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    
+    if ($sequence_set) {
+        print_sequence_set($ds, $sequence_set);
+    } else {
+        print_set_list($ds);
+    }
+}
+
+sub print_sequence_set {
+    my( $ds, $sequence_set ) = @_;
+    
+    my $ss = $ds->get_SequenceSet_by_name($sequence_set);
+    $ds->fetch_all_CloneSequences_for_SequenceSet($ss);
+    my $cs_list = $ss->CloneSequence_list;
+    
+    my $last_pos = 0;
+    for (my $i = 0; $i < @$cs_list; $i++) {
+        my $cs = $cs_list->[$i];
+        
+        # Show sizes of gaps between clones
+        if (my $gap = $cs->chr_start - $last_pos - 1) {
+            printf "GAP  %s bp\n", comma_format($gap);
+        }
+        $last_pos = $cs->chr_end;
+        
+        # Print the clone information
+        printf "%5d  %-12s  %-8s\n",
+            $i + 1,
+            $cs->clone_name,
+            $cs->accession;
+    }
+}
+
+sub print_set_list {
+    my( $ds ) = @_;
+    
+    my @ss_list = sort {ace_sort($a->name, $b->name)} @{$ds->get_all_SequenceSets};
+    
+    my $max = 0;
+    foreach my $ss (@ss_list) {
+        my $len = length($ss->name);
+        $max = $len if $len > $max;
+    }
+    
+    my $pattern = "  \%-${max}s  \%s\n";
+    foreach my $ss (@ss_list) {
+        printf $pattern,
+            $ss->name,
+            $ss->description;
+    }
+}
+
+sub comma_format {
+    my( $number ) = @_;
+    
+    my $formatted = reverse $number;
+    $formatted =~ s/(\d{3})(?=\d)/$1,/g;
+    $formatted = reverse $formatted;
+    
+    return $formatted;
+}
+
+__END__
+
+=head1 NAME - show_sequence_set
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
