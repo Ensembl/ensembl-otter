@@ -797,15 +797,7 @@ sub show_peptide {
             $self->message("Truncated transcript - this part doesn't contain coding region ");
             return ;
         }        
-        # gene is not mutable - check if it is truncated, if so fix cds
-        ##if ($sub->Locus && $sub->Locus->is_truncated){
-        ##    my $start = $self->tk_t_start + 1 ;
-        ##    my $name = $sub->name ;
-        ##    warn "$name \nstart $start : phase " . $sub->start_phase;
-        ##
-        ##    warn "\nnothing" unless ($sub->translatable_Sequence->ace_string);
-        ##    $sub->start_not_found(1) ;
-        ##}  ### down to here added by ck for testing
+        
     }
 
     unless ($peptext) {
