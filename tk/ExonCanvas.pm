@@ -185,6 +185,8 @@ sub add_buttons_and_event_bindings {
 
     $canvas->Tk::bind('<Left>',      sub{ $self->canvas_go_left   });
     $canvas->Tk::bind('<Right>',     sub{ $self->canvas_go_right  });
+    $canvas->Tk::bind('<Up>',        sub{ $self->increment_int    });
+    $canvas->Tk::bind('<Down>',      sub{ $self->decrement_int    });
     $canvas->Tk::bind('<BackSpace>', sub{ $self->canvas_backspace });
     
     $canvas->Tk::bind('<<digit>>', [sub{ $self->canvas_insert_character(@_) }, Tk::Ev('A')]);
@@ -208,6 +210,7 @@ sub canvas_insert_character {
     
     my $text = $canvas->focus or return;
     $canvas->insert($text, 'insert', $char);
+    $self->re_highlight($text);
 }
 
 sub canvas_go_left {
@@ -218,6 +221,33 @@ sub canvas_go_left {
     my $pos = $canvas->index($text, 'insert');
     $canvas->icursor($text, $pos - 1);
 }
+
+sub increment_int {
+    my( $self ) = @_;
+    
+    my $canvas = $self->canvas;
+    my $text = $canvas->focus or return;
+    my $num = $canvas->itemcget($text, 'text');
+    if ($num =~ /^\d+$/) {
+        $num++;
+        $canvas->itemconfigure($text, -text => $num);
+        $self->re_highlight($text);
+    }
+}
+
+sub decrement_int {
+    my( $self ) = @_;
+    
+    my $canvas = $self->canvas;
+    my $text = $canvas->focus or return;
+    my $num = $canvas->itemcget($text, 'text');
+    if ($num =~ /^\d+$/) {
+        $num--;
+        $canvas->itemconfigure($text, -text => $num);
+        $self->re_highlight($text);
+    }
+}
+
 
 sub canvas_go_right {
     my( $self ) = @_;
@@ -236,12 +266,7 @@ sub canvas_backspace {
     my $pos = $canvas->index($text, 'insert')
         or return;  # Don't delete when at beginning of string
     $canvas->dchars($text, $pos - 1);
-}
-
-sub highlight {
-    my $self = shift;
-    
-    $self->SUPER::highlight(@_);
+    $self->re_highlight($text);
 }
 
 sub select_all_exon_pos {

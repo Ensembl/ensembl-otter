@@ -164,53 +164,64 @@ sub bind_scroll_commands {
     $canvas->configure(
         -takefocus => 1,
         );
-    return;
     
     # Home and End keys
-    $canvas->bind('<Key-Home>', sub{
+    $canvas->Tk::bind('<Home>', sub{
         $y_scroll->ScrlToPos(0);
         });
-    $canvas->bind('<Key-End>', sub{
+    $canvas->Tk::bind('<End>', sub{
         $y_scroll->ScrlToPos(1);
         });
     
     # Page-Up and Page-Down keys
-    $canvas->bind('<Key-Next>', sub{
+    $canvas->Tk::bind('<Next>', sub{
         $y_scroll->ScrlByPages('v', 1);
         });
-    $canvas->bind('<Key-Prior>', sub{
+    $canvas->Tk::bind('<Prior>', sub{
         $y_scroll->ScrlByPages('v', -1);
         });
-    $canvas->bind('<Control-Key-Down>', sub{
+    $canvas->Tk::bind('<Control-Down>', sub{
         $y_scroll->ScrlByPages('v', 1);
         });
-    $canvas->bind('<Control-Key-Up>', sub{
+    $canvas->Tk::bind('<Control-Up>', sub{
         $y_scroll->ScrlByPages('v', -1);
         });
     
     # Ctrl-Left and Ctrl-Right
-    $canvas->bind('<Control-Key-Left>', sub{
+    $canvas->Tk::bind('<Control-Left>', sub{
         $x_scroll->ScrlByPages('h', -1);
         });
-    $canvas->bind('<Control-Key-Right>', sub{
+    $canvas->Tk::bind('<Control-Right>', sub{
         $x_scroll->ScrlByPages('h', 1);
         });
     
     # Left and Right
-    $canvas->bind('<Shift-Key-Left>', sub{
+    $canvas->Tk::bind('<Shift-Left>', sub{
+        warn "Shift-Left";
         $x_scroll->ScrlByUnits('h', -1);
         });
-    $canvas->bind('<Shift-Key-Right>', sub{
+    $canvas->Tk::bind('<Shift-Right>', sub{
+        warn "Shift-Right";
         $x_scroll->ScrlByUnits('h', 1);
         });
     
     # Up and Down
-    $canvas->bind('<Shift-Key-Up>', sub{
+    $canvas->Tk::bind('<Shift-Up>', sub{
+        warn "Shift-Up";
         $y_scroll->ScrlByUnits('v', -1);
         });
-    $canvas->bind('<Shift-Key-Down>', sub{
+    $canvas->Tk::bind('<Shift-Down>', sub{
+        warn "Shift-Down";
         $y_scroll->ScrlByUnits('v', 1);
         });
+    
+    # Left and Right
+    $canvas->Tk::bind('<Left>', sub{ warn "nop" });
+    $canvas->Tk::bind('<Right>', sub{ warn "nop" });
+    
+    # Up and Down
+    $canvas->Tk::bind('<Up>', sub{ warn "nop" });
+    $canvas->Tk::bind('<Down>', sub{ warn "nop" });
 }
 
     #foreach my $key_seq ($x_scroll->bind($class)) {
@@ -751,6 +762,22 @@ sub next_message_id {
                 );
             $canvas->lower($r, $o);
             $self->add_selected($o, $r);
+        }
+    }
+
+    sub re_highlight {
+        my( $self, @obj ) = @_;
+
+        my $canvas = $self->canvas;
+        foreach my $o (@obj) {
+            my $r = $self->{'_selected_list'}{$o}
+                or confess "No highlight rectangle for object";
+            my @bbox = $canvas->bbox($o);
+            $bbox[0] -= 1;
+            $bbox[1] -= 1;
+            $bbox[2] += 1;
+            $bbox[3] += 1;
+            $canvas->coords($r, @bbox);
         }
     }
 
