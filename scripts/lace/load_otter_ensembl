@@ -66,11 +66,11 @@ use Bio::EnsEMBL::Chromosome;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Clone;
 
-my $input_type; 
 {
 #    my $t0 = new Benchmark; # test the time taken for the script to run.
     
     # some important variables (and some less inportant ones that look neater up here) 
+    my $input_type;     # AGP or LIST
     my $sth ;                 # used as a variable for storing the various statement handles used through the script
     my $agp_file ;            # the file containing the assembly details
     my $pipe_analysis ;       # analysis adaptor for the pipeline db
@@ -191,43 +191,34 @@ my $input_type;
         print STDERR "reading line ". ($line_counter + 1) ."\n";
         $line_counter ++;    
     
-        my @line_in_array = split /[\s]/ , $_ ; 
-        # 0       1       2       3       4       5               6       7       8
-        # chr_20  2808333 2934911 29      F       AL121905.0      101     126679  +
+        # 0       1       2       3       4       5               6       7       8     9
+        # chr_20  2808333 2934911 29      F       AL121905.0      101     126679  +     Optional comment
         # splits each line into its component parts - puts line in a temporary array (splits the line on whitespace)
+        my @line_in_array = split /\s+/, $_, 10;
     
  
-        if (@line_in_array >= 9) {
-            # we must have the full file rather than just clone names
-            $input_type = "AGP";
-            $chromosome_name = @line_in_array->[0]; 
-            my $type = @line_in_array->[4];
-            if ($prev_chr_name eq $chromosome_name){
-                die "clones on different chromosomes" unless $chromosome_name eq $prev_chr_name ;
-            }
-            else{
-                $prev_chr_name = $chromosome_name;
-            }
-        
-            # if clones are not finished , dont add them to database
-            if (! $type  eq 'F'){
-                      next;            
-            }
-               
-        }
-        elsif(@line_in_array == 1){ 
+        if (@line_in_array == 1) { 
             # cant think of anything to check  here yet
             # we will end up here if the input file has only a list of contigs in it. 
             $input_type = "LIST";
-            if (! defined $chromosome_name){
+            if (! defined $chromosome_name) {
                 # we need a chromosome name if only a list of contigs is given
                 die "you need to provide the name of a chromosome when the input file is a list of clones";
             }
-            
+        }
+        elsif ($line_in_array[4] eq 'F') {
+            # we must have the full file rather than just clone names
+            $input_type = "AGP";
+            $chromosome_name = $line_in_array[0]; 
+            if ($prev_chr_name) {
+                die "clones on different chromosomes: '$chromosome_name' and '$prev_chr_name'"
+                    unless $chromosome_name eq $prev_chr_name;
+            } else {
+                $prev_chr_name = $chromosome_name;
+            }
         }
         else {
-            print STDERR "\n\tinput file does not have the expected number of columns at line $line_counter\n\tshould have the format ...\n\tchr_20  2808333 2934911 29      F       AL121905.0      101     126679  +";
-            print STDERR "line $line_counter has been skipped";
+            warn "Skipping: $_";
             next; 
         }
         ## store all values in this array, so that the file does not need to be re-read
@@ -239,12 +230,15 @@ my $input_type;
     
 
     # die on INT signal    - should clean things up a bit , if program terminates early
-    $SIG{INT} = sub {my $sig=shift;die "exited after SIG$sig";};
+    $SIG{INT} = sub {
+        my $sig = shift;
+        die "exited after SIG$sig";
+        };
 
 
     # update the sequence sets table and return the coord of the last contig if available
-    $end_coord = check_sequence_set($otter_db, $set_name);
-    my $other_end_coord = check_sequence_set($pipeline_db , $set_name);
+    $end_coord          = check_and_save_sequence_set($otter_db,     $set_name, $description, $input_type);
+    my $other_end_coord = check_and_save_sequence_set($pipeline_db , $set_name, $description, $input_type);
     if ($other_end_coord > $end_coord)  { $end_coord = $other_end_coord };
     
     
@@ -336,7 +330,7 @@ my $input_type;
         
         
         # next line stores the details of that contig in the database and returns the dbID
-        my $ctg_id = clone_to_db($pipe_clone_adaptor ,$seq,  $acc ,$sv);                       
+        my($ctg_id, $ctg_name) = clone_to_db($pipe_clone_adaptor, $seq, $acc, $sv);                       
         
         # assembly details get put into a 2D array corresponding to columns in the assembly table of the db
         push(@sgp_pipe, [
@@ -352,25 +346,25 @@ my $input_type;
             );                 
 
         # again for otter db
-        $ctg_id = clone_to_db($otter_clone_adaptor ,$seq,  $acc ,$sv);
+        my ($otter_ctg_id) = clone_to_db($otter_clone_adaptor, $seq, $acc, $sv);
         push (@sgp_otter, [
                     $otter_chromosome->dbID,
                     $chr_start, $chr_end,
                     $super_contig_name,
                     $chr_start, $chr_end,
                     $superctg_ori ,
-                    $ctg_id,
+                    $otter_ctg_id,
                     $ctg_start, $ctg_end,
                     $ctg_ori,
                     $set_name]);
         
         
-        ## store_input_id_analysis($pipeline_db, $clone->embl_id) ;
         ## update input_id_analysis table
         eval{
-            $state_info->store_input_id_analysis( $acc_ver . ".1."  . ($seq->length )  , $ana_obj );
+            $state_info->store_input_id_analysis($ctg_name, $ana_obj);
         };
-        if ($@){
+        # Don't warn about duplicate entries - means that it is already in the db.
+        if ($@ and $@ !~ /Duplicate entry/){
             print STDERR "could not enter values to input_id_analysis table\n$@"; 
         }
         
@@ -453,9 +447,9 @@ sub store_clone{
 # check if a set with that name exists 
 # if it deosnt exist update databases with appropritae entry;
 # it returns the last cromosome end coordinate in that sequence set 
-sub check_sequence_set {
-    my ($db, $name) = @_;
-    my $value = 0;
+sub check_and_save_sequence_set {
+    my ($db, $name, $description, $input_type) = @_;
+    my $max_chr_end = 0;
     
     my $sth = $db->prepare("SELECT count(*) FROM sequence_set WHERE assembly_type = '$name' ");
     $sth->execute();
@@ -472,25 +466,23 @@ sub check_sequence_set {
             print STDERR "we already have that sequence set name in ". $db->dbname . ". Entires will be appended to end\n";    
             $sth = $db->prepare("SELECT max(chr_end) FROM assembly WHERE type = '$name'");
             $sth->execute;
-            if (my $row = $sth->fetchrow){
-                $value = $row;
-            }       
+            ($max_chr_end) = $sth->fetchrow;
         }
     }
     else{
         
         ## so there is no entry in the sequence set table- create an entry then
-        $sth = $db->prepare(q{INSERT INTO sequence_set (assembly_type , description , analysis_priority) VALUES (?,?,?)});
-        my @values;
-        @values->[0] = $name;
-        @values->[1] = "description test" ; # need to get this from the command line
-        @values->[2] = 5 ;
-                
-        $sth->execute(@values) or warn "could not enter information into the sequence set table of otter" ; 
+        $sth = $db->prepare(q{
+            INSERT INTO sequence_set (assembly_type
+                  , description
+                  , analysis_priority)
+            VALUES (?,?,?)
+            });
+        $sth->execute($name, $description, 5);
         
     }
  
-    return $value;
+    return $max_chr_end;
 }
 
 #---------------------------------------------------------------------------------------------------
@@ -551,8 +543,7 @@ sub update_chromosome_length{
 
 # check if clone is in db already not used yet, but will be when i tidy up the code.
 # takes the db adaptor and accession and version number
-sub clone_to_db{
-    
+sub clone_to_db {
     my ( $adaptor, $seq , $acc , $seq_ver) = @_ ; 
     my $clone;
     
@@ -591,10 +582,9 @@ sub clone_to_db{
     }
     
    
-    my $contigs = $clone->get_all_Contigs;
-    my $ctg_id = @$contigs->[0]->dbID;
+    my $contig = $clone->get_all_Contigs->[0];
               
-    return $ctg_id;
+    return($contig->dbID, $contig->display_id);
 }  
     
 #------------------------------------------------------------------------------------------
