@@ -33,12 +33,14 @@ use Getopt::Long 'GetOptions';
     my @day = (localtime)[3,4,5];
     
     # after, repeat
-    my %remind = qw{
+    my @remind = qw{
         lunch   12:15
         tea     15:15
         bus     17:30
+        bus     18:30
         };
-    while (my ($rem, $when) = each %remind) {
+    for (my $i = 0; $i < @remind; $i += 2) {
+        my ($rem, $when) = @remind[$i, $i + 1];
         my( $warn_time );
         if ($test_flag) {
             $warn_time = time + 5;
