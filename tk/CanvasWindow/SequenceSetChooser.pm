@@ -9,6 +9,7 @@ use base 'CanvasWindow';
 use CanvasWindow::SequenceNotes;
 use CanvasWindow::SequenceNotes::SearchedSequenceNotes ;
 use Hum::Sort 'ace_sort';
+use TransientWindow::SearchWindow;
 
 sub new {
     my( $pkg, @args ) = @_;
@@ -289,8 +290,6 @@ sub search_window{
   
     unless (defined ($search_window) ){
         ## make a new window
-        use TransientWindow::SearchWindow;
-        use ProxyObject;
         $self->{'_search_window'} =
             $search_window = TransientWindow::SearchWindow->new($self->canvas->toplevel, 'Find loci, stable_ids or clones');
         $search_window->action('doSearch', sub{ my ($sw) = @_; $self->search($sw); });
