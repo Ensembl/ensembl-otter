@@ -21,7 +21,7 @@ sub new {
 
 sub render {
     my( $band , $tags ) = @_;
-           
+    
     my $y_offset = $band->y_offset;
     my @x_offsets = $band->column_offsets;
     foreach my $row ($band->chooser_map) {
@@ -186,8 +186,7 @@ sub column_font {
 
 sub column_offsets {
     my( $band ) = @_;
-    
-#    warn "Calculating column widths\n";
+    ##warn "band?" .defined $band ;
     my @widths = $band->column_widths;
 #    warn "widths [@widths]\n";
     my $x_offset = $band->x_padding;
@@ -227,6 +226,7 @@ sub column_widths {
     }
     my $font = $band->column_font;
     my $canvas = $band->canvas;
+   
     $max = $band->max_width;
     for (my $i = 0; $i < @widths; $i++) {
         if (! defined $longest[$i]){
@@ -234,6 +234,7 @@ sub column_widths {
         }
         
         my $text = substr($longest[$i], 0, $max) . 'XX';
+#        warn "font:$font\ttext:$text\ncanvas:$canvas";
         my $w = $canvas->fontMeasure($font, $text);
         $widths[$i] = ($w > $max) ? $max : $w;
     }   
