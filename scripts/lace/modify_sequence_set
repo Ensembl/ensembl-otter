@@ -53,7 +53,11 @@ use Hum::Submission qw(accession_from_sanger_name);
 	$ds->update_SequenceSet($SequenceSet);
 	print STDERR join("  |  ", $SequenceSet->name, $SequenceSet->description, $SequenceSet->priority) . "\n";
     }elsif($delete){
+	my $description = $SequenceSet->description();
+	$priority       = $SequenceSet->priority();
 	$ds->delete_SequenceSet($SequenceSet);
+	print STDERR "to undo this (assuming you have an assembly file):\n";
+	print STDERR "'load_script' -name $set_name -desc $description -priority $priority 'filename'\n";
     }elsif($show){
 #	$ds->export_SequenceSet();
 	my ($gaps, $found) = export_SequenceSet($otter_db, $SequenceSet, $list, $ARGV[0]);
