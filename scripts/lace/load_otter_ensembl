@@ -170,7 +170,7 @@ my $input_type;
     my $line_counter = 0;
     my $prev_chr_name ='';
     while(<AGP>){
-    
+        print STDERR "reading\n";
         $line_counter ++;    
     
         my @line_in_array = split /[\s]/ , $_ ; # puts line in a temporary array (splits the array on whitespace)
@@ -335,7 +335,12 @@ my $input_type;
         else {
             die "Invalid orientation '$ctg_ori'";
         }
-           
+
+
+
+
+
+##----------------------------------------to be replaced------------------------------------------------------------------------------------           
         ## check to see if the clone exists in the db already
         my $clone;
         eval{ 
@@ -377,17 +382,17 @@ my $input_type;
             store_clone($otter_clone_adaptor , $clone);
             ##---------------------------------------    
         }
-        
-##         store_input_id_analysis($pipeline_db, $clone->embl_id) ;
-        
-        
-        
+        my $ctg_id;
+###-----------------------------------end of bit to be replaced----------------------------------------------------------        
+###-----------------------------------to be replaced with --------------------------------------------------------- 
+#        my $ctg_id = clone_to_db($pipe_clone_adaptor , $acc , $ver);      
+###----------------------------------------------------------------------------------------------------------------------
+
                 
         # assembly details get put into a 2D array corresponding to columns in the assembly table of the db
-        
         my $contigs = $clone->get_all_Contigs;
         if (scalar(@$contigs) == 1) {
-            my $ctg_id = @$contigs->[0]->dbID; 
+            $ctg_id = @$contigs->[0]->dbID; 
             push(@sgp, [
                 $chr_start, $chr_end,
                 $super_contig_name,
@@ -402,6 +407,13 @@ my $input_type;
         } else {
             warn "Error: got ", scalar(@$contigs), " contigs for '$acc' (should be one clone per contig)";
         }
+        
+        
+        ## store_input_id_analysis($pipeline_db, $clone->embl_id) ;
+        ## update input_id_analysis table
+        my $state_info = $pipeline_db->get_StateInfoContainer;
+        $state_info->store_input_id_analysis($ctg_id, $pipe_analysis->fetch_by_logic_name('SubmitContig') );
+    
         ##-------------------------------------
     }  #-----end of read in file loop
 
@@ -427,9 +439,11 @@ my $input_type;
                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
                         } ;
 
+    
     $sth = $pipeline_db->prepare($insert_query);   
     my $otter_sth = $otter_db->prepare($insert_query); 
 
+    
     foreach my $line (@sgp) {
         # add the appropriate chromosome_id before executing the query        
         eval{ 
@@ -444,15 +458,12 @@ my $input_type;
         }    
     }
 
-
-
     #update chromosome length now. - set to max value of chr end in assembly table
     # I am doing this as two seperate entries, incase one databases contains previous entries that the other doesnt.
     update_chromosome_length($pipeline_db, $pipe_chromosome);
     update_chromosome_length($otter_db, $otter_chromosome);
 
-
-
+     
     # benchmarking 
     my $t1 = new Benchmark;
     my $td = timediff($t1, $t0);
@@ -595,7 +606,7 @@ sub update_chromosome_length{
 }
 
 ##--------------------------------------------------------------------------------------------------
-
+## should be using the API, and this isnt needed then.
 sub store_input_id_analysis{
     my ($db , $input_id ) = @_;
     
@@ -621,59 +632,59 @@ sub store_input_id_analysis{
     
 }
 
+#------------------------------------------------------------------------------------------------------------------------------------
 
-##---------------------------------------------------------------------------------------------------------
-### check if clone is in db already not used yet, but will be when i tidy up the code.
+# check if clone is in db already not used yet, but will be when i tidy up the code.
+# takes the db adaptor and accession and version number
 
-##sub clone_to_db{
-##    
-##    my ( $adaptor, $acc , $sv ) = @_ ; 
-##    
-##    eval { $clone = $pipe_clone_adaptor->fetch_by_accession_version($acc , $sv); };
-##    if (! $@){
-##        warn "this clone is already in the " . $adaptor->db->dbname . " database" ;
-##    }
-##    else{
-##                 
-##            $clone= Bio::EnsEMBL::Clone->new();
-##            $clone->htg_phase(3);
-##            $clone->id($acc_ver);
-##            $clone->embl_id($acc);
-##            $clone->version(1);
-##            $clone->embl_version($sv);
-##            $clone->created(time);
-##            $clone->modified(time);
-##    
-##            #    create and add contig(s) to the clone
-##            ##   now we only expect one contig per clone
-##            $seq = $pfetch->get_Seq_by_acc($acc_ver);
-##            my $contig = Bio::EnsEMBL::RawContig->new;
-##            my $end = $seq->length;
-##
-##        
-##            $contig->name($acc_ver . '.1.' . $seq->length);
-##            $contig->length($seq->length);
-##            $contig->seq($seq->seq); 
-##            $clone->add_Contig($contig);
-##        
-##            ##-------------------------------------- 
-##            ## need to store the ID of the first db in a seperate array as storing the clone 
-##            store_clone($pipe_clone_adaptor , $clone);
-###            push  @alternative_id,   $clone->get_all_Contigs->[0]->dbID ;
-##            store_clone($otter_clone_adaptor , $clone);
-##            ##---------------------------------------    
-##        }
-##    
-##    #fetch by clone accession
-###    if exists 
-###            warn user
-###    else
-###           store it    
-##
-###   return sqp or whatever.    
+sub clone_to_db{
     
+    my ( $adaptor, $acc , $ver ) = @_ ; 
+    my $clone;
     
-##}
+    eval { $clone = $adaptor->fetch_by_accession_version($acc , $ver); };
+    if (! $@){
+        warn "this clone is already in the " . $adaptor->db->dbname . " database" ;
+        my $contigs = $clone->get_all_Contigs;
+        if (scalar(@$contigs) != 1){
+            die "more than 1 contig for clone " . $acc ; 
+        }    
+    }
+    else{
+                
+        $clone = Bio::EnsEMBL::Clone->new();
+        $clone->htg_phase(3);
+        $clone->id($acc.$ver);
+        $clone->embl_id($acc);
+        $clone->version(1);
+        $clone->embl_version($ver);
+        $clone->created(time);
+        $clone->modified(time);
+ 
+        #    create and add contig(s) to the clone
+        ##   now we only expect one contig per clone
+        my $seq = $pfetch->get_Seq_by_acc($acc.$ver);
+        my $contig = Bio::EnsEMBL::RawContig->new;
+        my $end = $seq->length;
+
+ 
+        $contig->name($acc_ver . '.1.' . $seq->length);
+        $contig->length($seq->length);
+        $contig->seq($seq->seq);
+        $clone->add_Contig($contig);
+ 
+        ##------------------
+        store_clone($pipe_clone_adaptor , $clone);       
+    }
+    
+   
+    my $contigs = $clone->get_all_Contigs;
+    my $ctg_id = @$contigs->[0]->dbID;
+              
+    return $ctg_id;
+}    
+    
+#------------------------------------------------------------------------------------------
 
 
 sub get_pipeline_options {
@@ -701,6 +712,7 @@ sub save_pipeline_options {
     my $user = $options_hash->{user};
     my $pass = $options_hash->{pass};
     my $dbname = $options_hash->{dbname};
+    
     
     my $opt_str = qq{
         -HOST   => '$host',
