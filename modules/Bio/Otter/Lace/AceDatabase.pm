@@ -144,21 +144,13 @@ sub write_otter_acefile {
 
 sub fetch_otter_ace_for_SequenceSet {
     my( $self, $ss ) = @_;
-    
+
     my $client = $self->Client
         or confess "No otter client attached";
-    my( $ds );
-  SEARCH: foreach my $this_ds ($client->get_all_DataSets) {
-        my $ss_list = $this_ds->get_all_SequenceSets;
-        foreach my $this_ss (@$ss_list) {
-            if ($this_ss == $ss) {
-                $ds = $this_ds;
-                last SEARCH;
-            }
-        }
-    }
+    my $ds = $client->get_DataSet_by_name($ss->dataset_name);
     confess "Can't find DataSet that SequenceSet belongs to"
         unless $ds;
+
     $ds->selected_SequenceSet($ss);
     my $ctg_list = $ss->selected_CloneSequences_as_contig_list
         or confess "No CloneSequences selected";
@@ -196,7 +188,7 @@ sub ace_from_contig_list {
     my( $self, $ctg_list, $ds ) = @_;
     
     my $client = $self->Client or confess "No otter Client attached";
-    
+
     my $ace = '';
     foreach my $ctg (@$ctg_list) {
         my $xml = Bio::Otter::Lace::TempFile->new;
@@ -551,12 +543,17 @@ sub write_pipeline_data {
 
     my $dataset = $self->Client->get_DataSet_by_name($ss->dataset_name);
     $dataset->selected_SequenceSet($ss);    # Not necessary?
-    my $ens_db;
+    my $ens_db = $dataset->get_cached_DBAdaptor();
+    my $pipe_db;
+#    warn "$ens_db                                                    not otter_human\n";
+#    warn $ens_db->dbname;
+#    warn $ens_db->dnadb->dbname;
     if(Bio::Otter::Lace::Defaults::fetch_pipeline_switch()){
-	$ens_db = Bio::Otter::Lace::PipelineDB::get_DBAdaptor($dataset->get_cached_DBAdaptor);
-    }else{
-	$ens_db = $dataset->make_DBAdaptor();
+	$pipe_db = Bio::Otter::Lace::PipelineDB::get_DBAdaptor($dataset->get_cached_DBAdaptor);
+	$pipe_db->dnadb($ens_db->dnadb);
     }
+    $ens_db = $pipe_db || $ens_db;
+    
     $ens_db->assembly_type($ss->name);
     my $species = $dataset->species();
     warn "This is species <$species>\n";
@@ -660,8 +657,13 @@ sub make_AceDataFactory {
     }
 
     # If we aren't fetching all the analysis, we only need the DNA
+    
     $logic_to_load->{'submitcontig'} = 1;
     $module_options->{'submitcontig'}->{'module'} = 'Bio::EnsEMBL::Ace::Filter::DNA';
+
+#    my $submitcontig = $self->Client->option_from_array([qw!client dna!]);
+#    $logic_to_load->{$submitcontig} = 1;
+#    $module_options->{$submitcontig}->{'module'} = 'Bio::EnsEMBL::Ace::Filter::DNA';
 
     foreach my $logic_name (keys %$logic_to_load){
 	next unless $logic_to_load->{$logic_name};
