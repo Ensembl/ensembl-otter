@@ -1,0 +1,51 @@
+#!/usr/local/bin/perl -w
+
+### list_gene_type_counts_for_set
+
+use strict;
+use Bio::Otter::Lace::Defaults;
+
+{
+    my( $dataset_name, $set_name );
+    my $usage = sub { exec('perldoc', $0) };
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'dataset=s'     => \$dataset_name,
+        'set|chr=s'     => \$set_name,
+        ) or $usage->();
+    $usage->() unless $dataset_name and $set_name;
+
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    my $dba = $ds->get_cached_DBAdaptor;
+    my $sth = $dba->prepare(q{
+        SELECT g.type
+          , count(distinct gsid.stable_id)
+        FROM gene_stable_id gsid
+          , gene g
+          , transcript t
+          , exon_transcript et
+          , exon e
+          , assembly a
+        WHERE gsid.gene_id = g.gene_id
+          AND g.gene_id = t.gene_id
+          AND t.transcript_id = et.transcript_id
+          AND et.exon_id = e.exon_id
+          AND e.contig_id = a.contig_id
+          AND a.type = ?
+        GROUP BY g.type
+        });
+    $sth->execute($set_name);
+    
+    while (my ($type, $count) = $sth->fetchrow) {
+        printf "%25s  %5d\n", $type, $count;
+    }
+}
+
+__END__
+
+=head1 NAME - list_gene_type_counts_for_set
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
