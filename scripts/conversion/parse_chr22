@@ -161,7 +161,7 @@ foreach my $geneid (keys %genes) {
     $gene->type($type_conv_hash->{$geneid2});
     if (defined($values{'Locus'}) && $values{'Locus'} ne $geneid) {
       #print "update gene_name set name='" . $values{'Locus'} . "' where name='" . $geneid . "';\n";
-      $geneinfo->name(new Bio::Otter::GeneName(-name => $values{'locus'}));
+      $geneinfo->name(new Bio::Otter::GeneName(-name => $values{'Locus'}));
     } else {
       $geneinfo->name(new Bio::Otter::GeneName(-name => $geneid));
     }
