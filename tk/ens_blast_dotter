@@ -4,8 +4,14 @@
 
 use strict;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
+use Hum::Submission 'sanger_name';
 use CanvasWindow;
 
+my $sel_tag = 'selected';
+my $lab_tag = 'seq_label';
+my $sel_color = 'LemonChiffon';
+my $match_color = '#284d49';
+my $seq_tag = 'seq_rect';
 
 {
     my $ensdb = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
@@ -43,7 +49,7 @@ use CanvasWindow;
     my $mw = CanvasWindow::MainWindow->new;
     my $cw = CanvasWindow->new($mw);
     my $canvas = $cw->canvas;
-    $canvas->CanvasBind('<Button-1>', 'main::highlight_seq_rect');
+    $canvas->CanvasBind('<Button-1>', \&handle_button_1);
     #$canvas->configure(-cursor => 'plus');
 
     my $scale = 2_000;
@@ -64,7 +70,13 @@ use CanvasWindow;
             my $seq_rect = $canvas->createRectangle($x1, $y1, $x2, $y2,
                 -outline    => 'grey',
                 -fill       => 'white',
-                -tags       => ['seq_rect', "row=$row_name", "col=$col_name"],
+                -tags       => [
+                    $seq_tag,
+                    "row=$row_name",
+                    "col=$col_name",
+                    sanger_tag('sanger_row', $row_name),
+                    sanger_tag('sanger_col', $col_name),
+                    ],
                 );
             
             my $sql = qq{
@@ -93,7 +105,7 @@ use CanvasWindow;
                     $x1 + ($col_end   / $scale),
                     $y1 + ($row_end   / $scale),
                     -width  => 2,
-                    -fill   => 'DarkSlateGrey',
+                    -fill   => pid_color($pid, $match_color),
                     );
                 $feature_count++;
                 unless ($feature_count % 10) {
@@ -112,7 +124,7 @@ use CanvasWindow;
     printf STDERR " %10d\n", $feature_count;
     
     # Put the sequence background under everything else
-    $canvas->lower('seq_rect', 'all');
+    $canvas->lower($seq_tag, 'all');
     
     my $rec = $canvas->createRectangle(
         $canvas->bbox('all'),
@@ -128,12 +140,9 @@ use CanvasWindow;
     Tk::MainLoop();
 }
 
-sub highlight_seq_rect {
+sub handle_button_1 {
     my( $canvas ) = @_;
 
-    my $sel_tag = 'selected';
-    my $lab_tag = 'seq_label';
-    my $sel_color = 'LemonChiffon';
     
     $canvas->delete($lab_tag);
     my @selected = $canvas->find('withtag', $sel_tag);
@@ -144,7 +153,14 @@ sub highlight_seq_rect {
         }
     }
 
-    my $area = $canvas->find('withtag', 'seq_rect&&current') or return;
+    if (my $area = $canvas->find('withtag', "$seq_tag&&current")) {
+        highlight_sequence_rectangle($canvas, $area);
+    }
+}
+
+sub highlight_sequence_rectangle {
+    my( $canvas, $area ) = @_;
+
     $canvas->addtag($sel_tag, 'withtag', $area);
     $canvas->itemconfigure($area, -fill => $sel_color);
     
@@ -157,14 +173,14 @@ sub highlight_seq_rect {
     my $font = ['Helvetica', 12, 'bold'];
     my $col_label = $canvas->createText(
         $x_pos, $y1 - $pad,
-        -text       => $inf->{'col'},
+        -text       => $inf->{'sanger_col'},
         -anchor     => 's',
         -justify    => 'center',
         -tags       => [$lab_tag],
         );
     my $row_label = $canvas->createText(
         $x1 - $pad, $y_pos,
-        -text       => $inf->{'row'},
+        -text       => $inf->{'sanger_row'},
         -anchor     => 'e',
         -justify    => 'right',
         -tags       => [$lab_tag],
@@ -212,6 +228,67 @@ sub get_canvas_item_info {
         }
     }
     return $inf;
+}
+
+{
+    my( %contig_sanger );
+    
+    sub sanger_tag {
+        my( $prefix, $contig_id ) = @_;
+        
+        my( $sanger_name );
+        unless ($sanger_name = $contig_sanger{$contig_id}) {
+            my ($acc) = $contig_id =~ /^([^.]+)/;
+            $sanger_name = $contig_sanger{$contig_id} = sanger_name($acc);
+        }
+        return "$prefix=$sanger_name";
+    }
+}
+
+{
+    my( %hex_rgb );
+    
+    sub pid_color {
+        my( $pid, $hex_color ) = @_;
+
+        $pid /= 100;
+        my $max = 0xff;
+        my $rgb = $hex_rgb{$hex_color} ||= web_hex_to_rgb($hex_color);
+        my $faded_rgb = '#';
+        foreach my $n (@$rgb) {
+            $faded_rgb .= sprintf "%02x", $n + (($max - $n) * (1 - $pid));
+        }
+        return $faded_rgb;
+    }
+}
+
+sub make_tile_colours {
+    my( $rgb_param, $n_steps ) = @_;
+    
+    my $max = 0xff;
+    my @begin_rgb = web_hex_to_rgb($rgb_param);
+    
+    my( @steps );
+    for (my $i = 0; $i < $n_steps; $i++) {
+        my $rgb = [];
+        foreach my $c (@begin_rgb) {
+            push(@$rgb,
+                $c + (($max - $c) / $n_steps) * $i
+                );
+        }
+        push(@steps, $rgb);
+    }
+    push(@steps, [$max, $max, $max]);
+    
+    return @steps
+}
+
+sub web_hex_to_rgb {
+    my( $rgb_param ) = @_;
+    
+    my @rgb = $rgb_param =~ /^#?([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})$/
+        or die "Illegal rgb parameter '$rgb_param'\n";
+    return [map hex($_), @rgb];
 }
 
 
