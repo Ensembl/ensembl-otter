@@ -325,12 +325,12 @@ sub normalize_coords {
 }
 
 
-sub fix_window_min_max_sizes {
+sub TEST_fix_window_min_max_sizes {
     my( $self ) = @_;
     
     my $mw = $self->canvas->toplevel;
     $mw->update;
-    #$mw->withdraw;
+    $mw->withdraw;
     
     
     my( $max_x, $max_y, $display_max_x, $display_max_y )
@@ -381,11 +381,53 @@ sub fix_window_min_max_sizes {
     #$geom = $mw->geometry;
     #warn "  Actual geometry: $geom";
     
-    #$mw->update;
     #$mw->geometry("+$x+$y");
-    #$mw->deiconify;
+    $mw->update;
+    $mw->deiconify;
 }
 
+sub fix_window_min_max_sizes {
+    my( $self ) = @_;
+    
+    my $mw = $self->canvas->toplevel;
+    $mw->update;
+    $mw->withdraw;
+    
+    my( $max_x, $max_y, $display_max_x, $display_max_y )
+        = $self->set_scroll_region_and_maxsize;
+    
+    # Get the current screen offsets
+    my($x, $y) = $mw->geometry =~ /^=?\d+x\d+\+?(-?\d+)\+?(-?\d+)/;
+
+    # Is there a set window size?
+    if (my($fix_x, $fix_y) = $self->set_window_size) {
+        $max_x = $fix_x;
+        $max_y = $fix_y;
+    } else {
+        if (($x + $max_x) > $display_max_x) {
+            $x = $display_max_x - $max_x;
+        }
+        if (($y + $max_y) > $display_max_y) {
+            $y = $display_max_y - $max_y;
+        }
+
+        # Leave at least 100 pixels
+        my $border = 100;
+        if ($max_x > $display_max_x - $border) {
+            $max_x = $display_max_x - $border;
+        }
+        if ($max_y > $display_max_y - $border) {
+            $max_y = $display_max_y - $border;
+        }
+    }
+    # Nudge the window onto the screen.
+    $x = 0 if $x < 0;
+    $y = 0 if $y < 0;
+
+    my $geom = "${max_x}x$max_y+$x+$y";
+    $mw->geometry($geom);
+    $mw->deiconify;
+}
 sub set_scroll_region_and_maxsize {
     my( $self ) = @_;
 

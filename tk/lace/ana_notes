@@ -232,34 +232,18 @@ use Getopt::Long 'GetOptions';
         
         my $text = get_history_for_ana_seq_id($asid);
         
-        my $lines = $fasta =~ tr/\n//;
-        $peptext->delete('1.0', 'end');
-
-        # Markup stop codons
-        foreach my $bit (split /(\*+)/, $fasta) {
-            if ($bit =~ /\*/) {
-                $peptext->insert('end', $bit, 'redstop');
-            } else {
-                # Highlight "X", the unknown amino acid
-                foreach my $xstr (split /(X+)/, $bit) {
-                    if ($xstr =~ /X/) {
-                        $peptext->insert('end', $xstr, 'blueunk');
-                    } else {
-                        $peptext->insert('end', $xstr);
-                    }
-                }
-            }
-        }
+        my $lines = $text =~ tr/\n//;
+        $hist->delete('1.0', 'end');
 
         # Size widget to fit
-        $peptext->configure(
-            -width  => 60,
+        $hist->configure(
+            #-width  => 60,
             -height => $lines,
             );
 
         # Set the window title, and make it visible
-        my $win = $peptext->toplevel;
-        $win->configure( -title => $sub->name . " translation" );
+        my $win = $hist->toplevel;
+        $win->configure( -title => "Remark history" );
         $win->deiconify;
         $win->raise;
         
