@@ -106,8 +106,8 @@ sub _make_menu {
     my $button = $menu_frame->Menubutton(
         -text       => $name,
         -underline  => $pos,
-        #-padx       => 6,
-        -pady       => 6,
+        #-padx       => 8,
+        #-pady       => 6,
         );
     $button->pack(
         -side       => 'left',

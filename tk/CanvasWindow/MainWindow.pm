@@ -61,8 +61,12 @@ CanvasWindow*borderWidth: 1
 CanvasWindow*activeborderWidth: 1
 CanvasWindow*Frame.borderWidth: 0
 CanvasWindow*Scrollbar.width: 11
+!CanvasWindow*font: -*-lucidabright-medium-r-*-*-14-*-*-*-*-*-*-*
 CanvasWindow*font: -*-helvetica-medium-r-*-*-12-*-*-*-*-*-*-*
 CanvasWindow*selectColor: gold
+CanvasWindow*Menubutton.padX: 6
+CanvasWindow*Menubutton.padY: 8
+
 
 };
             close XRES;
