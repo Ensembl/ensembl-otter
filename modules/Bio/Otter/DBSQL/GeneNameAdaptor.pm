@@ -2,6 +2,7 @@ package Bio::Otter::DBSQL::GeneNameAdaptor;
 
 use strict;
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
+use Bio::Otter::GeneName;
 
 use vars qw(@ISA);
 

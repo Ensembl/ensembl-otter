@@ -18,7 +18,7 @@ sub _fetch_new_by_type {
 	my $id     = $type . "_id";
 	my $poolid = $type . "_pool_id";
 	my $table  = $type . "_stable_id_pool";
-	
+
 	my $sql = "insert into $table values(null,'',now())";
 	my $sth = $self->prepare($sql);
 
@@ -31,9 +31,29 @@ sub _fetch_new_by_type {
 
 	my $num = $row->{'last_insert_id()'};
 
+        if (defined($self->db->dataset)) {
+          my $min_id = $OTTER_SPECIES->{$self->db->dataset}->{STABLE_ID_MIN};
+          if (defined($min_id) && $min_id > $num) {
+	    my $sql = "update $table set $poolid=$min_id where $poolid=$num";
+	    my $sth = $self->prepare($sql);
+	    $res = $sth->execute;
+            $num = $min_id;
+
+	    $sql = "alter table $table auto_increment= " . ($min_id+1);
+	    $sth = $self->prepare($sql);
+	    $res = $sth->execute;
+            
+          }
+        }
+
 	print STDERR "New num for $type is $num\n";
 
 	my $stableid = $prefix;
+
+        if (defined($self->db->dataset) &&
+            defined($OTTER_SPECIES->{$self->db->dataset}->{SPECIES_PREFIX})) {
+          $stableid .= $OTTER_SPECIES->{$self->db->dataset}->{SPECIES_PREFIX};
+        }
 
 	if ($type eq "gene") {
 	    $stableid .= "G";
