@@ -85,23 +85,34 @@ sub text_variable_ref{
     return \$self->{'_text_variable_refs'}->{$named} || \$default;
 }
 sub action{
-    my ($self, $named, $callback, $stack) = @_;
+    my ($self, $named, $callback) = @_;
     unless($named){
         warn "usage: $self->action('registeredName', [(CODE_REF)])\n";
         return sub { warn "usage: $self->action('registeredName', [(CODE_REF)])\n" };
     }
     if(ref($callback) && ref($callback) eq 'CODE'){
-        $self->{'_actions'}->{$named} = $callback;
+        $self->{'_actions'}->{$named} = $callback; 
     }
     return $self->{'_actions'}->{$named} || sub{  warn "No callback registered for action '$named'\n"; };
+}
+sub delete_action{
+    my ($self, $named) = @_;
+    $self->{'_actions'}->{$named} = undef;
+    return 1;
+}
+
+sub delete_all_actions{
+    my $self = shift;
+    foreach my $name(keys(%{$self->{'_actions'}})){
+        $self->delete_action($name);
+    } 
 }
 
 sub DESTROY{
     my $self = shift;
     my $t = $self->title();
-    $self->{'_actions'}            = undef;
-    $self->{'_text_variable_refs'} = undef;
-    warn "Destroying $self named '$t'";
+    my ($type) = ref($self) =~ /([^:]+)$/;
+    warn "Destroying $type named '$t'";
 }
 1;
 
