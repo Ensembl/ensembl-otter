@@ -2,7 +2,7 @@ package HeadedCanvas;
 
 # a double-headed canvas with scrolls
 #
-# 2.feb'2005, lg4
+# 8.feb'2005, lg4
 
 use strict;
 use Tk;
@@ -14,16 +14,20 @@ Construct Tk::Widget 'HeadedCanvas';
 sub _multiscrollx { # callback, not a method
 	my ($sb,$widgets,@args) = @_;
 
-	foreach my $w (@$widgets) {
-		$w->xview(@args);
+	if($args[1]>=0) {
+		foreach my $w (@$widgets) {
+			$w->xview(@args);
+		}
 	}
 }
 
 sub _multiscrolly { # callback, not a method
 	my ($sb,$widgets,@args) = @_;
 
-	foreach my $w (@$widgets) {
-		$w->yview(@args);
+	if($args[1]>=0) {
+		foreach my $w (@$widgets) {
+			$w->yview(@args);
+		}
 	}
 }
 
