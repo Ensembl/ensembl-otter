@@ -45,13 +45,14 @@ my @contigs = @{$db->get_RawContigAdaptor->fetch_all};
 my $db2 = new Bio::Otter::DBSQL::DBAdaptor(-host => $otter_test->host,
                                            -user => $otter_test->user,
                                            -port => $otter_test->port,
+                                           -pass => $otter_test->pass,
                                            -dbname => $otter_test->dbname);
 
-$db2->assembly_type($type);
+$db2->assembly_type($slice->assembly_type);
 
-my $slice = $db2->get_SliceAdaptor->fetch_by_chr_start_end($chr,$chrstart,$chrend);
+my $slice = $db2->get_SliceAdaptor->fetch_by_chr_start_end($slice->chr_name,$slice->chr_start,$slice->chr_end);
 
-ok($dna eq $slice->seq);
+ok($seq eq $slice->seq);
 
 
 my $analysis = new Bio::EnsEMBL::Analysis(-logic_name => 'otter');
@@ -59,7 +60,7 @@ $db->get_AnalysisAdaptor->store($analysis);
 
 my %transeq;
 
-foreach my $gene (@$genes2) {
+foreach my $gene (@$genes) {
   
   $gene->analysis($analysis);
 
@@ -95,7 +96,7 @@ foreach my $gene (@newgenes) {
     }
   }
 }
-print ("Length dna " . length($dna) . " " . length($slice->seq) . "\n");
+print ("Length dna " . length($seq) . " " . length($slice->seq) . "\n");
 
 #my $xml   = Bio::Otter::Converter::path_to_XML($chr,$chrstart,$chrend,$type,@{$slice->get_tiling_path});
 my $xml   = Bio::Otter::Converter::slice_to_XML($slice,$db,1);
