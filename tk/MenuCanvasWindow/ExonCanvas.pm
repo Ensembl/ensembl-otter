@@ -285,14 +285,25 @@ sub initialize {
             }          
         }
 
-        my $type_frame = $frame->Frame(-border => 1 )->pack(-side => 'top' );
-        my $type = $type_frame->Label(-text => 'Type : ',                                      
-            )->pack( -side=>left );
-        my $tf_label = $type_frame->Label(  -padx => 6,
-                                            -relief => 'groove',
-                                            -textvariable => \$current_method ,
-                                            -width => $width
-            )->pack(-side => 'left' , -ipady => 3 , -padx=> 3);
+        my $type_frame = $frame->Frame(
+            -border => 6,
+            )->pack( -side => 'top' );
+        my $type = $type_frame->Label(
+            -padx => 6,
+            -text => 'Type:',
+            )->pack( -side => 'left' );
+        my $tf_label = $type_frame->Label(
+            -padx => 3,
+            -pady => 3,
+            -anchor => 'w',
+            -relief => 'sunken',
+            -textvariable => \$current_method ,
+            -width => $width,
+            #-font   => [$self->font, $self->font_size],
+            )->pack(
+                -side => 'left',
+                -expand => 'x',
+                );
         
         my $length = 0;
         my ($prev ,@menu_items) ;
@@ -323,7 +334,7 @@ sub initialize {
         my $om = $type_frame->Menubutton(   -bitmap => '@' . Tk->findINC('cbxarrow.xbm'),
                                             -relief     =>  'groove' ,
                                             -tearoff    =>  0 ,
-                                            -direction  => 'left' ,
+                                            -direction  => 'left',
                                             -menuitems  => [@menu_items]   
         )->pack(-side => 'right', -padx => 1, -fill => 'y', -expand => 1 , -ipady => 3 , -ipadx => 1, -padx =>2);
    

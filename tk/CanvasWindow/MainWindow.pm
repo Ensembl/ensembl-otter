@@ -55,7 +55,7 @@ sub read_custom_option_file {
     my $mtime = (stat($xres_file))[9] || 0;
 
     ### Change time int here if you modify the X resources
-    if ($mtime < 1066666791) {
+    if ($mtime < 1068827183) {
         warn "Writing new X resource file '$xres_file'\n";
         rename($xres_file, "$xres_file.bak") if $mtime;
         
@@ -82,7 +82,7 @@ CanvasWindow*Frame.borderWidth: 0
 CanvasWindow*Scrollbar.width: 11
 CanvasWindow*Menubutton.padX: 6
 CanvasWindow*Menubutton.padY: 6
-CanvasWindow*Entry.relief: flat
+CanvasWindow*Entry.relief: sunken
 CanvasWindow*Entry.foreground: black
 CanvasWindow*Entry.background: white
 
