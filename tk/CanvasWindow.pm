@@ -78,14 +78,19 @@ sub font {
     return $self->{'_font'} || 'lucidatypewriter';
 }
 
-sub font_size {
-    my( $self, $font_size ) = @_;
-    
-    if ($font_size) {
-        $self->{'_font_size'} = $font_size;
-        $self->{'_font_unit_width'} = undef;
+{
+    my $_default_font_size = 14;
+
+    sub font_size {
+        my( $self, $font_size ) = @_;
+
+        if ($font_size) {
+            $_default_font_size   = $font_size;
+            $self->{'_font_size'} = $font_size;
+            $self->{'_font_unit_width'} = undef;
+        }
+        return $self->{'_font_size'} || $_default_font_size;
     }
-    return $self->{'_font_size'} || 14;
 }
 
 sub font_unit_width {

@@ -18,7 +18,7 @@ sub new {
     my $mw = $pkg->SUPER::new(
         -class => 'CanvasWindow',
         -title => $title,
-        -colormap   => 'new',
+        #-colormap   => 'new',
         );
     $mw->configure(
         -background     => '#bebebe',

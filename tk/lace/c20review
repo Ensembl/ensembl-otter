@@ -13,7 +13,7 @@ use Carp;
 use Getopt::Long 'GetOptions';
 
 {
-    my $host = 'ensrv3';
+    my $host = 'ecs1b';
     my $db   = 'chr20';
     my $user = 'ensro';
     my $fpc  = 'chr20';

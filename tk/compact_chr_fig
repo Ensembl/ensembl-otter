@@ -23,12 +23,14 @@ use Getopt::Long 'GetOptions';
 
 {
     my $test_flag = 0;
+    my $sanger_names = 0;
     my( $start, $end, $ps_file_name );
     GetOptions(
         'test!'     => \$test_flag,
         'start=i'   => \$start,
         'end=i'     => \$end,
         'ps_file=s' => \$ps_file_name,
+        'sanger!'   => \$sanger_names,
         ) or die "error processing command line";
 
     my $host            = 'ecs1b';
@@ -66,8 +68,9 @@ use Getopt::Long 'GetOptions';
     }
     else {
         @chr_parts = (
-            [1, 27_500_000],
-            [27_500_000, get_chr_end($db, $static_type, $chr_name)]);
+            #[1, 27_500_000],
+            #[27_500_000, get_chr_end($db, $static_type, $chr_name)]);
+            [1, get_chr_end($db, $static_type, $chr_name)]);
     }
     
     foreach my $chr_pos (@chr_parts) {
@@ -78,7 +81,11 @@ use Getopt::Long 'GetOptions';
                 
         my $tiling = GenomeCanvas::Band::TilingPath->new($vc);
         $tiling->title("Contig\nTiling\nPath");
-        $tiling->name_morpher(\&trim_name);
+        if ($sanger_names) {
+            $tiling->name_morpher(\&get_sanger_name);
+        } else {
+            $tiling->name_morpher(\&trim_name);
+        }
         $tiling->tiling_direction(-1);
         $gc->add_Band($tiling);
 
@@ -187,19 +194,33 @@ use Getopt::Long 'GetOptions';
     unless ($test_flag) {
         $mw->update;
 
-        # A4 is 841 x 591 points
-        $gc->page_width(591 * 4);
-        $gc->page_height(841);
-        my @files = $gc->print_postscript('chr_20');
-        warn "Printed to files:\n",
-            map "  $_\n", @files;
+        if (0) {
+            # A4 is 841 x 591 points
+            $gc->page_width(591 * 4);
+            $gc->page_height(841);
+            my @files = $gc->print_postscript('chr_20');
+            warn "Printed to files:\n",
+                map "  $_\n", @files;
+        }
 
-        $gc->page_height(841);
-        $gc->page_width(591);
-        $gc->horizontal_tile(4);
-        @files = $gc->print_postscript('chr_20-4-page');
-        warn "Printed to files:\n",
-            map "  $_\n", @files;
+        if (0) {
+            $gc->page_height(841);
+            $gc->page_width(591);
+            $gc->horizontal_tile(4);
+            my @files = $gc->print_postscript('chr_20-4-page');
+            warn "Printed to files:\n",
+                map "  $_\n", @files;
+        }
+        
+        if (1) {
+            $gc->page_height(841);
+            $gc->page_width(591);
+            $gc->landscape(1);
+            $gc->vertical_tile(1);
+            my @files = $gc->print_postscript('chr_20-long');
+            warn "Printed to files:\n",
+                map "  $_\n", @files;
+        }
     }
 }
 
