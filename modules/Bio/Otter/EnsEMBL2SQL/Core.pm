@@ -46,9 +46,11 @@ sub get_assembly_SQL {
 
     my $contigstr = $self->get_raw_contig_string;
     
-    my $str = $self->query("select * from assembly where contig_id in $contigstr");
+    if ($contigstr ne "") {
+	my $str = $self->query("select * from assembly where contig_id in $contigstr");
 
-    return $str;
+	return $str;
+    }
 }
 
 
@@ -429,22 +431,25 @@ sub get_exon_dbIDs {
 
     
     if (!defined($self->{_exon_dbIDs})) {
+	$self->{_exon_dbIDs} = [];
 
 	my $contigstr = $self->get_raw_contig_string;
 
-	my $query = "select exon_id from exon where contig_id in $contigstr";
+	if ($contigstr ne "") {
+	    my $query = "select exon_id from exon where contig_id in $contigstr";
 
-	my $sth = $self->prepare($query);
+	    my $sth = $self->prepare($query);
 
-	my $res = $sth->execute;
+	    my $res = $sth->execute;
 
-	my @exonids;
+	    my @exonids;
 
-	while (my $ref = $sth->fetchrow_arrayref) {
-	    push(@exonids,$ref->[0]);
+	    while (my $ref = $sth->fetchrow_arrayref) {
+		push(@exonids,$ref->[0]);
+	    }
+
+	    $self->{_exon_dbIDs} = \@exonids;
 	}
-
-	$self->{_exon_dbIDs} = \@exonids;
     }
 
     return $self->{_exon_dbIDs};
@@ -549,9 +554,11 @@ sub get_object_xref_SQL {
 
     my $xref_id_string = $self->get_xref_id_string;
 
-    my $str = $self->query("select * from object_xref where xref_id in $xref_id_string");
+    if ($xref_id_string ne "") {
+	my $str = $self->query("select * from object_xref where xref_id in $xref_id_string");
 
-    return $str;
+	return $str;
+    }
 
 }
 
@@ -564,9 +571,11 @@ sub get_xref_SQL {
 
     my $xref_id_string = $self->get_xref_id_string;
 
-    my $str = $self->query("select * from xref where xref_id in $xref_id_string");
+    if (defined($xref_id_string) && $xref_id_string ne "") {
+	my $str = $self->query("select * from xref where xref_id in $xref_id_string");
 
-    return $str;
+	return $str;
+    }
 
 }
 
@@ -578,10 +587,12 @@ sub get_identity_xref_SQL {
     }
 
     my $xref_id_string = $self->get_xref_id_string;
+    
+    if ($xref_id_string ne "") {
+	my $str = $self->query("select * from identity_xref ix,object_xref ox where ix.object_xref_id = ox.object_xref_id and ox.xref_id in $xref_id_string");
 
-    my $str = $self->query("select * from identity_xref ix,object_xref ox where ix.object_xref_id = ox.object_xref_id and ox.xref_id in $xref_id_string");
-
-    return $str;
+	return $str;
+    }
 
 }
 
@@ -594,13 +605,13 @@ sub get_external_synonym_SQL {
 
     my $xref_id_string = $self->get_xref_id_string;
 
-    my $str = $self->query("select * from external_synonym where xref_id in $xref_id_string");
+    if ($xref_id_string ne "") {
+	my $str = $self->query("select * from external_synonym where xref_id in $xref_id_string");
 
-    return $str;
+	return $str;
+    }
 
 }
-
-
 
 sub get_xref_id_string {
     my ($self) = @_;

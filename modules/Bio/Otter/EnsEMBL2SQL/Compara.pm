@@ -82,7 +82,7 @@ sub get_gene_relationship_SQL {
 	$self->throw("Can't dump gene_relationship SQL with no slice");
     }
 
-    my $query = "select distinct gr.* from genome_db gdb, gene_relationship gr, gene_relationship_member grm where gr.gene_relationship_id = grm.gene_relationship_id and grm.chromosome = '" . $self->chromosome . "' and grm.chrom_start >= " . $self->start  . " and grm.chrom_end <= " . $self->end . " and gdb.genome_db_id = grm.genome_db_id and gdb.name = '" . $self->species_name . "'";
+    my $query = "select distinct gr.* from genome_db gdb, gene_relationship gr, gene_relationship_member grm1, gene_relationship_member grm2 where grm1.gene_relationship_id = gr.gene_relationship_id and gr.gene_relationship_id = grm2.gene_relationship_id and grm1.chromosome = '" . $self->chromosome . "' and grm1.chrom_start >= " . $self->start  . " and grm1.chrom_end <= " . $self->end . " and gdb.genome_db_id = grm1.genome_db_id and gdb.name = '" . $self->species_name . "' and grm1.genome_db_id != grm2.genome_db_id";
 
     my $str = $self->query($query);
 
@@ -157,7 +157,6 @@ sub get_dnafrag_ids {
 
 	my $query = "select dfr.dnafrag_id from genome_db gdb, dnafrag_region dfr, dnafrag df where df.dnafrag_id = dfr.dnafrag_id and df.name = '" . $self->chromosome . "' and gdb.genome_db_id = df.genome_db_id and gdb.name = '" . $self->species_name . "'";
 
-	print "Query $query\n";
 	my $sth = $self->prepare($query);
 	my $res = $sth->execute;
 

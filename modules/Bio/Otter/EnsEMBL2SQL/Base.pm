@@ -2,6 +2,8 @@ package Bio::Otter::EnsEMBL2SQL::Base;
 
 use vars qw(@ISA);
 use strict;
+
+use FileHandle;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 
 @ISA = qw(Bio::EnsEMBL::DBSQL::DBAdaptor);
@@ -32,8 +34,6 @@ sub new {
   return $self;
 }
 
-
-	
 sub chromosome {
     my ($self,$arg) = @_;
 
@@ -80,30 +80,34 @@ sub type {
 sub query  {
     my ($self,$query) = @_;
 
-    my $str;
     eval {
 
 	my $sth = $self->prepare($query);
 
 	my $res = $sth->execute;
+	my $fh = $self->filehandle;
 
 	while (my @row = $sth->fetchrow_array) {
+	    my $str;
 	    foreach my $r (@row) {
 		if (!defined($r) || $r eq "") {
 		    $r = "\\N";
 		}
 		$str .= "$r\t";
+
 	    }
 	    chop($str);
 	    $str .= "\n";
+
+	    print $fh $str;
 	}
-	return $str;
+
     };
     if ($@) {
 	$self->throw("Error executing sql $query\n");
     }
 
-    return $str;
+
 }
 
 sub dump_SQL_to_file {
@@ -112,26 +116,32 @@ sub dump_SQL_to_file {
     my $method = "get_" . $table . "_SQL";
 
     if ($self->can($method)) {
-	print STDERR "Dumping SQL for $table using custom method\n";
+	printf STDERR "Dumping SQL for %-25s [ %-25s ] using CUSTOM table method\n",$table,$self->dbname;
 
-	my $file = "$dir/$table.sql";
+	my $filehandle = new FileHandle;
 
-	open(OUT,">$file");
+	$filehandle->open(">$dir/$table.sql");
 
-	print OUT $self->$method;
+	$self->filehandle($filehandle);
+
+	$self->$method;
 	
-	close(OUT);
+	$filehandle->close;
+
     } else {
-	print STDERR "Dumping whole table SQL\n";
+	printf STDERR "Dumping SQL for %-25s [ %-25s ] using WHOLE  table method\n",$table,$self->dbname;
 
-	my $file = "$dir/$table.sql";
+	my $filehandle = new FileHandle;
 
-	open(OUT,">$file");
+	$filehandle->open(">$dir/$table.sql");
 
-	print OUT $self->dump_table($table);
+	$self->filehandle($filehandle);
+
+	$self->dump_table($table);
+
+	$filehandle->close;
     }
 }
-
 
 sub dump_table {
     my ($self,$table) = @_;
@@ -140,9 +150,11 @@ sub dump_table {
 
     my $res = $sth->execute;
 
-    my $str;
+
+    my $fh = $self->filehandle;
 
     while (my @row = $sth->fetchrow_array) {
+	my $str;
 	foreach my $r (@row) {
 	    if (!defined($r) || $r eq "") {
 		$r = "\\N";
@@ -151,9 +163,12 @@ sub dump_table {
 	}
 	chop($str);
 	$str .= "\n";
+
+	if (defined($fh)) {
+	    print $fh $str;
+	}
     }
 
-    return $str;
 }
 
 sub get_dump_stub {
@@ -173,7 +188,7 @@ sub get_dump_stub {
     return $command;
 }
     
-sub dump_table_create {
+sub dump_table_SQL {
     my ($self,$table) = @_;
 
     my $command = $self->get_dump_stub($table);
@@ -182,8 +197,14 @@ sub dump_table_create {
     
     my $str;
 
+    my $fh = $self->filehandle;
+
     while (<IN>) {
-	$str .= $_;
+	if (defined($fh)) {
+	    print $fh $_;
+	} else {
+	    $str .= $_;
+	}
     }
 
     close(IN);
@@ -219,6 +240,35 @@ sub slice {
     
 }
 
+sub filehandle {
+    my ($self,$fh) = @_;
 
-	
+    if (defined($fh)) {
+	$self->{_fh} = $fh;
+    }
+
+    return $self->{_fh};
+}
+
+
+sub get_tables {
+    my ($self) = @_;
+
+    if (!defined($self->{_tables})) {
+	my $query = "show tables";
+
+	my $sth = $self->prepare($query);
+	my $res = $sth->execute;
+
+	my @tables;
+
+	while (my $ref = $sth->fetchrow_arrayref) {
+	    push(@tables,$ref->[0]);
+	}
+
+	$self->{_tables} = \@tables;
+    }
+
+    return $self->{_tables};
+}
 1;
