@@ -150,8 +150,8 @@ sub make_new_child {
                 while (<$fh>){
                     print $client $_;
                 }
-                # close $fh;# || die qq{unexpected exit by $program: $!\n};
-                alarm 0;
+                close $fh;# || die qq{unexpected exit by $program: $!\n};
+                #alarm 0;
             };
             if ($@) {
                 print STDERR qq{ERROR: $@ \n};
