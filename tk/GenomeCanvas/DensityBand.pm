@@ -159,13 +159,15 @@ sub draw_density_segment {
     $stepmap->values(@values);
 
     # Print the GIF to a temporary file
-    my $tmp_img = "/tmp/DensityBand.$$.gif";
+    #my $tmp_img = "/tmp/DensityBand.$$.gif";
+    my $tmp_img = "DensityBand.$$.gif";
     local *GIF;
     open GIF, "> $tmp_img" or die;
     print GIF $stepmap->gif;
     close GIF;
+    die $tmp_img;
     END {
-        unlink($tmp_img) if $tmp_img;
+        #unlink($tmp_img) if $tmp_img;
     }
 
     # Add the gif to the image

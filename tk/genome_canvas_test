@@ -6,8 +6,8 @@ use strict;
 use GenomeCanvas;
 use GenomeCanvas::Band::TilingPath;
 use GenomeCanvas::Band::Plot;
-use GenomeCanvas::Band::RepeatFeature;
-use GenomeCanvas::Band::GeneDensity;
+use GenomeCanvas::DensityBand::RepeatFeature;
+use GenomeCanvas::DensityBand::Gene;
 use Bio::EnsEMBL::DBSQL::Obj;
 use Hum::Submission 'prepare_statement'; # For Sanger sequence names
 use Getopt::Long 'GetOptions';
@@ -96,13 +96,13 @@ use Getopt::Long 'GetOptions';
         #$tiling2->tiling_direction(1);
         #$gc->add_Band($tiling2);
 
-        my $gene_density = GenomeCanvas::Band::GeneDensity->new;
+        my $gene_density = GenomeCanvas::DensityBand::Gene->new;
         $gene_density->virtual_contig($vc);
         $gene_density->strip_labels('merged');
         $gene_density->band_color('#6600cc');
         $gc->add_Band($gene_density);
 
-        my $repeat = GenomeCanvas::Band::RepeatFeature->new;
+        my $repeat = GenomeCanvas::DensityBand::RepeatFeature->new;
         $repeat->virtual_contig($vc);
         $repeat->repeat_classifier(\&repeat_class);
         $gc->add_Band($repeat);

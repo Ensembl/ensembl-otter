@@ -1,7 +1,7 @@
 
-### GenomeCanvas::Band::Gene
+### GenomeCanvas::DensityBand::Gene
 
-package GenomeCanvas::Band::GeneDensity;
+package GenomeCanvas::DensityBand::Gene;
 
 use strict;
 
@@ -74,7 +74,7 @@ sub draw_gene_features_on_sub_vc {
 
 __END__
 
-=head1 NAME - GenomeCanvas::Band::Gene
+=head1 NAME - GenomeCanvas::DensityBand::Gene
 
 =head1 AUTHOR
 

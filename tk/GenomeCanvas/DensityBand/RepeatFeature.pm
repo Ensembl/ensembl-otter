@@ -1,7 +1,7 @@
 
-### GenomeCanvas::Band::RepeatFeature
+### GenomeCanvas::DensityBand::RepeatFeature
 
-package GenomeCanvas::Band::RepeatFeature;
+package GenomeCanvas::DensityBand::RepeatFeature;
 
 use strict;
 use Carp;
@@ -27,7 +27,7 @@ sub repeat_classes {
     if (my $c = $band->{'_repeat_classes'}) {
         @classes = @$c;
     } else {
-        @classes = qw{ SINE LINE DNA LTR };
+        @classes = qw{ SINE LINE LTR DNA };
     }
     push(@classes, 'Other');
     return @classes;
@@ -76,7 +76,7 @@ sub draw_repeat_features_on_sub_vc {
 
 __END__
 
-=head1 NAME - GenomeCanvas::Band::RepeatFeature
+=head1 NAME - GenomeCanvas::DensityBand::RepeatFeature
 
 =head1 AUTHOR
 
