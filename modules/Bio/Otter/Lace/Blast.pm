@@ -1,3 +1,131 @@
+
+=pod
+
+=head1 NAME - Bio::Otter::Lace::Blast
+
+=head1 DESCRIPTION
+
+    Similar to a Pipeline RunnableDB, but for Otter on the fly blast/est2genome
+
+=cut
+
+
+## BEGIN Block to avoid some hassle with pipeline configuration
+
+BEGIN{
+#     *{"Bio::EnsEMBL::Pipeline::Config::General::Config"} = \%Config;
+#     *{"Bio::EnsEMBL::Pipeline::Config::Blast::Config"} = \%Config;
+
+    my @fake_modules = qw(
+                          BlastableVersion.pm
+                          Bio/EnsEMBL/Pipeline/Config/General.pm
+                          Bio/EnsEMBL/Pipeline/Config/Blast.pm
+                          );
+    map { $INC{$_} = 1 } @fake_modules;
+}
+
+####
+package Bio::EnsEMBL::Pipeline::Config::General;
+
+use strict;
+
+sub import {
+
+    my ($callpack) = caller(0); # Name of the calling package
+    my $pack = shift; # Need to move package off @_
+
+    # had to put this inline here
+    my %Config = (
+                  
+                  BIN_DIR => '/nfs/disk100/pubseq/emboss/bin',
+                  DATA_DIR => '/usr/local/ensembl/data',
+                  LIB_DIR  => '/usr/local/ensembl/lib',
+                  
+                  # location of output and error files
+                  # (can also be specified on RuleManager command line)
+                  PIPELINE_OUTPUT_DIR => '/out',
+                  
+                  # temporary working space (e.g. /tmp)
+                  PIPELINE_WORK_DIR   => '/tmp',
+                  
+                  # default runner script
+                  PIPELINE_RUNNER_SCRIPT => 'runner.pl',
+                  
+                  # automatic update in input_id_analysis of completed jobs
+                  AUTO_JOB_UPDATE     => 1,
+                  
+                  PIPELINE_REPEAT_MASKING => ['RepeatMask','trf'],
+                  
+                  SOFT_MASKING => 0,
+                  );
+
+    # Get list of variables supplied, or else all
+    my @vars = @_ ? @_ : keys(%Config);
+    return unless @vars;
+
+    # Predeclare global variables in calling package
+    eval "package $callpack; use vars qw("
+         . join(' ', map { '$'.$_ } @vars) . ")";
+    die $@ if $@;
+
+
+    foreach (@vars) {
+	if (defined $Config{ $_ }) {
+            no strict 'refs';
+	    # Exporter does a similar job to the following
+	    # statement, but for function names, not
+	    # scalar variables:
+	    *{"${callpack}::$_"} = \$Config{ $_ };
+	} else {
+	    die "Error: Config: $_ not known (See Bio::Otter::Lace::Blast)\n";
+	}
+    }
+}
+
+1;
+
+package Bio::EnsEMBL::Pipeline::Config::Blast;
+
+use strict;
+
+
+sub import {
+
+    my ($callpack) = caller(0); # Name of the calling package
+    my $pack = shift; # Need to move package off @_
+
+    # had to put this inline here.
+    my %Config = (
+                  DB_CONFIG => [{}],
+                  UNKNOWN_ERROR_STRING => 'WHAT',
+                  );
+
+
+    # Get list of variables supplied, or else all
+    my @vars = @_ ? @_ : keys(%Config);
+    return unless @vars;
+
+    # Predeclare global variables in calling package
+    eval "package $callpack; use vars qw("
+         . join(' ', map { '$'.$_ } @vars) . ")";
+    die $@ if $@;
+
+
+    foreach (@vars) {
+	if (defined $Config{ $_ }) {
+            no strict 'refs';
+	    # Exporter does a similar job to the following
+	    # statement, but for function names, not
+	    # scalar variables:
+	    *{"${callpack}::$_"} = \$Config{ $_ };
+	} else {
+	    die "Error: Config: $_ not known (See Bio::Otter::Lace::Blast)\n";
+	}
+    }
+}
+
+1;
+
 package BlastableVersion;
 
 #### Configurable variables
@@ -12,7 +140,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.1 $ ';
+$revision='$Revision: 1.2 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
@@ -39,6 +167,10 @@ sub get_version { }
 1;
 
 
+
+
+
+
 ##########################################################################
 ##########################################################################
 ##########################################################################
@@ -51,17 +183,11 @@ sub get_version { }
 
 package Bio::Otter::Lace::Blast;
 
-BEGIN{
-    my $module = "BlastableVersion.pm";
-    # make perl think It's loaded the BlastableVersion module *FAKED ABOVE*
-    # 
-    $INC{$module} = 1;
-}
-
 use strict;
 use warnings;
 use Bio::EnsEMBL::Pipeline::SeqFetcher::OBDAIndexSeqFetcher;
 use Bio::EnsEMBL::Pipeline::Runnable::Finished_EST;
+use Bio::EnsEMBL::Pipeline::Runnable::Finished_Blast;
 use Bio::Otter::Lace::PersistentFile;
 use Bio::EnsEMBL::Root;
 use File::Basename;
@@ -163,7 +289,7 @@ sub initialise{
         }
     }
 
-    Bio::EnsEMBL::Pipeline::Runnable::Finished_Blast->add_regex($self->analysis->db_file, '(\S+)');
+    Bio::EnsEMBL::Pipeline::Runnable::Finished_Blast::add_regex($self->analysis->db_file, '(\S+)');
 
     return 1;
 }
@@ -356,3 +482,5 @@ sub lib_path{
     }
     return $self->{'_lib_path'};
 }
+
+1;
