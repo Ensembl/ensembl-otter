@@ -642,6 +642,12 @@ sub ace_to_otter {
   my @tran;
   my %genes;
   my %genenames;
+  my $type;
+  my %frags;
+  my $chr;
+  my $chrstart;
+  my $chrend;
+  my $dna;
 
   while (<$fh>) {
 
@@ -650,7 +656,6 @@ sub ace_to_otter {
 
     if (/^Sequence +: +\"(.*)\"/) {
       my $currname = $1;
-
       #print STDERR "Found sequence [$currname]\n";
 
       while (($_ = <$fh>) !~ /^\n$/) {
@@ -680,8 +685,28 @@ sub ace_to_otter {
           $sequence{$name}{parent} = $currname;
           $sequence{$name}{strand} = $strand;
 
-        } elsif (/^Genomic_canonical/) {
+        } elsif (/Assembly_name +(\S+)/) {
+          $type = $1;
+        } elsif (/TilePath +(\d+) +(\d+) +(\S+) +(\S+)/) {
+          my $assstart  = $1;
+          my $assend    = $2;
+          my $assname   = $4;
 
+          # Hmm - no offset
+          if (defined($frags{$assname})) {
+             print "ERROR: Fragment name [$assname] appears more than once in the tiling path\n";
+          }
+          $frags{$assname}{start} = $assstart;
+          $frags{$assname}{end}   = $assend;
+          $frags{$assname}{offset};  # SHOULD BE SET
+        } elsif (/^Genomic_canonical/) {
+          if ($currname =~ /(\S+).(\d+)-(\d+)/) {
+             $chr      = $1;
+             $chrstart = $2;
+             $chrend   = $3;
+          } else {
+            print "Warning: Genomic|_canonical sequence is not in the 6.1-10000 format [$currname].  Can't convert to chr, start,end\n";
+          }
           #print "Found contig\n";
 
           if (defined($contig)) {
@@ -893,7 +918,7 @@ sub ace_to_otter {
         chomp($line);
         $seq .= $line;
       }
-      $sequence{$name} = $seq;
+      $dna = $seq;
     } elsif (/^Locus +: +(\S+)/) {
       my $name = $1;
       $name =~ s/\"//g;
@@ -1177,7 +1202,7 @@ sub ace_to_otter {
     }
     prune_Exons($gene);
   }
-  return \@genes;
+  return \@genes,\%frags,$type,$dna,$chr,$chrstart,$chrend;
 }
 
 sub make_translation_from_cds {
@@ -1413,6 +1438,35 @@ sub path_to_XML {
 
 }
 
+
+sub frags_to_XML {
+  my ($frags,$type,$chr,$start,$end) = @_;
+
+  my $str = "  <assembly_type>" . $type . "<\/assembly_type>\n";
+
+  my @names = keys %$frags;
+  @names = sort {$frags->{$a}{start} <=> $frags->{$b}{start}} @names;
+
+  foreach my $name (@names) {
+     $str .= "    <sequencefragment>\n";
+     $str .= "      <id>" . $name . "<\/id>\n";
+     $str .= "      <chromosome>" . $chr . "<\/chromosome>\n";
+
+     my $start = $frags->{$name}{start};
+     my $end   = $frags->{$name}{end};
+
+     if ($start < $end) {
+     $str .= "      <assemblystart>" . $start . "<\/assemblystart>\n";
+     $str .= "      <assemblyend>" . $end . "<\/assemblyend>\n";
+     $str .= "      <assemblyori>1<\/assemblyori>\n";
+     } else {
+     $str .= "      <assemblystart>" . $end . "<\/assemblystart>\n";
+     $str .= "      <assemblyend>" . $start . "<\/assemblyend>\n";
+     $str .= "      <assemblyori>-1<\/assemblyori>\n";
+     }
+  }
+  return $str;
+}
 sub genes_to_XML_with_Slice {
   my ($slice, $genes, $type, $writeseq) = @_;
 
