@@ -171,12 +171,15 @@ while(<IN>){
     $nobs++;
     next;
   }
+  my $eflag=0;
   foreach my $excl (split(/,/,$exclude)){
     if($gt=~/^$excl/){
       $nexclude++;
-      next;
+      $eflag=1;
+      last;
     }
   }
+  next if $eflag;
 
   # expect transcripts to stay on same assembly
   if($tsi_sum{$tsi}){
@@ -230,7 +233,7 @@ foreach my $atype (keys %gsi){
   foreach my $gsi (keys %{$gsi{$atype}}){
 
     # debug:
-    if($gsi eq 'OTTHUMG00000015202' && $opt_v){
+    if($gsi eq 'OTTHUMG00000032751' && $opt_v){
       $flag_v=1;
     }else{
       $flag_v=0;
