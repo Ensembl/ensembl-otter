@@ -2034,7 +2034,12 @@ sub assembly_tags_to_XML {
 
   if ( ref($slice) eq "Bio::EnsEMBL::Slice" ){
     $atag_Ad  = $db->get_AssemblyTagAdaptor;
-    $tag_data = $atag_Ad->fetch_AssemblyTags_by_Slice($slice);
+
+    # $atags_Ad inherits from Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor,
+    # which inherits from Bio::EnsEMBL::DBSQL:BaseAdaptor
+    # This also allows fetching AssemblyTag features by passing a slice obj to fetch_all_by_Slice()
+
+    $tag_data = $atag_Ad->fetch_all_by_Slice($slice);
   }
 
   # $slice here is actually array of AssemblyTag objs
