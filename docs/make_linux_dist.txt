@@ -3,7 +3,7 @@ source ~/otterdistprep/setenv.csh
 
 which does:
 setenv LONGDIR <LONG_DIRECTORY_NAME>
-setenv PATH $LONGDIR/bin:/usr/bin:/bin:/usr/sbin:/sbin:/sw/bin
+setenv PATH $LONGDIR/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/X11R6/bin
 
 Then if you havent done it:
 mkdir -p $LONGDIR
@@ -11,7 +11,7 @@ mkdir -p $LONGDIR
 You may want to move /usr/local temporarily to stop things from there being used.
 
 You need to recompile tar and install it to stop the LongLink file
-truncation.
+truncation. Not sure if this is necessary in linux.
 
 For libiconv
 ==
