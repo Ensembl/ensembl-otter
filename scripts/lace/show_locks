@@ -17,6 +17,18 @@ $| = 1;
     my $assembly  = undef;
     my $hostname  = undef;
     my $do_delete = 0;
+    my @lock_id_range = ();
+    my $range_parser = sub{
+        my( $start, $end ) = $_[1] =~ /(\d+)(?:[^\d+](\d+))?/;
+        if ($start and ! $end) {
+            $end = $start;
+        }
+        if ($start and $end and $start <= $end) {
+            @lock_id_range = ($start, $end);
+        } else {
+            $usage->();
+        }
+    };
     Bio::Otter::Lace::Defaults::do_getopt(
         'h|help!'       => $usage,
         'dataset=s'     => \$dataset_name,
@@ -24,6 +36,7 @@ $| = 1;
         'set=s'         => \$assembly,
         'machine=s'     => \$hostname,
         'delete!'       => \$do_delete,
+        'range=s'       => $range_parser,
         ) or $usage->();
     $usage->() unless $dataset_name;
 
@@ -60,6 +73,11 @@ $| = 1;
         $sql .= ' AND l.hostname = ? ';
         push(@param, $hostname);
     }
+    if (@lock_id_range) {
+        $sql .= ' AND l.clone_lock_id BETWEEN ? AND ? ';
+        push(@param, @lock_id_range);
+    }
+    $sql .= ' ORDER BY l.clone_lock_id ASC ';
     my $sth = $otter_db->prepare($sql);
     $sth->execute(@param);
     
@@ -109,9 +127,63 @@ __END__
 
 =head1 NAME - show_locks
 
+=head1 DESCRIPTION
+
+Show and delete clone locks from an otter
+database.  If locks need to be removed by hand
+using this script it is because something has
+gone wrong in the annotation system - which may
+need to be fixed!
+
 =head1 SYNOPSIS
 
-  show_locks -dataset <DATASET_NAME> [-delete] [-annotator <UNAME>] [-set <TYPE>] [-machine <HOSTNAME>]
+  show_locks -dataset <DATASET_NAME> [-delete] [-annotator <UNAME>] \
+    [-set <TYPE>] [-machine <HOSTNAME>] [-range <INT[-INT]>]
+
+=head1 ARGUMENTS
+
+=over 4
+
+=item -dataset <DATASET_NAME>
+
+The name of the dataset to search.  eg: B<human>
+
+=item -delete
+
+With this flag set, the script will show the list
+of locks that match the search criteria followed
+by a prompt which asks if all the locks in the
+list should be deteleted.
+
+=back
+
+The rest of the arguments confine the list of
+locks shown to:
+
+=over 4
+
+=item -set <TYPE>
+
+Clones which are members of this sequence set. 
+(Sequence sets are listed on the far right of the
+output.)
+
+=item -annotator <UNAME>
+
+Those locked by this user name.
+
+=item -machine <HOSTNAME>
+
+Those that were locked from the named computer.
+
+=item -range <INT[-INT]>
+
+Those in this range (or this one if only one
+number is given).  The two integers can be
+separated by any non-integer non-whitespace
+characers.
+
+=back
 
 =head1 AUTHOR
 
