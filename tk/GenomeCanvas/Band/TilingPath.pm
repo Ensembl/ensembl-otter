@@ -20,6 +20,7 @@ sub new {
     $band->virtual_contig($vc);
     $band->show_labels(1);
     $band->gold(1);
+    $band->trim_labels(1);
     return $band;
 }
 
@@ -41,6 +42,15 @@ sub gold {
         $band->{'_show_gold'} = $flag;
     }
     return $band->{'_show_gold'};
+}
+
+sub trim_labels {
+    my( $band, $flag ) = @_;
+    
+    if (defined $flag) {
+        $band->{'_trim_labels'} = $flag;
+    }
+    return $band->{'_trim_labels'};
 }
 
 sub show_labels {
@@ -66,8 +76,9 @@ sub render {
         $y_offset = $y_top - 100;
     }
 
+    my $map_contig_count = 0;
     foreach my $map_c ($vc->_vmap->each_MapContig) {
-    
+        $map_contig_count++;
         my $start  = $map_c->start;
         my $end    = $map_c->end;
         my $raw_start = $map_c->rawcontig_start;
@@ -75,6 +86,9 @@ sub render {
         my $contig = $map_c->contig;
         my $length = $contig->length;
         my $name = $contig->id;
+        if ($band->trim_labels) {
+            $name =~ s/\.\d+$//;
+        }
         my $group = "$tags[0]::$name";
         #printf STDERR "%-10s  %2d %6d %6d %6d  %10d %10d\n", $name, $map_c->orientation, $raw_start, $raw_end, $length, $start, $end;
 
@@ -144,6 +158,7 @@ sub render {
         $band->nudge_into_free_space($group, $nudge_distance);
         $canvas->delete($bkgd_rectangle) if $bkgd_rectangle;
     }
+    confess "No mapcontigs in virtual contig" unless $map_contig_count;
 }
 
 1;

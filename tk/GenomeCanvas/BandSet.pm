@@ -60,7 +60,8 @@ sub draw_set_outline {
     
     my $canvas = $set->canvas;
     my $tag = $set->bandset_tag;
-    my @rect = $canvas->bbox($tag);
+    my @rect = $canvas->bbox($tag)
+        or confess "Can't get bbox for tag '$tag'";
     $canvas->createRectangle(
         @rect,
         -fill       => undef,

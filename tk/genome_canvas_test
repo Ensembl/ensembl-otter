@@ -2,8 +2,6 @@
 
 ### genome_canvas_test
 
-use lib '/nfs/disk84/jgrg/temp/ensembl/modules';
-
 use strict;
 use GenomeCanvas;
 use GenomeCanvas::Band::TilingPath;
@@ -11,14 +9,17 @@ use GenomeCanvas::Band::Plot;
 use Getopt::Long 'GetOptions';
 
 {
-    my $host = 'localhost';
-    my $db   = 'chr_20';
+    my $host = 'ecs1c';
+    my $db   = 'chr20';
     my $user = 'ensro';
-    my $fpc = 'chr_20';
-    my $static_type = 'ACE';
+    my $fpc = 'chr20';
+    my $static_type = 'SANGER';
     my $scale = 2000;
     my $labels = 1;
     my $n_tiles = 1;
+    my $chr_name = '';
+    my $chr_start = 0;
+    my $chr_end = 0;
     GetOptions(
         'host=s'    => \$host,
         'db=s'      => \$db,
@@ -28,7 +29,10 @@ use Getopt::Long 'GetOptions';
         'type=s'    => \$static_type,
         'label!'    => \$labels,
         'tiles=i'   => \$n_tiles,
-        );
+        'chr=s'     => \$chr_name,
+        'start=i'   => \$chr_start,
+        'end=i'     => \$chr_end,
+        ) or die "Error processing command line options";
 
     my $mw = GenomeCanvas::MainWindow->new;
     $mw->title($fpc);
@@ -53,16 +57,18 @@ use Getopt::Long 'GetOptions';
         $db->static_golden_path_type($static_type);
         my $stadp = $db->get_StaticGoldenPathAdaptor();
 
-        my( $vc, $chr, $chrstart, $chrend );
-        if (defined($fpc)) {
-            $vc = $stadp->fetch_VirtualContig_by_fpc_name($fpc);
-        } else {
-            print STDERR "Fetching region $chr, $chrstart - $chrend\n";
+        my( $vc );
+        if ($chr_start) {
+            $chr_name ||= $fpc;
+            print STDERR "Fetching region of chr '$chr_name' from $chr_start to $chr_end\n";
             $vc = $stadp->fetch_VirtualContig_by_chr_start_end(
-                $chr,
-                $chrstart,
-                $chrend,
+                $chr_name,
+                $chr_start,
+                $chr_end,
                 );
+        } else {
+            print STDERR "Fetching virtual contig for all of fpc contig '$fpc'\n";
+            $vc = $stadp->fetch_VirtualContig_by_fpc_name($fpc);
         }
         
         my $tiling = GenomeCanvas::Band::TilingPath->new($vc);
@@ -83,6 +89,7 @@ use Getopt::Long 'GetOptions';
         my $plot_set = $gc->new_BandSet;
         $plot_set->add_Band($plot);
 
+        print STDERR "Rendering canvas\n";
         $gc->residues_per_pixel($scale);
         $gc->render;
     }
