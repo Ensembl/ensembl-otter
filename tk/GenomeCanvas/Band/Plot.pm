@@ -16,7 +16,16 @@ sub height {
     if ($height) {
         $band->{'_height'} = $height;
     }
-    return $band->{'_height'} || 30;
+    return $band->{'_height'} || $band->font_size * 10;
+}
+
+sub plot_method {
+    my( $band, $plot_method ) = @_;
+    
+    if ($plot_method) {
+        $band->{'_plot_method'} = $plot_method;
+    }
+    return $band->{'_plot_method'} || "gc_profile";
 }
 
 sub range {
@@ -37,77 +46,83 @@ sub range {
 sub render {
     my( $band ) = @_;
     
-    my $vc = $band->virtual_contig
-        or confess "No virtual contig attached";
-    my $rpp = $band->residues_per_pixel;
-    my $seq_length = $vc->length;
-    my $canvas = $band->canvas;
-    my $y_offset = $band->y_offset;
-    my @tags = $band->tags;
-    
-    my $height = $band->height;
-    my $y_max = $y_offset + $height;
-    
     # Draw grey boxes in plot where there is sequence missing
-    $band->draw_sequence_gaps($y_offset);
+    $band->draw_sequence_gaps;
     
     # Draw the plot where there is sequence
-    {
-        
-        # Get the map of the chunks of sequence
-        my @seq_coord = $band->sequence_chunk_coords;
-        
-        my $y_middle = $y_offset + ($height / 2);
-        my $y_max = $band->y_max;
-        my( $low, $high ) = $band->range;
-        my $scale = $height / ($high - $low);
-        for (my $i = 0; $i < @seq_coord; $i += 2) {
-            my( $start, $end ) = @seq_coord[$i, $i+1];
-
-            my( @plot );
-            my( $pos, $value ) = $band->seqpos_value($start, $end);
-            for (my $j = 0; $j < @$pos; $j++) {
-                my $p = $pos->[$j];
-                my $x = $p / $rpp;
-
-                my $v = $value->[$j];
-                my $y = $y_max - (($v - $low) * $scale);
-                push(@plot, $x, $y);
-            }
-            
-            # Draw midline
-            my $x1 = $start / $rpp;
-            my $x2 = $end   / $rpp;
-            $canvas->createLine(
-                $x1, $y_middle, $x2, $y_middle,
-                -fill       => '#ff6666',
-                -width      => 1,
-                -tags       => [@tags],
-                );
-            
-            # Draw plot
-            $canvas->createLine(
-                @plot,
-                -fill       => 'red',
-                -width      => 2,
-                -tags       => [@tags],
-                );
-            ## Draw plot
-            #$canvas->createLine(
-            #    @plot,
-            #    -fill       => 'black',
-            #    -width      => 1,
-            #    -smooth     => 1,
-            #    -tags       => [@tags],
-            #    );
-        }
-    }
-    $band->draw_plot_axes;
+    $band->create_plot;
     
-    #my $seq_string = lc $vc->seq;
+    # Draw the axes on top of the plot
+    $band->draw_plot_axes;
 }
 
-sub seqpos_value {
+
+
+sub create_plot {
+    my( $band ) = @_;
+    
+    my $plot_method = $band->plot_method;
+    
+    my @tags = $band->tags;
+    my $rpp = $band->residues_per_pixel;
+    my $vc = $band->virtual_contig
+        or confess "No virtual contig attached";
+    my $seq_length = $vc->length;
+    my $canvas = $band->canvas;
+    my $height = $band->height;
+    my $y_offset = $band->y_offset;
+    my $y_max = $y_offset + $height;
+    my $y_middle = $y_offset + ($height / 2);
+    
+    
+    # Get the map of the chunks of sequence
+    my @seq_coord = $band->sequence_chunk_coords;
+
+    my( $low, $high ) = $band->range;
+    my $scale = $height / ($high - $low);
+    for (my $i = 0; $i < @seq_coord; $i += 2) {
+        my( $start, $end ) = @seq_coord[$i, $i+1];
+
+        my( @plot );
+        my( $pos, $value ) = $band->$plot_method($start, $end);
+        for (my $j = 0; $j < @$pos; $j++) {
+            my $p = $pos->[$j];
+            my $x = $p / $rpp;
+
+            my $v = $value->[$j];
+            my $y = $y_max - (($v - $low) * $scale);
+            push(@plot, $x, $y);
+        }
+
+        # Draw midline
+        my $x1 = $start / $rpp;
+        my $x2 = $end   / $rpp;
+        $canvas->createLine(
+            $x1, $y_middle, $x2, $y_middle,
+            -fill       => '#ff6666',
+            -width      => 1,
+            -tags       => [@tags],
+            );
+
+        # Draw plot
+        $canvas->createLine(
+            @plot,
+            -fill       => 'red',
+            -width      => 2,
+            -tags       => [@tags],
+            );
+        ## Draw plot
+        #$canvas->createLine(
+        #    @plot,
+        #    -fill       => 'black',
+        #    -width      => 1,
+        #    -smooth     => 1,
+        #    -tags       => [@tags],
+        #    );
+    }
+}
+
+sub gc_profile {
     my( $band, $start, $end ) = @_;
     
     my $rpp = $band->residues_per_pixel;
