@@ -1,0 +1,129 @@
+#!/nfs/humace2/hum/bin/perl -w
+
+### drag_line
+
+use strict;
+
+use GenomeCanvas;
+
+{
+    my $mw = CanvasWindow::MainWindow->new;
+    $mw->title('Drag line');
+    $mw->bind(<Control-q>, sub {$mw->destroy});
+    $mw->bind(<Control-Q>, sub {$mw->destroy});
+    
+    my $gc = CanvasWindow->new($mw);
+    
+    my $canvas = $gc->canvas;
+    my $max_x = 800;
+    my $max_y = 500;
+    my $rec = $canvas->createRectangle(1,1, $max_x,$max_y,
+        -fill       => '#ffffff',
+        -outline    => '#999999',
+        -tags       => ['bkgd_rec'],
+        );
+    
+    my $line_count = 20;
+    
+    for (my $i = 0; $i < $line_count; $i++) {
+        $canvas->createLine(
+            rand_num($max_x), rand_num($max_y),
+            rand_num($max_x), rand_num($max_y),
+            -width      => 4,
+            -tags       => ['draggable_line'],
+            );
+    }
+    
+    $canvas->Tk::bind('<ButtonPress-1>',    [ \&save_current, Tk::Ev('x'), Tk::Ev('y') ] );
+    $canvas->Tk::bind('<Button1-Motion>',   [ \&move_current, Tk::Ev('x'), Tk::Ev('y') ] );
+    $canvas->Tk::bind('<ButtonRelease-1>',    \&delete_current                           );
+
+    $gc->fix_window_min_max_sizes;
+    
+    Tk::MainLoop();
+}
+
+sub rand_num {
+    return int(rand(shift));
+}
+
+{
+    my( $drag_line, $drag_i );
+    
+    sub save_current {
+        my( $canvas, $x, $y ) = @_;
+        
+        $x = $canvas->canvasx($x);
+        $y = $canvas->canvasy($y);
+        
+        my $obj = $canvas->find('closest', $x, $y, 5) or return;
+
+        return unless grep $_ eq 'draggable_line', $canvas->gettags($obj);
+
+        $drag_line = $obj;
+        my ($x1, $y1, $x2, $y2) = $canvas->coords($drag_line);
+        
+        my $distance_to_start = hypotenuse($x, $y, $x1, $y1);
+        my $distance_to_end   = hypotenuse($x, $y, $x2, $y2);
+        
+        my $h = 6;
+        my( @highlight );
+        if ($distance_to_start < $distance_to_end) {
+            $drag_i = 0;
+            @highlight = ($x1 - $h, $y1 - $h, $x1 + $h, $y1 + $h);
+        } else {
+            $drag_i = 2;
+            @highlight = ($x2 - $h, $y2 - $h, $x2 + $h, $y2 + $h);
+        }
+        
+        # Highlight rectangle shows which end was nearest to the pointer
+        $canvas->createRectangle(@highlight,
+            -fill       => 'red',
+            -outline    => undef,
+            -tags       => ['highlight_rectangle'],
+            );
+    }
+    
+    sub move_current {
+        my( $canvas, $x, $y ) = @_;
+        
+        return unless $drag_line;
+        
+        $canvas->delete('highlight_rectangle');
+        
+        $x = $canvas->canvasx($x);
+        $y = $canvas->canvasy($y);
+        
+        my @coords = $canvas->coords($drag_line);
+        $coords[$drag_i    ] = $x;
+        $coords[$drag_i + 1] = $y;
+        $canvas->coords($drag_line, @coords);
+    }
+    
+    sub delete_current {
+        my( $canvas ) = @_;
+        
+        $canvas->delete('highlight_rectangle');
+    
+        $drag_line = undef;
+        $drag_i    = undef;
+    }
+}
+
+sub hypotenuse {
+    my( $x1, $y1, $x2, $y2 ) = @_;
+    
+    my $x = $x1 - $x2;
+    my $y = $y1 - $y2;
+    
+    return sqrt(($x * $x) + ($y * $y));
+}
+
+__END__
+
+=head1 NAME - drag_line
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+

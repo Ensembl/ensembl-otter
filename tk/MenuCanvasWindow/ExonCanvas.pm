@@ -585,7 +585,8 @@ sub subseq_name_Entry {
 sub get_subseq_name {
     my( $self ) = @_;
     
-    return $self->subseq_name_Entry->get;
+    my $name = $self->subseq_name_Entry->get;
+    return $name || 'NO-NAME';
 }
 
 sub set_subseq_name {
@@ -1064,6 +1065,7 @@ sub new_SubSeq_from_tk {
     my( $self ) = @_;
 
     my $sub = $self->SubSeq->clone;
+    my @exons = $self->Exons_from_canvas or return;
     $sub->translation_region( $self->get_translation_region );
     $sub->name              ( $self->get_subseq_name        );
     $sub->replace_all_Exons ( $self->Exons_from_canvas      );
