@@ -176,12 +176,16 @@ sub get_all_DataSets {
             next unless $in_details;
 
             my $set = Bio::Otter::Lace::DataSet->new;
+            $set->author($self->author);
             my ($name) = /(\S+)/;
             $set->name($name);
+            my $property_count = 0;
             while (/^\s+(\S+)\s+(\S+)/mg) {
+                $property_count++;
                 #warn "$name: $1 => $2\n";
                 $set->$1($2);
             }
+            confess "No properties in dataset '$name'" unless $property_count;
             push(@$ds, $set);
         }
     }

@@ -12,21 +12,22 @@ use Bio::Otter::Lace::Client;
 my $defaults = {};
 my @option_fields = qw{ host port author email write_access };
 
-sub save_option {
+my $save_option = sub {
     my( $option, $value ) = @_;
 
     $defaults->{$option} = $value;
-}
+};
 
 sub do_getopt {
     my( @script_args ) = @_;
 
     GetOptions(
-        'host=s'        => \&save_option,
-        'port=s'        => \&save_option,
-        'author=s'      => \&save_option,
-        'email=s'       => \&save_option,
-        'write_access!' => \&save_option,
+        'host=s'        => $save_option,
+        'port=s'        => $save_option,
+        'author=s'      => $save_option,
+        'email=s'       => $save_option,
+        'write_access!' => $save_option,
+        'view'          => sub{ $defaults->{'write_access'} = 0 },
         @script_args,
     ) or confess "Error processing command line";
     
@@ -49,7 +50,7 @@ sub do_getopt {
     # and fill them in from each file in turn.
     until (all_options_are_filled()) {
         my $file = shift @conf_files or last;
-        warn "Getting options from '$file'";
+        #warn "Getting options from '$file'";
         if (my $file_opts = options_from_file($file)) {
             foreach my $field (@option_fields) {
                 if (! $defaults->{$field} and $file_opts->{$field}) {
@@ -65,6 +66,8 @@ sub do_getopt {
     $defaults->{'author'}       ||= $this_user;
     $defaults->{'email'}        ||= $this_user;
     $defaults->{'write_access'} ||= 0;
+    
+    return 1;
 }
 
 sub make_Client {
@@ -113,7 +116,7 @@ sub options_from_file {
 sub all_options_are_filled {
     foreach my $field (@option_fields) {
         unless ($defaults->{$field}) {
-            warn "Missing '$field'";
+            #warn "Missing '$field'";
             return 0;
         }
     }

@@ -119,21 +119,24 @@ sub fetch_otter_ace {
     my $ace = '';
     my $selected_count = 0;
     foreach my $ds ($client->get_all_DataSets) {
-        if (my $ctg_list = $ds->selected_CloneSequences_as_contig_list) {
-            foreach my $ctg (@$ctg_list) {
-                $selected_count += @$ctg;
-                my $xml = Bio::Otter::Lace::TempFile->new;
-                $xml->name('lace.xml');
-                my $write = $xml->write_file_handle;
-                print $write $client->get_xml_for_contig_from_Dataset($ctg, $ds);
-                my ($genes, $slice, $sequence, $tiles) =
-                    Bio::Otter::Converter::XML_to_otter($xml->read_file_handle);
-                $ace .= Bio::Otter::Converter::otter_to_ace($slice, $genes, $tiles, $sequence);
-                
-                # We need to record which dataset each slice came
-                # from so that we can save it back.
-                my $slice_name = $slice->display_id;
-                $self->save_slice_dataset($slice_name, $ds);
+        my $ss_list = $ds->get_all_SequenceSets;
+        foreach my $ss (@$ss_list) {
+            if (my $ctg_list = $ss->selected_CloneSequences_as_contig_list) {
+                foreach my $ctg (@$ctg_list) {
+                    $selected_count += @$ctg;
+                    my $xml = Bio::Otter::Lace::TempFile->new;
+                    $xml->name('lace.xml');
+                    my $write = $xml->write_file_handle;
+                    print $write $client->get_xml_for_contig_from_Dataset($ctg, $ss);
+                    my ($genes, $slice, $sequence, $tiles) =
+                        Bio::Otter::Converter::XML_to_otter($xml->read_file_handle);
+                    $ace .= Bio::Otter::Converter::otter_to_ace($slice, $genes, $tiles, $sequence);
+
+                    # We need to record which dataset each slice came
+                    # from so that we can save it back.
+                    my $slice_name = $slice->display_id;
+                    $self->save_slice_dataset($slice_name, $ds);
+                }
             }
         }
     }

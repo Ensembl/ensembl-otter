@@ -12,7 +12,7 @@ use Bio::Otter::Lace::SequenceSet;
 
 sub new {
     my( $pkg ) = @_;
-    
+
     return bless {}, $pkg;
 }
 
@@ -72,16 +72,16 @@ sub get_all_SequenceSets {
         
         my $dba = $self->get_cached_DBAdaptor;
         my $sth = $dba->prepare(q{
-            SELECT assemmbly_type
+            SELECT assembly_type
               , description
             FROM sequence_set
-            ORDER BY assemmbly_type
+            ORDER BY assembly_type
             });
         $sth->execute;
         
         while (my ($name, $desc) = $sth->fetchrow) {
             my( $write_flag );
-            if ($ssal) {
+            if (%$ssal) {
                 $write_flag = $ssal->{$name}{$this_author};
                 # If an author doesn't have an entry in the sequence_set_access
                 # table for this set, then it is invisible to them.
@@ -91,7 +91,7 @@ sub get_all_SequenceSets {
                 $write_flag = 1;
             }
         
-            my $set = Bio::Otter::SequenceSet->new;
+            my $set = Bio::Otter::Lace::SequenceSet->new;
             $set->name($name);
             $set->description($desc);
             $set->write_access($write_flag);
@@ -115,6 +115,14 @@ sub unselect_SequenceSet {
     my( $self ) = @_;
     
     $self->{'_selected_SequenceSet'} = undef;
+}
+
+sub fetch_all_CloneSequences_for_selected_SequenceSet {
+    my( $self ) = @_;
+    
+    my $ss = $self->selected_SequenceSet
+        or confess "No SequenceSet is selected";
+    return $self->fetch_all_CloneSequences_for_SequenceSet($ss);
 }
 
 sub fetch_all_CloneSequences_for_SequenceSet {
@@ -254,6 +262,7 @@ sub make_DBAdaptor {
     my(@args);
     foreach my $prop ($self->list_all_properties) {
         if (my $val = $self->$prop()) {
+            #print STDERR "-$prop  $val\n";
             push(@args, "-$prop", $val);
         }
     }
