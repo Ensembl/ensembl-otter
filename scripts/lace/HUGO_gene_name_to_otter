@@ -150,8 +150,8 @@ eval {
 
 	  $changed .= "   Found <TYPE> update: old gene type was \"$otter_type\"\n";
 
-	  # store previous gene type under Remark tag in AceDB
-	  my $rem = "old gene type was $otter_type";
+	  # store previous gene type under Annotation_remark tag in AceDB
+	  my $rem = "Annotation_remark- old gene type was $otter_type";
 	  $sth = $otter_db->prepare('Insert into gene_remark (gene_remark_id, remark, gene_info_id) values(null,?,?)');
 	  $sth->execute($rem, $gene->gene_info->dbID);
 	  $sth->finish();
