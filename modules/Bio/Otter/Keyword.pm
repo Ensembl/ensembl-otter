@@ -25,18 +25,6 @@ sub new {
   return $self;
 }
 
-=head2 dbID
-
- Title   : dbID
- Usage   : $obj->dbID($newval)
- Function: 
- Example : 
- Returns : value of dbID
- Args    : newvalue (optional)
-
-
-=cut
-
 sub dbID{
    my ($obj,$value) = @_;
    if( defined $value) {
@@ -45,18 +33,6 @@ sub dbID{
     return $obj->{'dbID'};
 
 }
-
-=head2 name
-
- Title   : name
- Usage   : $obj->name($newval)
- Function: 
- Example : 
- Returns : value of name
- Args    : newvalue (optional)
-
-
-=cut
 
 sub name{
    my ($obj,$value) = @_;
@@ -67,18 +43,6 @@ sub name{
 
 }
 
-=head2 clone_dbID
-
- Title   : clone_info_id
- Usage   : $obj->clone_dbID($newval)
- Function: 
- Example : 
- Returns : value of clone_info_id
- Args    : newvalue (optional)
-
-
-=cut
-
 sub clone_info_id{
    my ($obj,$value) = @_;
    if( defined $value) {
@@ -87,18 +51,6 @@ sub clone_info_id{
     return $obj->{'clone_info_id'};
 
 }
-
-=head2 toString
-
- Title   : toString
- Usage   :
- Function:
- Example :
- Returns : 
- Args    :
-
-
-=cut
 
 sub toString{
     my ($self) = shift;
@@ -120,6 +72,12 @@ sub toString{
 
     return $str;
 
+}
+
+sub equals {
+    my( $old, $new ) = @_;
+    
+    return $old->name eq $new->name;
 }
 
 1;

@@ -157,24 +157,24 @@ sub equals {
     }
 
 
-    my @key1 = $self->keyword;
-    my @key2 = $obj->keyword;
+    my @old = $self->keyword;
+    my @new = $obj->keyword;
 
-    if (scalar(@key1) != scalar(@key2)) {
+    if (@old != @new) {
         warn "Different numbers of keywords\n";
         return 0;
     }
 
-    foreach my $rem (@key1) {
+    foreach my $old_key (@old) {
         my $found = 0;
 
-        foreach my $rem2 (@key2) {
-            if ($rem eq $rem2) {
+        foreach my $new_key (@new) {
+            if ($old_key->equals($new_key)) {
                 $found = 1;
             }
         }
         if ($found == 0) {
-            warn "Different keywords: '$rem' not found\n";
+            printf STDERR "Different keywords: '%s' not found\n", $old_key->name;
             return 0;
         }
     }
