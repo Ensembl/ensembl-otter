@@ -90,6 +90,7 @@ my $DEBUG = 0;
     my $submit_contig     = 'SubmitContig';
     my $superctg_ori      = 1; # default value for just now. - true value will be added by a different script
     my $help              = 0;
+    my $at_sanger         = 1;  # Set if we want to get sequence notes and clone names
     
     #---------------------------------------------------------------------------
     Bio::Otter::Lace::Defaults::do_getopt(
@@ -101,6 +102,7 @@ my $DEBUG = 0;
         'set|name=s'    => \$set_name,
 	'delete'        => \$delete,
         'debug'         => \$DEBUG,
+        'sanger!'       => \$at_sanger,
         ) or useage();
     useage() if $help;
     $agp_file           = $ARGV[0]; # takes the remaining argument as the filename to be read
@@ -260,6 +262,14 @@ my $DEBUG = 0;
     my $elapsed = tv_interval ( $t0, [gettimeofday]);
     print STDERR "code took: $elapsed seconds\n" if $DEBUG;
 
+    # Get sequence notes and clone names from fox and oracle
+    if ($at_sanger) {
+        my ($root) = $0 =~ m{(.+?)[^/]+};
+        $root =~ s{/$}{};
+        foreach my $script (qw{ submissions_to_otter clones_to_otter }) {
+            system("$root/$script", '-dataset', $dataset_name);
+        }
+    }
 }
 
 
