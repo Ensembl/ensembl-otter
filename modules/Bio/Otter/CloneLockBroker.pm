@@ -153,7 +153,7 @@ sub remove_by_slice {
 
     foreach my $clone (@$clone_list) {
 	if (my $lock = $self->get_CloneLockAdaptor->fetch_by_clone_id($clone->dbID)) {
-	    unless ($lock->author->equals($author)) {
+	    unless ($lock->author->name eq $author->name) {
 	        $self->throw("Author [" . $author->name . "] doesn't own lock for $clone");
             }
             $aptr->remove($lock);
