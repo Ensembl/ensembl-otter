@@ -1,0 +1,101 @@
+
+### GenomeCanvas::Band::FileFeatures
+
+package GenomeCanvas::Band::FileFeatures;
+
+use strict;
+use Carp;
+use GenomeCanvas::Band;
+use Symbol 'gensym';
+
+use vars '@ISA';
+@ISA = ('GenomeCanvas::Band');
+
+sub feature_file {
+    my( $self, $file ) = @_;
+    
+    if ($file) {
+        $self->{'_feature_file'} = $file;
+    }
+    return $self->{'_feature_file'};
+}
+
+sub start_end_column_indices {
+    my( $self, @indices ) = @_;
+    
+    if (@indices) {
+        unless (@indices == 2) {
+            confess "Need 2 indices, for start and end columns, but got ", scalar(@indices);
+        }
+        $self->{'_start_end_column_indices'} = [@indices];
+    }
+    my $ind_ref = $self->{'_start_end_column_indices'};
+    if ($ind_ref) {
+        return @$ind_ref;
+    } else {
+        return (4,5);   # Start + End in GFF
+    }
+}
+
+sub render {
+    my( $band ) = @_;
+    
+    my $vc = $band->virtual_contig
+        or confess "No virtual contig attached";
+    my $global_offset = $vc->_global_start - 1
+        or confess "Can't get global_start from Virtual Contig";
+    my $file = $band->feature_file
+        or confess "feature_file not set";
+    my $fh = gensym();
+    open $fh, $file or confess "Can't open '$file' : $!";
+    my @ind = $band->start_end_column_indices;
+
+    my $height    = $band->height;
+    my $canvas    = $band->canvas;
+    my $y_offset  = $band->y_offset;
+    my $rpp       = $band->residues_per_pixel;
+    my $color     = $band->band_color;
+    my @tags      = $band->tags;
+    
+    $canvas->createRectangle(
+        0, $y_offset, $band->width, $y_offset + $height,
+        -fill       => undef,
+        -outline    => undef,
+        -tags       => [@tags],
+        );
+
+    my $y1 = $y_offset + 1;
+    my $y2 = $y_offset + $height - 1;
+    
+    while (<$fh>) {
+        # Cunning or what!
+        my ($start, $end) = map $_ -= $global_offset, (split)[@ind];
+        warn "Start End = $start\t$end\n";
+    
+        my $x1 = $start / $rpp;
+        my $x2 = $end   / $rpp;
+        
+        $canvas->createRectangle(
+            $x1, $y_offset, $x2, $y2,
+            -fill       => $color,
+            -outline    => $color,
+            -width      => 0.5,
+            -tags       => [@tags],
+            );
+    }
+    
+}
+
+
+
+
+1;
+
+__END__
+
+=head1 NAME - GenomeCanvas::Band::FileFeatures
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+

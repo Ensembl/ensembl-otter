@@ -17,26 +17,24 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use GenomeCanvas::Band::GeneticMap;
 #use Bio::EnsEMBL::ExternalData::SNPSQL::DBAdaptor;
 use Hum::Submission 'prepare_statement'; # For Sanger sequence names
-use Getopt::Long 'GetOptions';
+use Hum::EnsCmdLineDB;
+
 
 {
     my $test_flag = 0;
     my $sanger_names = 0;
+    my $chr_name = 'chr20';
+    my $scale = 4000;
     my( $start, $end, $ps_file_name );
-    GetOptions(
+    Hum::EnsCmdLineDB::do_getopt(
         'test!'     => \$test_flag,
         'start=i'   => \$start,
         'end=i'     => \$end,
         'ps_file=s' => \$ps_file_name,
         'sanger!'   => \$sanger_names,
-        ) or die "error processing command line";
+        'chr=s'     => \$chr_name,
+        );
 
-    my $host            = 'ecs1b';
-    my $db_name         = 'human_chr20_fin';
-    my $user            = 'ensro';
-    my $chr_name        = 'chr20';
-    my $static_type     = 'SANGER';
-    my $scale           = 4000;
     
     my $mw = CanvasWindow::MainWindow->new;
     $mw->title($chr_name);
@@ -44,19 +42,15 @@ use Getopt::Long 'GetOptions';
     
     my $canvas = $gc->canvas;
 
-    my $db = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
-        -DBNAME => $db_name,
-        -USER   => $user,
-        -HOST   => $host,
-        );
-    $db->static_golden_path_type($static_type);
+    my $db = Hum::EnsCmdLineDB::connect();
     my $stadp = $db->get_StaticGoldenPathAdaptor();
     
     # Coords for p and q arms
     my( @chr_parts );
     if ($test_flag) {
         @chr_parts = (
-            [7_500_000, 9_500_000],
+            [37_000_001, 48_500_000],
+            #[7_500_000, 9_500_000],
             #[27_000_000, 30_000_000],
             #[60_000_000, 62_500_000],
             );
@@ -68,7 +62,7 @@ use Getopt::Long 'GetOptions';
         @chr_parts = (
             #[1, 27_500_000],
             #[27_500_000, get_chr_end($db, $static_type, $chr_name)]);
-            [1, get_chr_end($db, $static_type, $chr_name)]);
+            [1, get_chr_end($db, $db->static_golden_path_type, $chr_name)]);
     }
     
     foreach my $chr_pos (@chr_parts) {
@@ -189,7 +183,7 @@ use Getopt::Long 'GetOptions';
         });
     $gc->fix_window_min_max_sizes;
     
-    unless ($test_flag) {
+    #unless ($test_flag) {
         $mw->update;
 
         if (0) {
@@ -214,12 +208,12 @@ use Getopt::Long 'GetOptions';
             $gc->page_height(841);
             $gc->page_width(591);
             $gc->landscape(1);
-            $gc->vertical_tile(1);
+            #$gc->vertical_tile(1);
             my @files = $gc->print_postscript('chr_20-long');
             warn "Printed to files:\n",
                 map "  $_\n", @files;
         }
-    }
+    #}
 }
 
 

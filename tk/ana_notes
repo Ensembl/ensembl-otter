@@ -110,8 +110,8 @@ use Getopt::Long 'GetOptions';
             default_cursor($mw);
             };
         
-        # First call to this returns empty list!
-        my @all_text_obj = $canvas->find('withtag', 'contig_text');
+        ## First call to this returns empty list!
+        #my @all_text_obj = $canvas->find('withtag', 'contig_text');
         
         make_button($button_frame2, 'Hunt selection', $hunter, 0);
         $mw->bind('<Control-h>', $hunter);
