@@ -830,6 +830,8 @@ sub _make_search{
 sub hunt_for_Entry_text{
     my ($self, $entry) = @_; 
 #   Finds the text given in the supplied Entry in $self->canvas
+#   Very similar to hunt_for_selection in SequenceNotes.pm
+#   potential for refactoring...
     my $canvas = $self->canvas;
     my( $query_str, $regex );
     eval{
@@ -843,6 +845,13 @@ sub hunt_for_Entry_text{
     $canvas->delete('msg');
     $self->deselect_all();
     my @all_text_obj = $canvas->find('withtag', 'searchable');
+    unless (@all_text_obj) {
+        ### Sometimes a weird error occurs where the first call to find
+        ### doesn't return anything - warn user if this happens.
+        $self->message('No searchable text on canvas - is it empty?');
+        return;
+    }
+
     my $found = 0;
     foreach my $obj (@all_text_obj) {
         my $text = $canvas->itemcget($obj, 'text');
