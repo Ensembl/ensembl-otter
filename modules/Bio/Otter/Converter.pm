@@ -578,7 +578,7 @@ sub otter_to_ace {
           $start = $path->assembled_end;
         }
         $str .= sprintf qq{SubSequence "%s" %d %d\n}, 
-                      $path->component_Seq->clone->embl_id, $start, $end;
+                      $path->component_Seq->name, $start, $end;
     }
   }
 
