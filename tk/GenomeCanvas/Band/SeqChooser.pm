@@ -92,7 +92,7 @@ sub draw_seq_row {
     my $font   = $band->column_font;
     my @tags   = $band->tags;
     my $width  = $band->max_width;
-    push(@tags, $id, "sequence_name=$text[0]");
+    push(@tags, $id, "sequence_name=$text[1]");
     my $y1 = $y_offset + 3;
     for (my $i = 0; $i < @text; $i++) {
         my $t = $text[$i] or next;
