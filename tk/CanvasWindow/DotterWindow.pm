@@ -34,10 +34,11 @@ sub initialise {
         );
     
     # Entry box for match at top
-    my $match_frame = $top->Frame->pack(
-        -side   => 'top',
-        -ipady  => 6,
-        );
+    my $match_frame = $top->Frame(
+        -border => 3,
+        )->pack(
+            -side   => 'top',
+            );
     $match_frame->Label(
         -text   => 'Match name:',
         -anchor => 's',
@@ -45,10 +46,25 @@ sub initialise {
         )->pack(-side => 'left');
     $self->match(
         $match_frame->Entry(
-            -width  => 20,
+            -width  => 16,
             @std_entry_args,
             )->pack(-side => 'left')
         );
+    
+    # Pad between entries
+    $match_frame->Frame(
+        -width  => 10,
+        )->pack(-side => 'left');
+    
+    
+    # Whether to open dotter with rev-comp'd match sequence
+    my $rev_comp = 0;
+    $self->revcomp_ref(\$rev_comp);
+    $match_frame->Checkbutton(
+        -text       => 'Reverse strand',
+        -variable   => \$rev_comp,
+        )->pack(-side => 'left');
+
     
     # Labelled frame around all the Genomic stuff
     my $lab_frame = $top->LabFrame(
@@ -265,6 +281,15 @@ sub top {
     return $self->{'_top'};
 }
 
+sub revcomp_ref {
+    my( $self, $revcomp_ref ) = @_;
+    
+    if ($revcomp_ref) {
+        $self->{'_revcomp_ref'} = $revcomp_ref;
+    }
+    return $self->{'_revcomp_ref'};
+}
+
 sub dotter {
     my( $self, $dotter ) = @_;
     
@@ -282,6 +307,7 @@ sub launch_dotter {
     my $start      = $self->get_entry('genomic_start');
     my $end        = $self->get_entry('genomic_end');
     my $genomic    = $self->get_query_Sequence($clone_name);
+    my $revcomp    = $self->revcomp_ref;
     
     unless ($match_name and $clone_name and $start and $end and $genomic) {
         warn "Missing parameters\n";
@@ -297,6 +323,7 @@ sub launch_dotter {
     $dotter->query_start($start);
     $dotter->query_end($end);
     $dotter->subject_name($match_name);
+    $dotter->revcomp_subject($$revcomp);
     
     return $dotter->fork_dotter;
 }
