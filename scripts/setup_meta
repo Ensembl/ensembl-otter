@@ -11,9 +11,11 @@ my $pass    = 'ensembl';
 my $dbname  = undef;
 my $port    = 19322;
 
-my $min_stable_id = undef;
-my $prefix = "OTT";
+my $min_stable_id  = undef;
+my $prefix         = "OTT";
 my $species_prefix = "HUM";
+my $species_taxon  = undef; # holds taxonID e.g. for Homo sapiens : 9606
+my $species_common = undef; # holds species common name e.g. human
 
 &GetOptions( 'host:s'          => \$host,
              'user:s'          => \$user,
@@ -23,6 +25,8 @@ my $species_prefix = "HUM";
              'minstableid:n'   => \$min_stable_id,
              'prefix:s'        => \$prefix,
              'speciesprefix:s' => \$species_prefix,
+             'speciestaxon:s'  => \$species_taxon,
+             'speciescommon:s' => \$species_common,
             );
 
 if (!defined($dbname)) {
@@ -46,4 +50,10 @@ if ($prefix) {
 }
 if ($species_prefix) {
   $meta_con->store_key_value('prefix.species',"$species_prefix");
+}
+if ($species_taxon){
+  $meta_con->store_key_value('taxon.species',"$species_taxon");
+}
+if ($species_common){
+  $meta_con->store_key_value('common.species',"$species_common");
 }
