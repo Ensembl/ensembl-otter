@@ -369,11 +369,12 @@ use GenomeCanvas::Band::SeqChooser;
         
               
         # check that author is valid to update note
-        my $note_author = $current_note->author; 
-        my $current_user= getlogin;
+        my $note_author     = $current_note->author; 
 
-  
-        if (($note_author eq $current_user )){     
+        my $current_user    = $self->DataSet->author;
+
+### ck2 thing in for testing purposes. remove this if I have left it in !   
+        if (($note_author eq $current_user) ){              #|| ($current_user eq 'ck2' )){     
             # confirm that the user wants to update the entry
             unless($history_canvas->confirm_update($self->toplevel)){
                 return $return_string ;
