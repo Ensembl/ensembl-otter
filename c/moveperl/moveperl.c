@@ -44,13 +44,13 @@ int main(int argc, char *argv[]) {
   char baseToPath[MAXPATHLEN];
   struct stat st;
   int  allowAppend = 0;
+  int  allowLongerDest = 0;
   char archiveExtension[MAXPATHLEN];
 
   baseSrcPath[0] = '\0';
   archiveExtension[0] = '\0';
 
-  argv++;
-  argc--;
+  argv++; argc--;
 
   while (argc && argv[0][0] == '-') {
     if (strlen(argv[0]) != 2) printUsageAndDie();
@@ -65,6 +65,11 @@ int main(int argc, char *argv[]) {
       case 'a':
         printf("Allowing append\n");
         allowAppend = 1;
+        argv++; argc--;
+        break;
+      case 'l':
+        printf("Allowing destination to be longer than source\n");
+        allowLongerDest = 1;
         argv++; argc--;
         break;
       case 'r':
@@ -114,7 +119,7 @@ int main(int argc, char *argv[]) {
   strcpy(fullFromName,argv[0]);
   strcpy(fullDestName,argv[1]);
 
-  if (strlen(fullFromName) < strlen(fullDestName)) {
+  if (strlen(fullFromName) < strlen(fullDestName) && !allowLongerDest) {
     fprintf(stderr,"Error: Length of to path can't be longer than from path\n");
     exit(1);
   }
@@ -139,7 +144,7 @@ int main(int argc, char *argv[]) {
 }
 
 void printUsageAndDie() {
-  fprintf(stderr, "Usage: moveperl [-a] [-s <srcdir>] [-r <libsuffix>] <fromdir> <todir>\n");
+  fprintf(stderr, "Usage: moveperl [-l] [-a] [-s <srcdir>] [-r <libsuffix>] <fromdir> <todir>\n");
   exit(1);
 }
 
@@ -220,7 +225,8 @@ int doFuncInp(char *fromName, char *toName, char *baseSrcName,
       fprintf(stderr,"Error: Failed allocating space for file buffer\n");
       exit(1);
     }
-    if ((toBuf = calloc(st.st_size+1,sizeof(char))) == NULL) {
+/* Hack */
+    if ((toBuf = calloc(st.st_size+1000000,sizeof(char))) == NULL) {
       fprintf(stderr,"Error: Failed allocating space for file buffer\n");
       exit(1);
     }
