@@ -5,7 +5,7 @@ package CanvasWindow::SequenceNotes::History;
 
 use strict;
 use Carp;
-use Data::Dumper;
+
 use base 'CanvasWindow::SequenceNotes';
 
 sub clone_index{
