@@ -268,36 +268,65 @@ sub initialize {
         my $frame = $canvas->toplevel->Frame->pack( -side => 'top', );
 
         # Choice of Method
-        my @allowed_methods = map $_->name,
-            $self->xace_seq_chooser->get_all_mutable_GeneMethods;
+        my @mutable_gene_methods = $self->xace_seq_chooser->get_all_mutable_GeneMethods ;
+        my @allowed_methods = map $_->name, @mutable_gene_methods;
+#            $self->xace_seq_chooser->get_all_mutable_GeneMethods;      
+        my @parent_child = map $_->has_parent, @mutable_gene_methods;
         my $method_i = 0;
         my $current_method = $self->SubSeq->GeneMethod->name;
         $self->method_name_var(\$current_method);
         #warn "Looking for '$current_method'";
+        my $width = 0;
         for (my $i = 0; $i < @allowed_methods; $i++) {
-            if ($current_method eq $allowed_methods[$i]) {
+            if ($width < length($allowed_methods[$i])) { $width = length($allowed_methods[$i]) } ;
+            if ($current_method eq $allowed_methods[$i]) {    
                 #warn "Found at '$i'";
                 $method_i = $i;
-                last;
-            }
+            }          
         }
 
-        my $type_frame = $frame->Frame(-border => 6)->pack(-side => 'top');
-        $type_frame->Label(
-            -text => 'Type:',
-            -padx => 6,
-            )->pack(-side => 'left');
-
-        my $om = $type_frame->Optionmenu(
-            -variable   => \$current_method,
-            -options    => [@allowed_methods],
-            -takefocus  => 0,   # Doesn't work
-            -command    => sub{
-                $self->draw_translation_region;
-                $top->focus;  # Need this
-                my $txt = $self->method_name_var;
-                },
-            )->pack( -side => 'top' );
+        my $type_frame = $frame->Frame(-border => 1 )->pack(-side => 'top' );
+        my $type = $type_frame->Label(-text => 'Type : ',                                      
+            )->pack( -side=>left );
+        my $tf_label = $type_frame->Label(  -padx => 6,
+                                            -relief => 'groove',
+                                            -textvariable => \$current_method ,
+                                            -width => $width
+            )->pack(-side => 'left' , -ipady => 3 , -padx=> 1);
+        
+        my $length = 0;
+        my ($prev ,@menu_items) ;
+        foreach my $gm ( @mutable_gene_methods ){
+                        
+            my $orig_name = $gm->name;
+            my $display_name = $orig_name;
+            if ($gm->has_parent){
+                $display_name = "    " . $orig_name ;
+            }
+            else{
+                unless ($gm == $mutable_gene_methods[0]){
+                    push @menu_items , '-' ;    
+                }
+            }
+            my $item = ['command' => $display_name , 
+                        -command => sub{    ${\$current_method} = $orig_name ;
+                                            $self->draw_translation_region;
+                                            $top->focus;  # Need this
+                                            my $txt = $self->method_name_var; 
+                                        }
+                        ];
+                        
+            push @menu_items, $item ;
+        }
+           
+        
+        my $om = $type_frame->Menubutton(   -bitmap => '@' . Tk->findINC('cbxarrow.xbm'),
+                                            -relief     =>  'groove' ,
+                                            -tearoff    =>  0 ,
+                                            -direction  => 'left' ,
+                                            -menuitems  => [@menu_items]   
+        )->pack(-side => 'right', -padx => 1, -fill => 'y', -expand => 1 , -ipady => 3 , -ipadx => 1, -padx =>1);
+   
         $om->menu->invoke($method_i);
         
         # Widget for changing name
