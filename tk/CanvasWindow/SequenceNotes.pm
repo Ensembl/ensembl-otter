@@ -76,15 +76,16 @@ sub refresh_column {
     my $ss = $self->SequenceSet();
     
     $self->_refresh_SequenceSet($col_no);
-    my $cs_list = $self->get_CloneSequence_list;
-            
+    #my $cs_list = $self->get_CloneSequence_list;
+    my $cs_list = $self->get_rows_list;
+    my $method  = $self->column_methods->[$col_no]->[1];
+
     for (my $i = 0; $i < @$cs_list; $i++) {
 
         my $cs = $cs_list->[$i];
         my $tag_string = "$col_tag&&cs=$i";
         if (my ($obj) = $canvas->find('withtag', $tag_string) ) {
-            my $method_list = $self->column_methods;
-	    my $new_content = $method_list->[$col_no]->[1]->($cs, $i , $self);
+	    my $new_content = $method->($cs, $i , $self);
             delete $new_content->{'-tags'};    # Don't want to alter tags
 #	    warn "re-configuring column  $col_no , row $i" ; 
             $canvas->itemconfigure($obj, %$new_content);
@@ -694,7 +695,7 @@ sub get_rows_list{
     if($self->_allow_paging()){
         my ($offset, $length) = $self->_sanity_check_paging($max_cs_list);
         warn "slice $offset .. $length\n";
-        $cs_list = [ @{$cs_list}[$offset..$length] ];
+        $cs_list = [ @{ $cs_list } [$offset..$length] ];
     }
     return $cs_list;
 }
@@ -1414,7 +1415,7 @@ sub open_padlock_pixmap {
     my( $self ) = @_;
     
     my( $pix );
-    unless ($pix = $self->{'_closed_padlock_pixmap'}) {
+    unless ($pix = $self->{'_open_padlock_pixmap'}) {
     
         my $data = <<'END_OF_PIXMAP';
 /* XPM */    
@@ -1438,7 +1439,7 @@ static char * padlock[] = {
 "           "};
 END_OF_PIXMAP
         
-        $pix = $self->{'_closed_padlock_pixmap'} = $self->canvas->Pixmap( -data => $data );
+        $pix = $self->{'_open_padlock_pixmap'} = $self->canvas->Pixmap( -data => $data );
     }
     return $pix;
 }
