@@ -17,7 +17,7 @@ sub get_DBAdaptor {
 sub get_pipeline_DBAdaptor {
     my( $otter_db ) = @_;
 
-    require 'Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor';
+    require Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor;
     return Bio::Otter::Lace::SatelliteDB::_get_DBAdaptor($otter_db, 'pipeline_db', 'Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor');
 }
 
