@@ -180,16 +180,16 @@ sub zoom_in {
     my( $cw ) = @_;
     
     $cw->canvas->scale('all', 0,0,2,2);
-    #$cw->set_scroll_region_and_maxsize;
-    $cw->fix_window_min_max_sizes;
+    $cw->set_scroll_region_and_maxsize;
+    #$cw->fix_window_min_max_sizes;
 }
 
 sub zoom_out {
     my( $cw ) = @_;
     
     $cw->canvas->scale('all', 0,0,0.5,0.5);
-    #$cw->set_scroll_region_and_maxsize;
-    $cw->fix_window_min_max_sizes;
+    $cw->set_scroll_region_and_maxsize;
+    #$cw->fix_window_min_max_sizes;
 }
 
 sub handle_button_1 {
