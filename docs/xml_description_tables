@@ -421,7 +421,7 @@ description     a genomic region - part or whole of a chromosome
 contains        assembly_type
 contains        sequence_fragment
 contains        locus
-contains        feature_list
+contains        feature_set
 contains        dna
 mandatory
 multiple
@@ -673,7 +673,7 @@ value           string
 description     where to begin translation of exon. This tag is omitted for a non-coding exon
 value           0 = translation begins at first base of exon (or first base of the translation region within the exon)\n1 = translation begins at second base of exon\n2 = translation begins at third base of exon
 
-<feature_list>
+<feature_set>
 description     list of simple features, such as PolyA sites, that form an essential part of the gene annotation
 contains        feature
 

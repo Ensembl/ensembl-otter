@@ -22,6 +22,44 @@ sub current_author {
     return $self->{'_current_author'};
 }
 
+sub compare_feature_sets {
+    my( $self, $old_features, $new_features ) = @_;
+    
+    my %old = map {SimpleFeature_key($_), $_} @$old_features;
+    my %new = map {SimpleFeature_key($_), $_} @$new_features;
+
+    # Features that were in the old, but not the new, should be deleted    
+    my $delete = [];
+    while (my ($key, $old_sf) = each %old) {
+        unless ($new{$key}) {
+            push(@$delete, $old_sf);
+        }
+    }
+
+    # Features that are in the new but were not in the old should be saved
+    my $save = [];
+    while (my ($key, $new_sf) = each %new) {
+        unless ($old{$key}) {
+            push(@$save, $new_sf);
+        }
+    }
+
+    return($delete, $save);
+}
+
+sub SimpleFeature_key {
+    my( $sf ) = @_;
+    
+    return join('^',
+        $sf->analysis->logic_name,
+        $sf->start,
+        $sf->end,
+        $sf->strand,
+        $sf->score,
+        $sf->display_label || '',
+        );
+}
+
 sub compare_clones {
     my( $self, $old_clones, $new_clones ) = @_;
     

@@ -11,6 +11,7 @@ use Fcntl qw{ O_WRONLY O_CREAT };
 use Ace;
 use Bio::Otter::Lace::PipelineDB;
 use Bio::Otter::Lace::SatelliteDB;
+use Bio::Otter::Converter;
 
 use Bio::EnsEMBL::Ace::DataFactory;
 
@@ -191,12 +192,15 @@ sub ace_from_contig_list {
         $xml->name('lace.xml');
         my $write = $xml->write_file_handle;
         print $write $client->get_xml_for_contig_from_Dataset($ctg, $ds);
-        my ($genes, $slice, $sequence, $tiles) =
+
+        ### Nasty that genes and slice arguments are in
+        ### different order in these two subroutines
+        my ($genes, $slice, $sequence, $tiles, $feature_set) =
             Bio::Otter::Converter::XML_to_otter($xml->read_file_handle);
-        $ace .= Bio::Otter::Converter::otter_to_ace($slice, $genes, $tiles, $sequence);
+        $ace .= Bio::Otter::Converter::otter_to_ace($slice, $genes, $tiles, $sequence, $feature_set);
 
         # We need to record which dataset each slice came
-        # from so that we can save it back.
+        # from so that we know where to save it back to.
         my $slice_name = $slice->display_id;
         $self->save_slice_dataset($slice_name, $ds);
     }

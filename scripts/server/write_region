@@ -2,6 +2,7 @@
 
 use OtterDefs;
 use strict;
+use Symbol 'gensym';
 use CGI;
 
 use Bio::Otter::DBSQL::DBAdaptor;
@@ -23,48 +24,49 @@ if ($ENV{SERVER_SOFTWARE} =~ /libwww-perl-daemon/) {
 
 my %params = $q->Vars;
 
-my $dataset = $params{dataset} || error_exit($q,"No dataset type entered. Can't write region");
-my $data    = $params{data}    || error_exit($q,"No xml data entered. Can't write region");
+my $dataset = $params{'dataset'} || error_exit($q,"No dataset type entered. Can't write region");
+error_exit($q,"No xml data entered. Can't write region")
+    unless $params{'data'};
 error_exit($q,"Author must defined to write a region")
-       unless $params{author};
-my $email   = $params{email}   || error_exit($q,"Email must defined to write a region");
+    unless $params{'author'};
+my $email = $params{email} || error_exit($q,"Email must defined to write a region");
 
-print STDERR "Length of data " . length($data) . "\n";
+print STDERR "Length of data " . length($params{'data'}) . "\n";
 
-# Is this just for debugging?
-open OTT,">/tmp/apollo.$$.xml";
-print OTT $data;
-close(OTT);
+### Is this just for debugging?
+#open OTT,">/tmp/apollo.$$.xml";
+#print OTT $params{'data'};
+#close(OTT);
 
-if (!defined($OTTER_SPECIES->{$params{'dataset'}})) {
+unless ($OTTER_SPECIES->{$dataset}) {
   print STDERR "Unknown data set\n";
-  error_exit($q, "Unknown data set " . $params{'dataset'} . " in write_region\n");
+  error_exit($q, "Unknown data set '$dataset' in write_region\n");
 }
 
-my %dbinfo   = %{$OTTER_SPECIES->{$params{'dataset'}}};
-my %defaults = %{$OTTER_SPECIES->{'defaults'}};
 
-my $odb;
-my $dnadb;
 
 my $author = Bio::Otter::Author->new(-name  => $params{author},
                                      -email => $params{email});
 
-my $host = $dbinfo{HOST}   || $defaults{HOST},
-my $user = $dbinfo{USER}   || $defaults{USER},
-my $pass = $dbinfo{PASS}   || $defaults{PASS},
-my $port = $dbinfo{PORT}   || $defaults{PORT},
-my $dbname = $dbinfo{DBNAME};
+my $dbinfo   = $OTTER_SPECIES->{$dataset};
+my $defaults = $OTTER_SPECIES->{'defaults'};
+
+my $host   = $dbinfo->{HOST} || $defaults->{HOST};
+my $user   = $dbinfo->{USER} || $defaults->{USER};
+my $pass   = $dbinfo->{PASS} || $defaults->{PASS};
+my $port   = $dbinfo->{PORT} || $defaults->{PORT};
+my $dbname = $dbinfo->{DBNAME};
 
 #print STDERR "\nDatabase [$dbname][$host][$user][$pass][$port]\n";
 #print STDERR "\nAuthor $author email $email dataset $dataset\n";
 
-my $dnahost = $dbinfo{DNA_HOST}    || $defaults{DNA_HOST},
-my $dnauser = $dbinfo{DNA_USER}    || $defaults{DNA_USER},
-my $dnapass = $dbinfo{DNA_PASS}    || $defaults{DNA_PASS},
-my $dnaport = $dbinfo{DNA_PORT}    || $defaults{DNA_PORT},
-my $dna_dbname = $dbinfo{DNA_DBNAME};
+my $dnahost    = $dbinfo->{DNA_HOST} || $defaults->{DNA_HOST};
+my $dnauser    = $dbinfo->{DNA_USER} || $defaults->{DNA_USER};
+my $dnapass    = $dbinfo->{DNA_PASS} || $defaults->{DNA_PASS};
+my $dnaport    = $dbinfo->{DNA_PORT} || $defaults->{DNA_PORT};
+my $dna_dbname = $dbinfo->{DNA_DBNAME};
   
+my( $odb );
 eval {
   $odb = new Bio::Otter::DBSQL::DBAdaptor(-host => $host,
                                           -user => $user,
@@ -78,7 +80,8 @@ if ($@) {
 
 print STDERR "Connected to local database\n";
 
-if (defined($dbinfo{DNA_DBNAME})) {
+my( $dnadb );
+if ($dna_dbname) {
   eval {
     $dnadb = new Bio::EnsEMBL::DBSQL::DBAdaptor(-host   => $dnahost,
                                                 -user   => $dnauser,
@@ -97,34 +100,35 @@ my $tmp_xmlfile = get_tmp_file("/tmp","otter","xml");
 
 print STDERR "\nWriting xml to tmp file [" . $tmp_xmlfile . "]\n\n";
 
-open FPOUT,">$tmp_xmlfile" or error_exit($q, "Failed opening temp file for write");
-
+open FPOUT,">$tmp_xmlfile" or error_exit($q, "Can't write to '$tmp_xmlfile' : $!");
 print FPOUT $params{'data'};
 close FPOUT;
 
-open(XML,"<$tmp_xmlfile");
-my $fh = \*XML;
+# Save a bit of memory
+$params{'data'} = undef;
 
-my $chrname;
-my $chrstart;
-my $chrend;
-my $genes;
-my $slice;
-my $path;
-my $seqstr;
-my $sa  = $odb->get_SliceAdaptor;
+my $fh = gensym();
+open $fh, $tmp_xmlfile or die "Can't read '$tmp_xmlfile' : $!";
 
 print STDERR "\nConverting xml to otter...\n";
 
+my( $genes, 
+    $slice, # The slice is fetched from the database by XML_to_otter
+    $path,
+    $new_feature_set,   # Arrayref of SimpleFeature objects
+    $chrname, $chrstart, $chrend,
+    );
 eval {
-    ($genes,$slice,$seqstr,$path) = Bio::Otter::Converter::XML_to_otter($fh,$odb);
-    die "no path from XML" unless $path;
+    my( $seqstr );  # Don't need outside block
+    ($genes, $slice, $seqstr, $path, $new_feature_set) =
+        Bio::Otter::Converter::XML_to_otter($fh, $odb);
+
+    die "no path from XML"    unless  $path;
     die "empty path from XML" unless @$path;
 
     $chrname  = $slice->chr_name;
     $chrstart = $slice->chr_start;
     $chrend   = $slice->chr_end;
-
 
     print STDERR "Processed incoming xml file :  Chr start end $chrname $chrstart $chrend\n"; 
 };
@@ -136,6 +140,17 @@ print STDERR "done\n";
 
 print STDERR "\nFound " . scalar(@$genes) . " genes on region $chrname $chrstart-$chrend\n";
 
+
+
+print STDERR "Checking region is locked...\n";
+my $cb = new Bio::Otter::CloneLockBroker($odb);
+eval {
+  $cb->check_locks_exist_by_slice($slice, $author);
+};
+if ($@) {
+  error_exit($q, "Failed checking locks [$@]");
+}
+print STDERR "done\n";
 
 # Get stable IDs for any genes, transcripts, translations and exons that don't have them
 my $sida = $odb->get_StableIdAdaptor();
@@ -172,21 +187,6 @@ $ab->current_author($author);
 my $oaga = $odb->get_GeneAdaptor();
 $odb->assembly_type($slice->assembly_type);
 
-print STDERR "\nFetching slice $chrname $chrstart $chrend...";
-
-print STDERR "done\n";
-
-my $cb   = new Bio::Otter::CloneLockBroker($odb);
-
-print STDERR "Checking region is locked...\n";
-
-eval {
-  $cb->check_locks_exist_by_slice($slice, $author);
-};
-if ($@) {
-  error_exit($q, "Failed checking locks [$@]");
-}
-print STDERR "done\n";
 
 my $anal;
 
@@ -243,21 +243,26 @@ if ($@) {
 
 my( @gene_events, @changed_clones );
 
-print STDERR "New clones\n";
-my $new_clones = clones_from_path($path);
-print STDERR "Old clones\n";
-my $old_clones = clones_from_path($slice->get_tiling_path);
-
 
 print STDERR "\nComparing annotations " . scalar(@$dbgenes) . " " . scalar(@$genes) . "...\n";
 
+my( $del_sf, $save_sf );
 eval {
+    print STDERR "New clones\n";
+    my $new_clones = clones_from_path($path);
+    print STDERR "Old clones\n";
+    my $old_clones = clones_from_path($slice->get_tiling_path);
+
     print STDERR "trimming old genes to slice:\n";
     my $old_genes = trim_genes_to_slice($dbgenes, $slice);
     print STDERR "trimming new genes to slice:\n";
     my $new_genes = trim_genes_to_slice($genes,  $slice);
     @gene_events = $ab->compare_genes($old_genes, $new_genes);
     @changed_clones = $ab->compare_clones($old_clones, $new_clones);
+    
+    # $slice was fetched from the database by XML_to_otter, so we can simply:
+    my $old_feature_set = $slice->get_all_SimpleFeatures;
+    ($del_sf, $save_sf) = $ab->compare_feature_sets($old_feature_set, $new_feature_set);
 };
 if ($@) {
   error_exit($q, "Failed comparing annotations [$@]");
@@ -302,6 +307,19 @@ eval {
     $db_clone->clone_info($clone->clone_info);
     $oaca->store($db_clone);
   }
+    
+    # Store SimpleFeature changes
+    my $sfa = $odb->get_SimpleFeatureAdaptor;
+    if (@$del_sf) {
+        printf STDERR "Deleting %d SimpleFeatures\n", scalar @$del_sf;
+        foreach my $sf (@$del_sf) {
+            $sfa->remove($sf);
+        }
+    }
+    if (@$save_sf) {
+        printf STDERR "Saving %d SimpleFeatures\n", scalar @$save_sf;
+        $sfa->store(@$save_sf);
+    }
   
   $odb->commit();
 };

@@ -26,8 +26,6 @@ use Bio::EnsEMBL::Clone;
 use Bio::Seq;
 
 
-### Add authors to clones in XML_to_otter
-
 sub XML_to_otter {
   my $fh = shift;
   my $db = shift;
@@ -60,6 +58,10 @@ sub XML_to_otter {
   my $slice; 
   my $accession;
   my $version;
+  
+  my $feature_set = [];
+
+    ### <sequence_set> tag is ignored - parser will produce rubbish with multiple sequence_sets
 
   while (<$fh>) {
     chomp;
@@ -369,9 +371,16 @@ sub XML_to_otter {
           #print STDERR "Found seq " . length($seqstr) . "\n";
         }
       }
-    } elsif (/<\/otter>/) {
+    }
+    elsif (/<feature_set>/) {
+        XML_to_features($fh, $feature_set);
+    }
+    elsif (/<\/otter>/) {
       $foundend = 1;
     }
+    #else {
+    #    warn "UNKNOWN TAG: $_";
+    #}
   }
 
   if (!$foundend) {
@@ -476,19 +485,6 @@ sub XML_to_otter {
         or confess "Can't get slice for chr '$chrname' $chrstart-$chrend on $assembly_type";
 
     my $path = $slice->get_tiling_path;
-  
-    ## Only store slice if no tiling path returned
-    ## Then refetch slice
-    #
-    #unless (@$path) {
-    #  
-    #  Bio::Otter::Converter::frags_to_slice($chrname,$chrstart,$chrend,$assembly_type,$seqstr,\%frag,$db);
-    #  
-    #  $sa    = $db->get_SliceAdaptor;
-    #  $slice = $sa->fetch_by_chr_start_end($chrname, $chrstart, $chrend);
-    #  
-    #  $path = $slice->get_tiling_path;
-    #}
 
     unless (@$path) {
         die "Can't get tiling path for chr '$chrname' $chrstart-$chrend on $assembly_type";
@@ -538,7 +534,48 @@ sub XML_to_otter {
   }
 
   #return (\@genes, \@clones,$chrname, $chrstart, $chrend,$assembly_type,$seqstr,);
-  return (\@genes, $slice,$seqstr,\@tiles);
+  return (\@genes, $slice,$seqstr,\@tiles, $feature_set);
+}
+
+sub XML_to_features {
+    my( $fh, $feature_set ) = @_;
+    
+    my( %logic_ana );
+    while (<$fh>) {
+        if (/<feature>/) {
+            my $sf = Bio::EnsEMBL::SimpleFeature->new;
+            while (<$fh>) {
+                if (/<start>(.+)<\/start>/) {
+                    $sf->start($1);
+                }
+                elsif (/<end>(.+)<\/end>/) {
+                    $sf->end($1);
+                }
+                elsif (/<strand>(.+)<\/strand>/) {
+                    $sf->strand($1);
+                }
+                elsif (/<score>(.+)<\/score>/) {
+                    $sf->score($1);
+                }
+                elsif (my ($type) = /<type>(.+)<\/type>/) {
+                    my $ana = $logic_ana{$type} ||= Bio::EnsEMBL::Analysis->new(-LOGIC_NAME => $type);
+                    $sf->analysis($ana);
+                }
+                elsif (/<label>(.+)<\/label>/) {
+                    $sf->display_label($1);
+                }
+                elsif (/<\/feature>/) {
+                    push(@$feature_set, $sf);
+                    last;
+                }
+            }
+        }
+        elsif (/<\/feature_set>/) {
+            return 1;
+        }
+    }
+    
+    confess "Failed to find closing </feature_set> tag";
 }
 
 my %ace2ens_phase = (
@@ -554,7 +591,7 @@ my %ens2ace_phase = (
     );
 
 sub otter_to_ace {
-    my ($slice, $genes, $path, $seq) = @_;
+    my ($slice, $genes, $path, $seq, $feature_set) = @_;
 
     my $slice_name = $slice->display_id;
 
@@ -609,8 +646,27 @@ sub otter_to_ace {
             }
         }
     }
+    
+    # Features (polyA signals and sites etc...)
+    if ($feature_set) {
+        foreach my $sf (@$feature_set) {
+            my $start = $sf->start;
+            my $end   = $sf->end;
+            if ($sf->strand == -1) {
+                ($start, $end) = ($end, $start);
+            }
+            my $type = $sf->analysis->logic_name or die "no logic_name on analysis object";
+            my $score = $sf->score;
+            $score = 1 unless defined $score;
+            if (my $label = $sf->display_label) {
+                $str .= qq{Feature "$type" $start $end $score "$label"\n};
+            } else {
+                $str .= qq{Feature "$type" $start $end $score\n};
+            }
+        }
+    }
 
-    # Clone features, keywords
+    # Clone remarks, keywords
     foreach my $tile (@$path) {
         my $clone = $tile->component_Seq->clone;
         my $name  = $tile->component_Seq->name;
@@ -632,19 +688,6 @@ sub otter_to_ace {
             }
             else {
                 $str .= qq{Annotation_remark "$rem"\n};
-            }
-        }
-
-        ### Do we need to get all features?    - Is it just for PolyA?
-        if (defined($tile->component_Seq->adaptor)) {
-            foreach my $sf (@{$tile->component_Seq->get_all_SimpleFeatures}) {
-               my( $start, $end );
-               if ($sf->strand == 1) {
-                   ($start, $end) = ($sf->start, $sf->end);
-               } else {
-                   ($start, $end) = ($sf->end, $sf->start);
-               }
-               $str .= sprintf qq{Feature "%s" %d %d %f "%s"\n}, $sf->analysis->logic_name, $start, $end, $sf->score, $sf->display_label;
             }
         }
         $str .= "\n";
@@ -814,7 +857,7 @@ sub otter_to_ace {
             $str .= $1 . "\n";
         }
     }
-  return $str;
+    return $str;
 }
 
 sub rna_pos {
@@ -1632,9 +1675,6 @@ sub path_to_XML {
     if (my $clone = $p->component_Seq->clone) {
         $xmlstr .= clone_to_XML($clone);
     }
-    
-    
-    ### Features via $tile->component_Seq->get_all_SimpleFeatures
 
     $xmlstr .= "  <assembly_start>" . ($chrstart + $p->assembled_start() - 1) . "</assembly_start>\n";
     $xmlstr .= "  <assembly_end>" . ($chrstart + $p->assembled_end() - 1) . "</assembly_end>\n";
@@ -1680,57 +1720,22 @@ sub clone_to_XML {
      return $str;
 }
 
-### Don't think this is used for anything - probably dead
-sub genes_to_XML_with_Slice {
-  my ($slice, $genes, $writeseq,$path,$seqstr) = @_;
-
-  my @genes = @$genes;
-
-  my $xmlstr = "";
-
-  $xmlstr .= "<otter>\n";
-  $xmlstr .= "<sequence_set>\n";
-
-  my @path;
-
-  if (!defined($path)) {
-    @path  = @{ $slice->get_tiling_path };
-  } else {
-    @path  = @$path;
-  }
-  my $chr      = $slice->chr_name;
-  my $chrstart = $slice->chr_start;
-  my $chrend   = $slice->chr_end;
-
-  $xmlstr .= Bio::Otter::Converter::path_to_XML($chr, $chrstart, $chrend, 
-                                                $slice->assembly_type, \@path);
-  #print STDERR "XML $xmlstr\n";  
-
-  print STDERR "Writeseq $writeseq\n";
-  if ($writeseq && defined($slice->adaptor)) {
-    $xmlstr .= "<dna>\n";
-    $seqstr = $slice->seq unless $seqstr;
-    $seqstr =~ s/(.{72})/  $1\n/g;
-    $xmlstr .= $seqstr . "\n";
-    $xmlstr .= "</dna>\n";
-  }
-
-  foreach my $g (@genes) {
-    foreach my $exon (@{$g->get_all_Exons}) {
-      $exon->start($exon->start + $chrstart -1);
-      $exon->end($exon->end + $chrstart -1);
+sub features_to_XML {
+    my( $features ) = @_;
+    
+    my $xml = "<feature_set>\n";
+    foreach my $sf (@$features) {
+        $xml .= "  <feature>\n"
+            . sprintf("    <type>%s</type>\n",      $sf->analysis->logic_name   )
+            . sprintf("    <start>%s</start>\n",    $sf->start                  )
+            . sprintf("    <end>%s</end>\n",        $sf->end                    )
+            . sprintf("    <strand>%s</strand>\n",  $sf->strand                 )
+            . sprintf("    <score>%s</score>\n",    $sf->score                  )
+            . sprintf("    <label>%s</label>\n",    $sf->display_label          )
+            . "  </feature>\n";
     }
-    $xmlstr .= $g->toXMLString . "\n";
-    foreach my $exon (@{$g->get_all_Exons}) {
-      $exon->start($exon->start - $chrstart + 1);
-      $exon->end($exon->end - $chrstart + 1);
-    }
-  }
-
-  $xmlstr .= "</sequence_set>\n";
-  $xmlstr .= "</otter>\n";
-
-  return $xmlstr;
+    $xml .= "</feature_set>\n";
+    return $xml;
 }
 
 sub slice_to_XML {
@@ -1789,6 +1794,11 @@ sub slice_to_XML {
 
   $xmlstr .= Bio::Otter::Converter::path_to_XML($chr, $chrstart, $chrend, 
                                                 $db->assembly_type, $path);
+    
+    # Simple features for polyA signals and sites etc...
+    if (my $feats = $slice->get_all_SimpleFeatures) {
+        $xmlstr .= features_to_XML($feats);
+    }
 
   if (defined($writeseq)) {
     $xmlstr .= "<dna>\n";
