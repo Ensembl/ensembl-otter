@@ -154,6 +154,18 @@ use Getopt::Long 'GetOptions';
             $mw->bind('<Control-E>', $do_embl_dump);
         }
         
+        my $print_to_file = sub {
+            $gc->page_width(591);
+            $gc->page_height(841);
+            my @files = $gc->print_postscript($set_name);
+            warn "Printed to files:\n",
+                map "  $_\n", @files;
+          };
+        $mw->bind('<Control-p>', $print_to_file);
+        $mw->bind('<Control-P>', $print_to_file);
+                    
+
+        
         make_button($button_frame2, 'Quit', sub{ $mw->destroy }, 0);
     }
     
