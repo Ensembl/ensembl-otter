@@ -837,61 +837,75 @@ sub populate_polyA_menu{
 sub launch_polyA{
     my( $self, $clone_name ) = @_;
        
-        eval {
-            if (my $mw = $self->get_polyA_window($clone_name)) {
-                $mw->deiconify;
-                $mw->raise;
-            } else {
-                my $clone = $self->get_CloneSeq($clone_name) ;
-                $mw = $self->canvas->Toplevel;
-                my $polyA = CanvasWindow::PolyAWindow->new($mw);
-                $polyA->add_clone_sequence( $clone ) ; # added for polya
-                $polyA->xace_seq_chooser($self);
-                $polyA->slice_name($clone_name);
-                $polyA->initialize;
-                $polyA->draw;
-
-                $self->add_polyA_window($clone_name, $mw);
-            }
-        };
-        if ($@) {
-            $self->exception_message("Error creating PolyA window for '$clone_name'", $@);
-        }
+    eval {
+	my $mw = undef;
+	my $polyAs = $self->get_all_PolyAWindows();
+	
+	foreach my $hash_id(keys %$polyAs){
+	    next unless $polyAs->{"$hash_id"}->slice_name eq $clone_name;
+	    warn "launch_polyA found polyA with name : " . $polyAs->{"$hash_id"}->slice_name . "\n";
+	    $mw = $polyAs->{"$hash_id"}->toplevel;
+	    $mw->deiconify;
+	    $mw->raise;
+	}
+	unless ($mw){
+	    my $clone = $self->get_CloneSeq($clone_name) ;
+	    $mw = $self->canvas->Toplevel;
+	    my $polyA = CanvasWindow::PolyAWindow->new($mw);
+	    # $polyA->add_CloneSequence( $clone ) ; # added for polya
+	    $polyA->xace_seq_chooser($self);
+	    $polyA->slice_name($clone_name);
+	    $polyA->initialize;
+	    $polyA->draw;
+	    
+	    $self->add_PolyAWindow($polyA);
+	}
+    };
+    if ($@) {
+	$self->exception_message("Error creating PolyA window for '$clone_name'", $@);
+    }
+}
+sub add_PolyAWindow{
+    my ($self, $polyA) = @_;
+    $self->{'_PolyAWindows'}{"$polyA"} = $polyA;
+}
+sub get_all_PolyAWindows{
+    my ($self) = @_;
+    return $self->{'_PolyAWindows'};
+}
+sub delete_PolyAWindow {
+    my( $self, $polyA ) = @_;
+    $self->{'_PolyAWindows'}{"$polyA"} = undef;
+    delete $self->{'_PolyAWindows'}->{"$polyA"};
+}
+sub withdraw_PolyAWindow {
+    my( $self, $polyA ) = @_;
+    $self->{'_PolyAWindows'}{"$polyA"}->toplevel->withdraw();
 }
 
-sub add_polyA_window{
-    my ($self, $clone_name, $polyA) = @_;
-
-    $self->{'_polyA_window'}{$clone_name} = $polyA;
-}
-
-sub get_polyA_window {
-    my ( $self, $clone_name ) =  @_;
-    
-    return $self->{'_polyA_window'}{$clone_name};
-}
-
-sub delete_polyA_window {
-    my( $self, $clone_name ) = @_;
-    
-    $self->{'_polyA_window'}{$clone_name} = undef;
-}
-
-sub close_all_polyA_windows {
+sub close_all_PolyAWindows {
     my( $self ) = @_;
-    
-    foreach my $name (keys %{$self->{'_polyA'}}) {
-        my $top = $self->get_polyA_window($name);
+
+    my $polyAs = $self->get_all_PolyAWindows();
+
+    foreach my $hash_id (keys %$polyAs) {
+	my $polyA = $polyAs->{"$hash_id"};
+        my $top = $polyA->toplevel;
         # Send save message
         $top->deiconify;
         $top->raise;
         $top->update;
         $top->focus;
         $top->eventGenerate('<Control-w>');
-        if ($self->get_polyA_window($name)) {
-            warn "polyA edit window '$name' was not closed\n";
-            return 0;
-        }
+
+	# clean out the cache of polyAs.
+	$self->delete_PolyAWindow($polyA);
+
+	# not sure this was right
+	# if ($top) {
+	#     warn "polyA edit window '$hash_id' was not closed its still a $top\n";
+	#     return 0;
+	# }
     }
     return 1;
 }
@@ -938,7 +952,7 @@ sub exit_save_data {
 
     # Are there unsaved changes in open ExonCanvas windows?
     $self->close_all_subseq_edit_windows or return;
-    $self->close_all_polyA_windows       or return;
+    $self->close_all_PolyAWindows       or return;
 
     # Ask the user if any changes should be saved
     my $dialog = $self->canvas->toplevel->Dialog(
