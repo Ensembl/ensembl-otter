@@ -1,0 +1,252 @@
+#!/usr/local/bin/perl -w
+
+### check_CDS_end_not_found
+
+use strict;
+use Getopt::Long 'GetOptions';
+use Bio::Otter::Lace::Defaults;
+use Bio::Seq;
+
+
+$| =1;
+
+{
+  my ($dataset, $verbose, @sets);
+
+  my $help = sub { exec('perldoc', $0) };
+
+  Bio::Otter::Lace::Defaults::do_getopt('ds|dataset=s' => \$dataset,
+					'v|verbose'    => \$verbose,
+					's|set=s@'    =>  \@sets,
+					'h|help'       => $help,
+				       ) or $help->(); # plus default options
+  $help->() unless $dataset;
+
+  my $client    = Bio::Otter::Lace::Defaults::make_Client(); # Bio::Otter::Lace::Client
+  my $dset      = $client->get_DataSet_by_name($dataset);    # Bio::Otter::Lace::DataSet
+  my $otter_db  = $dset->get_cached_DBAdaptor;               # Bio::EnsEMBL::Containerr
+
+  my ($chrom, $geneAd, $sliceAd, $slice, $gene, @positives);
+  my $name_and_shame = {};
+
+  unless ( @sets ){
+
+    # sql query to get all assembly types
+    my $sql = q{SELECT assembly_type FROM sequence_set};
+    my $sth = $otter_db->prepare($sql);
+    $sth->execute;
+    while ( my ($type) = $sth->fetchrow_array()) {
+      push (@sets, $type);
+    }
+    $sth->finish;
+  }
+
+  # loop thru all assembly types to fetch all annotated genes in it on otter
+  my $date = `date +%Y%m%d`; chomp $date;
+  open (my $fh, ">cds_end_not_found_updateInfo.$dataset.$date") || die $!;
+
+#  my $stat = "no_stop".$dataset.$date;
+  open (my $fh1, ">cds_end_not_found_annotator.$dataset.$date") || die $!;
+
+  foreach my $set ( @sets ) {
+
+    @positives = ();
+
+    my $i = "\nExamining genes on '$set'\n";
+
+    $otter_db->assembly_type($set); # replace the default sequence set setting
+
+    my $seqSet    = $dset->get_SequenceSet_by_name($set);
+    $dset->fetch_all_CloneSequences_for_SequenceSet($seqSet);
+    $chrom     = $seqSet->CloneSequence_list()->[0]->chromosome;
+
+    $geneAd  = $otter_db->get_GeneAdaptor; # Bio::Otter::AnnotatedGeneAdaptor
+    $sliceAd = $otter_db->get_SliceAdaptor;
+    $slice = $sliceAd->fetch_by_chr_name($chrom->name);
+
+    my $latest_gene_id = $geneAd->list_current_dbIDs_for_Slice($slice);
+
+    open (my $f, ">gene_ids");
+    foreach my $id ( @$latest_gene_id ) {
+
+      # transform contig coords of a gene into chrom. coords
+      my $gene = $geneAd->fetch_by_dbID($id)->transform($slice);
+
+      # always filter out gene type = "obsolete"
+      next if $gene->type eq "obsolete";
+
+      my $trans_list = $gene->get_all_Transcripts;
+
+      # now working on transcript translation
+
+      foreach my $trans ( @$trans_list ) {
+
+	next if $trans->transcript_info->class->name eq "Transposon";
+
+	if ( $trans->translation ) {
+	  push (@positives, $trans);
+	}
+      }
+    }
+
+    my $trans_info_update   = [];
+
+    my $e = "\tFound " . scalar @positives . " transcripts w/ translation. . .\n";
+    print $fh $e;
+    print STDERR $e;
+
+    my ($protein, $mrna);
+
+    foreach my $t ( @positives ) {
+
+     # calling translateable_seq first then call translate to preserve stop codon
+      undef $@;
+      eval{
+	$mrna    = $t->translateable_seq;
+	my $peptide = Bio::Seq->new( -seq      => $mrna,
+  			             -alphabet => 'dna');
+
+	$protein = $peptide->translate->seq;
+
+      };
+
+      unless ( $@ ){
+	#-------------------------------------
+	#  check translation has stop codon
+	#-------------------------------------
+
+	# grep only transcirpts with non-stop translation
+	if ( $protein !~ /\*$/ && $t->transcript_info->cds_end_not_found == 0 ){
+
+          my $end_exon_end_30 = get_end_30_dna($t->get_all_translateable_Exons->[-1]->seq->seq); # last exon dna seq
+	  my $trans_end_30    = get_end_30_dna( $mrna );                                         # full mrna dna seq
+
+	  my $tsi = $t->transcript_info->transcript_stable_id;
+
+	  unless ( $end_exon_end_30 eq $trans_end_30 ){
+	    printf $fh ("\t%-25s(%10s) - no stop codon - annotator to check\n", $t->transcript_info->name, $tsi);
+
+	    my $annotator = $t->transcript_info->author->name;
+	    my $error     = sprintf("\t%-25s(%10s)\n", $t->transcript_info->name, $tsi);
+	    push(@{$name_and_shame->{$annotator}}, $error);
+	  }
+
+	  else {
+	    printf $fh ("\t%-25s(%10s) - no stop codon - fixed automatically\n", $t->transcript_info->name, $tsi);
+	    push(@$trans_info_update, $tsi);
+	  }
+	}
+      }
+    }
+
+    undef $@;
+    if ( $trans_info_update->[0] ){
+
+      $otter_db->begin_work;
+
+      eval {
+	#update_cds_end_not_found($otter_db, $trans_info_update);
+      };
+      unless ( $@ ){
+	$otter_db->commit;
+	printf $fh ("\tcds_end_not_found update on $set successful (%d)\n", scalar @$trans_info_update);
+      }
+      else {
+	$otter_db->rollback;
+      }
+    }
+    else {
+      printf $fh ("\tNo cds_end_not_found to update automatically\n");
+    }
+  }
+
+  # blame list
+  if ( keys %$name_and_shame ){
+    print $fh1 "\nProtein sequence of transcripts without stop codon but cds_end_not_found set to 0.\nPlease Check.\n\n";
+
+    foreach my $name ( sort keys %$name_and_shame ){
+      printf $fh1 ("Annotator: %s (%d)\n", $name, scalar @{$name_and_shame->{$name}});
+      print $fh1 "@{$name_and_shame->{$name}}\n";
+    }
+  }
+}
+
+sub get_end_30_dna {
+
+  # get end 30 or less dna
+  my $end_dna = shift;
+
+  my $end_30;
+  if ( length($end_dna) >= 30 ){
+    $end_30 = substr($end_dna, -(30-length($end_dna)), 30);
+  }
+  else {
+    $end_30 = substr($end_dna, 0, length($end_dna));
+  }
+
+  return $end_30;
+}
+
+
+sub update_cds_end_not_found {
+  my ( $db, $trans_info_update ) = @_;
+
+  my $ids = join(',', map {"'".$_."'"} @$trans_info_update);
+
+  my $sth = $db->prepare( "UPDATE transcript_info "
+                         ."SET cds_end_not_found = 'true' "
+                         ."WHERE transcript_stable_id IN ($ids)" );
+  $sth->execute;
+  $sth->finish;
+}
+
+
+
+__END__
+
+=head1 NAME - check_CDS_end_not_found
+
+=head1 SYNOPSIS
+
+check_CDS_end_not_found [-dataset <dataset>] [-set <assembly_type>]
+
+Two info fles are created at run dir:
+
+(1) cds_end_not_found_info.rundate => what is fixed automatically, what requires annotator attention
+
+(2) no_stop_dataset.rundate => transcripts to fix for each annotator
+
+
+=head1 DESCRIPTION
+
+Look for protein sequence of transcripts which does not have stop codon but cds_end_not_found is set to false.
+This causes EMBL file submission errors. Normally such errors are from annotators not setting the value accordingly.
+
+This script also reset the value of cds_end_not_found column in otter to "true" for those transcripts found when
+the end protein sequence of a transcript is in the end exon.
+
+
+=head1 AUTHOR
+
+Chao-Kung Chen B<email> ck1@sanger.ac.uk
+
+
+
+-set chr10_06
+-set chr13-10
+-set chr14
+-set chr19
+-set Chr1_final
+-set chr20-9
+-set chr22-02
+-set chr6-14
+-set chr7
+-set chr9-12
+-set ChrX-07
+-set chr_Y_01
+-set MHC_COX
+-set MHC_NCBI34.1
+-set MHC_NCBI34.2
+-set MHC_PGF
+-set MHC_QBL
+-set MHC_SSTO
