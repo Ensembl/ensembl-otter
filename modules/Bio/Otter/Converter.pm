@@ -555,12 +555,18 @@ sub otter_to_ace {
         $str .= "Pseudogene\nCDS\n";
       }
 
-      my @remark = $tran->transcript_info->remark;
+      my @remarks = $tran->transcript_info->remark;
 
-      @remark = sort {$a->remark cmp $b->remark} @remark;
+      @remarks = sort {$a->remark cmp $b->remark} @remarks;
 
-      foreach my $rem (@remark) {
-        $str .= "Remark \"" . $rem->remark . "\"\n";
+      foreach my $remark (@remarks) {
+        if ($remark->remark =~ /^Annotation_remark- /) {
+          my $rem = $remark->remark;
+          $rem =~ s/^Annotation_remark- //;
+          $str .= "Annotation_remark \"" . $rem . "\"\n";
+        } else {
+          $str .= "Remark \"" . $remark->remark . "\"\n";
+        }
       }
 
       my @ev = $tran->transcript_info->evidence;
@@ -596,11 +602,12 @@ sub otter_to_ace {
         }
       }
 
+      # Seems to always be there - que?
+      $str .= "Predicted_gene\n";
+
       if ($tran->translation) {
         my $translation = $tran->translation;
 
-        #Need to check putting Predicted_gene here is OK
-        $str .= "Predicted_gene\n";
         $str .= "CDS ";
         if ($exons[0]->strand == 1) {
           $str .= rna_pos($tran, $tran->coding_start) . " ";
