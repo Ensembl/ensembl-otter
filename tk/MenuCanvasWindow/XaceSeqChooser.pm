@@ -604,13 +604,13 @@ sub populate_polyA_menu{
     
     my $menu_frame = $self->menu_bar
             or confess 'No menu Bar';
-    my $menu = $self->make_menu("PolyA's");
+    my $menu = $self->make_menu("PolyA");
     
     my @clone_list = $self->clone_list;
     
     foreach my  $clone_name (@clone_list) {
 
-        warn "adding $clone_name to polyA menu";
+        #warn "adding $clone_name to polyA menu";
         $menu->add( 'command' ,
                     -label => $clone_name,    
                     -command => sub { $self->launch_polyA($clone_name) },
@@ -706,6 +706,9 @@ sub exit_save_data {
         $self->kill_xace;
         return 1;
     }
+
+    # Are there unsaved changes in open ExonCanvas windows?
+    $self->close_all_subseq_edit_windows or return;
 
     # Ask the user if any changes should be saved
     my $dialog = $self->canvas->toplevel->Dialog(
@@ -1498,6 +1501,25 @@ sub rename_subseq_edit_window {
         or return;
     $self->delete_subseq_edit_window($old_name);
     $self->save_subseq_edit_window($new_name, $win);
+}
+
+sub close_all_subseq_edit_windows {
+    my( $self ) = @_;
+
+    foreach my $name ($self->list_all_subseq_edit_window_names) {
+        my $top = $self->get_subseq_edit_window($name) or next;
+        # Tell window to close
+        warn "Closing edit window for '$name'\n";
+        $top->deiconify;
+        $top->raise;
+        $top->focus;
+        $top->eventGenerate('<Control-w>');
+        
+        # User pressed "Cancel" if window is till there
+        return 0 if $self->get_subseq_edit_window($name);
+    }
+    
+    return 1;
 }
 
 sub draw_clone_list {

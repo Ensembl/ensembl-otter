@@ -53,7 +53,6 @@ sub initialize {
         #  destroyed, because the closures in this scope    #
         #  still reference it.                              #
         $self = undef;
-        
         };
 
     my $file_menu = $self->make_menu('File');
@@ -185,43 +184,39 @@ sub initialize {
         $canvas->Tk::bind('<Control-d>', $delete_exons);
         $canvas->Tk::bind('<Control-D>', $delete_exons);
 
-##
+        ## For finding PolyA signals and sites (This was never used in production.)
+        #my $polyA_menu = $self->make_menu('Poly-A');
+        #
+        #my $auto_find_sub = sub { $self->auto_find_PolyA };
+        #$polyA_menu->add('command',
+        #    -label          => 'Auto find',
+        #    -command        => $auto_find_sub,
+        #    -accelerator    => 'Ctrl+U',
+        #    -underline      => 1,
+        #    );
+        #$canvas->Tk::bind('<Control-U>', $auto_find_sub);
+        #$canvas->Tk::bind('<Control-u>', $auto_find_sub);
+        #
+        #my $polyA_search_sub = sub { $self->open_PolyA_search_window };
+        #$polyA_menu->add('command',
+        #    -label          => 'Edit...',
+        #    -command        => $polyA_search_sub,
+        #    -accelerator    => 'Ctrl+Y',
+        #    -underline      => 0,
+        #    -state          => 'disabled',
+        #    );
+        #$canvas->Tk::bind('<Control-Y>', $polyA_search_sub);
+        #$canvas->Tk::bind('<Control-y>', $polyA_search_sub);
 
-        ## For finding PolyA signals and sites
-        my $polyA_menu = $self->make_menu('Poly-A');
-        
-        my $auto_find_sub = sub { $self->auto_find_PolyA };
-        $polyA_menu->add('command',
-            -label          => 'Auto find',
-            -command        => $auto_find_sub,
-            -accelerator    => 'Ctrl+U',
-            -underline      => 1,
-            );
-        $canvas->Tk::bind('<Control-U>', $auto_find_sub);
-        $canvas->Tk::bind('<Control-u>', $auto_find_sub);
-        
-        my $polyA_search_sub = sub { $self->open_PolyA_search_window };
-        $polyA_menu->add('command',
-            -label          => 'Edit...',
-            -command        => $polyA_search_sub,
-            -accelerator    => 'Ctrl+Y',
-            -underline      => 0,
-            -state          => 'disabled',
-            );
-        $canvas->Tk::bind('<Control-Y>', $polyA_search_sub);
-        $canvas->Tk::bind('<Control-y>', $polyA_search_sub);
-
-        my $polyA_delete_sub = sub { $self->delete_selected_PolyA };
-        $polyA_menu->add('command',
-            -label          => 'Delete',
-            -command        => $polyA_delete_sub,
-            -accelerator    => 'Ctrl+K',
-            -underline      => 0,
-            );
-        $canvas->Tk::bind('<Control-K>', $polyA_delete_sub);
-        $canvas->Tk::bind('<Control-k>', $polyA_delete_sub);
-
-##
+        #my $polyA_delete_sub = sub { $self->delete_selected_PolyA };
+        #$polyA_menu->add('command',
+        #    -label          => 'Delete',
+        #    -command        => $polyA_delete_sub,
+        #    -accelerator    => 'Ctrl+K',
+        #    -underline      => 0,
+        #    );
+        #$canvas->Tk::bind('<Control-K>', $polyA_delete_sub);
+        #$canvas->Tk::bind('<Control-k>', $polyA_delete_sub);
 
         # Keyboard editing commands
         $canvas->Tk::bind('<Left>',      sub{ $self->canvas_text_go_left   });
@@ -270,7 +265,6 @@ sub initialize {
         # Choice of Method
         my @mutable_gene_methods = $self->xace_seq_chooser->get_all_mutable_GeneMethods ;
         my @allowed_methods = map $_->name, @mutable_gene_methods;
-#            $self->xace_seq_chooser->get_all_mutable_GeneMethods;      
         my @parent_child = map $_->has_parent, @mutable_gene_methods;
         my $method_i = 0;
         my $current_method = $self->SubSeq->GeneMethod->name;
@@ -817,6 +811,8 @@ sub is_mutable {
 
 sub window_close {
     my( $self ) = @_;
+    
+    warn "Closing window";
     
     my $xc = $self->xace_seq_chooser;
     if ($self->is_mutable) {
@@ -1957,7 +1953,7 @@ sub new_SubSeq_from_tk {
     $sub->end_not_found          ( $self->end_not_found_from_tk       );
     #$sub->upstream_subseq_name   ( $self->continued_from_from_tk      );
     #$sub->downstream_subseq_name ( $self->continues_as_from_tk        );
-    $sub->replace_all_PolyA      ( $self->get_PolyA_from_tk           );
+    #$sub->replace_all_PolyA      ( $self->get_PolyA_from_tk           );
     #warn "Start not found ", $self->start_not_found_from_tk, "\n",
     #    "End not found ", $self->end_not_found_from_tk, "\n";
     return $sub;
