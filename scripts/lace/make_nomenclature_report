@@ -11,7 +11,6 @@ use Bio::SeqIO;
     my( $dataset_name, $set_name, $locus_skip_file, $gene_type );
     my $file_name = 'nomenclature_report';
     my $keep_stops = 0;
-    my $list_types = 0;
 
     my $usage = sub { exec('perldoc', $0) };
     Bio::Otter::Lace::Defaults::do_getopt(
@@ -22,9 +21,8 @@ use Bio::SeqIO;
         'stops!'        => \$keep_stops,
         'skip=s'        => \$locus_skip_file,
         'gene_type=s'   => \$gene_type,
-        'list!'         => \$list_types,
         ) or $usage->();
-    $usage->() unless $dataset_name and $set_name and ($gene_type or $list_types);
+    $usage->() unless $dataset_name and $set_name and $gene_type;
 
     my $nuc_file = "$file_name.mRNA";
     my $pep_file = "$file_name.pep";
@@ -87,7 +85,7 @@ use Bio::SeqIO;
         $gene_count += @found_genes;
         foreach my $gene (@found_genes) {
             my $name = $gene->gene_info->name->name;
-            if ($skip_list{$name} or $name =~ /\.GD$/i) {
+            if ($skip_list{$name} or $name =~ /^GD:/i) {
                 warn "Skipping '$name'\n";
                 next;
             }

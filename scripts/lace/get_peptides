@@ -1,0 +1,137 @@
+#!/usr/local/bin/perl -w
+
+### get_peptides
+
+use strict;
+use Bio::Otter::Lace::Defaults;
+use Bio::SeqIO;
+
+
+{
+    my( $dataset_name, $set_name, $locus_skip_file, $gene_type, $file_name );
+    my $keep_stops = 1;
+
+    my $usage = sub { exec('perldoc', $0) };
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'           => $usage,
+        'dataset=s'         => \$dataset_name,
+        'set|chr=s'         => \$set_name,
+        'file=s'            => \$file_name,
+        'stops!'            => \$keep_stops,
+        'skip=s'            => \$locus_skip_file,
+        'type|gene_type=s'  => \$gene_type,
+        ) or $usage->();
+    $usage->() unless $dataset_name and $set_name and $gene_type;
+
+    $file_name ||= "$dataset_name-$set_name-$gene_type";
+    my $pep_file = "$file_name.pep";
+    if (-e $pep_file) {
+        die "ERROR: file '$pep_file' already exists\n";
+    } else {
+        print STDERR "Writing peptides to '$pep_file'\n";
+    }
+    
+
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    my $ss = $ds->get_SequenceSet_by_name($set_name);
+    $ds->fetch_all_CloneSequences_for_SequenceSet($ss);
+    $ss->selected_CloneSequences($ss->CloneSequence_list);
+    
+    my( %skip_list );
+    if ($locus_skip_file) {
+        #my %req_gene = map {$_, 1} @gene_id;
+    
+        open SKIP, $locus_skip_file or die "Can't read '$locus_skip_file' : $!";
+        while (<SKIP>) {
+            foreach my $id (split) {
+                $skip_list{$id} = 1;
+                #if ($req_gene{$id}) {
+                #    warn "Gene '$id' is on command line but will be skipped\n";
+                #}
+            }
+        }
+        close SKIP;
+    }
+    
+    my $pep_out = Bio::SeqIO->new(
+        -FORMAT => 'fasta',
+        -FILE   => "> $pep_file",
+        );
+    
+    my $slice_aptr = $ds->get_cached_DBAdaptor->get_SliceAdaptor;
+    my $gene_aptr  = $ds->get_cached_DBAdaptor->get_GeneAdaptor;
+    my $ctg_list = $ss->selected_CloneSequences_as_contig_list;
+    $ds->get_cached_DBAdaptor->assembly_type($set_name);    # Why do I have to set this?
+    my $gene_count = 0;
+    foreach my $ctg (@$ctg_list) {
+        my( $gene_id );
+        {
+            my $chr_name  = $ctg->[0]->chromosome->name;
+            my $start     = $ctg->[0]->chr_start;
+            my $end       = $ctg->[$#$ctg]->chr_end;
+            print STDERR "Fetching slice of chr '$chr_name' from '$start' to '$end'\n";
+            my $slice = $slice_aptr->fetch_by_chr_start_end($chr_name, $start, $end);
+            $gene_id = $gene_aptr->list_current_dbIDs_for_Slice_by_type($slice, $gene_type);
+        }
+        $gene_count += @$gene_id;
+        foreach my $gid (@$gene_id) {
+            my $gene = $gene_aptr->fetch_by_dbID($gid);
+            my $name        = $gene->gene_info->name->name;
+            my $description = $gene->description;
+            if ($skip_list{$name} or $name =~ /^GD:/i) {
+                warn "Skipping '$name'\n";
+                next;
+            }
+            eval {
+                warn "Translating gene '$name'\n";
+                foreach my $tscript (@{$gene->get_all_Transcripts}) {
+                    my $translation = $tscript->translation or next;
+                    my $pep = $tscript->translate;
+                    my $t_name = $tscript->transcript_info->name;
+                    my $tsid = $tscript->stable_id;
+                    if ($pep->seq =~ /\*/) {
+                        warn "Stops detected in gene '$name' tscript '$tsid'\n";
+                    }
+                    my @ele = (
+                        qq{SUBMIT_ID "$tsid"},
+                        qq{CATEG "$gene_type"},
+                        );
+                    push(@ele, qq{NAME "$description"}) if $description;
+                    if ($gene->gene_info->known_flag) {
+                        push(@ele, qq{SYMBOL "$name"});
+                    }
+                    my @evidence = map $_->name, $tscript->transcript_info->evidence;
+                    if (@evidence) {
+                        push(@ele, qq{AC "@evidence"});
+                    }
+                    my $desc = join(' | ', @ele);
+                    $pep->id($t_name);
+                    $pep->desc($desc);
+                    $pep_out->write_seq($pep);
+                }
+            };
+            if ($@) {
+                warn "ERROR in '$name':\n$@";
+            }
+        }    
+    }
+
+    if ($gene_count) {
+        warn "Got peptides for $gene_count '$gene_type' genes\n";
+    } else {
+        die "No genes of type '$gene_type'";
+    }
+
+}
+
+
+
+__END__
+
+=head1 NAME - get_peptides
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
