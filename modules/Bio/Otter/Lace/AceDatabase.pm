@@ -555,7 +555,9 @@ sub write_pipeline_data {
 	$ens_db = $dataset->make_DBAdaptor();
     }
     $ens_db->assembly_type($ss->name);
-    my $factory = $self->{'_pipeline_data_factory'} ||= $self->make_AceDataFactory($ens_db);
+    my $species = $dataset->species();
+    warn "This is species <$species>\n";
+    my $factory = $self->{'_pipeline_data_factory'} ||= $self->make_AceDataFactory($ens_db, $species);
     
     # create file for output and add it to the acedb object
     my $ace_file = $self->home . "/rawdata/pipeline.ace";
@@ -601,73 +603,25 @@ sub write_pipeline_data {
 }
 
 sub make_AceDataFactory {
-    my( $self, $ens_db ) = @_;
+    my( $self, $ens_db, $species ) = @_;
 
     # create new datafactory object - cotains all ace filters and produces the data from these
     my $factory = Bio::EnsEMBL::Ace::DataFactory->new;       
-#    $factory->add_all_Filters($ensdb);   
-   
-    
-   my $ana_adaptor = $ens_db->get_AnalysisAdaptor;
-   
-   ##----------code to add all of the ace filters to data factory-----------------------------------
-    
-    my $fetch_all_pipeline_data = Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
-    
-    my @logic_class = (
-        [qw{ SubmitContig   Bio::EnsEMBL::Ace::Filter::DNA              }]
-        );
-    
-    # If we aren't fetching all the analysis, we only need the DNA
-    if ($fetch_all_pipeline_data) {
-        push(@logic_class,
-            [qw{ RepeatMask     Bio::EnsEMBL::Ace::Filter::Repeatmasker     }],
-            [qw{ trf            Bio::EnsEMBL::Ace::Filter::TRF              }],
-            [qw{ genscan        Bio::EnsEMBL::Ace::Filter::Gene::Predicted  }],
-            [qw{ Fgenesh        Bio::EnsEMBL::Ace::Filter::Gene::Predicted  }],
-            [qw{ CpG            Bio::EnsEMBL::Ace::Filter::CpG              }],
-            );
-    }
+    # $factory->add_all_Filters($ensdb);   
+    my $ana_adaptor = $ens_db->get_AnalysisAdaptor;
 
-    foreach my $lc (@logic_class) {
-        my ($logic_name, $class) = @$lc;
-        if (my $ana = $ana_adaptor->fetch_by_logic_name($logic_name)) {
-            my $filt = $class->new;
-            $filt->analysis_object($ana);
-            $factory->add_AceFilter($filt);
-        } else {
-            warn "No analysis called '$logic_name'\n";
-        }
-    }
-    
-    # Return factory containing just the DNA filter if we don't want all the pipeline data
-    unless ($fetch_all_pipeline_data) {
-        return $factory;
-    }
-    
-    #halfwise
-    if (my $ana = $ana_adaptor->fetch_by_logic_name('Halfwise')) {
-        my $halfwise = Bio::EnsEMBL::Ace::Filter::Gene::Halfwise->new;
-        $halfwise->url_string('http\\:\\/\\/www.sanger.ac.uk\\/cgi-bin\\/Pfam\\/getacc?%s');   ##??is this still correct?
-        $halfwise->analysis_object($ana);
-        $factory->add_AceFilter($halfwise);
-    } else {
-        warn "No analysis called 'Halfwise'\n";
-    }
-
-## big list for DNASimilarity / Protein_similarity
-
-## note: most of the list here is taken from the previous version, 
-## currently only the uncommented ones seem to be in the database   
+    ## note: most of the list here is taken from the previous version, 
+    ## currently only the uncommented ones seem to be in the database   
+    ## N.B. keys should be lowercase!!
     my %logic_tag_method = (
-#        'Est2Genome'        => [qw{             EST_homol  EST_eg           }],
-
-        'Est2Genome_human'  => [qw{             EST_homol  EST_Human     }],
-        'Est2Genome_mouse'  => [qw{             EST_homol  EST_Mouse     }],
-        'Est2Genome_fish'   => [qw{             EST_homol  EST_fish      }],
-        'Est2Genome_other'  => [qw{             EST_homol  EST           }],
-#        'refseq_human'      => [qw{             DNA_homol  REFSEQ           }],
+        'est2genome_human'  => [qw{             EST_homol  EST_Human     }],
+        'est2genome_mouse'  => [qw{             EST_homol  EST_Mouse     }],
+        'est2genome_fish'   => [qw{             EST_homol  EST_Fish      }],
+        'est2genome_other'  => [qw{             EST_homol  EST           }],
+        'refseq_human'      => [qw{             DNA_homol  REFSEQ           }],
         'vertrna'           => [qw{ vertebrate_mRNA_homol  vertebrate_mRNA  }],
+        'swall'             => [qw{                 swall  BLASTX           }],
+#        'eponine'           => [qw{                     0  EPONINE          }],
 
 #        'Full_dbGSS'        => [qw{             GSS_homol  GSS_eg           }],
 #        'Full_dbSTS'        => [qw{             STS_homol  STS_eg           }],
@@ -675,56 +629,68 @@ sub make_AceDataFactory {
 #        'riken_mouse_cdnal' => [qw{             EST_homol  riken_mouse_cdna }],
 #        'primer'            => [qw{             DNA_homol  primer           }],
 
-
 #        'zfishEST'          => [qw{             EST_homol  EST_eg-fish      }],
         );
-        
-    foreach my $logic_name (keys %logic_tag_method) {
+    
+    ##----------code to add all of the ace filters to data factory-----------------------------------
+
+    my $fetch_all_pipeline_data = Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
+    my $logic_to_load = {};
+    my $module_options = {};
+    if ($fetch_all_pipeline_data) {
+	$logic_to_load = $self->Client->option_from_array([$species, 'filters']);
+	$module_options = $self->Client->option_from_array([$species, 'filter']);
+
+	# require them
+	for my $s (keys %$logic_to_load){
+	    next unless $logic_to_load->{$s};
+	    # warn " AceBatabase.pm: $s\n";
+	    my $file = $module_options->{$s}->{module}.".pm";
+	    $file =~ s{::}{/}g;
+	    # warn " AceDatabase.pm: requiring $file \n";
+	    eval{  require "$file"  };
+	    if($@){
+		delete $logic_to_load->{$_};
+		warn "Couldn't find file $file $@ \n";
+	    }
+	}
+    }
+
+    # If we aren't fetching all the analysis, we only need the DNA
+    $logic_to_load->{'submitcontig'} = 1;
+    $module_options->{'submitcontig'}->{'module'} = 'Bio::EnsEMBL::Ace::Filter::DNA';
+
+    foreach my $logic_name (keys %$logic_to_load){
+	next unless $logic_to_load->{$logic_name};
+	# class successfully required already.
+	my $class = $module_options->{$logic_name}->{'module'};
+	# check there is an analysis
         if (my $ana = $ana_adaptor->fetch_by_logic_name($logic_name)) {
-            my( $tag, $meth, $coverage ) = @{$logic_tag_method{$logic_name}};
-            my $sim = Bio::EnsEMBL::Ace::Filter::Similarity::DnaSimilarity->new;
-            #warn "setting analysis object to '$ana' for '$logic_name'\n";
-            $sim->analysis_object($ana);
-            $sim->homol_tag($tag);
-            $sim->method_tag($meth);
-            $sim->hseq_prefix('Em:');
-            $sim->max_coverage($coverage);
-            #$sim->percent_identity_cutoff(40);
-            $factory->add_AceFilter($sim);
-#            warn 'logic_tag:' , $tag , "\n" ;
-        } else{
+            my $filt = $class->new;
+            $filt->analysis_object($ana);
+
+	    # Does the logic_name have a tag & method?
+	    $filt->homol_tag($logic_tag_method{$logic_name}->[0]) 
+		if $logic_tag_method{$logic_name}->[0];
+            $filt->method_tag($logic_tag_method{$logic_name}->[1])
+		if $logic_tag_method{$logic_name}->[1];
+
+	    # find the options for the filter?
+	    foreach my $option(keys (%{$module_options->{"$logic_name"}})){
+		# warn "checking $filt for method $option\n";
+		next unless $filt->can($option);
+		my $value = $module_options->{"$logic_name"}->{$option};
+		# warn "setting $option : $value \n";
+		$filt->$option($value);
+	    }
+
+	    # add the filter to the factory
+            $factory->add_AceFilter($filt);
+        } else {
             warn "No analysis called '$logic_name'\n";
         }
     }
-    if (my $ana = $ana_adaptor->fetch_by_logic_name('refseq_human')){
-	
-	my $sim = Bio::EnsEMBL::Ace::Filter::Similarity::RefSeq->new;
-
-	# This url requires a LocusLink ID
-	# http://www.ncbi.nlm.nih.gov/LocusLink/help.html#LinkingtoaSpecificRecord
-	# $sim->url_string('http\\:\\/\\/www.ncbi.nlm.nih.gov\\/LocusLink\\/LocRpt.cgi?l=?%s');
-
-	# This url does a search as described by
-	# http://www.ncbi.nlm.nih.gov/LocusLink/help.html#CreatingaLink
-	$sim->url_string('http:\\/\\/www.ncbi.nlm.nih.gov\\/LocusLink\\/list.cgi?ORG=Hs&Q=%s');
-	$sim->analysis_object($ana);
-	$sim->homol_tag("DNA_homol");
-	$sim->method_tag("REFSEQ");
-        $factory->add_AceFilter($sim);    
-    }
-    
-    ## protein similarity
-    if (my $ana = $ana_adaptor->fetch_by_logic_name('swall')) {
-        my $prot_sim = Bio::EnsEMBL::Ace::Filter::Similarity::ProteinSimilarity->new;
-        $prot_sim->analysis_object($ana);
-        $prot_sim->homol_tag('swall');
-        $prot_sim->method_tag('BLASTX');
-        $prot_sim->percent_identity_cutoff(40);
-        $factory->add_AceFilter($prot_sim);    
-    } else {
-        warn "No analysis called 'swall'\n";
-    }
-    
+        
     return $factory;
 }
 
