@@ -360,7 +360,7 @@ sub get_default_GeneMethods{
     foreach my $method(keys(%defaults_hash)){
         my $properties = $defaults_hash{$method};
         my $prop_array = [ split(',', $properties) ];
-        $defaults_hash{$method} = [ @$prop_array[$EDITABLE..$IS_SUB_CAT], undef, 0];
+        $defaults_hash{$method} = [ @$prop_array[$EDITABLE..$IS_SUB_CAT], undef, $prop_array->[$ORDER] || 0];
         if($prop_array->[$TRUNC_VER]){
             $defaults_hash{"${method}_trunc"} = [ 0, @$prop_array[$CODING..$IS_SUB_CAT], undef, 0];
         }
@@ -671,7 +671,7 @@ GENSCAN=0,1
 HALFWISE=0,0
 SPAN=0,0
 EnsEMBL=0,1
-genomewise=1,1
+genomewise=0,1
 ncbigene=0,1
 WashU-Supported=0,1
 WashU-Putative=0,0
