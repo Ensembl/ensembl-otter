@@ -19,6 +19,8 @@ use CanvasWindow::DotterWindow;
 use Hum::Ace;
 use Data::Dumper;
 
+use CanvasWindow::PolyAWindow;
+
 sub new {
     my( $pkg, $tk ) = @_;
     
@@ -92,6 +94,11 @@ sub initialize {
         );
 
     $self->draw_clone_list;
+    
+    ## populate polyA menu here
+    ## wasn't possible to do it at the same time as other menus, as AceDB object wasnt added at that point.    
+    $self->populate_polyA_menu();
+    
     $self->_make_search;
     $self->fix_window_min_max_sizes;
 }
@@ -587,7 +594,77 @@ sub populate_menus {
     #    -accelerator    => 'Ctrl+T',
     #    -underline      => 0,
     #    );
+
 }
+
+## needs to be called when drawing the clone_sequences (clone sequence details not present when other menus are created)
+sub populate_polyA_menu{
+    my ($self ) = @_;
+    
+    my $menu_frame = $self->menu_bar
+            or confess 'No menu Bar';
+    my $menu = $self->make_menu("PolyA's");
+    
+    my @clone_list = $self->clone_list;
+    
+    foreach my  $clone_name (@clone_list) {
+        warn "should be adding $clone_name to polyA menu";
+        $menu->add( 'command' ,
+                    -label => $clone_name,    
+                    -command => sub { $self->launch_polyA($clone_name) },
+        );
+    } 
+}
+
+sub launch_polyA{
+    my ($self , $clone_name) = @_ ;
+       
+        eval {
+            unless ($self->check_polyA_list($clone_name) ){
+                my $clone = $self->get_CloneSeq($clone_name) ;
+                my $canvas = $self->canvas; 
+                my $mw = $self->canvas->Toplevel;
+                my $polyA = CanvasWindow::PolyAWindow->new($mw);
+                $self->add_polyA_window($polyA);
+                $polyA->add_clone_sequence( $clone ) ; # added for polya
+
+                $polyA->xace_seq_chooser($self);
+                $polyA->slice_name($clone_name);
+                $polyA->initialize;
+                $polyA->draw;
+            }
+        };
+        if($@) {
+            warn "problems creating the PolyA menu";
+            warn $@;
+        }
+}
+
+sub add_polyA_window{
+    my ($self, $polyA) = @_;
+    if ($polyA){
+        push (@{ $self->{'_polyA'} },  $polyA );
+    }
+}
+
+sub check_polyA_list{
+    my ($self , $clone_name ) =  @_;
+    
+    if ($self->{'_polyA'}){
+        my @list = @{   $self->{'_polyA'}   } ;
+        foreach my $window (@list){
+            if ( $clone_name eq $window->slice_name){
+                $window->show;
+                return 1;
+            }
+        }
+        return 0;
+    }
+    else{
+        return 0;
+    }
+}
+
 
 sub bind_events {
     my( $self ) = @_;
@@ -645,6 +722,7 @@ sub exit_save_data {
         # Return false if there is a problem saving
         $self->save_data or return;
     }
+    $self->close_polyAs;
 
     # Will not want xace any more
     $self->kill_xace;
@@ -669,18 +747,19 @@ sub save_data {
     #warn "SAVING DATA";
 
     if (my $xr = $self->xace_remote) {
+        
         #warn "XACE SAVE";
         # This will fail if xace has been
         # exited, so we ignore error.
         eval{ $xr->save; };
     }
 
+    $self->save_polyAs ;
     unless ($self->write_access) {
         warn "Read only session - not saving\n";
         return 1;   # Can't save - but is OK
     }
     my $top = $self->canvas->toplevel;
-
 
     $top->Busy;
 
@@ -697,6 +776,32 @@ sub save_data {
         return 0;
     } else {
         return 1;
+    }
+}
+
+sub save_polyAs{
+    my ($self) = @_;
+    my @polyA_list = @{$self->{'_polyA'}};
+   
+    my $xr = $self->xace_remote; 
+   
+    foreach my $window  ( @polyA_list){
+        if ($xr){        
+            warn "saving " . $window->toplevel->title;
+            eval{ $window->close_window;};
+        }
+    }
+
+}
+
+sub close_polyAs{
+    my $self = shift @_ ;
+    my $listref = $self->{'_polyA'} ;
+    my @list = @$listref ;
+
+    foreach my $window ( @list){
+        $window->delete_xace_chooser;
+        $window->toplevel->destroy ;   
     }
 }
 
@@ -784,6 +889,8 @@ sub draw_current_state {
     }
     $self->fix_window_min_max_sizes;
 }
+
+
 
 sub do_subseq_display {
     my( $self ) = @_;
@@ -1400,7 +1507,9 @@ sub draw_clone_list {
     
     $self->draw_sequence_list('clone', @slist);
     $self->subseq_menubutton->configure(-state => 'disabled');
+
 }
+
 
 sub OLD_draw_subseq_list {
     my( $self, @selected_clones ) = @_;
@@ -1420,8 +1529,13 @@ sub OLD_draw_subseq_list {
 
 sub draw_subseq_list {
     my( $self, @selected_clones ) = @_;
+
+    ## new bit to create  a polya editing window. probaly put it in a seperate routine later - just to test it now
+    my $canvas = $self->canvas;
     
+
     my( @subseq );
+    my $counter = 1;
     foreach my $clone_name (@selected_clones) {
         my $clone = $self->get_CloneSeq($clone_name)
             or confess "Can't get Clone '$clone_name'";
@@ -1429,10 +1543,16 @@ sub draw_subseq_list {
             push(@subseq, "") if @subseq;
             push(@subseq, map($_->name, @$clust));
         }
+
+
     }
+    
     $self->draw_sequence_list('subseq', @subseq);
     $self->subseq_menubutton->configure(-state => 'normal');
+
 }
+
+
 
 sub get_all_Subseq_clusters {
     my( $self, $clone ) = @_;
