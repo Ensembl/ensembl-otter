@@ -9,6 +9,17 @@ use Bio::Otter::CloneLock;
 # Shouldn't have this
 @ISA = qw(Bio::EnsEMBL::DBSQL::BaseAdaptor);
 
+
+sub client_hostname {
+    my( $self, $client_hostname ) = @_;
+    
+    if ($client_hostname) {
+        $self->{'_client_hostname'} = $client_hostname;
+    }
+    return $self->{'_client_hostname'};
+}
+
+
 ### CloneLockBroker should have an Author and a CloneLockAdaptor attached
 ### so it doesn't need to inherit from BaseAdaptor
 
@@ -101,7 +112,8 @@ sub lock_clones_by_slice {
             or $self->throw('Clone does not have dbID set');
 	my $lock = Bio::Otter::CloneLock->new(
             -author     => $author, 
-	    -clone_id   => $clone_id, 
+	    -clone_id   => $clone_id,
+            -hostname   => $self->client_hostname,
             );
 	eval {
 	    $self->get_CloneLockAdaptor->store($lock); 

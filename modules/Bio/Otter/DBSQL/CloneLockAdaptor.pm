@@ -18,6 +18,7 @@ sub _generic_sql_fetch {
           , clone_id
           , author_id
           , UNIX_TIMESTAMP(timestamp)
+          , hostname
         FROM clone_lock
         } . $where_clause);
     $sth->execute(@param);
@@ -29,10 +30,11 @@ sub _generic_sql_fetch {
         my $author = $aad->fetch_by_dbID($row->[2]);
 
         my $clonelock = new Bio::Otter::CloneLock(
-            -DBID      => $row->[0],
-            -CLONE_ID  => $row->[1],
-            -AUTHOR    => $author,
-            -TIMESTAMP => $row->[3],
+            -DBID       => $row->[0],
+            -CLONE_ID   => $row->[1],
+            -AUTHOR     => $author,
+            -TIMESTAMP  => $row->[3],
+            -HOSTNAME   => $row->[4],
             );
 
         push(@clonelock, $clonelock);
@@ -101,10 +103,11 @@ sub store {
         INSERT INTO clone_lock( clone_lock_id
               , clone_id
               , author_id
-              , timestamp)
-        VALUES (NULL, ?, ?, NOW())
+              , timestamp
+              , hostname)
+        VALUES (NULL, ?, ?, NOW(), ?)
         });
-    $sth->execute($clone_id, $author_id);
+    $sth->execute($clone_id, $author_id, $clone_lock->hostname);
 
     my $clone_lock_id = $sth->{'mysql_insertid'}
         or $self->throw('Failed to get new autoincremented ID for lock');

@@ -5,6 +5,7 @@ package Bio::Otter::Lace::Client;
 
 use strict;
 use Carp;
+use Sys::Hostname qw{ hostname };
 use LWP;
 use Bio::Otter::Lace::DataSet;
 use Bio::Otter::Lace::AceDatabase;
@@ -70,6 +71,18 @@ sub lock {
     return $self->write_access ? 'true' : 'false';
 }
 
+sub client_hostname {
+    my( $self, $client_hostname ) = @_;
+    
+    if ($client_hostname) {
+        $self->{'_client_hostname'} = $client_hostname;
+    }
+    elsif (not $client_hostname = $self->{'_client_hostname'}) {
+        $client_hostname = $self->{'_client_hostname'} = hostname();
+    }
+    return $client_hostname;
+}
+
 sub new_AceDatabase {
     my( $self ) = @_;
     
@@ -99,6 +112,7 @@ sub get_xml_for_contig_from_Dataset {
 	     'author='   . uri_escape($self->author),
 	     'email='    . uri_escape($self->email),
 	     'lock='     . uri_escape($self->lock),
+             'hostname=' . uri_escape($self->client_hostname),
 	     'dataset='  . uri_escape($dataset->name),
 	     'chr='      . uri_escape($chr_name),
 	     'chrstart=' . uri_escape($start),

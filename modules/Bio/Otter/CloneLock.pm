@@ -14,14 +14,15 @@ sub new {
 
   my $self = bless {}, $class;
 
-  my ($dbid, $clone_id, $author, $timestamp)  = 
-      $self->_rearrange([qw(DBID CLONE_ID AUTHOR TIMESTAMP 
+  my ($dbid, $clone_id, $author, $timestamp, $hostname)  = 
+      $self->_rearrange([qw(DBID CLONE_ID AUTHOR TIMESTAMP HOSTNAME
                             )],@args);
 
   $self->dbID($dbid);
   $self->clone_id($clone_id);
   $self->author($author);
   $self->timestamp($timestamp);
+  $self->hostname($hostname);
 
   return $self;
 }
@@ -65,6 +66,16 @@ sub timestamp{
     return $obj->{'timestamp'};
 
 }
+
+sub hostname {
+    my( $self, $hostname ) = @_;
+    
+    if ($hostname) {
+        $self->{'_hostname'} = $hostname;
+    }
+    return $self->{'_hostname'};
+}
+
 
 
 1;
