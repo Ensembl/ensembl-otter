@@ -8,51 +8,69 @@ use Bio::Otter::Lace::Defaults;
 {
     my( $dataset_name, $set_name );
     my $usage = sub { exec('perldoc', $0) };
+    my $tran_info_flag = 0;
+    my $list_alias_flag = 0;
     Bio::Otter::Lace::Defaults::do_getopt(
-        'dataset=s'     => \$dataset_name,
-        'set|chr=s'     => \$set_name,
+        'dataset=s'         => \$dataset_name,
+        'set|chr=s'         => \$set_name,
+        'transcript!'       => \$tran_info_flag,
+        'alias|synonym!'    => \$list_alias_flag,
         ) or $usage->();
-    $usage->() unless $dataset_name and $set_name;
+    $usage->() unless $dataset_name;
 
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
     my $ds = $cl->get_DataSet_by_name($dataset_name);
-    my $ss = $ds->get_SequenceSet_by_name($set_name);
-    $ds->selected_SequenceSet($ss);
-    $ds->fetch_all_CloneSequences_for_SequenceSet($ss);
-    
     my $dba = $ds->get_cached_DBAdaptor;
-    $dba->assembly_type($set_name); # Why do I have to do this?
-    my $slice_aptr = $dba->get_SliceAdaptor;
     my $gene_aptr  = $dba->get_GeneAdaptor;
+
+    my( $gene_id_list );
+    if ($set_name) {
+        my $ss = $ds->get_SequenceSet_by_name($set_name);
+        $ds->selected_SequenceSet($ss);
+        $ds->fetch_all_CloneSequences_for_SequenceSet($ss);
+
+        $dba->assembly_type($set_name); # Why do I have to do this?
+        my $slice_aptr = $dba->get_SliceAdaptor;
+
+        my ($chr, $chr_start, $chr_end) = $cl->chr_start_end_from_contig($ss->CloneSequence_list);
+        #warn "$chr $chr_start-$chr_end\n";
+        my $slice = $slice_aptr->fetch_by_chr_start_end($chr, $chr_start, $chr_end);
+
+        $gene_id_list = $gene_aptr->list_current_dbIDs_for_Slice($slice);
+    } else {
+        $gene_id_list = $gene_aptr->list_current_dbIDs;
+    }
     
-    my ($chr, $chr_start, $chr_end) = $cl->chr_start_end_from_contig($ss->CloneSequence_list);
-    #warn "$chr $chr_start-$chr_end\n";
-    my $slice = $slice_aptr->fetch_by_chr_start_end($chr, $chr_start, $chr_end);
-    
-    my $gene_id_list = $gene_aptr->list_current_dbIDs_for_Slice($slice);
-    
-    my $get_tsct_syn = $dba->prepare(q{
-        SELECT transcript_synonym
-        FROM transcript_synonym 
-        WHERE transcript_name = ?
-        });
-    
+    my( $get_tsct_syn );
     foreach my $id (@$gene_id_list) {
         my $gene = $gene_aptr->fetch_by_dbID($id);
         my $name = $gene->gene_info->name->name;
         my $type = $gene->type;
-        #printf STDERR "%-6d %24s  %-s\n", $gene->gene_info->dbID, $type, $name;
-        foreach my $tsct (@{$gene->get_all_Transcripts}) {
-            my $tsct_name = $tsct->transcript_info->name;
-            $get_tsct_syn->execute($tsct_name);
-            my( @all_syn );
-            while (my ($syn) = $get_tsct_syn->fetchrow) {
-                push(@all_syn, $syn);
-                #print STDERR "$syn\n";
+        if ($tran_info_flag) {
+            $get_tsct_syn ||= $dba->prepare(q{
+                SELECT transcript_synonym
+                FROM transcript_synonym 
+                WHERE transcript_name = ?
+                });
+            foreach my $tsct (@{$gene->get_all_Transcripts}) {
+                my $tsct_name = $tsct->transcript_info->name;
+                $get_tsct_syn->execute($tsct_name);
+                my( @all_syn );
+                while (my ($syn) = $get_tsct_syn->fetchrow) {
+                    push(@all_syn, $syn);
+                    #print STDERR "$syn\n";
+                }
+                print join("\t",
+                    $name, $type, $gene->stable_id, $tsct_name, "@all_syn"
+                    ), "\n";
             }
-            print join("\t",
-                $name, $type, $gene->stable_id, $tsct_name, "@all_syn"
-                ), "\n";
+        } else {
+            printf "%-6d  %18s  %24s  %-s\n", $gene->dbID, $gene->stable_id, $type, $name;
+            if ($list_alias_flag) {
+                foreach my $syn ($gene->gene_info->synonym) {
+                    printf "%-6d  %18s  %24s  %-s\n", $gene->dbID, $gene->stable_id, $type, $syn->name;
+                }
+            }
         }
     }
 }

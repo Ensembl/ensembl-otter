@@ -112,7 +112,7 @@ sub print_sequence_set {
 sub print_set_list {
     my( $ds ) = @_;
     
-    my @ss_list = sort {ace_sort($a->name, $b->name)} @{$ds->get_all_SequenceSets};
+    my @ss_list = sort {ace_sort($a->name, $b->name)} @{$ds->get_all_visible_SequenceSets};
     
     my $max = 0;
     foreach my $ss (@ss_list) {

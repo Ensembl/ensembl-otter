@@ -306,11 +306,37 @@ sub detach_DBAdaptors {
     }
 }
 
-sub pretty_string {
+sub length {
     my( $self ) = @_;
     
-    my $str = 'Locus ';
-    
+    my $exons = $self->get_all_Exons;
+    my( $ctg, $gene_start, $gene_end );
+    foreach my $exon (@$exons) {
+        if ($ctg) {
+            if ($exon->contig != $ctg) {
+                $self->throw("exons are not all on the same sequence - can get length");
+            }
+        } else {
+            $ctg = $exon->contig;
+        }
+        my $start = $exon->start;
+        my $end   = $exon->end;
+        if ($gene_start) {
+            $gene_start = $start if $start < $gene_start;
+        } else {
+            $gene_start = $start;
+        }
+        if ($gene_end) {
+            $gene_end = $end if $end > $gene_end;
+        } else {
+            $gene_end = $end;
+        }
+    }
+    unless ($gene_start and $gene_end) {
+        $self->throw(sprintf("Failed to get both gene start (%s) and end (%s)",
+            $gene_start || 'NONE', $gene_end || 'NONE'));
+    }
+    return $gene_end - $gene_start + 1;
 }
 
 1;

@@ -163,6 +163,7 @@ sub save_new_gene {
         warn "Error saving remapped gene: $@";
     }
     elsif ($test_flag) {
+        warn "Test flag set - not saving\n";
         $dba->rollback;
     }
     else {
@@ -226,6 +227,7 @@ sub otter_objects_from_contig {
     return ($genes, $tiles);
 }
 
+### Also in gene_stats - should be in a module
 sub select_CloneSequence_contig {
     my( $ss, $start_acc, $end_acc ) = @_;
     

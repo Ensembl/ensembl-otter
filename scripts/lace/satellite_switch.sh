@@ -20,8 +20,8 @@ do
     ./save_satellite_db \
 -dataset $species \
 -key $key \
--sathost otterpipe1 \
+-sathost otterslave \
 -satuser ottro \
--satport 3302 \
+-satport 3312 \
 -satdbname ${species}_finished
 done

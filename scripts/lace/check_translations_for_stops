@@ -10,8 +10,7 @@ use Bio::Seq;
 $| = 1;
 
 {
-    my ($dataset, @sets, $vega);
-
+    my( $dataset );
     my $help = sub { exec('perldoc', $0) };
 
     Bio::Otter::Lace::Defaults::do_getopt(
