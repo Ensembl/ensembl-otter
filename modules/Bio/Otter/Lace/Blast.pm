@@ -38,7 +38,7 @@ sub import {
     # had to put this inline here
     my %Config = (
                   
-                  BIN_DIR => '/nfs/disk100/pubseq/emboss/bin',
+                  BIN_DIR => '/nfs/disk100/humpub/LINUXbin',
                   DATA_DIR => '/usr/local/ensembl/data',
                   LIB_DIR  => '/usr/local/ensembl/lib',
                   
@@ -141,7 +141,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.4 $ ';
+$revision='$Revision: 1.5 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
