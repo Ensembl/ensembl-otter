@@ -1037,6 +1037,10 @@ sub edit_new_subsequence {
             for (my $i = 0; $i < @ints; $i += 2) {
                 my $start = $ints[$i];
                 my $end   = $ints[$i + 1] or last;
+                if ($start > $end) {
+                    ($start, $end) = ($end, $start);
+                    $new->strand(-1);
+                }
                 my $ex = $new->new_Exon;
                 $ex->start($start);
                 $ex->end  ($end);
