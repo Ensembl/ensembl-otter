@@ -186,7 +186,7 @@ sub get_xml_for_contig_from_Dataset {
 
 =head1 _check_for_error
 
-     Args: HTTP::Response Obj, $dont_confess Boolean
+     Args: HTTP::Response Obj, $dont_confess_otter_errors Boolean
   Returns: HTTP::Response->content after checking it for errors
     and "otter" errors.  It will confess (see B<Carp>) the 
     error if there is an error unless Boolean is true, in which 
@@ -195,20 +195,19 @@ sub get_xml_for_contig_from_Dataset {
 =cut
 
 sub _check_for_error {
-    my( $self, $response, $return_instead_of_confessing ) = @_;
+    my( $self, $response, $dont_confess_otter_errors ) = @_;
 
     my $xml = $response->content();
-    
+
     if ($xml =~ m{<response>(.+?)</response>}s) {
         # response can be empty on success
         my $err = $1;
         if($err =~ /\w/){
-            return if $return_instead_of_confessing;
+            return if $dont_confess_otter_errors;
             confess $err;
         }
     }elsif($response->is_error()){
         my $err = $response->message();
-        return if $return_instead_of_confessing;
         confess $err;
     }
     return $xml;
@@ -241,7 +240,7 @@ sub get_all_DataSets {
     unless ($ds = $self->{'_datasets'}) {    
         my $ua   = $self->get_UserAgent;
         my $root = $self->url_root;
-        my $content;
+        my ($content, $response);
         for(my $i = 0 ; $i <= 3 ; $i++){
             if($i > 0){
                 my $pass = $self->password_prompt();
@@ -251,9 +250,11 @@ sub get_all_DataSets {
             my $request = $self->new_http_request('GET');
             $request->uri("$root/get_datasets?details=true");
             # warn $request->uri();
-            my $response = $ua->request($request);
+            $response   = $ua->request($request);
             last if $content = $self->_check_for_error($response, 1);
         }
+        $self->_check_for_error($response);
+        $response = undef;
         $ds = $self->{'_datasets'} = [];
 
         my $in_details = 0;
