@@ -76,8 +76,8 @@ sub delete_input_id_analysis {
     eval{ $sth->execute($ana_id); };
     return if $@;
     
-    my $delete = $sth->prepare(q{
-        DELETE input_id_analysis
+    my $delete = $dba->prepare(q{
+        DELETE FROM input_id_analysis
         WHERE input_id = ?
           AND analysis_id = ?
         });
