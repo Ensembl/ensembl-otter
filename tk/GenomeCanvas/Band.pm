@@ -55,6 +55,18 @@ sub render {
         );
 }
 
+sub band_color {
+    my( $band, $color ) = @_;
+    
+    if ($color) {
+        confess "Invalid color '$color'"
+            unless $color =~ /^#[0-9A-Za-z]{6}$/;
+        $band->{'_band_color'} = $color;
+    }
+    # Default color "#284d49" is DarkSlateGrey
+    return $band->{'_band_color'} || '#284d49';
+}
+
 sub tick_label {
     my( $band, $text, $dir, @line_start ) = @_;
     

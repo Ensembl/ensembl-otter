@@ -127,7 +127,7 @@ sub band_padding {
     if ($pixels) {
         $gc->{'_band_padding'} = $pixels;
     }
-    return $gc->{'_band_padding'} || 20;
+    return $gc->{'_band_padding'} || $gc->font_size * 2;
 }
 
 sub add_Band {

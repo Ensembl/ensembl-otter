@@ -115,7 +115,7 @@ sub draw_density_segment {
     my $tile_count = int($vc_length / $rpp);
     $tile_count += 1 if $vc_length % $rpp;
     my $stepmap = GenomeCanvas::GD_StepMap->new($tile_count, $height);
-    $stepmap->color('#284d49');
+    $stepmap->color($band->band_color);
 
     my( @values );
     for (my ($i,$j) = (0,0); $i < $tile_count; $i++) {

@@ -98,6 +98,8 @@ use Getopt::Long 'GetOptions';
 
         my $gene_density = GenomeCanvas::Band::GeneDensity->new;
         $gene_density->virtual_contig($vc);
+        $gene_density->strip_labels('merged');
+        $gene_density->band_color('#6600cc');
         $gc->add_Band($gene_density);
 
         my $repeat = GenomeCanvas::Band::RepeatFeature->new;
