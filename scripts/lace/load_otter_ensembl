@@ -56,6 +56,7 @@ use Benchmark;
 use strict;
 use Getopt::Long;
 use Bio::SeqIO;
+use Bio::EnsEMBL::Analysis;
 use Bio::EnsEMBL::Clone;
 use Bio::EnsEMBL::RawContig;
 use Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor;
@@ -79,6 +80,7 @@ my $input_type;
     my $chromosome_id ;
     my @sgp ;           #static golden path. stores an array of arrays. each sub array contains the details for 1 row in the asembly table effectivley
     my @sgp_pipe ;
+    my @sgp_otter;
     my @alternative_id ;      # stores the id of contigs for one of the dbs
     my $sv;                   # sequence version
     my $module = 'Bio::EnsEMBL::DBSQL::DBAdaptor';
@@ -182,9 +184,9 @@ my $input_type;
 
 
 
-    #------------------------- read input file bit -----------------------------------------
-    
+    #------------------------- read input file -----------------------------------------    
     # first go through file , check that the file contains the same chromosome for each entry store values an an array
+
     my $line_counter = 0;
     my $prev_chr_name ='';
     while(<AGP>){
@@ -230,10 +232,13 @@ my $input_type;
             print STDERR "line $line_counter has been skipped";
             next; 
         }
+        ## store all values in this array, so that the file does not need to be re-read
         push (@file_values , [@line_in_array]); 
     
     }
-    #--------------------------------finish reading input file bit------------------------
+    #--------------------------------finished reading input file ------------------------
+
+
     
 
     # die on INT signal    - should clean things up a bit , if program terminates early
@@ -261,39 +266,42 @@ my $input_type;
     
     # Get SubmitContig analysis object for priming the pipeline
     my $ana_obj = $pipe_analysis->fetch_by_logic_name('SubmitContig');
+   
     unless ($ana_obj) {
          $ana_obj = new Bio::EnsEMBL::Pipeline::Analysis(
             -LOGIC_NAME     => 'SubmitContig',
             -INPUT_ID_TYPE  => 'CONTIG',
             );
+
          $pipe_analysis->store($ana_obj);
     }
     my $state_info = $pipeline_db->get_StateInfoContainer;
     
 
 
-    ## while loop effectively reads each line of a .agp file (that has already been done and stored in @file values)
+
+    ## while loop effectively reads each line of a  *.agp file (that has already been done and stored in @file values)
     ## it pfetches the sequence details based on the accsession number and version.
     my ($super_contig_name, $chr_start,$chr_end, $n, $type, $acc_ver, $ctg_start, $ctg_end,$ctg_ori,) ; 
-       
+    my $otter_chromosome  =  get_chromosome($otter_db    , $chromosome_name );
+    my $pipe_chromosome   =  get_chromosome($pipeline_db , $chromosome_name );
+   
     foreach my $file_line (@file_values) {       
- 
-            
+        my @value_array ;            
         if ($input_type eq 'LIST'){
             ## all we have is the list of contigs/clones - need to give default values for agp
             $acc_ver = $file_line->[0];
+            $seq = $pfetch->get_Seq_by_acc($acc_ver);
             $super_contig_name = $chromosome_name;  # should be available from the command line if we have a clone list as input (or we would have died earlier)       
             $n = 5;    # does this get used for anything? - don't think so
             $type = 'F' ;        
             $ctg_ori =  '+';
             $chr_start =  $end_coord + 10000 ;
             $chr_end = ($chr_start + $seq->length + 1);
-            
             $ctg_start = 1 ;
             $ctg_end =  1 + $seq->length;
-                       
-            $end_coord = $chr_end; # so that it is in a suitable position for next time            
-            
+            $end_coord = $chr_end; # so that it is in a suitable position for next time              
+        
         }
         else {
         # input file must be in AGP format
@@ -310,16 +318,14 @@ my $input_type;
             $ctg_end,
             $ctg_ori,
             ) = @$file_line;    
-        
+            $seq = $pfetch->get_Seq_by_acc($acc_ver);
         }
-        $seq = $pfetch->get_Seq_by_acc($acc_ver);
-        
         
         next unless ($type eq 'F');
-    #    warn "number of bits :" . scalar(@$file_line) ;   #debugging - make sure we have correct number of   
 
         #split ino accesion number and version number 
         my ($acc, $sv) = $acc_ver =~ /^(.+)\.(\d+)$/;
+        
         # translate orientation to integer
         if ($ctg_ori eq '-') {
             $ctg_ori = -1;
@@ -331,63 +337,14 @@ my $input_type;
             die "Invalid orientation '$ctg_ori'";
         }
 
-
-
-
-
-##----------------------------------------to be replaced------------------------------------------------------------------------------------           
-        ## check to see if the clone exists in the db already
-        my $clone;
-        eval{ 
-            $clone = $pipe_clone_adaptor->fetch_by_accession_version($acc , $sv);
-            $clone = $otter_clone_adaptor->fetch_by_accession_version($acc, $sv);
-        };
-
-        if (! $@) {
-            warn "this clone is already in the database (id: " .$clone->dbID .")\n";   
-        }
-        else{
-            $clone= Bio::EnsEMBL::Clone->new();
-                 
-            $clone->htg_phase(3);
-            $clone->id($acc_ver);
-            $clone->embl_id($acc);
-            $clone->version(1);
-            $clone->embl_version($sv);
-            $clone->created(time);
-            $clone->modified(time);
-    
-            #    create and add contig(s) to the clone
-            ##   now we only expect one contig per clone
-
-            my $contig = Bio::EnsEMBL::RawContig->new;
-            my $end = $seq->length;
-
         
-            $contig->name($acc_ver . '.1.' . $seq->length);
-            $contig->length($seq->length);
-            $contig->seq($seq->seq); 
-            $clone->add_Contig($contig);
         
-            ##-------------------------------------- 
-            ## need to store the ID of the first db in a seperate array as storing the clone 
-            store_clone($pipe_clone_adaptor , $clone);
-            push  @alternative_id,   $clone->get_all_Contigs->[0]->dbID ;
-            store_clone($otter_clone_adaptor , $clone);
-            ##---------------------------------------    
-        }
-        my $ctg_id;
-###-----------------------------------end of bit to be replaced----------------------------------------------------------        
-###-----------------------------------to be replaced with --------------------------------------------------------- 
-#        my $ctg_id = clone_to_db($pipe_clone_adaptor , $pfetch, $acc , $ver);      
-###----------------------------------------------------------------------------------------------------------------------
-
-                
+        # next line stores the details of that contig in the database and returns the dbID
+        my $ctg_id = clone_to_db($pipe_clone_adaptor ,$seq,  $acc ,$sv);                       
+        
         # assembly details get put into a 2D array corresponding to columns in the assembly table of the db
-        my $contigs = $clone->get_all_Contigs;
-        if (scalar(@$contigs) == 1) {
-            $ctg_id = @$contigs->[0]->dbID; 
-            push(@sgp, [
+        push(@sgp_pipe, [
+                $pipe_chromosome->dbID,
                 $chr_start, $chr_end,
                 $super_contig_name,
                 $chr_start, $chr_end,
@@ -396,31 +353,35 @@ my $input_type;
                 $ctg_start, $ctg_end,
                 $ctg_ori,
                 $set_name ]
-                );
-                    
-        } else {
-            die "Error: got ", scalar(@$contigs), " contigs for '$acc' (only expecting one contig per clone)";
-        }
+            );                 
+
+        # again for otter db
+        $ctg_id = clone_to_db($otter_clone_adaptor ,$seq,  $acc ,$sv);
+        push (@sgp_otter, [
+                    $otter_chromosome->dbID,
+                    $chr_start, $chr_end,
+                    $super_contig_name,
+                    $chr_start, $chr_end,
+                    $superctg_ori ,
+                    $ctg_id,
+                    $ctg_start, $ctg_end,
+                    $ctg_ori,
+                    $set_name]);
         
         
         ## store_input_id_analysis($pipeline_db, $clone->embl_id) ;
         ## update input_id_analysis table
         eval{
-            $state_info->store_input_id_analysis( $acc_ver.".$chr_start.$chr_end" , $ana_obj );
+            $state_info->store_input_id_analysis( $acc_ver . ".1."  . ($seq->length + 1)  , $ana_obj );
         };
         if ($@){
             print STDERR "could not enter values to input_id_analysis table\n$@"; 
         }
         
-        ##-------------------------------------
     }  #-----end of read in file loop
 
 
-    my $otter_chromosome  =  get_chromosome($otter_db    , @file_values->[0]->[0] );
-    my $pipe_chromosome   =  get_chromosome($pipeline_db , @file_values->[0]->[0] );
-
-
-    # Get ready the statements for inserting into the assembly table
+   # Get ready the statements for inserting into the assembly table
     my $insert_query = q{
         INSERT assembly ( 
             chromosome_id
@@ -437,15 +398,16 @@ my $input_type;
     my $pipe_assembly_insert  = $pipeline_db->prepare($insert_query);   
     my $otter_assembly_insert = $otter_db   ->prepare($insert_query); 
     
-    foreach my $line (@sgp) {
+    
+    foreach my $line_otter (@sgp_otter) {
+        
         # add the appropriate chromosome_id before executing the query        
         eval{ 
-            unshift(@$line, $otter_chromosome->dbID);             
-            $otter_assembly_insert->execute(@$line);
-            $line->[0] = $pipe_chromosome->dbID ;
-            $line->[8] = shift @alternative_id;  
-            $pipe_assembly_insert->execute(@$line);
+            my $line_pipe = shift(@sgp_pipe); # 
+            $otter_assembly_insert->execute(@$line_otter) or warn "Couldn\'t execute \"INSERT assembly ...\" statement in otterdb";
+            $pipe_assembly_insert->execute(@$line_pipe) or warn "Couldn\'t execute statement in pipeline db " 
         } ;
+        
         if ($@){
             print STDERR "Could not write to databases error was $@\n";
         }    
@@ -467,6 +429,10 @@ my $input_type;
 
 
 
+
+
+
+
 #               Subroutines
 #--------------------------------------------------------------------------------------------------------------------------
 #
@@ -478,15 +444,11 @@ sub store_clone{
     my $acc_ver = $clone->id;
 
     my ($acc, $sv) = $acc_ver =~ /^(.+)\.(\d+)$/;
-    
  
         eval{ $clone_adaptor->store($clone);  };
-        
         if($@){
             print STDERR "Problems writing " . $clone->id . " to database. \nProblem was " . $@;             
         }
-
-      
 
 }
 
@@ -512,7 +474,7 @@ sub check_sequence_set {
         }
         else{
             ## input must be a list of accessions - append to end of existing set
-            print STDERR "we already have that sequence set name. Entires will be appended to end\n";    
+            print STDERR "we already have that sequence set name in ". $db->dbname . ". Entires will be appended to end\n";    
             $sth = $db->prepare("SELECT max(chr_end) FROM assembly WHERE type = '$name'");
             $sth->execute;
             if (my $row = $sth->fetchrow){
@@ -575,7 +537,6 @@ sub update_chromosome_length{
      if($sth->execute()){
          my $chr_end = $sth->fetchrow ;
          if (!defined $chr_end) {$chr_end = 0}; 
-#         warn "max chr_end = $chr_end";
      
          $sth = $db->prepare("UPDATE chromosome SET length = $chr_end WHERE chromosome_id = $chr_id");
          if ($sth->execute){  
@@ -590,44 +551,20 @@ sub update_chromosome_length{
      }   
 }
 
-##--------------------------------------------------------------------------------------------------
-#### should be using the API, and this isnt needed then.
-##sub store_input_id_analysis{
-##    my ($db , $input_id ) = @_;
-##    
-##    my $sth = $db->prepare (qq{ SELECT * FROM input_id_analysis WHERE input_id = '$input_id' }) ;
-##    
-##    $sth->execute;
-##    
-##    if ($sth->fetchrow){
-##        #there is an entry already - not allowed
-##        warn "there is already an input analysis of $input_id";
-##    }
-##    else{
-##    
-##        my $analysis_id = $db->get_AnalysisAdaptor->fetch_by_logic_name('SubmitContig');
-##        my $time = time;
-##        my $result = 0;
-##        
-##        $sth= $db->prepare(qq{INSERT input_id_analysis (input_id , analysis_id , created , result ) 
-##                         VALUES ($input_id , $analysis_id , $time , $result ) });
-##    }
-##    
-##}
 
 #------------------------------------------------------------------------------------------------------------------------------------
 
 # check if clone is in db already not used yet, but will be when i tidy up the code.
 # takes the db adaptor and accession and version number
-
-
 sub clone_to_db{
     
-    my ( $adaptor, $pfetch, $acc , $ver ) = @_ ; 
+    my ( $adaptor, $seq , $acc , $seq_ver) = @_ ; 
     my $clone;
     
-    my $acc_ver = "$acc.$ver";
-    eval { $clone = $adaptor->fetch_by_accession_version($acc , $ver); };
+#    my ($super_contig_name, $chr_start, $chr_end, $n , $type, $acc, $seq_ver , $ctg_start, $ctg_end, $ctg_ori, $length ) = @clone_values;
+    
+    
+    eval { $clone = $adaptor->fetch_by_accession_version($acc , $seq_ver); };
     if (! $@){
         warn "this clone is already in the " . $adaptor->db->dbname . " database" ;
         my $contigs = $clone->get_all_Contigs;
@@ -639,21 +576,21 @@ sub clone_to_db{
                 
         $clone = Bio::EnsEMBL::Clone->new();
         $clone->htg_phase(3);
-        $clone->id($acc_ver);
+        $clone->id("$acc.$seq_ver");
         $clone->embl_id($acc);
         $clone->version(1);
-        $clone->embl_version($ver);
+        $clone->embl_version($seq_ver);
         $clone->created(time);
         $clone->modified(time);
  
         #    create and add contig(s) to the clone
         ##   now we only expect one contig per clone
-        my $seq = $pfetch->get_Seq_by_acc($acc.$ver);
+#        my $seq = $pfetch->get_Seq_by_acc($acc.$ver);
         my $contig = Bio::EnsEMBL::RawContig->new;
         my $end = $seq->length;
 
  
-        $contig->name($acc_ver . '.1.' . $seq->length);
+        $contig->name("$acc.$seq_ver.1." . $seq->length);
         $contig->length($seq->length);
         $contig->seq($seq->seq);
         $clone->add_Contig($contig);
