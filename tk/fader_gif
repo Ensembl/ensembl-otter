@@ -6,39 +6,51 @@ use strict;
 use GD;
 use CGI;
 use CGI::Carp 'fatalsToBrowser';
-use vars qw{ $n_steps $step_width $img_width $img_height };
-
-$n_steps = 256;
-$step_width = 2;
-$img_width = $n_steps * $step_width;
-$img_height = 200;
 
 {
     my $q = CGI->new;
+
+    my $img_height = 200;
+    my( $steps, $width, $img_width );
+    if ($steps = $q->param('steps')) {
+        my $max_steps = 255;
+        my $max_img_width = 2000;
+
+        if ($steps > $max_steps) {
+            $q->param('steps', $max_steps);
+            $steps = $max_steps;
+        }
+        
+        $width = $q->param('width');
+        my $max_width = int($max_img_width / $steps);
+        if ($width > $max_width) {
+            $q->param('width', $max_width);
+            $width = $max_width;
+        }
+
+        $img_width  = $steps * $width;
+    }
+
     if ($q->param('get_gif')) {
-        print_gif($q);
+        print_gif($q, $steps, $width, $img_height, $img_width);
     } else {
-        print_form($q);
+        print_form($q, $steps, $img_height, $img_width);
     }
 }
 
 sub print_gif {
-    my( $q ) = @_;
+    my( $q, $n_steps, $step_width, $img_height, $img_width ) = @_;
     
     my $rgb_param = $q->param('rgb')
         or die "No rgb paramter given";
-    my @rgb = get_rgb($rgb_param);
+    my @steps = make_tile_colours($rgb_param, $n_steps);
 
     my $img = GD::Image->new($img_width,$img_height);
     
-    my ($hue, $sat, $lgt) = rgb_to_hsl(@rgb);
     my($y1, $y2) = (0, $img_height - 1);
-    for (my $i = 0; $i < $n_steps; $i++) {
-        my $lgt_fade = $lgt + (((1 - $lgt) / $n_steps) * $i);
-        my $sat_fade = $sat - (($sat / $n_steps) * $i);
-        #my $sat_fade = $sat;
-        my @rgb = hsl_to_rgb($hue, $sat_fade, $lgt_fade);
-        my $color = $img->colorAllocate(@rgb);
+    for (my $i = 0; $i < @steps; $i++) {
+        my $rgb = $steps[$i];
+        my $color = $img->colorAllocate(@$rgb);
         my $x = $i * $step_width;
         $img->filledRectangle($x,$y1,$x + $step_width - 1,$y2, $color);
     }
@@ -48,17 +60,8 @@ sub print_gif {
         $img->gif;
 }
 
-sub get_rgb {
-    my( $rgb_param ) = @_;
-    
-    my @rgb = $rgb_param =~ /^#?([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})$/
-        or die "Illegal rgb parameter '$rgb_param'\n";
-    @rgb = map hex($_), @rgb;
-    return @rgb;
-}
-
 sub print_form {
-    my( $q ) = @_;
+    my( $q, $n_steps, $img_height, $img_width ) = @_;
     
     print $q->header,
         $q->start_html(
@@ -68,121 +71,86 @@ sub print_form {
         $q->start_form(
             -method => 'GET',
             ),
-        "<br>Colour to fade (rgb):&nbsp\n",
+        
+        "<br>Colour to fade (rgb):\n",
         $q->textfield(
             -name => 'rgb',
             -size => 7,
-            -default => '#ff0000',
+            -default => '#339900',
             ),
+        
+        "&nbsp;Number of steps:\n",
+        $q->textfield(
+            -name => 'steps',
+            -size => 3,
+            -default => 255,
+            ),
+        
+        "&nbsp;Step width:\n",
+        $q->textfield(
+            -name => 'width',
+            -size => 3,
+            -default => 2,
+            ),
+        
         "&nbsp\n",
         $q->submit,
         $q->end_form,
         "<hr><br>\n";
     if (my $rgb_param = $q->param('rgb')) {
-        eval{ get_rgb($rgb_param) };
+        eval{ web_hex_to_rgb($rgb_param) };
         if ($@) {
             print qq{<font size=6>Illegal rgb parameter: <b><code>'$rgb_param'</code></b></font>\n};
         } else {
             my $url = $q->self_url;
             print qq{<img src="$url&get_gif=fader.gif" height=$img_height width=$img_width>};
+            
+            my @steps = make_tile_colours($rgb_param, $n_steps);
+            print qq{<br><pre>\n};
+            for (my $i = 0; $i < @steps; $i++) {
+                my $rgb = $steps[$i];
+                my $web = rgb_to_web_hex(@$rgb);
+                printf "   %3d  %s\n", $i + 1, $web;
+            }
+            print qq{<br></pre>\n};
         }
     }
     print $q->end_html;
 }
 
-sub rgb_to_hsl {
-    my( $r, $g, $b ) = @_;
+sub make_tile_colours {
+    my( $rgb_param, $n_steps ) = @_;
     
-    ($r,$g,$b) = map $_ / 0xff, ($r,$g,$b);
+    my $max = 0xff;
+    my @begin_rgb = web_hex_to_rgb($rgb_param);
     
-    # Calculate the lightness
-    my($min, $max) = (1,0);
-    foreach my $v ($r,$g,$b) {
-        $min = $v if $v < $min;
-        $max = $v if $v > $max;
-    }
-    #warn "max=$max min=$min";
-    my $lgt = ($min + $max) / 2;
-    
-    my( $hue, $sat ) = (0,0);
-    # If min and max are the same, then hue and
-    # saturation stay at zero.  Otherwise:
-    unless ($min == $max) {
-        
-        # Calculate the saturation
-        if ($lgt < 0.5) {
-            $sat = ($max - $min) / ($max + $min);
-        } else {
-            $sat = ($max - $min) / (2 - $max - $min);
+    my( @steps );
+    for (my $i = 0; $i < $n_steps; $i++) {
+        my $rgb = [];
+        foreach my $c (@begin_rgb) {
+            push(@$rgb,
+                $c + (($max - $c) / $n_steps) * $i
+                );
         }
-        
-        # Calculate the hue
-        my $divisor = $max - $min;
-        if ($r == $max) {
-            $hue =      ($g - $b) / $divisor;
-        }
-        elsif ($g == $max) {
-            $hue = 2 + (($b - $r) / $divisor);
-        }
-        elsif ($b == $max) {
-            $hue = 4 + (($r - $g) / $divisor);
-        }
+        push(@steps, $rgb);
     }
     
-    # return HSL
-    return($hue, $sat, $lgt);
+    return @steps
 }
 
-sub hsl_to_rgb {
-    my( $hue, $sat, $lgt ) = @_;
+sub web_hex_to_rgb {
+    my( $rgb_param ) = @_;
     
-    $hue = $hue / 6;
-    
-    my($r,$g,$b) = (0,0,0);
-    if ($sat == 0) {
-        $r = $g = $b = $lgt;
-    } else {
-        my( $t1, $t2 );
-        if ($lgt < 0.5) {
-            $t2 = $lgt * ($sat + 1);
-        } else {
-            $t2 = $lgt + $sat - ($lgt * $sat);
-        }
-        $t1 = (2 * $lgt) - $t2;
-        
-        $r = _temp_to_rgb_value($t1, $t2, $hue + (1/3));
-        $g = _temp_to_rgb_value($t1, $t2, $hue        );
-        $b = _temp_to_rgb_value($t1, $t2, $hue - (1/3));
-    }
-    
-    return map $_ * 0xff, ($r,$g,$b);
+    my @rgb = $rgb_param =~ /^#?([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})$/
+        or die "Illegal rgb parameter '$rgb_param'\n";
+    @rgb = map hex($_), @rgb;
+    return @rgb;
 }
 
-sub _temp_to_rgb_value {
-    my( $t1, $t2, $t3 ) = @_;
+sub rgb_to_web_hex {
+    my( @rgb ) = @_;
     
-    if ($t3 < 0) {
-        $t3 += 1;
-    }
-    elsif ($t3 > 1) {
-        $t3 -= 1;
-    }
-    
-    my( $v );
-    if (6 * $t3 < 1) {
-        $v = $t1 + (($t2 - $t1) * 6 * $t3);
-    }
-    elsif (2 * $t3 < 1) {
-        $v = $t2;
-    }
-    elsif (3 * $t3 < 2) {
-        $v = $t1 + (($t2 - $t1) * ((2/3) - $t3) * 6);
-    }
-    else {
-        $v = $t1;
-    }
-    
-    return $v;
+    return sprintf "#%02x%02x%02x", @rgb;
 }
 
 __END__
