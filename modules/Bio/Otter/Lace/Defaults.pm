@@ -53,8 +53,7 @@ sub fetch_pipeline_switch {
  A wrapper function around GetOptions
 
     We get options from:
-     - files provided by list_config_files() including 
-       files provided by user on command line (-cfgfile option)
+     - files provided by list_config_files()
      - command line
      - hardwired defaults (in this subroutine)
     overriding as we go.
@@ -66,6 +65,18 @@ sub do_getopt {
 
     my ($this_user, $home_dir) = (getpwuid($<))[0,7];    
     
+    my @conf_files = list_config_files();
+
+    my $file_options = [];
+    foreach my $file(@conf_files){
+	# warn "Getting options from '$file'\n";
+	if (my $file_opts = options_from_file($file)) {
+	    push(@$file_options, $file_opts);
+	}
+    }
+
+    $DEFAULTS = merge_options_for_stanzas($file_options);
+
     GetOptions(
 	       # map {} makes these lines dynamically from @CLIENT_OPTIONS
 	       # 'host=s'        => $save_option,
@@ -74,22 +85,10 @@ sub do_getopt {
 	       'cfgstr=s'      => $save_deep_option,
 	       # this is just a synonym feel free to add more
 	       'view'          => sub { $DEFAULTS->{$CLIENT_STANZA}->{'write_access'} = 0 },
-               'cfgfile=s'     => sub { add_config_file($_[1]) },
+               # 'cfgfile=s'     => sub { add_config_file($_[1]) },
 	       # these are the caller script's options
 	       @script_args,
 	       ) or return 0;
-
-    my @conf_files = list_config_files();
-
-    my $file_options = []; # should end up being a list of hashes
-    foreach my $file(@conf_files){
-	#print STDERR "Reading options from '$file'\n";
-	if (my $file_opts = options_from_file($file)) {
-	    push(@$file_options, $file_opts);
-	}
-    }
-
-    $DEFAULTS = merge_options_for_stanzas($file_options);
 
     merge_all_optionals();
     check_spelling(); # only does client ATM
@@ -201,38 +200,21 @@ sub check_spelling{
 	" *** PLEASE CHECK CONFIG FILES ***\n" if @poss_errs;
 }
 
-{
-    my @conf_files = ();
-    my @defaults   = ("/etc/otter_config");
+sub list_config_files{
+    #   ~/.otter_config
+    #   $ENV{'OTTER_HOME'}/otter_config
+    #   /etc/otter_config
+    my @conf_files = ("/etc/otter_config");
 
-    sub default_config_files{
-        #   ~/.otter_config
-        #   $ENV{'OTTER_HOME'}/otter_config
-        #   /etc/otter_config
-        unless(scalar(@conf_files)){
-            push(@conf_files, @defaults);
-            if ($ENV{'OTTER_HOME'}) {
-                # Only add if OTTER_HOME environment variable is set
-                push(@conf_files, "$ENV{'OTTER_HOME'}/otter_config");
-            }
-            my ($home_dir) = (getpwuid($<))[7];
-            push(@conf_files, "$home_dir/.otter_config");
-        }
-        return @conf_files;
+    if ($ENV{'OTTER_HOME'}) {
+        # Only add if OTTER_HOME environment variable is set
+        push(@conf_files, "$ENV{'OTTER_HOME'}/otter_config");
     }
-
-    sub add_config_file{
-        my ($file) = @_;
-        &default_config_files;
-        return unless $file && -e $file;
-        print STDERR "Added config file '$file'\n";
-        push(@conf_files, $file);
-    }
-    sub list_config_files{
-        &default_config_files;
-        return @conf_files;
-    }
+    my ($home_dir) = (getpwuid($<))[7];
+    push(@conf_files, "$home_dir/.otter_config");
+    return @conf_files;
 }
+
 ################################################
 sub set_hash_val{
     my ($hash, $keys, $value) = @_;
@@ -381,7 +363,6 @@ Loads default values needed for creation of an
 otter client from:
 
   command line
-  -cfgfile files
   ~/.otter_config
   $ENV{'OTTER_HOME'}/otter_config
   /etc/otter_config
@@ -471,12 +452,6 @@ command line using the B<cfgstr> option.  Thus:
 will switch off est2genome_mouse for the
 zebrafish dataset exactly as the config file example
 above does.
-
-Alternatively create an extra config file 
-('~/.otter_config_extra') in style of above and do.
-    
-    -cfgfile ~/.otter_config_extra
-
 
 =head1 SYNOPSIS
 
