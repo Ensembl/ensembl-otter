@@ -1,0 +1,112 @@
+#!/usr/local/bin/perl5.6.1 -w
+
+### clones_to_otter
+
+use strict;
+use Carp;
+use Getopt::Long 'GetOptions';
+use Hum::Tracking;
+use Bio::Otter::Lace::PipelineDB;
+
+{
+    my $host = 'localhost'; 
+    my $port = 3306; 
+    my( $dbname, $dbuser, $dbpass );
+
+    GetOptions(
+        'host=s'    => \$host,
+        'port=i'    => \$port,
+        'dbname=s'  => \$dbname,
+        'user=s'    => \$dbuser,
+        'password=s'=> \$dbpass,
+         ) or die "Error processing command line";    
+
+    # Make a connection to the otter database
+    my $otter_db = Bio::EnsEMBL::DBSQL::DBAdaptor->new (   
+        -HOST   => $host,
+        -PORT   => $port,
+        -DBNAME => $dbname,
+        -USER   => $dbuser,
+        -PASS   => $dbpass,
+        );
+    my $pipe_db = Bio::Otter::Lace::PipelineDB::get_DBAdaptor($otter_db);
+    
+    my $list_acc_sv_clones = $otter_db->prepare(q{
+        SELECT embl_acc
+          , embl_version
+        FROM clone
+        WHERE concat(embl_acc
+              , '.'
+              , embl_version) = name
+        });
+    $list_acc_sv_clones->execute;
+    
+    my $update_sql = q{
+        UPDATE clone
+        SET name = ?
+        WHERE embl_acc = ?
+          AND embl_version = ?
+        };
+    my $update_otter = $otter_db->prepare($update_sql);
+    my $update_pipe  =  $pipe_db->prepare($update_sql);
+    
+    while (my ($acc, $sv) = $list_acc_sv_clones->fetchrow) {
+        next unless my $intl = get_international_clone_name($acc);
+        warn "$acc.$sv -> $intl\n";
+        #$update_otter->execute($intl, $acc, $sv);
+        # $update_pipe->execute($intl, $acc, $sv);
+    }
+}
+
+{
+    my( $sth );
+
+    sub get_international_clone_name {
+        my( $acc ) = @_;
+
+        $sth ||= Hum::Tracking::prepare_track_statement(q{
+            SELECT c.clonename
+              , l.internal_prefix
+              , l.external_prefix
+            FROM sequence s
+              , clone_sequence cs
+              , clone c
+              , library l
+            WHERE s.id_sequence = cs.id_sequence
+              AND cs.clonename = c.clonename
+              AND c.libraryname = l.libraryname
+              AND s.accession = ?
+              AND cs.is_current = 1
+            });
+        $sth->execute($acc);
+        
+        my ($clone, $int_pre, $ext_pre) = $sth->fetchrow;
+        $sth->finish;
+        
+        return unless $clone;
+        
+        my $intl = uc $clone;
+        $int_pre ||= '';
+        $ext_pre ||= 'XX';
+        if ($ext_pre =~ /^XX/) {
+            $intl = "$ext_pre-$intl";
+        } else {
+            if (substr($intl, 0, length($int_pre)) eq uc $int_pre) {
+                substr($intl, 0, length($int_pre)) = "$ext_pre-";
+            } else {
+                warn "clone '$clone' does not begin with internal prefix '$int_pre'";
+                $intl = "$ext_pre-$intl";
+            }
+        }
+        return $intl;
+    }
+}
+
+__END__
+
+=head1 NAME - clones_to_otter
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+

@@ -148,6 +148,7 @@ sub get_author_id_hash {
     return $authors;
 }
 
+### Use this in SequenceNotes for new authors
 sub insert_new_author {
     my( $username, $domain ) = @_;
 

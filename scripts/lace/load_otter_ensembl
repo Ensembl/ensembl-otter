@@ -597,7 +597,7 @@ sub clone_to_db {
                 
         $clone = Bio::EnsEMBL::Clone->new();
         $clone->htg_phase(3);
-        $clone->id("$acc.$seq_ver");
+        $clone->id("$acc.$seq_ver");    ### Should set to international clone name
         $clone->embl_id($acc);
         $clone->version(1);
         $clone->embl_version($seq_ver);
