@@ -25,6 +25,7 @@ use Bio::EnsEMBL::Ace::Filter::Gene::Halfwise;
 use Bio::EnsEMBL::Ace::Filter::Gene::Predicted;
 use Bio::EnsEMBL::Ace::Filter::Similarity::DnaSimilarity;
 use Bio::EnsEMBL::Ace::Filter::Similarity::ProteinSimilarity;
+use Bio::EnsEMBL::Ace::Filter::Similarity::RefSeq;
 use Bio::EnsEMBL::Ace::Filter::SimpleFeature;
 
 sub new {
@@ -479,7 +480,7 @@ sub edit_displays_wrm {
         next unless /^_DDtMain/;
 
         # Add our title onto the Main window
-        s/\s-t\s*"[^"]+/ -t "$title/i;
+        s/\s-t\s*"[^"]+/ -t "$title/i;  # " sorry just to fix emacs syntax highlight
         last;
     }
 
@@ -547,9 +548,12 @@ sub write_pipeline_data {
 
     my $dataset = $self->Client->get_DataSet_by_name($ss->dataset_name);
     $dataset->selected_SequenceSet($ss);    # Not necessary?
-    my $ens_db = Bio::Otter::Lace::PipelineDB::get_DBAdaptor(
-        $dataset->get_cached_DBAdaptor
-        );
+    my $ens_db;
+    if(Bio::Otter::Lace::Defaults::fetch_pipeline_switch()){
+	$ens_db = Bio::Otter::Lace::PipelineDB::get_DBAdaptor($dataset->get_cached_DBAdaptor);
+    }else{
+	$ens_db = $dataset->make_DBAdaptor();
+    }
     $ens_db->assembly_type($ss->name);
     my $factory = $self->{'_pipeline_data_factory'} ||= $self->make_AceDataFactory($ens_db);
     
@@ -662,6 +666,7 @@ sub make_AceDataFactory {
         'Est2Genome_mouse'  => [qw{             EST_homol  EST_Mouse     }],
         'Est2Genome_fish'   => [qw{             EST_homol  EST_fish      }],
         'Est2Genome_other'  => [qw{             EST_homol  EST           }],
+#        'refseq_human'      => [qw{             DNA_homol  REFSEQ           }],
         'vertrna'           => [qw{ vertebrate_mRNA_homol  vertebrate_mRNA  }],
 
 #        'Full_dbGSS'        => [qw{             GSS_homol  GSS_eg           }],
@@ -691,7 +696,22 @@ sub make_AceDataFactory {
             warn "No analysis called '$logic_name'\n";
         }
     }
-    
+    if (my $ana = $ana_adaptor->fetch_by_logic_name('refseq_human')){
+	
+	my $sim = Bio::EnsEMBL::Ace::Filter::Similarity::RefSeq->new;
+
+	# This url requires a LocusLink ID
+	# http://www.ncbi.nlm.nih.gov/LocusLink/help.html#LinkingtoaSpecificRecord
+	# $sim->url_string('http\\:\\/\\/www.ncbi.nlm.nih.gov\\/LocusLink\\/LocRpt.cgi?l=?%s');
+
+	# This url does a search as described by
+	# http://www.ncbi.nlm.nih.gov/LocusLink/help.html#CreatingaLink
+	$sim->url_string('http:\\/\\/www.ncbi.nlm.nih.gov\\/LocusLink\\/list.cgi?ORG=Hs&Q=%s');
+	$sim->analysis_object($ana);
+	$sim->homol_tag("DNA_homol");
+	$sim->method_tag("REFSEQ");
+        $factory->add_AceFilter($sim);    
+    }
     
     ## protein similarity
     if (my $ana = $ana_adaptor->fetch_by_logic_name('swall')) {
