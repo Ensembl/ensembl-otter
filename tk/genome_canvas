@@ -172,6 +172,13 @@ use Hum::EnsCmdLineDB;
             $gene_names->virtual_contig($vc);
             $gene_names->span_file($span_file);
             $gene_names->tiling_direction(1);
+            $gene_names->ignore_label_sub(
+                sub{
+                    my $id = shift;
+                    #warn "Checking '$id'\n";
+                    # Ignore sanger format loci names
+                    return $id =~ /^[a-z][0-9A-Z]+\.\d+$/;
+                });
             $gc->add_Band($gene_names);
         }
 

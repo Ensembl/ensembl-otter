@@ -56,19 +56,36 @@ sub clone_sub_switch_var {
 
 sub set_known_GeneMethods {
     my $self = shift;
-    my %methods_mutable = @_;
+    my @methods_mutable = @_;
     
-    my $db = $self->ace_handle;
-    while (my($name, $is_mutable) = each %methods_mutable) {
-        my $ace = $db->fetch(Method => $name);
-        unless ($ace) {
-            warn "Method '$name' is not in database\n";
-            next;
-        }
-        my $meth = Hum::Ace::GeneMethod->new_from_ace($ace);
+    confess "uneven number of arguments" if @methods_mutable % 2;
+    
+    for (my $i = 0; $i < @methods_mutable; $i+= 2) {
+        my ($name, $flags) = @methods_mutable[$i, $i+1];
+        my ($is_mutable, $is_coding) = @$flags;
+        my $meth = $self->fetch_GeneMethod($name);
         $meth->is_mutable($is_mutable);
+        $meth->is_coding($is_coding);
         $self->add_GeneMethod($meth);
     }
+}
+
+sub fetch_GeneMethod {
+    my( $self, $name ) = @_;
+    
+    confess "Missing name argument" unless $name;
+    my $ace = $self->ace_handle->fetch(Method => $name);
+    my( $meth );
+    if ($ace) {
+        $meth = Hum::Ace::GeneMethod->new_from_ace($ace);
+    } else {
+        warn "Making method not in db: '$name'\n";
+        $meth = Hum::Ace::GeneMethod->new;
+        $meth->name($name);
+        $meth->color('BLUE');
+        $meth->cds_color('MIDBLUE');
+    }
+    return $meth;
 }
 
 sub add_GeneMethod {
@@ -76,16 +93,20 @@ sub add_GeneMethod {
     
     my $name = $meth->name;
     $self->{'_gene_methods'}{$name} = $meth;
+    my $list = $self->{'_gene_methods_list'} ||= [];
+    push(@$list, $meth);
 }
 
 sub get_GeneMethod {
     my( $self, $name ) = @_;
     
-    if (my $meth = $self->{'_gene_methods'}{$name}) {
-        return $meth;
-    } else {
-        confess "No such method '$name'";
+    my( $meth );
+    unless ($meth = $self->{'_gene_methods'}{$name}) {
+        $meth = $self->fetch_GeneMethod($name)
+            or confess "No such Method '$name'";
+        $self->add_GeneMethod($meth);
     }
+    return $meth;
 }
 
 sub get_all_GeneMethods {
@@ -97,8 +118,8 @@ sub get_all_GeneMethods {
 sub get_all_mutable_GeneMethods {
     my( $self ) = @_;
     
-    return sort {lc($a->name) cmp lc($b->name)}
-        grep $_->is_mutable, $self->get_all_GeneMethods;
+    my $list = $self->{'_gene_methods_list'} || [];
+    return grep $_->is_mutable, @$list;
 }
 
 sub get_default_mutable_GeneMethod {
@@ -202,6 +223,7 @@ sub launch_xace {
     if (my $path = $self->ace_path) {
         if (my $pid = fork) {
             $self->xace_process_id($pid);
+            $self->get_xwindow_id_from_readlock;
         }
         elsif (defined($pid)) {
             exec('xace', '-fmapcutcoords', $path);
@@ -211,6 +233,56 @@ sub launch_xace {
         }
     } else {
         warn "Error: ace_path not set";
+    }
+}
+
+sub get_xwindow_id_from_readlock {
+    my( $self ) = @_;
+    
+    local(*LOCK_DIR, *LOCK_FILE);
+
+    my $pid  = $self->xace_process_id or confess "xace_process_id not set";
+    my $path = $self->ace_path        or confess "ace_path not set";
+    
+    # Find the readlock file for the process we just launched
+    my $lock_dir = "$path/database/readlocks";
+    my( $lock_file );
+    my $wait_seconds = 20;
+    for (my $i = 0; $i < $wait_seconds; $i++) {
+        sleep 1;
+        opendir LOCK_DIR, $lock_dir or confess "Can't opendir '$lock_dir' : $!";
+        ($lock_file) = grep /\.$pid$/, readdir LOCK_DIR;
+        closedir LOCK_DIR;
+        if ($lock_file) {
+            $lock_file = "$lock_dir/$lock_file";
+            last;
+        }
+    }
+    unless ($lock_file) {
+        warn "Can't find xace readlock file in '$lock_dir' for process '$pid' after waiting for $wait_seconds seconds\n";
+        return 0;
+    }
+    
+    # Extract the WindowID from the readlock file
+    open LOCK_FILE, $lock_file or confess "Can't read '$lock_file' : $!";
+    my( $xwid );
+    while (<LOCK_FILE>) {
+        if (/WindowID: (\w+)/) {
+            $xwid = $1;
+            last;
+        }
+    }
+    close LOCK_FILE;
+    
+    if ($xwid) {
+        my $xrem = Hum::Ace::XaceRemote->new($xwid);
+        $self->xace_remote($xrem);
+        $xrem->send_command('save');
+        #$xrem->send_command('writeaccess -gain');
+        return 1;
+    } else {
+        warn "WindowID was not found in lock file - outdated version of xace?";
+        return 0;
     }
 }
 

@@ -152,6 +152,15 @@ sub get_gene_span_data {
     return @span;
 }
 
+sub ignore_label_sub {
+    my( $self, $ignore_label_sub ) = @_;
+    
+    if ($ignore_label_sub) {
+        $self->{'_ignore_label_sub'} = $ignore_label_sub;
+    }
+    return $self->{'_ignore_label_sub'};
+}
+
 sub draw_gene_features_on_vc {
     my( $band, $vc, $x_offset ) = @_;
 
@@ -186,6 +195,8 @@ sub draw_gene_features_on_vc {
         @ranked_genes = [@genes];
     }
     
+    my $ignore_label_sub = $band->ignore_label_sub;
+    
     my $text_nudge_flag = 0;
     for (my $i = 0; $i < @ranked_genes; $i++) {
         my $rank = $ranked_genes[$i] or next;
@@ -212,8 +223,8 @@ sub draw_gene_features_on_vc {
             $band->draw_gene_arrow($x1, $x2, $strand, $rectangle_height, @tags, $group);
 
             #if ($i <= 1 and $band->show_labels) {
-            if ($band->show_labels) {
                 #warn "Hack to only show labels for certain classes of gene";
+            if ($band->show_labels) {
                 
                 my( $anchor, $y1 );
                 if ($y_dir == 1) {
@@ -224,13 +235,15 @@ sub draw_gene_features_on_vc {
                     $y1 = $y_offset - $rectangle_height;
                 }
 
-                my $label = $canvas->createText(
-                    $x1, $y1,
-                    -text => $id,
-                    -font => ['helvetica', $font_size],
-                    -anchor => $anchor,
-                    -tags => [@tags, 'gene_label', $group],
-                    );
+                unless ($ignore_label_sub and $ignore_label_sub->($id)) {
+                    my $label = $canvas->createText(
+                        $x1, $y1,
+                        -text => $id,
+                        -font => ['helvetica', $font_size],
+                        -anchor => $anchor,
+                        -tags => [@tags, 'gene_label', $group],
+                        );
+                }
 
                 my @bkgd = $canvas->bbox($group);
 

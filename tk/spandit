@@ -1,11 +1,10 @@
-#!/nfs/humace2/hum/bin/perl -w
 #!/usr/local/bin/perl5.6.1 -w
+#!/nfs/humace2/hum/bin/perl -w
 
 ### spandit
 
 use strict;
 use MenuCanvasWindow::XaceSeqChooser;
-use MenuCanvasWindow::ExonCanvas;
 use Ace;
 use Getopt::Long 'GetOptions';
 use Socket;
@@ -40,34 +39,7 @@ use vars '@command_line';
     $xc->clone_list(@ARGV);
      
     if ($path) {
-        if (1) {
-            $xc->ace_path($path);
-        } else {
-            #my $local_server = Hum::Ace::LocalServer->new($path);
-            my $local_server = Hum::Ace::LocalServer::RPC->new($path);
-
-            $local_server->start_server;
-            $xc->local_server($local_server);
-
-            #if (ref($local_server) eq 'Hum::Ace::LocalServer') {
-            #    my $sock = $xc->ace_handle->{'database'}->socket;
-
-                ##$sock->sockopt(SO_SNDLOWAT, 1);
-                #$sock->sockopt(SO_SNDBUF, 128);
-                ##$sock->sockopt(SO_RCVBUF, 128 * 1024);
-
-            #    my %opt_num = (
-            #        'SO_SNDLOWAT'   => SO_SNDLOWAT,
-            #        'SO_RCVLOWAT'   => SO_RCVLOWAT,
-            #        'SO_SNDBUF'     => SO_SNDBUF,
-            #        'SO_RCVBUF'     => SO_RCVBUF,
-            #        );
-            #    foreach my $opt (keys %opt_num) {
-            #        my $n = $opt_num{$opt};
-            #        print "$opt = ", $sock->sockopt($n), "\n";
-            #    }
-            #}
-        }
+        $xc->ace_path($path);
     } else {
         my $ace = Ace->connect(
             -HOST       => $host,
@@ -81,27 +53,44 @@ use vars '@command_line';
     $xc->draw_clone_list;
     $xc->fix_window_min_max_sizes;
     
-    my %methods_mutable = (
-      # Method name         Editable?
-        supported           => 1,
-        supported_CDS       => 1,
-        supported_mRNA      => 1,
-        GD_supported        => 1,
-        GD_supported_mRNA   => 1,
-        GD_working          => 1,
-        Pseudogene          => 1,
-        fgenesh             => 0,
-        FGENES              => 0,
-        GENSCAN             => 0,
-        HALFWISE            => 0,
-        SPAN                => 0,
-        EnsEMBL             => 0,
-        genomewise          => 0,
-        'WashU-Supported'   => 0,
-        'WashU-Putative'    => 0,
-        'WashU-Pseudogene'  => 0,
+    my @methods_mutable = (
+        # Method name                Editable?  Coding?
+        
+        # New set of methods for Otter
+        Coding                   => [1,         1],
+        Transcript               => [1,         0],
+        Non_coding               => [1,         0],
+        Ambiguous_ORF            => [1,         0],
+        Immature                 => [1,         0],
+        Antisense                => [1,         0],
+        IG_segment               => [1,         1],
+        Putative                 => [1,         0],
+        Pseudogene               => [1,         0],
+        Processed_pseudogene     => [1,         0],
+        Unprocessed_pseudogene   => [1,         0],
+        Predicted                => [1,         0],
+        
+        # Old methods
+        supported                => [1,         1], 
+        supported_CDS            => [1,         1], 
+        supported_mRNA           => [1,         0], 
+        GD_supported             => [1,         1], 
+        GD_supported_mRNA        => [1,         0], 
+        GD_working               => [1,         1], 
+
+        # Auto-analysis gene types (non-editable)
+        fgenesh                  => [0,         0],
+        FGENES                   => [0,         0],
+        GENSCAN                  => [0,         0],
+        HALFWISE                 => [0,         0],
+        SPAN                     => [0,         0],
+        EnsEMBL                  => [0,         0],
+        genomewise               => [0,         0],
+        'WashU-Supported'        => [0,         0],
+        'WashU-Putative'         => [0,         0],
+        'WashU-Pseudogene'       => [0,         0],
         );
-    $xc->set_known_GeneMethods(%methods_mutable);
+    $xc->set_known_GeneMethods(@methods_mutable);
     
     Tk::MainLoop();
 }
