@@ -205,6 +205,8 @@ sub list_current_dbIDs_for_Slice_by_type {
 
 Given a slice, lists the dbIDs of the genes with exons on the slice.
 
+Note that this will not filter out a gene of the type "obsolete"
+
 =cut
 
 sub list_current_dbIDs_for_Slice {
