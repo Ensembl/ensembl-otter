@@ -2,7 +2,7 @@ package Bio::Otter::DBSQL::AssemblyTagAdaptor;
 
 use strict;
 use Bio::Otter::AssemblyTag;
-use base 'Bio::Otter::DBSQL::BaseFeatureAdaptor';
+use base 'Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor';
 
 
 sub _tables {
