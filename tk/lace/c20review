@@ -24,8 +24,9 @@ use Getopt::Long 'GetOptions';
         'user=s'    => \$annotator,
         ) or useage();
     useage() if $help;
-    useage() unless $annotator;
-    die "Invalid annotator '$annotator'" unless is_valid_annotator($annotator);
+    if ($annotator) {
+        die "Invalid annotator '$annotator'" unless is_valid_annotator($annotator);
+    }
     
     my $ensdb = Bio::EnsEMBL::DBSQL::Obj->new(
         -DBNAME => $db,
@@ -52,24 +53,28 @@ use Getopt::Long 'GetOptions';
         });
     
     {
-        my $button_frame = $mw->Frame;
-        $button_frame->pack(
-            -side => 'top',
-            );
+        my( $comment );
+        if ($annotator) {
+            my $button_frame = $mw->Frame;
+            $button_frame->pack(
+                -side => 'top',
+                );
+
+            my $comment_label = $button_frame->Label(
+                -text => 'Comment:',
+                );
+            $comment_label->pack(
+                -side => 'left',
+                );
+
+            $comment = $button_frame->Entry(
+                -width => 50,
+                );
+            $comment->pack(
+                -side => 'left',
+                );
+        }
         
-        my $comment_label = $button_frame->Label(
-            -text => 'Comment:',
-            );
-        $comment_label->pack(
-            -side => 'left',
-            );
-        
-        my $comment = $button_frame->Entry(
-            -width => 50,
-            );
-        $comment->pack(
-            -side => 'left',
-            );
         
         my $button_frame2 = $mw->Frame;
         $button_frame2->pack(
@@ -85,7 +90,7 @@ use Getopt::Long 'GetOptions';
             $gc->set_window_size(1);
             $gc->render;
             $gc->fix_window_min_max_sizes;
-        });
+        }) if $annotator;
 
         make_button($button_frame2, 'Refresh', sub{
             $chooser->chooser_map(make_chooser_map());
@@ -98,14 +103,14 @@ use Getopt::Long 'GetOptions';
             my @sequence_name_list = list_selected_sequence_names($canvas);
             return unless @sequence_name_list;
             fork_lace_process(@sequence_name_list);
-        });
+        }) if $annotator;
 
         make_button($button_frame2, 'EMBL dump', sub{
             my @sequence_name_list = list_selected_sequence_names($canvas);
             foreach my $seq (@sequence_name_list) {
                 do_embl_dump($seq);
             }
-        });
+        }) if $annotator;
         
         make_button($button_frame2, 'Exit', sub{ exit } );
     }
@@ -440,7 +445,15 @@ __END__
 
 =head1 SYNOPISS
 
-    c20review -user <username>
+    c20review [-user <username>]
+
+=head1 DESCRIPTION
+
+Tracks who a reviewed the annotation of which
+sequences on chromosome 20.
+
+If the user is specified, then the interface
+allows the database to be edited.
 
 =head1 AUTHOR
 
