@@ -85,8 +85,6 @@ gtf2xml.pl
   -prefix          char   group prefix to prepend to gene_names and types ($prefix)
   -P                      parse input file only
 
-  -P                      parse input file only
-
   -v                      verbose
   -h                      this help
   -help                   perldoc help
@@ -140,6 +138,9 @@ my %map_category;
 	       'Predicted_Gene'=>'Predicted',
 	       'ncRNA'=>'Non_coding',
 	       'Putative_Gene'=>'Putative',
+	       'predicted'=>'Predicted',
+	       'putative'=>'Putative',
+	       'novel'=>'Novel_Transcript',
 	       );
 
 my %map_key;
@@ -252,7 +253,7 @@ while(<IN>){
       $genes{$gene_id}->{$transcript_id}->{'exons'}=[];
     }
     push(@{$genes{$gene_id}->{$transcript_id}->{'exons'}},\%exonhash);
-  }elsif($arr[2] eq "CDS"){
+  }elsif($arr[2] eq "CDS" || $arr[2] eq "cds"){
     if(!defined($genes{$gene_id}->{$transcript_id}->{'cds'})){
       $genes{$gene_id}->{$transcript_id}->{'cds'}=[];
     }

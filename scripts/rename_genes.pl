@@ -1,7 +1,9 @@
 #!/usr/local/bin/perl
 
-# script to take a list of HUGO names current gene labels
-# and write sql required to change them.
+# script to take a list of HUGO names current gene labels and write
+# sql required to change them.  ONLY SUITABLE FOR VEGA DATABASEs which
+# only one assembly for each clone and the most recent version of each
+# gene.
 
 use strict;
 use Getopt::Long;

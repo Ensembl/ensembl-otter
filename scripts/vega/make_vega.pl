@@ -101,11 +101,6 @@ if(my $err=&_db_connect(\$dbh,$host,$db,$user,$password,$port)){
     print "failed to connect $db: $err\n";
     exit 0;
 }
-my $dbh2;
-if(my $err=&_db_connect(\$dbh2,$host2,$db2,$user2,$password2,$port2)){
-    print "failed to connect $db2: $err\n";
-    exit 0;
-}
 
 # fetch vega_set
 my $sql = qq{
@@ -234,8 +229,9 @@ print "\n";
 print "Check that no contigs are reused in VEGA sets\n";
 $sql = qq{
     SELECT c.name, a.type
-      FROM assembly a, contig c, sequence_set ss
-     WHERE ss.vega_set_id != 0 
+      FROM assembly a, contig c, sequence_set ss, vega_set vs
+     WHERE ss.vega_set_id = vs.vega_set_id
+       AND vs.vega_type != 'N'
        AND a.contig_id=c.contig_id
        AND a.type=ss.assembly_type
     };
@@ -258,6 +254,12 @@ if($opt_t || $err){
     print "\nFatal errors - meta data in $db needs updating\n";
   }
   exit 0;
+}
+
+my $dbh2;
+if(my $err=&_db_connect(\$dbh2,$host2,$db2,$user2,$password2,$port2)){
+    print "failed to connect $db2: $err\n";
+    exit 0;
 }
 
 $dbh->do(qq{});
