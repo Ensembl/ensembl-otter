@@ -1702,7 +1702,7 @@ sub ace_to_XML {
     my( $genes, $tile_path, $type, $dna, $chr, $chrstart, $chrend, $feature_set ) = ace_to_otter($fh);
     my $xml = "<otter>\n<sequence_set>\n"
         . path_to_XML($chr, $chrstart, $chrend, $type, $tile_path)
-        . features_to_XML($chrstart, $feature_set);
+        . ($feature_set ? features_to_XML($chrstart, $feature_set) : '');
     foreach my $g (@$genes) {
         $xml .= $g->toXMLString;
     }
