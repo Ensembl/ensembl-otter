@@ -39,7 +39,17 @@ sub new {
     $self->canvas($canvas);
     $self->bind_scroll_commands;
     
+    # Does the module define a Pixmap for the icon?
+    if (my $pix = $pkg->icon_pixmap) {
+        my $mw = $canvas->toplevel;
+        $mw->Icon(-image => $mw->Pixmap(-data => $pix));
+    }
+    
     return $self;
+}
+
+sub icon_pixmap {
+    return;
 }
 
 sub initial_canvas_size {

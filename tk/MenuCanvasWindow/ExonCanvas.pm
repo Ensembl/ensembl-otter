@@ -1782,6 +1782,71 @@ sub DESTROY {
     #my $name = $self->name;
     #warn "Destroying: '$name'\n";
 }
+sub icon_pixmap {
+
+    return <<'END_OF_PIXMAP';
+/* XPM */
+static char * exoncanvas_xpm[] = {
+/* width height ncolors cpp [x_hot y_hot] */
+"48 48 5 1 0 0",
+/* colors */
+" 	s none	m none	c none",
+".	s iconColor2	m white	c white",
+"X	s bottomShadowColor	m black	c #636363636363",
+"o	s iconColor3	m black	c red",
+"O	s iconColor1	m black	c black",
+/* pixels */
+"   .....................XX                      ",
+"   ...o.............o...XX                      ",
+"   ...o.............o...XX                      ",
+"   ...o.............o...XX                      ",
+"   ...o.............o...XX                      ",
+"   ...o.............o...XX                      ",
+"   ...ooooooooooooooo...XX                      ",
+"   ...........oo........XX                      ",
+"   .............o.......XX                      ",
+"   ..............o......XX                      ",
+"   ...............oo....XX                      ",
+"   .................o...XX            O         ",
+"   ...............oo....XX           O.O        ",
+"   ..............o......XX          O...O       ",
+"   .............o.......XX         O.....O      ",
+"   ...........oo........XX        O.......O     ",
+"   ...ooooooooooooooo...XX       O.........O    ",
+"   ...o.............o...XX      OOOOOO.OOOOOO   ",
+"   ...o.............o...XX          XO.OXXX     ",
+"   ...o.............o...XX         XXO.OXXXX    ",
+"   ...o.............o...XX        XXXO.OXXXXX   ",
+"   ...o.............o...XX       XXXXO.OXXXXXX  ",
+"   ...o.............o...XX           O.OX       ",
+"   ...o.............o...XX           O.OX       ",
+"   ...o.............o.OOOOOOOOOOOOOOOO.OOOOOOO  ",
+"   ...ooooooooooooooo........................O  ",
+"   ...ooooooooooooooo.OOOOOOOOOOOOOOOOOOOOOOOO  ",
+"   ...ooooooooooooooo..XXX            XXX       ",
+"   ...ooooooooooooooo...XXXXXXXXXXXXXXXXXXXXXXX ",
+"   ...ooooooooooooooo...XXXXXXXXXXXXXXXXXXXXXXX ",
+"   ...ooooooooooooooo...XXXXXXXXXXXXXXXXXXXXXXX ",
+"   ...ooooooooooooooo...XX                      ",
+"   ...ooooooooooooooo...XX                      ",
+"   ...ooooooooooooooo...XX                      ",
+"   ...ooooooooooooooo...XX                      ",
+"   ...ooooooooooooooo...XX                      ",
+"   ...ooooooooooooooo...XX                      ",
+"   ...ooooooooooooooo...XX                      ",
+"   ...ooooooooooooooo...XX                      ",
+"   ...ooooooooooooooo...XX                      ",
+"   ...ooooooooooooooo...XX                      ",
+"   ...ooooooooooooooo...XX                      ",
+"   ...........o.........XX                      ",
+"   ...........o.........XX                      ",
+"   ............o........XX                      ",
+"   ............o........XX                      ",
+"    XXXXXXXXXXXXXXXXXXXXXX                      ",
+"    XXXXXXXXXXXXXXXXXXXXXX                      "};
+END_OF_PIXMAP
+
+}
 
 1;
 
