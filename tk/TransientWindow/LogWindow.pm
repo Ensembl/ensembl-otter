@@ -182,14 +182,14 @@ sub mail_contents{
 
     my $mess = $self->get_log_contents();
     if($allow_mailing){
-        $subj =~ s/(['"\$])/\\$1/g;
+        $subj =~ s/(['"\$])/\\$1/g;   #escape ", ', \, and $. :))
         my $fh = gensym();
         my $mail_pipe = qq{| Mail -s "$subj" $to};
         open $fh, $mail_pipe or die "Error opening '$mail_pipe' : $!";
-        print $fh "$pre $mess";
+        print $fh "$pre\n$mess";
         close $fh or warn "Error emailing with pipe '$mail_pipe' : exit($?)";
     }else{
-        print STDOUT $mess;
+        print STDOUT "$pre\n$mess";
     }
 }
 
