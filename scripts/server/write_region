@@ -51,6 +51,7 @@ my $port = $dbinfo{PORT}   || $defaults{PORT},
 my $dbname = $dbinfo{DBNAME};
 
 print STDERR "\nDatabase [$dbname][$host][$user][$pass][$port]\n";
+print STDERR "\nAuthor $authorname email $email dataset $dataset\n";
 
 my $dnahost = $dbinfo{DNA_HOST}    || $defaults{DNA_HOST},
 my $dnauser = $dbinfo{DNA_USER}    || $defaults{DNA_USER},
