@@ -1,0 +1,92 @@
+<HTML><HEAD><TITLE>HSL and RGB conversion </TITLE> </HEAD>
+<BODY BGCOLOR="#ffffff" LINK="#0000CC" VLINK="#002266" ALINK="#330000" TEXT="#000033">
+<BODY>
+<p>
+
+<p>The conversion algorithms for these color spaces are originally
+from the book
+<i>Fundamentals of Interactive Computer Graphics</i> by Foley and van Dam
+(c 1982, Addison-Wesley).  Chapter 17 describes color spaces and shows
+their relationships via easy-to-follow diagrams.  <cite>NB</cite> this is
+a wonderful book, but if you are going to get a copy, I suggest you look
+for the latest edition.
+<p>
+<h3>RGB - HSL</h3>
+<p>
+<ol>
+<li>  Convert the RBG values to the range 0-1<br>
+Example: from the video colors page, colorbar red has R=83%, B=7%,
+G=7%, or in this scale, R=.83, B=.07, G=.07<p>
+
+<li>  Find min and max values of R, B, G<br>
+In the example, <var>maxcolor</var> = .83, <var>mincolor</var>=.07<p>
+
+<li> L = (<var>maxcolor</var> + <var>mincolor</var>)/2 <br>
+For the example, L = (.83+.07)/2 = .45<p>
+
+<li>  If the max and min colors are the same (<cite>ie</cite> the color is
+some kind of grey), S is defined to be 0, and H is undefined but in
+programs usually written as 0<p>
+
+<li>  Otherwise, test L.  <br>
+             If L < 0.5, S=<var>(maxcolor-mincolor)/(maxcolor+mincolor)</var><br>
+             If L >=0.5, S=<var>(maxcolor-mincolor)</var>/(2.0-<var>maxcolor-mincolor</var>)<br>
+For the example, L=0.45 so S=(.83-.07)/(.83+.07) = .84<p>
+
+<li>  If R=<var>maxcolor</var>, H = (G-B)/(<var>maxcolor-mincolor</var>)<br>
+    If G=<var>maxcolor</var>, H = 2.0 + (B-R)/(<var>maxcolor-mincolor</var>)<br>
+    If B=<var>maxcolor</var>, H = 4.0 + (R-G)/(<var>maxcolor-mincolor</var>)<br>
+For the example, R=<var>maxcolor</var> so H = (.07-.07)/(.83-.07) = 0<p>
+<li>  To use the scaling shown in the video color page, convert L and S
+back to percentages, and H into an angle in degrees (<cite>ie</cite>
+scale it from 0-360).  From the computation in step 6, H will range from
+0-6.  RGB space is a cube, and HSL space is a double hexacone, 
+where L is the principal diagonal of the RGB cube.  Thus corners of the RGB
+cube; red, yellow, green, cyan, blue, and magenta, become the vertices of the
+HSL hexagon.
+Then the value 0-6 for H tells you which section
+of the hexgon you are in.  H is most commonly given as in degrees, so to
+convert<br>
+H = H*60.0<br>
+If H is negative, add 360 to complete the conversion.
+</ol>
+<p>
+<h3>HSL - RGB</h3>
+<ol>
+<li> If S=0, define R, G, and B all to L<p>
+<li> Otherwise, test L.<br>
+If L <  0.5, <var>temp2</var>=L*(1.0+S)<br>
+If L >= 0.5, <var>temp2</var>=L+S - L*S<br>
+In the colorbar example for colorbar green, H=120, L=52, S=79, so
+converting to the range 0-1, L=.52, so<br>
+ <var>temp2</var>=(.52+.79) - (.52*.79) = .899<p>
+<li><var>temp1</var> = 2.0*L - <var>temp2</var><br>
+In the example, <var>temp1</var> = 2.0*.52 - .899 = .141<p>
+<li>Convert H to the range 0-1<br>
+In the example, H=120/360 = .33<p>
+<li> For each of R, G, B, compute another temporary value, <var>temp3</var>, as
+follows:<br>
+for R, <var>temp3</var>=H+1.0/3.0<br>
+for G, <var>temp3</var>=H<br>
+for B, <var>temp3</var>=H-1.0/3.0<br>
+if <var>temp3 < 0, temp3 = temp3 + 1.0</var><br>
+if <var>temp3 > 1, temp3 = temp3 - 1.0</var><br>
+
+In the example, <var>Rtemp3</var>=.33+.33 = .66, <var>Gtemp3</var>=.33, <var>Btemp3</var>=.33-.33=0<p>
+<li> For each of R, G, B, do the following test:<br>
+If 6.0*<var>temp3</var> < 1, color=<var>temp1</var>+(<var>temp2</var>-<var>temp1</var>)*6.0*<var>temp3</var><br>
+Else if 2.0*<var>temp3</var> < 1, color=<var>temp2</var><br>
+Else if 3.0*<var>temp3</var> < 2, color=<var>temp1</var>+(<var>temp2</var>-<var>temp1</var>)*((2.0/3.0)-<var>temp3</var>)*6.0<br>
+Else color=<var>temp1</var><br>
+In the example,<br>
+3.0*<var>Rtemp3</var> < 2 so R=.141+(.899-.141)*((2.0/3.0-.66)*6.0=.141<br>
+2.0*<var>Gtemp3</var> < 1 so G=.899<br>
+6.0*<var>Btemp3</var> < 1 so B=.141+(.899-.141)*6.0*0=.141<br><p>
+<li> Scale back to the range 0-100 to use the scaling shown in the
+video color page<br>
+For the example, R=14, G=90, B=14<p>
+<a href="vidcolor.html">
+Color in video</a>
+
+</BODY>
+</HTML>
