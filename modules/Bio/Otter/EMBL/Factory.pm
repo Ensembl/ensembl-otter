@@ -23,11 +23,18 @@ my $factory = Bio::Otter::EMBL::Factory->new;
 
 package Bio::Otter::EMBL::Factory;
 
-
 use strict;
 use Carp;
 use Hum::EMBL;
-use Hum::EmblUtils qw( add_source_FT add_Organism);
+use Hum::EMBL::FeatureSet;
+use Hum::EMBL::LocationUtils qw( simple_location locations_from_subsequence
+    location_from_homol_block );
+use Hum::EmblUtils qw( add_source_FT add_Organism );
+
+Hum::EMBL->import(
+    'AC *' => 'Hum::EMBL::Line::AC_star',
+    'BQ *' => 'Hum::EMBL::Line::BQ_star',
+    );
 
 
 =head2 new
@@ -75,35 +82,177 @@ from the Dataset, together with Slice and Gene adaptors.
 
 =cut
 
-{
-    my ( $otter_db, $slice_aptr, $gene_aptr );
-    my ( $contig_length, $slice, $slice_contig );
+sub get_DBAdaptors {
+    my ( $self ) = @_;
 
-    sub get_DBAdaptors {
-        my ( $self ) = @_;
+    my $ds = $self->Dataset
+        or confess "Dataset not set";
 
-        my $ds = $self->Dataset
-            or confess "Dataset not set";
+    #Bio::EnsEMBL::Container    
+    my $otter_db = $ds->get_cached_DBAdaptor
+        or confess 'Bio::Otter::Lace::DataSet->get_cached_DBAdaptor failed';
 
-        #Bio::EnsEMBL::Container    
-        $otter_db = $ds->get_cached_DBAdaptor
-            or confess 'Bio::Otter::Lace::DataSet->get_cached_DBAdaptor failed';
+    #Bio::EnsEMBL::DBSQL::SliceAdaptor
+    my $slice_aptr = $otter_db->get_SliceAdaptor
+        or confess "get_SliceAdaptor failed";
 
-        #Bio::EnsEMBL::DBSQL::SliceAdaptor
-        $slice_aptr = $otter_db->get_SliceAdaptor
-            or confess "get_SliceAdaptor failed";
+    #Bio::EnsEMBL::DBSQL::ProxyGeneAdaptor
+    my $gene_aptr  = $otter_db->get_GeneAdaptor
+        or confess "get_GeneAdaptor failed";
 
-        #Bio::EnsEMBL::DBSQL::ProxyGeneAdaptor
-        $gene_aptr  = $otter_db->get_GeneAdaptor
-            or confess "get_GeneAdaptor failed";
-    }
+    return ($otter_db, $slice_aptr, $gene_aptr);
+}
 
-    sub kill_DBAdaptors {
+
+sub fake_embl_setup {
+    my ( $self, $embl, $acc, @sec ) = @_;
     
-        $otter_db = undef;
-        $slice_aptr = undef;
-        $gene_aptr = undef;
+    # ID line
+    my $id = $embl->newID;
+    $id->entryname('fake');
+    $id->dataclass('standard');
+    $id->molecule('genomic DNA');
+    $id->division('hum');
+    $id->seqlength(150000);
+    $embl->newXX;
+    
+    # AC line
+    my $ac = $embl->newAC;
+    if (@sec) {
+        $ac->secondaries(@sec);
+        # We need the placeholder "ACCESSION"
+        # if we don't have an accession
+        $ac->primary($acc);
+    } else {
+        $ac->primary($acc);
     }
+    $embl->newXX;
+
+    # AC * line
+    my $ac_star = $embl->newAC_star;
+    $ac_star->identifier('fake');
+    $embl->newXX;
+
+    # DE line
+    #$pdmp->add_Description($embl);
+
+    # KW line
+    #$pdmp->add_Keywords($embl);
+
+    # Organism
+    #add_Organism($embl, $species);
+    #$embl->newXX;
+
+    # Reference
+    #$pdmp->add_Reference($embl, $seqlength);
+
+    # CC lines
+    #$pdmp->add_Headers($embl, $contig_map);
+    #$embl->newXX;
+
+    # Feature table header
+    $embl->newFH;
+
+    # Feature table source feature
+    #my( $libraryname ) = library_and_vector( $project );
+    #add_source_FT( $embl, $seqlength, $binomial, $ext_clone,
+    #               $chr, $map, $libraryname );
+
+
+
+}
+
+=head2 Embl
+ 
+?? 
+
+=cut
+
+sub EMBL {
+    my ( $self, $embl ) = @_;
+    
+    if ($embl) {
+        $self->{'_bio_otter_embl_factory_embl'} = $embl;
+    }
+    return $self->{'_bio_otter_embl_factory_embl'};
+}
+
+
+=head2 contig_length
+ 
+?? 
+
+=cut
+
+sub contig_length {
+    my ( $self, $contig_length )  = @_;
+
+    if ($contig_length) {
+        $self->{'_bio_otter_embl_factory_contig_length'} = $contig_length;
+    }
+    return $self->{'_bio_otter_embl_factory_contig_length'};
+}
+
+
+=head2 Slice
+ 
+?? 
+
+=cut
+
+sub Slice {
+    my ( $self, $slice ) = @_;
+
+    if ($slice) {
+        $self->{'_bio_otter_embl_factory_slice'} = $slice;
+    }    
+    return $self->{'_bio_otter_embl_factory_slice'};
+}
+
+=head2 Slice_contig
+ 
+?? 
+
+=cut
+
+sub Slice_contig {
+    my ( $self, $slice_contig ) = @_;
+    
+    if ($slice_contig) {
+        $self->{'_bio_otter_embl_factory_slice_contig'} = $slice_contig;
+    }
+    return $self->{'_bio_otter_embl_factory_slice_contig'};
+}
+
+=head2 FeatureSet
+ 
+Holds the Hum::EMBL::FeatureSet object.
+
+=cut
+
+sub FeatureSet {
+    my ( $self, $FeatureSet ) = @_;
+    
+    if ($FeatureSet) {
+        $self->{'_bio_otter_embl_factory_feature_set'} = $FeatureSet;
+    }
+    return $self->{'_bio_otter_embl_factory_feature_set'};
+}
+
+
+
+    # Get polyA sites
+    #$pdmp->addPolyA_toSet($set);
+    
+    # Get CpG islands
+    #$pdmp->addCpG_toSet($set);
+    
+    # Add the genes and other features into the entry
+    #$set->sortByPosition;
+    #$set->removeDuplicateFeatures;
+    #$set->addToEntry($embl);
+
+
 
 =head2 make_embl
  
@@ -111,80 +260,141 @@ This is the big one!
 
 =cut
 
-    sub make_embl {
-        my ( $self, $acc ) = @_;
+sub make_embl {
+    my ( $self, $acc ) = @_;
 
-        confess "Must pass an accession" unless $acc;
+    confess "Must pass an accession" unless $acc;
 
-        my $ds = $self->Dataset
-            or confess "Dataset must be set before calling make_embl";
+    my $ds = $self->Dataset
+        or confess "Dataset must be set before calling make_embl";
 
-        $self->get_DBAdaptors();
-        my $embl = Hum::EMBL->new();
+    my ($otter_db, $slice_aptr, $gene_aptr) = $self->get_DBAdaptors();
+    my $embl = Hum::EMBL->new;
+    $self->EMBL($embl);
+    $self->fake_embl_setup($embl, $acc);
 
-        foreach my $chr_s_e ($self->fetch_chr_start_end_for_accession($otter_db, $acc)) {
+    my $set = 'Hum::EMBL::FeatureSet'->new;
+    $self->FeatureSet($set);
+    
+    foreach my $chr_s_e ($self->fetch_chr_start_end_for_accession($otter_db, $acc)) {
 
-            print "ACC: $acc ";  
-            print "Chr: ", $chr_s_e->[0], " Start: ", $chr_s_e->[1], " End: ", $chr_s_e->[2], "\n";
+        print "ACC: $acc ";  
+        print "Chr: ", $chr_s_e->[0], " Start: "
+            , $chr_s_e->[1], " End: ", $chr_s_e->[2], "\n";
 
-            #Get the Bio::EnsEMBL::Slice
-            $slice = $slice_aptr->fetch_by_chr_start_end(@$chr_s_e);
-            my $tile_path = $self->get_tiling_path_for_Slice($slice);
+        #Get the Bio::EnsEMBL::Slice
+        my $slice = $self->Slice($slice_aptr->fetch_by_chr_start_end(@$chr_s_e));
+        my $tile_path = $self->get_tiling_path_for_Slice($slice);
 
-            #Bio::EnsEMBL::RawContig
-            $slice_contig = $tile_path->[0]->component_Seq;
-            $contig_length = $slice_contig->length;
+        #Bio::EnsEMBL::RawContig
+        my $slice_contig = $self->Slice_contig($tile_path->[0]->component_Seq);
+        my $contig_length = $self->contig_length($slice_contig->length);
 
-            my $gene_id_list = $gene_aptr->list_current_dbIDs_for_Slice($slice);
-            foreach my $gid (@$gene_id_list) {
-                #$self->do_gene_by_id($gid);
-            }
+        my $gene_id_list = $gene_aptr->list_current_dbIDs_for_Slice($slice);
+        foreach my $gid (@$gene_id_list) {
+
+            my $gene = $gene_aptr->fetch_by_dbID($gid);
+            $self->do_Gene($gene);
         }
-        kill_DBAdaptors();
-        return $embl;
     }
+    
+    $self->fake_features;
+    
+    #Finish up, add the genes and other features into the entry
+    $set->sortByPosition;
+    $set->removeDuplicateFeatures;
+    $set->addToEntry($embl);
+    return $embl;
+}
 
-    sub do_gene_by_id {
-        my ( $self, $gid ) = @_;
+#Debugging just to see how features are made
+sub fake_features {
+    my ( $self ) = @_;
+    
+    my $set = $self->FeatureSet;
+    
+    #Hum::EMBL::Line::FT
+    my $ft = $set->newFeature;
+    my $key = 'mRNA'; # or 'CDS'
+    $ft->key($key);
+    
+    my $loc = Hum::EMBL::Location->new;
+    $loc->strand('W');
+    $loc->exons([1000, 1024], [1048, 1100], [1112, 1196]);
+    $ft->location($loc);
+    $ft->addQualifierStrings('gene', "fcuk");
+    $ft->addQualifierStrings('standard_name', "assmapper");
+    $ft->addQualifierStrings('evidence','NOT_EXPERIMENTAL');
+    
+    my $ft2 = $set->newFeature;
+    my $key2 = 'mRNA'; # or 'CDS'
+    $ft2->key($key2);
+    my $loc2 = Hum::EMBL::Location->new;
+    $loc2->strand('C');
+    $loc2->exons([2000, 2024], [2048, 2100], [2112, 2196]);
+    $ft2->location($loc2);
+    $ft2->addQualifierStrings('gene', "blows_chunks");
+    $ft2->addQualifierStrings('standard_name', "badass");
+    $ft2->addQualifierStrings('evidence','EXPERIMENTAL');
 
-        #Bio::Otter::AnnotatedGene, isa Bio::EnsEMBL::Gene
-        my $gene = $gene_aptr->fetch_by_dbID($gid);
-        return if $gene->type eq 'obsolete'; # Deleted genes
 
-        #Bio::Otter::AnnotatedTranscript, isa Bio::EnsEMBL::Transcript
-        foreach my $transcript (@{$gene->get_all_Transcripts}) {
-        
-            my $sid = $transcript->stable_id;
-            foreach my $exon (@{$transcript->get_all_Exons}) {
+    #locations_from_subsequence ??
 
-                #Bio::EnsEMBL::RawContig, each exon knows its contig
-                my $contig  = $exon->contig;
-                my $start   = $exon->start;
-                my $end     = $exon->end;
+    #$ft->addQualifier($product);
 
-                # May be an is_sticky method?
-                if ($exon->isa('Bio::Ensembl::StickyExon')) {
-                    # Deal with sticy exon
-                    warn "STICKY!\n";
+
+  #  my $loc = simple_location(6104,7000);
+}
+
+
+=head2 do_Gene
+
+
+=cut
+
+sub do_Gene {
+    my ( $self, $gene ) = @_;
+
+    my $contig_length = $self->contig_length;
+    my $embl = $self->EMBL;
+    
+    #Bio::Otter::AnnotatedGene, isa Bio::EnsEMBL::Gene
+    return if $gene->type eq 'obsolete'; # Deleted genes
+
+    #Bio::Otter::AnnotatedTranscript, isa Bio::EnsEMBL::Transcript
+    foreach my $transcript (@{$gene->get_all_Transcripts}) {
+
+        my $sid = $transcript->stable_id;
+        foreach my $exon (@{$transcript->get_all_Exons}) {
+
+            #Bio::EnsEMBL::RawContig, each exon knows its contig
+            my $contig  = $exon->contig;
+            my $start   = $exon->start;
+            my $end     = $exon->end;
+
+            # May be an is_sticky method?
+            if ($exon->isa('Bio::Ensembl::StickyExon')) {
+                # Deal with sticy exon
+                warn "STICKY!\n";
+            }
+            elsif ($contig != $self->Slice_contig()) {
+                my $acc = $contig->clone->embl_id;
+                my $sv  = $contig->clone->embl_version;
+                # Is not on Slice
+                print "$acc.$sv:$start..$end\n";
+            }
+            else {
+                # Is on Slice (ie: clone)
+                if ($end < 1 or $start > $contig_length) {
+                    carp "Unexpected exon start '$start' end '$end' "
+                        . "on contig of length '$contig_length'\n";
                 }
-                elsif ($contig != $slice_contig) {
-                    my $acc = $contig->clone->embl_id;
-                    my $sv  = $contig->clone->embl_version;
-                    # Is not on Slice
-                    print "$acc.$sv:$start..$end\n";
-                }
-                else {
-                    # Is on Slice (ie: clone)
-                    if ($end < 1 or $start > $contig_length) {
-                        carp "Unexpected exon start '$start' end '$end' "
-                            . "on contig of length '$contig_length'\n";
-                    }
-                    print "$start..$end\n";
-                }
+                print "$start..$end\n";
             }
         }
     }
 }
+
 
 =head2 get_tiling_path_for_Slice
 
