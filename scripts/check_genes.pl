@@ -692,7 +692,11 @@ foreach my $atype (keys %gsi){
     my %eidso;
     # look for overlapping exons and group exons into transcripts
     # (one gene at a time)
-    foreach my $rt (@{$gsi{$atype}->{$gsi}}){
+    foreach my $rt (sort {
+                          $gsi{$atype}->{$gsi}->[$a]->[0]<=>$gsi{$atype}->{$gsi}->[$b]->[0] || 
+                          $gsi{$atype}->{$gsi}->[$a]->[1]<=>$gsi{$atype}->{$gsi}->[$b]->[1] || 
+                          $gsi{$atype}->{$gsi}->[$a]->[5]<=>$gsi{$atype}->{$gsi}->[$b]->[5] 
+			    } @{$gsi{$atype}->{$gsi}}){
       my($tsi,$erank,$eid,$ecst,$eced,$esr,$es,$ep,$eep,$trid)=@{$rt};
       if($e{$gsi}->{$eid}){
 	# either stored as sticky rank2 or this is sticky rank2
@@ -844,8 +848,8 @@ foreach my $atype (keys %gsi){
 
       # analysis by overlap of transcripts
       my $last_ed;
-      foreach my $tsi (sort {$tse{$gsi}->{$a}->[0]<=>$tse{$gsi}->{$b}->[0]} keys %{$tse{$gsi}}){
-	my($st,$ed)=@{$tse{$gsi}->{$tsi}};
+      foreach my $tsi (sort {$tse{$a}->[0]<=>$tse{$b}->[0]} keys %tse){
+	my($st,$ed)=@{$tse{$tsi}};
 	my($tn)=@{$tsi_sum{$tsi}};
 	if($last_ed && $last_ed<$st){
 	  my $gap=$st-$last_ed;
@@ -955,7 +959,7 @@ if($ngcl>1){
 	    $ntd++;
 	  }
 	}
-	print "   $gsi ($ntd/$nt):\n";
+	print "  $gsi ($ntd/$nt):\n";
 	foreach my $tsi (sort @gtsi){
 	  if($tsi{$tsi}){
 	    my @e=@{$t2e{$gsi}->{$tsi}};
