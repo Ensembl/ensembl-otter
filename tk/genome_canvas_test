@@ -4,49 +4,66 @@
 
 use strict;
 use GenomeCanvas;
-use Bio::EnsEMBL::DBSQL::Obj;
 
 {
-    my $db = Bio::EnsEMBL::DBSQL::Obj->new(
-        -DBNAME => 'chr_20',
-        -USER   => 'ensadmin',
-        -HOST   => 'localhost',
-        );
-
     my $mw = GenomeCanvas::MainWindow->new;
     my $gc = GenomeCanvas->new($mw);
     
     my $canvas = $gc->canvas;
-    
-    my $get_map = $db->prepare(q{
-        SELECT s.map_position
-          , s.sanger_name
-          , c.id
-          , c.htg_phase
-          , ctg.length
-        FROM clone c
-          , simple_map s
-          , contig ctg
-        WHERE c.internal_id = s.clone_internal_id
-          AND ctg.clone = c.internal_id
-          AND s.map_name = 'chr_20'
-        ORDER BY s.map_position ASC
-        });
-    $get_map->execute;
-    my $ans = $get_map->fetchall_arrayref;
 
-    my $last_pos = 0;
-    for (my $i = 0; $i < @$ans;) {
-        my($pos, $sname, $acc, $phase, $length) = @{$ans->[$i]};
+    if (0) {
+        require Bio::EnsEMBL::DBSQL::Obj;
         
-        for ($i++; $i < @$ans and $ans->[$i][2] eq $acc; $i++) {
-            $length += $ans->[$i][4];
+        my $db = Bio::EnsEMBL::DBSQL::Obj->new(
+            -DBNAME => 'chr_20',
+            -USER   => 'ensadmin',
+            -HOST   => 'localhost',
+            );
+
+        my $get_map = $db->prepare(q{
+            SELECT s.map_position
+              , s.sanger_name
+              , c.id
+              , c.htg_phase
+              , ctg.length
+            FROM clone c
+              , simple_map s
+              , contig ctg
+            WHERE c.internal_id = s.clone_internal_id
+              AND ctg.clone = c.internal_id
+              AND s.map_name = 'chr_20'
+            ORDER BY s.map_position ASC
+            });
+        $get_map->execute;
+        my $ans = $get_map->fetchall_arrayref;
+
+        my $last_pos = 0;
+        for (my $i = 0; $i < @$ans;) {
+            my($pos, $sname, $acc, $phase, $length) = @{$ans->[$i]};
+
+            for ($i++; $i < @$ans and $ans->[$i][2] eq $acc; $i++) {
+                $length += $ans->[$i][4];
+            }
+            #print "$pos, $sname, $acc, $phase, $length\n";
+            my $gap = $pos - $last_pos - 1;
+            my $name = $sname || $acc;
+            add_contig($canvas, $name, $length, $phase, $gap);
+            $last_pos = $pos;
         }
-        #print "$pos, $sname, $acc, $phase, $length\n";
-        my $gap = $pos - $last_pos - 1;
-        my $name = $sname || $acc;
-        add_contig($canvas, $name, $length, $phase, $gap);
-        $last_pos = $pos;
+    } else {
+        my $last_ctg = '';
+        while (<>) {
+            my ($ctg, $sname, $acc, $length, $status) = split /\t/, $_;
+            $length ||= 50000;
+            my $phase = $status =~ /fin|ana|sub/i ? 3 : 1;
+            my $gap = 0;
+            my $name = $sname || $acc;
+            if ($last_ctg and $last_ctg ne $ctg) {
+                $gap = 1;
+            }
+            add_contig($canvas, $name, $length, $phase, $gap);
+            $last_ctg = $ctg;
+        }
     }
     
     my @bbox = $canvas->bbox('all');
@@ -61,7 +78,7 @@ use Bio::EnsEMBL::DBSQL::Obj;
         -side => 'top',
         );
 
-    make_button($button_frame, 'Exit', sub{ exit; });
+    make_button($button_frame, 'Exit', sub{ exit 0 });
 
     make_button($button_frame, 'PostScript',
         sub {
@@ -92,9 +109,14 @@ use Bio::EnsEMBL::DBSQL::Obj;
         });
 }
 
-###############
-Tk::MainLoop();
-###############
+
+
+
+                            ###############
+                            Tk::MainLoop();
+                            ###############
+
+
 
 sub make_button {
     my( $parent, $label, $command ) = @_;
@@ -130,7 +152,7 @@ sub add_contig {
         $x1, -1,
         -text => $name,
         #-font => '-*-helvetica-medium-r-*-*-24-*-*-*-*-*-*-*',
-        -font => ['helvetica', 25],
+        -font => ['helvetica', 12],
         -anchor => 'sw',
         -tags => ['contig_label', $name],
         );

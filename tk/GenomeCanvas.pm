@@ -24,7 +24,8 @@ sub new {
     my $scrolled = $tk->Scrolled('Canvas',
         -highlightthickness => 1,
         -background         => 'white',
-        -scrollbars         => 'se',
+        #-scrollbars         => 'se',
+        -scrollbars         => 's',
         -width              => 500,
         -height             => 200,
         );
