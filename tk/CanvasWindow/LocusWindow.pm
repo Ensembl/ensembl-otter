@@ -185,25 +185,19 @@ sub show{
     $self->update_checkbutton ;
     
     $self->state($state);
-    if ($state eq 'new'){
-        $combo->configure(-listcmd => 
-            sub{
-                my @names = ('');
-                $combo->configure(
-                -choices   => [@names],
-                #-listwidth => scalar @names,
-                );       
-            });
-        ${$self->locus_name_ref} = '';
+     
+    my @names ;
+    my $entry_text  ;
+    if ($state eq 'new') {
+        @names = ('') ;
+        $entry_text = '' ;
+    }elsif($state eq 'edit' ){
+        @names = $self->xace_seq_chooser->list_Locus_names ;
+        $entry_text = $self->locus->name ;
+    
     }
-    elsif($state eq 'edit'){ # state eq merge / swap ...
-
-        my @names = $self->xace_seq_chooser->list_Locus_names ;
-        $combo->configure(-listcmd => sub{  
-                                        $combo->configure(  -choices   => [@names] );
-                                             });        
-        ${$self->locus_name_ref} = $self->locus->name ;      
-    }
+    $combo->configure(  -choices   => [@names] );
+    ${$self->locus_name_ref} = $entry_text;
 
     $combo->focus ;
     $self->toplevel->deiconify ;
