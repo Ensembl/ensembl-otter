@@ -928,9 +928,6 @@ sub otter_to_ace {
             $str .= $1 . "\n";
         }
     }
-    open TEST , ">test_ace.ace" ;
-    print TEST $str ; 
-    
     return $str;
 }
 
