@@ -198,15 +198,14 @@ sub compare_genes {
             $newg->get_all_Transcripts);
 
         # Set the author for deleted and new transcripts
-        ### No point doing this on deleted transcripts because they are not saved
-        #if (scalar(@$tdel)) {
-        #    $gene_modified = 1;
-        #    print STDERR "Deleted transcripts ";
-        #    foreach my $td (@$tdel) {
-        #       printf STDERR "  %s\n", $td->stable_id;
-        #       $td->transcript_info->author($current_author);
-        #    }
-        #}
+        if (scalar(@$tdel)) {
+            $gene_modified = 1;
+            ### No point doing this on deleted transcripts because they are not saved
+            #foreach my $td (@$tdel) {
+            #   printf STDERR "  %s\n", $td->stable_id;
+            #   $td->transcript_info->author($current_author);
+            #}
+        }
         if (scalar(@$tnew)) {
             $gene_modified = 1;
             print STDERR "New transcripts ";
