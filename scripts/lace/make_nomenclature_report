@@ -1,0 +1,217 @@
+#!/usr/local/bin/perl -w
+
+### make_nomenclature_report
+
+use strict;
+use Bio::Otter::Lace::Defaults;
+use Bio::SeqIO;
+
+
+{
+    my( $dataset_name, $set_name, $locus_skip_file, $gene_type );
+    my $file_name = 'nomenclature_report';
+    my $keep_stops = 0;
+    my $list_types = 0;
+
+    my $usage = sub { exec('perldoc', $0) };
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'       => $usage,
+        'dataset=s'     => \$dataset_name,
+        'set|chr=s'     => \$set_name,
+        'file=s'        => \$file_name,
+        'stops!'        => \$keep_stops,
+        'skip=s'        => \$locus_skip_file,
+        'gene_type=s'   => \$gene_type,
+        'list!'         => \$list_types,
+        ) or $usage->();
+    $usage->() unless $dataset_name and $set_name and ($gene_type or $list_types);
+
+    my $nuc_file = "$file_name.mRNA";
+    my $pep_file = "$file_name.pep";
+    print STDERR "Writing transcripts to '$nuc_file' and peptides to '$pep_file'\n";
+    
+
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    my $ss = $ds->get_SequenceSet_by_name($set_name);
+    $ds->fetch_all_CloneSequences_for_SequenceSet($ss);
+    $ss->selected_CloneSequences($ss->CloneSequence_list);
+    
+    my( %skip_list );
+    if ($locus_skip_file) {
+        #my %req_gene = map {$_, 1} @gene_id;
+    
+        open SKIP, $locus_skip_file or die "Can't read '$locus_skip_file' : $!";
+        while (<SKIP>) {
+            foreach my $id (split) {
+                $skip_list{$id} = 1;
+                #if ($req_gene{$id}) {
+                #    warn "Gene '$id' is on command line but will be skipped\n";
+                #}
+            }
+        }
+        close SKIP;
+    }
+    
+    my $nuc_out = Bio::SeqIO->new(
+        -FORMAT => 'fasta',
+        -FILE   => "> $nuc_file",
+        );
+    my $pep_out = Bio::SeqIO->new(
+        -FORMAT => 'fasta',
+        -FILE   => "> $pep_file",
+        );
+    
+    my $slice_aptr = $ds->get_cached_DBAdaptor->get_SliceAdaptor;
+    my $gene_aptr  = $ds->get_cached_DBAdaptor->get_GeneAdaptor;
+    my $ctg_list = $ss->selected_CloneSequences_as_contig_list;
+    $ds->get_cached_DBAdaptor->assembly_type($set_name);    # Why do I have to set this?
+    my $gene_count = 0;
+    foreach my $ctg (@$ctg_list) {
+        my( @found_genes );
+        {
+            my $chr_name  = $ctg->[0]->chromosome->name;
+            my $start     = $ctg->[0]->chr_start;
+            my $end       = $ctg->[$#$ctg]->chr_end;
+            #print STDERR "Fetching slice of chr '$chr_name' from '$start' to '$end'\n";
+            my $slice = $slice_aptr->fetch_by_chr_start_end($chr_name, $start, $end);
+            my $slice_genes = $gene_aptr->fetch_by_Slice($slice);
+            foreach my $gene (@$slice_genes) {
+                if ($gene->type eq $gene_type) {
+                    push(@found_genes, $gene);
+                } else {
+                    print STDERR "Skipping '", $gene->type, "' gene '", $gene->gene_info->name->name, "'\n";
+                }
+            }
+        }
+        $gene_count += @found_genes;
+        foreach my $gene (@found_genes) {
+            my $name = $gene->gene_info->name->name;
+            if ($skip_list{$name}) {
+                warn "Skipping '$name'\n";
+                next;
+            }
+            eval {
+                warn "Translating gene '$name'\n";
+                my( @tscript_pep );
+                foreach my $transcript (@{$gene->get_all_Transcripts}) {
+                    if (my $translation = $transcript->translation) {
+                        my $pep = $transcript->translate;
+                        my $t_name = $transcript->transcript_info->name;
+                        push(@tscript_pep, [$transcript, $pep, $t_name]);
+                    }
+                }
+                my $description = $gene->description;
+                unless (@tscript_pep) {
+                    die "No translation for '$name'\n";
+                }
+
+                # Sort by peptide length or transcript name
+                my ($longest) = sort {
+                    $b->[1]->length <=> $a->[1]->length || $a->[2] cmp $b->[2]
+                    } @tscript_pep;
+
+
+                my ($tscript, $pep, $t_name) = @$longest;
+                my $tsid = $tscript->stable_id;
+                if ($pep->seq =~ /\*/) {
+                    my $msg = "Stops detected in gene '$name' transcript '$tsid'\n";
+                    if ($keep_stops) {
+                        print STDERR $msg;
+                    } else {
+                        die $msg;
+                    }
+                }
+                my @ele = (
+                    qq{SUBMIT_ID "$tsid"},
+                    qq{CATEG "$gene_type"},
+                    qq{NAME "$description"},
+                    );
+                if ($gene->gene_info->known_flag) {
+                    push(@ele, qq{SYMBOL "$name"});
+                }
+                my @evidence = map $_->name, $tscript->transcript_info->evidence;
+                if (@evidence) {
+                    push(@ele, qq{AC "@evidence"});
+                }
+                my $desc = join(' | ', @ele);
+                my $nuc = $tscript->seq;
+                $nuc->id($t_name);
+                $nuc->desc($desc);
+                $pep->id($t_name);
+                $pep->desc($desc);
+                $nuc_out->write_seq($nuc);
+                $pep_out->write_seq($pep);
+            };
+            if ($@) {
+                warn "ERROR in '$name':\n$@";
+            }
+        }    
+    }
+
+    die "No genes of type '$gene_type'"
+        unless $gene_count;
+
+}
+
+sub get_remark {
+    my( $gene ) = @_;
+
+    my @all_remark = map $_->remark, $gene->gene_info->remark;
+    if (@all_remark) {
+        return join(' -- ', @all_remark);
+    } else {
+        return;
+    }
+}
+
+
+__END__
+
+
+=head1 NAME - make_nomenclature_report
+
+=head1 EXAMPLE
+
+  make_nomenclature_report -dataset human -set ChrX-07 -file chr_x_report -gene_type Known
+
+=head1 Original email from HUGO:
+
+We request that data is submitted to us in the following format:
+
+Tab-delimited (or | delimited) fasta format file containing cDNA
+(concatenated exonic sequence) for one transcript per gene with submitter
+identifiers, e.g.
+
+
+  > SUBMIT_ID "c14.1"| CATEG "KNOWN GENE" | START "84797873" | END
+  "84806954" | STRAND "forward" | NAME "Gene for DKFZP434N178 protein
+  (DKFZP434N178)" | SYMBOL "undef" | LOCUS_ID "26153" | AC "AB033062
+  AK026406" | LOCATION "14q32.33" | LENGTH "5523"
+
+  *SUBMIT_ID*: your sequence identifier
+  *CATEG*: gene category - known, novel or pseudogene
+  START: start position on chromosome
+  END: end position on chromosome
+  STRAND: forward or reverse strand
+  *NAME*: gene description or name
+  SYMBOL: gene symbol ("undef" if not known/applicable)
+  LOCUS_ID: entry number in LocusLink ("undef" if not applicable)
+  AC: accession nos from other databases, e.g. GenBank, SwissProt ("undef"
+  if not applicable)
+  LOCATION: chromosomal location
+  LENGTH: no. of basepairs (or amino-acids if putative product)
+
+Fields in *bold* are absolutely essential; the information in other
+fields, where known, is very useful to us and may enable us to process
+your data more quickly.
+
+Predicted protein sequences are also welcome, but should be sent in a
+separate file to the cDNAs; please make sure it is clear which cDNA
+corresponds to which protein, ideally by using the same SUBMIT_ID for the
+transcript and product.
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
