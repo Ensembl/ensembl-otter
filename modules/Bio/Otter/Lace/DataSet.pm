@@ -10,6 +10,9 @@ use Bio::Otter::Lace::CloneSequence;
 use Bio::Otter::Lace::Chromosome;
 use Bio::Otter::Lace::SequenceSet;
 use Bio::Otter::Lace::SequenceNote;
+use Bio::EnsEMBL::Pipeline::Monitor;
+use Bio::Otter::Lace::PipelineDB;
+
 
 sub new {
     my( $pkg ) = @_;
@@ -162,6 +165,32 @@ sub fetch_all_CloneSequences_for_selected_SequenceSet {
     return $self->fetch_all_CloneSequences_for_SequenceSet($ss);
 }
 
+sub status{
+    my ($self, $dba, $type, $force_refresh) = @_;
+    if(!$self->{'_dataset_status_hash'}->{$type} || $force_refresh){
+	my $pipeline_db = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($dba) ;
+	my $monitor     = Bio::EnsEMBL::Pipeline::Monitor->new(-dbobj => $pipeline_db);
+	my $unfin       = $monitor->get_unfinished_analyses_for_assembly_type($type);
+	my $hash        = {};
+	map { $hash->{$_->[0]}->{$_->[1]} = $_->[2] } @$unfin;
+	$self->{'_dataset_status_hash'}->{$type} = $hash;
+    }
+    return $self->{'_dataset_status_hash'}->{$type};
+}
+
+sub status_refresh_for_SequenceSet{
+#   this forces a refresh of the $self->status query
+#   but doesn't re fetch all CloneSequences of the SequenceSet
+    my ($self, $ss) = @_;
+    my $dba    = $self->get_cached_DBAdaptor;
+    my $type   = $ss->name;
+    my $lookup = $self->status($dba, $type, 1);
+    foreach my $cs (@{$ss->CloneSequence_list}){
+	my $ctg_name = $cs->contig_name();
+	$cs->unfinished($lookup->{$ctg_name});
+    }
+}
+
 sub fetch_all_CloneSequences_for_SequenceSet {
     my( $self, $ss ) = @_;
     
@@ -173,6 +202,9 @@ sub fetch_all_CloneSequences_for_SequenceSet {
     
     my $dba = $self->get_cached_DBAdaptor;
     my $type = $ss->name;
+
+    my $lookup = $self->status($dba, $type);
+
     my $sth = $dba->prepare(q{
         SELECT c.name, c.embl_acc, c.embl_version
           , g.contig_id, g.name, g.length
@@ -213,6 +245,7 @@ sub fetch_all_CloneSequences_for_SequenceSet {
         $cl->contig_strand($strand);
         $cl->contig_name($ctg_name);
         $cl->contig_id($ctg_id);
+	$cl->unfinished($lookup->{$ctg_name});
         push(@$cs, $cl);
     }
 
