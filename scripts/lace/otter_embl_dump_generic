@@ -10,7 +10,7 @@
 
 Required parameters
   -dataset              
-  -chrlibrary_name
+  -chr
   
 Optional parameters
   -h|--help
