@@ -13,6 +13,7 @@ use Bio::Otter::Converter;
 use Bio::Otter::Lace::TempFile;
 use URI::Escape qw{ uri_escape };
 
+
 sub new {
     my( $pkg ) = @_;
     
@@ -23,45 +24,45 @@ sub host {
     my( $self, $host ) = @_;
     
     if ($host) {
-        $self->{'_host'} = $host;
+        $self->{'_options'}->{'client'}->{'_host'} = $host;
     }
-    return $self->{'_host'};
+    return $self->{'_options'}->{'client'}->{'host'};
 }
 
 sub port {
     my( $self, $port ) = @_;
     
     if ($port) {
-        $self->{'_port'} = $port;
+        $self->{'_options'}->{'client'}->{'port'} = $port;
     }
-    return $self->{'_port'};
+    return $self->{'_options'}->{'client'}->{'port'};
 }
 
 sub write_access {
     my( $self, $write_access ) = @_;
     
     if (defined $write_access) {
-        $self->{'_write_access'} = $write_access;
+        $self->{'_options'}->{'client'}->{'write_access'} = $write_access;
     }
-    return $self->{'_write_access'} || 0;
+    return $self->{'_options'}->{'client'}->{'write_access'} || 0;
 }
 
 sub author {
     my( $self, $author ) = @_;
     
     if ($author) {
-        $self->{'_author'} = $author;
+        $self->{'_options'}->{'client'}->{'author'} = $author;
     }
-    return $self->{'_author'} || (getpwuid($<))[6];
+    return $self->{'_options'}->{'client'}->{'author'} || (getpwuid($<))[6];
 }
 
 sub email {
     my( $self, $email ) = @_;
     
     if ($email) {
-        $self->{'_email'} = $email;
+        $self->{'_options'}->{'client'}->{'email'} = $email;
     }
-    return $self->{'_email'} || (getpwuid($<))[0];
+    return $self->{'_options'}->{'client'}->{'email'} || (getpwuid($<))[0];
 }
 
 sub lock {
@@ -69,6 +70,30 @@ sub lock {
     
     confess "lock takes no arguments" if @_;
     return $self->write_access ? 'true' : 'false';
+}
+sub all_options{
+    my ($self, $hash) = @_;
+    $self->{'_options'} = $hash if ref($hash) eq 'HASH';
+    return $self->{'_options'};
+}
+
+sub option_from_array{
+    my ($self, $array) = @_;
+    my $options = $self->all_options();
+    my $opt     = $options;
+    my $key     = pop @$array;
+    my $value   = undef;
+
+    foreach my $k(@$array){
+	if(exists $opt->{$k}){
+	    $opt = $opt->{$k};
+	}else{
+	    warn "Couldn't find $k. Please check otter_config file\n";
+	    next;
+	}
+    }
+    $value = $opt->{$key};
+    return $value;
 }
 
 sub client_hostname {
