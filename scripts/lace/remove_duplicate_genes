@@ -48,51 +48,81 @@ $| = 1;
         push(@$list, $gid);
     }
     
+    my $make_obsolete = $dba->prepare(q{
+        UPDATE gene
+        SET type = 'obsolete'
+        WHERE gene_id = ?
+        });
+    
     my $gene_aptr = $dba->get_GeneAdaptor;
     my $names_examined = 0;
     my $genes_fixed    = 0;
-    while (my ($name, $gid_list) = each %name_gid) {
-        next unless  @$gid_list > 1;
-        print "\nNAME: $name\n";
-        $names_examined++;
-        my( @candidate );
-        foreach my $gene_id (@$gid_list) {
-            my $gene = $gene_aptr->fetch_by_dbID($gene_id);
-            push(@candidate, $gene);
-        }
-        
-        my $fixed_this_gene = 0;
-        my @overlaps = grep @$_ > 1, group_by_contigs(@candidate);
-        if (@overlaps) {
-            foreach my $group (@overlaps) {
-                print "  GROUP:\n";
-                my( %ctg_count, %gene_stable_id );
-                foreach my $g (sort {$a->modified <=> $b->modified} @$group) {
-                    # Make a key from all the contig names
-                    my $ctg_key = join(' ', sort {$a cmp $b} list_contig_names($g));
-                    $ctg_count{$ctg_key}++;
-                    $gene_stable_id{$g->stable_id}++;
-                    printf "    %s\t%s\t%s\n", $g->stable_id, $g->version, scalar localtime($g->modified);
-                    print  "      $ctg_key\n";
-                }
-                if (keys %ctg_count > 1) {
-                    print "  Gene in this group is not always on the same contig - Can't resolve\n";
-                    next;
-                }
-                if (keys %gene_stable_id != @$group) {
-                    print "  Some gene IDs appear more than once in this group - Can't resolve\n";
-                    next;
-                }
-                print "  Going to set new duplicates to obsolete\n";
-                $fixed_this_gene++;
+    $dba->begin_work;
+    eval{
+        while (my ($name, $gid_list) = each %name_gid) {
+            next unless  @$gid_list > 1;
+            print "\nNAME: $name\n";
+            $names_examined++;
+            my( @candidate );
+            foreach my $gene_id (@$gid_list) {
+                my $gene = $gene_aptr->fetch_by_dbID($gene_id);
+                push(@candidate, $gene);
             }
-        } else {
-            print "  No overlapping genes under this name\n";
+
+            my $fixed_this_gene = 0;
+            my @overlaps = grep @$_ > 1, group_by_contigs(@candidate);
+            if (@overlaps) {
+                foreach my $group (@overlaps) {
+                    print "  GROUP:\n";
+                    my( %ctg_count, %gene_stable_id );
+                    @$group = sort {
+                        $b->modified <=> $a->modified       # Keep the most recently modified
+                        || $a->stable_id cmp $b->stable_id  # ... or the oldest otter ID
+                        } @$group;
+                    foreach my $g (@$group) {
+                        # Make a key from all the contig names
+                        my $ctg_key = join(' ', sort {$a cmp $b} list_contig_names($g));
+                        $ctg_count{$ctg_key}++;
+                        $gene_stable_id{$g->stable_id}++;
+                        print "    ", gene_str($g);
+                        print  "      $ctg_key\n";
+                    }
+                    if (keys %ctg_count > 1) {
+                        print "  Gene in this group is not always on the same contig - Can't resolve\n";
+                        next;
+                    }
+                    if (keys %gene_stable_id != @$group) {
+                        print "  Some gene IDs appear more than once in this group - Can't resolve\n";
+                        next;
+                    }
+                    print "  Going to set duplicates to obsolete\n";
+                    my $keep = shift @$group;
+                    print "  Keeping:\n",
+                        "    ", gene_str($keep);
+                    foreach my $g (@$group) {
+                        $make_obsolete->execute($g->dbID);
+                    }
+                    $fixed_this_gene++;
+                }
+            } else {
+                print "  No overlapping genes under this name\n";
+            }
+            $genes_fixed++ if $fixed_this_gene;
         }
-        $genes_fixed++ if $fixed_this_gene;
+    };
+    if ($@) {
+        $dba->rollback;
+        die "\n\nError: $@";
+    } else {
+        print "\n\nExamined $names_examined candidates and fixed $genes_fixed\n";
+        $dba->commit;
     }
+}
+
+sub gene_str {
+    my( $gene ) = @_;
     
-    print "Examined $names_examined candidates and fixed $genes_fixed\n";
+    return sprintf "%s\t%s\t%s\n", $gene->stable_id, $gene->version, scalar localtime($gene->modified);
 }
 
 sub fetch_all_current_gene_ids {

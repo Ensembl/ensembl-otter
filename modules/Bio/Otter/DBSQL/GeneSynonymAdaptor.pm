@@ -39,18 +39,10 @@ sub _generic_sql_fetch {
 	my @out;
 
 	while  (my $ref = $sth->fetchrow_hashref) {
-
 	    my $obj = new Bio::Otter::GeneSynonym;
-	    eval {
-		$obj->dbID($ref->{synonym_id});
-	        $obj->name($ref->{name});
-	        $obj->gene_info_id($ref->{gene_info_id});
-	    };
-	    if ($@){
-	      warn "No dbID: can't fetch synonym_id";
-              warn "Can't fetch name";
-	      warn "Cant' fetch gene info";
-            }
+	    $obj->dbID($ref->{synonym_id});
+	    $obj->name($ref->{name});
+	    $obj->gene_info_id($ref->{gene_info_id});
 	    push(@out,$obj);
 	  }
 	return @out;

@@ -18,7 +18,7 @@ sub fetch_new_gene_stable_id {
 
 sub fetch_new_transcript_stable_id {
     my ($self) = @_;
-    warn $self;
+
     return $self->_fetch_new_by_type('transcript', 'T');
 }
 

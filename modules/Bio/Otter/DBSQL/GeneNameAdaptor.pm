@@ -158,7 +158,7 @@ sub store {
 
     my $sql = "insert into gene_name(gene_name_id,name,gene_info_id) values (null,\'" . 
 	 $obj->name . "\',".
-	 $obj->gene_info_id . ");";  
+	 $obj->gene_info_id . ")";  
  
 
     my $sth = $self->prepare($sql);
