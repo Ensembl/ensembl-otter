@@ -29,18 +29,19 @@ sub _generic_sql_fetch {
 		SELECT gene_info_id,
 		       gene_stable_id,
                        author_id,
-                       timestamp
+                       is_known,
+                       UNIX_TIMESTAMP(timestamp)
 		FROM gene_info }
 	. $where_clause;
 
 	my $sth = $self->prepare($sql);
 	$sth->execute;
 
-	if (my $ref = $sth->fetchrow_hashref) {
-		my $info_id   = $ref->{gene_info_id};
-		my $stable_id  = $ref->{gene_stable_id};
-		my $author_id = $ref->{author_id};
-		my $timestamp = $ref->{timestamp};
+	if (my $row = $sth->fetch) {
+		my $info_id   = $row->[0];
+		my $stable_id = $row->[1];
+		my $author_id = $row->[2];
+		my $timestamp = $row->[4];
 
 		#  Should probably do this all in the sql           
 		my $aad = $self->db->get_AuthorAdaptor();
@@ -50,7 +51,8 @@ sub _generic_sql_fetch {
                                                         -gene_stable_id  => $stable_id,
                                                         -author          => $author,
                                                         -timestamp       => $timestamp);
-	
+	        $geneinfo->known_flag($row->[3] eq 'true' ? 1 : 0);
+        
                 # Now get the remarks using the GeneRemarkAdaptor	
 
 		my @remark = $self->db->get_GeneRemarkAdaptor->list_by_gene_info_id($info_id);
@@ -150,38 +152,39 @@ sub store {
 
   $self->db->get_AuthorAdaptor->store($geneinfo->author);
   
-  my $sql = "insert into gene_info(gene_stable_id,author_id,timestamp) values (\'" . 
-      $geneinfo->gene_stable_id . "\'," . 
-      $geneinfo->author->dbID . ",now())";
+  my $sth = $self->prepare(q{
+      INSERT INTO gene_info(
+            gene_stable_id
+            , author_id
+            , is_known
+            , timestamp )
+      VALUES (?,?,?,NOW())
+      });
+  $sth->execute(
+    $geneinfo->gene_stable_id,
+    $geneinfo->author->dbID,
+    $geneinfo->known_flag ? 'true' : 'false',
+    );
+  my $db_id = $sth->{'mysql_insertid'} or
+    $self->throw("failed to get autoincremented ID from gene_info insert");
   
-  my $sth = $self->prepare($sql);
-  my $rv  = $sth->execute();
-  
-  $self->throw("Failed to insert geneinfo for gene " . $geneinfo->gene_stable_id) unless $rv;
-  
-  my $sth2 = $self->prepare("select last_insert_id()");
-  my $res = $sth2->execute;
-  my $row = $sth2->fetchrow_hashref;
-
-  $sth2->finish;
-  
-  $geneinfo->dbID($row->{'last_insert_id()'});
+  $geneinfo->dbID($db_id);
 
   # First the name
   my $name = $geneinfo->name;
-  $name->gene_info_id($geneinfo->dbID);
+  $name->gene_info_id($db_id);
 
   $self->db->get_GeneNameAdaptor->store($name);
 
   # Now the synonyms
   foreach my $syn ($geneinfo->synonym) {
-      $syn->gene_info_id($geneinfo->dbID);
+      $syn->gene_info_id($db_id);
       $self->db->get_GeneSynonymAdaptor->store($syn);
   }
   # And finally the remarks
 
   foreach my $rem ($geneinfo->remark) {
-      $rem->gene_info_id($geneinfo->dbID);
+      $rem->gene_info_id($db_id);
       $self->db->get_GeneRemarkAdaptor->store($rem);
   }  
 

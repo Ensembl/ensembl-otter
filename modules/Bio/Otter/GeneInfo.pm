@@ -275,6 +275,10 @@ sub equals {
 	$self->throw("[$obj] is not a Bio::Otter::GeneInfo");
     }
 
+    if ($self->known_flag != $obj->known_flag) {
+        return 0;
+    }
+
     if ($self->gene_stable_id ne $obj->gene_stable_id ||
 	$self->author->equals($obj->author) == 0) {          
 	return 0;
