@@ -32,7 +32,7 @@ use Bio::Otter::Lace::Defaults;
     my $order_by = ($sort ? 'ORDER BY gsi1.stable_id' : '');
 
     my $sth = $ens_db->prepare(qq{
-        SELECT gsi1.stable_id
+        SELECT DISTINCT gsi1.stable_id
           FROM assembly a,
             contig c,
             exon e,
