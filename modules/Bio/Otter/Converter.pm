@@ -80,6 +80,7 @@ sub XML_to_otter {
     } elsif (/<locus_type>(.*)<\/locus_type>/) {
       if ($currentobj ne $1) {
         #print STDERR "EEEK! Wrong locus type [$currentobj][$1]\n";
+        $gene->type($1);
       }
     } elsif (/<stable_id>(.*)<\/stable_id>/) {
       my $stable_id = $1;
@@ -448,17 +449,19 @@ sub XML_to_otter {
   
   #$assembly_type = 'fake_gp_1' if (!defined($assembly_type));
 
-  $slice = new Bio::EnsEMBL::Slice(-chr_name  => $chrname,
-                                   -chr_start => $chrstart,
-                                   -chr_end   => $chrend,
-                                   -strand    => 1,
-                                   -assembly_type => $assembly_type);
+  if ($chrstart != 2000000000) {
 
-
-  #$slice->seq($seqstr);
-
-  @tiles     = sort { $a->assembled_start <=> $b->assembled_start} @tiles;
-
+      $slice = new Bio::EnsEMBL::Slice(-chr_name  => $chrname,
+                                       -chr_start => $chrstart,
+                                       -chr_end   => $chrend,
+                                       -strand    => 1,
+                                       -assembly_type => $assembly_type);
+  
+                                       
+        @fragnames = sort { $frag{$a}{start} <=> $frag{$b}{start} } @fragnames;
+        @tiles     = sort { $a->assembled_start <=> $b->assembled_start} @tiles;
+    }
+    
   # print STDERR "chrname = " . $chrname . " chrstart = " . $chrstart . " chrend = "
   #  . $chrend . "\n";
 
@@ -1645,7 +1648,7 @@ sub prune_Exons {
 
   foreach my $id (keys %exonhash) {
      if ($exonhash{$id} > 1) {
-      print STDERR "Exon id seen twice $id " . $exonhash{$id} . "\n";
+     # print STDERR "Exon id seen twice $id " . $exonhash{$id} . "\n";
      }
    }
 }
@@ -2055,4 +2058,3 @@ sub ace_escape {
 }
 
 1;
-
