@@ -51,7 +51,7 @@ sub initial_canvas_size {
     if (my $in = $self->{'_initial_canvas_size'}) {
         return @$in;
     } else {
-        return (50,50); # Default
+        return (250,250); # Default
     }
 }
 
@@ -303,7 +303,7 @@ sub fix_window_min_max_sizes {
     
     my $mw = $self->canvas->toplevel;
     $mw->update;
-
+    
     my( $other_x, # other_x and other_y record the space occupied
         $other_y, # by the widgets other than the canvas in the
                   # window.

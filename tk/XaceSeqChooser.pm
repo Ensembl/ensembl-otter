@@ -106,6 +106,19 @@ sub get_GeneMethod {
     }
 }
 
+sub get_all_GeneMethods {
+    my( $self ) = @_;
+    
+    return values %{$self->{'_gene_methods'}};
+}
+
+sub get_all_mutable_GeneMethods {
+    my( $self ) = @_;
+    
+    return sort {lc($a->name) cmp lc($b->name)}
+        grep $_->is_mutable, $self->get_all_GeneMethods;
+}
+
 sub add_buttons {
     my( $self, $tk ) = @_;
     
@@ -218,7 +231,7 @@ sub clone_sub_switch {
     } else {
         $self->switch_to_clone_display;
     }
-    $self->set_window_size(1);
+    #$self->set_window_size(1);
     $self->fix_window_min_max_sizes;
 }
 
@@ -316,15 +329,22 @@ sub edit_subsequences {
     my @sub_names = $self->list_selected_subseq_names;
     my $canvas = $self->canvas;
     foreach my $sub_name (@sub_names) {
+        # Just show the edit window if present
         next if $self->raise_subseq_edit_window($sub_name);
         
-        my $sub = $self->get_SubSeq($sub_name);
+        # Get a copy of the subseq
+        my $sub = $self->get_SubSeq($sub_name)->clone;
+        
+        # Make a new window
         my $top = $canvas->Toplevel(
             -title  => $sub_name,
             );
+        
+        # Make new ExonCanvas object and initialize
         my $ec = ExonCanvas->new($top);
         $ec->name($sub_name);
         $ec->xace_seq_chooser($self);
+        $ec->SubSeq($sub);
         $ec->initialize;
         
         $self->save_subseq_edit_window($sub_name, $top);
@@ -481,9 +501,6 @@ sub express_clone_and_subseq_fetch {
                 }
             }
             
-            # Mark the subsequence as coming from the db
-            $sub->is_archival(1);
-            
             $clone->add_SubSeq($sub);
             $self->add_SubSeq($sub);
         };
@@ -494,16 +511,31 @@ sub express_clone_and_subseq_fetch {
     return $clone;
 }
 
+sub replace_SubSeq {
+    my( $self, $sub ) = @_;
+    
+    my $sub_name = $sub->name;
+    my $clone_name = $sub->clone_Sequence->name;
+    my $clone = $self->get_CloneSeq($clone_name);
+    $clone->replace_SubSeq($sub);
+    $self->{'_subsequence_cache'}{$sub_name} = $sub;
+}
+
 sub add_SubSeq {
     my( $self, $sub ) = @_;
     
     my $name = $sub->name;
-    $self->{'_subsequence_cache'}{$name} = $sub;
+    if ($self->{'_subsequence_cache'}{$name}) {
+        confess "already have SubSeq '$name'";
+    } else {
+        $self->{'_subsequence_cache'}{$name} = $sub;
+    }
 }
 
 sub get_SubSeq {
     my( $self, $name ) = @_;
     
+    confess "no name given" unless $name;
     return $self->{'_subsequence_cache'}{$name};
 }
 

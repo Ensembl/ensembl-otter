@@ -43,12 +43,17 @@ sub name {
     return $self->{'_name'};
 }
 
-sub subseq {
-    my( $self ) = @_;
+sub SubSeq {
+    my( $self, $sub ) = @_;
     
-    my $name = $self->name
-        or confess "name not set";
-    return $self->xace_seq_chooser->get_SubSeq($name);
+    if ($sub) {
+        my $expected = 'Hum::Ace::SubSeq';
+        unless ($sub->isa($expected)) {
+            confess "Expected a '$expected', but got a '$sub'";
+        }
+        $self->{'_SubSeq'} = $sub;
+    }
+    return $self->{'_SubSeq'};
 }
 
 sub xace_seq_chooser {
@@ -63,9 +68,9 @@ sub xace_seq_chooser {
 sub add_SubSeq_exons {
     my( $self, $subseq ) = @_;
     
-    my $expected_class = 'Hum::Ace::SubSeq';
-    unless ($subseq->isa($expected_class)) {
-        warn "Unexpected object '$subseq', expected a '$expected_class'";
+    my $expected = 'Hum::Ace::SubSeq';
+    unless ($subseq->isa($expected)) {
+        warn "Unexpected object '$subseq', expected a '$expected'";
     }
     
     my $strand = $subseq->strand;
@@ -229,10 +234,11 @@ sub add_coordinate_pair {
 sub initialize {
     my( $self ) = @_;
     
-    my $sub    = $self->subseq;
+    my $sub    = $self->SubSeq;
     my $canvas = $self->canvas;
+    my $top = $canvas->toplevel;
 
-    my $method = $sub->GeneMethod;
+    $self->archive_string($sub->as_ace_file_format_text);
     $self->add_SubSeq_exons($sub);
 
     # Routines to handle the clipboard
@@ -250,42 +256,14 @@ sub initialize {
     };
 
     # Save changes on window close
-    my $top = $canvas->toplevel;
     my $window_close = sub {
-        my ($sub, $ace) = $self->to_ace_subseq;
-        unless ($sub and $sub->is_archival) {
-            require Tk::Dialog;
-            my $name = $self->name;
-            my $dialog = $self->canvas->toplevel->Dialog(
-                -title  => 'Save changes?',
-                -text   => "Save changes to SubSequence '$name' ?",
-                -default_button => 'Yes',
-                -buttons    => [qw{ Yes No Cancel }],
-                );
-            my $ans = $dialog->Show;
-            if ($ans eq 'Cancel') {
-                return;
-            }
-            elsif ($ans eq 'Yes') {
-                return unless $sub;
-                my $xr = $self->xace_seq_chooser->xace_remote;
-                if ($xr) {
-                    $xr->load_ace($ace);
-                    $xr->save;
-                    $sub->is_archival(1);
-                } else {
-                    $self->message("No xace attached");
-                    return;
-                }
-            }
-        }
-        $self->delete_chooser_window_ref;
+        $self->window_close;
+        
         # Have to specifically undef $self, or the
         # ExonCanvas object doesn't get destroyed,
         # because the other closures still reference it.
         $self = undef;
-        $top->destroy;
-    };
+        };
     
     ### Buttons
 
@@ -296,7 +274,7 @@ sub initialize {
         -command    => sub{
                 my $xr = $self->xace_seq_chooser->xace_remote;
                 if ($xr) {
-                    $xr->show_SubSeq($self->subseq);
+                    $xr->show_SubSeq($self->SubSeq);
                 } else {
                     $self->message("No xace attached");
                 }
@@ -305,6 +283,7 @@ sub initialize {
         -side   => 'left',
         );
     
+    my $method = $sub->GeneMethod;
     if ($method->is_mutable) {
 
         # Sort the postions
@@ -328,21 +307,43 @@ sub initialize {
         # Save in xace
         my $save_button = $bf->Button(
             -text       => 'Save',
-            -command    => sub{
-                my ($sub, $ace) = $self->to_ace_subseq;
-                #warn $ace;
-                my $xr = $self->xace_seq_chooser->xace_remote;
-                if ($xr) {
-                    $xr->load_ace($ace);
-                    $xr->save;
-                    $sub->is_archival(1);
-                } else {
-                    $self->message("No xace attached");
-                }
-            });
+            -command    => sub{ $self->xace_save },
+            );
         $save_button->pack(
             -side   => 'left',
             );
+
+        # Choice of Method
+        {
+            require Tk::Optionmenu;
+            my $bottom_frame = $top->Frame;
+            $bottom_frame->pack(
+                -side => 'top',
+                -fill => 'x',
+                );
+            
+            # Label for option menu
+            my $label = $bottom_frame->Label(
+                -text   => 'Method:',
+                -anchor => 'e',
+                );
+            $label->pack(-side => 'left');
+            
+            # Menu to choose Method
+            my $initial_method = $sub->GeneMethod->name;
+            my @meth = map $_->name,
+                $self->xace_seq_chooser->get_all_mutable_GeneMethods;
+            my $method_chooser = $bottom_frame->Optionmenu(
+                -options    => [@meth],
+                -command    => sub {
+                    my $name = shift;
+                    my $meth = $self->xace_seq_chooser->get_GeneMethod($name);
+                    $self->SubSeq->GeneMethod($meth);
+                },
+                -variable   => \$initial_method,
+                );
+            $method_chooser->pack(-side => 'left');
+        }
 
         # Keyboard editing commands
         $canvas->Tk::bind('<Left>',      sub{ $self->canvas_text_go_left   });
@@ -420,6 +421,32 @@ sub initialize {
     #$top->transient($top->parent);
     
     $self->fix_window_min_max_sizes;
+}
+
+sub window_close {
+    my( $self ) = @_;
+    
+    my $xc = $self->xace_seq_chooser;
+    my $sub = $self->SubSeq;
+    if (my $ace = $self->get_ace_if_changed) {
+        require Tk::Dialog;
+        my $name = $self->name;
+        my $dialog = $self->canvas->toplevel->Dialog(
+            -title  => 'Save changes?',
+            -text   => "Save changes to SubSequence '$name' ?",
+            -default_button => 'Yes',
+            -buttons    => [qw{ Yes No Cancel }],
+            );
+        my $ans = $dialog->Show;
+        if ($ans eq 'Cancel') {
+            return;
+        }
+        elsif ($ans eq 'Yes') {
+            $self->xace_save($ace) or return;
+        }
+    }
+    $self->delete_chooser_window_ref;
+    $self->canvas->toplevel->destroy;
 }
 
 sub canvas_insert_character {
@@ -608,7 +635,7 @@ sub export_highlighted_text_to_selection {
     my( $self, $offset, $max_bytes ) = @_;
     
     my @text = $self->get_all_selected_text;
-    my $strand = $self->subseq->strand;
+    my $strand = $self->SubSeq->strand;
     my $clip = '';
     if (@text == 1) {
         $clip = $text[0];
@@ -646,8 +673,8 @@ sub get_all_selected_text {
 sub export_ace_subseq_to_selection {
     my( $self, $offset, $max_bytes ) = @_;
         
-    my $sub = $self->to_ace_subseq;
-    my $text = $sub->as_ace_file_text;
+    my $sub = $self->update_ace_subseq;
+    my $text = $sub->as_ace_file_format_text;
     if (length($text) > $max_bytes) {
         die "text too big";
     }
@@ -781,32 +808,62 @@ sub add_exon_holder {
     return $size + $pad;
 }
 
-sub to_ace_subseq {
+sub get_ace_if_changed {
     my( $self ) = @_;
-
-    my @exons = $self->Exons_from_canvas or return;
-    my $arch_str = $self->archive_string;
-    my $subseq = $self->subseq;
-    $subseq->replace_all_Exons(@exons);
-    my $new_str = $subseq->as_ace_file_format_text;
-    if ($new_str eq $arch_str) {
-        $subseq->is_archival(1);
+    
+    my $sub = $self->update_ace_subseq;
+    my $new = $sub->as_ace_file_format_text;
+    my $old = $self->archive_string;
+    if ($new eq $old) {
+        return;
     } else {
-        $subseq->is_archival(0);
+        return $new;
     }
-    return($subseq, $new_str);
 }
 
 sub archive_string {
-    my( $self ) = @_;
+    my( $self, $string ) = @_;
     
-    my( $arch );
-    unless ($arch = $self->{'_archive_string'}) {
-        my $subseq = $self->subseq;
-        $arch = $subseq->as_ace_file_format_text;
-        $self->{'_archive_string'} = $arch;
+    if ($string) {
+        $self->{'_archive_string'} = $string;
     }
-    return $arch;
+    return $self->{'_archive_string'}
+        || confess "archive string not set";
+}
+
+sub update_ace_subseq {
+    my( $self ) = @_;
+
+    my @exons = $self->Exons_from_canvas or return;
+
+    my $sub = $self->SubSeq;
+    $sub->replace_all_Exons(@exons);
+    return $sub;
+}
+
+sub xace_save {
+    my( $self, $ace ) = @_;
+    
+    # $ace can be supplied to avoid calculating it twice
+    my( $sub );
+    if ($ace) {
+        $sub = $self->SubSeq;
+    } else {
+        $sub = $self->update_ace_subseq;
+        $ace = $sub->as_ace_file_format_text;
+    }
+    
+    my $xc = $self->xace_seq_chooser;
+    my $xr = $xc->xace_remote;
+    if ($xr) {
+        $xr->load_ace($ace);
+        $xr->save;
+        $self->archive_string($ace);
+        return 1;
+    } else {
+        $self->message("No xace attached");
+        return 0;
+    }
 }
 
 sub Exons_from_canvas {
