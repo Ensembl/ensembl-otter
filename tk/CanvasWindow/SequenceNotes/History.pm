@@ -391,7 +391,7 @@ use GenomeCanvas::Band::SeqChooser;
         }
         else{
             $self->toplevel->messageBox(-title => 'Sorry', 
-            -message => "Only the origonal author, $note_author, can update these comments\nYou are currently logged on as $current_user", 
+            -message => "Only the original author, $note_author, can update these comments\nYou are currently logged on as $current_user", 
             -type => 'OK');
             #$return_string = "Sorry, only the original author can update this note"; 
             
