@@ -781,27 +781,29 @@ sub save_data {
 
 sub save_polyAs{
     my ($self) = @_;
-    my @polyA_list = @{$self->{'_polyA'}};
-   
-    my $xr = $self->xace_remote; 
-   
-    foreach my $window  ( @polyA_list){
-        if ($xr){        
-            warn "saving " . $window->toplevel->title;
-            eval{ $window->close_window;};
+    if ($self->{'_polyA'}){
+        my @polyA_list = @{$self->{'_polyA'}};
+
+        my $xr = $self->xace_remote; 
+
+        foreach my $window  ( @polyA_list){
+            if ($xr){        
+                warn "saving " . $window->toplevel->title;
+                eval{ $window->close_window;};
+            }
         }
-    }
+    }    
 
 }
 
 sub close_polyAs{
     my $self = shift @_ ;
-    my $listref = $self->{'_polyA'} ;
-    my @list = @$listref ;
-
-    foreach my $window ( @list){
-        $window->delete_xace_chooser;
-        $window->toplevel->destroy ;   
+    if ($self->{'_polyA'}){
+        my @list = @{$self->{'_polyA'}} ;
+        foreach my $window ( @list){
+            $window->delete_xace_chooser;
+            $window->toplevel->destroy ;   
+        }
     }
 }
 
