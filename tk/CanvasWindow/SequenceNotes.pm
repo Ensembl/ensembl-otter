@@ -9,8 +9,6 @@ use base 'CanvasWindow';
 use MenuCanvasWindow::XaceSeqChooser;
 use CanvasWindow::SequenceNotes::History;
 
-# An extra line
-
 sub name {
     my( $self, $name ) = @_;
     
@@ -386,9 +384,6 @@ sub hunt_for_selection {
         }
     }
 }
-
-
-
 
 sub make_button {
     my( $self, $parent, $label, $command, $underline_index ) = @_;
