@@ -178,8 +178,8 @@ sub make_new_child {
           # $client->send_file(\*PRG);
           my $nline = 0;     
           while (<PRG>) {    
+            #print STDERR $_;
             print $client $_;
-            #print STDERR $_;    
             $nline++;
           }
           if (!$nline) {
@@ -205,8 +205,8 @@ sub make_new_child {
         close FPDBG;
         print "OTTER_SERVER : Printing response\n";
         while (<$out>) {
-          print STDERR $_;
-          #print $client $_;
+          #print STDERR $_;
+          print $client $_;
         }
         print "OTTER_SERVER : End response\n";
         close $out;
@@ -221,8 +221,8 @@ sub make_new_child {
         close $in;
         print "OTTER_SERVER : Printing response\n";
         while (<$out>) {
-          print STDERR $_;
-          #print $client $_;
+          #print STDERR $_;
+          print $client $_;
         }
         print "OTTER_SERVER : End response\n";
         close $out;
