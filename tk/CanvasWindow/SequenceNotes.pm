@@ -9,6 +9,7 @@ use base 'CanvasWindow';
 use MenuCanvasWindow::XaceSeqChooser;
 use CanvasWindow::SequenceNotes::History;
 use CanvasWindow::SequenceNotes::Status;
+use POSIX qw(ceil);
 
 sub name {
     my( $self, $name ) = @_;
@@ -53,11 +54,13 @@ sub get_CloneSequence_list {
     my $ss = $self->SequenceSet;
     my $cs_list = $ss->CloneSequence_list;
     if ($force_update || !$cs_list ) {
+        print STDERR "Fetching CloneSequence list...";
         my $ds = $self->SequenceSetChooser->DataSet;
         $ds->fetch_all_CloneSequences_for_SequenceSet($ss);
         $ds->fetch_all_SequenceNotes_for_SequenceSet($ss);
         $ds->status_refresh_for_SequenceSet($ss);
         $cs_list = $ss->CloneSequence_list;
+        print STDERR "done\n";
     }
     return $cs_list;
 }
@@ -189,9 +192,10 @@ sub _draw_image{
 }
 
 sub _column_text_row_number {
-    my( $cs, $row ) = @_;
-    
-    return { -text => 1 + $row };
+    my( $cs, $row, $self ) = @_;
+
+    my $row_no = ($self->_user_first_clone_seq || 1) + $row;
+    return { -text => $row_no };
 }
 
 sub _column_text_seq_note_author {
@@ -317,7 +321,17 @@ sub initialise {
 	$self->hunt_for_selection;
 	$top->Unbusy;
     };
-    
+
+    if( @{$self->get_CloneSequence_list()} > $self->max_per_page() ){
+        $self->_allow_paging(1);
+        my $open_range = sub{
+            $top->Busy;
+            $self->draw_range();
+            $top->Unbusy;
+        };
+        $self->make_button($button_frame_2, 'Show Range [F7]', $open_range);
+        $top->bind('<F7>', $open_range);
+    }
     ## First call to this returns empty list!
     #my @all_text_obj = $canvas->find('withtag', 'contig_text');
     
@@ -353,6 +367,7 @@ sub initialise {
     $self->make_button($button_frame_2, 'Run lace', $run_lace, 4);
     $top->bind('<Control-l>', $run_lace);
     $top->bind('<Control-L>', $run_lace);
+
     
     #if ($write) {
     #    
@@ -673,18 +688,245 @@ sub make_XaceSeqChooser {
 ## this returns the rows to be displayed - havent used get_CloneSequence_list directly, as this allows for easier inheritence of the module
 sub get_rows_list{
     my ($self) = @_;
-    print STDERR "Fetching CloneSequence list...";
-    return $self->get_CloneSequence_list;
+    my $cs_list = $self->get_CloneSequence_list;
+    my $max_cs_list = scalar(@$cs_list);
+
+    if($self->_allow_paging()){
+        my ($offset, $length) = $self->_sanity_check_paging($max_cs_list);
+        warn "slice $offset .. $length\n";
+        $cs_list = [ @{$cs_list}[$offset..$length] ];
+    }
+    return $cs_list;
+}
+sub _sanity_check_paging{
+    my ($self, $max) = @_;
+    $max--;
+    my $slice_a = $self->_user_first_clone_seq() - 1;
+    my $slice_b = $self->_user_last_clone_seq()  - 1;
+    my $max_pp  = $self->max_per_page()          - 1;
+    my $sanity_saved = 0;
+
+    if($slice_a < 0){
+        $sanity_saved = 1;
+        $slice_a      = 0;
+    }
+    if($slice_b > $max){
+        $sanity_saved = 1;
+        $slice_b      = $max;
+    }
+    if($slice_a > $slice_b){
+        $sanity_saved        = 1;
+        ($slice_a, $slice_b) = (0, $max_pp);
+    }
+    $self->_user_first_clone_seq($slice_a + 1);
+    $self->_user_last_clone_seq($slice_b + 1);    
+    $self->max_per_page($slice_b - $slice_a + 1) unless $sanity_saved;
+    
+    return ($slice_a, $slice_b);
+}
+sub _user_first_clone_seq{
+    my ($self, $min) = @_;
+    if(defined($min)){
+        $min =~ s/\D//g;
+        $self->{'_user_min_element'} = $min;
+    }
+    return $self->{'_user_min_element'} || 0;
+}
+sub _user_last_clone_seq{
+    my ($self, $max) = @_;
+    if(defined($max)){
+        $max =~ s/\D//g;
+        $self->{'_user_max_element'} = $max;
+    }
+    return $self->{'_user_max_element'} || 1;
+}
+sub max_per_page{
+    my ($self, $max) = @_;
+    $self->{'_max_per_page'} = $max if $max;
+    return $self->{'_max_per_page'} || 100;
+}
+sub draw_paging_buttons{
+    my ($self) = @_;
+    return () unless $self->_allow_paging();
+
+    my $cur_min = $self->_user_first_clone_seq();
+    my $cur_max = $self->_user_last_clone_seq();
+    my $abs_max = scalar(@{$self->get_CloneSequence_list()});
+    my $ppg_max = $self->max_per_page();
+
+    my $prev_new_min = ($cur_min > 0        ? $cur_min - $ppg_max : 0);
+    my $next_new_max = ($cur_max < $abs_max ? $cur_max + $ppg_max : $abs_max);
+    my $prev_new_max = $cur_min - 1;
+    my $next_new_min = $cur_max + 1;
+    
+    my $prev_state   = ($cur_min - $ppg_max > 0 ? 'normal' : 'disabled');
+    my $next_state   = ($cur_max < $abs_max     ? 'normal' : 'disabled');
+
+    my $t = ceil( $abs_max / $ppg_max );
+    my $n = ceil( $cur_min / $ppg_max );
+
+    return () if $prev_state eq 'disabled' && $next_state eq 'disabled';
+
+    my $canvas   = $self->canvas();
+    my $pg_frame = $canvas->Frame(-background => 'white');
+
+    my $top  = $canvas->toplevel();
+
+    my $prev_cmd = sub{
+        $self->_user_first_clone_seq($prev_new_min);
+        $self->_user_last_clone_seq($prev_new_max);
+        $self->draw();
+    };
+    my $next_cmd = sub{ 
+        $self->_user_first_clone_seq($next_new_min);
+        $self->_user_last_clone_seq($next_new_max);
+        $self->draw();
+    };
+    $top->bind('<Control-Shift-Key-space>', ($prev_state eq 'normal' ? $prev_cmd : undef));
+    $top->bind('<Control-Key-space>', ($next_state eq 'normal' ? $next_cmd : undef));
+    
+    my $prev = $pg_frame->Button(-text => 'prev',
+                                 -state => $prev_state,
+                                 -command => $prev_cmd
+                                 )->pack(
+                                         -side  => 'left'
+                                         );
+    my $mssg = $pg_frame->Label(-text => #"You are viewing a paged display of this sequence set. "
+                                "Page $n of $t",
+                                -justify => 'center',
+                                -background => 'white',
+                                )->pack(-side   => 'left',
+                                        -fill   => 'x',
+                                        -expand => 1);
+    my $next = $pg_frame->Button(-text => 'next',
+                                 -state => $next_state,
+                                 -command => $next_cmd
+                                 )->pack(
+                                         -side  => 'right'
+                                         );
+    my @bbox  = $canvas->bbox('all');
+    my $x     = $self->font_size();
+    my $y     = $bbox[3] + $x;
+    my $width = $bbox[2] - $x;
+    
+    $self->canvas->createWindow($x, $y,
+                                -width  => $width,
+                                -anchor => 'nw',
+                                -window => $pg_frame);
+}
+
+sub draw_range{
+    my ($self) = @_;
+    my $cs_list = $self->get_CloneSequence_list;
+    my $no_of_cs = scalar(@$cs_list);
+
+    unless($self->_allow_paging()){
+        $self->_user_first_clone_seq(1);
+        $self->_user_last_clone_seq($no_of_cs);
+        return $self->draw();
+    }
+
+    my $trim_window = $self->{'_trim_window'}; 
+
+    $self->_user_first_clone_seq(1);
+    $self->_user_last_clone_seq($self->max_per_page);
+
+    unless (defined ($trim_window)){
+        ## make a new window
+        my $master = $self->canvas->toplevel;
+        $master->withdraw(); # only do this first time.
+        $trim_window = $master->Toplevel(-title => 'Open Range');
+        $trim_window->transient($master);
+        $trim_window->protocol('WM_DELETE_WINDOW', sub{ $trim_window->withdraw });
+    
+        my $label = $trim_window->Label(-text => "It looks as though you are about to open" .
+                                        " a large sequence set. Would you like to restrict" .
+                                        " the number of clones visible in the ana_notes window?" .
+                                        " If so please enter the number of the first and last" .
+                                        " clones you would like to see.",
+                                        -wraplength => 400, ####????
+                                        -justify    => 'center'
+                                        )->pack(-side   =>  'top');
+        
+        my $entry_frame = $trim_window->Frame()->pack(-side   =>  'top',
+                                                      -pady   =>  5,
+                                                      -fill   =>  'x'
+                                                      ); 
+        my $label1 = $entry_frame->Label(-text => "First Clone: (1)"
+                                         )->pack(-side   =>  'left');
+        my $search_entry1 = $entry_frame->Entry(
+                                                -width        => 5,
+                                                -relief       => 'sunken',
+                                                -borderwidth  => 2,
+                                                -textvariable => \ ($self->{'_user_min_element'}),
+                                               )->pack(-side => 'left',
+                                                       -padx => 5,
+                                                       -fill => 'x'
+                                                       );
+        my $label2 = $entry_frame->Label(-text => "Last Clone: ($no_of_cs)"
+                                         )->pack(
+                                                 -side   =>  'left'
+                                                 );
+        my $search_entry2 = $entry_frame->Entry(-width        => 5,
+                                                -relief       => 'sunken',
+                                                -borderwidth  => 2,
+                                                -textvariable => \ ($self->{'_user_max_element'}),
+                                                )->pack(-side => 'left',
+                                                        -padx => 5,
+                                                        -fill => 'x',
+                                                        );
+        ## search cancel buttons
+        my $limit_cancel_frame = $trim_window->Frame()->pack(-side => 'bottom',
+                                                                     -padx =>  5,
+                                                                     -pady =>  5,
+                                                                     -fill => 'x'
+                                                                     );   
+        my $limit_button = $limit_cancel_frame->Button(-text => 'Open Range',
+                                                       -command =>  sub{ 
+                                                           $trim_window->withdraw();
+                                                           $master->deiconify();
+                                                           $master->raise();
+                                                           $master->focus();
+                                                           $self->draw();
+                                                       }
+                                                       )->pack(
+                                                               -side  => 'right'
+                                                               );
+        my $cancel_button = $limit_cancel_frame->Button(-text    => 'Open All',
+                                                        -command => sub { 
+                                                            $trim_window->withdraw();
+                                                            $self->_user_first_clone_seq(0);
+                                                            $self->_user_last_clone_seq($no_of_cs);
+                                                            $master->deiconify();
+                                                            $master->raise();
+                                                            $master->focus();
+                                                            $self->draw();
+                                                            }
+                                                        )->pack(
+                                                                -side => 'right'
+                                                                );
+        $self->{'_trim_window'} = $trim_window;
+        $trim_window->bind('<Destroy>' , sub { $self = undef }  ) ;
+    }
+    
+    $trim_window->deiconify;
+    $trim_window->raise;
+    $trim_window->focus;
+    return 1;
+}
+
+sub _allow_paging{
+    my $self = shift;
+    $self->{'_allow_paging'} = shift if @_;
+    return ($self->{'_allow_paging'} ? 1 : 0);
 }
 
 sub draw {
     my( $self ) = @_;
-    
     # gets a list of CloneSequence objects.
     # draws a row for each of them
-    
     my $cs_list   = $self->get_rows_list;
-    print STDERR " done\n";
+
     my $size      = $self->font_size;
     my $canvas    = $self->canvas;
     my $methods   = $self->column_methods;
@@ -697,6 +939,7 @@ sub draw {
     print STDERR "Drawing list...";
     my $gaps = 0;
     my $gap_pos = {};
+    
     for (my $i = 0; $i < @$cs_list; $i++) {   # go through each clone sequence
         my $row = $i + $gaps;
         my $cs = $cs_list->[$i];
@@ -763,8 +1006,12 @@ sub draw {
     print STDERR "Drawing background rectangles...";
     $self->draw_row_backgrounds($row_count, $gap_pos);
     print STDERR " done\n";
+
+    $self->draw_paging_buttons();
+
     $self->message($self->empty_canvas_message) unless scalar @$cs_list;
     $self->fix_window_min_max_sizes;
+    return 0;
 }
 
 
@@ -1195,8 +1442,6 @@ END_OF_PIXMAP
     }
     return $pix;
 }
-
-
 
 1;
 

@@ -260,7 +260,8 @@ sub open_sequence_set {
             $sn->SequenceSet($ss);
             $sn->SequenceSetChooser($self);
             $sn->initialise;
-            $sn->draw;   
+            #$sn->draw;   
+            $sn->draw_range;   
             $self->add_SequenceNotes($sn);
            
             #$this_top->Unbusy;
