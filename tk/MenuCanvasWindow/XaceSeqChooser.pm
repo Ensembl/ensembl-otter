@@ -76,8 +76,15 @@ sub initialize {
     $self->populate_polyA_menu();
     
     $self->_make_search;
-    $self->menu_bar()->Label(-text => 'Read Only',
-                             -foreground => 'red')->pack(-side => 'left') unless $self->write_access;
+    unless ($self->write_access) {
+        $self->menu_bar()->Label(
+            -text       => 'Read Only',
+            -foreground => 'red',
+            -padx       => 6,
+            )->pack(
+                    -side => 'right',
+                    );
+    }
     $self->fix_window_min_max_sizes;
 }
 

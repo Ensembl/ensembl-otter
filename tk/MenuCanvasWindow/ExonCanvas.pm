@@ -116,7 +116,8 @@ sub initialize {
     # Deselect all
     $canvas->Tk::bind('<Escape>', sub{ $self->deselect_all });
     
-    if ($self->is_mutable && $self->xace_seq_chooser->write_access) {
+    #if ($self->is_mutable && $self->xace_seq_chooser->write_access) {
+    if ($self->is_mutable) {
 
         # Save into db via xace
         my $save_command = sub{ $self->save_if_changed };
