@@ -13,7 +13,7 @@ use Bio::Otter::Lace::Client;
 our $CLIENT_STANZA  = 'client';
 our $DEFAULT_TAG    = 'default';
 our $DEFAULTS       = {};
-our @CLIENT_OPTIONS = qw(host=s port=s author=s email=s pipeline! write_access! group=s);
+my @CLIENT_OPTIONS = qw(host=s port=s author=s email=s pipeline! write_access! group=s);
 # @CLIENT_OPTIONS is Getopt::GetOptions() keys which will be included in the 
 # $DEFAULTS->{$CLIENT_STANZA} hash.  To add another client option just include in above
 # and if necessary add to hardwired defaults in do_getopt().
@@ -23,7 +23,7 @@ our $save_option = sub {
     $DEFAULTS->{$CLIENT_STANZA}->{$option} = $value;
 };
 our $save_deep_option = sub {
-    my ( $getopt ) = @_;
+    my $getopt = $_[1];
     my ($option, $value) = split(/=/, $getopt,2);
     $option = [split(/\./, $option)];
     set_hash_val($DEFAULTS, $option, $value);
@@ -62,8 +62,8 @@ sub do_getopt {
 	       # map {} makes these lines dynamically from @CLIENT_OPTIONS
 	       # 'host=s'        => $save_option,
 	       ( map { $_ => $save_option } @CLIENT_OPTIONS ),
-	       # this allows setting of options using @ARGV
-	       '<>'            => $save_deep_option,
+	       # this allows setting of options as in the config file
+	       'cfgstr=s'       => $save_deep_option,
 	       # this is just a synonym feel free to add more
 	       'view'          => sub{ $DEFAULTS->{$CLIENT_STANZA}->{'write_access'} = 0 },
 	       # these are the caller script's options
@@ -264,8 +264,9 @@ otter client from:
   /etc/otter_config
   hardwired defaults (in this module)
 
-The values filled in, which can be given by
-command line options of the same name, are:
+in that order.  The values filled in, which can
+be given by command line options of the same
+name, are:
 
 =over 4
 
@@ -294,46 +295,60 @@ Defaults to B<0>
 
 =head1 EXAMPLE
 
-Here's an example config file
+Here's an example config file:
 
-----START----
 
- [client]
- port=33999
+  [client]
+  port=33999
 
- [default.Filters]
- trf=1
- est2genome_mouse=1
+  [default.use_FilteRs]
+  trf=1
+  est2genome_mouse=1
 
- [zebrafish.filters]
- est2genome_mouse=0
+  [zebrafish.use_filters]
+  est2genome_mouse=0
 
- [default.filter.est2genome_mouse]
- module=Bio::EnsEMBL::Ace::Filter::Similarity::DnaSimilarity
- max_coverage=12
+  [default.filter.est2genome_mouse]
+  module=Bio::EnsEMBL::Ace::Filter::Similarity::DnaSimilarity
+  max_coverage=12
 
-----END----
 
-will make a hash
+which will make this hash:
 
- $hash = {
-    'client' => {'port' => 33999},       
-    'default' => {
-        'filters' => {'trf' => 1,
-                      'est2genome_mouse' => 1
-                     },
-        'filter' => {'est2genome_mouse' => {'module' => 'Bio::EnsEMBL::Ace::Filter::Similarity::DnaSimilarity',
-                                            'max_coverage' => 12
-                                           },
-                    },
-                  },
-    'zebrafish' => {
-        'filters' => {'trf' => 1}
-                   },
- };
+    $Bio::Otter::Lace::DEFAULTS = {
+        'client' => {
+            'port' => 33999,
+            },       
+        'default' => {
+            'use_filters' => {
+                'trf' => 1,
+                'est2genome_mouse' => 1
+                },
+            'filter' => {
+                'est2genome_mouse' => {
+                    'module' => 'Bio::EnsEMBL::Ace::Filter::Similarity::DnaSimilarity',
+                    'max_coverage' => 12
+                },
+            },
+        },
+        'zebrafish' => {
+            'use_filters' => {
+                'trf' => 1,
+                'est2genome_mouse' => 0,
+            },
+        },
+    };
 
-N.B. ALL hash keys are lower cased to ensure ease of look up.
-    
+N.B. ALL hash keys are lower cased to ensure ease
+of look up.  You can also specify options on the
+command line using the B<cfgstr> option.  Thus:
+
+    -cfgstr zebrafish.use_filters.est2genome_mouse=0
+
+will switch off est2genome_mouse for the
+zebrafish dataset exactly as the config file example
+above does.
+
 =head1 SYNOPSIS
 
   use Bio::Otter::Lace::Defaults;

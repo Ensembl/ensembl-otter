@@ -639,7 +639,7 @@ sub make_AceDataFactory {
     my $logic_to_load = {};
     my $module_options = {};
     if ($fetch_all_pipeline_data) {
-	$logic_to_load = $self->Client->option_from_array([$species, 'filters']);
+	$logic_to_load = $self->Client->option_from_array([$species, 'use_filters']);
 	$module_options = $self->Client->option_from_array([$species, 'filter']);
 
 	# require them
