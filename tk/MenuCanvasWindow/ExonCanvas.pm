@@ -266,8 +266,17 @@ sub initialize {
         # Choice of Method
         my @allowed_methods = map $_->name,
             $self->xace_seq_chooser->get_all_mutable_GeneMethods;
+        my $method_i = 0;
         my $current_method = $self->SubSeq->GeneMethod->name;
         $self->method_name_var(\$current_method);
+        #warn "Looking for '$current_method'";
+        for (my $i = 0; $i < @allowed_methods; $i++) {
+            if ($current_method eq $allowed_methods[$i]) {
+                #warn "Found at '$i'";
+                $method_i = $i;
+                last;
+            }
+        }
 
         my $type_frame = $frame->Frame(-border => 6)->pack(-side => 'top');
         $type_frame->Label(
@@ -285,7 +294,7 @@ sub initialize {
                 my $txt = $self->method_name_var;
                 },
             )->pack( -side => 'top' );
-        $om->menu->invoke($current_method);
+        $om->menu->invoke($method_i);
         
         # Widget for changing name
         $self->add_subseq_rename_widget($frame);
