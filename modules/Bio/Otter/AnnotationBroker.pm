@@ -85,8 +85,38 @@ sub compare_clones {
     return @changed;
 }
 
+sub make_id_version_hash {
+    my( $self, $genes ) = @_;
+    
+    my $stable_version = {};
+    foreach my $gene (@$genes) {
+        $self->store_stable($stable_version, $gene);
+        foreach my $tsct (@{$gene->get_all_Transcripts}) {
+            $self->store_stable($stable_version, $tsct);
+            if (my $tnsl = $tsct->translation) {
+                $self->store_stable($stable_version, $tnsl);
+            }
+        }
+        foreach my $exon (@{$gene->get_all_Exons}) {
+            $self->store_stable($stable_version, $exon);
+        }
+    }
+    
+    return $stable_version;
+}
+
+sub store_stable {
+    my( $self, $sid_v, $obj ) = @_;
+    
+    if (my $sid = $obj->stable_id) {
+        $sid_v->{$sid} = $obj->version;
+    }
+}
+
 sub compare_genes {
     my ($self, $old_genes, $new_genes) = @_;
+    
+    my $id_version_hash = $self->make_id_version_hash($old_genes);
 
     my $current_author = $self->current_author
         or $self->throw("current_author not set");
@@ -294,7 +324,7 @@ sub compare_genes {
 	my $old_gene = $oldgenehash{$id};
         my $new_gene = $newgenehash{$id};
 	
-        $self->increment_versions($old_gene,$new_gene);
+        $self->increment_versions($id_version_hash, $new_gene);
 
 	my $event = Bio::Otter::AnnotationBroker::Event->new( -type => 'modified',
 							      -new  => $new_gene,
@@ -335,58 +365,26 @@ sub set_gene_created_version_modified {
 }
 
 sub increment_versions {
-  my ($self,$old_gene,$new_gene) = @_;
+  my ($self, $id_version_hash, $new_gene) = @_;
 
-  my $gv = $old_gene->version;
-  $gv++;
-  $new_gene->version($gv);
+    $self->incerement_obj_version($id_version_hash, $new_gene);
+    foreach my $exon (@{$new_gene->get_all_Exons}) {
+        $self->incerement_obj_version($id_version_hash, $exon);
+    }
+    foreach my $tsct (@{$new_gene->get_all_Transcripts}) {
+        $self->incerement_obj_version($id_version_hash, $tsct);
+        if (my $tnsl = $tsct->translation) {
+            $self->incerement_obj_version($id_version_hash, $tnsl);
+        }
+    }
+}
+
+sub increment_obj_version {
+    my( $self, $id_version_hash, $obj ) = @_;
     
-  my %oldexonhash;
-  foreach my $exon (@{$old_gene->get_all_Exons}) {
-    $oldexonhash{$exon->stable_id} = $exon;
-  }
-  foreach my $exon (@{$new_gene->get_all_Exons}) {
-    my $ev;
-    if (defined($oldexonhash{$exon->stable_id})) {
-      $ev = $oldexonhash{$exon->stable_id}->version;
-    } else {
-      $ev = $exon->version;
-    }
-    $ev++;
-    print STDERR "Incrementing version to $ev for " . $exon->stable_id . "\n";
-    $exon->version($ev);
-  }
-  my %oldtranshash;
-  foreach my $tran (@{$old_gene->get_all_Transcripts}) {
-    $oldtranshash{$tran->stable_id} = $tran;
-  }
-  foreach my $tran (@{$new_gene->get_all_Transcripts}) {
-    my $tv;
-
-    if (defined($oldtranshash{$tran->stable_id})) {
-      $tv = $oldtranshash{$tran->stable_id}->version;
-    } else {
-      $tv = $tran->version;
-    }
-
-    $tv++;
-    $tran->version($tv);
-
-    if (defined($tran->translation)) {
-      print STDERR "Increasing translation version " . $tran->stable_id . " " . $tran->translation->stable_id . " "  . $tran->translation . "\n";
-
-      my $tnv = 0;
-
-      if (defined($oldtranshash{$tran->stable_id}) && defined($oldtranshash{$tran->stable_id}->translation)) {
-        $tnv = $oldtranshash{$tran->stable_id}->translation->version;
-      }
-
-      print STDERR "Existing version " . $tnv . "\n";
-      $tnv++;
-      $tran->translation->version($tnv);
-      print STDERR "New version $tnv\n";
-    }
-  }
+    my $version = $id_version_hash->{$obj->stable_id} || 0;
+    $version++;
+    $obj->version($version);
 }
 
 sub compare_obj {
