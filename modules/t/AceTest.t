@@ -25,12 +25,35 @@ ok(open(IN,"<$file"));
 ok(my ($genes2,$chr,$chrstart,$chrend,$type,$dna) = Bio::Otter::Converter::XML_to_otter(\*IN,$db));
 close(IN);
 
-ok(open(IN,"<$file"));
-my $oldxml = "";
-while (<IN>) {
-  $oldxml .= $_;
+my $db2 = new Bio::Otter::DBSQL::DBAdaptor(-host => $otter_test->host,
+                                           -user => $otter_test->user,
+                                           -port => $otter_test->port,
+                                           -dbname => $otter_test->dbname);
+
+$db2->assembly_type($type);
+
+my $slice = $db2->get_SliceAdaptor->fetch_by_chr_start_end($chr,$chrstart,$chrend);
+
+my $analysis = new Bio::EnsEMBL::Analysis(-logic_name => 'otter');
+$db->get_AnalysisAdaptor->store($analysis);
+
+my %transeq;
+
+foreach my $gene (@$genes2) {
+
+  $gene->analysis($analysis);
+
+  $db->get_AnnotatedGeneAdaptor->attach_to_Slice($gene,$slice);
+
+  foreach my $tran (@{$gene->get_all_Transcripts}) {
+    if (defined($tran->translation)) {
+      print "Pre tran " . $tran->translate->seq . "\n";
+      $transeq{$tran->stable_id} = $tran->translate->seq;
+    }
+  }
+  $db->get_AnnotatedGeneAdaptor->store($gene);
+
 }
-close(IN);
 
 print "Chr $chr $chrstart $chrend $type " . length($dna) . "\n";
 
@@ -47,8 +70,9 @@ $db2->assembly_type($type);
 my $slice = $db2->get_SliceAdaptor->fetch_by_chr_start_end($chr,$chrstart,$chrend);
 
 ok($dna eq $slice->seq);
-
-ok(my $str = Bio::Otter::Converter::otter_to_ace($slice,$genes2));
+my @genes = @{$db2->get_AnnotatedGeneAdaptor->fetch_by_Slice($slice)};
+$otter_test->pause;
+ok(my $str = Bio::Otter::Converter::otter_to_ace($slice,\@genes));
 
 open(OUT,">test.ace");
 print OUT $str;

@@ -39,11 +39,6 @@ ok($db->assembly_type($type));
 
 my @contigs = @{$db->get_RawContigAdaptor->fetch_all};
 
-foreach my $contig (@contigs) {
-  print $contig->name . "\n";
-  #print $contig->seq . "\n";
-} 
-
 #DBI->trace(2);
 my $db2 = new Bio::Otter::DBSQL::DBAdaptor(-host => $otter_test->host,
                                            -user => $otter_test->user,

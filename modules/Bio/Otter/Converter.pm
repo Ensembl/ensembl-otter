@@ -397,17 +397,17 @@ sub XML_to_otter {
 
 sub otter_to_ace {
   my ($contig, $genes) = @_;
-
   
   my $str =  "Sequence : \"" . $contig->display_id . "\"\nGenomic_canonical\n";
   foreach my $gene (@$genes) {
     foreach my $tran (@{ $gene->get_all_Transcripts }) {
       $str .= "Subsequence   \"" . $tran->stable_id . "\" ";
       my @exons = @{ $tran->get_all_Exons };
+      @exons = sort {$a->start <=> $b->start} @exons;
       if ($exons[0]->strand == 1) {
-        $str .= $tran->start . " " . $tran->end . "\n";
+        $str .= $exons[0]->start . " " . $exons[$#exons]->end . "\n";
       } else {
-        $str .= $tran->start . " " . $tran->end . "\n";
+        $str .= $exons[$#exons]->end . " " . $exons[0]->start. "\n";
       }
     }
   }
@@ -517,6 +517,13 @@ sub otter_to_ace {
     }
     $str .= "\n";
   }
+
+  # Finally the dna
+#  $str .= "\nDNA \"" . $contig->display_id . "\"\n";
+  #my $seq = $contig->seq;
+
+#  $seq =~ s/(.{72})/$1\n/g;
+#  $str .= $seq;
   return $str;
 }
 
