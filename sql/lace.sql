@@ -20,3 +20,11 @@ create table sequence_note (
     
     KEY(contig_id, is_current)
 );
+
+create table sequence_set_access (
+    assembly_type varchar (20) NOT NULL,
+    author_id INT(10) unsigned DEFAULT '0' NOT NULL,
+    access_type ENUM('R', 'RW') DEFAULT 'R' NOT NULL,
+    
+    PRIMARY KEY(assembly_type, author_id)
+);
