@@ -971,20 +971,12 @@ sub ace_to_otter {
                         $slice_name = $currname;
                     }
                 }
-                ### Not used so commented out
-                #elsif (/^(Clone_right_end|Clone_left_end) $STRING $INT/x) {
-                #  $curr_seq->{$1}{$2} = $3;
-                #}
-                elsif (/^Keyword $STRING/x) {
-                  my $keywords = $curr_seq->{keyword} ||= [];
-                  push @$keywords, $1;
-                }
-                elsif (/^Annotation_remark $STRING/x) {
-                  my $remarks = $curr_seq->{remark} ||= [];
-                  push @$remarks, $1;
+                elsif (/^(Keyword|Remark|Annotation_remark) $STRING/x) {
+                  my $anno_txts = $curr_seq->{$1} ||= [];
+                  push @$anno_txts, ace_unescape($2);
                 }
                 elsif (/^EMBL_dump_info\s+DE_line $STRING/x) {
-                    $curr_seq->{EMBL_dump_info} = $1;
+                    $curr_seq->{EMBL_dump_info} = ace_unescape($1);
                 }
                 elsif (/^Feature $STRING $INT $INT $FLOAT $STRING/x) {
                     my $val   = $1;
@@ -1009,7 +1001,7 @@ sub ace_to_otter {
                     # We have a gene and not a contig.
                     $curr_seq->{Source} = $1;
 
-                    my $tran = new Bio::EnsEMBL::Transcript();
+                    my $tran = Bio::Otter::AnnotatedTranscript->new;
                     $curr_seq->{transcript} = $tran;
 
                     #print STDERR "new tran  $currname [$tran][$val]\n";
@@ -1045,19 +1037,12 @@ sub ace_to_otter {
                     ### This assumes the "Source" tag will always be encountered before Exon tags - bad
                     $curr_seq->{transcript}->add_Exon($exon);
                 }
-                elsif (/^Continues_as $STRING/x) {
-                    $curr_seq->{Continues_as} = $1;
-                }
                 elsif (/^(cDNA_match|Protein_match|Genomic_match|EST_match) $STRING/x) {
                     my $matches = $curr_seq->{$1} ||= [];
                     push @$matches, $2;
                 }
                 elsif (/^Locus $STRING/x) {
                     $genenames{$currname} = $1;
-                }
-                elsif (/^(Remark|Isoform|Predicted_gene) $STRING/x) {
-                    my $list = $curr_seq->{$1} ||= [];
-                    push @$list, $2;
                 }
                 elsif (/^CDS $INT $INT/x) {
                     $curr_seq->{CDS_start} = $1;
@@ -1178,11 +1163,20 @@ sub ace_to_otter {
             $traninfo->author($author);
         }
 
-        if (my $rem_list = $seq_data->{remark}) {
+        # Remarks
+        if (my $rem_list = $seq_data->{Annotation_remark}) {
             foreach my $txt (@$rem_list) {
                 my $remark = Bio::Otter::TranscriptRemark->new;
                 # Method should be called "name" for symetry with CloneRemark
                 $remark->remark("Annotation_remark- $txt");
+                $traninfo->remark($remark);
+            }
+        }
+        if (defined($seq_data->{Remark})) {
+            my @rem = @{ $seq_data->{Remark} };
+
+            foreach my $rem (@rem) {
+                my $remark = new Bio::Otter::TranscriptRemark(-remark => $rem);
                 $traninfo->remark($remark);
             }
         }
@@ -1200,15 +1194,6 @@ sub ace_to_otter {
                 $seq_data->{End_not_found}     ? 1 : 0);
         }
 
-        # Remarks for the transcript
-        if (defined($seq_data->{Remark})) {
-            my @rem = @{ $seq_data->{Remark} };
-
-            foreach my $rem (@rem) {
-                my $remark = new Bio::Otter::TranscriptRemark(-remark => $rem);
-                $traninfo->remark($remark);
-            }
-        }
 
         # Evidence for the transcript
         my @evidence;
@@ -1237,8 +1222,7 @@ sub ace_to_otter {
 
         #print STDERR "Defined $seq " . $seq_data->{transcript} . "\n";
         if (defined($seq_data->{transcript})) {
-            my $anntran = bless $seq_data->{transcript},
-                "Bio::Otter::AnnotatedTranscript";
+            my $anntran = $seq_data->{transcript};
 
             $anntran->transcript_info($traninfo);
 
@@ -1322,87 +1306,28 @@ sub ace_to_otter {
 
         TRAN: foreach my $tranname (@{ $genes{$gname}{transcripts} }) {
             my $tran = $anntran{$tranname};
+            my $tran_data = $sequence{$tranname};
 
             unless ($tran) {
-                warn "Transcript '$tranname' in Locus '$gname' does not exist\n";
+                warn "Transcript '$tranname' in Locus '$gname' not found in ace data\n";
                 next TRAN;
             }
 
-            # If we have mRNA in the name look for a CDS
-            # with the same name without the .mRNA
+            $gene->add_Transcript($tran);
 
-            # Alternatively the CDS may have CDS_start and CDS_end
-            # coordinates
-
-            if ($tranname =~ /(.*?)\.mRNA$/) {
-
-                print STDERR "Got mrna $1 - finding CDS\n";
-
-                my $cdsname = $1;
-
-                TRAN2: foreach my $tname (@{ $genes{$gname}{transcripts} }) {
-
-                    print STDERR "Name $tname \n";
-                    if ($tname eq $cdsname) {
-
-                        print STDERR "Found CDS " . $tname . "\n";
-
-                        # We have found a matching cds for 
-                        # a mRNA.    We need to set the 
-                        # translation start and end points
-
-                        my $cds = $anntran{$tname};
-
-                        next TRAN2 unless defined($cds);
-
-                        my @exons = @{ $cds->get_all_Exons };
-
-                        my $cds_start;
-                        my $cds_end;
-
-                        my $start_phase;
-                        if ($exons[0]->strand == 1) {
-                            $cds_start     = $exons[0]->start;
-                            $cds_end         = $exons[$#exons]->end;
-                            $start_phase = $exons[0]->phase;
-                        } else {
-                            $cds_start     = $exons[0]->end;
-                            $cds_end         = $exons[$#exons]->start;
-                            $start_phase = $exons[0]->phase;
-                        }
-
-                        if (!exists($sequence{$tname}{Start_not_found})) {
-                            $start_phase = 0;
-                        }
-
-                        #print STDERR "cds start = $cds_start cds end = $cds_end exon start = " . $exons[0]->start
-                        #        . " end " . $exons[0]->end
-                        #        . " phase " . $exons[0]->phase
-                        #        . " start_phase = " . $start_phase
-                        #        . " start_not_found = " . $sequence{$tname}{Start_not_found}. "\n";
-
-                        make_translation($tran, $cds_start, $cds_end, $start_phase);
-
-                    }
-                }
-                if (my $translation = $tran->translation) {
-                    if (my $tl_id = $sequence{$tranname}{Translation_id}) {
-                        $translation->stable_id($tl_id);
-                    }
-                }
-            }
-
-            if ($sequence{$tranname}{CDS_start}) {
+            if ($tran_data->{CDS_start}) {
 
                 my $translation = new Bio::EnsEMBL::Translation;
 
                 $tran->translation($translation);
-
-                $translation->stable_id($tran->stable_id);
                 $translation->version(1);
+                
+                if (my $tsl_id = $tran_data->{Translation_id}) {
+                    $translation->stable_id($tsl_id);
+                }
 
-                my $cds_start = $sequence{$tranname}{CDS_start};
-                my $cds_end     = $sequence{$tranname}{CDS_end};
+                my $cds_start = $tran_data->{CDS_start};
+                my $cds_end   = $tran_data->{CDS_end};
 
                 # print STDERR "Found new CDS $tranname " . $cds_start . " " . $cds_end . "\n";
 
@@ -1411,28 +1336,10 @@ sub ace_to_otter {
             }
         }
 
-        # We are left with the CDS only transcripts now
-
-        TRAN3: foreach my $tranname (@{ $genes{$gname}{transcripts} }) {
-            my $tran = $anntran{$tranname};
-
-            next TRAN3 unless defined($tran);
-
-            #print STDERR "Tran [$tranname][$tran]\n";
-            #if (defined($tran) && defined($tran->translation)) {
-            if (defined($tran)) {
-
-                # if (defined($tran)) {
-                #$tran->stable_id($tranname);
-                $gene->add_Transcript($tran);
-
-                #print STDERR "Adding transcript\n";
-            }
-        }
         prune_Exons($gene);
     }
     
-    # Turn %frags into a path
+    # Turn %frags into a Tiling Path
     my $tile_path = [];
     foreach my $ctg_name (keys %frags) {
         my $fragment = $frags{$ctg_name};
@@ -1455,14 +1362,14 @@ sub ace_to_otter {
             my $author = $authors{$auth} or die "No Author object called '$auth'";
             $info->author($author);
         }
-        if (my $kw_list = $cln->{keyword}) {
+        if (my $kw_list = $cln->{Keyword}) {
             foreach my $word (@$kw_list) {
                 my $kw = Bio::Otter::Keyword->new;
                 $kw->name($word);
                 $info->remark($kw);
             }
         }
-        if (my $rem_list = $cln->{remark}) {
+        if (my $rem_list = $cln->{Annotation_remark}) {
             foreach my $txt (@$rem_list) {
                 my $remark = Bio::Otter::CloneRemark->new;
                 $remark->name("Annotation_remark- $txt");
@@ -1575,95 +1482,6 @@ sub make_translation_from_cds {
     print STDERR
       "ERROR: Didn't find exon for end at $cds_end in CDS in exons:\n";
     my @exons = @{ $tran->get_all_Exons };
-    foreach my $exon (@exons) {
-      print STDERR "  Exon " . $exon->start . " " . $exon->end . "\n";
-    }
-  }
-}
-
-sub make_translation {
-  my ($mrna, $cds_start, $cds_end, $start_phase) = @_;
-
-  my $translation = new Bio::EnsEMBL::Translation;
-
-  $mrna->translation($translation);
-  $translation->stable_id($mrna->stable_id);
-  $translation->version(1);
-  my @exons = @{ $mrna->get_all_Exons };
-
-  my $found_start = 0;
-  my $found_end   = 0;
-  my $phase       = $start_phase;
-
-  if ($exons[0]->strand == 1) {
-
-    foreach my $exon (@exons) {
-      if ($found_start && !$found_end) {
-        my $len      = $exon->end - $exon->start + 1;
-        my $endphase = ($len + $phase) % 3;
-        $exon->phase($phase);
-        $exon->end_phase($endphase);
-        $phase = $endphase;
-      }
-
-      if ($cds_start >= $exon->start && $cds_start <= $exon->end) {
-        $translation->start_Exon($exon);
-        $translation->start($cds_start - $exon->start + 1);
-        $found_start = 1;
-        my $len      = $exon->end - $cds_start + 1;
-        my $endphase = ($len + $phase) % 3;
-        $exon->phase(($cds_start == $exon->start) ? $phase : -1);
-        $exon->end_phase($endphase);
-        $phase = $endphase;
-      }
-
-      if ($cds_end >= $exon->start && $cds_end <= $exon->end) {
-        $translation->end_Exon($exon);
-        $translation->end($cds_end - $exon->start + 1);
-        $found_end = 1;
-        $exon->end_phase(($cds_end == $exon->end) ? 0 : -1);
-      }
-    }
-  } else {
-
-    foreach my $exon (@exons) {
-      if ($found_start && !$found_end) {
-        my $len      = $exon->end - $exon->start + 1;
-        my $endphase = ($len + $phase) % 3;
-        $exon->phase($phase);
-        $exon->end_phase($endphase);
-        $phase = $endphase;
-      }
-
-      if ($cds_start >= $exon->start && $cds_start <= $exon->end) {
-        $translation->start_Exon($exon);
-        $translation->start($exon->end - $cds_start + 1);
-
-        $found_start = 1;
-        my $len      = $cds_start - $exon->start + 1;
-        my $endphase = ($len + $phase) % 3;
-        $exon->phase(($cds_start == $exon->end) ? $phase : -1);
-        $exon->end_phase($endphase);
-        $phase = $endphase;
-      }
-
-      if ($cds_end >= $exon->start && $cds_end <= $exon->end) {
-        $translation->end_Exon($exon);
-        $translation->end($exon->end - $cds_end + 1);
-        $found_end = 1;
-      }
-    }
-  }
-
-  if ($found_start == 0) {
-    print STDERR "ERROR: Didn't find exon for start at $cds_start in exons:\n";
-    foreach my $exon (@exons) {
-      print STDERR "  Exon " . $exon->start . " " . $exon->end . "\n";
-    }
-  }
-
-  if ($found_end == 0) {
-    print STDERR "ERROR: Didn't find exon for end at $cds_end in exons:\n";
     foreach my $exon (@exons) {
       print STDERR "  Exon " . $exon->start . " " . $exon->end . "\n";
     }
@@ -2138,6 +1956,18 @@ sub ace_escape {
     # % signs, and semi-colons.
     $str =~ s/([\/"%;\\])/\\$1/g;
 
+    return $str;
+}
+
+sub ace_unescape {
+    my $str = shift;
+    
+    $str =~ s/\s+$//;       # Trim trailing whitespace.
+
+    # Unescape quotes, back and forward slashes,
+    # % signs, and semi-colons.
+    $str =~ s/\\([\/"%;\\])/$1/g;
+    
     return $str;
 }
 
