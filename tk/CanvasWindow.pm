@@ -456,7 +456,7 @@ sub set_scroll_region_and_maxsize {
         $other_y = int $height - $visible_y;
 
         ($display_max_x, $display_max_y) = $mw->maxsize;
-        warn "widget x = '$other_x'  widget y = '$other_y'\n";
+        #warn "widget x = '$other_x'  widget y = '$other_y'\n";
         $self->{'_toplevel_other_max'} = [$other_x, $other_y, $display_max_x, $display_max_y];
         $mw->resizable(1,1);
     }
