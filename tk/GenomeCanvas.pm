@@ -57,7 +57,7 @@ sub render {
     my @band_list = $gc->band_list;
     for (my $i = 0; $i < @band_list; $i++) {
         my $band = $band_list[$i];
-        #print STDERR scalar(localtime), " Rendering a ", ref($band), "\n";
+        print STDERR scalar(localtime), " Rendering a ", ref($band), "\n";
         my $tag = "$band-$i";
         if ($c > 0) {
             # Increase y_offset by the amount

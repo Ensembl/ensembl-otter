@@ -43,7 +43,8 @@ use Hum::EnsCmdLineDB;
     my $clusters   =    0;
     my $snps       =    0;
     my $psdir      =    '.';
-    my $big_picture     = 0;    
+    my $big_picture     = 0;
+    my $eps_file    = undef;
     my( $span_file );
     
     my $usage = sub{ exec('perldoc', $0) };
@@ -71,7 +72,12 @@ use Hum::EnsCmdLineDB;
         'psdir=s'       => \$psdir,
         'big!'          => \$big_picture,
         'help'          => $usage,
+        'eps=s'         => \$eps_file,
         ) or $usage->();
+
+    if ($eps_file) {
+        $eps_file .= '.eps' unless $eps_file =~ /\.eps$/i;
+    }
 
     if    (! $fpc and   $chr_name) {$fpc = $chr_name}
     elsif (  $fpc and ! $chr_name) {$chr_name = $fpc}
@@ -172,14 +178,20 @@ use Hum::EnsCmdLineDB;
         $gc->add_Band($plot);
 
         
-        my $cpg_plot = GenomeCanvas::Band::Plot->new;
-        $cpg_plot->title('CpG Content');
-        $cpg_plot->virtual_contig($vc);
-        $cpg_plot->plot_method('cpg_profile');
-        $cpg_plot->range(0.0,0.08);
-        $cpg_plot->x_major(0.02);
-	$cpg_plot->show_horizontal_scale(0);
-        $gc->add_Band($cpg_plot);
+        if ($show_cpg) {
+            my $cpg_plot = GenomeCanvas::Band::Plot->new;
+            $cpg_plot->title('CpG Content');
+            $cpg_plot->virtual_contig($vc);
+            $cpg_plot->plot_method('cpg_profile');
+            $cpg_plot->range(0.0,0.08);
+            $cpg_plot->x_major(0.02);
+            $cpg_plot->show_horizontal_scale(0);
+            $gc->add_Band($cpg_plot);
+
+            my $cpg = GenomeCanvas::Band::CpG->new;
+            $cpg->virtual_contig($vc);
+            $gc->add_Band($cpg);
+        }
 
         if ($snps) {
             my $snp = GenomeCanvas::Band::SNP->new;
@@ -191,11 +203,6 @@ use Hum::EnsCmdLineDB;
             $gc->add_Band($snp);
         }
 
-        if ($show_cpg) {
-            my $cpg = GenomeCanvas::Band::CpG->new;
-            $cpg->virtual_contig($vc);
-            $gc->add_Band($cpg);
-        }
 
 	if ($homologies) {
 	    my $track = GenomeCanvas::Band::HomolFeature->new();
@@ -274,34 +281,62 @@ use Hum::EnsCmdLineDB;
             }
         } );
 
-    make_button($button_frame, 'PostScript',
-        sub {
-            warn "Printed to files:\n",
-                map "  $_\n", $gc->print_postscript("$psdir/$fpc");
+    if ($eps_file) {
+        # For making figures of a fixed scale for posters
+        make_button($button_frame, 'PostScript',
+            sub {
+                warn "Printed to file '$eps_file'\n";
 
-            if ($big_picture) {
-                my $htile = $gc->horizontal_tile || 1;
-                my $vtile = $gc->vertical_tile   || 1;
-                my( $pwidth, $pheight );
-                if ($gc->landscape) {
-                    $pwidth  = $gc->page_width  * $htile;
-                    $pheight = $gc->page_height * $vtile;
-                } else {
-                    $pwidth  = $gc->page_width  * $vtile;
-                    $pheight = $gc->page_height * $htile;
-                }
-                if ($pwidth > $pheight) {
-                    ($pwidth, $pheight) = ($pheight, $pwidth);
-                }
-                $gc->page_width ($pwidth);
-                $gc->page_height($pheight);
-                $gc->horizontal_tile(0);
-                $gc->vertical_tile(0);
+                my $canvas = $gc->canvas;
+                my ($x1, $y1, $x2, $y2) = $canvas->bbox('all');
+                my $border = 10;
+                my $width  = $x2 - $x1 + (2 * $border);
+                my $height = $y2 - $y1 + (2 * $border);
+                my $x = $x1 - $border;
+                my $y = $y1 - $border;
+                $canvas->postscript(
+                    -file       => $eps_file,
+                    -x          => $x,
+                    -y          => $y,
+                    -width      => $width,
+                    -height     => $height,
+                    -pageanchor => 'nw',
+                    -pagex      => $border,
+                    -pagey      => $border,
+                    -pagewidth  => $width / 2,
+                    -rotate     => 0,
+                    );
+            });
+    } else {
+        make_button($button_frame, 'PostScript',
+            sub {
+                warn "Printed to files:\n",
+                    map "  $_\n", $gc->print_postscript("$psdir/$fpc");
 
-                warn "Whole diagram printed to:\n",
-                    map "  $_\n", $gc->print_postscript($fpc);
-            }
-        });
+                if ($big_picture) {
+                    my $htile = $gc->horizontal_tile || 1;
+                    my $vtile = $gc->vertical_tile   || 1;
+                    my( $pwidth, $pheight );
+                    if ($gc->landscape) {
+                        $pwidth  = $gc->page_width  * $htile;
+                        $pheight = $gc->page_height * $vtile;
+                    } else {
+                        $pwidth  = $gc->page_width  * $vtile;
+                        $pheight = $gc->page_height * $htile;
+                    }
+                    if ($pwidth > $pheight) {
+                        ($pwidth, $pheight) = ($pheight, $pwidth);
+                    }
+                    $gc->page_width ($pwidth);
+                    $gc->page_height($pheight);
+                    $gc->horizontal_tile(0);
+                    $gc->vertical_tile(0);
+
+                    warn "Whole diagram printed to:\n",
+                        map "  $_\n", $gc->print_postscript($fpc);
+                }
+            });
+    }
     $gc->fix_window_min_max_sizes;
 }
 

@@ -48,8 +48,15 @@ sub draw_repeat_features {
     my( $band ) = @_;
     
     $band->strip_labels($band->repeat_classes);
-    while (my($vc, $x_offset) = $band->next_sub_VirtualContig) {
-        $band->draw_repeat_features_on_sub_vc($vc, $x_offset);
+    if (0) {
+        # Don't know if we need this code any more now that we don't
+        # create bitmaps.
+        while (my($vc, $x_offset) = $band->next_sub_VirtualContig) {
+            $band->draw_repeat_features_on_sub_vc($vc, $x_offset);
+        }
+    } else {
+        my $vc = $band->virtual_contig;
+        $band->draw_repeat_features_on_sub_vc($vc, 0);
     }
 }
 

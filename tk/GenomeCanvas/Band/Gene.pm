@@ -217,7 +217,10 @@ sub get_gene_span_data {
     }
     else {
         foreach my $vg (@{$vc->get_all_Genes}) {
-	    push(@span, [$vg->stable_id, $vg->type, $vg->start, $vg->end, $vg->strand]);
+            my $id = $vg->isa('Bio::Otter::AnnotatedGene')
+                ? $vg->gene_info->name->name
+                : $vg->stable_id;
+	    push(@span, [$id, $vg->type, $vg->start, $vg->end, $vg->strand]);
         }
     }
     return @span;

@@ -5,7 +5,7 @@ package GenomeCanvas::DensityBand;
 
 use strict;
 use Carp;
-use GenomeCanvas::GD_StepMap;
+use GenomeCanvas::FadeMap;
 use GenomeCanvas::Band;
 
 use vars '@ISA';
@@ -73,6 +73,15 @@ sub strip_y_map {
     return @$map;
 }
 
+sub tile_pixels {
+    my( $self, $tile_pixels ) = @_;
+    
+    if ($tile_pixels) {
+        $self->{'_tile_pixels'} = $tile_pixels;
+    }
+    return $self->{'_tile_pixels'} || 2;
+}
+
 sub draw_sequence_gaps {
     my( $band ) = @_;
     
@@ -116,17 +125,17 @@ sub draw_density_segment {
     my $y = ($band->strip_y_map)[$level];
     my $rpp = $band->residues_per_pixel;
     my $canvas = $band->canvas;
+    my $tile_pixels = $band->tile_pixels;
+    my $tile_width = $rpp * $tile_pixels;
     my @tags = $band->tags;
-
-    my $tile_count = int($vc_length / $rpp);
+    
+    my $tile_count = int($vc_length / $tile_width);
     $tile_count += 1 if $vc_length % $rpp;
-    my $stepmap = GenomeCanvas::GD_StepMap->new($tile_count, $height);
-    $stepmap->color($band->band_color);
 
     my( @values );
     for (my ($i,$j) = (0,0); $i < $tile_count; $i++) {
-        my $start = $i * $rpp;
-        my $end = $start + $rpp - 1;
+        my $start = $i * $tile_width;
+        my $end = $start + $tile_width - 1;
 
         my $covered_length = 0;
 
@@ -162,21 +171,43 @@ sub draw_density_segment {
         #warn "$covered_length / ($end - $start + 1)\n";
         push(@values, $covered_length / ($end - $start + 1));
     }
-    $stepmap->values(@values);
 
-    # Add the png to the image
-    my $x = $x_offset / $rpp;
-    my $image = $canvas->Photo(
-        '-format'   => 'png',
-        -data       => $stepmap->base64_png,
-        );
-    $canvas->createImage(
-        $x, $y->[0] + 0.5,    # Off-by-1 error when placing images?
-        -anchor     => 'nw',
-        -image      => $image,
-        -tags       => [@tags],
-        );
+    my $fademap = GenomeCanvas::FadeMap->new;
+    $fademap->fade_color($band->band_color);
+    my ($y1, $y2) = ($y->[0], $y->[0] + $height);
 
+    my ($min, $max) = (0,1);
+    my $steps = $fademap->number_of_steps;
+    for (my $i = 0; $i < @values; $i++) {
+        my $val = $values[$i];
+        my $x1 = ($x_offset / $rpp) + ($i * $tile_pixels);
+        my $x2 = $x1 + $tile_pixels;
+        
+        # If the next box is going to be the same colour, just make
+        # the rectangle drawn bigger. This draws far fewer boxes.
+        for (my $j = $i + 1; $j < @values; $j++) {
+            last unless $val == $values[$j];
+            $x2 += $tile_pixels;
+            $i = $j;
+        }
+        
+        # Make sure the last box doesn't extend beyond the end
+        # of the sequence.
+        if ($i == $#values) {
+            #printf STDERR "Resetting end coord from '$x2' to ";
+            $x2 = ($x_offset / $rpp) + ($vc_length / $rpp);
+            #printf STDERR "'$x2'\n";
+        }
+        
+        my $color_i = $steps * (($val - $min) / ($max - $min));
+        my $color = $fademap->get_color($color_i);
+        $canvas->createRectangle(
+            $x1, $y1, $x2, $y2,
+            -fill       => $color,
+            -outline    => undef,
+            -tags       => [@tags],
+            );
+    }
 }
 
 sub draw_outline_and_labels {
