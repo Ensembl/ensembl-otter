@@ -10,3 +10,4 @@ delete from current_gene_info; delete from current_transcript_info;
 delete from gene_synonym; delete from gene_stable_id_pool;
 delete from transcript_stable_id_pool; delete from translation_stable_id_pool;
 delete from exon_stable_id_pool; delete from translation_stable_id;
+delete from clone_remark;
