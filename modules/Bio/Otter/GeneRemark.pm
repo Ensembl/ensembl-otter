@@ -63,7 +63,7 @@ formal_parameter_name
 sub remark{
    my ($obj,$value) = @_;
    if( defined $value) {
-      $obj->{'remark'} = "$value";
+      $obj->{'remark'} = $value;
     }
     return $obj->{'remark'};
 
