@@ -1,0 +1,169 @@
+#!/usr/local/bin/perl -w
+
+=head1 NAME
+    
+submssion_to_otter
+
+=head1  SYNOPSIS 
+    
+submission_to_otter [-host] [-port] [-user] [-dbname] [-dbpass]
+
+=head1 DESCRIPTION         
+    
+checks through the contigs in an otter databases and if no sequence notes are present, it copies them from the submissions database
+
+=cut 
+ 
+
+use strict ;
+use Hum::Submission qw{sub_db prepare_statement};
+use DBI;
+use Getopt::Long 'GetOptions';
+
+my $otter_db;
+
+{
+    my $host  ; 
+    my $port  ; 
+    my $dbname ;
+    my $dbpass ;
+    my $user  ;
+    my $count = 0;
+
+
+    GetOptions(
+        'password:s'=> \$dbpass,
+        'dbname:s'  => \$dbname,
+        'port:i'    => \$port,
+        'host:s'    => \$host , 
+        'user:s'    => \$user
+         ) ; 
+
+    if (!defined $port){
+        $port = 3306;
+    } 
+
+    $otter_db = DBI->connect("DBI:mysql:host=$host;port=$port;database=$dbname",
+                                   $user, $dbpass , {RaiseError => 1, PrintError => 0})
+                    or die "Can't connect to submissions database as '$user' ",
+                    DBI::errstr();
+
+
+    #query otter database for each of the contigs that have no comment
+    my $otter_sth =   $otter_db->prepare(qq{
+                SELECT cl.name , c.contig_id 
+                FROM  clone cl , contig c
+                LEFT JOIN sequence_note sn 
+                ON   sn.contig_id = c.contig_id
+                WHERE c.clone_id = cl.clone_id
+                AND sn.note is null          
+                }) ;
+
+
+    $otter_sth->execute;
+
+    while (my ($name, $contig_id) = $otter_sth->fetchrow){
+
+        my ($accession , $version ) = split /\./  , $name ;
+        my $submission_sth = prepare_statement(qq{
+                    SELECT ap.annotator_uname,
+                           review_comment ,
+                           asr.review_time
+                    FROM ana_sequence_person ap,
+                         ana_sequence_review asr,
+                         ana_sequence ans,
+                         sequence s
+                    LEFT JOIN project_dump pd
+                      ON s.seq_id = pd.seq_id
+                    LEFT JOIN project_acc pa
+                      ON pd.sanger_id = pa.sanger_id
+                    WHERE ap.ana_seq_id = ans.ana_seq_id
+                      AND ans.ana_seq_id = asr.ana_seq_id
+                      AND s.seq_id = ans.seq_id
+                      AND ans.is_current = 'Y'
+                      AND (pa.accession = ?
+                           OR s.sequence_name = ?)
+                      AND s.sequence_version = ?
+                    ORDER BY asr.review_time DESC              
+                    });
+        $submission_sth->execute($accession , $accession, $version );
+        my ( $username , $comment , $time);
+        $submission_sth->bind_columns( \$username , \$comment , \$time );
+
+
+
+        my $is_current = 'Y';               ## set initaially to 'Y' for the first note (most recent) copied over, then set to 'N'
+        while ( $submission_sth->fetch() )
+        { 
+            # insert the note 
+            if (insert_note( $contig_id ,$is_current , $comment , $time, $username) < 1)  {
+                # inserting the sequence note has failed ,I am assuming that the problem is that the annotator is not present
+                # so insert a new annotator then the note
+                if ( insert_new_author($username) >= 1 && insert_note( $contig_id ,$is_current , $comment , $time ,  $username) ){
+                }
+                else{
+                    print STDOUT "problem inserting details of contig $contig_id,\nannotator username is $username\nComment is '$comment'\n\n ";    
+                    next;
+                } 
+            }
+            
+            $count ++;
+            $is_current = 'N';
+        }    
+    }
+
+    print STDOUT $count ." sequence notes copied over\n";
+
+}
+
+#---------------------------------------------------------------------------------------------------------------------
+
+sub insert_note{
+   # args should be in order : $contig_id , $is_current , $comment , $time , $username
+   
+   my $sth = $otter_db->prepare(qq{
+                                    INSERT INTO sequence_note ( author_id , contig_id , is_current , note_time , note) 
+                                    SELECT author_id , ?, ? , ? , ?
+                                    FROM  author 
+                                    WHERE author_email = ?
+                                    });
+    return $sth->execute(@_) ;
+}
+
+#-----------------------------------------------------------------------------------------------------------------------
+
+sub insert_new_author{
+    
+    my $username = shift @_;
+    
+    my $author_full_sth = prepare_statement(qq{
+                                                SELECT full_name 
+                                                FROM ana_person 
+                                                WHERE annotator_uname = ?
+    });
+    $author_full_sth->execute($username);
+    my $fullname = $author_full_sth->fetchrow;  
+    
+    my $new_annotator_sth   =   $otter_db->prepare(qq{ 
+                                                    INSERT INTO author (author_email, author_name)
+                                                    VALUES (?,?)
+                                                     });
+                                            
+    if ($new_annotator_sth->execute($username , $fullname)  > 0 ) {
+        print STDOUT "added new author $fullname\n";
+        return 1;
+    }
+    else{
+        warn "problem adding author $fullname $username to database\n";
+        return 0 ;
+    }
+}
+
+
+#---------------------------------------------------------------------------------------------------------------------
+
+
+=head1 AUTHOR
+
+Colin Kingswood<email> ck2@sanger.ac.uk
+
