@@ -18,11 +18,15 @@ use GenomeCanvas;
         -fill       => '#ffffff',
         -outline    => '#999999',
         );
-    warn $rec;
-    $canvas->bind($rec, '<Button-1>', \&deselect_text);
+    $canvas->Tk::bind('<Button-1>',     [ \&deal_with_button_1, Tk::Ev('@') ] );
+    $canvas->Tk::bind('<BackSpace>',      \&backspace                         );
+    $canvas->Tk::bind('<Left>',           \&go_left                           );
+    $canvas->Tk::bind('<Right>',          \&go_right                          );
+    $canvas->Tk::bind('<<alpha_num>>',  [ \&insert_character,   Tk::Ev('A') ] );
     
     $canvas->eventAdd('<<alpha_num>>', map "<KeyPress-$_>", ' ', "a".."z", "A".."Z", 0..9);
-    my $size = 14;
+
+    my $size = 15;
     my $x = 10;
     my $y_begin = $x;
     for (my $i = 0; $i < 11; $i++) {
@@ -49,95 +53,122 @@ sub make_editable_label {
         -font   => ['lucidatypewriter', $size, 'normal'],
         -tags   => ['test text'],
         );
-    $canvas->bind($t, '<Button-1>',     \&select_text);
-    $canvas->bind($t, '<BackSpace>',    \&backspace);
-    $canvas->bind($t, '<Left>',         \&go_left);
-    $canvas->bind($t, '<Right>',        \&go_right);
-    $canvas->bind($t, '<<alpha_num>>',  [\&insert_character, Tk::Ev('A')]);
+    #$canvas->bind($t, '<Button-1>',     \&select_text);
 }
 
 BEGIN {
+    my $sel_tag = 'SelectedThing';
+    my $selected = 0;
 
-    my $rec_tag = 'SelectedTextBkgd';
-    my $current_text = 0;
+    sub deal_with_button_1 {
+        my( $canvas, $xy ) = @_;
 
-    sub backspace {
-        my( $canvas ) = @_;
-
-        my $text = $canvas->find('withtag', 'current');
-
-        my $pos = $canvas->index($text, 'insert');
-        $canvas->dchars($text, $pos - 1);
-    }
-
-    sub go_left {
-        my( $canvas ) = @_;
-
-        my $text = $canvas->find('withtag', 'current');
-
-        my $pos = $canvas->index($text, 'insert');
-        $canvas->icursor($text, $pos - 1);
-    }
-
-    sub go_right {
-        my( $canvas ) = @_;
-
-        my $text = $canvas->find('withtag', 'current');
-
-        my $pos = $canvas->index($text, 'insert');
-        $canvas->icursor($text, $pos + 1);
-    }
-
-    sub select_text {
-        my( $canvas ) = @_;
-
-        my $text = $canvas->find('withtag', 'current');
-        if ($text == $current_text) {
-            # position pointer
-        } else {
-            deselect_text();
-            make_highlight_rectangle($canvas, $text);
-
-            $canvas->focus($text);
-            $canvas->icursor($text, 'end');
+        my $obj = $canvas->find('withtag', 'current');
+        unless ($obj) {
+            deselect($canvas);
+            return;
         }
-        $current_text = $text;
-    }
+        
+        unless ($obj == $selected) {
+            deselect($canvas);
+        }
 
-    sub make_highlight_rectangle {
+        my $type = $canvas->type($obj)
+            or return;
+        
+        if ($type eq 'text') {
+        
+            # Position the icursor in the text
+            my($x,$y) = canvas_x_y($canvas, $xy);
+            my $pos = $canvas->index($obj, [$x, $y]) + 1;
+            $canvas->icursor($obj, $pos);
+            
+            # Hightlight and focus if it isn't the
+            # current object
+            if ($obj != $selected) {
+                $canvas->focus($obj);
+                maintain_highlight_rectangle($canvas, $obj);
+                $selected = $obj;
+            }
+        }
+    }
+    
+    sub deselect {
+        my( $canvas ) = @_;
+        
+        $canvas->delete($sel_tag);
+        $canvas->focus("");
+        $selected = 0;
+    }
+    
+    sub maintain_highlight_rectangle {
         my( $canvas, $obj ) = @_;
         
-        # Make the highlight rectangle
+        $canvas->delete($sel_tag);
+        
         my @bbox = $canvas->bbox($obj);
+        $bbox[0] -= 1;
+        $bbox[1] -= 1;
+        $bbox[2] += 1;
+        $bbox[3] += 1;
         my $rec = $canvas->createRectangle(
             @bbox,
             -fill       => '#ffff00',
             -outline    => undef,
-            -tags       => [$rec_tag],
+            -tags       => [$sel_tag],
             );
         $canvas->lower($rec, $obj);
     }
+}
 
-    sub deselect_text {
-        my( $canvas ) = @_;
-
-        return unless $current_text;
-        $canvas->delete($rec_tag);
-        $canvas->focus("");
-        $current_text = 0;
-    }
+sub canvas_x_y {
+    my( $canvas, $xy ) = @_;
     
-    sub insert_character {
-        my( $canvas, $char ) = @_;
-        
-        return unless $char =~ /^[a-zA-Z0-9 ]$/;
-        
-        my $text = $canvas->find('withtag', 'current');
-        $canvas->insert('current', 'insert', $char);
-        
-        $canvas->delete($rec_tag);
-        make_highlight_rectangle($canvas, $text);
-    }
+    my ($x,$y) = $xy =~ /^\@(\d+),(\d+)/
+        or die "Wierd xy: '$xy'";
+    $x = $canvas->canvasx($x);
+    $y = $canvas->canvasy($y);
+    
+    return($x, $y);
+}
+
+sub backspace {
+    my( $canvas ) = @_;
+
+    my $text = $canvas->focus or return;
+
+    my $pos = $canvas->index($text, 'insert');
+    $canvas->dchars($text, $pos - 1);
+    maintain_highlight_rectangle($canvas, $text);
+}
+
+sub go_left {
+    my( $canvas ) = @_;
+
+    my $text = $canvas->focus or return;
+
+    my $pos = $canvas->index($text, 'insert');
+    $canvas->icursor($text, $pos - 1);
+}
+
+sub go_right {
+    my( $canvas ) = @_;
+
+    my $text = $canvas->focus or return;
+
+    my $pos = $canvas->index($text, 'insert');
+    $canvas->icursor($text, $pos + 1);
+}
+
+    
+sub insert_character {
+    my( $canvas, $char ) = @_;
+
+    return unless $char =~ /^[a-zA-Z0-9 ]$/;
+
+    my $text = $canvas->focus or return;
+    $canvas->insert($text, 'insert', $char);
+    maintain_highlight_rectangle($canvas, $text);
 }
 
 __END__
