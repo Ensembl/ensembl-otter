@@ -11,9 +11,11 @@ $| = 1;
 {
     my @tail         = ();
     my $tail_size    = 0;
+    my $callback     = undef;
     sub keep_history{
         return unless $tail_size;
         push(@tail, @_);
+        $callback->() if ref($callback);
         my $c = scalar @tail - $tail_size;
         return unless $c > 1;
         splice(@tail, 0, $c);
@@ -25,6 +27,12 @@ $| = 1;
         my ($size) = shift;
         $size    ||= 20;
         $tail_size = $size;
+    }
+    sub register_callback{
+        $callback = shift if @_;
+    }
+    sub delete_callback{
+        $callback = undef;
     }
 }
 
@@ -62,6 +70,7 @@ sub OPEN{
 sub READ     { read($_[0],$_[1],$_[2]) }
 sub READLINE { my $fh = $_[0]; <$fh> }
 sub GETC     { getc($_[0]) }
+
 
 sub WRITE{
     my $fh = $_[0];
