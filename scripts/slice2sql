@@ -211,24 +211,29 @@ print "  -end     : End position in chromosome\n";
 print "  -all     : Dump all databases (core/est/estgene/compara/disease)\n";
 print "  -databases db1:db2:db3  : Dump only the specified databases\n";
 print "\n\n";
+
+print "Example : slice2sql -chr 4 -start 1 -end 1000000 -databases core:compara -type NCBI31 -dir /home/michele/sql\n\n";
+print "This will dump the default species (human) from 1-1Mb on chromosome 4\nand dump the core and compara databases only.\n\n";
+print "The sql will be dumped to /home/michele/sql and the assembly to use is NCBI31\n\n";
+
 print "Additional options\n\n";
 
-print "  -species : Species name (e.g. \"Homo sapiens\" \"Mus musculus\" \"Rattus norvegicus\") (default \"Homo sapiens\")\n";
-print "  -type    : Assembly type or version (default NCBI31)\n";
+print "  -species : Species name (e.g. \"Homo sapiens\" \"Mus musculus\" \"Rattus norvegicus\") (default \"$species\")\n";
+print "  -type    : Assembly type or version (default $type)\n";
 print "  -dir     : Directory to dump to (default /tmp)\n";
 
 print "\nDatabase location options\n\n";
-print "  -host    : Database host (default kaka.sanger.ac.uk)\n";
-print "  -user    : Database user (default anonymous)\n";
-print "  -port    : Database port (default 3306)\n";
-print "  -pass    : Database password (default \'\')\n";
+print "  -host    : Database host (default $host)\n";
+print "  -user    : Database user (default $user)\n";
+print "  -port    : Database port (default $port)\n";
+print "  -pass    : Database password (default $pass)\n";
 
 print "\nDatabase name options\n\n";
-print "  -core_name    : Core database name (dna/genes/features/repeats etc) (default homo_sapiens_core_13_31)\n";
-print "  -est_name     : Est database name                                   (default homo_sapiens_est_13_31)\n";
-print "  -estgene_name : Est gene database name                              (default homo_sapiens_estgene_13_31)\n";
-print "  -compara_name : Genome comparison database name                     (default ensembl_compara_13_31)\n";
-print "  -disease_name : Disease gene database name                          (default homo_sapiens_disease_13_31)\n";
+print "  -core_name    : Core database name (dna/genes/features/repeats etc) (default $core_name)\n";
+print "  -est_name     : Est database name                                   (default $est_name)\n";
+print "  -estgene_name : Est gene database name                              (default $estgene_name)\n";
+print "  -compara_name : Genome comparison database name                     (default $compara_name)\n";
+print "  -disease_name : Disease gene database name                          (default $disease_name)\n";
 print "\n\n";
 
 exit(0);
