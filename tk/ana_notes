@@ -1,0 +1,795 @@
+#!/nfs/humace2/hum/bin/perl -w
+
+### ana_notes
+
+use strict;
+use GenomeCanvas;
+use Hum::Submission 'prepare_statement';
+use Hum::AnaStatus qw{ annotator_full_name };
+use Hum::AnaStatus::Sequence;
+use Hum::AnaStatus::SequenceSet;
+use Hum::Conf qw{ HUMACESERVER_HOST HUMGIFACESERVER_PORT };
+use GenomeCanvas::Band::SeqChooser;
+use Carp;
+use Getopt::Long 'GetOptions';
+
+{
+    my $list_sets = 0;
+    GetOptions(
+        'help!'     => \&useage,
+        'list!'     => \$list_sets,
+        ) or useage();
+    
+    if ($list_sets) {
+        list_sets();
+        exit;
+    }
+
+    my $set_name = shift(@ARGV) || useage();
+    die "Unknown elements on command line: '@ARGV'\n" if @ARGV;
+    
+    my( $annotator );
+    my $user = (getpwuid($<))[0];
+    if (is_valid_annotator($user)) {
+        $annotator = $user;
+    }
+    
+    # Set group writable
+    umask(002);
+    
+    my $set_id = set_name_to_set_id($set_name);
+    
+    my $mw = CanvasWindow::MainWindow->new;
+    $mw->title($set_name);
+    my $gc = GenomeCanvas->new($mw);
+    my $chooser = GenomeCanvas::Band::SeqChooser->new;
+    $gc->add_Band($chooser);
+    $chooser->chooser_map(make_chooser_map($set_id));
+    
+    my $canvas = $gc->canvas;
+    $canvas->configure(-selectbackground => 'gold');
+    $canvas->CanvasBind('<Button-1>', sub {
+        return if $gc->delete_message;
+        deselect_all_selected_not_current($gc);
+        toggle_current($gc);
+        });
+    $canvas->CanvasBind('<Shift-Button-1>', sub {
+        return if $gc->delete_message;
+        toggle_current($gc);
+        });
+    
+    {
+        my( $comment );
+        if ($annotator) {
+            my $button_frame = $mw->Frame;
+            $button_frame->pack(
+                -side => 'top',
+                );
+
+            my $comment_label = $button_frame->Label(
+                -text => 'Note text:',
+                );
+            $comment_label->pack(
+                -side => 'left',
+                );
+
+            $comment = $button_frame->Entry(
+                -width              => 55,
+                -background         => 'white',
+                -selectbackground   => 'gold',
+                );
+            $comment->pack(
+                -side => 'left',
+                );
+        }
+        
+        
+        my $button_frame2 = $mw->Frame;
+        $button_frame2->pack(
+            -side => 'top',
+            );
+        
+        if ($annotator) {
+            my $set_reviewed = sub{
+                my $c = $comment->get;
+                my @ana_seq_id_list = list_selected_ana_seq_ids($canvas);
+                return unless @ana_seq_id_list;
+                set_reviewed($annotator, $c, @ana_seq_id_list);
+                $chooser->chooser_map(make_chooser_map($set_id));
+                $gc->render;
+                $gc->set_scroll_region_and_maxsize;
+                };
+            make_button($button_frame2, 'Set note', $set_reviewed, 0);
+            $mw->bind('<Control-s>', $set_reviewed);
+            $mw->bind('<Control-S>', $set_reviewed);
+        }
+        
+        my $hunter = sub{
+            watch_cursor($mw);
+            hunt_for_selection($gc);
+            default_cursor($mw);
+            };
+        
+        # First call to this returns empty list!
+        my @all_text_obj = $canvas->find('withtag', 'contig_text');
+        
+        make_button($button_frame2, 'Hunt selection', $hunter, 0);
+        $mw->bind('<Control-h>', $hunter);
+        $mw->bind('<Control-H>', $hunter);
+        
+        my $refesher = sub{
+            watch_cursor($mw);
+            $chooser->chooser_map(make_chooser_map($set_id));
+            $gc->render;
+            $gc->set_scroll_region_and_maxsize;
+            default_cursor($mw);
+            };
+        make_button($button_frame2, 'Refresh', $refesher, 0);
+        $mw->bind('<Control-r>', $refesher);
+        $mw->bind('<Control-R>', $refesher);
+        $mw->bind('<F5>', $refesher);
+
+        if ($annotator) {
+            my $run_lace = sub{
+                watch_cursor($mw);
+                my @sequence_name_list = list_selected_sequence_names($canvas);
+                return unless @sequence_name_list;
+                fork_lace_process(@sequence_name_list);
+                default_cursor($mw);
+                };
+            make_button($button_frame2, 'Run lace', $run_lace, 4);
+            $mw->bind('<Control-l>', $run_lace);
+            $mw->bind('<Control-L>', $run_lace);
+            
+            my $do_embl_dump = sub{
+                watch_cursor($mw);
+                my @sequence_name_list = list_selected_sequence_names($canvas);
+                foreach my $seq (@sequence_name_list) {
+                    do_embl_dump($seq);
+                }
+                default_cursor($mw);
+                };
+            make_button($button_frame2, 'EMBL dump', $do_embl_dump, 0);
+            $mw->bind('<Control-e>', $do_embl_dump);
+            $mw->bind('<Control-E>', $do_embl_dump);
+        }
+        
+        my $print_to_file = sub {
+            $gc->page_width(591);
+            $gc->page_height(841);
+            my @files = $gc->print_postscript($set_name);
+            warn "Printed to files:\n",
+                map "  $_\n", @files;
+          };
+        $mw->bind('<Control-p>', $print_to_file);
+        $mw->bind('<Control-P>', $print_to_file);
+                    
+
+        
+        make_button($button_frame2, 'Quit', sub{ $mw->destroy }, 0);
+    }
+    $gc->render;
+    $gc->fix_window_min_max_sizes;
+    
+    ###############
+    Tk::MainLoop();
+    ###############
+}
+
+{
+    my( $top, $hist );
+
+    sub popup_ana_seq_history {
+        my( $gc ) = @_;
+        
+        my $canvas = $gc->canvas;
+        my $asid = get_current_ana_seq_id($canvas)
+            or return;
+        
+        unless ($top) {
+            my $master = $canvas->toplevel;
+            $top = $master->Toplevel;
+            $top->transient($master);
+            my $font = 'helvetica';
+            my $size = $gc->font_size;
+
+            $hist = $top->ROText(
+                -font           => [$font, $size, 'normal'],
+                #-justify        => 'left',
+                -padx                   => 6,
+                -pady                   => 6,
+                -relief                 => 'groove',
+                -background             => 'white',
+                -border                 => 2,
+                -selectbackground       => 'gold',
+                #-exportselection => 1,
+                )->pack(
+                    -expand => 1,
+                    -fill   => 'both',
+                    );
+        
+            # Make a Close button inside a frame
+            my $frame = $top->Frame(
+                -border => 6,
+                )->pack(
+                    -anchor => 'sw',
+                    );
+
+            # Close only unmaps it from the display
+            my $close_command = sub{ $top->withdraw };
+
+            my $exit = $frame->Button(
+                -text => 'Close',
+                -command => $close_command ,
+                )->pack;
+            $top->bind(    '<Control-w>',      $close_command);
+            $top->bind(    '<Control-W>',      $close_command);
+            $top->bind(    '<Escape>',         $close_command);
+
+            # Closing with window manager only unmaps window
+            $top->protocol('WM_DELETE_WINDOW', $close_command);
+        }
+        
+        my $text = get_history_for_ana_seq_id($asid);
+        
+        my $lines = $text =~ tr/\n//;
+        $hist->delete('1.0', 'end');
+
+        # Size widget to fit
+        $hist->configure(
+            #-width  => 60,
+            -height => $lines,
+            );
+
+        # Set the window title, and make it visible
+        my $win = $hist->toplevel;
+        $win->configure( -title => "Remark history" );
+        $win->deiconify;
+        $win->raise;
+        
+    }
+}
+
+sub get_history_for_ana_seq_id {
+    my( $asid ) = @_;
+    
+    my $sth = prepare_statement(qq{
+        SELECT ass.rank
+          , s.sequence_name
+          , r.review_time
+          , r.annotator_uname
+          , r.review_comment
+        FROM sequence s
+          , ana_sequence a
+        WHERE s.seq_id = a.seq_id
+          AND a.ana_seq_id = r.ana_seq_id
+          AND s.ana_seq_id = $asid
+        ORDER BY r.review_time        
+        });
+    $sth->execute;
+}
+
+sub list_sets {
+    my $sth = prepare_statement(q{
+        SELECT set_name
+          , set_description
+        FROM ana_set
+        });
+    $sth->execute;
+    
+    my $rows = $sth->fetchall_arrayref;
+    if (@$rows == 0) {
+        print "No sets found!\n";
+        return;
+    }
+    
+    my @head = ('Set name', 'Description');
+    my $max_l = length($head[0]);
+    foreach my $set_name (map $_->[0], @$rows) {
+        my $l = length($set_name);
+        if ($l > $max_l) {
+            $max_l = $l
+        }
+    }
+    my $pattern = "  \%${max_l}s  %-s\n";
+    
+    print "\n";
+    printf($pattern, @head);
+    print "\n";
+    foreach my $r (@$rows) {
+        printf($pattern, @$r);
+    }
+    print "\n";
+}
+
+sub set_name_to_set_id {
+    my( $set_name ) = @_;
+    
+    my $sth = prepare_statement(q{
+        SELECT set_id
+        FROM ana_set
+        WHERE set_name = ?
+        });
+    $sth->execute($set_name);
+    my ($set_id) = $sth->fetchrow;
+    
+    if ($set_id) {
+        return $set_id;
+    } else {
+        die "No such set '$set_name'\n";
+    }
+}
+
+sub watch_cursor {
+    my( $w ) = @_;
+    
+    $w->configure( -cursor => 'watch' );
+    $w->update;
+}
+
+sub default_cursor {
+    my( $w ) = @_;
+    
+    $w->configure( -cursor => undef );
+    $w->update;
+}
+
+{
+    my( %lace_dir );
+
+    sub fork_lace_process {
+        my( @seq_name_list ) = @_;
+
+        # Record the lace db directory of each
+        # of the sequences.
+        my $time = hr_min_sec();
+        my $lace_dir = "/tmp/lace-$seq_name_list[0]-$time";
+        foreach my $seq (@seq_name_list) {
+            if (my $dir = $lace_dir{$seq}) {
+                if (-e $dir) {
+                    warn "Error lace already running on '$seq' in '$dir'\n";
+                    return;
+                }
+            }
+        }
+        map $lace_dir{$_} = $lace_dir, @seq_name_list;
+
+        if (my $pid = fork) {
+            #$SIG{'CHLD'} = 'IGNORE';
+            #sleep 15;   # Prevent multiple button presses
+            return 1;
+        }
+        elsif (defined $pid) {
+            #exec('lace', '-path', $lace_dir, '-view', '-noens', @seq_name_list);
+            exec('lace', '-path', $lace_dir, @seq_name_list);
+        }
+        else {
+            die "Error: Can't fork : $!";
+        }
+    }
+
+    sub do_embl_dump {
+        my( $sequence_name ) = @_;
+        
+        my $ana_seq = Hum::AnaStatus::Sequence->new_from_sequence_name($sequence_name);
+        my $ana_dir = $ana_seq->analysis_directory;
+        my( $lace_dir );
+        if ($lace_dir = $lace_dir{$sequence_name} and -e $lace_dir) {
+            my @embl_dump_command = ('emblDump',
+                '-path', $lace_dir,
+                '-dump', $ana_dir,
+                $sequence_name,
+                );
+            warn "Running '@embl_dump_command'\n";
+            system(@embl_dump_command) == 0
+                or warn "Error ($?) from emblDump";
+        } else {
+            warn "No lace database for '$sequence_name'";
+        }
+    }
+}
+
+sub hr_min_sec {
+    my ($sec, $min, $hr) = localtime(time);
+
+    return sprintf("%02d_%02d_%02d", $hr, $min, $sec);
+}
+
+sub hunt_for_selection {
+    my( $gc ) = @_;
+    
+    my $canvas = $gc->canvas;
+    
+    my( $query_str );
+    eval {
+        $query_str = $canvas->SelectionGet;
+    };
+    return if $@;
+    #warn "Looking for '$query_str'";
+    my $matcher = make_matcher($query_str);
+    
+    my $current_obj;
+    foreach my $obj ($canvas->find('withtag', 'selected')) {
+        $current_obj ||= $obj;
+        toggle_selection($gc, $obj);
+    }
+    
+    my $selected_text_obj = $canvas->selectItem;
+
+    ### Weirdly, I have to call this "find" twice,
+    ### or the first time it is called it returns
+    ### an empty list.
+    my @all_text_obj = $canvas->find('withtag', 'contig_text');
+       @all_text_obj = $canvas->find('withtag', 'contig_text');
+    
+    if ($selected_text_obj) {
+        if ($selected_text_obj == $all_text_obj[$#all_text_obj]) {
+            # selected obj is last on list, so is to leave at end
+        } else {
+            for (my $i = 0; $i < @all_text_obj; $i++) {
+                if ($all_text_obj[$i] == $selected_text_obj) {
+                    my @tail = @all_text_obj[$i + 1 .. $#all_text_obj];
+                    my @head = @all_text_obj[0 .. $i];
+                    @all_text_obj = (@tail, @head);
+                    last;
+                }
+            }
+        }
+    }
+
+    my $found = 0;
+    foreach my $obj (@all_text_obj) {
+        my $text = $canvas->itemcget($obj, 'text');
+        my $hit = &$matcher($text);
+        if ($hit) {
+            $canvas->selectClear;
+            my $start = index($text, $hit);
+            die "Can't find '$hit' in '$text'" if $start == -1;
+            $canvas->selectFrom($obj, $start);
+            $canvas->selectTo  ($obj, $start + length($hit) - 1);
+            $found = $obj;
+            last;
+        }
+    }
+    
+    unless ($found) {
+        $gc->message("Can't find '$query_str'");
+        return;
+    }
+    
+    $gc->scroll_to_obj($found);
+    
+    my @overlapping = $canvas->find('overlapping', $canvas->bbox($found));
+    foreach my $obj (@overlapping) {
+        my @tags = $canvas->gettags($obj);
+        if (grep $_ eq 'contig_seq_rectangle', @tags) {
+            unless (grep $_ eq 'selected', @tags) {
+                toggle_selection($gc, $obj);
+            }
+        }
+    }
+}
+
+sub make_matcher {
+    my( $pattern ) = @_;
+    
+    # Escape non word characters
+    $pattern =~ s{(\W)}{\\$1}g;
+    
+    my $matcher = eval "sub {
+        my( \$text ) = \@_;
+        
+        \$text =~ /($pattern)/i;
+        return \$1;
+        }";
+    if ($@) {
+        die "Error in pattern '$pattern' \n$@";
+    } else {
+        return $matcher;
+    }
+}
+
+sub list_selected_ana_seq_ids {
+    my( $canvas ) = @_;
+    
+    my @selected_objects = $canvas->find('withtag', 'selected');
+    my( @ana_seq_id_list );
+    foreach my $obj (@selected_objects) {
+        my ($ana_seq_id) = map /ana_seq_id=(\d+)/, $canvas->gettags($obj); 
+        die "Found selected object without ana_seq_id" unless $ana_seq_id;
+        push(@ana_seq_id_list, $ana_seq_id);
+    }
+    return @ana_seq_id_list;
+}
+
+sub list_selected_sequence_names {
+    my( $canvas ) = @_;
+    
+    my @selected_objects = $canvas->find('withtag', 'selected');
+    my( @sequence_name_list );
+    foreach my $obj (@selected_objects) {
+        my ($sequence_name) = map /sequence_name=(.+)/, $canvas->gettags($obj); 
+        die "Found selected object without sequence_name" unless $sequence_name;
+        push(@sequence_name_list, $sequence_name);
+    }
+    return @sequence_name_list;
+}
+
+sub set_reviewed {
+    my( $user, $comment, @ana_seq_id ) = @_;
+
+    foreach my $id (@ana_seq_id) {
+        add_new_entry($id, $user, $comment);
+    }
+}
+
+{
+    my( $sth );
+    
+    sub add_new_entry {
+        my( $id, $user, $comment ) = @_;
+        
+        $sth ||= prepare_statement(q{
+            INSERT ana_sequence_review( ana_seq_id
+                  , annotator_uname
+                  , review_time
+                  , review_comment)
+            VALUES(?,?,NOW(),?)
+            });
+        $sth->execute($id, $user, $comment);
+        $sth->rows or confess "Error inserting [$id, $user, $comment]";
+    }
+}
+
+
+sub make_button {
+    my( $parent, $label, $command, $underline_index ) = @_;
+    
+    my @args = (
+        -text => $label,
+        -command => $command,
+        );
+    push(@args, -underline => $underline_index)
+        if defined $underline_index;
+    my $button = $parent->Button(@args);
+    $button->pack(
+        -side => 'left',
+        );
+    return $button;
+}
+
+sub is_valid_annotator {
+    my( $annotator ) = @_;
+
+    my $sth = prepare_statement(q{
+        SELECT annotator_uname
+        FROM ana_person
+        });
+    $sth->execute;
+
+    while (my( $db_ann ) = $sth->fetchrow) {
+        return 1 if $db_ann eq $annotator;
+    }
+    return 0;
+}
+
+
+sub toggle_current {
+    my( $gc ) = @_;
+    
+    my $canvas = $gc->canvas;
+    
+    my $ana_seq = get_current_ana_seq_id($canvas);
+    return unless $ana_seq;
+
+    my ($rec) = $canvas->find('withtag', "ana_seq_id=$ana_seq&&contig_seq_rectangle");        
+    toggle_selection($gc, $rec);
+}
+
+sub get_current_ana_seq_id {
+    my( $canvas ) = @_;
+    
+    my ($ana_seq) = map /^ana_seq_id=(\d+)/, $canvas->gettags('current');
+    return $ana_seq;
+}
+
+sub deselect_all_selected_not_current {
+    my( $gc ) = @_;
+    
+    my $canvas = $gc->canvas;
+    $canvas->selectClear;
+    foreach my $obj ($canvas->find('withtag', 'selected&&!current')) {
+        toggle_selection($gc, $obj);
+    }
+}
+
+sub toggle_selection {
+    my( $gc, $obj ) = @_;
+    
+    my $canvas = $gc->canvas;
+    my $is_selected = grep $_ eq 'selected', $canvas->gettags($obj);
+    my( $new_colour ); 
+    if ($is_selected) {
+        $new_colour = '#aaaaff';
+        $canvas->dtag($obj, 'selected');
+    } else {
+        $new_colour = '#ffcccc';
+        $canvas->addtag('selected', 'withtag', $obj);
+    }
+    $canvas->itemconfigure($obj,
+        -fill => $new_colour,
+        );
+}
+
+sub useage {
+    exec('perldoc', $0);
+}
+
+sub make_chooser_map {
+    my( $set_id ) = @_;
+    
+    confess "No set_id given" unless $set_id;
+    
+    print STDERR "Getting set notes...";
+    
+    my $sql = qq{
+        SELECT ss.rank
+          , s.sequence_name
+          , a.ana_seq_id
+          , st.status_id
+          , r.annotator_uname
+          , r.review_time
+          , r.review_comment
+        FROM sequence s
+          , ana_sequence a
+          , ana_status st
+          , species_chromosome c
+          , ana_sequence_set ss
+        LEFT JOIN ana_sequence_review r
+          ON a.ana_seq_id = r.ana_seq_id
+        WHERE s.seq_id = a.seq_id
+          AND a.ana_seq_id = st.ana_seq_id
+          AND s.chromosome_id = c.chromosome_id
+          AND a.ana_seq_id = ss.ana_seq_id
+          AND a.is_current = 'Y'
+          AND st.is_current = 'Y'
+          AND ss.set_id = $set_id
+        ORDER BY ss.rank ASC
+          , r.review_time DESC
+        };
+    my $sth = prepare_statement($sql);
+    $sth->execute;
+
+    my( $rank,   $seq_name, $ana_seq_id,
+        $status, $uname,    $date,
+        $comment );
+    $sth->bind_columns(
+        \$rank,   \$seq_name, \$ana_seq_id,
+        \$status, \$uname,    \$date,
+        \$comment,
+        );
+    
+    my( @map );
+    my $last_ana_seq_id = 0;
+    while ($sth->fetch) {
+        next if $ana_seq_id == $last_ana_seq_id;
+        ($date) = $date =~ /(\d{4}-\d\d-\d\d)/ if $date;
+        $status = status_name($status);
+        push(@map,
+            [ $ana_seq_id, $rank, $seq_name, $status, $uname, $date, $comment ]
+            );
+        $last_ana_seq_id = $ana_seq_id;
+    }
+    
+    print STDERR " got them.\n";
+    
+    return @map;
+}
+
+sub get_unplaced_clones {
+    my( @map ) = @_;
+    
+    my %is_placed = map {$_->[1], 1} grep $_->[1], @map;
+    my( @unplaced );
+    foreach my $seq_name (list_all_seq_names())  {
+        push(@unplaced, $seq_name) unless $is_placed{$seq_name};
+    }
+    return @unplaced;
+}
+
+{
+    my( %id_status );
+    
+    sub status_name {
+        my( $id ) = @_;
+        
+        unless (%id_status) {
+            my $sth = prepare_statement(q{
+                SELECT status_id
+                  , status_name
+                FROM ana_status_dict
+                });
+            $sth->execute;
+            while (my( $id, $name ) = $sth->fetchrow) {
+                $id_status{$id} = $name;
+            }
+        }
+        return $id_status{$id};
+    }
+}
+
+
+
+__END__
+
+=head1 NAME - ana_notes
+
+=head1 SYNOPSIS
+
+  ana_notes SEQUENCE_SET_NAME
+  ana_notes -list
+  ana_notes -help
+
+=head1 DESCRIPTION
+
+Used to attach notes to sequences in sets of
+sequences during annotation.  A new note replaces
+the note seen in the display, but does not delete
+it from the central database.
+
+If run by non-annotators, it doesn't display the
+editing controls.
+
+=head1 PARAMETERS
+
+=over 4
+
+=item -list
+
+Lists all the sequence sets in the database to the
+terminal.
+
+=item SEQUENCE_SET_NAME
+
+The name of the sequence set.
+
+=back
+
+=head1 KEYBOARD SHORT CUTS
+
+=over 4
+
+=item Control-H
+
+B<H>unts for the text in the clipboard.  Just
+highlight a piece of text in your terminal or
+editor, and press B<Control-H> in ana_notes to
+find it.
+
+=item Control-S
+
+B<S>ave the current text in the B<Note text>
+entry box to all the selected (pink)
+sequences.  This also re-synchronizes with the
+central database.
+
+=item Control-R or F5
+
+Re-synchronizes with the central database, so
+that you can see the changes to notes made by
+other annotators.
+
+=item Control-L
+
+Run B<lace> on the selected sequences.
+
+=item Control-E
+
+Run B<emblDump> on the selected sequences.
+
+=back
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
