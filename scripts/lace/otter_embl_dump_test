@@ -30,6 +30,19 @@ e.g.
 
 otter_embl_dump_test -dataset human -chr chr1-07 AC114498.2
 
+Where possible, when data is not explicitly provided in the
+script, it is obtained from Otter.
+
+Currently does this for:
+
+  Species
+  EMBL divsion
+  Chromosome name
+  Description
+  Keywords
+  Clone length
+  Sequence (of course)
+
 =cut
 
 use strict;
@@ -89,7 +102,6 @@ use Carp;
         $ft_factory->comments(\@comments);
         $ft_factory->comments(\@comments2);
 
-        #embl_setup sets $ft_factory->accession, and $ft_factory->sequence_version
         my $embl = $ft_factory->embl_setup();
         $ft_factory->make_embl_ft($accession, $embl, $seq_version);
         $ft_factory->add_sequence_from_otter($embl);
