@@ -68,86 +68,90 @@ my $user   = 'ensadmin';
 my $pass   = 'ensembl';
 my $port   = 19322;
 my $dbname = 'otter_chr21';
+my $gene_type = 'Known';
 
 my $db = new Bio::EnsEMBL::DBSQL::DBAdaptor(
   -host   => $host,
   -user   => $user,
   -pass   => $pass,
   -port   => $port,
-  -dbname => $dbname
+  -dbname => $dbname,
+  -genetype  => $gene_type
 );
 
 my $analysis = new Bio::EnsEMBL::Analysis(-logic_name => 'curated');
 
 $db->assembly_type('RIKEN');
 my $slice = $db->get_SliceAdaptor->fetch_by_chr_name('21');
-#my $testslice = $db->get_SliceAdaptor->fetch_by_chr_start_end('21',16368550,16417237);
 
 
-
-while (<>) {
-  chomp;
-
-  my @arr = split (' ', $_, 9);
-  my $clone  = $arr[0];
-  my $start  = $arr[3];
-  my $end    = $arr[4];
-  my $strand = $arr[6];
-
-  my @arr2 = split (/\;/, $arr[8]);
-
-  my %hashy;
-  foreach my $str (@arr2) {
-    my ($key, $val) = split (' ', $str, 2);
-
-    # print "Found key $key $val\n";
-    $key =~ s/ //g;
-    $key =~ s/\"//g;
-    $val =~ s/\"//g;
-    if ($key ne "Description") {
-      $val =~ s/^ +//;
-      $val =~ s/ +$//;
-      $key =~ s/\t//g;
-      $val =~ s/\t//g;
-    } else {
-      $val =~ s/\t/ /g;
+foreach my $file (@ARGV) {
+  open FP,"<$file";
+  while (<FP>) {
+    chomp;
+  
+    my @arr = split (' ', $_, 9);
+    my $clone  = $arr[0];
+    my $start  = $arr[3];
+    my $end    = $arr[4];
+    my $strand = $arr[6];
+  
+    my @arr2 = split (/\;/, $arr[8]);
+  
+    my %hashy;
+    foreach my $str (@arr2) {
+      my ($key, $val) = split (' ', $str, 2);
+  
+      # print "Found key $key $val\n";
+      $key =~ s/ //g;
+      $key =~ s/\"//g;
+      $val =~ s/\"//g;
+      if ($key ne "Description") {
+        $val =~ s/^ +//;
+        $val =~ s/ +$//;
+        $key =~ s/\t//g;
+        $val =~ s/\t//g;
+      } else {
+        $val =~ s/\t/ /g;
+      }
+  
+      $hashy{$key} = $val;
+  
+      #print "Found key $key $val\n";
+  
     }
-
-    $hashy{$key} = $val;
-
-    #print "Found key $key $val\n";
-
+    if ($arr[2] eq "exon") {
+      my $id = $hashy{transcript_id};
+      my $geneid = $hashy{gene_id};
+  
+      if (!defined($exons{$geneid}{$id})) {
+        $exons{$geneid}{$id} = [];
+      }
+      my %exonhash;
+      $exonhash{clone}  = $clone;
+      $exonhash{start}  = $start;
+      $exonhash{end}    = $end;
+      $exonhash{strand} = $strand;
+      $exonhash{values} = \%hashy;
+      push (@{ $exons{$geneid}{$id} }, \%exonhash);
+  
+    } elsif ($arr[2] eq "CDS") {
+      my $id = $hashy{transcript_id};
+      my $geneid = $hashy{gene_id};
+  
+      if (!defined($cds{$geneid}{$id})) {
+        $cds{$geneid}{$id} = [];
+      }
+      my %cdshash;
+      $cdshash{clone}  = $clone;
+      $cdshash{start}  = $start;
+      $cdshash{end}    = $end;
+      $cdshash{strand} = $strand;
+      $cdshash{values} = \%hashy;
+      push (@{ $cds{$geneid}{$id} }, \%cdshash);
+    }
   }
-  if ($arr[2] eq "exon") {
-    my $id = $hashy{transcript_id};
-    my $geneid = $hashy{gene_id};
-
-    if (!defined($exons{$geneid}{$id})) {
-      $exons{$geneid}{$id} = [];
-    }
-    my %exonhash;
-    $exonhash{clone}  = $clone;
-    $exonhash{start}  = $start;
-    $exonhash{end}    = $end;
-    $exonhash{strand} = $strand;
-    $exonhash{values} = \%hashy;
-    push (@{ $exons{$geneid}{$id} }, \%exonhash);
-
-  } elsif ($arr[2] eq "CDS") {
-    my $id = $hashy{transcript_id};
-    my $geneid = $hashy{gene_id};
-
-    if (!defined($cds{$geneid}{$id})) {
-      $cds{$geneid}{$id} = [];
-    }
-    my %cdshash;
-    $cdshash{clone}  = $clone;
-    $cdshash{start}  = $start;
-    $cdshash{end}    = $end;
-    $cdshash{strand} = $strand;
-    $cdshash{values} = \%hashy;
-    push (@{ $cds{$geneid}{$id} }, \%cdshash);
-  }
+  close FP;
 }
 
 my @tilepath = @{$slice->get_tiling_path};
@@ -238,12 +242,10 @@ foreach my $ref (\%cds, \%exons) {
 print "Finished remap\n";
 
 my $author = new Bio::Otter::Author(
-  -name  => 'Todd',
-  -email => 'todd@????'
+  -name  => 'Todd Taylor',
+  -email => 'Taylor@gsc.riken.go.jp'
 );
 
-# foreach my $gene (keys %cds) {
-#  foreach my $tran (keys %{$cds{$gene}}) {
 foreach my $geneid (keys %exons) {
   print STDERR "Gene id " . $geneid . "\n";
 
@@ -253,7 +255,7 @@ foreach my $geneid (keys %exons) {
   my $geneinfo = new Bio::Otter::GeneInfo;
 
   $gene->gene_info($geneinfo);
-  $gene->type($values{'type'});
+  $gene->type($gene_type);
 
   $geneinfo->name(new Bio::Otter::GeneName(-name => $geneid));
   $geneinfo->author($author);
@@ -287,7 +289,7 @@ foreach my $geneid (keys %exons) {
 
     $tran->transcript_info($traninfo);
     $traninfo->class(
-      new Bio::Otter::TranscriptClass(-name => 'Known'));
+      new Bio::Otter::TranscriptClass(-name => $gene_type));
     $traninfo->name($tranid);
     $traninfo->author($author);
 
@@ -434,7 +436,7 @@ foreach my $geneid (keys %exons) {
         $t->translation->version(1);
       }
     }
-#    $db->get_GeneAdaptor->store($gene);
+    $db->get_GeneAdaptor->store($gene);
 
   };
   if ($@) {
