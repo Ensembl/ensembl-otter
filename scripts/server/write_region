@@ -25,9 +25,11 @@ print STDERR "******* Starting to write region *********";
 
 my $odb    = get_DBAdaptor_from_CGI_species($q, $OTTER_SPECIES);
 my $author = get_Author_from_CGI($q);
+
 ####################################################################
 ####################################################################
 ####################################################################
+
 # Get all the params in nice variables
 
 my %params = $q->Vars;
@@ -38,14 +40,17 @@ print STDERR "Length of data " . length($xml_data) . "";
 
 my $auth_name = $author->name();
 my $tmp_xml = Bio::Otter::Lace::TempFile->new;
+
 $tmp_xml->root('/tmp');
 $tmp_xml->name(qq`write_region_${auth_name}.xml`);
 my $tmp_xml_name = $tmp_xml->full_name();
+
 print STDERR "Writing xml to tmp file [$tmp_xml_name]";
 
 my $xml_fh = eval{
-    $tmp_xml->write_file_handle();
-} || error_exit($q, "Can't write to '$tmp_xml_name' : $!");
+  $tmp_xml->write_file_handle();
+  } || error_exit($q, "Can't write to '$tmp_xml_name' : $!");
+
 print $xml_fh $xml_data;
 
 # Save a bit of memory
@@ -59,44 +64,48 @@ my $fh = $tmp_xml->read_file_handle();
 ####################################################################
 
 my( $genes, 
-    $slice, # The slice is fetched from the database by XML_to_otter
+    $slice,			# The slice is fetched from the database by XML_to_otter
     $path,
-    $new_feature_set,   # Arrayref of SimpleFeature objects
+    $new_feature_set,		# Arrayref of SimpleFeature objects
+    $new_assembly_tag_set,	# Arrayref of AssemblyTag objects
     $chrname, $chrstart, $chrend,
-    );
+  );
+
 my $path_as_XML;
+
 eval {
-    my( $seqstr );  # Don't need outside block
-    ($genes, $slice, $seqstr, $path, $new_feature_set) =
-        Bio::Otter::Converter::XML_to_otter($fh, $odb);
+  my( $seqstr );		# Don't need outside block
+  ($genes, $slice, $seqstr, $path, $new_feature_set, $new_assembly_tag_set) =
+    Bio::Otter::Converter::XML_to_otter($fh, $odb);
 
-    die "no path from XML"    unless  $path;
-    die "empty path from XML" unless @$path;
+  die "no path from XML"    unless  $path;
+  die "empty path from XML" unless @$path;
 
-    $chrname  = $slice->chr_name;
-    $chrstart = $slice->chr_start;
-    $chrend   = $slice->chr_end;
+  $chrname  = $slice->chr_name;
+  $chrstart = $slice->chr_start;
+  $chrend   = $slice->chr_end;
 
-    $path_as_XML = Bio::Otter::Converter::path_to_XML($chrname, $chrstart, $chrend, $slice->assembly_type, $slice->get_tiling_path);
+  $path_as_XML = Bio::Otter::Converter::path_to_XML($chrname, $chrstart, $chrend, $slice->assembly_type, $slice->get_tiling_path);
 
-    print STDERR "Processed incoming xml file with slice: [$chrname] [$chrstart] [$chrend]"; 
+  print STDERR "Processed incoming xml file with slice: [$chrname] [$chrstart] [$chrend]"; 
 };
+
 if ($@) {
   print STDERR "Failed converting XML [$genes,$chrname,$chrstart,$chrend][$@]";
   error_exit($q, "Failed converting XML to otter [$@]");
 }
-print STDERR "done";
 
+print STDERR "done";
 print STDERR "Found " . scalar(@$genes) . " genes on slice [$chrname] [$chrstart] [$chrend]";
 
 
 my $cb = new Bio::Otter::CloneLockBroker($odb);
 
-
 print STDERR "Checking region is locked...";
 eval {
-    $cb->check_locks_exist_by_slice($slice, $author);
+  $cb->check_locks_exist_by_slice($slice, $author);
 };
+
 error_exit($q, "Failed checking locks [$@]") if $@;
 print STDERR "done";
 
@@ -105,25 +114,28 @@ print STDERR "done";
 my $sida = $odb->get_StableIdAdaptor();
 strip_incomplete_genes($genes);
 
-foreach my $gene (@$genes) {    
-    $gene->stable_id($sida->fetch_new_gene_stable_id)
-        unless $gene->stable_id;
-    foreach my $trans (@{$gene->get_all_Transcripts}) {
-        $trans->stable_id($sida->fetch_new_transcript_stable_id)
-            unless $trans->stable_id;
-        if (my $translation = $trans->translation) {
-            $translation->stable_id($sida->fetch_new_translation_stable_id)
-                unless $translation->stable_id;
-        }
-        foreach my $exon (@{$trans->get_all_Exons}) {
-            $exon->stable_id($sida->fetch_new_exon_stable_id)
-                unless $exon->stable_id;
-        }
+foreach my $gene (@$genes) {
+  $gene->stable_id($sida->fetch_new_gene_stable_id)
+    unless $gene->stable_id;
+
+  foreach my $trans (@{$gene->get_all_Transcripts}) {
+    $trans->stable_id($sida->fetch_new_transcript_stable_id)
+      unless $trans->stable_id;
+    if (my $translation = $trans->translation) {
+      $translation->stable_id($sida->fetch_new_translation_stable_id)
+	unless $translation->stable_id;
     }
+
+    foreach my $exon (@{$trans->get_all_Exons}) {
+      $exon->stable_id($sida->fetch_new_exon_stable_id)
+	unless $exon->stable_id;
+    }
+  }
 }
 
 my $ab = new Bio::Otter::AnnotationBroker($odb);
 $ab->current_author($author);
+
 my $oaga = $odb->get_GeneAdaptor();
 $odb->assembly_type($slice->assembly_type);
 
@@ -136,7 +148,8 @@ eval {
 if ($@) {
   error_exit($q, "Failed fetching analysis [$@]");
 }
-if(!defined($anal)) {
+
+if (!defined($anal)) {
   error_exit($q, "No analysis object associated with otter");
 }
 
@@ -147,6 +160,7 @@ eval {
   $dbgenes = $oaga->fetch_by_Slice($slice);
   strip_incomplete_genes($dbgenes);
 };
+
 if ($@) {
   error_exit($q, "Failed fetching genes [$@]");
 }
@@ -159,15 +173,19 @@ foreach my $gene (@$genes) {
 
 # These lines force loads from the database to stop attempted lazy
 # loading during the write
+
 eval {
   foreach my $gene (@$dbgenes) {
+
     my $transcripts = $gene->get_all_Transcripts;
+
     foreach my $tran (@$transcripts) {
       $tran->translation;
       if ($tran->translation) {
-         $tran->translation->stable_id;
+	$tran->translation->stable_id;
       }
       $tran->stable_id;
+
       my $exons =  $tran->get_all_Exons;
       foreach my $exon (@$exons) {
         $exon->stable_id;
@@ -175,43 +193,51 @@ eval {
     }
   }
 };
+
 if ($@) {
   error_exit($q, "Failed fully loading genes before write [$@]");
 }
 
-
 my( @gene_events, @changed_clones );
-
 
 print STDERR "Comparing " . scalar(@$dbgenes) . " old to " . scalar(@$genes) . " new gene(s)... ";
 
-my( $del_sf, $save_sf );
-eval {
-    print STDERR "New clones";
-    my $new_clones = clones_from_path($path);
-    print STDERR "Old clones";
-    my $old_clones = clones_from_path($slice->get_tiling_path);
+my( $del_sf, $save_sf, $del_at, $save_at );
 
-    @gene_events = $ab->compare_genes($dbgenes, $genes);
-    @changed_clones = $ab->compare_clones($old_clones, $new_clones);
-    
-    # $slice was fetched from the database by XML_to_otter, so we can simply:
-    my $old_feature_set = $slice->get_all_SimpleFeatures;
-    ($del_sf, $save_sf) = $ab->compare_feature_sets($old_feature_set, $new_feature_set);
+eval {
+  print STDERR "New clones";
+  my $new_clones = clones_from_path($path);
+
+  print STDERR "Old clones";
+  my $old_clones = clones_from_path($slice->get_tiling_path);
+
+  @gene_events = $ab->compare_genes($dbgenes, $genes);
+  @changed_clones = $ab->compare_clones($old_clones, $new_clones);
+
+  # $slice was fetched from the database by XML_to_otter, so we can simply:
+  my $old_feature_set = $slice->get_all_SimpleFeatures;
+  ($del_sf, $save_sf) = $ab->compare_feature_sets($old_feature_set, $new_feature_set);
+
+  my $atag_Ad = $odb->get_AssemblyTagAdaptor;
+  my $old_assembly_tag_set = $atag_Ad->fetch_AssemblyTags_by_Slice($slice);
+
+  ($del_at, $save_at) = $ab->compare_assembly_tag_sets($old_assembly_tag_set, $new_assembly_tag_set);
 };
+
 if ($@) {
-    error_exit($q, "Failed comparing annotations [$@]");
+  error_exit($q, "Failed comparing annotations [$@]");
 }
 print STDERR "done";
 
 # the magic happens!
 
 my ($outputstr, $output_xml);
+
 eval {
   $odb->begin_work();
 
   print STDERR "Found " . scalar(@gene_events) . " changed gene annotations";
-  
+
   foreach my $event ( @gene_events ) {
     $outputstr .= $event->to_string;
     print STDERR $event->to_string;
@@ -222,42 +248,60 @@ eval {
       $gene = $event->old_gene;
     } else {
       $gene = $event->new_gene;
-        $output_xml .= $gene->toXMLString();
     }
 
     print STDERR "Attaching gene to slice " . $gene->stable_id . " " . $gene->version. "";
     $oaga->attach_to_Slice($gene,$slice);
     $gene->detach_DBAdaptors;
     print STDERR "Done attaching";
+
     $oaga->store($gene);
+    $output_xml .= $gene->toXMLString() unless $event->type eq 'deleted';
     print STDERR "Stored gene";
     $outputstr .= " " . $gene->version . " " . $gene->gene_info->name->name . "";
   }
-  
+
   my $oaca = $odb->get_CloneAdaptor;
   foreach my $clone (@changed_clones) {
+
     my $acc = $clone->embl_id;
     my $sv  = $clone->embl_version;
     printf STDERR "Storing new version of clone '$acc.$sv'";
+
     my $db_clone = $oaca->fetch_by_accession_version($acc, $sv);
     $db_clone->clone_info($clone->clone_info);
     $oaca->store($db_clone);
   }
-    
-    # Store SimpleFeature changes
-    my $sfa = $odb->get_SimpleFeatureAdaptor;
-    if (@$del_sf) {
-        printf STDERR "Deleting %d SimpleFeatures", scalar @$del_sf;
-        foreach my $sf (@$del_sf) {
-            $sfa->remove($sf);
-        }
+
+  # Store SimpleFeature changes
+  my $sfa = $odb->get_SimpleFeatureAdaptor;
+  if (@$del_sf) {
+    foreach my $sf (@$del_sf) {
+      $sfa->remove($sf);
     }
-    if (@$save_sf) {
-        attach_analysis_objects_and_transform_to_slice($odb, $slice, $save_sf);
-        printf STDERR "Saving %d SimpleFeatures", scalar @$save_sf;
-        $sfa->store(@$save_sf);
-    }
-  
+    printf STDERR "Deleting %d SimpleFeatures", scalar @$del_sf unless $@;
+  }
+  if (@$save_sf) {
+    attach_analysis_objects_and_transform_to_slice($odb, $slice, $save_sf);
+    $sfa->store(@$save_sf);
+    printf STDERR "Saving %d SimpleFeatures", scalar @$save_sf unless $@;
+  }
+
+  # Store Assembly_tags changes
+  my $atag_Ad = $odb->get_AssemblyTagAdaptor;
+
+  if (@$del_at) {
+    $atag_Ad->remove($del_at);
+    printf STDERR "Deleting %d AssemblyTags", scalar @$del_at unless $@;
+  }
+
+  if (@$save_at) {
+
+    my $c_save = transform_assembly_tag_coordinates($slice, $save_at);
+    $atag_Ad->store($c_save);
+    printf STDERR "Saving %d AssemblyTags", scalar @$c_save unless $@;
+  }
+
   $odb->commit();
 };
 
@@ -266,64 +310,108 @@ if ($@) {
 }
 
 $outputstr ||= "No changes to annotations";
+
 #send_response($q, $outputstr);
 $output_xml = "<otter>\n" . $path_as_XML . $output_xml . "</otter>\n";
 send_response($q, $output_xml);
 
-#####################################################################################
+     #-------------------------------------------
+     #          S U B R O U T I N E S
+     #-------------------------------------------
+
 
 sub clones_from_path {
-    my( $path ) = @_;
+  my( $path ) = @_;
 
-    my $clones = [];
-    foreach my $rawcontig (map $_->component_Seq, @$path) {
-        my $clone = $rawcontig->clone;
-        unless ($clone) {
-            printf STDERR "No clone attached to '%s'", $rawcontig->id;
-            next;
-        }
-        push(@$clones, $clone);
+  my $clones = [];
+  foreach my $rawcontig (map $_->component_Seq, @$path) {
+    my $clone = $rawcontig->clone;
+    unless ($clone) {
+      printf STDERR "No clone attached to '%s'", $rawcontig->id;
+      next;
     }
-    return $clones;
+    push(@$clones, $clone);
+  }
+  return $clones;
 }
 
 sub attach_analysis_objects_and_transform_to_slice {
-    my( $dba, $slice, $sf_list ) = @_;
+  my( $dba, $slice, $sf_list ) = @_;
 
-    my $analysis_adaptor = $dba->get_AnalysisAdaptor;
-    
-    my( %logic_ana );
-    for (my $i = 0; $i < @$sf_list; $i++) {
-        my $sf = $sf_list->[$i];
-        my $class = ref($sf);
-        my $logic_name = $sf->analysis->logic_name;
-        my $ana = $logic_ana{$logic_name}
-            ||= $analysis_adaptor->fetch_by_logic_name($logic_name);
-        $sf->analysis($ana);
-        $sf->contig($slice);
-        my @mapped = $sf->transform;
-        if (@mapped == 1) {
-            unless ($mapped[0]->isa($class)) {
-                die "Error, got '$mapped[0]' from transform";
-            }
-            $sf_list->[$i] = $mapped[0];
-        } else {
-            die "transform returned ", scalar(@mapped), " features: (@mapped)";
-        }
+  my $analysis_adaptor = $dba->get_AnalysisAdaptor;
+
+  my( %logic_ana );
+
+  for (my $i = 0; $i < @$sf_list; $i++) {
+
+    my $sf = $sf_list->[$i];
+    my $class = ref($sf);
+    my $logic_name = $sf->analysis->logic_name;
+
+    my $ana = $logic_ana{$logic_name}
+      ||= $analysis_adaptor->fetch_by_logic_name($logic_name);
+
+    $sf->analysis($ana);
+    $sf->contig($slice);
+
+    my @mapped = $sf->transform;
+
+    if (@mapped == 1) {
+      unless ($mapped[0]->isa($class)) {
+	die "Error, got '$mapped[0]' from transform";
+      }
+      $sf_list->[$i] = $mapped[0];
     }
+    else {
+      die "transform returned ", scalar(@mapped), " features: (@mapped)";
+    }
+  }
+}
+
+sub transform_assembly_tag_coordinates {
+  my ($slice, $sets) = @_;
+
+  my $new_sets = [];
+
+  foreach my $at ( @$sets ) {
+
+    $at->contig($slice);
+    my @mapped = $at->transform;
+
+    if ( @mapped == 1 ) {
+      unless ( $mapped[0]->isa(ref($at)) ) {
+	die "Error, got '$mapped[0]' from transform, which is not a ".ref($at);
+      }
+
+      # $mapped[0]->{_seqname} is contig_id,    # $mapped[0]->seqname : contig_name
+
+      $at->contig_id($mapped[0]->{_seqname});
+      $at->tag_info ($mapped[0]->tag_info);
+      $at->tag_type ($mapped[0]->tag_type);
+      push(@$new_sets, $at);
+    }
+    else {
+      # can't deal with assembly tags mapped to > 1 contig
+      die "transform returned ", scalar(@mapped), " AssemblyTag: (@mapped)";
+    }
+  }
+  return $new_sets;
 }
 
 sub strip_incomplete_genes {
-    my( $gene_list ) = @_;
-    
-    for (my $i = 0; $i < @$gene_list;) {
-        my $gene = $gene_list->[$i];
-        if ($gene->gene_info->truncated_flag) {
-            printf STDERR "Splicing out incomplete gene '%s'", $gene->gene_info->name->name;
-            splice(@$gene_list, $i, 1);
-            next;
-        } else {
-            $i++;
-        }
+  my( $gene_list ) = @_;
+
+  for (my $i = 0; $i < @$gene_list;) {
+    my $gene = $gene_list->[$i];
+    if ($gene->gene_info->truncated_flag) {
+      printf STDERR "Splicing out incomplete gene '%s'", $gene->gene_info->name->name;
+      splice(@$gene_list, $i, 1);
+      next;
+    } else {
+      $i++;
     }
+  }
 }
+
+__END__
+

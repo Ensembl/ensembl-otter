@@ -11,7 +11,7 @@ use Bio::Otter::AnnotationBroker::Event;
 # The name of the author writing changes into the database
 sub current_author {
     my( $self, $current_author ) = @_;
-    
+
     if ($current_author) {
         my $class = 'Bio::Otter::Author';
         my $ok = 0;
@@ -24,11 +24,11 @@ sub current_author {
 
 sub compare_feature_sets {
     my( $self, $old_features, $new_features ) = @_;
-    
+
     my %old = map {SimpleFeature_key($_), $_} @$old_features;
     my %new = map {SimpleFeature_key($_), $_} @$new_features;
 
-    # Features that were in the old, but not the new, should be deleted    
+    # Features that were in the old, but not the new, should be deleted
     my $delete = [];
     while (my ($key, $old_sf) = each %old) {
         unless ($new{$key}) {
@@ -49,7 +49,7 @@ sub compare_feature_sets {
 
 sub SimpleFeature_key {
     my( $sf ) = @_;
-    
+
     return join('^',
         $sf->analysis->logic_name,
         $sf->start,
@@ -61,15 +61,52 @@ sub SimpleFeature_key {
         );
 }
 
+sub compare_assembly_tag_sets {
+  my( $self, $old_tag_set, $new_tag_set ) = @_;
+
+  my %old = map {AssemblyTag_key($_), $_} @$old_tag_set;
+  my %new = map {AssemblyTag_key($_), $_} @$new_tag_set;
+
+  # Features that were in the old, but not the new, should be deleted
+  my $delete = [];
+  while (my ($key, $old_at) = each %old) {
+    unless ($new{$key}) {
+      push(@$delete, $old_at);
+    }
+  }
+
+  # Features that are in the new but were not in the old should be saved
+  my $save = [];
+  while (my ($key, $new_at) = each %new) {
+    unless ($old{$key}) {
+      push(@$save, $new_at);
+    }
+  }
+
+  return($delete, $save);
+}
+
+sub AssemblyTag_key {
+    my( $at ) = @_;
+
+    return join('^',
+        $at->tag_type,
+        $at->start,
+        $at->end,
+	$at->tag_info,	
+	$at->strand	
+        );
+}
+
 sub compare_clones {
     my( $self, $old_clones, $new_clones ) = @_;
-    
+
     my $current_author = $self->current_author
         or $self->throw("current_author not set");
-    
+
     my %new = map {$_->embl_id . "." . $_->embl_version, $_} @$new_clones;
     my %old = map {$_->embl_id . "." . $_->embl_version, $_} @$old_clones;
-    
+
     my( @changed );
     foreach my $acc_sv (keys %old) {
         my $old_clone = $old{$acc_sv};
@@ -87,7 +124,7 @@ sub compare_clones {
 
 sub make_id_version_hash {
     my( $self, $genes ) = @_;
-    
+
     my $stable_version = {};
     foreach my $gene (@$genes) {
         $self->store_stable($stable_version, $gene);
@@ -101,15 +138,15 @@ sub make_id_version_hash {
             $self->store_stable($stable_version, $exon);
         }
     }
-    
+
     $self->{'_id_version_hash'} = $stable_version;
 }
 
 sub increment_obj_version {
     my( $self, $obj ) = @_;
-    
+
     my $stable_version = $self->{'_id_version_hash'};
-    
+
     my $stable = $obj->stable_id
         or $self->throw("No stable_id on object '$obj'");
     my $version = ++$stable_version->{$stable};
@@ -126,13 +163,13 @@ sub increment_obj_version {
 
 sub drop_id_version_hash {
     my( $self ) = @_;
-    
+
     $self->{'_id_version_hash'} = undef;
 }
 
 sub store_stable {
     my( $self, $sid_v, $obj ) = @_;
-    
+
     if (my $sid = $obj->stable_id) {
         my $this_version = $obj->version;
         if (my $version = $sid_v->{$sid}) {
@@ -145,7 +182,7 @@ sub store_stable {
 
 sub compare_genes {
     my ($self, $old_genes, $new_genes) = @_;
-    
+
     $self->make_id_version_hash($old_genes);
 
     my $current_author = $self->current_author
@@ -165,7 +202,7 @@ sub compare_genes {
     # Change type on deleted genes
 
     my ($del,$new,$mod) = $self->compare_obj($old_genes, $new_genes);
-    
+
     my %modified_gene_ids;
     my @events;
     foreach my $geneid (keys %$mod) {
@@ -234,7 +271,7 @@ sub compare_genes {
             if ($self->compare_transcripts($oldt, $newt) == 0) {
                 $gene_modified = $transcript_modified = 1;
             }
-            
+
             if ($transcript_modified) {
                 $newt->transcript_info->author($current_author);
             }
@@ -248,12 +285,9 @@ sub compare_genes {
         }
 
     } # done comparisons - now need to build arrays
-    
+
     my $time = time;
 
-
-
-    
     foreach my $g (@$new) {
         print STDERR "Do I have a stableID? : " . $g->stable_id . "\n";
 
@@ -283,10 +317,9 @@ sub compare_genes {
 							      -new => $gene);
 	push(@events,$event);
     }
-    
-    
+
     # Flag deleted genes
-    
+
     foreach my $g (@$del) {
         my $gene = $oldgenehash{$g->stable_id};
         $self->set_gene_created_version_modified($gene, $time);
@@ -304,14 +337,13 @@ sub compare_genes {
 		    $self->increment_obj_version($exon);
                 }
             }
-          
+
             my $event = Bio::Otter::AnnotationBroker::Event->new( -type => 'deleted',
                                                                   -old  => $gene);
             push(@events,$event);
         }
     }
-    
-    
+
     # Modified genes :
     foreach my $id (keys %modified_gene_ids) {
 	my $old_gene = $oldgenehash{$id};
@@ -321,9 +353,9 @@ sub compare_genes {
 							      -new  => $new_gene,
 							      -old  => $old_gene);
 	
-	push(@events,$event);	    
+	push(@events,$event);	
     }
-    
+
     $self->drop_id_version_hash;
 
     return @events;
@@ -331,7 +363,7 @@ sub compare_genes {
 
 sub increment_versions_in_gene {
     my( $self, $gene ) = @_;
-    
+
     $self->increment_obj_version($gene);
 
     foreach my $tn (@{$gene->get_all_Transcripts}) {
@@ -353,7 +385,7 @@ sub increment_versions_in_gene {
 
 sub set_gene_created_version_modified {
     my( $self, $gene, $time ) = @_;
-    
+
     # Set created and version on all gene components that don't have them
     # Update the modified time
     $gene->created($time) unless $gene->created;
@@ -423,12 +455,12 @@ sub compare_obj {
                 next;
             }
         }
-        
+
         # This is here because the new object may not be new,
         # but could be, for example, an existing transcript
         # that has now been moved into another gene.
         $self->increment_obj_version($newobj);
-        
+
         push(@new, $newobj);
     }
 
@@ -445,7 +477,7 @@ sub compare_obj {
 
 sub obj_type {
     my( $self, $obj ) = @_;
-    
+
     my ($type) = ref($obj) =~ /([^:]+)$/;
     return $type;
 }
@@ -548,5 +580,5 @@ sub compare_translations {
 	return 1;
     }
 }
-    
+
 1;
