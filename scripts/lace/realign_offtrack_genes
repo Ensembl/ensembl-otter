@@ -98,8 +98,10 @@ $| = 1;
         my $finder = Hum::Analysis::Factory::ExonLocator->new;
         $finder->genomic_Sequence($dest_seq);
         
-        if (remap_ens_Exons($finder, $db_gene->get_all_Exons, $short_slice, $liberal)) {
-            warn "Remapped exons OK\n";
+        my $before_exon_count = @{$db_gene->get_all_Exons};
+        if (remap_ens_Exons($finder, $db_gene, $short_slice, $liberal)) {
+            my $after_exon_count = @{$db_gene->get_all_Exons};
+            warn "Remapped $after_exon_count of $before_exon_count exons OK\n";
             # otter > XML > otter
             my $temp = Bio::Otter::Lace::TempFile->new;
             $temp->name("realign_offtrack.$$.xml");
@@ -281,7 +283,9 @@ sub hum_seq_from_exon {
 }
 
 sub remap_ens_Exons {
-    my( $finder, $exons, $dest_ctg, $liberal ) = @_;
+    my( $finder, $gene, $dest_ctg, $liberal ) = @_;
+
+    my $exons = $gene->get_all_Exons;
 
     # Make a Hum::Sequence object for each exon
     my $exon_seq = [];
@@ -295,8 +299,10 @@ sub remap_ens_Exons {
     # Give Exons new coords
     my $sub_strand = undef;
     my $all_found = 1;
-    for (my $i = 0; $i < @$exons;) {
+    my $exons_not_found = {};
+    for (my $i = 0; $i < @$exons; $i++) {
         my $exon  = $exons->[$i];
+        warn "Looking at exon $i '", $exon->stable_id, "'\n";
         my $name  = $exon->stable_id;
         my $e_len = $exon->length;
         if (my $feat = $fs->[$i]) {
@@ -324,27 +330,69 @@ sub remap_ens_Exons {
             $exon->end($end);
             $exon->strand($strand);
             $exon->contig($dest_ctg);
-            $i++;
         } else {
             printf STDERR "Failed to find %d bp exon '%s'\n",
                 $exon->length,
                 $exon->stable_id;
             $all_found = 0;
             if ($liberal) {
-                splice(@$exons, $i, 1);
-            } else {
-                $i++;
+                $exons_not_found->{$exon} = 1;
             }
         }
     }
     if ($liberal) {
+        # Strip out any exons that weren't found
+        strip_unfound_exons_from_gene($exons_not_found, $gene);
+        
         # Only return true if we found any exons 
-        # Could add code to remove transcript from gene
-        return @$exons ? 1 : 0;
+        return @{$gene->get_all_Exons} ? 1 : 0;
     } else {
         return $all_found;
     }
 }
+
+sub strip_unfound_exons_from_gene {
+    my( $exons_not_found, $gene ) = @_;
+    
+    my $empty_transcripts = {};
+    foreach my $tran (@{$gene->get_all_Transcripts}) {
+        my @exons = @{$tran->get_all_Exons};
+        $tran->flush_Exons;
+        my $drop_translation = 0;
+        foreach my $ex (@exons) {
+            if ($exons_not_found->{$ex}) {
+                warn "Stripping unfound exon '", $ex->stable_id, "' from transcript\n";
+                $drop_translation = 1;
+            } else {
+                $tran->add_Exon($ex);
+            }
+        }
+        if ($drop_translation) {
+            ### Would be better if we could keep translation
+            ### Same problem in truncate genes subroutine
+            warn "Discarding translation\n";
+            $tran->flush_Translation;
+        }
+        unless (@{$tran->get_all_Exons}) {
+            $empty_transcripts->{$tran} = 1;
+        }
+    }
+    
+    if (my $empt = keys %$empty_transcripts) {
+        # Remove empty transcripts from gene
+        warn "$empt transcripts have no exons left\n";
+        my @tran = @{$gene->get_all_Transcripts};
+        $gene->flush_Transcripts;
+        foreach my $tr (@tran) {
+            if ($empty_transcripts->{$tr}) {
+                warn "Stripping empty transcript '", $tr->stable_id, "' from gene\n";
+            } else {
+                $gene->add_Transcript($tr);
+            }
+        }
+    }
+}
+
 
 __END__
 

@@ -2,7 +2,7 @@ package Bio::Otter::Converter;
 
 use strict;
 use warnings;
-use Carp;
+use Carp qw{ cluck confess };
 
 use Bio::Otter::Author;
 use Bio::Otter::AssemblyTag;
@@ -1768,7 +1768,7 @@ sub prune_Exons {
     # keep track of all unique exons found so far to avoid making duplicates
     # need to be very careful about translation->start_exon and translation->end_Exon
 
-    warn "Pruning exons";
+    #cluck "Pruning exons";
 
     my( %stable_key, %unique_exons );
 

@@ -109,7 +109,7 @@ sub store_by_type {
   my $table  = $type . "_stable_id_pool";
 
   if (! $self->_exists_stable_id_by_type($id,$type)) {
-
+    ### Don't understand why this is needed.
      my $sql = "insert into $table values(null,'$id',now())";
 
      my $sth = $self->prepare($sql);

@@ -22,6 +22,12 @@ sub new {
   return $self;
 }
 
+sub flush_Transcripts {
+    my( $self ) = @_;
+    
+    $self->{'_transcript_array'} = [];
+}
+
 =head2 gene_info
 
  Title   : gene_info

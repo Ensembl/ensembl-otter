@@ -34,54 +34,54 @@ use Hum::Submission 'prepare_cached_statement';
     save_gene_numbers($dba);
     save_tsct_names($dba);
 
-    #my( %root_gid_name );
-    #my $count = 0;
-    #foreach my $gid (@$gene_db_id) {
-    #    $count++;
-    #    print STDERR " $count" unless $count % 100;
-    #    my $gene = $gene_aptr->fetch_by_dbID($gid);
-    #    my $gene_name = $gene->gene_info->name->name;
-    #    
-    #    my $tsct_list = $gene->get_all_Transcripts;
-    #    my $fix_flag = 1;
-    #    foreach my $tsct (@$tsct_list) {
-    #        my $name = $tsct->transcript_info->name;
-    #        my ($root) = $name =~ /^(.+)-\d{3}$/
-    #            or next;
-    #        $root_gid_name{$root}{$gid} = $gene_name;
-    #    }
-    #}
-    #
-    #my( %fix_gid );
-    #while (my ($root, $gene_hash) = each %root_gid_name) {
-    #    next if keys(%$gene_hash) == 1;
-    #    # Choose which gids should get renamed
-    #    # The one that isn't clone based, or the one with the largest gid.
-    #    my $found_keep = 0;
-    #    foreach my $gid (keys %$gene_hash) {
-    #        my $name = $gene_hash->{$gid};
-    #        if (index($name, $root) == 0) {
-    #            delete($gene_hash->{$gid});
-    #            $found_keep = 1;
-    #        }
-    #    }
-    #    unless ($found_keep) {
-    #        my ($oldest) = sort {$a <=> $b} keys %$gene_hash;
-    #        delete($gene_hash->{$oldest});
-    #    }
-    #    foreach my $gid (keys %$gene_hash) {
-    #        $fix_gid{$gid} = 1;
-    #    }
-    #}
+    # Check for duplicate transcript names
+    my( %root_gid_name );
+    my $count = 0;
+    foreach my $gid (@$gene_db_id) {
+        $count++;
+        print STDERR " $count" unless $count % 100;
+        my $gene = $gene_aptr->fetch_by_dbID($gid);
+        my $gene_name = $gene->gene_info->name->name;
+        
+        my $tsct_list = $gene->get_all_Transcripts;
+        foreach my $tsct (@$tsct_list) {
+            my $name = $tsct->transcript_info->name;
+            my ($root) = $name =~ /^(.+)-\d{3}$/
+                or next;
+            $root_gid_name{$root}{$gid} = $gene_name;
+        }
+    }
+    
+    my( %fix_gid );
+    while (my ($root, $gene_hash) = each %root_gid_name) {
+        next if keys(%$gene_hash) == 1;
+        # Choose which gids should get renamed
+        # The one that isn't clone based, or the one with the largest gid.
+        my $found_keep = 0;
+        foreach my $gid (keys %$gene_hash) {
+            my $name = $gene_hash->{$gid};
+            if (index($name, $root) == 0) {
+                delete($gene_hash->{$gid});
+                $found_keep = 1;
+            }
+        }
+        unless ($found_keep) {
+            my ($oldest) = sort {$a <=> $b} keys %$gene_hash;
+            delete($gene_hash->{$oldest});
+        }
+        foreach my $gid (keys %$gene_hash) {
+            $fix_gid{$gid} = 1;
+        }
+    }
 
-    #printf STDERR "Found %d bad transcript roots to fix\n", scalar(keys %fix_gid);
+    printf STDERR "Found %d bad transcript roots to fix\n", scalar(keys %fix_gid);
     
     foreach my $gid (@$gene_db_id) {
         $dba->begin_work;
         eval{
-            #fix_names($dba, $gene_aptr, $gid, $ren_hash, $fix_gid{$gid} ? 1 : 0);
+            fix_names($dba, $gene_aptr, $gid, $ren_hash, $fix_gid{$gid} ? 1 : 0);
             #fix_names($dba, $gene_aptr, $gid, $ren_hash, 0);
-            fix_chr7_transcript_names($dba, $gene_aptr, $gid, $ren_hash, 0);
+            #fix_chr7_transcript_names($dba, $gene_aptr, $gid, $ren_hash, 0);
         };
         if ($@) {
             $dba->rollback;
@@ -204,7 +204,7 @@ sub fix_names {
         my $clone_root = $1;
         $gene_number   = $2;
         if (is_sequence_name($clone_root)) {
-          $fix_names = 1;
+            $fix_names = 1;
         }
     }
     # Chromosome 14 gene names
