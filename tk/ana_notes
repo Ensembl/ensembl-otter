@@ -5,7 +5,7 @@
 use strict;
 use GenomeCanvas;
 
-use Ana_Submission qw{ set_db_args sub_db prepare_statement get_db}  ;
+use Bio::EnsEMBL::Pipeline::AnaSubmission qw{ set_db_args sub_db prepare_statement get_db}  ;
 use Hum::Submission qw{ submission_user user_has_access  get_user};
 use Hum::SubmissionVersion;
 
