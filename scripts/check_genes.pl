@@ -207,9 +207,6 @@ if($make_cache){
     print "$ns are current; $no older; $nn newer versions\n";
   }
 
-  # get exons of current genes
-  my $sth=$dbh->prepare("select gsi1.stable_id,gn.name,g.type,tsi.stable_id,ti.name,et.rank,e.exon_id,e.contig_id,e.contig_start,e.contig_end,e.sticky_rank,e.contig_strand,e.phase,e.end_phase,tr.remark from exon e, exon_transcript et, transcript t, current_gene_info cgi, gene_stable_id gsi1, gene_name gn, gene g, transcript_stable_id tsi, current_transcript_info cti, transcript_info ti left join gene_stable_id gsi2 on (gsi1.stable_id=gsi2.stable_id and gsi1.version<gsi2.version) left join transcript_remark tr on (ti.transcript_info_id=tr.transcript_info_id) where gsi2.stable_id IS NULL and cgi.gene_stable_id=gsi1.stable_id and cgi.gene_info_id=gn.gene_info_id and gsi1.gene_id=g.gene_id and g.gene_id=t.gene_id and t.transcript_id=tsi.transcript_id and tsi.stable_id=cti.transcript_stable_id and cti.transcript_info_id=ti.transcript_info_id and t.transcript_id=et.transcript_id and et.exon_id=e.exon_id and e.contig_id");
-  $sth->execute;
   my $nexclude=0;
   my %excluded_gsi;
   my %offagp_gsi;
@@ -224,6 +221,10 @@ if($make_cache){
   my %gsi2gn;
   my %missing_tr;
   my $nobs=0;
+
+  # get exons of current genes
+  my $sth=$dbh->prepare("select gsi1.stable_id,gn.name,g.type,tsi.stable_id,ti.name,et.rank,e.exon_id,e.contig_id,e.contig_start,e.contig_end,e.sticky_rank,e.contig_strand,e.phase,e.end_phase,tr.remark from exon e, exon_transcript et, transcript t, current_gene_info cgi, gene_stable_id gsi1, gene_name gn, gene g, transcript_stable_id tsi, current_transcript_info cti, transcript_info ti left join gene_stable_id gsi2 on (gsi1.stable_id=gsi2.stable_id and gsi1.version<gsi2.version) left join transcript_remark tr on (ti.transcript_info_id=tr.transcript_info_id) where gsi2.stable_id IS NULL and cgi.gene_stable_id=gsi1.stable_id and cgi.gene_info_id=gn.gene_info_id and gsi1.gene_id=g.gene_id and g.gene_id=t.gene_id and t.transcript_id=tsi.transcript_id and tsi.stable_id=cti.transcript_stable_id and cti.transcript_info_id=ti.transcript_info_id and t.transcript_id=et.transcript_id and et.exon_id=e.exon_id and e.contig_id");
+  $sth->execute;
   open(OUT,">$cache_file") || die "cannot open cache file $cache_file";
   while (my @row = $sth->fetchrow_array()){
     $n++;
@@ -816,6 +817,91 @@ print "$nl large transcripts\n";
 close(OUT);
 close(OUT2);
 close(OUT3);
+
+# new check - for each transcript, check all exons are sequential, same strand
+# sensible direction etc.  Check orientation of all transcripts in a gene consistent
+foreach my $atype (keys %gsi){
+  my $cname=$atype{$atype};
+  foreach my $gsi (keys %{$gsi{$atype}}){
+    my($gn,$gt)=@{$gsi_sum{$gsi}};
+    # structure data
+    my %tsi;
+    foreach my $re (@{$gsi{$atype}->{$gsi}}){
+      my($tsi,$erank,$eid,$ecst,$eced,$esr,$es,$ep,$eep)=@$re;
+      $erank--;
+      # id, st, ed, esr, strand, phase, endphase
+      $tsi{$tsi}->[$erank]=[$eid,$ecst,$eced,$esr,$es,$ep,$eep];
+    }
+    my $dirg=0;
+    foreach my $tsi (keys %tsi){
+      my $last;
+      my $dirt=0;
+      for(my $i=0;$i<scalar(@{$tsi{$tsi}});$i++){
+	my($eid,$ecst,$eced,$esr,$es,$ep,$eep)=@{$tsi{$tsi}->[$i]};
+
+	# check consistent direction
+	if($dirt){
+	  if($es!=$dirt){
+	    print "ERR: $tsi direction is $dirt, but exon $eid is $es\n";
+	    next;
+	  }
+	}else{
+	  $dirt=$es;
+	}
+
+	# check order in sequence
+	if($dirt==1){
+	  if($last){
+	    if($esr>1){
+	      if($last+1!=$ecst){
+		print "ERR: $tsi exon $eid out of order $ecst-$eced follows $last ($dirt) (sticky)\n";
+	      }else{
+		$last=$eced;
+	      }
+	    }else{
+	      if($last>=$ecst){
+		print "ERR: $tsi exon $eid out of order $ecst-$eced follows $last ($dirt)\n";
+	      }else{
+		$last=$eced;
+	      }
+	    }
+	  }else{
+	    $last=$eced;
+	  }
+	}else{
+	  if($last){
+	    if($esr>1){
+	      if($last-1!=$eced){
+		print "ERR: $tsi exon $eid out of order $ecst-$eced follows $last ($dirt) (sticky)\n";
+	      }else{
+		$last=$ecst;
+	      }
+	    }else{
+	      if($last<=$eced){
+		print "ERR: $tsi exon $eid out of order $ecst-$eced follows $last ($dirt)\n";
+	      }else{
+		$last=$ecst;
+	      }
+	    }
+	  }else{
+	    $last=$ecst;
+	  }
+	}
+
+      }
+
+      if($dirg){
+	if($dirt!=$dirg){
+	  print "ERR: $gsi has direction $dirg, but $tsi has direction $dirt\n";
+	}
+      }else{
+	$dirg=$dirt;
+      }
+
+    }
+  }
+}
+
 
 exit 0;
 
