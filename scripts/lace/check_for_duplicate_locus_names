@@ -44,8 +44,8 @@ use Bio::Otter::Lace::Defaults;
           AND gsid.gene_id = ?
         });
 
-    my( %name_sid );
     foreach my $ss (@$ss_list) {
+        my( %name_sid );
         my $set_name = $ss->name;
         $dba->assembly_type($set_name);
         $ds->fetch_all_CloneSequences_for_SequenceSet($ss);
@@ -64,39 +64,38 @@ use Bio::Otter::Lace::Defaults;
             $get_stable_name->execute($id);
             my ($stable, $name, $type, $info_id) = $get_stable_name->fetchrow;
             next if $type eq 'obsolete';
-            my $inf_hash = $name_sid{$name}{$info_id} = $stable;
+            $name_sid{$name}{$info_id} = $stable;
         }
-    }
-
-    if ($fix_flag) {
-        my $fix_name = $dba->prepare(q{
-            UPDATE gene_name
-            SET name = ?
-            WHERE gene_info_id = ?
-            });
-        foreach my $name (sort keys %name_sid) {
-            my $sid_hash = $name_sid{$name};
-            if (keys %$sid_hash > 1) {
-                my @sid_list = map [$sid_hash->{$_}, $_], keys %$sid_hash;
-                my ($first, @rest) = sort {$a->[0] cmp $b->[0]} @sid_list;
-                my ($first_stable, $first_info) = @$first;
-                print "\n$name\t$first_stable\n";
-                my $i = 1;
-                foreach my $other (@rest) {
-                    my( $stable, $info_id ) = @$other;
-                    $i++;
-                    my $new = "$name-$i";
-                    print "$new\t$stable\n";
-                    $fix_name->execute($new, $info_id);
+        if ($fix_flag) {
+            my $fix_name = $dba->prepare(q{
+                UPDATE gene_name
+                SET name = ?
+                WHERE gene_info_id = ?
+                });
+            foreach my $name (sort keys %name_sid) {
+                my $sid_hash = $name_sid{$name};
+                if (keys %$sid_hash > 1) {
+                    my @sid_list = map [$sid_hash->{$_}, $_], keys %$sid_hash;
+                    my ($first, @rest) = sort {$a->[0] cmp $b->[0]} @sid_list;
+                    my ($first_stable, $first_info) = @$first;
+                    print "\n$name\t$first_stable\n";
+                    my $i = 1;
+                    foreach my $other (@rest) {
+                        my( $stable, $info_id ) = @$other;
+                        $i++;
+                        my $new = "$name-$i";
+                        print "$new\t$stable\n";
+                        $fix_name->execute($new, $info_id);
+                    }
                 }
             }
-        }
-    } else {
-        foreach my $name (sort keys %name_sid) {
-            my $sid_hash = $name_sid{$name};
-            if (keys %$sid_hash > 1) {
-                my @sid_list = sort values %$sid_hash;
-                print "$name\t$set_name\t@sid_list\n";
+        } else {
+            foreach my $name (sort keys %name_sid) {
+                my $sid_hash = $name_sid{$name};
+                if (keys %$sid_hash > 1) {
+                    my @sid_list = sort values %$sid_hash;
+                    print "$name\t$set_name\t@sid_list\n";
+                }
             }
         }
     }
