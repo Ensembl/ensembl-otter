@@ -1,0 +1,74 @@
+#!/usr/local/bin/perl -w
+
+### fader_gif
+
+use strict;
+use GD;
+
+#my $img = GD::Image->new(256,20);
+foreach my $rgb (
+    [0x00, 0x00, 0x00],
+    [0xff, 0x00, 0x00],
+    [0x00, 0xff, 0x00],
+    [0x00, 0x00, 0xff],
+    [0xff, 0xff, 0xff],
+    ) {
+    my @hsl = rgb_to_hsl(@$rgb);
+    printf "[%3d, %3d, %3d] -> [%3.2f, %3.2f, %3.2f]\n", @$rgb, @hsl;    
+}
+
+sub rgb_to_hsl {
+    my( @rgb ) = @_;
+    
+    @rgb = map $_ / 0xff, @rgb;
+    
+    # Calculate the lightness
+    my($min, $max) = (255,0);
+    foreach my $v (@rgb) {
+        $min = $v if $v < $min;
+        $max = $v if $v > $max;
+    }
+    my $lgt = ($min + $max) / 2;
+    
+    my( $hue, $sat ) = (0,0);
+    # If min and max are the same, then hue and
+    # saturation stay at zero.  Otherwise:
+    unless ($min == $max) {
+        
+        # Calculate the saturation
+        if ($lgt < 0.5) {
+            $sat = ($max - $min) / ($max + $min);
+        } else {
+            $sat = ($max - $min) / (2 - $max - $min);
+        }
+        
+        # Calculate the hue
+        my $divisor = $max / $min;
+        if ($rgb[0] == $max) {
+            $hue = ($rgb[1] - $rgb[2]) / $divisor;
+        }
+        elsif ($rgb[1] == $max) {
+            $hue = (2 + $rgb[2] - $rgb[0]) / $divisor;
+        }
+        elsif ($rgb[2] == $max) {
+            $hue = (4 + $rgb[0] - $rgb[1]) / $divisor;
+        }
+    }
+    
+    # return HSL
+    return($hue, $sat, $lgt);
+}
+
+sub hsl_to_rgb {
+    
+}
+
+
+__END__
+
+=head1 NAME - fader_gif
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
