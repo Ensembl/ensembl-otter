@@ -1,0 +1,102 @@
+#!/usr/local/bin/perl5.6.1 -w
+
+### compare_xml
+
+use strict;
+use Getopt::Long 'GetOptions';
+
+{
+    my $tag = 'transcript';
+    GetOptions(
+        'tag=s'     => \$tag,
+        ) or die "Error processing command line";
+    my( $before_file, $after_file ) = @ARGV;
+    
+    my $before = get_file($before_file);
+    my $after  = get_file( $after_file);
+    
+    my @before_tran = sort {$$a cmp $$b} $before->get_subtags($tag);
+    my  @after_tran = sort {$$a cmp $$b}  $after->get_subtags($tag);
+    
+    my $before_tmp = "/tmp/xml.$$.before";
+    my  $after_tmp = "/tmp/xml.$$.after";
+    END{ unlink($before_tmp, $after_tmp); }
+    
+    print_xml($before_tmp, @before_tran);
+    print_xml( $after_tmp,  @after_tran);
+    
+    print `diff -c $before_tmp $after_tmp`;
+    die "Error running diff: exit($?)" if $? > 1;
+}
+
+sub print_xml {
+    my( $file, @data ) = @_;
+    
+    open FILE, "> $file" or die "Can't write to '$file' : $!";
+    print FILE map $$_, @data;
+    close FILE;
+}
+
+sub get_file {
+    my( $file ) = @_;
+    
+    local $/ = undef;
+    open FILE, $file or die "Can't read '$file' : $!";
+    my $str = <FILE>;
+    close FILE;
+    return OtterParse->new(\$str);
+}
+
+package OtterParse;
+
+sub new {
+    my( $pkg, $txt_ref ) = @_;
+    
+    return bless $txt_ref, $pkg;
+}
+
+{
+    my( %parse_pattern );
+
+    sub get_subtags {
+        my( $self, $tag ) = @_;
+        
+        my $pat = $parse_pattern{$tag} ||= $self->make_pattern($tag);
+        my( @values );
+        while ($$self =~ /$pat/g) {
+            my $v = $1;
+            push(@values, ref($self)->new(\$v));
+        }
+        return @values;
+    }
+
+    sub get_value {
+        my( $self, $tag ) = @_;
+        
+        my $pat = $parse_pattern{$tag} ||= $self->make_pattern($tag);
+        my ($v) = $$self =~ /$pat/;
+        if ($v) {
+            return $v;
+        } else {
+            return;
+        }
+    }
+}
+
+sub make_pattern {
+    my( $self, $tag ) = @_;
+    
+    return qr{<$tag>(.*?)</$tag>}s;
+}
+
+
+
+
+__END__
+
+=head1 NAME - compare_xml
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
