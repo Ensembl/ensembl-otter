@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/local/bin/perl
 
 use OtterDefs;
 use Bio::Otter::DBSQL::DBAdaptor;
