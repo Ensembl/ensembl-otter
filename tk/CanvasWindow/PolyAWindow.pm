@@ -516,7 +516,7 @@ sub create_ace_file{
             my $new_start_ref = $new_coord_pair->[0];
             my $new_end_ref = $new_coord_pair->[1];
             
-            unless (($$old_start_ref = $$new_start_ref) || ($$old_end_ref = $$new_end_ref) ) {
+            unless (($$old_start_ref == $$new_start_ref) || ($$old_end_ref == $$new_end_ref) ) {
                 ## original coord changed
                 ## write a deletion then an addition line
                 
