@@ -3,6 +3,8 @@ package Bio::Otter::DBSQL::GeneSynonymAdaptor;
 use strict;
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 
+use Bio::Otter::GeneSynonym;
+
 use vars qw(@ISA);
 
 @ISA = qw ( Bio::EnsEMBL::DBSQL::BaseAdaptor);
