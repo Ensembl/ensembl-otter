@@ -148,7 +148,7 @@ use Getopt::Long 'GetOptions';
             $mw->bind('<Control-E>', $do_embl_dump);
         }
         
-        make_button($button_frame2, 'Quit', sub{ exit }, 0);
+        make_button($button_frame2, 'Quit', sub{ Tk::exit() }, 0);
     }
     
     ###############
