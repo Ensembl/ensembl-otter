@@ -8,85 +8,110 @@ use Carp;
 use Getopt::Long 'GetOptions';
 use Symbol 'gensym';
 use Bio::Otter::Lace::Client;
+# use Data::Dumper;
 
+our $CLIENT_STANZA  = 'client';
+our $DEFAULT_TAG    = 'default';
+our $DEFAULTS       = {};
+our @CLIENT_OPTIONS = qw(host=s port=s author=s email=s pipeline! write_access! group=s);
+# @CLIENT_OPTIONS is Getopt::GetOptions() keys which will be included in the 
+# $DEFAULTS->{$CLIENT_STANZA} hash.  To add another client option just include in above
+# and if necessary add to hardwired defaults in do_getopt().
 
-my @option_fields = qw{ host port author email write_access pipeline };
-
-my $defaults = {};
-my $save_option = sub {
+our $save_option = sub {
     my( $option, $value ) = @_;
-
-    $defaults->{$option} = $value;
+    $DEFAULTS->{$CLIENT_STANZA}->{$option} = $value;
+};
+our $save_deep_option = sub {
+    my ( $getopt ) = @_;
+    my ($option, $value) = split(/=/, $getopt,2);
+    $option = [split(/\./, $option)];
+    set_hash_val($DEFAULTS, $option, $value);
 };
 
+
 sub fetch_pipeline_switch {
-    return $defaults->{'pipeline'} ? 1 : 0;
+    return $DEFAULTS->{$CLIENT_STANZA}->{'pipeline'} ? 1 : 0;
 }
 
 sub do_getopt {
     my( @script_args ) = @_;
 
-    GetOptions(
-        'host=s'        => $save_option,
-        'port=s'        => $save_option,
-        'author=s'      => $save_option,
-        'email=s'       => $save_option,
-        'write_access!' => $save_option,
-        'pipeline!'     => $save_option,
-        'view'          => sub{ $defaults->{'write_access'} = 0 },
-        @script_args,
-    ) or confess "Error processing command line";
-    
-    my ($this_user, $home_dir) = (getpwuid($<))[0,7];
+    my ($this_user, $home_dir) = (getpwuid($<))[0,7];    
     
     # We get options from:
+    #   files provided by list_config_files()
     #   command line
-    #   ~/.otter_config
-    #   $ENV{'OTTER_HOME'}/otter_config
-    #   /etc/otter_config
     #   hardwired defaults (in this subroutine)
-    my @conf_files = ("$home_dir/.otter_config");
-    if ($ENV{'OTTER_HOME'}) {
-        # Only add if OTTER_HOME environment variable is set
-        push(@conf_files, "$ENV{'OTTER_HOME'}/otter_config");
-    }
-    push(@conf_files, '/etc/otter_config');
-    
-    # If we are missing any values in the $defaults hash, try
+    # overriding as we go.
+    my @conf_files = list_config_files();
+    # warn "@conf_files \n";
+    # If we are missing any values in the $DEFAULTS hash, try
     # and fill them in from each file in turn.
-    until (all_options_are_filled()) {
-        my $file = shift @conf_files or last;
-        #warn "Getting options from '$file'";
-        if (my $file_opts = options_from_file($file)) {
-            foreach my $field (@option_fields) {
-                if (! defined $defaults->{$field} and defined $file_opts->{$field}) {
-                    $defaults->{$field} = $file_opts->{$field};
-                }
-            }
-        }
+    my $file_options = [];
+    foreach my $file(@conf_files){
+	# warn "Getting options from '$file'\n";
+	if (my $file_opts = options_from_file($file)) {
+	    push(@$file_options, $file_opts);
+	}
     }
-    
+
+    $DEFAULTS = merge_options_for_stanzas($file_options);
+
+    GetOptions(
+	       # map {} makes these lines dynamically from @CLIENT_OPTIONS
+	       # 'host=s'        => $save_option,
+	       ( map { $_ => $save_option } @CLIENT_OPTIONS ),
+	       # this allows setting of options using @ARGV
+	       '<>'            => $save_deep_option,
+	       # this is just a synonym feel free to add more
+	       'view'          => sub{ $DEFAULTS->{$CLIENT_STANZA}->{'write_access'} = 0 },
+	       # these are the caller script's options
+	       @script_args,
+	       ) or confess "Error processing command line";
+
+    merge_all_optionals();
+    check_spelling(); # only does client ATM
+
     # Fallback on hardwired defaults
-    $defaults->{'host'}         ||= 'localhost';
-    $defaults->{'port'}         ||= 39312;
-    $defaults->{'author'}       ||= $this_user;
-    $defaults->{'email'}        ||= $this_user;
-    $defaults->{'write_access'} ||= 0;
-    $defaults->{'pipeline'} = 1 unless defined($defaults->{'pipeline'});
-    
+    $DEFAULTS->{$CLIENT_STANZA}->{'host'}         ||= 'localhost';
+    $DEFAULTS->{$CLIENT_STANZA}->{'port'}         ||= 39312;
+    $DEFAULTS->{$CLIENT_STANZA}->{'author'}       ||= $this_user;
+    $DEFAULTS->{$CLIENT_STANZA}->{'email'}        ||= $this_user;
+    $DEFAULTS->{$CLIENT_STANZA}->{'write_access'} ||= 0;
+    $DEFAULTS->{$CLIENT_STANZA}->{'pipeline'}       = 1 
+	unless defined($DEFAULTS->{$CLIENT_STANZA}->{'pipeline'});
+
     return 1;
+}
+
+# merge_options_for_stanza 
+# this goes through the hashes over writing earlier
+# option/values with later ones. 
+# so $array->[0]->{option} is overwritten by $array->[1]->{option}
+# and so on...
+# wants array ref of hash refs
+
+sub merge_options_for_stanzas{
+    my ( $array ) = @_;
+    my $return_hash = {};
+    foreach my $hash(@$array){
+	$return_hash = merge($return_hash, $hash);
+    }
+    return $return_hash;
 }
 
 sub make_Client {
     my $client = Bio::Otter::Lace::Client->new;
-    
-    foreach my $meth (@option_fields) {
-        next unless $client->can($meth);
-        my $value = $defaults->{$meth};
-        $client->$meth($value);
-    }
+
+    $client->all_options($DEFAULTS);
+
     return $client;
 }
+
+# options_from_file
+# reads the whole file into a hash
+# $hash->{stanza}->{option}->{value}
 
 sub options_from_file {
     my( $file ) = @_;
@@ -96,42 +121,130 @@ sub options_from_file {
     # Just return if file does not exist or is unreadable
     open $fh, $file or return;
     
-    my $in_client = 0;
-    my $opts = {};
+    my $current_stanza = '';
+    my $all_opts = {};
+
     while (<$fh>) {
         chomp;
-        
+        next if /^\#/ || /^$/; # ignore comments and blank
         # Only look at client stanza
-        if (/^\[client\]/) {
-            $in_client = 1;
+        if (/^\[([\w\._]+)\]/) {
+            $current_stanza = $1;
+	    set_hash_val($all_opts, [ split(/\./, $current_stanza)], {});
         }
-        elsif (/^$/) {
-            $in_client = 0;
-        }
-        else {
-            next unless $in_client;
-        }
-        
-        if (/([^=]+)\s*=\s*([^=]+)/) {
-            #warn "Got '$1' = '$2'\n";
-            $opts->{$1} = $2;
+
+        if (/([^=]+)\s*=\s*([^\n]+)/) {
+            # warn "Got '$1' = '$2' \n";
+	    set_hash_val($all_opts, [ split(/\./, $current_stanza), lc $1 ], $2);
         }
     }
     
     close $fh;
-    
-    return $opts;
+
+    return $all_opts;
 }
 
-sub all_options_are_filled {
-    foreach my $field (@option_fields) {
-        unless (defined $defaults->{$field}) {
-            #warn "Missing '$field'\n";
-            return 0;
-        }
+sub merge_all_optionals{
+    my @overrides = keys(%{$DEFAULTS->{$DEFAULT_TAG}});
+    my @toplevels = grep { !(/$DEFAULT_TAG/ || /$CLIENT_STANZA/) }  keys(%$DEFAULTS);
+
+    foreach my $i(@toplevels){
+
+	# this check is pretty crude and ONLY handles two levels
+	my $check = { map{ $_, 1} keys(%{$DEFAULTS->{$i}}) };
+	foreach my $j(@overrides){
+	    delete $check->{$j};
+	    # warn " ***** merging \$DEFAULTS->{'$DEFAULT_TAG'}->{'$j'} with \$DEFAULTS->{'$i'}->{'$j'}\n";
+	    $DEFAULTS->{$i}->{$j} = merge($DEFAULTS->{$DEFAULT_TAG}->{$j},
+					  $DEFAULTS->{$i}->{$j});
+	}
+	my @poss_errs = map{"<$_>"} keys(%$check);
+	warn "Are you sure <$i> has sublevel(s): " . join(" ", @poss_errs) . 
+	    " *** PLEASE CHECK CONFIG FILES ***\n" if @poss_errs;
     }
-    return 1;
 }
+
+# this checks spelling for all @CLIENT_OPTIONS
+# an easy mistake to make in config files which 
+# would otherwise be ignored. E.G.
+# [client]
+# pipleine=0
+sub check_spelling{
+    my $actuals = { map {$_, 1} keys(%{$DEFAULTS->{$CLIENT_STANZA}})};
+    map { s/^(\w+).+/$1/g; delete $actuals->{$_} } @CLIENT_OPTIONS;
+    my @poss_errs =  map{"<$_>"} keys(%$actuals);
+    warn "Possible typo for option(s): " . join(" ", @poss_errs ) . 
+	" *** PLEASE CHECK CONFIG FILES ***\n" if @poss_errs;
+}
+
+sub list_config_files{
+    #   ~/.otter_config
+    #   $ENV{'OTTER_HOME'}/otter_config
+    #   /etc/otter_config
+    my @conf_files = ("/etc/otter_config");
+
+    if ($ENV{'OTTER_HOME'}) {
+        # Only add if OTTER_HOME environment variable is set
+        push(@conf_files, "$ENV{'OTTER_HOME'}/otter_config");
+    }
+    my ($home_dir) = (getpwuid($<))[7];
+    push(@conf_files, "$home_dir/.otter_config");
+    return @conf_files;
+}
+
+################################################
+sub set_hash_val{
+    my ($hash, $keys, $value) = @_;
+    my $lastKey = lc(pop @$keys);
+    
+    foreach my $key (@$keys) {
+	$key = lc $key;
+	if (not exists($hash->{$key})) {
+	    $hash->{$key} = {};
+	} elsif (ref($hash->{$key}) ne 'HASH') {
+	    my $oldVal = $hash->{$key};
+	    $hash->{$key} = {};
+	    warn "Looks like something's been defined twice\n";
+	    $hash->{$key}{'_setHashVal_'} = $oldVal;
+	}
+	# Traverse hash
+	$hash = $hash->{$key};
+    }
+    $hash->{$lastKey} = $value;
+}
+
+################################################
+# slightly modified from the guts of Hash::Merge
+# works on a right precedence behaviour
+# as would $hash = { %$first, %$second } in perl.
+#
+sub merge {
+    my ( $left, $right ) = @_;
+    return _merge_hashes( $left, $right ) if UNIVERSAL::isa( $right, 'HASH' );
+    return defined $right ? $right : $left;
+}	
+sub _merge_hashes {
+    my ( $left, $right ) = @_;
+    die "Arguments for _merge_hashes must be hash references" unless 
+	UNIVERSAL::isa( $left, 'HASH' ) && UNIVERSAL::isa( $right, 'HASH' );
+
+    my $newhash;
+    foreach my $leftkey( keys %$left ) {
+	if ( exists $right->{ $leftkey } ) {
+	    $newhash->{ $leftkey } = merge ( $left->{ $leftkey }, $right->{ $leftkey } );
+	}else{
+	    $newhash->{ $leftkey } = $left->{ $leftkey };
+	}
+    }
+    foreach my $rightkey( keys %$right ){ 
+	if( !exists $left->{ $rightkey } ){
+	    $newhash->{ $rightkey } = $right->{ $rightkey };
+	}
+    }
+    return $newhash;
+}
+
+
 
 1;
 
@@ -177,6 +290,49 @@ Defaults to B<0>
 
 =back
 
+
+=head1 EXAMPLE
+
+Here's an example config file
+
+----START----
+
+ [client]
+ port=33999
+
+ [default.Filters]
+ trf=1
+ est2genome_mouse=1
+
+ [zebrafish.filters]
+ est2genome_mouse=0
+
+ [default.filter.est2genome_mouse]
+ module=Bio::EnsEMBL::Ace::Filter::Similarity::DnaSimilarity
+ max_coverage=12
+
+----END----
+
+will make a hash
+
+ $hash = {
+    'client' => {'port' => 33999},       
+    'default' => {
+        'filters' => {'trf' => 1,
+                      'est2genome_mouse' => 1
+                     },
+        'filter' => {'est2genome_mouse' => {'module' => 'Bio::EnsEMBL::Ace::Filter::Similarity::DnaSimilarity',
+                                            'max_coverage' => 12
+                                           },
+                    },
+                  },
+    'zebrafish' => {
+        'filters' => {'trf' => 1}
+                   },
+ };
+
+N.B. ALL hash keys are lower cased to ensure ease of look up.
+    
 =head1 SYNOPSIS
 
   use Bio::Otter::Lace::Defaults;
