@@ -27,9 +27,7 @@ sub print_gif {
     
     my $rgb_param = $q->param('rgb')
         or die "No rgb paramter given";
-    my @rgb = $rgb_param =~ /^#?([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})$/
-        or die "Illegal rgb parameter '$rgb_param'";
-    @rgb = map hex($_), @rgb;
+    my @rgb = get_rgb($rgb_param);
 
     my $img = GD::Image->new($img_width,$img_height);
     
@@ -47,6 +45,15 @@ sub print_gif {
         -type => 'image/gif',
         ),
         $img->gif;
+}
+
+sub get_rgb {
+    my( $rgb_param ) = @_;
+    
+    my @rgb = $rgb_param =~ /^#?([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})$/
+        or die "Illegal rgb parameter '$rgb_param'\n";
+    @rgb = map hex($_), @rgb;
+    return @rgb;
 }
 
 sub print_form {
@@ -70,9 +77,14 @@ sub print_form {
         $q->submit,
         $q->end_form,
         "<hr><br>\n";
-    if ($q->param('rgb')) {
-        my $url = $q->self_url;
-        print qq{<img src="$url&get_gif=fader.gif" height=$img_height width=$img_width>};
+    if (my $rgb_param = $q->param('rgb')) {
+        eval{ get_rgb($rgb_param) };
+        if ($@) {
+            print qq{<font size=6>Illegal rgb parameter: <b><code>'$rgb_param'</code></b></font>\n};
+        } else {
+            my $url = $q->self_url;
+            print qq{<img src="$url&get_gif=fader.gif" height=$img_height width=$img_width>};
+        }
     }
     print $q->end_html;
 }
