@@ -29,7 +29,9 @@ my $author  = $params{author}  || error_exit($q,"Author must defined to write a 
 my $email   = $params{email}   || error_exit($q,"Email must defined to write a region");
 
 print STDERR "Length of data " . length($data) . "\n";
-
+open OTT,">/tmp/apollo.$$.xml";
+print OTT $data;
+close(OTT);
 if (!defined($OTTER_SPECIES->{$params{'dataset'}})) {
   print STDERR "Unknown data set\n";
   error_exit($q, "Unknown data set " . $params{'dataset'} . " in write_region\n");
@@ -138,6 +140,11 @@ print STDERR "\nFound " . scalar(@genes) . " genes on region $chrname $chrstart-
      if (!defined($trans->stable_id) || $trans->stable_id eq "") {
        $trans->stable_id($sida->fetch_new_transcript_stable_id);
      }
+     if (defined($trans->translation)) {
+        if (!defined($trans->translation->stable_id) || $trans->translation->stable_id eq "") {
+        $trans->translation->stable_id($sida->fetch_new_translation_stable_id);
+        }
+     }
      foreach my $exon (@{$trans->get_all_Exons}) {
        if (!defined($exon->stable_id) || $exon->stable_id eq "") {
          $exon->stable_id($sida->fetch_new_exon_stable_id);
@@ -215,10 +222,12 @@ foreach my $gene (@genes) {
 # loading during the write
 eval {
   foreach my $gene (@$dbgenes) {
-    print STDERR "Local genes : " . $gene->stable_id . "\n";
     my $transcripts = $gene->get_all_Transcripts;
     foreach my $tran (@$transcripts) {
       $tran->translation;
+      if ($tran->translation) {
+         $tran->translation->stable_id;
+      }
       $tran->stable_id;
       my $exons =  $tran->get_all_Exons;
       foreach my $exon (@$exons) {
@@ -237,7 +246,8 @@ my @events;
 print STDERR "\nComparing annotations " . scalar(@$dbgenes) . " " . scalar(@genes) . "...\n";
 
 eval {
-  @events = $ab->compare_annotations($dbgenes,\@genes,$slice);
+  my ($oldgenes,$newgenes) = trim_genes_to_slice($dbgenes,\@genes,$slice);
+  @events = $ab->compare_annotations($oldgenes,$newgenes,$slice);
 };
 if ($@) {
   print STDERR "Failed comparing annotations [$@]\n";
@@ -254,19 +264,24 @@ eval {
   print STDERR "\nFound " . scalar(@events) . " changed annotations\n";
   
   foreach my $event ( @events ) {
-    $outputstr .= $event->to_string."\n";
-    print STDERR $event->to_string,"\n";
+    $outputstr .= $event->to_string;
+    print STDERR $event->to_string;
 
     my $gene;
+
     if ($event->type eq 'deleted') {
       $gene = $event->old_gene;
     } else {
       $gene = $event->new_gene;
     }
-    $oaga->attach_to_Slice($gene,$slice);
+
+
     print STDERR "\nAttaching gene to slice " . $gene->stable_id . " " . $gene->version. "\n";
+    $oaga->attach_to_Slice($gene,$slice);
+    print STDERR "Done attaching\n";
     $oaga->store($gene);
     print STDERR "Stored gene\n";
+    $outputstr .= " " . $gene->version . " " . $gene->gene_info->name->name . "\n";
   }
   $odb->commit();
 };
@@ -275,25 +290,83 @@ if ($@) {
   error_exit($q, "Failed writing annotations [$@]");
 }
 
-unlink($tmp_xmlfile);
+#unlink($tmp_xmlfile);
 
 print STDERR "About to write success response\n";
 print $q->header();
-print("<otter>\n");
-print("  <response>\n");
+#print("<otter>\n");
+#print("  <response>\n");
+if ($outputstr eq "") {
+   $outputstr = "No changes to annotations";
+}
 print($outputstr);
-print("  </response>\n");
-print("</otter>\n");
+#print("  </response>\n");
+#print("</otter>\n");
 
 print STDERR "\nUnlocking clones...";
 
 if (defined($params{unlock})) {
-  $cb->remove_by_slice($slice,$author);
+  #$cb->remove_by_slice($slice,$author);
 }
 
 print STDERR "done\n";
 #####################################################################################
 
+sub trim_genes_to_slice {
+  my ($genes1,$genes2,$slice) = @_;
+
+  my $start = $slice->chr_start;
+  my $end   = $slice->chr_end;
+
+  my @newgenes1;
+  my @newgenes2;
+
+  print STDERR "Start end $start $end\n";
+
+  foreach my $g (@$genes1) {
+    my ($gstart,$gend) = find_gene_ends($g);
+
+    $gstart = $gstart + $start -1;
+    $gend   = $gend   + $start -1;
+    
+    if ($gstart > $start && $gend < $end) {
+      print STDERR "Gene inside region " . $gstart . " " . $gend . "\t" . $g->stable_id . "\n";
+      push(@newgenes1,$g);
+    } else {
+      print STDERR "Gene outside region " . $gstart . " " . $gend . "\t" . $g->stable_id . "\n";
+    }
+  }
+  foreach my $g (@$genes2) {
+    my ($gstart,$gend) = find_gene_ends($g);
+    $gstart = $gstart + $start -1;
+    $gend   = $gend   + $start -1;
+    if ($gstart > $start && $gend < $end) {
+      print STDERR "Gene inside region " . $gstart . " " . $gend . "\t" . $g->stable_id . "\n";
+      push(@newgenes2,$g);
+    } else {
+      print STDERR "Gene outside region " . $gstart . " " . $gend . "\t" . $g->stable_id . "\n";
+    }
+  }
+
+  print STDERR "New genes 1 @newgenes1\n";
+  print STDERR "New genes 2 @newgenes2\n";
+
+  return (\@newgenes1,\@newgenes2);
+}
+
+sub find_gene_ends {
+  my ($g) = @_;
+
+  my $min;
+  my $max;
+
+  my @exons = @{$g->get_all_Exons};
+
+  @exons = sort {$a->start <=> $b->start} @exons;
+
+  return ($exons[0]->start,$exons[$#exons]->end);
+}
+    
 sub error_exit {
   my ($q,$reason) = @_;
 
