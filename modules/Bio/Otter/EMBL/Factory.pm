@@ -69,7 +69,7 @@ Constructor for the class.
 	
 sub new {
     my( $pkg ) = @_;
-     
+
     return bless {}, $pkg;
 }
 
@@ -82,7 +82,7 @@ lines. Each block will be separated by an XX line.
 
 sub comments {
     my ( $self, $value ) = @_;
-    
+
     if ($value) {
         unless (ref($value) eq 'ARRAY') {
             confess "Must pass an array reference";
@@ -116,7 +116,7 @@ Pass a reference to an array of four elements:
 
 sub references {
     my ( $self, $value ) = @_;
-    
+
     if ($value) {
         unless (ref($value) eq 'ARRAY' and scalar(@$value == 4)) {
             confess "Must pass an array reference pointing to 4 elements";
@@ -515,7 +515,7 @@ Get/set method for the EMBL data class. Generally set to
 
 sub data_class {
     my ( $self, $value ) = @_;
-    
+
     if ($value) {
         $self->{'_bio_otter_embl_factory_data_class'} = $value;
     }
@@ -531,7 +531,7 @@ set explicitly.
 
 sub mol_type {
     my ( $self, $value ) = @_;
-    
+
     if ($value) {
         $self->{'_bio_otter_embl_factory_mol_type'} = $value;
     } else {
@@ -551,7 +551,7 @@ Get/set method for the EMBL divison.
 
 sub division {
     my ( $self, $value ) = @_;
-    
+
     if ($value) {
         $self->{'_bio_otter_embl_factory_division'} = $value;
     }
@@ -567,7 +567,7 @@ Get/set method for the EMBL divison.
 
 sub seq_length {
     my ( $self, $value ) = @_;
-    
+
     if ($value) {
         $self->{'_bio_otter_embl_factory_seq_length'} = $value;
     }
@@ -583,7 +583,7 @@ Get/set method for the clone library name.
 
 sub clone_lib {
     my ( $self, $value ) = @_;
-    
+
     if ($value) {
         $self->{'_bio_otter_embl_factory_clone_lib'} = $value;
     }
@@ -598,7 +598,7 @@ Get/set method for the contig_length.
 
 sub contig_length {
     my ( $self, $value ) = @_;
-    
+
     if ($value) {
         $self->{'_bio_otter_embl_factory_contig_length'} = $value;
     }
@@ -613,7 +613,7 @@ Get/set method for the clone name.
 
 sub clone_name {
     my ( $self, $value ) = @_;
-    
+
     if ($value) {
         $self->{'_bio_otter_embl_factory_clone_name'} = $value;
     }
@@ -632,7 +632,7 @@ sub Slice {
 
     if ($slice) {
         $self->{'_bio_otter_embl_factory_slice'} = $slice;
-    }    
+    }
     return $self->{'_bio_otter_embl_factory_slice'};
 }
 
@@ -645,7 +645,7 @@ from the tiling path.
 
 sub Slice_contig {
     my ( $self, $slice_contig ) = @_;
-    
+
     if ($slice_contig) {
         $self->{'_bio_otter_embl_factory_slice_contig'} = $slice_contig;
         $self->contig_length($slice_contig->length);
@@ -667,16 +667,16 @@ d)  Calls $embl_factory->fetch_chr_start_end_for_accession to get a list of
     listrefs such as [1, 561232, 672780]
 
 e)  Iterates of the chr_start_ends
-    
+
       Fetches Slice by chr_start_end
       Gets tiling path for fetched slice
       Gets Slice_contig from tiling_path
       Gets a list of dbIDS for the Slice
-    
+
       Iterates over the Gene ids
 
         Fetches Gene
-        Calls $embl_factory->_do_Gene   
+        Calls $embl_factory->_do_Gene
 
 f)  Finishes up by calling Hum::EMBL::FeatureSet->sortByPosition
                            Hum::EMBL::FeatureSet->removeDuplicateFeatures
@@ -700,7 +700,7 @@ sub make_embl_ft {
         = $self->get_DBAdaptors();
 
     my $set = 'Hum::EMBL::FeatureSet'->new;
-    
+
     foreach my $chr_s_e ($self->fetch_chr_start_end_for_accession($otter_db, $acc)) {
 
         #Get the Bio::EnsEMBL::Slice
@@ -709,20 +709,21 @@ sub make_embl_ft {
 
         #Bio::EnsEMBL::RawContig
         $self->Slice_contig($tile_path->[0]->component_Seq);
- 
+
         my $gene_id_list = $gene_aptr->list_current_dbIDs_for_Slice($slice);
         foreach my $gid (@$gene_id_list) {
 
             my $gene = $gene_aptr->fetch_by_dbID($gid);
             $self->_do_Gene($gene, $set);
         }
-        
+
         #PolyA signals and sites for the slice
         $self->_do_polyA($slice, $set);
-        
-        ### Assembly tags here
+       
+        # assembly_tags on the slice
+	$self->_do_assembly_tag($slice, $set);
     }
-    
+
     #Finish up
     $set->sortByPosition;
     $set->removeDuplicateFeatures;
@@ -858,11 +859,11 @@ Warns if no Keyword objects are fetched for the clone, returning undef.
 
 sub get_keywords_from_otter {
 	my ( $self ) = @_;
-    
+
     my $annotated_clone = $self->annotated_clone();
     my $clone_info = $annotated_clone->clone_info
         or confess "could not get: CloneInfo object";
-        
+
     my @keywords = $clone_info->keyword
         or warn "No CloneRemarks for annotated clone " . $self->accession
             . "." . $self->sequence_version;
@@ -871,14 +872,58 @@ sub get_keywords_from_otter {
     foreach my $keyword (@keywords) {
         push (@keywords_txt, $keyword->name);
     }
-    
+
     unless (@keywords_txt) {
         return;
     }
-    
+
     return(@keywords_txt);
 }
 
+=head2 _do_assembly_tag
+
+Internal method called by make_embl_ft to add lines of the type:
+
+FT   assembly_tag    156832..156837
+FT   assembly_tag    complement(170549..170554)
+
+These are stored in Otter in assembly_tag table on the Slice
+
+=cut
+
+
+sub _do_assembly_tag {
+  my ( $self, $slice, $set ) = @_;
+
+  my $atags_Ad = $slice->adaptor->db->get_AssemblyTagAdaptor;
+  my $atags = $atags_Ad->fetch_AssemblyTags_by_Slice($slice);
+
+  foreach my $atag (@$atags) {
+
+    my $feat = $set->newFeature;
+
+    # assembly_tag types: Oligo, Clone_left_end, Clone_right_end and Misc
+    #                     are assigned "misc_feature" key,
+    #                     whereas type "unsure" is assigned "unsure" key
+
+   if ( $atag->tag_type eq "unsure" ){
+      $feat->key('unsure');
+    }
+    else {
+      $feat->key('misc_feature');
+    }
+
+    if ($atag->strand == 1) {
+      $feat->location(simple_location($atag->start, $atag->end));
+    }
+    elsif ($atag->strand == -1) {
+      $feat->location(simple_location($atag->end, $atag->start));
+    }
+
+    # add qualifier
+    $feat->addQualifierStrings('note', $atag->tag_info);
+  }
+}
 
 =head2 _do_polyA
 
