@@ -46,7 +46,7 @@ sub WRITE{
 sub PRINTF{
     my $fh  = shift;
     my $fmt = shift;
-    $fh->_print(&_log_prefix . sprintf($fmt, @_) . "\n");
+    $fh->_print(&_log_prefix . " " . sprintf($fmt, @_) . "\n");
 }
 sub PRINT {
     my $fh = shift;
@@ -57,7 +57,7 @@ sub DESTROY{
     my $fh = shift;
     # just implementing this method like this seemed to clean up some weird (!!!) errors
     # not sure if we need UNTIE too....
-    $fh->_print(&_log_prefix . " DESTROY method of LogFile.pm\n");
+    # $fh->_print(&_log_prefix . " DESTROY method of LogFile.pm\n");
 }
 
 sub _print{
@@ -70,6 +70,9 @@ sub _warning{
 }
 sub _death{
     my $fh = shift;
+    # printing to STDOUT is v.eff scary considering this is a tied STDERR fh!!!
+    # It does seem to work though and can catch compile time errors.
+    # print STDOUT "<otter>\n<response>\nERROR : please email anacode\@sanger.ac.uk for help\n</response>\n<otter>\n";
     $fh->_print(&_log_prefix . Carp::longmess(' Carping from die()...'));
     exit 2;
 }
