@@ -288,11 +288,14 @@ sub search_window{
     
         my $label           =   $search_window->Label(-text     =>  "Use spaces to separate multiple terms"
                 )->pack(-side   =>  'top');
-        
-        my $search_entry    =   $search_window->Entry(   
-                                                    -width      => 30       ,
-                                                    -relief     => 'sunken' ,
-                                                    -borderwidth=> 2        ,
+
+        my $search_text     ||= '';
+        $self->search_text_ref(\$search_text);
+        my $search_entry    =   $search_window->Entry(
+                                                      -width        => 30       ,
+                                                      -relief       => 'sunken' ,
+                                                      -borderwidth  => 2        ,
+                                                      -textvariable => $self->search_text_ref,
                                                     #-font       =>   'Helvetica-14',   
                 )->pack(    -side => 'top' , 
                             -padx => 5 ,
@@ -328,6 +331,8 @@ sub search_window{
                 )->pack(    -side   =>  'right' ,
                             -padx   =>  5
                         );
+
+
         
         
         ## search cancel buttons
@@ -339,6 +344,23 @@ sub search_window{
         my $find_button     =   $search_cancel_frame->Button(   -text       => 'Search' ,
                                                                 -command    =>  sub{$self->search($radio_variable)}    
                 )->pack(    -side    => 'left') ;
+
+        my $context_label   =   $search_cancel_frame->Label(-text       => ' with context:' ,
+                                                            )->pack(    -side    => 'left') ;
+
+
+        my $context_size ||= 1;
+        $self->context_size_ref(\$context_size);
+        my $context_entry    =   $search_cancel_frame->Entry(
+                                                      -width        => 5       ,
+                                                      -relief       => 'sunken' ,
+                                                      -borderwidth  => 2        ,
+                                                      -textvariable => $self->context_size_ref,
+                                                    #-font       =>   'Helvetica-14',   
+                )->pack(    -side => 'left' , 
+                            -padx => 5 ,
+                            ) ;
+
         my $cancel_button   =   $search_cancel_frame->Button(   -text       => 'cancel'   ,
                                                                 -command    => sub { $search_window->withdraw }
                 )->pack(-side => 'right');
@@ -361,9 +383,9 @@ sub search{
     
     my $rs = Bio::Otter::Lace::ResultSet->new ;
     $rs->DataSet($self->DataSet) ;
-    my $search = $self->{'search_entry'}->get   ;
-    my @search_names = split /\s+/ ,  $search ;
-        
+    my $search = ${$self->search_text_ref()}; #$self->{'search_entry'}->get;
+    my @search_names = split(/\s+/, $search);
+    
     if ($search_type eq 'clone') {
         $rs->search_type('clone') ;
     }elsif($search_type eq 'stable_id'){
@@ -371,7 +393,8 @@ sub search{
     } else {
         $rs->search_type('locus') ; # defaults to locus 
     }
-    
+    $rs->context_size(${$self->context_size_ref});
+
     my $clones_found = $rs->execute_search(\@search_names) ;
     
     if ( $clones_found > 0 ){
@@ -399,7 +422,16 @@ sub search{
 }
 
 
-
+sub search_text_ref{
+    my ($self, $search) = @_;
+    $self->{'_search_text'} = $search if $search;
+    return $self->{'_search_text'};
+}
+sub context_size_ref{
+    my ($self, $context) = @_;
+    $self->{'_context_size'} = $context if $context;
+    return $self->{'_context_size'};    
+}
 
 sub DESTROY {
     my( $self ) = @_;
