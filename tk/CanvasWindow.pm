@@ -202,6 +202,14 @@ sub bind_scroll_commands {
     my $canvas = $self->canvas;
     my $x_scroll = $canvas->can('Subwidget') ? $canvas->Subwidget('xscrollbar') : $canvas->parent->Subwidget('xscrollbar');
     my $y_scroll = $canvas->can('Subwidget') ? $canvas->Subwidget('yscrollbar') : $canvas->parent->Subwidget('yscrollbar');
+
+	my $canvas_components = $canvas->can('Subwidget')
+			? [ $canvas->Subwidget('main_canvas'),
+				$canvas->Subwidget('left_canvas'),
+				$canvas->Subwidget('top_canvas'),
+				$canvas->Subwidget('topleft_canvas'),
+			  ]
+			: [ $canvas ];
     
     # Unbind the scrollbar keyboard events from the canvas
     my $class = ref($canvas);
@@ -277,21 +285,34 @@ sub bind_scroll_commands {
         $y_scroll->ScrlByUnits('v', 1);
         });
 
-    if($^O eq 'MSWin32'){
-        #$canvas->Tk::bind('<MouseWheel>',sub{
-            #warn "Someone's scrolling with the mousewheel\n";
-            #$y_scroll->ScrlByUnits('v', 3);
-        #});
-    }else{
-        $canvas->Tk::bind('<4>', sub{
-            #warn "Someone's scrolling up with the mousewheel\n";
-            $y_scroll->ScrlByUnits('v', -3);
-        });
-        $canvas->Tk::bind('<5>', sub{
-            #warn "Someone's scrolling down with the mousewheel\n";
-            $y_scroll->ScrlByUnits('v',  +3);
-        });
-    }
+	for my $cc (@$canvas_components) { # mousewheel must be bound on every focusable canvas component
+		if($^O eq 'MSWin32'){
+			#$cc->Tk::bind('<MouseWheel>',sub{
+				#warn "Someone's scrolling with the mousewheel\n";
+				#$y_scroll->ScrlByUnits('v', 3);
+			#});
+		}else{
+				# vertical scroll
+			$cc->Tk::bind('<4>', sub{
+				# warn "Someone's scrolling up with the mousewheel\n";
+				$y_scroll->ScrlByUnits('v', -3);
+			});
+			$cc->Tk::bind('<5>', sub{
+				# warn "Someone's scrolling down with the mousewheel\n";
+				$y_scroll->ScrlByUnits('v',  +3);
+			});
+
+				# horizontal scroll using Control modifier
+			$cc->Tk::bind('<Control-4>', sub{
+				# warn "Someone's scrolling left with the mousewheel\n";
+				$x_scroll->ScrlByUnits('h', -3);
+			});
+			$cc->Tk::bind('<Control-5>', sub{
+				# warn "Someone's scrolling right with the mousewheel\n";
+				$x_scroll->ScrlByUnits('h',  +3);
+			});
+		}
+	}
 }
 
     #foreach my $key_seq ($x_scroll->bind($class)) {

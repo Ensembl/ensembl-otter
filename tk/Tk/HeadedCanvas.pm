@@ -2,7 +2,7 @@ package HeadedCanvas;
 
 # a double-headed canvas with scrolls
 #
-# 8.feb'2005, lg4
+# 24.Feb'2005, lg4
 
 use strict;
 use Tk;
@@ -10,28 +10,6 @@ use Tk;
 use base ('Tk::Frame');
 
 Construct Tk::Widget 'HeadedCanvas';
-
-sub _multiscrollx { # callback, not a method
-	my ($sb,$widgets,@args) = @_;
-
-	if(($args[0] eq 'moveto')&&($args[1]<0)) {
-		$args[1] = 0;
-	}
-	foreach my $w (@$widgets) {
-		$w->xview(@args);
-	}
-}
-
-sub _multiscrolly { # callback, not a method
-	my ($sb,$widgets,@args) = @_;
-
-	if(($args[0] eq 'moveto')&&($args[1]<0)) {
-		$args[1] = 0;
-	}
-	foreach my $w (@$widgets) {
-		$w->yview(@args);
-	}
-}
 
 sub Populate {
 	my ($self,$args) = @_;
@@ -60,13 +38,28 @@ sub Populate {
 	)->pack(-side=>'bottom',-fill=>'both',-expand=>1);
 
 		# scrolls' binding:
-	$sh->configure( -command => [ \&_multiscrollx, $sh, [$main_canvas,$top_canvas]]);
-	$top_canvas->configure(-xscrollcommand => [ set => $sh]);
-	$main_canvas->configure(-xscrollcommand => [ set => $sh]);
+	$sh->configure( -command => sub {
+										if(($_[0] eq 'moveto')&&($_[1]<0)) { # don't let it become negative
+											$_[1] = 0;
+										}
+										foreach my $c ($main_canvas,$top_canvas) {
+											$c->xview(@_);
+										}
+								});
+	$top_canvas->configure(-xscrollcommand => sub { $sh->set(@_); });
+	$main_canvas->configure(-xscrollcommand => sub { $sh->set(@_); });
 	 
-	$sv->configure( -command => [ \&_multiscrolly, $sv, [$main_canvas,$left_canvas]]);
-	$left_canvas->configure(-yscrollcommand => [ set => $sv]);
-	$main_canvas->configure(-yscrollcommand => [ set => $sv]);
+	$sv->configure( -command => sub {
+										if(($_[0] eq 'moveto')&&($_[1]<0)) { # don't let it become negative
+											$_[1] = 0;
+										}
+										foreach my $c ($main_canvas,$left_canvas) {
+											$c->yview(@_);
+										}
+								});
+	$left_canvas->configure(-yscrollcommand => sub { $sv->set(@_); });
+	# $left_canvas->configure(-yscrollcommand => [ set => $sv ]);
+	$main_canvas->configure(-yscrollcommand => sub { $sv->set(@_); });
 
 		# advertisement:
 	$self->Advertise('main_canvas'     => $main_canvas);
@@ -197,6 +190,13 @@ sub fit_everything {
 	$self->Subwidget('left_canvas')->yviewMoveto(0);
 	$self->Subwidget('main_canvas')->xviewMoveto(0);
 	$self->Subwidget('main_canvas')->yviewMoveto(0);
+}
+
+sub DESTROY {
+	my( $self ) = @_;
+
+	my $class = ref($self);
+	warn "Destroying a '$class'";
 }
 
 1;
