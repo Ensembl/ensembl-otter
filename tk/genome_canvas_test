@@ -88,7 +88,7 @@ use GenomeCanvas;
         -side => 'top',
         );
 
-    make_button($button_frame, 'Exit', sub{ exit 0 });
+    make_button($button_frame, 'Exit', sub{ kill 'INT', $$ } );
 
     make_button($button_frame, 'PostScript',
         sub {
@@ -126,8 +126,6 @@ use GenomeCanvas;
                             ###############
                             Tk::MainLoop();
                             ###############
-
-
 
 sub make_button {
     my( $parent, $label, $command ) = @_;
