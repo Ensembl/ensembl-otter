@@ -27,6 +27,7 @@ use strict;
 use Carp;
 use Hum::EMBL;
 use Hum::EMBL::FeatureSet;
+use Hum::EMBL::Location::Exon;
 use Hum::EMBL::LocationUtils qw( simple_location locations_from_subsequence
     location_from_homol_block );
 use Hum::EmblUtils qw( add_source_FT add_Organism );
@@ -337,6 +338,16 @@ sub fake_features {
     $ft2->addQualifierStrings('standard_name', "badass");
     $ft2->addQualifierStrings('evidence','EXPERIMENTAL');
 
+    my $ft3 = $set->newFeature;
+    my $key3 = 'mRNA'; # or 'CDS'
+    $ft3->key($key3);
+    my $loc3 = Hum::EMBL::Location->new;
+    $loc3->strand('C');
+    $loc3->exons(34);
+    $ft3->location($loc3);
+    $ft3->addQualifierStrings('gene', "blows_chunks");
+    $ft3->addQualifierStrings('standard_name', "badass");
+    $ft3->addQualifierStrings('evidence','EXPERIMENTAL');
 
     #locations_from_subsequence ??
 
@@ -355,42 +366,63 @@ sub fake_features {
 sub do_Gene {
     my ( $self, $gene ) = @_;
 
-    my $contig_length = $self->contig_length;
-    my $embl = $self->EMBL;
-    
     #Bio::Otter::AnnotatedGene, isa Bio::EnsEMBL::Gene
     return if $gene->type eq 'obsolete'; # Deleted genes
 
+    my $contig_length = $self->contig_length;
+    my $embl = $self->EMBL;
+    my $set = $self->FeatureSet;
+    
+
     #Bio::Otter::AnnotatedTranscript, isa Bio::EnsEMBL::Transcript
+    #Transcript here give an mRNA, potentially + a CDS in EMBL record.
     foreach my $transcript (@{$gene->get_all_Transcripts}) {
 
-        my $sid = $transcript->stable_id;
-        foreach my $exon (@{$transcript->get_all_Exons}) {
+        my $sid = $transcript->stable_id; #Currently not used
+        
+        #Do the mRNA fist
+        my $all_transcript_Exons = $transcript->get_all_Exons;
+        if ($all_transcript_Exons) {
+            my $ft = $set->newFeature;
+            $ft->key('mRNA');
+            my $loc = Hum::EMBL::Location->new;
+            $ft->location($loc);
+            $loc->strand('W'); #By default, Exons may vary
 
-            #Bio::EnsEMBL::RawContig, each exon knows its contig
-            my $contig  = $exon->contig;
-            my $start   = $exon->start;
-            my $end     = $exon->end;
+            my @location_Exons;
+            foreach my $exon (@{$all_transcript_Exons}) {
 
-            # May be an is_sticky method?
-            if ($exon->isa('Bio::Ensembl::StickyExon')) {
-                # Deal with sticy exon
-                warn "STICKY!\n";
-            }
-            elsif ($contig != $self->Slice_contig()) {
-                my $acc = $contig->clone->embl_id;
-                my $sv  = $contig->clone->embl_version;
-                # Is not on Slice
-                print "$acc.$sv:$start..$end\n";
-            }
-            else {
-                # Is on Slice (ie: clone)
-                if ($end < 1 or $start > $contig_length) {
-                    carp "Unexpected exon start '$start' end '$end' "
-                        . "on contig of length '$contig_length'\n";
+                my $location_Exon = Hum::EMBL::Location::Exon->new;
+                $location_Exon->strand($exon->strand);
+                
+                #Bio::EnsEMBL::RawContig, each exon knows its contig
+                my $contig  = $exon->contig;
+                my $start   = $exon->start;
+                my $end     = $exon->end;
+
+                $location_Exon->start($start);
+                $location_Exon->end($end);
+
+                # May be an is_sticky method?
+                if ($exon->isa('Bio::Ensembl::StickyExon')) {
+                    # Deal with sticy exon
+                    warn "STICKY!\n";
                 }
-                print "$start..$end\n";
+                elsif ($contig != $self->Slice_contig()) {
+                    # Is not on the Slice
+                    my $acc = $contig->clone->embl_id;
+                    my $sv  = $contig->clone->embl_version;
+                }
+                else {
+                    # Is on Slice (ie: clone)
+                    if ($end < 1 or $start > $contig_length) {
+                        carp "Unexpected exon start '$start' end '$end' "
+                            . "on contig of length '$contig_length'\n";
+                    }
+                }
+                push(@location_Exons, $location_Exon);
             }
+            $loc->exons(@location_Exons);
         }
     }
 }
