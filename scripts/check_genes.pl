@@ -855,8 +855,7 @@ foreach my $atype (keys %gsi){
 	  }
 	  $tsi{$tsi}->[$erank]=[$eid,$ecst,$eced,$esr,$es,$ep,$eep];
 	}else{
-	  print "FATAL: Duplicate rank for $tsi, $erank\n";
-	  exit 0;
+	  print "WARN: Duplicate rank for $tsi, $erank\n";
 	}
       }else{
 	$tsi{$tsi}->[$erank]=[$eid,$ecst,$eced,$esr,$es,$ep,$eep];
