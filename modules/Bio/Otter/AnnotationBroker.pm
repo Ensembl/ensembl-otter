@@ -127,15 +127,15 @@ sub make_id_version_hash {
 
     my $stable_version = {};
     foreach my $gene (@$genes) {
-        $self->store_stable($stable_version, $gene);
+        $self->store_stable($stable_version, $gene, 'gene');
         foreach my $tsct (@{$gene->get_all_Transcripts}) {
-            $self->store_stable($stable_version, $tsct);
+            $self->store_stable($stable_version, $tsct, 'transcript');
             if (my $tnsl = $tsct->translation) {
-                $self->store_stable($stable_version, $tnsl);
+                $self->store_stable($stable_version, $tnsl, 'translation');
             }
         }
         foreach my $exon (@{$gene->get_all_Exons}) {
-            $self->store_stable($stable_version, $exon);
+            $self->store_stable($stable_version, $exon, 'exon');
         }
     }
 
@@ -143,10 +143,19 @@ sub make_id_version_hash {
 }
 
 sub store_stable {
-    my( $self, $sid_v, $obj ) = @_;
+    my( $self, $sid_v, $obj, $type ) = @_;
 
     if (my $sid = $obj->stable_id) {
+        my $get_max = $self->db->prepare(qq{
+            SELECT MAX(version)
+            FROM ${type}_stable_id
+            WHERE stable_id = ?
+            });
+        $get_max->execute($sid);
+        my ($max) = $get_max->fetchrow;
+        
         my $this_version = $obj->version;
+        $this_version = $max if $max > $this_version;
         if (my $version = $sid_v->{$sid}) {
             $sid_v->{$sid} = $this_version if $this_version > $version;
         } else {
