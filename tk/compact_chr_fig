@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl -w
+#!/nfs/humace2/hum/bin/perl -w
 
 use lib '/nfs/disk84/jgrg/work/tk';
 

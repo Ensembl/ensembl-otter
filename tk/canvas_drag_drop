@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl -w
+#!/nfs/humace2/hum/bin/perl -w
 
 ### canvas_drag_drop
 
@@ -8,10 +8,10 @@ use GenomeCanvas;
 {
     my $mw = CanvasWindow::MainWindow->new;
     $mw->title('Drag & Drop');
-    $mw->bind(<Control-q>, sub {exit 0});
-    $mw->bind(<Control-Q>, sub {exit 0});
+    $mw->bind(<Control-q>, sub {$mw->destroy});
+    $mw->bind(<Control-Q>, sub {$mw->destroy});
     
-    my $gc = GenomeCanvas->new($mw);
+    my $gc = CanvasWindow->new($mw);
     
     my $canvas = $gc->canvas;
 
