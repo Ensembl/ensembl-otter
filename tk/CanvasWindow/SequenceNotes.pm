@@ -559,7 +559,7 @@ sub draw {
             my $col_tag = "col=$col";
             my $meth = $methods->[$col];
             
-            my ($text, $font, @tags) = $meth->($cs, $row);
+            my ($text, $font, @tags) = $meth->($cs, $i);
             $canvas->createText(
                 $x, $y,
                 -anchor => 'nw',
