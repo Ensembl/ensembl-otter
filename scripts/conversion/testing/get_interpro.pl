@@ -46,7 +46,7 @@ my $db = new Bio::Otter::DBSQL::DBAdaptor(
 $db->assembly_type($path);
 
 my $sa  = $db->get_SliceAdaptor();
-my $aga = $db->get_AnnotatedGeneAdaptor();
+my $aga = $db->get_GeneAdaptor();
 my $pfa = $db->get_ProteinFeatureAdaptor();
 
 my $chrhash = get_chrlengths($db);

@@ -54,7 +54,7 @@ close(XML2);
 ok(7);
 
 my $ab = new Bio::Otter::AnnotationBroker($db);
-my $aga = $db->get_AnnotatedGeneAdaptor;
+my $aga = $db->get_GeneAdaptor;
 
 ok(8);
 

@@ -76,11 +76,6 @@ if (defined($clone_accession)) {
   $genes = $vcontig->get_all_Genes;
 }
 
-my $oaga = $otterdb->get_AnnotatedGeneAdaptor();
-
-foreach my $gene (@$genes) {
-  $oaga->annotate_gene($gene);
-}
 if ($output_type eq 'xml') {
   foreach my $gene (@$genes) {
     print $gene->toXMLString() . "\n";

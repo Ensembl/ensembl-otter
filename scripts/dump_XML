@@ -26,7 +26,7 @@ my $sa = $db->get_SliceAdaptor;
 
 my $slice = $sa->fetch_by_chr_start_end($chr,$chrstart,$chrend);
 
-my @genes = @{$db->get_AnnotatedGeneAdaptor->fetch_by_Slice($slice)};
+my @genes = @{$db->get_GeneAdaptor->fetch_by_Slice($slice)};
 my @path  = @{$slice->get_tiling_path};
 
 my $xmlstr = Bio::Otter::Converter::genes_to_XML_with_Slice($slice,\@genes,1,\@path,$slice->seq);

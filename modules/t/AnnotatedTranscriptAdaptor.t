@@ -38,8 +38,8 @@ my $db = $testdb->get_DBSQL_Obj;
 
 ok($db);
 
-my $ag_adaptor = $db->get_AnnotatedGeneAdaptor;
-my $at_adaptor = $db->get_AnnotatedTranscriptAdaptor;
+my $ag_adaptor = $db->get_GeneAdaptor;
+my $at_adaptor = $db->get_TranscriptAdaptor;
 
 ok($ag_adaptor && $at_adaptor);
 

@@ -1910,11 +1910,11 @@ sub slice_to_XML {
   $xmlstr .= "<sequenceset>\n";
 
   my @path  = @{ $slice->get_tiling_path };
-  #my @genes = @{ $db->get_AnnotatedGeneAdaptor->fetch_by_Slice($slice) };
+  #my @genes = @{ $db->get_GeneAdaptor->fetch_by_Slice($slice) };
   my @genes;
 
   if ($db->isa("Bio::Otter::DBSQL::DBAdaptor")) {
-     @genes = @{ $db->get_AnnotatedGeneAdaptor->fetch_by_Slice($slice) };
+     @genes = @{ $db->get_GeneAdaptor->fetch_by_Slice($slice) };
    } else {
      my $tmpgenes = $db->get_GeneAdaptor->fetch_all_by_Slice($slice);
      foreach my $g (@$tmpgenes) {

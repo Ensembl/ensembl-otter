@@ -126,7 +126,7 @@ if ($store) {
       die "No analysis object associated with otter. Dieing ...";
   }
 
-  my $oaga = $odb->get_AnnotatedGeneAdaptor();
+  my $oaga = $odb->get_GeneAdaptor();
   
   my $name = `whoami`; chomp($name);
   

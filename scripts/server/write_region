@@ -156,12 +156,12 @@ foreach my $gene (@genes) {
 }
 
 my $ab = new Bio::Otter::AnnotationBroker($odb);
-my $oaga = $odb->get_AnnotatedGeneAdaptor();
+my $oaga = $odb->get_GeneAdaptor();
 $odb->assembly_type($xmlslice->assembly_type);
-my $slice;
 
 print STDERR "\nFetching slice $chrname $chrstart $chrend...";
 
+my( $slice );
 eval {
   $slice = $sa->fetch_by_chr_start_end($chrname,$chrstart,$chrend);
 };

@@ -60,12 +60,12 @@ my $tdb = new Bio::Otter::DBSQL::DBAdaptor(-host => $t_host,
 $tdb->assembly_type($path);
 
 my $s_sgp = $sdb->get_SliceAdaptor;
-my $s_aga = $sdb->get_AnnotatedGeneAdaptor;
-my $s_aca = $sdb->get_AnnotatedCloneAdaptor;
+my $s_aga = $sdb->get_GeneAdaptor;
+my $s_aca = $sdb->get_CloneAdaptor;
 
 my $t_sgp = $tdb->get_SliceAdaptor;
-my $t_aga = $tdb->get_AnnotatedGeneAdaptor;
-my $t_aca = $tdb->get_AnnotatedCloneAdaptor;
+my $t_aga = $tdb->get_GeneAdaptor;
+my $t_aca = $tdb->get_CloneAdaptor;
 my $t_ea  = $tdb->get_ExonAdaptor;
 
 

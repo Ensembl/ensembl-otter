@@ -43,7 +43,7 @@ foreach my $gene (@$genes2) {
 
   $gene->analysis($analysis);
 
-  $db->get_AnnotatedGeneAdaptor->attach_to_Slice($gene,$slice);
+  $db->get_GeneAdaptor->attach_to_Slice($gene,$slice);
 
   foreach my $tran (@{$gene->get_all_Transcripts}) {
     foreach my $exon (@{$tran->get_all_Exons}) {
@@ -55,7 +55,7 @@ foreach my $gene (@$genes2) {
       $transeq{$tran->stable_id} = $tran->translate->seq;
     }
   }
-  $db->get_AnnotatedGeneAdaptor->store($gene);
+  $db->get_GeneAdaptor->store($gene);
 
 }
 
@@ -74,7 +74,7 @@ $db3->assembly_type($type);
 my $slice3 = $db3->get_SliceAdaptor->fetch_by_chr_start_end($chr,$chrstart,$chrend);
 
 ok($dna eq $slice3->seq);
-my @genes = @{$db3->get_AnnotatedGeneAdaptor->fetch_by_Slice($slice)};
+my @genes = @{$db3->get_GeneAdaptor->fetch_by_Slice($slice)};
 #$otter_test->pause;
 
 print "PRE**************\n";

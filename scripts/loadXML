@@ -38,7 +38,7 @@ foreach my $gene (@$genes) {
   $gene->analysis($analysis);
 
   eval {
-     $db->get_AnnotatedGeneAdaptor->attach_to_Slice($gene,$slice);
+     $db->get_GeneAdaptor->attach_to_Slice($gene,$slice);
      if ($stable_id) {
        my $id = $db->get_StableIdAdaptor->_fetch_new_by_type('gene');
        print "Id $id\n";
@@ -68,7 +68,7 @@ foreach my $gene (@$genes) {
      print "Exon " . $exon->stable_id . "\n";
   }
       
-  $db->get_AnnotatedGeneAdaptor->store($gene);
+  $db->get_GeneAdaptor->store($gene);
   };
   if ($@) {
      print "Problem loading gene " . $gene->gene_info->name->name . " [$@]\n";

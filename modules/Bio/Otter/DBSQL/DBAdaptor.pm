@@ -45,25 +45,31 @@ sub rollback {
     $self->db_handle->rollback();
 }
 
-sub get_RawContigAdaptor {
-  my $self = shift;
+# No longer needed now get_AnnotatedCloneAdaptor -> get_CloneAdaptor
+#sub get_RawContigAdaptor {
+#  my $self = shift;
+#
+#  return $self->_get_adaptor("Bio::Otter::DBSQL::RawContigAdaptor");
+#}
 
-  return $self->_get_adaptor("Bio::Otter::DBSQL::RawContigAdaptor");
-}
-
-sub get_AnnotatedCloneAdaptor {
+# These next three methods override the methods in the core
+# Ensembl DBAdaptor, returning the otter Annotated versions
+# of the core adaptors, so that all clones, genes and transcripts
+# that come out of an Otter DBAdaptor have the extra annotation
+# information
+sub get_CloneAdaptor {
   my $self = shift;
 
   return
     $self->_get_adaptor("Bio::Otter::DBSQL::AnnotatedCloneAdaptor");
 } 
-sub get_AnnotatedGeneAdaptor {
+sub get_GeneAdaptor {
   my $self = shift;
 
   return
     $self->_get_adaptor("Bio::Otter::DBSQL::AnnotatedGeneAdaptor");
 } 
-sub get_AnnotatedTranscriptAdaptor {
+sub get_TranscriptAdaptor {
   my $self = shift;
 
   return
@@ -163,7 +169,6 @@ sub get_CurrentGeneInfoAdaptor {
 
     return $self->_get_adaptor("Bio::Otter::DBSQL::CurrentGeneInfoAdaptor");
 }
-
 sub get_CurrentTranscriptInfoAdaptor {
     my $self = shift;
 

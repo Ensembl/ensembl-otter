@@ -55,7 +55,7 @@ my $chr_slice = $tdb->get_SliceAdaptor()->fetch_by_chr_name($chr);
 
 my $ens_genes = $chr_slice->get_all_Genes;
 
-#my $genes = $tdb->get_AnnotatedGeneAdaptor()->fetch_by_Slice($chr_slice);
+#my $genes = $tdb->get_GeneAdaptor()->fetch_by_Slice($chr_slice);
 
 my $padding = 1000;
 
@@ -64,7 +64,7 @@ my %analyses;
 foreach my $ens_gene (@$ens_genes) {
   my $gene_slice = $tdb->get_SliceAdaptor()->fetch_by_chr_start_end($chr,$ens_gene->start-$padding,$ens_gene->end+$padding);
 
-  my $ott_genes = $tdb->get_AnnotatedGeneAdaptor()->fetch_by_Slice($gene_slice);
+  my $ott_genes = $tdb->get_GeneAdaptor()->fetch_by_Slice($gene_slice);
 
   my $gene = undef;
   foreach my $ott_gene (@$ott_genes) {

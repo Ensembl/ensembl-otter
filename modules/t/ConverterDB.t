@@ -64,7 +64,7 @@ foreach my $gene (@$genes) {
   
   $gene->analysis($analysis);
 
-  $db->get_AnnotatedGeneAdaptor->attach_to_Slice($gene,$slice);
+  $db->get_GeneAdaptor->attach_to_Slice($gene,$slice);
 
   foreach my $tran (@{$gene->get_all_Transcripts}) {
     if (defined($tran->translation)) {
@@ -72,7 +72,7 @@ foreach my $gene (@$genes) {
       $transeq{$tran->stable_id} = $tran->translate->seq;
     }
   }
-  $db->get_AnnotatedGeneAdaptor->store($gene);
+  $db->get_GeneAdaptor->store($gene);
 
 }
 

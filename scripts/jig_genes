@@ -68,7 +68,7 @@ my $dbfile;
   }
 
 my $ab = new Bio::Otter::AnnotationBroker($odb);
-my $ga = $odb->get_AnnotatedGeneAdaptor;
+my $ga = $odb->get_GeneAdaptor;
 
 my $sgp = $odb->get_SliceAdaptor;
 

@@ -263,7 +263,7 @@ while ( my $seq = $in->next_seq() ) {
       }
       $gene->transform;
       eval {
-        $db->get_AnnotatedGeneAdaptor->store($gene);
+        $db->get_GeneAdaptor->store($gene);
       };
       if ($@) {
         print "Failed loading $geneid\n$@";

@@ -113,7 +113,7 @@ if ($print) {
 }
 if ($store) {  
   my $ab = new Bio::Otter::AnnotationBroker($odb);
-  my $oaga = $odb->get_AnnotatedGeneAdaptor();
+  my $oaga = $odb->get_GeneAdaptor();
 
   print "chr = $chrname chrstart = $chrstart chrend = $chrend\n";
   my $slice = $sa->fetch_by_chr_start_end($chrname,$chrstart,$chrend);

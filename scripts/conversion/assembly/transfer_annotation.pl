@@ -81,13 +81,13 @@ my $tdb = new Bio::Otter::DBSQL::DBAdaptor(-host => $t_host,
 $tdb->assembly_type($t_path);
 
 my $sgp = $sdb->get_SliceAdaptor;
-my $aga = $sdb->get_AnnotatedGeneAdaptor;
+my $aga = $sdb->get_GeneAdaptor;
 
 my $c_sgp = $cdb->get_SliceAdaptor;
-my $c_aga = $cdb->get_AnnotatedGeneAdaptor;
+my $c_aga = $cdb->get_GeneAdaptor;
 
 my $t_sgp = $tdb->get_SliceAdaptor;
-my $t_aga = $tdb->get_AnnotatedGeneAdaptor;
+my $t_aga = $tdb->get_GeneAdaptor;
 
 
 my $vcontig = $sgp->fetch_by_chr_start_end($chr,$chrstart,$chrend);

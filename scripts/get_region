@@ -68,7 +68,7 @@ if (defined($dna_dbname)) {
 
 
 my $sgp  = $odb->get_SliceAdaptor;
-my $aga  = $odb->get_AnnotatedGeneAdaptor;
+my $aga  = $odb->get_GeneAdaptor;
 
 my $cb   = new Bio::Otter::CloneLockBroker($odb);
 

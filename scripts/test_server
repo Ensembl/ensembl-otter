@@ -91,7 +91,7 @@ if (defined($dna_dbname)) {
 
 my $sa   = $odb->get_SliceAdaptor;
 my $ab   = new Bio::Otter::AnnotationBroker($odb);
-my $oaga = $odb->get_AnnotatedGeneAdaptor;
+my $oaga = $odb->get_GeneAdaptor;
 
 my @authors = qw(searle michele james birney);
 

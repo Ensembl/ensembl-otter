@@ -38,7 +38,7 @@ my $db = $testdb->get_DBSQL_Obj;
 
 ok($db);
 
-my $adaptor = $db->get_AnnotatedGeneAdaptor;
+my $adaptor = $db->get_GeneAdaptor;
 
 ok($adaptor);
 

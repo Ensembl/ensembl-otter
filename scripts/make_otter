@@ -61,7 +61,7 @@ my $otterdb = new Bio::Otter::DBSQL::DBAdaptor(-host => $otter_host,
 					       -port => $otter_port,
 					       -dbname => $otter_dbname);
 
-my $oaga = $otterdb->get_AnnotatedGeneAdaptor;
+my $oaga = $otterdb->get_GeneAdaptor;
 
 
 my $sgp = $ensdb->get_SliceAdaptor;

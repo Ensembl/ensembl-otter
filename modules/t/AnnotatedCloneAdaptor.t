@@ -28,7 +28,7 @@ my $db = $testdb->get_DBSQL_Obj;
 
 ok($db);
 
-my $adaptor = $db->get_AnnotatedCloneAdaptor;
+my $adaptor = $db->get_CloneAdaptor;
 
 ok($adaptor);
 
@@ -116,10 +116,10 @@ while (my $seq = $seqio->next_seq) {
 
     $clone->add_Contig($contig);
     $clone->clone_info($cloneinfo);
-    $db->get_AnnotatedCloneAdaptor->store($clone);
+    $db->get_CloneAdaptor->store($clone);
 
 
-    my $newclone = $db->get_AnnotatedCloneAdaptor->fetch_by_accession_version($tmpseq->id,1);
+    my $newclone = $db->get_CloneAdaptor->fetch_by_accession_version($tmpseq->id,1);
 
     my $cloneinfo = $newclone->clone_info;
 

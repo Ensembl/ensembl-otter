@@ -111,7 +111,7 @@ if ($store) {
   my $slice = $sgp->fetch_by_chr_start_end($chr,$chrstart,$chrend);
 
   my $anal = $odb->get_AnalysisAdaptor()->fetch_by_logic_name('otter');
-  my $oaga = $odb->get_AnnotatedGeneAdaptor();
+  my $oaga = $odb->get_GeneAdaptor();
 
 
   my $author = new Bio::Otter::Author(-name => $author_name, -email => $email);
