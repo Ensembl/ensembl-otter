@@ -268,8 +268,9 @@ sub draw_sequence_gaps {
 
     # Draw the gaps    
     foreach my $gap ($band->sequence_gap_map) {
-        my ($x1, $x2) = map $_ / $rpp, @{$gap}[0,1];
-        my $color = $gap->[2] || $default_color;
+        my ($x1, $x2, $color) = @$gap;
+        ($x1, $x2) = map $_ / $rpp, ($x1, $x2);
+        $color ||= $default_color;
         $canvas->createRectangle(
             $x1, $y_offset, $x2, $y_max,
             -fill       => $color,
@@ -315,7 +316,38 @@ sub sequence_gap_map {
         push(@gap_map, [$prev_end + 1, $vc_length]);
     }
     
+    foreach my $gap (@gap_map) {
+        my( $start, $end ) = @$gap;
+        if (my $color = $band->zone_color($start, $end)) {
+            push(@$gap, $color);
+        }
+    }
+    
     return @gap_map;
+}
+
+sub set_color_zones {
+    my( $band, @zones ) = @_;
+    
+    $band->{'_color_zones'} = [@zones];
+}
+
+sub zone_color {
+    my( $band, $start, $end ) = @_;
+
+    my $vc = $band->virtual_contig or return;
+    my $offset = $vc->_global_start - 1;
+    $start += $offset;
+    $end   += $offset;
+    
+    my $z_list = $band->{'_color_zones'} or return;
+    foreach my $zone (@$z_list) {
+        my ($z_start, $z_end, $z_color) = @$zone;
+        if ($start <= $z_end and $end >= $z_start) {
+            return $z_color;
+        }
+    }
+    return;
 }
 
 sub sub_vc_size {

@@ -72,15 +72,17 @@ sub strip_y_map {
 sub draw_sequence_gaps {
     my( $band ) = @_;
     
-    my $canvas      = $band->canvas;
-    my $height      = $band->height;
-    my $rpp         = $band->residues_per_pixel;
-    my $color       = $band->sequence_gap_color;
+    my $canvas          = $band->canvas;
+    my $height          = $band->height;
+    my $rpp             = $band->residues_per_pixel;
+    my $default_color   = $band->sequence_gap_color;
     my @tags = $band->tags;
 
     # Draw the gaps
     foreach my $gap ($band->sequence_gap_map) {
-        my ($x1, $x2) = map $_ / $rpp, @$gap;
+        my ($x1, $x2, $color) = @$gap;
+        ($x1, $x2) = map $_ / $rpp, ($x1, $x2);
+        $color ||= $default_color;
         
         # Over each strip
         foreach my $strip ($band->strip_y_map) {

@@ -155,6 +155,30 @@ sub all_position_pair_text {
     return @pos;
 }
 
+sub set_position_pair_text {
+    my( $self, $pp, $text_pair ) = @_;
+    
+    my $canvas = $self->canvas;
+    foreach my $i (0,1) {
+        my $obj = $pp->[$i];
+        my $pos = $text_pair->[$i] || $self->empty_string;
+        $canvas->itemconfigure($obj, -text => $pos);
+    }
+}
+
+sub set_all_position_pair_text {
+    my( $self, @coord ) = @_;
+
+    my @pp_list = $self->position_pairs;
+    if (@pp_list != @coord) {
+        confess "position pair number '", scalar(@pp_list),
+            "' doesn't match number of coordinates '", scalar(@coord), "'";
+    }
+    for (my $i = 0; $i < @pp_list; $i++) {
+        $self->set_position_pair_text($pp_list[$i], $coord[$i]);
+    }
+}
+
 sub sort_position_pairs {
     my( $self ) = @_;
 
@@ -199,24 +223,48 @@ sub merge_position_pairs {
         }
     }
     
-    my $canvas = $self->canvas;
-    my $empty  = $self->empty_string;
     my @pairs  = $self->position_pairs;
-    for (my $n = 0; $n < @pairs; $n++) {
-        foreach my $i (0,1) {
-            my $num;
-            if ($pos[$n]) {
-                $num = $pos[$n][$i];
-            }
-            $num ||= $empty;
-            my $obj = $pairs[$n][$i];
-            $canvas->itemconfigure($obj, -text => $num);
-        }
+    for (my $i = 0; $i < @pos; $i++) {
+        $self->set_position_pair_text($pairs[$i], $pos[$i]);
     }
     if (my $over = @pairs - @pos) {
         $self->trim_position_pairs($over);
         $self->fix_window_min_max_sizes;
     }
+}
+
+sub delete_selected_exons {
+    my( $self ) = @_;
+    
+    my $canvas = $self->canvas;
+    my @selected = $self->list_selected;
+    $self->deselect_all;
+    my( %del_exon );
+    foreach my $obj (@selected) {
+        my ($exon_id) = grep /^exon_id/, $canvas->gettags($obj);
+        if ($exon_id) {
+            $del_exon{$exon_id}++;
+        }
+    }
+    
+    my @text    = $self->all_position_pair_text;
+    my @pp_list = $self->position_pairs;
+    my $trim = 0;
+    my( @keep );
+    for (my $i = 0; $i < @pp_list; $i++) {
+        my $exon_id = $pp_list[$i][2];
+        my $count = $del_exon{$exon_id};
+        if ($count and $count == 2) {
+            $trim++;
+        } else {
+            push(@keep, $text[$i]);
+        }
+    }
+    
+    return unless $trim;
+    
+    $self->trim_position_pairs($trim);
+    $self->set_all_position_pair_text(@keep);
 }
 
 sub add_coordinate_pair {
@@ -270,8 +318,6 @@ sub initialize {
         # because the other closures still reference it.
         $self = undef;
         };
-    
-    ### Buttons
 
     my $bf = $self->button_frame;
    
@@ -291,8 +337,9 @@ sub initialize {
     
     my $method = $sub->GeneMethod;
     if ($method->is_mutable) {
+        # Add editing facilities for editable SubSeqs
 
-        # Sort the postions
+        # Sort the positions
         my $sort_button = $bf->Button(
             -text       => 'Sort',
             -command    => sub{ $self->sort_position_pairs },
@@ -301,7 +348,7 @@ sub initialize {
             -side   => 'left',
             );
         
-        # Merge overlapping positions
+        # Merge overlapping exon coordinates
         my $merge_button = $bf->Button(
             -text       => 'Merge',
             -command    => sub{ $self->merge_position_pairs },
@@ -351,17 +398,27 @@ sub initialize {
             $method_chooser->pack(-side => 'left');
         }
 
+        $canvas->Tk::bind('<Control-d>', sub{ $self->delete_selected_exons });
+        $canvas->Tk::bind('<Control-D>', sub{ $self->delete_selected_exons });
+
         # Keyboard editing commands
         $canvas->Tk::bind('<Left>',      sub{ $self->canvas_text_go_left   });
         $canvas->Tk::bind('<Right>',     sub{ $self->canvas_text_go_right  });
-        $canvas->Tk::bind('<Up>',        sub{ $self->increment_int    });
-        $canvas->Tk::bind('<Down>',      sub{ $self->decrement_int    });
-        $canvas->Tk::bind('<BackSpace>', sub{ $self->canvas_backspace });
-
-        $canvas->Tk::bind('<<digit>>', [sub{ $self->canvas_insert_character(@_) }, Tk::Ev('A')]);
+        $canvas->Tk::bind('<BackSpace>', sub{ $self->canvas_backspace      });
+        
+        # For entering digits into the text object which has keyboard focus
         $canvas->eventAdd('<<digit>>', map "<KeyPress-$_>", 0..9);
+        $canvas->Tk::bind('<<digit>>', [sub{ $self->canvas_insert_character(@_) }, Tk::Ev('A')]);
 
-        # Control-Left for switching strand
+        # Increases the number which has keyboard focus
+        $canvas->eventAdd('<<increment>>', qw{ <plus> <KP_Add> <equal> });
+        $canvas->Tk::bind('<<increment>>', sub{ $self->increment_int });
+
+        # Decreases the number which has keyboard focus
+        $canvas->eventAdd('<<decrement>>', qw{ <minus> <KP_Subtract> <underscore> });
+        $canvas->Tk::bind('<<decrement>>', sub{ $self->decrement_int });
+
+        # Control-Left mouse for switching strand
         $canvas->Tk::bind('<Control-Button-1>', sub{
             $self->control_left_button_handler;
             if ($self->count_selected) {
@@ -369,7 +426,7 @@ sub initialize {
             }
         });
 
-        # For pasting in coords from clipboard
+        # Middle mouse pastes in coords from clipboard
         $canvas->Tk::bind('<Button-2>', sub{
             $self->middle_button_paste;
             if ($self->count_selected) {
@@ -377,7 +434,7 @@ sub initialize {
             }
         });
         
-        # Focus on current text
+        # Handle left mouse
         $canvas->Tk::bind('<Button-1>', sub{
             $self->left_button_handler;
             $self->focus_on_current_text;
@@ -709,7 +766,20 @@ sub middle_button_paste {
     };
     return if $@;
     
-    my @ints = $text =~ /(\d+)/g;
+    my( @ints );
+    # match fMap "blue box" DNA selection
+    if (@ints = $text =~ /Selection (\d+) ---> (\d+)/) {
+        if ($ints[0] == $ints[1]) {
+            # user clicked on single base pair
+            @ints = ($ints[0]);
+        }
+    } else {
+        # match general fMap "blue box" pattern
+        unless (@ints = $text =~ /^\S+\s+(\d+)\s+(\d+)\s+\(\d+\)/) {
+            # or just get all the integers
+            @ints = grep ! /\./, $text =~ /([\.\d]+)/g;
+        }
+    }
     
     if (my $obj  = $canvas->find('withtag', 'current')) {
         $self->deselect_all;

@@ -56,7 +56,7 @@ use Getopt::Long 'GetOptions';
     my( @chr_parts );
     if ($test_flag) {
         @chr_parts = (
-            [1, 3_000_000],
+            [27_000_000, 30_000_000],
             [60_000_000, 62_500_000],
             );
     }
@@ -120,6 +120,12 @@ use Getopt::Long 'GetOptions';
         $gene_names->tiling_direction(1);
         $gc->add_Band($gene_names);
     }
+    
+    # Different color for centromere gaps
+    my $centromere = [26257627, 29257626, '#bebecc'];
+    foreach my $band ($gc->band_list) {
+        $band->set_color_zones($centromere);
+    }
 
     print STDERR "Rendering canvas\n";
     $gc->residues_per_pixel($scale);
@@ -154,18 +160,18 @@ use Getopt::Long 'GetOptions';
         sub {
             
             # A4 is 841 x 591 points
-            $gc->page_width(841);
-            $gc->page_height(591);
-            my @files = $gc->print_postscript($ps_file_name);
+            $gc->page_width(591 * 4);
+            $gc->page_height(841);
+            my @files = $gc->print_postscript('chr_20');
             warn "Printed to files:\n",
                 map "  $_\n", @files;
         
-            #$gc->page_height(841);
-            #$gc->page_width(591);
-            #$gc->horizontal_tile(4);
-            #@files = $gc->print_postscript('chr_20-4-page');
-            #warn "Printed to files:\n",
-            #    map "  $_\n", @files;
+            $gc->page_height(841);
+            $gc->page_width(591);
+            $gc->horizontal_tile(4);
+            @files = $gc->print_postscript('chr_20-4-page');
+            warn "Printed to files:\n",
+                map "  $_\n", @files;
         
             #$gc->page_height(841);
             #$gc->page_width(591);
