@@ -1,0 +1,33 @@
+#!/usr/local/bin/perl -w
+
+### canvas_text
+
+use strict;
+use GenomeCanvas;
+
+{
+    my $mw = GenomeCanvas::MainWindow->new;
+    $mw->title('Text test');
+    
+    my $gc = GenomeCanvas->new($mw);
+    
+    my $canvas = $gc->canvas;
+    $canvas->createRectangle(1,1,500,200,
+        -fill   => '#ffffff',
+        );
+    
+    $gc->fix_window_min_max_sizes;
+    
+    Tk::MainLoop();
+}
+
+
+
+__END__
+
+=head1 NAME - canvas_text
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
