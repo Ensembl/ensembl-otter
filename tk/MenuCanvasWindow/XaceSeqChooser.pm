@@ -19,7 +19,7 @@ sub new {
 
     $self->populate_menus;
     $self->bind_events;
-    $self->minimum_scroll_bbox(0,0,200,200);
+    $self->minimum_scroll_bbox(0,0, 200,200);
     return $self;
 }
 

@@ -7,6 +7,7 @@ use strict;
 use Carp;
 use Tk::Dialog;
 use Hum::Ace::SubSeq;
+use Hum::Translator;
 use MenuCanvasWindow;
 use vars ('@ISA');
 use Hum::Ace;
@@ -315,6 +316,17 @@ sub initialize {
         );
     $canvas->Tk::bind('<Control-h>',   $show_subseq);
     $canvas->Tk::bind('<Control-H>',   $show_subseq);
+
+    # Show the peptide
+    my $show_pep_command = sub{ $self->show_peptide };
+    $file_menu->add('command',
+        -label          => 'Show Peptide',
+        -command        => $show_pep_command,
+        -accelerator    => 'Ctrl+P',
+        -underline      => 5,
+        );
+    $top->bind('<Control-p>',   $show_pep_command);
+    $top->bind('<Control-P>',   $show_pep_command);
     
     # Trap window close
     $top->protocol('WM_DELETE_WINDOW', $window_close);
@@ -446,6 +458,10 @@ sub initialize {
         
         # Widget for changing name
         $self->add_subseq_rename_widget;
+        
+        # Start not found and end not found widgets
+        $self->add_start_not_found_widgets;
+        $self->add_end_not_found_widgets;
     } else {
         # SubSeq with an immutable method
         
@@ -537,19 +553,42 @@ sub show_subseq {
     }
 };
 
+sub show_peptide {
+    my( $self ) = @_;
+    
+    my( $sub );
+    if ($self->is_mutable) {
+        $sub = $self->new_SubSeq_from_tk;
+        return unless $sub->GeneMethod->is_coding;
+    } else {
+        $sub = $self->SubSeq;
+    }
+    my $pep = $self->translator->translate($sub->translateable_Sequence);
+    print $pep->fasta_string;
+}
+
+sub translator {
+    my( $self ) = @_;
+    
+    # Cache a copy of a translator object
+    my( $tlr );
+    unless ($tlr = $self->{'_translator'}) {
+        $self->{'_translator'} = $tlr = Hum::Translator->new;
+    }
+    return $tlr;
+}
 
 sub add_subseq_rename_widget {
     my( $self ) = @_;
     
-    my $button_frame = $self->canvas->toplevel->Frame(
+    my $frame = $self->canvas->toplevel->Frame(
         -borderwidth    => 6,
         );
-    $button_frame->pack(
-        #-side => 'top',
+    $frame->pack(
         -anchor => 'nw',
         );
     
-    my $sub_name_label = $button_frame->Label(
+    my $sub_name_label = $frame->Label(
         -text   => "Name:",
         -anchor => 's',
         -padx   => 6,
@@ -558,7 +597,7 @@ sub add_subseq_rename_widget {
         -side => 'left',
         );
 
-    my $sub_name = $button_frame->Entry(
+    my $sub_name = $frame->Entry(
         -width              => 20,
         -exportselection    => 1,
         -relief             => 'flat',
@@ -571,6 +610,64 @@ sub add_subseq_rename_widget {
         );
     $sub_name->insert(0, $self->SubSeq->name);
     $self->subseq_name_Entry($sub_name);
+}
+
+sub add_start_not_found_widgets {
+    my( $self ) = @_;
+    
+    my $frame = $self->canvas->toplevel->Frame(
+        -borderwidth    => 3,
+        )->pack( -anchor => 'nw' );
+    
+    my( $snf );
+    my $om = $frame->Optionmenu(
+        -variable   => \$snf,
+        -options    => [
+                ['No' => 0],
+                ['1'  => 1],
+                ['2'  => 2],
+                ['3'  => 3],
+            ],
+        )->pack( -side => 'left' );
+    $snf = $self->SubSeq->start_not_found;
+    $om->menu->invoke($snf);
+    warn "snf = $snf";
+    
+    $frame->Label(
+        -text       => 'Start not found',
+        )->pack( -side => 'left' );
+
+    $self->{'_start_not_found_variable'} = \$snf;
+}
+
+sub start_not_found_from_tk {
+    my( $self ) = @_;
+    
+    return ${$self->{'_start_not_found_variable'}} || 0;
+}
+
+sub add_end_not_found_widgets {
+    my( $self ) = @_;
+    
+    my $frame = $self->canvas->toplevel->Frame(
+        -borderwidth    => 3,
+        )->pack( -anchor => 'nw' );
+    
+    my $enf = $self->SubSeq->end_not_found;
+    $frame->Checkbutton(
+        -text       => 'End not found',
+        -variable   => \$enf,
+        )->pack( -side => 'left' );
+
+    warn "enf = $enf";
+
+    $self->{'_end_not_found_variable'} = \$enf;
+}
+
+sub end_not_found_from_tk {
+    my( $self ) = @_;
+    
+    return ${$self->{'_end_not_found_variable'}} || 0;
 }
 
 sub subseq_name_Entry {
@@ -1065,12 +1162,15 @@ sub new_SubSeq_from_tk {
     my( $self ) = @_;
 
     my $sub = $self->SubSeq->clone;
-    my @exons = $self->Exons_from_canvas or return;
-    $sub->translation_region( $self->get_translation_region );
-    $sub->name              ( $self->get_subseq_name        );
-    $sub->replace_all_Exons ( $self->Exons_from_canvas      );
-    $sub->GeneMethod        ( $self->get_GeneMethod_from_tk );
-    $sub->strand            ( $self->strand_from_tk         );
+    $sub->translation_region( $self->get_translation_region  );
+    $sub->name              ( $self->get_subseq_name         );
+    $sub->replace_all_Exons ( $self->Exons_from_canvas       );
+    $sub->GeneMethod        ( $self->get_GeneMethod_from_tk  );
+    $sub->strand            ( $self->strand_from_tk          );
+    $sub->start_not_found   ( $self->start_not_found_from_tk );
+    $sub->end_not_found     ( $self->end_not_found_from_tk   );
+    warn "Start not found ", $self->start_not_found_from_tk, "\n",
+        "End not found ", $self->end_not_found_from_tk, "\n";
     return $sub;
 }
 
