@@ -447,6 +447,7 @@ sub fetch_all_SequenceNotes_for_SequenceSet {
           , UNIX_TIMESTAMP(n.note_time)
           , n.is_current
           , au.author_name
+          , ass.superctg_name
         FROM assembly ass
           , sequence_note n
           , author au
@@ -456,12 +457,15 @@ sub fetch_all_SequenceNotes_for_SequenceSet {
         });
     $sth->execute($name);
     
-    my( $ctg_id, $text, $time, $is_current, $author );
-    $sth->bind_columns(\$ctg_id, \$text, \$time, \$is_current, \$author);
+    my( $ctg_id, $text, $time, $is_current, $author, $super_contig );
+    $sth->bind_columns(\$ctg_id, \$text, \$time, \$is_current, \$author, $super_contig);
     
     my( %ctg_notes );
     while ($sth->fetch) {
         my $note = Bio::Otter::Lace::SequenceNote->new;
+        # use the super contig name as a prefix on the current sequence note
+        # this should only happen when the ame begins with an asterix (*).
+        $note->prefix($super_contig) if $super_contig =~ /^\*/;
         $note->text($text);
         $note->timestamp($time);
         $note->is_current($is_current eq 'Y' ? 1 : 0);
