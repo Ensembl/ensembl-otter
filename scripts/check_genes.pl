@@ -692,11 +692,12 @@ foreach my $atype (keys %gsi){
     my %eidso;
     # look for overlapping exons and group exons into transcripts
     # (one gene at a time)
-    foreach my $rt (sort {
-                          $a->[0]<=>$b->[0] || 
-                          $a->[1]<=>$b->[1] || 
-                          $a->[5]<=>$b->[5]
-			    } @{$gsi{$atype}->{$gsi}}){
+    foreach my $rt (@{$gsi{$atype}->{$gsi}}){
+#    foreach my $rt (sort {
+#                          $a->[0]<=>$b->[0] || 
+#                          $a->[1]<=>$b->[1] || 
+#                          $a->[5]<=>$b->[5]
+#			    } @{$gsi{$atype}->{$gsi}}){
       my($tsi,$erank,$eid,$ecst,$eced,$esr,$es,$ep,$eep,$trid)=@{$rt};
       if($e{$gsi}->{$eid}){
 	# either stored as sticky rank2 or this is sticky rank2
@@ -776,7 +777,7 @@ foreach my $atype (keys %gsi){
 	  my $flag_noncoding=0;
 	  if($ep==-1 || $eep==-1){
 	    $flag_noncoding=1 if $ep==-1;
-	    if($ep+$eep==-2){
+	    if($ep+$eep!=-2){
 	      print OUT3 "ERR1 $eid $ep $eep inconsistent noncoding phases\n";
 	      $nip++;
 	    }
@@ -889,6 +890,7 @@ close(OUT2);
 close(OUT3);
 
 # global check on duplicate exons - look for cases where exact duplicate exons are part of different genes
+# (note: considers duplicate even when phases are different)
 my $dgcl=new cluster();
 # need to keep a list of exons that are involved in pairs
 my %dg2s;
