@@ -993,7 +993,11 @@ sub close_all_PolyAWindows {
             
             if (@new_exons) {
                 my $new = $sub->clone;
-                my $temp_name = sprintf "TEMP-%03d", ++$i;
+                my( $temp_name );
+                do {
+                    $temp_name = sprintf "TEMP-%03d", ++$i;
+                } while ($self->get_SubSeq($temp_name));
+                #my $temp_name = sprintf "TEMP-%03d", ++$i;
                 $new->name($temp_name);
                 $new->strand($strand);
                 $new->replace_all_Exons(@new_exons);
