@@ -76,7 +76,7 @@ sub tar_file {
             next unless $root;
             my $file = "$root/lace_acedb.tar";
             if (-e $file) {
-                warn "FOUND '$file'";
+                warn "FOUND '$file'\n";
                 $self->{'_tar_file'} = $file;
                 last;
             }
@@ -321,8 +321,15 @@ sub save_otter_slice {
     # Then get the information for the TilePath
     $ace->find(Genome_Sequence => $name);
     $ace->raw_query('Follow AGP_Fragment');
-    $ace_txt .= $ace->raw_query('show -a');
-    ### Do show -a on a restricted list of tags
+    # Do show -a on a restricted list of tags
+    foreach my $tag (qw{
+        Otter
+        DB_info
+        Annotation
+        })
+    {
+        $ace_txt .= $ace->raw_query("show -a $tag");
+    }
     
     # Cleanup text
     $ace_txt =~ s/\0//g;            # Remove nulls
@@ -375,6 +382,14 @@ sub aceperl_db_handle {
     unless ($dbh = $self->{'_aceperl_db_handle'}) {
         my $home = $self->home;
         my $tace = $self->tace;
+        
+        # Check for ACEDB.wrm, or tace will hang waiting for
+        # an answer to the "initialize database?" question.
+        my $init_file = "$home/database/ACEDB.wrm";
+        unless (-e $init_file) {
+            confess "The file '$init_file' is missing - database has not been initialized";
+        }
+        
         $dbh = $self->{'_aceperl_db_handle'}
             = Ace->connect(-PATH => $home, -PROGRAM => $tace)
                 or confess "Can't connect to database in '$home': ", Ace->error;
