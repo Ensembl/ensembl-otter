@@ -26,7 +26,7 @@ my $OTTER_INFO            = undef;
 my $PREFORK               = 5;
 my $MAX_CLIENTS_PER_CHILD = $OTTER_MAX_CLIENTS;
 my $SOCKET                = $OTTER_SERVER_PORT;
-my $DEBUG                 = 0;
+my $DEBUG                 = 1;
 my $VERSION               = "0.1";
 
 #--------------------- global variables ----------------------#
@@ -121,10 +121,12 @@ sub make_new_child {
 
       my $perl5lib  = $ENV{PERL5LIB};
       my $path      = $ENV{PATH};
+      my $vegadbsrc = $ENV{VEGADBSRC};
 
       %ENV = ();
       $ENV{PERL5LIB}  = $perl5lib;
       $ENV{PATH}      = $path;
+      $ENV{VEGADBSRC} = $vegadbsrc;
       set_cgi_env($r);
 
       if ($r->method eq 'GET' and $r->url->path eq "/perl/get_region") {

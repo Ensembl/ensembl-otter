@@ -90,19 +90,17 @@ sub get_xml_for_contig_from_Dataset {
     my $root   = $self->url_root;
     my $script = 'get_region';
     my $url = "$root/$script?" .
-        uri_escape(
-            join('&',
-                'author='   . $self->author,
-                'email='    . $self->email,
-                'lock='     . $self->lock,
-                'dataset='  . $dataset->name,
-                'chr='      . $chr_name,
-                'chrstart=' . $start,
-                'chrend='   . $end,
-            )
-        );
+        join('&',
+	     'author='   . uri_escape($self->author),
+	     'email='    . uri_escape($self->email),
+	     'lock='     . uri_escape($self->lock),
+	     'dataset='  . uri_escape($dataset->name),
+	     'chr='      . uri_escape($chr_name),
+	     'chrstart=' . uri_escape($start),
+	     'chrend='   . uri_escape($end)
+	     );
     #warn "url <$url>\n";
-    
+
     my $ua = $self->get_UserAgent;
     my $request = HTTP::Request->new;
     $request->method('GET');
