@@ -439,7 +439,7 @@ sub XML_to_otter {
         
   }
   
-  $assembly_type = 'fake_gp_1' if (!defined($assembly_type));
+  #$assembly_type = 'fake_gp_1' if (!defined($assembly_type));
 
   $slice = new Bio::EnsEMBL::Slice(-chr_name  => $chrname,
                                    -chr_start => $chrstart,
