@@ -82,7 +82,13 @@ sub add_buttons {
     my $x_attach = $bf->Button(
         -text       => 'Attach xace',
         -command    => sub{
-            $self->get_xace_window_id;
+            if (my $xwid = $self->get_xace_window_id) {
+                my $xrem = Hum::Ace::XaceRemote->new($xwid);
+                $self->xace_remote($xrem);
+                $xrem->send_command('save');
+            } else {
+                warn "no xwindow id: $xwid";
+            }
             });
     $x_attach->pack(
         -side   => 'left',
@@ -441,17 +447,16 @@ sub draw_sequence_list {
     }
 }
 
-sub xace_window_id {
-    my( $self, $xwid ) = @_;
+sub xace_remote {
+    my( $self, $xrem ) = @_;
     
-    if ($xwid) {
-        $self->{'_xace_window_id'} = $xwid;
+    if ($xrem) {
+        my $expected = 'Hum::Ace::XaceRemote';
+        confess "'$xrem' is not an '$expected'"
+            unless (ref($xrem) and $xrem->isa($expected));
+        $self->{'_xace_remote'} = $xrem;
     }
-    unless ($xwid = $self->{'_xace_window_id'}) {
-        my $xwid = $self->get_xace_window_id;
-        $self->{'_xace_window_id'} = $xwid;
-    }
-    return $xwid;
+    return $self->{'_xace_remote'};
 }
 
 sub get_xace_window_id {
@@ -461,14 +466,15 @@ sub get_xace_window_id {
     $self->delete_message($mid);
     local *XWID;
     open XWID, "xwininfo |"
-        or confess "Can't open pipe from xwininfo : $!";
+        or confess("Can't open pipe from xwininfo : $!");
     my( $xwid );
     while (<XWID>) {
         # xwininfo: Window id: 0x7c00026 "ACEDB 4_9c, lace bA314N13"
         if (/Window id: (\w+) "([^"]+)/) {
+            my $id   = $1;
             my $name = $2;
             if ($name =~ /^ACEDB/) {
-                $xwid = $1;
+                $xwid = $id;
                 $self->message("Attached to:\n$name");
             } else {
                 $self->message("'$name' is not an xace main window");
@@ -478,7 +484,7 @@ sub get_xace_window_id {
     if (close XWID) {
         return $xwid;
     } else {
-        $self->message("Error running xwininfo : $!");
+        $self->message("Error running xwininfo: $?");
     }
 }
 

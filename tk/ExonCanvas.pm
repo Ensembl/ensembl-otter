@@ -12,13 +12,27 @@ use vars ('@ISA');
 @ISA = ('CanvasWindow');
 
 sub new {
-    my( $pkg, @args ) = @_;
+    my( $pkg, $tk ) = @_;
     
-    my $self = $pkg->SUPER::new(@args);
-    
-    $self->bind_events;
+    my $button_frame = $tk->Frame;
+    $button_frame->pack(
+        -side   => 'top',
+        -fill   => 'x',
+        );
+    my $self = $pkg->SUPER::new($tk);
+    $self->button_frame($button_frame);
+    $self->add_buttons_and_event_bindings;
     
     return $self;
+}
+
+sub button_frame {
+    my( $self, $bf ) = @_;
+    
+    if ($bf) {
+        $self->{'_button_frame'} = $bf;
+    }
+    return $self->{'_button_frame'};
 }
 
 sub name {
@@ -85,65 +99,156 @@ sub add_coordinate_pair {
     $self->add_exon_holder($start, $end, $strand, $x_offset, $y_offset);
 }
 
-sub bind_events {
+sub add_buttons_and_event_bindings {
     my( $self ) = @_;
     
-    my $canvas = $self->canvas;
+    my $canvas          = $self->canvas;
+    my $deselect_sub = sub{ $self->deselect_all };
     $canvas->SelectionHandle(
         sub { $self->export_highlighted_text_to_selection(@_); }
         );
     my $select_all_sub = sub{
         $self->select_all_exon_pos;
-        $canvas->SelectionOwn(
-            -command => sub{
-                $self->deselect_all;
-            },
-            );
+        $canvas->SelectionOwn( -command => $deselect_sub )
+            if $self->list_selected;
         };
+
+    my $top = $canvas->toplevel;
+    my $window_close = sub {
+        my $so = $canvas->SelectionOwner;
+        $self->delete_chooser_window_ref;
+        # Have to specifically undef $self, or the ExonCanvas object
+        # doesn't get destroyed.  (Due to closures?)
+        $self = undef;
+        $top->destroy;
+    };
+    
+    ### Buttons
+
+    my $bf = $self->button_frame;
+   
+    my $show_sub_button = $bf->Button(
+        -text       => 'Show',
+        -command    => sub{
+                my $xr = $self->xace_seq_chooser->xace_remote;
+                if ($xr) {
+                    $xr->show_sequence($self->name);
+                } else {
+                    $self->message("No xace attached");
+                }
+            });
+    $show_sub_button->pack(
+        -side   => 'left',
+        );
+    
+    my $close_button = $bf->Button(
+        -text       => 'Close',
+        -command    => $window_close,
+            );
+    $close_button->pack(
+        -side   => 'left',
+        );
+    
+    ### Event bindings
     $canvas->Tk::bind('<Control-a>', $select_all_sub);
     $canvas->Tk::bind('<Control-A>', $select_all_sub);
+    
+    $canvas->Tk::bind('<Control-v>', sub{ $self->message('verbose') });
 
     $canvas->Tk::bind('<Button-1>', sub{
         $self->left_button_handler;
-        });
+        if ($self->count_selected) {
+            $canvas->SelectionOwn( -command => $deselect_sub )
+        }
+    });
 
     $canvas->Tk::bind('<Shift-Button-1>', sub{
         $self->shift_left_button_handler;
-        });
+        if ($self->count_selected) {
+            $canvas->SelectionOwn( -command => $deselect_sub )
+        }
+    });
 
     $canvas->Tk::bind('<Control-Button-1>', sub{
         $self->control_left_button_handler;
-        });
+        if ($self->count_selected) {
+            $canvas->SelectionOwn( -command => $deselect_sub )
+        }
+    });
 
     $canvas->Tk::bind('<Button-2>', sub{
         $self->middle_button_paste;
-        });
+        if ($self->count_selected) {
+            $canvas->SelectionOwn( -command => $deselect_sub )
+        }
+    });
+
+    $canvas->Tk::bind('<Left>',      sub{ $self->canvas_go_left   });
+    $canvas->Tk::bind('<Right>',     sub{ $self->canvas_go_right  });
+    $canvas->Tk::bind('<BackSpace>', sub{ $self->canvas_backspace });
     
-    my $top = $canvas->toplevel;
-    $top->protocol('WM_DELETE_WINDOW', sub{
-        $self->delete_chooser_window_ref;
-        $self = undef;  # -- or the ExonCanvas object
-                        #    doesn't get destroyed
-        $top->destroy;
-        });
+    $canvas->Tk::bind('<<digit>>', [sub{ $self->canvas_insert_character(@_) }, Tk::Ev('A')]);
     
+    
+    $canvas->eventAdd('<<digit>>', map "<KeyPress-$_>", 0..9);
+    
+    
+    
+    # Trap window close
+    $top->protocol('WM_DELETE_WINDOW', $window_close);
+    $canvas->Tk::bind('<Control-q>',   $window_close);
+    $canvas->Tk::bind('<Control-Q>',   $window_close);
+    $canvas->Tk::bind('<Control-w>',   $window_close);
+    $canvas->Tk::bind('<Control-W>',   $window_close);
     #$top->transient($top->parent);
+}
+
+sub canvas_insert_character {
+    my( $self, $canvas, $char ) = @_;
+    
+    my $text = $canvas->focus or return;
+    $canvas->insert($text, 'insert', $char);
+}
+
+sub canvas_go_left {
+    my( $self ) = @_;
+    
+    my $canvas = $self->canvas;
+    my $text = $canvas->focus or return;
+    my $pos = $canvas->index($text, 'insert');
+    $canvas->icursor($text, $pos - 1);
+}
+
+sub canvas_go_right {
+    my( $self ) = @_;
+    
+    my $canvas = $self->canvas;
+    my $text = $canvas->focus or return;
+    my $pos = $canvas->index($text, 'insert');
+    $canvas->icursor($text, $pos + 1);
+}
+
+sub canvas_backspace {
+    my( $self ) = @_;
+    
+    my $canvas = $self->canvas;
+    my $text = $canvas->focus or return;
+    my $pos = $canvas->index($text, 'insert')
+        or return;  # Don't delete when at beginning of string
+    $canvas->dchars($text, $pos - 1);
 }
 
 sub highlight {
     my $self = shift;
     
     $self->SUPER::highlight(@_);
-    $self->canvas->SelectionOwn(
-        -command => sub{ $self->deselect_all; }
-        );
 }
 
 sub select_all_exon_pos {
     my( $self ) = @_;
     
     my $canvas = $self->canvas;
-    $self->highlight($canvas->find('withtag', 'exon_pos'));
+    return $self->highlight($canvas->find('withtag', 'exon_pos'));
 }
 
 sub delete_chooser_window_ref {
@@ -272,13 +377,17 @@ sub export_highlighted_text_to_selection {
     }
     my $strand = $self->subseq->strand;
     my $clip = '';
-    for (my $i = 0; $i < @text; $i += 2) {
-        my($start, $end) = @text[$i, $i + 1];
-        $end ||= $self->empty_string;
-        if ($strand == -1) {
-            ($start, $end) = ($end, $start);
+    if (@text == 1) {
+        $clip = $text[0];
+    } else {
+        for (my $i = 0; $i < @text; $i += 2) {
+            my($start, $end) = @text[$i, $i + 1];
+            $end ||= $self->empty_string;
+            if ($strand == -1) {
+                ($start, $end) = ($end, $start);
+            }
+            $clip .= "$start  $end\n";
         }
-        $clip .= "$start  $end\n";
     }
     
     if (length($clip) > $max_bytes) {
@@ -336,13 +445,17 @@ sub add_exon_holder {
     $start ||= $self->empty_string;
     $end   ||= $self->empty_string;
     
-    my $canvas  =          $self->canvas;
-    my $font    =          $self->font;
-    my $size    =          $self->font_size;
+    my $canvas  = $self->canvas;
+    my $font    = $self->font;
+    my $size    = $self->font_size;
+    my $uw      = $self->font_unit_width;
     my $exon_id = 'exon_id-'. $self->next_exon_number;
+    my $max_chars = 8;  # Max length of a number in chars]
+    my $text_len = $max_chars * $uw;
     my $pad  = int($size / 6);
     my $half = int($size / 2);
     my $arrow_size = $half - $pad;
+    
     $y_offset += $half + $pad;
     
     my $line_length = $size;
@@ -350,7 +463,7 @@ sub add_exon_holder {
     my $arrow = ($strand == 1) ? 'last' : 'first';
     
     my $start_text = $canvas->createText(
-        $x_offset - $size, $y_offset,
+        $x_offset + $text_len, $y_offset,
         -anchor     => 'e',
         -text       => $start,
         -font       => [$font, $size, 'normal'],
@@ -358,8 +471,8 @@ sub add_exon_holder {
         );
     
     my $strand_arrow = $canvas->createLine(
-        $x_offset - $half, $y_offset,
-        $x_offset + $half, $y_offset,
+        $x_offset + $text_len + $half,         $y_offset,
+        $x_offset + $text_len + $half + $size, $y_offset,
         -width      => 1,
         -arrow      => $arrow,
         -arrowshape => [$arrow_size, $arrow_size, $arrow_size - $pad],
@@ -367,7 +480,7 @@ sub add_exon_holder {
         );
     
     my $end_text = $canvas->createText(
-        $x_offset + $size, $y_offset,
+        $x_offset + $text_len + (2 * $size), $y_offset,
         -anchor     => 'w',
         -text       => $end,
         -font       => [$font, $size],
@@ -376,8 +489,11 @@ sub add_exon_holder {
     
     $self->record_exon_inf($exon_id, $start_text, $strand_arrow, $end_text);
     
+    my @bbox = $canvas->bbox($exon_id);
+    $bbox[0] = $x_offset;
+    $bbox[2] = $x_offset + (2 * $text_len) + (2 * $size);
     my $bkgd = $canvas->createRectangle(
-        $canvas->bbox($exon_id),
+        @bbox,
         -fill       => 'white',
         -outline    => undef,
         -tags       => [$exon_id, 'exon_furniture'],

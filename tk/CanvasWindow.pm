@@ -73,6 +73,7 @@ sub font {
     
     if ($font) {
         $self->{'_font'} = $font;
+        $self->{'_font_unit_width'} = undef;
     }
     return $self->{'_font'} || 'lucidatypewriter';
 }
@@ -82,8 +83,26 @@ sub font_size {
     
     if ($font_size) {
         $self->{'_font_size'} = $font_size;
+        $self->{'_font_unit_width'} = undef;
     }
     return $self->{'_font_size'} || 15;
+}
+
+sub font_unit_width {
+    my( $self ) = @_;
+    
+    my( $uw );
+    unless ($uw = $self->{'_font_unit_width'}) {
+        my $string_length = 1000;
+        my $test_string = '0' x $string_length;
+        my $font    = $self->font;
+        my $size    = $self->font_size;
+        my $width   = $self->canvas->fontMeasure(
+            [$font, $size, 'normal'], $test_string);
+        $uw = $width / $string_length;
+        $self->{'_font_unit_width'} = $uw;
+    }
+    return $uw;
 }
 
 sub set_scroll_region {
@@ -178,18 +197,18 @@ sub bind_scroll_commands {
         });
     
     # Left and Right
-    $canvas->bind('<Key-Left>', sub{
+    $canvas->bind('<Shift-Key-Left>', sub{
         $x_scroll->ScrlByUnits('h', -1);
         });
-    $canvas->bind('<Key-Right>', sub{
+    $canvas->bind('<Shift-Key-Right>', sub{
         $x_scroll->ScrlByUnits('h', 1);
         });
     
     # Up and Down
-    $canvas->bind('<Key-Up>', sub{
+    $canvas->bind('<Shift-Key-Up>', sub{
         $y_scroll->ScrlByUnits('v', -1);
         });
-    $canvas->bind('<Key-Down>', sub{
+    $canvas->bind('<Shift-Key-Down>', sub{
         $y_scroll->ScrlByUnits('v', 1);
         });
 }
@@ -754,8 +773,8 @@ sub next_message_id {
 
         my $canvas = $self->canvas;
         foreach my $o (@obj) {
-            if (my $r = $self->{'_selected_list'}{$o}) {
-                $canvas->delete($r);
+            if (my $rect = $self->{'_selected_list'}{$o}) {
+                $canvas->delete($rect);
                 delete($self->{'_selected_list'}{$o});
             }
         }
@@ -772,6 +791,16 @@ sub next_message_id {
 
         if (my $sel = $self->{'_selected_list'}) {
             return sort {$a <=> $b} keys %$sel;
+        } else {
+            return;
+        }
+    }
+
+    sub count_selected {
+        my( $self ) = @_;
+
+        if (my $sel = $self->{'_selected_list'}) {
+            return scalar keys %$sel;
         } else {
             return;
         }
