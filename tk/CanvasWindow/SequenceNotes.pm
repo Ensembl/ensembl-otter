@@ -101,7 +101,7 @@ sub _tag_string {
 
 
 # this should be used by the refresh column method
-# some of the columns have had different queries written to sped up the refresh ,
+# some of the columns have had different queries written to speed up the refresh ,
 # this method activates the appropriate one 
 sub _refresh_SequenceSet{
     my ($self , $column_number ) = @_ ;
@@ -472,7 +472,13 @@ sub hunt_for_selection {
     
     my $selected_text_obj = $canvas->selectItem;
 
-    my @all_text_obj = $canvas->find('withtag', 'searchable');
+    
+    # naff hack to get round the error when the first call produces no results.
+    my @all_text_obj ;
+    for (my $number = 0 ; $number < 2 ; $number ++ ){
+        @all_text_obj = $canvas->find('withtag', 'searchable');
+        last if @all_text_obj > 0 ; 
+    }
     
     unless (@all_text_obj) {
         ### Sometimes a weird error occurs where the first call to find
@@ -553,6 +559,7 @@ sub set_selected_from_canvas {
     if (my $sel_i = $self->selected_CloneSequence_indices) {
         my $cs_list = $ss->CloneSequence_list;
         my $selected = [ @{$cs_list}[@$sel_i] ];
+#        warn "SELECTED INDICES " . join " , " , @$sel_i  ;
         $ss->selected_CloneSequences($selected);
         return 1;
     } else {
@@ -582,7 +589,8 @@ sub run_lace {
     $db->title($title);
     $db->error_flag(1);
     eval{
-        $self->init_AceDatabase($db, $ss);
+        my $non_fatal_errors = $self->init_AceDatabase($db, $ss);
+        $self->message($non_fatal_errors) if $non_fatal_errors ; 
     };
     if ($@) {
         $db->error_flag(0);
@@ -600,6 +608,8 @@ sub run_lace {
         }
         else{
             $self->exception_message($@, 'Error initialising database');
+            my $ds = $self->SequenceSetChooser->DataSet ;
+            $self->Client->remove_stale_locks($ss , $self->SequenceSetChooser->DataSet) ;         
         }
         return;
     }    
@@ -659,9 +669,10 @@ sub init_AceDatabase {
 
     $db->make_database_directory;
     $db->write_otter_acefile($ss);
-    $db->write_ensembl_data($ss);
+    my $non_fatal_errors = $db->write_ensembl_data($ss);
     $db->write_pipeline_data($ss);
     $db->initialize_database;
+    return $non_fatal_errors ;
 }
 
 sub make_XaceSeqChooser {
