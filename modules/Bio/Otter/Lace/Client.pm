@@ -11,6 +11,8 @@ use Bio::Otter::Lace::DataSet;
 use Bio::Otter::Lace::AceDatabase;
 use Bio::Otter::Lace::PersistentFile;
 use Bio::Otter::Lace::DasClient;
+use Bio::Otter::Transform::DataSets;
+use Bio::Otter::Transform::SequenceSets;
 use Bio::Otter::Converter;
 use Bio::Otter::Lace::TempFile;
 use URI::Escape qw{ uri_escape };
@@ -271,9 +273,9 @@ sub get_all_DataSets {
         my ($content, $response);
         for(my $i = 0 ; $i <= 3 ; $i++){
             if($i > 0){
-                my $pass = $self->password_prompt();
-                #warn "Attempting to connect using password '" . '*' x length($pass) . "'\n";
-                $self->password($pass);
+                $self->password_prompt()->($self);
+                my $pass = $self->password || '';
+                warn "Attempting to connect using password '" . '*' x length($pass) . "'\n";
             }
             my $request = $self->new_http_request('GET');
             $request->uri("$root/get_datasets?details=true");
@@ -283,35 +285,46 @@ sub get_all_DataSets {
         }
         $self->_check_for_error($response);
         $response = undef;
-        $ds = $self->{'_datasets'} = [];
 
-        my $in_details = 0;
-        # Split the string into blocks of text which
-        # are separated by two or more newlines.
-        foreach (split /\n{2,}/, $content) {
-            if (/Details/) {
-                $in_details = 1;
-                next;
-            }
-            next unless $in_details;
-
-            my $set = Bio::Otter::Lace::DataSet->new;
-            $set->author($self->author);
-            my ($name) = /(\S+)/;
-            $set->name($name);
-            my $property_count = 0;
-            while (/^\s+(\S+)\s+(\S+)/mg) {
-                $property_count++;
-                #warn "$name: $1 => $2\n";
-                $set->$1($2);
-            }
-            confess "No properties in dataset '$name'" unless $property_count;
-            push(@$ds, $set);
-        }
-        ### Would prefer to keep order found in species.dat
-        @$ds = sort {$a->name cmp $b->name} @$ds;
+        my $dsp = Bio::Otter::Transform::DataSets->new();
+        $dsp->set_property('author', $self->author);
+        my $p = $dsp->my_parser();
+        $p->parse($content);
+        $ds = $self->{'_datasets'} = $dsp->objects;
     }
     return @$ds;
+}
+
+sub get_all_SequenceSets_for_DataSet{
+    my( $self, $dsObj ) = @_;
+
+    return [] unless $dsObj;
+    my $cache = $dsObj->get_all_SequenceSets();
+    return $cache if scalar(@$cache);
+ 
+    # go get the cache
+    my $ua      = $self->get_UserAgent;
+    my $root    = $self->url_root;
+    my $request = $self->new_http_request('GET');
+    $request->uri("$root/get_sequencesets?".
+                  join('&',                  
+                       "dataset="  . uri_escape($dsObj->name),
+                       "author="   . uri_escape($self->author),
+                       "email="    . uri_escape($self->email),
+                       "hostname=" . uri_escape($self->client_hostname),
+                       )
+                  );
+    # warn $request->uri();
+    my $response = $ua->request($request);
+    my $content  = $self->_check_for_error($response);
+    # stream parsing ????
+    $response    = undef;
+
+    my $ssp = Bio::Otter::Transform::SequenceSets->new();
+    $ssp->set_property('dataset_name', $dsObj->name);
+    my $p   = $ssp->my_parser();
+    $p->parse($content);
+    return $dsObj->get_all_SequenceSets($ssp->objects);
 }
 
 sub save_otter_xml {
@@ -396,11 +409,11 @@ sub password_prompt{
         $callback = sub {
             my $self = shift;
             my $user = $self->username();
-            return Hum::EnsCmdLineDB::prompt_for_password("Please enter your password ($user): ");
+            $self->password(Hum::EnsCmdLineDB::prompt_for_password("Please enter your password ($user): "));
         };
         $self->{'_password_prompt_callback'} = $callback;
     }
-    return $callback->($self);
+    return $callback;
 }
 
 sub dasClient{
