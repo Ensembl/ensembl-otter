@@ -624,7 +624,11 @@ sub bind_events {
 sub exit_save_data {
     my( $self ) = @_;
 
-    return 1 unless $self->write_access;
+    my $ace = $self->AceDatabase;
+    unless ($self->write_access) {
+        $ace->error_flag(0);
+        return 1;
+    }
 
     # Ask the user if any changes should be saved
     my $dialog = $self->canvas->toplevel->Dialog(
@@ -649,7 +653,6 @@ sub exit_save_data {
     
     # Unlock and cleanup (lace dir gets
     # removed by AceDatabase->DESTROY)
-    my $ace = $self->AceDatabase;
     $ace->unlock_all_slices;
     $ace->error_flag(0);
     

@@ -282,8 +282,9 @@ sub initialise {
         $top->bind('<Control-p>', $print_to_file);
         $top->bind('<Control-P>', $print_to_file);
         
-        $top->bind('<Control-Button-1>', sub{ $self->popup_ana_seq_history });
-        $top->bind('<Double-Button-1>',  sub{ $self->popup_ana_seq_history });
+        $canvas->Tk::bind('<Control-Button-1>', sub{ $self->popup_ana_seq_history });
+        $canvas->Tk::bind('<Double-Button-1>',  sub{ $self->popup_ana_seq_history });
+        
         $self->make_button($button_frame2, 'Close', $close_window, 0);
         
         $top->bind('<Destroy>', sub{ $self = undef });
@@ -416,6 +417,7 @@ sub run_lace {
     ### Prevent opening of sequences already in lace sessions
     return unless $self->set_seleted_from_canvas;
     my $ss = $self->SequenceSet;
+    my $cl = $self->Client;
 
     my $title = 'lace '. $self->name;
 
@@ -427,7 +429,8 @@ sub run_lace {
     my $xc = $self->make_XaceSeqChooser($title);
     ### Maybe: $xc->SequenceNotes($self);
     $xc->SequenceSet($ss);
-    $xc->write_access($ss->write_access);  ### Can be part of interface in future
+    my $write_flag = $cl->write_access ? $ss->write_access : 0;
+    $xc->write_access($write_flag);  ### Can be part of interface in future
     $xc->Client($self->Client);
     $xc->initialize;
 }
@@ -689,7 +692,7 @@ sub popup_ana_seq_history{
     #my $hp  = CanvasWindow::SequenceNotes::History->new($canv);
     my $hp  = CanvasWindow::SequenceNotes::History->new($self);
     
-    $hp->sequence_set($self->SequenceSet );
+    $hp->sequence_set($self->SequenceSet);
     $hp->DataSet($self->SequenceSetChooser->DataSet);
     
     my $index = $self->current_CloneSequence_index(); 
