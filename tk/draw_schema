@@ -6,6 +6,7 @@ use strict;
 use CanvasWindow;
 use DBI;
 use Hum::Fox;
+use Hum::Submission;
 
 {
 
@@ -23,9 +24,13 @@ use Hum::Fox;
             "DBI:mysql:host=$host;port=$port;database=$dbname",
             $user, $password, {RaiseError => 1}
             );
-    } else {
+    } elsif (0) {
         $dbname = 'fox';
         $dbh = Hum::Fox::fox_db();
+    }
+    else {
+        $dbname = 'submissions';
+        $dbh = Hum::Submission::sub_db();
     }
     
     my $query;

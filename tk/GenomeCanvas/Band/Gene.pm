@@ -120,6 +120,38 @@ sub gene_type_color {
     return $hash->{$type};
 }
 
+
+sub span_file {
+    my( $self, $span_file ) = @_;
+    
+    if ($span_file) {
+        $self->{'_span_file'} = $span_file;
+    }
+    return $self->{'_span_file'};
+}
+
+
+sub get_gene_span_data {
+    my( $self, $vc ) = @_;
+    
+    my( @span );
+    if (my $span_file = $self->span_file) {
+        local *SPANS;
+        open SPANS, $span_file or die "Can't read '$span_file' : $!";
+        while (<SPANS>) {
+            my @s = split /\t/, $_;
+            push(@span, [@s]);
+        }
+        close SPANS;
+    }
+    else {
+        foreach my $vg ($vc->get_all_VirtualGenes) {
+            push(@span, [$vg->id, $vg->gene->type, $vg->start, $vg->end, $vg->strand]);
+        }
+    }
+    return @span;
+}
+
 sub draw_gene_features_on_vc {
     my( $band, $vc, $x_offset ) = @_;
 
@@ -133,6 +165,8 @@ sub draw_gene_features_on_vc {
     my $rectangle_height = $font_size;
     my $nudge_distance = $rectangle_height * $y_dir;
 
+    my @spans = $band->get_gene_span_data($vc);
+
     my @genes = $vc->get_all_VirtualGenes;
     my( @ranked_genes );
     if (my $label_type = $band->label_type_list) {
@@ -141,12 +175,12 @@ sub draw_gene_features_on_vc {
         for (my $i = 0; $i < @types; $i++) {
             $type_level{$types[$i]} = $i;
         }
-        foreach my $vg (@genes) {
-            my $type = $vg->gene->type;
+        foreach my $sp (@spans) {
+            my $type = $sp->[1];
             my $i = $type_level{$type};
             next unless defined($i);
             $ranked_genes[$i] ||= [];
-            push(@{$ranked_genes[$i]}, $vg);
+            push(@{$ranked_genes[$i]}, $sp);
         }
     } else {
         @ranked_genes = [@genes];
@@ -155,25 +189,30 @@ sub draw_gene_features_on_vc {
     my $text_nudge_flag = 0;
     for (my $i = 0; $i < @ranked_genes; $i++) {
         my $rank = $ranked_genes[$i] or next;
-        foreach my $vg (sort {$a->start <=> $b->start} @$rank) {
-            my $color = $band->gene_type_color($vg->gene->type)
+
+        # Span:
+        # 0    1    2     3   4
+        # name type start end srand
+        foreach my $sp (sort {$a->[2] <=> $b->[2]} @$rank) {
+            my $color = $band->gene_type_color($sp->[1])
                 or next;
-        
-            my $id    = $vg->id;
-            my $group = "gene_group-$id-$vc";
-        
             $band->current_color($color);
-            my $start = $x_offset + $vg->start;
-            my $end   = $x_offset + $vg->end;
+        
+            my $id     =             $sp->[0];
+            my $start  = $x_offset + $sp->[2];
+            my $end    = $x_offset + $sp->[3];
+            my $strand =             $sp->[4];
+            my $group = "gene_group-$id-$vc";
             #warn "[$x_offset] $id: $start -> $end\n";
 
 
             my $x1 = $start / $rpp;
             my $x2 = $end   / $rpp;
 
-            $band->draw_gene_arrow($x1, $x2, $vg->strand, $rectangle_height, @tags, $group);
+            $band->draw_gene_arrow($x1, $x2, $strand, $rectangle_height, @tags, $group);
 
-            if ($i <= 1 and $band->show_labels) {
+            #if ($i <= 1 and $band->show_labels) {
+            if ($band->show_labels) {
                 #warn "Hack to only show labels for certain classes of gene";
                 
                 my( $anchor, $y1 );

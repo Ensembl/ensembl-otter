@@ -699,7 +699,7 @@ sub landscape {
 sub horizontal_tile {
     my( $self, $count ) = @_;
     
-    if ($count) {
+    if (defined $count) {
         confess "Illegal horizontal tile count '$count'"
             unless $count =~ /^\d+$/;
         $self->{'_print_horizontal_tile'} = $count;
@@ -711,7 +711,7 @@ sub horizontal_tile {
 sub vertical_tile {
     my( $self, $count ) = @_;
     
-    if ($count) {
+    if (defined $count) {
         confess "Illegal vertical tile count '$count'"
             unless $count =~ /^\d+$/;
         $self->{'_print_horizontal_tile'} = 0;

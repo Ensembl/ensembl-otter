@@ -11,6 +11,7 @@ use GenomeCanvas::DensityBand::RepeatFeature;
 use GenomeCanvas::DensityBand::Gene;
 use GenomeCanvas::Band::Gene;
 use GenomeCanvas::Band::SNP;
+use GenomeCanvas::Band::CpG;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Hum::Submission 'prepare_statement'; # For Sanger sequence names
 use Getopt::Long 'GetOptions';
@@ -28,10 +29,12 @@ use Hum::EnsCmdLineDB;
     my $sanger_names = 0;
     my $landscape = 1;
     my $portrait = 0;
-    my $gene_labels = 1;
-    my $show_genes      = 0;
-    my $show_repeats    = 0;
+    my $gene_labels     = 1;
+    my $show_genes      = 1;
+    my $show_repeats    = 1;
     my $show_snps       = 0;
+    my $show_cpg        = 1;
+    my( $span_file );
     Hum::EnsCmdLineDB::do_getopt(
         'fpc=s'         => \$fpc,
         'scale=s'       => \$scale,
@@ -48,7 +51,12 @@ use Hum::EnsCmdLineDB;
         'genes!'        => \$show_genes,
         'repeats!'      => \$show_repeats,
         'snps!'         => \$show_snps,
+        'cpg!'          => \$show_cpg,
+        'gene_spans=s'  => \$span_file,
         ) or die "Error processing command line options";
+
+    if    ($chr_name and ! $fpc) {$fpc = $chr_name}
+    elsif ($fpc and ! $chr_name) {$chr_name = $fpc};
 
     if ($chr_start) {
         my $chr_start_num = parse_num($chr_start)
@@ -79,6 +87,8 @@ use Hum::EnsCmdLineDB;
     if ($portrait) {
         $gc->landscape(0);
     }
+    
+
     
     my $canvas = $gc->canvas;
 
@@ -134,18 +144,28 @@ use Hum::EnsCmdLineDB;
         $plot->x_major(0.2);
         $gc->add_Band($plot);
 
+        if ($show_cpg) {
+            my $cpg = GenomeCanvas::Band::CpG->new;
+            $cpg->virtual_contig($vc);
+            $gc->add_Band($cpg);
+        }
 
         if ($show_genes) {
             my $gene_names = GenomeCanvas::Band::Gene->new;
             $gene_names->show_labels($gene_labels);
             $gene_names->label_type_color_list(
-                [ 'Known',              'HUMACE-Known',             '#4169e7' ],
-                [ 'Novel CDS',          'HUMACE-Novel_CDS',         '#86ceff' ],
-                [ 'Novel Transcript',   'HUMACE-Novel_Transcript',  '#ffa600' ],
-                [ 'Pseudogene',         'HUMACE-Pseudogene',        '#31ce31' ],
-                [ 'Putative',           'HUMACE-Putative',          '#cccccc' ],
+                #[ 'Known',              'HUMACE-Known',             '#4169e7' ],
+                #[ 'Novel CDS',          'HUMACE-Novel_CDS',         '#86ceff' ],
+                #[ 'Novel Transcript',   'HUMACE-Novel_Transcript',  '#ffa600' ],
+                #[ 'Pseudogene',         'HUMACE-Pseudogene',        '#31ce31' ],
+                #[ 'Putative',           'HUMACE-Putative',          '#cccccc' ],
+                [ 'Known',              'Known',             '#4169e7' ],
+                [ 'Novel CDS',          'Novel_CDS',         '#86ceff' ],
+                [ 'Novel Transcript',   'Novel_Transcript',  '#ffa600' ],
+                [ 'Pseudogene',         'Pseudogene',        '#31ce31' ],
                 );
             $gene_names->virtual_contig($vc);
+            $gene_names->span_file($span_file);
             $gene_names->tiling_direction(1);
             $gc->add_Band($gene_names);
         }
@@ -189,9 +209,23 @@ use Hum::EnsCmdLineDB;
 
     make_button($button_frame, 'PostScript',
         sub {
-            my @files = $gc->print_postscript($fpc);
             warn "Printed to files:\n",
-                map "  $_\n", @files;
+                map "  $_\n", $gc->print_postscript($fpc);
+            my $htile = $gc->horizontal_tile || 1;
+            my $vtile = $gc->vertical_tile   || 1;
+            if ($gc->landscape) {
+                $gc->page_width ($gc->page_width  * $htile);
+                $gc->page_height($gc->page_height * $vtile);
+            } else {
+                $gc->page_width ($gc->page_width  * $vtile);
+                $gc->page_height($gc->page_height * $htile);
+            }
+            $gc->horizontal_tile(0);
+            $gc->vertial_tile(0);
+            
+            warn "Printed to files:\n",
+                map "  $_\n", $gc->print_postscript($fpc);
+            
         });
     $gc->fix_window_min_max_sizes;
 }
@@ -365,7 +399,7 @@ sub nudge_into_free_space {
         my %valid_classes = map {$_, 1} $band->repeat_classes;
 
         local *LIB;
-        my $dir = '/nfs/disk84/jgrg/work/repeatmasker/RepeatMasker08142000/Libraries';
+        my $dir = '/nfs/team71/analysis/jgrg/work/repeatmasker/RepeatMasker08142000/Libraries';
         opendir LIB, $dir or die "Can't opendir '$dir' : $!";
         foreach my $file (map "$dir/$_", grep /\.lib$/, readdir LIB) {
             local *FA;
@@ -380,6 +414,7 @@ sub nudge_into_free_space {
                             if $stored_class ne $class;
                     } else {
                         $repeat_class{$rep} = $class;
+                        #printf STDERR "%12s  %-s\n", $class, $rep;
                     }
                 }
             }
