@@ -49,7 +49,10 @@ use Bio::Otter::Lace::Defaults;
   else {
     while (<>) {
       chomp;
-      $ctgId_ctgName->{ contig_name_to_contig_id($pipe_db, $_) } = $_;
+      my $contig_name = $_;
+      $contig_name =~ s/\s+$//;
+   	
+      $ctgId_ctgName->{ contig_name_to_contig_id($pipe_db, $contig_name) } = $contig_name;
     }
   }
 
@@ -109,7 +112,7 @@ sub remove_pipeline_analysis {
   $counter->{input_id_analysis} =
     delete_rows($action, $pipe_db, "input_id_analysis", "input_id = ? AND analysis_id > 1", $contig_name);
 
-  # delete rows in these 6 tables based on contig_id
+  # delete rows in these 5 tables based on contig_id
   # dna_align_feature, protein_align_feature, simple_feature, repeat_feature, prediction_transcript
   my @tbls = qw(dna_align_feature protein_align_feature simple_feature repeat_feature prediction_transcript);
 
@@ -117,7 +120,7 @@ sub remove_pipeline_analysis {
     $counter->{$t} = delete_rows($action, $pipe_db, $t, "contig_id = $contig_id");
   }
 
-  # Also delete rows in these 6 tables: gene, exon, exon_transcript, transcript, translation and object_xref
+  # Also delete rows in these 7 tables: gene, gene_description, exon, exon_transcript, transcript, translation and object_xref
   # Not all genes have translations - use left join
 
   # Deleting rows in object_xref is based on gene_id col where gene_id = object_xref.ensembl_id and object_xref.ensembl_object_type = 'Gene'
@@ -127,7 +130,7 @@ sub remove_pipeline_analysis {
                                  FROM exon e, contig c, exon_transcript et, transcript t, gene g
                                  LEFT JOIN translation tl
                                  ON t.translation_id = tl.translation_id
-								 WHERE c.contig_id = e.contig_id
+				 WHERE c.contig_id = e.contig_id
                                  AND e.exon_id = et.exon_id
                                  AND et.transcript_id = t.transcript_id
                                  AND t.gene_id = g.gene_id
@@ -248,3 +251,5 @@ AND e.contig_id =
 =head1 B<AUTHOR>
 
 Chao-Kung Chen B<email> ck1@sanger.ac.uk
+
+
