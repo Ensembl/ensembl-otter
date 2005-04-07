@@ -59,11 +59,17 @@ sub new {
     
     # Does the module define a Pixmap for the icon?
     if (my $pix = $pkg->icon_pixmap) {
-        my $mw = $canvas->toplevel;
+        my $mw = $self->top_window();
         $mw->Icon(-image => $mw->Pixmap(-data => $pix));
     }
     
     return $self;
+}
+
+sub top_window {
+	my $self = shift @_;
+
+	return $self->canvas()->toplevel();
 }
 
 sub icon_pixmap {
@@ -376,7 +382,7 @@ sub scroll_to_obj {
 sub fix_window_min_max_sizes {
     my( $self ) = @_;
     
-    my $mw = $self->canvas->toplevel;
+    my $mw = $self->top_window();
     $mw->update;
     #$mw->withdraw;
     
@@ -423,7 +429,7 @@ sub set_scroll_region_and_maxsize {
     my $canvas_width  = $bbox[2] - $bbox[0];
     my $canvas_height = $bbox[3] - $bbox[1];
     
-    my $mw = $self->canvas->toplevel;
+    my $mw = $self->top_window();
     
     my( $other_x, # other_x and other_y record the space occupied
         $other_y, # by the widgets other than the canvas in the
@@ -461,7 +467,7 @@ sub set_window_size {
     my( $self, $set_flag ) = @_;
     
     if ($set_flag) {
-        my $mw = $self->canvas->toplevel;
+        my $mw = $self->top_window();
         my($x, $y) = $mw->geometry =~ /^(\d+)x(\d+)/;
         my ($display_max_x, $display_max_y) = $mw->maxsize;
         $x = $display_max_x if $x > $display_max_x;
@@ -479,7 +485,7 @@ sub print_postscript {
     my( $self, $file_root ) = @_;
     
     unless ($file_root) {
-        $file_root = $self->canvas->toplevel->cget('title')
+        $file_root = $self->top_window()->cget('title')
             || 'CanvasWindow';
         $file_root =~ s/\s/_/g;
     }
@@ -867,7 +873,7 @@ sub show_log{
 
     my $tw = $self->{'__tw_log'};
     unless($tw){
-        $tw = TransientWindow::LogWindow->new($self->canvas->toplevel, 'log file - ' . $self->name);
+        $tw = TransientWindow::LogWindow->new($self->top_window(), 'log file - ' . $self->name);
         $tw->initialise();
         $tw->draw();
         $self->{'__tw_log'} = $tw;

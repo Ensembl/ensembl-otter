@@ -382,7 +382,7 @@ sub update_ace_display{
 sub open_xace_dialogue{
     my ($self) = @_ ;
     
-    my $answer = $self->canvas->toplevel()->messageBox(-title => 'Please Reply', 
+    my $answer = $self->top_window()->messageBox(-title => 'Please Reply', 
      -message => 'No Xace attached, would you like to launch Xace?', 
      -type => 'YesNo', -icon => 'question', -default => 'Yes');
 
@@ -1071,7 +1071,7 @@ sub exit_save_data {
     $self->close_all_edit_windows or return;
     
     # Ask the user if any changes should be saved
-    my $dialog = $self->canvas->toplevel->Dialog(
+    my $dialog = $self->top_window()->Dialog(
         -title          => 'Otter save?',
         -bitmap         => 'question',
         -text           => "Save any changes to otter server?",
@@ -1131,7 +1131,7 @@ sub save_data {
         warn "Read only session - not saving\n";
         return 1;   # Can't save - but is OK
     }
-    my $top = $self->canvas->toplevel;
+    my $top = $self->top_window();
 
     $top->Busy;
 
@@ -1163,7 +1163,7 @@ sub command_line_restart {
 
     if (my @exec = @main::command_line) {
         if (my $pid = fork) {
-            $self->canvas->toplevel->destroy;
+            $self->top_window()->destroy;
         }
         elsif (defined $pid) {
             exec(@exec);
@@ -1262,7 +1262,7 @@ sub do_subseq_display {
 sub _make_search {
     my ($self) = @_;
 
-    my $top = $self->canvas->toplevel();
+    my $top = $self->top_window();
     my $search_frame = $top->Frame();
     $search_frame->pack(-side => 'top');
     
@@ -1692,7 +1692,7 @@ sub delete_subsequences {
         $question = "Really delete this subsequence?\n\n  "
             . $to_die[0]->name ."\n";
     }
-    my $dialog = $self->canvas->toplevel->Dialog(
+    my $dialog = $self->top_window()->Dialog(
         -title          => 'Delete subsequenes?',
         -bitmap         => 'question',
         -text           => $question,
@@ -1863,7 +1863,7 @@ sub rename_subseq_edit_window {
 sub close_all_subseq_edit_windows {
     my( $self ) = @_;
 
-    my $mw = $self->canvas->toplevel;
+    my $mw = $self->top_window();
     foreach my $name ($self->list_all_subseq_edit_window_names) {
         my $top = $self->get_subseq_edit_window($name) or next;
         # Tell window to close
@@ -2309,7 +2309,7 @@ sub run_dotter {
     
     my $dw = $self->{'_dotter_window'};
     unless ($dw) {
-        my $parent = $self->canvas->toplevel;
+        my $parent = $self->top_window();
         my $top = $parent->Toplevel(-title => 'run dotter');
         $top->transient($parent);
         $dw = CanvasWindow::DotterWindow->new($top);
