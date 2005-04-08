@@ -4,8 +4,6 @@ package Evi::EviCollection;
 #
 # Collects the ESTs/mRNAs/proteins that match the genomic sequence in a certain slice,
 # combines them into matching chains and returns as a list of EviChain objects.
-#
-# lg4
 
 use strict;
 use Evi::EviChain;
@@ -49,15 +47,17 @@ sub new_from_pipeline_Slice {
 	my $daf_adaptor = $pipeline_dba->get_DnaAlignFeatureAdaptor();
 	for my $analysis (@{$self->rna_analyses_lp()}) {
 		my $dafs_lp = $daf_adaptor->fetch_all_by_Slice($self->pipeline_slice(),$analysis);
-		print STDERR "[$analysis] ";
+		print STDERR "[$analysis";
 		$self->add_collection($dafs_lp);
+		print STDERR "] ";
 	}
 
 	my $paf_adaptor = $pipeline_dba->get_ProteinAlignFeatureAdaptor();
 	for my $analysis (@{$self->protein_analyses_lp()}) {
 		my $pafs_lp = $paf_adaptor->fetch_all_by_Slice($self->pipeline_slice(),$analysis);
-		print STDERR "[$analysis] ";
+		print STDERR "[$analysis";
 		$self->add_collection($pafs_lp);
+		print STDERR "] ";
 	}
 	print STDERR "\n";
 
@@ -172,6 +172,10 @@ sub add_collection {
 				push @candidates, _tracechains($start,\%next,());
 			}
 		}
+	}
+
+	if(! @candidates) {
+		print STDERR ":EMPTY";
 	}
 
 	for my $evichain (@candidates) {

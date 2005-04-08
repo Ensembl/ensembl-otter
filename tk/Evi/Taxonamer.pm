@@ -1,14 +1,10 @@
-
 package Evi::Taxonamer;
 
-use IO::Socket;
+# Find out and cache the taxon_id<->taxon_name mapping globally
 
+use IO::Socket;
 my $host=$ENV{'GETZHOST'} || "cbi2";
 my $port=$ENV{'GETZPORT'} || "20204";
-
-# Find out and cache the taxon_id<->taxon_name mapping globally
-#
-# lg4, 6.Apr'2005
 
 my %waiting	= ();
 my %data	= ();
@@ -26,7 +22,10 @@ sub put_id {    # use this method to register the id's
 }
 
 sub fetch {
-    return unless %waiting;
+	if(! %waiting) {
+		print STDERR "Taxonamer: nothing to be fetched\n";
+		return;
+	}
 
 	my @lines = getz('-f', 'id spc', '[taxonomy-id:'.join('|', keys %waiting).']');
 	while(@lines) {
@@ -50,10 +49,13 @@ sub get_name {					# a normal usage is Taxonamer::get_name(9606)
 
 	put_id($taxon_id);
 
-	fetch();
+	if( %waiting) {
+		fetch();
+	}
 	return $data{$taxon_id};
 }
 
+# code borrowed from SRS.pm
 
 sub getz {
 
@@ -83,7 +85,5 @@ sub getz {
         $sockh->close;
     }
 }
-
-
 
 1;
