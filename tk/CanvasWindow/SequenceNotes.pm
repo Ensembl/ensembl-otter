@@ -10,6 +10,7 @@ use MenuCanvasWindow::XaceSeqChooser;
 use CanvasWindow::SequenceNotes::History;
 use CanvasWindow::SequenceNotes::Status;
 use TransientWindow::OpenRange;
+use Evi::EviCollection;
 use POSIX qw(ceil);
 
 sub name {
@@ -693,16 +694,50 @@ sub _open_SequenceSet{
         return;
     }    
 
+
+    # Create EviCollection Object
+    my( $ec );
+    eval {
+        $ec = $self->make_EviCollection($ss);
+    };
+    if ($@) {
+        $db->error_flag(0);
+        $self->exception_message($@, 'Error creating EviCollection for supporting evidence selection');
+        return;
+    }
+
     my $xc = $self->make_XaceSeqChooser($title);
     ### Maybe: $xc->SequenceNotes($self);
     $xc->SequenceNotes($self) ;
     $xc->AceDatabase($db);
+    $xc->EviCollection($ec);
     my $write_flag = $cl->write_access ? $ss->write_access : 0;
     $xc->write_access($write_flag);  ### Can be part of interface in future
     $xc->Client($self->Client);
     $xc->initialize;
     $self->refresh_column(7) ; # 7 is the locks column
     
+}
+
+sub make_EviCollection {
+    my( $self, $ss ) = @_;
+    
+    return unless Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
+    my $dataset = $self->Client->get_DataSet_by_name($ss->dataset_name);
+    my $ctg = $ss->selected_CloneSequences;
+    my( $chr, $chr_start, $chr_end ) = $self->Client->chr_start_end_from_contig($ctg);
+    #print STDERR "EviSlice: $chr $chr_start-$chr_end\n";
+    
+    my $pipe_db = Bio::Otter::Lace::PipelineDB::get_DBAdaptor($dataset->get_cached_DBAdaptor);
+    my $slice_adaptor = $pipe_db->get_SliceAdaptor;
+    my $slice = $slice_adaptor->fetch_by_chr_start_end($chr, $chr_start, $chr_end);
+
+    return Evi::EviCollection->new_from_pipeline_Slice(
+        $slice,
+        [qw{ vertrna Est2genome_human Est2genome_mouse Est2genome_other }],
+        #[qw{ Uniprot }],
+        [],
+       );
 }
 
 # creates a string based on the selected clones, with commas seperating individual values or dots to represent a continous sequence

@@ -63,6 +63,15 @@ sub SequenceNotes{
     return $self->{'_sequence_notes'} ;
 }
 
+sub EviCollection {
+    my( $self, $EviCollection ) = @_;
+    
+    if ($EviCollection) {
+        $self->{'_EviCollection'} = $EviCollection;
+    }
+    return $self->{'_EviCollection'};
+}
+
 sub initialize {
     my( $self ) = @_;
     
