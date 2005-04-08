@@ -11,6 +11,11 @@ use strict;
 use Evi::EviChain;
 use Evi::Taxonamer;
 
+
+sub new_from_pipeline_Slice {
+
+}
+
 sub new {
 	my $pkg = shift @_;
 
