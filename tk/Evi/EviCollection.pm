@@ -47,17 +47,13 @@ sub new_from_pipeline_Slice {
 	my $daf_adaptor = $pipeline_dba->get_DnaAlignFeatureAdaptor();
 	for my $analysis (@{$self->rna_analyses_lp()}) {
 		my $dafs_lp = $daf_adaptor->fetch_all_by_Slice($self->pipeline_slice(),$analysis);
-		print STDERR "[$analysis";
-		$self->add_collection($dafs_lp);
-		print STDERR "] ";
+		$self->add_collection($dafs_lp, $analysis);
 	}
 
 	my $paf_adaptor = $pipeline_dba->get_ProteinAlignFeatureAdaptor();
 	for my $analysis (@{$self->protein_analyses_lp()}) {
 		my $pafs_lp = $paf_adaptor->fetch_all_by_Slice($self->pipeline_slice(),$analysis);
-		print STDERR "[$analysis";
-		$self->add_collection($pafs_lp);
-		print STDERR "] ";
+		$self->add_collection($pafs_lp, $analysis);
 	}
 	print STDERR "\n";
 
@@ -117,9 +113,9 @@ sub find_intersecting_matches {
 }
 
 sub add_collection {
-	my $self = shift @_;
-
-	my @afs = @{ shift @_ };
+	my $self			= shift @_;
+	my @afs				= @{ shift @_ };
+	my $analysis_name	= shift @_;
 
 	my %match_by_eviname = ();
 	my %unique_match = ();
@@ -174,18 +170,17 @@ sub add_collection {
 		}
 	}
 
-	if(! @candidates) {
-		print STDERR ":EMPTY";
-	}
-
+	my $counter = 0;
+	print STDERR "[$analysis_name...";
 	for my $evichain (@candidates) {
 		if(1) {  # (any global filters for candidates should appear here)
 			push @{$self->{_collection}}, $evichain; # put it on the global list
 			push @{$self->{_name2chains}{$evichain->name()}}, $evichain; # add it to by-name index
 			Evi::Taxonamer::put_id($evichain->taxon_id());
+			$counter++;
 		}
 	}
-
+	print STDERR ''.($counter ? $counter : 'EMPTY').']';
 }
 
 sub _tracechains {	# not a method

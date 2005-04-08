@@ -34,7 +34,7 @@ sub fetch {
 
 		$data{$taxon_id} = $name;
 		delete $waiting{$taxon_id};
-		print "Taxonamer: found [$taxon_id] --> [$name]\n";
+		print STDERR "Taxonamer: found [$taxon_id] --> [$name]\n";
 	}
 
 	for my $taxon_id (keys %waiting) { # get rid of the rest just once
