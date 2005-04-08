@@ -13,6 +13,7 @@ use Hum::Ace::SubSeq;
 use Hum::Translator;
 use MenuCanvasWindow;
 use Hum::Ace::DotterLauncher;
+use Evi::EviDisplay;
 use vars ('@ISA');
 use Hum::Ace;
 @ISA = ('MenuCanvasWindow');
@@ -118,6 +119,17 @@ sub initialize {
     
     #if ($self->is_mutable && $self->xace_seq_chooser->write_access) {
     if ($self->is_mutable) {
+
+        # Select supporting evidence for the transcript
+        my $select_evidence = sub{ $self->select_evidence };
+        $file_menu->add('command',
+            -label          => 'Select evidence',
+            -command        => $select_evidence,
+            -accelerator    => 'Ctrl+E',
+            -underline      => 1,
+            );
+        $canvas->Tk::bind('<Control-e>',   $select_evidence);
+        $canvas->Tk::bind('<Control-E>',   $select_evidence);
 
         # Save into db via xace
         my $save_command = sub{ $self->save_if_changed };
@@ -922,6 +934,22 @@ sub show_peptide {
     $win->configure( -title => $sub->name . " translation" );
     $win->deiconify;
     $win->raise;
+}
+
+sub select_evidence {
+    my( $self ) = @_;
+    
+    my $ec = $self->xace_seq_chooser->EviCollection
+        or die "No EviCollection attatched to XaceSeqChooser";
+    my $otter_transcript = $self->otter_Transcript_from_tk;
+    my $title = "Evidence: ". $otter_transcript->transcript_info->name;
+    my $evi = Evi::EviDisplay->new(
+        $self->canvas->toplevel,
+        $title,
+        $ec,
+        $otter_transcript,
+        );
+    
 }
 
 sub trim_cds_coord_to_current_methionine {
@@ -2082,6 +2110,26 @@ sub new_SubSeq_from_tk {
     #warn "Start not found ", $self->start_not_found_from_tk, "\n",
     #    "End not found ", $self->end_not_found_from_tk, "\n";
     return $sub;
+}
+
+sub otter_Transcript_from_tk {
+    my( $self ) = @_;
+    
+    # Creates mininmal AnnotatedTranscript for use by EviDisplay
+    my $tsct = Bio::Otter::AnnotatedTranscript->new;
+    my $strand = $self->strand_from_tk;
+    foreach my $ex ($self->Exons_from_canvas) {
+        my $exon = Bio::EnsEMBL::Exon->new;
+        $exon->start($ex->start);
+        $exon->end($ex->end);
+        $exon->strand($strand);
+        $tsct->add_Exon($exon);
+    }
+    my $info = Bio::Otter::TranscriptInfo->new;
+    $info->name($self->get_subseq_name);
+    $tsct->transcript_info($info);
+    
+    return $tsct;
 }
 
 sub save_if_changed {
