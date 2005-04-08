@@ -54,7 +54,8 @@ use Evi::Tictoc;
     }
 
 my $tt_evicoll = Evi::Tictoc->new("Building the evidence collection");
-    my $evi_coll = Evi::EviCollection->new($otter_slice, [ @rna_analyses ], [@protein_analyses] );
+    my $evi_coll = Evi::EviCollection->new_from_otter_Slice(
+						$otter_slice, [ @rna_analyses ], [@protein_analyses] );
 $tt_evicoll->done();
 
     my $mw = CanvasWindow::MainWindow->new('EviView| Choose a transcript to work on');

@@ -5,65 +5,74 @@ package Evi::EviCollection;
 # Collects the ESTs/mRNAs/proteins that match the genomic sequence in a certain slice,
 # combines them into matching chains and returns as a list of EviChain objects.
 #
-# lg4, 7.Apr'2005
+# lg4
 
 use strict;
 use Evi::EviChain;
 use Evi::Taxonamer;
 
+sub new_from_otter_Slice {
+	my ($pkg, $otter_slice, $rna_analyses_lp, $protein_analyses_lp) = @_;
 
-sub new_from_pipeline_Slice {
+	my $otter_dba = $otter_slice->adaptor()->db();
 
+		# connect to slave:
+    my $pipeline_dba = Bio::Otter::Lace::PipelineDB::get_DBAdaptor($otter_dba);
+
+	#	# connect to master: [for debug purposes]
+    # my $pipeline_dba  = Bio::Otter::Lace::PipelineDB::get_rw_DBAdaptor($otter_dba);
+
+	$pipeline_dba->assembly_type($otter_dba->assembly_type());
+
+	my $pipeline_slice = $pipeline_dba->get_SliceAdaptor()->fetch_by_chr_start_end(
+			$otter_slice->chr_name(),
+			$otter_slice->chr_start(),
+			$otter_slice->chr_end());
+
+	return $pkg->new_from_pipeline_Slice($pipeline_slice, $rna_analyses_lp, $protein_analyses_lp);
 }
 
-sub new {
+sub new_from_pipeline_Slice {
 	my $pkg = shift @_;
 
 	my $self = bless {}, $pkg;
 
-	$self->otter_slice(shift @_);
+	$self->pipeline_slice(shift @_);
 	$self->rna_analyses_lp(shift @_);
 	$self->protein_analyses_lp(shift @_);
 
-	my $otter_dba = $self->otter_slice()->adaptor()->db();
-
-    # my $pipe_dba  = Bio::Otter::Lace::PipelineDB::get_DBAdaptor($otter_dba);
-    my $pipe_dba  = Bio::Otter::Lace::PipelineDB::get_rw_DBAdaptor($otter_dba);
-	$pipe_dba->assembly_type($otter_dba->assembly_type());
-
-	my $pipe_slice = $pipe_dba->get_SliceAdaptor()->fetch_by_chr_start_end(
-			$self->otter_slice()->chr_name(),
-			$self->otter_slice()->chr_start(),
-			$self->otter_slice()->chr_end());
+	my $pipeline_dba = $self->pipeline_slice()->adaptor()->db();
 
 	$self->{_collection} = [];	# whole list of chains
 	$self->{_name2chains} = {}; # sublists of chains indexed by name
 
-	my $daf_adaptor = $pipe_dba->get_DnaAlignFeatureAdaptor();
+	my $daf_adaptor = $pipeline_dba->get_DnaAlignFeatureAdaptor();
 	for my $analysis (@{$self->rna_analyses_lp()}) {
-		my $dafs_lp = $daf_adaptor->fetch_all_by_Slice($pipe_slice,$analysis);
+		my $dafs_lp = $daf_adaptor->fetch_all_by_Slice($self->pipeline_slice(),$analysis);
 		print STDERR "[$analysis] ";
 		$self->add_collection($dafs_lp);
 	}
 
-	my $paf_adaptor = $pipe_dba->get_ProteinAlignFeatureAdaptor();
+	my $paf_adaptor = $pipeline_dba->get_ProteinAlignFeatureAdaptor();
 	for my $analysis (@{$self->protein_analyses_lp()}) {
-		my $pafs_lp = $paf_adaptor->fetch_all_by_Slice($pipe_slice,$analysis);
+		my $pafs_lp = $paf_adaptor->fetch_all_by_Slice($self->pipeline_slice(),$analysis);
 		print STDERR "[$analysis] ";
 		$self->add_collection($pafs_lp);
 	}
 	print STDERR "\n";
 
+	Evi::Taxonamer::fetch();
+
 	return $self;
 }
 
-sub otter_slice {
+sub pipeline_slice {
 	my $self = shift @_;
 
 	if(@_) {
-		$self->{_otter_slice} = shift @_;
+		$self->{_pipeline_slice} = shift @_;
 	}
-	return $self->{_otter_slice};
+	return $self->{_pipeline_slice};
 }
 
 sub rna_analyses_lp {
