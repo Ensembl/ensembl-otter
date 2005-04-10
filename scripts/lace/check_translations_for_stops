@@ -132,7 +132,7 @@ sub check_for_stops {
 	my $out;
 	foreach my $remark ($trans->transcript_info->remark){
 	  my $text=$remark->remark;
-	  if($text=~/selenocysteine/i){
+	  if($text=~/seleno/i){
 	    $flag_remark=1;
 	  }
 	  $out.="  remark: $text\n";
