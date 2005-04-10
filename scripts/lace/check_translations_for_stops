@@ -10,21 +10,65 @@ use Bio::Seq;
 $| = 1;
 
 {
-    my( $dataset );
+    my( $dataset, $sequence_set, $chr_start_acc, $chr_end_acc, $gene_stable_id );
+    my( $tunnel, $remarks );
     my $help = sub { exec('perldoc', $0) };
 
     Bio::Otter::Lace::Defaults::do_getopt(
-        'ds|dataset=s' => \$dataset,
-        'h|help'       => $help,
+        'ds|dataset=s'     => \$dataset,
+	'chr|set=s'        => \$sequence_set,
+        'start_acc=s'      => \$chr_start_acc,
+        'end_acc=s'        => \$chr_end_acc,
+        'gene_stable_id=s' => \$gene_stable_id,
+        'tunnel=s'         => \$tunnel,
+        'remarks'          => \$remarks,
+        'h|help'           => $help,
         ) or $help->();
     $help->() unless $dataset;
 
     my $client    = Bio::Otter::Lace::Defaults::make_Client();
     my $dset      = $client->get_DataSet_by_name($dataset);
+    # for tunnelling
+    if($tunnel){
+      $dset->HOST('127.0.0.1');
+      $dset->PORT($tunnel);
+      $dset->DNA_HOST('127.0.0.1');
+      $dset->DNA_PORT($tunnel);
+      print STDERR "Tunnelling otter mysql connection\n";
+      print STDERR '  HOST='.$dset->HOST."\n";
+      print STDERR '  PORT='.$dset->PORT."\n";
+      print STDERR '  DNA_HOST='.$dset->DNA_HOST."\n";
+      print STDERR '  DNA_PORT='.$dset->DNA_PORT."\n";
+    }
     my $otter_db  = $dset->get_cached_DBAdaptor;
     my $gene_aptr = $otter_db->get_GeneAdaptor;
 
-    my $gene_id_list = $gene_aptr->list_current_dbIDs;
+    my $gene_id_list;
+    if($gene_stable_id){
+      @$gene_id_list=($gene_aptr->fetch_by_stable_id($gene_stable_id)->dbID);
+    }elsif($sequence_set){
+      my $slice_aptr = $otter_db->get_SliceAdaptor;
+      $otter_db->assembly_type($sequence_set);
+      # code warns to set this, but doesn't exist/work...
+      #$client->get_SequenceSets_for_DataSet($dset);
+      my $ss = $dset->get_SequenceSet_by_name($sequence_set);
+      $dset->selected_SequenceSet($ss);
+      $dset->fetch_all_CloneSequences_for_SequenceSet($ss);
+      if ($chr_start_acc or $chr_end_acc) {
+        die sprintf("Need both start_acc (got '%s') and end_acc (got '%s')\n",
+		    $chr_start_acc || 'NONE',
+		    $chr_end_acc   || 'NONE',
+		    ) unless $chr_start_acc and $chr_end_acc;
+        select_CloneSequence_contig($ss, $chr_start_acc, $chr_end_acc);
+      } else {
+	$ss->selected_CloneSequences($ss->CloneSequence_list);
+      }
+      my($chr,$chr_start,$chr_end)=$client->chr_start_end_from_contig($ss->selected_CloneSequences);
+      my $slice = $slice_aptr->fetch_by_chr_start_end($chr,$chr_start,$chr_end);
+      $gene_id_list = $gene_aptr->list_current_dbIDs_for_Slice($slice);
+    }else{
+      $gene_id_list = $gene_aptr->list_current_dbIDs;
+    }
     printf STDERR "Found %d current genes\n", scalar(@$gene_id_list);
     my $i = 0;
     foreach my $id (@$gene_id_list) {
@@ -32,27 +76,130 @@ $| = 1;
         my $gene = $gene_aptr->fetch_by_dbID($id);
         foreach my $trans (@{$gene->get_all_Transcripts}) {
             next unless $trans->translation;
-            check_for_stops($gene, $trans);
+            check_for_stops($gene, $trans, $remarks);
         }
     }
     print STDERR " $i\n";
 }
 
 sub check_for_stops {
-    my( $gene, $trans ) = @_;
+    my( $gene, $trans, $remarks ) = @_;
+
+    # stop is ok if
+    # - pseudogene
+    # - selenocysteine and only single stop
     
     # Translate method trims stops from sequence end
     my $peptide = $trans->translate;
-    if ($peptide->seq =~ /\*/) {
-        printf "%-24s  %-24s  %18s  %2d  %12s\n",
+    my $pseq=$peptide->seq;
+    if ($pseq =~ /\*/) {
+
+        # contains stops: find out where and how many there are
+        my @stop;
+        my $mrna=$trans->translateable_seq;
+	my $offset=0;
+	my $tstop;
+      LOOP:
+	{
+	  if ($pseq =~ /(.*)\*(.*)/) {
+	    $pseq=$2;
+	    # see if stop codon is result of selenocysteine (TGA)
+	    my $seq_flag=0;
+	    $offset+=length($1)*3;
+	    my $stop=substr($mrna,$offset,3);
+	    push(@stop,[$stop,$offset]);
+	    if($tstop){$tstop.="; ";}
+	    $tstop.="$offset:$stop";
+	    redo LOOP if($pseq);
+	  }
+	}
+	my $nstop=scalar(@stop);
+        my $flag_seq=0;
+	# if only one and TGA, this is a candidate selenocysteine
+	if($nstop==1 && $stop[0]->[0] eq 'TGA'){
+	  $flag_seq=1;
+	}
+
+	# check if pseudo or not
+	my $trans_class=$trans->transcript_info->class->name,
+	my $flag_pseudo=0;
+	if($trans_class eq 'Pseudogene'){
+	  $flag_pseudo=1;
+	}
+
+	# check remarks
+	my $flag_remark=0;
+	my $out;
+	foreach my $remark ($trans->transcript_info->remark){
+	  my $text=$remark->remark;
+	  if($text=~/selenocysteine/i){
+	    $flag_remark=1;
+	  }
+	  $out.="  remark: $text\n";
+	}
+	
+	# provide feedback
+	my $label;
+	if($flag_pseudo){
+	  $label='P-OK';
+	}elsif($flag_seq==1){
+	  if($flag_remark){
+	    # remark indicates stop is a Selenocysteine
+	    $label='S-OK';
+	  }else{
+	    $label='S-??';
+	  }
+	}else{
+	  $label='????';
+	}
+
+        printf "%-24s %-24s %18s %2d %12s %4s %2d %s\n",
             $gene->gene_info->name->name,
             $trans->transcript_info->name,
             $trans->stable_id,
             $trans->version,
-            $trans->transcript_info->class->name;
+	    $trans_class,
+	    $label,
+	    $nstop,
+	    $tstop;
+
+	print "$out\n" if $remarks;
+
     }
 }
 
+### Also in gene_stats - should be in a module
+sub select_CloneSequence_contig {
+    my( $ss, $start_acc, $end_acc ) = @_;
+    
+    my $ctg = [];
+    my $in_contig = 0;
+    my $cs_list = $ss->CloneSequence_list;
+    foreach my $cs (@$cs_list) {
+        my $acc = $cs->accession;
+        if ($acc eq $start_acc) {
+            $in_contig = 1;
+        }
+        if ($in_contig) {
+            push(@$ctg, $cs);
+        }
+        if ($acc eq $end_acc) {
+            if ($in_contig) {
+                $in_contig = 0;
+            } else {
+                die "Found end '$end_acc' but not start '$start_acc'\n";
+            }
+        }
+    }
+    if (@$ctg == 0) {
+        die "Failed to find start '$start_acc'\n";
+    }
+    elsif ($in_contig) {
+        die "Failed to find end '$end_acc'\n";
+    }
+    
+    $ss->selected_CloneSequences($ctg);
+}
 
 __END__
 
