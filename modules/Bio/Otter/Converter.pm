@@ -893,7 +893,7 @@ sub ace_transcript_seq_objs_from_genes{
             }
 
             # Supporting evidence
-            my @ev = sort {$a->name cmp $b->name} @{$tran->transcript_info->get_Evidence};
+            my @ev = sort {$a->name cmp $b->name} @{$tran->transcript_info->get_all_Evidence};
             foreach my $ev (@ev) {
                 my $type = $ev->type;
                 my $name = $ev->name;

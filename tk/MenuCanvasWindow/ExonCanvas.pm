@@ -23,7 +23,6 @@ use Hum::Ace;
 sub initialize {
     my( $self ) = @_;
     
-    my $sub    = $self->SubSeq;
     my $canvas = $self->canvas;
     my $top = $canvas->toplevel;
 
@@ -690,6 +689,7 @@ sub draw_subseq {
     my $sub = $self->SubSeq;
     $self->add_subseq_exons($sub);
     $self->draw_translation_region($sub);
+    $self->evidence_hash({%{$sub->evidence_hash}});
 }
 
 sub is_mutable {
@@ -935,12 +935,22 @@ sub show_peptide {
     $win->deiconify;
     $win->raise;
 }
+ 
+sub evidence_hash {
+    my( $self, $evidence_hash ) = @_;
+    
+    if ($evidence_hash) {
+        $self->{'_evidence_hash'} = $evidence_hash;
+    }
+    return $self->{'_evidence_hash'};
+}
 
 sub select_evidence {
     my( $self ) = @_;
     
     my $ec = $self->xace_seq_chooser->EviCollection
         or die "No EviCollection attatched to XaceSeqChooser";
+    ### Need to close EviDisplay here if there is one already open
     my $otter_transcript = $self->otter_Transcript_from_tk;
     my $title = "Evidence: ". $otter_transcript->transcript_info->name;
     my $evi = Evi::EviDisplay->new(
@@ -949,7 +959,21 @@ sub select_evidence {
         $ec,
         $otter_transcript,
         );
+    $ec->ExonCanavs($self);
+}
+
+sub save_OtterTranscript_evidence {
+    my( $self, $transcript ) = @_;
     
+    my $info = $transcript->transcript_info;
+    my $evi_hash = {};
+    foreach my $evi (@{$info->get_all_Evidence}) {
+        my $type = $evi->type;
+        my $name = $evi->name;
+        my $evi_list = $evi_hash->{$type} ||= [];
+        push @$evi_list, $name;
+    }
+    $self->evidence_hash($evi_hash);
 }
 
 sub trim_cds_coord_to_current_methionine {
@@ -2107,6 +2131,7 @@ sub new_SubSeq_from_tk {
     $sub->strand                 ( $self->strand_from_tk              );
     $sub->start_not_found        ( $self->start_not_found_from_tk     );
     $sub->end_not_found          ( $self->end_not_found_from_tk       );
+    $sub->evidence_hash          ( $self->evidence_hash               );
     #warn "Start not found ", $self->start_not_found_from_tk, "\n",
     #    "End not found ", $self->end_not_found_from_tk, "\n";
     return $sub;
@@ -2127,6 +2152,15 @@ sub otter_Transcript_from_tk {
     }
     my $info = Bio::Otter::TranscriptInfo->new;
     $info->name($self->get_subseq_name);
+    my $evi = $self->evidence_hash;
+    foreach my $type (sort keys %$evi) {
+        foreach my $name (@{$evi->{$type}}) {
+            my $supp = Bio::Otter::Evidence->new;
+            $supp->type($type);
+            $supp->name($name);
+            $info->add_Evidence($supp);
+        }
+    }
     $tsct->transcript_info($info);
     
     return $tsct;

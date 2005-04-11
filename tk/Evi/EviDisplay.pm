@@ -262,6 +262,15 @@ sub new {
 	return $self;
 }
 
+sub ExonCanvas {
+    my( $self, $ExonCanvas ) = @_;
+    
+    if ($ExonCanvas) {
+        $self->{'_ExonCanvas'} = $ExonCanvas;
+    }
+    return $self->{'_ExonCanvas'};
+}
+
 sub populate_scale {
 	my $self = shift @_;
 
@@ -759,6 +768,9 @@ sub save_selection_to_transcript {
 					(keys %{ $self->{_name2selevidence}})
 		);
 		print $self->{_transcript}->transcript_info()->toString();
+        if (my $ec = $self->ExonCanvas) {
+            $ec->save_OtterTranscript_evidence($self->{_transcript});
+        }
 	} else {
 		print "The list of selected evidence did not change.\n";
 		print "Nothing to be saved back to the database\n";

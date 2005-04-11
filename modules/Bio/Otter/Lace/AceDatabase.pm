@@ -749,8 +749,8 @@ sub write_pipeline_data {
     my $pipe_db;
     my $fetch_pipe = Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
     if($fetch_pipe){
-	$pipe_db = Bio::Otter::Lace::PipelineDB::get_DBAdaptor($dataset->get_cached_DBAdaptor);
-	#$pipe_db->dnadb($ens_db->dnadb);
+	    $pipe_db = Bio::Otter::Lace::PipelineDB::get_DBAdaptor($dataset->get_cached_DBAdaptor);
+	    #$pipe_db->dnadb($ens_db->dnadb);
     }
     $ens_db = $pipe_db || $ens_db;
 
@@ -777,14 +777,7 @@ sub write_pipeline_data {
     # each subarray contains a list of clones that are together on the golden path
     my $sel = $ss->selected_CloneSequences_as_contig_list ;
     foreach my $cs (@$sel) {
-
-        my $first_ctg = $cs->[0];
-        my $last_ctg = $cs->[$#$cs];
-
-        my $chr = $first_ctg->chromosome->name;  
-        my $chr_start = $first_ctg->chr_start;
-        my $chr_end = $last_ctg->chr_end;
-
+        my( $chr, $chr_start, $chr_end ) = $self->Client->chr_start_end_from_contig($cs);
         my $slice = $slice_adaptor->fetch_by_chr_start_end($chr, $chr_start, $chr_end);
 
         ### Check we got a slice

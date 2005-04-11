@@ -10,6 +10,8 @@ use base 'Bio::EnsEMBL::DBSQL::BaseAdaptor';
 sub fetch_HitDescriptions_into_hash {
     my( $self, $hash ) = @_;
     
+    return unless %$hash;
+    
     my $sql = qq{
         SELECT hit_name
           , hit_length
