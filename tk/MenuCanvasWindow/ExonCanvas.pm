@@ -959,7 +959,7 @@ sub select_evidence {
         $evi_coll,
         $otter_transcript,
         );
-    $evi_disp->ExonCanavs($self);
+    $evi_disp->ExonCanvas($self);
 }
 
 sub save_OtterTranscript_evidence {

@@ -738,9 +738,9 @@ sub make_EviCollection {
 
     return Evi::EviCollection->new_from_pipeline_Slice(
         $slice,
-        #[qw{ vertrna Est2genome_human Est2genome_mouse Est2genome_other }],
+        [qw{ vertrna Est2genome_human Est2genome_mouse Est2genome_other }],
+        #[qw{ vertrna }],
         #[qw{ Uniprot }],
-        [qw{ vertrna }],
         [],
        );
 }
