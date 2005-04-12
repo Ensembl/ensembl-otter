@@ -154,7 +154,9 @@ sub new {
 	$menu_file->command(
         -label      => 'Save and exit',
         -command    => sub {
+                            print STDERR "Saving to transcript\n";
 							$self->save_selection_to_transcript();
+                            print STDERR "Closing window\n";
 							$self->top_window()->destroy();
 						},
 	);
@@ -757,17 +759,20 @@ sub save_selection_to_transcript {
 	if( $self->any_changes_in_selection() ) {
 		print "The list of selected evidence changed.\n";
 		print "The new list of selected evidence is:\n";
+
+		$self->{_transcript}->transcript_info()->flush_Evidence();
+
 		for my $eviname (keys %{$self->{_name2selevidence}}) {
 			print "\t".$self->{_name2selevidence}{$eviname}{data}->name();
 			print "\t".$self->{_name2selevidence}{$eviname}{visible}."\n";
 		}
-
-		$self->{_transcript}->transcript_info()->flush_Evidence();
+        
 		$self->{_transcript}->transcript_info()->add_Evidence(
 			map { $self->{_name2selevidence}{$_}{data}; }
 					(keys %{ $self->{_name2selevidence}})
 		);
-		print $self->{_transcript}->transcript_info()->toString();
+        use Data::Dumper;
+        print STDERR Dumper($self->{_transcript}->transcript_info);
         if (my $ec = $self->ExonCanvas) {
             $ec->save_OtterTranscript_evidence($self->{_transcript});
         }

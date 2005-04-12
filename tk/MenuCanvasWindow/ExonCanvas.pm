@@ -2158,6 +2158,7 @@ sub otter_Transcript_from_tk {
             my $supp = Bio::Otter::Evidence->new;
             $supp->type($type);
             $supp->name($name);
+            warn qq{Adding evidence: $type "$name"\n};
             $info->add_Evidence($supp);
         }
     }
