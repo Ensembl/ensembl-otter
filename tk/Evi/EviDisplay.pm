@@ -150,6 +150,21 @@ sub new {
 
 	$self->{_statusline} = $top_window->ROText(-height=>1)->pack(-side => 'bottom');
 
+	my $menu_file = $self->make_menu('File');
+	$menu_file->command(
+        -label      => 'Save and exit',
+        -command    => sub {
+							$self->save_selection_to_transcript();
+							$self->top_window()->destroy();
+						},
+	);
+	$menu_file->command(
+        -label      => 'Exit without saving',
+        -command    => sub {
+							$self->top_window()->destroy();
+						},
+	);
+
 	my $menu_data = $self->make_menu('Data');
 	for my $analysis (sort keys %{ $self->{_show_analysis} }) {
 		$menu_data->checkbutton(
@@ -233,21 +248,6 @@ sub new {
 	);
 
 	$self->{_menu_selection} = $self->make_menu('Selection');
-
-	my $menu_done = $self->make_menu('Done');
-	$menu_done->command(
-        -label      => 'Save and exit',
-        -command    => sub {
-							$self->save_selection_to_transcript();
-							$self->top_window()->destroy();
-						},
-	);
-	$menu_done->command(
-        -label      => 'Exit without saving',
-        -command    => sub {
-							$self->top_window()->destroy();
-						},
-	);
 
 	$top_window->protocol('WM_DELETE_WINDOW', sub {
 										$self->save_selection_to_transcript();

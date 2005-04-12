@@ -948,18 +948,18 @@ sub evidence_hash {
 sub select_evidence {
     my( $self ) = @_;
     
-    my $ec = $self->xace_seq_chooser->EviCollection
+    my $evi_coll = $self->xace_seq_chooser->EviCollection
         or die "No EviCollection attatched to XaceSeqChooser";
     ### Need to close EviDisplay here if there is one already open
     my $otter_transcript = $self->otter_Transcript_from_tk;
     my $title = "Evidence: ". $otter_transcript->transcript_info->name;
-    my $evi = Evi::EviDisplay->new(
+    my $evi_disp = Evi::EviDisplay->new(
         $self->canvas->toplevel,
         $title,
-        $ec,
+        $evi_coll,
         $otter_transcript,
         );
-    $ec->ExonCanavs($self);
+    $evi_disp->ExonCanavs($self);
 }
 
 sub save_OtterTranscript_evidence {
