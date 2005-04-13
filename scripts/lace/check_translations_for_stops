@@ -11,7 +11,7 @@ $| = 1;
 
 {
     my( $dataset, $sequence_set, $chr_start_acc, $chr_end_acc, $gene_stable_id );
-    my( $tunnel, $remarks );
+    my( $tunnel, $remarks, $verbose );
     my $help = sub { exec('perldoc', $0) };
 
     Bio::Otter::Lace::Defaults::do_getopt(
@@ -22,6 +22,7 @@ $| = 1;
         'gene_stable_id=s' => \$gene_stable_id,
         'tunnel=s'         => \$tunnel,
         'remarks'          => \$remarks,
+	'verbose|v'        => \$verbose,
         'h|help'           => $help,
         ) or $help->();
     $help->() unless $dataset;
@@ -76,14 +77,14 @@ $| = 1;
         my $gene = $gene_aptr->fetch_by_dbID($id);
         foreach my $trans (@{$gene->get_all_Transcripts}) {
             next unless $trans->translation;
-            check_for_stops($gene, $trans, $remarks);
+            check_for_stops($gene, $trans, $remarks, $verbose);
         }
     }
     print STDERR " $i\n";
 }
 
 sub check_for_stops {
-    my( $gene, $trans, $remarks ) = @_;
+    my( $gene, $trans, $remarks, $verbose ) = @_;
 
     # stop is ok if
     # - pseudogene
@@ -98,19 +99,29 @@ sub check_for_stops {
         my @stop;
         my $mrna=$trans->translateable_seq;
 	my $offset=0;
+	my $last_offset=0;
 	my $tstop;
       LOOP:
 	{
-	  if ($pseq =~ /(.*)\*(.*)/) {
+	  if ($pseq =~ /([^\*]+)\*(.*)/) {
+	    my $pseq1_f=$1;
 	    $pseq=$2;
 	    # see if stop codon is result of selenocysteine (TGA)
 	    my $seq_flag=0;
-	    $offset+=length($1)*3;
+	    $offset+=length($pseq1_f)*3;
 	    my $stop=substr($mrna,$offset,3);
+	    if($verbose){
+	      my $pseq3_f=join('  ',split(//,$pseq1_f));
+	      my $mrna_f=substr($mrna,$last_offset,$offset-$last_offset);
+	      printf "%4d  ".$pseq3_f."   *\n%4d ".$mrna_f." ".$stop."\n",
+	      length($pseq1_f),length($mrna_f);
+	    }
 	    push(@stop,[$stop,$offset]);
 	    if($tstop){$tstop.="; ";}
 	    $tstop.="$offset:$stop";
-	    redo LOOP if($pseq);
+	    $offset+=3;
+	    $last_offset=$offset;
+	    redo LOOP if $pseq ne '';
 	  }
 	}
 	my $nstop=scalar(@stop);
