@@ -5,6 +5,8 @@
 use strict;
 use Bio::Otter::Lace::Defaults;
 
+$| = 1;
+
 {
     my( $dataset_name, $set_name );
     my $fix_flag = 0;
@@ -76,7 +78,7 @@ use Bio::Otter::Lace::Defaults;
                 my $sid_hash = $name_sid{$name};
                 if (keys %$sid_hash > 1) {
                     my @sid_list = map [$sid_hash->{$_}, $_], keys %$sid_hash;
-                    my ($first, @rest) = sort {$a->[0] cmp $b->[0]} @sid_list;
+                    my ($first, @rest) = sort {$b->[0] cmp $a->[0]} @sid_list;
                     my ($first_stable, $first_info) = @$first;
                     print "\n$name\t$first_stable\n";
                     my $i = 1;
@@ -86,6 +88,7 @@ use Bio::Otter::Lace::Defaults;
                         my $new = "$name-$i";
                         print "$new\t$stable\n";
                         $fix_name->execute($new, $info_id);
+                        fix_transcript_naming($dba, $stable, $i);
                     }
                 }
             }
@@ -101,8 +104,28 @@ use Bio::Otter::Lace::Defaults;
     }
 }
 
-
-
+sub fix_transcript_naming {
+    my( $dba, $stable, $n ) = @_;
+    
+    my $gene_aptr = $dba->get_GeneAdaptor;
+    my $gene = $gene_aptr->fetch_by_stable_id($stable);
+    my $update = $dba->prepare(q{
+        UPDATE transcript_info
+        SET name = ?
+        WHERE transcript_info_id = ?
+        });
+    my $tsct_list = $gene->get_all_Transcripts;
+    my @sorted = sort {$a->transcript_info->name cmp $b->transcript_info->name} @$tsct_list;
+        
+    foreach my $trans (@sorted) {
+        my $stable = $trans->stable_id;
+        my $info = $trans->transcript_info;
+        my $name = $info->name;
+        my $new = "$name-$n";
+        print "  $new\t$stable\n";
+        $update->execute($new, $info->dbID);
+    }
+}
 
 __END__
 
