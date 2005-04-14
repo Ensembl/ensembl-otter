@@ -19,17 +19,19 @@ $| = 1;
     my $liberal = 0;  # If set, doesn't care if it fails to find some exons
     my $test_flag = 0;  # Don't write realigned genes to database
     my $flank = 200_000;   # Extra space around gene to search
+    my $allow_other_accs;  # dangerous option to allow other transfer from non-current agp clones
 
     my $usage = sub { exec('perldoc', $0) };
     Bio::Otter::Lace::Defaults::do_getopt(
-        'h|help!'       => $usage,
-        'dataset=s'     => \$dataset_name,
-        'chr|set=s'     => \$sequence_set,
-        'start_acc=s'   => \$chr_start_acc,
-        'end_acc=s'     => \$chr_end_acc,
-        'liberal!'      => \$liberal,
-        'test!'         => \$test_flag,
-        'flank=i'       => \$flank,
+        'h|help!'          => $usage,
+        'dataset=s'        => \$dataset_name,
+        'chr|set=s'        => \$sequence_set,
+        'start_acc=s'      => \$chr_start_acc,
+        'end_acc=s'        => \$chr_end_acc,
+        'liberal!'         => \$liberal,
+        'test!'            => \$test_flag,
+        'flank=i'          => \$flank,
+        'allow_other_accs' => \$allow_other_accs,
         ) or $usage->();
     $usage->() unless $dataset_name and $sequence_set;
     
@@ -80,7 +82,7 @@ $| = 1;
         $slice_gene = undef;    # It has served its purpose
         
         my $gene_accs = undef;
-        if ($gene_accs = gene_accs_are_all_in_slice($db_gene, $slice_accs)) {
+        if ($gene_accs = gene_accs_are_all_in_slice($db_gene, $slice_accs, $allow_other_accs)) {
             print STDERR "Found off track gene '$name' ($stable_id)\n";
         } else {
             print STDERR "Found gene with accs not in slice '$name' ($stable_id)\n";
@@ -189,7 +191,7 @@ sub gene_is_truncated {
 }
 
 sub gene_accs_are_all_in_slice {
-    my( $gene, $slice_acc ) = @_;
+    my( $gene, $slice_acc, $allow_other_accs ) = @_;
     
     my $gene_acc = {};
     foreach my $exon (@{$gene->get_all_Exons}) {
@@ -199,7 +201,7 @@ sub gene_accs_are_all_in_slice {
         foreach my $exon (@$exon_list) {
             my $clone_acc = $exon->contig->clone->embl_id;
             $gene_acc->{$clone_acc} = 1;
-            return(undef) unless $slice_acc->{$clone_acc};
+            return(undef) unless ($slice_acc->{$clone_acc} || $allow_other_accs);
         }
     }
     # We found all the accessions the gene is attached to

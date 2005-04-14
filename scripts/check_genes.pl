@@ -27,20 +27,27 @@ my $opt_V;
 my $opt_D;
 my $opt_i='';
 my $opt_o='large_transcripts.lis';
+my $opt_O='check_genes_log.out';
 my $opt_p='duplicate_exons.lis';
 my $opt_q='near_duplicate_exons.lis';
 my $opt_r='missing_remarks.lis';
+my $opt_R='missing_descriptions.lis';
 my $cache_file='check_genes.cache';
 my $make_cache;
+my $read_cache;
 my $opt_c='';
 my $opt_s=1000000;
 my $opt_t;
-my $exclude='GD:';
+my $exclude='GD';
+my $exclude_all;
 my $ext;
 my $inprogress;
 my $vega;
 my $set;
 my $stats;
+my $opt_k;
+
+my $ncheck;
 
 $Getopt::Long::ignorecase=0;
 
@@ -58,18 +65,23 @@ GetOptions(
 	   'D',    \$opt_D,
 	   'i:s',  \$opt_i,
 	   'o:s',  \$opt_o,
+	   'O:s',  \$opt_O,
 	   'p:s',  \$opt_p,
 	   'q:s',  \$opt_q,
 	   'r:s',  \$opt_r,
+	   'R:s',  \$opt_R,
 	   'c:s',  \$opt_c,
 	   'make_cache',\$make_cache,
+	   'read_cache',\$read_cache,
 	   't:s',  \$opt_t,
 	   'exclude:s', \$exclude,
+	   'exclude_all', \$exclude_all,
 	   'external',  \$ext,
 	   'progress',  \$inprogress,
 	   'vega',      \$vega,
 	   'set:s',     \$set,
 	   'stats',     \$stats,
+	   'k:s',       \$opt_k,
 	   );
 
 # help
@@ -90,13 +102,17 @@ check_genes.pl
   -help                     perldoc help
   -v                        verbose
   -V                        really verbose
+  -O              file      report file ($opt_O)
   -o              file      output file ($opt_o)
   -p              file      output file ($opt_p)
   -q              file      output file ($opt_q)
   -r              file      output file ($opt_r)
+  -R              file      output file ($opt_R)
   -c              char      chromosome ($opt_c)
   -make_cache               make cache file
-  -exclude                  gene types prefixes to exclude ($exclude)
+  -read_cache               read cache file
+  -exclude        PRE[,PRE] gene types prefixes to exclude ($exclude)
+  -exclude_all              exclude all gene types prefixes
 
 Select sets (default is vega_sets tagged 'external' + 'internal', E+I)
   -external                 only consider vega_sets tagged as 'external' (E)
@@ -105,6 +121,8 @@ Select sets (default is vega_sets tagged 'external' + 'internal', E+I)
   -set            set       specified set only
 
   -stats                    calculate stats from cache file only
+
+  -k              file      read bad translations log file (to merge in output)
 ENDOFTEXT
     exit 0;
 }
@@ -116,8 +134,19 @@ if(my $err=&_db_connect(\$dbh,$host,$db,$user,$pass)){
   exit 0;
 }
 
-my $n=0;
-if($make_cache){
+open(LOG,">$opt_O") || die "cannot open $opt_O";
+
+my @data;
+if($read_cache){
+  open(IN,"$cache_file") || die "cannot open $opt_i";
+  while(<IN>){
+    chomp;
+    push(@data,[split(/\t/)]);
+  }
+}else{
+  my $n=0;
+
+  print LOG "START assembly processing\n\n";
 
   # get assemblies of interest
   my %a;
@@ -165,7 +194,15 @@ if($make_cache){
       $n++;
     }
   }
-  print "$n contigs read from selected assemblies; $no from other assemblies\n";
+  print LOG "$n contigs read from selected assemblies; $no from other assemblies\n";
+
+  # build a list of all gene_descriptions (not keeping gene_id so map to gene_stable_id)
+  my %gdes;
+  my $sth=$dbh->prepare("select gsi.stable_id from gene_stable_id gsi, gene_description gd where gsi.gene_id=gd.gene_id");
+  $sth->execute();
+  while (my ($gsi) = $sth->fetchrow_array()){
+    $gdes{$gsi}++;
+  }
 
   # build a list of transcript_info_id's of all transcript remarks
   my %trii;
@@ -174,6 +211,15 @@ if($make_cache){
   while (my @row = $sth->fetchrow_array()){
     my($trii)=@row;
     $trii{$trii}++;
+  }
+
+  # build a list of translations
+  my %tle;
+  my $sth=$dbh->prepare("select * from translation");
+  $sth->execute();
+  while (my @row = $sth->fetchrow_array()){
+    my($tlid,$est,$estid,$eed,$eedid)=@row;
+    $tle{$tlid}=[$est,$estid,$eed,$eedid];
   }
 
   # build list of all contigs, grouped by clone
@@ -207,23 +253,23 @@ if($make_cache){
 	    $a2{$cid2}=[$cla2,$clv2,$atype2,$clv,$cid,$cname,$atype];
 	    if($clv2<$clv){
 	      $no++;
-	      print "contig $cid2 is older ($cid)\n" if $opt_V;
+	      print LOG "contig $cid2 is older ($cid)\n" if $opt_V;
 	    }else{
 	      $nn++;
-	      print "contig $cid2 is newer ($cid)\n" if $opt_V;
+	      print LOG "contig $cid2 is newer ($cid)\n" if $opt_V;
 	    }
 	  }else{
 	    $ns++;
 	  }
 	}
       }else{
-	print "FATAL: contig $cid not found\n";
+	print LOG "FATAL: contig $cid not found\n";
 	exit 0;
       }
     }
     $nd=$nc-($ns+$no+$nn);
-    print "$nc contigs found; $nd different\n";
-    print "$ns are current; $no older; $nn newer versions\n";
+    print LOG "$nc contigs found; $nd different\n";
+    print LOG "$ns are current; $no older; $nn newer versions\n";
   }
 
   my $nexclude=0;
@@ -239,17 +285,18 @@ if($make_cache){
   my %type_gsi;
   my %gsi2gn;
   my %missing_tr;
+  my %missing_gdes;
   my $nobs=0;
 
   # get exons of current genes
   my $sth=$dbh->prepare("select gsi1.stable_id,gn.name,g.type,tsi.stable_id,ti.name,et.rank,e.exon_id,e.contig_id,e.contig_start,e.contig_end,e.sticky_rank,e.contig_strand,e.phase,e.end_phase,cti.transcript_info_id,t.translation_id from exon e, exon_transcript et, transcript t, current_gene_info cgi, gene_stable_id gsi1, gene_name gn, gene g, transcript_stable_id tsi, current_transcript_info cti, transcript_info ti left join gene_stable_id gsi2 on (gsi1.stable_id=gsi2.stable_id and gsi1.version<gsi2.version) where gsi2.stable_id IS NULL and cgi.gene_stable_id=gsi1.stable_id and cgi.gene_info_id=gn.gene_info_id and gsi1.gene_id=g.gene_id and g.gene_id=t.gene_id and t.transcript_id=tsi.transcript_id and tsi.stable_id=cti.transcript_stable_id and cti.transcript_info_id=ti.transcript_info_id and t.transcript_id=et.transcript_id and et.exon_id=e.exon_id and e.contig_id");
   $sth->execute;
-  open(OUT,">$cache_file") || die "cannot open cache file $cache_file";
+
   while (my @row = $sth->fetchrow_array()){
     $n++;
 
     # transform to chr coords
-    my($gsi,$gn,$gt,$tsi,$tn,$erank,$eid,$ecid,$est,$eed,$esr,$es,$ep,$eep,$tiid,$trid)=@row;
+    my($gsi,$gn,$gt,$tsi,$tn,$erank,$eid,$ecid,$est,$eed,$esr,$es,$ep,$eep,$tiid,$tlid)=@row;
 
     # skip obs genes
     if($gt eq 'obsolete'){
@@ -290,17 +337,27 @@ if($make_cache){
 	$ecst=$eced;
 	$eced=$t;
       }
-      my @row2=($gsi,$gn,$gt,$tsi,$tn,$erank,$eid,$ecst,$eced,$cname,$atype,$esr,$es,$ep,$eep,$trid);
-      print OUT join("\t",@row2)."\n";
+      my @row2=($gsi,$gn,$gt,$tsi,$tn,$erank,$eid,$ecst,$eced,$cname,$atype,$esr,$es,$ep,$eep,$tlid);
+      push(@data,[@row2]);
 
-      # record genes with no gene_remark
+      # record genes with no gene_description
+      my $type="$atype:$cname";
+      if(!$gdes{$gsi}){
+	$missing_gdes{$type}->{$gt}->{$gsi}=$gn;
+      }else{
+	$missing_gdes{$type}->{$gt}->{$gsi}=1;
+      }
+
+      # record transcripts with no transcript_remark
       if(!$trii{$tiid}){
 	$missing_tr{$gt}->{$tsi}="$gsi:$gn";
+      }else{
+	$missing_tr{$gt}->{$tsi}=1;
       }
       
       # record clones that each gsi are attached to and assembly for each gsi
       $gsi_clone{$gsi}->{"$cla.$clv"}=1;
-      $type_gsi{"$atype:$cname"}->{$gsi}=1;
+      $type_gsi{$type}->{$gsi}=1;
 
     }else{
       $nexclude++;
@@ -322,28 +379,69 @@ if($make_cache){
 	# an unknown contig
 	if(!$reported_gsi_cid{$gsi}->{$ecid}){
 	  $reported_gsi_cid{$gsi}->{$ecid}=1;
-	  print "WARN: $gsi attached to contig $ecid (unknown)\n" if $opt_v;
+	  print LOG "WARN: $gsi attached to contig $ecid (unknown)\n" if $opt_v;
 	}
       }
     }
     last if ($opt_t && $n>=$opt_t);
   }
-  close(OUT);
-  $dbh->disconnect();
 
-  # report all genes with missing remarks
-  print "Transcripts with missing remarks (see $opt_r):\n";
+  # report all genes with missing descriptions
+  print "gene_check report\n\n";
+  $ncheck++;
+  print "[$ncheck] Genes with missing descriptions (see $opt_R) - add descriptions:\n";
+  open (MOUT,">$opt_R") || die "cannot open missing descriptions file";
+  foreach my $type (sort keys %missing_gdes){
+    my($label,$atype,$cname)=type2label($type);
+    print "sequence_set $label\n";
+    print MOUT "sequence_set $label\n";
+    foreach my $gt (sort keys %{$missing_gdes{$type}}){
+      print " gene type $gt\n" if $gt eq 'Known';
+      print MOUT " gene type $gt\n";
+      my $n=0;
+      my $nt=0;
+      my $out='';
+      foreach my $gsi (sort keys %{$missing_gdes{$type}->{$gt}}){
+	$nt++;
+	my $gname=$missing_gdes{$type}->{$gt}->{$gsi};
+	next if $gname eq '1';
+	$n++;
+	$out.="   $gsi $gname\n";
+      }
+      if($n==1){
+	print "   $n/$nt gene has a missing description\n$out" if $gt eq 'Known';
+	print MOUT "   $n/$nt gene has a missing description\n$out";
+      }else{
+	print "   $n/$nt genes have missing descriptions\n$out" if $gt eq 'Known';
+	print MOUT "   $n/$nt genes have missing descriptions\n$out";
+      }
+    }
+  }
+  print "\n";
+  close MOUT;
+
+  # report all transcripts with missing_remarks
+  #$ncheck++;
+  print LOG "Transcripts with missing remarks (see $opt_r):\n";
   open (MOUT,">$opt_r") || die "cannot open remarks file";
   foreach my $gt (sort keys %missing_tr){
     my $n=0;
+    my $nt=0;
     my $out='';
     foreach my $tsi (sort keys %{$missing_tr{$gt}}){
       my $gname=$missing_tr{$gt}->{$tsi};
+      $nt++;
+      next if $gname eq '1';
       $n++;
       $out.="  $tsi ($gname)\n";
     }
-    print " $n transcripts of gene type $gt have missing remarks\n";
-    print MOUT " $n transcripts of gene type $gt have missing remarks:\n$out";
+    if($n==1){
+      print LOG " $n/$nt transcript of gene type $gt has a missing remark\n";
+      print MOUT " $n/$nt transcript of gene type $gt has a missing remark:\n$out";
+    }else{
+      print LOG " $n/$nt transcripts of gene type $gt have missing remarks\n";
+      print MOUT " $n/$nt transcripts of gene type $gt have missing remarks:\n$out";
+    }
   }
   print "\n";
   close(MOUT);
@@ -354,20 +452,11 @@ if($make_cache){
   my %orphan_gsi;
   foreach my $type (sort keys %type_gsi){
 
-    # in vega case, chromosome is most useful label
-    # in otter case, type is most useful label
-    my($atype,$cname)=split(/:/,$type);
-    my $label;
-    if($vega){
-      $label=$type;
-    }else{
-      $label=$atype;
-    }
-
+    my($label,$atype,$cname)=type2label($type);
     $n_offtrack{$label}->[0]=0;
     $n_offtrack{$label}->[1]=0;
     $n_offtrack{$label}->[2]=0;
-    print "sequence_set $label\n";
+    print LOG "sequence_set $label\n";
 
     # report partial genes:
     my %sv;
@@ -383,7 +472,7 @@ if($make_cache){
 	  }
 	}
 	my $gn=$gsi2gn{$gsi};
-	print " ERR1 $gsi ($gn) ss=\'$type\' has exon(s) off assembly:\n";
+	print LOG " ERR1 $gsi ($gn) ss=\'$type\' has exon(s) off assembly:\n";
 	$n_offtrack{$label}->[0]++;
 	# 3 diff classes of clones:
 	# V = different version of clone in assembly
@@ -395,8 +484,8 @@ if($make_cache){
 	if($a2c){$a2c="V:$a2c";}
 	if($aoc){$a2c="O:$a2c";}
 	if($auc){$a2c="U:$a2c";}
-	print "  on clones: $a2c $aoc $auc\n";
-	print "   ".join("\n   ",@{$excluded_gsi{$gsi}})."\n" if $opt_v;
+	print LOG "  on clones: $a2c $aoc $auc\n";
+	print LOG "   ".join("\n   ",@{$excluded_gsi{$gsi}})."\n" if $opt_v;
       }
     }
 
@@ -409,7 +498,7 @@ if($make_cache){
       my $sv="$cla.$clv";
       if($sv{$sv}){
 	my $glist=$sv{$sv};
-	print " [$n] $sv [$glist]\n";
+	print LOG " [$n] $sv [$glist]\n";
       }
     }
     
@@ -427,11 +516,11 @@ if($make_cache){
 	my $gn=$gsi2gn{$gsi};
 	$n_offtrack{$label}->[1]++;
 	if($onagp_gsi{$gsi}){
-	  print " ERR2 $gsi ($gn) ss=\'$atype\' some exon(s) off agp:\n";
+	  print LOG " ERR2 $gsi ($gn) ss=\'$atype\' some exon(s) off agp:\n";
 	}else{
-	  print " ERR2 $gsi ($gn) ss=\'$atype\' all exon(s) off agp:\n";
+	  print LOG " ERR2 $gsi ($gn) ss=\'$atype\' all exon(s) off agp:\n";
 	}
-	print "   ".join("\n   ",@{$offagp_gsi{$gsi}})."\n" if $opt_v;
+	print LOG "   ".join("\n   ",@{$offagp_gsi{$gsi}})."\n" if $opt_v;
       }
     }
     my $n=0;
@@ -442,7 +531,7 @@ if($make_cache){
       my $sv="$cla.$clv";
       if($sv2{$sv}){
 	my $glist=$sv2{$sv};
-	print " [$n] $sv [$glist]\n";
+	print LOG " [$n] $sv [$glist]\n";
       }
     }
 
@@ -466,17 +555,11 @@ if($make_cache){
       $sv{"$cla2.$clv"}=1;
       $type{$type}++;
     }
-    foreach my $type (keys %type){
-      my($atype,$cname)=split(/:/,$type);
-      my $label;
-      if($vega){
-	$label=$type;
-      }else{
-	$label=$atype;
-      }
+    foreach my $type (sort keys %type){
+      my($label)=type2label($type);
       $n_offtrack{$label}->[2]++;
     }
-    print " ERR3 $gsi ($gn) linked to =\'".join("\',\'",(keys %type))."\'; clones: ".
+    print LOG " ERR3 $gsi ($gn) linked to =\'".join("\',\'",(keys %type))."\'; clones: ".
 	join(",",(keys %sv))."\n";
     # 3 diff classes of clones:
     # V = different version of clone in assembly
@@ -488,36 +571,191 @@ if($make_cache){
     if($a2c){$a2c="V:$a2c";}
     if($aoc){$a2c="O:$a2c";}
     if($auc){$a2c="U:$a2c";}
-    print "  found on clones: $a2c $aoc $auc\n";
-    print "   ".join("\n   ",@{$excluded_gsi{$gsi}})."\n" if $opt_v;
+    print LOG "  found on clones: $a2c $aoc $auc\n";
+    print LOG "   ".join("\n   ",@{$excluded_gsi{$gsi}})."\n" if $opt_v;
   }
 
-  print "wrote $n records to cache file $cache_file\n";
-  print "wrote $nexclude exons ignored as not in selected assembly\n";
-  print "skipped $nobs exons marked as obsolete\n";
+  print LOG "wrote $n records to cache file $cache_file\n";
+  print LOG "wrote $nexclude exons ignored as not in selected assembly\n";
+  print LOG "skipped $nobs exons marked as obsolete\n";
 
-  print "\nNumber of offtrack gene problems by sequence_set and type (ERR1, ERR2, ERR3)\n";
+  print LOG "\nNumber of offtrack gene problems by sequence_set and type (ERR1, ERR2, ERR3)\n";
   foreach my $label (sort keys %n_offtrack){
-    printf "%-20s %4d %4d %4d\n",$label,@{$n_offtrack{$label}};
+    printf LOG "%-20s %4d %4d %4d\n",$label,@{$n_offtrack{$label}};
   }
 
-  exit 0;
+  print LOG "\nChecking consistency of translations\n";
+
+  # attach translation information to exons, looking for exons that are part of both...
+  # states 1: before; 2: coding; 3 endcoding; 4: after
+  my %etls;
+  my $last_tsi;
+  my $last_eid;
+  my $state;
+  my($est,$estid,$eed,$eedid);
+  my $nis=0;
+  my $nodd=0;
+  my $nss=0;
+  foreach my $rdata (sort {
+                           $a->[0] cmp $b->[0] ||
+                           $a->[3] cmp $b->[3] ||
+                           $a->[5]<=>$b->[5]
+			 } @data){
+    my($gsi,$gn,$gt,$tsi,$tn,$erank,$eid,$ecst,$eced,$cname,$atype,$esr,$es,$ep,$eep,$tlid)=@$rdata;
+
+    # nothing to annotate if no translation
+    next unless $tlid;
+
+    # ignore sticky exons in this case
+    next if($eid==$last_eid);
+    $last_eid=$eid;
+
+    # reset state
+    if($tsi ne $last_tsi){
+      $state=1;
+      $last_tsi=$tsi;
+    }
+
+    if($tle{$tlid}){
+      ($est,$estid,$eed,$eedid)=@{$tle{$tlid}};
+      if($eid eq $estid){
+	if($eid eq $eedid){
+	  # single: ->3
+	  if($state==1){
+	    $state=3;
+	  }else{
+	    print LOG "FATAL $tlid, $eid: exon/translation order error $state => 6\n";
+	  }
+	}else{
+	  # start: ->2
+	  if($state==1){
+	    $state=2;
+	  }else{
+	    print LOG "FATAL $tlid, $eid: exon/translation order error $state => 2\n";
+	  }
+	}
+      }elsif($eid eq $eedid){
+	if($state==2){
+	  # end: ->3
+	  $state=3;
+	}else{
+	  print LOG "FATAL $tlid, $eid: exon/translation order error $state => 4\n";
+	}
+      }else{
+	if($state==3){
+	  # middle: ->4
+	  $state=4;
+	}
+      }
+    }else{
+      print LOG "FATAL no entry in translation table for translation_id $tlid\n";
+    }
+    if($etls{$eid}){
+      my($state2,$tlid2)=@{$etls{$eid}};
+      if($state2!=$state){
+	if(($state==1 && $state2==4) || ($state==4 && $state==1)){
+	  print LOG "  WARN: $eid used by two translations oddly: $tlid:$state; $tlid2:$state2\n";
+	  $nodd++;
+	}else{
+	  print LOG "  ERROR: $eid used by two translations inconsistently: $tlid:$state; $tlid2:$state2\n";
+	  $nis++;
+	}
+      }else{
+	print LOG "  INFO: $eid used by two translation consistently: $tlid, $tlid2 $state\n" if $opt_V;
+	$nss++;
+      }
+    }else{
+      $etls{$eid}=[$state,$tlid];
+    }
+  }
+
+  # loop again to check if any CDS exons (states 2,3) are used in transcripts with no translation
+  my $nis2=0;
+  for(my $i=0;$i<scalar(@data);$i++){
+    my($gsi,$gn,$gt,$tsi,$tn,$erank,$eid,$ecst,$eced,$cname,$atype,$esr,$es,$ep,$eep,$tlid)=@{$data[$i]};
+    my($state2,$tlid2);
+    if($etls{$eid}){
+      ($state,$tlid2)=@{$etls{$eid}};
+    }else{
+      $state=0;
+    }
+    push(@{$data[$i]},$state);
+    next if($tlid);
+    if($state==2 || $state==3){
+      print LOG "ERROR: $eid used by translation and transcript inconsistently: $tlid2:$state; transcript $tsi\n";
+      $nis2++;
+    }
+  }  
+
+  print LOG "$nis exons used inconsistently by two translations - ERROR\n";
+  print LOG "$nis2 exons used inconsistently by translation and transcript - ERROR\n";
+  print LOG "$nodd exons used oddly by two translations - WARN\n";
+  print LOG "$nss exons used consistently by two translations - INFO\n";
+
+  print LOG "\nEND assembly processing\n\n";
+
+  # if saving cache file
+  if($make_cache){
+    open(OUT,">$cache_file") || die "cannot open cache file $cache_file";
+    foreach my $rdata (@data){
+      print OUT join("\t",@$rdata)."\n";
+    }
+    close(OUT);
+  }
+
+}
+
+# read list of bad translations so can report which genes have bad translations
+my %bt;
+my %bg;
+if($opt_k){
+  my $ne=0;
+  open(IN,"$opt_k") || die "cannot open $opt_k";
+  my $old_tid;
+  my $flag;
+  while(<IN>){
+    chomp;
+    if(/remark:\s+(.*)/){
+      if($flag){
+	push(@{$bt{$old_tid}},$1);
+      }
+    }elsif(/^\s*$/){
+    }else{
+      my($gn,$tn,$tid,$ne,$type,$label,$nstop,$tstop)=split(/\s+/);
+      if($gn=~/(\w+):(.*)/){
+	my $prefix=$1;
+	if($exclude_all || ($exclude=~/$prefix/)){
+	  $ne++;
+	  $flag=0;
+	}
+      }else{
+	$bt{$tid}=[$gn,$tn,$ne,$type,$label,$nstop,$tstop];
+	push(@{$bg{$gn}},$tid);
+	$old_tid=$tid;
+	$flag=1;
+      }
+    }
+  }
+  print LOG scalar(keys %bt)." bad translations found in check translations output\n\n";
+  print LOG "$ne genes with prefix excluded (reading from $opt_k)\n";
 }
 
 my %gsi;
 my %gsi_sum;
 my %tsi_sum;
-my %atype;
 my $n=0;
 my $nobs=0;
 my $nexclude=0;
 my %ngtgnerr;
 my %ngtgnerr2;
 my %ngtgnerr3;
-open(IN,"$cache_file") || die "cannot open $opt_i";
-while(<IN>){
-  chomp;
-  my($gsi,$gn,$gt,$tsi,$tn,$erank,$eid,$ecst,$eced,$cname,$atype,$esr,$es,$ep,$eep,$trid)=split(/\t/);
+
+print LOG "START gene processing\n\n";
+
+# unpack data array
+foreach my $rdata (@data){
+  my($gsi,$gn,$gt,$tsi,$tn,$erank,$eid,$ecst,$eced,$cname,$atype,$esr,$es,$ep,$eep,$tlid,$tls)=
+      @$rdata;
 
   # skip obs genes
   if($gt eq 'obsolete'){
@@ -525,114 +763,107 @@ while(<IN>){
     next;
   }
 
-  # warn for mislabelled genes
-  foreach my $excl (split(/,/,$exclude)){
-    if($gt=~/^$excl/ && $gn!~/^$excl/){
-      if(!$ngtgnerr2{$gsi}){
-	$ngtgnerr2{$gsi}=1;
-	print "WARN2 $gsi: type=\'$gt\' but name=\'$gn\'\n" if $opt_v;
-      }
+  # gn, gt, tn can all have prefixes, and they should be consistent:
+  # warn for mislabelled genes/transcripts
+  my $gnpre='';
+  if($gn=~/^(\w+):/){
+    $gnpre=$1;
+  }
+  my $tnpre='';
+  if($tn=~/^(\w+):/){
+    $tnpre=$1;
+  }
+  my $gtpre='';
+  if($gt=~/^(\w+):/){
+    $gtpre=$1;
+  }
+  #print "DEBUG|$gnpre|$gtpre|$tnpre|$exclude_all|\n";
+  
+  if($gnpre ne $gtpre){
+    if(!$ngtgnerr2{$gn}){
+      $ngtgnerr2{$gn}=1;
+      print LOG "WARN2 prefix mismatch: name=\'$gn\', type=\'$gt\'\n" if $opt_v;
     }
   }
 
-  # warn for mislabelled genes/transcripts
-  my $gpre='';
-  if($gsi=~/^(\w+):/){
-    my $gpre=$1;
-  }
-  my $tpre='';
-  if($tsi=~/^(\w+):/){
-    my $tpre=$1;
-  }
-  if($gpre ne $tpre){
-    if(!$ngtgnerr3{$tsi}){
-      $ngtgnerr3{$tsi}=1;
-      print "WARN3 $gsi: $tsi\n";
+  if($gnpre ne $tnpre){
+    if(!$ngtgnerr3{$tn}){
+      $ngtgnerr3{$tn}=1;
+      print LOG "WARN3 prefix mismatch: name=\'$gn\', name=\'$tn\'\n" if $opt_v;
     }
   }
 
   my $eflag=0;
-  foreach my $excl (split(/,/,$exclude)){
-    if($gt=~/^$excl/){
-      $nexclude++;
-      $eflag=1;
-      last;
-    }
-  }
-  next if $eflag;
-
-  # warn for mislabelled genes
-  foreach my $excl (split(/,/,$exclude)){
-    if($gn=~/^$excl/){
-      $eflag=1;
-      if(!$ngtgnerr{$gsi}){
-	$ngtgnerr{$gsi}=1;
-	print "WARN $gsi: type=\'$gt\' but name=\'$gn\'\n" if $opt_v;
+  if($exclude_all && ($gnpre || $gtpre || $tnpre)){
+    $eflag=1;
+  }elsif($exclude && ($gnpre || $gtpre || $tnpre)){
+    foreach my $excl (split(/,/,$exclude)){
+      if($gnpre eq $excl || $gtpre eq $excl || $tnpre eq $excl){
+	$eflag=1;
+	last;
       }
     }
   }
-  next if $eflag;
-
-  # expect transcripts to stay on same assembly
-  if($tsi_sum{$tsi}){
-    my($tn2,$cname2,$atype2)=@{$tsi_sum{$tsi}};
-    if($cname2 ne $cname){
-      print "ERR: $gsi ($gn): $tsi ($tn) on chr $cname and $cname2\n";
-    }elsif($atype ne $atype2){
-      print "ERR: $gsi ($gn): $tsi ($tn) on chr $atype and $atype2\n";
-    }
-  }else{
-    $tsi_sum{$tsi}=[$tn,$cname,$atype];
+  if($eflag){
+    $nexclude++;
+    next;
   }
 
-  push(@{$gsi{$atype}->{$gsi}},[$tsi,$erank,$eid,$ecst,$eced,$esr,$es,$ep,$eep,$trid]);
+  # expect transcripts to stay on same assembly
+  my $type="$atype:$cname";
+  if($tsi_sum{$tsi}){
+    my($tn2,$type2)=@{$tsi_sum{$tsi}};
+    if($type2 ne $type){
+      print LOG "ERROR: $gsi ($gn): $tsi ($tn) on type:chr $type and $type2\n";
+    }
+  }else{
+    $tsi_sum{$tsi}=[$tn,$type];
+  }
+
+  push(@{$gsi{$type}->{$gsi}},[$tsi,$erank,$eid,$ecst,$eced,$esr,$es,$ep,$eep,$tlid,$tls]);
 
   # these relationships should be fixed
-  $atype{$atype}=$cname;
   $gsi_sum{$gsi}=[$gn,$gt];
 
   $n++;
 }
 close(IN);
-print scalar(keys %gsi_sum)." genes read; $nobs obsolete skipped; $nexclude excluded\n";
-print "$n name relationships read\n\n";
-print scalar(keys %ngtgnerr)." naming errors (GD:name; type)\n";
-print scalar(keys %ngtgnerr2)." naming errors (name; GD:type\n";
+print LOG scalar(keys %gsi_sum)." genes read; $nobs obsolete skipped; $nexclude excluded\n";
+print LOG "$n name relationships read\n\n";
+print LOG scalar(keys %ngtgnerr)." naming errors (GD:name; type)\n";
+print LOG scalar(keys %ngtgnerr2)." naming errors (name; GD:type\n";
 
 # another option for script, to use cache file to generate gene count stats
 if($stats){
   my %stats;
-  foreach my $atype (keys %gsi){
-    my $cname=$atype{$atype};
-    foreach my $gsi (keys %{$gsi{$atype}}){
+  foreach my $type (keys %gsi){
+    foreach my $gsi (keys %{$gsi{$type}}){
       my($gn,$gt)=@{$gsi_sum{$gsi}};
-      foreach my $set ($atype,'All'){
-	foreach my $type ($gt,'All'){
+      foreach my $set ($type,'All'){
+	foreach my $type2 ($gt,'All'){
 	  # count genes
-	  $stats{$set}->{$type}->[0]++;
+	  $stats{$set}->{$type2}->[0]++;
 	  my %t;
 	  my %e;
-	  foreach my $re (@{$gsi{$atype}->{$gsi}}){
+	  foreach my $re (@{$gsi{$type}->{$gsi}}){
 	    my($tsi,$erank,$eid)=@$re;
 	    $t{$tsi}++;
 	    $e{$eid}++;
 	    # number of exons
-	    $stats{$set}->{$type}->[2]++;
+	    $stats{$set}->{$type2}->[2]++;
 	  }
 	  # number of transcripts
-	  $stats{$set}->{$type}->[1]+=scalar(keys %t);
+	  $stats{$set}->{$type2}->[1]+=scalar(keys %t);
 	  # number of unique exons
-	  $stats{$set}->{$type}->[3]+=scalar(keys %e);
+	  $stats{$set}->{$type2}->[3]+=scalar(keys %e);
 	}
       }
     }
   }
-  $atype{'All'}='All';
-  foreach my $atype (sort keys %stats){
-    my $cname=$atype{$atype};
-    foreach my $type (sort keys %{$stats{$atype}}){
+  foreach my $type (sort keys %stats){
+    foreach my $type2 (sort keys %{$stats{$type}}){
       printf "%-20s %-25s %6d %6d %6d %6d\n",
-      "$atype ($cname)",$type,@{$stats{$atype}->{$type}};
+      $type,$type2,@{$stats{atype}->{$type2}};
     }
   }
   exit 0;
@@ -653,8 +884,8 @@ while (my @row = $sth->fetchrow_array()){
   my $embl_acc=shift @row;
   $a{$type}->{$embl_acc}=[@row];
   $n++;
-  }
-print "$n contigs read from assembly\n";
+}
+print LOG "$n contigs read from assembly\n";
 
 my $nsticky=0;
 my $nexon=0;
@@ -673,13 +904,48 @@ my %e;
 my %elink;
 my %eall;
 my %e2g;
+
+# process bad translations
+if($opt_k){
+  $ncheck++;
+  print "[$ncheck] Following genes have STOP codons - editing or seleno labelling required\n";
+  foreach my $type (sort keys %gsi){
+    my($label,$atype,$cname)=type2label($type);
+    print "\nChecking \'$atype\' (chr \'$cname\')\n";
+    foreach my $gsi (keys %{$gsi{$type}}){
+      my($gn,$gt)=@{$gsi_sum{$gsi}};
+      if($bg{$gn}){
+	# because -k output is keyd off genename, which may not be unique (alleles)
+	# have to do this convoluted lookup off TIDs - pretty stupid!
+	my $out="  Translations in $gsi ($gn) have stops\n";
+	my %tid;
+	%tid=map{$_->[1],1}@{$gsi{$type}->{$gsi}};
+	my $flag_ok;
+	foreach my $tid (@{$bg{$gn}}){
+	  next unless $tid{$tid};
+	  $flag_ok=1;
+	  my($gn,$tn,$ne,$type,$label,$nstop,$tstop,@remarks)=@{$bt{$tid}};
+	  $out.="    $tid $tn $ne $type $label $nstop $tstop\n";
+	  foreach my $remark (@remarks){
+	    $out.="      Remark: $remark\n";
+	  }
+	}
+	print $out if $flag_ok;
+      }
+    }
+  }
+  print "\n\n";
+}
+
+$ncheck++;
+print "[$ncheck] Genes composed of transcripts that do not overlap - transcripts may need merging\n";
 open(OUT,">$opt_o") || die "cannot open $opt_o";
 open(OUT2,">$opt_p") || die "cannot open $opt_p";
 open(OUT3,">$opt_q") || die "cannot open $opt_q";
-foreach my $atype (keys %gsi){
-  my $cname=$atype{$atype};
-  print "Checking \'$atype\' (chr \'$cname\')\n";
-  foreach my $gsi (keys %{$gsi{$atype}}){
+foreach my $type (sort keys %gsi){
+  my($label,$atype,$cname)=type2label($type);
+  print "\nChecking \'$atype\' (chr \'$cname\')\n";
+  foreach my $gsi (keys %{$gsi{$type}}){
 
     # debug:
     if($gsi eq 'OTTHUMG00000032751' && $opt_D){
@@ -696,18 +962,17 @@ foreach my $atype (keys %gsi){
     my %etrans;
     # look for overlapping exons and group exons into transcripts
     # (one gene at a time)
-#    foreach my $rt (@{$gsi{$atype}->{$gsi}}){
     foreach my $rt (sort {
                           $a->[0]<=>$b->[0] || 
                           $a->[1]<=>$b->[1] || 
                           $a->[5]<=>$b->[5]
-			    } @{$gsi{$atype}->{$gsi}}){
-      my($tsi,$erank,$eid,$ecst,$eced,$esr,$es,$ep,$eep,$trid)=@{$rt};
+			    } @{$gsi{$type}->{$gsi}}){
+      my($tsi,$erank,$eid,$ecst,$eced,$esr,$es,$ep,$eep,$tlid,$tls)=@{$rt};
       if($e{$gsi}->{$eid}){
 	# either stored as sticky rank2 or this is sticky rank2
 	if($eids{$eid} || $esr>1){
 
-	  my($st,$ed,$es,$ep,$eep,$trid)=@{$e{$gsi}->{$eid}};
+	  my($st,$ed,$es,$ep,$eep,$tlid,$tls)=@{$e{$gsi}->{$eid}};
 
 	  # save originals
 	  my $esro=1;
@@ -734,14 +999,14 @@ foreach my $atype (keys %gsi){
 	  }elsif($ed+1==$ecst){
 	    $eids{"$eid.$esr"}=[$ecst,$eced];
 	    $ed=$eced;
-	    $e{$gsi}->{$eid}=[$st,$ed,$es,$ep,$eep,$trid];
+	    $e{$gsi}->{$eid}=[$st,$ed,$es,$ep,$eep,$tlid,$tls];
 	    $nsticky++;
 	  }elsif($eced+1==$st){
 	    $st=$ecst;
-	    $e{$gsi}->{$eid}=[$st,$ed,$es,$ep,$eep,$trid];
+	    $e{$gsi}->{$eid}=[$st,$ed,$es,$ep,$eep,$tlid,$tls];
 	    $nsticky++;
 	  }else{
-	    print "ERR: duplicate exon id $eid, but no sticky alignment\n";
+	    print LOG "ERROR: duplicate exon id $eid, but no sticky alignment\n";
 	  }
 	}
       }else{
@@ -749,8 +1014,9 @@ foreach my $atype (keys %gsi){
 	
 	# check consistency of phase of exon
 	# and consistency wrt to translation of each instance of each exon
+	# (note: before $eid->$eid2 in case of duplication)
 	my($t,$p);
-	if($trid==0){
+	if($tlid==0){
 	  $t=1;
 	  $p=0;
 	}else{
@@ -766,17 +1032,17 @@ foreach my $atype (keys %gsi){
 	      $nip++;
 	    }
 	  }
-	  $etrans{$eid}=[$flag_noncoding,$t,$p];
+	  $etrans{$eid}=[$flag_noncoding,$t,$p,$ep,$eep];
 	}else{
-	  my($f,$t1,$p1)=@{$etrans{$eid}};
+	  my($f,$t1,$p1,$ep,$eep)=@{$etrans{$eid}};
 	  $t1+=$t;
 	  $p1+=$p;
-	  $etrans{$eid}=[$f,$t1,$p1];
+	  $etrans{$eid}=[$f,$t1,$p1,$ep,$eep];
 	}
 
 	# compare current exon to all existing ones...
 	foreach my $eid2 (keys %{$e{$gsi}}){
-	  my($st,$ed,$es2,$ep2,$eep2,$trid2)=@{$e{$gsi}->{$eid2}};
+	  my($st,$ed,$es2,$ep2,$eep2,$tlid2,$tls)=@{$e{$gsi}->{$eid2}};
 	  if($st==$ecst && $ed==$eced){
 	    # duplicate exons
 	    if($es!=$es2){
@@ -788,20 +1054,20 @@ foreach my $atype (keys %gsi){
 	      print OUT3 "WARN NON-DUP: $eid, $eid2 identical but diff end phases ($eep,$eep2) [$ep,$ep2]\n";
 	    }elsif($dup_exon{$eid}==$eid2 || $dup_exon{$eid2}==$eid){
 	      # don't report again
-	      print "should never happen $eid, $eid2\n";
+	      print LOG "should never happen $eid, $eid2\n";
 	    }
 	    # if seen this phase before, for a different eid, then a duplicate - delete
 	    my $dflag=0;
 	    foreach my $rp (@{$ephases{$eid2}}){
 	      my($eid3,$es3,$ep3,$eep3)=@$rp;
 	      if($eid!=$eid3 && $es==$es3 && $ep==$ep3 && $eep==$eep3){
-		$dflag=1;
+		$dflag=$eid3;
 	      }
 	    }
 	    if($dflag){
 	      if($dup_exon{$eid}!=$eid2){
 		$dup_exon{$eid}=$eid2;
-		print OUT2 "$eid\t$eid2\t$st\t$ed\n";
+		print OUT2 "$eid\t$dflag\t$st\t$ed\n";
 	      }
 	    }else{
 	      push(@{$ephases{$eid2}},[$eid,$es,$ep,$eep]);
@@ -819,7 +1085,7 @@ foreach my $atype (keys %gsi){
 	  }
 	}
 	if(!$flag){
-	  $e{$gsi}->{$eid}=[$ecst,$eced,$es,$ep,$eep,$trid];
+	  $e{$gsi}->{$eid}=[$ecst,$eced,$es,$ep,$eep,$tlid,$tls];
 	  push(@{$ephases{$eid}},[$eid,$es,$ep,$eep]);
 	  push(@{$eall{$ecst}->{$eced}},$eid);
 	  $eids{$eid}=$esr if $esr>1;
@@ -830,7 +1096,7 @@ foreach my $atype (keys %gsi){
       push(@{$e2t{$gsi}->{$eid}},$tsi);
       if($e2g{$eid} && $e2g{$eid} ne $gsi){
 	# eids should only be part of a single gid
-	print "FATAL $eid part of $gsi and $e2g{$eid}\n";
+	print LOG "FATAL $eid part of $gsi and $e2g{$eid}\n";
       }else{
 	$e2g{$eid}=$gsi;
       }
@@ -838,7 +1104,7 @@ foreach my $atype (keys %gsi){
 
     # report consistency of exon phase wrt translation
     foreach my $eid (keys %etrans){
-      my($f,$t,$p)=@{$etrans{$eid}};
+      my($f,$t,$p,$ep,$eep)=@{$etrans{$eid}};
       if($f==0 && $t){
 	if($p){
 	  print OUT3 "ERR3 $eid $ep $eep exon has phase when sometimes translation\n";
@@ -873,12 +1139,12 @@ foreach my $atype (keys %gsi){
     # link exons by transcripts
     foreach my $tsi (keys %{$t2e{$gsi}}){
       $cl->link([@{$t2e{$gsi}->{$tsi}}]);
-      print "D: $tsi ".join(',',@{$t2e{$gsi}->{$tsi}})."\n" if $flag_v;
+      print LOG "D: $tsi ".join(',',@{$t2e{$gsi}->{$tsi}})."\n" if $flag_v;
     }
     # link exons by overlap
     foreach my $eid (keys %{$elink{$gsi}}){
       $cl->link([$eid,@{$elink{$gsi}->{$eid}}]);
-      print "D: $eid ".join(',',@{$elink{$gsi}->{$eid}})."\n" if $flag_v;
+      print LOG "D: $eid ".join(',',@{$elink{$gsi}->{$eid}})."\n" if $flag_v;
     }
     if($cl->cluster_count>1){
       print "$gsi ($gt,$gn) has multiple clusters\n";
@@ -926,20 +1192,24 @@ foreach my $atype (keys %gsi){
 	$last_ed=$ed if $ed>$last_ed;
       }
       $nmc++;
+      print "\n";
     }
   }
 }
-print scalar(keys %dup_exon)." duplicate exons\n";
-print "$nmc genes with non overlapping transcripts; $nmcb cases gap crosses single clone boudary\n";
-print "found $nexon exons; $nsticky sticky exons\n";
-print "$nip exons have inconsistent noncoding phases;\n";
-print "$npstr exons have phase when sometimes translation; $npntr exons have phase when never translation\n";
-print "$nl large transcripts found (see $opt_o)\n\n";
+print LOG scalar(keys %dup_exon)." duplicate exons\n";
+print LOG "$nmc genes with non overlapping transcripts; $nmcb cases gap crosses single clone boudary\n";
+print LOG "found $nexon exons; $nsticky sticky exons\n";
+print LOG "$nip exons have inconsistent noncoding phases;\n";
+print LOG "$npstr exons have phase when sometimes translation; $npntr exons have phase when never translation\n";
+
+$ncheck++;
+print "\n[$ncheck] $nl large transcripts found (see $opt_o) - annotation errors?\n\n";
 close(OUT);
 close(OUT2);
 close(OUT3);
 
-# global check on duplicate exons - look for cases where exact duplicate exons are part of different genes
+# global check on duplicate exons
+# look for cases where exact duplicate exons are part of different genes
 # (note: considers duplicate even when phases are different)
 my $dgcl=new cluster();
 # need to keep a list of exons that are involved in pairs
@@ -966,8 +1236,10 @@ foreach my $ecst (keys %eall){
   }
 }
 my $ngcl=$dgcl->cluster_count;
-if($ngcl>1){
-  print "$ngcl clusters of genes that share identical exons\n";
+$ncheck++;
+print "[$ncheck] $ngcl Clusters of genes which share identical exons - may be duplicates:\n";
+if($ngcl>0){
+  my %out;
   # analysis by cluster
   my $igcl=0;
   foreach my $cid ($dgcl->cluster_ids){
@@ -997,14 +1269,15 @@ if($ngcl>1){
     }
     my @ctsi=$tcl->cluster_ids;
     my @tsi=$tcl->cluster_members($ctsi[0]);
-    my($tn,$cname,$atype)=@{$tsi_sum{$tsi[0]}};
-    print " Cluster $igcl: ".scalar(@gsi)." genes; ".scalar(@ctsi)." sets of duplicated transcripts [$cname,$atype]\n";
+    my($tn,$type)=@{$tsi_sum{$tsi[0]}};
+    $out{$type}.=" Cluster $igcl: ".scalar(@gsi)." genes; ".scalar(@ctsi).
+	" sets of duplicated transcripts\n";
 
     my $itcl=0;
     foreach my $tcid (@ctsi){
       $itcl++;
       my @tsi=$tcl->cluster_members($tcid);
-      print "  Transcript set $itcl: ".scalar(@tsi)." transcripts\n";
+      $out{$type}.="  Transcript set $itcl: ".scalar(@tsi)." transcripts\n";
       my %tsi=map{$_,1}@tsi;
       my %gset;
       my %tset;
@@ -1062,7 +1335,7 @@ if($ngcl>1){
       foreach my $gsi (sort @gsi){
 	my($ntd,$nt)=@{$gset{$gsi}};
 	my($gn,$gt)=@{$gsi_sum{$gsi}};
-	print "  $gsi ($gn, $gt) $ntd/$nt transcripts in duplication:\n";
+	$out{$type}.="  $gsi ($gn, $gt) $ntd/$nt transcripts in duplication:\n";
 	foreach my $tsi (sort keys %{$tset{$gsi}}){
 	  my($tn)=@{$tsi_sum{$tsi}};
 	  my($ned,$ne,@eo)=@{$tset{$gsi}->{$tsi}};
@@ -1071,26 +1344,35 @@ if($ngcl>1){
 	      $eo[$i]=$id{$eo[$i]};
 	    }
 	  }
-	  print "    $tsi ($tn) $ned/$ne exons: ".join(' ',@eo)."\n";
+	  $out{$type}.="    $tsi ($tn) $ned/$ne exons: ".join(' ',@eo)."\n";
 	}
       }
     }
+    $out{$type}.="\n";
+  }
+  foreach my $type (sort keys %out){
+    my($label,$atype,$cname)=type2label($type);
+    print "sequence_set $label\n";
+    print $out{$type};
   }
 }
 print "\n";
 
 # new check - for each transcript, check all exons are sequential, same strand
 # sensible direction etc.  Check orientation of all transcripts in a gene consistent
+$ncheck++;
+print "[$ncheck] Transcripts with out of order exons - fix required\n";
 my $neo=0;
 my $ned=0;
 my $ntd=0;
-foreach my $atype (keys %gsi){
-  my $cname=$atype{$atype};
-  foreach my $gsi (keys %{$gsi{$atype}}){
+foreach my $type (sort keys %gsi){
+  my($label,$atype,$cname)=type2label($type);
+  print "sequence_set $label\n";
+  foreach my $gsi (keys %{$gsi{$type}}){
     my($gn,$gt)=@{$gsi_sum{$gsi}};
     # structure data
     my %tsi;
-    foreach my $re (@{$gsi{$atype}->{$gsi}}){
+    foreach my $re (@{$gsi{$type}->{$gsi}}){
       my($tsi,$erank,$eid,$ecst,$eced,$esr,$es,$ep,$eep)=@$re;
       $erank--;
       # id, st, ed, esr, strand, phase, endphase
@@ -1111,29 +1393,50 @@ foreach my $atype (keys %gsi){
 	  }elsif($eced2+1==$ecst){
 	    $ecst=$ecst2;
 	  }else{
-	    print "FATAL: cannot merge sticky exons $tsi: $eid:$ecst-$eced, $eid2:$ecst2-$eced2\n";
+	    my $out;
+	    my $diff;
+	    if($eced2-$ecst>$eced-$ecst2){
+	      $out="$ecst-$eced..$ecst2-$eced2\n";
+	      $diff=$ecst2-$eced;
+	      $eced=$eced2;
+	    }else{
+	      $out="$ecst2-$eced2..$ecst-$eced\n";
+	      $diff=$ecst-$eced2;
+	      $ecst=$ecst2;
+	    }
+	    if($diff>1){
+	      print LOG "ERROR: merging sticky exons $eid over gap in $tsi: $out";
+	    }else{
+	      print LOG "ERROR: merging overlapping sticky exons $eid in $tsi: $out";
+	    }
 	  }
 	  $tsi{$tsi}->[$erank]=[$eid,$ecst,$eced,$esr3,$es,$ep,$eep];
 	}else{
-	  print "FATAL: Duplicate rank for $tsi, $erank\n";
+	  print LOG "FATAL: Duplicate rank for $tsi, $erank\n";
 	}
       }else{
 	$tsi{$tsi}->[$erank]=[$eid,$ecst,$eced,$esr,$es,$ep,$eep];
       }
     }
     my $dirg=0;
+
+
     foreach my $tsi (keys %tsi){
       my $last;
       my $dirt=0;
       for(my $i=0;$i<scalar(@{$tsi{$tsi}});$i++){
-	my($eid,$ecst,$eced,$esr,$es,$ep,$eep)=@{$tsi{$tsi}->[$i]};
 	my $erank=$i+1;
-	print "WARN $tsi: unresolved sticky in $eid $esr\n" if $esr>1;
+	if(!$tsi{$tsi}->[$i]){
+	  print LOG "WARN $tsi: exon rank $erank is missing from this slice\n";
+	  next;
+	}
+	my($eid,$ecst,$eced,$esr,$es,$ep,$eep)=@{$tsi{$tsi}->[$i]};
+	print LOG "WARN $tsi: unresolved sticky in $eid $esr\n" if $esr>1;
 
 	# check consistent direction
 	if($dirt){
 	  if($es!=$dirt){
-	    print "ERR: $tsi direction is $dirt, but exon $eid is $es\n";
+	    print "  $tsi direction is $dirt, but exon $eid is $es\n";
 	    $ned++;
 	    next;
 	  }
@@ -1145,7 +1448,7 @@ foreach my $atype (keys %gsi){
 	if($dirt==1){
 	  if($last){
 	    if($last>=$ecst){
-	      print "ERR: $gsi $tsi exon $erank ($eid) out of order $ecst-$eced follows $last ($dirt)\n";
+	      print "  ERROR: $gsi $tsi exon $erank ($eid) out of order $ecst-$eced follows $last ($dirt)\n";
 	      $neo++;
 	    }else{
 	      $last=$eced;
@@ -1156,7 +1459,7 @@ foreach my $atype (keys %gsi){
 	}else{
 	  if($last){
 	    if($last<=$eced){
-	      print "ERR: $gsi $tsi exon $erank ($eid) out of order $ecst-$eced follows $last ($dirt)\n";
+	      print "  ERROR: $gsi $tsi exon $erank ($eid) out of order $ecst-$eced follows $last ($dirt)\n";
 	      $neo++;
 	    }else{
 	      $last=$ecst;
@@ -1170,7 +1473,7 @@ foreach my $atype (keys %gsi){
 
       if($dirg){
 	if($dirt!=$dirg){
-	  print "ERR: $gsi has direction $dirg, but $tsi has direction $dirt\n";
+	  print "  ERROR: $gsi has direction $dirg, but $tsi has direction $dirt\n";
 	  $ntd++;
 	}
       }else{
@@ -1180,12 +1483,28 @@ foreach my $atype (keys %gsi){
     }
   }
 }
-print "$neo exons are out of order; $ned exons have inconsistent direction\n";
-print "$ntd transcripts have inconsistent direction\n";
+print LOG "$neo exons are out of order; $ned exons have inconsistent direction\n";
+print LOG "$ntd transcripts have inconsistent direction\n";
 
-print "\nEND check_genes.pl\n";
+print LOG "\nEND gene processing\n";
+
+$dbh->disconnect();
 
 exit 0;
+
+# in vega case, chromosome is most useful label (assembly.type may be 'VEGA')
+# in otter case, assembly.type is most useful label
+sub type2label{
+  my $type = shift;
+  my($atype,$cname)=split(/:/,$type);
+  my $label;
+  if($vega){
+    $label=$type;
+  }else{
+    $label=$atype;
+  }
+  return $label,$atype,$cname;
+}
 
 # connect to db with error handling
 sub _db_connect{

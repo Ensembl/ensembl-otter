@@ -15,6 +15,7 @@ use strict;
 use Getopt::Long;
 use DBI;
 use Sys::Hostname;
+use Bio::Otter::Lace::SatelliteDB;
 
 # hard wired
 my $driver="mysql";
@@ -38,8 +39,17 @@ my $help;
 my $phelp;
 my $opt_v;
 my $opt_t;
-my $set;
+my $sel_vega_set;
+my $sel_sequence_set;
 my $opt_I;
+my $ext;
+my $pipe;
+my $transform;
+my $filter_annotation;
+my $root_dir="/acari/work2/th";
+
+my $f_dump='vega_pipe_dump.csh';
+my $f_root='vega_pipe_dump';
 
 my $opt_o='vega_transfer.csh';
 my $opt_p='vega_transform.sql';
@@ -47,34 +57,42 @@ my $opt_p='vega_transform.sql';
 $Getopt::Long::ignorecase=0;
 
 GetOptions(
-	   'port:s', \$port,
-	   'pass:s', \$pass,
-	   'host:s', \$host,
-	   'user:s', \$user,
-	   'db:s', \$db,
+	   'port:s',    \$port,
+	   'pass:s',    \$pass,
+	   'host:s',    \$host,
+	   'user:s',    \$user,
+	   'db:s',      \$db,
 
-	   'port2:s', \$port2,
-	   'pass2:s', \$pass2,
-	   'host2:s', \$host2,
-	   'user2:s', \$user2,
-	   'db2:s', \$db2,
+	   'port2:s',   \$port2,
+	   'pass2:s',   \$pass2,
+	   'host2:s',   \$host2,
+	   'user2:s',   \$user2,
+	   'db2:s',     \$db2,
 
-	   't', \$opt_t,
-	   'set:s', \$set,
+	   't',         \$opt_t,
+	   'vega_set:s',     \$sel_vega_set,
+	   'sequence_set:s', \$sel_sequence_set,
+	   'external',  \$ext,
+	   'pipe',      \$pipe,
+	   'filter_annotation',    \$filter_annotation,
+	   'transform', \$transform,
 
-	   'o:s', \$opt_o,
-	   'o:s', \$opt_p,
+	   'o:s',       \$opt_o,
+	   'p:s',       \$opt_p,
+	   'root_dir:s',\$root_dir,
+	   'pipe_root:s',   \$f_root,
+	   'pipe_script:s', \$f_dump,
 
-	   'help', \$phelp,
-	   'h', \$help,
-	   'v', \$opt_v,
-	   'I', \$opt_I,
+	   'help',      \$phelp,
+	   'h',         \$help,
+	   'v',         \$opt_v,
+	   'I',         \$opt_I,
 	   );
 
 # help
 if($help){
     print<<ENDOFTEXT;
-split_gene.pl
+make_vega.pl
 OTTER reference DB
   -host           char      host of mysql instance ($host)
   -db             char      database ($db)
@@ -89,15 +107,27 @@ VEGA DB
   -user2          char      user ($user2)
   -pass2          char      passwd
 
-  -t                        test
-  -set            set[,set] dump datasets listed only (vega name)
+  -vega_set       set[,set] dump datasets listed only (vega set name)
+  -sequence_set   set[,set] dump datasets listed only (sequence set name)
+  -external                 dump datasets defined as 'external' (vega_set) only
 
+STEP 1 (pipeline)
+  -pipe                     create scripts for pipeline dump
+  -pipe_root      char      stem for .sql and .log files for ($f_root)
+  -pipe_script    file      output file for pipeline dump script ($f_dump)
+
+STEP 2 (annotation)
+  -filter_annotation        insert option to transfer genes in clones tagged as annotated
+  -transform                create sql for chromosome.name and assembly.type changes
   -o              file      output file for transcript script ($opt_o)
   -p              file      output file for transform sql ($opt_p)
+
+  -root_dir       dir       root directory for script called by csh files ($root_dir)
 
   -h                        this help
   -help                     perldoc help
   -v                        verbose
+  -t                        test
 
 ENDOFTEXT
     exit 0;
@@ -106,8 +136,10 @@ ENDOFTEXT
     exit 0;
 }
 
-my %set;
-%set=map{$_,1}split(/,/,$set);
+my %sel_vega_set;
+%sel_vega_set=map{$_,1}split(/,/,$sel_vega_set);
+my %sel_sequence_set;
+%sel_sequence_set=map{$_,1}split(/,/,$sel_sequence_set);
 
 # connect
 my $dbh;
@@ -115,6 +147,8 @@ if(my $err=&_db_connect(\$dbh,$host,$db,$user,$pass,$port)){
   print "failed to connect $db: $err\n";
   exit 0;
 }
+
+# [1] global checks of vega tables for consistency
 
 # fetch vega_set
 my $sql = qq{
@@ -239,30 +273,159 @@ foreach my $vega_set_id (sort {$a<=>$b} keys %vega_set){
 }
 print "\n";
 
+# [2] dump specific checks
+# default is I and E
+# -external can modify to E only
+
 # check none of the sequence sets share contigs
 # (may not be an issue under scheme 20+)
 print "Check that no contigs are reused in VEGA sets\n";
+my $not_set="\'N\',\'P\'";
+if($ext){
+  $not_set="\'N\',\'P\',\'I\'";
+}
 $sql = qq{
-    SELECT c.name, a.type
+    SELECT c.name, a.type, a.chr_start, a.chr_end
       FROM assembly a, contig c, sequence_set ss, vega_set vs
      WHERE ss.vega_set_id = vs.vega_set_id
-       AND vs.vega_type not in ('N','P')
+       AND vs.vega_type not in ($not_set)
        AND a.contig_id=c.contig_id
        AND a.type=ss.assembly_type
     };
 my $sth = $dbh->prepare($sql);
 $sth->execute;
 my %contig;
+my @shared;
 while (my @row = $sth->fetchrow_array()){
-  my($contig,$type)=@row;
-  if($contig{$contig}){
-    print "FATAL contig shared between two VEGA sets\n";
-    print "  $contig: $contig{$contig}, $type\n";
-  }else{
-    $contig{$contig}=$type;
+  my($contig,$type,$chst,$ched)=@row;
+  $contig{$contig}->{$type}=[$chst,$ched];
+}
+my %dcontig;
+foreach my $contig (keys %contig){
+  if(scalar(keys %{$contig{$contig}})>1){
+    foreach my $type (keys %{$contig{$contig}}){
+      my($chst,$ched)=@{$contig{$contig}->{$type}};
+      $dcontig{$type}->{$contig}=[$chst,$ched];
+    }
+  }
+}
+my @shared;
+my %ucontig;
+foreach my $type (sort keys %dcontig){
+  foreach my $contig (sort {$dcontig{$type}->{$a}->[0]<=>$dcontig{$type}->{$b}->[0]} keys %{$dcontig{$type}}){
+    # only process each contig once
+    next if $ucontig{$contig};
+    $ucontig{$contig}=1;
+    #print "P $type:$contig\n";
+
+    my($chst,$ched)=@{$dcontig{$type}->{$contig}};
+
+    # look for a match for $type
+    my $match=0;
+    my $mxi=scalar(@shared);
+    for(my $i=0;$i<$mxi;$i++){
+      if($shared[$i]->{$type}){
+	my($chst2,$ched2,@contigs)=@{$shared[$i]->{$type}};
+	#print "   test $i $chst2-$ched2 $chst\n";
+	if($chst==$ched2+1){
+	  $shared[$i]->{$type}=[$chst2,$ched,@contigs,$contig];
+	  $match=1;
+	  $mxi=$i;
+	  last;
+	}
+      }
+    }
+    if($match){
+      #print " old $mxi [$chst-$ched]\n";
+    }else{
+      $shared[$mxi]->{$type}=[$chst,$ched,$contig];
+      #print " new $mxi [$chst-$ched]\n";
+    }
+    # save match for other $types
+    foreach my $type2 (sort keys %{$contig{$contig}}){
+      next if $type eq $type2;
+      my($chst,$ched)=@{$contig{$contig}->{$type2}};
+      if($shared[$mxi]->{$type2}){
+	my($chst2,$ched2,@contigs)=@{$shared[$mxi]->{$type2}};
+	if($chst=$ched2+1){
+	  $shared[$mxi]->{$type2}=[$chst2,$ched,@contigs,$contig];
+	  #print "   extended $type2 $mxi [$chst2-$ched]\n";
+	}
+      }else{
+	$shared[$mxi]->{$type2}=[$chst,$ched,$contig];
+	#print "   new $type2 $mxi [$chst-$ched]\n";
+      }
+    }
+  }
+}
+# report
+my $mxi=scalar(@shared);
+if($mxi>0){
+  my $nr=$mxi+1;
+  print "WARN: Following $nr regions are shared between VEGA sets\n";
+  my $ri=0;
+  for(my $i=0;$i<$mxi;$i++){
+    $ri++;
+    print " REGION $ri:\n";
+    foreach my $type (sort keys %{$shared[$i]}){
+      my($chst,$ched,@contigs)=@{$shared[$i]->{$type}};
+      my $nc=scalar(@contigs);
+      print "  $type:$chst-$ched $nc contigs\n";
+      print "    ".join(',',@contigs)."\n" if $opt_v;
+    }
   }
 }
 print "\n";
+
+my %sset;
+my %vset;
+my %vega_subset;
+foreach my $vega_set_id (sort {$a<=>$b} keys %vega_set){
+  my($vega_author_id, $vega_type, $vega_name)=@{$vega_set{$vega_set_id}};
+
+  # filter out sets we don't want to consider
+  next if ($vega_type eq 'N' || $vega_type eq 'P');
+  next if ($ext && $vega_type eq 'I');
+  next if ($sel_vega_set && !$sel_vega_set{$vega_name});
+  my $ss=$vega2ss{$vega_set_id};
+  next if ($sel_sequence_set && !$sel_sequence_set{$ss});
+  $sset{$ss}=1;
+  $vset{$vega_name}=1;
+  # save this selection to reuse
+  $vega_subset{$vega_set_id}=1;
+}
+print "Selected sets are ".join(',',(sort {$a<=>$b} keys %vega_subset))."\n\n";
+my $flag;
+if($sel_vega_set){
+  foreach my $sset (keys %sel_vega_set){
+    if(!$vset{$sset}){
+      print "ERROR: selected vega_set \'$sset\' not found\n";
+      $flag=1;
+    }
+  }
+}
+if($sel_sequence_set){
+  foreach my $sset (keys %sel_sequence_set){
+    if(!$sset{$sset}){
+      print "ERROR: selected sequence_set \'$sset\' not found\n";
+      $flag=1;
+    }
+  }
+}
+exit 0 if $flag;
+
+# create script to dump pipeline
+if($pipe){
+  my $p_db=Bio::Otter::Lace::SatelliteDB::get_options_for_key($dbh,'pipeline_db');
+  my $sset=join(',',(sort keys %sset));
+  open(OUT,">$f_dump") || die "cannot open $opt_o";
+  print OUT "#!/bin/csh -f\n\n#\n# commands autogenerated by make_vega.pl\n#\n\n";
+  print OUT "source $root_dir/src/source/source9pipeline\n\n";
+  print OUT "$root_dir/src/lace_local_admin/scripts/mysqlcopy_sequence_set.pl -set $sset -o $f_root.sql -i $root_dir/src/trunk/ensembl-otter/sql/otter.sql -host ".$p_db->{'-HOST'}." -port ".$p_db->{'-PORT'}." -user ".$p_db->{'-USER'}." -db ".$p_db->{'-DBNAME'}." > & ! $f_root.log\n";
+  close(OUT);
+  print "Wrote command for dumping pipeline database\n";
+  exit 0;
+}
 
 if($opt_t || $err){
   if($err){
@@ -311,10 +474,8 @@ $sql = qq{
       GROUP BY a.type
     };
 my $sth = $dbh2->prepare($sql);
-foreach my $vega_set_id (sort {$a<=>$b} keys %vega_set){
+foreach my $vega_set_id (sort {$a<=>$b} keys %vega_subset){
   my($vega_author_id, $vega_type, $vega_name)=@{$vega_set{$vega_set_id}};
-  next if ($vega_type eq 'N' || $vega_type eq 'P');
-  next if ($set && $set ne $vega_name);
   my $ss=$vega2ss{$vega_set_id};
   my $chr=$ss2chr{$ss};
   my $ss=$vega2ss{$vega_set_id};
@@ -332,7 +493,7 @@ foreach my $vega_set_id (sort {$a<=>$b} keys %vega_set){
     }
   }else{
     $err=1;
-    print "FATAL target database missing sequence_set $ss\n";
+    print "FATAL target database missing sequence_set \'$ss\'\n";
   }
 }
 
@@ -351,21 +512,15 @@ if($err){
 # build lists
 my $type_string;
 my %chr_id;
+my $filter_text;
+if($filter_annotation){$filter_text='-filter_annotation';}
 
 # loop over valid sequence sets and write transfer commands
 open(OUT,">$opt_o") || die "cannot open $opt_o";
 print OUT "#!/bin/csh -f\n\n#\n# commands autogenerated by make_vega.pl\n#\n\n";
-print OUT "source ../../../src/source/source9pipeline\n\n";
-foreach my $vega_set_id (sort {$a<=>$b} keys %vega_set){
+print OUT "source $root_dir/src/source/source9pipeline\n\n";
+foreach my $vega_set_id (sort {$a<=>$b} keys %vega_subset){
   my($vega_author_id, $vega_type, $vega_name)=@{$vega_set{$vega_set_id}};
-  if($set){
-    if($set{$vega_name}){
-    }else{
-      next;
-    }
-  }elsif($vega_type eq 'N' || $vega_type eq 'P'){
-    next;
-  }
   print "Wrote commands for transfering \'$vega_name\'\n";
   my $ss=$vega2ss{$vega_set_id};
   my $chr=$ss2chr{$ss};
@@ -373,33 +528,54 @@ foreach my $vega_set_id (sort {$a<=>$b} keys %vega_set){
   if($type_string){$type_string.=',';}
   $type_string.="\'$ss\'";
   $chr_id{$chr_id}=1;
-  print OUT "../../../src/trunk/ensembl-otter/scripts/conversion/assembly/transfer_annotation.pl -host $host -user $user -pass $pass -port $port -dbname $db -c_host $host -c_user $user -c_pass $pass -c_port $port -c_dbname $db -t_host $host2 -t_user $user2 -t_pass $pass2 -t_port $port2 -t_dbname $db2 -chr $chr -chrstart $chr_st -chrend $chr_ed -path $ss -c_path $ss -t_path $ss -filter_gd -filter_obs -filter_for_vega >&! ogt_".$vega_name.".log \n";
-  print OUT "../../../src/trunk/ensembl-otter/scripts/conversion/assembly/transfer_clone_annotation.pl -host $host -user $user -port $port -dbname $db -t_host $host2 -t_user $user2 -t_pass $pass2 -t_port $port2 -t_dbname $db2 -t_path $ss > ! oct_".$vega_name."_sf.log\n";
+  print OUT "$root_dir/src/trunk/ensembl-otter/scripts/conversion/assembly/transfer_annotation.pl -host $host -user $user -pass $pass -port $port -dbname $db -c_host $host -c_user $user -c_pass $pass -c_port $port -c_dbname $db -t_host $host2 -t_user $user2 -t_pass $pass2 -t_port $port2 -t_dbname $db2 -chr $chr -chrstart $chr_st -chrend $chr_ed -path $ss -c_path $ss -t_path $ss -filter_gd -filter_obs -filter_for_vega $filter_text >&! ogt_".$vega_name.".log \n";
+  print OUT "$root_dir/src/trunk/ensembl-otter/scripts/conversion/assembly/transfer_clone_annotation.pl -host $host -user $user -port $port -dbname $db -t_host $host2 -t_user $user2 -t_pass $pass2 -t_port $port2 -t_dbname $db2 -t_path $ss > ! oct_".$vega_name."_sf.log\n";
 }
 print "\n";
 close(OUT);
 
-# loop over valid sequence sets and write transform sql commands
-open(OUT,">$opt_p") || die "cannot open $opt_p";
-print OUT "#\n# sql autogenerated by make_vega.pl\n#\n\n";
+if($transform){
 
-# delete orphan chromosomes, assemblies
+  # loop over valid sequence sets and write transform sql commands
+  open(OUT,">$opt_p") || die "cannot open $opt_p";
+  print OUT "#\n# sql autogenerated by make_vega.pl\n#\n\n";
 
-my $chrid_string=join(',',(keys %chr_id));
-print OUT "# remove unneeded assembly entries\n";
-print OUT "delete from assembly where type not in ($type_string);\n\n";
-print OUT "# remove unneeded chrosome entries\n";
-print OUT "delete from chromosome where chromosome_id not in ($chrid_string);\n\n";
+  # delete orphan chromosomes, assemblies
+
+  my $chrid_string=join(',',(keys %chr_id));
+  print OUT "# remove unneeded assembly entries\n";
+  print OUT "delete from assembly where type not in ($type_string);\n\n";
+  print OUT "# remove unneeded chrosome entries\n";
+
+  # create new chromosomes with correct lengths and link assembly table to them
+  #print OUT "delete from chromosome where chromosome_id not in ($chrid_string);\n\n";
+  print OUT "delete from chromosome;\n\n";
+  my $ichr=0;
+  my %used_authors;
+  foreach my $vega_set_id (sort {$a<=>$b} keys %vega_subset){
+    my($vega_author_id, $vega_type, $vega_name)=@{$vega_set{$vega_set_id}};
+    $used_authors{$vega_author_id}=1;
+    my $ss=$vega2ss{$vega_set_id};
+    my($chr_st,$chr_ed,$chr_id)=@{$ss2{$ss}};
+    $ichr++;
+    print OUT "insert into chromosome values($ichr,\'$vega_name\',$chr_ed);\n";
+    print OUT "update assembly set chromosome_id=$ichr where type=\'$ss\';\n";
+  }
+  print OUT "update assembly set type=\'VEGA\';\n";
+
+  # fix authors
+  print OUT "delete from author;\n\n";
+  foreach my $vega_author_id (sort keys %used_authors){
+    my($author_email,$author_name)=@{$vega_author{$vega_author_id}};
+    print OUT "insert into author values ($vega_author_id,\'$author_email\',\'$author_name\');\n";
+  }
+}
 
 # delete unwanted tables
 # (should come from another meta table?)
 
 # insert meta information
 # (should come from another meta table?)
-
-# create new chromosomes with correct lengths
-
-# fix authors
 
 close(OUT);
 
