@@ -37,10 +37,14 @@ my $filter_for_vega;
 my $filter_anno;
 my $gene_type;
 my @gene_stable_ids;
+my @exclude_gene_stable_ids;
+my $strip_prefix;
 my $opt_t;
 my $opt_o;
+my $help;
 
-&GetOptions( 'host:s'           => \$host,
+&GetOptions( 'h'                => \$help,
+	     'host:s'           => \$host,
              'user:s'           => \$user,
              'pass:s'           => \$pass,
              'port:s'           => \$port,
@@ -66,11 +70,24 @@ my $opt_o;
 	     'filter_for_vega'  => \$filter_for_vega,
 	     'gene_type:s'      => \$gene_type,
 	     'gene_stable_id:s' => \@gene_stable_ids,
+	     'exclude_gene_stable_id:s' => \@exclude_gene_stable_ids,
+	     'strip_prefix:s'   => \$strip_prefix,
 	     't'                => \$opt_t,
 	     'o:s'              => \$opt_o,
              'filter_annotation'=> \$filter_anno,
             );
 
+# help
+if($help){
+    print<<ENDOFTEXT;
+transfer_annotation.pl
+  -h                        this help
+
+ENDOFTEXT
+    exit 0;
+}
+
+# if defined, genes must be in this list
 my %gene_stable_ids;
 if (scalar(@gene_stable_ids)) {
   my $gene_stable_id=$gene_stable_ids[0];
@@ -89,6 +106,29 @@ if (scalar(@gene_stable_ids)) {
   print "Using list of ".scalar(@gene_stable_ids)." gene stable ids\n";
   %gene_stable_ids = map {$_,1} @gene_stable_ids;
 }
+
+# if defined, genes must not be in this list
+my %exclude_gene_stable_ids;
+if (scalar(@exclude_gene_stable_ids)) {
+  my $file=$exclude_gene_stable_ids[0];
+  if(scalar(@exclude_gene_stable_ids)==1 && -e $file){
+    # 'gene' is a file
+    @exclude_gene_stable_ids=();
+    open(IN,$file) || die "cannot open $file";
+    while(<IN>){
+      chomp;
+      push(@exclude_gene_stable_ids,$_);
+    }
+    close(IN);
+  }else{
+    @exclude_gene_stable_ids = split (/,/, join (',', @exclude_gene_stable_ids));
+  }
+  print "Excluding ".scalar(@exclude_gene_stable_ids)." gene stable ids from list\n";
+  %exclude_gene_stable_ids = map {$_,1} @exclude_gene_stable_ids;
+}
+
+my %strip_prefix;
+%strip_prefix=map{$_,1}split(/,/,$strip_prefix);
 
 my $sdb = new Bio::Otter::DBSQL::DBAdaptor(-host => $host,
                                            -user => $user,
@@ -172,17 +212,31 @@ my %genehash;
 my $ngd=0;
 my $nobs=0;
 my $nskipped=0;
+my $nexclude=0;
 my $not_okay=0;
 my $n_not_vega=0;
+my %npre;
+my %nstrip_pre;
 open(OUT,">$opt_o") || die "cannot open $opt_o" if $opt_o;
 foreach my $gene (@$genes) {
   my $gsi=$gene->stable_id;
   my $version=$gene->version;
+
+  # if include list, don't include if not in list
   if(scalar(@gene_stable_ids)){
     next unless $gene_stable_ids{$gsi};
   }
+
+  # if exclude list, don't include if not in list
+  if(scalar(@exclude_gene_stable_ids)){
+    if($exclude_gene_stable_ids{$gsi}){
+      $nexclude++;
+      next;
+    }
+  }
+
+  my $name=$gene->gene_info->name->name;
   if($filter_gd){
-    my $name=$gene->gene_info->name->name;
     if($name=~/\.GD$/ || $name=~/^GD:/){
       print "GD gene $gsi $name was ignored\n";
       $ngd++;
@@ -197,13 +251,30 @@ foreach my $gene (@$genes) {
       next;
     }
   }
+
+  # strip prefix from gene name, gene type, transcript name
+  if($strip_prefix && $name=~/^(\w+):(.*)/){
+    my $prefix=$1;
+    my $name2=$2;
+    if($strip_prefix{$prefix}){
+      $nstrip_pre{$prefix}++;
+      $name=$name2;
+    }
+  }
+
+  # annotation types to be excluded specifically in vega
   if($filter_for_vega){
     if($type=~/(Artifact|TEC)$/){
       print "Gene $gsi is not for Vega ($type)\n";
       $n_not_vega++;
       next;
+    }elsif($name=~/^(\w+):/){
+      print "$1 gene $gsi $name was ignored\n";
+      $npre{$1}++;
+      next;
     }
   }
+
   if($gene_type){
     if($type ne $gene_type){
       print "Gene $gsi skipped - not of type $gene_type\n";
@@ -233,7 +304,25 @@ foreach my $gene (@$genes) {
   print OUT "$gsi\t$version\n" if $opt_o;
 }
 close(OUT) if $opt_o;
-print "$ngd GD genes removed, $nobs obsolete genes removed, $nskipped skipped as incorrect type\n";
+print "$ngd GD genes removed; $nobs obsolete genes removed; $nskipped skipped as incorrect type\n";
+print "$nexclude genes excluded (exclude list)\n" if (scalar(@exclude_gene_stable_ids));
+
+my $out;
+foreach my $pre (keys %nstrip_pre){
+  my $npre=$nstrip_pre{$pre};
+  $out.="$npre $pre genes transfered after prefix stripped;";
+}
+if($out){
+  print $out."\n";
+}
+my $out;
+foreach my $pre (keys %npre){
+  my $npre=$npre{$pre};
+  $out.="$npre $pre genes removed;";
+}
+if($out){
+  print $out."\n";
+}
 print "$not_okay skipped as not in annotated part; $n_not_vega skipped as not for vega\n";
 print scalar(keys %genehash)." genes to transfer\n";
 
@@ -360,6 +449,27 @@ print "Done\n";
 sub write_gene {
   my ($t_aga,$t_vcontig,$gene) = @_;
 
+  # strip prefix from gene name, gene type, transcript name
+  my $gname=$gene->gene_info->name->name;
+  my $prefix;
+  if($strip_prefix && $gname=~/^(\w+):(.*)/){
+    my $prefix2=$1;
+    my $gname2=$2;
+    if($strip_prefix{$prefix2}){
+      print "INFO: Striping gene name prefix for $gname -> $gname2\n";
+      $prefix=$prefix2;
+      # strip gene name
+      $gene->gene_info->name->name($gname2);
+      # strip gene type
+      my $type=$gene->type;
+      if($type=~/^$prefix:(.*)/){
+	$gene->type($1);
+      }else{
+	print "ERROR gene $gname2 ($prefix): cannot change type \'$type\'\n";
+      }
+    }
+  }
+
   foreach my $tran (@{$gene->get_all_Transcripts}) {
     $tran->sort;
 
@@ -379,6 +489,17 @@ sub write_gene {
       $exon->contig($t_vcontig);
       $exon->get_all_supporting_features; 
     }
+
+    if($prefix){
+      my $tname=$tran->transcript_info->name;
+      # change transcript name
+      if($tname=~/^$prefix:(.*)/){
+	$tran->transcript_info->name($1);
+      }else{
+	print "ERROR gene $gname ($prefix): cannot change transcript name \'$tname\'\n";
+      }
+    }
+
   }
 
 # Transform gene to raw contig coords

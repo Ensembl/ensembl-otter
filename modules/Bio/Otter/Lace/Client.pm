@@ -289,7 +289,7 @@ sub get_all_DataSets {
         my $dsp = Bio::Otter::Transform::DataSets->new();
         $dsp->set_property('author', $self->author);
         my $p = $dsp->my_parser();
-        $p->parse($content);
+	$p->parse($content);
         $ds = $self->{'_datasets'} = $dsp->objects;
     }
     return @$ds;

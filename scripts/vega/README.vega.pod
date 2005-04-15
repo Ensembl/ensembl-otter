@@ -1,5 +1,13 @@
 =head1 Notes on scripts to create vega database from otter/pipeline
 
+Meta tables in otter.
+
+	vega_set (cf sequence_set)
+
+	vega_author (cf author)
+
+	
+
 =head2 adding a new vega_set
 
 (example: adding chr19)
