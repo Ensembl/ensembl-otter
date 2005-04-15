@@ -37,14 +37,16 @@ use Bio::Otter::Lace::Defaults;
   # first fetch all clones in a sequence set from otter or from a list of contig_name in a file
   # and turn them into a %ctgId_ctgName hash
   if ( @sets ) {
-    foreach ( @sets ) {
-      my $seqSet = $dset->get_SequenceSet_by_name($_);
-	  my $cs = $dset->fetch_all_CloneSequences_for_SequenceSet($seqSet);
+      foreach my $name (@sets) {
+          my $seqSet = $dset->get_SequenceSet_by_name($name);
+	      $dset->fetch_pipeline_ctg_ids_for_SequenceSet($seqSet);
+	      my $cs_list = $dset->fetch_all_CloneSequences_for_SequenceSet($seqSet);
 
-	  # CAREFUL: contig_id from pipeline db, NOT otter as they are auto-incremented
-	  $dset->fetch_pipeline_ctg_ids_for_SequenceSet($seqSet);
-	  map { $ctgId_ctgName ->{$_->contig_id} = $_->contig_name } @$cs;
-	}
+	      # CAREFUL: contig_id from pipeline db, NOT otter as they are auto-incremented
+          foreach my $cs (@$cs_list) {
+              $ctgId_ctgName->{$cs->pipeline_contig_id} = $cs->contig_name;
+          }
+	  }
   }
   else {
     while (<>) {
