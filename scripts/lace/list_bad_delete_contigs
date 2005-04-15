@@ -1,0 +1,118 @@
+#!/usr/local/bin/perl -w
+
+### list_bad_delete_contigs
+
+use strict;
+use Bio::Otter::Lace::Defaults;
+
+$| = 1;
+
+{
+    my $usage = sub { exec('perldoc', $0) };
+    my $trim = 1;
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'   => $usage,
+        'trim!'     => \$trim,
+        ) or $usage->();
+    
+    my @sets = qw{ MHC_PGF encode_ext_agp-03 encode_ext_agp-04 };
+    
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name('human');
+    my $otter_dba = $ds->get_cached_DBAdaptor;
+    my $pipe_dba = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($otter_dba);
+
+    my $otter_id_name = get_id_name($otter_dba, @sets);
+    my  $pipe_id_name = get_pipe_id_name($pipe_dba, $otter_id_name);
+    
+    printf STDERR "%d ids in otter and %d ids in pipe\n",
+        scalar(keys %$otter_id_name),
+        scalar(keys %$pipe_id_name);
+    
+    my $otter_name_id = {};
+    my  $pipe_name_id = {};
+    %$otter_name_id = reverse(%$otter_id_name);
+     %$pipe_name_id = reverse( %$pipe_id_name);
+    
+    printf STDERR "%d names in otter and %d names in pipe\n",
+        scalar(keys %$otter_id_name),
+        scalar(keys %$pipe_id_name);
+
+    my $all_names = {};
+    foreach my $hash ($otter_name_id, $pipe_name_id) {
+        foreach my $name (keys %$hash) {
+            $all_names->{$name} = 1;
+        }
+    }
+
+    printf STDERR "%d total contig names affected\n", scalar(keys %$all_names);
+
+    # Remove names that have actually been reanalysed
+    if ($trim) {
+        my $ana_ok = 0;
+        foreach my $name (keys %$otter_name_id) {
+            if ($pipe_name_id->{$name}) {
+                $ana_ok++;
+                delete($all_names->{$name});
+            }
+        }
+        print STDERR "$ana_ok contigs were analysed OK due to contig ID overlap\n";
+    }
+    
+    printf STDERR "%d total contig names need re-analysis\n", scalar(keys %$all_names);
+    
+    print map "$_\n", sort keys %$all_names;
+}
+
+sub get_id_name {
+    my( $dba, @sets ) = @_;
+
+    my $sth = $dba->prepare(q{
+        SELECT g.contig_id
+          , g.name
+        FROM contig g
+          , assembly a
+        WHERE g.contig_id = a.contig_id
+          AND a.type = ?
+        });
+    my $id_name = {};
+    foreach my $name (@sets) {
+        $sth->execute($name);
+        while (my ($id, $name) = $sth->fetchrow) {
+            $id_name->{$id} = $name;
+        }
+    }
+    
+    return $id_name;
+}
+
+sub get_pipe_id_name {
+    my( $dba, $other_id_name ) = @_;
+    
+    my $ctg_str = join(',', keys %$other_id_name);
+    my $sth = $dba->prepare(qq{
+        SELECT name
+          , contig_id
+        FROM contig
+        WHERE contig_id IN ($ctg_str)
+        });
+    $sth->execute;
+    my $id_name = {};
+    while (my ($name, $id) = $sth->fetchrow) {
+        $id_name->{$id} = $name;
+    }
+    
+    return $id_name;
+}
+
+__END__
+
+=head1 NAME - list_bad_delete_contigs
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+

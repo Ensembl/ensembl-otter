@@ -36,12 +36,12 @@ use Bio::Otter::Lace::Defaults;
     my $ds = $cl->get_DataSet_by_name($dataset_name);
     my $otter_db = $ds->get_cached_DBAdaptor;
 
+    my $current = Bio::Otter::Lace::SatelliteDB::get_options_for_key($otter_db, $key);
     if($view){ 
-        my $current = Bio::Otter::Lace::SatelliteDB::get_options_for_key($otter_db, $key);
         print show_current($current, $key); 
         exit; 
     }
-    my $sat_opts = {};
+    my $sat_opts = $current || {};
     $sat_opts->{'-HOST'}    = $sathost      if $sathost;
     $sat_opts->{'-PORT'}    = $satport      if $satport;
     $sat_opts->{'-USER'}    = $satuser      if $satuser;
@@ -49,9 +49,7 @@ use Bio::Otter::Lace::Defaults;
     $sat_opts->{'-DBNAME'}  = $satdbname    if $satdbname;
 
     # so we can use undefined password
-    foreach(qw(-PASS)){ 
-	delete $sat_opts->{$_} if($sat_opts->{$_} && $sat_opts->{$_} eq 'undef');
-    }
+    delete($sat_opts->{'-PASS'}) unless $satpass;
 
     # Check we can connect to the Satellite database with options supplied
     eval {
@@ -85,12 +83,13 @@ __END__
 
 =head1 SYNOPSIS
 
- ./save_satellite_db -key <key> -dataset <dataset> [-view]|[-satdb* options]
+ ./save_satellite_db -key <key> -dataset <dataset> [-view] [-satdb* options]
 
 =head1 DESCRIPTION
 
     Saves the connection hash for a satellite database for 
-the otter server under the B<key>.
+the otter server under the B<key>.  By default it uses the options 
+already stored in the database for the B<key>.
 
 =head1 USAGE
 

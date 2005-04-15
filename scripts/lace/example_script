@@ -27,7 +27,7 @@ use Bio::Otter::Lace::Defaults;
     my $ss = $ds->get_SequenceSet_by_name($set_name);
     
     my $otter_dba = $ds->get_cached_DBAdaptor;
-    my $pipe_db = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($otter_dba);
+    my $pipe_dba = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($otter_dba);
     
     
 }
