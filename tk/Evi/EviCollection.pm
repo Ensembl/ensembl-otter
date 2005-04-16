@@ -99,6 +99,11 @@ sub get_all_matches_by_name {
 	my $self = shift @_;
 	my $name = shift @_;
 
+	if(not $self->{_name2chains}{$name}) {
+		warn "EviCollection: where did you get '$name' from???\n";
+		warn "EviCollection: Certainly not from me!!!\n";
+	}
+
 	return $self->{_name2chains}{$name};
 }
 

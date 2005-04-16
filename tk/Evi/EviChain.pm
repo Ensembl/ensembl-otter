@@ -3,7 +3,7 @@ package Evi::EviChain;
 # a chain of evidence matches (DnaAlignFeatures) with the same name
 # in some slice's coordinates (the slice is fixed, but not known to the EviChain)
 #
-# lg4, 6.Apr'2005
+# lg4
 
 use Evi::Taxonamer;
 
@@ -205,15 +205,15 @@ sub intersect2exons { # NB: not a method
 sub supported_length {
 	my ($self, $transcript) = @_;
 
-	if(! exists($self->{_supported_length}->{$transcript})) {
-		$self->{_supported_length}->{$transcript} = 0;
+	if(! exists($self->{_supported_length}{$transcript})) {
+		$self->{_supported_length}{$transcript} = 0;
 		for my $trans_exon (@{ $transcript->get_all_Exons() }) {
 			for my $af (@{ $self->afs_lp() }) {
-				$self->{_supported_length}->{$transcript} += intersect2exons($trans_exon,$af);
+				$self->{_supported_length}{$transcript} += intersect2exons($trans_exon,$af);
 			}
 		}
 	}
-	return $self->{_supported_length}->{$transcript};
+	return $self->{_supported_length}{$transcript};
 }
 
 sub transcript_coverage {
@@ -229,6 +229,7 @@ sub contrasupported_length { # a part of matched part of EST/mRNA length
 	my ($self, $transcript) = @_;
 
 	my ($ups_len, $match_len, $dns_len, $eviseq_len) = $self->match_lengths();
+
 	return    $match_len
 			- $self->supported_length($transcript);
 }

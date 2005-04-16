@@ -2,7 +2,7 @@ package Evi::EviDisplay;
 
 # A window showing a transcript and supporting evidence
 #
-# lg4, 7.Apr'2005
+# lg4
 
 my $ystep = 16;
 my $rel_exon_thickness = 0.5; # in practice - from 0.1 to 0.9
@@ -31,11 +31,13 @@ my $type_to_optpairs = { # canvas-dependent stuff
 
 use strict;
 use Evi::SortCriterion;		# method/params to be called on data to compute the key, direction, threshold...
-use Evi::Sorter;				# performs multicriterial sorting, filtering and uniq
+use Evi::Sorter;			# performs multicriterial sorting, filtering and uniq
 
-use Evi::ScaleQuantum;		# scaler that exaggerates the small differences in lengths
-use Evi::ScaleMinexon;		# scaler that fixes the minimum length of an exon
-use Evi::ScaleFitwidth;		# scaler that fits everything into given width
+use Evi::LogicalSelection;	# keeps the information about selection and visibility
+
+use Evi::ScaleQuantum;		# a scaler that exaggerates the small differences in lengths
+use Evi::ScaleMinexon;		# a scaler that limits the minimum length of an exon
+use Evi::ScaleFitwidth;		# a scaler that fits everything into given width
 
 use Tk::ROText;			# for the status line
 use Tk::WrappedOSF;		# frame that selects the sorting order
@@ -79,7 +81,7 @@ sub init_filter_and_sort_criteria {
 		Evi::SortCriterion->new('Supported % of transcript','transcript_coverage',
 					[$self->{_transcript}], 'numeric','descending'),
 		Evi::SortCriterion->new('Dangling ends (bases)','contrasupported_length',
-					[$self->{_transcript}], 'numeric','ascending',0),
+					[$self->{_transcript}], 'numeric','ascending',10),
 
 			# transcript-independent criteria:
 		Evi::SortCriterion->new('Evidence sequence coverage (%)','eviseq_coverage',
@@ -146,7 +148,7 @@ sub new {
 	$self->{_scale_type}		= shift @_ || 'Evi::ScaleFitwidth';
 
 	$self->init_filter_and_sort_criteria();
-	$self->load_selection_from_transcript();
+	$self->{_lselection}		= Evi::LogicalSelection->new($self->{_evicoll},$self->{_transcript});
 
 	$self->{_statusline} = $top_window->ROText(-height=>1)->pack(-side => 'bottom');
 
@@ -224,21 +226,23 @@ sub new {
     );
 
 	my $menu_view = $self->make_menu('View');
+if(0) {
+	$menu_view->radiobutton(
+		-label	=> '~MinExon view',
+		-value	=> 'Evi::ScaleMinexon',
+		-variable => \$self->{_scale_type},
+		-command => sub { $self->evi_redraw(); }
+	);
 	$menu_view->radiobutton(
 		-label	=> '~Proportional 1:1 view',
 		-value	=> 'Evi::ScaleBase',
 		-variable => \$self->{_scale_type},
 		-command => sub { $self->evi_redraw(); }
 	);
+}
 	$menu_view->radiobutton(
-		-label	=> '~Fitting view',
+		-label	=> '~Proportional view',
 		-value	=> 'Evi::ScaleFitwidth',
-		-variable => \$self->{_scale_type},
-		-command => sub { $self->evi_redraw(); }
-	);
-	$menu_view->radiobutton(
-		-label	=> '~MinExon view',
-		-value	=> 'Evi::ScaleMinexon',
 		-variable => \$self->{_scale_type},
 		-command => sub { $self->evi_redraw(); }
 	);
@@ -635,7 +639,7 @@ sub toggle_highlighting_by_id { # not a method
 	}
 }
 
-# ----------------------------------[selection]-------------------------------------------
+# ----------------------------------[de/selection]-------------------------------------------
 
 sub deselect_by_name { # FIXME: may try to (invisibly) select the actual transcript.
 		# Because of the difference in callback orders
@@ -651,7 +655,7 @@ sub deselect_by_name { # FIXME: may try to (invisibly) select the actual transcr
 			}
 		}
 	}
-	delete $self->{_name2selevidence}{$name_tag}; # unconditionally remove from the selected set
+	$self->{_lselection}->deselect($name_tag);
 
 	my $ms = $self->{_menu_selection}; # unconditionally remove  from the menu
 	for my $ind (0..$ms->index('last')) { # if the beginning matches...
@@ -667,14 +671,8 @@ sub select_by_name { # FIXME: may try to (invisibly) select the actual transcrip
 	my $name_tag	= pop @_;
 	my $self		= pop @_;
 
-	my $representative_chain = $self->{_evicoll}->get_all_matches_by_name($name_tag)->[0];
-	$self->{_name2selevidence}{$name_tag} = { # make it selected, but invisible by default
-		'data' => Bio::Otter::Evidence->new(
-					-NAME => $representative_chain->prefixed_name(),
-					-TYPE => $representative_chain->evitype(),
-				),
-		'visible' => 0,
-	};
+	$self->{_lselection}->select($name_tag);
+
 	for my $canvas (@{ $self->canvas()->canvases() }) {
 		for my $id ($canvas->find('withtag',"$name_tag&&backribbon")) {
 			for my $opt ('-fill','-disabledfill') {
@@ -682,12 +680,12 @@ sub select_by_name { # FIXME: may try to (invisibly) select the actual transcrip
 				$self->{_selected_items}{$name_tag}{$id}{$opt} = $orig_color;
 				$canvas->itemconfigure($id, $opt => $selection_color);
 			}
-			$self->{_name2selevidence}{$name_tag}{visible} = 1; # something was found and visibly selected
+			$self->{_lselection}->set_visibility($name_tag, 1); # something was found and visibly selected
 		}
 	}
 
 	$self->{_menu_selection}->command( # unconditionally add the removal command to the menu
-				-label		=> ($self->{_name2selevidence}{$name_tag}{visible}
+				-label		=> ($self->{_lselection}->is_visible($name_tag)
 									? $name_tag
 									: "$name_tag (invisible)"),
 				-command	=> [\&deselect_by_name, $self, $name_tag],
@@ -700,32 +698,10 @@ sub toggle_select_by_name {
 	my $name_tag= pop @_;
 	my $self	= pop @_;
 
-	if(exists $self->{_name2selevidence}{$name_tag}) { # (definitely visible) deselect it:
+	if($self->{_lselection}->is_selected($name_tag)) { # (definitely visible) deselect it:
 		$self->deselect_by_name($name_tag);
 	} else { # select it:
 		$self->select_by_name($name_tag);
-	}
-}
-
-sub strip_colonprefix { # not a method
-	my $name = shift @_;
-
-	return ($name=~/:(.*)$/)
-			? $1
-			: $name;
-}
-
-sub load_selection_from_transcript {
-	my $self = shift @_;
-
-	$self->{_name2selevidence} = {};
-	for my $evientry (@{ $self->{_transcript}->transcript_info()->get_all_Evidence() }) {
-		my $name = strip_colonprefix($evientry->name());
-
-		$self->{_name2selevidence}{$name} = {
-			'data' => $evientry, # just grab them as they are
-			'visible' => 0,
-		};
 	}
 }
 
@@ -734,43 +710,21 @@ sub redraw_selection {
 
 	$self->{_menu_selection}->delete(0,'last'); # start from the empty menu
 
-	for my $eviname (keys %{ $self->{_name2selevidence}}) {
+	for my $eviname (@{ $self->{_lselection}->get_list() }) {
 		$self->select_by_name($eviname); # try to make it visible
-		if(! $self->{_name2selevidence}{$eviname}{visible}) {
+		if(not $self->{_lselection}->is_visible($eviname)) {
 			warn "$eviname cannot be selected as it is not visible on the EviDisplay\n";
 		}
 	}
 }
 
-sub any_changes_in_selection {
-	my $self = shift @_;
-
-	my $old_selection = join(',', sort map { strip_colonprefix($_->name()); }
-									@{ $self->{_transcript}->transcript_info()->get_all_Evidence() });
-
-	my $curr_selection = join(',', sort (keys %{ $self->{_name2selevidence}}) );
-
-	return $old_selection ne $curr_selection;
-}
-
 sub save_selection_to_transcript {
 	my $self = shift @_;
 
-	if( $self->any_changes_in_selection() ) {
+	if( $self->{_lselection}->save_to_transcript() ) {
 		print "The list of selected evidence changed.\n";
 		print "The new list of selected evidence is:\n";
 
-		$self->{_transcript}->transcript_info()->flush_Evidence();
-
-		for my $eviname (keys %{$self->{_name2selevidence}}) {
-			print "\t".$self->{_name2selevidence}{$eviname}{data}->name();
-			print "\t".$self->{_name2selevidence}{$eviname}{visible}."\n";
-		}
-        
-		$self->{_transcript}->transcript_info()->add_Evidence(
-			map { $self->{_name2selevidence}{$_}{data}; }
-					(keys %{ $self->{_name2selevidence}})
-		);
         use Data::Dumper;
         print STDERR Dumper($self->{_transcript}->transcript_info);
         if (my $ec = $self->ExonCanvas) {
