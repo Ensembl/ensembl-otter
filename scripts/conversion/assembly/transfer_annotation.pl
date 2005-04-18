@@ -41,6 +41,7 @@ my @exclude_gene_stable_ids;
 my $strip_prefix;
 my $opt_t;
 my $opt_o;
+my $opt_l;
 my $help;
 
 &GetOptions( 'h'                => \$help,
@@ -73,6 +74,7 @@ my $help;
 	     'exclude_gene_stable_id:s' => \@exclude_gene_stable_ids,
 	     'strip_prefix:s'   => \$strip_prefix,
 	     't'                => \$opt_t,
+	     'l:s'              => \$opt_l,
 	     'o:s'              => \$opt_o,
              'filter_annotation'=> \$filter_anno,
             );
@@ -325,6 +327,15 @@ if($out){
 }
 print "$not_okay skipped as not in annotated part; $n_not_vega skipped as not for vega\n";
 print scalar(keys %genehash)." genes to transfer\n";
+
+if($opt_l){
+  open(OUT,">$opt_l") || die "cannot open $opt_l";
+  foreach my $gsi (keys %genehash){
+    print OUT "$gsi\n";
+  }
+  close(OUT);
+  exit 0;
+}
 
 exit 0 if $opt_t;
 
