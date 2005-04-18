@@ -6,6 +6,7 @@ package Evi::EviDisplay;
 
 my $ystep = 16;
 my $rel_exon_thickness = 0.5; # in practice - from 0.1 to 0.9
+my $half_delta	= $ystep*$rel_exon_thickness/2;
 
 my $current_contour_color = 'red';
 my $selection_color    = '#9ea2ff';
@@ -14,7 +15,8 @@ my $highlighting_color = 'yellow';
 my @alternating_colors = ('white','#eeeeee');
 
 my $color_scheme = {      #  OUTLINE,		FILL
-	'transcript'       => [ 'darkgreen',	'green'		],
+	'transcript'       => [ 'orange',		'red'		],
+	'translation'      => [ 'darkgreen',	'green'		],
 	'Est2genome_human' => [ 'blue',			'violet'	],
 	'Est2genome_mouse' => [ 'blue',			'violet'	],
 	'Est2genome_other' => [ 'blue',			'violet'	],
@@ -288,6 +290,13 @@ sub populate_scale {
 		$self->{_scale}->add_pair( $exon->start(), $exon->end() );
 	}
 
+	if($self->{_transcript}->translation()) {
+		$self->{_scale}->add_pair(
+			$self->{_transcript}->coding_region_start(),
+			$self->{_transcript}->coding_region_end()
+		);
+	}
+
 		# then, collect all the matches' boundaries
 	for my $evichain (@{$self->{_evichains_lp}}) {
 		for my $af (@{$evichain->afs_lp()}) {
@@ -313,14 +322,39 @@ my $tt_redraw = Evi::Tictoc->new("EviDisplay layout");
 			$self->canvas()->Subwidget('main_canvas'),
 			$self->canvas()->Subwidget('topleft_canvas'),
 			$self->{_transcript}->get_all_Exons(),
+			undef,
+			undef,
 			-1,
 			$self->{_transcript}->transcript_info()->name(),
 			$tran_strand,
 			[	"Name: ".$self->{_transcript}->transcript_info()->name(),
 				"Strand: ".strand2name($tran_strand),
 			],
-			'transcript'
+			'transcript',
+			$half_delta,
+			1
 			);
+
+		# show the translation
+	if($self->{_transcript}->translation()) {
+		$self->draw_exons(
+			$self->canvas()->Subwidget('top_canvas'),
+			$self->canvas()->Subwidget('main_canvas'),
+			$self->canvas()->Subwidget('topleft_canvas'),
+			$self->{_transcript}->get_all_Exons(),
+			$self->{_transcript}->coding_region_start(),
+			$self->{_transcript}->coding_region_end(),
+			-1,
+			$self->{_transcript}->transcript_info()->name(),
+			$tran_strand,
+			[	"Name: ".$self->{_transcript}->transcript_info()->name(),
+				"Strand: ".strand2name($tran_strand),
+			],
+			'translation',
+			$half_delta-2,
+			0
+			);
+	}
 
 		# force the canvas to resize just once and speed up the whole process of drawing:
 	$self->canvas()->Subwidget('main_canvas')->createLine(
@@ -339,6 +373,8 @@ my $tt_redraw = Evi::Tictoc->new("EviDisplay layout");
 			$self->canvas()->Subwidget('top_canvas'),
 			$self->canvas()->Subwidget('left_canvas'),
 			$evichain->afs_lp(),
+			undef,
+			undef,
 			$screendex,
 			$evichain->name(),
 			$evichain->strand(),
@@ -350,7 +386,9 @@ my $tt_redraw = Evi::Tictoc->new("EviDisplay layout");
 					@{$self->{remaining_criteria_lp}}),
 				"Strand: ".strand2name($evichain->strand()),
 			],
-			$evichain->analysis()
+			$evichain->analysis(),
+			$half_delta,
+			1
 			);
 	}
 
@@ -401,7 +439,8 @@ sub strand2name {
 }
 
 sub draw_exons {
-	my ($self,$where,$where_alt,$where_text,$exons_lp,$screendex,$name_tag,$chain_strand,$infotext,$scheme) = @_;
+	my ($self,$where,$where_alt,$where_text,$exons_lp,$start_at,$end_at,
+		$screendex,$name_tag,$chain_strand,$infotext,$scheme,$hd,$draw_stripes) = @_;
 
 	my ($ocolor,$fcolor) = @{$color_scheme->{$scheme}};
 	my $stripecolor = $alternating_colors[$screendex % 2];
@@ -410,45 +449,48 @@ sub draw_exons {
 	my $ribbon_bot	= $ystep*($screendex+1)-1;
 	my $mid_y		= $ystep*($screendex+1/2);
 
-	my $half_delta	= $ystep*$rel_exon_thickness/2;
-	my $exon_top	= $mid_y - $half_delta;
-	my $exon_bot	= $mid_y + $half_delta;
+	my $exon_top	= $mid_y - $hd;
+	my $exon_bot	= $mid_y + $hd;
+	my $intron_top  = $mid_y - $half_delta;
+	my $intron_bot  = $mid_y + $half_delta;
 
-	my $chain_tag = "rowindex:.$screendex";	# make it unique (i.e. differ from non-unique $name_tag)
+	my $chain_tag = "rowindex:$screendex";	# make it unique (i.e. differ from non-unique $name_tag)
 
-		# white-lightgrey background stripes for the chains themselves
-	$where->createRectangle(
-		$self->{_scale}->get_scaled_min(),
-		$ribbon_top,
-		$self->{_scale}->get_scaled_max(),
-		$ribbon_bot,
-		-outline => $stripecolor,
-		-fill => $stripecolor,
-		-disabledoutline => $current_contour_color,
-		-disabledfill => $stripecolor,
-		-tags =>	[ $name_tag, $chain_tag, 'backribbon' ],
-	);
+	if($draw_stripes) {
+			# white-lightgrey background stripes for the chains themselves
+		$where->createRectangle(
+			$self->{_scale}->get_scaled_min(),
+			$ribbon_top,
+			$self->{_scale}->get_scaled_max(),
+			$ribbon_bot,
+			-outline => $stripecolor,
+			-fill => $stripecolor,
+			-disabledoutline => $current_contour_color,
+			-disabledfill => $stripecolor,
+			-tags =>	[ $name_tag, $chain_tag, 'backribbon' ],
+		);
 
-		# white-lightgrey background stripes for text labels
-	$where_text->createRectangle(
-		0, # to be substituted later
-		$ribbon_top,
-		0, # to be substituted later
-		$ribbon_bot,
-		-outline => $stripecolor,
-		-fill => $stripecolor,
-		-disabledoutline => $current_contour_color,
-		-disabledfill => $stripecolor,
-		-tags =>	[ $name_tag, $chain_tag, 'backribbon' ],
-	);
+			# white-lightgrey background stripes for text labels
+		$where_text->createRectangle(
+			0, # to be substituted later
+			$ribbon_top,
+			0, # to be substituted later
+			$ribbon_bot,
+			-outline => $stripecolor,
+			-fill => $stripecolor,
+			-disabledoutline => $current_contour_color,
+			-disabledfill => $stripecolor,
+			-tags =>	[ $name_tag, $chain_tag, 'backribbon' ],
+		);
 
-	$where_text->createText(0, $mid_y,
-		-fill => 'black',
-		-disabledfill => $current_contour_color,
-		-text =>	$name_tag.' '.strand2arrow($chain_strand),
-		-anchor =>	'e',
-		-tags =>	[ $chain_tag, $name_tag ],
-	);
+		$where_text->createText(0, $mid_y,
+			-fill => 'black',
+			-disabledfill => $current_contour_color,
+			-text =>	$name_tag.' '.strand2arrow($chain_strand),
+			-anchor =>	'e',
+			-tags =>	[ $chain_tag, $name_tag ],
+		);
+	}
 
 	my @all_exon_intron_tags = ();
 
@@ -461,22 +503,41 @@ sub draw_exons {
 		#
 	for my $exon (sort {$a->start() <=> $b->start()} @$exons_lp) {
 
-		my $from = $self->{_scale}->scale_point($exon->start());
-		my $to   = $self->{_scale}->scale_point($exon->end());
-		my $exon_tag = $exon->start().','.$exon->end(); # must be scale-independent
+		my $e_start = $exon->start();
+		my $e_end   = $exon->end();
+
+		if($start_at) {
+			if($e_end<$start_at) { # skip exons to the left
+				next;
+			} elsif(($e_start<=$start_at) && ($start_at<=$e_end)) { # trim it
+				$e_start = $start_at;
+			}
+		}
+
+		if($end_at) {
+			if($end_at<$e_start) { # skip exons to the right
+				last;
+			} elsif(($e_start<=$end_at) && ($end_at<=$e_end)) { # trim it
+				$e_end = $end_at;
+			}
+		}
+
+		my $from = $self->{_scale}->scale_point($e_start);
+		my $to   = $self->{_scale}->scale_point($e_end);
+		my $exon_tag = "$e_start,$e_end"; # must be scale-independent
 
 		push @all_exon_intron_tags, $exon_tag;
 
 			# draw the preceding intron, if there is one:
 		if(defined($i_start)) {
-			my $intron_tag = $i_start.','.($exon->start()-1);
+			my $intron_tag = $i_start.','.($e_start-1);
 			my $i_mid_x = ($i_from+$from)/2;
 
 			push @all_exon_intron_tags, $intron_tag;
 
 				# highlightable background rectangle behind an intron:
 			my $rect = $where->createRectangle(
-					$i_from,$exon_top,$from,$exon_bot,
+					$i_from,$intron_top,$from,$intron_bot,
 				-outline => $stripecolor,
 				-fill =>    $stripecolor,
 				-disabledoutline => $stripecolor,
@@ -486,10 +547,10 @@ sub draw_exons {
 
 			$where->createPolygon(	# the intron itself (angular line pointing upwards)
 					$i_from, $mid_y,
-					$i_mid_x, $exon_top,
+					$i_mid_x, $intron_top,
 					$from, $mid_y,
 					$from, $mid_y,
-					$i_mid_x, $exon_top,
+					$i_mid_x, $intron_top,
 					$i_from, $mid_y,
 				-outline => $ocolor,
 				-fill    => $fcolor,
@@ -525,7 +586,7 @@ sub draw_exons {
 		);
 
 			# prepare for the next intron:
-		($i_start,$i_from) = ($exon->end()+1,$to+1);
+		($i_start,$i_from) = ($e_end+1,$to+1);
 	}
 
 	# ------------[the "chain-wide" event bindings]----------------------:
