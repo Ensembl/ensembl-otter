@@ -38,7 +38,6 @@ sub import {
     # had to put this inline here
     my %Config = (
                   
-                  BIN_DIR => '/nfs/disk100/humpub/LINUXbin',
                   DATA_DIR => '/usr/local/ensembl/data',
                   LIB_DIR  => '/usr/local/ensembl/lib',
                   
@@ -59,6 +58,17 @@ sub import {
                   
                   SOFT_MASKING => 0,
                   );
+    if ($^O eq 'linux') {
+        $Config{'BIN_DIR'} = '/nfs/disk100/humpub/LINUXbin';
+    }
+    elsif ($^O eq 'dec_osf') {
+        $Config{'BIN_DIR'} = '/nfs/disk100/humpub/OSFbin';
+    }
+    else {
+        my $bin_dir = '/usr/local/bin';
+        warn "Guessing BIN_DIR is '$bin_dir' for operating system '$^O'";
+        $Config{'BIN_DIR'} = $bin_dir;
+    }
 
     # Get list of variables supplied, or else all
     my @vars = @_ ? @_ : keys(%Config);
@@ -141,7 +151,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.6 $ ';
+$revision='$Revision: 1.7 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
@@ -189,6 +199,7 @@ use warnings;
 use Bio::EnsEMBL::Pipeline::SeqFetcher::OBDAIndexSeqFetcher;
 use Bio::EnsEMBL::Pipeline::Runnable::Finished_EST;
 use Bio::EnsEMBL::Pipeline::Runnable::Finished_Blast;
+use Bio::EnsEMBL::Pipeline::Config::General;
 use Bio::Otter::Lace::PersistentFile;
 use Bio::EnsEMBL::Root;
 use File::Basename;
@@ -332,7 +343,14 @@ sub _remove_files{
 }
 sub add_output{
     my ($self, @out) = @_;
-    push(@{$self->{'__output'}}, @out) if @out;
+    
+    if (@out) {
+        my $name = $self->query->display_id;
+        foreach my $fp (@out) {
+            $fp->seqname($name);
+        }
+        push(@{$self->{'__output'}}, @out) if @out;
+    }
     return undef;
 }
 sub output{
@@ -350,10 +368,10 @@ sub run{
     my $analysis = $self->analysis();
 
     my $runnable = Bio::EnsEMBL::Pipeline::Runnable::Finished_EST->new(
-                                                                       -analysis => $self->analysis(),
-                                                                       -query    => $seq,
-                                                                       -unmasked => $seq,
-                                                                       );
+        -analysis => $self->analysis(),
+        -query    => $seq->get_repeatmasked_seq($PIPELINE_REPEAT_MASKING),
+        -unmasked => $seq,
+        );
     $runnable->run();
     $self->seqfetcher($runnable->seqfetcher) unless $self->seqfetcher();
     $self->add_output($runnable->output());
@@ -474,8 +492,6 @@ sub query{
     my ($self, $seq) = @_;
     
     if ($seq) {
-        use Carp 'cluck';
-        cluck "Setting query to '$seq'";
         $self->{'_query_seq'} = $seq;
     }
     return $self->{'_query_seq'};
