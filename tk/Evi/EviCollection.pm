@@ -178,11 +178,13 @@ sub add_collection {
 	my $counter = 0;
 	print STDERR "[$analysis_name...";
 	for my $evichain (@candidates) {
-		if(1) {  # (any global filters for candidates should appear here)
+		if($evichain->get_first_exon()->can('get_HitDescription')) {
 			push @{$self->{_collection}}, $evichain; # put it on the global list
 			push @{$self->{_name2chains}{$evichain->name()}}, $evichain; # add it to by-name index
 			Evi::Taxonamer::put_id($evichain->taxon_id());
 			$counter++;
+		} else {
+			warn "EviColleciton: ".$evichain->name()." does not have a hit_Description(), ignoring.";
 		}
 	}
 	print STDERR ''.($counter ? $counter : 'EMPTY').']';
