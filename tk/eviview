@@ -15,12 +15,10 @@ use Evi::Tictoc;
 
 {
     my $dataset_name	= 'human';	# 'mouse', ...
-    # my $set_name	= 'ChrX-07';	# 'chr22-02', ...
-    # my $chr_name	= 'X';		# '22', ...
-    # my $trstable	= 'OTTHUMT00000081638';
-	my $set_name	= 'MHC_COX';
-	my $chr_name	= '6';
-    my $trstable	= 'OTTHUMT00000076915';
+
+	# my ($set_name, $chr_name, $trstable) = ('MHC_COX', '6', 'OTTHUMT00000076915');
+	my ($set_name, $chr_name, $trstable) = ('ChrX-07', 'X', 'OTTHUMT00000081638');
+
     my $margin		= 10000;	# any number > 0
     my @rna_analyses  = ('vertrna','Est2genome_human','Est2genome_mouse','Est2genome_other');
     # my @protein_analyses = ('Uniprot');

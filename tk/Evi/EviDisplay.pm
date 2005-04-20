@@ -745,10 +745,15 @@ sub select_by_name { # FIXME: may try to (invisibly) select the actual transcrip
 		}
 	}
 
-	$self->{_menu_selection}->command( # unconditionally add the removal command to the menu
-				-label		=> ($self->{_lselection}->is_visible($name_tag)
-									? $name_tag
-									: "$name_tag (invisible)"),
+		# unconditionally add the removal command to the menu:
+	my $submenu = $self->{_menu_selection}->cascade(
+			-label		=> ($self->{_lselection}->is_visible($name_tag)
+								? $name_tag
+								: "$name_tag (invisible)"),
+			-tearoff	=> 0,
+	);
+	$submenu->command(
+				-label		=> "Remove",
 				-command	=> [\&deselect_by_name, $self, $name_tag],
 	);
 }
