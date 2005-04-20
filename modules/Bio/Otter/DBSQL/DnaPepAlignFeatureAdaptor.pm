@@ -19,10 +19,12 @@ sub _objs_from_sth {
     my $hit_hash = {map {$_->hseqname, undef} @$features};
     $hd_aptr->fetch_HitDescriptions_into_hash($hit_hash);
     foreach my $feat (@$features) {
-        my $desc = $hit_hash->{$feat->hseqname}
-            or $self->throw(sprintf "No HitDescription for '%s'", $feat->hseqname);
-        bless $feat, 'Bio::Otter::DnaPepAlignFeature';
-        $feat->{'_hit_description'} = $desc;
+        if (my $desc = $hit_hash->{$feat->hseqname}) {
+            bless $feat, 'Bio::Otter::DnaPepAlignFeature';
+            $feat->{'_hit_description'} = $desc;
+        } else {
+            warn sprintf "No HitDescription for '%s'", $feat->hseqname;
+        }
     }
     return $features;
 }
