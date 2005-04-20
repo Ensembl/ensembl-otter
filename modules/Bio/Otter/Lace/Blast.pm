@@ -113,15 +113,15 @@ sub import {
 
 
     foreach (@vars) {
-	if (defined $Config{ $_ }) {
-            no strict 'refs';
-	    # Exporter does a similar job to the following
-	    # statement, but for function names, not
-	    # scalar variables:
-	    *{"${callpack}::$_"} = \$Config{ $_ };
-	} else {
-	    die "Error: Config: $_ not known (See Bio::Otter::Lace::Blast)\n";
-	}
+	    if (defined $Config{ $_ }) {
+                no strict 'refs';
+	        # Exporter does a similar job to the following
+	        # statement, but for function names, not
+	        # scalar variables:
+	        *{"${callpack}::$_"} = \$Config{ $_ };
+	    } else {
+	        die "Error: Config: $_ not known (See Bio::Otter::Lace::Blast)\n";
+	    }
     }
 }
 
@@ -141,7 +141,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.5 $ ';
+$revision='$Revision: 1.6 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
@@ -472,7 +472,12 @@ sub blast_idx_program{
 }
 sub query{
     my ($self, $seq) = @_;
-    $self->{'_query_seq'} = $seq if $seq;
+    
+    if ($seq) {
+        use Carp 'cluck';
+        cluck "Setting query to '$seq'";
+        $self->{'_query_seq'} = $seq;
+    }
     return $self->{'_query_seq'};
 }
 sub lib_path{

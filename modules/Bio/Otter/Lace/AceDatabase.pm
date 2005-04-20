@@ -1373,6 +1373,9 @@ sub write_das{
 
 sub DESTROY {
     my( $self ) = @_;
+    
+    #warn "Debug - leaving database intact"; return;
+    
     my $home = $self->home;
     print STDERR "DESTROY has been called for AceDatabase.pm with home $home\n";
     if ($self->error_flag) {
