@@ -46,7 +46,21 @@ $| = 1;
 
     my $gene_id_list;
     if($gene_stable_id){
-      @$gene_id_list=($gene_aptr->fetch_by_stable_id($gene_stable_id)->dbID);
+      if(-e $gene_stable_id){
+	# 'gene_stable_id' is a file
+	my $n=0;
+	open(IN,$gene_stable_id) || die "cannot open $gene_stable_id";
+	while(<IN>){
+	  chomp;
+	  push(@$gene_id_list,$gene_aptr->fetch_by_stable_id($_)->dbID);
+	  $n++;
+	}
+	close(IN);
+	print STDERR "checking $n gene_stable_ids only\n";
+      }else{
+	@$gene_id_list=($gene_aptr->fetch_by_stable_id($gene_stable_id)->dbID);
+	print STDERR "checking $gene_stable_id only\n";
+      }
     }elsif($sequence_set){
       my $slice_aptr = $otter_db->get_SliceAdaptor;
       $otter_db->assembly_type($sequence_set);
