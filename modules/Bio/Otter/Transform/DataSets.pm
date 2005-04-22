@@ -18,7 +18,8 @@ my $SUP_ELE = { map { $_ => 1 } qw(otter datasets) };
 sub start_handler{
     my $self = shift;
     my $xml  = shift;
-    my $ele  = lc shift;
+    my $ele  = shift;
+    $ele     =~ tr/[A-Z]/[a-z]/;
     my $attr = {@_};
     $self->_check_version(@_) if $ele eq 'otter';
 
@@ -43,7 +44,8 @@ sub char_handler{
     my $context = $xml->current_element();
     #print "context '$context'\n";
     if($SUB_ELE->{$context}){
-        my $context_method = uc $context;
+        $context =~ tr/[a-z]/[A-Z]/;
+        my $context_method = $context;
         my $ds = $self->objects;
         my $current = $ds->[$#$ds];
         if($current->can($context_method)){
