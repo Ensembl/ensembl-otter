@@ -197,7 +197,8 @@ while(<IN>){
       }elsif($val=~/(\S+)\_full\_length/){
 	$val=$1;
       }
-    }elsif($key ne 'Description'){
+    }elsif($key ne 'Description' && $key ne 'gene_id' && $key ne 'transcript_id' &&
+	   $key ne 'gene_category' && $key ne 'transcript_remark'){
       # store unrecognised keys as remarks
       $hashy{'remark'}.="$key: $val; ";
     }
@@ -438,7 +439,9 @@ foreach my $gene_id (keys %genes){
 }
 
 my $nmm=0;
-foreach my $gene_id (keys %genes){
+my $prefix2='GTF';
+if($prefix){$prefix2=$prefix;}
+foreach my $gene_id (sort keys %genes){
   my $gene     = new Bio::Otter::AnnotatedGene;
   my $geneinfo = new Bio::Otter::GeneInfo;   
   $gene->gene_info($geneinfo);
@@ -519,9 +522,12 @@ foreach my $gene_id (keys %genes){
   if($values{'Description'}){
     $gene->description($values{'Description'});
   }
+  # preserve import name as remark
+  my $remark="Annotation_remark- import $prefix2 name: $gene_id";
+  $geneinfo->remark(new Bio::Otter::GeneRemark(-remark=>$remark));
   if($values{'remark'}){
-    my $remark=new Bio::Otter::GeneRemark(-remark=>$values{'remark'});
-    $geneinfo->remark($remark);
+    my $remark="Annotation_remark- import $prefix2 remark: ".$values{'remark'};
+    $geneinfo->remark(new Bio::Otter::GeneRemark(-remark=>$remark));
   }
    
   # transcripts
@@ -549,13 +555,13 @@ foreach my $gene_id (keys %genes){
     my $transcript_name=next_transcript_name($gene_name,\$t_index);
     print STDERR " Transcript id $transcript_name ($transcript_id)\n" if $opt_v;
     $traninfo->name($transcript_name);
-    my $remark;
-    if($prefix){
-      $remark="$prefix name: $transcript_id";
-    }else{
-      $remark="GTF name: $transcript_id";
-    }
+    # original name should be public, better place would be transcript_synonym though
+    my $remark="$prefix2 name: $transcript_id";
     $traninfo->remark(new Bio::Otter::TranscriptRemark(-remark=>$remark));
+    if($tvalues{'transcript_remark'}){
+      my $remark="Annotation_remark- import $prefix2 remark: ".$tvalues{'transcript_remark'};
+      $traninfo->remark(new Bio::Otter::TranscriptRemark(-remark=>$remark));
+    }
 
     # recognise some tags and save as remarks
     if($values{'complete_CDS'}){
