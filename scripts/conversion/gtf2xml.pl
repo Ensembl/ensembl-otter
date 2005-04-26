@@ -198,7 +198,7 @@ while(<IN>){
 	$val=$1;
       }
     }elsif($key ne 'Description' && $key ne 'gene_id' && $key ne 'transcript_id' &&
-	   $key ne 'gene_category' && $key ne 'transcript_remark'){
+	   $key ne 'gene_category' && $key ne 'transcript_remark' && $key ne 'transcript_name'){
       # store unrecognised keys as remarks
       $hashy{'remark'}.="$key: $val; ";
     }
@@ -552,7 +552,12 @@ foreach my $gene_id (sort keys %genes){
 
     # transcript_name is create from gene_name;
     # original transcript_id is stored in remark
-    my $transcript_name=next_transcript_name($gene_name,\$t_index);
+    my $transcript_name;
+    if($tvalues{'transcript_name'}){
+      $transcript_name=$tvalues{'transcript_name'};
+    }else{
+      $transcript_name=next_transcript_name($gene_name,\$t_index);
+    }
     print STDERR " Transcript id $transcript_name ($transcript_id)\n" if $opt_v;
     $traninfo->name($transcript_name);
     # original name should be public, better place would be transcript_synonym though
