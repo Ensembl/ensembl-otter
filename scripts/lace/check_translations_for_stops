@@ -148,7 +148,7 @@ sub check_for_stops {
 	# check if pseudo or not
 	my $trans_class=$trans->transcript_info->class->name,
 	my $flag_pseudo=0;
-	if($trans_class eq 'Pseudogene'){
+	if($trans_class=~/seudogene$/){
 	  $flag_pseudo=1;
 	}
 
