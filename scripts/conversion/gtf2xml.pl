@@ -185,6 +185,7 @@ while(<IN>){
     }else{
       # don't process description lines as much
       $val=~s/\t/ /g;
+      $val=~s/\|/;/g;
     }
     $gtf_keys{$key}++;
 
