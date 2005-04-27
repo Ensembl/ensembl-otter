@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl5.8.0
+#!/usr/local/bin/perl5.8.0 -w
 
 # Shamelessly ripped off from pfetch_srv
 package OtterServer;
@@ -62,7 +62,7 @@ my $server = HTTP::Daemon->new(
   Listen    => 10
 ) or die "making socket: $@\n";
 
-make_log_file($LOGFILE);
+Bio::Otter::LogFile->make_log($LOGFILE);
 make_pid_file($PIDFILE);
 # Fork off  children.
 print "\nCreating Children...\n";
@@ -222,7 +222,7 @@ sub set_cgi_env {
   $ENV{"REQUEST_URI"}       = $r->uri;
   $ENV{"REQUEST_METHOD"}    = $r->method;
   $ENV{"SCRIPT_NAME"}       = $r->url->path;
-  $ENV{"SERVER_ADMIN"}      = "searle\@sanger.ac.uk";
+  $ENV{"SERVER_ADMIN"}      = "anacode\@sanger.ac.uk";
   $ENV{"SERVER_PORT"}       = $SOCKET;
   $ENV{"SERVER_PROTOCOL"}   = "HTTP/1.0";
   $ENV{"SERVER_SOFTWARE"}   = $server->product_tokens;
@@ -327,21 +327,13 @@ sub ROTATE_LOGS{
     }
     print STDOUT "OTTER_SERVER : Sent ALT HUP to children: ". join (",", @kids). "\n" if $DEBUG;
     # reopen the log files
-    make_log_file($LOGFILE);
+    Bio::Otter::LogFile->make_log($LOGFILE);
     # note to log file reader
     print STDERR "using this log file now as from $rotate_time\n";
     # wake this script up a bit, and make children
     &{$SIG{CHLD}};
 
     $SIG{HUP} = \&ROTATE_LOGS;
-}
-
-##################
-# log file stuff, only for STDERR.  Do we need something for STDOUT?
-sub make_log_file{
-    my $output = shift;
-    close STDERR; 
-    open (STDERR, ">$output")   or die "Can't dup stdout: $!";
 }
 
 ###########################################################

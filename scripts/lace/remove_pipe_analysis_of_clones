@@ -24,7 +24,7 @@ use Bio::Otter::Lace::Defaults;
 
 
   # @ARGV is filename with a list of contig_names (eg, AC012101.7.1.168965)
-   $help->() unless ($dataset and (@sets or @ARGV) and $action);
+   $help->() unless ($dataset and $action);
 
   # pipeline db connection
   my $client    = Bio::Otter::Lace::Defaults::make_Client(); # Bio::Otter::Lace::Client
@@ -47,15 +47,13 @@ use Bio::Otter::Lace::Defaults;
               $ctgId_ctgName->{$cs->pipeline_contig_id} = $cs->contig_name;
           }
 	  }
-  }
-  else {
-    while (<>) {
-      chomp;
-      my $contig_name = $_;
-      $contig_name =~ s/\s+$//;
-   	
-      $ctgId_ctgName->{ contig_name_to_contig_id($pipe_db, $contig_name) } = $contig_name;
-    }
+  } else {
+        while (<>) {
+            foreach my $contig_name (split) {
+                my $id = contig_name_to_contig_id($pipe_db, $contig_name);
+                $ctgId_ctgName->{$id} = $contig_name;
+            }
+        }
   }
 
   # then do things with each clone (as contig_name) in pipeline db
@@ -69,7 +67,7 @@ use Bio::Otter::Lace::Defaults;
 	  my ($counter, $order) = remove_pipeline_analysis($action, $pipe_db, $ctg_name, $ctg_id);
 
 	  # this tells if an analysis actually creates rows in the database
-	  printf ( "%s\t%s\n", $msg, ($action eq "kill" ? "Deleted" : "Found") );
+	  printf( "%s\t%s\n", $msg, ($action eq "kill" ? "Deleted" : "Found") );
 	  foreach my $k (@$order ) {
 		printf("\t\t%7d row(s) in $k table\n", $counter->{$k});
 	  }

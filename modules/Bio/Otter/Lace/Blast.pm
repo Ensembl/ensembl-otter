@@ -151,7 +151,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.7 $ ';
+$revision='$Revision: 1.8 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
@@ -403,6 +403,7 @@ sub run_on_selected_CloneSequences{
         if(@$tp){
             foreach my $tile(@$tp){
                 my $seq = $tile->component_Seq();
+                printf STDERR "Searching sequence '%s'\n", $seq->display_id;
                 $self->query($seq);
                 $self->run();
             }

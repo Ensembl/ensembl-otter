@@ -7,6 +7,7 @@ use strict;
 use Carp qw{ confess cluck };
 use Sys::Hostname qw{ hostname };
 use LWP;
+use Bio::Otter::LogFile;
 use Bio::Otter::Lace::DataSet;
 use Bio::Otter::Lace::AceDatabase;
 use Bio::Otter::Lace::PersistentFile;
@@ -71,6 +72,33 @@ sub debug{
 
     return $self->option_from_array([qw( client debug )]) ? 1 : 0;
 }
+
+sub make_log_file {
+    my( $self, $file_root ) = @_;
+    
+    $file_root ||= 'client';
+    
+    my $log_dir = $self->option_from_array([qw( client logdir )])
+        or return;
+    
+    # Make $log_dir into absolute file path
+    # It is assumed to be relative to the home directory if not
+    # already absolute or beginning with "~/".
+    my $home = (getpwuid($<))[7];
+    $log_dir =~ s{^~/}{$home/};
+    unless ($log_dir =~ m{^/}) {
+        $log_dir = "$home/$log_dir";
+    }
+    
+    if (mkdir($log_dir)) {
+        warn "Made logging directory '$log_dir'\n";
+    }
+    
+    my $log_file = "$log_dir/$file_root.$$.log";
+    warn "Logging output to '$log_file'\n";
+    Bio::Otter::LogFile->make_log($log_file);
+}
+
 sub lock {
     my $self = shift;
     
