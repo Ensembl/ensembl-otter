@@ -2,18 +2,21 @@ package Evi::Tictoc;
 
 # a simple stopwatch a la Matlab's tic/toc
 #
-# 4.Mar'2005, lg4
+# lg4
 
 use strict;
 
 sub new {
-	my $pkg = shift @_;
+	my $pkg		= shift @_;
+	my $title	= shift @_;
+	my $start	= time;
 
-	my $self = bless {}, $pkg;
-	$self->{_start} = time;
+	my $self = bless {
+		'_title' => $title,
+		'_start' => $start,
+	}, $pkg;
 
-	my $title = shift @_;
-	print STDERR $title."... ";
+	print STDERR $title." started...\n";
 
 	return $self;
 }
@@ -23,7 +26,7 @@ sub done {
 
 	$self->{_end} = time;
 
-	print STDERR "done in ".($self->{_end}-$self->{_start})." sec\n";
+	print STDERR ''.$self->{_title}." done in ".($self->{_end}-$self->{_start})." sec\n";
 }
 
 1;

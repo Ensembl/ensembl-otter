@@ -251,6 +251,16 @@ if(0) {
 sub exit_callback {
 	my $self		= shift @_;
 	my $function	= shift @_;
+
+	if($function == 2) { # unsure, ask it explicitly
+		$function = 'Yes' eq $self->top_window()->messageBox(
+				-title => 'Please reply',
+				-message => 'Do you want to save the changes?',
+				-type => 'YesNo',
+				-icon => 'question',
+				-default => 'Yes',
+		);
+	}
 	
 	if($function) {
 		warn "attempting to save back the selection";
@@ -790,7 +800,7 @@ sub save_selection_to_transcript {
             $ec->save_OtterTranscript_evidence($self->{_transcript});
         }
 	} else {
-		print "The list of selected evidence did not change. Nothing to be saved back to the database.";
+		print "The list of selected evidence did not change. Nothing to be saved back to the database.\n";
 	}
 }
 
