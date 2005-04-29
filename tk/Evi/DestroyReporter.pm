@@ -1,14 +1,21 @@
 package Evi::DestroyReporter;
 
-# Any object that wants to report about its own destruction should inherit from this one
+# Any class that wants to report about destruction of its instances
+# should inherit from this one
 #
-# lg4, 25.Feb'2005
+# lg4
 
-sub DESTROY {
-	my( $self ) = @_;
+sub report_destruction {
+	my $self = shift @_;
 	
 	my $class = ref($self);
 	warn "Destroying a '$class'";
+}
+
+sub DESTROY {
+	my $self = shift @_;
+
+	$self->report_destruction();
 }
 
 1;

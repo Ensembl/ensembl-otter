@@ -119,18 +119,19 @@ sub find_intersecting_matches {
 
 sub add_collection {
 	my $self			= shift @_;
-	my @afs				= @{ shift @_ };
+	my @separate_afs	= @{ shift @_ };
 	my $analysis_name	= shift @_;
 
 	my %match_by_eviname = ();
 	my %unique_match = ();
 
 		# group the *unique* matches by the EST/mRNA name [and the strand]:
-	foreach my $af (@afs) {
+	foreach my $af (@separate_afs) {
 		my $hseqname    = $af->hseqname();
 		my $hstrand     = $af->hstrand();
 
-		my $keyline	= $hseqname;
+		my $keyline		= $hseqname;
+
 		my $start       = $af->start();
 		my $end         = $af->end();
 		my $hstart      = $af->hstart();

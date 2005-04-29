@@ -35,6 +35,8 @@ use strict;
 use Evi::SortCriterion;		# method/params to be called on data to compute the key, direction, threshold...
 use Evi::Sorter;			# performs multicriterial sorting, filtering and uniq
 
+use Evi::SortFilterDialog; # window that selects the sorting order
+
 use Evi::LogicalSelection;	# keeps the information about selection and visibility
 
 use Evi::ScaleQuantum;		# a scaler that exaggerates the small differences in lengths
@@ -42,7 +44,6 @@ use Evi::ScaleMinexon;		# a scaler that limits the minimum length of an exon
 use Evi::ScaleFitwidth;		# a scaler that fits everything into given width
 
 use Tk::ROText;			# for the status line
-use Tk::WrappedOSF;		# frame that selects the sorting order
 use MenuCanvasWindow;	# recommended self-resizing window mgr
 
 use Evi::Tictoc;				# a simple stopwatch
@@ -52,12 +53,12 @@ use base ('MenuCanvasWindow','Evi::DestroyReporter'); # we want to track the des
 sub init_filter_and_sort_criteria {
 	my $self = shift @_;
 
-		# ALLOW: switch on showing all available analyses
+		# ALLOW POLICY: switch on showing all available analyses
 	for my $analysis (	@{ $self->{_evicoll}->rna_analyses_lp() },
 						@{ $self->{_evicoll}->protein_analyses_lp() }) {
 		$self->{_show_analysis}{$analysis} = 1;
 	}
-		# DENY: switch off certain analyses
+		# DENY POLICY: switch off certain analyses
 	for my $analysis (@{ $self->{_hide_analyses_lp} }) {
 			# be careful not to create unwanted hash values:
 		if($self->{_show_analysis}{$analysis}) {
@@ -133,6 +134,13 @@ my $tt_fs = Evi::Tictoc->new("Filtering and sorting");
 $tt_fs->done();
 }
 
+sub filter_sort_redraw { # a callback
+	my $self = shift @_;
+
+	$self->filter_and_sort();
+	$self->evi_redraw();
+}
+
 sub new {
 	my $pkg = shift @_;
 
@@ -150,6 +158,16 @@ sub new {
 	$self->{_scale_type}		= shift @_ || 'Evi::ScaleFitwidth';
 
 	$self->init_filter_and_sort_criteria();
+
+	$self->{_sortfilterdialog} = Evi::SortFilterDialog->new(
+				$top_window,
+				"$title| Sort data",
+				$self->{active_criteria_lp},
+				$self->{remaining_criteria_lp},
+				$self,
+				'filter_sort_redraw'
+	);
+
 	$self->{_lselection}		= Evi::LogicalSelection->new($self->{_evicoll},$self->{_transcript});
 
 	$self->{_statusline} = $top_window->ROText(-height=>1)->pack(-side => 'bottom');
@@ -157,18 +175,11 @@ sub new {
 	my $menu_file = $self->make_menu('File');
 	$menu_file->command(
         -label      => 'Save and exit',
-        -command    => sub {
-                            print STDERR "Saving to transcript\n";
-							$self->save_selection_to_transcript();
-                            print STDERR "Closing window\n";
-							$self->top_window()->destroy();
-						},
+        -command    => [ $self => 'exit_callback', 1 ],
 	);
 	$menu_file->command(
         -label      => 'Exit without saving',
-        -command    => sub {
-							$self->top_window()->destroy();
-						},
+        -command    => [ $self => 'exit_callback', 0 ],
 	);
 
 	my $menu_data = $self->make_menu('Data');
@@ -176,10 +187,7 @@ sub new {
 		$menu_data->checkbutton(
 			-label  => "Show $analysis",
 			-variable => \$self->{_show_analysis}{$analysis},
-			-command => sub {
-							$self->filter_and_sort();
-							$self->evi_redraw();
-						},
+			-command => [ $self => 'filter_sort_redraw' ],
 		);
 	}
 	$menu_data->separator();
@@ -187,87 +195,70 @@ sub new {
         -label  => 'Show uni~que matches',
         -value  => 1,
         -variable => \$self->{_uniq},
-		-command => sub {
-						$self->filter_and_sort();
-						$self->evi_redraw();
-					},
+		-command => [ $self => 'filter_sort_redraw' ],
     );
     $menu_data->radiobutton(
         -label  => 'Show ~all matches',
         -value  => 0,
         -variable => \$self->{_uniq},
-		-command => sub {
-						$self->filter_and_sort();
-						$self->evi_redraw();
-					},
+		-command => [ $self => 'filter_sort_redraw' ],
     );
 	$menu_data->separator();
 	$menu_data->command(
         -label      => 'Change ~sorting/filtering order ...',
-        -command    => sub {
-			my $sort_w = $top_window->Toplevel(-title => "$title| Sort data");
-			$sort_w->minsize(700,150);
-
-			$sort_w->Label('-text' => 'Please select the sorting order:')
-				->pack('-side' => 'top');
-			my $wosf = $sort_w->WrappedOSF()
-				->pack('-fill' => 'both', '-expand' => 1);
-
-			$wosf->link_data( $self->{active_criteria_lp}, $self->{remaining_criteria_lp} );
-
-			my $done_b = $sort_w->Button(
-							'-text' => 'Done',
-							'-command' => sub{
-								$self->filter_and_sort();
-								$self->evi_redraw();
-								$sort_w->destroy(); # it IS better to get rid of it
-							}
-			)->pack('-side' => 'bottom', '-anchor' => 'se');
-			$done_b->bind('<Destroy>', sub { $sort_w=$wosf=undef; });
-		}
+		-command => [ $self->{_sortfilterdialog} => 'open' ],
     );
 
 	my $menu_view = $self->make_menu('View');
-if(0) {
-	$menu_view->radiobutton(
-		-label	=> '~MinExon view',
-		-value	=> 'Evi::ScaleMinexon',
-		-variable => \$self->{_scale_type},
-		-command => sub { $self->evi_redraw(); }
-	);
-	$menu_view->radiobutton(
-		-label	=> '~Proportional 1:1 view',
-		-value	=> 'Evi::ScaleBase',
-		-variable => \$self->{_scale_type},
-		-command => sub { $self->evi_redraw(); }
-	);
-}
 	$menu_view->radiobutton(
 		-label	=> '~Proportional view',
 		-value	=> 'Evi::ScaleFitwidth',
 		-variable => \$self->{_scale_type},
-		-command => sub { $self->evi_redraw(); }
+		-command => [ $self => 'evi_redraw' ],
 	);
 	$menu_view->radiobutton(
 		-label	=> '~Quantum view',
 		-value	=> 'Evi::ScaleQuantum',
 		-variable => \$self->{_scale_type},
-		-command => sub { $self->evi_redraw(); }
+		-command => [ $self => 'evi_redraw' ],
 	);
+if(0) {
+	$menu_view->radiobutton(
+		-label	=> '~MinExon view',
+		-value	=> 'Evi::ScaleMinexon',
+		-variable => \$self->{_scale_type},
+		-command => [ $self => 'evi_redraw' ],
+	);
+	$menu_view->radiobutton(
+		-label	=> '~Proportional 1:1 view',
+		-value	=> 'Evi::ScaleBase',
+		-variable => \$self->{_scale_type},
+		-command => [ $self => 'evi_redraw' ],
+	);
+}
 
 	$self->{_menu_selection} = $self->make_menu('Selection');
 
-	$top_window->protocol('WM_DELETE_WINDOW', sub {
-										$self->save_selection_to_transcript();
-										$self->top_window()->destroy();
-									});
+	$top_window->protocol('WM_DELETE_WINDOW', [ $self => 'exit_callback', 2 ]);
 
-	$top_window->bind('<Destroy>', sub { $self=undef; });
+	$top_window->bind('<Destroy>', sub { $self->{_sortfilterdialog}=$self=undef; });
 
-	$self->filter_and_sort();
-	$self->evi_redraw();
+	$self->filter_sort_redraw();
 
 	return $self;
+}
+
+sub exit_callback {
+	my $self		= shift @_;
+	my $function	= shift @_;
+	
+	if($function) {
+		warn "attempting to save back the selection";
+		$self->save_selection_to_transcript();
+	}
+	$self->{_sortfilterdialog}->release();
+	warn "closing the EviDisplay window";
+	$self->top_window()->destroy();
 }
 
 sub ExonCanvas {
@@ -290,7 +281,7 @@ sub populate_scale {
 		$self->{_scale}->add_pair( $exon->start(), $exon->end() );
 	}
 
-	if($self->{_transcript}->translation()) {
+	if($self->{_transcript}->translation()) { # both ends of the translation
 		$self->{_scale}->add_pair(
 			$self->{_transcript}->coding_region_start(),
 			$self->{_transcript}->coding_region_end()
@@ -355,6 +346,9 @@ my $tt_redraw = Evi::Tictoc->new("EviDisplay layout");
 			0
 			);
 	}
+
+	warn "SC_MIN: ".$self->{_scale}->get_scaled_min()."\n";
+	warn "SC_MAX: ".$self->{_scale}->get_scaled_max()."\n";
 
 		# force the canvas to resize just once and speed up the whole process of drawing:
 	$self->canvas()->Subwidget('main_canvas')->createLine(
@@ -788,17 +782,15 @@ sub save_selection_to_transcript {
 	my $self = shift @_;
 
 	if( $self->{_lselection}->save_to_transcript() ) {
-		print "The list of selected evidence changed.\n";
-		print "The new list of selected evidence is:\n";
+		print "The list of selected evidence changed. The new list of selected evidence is:\n";
 
         use Data::Dumper;
-        print STDERR Dumper($self->{_transcript}->transcript_info);
+        print Dumper($self->{_transcript}->transcript_info);
         if (my $ec = $self->ExonCanvas) {
             $ec->save_OtterTranscript_evidence($self->{_transcript});
         }
 	} else {
-		print "The list of selected evidence did not change.\n";
-		print "Nothing to be saved back to the database\n";
+		print "The list of selected evidence did not change. Nothing to be saved back to the database.";
 	}
 }
 

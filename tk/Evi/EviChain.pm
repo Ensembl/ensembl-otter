@@ -322,18 +322,21 @@ sub _af2string {	# not-a-method:
 	my $percent_id  = $af->percent_id();
 
 	return ($hstrand == 1)
-		? "[$hstart-$hend] ($start ==> $end) $percent_id"
-		: "[$hend-$hstart] ($start <== $end) $percent_id"
+		? "[$hstart-$hend]/".($hend-$hstart+1)." ($start ==> $end)/".($end-$start+1)." ${percent_id}%"
+		: "[$hend-$hstart]/".($hstart-$hend+1)." ($start <== $end)/".($start-$end+1)." ${percent_id}%"
 }
 
 sub toString {	# multistring text, actually
 	my $self = shift @_;
-	my $transcript = shift @_;
+	my $transcript = shift @_ || 0;
 
 	return '['.$self->eviseq_length().'] '
 		.$self->prefixed_name().':'
-		.'  supp_introns='.$self->trans_supported_introns($transcript)
-		.'  supp_junctions='.$self->trans_supported_junctions($transcript)
+		. ($transcript
+			? (' supp_introns='.$self->trans_supported_introns($transcript)
+			  .' supp_junctions='.$self->trans_supported_junctions($transcript)
+			)
+			: '')
 		.'  eviseq_coverage='.$self->eviseq_coverage()
 		.'  min_percent_id='.$self->min_percent_id()
 		."\n"
