@@ -13,6 +13,11 @@ use Evi::EviCollection;
 use Evi::EviDisplay;
 use Evi::Tictoc;
 
+# sub Bio::EnsEMBL::DBSQL::DBAdaptor::DESTROY {
+#	use Carp 'cluck';
+#	cluck 'bye';
+# }
+
 {
     my $dataset_name	= 'human';	# 'mouse', ...
 
@@ -57,7 +62,20 @@ use Evi::Tictoc;
 my $tt_evicoll = Evi::Tictoc->new("Building the evidence collection");
     my $evi_coll = Evi::EviCollection->new_from_otter_Slice(
 						$otter_slice, [ @rna_analyses ], [@protein_analyses] );
+	if(! $evi_coll->pipeline_slice->adaptor->db) {
+		warn "\n[DATABASE ADAPTOR LOST] ";
+	}
 $tt_evicoll->done();
+
+if(0) {
+    my $inter_matches_lp = $evi_coll->get_all_matches();
+	for my $evichain (@$inter_matches_lp) {
+		if($evichain->analysis() eq 'Uniprot') {
+			print $evichain->toString()."\n";
+		}
+	}
+	exit(0);
+}
 
     my $mw = CanvasWindow::MainWindow->new('EviView| Choose a transcript to work on');
 	my $mcw = MenuCanvasWindow->new($mw);

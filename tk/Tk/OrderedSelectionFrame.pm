@@ -89,7 +89,7 @@ sub Populate {
 		->pack('-side' => 'right', '-fill' => 'both', '-expand' => 1);
 	$self->{_remaining_lab} = $self->{_right_fr}->Label('-text' => 'Remaining:')
 		->pack('-side' => 'top');
-	$self->{_remaining_lb}  = $self->{_right_fr}->Listbox('-selectmode' => 'multiple')
+	$self->{_remaining_lb}  = $self->{_right_fr}->Listbox('-selectmode' => 'browse') # was => 'multiple'
 		->pack('-side' => 'bottom', '-fill' => 'both', '-expand' => 1);
 
 	tie @{$self->{active_aref}}, "Tk::Listbox", $self->{_active_lb};
