@@ -203,12 +203,8 @@ sub bind_scroll_commands {
     my $x_scroll = $scrolled->Subwidget('xscrollbar');
     my $y_scroll = $scrolled->Subwidget('yscrollbar');
 
-	my $canvas_components = $canvas->can('Subwidget')
-			? [ $canvas->Subwidget('main_canvas'),
-				$canvas->Subwidget('left_canvas'),
-				$canvas->Subwidget('top_canvas'),
-				$canvas->Subwidget('topleft_canvas'),
-			  ]
+	my $canvas_components = $canvas->can('canvases')
+			? $canvas->canvases()
 			: [ $canvas ];
     
     # Unbind the scrollbar keyboard events from the canvas
@@ -339,11 +335,16 @@ sub scroll_to_obj {
         or confess "No scrollregion";
     my ($scr_left,$scr_top,$scr_right,$scr_bottom) = @$scroll_ref;
 
+# print "SCREGION: ".join(', ',($scr_left,$scr_top,$scr_right,$scr_bottom))."\n";
+
     my $width  = $scr_right  - $scr_left;
     my $height = $scr_bottom - $scr_top;
     #warn "width=$width, height=$height\n";
 
     my ($obj_left, $obj_top, $obj_right, $obj_bottom) = $canvas->bbox($obj);
+
+# print "BBOX: ".join(', ',($obj_left, $obj_top, $obj_right, $obj_bottom))."\n";
+
     $obj_left   -= $scr_left;
     $obj_right  -= $scr_left;
     $obj_top    -= $scr_top;
@@ -355,13 +356,15 @@ sub scroll_to_obj {
     #warn "left=$visible_left, right=$visible_right\n";
     if ($obj_right < $visible_left) {
         $canvas->xviewMoveto(($obj_left - $margin) / $width);
+		# warn "scrolling left";
     }
     elsif ($obj_left > $visible_right) {
         my $visible_width = $visible_right - $visible_left;
         $canvas->xviewMoveto(($obj_right + $margin - $visible_width) / $width);
+		# warn "scrolling right";
     }
     else {
-        #warn "object is visible in x axis\n";
+        # warn "object is visible in x axis\n";
     }
     
     my ($t_frac, $b_frac) = $canvas->yview;
@@ -370,12 +373,14 @@ sub scroll_to_obj {
     #warn "top=$top, bottom=$bottom\n";
     if ($obj_bottom < $visible_top) {
         $canvas->yviewMoveto(($obj_top - $margin) / $height);
+		# warn "scrolling up";
     }
     elsif ($obj_top > $visible_bottom) {
         my $visible_height = $visible_bottom - $visible_top;
         $canvas->yviewMoveto(($obj_bottom + $margin - $visible_height) / $height);
+		# warn "scrolling down";
     } else {
-        #warn "object is visible in y axis\n";
+        # warn "object is visible in y axis\n";
     }
 }
 

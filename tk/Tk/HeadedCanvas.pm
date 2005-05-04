@@ -1,15 +1,20 @@
-package HeadedCanvas;
+package Tk::HeadedCanvas;
 
 # a double-headed canvas with scrolls
 #
-# 10.Mar'2005, lg4
+# lg4
 
 use strict;
 use Tk;
 
-use base ('Tk::Frame');
+use base ('Evi::DestroyReporter','Tk::Frame');
 
 Construct Tk::Widget 'HeadedCanvas';
+
+use Tk::Submethods ( # propagate xviewMoveto(@_) --> xview('moveto',@_); etc
+			'xview'  => [qw(moveto scroll)],
+			'yview'  => [qw(moveto scroll)],
+);
 
 sub Populate {
 	my ($self,$args) = @_;
@@ -38,28 +43,13 @@ sub Populate {
 	)->pack(-side=>'bottom',-fill=>'both',-expand=>1);
 
 		# scrolls' binding:
-	$sh->configure( -command => sub {
-										if(($_[0] eq 'moveto')&&($_[1]<0)) { # don't let it become negative
-											$_[1] = 0;
-										}
-										foreach my $c ($main_canvas,$top_canvas) {
-											$c->xview(@_);
-										}
-								});
-	$top_canvas->configure(-xscrollcommand => sub { $sh->set(@_); });
-	$main_canvas->configure(-xscrollcommand => sub { $sh->set(@_); });
+	$sh->configure( -command => [$self => 'xview']);
+	$top_canvas->configure(-xscrollcommand => [$sh => 'set']);
+	$main_canvas->configure(-xscrollcommand => [$sh => 'set']);
 	 
-	$sv->configure( -command => sub {
-										if(($_[0] eq 'moveto')&&($_[1]<0)) { # don't let it become negative
-											$_[1] = 0;
-										}
-										foreach my $c ($main_canvas,$left_canvas) {
-											$c->yview(@_);
-										}
-								});
-	$left_canvas->configure(-yscrollcommand => sub { $sv->set(@_); });
-	# $left_canvas->configure(-yscrollcommand => [ set => $sv ]);
-	$main_canvas->configure(-yscrollcommand => sub { $sv->set(@_); });
+	$sv->configure( -command => [$self => 'yview']);
+	$left_canvas->configure(-yscrollcommand => [$sv => 'set']);
+	$main_canvas->configure(-yscrollcommand => [$sv => 'set']);
 
 		# advertisement:
 	$self->Advertise('main_canvas'     => $main_canvas);
@@ -74,11 +64,12 @@ sub Populate {
 		-background => [['DESCENDANTS','SELF'],'background','Background','white'],
 		-foreground => [['DESCENDANTS','SELF'],'foreground','Foreground','black'],
 		-scrollregion => ['METHOD','scrollregion','Scrollregion',[0,0,0,0]],
-		'DEFAULT' => [$main_canvas],
+		'DEFAULT' => [ 'main_canvas' ],
 	);
+
 		# delegate methods to the main canvas:
 	$self->Delegates(
-		'DEFAULT' => $main_canvas,
+		'DEFAULT' => 'main_canvas',
 	);
 }
 
@@ -109,20 +100,36 @@ sub scrollregion {
 	}
 }
 
-# calls to 'xview()' and 'yview()' should get propagated to the main_canvas
+# calls to 'xview()' and 'yview()' should get propagated to the correct subcanvases:
 
-sub xviewMoveto {
-	my ($self,$frac) = @_;
+sub xview {
+	my $self = shift @_;
 
-	$self->Subwidget('main_canvas')->xviewMoveto($frac);
-	$self->Subwidget('top_canvas')->xviewMoveto($frac);
+	if(!scalar(@_)) {
+		return $self->Subwidget('main_canvas')->xview();
+	} else {
+		if(($_[0] eq 'moveto')&&($_[1]<0)) { # don't let it become negative
+			$_[1] = 0;
+		}
+		foreach my $c ('main_canvas','top_canvas') {
+			$self->Subwidget($c)->xview(@_);
+		}
+	}
 }
 
-sub yviewMoveto {
-	my ($self,$frac) = @_;
+sub yview {
+	my $self = shift @_;
 
-	$self->Subwidget('main_canvas')->xviewMoveto($frac);
-	$self->Subwidget('left_canvas')->xviewMoveto($frac);
+	if(!scalar(@_)) {
+		return $self->Subwidget('main_canvas')->yview();
+	} else {
+		if(($_[0] eq 'moveto')&&($_[1]<0)) { # don't let it become negative
+			$_[1] = 0;
+		}
+		foreach my $c ('main_canvas','left_canvas') {
+			$self->Subwidget($c)->yview(@_);
+		}
+	}
 }
 
 sub defmin { # not a method
@@ -193,13 +200,6 @@ sub fit_everything {
 		$c->xviewMoveto(0);
 		$c->yviewMoveto(0);
 	}
-}
-
-sub DESTROY {
-	my( $self ) = @_;
-
-	my $class = ref($self);
-	warn "Destroying a '$class'";
 }
 
 1;

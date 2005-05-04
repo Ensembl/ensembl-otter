@@ -9,6 +9,8 @@ use strict;
 use Evi::EviChain;
 use Evi::Taxonamer;
 
+use base ('Evi::DestroyReporter'); # we want to track the destruction event
+
 sub new_from_otter_Slice {
 	my ($pkg, $otter_slice, $rna_analyses_lp, $protein_analyses_lp) = @_;
 

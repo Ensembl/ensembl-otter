@@ -4,6 +4,8 @@ package Evi::EviDisplay;
 #
 # lg4
 
+my $bind_ok = 1;
+
 my $ystep = 16;
 my $rel_exon_thickness = 0.5; # in practice - from 0.1 to 0.9
 my $half_delta	= $ystep*$rel_exon_thickness/2;
@@ -241,7 +243,7 @@ if(0) {
 
 	$top_window->protocol('WM_DELETE_WINDOW', [ $self => 'exit_callback', 2 ]);
 
-	$top_window->bind('<Destroy>', sub { $self->{_sortfilterdialog}=$self=undef; });
+	# $top_window->bind('<Destroy>', sub { $self->{_sortfilterdialog}=$self=undef; });
 
 	$self->filter_sort_redraw();
 
@@ -267,8 +269,10 @@ sub exit_callback {
 		$self->save_selection_to_transcript();
 	}
 	$self->{_sortfilterdialog}->release();
+	my $top_window = $self->top_window();
+	$self->release();
 	warn "closing the EviDisplay window";
-	$self->top_window()->destroy();
+	$top_window->destroy();
 }
 
 sub ExonCanvas {
@@ -563,6 +567,7 @@ sub draw_exons {
 				-tags =>	[ $intron_tag, $chain_tag, $name_tag ],
 			);
 
+if($bind_ok) {
 			$where->bind($intron_tag,'<ButtonPress-1>',
 				[\&highlight, (1, [$where,$where_alt], $intron_tag)] # FIXME: copy to clipboard
 											# or substitute by a popup
@@ -570,6 +575,7 @@ sub draw_exons {
 			$where->bind($intron_tag,'<ButtonRelease-1>',
 				[\&highlight, (0, [$where,$where_alt], $intron_tag)] # FIXME: copy to clipboard
 			);
+}
 		}
 
 			# now, draw the exon itself:
@@ -581,6 +587,7 @@ sub draw_exons {
 			-tags =>	[ $exon_tag, $chain_tag, $name_tag ],
 		);
 
+if($bind_ok) {
 		$where->bind($exon_tag,'<ButtonPress-1>',
 			[\&highlight, (1, [$where,$where_alt], $exon_tag)] # FIXME: copy to clipboard
 																# or substitute by a popup
@@ -588,6 +595,7 @@ sub draw_exons {
 		$where->bind($exon_tag,'<ButtonRelease-1>',
 			[\&highlight, (0, [$where,$where_alt], $exon_tag)] # FIXME: copy to clipboard
 		);
+}
 
 			# prepare for the next intron:
 		($i_start,$i_from) = ($e_end+1,$to+1);
@@ -597,6 +605,7 @@ sub draw_exons {
 
 	my $tag_expr = join('||',@all_exon_intron_tags);
 
+if($bind_ok) {
 		# show *all* similar exons and introns:
 	$where_text->bind($chain_tag,'<ButtonPress-1>',
 		[\&highlight, (1, [$where,$where_alt], $tag_expr)]
@@ -627,6 +636,8 @@ sub draw_exons {
 
 	$self->info_popup($where,$chain_tag,$infotext);
 	$self->info_popup($where_text,$chain_tag,$infotext);
+}
+
 }
 
 sub info_popup {
@@ -756,9 +767,15 @@ sub select_by_name { # FIXME: may try to (invisibly) select the actual transcrip
 								: "$name_tag (invisible)"),
 			-tearoff	=> 0,
 	);
+	if($self->{_lselection}->is_visible($name_tag)) {
+		$submenu->command(
+			-label		=> "ScrollTo",
+			-command	=> [$self => 'scroll_to_obj', $name_tag],
+		);
+	}
 	$submenu->command(
-				-label		=> "Remove",
-				-command	=> [\&deselect_by_name, $self, $name_tag],
+		-label		=> "Remove",
+		-command	=> [$self => 'deselect_by_name', $name_tag],
 	);
 }
 
@@ -801,6 +818,14 @@ sub save_selection_to_transcript {
         }
 	} else {
 		print "The list of selected evidence did not change. Nothing to be saved back to the database.\n";
+	}
+}
+
+sub release { # the Black Spot
+	my $self = shift @_;
+
+	for my $k (keys %$self) {
+			delete $self->{$k};
 	}
 }
 
