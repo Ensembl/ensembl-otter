@@ -177,11 +177,11 @@ sub new {
 	my $menu_file = $self->make_menu('File');
 	$menu_file->command(
         -label      => 'Save and exit',
-        -command    => [ $self => 'exit_callback', 1 ],
+        -command    => [ $self => 'exit_callback', 1, 0 ],
 	);
 	$menu_file->command(
         -label      => 'Exit without saving',
-        -command    => [ $self => 'exit_callback', 0 ],
+        -command    => [ $self => 'exit_callback', 0, 0 ],
 	);
 
 	my $menu_data = $self->make_menu('Data');
@@ -241,7 +241,7 @@ if(0) {
 
 	$self->{_menu_selection} = $self->make_menu('Selection');
 
-	$top_window->protocol('WM_DELETE_WINDOW', [ $self => 'exit_callback', 2 ]);
+	$top_window->protocol('WM_DELETE_WINDOW', [ $self => 'exit_callback', 1, 1 ]);
 
 	# $top_window->bind('<Destroy>', sub { $self->{_sortfilterdialog}=$self=undef; });
 
@@ -251,23 +251,34 @@ if(0) {
 }
 
 sub exit_callback {
-	my $self		= shift @_;
-	my $function	= shift @_;
+	my ($self, $save, $interactive) = @_;
 
-	if($function == 2) { # unsure, ask it explicitly
-		$function = 'Yes' eq $self->top_window()->messageBox(
-				-title => 'Please reply',
-				-message => 'Do you want to save the changes?',
-				-type => 'YesNo',
-				-icon => 'question',
-				-default => 'Yes',
-		);
+	if($save && $self->{_lselection}->any_changes_in_selection()) {
+		warn "There were changes in the selection";
+		if(!$interactive || ($self->top_window()->messageBox(
+								-title => 'Please reply',
+								-message => 'Do you want to save the changes?',
+								-type => 'YesNo',
+								-icon => 'question',
+								-default => 'Yes',
+						) eq 'Yes')
+		) {
+			$self->{_lselection}->save_to_transcript();
+			print "The list of selected evidence changed.";
+			print "The new list of selected evidence is:\n";
+
+			use Data::Dumper;
+			print Dumper($self->{_transcript}->transcript_info);
+			if (my $ec = $self->ExonCanvas) {
+				$ec->save_OtterTranscript_evidence($self->{_transcript});
+			}
+		} else {
+			warn "Refused to save the changes";
+		}
+	} else {
+		warn "No changes in the selection or ignoring them";
 	}
-	
-	if($function) {
-		warn "attempting to save back the selection";
-		$self->save_selection_to_transcript();
-	}
+
 	$self->{_sortfilterdialog}->release();
 	my $top_window = $self->top_window();
 	$self->release();
@@ -802,22 +813,6 @@ sub redraw_selection {
 		if(not $self->{_lselection}->is_visible($eviname)) {
 			warn "$eviname cannot be selected as it is not visible on the EviDisplay\n";
 		}
-	}
-}
-
-sub save_selection_to_transcript {
-	my $self = shift @_;
-
-	if( $self->{_lselection}->save_to_transcript() ) {
-		print "The list of selected evidence changed. The new list of selected evidence is:\n";
-
-        use Data::Dumper;
-        print Dumper($self->{_transcript}->transcript_info);
-        if (my $ec = $self->ExonCanvas) {
-            $ec->save_OtterTranscript_evidence($self->{_transcript});
-        }
-	} else {
-		print "The list of selected evidence did not change. Nothing to be saved back to the database.\n";
 	}
 }
 

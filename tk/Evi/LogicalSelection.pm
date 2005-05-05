@@ -103,29 +103,15 @@ sub any_changes_in_selection {
 	return $old_selection ne $curr_selection;
 }
 
-sub save_to_transcript {
+sub save_to_transcript { # no check here, just force it
 	my $self = shift @_;
 
-	if( $self->any_changes_in_selection() ) {
-		$self->{_transcript}->transcript_info()->flush_Evidence();
+	$self->{_transcript}->transcript_info()->flush_Evidence();
 
-		# for my $eviname (keys %{$self->{_data}}) {
-		#	print "\t".$self->{_data}{$eviname}{entry}->name();
-		#	print "\t".$self->{_data}{$eviname}{visible}."\n";
-		# }
-        
-		$self->{_transcript}->transcript_info()->add_Evidence(
-			map { $self->{_data}{$_}{entry}; }
-					(keys %{ $self->{_data}})
-		);
-
-        # use Data::Dumper;
-        # print STDERR Dumper($self->{_transcript}->transcript_info);
-
-		return 1;
-	} else { # nothing to be done
-		return 0;
-	}
+	$self->{_transcript}->transcript_info()->add_Evidence(
+		map { $self->{_data}{$_}{entry}; }
+				(keys %{ $self->{_data}})
+	);
 }
 
 1;
