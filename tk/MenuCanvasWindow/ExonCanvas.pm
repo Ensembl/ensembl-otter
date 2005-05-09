@@ -689,7 +689,7 @@ sub draw_subseq {
     my $sub = $self->SubSeq;
     $self->add_subseq_exons($sub);
     $self->draw_translation_region($sub);
-    $self->evidence_hash({%{$sub->evidence_hash}});
+    $self->evidence_hash($sub->clone_evidence_hash);
 }
 
 sub is_mutable {
@@ -2272,6 +2272,7 @@ sub xace_save {
         $xc->replace_SubSeq($sub, $old_name);
         $self->SubSeq($sub);
         $self->name($new_name);
+        $self->evidence_hash($sub->clone_evidence_hash);
         $sub->is_archival(1);
         return 1;
     } else {
