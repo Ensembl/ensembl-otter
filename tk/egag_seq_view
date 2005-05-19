@@ -1,0 +1,54 @@
+#!/usr/local/bin/perl -w
+
+### egag_seq_view
+
+use strict;
+use Bio::Otter::Lace::Defaults;
+use MenuCanvasWindow::XaceSeqChooser;
+
+{
+    push(@ARGV, '-view'); # force read-only
+    Bio::Otter::Lace::Defaults::do_getopt();
+    my $dataset_name = 'human';
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    # Look at code used by CanvasWindow::SequenceNotes::SearchedSequenceNotes for clues
+    #my $otter_dba = $ds->get_cached_DBAdaptor;
+    #my $pipe_dba = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($otter_dba);
+
+    ### From OTT id find clones and sequence set name
+    my $set_name = undef;
+
+    my $ss = $ds->get_SequenceSet_by_name($set_name);
+    ### Select clones that contain transcript in sequence set
+
+    ### Create AceDatabase
+    my $db = $cl->new_AceDatabase;
+    $db->add_misc_acefile;
+    $db->write_otter_acefile($ss);
+    $db->write_local_blast($ss);
+    $db->write_pipeline_data($ss);
+    $db->initialize_database;
+   
+    ### Attach to XaceSeqChooser
+    my $mw = CanvasWindow::MainWindow->new('EGAG seq viewer');
+    my $xc = MenuCanvasWindow::XaceSeqChooser->new($mw);
+    $xc->AceDatabase($db);
+    ### launch xace
+    ### Display region containing hit in fMap - see code in ExonCanvas
+    
+    Tk::Mainloop();
+}
+
+
+__END__
+
+=head1 NAME - egag_seq_view
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
