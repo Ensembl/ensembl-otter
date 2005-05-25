@@ -4,7 +4,7 @@ package Evi::SortCriterion;
 # (contains a fieldname, a type, a direction and a threshold).
 # An element of the array used by Sorter.pm
 #
-# lg4, 25.Feb'2005
+# lg4
 
 use base ('Evi::MappableData');
 
@@ -22,6 +22,7 @@ my $value_mapping = {
 		},
 	'_direction' => {
 		'ascending'  => -1,
+		'is'         =>  0,
 		'descending' =>  1,
 		},
 };

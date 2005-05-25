@@ -58,9 +58,13 @@ sub cut {
 
 			if(defined($thr)) {
 				if($type && ($thr=~/^[\+\-\d\.e]+$/) ) { # numerical cutoff
-					$result &&= ($_->$method(@$params) <=> $thr)*$dir >= 0;
+					$result &&= $dir
+						? (($_->$method(@$params) <=> $thr)*$dir >= 0)
+						: ($_->$method(@$params) == $thr); # equality filter
 				} elsif((!$type) && length($thr)) { # alphabetical cutoff
-					$result &&= ($_->$method(@$params) cmp $thr)*$dir >= 0;
+					$result &&= $dir
+						? (($_->$method(@$params) cmp $thr)*$dir >= 0)
+						: ($_->$method(@$params) =~ /$thr/); # equality/match filter
 				}
 			}
 		}
@@ -82,9 +86,11 @@ sub sort {
 			my $type   = $$self[$i]->{_type};
 			my $dir    = $$self[$i]->{_direction};
 
-			$result ||= $type
-				? ($b->$method(@$params) <=> $a->$method(@$params))*$dir
-				: ($b->$method(@$params) cmp $a->$method(@$params))*$dir;
+			if($dir) { # if not equality filter
+				$result ||= $type
+					? ($b->$method(@$params) <=> $a->$method(@$params))*$dir
+					: ($b->$method(@$params) cmp $a->$method(@$params))*$dir;
+			}
 		}
 		$result;
 	} @$data_lp ];

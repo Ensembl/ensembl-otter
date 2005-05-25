@@ -155,6 +155,7 @@ sub new {
 
 	$self->{_evicoll}			= shift @_;
 	$self->{_transcript}		= shift @_;
+
 	$self->{_uniq}				= shift @_ || 1;
 	$self->{_hide_analyses_lp}	= shift @_ || [ 'Uniprot' ];
 	$self->{_scale_type}		= shift @_ || 'Evi::ScaleFitwidth';
@@ -597,6 +598,20 @@ if($bind_ok) {
 			-disabledfill => $highlighting_color,
 			-tags =>	[ $exon_tag, $chain_tag, $name_tag ],
 		);
+
+		# HERE
+if(0) {
+		$where->createText($from, $exon_top,
+			-fill => 'black',
+			-text =>	$e_start,
+			-anchor =>	'c',
+		);
+		$where->createText($to, $exon_bot,
+			-fill => 'black',
+			-text =>	$e_end,
+			-anchor =>	'c',
+		);
+}
 
 if($bind_ok) {
 		$where->bind($exon_tag,'<ButtonPress-1>',

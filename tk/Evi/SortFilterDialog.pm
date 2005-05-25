@@ -27,26 +27,31 @@ sub new { # class method
 sub open {
 	my $self = shift @_;
 
-	$self->{_window} = $self->{_topwindow}->Toplevel(-title => $self->{_title});
-	$self->{_window}->minsize(700,150);
+	if($self->{_window}) { # do not open two sorting windows
+		$self->{_window}->raise();
+	} else {
 
-	$self->{_window}->Label('-text' => 'Please select the sorting order:')
-		->pack('-side' => 'top');
-	my $wosf = $self->{_window}->WrappedOSF()
-		->pack('-fill' => 'both', '-expand' => 1);
+		$self->{_window} = $self->{_topwindow}->Toplevel(-title => $self->{_title});
+		$self->{_window}->minsize(700,150);
 
-	$wosf->link_data( $self->{_active}, $self->{_remaining} );
+		$self->{_window}->Label('-text' => 'Please select the sorting order:')
+			->pack('-side' => 'top');
+		my $wosf = $self->{_window}->WrappedOSF()
+			->pack('-fill' => 'both', '-expand' => 1);
 
-	$self->{_window}->Button(
-					'-text' => 'Sort',
-					'-command' => [ $self => 'exit_callback', 1 ],
-	)->pack('-side' => 'left');
-	$self->{_window}->Button(
-					'-text' => 'Cancel',
-					'-command' => [ $self => 'exit_callback', 0 ],
-	)->pack('-side' => 'right');
+		$wosf->link_data( $self->{_active}, $self->{_remaining} );
 
-	$self->{_window}->protocol('WM_DELETE_WINDOW', [ $self => 'exit_callback', 0 ]); # ==[Cancel]
+		$self->{_window}->Button(
+						'-text' => 'Sort & Filter',
+						'-command' => [ $self => 'exit_callback', 1 ],
+		)->pack('-side' => 'left');
+		$self->{_window}->Button(
+						'-text' => 'Cancel',
+						'-command' => [ $self => 'exit_callback', 0 ],
+		)->pack('-side' => 'right');
+
+		$self->{_window}->protocol('WM_DELETE_WINDOW', [ $self => 'exit_callback', 0 ]); # ==[Cancel]
+	}
 }
 
 sub exit_callback {
@@ -60,6 +65,7 @@ sub exit_callback {
 	}
 	warn "closing the sorter window";
 	$self->{_window}->destroy();
+	delete $self->{_window};
 }
 
 sub release { # the Black Spot
