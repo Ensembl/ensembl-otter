@@ -51,7 +51,9 @@ $help->() unless ($dataset && (@sets || @clones || $clone_list) );
 	# when specifying -set all
 	my @tmp;
     if ( $sets[0] eq "all" ){
-      warn "Fetching all assembly types";
+
+      warn "Fetching all assembly types\n";
+
       my $sth = $otter_db->prepare(q{SELECT assembly_type FROM sequence_set});
       $sth->execute;
 
@@ -66,8 +68,7 @@ $help->() unless ($dataset && (@sets || @clones || $clone_list) );
     my $type;
     foreach $type ( @sets ) {
 
-      print "Working on $type\n\n";
-      warn "\tWorking on $type\n";
+      warn "\nWorking on $type\n";
 
       $otter_db->assembly_type($type); # replace the default sequence set setting
       my $seqSet = $dset->get_SequenceSet_by_name($type);
@@ -155,7 +156,7 @@ sub fetch_by_clone_name {
 
 sub fetch_by_clone_obj {
 
-  my ($clones, $otter_db, $atagCtgID_clnID) = @_;
+  my ($clones, $otter_db, $atagCtgID_clnID, $type) = @_;
 
   my $cloneAd = $otter_db->get_CloneAdaptor;
   my ($atagClone_acefile_info, $to_do, $acc, $ctg_name, $seq_name, $ctg_id, $version, $ctg_strand, $humace_file);
@@ -229,7 +230,7 @@ sub fetch_by_clone_obj {
 	store_and_update($contig_atag_data, $otter_db);
   }
   else {
-	warn "Nothing new to update\n";
+	warn "\nNothing new to update for $type\n\n";
   }
 }
 
