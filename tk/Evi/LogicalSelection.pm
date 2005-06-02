@@ -62,6 +62,7 @@ sub select {
 	if(not $self->is_selected($name)) {
 		$self->_addentry($name);
 	}
+	$self->set_visibility($name, 0); # force the invisibility first
 }
 
 sub deselect {

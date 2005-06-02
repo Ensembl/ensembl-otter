@@ -1,9 +1,9 @@
-package WrappedOSF;
+package Tk::WrappedOSF;
 
 # A wrapper that catches the basic operations of items between/within the two Listbox'es
 # using inheritance and performs the same operations with the "real" data items.
 #
-# lg4, 25.Feb'2005
+# lg4
 
 use Tk;
 

@@ -23,7 +23,8 @@ my $color_scheme = {      #  OUTLINE,		FILL
 	'Est2genome_mouse' => [ 'blue',			'violet'	],
 	'Est2genome_other' => [ 'blue',			'violet'	],
 	'vertrna'          => [ 'black',		'#a05000'	],
-	'Uniprot'          => [ 'cyan',			'darkblue'	],
+	# 'Uniprot'          => [ 'cyan',			'darkblue'	],
+	'Uniprot'      => [ 'darkgreen',	'green'		],
 };
 
 my $type_to_optpairs = { # canvas-dependent stuff
@@ -34,9 +35,6 @@ my $type_to_optpairs = { # canvas-dependent stuff
 };
 
 use strict;
-use Evi::SortCriterion;		# method/params to be called on data to compute the key, direction, threshold...
-use Evi::Sorter;			# performs multicriterial sorting, filtering and uniq
-
 use Evi::SortFilterDialog; # window that selects the sorting order
 
 use Evi::LogicalSelection;	# keeps the information about selection and visibility
@@ -52,94 +50,12 @@ use Evi::Tictoc;				# a simple stopwatch
 
 use base ('MenuCanvasWindow','Evi::DestroyReporter'); # we want to track the destruction event
 
-sub init_filter_and_sort_criteria {
-	my $self = shift @_;
 
-		# ALLOW POLICY: switch on showing all available analyses
-	for my $analysis (	@{ $self->{_evicoll}->rna_analyses_lp() },
-						@{ $self->{_evicoll}->protein_analyses_lp() }) {
-		$self->{_show_analysis}{$analysis} = 1;
-	}
-		# DENY POLICY: switch off certain analyses
-	for my $analysis (@{ $self->{_hide_analyses_lp} }) {
-			# be careful not to create unwanted hash values:
-		if($self->{_show_analysis}{$analysis}) {
-			$self->{_show_analysis}{$analysis} = 0;
-		}
-	}
+sub after_filtering_sorting_callback {
+	my ($self, $results) = @_;
 
-		# create and initialize the sorter
-    $self->{active_criteria_lp} = [
-		Evi::SortCriterion->new('Analysis','analysis',
-					[],'alphabetic','ascending'),
-		Evi::SortCriterion->new('Taxon','taxon_name',
-					[],'alphabetic','ascending'),
-		Evi::SortCriterion->new('Evidence name','name',
-					[],'alphabetic','ascending'),
-    ];
-    $self->{remaining_criteria_lp} = [
-			# transcript-dependent criteria:
-		Evi::SortCriterion->new('Supported introns', 'trans_supported_introns',
-					[$self->{_transcript}], 'numeric','descending',1),
-		Evi::SortCriterion->new('Supported junctions', 'trans_supported_junctions',
-					[$self->{_transcript}], 'numeric','descending'),
-		Evi::SortCriterion->new('Supported % of transcript','transcript_coverage',
-					[$self->{_transcript}], 'numeric','descending'),
-		Evi::SortCriterion->new('Dangling ends (bases)','contrasupported_length',
-					[$self->{_transcript}], 'numeric','ascending',10),
+	$self->{_evichains_lp} = $results;
 
-			# transcript-independent criteria:
-		Evi::SortCriterion->new('Evidence sequence coverage (%)','eviseq_coverage',
-					[], 'numeric','descending',50),
-		Evi::SortCriterion->new('Minimum % of identity','min_percent_id',
-					[], 'numeric','descending'),
-		Evi::SortCriterion->new('Start of match (slice coords)','start',
-					[], 'numeric','ascending'),
-		Evi::SortCriterion->new('End of match (slice coords)','end',
-					[], 'numeric','descending'),
-		Evi::SortCriterion->new('Source database','db_name',
-					[], 'alphabetic','ascending'),
-    ];
-}
-
-sub filter_and_sort {
-	my $self = shift @_;
-
-my $tt_fs = Evi::Tictoc->new("Filtering and sorting");
-		# find everything that intersects with the transcript
-	my $left_matches_lp = $self->{_evicoll}->find_intersecting_matches($self->{_transcript});
-
-		# show only certain types of analyses:
-	$left_matches_lp = [ grep { $self->{_show_analysis}{$_->analysis()} } @$left_matches_lp ];
-
-		# from the matching chains with equal names take the ones with best coverage
-	if($self->{_uniq}) {
-			$left_matches_lp = Evi::Sorter::uniq($left_matches_lp,
-				[ Evi::SortCriterion->new('unique by EviSeq name',
-										'name', [],'alphabetic','ascending') ],
-				[ Evi::SortCriterion->new('optimal by EviSeq coverage',
-										'eviseq_coverage', [], 'numeric','descending') ]
-			);
-	}
-
-    my $sorter = Evi::Sorter->new( @{ $self->{active_criteria_lp} } );
-
-	if(0) { # IF SORTER "gets inherited" FROM ANOTHER TRANSCRIPT,
-			# re-set the transcript parameter in (active-only!) criteria:
-		for my $criterion (@{ $sorter->get_criteria() }) {
-			$criterion->internalFeature('_params',[$self->{_transcript}]);
-		}
-	}
-		# finally, cut off by thresholds and sort
-	$self->{_evichains_lp} = $sorter->cutsort($left_matches_lp);
-
-$tt_fs->done();
-}
-
-sub filter_sort_redraw { # a callback
-	my $self = shift @_;
-
-	$self->filter_and_sort();
 	$self->evi_redraw();
 }
 
@@ -156,20 +72,17 @@ sub new {
 	$self->{_evicoll}			= shift @_;
 	$self->{_transcript}		= shift @_;
 
-	$self->{_uniq}				= shift @_ || 1;
-	$self->{_hide_analyses_lp}	= shift @_ || [ 'Uniprot' ];
 	$self->{_scale_type}		= shift @_ || 'Evi::ScaleFitwidth';
-
-	$self->init_filter_and_sort_criteria();
 
 	$self->{_sortfilterdialog} = Evi::SortFilterDialog->new(
 				$top_window,
 				"$title| Sort data",
-				$self->{active_criteria_lp},
-				$self->{remaining_criteria_lp},
+				$self->{_evicoll},
+				1, # uniq_p
 				$self,
-				'filter_sort_redraw'
+				'after_filtering_sorting_callback'
 	);
+	$self->{_sortfilterdialog}->current_transcript($self->{_transcript}); # may be changed later
 
 	$self->{_lselection}		= Evi::LogicalSelection->new($self->{_evicoll},$self->{_transcript});
 
@@ -178,35 +91,14 @@ sub new {
 	my $menu_file = $self->make_menu('File');
 	$menu_file->command(
         -label      => 'Save and exit',
-        -command    => [ $self => 'exit_callback', 1, 0 ],
+        -command    => [ \&exit_callback, ($self, 1, 0) ],
 	);
 	$menu_file->command(
         -label      => 'Exit without saving',
-        -command    => [ $self => 'exit_callback', 0, 0 ],
+        -command    => [ \&exit_callback, ($self, 0, 0) ],
 	);
 
 	my $menu_data = $self->make_menu('Data');
-	for my $analysis (sort keys %{ $self->{_show_analysis} }) {
-		$menu_data->checkbutton(
-			-label  => "Show $analysis",
-			-variable => \$self->{_show_analysis}{$analysis},
-			-command => [ $self => 'filter_sort_redraw' ],
-		);
-	}
-	$menu_data->separator();
-	$menu_data->radiobutton(
-        -label  => 'Show uni~que matches',
-        -value  => 1,
-        -variable => \$self->{_uniq},
-		-command => [ $self => 'filter_sort_redraw' ],
-    );
-    $menu_data->radiobutton(
-        -label  => 'Show ~all matches',
-        -value  => 0,
-        -variable => \$self->{_uniq},
-		-command => [ $self => 'filter_sort_redraw' ],
-    );
-	$menu_data->separator();
 	$menu_data->command(
         -label      => 'Change ~sorting/filtering order ...',
 		-command => [ $self->{_sortfilterdialog} => 'open' ],
@@ -217,26 +109,26 @@ sub new {
 		-label	=> '~Proportional view',
 		-value	=> 'Evi::ScaleFitwidth',
 		-variable => \$self->{_scale_type},
-		-command => [ $self => 'evi_redraw' ],
+		-command => [ \&evi_redraw, ($self) ],
 	);
 	$menu_view->radiobutton(
 		-label	=> '~Quantum view',
 		-value	=> 'Evi::ScaleQuantum',
 		-variable => \$self->{_scale_type},
-		-command => [ $self => 'evi_redraw' ],
+		-command => [ \&evi_redraw, ($self) ],
 	);
 if(0) {
 	$menu_view->radiobutton(
 		-label	=> '~MinExon view',
 		-value	=> 'Evi::ScaleMinexon',
 		-variable => \$self->{_scale_type},
-		-command => [ $self => 'evi_redraw' ],
+		-command => [ \&evi_redraw, ($self) ],
 	);
 	$menu_view->radiobutton(
 		-label	=> '~Proportional 1:1 view',
 		-value	=> 'Evi::ScaleBase',
 		-variable => \$self->{_scale_type},
-		-command => [ $self => 'evi_redraw' ],
+		-command => [ \&evi_redraw, ($self) ],
 	);
 }
 
@@ -246,7 +138,7 @@ if(0) {
 
 	# $top_window->bind('<Destroy>', sub { $self->{_sortfilterdialog}=$self=undef; });
 
-	$self->filter_sort_redraw();
+	$self->{_sortfilterdialog}->filter_and_sort(1);
 
 	return $self;
 }
@@ -400,10 +292,10 @@ my $tt_redraw = Evi::Tictoc->new("EviDisplay layout");
 			$evichain->strand(),
 			[
 				(map { $_->{_name}.':  '.$_->compute($evichain); }
-					@{$self->{active_criteria_lp}}),
+					@{$self->{_sortfilterdialog}->active_criteria()}),
 				'-----------------------',
 				(map { $_->{_name}.':  '.$_->compute($evichain); }
-					@{$self->{remaining_criteria_lp}}),
+					@{$self->{_sortfilterdialog}->remaining_criteria()}),
 				"Strand: ".strand2name($evichain->strand()),
 			],
 			$evichain->analysis(),
@@ -474,7 +366,7 @@ sub draw_exons {
 	my $intron_top  = $mid_y - $half_delta;
 	my $intron_bot  = $mid_y + $half_delta;
 
-	my $chain_tag = "rowindex:$screendex";	# make it unique (i.e. differ from non-unique $name_tag)
+	my $chain_tag = "rowindex_$screendex";	# make it unique (i.e. differ from non-unique $name_tag)
 
 	if($draw_stripes) {
 			# white-lightgrey background stripes for the chains themselves
@@ -544,16 +436,12 @@ sub draw_exons {
 
 		my $from = $self->{_scale}->scale_point($e_start);
 		my $to   = $self->{_scale}->scale_point($e_end);
-		my $exon_tag = "$e_start,$e_end"; # must be scale-independent
-
-		push @all_exon_intron_tags, $exon_tag;
+		my $exon_tag = 'exon_'.$e_start.'_'.$e_end; # must be scale-independent
 
 			# draw the preceding intron, if there is one:
 		if(defined($i_start)) {
-			my $intron_tag = $i_start.','.($e_start-1);
+			my $intron_tag = 'intron_'.$i_start.'_'.($e_start-1);
 			my $i_mid_x = ($i_from+$from)/2;
-
-			push @all_exon_intron_tags, $intron_tag;
 
 				# highlightable background rectangle behind an intron:
 			my $rect = $where->createRectangle(
@@ -565,27 +453,40 @@ sub draw_exons {
 				-tags =>	[ $intron_tag, $chain_tag, $name_tag ],
 			);
 
-			$where->createPolygon(	# the intron itself (angular line pointing upwards)
-					$i_from, $mid_y,
-					$i_mid_x, $intron_top,
-					$from, $mid_y,
-					$from, $mid_y,
-					$i_mid_x, $intron_top,
-					$i_from, $mid_y,
-				-outline => $ocolor,
-				-fill    => $fcolor,
-				-disabledoutline => $current_contour_color,
-				-disabledfill    => $highlighting_color,
-				-tags =>	[ $intron_tag, $chain_tag, $name_tag ],
-			);
+			if($scheme ne 'Uniprot') {
+				$where->createPolygon(	# the intron itself (angular line pointing upwards)
+						$i_from, $mid_y,
+						$i_mid_x, $intron_top,
+						$from, $mid_y,
+						$from, $mid_y,
+						$i_mid_x, $intron_top,
+						$i_from, $mid_y,
+					-outline => $ocolor,
+					-fill    => $fcolor,
+					-disabledoutline => $current_contour_color,
+					-disabledfill    => $highlighting_color,
+					-tags =>	[ $intron_tag, $chain_tag, $name_tag ],
+				);
+			} else {
+				$where->createLine(	# the pseudointron (straight horisontal dashed line)
+						$i_from, $mid_y,
+						$from, $mid_y,
+					-fill	=> $ocolor,
+					-disabledfill => $current_contour_color,
+					-dash	=> [5,3],
+					-tags =>	[ $intron_tag, $chain_tag, $name_tag ],
+				);
+			}
+
+			push @all_exon_intron_tags, $intron_tag;
 
 if($bind_ok) {
 			$where->bind($intron_tag,'<ButtonPress-1>',
-				[\&highlight, (1, [$where,$where_alt], $intron_tag)] # FIXME: copy to clipboard
+				[\&highlight_bindcallback, (1, [$where,$where_alt], $intron_tag)] # FIXME: copy to clipboard
 											# or substitute by a popup
 			);
 			$where->bind($intron_tag,'<ButtonRelease-1>',
-				[\&highlight, (0, [$where,$where_alt], $intron_tag)] # FIXME: copy to clipboard
+				[\&highlight_bindcallback, (0, [$where,$where_alt], $intron_tag)] # FIXME: copy to clipboard
 			);
 }
 		}
@@ -598,6 +499,8 @@ if($bind_ok) {
 			-disabledfill => $highlighting_color,
 			-tags =>	[ $exon_tag, $chain_tag, $name_tag ],
 		);
+		push @all_exon_intron_tags, $exon_tag;
+
 
 		# HERE
 if(0) {
@@ -615,11 +518,11 @@ if(0) {
 
 if($bind_ok) {
 		$where->bind($exon_tag,'<ButtonPress-1>',
-			[\&highlight, (1, [$where,$where_alt], $exon_tag)] # FIXME: copy to clipboard
+			[\&highlight_bindcallback, (1, [$where,$where_alt], $exon_tag)] # FIXME: copy to clipboard
 																# or substitute by a popup
 		);
 		$where->bind($exon_tag,'<ButtonRelease-1>',
-			[\&highlight, (0, [$where,$where_alt], $exon_tag)] # FIXME: copy to clipboard
+			[\&highlight_bindcallback, (0, [$where,$where_alt], $exon_tag)] # FIXME: copy to clipboard
 		);
 }
 
@@ -634,19 +537,19 @@ if($bind_ok) {
 if($bind_ok) {
 		# show *all* similar exons and introns:
 	$where_text->bind($chain_tag,'<ButtonPress-1>',
-		[\&highlight, (1, [$where,$where_alt], $tag_expr)]
+		[\&highlight_bindcallback, (1, [$where,$where_alt], $tag_expr)]
 	);
 	$where_text->bind($chain_tag,'<ButtonRelease-1>',
-		[\&highlight, (0, [$where,$where_alt], $tag_expr)]
+		[\&highlight_bindcallback, (0, [$where,$where_alt], $tag_expr)]
 	);
 
 	for my $c ($where, $where_text) {
 			# highlight the current chain:
 		$c->bind($chain_tag,'<Enter>',
-			[\&highlight, (1, [$where,$where_text], "$chain_tag||(!backribbon&&$name_tag)")]
+			[\&highlight_bindcallback, (1, [$where,$where_text], "$chain_tag||(!backribbon&&$name_tag)")]
 		);
 		$c->bind($chain_tag,'<Leave>',
-			[\&highlight, (0, [$where,$where_text], "$chain_tag||(!backribbon&&$name_tag)")]
+			[\&highlight_bindcallback, (0, [$where,$where_text], "$chain_tag||(!backribbon&&$name_tag)")]
 		);
 
 			# perform the selection (based on $name_tag)
@@ -655,7 +558,7 @@ if($bind_ok) {
 			#	once they get stored in the database:
 		if($screendex>=0) { # do it only for evidences, not for transcript(s)
 			$c->bind($name_tag,'<Double-1>',
-				[\&toggle_select_by_name, $self, $name_tag]
+				[\&toggle_select_by_name_bindcallback, ($self, $name_tag)]
 			);
 		}
 	}
@@ -674,7 +577,8 @@ sub info_popup {
 		-menuitems => [
 			map { my $line=$_; [
 					Button => $line,
-					-command => [ $self => 'set_statusline', ($line)], # GC ok
+					# -command => [ $self => 'set_statusline', ($line)], # may be needed if called from other class
+					-command => [ \&set_statusline, ($self, $line)], # GarbageCollector-ok
 			]; } @$text
 		]
 	);
@@ -706,15 +610,21 @@ sub get_statusline {
 
 # ------------------------------[highlighting]-------------------------------------------
 
-sub highlight { # not a method, but called as such sometimes
-		# because of the difference in callback orders
-		# IT IS SAFER to parse the args starting from the other end:
-	my $tag_expr	= pop @_;
-	my $canvases_lp = pop @_;
-	my $wanted_state= pop @_;
+sub highlight_bindcallback { # not a method!
+	my ($bound_canvas, $wanted_state, $canvases_lp, $tag_expr) = @_;
+
+print "$tag_expr LENGTH=".length($tag_expr)."\n";
 
 	for my $canvas (@$canvases_lp) {
-		for my $id ($canvas->find('withtag',$tag_expr)) {
+print "canvas: $canvas\n";
+
+		 my @all_ids = $canvas->find('withtag',$tag_expr);
+print "(1) number of IDS: ".scalar(@all_ids)."\n";
+		    @all_ids = $canvas->find('withtag',$tag_expr);
+print "(2) number of IDS: ".scalar(@all_ids)."\n\n";
+
+		 for my $id (@all_ids) {
+		# for my $id ($canvas->find('withtag',$tag_expr)) {
 			my $old_state = $canvas->{_highlighted}{$id};
 
 			if( ((not $old_state) and $wanted_state)
@@ -743,7 +653,7 @@ sub toggle_highlighting_by_id { # not a method
 
 # ----------------------------------[de/selection]-------------------------------------------
 
-sub deselect_by_name { # FIXME: may try to (invisibly) select the actual transcript.
+sub deselect_by_name { # NB: sometimes it is a method, sometimes it is not!
 		# Because of the difference in callback orders
 		# IT IS SAFER to parse the args starting from the other end:
 	my $name_tag	= pop @_;
@@ -767,13 +677,13 @@ sub deselect_by_name { # FIXME: may try to (invisibly) select the actual transcr
 	}
 }
 
-sub select_by_name { # FIXME: may try to (invisibly) select the actual transcript.
+sub select_by_name { # NB: sometimes it is a method, sometimes it is not!
 		# Because of the difference in callback orders
 		# IT IS SAFER to parse the args starting from the other end:
 	my $name_tag	= pop @_;
 	my $self		= pop @_;
 
-	$self->{_lselection}->select($name_tag);
+	$self->{_lselection}->select($name_tag); # NB: invisible by default
 
 	for my $canvas (@{ $self->canvas()->canvases() }) {
 		for my $id ($canvas->find('withtag',"$name_tag&&backribbon")) {
@@ -786,30 +696,29 @@ sub select_by_name { # FIXME: may try to (invisibly) select the actual transcrip
 		}
 	}
 
+	my $is_vis = $self->{_lselection}->is_visible($name_tag);
+
 		# unconditionally add the removal command to the menu:
 	my $submenu = $self->{_menu_selection}->cascade(
-			-label		=> ($self->{_lselection}->is_visible($name_tag)
+			-label		=> ($is_vis
 								? $name_tag
 								: "$name_tag (invisible)"),
 			-tearoff	=> 0,
 	);
-	if($self->{_lselection}->is_visible($name_tag)) {
+	if($is_vis) {
 		$submenu->command(
 			-label		=> "ScrollTo",
-			-command	=> [$self => 'scroll_to_obj', $name_tag],
+			-command	=> [\&scroll_to_obj, ($self, $name_tag) ],
 		);
 	}
 	$submenu->command(
 		-label		=> "Remove",
-		-command	=> [$self => 'deselect_by_name', $name_tag],
+		-command	=> [\&deselect_by_name, ($self, $name_tag) ],
 	);
 }
 
-sub toggle_select_by_name {
-		# Because of the difference in callback orders
-		# IT IS SAFER to parse the args starting from the other end:
-	my $name_tag= pop @_;
-	my $self	= pop @_;
+sub toggle_select_by_name_bindcallback { # not a method!
+	my ($bound_canvas, $self, $name_tag) = @_;
 
 	if($self->{_lselection}->is_selected($name_tag)) { # (definitely visible) deselect it:
 		$self->deselect_by_name($name_tag);

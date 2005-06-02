@@ -2,7 +2,7 @@ package Tk::OrderedSelectionFrame;
 
 # A Frame to perform ordered selection
 #
-# lg4, 18.Jan'2004
+# lg4
 
 use Tk;
 
@@ -200,6 +200,14 @@ sub set_active_entries { # entries are passed inside and copied into the tied ar
 	my $self = shift @_;
 
 	@{$self->{active_aref}} = @_; # NB: the tied reference must stay the same
+}
+
+sub release { # the Black Spot
+        my $self = shift @_;
+                                                                                                            
+        for my $k (keys %$self) {
+                delete $self->{$k};
+        }
 }
 
 1;

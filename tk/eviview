@@ -4,7 +4,9 @@
 # combine them into matching chains
 # and show them to the user.
 #
-# lg4, 7.Apr'2005
+# lg4
+
+my $proteins_on = 0;
 
 use strict;
 use Bio::Otter::Lace::Defaults;
@@ -23,21 +25,19 @@ use Evi::Tictoc;
 
 	# my ($set_name, $chr_name, $trstable) = ('MHC_COX', '6', 'OTTHUMT00000076915');
 	my ($set_name, $chr_name, $trstable) = ('ChrX-07', 'X', 'OTTHUMT00000081638');
+	# my ($set_name, $chr_name, $trstable) = ('encode_ext_agp-04', 'MANY', 'OTTHUMT00000132895');
 
     my $margin		= 10000;	# any number > 0
     my @rna_analyses  = ('vertrna','Est2genome_human','Est2genome_mouse','Est2genome_other');
-    # my @protein_analyses = ('Uniprot');
-    my @protein_analyses = ();
+    my @protein_analyses = $proteins_on ? ('Uniprot') : ();
 
-    my $usage = sub { exec('perldoc', $0) };
     Bio::Otter::Lace::Defaults::do_getopt(
-        'h|help!'       => $usage,
         'dataset=s'     => \$dataset_name,
         'set=s'         => \$set_name,
 		'chr=s'			=> \$chr_name,
 		'trstable=s'	=> \$trstable,
 		'margin=s'		=> \$margin,
-    ) or $usage->();
+    );
     
     # Client communicates with otter HTTP server
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
@@ -67,16 +67,6 @@ my $tt_evicoll = Evi::Tictoc->new("Building the evidence collection");
 	}
 $tt_evicoll->done();
 
-if(0) {
-    my $inter_matches_lp = $evi_coll->get_all_matches();
-	for my $evichain (@$inter_matches_lp) {
-		if($evichain->analysis() eq 'Uniprot') {
-			print $evichain->toString()."\n";
-		}
-	}
-	exit(0);
-}
-
     my $mw = CanvasWindow::MainWindow->new('EviView| Choose a transcript to work on');
 	my $mcw = MenuCanvasWindow->new($mw);
 
@@ -86,6 +76,7 @@ if(0) {
 			my $gene_name  = $gene->gene_info()->name()->name();
 			my $trans_name = $transcript->transcript_info()->name();
 			my $title = "${gene_name} || ${trans_name}";
+
 			$mcw->canvas()->Button(
 				-text => $title,
 				-command => sub{

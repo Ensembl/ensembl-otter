@@ -124,6 +124,8 @@ sub add_collection {
 	my @separate_afs	= @{ shift @_ };
 	my $analysis_name	= shift @_;
 
+	my $strict_chains	= $analysis_name ne 'Uniprot';
+
 	my %match_by_eviname = ();
 	my %unique_match = ();
 
@@ -156,18 +158,20 @@ sub add_collection {
 
 		my %next = ();  # HoL (the digraph adjacency hash/array)
 		my %pointed_at_count = ();  # HoCounts
-		my @seen = ();  # list of object ptrs
 
 			# build the digraph:
-		for my $curr (reverse @order) { # start moving upstream in contig coordinates
-			for my $prev (@seen) { # check all previously seen matches
+		for my $curr_ind (reverse (0..@order-1)) { # start moving upstream in contig coordinates
+			my $curr = $order[$curr_ind];
+
+			for my $prev (@order[$curr_ind+1..@order-1]) { # check all previously connected matches
+
 				if( ($curr->end() < $prev->start())
-				 && _joinable($curr,$prev) ) {
+				 && ( $strict_chains ?  _joinable($curr,$prev) : (!$pointed_at_count{$prev}) )
+				) {
 					push @{$next{$curr}}, $prev;
 					$pointed_at_count{$prev}++;
 				}
 			}
-			push @seen, $curr;
 		}
 
 			# trace the graph and create EviChain objects:
@@ -212,7 +216,7 @@ sub _tracechains {	# not a method
 }
 
 sub _joinable {		# not a method
-        my ($c_ups,$c_downs) = @_;      # DnaAlignFeatures in contig coordinate system
+        my ($c_ups,$c_downs) = @_;      # DnaXXXAlignFeatures in contig coordinate system
 
         if($c_ups->hstrand()*$c_downs->hstrand() == -1) {       # different strands
                 return 0;
