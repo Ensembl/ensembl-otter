@@ -18,13 +18,19 @@ my @alternating_colors = ('white','#eeeeee');
 
 my $color_scheme = {      #  OUTLINE,		FILL
 	'transcript'       => [ 'orange',		'red'		],
-	'translation'      => [ 'darkgreen',	'green'		],
+
+	# 'translation'      => [ 'darkgreen',	'green'		],
+
 	'Est2genome_human' => [ 'blue',			'violet'	],
 	'Est2genome_mouse' => [ 'blue',			'violet'	],
 	'Est2genome_other' => [ 'blue',			'violet'	],
 	'vertrna'          => [ 'black',		'#a05000'	],
-	# 'Uniprot'          => [ 'cyan',			'darkblue'	],
-	'Uniprot'      => [ 'darkgreen',	'green'		],
+
+	# 'Uniprot'		   => [ 'darkgreen',	'green'		],
+
+	'frame_0'		   => ['darkgreen',		'#3cb371' ], # #32cd32
+	'frame_1'		   => ['darkblue',		'#00ced1' ],
+	'frame_2'		   => ['darkblue',		'#8470ff' ],
 };
 
 my $type_to_optpairs = { # canvas-dependent stuff
@@ -231,6 +237,7 @@ my $tt_redraw = Evi::Tictoc->new("EviDisplay layout");
 			$self->canvas()->Subwidget('main_canvas'),
 			$self->canvas()->Subwidget('topleft_canvas'),
 			$self->{_transcript}->get_all_Exons(),
+			1,
 			undef,
 			undef,
 			-1,
@@ -240,7 +247,8 @@ my $tt_redraw = Evi::Tictoc->new("EviDisplay layout");
 				"Strand: ".strand2name($tran_strand),
 			],
 			'transcript',
-			$half_delta,
+			0,
+			$half_delta+1,
 			1
 			);
 
@@ -251,6 +259,7 @@ my $tt_redraw = Evi::Tictoc->new("EviDisplay layout");
 			$self->canvas()->Subwidget('main_canvas'),
 			$self->canvas()->Subwidget('topleft_canvas'),
 			$self->{_transcript}->get_all_Exons(),
+			0,
 			$self->{_transcript}->coding_region_start(),
 			$self->{_transcript}->coding_region_end(),
 			-1,
@@ -260,7 +269,8 @@ my $tt_redraw = Evi::Tictoc->new("EviDisplay layout");
 				"Strand: ".strand2name($tran_strand),
 			],
 			'translation',
-			$half_delta-2,
+			1,
+			$half_delta-1,
 			0
 			);
 	}
@@ -285,6 +295,7 @@ my $tt_redraw = Evi::Tictoc->new("EviDisplay layout");
 			$self->canvas()->Subwidget('top_canvas'),
 			$self->canvas()->Subwidget('left_canvas'),
 			$evichain->afs_lp(),
+			($evichain->analysis() ne 'Uniprot'),
 			undef,
 			undef,
 			$screendex,
@@ -299,6 +310,7 @@ my $tt_redraw = Evi::Tictoc->new("EviDisplay layout");
 				"Strand: ".strand2name($evichain->strand()),
 			],
 			$evichain->analysis(),
+			$evichain->analysis() eq 'Uniprot',
 			$half_delta,
 			1
 			);
@@ -351,10 +363,10 @@ sub strand2name {
 }
 
 sub draw_exons {
-	my ($self,$where,$where_alt,$where_text,$exons_lp,$start_at,$end_at,
-		$screendex,$name_tag,$chain_strand,$infotext,$scheme,$hd,$draw_stripes) = @_;
+	my ($self,$where,$where_alt,$where_text,$exons_lp,$show_introns,$start_at,$end_at,
+		$screendex,$name_tag,$chain_strand,$infotext,$scheme,$show_frame,$hd,$draw_stripes) = @_;
 
-	my ($ocolor,$fcolor) = @{$color_scheme->{$scheme}};
+	my ($ocolor,$fcolor);
 	my $stripecolor = $alternating_colors[$screendex % 2];
 
 	my $ribbon_top	= $ystep*$screendex;
@@ -436,11 +448,11 @@ sub draw_exons {
 
 		my $from = $self->{_scale}->scale_point($e_start);
 		my $to   = $self->{_scale}->scale_point($e_end);
-		my $exon_tag = 'exon_'.$e_start.'_'.$e_end; # must be scale-independent
+		my $exon_tag = 'e_'.$e_start.'_'.$e_end; # must be scale-independent
 
 			# draw the preceding intron, if there is one:
-		if(defined($i_start)) {
-			my $intron_tag = 'intron_'.$i_start.'_'.($e_start-1);
+		if($show_introns && defined($i_start)) {
+			my $intron_tag = 'i_'.$i_start.'_'.($e_start-1);
 			my $i_mid_x = ($i_from+$from)/2;
 
 				# highlightable background rectangle behind an intron:
@@ -453,30 +465,21 @@ sub draw_exons {
 				-tags =>	[ $intron_tag, $chain_tag, $name_tag ],
 			);
 
-			if($scheme ne 'Uniprot') {
-				$where->createPolygon(	# the intron itself (angular line pointing upwards)
-						$i_from, $mid_y,
-						$i_mid_x, $intron_top,
-						$from, $mid_y,
-						$from, $mid_y,
-						$i_mid_x, $intron_top,
-						$i_from, $mid_y,
-					-outline => $ocolor,
-					-fill    => $fcolor,
-					-disabledoutline => $current_contour_color,
-					-disabledfill    => $highlighting_color,
-					-tags =>	[ $intron_tag, $chain_tag, $name_tag ],
-				);
-			} else {
-				$where->createLine(	# the pseudointron (straight horisontal dashed line)
-						$i_from, $mid_y,
-						$from, $mid_y,
-					-fill	=> $ocolor,
-					-disabledfill => $current_contour_color,
-					-dash	=> [5,3],
-					-tags =>	[ $intron_tag, $chain_tag, $name_tag ],
-				);
-			}
+			($ocolor,$fcolor) = @{$color_scheme->{$scheme || 'default'}}; # frame-independent
+
+			$where->createPolygon(	# the intron itself (angular line pointing upwards)
+					$i_from, $mid_y,
+					$i_mid_x, $intron_top,
+					$from, $mid_y,
+					$from, $mid_y,
+					$i_mid_x, $intron_top,
+					$i_from, $mid_y,
+				-outline => $ocolor,
+				-fill    => $fcolor,
+				-disabledoutline => $current_contour_color,
+				-disabledfill    => $highlighting_color,
+				-tags =>	[ $intron_tag, $chain_tag, $name_tag ],
+			);
 
 			push @all_exon_intron_tags, $intron_tag;
 
@@ -491,6 +494,13 @@ if($bind_ok) {
 }
 		}
 
+		my $scheme_key = $scheme;
+		if($show_frame && $exon->can('frame')) { # set the frame-dependent scheme
+			my $frame = $exon->frame();
+			$scheme_key = 'frame_'.$frame;
+		}
+		($ocolor,$fcolor) = @{$color_scheme->{$scheme_key}};
+
 			# now, draw the exon itself:
 		$where->createRectangle($from, $exon_top, $to, $exon_bot,
 			-outline => $ocolor,
@@ -502,7 +512,7 @@ if($bind_ok) {
 		push @all_exon_intron_tags, $exon_tag;
 
 
-		# HERE
+		# Show coordinates
 if(0) {
 		$where->createText($from, $exon_top,
 			-fill => 'black',
@@ -613,18 +623,9 @@ sub get_statusline {
 sub highlight_bindcallback { # not a method!
 	my ($bound_canvas, $wanted_state, $canvases_lp, $tag_expr) = @_;
 
-print "$tag_expr LENGTH=".length($tag_expr)."\n";
-
 	for my $canvas (@$canvases_lp) {
-print "canvas: $canvas\n";
 
-		 my @all_ids = $canvas->find('withtag',$tag_expr);
-print "(1) number of IDS: ".scalar(@all_ids)."\n";
-		    @all_ids = $canvas->find('withtag',$tag_expr);
-print "(2) number of IDS: ".scalar(@all_ids)."\n\n";
-
-		 for my $id (@all_ids) {
-		# for my $id ($canvas->find('withtag',$tag_expr)) {
+		 for my $id ( $canvas->find('withtag',$tag_expr) ) {
 			my $old_state = $canvas->{_highlighted}{$id};
 
 			if( ((not $old_state) and $wanted_state)

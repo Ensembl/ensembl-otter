@@ -12,6 +12,12 @@ sub get_HitDescription {
     return $self->{'_hit_description'};
 }
 
+sub frame { # has to match the name of the method in Exon.pm
+    my( $self ) = @_;
+    
+    return $self->start() % 3;
+}
+
 1;
 
 __END__
