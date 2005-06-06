@@ -1,6 +1,7 @@
+
 #!/usr/local/bin/perl -w
 
-### check_CDS_end_not_found
+### check_CDS_start_end_not_found
 
 use strict;
 use Getopt::Long 'GetOptions';
@@ -31,14 +32,19 @@ my $geneAd    = $otter_db->get_GeneAdaptor;	                       # Bio::Otter:
 
 my $date = `date +%Y%m%d`; chomp $date;
 my ($fh, $fh1);
+my $tmp;
 
 if ( !$vega ) {
   open ( $fh, ">cds_start_end_not_found_updateInfo.$dataset.$date")     || die $!;
-  open ( $fh1, ">cds_start_end_not_found_annotator.$dataset.$date.tmp") || die $!;
+  $tmp = "cds_start_end_not_found_annotator.$dataset.$date.tmp";
+
+  open ( $fh1, ">$tmp") || die $!;
 }
 else {
   open ( $fh, ">cds_start_end_not_found_updateInfo.${dataset}_vega.$date")     || die $!;
-  open ( $fh1, ">cds_start_end_not_found_annotator.${dataset}_vega.$date.tmp") || die $!;
+  $tmp = "cds_start_end_not_found_annotator.${dataset}_vega.$date.tmp";
+
+  open ( $fh1, ">$tmp") || die $!;
 }
 
 # do not want to use buffer
@@ -48,7 +54,8 @@ for my $current ($fh, $fh1) {
   select ($old);
 }
 
-my $name_and_shame = {};
+
+my $name_and_shame;
 
 # do only vega sets
 if ( $vega ) {
@@ -75,7 +82,7 @@ if ( !@sets and !$vega ) {
   my $positives = get_latest_gene_translations($latest_gene_id);
 
   $name_and_shame = check_annotations($positives);
-  output_list($name_and_shame);
+  output_list($name_and_shame, $vega, $tmp);
 }
 
 # loop thru all assembly types to fetch all annotated genes in it on otter
@@ -108,10 +115,10 @@ if ( @sets ) {
 	print $fh $e;
 	warn $e, "\n";
 
-	$name_and_shame = check_annotations($positives, $set);
+    $name_and_shame = check_annotations($positives, $set);
   }
 
-  output_list($name_and_shame, $vega);
+  output_list($name_and_shame, $vega, $tmp);
 }
 
 
@@ -122,31 +129,32 @@ if ( @sets ) {
 
 sub output_list {
 
-  my ($name_and_shame, $vega) = @_;
+  my ($name_and_shame, $vega, $tmp) = @_;
 
   if ( keys %$name_and_shame ) {
 
-	my ($list, $tmp);
+	my $list;
 
 	if ( $vega == 1 ) {
 	  $list = "cds_start_end_not_found_annotator.${dataset}_vega.$date";
-	  $tmp  = "cds_start_end_not_found_annotator.${dataset}_vega.$date.tmp";
 	}
 	else {
 	  $list = "cds_start_end_not_found_annotator.$dataset.$date";
-	  $tmp  = "cds_start_end_not_found_annotator.$dataset.$date.tmp";
 	}
 
 	# blame list
 	open( FH, ">$list") or die $!;
 	print FH "\nPlease check the protein sequence of transcript that has:\n";
 	print FH "\t(1) no stop codon but 'cds_end_not_found' tag is NOT selected or\n";
-	print FH "\t(2) non-ATG translation start but 'cds_start_not_found' tag is NOT selected.\n\n";
+	print FH "\t(2) non-ATG translation start but 'cds_start_not_found' tag is NOT selected or\n";
+	print FH "\t(3) stop codon in CDS(s)\n\n";
 
 	foreach my $name ( sort keys %$name_and_shame ) {
 	  warn $name;
 	  my @errs = `grep $name $tmp | cut -f2-4 `;
+
 	  if ( @errs ){
+		warn @errs;
 		print FH "\n$name:\n";
 		foreach my $err ( @errs ){
 		  print FH "\t$err";
@@ -194,7 +202,6 @@ sub check_annotations {
 
   my ($positives, $set) = @_;
 
-  my $name_and_shame = {};
   my ($protein, $mrna);
   my $trans_info_update = [];
 
@@ -263,7 +270,7 @@ sub check_annotations {
 		}
 	  }
 	  elsif ( $protein =~ /\*.*[A-Z]$/ ) {
-		my $error = sprintf("$annotator\t%-20s\t%-25s%-10s\tnon-ending stop codon - annotator to check\n", $t->transcript_info->name, $set, $tsi);
+		my $error = sprintf("$annotator\t%-20s\t%-25s%-10s\tstop codon in CDS - annotator to check\n", $t->transcript_info->name, $set, $tsi);
 		print $fh1 $error;
 	  }
 	}
