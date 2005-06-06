@@ -32,17 +32,19 @@ my $geneAd    = $otter_db->get_GeneAdaptor;	                       # Bio::Otter:
 
 my $date = `date +%Y%m%d`; chomp $date;
 my ($fh, $fh1);
-my $tmp;
+my ($tmp, $list);
 
 if ( !$vega ) {
-  open ( $fh, ">cds_start_end_not_found_updateInfo.$dataset.$date")     || die $!;
+  open ( $fh, ">cds_start_end_not_found_updateInfo.$dataset.$date") || die $!;
   $tmp = "cds_start_end_not_found_annotator.$dataset.$date.tmp";
+  $list = "cds_start_end_not_found_annotator.$dataset.$date";
 
   open ( $fh1, ">$tmp") || die $!;
 }
 else {
-  open ( $fh, ">cds_start_end_not_found_updateInfo.${dataset}_vega.$date")     || die $!;
+  open ( $fh, ">cds_start_end_not_found_updateInfo.${dataset}_vega.$date") || die $!;
   $tmp = "cds_start_end_not_found_annotator.${dataset}_vega.$date.tmp";
+  $list = "cds_start_end_not_found_annotator.${dataset}_vega.$date";
 
   open ( $fh1, ">$tmp") || die $!;
 }
@@ -82,7 +84,7 @@ if ( !@sets and !$vega ) {
   my $positives = get_latest_gene_translations($latest_gene_id);
 
   $name_and_shame = check_annotations($positives);
-  output_list($name_and_shame, $vega, $tmp);
+  output_list($name_and_shame, $vega, $tmp, $list);
 }
 
 # loop thru all assembly types to fetch all annotated genes in it on otter
@@ -118,7 +120,7 @@ if ( @sets ) {
     $name_and_shame = check_annotations($positives, $set);
   }
 
-  output_list($name_and_shame, $vega, $tmp);
+  output_list($name_and_shame, $vega, $tmp, $list);
 }
 
 
@@ -129,18 +131,9 @@ if ( @sets ) {
 
 sub output_list {
 
-  my ($name_and_shame, $vega, $tmp) = @_;
+  my ($name_and_shame, $vega, $tmp, $list) = @_;
 
   if ( keys %$name_and_shame ) {
-
-	my $list;
-
-	if ( $vega == 1 ) {
-	  $list = "cds_start_end_not_found_annotator.${dataset}_vega.$date";
-	}
-	else {
-	  $list = "cds_start_end_not_found_annotator.$dataset.$date";
-	}
 
 	# blame list
 	open( FH, ">$list") or die $!;
