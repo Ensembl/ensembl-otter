@@ -51,8 +51,8 @@ use Hum::EMBL::Exon;
 use Hum::EMBL::ExonLocation;
 use Hum::EMBL::LocationUtils qw( simple_location locations_from_subsequence
     location_from_homol_block );
-use Hum::EmblUtils qw( add_Organism add_source_FT species_binomial );
-
+use Hum::EmblUtils qw( add_Organism add_source_FT );
+use Hum::Species;
 
 Hum::EMBL->import(
     'AC *' => 'Hum::EMBL::Line::AC_star',
@@ -195,10 +195,10 @@ sub embl_setup {
     my $references_ref = $self->references;
     
     # EMBL Division, species    
-    my $division;
-    my ($otter_division, $species) = $self->get_EMBL_division_from_otter_species;
+    my( $division );
+    my $species = $self->get_Hum_Species;
     unless ($division = $self->division) {
-        $division = $otter_division;
+        $division = $species->division;
     }
     confess "division not set" unless $division;
     
@@ -260,8 +260,10 @@ sub embl_setup {
         $embl->newXX;
     }
 
-    #Organism
-    add_Organism($embl, $species);
+    # Organism
+    ### should change this argument to just pass $species itself.
+    ### (Need to change in Hum::ProjectDump::EMBL too!)
+    add_Organism($embl, $species->name);
     $embl->newXX;
 
     # Reference
@@ -295,7 +297,7 @@ sub embl_setup {
     $loc->strand('W');
         
     $source->addQualifierStrings('mol_type',  $mol_type);
-    $source->addQualifierStrings('organism',  species_binomial($species));
+    $source->addQualifierStrings('organism',  $species->binomial);
     $source->addQualifierStrings('chromosome',  $chromosome_name);
     $source->addQualifierStrings('clone',     $clone_name) if $clone_name;
     $source->addQualifierStrings('clone_lib', $clone_lib) if $clone_lib;
@@ -303,76 +305,19 @@ sub embl_setup {
     return $embl;
 }
 
-=pod
 
-=head2 EMBL Database Divisions
+sub get_Hum_Species {
+    my( $self ) = @_;
 
-    Division                Code
-    -----------------       ----
-    ESTs                    EST
-    Bacteriophage           PHG
-    Fungi                   FUN
-    Genome survey           GSS
-    High Throughput cDNA    HTC
-    High Throughput Genome  HTG
-    Human                   HUM
-    Invertebrates           INV
-    Mus musculus            MUS
-    Organelles              ORG
-    Other Mammals           MAM
-    Other Vertebrates       VRT
-    Plants                  PLN
-    Prokaryotes             PRO
-    Rodents                 ROD
-    STSs                    STS
-    Synthetic               SYN
-    Unclassified            UNC
-    Viruses                 VRL
+    my $ds = $self->DataSet or confess "DataSet not set";
+    my $species_name = $ds->species
+        or confess "Could not get species from DataSet";
 
-=cut
-
-{
-    my %species_division = (
-        'human'         => 'HUM',
-        'gibbon'        => 'PRI',
-        'mouse'         => 'MUS',
-        'rat'           => 'ROD',
-        'dog'           => 'MAM',
-        'cat'           => 'MAM',
-        'pig'           => 'MAM',
-
-        'fugu'          => 'VRT',
-        'zebrafish'     => 'VRT',
-        'b.floridae'    => 'VRT',
-
-        'drosophila'    => 'INV',
-        
-        'arabidopsis'   => 'PLN',
-        );
-
-=head2 get_EMBL_division_from_otter_species
-
-Using the Bio::Otter::Lace::Dataset->species, returns the 
-EMBL division code ('HUM', 'VRT' etc) and the lowercase
-species name. Confesses if the species retrieved doesnt
-correspond to one of those known about (i.e. hardcoded in
-the module).
-
-=cut
-
-    sub get_EMBL_division_from_otter_species {
-        my( $self ) = @_;
-
-        my $ds = $self->DataSet or confess "DataSet not set";
-        my $species = $ds->species
-            or confess "Could not get species from DataSet";
-        
-        unless ($species_division{lc $species}) {
-            confess "Dont know EMBL_division for: $species";
-        }
-        return ($species_division{$species}, $species);
-    }
+    my $species = Hum::Species->fetch_Species_by_name($species_name)
+        or confess "Can't fetch Hum::Species object for '$species_name'";
+    return $species;
 }
+
 
 =head2 add_sequence_from_otter
 
