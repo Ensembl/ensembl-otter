@@ -36,14 +36,14 @@ my ($tmp, $list);
 
 if ( !$vega ) {
   open ( $fh, ">cds_start_end_not_found_updateInfo.$dataset.$date") || die $!;
-  $tmp = "cds_start_end_not_found_annotator.$dataset.$date.tmp";
+  $tmp  = "cds_start_end_not_found_annotator.$dataset.$date.tmp";
   $list = "cds_start_end_not_found_annotator.$dataset.$date";
 
   open ( $fh1, ">$tmp") || die $!;
 }
 else {
   open ( $fh, ">cds_start_end_not_found_updateInfo.${dataset}_vega.$date") || die $!;
-  $tmp = "cds_start_end_not_found_annotator.${dataset}_vega.$date.tmp";
+  $tmp  = "cds_start_end_not_found_annotator.${dataset}_vega.$date.tmp";
   $list = "cds_start_end_not_found_annotator.${dataset}_vega.$date";
 
   open ( $fh1, ">$tmp") || die $!;
@@ -200,8 +200,9 @@ sub check_annotations {
 
   foreach my $t ( @$positives ) {
 
+    $set = $t->adaptor->db->assembly_type unless $set;
+
 	my $tsi = $t->transcript_info->transcript_stable_id;
-					
 	my $annotator = $t->transcript_info->author->name;
 	$name_and_shame->{$annotator}++;
 
@@ -258,7 +259,7 @@ sub check_annotations {
 		  print $fh1 $error;	
 		}
 		else {
-		  printf $fh ("\t%-25s(%10s) - no stop codon - fixed automatically\n", $t->transcript_info->name, $tsi);
+		  printf $fh ("\t%-25s(%10s) - no stop codon - fixed automatically\n", $t->transcript_info->name, $set, $tsi);
 		  push(@$trans_info_update, $tsi);
 		}
 	  }
