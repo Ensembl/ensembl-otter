@@ -21,7 +21,8 @@ sub mv{
     #$self->close(); # no need to do this apparently
     $self->name($name);
     my $new_full_name = $self->full_name();
-    system('mv', $old_full_name, $new_full_name) == 0 || confess "Had trouble moving the file";
+    rename($old_full_name, $new_full_name)
+        or confess "Error renaming '$old_full_name' to '$new_full_name' : $!";
 }
 sub full_name{
     my( $self, $full_name ) = @_;
