@@ -737,6 +737,7 @@ sub make_EviCollection {
         unless @{$slice->get_tiling_path};
 
     return Evi::EviCollection->new_from_pipeline_Slice(
+        $pipe_db,
         $slice,
         [qw{ vertrna Est2genome_human Est2genome_mouse Est2genome_other }],
         #[qw{ vertrna }],

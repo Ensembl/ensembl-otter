@@ -117,10 +117,16 @@ sub end { # in slice coordinates
 	return $self->get_last_exon()->end();
 }
 
-sub strand {
+sub hstrand {
 	my $self = shift @_;
 
 	return $self->get_first_exon()->hstrand();
+}
+
+sub strand {
+	my $self = shift @_;
+
+	return $self->get_first_exon()->strand();
 }
 
 sub min_percent_id {	# cached, not to be set
@@ -148,7 +154,7 @@ sub match_lengths { # returns (upstream_unmatched,matched,downstream_unmatched,e
 	my $eviseq_len = $self->eviseq_length();
 
 	my ($ups_len,$dns_len);
-	if($self->strand() == 1) {
+	if($self->hstrand() == 1) {
 		$ups_len = $self->get_first_exon()->hstart() - 1;
 		$dns_len = $eviseq_len - $self->get_last_exon()->hend();
 	} else {

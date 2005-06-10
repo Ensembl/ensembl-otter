@@ -11,7 +11,7 @@ my $rel_exon_thickness = 0.5; # in practice - from 0.1 to 0.9
 my $half_delta	= $ystep*$rel_exon_thickness/2;
 
 my $current_contour_color = 'red';
-my $selection_color    = '#9ea2ff';
+my $selection_color    = '#ffe4b5';
 my $highlighting_color = 'yellow';
 
 my @alternating_colors = ('white','#eeeeee');
@@ -146,6 +146,8 @@ if(0) {
 
 	$self->{_sortfilterdialog}->filter_and_sort(1);
 
+    print $self->{_evicoll}->pipeline_slice()->seq."\n\n";
+
 	return $self;
 }
 
@@ -243,6 +245,7 @@ my $tt_redraw = Evi::Tictoc->new("EviDisplay layout");
 			-1,
 			$self->{_transcript}->transcript_info()->name(),
 			$tran_strand,
+			1,
 			[	"Name: ".$self->{_transcript}->transcript_info()->name(),
 				"Strand: ".strand2name($tran_strand),
 			],
@@ -265,6 +268,7 @@ my $tt_redraw = Evi::Tictoc->new("EviDisplay layout");
 			-1,
 			$self->{_transcript}->transcript_info()->name(),
 			$tran_strand,
+			1,
 			[	"Name: ".$self->{_transcript}->transcript_info()->name(),
 				"Strand: ".strand2name($tran_strand),
 			],
@@ -274,9 +278,6 @@ my $tt_redraw = Evi::Tictoc->new("EviDisplay layout");
 			0
 			);
 	}
-
-	warn "SC_MIN: ".$self->{_scale}->get_scaled_min()."\n";
-	warn "SC_MAX: ".$self->{_scale}->get_scaled_max()."\n";
 
 		# force the canvas to resize just once and speed up the whole process of drawing:
 	$self->canvas()->Subwidget('main_canvas')->createLine(
@@ -301,13 +302,12 @@ my $tt_redraw = Evi::Tictoc->new("EviDisplay layout");
 			$screendex,
 			$evichain->name(),
 			$evichain->strand(),
+			$evichain->hstrand(),
 			[
 				(map { $_->{_name}.':  '.$_->compute($evichain); }
-					@{$self->{_sortfilterdialog}->active_criteria()}),
-				'-----------------------',
-				(map { $_->{_name}.':  '.$_->compute($evichain); }
-					@{$self->{_sortfilterdialog}->remaining_criteria()}),
-				"Strand: ".strand2name($evichain->strand()),
+					@{$self->{_sortfilterdialog}->all_criteria()}),
+				"QStrand: ".strand2name($evichain->strand()),
+				"HStrand: ".strand2name($evichain->hstrand()),
 			],
 			$evichain->analysis(),
 			$evichain->analysis() eq 'Uniprot',
@@ -364,7 +364,7 @@ sub strand2name {
 
 sub draw_exons {
 	my ($self,$where,$where_alt,$where_text,$exons_lp,$show_introns,$start_at,$end_at,
-		$screendex,$name_tag,$chain_strand,$infotext,$scheme,$show_frame,$hd,$draw_stripes) = @_;
+		$screendex,$name_tag,$chain_qstrand,$chain_hstrand,$infotext,$scheme,$show_frame,$hd,$draw_stripes) = @_;
 
 	my ($ocolor,$fcolor);
 	my $stripecolor = $alternating_colors[$screendex % 2];
@@ -410,7 +410,7 @@ sub draw_exons {
 		$where_text->createText(0, $mid_y,
 			-fill => 'black',
 			-disabledfill => $current_contour_color,
-			-text =>	$name_tag.' '.strand2arrow($chain_strand),
+			-text =>	$name_tag.' Q:'.strand2arrow($chain_qstrand).' H:'.strand2arrow($chain_hstrand),
 			-anchor =>	'e',
 			-tags =>	[ $chain_tag, $name_tag ],
 		);

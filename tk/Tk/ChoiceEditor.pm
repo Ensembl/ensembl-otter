@@ -1,0 +1,105 @@
+package Tk::ChoiceEditor;
+
+# Given a list of Mappable objects choose one and enable the user to edit its fields.
+#
+# lg4
+
+use Tk;
+
+use base ('Evi::DestroyReporter', 'Tk::LabFrame');
+
+Construct Tk::Widget 'ChoiceEditor';
+
+sub Populate {
+	my ($self,$args) = @_;
+
+	$self->ConfigSpecs(
+		-objectlist => [ 'METHOD', 'objectlist', 'Objectlist', []],
+	);
+
+	$self->SUPER::Populate($args);
+
+	$self->{_selector} = $self->Optionmenu(
+		-command => [\&editor_idx, $self],
+	)->pack(
+		-side => 'left',
+		-padx => 10,
+		-pady => 10,
+		-fill => 'y',
+		-expand => 1,
+	);
+}
+
+sub objectlist { # the METHOD's name should match the option name minus dash
+	my ($self, $new_lp) = @_;
+
+	if(defined($new_lp)) {
+		$self->{_objectlist} = $new_lp;
+
+		$self->{_selector}->configure(-options =>
+			[ map { [ $new_lp->[$_]->{_name} => $_ ]; } (0..@$new_lp-1) ]
+		);
+	}
+	return $self->{_objectlist};
+}
+
+sub editor_idx {
+	my ($self, $idx) = @_;
+
+	$self->{_currobj} = $self->{_objectlist}[$idx];
+
+	if($self->{_eframe}) {
+		$self->{_eframe}->destroy();
+		$self->{_eframe} = undef;
+	}
+
+	$self->{_eframe} = $self->Frame()->pack();
+
+	for my $field ($self->{_currobj}->getChangeables()) {
+		my $subframe = $self->{_eframe}->Frame()
+			->pack(
+				-side => 'left',
+				-padx => 10,
+				-pady => 10,
+			);
+
+		$subframe->Label(
+				'-text' => $self->{_currobj}->mapName($field).':'
+			)->pack(
+				-side => 'top',
+				-pady => 5,
+			);
+
+		my $name2val_ref = $self->{_currobj}->getValueMapping()->{$field};
+
+		if(defined($name2val_ref)) { # described by getValueMapping() => generate an Optionmenu
+
+			my $tvar = $self->{_currobj}->externalFeature($field); # closure
+			my $om = $subframe->Optionmenu(
+				-options  => [ keys %$name2val_ref ],
+				-textvariable => \$tvar,
+				-command => [ 'externalFeature', ($self->{_currobj}, $field, $tvar) ],
+			)->pack(
+				-side => 'bottom',
+				-pady => 5,
+			);
+
+		} else { # other fields => generate a TextEntry:
+			my $entry = $subframe->Entry(
+					'-textvariable' => \$self->{_currobj}{$field}
+			)->pack(
+				-side => 'bottom',
+				-pady => 5,
+			);
+		}
+	}
+}
+
+sub getCurrobj { # returns the only reference to the object
+	my $self = shift @_;
+
+	return $self->{_currobj};
+}
+
+1;
+

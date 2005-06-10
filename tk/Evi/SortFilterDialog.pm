@@ -5,7 +5,9 @@ package Evi::SortFilterDialog;
 #
 # lg4
 
-use Tk::WrappedOSF;     # frame that selects the sorting order
+use Tk;
+
+use Tk::ObjectPalette;     # frame that selects the sorting order
 
 use Evi::SortCriterion;	# method/params to be called on data to compute the key, direction, threshold...
 use Evi::Sorter;		# performs multicriterial sorting, filtering and uniq
@@ -45,37 +47,48 @@ sub open {
 		$self->{_window} = $self->{_topwindow}->Toplevel(-title => $self->{_title});
 		$self->{_window}->minsize(700,150);
 
-		my $topframe = $self->{_window}->Frame()
-			->pack('-side' => 'top');
+		$self->{_uframe} = $self->{_window}->LabFrame(
+			-label => 'Uniqueness of names:',
+			-labelside => 'acrosstop',
+		)->pack(
+			-side => 'top',
+			-padx => 10,
+			-pady => 10,
+			-fill => 'x',
+			-expand => 1,
+		);
 
-		$topframe->Radiobutton(-value => 1, -variable => \$self->{_uniq})
-			->pack(-side => 'left');
-		$topframe->Label(-text => 'Show unique matches')
-			->pack(-side => 'left');
+		$self->{_ome} = $self->{_uframe}->Optionmenu(
+			-options => [ ['Show unique matches' => 1], ['Show all matches' => 0] ],
+			-variable => \$self->{_uniq},
+		)->pack(
+			-padx => 10,
+			-pady => 10,
+		);
 
-		$topframe->Label(-text => 'Show all matches')
-			->pack(-side => 'right');
-		$topframe->Radiobutton(-value => 0, -variable => \$self->{_uniq})
-			->pack(-side => 'right');
-			
-		$topframe->Label(-text => ' ------------------------ ')
-			->pack(-side => 'bottom', -anchor => 'center');
-
-		$self->{_window}->Label('-text' => 'The sorting order:')
-			->pack('-side' => 'top');
-		$self->{_wosf} = $self->{_window}->WrappedOSF()
-			->pack('-fill' => 'both', '-expand' => 1);
-
-		$self->{_wosf}->link_data( $self->active_criteria(), $self->remaining_criteria() );
+		$self->{_opa} = $self->{_window}->ObjectPalette(
+			-molabel => 'Current sorting/filtering order:',
+			-activelist => $self->active_criteria(),
+			-celabel => 'Add more criteria:',
+			-objectlist => $self->all_criteria(),
+		)->pack('-fill' => 'both', '-expand' => 1);
 
 		$self->{_window}->Button(
 						'-text' => 'Sort & Filter',
 						'-command' => [ $self => 'close_window_callback', 1 ],
-		)->pack('-side' => 'left');
+		)->pack(
+			-side => 'left',
+			-padx => 10,
+			-pady => 10,
+		);
 		$self->{_window}->Button(
 						'-text' => 'Cancel',
 						'-command' => [ $self => 'close_window_callback', 0 ],
-		)->pack('-side' => 'right');
+		)->pack(
+			-side => 'right',
+			-padx => 10,
+			-pady => 10,
+		);
 
 			# Killing the window is equivalent to 'Cancel':
 		$self->{_window}->protocol('WM_DELETE_WINDOW', [ $self => 'close_window_callback', 0 ]);
@@ -90,7 +103,9 @@ sub close_window_callback {
 		$result = $self->filter_and_sort(1);
 	}
 	warn "closing the sorter window";
-	$self->{_wosf}->release();
+	$self->{_ome}->configure(-variable, []);
+	$self->{_opa}->configure(-activelist => [], -objectlist => []);
+	$self->{_opa}->destroy();
 	$self->{_window}->destroy();
 	delete $self->{_window};
 }
@@ -125,13 +140,13 @@ sub active_criteria {
 	return $self->{_active_criteria_lp};
 }
 
-sub remaining_criteria {
+sub all_criteria {
 	my ($self, $new_list) = @_;
 
 	if(defined($new_list)) {
-		$self->{_remaining_criteria_lp} = $new_list;
+		$self->{_all_criteria_lp} = $new_list;
 	}
-	return $self->{_remaining_criteria_lp};
+	return $self->{_all_criteria_lp};
 }
 
 sub current_transcript {
@@ -140,8 +155,8 @@ sub current_transcript {
 	if(defined($transcript)) {
 		$self->{_current_transcript} = $transcript;
 
-			# the remaining criteria are computed by EviDisplay, so we set them as well:
-		for my $criterion (@{ $self->active_criteria()}, @{ $self->remaining_criteria()}) {
+			# all_criteria are computed by EviDisplay, so we set them as well:
+		for my $criterion (@{ $self->active_criteria()}, @{ $self->all_criteria()}) {
 			$criterion->internalFeature('_params',[$transcript]);
 		}
 	}
@@ -160,7 +175,11 @@ sub init_criteria { # NB: current_transcript must be set after calling this func
 					[],'alphabetic','ascending'),
     ]);
 
-    $self->remaining_criteria([
+    $self->all_criteria([
+
+			# include them as well:
+		@{$self->active_criteria()},
+
 			# current transcript-dependent criteria:
 		Evi::SortCriterion->new('Supported introns', 'trans_supported_introns',
 					[], 'numeric','descending',1),
@@ -191,8 +210,6 @@ sub filter_intersecting_current_range {
 	my ($range_start, $range_end)
 	 =	$self->current_range()
 	 || ($self->current_transcript()->start(), $self->current_transcript()->end() );
-
-warn "RANGE: ($range_start, $range_end) ";
 
 	return [
 		grep { $range_start<=$_->end()
