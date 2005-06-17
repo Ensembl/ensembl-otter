@@ -71,7 +71,7 @@ sub deselect {
 	delete $self->{_data}{$name};
 }
 
-sub get_list {
+sub get_namelist {
 	my $self = shift @_;
 
 	return [ keys %{ $self->{_data}} ];
@@ -99,7 +99,7 @@ sub any_changes_in_selection {
 	my $old_selection = join(',', sort map { strip_colonprefix($_->name()); }
 									@{ $self->{_transcript}->transcript_info()->get_all_Evidence() });
 
-	my $curr_selection = join(',', sort @{$self->get_list()} );
+	my $curr_selection = join(',', sort @{$self->get_namelist()} );
 
 	return $old_selection ne $curr_selection;
 }
