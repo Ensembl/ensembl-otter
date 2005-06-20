@@ -57,23 +57,52 @@ sub emit_chains_to_file {
     my $chains  = shift @_;
 
     open(OUT,">$outfile");
-    print OUT '';         # just ignore the chains temporarily
+    print OUT "# exblx\n";
+    print OUT "# blastN\n";
     for my $chain (@$chains) {
-        if($chain->strand() == 1) { # test on the forward strand first
-            my $prefixed_name = $chain->prefixed_name;
-            for my $af (@{$chain->afs_lp()}) {
-                my ($start, $end, $hstart, $hend) = ($af->start(), $af->end(), $af->hstart(), $af->hend());
-                my $frame = $start % 3 || 3;
-                print OUT join(' ',
-                    $af->score(),
-                    "(+$frame)",
-                    $start,
-                    $end,
-                    $hstart,
-                    $hend,
-                    $prefixed_name,
-                )."\n";
+        my $strand = $chain->hstrand();
+        my $prefixed_name = $chain->prefixed_name;
+        for my $af (@{$chain->afs_lp()}) {
+            my ($start, $end, $hstart, $hend) =
+                ($af->start(), $af->end(), $af->hstart(), $af->hend());
+            my $frame = $start % 3 || 3;
+            print OUT join("\t",
+                int($af->percent_id()), # $af->score(),
+                ($strand == 1)
+                    ? ( '(+1)', $start, $end)
+                    : ( '(-1)', $end, $start),
+                $hstart,
+                $hend,
+                $prefixed_name,
+                '',
+            );
+            my $cigar = $af->cigar_string();
+            print "$prefixed_name: ($start, $end) $cigar\n";
+
+            my $hcurr = $hstart;
+            my $qcurr = ($strand == 1) ? $start : $end;
+
+            while($cigar=~/(\d*)([MID])/g) {
+                my $len = $1 || 1;
+                my $cmd = $2;
+
+                if($cmd eq 'D') {
+                    $hcurr += $len;
+                    next;
+                } elsif($cmd eq 'I') {
+                    $qcurr += $len*$strand;
+                    next;
+                } else { # $cmd eq 'M'
+                    my $hnext = $hcurr + ($len - 1);
+                    my $qnext = $qcurr + ($len - 1)*$strand;
+                    
+                    print OUT join(' ', $hcurr, $hnext, $qcurr, $qnext,'');
+
+                    $hcurr = $hnext + 1;
+                    $qcurr = $qnext + $strand;
+                }
             }
+            print OUT "\n";
         }
     }
     close OUT;
@@ -86,6 +115,7 @@ sub launch {
     my $tmp_dir = '.'; # '/tmp'; # (-w '/tmp') ? '/tmp' : (-w '.') ? '.' : $ENV{HOME};
     my $slice_file  = $tmp_dir."/blixem_slice.$$";
     my $chains_file = $tmp_dir."/blixem_chains.$$";
+    my $rubbish_file = 'myoutput';
 
     $self->emit_sliceseq_to_file($slice_file);
     $self->emit_chains_to_file($chains_file, $chains);
@@ -93,7 +123,7 @@ sub launch {
     system('echo', 'blixem', $slice_file, $chains_file);
     system('blixem', $slice_file, $chains_file);
 
-    # unlink($slice_file, $chains_file);
+    unlink($slice_file, $chains_file, $rubbish_file);
 }
 
 1;

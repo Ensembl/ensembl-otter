@@ -117,7 +117,7 @@ sub new {
     my $menu_view = $self->make_menu('View');
     $menu_view->command(
         -label   => 'Launch Blixem',
-        -command => [ $self->{_blixem} => 'launch' ],
+        -command => [ \&launch_blixem_callback, ($self) ],
     );
     $menu_view->separator();
     $menu_view->radiobutton(
@@ -192,6 +192,16 @@ sub exit_callback {
     $self->release();
     warn "closing the EviDisplay window";
     $top_window->destroy();
+}
+
+sub launch_blixem_callback {
+    my $self = shift @_;
+
+    my @chains_to_show =
+        map { $self->{_evichains_lp}[$_]; }
+            @{$self->{_lselection}->get_all_visible_indices()};
+
+     $self->{_blixem}->launch(\@chains_to_show);
 }
 
 sub ExonCanvas {
@@ -307,7 +317,7 @@ my $tt_redraw = Evi::Tictoc->new("EviDisplay layout");
             undef,
             undef,
             $screendex,
-            $evichain->name(),
+            $evichain->name(), # it must be the name itself for the selection mechanism to work
             $evichain->strand(),
             $evichain->hstrand(),
             [
@@ -664,22 +674,30 @@ sub visual_toggle_highlighting_by_id { # not a method
 
 # ----------------------------------[de/selection]-------------------------------------------
 
-sub visual_select_by_id {
-    my ($self, $canvas, $id) = @_;
+sub visual_select_by_nametag {
+    my ($self, $name_tag) = @_;
 
-    for my $opt ('-fill','-disabledfill') {
-        my $orig_color = $canvas->itemcget($id,$opt);
-        $self->{_selected_ids}{$canvas}{$id}{$opt} = $orig_color;
-        $canvas->itemconfigure($id, $opt => $selection_color);
+    for my $canvas (@{ $self->canvas()->canvases() }) {
+        for my $id ($canvas->find('withtag',"$name_tag&&backribbon")) {
+            for my $opt ('-fill','-disabledfill') {
+                my $orig_color = $canvas->itemcget($id,$opt);
+                $self->{_selected_ids}{$canvas}{$id}{$opt} = $orig_color;
+                $canvas->itemconfigure($id, $opt => $selection_color);
+            }
+        }
     }
 }
 
-sub visual_deselect_by_id {
-    my ($self, $canvas, $id) = @_;
+sub visual_deselect_by_nametag {
+    my ($self, $name_tag) = @_;
 
-    for my $opt ('-fill','-disabledfill') {
-        my $orig_color = $self->{_selected_ids}{$canvas}{$id}{$opt};
-        $canvas->itemconfigure($id, $opt => $orig_color);
+    for my $canvas (@{ $self->canvas()->canvases() }) {
+        for my $id ($canvas->find('withtag',"$name_tag&&backribbon")) {
+            for my $opt ('-fill','-disabledfill') {
+                my $orig_color = $self->{_selected_ids}{$canvas}{$id}{$opt};
+                $canvas->itemconfigure($id, $opt => $orig_color);
+            }
+        }
     }
 }
 
@@ -689,12 +707,9 @@ sub deselect_by_name { # NB: sometimes it is a method, sometimes it is not!
     my $name_tag    = pop @_;
     my $self        = pop @_;
 
-    for my $canvas (@{ $self->canvas()->canvases() }) {
-        for my $id ($canvas->find('withtag',"$name_tag&&backribbon")) {
-            $self->visual_deselect_by_id($canvas,$id);
-        }
-    }
-    $self->{_lselection}->deselect($name_tag);
+    $self->visual_deselect_by_nametag($name_tag);
+
+    $self->{_lselection}->deselect_byname($name_tag);
 
     my $ms = $self->{_menu_selection}; # unconditionally remove  from the menu
     for my $ind (0..$ms->index('last')) { # if the beginning matches...
@@ -710,15 +725,18 @@ sub select_by_name { # NB: sometimes it is a method, sometimes it is not!
     my $name_tag    = pop @_;
     my $self        = pop @_;
 
-    $self->{_lselection}->select($name_tag); # NB: invisible by default
-
-    for my $canvas (@{ $self->canvas()->canvases() }) {
-        for my $id ($canvas->find('withtag',"$name_tag&&backribbon")) {
-            $self->visual_select_by_id($canvas,$id);
-                # something was found and visibly selected:
-            $self->{_lselection}->set_visibility($name_tag, 1);
+        # select logically, invisible by default:
+    $self->{_lselection}->select_byname($name_tag);
+    
+        # set logical visibility:
+    for my $screendex (0..@{$self->{_evichains_lp}}-1) {
+        my $evichain = $self->{_evichains_lp}[$screendex];
+        if($evichain->name() eq $name_tag) {
+            $self->{_lselection}->set_visibility($name_tag, 1, $screendex);
         }
     }
+
+    $self->visual_select_by_nametag($name_tag);
 
     my $is_vis = $self->{_lselection}->is_visible($name_tag);
 
@@ -732,7 +750,7 @@ sub select_by_name { # NB: sometimes it is a method, sometimes it is not!
     if($is_vis) {
         $submenu->command(
             -label      => "ScrollTo",
-            -command    => [\&scroll_to_obj, ($self, $name_tag) ],
+            -command    => [ $self => 'scroll_to_obj', ($name_tag) ],
         );
     }
     $submenu->command(
@@ -757,9 +775,10 @@ sub redraw_selection {
     $self->{_menu_selection}->delete(0,'last'); # start from the empty menu
 
     for my $eviname (@{ $self->{_lselection}->get_namelist() }) {
+
         $self->select_by_name($eviname); # try to make it visible
         if(not $self->{_lselection}->is_visible($eviname)) {
-            warn "$eviname cannot be selected as it is not visible on the EviDisplay\n";
+            warn "$eviname is not currently visible and so cannot be selected on the EviDisplay\n";
         }
     }
 }
