@@ -6,6 +6,8 @@ package Evi::BlixemLauncher;
 #
 # lg4
 
+use Hum::Conf qw{ PFETCH_SERVER_LIST }; # to get the default pfetch server and port
+
 use Bio::Seq;               # for emitting the fasta sequence of the slice
 use Bio::SeqIO;
 
@@ -203,15 +205,21 @@ sub emit_trans_chains_to_file {
 sub launch {
     my $self        = shift @_;
 
-    my $tmp_dir = '.'; # '/tmp'; # (-w '/tmp') ? '/tmp' : (-w '.') ? '.' : $ENV{HOME};
-    my $slice_file  = $tmp_dir."/blixem_slice.$$";
-    my $chains_file = $tmp_dir."/blixem_chains.$$";
-    my $rubbish_file = 'myoutput';
+    my $tmp_dir       = '.'; # '/tmp'; # (-w '/tmp') ? '/tmp' : (-w '.') ? '.' : $ENV{HOME};
+    my $slice_file    = $tmp_dir."/blixem_slice.$$";
+    my $chains_file   = $tmp_dir."/blixem_chains.$$";
+    my $rubbish_file  = 'myoutput';
+    my $pfetch_server = $PFETCH_SERVER_LIST->[0][0];
+    my $pfetch_port   = $PFETCH_SERVER_LIST->[0][1];
+    my $quick_pfetch  = 1;
 
     $self->emit_sliceseq_to_file($slice_file);
     $self->emit_trans_chains_to_file($chains_file);
 
-    system('blixem', $slice_file, $chains_file);
+    system('blixem', $quick_pfetch
+                ? ('-P', join(':', $pfetch_server, $pfetch_port) )
+                : (),
+            $slice_file, $chains_file);
 
     unlink($slice_file, $chains_file, $rubbish_file);
 }
