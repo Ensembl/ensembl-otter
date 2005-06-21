@@ -202,7 +202,7 @@ sub launch_blixem_callback {
             @{$self->{_lselection}->get_all_visible_indices()};
 
      $self->{_blixem}->chains(\@chains_to_show);
-     $self->{_blixem}->launch();
+     $self->{_blixem}->forklaunch();
 }
 
 sub ExonCanvas {

@@ -211,10 +211,24 @@ sub launch {
     $self->emit_sliceseq_to_file($slice_file);
     $self->emit_trans_chains_to_file($chains_file);
 
-    system('echo', 'blixem', $slice_file, $chains_file);
     system('blixem', $slice_file, $chains_file);
 
     unlink($slice_file, $chains_file, $rubbish_file);
+}
+
+sub forklaunch {
+    my $self        = shift @_;
+
+    $SIG{CHLD} = 'IGNORE'; # we do not want to wait for the children
+
+    if (my $pid = fork) { # nonzero => the parent simply returns
+        return;
+    } elsif (defined $pid) { # zero => the child executes the function AND TERMINATES
+        $self->launch();
+        exit(0);
+    } else {
+        warn "Unable to fork : $!";
+    }
 }
 
 1;
