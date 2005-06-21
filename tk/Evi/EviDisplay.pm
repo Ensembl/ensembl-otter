@@ -96,7 +96,7 @@ sub new {
 
     $self->{_statusline} = $top_window->ROText(-height=>1)->pack(-side => 'bottom');
 
-    $self->{_blixem} = Evi::BlixemLauncher->new($self->{_evicoll}->pipeline_slice());
+    $self->{_blixem} = Evi::BlixemLauncher->new($self->{_evicoll}->pipeline_slice(),$self->{_transcript});
 
     my $menu_file = $self->make_menu('File');
     $menu_file->command(
@@ -201,7 +201,8 @@ sub launch_blixem_callback {
         map { $self->{_evichains_lp}[$_]; }
             @{$self->{_lselection}->get_all_visible_indices()};
 
-     $self->{_blixem}->launch(\@chains_to_show);
+     $self->{_blixem}->chains(\@chains_to_show);
+     $self->{_blixem}->launch();
 }
 
 sub ExonCanvas {
