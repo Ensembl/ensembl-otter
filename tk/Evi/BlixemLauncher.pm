@@ -206,9 +206,9 @@ sub launch {
     my $self        = shift @_;
 
     my $tmp_dir       = '.'; # '/tmp'; # (-w '/tmp') ? '/tmp' : (-w '.') ? '.' : $ENV{HOME};
-    my $slice_file    = $tmp_dir."/blixem_slice.$$";
-    my $chains_file   = $tmp_dir."/blixem_chains.$$";
-    my $rubbish_file  = 'myoutput';
+    my $pid           = $$;  # child's PID, which is unique
+    my $slice_file    = $tmp_dir."/blixem_slice.$pid";
+    my $chains_file   = $tmp_dir."/blixem_chains.$pid";
     my $pfetch_server = $PFETCH_SERVER_LIST->[0][0];
     my $pfetch_port   = $PFETCH_SERVER_LIST->[0][1];
     my $quick_pfetch  = 1;
@@ -216,12 +216,11 @@ sub launch {
     $self->emit_sliceseq_to_file($slice_file);
     $self->emit_trans_chains_to_file($chains_file);
 
-    system('blixem', $quick_pfetch
-                ? ('-P', join(':', $pfetch_server, $pfetch_port) )
-                : (),
+    exec('blixem', $quick_pfetch
+                ? ('-P', join(':', $pfetch_server, $pfetch_port) )  # use multiseq pfetch server
+                : (),                                               # pfetch them 1-by-1
+            '-r', # remove the files after using them (which actually happens at startup!)
             $slice_file, $chains_file);
-
-    unlink($slice_file, $chains_file, $rubbish_file);
 }
 
 sub forklaunch {
