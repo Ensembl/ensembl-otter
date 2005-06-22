@@ -13,9 +13,7 @@ Construct Tk::Widget 'ChoiceEditor';
 sub Populate {
 	my ($self,$args) = @_;
 
-	$self->ConfigSpecs(
-		-objectlist => [ 'METHOD', 'objectlist', 'Objectlist', []],
-	);
+    my $objectlist = delete $args->{-objectlist};
 
 	$self->SUPER::Populate($args);
 
@@ -27,6 +25,10 @@ sub Populate {
 		-pady => 10,
 		-fill => 'y',
 		-expand => 1,
+	);
+
+	$self->ConfigSpecs(
+		-objectlist => [ 'METHOD', 'objectlist', 'Objectlist', $objectlist ? $objectlist : [] ],
 	);
 }
 

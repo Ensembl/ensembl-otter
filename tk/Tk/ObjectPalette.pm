@@ -16,6 +16,9 @@ Construct Tk::Widget 'ObjectPalette';
 sub Populate {
 	my ($self,$args) = @_;
 
+    my $activelist = delete $args->{-activelist};
+    my $objectlist = delete $args->{-objectlist};
+
 	$self->SUPER::Populate($args);
 
 	$self->{_mo} = $self->ManualOrder(
@@ -50,10 +53,10 @@ sub Populate {
 	);
 
 	$self->ConfigSpecs(
-		-activelist => [ $self->{_mo}, 'activelist', 'Activelist', []],
-		-objectlist => [ $self->{_ce}, 'objectlist', 'Objectlist', []],
-		-molabel =>     [ 'METHOD', 'molabel', 'Molabel', 'The current order:' ],
-		-celabel =>     [ 'METHOD', 'celabel', 'Celabel', 'Please choose from here:' ],
+		-activelist => [ $self->{_mo}, 'activelist', 'Activelist', $activelist?$activelist:[] ],
+		-objectlist => [ $self->{_ce}, 'objectlist', 'Objectlist', $objectlist?$objectlist:[] ],
+		-molabel =>    [ { -label => $self->{_mo} }, 'molabel', 'Molabel', 'The current order:' ],
+		-celabel =>    [ { -label => $self->{_ce} }, 'celabel', 'Celabel', 'Please choose from here:' ],
 	);
 }
 
@@ -62,26 +65,6 @@ sub add_callback {
 
 	my $clone = Storable::dclone($self->{_ce}->getCurrobj());
 	$self->{_mo}->append_object($clone);
-}
-
-sub molabel { # just forward the request:
-	my $self = shift @_;
-
-	if(@_) {
-		$self->{_mo}->configure(-label => @_);
-	} else {
-		return $self->{_mo}->cget(-label);
-	}
-}
-
-sub celabel { # just forward the request:
-	my $self = shift @_;
-
-	if(@_) {
-		$self->{_ce}->configure(-label => @_);
-	} else {
-		return $self->{_ce}->cget(-label);
-	}
 }
 
 1;
