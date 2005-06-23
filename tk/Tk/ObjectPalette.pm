@@ -6,6 +6,9 @@ package Tk::ObjectPalette;
 
 use Storable;
 use Tk;
+use Tk::LabFrame;   # This class should never be inherited from,
+                    # as it has bugs that break 'grid' geometry manager.
+                    # Things should inherit from Tk::Frame instead, and be wrapped.
 use Tk::ManualOrder;
 use Tk::ChoiceEditor;
 
@@ -21,7 +24,7 @@ sub Populate {
 
 	$self->SUPER::Populate($args);
 
-	$self->{_mo} = $self->ManualOrder(
+    $self->{_mo_lf} = $self->LabFrame(
 		-labelside => 'acrosstop',
 	)->pack(
 		-side => 'top',
@@ -31,13 +34,23 @@ sub Populate {
 		-expand => 1,
 	);
 
-	$self->{_ce} = $self->ChoiceEditor(
+	$self->{_mo} = $self->{_mo_lf}->ManualOrder()->pack(
+		-fill => 'both',
+		-expand => 1,
+    );
+
+	$self->{_ce_lf} = $self->LabFrame(
 		-labelside => 'acrosstop',
 	)->pack(
 		-side => 'left',
 		-padx => 10,
 		-pady => 10,
 		-fill => 'x',
+		-expand => 1,
+	);
+
+	$self->{_ce} = $self->{_ce_lf}->ChoiceEditor()->pack(
+		-fill => 'both',
 		-expand => 1,
 	);
 
@@ -55,8 +68,8 @@ sub Populate {
 	$self->ConfigSpecs(
 		-activelist => [ $self->{_mo}, 'activelist', 'Activelist', $activelist?$activelist:[] ],
 		-objectlist => [ $self->{_ce}, 'objectlist', 'Objectlist', $objectlist?$objectlist:[] ],
-		-molabel =>    [ { -label => $self->{_mo} }, 'molabel', 'Molabel', 'The current order:' ],
-		-celabel =>    [ { -label => $self->{_ce} }, 'celabel', 'Celabel', 'Please choose from here:' ],
+		-molabel =>    [ { -label => $self->{_mo_lf} }, 'molabel', 'Molabel', 'The current order:' ],
+		-celabel =>    [ { -label => $self->{_ce_lf} }, 'celabel', 'Celabel', 'Please choose from here:' ],
 	);
 }
 

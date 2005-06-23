@@ -77,7 +77,7 @@ sub open {
 						'-text' => 'Sort & Filter',
 						'-command' => [ $self => 'close_window_callback', 1 ],
 		)->pack(
-			-side => 'left',
+			-side => 'right',
 			-padx => 10,
 			-pady => 10,
 		);

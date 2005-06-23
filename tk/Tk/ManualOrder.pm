@@ -12,19 +12,23 @@ package Tk::ManualOrder;
 
 use Tk;
 
-use base ('Evi::DestroyReporter', 'Tk::LabFrame');
+    # Tk::LabFrame should be never inherited from,
+    # as it has bugs that break 'grid' geometry manager.
+    # Things should inherit from Tk::Frame instead, and be wrapped.
+use base ('Evi::DestroyReporter', 'Tk::Frame');
 
 Construct Tk::Widget 'ManualOrder';
 
 sub Populate {
 	my ($self,$args) = @_;
 
-    my $activelist = delete $args->{-activelist}; # save the parent from seeing this
+    my $activelist = delete $args->{-activelist};
 
 	$self->SUPER::Populate($args);
 
 	$self->ConfigSpecs(
-        -activelist => ['METHOD', 'activelist', 'Activelist', $activelist ? $activelist : [] ],
+        -activelist => ['METHOD', 'activelist', 'Activelist',
+                        $activelist ? $activelist : [] ],
 	);
 }
 
@@ -57,24 +61,13 @@ sub append_object {
 sub _get_rid_of {
 	my ($self, @rest) = @_;
 
-    print "[_get_rid_of @rest]:\n";
-
-    print "gridSlaves($self):\n";
-    for my $wid ($self->gridSlaves()) {
-        print "\t".$wid->cget(-text)."\n";
-    }
-    print "-----------\n\n";
-
 	for my $wid ($self->gridSlaves(@rest)) {
-        print "!!! gridForgetting: $wid\n";
 		$wid->gridForget();
 	}
 }
 
 sub _grid_object_at {
 	my ($self, $object, $idx) = @_;
-
-    print "[_grid_object_at($idx)]\n";
 
 	if($idx) {
 		$self->Button(
@@ -107,18 +100,10 @@ sub _grid_object_at {
         -sticky => 'news',
     );
 
-    print "gridSlaves($self):\n";
-    for my $wid ($self->gridSlaves()) {
-        print "\t".$wid->cget(-text)."\n";
-    }
-    print "-----------\n\n";
-
 }
 
 sub _swap_idx1_idx2 { # just re-create them from scratch
 	my ($self, $idx1, $idx2) = @_;
-
-    print "[_swap_idx1_idx2: $idx1, $idx2]\n";
 
 	my $activelist = $self->{_activelist};
 
@@ -135,8 +120,6 @@ sub _swap_idx1_idx2 { # just re-create them from scratch
 
 sub _remove_by_idx {
 	my ($self, $idx) = @_;
-
-    print "[_remove_by_idx: $idx]\n";
 
 	my $activelist = $self->{_activelist};
 
