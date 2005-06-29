@@ -116,8 +116,12 @@ sub new {
 
     my $menu_view = $self->make_menu('View');
     $menu_view->command(
-        -label   => 'Launch Blixem',
-        -command => [ \&launch_blixem_callback, ($self) ],
+        -label   => 'Launch Nucleotide Blixem',
+        -command => [ \&launch_blixem_callback, ($self, 1) ],
+    );
+    $menu_view->command(
+        -label   => 'Launch Protein Blixem',
+        -command => [ \&launch_blixem_callback, ($self, 3) ],
     );
     $menu_view->separator();
     $menu_view->radiobutton(
@@ -196,13 +200,14 @@ sub exit_callback {
 
 sub launch_blixem_callback {
     my $self = shift @_;
+    my $unit = shift @_;
 
     my @chains_to_show =
         map { $self->{_evichains_lp}[$_]; }
             @{$self->{_lselection}->get_all_visible_indices()};
 
      $self->{_blixem}->chains(\@chains_to_show);
-     $self->{_blixem}->forklaunch();
+     $self->{_blixem}->forklaunch($unit);
 }
 
 sub ExonCanvas {

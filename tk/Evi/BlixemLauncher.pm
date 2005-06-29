@@ -2,14 +2,19 @@ package Evi::BlixemLauncher;
 
 # Just launch Blixem with the slice and a set of EviChains
 #
-# NB: works only on EST/mRNA chains, may fail on protein chains
-#
 # lg4
 
 use Hum::Conf qw{ PFETCH_SERVER_LIST }; # to get the default pfetch server and port
 
 use Bio::Seq;               # for emitting the fasta sequence of the slice
 use Bio::SeqIO;
+
+my $remove_files  = 1;  # cleanup_after_use(=1) vs leave_for_debug(=0)
+my $tmp_dir       = '.';# where to create files
+
+my $quick_pfetch  = 1;  # use multi-sequence pfetch server via a direct TCP connection:
+my $pfetch_server = $PFETCH_SERVER_LIST->[0][0];
+my $pfetch_port   = $PFETCH_SERVER_LIST->[0][1];
 
 sub new {
     my $pkg         = shift @_;
@@ -87,16 +92,20 @@ sub parse_cigar_along_hit { # not a method
 }
 
 sub Evi::EviChain::to_blixem_strings {
+    use strict;
+
     my $chain  = shift @_;
 
+    my $unit = $chain->unit();
     my @lines = ();
 
-    my $strand = $chain->hstrand();
+    my $strand = $chain->strand()*$chain->hstrand();
     my $prefixed_name = $chain->prefixed_name;
     for my $af (@{$chain->afs_lp()}) {
         my ($start, $end, $hstart, $hend) =
             ($af->start(), $af->end(), $af->hstart(), $af->hend());
-        my $frame = $start % 3 || 3;
+
+        my $frame = $start*$strand % 3 || 3; # this is how BLIXEM wants it to be
 
         my @syll = (
             int($af->percent_id()), # $af->score(),
@@ -111,17 +120,18 @@ sub Evi::EviChain::to_blixem_strings {
         my $hcurr = $hstart;
         my $qcurr = ($strand == 1) ? $start : $end;
 
-        for my $pair (@{ parse_cigar_along_hit($af->cigar_string(), $strand) }) {
+        for my $pair (@{ parse_cigar_along_hit($af->cigar_string(), $chain->hstrand()) }) {
             my ($cmd, $len) = split(':', $pair);
 
+                # NB: cigar's units are always query-sequence's units.
             if($cmd eq 'D') {
-                $hcurr += $len;
+                $hcurr += $len/$unit;
                 next;
             } elsif($cmd eq 'I') {
                 $qcurr += $len*$strand;
                 next;
             } else { # $cmd eq 'M'
-                my $hnext = $hcurr + ($len - 1);
+                my $hnext = $hcurr + ($len/$unit - 1);
                 my $qnext = $qcurr + ($len - 1)*$strand;
                 
                 push @syll, join(' ', $hcurr, $hnext, $qcurr, $qnext);
@@ -135,24 +145,70 @@ sub Evi::EviChain::to_blixem_strings {
     return @lines;
 }
 
+sub Bio::EnsEMBL::Transcript::get_all_split_Exons { # based on the original code of get_all_translateable_Exons
+    use strict;
+
+    my $transcript  = shift @_;
+    my $translation = $transcript->translation();
+    my $start_exon  = $translation ? $translation->start_Exon : 0;
+    my $end_exon    = $translation ? $translation->end_Exon : 0;
+
+    my @origex      = @{ $transcript->get_all_Exons() }; # caching against destruction
+    my @splitex     = ();
+    my $currtype    = $translation ? '5UTR' : 'UTR';
+
+    foreach my $exon_ind (1..@origex) {
+        my $exon = $origex[$exon_ind-1];
+
+        if ($exon == $start_exon) { # end of 5'UTR
+            my $utr5 = $exon->adjust_start_end(0, $translation->start()-1-$exon->length());
+            $utr5->{_bltype} = '5UTR';
+            $utr5->{_blnum}  = $exon_ind;
+            push @splitex, $utr5;
+
+            $currtype = 'CDS'; # start of CDS
+            $exon = $exon->adjust_start_end($translation->start()-1,0);
+        }
+        
+        if ($exon == $end_exon) { # end of CDS
+            my $cds = $exon->adjust_start_end(0, $translation->end()-$exon->length());
+            $cds->{_bltype} = 'CDS';
+            $cds->{_blnum}  = $exon_ind;
+            push @splitex, $cds;
+
+            $currtype = '3UTR'; # start of 3'UTR
+            $exon = $exon->adjust_start_end($translation->end(),0);
+        }
+
+        if($exon->length()) { # if there is something left,
+            $exon->{_bltype} = $currtype;
+            $exon->{_blnum}  = $exon_ind;
+            push @splitex, $exon;
+        }
+    }
+    return \@splitex;
+}
+
 sub Bio::EnsEMBL::Transcript::to_blixem_strings {
+    use strict;
+
     my $transcript = shift @_;
+    my $unit       = shift @_;
 
     my @lines = ();
-
-    my @exons = @{ $transcript->get_all_Exons() };
-    my $strand = $exons[0]->strand();
-
     my $len_so_far = 0;
 
-    for my $exon_ind (0..scalar(@exons)-1) {
-        my $exon = $exons[$exon_ind];
+    for my $exon ( @{ $transcript->get_all_split_Exons() }) {
 
-        my ($start, $end, $exonlen) = ($exon->start(), $exon->end(), $exon->length());
+        my ($start, $end, $exonlen, $strand) = ($exon->start(), $exon->end(), $exon->length(), $exon->strand());
         my ($hstart, $hend) = ( $len_so_far+1, $len_so_far+$exonlen );
 
-        # my $name = $transcript->transcript_info->name();
-        my $frame = $start % 3 || 3;
+        my $name = 'Exon'.$exon->{_blnum}.'_'.$exon->{_bltype};
+        my $phase = $exon->phase();
+        my $frame = ( ($strand==1)
+                     ? ($exon->start() - $phase)
+                     : -($exon->end() + 1 + $phase)
+                    ) % $unit || $unit;
 
         push @lines, join("\t",
             -1, # signifies an exon
@@ -161,77 +217,82 @@ sub Bio::EnsEMBL::Transcript::to_blixem_strings {
                 : ( "(-$frame)", $end, $start),
             $hstart,
             $hend,
-            'Exon_'.($exon_ind+1)
+            $name,
         )."\n";
 
-        if($exon_ind < scalar(@exons)-1) { # not the last one
-
-            push @lines, join("\t",
-                -2, # signifies an intron
-                ($strand == 1)
-                    ? ( '(+1)', $end+1, $exons[$exon_ind+1]->start()-1 )
-                    : ( '(-1)', $start-1, $exons[$exon_ind+1]->end()+1 ),
-                0,
-                0,
-                'Intron_'.($exon_ind+1)
-            )."\n";
-        }
-
         $len_so_far += $exonlen;
-
     }
+
+    for my $intron (@{ $transcript->get_all_Introns() }) {
+        push @lines, join("\t",
+            -2, # signifies an intron
+            ($intron->strand() == 1)
+                ? ( '(+1)', $intron->start(), $intron->end() )
+                : ( '(-1)', $intron->end(), $intron->start() ),
+            0,
+            0,
+            'Intron' # nobody sees these names anyway
+        )."\n";
+    }
+
     return @lines;
 }
 
 sub emit_trans_chains_to_file {
-    my $self       = shift @_;
-    my $outfile    = shift @_;
+    my $self        = shift @_;
+    my $outfile     = shift @_;
+    my $unit        = shift @_ || 1;
+
+    my $blasttype = { 1 => 'blastN', 3 => 'blastX'}->{$unit};
 
     my $transcript = $self->transcript();
     my $chains     = $self->chains();
 
     open(OUT,">$outfile");
     print OUT "# exblx\n";
-    print OUT "# blastN\n";
+    print OUT "# $blasttype\n";
     if($transcript) {
-        print OUT $transcript->to_blixem_strings();
+        print OUT $transcript->to_blixem_strings($unit);
     }
     for my $chain (@$chains) {
-        print OUT $chain->to_blixem_strings();
+        if($unit == $chain->unit()) { # only show the chains intended for current display
+            print OUT $chain->to_blixem_strings();
+        }
     }
     close OUT;
 }
 
 sub launch {
     my $self        = shift @_;
+    my $unit        = shift @_;
 
-    my $tmp_dir       = '.'; # '/tmp'; # (-w '/tmp') ? '/tmp' : (-w '.') ? '.' : $ENV{HOME};
     my $pid           = $$;  # child's PID, which is unique
     my $slice_file    = $tmp_dir."/blixem_slice.$pid";
     my $chains_file   = $tmp_dir."/blixem_chains.$pid";
-    my $pfetch_server = $PFETCH_SERVER_LIST->[0][0];
-    my $pfetch_port   = $PFETCH_SERVER_LIST->[0][1];
-    my $quick_pfetch  = 1;
 
     $self->emit_sliceseq_to_file($slice_file);
-    $self->emit_trans_chains_to_file($chains_file);
+    $self->emit_trans_chains_to_file($chains_file, $unit);
 
-    exec('blixem', $quick_pfetch
+    exec('blixem',
+            $quick_pfetch
                 ? ('-P', join(':', $pfetch_server, $pfetch_port) )  # use multiseq pfetch server
                 : (),                                               # pfetch them 1-by-1
-            '-r', # remove the files after using them (which actually happens at startup!)
+            $remove_files
+                ? ('-r')
+                : (), # remove the files after using them (which actually happens at startup!)
             $slice_file, $chains_file);
 }
 
 sub forklaunch {
     my $self        = shift @_;
+    my $unit        = shift @_;
 
     $SIG{CHLD} = 'IGNORE'; # we do not want to wait for the children
 
     if (my $pid = fork) { # nonzero => the parent simply returns
         return;
     } elsif (defined $pid) { # zero => the child executes the function AND TERMINATES
-        $self->launch();
+        $self->launch($unit);
         exit(0);
     } else {
         warn "Unable to fork : $!";

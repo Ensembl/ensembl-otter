@@ -85,6 +85,18 @@ sub prefixed_name {
 	return $db2prefix{$self->db_name()}.$self->name();
 }
 
+my %db2unit = (
+    EMBL        => 1,
+    Swissprot   => 3,
+    TrEMBL      => 3,
+);
+
+sub unit {
+    my $self = shift @_;
+
+    return $db2unit{$self->db_name()};
+}
+
 sub analysis {
 	my $self = shift @_;
 
