@@ -323,7 +323,7 @@ my $tt_redraw = Evi::Tictoc->new("EviDisplay layout");
             undef,
             undef,
             $screendex,
-            $evichain->name(), # it must be the name itself for the selection mechanism to work
+            $evichain->name(), # it MUST be the name itself for the selection mechanism to work
             $evichain->strand(),
             $evichain->hstrand(),
             [
@@ -388,7 +388,7 @@ sub strand2name {
 sub draw_exons {
     my ($self,$where,$where_alt,$where_text,$exons_lp,$show_introns,$start_at,$end_at,
         $screendex,$name_tag,$chain_qstrand,$chain_hstrand,$infotext,
-        $scheme,$show_frame,$hd,$draw_stripes) = @_;
+        $scheme,$want_in_frame,$hd,$draw_stripes) = @_;
 
     my ($ocolor,$fcolor);
     my $stripecolor = $alternating_colors[$screendex % 2];
@@ -472,11 +472,11 @@ sub draw_exons {
 
         my $from = $self->{_scale}->scale_point($e_start);
         my $to   = $self->{_scale}->scale_point($e_end);
-        my $exon_tag = 'e_'.$e_start.'_'.$e_end; # must be scale-independent
+        my $exonc_tag = 'e_'.$e_start.'_'.$e_end; # must be scale-independent
 
             # draw the preceding intron, if there is one:
         if($show_introns && defined($i_start)) {
-            my $intron_tag = 'i_'.$i_start.'_'.($e_start-1);
+            my $intronc_tag = 'i_'.$i_start.'_'.($e_start-1);
             my $i_mid_x = ($i_from+$from)/2;
 
                 # highlightable background rectangle behind an intron:
@@ -486,7 +486,7 @@ sub draw_exons {
                 -fill =>    $stripecolor,
                 -disabledoutline => $stripecolor,
                 -disabledfill => $highlighting_color,
-                -tags =>    [ $intron_tag, $chain_tag, $name_tag ],
+                -tags =>    [ $intronc_tag, $chain_tag, $name_tag ],
             );
 
             ($ocolor,$fcolor) = @{$color_scheme->{$scheme || 'default'}}; # frame-independent
@@ -502,24 +502,25 @@ sub draw_exons {
                 -fill    => $fcolor,
                 -disabledoutline => $current_contour_color,
                 -disabledfill    => $highlighting_color,
-                -tags =>    [ $intron_tag, $chain_tag, $name_tag ],
+                -tags =>    [ $intronc_tag, $chain_tag, $name_tag ],
             );
 
-            push @all_exon_intron_tags, $intron_tag;
+            push @all_exon_intron_tags, $intronc_tag;
 
 if($bind_ok) {
-            $where->bind($intron_tag,'<ButtonPress-1>',
-                [\&highlight_bindcallback, (1, [$where,$where_alt], $intron_tag)] # FIXME: copy to clipboard
+            $where->bind($intronc_tag,'<ButtonPress-1>',
+                [\&highlight_bindcallback, (1, [$where,$where_alt], $intronc_tag)] # FIXME: copy to clipboard
                                             # or substitute by a popup
             );
-            $where->bind($intron_tag,'<ButtonRelease-1>',
-                [\&highlight_bindcallback, (0, [$where,$where_alt], $intron_tag)] # FIXME: copy to clipboard
+            $where->bind($intronc_tag,'<ButtonRelease-1>',
+                [\&highlight_bindcallback, (0, [$where,$where_alt], $intronc_tag)] # FIXME: copy to clipboard
             );
 }
         }
 
         my $scheme_key = $scheme;
-        if($show_frame && $exon->can('frame')) { # set the frame-dependent scheme
+        my $show_in_frame = $want_in_frame && $exon->can('frame');
+        if($show_in_frame) { # set the frame-dependent scheme
             my $frame = $exon->frame();
             $scheme_key = 'frame_'.$frame;
         }
@@ -531,9 +532,9 @@ if($bind_ok) {
             -fill =>    $fcolor,
             -disabledoutline => $current_contour_color,
             -disabledfill => $highlighting_color,
-            -tags =>    [ $exon_tag, $chain_tag, $name_tag ],
+            -tags =>    [ 'exon', $exonc_tag, $chain_tag, $name_tag, $show_in_frame?($scheme_key):() ],
         );
-        push @all_exon_intron_tags, $exon_tag;
+        push @all_exon_intron_tags, $exonc_tag;
 
 
         # Show coordinates
@@ -551,12 +552,15 @@ if(0) {
 }
 
 if($bind_ok) {
-        $where->bind($exon_tag,'<ButtonPress-1>',
-            [\&highlight_bindcallback, (1, [$where,$where_alt], $exon_tag)] # FIXME: copy to clipboard
-                                                                # or substitute by a popup
+        $where->bind($exonc_tag,'<ButtonPress-1>',
+            [\&highlight_bindcallback, (1, [$where,$where_alt], $show_in_frame
+                                        ? ("exon&&${scheme_key}",$e_start,$e_end)
+                                        : ($exonc_tag) )]
         );
-        $where->bind($exon_tag,'<ButtonRelease-1>',
-            [\&highlight_bindcallback, (0, [$where,$where_alt], $exon_tag)] # FIXME: copy to clipboard
+        $where->bind($exonc_tag,'<ButtonRelease-1>',
+            [\&highlight_bindcallback, (0, [$where,$where_alt], $show_in_frame
+                                        ? ("exon&&${scheme_key}",$e_start,$e_end)
+                                        : ($exonc_tag) )]
         );
 }
 
@@ -644,17 +648,33 @@ sub get_statusline {
 
 # ------------------------------[highlighting]-------------------------------------------
 
+sub intersects_tag { # not a method
+    my ($canvas,$id,$left,$right) = @_;
+
+    for my $tag ($canvas->gettags($id)) {
+        if($tag=~/^[ei]\_(\d+)\_(\d+)$/) {
+            return ($1<=$right)&&($left<=$2);
+        }
+    }
+    return 0;
+}
+
 sub highlight_bindcallback { # not a method!
-    my ($bound_canvas, $wanted_state, $canvases_lp, $tag_expr) = @_;
+    my ($bound_canvas, $wanted_state, $canvases_lp, $from_tag_expr, $left, $right) = @_;
 
     for my $canvas (@$canvases_lp) {
-         for my $id ( $canvas->find('withtag',$tag_expr) ) {
-            my $old_state = $canvas->{_highlighted}{$id};
+         for my $id ( $canvas->find('withtag',$from_tag_expr) ) {
+            my ($from, $to);
+            if( (!defined($right))
+            || intersects_tag($canvas,$id,$left,$right)
+            ) {
+                my $old_state = $canvas->{_highlighted}{$id};
 
-            if( ((not $old_state) and $wanted_state)
-             or ((not $wanted_state) and $old_state)) {
-                visual_toggle_highlighting_by_id($canvas,$id);
-                $canvas->{_highlighted}{$id} = not $canvas->{_highlighted}{$id};
+                if( ((not $old_state) and $wanted_state)
+                 or ((not $wanted_state) and $old_state)) {
+                    visual_toggle_highlighting_by_id($canvas,$id);
+                    $canvas->{_highlighted}{$id} = not $canvas->{_highlighted}{$id};
+                }
             }
         }
     }
