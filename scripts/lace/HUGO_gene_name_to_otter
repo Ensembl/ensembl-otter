@@ -117,23 +117,25 @@ eval
 
 		my $start = 0;
 		my $line = 0;
-		my ($hugo_gname, $hugo_desc, $HGNC, $hugo_type, $otter_trans_stable_id);
+		my ($diff, $hugo_gname, $hugo_desc, $HGNC, $hugo_type, $otter_trans_stable_id);
 
 		while (<FILE>) {
 			chomp;
 			$line++;
-			if ( /^Approved Symbol/ ) {
+			if ( /^Diff\tApproved Symbol/ ) {
 				$start = 1; next;
-			} elsif ( $start == 1 && $_ ne "") {
+			}
+            elsif ( $start == 1 && $_ ne "") {
 
-				($hugo_gname, $hugo_desc, $HGNC, $hugo_type, $otter_trans_stable_id) = split /\t/, $_;
+				($diff, $hugo_gname, $hugo_desc, $HGNC, $hugo_type, $otter_trans_stable_id) = split /\t/, $_;
 
-				#print "$hugo_gname, $hugo_desc, $HGNC, $hugo_type, $otter_trans_stable_id\n";
+				#print "$diff, $hugo_gname, $hugo_desc, $HGNC, $hugo_type, $otter_trans_stable_id\n"; exit;
 
 				if ( !($hugo_gname && $hugo_desc && $HGNC && $hugo_type && $otter_trans_stable_id) ) {
 					print "\nERROR at line $line: raw data fields are not tab delimited [$_]\nThis needs to be fixed first.\n\n";
 					exit(1);
-				} else {
+				}
+                else {
 					foreach ($hugo_gname, $hugo_desc, $HGNC, $hugo_type, $otter_trans_stable_id) {
 						s/(^\s+)|(\s+$)//g;	# Trim trailing or leading whitespace
 							  }
