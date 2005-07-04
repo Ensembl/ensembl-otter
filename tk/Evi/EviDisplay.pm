@@ -7,6 +7,7 @@ package Evi::EviDisplay;
 my $bind_ok = 1;
 
 my $ystep = 16;
+my $abs_arrow_length   = 2;   # in pixels
 my $rel_exon_thickness = 0.5; # in practice - from 0.1 to 0.9
 my $half_delta  = $ystep*$rel_exon_thickness/2;
 
@@ -397,10 +398,14 @@ sub draw_exons {
     my $ribbon_bot  = $ystep*($screendex+1)-1;
     my $mid_y       = $ystep*($screendex+1/2);
 
+    my $combined_strand = $chain_hstrand*$chain_qstrand;
+    my $signed_arrow    = $combined_strand*$abs_arrow_length;
+
     my $exon_top    = $mid_y - $hd;
     my $exon_bot    = $mid_y + $hd;
     my $intron_top  = $mid_y - $half_delta;
     my $intron_bot  = $mid_y + $half_delta;
+
 
     my $chain_tag = "rowindex_$screendex";  # make it unique (i.e. differ from non-unique $name_tag)
 
@@ -481,7 +486,10 @@ sub draw_exons {
 
                 # highlightable background rectangle behind an intron:
             my $rect = $where->createRectangle(
-                    $i_from,$intron_top,$from,$intron_bot,
+                    $i_from+$signed_arrow,
+                    $intron_top,
+                    $from+$signed_arrow,
+                    $intron_bot,
                 -outline => $stripecolor,
                 -fill =>    $stripecolor,
                 -disabledoutline => $stripecolor,
@@ -492,12 +500,12 @@ sub draw_exons {
             ($ocolor,$fcolor) = @{$color_scheme->{$scheme || 'default'}}; # frame-independent
 
             $where->createPolygon(  # the intron itself (angular line pointing upwards)
-                    $i_from, $mid_y,
-                    $i_mid_x, $intron_top,
-                    $from, $mid_y,
-                    $from, $mid_y,
-                    $i_mid_x, $intron_top,
-                    $i_from, $mid_y,
+                    $i_from+$signed_arrow, $mid_y,
+                    $i_mid_x+$signed_arrow, $intron_top,
+                    $from+$signed_arrow, $mid_y,
+                    $from+$signed_arrow, $mid_y,
+                    $i_mid_x+$signed_arrow, $intron_top,
+                    $i_from+$signed_arrow, $mid_y,
                 -outline => $ocolor,
                 -fill    => $fcolor,
                 -disabledoutline => $current_contour_color,
@@ -525,14 +533,25 @@ if($bind_ok) {
             $scheme_key = 'frame_'.$frame;
         }
         ($ocolor,$fcolor) = @{$color_scheme->{$scheme_key}};
+        my $cstrand_name = strand2name($combined_strand);
 
             # now, draw the exon itself:
-        $where->createRectangle($from, $exon_top, $to, $exon_bot,
+        # $where->createRectangle($from, $exon_top, $to, $exon_bot, # NOT MUCH FASTER, ACTUALLY!
+        $where->createPolygon(
+                $from, $exon_top,
+                $to,   $exon_top,
+                $to+$signed_arrow, $mid_y,
+                $to,   $exon_bot,
+                $from, $exon_bot,
+                $from+$signed_arrow, $mid_y,
             -outline => $ocolor,
             -fill =>    $fcolor,
             -disabledoutline => $current_contour_color,
             -disabledfill => $highlighting_color,
-            -tags =>    [ 'exon', $exonc_tag, $chain_tag, $name_tag, $show_in_frame?($scheme_key):() ],
+            -tags =>    [ 'exon', $exonc_tag, $chain_tag, $name_tag, $show_in_frame
+                            ? ($scheme_key, $cstrand_name)
+                            : ()
+                        ],
         );
         push @all_exon_intron_tags, $exonc_tag;
 
@@ -554,12 +573,12 @@ if(0) {
 if($bind_ok) {
         $where->bind($exonc_tag,'<ButtonPress-1>',
             [\&highlight_bindcallback, (1, [$where,$where_alt], $show_in_frame
-                                        ? ("exon&&${scheme_key}",$e_start,$e_end)
+                                        ? ("exon&&${scheme_key}&&${cstrand_name}",$e_start,$e_end)
                                         : ($exonc_tag) )]
         );
         $where->bind($exonc_tag,'<ButtonRelease-1>',
             [\&highlight_bindcallback, (0, [$where,$where_alt], $show_in_frame
-                                        ? ("exon&&${scheme_key}",$e_start,$e_end)
+                                        ? ("exon&&${scheme_key}&&${cstrand_name}",$e_start,$e_end)
                                         : ($exonc_tag) )]
         );
 }
