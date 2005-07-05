@@ -781,7 +781,7 @@ sub show_peptide {
     my( $sub );
     if ($self->is_mutable) {
         $sub = $self->new_SubSeq_from_tk;
-        unless ($sub->GeneMethod->is_coding) {
+        unless ($sub->GeneMethod->coding) {
             if ($peptext) {
                 $peptext->toplevel->withdraw;
             }
@@ -1137,7 +1137,7 @@ sub check_kozak{
 sub trim_cds_coord_to_first_stop {
     my( $self ) = @_;
 
-    unless ($self->get_GeneMethod_from_tk->is_coding) {
+    unless ($self->get_GeneMethod_from_tk->coding) {
         $self->message('non-coding method');
         return;
     }
@@ -2027,7 +2027,7 @@ sub strand_from_tk {
             $meth = $self->get_GeneMethod_from_tk;#no
             $strand = $self->strand_from_tk;
         }
-        return unless $meth->is_coding  ; 
+        return unless $meth->coding  ; 
 
         my $color = $meth->cds_color;
         

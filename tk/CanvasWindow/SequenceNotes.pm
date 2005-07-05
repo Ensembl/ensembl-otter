@@ -794,6 +794,7 @@ sub init_AceDatabase {
     $db->write_local_blast($ss);
     $db->write_pipeline_data($ss);
     $db->write_ensembl_data($ss);
+    $db->write_methods_acefile;
     $db->initialize_database;
 }
 

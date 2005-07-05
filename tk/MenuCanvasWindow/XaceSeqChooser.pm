@@ -10,7 +10,7 @@ use Tk::Dialog;
 
 use Hum::Ace::SubSeq;
 use Hum::Ace::Locus;
-use Hum::Ace::GeneMethod;
+use Hum::Ace::Method;
 use Hum::Ace::XaceRemote;
 use Hum::Ace::DotterLauncher;
 use Hum::Ace;
@@ -142,33 +142,28 @@ sub set_known_GeneMethods_via_Defaults{
 
 sub set_known_GeneMethods{
     my ($self) = @_ ;
-    my @methods_mutable = Bio::Otter::Lace::Defaults::get_default_GeneMethods();
-    
-    confess "uneven number of arguments" if @methods_mutable % 2;
 
-    for (my $i = 0; $i < @methods_mutable; $i+= 2) {
-        my ($name, $flags) = @methods_mutable[$i, $i+1];
-        my ($is_mutable, $is_coding , $has_parent) = @$flags;
-        my $meth = $self->fetch_GeneMethod($name);
-        $meth->is_mutable($is_mutable);
-        $meth->is_coding($is_coding); 
-        $meth->has_parent($has_parent);
-        $self->add_GeneMethod($meth);
+    my $collection = $self->AceDatabase->get_default_MethodCollection;
+    foreach my $method (@{$collection->get_all_Methods}) {
+        if ($method->transcript_type) {
+            $self->add_GeneMethod($method);
+        }
     }
 }
-
 
 sub fetch_GeneMethod {
     my( $self, $name ) = @_;
     
     confess "Missing name argument" unless $name;
-    my $ace = $self->ace_handle->fetch(Method => $name);
+    my $ace = $self->ace_handle;
+    $ace->raw_query("find Method $name");
+    my $txt = Hum::Ace::AceText->new($ace->raw_query('show -a'));
     my( $meth );
-    if ($ace) {
-        $meth = Hum::Ace::GeneMethod->new_from_ace($ace);
+    if ($txt->count_tag('Method')) {
+        $meth = Hum::Ace::Method->new_from_AceText($txt);
     } else {
         warn "Making method not in db: '$name'\n";
-        $meth = Hum::Ace::GeneMethod->new;
+        $meth = Hum::Ace::Method->new;
         $meth->name($name);
         $meth->color('BLUE');
         $meth->cds_color('MIDBLUE');
@@ -207,7 +202,7 @@ sub get_all_mutable_GeneMethods {
     my( $self ) = @_;
     
     my $list = $self->{'_gene_methods_list'} || [];
-    return grep $_->is_mutable, @$list;
+    return grep $_->mutable, @$list;
 }
 
 sub get_default_mutable_GeneMethod {
@@ -1673,7 +1668,7 @@ sub delete_subsequences {
     my( @to_die );
     foreach my $sub_name (@sub_names) {
         my $sub = $self->get_SubSeq($sub_name);
-        if ($sub->GeneMethod->is_mutable) {
+        if ($sub->GeneMethod->mutable) {
             push(@to_die, $sub);
         }
     }
