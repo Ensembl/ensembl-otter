@@ -1897,8 +1897,10 @@ sub features_to_XML {
     my $xml = "<feature_set>\n";
 
       foreach my $sf (@$features) {
+        my $type = $sf->analysis->logic_name;
+        next if $type =~ /cpg/i;    ### Hack to ignore CpG analysis in xenopus cDNA database
         $xml .= "  <feature>\n"
-            . sprintf("    <type>%s</type>\n",      $sf->analysis->logic_name   )
+            . sprintf("    <type>%s</type>\n",      $type                       )
             . sprintf("    <start>%s</start>\n",    $sf->start + $offset        )
             . sprintf("    <end>%s</end>\n",        $sf->end   + $offset        )
             . sprintf("    <strand>%s</strand>\n",  $sf->strand                 )
