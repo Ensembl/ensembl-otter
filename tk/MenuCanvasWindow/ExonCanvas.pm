@@ -16,6 +16,7 @@ use Hum::Ace::DotterLauncher;
 use Evi::EviDisplay;
 use vars ('@ISA');
 use Hum::Ace;
+use Bio::Otter::Converter;
 @ISA = ('MenuCanvasWindow');
 
 # "new" is in MenuCanvasWindow
@@ -41,12 +42,6 @@ sub initialize {
             warn "Nothing selected";
         }
     };
-
-    my $delete_xace_ref = sub   {   warn "doing delete thing" ;
-                                    $self->{'_xace_seq_chooser'} = undef ;
-                                    warn  $self->{'_xace_seq_chooser'}  . "reference should have been deleted ";                                       
-                                }; 
-    $top->bind('<<delete_xace_ref>>',   $delete_xace_ref);
     
     # Save changes on window close
     my $window_close = sub {
@@ -77,12 +72,12 @@ sub initialize {
     $file_menu->add('command',
         -label          => 'Show Peptide',
         -command        => $show_pep_command,
-        -accelerator    => 'Spacebar',
+        -accelerator    => 'Ctrl+Spacebar',
         -underline      => 5,
         );
-    $top->bind('<Control-p>',   $show_pep_command);
-    $top->bind('<Control-P>',   $show_pep_command);
-    $top->bind('<space>',       $show_pep_command);
+    $top->bind('<Control-p>',       $show_pep_command);
+    $top->bind('<Control-P>',       $show_pep_command);
+    $top->bind('<Control-space>',   $show_pep_command);
     
     # Run dotter
     my $run_dotter = sub{ $self->run_dotter };
@@ -119,16 +114,17 @@ sub initialize {
     #if ($self->is_mutable && $self->xace_seq_chooser->write_access) {
     if ($self->is_mutable) {
 
-        # Select supporting evidence for the transcript
-        my $select_evidence = sub{ $self->select_evidence };
-        $file_menu->add('command',
-            -label          => 'Select evidence',
-            -command        => $select_evidence,
-            -accelerator    => 'Ctrl+E',
-            -underline      => 1,
-            );
-        $canvas->Tk::bind('<Control-e>',   $select_evidence);
-        $canvas->Tk::bind('<Control-E>',   $select_evidence);
+### Commented out for tropicalis cDNA annotation workshop
+#        # Select supporting evidence for the transcript
+#        my $select_evidence = sub{ $self->select_evidence };
+#        $file_menu->add('command',
+#            -label          => 'Select evidence',
+#            -command        => $select_evidence,
+#            -accelerator    => 'Ctrl+E',
+#            -underline      => 1,
+#            );
+#        $canvas->Tk::bind('<Control-e>',   $select_evidence);
+#        $canvas->Tk::bind('<Control-E>',   $select_evidence);
 
         # Save into db via xace
         my $save_command = sub{ $self->save_if_changed };
@@ -242,7 +238,16 @@ sub initialize {
             }
         });
 
-        my $frame = $canvas->toplevel->Frame->pack( -side => 'top', );
+        my $frame = $canvas->toplevel->LabFrame(
+            -label => 'Transcript',
+            -border => 3,
+            )->pack(
+                -side => 'top',
+                -fill => 'x',
+                );
+        
+        # Widget for changing name
+        $self->add_subseq_rename_widget($frame);
 
         # Choice of Method
         my $current_method = $self->SubSeq->GeneMethod->name;
@@ -274,13 +279,31 @@ sub initialize {
                 );
         }
 
+        # Widget for changing transcript type
         my $type_frame = $frame->Frame(
-            -border => 6,
+            -border => 3,
             )->pack( -side => 'top' );
         $type_frame->Label(
             -padx => 6,
             -text => 'Type:',
             )->pack( -side => 'left' );
+
+        # Button for chosing transcript type
+        $type_frame->Menubutton(
+            -bitmap => '@' . Tk->findINC('cbxarrow.xbm'),
+            -tearoff    =>  0 ,
+            -direction  => 'below',
+            -relief     => 'raised',
+            -menuitems  => [@menu_items]   
+            )->pack(
+                -side   => 'left',
+                -fill   => 'y',
+                -expand => 1,
+                -ipady  => 3,
+                -ipadx  => 1,
+                -padx   => 2,
+                );
+
         $type_frame->Label(
             -padx => 3,
             -pady => 3,
@@ -293,53 +316,23 @@ sub initialize {
                 -expand => 'x',
                 );
         
-        $type_frame->Menubutton(
-            -bitmap => '@' . Tk->findINC('cbxarrow.xbm'),
-            -relief     =>  'groove' ,
-            -tearoff    =>  0 ,
-            -direction  => 'left',
-            -menuitems  => [@menu_items]   
-            )->pack(
-                -side   => 'left',
-                -fill   => 'y',
-                -expand => 1,
-                -ipady  => 3,
-                -ipadx  => 1,
-                -padx   => 2,
-                );
-        
-        # Widget for changing name
-        $self->add_subseq_rename_widget($frame);
-       
-        # Widget for changing locus name
-        my $button_frame = $frame->Frame()->pack ;
-        my $be = $self->add_locus_rename_widget($button_frame);    
-
-        $be->configure(-listcmd => sub{
-            my @names = $self->xace_seq_chooser->list_Locus_names;
-            $be->configure(
-                -choices   => [@names],
-                #-listwidth => scalar @names,
-                );
-            });      
-        
-    
-#       my $button_frame = $frame->Frame()->pack(-side => '') ;
-        $button_frame->Button(  -text   =>   'new' ,
-                                -command=>  sub{ $self->modify_locus('new')})->pack(-side => 'left');
-
-        $button_frame->Button(  -text   =>   'edit' ,
-                                -command=>  sub{ $self->modify_locus('edit')})->pack(-side => 'left');
-                                
-
-       
-        ## this isnt needed as a keyboard command - it is needed as an event for when loci are merged
-        my $update_locus = sub {  $self->update_locus_display()  } ;
-        $top->bind( '<<update_locus>>' , $update_locus) ;
-        $top->bind('<<refresh_locus_display>>' , sub {$self->show_new_locus_name});            
-        
         # Start not found and end not found and method widgets
         $self->add_start_end_method_widgets($frame);
+        
+        # Transcript remark widget
+        $self->add_transcript_remark_widget($frame);
+       
+        # Widget for changing locus properties
+        my $locus_frame = $canvas->toplevel->LabFrame(
+            -label => 'Locus',
+            -border => 3,
+            )->pack(
+                -side => 'top',
+                -fill => 'x',
+                );
+        my $be = $self->add_locus_editing_widgets($locus_frame);    
+        
+        
     } else {
         # SubSeq with an immutable method - wont display entry widgets for updating things
         
@@ -781,7 +774,7 @@ sub show_peptide {
     my( $sub );
     if ($self->is_mutable) {
         $sub = $self->new_SubSeq_from_tk;
-        unless ($sub->GeneMethod->coding) {
+        unless ($sub->GeneMethod->transcript_type eq 'coding') {
             if ($peptext) {
                 $peptext->toplevel->withdraw;
             }
@@ -1137,7 +1130,7 @@ sub check_kozak{
 sub trim_cds_coord_to_first_stop {
     my( $self ) = @_;
 
-    unless ($self->get_GeneMethod_from_tk->coding) {
+    unless ($self->get_GeneMethod_from_tk->transcrpit_type eq 'coding') {
         $self->message('non-coding method');
         return;
     }
@@ -1209,170 +1202,140 @@ sub translator {
     return $tlr;
 }
 
-sub add_locus_rename_widget {
-
+sub add_locus_editing_widgets {
     my( $self, $widget ) = @_;
     
     # Get the Locus name
-    my( $locus_name );
-    eval{ $locus_name = $self->SubSeq->Locus->name };
-    $locus_name ||= '';
-    $self->{'_locus_name_variable'} = \$locus_name;
+    my( $locus_name, $locus_description, $locus_remark );
+    if (my $locus = $self->SubSeq->Locus) {
+        $locus_name        = $locus->name;
+        $locus_description = $locus->description;
+        if (my @remarks = $locus->list_remarks) {
+            $locus_remark = join '; ', @remarks;
+        }
+    }
+    $locus_name        ||= '';
+    $locus_remark      ||= '';
+    $locus_description ||= '';
+    $self->{'_locus_name_variable'}        = \$locus_name;
     
     my $be = $widget->ComboBox(
         #-listwidth  => 18,
         -listheight => 10,
-        -label      => 'Locus: ',
+        -label      => 'Name: ',
         -width      => 18,
-        -variable   => \$locus_name,
+        -variable   => $self->{'_locus_name_variable'},
 
         -exportselection    => 1,
-        #-relief             => 'flat',
         -background         => 'white',
         -selectbackground   => 'gold',
         -font               => [$self->font, $self->font_size, 'normal'],
-        )->pack(-side => 'left');
+        )->pack(-side => 'top');
     #$be->bind('<Leave>', sub{ print STDERR "Variable now: ", ${$self->{'_locus_name_variable'}}, "\n"; });
+
+
+    $be->configure(
+        -listcmd => sub{
+            my @names = $self->xace_seq_chooser->list_Locus_names;
+            $be->configure(
+                -choices   => [@names],
+                #-listwidth => scalar @names,
+                );}
+        );
+
+    my $de = $self->make_labelled_entry_widget($widget, 'Description', $locus_description, 30, -anchor => 'e');
+    my $re = $self->make_labelled_entry_widget($widget, 'Remark',      $locus_remark,      30, -anchor => 'se');
+
+    $self->locus_description_Entry($de);
+    $self->locus_remark_Entry($re);
+
+    # Avoid memory cycle created by ref to $self in above closure
+    $be->Tk::bind('<Destroy>', sub{ $self = undef });
+
     return $be;
+}
+
+sub set_Locus {
+    my( $self, $locus ) = @_;
+    
+    # Can this be done for the name too?
+    
+    my $de = $self->locus_description_Entry;
+    $de->delete(0, 'end');
+    if (my $desc = $locus->description) {
+        $de->insert(0, $desc);
+    }
+
+    my $re = $self->locus_remark_Entry;
+    $re->delete(0, 'end');
+    if (my @remark = $locus->list_remarks) {
+        $de->insert(0, join('; ', @remarks));
+    }
+    
+    $self->SubSeq->Locus($locus);
 }
 
 sub get_Locus_from_tk {
     my( $self ) = @_;
     
-    my $name = ${$self->{'_locus_name_variable'}}
-        or return;
+    my $name = ${$self->{'_locus_name_variable'}} or return;
+    my $desc   = $self->get_locus_description;
+    my $remark = $self->get_locus_remark;
+    
+    #warn "name '$name'\ndesc '$desc'\nremark '$remark'\n";
+    
     if ($name =~ /\s/) {
         $self->message("Error: whitespace in Locus name '$name'");
         return;
     }
-    return $self->xace_seq_chooser->get_Locus($name);
-}
-
-sub update_locus_display{
-    my ($self ) = @_ ;
-        
-    my @window_list = $self->xace_seq_chooser->get_all_locus_windows;
-    foreach my $window (@window_list){
-
-        if ( $window->is_current){
-            # this is going to happen in every exon canvas that is open , make sure that the current window is supposed to get updated!
-            # only update the display if the current display == locus_window selected name                                   
-            my $old_name = $window->get_locus_old_name();
-            my $new_name = $window->get_locus_new_name();
-            
-            if ( (${$self->{'_locus_name_variable'}}) eq  $old_name) {
-                ${$self->{'_locus_name_variable'}}  = $new_name ;    
-                
-                unless ($window->state eq 'rename'){ 
-                    $self->save_if_changed;
-                }
-            }
-        } 
-    }
-}
-
-sub show_new_locus_name{
-    my ($self) = @_ ;
-    my $name = $self->SubSeq->Locus()->name;
-    ${$self->{'_locus_name_variable'}} = $name ;
-}
-
-
-sub locus_name_entry{
-    my ($self , $entry) = @_ ;
-    if ($entry){
-        $self->{'_locus_entry'} = $entry ;
-    } 
-    return $self->{'_locus_entry'} ;
-}
-
-
-sub get_locus_name_from_current_subseq{
-    my ($self) = @_ ;
-    # Get the Locus name
-    my( $locus_name );
-    eval{ $locus_name = $self->SubSeq->Locus->name };
-    $locus_name ||= '';
     
-    $self->{'locus_name_variable'} = \$locus_name  ;
+    my $locus = Hum::Ace::Locus->new;
+    $locus->name($name);
+    $locus->description($desc)   if $desc;
+    $locus->set_remarks($remark) if $remark;
+    return $locus;
 }
 
-
-## it passes the appropriate action type to the method in XaceSeqChooser (which is wher all the loci are stored)
-sub modify_locus{
-    my ($self , $type_of_modification) = @_ ;
-        
-    my $xace_seq = $self->xace_seq_chooser;
+sub add_transcript_remark_widget {
+    my( $self, $widget ) = @_;
     
-    ## just testing this with the split state just now
-    $xace_seq->show_LocusWindow($self, $type_of_modification);    
+    $self->transcript_remark_Entry(
+        $self->make_labelled_entry_widget(
+            $widget, 'Remark',
+            join('; ', $self->SubSeq->list_remarks),
+            30, -anchor => 'se')
+        );
 }
-
-## this should get called from the LocusWindow when updating it (via a generated event bound to the toplevel)
-## also called from self when swapping a locus or 
-sub update_locus{
-    my ($self , $new_locus) = @_ ;
-
-    if ($new_locus) {
-        my $old_locus = $self->SubSeq->Locus;
-                
-        $self->SubSeq->Locus($new_locus);
-        my $locus_name = $new_locus->name ;
-        $locus_name ||= '';
-        ${$self->{'_locus_name_variable'}} = $locus_name ;  # updates the entry display (looks a bit mad)
-        
-        #remove old locus if this is the only excon canvas using it
-        my $xace = $self->xace_seq_chooser; 
-        $xace->remove_Locus_if_not_in_use($old_locus->name);
-    }else{
-        $self->message('need to supply a new locus');
-    }
-}
-
-
-sub new_locus{
-    my ($self ) = @_ ;
-    $self->{'_new_locus'} = 1 ;    
-}
-
-sub editing_locus{ 
-    my ($self) = @_ ;
-    $self->{'_edit_locus'} = 1 ;   
-    
-}
-
 
 sub add_subseq_rename_widget {
     my( $self, $widget ) = @_;
     
-    my $frame = $widget->Frame(
-        -borderwidth    => 6,
-        )->pack;
-    
     $self->subseq_name_Entry(
-        $self->make_labelled_entry_widget($frame, 'Name', $self->SubSeq->name, 22)
+        $self->make_labelled_entry_widget($widget, 'Name', $self->SubSeq->name, 22, -side => 'top')
         );
 }
-
-
 
 sub make_labelled_entry_widget {
     my( $self, $widget, $name, $value, $size, @pack ) = @_;
     
     @pack = (-side => 'left') unless @pack;
     
-    my $entry_label = $widget->Label(
+    my $frame = $widget->Frame(
+        -border => 3,
+        )->pack(@pack);
+    
+    my $entry_label = $frame->Label(
         -text   => "$name:",
         -anchor => 's',
         -padx   => 6,
         );
-    $entry_label->pack(@pack);
+    $entry_label->pack(-side => 'left');
 
-    my $entry = $widget->Entry(
+    my $entry = $frame->Entry(
         -width              => $size,
         -exportselection    => 1,
         );
-    $entry->pack(@pack);
+    $entry->pack(-side => 'left');
     $entry->insert(0, $value) if $value;
     return $entry;
 }
@@ -1477,6 +1440,69 @@ sub subseq_name_Entry {
         $self->{'_subseq_name_entry'} = $entry;
     }
     return $self->{'_subseq_name_entry'};
+}
+
+sub transcript_remark_Entry {
+    my( $self, $transcript_remark_Entry ) = @_;
+    
+    if ($transcript_remark_Entry) {
+        $self->{'_transcript_remark_Entry'} = $transcript_remark_Entry;
+    }
+    return $self->{'_transcript_remark_Entry'};
+}
+
+sub get_transcript_remark {
+    my( $self ) = @_;
+    
+    my $remark = $self->transcript_remark_Entry->get;
+    $remark =~ s/(^\s+|\s+$)//g;
+    if ($remark) {
+        return $remark;
+    } else {
+        return;
+    }
+}
+
+sub locus_remark_Entry {
+    my( $self, $locus_remark_Entry ) = @_;
+    
+    if ($locus_remark_Entry) {
+        $self->{'_locus_remark_Entry'} = $locus_remark_Entry;
+    }
+    return $self->{'_locus_remark_Entry'};
+}
+
+sub get_locus_remark {
+    my( $self ) = @_;
+    
+    my $remark = $self->locus_remark_Entry->get;
+    $remark =~ s/(^\s+|\s+$)//g;
+    if ($remark) {
+        return $remark;
+    } else {
+        return;
+    }
+}
+
+sub locus_description_Entry {
+    my( $self, $locus_description_Entry ) = @_;
+    
+    if ($locus_description_Entry) {
+        $self->{'_locus_description_Entry'} = $locus_description_Entry;
+    }
+    return $self->{'_locus_description_Entry'};
+}
+
+sub get_locus_description {
+    my( $self ) = @_;
+    
+    my $desc = $self->locus_description_Entry->get;
+    $desc =~ s/(^\s+|\s+$)//g;
+    if ($desc) {
+        return $desc;
+    } else {
+        return;
+    }
 }
 
 sub get_subseq_name {
@@ -2027,7 +2053,7 @@ sub strand_from_tk {
             $meth = $self->get_GeneMethod_from_tk;#no
             $strand = $self->strand_from_tk;
         }
-        return unless $meth->coding  ; 
+        return unless $meth->transcript_type eq 'coding'; 
 
         my $color = $meth->cds_color;
         
@@ -2101,13 +2127,13 @@ sub get_SubSeq_if_changed {
     
     my $new = $self->new_SubSeq_from_tk;
     my $old = $self->SubSeq;
-        
+    
     # Preserve Otter ids
     $new->take_otter_ids($old);
     if ($old->is_archival and $new->ace_string eq $old->ace_string) {
         return;
     }
-    warn $new->ace_string, $old->ace_string;
+    #warn $old->ace_string, $new->ace_string;
     my $new_name = $new->name;
     if ($new_name ne $self->name) {
         if ($self->xace_seq_chooser->get_SubSeq($new_name)) {
@@ -2132,6 +2158,7 @@ sub new_SubSeq_from_tk {
     $sub->start_not_found        ( $self->start_not_found_from_tk     );
     $sub->end_not_found          ( $self->end_not_found_from_tk       );
     $sub->evidence_hash          ( $self->evidence_hash               );
+    $sub->set_remarks            ( $self->get_transcript_remark       );
     #warn "Start not found ", $self->start_not_found_from_tk, "\n",
     #    "End not found ", $self->end_not_found_from_tk, "\n";
     return $sub;
@@ -2150,6 +2177,31 @@ sub otter_Transcript_from_tk {
         $exon->strand($strand);
         $tsct->add_Exon($exon);
     }
+    
+    my ($tl_start, $tl_end) = $self->translation_region_from_tk;
+    if ($tl_start and $tl_end) {
+        if ($strand == -1) {
+            ($tl_start, $tl_end) = ($tl_end, $tl_start);
+        }
+
+        # Add coding region
+        my ($start_exon, $start_pos) = Bio::Otter::Converter::exon_pos($tsct, $tl_start);
+        my ($end_exon,   $end_pos)   = Bio::Otter::Converter::exon_pos($tsct, $tl_end);
+        
+        if ($start_exon and $end_exon) {
+            my $tsl = Bio::EnsEMBL::Translation->new;
+            $tsl->start_Exon($start_exon);
+            $tsl->start($start_pos);
+            $tsl->end_Exon($end_exon);
+            $tsl->end($end_pos);
+            
+            ### Set exon phases?
+            
+            
+            $tsct->translation($tsl);
+        }
+    }
+    
     my $info = Bio::Otter::TranscriptInfo->new;
     $info->name($self->get_subseq_name);
     my $evi = $self->evidence_hash;
@@ -2171,7 +2223,6 @@ sub save_if_changed {
     my( $self ) = @_;
     
     eval {
-        $self->check_locus_window ;
         if (my $sub = $self->get_SubSeq_if_changed) {
             $sub->validate;
             $self->xace_save($sub);
@@ -2182,57 +2233,6 @@ sub save_if_changed {
     if ($@) {
         $self->exception_message($@, 'Error saving to acedb');
     }
-}
-
-#used to see if the locus has changed in the display
-sub check_locus_window{
-    my ($self ) = @_ ;
-    
-    my @list = $self->xace_seq_chooser->list_Locus_names ;
-    my $locus = $self->SubSeq->Locus;
-    my $new_name = ${$self->{'_locus_name_variable'}} || return;
-    my $old_name;
-    if ($locus){
-        $old_name = $locus->name ;  
-    }
-    else{
-        $old_name = '' ;
-    }
-    #warn "names old , $old_name, new $new_name" ; 
-    if ($old_name ne $new_name){
-        
-        if  ( grep {$new_name eq $_ }  @list){
-
-            # the name must have been selected from the list - swap operation           
-            my $new_locus_name = ${$self->{'_locus_name_variable'}}; 
-                
-            my $new_locus = $self->xace_seq_chooser->get_Locus($new_locus_name);
-            # update exon canvas display.....
-            $self->update_locus($new_locus); 
-            # update ace display
-            my $ace = $self->SubSeq->ace_string;  
-            $self->xace_seq_chooser->update_ace_display($ace);  
-        } 
-        else{
-            # new or rename
-            my $answer = $self->canvas->toplevel->Dialog(
-                -title => 'Please Reply', 
-                -text => 'Rename current locus or create a new locus?', 
-                -default_button => 'rename', -buttons => ['new','rename','cancel'], 
-                -bitmap => 'question' )->Show(  );    
-            if ($answer eq 'cancel'){
-                return ;
-            }
-            elsif($answer eq 'rename'){
-                #warn "renaming locus" ;
-                $self->xace_seq_chooser->rename_loci($old_name , $new_name);
-            }
-            elsif($answer eq 'new'){
-                #warn 'creating new locus'; 
-#                this should work from the old system - ie taking the values from tk and creating a new locus if it changed.                        
-            }
-        } 
-    }  
 }
 
 sub xace_save {
@@ -2271,6 +2271,7 @@ sub xace_save {
         $xr->send_command('gif ; seqrecalc');
         $xc->replace_SubSeq($sub, $old_name);
         $self->SubSeq($sub);
+        $self->update_Locus_tk_fields($sub->Locus);
         $self->name($new_name);
         $self->evidence_hash($sub->clone_evidence_hash);
         $sub->is_archival(1);

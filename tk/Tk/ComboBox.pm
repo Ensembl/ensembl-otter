@@ -6,7 +6,7 @@ package Tk::ComboBox;
 use strict;
 
 use vars qw($VERSION);
-$VERSION = '0.1'; # $Id: ComboBox.pm,v 1.4 2003-10-29 11:31:54 jgrg Exp $
+$VERSION = '0.1'; # $Id: ComboBox.pm,v 1.5 2005-07-06 17:24:37 jgrg Exp $
 
 use Tk qw(Ev);
 use Carp;
@@ -220,14 +220,14 @@ sub PopupChoices {
 sub LbChoose {
     my ($w, $x, $y) = @_;
     my $l = $w->Subwidget('slistbox')->Subwidget('listbox');
-    if ((($x < 0) || ($x > $l->Width)) ||
-	(($y < 0) || ($y > $l->Height))) {
-	# mouse was clicked outside the listbox... close the listbox
-	$w->LbClose;
+    if ((($x < 0) || ($x > $l->Width)) || (($y < 0) || ($y > $l->Height))) {
+	    # mouse was clicked outside the listbox... close the listbox
+	    $w->LbClose;
+        #warn "Click outside listbox";
     } else {
-	# select appropriate entry and close the listbox
-	$w->LbCopySelection;
-       $w->Callback(-browsecmd => $w, $w->Subwidget('entry')->get);
+	    # select appropriate entry and close the listbox
+	    $w->LbCopySelection;
+        $w->Callback(-browsecmd => $w, $w->Subwidget('entry')->get);
     }
 }
 
@@ -244,10 +244,13 @@ sub LbCopySelection {
     my ($w) = @_;
     my $index = $w->LbIndex;
     if (defined $index) {
-	$w->{'curIndex'} = $index;
-	my $l = $w->Subwidget('slistbox')->Subwidget('listbox');
+	    $w->{'curIndex'} = $index;
+	    my $l = $w->Subwidget('slistbox')->Subwidget('listbox');
         my $var_ref = $w->cget( '-textvariable' );
-        $$var_ref = $l->get($index);
+        my $value = $l->get($index);
+        #warn "Got value '$value' at position '$index'";
+        $$var_ref = $value;
+        #$$var_ref = $l->get($index);
     }
     $w->Popdown;
 }
@@ -256,13 +259,18 @@ sub LbIndex {
     my ($w, $flag) = @_;
     my $sel = $w->Subwidget('slistbox')->Subwidget('listbox')->curselection;
     if (defined $sel) {
-	return int($sel);
+        ### This was broken somehow
+        if (ref($sel) eq 'ARRAY') {
+            return $sel->[0];
+        } else {
+	        die "Unexpected return type from Tk::Listbox->curselection : '$sel'";
+        }
     } else {
-	if (defined $flag && ($flag eq 'emptyOK')) {
-	    return undef;
-	} else {
-	    return 0;
-	}
+	    if (defined $flag && ($flag eq 'emptyOK')) {
+	        return undef;
+	    } else {
+	        return 0;
+	    }
     }
 }
 

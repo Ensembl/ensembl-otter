@@ -18,7 +18,6 @@ use Hum::Analysis::Factory::ExonLocator;
 use MenuCanvasWindow::ExonCanvas;
 use CanvasWindow::DotterWindow;
 use CanvasWindow::PolyAWindow;
-use CanvasWindow::LocusWindow;
 use Bio::Otter::Lace::Defaults;
 
 use base 'MenuCanvasWindow';
@@ -221,147 +220,6 @@ sub get_default_mutable_GeneMethod {
     }
 }
 
- # called from ExonCanvas. $state should be either 'new' or 'edit'
-sub show_LocusWindow{
-    my ($self , $exon_canv , $state) = @_ ;  
-    
-    my $locus ;
-    $locus = $exon_canv->SubSeq->Locus ;  
-  
-    my $top;
-    my $window ;
-
-    $window = $self->{'_locus_window_cache'}{$locus};
-        
-    unless($window){
-       
-        print STDERR "creating LocusWindow from Xace\n" ;
-        $top = $self->canvas->Toplevel(-width => 500);
-       
-        $window = CanvasWindow::LocusWindow->new($top);        
-        $self->{'_locus_window_cache'}{$locus} = $window;
-        $window->initialize; 
-    
-    }
-    $window->last_exon_canvas($exon_canv);    
-    $window->show($state); 
-}
-
-sub close_all_LocusWindows { 
-    my ($self) = @_ ;
-
-    $self->{'_locus_window_cache'} = undef ;
-}
-
-sub get_all_locus_windows{
-    my ($self) = @_ ;
-    
-    my @array ;
-    my %hash = %{$self->{'_locus_window_cache'}}  ;  
-    while (my ($key , $value) = each (%hash)){
-        push (@array , $value);
-    }
-    return @array ;
-}
-
-sub add_new_Locus{
-    my ($self , $locus) = @_ ;
-    
-    my $name = $locus->name;
-    if ($self->{'_locus_cache'}{$name} ){
-        $self->message("The new locus name has already been assigned, please choose another");
-        return 0;
-    }
-    else{
-        $self->{'_locus_cache'}{$name} = $locus ;  
-        return 1;
-    }
-}
-
-sub remove_Locus_if_not_in_use{
-    my ($self , $locus_name) = @_ ;   
-    my %subseq_hash = %{$self->get_stored_SubSeq_hash()} ;   
-    while (my ($key , $SubSeq ) = each (%subseq_hash) ){
-        # dont delete locus if another subseq is using it
-        my $locus = $SubSeq->Locus || next ;
-        if ( $locus->name eq  $locus_name  ) {
-            return;
-        }
-    }         
-    #locus is not used anywhere else - get rid of it (or it will cause other problems)
-    $self->remove_Locus($locus_name);
-    
-}
-
-sub remove_Locus{
-    my ($self , $locus_name) = @_;
-    if ($self->{'_locus_cache'}{$locus_name}){
-        #print STDERR "removing " . $locus_name;
-        # remove all associated windows first
-        my $locus = $self->get_Locus($locus_name); 
-        delete ($self->{'_locus_window_cache'}{$locus}) ;
-        delete ($self->{'_locus_cache'}{$locus_name});      
-    }
-    else{
-        print STDERR "No Locus with name $locus_name to be removed" ;
-    }
-}
-
-
-sub rename_loci{
-    my ($self , $old_name , $new_name ) = @_ ; 
-    
-    #warn "renaming locus '$old_name' to '$new_name'\n";
-    my $locus = $self->get_Locus($old_name);
-    $self->remove_Locus($old_name) ; # otherwise we have two hash keys for the same locus.
-    $locus->name($new_name); 
-    $self->add_new_Locus($locus) ;
-    
-    my $ace = $locus->ace_string($old_name);  
-    
-    foreach my $name ($self->list_all_subseq_edit_window_names) {
-        my $top = $self->get_subseq_edit_window($name) or next;
-        $top->deiconify;
-        $top->raise;
-        $top->update;
-        $top->focus;
-        $top->eventGenerate('<<refresh_locus_display>>');
-    } 
-    $self->update_ace_display($ace);   
-}
-
-
-# go through all the SubSeq objects replace the locus if  it is the selected one ($removable_name)
-# add data to .ace file for each locus changed. Update AceDb with this file.
-sub merge_loci {
-    my ($self , $stable_name , $removable_name) = @_ ;
-    
-    my $stable_locus = $self->get_Locus( $stable_name);
-    my $removable_locus = $self->get_Locus($removable_name) ;  
-    $self->replace_loci($removable_locus , $stable_locus);
-}
-
-sub replace_loci{
-    my ($self , $old , $new) = @_ ;
-
-    my %subseq_hash = %{$self->get_stored_SubSeq_hash()};
-    my $ace = '';   
-    while (my ($name, $SubSeq) = each(%subseq_hash)){   
-        if (($SubSeq->Locus || next ) == $old){
-            $SubSeq->Locus($new) ; 
-            $ace .= $SubSeq->ace_string ;              
-            $SubSeq->is_archival(1);
-#            warn "updating ace db for " . $SubSeq->name;  
-        }    
-    }
-    my $result = $self->update_ace_display($ace);  
-    unless ($result == 0){
-        $self->remove_Locus($old->name);
-    }
-}
-
-
-
 sub update_ace_display{
     my ($self , $ace) = @_ ;
     
@@ -415,6 +273,15 @@ sub get_Locus {
         $self->{'_locus_cache'}{$name} = $locus;
         return $locus;
     }
+}
+
+sub set_Locus {
+    my( $self, $locus ) = @_;
+    
+    my $name = $locus->name;
+    $self->{'_locus_cache'}{$name} = $name;
+    
+    
 }
 
 sub get_all_Loci {
@@ -1112,8 +979,7 @@ sub close_all_edit_windows {
     my( $self ) = @_;
     
     $self->close_all_subseq_edit_windows or return;
-    $self->close_all_LocusWindows ;
-    $self->close_all_PolyAWindows        or return;
+    $self->close_all_PolyAWindows        or return; ### Needs looking at!
     return 1;
 }
 
@@ -2050,6 +1916,8 @@ sub replace_SubSeq {
         $self->rename_subseq_edit_window($old_name, $sub_name);
     }
     $self->{'_subsequence_cache'}{$sub_name} = $sub;
+    $self->set_Locus($sub->Locus);
+    ### Update all subseq edit windows
     $self->draw_current_state;
 }
 

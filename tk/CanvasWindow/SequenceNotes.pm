@@ -694,23 +694,23 @@ sub _open_SequenceSet{
         return;
     }    
 
-
-    # Create EviCollection Object
-    my( $ec );
-    eval {
-        $ec = $self->make_EviCollection($ss);
-    };
-    if ($@) {
-        $db->error_flag(0);
-        $self->exception_message($@, 'Error creating EviCollection for supporting evidence selection');
-        return;
-    }
+### Commented out for tropicalis cDNA annotation workshop
+#    # Create EviCollection Object
+#    my( $ec );
+#    eval {
+#        $ec = $self->make_EviCollection($ss);
+#    };
+#    if ($@) {
+#        $db->error_flag(0);
+#        $self->exception_message($@, 'Error creating EviCollection for supporting evidence selection');
+#        return;
+#    }
 
     my $xc = $self->make_XaceSeqChooser($title);
     ### Maybe: $xc->SequenceNotes($self);
     $xc->SequenceNotes($self) ;
     $xc->AceDatabase($db);
-    $xc->EviCollection($ec);
+#    $xc->EviCollection($ec);
     my $write_flag = $cl->write_access ? $ss->write_access : 0;
     $xc->write_access($write_flag);  ### Can be part of interface in future
     $xc->Client($self->Client);
