@@ -995,8 +995,8 @@ sub get_cached_DBAdaptor {
     my( $self ) = @_;
 
     unless($self->{'_dba_cache'}){
-	$self->{'_dba_cache'} = $self->make_DBAdaptor;
-	$self->_attach_DNA_DBAdaptor($self->{'_dba_cache'});
+	    $self->{'_dba_cache'} = $self->make_DBAdaptor;
+	    $self->_attach_DNA_DBAdaptor($self->{'_dba_cache'});
     }
     #warn "OTTER DBADAPTOR = '$dba'";
     return $self->{'_dba_cache'};

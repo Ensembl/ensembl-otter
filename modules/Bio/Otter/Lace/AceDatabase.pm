@@ -23,6 +23,8 @@ use Bio::EnsEMBL::Ace::DataFactory;
 use Bio::EnsEMBL::Ace::Filter::Gene;
 use Bio::EnsEMBL::Ace::Filter::DNA;
 
+use Hum::Ace::MethodCollection;
+
 my $DATASET_HASH_FILE    = '.slice_dataset';
 my $LOCK_REGION_XML_FILE = '.lock_region.xml';
 
@@ -620,11 +622,24 @@ sub make_database_directory {
         confess "Error running '$tar_command' exit($?)";
     }
 
-    # This acefile from the tar file needs to get parsed
-    $self->add_acefile("$home/rawdata/methods.ace");
+    # rawdata used to be in tar file, but no longer because
+    # it doesn't (yet) contain any files.
+    my $rawdata = "$home/rawdata";
+    mkdir($rawdata, 0777) or die "Can't mkdir('$rawdata') : $!\n";
 
     $self->make_passwd_wrm;
     $self->edit_displays_wrm;
+}
+
+sub write_methods_acefile {
+    my( $self ) = @_;
+    
+    my $home = $self->home;
+    my $methods_file = "$home/rawdata/methods.ace";
+    my $collect = $self->get_default_MethodCollection;
+    $collect->process_for_otterlace;
+    $collect->write_to_file($methods_file);
+    $self->add_acefile($methods_file);
 }
 
 sub make_passwd_wrm {
@@ -840,7 +855,8 @@ sub make_AceDataFactory {
     $logic_to_load->{$submitcontig} = 1;
     $module_options->{$submitcontig}->{'module'} = 'Bio::EnsEMBL::Ace::Filter::DNA';
 
-    my $aceMethods_cache = $self->make_ace_methods();
+    #my $aceMethods_cache = $self->make_ace_methods();
+    my $collect = $self->get_default_MethodCollection;
 
     foreach my $logic_name (keys %$logic_to_load){
 	next unless $logic_to_load->{$logic_name};
@@ -868,7 +884,8 @@ sub make_AceDataFactory {
             my @required_ace_methods = @{ $filt->required_ace_method_names() };
             foreach my $tag(@required_ace_methods){
                 print STDERR "Trying to get a method Object with tag '$tag' ... filter '$class' ... " if $debug;
-                my $methObj = $aceMethods_cache->{$tag};
+                #my $methObj = $aceMethods_cache->{$tag};
+                my $methObj = $collect->get_Method_by_name($tag);
                 print STDERR "Found one" if $debug && $methObj;
                 print STDERR "\n" if $debug;
                 $filt->add_method_object($methObj); # or some other place
@@ -1179,7 +1196,8 @@ sub write_das{
     my $ace_file = $self->home . '/rawdata/das.ace';
     my $locators = $dasClient->locatorObjs() || [];
     my $DasAceDataFactory = Bio::EnsEMBL::Ace::DataFactory->new();
-    my $method_objects    = $self->make_ace_methods();
+    #my $method_objects    = $self->make_ace_methods();
+    my $collect = $self->get_default_MethodCollection;
     use Data::Dumper;
     foreach my $locObj(@$locators){
         my $dasObj = $locObj->get_DasObj();
@@ -1198,7 +1216,8 @@ sub write_das{
         # get the method object for the Filter
         my $current_tag      = $locObj->method_tag;
         print STDERR "current tag is '$current_tag' \n";
-        my $current_method   = $method_objects->{$current_tag};
+        #my $current_method   = $method_objects->{$current_tag};
+        my $current_method = $collect->get_Method_by_name($current_tag);
         print STDERR Dumper $current_method;
         $locObj->method_object($current_method);
         $DasLocatorFilter->locator($locObj);
@@ -1256,119 +1275,135 @@ sub write_das{
 }
 
 {
-    my $METHODS_CACHE = {};
+    my $default_collection = undef;
     
-    use AceParse qw(aceParse);
-    
-    sub read_Methods{
-        my ($file) = @_;
-        return unless $file;
-        unless(exists($METHODS_CACHE->{$file})){
-            my $tables = {};
-            open my $fh, $file || return $tables;
-            while(my $table = AceParse->aceTableFromStream($fh)){
-                my $class = $table->class;
-                my $name  = $table->name;
-                next unless $class && $name;
-                #print STDERR "have $class $name from $file\n";
-                if($class eq 'Method'){
-                    # rebless as a Bio::EnsEMBL::Ace::Method
-                    $table = bless $table, 'Bio::EnsEMBL::Ace::Method';
-                    $tables->{$name} = $table;
-                }
-            }
-            close $fh;
-            $METHODS_CACHE->{$file} = $tables;
-        }
-        my $ace_tables = $METHODS_CACHE->{$file};
-        return $ace_tables; # these are the methods, keyed on their names
-    }
-
-    sub Bio::EnsEMBL::Ace::Method::right_priority{
-        return rand(100);
-    }
-
-
-
-# returns a hash of method objects 
-# keyed on Method name.
-# The methods are sourced from files held on disk accessed by the operating system
-    sub make_ace_methods{
-        my $self = shift;
-        my $methods = {};
-
-        # get the required options from the config
-        my $base_methods_files = Bio::Otter::Lace::Defaults::option_from_array([qw(client methods_files)]);
-        my $groups             = Bio::Otter::Lace::Defaults::option_from_array([qw(client use_method_groups)]);
-        return $methods unless $base_methods_files;
-        return $methods unless $groups;
-        my @order              = split(',', $groups); # need to keep the order
-
-        # make the objects for the base file
-        foreach my $meth_file(split(",", $base_methods_files)){
-            # so this just needs to find the methods somehow.
-            $methods = { %$methods, %{read_Methods($meth_file)} };
-        }
+    sub get_default_MethodCollection {
+        my( $self ) = @_;
         
-        # need to sort into groups
-        # groups defined in the otter_conf
-        # keep the order from there!
-        my $grps  = {map { $_ => [] } @order};
-        foreach my $group(@order){
-            #print STDERR "looking at method_groups for '$group'\n";
-            my $group_members =  Bio::Otter::Lace::Defaults::option_from_array(['method_groups', $group]);
-            $grps->{$group}   = [ split(',', $group_members) ];
-        }
-        #print STDERR Dumper $grps;
+        #my $base_methods_files = Bio::Otter::Lace::Defaults::option_from_array([qw(client methods_files)]);
+        unless ($default_collection) {
+            # This file should be the default:
+            my $method_file = $ENV{'OTTER_HOME'} . "/methods.ace";
 
-        # add further (DAS) objects here, setting right priority to big number (10000)
-        # this means they end up at the end of the @sorted list below
-        my %userMethods = %{Bio::Otter::Lace::Defaults::option_from_array([qw(ace method)])};
-        # [ace_method.specialDASAnalysis] stanzas?
-        foreach my $user_meth_name(keys %userMethods){
-            my ($methdObj, $meth_group) = _create_ace_method($user_meth_name, $userMethods{$user_meth_name});
-            # $meth_group should be one of @order members
-            # check with 
-            unless(grep { /^$meth_group$/ } @order){
-                #print STDERR " *** Method '$user_meth_name' cannot be added to '$meth_group', $meth_group doesn't exist. try one of [@order]\n";
-                next;
-            }
-            # add the meth name to the appropriate grp
-            #print STDERR "Method '$user_meth_name' WILL be added to '$meth_group', $meth_group doesn't exist. try one of [@order]\n";
-            push(@{$grps->{$meth_group}}, $user_meth_name);
-            # add the object to 
-            #push(@)
+            $default_collection = Hum::Ace::MethodCollection->new_from_file($method_file);
         }
-
-        # set up right_priority
-        # need floor() here somewhere I think
-        my $min = 1;
-        my $max = 100;
-        my $sep = ($max - $min + 1) / (scalar(@order) + 1);
-        for my $i(0..scalar(@order)-1){
-            my $group   = $order[$i];
-            my $members = $grps->{$group};
-            #print STDERR "members of grp '$group' are @$members\n";
-            my $g_min   = $sep * $i;
-            my $g_max   = $sep * ($i + 1);
-            # get the method objects from the hash
-            my @g_Objs  = grep { defined } @$methods{@$members};
-            # sort them on their current right_priority
-            my @sorted  = sort {$a->right_priority <=> $b->right_priority } @g_Objs;
-            my $g_sep   = ($g_max - $g_min + 1) / (scalar(@sorted) + 1);
-            my $c_rghtp = $g_min;
-            foreach my $obj(@sorted){
-                $obj->right_priority($g_min);
-                $g_min += $g_sep;
-            }
-        }
-
-        return $methods;
-    }
-    sub _create_ace_method{
-        return (0,0);
+        return $default_collection;
     }
 }
+
+
+#{
+#    use AceParse qw(aceParse);
+#    
+#    sub read_Methods{
+#        my ($file) = @_;
+#        return unless $file;
+#        unless(exists($METHODS_CACHE->{$file})){
+#            my $tables = {};
+#            open my $fh, $file || return $tables;
+#            while(my $table = AceParse->aceTableFromStream($fh)){
+#                my $class = $table->class;
+#                my $name  = $table->name;
+#                next unless $class && $name;
+#                #print STDERR "have $class $name from $file\n";
+#                if($class eq 'Method'){
+#                    # rebless as a Bio::EnsEMBL::Ace::Method
+#                    $table = bless $table, 'Bio::EnsEMBL::Ace::Method';
+#                    $tables->{$name} = $table;
+#                }
+#            }
+#            close $fh;
+#            $METHODS_CACHE->{$file} = $tables;
+#        }
+#        my $ace_tables = $METHODS_CACHE->{$file};
+#        return $ace_tables; # these are the methods, keyed on their names
+#    }
+#
+#    sub Bio::EnsEMBL::Ace::Method::right_priority{
+#        return rand(100);
+#    }
+#
+#
+#
+## returns a hash of method objects 
+## keyed on Method name.
+## The methods are sourced from files held on disk accessed by the operating system
+#    sub make_ace_methods{
+#        my $self = shift;
+#        my $methods = {};
+#
+#        # get the required options from the config
+#        my $base_methods_files = Bio::Otter::Lace::Defaults::option_from_array([qw(client methods_files)]);
+#        my $groups             = Bio::Otter::Lace::Defaults::option_from_array([qw(client use_method_groups)]);
+#        return $methods unless $base_methods_files;
+#        return $methods unless $groups;
+#        my @order              = split(',', $groups); # need to keep the order
+#
+#        # make the objects for the base file
+#        foreach my $meth_file(split(",", $base_methods_files)){
+#            # so this just needs to find the methods somehow.
+#            $methods = { %$methods, %{read_Methods($meth_file)} };
+#        }
+#        
+#        # need to sort into groups
+#        # groups defined in the otter_conf
+#        # keep the order from there!
+#        my $grps  = {map { $_ => [] } @order};
+#        foreach my $group(@order){
+#            #print STDERR "looking at method_groups for '$group'\n";
+#            my $group_members =  Bio::Otter::Lace::Defaults::option_from_array(['method_groups', $group]);
+#            $grps->{$group}   = [ split(',', $group_members) ];
+#        }
+#        #print STDERR Dumper $grps;
+#
+#        # add further (DAS) objects here, setting right priority to big number (10000)
+#        # this means they end up at the end of the @sorted list below
+#        my %userMethods = %{Bio::Otter::Lace::Defaults::option_from_array([qw(ace method)])};
+#        # [ace_method.specialDASAnalysis] stanzas?
+#        foreach my $user_meth_name(keys %userMethods){
+#            my ($methdObj, $meth_group) = _create_ace_method($user_meth_name, $userMethods{$user_meth_name});
+#            # $meth_group should be one of @order members
+#            # check with 
+#            unless(grep { /^$meth_group$/ } @order){
+#                #print STDERR " *** Method '$user_meth_name' cannot be added to '$meth_group', $meth_group doesn't exist. try one of [@order]\n";
+#                next;
+#            }
+#            # add the meth name to the appropriate grp
+#            #print STDERR "Method '$user_meth_name' WILL be added to '$meth_group', $meth_group doesn't exist. try one of [@order]\n";
+#            push(@{$grps->{$meth_group}}, $user_meth_name);
+#            # add the object to 
+#            #push(@)
+#        }
+#
+#        # set up right_priority
+#        # need floor() here somewhere I think
+#        my $min = 1;
+#        my $max = 100;
+#        my $sep = ($max - $min + 1) / (scalar(@order) + 1);
+#        for my $i(0..scalar(@order)-1){
+#            my $group   = $order[$i];
+#            my $members = $grps->{$group};
+#            #print STDERR "members of grp '$group' are @$members\n";
+#            my $g_min   = $sep * $i;
+#            my $g_max   = $sep * ($i + 1);
+#            # get the method objects from the hash
+#            my @g_Objs  = grep { defined } @$methods{@$members};
+#            # sort them on their current right_priority
+#            my @sorted  = sort {$a->right_priority <=> $b->right_priority } @g_Objs;
+#            my $g_sep   = ($g_max - $g_min + 1) / (scalar(@sorted) + 1);
+#            my $c_rghtp = $g_min;
+#            foreach my $obj(@sorted){
+#                $obj->right_priority($g_min);
+#                $g_min += $g_sep;
+#            }
+#        }
+#
+#        return $methods;
+#    }
+#    sub _create_ace_method{
+#        return (0,0);
+#    }
+#}
 
 
 sub DESTROY {

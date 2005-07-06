@@ -246,38 +246,42 @@ sub misc_acefile {
     return option_from_array([ $CLIENT_STANZA, 'misc_acefile' ]);
 }
 
+sub methods_acefile {
+    return option_from_array([ $CLIENT_STANZA, 'methods_acefile' ]);
+}
+
 sub get_config_list{
     return $CONFIG_INIFILES;
 }
 
-sub get_default_GeneMethods{
+#sub get_default_GeneMethods{
+#
+    #my $stanza = 'gene_methods';
+    #my %defaults_hash = %{option_from_array([$stanza])};
+    #my @methods = ();
+    ## 
+    #my $EDITABLE   = 0; # is the gene method editable?
+    #my $CODING     = 1; # is the gene method coding?
+    #my $IS_SUB_CAT = 2; # is the method a sub category?
+    #my $TRUNC_VER  = 3; # should I make a truncated version?
+    #my $ORDER      = 4; # ORDER THE EDITABLE TO MAKE THE TREE WORK
 
-    my $stanza = 'gene_methods';
-    my %defaults_hash = %{option_from_array([$stanza])};
-    my @methods = ();
-    # 
-    my $EDITABLE   = 0; # is the gene method editable?
-    my $CODING     = 1; # is the gene method coding?
-    my $IS_SUB_CAT = 2; # is the method a sub category?
-    my $TRUNC_VER  = 3; # should I make a truncated version?
-    my $ORDER      = 4; # ORDER THE EDITABLE TO MAKE THE TREE WORK
+    #foreach my $method(keys(%defaults_hash)){
+    #    my $properties = $defaults_hash{$method};
+    #    my $prop_array = [ split(',', $properties) ];
+    #    $defaults_hash{$method} = [ @$prop_array[$EDITABLE..$IS_SUB_CAT], undef, $prop_array->[$ORDER] || 0];
+    #    if($prop_array->[$TRUNC_VER]){
+    #        $defaults_hash{"${method}_trunc"} = [ 0, @$prop_array[$CODING..$IS_SUB_CAT], undef, 0];
+    #    }
+    #}
+    ## there must be a better way.
+    #foreach my $method(sort { $defaults_hash{$a}->[$ORDER] <=> $defaults_hash{$b}->[$ORDER] } keys(%defaults_hash)){
+    #    my $prop_array = $defaults_hash{$method};
+    #    push(@methods, ($method => [ @$prop_array[$EDITABLE..$IS_SUB_CAT] ]));
+    #}
 
-    foreach my $method(keys(%defaults_hash)){
-        my $properties = $defaults_hash{$method};
-        my $prop_array = [ split(',', $properties) ];
-        $defaults_hash{$method} = [ @$prop_array[$EDITABLE..$IS_SUB_CAT], undef, $prop_array->[$ORDER] || 0];
-        if($prop_array->[$TRUNC_VER]){
-            $defaults_hash{"${method}_trunc"} = [ 0, @$prop_array[$CODING..$IS_SUB_CAT], undef, 0];
-        }
-    }
-    # there must be a better way.
-    foreach my $method(sort { $defaults_hash{$a}->[$ORDER] <=> $defaults_hash{$b}->[$ORDER] } keys(%defaults_hash)){
-        my $prop_array = $defaults_hash{$method};
-        push(@methods, ($method => [ @$prop_array[$EDITABLE..$IS_SUB_CAT] ]));
-    }
-
-    return @methods;
-}
+#    return @methods;
+#}
 
 sub get_dot_otter_config{
     my $configs = get_config_list();

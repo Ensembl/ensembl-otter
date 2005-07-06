@@ -1255,7 +1255,7 @@ sub add_locus_editing_widgets {
     return $be;
 }
 
-sub set_Locus {
+sub update_Locus_tk_fields {
     my( $self, $locus ) = @_;
     
     # Can this be done for the name too?
@@ -1271,8 +1271,6 @@ sub set_Locus {
     if (my @remark = $locus->list_remarks) {
         $de->insert(0, join('; ', @remark));
     }
-    
-    $self->SubSeq->Locus($locus);
 }
 
 sub get_Locus_from_tk {

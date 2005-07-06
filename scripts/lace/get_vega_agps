@@ -1,0 +1,62 @@
+#!/usr/local/bin/perl -w
+
+### get_vega_agps
+
+use strict;
+use Bio::Otter::Lace::Defaults;
+
+{
+    my( $dataset_name, $set_name, $agp_dir );
+
+    my $usage = sub { exec('perldoc', $0) };
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'dataset=s'     => \$dataset_name,
+        'dir=s'         => \$agp_dir,
+        ) or $usage->();
+    $usage->() unless $dataset_name and $agp_dir;
+    
+    mkdir($agp_dir) or die "Can't mkdir('$agp_dir') : $!";
+    
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    
+    my $otter_dba = $ds->get_cached_DBAdaptor;
+    
+    my $sth = $otter_dba->prepare(q{
+        SELECT vs.vega_name
+          , ss.assembly_type
+        FROM sequence_set ss
+          , vega_set vs
+        WHERE ss.vega_set_id = vs.vega_set_id
+          AND vs.vega_type = 'E'
+          });
+    $sth->execute;
+    
+    while (my ($name, $type) = $sth->fetchrow) {
+        my $out_file = "$agp_dir/$name.agp";
+        warn "Creating: $out_file\n";
+        my $create = "./show_sequence_set -agp -dataset $dataset_name -set $type > $out_file\n";
+        system($create) == 0 or die "Command '$create' failed exit($?)";
+    }
+}
+
+
+
+
+
+
+__END__
+
+=head1 NAME - get_vega_agps
+
+=head1 EXAMPLE
+
+  get_vega_agps -dataset human -dir human_vega_agp
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+

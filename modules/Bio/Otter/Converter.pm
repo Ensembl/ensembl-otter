@@ -743,13 +743,13 @@ sub otter_to_ace {
       foreach my $at (@$assembly_tag_set) {
 
         # coords are same as XML from otter db (ie, all -1 <-> 1 and all start coord <= end coord)
-	my ($start, $end);
+	    my ($start, $end);
         ($at->strand == 1) ? ($start = $at->start, $end = $at->end) : ($start=$at->end, $end=$at->start);
 	
-	my $tag_type = $at->tag_type;
-	my $tag_info = $at->tag_info;
+	    my $tag_type = $at->tag_type;
+	    my $tag_info = $at->tag_info;
 
-	$str .= qq{Assembly_tags "$tag_type" $start $end "$tag_info"\n};
+	    $str .= qq{Assembly_tags "$tag_type" $start $end "$tag_info"\n};
       }
     }
 
