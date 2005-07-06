@@ -761,13 +761,12 @@ sub write_pipeline_data {
     my $dataset = $self->Client->get_DataSet_by_name($ss->dataset_name);
     $dataset->selected_SequenceSet($ss);    # Not necessary?
     my $ens_db = $dataset->get_cached_DBAdaptor();
-    my $pipe_db;
     my $fetch_pipe = Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
-    if($fetch_pipe){
-	    $pipe_db = Bio::Otter::Lace::PipelineDB::get_DBAdaptor($dataset->get_cached_DBAdaptor);
-	    #$pipe_db->dnadb($ens_db->dnadb);
+    if ($fetch_pipe) {
+	    my $pipe_db = Bio::Otter::Lace::PipelineDB::get_DBAdaptor($ens_db);
+	    $ens_db = $pipe_db;
+        #$pipe_db->dnadb($ens_db->dnadb);
     }
-    $ens_db = $pipe_db || $ens_db;
 
     $ens_db->assembly_type($ss->name);
     my $species = $dataset->species();
