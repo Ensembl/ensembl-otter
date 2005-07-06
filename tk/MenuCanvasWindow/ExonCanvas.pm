@@ -1269,7 +1269,7 @@ sub set_Locus {
     my $re = $self->locus_remark_Entry;
     $re->delete(0, 'end');
     if (my @remark = $locus->list_remarks) {
-        $de->insert(0, join('; ', @remarks));
+        $de->insert(0, join('; ', @remark));
     }
     
     $self->SubSeq->Locus($locus);
