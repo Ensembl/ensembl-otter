@@ -279,7 +279,7 @@ sub set_Locus {
     my( $self, $locus ) = @_;
     
     my $name = $locus->name;
-    $self->{'_locus_cache'}{$name} = $name;
+    $self->{'_locus_cache'}{$name} = $locus;
 }
 
 sub get_all_Loci {
