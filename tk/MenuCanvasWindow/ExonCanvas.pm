@@ -1130,7 +1130,7 @@ sub check_kozak{
 sub trim_cds_coord_to_first_stop {
     my( $self ) = @_;
 
-    unless ($self->get_GeneMethod_from_tk->transcrpit_type eq 'coding') {
+    unless ($self->get_GeneMethod_from_tk->transcript_type eq 'coding') {
         $self->message('non-coding method');
         return;
     }
