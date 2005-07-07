@@ -134,10 +134,10 @@ sub initialize {
             -accelerator    => 'Ctrl+S',
             -underline      => 0,
             );
-        $top->bind('<Control-s>',   $save_command);
-        $top->bind('<Control-S>',   $save_command);
-        $top->bind('<Return>',      $save_command);
-        $top->bind('<KP_Enter>',    $save_command);
+        $top->bind('<Control-s>',       $save_command);
+        $top->bind('<Control-S>',       $save_command);
+        $top->bind('<Control-Return>',  $save_command);
+        $top->bind('<KP_Enter>',        $save_command);
 
         ### Additions to Edit menu
 
@@ -1206,23 +1206,20 @@ sub add_locus_editing_widgets {
     my( $self, $widget ) = @_;
     
     # Get the Locus name
-    my( $locus_name, $locus_description, $locus_remark );
+    my( $locus_name, $locus_description, @remarks );
     if (my $locus = $self->SubSeq->Locus) {
         $locus_name        = $locus->name;
         $locus_description = $locus->description;
-        if (my @remarks = $locus->list_remarks) {
-            $locus_remark = join '; ', @remarks;
-        }
+        @remarks           = $locus->list_remarks;
     }
     $locus_name        ||= '';
-    $locus_remark      ||= '';
     $locus_description ||= '';
     $self->{'_locus_name_variable'}        = \$locus_name;
     
     my $be = $widget->ComboBox(
         #-listwidth  => 18,
         -listheight => 10,
-        -label      => 'Name: ',
+        -label      => 'Symbol: ',
         -width      => 18,
         -variable   => $self->{'_locus_name_variable'},
 
@@ -1243,11 +1240,17 @@ sub add_locus_editing_widgets {
                 );}
         );
 
-    my $de = $self->make_labelled_entry_widget($widget, 'Description', $locus_description, 30, -anchor => 'e');
-    my $re = $self->make_labelled_entry_widget($widget, 'Remark',      $locus_remark,      30, -anchor => 'se');
-
+    # Description ("Full_name" in acedb) editing widget
+    my $de = $self->make_labelled_entry_widget($widget, 'Full name', $locus_description, 30, -anchor => 'e');
     $self->locus_description_Entry($de);
+
+    # Locus remark widget
+    my $re = $self->make_labelled_text_widget($widget, 'Remarks', 38, -anchor => 'se');
+    foreach my $remark (@remarks) {
+        $re->insert('end', "$remark\n");
+    }
     $self->locus_remark_Entry($re);
+
 
     # Avoid memory cycle created by ref to $self in above closure
     $be->Tk::bind('<Destroy>', sub{ $self = undef });
@@ -1267,9 +1270,9 @@ sub update_Locus_tk_fields {
     }
 
     my $re = $self->locus_remark_Entry;
-    $re->delete(0, 'end');
-    if (my @remark = $locus->list_remarks) {
-        $re->insert(0, join('; ', @remark));
+    $re->delete('1.0', 'end');
+    foreach my $remark ($locus->list_remarks) {
+        $re->insert('end', "$remark\n");
     }
 }
 
@@ -1278,7 +1281,7 @@ sub get_Locus_from_tk {
     
     my $name = ${$self->{'_locus_name_variable'}} or return;
     my $desc   = $self->get_locus_description;
-    my $remark = $self->get_locus_remark;
+    my @remark = $self->get_locus_remarks;
     
     #warn "name '$name'\ndesc '$desc'\nremark '$remark'\n";
     
@@ -1289,20 +1292,27 @@ sub get_Locus_from_tk {
     
     my $locus = Hum::Ace::Locus->new;
     $locus->name($name);
-    $locus->description($desc)   if $desc;
-    $locus->set_remarks($remark) if $remark;
+    $locus->description($desc) if $desc;
+    $locus->set_remarks(@remark);
     return $locus;
+}
+
+sub update_transcript_remark_widget {
+    my( $self, $widget ) = @_;
+    
+    my $rt = $self->transcript_remark_Entry;
+    $rt->delete('1.0', 'end');
+    foreach my $remark ($self->SubSeq->list_remarks) {
+        $rt->insert('end', "$remark\n");
+    }
 }
 
 sub add_transcript_remark_widget {
     my( $self, $widget ) = @_;
     
-    $self->transcript_remark_Entry(
-        $self->make_labelled_entry_widget(
-            $widget, 'Remark',
-            join('; ', $self->SubSeq->list_remarks),
-            30, -anchor => 'se')
-        );
+    my $rt = $self->make_labelled_text_widget($widget, 'Remarks', 38, -anchor => 'se');
+    $self->transcript_remark_Entry($rt);
+    $self->update_transcript_remark_widget;
 }
 
 sub add_subseq_rename_widget {
@@ -1311,6 +1321,34 @@ sub add_subseq_rename_widget {
     $self->subseq_name_Entry(
         $self->make_labelled_entry_widget($widget, 'Name', $self->SubSeq->name, 22, -side => 'top')
         );
+}
+
+sub make_labelled_text_widget {
+    my( $self, $widget, $name, $size, @pack ) = @_;
+    
+    @pack = (-side => 'left') unless @pack;
+    
+    my $frame = $widget->Frame(
+        -border => 3,
+        )->pack(@pack);
+    
+    my $text_label = $frame->Label(
+        -text   => "$name:",
+        -anchor => 'n',
+        -padx   => 6,
+        );
+    $text_label->pack(-side => 'left', -fill => 'y');
+
+    my $text = $frame->Scrolled('Text',
+        -scrollbars         => 'e',
+        -width              => $size,
+        -height             => 3,
+        -exportselection    => 1,
+        -background         => 'white',
+        -wrap               => 'word',
+        );
+    $text->pack(-side => 'left');
+    return $text;
 }
 
 sub make_labelled_entry_widget {
@@ -1449,18 +1487,6 @@ sub transcript_remark_Entry {
     return $self->{'_transcript_remark_Entry'};
 }
 
-sub get_transcript_remark {
-    my( $self ) = @_;
-    
-    my $remark = $self->transcript_remark_Entry->get;
-    $remark =~ s/(^\s+|\s+$)//g;
-    if ($remark) {
-        return $remark;
-    } else {
-        return;
-    }
-}
-
 sub locus_remark_Entry {
     my( $self, $locus_remark_Entry ) = @_;
     
@@ -1470,16 +1496,28 @@ sub locus_remark_Entry {
     return $self->{'_locus_remark_Entry'};
 }
 
-sub get_locus_remark {
+sub get_transcript_remarks {
     my( $self ) = @_;
     
-    my $remark = $self->locus_remark_Entry->get;
-    $remark =~ s/(^\s+|\s+$)//g;
-    if ($remark) {
-        return $remark;
-    } else {
-        return;
+    return $self->get_remarks_from_Entry($self->transcript_remark_Entry);
+}
+
+sub get_locus_remarks {
+    my( $self ) = @_;
+    
+    return $self->get_remarks_from_Entry($self->locus_remark_Entry);
+}
+
+sub get_remarks_from_Entry {
+    my( $self, $entry ) = @_;
+    
+    my $txt = $entry->get('1.0', 'end');
+    my @remark_list;
+    foreach my $remark (split /\n/, $txt) {
+        $remark =~ s/(^\s+|\s+$)//g;
+        push(@remark_list, $remark) if $remark;
     }
+    return @remark_list;
 }
 
 sub locus_description_Entry {
@@ -2156,7 +2194,7 @@ sub new_SubSeq_from_tk {
     $sub->start_not_found        ( $self->start_not_found_from_tk     );
     $sub->end_not_found          ( $self->end_not_found_from_tk       );
     $sub->evidence_hash          ( $self->evidence_hash               );
-    $sub->set_remarks            ( $self->get_transcript_remark       );
+    $sub->set_remarks            ( $self->get_transcript_remarks      );
     #warn "Start not found ", $self->start_not_found_from_tk, "\n",
     #    "End not found ", $self->end_not_found_from_tk, "\n";
     return $sub;
@@ -2269,6 +2307,7 @@ sub xace_save {
         $xr->send_command('gif ; seqrecalc');
         $xc->replace_SubSeq($sub, $old_name);
         $self->SubSeq($sub);
+        $self->update_transcript_remark_widget;
         $self->update_Locus_tk_fields($sub->Locus);
         $self->name($new_name);
         $self->evidence_hash($sub->clone_evidence_hash);
