@@ -207,7 +207,7 @@ sub get_all_mutable_GeneMethods {
 sub get_default_mutable_GeneMethod {
     my( $self ) = @_;
    
-    my @possible = grep $_->is_coding, $self->get_all_mutable_GeneMethods;
+    my @possible = grep $_->transcript_type eq 'coding', $self->get_all_mutable_GeneMethods;
     if (my ($supp) = grep $_->name eq 'Coding', @possible) {
         # "Coding" is the default method, if it is there
         return $supp;
@@ -1501,7 +1501,7 @@ sub edit_new_subsequence {
     
 
     ## problem where translation was not being set on newly created 'Coding' SubSeq's
-    if ($gm->is_coding){        
+    if ($gm->transcript_type eq 'coding'){        
         $new->translation_region( $new->start , $new->end) ;
     }
     
