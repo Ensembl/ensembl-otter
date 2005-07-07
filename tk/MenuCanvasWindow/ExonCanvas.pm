@@ -1269,7 +1269,7 @@ sub update_Locus_tk_fields {
     my $re = $self->locus_remark_Entry;
     $re->delete(0, 'end');
     if (my @remark = $locus->list_remarks) {
-        $de->insert(0, join('; ', @remark));
+        $re->insert(0, join('; ', @remark));
     }
 }
 
