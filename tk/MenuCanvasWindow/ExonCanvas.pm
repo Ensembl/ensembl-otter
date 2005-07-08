@@ -13,7 +13,8 @@ use Hum::Ace::SubSeq;
 use Hum::Translator;
 use MenuCanvasWindow;
 use Hum::Ace::DotterLauncher;
-use Evi::EviDisplay;
+use CanvasWindow::EvidencePaster;
+#use Evi::EviDisplay;
 use vars ('@ISA');
 use Hum::Ace;
 use Bio::Otter::Converter;
@@ -114,17 +115,16 @@ sub initialize {
     #if ($self->is_mutable && $self->xace_seq_chooser->write_access) {
     if ($self->is_mutable) {
 
-### Commented out for tropicalis cDNA annotation workshop
-#        # Select supporting evidence for the transcript
-#        my $select_evidence = sub{ $self->select_evidence };
-#        $file_menu->add('command',
-#            -label          => 'Select evidence',
-#            -command        => $select_evidence,
-#            -accelerator    => 'Ctrl+E',
-#            -underline      => 1,
-#            );
-#        $canvas->Tk::bind('<Control-e>',   $select_evidence);
-#        $canvas->Tk::bind('<Control-E>',   $select_evidence);
+        # Select supporting evidence for the transcript
+        my $select_evidence = sub{ $self->select_evidence };
+        $file_menu->add('command',
+            -label          => 'Select evidence',
+            -command        => $select_evidence,
+            -accelerator    => 'Ctrl+E',
+            -underline      => 1,
+            );
+        $canvas->Tk::bind('<Control-e>',   $select_evidence);
+        $canvas->Tk::bind('<Control-E>',   $select_evidence);
 
         # Save into db via xace
         my $save_command = sub{ $self->save_if_changed };
@@ -928,12 +928,16 @@ sub show_peptide {
     $win->deiconify;
     $win->raise;
 }
- 
+
 sub evidence_hash {
     my( $self, $evidence_hash ) = @_;
     
     if ($evidence_hash) {
         $self->{'_evidence_hash'} = $evidence_hash;
+        if (my $paster = $self->{'_evi_window'}) {
+            $paster->evidence_hash($evidence_hash);
+            $paster->draw_evidence;
+        }
     }
     return $self->{'_evidence_hash'};
 }
@@ -941,19 +945,40 @@ sub evidence_hash {
 sub select_evidence {
     my( $self ) = @_;
     
-    my $evi_coll = $self->xace_seq_chooser->EviCollection
-        or die "No EviCollection attatched to XaceSeqChooser";
-    ### Need to close EviDisplay here if there is one already open
-    my $otter_transcript = $self->otter_Transcript_from_tk;
-    my $title = "Evidence: ". $otter_transcript->transcript_info->name;
-    my $evi_disp = Evi::EviDisplay->new(
-        $self->canvas->toplevel,
-        $title,
-        $evi_coll,
-        $otter_transcript,
-        );
-    $evi_disp->ExonCanvas($self);
+    my $evi = $self->evidence_hash;
+    
+    my( $paster_top );
+    if (my $paster = $self->{'_evi_window'}) {
+        $paster->evidence_hash($evi);
+        $paster->draw_evidence;
+        $paster_top = $paster->canvas->toplevel;
+    } else {
+        $paster_top = $self->canvas->Toplevel;
+        $paster_top->transient($self->canvas->toplevel);
+        my $paster = $self->{'_evi_window'} = CanvasWindow::EvidencePaster->new($paster_top);
+        $paster->initialise($evi);
+    }
+    $paster_top->deiconify;
+    $paster_top->raise;
 }
+
+## Commented out for tropicalis cDNA annotation workshop
+#sub select_evidence {
+#    my( $self ) = @_;
+#    
+#    my $evi_coll = $self->xace_seq_chooser->EviCollection
+#        or die "No EviCollection attatched to XaceSeqChooser";
+#    ### Need to close EviDisplay here if there is one already open
+#    my $otter_transcript = $self->otter_Transcript_from_tk;
+#    my $title = "Evidence: ". $otter_transcript->transcript_info->name;
+#    my $evi_disp = Evi::EviDisplay->new(
+#        $self->canvas->toplevel,
+#        $title,
+#        $evi_coll,
+#        $otter_transcript,
+#        );
+#    $evi_disp->ExonCanvas($self);
+#}
 
 sub save_OtterTranscript_evidence {
     my( $self, $transcript ) = @_;

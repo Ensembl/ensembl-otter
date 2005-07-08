@@ -7,6 +7,7 @@ use strict;
 use 5.006_001;  # For qr support
 use Carp qw{ cluck confess };
 use Tk::Dialog;
+use Symbol 'gensym';
 
 use Hum::Ace::SubSeq;
 use Hum::Ace::Locus;
@@ -74,7 +75,7 @@ sub EviCollection {
 sub initialize {
     my( $self ) = @_;
     
-    # take GeneMethods from Defaults.pm file
+    # take GeneMethods from methods.ace file
     $self->set_known_GeneMethods();
     
     $self->draw_clone_list;
@@ -2014,14 +2015,14 @@ sub draw_sequence_list {
                 }
             }
 
-	    $canvas->createText(
-		$x, $y,
-		-anchor     => 'nw',
-		-text       => $text,
-		-font       => [$font, $size, $style],
-		-tags       => [$tag, 'searchable'],
-		-fill       => $color,
-		);
+	        $canvas->createText(
+		        $x, $y,
+		        -anchor     => 'nw',
+		        -text       => $text,
+		        -font       => [$font, $size, $style],
+		        -tags       => [$tag, 'searchable'],
+		        -fill       => $color,
+		        );
         }
         
         if (($i + 1) % $rows) {
