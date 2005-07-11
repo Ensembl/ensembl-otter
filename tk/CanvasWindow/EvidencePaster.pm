@@ -199,7 +199,7 @@ sub highlight_evidence_by_name {
         # Sequence:Em:AB042555.1    85437 88797 (3361)  vertebrate_mRNA 99.3 (709 - 4071) Em:AB042555.1
         # Protein:Tr:Q7SYC3    75996 76703 (708)  BLASTX 77.0 (409 - 641) Tr:Q7SYC3
 
-        if ($text =~ /^(?:Sequence|Protein):\w\w:([\w\.]+)[\d\(\)\s]+(EST|vertebrate_mRNA|BLASTX)/) {
+        if ($text =~ /^(?:Sequence|Protein):(?:\w\w:)([\w\.]+)[\d\(\)\s]+(EST|vertebrate_mRNA|BLASTX)/) {
             my $name = $1;
             my $column = $2;
             my $type = $column_type{$column} or die "Can't match '$column'";
