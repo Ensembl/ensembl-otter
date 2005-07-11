@@ -790,12 +790,16 @@ sub init_AceDatabase {
     my( $self, $db, $ss ) = @_;
     
     $db->add_misc_acefile;
-    #$db->write_das($ss);
+    $db->write_das($ss);
     $db->write_otter_acefile($ss);
     $db->write_local_blast($ss);
     $db->write_pipeline_data($ss);
+<<<<<<< SequenceNotes.pm
+    #$db->write_ensembl_data($ss);
+=======
     $db->write_ensembl_data($ss);
     $db->write_methods_acefile;
+>>>>>>> 1.74
     $db->initialize_database;
 }
 
@@ -1033,8 +1037,10 @@ sub draw {
             #if ($cs->can('chr_start')){
             if (UNIVERSAL::can($cs,'chr_start')){
                 $gap = $cs->chr_start - $last->chr_end - 1;
-            }            
-            if ($gap > 0) {
+            }
+            ### Changed for xenopus cDNA annotation workshop
+            #if ($gap > 0) {
+            if ($gap > 100) {
                 $gap_pos->{$row} = 1;              
                 # Put spaces between thousands in gap length
                 my $gap_size = reverse $gap;
