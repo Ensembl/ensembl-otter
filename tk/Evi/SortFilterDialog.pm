@@ -1,19 +1,16 @@
 package Evi::SortFilterDialog;
  
-# A module that sorts/filters the data.
-# The interactive part opens a TK window allowing to modify sorting/filtering criteria
+# A module that interacts with user and modifies the list of sorting/filtering criteria.
+# When it's done, it signals to the caller by activating the callback.
 #
 # lg4
 
-use Tk;
+use Evi::CollectionFilter; # the sorting/filtering criteria live here
 
+use Tk;
 use Tk::ObjectPalette;     # frame that selects the sorting order
 
-use Evi::SortCriterion;	# method/params to be called on data to compute the key, direction, threshold...
-use Evi::Sorter;		# performs multicriterial sorting, filtering and uniq
-use Evi::Tictoc;		# the stopwatch
-
-use base ('Evi::DestroyReporter');
+use base ('Evi::DestroyReporter','Evi::BlackSpot');
  
 sub new { # class method
 	my $pkg			= shift @_;
@@ -23,19 +20,13 @@ sub new { # class method
 	$self->{_topwindow}	= shift @_;
 	$self->{_title}		= shift @_;
 
-	$self->{_evicoll}	= shift @_;
-
-	$self->{_uniq}		= shift @_;
+	$self->{_cf}        = shift @_;
 
 	$self->{_callback_obj} = shift @_;
 	$self->{_callback_mth} = shift @_;
 
-	$self->init_criteria(); # NB: don't forget to set current_transcript() !
-
 	return $self;
 }
-
-# ---------------------------- TK interface part: ----------------------------
 
 sub open {
 	my $self = shift @_;
@@ -43,6 +34,11 @@ sub open {
 	if($self->{_window}) { # do not open two sorting windows
 		$self->{_window}->raise();
 	} else {
+
+            # initialize the LOCAL COPIES of the data (to be able to [Cancel])
+        my $uniq_init = $self->{_cf}->uniq();
+        my $uniq_variable = $uniq_init;
+        my $current_activelist = [ @{ $self->{_cf}->active_criteria() } ];
 
 		$self->{_window} = $self->{_topwindow}->Toplevel(-title => $self->{_title});
 		$self->{_window}->minsize(700,150);
@@ -58,19 +54,35 @@ sub open {
 			-expand => 1,
 		);
 
+        my %uniq_textmap = (
+            0 => 'Show all matches',
+            1 => 'Show unique matches',
+        );
+
+            #
+            # NB: -variable is not used for initialization of Optionmenu !
+            # Since it is declared as "PASSIVE", it does quite the opposite instead:
+            # spoils the original value even if there was originally something meaningful.
+            #
+            # This is why we are forced to use $uniq_variable for PASSIVE
+            # and $uniq_init for initialization.
+            #
 		$self->{_ome} = $self->{_uframe}->Optionmenu(
-			-options => [ ['Show unique matches' => 1], ['Show all matches' => 0] ],
-			-variable => \$self->{_uniq},
+			-options => [ map { [ $uniq_textmap{$_} => $_ ]; } (keys %uniq_textmap) ],
+			-variable => \$uniq_variable,
 		)->pack(
 			-padx => 10,
 			-pady => 10,
 		);
 
+            # now, set it explicitly
+        $self->{_ome}->setOption($uniq_textmap{$uniq_init}, $uniq_init); # enforce it
+
 		$self->{_opa} = $self->{_window}->ObjectPalette(
 			-molabel => 'Current sorting/filtering order:',
-			-activelist => $self->active_criteria(),
+			-activelist => $current_activelist,
 			-celabel => 'Add more criteria:',
-			-objectlist => $self->all_criteria(),
+			-objectlist => $self->{_cf}->all_criteria(),
 		)->pack('-fill' => 'both', '-expand' => 1);
 
 		$self->{_window}->Button(
@@ -100,7 +112,12 @@ sub close_window_callback {
 	my $function	= shift @_;
 
 	if($function) {
-		$result = $self->filter_and_sort(1);
+            # pull the data out of the interfaces
+        $self->{_cf}->uniq( ${$self->{_ome}->cget(-variable)} );
+        $self->{_cf}->active_criteria( $self->{_opa}->cget(-activelist) ); # invalidates the cache automatically
+
+		my $method = $self->{_callback_mth};
+		$self->{_callback_obj}->$method();
 	}
 	warn "closing the sorter window";
 	$self->{_ome}->configure(-variable, []);
@@ -108,145 +125,6 @@ sub close_window_callback {
 	$self->{_opa}->destroy();
 	$self->{_window}->destroy();
 	delete $self->{_window};
-}
-
-sub release { # the Black Spot
-	my $self = shift @_;
-
-	for my $k (keys %$self) {
-		delete $self->{$k};
-	}
-}
-
-# ------------------------- Sorting/Filtering part: -------------------------------------
-
-sub current_range {
-	my ($self, $range_start, $range_end) = @_;
-
-	if(defined($range_start)&&defined($range_end)) {
-		$self->{_current_range} = [$range_start, $range_end];
-	}
-	return $self->{_current_range}
-		? @{ $self->{_current_range} }
-		: ();
-}
-
-sub active_criteria {
-	my ($self, $new_list) = @_;
-
-	if(defined($new_list)) {
-		$self->{_active_criteria_lp} = $new_list;
-	}
-	return $self->{_active_criteria_lp};
-}
-
-sub all_criteria {
-	my ($self, $new_list) = @_;
-
-	if(defined($new_list)) {
-		$self->{_all_criteria_lp} = $new_list;
-	}
-	return $self->{_all_criteria_lp};
-}
-
-sub current_transcript {
-	my ($self, $transcript) = @_;
-
-	if(defined($transcript)) {
-		$self->{_current_transcript} = $transcript;
-
-			# all_criteria are computed by EviDisplay, so we set them as well:
-		for my $criterion (@{ $self->active_criteria()}, @{ $self->all_criteria()}) {
-			$criterion->internalFeature('_params',[$transcript]);
-		}
-	}
-	return $self->{_current_transcript};
-}
-
-sub init_criteria { # NB: current_transcript must be set after calling this function!
-	my $self = shift @_;
-
-	$self->active_criteria([
-		Evi::SortCriterion->new('Analysis','analysis',
-					[],'alphabetic','ascending'),
-		Evi::SortCriterion->new('Taxon','taxon_name',
-					[],'alphabetic','ascending'),
-		Evi::SortCriterion->new('Evidence name','name',
-					[],'alphabetic','ascending'),
-    ]);
-
-    $self->all_criteria([
-
-			# include them as well:
-		@{$self->active_criteria()},
-
-			# current transcript-dependent criteria:
-		Evi::SortCriterion->new('Supported introns', 'trans_supported_introns',
-					[], 'numeric','descending',1),
-		Evi::SortCriterion->new('Supported junctions', 'trans_supported_junctions',
-					[], 'numeric','descending'),
-		Evi::SortCriterion->new('Supported % of transcript','transcript_coverage',
-					[], 'numeric','descending'),
-		Evi::SortCriterion->new('Dangling ends (bases)','contrasupported_length',
-					[], 'numeric','ascending',10),
-
-			# transcript-independent criteria:
-		Evi::SortCriterion->new('Evidence sequence coverage (%)','eviseq_coverage',
-					[], 'numeric','descending',50),
-		Evi::SortCriterion->new('Minimum % of identity','min_percent_id',
-					[], 'numeric','descending'),
-		Evi::SortCriterion->new('Start of match (slice coords)','start',
-					[], 'numeric','ascending'),
-		Evi::SortCriterion->new('End of match (slice coords)','end',
-					[], 'numeric','descending'),
-		Evi::SortCriterion->new('Source database','db_name',
-					[], 'alphabetic','ascending'),
-    ]);
-}
-
-sub filter_intersecting_current_range {
-	my $self = shift @_;
-
-	my ($range_start, $range_end)
-	 =	$self->current_range()
-	 || ($self->current_transcript()->start(), $self->current_transcript()->end() );
-
-	return [
-		grep { $range_start<=$_->end()
-		 and   $_->start()<=$range_end } @{ $self->{_evicoll}->get_all_matches() }
-	];
-}
-
-sub filter_and_sort {
-	my ($self, $notify) = @_;
-
-my $tt_fs = Evi::Tictoc->new("Filtering and sorting");
-
-	my $left_matches_lp = $self->filter_intersecting_current_range();
-
-		# from the matching chains with equal names take the ones with best coverage
-	if($self->{_uniq}) {
-			$left_matches_lp = Evi::Sorter::uniq($left_matches_lp,
-				[ Evi::SortCriterion->new('unique by EviSeq name',
-										'name', [],'alphabetic','ascending') ],
-				[ Evi::SortCriterion->new('optimal by EviSeq coverage',
-										'eviseq_coverage', [], 'numeric','descending') ]
-			);
-	}
-
-    my $sorter = Evi::Sorter->new( @{ $self->active_criteria() } );
-
-		# finally, cut off by thresholds and sort
-	$left_matches_lp = $sorter->cutsort($left_matches_lp);
-
-$tt_fs->done();
-
-	if($notify) { # notify the caller:
-		my $method = $self->{_callback_mth};
-		$self->{_callback_obj}->$method($left_matches_lp);
-	} else {
-		return $left_matches_lp;
-	}
 }
 
 1;

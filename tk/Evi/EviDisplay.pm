@@ -42,6 +42,8 @@ my $type_to_optpairs = { # canvas-dependent stuff
 };
 
 use strict;
+use Evi::CollectionFilter; # object that keeps the sorting/filtering list and performs sorting/filtering
+
 use Evi::SortFilterDialog; # window that selects the sorting order
 
 use Evi::LogicalSelection;  # keeps the information about selection and visibility
@@ -57,13 +59,15 @@ use Evi::Tictoc;            # a simple stopwatch
 
 use Evi::BlixemLauncher;    # the name says it all
 
-use base ('MenuCanvasWindow','Evi::DestroyReporter'); # we want to track the destruction event
-
+use base ('MenuCanvasWindow',
+    'Evi::DestroyReporter',     # we want to track the destruction event
+    'Evi::BlackSpot',           # and be able to break the links
+);
 
 sub after_filtering_sorting_callback {
-    my ($self, $results) = @_;
+    my $self = shift @_;
 
-    $self->{_evichains_lp} = $results;
+    $self->{_evichains_lp} = $self->{_collectionfilter}->results_lp();
 
     $self->evi_redraw();
 }
@@ -83,15 +87,58 @@ sub new {
 
     $self->{_scale_type}        = shift @_ || 'Evi::ScaleFitwidth';
 
+    $self->{_collectionfilter}  = Evi::CollectionFilter->new(
+                'All',
+                $self->{_evicoll},
+                [
+                    Evi::SortCriterion->new('Analysis','analysis',
+                        [],'alphabetic','ascending'),
+                    Evi::SortCriterion->new('Taxon','taxon_name',
+                        [],'alphabetic','ascending'),
+                    Evi::SortCriterion->new('Evidence name','name',
+                        [],'alphabetic','ascending'),
+                ],
+                [
+                            # include the active ones as well
+                    Evi::SortCriterion->new('Analysis','analysis',
+                                            [],'alphabetic','ascending'),
+                    Evi::SortCriterion->new('Taxon','taxon_name',
+                                            [],'alphabetic','ascending'),
+                    Evi::SortCriterion->new('Evidence name','name',
+                                            [],'alphabetic','ascending'),
+                            # current transcript-dependent criteria:
+                    Evi::SortCriterion->new('Supported introns', 'trans_supported_introns',
+                                            [], 'numeric','descending',1),
+                    Evi::SortCriterion->new('Supported junctions', 'trans_supported_junctions',
+                                            [], 'numeric','descending'),
+                    Evi::SortCriterion->new('Supported % of transcript','transcript_coverage',
+                                            [], 'numeric','descending'),
+                    Evi::SortCriterion->new('Dangling ends (bases)','contrasupported_length',
+                                            [], 'numeric','ascending',10),
+     
+                            # transcript-independent criteria:
+                    Evi::SortCriterion->new('Evidence sequence coverage (%)','eviseq_coverage',
+                                            [], 'numeric','descending',50),
+                    Evi::SortCriterion->new('Minimum % of identity','min_percent_id',
+                                            [], 'numeric','descending'),
+                    Evi::SortCriterion->new('Start of match (slice coords)','start',
+                                            [], 'numeric','ascending'),
+                    Evi::SortCriterion->new('End of match (slice coords)','end',
+                                            [], 'numeric','descending'),
+                    Evi::SortCriterion->new('Source database','db_name',
+                                            [], 'alphabetic','ascending'),
+                ],
+                1,
+    );
+    $self->{_collectionfilter}->current_transcript($self->{_transcript}); # may be changed later
+
     $self->{_sortfilterdialog} = Evi::SortFilterDialog->new(
                 $top_window,
                 "$title| Sort data",
-                $self->{_evicoll},
-                1, # uniq_p
+                $self->{_collectionfilter},
                 $self,
                 'after_filtering_sorting_callback'
     );
-    $self->{_sortfilterdialog}->current_transcript($self->{_transcript}); # may be changed later
 
     $self->{_lselection}        = Evi::LogicalSelection->new($self->{_evicoll},$self->{_transcript});
 
@@ -156,9 +203,7 @@ if(0) {
 
     $top_window->protocol('WM_DELETE_WINDOW', [ $self => 'exit_callback', 1, 1 ]);
 
-    # $top_window->bind('<Destroy>', sub { $self->{_sortfilterdialog}=$self=undef; });
-
-    $self->{_sortfilterdialog}->filter_and_sort(1);
+    $self->after_filtering_sorting_callback(); # "activate the sorting"
 
     return $self;
 }
@@ -192,9 +237,9 @@ sub exit_callback {
         warn "No changes in the selection or ignoring them";
     }
 
-    $self->{_sortfilterdialog}->release();
+    $self->{_sortfilterdialog}->break_the_links();
     my $top_window = $self->top_window();
-    $self->release();
+    $self->break_the_links();
     warn "closing the EviDisplay window";
     $top_window->destroy();
 }
@@ -329,7 +374,7 @@ my $tt_redraw = Evi::Tictoc->new("EviDisplay layout");
             $evichain->hstrand(),
             [
                 (map { $_->{_name}.':  '.$_->compute($evichain); }
-                    @{$self->{_sortfilterdialog}->all_criteria()}),
+                    @{$self->{_collectionfilter}->all_criteria()}),
                 "QStrand: ".strand2name($evichain->strand()),
                 "HStrand: ".strand2name($evichain->hstrand()),
             ],
@@ -439,7 +484,7 @@ sub draw_exons {
         $where_text->createText(0, $mid_y,
             -fill => 'black',
             -disabledfill => $current_contour_color,
-            -text =>    $name_tag.' Q:'.strand2arrow($chain_qstrand).' H:'.strand2arrow($chain_hstrand),
+            -text =>    $name_tag,
             -anchor =>  'e',
             -tags =>    [ $chain_tag, $name_tag ],
         );
@@ -825,14 +870,6 @@ sub redraw_selection {
         if(not $self->{_lselection}->is_visible($eviname)) {
             warn "$eviname is not currently visible and so cannot be selected on the EviDisplay\n";
         }
-    }
-}
-
-sub release { # the Black Spot
-    my $self = shift @_;
-
-    for my $k (keys %$self) {
-            delete $self->{$k};
     }
 }
 

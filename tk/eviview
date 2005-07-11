@@ -6,7 +6,7 @@
 #
 # lg4
 
-my $proteins_on = 0;
+my $proteins_on = 1;
 
 use strict;
 use Bio::Otter::Lace::Defaults;
@@ -25,7 +25,8 @@ use Evi::Tictoc;
 
         # my ($set_name, $chr_name, $trstable) = ('MHC_COX', '6', 'OTTHUMT00000076915');
         # my ($set_name, $chr_name, $trstable) = ('ChrX-07', 'X', 'OTTHUMT00000081638');
-        my ($set_name, $chr_name, $trstable) = ('encode_ext_agp-04', 'MANY', 'OTTHUMT00000132895');
+          my ($set_name, $chr_name, $trstable) = ('encode_ext_agp-04', 'MANY', 'OTTHUMT00000132895');
+        # my ($set_name, $chr_name, $trstable) = ('chr9-16', '9', 'OTTHUMT00000001011');
 
     my $margin          = 10000;        # any number > 0
     my @rna_analyses  = ('vertrna','Est2genome_human','Est2genome_mouse','Est2genome_other');
