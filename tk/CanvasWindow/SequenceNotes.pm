@@ -783,23 +783,16 @@ sub selected_sequence_string{
     return $string ;
 }
 
-
-
-
 sub init_AceDatabase {
     my( $self, $db, $ss ) = @_;
     
     $db->add_misc_acefile;
-    $db->write_das($ss);
+    #$db->write_das($ss);
     $db->write_otter_acefile($ss);
     $db->write_local_blast($ss);
     $db->write_pipeline_data($ss);
-<<<<<<< SequenceNotes.pm
-    #$db->write_ensembl_data($ss);
-=======
     $db->write_ensembl_data($ss);
     $db->write_methods_acefile;
->>>>>>> 1.74
     $db->initialize_database;
 }
 
