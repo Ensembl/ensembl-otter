@@ -6,7 +6,7 @@ package Tk::ComboBox;
 use strict;
 
 use vars qw($VERSION);
-$VERSION = '0.1'; # $Id: ComboBox.pm,v 1.5 2005-07-06 17:24:37 jgrg Exp $
+$VERSION = '0.1'; # $Id: ComboBox.pm,v 1.6 2005-07-12 16:05:51 jgrg Exp $
 
 use Tk qw(Ev);
 use Carp;
@@ -263,7 +263,8 @@ sub LbIndex {
         if (ref($sel) eq 'ARRAY') {
             return $sel->[0];
         } else {
-	        die "Unexpected return type from Tk::Listbox->curselection : '$sel'";
+	        warn "Unexpected return type from Tk::Listbox->curselection : '$sel'";
+            return $sel;
         }
     } else {
 	    if (defined $flag && ($flag eq 'emptyOK')) {
