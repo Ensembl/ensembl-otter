@@ -1399,7 +1399,8 @@ sub edit_new_subsequence {
        return;
     }
     
-    my( $most_3prime, @ints );
+    my( @ints );
+    my $most_3prime = 1;
     if (@subseq) {
         # Find 3' most coordinate in subsequences
         foreach my $sub (@subseq) {
