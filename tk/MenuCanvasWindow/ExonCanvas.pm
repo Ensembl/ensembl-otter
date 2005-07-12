@@ -1240,6 +1240,7 @@ sub add_locus_editing_widgets {
     }
     $locus_name        ||= '';
     $locus_description ||= '';
+    $locus_alias       ||= '';
     $self->{'_locus_name_variable'}        = \$locus_name;
     
     my $be = $widget->ComboBox(
