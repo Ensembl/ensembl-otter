@@ -48,6 +48,14 @@ sub objectlist { # the METHOD's name should match the option name minus dash
 	return $self->{_objectlist};
 }
 
+    # The purpose of this callback is to create a closure for $$tvar_ref,
+    # which would be otherwise computed straight away.
+sub tvar2obj_callback { # (not an object method)
+    my ($tvar_ref, $obj, $field) = @_;
+    
+    $obj->externalFeature($field, $$tvar_ref );
+}
+
 sub editor_idx {
 	my ($self, $idx) = @_;
 
@@ -79,11 +87,15 @@ sub editor_idx {
 
 		if(defined($name2val_ref)) { # described by getValueMapping() => generate an Optionmenu
 
-			my $tvar = $self->{_currobj}->externalFeature($field); # closure
+                # a closure is needed to protect it from precomputation!
+			my $tvar = $self->{_currobj}->externalFeature($field);
+
 			my $om = $subframe->Optionmenu(
 				-options  => [ keys %$name2val_ref ],
 				-textvariable => \$tvar,
-				-command => [ 'externalFeature', ($self->{_currobj}, $field, $tvar) ],
+				# -command => sub{ $self->{_currobj}->externalFeature($field, $tvar); }, # another way to make a closure
+				-command => [ \&tvar2obj_callback, ( \$tvar, $self->{_currobj}, $field) ],
+                                
 			)->pack(
 				-side => 'bottom',
 				-pady => 5,
@@ -100,7 +112,7 @@ sub editor_idx {
 	}
 }
 
-sub getCurrobj { # returns the only reference to the object
+sub getCurrobj { # returns the only reference to the object (called by ObjectPalette)
 	my $self = shift @_;
 
 	return $self->{_currobj};

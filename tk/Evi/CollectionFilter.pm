@@ -20,8 +20,8 @@ sub new { # class method
 
 	my $self = bless {}, $pkg;
 
-    $self->{_name}    = shift @_;
-	$self->{_evicoll} = shift @_;
+    $self->name( shift @_ );
+	$self->evicoll( shift @_ );
     $self->active_criteria( shift @_ || [] );
     $self->all_criteria( shift @_ || [] );
 
@@ -29,6 +29,26 @@ sub new { # class method
     $self->uniq( defined($uniq) ? $uniq : 1 );
 
 	return $self;
+}
+
+    # Gets/sets the cf's name
+sub name {
+    my ($self, $name) = @_;
+                                                                                                                         
+    if(defined($name)) {
+        $self->{_name} = $name;
+    }
+    return $self->{_name};
+}
+
+    # Gets/sets the evidence collection
+sub evicoll {
+    my ($self, $evicoll) = @_;
+                                                                                                                         
+    if(defined($evicoll)) {
+        $self->{_evicoll} = $evicoll;
+    }
+    return $self->{_evicoll};
 }
 
     # Gets/sets the uniq flag.
@@ -124,7 +144,7 @@ sub filter_intersecting_current_range {
 
 	return [
 		grep { $range_start<=$_->end()
-		 and   $_->start()<=$range_end } @{ $self->{_evicoll}->get_all_matches() }
+		 and   $_->start()<=$range_end } @{ $self->evicoll()->get_all_matches() }
 	];
 }
 
@@ -132,7 +152,7 @@ sub results_lp {
     my $self = shift @_;
 
     if(!$self->cache_ok()) {
-        my $tt_fs = Evi::Tictoc->new('Filtering and sorting '.$self->{_name});
+        my $tt_fs = Evi::Tictoc->new('Filtering and sorting '.$self->name() );
 
             $self->{_cached_results_lp}
             = $self->filter_intersecting_current_range();

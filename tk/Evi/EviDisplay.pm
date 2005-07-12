@@ -4,6 +4,8 @@ package Evi::EviDisplay;
 #
 # lg4
 
+use strict;
+
 my $bind_ok = 1;
 
 my $ystep = 16;
@@ -41,8 +43,8 @@ my $type_to_optpairs = { # canvas-dependent stuff
     'polygon'   => [ ['-fill','-disabledfill'], ['-outline','-disabledoutline'] ],
 };
 
-use strict;
 use Evi::CollectionFilter; # object that keeps the sorting/filtering list and performs sorting/filtering
+use Evi::CF_Set; # a list of CollectionFilters
 
 use Evi::SortFilterDialog; # window that selects the sorting order
 
@@ -67,7 +69,8 @@ use base ('MenuCanvasWindow',
 sub after_filtering_sorting_callback {
     my $self = shift @_;
 
-    $self->{_evichains_lp} = $self->{_collectionfilter}->results_lp();
+    # $self->{_evichains_lp} = $self->{_collectionfilter}->results_lp();
+    $self->{_evichains_lp} = $self->{_cfset}->results_lp();
 
     $self->evi_redraw();
 }
@@ -132,10 +135,14 @@ sub new {
     );
     $self->{_collectionfilter}->current_transcript($self->{_transcript}); # may be changed later
 
+    $self->{_cfset} = Evi::CF_Set->new( $self->{_evicoll} ); # we use the default_filterlist
+    $self->{_cfset}->current_transcript( $self->{_transcript} ); # may be changed later
+
     $self->{_sortfilterdialog} = Evi::SortFilterDialog->new(
                 $top_window,
                 "$title| Sort data",
-                $self->{_collectionfilter},
+                # $self->{_collectionfilter},
+                $self->{_cfset},
                 $self,
                 'after_filtering_sorting_callback'
     );

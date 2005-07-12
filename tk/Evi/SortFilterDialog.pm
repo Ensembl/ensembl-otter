@@ -17,10 +17,10 @@ sub new { # class method
 
 	my $self = bless {}, $pkg;
 
-	$self->{_topwindow}	= shift @_;
-	$self->{_title}		= shift @_;
+	$self->{_topwindow}    = shift @_;
+	$self->{_title}        = shift @_;
 
-	$self->{_cf}        = shift @_;
+	$self->{_cfset}        = shift @_;
 
 	$self->{_callback_obj} = shift @_;
 	$self->{_callback_mth} = shift @_;
@@ -34,56 +34,68 @@ sub open {
 	if($self->{_window}) { # do not open two sorting windows
 		$self->{_window}->raise();
 	} else {
-
-            # initialize the LOCAL COPIES of the data (to be able to [Cancel])
-        my $uniq_init = $self->{_cf}->uniq();
-        my $uniq_variable = $uniq_init;
-        my $current_activelist = [ @{ $self->{_cf}->active_criteria() } ];
-
 		$self->{_window} = $self->{_topwindow}->Toplevel(-title => $self->{_title});
 		$self->{_window}->minsize(700,150);
 
-		$self->{_uframe} = $self->{_window}->LabFrame(
-			-label => 'Uniqueness of names:',
-			-labelside => 'acrosstop',
-		)->pack(
-			-side => 'top',
-			-padx => 10,
-			-pady => 10,
-			-fill => 'x',
-			-expand => 1,
-		);
-
-        my %uniq_textmap = (
-            0 => 'Show all matches',
-            1 => 'Show unique matches',
+        my $notebook = $self->{_window}->NoteBook()->pack(
+            -side => 'top',
+            -fill=>'both',
+            -expand=>1
         );
 
-            #
-            # NB: -variable is not used for initialization of Optionmenu !
-            # Since it is declared as "PASSIVE", it does quite the opposite instead:
-            # spoils the original value even if there was originally something meaningful.
-            #
-            # This is why we are forced to use $uniq_variable for PASSIVE
-            # and $uniq_init for initialization.
-            #
-		$self->{_ome} = $self->{_uframe}->Optionmenu(
-			-options => [ map { [ $uniq_textmap{$_} => $_ ]; } (keys %uniq_textmap) ],
-			-variable => \$uniq_variable,
-		)->pack(
-			-padx => 10,
-			-pady => 10,
-		);
+        for my $cf (@{ $self->{_cfset}->filterlist()}) {
 
-            # now, set it explicitly
-        $self->{_ome}->setOption($uniq_textmap{$uniq_init}, $uniq_init); # enforce it
+            my $name = $cf->name();
+            my $currtab = $notebook->add( $name, -label => $name );
+                 
+                # initialize the LOCAL COPIES of the data (to be able to [Cancel])
+            my $uniq_init = $cf->uniq();
+            my $uniq_variable = $uniq_init;
+            my $current_activelist = [ @{ $cf->active_criteria() } ];
 
-		$self->{_opa} = $self->{_window}->ObjectPalette(
-			-molabel => 'Current sorting/filtering order:',
-			-activelist => $current_activelist,
-			-celabel => 'Add more criteria:',
-			-objectlist => $self->{_cf}->all_criteria(),
-		)->pack('-fill' => 'both', '-expand' => 1);
+            my $uframe = $currtab->LabFrame(
+                -label => 'Uniqueness of names:',
+                -labelside => 'acrosstop',
+            )->pack(
+                -side => 'top',
+                -padx => 10,
+                -pady => 10,
+                -fill => 'x',
+                -expand => 1,
+            );
+
+            my %uniq_textmap = (
+                0 => 'Show all matches',
+                1 => 'Show unique matches',
+            );
+
+                #
+                # NB: -variable is not used for initialization of Optionmenu !
+                # Since it is declared as "PASSIVE", it does quite the opposite instead:
+                # spoils the original value even if there was originally something meaningful.
+                #
+                # This is why we are forced to use $uniq_variable for PASSIVE
+                # and $uniq_init for initialization.
+                #
+            $self->{_ome}{$name} = $uframe->Optionmenu(
+                -options => [ map { [ $uniq_textmap{$_} => $_ ]; } (keys %uniq_textmap) ],
+                -variable => \$uniq_variable,
+            )->pack(
+                -padx => 10,
+                -pady => 10,
+            );
+
+                # now, set it explicitly
+            $self->{_ome}{$name}->setOption($uniq_textmap{$uniq_init}, $uniq_init); # enforce it
+
+            $self->{_opa}{$name} = $currtab->ObjectPalette(
+                -molabel => 'Current sorting/filtering order:',
+                -activelist => $current_activelist,
+                -celabel => 'Add more criteria:',
+                -objectlist => $cf->all_criteria(),
+            )->pack('-fill' => 'both', '-expand' => 1);
+
+        }
 
 		$self->{_window}->Button(
 						'-text' => 'Sort & Filter',
@@ -113,16 +125,26 @@ sub close_window_callback {
 
 	if($function) {
             # pull the data out of the interfaces
-        $self->{_cf}->uniq( ${$self->{_ome}->cget(-variable)} );
-        $self->{_cf}->active_criteria( $self->{_opa}->cget(-activelist) ); # invalidates the cache automatically
+        for my $cf (@{ $self->{_cfset}->filterlist()}) {
+            my $name = $cf->name();
+
+            $cf->uniq( ${$self->{_ome}{$name}->cget(-variable)} );
+            $cf->active_criteria( $self->{_opa}{$name}->cget(-activelist) ); # invalidates the cache automatically
+        }
 
 		my $method = $self->{_callback_mth};
 		$self->{_callback_obj}->$method();
 	}
 	warn "closing the sorter window";
-	$self->{_ome}->configure(-variable, []);
-	$self->{_opa}->configure(-activelist => [], -objectlist => []);
-	$self->{_opa}->destroy();
+
+    for my $cf (@{ $self->{_cfset}->filterlist()}) {
+        my $name = $cf->name();
+
+        $self->{_ome}{$name}->configure(-variable, []);
+        $self->{_opa}{$name}->configure(-activelist => [], -objectlist => []);
+        $self->{_opa}{$name}->destroy();
+    }
+
 	$self->{_window}->destroy();
 	delete $self->{_window};
 }
