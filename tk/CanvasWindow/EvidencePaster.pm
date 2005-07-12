@@ -212,7 +212,7 @@ sub highlight_evidence_by_name {
             #warn "Got $type:$name\n";
             return ($type, $name);
         }
-        elsif ($text =~ /^(?:SW|TR):([\w\.]+)$/) {
+        elsif ($text =~ /^(?:SW|TR):([\w\.]+)$/i) {
             my $name = $1;
             #$name =~ s/^(..)/ $lc_second_sw_tr{$1} /e;
             return ('Protein', $name);
