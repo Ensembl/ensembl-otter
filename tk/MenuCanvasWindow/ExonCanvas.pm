@@ -1231,9 +1231,10 @@ sub add_locus_editing_widgets {
     my( $self, $widget ) = @_;
     
     # Get the Locus name
-    my( $locus_name, $locus_description, @remarks );
+    my( $locus_name, $locus_description, $locus_alias, @remarks );
     if (my $locus = $self->SubSeq->Locus) {
         $locus_name        = $locus->name;
+        $locus_alias       = join(' ', $locus->list_aliases);
         $locus_description = $locus->description;
         @remarks           = $locus->list_remarks;
     }
@@ -1264,6 +1265,9 @@ sub add_locus_editing_widgets {
                 #-listwidth => scalar @names,
                 );}
         );
+    
+    my $ae = $self->make_labelled_entry_widget($widget, 'Xenopus alias', $locus_alias, 18, -side => 'top');
+    $self->locus_alias_Entry($ae);
 
     # Description ("Full_name" in acedb) editing widget
     my $de = $self->make_labelled_entry_widget($widget, 'Full name', $locus_description, 30, -anchor => 'e');
@@ -1294,6 +1298,12 @@ sub update_Locus_tk_fields {
         $de->insert(0, $desc);
     }
 
+    my $ae = $self->locus_alias_Entry;
+    $ae->delete(0, 'end');
+    if (my $alias_str = join(' ', $locus->list_aliases)) {
+        $ae->insert(0, $alias_str);
+    }
+
     my $re = $self->locus_remark_Entry;
     $re->delete('1.0', 'end');
     foreach my $remark ($locus->list_remarks) {
@@ -1305,8 +1315,9 @@ sub get_Locus_from_tk {
     my( $self ) = @_;
     
     my $name = ${$self->{'_locus_name_variable'}} or return;
-    my $desc   = $self->get_locus_description;
-    my @remark = $self->get_locus_remarks;
+    my $desc    = $self->get_locus_description;
+    my @aliases = $self->get_locus_aliases;
+    my @remark  = $self->get_locus_remarks;
     
     #warn "name '$name'\ndesc '$desc'\nremark '$remark'\n";
     
@@ -1319,6 +1330,7 @@ sub get_Locus_from_tk {
     $locus->name($name);
     $locus->description($desc) if $desc;
     $locus->set_remarks(@remark);
+    $locus->set_aliases(@aliases);
     return $locus;
 }
 
@@ -1561,6 +1573,28 @@ sub get_locus_description {
     $desc =~ s/(^\s+|\s+$)//g;
     if ($desc) {
         return $desc;
+    } else {
+        return;
+    }
+}
+
+sub locus_alias_Entry {
+    my( $self, $locus_alias_Entry ) = @_;
+    
+    if ($locus_alias_Entry) {
+        $self->{'_locus_alias_Entry'} = $locus_alias_Entry;
+    }
+    return $self->{'_locus_alias_Entry'};
+}
+
+sub get_locus_aliases {
+    my( $self ) = @_;
+    
+    my $alias_str = $self->locus_alias_Entry->get;
+    $alias_str =~ s/(^\s+|\s+$)//g;
+    my @aliases = split /\s+/, $alias_str;
+    if (@aliases) {
+        return @aliases;
     } else {
         return;
     }
