@@ -9,17 +9,19 @@ use Bio::Otter::Lace::Defaults;
 
 $| = 1;
 
-my ($dataset, @sets, $vega);
+my ($dataset, @sets, $vega, $all_exons, $cds_only);
 
 my $help = sub { exec('perldoc', $0) };
 
 Bio::Otter::Lace::Defaults::do_getopt('ds|dataset=s' => \$dataset, # eg, human or mouse or zebrafish
 									  's|set=s@'     => \@sets,	   # sequence set(s) to check
+									  'all-exons'    => \$all_exons,
+									  'cds-only'     => \$cds_only,
 									  'h|help'       => $help,
 									  'v|vega'       => \$vega,	   # this flags vega_set_id > 0. If !$vega: check all datasets
 								                                   # for now, zebrafish defaults to !$vega
 									 ) or $help->();               # plus default options
-$help->() unless ( $dataset );
+$help->() unless ( $dataset && ($all_exons or $cds_only) );
 $help->() if ( $vega and @sets );                                  # vega option does all vega sets
 
 
@@ -135,15 +137,29 @@ sub output_sequences {
   foreach my $t ( @$trans_sets ) {
 
     $set = $t->adaptor->db->assembly_type unless $set;
+	my $formatted_seq_all_exons;
+	my $formatted_seq_CDS_only;
 
-	my $exon_seqs;
-	foreach my $exon ( @{$t->get_all_Exons} ){
-	  $exon_seqs .= $exon->seq->seq;
+	if ( $all_exons ){
+	  my $exon_seqs;
+	  foreach my $exon ( @{$t->get_all_Exons} ){
+		$exon_seqs .= $exon->seq->seq;
+	  }
+	  $formatted_seq_all_exons = sixty_cols($exon_seqs);
 	}
-	my $formatted_seq = sixty_cols($exon_seqs);
+
+	if ( $cds_only ){	
+	  my $exon_seqs;
+	  foreach my $exon ( @{$t->get_all_translateable_Exons} ){
+		$exon_seqs .= $exon->seq->seq;
+	  }
+	  $formatted_seq_CDS_only = sixty_cols($exon_seqs);
+	}
+	
+#	my $formatted_seq = sixty_cols($exon_seqs);
 
 	my $trans_class = $t->transcript_info->class->name;
-	my $filename;
+	my ($filename_a, $filename_c);
 
 	
 #	if ( $trans_class eq "Coding" ) {
@@ -158,22 +174,31 @@ sub output_sequences {
 #	}
 	
 	if ( $trans_class =~ /pseudogene/i ) {
-	  $filename = "Pseudogenes_DNA_".$date;
+	  $filename_a = "Pseudogenes_DNA_all_exons_".$date;
+	  $filename_c = "Pseudogenes_DNA_CDS_only_".$date;
 	}
 	else {
-	  $filename = $trans_class."_genes_DNA_".$date;
+	  $filename_a = $trans_class."_genes_DNA_all_exons_".$date;
+	  $filename_c = $trans_class."_genes_DNA_CDS_only_".$date;
 	}
 	
-
-	open($fh, ">>$filename") or die $!;
-	print $fh ">@{$gene_info_of_trans->{$t}}\n";
-	print $fh $formatted_seq, "\n";
+	
+	if ( $all_exons ){
+	  open($fh, ">>$filename_a") or die $!;
+	  print $fh ">@{$gene_info_of_trans->{$t}}\n";
+	  print $fh $formatted_seq_all_exons, "\n";
+	}
+	if ( $cds_only ){
+	  open($fh, ">>$filename_c") or die $!;
+	  print $fh ">@{$gene_info_of_trans->{$t}}\n";
+	  print $fh $formatted_seq_CDS_only, "\n"  if $cds_only;
+	}
 
 	if ( $trans_class eq "Coding" ) {
 	  # print also prtein seq to a separate file for conding genes
 
-	  $filename = "Coding_genes_AA_".$date;
-	  open($fh, ">>$filename") or die $!;
+	  my $filename_p = "Coding_genes_AA_".$date;
+	  open($fh, ">>$filename_p") or die $!;
 
 	  # looks like some genes can be dubious due to incomplete annotation
 	  # eg, coding gene but its transcript does not have translation
@@ -208,12 +233,13 @@ sub sixty_cols {
 
 =head1 SYNOPSIS
 
-get_DNA_Protein_seqs_of_genes_in_fasta -dataset <dataset> -set <assembly_type>
+get_DNA_Protein_seqs_of_genes_in_fasta -dataset <dataset> -set <assembly_type> <-all-exons and/or -cds-only>
 
 
 =head1 DESCRIPTION
 
-output DNA/Protein sequence of each splice variant of a gene in fasta format
+Output DNA/Protein sequence of each splice variant of a gene in fasta format.
+One of the -all-exons, -cds-only option is
 
 
 =head1 AUTHOR
