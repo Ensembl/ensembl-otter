@@ -24,11 +24,11 @@ Bio::Otter::Lace::Defaults::do_getopt('ds|dataset=s' => \$dataset, # eg, human o
 $help->() unless ( $dataset && ($all_exons or $cds_only) );
 $help->() if ( $vega and @sets );                                  # vega option does all vega sets
 
-
-my $client    = Bio::Otter::Lace::Defaults::make_Client();         # Bio::Otter::Lace::Client
-my $dset      = $client->get_DataSet_by_name($dataset);	           # Bio::Otter::Lace::DataSet
-my $otter_db  = $dset->get_cached_DBAdaptor;                       # Bio::EnsEMBL::Containerr
-my $geneAd    = $otter_db->get_GeneAdaptor;	                       # Bio::Otter::AnnotatedGeneAdaptor
+my $client   = Bio::Otter::Lace::Defaults::make_Client();         # Bio::Otter::Lace::Client
+my $dset     = $client->get_DataSet_by_name($dataset);	           # Bio::Otter::Lace::DataSet
+my $otter_db = $dset->get_cached_DBAdaptor;                       # Bio::EnsEMBL::Containerr
+my $sliceAd  = $otter_db->get_SliceAdaptor;
+my $geneAd   = $otter_db->get_GeneAdaptor;	                       # Bio::Otter::AnnotatedGeneAdaptor
 
 my $date = `date +%Y%m%d`; chomp $date;
 my $gene_info_of_trans    = {};
@@ -49,7 +49,6 @@ if ( @sets ) {
 	my $chrom;
 	$chrom = $seqSet->CloneSequence_list()->[0]->chromosome;
 		
-	my $sliceAd = $otter_db->get_SliceAdaptor;
 	my $slice   = $sliceAd->fetch_by_chr_name($chrom->name);
 
 	my $latest_gene_id = $geneAd->list_current_dbIDs_for_Slice($slice);
@@ -93,21 +92,27 @@ sub get_latest_trans_or_prot_seq {
 
 	foreach my $trans ( @$trans_list ) {
 
+	  my $geneNAME   = $gene->gene_info->name->name;
+
+	  # use this condition if necessary
+	  next if $geneNAME =~ /GD:|ERI:|MPI:/;
+
 	  my $geneTYPE   = $gene->type;
 	  my $geneID     = $gene->stable_id;
-	  my $geneNAME   = $gene->gene_info->name->name;
 	  my $geneDESC   = $gene->description;
 	  my $transID    = $trans->transcript_info->transcript_stable_id;
 	  my $transNAME  = $trans->transcript_info->name;
 	  my $transCLASS = $trans->type;
+	  my $transSTART = $trans->start;
+	  my $transEND   = $trans->end;
 
 	  if ( $trans->translation ){
 		my $protID  = $trans->translation->stable_id;
 
-		push(@{$gene_info_of_trans_AA->{$trans}}, "$transID | GENE_ID $geneID | GENE_TYPE $geneTYPE | SYMBOL $geneNAME | TRANS_NAME $transNAME | TRANS_CLASS $transCLASS | PROT_ID $protID | DESC $geneDESC");
+		push(@{$gene_info_of_trans_AA->{$trans}}, "$transID ($transSTART - $transEND) | GENE_ID $geneID | GENE_TYPE $geneTYPE | SYMBOL $geneNAME | TRANS_NAME $transNAME | TRANS_CLASS $transCLASS | PROT_ID $protID | DESC $geneDESC");
 	  }
 
-	  push(@{$gene_info_of_trans->{$trans}}, "$transID | GENE_ID $geneID | GENE_TYPE $geneTYPE | SYMBOL $geneNAME | TRANS_NAME $transNAME | TRANS_CLASS $transCLASS | DESC $geneDESC");
+	  push(@{$gene_info_of_trans->{$trans}}, "$transID ($transSTART - $transEND) | GENE_ID $geneID | GENE_TYPE $geneTYPE | SYMBOL $geneNAME | TRANS_NAME $transNAME | TRANS_CLASS $transCLASS | DESC $geneDESC");
 
 	  next if $trans->transcript_info->class->name eq "Transposon";
 
@@ -156,8 +161,6 @@ sub output_sequences {
 	  $formatted_seq_CDS_only = sixty_cols($exon_seqs);
 	}
 	
-#	my $formatted_seq = sixty_cols($exon_seqs);
-
 	my $trans_class = $t->transcript_info->class->name;
 	my ($filename_a, $filename_c);
 
