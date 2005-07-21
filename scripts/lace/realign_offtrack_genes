@@ -39,16 +39,15 @@ $| = 1;
     my $gene_accs = undef;
     my $other_accs={};
     if($other_accs_raw){
-      foreach my $set (split(/;/,$other_accs_raw)){
-	if($set=~/^(\w+):([\w,]+)$/){
-	  my($f,$rt)=($1,$2);
-	  my @t=split(/,/,$rt);
-	  push(@{$other_accs->{$f}},@t);
-	}else{
-	  print "cannot parse -other_accs \'$other_accs_raw\'\n";
-	  exit 0;
-	}
-      }
+        foreach my $set (split(/;/,$other_accs_raw)){
+	        if($set=~/^(\w+):([\w,]+)$/){
+	            my($f,$rt)=($1,$2);
+	            my @t=split(/,/,$rt);
+	            push(@{$other_accs->{$f}},@t);
+	        }else{
+	            die "cannot parse -other_accs \'$other_accs_raw\'\n";
+	        }
+        }
     }
 
     # Connect to Ensembl/Otter database and fetch adaptors
@@ -214,24 +213,24 @@ sub gene_accs_are_all_in_slice {
             : [$exon];
         foreach my $exon (@$exon_list) {
             my $clone_acc = $exon->contig->clone->embl_id;
-	    my $flag;
-	    if($slice_acc->{$clone_acc}){
-	      $gene_acc->{$clone_acc} = 1;
-	    }elsif($other_accs->{$clone_acc}){
-	      # allows from->to relationships of clones to be specified manually
-	      foreach my $clone_acc2 (@{$other_accs->{$clone_acc}}){
-		if($slice_acc->{$clone_acc2}){
-		  $gene_acc->{$clone_acc2} = 1;
-		}else{
-		  $flag=1;
-		}
-	      }
-	    }else{
-	      $flag=1;
-	    }
-	    if($flag){
-	      return(undef);
-	    }
+	        my $flag;
+	        if($slice_acc->{$clone_acc}){
+	          $gene_acc->{$clone_acc} = 1;
+	        }elsif($other_accs->{$clone_acc}){
+	          # allows from->to relationships of clones to be specified manually
+	          foreach my $clone_acc2 (@{$other_accs->{$clone_acc}}){
+		          if($slice_acc->{$clone_acc2}){
+		            $gene_acc->{$clone_acc2} = 1;
+		          }else{
+		            $flag=1;
+		          }
+	          }
+	        }else{
+	          $flag=1;
+	        }
+	        if($flag){
+	          return(undef);
+	        }
         }
     }
     # We found all the accessions the gene is attached to

@@ -298,29 +298,29 @@ sub check_line{
     # warn 'line: ', join(', ', map "'$_'", @line_in_array), "\n";
     
     if (scalar(@line_in_array) == 1) { 
-	# cant think of anything to check  here yet
-	# we will end up here if the input file has only a list of contigs in it. 
-	$input_type = "LIST";
-	if (! defined $chromosome_name) {
-	    # we need a chromosome name if only a list of contigs is given
-	    die "you need to provide the name of a chromosome when the input file is a list of clones";
-	}
-	$line_in_array[5] = $line_in_array[0];
-	$line_in_array[9] = "FROM LIST OF CLONES";
-	$line_in_array[0] = $chromosome_name;
+	    # cant think of anything to check  here yet
+	    # we will end up here if the input file has only a list of contigs in it. 
+	    $input_type = "LIST";
+	    if (! defined $chromosome_name) {
+	        # we need a chromosome name if only a list of contigs is given
+	        die "you need to provide the name of a chromosome when the input file is a list of clones";
+	    }
+	    $line_in_array[5] = $line_in_array[0];
+	    $line_in_array[9] = "FROM LIST OF CLONES";
+	    $line_in_array[0] = $chromosome_name;
     }
-    elsif ($line_in_array[4] && $line_in_array[4] eq 'F') {
-	# we must have the full file rather than just clone names
-	$input_type = "AGP";
-	
-	if ($chromosome_name) {
+    elsif ($line_in_array[4] && $line_in_array[4] =~ /^[AUF]$/) {
+	    # we must have the full file rather than just clone names
+	    $input_type = "AGP";
+
+	    if ($chromosome_name) {
             $line_in_array[0] =~ s/^chr//i;
-	    die "clones on different chromosomes: '$chromosome_name' and '$line_in_array[0]'"
-		unless $chromosome_name eq $line_in_array[0];
-	}
+	        die "clones on different chromosomes: '$chromosome_name' and '$line_in_array[0]'"
+		    unless $chromosome_name eq $line_in_array[0];
+	    }
     }
     else {
-	return ('SKIP'); 
+	    return ('SKIP'); 
     } 
     return $input_type, @line_in_array;
 }
