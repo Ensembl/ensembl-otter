@@ -32,6 +32,7 @@ my $c_path   = '';
 my $t_path   = '';
 
 my $filter_gd;
+my $filter_prefix;
 my $filter_obs;
 my $filter_for_vega;
 my $filter_anno;
@@ -67,6 +68,7 @@ my $help;
              'c_path:s'         => \$c_path,
              't_path:s'         => \$t_path,
 	     'filter_gd'        => \$filter_gd,
+	     'filter_prefix:s'  => \$filter_prefix,
 	     'filter_obs'       => \$filter_obs,
 	     'filter_for_vega'  => \$filter_for_vega,
 	     'gene_type:s'      => \$gene_type,
@@ -131,6 +133,8 @@ if (scalar(@exclude_gene_stable_ids)) {
 
 my %strip_prefix;
 %strip_prefix=map{$_,1}split(/,/,$strip_prefix);
+my %filter_prefix;
+%filter_prefix=map{$_,1}split(/,/,$filter_prefix);
 
 my $sdb = new Bio::Otter::DBSQL::DBAdaptor(-host => $host,
                                            -user => $user,
@@ -219,6 +223,7 @@ my $not_okay=0;
 my $n_not_vega=0;
 my %npre;
 my %nstrip_pre;
+my %nfilter_pre;
 open(OUT,">$opt_o") || die "cannot open $opt_o" if $opt_o;
 foreach my $gene (@$genes) {
   my $gsi=$gene->stable_id;
@@ -243,6 +248,15 @@ foreach my $gene (@$genes) {
       print "GD gene $gsi $name was ignored\n";
       $ngd++;
       next;
+    }
+  }
+  if($filter_prefix){
+    if($name=~/^(\S+):/){
+      if($filter_prefix{$1}){
+	print "$1 gene $gsi $name was ignored\n";
+	$nfilter_pre{$1}++;
+	next;
+      }
     }
   }
   my $type=$gene->type;
@@ -309,6 +323,14 @@ close(OUT) if $opt_o;
 print "$ngd GD genes removed; $nobs obsolete genes removed; $nskipped skipped as incorrect type\n";
 print "$nexclude genes excluded (exclude list)\n" if (scalar(@exclude_gene_stable_ids));
 
+my $out;
+foreach my $pre (keys %nfilter_pre){
+  my $npre=$nfilter_pre{$pre};
+  $out.="$npre $pre genes excluded;";
+}
+if($out){
+  print $out."\n";
+}
 my $out;
 foreach my $pre (keys %nstrip_pre){
   my $npre=$nstrip_pre{$pre};

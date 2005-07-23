@@ -11,19 +11,21 @@ $| = 1;
 
 {
     my( $dataset, $sequence_set, $chr_start_acc, $chr_end_acc, $gene_stable_id );
-    my( $tunnel, $remarks, $verbose );
+    my( $tunnel, $remarks, $verbose, $seleno, $sql );
     my $help = sub { exec('perldoc', $0) };
 
     Bio::Otter::Lace::Defaults::do_getopt(
-        'ds|dataset=s'     => \$dataset,
-	'chr|set=s'        => \$sequence_set,
-        'start_acc=s'      => \$chr_start_acc,
-        'end_acc=s'        => \$chr_end_acc,
-        'gene_stable_id=s' => \$gene_stable_id,
-        'tunnel=s'         => \$tunnel,
-        'remarks'          => \$remarks,
-	'verbose|v'        => \$verbose,
-        'h|help'           => $help,
+        'ds|dataset=s'          => \$dataset,
+	'chr|set=s'             => \$sequence_set,
+        'start_acc=s'           => \$chr_start_acc,
+        'end_acc=s'             => \$chr_end_acc,
+        'gene_stable_id=s'      => \$gene_stable_id,
+        'tunnel=s'              => \$tunnel,
+        'remarks'               => \$remarks,
+	'seleno|selenocysteine' => \$seleno,
+	'sql:s'                 => \$sql,
+	'verbose|v'             => \$verbose,
+        'h|help'                => $help,
         ) or $help->();
     $help->() unless $dataset;
 
@@ -58,8 +60,17 @@ $| = 1;
 	close(IN);
 	print STDERR "checking $n gene_stable_ids only\n";
       }else{
-	@$gene_id_list=($gene_aptr->fetch_by_stable_id($gene_stable_id)->dbID);
-	print STDERR "checking $gene_stable_id only\n";
+	my $n=0;
+	foreach my $gsi (split(/,/,$gene_stable_id)){
+	  if($gsi=~/T\d+/){
+	    # looks like a transcript_id
+	    push(@$gene_id_list,$gene_aptr->fetch_by_transcript_stable_id($gsi)->dbID);
+	  }else{
+	    push(@$gene_id_list,$gene_aptr->fetch_by_stable_id($gsi)->dbID);
+	  }
+	  $n++;
+	}
+	print STDERR "checking $n $gene_stable_id only\n";
       }
     }elsif($sequence_set){
       my $slice_aptr = $otter_db->get_SliceAdaptor;
@@ -86,111 +97,180 @@ $| = 1;
     }
     printf STDERR "Found %d current genes\n", scalar(@$gene_id_list);
     my $i = 0;
+    if($sql){
+      open(OUT2,">$sql") || die "cannot open $sql";
+    }
     foreach my $id (@$gene_id_list) {
         $i++; print STDERR '.'; print STDERR " $i\n" unless $i % 50;
         my $gene = $gene_aptr->fetch_by_dbID($id);
         foreach my $trans (@{$gene->get_all_Transcripts}) {
             next unless $trans->translation;
-            check_for_stops($gene, $trans, $remarks, $verbose);
-        }
+            my $sqltxt=check_for_stops($gene, $trans, $remarks, $verbose, $seleno, $sql);
+	    print OUT2 $sqltxt if $sql;
+	}
     }
     print STDERR " $i\n";
+    close OUT2 if $sql;
 }
 
 sub check_for_stops {
-    my( $gene, $trans, $remarks, $verbose ) = @_;
+    my( $gene, $trans, $remarks, $verbose, $seleno ) = @_;
 
     # stop is ok if
     # - pseudogene
     # - selenocysteine and only single stop
+
+    # selenocysteine stop codon
+    my $scodon='TGA';
+    my $sql='';
     
     # Translate method trims stops from sequence end
     my $peptide = $trans->translate;
     my $pseq=$peptide->seq;
-    if ($pseq =~ /\*/) {
 
-        # contains stops: find out where and how many there are
-        my @stop;
-        my $mrna=$trans->translateable_seq;
-	my $offset=0;
-	my $last_offset=0;
-	my $tstop;
-      LOOP:
-	{
-	  if ($pseq =~ /([^\*]+)\*(.*)/) {
-	    my $pseq1_f=$1;
-	    $pseq=$2;
-	    # see if stop codon is result of selenocysteine (TGA)
-	    my $seq_flag=0;
-	    $offset+=length($pseq1_f)*3;
-	    my $stop=substr($mrna,$offset,3);
-	    if($verbose){
-	      my $pseq3_f=join('  ',split(//,$pseq1_f));
-	      my $mrna_f=substr($mrna,$last_offset,$offset-$last_offset);
-	      printf "%4d  ".$pseq3_f."   *\n%4d ".$mrna_f." ".$stop."\n",
-	      length($pseq1_f),length($mrna_f);
-	    }
-	    push(@stop,[$stop,$offset]);
-	    if($tstop){$tstop.="; ";}
-	    $tstop.="$offset:$stop";
-	    $offset+=3;
-	    $last_offset=$offset;
-	    redo LOOP if $pseq ne '';
+    # exit if no stops
+    return unless ($pseq =~ /\*/);
+
+    # contains stops: find out where and how many there are
+    my @stop;
+    my $tstop;
+    {
+      my $mrna=$trans->translateable_seq;
+      my $offset=0;
+      my $last_offset=0;
+    LOOP:
+      {
+	if ($pseq =~ /([^\*]+)\*(.*)/) {
+	  my $pseq1_f=$1;
+	  $pseq=$2;
+	  # see if stop codon is result of selenocysteine (TGA)
+	  my $seq_flag=0;
+	  $offset+=length($pseq1_f)*3;
+	  my $stop=substr($mrna,$offset,3);
+	  if($verbose){
+	    my $pseq3_f=join('  ',split(//,$pseq1_f));
+	    my $mrna_f=substr($mrna,$last_offset,$offset-$last_offset);
+	    printf "%4d  ".$pseq3_f."   *\n%4d ".$mrna_f." ".$stop."\n",
+	    length($pseq1_f),length($mrna_f);
 	  }
+	  my $aaoffset=int($offset/3);
+	  push(@stop,[$stop,$aaoffset]);
+	  if($tstop){$tstop.="; ";}
+	  $tstop.="$aaoffset:$stop";
+	  
+	  $offset+=3;
+	  $last_offset=$offset;
+	  redo LOOP if $pseq ne '';
 	}
-	my $nstop=scalar(@stop);
-        my $flag_seq=0;
-	# if only one and TGA, this is a candidate selenocysteine
-	if($nstop==1 && $stop[0]->[0] eq 'TGA'){
-	  $flag_seq=1;
-	}
-
-	# check if pseudo or not
-	my $trans_class=$trans->transcript_info->class->name,
-	my $flag_pseudo=0;
-	if($trans_class=~/seudogene$/){
-	  $flag_pseudo=1;
-	}
-
-	# check remarks
-	my $flag_remark=0;
-	my $out;
-	foreach my $remark ($trans->transcript_info->remark){
-	  my $text=$remark->remark;
-	  if($text=~/seleno/i){
-	    $flag_remark=1;
-	  }
-	  $out.="  remark: $text\n";
-	}
-	
-	# provide feedback
-	my $label;
-	if($flag_pseudo){
-	  $label='P-OK';
-	}elsif($flag_seq==1){
-	  if($flag_remark){
-	    # remark indicates stop is a Selenocysteine
-	    $label='S-OK';
-	  }else{
-	    $label='S-??';
-	  }
-	}else{
-	  $label='????';
-	}
-
-        printf "%-24s %-24s %18s %2d %12s %4s %2d %s\n",
-            $gene->gene_info->name->name,
-            $trans->transcript_info->name,
-            $trans->stable_id,
-            $trans->version,
-	    $trans_class,
-	    $label,
-	    $nstop,
-	    $tstop;
-
-	print "$out\n" if $remarks;
-
+      }
     }
+
+    my $nstop=scalar(@stop);
+
+    my $flag_seq=0;
+    # if all stops are TGA, this is a candidate selenocysteine
+    {
+      my $ntga=0;
+      for(my $i=0;$i<$nstop;$i++){
+	if($stop[$i]->[0] eq $scodon){
+	  $ntga++;
+	}
+      }
+      if($ntga==$nstop){
+	$flag_seq=1;
+      }
+    }
+
+    # check if pseudo or not
+    my $trans_class=$trans->transcript_info->class->name,
+    my $flag_pseudo=0;
+    if($trans_class=~/seudogene$/){
+      $flag_pseudo=1;
+    }
+
+    # check remarks
+    my $flag_remark=0;
+    my $flag_remark2=0;
+    my $alabel='Annotation_remark- selenocysteine ';
+    my $out;
+    my $out2;
+    my $tiid;
+    foreach my $remark ($trans->transcript_info->remark){
+      my $dbid=$remark->dbID;
+      $tiid=$remark->transcript_info_id;
+      my $text=$remark->remark;
+      if($text=~/seleno/i){
+	$flag_remark=1;
+      }
+      if($text=~/^$alabel(.*)/){
+	my $stops=$1;
+	my $nmatch=0;
+	my $i=0;
+	my $flag_patch=0;
+	foreach my $rstop (split(/;\s/,$stops)){
+	  my($offset,$stop)=split(/:/,$rstop);
+	  if($stop ne $scodon){
+	    next;
+	  }
+	  if($i+1>$nstop){
+	    $nmatch=0;
+	    last;
+	  }
+	  if($stop[$i]->[1]==$offset){
+	    $nmatch++;
+	  }elsif(($stop[$i]->[1]*3)==$offset){
+	    $nmatch++;
+	    $flag_patch=1;
+	  }
+	  $i++;
+	}
+	if($nmatch==$nstop){
+	  $flag_remark2=1;
+	  if($flag_patch){
+	    # existing structured remark is wrong - patch
+	    $sql.="update transcript_remark set remark=\'$alabel$tstop\' where transcript_remark_id=$dbid;\n";
+	    $out2=sprintf("  UPDATED REMARK: %s %s\n",$trans->transcript_info->name,"$alabel$tstop");
+	  }
+	}
+      }
+      $out.="  remark: $text\n";
+    }
+	
+    # provide feedback
+    my $label;
+    if($flag_pseudo){
+      $label='P-OK';
+    }elsif($flag_seq==1){
+      if($flag_remark){
+	# remark indicates stop is a Selenocysteine
+	$label='S-OK';
+	if(!$flag_remark2){
+	  # unless structured remark exists, build appropriate sql
+	  $sql.="insert into transcript_remark values (NULL,\'$alabel$tstop\',$tiid);\n";
+	  $out2=sprintf("  NEW REMARK: %s %s\n",$trans->transcript_info->name,"$alabel$tstop");
+	}
+      }else{
+	$label='S-??';
+      }
+    }else{
+      $label='????';
+    }
+
+    # don't report if perfectly tagged seleno, unless -seleno option
+    if($seleno || $flag_remark2==0){
+      printf "%-24s %-24s %18s %2d %12s %4s %2d %s\n",
+      $gene->gene_info->name->name,
+      $trans->transcript_info->name,
+      $trans->stable_id,
+      $trans->version,
+      $trans_class,
+      $label,
+      $nstop,
+      $tstop;
+    
+      print "$out$out2\n" if $remarks;
+    }
+    return $sql;
 }
 
 ### Also in gene_stats - should be in a module
@@ -239,6 +319,21 @@ __END__
 Checks all the translations of the genes in an
 otter database, printing a report to STDOUT of
 those that have internal stop codons.
+
+=head1 FLAGS
+
+=over 4
+
+=item -remarks
+
+Reports remark records for any transcript containing stops
+
+=item -selenocysteine
+
+Reports transcripts containing stops labelled as such in remarks
+(skipped by default)
+
+=back
 
 =head1 AUTHOR
 

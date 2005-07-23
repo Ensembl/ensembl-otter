@@ -163,6 +163,7 @@ foreach my $cid ($cl->cluster_ids){
 		AND et.exon_id=e.exon_id 
                 AND esi.exon_id=e.exon_id 
                 AND e.exon_id in ($txt)
+                ORDER BY e.exon_id, e.sticky_rank
 		};
   my $sth = $dbh->prepare($sql);
   $sth->execute();
@@ -188,7 +189,7 @@ foreach my $cid ($cl->cluster_ids){
     if($exon2[$sr]){
       my($eid2,$cid2,$cst2,$ced2,$st2,$ph2,$eph2)=@{$exon2[$sr]};
       if($cid!=$cid2 || $cst!=$cst2 || $ced!=$ced2 || $st!=$st2 || $ph!=$ph2 || $eph!=$eph2){
-	print " FATAL: Exons not identical\n";
+	print " FATAL: Exons not identical (sticky_rank: $sr)\n";
 	print "  $eid,$cid,$cst,$ced,$st,$ph,$eph\n";
 	print "  $eid2,$cid2,$cst2,$ced2,$st2,$ph2,$eph2\n";
 	$flag_fail=1;
