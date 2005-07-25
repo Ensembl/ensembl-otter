@@ -4,32 +4,149 @@
 
 use strict;
 use Bio::Otter::Lace::Defaults;
+use Date::Calc 'Monday_of_Week';
 
 {
-    my( $dataset_name );
+    my( @dataset_name, @annotator_names );
 
     my $usage = sub { exec('perldoc', $0) };
     Bio::Otter::Lace::Defaults::do_getopt(
         'h|help!'       => $usage,
-        'dataset=s'     => \$dataset_name,
+        'dataset=s'     => \@dataset_name,
+        'annotators=s'  => \@annotator_names,
         ) or $usage->();
-    $usage->() unless $dataset_name;
+    
+    my %annotator = ();
+    my $restrict_names = 0;
+    if (@annotator_names) {
+        $restrict_names = 1;
+        foreach my $str (@annotator_names) {
+            foreach my $name (split /\W+/, $str) {
+                $annotator{$name} = $name;
+            }
+        }
+    }
     
     # Client communicates with otter HTTP server
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
-    
-    # DataSet interacts directly with an otter database
-    my $ds = $cl->get_DataSet_by_name($dataset_name);
-    my $otter_dba = $ds->get_cached_DBAdaptor;
 
+    my( @dataset );
+    if (@dataset_name) {
+        foreach my $name (@dataset_name) {
+            my $ds = $cl->get_DataSet_by_name($name);
+            push(@dataset, $ds);
+        }
+    } else {
+        foreach my $ds ($cl->get_all_DataSets) {
+            push(@dataset, $ds);
+        }
+    }
+
+    my $gene_count   = {};
+    my $author_count = {};
     
+    foreach my $ds (@dataset) {
+        my $otter_dba = $ds->get_cached_DBAdaptor;
+
+        my $gene_aptr = $otter_dba->get_GeneAdaptor;
+        my $gene_id_list = $gene_aptr->list_current_dbIDs;
+
+        my $sth = $otter_dba->prepare(q{
+            SELECT s.stable_id
+              , g.gene_id
+              , g.type
+              , DATE_FORMAT(s.modified, '%x/%v')
+              , a.author_name
+            FROM gene g
+              , gene_stable_id s
+              , current_gene_info cur
+              , gene_info i
+              , author a
+            LEFT JOIN gene_stable_id s2
+              ON s.stable_id = s2.stable_id
+              AND s.version < s2.version
+            WHERE g.gene_id = s.gene_id
+              AND s.stable_id = cur.gene_stable_id
+              AND cur.gene_info_id = i.gene_info_id
+              AND i.author_id = a.author_id
+              AND s2.version IS NULL
+            });
+
+        $sth->execute;
+
+        my( $stable_id, $gene_id, $gene_type, $created, $modified, $author );
+        $sth->bind_columns(\$stable_id, \$gene_id, \$gene_type, \$modified, \$author);
+
+        while ($sth->fetch) {
+            next if $gene_type eq 'obsolete';
+            if ($restrict_names) {
+                $author = $annotator{$author} || 'other';
+            }
+            $gene_count->{$modified}{$author}++;
+            $author_count->{$author}++;
+        }
+    }
+    
+    printf "Genes in datasets: %s\n", join(", ", sort map $_->name, @dataset);
+    
+    my @authors = sort keys %$author_count;
+    # Author name headers
+    foreach my $name (@authors) {
+        print "\t$name";
+    }
+    print "\n";
+
+    print "Total";
+    foreach my $name (@authors) {
+        print "\t$author_count->{$name}";
+    }
+    print "\n";
+    
+    foreach my $year_week (sort {$b cmp $a} keys %$gene_count) {
+        my ($yr, $week) = $year_week =~ m{(\d{4})/(\d\d)}
+            or die "Can't parse year/week: '$year_week'";
+        my ($year, $month, $day) = Monday_of_Week($week, $yr);
+        printf "%4d-%02d-%02d", $year, $month, $day;
+        my $year_week_hash = $gene_count->{$year_week};
+        foreach my $name (@authors) {
+            my $n = $year_week_hash->{$name} || 0;
+            print "\t$n";
+        }
+        print "\n";
+    }
 }
 
+#use Time::HiRes 'gettimeofday';
+#    my $before = gettimeofday();
+#    my $after = gettimeofday();
+#    printf "Query took %.2f seconds\n", $after - $before;
 
 
 __END__
 
 =head1 NAME - productivity_report
+
+=head1 SYNOPSIS
+
+  productivity_report [-dataset <NAME> [-dataset <NAME>]] -annotator <STRING> > report.txt
+
+=head1 EXAMPLE
+
+    productivity_report -dataset zebrafish -annotator jel,gkl,hks,kj2 > report.txt
+
+=head1 DESCRIPTION
+
+Counts who last modified each of the current genes
+in which week.
+
+This can be restriced to one or more datasets, or
+one or more annotators, using the B<dataset> and
+B<annotator> arguments.
+
+The report is tab-separated text suitable for
+importing into a spreadsheet application. Weeks
+when no genes were last modified do not appear in
+the report.
 
 =head1 AUTHOR
 
