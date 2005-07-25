@@ -22,22 +22,27 @@ use Hum::Sort 'ace_sort';
         'acc_only!'     => \$acc_only,
         'agp!'          => \$show_agp,
         ) or $usage->();
-    unless ($dataset_name) {
-        $usage->();
-    }
 
     # Connect to Ensembl/Otter database and fetch adaptors
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
-    my $ds = $cl->get_DataSet_by_name($dataset_name);
     
-    if ($sequence_set) {
-        if ($show_agp) {
-            print_agp($ds, $sequence_set);
+    if ($dataset_name) {
+        my $ds = $cl->get_DataSet_by_name($dataset_name);
+
+        if ($sequence_set) {
+            if ($show_agp) {
+                print_agp($ds, $sequence_set);
+            } else {
+                print_sequence_set($ds, $sequence_set, $acc_only);
+            }
         } else {
-            print_sequence_set($ds, $sequence_set, $acc_only);
+            print_set_list($ds);
         }
     } else {
-        print_set_list($ds);
+        print "Datasets:\n";
+        foreach my $ds ($cl->get_all_DataSets) {
+            print "  ", $ds->name, "\n";
+        }
     }
 }
 

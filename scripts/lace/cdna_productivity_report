@@ -1,0 +1,136 @@
+#!/usr/local/bin/perl -w
+
+### cdna_productivity_report
+
+use strict;
+use Bio::Otter::Lace::Defaults;
+
+{
+    my( $dataset_name );
+
+    my $usage = sub { exec('perldoc', $0) };
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'       => $usage,
+        'dataset=s'     => \$dataset_name,
+        ) or $usage->();
+    $usage->() unless $dataset_name;
+    
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    my $otter_dba = $ds->get_cached_DBAdaptor;
+
+    my( %name_full );
+
+    foreach my $line (split /\n/, q{
+guest11 Eddie Loh Yong Hwee
+guest12 Mustafa Khokha
+guest13 Ricardo Costa
+guest14 Curtis R Altmann
+guest15 Garry Scarlett
+guest16 Anita Abu-Daya
+guest17 Massimiliano Andreazzoli
+guest18 Masanori Taira
+guest19 Branko Latinkic
+guest20 Gustavo Barisone
+guest21 Karine Masse
+guest22 Noriyuki Takahashi
+guest23 Erika Lindquist
+guest24 Paul Kreig
+guest25 Rob Garriock
+guest26 Andy Warkman
+guest27 Liz Callery
+guest28 Sam Carruthers
+guest29 Enrique Amaya
+guest30 Kathy Hartley
+guest31 Mike Gilchrist
+guest32 Eleanor Whitfield
+guest34 Qods Ymlahi Ouazzani
+guest35 Frederic Brunet
+guest36 Astrid Terry
+guest37 Lyle Zimmerman
+guest38 Guennadi Khoudoli
+guest39 Jeff Huang
+guest40 Martin Roth
+jla1    Jennifer Ashurst
+jgrg    James Gilbert
+jel     Jane Loveland
+lw2     Laurens Wilming
+hyh     Hwang Ho-yon
+gkl     Gavin Laird
+        })
+    {
+        chomp($line);
+        my ($name, $full) = split /\s+/, $line, 2;
+        next unless $name;
+        $name_full{$name} = $full;
+    }
+
+    my $progress = $otter_dba->prepare(q{
+        SELECT g.contig_id
+          , DATE_FORMAT(MIN(s.created), '%d %a') first_saved
+          , MIN(e.exon_id)
+        FROM contig g
+          , exon e
+          , exon_stable_id s
+        WHERE g.contig_id = e.contig_id
+          AND e.exon_id = s.exon_id
+        GROUP BY g.contig_id
+        ORDER BY first_saved
+        });
+    $progress->execute;
+
+    my $who_first = $otter_dba->prepare(q{
+        SELECT a.author_name
+        FROM exon_transcript et
+          , transcript_stable_id tsid
+          , current_transcript_info cur
+          , transcript_info ti
+          , author a
+        WHERE et.transcript_id = tsid.transcript_id
+          AND tsid.stable_id = cur.transcript_stable_id
+          and cur.transcript_info_id = ti.transcript_info_id
+          AND ti.author_id = a.author_id
+          AND et.exon_id = ?
+        ORDER BY ti.transcript_info_id DESC
+        });
+
+    my( %day_bin, %author_count );
+    while (my ($contig, $when, $exon_id) = $progress->fetchrow) {
+        ### Query who first annotated contig
+        $who_first->execute($exon_id);
+        my ($author) = $who_first->fetchrow;
+        my $full = $name_full{$author} or die "No name for '$author'";
+        $author_count{$full}++;
+        $day_bin{$when}++;
+    }
+
+    print "\n";
+    my $total = 0;
+    foreach my $day (sort keys %day_bin) {
+        my $count = $day_bin{$day};
+        $total += $count;
+        printf "%s  %4d  %4d\n", $day, $count, $total;
+    }
+    
+    print "\n";
+    foreach my $name (sort {$author_count{$b} <=> $author_count{$a}} keys %author_count) {
+        printf "%4d  %s\n", $author_count{$name}, $name;
+    }
+}
+
+
+
+
+__END__
+
+=head1 NAME - cdna_productivity_report
+
+Written for the Xenopus tropicalis cDNA annotation workshop.
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
