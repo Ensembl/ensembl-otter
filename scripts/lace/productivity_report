@@ -146,7 +146,8 @@ B<annotator> arguments.
 The report is tab-separated text suitable for
 importing into a spreadsheet application. Weeks
 when no genes were last modified do not appear in
-the report.
+the report. The week is given by the date of the
+Monday.
 
 =head1 AUTHOR
 
