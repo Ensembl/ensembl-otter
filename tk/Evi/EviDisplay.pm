@@ -43,10 +43,8 @@ my $type_to_optpairs = { # canvas-dependent stuff
     'polygon'   => [ ['-fill','-disabledfill'], ['-outline','-disabledoutline'] ],
 };
 
-use Evi::CollectionFilter; # object that keeps the sorting/filtering list and performs sorting/filtering
-use Evi::CF_Set; # a list of CollectionFilters
-
-use Evi::SortFilterDialog; # window that selects the sorting order
+use Evi::CF_Set;            # a list of CollectionFilters
+use Evi::SortFilterDialog;  # window that selects the sorting order
 
 use Evi::LogicalSelection;  # keeps the information about selection and visibility
 
@@ -69,7 +67,6 @@ use base ('MenuCanvasWindow',
 sub after_filtering_sorting_callback {
     my $self = shift @_;
 
-    # $self->{_evichains_lp} = $self->{_collectionfilter}->results_lp();
     $self->{_evichains_lp} = $self->{_cfset}->results_lp();
 
     $self->evi_redraw();
@@ -90,58 +87,12 @@ sub new {
 
     $self->{_scale_type}        = shift @_ || 'Evi::ScaleFitwidth';
 
-    $self->{_collectionfilter}  = Evi::CollectionFilter->new(
-                'All',
-                $self->{_evicoll},
-                [
-                    Evi::SortCriterion->new('Analysis','analysis',
-                        [],'alphabetic','ascending'),
-                    Evi::SortCriterion->new('Taxon','taxon_name',
-                        [],'alphabetic','ascending'),
-                    Evi::SortCriterion->new('Evidence name','name',
-                        [],'alphabetic','ascending'),
-                ],
-                [
-                            # include the active ones as well
-                    Evi::SortCriterion->new('Analysis','analysis',
-                                            [],'alphabetic','ascending'),
-                    Evi::SortCriterion->new('Taxon','taxon_name',
-                                            [],'alphabetic','ascending'),
-                    Evi::SortCriterion->new('Evidence name','name',
-                                            [],'alphabetic','ascending'),
-                            # current transcript-dependent criteria:
-                    Evi::SortCriterion->new('Supported introns', 'trans_supported_introns',
-                                            [], 'numeric','descending',1),
-                    Evi::SortCriterion->new('Supported junctions', 'trans_supported_junctions',
-                                            [], 'numeric','descending'),
-                    Evi::SortCriterion->new('Supported % of transcript','transcript_coverage',
-                                            [], 'numeric','descending'),
-                    Evi::SortCriterion->new('Dangling ends (bases)','contrasupported_length',
-                                            [], 'numeric','ascending',10),
-     
-                            # transcript-independent criteria:
-                    Evi::SortCriterion->new('Evidence sequence coverage (%)','eviseq_coverage',
-                                            [], 'numeric','descending',50),
-                    Evi::SortCriterion->new('Minimum % of identity','min_percent_id',
-                                            [], 'numeric','descending'),
-                    Evi::SortCriterion->new('Start of match (slice coords)','start',
-                                            [], 'numeric','ascending'),
-                    Evi::SortCriterion->new('End of match (slice coords)','end',
-                                            [], 'numeric','descending'),
-                    Evi::SortCriterion->new('Source database','db_name',
-                                            [], 'alphabetic','ascending'),
-                ],
-                1,
-    );
-    $self->{_collectionfilter}->current_transcript($self->{_transcript}); # may be changed later
-
     $self->{_cfset} = Evi::CF_Set->new( $self->{_evicoll} ); # we use the default_filterlist
     $self->{_cfset}->current_transcript( $self->{_transcript} ); # may be changed later
 
     $self->{_sortfilterdialog} = Evi::SortFilterDialog->new(
                 $top_window,
                 "$title| Sort data",
-                # $self->{_collectionfilter},
                 $self->{_cfset},
                 $self,
                 'after_filtering_sorting_callback'
@@ -381,7 +332,7 @@ my $tt_redraw = Evi::Tictoc->new("EviDisplay layout");
             $evichain->hstrand(),
             [
                 (map { $_->{_name}.':  '.$_->compute($evichain); }
-                    @{$self->{_collectionfilter}->all_criteria()}),
+                    @{$self->{_cfset}->filterlist()->[0]->all_criteria()}), # FIXME: should match the class!
                 "QStrand: ".strand2name($evichain->strand()),
                 "HStrand: ".strand2name($evichain->hstrand()),
             ],

@@ -27,7 +27,7 @@ sub fetch {
 		return;
 	}
 
-	my @lines = getz('-f', 'id spc', '[taxonomy-id:'.join('|', keys %waiting).']');
+	my @lines = getz('-f', 'id tax', '[taxonomy-id:'.join('|', keys %waiting).']');
 	while(@lines) {
 		my $taxon_id = (split(/(\s*:\s*|\s*\n)/,shift @lines))[2];
 		my $name	 = (split(/(\s*:\s*|\s*\n)/,shift @lines))[2];
