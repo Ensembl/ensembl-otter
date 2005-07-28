@@ -20,6 +20,10 @@ use File::Path 'rmtree';
     my $archive = '/nfs/disk100/humpub/data/mysql_backup/otter';
     my $archive_host = 'cbi1';
     my $root_dir = '/humsql/otter';
+    
+    cleanup_old_otter_dbs($root_dir);
+    die "DEVEL EXIT";
+    
     my $date_dir = date_dir();
     my $working_dir = "$root_dir/$date_dir";
     mkdir($working_dir) or die "Can't create '$working_dir' directory : $!";
@@ -132,6 +136,33 @@ sub date_dir {
     my ($year, $mon, $mday, $hour, $min, $sec) = (localtime)[5,4,3,2,1,0];
     return sprintf("otter_backup_%04d-%02d-%02d_%02d-%02d-%02d",
         $year + 1900, $mon + 1, $mday, $hour, $min, $sec);
+}
+
+sub cleanup_old_otter_dbs {
+    my( $dir ) = @_;
+    
+    opendir BACKUPS, $dir or die "Can't opendir '$dir' : $!";
+    my @all = sort grep /^otter_backup_/, readdir BACKUPS;
+    closedir BACKUPS;
+    
+    # Keep the most recent 24
+    foreach my $i (01..24) {
+        my $backup = pop(@all);
+        warn "Keeping $i: $backup\n";
+        last unless @all;
+    }
+    
+    my( %seen_month );
+    # Keep one from every month
+    foreach my $backup (@all) {
+        my ($year_month) = $backup =~ /(\d{4}-\d\d)/;
+        if ($seen_month{$year_month}) {
+            print STDERR "Deleteting old backup: $backup\n";
+        } else {
+            print STDERR "Keeping: $backup\n";
+            $seen_month{$year_month} = $backup;
+        }
+    }
 }
 
 __END__
