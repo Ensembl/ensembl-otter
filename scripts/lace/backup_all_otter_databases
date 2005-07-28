@@ -21,8 +21,7 @@ use File::Path 'rmtree';
     my $archive_host = 'cbi1';
     my $root_dir = '/humsql/otter';
     
-    cleanup_old_otter_dbs($root_dir);
-    die "DEVEL EXIT";
+    cleanup_old_otter_dbs($archive);
     
     my $date_dir = date_dir();
     my $working_dir = "$root_dir/$date_dir";
@@ -158,6 +157,7 @@ sub cleanup_old_otter_dbs {
         my ($year_month) = $backup =~ /(\d{4}-\d\d)/;
         if ($seen_month{$year_month}) {
             print STDERR "Deleteting old backup: $backup\n";
+            rmtree("$dir/$backup");
         } else {
             print STDERR "Keeping: $backup\n";
             $seen_month{$year_month} = $backup;
