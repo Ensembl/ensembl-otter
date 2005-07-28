@@ -7,16 +7,19 @@ use Getopt::Long 'GetOptions';
 use Bio::Otter::Lace::Defaults;
 
 
-my ($dataset, $help, $infile, $outfile, $sanger, $name, $gtype);
+my ($dataset, $help, $infile, $outfile, $sanger, $name, $gtype, $test, $errlog);
 
 Bio::Otter::Lace::Defaults::do_getopt('ds|dataset=s' => \$dataset,
 									  'i|infile=s'   => \$infile,
 									  'o|outfile=s'  => \$outfile,
 									  'sanger'       => \$sanger, # parsing gene name update from Sanger
 									  'n|name'       => \$name,
-									  't|type'       => \$gtype); # plus default options
+									  't|type'       => \$gtype,
+									  'test'         => \$test,
+									  'err=s'        => \$errlog
+									 ); # plus default options
 
-if ( !$sanger && !($dataset && $infile && $outfile && ($name || $gtype))  ) {
+if ( !$sanger && !($dataset && $infile && $outfile && $errlog && ($name || $gtype))  ) {
 	exec('perldoc', $0);
 }
 elsif ( $sanger && !($dataset && $infile && $outfile) ) {
@@ -118,21 +121,24 @@ eval
 		my $start = 0;
 		my $line = 0;
 		my ($diff, $hugo_gname, $hugo_desc, $HGNC, $hugo_type, $otter_trans_stable_id);
+		open( ERROR, ">$errlog") || die $!;
 
 		while (<FILE>) {
 			chomp;
 			$line++;
-			if ( /^Diff\tApproved Symbol/ ) {
+			#if ( /^Diff\tApproved Symbol/ ) {
+			if ( /^Approved Symbol/ ) { 
 				$start = 1; next;
 			}
             elsif ( $start == 1 && $_ ne "") {
 
-				($diff, $hugo_gname, $hugo_desc, $HGNC, $hugo_type, $otter_trans_stable_id) = split /\t/, $_;
+				#($diff, $hugo_gname, $hugo_desc, $HGNC, $hugo_type, $otter_trans_stable_id) = split /\t/, $_;
+			  ($hugo_gname, $hugo_desc, $HGNC, $hugo_type, $otter_trans_stable_id) = split /\t/, $_;
 
 				#print "$diff, $hugo_gname, $hugo_desc, $HGNC, $hugo_type, $otter_trans_stable_id\n"; exit;
 
 				if ( !($hugo_gname && $hugo_desc && $HGNC && $hugo_type && $otter_trans_stable_id) ) {
-					print "\nERROR at line $line: raw data fields are not tab delimited [$_]\nThis needs to be fixed first.\n\n";
+					print ERROR "\nERROR at line $line: raw data fields are not tab delimited [$_]\nThis needs to be fixed first.\n\n";
 					exit(1);
 				}
                 else {
@@ -150,7 +156,7 @@ eval
 					};
 
 					if ( $@ ) {
-						print "ERROR: $otter_trans_stable_id at line $line not found in the database or bad format.\n".
+						print ERROR "ERROR: $otter_trans_stable_id at line $line not found in the database or bad format.\n".
 							"       Check if the line contains multiple IDs or if transcript stable_id becomes obsolete\n".
 								"       or if the annotations of the IDs need to be looked at  . . . . . . skip to work on other genes. . .\n\n";
 					} else {
@@ -241,7 +247,7 @@ eval
 		else {
 			print "\nGene name update is OK.\n" if $name || $sanger;
 			print "\nGene type update is OK.\n" if $gtype;
-			$otter_db->commit;
+			$otter_db->commit unless $test;
 		}
 };
 
@@ -251,7 +257,7 @@ sub update_gene_name {
 
 	my $gene_info_id = $gene->gene_info->name->gene_info_id;
 
-	print " $otter_gname -> $new_gname (new) $gene_info_id\n";
+	#print " $otter_gname -> $new_gname (new) $gene_info_id\n";
 
 	# not using $geneNameAd->store() here as this method does only INSERT and no UPDATE
 
@@ -289,8 +295,7 @@ sub update_gene_description {
 	$sth->finish();
 }
 
-
-	__END__
+__END__
 
 
 =head1 NAME - HUGO_gene_name_to_otter
