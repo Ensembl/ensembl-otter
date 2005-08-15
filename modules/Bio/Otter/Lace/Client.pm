@@ -136,49 +136,58 @@ sub new_AceDatabase {
 sub ace_readonly_tag{
     return Bio::Otter::Lace::AceDatabase::readonly_tag();
 }
-sub get_UserAgent {
-    my( $self ) = @_;
-    
-    return LWP::UserAgent->new(timeout => 9000);
 
-    #my( $ua );
-    #unless ($ua = $self->{'_user_agent'}) {
-    #    $ua = $self->{'_user_agent'} = LWP::UserAgent->new;
-    #}
-    #return $ua;
-}
-sub lock_region_for_contig_from_Dataset{
-    my( $self, $ctg, $dataset ) = @_;
+sub chr_start_end_from_contig {
+    my( $self, $ctg ) = @_;
     
     my $chr_name  = $ctg->[0]->chromosome->name;
     my $start     = $ctg->[0]->chr_start;
     my $end       = $ctg->[$#$ctg]->chr_end;
-    my $ss = $dataset->selected_SequenceSet
-        or confess "no selected_SequenceSet attached to DataSet";
     
-    my $root   = $self->url_root;
-    my $url = "$root/lock_region?" .
-        join('&',
-	     'author='   . uri_escape($self->author),
-	     'email='    . uri_escape($self->email),
-             'hostname=' . uri_escape($self->client_hostname),
-	     'dataset='  . uri_escape($dataset->name),
-	     'chr='      . uri_escape($chr_name),
-	     'chrstart=' . uri_escape($start),
-	     'chrend='   . uri_escape($end),
-             'type='     . uri_escape($ss->name),
-	     );
-    warn "url <$url>\n";
-
-    my $ua = $self->get_UserAgent;
-    my $request = $self->new_http_request('GET');
-    $request->uri($url);
-    my $response = $ua->request($request);
-
-    my $xml = $self->_check_for_error($response);
-
-    return $xml;
+    return($chr_name, $start, $end);
 }
+
+sub get_DataSet_by_name {
+    my( $self, $name ) = @_;
+    
+    foreach my $ds ($self->get_all_DataSets) {
+        if ($ds->name eq $name) {
+            return $ds;
+        }
+    }
+    confess "No such DataSet '$name'";
+}
+
+sub username{
+    my $self = shift;
+    warn "get only, use author() method to set" if @_;
+    return $self->author();
+}
+sub password{
+    my ($self, $pass) = @_;
+    if($pass){
+        $self->{'__password'} = $pass;
+    }
+    return $self->{'__password'} || $self->option_from_array([qw( client password )]);
+}
+sub password_prompt{
+    my ($self, $callback) = @_;
+    if($callback){
+        $self->{'_password_prompt_callback'} = $callback;
+    }
+    $callback = $self->{'_password_prompt_callback'};
+    unless($callback){
+        $callback = sub {
+            my $self = shift;
+            my $user = $self->username();
+            $self->password(Hum::EnsCmdLineDB::prompt_for_password("Please enter your password ($user): "));
+        };
+        $self->{'_password_prompt_callback'} = $callback;
+    }
+    return $callback;
+}
+
+    # called by AceDatabase.pm:
 sub get_xml_for_contig_from_Dataset {
     my( $self, $ctg, $dataset ) = @_;
     
@@ -191,53 +200,35 @@ sub get_xml_for_contig_from_Dataset {
 
     return $self->get_xml_from_Dataset_type_chr_start_end(
         $dataset, $ss->name, $chr_name, $start, $end,
-        );
+    );
 }
 
-sub get_xml_from_Dataset_type_chr_start_end {
-    my( $self, $dataset, $type, $chr_name, $start, $end ) = @_;
+
+# ---- HTTP protocol related routines:
+
+sub get_UserAgent {
+    my( $self ) = @_;
     
-    my $root = $self->url_root;
-    my $url = "$root/get_region?" .
-        join('&',
-	     'author='   . uri_escape($self->author),
-	     'email='    . uri_escape($self->email),
-	     'dataset='  . uri_escape($dataset->name),
-	     'chr='      . uri_escape($chr_name),
-	     'chrstart=' . uri_escape($start),
-	     'chrend='   . uri_escape($end),
-             'type='     . uri_escape($type),
-	     );
-    warn "url <$url>\n";
+    return LWP::UserAgent->new(timeout => 9000);
+}
+sub new_http_request{
+    my ($self, $method) = @_;
+    my $request = HTTP::Request->new();
+    $request->method($method || 'GET');
 
-    my $ua = $self->get_UserAgent;
-    my $request = $self->new_http_request('GET');
-    $request->uri($url);
-    my $response = $ua->request($request);
-
-    my $xml = $self->_check_for_error($response);
-
-    if ($self->debug){
-        my $debug_file = Bio::Otter::Lace::PersistentFile->new();
-        $debug_file->name("otter-debug.$$.fetch.xml");
-        my $fh = $debug_file->write_file_handle();
-        print $fh $xml;
-        close $fh;
-    }else{
-        warn "Debug switch is false\n";
+    if(defined(my $password = $self->password())){
+        my $encoded = MIME::Base64::encode_base64($self->username() . ":$password");
+        $request->header(Authorization => qq`Basic $encoded`);
     }
-    
-    return $xml;
+    return $request;
 }
-
-sub chr_start_end_from_contig {
-    my( $self, $ctg ) = @_;
+sub url_root {
+    my( $self ) = @_;
     
-    my $chr_name  = $ctg->[0]->chromosome->name;
-    my $start     = $ctg->[0]->chr_start;
-    my $end       = $ctg->[$#$ctg]->chr_end;
-    
-    return($chr_name, $start, $end);
+    my $host = $self->host or confess "host not set";
+    my $port = $self->port or confess "port not set";
+    $port =~ s/\D//g; # port only wants to be a number! no spaces etc
+    return "http://$host:$port/perl";
 }
 
 =pod 
@@ -271,53 +262,148 @@ sub _check_for_error {
     return $xml;
 }
 
-sub url_root {
-    my( $self ) = @_;
-    
-    my $host = $self->host or confess "host not set";
-    my $port = $self->port or confess "port not set";
-    $port =~ s/\D//g; # port only wants to be a number! no spaces etc
-    return "http://$host:$port/perl";
+sub general_http_dialog {
+    my ($self, $psw_attempts_left, $method, $scriptname, $params) = @_;
+
+    my $url = $self->url_root.'/'.$scriptname;
+    my $paramstring = join('&',
+        map { $_.'='.uri_escape($params->{$_}) } (keys %$params)
+    );
+    my $try_password = 0; # first try without it
+    my $content      = '';
+
+    do {
+        if($try_password++) { # definitely try it next time
+            $self->password_prompt()->($self);
+            my $pass = $self->password || '';
+            warn "Attempting to connect using password '" . '*' x length($pass) . "'\n";
+        }
+        my $request = $self->new_http_request($method);
+        if($method eq 'GET') {
+            $request->uri($url.'?'.$paramstring);
+
+            warn "url: ${url}?${paramstring}";
+        } elsif($method eq 'POST') {
+            $request->uri($url);
+            $request->content($paramstring);
+
+            warn "url: $url";
+            warn "paramstring: $paramstring";
+        } else {
+            confess "method '$method' is not supported";
+        }
+        my $response = $self->get_UserAgent->request($request);
+        $content = $self->_check_for_error($response, $psw_attempts_left);
+    } while ($psw_attempts_left-- && !$content);
+
+    return $content;
 }
 
-sub get_DataSet_by_name {
-    my( $self, $name ) = @_;
-    
-    foreach my $ds ($self->get_all_DataSets) {
-        if ($ds->name eq $name) {
-            return $ds;
+# ---- specific HTTP-requests:
+
+sub get_dafs_from_dataset_type_chr_start_end_analysis {
+    my( $self, $dataset, $type, $chr_name, $start, $end, $analysis ) = @_;
+
+    my $response = $self->general_http_dialog(
+        0,
+        'GET',
+        'get_dafs',
+        {
+            'dataset'  => $dataset->name,
+            'type'     => $type,
+            'chr'      => $chr_name,
+            'chrstart' => $start,
+            'chrend'   => $end,
+            'analysis' => ($analysis ? $analysis : ''),
         }
+    );
+
+    my @resplines = split(/\n/,$response);
+    pop @resplines; # the last one is empty;
+
+    my @dafs = ();
+    foreach my $respline (@resplines) {
+        my ($dbID, $hseqname, $hstart, $hend, $hstrand, $start, $end, $strand) = split(/\t/,$respline);
+        my $daf = $respline; # FIXME: build a feature here;
+        push @dafs, $daf;
     }
-    confess "No such DataSet '$name'";
+
+    return \@dafs;
+}
+
+sub lock_region_for_contig_from_Dataset{
+    my( $self, $ctg, $dataset ) = @_;
+    
+    my ($chr_name, $start, $end) = $self->chr_start_end_from_contig($ctg);
+    my $ss = $dataset->selected_SequenceSet
+        or confess "no selected_SequenceSet attached to DataSet";
+    
+    return $self->general_http_dialog(
+        0,
+        'GET',
+        'lock_region',
+        {
+            'author'   => $self->author,
+            'email'    => $self->email,
+            'hostname' => $self->client_hostname,
+            'dataset'  => $dataset->name,
+            'type'     => $ss->name,
+            'chr'      => $chr_name,
+            'chrstart' => $start,
+            'chrend'   => $end,
+        }
+    );
+}
+
+sub get_xml_from_Dataset_type_chr_start_end {
+    my( $self, $dataset, $type, $chr_name, $start, $end ) = @_;
+
+    my $xml = $self->general_http_dialog(
+        0,
+        'GET',
+        'get_region',
+        {
+            'author'   => $self->author,
+            'email'    => $self->email,
+            'dataset'  => $dataset->name,
+            'type'     => $type,
+            'chr'      => $chr_name,
+            'chrstart' => $start,
+            'chrend'   => $end,
+        }
+    );
+
+    if ($self->debug){
+        my $debug_file = Bio::Otter::Lace::PersistentFile->new();
+        $debug_file->name("otter-debug.$$.fetch.xml");
+        my $fh = $debug_file->write_file_handle();
+        print $fh $xml;
+        close $fh;
+    }else{
+        warn "Debug switch is false\n";
+    }
+    
+    return $xml;
 }
 
 sub get_all_DataSets {
     my( $self ) = @_;
     
-    my( $ds );
-    unless ($ds = $self->{'_datasets'}) {    
-        my $ua   = $self->get_UserAgent;
-        my $root = $self->url_root;
-        my ($content, $response);
-        for(my $i = 0 ; $i <= 3 ; $i++){
-            if($i > 0){
-                $self->password_prompt()->($self);
-                my $pass = $self->password || '';
-                warn "Attempting to connect using password '" . '*' x length($pass) . "'\n";
+    my $ds = $self->{'_datasets'};
+    if (! $ds) {    
+        my $content = $self->general_http_dialog(
+            3,
+            'GET',
+            'get_datasets',
+            {
+                'details' => 'true',
             }
-            my $request = $self->new_http_request('GET');
-            $request->uri("$root/get_datasets?details=true");
-            # warn $request->uri();
-            $response   = $ua->request($request);
-            last if $content = $self->_check_for_error($response, 1);
-        }
-        $self->_check_for_error($response);
-        $response = undef;
+        );
 
         my $dsp = Bio::Otter::Transform::DataSets->new();
         $dsp->set_property('author', $self->author);
         my $p = $dsp->my_parser();
-	$p->parse($content);
+        $p->parse($content);
         $ds = $self->{'_datasets'} = $dsp->objects;
     }
     return @$ds;
@@ -330,23 +416,18 @@ sub get_all_SequenceSets_for_DataSet{
     my $cache = $dsObj->get_all_SequenceSets();
     return $cache if scalar(@$cache);
  
-    # go get the cache
-    my $ua      = $self->get_UserAgent;
-    my $root    = $self->url_root;
-    my $request = $self->new_http_request('GET');
-    $request->uri("$root/get_sequencesets?".
-                  join('&',                  
-                       "dataset="  . uri_escape($dsObj->name),
-                       "author="   . uri_escape($self->author),
-                       "email="    . uri_escape($self->email),
-                       "hostname=" . uri_escape($self->client_hostname),
-                       )
-                  );
-    # warn $request->uri();
-    my $response = $ua->request($request);
-    my $content  = $self->_check_for_error($response);
+    my $content = $self->general_http_dialog(
+        0,
+        'GET',
+        'get_sequencesets',
+        {
+            'author'   => $self->author,
+            'email'    => $self->email,
+            'hostname' => $self->client_hostname,
+            'dataset'  => $dsObj->name,
+        }
+    );
     # stream parsing ????
-    $response    = undef;
 
     my $ssp = Bio::Otter::Transform::SequenceSets->new();
     $ssp->set_property('dataset_name', $dsObj->name);
@@ -360,88 +441,42 @@ sub save_otter_xml {
     
     confess "Don't have write access" unless $self->write_access;
     
-    # Save to server with POST
-    my $url = $self->url_root . '/write_region';
-    my $request = $self->new_http_request('POST');
-    $request->uri($url);
-    $request->content(
-        join('&',
-            'author='   . uri_escape($self->author),
-            'email='    . uri_escape($self->email),
-            'dataset='  . uri_escape($dataset_name),
-            'data='     . uri_escape($xml),
-            'unlock=false',     # We give the annotators the option to
-            )                   # save during sessions, not just on exit.
-        );
-    my $response = $self->get_UserAgent->request($request);
-    my $content  = $self->_check_for_error($response);
+    my $content = $self->general_http_dialog(
+        0,
+        'POST',
+        'write_region',
+        {
+            'author'   => $self->author,
+            'email'    => $self->email,
+            'dataset'  => $dataset_name,
+            'data'     => $xml,
+            'unlock'   => 'false',  # We give the annotators the option to
+                                    # save during sessions, not just on exit.
+        }
+    );
 
     ## return $content;
     ## possibly should be
     return \$content;
 }
 
-
 sub unlock_otter_xml {
     my( $self, $xml, $dataset_name ) = @_;
     
     # print STDERR "<!-- BEGIN XML -->\n" . $xml . "<!-- END XML -->\n\n\n";
     
-    # Save to server with POST
-    my $url = $self->url_root . '/unlock_region';
-    my $request = $self->new_http_request('POST');
-    $request->uri($url);
-    
-    $request->content(
-        join('&',
-            'author='   . uri_escape($self->author),
-            'email='    . uri_escape($self->email),
-            'dataset='  . uri_escape($dataset_name),
-            'data='     . uri_escape($xml),
-            )
-        );
-    my $response = $self->get_UserAgent->request($request);
-    my $content  = $self->_check_for_error($response);
+    my $content = $self->general_http_dialog(
+        0,
+        'POST',
+        'unlock_region',
+        {
+            'author'   => $self->author,
+            'email'    => $self->email,
+            'dataset'  => $dataset_name,
+            'data'     => $xml,
+        }
+    );
     return 1;
-}
-sub new_http_request{
-    my ($self, $method) = @_;
-    my $request = HTTP::Request->new();
-    $request->method($method || 'GET');
-
-    if(defined(my $password = $self->password())){
-        my $encoded = MIME::Base64::encode_base64($self->username() . ":$password");
-        $request->header(Authorization => qq`Basic $encoded`);
-    }
-    return $request;
-}
-sub username{
-    my $self = shift;
-    warn "GET only, use author() method to set" if @_;
-    return $self->author();
-}
-sub password{
-    my ($self, $pass) = @_;
-    if($pass){
-        $self->{'__password'} = $pass;
-    }
-    return $self->{'__password'} || $self->option_from_array([qw( client password )]);
-}
-sub password_prompt{
-    my ($self, $callback) = @_;
-    if($callback){
-        $self->{'_password_prompt_callback'} = $callback;
-    }
-    $callback = $self->{'_password_prompt_callback'};
-    unless($callback){
-        $callback = sub {
-            my $self = shift;
-            my $user = $self->username();
-            $self->password(Hum::EnsCmdLineDB::prompt_for_password("Please enter your password ($user): "));
-        };
-        $self->{'_password_prompt_callback'} = $callback;
-    }
-    return $callback;
 }
 
 sub dasClient{
