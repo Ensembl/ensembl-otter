@@ -21,7 +21,7 @@ use Evi::Tictoc;
 # }
 
 {
-    my $dataset_name    = 'human';      # 'mouse', ...
+    my $dataset_name    = 'human'; # 'test_human';      # 'mouse', ...
 
         # my ($set_name, $chr_name, $trstable) = ('MHC_COX', '6', 'OTTHUMT00000076915');
         # my ($set_name, $chr_name, $trstable) = ('ChrX-07', 'X', 'OTTHUMT00000081638');

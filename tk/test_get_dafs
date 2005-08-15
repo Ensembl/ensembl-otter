@@ -1,0 +1,64 @@
+#!/usr/local/bin/perl -w
+
+# Collect the EviChains that match in a particular area,
+# combine them into matching chains
+# and show them to the user.
+#
+# lg4
+
+use strict;
+use Bio::Otter::Lace::Defaults;
+use Evi::Tictoc;
+
+{
+    my $dataset_name    = 'human';      # 'mouse', ...
+
+        # my ($set_name, $chr_name, $trstable) = ('MHC_COX', '6', 'OTTHUMT00000076915');
+        # my ($set_name, $chr_name, $trstable) = ('ChrX-07', 'X', 'OTTHUMT00000081638');
+        # my ($set_name, $chr_name, $trstable) = ('encode_ext_agp-04', 'MANY', 'OTTHUMT00000132895');
+          my ($set_name, $chr_name, $trstable) = ('chr9-16', '9', 'OTTHUMT00000001011');
+
+    my $margin          = 10000;        # any number > 0
+    my @rna_analyses  = ('vertrna','Est2genome_human','Est2genome_mouse','Est2genome_other');
+
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'dataset=s'     => \$dataset_name,
+        'set=s'         => \$set_name,
+        'chr=s'         => \$chr_name,
+        'trstable=s'    => \$trstable,
+        'margin=s'      => \$margin,
+    );
+    
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    
+    my $otter_dba = $ds->get_cached_DBAdaptor;
+    $otter_dba->assembly_type($set_name);
+
+    my $otter_slice;
+
+    if(0) { # different ways to produce a slice on a chromosome
+        my $start=153_236_054;
+        my $end  =153_300_000;
+
+        $otter_slice = $otter_dba->get_SliceAdaptor()->fetch_by_chr_start_end($chr_name,$start,$end);
+    } else {
+        $otter_slice = $otter_dba->get_SliceAdaptor()->fetch_by_transcript_stable_id($trstable, $margin);
+    }
+
+    my $len = $otter_slice->chr_end()-$otter_slice->chr_start()+1;
+    print "Slice length: [$len]\n\n";
+
+    for my $analysis_name (@rna_analyses, '') {
+        my $timer = Evi::Tictoc->new("Getting the <$analysis_name> features from the server");
+        my $listp = $cl->get_dafs_from_dataset_type_chr_start_end_analysis(
+            $ds, $set_name, $chr_name, $otter_slice->chr_start(), $otter_slice->chr_end(), $analysis_name
+        );
+        $timer->done();
+        print "Found ".scalar(@$listp)." features\n\n";
+    }
+
+}

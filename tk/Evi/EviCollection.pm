@@ -50,8 +50,17 @@ sub new_from_pipeline_Slice {
     $self->{_name2chains} = {}; # sublists of chains indexed by name
 
     my $daf_adaptor = $self->pipeline_dba()->get_DnaAlignFeatureAdaptor();
+
+#   print $daf_adaptor."\n";
+#   exit(0);
+
     for my $analysis (@{$self->rna_analyses_lp()}) {
         my $dafs_lp = $daf_adaptor->fetch_all_by_Slice($self->pipeline_slice(),$analysis);
+
+#   my $daf0 = $dafs_lp->[0];
+#   print $daf0."\n";
+#   exit(0);
+
         $self->add_collection($dafs_lp, $analysis);
     }
 
