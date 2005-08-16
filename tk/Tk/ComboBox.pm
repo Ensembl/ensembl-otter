@@ -6,7 +6,7 @@ package Tk::ComboBox;
 use strict;
 
 use vars qw($VERSION);
-$VERSION = '0.1'; # $Id: ComboBox.pm,v 1.6 2005-07-12 16:05:51 jgrg Exp $
+$VERSION = '0.1'; # $Id: ComboBox.pm,v 1.7 2005-08-16 15:55:42 jgrg Exp $
 
 use Tk qw(Ev);
 use Carp;
@@ -68,7 +68,7 @@ sub Populate {
         -state       => [qw/METHOD   state       State         normal/],
         -arrowimage  => [ {-image => $b}, qw/arrowImage ArrowImage/, undef],
         -variable    => '-textvariable',
-	-colorstate  => [qw/PASSIVE  colorState  ColorState/,  undef],
+	    -colorstate  => [qw/PASSIVE  colorState  ColorState/,  undef],
         -command     => '-browsecmd',
         -options     => '-choices',
         'DEFAULT'    => [$e],

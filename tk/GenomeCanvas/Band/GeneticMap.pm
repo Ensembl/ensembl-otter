@@ -41,9 +41,9 @@ sub render {
     open EPCR, $file or confess("Can't read '$file' : $!");
     my $nudge_distance = $font_size * 3;
     while (<EPCR>) {
-	/^\#/ and next; 
+	    /^\#/ and next; 
         my ($start, $end, $name_str) = (split)[3,4,8];
-	my ($name) = $name_str =~ /ID\=\"([^\"]+)\"/;
+	    my ($name) = $name_str =~ /ID\=\"([^\"]+)\"/;
         my $pos = $start + (($end - $start) / 2) - $offset;
         next if $pos < 1;
         next if $pos > $length;

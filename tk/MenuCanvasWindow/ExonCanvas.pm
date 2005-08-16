@@ -1249,7 +1249,7 @@ sub add_locus_editing_widgets {
         -label      => 'Symbol: ',
         -width      => 18,
         -variable   => $self->{'_locus_name_variable'},
-
+        ### Replace with subroutine that updates locus fields
         -exportselection    => 1,
         -background         => 'white',
         -selectbackground   => 'gold',

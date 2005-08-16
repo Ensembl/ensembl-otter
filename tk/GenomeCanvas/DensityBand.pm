@@ -39,7 +39,7 @@ sub strip_height {
     my( $band, $height ) = @_;
     
     if ($height) {
-	$band->{'_densband_strip_height'} = $height;
+	    $band->{'_densband_strip_height'} = $height;
     }
 
     return $band->{'_densband_strip_height'} ||  $band->font_size * 2;
@@ -61,7 +61,8 @@ sub strip_y_map {
         my $strip_count = scalar $band->strip_labels;
         my $y_offset    = $band->y_offset;
         my $height      = $band->strip_height;
-        my $pad         = $band->strip_padding;
+        ###my $pad         = $band->strip_padding;
+        my $pad = 0;
         $map = [];
         for (my $i = 0; $i < $strip_count; $i++) {
             my $y1 = $y_offset + ($i * ($height + $pad));
@@ -183,8 +184,8 @@ sub draw_density_segment {
         my $x1 = ($x_offset / $rpp) + ($i * $tile_pixels);
         my $x2 = $x1 + $tile_pixels;
         
-        # If the next box is going to be the same colour, just make
-        # the rectangle drawn bigger. This draws far fewer boxes.
+        # If the next box is going to be the same colour, just draw
+        # the rectangle bigger. This draws far fewer boxes.
         for (my $j = $i + 1; $j < @values; $j++) {
             last unless $val == $values[$j];
             $x2 += $tile_pixels;

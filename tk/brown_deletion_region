@@ -17,27 +17,29 @@ use GenomeCanvas::Band::FileFeatures;
 use GenomeCanvas::Band::HomolFeature;
 use GenomeCanvas::Band::GeneCluster;
 use GenomeCanvas::Band::Scale;
+use GenomeCanvas::Band::FuzzyRegions;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Hum::Submission 'prepare_statement'; # For Sanger sequence names
 use Getopt::Long 'GetOptions';
 use Hum::EnsCmdLineDB;
+use Bio::Otter::Lace::PipelineDB;
 
 {
-    my $scale = 2000;
+    my $scale = 8000;
     my $v_tiles = 0;
     my $h_tiles = 0;
     my $fpc      = '';
-    my $chr_name = '';
+    my $chr_name = '4';
     my $chr_start = 0;
     my $chr_end = 0;
     my $font_size = 12;
     my $sanger_names = 0;
-    my $landscape = 1;
-    my $portrait = 0;
+    my $landscape = 0;
+    my $portrait = 1;
     my $gene_labels     = 1;
     my $show_genes      = 1;
     my $show_repeats    = 1;
-    my $show_cpg        = 1;
+    my $show_cpg        = 0;
     my $show_gc_content = 1;
     my $homologies =    0;
     my $markers    =    0;
@@ -119,8 +121,23 @@ use Hum::EnsCmdLineDB;
 
     my $canvas = $gc->canvas;
 
-    {
-        my $db = Hum::EnsCmdLineDB::connect();
+    my $db = Hum::EnsCmdLineDB::connect();
+    my $pipe_db = Bio::Otter::Lace::PipelineDB::get_DBAdaptor($db);
+    $pipe_db->assembly_type($db->assembly_type);
+	my      $stadp =      $db->get_SliceAdaptor();
+    my $pipe_stadp = $pipe_db->get_SliceAdaptor();
+
+    my @coord_pairs = (
+        [ 61746818, 72863190 ],
+        [ 72863191, 83979562 ],
+
+        #[ 61746818, 69157732 ],
+        #[ 69157733, 76568647 ],
+        #[ 76568648, 83979562 ],
+        );
+
+    for (my $i = 0; $i < @coord_pairs; $i++) {
+        my( $chr_start, $chr_end ) = @{$coord_pairs[$i]};
 
         $chr_name ||= $fpc;
         if ($chr_start and ! $chr_end) {
@@ -130,19 +147,24 @@ use Hum::EnsCmdLineDB;
             $chr_start = 1;
         }
 
-	    my $stadp = $db->get_SliceAdaptor();
 
-        my( $vc );
+        my( $vc, $pipe_vc );
         if ($chr_start) {
             print STDERR "Fetching region of chr '$chr_name' from $chr_start to $chr_end\n";
-	    $vc = $stadp->fetch_by_chr_start_end(
+	        $vc = $stadp->fetch_by_chr_start_end(
+                $chr_name,
+                $chr_start,
+                $chr_end,
+                );
+            $pipe_vc = $pipe_stadp->fetch_by_chr_start_end(
                 $chr_name,
                 $chr_start,
                 $chr_end,
                 );
         } else {
             print STDERR "Fetching virtual contig for all of fpc contig '$fpc'\n";
-	    $vc = $stadp->fetch_by_supercontig_name($fpc);
+	        $vc = $stadp->fetch_by_supercontig_name($fpc);
+            $pipe_vc = $pipe_stadp->fetch_by_supercontig_name($fpc);
         }
                 
         my $tiling = GenomeCanvas::Band::TilingPath->new($vc);
@@ -155,6 +177,11 @@ use Hum::EnsCmdLineDB;
         $tiling->tiling_direction(-1);
         $gc->add_Band($tiling);
 
+        my $scale_track = GenomeCanvas::Band::Scale->new;
+        # $scale_track->title("scale");
+        $scale_track->virtual_contig($vc);
+        $gc->add_Band($scale_track);
+
 	    # gentic markers
 	    if ($markers) {
 	        my $m = GenomeCanvas::Band::GeneticMap->new;
@@ -165,7 +192,7 @@ use Hum::EnsCmdLineDB;
 
         if ($show_repeats) {
             my $repeat = GenomeCanvas::DensityBand::RepeatFeature->new;
-            $repeat->virtual_contig($vc);
+            $repeat->virtual_contig($pipe_vc);
             $repeat->title('Repeats');
             $repeat->repeat_classifier(\&repeat_class);
             $gc->add_Band($repeat);
@@ -175,9 +202,10 @@ use Hum::EnsCmdLineDB;
             my $plot = GenomeCanvas::Band::Plot->new;
             $plot->title('C+G Content');
             $plot->virtual_contig($vc);
-            $plot->range(0.1,0.7);
-            $plot->x_major(0.3);
-	        $plot->show_horizontal_scale(0);
+            $plot->range(0.3,0.7);
+            $plot->x_major(0.1);
+            $plot->height($plot->font_size * 6);
+	        $plot->show_horizontal_scale(1);
             $gc->add_Band($plot);
         }
         
@@ -215,10 +243,12 @@ use Hum::EnsCmdLineDB;
 	        $gc->add_Band($track);
 	    }
 
-	    my $scale_track = GenomeCanvas::Band::Scale->new;
-	    # $scale_track->title("scale");
-	    $scale_track->virtual_contig($vc);
-	    $gc->add_Band($scale_track);
+        # Here are the brown deletion breakpoints
+        my $regions = GenomeCanvas::Band::FuzzyRegions->new;
+        $regions->regions_file( 'brown_region_deletions.coords' );
+	    $regions->virtual_contig($vc);
+	    $regions->title("Critial regions");
+	    $gc->add_Band($regions);
 
 	    if ($clusters) {
 	        my $track = GenomeCanvas::Band::GeneCluster->new();
@@ -250,7 +280,7 @@ use Hum::EnsCmdLineDB;
             $gene_names->virtual_contig($vc);
             $gene_names->span_file($span_file);
             $gene_names->tiling_direction(1);
-            $gene_names->dont_show_key(1);
+            $gene_names->dont_show_key(0);
             $gc->add_Band($gene_names);
         }
 

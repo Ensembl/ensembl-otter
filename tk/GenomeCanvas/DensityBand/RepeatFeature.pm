@@ -69,9 +69,9 @@ sub draw_repeat_features_on_sub_vc {
     my %class = map {$_, []} @class_list;
     foreach my $r (@{$vc->get_all_RepeatFeatures}) {
         my $c = &$repeat_classifier($band, $r) || $other_class;
-	if (defined $c) {
-	    push @{$class{$c}}, $r;
-	}
+	    if (defined $c) {
+	        push @{$class{$c}}, $r;
+	    }
     }
     
     my $vc_length = $vc->length;

@@ -41,7 +41,7 @@ sub outline_color {
     my ($self, $color) = @_;
 
     if ($color) {
-	$self->{'_outline_color'} = $color;
+	    $self->{'_outline_color'} = $color;
     }
 
     return $self->{'_outline_color'};
@@ -79,26 +79,29 @@ sub render {
     my $y2 = $y_offset + $height - 1;
 
     while (<$fh>) {
+        next if /^\s*#/;
+        next if /^\s*$/;
+
         # Cunning or what!
-
         my ($start, $end) = map $_ -= $global_offset, (split /\s+/, $_)[@ind];
-        #warn "Start End = $start\t$end\n";
+        warn "Start End = $start\t$end\n";
 
-	next if $start < 1;
-	next if $end > $vc->length;
+	    next if $end < 1;
+	    next if $start > $vc->length;
     
         my $x1 = $start / $rpp;
         my $x2 = $end   / $rpp;
 
         $canvas->createRectangle(
             $x1, $y_offset, $x2, $y2,
-            -fill       => $color,
-            -outline    => $outline_color,
+            #-fill       => $color,
+            -fill       => 'LightSteelBlue',
+            -outline    => 'black',
             -width      => 0.5,
             -tags       => [@tags],
             );
     }
-    
+    close $fh;
 }
 
 
