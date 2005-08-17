@@ -1267,7 +1267,7 @@ sub add_locus_editing_widgets {
                 );}
         );
     
-    my $ae = $self->make_labelled_entry_widget($widget, 'Xenopus alias', $locus_alias, 18, -side => 'top');
+    my $ae = $self->make_labelled_entry_widget($widget, 'Alias', $locus_alias, 18, -side => 'top');
     $self->locus_alias_Entry($ae);
 
     # Description ("Full_name" in acedb) editing widget

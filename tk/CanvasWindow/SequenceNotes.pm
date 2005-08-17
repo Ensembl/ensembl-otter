@@ -135,63 +135,65 @@ sub column_methods {
     }
     elsif (! $self->{'_column_methods'}) {
         # Setup some default column methods
-        my $method = \&_write_text ;   # this is the default method to be used  to display text (rather than drawing s graphic)
-        my $draw_method = \&_draw_image ;
+        my $text_method  = \&_write_text ;   # this is the default method to be used  to display text (rather than drawing s graphic)
+        my $image_method = \&_draw_image ;
         
         my $norm = [$self->font, $self->font_size, 'normal'];
         my $bold = [$self->font, $self->font_size, 'bold'];
         $self->{'_column_methods'} = [
-            [$method, \&_column_text_row_number],
-            [$method, 
-            sub{
-                # Use closure for font definition
-                my $cs = shift;
-                my $acc = $cs->accession;
-                my $sv  = $cs->sv;
-                return {-text => "$acc.$sv", -font => $bold, -tags => ['searchable']};
-            }],
-            [$method, 
-            sub{
-                # Use closure for font definition
-                my $cs = shift;
-                return {-text => $cs->clone_name, -font => $bold, -tags => ['searchable'] };
-            }],
-            [$method, \&_column_text_seq_note_status],
-	    [$method , 
-            sub{
-                my $cs = shift;
-                if (my $sn = $cs->current_SequenceNote) {
-                    my $time = $sn->timestamp;
-                    my( $year, $month, $mday ) = (localtime($time))[5,4,3];
-                    my $txt = sprintf "%04d-%02d-%02d", 1900 + $year, 1 + $month, $mday;
-                    return { -text => $txt, -font => $norm, -tags => ['searchable']};
-                } else {
-                    return;
-                }
-            }],
-            [$method, \&_column_text_seq_note_author],
-            [$method, \&_column_text_seq_note_text],
-            [$draw_method ,  \&_padlock_icon ]
+            [$text_method, \&_column_text_row_number],
+            [$text_method, 
+                sub{
+                    # Use closure for font definition
+                    my $cs = shift;
+                    my $acc = $cs->accession;
+                    my $sv  = $cs->sv;
+                    return {-text => "$acc.$sv", -font => $bold, -tags => ['searchable']};
+                }],
+            [$text_method, 
+                sub{
+                    # Use closure for font definition
+                    my $cs = shift;
+                    return {-text => $cs->clone_name, -font => $bold, -tags => ['searchable'] };
+                }],
+            [$text_method, \&_column_text_seq_note_status],
+	        [$text_method , 
+                sub{
+                    my $cs = shift;
+                    if (my $sn = $cs->current_SequenceNote) {
+                        my $time = $sn->timestamp;
+                        my( $year, $month, $mday ) = (localtime($time))[5,4,3];
+                        my $txt = sprintf "%04d-%02d-%02d", 1900 + $year, 1 + $month, $mday;
+                        return { -text => $txt, -font => $norm, -tags => ['searchable']};
+                    } else {
+                        return;
+                    }
+                }],
+            [$text_method,  \&_column_text_seq_note_author],
+            [$text_method,  \&_column_text_seq_note_text],
+            [$image_method, \&_padlock_icon ]
             ];
     }
     return $self->{'_column_methods'};
 }
 
 sub _write_text{
-    my ($canvas ,  @args) = @_ ;
+    my ($canvas, @args) = @_ ;
+    
+    #warn "Drawing text with args [", join(', ', map "'$_'", @args), "]\n";
+    
     $canvas->createText(@args) ;
 }
 
 sub _draw_image{
-    my ($canvas, $x, $y, @args) = @_ ;
+    my ($canvas, $x, $y, %args) = @_;
     
     ## need to remove some tags -as they are for create_text 
-    my %hash = @args ;
-    delete $hash{'-width'} ;
-    delete $hash{'-font'} ;
-    delete $hash{'-anchor'} ; 
+    delete $args{'-width'} ;
+    delete $args{'-font'} ;
+    delete $args{'-anchor'} ; 
 
-    $canvas->createImage($x, $y, %hash , -anchor => 'n');
+    $canvas->createImage($x, $y, %args , -anchor => 'n');
 }
 
 sub _column_text_row_number {
@@ -227,22 +229,14 @@ sub _column_text_seq_note_text {
 
 sub _column_text_seq_note_status{
     my $cs = shift;
-    my $pipeStatus = $cs->pipelineStatus();
-    my $text    = $pipeStatus->short_display();
-    my $color   = 'darkgreen'; # default color
-
     
-    if($pipeStatus->unavailable()){
-        $color = 'blue';
-        $text  = '-nopipeline used';
-    }else{
-        if ($text eq 'missing'){
-            my $missing = $pipeStatus->list_unfinished();
-            warn $cs->accession . " is missing analyses:\t $missing\n";
-            $color   = 'red';
-        }
-    }
+    my $text  = 'unavaliable';
+    my $color = 'darkred';
 
+    if (my $pipeStatus = $cs->pipelineStatus) {
+        $text = $pipeStatus->short_display;
+        $color = $text eq 'complete' ? 'darkgreen' : 'red';
+    }
     return {
         -text => $text,
         -fill => $color,
@@ -422,8 +416,9 @@ sub initialise {
     $top->bind('<Control-P>', $print_to_file);
     
     $canvas->Tk::bind('<Double-Button-1>',  sub{ $self->popup_ana_seq_history });
-    $canvas->Tk::bind('<Button-3>',  sub{ $self->popup_missing_analysis });
-    
+    if (Bio::Otter::Lace::Defaults::fetch_pipeline_switch()) {
+        $canvas->Tk::bind('<Button-3>',  sub{ $self->popup_missing_analysis });
+    }    
     
     my $close_window = $self->bind_close_window($top);
 
@@ -1031,9 +1026,7 @@ sub draw {
             if (UNIVERSAL::can($cs,'chr_start')){
                 $gap = $cs->chr_start - $last->chr_end - 1;
             }
-            ### Changed for xenopus cDNA annotation workshop
-            #if ($gap > 0) {
-            if ($gap > 100) {
+            if ($gap > 0) {
                 $gap_pos->{$row} = 1;              
                 # Put spaces between thousands in gap length
                 my $gap_size = reverse $gap;
@@ -1059,19 +1052,17 @@ sub draw {
             my $x = $col * $size;
 
             my $col_tag = "col=$col";
-            my $meth_pair = $methods->[$col];
-            my $calling_method = @$meth_pair[0]; 
-            my $arg_method = @$meth_pair[1] ;
+            my ($draw_method, $data_method) = @{$methods->[$col]};
             
-	    my $opt_hash =  $arg_method->($cs, $i ,  $self ) if $arg_method ;
+	        my $opt_hash = $data_method->($cs, $i, $self) if $data_method;
             $opt_hash->{'-anchor'} ||= 'nw';
-	    $opt_hash->{'-font'}   ||= $helv_def;
-	    $opt_hash->{'-width'}  ||= $max_width;
-	    $opt_hash->{'-tags'}   ||= [];
-	    push(@{$opt_hash->{'-tags'}}, $row_tag, $col_tag, "cs=$i");
+	        $opt_hash->{'-font'}   ||= $helv_def;
+	        $opt_hash->{'-width'}  ||= $max_width;
+	        $opt_hash->{'-tags'}   ||= [];
+	        push(@{$opt_hash->{'-tags'}}, $row_tag, $col_tag, "cs=$i");
 	    
-            $calling_method->($canvas,  $x , $y ,  %$opt_hash);  ## in most cases this will be $canvas->createText
-            
+            #warn "\ntags = [", join(', ', map "'$_'", @{$opt_hash->{'-tags'}}), "]\n";
+            $draw_method->($canvas, $x, $y, %$opt_hash);  ## in most cases this will be $canvas->createText
         }
         
     }
@@ -1341,24 +1332,18 @@ sub popup_missing_analysis{
     unless ( $self->check_for_Status($index) ){
         # window has not been created already - create one
         my $cs =  $self->get_CloneSequence_list->[$index];
-        my $using_no_pipeline = $cs->pipelineStatus->unavailable();
-        if (!$using_no_pipeline){
-            my $top = $self->canvas->Toplevel();
-            $top->transient($self->canvas->toplevel);
-            my $hp  = CanvasWindow::SequenceNotes::Status->new($top, 650 , 50);
+        my $top = $self->canvas->Toplevel();
+        $top->transient($self->canvas->toplevel);
+        my $hp  = CanvasWindow::SequenceNotes::Status->new($top, 650 , 50);
 	    # $hp->SequenceNotes($self); # can't have reference to self if we're inheriting
 	    # clean up just won't work.
-            $hp->SequenceSet($self->SequenceSet);
-            $hp->SequenceSetChooser($self->SequenceSetChooser);
-            $hp->name($cs->contig_name);
-            $hp->clone_index($index) ;
-            $hp->initialise;
-            $hp->draw;
-            $self->add_Status($hp);
-        }
-        else{
-            $self->message( "You told me not to fetch this information with -nopipeline or pipeline=0." ); 
-        }
+        $hp->SequenceSet($self->SequenceSet);
+        $hp->SequenceSetChooser($self->SequenceSetChooser);
+        $hp->name($cs->contig_name);
+        $hp->clone_index($index) ;
+        $hp->initialise;
+        $hp->draw;
+        $self->add_Status($hp);
     }
 }
 

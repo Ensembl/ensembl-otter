@@ -52,14 +52,15 @@ sub fetch_by_stable_id{
    }
 
    # all this just to override this query
-   my $sth = $self->prepare(q`
-             SELECT gsi1.gene_id
-               FROM gene_stable_id gsi1 LEFT JOIN gene_stable_id gsi2 
-                 ON gsi1.stable_id = gsi2.stable_id 
-                AND gsi1.version < gsi2.version
-              WHERE gsi2.stable_id IS NULL
-                AND gsi1.stable_id = ?`
-                            );
+   my $sth = $self->prepare(q{
+        SELECT gsi1.gene_id
+        FROM gene_stable_id gsi1
+        LEFT JOIN gene_stable_id gsi2
+          ON gsi1.stable_id = gsi2.stable_id
+          AND gsi1.version < gsi2.version
+        WHERE gsi2.stable_id IS NULL
+          AND gsi1.stable_id = ?
+        });
    $sth->execute($id);
 
    my ($dbID) = $sth->fetchrow_array();
@@ -344,6 +345,9 @@ Returns a ref to a list of all the current non-obsolete gene dbIDs.
 sub list_current_dbIDs {
     my( $self ) = @_;
     
+    # This is much faster using both stable_id and version
+    # in the sort, even though we don't need it, because
+    # mysql can use the index instead of a filesort.
     my $sth = $self->db->prepare(q{
         SELECT s.stable_id
           , g.gene_id
@@ -351,7 +355,8 @@ sub list_current_dbIDs {
         FROM gene g
           , gene_stable_id s
         WHERE g.gene_id = s.gene_id
-        ORDER BY s.version ASC
+        ORDER BY s.stable_id ASC
+          , s.version ASC
         });
     $sth->execute;
 
