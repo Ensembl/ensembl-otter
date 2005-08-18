@@ -49,9 +49,14 @@ use Bio::Otter::Lace::Defaults;
         $type_count{$type}++;
     }
     
+    my $total = 0;
+    print "\nGene types in $dataset_name $set_name:\n";
     foreach my $type (sort keys %type_count) {
-        printf "%25s  %5d\n", $type, $type_count{$type};
+        my $count = $type_count{$type};
+        printf "%25s  %5d\n", $type, $count;
+        $total += $count;
     }
+    printf "\n%25s  %5d\n", 'Total:', $total;
 }
 
 __END__
