@@ -249,8 +249,9 @@ sub set_selected_from_canvas{
     }
 }
 
-##returns the indices of the selected clones
-sub popup_missing_analysis{
+# returns the indices of the selected clones
+### Nasty code duplication with SequenceNotes
+sub popup_missing_analysis {
     my ($self) = @_;
     #my $index = $self->get_current_CloneSequence_index ; 
     my ($ss, $index) = $self->get_SequenceSet_index_of_current;
@@ -260,26 +261,21 @@ sub popup_missing_analysis{
     unless ( $self->check_for_Status($ss, $index) ){
         # window has not been created already - create one
         my $cs =  $ss->CloneSequence_list->[$index];
-        my $using_no_pipeline = $cs->pipelineStatus->unavailable();
-        if (!$using_no_pipeline){
-            my $top = $self->canvas->Toplevel();
-            $top->transient($self->canvas->toplevel);
-            my $hp  = CanvasWindow::SequenceNotes::Status->new($top, 650 , 50);
+        my $top = $self->canvas->Toplevel();
+        $top->transient($self->canvas->toplevel);
+        my $hp  = CanvasWindow::SequenceNotes::Status->new($top, 650 , 50);
 	    # $hp->SequenceNotes($self); # can't have reference to self if we're inheriting
 	    # clean up just won't work.
-            $hp->SequenceSet($ss);
-            $hp->SequenceSetChooser($self->SequenceSetChooser);
-            $hp->name($cs->contig_name);
-            $hp->clone_index($index) ;
-            $hp->initialise;
-            $hp->draw;
-            $self->add_Status($hp);
-        }
-        else{
-            $self->message( "You told me not to fetch this information with -nopipeline or pipeline=0." ); 
-        }
+        $hp->SequenceSet($ss);
+        $hp->SequenceSetChooser($self->SequenceSetChooser);
+        $hp->name($cs->contig_name);
+        $hp->initialise;
+        $hp->clone_index($index) ;
+        $hp->draw;
+        $self->add_Status($hp);
     }
 }
+
 sub popup_ana_seq_history{
     my ($self) = @_;    
     my ($ss , $index) = $self->get_SequenceSet_index_of_current; 
@@ -299,8 +295,8 @@ sub popup_ana_seq_history{
             $hp->SequenceSet($ss);
             $hp->SequenceSetChooser($self->SequenceSetChooser);
             $hp->name($cs->contig_name);
-            $hp->clone_index($index) ;
             $hp->initialise;
+            $hp->clone_index($index) ;
             $hp->draw;
             $self->add_History($hp);
         }
@@ -327,10 +323,10 @@ sub check_for_History{
 # so we dont bring up copies of the same window
 sub check_for_Status{
     my ($self, $ss, $index) = @_;
-    return 0 unless defined($index); # 0 is valid index
 
-    my $status_win = $self->{'_Status_win'};
-    return 0 unless $status_win;
+    return unless defined($index); # 0 is valid index
+
+    my $status_win = $self->{'_Status_win'} or return;
     $status_win->clone_index($index);
     $status_win->SequenceSet($ss);
     $status_win->draw();

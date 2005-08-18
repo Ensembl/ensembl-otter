@@ -56,13 +56,13 @@ sub get_CloneSequence_list {
     my $ss = $self->SequenceSet;
     my $cs_list = $ss->CloneSequence_list;
     if ($force_update || !$cs_list ) {
-        print STDERR "Fetching CloneSequence list...";
+        #print STDERR "Fetching CloneSequence list...";
         my $ds = $self->SequenceSetChooser->DataSet;
         $ds->fetch_all_CloneSequences_for_SequenceSet($ss);
         $ds->fetch_all_SequenceNotes_for_SequenceSet($ss);
         $ds->status_refresh_for_SequenceSet($ss);
         $cs_list = $ss->CloneSequence_list;
-        print STDERR "done\n";
+        #print STDERR "done\n";
     }
     return $cs_list;
 }
@@ -227,14 +227,14 @@ sub _column_text_seq_note_text {
 }
 
 
-sub _column_text_seq_note_status{
+sub _column_text_seq_note_status {
     my $cs = shift;
     
     my $text  = 'unavaliable';
     my $color = 'darkred';
 
     if (my $pipeStatus = $cs->pipelineStatus) {
-        $text = $pipeStatus->short_display;
+        $text  = $pipeStatus->short_display;
         $color = $text eq 'complete' ? 'darkgreen' : 'red';
     }
     return {
@@ -404,13 +404,13 @@ sub initialise {
     #}
     
     my $print_to_file = sub {
-	$self->page_width(591);
-	$self->page_height(841);
-	my $title = $top->title;
-	$title =~ s/\W+/_/g;
-	my @files = $self->print_postscript($title);
-	warn "Printed to files:\n",
-	map "  $_\n", @files;
+	    $self->page_width(591);
+	    $self->page_height(841);
+	    my $title = $top->title;
+	    $title =~ s/\W+/_/g;
+	    my @files = $self->print_postscript($title);
+	    warn "Printed to files:\n",
+	    map "  $_\n", @files;
     };
     $top->bind('<Control-p>', $print_to_file);
     $top->bind('<Control-P>', $print_to_file);
@@ -561,14 +561,14 @@ sub make_button {
     my( $self, $parent, $label, $command, $underline_index ) = @_;
     
     my @args = (
-	-text => $label,
-	-command => $command,
+	    -text => $label,
+	    -command => $command,
 	);
     push(@args, -underline => $underline_index) 
-	if defined $underline_index;
+	    if defined $underline_index;
     my $button = $parent->Button(@args);
     $button->pack(
-	-side => 'left',
+	    -side => 'left',
 	);
 
     return $button;
@@ -1008,7 +1008,7 @@ sub draw {
     $canvas->delete('all');
     my $helv_def = ['Helvetica', $size, 'normal'];
 
-    print STDERR "Drawing list...";
+    #print STDERR "Drawing list...";
     my $gaps = 0;
     my $gap_pos = {};
     
@@ -1066,16 +1066,16 @@ sub draw {
         }
         
     }
-    print STDERR " done\n";
+    #print STDERR " done\n";
     my $col_count = scalar @$methods  + 1; # +1 fopr the padlock (non text column)
     my $row_count = scalar @$cs_list + $gaps;
     
-    print STDERR "Laying out table...";
+    #print STDERR "Laying out table...";
     $self->layout_columns_and_rows($col_count, $row_count);
-    print STDERR " done\n";
-    print STDERR "Drawing background rectangles...";
+    #print STDERR " done\n";
+    #print STDERR "Drawing background rectangles...";
     $self->draw_row_backgrounds($row_count, $gap_pos);
-    print STDERR " done\n";
+    #print STDERR " done\n";
 
     $self->draw_paging_buttons();
 
@@ -1340,8 +1340,8 @@ sub popup_missing_analysis{
         $hp->SequenceSet($self->SequenceSet);
         $hp->SequenceSetChooser($self->SequenceSetChooser);
         $hp->name($cs->contig_name);
-        $hp->clone_index($index) ;
         $hp->initialise;
+        $hp->clone_index($index);
         $hp->draw;
         $self->add_Status($hp);
     }
@@ -1368,8 +1368,8 @@ sub popup_ana_seq_history{
             $hp->SequenceSet($self->SequenceSet);
             $hp->SequenceSetChooser($self->SequenceSetChooser);
             $hp->name($cs->contig_name);
-            $hp->clone_index($index) ;
             $hp->initialise;
+            $hp->clone_index($index) ;
             $hp->draw;
             $self->add_History($hp);
         }

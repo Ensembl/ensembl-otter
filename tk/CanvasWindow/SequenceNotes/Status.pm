@@ -10,28 +10,29 @@ use base 'CanvasWindow::SequenceNotes';
 
 sub clone_index{
     my ($self, $index) = @_;
-    if (defined($index)) {
+
+    if (defined $index) {
 	    $self->{'_clone_index'} = $index;
-	    if ($self->SequenceSet) {
-	        my $cs_list = $self->get_CloneSequence_list();
-	        my $prev_button = $self->prev_button();
-	        my $next_button = $self->next_button();
-	        return $index unless $prev_button;
-	        if ($index == 0) {
-                # First clone
-		        $prev_button->configure(-state => 'disabled');
-		        $next_button->configure(-state => 'normal');
-	        }
-            elsif ($index + 1 >= scalar(@$cs_list)) {
-                # Last clone
-		        $prev_button->configure(-state => 'normal');
-		        $next_button->configure(-state => 'disabled');
-	        }
-            else {
-                # Internal clone
-		        $prev_button->configure(-state => 'normal');
-		        $next_button->configure(-state => 'normal');
-	        }
+
+
+        # Disable Prev and Next buttons at ends of range
+	    my $cs_list = $self->get_CloneSequence_list();
+	    my $prev_button = $self->prev_button();
+	    my $next_button = $self->next_button();
+        if ($index == 0) {
+            # First clone
+		    $prev_button->configure(-state => 'disabled');
+		    $next_button->configure(-state => 'normal');
+	    }
+        elsif ($index + 1 >= scalar(@$cs_list)) {
+            # Last clone
+		    $prev_button->configure(-state => 'normal');
+		    $next_button->configure(-state => 'disabled');
+	    }
+        else {
+            # Internal clone
+		    $prev_button->configure(-state => 'normal');
+		    $next_button->configure(-state => 'normal');
 	    }
     }
     return $self->{'_clone_index'};
@@ -53,13 +54,18 @@ sub prev_button {
 }
 
 sub current_clone {
-    my ($self , $clone) = @_;
+    my ($self, $clone) = @_;
+    
     my $cs_list = $self->get_CloneSequence_list();
-    my $cloneSeq = @$cs_list[$self->clone_index];
+    my $i = $self->clone_index;
+    my $cs = @$cs_list[$i];
 
-    my $title = "Pipeline Status for " .$cloneSeq->contig_name . "  " .$cloneSeq->clone_name;
+    my $title = sprintf "%d: pipline status of %s  (%s)",
+        $i + 1,
+        $cs->accession . '.' . $cs->sv,
+        $cs->clone_name;
     $self->canvas->toplevel->title($title);
-    return $cloneSeq;
+    return $cs;
 }
 
 sub initialise {
@@ -81,6 +87,8 @@ sub initialise {
     
     my( $comment, $comment_label, $set );
 
+    ### These buttons should also highlight the current
+    ### clone in the parent SequenceNotes window
     my $next_clone = sub { 
 	    my $cs_list = $self->get_CloneSequence_list(); 
 	    my $cur_idx = $self->clone_index();
@@ -142,47 +150,7 @@ sub get_rows_list {
     my ($self) = @_ ;         
 
     return $self->current_clone->pipelineStatus->display_list;
-}  
-
-sub empty_canvas_message{
-    my ($self) = @_;
-    my $clone = $self->current_clone;
-    return "No Status available for sequence " . $clone->contig_name . "  " . $clone->clone_name;
 }
-
-
-sub bind_item_selection{
-    # Called by SequenceNotes->initialise
-}
-
-sub toggle_selection {
-    my( $self, $obj ) = @_;
-    return;
-}
-
-sub get_row_id{
-    my ($self) = @_ ;
-    my $row_tag = $self->get_current_row_tag or return;
-    my ($index) = $row_tag =~ /row=(\d+)/;
-    return $index;
-}
-
-sub get_message{
-    my ($self) = @_ ;
-    my ($index) = $self->get_row_id ; 
-#    my $text = $self->indexed_note_text($index); 
-#    ${$self->entry_text_ref()} = $text;
-}
-
-sub Busy{   
-    my $self= shift ;
-    $self->canvas->toplevel->Busy;
-};
-    
-sub Unbusy{ 
-    my $self= shift;
-    $self->canvas->toplevel->Unbusy;
-};
 
 sub DESTROY {
     my( $self ) = @_;

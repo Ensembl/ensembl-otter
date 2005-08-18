@@ -10,6 +10,7 @@ use Bio::Otter::Lace::Defaults;
     
     Bio::Otter::Lace::Defaults::do_getopt() || die $Bio::Otter::Lace::Defaults::GETOPT_ERRSTR . "\n";
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    $cl->cleanup_log_dir('otterlace');
     $cl->make_log_file('otterlace');
 
     my $mw = CanvasWindow::MainWindow->new('Choose DataSet');
@@ -70,6 +71,8 @@ use Bio::Otter::Lace::Defaults;
     $dc->draw;
 
     Tk::MainLoop();
+    
+    print STDERR "exiting\n";
 }
 
 

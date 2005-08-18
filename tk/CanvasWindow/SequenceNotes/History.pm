@@ -8,26 +8,33 @@ use Carp;
 use Data::Dumper;
 use base 'CanvasWindow::SequenceNotes';
 
+### Lots of duplicated code with CanvasWindow::SequenceNotes::Status
 sub clone_index{
     my ($self, $index) = @_;
-    if (defined($index)){
-	$self->{'_clone_index'} = $index;
-	if($self->SequenceSet){
+
+    if (defined $index) {
+	    $self->{'_clone_index'} = $index;
+
+
+        # Disable Prev and Next buttons at ends of range
 	    my $cs_list = $self->get_CloneSequence_list();
 	    my $prev_button = $self->prev_button();
 	    my $next_button = $self->next_button();
-	    return $index unless $prev_button;
-	    if($index && $index + 1 >= scalar(@$cs_list)){
-		$next_button->configure(-state => 'disabled');
-		$prev_button->configure(-state => 'normal');
-	    }elsif(!$index){
-		$next_button->configure(-state => 'normal');
-		$prev_button->configure(-state => 'disabled');
-	    }else{
-		$next_button->configure(-state => 'normal');
-		$prev_button->configure(-state => 'normal');
+        if ($index == 0) {
+            # First clone
+		    $prev_button->configure(-state => 'disabled');
+		    $next_button->configure(-state => 'normal');
 	    }
-	}
+        elsif ($index + 1 >= scalar(@$cs_list)) {
+            # Last clone
+		    $prev_button->configure(-state => 'normal');
+		    $next_button->configure(-state => 'disabled');
+	    }
+        else {
+            # Internal clone
+		    $prev_button->configure(-state => 'normal');
+		    $next_button->configure(-state => 'normal');
+	    }
     }
     return $self->{'_clone_index'};
 }
@@ -35,14 +42,14 @@ sub clone_index{
 sub next_button{
     my ($self, $next) = @_;
     if ($next){
-	$self->{'_next_button'} = $next;
+	    $self->{'_next_button'} = $next;
     }
     return $self->{'_next_button'};
 }
 sub prev_button{
     my ($self, $prev) = @_;
     if ($prev){
-	$self->{'_prev_button'} = $prev;
+	    $self->{'_prev_button'} = $prev;
     }
     return $self->{'_prev_button'};
 }
@@ -55,16 +62,21 @@ sub entry_text_ref{
     return  $self->{'_entry_ref'} ;
 }
 
-
-sub current_clone{
-    my ($self , $clone) = @_;
+sub current_clone {
+    my ($self, $clone) = @_;
+    
     my $cs_list = $self->get_CloneSequence_list();
-    my $cloneSeq = @$cs_list[$self->clone_index];
+    my $i = $self->clone_index;
+    my $cs = @$cs_list[$i];
 
-    my $title = "History for " .$cloneSeq->contig_name . "  " .$cloneSeq->clone_name;
+    my $title = sprintf "%d: note history of %s  (%s)",
+        $i + 1,
+        $cs->accession . '.' . $cs->sv,
+        $cs->clone_name;
     $self->canvas->toplevel->title($title);
-    return $cloneSeq;
+    return $cs;
 }
+
 sub draw{
     my ($self) = @_;
     my $current_clone = $self->current_clone();
@@ -121,10 +133,10 @@ sub initialise {
  	my $text = '' ;
  	$self->entry_text_ref(\$text ) ;
  	$comment = $button_frame->Entry(
- 					-width  => 55,
- 					-font   => ['Helvetica', $self->font_size, 'normal'],
- 					-textvariable => $self->entry_text_ref ,                   
- 					);
+ 	    -width  => 40,
+ 	    -font   => ['Helvetica', $self->font_size, 'normal'],
+ 	    -textvariable => $self->entry_text_ref ,                   
+ 	    );
  	$comment->pack(
  		       -side => 'left',
  		       );
@@ -133,7 +145,6 @@ sub initialise {
  	$comment->bind(ref($comment), '<Control-H>', '');
 	
  	$comment->bind('<Return>',  sub { $self->update_db_comment } ); #update_sequence_notes($comment)});
-	$comment->bind('<Destroy>', sub { $self = undef });
  	my $update_comment = sub{
  	    $self->update_db_comment;
  	    #update_sequence_notes($comment);
@@ -141,28 +152,30 @@ sub initialise {
  	$set = $self->make_button($button_frame, 'Set note', $update_comment, 0);
  	$top->bind('<Control-s>', $update_comment);
  	$top->bind('<Control-S>', $update_comment);
-	$set->bind('<Destroy>', sub { $self = undef });
 	
  	$self->bind_item_selection($canvas , $comment );
     }
     
     my $next_clone = sub { 
-	my $cs_list = $self->get_CloneSequence_list(); 
-	my $cur_idx = $self->clone_index();
-	$self->clone_index(++$cur_idx) unless $cur_idx + 1 >= scalar(@$cs_list);
-	$self->draw();
+	    my $cs_list = $self->get_CloneSequence_list(); 
+	    my $cur_idx = $self->clone_index();
+	    $self->clone_index(++$cur_idx) unless $cur_idx + 1 >= scalar(@$cs_list);
+	    $self->draw();
     };
     my $prev_clone = sub { 
-	my $cs_list = $self->get_CloneSequence_list(); 
-	my $cur_idx = $self->clone_index();
-	$self->clone_index(--$cur_idx) if $cur_idx;
-	$self->draw();
+	    my $cs_list = $self->get_CloneSequence_list(); 
+	    my $cur_idx = $self->clone_index();
+	    $self->clone_index(--$cur_idx) if $cur_idx;
+	    $self->draw();
     };
     
-    my $prev = $self->make_button($button_frame, 'Prev Clone', $prev_clone);
-    my $next = $self->make_button($button_frame, 'Next Clone', $next_clone);
-    $prev->bind('<Destroy>', sub { $self = undef });
-    $next->bind('<Destroy>', sub { $self = undef });
+    my $prev = $self->make_button($button_frame, 'Prev. Clone', $prev_clone, 0);
+    my $next = $self->make_button($button_frame, 'Next Clone',  $next_clone, 0);
+    $top->bind('<Control-p>', $prev_clone);
+    $top->bind('<Control-P>', $prev_clone);
+    $top->bind('<Control-n>', $next_clone);
+    $top->bind('<Control-N>', $next_clone);
+    
     $self->prev_button($prev);
     $self->next_button($next);
     
@@ -173,12 +186,12 @@ sub initialise {
     # And I think normal behaviour without it.
     $self->bind_close_window($top);
     
+    $canvas->bind('<Destroy>', sub { $self = undef });
     return $self;
 }
 
 sub get_rows_list{
     my ($self) = @_ ;         
-    print STDERR "Fetching SequenceNotes list...";
     my $clone = $self->current_clone;
     my $note_list = $clone->get_all_SequenceNotes;
     return $note_list;
@@ -197,6 +210,7 @@ sub _write_text{
 
 sub column_methods{
     my $self = shift @_ ;
+    my $helv = ['helvetica', $self->font_size, 'normal'];
     my $norm = [$self->font, $self->font_size, 'normal'];
     my $bold = [$self->font, $self->font_size, 'bold'];   
     unless(ref($self->{'_column_methods'}) eq 'ARRAY'){
@@ -221,7 +235,7 @@ sub column_methods{
                       sub{
 			  # Use closure for font definition
 			  my $note = shift;
-			  return {-text => $note->text , -font => $norm, -tags => ['searchable'] };
+			  return {-text => $note->text , -font => $helv, -tags => ['searchable'] };
 		      }]            
 		      ];
 	$self->{'_column_methods'} = $methods;
@@ -339,16 +353,6 @@ sub update_db_comment{
     }
     $self->Unbusy;
 }
-
-sub Busy{   
-    my $self= shift ;
-    $self->canvas->toplevel->Busy;
-};
-    
-sub Unbusy{ 
-    my $self= shift;
-    $self->canvas->toplevel->Unbusy;
-};
 
 
 
