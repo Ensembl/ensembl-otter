@@ -104,8 +104,6 @@ sub initialise {
     
     my $prev = $self->make_button($button_frame, 'Prev Clone', $prev_clone);
     my $next = $self->make_button($button_frame, 'Next Clone', $next_clone);
-    $prev->bind('<Destroy>', sub { $self = undef });
-    $next->bind('<Destroy>', sub { $self = undef });
     $self->prev_button($prev);
     $self->next_button($next);
     
@@ -143,6 +141,8 @@ sub initialise {
              }],
     ]);
     
+    $prev->bind('<Destroy>', sub { $self = undef });
+
     return $self;
 }
 

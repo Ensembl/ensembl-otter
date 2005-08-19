@@ -7,6 +7,9 @@ use strict;
 use Carp qw{ confess cluck };
 use Sys::Hostname qw{ hostname };
 use LWP;
+use Symbol 'gensym';
+use URI::Escape qw{ uri_escape };
+use MIME::Base64;
 use Bio::Otter::LogFile;
 use Bio::Otter::Lace::DataSet;
 use Bio::Otter::Lace::AceDatabase;
@@ -16,8 +19,6 @@ use Bio::Otter::Transform::DataSets;
 use Bio::Otter::Transform::SequenceSets;
 use Bio::Otter::Converter;
 use Bio::Otter::Lace::TempFile;
-use URI::Escape qw{ uri_escape };
-use MIME::Base64;
 use Hum::EnsCmdLineDB;
 
 sub new {
@@ -120,16 +121,16 @@ sub cleanup_log_dir {
     
     my $log_dir = $self->get_log_dir or return;
     
-    local *LOG;
-    opendir LOG, $log_dir or confess "Can't open directory '$log_dir': $!";
-    foreach my $file (grep /^$file_root\./, readdir LOG) {
+    my $LOG = gensym();
+    opendir $LOG, $log_dir or confess "Can't open directory '$log_dir': $!";
+    foreach my $file (grep /^$file_root\./, readdir $LOG) {
         my $full = "$log_dir/$file";
         if (-M $full > $days) {
             unlink $full
                 or warn "Couldn't delete file '$full' : $!";
         }
     }
-    closedir LOG
+    closedir $LOG or confess "Error reading directory '$log_dir' : $!";
 }
 
 sub lock {
