@@ -72,7 +72,7 @@ use Bio::Otter::Lace::Defaults;
 
     Tk::MainLoop();
     
-    print STDERR "exiting\n";
+    print STDERR "Exiting\n";
 }
 
 

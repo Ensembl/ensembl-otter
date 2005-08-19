@@ -45,7 +45,8 @@ sub make_log {
         
         # Child filters output from parent
         while (<STDIN>) {
-           print $log $prefix_sub->(), $_;
+            print STDERR $_;    # Still print to STDERR
+            print $log $prefix_sub->(), $_;
         }
         close $log;
         exit;   # Child must exit here!

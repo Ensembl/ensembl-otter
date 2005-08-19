@@ -126,16 +126,16 @@ sub initialise {
     $self->column_methods([
         [$write_text, sub{
 	         my $pipe_status = shift;
-	         return { -font => $bold, -tags => ['searchable'], -text => $pipe_status->{'name'} }; 
+	         return { -font => $norm, -tags => ['searchable'], -text => $pipe_status->{'name'} }; 
 	         }],
         [$write_text, sub{
 	         my $pipe_status = shift;
              my $status = $pipe_status->{'status'};
-	         return { -font => $bold, -tags => ['searchable'], -text => $status, -fill => $status_colors->{$status}};
+	         return { -font => $norm, -tags => ['searchable'], -text => $status, -fill => $status_colors->{$status}};
              }],
         [$write_text, sub{
 	         my $pipe_status = shift;
-	         return { -font => $bold, -tags => ['searchable'], -text => $pipe_status->{'created'} };
+	         return { -font => $norm, -tags => ['searchable'], -text => $pipe_status->{'created'} };
              }],
         [$write_text, sub{
 	         my $pipe_status = shift;

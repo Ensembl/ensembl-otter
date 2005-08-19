@@ -246,11 +246,13 @@ sub fetch_all_CloneSequences_for_selected_SequenceSet {
     return $self->fetch_all_CloneSequences_for_SequenceSet($ss);
 }
 
+#   this forces a refresh of the $self->status query
+#   but doesn't re fetch all CloneSequences of the SequenceSet
 sub status_refresh_for_SequenceSet{
-    #   this forces a refresh of the $self->status query
-    #   but doesn't re fetch all CloneSequences of the SequenceSet
     my ($self, $ss) = @_;
+
     return unless Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
+
     my $dba = $self->get_cached_DBAdaptor;
     my $pipe_dba = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($dba);
     $self->fetch_pipeline_ctg_ids_for_SequenceSet($ss);
@@ -281,7 +283,7 @@ sub status_refresh_for_SequenceSet{
             push(@$rule_list, $s);
         }
     }
-    Bio::Otter::Lace::PipelineStatus->set_rule_list($rule_list);
+    Bio::Otter::Lace::PipelineStatus->set_rule_list([sort @$rule_list]);
 
     my $sql = q{
         SELECT c.contig_id
@@ -295,7 +297,7 @@ sub status_refresh_for_SequenceSet{
           AND y.analysis_id = i.analysis_id
           AND i.input_id = c.name
           AND c.contig_id IN (} . join(', ', keys %id_cs) . q{)};
-    warn "pipeline status query = '$sql'";
+    #warn "pipeline status query = '$sql'";
     my $sth = $pipe_dba->prepare($sql);
     $sth->execute();
     
@@ -304,6 +306,7 @@ sub status_refresh_for_SequenceSet{
     
     my( %id_status );
     while ($sth->fetch) {
+        next if $ana_name eq 'SubmitContig';
         my $status = $id_status{$ctg_id};
         unless ($status) {
             # Make a new PipelineStatus object, and attach it to its CloneSequence

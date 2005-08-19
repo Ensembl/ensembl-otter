@@ -73,10 +73,8 @@ sub debug{
     return $self->option_from_array([qw( client debug )]) ? 1 : 0;
 }
 
-sub make_log_file {
-    my( $self, $file_root ) = @_;
-    
-    $file_root ||= 'client';
+sub get_log_dir {
+    my( $self ) = @_;
     
     my $log_dir = $self->option_from_array([qw( client logdir )])
         or return;
@@ -93,10 +91,45 @@ sub make_log_file {
     if (mkdir($log_dir)) {
         warn "Made logging directory '$log_dir'\n";
     }
+    return $log_dir;
+}
+
+sub make_log_file {
+    my( $self, $file_root ) = @_;
     
-    my $log_file = "$log_dir/$file_root.$$.log";
+    $file_root ||= 'client';
+    
+    my $log_dir = $self->get_log_dir or return;
+    my( $log_file );
+    my $i = 'a';
+    do {
+        $log_file = "$log_dir/$file_root.$$-$i.log";
+        $i++;
+    } while (-e $log_file);
     warn "Logging output to '$log_file'\n";
     Bio::Otter::LogFile->make_log($log_file);
+}
+
+sub cleanup_log_dir {
+    my( $self, $file_root, $days ) = @_;
+    
+    # Files older than this number of days are deleted.
+    $days ||= 14;
+    
+    $file_root ||= 'client';
+    
+    my $log_dir = $self->get_log_dir or return;
+    
+    local *LOG;
+    opendir LOG, $log_dir or confess "Can't open directory '$log_dir': $!";
+    foreach my $file (grep /^$file_root\./, readdir LOG) {
+        my $full = "$log_dir/$file";
+        if (-M $full > $days) {
+            unlink $full
+                or warn "Couldn't delete file '$full' : $!";
+        }
+    }
+    closedir LOG
 }
 
 sub lock {

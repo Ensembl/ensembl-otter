@@ -235,7 +235,7 @@ sub _column_text_seq_note_status {
 
     if (my $pipeStatus = $cs->pipelineStatus) {
         $text  = $pipeStatus->short_display;
-        $color = $text eq 'complete' ? 'darkgreen' : 'red';
+        $color = $text eq 'completed' ? 'darkgreen' : 'red';
     }
     return {
         -text => $text,

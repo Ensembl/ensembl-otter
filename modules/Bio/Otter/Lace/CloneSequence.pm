@@ -4,7 +4,6 @@
 package Bio::Otter::Lace::CloneSequence;
 
 use strict;
-use Bio::Otter::Lace::PipelineStatus;
 
 sub new {
     my( $pkg ) = @_;
@@ -144,25 +143,19 @@ sub contig_strand {
     return $self->{'_contig_strand'};
 }
 
-{
-    # Dummy PipelineStatus object that get returned when there
-    # isn't a connection to the pipeline database.
-    my $none = Bio::Otter::Lace::PipelineStatus->new(-unavailable => 1);
+sub pipelineStatus {
+    my( $self, $status ) = @_;
 
-    sub pipelineStatus {
-        my( $self, $status ) = @_;
+    if ($status) {
+        $self->{'_pipelineStatus'} = $status;
+    }
+    return $self->{'_pipelineStatus'};
+}
 
-        if ($status) {
-            $self->{'_pipelineStatus'} = $status;
-        }
-        return $self->{'_pipelineStatus'} || $none;
-    }
-    
-    sub drop_pipelineStatus {
-        my( $self ) = @_;
-        
-        $self->{'_pipelineStatus'} = undef;
-    }
+sub drop_pipelineStatus {
+    my( $self ) = @_;
+
+    $self->{'_pipelineStatus'} = undef;
 }
 
 sub add_SequenceNote {
