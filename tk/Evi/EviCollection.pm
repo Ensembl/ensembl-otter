@@ -11,8 +11,8 @@ use Evi::Taxonamer;
 
 use base ('Evi::DestroyReporter'); # we want to track the destruction event
 
-sub new_from_otter_Slice {
-    my ($pkg, $otter_slice, $rna_analyses_lp, $protein_analyses_lp) = @_;
+sub otter_to_pipeline { # class method
+    my $otter_slice = shift @_;
 
     my $otter_dba = $otter_slice->adaptor()->db();
 
@@ -27,7 +27,16 @@ sub new_from_otter_Slice {
     my $pipeline_slice = $pipeline_dba->get_SliceAdaptor()->fetch_by_chr_start_end(
             $otter_slice->chr_name(),
             $otter_slice->chr_start(),
-            $otter_slice->chr_end());
+            $otter_slice->chr_end()
+    );
+
+    return ($pipeline_dba, $pipeline_slice);
+}
+
+sub new_from_otter_Slice {
+    my ($pkg, $otter_slice, $rna_analyses_lp, $protein_analyses_lp) = @_;
+
+    my ($pipeline_dba, $pipeline_slice) = otter_to_pipeline($otter_slice);
 
     return $pkg->new_from_pipeline_Slice(
         $pipeline_dba,
@@ -50,24 +59,49 @@ sub new_from_pipeline_Slice {
     $self->{_name2chains} = {}; # sublists of chains indexed by name
 
     my $daf_adaptor = $self->pipeline_dba()->get_DnaAlignFeatureAdaptor();
-
-#   print $daf_adaptor."\n";
-#   exit(0);
-
-    for my $analysis (@{$self->rna_analyses_lp()}) {
-        my $dafs_lp = $daf_adaptor->fetch_all_by_Slice($self->pipeline_slice(),$analysis);
-
-#   my $daf0 = $dafs_lp->[0];
-#   print $daf0."\n";
-#   exit(0);
-
-        $self->add_collection($dafs_lp, $analysis);
+    for my $analysis_name (@{$self->rna_analyses_lp()}) {
+        my $dafs_lp = $daf_adaptor->fetch_all_by_Slice($self->pipeline_slice(),$analysis_name);
+        $self->add_collection($dafs_lp, $analysis_name);
     }
 
     my $paf_adaptor = $self->pipeline_dba()->get_ProteinAlignFeatureAdaptor();
-    for my $analysis (@{$self->protein_analyses_lp()}) {
-        my $pafs_lp = $paf_adaptor->fetch_all_by_Slice($self->pipeline_slice(),$analysis);
-        $self->add_collection($pafs_lp, $analysis);
+    for my $analysis_name (@{$self->protein_analyses_lp()}) {
+        my $pafs_lp = $paf_adaptor->fetch_all_by_Slice($self->pipeline_slice(),$analysis_name);
+        $self->add_collection($pafs_lp, $analysis_name);
+    }
+    print STDERR "\n";
+
+    Evi::Taxonamer::fetch();
+
+    return $self;
+}
+
+sub new_from_client_dataset_otterslice {
+    my $pkg = shift @_;
+
+    my $self = bless {}, $pkg;
+
+    my $client      = shift @_;
+    my $dataset     = shift @_; # e.g. 'human', 'mouse', etc
+    my $otter_slice = shift @_; # contains assembly_type=set_name, chr_name, chr_start & chr_end
+
+    my ($pipeline_dba, $pipeline_slice) = otter_to_pipeline($otter_slice);
+
+    $self->pipeline_dba($pipeline_dba);
+    $self->pipeline_slice($pipeline_slice);
+    $self->rna_analyses_lp(shift @_);
+    $self->protein_analyses_lp(shift @_);
+    
+    $self->{_collection} = {};  # hash{by_analysis} of lists of chains
+    $self->{_name2chains} = {}; # sublists of chains indexed by name
+
+    for my $analysis_name (@{$self->rna_analyses_lp()}) {
+        my $dafs_lp = $client->get_dafs_from_dataset_slice_analysis(
+            $dataset,
+            $otter_slice,
+            $analysis_name,
+        );
+        $self->add_collection($dafs_lp, $analysis_name);
     }
     print STDERR "\n";
 
@@ -123,10 +157,10 @@ sub get_all_matches {
 }
 
 sub get_all_matches_by_analysis {
-    my $self     = shift @_;
-    my $analysis = shift @_;
+    my $self          = shift @_;
+    my $analysis_name = shift @_;
 
-    return $self->{_collection}{$analysis};
+    return $self->{_collection}{$analysis_name};
 }
 
 sub get_all_matches_by_name {

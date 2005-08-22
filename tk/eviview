@@ -6,7 +6,7 @@
 #
 # lg4
 
-my $proteins_on = 1;
+my $proteins_on = 0;
 
 use strict;
 use Bio::Otter::Lace::Defaults;
@@ -61,8 +61,9 @@ use Evi::Tictoc;
     }
 
 my $tt_evicoll = Evi::Tictoc->new("Building the evidence collection");
-    my $evi_coll = Evi::EviCollection->new_from_otter_Slice(
-                                    $otter_slice, [ @rna_analyses ], [@protein_analyses] );
+    # my $evi_coll = Evi::EviCollection->new_from_otter_Slice(
+    my $evi_coll = Evi::EviCollection->new_from_client_dataset_otterslice( $cl, $ds,
+            $otter_slice, [ @rna_analyses ], [@protein_analyses] );
 
         if(! $evi_coll->pipeline_slice->adaptor->db) {
                 warn "\n[DATABASE ADAPTOR LOST] ";

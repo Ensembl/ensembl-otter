@@ -54,8 +54,10 @@ use Evi::Tictoc;
 
     for my $analysis_name (@rna_analyses, '') {
         my $timer = Evi::Tictoc->new("Getting the <$analysis_name> features from the server");
-        my $listp = $cl->get_dafs_from_dataset_type_chr_start_end_analysis(
-            $ds, $set_name, $chr_name, $otter_slice->chr_start(), $otter_slice->chr_end(), $analysis_name
+        my $listp = $cl->get_dafs_from_dataset_slice_analysis(
+            $ds,
+            $otter_slice,
+            $analysis_name,
         );
         $timer->done();
         print "Found ".scalar(@$listp)." features\n\n";
