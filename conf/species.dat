@@ -1,18 +1,19 @@
 
 [defaults]
-USER     ensadmin
-PASS     ensembl
 HOST     humsrv1
 PORT     3306
-DNA_USER ensadmin 
-DNA_PORT 3306
-DNA_PASS ensembl
+USER     ensadmin
+PASS     ensembl
 DNA_HOST humsrv1
+DNA_PORT 3306
+DNA_USER ensadmin 
+DNA_PASS ensembl
 
 [human]
-DBNAME         test_otter_human
-TYPE           SANGER
+DBNAME  test_otter_human
+TYPE    chr9p12
 
-[zebrafish]
-DBNAME         otter_zebrafish
-TYPE           SANGER
+[mouse]
+DBNAME  test_otter_mouse
+TYPE    chr11
+

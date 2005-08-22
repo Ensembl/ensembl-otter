@@ -42,7 +42,7 @@ my $CHILDREN = 0;   # current number of children
 
 
 
-if ($ARGV[0] eq '--alt') {
+if (defined($ARGV[0]) && ($ARGV[0] eq '--alt')) {
   $HOME = $ALT_HOME;
 }
 

@@ -5,86 +5,108 @@ umask 0002
 
 ### come find yourself
 THISSCRIPT=`basename $0`
-   ILIVEIN=`dirname $0` # this is where the script lives. can cd there.
-   CVSBASE=..
-    CALLED=`pwd`
+ILIVEIN=`dirname $0` # this is where the script lives. can cd there.
+CVSBASE=..
+CALLED=`pwd`
 
 ## get to cvs check outs directory
 cd $ILIVEIN/$CVSBASE/..
 
 root=`pwd`
-
 pid_file=$root/ensembl-otter/otter_srv.pid
-pid_exist=0
 
 # set PERL5LIB
 PERL5LIB=\
 $root/ensembl-otter/modules:\
 $root/ensembl/modules:\
-$root/bioperl-0.7.2
+$root/bioperl-0.7.2:\
+$root/CPAN
 
 export PERL5LIB
 
 cd ensembl-otter/scripts
 
-# check the pid file exists for later
-if [ -e $pid_file ]; then
-    pid_exist=1
-fi
-
 die(){
     echo "$THISSCRIPT: $1" 1>&2
     exit 1
 }
+
 message(){
     echo "$THISSCRIPT: $1"
 }
 
+if [ -e $pid_file ]; then
+    pidfile_exists=1
+    pid=`cat $pid_file`
+    process_info=`ps -p $pid | tail +2`
+    if [ "$process_info" ]; then
+        message "The server (PID=$pid) is running"
+    else
+        message "The server (PID=$pid) is either dead or running on a different host"
+    fi
+else
+    pidfile_exists=0
+    message "The server is not running (pidfile does not exist)"
+fi
+
 start(){
-    if [ "$pid_exist" == "0" ]; then
-	message "starting otter_srv..."
+    if [ "$pidfile_exists" == "0" ]; then
+        message "starting otter_srv..."
         exec ./otter_srv &
     else
-	die "can't start '$pid_file' exists"
+        die "can't start '$pid_file' exists"
     fi
 }
+
+unlock(){
+    message "Removing the file $pid_file"
+    rm -f $pid_file 2>/dev/null
+}
+
 stop(){
-    if [ "$pid_exist" == "1" ]; then
-	pid=`cat $pid_file`
-	if [ $pid -gt 0 ]; then
-	    message "pid exists so stopping $pid"
+    if [ "$pidfile_exists" == "1" ]; then
+        pid=`cat $pid_file`
+        if [ $pid -gt 0 ]; then
+            message "pid exists so stopping $pid"
             kill -INT $pid  2>/dev/null
             if [ "$?" == "0" ]; then
-                rm -f $pid_file 2>/dev/null
-                pid_exist=0
+                unlock
+                pidfile_exists=0
+                message "Successfully stopped the server"
             else
                 die "Failed to 'kill -INT $pid' it is probably not owned by you."
             fi
-	else
-	    die "'$pid_file' is not a valid pid file"
-	fi
+        else
+            die "'$pid_file' is not a valid pid file"
+        fi
     else
-	die "no pidfile [$pid_file] exists, so can't stop"
+        die "no pidfile [$pid_file] exists, so can't stop"
     fi
 }
+
 rotate_log(){
-    if [ "$pid_exist" == "1" ]; then
-	pid=`cat $pid_file`
-	if [ $pid -gt 0 ]; then
-	    message "rotating logs..."
+    if [ "$pidfile_exists" == "1" ]; then
+        pid=`cat $pid_file`
+        if [ $pid -gt 0 ]; then
+            message "rotating logs..."
             kill -HUP $pid 2>dev/null
             if [ "$?" == "0" ]; then
                 message "successfully rotated logs."
             else
                 die "Failed to 'kill -HUP $pid' it is probably not owned by you."                
             fi
-	else
-	    die "'$pid_file' is not a valid pid file."
-	fi
+        else
+            die "'$pid_file' is not a valid pid file."
+        fi
     else
-	die "no pidfile [$pid_file] exists, so can't do rotate."
+        die "no pidfile [$pid_file] exists, so can't do rotate."
     fi
 }
+
+help(){
+    message "Usage: $THISSCRIPT {start|stop|logrotate|restart|unlock}"
+}
+
 restart(){
     stop
     start
@@ -98,12 +120,15 @@ case "$1" in
     stop
     ;;
   logrotate)
-    rotate_log
+    # rotate_log
     ;;
   restart)
     restart
     ;;
+  unlock)
+    message "You should know what you are doing!"
+    unlock
+    ;;
   *)
-    die $"
-    Usage: $THISSCRIPT {start|stop|logrotate|restart}"
+    help
 esac
