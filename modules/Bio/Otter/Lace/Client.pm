@@ -21,6 +21,11 @@ use Bio::Otter::Converter;
 use Bio::Otter::Lace::TempFile;
 use Hum::EnsCmdLineDB;
 
+use Bio::EnsEMBL::Analysis;
+use Bio::EnsEMBL::DnaDnaAlignFeature;
+use Bio::Otter::DnaDnaAlignFeature;
+use Bio::Otter::HitDescription;
+
 sub new {
     my( $pkg ) = @_;
     
@@ -335,31 +340,115 @@ sub general_http_dialog {
 
 # ---- specific HTTP-requests:
 
-sub get_dafs_from_dataset_type_chr_start_end_analysis {
-    my( $self, $dataset, $type, $chr_name, $start, $end, $analysis ) = @_;
+sub get_hitdescs_from_dataset_type_hithash {
+    my( $self, $dataset, $type, $hithash_hp) = @_;
+
+    my $response = $self->general_http_dialog(
+        0,
+        'POST',
+        'get_hitdescs',
+        {
+            'dataset'  => $dataset->name(),
+            'type'     => $type,
+            'names'    => join(',' => keys %$hithash_hp),
+        }
+    );
+    print "[HITDESC] CLIENT RECEIVED [".length($response)."] bytes over the TCP connection\n";
+
+    my @resplines = split(/\n/,$response);
+
+    my @optnames = @{Bio::Otter::HitDescription->get_option_order()};
+
+    foreach my $respline (@resplines) {
+
+        my @optvalues = split(/\t/,$respline);
+        my $name = shift @optvalues;
+        my $hitdesc = Bio::Otter::HitDescription->new();
+
+        for my $ind (0..@optnames-1) {
+            my $method = $optnames[$ind];
+            $hitdesc->$method($optvalues[$ind]);
+        }
+
+        $hithash_hp->{$name} = $hitdesc;
+    }
+
+    return $hithash_hp;
+}
+
+sub get_dafs_from_dataset_slice_analysis {
+    my( $self, $dataset, $slice, $rq_analysis ) = @_;
 
     my $response = $self->general_http_dialog(
         0,
         'GET',
         'get_dafs',
         {
-            'dataset'  => $dataset->name,
-            'type'     => $type,
-            'chr'      => $chr_name,
-            'chrstart' => $start,
-            'chrend'   => $end,
-            'analysis' => ($analysis ? $analysis : ''),
+            'dataset'  => $dataset->name(),
+            'type'     => $slice->assembly_type(),
+            'chr'      => $slice->chr_name(),
+            'chrstart' => $slice->chr_start(),
+            'chrend'   => $slice->chr_end(),
+            'analysis' => ($rq_analysis ? $rq_analysis : ''),
         }
     );
+    print "[DAFS] CLIENT RECEIVED [".length($response)."] bytes over the TCP connection\n";
 
     my @resplines = split(/\n/,$response);
-    pop @resplines; # the last one is empty;
+    pop @resplines; # the last one is empty;  IS IT???
 
+    my @optnames = @{Bio::Otter::DnaDnaAlignFeature->get_option_order()};
+
+    my %hithash = ();
     my @dafs = ();
+    my %ana  = ();
     foreach my $respline (@resplines) {
-        my ($dbID, $hseqname, $hstart, $hend, $hstrand, $start, $end, $strand) = split(/\t/,$respline);
-        my $daf = $respline; # FIXME: build a feature here;
+
+        my @optvalues = split(/\t/,$respline);
+        my $cigar_string  = pop @optvalues;
+        my $analysis_name = pop @optvalues;
+
+        my %option = ();
+        for my $ind (0..@optnames-1) {
+            $option{$optnames[$ind]} = $optvalues[$ind];
+        }
+
+        my $daf = Bio::EnsEMBL::DnaDnaAlignFeature->new(
+            -cigar_string => $cigar_string,
+        );
+
+        for my $opt (@optnames) {
+            $daf->$opt($option{$opt});
+        }
+
+        if(!$ana{$analysis_name}) { # if not cached, cache it
+            $ana{$analysis_name} = 
+                Bio::EnsEMBL::Analysis->new(
+                    -logic_name => $analysis_name,
+                );
+        }
+        $daf->analysis ( $ana{$analysis_name} ); # use the cached value
+
         push @dafs, $daf;
+        $hithash{$daf->hseqname()} = undef;
+    }
+
+    $self->get_hitdescs_from_dataset_type_hithash(
+        $dataset,
+        $slice->assembly_type(),
+        \%hithash
+    );
+
+        # Now add the HitDescriptions to Bio::EnsEMBL::DnaDnaAlignFeatures
+        # and re-bless them into Bio::Otter::DnaDnaFeatures
+    for my $daf (@dafs) {
+        my $name = $daf->hseqname();
+        if(my $desc = $hithash{$name}) {
+            bless $daf, 'Bio::Otter::DnaDnaAlignFeature';
+            $daf->{'_hit_description'} = $desc;
+        } else {
+            # warn "No HitDescription for '$name'";
+        }
     }
 
     return \@dafs;
