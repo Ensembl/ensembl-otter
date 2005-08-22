@@ -10,6 +10,7 @@ use OtterDefs;
 use CGI;
 use Bio::Otter::ServerSide (':all');
 use Bio::Otter::Lace::PipelineDB;
+use Bio::Otter::DnaDnaAlignFeature;
 
 $| = 1;
 
@@ -32,13 +33,7 @@ my $pipeline_slice = $pdb->get_SliceAdaptor()->fetch_by_chr_start_end(
 
 my $analysis = $cgi_args{analysis};
 
-    # THE ORDER IS IMPORTANT!
-my @optnames = (
-     'seqname',  'start',  'end',  'strand',
-    'hseqname', 'hstart', 'hend', 'hstrand',
-    'percent_id', 'score', 'dbID',
-    # 'analysis_name', 'cigar_string',
-);
+my @optnames = @{Bio::Otter::DnaDnaAlignFeature->get_option_order()};
 
 my $daf_adaptor = $pdb->get_DnaAlignFeatureAdaptor();
 my $dafs = $daf_adaptor->fetch_all_by_Slice($pipeline_slice, $analysis?$analysis:());

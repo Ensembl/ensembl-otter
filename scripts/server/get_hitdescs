@@ -1,0 +1,41 @@
+#!/usr/bin/perl -w
+
+use strict;
+use OtterDefs;
+use CGI;
+use Bio::Otter::ServerSide (':all');
+use Bio::Otter::Lace::PipelineDB;
+use Bio::Otter::HitDescription;
+
+$| = 1;
+
+my $cgi = new CGI;
+set_nph($cgi);
+my %cgi_args = $cgi->Vars;
+
+my $names_lp = [ split(/,/ => $cgi_args{names}) ];
+
+my $odb = get_DBAdaptor_from_CGI_species($cgi, $OTTER_SPECIES);
+my $pdb = Bio::Otter::Lace::PipelineDB::get_DBAdaptor($odb);
+# transfer the assembly type from OtterDB to PipeDB (should be done elsewhere!)
+$pdb->assembly_type($odb->assembly_type());
+      
+my $hd_adaptor = $pdb->get_HitDescriptionAdaptor();
+my $hit_hash_hp = { map { $_ => undef} @$names_lp };
+$hd_adaptor->fetch_HitDescriptions_into_hash($hit_hash_hp);
+
+my @optnames = @{Bio::Otter::HitDescription->get_option_order()};
+
+for my $name (@$names_lp) {
+    if(my $desc = $hit_hash_hp->{$name}) {
+        my @optvalues = ($name);
+        for my $opt (@optnames) {
+            push @optvalues, $desc->$opt();
+        }
+
+        print join("\t", @optvalues)."\n";
+    } else {
+#       warn "No HitDescription for '$name'";
+    }
+}
+
