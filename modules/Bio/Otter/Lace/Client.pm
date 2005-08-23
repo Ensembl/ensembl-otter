@@ -23,7 +23,9 @@ use Hum::EnsCmdLineDB;
 
 use Bio::EnsEMBL::Analysis;
 use Bio::EnsEMBL::DnaDnaAlignFeature;
+use Bio::EnsEMBL::DnaPepAlignFeature;
 use Bio::Otter::DnaDnaAlignFeature;
+use Bio::Otter::DnaPepAlignFeature;
 use Bio::Otter::HitDescription;
 
 sub new {
@@ -376,23 +378,46 @@ sub get_hitdescs_from_dataset_type_hithash {
     return $hithash_hp;
 }
 
+
 sub get_dafs_from_dataset_slice_analysis {
     my( $self, $dataset, $slice, $rq_analysis ) = @_;
 
+    return $self->get_afs_from_dataset_slice_kind_analysis(
+        $dataset, $slice, 'dafs', $rq_analysis
+    );
+}
+
+sub get_pafs_from_dataset_slice_analysis {
+    my( $self, $dataset, $slice, $rq_analysis ) = @_;
+
+    return $self->get_afs_from_dataset_slice_kind_analysis(
+        $dataset, $slice, 'pafs', $rq_analysis
+    );
+}
+
+sub get_afs_from_dataset_slice_kind_analysis {
+    my( $self, $dataset, $slice, $kind, $rq_analysis ) = @_;
+
+    my ($baseclass, $subclass) = @{ {
+        'dafs' => [ qw(Bio::EnsEMBL::DnaDnaAlignFeature Bio::Otter::DnaDnaAlignFeature) ],
+        'pafs' => [ qw(Bio::EnsEMBL::DnaPepAlignFeature Bio::Otter::DnaPepAlignFeature) ],
+    }->{$kind} };
+    
     my $response = $self->general_http_dialog(
         0,
         'GET',
-        'get_dafs',
+        'get_afs',
         {
             'dataset'  => $dataset->name(),
             'type'     => $slice->assembly_type(),
             'chr'      => $slice->chr_name(),
             'chrstart' => $slice->chr_start(),
             'chrend'   => $slice->chr_end(),
+            'kind'     => $kind,
             'analysis' => ($rq_analysis ? $rq_analysis : ''),
         }
     );
-    print "[DAFS] CLIENT RECEIVED [".length($response)."] bytes over the TCP connection\n";
+    print "[AFS] CLIENT RECEIVED [".length($response)."] bytes over the TCP connection\n";
 
     my @resplines = split(/\n/,$response);
     pop @resplines; # the last one is empty;  IS IT???
@@ -400,7 +425,7 @@ sub get_dafs_from_dataset_slice_analysis {
     my @optnames = @{Bio::Otter::DnaDnaAlignFeature->get_option_order()};
 
     my %hithash = ();
-    my @dafs = ();
+    my @afs = ();
     my %ana  = ();
     foreach my $respline (@resplines) {
 
@@ -413,12 +438,12 @@ sub get_dafs_from_dataset_slice_analysis {
             $option{$optnames[$ind]} = $optvalues[$ind];
         }
 
-        my $daf = Bio::EnsEMBL::DnaDnaAlignFeature->new(
-            -cigar_string => $cigar_string,
+        my $af = $baseclass->new(
+                -cigar_string => $cigar_string
         );
 
         for my $opt (@optnames) {
-            $daf->$opt($option{$opt});
+            $af->$opt($option{$opt});
         }
 
         if(!$ana{$analysis_name}) { # if not cached, cache it
@@ -427,10 +452,10 @@ sub get_dafs_from_dataset_slice_analysis {
                     -logic_name => $analysis_name,
                 );
         }
-        $daf->analysis ( $ana{$analysis_name} ); # use the cached value
+        $af->analysis ( $ana{$analysis_name} ); # use the cached value
 
-        push @dafs, $daf;
-        $hithash{$daf->hseqname()} = undef;
+        push @afs, $af;
+        $hithash{$af->hseqname()} = undef;
     }
 
     $self->get_hitdescs_from_dataset_type_hithash(
@@ -439,19 +464,19 @@ sub get_dafs_from_dataset_slice_analysis {
         \%hithash
     );
 
-        # Now add the HitDescriptions to Bio::EnsEMBL::DnaDnaAlignFeatures
-        # and re-bless them into Bio::Otter::DnaDnaFeatures
-    for my $daf (@dafs) {
-        my $name = $daf->hseqname();
+        # Now add the HitDescriptions to Bio::EnsEMBL::DnaXxxAlignFeatures
+        # and re-bless them into Bio::Otter::DnaXxxAlignFeatures
+    for my $af (@afs) {
+        my $name = $af->hseqname();
         if(my $desc = $hithash{$name}) {
-            bless $daf, 'Bio::Otter::DnaDnaAlignFeature';
-            $daf->{'_hit_description'} = $desc;
+            bless $af, $subclass;
+            $af->{'_hit_description'} = $desc;
         } else {
             # warn "No HitDescription for '$name'";
         }
     }
 
-    return \@dafs;
+    return \@afs;
 }
 
 sub lock_region_for_contig_from_Dataset{

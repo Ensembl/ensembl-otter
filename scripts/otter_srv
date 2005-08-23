@@ -218,7 +218,7 @@ sub set_cgi_env {
   $r->headers->scan(\&set_http_header_env);
   $r->headers->scan(\&set_http_header_prefix_env);
   $ENV{"GATEWAY_INTERFACE"} = "CGI/1.1";
-  $ENV{"QUERY_STRING"}      = $r->url->query;
+  $ENV{"QUERY_STRING"}      = $r->url->query || ''; # to stop the server complaining about it
   $ENV{"REQUEST_URI"}       = $r->uri;
   $ENV{"REQUEST_METHOD"}    = $r->method;
   $ENV{"SCRIPT_NAME"}       = $r->url->path;

@@ -9,11 +9,11 @@ DNA_PORT 3306
 DNA_USER ensadmin 
 DNA_PASS ensembl
 
-[human]
+[test_human]
 DBNAME  test_otter_human
 TYPE    chr9p12
 
-[mouse]
+[test_mouse]
 DBNAME  test_otter_mouse
 TYPE    chr11
 

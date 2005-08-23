@@ -1,0 +1,57 @@
+#!/usr/local/bin/perl5.8.0 -w
+
+
+# no  lib '/nfs/team71/analysis/lg4/work/ensembl/modules';
+# use lib '/nfs/team71/analysis/lg4/work/ensembl_head/modules';
+# my $db_metakey = 'pipeline_db_v32';
+# my $db_metakey = 'pipeline_db';
+
+use strict;
+use OtterDefs;
+use CGI;
+use Bio::Otter::ServerSide (':all');
+use Bio::Otter::Lace::PipelineDB;
+use Bio::Otter::DnaDnaAlignFeature; # contains the (common) list of option names
+
+$| = 1;
+
+my $cgi = new CGI;
+set_nph($cgi);
+my %cgi_args = $cgi->Vars;
+
+my $odb = get_DBAdaptor_from_CGI_species($cgi, $OTTER_SPECIES);
+
+my $pdb = Bio::Otter::Lace::PipelineDB::get_DBAdaptor($odb);
+
+    # transfer the assembly type from OtterDB to PipeDB (should be done elsewhere!)
+$pdb->assembly_type($odb->assembly_type());
+
+my $pipeline_slice = $pdb->get_SliceAdaptor()->fetch_by_chr_start_end(
+    $cgi_args{chr},
+    $cgi_args{chrstart},
+    $cgi_args{chrend},
+);
+
+my $analysis = $cgi_args{analysis};
+
+my @optnames = @{Bio::Otter::DnaDnaAlignFeature->get_option_order()};
+
+my $kind = $cgi_args{kind};
+my $method = {
+    'dafs' => 'get_DnaAlignFeatureAdaptor',
+    'pafs' => 'get_ProteinAlignFeatureAdaptor',
+}->{$kind};
+
+my $af_adaptor = $pdb->$method();
+my $afs = $af_adaptor->fetch_all_by_Slice($pipeline_slice, $analysis?$analysis:());
+foreach my $af (@$afs) {
+    my @optvalues = ();
+    for my $opt (@optnames) {
+        push @optvalues, $af->$opt();
+    }
+    push @optvalues, $af->analysis()->logic_name();
+    push @optvalues, $af->cigar_string();
+
+    print join("\t", @optvalues)."\n";
+}
+
