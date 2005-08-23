@@ -6,7 +6,7 @@
 #
 # lg4
 
-my $proteins_on = 0;
+my $proteins_on = 1;
 
 use strict;
 use Bio::Otter::Lace::Defaults;
@@ -21,7 +21,7 @@ use Evi::Tictoc;
 # }
 
 {
-    my $dataset_name    = 'human'; # 'test_human';      # 'mouse', ...
+    my $dataset_name    = 'test_human'; # 'test_human';      # 'mouse', ...
 
         # my ($set_name, $chr_name, $trstable) = ('MHC_COX', '6', 'OTTHUMT00000076915');
         # my ($set_name, $chr_name, $trstable) = ('ChrX-07', 'X', 'OTTHUMT00000081638');

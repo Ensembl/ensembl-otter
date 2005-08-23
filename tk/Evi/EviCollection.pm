@@ -103,6 +103,14 @@ sub new_from_client_dataset_otterslice {
         );
         $self->add_collection($dafs_lp, $analysis_name);
     }
+    for my $analysis_name (@{$self->protein_analyses_lp()}) {
+        my $pafs_lp = $client->get_pafs_from_dataset_slice_analysis(
+            $dataset,
+            $otter_slice,
+            $analysis_name,
+        );
+        $self->add_collection($pafs_lp, $analysis_name);
+    }
     print STDERR "\n";
 
     Evi::Taxonamer::fetch();
@@ -189,7 +197,7 @@ sub add_collection {
     foreach my $af (@separate_afs) {
         my $hseqname    = $af->hseqname();
         my $hstrand     = $af->hstrand();
-        my $strand      = $af->hstrand();
+        my $strand      = $af->strand();
 
         my $keyline     = $hseqname.':'.$strand.':'.$hstrand;
 
