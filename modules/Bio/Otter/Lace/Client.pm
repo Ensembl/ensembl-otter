@@ -1,4 +1,3 @@
-
 ### Bio::Otter::Lace::Client
 
 package Bio::Otter::Lace::Client;
@@ -359,7 +358,7 @@ sub get_hitdescs_from_dataset_type_hithash {
 
     my @resplines = split(/\n/,$response);
 
-    my @optnames = @{Bio::Otter::HitDescription->get_option_order()};
+    my @hd_optnames = @{Bio::Otter::HitDescription->get_option_order()};
 
     foreach my $respline (@resplines) {
 
@@ -367,8 +366,8 @@ sub get_hitdescs_from_dataset_type_hithash {
         my $name = shift @optvalues;
         my $hitdesc = Bio::Otter::HitDescription->new();
 
-        for my $ind (0..@optnames-1) {
-            my $method = $optnames[$ind];
+        for my $ind (0..@hd_optnames-1) {
+            my $method = $hd_optnames[$ind];
             $hitdesc->$method($optvalues[$ind]);
         }
 
@@ -422,57 +421,64 @@ sub get_afs_from_dataset_slice_kind_analysis {
     my @resplines = split(/\n/,$response);
     pop @resplines; # the last one is empty;  IS IT???
 
-    my @optnames = @{Bio::Otter::DnaDnaAlignFeature->get_option_order()};
+    my @af_optnames = @{Bio::Otter::DnaDnaAlignFeature->get_option_order()};
+    my @hd_optnames = @{Bio::Otter::HitDescription->get_option_order()};
 
-    my %hithash = ();
-    my @afs = ();
-    my %ana  = ();
+    my %hds = (); # hit descriptions, keyed by hit_name
+    my @afs = (); # align features in a list
+    my %ana  = ();# analysis objects, keyed by analysis name
     foreach my $respline (@resplines) {
 
         my @optvalues = split(/\t/,$respline);
-        my $cigar_string  = pop @optvalues;
-        my $analysis_name = pop @optvalues;
+        my $linetype      = shift @optvalues; # 'AlignFeature' || 'HitDescription'
 
-        my %option = ();
-        for my $ind (0..@optnames-1) {
-            $option{$optnames[$ind]} = $optvalues[$ind];
-        }
+        if($linetype eq 'HitDescription') {
 
-        my $af = $baseclass->new(
-                -cigar_string => $cigar_string
-        );
+            my $hit_name = shift @optvalues;
+            my $hd = Bio::Otter::HitDescription->new();
+            for my $ind (0..@hd_optnames-1) {
+                my $method = $hd_optnames[$ind];
+                $hd->$method($optvalues[$ind]);
+            }
+            $hds{$hit_name} = $hd;
 
-        for my $opt (@optnames) {
-            $af->$opt($option{$opt});
-        }
+        } elsif($linetype eq 'AlignFeature') {
+            my $cigar_string  = pop @optvalues;
+            my $analysis_name = pop @optvalues;
 
-        if(!$ana{$analysis_name}) { # if not cached, cache it
-            $ana{$analysis_name} = 
-                Bio::EnsEMBL::Analysis->new(
-                    -logic_name => $analysis_name,
-                );
-        }
-        $af->analysis ( $ana{$analysis_name} ); # use the cached value
+            my %option = ();
+            for my $ind (0..@af_optnames-1) {
+                $option{$af_optnames[$ind]} = $optvalues[$ind];
+            }
 
-        push @afs, $af;
-        $hithash{$af->hseqname()} = undef;
-    }
+            my $af = $baseclass->new(
+                    -cigar_string => $cigar_string
+            );
 
-    $self->get_hitdescs_from_dataset_type_hithash(
-        $dataset,
-        $slice->assembly_type(),
-        \%hithash
-    );
+            for my $opt (@af_optnames) {
+                $af->$opt($option{$opt});
+            }
 
-        # Now add the HitDescriptions to Bio::EnsEMBL::DnaXxxAlignFeatures
-        # and re-bless them into Bio::Otter::DnaXxxAlignFeatures
-    for my $af (@afs) {
-        my $name = $af->hseqname();
-        if(my $desc = $hithash{$name}) {
-            bless $af, $subclass;
-            $af->{'_hit_description'} = $desc;
-        } else {
-            # warn "No HitDescription for '$name'";
+            if(!$ana{$analysis_name}) { # if not cached, cache it
+                $ana{$analysis_name} = 
+                    Bio::EnsEMBL::Analysis->new(
+                        -logic_name => $analysis_name,
+                    );
+            }
+            $af->analysis ( $ana{$analysis_name} ); # use the cached value
+
+                # Now add the HitDescriptions to Bio::EnsEMBL::DnaXxxAlignFeatures
+                # and re-bless them into Bio::Otter::DnaXxxAlignFeatures,
+                # IF the HitDescription is available
+            my $hit_name = $af->hseqname();
+            if(my $hd = $hds{$hit_name}) {
+                bless $af, $subclass;
+                $af->{'_hit_description'} = $hd;
+            } else {
+                # warn "No HitDescription for '$hit_name'";
+            }
+
+            push @afs, $af;
         }
     }
 

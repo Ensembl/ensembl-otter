@@ -11,7 +11,9 @@ use OtterDefs;
 use CGI;
 use Bio::Otter::ServerSide (':all');
 use Bio::Otter::Lace::PipelineDB;
-use Bio::Otter::DnaDnaAlignFeature; # contains the (common) list of option names
+use Bio::Otter::DnaDnaAlignFeature; # also contains the (common) list of option names
+use Bio::Otter::DnaPepAlignFeature; #
+use Bio::Otter::HitDescription;     # also contains another list of option names
 
 $| = 1;
 
@@ -34,7 +36,8 @@ my $pipeline_slice = $pdb->get_SliceAdaptor()->fetch_by_chr_start_end(
 
 my $analysis = $cgi_args{analysis};
 
-my @optnames = @{Bio::Otter::DnaDnaAlignFeature->get_option_order()};
+my @af_optnames = @{Bio::Otter::DnaDnaAlignFeature->get_option_order()};
+my @hd_optnames = @{Bio::Otter::HitDescription->get_option_order()};
 
 my $kind = $cgi_args{kind};
 my $method = {
@@ -42,16 +45,38 @@ my $method = {
     'pafs' => 'get_ProteinAlignFeatureAdaptor',
 }->{$kind};
 
+    # Fetch the features:
 my $af_adaptor = $pdb->$method();
 my $afs = $af_adaptor->fetch_all_by_Slice($pipeline_slice, $analysis?$analysis:());
-foreach my $af (@$afs) {
-    my @optvalues = ();
-    for my $opt (@optnames) {
-        push @optvalues, $af->$opt();
-    }
-    push @optvalues, $af->analysis()->logic_name();
-    push @optvalues, $af->cigar_string();
 
-    print join("\t", @optvalues)."\n";
+    # Stringify only the simple fields:
+my %hit_seen = (); # collect the seen hit names here
+foreach my $af (@$afs) {
+    if($af->can('get_HitDescription')) {
+        my $hit_name = $af->hseqname();
+
+        if(!exists($hit_seen{$hit_name})) { # new one
+            my $hd = $af->get_HitDescription();
+
+                # output a HitDescription line
+            my @hd_optvalues = ('HitDescription', $hit_name);
+            for my $opt (@hd_optnames) {
+                push @hd_optvalues, $hd->$opt();
+            }
+            print join("\t", @hd_optvalues)."\n";
+
+            $hit_seen{$hit_name} = 1;
+        }
+    }
+
+        # output an AlignFeature line
+    my @af_optvalues = ('AlignFeature');
+    for my $opt (@af_optnames) {
+        push @af_optvalues, $af->$opt();
+    }
+    push @af_optvalues, $af->analysis()->logic_name();
+    push @af_optvalues, $af->cigar_string();
+
+    print join("\t", @af_optvalues)."\n";
 }
 
