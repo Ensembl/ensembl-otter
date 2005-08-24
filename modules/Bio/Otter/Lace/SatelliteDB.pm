@@ -41,9 +41,7 @@ sub _get_DBAdaptor {
 sub get_options_for_key {
     my( $db, $key ) = @_;
     
-    my $sth = $db->prepare("SELECT meta_value FROM meta WHERE meta_key = ?");
-    $sth->execute($key);
-    my ($opt_str) = $sth->fetchrow;
+    my ($opt_str) = @{ $db->get_MetaContainer()->list_value_by_key($key) };
     if ($opt_str) {
         my $options_hash = {eval $opt_str};
         if ($@) {

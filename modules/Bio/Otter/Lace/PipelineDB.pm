@@ -38,6 +38,14 @@ sub get_pipeline_rw_DBAdaptor {
         $otter_db, 'pipeline_db_rw', 'Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor');
 }
 
+sub get_pipeline_v32_DBAdaptor {
+    my( $otter_db, $rw ) = @_;
+
+    require Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor;
+    return Bio::Otter::Lace::SatelliteDB::_get_DBAdaptor(
+        $otter_db, 'pipeline_db_v32', 'Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor');
+}
+
 1;
 
 __END__

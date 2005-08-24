@@ -3,6 +3,7 @@ package Bio::Otter::ServerSide;
 use strict;
 use Exporter;
 
+use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::Otter::DBSQL::DBAdaptor;
 use Bio::Otter::Author;
 use Bio::Otter::Version;
@@ -54,7 +55,12 @@ sub get_Author_from_CGI{
 }
 
 sub get_DBAdaptor_from_CGI_species{
-    my ($q, $SPECIES) = @_;
+    my ($q, $SPECIES, $ensembl_only) = @_;
+
+    my $adapter_class = $ensembl_only
+        ? 'Bio::EnsEMBL::DBSQL::DBAdaptor'
+        : 'Bio::Otter::DBSQL::DBAdaptor';
+
     error_exit('', 'I need two arguments') unless $q && $SPECIES;
     error_exit('', 'I need a CGI object') unless UNIVERSAL::isa($q, 'CGI');
     my %params   = $q->Vars;
@@ -88,11 +94,11 @@ sub get_DBAdaptor_from_CGI_species{
 
     print STDERR "Database dbname : [$dbname] host : [$dbhost] user : [$dbuser] pass : [$dbpass] port : [$dbport]";
     eval {
-        $odb = new Bio::Otter::DBSQL::DBAdaptor(-host   => $dbhost,
-                                                -user   => $dbuser,
-                                                -pass   => $dbpass,
-                                                -port   => $dbport,
-                                                -dbname => $dbname);
+        $odb = $adapter_class->new( -host   => $dbhost,
+                                    -user   => $dbuser,
+                                    -pass   => $dbpass,
+                                    -port   => $dbport,
+                                    -dbname => $dbname);
     };
     error_exit($q, "Failed opening otter database [$@]") if $@;
     if ($dna_dbname) {
@@ -108,7 +114,9 @@ sub get_DBAdaptor_from_CGI_species{
         
         print STDERR "Connected to dna database";
     }
-    print STDERR "Assembly type " . $odb->assembly_type($type);
+    if(!$ensembl_only) {
+        print STDERR "Assembly type " . $odb->assembly_type($type);
+    }
     return $odb;
 }
 
