@@ -1,0 +1,76 @@
+#!/usr/local/bin/perl -w
+
+### annotation_remark_textbox
+
+use strict;
+use CanvasWindow;
+
+{
+    my $widget = CanvasWindow::MainWindow->new('Annotation Remarks');
+
+    my $std_border = 3;
+    my $frame = $widget->Frame(
+        -border => $std_border,
+        )->pack(-side => 'top');
+    my $label_switch_frame = $frame->Frame->pack(
+        -side => 'left',
+        -expand => 1, -fill => 'y');
+    
+    my @label_pack = (-side => 'top', -expand => 1, -fill => 'x');
+    my @label_anchor = (-padx => $std_border, -anchor => 'w');
+    my $text_label = $label_switch_frame->Label(
+        -text   => "Remarks:",
+        @label_anchor,
+        )->pack(@label_pack);
+
+    # Button for setting Visible/Annotator remarks
+    my $annotator_button = $label_switch_frame->Button(
+        -text   => 'Annotator',
+        @label_anchor,
+        )->pack(@label_pack);
+
+    my $text = $frame->Scrolled('Text',
+        -scrollbars         => 'e',
+        -width              => 30,
+        -height             => 4,
+        -exportselection    => 1,
+        -background         => 'white',
+        -wrap               => 'word',
+        );
+    $text->pack(-side => 'left');
+    $text->tagConfigure('Annotator', -foreground => 'white', -background => 'IndianRed');
+    $text->tagLower('Annotator', 'sel');
+    
+    $annotator_button->configure(-command => sub {
+        my ($line) = $text->index('insert') =~ /^(\d+)/;
+        my $line_start = "$line.0";
+        my @this_line = ("$line_start", "$line_start lineend");
+        warn "line start = $line_start";
+        my $annotator_is_set = 0;
+        foreach my $tag ($text->tagNames("$line_start")) {
+            $annotator_is_set = 1 if $tag eq 'Annotator';
+            $text->tagRemove($tag, @this_line);
+        }
+        unless ($annotator_is_set) {
+            $text->tagAdd('Annotator', @this_line);
+        }
+    });
+    
+    my $button_frame = $widget->Frame->pack(-side => 'top');
+
+    $text->insert('1.0', "Line 1\nLine second is a really long line that will wrap\nLine the third\n");
+
+    Tk::MainLoop();
+}
+
+
+
+
+__END__
+
+=head1 NAME - annotation_remark_textbox
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+

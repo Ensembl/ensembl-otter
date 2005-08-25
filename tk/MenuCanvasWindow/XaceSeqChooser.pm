@@ -8,6 +8,7 @@ use 5.006_001;  # For qr support
 use Carp qw{ cluck confess };
 use Tk::Dialog;
 use Symbol 'gensym';
+use Scalar::Util 'weaken';
 
 use Hum::Ace::SubSeq;
 use Hum::Ace::Locus;
@@ -292,6 +293,12 @@ sub get_all_Loci {
 sub list_Locus_names {
     my( $self ) = @_;    
     return sort {lc $a cmp lc $b} map $_->name, $self->get_all_Loci;
+}
+
+sub empty_Locus_cache {
+    my( $self ) = @_;
+    
+    $self->{'_locus_cache'} = undef;
 }
 
 #------------------------------------------------------------------------------------------
@@ -1290,6 +1297,7 @@ sub resync_with_db {
     
     $self->empty_CloneSeq_cache;
     $self->empty_SubSeq_cache;
+    $self->empty_Locus_cache;
     
     # Redisplay
     $self->draw_current_state;
@@ -1678,7 +1686,7 @@ sub make_exoncanvas_edit_window {
     $ec->SubSeq($sub);
     $ec->initialize;
     
-    $self->save_subseq_edit_window($sub_name, $top);
+    $self->save_subseq_edit_window($sub_name, $ec);
     
     return $ec;
 }
@@ -1688,7 +1696,8 @@ sub raise_subseq_edit_window {
     
     confess "no name given" unless $name;
     
-    if (my $top = $self->get_subseq_edit_window($name)) {
+    if (my $ec = $self->get_subseq_edit_window($name)) {
+        my $top = $ec->canvas->toplevel;
         $top->deiconify;
         $top->raise;
         return 1;
@@ -1713,6 +1722,7 @@ sub save_subseq_edit_window {
     my( $self, $name, $top ) = @_;
     
     $self->{'_subseq_edit_window'}{$name} = $top;
+    weaken($self->{'_subseq_edit_window'}{$name});
 }
 
 sub delete_subseq_edit_window {
@@ -1733,20 +1743,35 @@ sub rename_subseq_edit_window {
 sub close_all_subseq_edit_windows {
     my( $self ) = @_;
 
-    my $mw = $self->top_window();
     foreach my $name ($self->list_all_subseq_edit_window_names) {
-        my $top = $self->get_subseq_edit_window($name) or next;
-        # Tell window to close
-        $top->deiconify;
-        $top->raise;
-        $top->update;
-        $top->focus;
-        $top->eventGenerate('<Control-w>');
-        # User pressed "Cancel" if window is still there
-        return 0 if $self->get_subseq_edit_window($name);
+        my $ec = $self->get_subseq_edit_window($name) or next;
+        $ec->window_close or return 0;
     }
     
     return 1;
+}
+
+sub update_all_locus_edit_fields {
+    my( $self, $locus_name ) = @_;
+    
+    foreach my $name ($self->list_all_subseq_edit_window_names) {
+        my $locus = $self->get_SubSeq($name)->Locus;
+        if ($locus->name eq $locus_name) {
+            warn "Updating '$name'";
+            my $ec = $self->get_subseq_edit_window($name) or next;
+            $ec->update_Locus_from_XaceSeqChooser;
+        }
+    }
+}
+
+sub send_event {
+    my( $self, $toplevel, $event ) = @_;
+    
+    $toplevel->deiconify;
+    $toplevel->raise;
+    $toplevel->focus;
+    $toplevel->update;
+    $toplevel->eventGenerate($event);
 }
 
 sub draw_clone_list {
@@ -1956,9 +1981,14 @@ sub get_SubSeq {
     return $self->{'_subsequence_cache'}{$name};
 }
 
-sub get_stored_SubSeq_hash{
+sub list_all_SubSeq_names {
     my ($self) = @_ ;
-    return $self->{'_subsequence_cache'} ;
+
+    if (my $sub_hash = $self->{'_subsequence_cache'}) {
+        return keys %$sub_hash;
+    } else {
+        return;
+    }
 }
 
 sub empty_SubSeq_cache {
