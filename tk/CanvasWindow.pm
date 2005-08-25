@@ -29,29 +29,29 @@ sub new {
     
     # Make and pack a canvas of the specified type
 
-	my @creation_params = (
+    my @creation_params = (
         -highlightthickness => 1,
         -background         => 'white',
         -width              => $x,
         -height             => $y,
 	);
-	my @packing_params = (
+    my @packing_params = (
         -side => 'top',
         -fill => 'both',
         -expand => 1,
 	);
 
-	my $scrolled = $where_scrollbars
-		? $tk->Scrolled( $canvas_class,
-							-scrollbars => $where_scrollbars,
-							@creation_params)
-		: $tk->$canvas_class( @creation_params );
+    my $scrolled = $where_scrollbars
+	    ? $tk->Scrolled( $canvas_class,
+                             -scrollbars => $where_scrollbars,
+                             @creation_params)
+	    : $tk->$canvas_class( @creation_params );
 
-	$scrolled->pack( @packing_params );
+    $scrolled->pack( @packing_params );
 
-	my $canvas = $where_scrollbars
-		? $scrolled->Subwidget('canvas')
-		: $scrolled;
+    my $canvas = $where_scrollbars
+        ? $scrolled->Subwidget('canvas')
+        : $scrolled;
 
     # Make a new CanvasWindow object, and return
     $self->canvas($canvas);

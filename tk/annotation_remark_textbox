@@ -24,9 +24,13 @@ use CanvasWindow;
         )->pack(@label_pack);
 
     # Button for setting Visible/Annotator remarks
+    my @annotator_color = (-foreground => 'white', -background => 'IndianRed3');
     my $annotator_button = $label_switch_frame->Button(
         -text   => 'Annotator',
         @label_anchor,
+        @annotator_color,
+        -activeforeground => 'white',
+        -activebackground => 'IndianRed2',
         )->pack(@label_pack);
 
     my $text = $frame->Scrolled('Text',
@@ -38,8 +42,35 @@ use CanvasWindow;
         -wrap               => 'word',
         );
     $text->pack(-side => 'left');
-    $text->tagConfigure('Annotator', -foreground => 'white', -background => 'IndianRed');
+    $text->tagConfigure('Annotator', @annotator_color);
     $text->tagLower('Annotator', 'sel');
+
+    my $tw = $text->Subwidget('text');
+    $tw->bind(ref($tw), '<Key>', '');
+    foreach my $char (0..1, 'a'..'z', 'A'..'Z', qw{
+        period comma
+        colon semicolon
+        apostrophe quotedbl
+        space
+        minus underscore
+        less greater
+        parenleft parenright
+        percent
+        })
+    {
+        $tw->bind("<Key-$char>", [\&insert_char, Tk::Ev('A')]);
+    }
+
+    #my $class = ref($text->Subwidget('text'));
+    #foreach my $sequence ($text->bind($class)) {
+    #    if ($sequence =~ /Key/) {
+    #        print STDERR "seq=$sequence\n";
+    #        $text->bind($class, $sequence, '');
+    #    } else {
+    #        print STDERR "non-key=$sequence\n";
+    #    }
+    #}
+
     
     $annotator_button->configure(-command => sub {
         my ($line) = $text->index('insert') =~ /^(\d+)/;
@@ -63,8 +94,12 @@ use CanvasWindow;
     Tk::MainLoop();
 }
 
-
-
+sub insert_char {
+    my( $text, $char ) = @_;
+    
+    my ($tag) = $text->tagNames('insert linestart');
+    $text->insert('insert', $char, $tag);
+}
 
 __END__
 
