@@ -12,9 +12,13 @@ use CanvasWindow;
     my $frame = $widget->Frame(
         -border => $std_border,
         )->pack(-side => 'top');
-    my $label_switch_frame = $frame->Frame->pack(
-        -side => 'left',
-        -expand => 1, -fill => 'y');
+    my $label_switch_frame = $frame->Frame(
+        -border => $std_border,
+        )->pack(
+            -side => 'left',
+            -expand => 1,
+            -fill => 'y',
+            );
     
     my @label_pack = (-side => 'top', -expand => 1, -fill => 'x');
     my @label_anchor = (-padx => $std_border, -anchor => 'w');
@@ -23,12 +27,14 @@ use CanvasWindow;
         @label_anchor,
         )->pack(@label_pack);
 
-    # Button for setting Visible/Annotator remarks
-    my @annotator_color = (-foreground => 'white', -background => 'IndianRed3');
-    my $annotator_button = $label_switch_frame->Button(
-        -text   => 'Annotator',
+    my $ann_tag = 'annotation';
+
+    # Button for setting Visible/annotation remarks
+    my @annotation_color = (-foreground => 'white', -background => 'IndianRed3');
+    my $annotation_button = $label_switch_frame->Button(
+        -text   => $ann_tag,
         @label_anchor,
-        @annotator_color,
+        @annotation_color,
         -activeforeground => 'white',
         -activebackground => 'IndianRed2',
         )->pack(@label_pack);
@@ -42,61 +48,74 @@ use CanvasWindow;
         -wrap               => 'word',
         );
     $text->pack(-side => 'left');
-    $text->tagConfigure('Annotator', @annotator_color);
-    $text->tagLower('Annotator', 'sel');
+    $text->tagConfigure($ann_tag, @annotation_color);
+    $text->tagLower($ann_tag, 'sel');
 
     my $tw = $text->Subwidget('text');
     $tw->bind(ref($tw), '<Key>', '');
-    foreach my $char (0..1, 'a'..'z', 'A'..'Z', qw{
-        period comma
-        colon semicolon
-        apostrophe quotedbl
-        space
-        minus underscore
-        less greater
-        parenleft parenright
-        percent
-        })
-    {
-        $tw->bind("<Key-$char>", [\&insert_char, Tk::Ev('A')]);
-    }
+    $tw->bind("<Key>", [\&insert_char, Tk::Ev('A')]);
 
     #my $class = ref($text->Subwidget('text'));
     #foreach my $sequence ($text->bind($class)) {
     #    if ($sequence =~ /Key/) {
     #        print STDERR "seq=$sequence\n";
-    #        $text->bind($class, $sequence, '');
+    #        #$text->bind($class, $sequence, '');
     #    } else {
     #        print STDERR "non-key=$sequence\n";
     #    }
     #}
 
     
-    $annotator_button->configure(-command => sub {
+    $annotation_button->configure(-command => sub {
         my ($line) = $text->index('insert') =~ /^(\d+)/;
         my $line_start = "$line.0";
         my @this_line = ("$line_start", "$line_start lineend");
-        warn "line start = $line_start";
-        my $annotator_is_set = 0;
+        #warn "line start = $line_start";
+        my $annotation_is_set = 0;
         foreach my $tag ($text->tagNames("$line_start")) {
-            $annotator_is_set = 1 if $tag eq 'Annotator';
+            $annotation_is_set = 1 if $tag eq $ann_tag;
             $text->tagRemove($tag, @this_line);
         }
-        unless ($annotator_is_set) {
-            $text->tagAdd('Annotator', @this_line);
+        unless ($annotation_is_set) {
+            $text->tagAdd($ann_tag, @this_line);
         }
     });
     
     my $button_frame = $widget->Frame->pack(-side => 'top');
+    $button_frame->Button(
+        -text => 'Get remarks',
+        -command => sub {
+                my %ann_index = $text->tagRanges($ann_tag);
+                my $line = 0;
+                foreach my $string (split /\n/, $text->get('1.0', 'end')) {
+                    $line++;
+                    # Trim trailing spaces and full-stops from remark
+                    $string =~ s/[\s\.]+$//;
+                    next if $string eq '';
+                    my $type = $ann_index{"$line.0"} ? 'Annotation_remark' : 'Remark';
+                    print STDERR "$type: '$string'\n";
+                }
+            },
+        )->pack(-side => 'left');
 
     $text->insert('1.0', "Line 1\nLine second is a really long line that will wrap\nLine the third\n");
 
     Tk::MainLoop();
 }
 
+# Inserts (printing) characters with the same style as the rest of the line
 sub insert_char {
     my( $text, $char ) = @_;
     
+    # We only want to insert printing characters in the Text box!
+    # [:print:] is the POSIX class of printing characters.
+    return unless $char =~ /[[:print:]]/;
+    
+    # Expected behaviour is that any selected text will
+    # be replaced by what the user types.
+    $text->deleteSelected;
+    
+    # There will only ever be one or zero tags per line in out Text box.
     my ($tag) = $text->tagNames('insert linestart');
     $text->insert('insert', $char, $tag);
 }

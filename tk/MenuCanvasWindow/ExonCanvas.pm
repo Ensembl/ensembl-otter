@@ -1211,16 +1211,15 @@ sub add_locus_editing_widgets {
     my( $self, $widget ) = @_;
     
     # Get the Locus name
-    my( $locus_name, $locus_description, $locus_alias, @remarks );
+    my( $locus_name, $locus_description, $locus_alias );
     my $locus_is_known = 0;
     if (my $locus = $self->SubSeq->Locus) {
-        $locus_name        = $locus->name;
-        $locus_alias       = join(' ', $locus->list_aliases);
-        $locus_description = $locus->description;
-        my $type = $locus->gene_type || '';
+        $locus_name         = $locus->name;
+        $locus_alias        = join(' ', $locus->list_aliases);
+        $locus_description  = $locus->description;
+        my $type            = $locus->gene_type || '';
         #warn "Gene type = '$type'";
-        $locus_is_known    = $type eq 'Known' ? 1 : 0;
-        @remarks           = $locus->list_remarks;
+        $locus_is_known     = $type eq 'Known' ? 1 : 0;
     }
     $locus_name        ||= '';
     $locus_description ||= '';
@@ -1293,11 +1292,10 @@ sub add_locus_editing_widgets {
 
     # Locus remark widget
     my $re = $self->make_labelled_text_widget($widget, 'Remarks', 38, -anchor => 'se');
-    foreach my $remark (@remarks) {
-        $re->insert('end', "$remark\n");
-    }
     $self->locus_remark_Entry($re);
-
+    if (my $locus = $self->SubSeq->Locus) {
+        $self->update_locus_remark_widget($locus);
+    }
 
     # Avoid memory cycle created by ref to $self in above closure
     $be->bind('<Destroy>', sub{ $self = undef });
@@ -1331,11 +1329,7 @@ sub update_Locus_tk_fields {
         $ae->insert(0, $alias_str);
     }
 
-    my $re = $self->locus_remark_Entry;
-    $re->delete('1.0', 'end');
-    foreach my $remark ($locus->list_remarks) {
-        $re->insert('end', "$remark\n");
-    }
+    $self->update_locus_remark_widget($locus);
 }
 
 # Locus renaming plan
@@ -1349,24 +1343,26 @@ sub get_Locus_from_tk {
     my( $self ) = @_;
     
     my $name = ${$self->{'_locus_name_var'}} or return;
-    my $type    = $self->get_locus_type;
-    my $desc    = $self->get_locus_description;
-    my @aliases = $self->get_locus_aliases;
-    my @remark  = $self->get_locus_remarks;
-    
-    #warn "name '$name'\ndesc '$desc'\nremark '$remark'\n";
-    
     if ($name =~ /\s/) {
         $self->message("Error: whitespace in Locus name '$name'");
         return;
     }
+
+    my $type            = $self->get_locus_type;
+    my $desc            = $self->get_locus_description;
+    my @aliases         = $self->get_locus_aliases;
+    
+    #warn "name '$name'\ndesc '$desc'\nremark '$remark'\n";
+    
     
     my $locus = Hum::Ace::Locus->new;
     $locus->name($name);
     $locus->gene_type($type);
     $locus->description($desc) if $desc;
-    $locus->set_remarks(@remark);
     $locus->set_aliases(@aliases);
+    
+    $self->get_locus_remarks($locus);
+    
     return $locus;
 }
 
@@ -1383,12 +1379,27 @@ sub update_Locus_from_XaceSeqChooser {
 }
 
 sub update_transcript_remark_widget {
-    my( $self, $widget ) = @_;
+    my( $self, $sub ) = @_;
     
-    my $rt = $self->transcript_remark_Entry;
-    $rt->delete('1.0', 'end');
-    foreach my $remark ($self->SubSeq->list_remarks) {
-        $rt->insert('end', "$remark\n");
+    $self->update_remark_Entry($self->transcript_remark_Entry, $sub);
+}
+
+sub update_locus_remark_widget {
+    my( $self, $locus ) = @_;
+    
+    $self->update_remark_Entry($self->locus_remark_Entry, $locus);
+}
+
+sub update_remark_Entry {
+    my( $self, $remark_text, $obj ) = @_;
+    
+    $remark_text->delete('1.0', 'end');
+    foreach my $remark ($obj->list_remarks) {
+        $remark_text->insert('end', "$remark\n");
+    }
+    foreach my $remark ($obj->list_annotation_remarks) {
+        $remark_text->insert('end', $remark, 'Annotation');
+        $remark_text->insert('end', "\n");
     }
 }
 
@@ -1397,7 +1408,7 @@ sub add_transcript_remark_widget {
     
     my $rt = $self->make_labelled_text_widget($widget, 'Remarks', 38, -anchor => 'se');
     $self->transcript_remark_Entry($rt);
-    $self->update_transcript_remark_widget;
+    $self->update_transcript_remark_widget($self->SubSeq);
 }
 
 sub add_subseq_rename_widget {
@@ -1413,27 +1424,97 @@ sub make_labelled_text_widget {
     
     @pack = (-side => 'left') unless @pack;
     
+    my $std_border = 3;
     my $frame = $widget->Frame(
-        -border => 3,
+        -border => $std_border,
         )->pack(@pack);
+    my $label_annotation_frame = $frame->Frame(
+        -border => $std_border,
+        )->pack(
+            -side => 'left',
+            -expand => 1,
+            -fill => 'y',
+            );
     
-    my $text_label = $frame->Label(
+    my @label_pack = (-side => 'top', -expand => 1, -fill => 'x');
+    my @label_anchor = (-padx => $std_border, -anchor => 'w');
+    my $text_label = $label_annotation_frame->Label(
         -text   => "$name:",
-        -anchor => 'n',
-        -padx   => 6,
-        );
-    $text_label->pack(-side => 'left', -fill => 'y');
+        @label_anchor,
+        )->pack(@label_pack);
+
+    my $ann_tag = 'Annotation';
+
+    # Button for setting Visible/Annotation remarks
+    my @annotation_color = (-foreground => 'white', -background => 'IndianRed3');
+    my $annotation_button = $label_annotation_frame->Button(
+        -text   => $ann_tag,
+        @label_anchor,
+        @annotation_color,
+        -activeforeground => 'white',
+        -activebackground => 'IndianRed2',
+        )->pack(@label_pack);
 
     my $text = $frame->Scrolled('Text',
         -scrollbars         => 'e',
         -width              => $size,
-        -height             => 3,
+        -height             => 4,
         -exportselection    => 1,
         -background         => 'white',
         -wrap               => 'word',
         );
     $text->pack(-side => 'left');
+    $text->tagConfigure($ann_tag, @annotation_color);
+    $text->tagLower($ann_tag, 'sel');
+
+    my $tw = $text->Subwidget('text');
+    $tw->bind(ref($tw), '<Key>', '');
+    $tw->bind("<Key>", [\&insert_char, Tk::Ev('A')]);
+
+    #my $class = ref($text->Subwidget('text'));
+    #foreach my $sequence ($text->bind($class)) {
+    #    if ($sequence =~ /Key/) {
+    #        print STDERR "seq=$sequence\n";
+    #        #$text->bind($class, $sequence, '');
+    #    } else {
+    #        print STDERR "non-key=$sequence\n";
+    #    }
+    #}
+    
+    $annotation_button->configure(-command => sub {
+        my ($line) = $text->index('insert') =~ /^(\d+)/;
+        my $line_start = "$line.0";
+        my @this_line = ("$line_start", "$line_start lineend");
+        #warn "line start = $line_start";
+        my $annotation_is_set = 0;
+        foreach my $tag ($text->tagNames("$line_start")) {
+            $annotation_is_set = 1 if $tag eq $ann_tag;
+            $text->tagRemove($tag, @this_line);
+        }
+        unless ($annotation_is_set) {
+            $text->tagAdd($ann_tag, @this_line);
+        }
+    });
+
     return $text;
+}
+
+# Inserts (printing) characters with the same style as the rest of the line
+sub insert_char {
+    my( $text, $char ) = @_;
+    
+    # We only want to insert printing characters in the Text box!
+    # [:print:] is the POSIX class of printing characters.
+    return unless $char =~ /[[:print:]]/;
+    return if $char eq "\t";
+    
+    # Expected behaviour is that any selected text will
+    # be replaced by what the user types.
+    $text->deleteSelected;
+    
+    # There will only ever be one or zero tags per line in out Text box.
+    my ($tag) = $text->tagNames('insert linestart');
+    $text->insert('insert', $char, $tag);
 }
 
 sub make_labelled_entry_widget {
@@ -1586,27 +1667,38 @@ sub locus_remark_Entry {
 }
 
 sub get_transcript_remarks {
-    my( $self ) = @_;
+    my( $self, $sub ) = @_;
     
-    return $self->get_remarks_from_Entry($self->transcript_remark_Entry);
+    confess "Missing SubSeq argument" unless $sub;
+    
+    return $self->get_remarks_from_Entry($self->transcript_remark_Entry, $sub);
 }
 
 sub get_locus_remarks {
-    my( $self ) = @_;
+    my( $self, $locus ) = @_;
     
-    return $self->get_remarks_from_Entry($self->locus_remark_Entry);
+    confess "Missing Locus argument" unless $locus;
+    
+    return $self->get_remarks_from_Entry($self->locus_remark_Entry, $locus);
 }
 
 sub get_remarks_from_Entry {
-    my( $self, $entry ) = @_;
+    my( $self, $text, $obj ) = @_;
     
-    my $txt = $entry->get('1.0', 'end');
-    my @remark_list;
-    foreach my $remark (split /\n/, $txt) {
-        $remark =~ s/(^\s+|\s+$)//g;
-        push(@remark_list, $remark) if $remark;
+    my %ann_index = $text->tagRanges('Annotation');
+    my $line = 0;
+    my $rem     = [];
+    my $ann_rem = [];
+    foreach my $string (split /\n/, $text->get('1.0', 'end')) {
+        $line++;
+        # Trim trailing spaces and full-stops from remark
+        $string =~ s/[\s\.]+$//;
+        next if $string eq '';
+        my $array = $ann_index{"$line.0"} ? $ann_rem : $rem;
+        push(@$array, $string);
     }
-    return @remark_list;
+    $obj->set_remarks(@$rem);
+    $obj->set_annotation_remarks(@$ann_rem);
 }
 
 sub locus_description_Entry {
@@ -2319,7 +2411,7 @@ sub new_SubSeq_from_tk {
     $sub->start_not_found        ( $self->start_not_found_from_tk     );
     $sub->end_not_found          ( $self->end_not_found_from_tk       );
     $sub->evidence_hash          ( $self->evidence_hash               );
-    $sub->set_remarks            ( $self->get_transcript_remarks      );
+    $self->get_transcript_remarks($sub);
     #warn "Start not found ", $self->start_not_found_from_tk, "\n",
     #    "End not found ", $self->end_not_found_from_tk, "\n";
     return $sub;
@@ -2432,7 +2524,7 @@ sub xace_save {
         $xr->send_command('gif ; seqrecalc');
         $xc->replace_SubSeq($sub, $old_name);
         $self->SubSeq($sub);
-        $self->update_transcript_remark_widget;
+        $self->update_transcript_remark_widget($sub);
         $self->update_Locus_tk_fields($sub->Locus);
         $self->name($new_name);
         $self->evidence_hash($sub->clone_evidence_hash);
