@@ -857,7 +857,7 @@ sub ace_transcript_seq_objs_from_genes{
         foreach my $tran (@{ $gene->get_all_Transcripts }) {
             my $tran_name = $tran->transcript_info->name || $tran->stable_id;
 
-            $str .= qq`\n//DELETE THE SEQUENCE FIRST\n-D Sequence : "$tran_name"\n\n`;
+            $str .= qq{\n-D Sequence : "$tran_name"\n\n};
 
             $str .= "Sequence : \"" . $tran_name . "\"\n";
             $str .= "Transcript_id \"" . $tran->stable_id . "\"\n";
@@ -964,8 +964,8 @@ sub ace_transcript_seq_objs_from_genes{
     return $str;
 }
 
-sub ace_locus_objs_from_genes{
-    my($genes, $authors) = @_;
+sub ace_locus_objs_from_genes {
+    my ($genes, $authors) = @_;
     my $str = '';
 
     # Locus objects for genes
@@ -978,7 +978,7 @@ sub ace_locus_objs_from_genes{
             $gene_name = $gene->stable_id;
         }
 
-        $str .= qq`\n//DELETE SEQUENCE FIRST\n-D Locus : "$gene_name"\n\n`;
+        $str .= qq{\n-D Locus : "$gene_name"\n\n};
 
         $str .= "Locus : \"" . $gene_name . "\"\n";
         foreach my $synonym ($info->synonym) {
@@ -1339,9 +1339,10 @@ sub ace_to_otter {
 	  $cur_gene->{$1} = ace_unescape($2);
 	} elsif (/^Truncated/) {
 	  $cur_gene->{Truncated} = 1;
-	} elsif (/^Remark $STRING/x || /^Annotation_remark $STRING/x ) {
+	} elsif (/^(Remark|Annotation_remark) $STRING/x ) {
 	  my $remark_list = $cur_gene->{'remarks'} ||= [];
-	  push(@$remark_list, ace_unescape($1));
+      my $remark = $1 eq 'Annotation_remark' ? "Annotation_remark- $2" : $2;
+	  push(@$remark_list, ace_unescape($remark));
 	} elsif (/^Alias $STRING/x) {
 	  my $alias_list = $cur_gene->{'aliases'} ||= [];
 	  push(@$alias_list, ace_unescape($1));

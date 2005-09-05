@@ -274,19 +274,30 @@ sub initialize {
         foreach my $gm (@mutable_gene_methods) {
             my $name = $gm->name;
             # "Coding" is shown as "Coding Coding" when the Menubutton
-            # is first drawn if $display_name eq $name!
+            # is first drawn if $display_name eq $name! (Hence space
+            # on the end of $display_name.)
             my $display_name = $gm->has_parent ? "    $name" : "$name ";
             push(@$menu_list, [$display_name, $name]);
         }
-        $type_frame->Optionmenu(
+        my $type_option_menu = $type_frame->Optionmenu(
             -options => $menu_list,
-            -textvariable => \$current_method,
+            -variable => \$current_method,
             -command => sub{
                     $self->draw_translation_region;
                     $top->focus;  # Need this
                 },
             )->pack(-side => 'left');
-
+        
+        # There is a bug in Optionmenu. The current method does
+        # not get set on the menu (via the "-variable") unless
+        # we explicitly set it with its (internal) setOption method.
+        $current_method = $self->SubSeq->GeneMethod->name;
+        foreach my $pair (@$menu_list) {
+            if ($pair->[1] eq $current_method) {
+                $type_option_menu->setOption(@$pair);
+                last;
+            }
+        }
         
         # Start not found and end not found and method widgets
         $self->add_start_end_method_widgets($frame);

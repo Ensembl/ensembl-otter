@@ -770,7 +770,7 @@ sub write_pipeline_data {
 
     $ens_db->assembly_type($ss->name);
     my $species = $dataset->species();
-    warn "This is species <$species>\n";
+    warn "This species is '$species'\n";
     my $factory = $self->{'_pipeline_data_factory'} ||= $self->make_AceDataFactory($ens_db, $species);
 
     # create file for output and add it to the acedb object
@@ -835,10 +835,12 @@ sub make_AceDataFactory {
 	# require them
 	for my $s (keys %$logic_to_load){
 	    next unless $logic_to_load->{$s};
-	    warn " AceBatabase.pm: $s\n" if $debug;
-	    my $file = $module_options->{$s}->{module}.".pm";
+	    #warn " AceDatabase.pm: $s\n" if $debug;
+	    my $module = $module_options->{$s}->{module}
+            or confess "Filter module not set for '$s'";
+        my $file = $module . ".pm";
 	    $file =~ s{::}{/}g;
-	    warn " AceDatabase.pm: requiring $file \n" if $debug;
+	    #warn " AceDatabase.pm: requiring $file \n" if $debug;
 	    eval{  require "$file"  };
 	    if($@){
 		delete $logic_to_load->{$s};
