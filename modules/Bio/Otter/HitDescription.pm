@@ -45,15 +45,6 @@ sub db_name {
     return $self->{'_db_name'};
 }
 
-sub get_option_order { # standard order of options for stringification
-return [
-        ## (The commented out ones need special treatment)
-        # qw(name),
-        qw(hit_length description taxon_id db_name),
-    ];
-}
-
-
 1;
 
 __END__

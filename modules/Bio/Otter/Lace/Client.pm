@@ -20,6 +20,7 @@ use Bio::Otter::Converter;
 use Bio::Otter::Lace::TempFile;
 use Hum::EnsCmdLineDB;
 
+use Bio::Otter::Lace::ViaText ('%OrderOfOptions');
 use Bio::EnsEMBL::Analysis;
 use Bio::EnsEMBL::DnaDnaAlignFeature;
 use Bio::EnsEMBL::DnaPepAlignFeature;
@@ -341,7 +342,7 @@ sub general_http_dialog {
 
 # ---- specific HTTP-requests:
 
-sub get_hitdescs_from_dataset_type_hithash {
+sub get_hitdescs_from_dataset_type_hithash { # (UNUSED)
     my( $self, $dataset, $type, $hithash_hp) = @_;
 
     my $response = $self->general_http_dialog(
@@ -358,7 +359,7 @@ sub get_hitdescs_from_dataset_type_hithash {
 
     my @resplines = split(/\n/,$response);
 
-    my @hd_optnames = @{Bio::Otter::HitDescription->get_option_order()};
+    my @hd_optnames = @{ $OrderOfOptions{HitDescription} };
 
     foreach my $respline (@resplines) {
 
@@ -379,23 +380,27 @@ sub get_hitdescs_from_dataset_type_hithash {
 
 
 sub get_dafs_from_dataset_slice_analysis {
-    my( $self, $dataset, $slice, $rq_analysis ) = @_;
+    my( $self, $dataset, $slice, $analysis_name, $enshead ) = @_;
 
     return $self->get_afs_from_dataset_slice_kind_analysis(
-        $dataset, $slice, 'dafs', $rq_analysis
+        $dataset, $slice, 'dafs', $analysis_name, $enshead
     );
 }
 
 sub get_pafs_from_dataset_slice_analysis {
-    my( $self, $dataset, $slice, $rq_analysis ) = @_;
+    my( $self, $dataset, $slice, $analysis_name, $enshead ) = @_;
 
     return $self->get_afs_from_dataset_slice_kind_analysis(
-        $dataset, $slice, 'pafs', $rq_analysis
+        $dataset, $slice, 'pafs', $analysis_name, $enshead
     );
 }
 
 sub get_afs_from_dataset_slice_kind_analysis {
-    my( $self, $dataset, $slice, $kind, $rq_analysis ) = @_;
+    my( $self, $dataset, $slice, $kind, $analysis_name, $enshead ) = @_;
+
+    if(!$analysis_name) {
+        die "Analysis name must be specified!";
+    }
 
     my ($baseclass, $subclass) = @{ {
         'dafs' => [ qw(Bio::EnsEMBL::DnaDnaAlignFeature Bio::Otter::DnaDnaAlignFeature) ],
@@ -407,13 +412,14 @@ sub get_afs_from_dataset_slice_kind_analysis {
         'GET',
         'get_afs',
         {
+            'enshead'  => $enshead ? 1 : 0,
             'dataset'  => $dataset->name(),
             'type'     => $slice->assembly_type(),
             'chr'      => $slice->chr_name(),
             'chrstart' => $slice->chr_start(),
             'chrend'   => $slice->chr_end(),
             'kind'     => $kind,
-            'analysis' => ($rq_analysis ? $rq_analysis : ''),
+            'analysis' => $analysis_name,
         }
     );
     print "[AFS] CLIENT RECEIVED [".length($response)."] bytes over the TCP connection\n";
@@ -421,12 +427,15 @@ sub get_afs_from_dataset_slice_kind_analysis {
     my @resplines = split(/\n/,$response);
     pop @resplines; # the last one is empty;  IS IT???
 
-    my @af_optnames = @{Bio::Otter::DnaDnaAlignFeature->get_option_order()};
-    my @hd_optnames = @{Bio::Otter::HitDescription->get_option_order()};
+    my @af_optnames = @{ $OrderOfOptions{AlignFeature} };
+    my @hd_optnames = @{ $OrderOfOptions{HitDescription} };
 
-    my %hds = (); # hit descriptions, keyed by hit_name
+        # cached values:
+    my $analysis = Bio::EnsEMBL::Analysis->new( -logic_name => $analysis_name );
+    my $seqname = $slice->name();
+
+    my %hds = (); # cached hit descriptions, keyed by hit_name
     my @afs = (); # align features in a list
-    my %ana  = ();# analysis objects, keyed by analysis name
     foreach my $respline (@resplines) {
 
         my @optvalues = split(/\t/,$respline);
@@ -444,28 +453,19 @@ sub get_afs_from_dataset_slice_kind_analysis {
 
         } elsif($linetype eq 'AlignFeature') {
             my $cigar_string  = pop @optvalues;
-            my $analysis_name = pop @optvalues;
-
-            my %option = ();
-            for my $ind (0..@af_optnames-1) {
-                $option{$af_optnames[$ind]} = $optvalues[$ind];
-            }
 
             my $af = $baseclass->new(
                     -cigar_string => $cigar_string
             );
 
-            for my $opt (@af_optnames) {
-                $af->$opt($option{$opt});
+            for my $ind (0..@af_optnames-1) {
+                my $method = $af_optnames[$ind];
+                $af->$method($optvalues[$ind]);
             }
 
-            if(!$ana{$analysis_name}) { # if not cached, cache it
-                $ana{$analysis_name} = 
-                    Bio::EnsEMBL::Analysis->new(
-                        -logic_name => $analysis_name,
-                    );
-            }
-            $af->analysis ( $ana{$analysis_name} ); # use the cached value
+                # use the cached values:
+            $af->analysis( $analysis );
+            $af->seqname( $seqname );
 
                 # Now add the HitDescriptions to Bio::EnsEMBL::DnaXxxAlignFeatures
                 # and re-bless them into Bio::Otter::DnaXxxAlignFeatures,

@@ -1,19 +1,17 @@
 #!/usr/local/bin/perl5.8.0 -w
 
-
-# no  lib '/nfs/team71/analysis/lg4/work/ensembl/modules';
-# use lib '/nfs/team71/analysis/lg4/work/ensembl_head/modules';
-# my $db_metakey = 'pipeline_db_v32';
-# my $db_metakey = 'pipeline_db';
+my $enshead = $ENV{ENSHEAD}; # is set by the server for any GET request
 
 use strict;
 use OtterDefs;
 use CGI;
 use Bio::Otter::ServerSide (':all');
 use Bio::Otter::Lace::PipelineDB;
-use Bio::Otter::DnaDnaAlignFeature; # also contains the (common) list of option names
-use Bio::Otter::DnaPepAlignFeature; #
-use Bio::Otter::HitDescription;     # also contains another list of option names
+use Bio::EnsEMBL::DBSQL::DBAdaptor;
+use Bio::Otter::DBSQL::DBAdaptor;
+use Bio::Otter::Lace::ViaText ('%OrderOfOptions');
+use Bio::Otter::DBSQL::SimpleBindingAdaptor;
+use Bio::Otter::HitDescription;
 
 $| = 1;
 
@@ -21,23 +19,44 @@ my $cgi = new CGI;
 set_nph($cgi);
 my %cgi_args = $cgi->Vars;
 
-my $odb = get_DBAdaptor_from_CGI_species($cgi, $OTTER_SPECIES);
-
-my $pdb = Bio::Otter::Lace::PipelineDB::get_DBAdaptor($odb);
-
-    # transfer the assembly type from OtterDB to PipeDB (should be done elsewhere!)
-$pdb->assembly_type($odb->assembly_type());
-
-my $pipeline_slice = $pdb->get_SliceAdaptor()->fetch_by_chr_start_end(
-    $cgi_args{chr},
-    $cgi_args{chrstart},
-    $cgi_args{chrend},
-);
-
 my $analysis = $cgi_args{analysis};
+my $odb = get_DBAdaptor_from_CGI_species($cgi, $OTTER_SPECIES, $enshead);
 
-my @af_optnames = @{Bio::Otter::DnaDnaAlignFeature->get_option_order()};
-my @hd_optnames = @{Bio::Otter::HitDescription->get_option_order()};
+my $pipekey = $enshead
+    ? 'pipeline_db_v32'
+    : 'pipeline_db';
+
+    # Getting (to) the pipeline adapter:
+my @pipe_all = @{ $odb->get_MetaContainer()->list_value_by_key($pipekey) };
+if(!@pipe_all) {
+    die "This database does not have an associated '$pipekey' in the meta table ";
+}
+my $pipe_lastval = pop @pipe_all; # we prefer the one added the latest
+my $pdb = Bio::EnsEMBL::DBSQL::DBAdaptor->new( eval $pipe_lastval );
+
+my $pipeline_slice;
+
+if($enshead) {
+    $pipeline_slice = $pdb->get_SliceAdaptor()->fetch_by_region(
+        'chromosome',
+        $cgi_args{chr},
+        $cgi_args{chrstart},
+        $cgi_args{chrend},
+        undef,              # strand
+        'Otter',            # version
+    );
+} else {
+    $pdb->assembly_type($odb->assembly_type());
+
+    $pipeline_slice = $pdb->get_SliceAdaptor()->fetch_by_chr_start_end(
+        $cgi_args{chr},
+        $cgi_args{chrstart},
+        $cgi_args{chrend},
+    );
+}
+
+my @af_optnames = @{ $OrderOfOptions{AlignFeature} };
+my @hd_optnames = @{ $OrderOfOptions{HitDescription} };
 
 my $kind = $cgi_args{kind};
 my $method = {
@@ -47,16 +66,39 @@ my $method = {
 
     # Fetch the features:
 my $af_adaptor = $pdb->$method();
-my $afs = $af_adaptor->fetch_all_by_Slice($pipeline_slice, $analysis?$analysis:());
+my $afs = $af_adaptor->fetch_all_by_Slice($pipeline_slice, $analysis);
+
+    # Put the names into the hit_description hash:
+my %hd_hash = ();
+foreach my $af (@$afs) {
+    $hd_hash{$af->hseqname()} = '';
+}
+
+    # Fetch the hit descriptions:
+my $hd_adaptor = Bio::Otter::DBSQL::SimpleBindingAdaptor->new( eval $pipe_lastval );
+$hd_adaptor->fetch_into_hash(
+    'hit_description',
+    'hit_name',
+    { qw(
+        hit_length _hit_length
+        hit_description _description
+        hit_taxon _taxon_id
+        hit_db _db_name
+    )},
+    'Bio::Otter::HitDescription',
+    \%hd_hash,
+);
 
     # Stringify only the simple fields:
 my %hit_seen = (); # collect the seen hit names here
 foreach my $af (@$afs) {
-    if($af->can('get_HitDescription')) {
-        my $hit_name = $af->hseqname();
+    my $hit_name = $af->hseqname();
+    my $hd = $hd_hash{$hit_name};
+    # if($af->can('get_HitDescription')) {
+    if($hd) {
 
         if(!exists($hit_seen{$hit_name})) { # new one
-            my $hd = $af->get_HitDescription();
+            # my $hd = $af->get_HitDescription();
 
                 # output a HitDescription line
             my @hd_optvalues = ('HitDescription', $hit_name);
@@ -68,13 +110,12 @@ foreach my $af (@$afs) {
             $hit_seen{$hit_name} = 1;
         }
     }
-
+    
         # output an AlignFeature line
     my @af_optvalues = ('AlignFeature');
     for my $opt (@af_optnames) {
         push @af_optvalues, $af->$opt();
     }
-    push @af_optvalues, $af->analysis()->logic_name();
     push @af_optvalues, $af->cigar_string();
 
     print join("\t", @af_optvalues)."\n";

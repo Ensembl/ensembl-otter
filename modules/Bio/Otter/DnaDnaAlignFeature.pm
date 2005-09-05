@@ -12,16 +12,6 @@ sub get_HitDescription {
     return $self->{'_hit_description'};
 }
 
-sub get_option_order { # standard order of options for stringification
-    return [
-        'seqname',  'start',  'end',  'strand',
-        'hseqname', 'hstart', 'hend', 'hstrand',
-        'percent_id', 'score', 'dbID',
-        # 'analysis_name', 'cigar_string',
-        ## (The commented out ones need special treatment)
-    ];
-}
-
 1;
 
 __END__
