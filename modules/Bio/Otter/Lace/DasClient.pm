@@ -126,3 +126,38 @@ AceDatabase
     -> ace_data_from_slice 
       -> DasClient fetches the das features and they make .ace files
   
+=head1 EXAMPLE OTTER CONFIG
+
+
+[client]
+with-das=1
+write_access=0
+methods_files=/nfs/team71/analysis/rds/workspace/ace_skeleton/rawdata/methods.ace
+
+[default.ensembl_sources]
+ensembl_core_db=---ensembl
+ensembl_estgene_db=---genomewise
+
+
+[default.das.locators]
+ensembl=0
+development=1
+
+[human.das.locators]
+ensembl=1
+
+[das.locator.ensembl]
+url=
+compulsory=1
+selected_sources=
+
+[default.das.locator.development]
+#url=http://servlet.sanger.ac.uk:8080/das
+#selected_sources=homo_sapiens_core_25_34e_cds
+proxy_url=http://wwwcache.sanger.ac.uk:3128
+compulsory=1
+url=http://deskpro345.dynamic.sanger.ac.uk:8080/das
+selected_sources=hsa35genes
+method_tag=BLASTN
+filterclass=Gene
+method_group=predicted

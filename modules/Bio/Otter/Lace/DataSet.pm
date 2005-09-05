@@ -266,23 +266,35 @@ sub status_refresh_for_SequenceSet{
     my $rule_list = []; # all the analysis which can run for this species.
     if (1) {
         my $ruleAdapt      = $pipe_dba->get_RuleAdaptor();
-        my @rules          = $ruleAdapt->fetch_all;
+        my %rules = map {$_->goalAnalysis->logic_name, $_} $ruleAdapt->fetch_all;
 
         ### Would be nice to see rules in correct order.
         #@rules = sort_rules_by_dependency(@rules);
 
-        foreach my $rule (@rules) {
-            push(@$rule_list, $rule->goalAnalysis->logic_name);
-        }
-    } else {
-        my $species = $self->species();
-        my $filters = Bio::Otter::Lace::Defaults::option_from_array([$species, 'use_filters']);
-        foreach my $s (keys %$filters){
-            # filter name can be present and have value 0.
-            next unless $filters->{$s};
-            push(@$rule_list, $s);
+        # Only show analyses that descend from 'SubmitContig'
+        while (my ($name, $rule) = each %rules) {
+            my $will_be_run = 0;
+            foreach my $cond_name (@{$rule->list_conditions}) {
+                # The "SubmitContig" rule does not show up by itself
+                if ($cond_name eq 'SubmitContig' or $rules{$cond_name}) {
+                    $will_be_run = 1;
+                }
+            }
+            if ($will_be_run) {
+                push(@$rule_list, $name);
+            }
         }
     }
+
+    # Used to depend on the list of filters in the config file
+    #my $species = $self->species();
+    #my $filters = Bio::Otter::Lace::Defaults::option_from_array([$species, 'use_filters']);
+    #foreach my $s (keys %$filters){
+    #    # filter name can be present and have value 0.
+    #    next unless $filters->{$s};
+    #    push(@$rule_list, $s);
+    #}
+
     Bio::Otter::Lace::PipelineStatus->set_rule_list([sort @$rule_list]);
 
     my $sql = q{

@@ -4,7 +4,7 @@ package Bio::Otter::Lace::DasClient::Locator;
 use strict;
 use warnings;
 
-my $DEBUG     = 0;
+my $DEBUG     = 1;
 my $DEBUG_DAS = 1;
 # new
 sub new{
@@ -107,7 +107,8 @@ sub available_dsn{
     unless(@{$self->{'_available_dsn'}}){
         $self->{'_available_dsn'} = $dasObj->fetch_dsn_info();
     }
-    foreach my $dsn(@{$self->{'_available_dsn'}}){
+    foreach my $dsn (@{$self->{'_available_dsn'}}){
+        warn "DSN: ", Data::Dumper::Dumper($dsn);
         return 1 if $dsn->id eq $dsn_name;
     }
     return 0;

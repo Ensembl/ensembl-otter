@@ -625,7 +625,8 @@ sub make_database_directory {
     # rawdata used to be in tar file, but no longer because
     # it doesn't (yet) contain any files.
     my $rawdata = "$home/rawdata";
-    mkdir($rawdata, 0777) or die "Can't mkdir('$rawdata') : $!\n";
+    mkdir($rawdata, 0777);
+    die "Can't mkdir('$rawdata') : $!\n" unless -d $rawdata;
 
     $self->make_passwd_wrm;
     $self->edit_displays_wrm;
