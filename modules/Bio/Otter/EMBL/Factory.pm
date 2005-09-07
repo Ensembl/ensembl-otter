@@ -633,11 +633,10 @@ g)  Returns the populated Hum::EMBL object
 =cut
 
 sub make_embl_ft {
-    my ( $self, $acc, $embl, $sequence_version ) = @_;
+    my ( $self, $embl ) = @_;
 
-    unless ($acc and $embl and $sequence_version) {
-        confess "Must pass an accession, Hum::EMBL object and sequence_version";
-    }
+    my $acc              = $self->accession;
+    my $sequence_version = $self->sequence_version;
 
     my $ds = $self->DataSet
         or confess "DataSet must be set before calling make_embl";
