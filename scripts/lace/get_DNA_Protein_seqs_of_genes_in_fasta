@@ -177,7 +177,7 @@ sub output_sequences {
 	  foreach my $exon ( @{$t->get_all_Exons} ){
 		$exon_seqs .= $exon->seq->seq;
 	  }
-	  $formatted_seq_all_exons = sixty_cols($exon_seqs);
+	  $formatted_seq_all_exons = lc(sixty_cols($exon_seqs));
 	}
 
 	if ( $cds_only ){	
@@ -185,7 +185,7 @@ sub output_sequences {
 	  foreach my $exon ( @{$t->get_all_translateable_Exons} ){
 		$exon_seqs .= $exon->seq->seq;
 	  }
-	  $formatted_seq_CDS_only = sixty_cols($exon_seqs);
+	  $formatted_seq_CDS_only = lc(sixty_cols($exon_seqs));
 	}
 	
 	my $trans_class = $t->transcript_info->class->name;
@@ -226,7 +226,8 @@ sub output_sequences {
 	  }
 	  else {
 		my $gene = $geneAd->fetch_by_transcript_id($t->dbID);
-		printf STDERR ("%s (%s) %s", $t->transcript_info->transcript_stable_id,	$gene->stable_id, " has no associated translation\n");
+		printf STDERR ("%s (%s) %s", $t->transcript_info->transcript_stable_id,	
+                       $gene->stable_id, " has no associated translation\n");
 	  }
 	}
   }
@@ -242,6 +243,7 @@ sub sixty_cols {
   }
   return $format_seq;
 }
+
 sub gene_stable_id_2_acc_sv {
 
   # this subroutine is for filtering out unwanted clones specified by annotators
