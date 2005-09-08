@@ -9,7 +9,7 @@ use Bio::Otter::Lace::Defaults;
 
 $| = 1;
 
-my ($dataset, @sets, $vega, $all_exons, $cds_only);
+my ($dataset, @sets, $vega, $all_exons, $cds_only, $filter);
 
 my $help = sub { exec('perldoc', $0) };
 
@@ -17,35 +17,41 @@ Bio::Otter::Lace::Defaults::do_getopt('ds|dataset=s' => \$dataset, # eg, human o
 									  's|set=s@'     => \@sets,	   # sequence set(s) to check
 									  'all-exons'    => \$all_exons,
 									  'cds-only'     => \$cds_only,
+									  'filter'       => \$filter,
 									  'h|help'       => $help,
-									  'v|vega'       => \$vega,	   # this flags vega_set_id > 0. If !$vega: check all datasets
+									  'v|vega'       => \$vega,	   # flags vega_set_id > 0. !$vega: check all datasets
 								                                   # for now, zebrafish defaults to !$vega
 									 ) or $help->();               # plus default options
 $help->() unless ( $dataset && ($all_exons or $cds_only) );
 $help->() if ( $vega and @sets );                                  # vega option does all vega sets
 
-my $client   = Bio::Otter::Lace::Defaults::make_Client();         # Bio::Otter::Lace::Client
+my $client   = Bio::Otter::Lace::Defaults::make_Client();          # Bio::Otter::Lace::Client
 my $dset     = $client->get_DataSet_by_name($dataset);	           # Bio::Otter::Lace::DataSet
-my $otter_db = $dset->get_cached_DBAdaptor;                       # Bio::EnsEMBL::Containerr
+my $otter_db = $dset->get_cached_DBAdaptor;                        # Bio::EnsEMBL::Containerr
 my $sliceAd  = $otter_db->get_SliceAdaptor;
 my $geneAd   = $otter_db->get_GeneAdaptor;	                       # Bio::Otter::AnnotatedGeneAdaptor
 
 my $date = `date +%Y%m%d`; chomp $date;
 my $gene_info_of_trans    = {};
 my $gene_info_of_trans_AA = {};
+my $stblID_acc;
 
 # loop thru all assembly types to fetch all annotated genes in it on otter
 if ( @sets ) {
 
   foreach my $set ( @sets ) {
 
-	print "\nExamining gene IDs on '$set'\n";
+	$stblID_acc = gene_stable_id_2_acc_sv($set) if $filter;	
 
 	$otter_db->assembly_type($set); # replace the default sequence set setting
 
 	my $seqSet    = $dset->get_SequenceSet_by_name($set);
 	$dset->fetch_all_CloneSequences_for_SequenceSet($seqSet);
 
+	print STDERR "\nExamining Transcripts on '$set'\n\n";
+	printf STDERR ("%s\n\t%s\n\t%s\n\t%s\n\t\n",
+                   "Transcript legend:", "e: external", "x: excluded", ".: wanted");
+	
 	my $chrom;
 	$chrom = $seqSet->CloneSequence_list()->[0]->chromosome;
 		
@@ -62,21 +68,18 @@ if ( @sets ) {
 }
 
 
-#############################################################
+#-----------------------------------------------------------
 #                   s u b r o u t i n e s
-#############################################################
+#-----------------------------------------------------------
 
 
 sub get_latest_trans_or_prot_seq {
 
   my ($latest_gene_id, $slice) = @_;
   my ($coding, $transcripts, $pseudos);
-  my $done;
+  my $counter;
 
   foreach my $id ( @$latest_gene_id ) {
-	$done++;
-	print STDOUT ".";
-	print STDOUT "\t$done\n"  if $done % 100 == 0;
 
 	# transform contig coords of a gene into chrom. coords
 	my $gene;
@@ -94,17 +97,41 @@ sub get_latest_trans_or_prot_seq {
 
 	  my $geneNAME   = $gene->gene_info->name->name;
 
-	  # use this condition if necessary
-	  next if $geneNAME =~ /GD:|ERI:|MPI:/;
+
+	  # don't want these external ones
+
+	  if ( $geneNAME =~ /^MPI:|^ERI:|^GD:/ ){
+		 $counter++;
+		 print STDOUT "e";
+		 print STDOUT "\t$counter\n"  if $counter % 100 == 0;
+		 next;
+	  }
+
+	  # take only a fraction of clones the annotators want
+	  my $geneID     = $gene->stable_id;
+
+	  if ( $filter ){
+		unless ( `grep $stblID_acc->{$geneID} /nfs/team71/analysis/ck1/SCRATCH/chr21-02_clones` ){
+		  $counter++;
+		  print STDOUT "x";
+		  print STDOUT "\t$counter\n"  if $counter % 100 == 0;
+		  next;
+		}
+	  }
 
 	  my $geneTYPE   = $gene->type;
-	  my $geneID     = $gene->stable_id;
-	  my $geneDESC   = $gene->description;
+	  my $geneDESC;
+	  $gene->description ? $geneDESC = $gene->description : $geneDESC = "None";
+
 	  my $transID    = $trans->transcript_info->transcript_stable_id;
 	  my $transNAME  = $trans->transcript_info->name;
 	  my $transCLASS = $trans->type;
 	  my $transSTART = $trans->start;
 	  my $transEND   = $trans->end;
+
+	  $counter++;
+	  print STDOUT ".";
+	  print STDOUT "\t$counter\n"  if $counter % 100 == 0;
 
 	  if ( $trans->translation ){
 		my $protID  = $trans->translation->stable_id;
@@ -127,7 +154,7 @@ sub get_latest_trans_or_prot_seq {
 	  }
 	}
   }
-  print STDOUT "\t$done\n";
+  print STDOUT "\t$counter\n";
 
   return $coding, $transcripts, $pseudos;
 }
@@ -164,27 +191,14 @@ sub output_sequences {
 	my $trans_class = $t->transcript_info->class->name;
 	my ($filename_a, $filename_c);
 
-	
-#	if ( $trans_class eq "Coding" ) {
-#	  $filename = "Coding_genes_DNA_".$date;
-#	}
-
-#	elsif ( $trans_class =~ /pseudogene/i ) {
-#	  $filename = "Pseudogenes_DNA_".$date;
-#	}
-#	else {
-#	  $filename = "Transcripts_DNA_".$date;
-#	}
-	
 	if ( $trans_class =~ /pseudogene/i ) {
-	  $filename_a = "Pseudogenes_DNA_all_exons_".$date;
+	  $filename_a = "Pseudogenes_DNA_".$date;
 	  $filename_c = "Pseudogenes_DNA_CDS_only_".$date;
 	}
 	else {
-	  $filename_a = $trans_class."_genes_DNA_all_exons_".$date;
+	  $filename_a = $trans_class."_genes_DNA_".$date;
 	  $filename_c = $trans_class."_genes_DNA_CDS_only_".$date;
 	}
-	
 	
 	if ( $all_exons ){
 	  open($fh, ">>$filename_a") or die $!;
@@ -212,7 +226,7 @@ sub output_sequences {
 	  }
 	  else {
 		my $gene = $geneAd->fetch_by_transcript_id($t->dbID);
-		printf("%s (%s) %s", $t->transcript_info->transcript_stable_id,	$gene->stable_id, " has no associated translation\n");
+		printf STDERR ("%s (%s) %s", $t->transcript_info->transcript_stable_id,	$gene->stable_id, " has no associated translation\n");
 	  }
 	}
   }
@@ -228,7 +242,35 @@ sub sixty_cols {
   }
   return $format_seq;
 }
+sub gene_stable_id_2_acc_sv {
 
+  # this subroutine is for filtering out unwanted clones specified by annotators
+  # called only when $filter is true
+
+  my $set = shift;
+  my $sql = $otter_db->prepare(qq{
+						SELECT distinct gsi.stable_id, c.name
+						FROM contig c, assembly a, exon e, exon_transcript et,
+						     transcript t, gene g, gene_stable_id gsi
+						WHERE a.type='$set'
+						AND a.contig_id = c.contig_id
+						AND c.contig_id = e.contig_id
+						AND e.exon_id = et.exon_id
+						AND et.transcript_id = t.transcript_id
+						AND t.gene_id = g.gene_id
+						AND g.gene_id = gsi.gene_id
+					   }
+					);
+
+  $sql->execute;
+
+  my $stblID_acc = {};
+  while ( my ($stblID, $contigName) = $sql->fetchrow ){
+	$contigName =~ /(.+\.\d+)\.\d+\.\d+/;
+	$stblID_acc->{$stblID} = $1;
+  }
+  return $stblID_acc;
+}
 
   __END__
 
@@ -236,7 +278,7 @@ sub sixty_cols {
 
 =head1 SYNOPSIS
 
-get_DNA_Protein_seqs_of_genes_in_fasta -dataset <dataset> -set <assembly_type> <-all-exons and/or -cds-only>
+get_DNA_Protein_seqs_of_genes_in_fasta -dataset <dataset> -set <assembly_type> <-all-exons and/or -cds-only> <-filter>
 
 
 =head1 DESCRIPTION
