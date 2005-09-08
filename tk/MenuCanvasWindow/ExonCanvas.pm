@@ -1382,7 +1382,7 @@ sub update_Locus_from_XaceSeqChooser {
     
     my $xc = $self->xace_seq_chooser;
     if (my $locus = $self->SubSeq->Locus) {
-        printf STDERR "update_Locus_from_XaceSeqChooser for locus %s\n", $locus->name;
+        printf STDERR "update_Locus_from_XaceSeqChooser for locus '%s'\n", $locus->name;
         my $xc_locus = $xc->get_Locus($locus->name);
         $self->update_Locus_tk_fields($xc_locus);
         $self->SubSeq->Locus($xc_locus);
@@ -2375,21 +2375,15 @@ sub tk_t_end {
 sub get_SubSeq_if_changed {
     my( $self ) = @_;
     
-    my $new = $self->new_SubSeq_from_tk;
     my $old = $self->SubSeq;
+    my $new = $self->new_SubSeq_from_tk;
     
-    # Preserve Otter ids
+    # Preserve Otter ids in SubSeq (not attached Locus)
     $new->take_otter_ids($old);
-    # Copy locus otter_id if present
-    my $xc_locus = $self->xace_seq_chooser->get_Locus($new->Locus->name);
-    if (my $xc_locus_otter_id = $xc_locus->otter_id) {
-        $new->Locus->otter_id($xc_locus_otter_id);
-    }
-    elsif ($new->Locus and $old->Locus) {
-        if (my $old_otter = $old->Locus->otter_id) {
-            $new->Locus->otter_id($old_otter);
-        }
-    }
+
+    # Get the otter_id for the locus, or take it from
+    # an existing locus if we are renaming.
+    $self->manage_locus_otter_ids($old, $new);
 
     if ($old->is_archival and $new->ace_string eq $old->ace_string) {
         # SubSeq is saved, and there are no changes.
@@ -2407,25 +2401,53 @@ sub get_SubSeq_if_changed {
     return $new;
 }
 
+sub manage_locus_otter_ids {
+    my( $self, $old, $new ) = @_;
+    
+    my $new_locus = $new->Locus;
+    my $new_locus_name = $new_locus->name;
+
+    # Copy locus otter_id from existing Locus of same name if present
+    my $xc_locus = $self->xace_seq_chooser->get_Locus($new_locus_name);
+    if (my $xc_locus_otter_id = $xc_locus->otter_id) {
+        $new_locus->otter_id($xc_locus_otter_id);
+    }
+    elsif (my $old_locus = $old->Locus) {
+        # We don't have an otter_id, but did the old locus have an otter_id?
+        my $old_locus_name = $old_locus->name;
+        if (my $old_otter_id = $old_locus->otter_id
+            and $new_locus_name ne $old_locus_name)
+        {
+            # Looks like a rename, so we steal the otter_id
+            # from the old locus.
+            warn "Locus rename from '$old_locus_name' to '$new_locus_name'";
+            $new_locus->otter_id($old_otter_id);
+            $new_locus->previous_name($old_locus_name);
+        }
+    }
+}
+
 sub new_SubSeq_from_tk {
     my( $self ) = @_;
 
-    my $sub = $self->SubSeq->clone;
-    $sub->unset_translation_region;
-    $sub->unset_Locus;
-    $sub->translation_region     ( $self->translation_region_from_tk  );
-    $sub->name                   ( $self->get_subseq_name             );
-    $sub->replace_all_Exons      ( $self->Exons_from_canvas           );
-    $sub->GeneMethod             ( $self->get_GeneMethod_from_tk      );
-    $sub->Locus                  ( $self->get_Locus_from_tk           );
-    $sub->strand                 ( $self->strand_from_tk              );
-    $sub->start_not_found        ( $self->start_not_found_from_tk     );
-    $sub->end_not_found          ( $self->end_not_found_from_tk       );
-    $sub->evidence_hash          ( $self->evidence_hash               );
-    $self->get_transcript_remarks($sub);
+    my $new = $self->SubSeq->clone;
+    $new->unset_Locus;
+    $new->unset_translation_region;
+    $new->translation_region     ( $self->translation_region_from_tk  );
+    $new->name                   ( $self->get_subseq_name             );
+    $new->replace_all_Exons      ( $self->Exons_from_canvas           );
+    $new->GeneMethod             ( $self->get_GeneMethod_from_tk      );
+    $new->strand                 ( $self->strand_from_tk              );
+    $new->start_not_found        ( $self->start_not_found_from_tk     );
+    $new->end_not_found          ( $self->end_not_found_from_tk       );
+    $new->evidence_hash          ( $self->evidence_hash               );
+    $new->Locus                  ( $self->get_Locus_from_tk           );
+    $self->get_transcript_remarks($new);
+
+
     #warn "Start not found ", $self->start_not_found_from_tk, "\n",
     #    "End not found ", $self->end_not_found_from_tk, "\n";
-    return $sub;
+    return $new;
 }
 
 sub otter_Transcript_from_tk {
@@ -2514,8 +2536,6 @@ sub xace_save {
         return;
     }
     
-    confess "No Locus" unless $sub->Locus;
-    
     my $ace = '';
     
     # Do we need to rename?
@@ -2524,6 +2544,8 @@ sub xace_save {
     } else {
         $ace .= $sub->ace_string;
     }
+    
+    # Add ace_string method from locus with rename as above
     
     print STDERR "Sending:\n$ace";
     

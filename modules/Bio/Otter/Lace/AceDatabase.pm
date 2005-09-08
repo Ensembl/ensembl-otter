@@ -191,7 +191,7 @@ sub write_local_blast{
             warn "fetching slice $chr $chr_start $chr_end \n";
             my $slice = $pipe_db->get_SliceAdaptor->fetch_by_chr_start_end($chr, $chr_start, $chr_end);
 
-            ### Check we got a slice
+            # Check we got a slice
             my $tp = $slice->get_tiling_path;
             if(@$tp){
                 foreach my $tile(@$tp){
@@ -332,8 +332,8 @@ sub write_lock_xml{
 sub save_slice_dataset {
     my( $self, $slice_name, $ds_name ) = @_;
 
-    if($slice_name && $ds_name){
-        print STDERR "Saving $slice_name under $ds_name \n";
+    if ($slice_name and $ds_name) {
+        print STDERR "Saving '$slice_name' in '$ds_name'\n";
         $self->{'_slice_name_dataset'}->{$ds_name} ||= [];
         push(@{$self->{'_slice_name_dataset'}->{$ds_name}}, $slice_name);
     }
@@ -795,7 +795,7 @@ sub write_pipeline_data {
         my( $chr, $chr_start, $chr_end ) = $self->Client->chr_start_end_from_contig($cs);
         my $slice = $slice_adaptor->fetch_by_chr_start_end($chr, $chr_start, $chr_end);
 
-        ### Check we got a slice
+        # Check we got a slice
         my $tp = $slice->get_tiling_path;
         my $type = $slice->assembly_type;
         #warn "assembly type = $type";
@@ -901,17 +901,17 @@ sub make_AceDataFactory {
 }
 
 
-##  creates a data factory and adds all the appropriate filters to
-##  it. It then produces a slice from the ensembl db (using the
-##  $dataset coords) and produces output based on that slice in
-##  ensembl.ace
+#  creates a data factory and adds all the appropriate filters to
+#  it. It then produces a slice from the ensembl db (using the
+#  $dataset coords) and produces output based on that slice in
+#  ensembl.ace
 sub write_ensembl_data {
     my( $self, $ss ) = @_;
 
     my $dataset = $self->Client->get_DataSet_by_name($ss->dataset_name);
     my $species = $dataset->species();
     my $ensembl_sources = $self->Client->option_from_array([$species, 'ensembl_sources']);
-    ### Analysis logic name should not be hard coded, so now they're not.
+    # Analysis logic name should not be hard coded, so now they're not.
     foreach my $key(keys(%$ensembl_sources)){
         my $logic = [ split(',', $ensembl_sources->{$key}) ];
         warn "I'm gonna fetch using key '$key' in meta table and set logic to '@$logic'\n";
@@ -1084,7 +1084,7 @@ sub write_ensembl_data_for_key {
     }
     close $fh;
 
-    ### Disconnect Ensembl DBAdaptor
+    # Disconnect Ensembl DBAdaptor
     Bio::Otter::Lace::SatelliteDB::disconnect_DBAdaptor($ens_db);
 }
 
@@ -1256,7 +1256,7 @@ sub write_das{
 
         my $slice = $slice_adaptor->fetch_by_chr_start_end($chr, $chr_start, $chr_end);
 
-        ### Check we got a slice
+        # Check we got a slice
         my $tp = $slice->get_tiling_path;
         my $type = $slice->assembly_type;
         #warn "assembly type = $type";

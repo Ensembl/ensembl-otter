@@ -782,12 +782,19 @@ sub init_AceDatabase {
     my( $self, $db, $ss ) = @_;
     
     $db->add_misc_acefile;
+    #warn "write_das";
     #$db->write_das($ss);
+    #warn "write_otter_acefile";
     $db->write_otter_acefile($ss);
+    #warn "write_local_blast";
     $db->write_local_blast($ss);
+    #warn "write_pipeline_data";
     $db->write_pipeline_data($ss);
+    #warn "write_ensembl_data";
     $db->write_ensembl_data($ss);
+    #warn "write_methods_acefile";
     $db->write_methods_acefile;
+    #warn "initialize_database";
     $db->initialize_database;
 }
 

@@ -1941,7 +1941,16 @@ sub replace_SubSeq {
         $self->rename_subseq_edit_window($old_name, $sub_name);
     }
     $self->{'_subsequence_cache'}{$sub_name} = $sub;
-    $self->set_Locus($sub->Locus);
+
+    my $locus = $sub->Locus;
+    if (my $prev_name = $locus->drop_previous_name) {
+        warn "Unsetting otter_id for locus '$prev_name'\n";
+        $self->get_Locus($prev_name)->drop_otter_id;
+        use Data::Dumper;
+        print STDERR Dumper($self->get_Locus($prev_name));
+    }
+    $self->set_Locus($locus);
+
     ### Update all subseq edit windows
     $self->draw_current_state;
 }
