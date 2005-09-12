@@ -1,31 +1,30 @@
 #!/usr/local/bin/perl -w
 
-### list_clones_from_loci
+### list_sequence_sets_from_genes
 
 use strict;
+
 
 use Getopt::Long 'GetOptions';
 use Bio::Otter::Lace::PipelineDB;
 use Bio::Otter::Lace::Defaults;
+use Hum::Sort qw{ ace_sort };
 
 {
     my $dataset_name = undef;
     my $usage = sub { exec 'perldoc', $0 };
-    my $show_accs = 0;
     
     Bio::Otter::Lace::Defaults::do_getopt(
           'dataset=s'   => \$dataset_name,
-          'accession!'  => \$show_accs,
           ) or $usage->();
     $usage->() unless $dataset_name;
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
     my $ds = $cl->get_DataSet_by_name($dataset_name);
     # Make a connection to the otter database
     my $otter_db = $ds->get_cached_DBAdaptor;
-
-    my $column = $show_accs ? 'cl.embl_acc' : 'cl.name';
+    
     my $sth = $otter_db->prepare(qq{
-        SELECT $column
+        SELECT DISTINCT ss.assembly_type
         FROM gene g
           , gene_stable_id gsid
           , current_gene_info c
@@ -34,8 +33,8 @@ use Bio::Otter::Lace::Defaults;
           , transcript t
           , exon_transcript et
           , exon e
-          , contig ctg
-          , clone cl
+        LEFT JOIN assembly a ON e.contig_id = a.contig_id
+        LEFT JOIN sequence_set ss on a.type = ss.assembly_type
         WHERE g.gene_id = gsid.gene_id
           AND gsid.stable_id = c.gene_stable_id
           AND c.gene_info_id = i.gene_info_id
@@ -43,32 +42,47 @@ use Bio::Otter::Lace::Defaults;
           AND g.gene_id = t.gene_id
           AND t.transcript_id = et.transcript_id
           AND et.exon_id = e.exon_id
-          AND e.contig_id = ctg.contig_id
-          AND ctg.clone_id = cl.clone_id
+          AND ss.hide = 'N'
           AND n.name = ?
-        GROUP BY e.contig_id
         });
     
+    print "\nBy GENE:\n";
+    my( %set_gene );
     foreach my $gene_name (@ARGV) {
-        $sth->execute($gene_name);
-        my( @clones );
-        while (my ($cl) = $sth->fetchrow) {
-            push(@clones, $cl);
+        my( @seq_sets );
+        foreach my $name ("GD:$gene_name", $gene_name) {
+            $sth->execute($name);
+            while (my ($ss) = $sth->fetchrow) {
+                push(@seq_sets, $ss || 'NO_SET');
+            }
+            if (@seq_sets) {
+                $gene_name = $name;
+                last;
+            }
         }
-        @clones = ('NOT_FOUND') unless @clones;
-        print "$gene_name\t@clones\n";
+        unless (@seq_sets) {
+            @seq_sets = ('NOT_FOUND');
+        }
+        print "$gene_name\t@seq_sets\n";
+        foreach my $set (@seq_sets) {
+            my $gene_list = $set_gene{$set} ||= [];
+            push(@$gene_list, $gene_name);
+        }
+    }
+    
+    print "\nBy SET:\n";
+    foreach my $set (sort {ace_sort($a, $b)} keys %set_gene) {
+        my @genes = sort @{$set_gene{$set}};
+        printf "%-16s\t@genes\n", $set;
     }
 }
 
 
 
+
 __END__
 
-=head1 NAME - list_clones_from_loci
-
-=head1 EXAMPLE
-
-  list_clones_from_loci -dataset human SCL TAL1
+=head1 NAME - list_sequence_sets_from_genes
 
 =head1 AUTHOR
 
