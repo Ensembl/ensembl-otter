@@ -134,6 +134,9 @@ sub get_latest_trans_or_prot_seq {
 	  print STDOUT "\t$counter\n"  if $counter % 100 == 0;
 
 	  if ( $trans->translation ){
+
+		# take care of lineal gene order
+
 		my $protID  = $trans->translation->stable_id;
 
 		push(@{$gene_info_of_trans_AA->{$trans}}, "$transID ($transSTART - $transEND) | GENE_ID $geneID | GENE_TYPE $geneTYPE | SYMBOL $geneNAME | TRANS_NAME $transNAME | TRANS_CLASS $transCLASS | PROT_ID $protID | DESC $geneDESC");
@@ -144,13 +147,13 @@ sub get_latest_trans_or_prot_seq {
 	  next if $trans->transcript_info->class->name eq "Transposon";
 
 	  if ( $trans->transcript_info->class->name eq "Coding" ){
-		push( @$coding, $trans );
+		push( @{$coding->{$transSTART}}, $trans );  # take care of linear gene order
 	  }
 	  elsif ( $trans->transcript_info->class->name =~ /pseudogene/i ){
-		push( @$pseudos, $trans );
+		push( @{$pseudos->{$transSTART}}, $trans );
 	  }
 	  else {
-		push( @$transcripts, $trans );
+		push( @{$transcripts->{$transSTART}}, $trans );
 	  }
 	}
   }
@@ -166,68 +169,73 @@ sub output_sequences {
 
   my ($protein, $fh);
 
-  foreach my $t ( @$trans_sets ) {
+  # take care of linear gene order
+  my @gene_order = sort {$a <=> $b} keys %{$trans_sets};
 
-    $set = $t->adaptor->db->assembly_type unless $set;
-	my $formatted_seq_all_exons;
-	my $formatted_seq_CDS_only;
+  foreach my $order ( @gene_order ){
 
-	if ( $all_exons ){
-	  my $exon_seqs;
-	  foreach my $exon ( @{$t->get_all_Exons} ){
-		$exon_seqs .= $exon->seq->seq;
+	foreach my $t ( @{$trans_sets->{$order}} ){
+
+	  $set = $t->adaptor->db->assembly_type unless $set;
+
+	  my $formatted_seq_all_exons;
+	  my $formatted_seq_CDS_only;
+
+	  if ( $all_exons ) {
+		my $exon_seqs;
+		foreach my $exon ( @{$t->get_all_Exons} ) {
+		  $exon_seqs .= $exon->seq->seq;
+		}
+		$formatted_seq_all_exons = lc(sixty_cols($exon_seqs));
 	  }
-	  $formatted_seq_all_exons = lc(sixty_cols($exon_seqs));
-	}
 
-	if ( $cds_only ){	
-	  my $exon_seqs;
-	  foreach my $exon ( @{$t->get_all_translateable_Exons} ){
-		$exon_seqs .= $exon->seq->seq;
+	  if ( $cds_only ) {	
+		my $exon_seqs;
+		foreach my $exon ( @{$t->get_all_translateable_Exons} ) {
+		  $exon_seqs .= $exon->seq->seq;
+		}
+		$formatted_seq_CDS_only = lc(sixty_cols($exon_seqs));
 	  }
-	  $formatted_seq_CDS_only = lc(sixty_cols($exon_seqs));
-	}
 	
-	my $trans_class = $t->transcript_info->class->name;
-	my ($filename_a, $filename_c);
+	  my $trans_class = $t->transcript_info->class->name;
+	  my ($filename_a, $filename_c);
 
-	if ( $trans_class =~ /pseudogene/i ) {
-	  $filename_a = "Pseudogenes_DNA_".$date;
-	  $filename_c = "Pseudogenes_DNA_CDS_only_".$date;
-	}
-	else {
-	  $filename_a = $trans_class."_genes_DNA_".$date;
-	  $filename_c = $trans_class."_genes_DNA_CDS_only_".$date;
-	}
-	
-	if ( $all_exons ){
-	  open($fh, ">>$filename_a") or die $!;
-	  print $fh ">@{$gene_info_of_trans->{$t}}\n";
-	  print $fh $formatted_seq_all_exons, "\n";
-	}
-	if ( $cds_only ){
-	  open($fh, ">>$filename_c") or die $!;
-	  print $fh ">@{$gene_info_of_trans->{$t}}\n";
-	  print $fh $formatted_seq_CDS_only, "\n"  if $cds_only;
-	}
-
-	if ( $trans_class eq "Coding" ) {
-	  # print also prtein seq to a separate file for conding genes
-
-	  my $filename_p = "Coding_genes_AA_".$date;
-	  open($fh, ">>$filename_p") or die $!;
-
-	  # looks like some genes can be dubious due to incomplete annotation
-	  # eg, coding gene but its transcript does not have translation
-	  if ( exists $gene_info_of_trans_AA->{$t} ){
-		print $fh ">@{$gene_info_of_trans_AA->{$t}}\n";
-		my $protein = sixty_cols($t->translate->primary_seq->seq);
-		print $fh $protein, "\n";
+	  if ( $trans_class =~ /pseudogene/i ) {
+		$filename_a = "Pseudogenes_DNA_".$date;
+		$filename_c = "Pseudogenes_DNA_CDS_only_".$date;
+	  } else {
+		$filename_a = $trans_class."_genes_DNA_".$date;
+		$filename_c = $trans_class."_genes_DNA_CDS_only_".$date;
 	  }
-	  else {
-		my $gene = $geneAd->fetch_by_transcript_id($t->dbID);
-		printf STDERR ("%s (%s) %s", $t->transcript_info->transcript_stable_id,	
-                       $gene->stable_id, " has no associated translation\n");
+	
+	  if ( $all_exons ) {
+		open($fh, ">>$filename_a") or die $!;
+		print $fh ">@{$gene_info_of_trans->{$t}}\n";
+		print $fh $formatted_seq_all_exons, "\n";
+	  }
+	  if ( $cds_only ) {
+		open($fh, ">>$filename_c") or die $!;
+		print $fh ">@{$gene_info_of_trans->{$t}}\n";
+		print $fh $formatted_seq_CDS_only, "\n"  if $cds_only;
+	  }
+
+	  if ( $trans_class eq "Coding" ) {
+		# print also prtein seq to a separate file for conding genes
+
+		my $filename_p = "Coding_genes_AA_".$date;
+		open($fh, ">>$filename_p") or die $!;
+
+		# looks like some genes can be dubious due to incomplete annotation
+		# eg, coding gene but its transcript does not have translation
+		if ( exists $gene_info_of_trans_AA->{$t} ) {
+		  print $fh ">@{$gene_info_of_trans_AA->{$t}}\n";
+		  my $protein = sixty_cols($t->translate->primary_seq->seq);
+		  print $fh $protein, "\n";
+		} else {
+		  my $gene = $geneAd->fetch_by_transcript_id($t->dbID);
+		  printf STDERR ("%s (%s) %s", $t->transcript_info->transcript_stable_id,	
+						 $gene->stable_id, " has no associated translation\n");
+		}
 	  }
 	}
   }
