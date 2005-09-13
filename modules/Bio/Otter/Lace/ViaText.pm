@@ -17,6 +17,9 @@ our %OrderOfOptions = (
                 ## Special treatment: 'name'
             qw(db_name taxon_id hit_length description)
     ],
+    'SimpleFeature' => [
+            qw(start end strand display_label score dbID),
+    ],
 );
 
 1;

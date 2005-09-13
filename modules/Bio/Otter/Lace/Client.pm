@@ -395,6 +395,61 @@ sub get_pafs_from_dataset_slice_analysis {
     );
 }
 
+sub get_sfs_from_dataset_slice_analysis {
+    my( $self, $dataset, $slice, $analysis_name, $enshead ) = @_;
+
+    if(!$analysis_name) {
+        die "Analysis name must be specified!";
+    }
+
+    my $response = $self->general_http_dialog(
+        0,
+        'GET',
+        'get_sfs',
+        {
+            'enshead'  => $enshead ? 1 : 0,
+            'dataset'  => $dataset->name(),
+            'type'     => $slice->assembly_type(),
+            'chr'      => $slice->chr_name(),
+            'chrstart' => $slice->chr_start(),
+            'chrend'   => $slice->chr_end(),
+            'analysis' => $analysis_name,
+        }
+    );
+    print "[SFS] CLIENT RECEIVED [".length($response)."] bytes over the TCP connection\n";
+
+    my @resplines = split(/\n/,$response);
+    pop @resplines; # the last one is empty;  IS IT???
+
+    my @sf_optnames = @{ $OrderOfOptions{SimpleFeature} };
+
+        # cached values:
+    my $analysis = Bio::EnsEMBL::Analysis->new( -logic_name => $analysis_name );
+    my $seqname = $slice->name();
+
+    my @sfs = (); # simple features in a list
+    foreach my $respline (@resplines) {
+
+        my @optvalues = split(/\t/,$respline);
+        my $linetype      = shift @optvalues; # 'SimpleFeature'
+
+        my $sf = Bio::EnsEMBL::SimpleFeature->new();
+
+        for my $ind (0..@sf_optnames-1) {
+            my $method = $sf_optnames[$ind];
+            $sf->$method($optvalues[$ind]);
+        }
+
+            # use the cached values:
+        $sf->analysis( $analysis );
+        $sf->seqname( $seqname );
+
+        push @sfs, $sf;
+    }
+
+    return \@sfs;
+}
+
 sub get_afs_from_dataset_slice_kind_analysis {
     my( $self, $dataset, $slice, $kind, $analysis_name, $enshead ) = @_;
 

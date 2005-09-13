@@ -48,25 +48,28 @@ use Exporter();
 
 @ISA=qw(Exporter);
 
-$OTTER_SERVER_ROOT 	    = '/nfs/team71/analysis/jgrg/work/ensembl-otter';
-$OTTER_ALTROOT    	    = '/nfs/team71/analysis/jgrg/work/ensembl-otter/otter_alt';
+$OTTER_SERVER_ROOT 	    = '/nfs/team71/analysis/lg4/work/ensembl-otter';
+$OTTER_ALTROOT    	    = '/nfs/team71/analysis/lg4/work/ensembl-otter/otter_alt';
 $OTTER_SCRIPTDIR            = $OTTER_SERVER_ROOT . '/scripts/server';
 $OTTER_SERVER		    = 'ecs2a.internal.sanger.ac.uk';#Sys::Hostname::hostname();  # Local machine name
 $OTTER_MAX_CLIENTS          = 5;
-$OTTER_SERVER_PORT          = 39312;
+$OTTER_SERVER_PORT          = 33999;
 $OTTER_SCRIPT_TIMEOUT       = 60;
 $OTTER_SPECIES_FILE         = $OTTER_SERVER_ROOT . "/conf/species.dat";
 $OTTER_SPECIES              = read_species($OTTER_SPECIES_FILE);
-$OTTER_DEFAULT_SPECIES      = 'human_9p12';
+$OTTER_DEFAULT_SPECIES      = 'test_human';
 $OTTER_PREFIX               = 'OTT';
 $OTTER_GET_SCRIPTS          = {'/perl/get_region'     => "get_region",
                                '/perl/get_sequence'   => "get_sequence",
                                '/perl/get_datasets'   => "get_datasets",
                                '/perl/get_loci_names' => "get_loci_names",
-                               '/perl/lock_region'    => "lock_region"
+                               '/perl/lock_region'    => "lock_region",
+                               '/perl/get_afs'        => "get_afs",
+                               '/perl/get_sfs'        => "get_sfs",
                               };
 $OTTER_POST_SCRIPTS         = {'/perl/write_region'   => "write_region",
                                '/perl/unlock_region'  => "unlock_region",
+                               '/perl/get_afs'        => "get_afs",
                               };
 $OTTER_GLOBAL_ACCESS_USER   = 'GLOBAL_READONLY'; 
 

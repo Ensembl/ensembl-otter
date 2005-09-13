@@ -23,7 +23,7 @@ my $analysis = $cgi_args{analysis};
 my $odb = get_DBAdaptor_from_CGI_species($cgi, $OTTER_SPECIES, $enshead);
 
 my $pipekey = $enshead
-    ? 'pipeline_db_v32'
+    ? 'pipeline_db_head'
     : 'pipeline_db';
 
     # Getting (to) the pipeline adapter:
@@ -68,6 +68,8 @@ my $method = {
 my $af_adaptor = $pdb->$method();
 my $afs = $af_adaptor->fetch_all_by_Slice($pipeline_slice, $analysis);
 
+print STDERR "Total of ".scalar(@$afs)." $kind:$analysis features found\n";
+
     # Put the names into the hit_description hash:
 my %hd_hash = ();
 foreach my $af (@$afs) {
@@ -94,11 +96,8 @@ my %hit_seen = (); # collect the seen hit names here
 foreach my $af (@$afs) {
     my $hit_name = $af->hseqname();
     my $hd = $hd_hash{$hit_name};
-    # if($af->can('get_HitDescription')) {
     if($hd) {
-
-        if(!exists($hit_seen{$hit_name})) { # new one
-            # my $hd = $af->get_HitDescription();
+        if(!exists($hit_seen{$hit_name})) { # a new one
 
                 # output a HitDescription line
             my @hd_optvalues = ('HitDescription', $hit_name);
