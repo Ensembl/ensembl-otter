@@ -53,21 +53,40 @@ if($enshead) {
     );
 }
 
-my @sf_optnames = @{ $OrderOfOptions{SimpleFeature} };
+my @rf_optnames = @{ $OrderOfOptions{RepeatFeature} };
+my @rc_optnames = @{ $OrderOfOptions{RepeatConsensus} };
 
     # Fetch the features:
-my $sf_adaptor = $pdb->get_SimpleFeatureAdaptor();
-my $sfs = $sf_adaptor->fetch_all_by_Slice($pipeline_slice, $analysis);
+my $rf_adaptor = $pdb->get_RepeatFeatureAdaptor();
+my $rfs = $rf_adaptor->fetch_all_by_Slice($pipeline_slice, $analysis);
 
-print STDERR "Total of ".scalar(@$sfs)." $analysis simple features found\n";
+print STDERR "Total of ".scalar(@$rfs)." $analysis repeat features found\n";
 
-foreach my $sf (@$sfs) {
-        # output a SimpleFeature line
-    my @sf_optvalues = ('SimpleFeature');
-    for my $opt (@sf_optnames) {
-        push @sf_optvalues, $sf->$opt();
+    # Stringify only the simple fields:
+my %rc_seen = (); # collect the seen repeat consensus ids here
+foreach my $rf (@$rfs) {
+    my $rc = $rf->repeat_consensus(); # object
+    my $rc_id = $rc->dbID();
+
+    if(!exists($rc_seen{$rc_id})) { # a new one
+
+            # output a repeat consensus line
+        my @rc_optvalues = ('RepeatConsensus');
+        for my $opt (@rc_optnames) {
+            push @rc_optvalues, $rc->$opt();
+        }
+        print join("\t", @rc_optvalues)."\n";
+
+        $rc_seen{$rc_id} = 1;
     }
+    
+        # output a repeat feature line
+    my @rf_optvalues = ('RepeatFeature');
+    for my $opt (@rf_optnames) {
+        push @rf_optvalues, $rf->$opt();
+    }
+    push @rf_optvalues, $rc_id;
 
-    print join("\t", @sf_optvalues)."\n";
+    print join("\t", @rf_optvalues)."\n";
 }
 

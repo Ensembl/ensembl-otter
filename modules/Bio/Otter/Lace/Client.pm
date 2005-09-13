@@ -26,7 +26,10 @@ use Bio::EnsEMBL::DnaDnaAlignFeature;
 use Bio::EnsEMBL::DnaPepAlignFeature;
 use Bio::Otter::DnaDnaAlignFeature;
 use Bio::Otter::DnaPepAlignFeature;
+use Bio::EnsEMBL::SimpleFeature;
 use Bio::Otter::HitDescription;
+use Bio::EnsEMBL::RepeatFeature;
+use Bio::EnsEMBL::RepeatConsensus;
 
 sub new {
     my( $pkg ) = @_;
@@ -538,6 +541,78 @@ sub get_afs_from_dataset_slice_kind_analysis {
     }
 
     return \@afs;
+}
+
+sub get_rfs_from_dataset_slice_analysis {
+    my( $self, $dataset, $slice, $analysis_name, $enshead ) = @_;
+
+    if(!$analysis_name) {
+        die "Analysis name must be specified!";
+    }
+
+    my $response = $self->general_http_dialog(
+        0,
+        'GET',
+        'get_rfs',
+        {
+            'enshead'  => $enshead ? 1 : 0,
+            'dataset'  => $dataset->name(),
+            'type'     => $slice->assembly_type(),
+            'chr'      => $slice->chr_name(),
+            'chrstart' => $slice->chr_start(),
+            'chrend'   => $slice->chr_end(),
+            'analysis' => $analysis_name,
+        }
+    );
+    print "[RFS] CLIENT RECEIVED [".length($response)."] bytes over the TCP connection\n";
+
+    my @resplines = split(/\n/,$response);
+    pop @resplines; # the last one is empty;  IS IT???
+
+    my @rf_optnames = @{ $OrderOfOptions{RepeatFeature} };
+    my @rc_optnames = @{ $OrderOfOptions{RepeatConsensus} };
+
+        # cached values:
+    my $analysis = Bio::EnsEMBL::Analysis->new( -logic_name => $analysis_name );
+
+    my %rcs = (); # cached repeat consensi, keyed by rc_id
+    my @rfs = (); # repeat features in a list
+    foreach my $respline (@resplines) {
+
+        my @optvalues = split(/\t/,$respline);
+        my $linetype      = shift @optvalues; # 'RepeatFeature' || 'RepeatConsensus'
+
+        if($linetype eq 'RepeatConsensus') {
+
+            my $rc_id = pop @optvalues;
+
+            my $rc = Bio::EnsEMBL::RepeatConsensus->new();
+            for my $ind (0..@rc_optnames-1) {
+                my $method = $rc_optnames[$ind];
+                $rc->$method($optvalues[$ind]);
+            }
+            $rcs{$rc_id} = $rc;
+
+        } elsif($linetype eq 'RepeatFeature') {
+
+            my $rc_id = pop @optvalues;
+
+            my $rf = Bio::EnsEMBL::RepeatFeature->new();
+
+            for my $ind (0..@rf_optnames-1) {
+                my $method = $rf_optnames[$ind];
+                $rf->$method($optvalues[$ind]);
+            }
+
+                # use the cached values:
+            $rf->analysis( $analysis );
+            $rf->repeat_consensus( $rcs{$rc_id} );
+
+            push @rfs, $rf;
+        }
+    }
+
+    return \@rfs;
 }
 
 sub lock_region_for_contig_from_Dataset{
