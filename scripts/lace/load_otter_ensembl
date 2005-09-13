@@ -274,8 +274,8 @@ my $DEBUG = 0;
     if ($at_sanger) {
         my ($root) = $0 =~ m{^(.+?)[^/]+$};
         $root =~ s{/$}{};
-        system("$root/submissions_to_otter",        '-dataset', $dataset_name);
-        system("$root/clones_to_otter", '-reverse', '-dataset', $dataset_name);
+        system("$root/submissions_to_otter",        '-dataset', $dataset_name, '-port', 33988);
+        system("$root/clones_to_otter", '-reverse', '-dataset', $dataset_name, '-port', 33988);
     }
 }
 
