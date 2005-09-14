@@ -67,6 +67,7 @@ $OTTER_GET_SCRIPTS          = {'/perl/get_region'     => "get_region",
                                '/perl/get_afs'        => "get_afs",
                                '/perl/get_sfs'        => "get_sfs",
                                '/perl/get_rfs'        => "get_rfs",
+                               '/perl/get_pt'         => "get_pt",
                               };
 $OTTER_POST_SCRIPTS         = {'/perl/write_region'   => "write_region",
                                '/perl/unlock_region'  => "unlock_region",

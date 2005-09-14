@@ -30,6 +30,7 @@ use Bio::EnsEMBL::SimpleFeature;
 use Bio::Otter::HitDescription;
 use Bio::EnsEMBL::RepeatFeature;
 use Bio::EnsEMBL::RepeatConsensus;
+use Bio::EnsEMBL::PredictionTranscript;
 
 sub new {
     my( $pkg ) = @_;
@@ -613,6 +614,86 @@ sub get_rfs_from_dataset_slice_analysis {
     }
 
     return \@rfs;
+}
+
+sub get_pts_from_dataset_slice_analysis {
+    my( $self, $dataset, $slice, $analysis_name, $enshead ) = @_;
+
+    if(!$analysis_name) {
+        die "Analysis name must be specified!";
+    }
+
+    my $response = $self->general_http_dialog(
+        0,
+        'GET',
+        'get_pt',
+        {
+            'enshead'  => $enshead ? 1 : 0,
+            'dataset'  => $dataset->name(),
+            'type'     => $slice->assembly_type(),
+            'chr'      => $slice->chr_name(),
+            'chrstart' => $slice->chr_start(),
+            'chrend'   => $slice->chr_end(),
+            'analysis' => $analysis_name,
+        }
+    );
+    print "[PT] CLIENT RECEIVED [".length($response)."] bytes over the TCP connection\n";
+
+    my @resplines = split(/\n/,$response);
+    pop @resplines; # the last one is empty;  IS IT???
+
+
+    my @pt_optnames = @{ $OrderOfOptions{PredictionTranscript} };
+    my @pe_optnames = @{ $OrderOfOptions{PredictionExon} };
+
+        # cached values:
+    my $analysis = Bio::EnsEMBL::Analysis->new( -logic_name => $analysis_name );
+
+    my @pts = (); # prediction transcripts in a list
+    my $curr_pt;
+    my $curr_ptid;
+    foreach my $respline (@resplines) {
+
+        my @optvalues = split(/\t/,$respline);
+        my $linetype      = shift @optvalues; # 'PredictionTranscript' || 'PredictionExon'
+
+        if($linetype eq 'PredictionTranscript') {
+
+            my $pt = Bio::EnsEMBL::PredictionTranscript->new();
+            for my $ind (0..@pt_optnames-1) {
+                my $method = $pt_optnames[$ind];
+                $pt->$method($optvalues[$ind]);
+            }
+            $pt->analysis( $analysis );
+
+            $curr_pt = $pt;
+            $curr_ptid = $pt->dbID();
+
+            push @pts, $pt;
+
+        } elsif($linetype eq 'PredictionExon') {
+
+            my $pt_id = pop @optvalues;
+
+            my $pe = Bio::EnsEMBL::Exon->new(); # there is no PredictionExon in v.19 code!
+
+            for my $ind (0..@pe_optnames-1) {
+                my $method = $pe_optnames[$ind];
+                $pe->$method($optvalues[$ind]);
+            }
+
+                # use the cached values:
+            $pe->analysis( $analysis );
+
+            if($pt_id == $curr_ptid) {
+                $curr_pt->add_Exon( $pe );
+            } else {
+                die "Wrong order of exons in the stream!";
+            }
+        }
+    }
+
+    return \@pts;
 }
 
 sub lock_region_for_contig_from_Dataset{
