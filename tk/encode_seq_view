@@ -26,7 +26,7 @@ use MenuCanvasWindow::XaceSeqChooser;
     my $ss = $ds->get_SequenceSet_by_name($set_name);
     
     # Select all clones in sequence set
-    $ss->selectedCloneSequences($ss->CloneSequence_list);
+    $ss->selected_CloneSequences($ss->CloneSequence_list);
 
     ### Create AceDatabase
     my $db = $cl->new_AceDatabase;
