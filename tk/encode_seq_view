@@ -18,12 +18,14 @@ use MenuCanvasWindow::XaceSeqChooser;
     
     # DataSet interacts directly with an otter database
     my $ds = $cl->get_DataSet_by_name($dataset_name);
+    warn "Got dataset";
     # Look at code used by CanvasWindow::SequenceNotes::SearchedSequenceNotes for clues
     #my $otter_dba = $ds->get_cached_DBAdaptor;
     #my $pipe_dba = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($otter_dba);
 
     my $set_name = "encode-$encode_region";
     my $ss = $ds->get_SequenceSet_by_name($set_name);
+    $ds->fetch_all_CloneSequences_for_SequenceSet($ss);
     
     # Select all clones in sequence set
     $ss->selected_CloneSequences($ss->CloneSequence_list);
@@ -44,7 +46,7 @@ use MenuCanvasWindow::XaceSeqChooser;
     ### launch xace
     ### Display region containing hit in fMap - see code in ExonCanvas
 
-    Tk::Mainloop();
+    Tk::MainLoop();
 }
 
 

@@ -640,9 +640,10 @@ sub _open_SequenceSet{
 #    my $title = $self->selected_sequence_string($ss);
 
     my $db = $cl->new_AceDatabase;
-    $db->make_database_directory;
-    $db->title($title);
     $db->error_flag(1);
+    $db->title($title);
+    $db->make_database_directory;
+
     my $write_access = $cl->write_access();
 
     if($write_access){
@@ -702,6 +703,7 @@ sub _open_SequenceSet{
 #        return;
 #    }
 
+    warn "Making XaceSeqChooser";
     my $xc = $self->make_XaceSeqChooser($title);
     ### Maybe: $xc->SequenceNotes($self);
     $xc->SequenceNotes($self) ;
