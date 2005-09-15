@@ -60,6 +60,10 @@ jel     Jane Loveland
 lw2     Laurens Wilming
 hyh     Hwang Ho-yon
 gkl     Gavin Laird
+ds3     Dave Swarbreck
+snc     Sam Carruthers
+af2     Adam Frankish
+cas     Charlie Steward
         })
     {
         chomp($line);
