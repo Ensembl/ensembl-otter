@@ -59,18 +59,18 @@ $OTTER_SPECIES_FILE         = $OTTER_SERVER_ROOT . "/conf/species.dat";
 $OTTER_SPECIES              = read_species($OTTER_SPECIES_FILE);
 $OTTER_DEFAULT_SPECIES      = 'test_human';
 $OTTER_PREFIX               = 'OTT';
-$OTTER_GET_SCRIPTS          = {'/perl/get_region'     => "get_region",
-                               '/perl/get_sequence'   => "get_sequence",
-                               '/perl/get_datasets'   => "get_datasets",
-                               '/perl/get_loci_names' => "get_loci_names",
-                               '/perl/lock_region'    => "lock_region",
-                               '/perl/get_afs'        => "get_afs",
-                               '/perl/get_sfs'        => "get_sfs",
-                               '/perl/get_rfs'        => "get_rfs",
-                               '/perl/get_pt'         => "get_pt",
+$OTTER_GET_SCRIPTS          = {'/perl/get_region'     => 'get_region',
+                               '/perl/get_sequence'   => 'get_sequence',
+                               '/perl/get_datasets'   => 'get_datasets',
+                               '/perl/get_loci_names' => 'get_loci_names',
+                               '/perl/lock_region'    => 'lock_region',
+                               '/perl/get_afs'        => 'get_afs',
+                               '/perl/get_sfs'        => 'get_sfs',
+                               '/perl/get_rfs'        => 'get_rfs',
+                               '/perl/get_pts'        => 'get_pts',
                               };
-$OTTER_POST_SCRIPTS         = {'/perl/write_region'   => "write_region",
-                               '/perl/unlock_region'  => "unlock_region",
+$OTTER_POST_SCRIPTS         = {'/perl/write_region'   => 'write_region',
+                               '/perl/unlock_region'  => 'unlock_region',
                               };
 $OTTER_GLOBAL_ACCESS_USER   = 'GLOBAL_READONLY'; 
 

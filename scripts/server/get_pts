@@ -19,39 +19,7 @@ my %cgi_args = $cgi->Vars;
 
 my $analysis = $cgi_args{analysis};
 my $odb = get_DBAdaptor_from_CGI_species($cgi, $OTTER_SPECIES, $enshead);
-
-my $pipekey = $enshead
-    ? 'pipeline_db_head'
-    : 'pipeline_db';
-
-    # Getting (to) the pipeline adapter:
-my @pipe_all = @{ $odb->get_MetaContainer()->list_value_by_key($pipekey) };
-if(!@pipe_all) {
-    die "This database does not have an associated '$pipekey' in the meta table ";
-}
-my $pipe_lastval = pop @pipe_all; # we prefer the one added the latest
-my $pdb = Bio::EnsEMBL::DBSQL::DBAdaptor->new( eval $pipe_lastval );
-
-my $pipeline_slice;
-
-if($enshead) {
-    $pipeline_slice = $pdb->get_SliceAdaptor()->fetch_by_region(
-        'chromosome',
-        $cgi_args{chr},
-        $cgi_args{chrstart},
-        $cgi_args{chrend},
-        undef,              # strand
-        'Otter',            # version
-    );
-} else {
-    $pdb->assembly_type($odb->assembly_type());
-
-    $pipeline_slice = $pdb->get_SliceAdaptor()->fetch_by_chr_start_end(
-        $cgi_args{chr},
-        $cgi_args{chrstart},
-        $cgi_args{chrend},
-    );
-}
+my ($pdb, $pipeline_slice, $pipe_connparms) = get_pipeline_adaptor_slice_parms($cgi, $odb, $enshead);
 
 my @pt_optnames = @{ $OrderOfOptions{PredictionTranscript} };
 my @pe_optnames = @{ $OrderOfOptions{PredictionExon} };

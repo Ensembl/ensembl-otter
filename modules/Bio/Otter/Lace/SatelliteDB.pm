@@ -7,34 +7,36 @@ use strict;
 use Carp;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 
-
-## takes in an otter_db adaptor and optionally a meta_key value.
-## uses these to connect to the otter db and return a db handle for the pipeline db
-sub get_pipeline_DBAdaptor {
-    my( $otter_db, $key ) = @_;
-
-    require 'Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor';
-    return _get_DBAdaptor($otter_db, $key, 'Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor');
-}
+## (lg4) This subroutine seems to have moved to PipelineDB::
+#
+# sub get_pipeline_DBAdaptor {
+#    my( $otter_db, $key ) = @_;
+#
+#    require 'Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor';
+#    return get_DBAdaptor($otter_db, $key, 'Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor');
+# }
 
 sub get_DBAdaptor {
-    my( $otter_db, $key ) = @_;
 
-    return _get_DBAdaptor($otter_db, $key, 'Bio::EnsEMBL::DBSQL::DBAdaptor');
+    my ($satellite_db, $satellite_options) = _get_DBAdaptor_and_options( @_ );
+
+    return $satellite_db;
 }
 
-sub _get_DBAdaptor {
+sub _get_DBAdaptor_and_options {
     my( $otter_db, $key, $class ) = @_;
 
     confess "Missing otter_db argument" unless $otter_db;
 
-    my $pipe_options = get_options_for_key($otter_db, $key) or return;
-    my $pipeline_db = $class->new(%$pipe_options);
+    $class ||= 'Bio::EnsEMBL::DBSQL::DBAdaptor';
 
-    if ($pipeline_db) {
-        return $pipeline_db;
+    my $satellite_options = get_options_for_key($otter_db, $key) or return;
+    my $satellite_db = $class->new(%$satellite_options);
+
+    if ($satellite_db) {
+        return ($satellite_db, $satellite_options);
     } else {
-        confess "Couldn't connect to pipeline db";
+        confess "Couldn't connect to satellite db";
     } 
 }
 
