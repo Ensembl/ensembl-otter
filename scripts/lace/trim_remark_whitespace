@@ -1,0 +1,56 @@
+#!/usr/local/bin/perl -w
+
+### trim_remark_whitespace
+
+use strict;
+
+use Bio::Otter::Lace::Defaults;
+
+{
+    my ($dataset_name);
+    my $usage = sub { exec('perldoc', $0) };
+    Bio::Otter::Lace::Defaults::do_getopt('dataset=s' => \$dataset_name,)
+      or $usage->();
+    $usage->() unless $dataset_name;
+
+    my $cl  = Bio::Otter::Lace::Defaults::make_Client();
+    my $ds  = $cl->get_DataSet_by_name($dataset_name);
+    my $dba = $ds->get_cached_DBAdaptor;
+
+    foreach my $type (qw{ transcript gene }) {
+        my $sth = $dba->prepare(
+            qq{
+            SELECT ${type}_remark_id
+              , remark
+            FROM ${type}_remark
+            }
+        );
+        $sth->execute;
+
+        my $update = $dba->prepare(
+            qq{
+            UPDATE ${type}_remark
+            SET remark = ?
+            WHERE ${type}_remark_id = ?
+            }
+        );
+
+        while (my ($id, $old_rem) = $sth->fetchrow) {
+            my $new_rem = $old_rem;
+            $new_rem =~ s/(^\s*|\s*$)//g;
+            if ($new_rem ne $old_rem) {
+                #print STDERR "$type: '$old_rem' => '$new_rem'\n";
+                $update->execute($new_rem, $id);
+            }
+        }
+    }
+}
+
+__END__
+
+=head1 NAME - trim_remark_whitespace
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
