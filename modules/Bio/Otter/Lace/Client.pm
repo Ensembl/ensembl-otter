@@ -626,7 +626,7 @@ sub get_pts_from_dataset_slice_analysis {
     my $response = $self->general_http_dialog(
         0,
         'GET',
-        'get_pt',
+        'get_pts',
         {
             'enshead'  => $enshead ? 1 : 0,
             'dataset'  => $dataset->name(),
