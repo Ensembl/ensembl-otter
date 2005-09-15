@@ -18,6 +18,7 @@ use Bio::Otter::Lace::Defaults;
     my $dba = $ds->get_cached_DBAdaptor;
 
     foreach my $type (qw{ transcript gene }) {
+        print STDERR "Fixing '${type}_remark' ";
         my $sth = $dba->prepare(
             qq{
             SELECT ${type}_remark_id
@@ -35,14 +36,18 @@ use Bio::Otter::Lace::Defaults;
             }
         );
 
+        my $fixed = 0;
         while (my ($id, $old_rem) = $sth->fetchrow) {
             my $new_rem = $old_rem;
             $new_rem =~ s/(^\s*|\s*$)//g;
             if ($new_rem ne $old_rem) {
                 #print STDERR "$type: '$old_rem' => '$new_rem'\n";
+                print STDERR ".";
+                $fixed++;
                 $update->execute($new_rem, $id);
             }
         }
+        print STDERR " $fixed fixed\n";
     }
 }
 
