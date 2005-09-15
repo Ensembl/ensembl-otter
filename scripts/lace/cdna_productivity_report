@@ -74,7 +74,7 @@ cas     Charlie Steward
 
     my $progress = $otter_dba->prepare(q{
         SELECT g.contig_id
-          , DATE_FORMAT(MIN(s.created), '%d %a') first_saved
+          , DATE_FORMAT(MIN(s.created), '%b %d %a') first_saved
           , MIN(e.exon_id)
         FROM contig g
           , exon e
@@ -121,7 +121,7 @@ cas     Charlie Steward
     
     print "\n";
     foreach my $name (sort {$author_count{$b} <=> $author_count{$a}} keys %author_count) {
-        printf "%4d  %s\n", $author_count{$name}, $name;
+        printf "%5d  %s\n", $author_count{$name}, $name;
     }
 }
 
