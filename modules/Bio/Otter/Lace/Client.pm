@@ -346,43 +346,6 @@ sub general_http_dialog {
 
 # ---- specific HTTP-requests:
 
-sub get_hitdescs_from_dataset_type_hithash { # (UNUSED)
-    my( $self, $dataset, $type, $hithash_hp) = @_;
-
-    my $response = $self->general_http_dialog(
-        0,
-        'POST',
-        'get_hitdescs',
-        {
-            'dataset'  => $dataset->name(),
-            'type'     => $type,
-            'names'    => join(',' => keys %$hithash_hp),
-        }
-    );
-    print "[HITDESC] CLIENT RECEIVED [".length($response)."] bytes over the TCP connection\n";
-
-    my @resplines = split(/\n/,$response);
-
-    my @hd_optnames = @{ $OrderOfOptions{HitDescription} };
-
-    foreach my $respline (@resplines) {
-
-        my @optvalues = split(/\t/,$respline);
-        my $name = shift @optvalues;
-        my $hitdesc = Bio::Otter::HitDescription->new();
-
-        for my $ind (0..@hd_optnames-1) {
-            my $method = $hd_optnames[$ind];
-            $hitdesc->$method($optvalues[$ind]);
-        }
-
-        $hithash_hp->{$name} = $hitdesc;
-    }
-
-    return $hithash_hp;
-}
-
-
 sub get_dafs_from_dataset_slice_analysis {
     my( $self, $dataset, $slice, $analysis_name, $enshead ) = @_;
 
