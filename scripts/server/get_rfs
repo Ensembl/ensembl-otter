@@ -30,6 +30,8 @@ my $rfs = $rf_adaptor->fetch_all_by_Slice($pipeline_slice, $analysis);
 
 print STDERR "Total of ".scalar(@$rfs)." $analysis repeat features found\n";
 
+my $output_string = '';
+
     # Stringify only the simple fields:
 my %rc_seen = (); # collect the seen repeat consensus ids here
 foreach my $rf (@$rfs) {
@@ -43,7 +45,7 @@ foreach my $rf (@$rfs) {
         for my $opt (@rc_optnames) {
             push @rc_optvalues, $rc->$opt();
         }
-        print join("\t", @rc_optvalues)."\n";
+        $output_string .= join("\t", @rc_optvalues)."\n";
 
         $rc_seen{$rc_id} = 1;
     }
@@ -55,6 +57,8 @@ foreach my $rf (@$rfs) {
     }
     push @rf_optvalues, $rc_id;
 
-    print join("\t", @rf_optvalues)."\n";
+    $output_string .= join("\t", @rf_optvalues)."\n";
 }
+
+send_response($cgi, $output_string, 1);
 

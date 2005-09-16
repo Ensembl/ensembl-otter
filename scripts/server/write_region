@@ -320,8 +320,11 @@ if ($@) {
 $outputstr ||= "No changes to annotations";
 
 #send_response($q, $outputstr);
-$output_xml = "<otter>\n" . $path_as_XML . $output_xml . "</otter>\n";
-send_response($q, $output_xml);
+
+#$output_xml = "<otter>\n" . $path_as_XML . $output_xml . "</otter>\n";
+
+$output_xml = $path_as_XML . $output_xml ;
+send_response($q, $output_xml, 1);
 
      #-------------------------------------------
      #          S U B R O U T I N E S

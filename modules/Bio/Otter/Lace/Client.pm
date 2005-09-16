@@ -289,9 +289,13 @@ sub url_root {
 =cut
 
 sub _check_for_error {
-    my( $self, $response, $dont_confess_otter_errors ) = @_;
+    my( $self, $response, $dont_confess_otter_errors, $unwrap ) = @_;
 
     my $xml = $response->content();
+
+    if($unwrap && $xml =~ m{<otter[^\>]*\>\s*(.*)</otter>\s*}) {
+        $xml = $1;
+    }
 
     if ($xml =~ m{<response>(.+?)</response>}s) {
         # response can be empty on success
@@ -308,7 +312,7 @@ sub _check_for_error {
 }
 
 sub general_http_dialog {
-    my ($self, $psw_attempts_left, $method, $scriptname, $params) = @_;
+    my ($self, $psw_attempts_left, $method, $scriptname, $params, $unwrap) = @_;
 
     my $url = $self->url_root.'/'.$scriptname;
     my $paramstring = join('&',
@@ -338,15 +342,17 @@ sub general_http_dialog {
             confess "method '$method' is not supported";
         }
         my $response = $self->get_UserAgent->request($request);
-        $content = $self->_check_for_error($response, $psw_attempts_left);
+        $content = $self->_check_for_error($response, $psw_attempts_left, $unwrap);
     } while ($psw_attempts_left-- && !$content);
+
+    print "[$scriptname] CLIENT RECEIVED [".length($content)."] bytes over the TCP connection\n";
 
     return $content;
 }
 
 # ---- specific HTTP-requests:
 
-sub get_dafs_from_dataset_slice_analysis {
+sub get_dafs_from_dataset_slice_analysis {  # get DnaAlignFeatures
     my( $self, $dataset, $slice, $analysis_name, $enshead ) = @_;
 
     return $self->get_afs_from_dataset_slice_kind_analysis(
@@ -354,7 +360,7 @@ sub get_dafs_from_dataset_slice_analysis {
     );
 }
 
-sub get_pafs_from_dataset_slice_analysis {
+sub get_pafs_from_dataset_slice_analysis {  # get ProteinAlignFeatures
     my( $self, $dataset, $slice, $analysis_name, $enshead ) = @_;
 
     return $self->get_afs_from_dataset_slice_kind_analysis(
@@ -362,7 +368,7 @@ sub get_pafs_from_dataset_slice_analysis {
     );
 }
 
-sub get_sfs_from_dataset_slice_analysis {
+sub get_sfs_from_dataset_slice_analysis {   # get SimpleFeatures
     my( $self, $dataset, $slice, $analysis_name, $enshead ) = @_;
 
     if(!$analysis_name) {
@@ -381,9 +387,9 @@ sub get_sfs_from_dataset_slice_analysis {
             'chrstart' => $slice->chr_start(),
             'chrend'   => $slice->chr_end(),
             'analysis' => $analysis_name,
-        }
+        },
+        1,
     );
-    print "[SFS] CLIENT RECEIVED [".length($response)."] bytes over the TCP connection\n";
 
     my @resplines = split(/\n/,$response);
     pop @resplines; # the last one is empty;  IS IT???
@@ -417,7 +423,7 @@ sub get_sfs_from_dataset_slice_analysis {
     return \@sfs;
 }
 
-sub get_afs_from_dataset_slice_kind_analysis {
+sub get_afs_from_dataset_slice_kind_analysis { # get AlignFeatures (Dna or Protein)
     my( $self, $dataset, $slice, $kind, $analysis_name, $enshead ) = @_;
 
     if(!$analysis_name) {
@@ -442,9 +448,9 @@ sub get_afs_from_dataset_slice_kind_analysis {
             'chrend'   => $slice->chr_end(),
             'kind'     => $kind,
             'analysis' => $analysis_name,
-        }
+        },
+        1,
     );
-    print "[AFS] CLIENT RECEIVED [".length($response)."] bytes over the TCP connection\n";
 
     my @resplines = split(/\n/,$response);
     pop @resplines; # the last one is empty;  IS IT???
@@ -507,7 +513,7 @@ sub get_afs_from_dataset_slice_kind_analysis {
     return \@afs;
 }
 
-sub get_rfs_from_dataset_slice_analysis {
+sub get_rfs_from_dataset_slice_analysis {   # get RepeatFeatures
     my( $self, $dataset, $slice, $analysis_name, $enshead ) = @_;
 
     if(!$analysis_name) {
@@ -526,9 +532,9 @@ sub get_rfs_from_dataset_slice_analysis {
             'chrstart' => $slice->chr_start(),
             'chrend'   => $slice->chr_end(),
             'analysis' => $analysis_name,
-        }
+        },
+        1,
     );
-    print "[RFS] CLIENT RECEIVED [".length($response)."] bytes over the TCP connection\n";
 
     my @resplines = split(/\n/,$response);
     pop @resplines; # the last one is empty;  IS IT???
@@ -579,7 +585,7 @@ sub get_rfs_from_dataset_slice_analysis {
     return \@rfs;
 }
 
-sub get_pts_from_dataset_slice_analysis {
+sub get_pts_from_dataset_slice_analysis {   # get PredictionTranscripts
     my( $self, $dataset, $slice, $analysis_name, $enshead ) = @_;
 
     if(!$analysis_name) {
@@ -598,9 +604,9 @@ sub get_pts_from_dataset_slice_analysis {
             'chrstart' => $slice->chr_start(),
             'chrend'   => $slice->chr_end(),
             'analysis' => $analysis_name,
-        }
+        },
+        1,
     );
-    print "[PT] CLIENT RECEIVED [".length($response)."] bytes over the TCP connection\n";
 
     my @resplines = split(/\n/,$response);
     pop @resplines; # the last one is empty;  IS IT???

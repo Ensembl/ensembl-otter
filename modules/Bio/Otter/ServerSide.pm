@@ -11,20 +11,50 @@ use Bio::Otter::Lace::SatelliteDB;
 
 our @ISA       = qw(Exporter);
 our @EXPORT    = qw();
-our @EXPORT_OK = qw(&error_exit
+our @EXPORT_OK = qw(
+                    &set_nph
+                    &send_response
+                    &error_exit
                     &get_pipeline_adaptor_slice_parms
                     &get_Author_from_CGI
                     &get_DBAdaptor_from_CGI_species
-                    &set_nph
-                    &send_response);
-our %EXPORT_TAGS = (all => [qw(error_exit
+                    );
+our %EXPORT_TAGS = (all => [qw(
+                               set_nph
+                               send_response
+                               error_exit
                                get_pipeline_adaptor_slice_parms
                                get_Author_from_CGI
                                get_DBAdaptor_from_CGI_species 
-                               set_nph
-                               send_response)
+                               )
                             ],
                     );
+
+sub set_nph{
+    my ($cgi) = @_;
+    error_exit('', 'I need a CGI object') unless $cgi && UNIVERSAL::isa($cgi, 'CGI');
+    if ($ENV{SERVER_SOFTWARE} =~ /libwww-perl-daemon/) {
+        print STDERR "NOTE : Setting nph to 1";
+        $cgi->nph(1);
+    }
+}
+
+sub send_response{
+    my ($cgi, $response, $wrap) = @_;
+    error_exit('', 'I need a CGI object') unless $cgi && UNIVERSAL::isa($cgi, 'CGI');
+    print STDERR "************** PRINTING RESPONSE ******************";
+    print $cgi->header('text/plain');
+
+    if($wrap) {
+        print qq`<otter schemaVersion="$SCHEMA_VERSION" xmlVersion="$XML_VERSION">\n`;
+    }
+
+    print $response;
+
+    if($wrap) {
+        print "</otter>\n";
+    }
+}
 
 sub error_exit {
   my ($cgi,$reason) = @_;
@@ -162,18 +192,3 @@ sub get_DBAdaptor_from_CGI_species{
     return $odb;
 }
 
-sub set_nph{
-    my ($cgi) = @_;
-    error_exit('', 'I need a CGI object') unless $cgi && UNIVERSAL::isa($cgi, 'CGI');
-    if ($ENV{SERVER_SOFTWARE} =~ /libwww-perl-daemon/) {
-        print STDERR "NOTE : Setting nph to 1";
-        $cgi->nph(1);
-    }
-}
-sub send_response{
-    my ($cgi, $response) = @_;
-    error_exit('', 'I need a CGI object') unless $cgi && UNIVERSAL::isa($cgi, 'CGI');
-    print STDERR "************** PRINTING RESPONSE ******************";
-    print $cgi->header('text/plain');
-    print $response;
-}

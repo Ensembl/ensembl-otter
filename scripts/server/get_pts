@@ -31,6 +31,8 @@ my $pts = $pt_adaptor->fetch_all_by_Slice($pipeline_slice, $analysis, 1);
 
 print STDERR "Total of ".scalar(@$pts)." $analysis prediction transcripts found\n";
 
+my $output_string = '';
+
 foreach my $pt (@$pts) {
 
         # output a predictioin transcipt line:
@@ -38,7 +40,7 @@ foreach my $pt (@$pts) {
     for my $opt (@pt_optnames) {
         push @pt_optvalues, $pt->$opt();
     }
-    print join("\t", @pt_optvalues)."\n";
+    $output_string .= join("\t", @pt_optvalues)."\n";
 
     my $pt_id = $pt->dbID();
 
@@ -50,7 +52,9 @@ foreach my $pt (@$pts) {
         }
         push @pe_optvalues, $pt_id;
 
-        print join("\t", @pe_optvalues)."\n";
+        $output_string .= join("\t", @pe_optvalues)."\n";
     }
 }
+
+send_response($cgi, $output_string, 1);
 

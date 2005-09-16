@@ -18,6 +18,7 @@ set_nph($cgi);
 my %cgi_args = $cgi->Vars;
 
 my $analysis = $cgi_args{analysis};
+
 my $odb = get_DBAdaptor_from_CGI_species($cgi, $OTTER_SPECIES, $enshead);
 my ($pdb, $pipeline_slice, $pipe_connparms) = get_pipeline_adaptor_slice_parms($cgi, $odb, $enshead);
 
@@ -29,6 +30,8 @@ my $sfs = $sf_adaptor->fetch_all_by_Slice($pipeline_slice, $analysis);
 
 print STDERR "Total of ".scalar(@$sfs)." $analysis simple features found\n";
 
+my $output_string = '';
+
 foreach my $sf (@$sfs) {
         # output a SimpleFeature line
     my @sf_optvalues = ('SimpleFeature');
@@ -36,6 +39,8 @@ foreach my $sf (@$sfs) {
         push @sf_optvalues, $sf->$opt();
     }
 
-    print join("\t", @sf_optvalues)."\n";
+    $output_string .= join("\t", @sf_optvalues)."\n";
 }
+
+send_response($cgi, $output_string, 1);
 

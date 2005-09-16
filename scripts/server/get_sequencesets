@@ -94,7 +94,8 @@ my $sth = $odb->prepare(q{
 $sth->execute($author_id);
 
 
-my $xml = qq`<otter schemaVersion="$SCHEMA_VERSION" xmlVersion="$XML_VERSION">\n`;
+my $xml = '';
+# $xml   .= qq`<otter schemaVersion="$SCHEMA_VERSION" xmlVersion="$XML_VERSION">\n`;
 $xml   .= qq`  <dataset name="$dataset">\n`;
 $xml   .= qq`    <sequencesets>\n`;
 
@@ -113,10 +114,10 @@ while(my $row = $sth->fetchrow_hashref){
 
 $xml .= qq`    </sequencesets>\n`;
 $xml .= qq`  </dataset>\n`;
-$xml .= qq`</otter>\n`;
+# $xml .= qq`</otter>\n`;
 
-print $xml;
-#End main
+# print $xml;
+send_response($q, $xml, 1);
 
 __END__
 

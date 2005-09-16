@@ -58,6 +58,7 @@ print STDERR "Obtained the locks";
 my $tp         = $slice->get_tiling_path();
 my $xml_string = Bio::Otter::Converter::path_to_XML($chr, $chrstart, $chrend, $odb->assembly_type(), $tp);
 
-send_response($q, "<otter>\n${xml_string}</otter>");
+# send_response($q, "<otter>\n${xml_string}</otter>");
+send_response($q, $xml_string, 1);
 
 ####################################################################

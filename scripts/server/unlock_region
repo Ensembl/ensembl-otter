@@ -97,6 +97,7 @@ error_exit($q, "Failed to unlock clones") if $@;
 print STDERR "done";
 ####################################################################
 
-send_response($q, "<otter>\n<response>\n</response>\n</otter>\n");
+# send_response($q, "<otter>\n<response>\n</response>\n</otter>\n");
+send_response($q, "<response>\n</response>\n", 1);
 
 
