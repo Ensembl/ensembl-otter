@@ -1,7 +1,7 @@
 
 #!/usr/local/bin/perl -w
 
-### get_DNA_Protein_seqs_of_genes_in_fasta
+### dump_DNA_Protein_seqs_of_genes_in_fasta
 
 use strict;
 use Getopt::Long 'GetOptions';
@@ -9,7 +9,9 @@ use Bio::Otter::Lace::Defaults;
 
 $| = 1;
 
-my ($dataset, @sets, $vega, $all_exons, $cds_only, $filter);
+my ($dataset, @sets, $vega, $all_exons, $cds_only, $filter, $type);
+
+$all_exons = 1; # default
 
 my $help = sub { exec('perldoc', $0) };
 
@@ -19,10 +21,11 @@ Bio::Otter::Lace::Defaults::do_getopt('ds|dataset=s' => \$dataset, # eg, human o
 									  'cds-only'     => \$cds_only,
 									  'filter'       => \$filter,
 									  'h|help'       => $help,
+									  'type=s'       => \$type,
 									  'v|vega'       => \$vega,	   # flags vega_set_id > 0. !$vega: check all datasets
 								                                   # for now, zebrafish defaults to !$vega
 									 ) or $help->();               # plus default options
-$help->() unless ( $dataset && ($all_exons or $cds_only) );
+$help->() unless ( $dataset && $type );
 $help->() if ( $vega and @sets );                                  # vega option does all vega sets
 
 my $client   = Bio::Otter::Lace::Defaults::make_Client();          # Bio::Otter::Lace::Client
@@ -57,13 +60,9 @@ if ( @sets ) {
 		
 	my $slice   = $sliceAd->fetch_by_chr_name($chrom->name);
 
-	my $latest_gene_id = $geneAd->list_current_dbIDs_for_Slice($slice);
+	my $latest_gene_ids = $geneAd->list_current_dbIDs_for_Slice($slice);
 
-	my ($coding, $transcripts, $pseudos) = get_latest_trans_or_prot_seq($latest_gene_id, $slice);
-
-	foreach ($coding, $transcripts, $pseudos){
-	  output_sequences($_, $set);
-	}
+	output_sequences( get_latest_trans_or_prot_seq($latest_gene_ids, $slice) );
   }
 }
 
@@ -76,7 +75,8 @@ if ( @sets ) {
 sub get_latest_trans_or_prot_seq {
 
   my ($latest_gene_id, $slice) = @_;
-  my ($coding, $transcripts, $pseudos);
+  my $transClass_trans = {};
+  my $geneType_trans   = {};
   my $counter;
 
   foreach my $id ( @$latest_gene_id ) {
@@ -125,7 +125,8 @@ sub get_latest_trans_or_prot_seq {
 
 	  my $transID    = $trans->transcript_info->transcript_stable_id;
 	  my $transNAME  = $trans->transcript_info->name;
-	  my $transCLASS = $trans->type;
+#	  my $transCLASS = $trans->type; # this returns gene_type
+	  my $transCLASS = $trans->transcript_info->class->name;
 	  my $transSTART = $trans->start;
 	  my $transEND   = $trans->end;
 
@@ -146,101 +147,112 @@ sub get_latest_trans_or_prot_seq {
 
 	  next if $trans->transcript_info->class->name eq "Transposon";
 
-	  if ( $trans->transcript_info->class->name eq "Coding" ){
-		push( @{$coding->{$transSTART}}, $trans );  # take care of linear gene order
+	  # dumping categories based on transcript type or gene type
+
+	  if ( $type eq "trans" ){
+	#	print $type,"***\n";
+		push( @{$transClass_trans->{$transCLASS}->{$transSTART}}, $trans);
 	  }
-	  elsif ( $trans->transcript_info->class->name =~ /pseudogene/i ){
-		push( @{$pseudos->{$transSTART}}, $trans );
-	  }
-	  else {
-		push( @{$transcripts->{$transSTART}}, $trans );
+	  elsif ( $type eq "gene" ) {
+		push( @{$geneType_trans->{$geneTYPE}->{$transSTART}}, $trans ); # take care of linear gene order
 	  }
 	}
   }
   print STDOUT "\t$counter\n";
 
-  return $coding, $transcripts, $pseudos;
-}
 
+  return $geneType_trans   if $type eq "gene";
+  return $transClass_trans if $type eq "trans";
+}
 
 sub output_sequences {
 
-  my ($trans_sets, $set) = @_;
-
+  my ($obj_sets) = shift;
   my ($protein, $fh);
 
-  # take care of linear gene order
-  my @gene_order = sort {$a <=> $b} keys %{$trans_sets};
+  # $type_or_class: transcript_class.name or gene.type in otter db
 
-  foreach my $order ( @gene_order ){
+  foreach my $type_or_class ( keys %{$obj_sets} ) {
 
-	foreach my $t ( @{$trans_sets->{$order}} ){
+	# take care of linear gene order
+	my @chr_coord_order = sort {$a <=> $b} keys %{$obj_sets->{$type_or_class}};
 
-	  $set = $t->adaptor->db->assembly_type unless $set;
+	foreach my $start_coord ( @chr_coord_order ) {
 
-	  my $formatted_seq_all_exons;
-	  my $formatted_seq_CDS_only;
+	  foreach my $t ( @{$obj_sets->{$type_or_class}->{$start_coord}} ) {
 
-	  if ( $all_exons ) {
-		my $exon_seqs;
-		foreach my $exon ( @{$t->get_all_Exons} ) {
-		  $exon_seqs .= $exon->seq->seq;
+		# get seq. from all exons or only from CDS (no UTRs)
+		my $formatted_seq_all_exons;
+		my $formatted_seq_CDS_only;
+
+		if ( $all_exons ) {
+		  my $exon_seqs;
+		  foreach my $exon ( @{$t->get_all_Exons} ) {
+			$exon_seqs .= $exon->seq->seq;
+		  }
+		  $formatted_seq_all_exons = lc(sixty_cols($exon_seqs));
 		}
-		$formatted_seq_all_exons = lc(sixty_cols($exon_seqs));
-	  }
 
-	  if ( $cds_only ) {	
-		my $exon_seqs;
-		foreach my $exon ( @{$t->get_all_translateable_Exons} ) {
-		  $exon_seqs .= $exon->seq->seq;
+		if ( $cds_only ) {	
+		  my $exon_seqs;
+		  foreach my $exon ( @{$t->get_all_translateable_Exons} ) {
+			$exon_seqs .= $exon->seq->seq;
+		  }
+		  $formatted_seq_CDS_only = lc(sixty_cols($exon_seqs));
 		}
-		$formatted_seq_CDS_only = lc(sixty_cols($exon_seqs));
-	  }
 	
-	  my $trans_class = $t->transcript_info->class->name;
-	  my ($filename_a, $filename_c);
+		my ($filename_a, $filename_c);
 
-	  if ( $trans_class =~ /pseudogene/i ) {
-		$filename_a = "Pseudogenes_DNA_".$date;
-		$filename_c = "Pseudogenes_DNA_CDS_only_".$date;
-	  } else {
-		$filename_a = $trans_class."_genes_DNA_".$date;
-		$filename_c = $trans_class."_genes_DNA_CDS_only_".$date;
-	  }
-	
-	  if ( $all_exons ) {
-		open($fh, ">>$filename_a") or die $!;
-		print $fh ">@{$gene_info_of_trans->{$t}}\n";
-		print $fh $formatted_seq_all_exons, "\n";
-	  }
-	  if ( $cds_only ) {
-		open($fh, ">>$filename_c") or die $!;
-		print $fh ">@{$gene_info_of_trans->{$t}}\n";
-		print $fh $formatted_seq_CDS_only, "\n"  if $cds_only;
-	  }
-
-	  if ( $trans_class eq "Coding" ) {
-		# print also prtein seq to a separate file for conding genes
-
-		my $filename_p = "Coding_genes_AA_".$date;
-		open($fh, ">>$filename_p") or die $!;
-
-		# looks like some genes can be dubious due to incomplete annotation
-		# eg, coding gene but its transcript does not have translation
-		if ( exists $gene_info_of_trans_AA->{$t} ) {
-		  print $fh ">@{$gene_info_of_trans_AA->{$t}}\n";
-		  my $protein = sixty_cols($t->translate->primary_seq->seq);
-		  print $fh $protein, "\n";
+		if ( $type_or_class =~ /pseudogene/i ) {
+		  $filename_a = "Pseudogenes_DNA_".$date;
+		  $filename_c = "Pseudogenes_DNA_CDS_only_".$date;
 		} else {
-		  my $gene = $geneAd->fetch_by_transcript_id($t->dbID);
-		  printf STDERR ("%s (%s) %s", $t->transcript_info->transcript_stable_id,	
-						 $gene->stable_id, " has no associated translation\n");
+		  $filename_a = $type_or_class."_DNA_".$date;
+		  $filename_c = $type_or_class."_DNA_CDS_only_".$date;
+		}
+	
+		if ( $all_exons ) {
+		  open($fh, ">>$filename_a") or die $!;
+		  print $fh ">@{$gene_info_of_trans->{$t}}\n"; # fasta header
+		  print $fh $formatted_seq_all_exons, "\n";
+		}
+		if ( $cds_only ) {
+		  open($fh, ">>$filename_c") or die $!;
+		  print $fh ">@{$gene_info_of_trans->{$t}}\n";
+		  print $fh $formatted_seq_CDS_only, "\n"  if $cds_only;
+		}
+
+		if ( $type_or_class eq "Coding"           or
+			 $type_or_class eq "Novel_CDS"        or
+			 $type_or_class eq "Known"            or
+			 $type_or_class eq "Novel_transcript" or
+			 $type_or_class eq "Predicted"        or
+			 $type_or_class eq "Putative"
+		   ) {
+
+		  # print also prtein seq to a separate file for conding genes
+
+		  my $filename_p = $type_or_class."_AA_".$date;
+		  open($fh, ">>$filename_p") or die $!;
+
+		  # looks like some genes can be dubious due to incomplete annotation
+		  # eg, coding gene but its transcript does not have translation
+
+		  if ( exists $gene_info_of_trans_AA->{$t} ) {
+			print $fh ">@{$gene_info_of_trans_AA->{$t}}\n";
+			my $protein = sixty_cols($t->translate->primary_seq->seq);
+			print $fh $protein, "\n";
+		  } else {
+			my $gene = $geneAd->fetch_by_transcript_id($t->dbID);
+		#	printf STDERR ("%s (%s) %s", $t->transcript_info->transcript_stable_id,	
+#						   $gene->stable_id, " has no associated translation\n");
+		  }
 		}
 	  }
 	}
   }
 }
-	
+
 sub sixty_cols {
 
   my $seq  = shift;
@@ -279,22 +291,28 @@ sub gene_stable_id_2_acc_sv {
 	$contigName =~ /(.+\.\d+)\.\d+\.\d+/;
 	$stblID_acc->{$stblID} = $1;
   }
+
   return $stblID_acc;
 }
 
   __END__
 
-=head1 NAME - get_DNA_Protein_seqs_of_genes_in_fasta
+=head1 NAME - dump_DNA_Protein_seqs_of_genes_in_fasta
 
 =head1 SYNOPSIS
 
-get_DNA_Protein_seqs_of_genes_in_fasta -dataset <dataset> -set <assembly_type> <-all-exons and/or -cds-only> <-filter>
+dump_DNA_Protein_seqs_of_genes_in_fasta -dataset <dataset> -set <assembly_type> <-all-exons and/or -cds-only> <-filter> -type gene
 
 
 =head1 DESCRIPTION
 
 Output DNA/Protein sequence of each splice variant of a gene in fasta format.
-One of the -all-exons, -cds-only option is
+
+One of the -all-exons, -cds-only option is mandatory, default is -all-exons
+
+-filter: useful if only want to dump certain clones.
+
+-type: to specify dumping via transcript type or gene type: eg, -type gene or -type trans
 
 
 =head1 AUTHOR
