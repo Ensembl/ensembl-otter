@@ -1,3 +1,4 @@
+
 package Bio::Otter::AnnotatedGene;
 
 use vars qw(@ISA);
@@ -20,6 +21,16 @@ sub new {
   $self->gene_info($gene_info);
 
   return $self;
+}
+
+sub gene_type_prefix {
+    my $self = shift;
+    
+    $self->throw("Read only method") if @_;
+    
+    if ($self->type =~ /^([^:]+):/) {
+        return $1;
+    }
 }
 
 sub flush_Transcripts {

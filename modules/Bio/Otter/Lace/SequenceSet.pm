@@ -111,7 +111,7 @@ sub selected_CloneSequences {
     my( $self, $selected_CloneSequences ) = @_;
     
     if ($selected_CloneSequences) {
-        my $is_list = 1;
+        my $is_list = 0;
         eval{ $is_list = 1 if ref($selected_CloneSequences) eq 'ARRAY' };
         confess "Not a list ref: '$selected_CloneSequences'" unless $is_list;
         $self->{'_selected_CloneSequences'} = $selected_CloneSequences;

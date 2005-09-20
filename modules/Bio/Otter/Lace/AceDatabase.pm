@@ -888,8 +888,9 @@ sub make_AceDataFactory {
                 print STDERR "Trying to get a method Object with tag '$tag' ... filter '$class' ... " if $debug;
                 #my $methObj = $aceMethods_cache->{$tag};
                 my $methObj = $collect->get_Method_by_name($tag);
-                print STDERR "Found one" if $debug && $methObj;
-                print STDERR "\n" if $debug;
+                if ($debug) {
+                    print STDERR $methObj ? "found one\n" : "find failed\n";
+                }
                 $filt->add_method_object($methObj); # or some other place
             }
 	    # add the filter to the factory

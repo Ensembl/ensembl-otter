@@ -25,12 +25,18 @@ use Hum::Ace::Colors;
         my $y2 = $y1 + $size;
         $canvas->createRectangle(
             $x1, $y1, $x2, $y2,
+            -fill       => undef,
+            -outline    => $hex,
+            );
+        
+        $canvas->createRectangle(
+            $x2 + $pad, $y1, $x2 + $pad + $size, $y2,
             -fill       => $hex,
             -outline    => 'black',
             );
         
         $canvas->createText(
-            $x2 + $size, $y1,
+            $x2 + $size + $size, $y1,
             -text   => $name,
             -anchor => 'nw',
             -font   => $font,

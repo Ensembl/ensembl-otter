@@ -74,7 +74,7 @@ cas     Charlie Steward
 
     my $progress = $otter_dba->prepare(q{
         SELECT g.contig_id
-          , DATE_FORMAT(MIN(s.created), '%b %d %a') first_saved
+          , DATE_FORMAT(MIN(s.created), '%m %d %a') first_saved
           , MIN(e.exon_id)
         FROM contig g
           , exon e
