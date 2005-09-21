@@ -6,6 +6,7 @@
 #
 # lg4
 
+my $enshead     = 1;
 my $proteins_on = 1;
 
 use strict;
@@ -24,11 +25,14 @@ use Evi::Tictoc;
     my $dataset_name    = 'test_human'; # 'test_human';      # 'mouse', ...
 
         # my ($set_name, $chr_name, $trstable) = ('MHC_COX', '6', 'OTTHUMT00000076915');
-        # my ($set_name, $chr_name, $trstable) = ('ChrX-07', 'X', 'OTTHUMT00000081638');
-          my ($set_name, $chr_name, $trstable) = ('encode_ext_agp-04', 'MANY', 'OTTHUMT00000132895');
+        # my ($set_name, $chr_name, $trstable) = ('ChrX-07', 'X', 'OTTHUMT00000081638');   # fwd strand
+        # my ($set_name, $chr_name, $trstable) = ('encode_ext_agp-04', 'MANY', 'OTTHUMT00000132895');
         # my ($set_name, $chr_name, $trstable) = ('chr9-16', '9', 'OTTHUMT00000001011');
+        # my ($set_name, $chr_name, $trstable) = ('chr22-02', '22', 'OTTHUMT00000074916');
+          my ($set_name, $chr_name, $trstable) = ('chr22-02', '22', 'OTTHUMT00000075000'); # rev strand
 
-    my $margin          = 10000;        # any number > 0
+
+    my $margin          = 5000;        # any number > 0
     my @rna_analyses  = ('vertrna','Est2genome_human','Est2genome_mouse','Est2genome_other');
     my @protein_analyses = $proteins_on ? ('Uniprot') : ();
 
@@ -63,7 +67,7 @@ use Evi::Tictoc;
 my $tt_evicoll = Evi::Tictoc->new("Building the evidence collection");
     # my $evi_coll = Evi::EviCollection->new_from_otter_Slice(
     my $evi_coll = Evi::EviCollection->new_from_client_dataset_otterslice( $cl, $ds,
-            $otter_slice, [ @rna_analyses ], [@protein_analyses] );
+            $otter_slice, [ @rna_analyses ], [@protein_analyses], $enshead );
 
         if(! $evi_coll->pipeline_slice->adaptor->db) {
                 warn "\n[DATABASE ADAPTOR LOST] ";

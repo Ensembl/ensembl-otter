@@ -86,28 +86,31 @@ sub new_from_client_dataset_otterslice {
     my $otter_slice = shift @_; # contains assembly_type=set_name, chr_name, chr_start & chr_end
 
     my ($pipeline_dba, $pipeline_slice) = otter_to_pipeline($otter_slice);
-
     $self->pipeline_dba($pipeline_dba);
     $self->pipeline_slice($pipeline_slice);
+
     $self->rna_analyses_lp(shift @_);
     $self->protein_analyses_lp(shift @_);
+    my $enshead     = shift @_ || 0;
     
     $self->{_collection} = {};  # hash{by_analysis} of lists of chains
     $self->{_name2chains} = {}; # sublists of chains indexed by name
 
     for my $analysis_name (@{$self->rna_analyses_lp()}) {
-        my $dafs_lp = $client->get_dafs_from_dataset_slice_analysis(
+        my $dafs_lp = $client->get_dafs_from_dataset_sliceargs_analysis(
             $dataset,
             $otter_slice,
             $analysis_name,
+            $enshead,
         );
         $self->add_collection($dafs_lp, $analysis_name);
     }
     for my $analysis_name (@{$self->protein_analyses_lp()}) {
-        my $pafs_lp = $client->get_pafs_from_dataset_slice_analysis(
+        my $pafs_lp = $client->get_pafs_from_dataset_sliceargs_analysis(
             $dataset,
             $otter_slice,
             $analysis_name,
+            $enshead,
         );
         $self->add_collection($pafs_lp, $analysis_name);
     }

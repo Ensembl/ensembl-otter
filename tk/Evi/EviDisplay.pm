@@ -318,12 +318,16 @@ my $tt_redraw = Evi::Tictoc->new("EviDisplay layout");
     for my $screendex (0..@{$self->{_evichains_lp}}-1) {
 
         my $evichain = $self->{_evichains_lp}[$screendex];
+
+        my $analysis_name = $evichain->analysis();
+        $analysis_name=~s/^df_//;
+
         $self->draw_exons(
             $self->canvas()->Subwidget('main_canvas'),
             $self->canvas()->Subwidget('top_canvas'),
             $self->canvas()->Subwidget('left_canvas'),
             $evichain->afs_lp(),
-            ($evichain->analysis() ne 'Uniprot'),
+            ($analysis_name ne 'Uniprot'),
             undef,
             undef,
             $screendex,
@@ -336,8 +340,8 @@ my $tt_redraw = Evi::Tictoc->new("EviDisplay layout");
                 "QStrand: ".strand2name($evichain->strand()),
                 "HStrand: ".strand2name($evichain->hstrand()),
             ],
-            $evichain->analysis(),
-            $evichain->analysis() eq 'Uniprot',
+            $analysis_name,
+            ($analysis_name eq 'Uniprot'),
             $half_delta,
             1
             );
@@ -409,7 +413,6 @@ sub draw_exons {
     my $intron_top  = $mid_y - $half_delta;
     my $intron_bot  = $mid_y + $half_delta;
 
-
     my $chain_tag = "rowindex_$screendex";  # make it unique (i.e. differ from non-unique $name_tag)
 
     if($draw_stripes) {
@@ -457,7 +460,7 @@ sub draw_exons {
         #
         # This may mean that we'll have to change the order when making Transcripts from EviChains
         #
-    for my $exon (sort {$a->start() <=> $b->start()} @$exons_lp) {
+    for my $exon (sort {$a->start() <=> $b->start()} @$exons_lp) { # left to right
 
         my $e_start = $exon->start();
         my $e_end   = $exon->end();
@@ -472,7 +475,7 @@ sub draw_exons {
 
         if($end_at) {
             if($end_at<$e_start) { # skip exons to the right
-                last;
+                next;
             } elsif(($e_start<=$end_at) && ($end_at<=$e_end)) { # trim it
                 $e_end = $end_at;
             }
@@ -489,9 +492,9 @@ sub draw_exons {
 
                 # highlightable background rectangle behind an intron:
             my $rect = $where->createRectangle(
-                    $i_from+$signed_arrow,
+                    $i_from + (($signed_arrow > 0) ? $signed_arrow : 0),
                     $intron_top,
-                    $from+$signed_arrow,
+                    $from + (($signed_arrow > 0) ? 0 : $signed_arrow),
                     $intron_bot,
                 -outline => $stripecolor,
                 -fill =>    $stripecolor,
