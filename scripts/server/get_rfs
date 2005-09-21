@@ -17,16 +17,14 @@ my $cgi = new CGI;
 set_nph($cgi);
 my %cgi_args = $cgi->Vars;
 
-my $analysis = $cgi_args{analysis};
 my $odb = get_DBAdaptor_from_CGI_species($cgi, $OTTER_SPECIES, $enshead);
 my ($pdb, $pipeline_slice, $pipe_connparms) = get_pipeline_adaptor_slice_parms($cgi, $odb, $enshead);
 
 my @rf_optnames = @{ $OrderOfOptions{RepeatFeature} };
 my @rc_optnames = @{ $OrderOfOptions{RepeatConsensus} };
 
-    # Fetch the features:
-my $rf_adaptor = $pdb->get_RepeatFeatureAdaptor();
-my $rfs = $rf_adaptor->fetch_all_by_Slice($pipeline_slice, $analysis);
+my $analysis = $cgi_args{analysis};
+my $rfs = $pipeline_slice->get_all_RepeatFeatures($analysis);
 
 print STDERR "Total of ".scalar(@$rfs)." $analysis repeat features found\n";
 

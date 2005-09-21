@@ -25,16 +25,14 @@ my ($pdb, $pipeline_slice, $pipe_connparms) = get_pipeline_adaptor_slice_parms($
 my @af_optnames = @{ $OrderOfOptions{AlignFeature} };
 my @hd_optnames = @{ $OrderOfOptions{HitDescription} };
 
-my $analysis = $cgi_args{analysis};
 my $kind     = $cgi_args{kind};
 my $method = {
-    'dafs' => 'get_DnaAlignFeatureAdaptor',
-    'pafs' => 'get_ProteinAlignFeatureAdaptor',
+    'dafs' => 'get_all_DnaAlignFeatures',
+    'pafs' => 'get_all_ProteinAlignFeatures',
 }->{$kind};
 
-    # Fetch the features:
-my $af_adaptor = $pdb->$method();
-my $afs = $af_adaptor->fetch_all_by_Slice($pipeline_slice, $analysis);
+my $analysis = $cgi_args{analysis};
+my $afs = $pipeline_slice->$method($analysis);
 
 print STDERR "Total of ".scalar(@$afs)." $kind:$analysis features found\n";
 

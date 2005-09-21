@@ -90,23 +90,37 @@ sub get_pipeline_adaptor_slice_parms { # codebase-independent version for script
     my %cgi_args = $cgi->Vars;
     my $pipeline_slice;
 
+        # CS defaults:
+    $cgi_args{cs} ||= 'chromosome';
+    if(!$cgi_args{csver} && ($cgi_args{cs} eq 'chromosome')) {
+        $cgi_args{csver} = 'Otter';
+    }
+
     if($enshead) {
         $pipeline_slice = $pdb->get_SliceAdaptor()->fetch_by_region(
-            'chromosome',
-            $cgi_args{chr},
-            $cgi_args{chrstart},
-            $cgi_args{chrend},
-            undef,              # strand
-            'Otter',            # version
+            $cgi_args{cs},
+            $cgi_args{name},    
+            $cgi_args{start},
+            $cgi_args{end},
+            $cgi_args{strand},
+            $cgi_args{csver},
         );
     } else {
         $pdb->assembly_type($odb->assembly_type());
-                                                                                                                       
-        $pipeline_slice = $pdb->get_SliceAdaptor()->fetch_by_chr_start_end(
-            $cgi_args{chr},
-            $cgi_args{chrstart},
-            $cgi_args{chrend},
-        );
+
+        if($cgi_args{cs} eq 'chromosome') {
+            $pipeline_slice = $pdb->get_SliceAdaptor()->fetch_by_chr_start_end(
+                $cgi_args{name},
+                $cgi_args{start},
+                $cgi_args{end},
+            );
+        } elsif($cgi_args{cs} eq 'contig') {
+            $pipeline_slice = $pdb->get_RawContigAdaptor()->fetch_by_name(
+                $cgi_args{name},
+            );
+        } else {
+            die "Other coordinate systems are not supported";
+        }
     }
 
     return ($pdb, $pipeline_slice, $pipedb_options);
@@ -191,4 +205,6 @@ sub get_DBAdaptor_from_CGI_species{
     }
     return $odb;
 }
+
+1;
 

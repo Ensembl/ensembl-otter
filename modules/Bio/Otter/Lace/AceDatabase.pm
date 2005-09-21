@@ -770,9 +770,7 @@ sub write_pipeline_data {
     }
 
     $ens_db->assembly_type($ss->name);
-    my $species = $dataset->species();
-    warn "This species is '$species'\n";
-    my $factory = $self->{'_pipeline_data_factory'} ||= $self->make_AceDataFactory($ens_db, $species);
+    my $factory = $self->{'_pipeline_data_factory'} ||= $self->make_AceDataFactory($ens_db, $dataset);
 
     # create file for output and add it to the acedb object
     $ace_file ||= $self->home . "/rawdata/pipeline.ace";
@@ -816,10 +814,13 @@ sub write_pipeline_data {
 }
 
 sub make_AceDataFactory {
-    my( $self, $ens_db, $species ) = @_;
+    my( $self, $ens_db, $dataset ) = @_;
+
+    my $species = $dataset->species();
+    warn "This species is '$species'\n";
 
     # create new datafactory object - cotains all ace filters and produces the data from these
-    my $factory = Bio::EnsEMBL::Ace::DataFactory->new;
+    my $factory = Bio::EnsEMBL::Ace::DataFactory->new($self->Client(), $dataset);
     # $factory->add_all_Filters($ensdb);
     my $ana_adaptor = $ens_db->get_AnalysisAdaptor;
 
@@ -1412,7 +1413,7 @@ sub write_das{
 sub DESTROY {
     my( $self ) = @_;
     
-    #warn "Debug - leaving database intact"; return;
+    # warn "Debug - leaving database intact"; return;
     
     my $home = $self->home;
     print STDERR "DESTROY has been called for AceDatabase.pm with home $home\n";

@@ -293,7 +293,7 @@ sub _check_for_error {
 
     my $xml = $response->content();
 
-    if($unwrap && $xml =~ m{<otter[^\>]*\>\s*(.*)</otter>\s*}) {
+    if($unwrap && $xml =~ m{<otter[^\>]*\>\s*(.*)</otter>\s*}s) {
         $xml = $1;
     }
 
@@ -352,24 +352,62 @@ sub general_http_dialog {
 
 # ---- specific HTTP-requests:
 
-sub get_dafs_from_dataset_slice_analysis {  # get DnaAlignFeatures
-    my( $self, $dataset, $slice, $analysis_name, $enshead ) = @_;
+sub to_sliceargs { # not a method!
+    my $arg = shift @_;
 
-    return $self->get_afs_from_dataset_slice_kind_analysis(
-        $dataset, $slice, 'dafs', $analysis_name, $enshead
+    return (UNIVERSAL::isa($arg, 'Bio::EnsEMBL::Slice'))
+        ? {
+            'cs'    => 'chromosome',
+            'csver' => 'Otter',
+            'type'  => $arg->assembly_type(),
+            'name'  => $arg->chr_name(),
+            'start' => $arg->chr_start(),
+            'end'   => $arg->chr_end(),
+            'slicename' => $arg->name(),
+        } : $arg;
+}
+
+=pod
+
+For all of the get_X methods below the 'sliceargs'
+is EITHER a valid slice
+OR a hash reference that contains enough parameters
+to construct the slice for the v32+ EnsEMBL API:
+
+Examples:
+    $sa = {
+            'cs'    => 'chromosome',
+            'name'  => 22,
+            'start' => 15e6,
+            'end'   => 17e6,
+    };
+    $sa2 = {
+            'cs'    => 'clone',
+            'name'  => 'AL008715.1.1.101817',
+    }
+
+=cut
+
+sub get_dafs_from_dataset_sliceargs_analysis {  # get DnaAlignFeatures
+    my( $self, $dataset, $sa, $analysis_name, $enshead ) = @_;
+
+    return $self->get_afs_from_dataset_sliceargs_kind_analysis(
+        $dataset, $sa, 'dafs', $analysis_name, $enshead
     );
 }
 
-sub get_pafs_from_dataset_slice_analysis {  # get ProteinAlignFeatures
-    my( $self, $dataset, $slice, $analysis_name, $enshead ) = @_;
+sub get_pafs_from_dataset_sliceargs_analysis {  # get ProteinAlignFeatures
+    my( $self, $dataset, $sa, $analysis_name, $enshead ) = @_;
 
-    return $self->get_afs_from_dataset_slice_kind_analysis(
-        $dataset, $slice, 'pafs', $analysis_name, $enshead
+    return $self->get_afs_from_dataset_sliceargs_kind_analysis(
+        $dataset, $sa, 'pafs', $analysis_name, $enshead
     );
 }
 
-sub get_sfs_from_dataset_slice_analysis {   # get SimpleFeatures
-    my( $self, $dataset, $slice, $analysis_name, $enshead ) = @_;
+sub get_sfs_from_dataset_sliceargs_analysis {   # get SimpleFeatures
+    my( $self, $dataset, $sa, $analysis_name, $enshead ) = @_;
+
+    $sa = to_sliceargs($sa); # normalization
 
     if(!$analysis_name) {
         die "Analysis name must be specified!";
@@ -380,25 +418,21 @@ sub get_sfs_from_dataset_slice_analysis {   # get SimpleFeatures
         'GET',
         'get_sfs',
         {
+            %$sa,
             'enshead'  => $enshead ? 1 : 0,
             'dataset'  => $dataset->name(),
-            'type'     => $slice->assembly_type(),
-            'chr'      => $slice->chr_name(),
-            'chrstart' => $slice->chr_start(),
-            'chrend'   => $slice->chr_end(),
             'analysis' => $analysis_name,
         },
         1,
     );
 
     my @resplines = split(/\n/,$response);
-    pop @resplines; # the last one is empty;  IS IT???
 
     my @sf_optnames = @{ $OrderOfOptions{SimpleFeature} };
 
         # cached values:
     my $analysis = Bio::EnsEMBL::Analysis->new( -logic_name => $analysis_name );
-    my $seqname = $slice->name();
+    my $seqname = $sa->{slicename};
 
     my @sfs = (); # simple features in a list
     foreach my $respline (@resplines) {
@@ -423,8 +457,10 @@ sub get_sfs_from_dataset_slice_analysis {   # get SimpleFeatures
     return \@sfs;
 }
 
-sub get_afs_from_dataset_slice_kind_analysis { # get AlignFeatures (Dna or Protein)
-    my( $self, $dataset, $slice, $kind, $analysis_name, $enshead ) = @_;
+sub get_afs_from_dataset_sliceargs_kind_analysis { # get AlignFeatures (Dna or Protein)
+    my( $self, $dataset, $sa, $kind, $analysis_name, $enshead ) = @_;
+
+    $sa = to_sliceargs($sa); # normalization
 
     if(!$analysis_name) {
         die "Analysis name must be specified!";
@@ -440,12 +476,9 @@ sub get_afs_from_dataset_slice_kind_analysis { # get AlignFeatures (Dna or Prote
         'GET',
         'get_afs',
         {
+            %$sa,
             'enshead'  => $enshead ? 1 : 0,
             'dataset'  => $dataset->name(),
-            'type'     => $slice->assembly_type(),
-            'chr'      => $slice->chr_name(),
-            'chrstart' => $slice->chr_start(),
-            'chrend'   => $slice->chr_end(),
             'kind'     => $kind,
             'analysis' => $analysis_name,
         },
@@ -453,14 +486,13 @@ sub get_afs_from_dataset_slice_kind_analysis { # get AlignFeatures (Dna or Prote
     );
 
     my @resplines = split(/\n/,$response);
-    pop @resplines; # the last one is empty;  IS IT???
 
     my @af_optnames = @{ $OrderOfOptions{AlignFeature} };
     my @hd_optnames = @{ $OrderOfOptions{HitDescription} };
 
         # cached values:
     my $analysis = Bio::EnsEMBL::Analysis->new( -logic_name => $analysis_name );
-    my $seqname = $slice->name();
+    my $seqname = $sa->{slicename};
 
     my %hds = (); # cached hit descriptions, keyed by hit_name
     my @afs = (); # align features in a list
@@ -513,8 +545,10 @@ sub get_afs_from_dataset_slice_kind_analysis { # get AlignFeatures (Dna or Prote
     return \@afs;
 }
 
-sub get_rfs_from_dataset_slice_analysis {   # get RepeatFeatures
-    my( $self, $dataset, $slice, $analysis_name, $enshead ) = @_;
+sub get_rfs_from_dataset_sliceargs_analysis {   # get RepeatFeatures
+    my( $self, $dataset, $sa, $analysis_name, $enshead ) = @_;
+
+    $sa = to_sliceargs($sa); # normalization
 
     if(!$analysis_name) {
         die "Analysis name must be specified!";
@@ -525,19 +559,15 @@ sub get_rfs_from_dataset_slice_analysis {   # get RepeatFeatures
         'GET',
         'get_rfs',
         {
+            %$sa,
             'enshead'  => $enshead ? 1 : 0,
             'dataset'  => $dataset->name(),
-            'type'     => $slice->assembly_type(),
-            'chr'      => $slice->chr_name(),
-            'chrstart' => $slice->chr_start(),
-            'chrend'   => $slice->chr_end(),
             'analysis' => $analysis_name,
         },
         1,
     );
 
     my @resplines = split(/\n/,$response);
-    pop @resplines; # the last one is empty;  IS IT???
 
     my @rf_optnames = @{ $OrderOfOptions{RepeatFeature} };
     my @rc_optnames = @{ $OrderOfOptions{RepeatConsensus} };
@@ -585,8 +615,10 @@ sub get_rfs_from_dataset_slice_analysis {   # get RepeatFeatures
     return \@rfs;
 }
 
-sub get_pts_from_dataset_slice_analysis {   # get PredictionTranscripts
-    my( $self, $dataset, $slice, $analysis_name, $enshead ) = @_;
+sub get_pts_from_dataset_sliceargs_analysis {   # get PredictionTranscripts
+    my( $self, $dataset, $sa, $analysis_name, $enshead ) = @_;
+
+    $sa = to_sliceargs($sa); # normalization
 
     if(!$analysis_name) {
         die "Analysis name must be specified!";
@@ -597,20 +629,15 @@ sub get_pts_from_dataset_slice_analysis {   # get PredictionTranscripts
         'GET',
         'get_pts',
         {
+            %$sa,
             'enshead'  => $enshead ? 1 : 0,
             'dataset'  => $dataset->name(),
-            'type'     => $slice->assembly_type(),
-            'chr'      => $slice->chr_name(),
-            'chrstart' => $slice->chr_start(),
-            'chrend'   => $slice->chr_end(),
             'analysis' => $analysis_name,
         },
         1,
     );
 
     my @resplines = split(/\n/,$response);
-    pop @resplines; # the last one is empty;  IS IT???
-
 
     my @pt_optnames = @{ $OrderOfOptions{PredictionTranscript} };
     my @pe_optnames = @{ $OrderOfOptions{PredictionExon} };

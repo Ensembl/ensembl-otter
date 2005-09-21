@@ -17,17 +17,15 @@ my $cgi = new CGI;
 set_nph($cgi);
 my %cgi_args = $cgi->Vars;
 
-my $analysis = $cgi_args{analysis};
 my $odb = get_DBAdaptor_from_CGI_species($cgi, $OTTER_SPECIES, $enshead);
 my ($pdb, $pipeline_slice, $pipe_connparms) = get_pipeline_adaptor_slice_parms($cgi, $odb, $enshead);
 
 my @pt_optnames = @{ $OrderOfOptions{PredictionTranscript} };
 my @pe_optnames = @{ $OrderOfOptions{PredictionExon} };
 
-    # Fetch the features:
-my $pt_adaptor = $pdb->get_PredictionTranscriptAdaptor();
+my $analysis = $cgi_args{analysis};
+my $pts = $pipeline_slice->get_all_PredictionTranscripts($analysis, 1);
     # last_arg=1 means "fetch all exons now"
-my $pts = $pt_adaptor->fetch_all_by_Slice($pipeline_slice, $analysis, 1);
 
 print STDERR "Total of ".scalar(@$pts)." $analysis prediction transcripts found\n";
 
