@@ -2110,7 +2110,8 @@ sub assembly_tags_to_XML {
   }
 
   foreach my $h ( @$tag_data ){
-
+    ### FIXME! These coordinates should be in chromosomal space!
+    ### See features_to_XML()
     $str .= "<assembly_tag>\n"
  	 . "  <contig_strand>" . $h->strand     . "</contig_strand>\n"	
          . "  <tag_type>"      . $h->tag_type   . "</tag_type>\n"
