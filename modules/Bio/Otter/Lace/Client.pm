@@ -756,16 +756,14 @@ sub get_all_DataSets {
             3,
             'GET',
             'get_datasets',
-            {
-                'details' => 'true',
-            }
+            {},
         );
 
         my $dsp = Bio::Otter::Transform::DataSets->new();
         $dsp->set_property('author', $self->author);
         my $p = $dsp->my_parser();
         $p->parse($content);
-        $ds = $self->{'_datasets'} = $dsp->objects;
+        $ds = $self->{'_datasets'} = $dsp->sorted_objects;
     }
     return @$ds;
 }

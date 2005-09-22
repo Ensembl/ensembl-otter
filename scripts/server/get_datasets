@@ -56,13 +56,10 @@ $xml   .= qq`  <datasets>\n`;
 # print the one's user is allowed to see.
 foreach my $dataset(@allowed_to_see){
     $xml .= qq`    <dataset name="$dataset">\n`;
-    # print details if they've ask for it.
-    if (defined($params{details})) {
-        foreach my $key (keys %{$OTTER_SPECIES->{$dataset}}) {
-            $xml .= qq`      <` . lc $key . qq`>`;
-            $xml .= $OTTER_SPECIES->{$dataset}->{$key};
-            $xml .= qq`</` . lc $key . qq`>\n`;
-        }
+    foreach my $key (keys %{$OTTER_SPECIES->{$dataset}}) {
+        $xml .= qq`      <` . lc $key . qq`>`;
+        $xml .= $OTTER_SPECIES->{$dataset}->{$key};
+        $xml .= qq`</` . lc $key . qq`>\n`;
     }
     $xml .= qq`    </dataset>\n`;
 }

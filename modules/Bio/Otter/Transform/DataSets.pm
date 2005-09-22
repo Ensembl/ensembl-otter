@@ -9,9 +9,12 @@ our @ISA = qw(Bio::Otter::Transform);
 
 
 # probably these should be global rather than assign EVERY time
-# ones were interested in 
-my $SUB_ELE = { map { $_ => 1 } qw(host port user pass dbname type
-                                   dna_host dna_port dna_user dna_pass dna_dbname)};
+# ones were interested in
+my $SUB_ELE = {
+    map { $_ => 1 }
+      qw(host port user pass dbname type
+      dna_host dna_port dna_user dna_pass dna_dbname)
+};
 my $SUP_ELE = { map { $_ => 1 } qw(otter datasets) };
 
 # this should be in xsl and use xslt to transform and create the objects
@@ -54,6 +57,10 @@ sub char_handler{
     }
 }
 
-
+sub sorted_objects {
+    my $self = shift;
+    
+    return [sort {$a->name cmp $b->name} @{$self->objects}];
+}
 
 1;
