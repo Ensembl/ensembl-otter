@@ -1508,6 +1508,7 @@ sub edit_new_subsequence {
     }
     $new->name($seq_name);
     $new->Locus($locus);
+    $new->empty_evidence_hash;
     my $gm = $self->get_default_mutable_GeneMethod or confess "No default mutable GeneMethod";
     
 
@@ -1660,6 +1661,7 @@ sub make_variant_subsequence {
     
     # Make the variant
     my $var = $sub->clone;
+    $var->empty_evidence_hash;
     $var->name($var_name);
     $self->add_SubSeq($var);
     $clone->add_SubSeq($var);
@@ -1756,8 +1758,9 @@ sub update_all_locus_edit_fields {
     my( $self, $locus_name ) = @_;
     
     foreach my $name ($self->list_all_subseq_edit_window_names) {
-        my $locus = $self->get_SubSeq($name)->Locus;
-        if ($locus->name eq $locus_name) {
+        warn "Looking at: '$name'";
+        my $sub = $self->get_SubSeq($name) or next;
+        if ($sub->Locus->name eq $locus_name) {
             warn "Updating '$name'";
             my $ec = $self->get_subseq_edit_window($name) or next;
             $ec->update_Locus_from_XaceSeqChooser;
