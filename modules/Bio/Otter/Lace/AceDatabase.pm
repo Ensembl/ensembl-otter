@@ -862,30 +862,32 @@ sub make_AceDataFactory {
     my $collect = $self->get_default_MethodCollection;
 
     foreach my $logic_name (keys %$logic_to_load){
-	next unless $logic_to_load->{$logic_name};
-	# class successfully required already.
-	my $class = $module_options->{$logic_name}->{'module'};
-        my $filt;
-	# check there is an analysis
+        next unless $logic_to_load->{$logic_name};
+
+            # class successfully required already.
+        my $class = $module_options->{$logic_name}->{'module'};
+        my $filt = $class->new;
+
+            # check there is an analysis
         if (my $ana = $ana_adaptor->fetch_by_logic_name($logic_name)) {
-            $filt = $class->new;
             $filt->analysis_object($ana);
         } else {
-            warn "No analysis called '$logic_name'\n";
+            $filt->analysis_name($logic_name); # Otter_Filters do not need the analysis_object anymore
+            warn "No analysis called '$logic_name' in *primary* pipeline_db (but may be in secondary)\n";
         }
         if($filt){
-	    # find the options for the filter?
-	    foreach my $option(keys (%{$module_options->{"$logic_name"}})){
-		# warn "checking $filt for method $option\n";
-		next unless $filt->can($option);
-		my $value = $module_options->{"$logic_name"}->{$option};
-		# warn "setting $option : $value \n";
-		$filt->$option($value);
-	    }
+            # find the options for the filter?
+            foreach my $option(keys (%{$module_options->{"$logic_name"}})){
+                # warn "checking $filt for method $option\n";
+                next unless $filt->can($option);
+                my $value = $module_options->{"$logic_name"}->{$option};
+                # warn "setting $option : $value \n";
+                $filt->$option($value);
+            }
             # does the filter need a method?
             #my $tag = $filt->method_tag();
             my @required_ace_methods = @{ $filt->required_ace_method_names() };
-            foreach my $tag(@required_ace_methods){
+            foreach my $tag (@required_ace_methods){
                 print STDERR "Trying to get a method Object with tag '$tag' ... filter '$class' ... " if $debug;
                 #my $methObj = $aceMethods_cache->{$tag};
                 my $methObj = $collect->get_Method_by_name($tag);

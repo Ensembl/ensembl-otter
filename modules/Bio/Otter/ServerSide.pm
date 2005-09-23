@@ -34,7 +34,7 @@ sub set_nph{
     my ($cgi) = @_;
     error_exit('', 'I need a CGI object') unless $cgi && UNIVERSAL::isa($cgi, 'CGI');
     if ($ENV{SERVER_SOFTWARE} =~ /libwww-perl-daemon/) {
-        print STDERR "NOTE : Setting nph to 1";
+        print STDERR "NOTE : Setting nph to 1\n";
         $cgi->nph(1);
     }
 }
@@ -42,7 +42,7 @@ sub set_nph{
 sub send_response{
     my ($cgi, $response, $wrap) = @_;
     error_exit('', 'I need a CGI object') unless $cgi && UNIVERSAL::isa($cgi, 'CGI');
-    print STDERR "************** PRINTING RESPONSE ******************";
+    print STDERR "************** PRINTING RESPONSE ******************\n";
     print $cgi->header('text/plain');
 
     if($wrap) {
@@ -69,7 +69,7 @@ sub error_exit {
   print qq`  </response>\n`;
   print qq`</otter>\n`;
 
-  print STDERR "ERROR: $reason";
+  print STDERR "ERROR: $reason\n";
 
   exit(1);
 }
@@ -177,7 +177,7 @@ sub get_DBAdaptor_from_CGI_species{
   
     my( $odb, $dnadb );
 
-    print STDERR "Database dbname : [$dbname] host : [$dbhost] user : [$dbuser] pass : [$dbpass] port : [$dbport]";
+    print STDERR "Database dbname : [$dbname] host : [$dbhost] user : [$dbuser] pass : [$dbpass] port : [$dbport]\n";
     eval {
         $odb = $adaptor_class->new( -host   => $dbhost,
                                     -user   => $dbuser,
@@ -197,10 +197,10 @@ sub get_DBAdaptor_from_CGI_species{
         error_exit($cgi, "Failed opening dna database [$@]") if $@;
         $odb->dnadb($dnadb);
         
-        print STDERR "Connected to dna database";
+        print STDERR "Connected to dna database\n";
     }
     if(!$enshead) {
-        print STDERR "Assembly type " . $odb->assembly_type($type);
+        print STDERR "Assembly type " . $odb->assembly_type($type)."\n";
     } else { # TODO: the version has to be propagated properly
     }
     return $odb;

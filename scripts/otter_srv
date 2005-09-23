@@ -152,7 +152,7 @@ sub make_new_child {
       my $uri = $r->url->path;
       if ($r->method eq 'GET' and $GET_SCRIPTS->{$uri}) {
         my $program = $ENV{SCRIPT_FILENAME} = "$SCRIPTDIR/" . $GET_SCRIPTS->{$uri};
-	print STDERR "*************  BEGIN $uri  *************";
+	print STDERR "*************  BEGIN $uri  *************\n";
         my @args = ();
         if( my $pid = open (my $fh, '-|') ){
             eval{
