@@ -196,35 +196,39 @@ sub compare_genes {
     $self->make_id_version_hash($old_genes);
 
     my $current_author = $self->current_author
-        or $self->throw("current_author not set");
+      or $self->throw("current_author not set");
 
     my %oldgenehash;
     my %newgenehash;
 
     foreach my $g (@$old_genes) {
-	$oldgenehash{$g->stable_id} = $g;
+        $oldgenehash{ $g->stable_id } = $g;
     }
     foreach my $g (@$new_genes) {
-	$newgenehash{$g->stable_id} = $g;
+        $newgenehash{ $g->stable_id } = $g;
     }
 
     # Find deleted genes
     # Change type on deleted genes
 
-    my ($del,$new,$mod) = $self->compare_obj($old_genes, $new_genes);
+    my ($del, $new, $mod) = $self->compare_obj($old_genes, $new_genes);
 
     my %modified_gene_ids;
     my @events;
     foreach my $geneid (keys %$mod) {
-        my $gene_modified   = 0;
+        my $gene_modified = 0;
 
         my $oldg = $mod->{$geneid}{'old'};
         my $newg = $mod->{$geneid}{'new'};
 
         # Genes which were deleted but have now been restored
-        if (defined ($oldg->type) && $oldg->type eq 'obsolete') {
-          $gene_modified = 1;
-          print STDERR "Found restored gene '$geneid'\n";
+        if (defined($oldg->type) && $oldg->type eq 'obsolete') {
+            print STDERR "Found restored gene '$geneid'\n";
+            $gene_modified = 1;
+        }
+        elsif ($oldg->type ne $newg->type) {
+            print STDERR "Gene '$geneid' changed type\n";
+            $gene_modified = 1;
         }
 
         if (($oldg->description || '') ne ($newg->description || '')) {
@@ -233,41 +237,43 @@ sub compare_genes {
         }
 
         # Compare the gene infos to see which have changed
-	if ($oldg->gene_info->equals($newg->gene_info) == 0) {
-	  $gene_modified = 1;
-	  print STDERR "Found modified gene info '$geneid'\n";
+        if ($oldg->gene_info->equals($newg->gene_info) == 0) {
+            $gene_modified = 1;
+            print STDERR "Found modified gene info '$geneid'\n";
 
-	  # See if gene name has changed, and if it has add
-	  # old as alias unless it is already an alias
+            # See if gene name has changed, and if it has add
+            # old as alias unless it is already an alias
 
-	  if ( $oldg->gene_info->name->name ne $newg->gene_info->name->name ){
+            if ($oldg->gene_info->name->name ne $newg->gene_info->name->name) {
 
-	    my $exist = 0;
+                my $exist = 0;
 
-	    if ( $oldg->gene_info->synonym ){
-	      foreach my $sym ( $oldg->gene_info->synonym ){
-		$exist++ if $sym->name eq $oldg->gene_info->name->name;
-	      }
-	    }
+                if ($oldg->gene_info->synonym) {
+                    foreach my $sym ($oldg->gene_info->synonym) {
+                        $exist++ if $sym->name eq $oldg->gene_info->name->name;
+                    }
+                }
 
-	    if ( $exist == 0 ){
+                if ($exist == 0) {
+                    my $gsynonym = new Bio::Otter::GeneSynonym;
+                    $gsynonym->gene_info_id($newg->gene_info->dbID);
+                    $gsynonym->name($oldg->gene_info->name->name);
+                    $newg->gene_info->synonym($gsynonym);
+                }
+                else {
+                    print STDERR "Synonym "
+                      . $oldg->gene_info->name->name
+                      . " already exists - no action\n";
+                }
+            }
+        }
+        else {
 
-	      my $gsynonym = new Bio::Otter::GeneSynonym;
-	      $gsynonym->gene_info_id($newg->gene_info->dbID);
-	      $gsynonym->name($oldg->gene_info->name->name);
-	      $newg->gene_info->synonym($gsynonym);
-	    }
-	    else {
-	      print STDERR "Synonym " . $oldg->gene_info->name->name . " already exists - no action\n";
-	    }
-	  }
-	}
-	else {
-	    #print STDERR "found same gene info\n";
-	}
-	
-	my ($tdel,$tnew,$tmod) = $self->compare_obj(
-            $oldg->get_all_Transcripts,
+            #print STDERR "found same gene info\n";
+        }
+
+        my ($tdel, $tnew, $tmod) =
+          $self->compare_obj($oldg->get_all_Transcripts,
             $newg->get_all_Transcripts);
 
         # Set the author for deleted and new transcripts
@@ -294,13 +300,14 @@ sub compare_genes {
 
         foreach my $tranid (keys %$tmod) {
             my $transcript_modified = 0;
-            my $oldt = $tmod->{$tranid}{'old'};
-            my $newt = $tmod->{$tranid}{'new'};
+            my $oldt                = $tmod->{$tranid}{'old'};
+            my $newt                = $tmod->{$tranid}{'new'};
 
             unless ($oldt->transcript_info->equals($newt->transcript_info)) {
                 $gene_modified = $transcript_modified = 1;
-                #print STDERR "Tran 1\n" . $oldt->transcript_info->toString() . "\n";
-                #print STDERR "Tran 2\n" . $newt->transcript_info->toString() . "\n";
+
+           #print STDERR "Tran 1\n" . $oldt->transcript_info->toString() . "\n";
+           #print STDERR "Tran 2\n" . $newt->transcript_info->toString() . "\n";
                 print STDERR "Transcript modified transcript info $tranid \n";
             }
 
@@ -313,85 +320,93 @@ sub compare_genes {
             }
         }
 
-	# We only need to look through all the exons if the gene is modified
+        # We only need to look through all the exons if the gene is modified
         if ($gene_modified == 1) {
             $newg->gene_info->author($current_author);
             $self->increment_versions_in_gene($newg);
             $modified_gene_ids{$geneid} = 1;
         }
 
-    } # done comparisons - now need to build arrays
+    }    # done comparisons - now need to build arrays
 
     my $time = time;
 
     foreach my $g (@$new) {
         print STDERR "Do I have a stableID? : " . $g->stable_id . "\n";
 
-        my $gene_stable_id = $self->db->get_StableIdAdaptor->fetch_new_gene_stable_id;
-	my $gene = $newgenehash{$g->stable_id};
+        my $gene_stable_id =
+          $self->db->get_StableIdAdaptor->fetch_new_gene_stable_id;
+        my $gene = $newgenehash{ $g->stable_id };
         $self->set_gene_created_version_modified($gene, $time);
         $gene->gene_info->author($current_author);
         $gene->stable_id($gene_stable_id);
 
+        foreach my $tran (@{ $g->get_all_Transcripts }) {
+            my $tid =
+              $self->db->get_StableIdAdaptor->fetch_new_transcript_stable_id;
+            $tran->stable_id($tid);
+            $tran->transcript_info->author($current_author);
 
-
-        foreach my $tran (@{$g->get_all_Transcripts}) {
-           my $tid = $self->db->get_StableIdAdaptor->fetch_new_transcript_stable_id;
-           $tran->stable_id($tid);
-           $tran->transcript_info->author($current_author);
-
-           if (defined($tran->translation)) {
-             my $tid = $self->db->get_StableIdAdaptor->fetch_new_translation_stable_id;
+            if (defined($tran->translation)) {
+                my $tid =
+                  $self->db->get_StableIdAdaptor
+                  ->fetch_new_translation_stable_id;
                 $tran->translation->stable_id($tid);
-           } 
+            }
 
         }
-        foreach my $ex (@{$g->get_all_Exons}) {
+        foreach my $ex (@{ $g->get_all_Exons }) {
             my $eid = $self->db->get_StableIdAdaptor->fetch_new_exon_stable_id;
-            $ex->stable_id($eid); 
+            $ex->stable_id($eid);
         }
 
-	my $event = Bio::Otter::AnnotationBroker::Event->new( -type => 'new',
-							      -new => $gene);
-	push(@events,$event);
+        my $event = Bio::Otter::AnnotationBroker::Event->new(
+            -type => 'new',
+            -new  => $gene
+        );
+        push(@events, $event);
     }
 
     # Flag deleted genes
 
     foreach my $g (@$del) {
-        my $gene = $oldgenehash{$g->stable_id};
+        my $gene = $oldgenehash{ $g->stable_id };
         $self->set_gene_created_version_modified($gene, $time);
 
         # Already deleted in old set
         if ($gene->type ne 'obsolete') {
             $gene->type('obsolete');
-	    $self->increment_obj_version($gene);
-            foreach my $tran (@{$gene->get_all_Transcripts}) {
-		$self->increment_obj_version($tran);
+            $self->increment_obj_version($gene);
+            foreach my $tran (@{ $gene->get_all_Transcripts }) {
+                $self->increment_obj_version($tran);
                 if (my $translation = $tran->translation) {
-		    $self->increment_obj_version($translation);
+                    $self->increment_obj_version($translation);
                 }
-                foreach my $exon (@{$gene->get_all_Exons}) {
-		    $self->increment_obj_version($exon);
+                foreach my $exon (@{ $gene->get_all_Exons }) {
+                    $self->increment_obj_version($exon);
                 }
             }
 
-            my $event = Bio::Otter::AnnotationBroker::Event->new( -type => 'deleted',
-                                                                  -old  => $gene);
-            push(@events,$event);
+            my $event = Bio::Otter::AnnotationBroker::Event->new(
+                -type => 'deleted',
+                -old  => $gene
+            );
+            push(@events, $event);
         }
     }
 
     # Modified genes :
     foreach my $id (keys %modified_gene_ids) {
-	my $old_gene = $oldgenehash{$id};
+        my $old_gene = $oldgenehash{$id};
         my $new_gene = $newgenehash{$id};
 
-	my $event = Bio::Otter::AnnotationBroker::Event->new( -type => 'modified',
-							      -new  => $new_gene,
-							      -old  => $old_gene);
-	
-	push(@events,$event);	
+        my $event = Bio::Otter::AnnotationBroker::Event->new(
+            -type => 'modified',
+            -new  => $new_gene,
+            -old  => $old_gene
+        );
+
+        push(@events, $event);
     }
 
     $self->drop_id_version_hash;

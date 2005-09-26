@@ -328,11 +328,11 @@ sub general_http_dialog {
             warn "Attempting to connect using password '" . '*' x length($pass) . "'\n";
         }
         my $request = $self->new_http_request($method);
-        if($method eq 'GET') {
-            $request->uri($url.'?'.$paramstring);
-
-            warn "url: ${url}?${paramstring}";
-        } elsif($method eq 'POST') {
+        if ($method eq 'GET') {
+            my $get = $url . ($paramstring ? "?$paramstring" : '');
+            $request->uri($get);
+            warn "url: $get";
+        } elsif ($method eq 'POST') {
             $request->uri($url);
             $request->content($paramstring);
 
