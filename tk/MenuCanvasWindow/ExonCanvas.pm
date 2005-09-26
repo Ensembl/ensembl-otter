@@ -1346,8 +1346,10 @@ sub update_Locus_tk_fields {
 # Locus renaming plan
 # On save the locus fields in all other ExonCanvases with the same Locus get updated
 # (Provide a button to open all ExonCanvases with same Locus?)
-# Choosing a different Locus from the dropdown menu updates the Locus edit widgets with values from the other Locus.
-# Editing the name of the Locus
+# Choosing a different Locus from the dropdown menu updates
+#   the Locus edit widgets with values from the other Locus.
+# Editing the name of the Locus and saving renames the locus if already
+#   saved, and keeps its otter_id.
 
 
 sub get_Locus_from_tk {
@@ -1365,10 +1367,12 @@ sub get_Locus_from_tk {
     
     #warn "name '$name'\ndesc '$desc'\nremark '$remark'\n";
     
-    
     my $locus = Hum::Ace::Locus->new;
     $locus->name($name);
     $locus->gene_type($type);
+    if ($name =~ /^([A-Z_]+):/) {
+        $locus->gene_type_prefix($1);
+    }
     $locus->description($desc) if $desc;
     $locus->set_aliases(@aliases);
     

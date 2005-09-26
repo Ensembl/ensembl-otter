@@ -1760,7 +1760,8 @@ sub update_all_locus_edit_fields {
     foreach my $name ($self->list_all_subseq_edit_window_names) {
         warn "Looking at: '$name'";
         my $sub = $self->get_SubSeq($name) or next;
-        if ($sub->Locus->name eq $locus_name) {
+        my $locus = $sub->Locus or next;
+        if ($locus->name eq $locus_name) {
             warn "Updating '$name'";
             my $ec = $self->get_subseq_edit_window($name) or next;
             $ec->update_Locus_from_XaceSeqChooser;
