@@ -107,7 +107,7 @@ sub initialize {
     # Deselect all
     $canvas->Tk::bind('<Escape>', sub{ $self->deselect_all });
     
-    #if ($self->is_mutable && $self->xace_seq_chooser->write_access) {
+    #if ($self->is_mutable && $self->XaceSeqChooser->write_access) {
     if ($self->is_mutable) {
 
         # Select supporting evidence for the transcript
@@ -261,7 +261,7 @@ sub initialize {
         # Widget for changing transcript type (acedb method).
         my $current_method = $self->SubSeq->GeneMethod->name;
         $self->method_name_var(\$current_method);
-        my @mutable_gene_methods = $self->xace_seq_chooser->get_all_mutable_GeneMethods;
+        my @mutable_gene_methods = $self->XaceSeqChooser->get_all_mutable_GeneMethods;
 
         my $type_frame = $frame->Frame(
             -border => 3,
@@ -378,13 +378,13 @@ sub SubSeq {
     return $self->{'_SubSeq'};
 }
 
-sub xace_seq_chooser {
+sub XaceSeqChooser {
     my( $self, $chooser ) = @_;
     
     if ($chooser) {
-        $self->{'_xace_seq_chooser'} = $chooser;
+        $self->{'_XaceSeqChooser'} = $chooser;
     }
-    return $self->{'_xace_seq_chooser'};
+    return $self->{'_XaceSeqChooser'};
 }
 
 sub add_subseq_exons {
@@ -677,7 +677,7 @@ sub is_mutable {
 sub window_close {
     my( $self ) = @_;
     
-    my $xc = $self->xace_seq_chooser;
+    my $xc = $self->XaceSeqChooser;
     
     if ($self->is_mutable && $xc->write_access) {
         my( $sub );
@@ -731,7 +731,7 @@ sub show_subseq {
     my( $self ) = @_;
 
     
-    my $xr = $self->xace_seq_chooser->xace_remote  || $self->xace_seq_chooser->open_xace_dialogue;
+    my $xr = $self->XaceSeqChooser->xace_remote  || $self->XaceSeqChooser->open_xace_dialogue;
     if ($xr) {
         my $sub = $self->SubSeq;
         unless ($sub->is_archival) {
@@ -947,6 +947,7 @@ sub select_evidence {
         $paster_top = $self->canvas->Toplevel;
         $paster_top->transient($self->canvas->toplevel);
         my $paster = $self->{'_evi_window'} = CanvasWindow::EvidencePaster->new($paster_top);
+        $paster->ExonCanvas($self);
         $paster->initialise($evi);
     }
     $paster_top->deiconify;
@@ -957,7 +958,7 @@ sub select_evidence {
 #sub select_evidence {
 #    my( $self ) = @_;
 #    
-#    my $evi_coll = $self->xace_seq_chooser->EviCollection
+#    my $evi_coll = $self->XaceSeqChooser->EviCollection
 #        or die "No EviCollection attatched to XaceSeqChooser";
 #    ### Need to close EviDisplay here if there is one already open
 #    my $otter_transcript = $self->otter_Transcript_from_tk;
@@ -1249,7 +1250,7 @@ sub add_locus_editing_widgets {
         -command    => sub{
             #warn "Locus is now '${$self->{'_locus_name_var'}}'\n";
             my $name = ${$self->{'_locus_name_var'}};
-            my $locus = $self->xace_seq_chooser->get_Locus($name);
+            my $locus = $self->XaceSeqChooser->get_Locus($name);
             $self->update_Locus_tk_fields($locus);
             },
         -exportselection    => 1,
@@ -1261,7 +1262,7 @@ sub add_locus_editing_widgets {
 
     $be->configure(
         -listcmd => sub{
-            my @names = $self->xace_seq_chooser->list_Locus_names;
+            my @names = $self->XaceSeqChooser->list_Locus_names;
             $be->configure(
                 -choices   => [@names],
                 #-listwidth => scalar @names,
@@ -1384,7 +1385,7 @@ sub get_Locus_from_tk {
 sub update_Locus_from_XaceSeqChooser {
     my( $self ) = @_;
     
-    my $xc = $self->xace_seq_chooser;
+    my $xc = $self->XaceSeqChooser;
     if (my $locus = $self->SubSeq->Locus) {
         printf STDERR "update_Locus_from_XaceSeqChooser for locus '%s'\n", $locus->name;
         my $xc_locus = $xc->get_Locus($locus->name);
@@ -1788,7 +1789,7 @@ sub get_GeneMethod_from_tk {
     my( $self ) = @_;
     
     my $meth_name = ${$self->method_name_var};
-    return $self->xace_seq_chooser->get_GeneMethod($meth_name);
+    return $self->XaceSeqChooser->get_GeneMethod($meth_name);
 }
 
 sub canvas_insert_character {
@@ -1865,7 +1866,7 @@ sub delete_chooser_window_ref {
     my( $self ) = @_;
     
     my $name = $self->name;
-    my $xc = $self->xace_seq_chooser;
+    my $xc = $self->XaceSeqChooser;
     $xc->delete_subseq_edit_window($name);
 }
 
@@ -2398,7 +2399,7 @@ sub get_SubSeq_if_changed {
 
     my $new_name = $new->name;
     if ($new_name ne $self->name) {
-        if ($self->xace_seq_chooser->get_SubSeq($new_name)) {
+        if ($self->XaceSeqChooser->get_SubSeq($new_name)) {
             confess "Error: SubSeq '$new_name' already exists\n";
         }
     }
@@ -2412,7 +2413,7 @@ sub manage_locus_otter_ids {
     my $new_locus_name = $new_locus->name;
 
     # Copy locus otter_id from existing Locus of same name if present
-    my $xc_locus = $self->xace_seq_chooser->get_Locus($new_locus_name);
+    my $xc_locus = $self->XaceSeqChooser->get_Locus($new_locus_name);
     if (my $xc_locus_otter_id = $xc_locus->otter_id) {
         $new_locus->otter_id($xc_locus_otter_id);
     }
@@ -2553,7 +2554,7 @@ sub xace_save {
     
     print STDERR "Sending:\n$ace";
     
-    my $xc = $self->xace_seq_chooser;
+    my $xc = $self->XaceSeqChooser;
     my $xr = $xc->xace_remote;
     if ($xr) {
         $xr->load_ace($ace);

@@ -766,7 +766,7 @@ sub launch_polyA{
 	    $mw = $self->canvas->Toplevel;
 	    my $polyA = CanvasWindow::PolyAWindow->new($mw);
 	    # $polyA->add_CloneSequence( $clone ) ; # added for polya
-	    $polyA->xace_seq_chooser($self);
+	    $polyA->XaceSeqChooser($self);
 	    $polyA->slice_name($clone_name);
 	    $polyA->initialize;
 	    $polyA->draw;
@@ -1685,7 +1685,7 @@ sub make_exoncanvas_edit_window {
     # Make new MenuCanvasWindow::ExonCanvas object and initialize
     my $ec = MenuCanvasWindow::ExonCanvas->new($top, 345, 50);
     $ec->name($sub_name);
-    $ec->xace_seq_chooser($self);
+    $ec->XaceSeqChooser($self);
     $ec->SubSeq($sub);
     $ec->initialize;
     

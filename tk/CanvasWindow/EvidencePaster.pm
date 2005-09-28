@@ -4,8 +4,9 @@
 package CanvasWindow::EvidencePaster;
 
 use strict;
+use Scalar::Util 'weaken';
+use Hum::Ace::AceText;
 use base 'CanvasWindow';
-
 
 sub initialise {
     my( $self, $evidence_hash ) = @_;
@@ -64,6 +65,15 @@ sub initialise {
     $self->draw_evidence;
 }
 
+sub ExonCanvas {
+    my( $self, $ExonCanvas ) = @_;
+    
+    if ($ExonCanvas) {
+        $self->{'_ExonCanvas'} = $ExonCanvas;
+        weaken($self->{'_ExonCanvas'});
+    }
+    return $self->{'_ExonCanvas'};
+}
 
 sub left_button_handler {
     my( $self ) = @_;
@@ -181,7 +191,7 @@ sub highlight_evidence_by_name {
         EST             => 'EST',
         vertebrate_mRNA => 'cDNA',
         BLASTX          => 'Protein',
-        );
+    );
 
     #my %lc_second_sw_tr = (
     #    'SW'    => 'Sw',
@@ -189,33 +199,59 @@ sub highlight_evidence_by_name {
     #    );
 
     sub type_and_name_from_clipboard {
-        my( $self ) = @_;
+        my ($self) = @_;
 
         my $canvas = $self->canvas;
 
-        my( $text );
-        eval {
-            $text = $canvas->SelectionGet;
-        };
+        my ($text);
+        eval { $text = $canvas->SelectionGet; };
         return if $@;
         #warn "Trying to parse: [$text]\n";
 
-        # Sequence:Em:BU533776.1    82637 83110 (474)  EST_Human 99.4 (3 - 478) Em:BU533776.1
-        # Sequence:Em:AB042555.1    85437 88797 (3361)  vertebrate_mRNA 99.3 (709 - 4071) Em:AB042555.1
-        # Protein:Tr:Q7SYC3    75996 76703 (708)  BLASTX 77.0 (409 - 641) Tr:Q7SYC3
+# Sequence:Em:BU533776.1    82637 83110 (474)  EST_Human 99.4 (3 - 478) Em:BU533776.1
+# Sequence:Em:AB042555.1    85437 88797 (3361)  vertebrate_mRNA 99.3 (709 - 4071) Em:AB042555.1
+# Protein:Tr:Q7SYC3    75996 76703 (708)  BLASTX 77.0 (409 - 641) Tr:Q7SYC3
 
-        #if ($text =~ /^(?:Sequence|Protein):(\w\w:[\w\.]+)[\d\(\)\s]+(EST|vertebrate_mRNA|BLASTX)/) {
-        if ($text =~ /^(?:Sequence|Protein):(?:\w\w):([\w\.]+)[\d\(\)\s]+(EST|vertebrate_mRNA|BLASTX)/) {
-            my $name = $1;
+        if ($text =~
+/^(?:Sequence|Protein):(?:\w\w):([\w\.]+)[\d\(\)\s]+(EST|vertebrate_mRNA|BLASTX)/
+          )
+        {
+            my $name   = $1;
             my $column = $2;
-            my $type = $column_type{$column} or die "Can't match '$column'";
+            my $type   = $column_type{$column} or die "Can't match '$column'";
+
             #warn "Got $type:$name\n";
             return ($type, $name);
         }
-        elsif ($text =~ /^(?:SW|TR):([\w\.]+)$/i) {
-            my $name = $1;
-            #$name =~ s/^(..)/ $lc_second_sw_tr{$1} /e;
-            return ('Protein', $name);
+        elsif ($text =~ /([A-Za-z]{2}:)?([A-Z]+\d+(?:[A-Z]+\d+)?)(\.\d+)?/) {
+            # There is something that looks like an accession on the clipboard.
+            my $prefix = $1 || '*';
+            my $acc    = $2;
+            my $sv     = $3 || '*';
+            warn "Got '$prefix$acc$sv'";
+            my $ace = $self->ExonCanvas->XaceSeqChooser->ace_handle;
+            my ($type, $name);
+            foreach my $class (qw{ Sequence Protein }) {
+                $ace->raw_query(qq{find $class "$prefix$acc$sv"});
+                my $txt =
+                  Hum::Ace::AceText->new($ace->raw_query(qq{show -a DNA_homol}));
+                #print STDERR $$txt;
+                my @seq = map $_->[1], $txt->get_values($class) or next;
+                if (@seq > 1) {
+                    $self->message(join '', "Got multiple matches:\n", map "  $_\n", @seq);
+                    last;
+                }
+                $name = $seq[0];
+                $name =~ s/^[A-Za-z]+://;
+                my $homol_method = ($txt->get_values('DNA_homol'))[0]->[1];
+                $homol_method =~ s/^(EST)_.+/$1/;
+                $type = $column_type{$homol_method};
+            }
+            if ($type and $name) {
+                return ($type, $name);
+            } else {
+                return;
+            }
         }
         else {
             #warn "Didn't match: '$text'\n";

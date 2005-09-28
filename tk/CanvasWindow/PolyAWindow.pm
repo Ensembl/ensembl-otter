@@ -14,13 +14,13 @@ sub toplevel {
     return $self->canvas->toplevel;
 }
 
-sub xace_seq_chooser{
+sub XaceSeqChooser{
     my ($self , $seq_chooser) = @_ ;
     if ($seq_chooser){
 
-        $self->{'_xace_seq_chooser'} = $seq_chooser;
+        $self->{'_XaceSeqChooser'} = $seq_chooser;
     }
-    return $self->{'_xace_seq_chooser'} ;
+    return $self->{'_XaceSeqChooser'} ;
 }
 
 sub slice_name {
@@ -38,7 +38,7 @@ sub add_CloneSequence{
 
 sub get_all_CloneSequences{
     my $self = shift;
-    my $xaceSeqChooser = $self->xace_seq_chooser();
+    my $xaceSeqChooser = $self->XaceSeqChooser();
     my $slice_name     = $self->slice_name();
     return ($xaceSeqChooser->get_CloneSeq($slice_name));
 #    return $self->{'_cs_list'} ? @{$self->{'_cs_list'}} : (); 
@@ -143,8 +143,8 @@ sub draw{
     $tl->title("Poly A sites / signals for : $slice_name");
     
     
-    # hope xace_seq_chooser exists
-    my $write_acces = $self->xace_seq_chooser->write_access();
+    # hope XaceSeqChooser exists
+    my $write_acces = $self->XaceSeqChooser->write_access();
     
     my $hide_window = sub { $self->hide_window  };
 
@@ -434,8 +434,8 @@ sub add_entry_widget{
 sub dialogue_for_save{
     my ($self) = @_ ;
 
-    # hope xace_seq_chooser exists
-    return 1 unless my $write_acces = $self->xace_seq_chooser->write_access();
+    # hope XaceSeqChooser exists
+    return 1 unless my $write_acces = $self->XaceSeqChooser->write_access();
     # checks to see if any (ie an ace file is created) and it is not invalid
     my ($status , $ace) = $self->create_ace_file;
     if ($ace){
@@ -473,12 +473,12 @@ sub hide_window{
     my ($self) = @_;
     # return 0 if user decides to cancel [see save_window]
     $self->dialogue_for_save() or return 0;
-    $self->xace_seq_chooser->withdraw_PolyAWindow($self);
+    $self->XaceSeqChooser->withdraw_PolyAWindow($self);
 }
 
 sub clean_XaceSeqChooser{
     my $self = shift;
-    $self->{'_xace_seq_chooser'} = undef;
+    $self->{'_XaceSeqChooser'} = undef;
 }
 
 sub save_details{
@@ -491,8 +491,8 @@ sub save_details{
 
     if ($ace){
         ## use xace_remote to parse this file 
-        my $xace_seq_chooser = $self->xace_seq_chooser ;
-        my $xace_remote = $xace_seq_chooser->xace_remote ;
+        my $XaceSeqChooser = $self->XaceSeqChooser ;
+        my $xace_remote = $XaceSeqChooser->xace_remote ;
         if ($xace_remote){
             my $result = 'Yes' ;
             if ($status  eq 'errors'){
