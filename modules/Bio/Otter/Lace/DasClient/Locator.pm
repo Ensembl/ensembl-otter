@@ -4,6 +4,9 @@ package Bio::Otter::Lace::DasClient::Locator;
 use strict;
 use warnings;
 
+use Bio::EnsEMBL::ExternalData::DAS::DASAdaptor;
+use Bio::EnsEMBL::ExternalData::DAS::DAS;
+
 my $DEBUG     = 1;
 my $DEBUG_DAS = 1;
 # new
@@ -125,27 +128,23 @@ sub list_DSN{
     return $self->{'_available_dsn'};
 }
 
-sub get_DasObj{
+sub get_DasObj {
     my ($self) = @_;
     my $dasObj = $self->{'_dasObj'};
-    unless($dasObj){
+    unless ($dasObj) {
         my $url   = $self->url();
         my $proxy = $self->proxy_url();
-        my $proto = $self->protocol()  || 'http';
-        eval "
-            require Bio::EnsEMBL::ExternalData::DAS::DASAdaptor;
-            require Bio::EnsEMBL::ExternalData::DAS::DAS;
-        ";
-        if($@){
-            die "Can't find a required module:\n$@\n";
-        }
-        print STDERR sprintf("url: '%s', proxy: '%s', proto: '%s'\n", $url, $proxy, $proto) if $DEBUG_DAS;
-        my $dasAdapt = Bio::EnsEMBL::ExternalData::DAS::DASAdaptor->new(-url       => $url,
-                                                                        -protocol  => $proto,
-                                                                        -proxy_url => $proxy,
-                                                                        );
+        my $proto = $self->protocol() || 'http';
+        print STDERR
+          sprintf("url: '%s', proxy: '%s', proto: '%s'\n", $url, $proxy, $proto)
+          if $DEBUG_DAS;
+        my $dasAdapt = Bio::EnsEMBL::ExternalData::DAS::DASAdaptor->new(
+            -url       => $url,
+            -protocol  => $proto,
+            -proxy_url => $proxy,
+        );
         $dasAdapt->_db_handle->debug($DEBUG_DAS);
-        $dasObj  = Bio::EnsEMBL::ExternalData::DAS::DAS->new($dasAdapt);
+        $dasObj = Bio::EnsEMBL::ExternalData::DAS::DAS->new($dasAdapt);
         $self->{'_dasObj'} = $dasObj;
     }
     return $dasObj;

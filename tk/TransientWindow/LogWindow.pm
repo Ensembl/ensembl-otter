@@ -1,200 +1,209 @@
+
 package TransientWindow::LogWindow;
 
 use strict;
 use TransientWindow;
+use Bio::Otter::LogFile;
 use Symbol 'gensym';
 
-our @ISA   = qw(TransientWindow);
+our @ISA = qw(TransientWindow);
 
-my $email  = q`anacode`;
-my $domain = q`sanger.ac.uk`;
-my @mail   = qw(smtp Server localhost);
-my $allow_mailing = 1;
-my $loggingOn     = 0;
+my $email     = q`anacode`;
+my $domain    = q`sanger.ac.uk`;
+my @mail      = qw(smtp Server localhost);
+my $loggingOn = 0;
 
-sub initialise{
+sub initialise {
     my $self = shift;
-    $self->SUPER::initialise(@_);
-    $self->get_log_contents(1);
-    return;
-}
 
-sub draw{
-    my $self   = shift;
-    return if $self->{'_drawn'};
+    $self->SUPER::initialise(@_);
 
     my $lw        = $self->window;
-    my $top_frame = $lw->Frame->pack(-side => 'top', -fill => 'both', -expand => 1);
-    my $but_frame = $lw->Frame->pack(-side => 'top', -fill => 'x');
-    my $scrolled  = $top_frame->Scrolled('ROText',
-                                         -font             => ['lucidatypewriter', 10, 'normal'],
-                                         -padx             => 6,
-                                         -pady             => 6,
-                                         -relief           => 'groove',
-                                         -background       => 'white',
-                                         -border           => 2,
-                                         -selectbackground => 'gold',
-                                         -scrollbars       => 'se',
-                                         #-exportselection => 1,
-                                         )->pack(
-                                                 -expand => 1,
-                                                 -fill   => 'both',
-                                                 );
+    my $top_frame = $lw->Frame->pack(
+        -side   => 'top',
+        -fill   => 'both',
+        -expand => 1
+    );
+    my $but_frame = $lw->Frame->pack(
+        -side => 'top',
+        -fill => 'x'
+    );
+    my $scrolled = $top_frame->Scrolled(
+        'ROText',
+        -font             => [ 'lucidatypewriter', 10, 'normal' ],
+        -padx             => 6,
+        -pady             => 6,
+        -relief           => 'groove',
+        -background       => 'white',
+        -border           => 2,
+        -selectbackground => 'gold',
+        -scrollbars       => 'se',
+        -wrap             => 'none',
+        -width            => 100,
+        -height           => 24,
+      )->pack(
+        -expand => 1,
+        -fill   => 'both',
+      );
     my $ROText = $scrolled->Subwidget('rotext');
-    unless($^O eq 'MSWin32'){
+    unless ($^O eq 'MSWin32') {
         my $y_scroll = $ROText->parent->Subwidget('yscrollbar');
-        $ROText->Tk::bind('<4>', sub{
-            $y_scroll->ScrlByUnits('v', -3);
-        });
-        $ROText->Tk::bind('<5>', sub{
-            $y_scroll->ScrlByUnits('v',  +3);
-        });
+        $ROText->Tk::bind(
+            '<4>',
+            sub {
+                $y_scroll->ScrlByUnits('v', -3);
+            }
+        );
+        $ROText->Tk::bind(
+            '<5>',
+            sub {
+                $y_scroll->ScrlByUnits('v', +3);
+            }
+        );
     }
-
-    my $string = $self->get_log_contents();
-    $ROText->delete('1.0', 'end');
-    $ROText->insert('end', $string);
     $self->readonly_text($ROText);
 
     my $email_dev = sub { $self->mail_contents(); };
-    $but_frame->Button(-text    => qq`Email $email`,
-                       -command => $email_dev,
-                       )->pack(-side => 'left') if $self->draw_email_flag() && $allow_mailing;
-    $but_frame->Button(-text => 'SelectAll',
-                       -command => sub { $self->readonly_text->selectAll() },
-                       )->pack(-side => 'left');
-    $but_frame->Button(-text    => 'Close',
-                       -command =>  $self->hide_me_ref,
-                       )->pack(-side => 'right');
-    $but_frame->Button(-text => 'Refresh',
-                       -command => sub { $self->refresh },
-                       )->pack(-side => 'right');
+    $but_frame->Button(
+        -text    => qq`Email $email`,
+        -command => $email_dev,
+    )->pack(-side => 'left');
+    $but_frame->Button(
+        -text    => 'SelectAll',
+        -command => sub { $self->readonly_text->selectAll() },
+    )->pack(-side => 'left');
+    $but_frame->Button(
+        -text    => 'Close',
+        -command => sub { $self->hide_me },
+    )->pack(-side => 'right');
 
-    $but_frame->bind('<Destroy>' , sub {
-        $self->do_callback_unregister();
-        $self = undef; 
-    }
-                     );
-    
+    $but_frame->bind('<Destroy>', sub { $self = undef; });
+
+    return;
+}
+
+sub draw {
+    my $self = shift;
+    return if $self->{'_drawn'};
+
+    my $fh        = gensym();
+    my $file      = $self->current_logfile;
+    my $tail_pipe = "tail -f -n 100 $file |";
+    my $pid       = open $fh, $tail_pipe
+      or die "Can't open tail command '$tail_pipe': $!";
+    $self->tail_process($pid);
+    $self->logfile_handle($fh);
+    my $txt = $self->readonly_text;
+    $txt->fileevent($fh, 'readable', sub { $self->show_output });
+    $txt->bind('<Destroy>', sub { $self = undef });
+
+    # Unbuffer filehandle
+    my $old_fh = select($fh);
+    $| = 1;
+    select($old_fh);
+
+    #my $string = $self->get_log_contents();
+    #$ROText->delete('1.0', 'end');
+    #$ROText->insert('end', $string);
+
     $self->{'_drawn'} = 1;
     return;
 }
-sub show_me{
-    my ($self) = @_;
-    $self->refresh();
-    $self->do_callback_register();
-    return $self->SUPER::show_me;
-}
-sub hide_me_ref{
-    my $self = shift;
-    my $ref  = $self->{'_hide_the_window'};
-    unless($ref){
-        my $window = $self->window();
-        $self->{'_hide_the_window'} = $ref = sub{ 
-            do_callback_unregister();
-            $window->withdraw(); 
-        };
+
+sub tail_process {
+    my ($self, $tail_process) = @_;
+
+    if ($tail_process) {
+        $self->{'_tail_process'} = $tail_process;
     }
-    return $ref;
+    return $self->{'_tail_process'};
 }
 
-sub refresh{
-    my $self   = shift;
-    my $string = $self->get_log_contents(1);
-    my $ROText = $self->readonly_text();
-    #warn "$self is refreshing\n";
-    $ROText->delete('1.0', 'end');
-    $ROText->insert('end',$string);
+sub logfile_handle {
+    my ($self, $logfile_handle) = @_;
+
+    if ($logfile_handle) {
+        $self->{'_logfile_handle'} = $logfile_handle;
+    }
+    return $self->{'_logfile_handle'};
 }
 
-sub readonly_text{
+sub current_logfile {
+    return Bio::Otter::LogFile::current_logfile();
+}
+
+sub readonly_text {
     my ($self, $widget) = @_;
+
     $self->{'_rotext'} = $widget if $widget;
     return $self->{'_rotext'};
 }
-sub do_callback_register{
-    my $self = shift;
-    Bio::Otter::Lace::LogFile::register_callback(sub { $self->refresh }) if $loggingOn;
-}
-sub do_callback_unregister{
-    Bio::Otter::Lace::LogFile::register_callback(undef) if $loggingOn;
-}
-sub draw_email_flag{
-    my ($self, $flag) =  @_;
-    if(defined $flag){
-        $self->{'_draw_email_flag'} = ($flag ? 1 : 0);
-    }
-    return $self->{'_draw_email_flag'} || 0; # default is not to draw it
+
+sub show_output {
+    my ($self) = @_;
+
+    my $fh  = $self->logfile_handle;
+    my $txt = $self->readonly_text;
+    $txt->insert('end', <$fh>);
+    $txt->yview('end');
 }
 
-sub get_log_contents{
+sub get_log_contents {
     my ($self, $refresh) = @_;
-    
-    if($refresh || !($self->{'_log_contents'})){
-        my @log_strings = ();
-        if($INC{'Bio/Otter/Lace/LogFile.pm'}){
-            $loggingOn = 1;
-            @log_strings = Bio::Otter::Lace::LogFile::tail_log();
-            $self->draw_email_flag(scalar @log_strings) unless $self->draw_email_flag;
-            push(@log_strings, q`Log is currently empty.`) unless @log_strings;
-        }else{
-            @log_strings = (qq`Logging is turned off.\n`,
-                            qq`To see the log start otterlace as:\n`,
-                            qq`$0 -logdir /path/to/logfile`);
-        }
-        $self->{'_log_contents'} = join('', @log_strings);
-    }
-    return $self->{'_log_contents'};
+
+    my $txt = $self->readonly_text;
+    return $txt->get('1.0', 'end');
 }
 
-sub mail_contents{
-    my $self   = shift;
-    my $pre    = '';
+sub mail_contents {
+    my ($self) = @_;
+
     my $to     = $email . '@' . $domain;
-    my $subj   = "[otterlace] user's error log";
+    my $file   = $self->current_logfile;
+    my $subj   = "[$0] error log $file";
     my $dialog = $self->window->toplevel->DialogBox(
-        -title   => "Email $to?", 
-        -buttons => [qw(Ok Cancel)], -default_button => 'Cancel');
-    
-    my @defaults = (
-                 -width         => 30,
-                 -background    => 'white',
-                 -labelPack     => [-side => 'left']
-        );
-    $dialog->add('LabEntry', 
-                 -textvariable  => \$subj,
-                 -label         => 'Subject: ',
-                 @defaults,
-                 )->pack();
-    $dialog->add('LabEntry', 
-                 -textvariable  => \$pre, 
-                 -label         => 'Problem: ',
-                 @defaults,
-                 )->pack();
-    $dialog->add('Label',
-        -text => "Really send this error log to $to?")->pack();
+        -title          => "Email $to?",
+        -buttons        => [qw(Ok Cancel)],
+        -default_button => 'Cancel',
+    );
+
+    $dialog->add('Label', -text => $subj,)->pack();
+    my $pre = '';
+    $dialog->add(
+        'LabEntry',
+        -textvariable => \$pre,
+        -label        => 'Description of error: ',
+        -width        => 45,
+        -background   => 'white',
+        -labelPack    => [ -side => 'left' ],
+        -font         => [ 'Helvetica', '12', 'normal' ],
+    )->pack(-pady => 6,);
+    $dialog->add('Label', -text => "Send this error log to '$to'?")->pack();
     my $result = $dialog->Show();
     return unless $result eq 'Ok';
 
-    my $mess = $self->get_log_contents();
-    if($allow_mailing){
-        $subj =~ s/(['"\$])/\\$1/g;   #escape ", ', \, and $. :))
-        my $fh = gensym();
-        my $mail_pipe = qq{| Mail -s "$subj" $to};
-        open $fh, $mail_pipe or die "Error opening '$mail_pipe' : $!";
-        print $fh "$pre\n$mess";
-        close $fh or warn "Error emailing with pipe '$mail_pipe' : exit($?)";
-    }else{
-        print STDOUT "$pre\n$mess";
+    my $mess      = $self->get_log_contents();
+    my $fh        = gensym();
+    my $mail_pipe = qq{| Mail -s "$subj" $to};
+    open $fh, $mail_pipe or die "Error opening '$mail_pipe' : $!";
+    print $fh "$pre\n\n$mess";
+    close $fh or warn "Error emailing with pipe '$mail_pipe' : exit($?)";
+}
+
+sub DESTROY {
+    my ($self) = @_;
+
+    warn "Destroying logfile monitor for '", $self->current_logfile, "'\n";
+
+    if (my $pid = $self->tail_process) {
+        kill 'TERM', $pid;
+    }
+    if (my $fh = $self->logfile_handle) {
+        close($fh);
     }
 }
 
-
 1;
-
-
-
-
 
 __END__
 

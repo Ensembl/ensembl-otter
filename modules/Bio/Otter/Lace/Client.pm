@@ -13,7 +13,7 @@ use Bio::Otter::LogFile;
 use Bio::Otter::Lace::DataSet;
 use Bio::Otter::Lace::AceDatabase;
 use Bio::Otter::Lace::PersistentFile;
-use Bio::Otter::Lace::DasClient;
+#use Bio::Otter::Lace::DasClient;
 use Bio::Otter::Transform::DataSets;
 use Bio::Otter::Transform::SequenceSets;
 use Bio::Otter::Converter;
@@ -119,7 +119,7 @@ sub make_log_file {
         $i++;
     } while (-e $log_file);
     warn "Logging output to '$log_file'\n";
-    Bio::Otter::LogFile->make_log($log_file);
+    Bio::Otter::LogFile::make_log($log_file);
 }
 
 sub cleanup_log_dir {
@@ -840,7 +840,10 @@ sub unlock_otter_xml {
 
 sub dasClient{
     my ($self) = @_;
-    my $das_on = $self->option_from_array([qw( client with-das )]);
+    
+    confess "Disabled";
+    
+    my $das_on = $self->option_from_array([qw( client das )]);
     my $dasObj;
     if($das_on){
         $dasObj = $self->{'_dasClient'};
@@ -849,7 +852,7 @@ sub dasClient{
             $self->{'_dasClient'} = $dasObj;
         }
     }else{
-        print STDERR "To use Das start '$0 -with-das' (currently in development)\n";
+        print STDERR "To use Das start '$0 -das' (currently in development)\n";
     }
     return $dasObj;
 }

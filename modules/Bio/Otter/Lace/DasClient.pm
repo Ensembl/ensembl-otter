@@ -130,7 +130,7 @@ AceDatabase
 
 
 [client]
-with-das=1
+das=1
 write_access=0
 methods_files=/nfs/team71/analysis/rds/workspace/ace_skeleton/rawdata/methods.ace
 

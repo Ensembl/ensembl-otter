@@ -7,9 +7,10 @@ use strict;
 use Carp;
 use base 'CanvasWindow';
 use CanvasWindow::SequenceNotes;
-use CanvasWindow::SequenceNotes::SearchedSequenceNotes ;
+use CanvasWindow::SequenceNotes::SearchedSequenceNotes;
 use Hum::Sort 'ace_sort';
 use TransientWindow::SearchWindow;
+use TransientWindow::LogWindow;
 
 sub new {
     my( $pkg, @args ) = @_;
@@ -178,6 +179,19 @@ sub draw {
     
     
     $self->fix_window_min_max_sizes;
+}
+
+sub show_log{
+    my $self = shift;
+
+    my $tw = $self->{'__tw_log'};
+    unless($tw){
+        $tw = TransientWindow::LogWindow->new($self->top_window(), 'log file - ' . $self->name);
+        $tw->initialise();
+        $tw->draw();
+        $self->{'__tw_log'} = $tw;
+    }
+    $tw->show_me();
 }
 
 sub select_sequence_set {

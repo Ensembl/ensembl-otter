@@ -7,8 +7,6 @@ use strict;
 use Carp;
 use CanvasWindow::MainWindow;
 use CanvasWindow::Utils 'expand_bbox';
-use TransientWindow;
-use TransientWindow::LogWindow;
 use Tk::HeadedCanvas;
 
 sub new {
@@ -872,20 +870,6 @@ sub next_message_id {
     
     return ++$self->{'_last_message_id'};
 }
-
-sub show_log{
-    my $self = shift;
-
-    my $tw = $self->{'__tw_log'};
-    unless($tw){
-        $tw = TransientWindow::LogWindow->new($self->top_window(), 'log file - ' . $self->name);
-        $tw->initialise();
-        $tw->draw();
-        $self->{'__tw_log'} = $tw;
-    }
-    $tw->show_me();
-}
-
 
 {
     my $sel_tag = 'SelectedThing';

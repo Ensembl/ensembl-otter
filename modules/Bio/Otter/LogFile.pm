@@ -7,22 +7,19 @@ use strict;
 use Symbol 'gensym';
 use Carp;
 
-sub import {
-    my $class = shift;
-
-    $class->make_log(@_) if @_;
-}
-
 my $prefix_sub = sub {
-    return scalar(localtime) . " - ";
+    return scalar(localtime) . "  ";
     };
 
 sub set_prefix_sub {
     $prefix_sub = shift;
 }
 
+my $file;
 sub make_log {
-    my( $class, $file ) = @_;
+    confess "Already logging to '$file'" if $file;
+    
+    $file = shift;
 
     # Unbuffer STDOUT
     my $oldsel = select(STDOUT);
@@ -32,11 +29,11 @@ sub make_log {
     if (my $pid = open(STDOUT, "|-")) {
         # Send parent's STDERR to the same place as STDOUT.
         open STDERR, ">&STDOUT" or confess "Can't redirect STDERR to STDOUT";
-        return $pid;
+        return $pid; ### Could write a rotate_logfile sub if we record the pid.
     }
     elsif (defined $pid) {
         my $log = gensym();
-        open $log, "> $file" or confess "Can't write to logfile '$file': $!";
+        open $log, ">> $file" or confess "Can't append to logfile '$file': $!";
         
         # Unbuffer logfile
         $oldsel = select($log);
@@ -52,8 +49,12 @@ sub make_log {
         exit;   # Child must exit here!
     }
     else {
-        confess "Can't fork STDOUT filter: $!";
+        confess "Can't fork output filter: $!";
     }
+}
+
+sub current_logfile {
+    return $file;
 }
 
 1;

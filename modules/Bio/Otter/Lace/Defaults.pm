@@ -128,7 +128,7 @@ sub do_getopt {
                     my $opts = options_from_file($_[1]);
                     push(@$CONFIG_INIFILES, $opts) if $opts;
                     },
-               'with-das!'     => sub { $DEFAULTS->{$CLIENT_STANZA}->{'with-das'} = $_[1] },
+               'das!'          => sub { $DEFAULTS->{$CLIENT_STANZA}->{'das'} = $_[1] },
                'log-file=s'    => sub { die "log-file option is obsolete - use logdir" },
                'help'          => sub { exit(exec('perldoc', $0)); },
                # these are the caller script's options

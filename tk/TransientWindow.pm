@@ -6,50 +6,56 @@ package TransientWindow;
 use strict;
 use Carp;
 
-sub new{
+sub new {
     my ($cls, $tk, $title) = @_;
-    unless($tk){
+    unless ($tk) {
         confess "need a Tk";
     }
     my $self = bless {}, ref($cls) || $cls;
 
     $self->title($title);
-    my $window   = $tk->Toplevel(-title => $title) || print STDOUT "didn't return window?";
+    my $window = $tk->Toplevel(-title => $title)
+      || print STDOUT "didn't return window?";
     $window->transient($tk);
     $self->window($window);
     $self->hide_me();
 
     return $self;
 }
-sub initialise{
+
+sub initialise {
     my ($self) = @_;
     my $window = $self->window();
-    $window->protocol('WM_DELETE_WINDOW', $self->hide_me_ref() );
-    $window->bind('<Destroy>' , sub { $self = undef }  );
+    $window->protocol('WM_DELETE_WINDOW', $self->hide_me_ref());
+    $window->bind('<Destroy>', sub { $self = undef });
 }
-sub draw{
+
+sub draw {
     my ($self) = @_;
     $self->show_me();
 }
-sub hide_me_ref{
+
+sub hide_me_ref {
     my $self = shift;
     my $ref  = $self->{'_hide_the_window'};
-    unless($ref){
+    unless ($ref) {
         my $window = $self->window();
-        $self->{'_hide_the_window'} = $ref = sub{ $window->withdraw(); };
+        $self->{'_hide_the_window'} = $ref = sub { $window->withdraw(); };
     }
     return $ref;
 }
-sub hide_me{
+
+sub hide_me {
     my ($self) = @_;
     $self->hide_me_ref->();
 }
-sub show_me_ref{
+
+sub show_me_ref {
     my ($self) = @_;
     my $ref = $self->{'_show_the_window'};
-    unless($ref){
+    unless ($ref) {
         my $win = $self->window();
-        $self->{'_show_the_window'} = $ref = sub{ 
+        $self->{'_show_the_window'} = $ref = sub {
             $win->deiconify;
             $win->raise;
             $win->focus;
@@ -57,63 +63,70 @@ sub show_me_ref{
     }
     return $ref;
 }
-sub show_me{
+
+sub show_me {
     my $self = shift;
     $self->show_me_ref->();
 }
 
-sub window{
+sub window {
     my ($self, $win) = @_;
-    if($win){
+    if ($win) {
         $self->{'_window'} = $win;
     }
-    return $self->{'_window'};    
+    return $self->{'_window'};
 }
-sub title{
+
+sub title {
     my ($self, $title) = @_;
     $self->{'_win_title'} = $title if $title;
     return $self->{'_win_title'} || __PACKAGE__;
 }
 
-sub text_variable_ref{
+sub text_variable_ref {
     my ($self, $named, $default, $initialise) = @_;
     return undef unless $named;
     $default ||= '';
-    if($initialise){
+    if ($initialise) {
         $self->{'_text_variable_refs'}->{$named} = $default;
     }
     return \$self->{'_text_variable_refs'}->{$named} || \$default;
 }
-sub action{
+
+sub action {
     my ($self, $named, $callback) = @_;
-    unless($named){
+    unless ($named) {
         warn "usage: $self->action('registeredName', [(CODE_REF)])\n";
-        return sub { warn "usage: $self->action('registeredName', [(CODE_REF)])\n" };
+        return
+          sub { warn "usage: $self->action('registeredName', [(CODE_REF)])\n" };
     }
-    if(ref($callback) && ref($callback) eq 'CODE'){
-        $self->{'_actions'}->{$named} = $callback; 
+    if (ref($callback) && ref($callback) eq 'CODE') {
+        $self->{'_actions'}->{$named} = $callback;
     }
-    return $self->{'_actions'}->{$named} || sub{  warn "No callback registered for action '$named'\n"; };
+    return $self->{'_actions'}->{$named}
+      || sub { warn "No callback registered for action '$named'\n"; };
 }
-sub delete_action{
+
+sub delete_action {
     my ($self, $named) = @_;
     $self->{'_actions'}->{$named} = undef;
     return 1;
 }
 
-sub delete_all_actions{
+sub delete_all_actions {
     my $self = shift;
-    foreach my $name(keys(%{$self->{'_actions'}})){
+    foreach my $name (keys(%{ $self->{'_actions'} })) {
         $self->delete_action($name);
-    } 
+    }
 }
 
-sub DESTROY{
+sub DESTROY {
     my $self = shift;
-    my $t = $self->title();
+    my $t    = $self->title();
     my ($type) = ref($self) =~ /([^:]+)$/;
     warn "Destroying $type named '$t'";
 }
+
 1;
 
 __END__
@@ -122,5 +135,5 @@ __END__
 
 =head1 AUTHOR
 
-Roy Storey,,,, B<email> rds@sanger.ac.uk
+Roy Storey B<email> rds@sanger.ac.uk
 
