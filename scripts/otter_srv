@@ -26,7 +26,6 @@ my $SCRIPTDIR             = $OTTER_SCRIPTDIR;
 my $HOME                  = $DEFAULT_HOME;
 my $SCRIPT_TIMEOUT        = int($OTTER_SCRIPT_TIMEOUT) || 60;
 my $PIDFILE               = $DEFAULT_HOME . "/otter_srv.pid";
-my $ENV{'LOGFILE'}        = $DEFAULT_HOME . "/otter_srv.log";
 my $OTTER_INFO            = undef;
 my $PREFORK               = 5;
 my $MAX_CLIENTS_PER_CHILD = $OTTER_MAX_CLIENTS;
@@ -35,6 +34,7 @@ my $DEBUG                 = 1;
 my $VERSION               = "0.1";
 my $GET_SCRIPTS           = $OTTER_GET_SCRIPTS || {};
 my $POST_SCRIPTS          = $OTTER_POST_SCRIPTS || {};
+$ENV{'LOGFILE'}           = $DEFAULT_HOME . "/otter_srv.log";
 $ENV{'SCRIPT_NAME'}       = 'OTTER_SERVER';
 
 #--------------------- global variables ----------------------#
