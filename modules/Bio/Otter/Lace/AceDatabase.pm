@@ -827,76 +827,81 @@ sub make_AceDataFactory {
     ##----------code to add all of the ace filters to data factory-----------------------------------
 
     my $fetch_all_pipeline_data = Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
-    my $logic_to_load = {};
-    my $module_options = {};
     my $debug = $self->Client->debug();
-    if ($fetch_all_pipeline_data) {
-	$logic_to_load = $self->Client->option_from_array([$species, 'use_filters']);
-	$module_options = $self->Client->option_from_array([$species, 'filter']);
+    
+    my $logic_to_load =
+      $self->Client->option_from_array([ $species, 'use_filters' ]);
+    my $module_options =
+      $self->Client->option_from_array([ $species, 'filter' ]);
 
-	# require them
-	for my $s (keys %$logic_to_load){
-	    next unless $logic_to_load->{$s};
-	    #warn " AceDatabase.pm: $s\n" if $debug;
-	    my $module = $module_options->{$s}->{module}
-            or confess "Filter module not set for '$s'";
-        my $file = $module . ".pm";
-	    $file =~ s{::}{/}g;
-	    #warn " AceDatabase.pm: requiring $file \n" if $debug;
-	    eval{  require "$file"  };
-	    if($@){
-		delete $logic_to_load->{$s};
-		warn " AceDatabase couldn't find file $file\n";
-                warn $@ if $debug;
-	    }
-	}
+    my @analysis_names;
+    if ($fetch_all_pipeline_data) {
+        @analysis_names = grep $logic_to_load->{$_}, keys %$logic_to_load;
+        push(@analysis_names, 'submitcontig');
+    } else {
+        # If we aren't fetching all the analysis, we only need the DNA
+        ### Shouldn't we just have a "SubmitContig" method
+        ### in the analysis table of each otter db?
+        push(@analysis_names, 'otter');
     }
 
-    # If we aren't fetching all the analysis, we only need the DNA
-    my $submitcontig = $self->Client->option_from_array([qw!client dna!]) 
-        || ( $fetch_all_pipeline_data ? 'SubmitContig' : 'otter' );
-    $logic_to_load->{$submitcontig} = 1;
-    $module_options->{$submitcontig}->{'module'} = 'Bio::EnsEMBL::Ace::Filter::DNA';
 
-    #my $aceMethods_cache = $self->make_ace_methods();
+    # require them
+    for my $analysis_type (@analysis_names) {
+        #warn " AceDatabase.pm: $analysis_type\n";
+        my $module = $module_options->{$analysis_type}->{module}
+          or confess "Filter module not set for '$analysis_type'";
+        my $file = "$module.pm";
+        $file =~ s{::}{/}g;
+
+        #warn " AceDatabase.pm: requiring $file\n";
+        eval { require "$file" };
+        if ($@) {
+            die "No such filter module '$file'\n$@";
+        }
+    }
+
     my $collect = $self->get_default_MethodCollection;
 
-    foreach my $logic_name (keys %$logic_to_load){
-        next unless $logic_to_load->{$logic_name};
+    foreach my $logic_name (@analysis_names) {
+        # class successfully required already.
+        my $class = $module_options->{$logic_name}->{'module'}
+          or confess "Module class for '$logic_name' missing from config";
+        my $filt  = $class->new;
 
-            # class successfully required already.
-        my $class = $module_options->{$logic_name}->{'module'};
-        my $filt = $class->new;
-
-            # check there is an analysis
+        # check there is an analysis
         if (my $ana = $ana_adaptor->fetch_by_logic_name($logic_name)) {
             $filt->analysis_object($ana);
-        } else {
-            $filt->analysis_name($logic_name); # Otter_Filters do not need the analysis_object anymore
-            warn "No analysis called '$logic_name' in *primary* pipeline_db (but may be in secondary)\n";
         }
-        if($filt){
+        else {
+            # Otter_Filters do not need the analysis_object anymore
+            $filt->analysis_name($logic_name);
+            warn
+"No analysis called '$logic_name' in *primary* pipeline_db (but may be in secondary)\n";
+        }
+        if ($filt) {
+
             # find the options for the filter?
-            foreach my $option(keys (%{$module_options->{"$logic_name"}})){
-                # warn "checking $filt for method $option\n";
+            foreach my $option (keys(%{ $module_options->{"$logic_name"} })) {
+
+                #warn "checking $filt for method $option\n";
                 next unless $filt->can($option);
                 my $value = $module_options->{"$logic_name"}->{$option};
-                # warn "setting $option : $value \n";
+
+                #warn "setting $option : $value \n";
                 $filt->$option($value);
             }
+
             # does the filter need a method?
-            #my $tag = $filt->method_tag();
-            my @required_ace_methods = @{ $filt->required_ace_method_names() };
-            foreach my $tag (@required_ace_methods){
-                print STDERR "Trying to get a method Object with tag '$tag' ... filter '$class' ... " if $debug;
-                #my $methObj = $aceMethods_cache->{$tag};
+            my $req = $filt->required_ace_method_names;
+            foreach my $tag (@$req) {
+                #print STDERR "Trying to get a method Object with tag '$tag' ... filter '$class' ... ";
                 my $methObj = $collect->get_Method_by_name($tag);
-                if ($debug) {
-                    print STDERR $methObj ? "found one\n" : "find failed\n";
-                }
-                $filt->add_method_object($methObj); # or some other place
+                #print STDERR $methObj ? "found one\n" : "find failed\n";
+                $filt->add_method_object($methObj);    # or some other place
             }
-	    # add the filter to the factory
+
+            # add the filter to the factory
             $factory->add_AceFilter($filt);
         }
     }

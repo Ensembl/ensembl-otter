@@ -8,6 +8,7 @@ use Bio::Otter::DBSQL::DBAdaptor;
 use Bio::Otter::Author;
 use Bio::Otter::Version;
 use Bio::Otter::Lace::SatelliteDB;
+use Bio::Otter::LogFile;
 
 our @ISA       = qw(Exporter);
 our @EXPORT    = qw();

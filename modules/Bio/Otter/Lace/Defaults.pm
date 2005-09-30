@@ -18,7 +18,7 @@ my $DEBUG_CONFIG    = 0;
 my $CONFIG_INIFILES = [];
 my %OPTIONS_TO_TIE  = (
                        -default => $DEFAULT_TAG, 
-                       -nocase  => 1
+                       -nocase  => 1,
                        );
 
 my $HARDWIRED = {};
@@ -96,55 +96,62 @@ Suggested usage:
 =cut
 
 sub do_getopt {
-    my( @script_args ) = @_;
-    
+    my (@script_args) = @_;
+
     my @conf_files = list_config_files();
 
-    $CONFIG_INIFILES = []; # clear and add in case of multiple calls
+    $CONFIG_INIFILES = [];    # clear and add in case of multiple calls
     push(@$CONFIG_INIFILES, $HARDWIRED);
 
     my $file_options = [];
-    foreach my $file(@conf_files){
-	if (my $file_opts = options_from_file($file)) {
-	    push(@$CONFIG_INIFILES, $file_opts);
-	}
+    foreach my $file (@conf_files) {
+        if (my $file_opts = options_from_file($file)) {
+            push(@$CONFIG_INIFILES, $file_opts);
+        }
     }
     ############################################################################
     ############################################################################
     my $start = "Called as:\n\t$CALLED\nGetOptions() Error parsing options:";
-    $GETOPT_ERRSTR = undef; # in case this gets called more than once
+    $GETOPT_ERRSTR = undef;    # in case this gets called more than once
     GetOptions(
-               # map {} makes these lines dynamically from @CLIENT_OPTIONS
-               # 'host=s'        => $save_option,
-               ( map { $_ => $save_option } @CLIENT_OPTIONS ),
-               # this allows setting of options as in the config file
-               'cfgstr=s'      => $save_deep_option,
-               # this is just a synonym feel free to add more
-               'view'          => sub { $DEFAULTS->{$CLIENT_STANZA}->{'write_access'} = 0 },
-               'local_fasta=s' => sub { $DEFAULTS->{'local_blast'}->{'database'} = $_[1] },
-               'noblast'       => sub { map { $_->{'local_blast'} = {} if exists $_->{'local_blast'} } @$CONFIG_INIFILES ; },
-               # this allows multiple extra config file to be used
-               'cfgfile=s'     => sub {
-                    my $opts = options_from_file($_[1]);
-                    push(@$CONFIG_INIFILES, $opts) if $opts;
-                    },
-               'das!'          => sub { $DEFAULTS->{$CLIENT_STANZA}->{'das'} = $_[1] },
-               'log-file=s'    => sub { die "log-file option is obsolete - use logdir" },
-               'help'          => sub { exit(exec('perldoc', $0)); },
-               # these are the caller script's options
-               @script_args,
-               ) or return 0;
+
+        # map {} makes these lines dynamically from @CLIENT_OPTIONS
+        # 'host=s'        => $save_option,
+        (map { $_ => $save_option } @CLIENT_OPTIONS),
+
+        # this allows setting of options as in the config file
+        'cfgstr=s' => $save_deep_option,
+
+        # this is just a synonym feel free to add more
+        'view' => sub { $DEFAULTS->{$CLIENT_STANZA}->{'write_access'} = 0 },
+        'local_fasta=s' =>
+          sub { $DEFAULTS->{'local_blast'}->{'database'} = $_[1] },
+        'noblast' => sub {
+            map { $_->{'local_blast'} = {} if exists $_->{'local_blast'} }
+              @$CONFIG_INIFILES;
+        },
+
+        # this allows multiple extra config file to be used
+        'cfgfile=s' => sub {
+            my $opts = options_from_file($_[1]);
+            push(@$CONFIG_INIFILES, $opts) if $opts;
+        },
+        'das!' => sub { $DEFAULTS->{$CLIENT_STANZA}->{'das'} = $_[1] },
+        'log-file=s' => sub { die "log-file option is obsolete - use logdir" },
+        'help'       => sub { exit(exec('perldoc', $0)); },
+
+        # these are the caller script's options
+        @script_args,
+      )
+      or return 0;
     ############################################################################
     ############################################################################
 
     push(@$CONFIG_INIFILES, $DEFAULTS);
+
     # now safe to call any subs which are required to setup stuff
 
     return 1;
-}
-
-sub start_Logging {
-    
 }
 
 sub make_Client {
@@ -186,9 +193,11 @@ sub option_from_array{
     #    - get default option from that and overwrite
     #    - get option from that (if exists) and overwrite
 
-    foreach my $conf(@$CONFIG_INIFILES){
-        $set_value->( __internal_option_from_array($conf, [ ( $DEFAULT_TAG, @arr_copy ) ]) );
-        $set_value->( __internal_option_from_array($conf, [ ($first, @arr_copy) ]) );
+    foreach my $conf (@$CONFIG_INIFILES) {
+        $set_value->(
+            __internal_option_from_array($conf, [ $DEFAULT_TAG, @arr_copy ]));
+        $set_value->(
+            __internal_option_from_array($conf, [ $first,       @arr_copy ]));
     }
 
     return $value;
@@ -254,35 +263,6 @@ sub get_config_list{
     return $CONFIG_INIFILES;
 }
 
-#sub get_default_GeneMethods{
-#
-    #my $stanza = 'gene_methods';
-    #my %defaults_hash = %{option_from_array([$stanza])};
-    #my @methods = ();
-    ## 
-    #my $EDITABLE   = 0; # is the gene method editable?
-    #my $CODING     = 1; # is the gene method coding?
-    #my $IS_SUB_CAT = 2; # is the method a sub category?
-    #my $TRUNC_VER  = 3; # should I make a truncated version?
-    #my $ORDER      = 4; # ORDER THE EDITABLE TO MAKE THE TREE WORK
-
-    #foreach my $method(keys(%defaults_hash)){
-    #    my $properties = $defaults_hash{$method};
-    #    my $prop_array = [ split(',', $properties) ];
-    #    $defaults_hash{$method} = [ @$prop_array[$EDITABLE..$IS_SUB_CAT], undef, $prop_array->[$ORDER] || 0];
-    #    if($prop_array->[$TRUNC_VER]){
-    #        $defaults_hash{"${method}_trunc"} = [ 0, @$prop_array[$CODING..$IS_SUB_CAT], undef, 0];
-    #    }
-    #}
-    ## there must be a better way.
-    #foreach my $method(sort { $defaults_hash{$a}->[$ORDER] <=> $defaults_hash{$b}->[$ORDER] } keys(%defaults_hash)){
-    #    my $prop_array = $defaults_hash{$method};
-    #    push(@methods, ($method => [ @$prop_array[$EDITABLE..$IS_SUB_CAT] ]));
-    #}
-
-#    return @methods;
-#}
-
 sub get_dot_otter_config{
     my $configs = get_config_list();
     my $dot_otter_config;
@@ -330,93 +310,78 @@ sub options_from_file{
     return $ini;
 }
 
-sub __internal_option_from_array{
+sub __internal_option_from_array {
     my ($inifiles, $array) = @_;
-    return unless tied( %$inifiles );
-    my $filename = tied( %$inifiles )->GetFileName();
-    warn "option from array inifile called // $inifiles @$array // looking at $filename\n" if $DEBUG_CONFIG;
-    my $param   = pop @$array;
+
+    return unless tied(%$inifiles);
+    my $filename = tied(%$inifiles)->GetFileName();
+
+    warn
+"option from array inifile called // $inifiles @$array // looking at $filename\n"
+      if $DEBUG_CONFIG;
+
+    my $param = pop @$array;
     my $section = join(".", @$array);
-    warn sprintf "param '%s' and section '%s'", $param, $section if $DEBUG_CONFIG;
-    my $value   = undef;
-    my $found   = 0;
+    warn sprintf "param '%s' and section '%s'", $param, $section
+      if $DEBUG_CONFIG;
+    my $value = undef;
+    my $found = 0;
 
     my $stem_finder = sub {
         my ($s, $p) = @_;
         my $val  = {};
         my $stem = "$s.$p";
-        foreach my $k(keys(%$inifiles)){
+        foreach my $k (keys(%$inifiles)) {
             $val = { %$val, ($1 => $inifiles->{$k}) } if $k =~ /^$stem\.(.+)/;
         }
         return (scalar(keys(%$val)) ? $val : undef);
     };
+
     # get the explicit call for a parameter client host
-    if(exists $inifiles->{$section} && exists $inifiles->{$section}->{$param}){
+    if (exists $inifiles->{$section} && exists $inifiles->{$section}->{$param})
+    {
+
         #print STDERR "1\n";
         $value = $inifiles->{$section}->{$param};
         $found = 1;
-    # get the hash for a block [default.use_filters]
-    }elsif(exists $inifiles->{$section. ".$param"}){
+
+        # get the hash for a block [default.use_filters]
+    }
+    elsif (exists $inifiles->{ $section . ".$param" }) {
+
         #print STDERR "2\n";
-        $value = $inifiles->{$section. ".$param"};
+        $value = $inifiles->{ $section . ".$param" };
         $found = 1;
-    # get the hash for a block [default]. this is same as the above but for only single named stanzas!
-    }elsif((!$section) && exists $inifiles->{"$param"}){
+
+# get the hash for a block [default]. this is same as the above but for only single named stanzas!
+    }
+    elsif ((!$section) && exists $inifiles->{"$param"}) {
+
         #print STDERR "3\n";
         $value = $inifiles->{"$param"};
         $found = 1;
-    # get the hash for a group of blocks [default.filter]
-    # will include [default.filter.repeatmask], [default.filter.cpg] ...
-    # this can be a pain, not sure stem finder is working as expected
-    }elsif(my $stem = $stem_finder->($section, $param)){
+
+        # get the hash for a group of blocks [default.filter]
+        # will include [default.filter.repeatmask], [default.filter.cpg] ...
+        # this can be a pain, not sure stem finder is working as expected
+    }
+    elsif (my $stem = $stem_finder->($section, $param)) {
+
         #print STDERR "4\n";
         $value = $stem;
         $found = 1;
-    # all the above failed to find the specified node of tree
-    }else{ 
+
+        # all the above failed to find the specified node of tree
+    }
+    else {
+
         #print STDERR "5\n";
-        $found = 0; 
+        $found = 0;
     }
     return ($value, $found);
 }
 
-sub set_hash_val{
-    my ($hash, $keys, $value) = @_;
-    my $lastKey = lc(pop @$keys);
-    
-    foreach my $key (@$keys) {
-	$key = lc $key;
-	if (not exists($hash->{$key})) {
-	    $hash->{$key} = {};
-	} elsif (ref($hash->{$key}) ne 'HASH') {
-	    my $oldVal = $hash->{$key};
-	    $hash->{$key} = {};
-	    warn "Looks like something's been defined twice\n";
-	    $hash->{$key}{'_setHashVal_'} = $oldVal;
-	}
-	# Traverse hash
-	$hash = $hash->{$key};
-    }
-    if(not exists($hash->{$lastKey})){
-        $hash->{$lastKey} = $value;
-    }elsif(ref($hash->{$lastKey}) eq 'HASH'){
-        #warn "Having to use '_setHashVal_' as key and $lastKey $value in hash THIS IS BAD!\n";
-        warn "Key '$lastKey' already existed with a hash below. Using '_setHashval_' instead\n";
-        $hash->{'_setHashVal_'} = $value;
-    }else{
-        warn "You've set '@$keys $lastKey' twice. This should be ok\n";
-        #use Data::Dumper;
-        #warn Dumper $hash->{$lastKey};
-        $hash->{$lastKey} = $value;
-    }
-}
-
-
-
-
 1;
-
-
 
 =head1 NAME - Bio::Otter::Lace::Defaults
 
@@ -534,37 +499,6 @@ annotation=Transcript
 prediction=ensembl,est_genes,fgenesh,genscan,HALFWISE
 simple=repeats,cpg_islands
 alignments=BLASTN,BLASTX,Uniprot
-
-
-[gene_methods]
-#Method name=Editable?,Coding?,Is sub-category?,Has truncated version?, Order (only for editables)
-Coding=1,1,0,1,1
-Transcript=1,0,0,1,2
-Non_coding=1,0,1,1,3
-Ambiguous_ORF=1,0,1,1,4
-Immature=1,0,1,1,5
-Antisense=1,0,1,1,6
-IG_segment=1,1,0,1,7
-Putative=1,0,0,1,8
-Pseudogene=1,0,0,1,9
-Processed_pseudogene=1,0,1,1,10
-Unprocessed_pseudogene=1,0,1,1,11
-Predicted= 1,0,0,1,12
-Transposon=1,1,0,1,13
-Artifact=1,0,0,1,14
-TEC=1,0,0,1,15
-# Auto-analysis gene types (non-editable)
-fgenesh=0,1
-FGENES=0,1
-GENSCAN=0,1
-HALFWISE=0,0
-SPAN=0,0
-EnsEMBL=0,1
-genomewise=0,1
-ncbigene=0,1
-WashU-Supported=0,1
-WashU-Putative=0,0
-WashU-Pseudogene=0,0
  
 [ace.method.specialDASAnalysis]
 group=simple

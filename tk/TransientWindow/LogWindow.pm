@@ -68,10 +68,7 @@ sub initialise {
         -text    => qq`Email $email`,
         -command => $email_dev,
     )->pack(-side => 'left');
-    $but_frame->Button(
-        -text    => 'SelectAll',
-        -command => sub { $self->readonly_text->selectAll() },
-    )->pack(-side => 'left');
+
     $but_frame->Button(
         -text    => 'Close',
         -command => sub { $self->hide_me },
