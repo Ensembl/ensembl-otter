@@ -264,29 +264,29 @@ sub status_refresh_for_SequenceSet{
     }
 
     my $rule_list = []; # all the analysis which can run for this species.
-    if (1) {
-        my $ruleAdapt      = $pipe_dba->get_RuleAdaptor();
-        my %rules = map {$_->goalAnalysis->logic_name, $_} $ruleAdapt->fetch_all;
+    my $ruleAdapt      = $pipe_dba->get_RuleAdaptor();
+    my %rules = map {$_->goalAnalysis->logic_name, $_} $ruleAdapt->fetch_all;
 
-        ### Would be nice to see rules in correct order.
-        #@rules = sort_rules_by_dependency(@rules);
+    ### Would be nice to see rules in correct order.
+    #@rules = sort_rules_by_dependency(@rules);
 
-        # Only show analyses that descend from 'SubmitContig'
-        while (my ($name, $rule) = each %rules) {
-            my $will_be_run = 0;
-            foreach my $cond_name (@{$rule->list_conditions}) {
-                # The "SubmitContig" rule does not show up by itself
-                if ($cond_name eq 'SubmitContig' or $rules{$cond_name}) {
-                    $will_be_run = 1;
-                }
+    my $root_analysis = 'SubmitContig';
+    # Only show analyses that descend from 'SubmitContig'
+    while (my ($name, $rule) = each %rules) {
+        my $will_be_run = 0;
+        foreach my $cond_name (@{$rule->list_conditions}) {
+            # The root analysis rule does not show up by itself
+            if ($cond_name eq $root_analysis or $rules{$cond_name}) {
+                $will_be_run = 1;
             }
-            if ($will_be_run) {
-                push(@$rule_list, $name);
-            }
+        }
+        if ($will_be_run) {
+            push(@$rule_list, $name);
         }
     }
 
-    # Used to depend on the list of filters in the config file
+    ### Used to depend on the list of filters in the config file.
+    ### Maybe interface should reflect which analyses will be fetched?
     #my $species = $self->species();
     #my $filters = Bio::Otter::Lace::Defaults::option_from_array([$species, 'use_filters']);
     #foreach my $s (keys %$filters){
@@ -295,7 +295,7 @@ sub status_refresh_for_SequenceSet{
     #    push(@$rule_list, $s);
     #}
 
-    Bio::Otter::Lace::PipelineStatus->set_rule_list([sort @$rule_list]);
+    Bio::Otter::Lace::PipelineStatus->set_rule_list([$root_analysis, (sort @$rule_list)]);
 
     my $sql = q{
         SELECT c.contig_id
@@ -318,7 +318,7 @@ sub status_refresh_for_SequenceSet{
     
     my( %id_status );
     while ($sth->fetch) {
-        next if $ana_name eq 'SubmitContig';
+        #print STDERR "$ctg_id, $ana_name, $created, $version\n";
         my $status = $id_status{$ctg_id};
         unless ($status) {
             # Make a new PipelineStatus object, and attach it to its CloneSequence

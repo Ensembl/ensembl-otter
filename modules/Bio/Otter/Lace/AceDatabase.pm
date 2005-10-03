@@ -909,6 +909,20 @@ sub make_AceDataFactory {
     return $factory;
 }
 
+sub make_ensembl_gene_DataFactory {
+    my( $self, $dataset, $ens_db, $logic_name ) = @_;
+
+    my $factory = Bio::EnsEMBL::Ace::DataFactory->new($self->Client, $dataset);
+    
+    my $ana_adaptor = $ens_db->get_AnalysisAdaptor;
+    my $ensembl = Bio::EnsEMBL::Ace::Filter::Gene->new;
+    $ensembl->url_string('http\:\/\/www.ensembl.org\/Homo_sapiens\/contigview?highlight=%s&chr=%s&vc_start=%s&vc_end=%s');    
+    my $ana_obj = $ana_adaptor->fetch_by_logic_name($logic_name) || return undef;
+    $ensembl->analysis_object( $ana_obj );
+    $factory->add_AceFilter($ensembl);
+    return $factory;
+}
+
 
 #  creates a data factory and adds all the appropriate filters to
 #  it. It then produces a slice from the ensembl db (using the
@@ -926,19 +940,6 @@ sub write_ensembl_data {
         warn "I'm gonna fetch using key '$key' in meta table and set logic to '@$logic'\n";
         map { $self->write_ensembl_data_for_key($ss, $key, $_) } @$logic;
     }
-}
-
-sub make_ensembl_gene_DataFactory {
-    my( $self, $ens_db, $logic_name ) = @_;
-
-    my $factory = Bio::EnsEMBL::Ace::DataFactory->new;
-    my $ana_adaptor = $ens_db->get_AnalysisAdaptor;
-    my $ensembl = Bio::EnsEMBL::Ace::Filter::Gene->new;
-    $ensembl->url_string('http\:\/\/www.ensembl.org\/Homo_sapiens\/contigview?highlight=%s&chr=%s&vc_start=%s&vc_end=%s');    
-    my $ana_obj = $ana_adaptor->fetch_by_logic_name($logic_name) || return undef;
-    $ensembl->analysis_object( $ana_obj );
-    $factory->add_AceFilter($ensembl);
-    return $factory;
 }
 
 sub write_ensembl_data_for_key {
@@ -963,7 +964,7 @@ sub write_ensembl_data_for_key {
     my $ch = get_all_LaceChromosomes($ens_db);
 
     my $factory = $self->{'_ensembl_gene_data_factory'}{$logic_name}
-        ||= $self->make_ensembl_gene_DataFactory($ens_db, $logic_name) || return undef;;
+        ||= $self->make_ensembl_gene_DataFactory($dataset, $ens_db, $logic_name) || return undef;;
 
     my $slice_adaptor = $ens_db->get_SliceAdaptor();
 
