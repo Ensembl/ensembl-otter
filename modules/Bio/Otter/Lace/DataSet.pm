@@ -271,17 +271,19 @@ sub status_refresh_for_SequenceSet{
     #@rules = sort_rules_by_dependency(@rules);
 
     my $root_analysis = 'SubmitContig';
+    my %root_analysis_rule;
     # Only show analyses that descend from 'SubmitContig'
     while (my ($name, $rule) = each %rules) {
         my $will_be_run = 0;
         foreach my $cond_name (@{$rule->list_conditions}) {
             # The root analysis rule does not show up by itself
             if ($cond_name eq $root_analysis or $rules{$cond_name}) {
+                #print STDERR "Including '$name' because of $cond_name\n";
                 $will_be_run = 1;
             }
         }
         if ($will_be_run) {
-            push(@$rule_list, $name);
+            $root_analysis_rule{$name} = 1;
         }
     }
 
@@ -295,7 +297,9 @@ sub status_refresh_for_SequenceSet{
     #    push(@$rule_list, $s);
     #}
 
-    Bio::Otter::Lace::PipelineStatus->set_rule_list([$root_analysis, (sort @$rule_list)]);
+    # It is convenient to show the $root_analysis at the top of the list
+    Bio::Otter::Lace::PipelineStatus->set_rule_list([$root_analysis, (sort keys %root_analysis_rule)]);
+    $root_analysis_rule{$root_analysis} = 1;
 
     my $sql = q{
         SELECT c.contig_id
@@ -319,6 +323,7 @@ sub status_refresh_for_SequenceSet{
     my( %id_status );
     while ($sth->fetch) {
         #print STDERR "$ctg_id, $ana_name, $created, $version\n";
+        next unless $root_analysis_rule{$ana_name};
         my $status = $id_status{$ctg_id};
         unless ($status) {
             # Make a new PipelineStatus object, and attach it to its CloneSequence

@@ -5,7 +5,6 @@ package Bio::Otter::Lace::PipelineStatus;
 
 use strict;
 use Carp;
-use Data::Dumper;
 use Bio::EnsEMBL::Analysis;
 
 
@@ -58,7 +57,18 @@ sub display_list {
 # Called by CanvasWindow::SequenceNotes for displaying overall status of clone
 sub short_display {
     my( $self ) = @_;
-        
+
+    # Uncomment for debugging:
+    #my %rules = map {$_, 'rule '} @rule_list;
+    #foreach my $key (keys %$self) {
+    #    $rules{$key} .= 'done';
+    #}
+    #use Data::Dumper;
+    #print STDERR Dumper(\%rules);
+    #my $key_count = keys %$self;
+    #my $rule_count = scalar @rule_list;
+    #print STDERR "$rule_count rules vs $key_count analyses\n";
+
     return keys %$self == @rule_list ? 'completed' : 'missing';
 }
 

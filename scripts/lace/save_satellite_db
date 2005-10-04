@@ -8,74 +8,77 @@ use Bio::Otter::Lace::SatelliteDB;
 use Bio::Otter::Lace::Defaults;
 
 {
-    my( $help,
-	$key, 
-        $sathost,
-        $satport,
-        $satuser,
-        $satpass,
-        $satdbname, 
-        $view,
-        );
+    my (
+      $help, $key, $view,
+      $sathost, $satport, $satuser, $satpass, $satdbname
+      );
     my $dataset_name = 'human';
     Bio::Otter::Lace::Defaults::do_getopt(
-					  'h|help!'     => \$help,
-					  'key=s'       => \$key,
-					  'sathost=s'   => \$sathost,
-					  'satport=s'   => \$satport,
-					  'satuser=s'   => \$satuser,
-					  'satpass=s'   => \$satpass,
-					  'satdbname=s' => \$satdbname,
-					  'dataset=s'   => \$dataset_name,
-                                          'show'        => \$view,
-					  ) || usage();
+        'h|help!'     => \$help,
+        'key=s'       => \$key,
+        'show'        => \$view,
+        'sathost=s'   => \$sathost,
+        'satport=s'   => \$satport,
+        'satuser=s'   => \$satuser,
+        'satpass=s'   => \$satpass,
+        'satdbname=s' => \$satdbname,
+        'dataset=s'   => \$dataset_name,
+      )
+      || usage();
     usage() if $help;
     die "Key not given" unless $key;
 
-    my $cl = Bio::Otter::Lace::Defaults::make_Client();
-    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    my $cl       = Bio::Otter::Lace::Defaults::make_Client();
+    my $ds       = $cl->get_DataSet_by_name($dataset_name);
     my $otter_db = $ds->get_cached_DBAdaptor;
 
-    my $current = Bio::Otter::Lace::SatelliteDB::get_options_for_key($otter_db, $key);
-    if($view){ 
-        print show_current($current, $key); 
-        exit; 
+    my $current =
+      Bio::Otter::Lace::SatelliteDB::get_options_for_key($otter_db, $key);
+    if ($view) {
+        print show_current($current, $key);
+        exit;
     }
     my $sat_opts = $current || {};
-    $sat_opts->{'-HOST'}    = $sathost      if $sathost;
-    $sat_opts->{'-PORT'}    = $satport      if $satport;
-    $sat_opts->{'-USER'}    = $satuser      if $satuser;
-    $sat_opts->{'-PASS'}    = $satpass      if $satpass;
-    $sat_opts->{'-DBNAME'}  = $satdbname    if $satdbname;
+    $sat_opts->{'-HOST'}   = $sathost   if $sathost;
+    $sat_opts->{'-PORT'}   = $satport   if $satport;
+    $sat_opts->{'-USER'}   = $satuser   if $satuser;
+    $sat_opts->{'-PASS'}   = $satpass   if $satpass;
+    $sat_opts->{'-DBNAME'} = $satdbname if $satdbname;
 
     # so we can use undefined password
     delete($sat_opts->{'-PASS'}) unless $satpass;
 
     # Check we can connect to the Satellite database with options supplied
     eval {
-	my $sat_db = Bio::EnsEMBL::DBSQL::DBAdaptor->new(%$sat_opts);
-	$sat_db = undef;
+        my $sat_db = Bio::EnsEMBL::DBSQL::DBAdaptor->new(%$sat_opts);
+        $sat_db = undef;
     };
-    if ($@){ die "Couldn't connect to SatelliteDB selected:\n" . show_current($sat_opts, 'SatelliteDB') . $@ }
+    if ($@) {
+        die "Couldn't connect to SatelliteDB selected:\n"
+          . show_current($sat_opts, 'SatelliteDB')
+          . $@;
+    }
 
     # delete the key
     Bio::Otter::Lace::SatelliteDB::remove_options_hash_for_key($otter_db, $key);
+
     # replace with new version
-    Bio::Otter::Lace::SatelliteDB::save_options_hash($otter_db, $key, $sat_opts);
+    Bio::Otter::Lace::SatelliteDB::save_options_hash($otter_db, $key,
+        $sat_opts);
 
 }
 
-sub show_current{
+sub show_current {
     my ($settings, $name, $ret) = @_;
     $ret = "Settings for $name:\n";
-    foreach my $key(keys(%$settings)){
-        $ret .= "$key   =  ". $settings->{$key} . "\n";
+    foreach my $key (keys(%$settings)) {
+        $ret .= "$key   =  " . $settings->{$key} . "\n";
     }
     return $ret;
 }
 
 #---------
-sub usage{ exit(exec("perldoc", $0)) }
+sub usage { exit(exec("perldoc", $0)) }
 
 __END__
 
