@@ -345,7 +345,11 @@ sub general_http_dialog {
         $content = $self->_check_for_error($response, $psw_attempts_left, $unwrap);
     } while ($psw_attempts_left-- && !$content);
 
-    print "[$scriptname] CLIENT RECEIVED [".length($content)."] bytes over the TCP connection\n";
+    print STDERR "[$scriptname:"
+          .$params->{analysis}
+          ."] CLIENT RECEIVED ["
+          .length($content)
+          ."] bytes over the TCP connection\n\n";
 
     return $content;
 }
@@ -372,7 +376,7 @@ sub to_sliceargs { # not a method!
 For all of the get_X methods below the 'sliceargs'
 is EITHER a valid slice
 OR a hash reference that contains enough parameters
-to construct the slice for the v32+ EnsEMBL API:
+to construct the slice for the v20+ EnsEMBL API:
 
 Examples:
     $sa = {
@@ -408,6 +412,9 @@ sub get_sfs_from_dataset_sliceargs_analysis {   # get SimpleFeatures
     my( $self, $dataset, $sa, $analysis_name, $enshead ) = @_;
 
     $sa = to_sliceargs($sa); # normalization
+        # cached values:
+    my $seqname = delete $sa->{slicename};
+    my $analysis = Bio::EnsEMBL::Analysis->new( -logic_name => $analysis_name );
 
     if(!$analysis_name) {
         die "Analysis name must be specified!";
@@ -430,9 +437,6 @@ sub get_sfs_from_dataset_sliceargs_analysis {   # get SimpleFeatures
 
     my @sf_optnames = @{ $OrderOfOptions{SimpleFeature} };
 
-        # cached values:
-    my $analysis = Bio::EnsEMBL::Analysis->new( -logic_name => $analysis_name );
-    my $seqname = $sa->{slicename};
 
     my @sfs = (); # simple features in a list
     foreach my $respline (@resplines) {
@@ -461,6 +465,9 @@ sub get_afs_from_dataset_sliceargs_kind_analysis { # get AlignFeatures (Dna or P
     my( $self, $dataset, $sa, $kind, $analysis_name, $enshead ) = @_;
 
     $sa = to_sliceargs($sa); # normalization
+        # cached values:
+    my $seqname = delete $sa->{slicename};
+    my $analysis = Bio::EnsEMBL::Analysis->new( -logic_name => $analysis_name );
 
     if(!$analysis_name) {
         die "Analysis name must be specified!";
@@ -489,10 +496,6 @@ sub get_afs_from_dataset_sliceargs_kind_analysis { # get AlignFeatures (Dna or P
 
     my @af_optnames = @{ $OrderOfOptions{AlignFeature} };
     my @hd_optnames = @{ $OrderOfOptions{HitDescription} };
-
-        # cached values:
-    my $analysis = Bio::EnsEMBL::Analysis->new( -logic_name => $analysis_name );
-    my $seqname = $sa->{slicename};
 
     my %hds = (); # cached hit descriptions, keyed by hit_name
     my @afs = (); # align features in a list
