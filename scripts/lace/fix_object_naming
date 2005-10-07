@@ -8,53 +8,76 @@ use Sys::Hostname 'hostname';
 use Hum::Submission 'prepare_cached_statement';
 
 {
-    my $dataset_name = undef;
-    #my $rename_hash_file = undef;
-    my $rename_hash_file = '/nfs/team71/analysis/jgrg/work/ensembl-otter/scripts/lace/chr14_rename.list';
-    
+    my $dataset_name     = undef;
+    my $set_name         = undef;
+    my $rename_hash_file = undef;
+
+#my $rename_hash_file = '/nfs/team71/analysis/jgrg/work/ensembl-otter/scripts/lace/chr14_rename.list';
+
     my $usage = sub { exec('perldoc', $0) };
     my $test_flag = 0;
     Bio::Otter::Lace::Defaults::do_getopt(
         'h|help!'   => $usage,
         'dataset=s' => \$dataset_name,
+        'set|chr=s' => \$set_name,
         'test!'     => \$test_flag,
         'file=s'    => \$rename_hash_file,
-        ) or $usage->();
+      )
+      or $usage->();
     $usage->() unless $dataset_name;
-    
-    my $ren_hash = $rename_hash_file ? rename_hash_from_file($rename_hash_file) : {};
-    
-    my $cl = Bio::Otter::Lace::Defaults::make_Client();
-    my $ds = $cl->get_DataSet_by_name($dataset_name);
-    my $dba = $ds->get_cached_DBAdaptor;
+
+    my $ren_hash =
+      $rename_hash_file ? rename_hash_from_file($rename_hash_file) : {};
+
+    my $cl        = Bio::Otter::Lace::Defaults::make_Client();
+    my $ds        = $cl->get_DataSet_by_name($dataset_name);
+    my $dba       = $ds->get_cached_DBAdaptor;
     my $gene_aptr = $dba->get_GeneAdaptor;
-    my $gene_db_id = $gene_aptr->list_current_dbIDs;
+
+    my $gene_db_id;
+    if ($set_name) {
+        my $ss = $ds->get_SequenceSet_by_name($set_name);
+        $dba->assembly_type($set_name);
+        $ds->fetch_all_CloneSequences_for_SequenceSet($ss);
+        $ss->selected_CloneSequences($ss->CloneSequence_list);
+        my ($chr, $chr_start, $chr_end) =
+          $cl->chr_start_end_from_contig($ss->selected_CloneSequences);
+        my $slice_aptr = $dba->get_SliceAdaptor;
+        my $slice      =
+          $slice_aptr->fetch_by_chr_start_end($chr, $chr_start, $chr_end);
+        $gene_db_id = $gene_aptr->list_current_dbIDs_for_Slice($slice);
+    }
+    else {
+        $gene_db_id = $gene_aptr->list_current_dbIDs;
+    }
+
     printf STDERR "There are %d current genes\n", scalar @$gene_db_id;
-    
+
     save_gene_numbers($dba);
     save_tsct_names($dba);
 
     # Check for duplicate transcript names
-    my( %root_gid_name );
+    my (%root_gid_name);
     my $count = 0;
     foreach my $gid (@$gene_db_id) {
         $count++;
         print STDERR " $count" unless $count % 100;
-        my $gene = $gene_aptr->fetch_by_dbID($gid);
+        my $gene      = $gene_aptr->fetch_by_dbID($gid);
         my $gene_name = $gene->gene_info->name->name;
-        
+
         my $tsct_list = $gene->get_all_Transcripts;
         foreach my $tsct (@$tsct_list) {
             my $name = $tsct->transcript_info->name;
             my ($root) = $name =~ /^(.+)-\d{3}$/
-                or next;
+              or next;
             $root_gid_name{$root}{$gid} = $gene_name;
         }
     }
-    
-    my( %fix_gid );
+
+    my (%fix_gid);
     while (my ($root, $gene_hash) = each %root_gid_name) {
         next if keys(%$gene_hash) == 1;
+
         # Choose which gids should get renamed
         # The one that isn't clone based, or the one with the largest gid.
         my $found_keep = 0;
@@ -66,7 +89,7 @@ use Hum::Submission 'prepare_cached_statement';
             }
         }
         unless ($found_keep) {
-            my ($oldest) = sort {$a <=> $b} keys %$gene_hash;
+            my ($oldest) = sort { $a <=> $b } keys %$gene_hash;
             delete($gene_hash->{$oldest});
         }
         foreach my $gid (keys %$gene_hash) {
@@ -74,12 +97,15 @@ use Hum::Submission 'prepare_cached_statement';
         }
     }
 
-    printf STDERR "Found %d bad transcript roots to fix\n", scalar(keys %fix_gid);
-    
+    printf STDERR "Found %d bad transcript roots to fix\n",
+      scalar(keys %fix_gid);
+
     foreach my $gid (@$gene_db_id) {
         $dba->begin_work;
-        eval{
-            fix_names($dba, $gene_aptr, $gid, $ren_hash, $fix_gid{$gid} ? 1 : 0);
+        eval {
+            fix_names($dba, $gene_aptr, $gid, $ren_hash,
+                $fix_gid{$gid} ? 1 : 0);
+
             #fix_names($dba, $gene_aptr, $gid, $ren_hash, 0);
             #fix_chr7_transcript_names($dba, $gene_aptr, $gid, $ren_hash, 0);
         };
@@ -97,13 +123,13 @@ use Hum::Submission 'prepare_cached_statement';
 }
 
 sub rename_hash_from_file {
-    my( $file ) = @_;
-    
+    my ($file) = @_;
+
     local *REN;
     open REN, $file or die "Can't read '$file' : $!";
     my $old_new = {};
     while (<REN>) {
-        my( $old, $new ) = split;
+        my ($old, $new) = split;
         $old_new->{$old} = $new;
     }
     close REN or die "Error reading '$file' : $!";
@@ -111,61 +137,67 @@ sub rename_hash_from_file {
 }
 
 sub is_sequence_name {
-    my( $name ) = @_;
+    my ($name) = @_;
 
-    my $sth = prepare_cached_statement(q{
+    my $sth = prepare_cached_statement(
+        q{
         SELECT count(*)
         FROM sequence
         WHERE sequence_name = ?
-        });
+        }
+    );
     $sth->execute($name);
-    
+
     my ($count) = $sth->fetchrow;
     $sth->finish;
     return $count;
 }
 
 sub fix_chr7_transcript_names {
-    my( $dba, $gene_aptr, $id, $ren_hash, $fix_root ) = @_;
+    my ($dba, $gene_aptr, $id, $ren_hash, $fix_root) = @_;
 
-    my $gene = $gene_aptr->fetch_by_dbID($id);
+    my $gene          = $gene_aptr->fetch_by_dbID($id);
     my $old_gene_name = $gene->gene_info->name->name;
-    my( $gene_num );
+    my ($gene_num);
     if ($old_gene_name =~ /^Hs_7_c(\d+)$/) {
         $gene_num = $1;
-    } else {
+    }
+    else {
         return;
     }
     printf STDERR "\nGENE: $old_gene_name\n";
     printf STDERR "  ROOT FIX\n" if $fix_root;
-    
-    my ($clone3prime, $all_clone_names, $all_clones) = three_prime_clone_name($gene);
-    
+
+    my ($clone3prime, $all_clone_names, $all_clones) =
+      three_prime_clone_name($gene);
+
     ### Lock clones here
-    eval{
-        lock_clones($dba, $all_clones);
-    };
+    eval { lock_clones($dba, $all_clones); };
     if ($@) {
         die "CLONES ARE LOCKED\n";
     }
 
     my $tsct_rename_map = [];
-    my $tsct_list = $gene->get_all_Transcripts;
-    foreach my $tsct (sort {$a->transcript_info->name cmp $b->transcript_info->name} @$tsct_list) {
+    my $tsct_list       = $gene->get_all_Transcripts;
+    foreach
+      my $tsct (sort { $a->transcript_info->name cmp $b->transcript_info->name }
+        @$tsct_list)
+    {
         my $old_tsct_name = $tsct->transcript_info->name;
         print STDERR "  TSCT: $old_tsct_name\n";
-        my ($gene_clone_root, $variant_number) = $old_tsct_name =~ /^(.+)-(\d{3})$/;
+        my ($gene_clone_root, $variant_number) =
+          $old_tsct_name =~ /^(.+)-(\d{3})$/;
         next unless $variant_number == $gene_num;
         $variant_number = '001';
         my $new_tsct_name = "$gene_clone_root-$variant_number";
         while (transcript_name_exists($new_tsct_name)) {
             $variant_number++;
             $new_tsct_name = "$gene_clone_root-$variant_number";
-            print STDERR "    INCREMENT TSCT: $variant_number\n";
+            #print STDERR "    INCREMENT TSCT: $variant_number\n";
         }
         save_transcript_name($new_tsct_name);
         print STDERR "    TSCT RENAME: $new_tsct_name\n";
-        push(@$tsct_rename_map, [$old_tsct_name, $new_tsct_name]);
+        push(@$tsct_rename_map, [ $old_tsct_name, $new_tsct_name ]);
         rename_transcript($dba, $tsct, $old_tsct_name, $new_tsct_name);
     }
 
@@ -175,38 +207,39 @@ sub fix_chr7_transcript_names {
 }
 
 sub fix_names {
-    my( $dba, $gene_aptr, $id, $ren_hash, $fix_root ) = @_;
+    my ($dba, $gene_aptr, $id, $ren_hash, $fix_root) = @_;
 
-    my $gene = $gene_aptr->fetch_by_dbID($id);
+    my $gene          = $gene_aptr->fetch_by_dbID($id);
     my $old_gene_name = $gene->gene_info->name->name;
     printf STDERR "\nGENE: $old_gene_name\n";
     printf STDERR "  ROOT FIX\n" if $fix_root;
 
     my ($gene_class, $gene_name) = get_class_and_name($old_gene_name);
-    my ($clone3prime, $all_clone_names, $all_clones) = three_prime_clone_name($gene);
+    my ($clone3prime, $all_clone_names, $all_clones) =
+      three_prime_clone_name($gene);
 
     ### Lock clones here
-    eval{
-        lock_clones($dba, $all_clones);
-    };
+    eval { lock_clones($dba, $all_clones); };
     if ($@) {
         die "CLONES ARE LOCKED\n";
     }
 
-    my $fix_names = 0;
+    my $fix_names   = 0;
     my $gene_number = undef;
     if (my $new = $ren_hash->{$gene_name}) {
         print STDERR "  HASH RENAME: $new\n";
+
         #$fix_names = 1;
         $gene_name = $new;
     }
     elsif ($gene_name =~ /^(?:[Ee][Mm]:)?([^\.]+)\.(\d+)$/) {
         my $clone_root = $1;
-        $gene_number   = $2;
+        $gene_number = $2;
         if (is_sequence_name($clone_root)) {
             $fix_names = 1;
         }
     }
+
     # Chromosome 14 gene names
     elsif ($gene_name =~ /^K14_.+_\d+$/) {
         $fix_names = 1;
@@ -215,8 +248,9 @@ sub fix_names {
         $fix_names = 1;
     }
 
-    my $is_int_end = 0;
+    my $is_int_end          = 0;
     my $int_end_gene_number = undef;
+
     #if ($old_gene_name =~ /[A-Za-z-](\d+)$/) {
     #    print STDERR "  INT_END\n";
     #    $is_int_end = 1;
@@ -227,22 +261,27 @@ sub fix_names {
     $gene_number ||= transcript_gene_number($gene);
 
     my $gene_clone_root = undef;
-    if (! $fix_root and name_is_clone_based($gene_name, $all_clone_names)) {
+    if (!$fix_root and name_is_clone_based($gene_name, $all_clone_names)) {
         print STDERR "  GENE NAME OK\n";
         $gene_clone_root = $gene_name;
     }
-    #else {
-    #    ($gene_number, $gene_clone_root) = make_new_gene_name($gene_number, $gene_class . $clone3prime);
-    #}
+
+#else {
+#    ($gene_number, $gene_clone_root) = make_new_gene_name($gene_number, $gene_class . $clone3prime);
+#}
 
     ### Fix gene classes here too?
 
     my $tsct_rename_map = [];
-    my $fix_int_end = 0;
-    my $tsct_list = $gene->get_all_Transcripts;
-    foreach my $tsct (sort {$a->transcript_info->name cmp $b->transcript_info->name} @$tsct_list) {
+    my $fix_int_end     = 0;
+    my $tsct_list       = $gene->get_all_Transcripts;
+    foreach
+      my $tsct (sort { $a->transcript_info->name cmp $b->transcript_info->name }
+        @$tsct_list)
+    {
         my $old_tsct_name = $tsct->transcript_info->name;
         my ($class, $name) = get_class_and_name($old_tsct_name);
+
         #if ($class ne $gene_class) {
         #    print STDERR "  CLASS POLLUTION: gene=$gene_class tsct=$class\n";
         #}
@@ -261,26 +300,35 @@ sub fix_names {
         $variant_number ||= '001';
 
         my $is_clone_based = name_is_clone_based($name, $all_clone_names);
-        if ($is_int_end and $gene_number and $gene_number == $int_end_gene_number) {
-            $gene_number = undef if ! $gene_clone_root;
+        if (    $is_int_end
+            and $gene_number
+            and $gene_number == $int_end_gene_number)
+        {
+            $gene_number = undef if !$gene_clone_root;
             $fix_int_end = 1;
         }
         elsif ($bad_tsct_name) {
+
             # Transcript name must be fixed
         }
         elsif ($fix_root) {
             $variant_number = '001';
         }
         elsif ("$class$name" eq $old_tsct_name and $is_clone_based) {
+
             # Already has intl gene name
             next unless $fix_int_end;
         }
 
         # Rename transcript:
         unless ($gene_clone_root) {
-            ($gene_number, $gene_clone_root) = make_new_gene_name($gene_number, $gene_class . $clone3prime);
+            ($gene_number, $gene_clone_root) =
+              make_new_gene_name($gene_number, $gene_class . $clone3prime);
         }
-        next if ($fix_int_end and $is_clone_based and $gene_number >= $int_end_gene_number);
+        next
+          if (  $fix_int_end
+            and $is_clone_based
+            and $gene_number >= $int_end_gene_number);
 
         my $new_tsct_name = "$gene_clone_root-$variant_number";
         while (transcript_name_exists($new_tsct_name)) {
@@ -290,7 +338,7 @@ sub fix_names {
         }
         save_transcript_name($new_tsct_name);
         print STDERR "    TSCT RENAME: $new_tsct_name\n";
-        push(@$tsct_rename_map, [$old_tsct_name, $new_tsct_name]);
+        push(@$tsct_rename_map, [ $old_tsct_name, $new_tsct_name ]);
         rename_transcript($dba, $tsct, $old_tsct_name, $new_tsct_name);
     }
 
@@ -299,33 +347,37 @@ sub fix_names {
     if ($fix_names and $gene_name ne $gene_clone_root) {
         unless ($gene_clone_root) {
             print STDERR "  NO NEW GENE NAME\n";
-            ($gene_number, $gene_clone_root) = make_new_gene_name($gene_number, $gene_class . $clone3prime);
+            ($gene_number, $gene_clone_root) =
+              make_new_gene_name($gene_number, $gene_class . $clone3prime);
         }
         print STDERR "  GENE RENAME: $gene_clone_root\n";
-        rename_gene($dba, $gene, $old_gene_name, $gene_clone_root, $tsct_rename_map);
+        rename_gene($dba, $gene, $old_gene_name, $gene_clone_root,
+            $tsct_rename_map);
     }
     elsif ("$gene_class$gene_name" ne $old_gene_name) {
         print STDERR "  GENE CLASS RENAME: $gene_class$gene_name\n";
-        rename_gene($dba, $gene, $old_gene_name, "$gene_class$gene_name", $tsct_rename_map);
+        rename_gene($dba, $gene, $old_gene_name, "$gene_class$gene_name",
+            $tsct_rename_map);
     }
 
     unlock_clones($dba, $all_clones);
 }
 
-
 {
-    my( $author_id );
+    my ($author_id);
 
     sub script_author_id {
-        my( $dba ) = @_;
-    
+        my ($dba) = @_;
+
         unless ($author_id) {
             my $uname = (getpwuid($<))[0];
-            my $sth = $dba->prepare(q{
+            my $sth   = $dba->prepare(
+                q{
                 SELECT author_id
                 FROM author
                 WHERE author_name = ?
-                });
+                }
+            );
             foreach my $name ($uname, 'vega') {
                 $sth->execute($name);
                 last if ($author_id) = $sth->fetchrow;
@@ -337,12 +389,13 @@ sub fix_names {
 }
 
 sub lock_clones {
-    my( $dba, $clone_list ) = @_;
-    
+    my ($dba, $clone_list) = @_;
+
     my $author_id = script_author_id($dba);
-    my $host = hostname();
-    
-    my $sth = $dba->prepare(q{
+    my $host      = hostname();
+
+    my $sth = $dba->prepare(
+        q{
         INSERT clone_lock(clone_id
               , timestamp
               , author_id
@@ -351,7 +404,8 @@ sub lock_clones {
               , FROM_UNIXTIME(?)
               , ?
               , ?)
-        });
+        }
+    );
     my $now = time;
     foreach my $clone (@$clone_list) {
         $sth->execute($clone->dbID, $now, $author_id, $host);
@@ -359,69 +413,80 @@ sub lock_clones {
 }
 
 sub unlock_clones {
-    my( $dba, $clone_list ) = @_;
-    
-    my $sth = $dba->prepare(q{
+    my ($dba, $clone_list) = @_;
+
+    my $sth = $dba->prepare(
+        q{
         DELETE FROM clone_lock
         WHERE clone_id = ?
-        });
+        }
+    );
     foreach my $clone (@$clone_list) {
         $sth->execute($clone->dbID);
     }
 }
 
-
 sub rename_transcript {
-    my( $dba, $tsct, $old, $new ) = @_;
-    
+    my ($dba, $tsct, $old, $new) = @_;
+
     my $info_id = $tsct->transcript_info->dbID
-        or die "No dbID for transcript";
-    my $ren = $dba->prepare(q{
+      or die "No dbID for transcript";
+    my $ren = $dba->prepare(
+        q{
         UPDATE transcript_info
         SET name = ?
         WHERE transcript_info_id = ?
-        });
+        }
+    );
     $ren->execute($new, $info_id);
 
-    my $arch = $dba->prepare(q{
+    my $arch = $dba->prepare(
+        q{
         REPLACE transcript_synonym( transcript_name
               , transcript_synonym)
         VALUES (?,?)
-        });
+        }
+    );
     $arch->execute($new, $old);
 }
 
 sub rename_gene {
-    my( $dba, $gene, $old, $new, $tsct_rename_map ) = @_;
-    
+    my ($dba, $gene, $old, $new, $tsct_rename_map) = @_;
+
     my $g_info_id = $gene->gene_info->dbID
-        or die "No dbID for gene";
-    my $ren = $dba->prepare(q{
+      or die "No dbID for gene";
+    my $ren = $dba->prepare(
+        q{
         UPDATE gene_name
         SET name = ?
         where gene_info_id = ?
-        });
+        }
+    );
     $ren->execute($new, $g_info_id);
-    
-    my $arch = $dba->prepare(q{
+
+    my $arch = $dba->prepare(
+        q{
         INSERT gene_synonym( name
               , gene_info_id )
         VALUES (?,?)
-        });
+        }
+    );
     $arch->execute($old, $g_info_id);
-    
+
     fix_gene_remarks($dba, $gene, $tsct_rename_map);
 }
 
 sub fix_gene_remarks {
-    my( $dba, $gene, $tsct_rename_map ) = @_;
-    
-    my $sth = $dba->prepare(q{
+    my ($dba, $gene, $tsct_rename_map) = @_;
+
+    my $sth = $dba->prepare(
+        q{
         UPDATE gene_remark
         SET remark = ?
         WHERE transcript_remark_id = ?
-        });
-    
+        }
+    );
+
     my @remarks = $gene->gene_info->remark;
     foreach my $old_new (@$tsct_rename_map) {
         my ($old, $new) = @$old_new;
@@ -434,6 +499,7 @@ sub fix_gene_remarks {
                 my $id = $rem->dbID or die "Missing gene_remark_id";
                 $sth->execute($new, $id);
             }
+
             #else {
             #    print STDERR "  OK: $txt\n";
             #}
@@ -442,14 +508,16 @@ sub fix_gene_remarks {
 }
 
 sub fix_transcript_remarks {
-    my( $dba, $tsct_list, $tsct_rename_map ) = @_;
-    
-    my $sth = $dba->prepare(q{
+    my ($dba, $tsct_list, $tsct_rename_map) = @_;
+
+    my $sth = $dba->prepare(
+        q{
         UPDATE transcript_remark
         SET remark = ?
         WHERE transcript_remark_id = ?
-        });
-    
+        }
+    );
+
     my @remarks = map $_->transcript_info->remark, @$tsct_list;
     foreach my $old_new (@$tsct_rename_map) {
         my ($old, $new) = @$old_new;
@@ -462,6 +530,7 @@ sub fix_transcript_remarks {
                 my $id = $rem->dbID or die "Missing transcript_remark_id";
                 $sth->execute($new, $id);
             }
+
             #else {
             #    print STDERR "    OK: $txt\n";
             #}
@@ -470,85 +539,91 @@ sub fix_transcript_remarks {
 }
 
 sub name_is_clone_based {
-    my( $name, $clone_list ) = @_;
-    
+    my ($name, $clone_list) = @_;
+
     foreach my $clone (@$clone_list) {
         return 1 if index($name, $clone) == 0;
+
         #print STDERR "  NO MATCH: $clone\n";
     }
     return 0;
 }
 
 sub get_class_and_name {
-    my( $name ) = @_;
-    
+    my ($name) = @_;
+
     my $class = '';
     if ($name =~ s/^([A-Z]+)://) {
         $class = $1;
     }
+
     #elsif ($name =~ s/\.($class_pattern)\b//) {
     #    $class = $1;
     #}
     $class = '' if $class eq 'C22';
     $class .= ':' if $class;
-    return( $class, $name );
+    return ($class, $name);
 }
 
 sub transcript_gene_number {
-    my( $gene ) = @_;
-    
+    my ($gene) = @_;
+
     my $tsct_list = $gene->get_all_Transcripts;
 
-    my( %gene_n );
+    my (%gene_n);
     foreach my $name (map $_->transcript_info->name, @$tsct_list) {
         if ($name =~ /\.(\d+)-\d{3}$/) {
             $gene_n{$1}++;
         }
     }
-    my ($most_common) = sort {$gene_n{$b} <=> $gene_n{$a}} keys %gene_n;
+    my ($most_common) = sort { $gene_n{$b} <=> $gene_n{$a} } keys %gene_n;
     return $most_common;
 }
 
 sub three_prime_clone_name {
-    my( $gene ) = @_;
-    
+    my ($gene) = @_;
+
     my $tsct_list = $gene->get_all_Transcripts;
-    
+
     my $longest = [];
-    my( %name_clone );
+    my (%name_clone);
     foreach my $tsct (@$tsct_list) {
-        my $clone_list = [map $_->contig->clone, @{$tsct->get_all_Exons}];
-        for (my $i = 1; $i < @$clone_list;) {
-            if ($clone_list->[$i]->id eq $clone_list->[$i-1]->id) {
+        my $clone_list = [ map $_->contig->clone, @{ $tsct->get_all_Exons } ];
+        for (my $i = 1 ; $i < @$clone_list ;) {
+            if ($clone_list->[$i]->id eq $clone_list->[ $i - 1 ]->id) {
                 splice(@$clone_list, $i, 1);
-            } else {
+            }
+            else {
                 $i++;
             }
         }
+
         #print STDERR "   @$clone_list\n";
         foreach my $clone (@$clone_list) {
             my $clone_name = $clone->id;
-            $clone_name =~ s/\.\d+$//;  # Trim SV from ACC.SV names
+            $clone_name =~ s/\.\d+$//;    # Trim SV from ACC.SV names
             $name_clone{$clone_name} = $clone;
         }
         $longest = $clone_list if @$clone_list > @$longest;
     }
+
     #print STDERR " + @$longest\n";
     die "No clone list!" unless @$longest;
     my $clone3prime = pop(@$longest)->id;
-    $clone3prime =~ s/\.\d+$//; # Trim SV from ACC.SV names
+    $clone3prime =~ s/\.\d+$//;           # Trim SV from ACC.SV names
     my $all_clone_names = [];
     foreach my $name (keys %name_clone) {
-        $name =~ s/\.\d+$//; # Trim SV from ACC.SV names
+        $name =~ s/\.\d+$//;              # Trim SV from ACC.SV names
         push(@$all_clone_names, $name);
     }
+
     #print STDERR "   end = $clone3prime\n";
-    return($clone3prime, $all_clone_names, [values %name_clone]);
+    return ($clone3prime, $all_clone_names, [ values %name_clone ]);
 }
 
 sub make_new_gene_name {
-    my( $gene_number, $clone3prime ) = @_;
-    
+    my ($gene_number, $clone3prime) = @_;
+
     $gene_number ||= new_gene_number($clone3prime);
     my $new_gene_name = "$clone3prime.$gene_number";
     while (gene_exists($new_gene_name)) {
@@ -557,17 +632,16 @@ sub make_new_gene_name {
         print STDERR "  INCREMENT GENE: $gene_number ($new_gene_name)\n";
     }
     save_gene_name($new_gene_name);
-    
-    return($gene_number, $new_gene_name);
+
+    return ($gene_number, $new_gene_name);
 }
 
-
 {
-    my( %gene_max, %gene_name );
+    my (%gene_max, %gene_name);
 
     sub save_gene_numbers {
-        my( $dba ) = @_;
-        
+        my ($dba) = @_;
+
         foreach my $table (qw{ gene_name gene_synonym }) {
             my $sth = $dba->prepare(qq{ SELECT DISTINCT name FROM $table });
             $sth->execute;
@@ -577,38 +651,40 @@ sub make_new_gene_name {
             }
         }
     }
-    
+
     sub save_number {
-        my( $name ) = @_;
-        
+        my ($name) = @_;
+
         if (my ($root, $n) = $name =~ /(.+)\.(\d+)/) {
             if (my $max = $gene_max{$root}) {
                 $gene_max{$root} = $n if $n > $max;
-            } else {
+            }
+            else {
                 $gene_max{$root} = $n;
             }
         }
     }
-    
+
     sub gene_exists {
-        my( $name ) = @_;
-        
+        my ($name) = @_;
+
         return $gene_name{$name};
     }
-    
+
     sub save_gene_name {
-        my( $name ) = @_;
-        
+        my ($name) = @_;
+
         $gene_name{$name}++;
     }
-    
+
     sub new_gene_number {
-        my( $root ) = @_;
-        
-        my( $n );
+        my ($root) = @_;
+
+        my ($n);
         if ($n = $gene_max{$root}) {
             $n++;
-        } else {
+        }
+        else {
             $n = 1;
         }
         $gene_max{$root} = $n;
@@ -617,11 +693,11 @@ sub make_new_gene_name {
 }
 
 {
-    my( %tsct_name );
-    
+    my (%tsct_name);
+
     sub save_tsct_names {
-        my( $dba ) = @_;
-        
+        my ($dba) = @_;
+
         my $sth = $dba->prepare(q{ SELECT distinct name FROM transcript_info });
         $sth->execute;
         while (my ($name) = $sth->fetchrow) {
@@ -629,21 +705,22 @@ sub make_new_gene_name {
 
             if (my ($gene) = $name =~ /^(.+)-\d{3}$/) {
                 save_gene_name($gene);
-            } else {
-                print STDERR "BAD TSCT NAME: '$name'\n";
             }
+            #else {
+            #    print STDERR "BAD TSCT NAME: '$name'\n";
+            #}
         }
     }
-    
+
     sub save_transcript_name {
-        my( $name ) = @_;
-        
+        my ($name) = @_;
+
         $tsct_name{$name}++;
     }
-    
+
     sub transcript_name_exists {
-        my( $name ) = @_;
-        
+        my ($name) = @_;
+
         return $tsct_name{$name};
     }
 }

@@ -1,0 +1,66 @@
+#!/usr/local/bin/perl -w
+
+### gff2ace
+
+use strict;
+use Bio::Otter::Lace::Defaults;
+
+{
+    my( $dataset_name, $set_name );
+
+    my $usage = sub { exec('perldoc', $0) };
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'       => $usage,
+        'dataset=s'     => \$dataset_name,
+        ) or $usage->();
+    $usage->() unless $dataset_name;
+    
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+
+    my $otter_dba = $ds->get_cached_DBAdaptor;
+    my $clone_aptr = $otter_dba->get_CloneAdaptor;
+    
+    print qq{\nMethod "TransFrags"\nColour CYAN\n};
+    
+    my $prev_acc_sv = '';
+    while (<>) {
+        next if /^#/;
+        next if /^\s*$/;
+        my ($acc_sv, $start, $end, $score, $strand) = (split)[0,3,4,5,6];
+        if ($strand eq '-') {
+            ($start, $end) = ($end, $start);
+        }
+        
+        if ($acc_sv ne $prev_acc_sv) {
+            my $ctg_name = fetch_contig_name($clone_aptr, $acc_sv);
+            print qq{\nSequence "$ctg_name"\n};
+            $prev_acc_sv = $acc_sv;
+        }
+        
+        print qq{Feature "TransFrags" $start $end 1.0\n};
+    }
+}
+
+sub fetch_contig_name {
+    my( $clone_aptr, $acc_sv ) = @_;
+    
+    my ($acc, $sv) = $acc_sv =~ /^(.+)\.(\d+)$/ or die "Cannot parse '$acc_sv'";
+    my $clone = $clone_aptr->fetch_by_accession_version($acc, $sv);
+    my $ctg = $clone->get_all_Contigs->[0];
+    return $ctg->name;
+}
+
+
+
+__END__
+
+=head1 NAME - gff2ace
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+

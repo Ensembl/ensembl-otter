@@ -403,7 +403,6 @@ sub check_line {
 #---------------------------------------------------------------------------------------------------
 # returns a chromosome when given a db object and a chromosome name
 sub get_chromosome {
-
     my ($db, $chr_name) = @_;
 
     my $chr_adp = $db->get_ChromosomeAdaptor();
@@ -431,7 +430,6 @@ sub get_chromosome {
 # updates the chromosome length field
 # after assembly table has had values entered
 sub update_chromosome_length {
-
     my ($db, $chromosome) = @_;
 
     my $chr_id = $chromosome->dbID;
