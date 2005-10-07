@@ -240,13 +240,13 @@ sub fix_names {
         }
     }
 
-    # Chromosome 14 gene names
-    elsif ($gene_name =~ /^K14_.+_\d+$/) {
-        $fix_names = 1;
-    }
-    elsif ($gene_name =~ /^Hs_7_c\d+$/) {
-        $fix_names = 1;
-    }
+    ## Chromosome 14 gene names
+    #elsif ($gene_name =~ /^K14_.+_\d+$/) {
+    #    $fix_names = 1;
+    #}
+    #elsif ($gene_name =~ /^Hs_7_c\d+$/) {
+    #    $fix_names = 1;
+    #}
 
     my $is_int_end          = 0;
     my $int_end_gene_number = undef;
