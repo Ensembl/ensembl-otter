@@ -331,7 +331,7 @@ sub length {
     foreach my $exon (@$exons) {
         if ($ctg) {
             if ($exon->contig != $ctg) {
-                $self->throw("exons are not all on the same sequence - can get length");
+                $self->throw("exons are not all on the same sequence - cannot get length");
             }
         } else {
             $ctg = $exon->contig;

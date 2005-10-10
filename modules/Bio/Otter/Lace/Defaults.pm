@@ -113,7 +113,9 @@ sub do_getopt {
     ############################################################################
     my $start = "Called as:\n\t$CALLED\nGetOptions() Error parsing options:";
     $GETOPT_ERRSTR = undef;    # in case this gets called more than once
+    my $show_help = \&show_help;
     GetOptions(
+        'h|help!' => $show_help,
 
         # map {} makes these lines dynamically from @CLIENT_OPTIONS
         # 'host=s'        => $save_option,
@@ -138,12 +140,11 @@ sub do_getopt {
         },
         'das!' => sub { $DEFAULTS->{$CLIENT_STANZA}->{'das'} = $_[1] },
         'log-file=s' => sub { die "log-file option is obsolete - use logdir" },
-        'help'       => sub { exit(exec('perldoc', $0)); },
 
         # these are the caller script's options
         @script_args,
       )
-      or return 0;
+      or show_help();
     ############################################################################
     ############################################################################
 
@@ -152,6 +153,10 @@ sub do_getopt {
     # now safe to call any subs which are required to setup stuff
 
     return 1;
+}
+
+sub show_help {
+    exec('perldoc', $0);
 }
 
 sub make_Client {
@@ -297,16 +302,11 @@ sub cmd_line{
 
 sub options_from_file{
     my ($file, $previous) = @_;
+    return unless -e $file;
     my $ini;
-    return undef unless -e $file;
-    eval{
-        print STDERR "Trying $file\n" if $DEBUG_CONFIG;
-        tie %$ini, 'Config::IniFiles', ( -file => $file, %OPTIONS_TO_TIE) or die $!;
-    };
-    if($@){
-        print STDERR "Tie Failed for '$file': \n". $@;
-        return undef;
-    }
+    print STDERR "Trying $file\n" if $DEBUG_CONFIG;
+    tie %$ini, 'Config::IniFiles', ( -file => $file, %OPTIONS_TO_TIE)
+      or confess "Error opening '$file':\n", join("\n", @Config::IniFiles::errors);
     return $ini;
 }
 
