@@ -223,8 +223,10 @@ sub highlight_evidence_by_name {
             #warn "Got $type:$name\n";
             return ($type, $name);
         }
-        elsif ($text =~ /([A-Za-z]{2}:)?([A-Z]+\d+(?:[A-Z]+\d+)?)(\.\d+)?/) {
+        elsif ($text =~ /([A-Za-z]{2}:)?([A-Z]+\d+(?:[A-Z]+\d+(?:[A-Z]+\d+)?)?)(\.\d+)?/) {
             # There is something that looks like an accession on the clipboard.
+            # TrEMBL accessions have up to three letter-digit substrings, which makes the
+            # pattern match above look messy.
             my $prefix = $1 || '*';
             my $acc    = $2;
             my $sv     = $3 || '*';
