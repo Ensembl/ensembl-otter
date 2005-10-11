@@ -223,14 +223,14 @@ sub highlight_evidence_by_name {
             #warn "Got $type:$name\n";
             return ($type, $name);
         }
-        elsif ($text =~ /([A-Za-z]{2}:)?([A-Z]+\d+(?:[A-Z]+\d+(?:[A-Z]+\d+)?)?)(\.\d+)?/) {
-            # There is something that looks like an accession on the clipboard.
-            # TrEMBL accessions have up to three letter-digit substrings, which makes the
-            # pattern match above look messy.
+        elsif ($text =~ /([A-Za-z]{2}:)?([A-Z]+\d{5,}|[A-Z]\d[A-Z\d]{4})(\.\d+)?/) {
+            # There is something that looks like an accession on the clipboard:
+            # One or more letters followed by 5 or more digits, or, for TrEMBL,
+            # a capital letter, a digit, then 4 letters and digits.
             my $prefix = $1 || '*';
             my $acc    = $2;
             my $sv     = $3 || '*';
-            warn "Got '$prefix$acc$sv'";
+            #warn "Got '$prefix$acc$sv'";
             my $ace = $self->ExonCanvas->XaceSeqChooser->ace_handle;
             my ($type, $name);
             foreach my $class (qw{ Sequence Protein }) {
