@@ -1,8 +1,11 @@
 #!/usr/local/bin/perl -w
 
-### ck1
-### maps clones on plate to their clone_name and source libraries
-### map_cdna_2_lib.pl
+# map_cdna_2_lib.pl
+
+# ck1
+
+# maps clones on plate to their clone_name and source libraries
+# also outputs a composite cons file for plate19
 
 
 use strict;
@@ -21,6 +24,9 @@ unless ( @ARGV == 3 ){
 
 my $db = new MySQL_DB;
 my $dbh = $db->connect_db($dbname, "otterpipe2", 3303, "ottro", "");
+
+# maps   eg: >XTropTFL19a01 FIN.0.1 (in plate19 cons file)
+# to   this: >TEgg001a21 TEgg
 
 my $cdna_lib = get_clone_mapping();
 
@@ -53,8 +59,9 @@ sub get_clone_mapping {
 	
 	$src_plate = sprintf("%03d", $src_plate);
 	
-	warn my $clonename = $lib.$src_plate.lc($src_well);
+	my $clonename = $lib.$src_plate.lc($src_well);
 
+	print $dest_plate.lc($dest_well), $lib, $clonename, "\n"; die;
 	push(@{$cdna_lib->{$dest_plate.lc($dest_well)}}, $lib, $clonename );
   }
 
@@ -77,13 +84,15 @@ while (<$fh> ){
 
 	my $header = ">$clonename $lib\n";
 	push(@{$cdna_fasta->{$lib}->{$cdna}}, $header);
-	print $header;
   }
 	
   else {
 	push(@{$cdna_fasta->{$lib}->{$cdna}}, $_);
   }
 }
+
+# this file is equivalent to all_x_trop_yyyy_mm_dd.fasta
+# and needs to be loaded into database before blasting
 
 my ($plate19);
 my $fasta = "all_plate19_". $release . ".fasta";
