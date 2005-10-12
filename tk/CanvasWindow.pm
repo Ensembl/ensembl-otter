@@ -109,13 +109,12 @@ sub font {
 }
 
 {
-    my $_default_font_size = 15;
+    my $_default_font_size = 14;
 
     sub font_size {
         my( $self, $font_size ) = @_;
 
         if ($font_size) {
-            #$_default_font_size   = $font_size;
             $self->{'_font_size'} = $font_size;
             $self->{'_font_unit_width'} = undef;
         }
