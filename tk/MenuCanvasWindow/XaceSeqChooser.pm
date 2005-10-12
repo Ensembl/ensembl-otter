@@ -1509,6 +1509,8 @@ sub edit_new_subsequence {
     $new->name($seq_name);
     $new->Locus($locus);
     $new->empty_evidence_hash;
+    $new->empty_remarks;
+    $new->empty_annotation_remarks;
     my $gm = $self->get_default_mutable_GeneMethod or confess "No default mutable GeneMethod";
     
 
@@ -1662,6 +1664,8 @@ sub make_variant_subsequence {
     # Make the variant
     my $var = $sub->clone;
     $var->empty_evidence_hash;
+    $var->empty_remarks;
+    $var->empty_annotation_remarks;
     $var->name($var_name);
     $self->add_SubSeq($var);
     $clone->add_SubSeq($var);
