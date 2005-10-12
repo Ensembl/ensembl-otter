@@ -8,7 +8,7 @@ use strict;
 #### modify variables before running a new submission
 
 my $taxon_id = 8364;
-my $cdna_db  = "tropicalis_cdna_2005_09_26";
+my $cdna_db  = "tropicalis_cdna_2005_10_11";
 
 $cdna_db =~ /tropicalis_cdna_(.+)/;
 my $release_date = $1;
@@ -32,6 +32,8 @@ my $new_load_fldr  = $load_fldrs[-1];
 
 my $file_list      = glob("$new_load_fldr/file_list*.txt");
 my $all_fasta      = "$new_load_fldr/all_x_trop_".$release_date.".fasta";
+my $plate19_fasta  = "$new_load_fldr/all_plate19_".$release_date.".fasta";
+
 
 my $embl_file      = "$EST/embl_temp/Xtrop/X_trop_cDNA_$release_date.embl";
 my $accepted_accs  = "$new_load_fldr/accepted_X_tropicalis_cDNAs_$release_date.fasta";
@@ -61,6 +63,10 @@ if ( $ARGV[0] == 2 ){
 
   $cwd = "$pipe_base/scripts";
   $s = system("$cwd/load_cdna_clones_from_fasta --db_conf=$cdna_db_conf_pipe --fasta_file=$all_fasta --taxon_id=$taxon_id");
+  check_status($s);
+
+  $s = system("$cwd/load_cdna_clones_from_fasta --db_conf=$cdna_db_conf_pipe --fasta_file=$plate19_fasta --taxon_id=$taxon_id");
+
  #$s = system("$cwd/test_sanger_id --db_conf=$cdna_db_conf_pipe --fasta_file=$all_fasta --taxon_id=$taxon_id");
   check_status($s);
 }
@@ -82,6 +88,12 @@ if ( $ARGV[0] == 3 ){
 }
 
 #	4.   SUBMIT BLASTS
+
+# known oddity: when the run_cDNA_DB_WuBLAST script is called to calculate percent id
+#               it uses the BPLite module. Different versions of this module calculates
+#               the percent id differently and so the $percent_scale_factor in this script has
+#               to be adjusted if the log file complains that percent id > 100%.
+
 if ( $ARGV[0] == 4 ){
   print STDOUT "4.   SUBMIT BLASTS\n\n";
 
@@ -101,7 +113,11 @@ if ( $ARGV[0] == 5 ){
 }
 
 #	6.   CHECK CLONE IDENTITY (not run on ecs4 as it failes to find Bio/SimpleAlign.pm
-#                              temporarily put bioperl-1.2 before 0.7.2
+#
+
+# checks clones marked as 'unchecked' in clone.identity_correct
+
+                             temporarily put bioperl-1.2 before 0.7.2
 if ( $ARGV[0] == 6 ){
   print STDOUT "6.   CHECK CLONE IDENTITY\n\n";
 
@@ -116,6 +132,9 @@ if ( $ARGV[0] == 6 ){
 }
 
 #	7.   CHECK CLONE FRAMESHIFTS
+
+# checks clones marked as 'unchecked' in clone.frame_shift
+
 if ( $ARGV[0] == 7 ){
    print STDOUT "7.   CHECK CLONE FRAMESHIFTS\n\n";
    $cwd = "$pipe_base/scripts";
@@ -375,13 +394,11 @@ m.gilchrist@gurdon.cam.ac.uk,
 mf1@sanger.ac.uk,
 np209@cam.ac.uk,
 np209@mole.bio.cam.ac.uk,
-paul.e.boardman@umist.ac.uk,
 pbbrokstein@lbl.gov
 rgt@sanger.ac.uk,
 rmd@sanger.ac.uk,
 simon.hubbard@umist.ac.uk,
 th@sanger.ac.uk,
-transcript@sanger.ac.uk,
 wagner@ncbi.nlm.nih.gov,
 
 
