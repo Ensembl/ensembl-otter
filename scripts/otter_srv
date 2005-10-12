@@ -19,6 +19,7 @@ use Bio::Otter::LogFile;
 $| = 1;
 
 #-------------------- main config options --------------------#
+my $ENV_HOME		  = $ENV{HOME};
 my $HOSTNAME              = $OTTER_SERVER;
 my $DEFAULT_HOME          = $OTTER_SERVER_ROOT;
 my $ALT_HOME              = $OTTER_ALTROOT;
@@ -142,6 +143,7 @@ sub make_new_child {
             my $vegadbsrc = $ENV{VEGADBSRC};
 
             %ENV            = ();
+	    $ENV{HOME}      = $ENV_HOME;
             $ENV{PERL5OPT}  = 'MBio::Otter::LogFile';
             $ENV{PERL5LIB}  = $perl5lib;
             $ENV{PATH}      = $path;
