@@ -164,7 +164,7 @@ sub write_local_blast{
     eval{
         $blast->hide_error(0);
         $blast->run_on_selected_CloneSequences($ss, $pipe_db->get_SliceAdaptor);
-        my $factory   = Bio::EnsEMBL::Ace::DataFactory->new;
+        my $factory   = Bio::EnsEMBL::Ace::DataFactory->new($cl, $ds);
         my $filter    = Bio::EnsEMBL::Ace::Filter::FPSimilarity->new(-features => $blast->output());
         $filter->analysis_object($ana_obj);
         $filter->homol_tag($homol_tag);
