@@ -43,6 +43,9 @@ use MenuCanvasWindow::XaceSeqChooser;
     my $mw = CanvasWindow::MainWindow->new("encode: $encode_region");
     my $xc = MenuCanvasWindow::XaceSeqChooser->new($mw);
     $xc->AceDatabase($db);
+    $xc->Client($cl);
+    $xc->write_access($cl->write_access ? $ss->write_access : 0);
+    $xc->initialize;
     ### launch xace
     ### Display region containing hit in fMap - see code in ExonCanvas
 
