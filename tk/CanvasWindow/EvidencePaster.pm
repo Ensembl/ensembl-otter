@@ -213,7 +213,7 @@ sub highlight_evidence_by_name {
 # Protein:Tr:Q7SYC3    75996 76703 (708)  BLASTX 77.0 (409 - 641) Tr:Q7SYC3
 
         if ($text =~
-/^(?:Sequence|Protein):(?:\w\w):([\w\.]+)[\d\(\)\s]+(EST|vertebrate_mRNA|BLASTX)/
+/^(?:Sequence|Protein):(\w\w:[\w\.]+)[\d\(\)\s]+(EST|vertebrate_mRNA|BLASTX)/
           )
         {
             my $name   = $1;
@@ -244,7 +244,6 @@ sub highlight_evidence_by_name {
                     last;
                 }
                 $name = $seq[0];
-                $name =~ s/^[A-Za-z]+://;
                 my $homol_method = ($txt->get_values('DNA_homol'))[0]->[1];
                 $homol_method =~ s/^(EST)_.+/$1/;
                 $type = $column_type{$homol_method};
