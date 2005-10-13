@@ -2,10 +2,14 @@
 
 use strict;
 
-# submit_est_cdna_to_embl: wrapper to run various scripts
+# Chao-Kung Chen
 
 
-#### modify variables before running a new submission
+# submit_est_cdna_to_embl: wrapper to run various scripts of the cdna_db packages
+#                          for submitting cDNA to EMBL
+
+
+#### modify variables, eg date of release, before running a new submission
 
 my $taxon_id = 8364;
 my $cdna_db  = "tropicalis_cdna_2005_10_11";
@@ -49,6 +53,7 @@ my ($cwd, $s);
 
 
 #	1.    EXTRACTING FASTA
+
 if ( $ARGV[0] == 1 ){
   print STDOUT "1.    EXTRACTING FASTA\n\n";
 
@@ -57,7 +62,10 @@ if ( $ARGV[0] == 1 ){
   check_status($s);
 }
 
-#	2.   LOADING CLONES (this step did not store sanger_id info: see create_new_Clone() )
+#	2.   LOADING CLONES
+
+#        this step did not store sanger_id info: see create_new_Clone()
+
 if ( $ARGV[0] == 2 ){
   print STDOUT "2.   LOADING CLONES\n\n";
 
@@ -72,6 +80,7 @@ if ( $ARGV[0] == 2 ){
 }
 
 #	3.   SETUP BLASTS
+
 if ( $ARGV[0] == 3 ){
   print STDOUT "3.   SETUP BLASTS\n\n";
 
@@ -89,12 +98,13 @@ if ( $ARGV[0] == 3 ){
 
 #	4.   SUBMIT BLASTS
 
-# known oddity: when the run_cDNA_DB_WuBLAST script is called to calculate percent id
-#               it uses the BPLite module. Different versions of this module calculates
-#               the percent id differently and so the $percent_scale_factor in this script has
-#               to be adjusted if the log file complains that percent id > 100%.
+#        known oddity: when the run_cDNA_DB_WuBLAST script is called to calculate percent id
+#        it uses the BPLite module. Different versions of this module calculates
+#        the percent id differently and so the $percent_scale_factor in this script has
+#        to be adjusted if the log file complains that percent id > 100%.
 
 if ( $ARGV[0] == 4 ){
+
   print STDOUT "4.   SUBMIT BLASTS\n\n";
 
   $cwd = "$pipe_base/scripts";
@@ -104,6 +114,7 @@ if ( $ARGV[0] == 4 ){
 }
 
 #	5.   LOAD_ESTS
+
 if ( $ARGV[0] == 5 ){
   print STDOUT "5.   LOAD_ESTS\n\n";
 
@@ -112,12 +123,12 @@ if ( $ARGV[0] == 5 ){
   check_status($s);
 }
 
-#	6.   CHECK CLONE IDENTITY (not run on ecs4 as it failes to find Bio/SimpleAlign.pm
-#
+#	6.   CHECK CLONE IDENTITY
 
-# checks clones marked as 'unchecked' in clone.identity_correct
+#        (not run on ecs4 as it failes to find Bio/SimpleAlign.pm
+#        temporarily put bioperl-1.2 before 0.7.2)
+#        checks clones marked as 'unchecked' in clone.identity_correct
 
-                             temporarily put bioperl-1.2 before 0.7.2
 if ( $ARGV[0] == 6 ){
   print STDOUT "6.   CHECK CLONE IDENTITY\n\n";
 
@@ -133,7 +144,7 @@ if ( $ARGV[0] == 6 ){
 
 #	7.   CHECK CLONE FRAMESHIFTS
 
-# checks clones marked as 'unchecked' in clone.frame_shift
+#        checks clones marked as 'unchecked' in clone.frame_shift
 
 if ( $ARGV[0] == 7 ){
    print STDOUT "7.   CHECK CLONE FRAMESHIFTS\n\n";
@@ -143,15 +154,21 @@ if ( $ARGV[0] == 7 ){
 }
 
 #	8.   BACKED UP
-if ( $ARGV[0] == 8 ){
-   print STDOUT "8.   BACKED UP\n\n";
 
-   print STDOUT "Your need to\n";
-   printf STDOUT ("%s\n%s\n%s\n%s\n", "(1) ssh to otterpipe2", "(2) Create directory 'mkdir $cdna_db_dump_dir'", "(3) chmod -R 777 $cdna_db_dump_dir",
-                  "(4) Run mysqldump -uottroot -plutrasuper -S /mysql/data_3303/otter-pipe2-master.sock --tab=$cdna_db_dump_dir/ --fields-terminated-by='\t' $cdna_db")
+if ( $ARGV[0] == 8 ){
+  print STDOUT "8.   BACKED UP\n\n";
+  print STDOUT "Your need to\n";
+  printf STDOUT ("%s\n%s\n%s\n%s\n", "(1) ssh to otterpipe2", "(2) Create directory 'mkdir $cdna_db_dump_dir'", "(3) chmod -R 777 $cdna_db_dump_dir",
+				 "(4) Run mysqldump -uottroot -plutrasuper -S /mysql/data_3303/otter-pipe2-master.sock --tab=$cdna_db_dump_dir/ --fields-terminated-by='\t' $cdna_db");
 }
 
+if ( $ARGV[0] == 81 ){
+  print STDOUT "8.   BACKED UP\n\nCommand successful\n\n";
+}
+
+
 #	9.   UPDATE_CLONES_CURRENT_VERSION
+
 if ( $ARGV[0] == 9 ){
   print STDOUT "9.   UPDATE_CLONES_CURRENT_VERSION\n\n";
   $cwd = "$pipe_base/submissions";
@@ -160,8 +177,12 @@ if ( $ARGV[0] == 9 ){
 }
 
 #	10.   SUBMIT_AND_WITHDRAW_CLONES
-#   Note: clones with submission_status='withdrawing' need to be withdrawn by contacting the EMBL staff at EBI.
-#         Once withdrawn, their submission_status need to be set to 'withdrawn'
+
+#         Note: clones with submission_status='withdrawing' need to be withdrawn
+#               by contacting the EMBL staff at EBI.
+#               Once withdrawn, their submission_status need to be set
+#               to 'withdrawn' in clone table
+
 
 if ( $ARGV[0] == 10 ){
   print STDOUT "10.   SUBMIT_AND_WITHDRAW_CLONES\n\n";
@@ -183,37 +204,46 @@ select submission_status, count(*) from clone group by submission_status;
 | obsolete          |       58 |
 +-------------------+----------+
 
+There should be no submitted clones at this point.
+
 =cut
 
 #	11.   MAKE EMBL FLATFILE
+
 if ( $ARGV[0] == 11 ){
+
   print STDOUT "11.   MAKE EMBL FLATFILE\n\n";
   $cwd = "$pipe_base/submissions";
   $s = system("$cwd/make_embl_flatfile --db_conf=$cdna_db_conf_pipe --taxon_id=$taxon_id > $embl_file");
-  print STDOUT "Creating EMBL flatfile: $embl_file\n";
+  print STDOUT "Created EMBL flatfile: $embl_file\n\n";
   check_status($s);
 }
+
+
 #------------------------------------
-#       PRE submission steps
+#       PRE submission step
 #------------------------------------
 
 #	11.1.   UPDATE CLONES FROM EMBL
 
-# This does the sanger_id -> acc mapping
-# run only on humsrv1 as this host is allowed to go through the EBI firewall
-# and connects to ORACLE database for updating clone info
-# needs username and password for ORACLE (.netrc)
+#           This does the sanger_id -> acc mapping
+#           run ONLY on humsrv1 as this host is allowed to go through the EBI firewall
+#           and connects to ORACLE database for updating clone info.
+#           Needs username and password for ORACLE (.netrc mode 600)
 
 if ( $ARGV[0] == 111 ){
+
   print STDOUT "11.1.   UPDATE CLONES FROM EMBL\n\n";
   $cwd = "$base/cdna_db/submissions";
   $s = system("$cwd/update_clones_from_EMBL --db_conf=$cdna_db_cbi1_conf");
+  print STDOUT "\n";
   check_status($s);
 }
 
 #	12.   SUBMIT
-#  run only on humsrv1 as this host is allowed to go through the EBI firewall
-#  connection params in .netrc (file perm. mode: 600)
+
+#         run ONLY on humsrv1
+
 
 if ( $ARGV[0] == 12 ){
   print STDOUT "12.   SUBMIT TO EMBL\n\n";
@@ -233,9 +263,9 @@ if ( $ARGV[0] == 12 ){
 
 #	13.   UPDATE CLONES FROM EMBL
 
-# run only on humsrv1 as this host is allowed to go through the EBI firewall
-# and connects to ORACLE database for updating clone info
-# needs username and password for ORACLE (.netrc)
+#         run only on humsrv1 as this host is allowed to go through the EBI firewall
+#         and connects to ORACLE database for updating clone info
+#         needs username and password for ORACLE (.netrc)
 
 if ( $ARGV[0] == 13 ){
   print STDOUT "13.   UPDATE CLONES FROM EMBL\n\n";
@@ -245,7 +275,9 @@ if ( $ARGV[0] == 13 ){
 }
 
 #	14.   DUMPING CLONES
-# dump accepted clones to FASTA with acc.ver format
+
+#         dump accepted clones to FASTA with acc.ver format
+
 if ( $ARGV[0] == 14 ){
   print STDOUT "14.   DUMPING CLONES\n\n";
 
@@ -275,14 +307,16 @@ if ( $ARGV[0] == 14 ){
 if ( $ARGV[0] == 15 ){
 	print STDERR "UPDATE FTP DIR AND ARCHIVING\n";
 
-	my $ftp_live = "/nfs/disk69/ftp/pub3/EST_data/Xenopus/FINISHED_cDNAs";
+	my $ftp_root = "/nfs/disk69/ftp/pub3/EST_data/Xenopus/";
+	my $ftp_live = $ftp_root."FINISHED_cDNAs/";
 
 	# makie archive dir
 
 	my $last_release_date = `ls $ftp_live/accepted_X_tropicalis_cDNAs*`;
 	$last_release_date =~ /(\d+_\d+_\d+)/;
 	$last_release_date = $1;
-	my $ftp_archive = "/nfs/disk69/ftp/pub3/EST_data/Xenopus/archive/Release_${last_release_date}_Finished_cDNA";
+	my $ftp_archive = $ftp_root."archive/Release_${last_release_date}_Finished_cDNA";
+
 	system("mkdir $ftp_archive");
 
 	# update FTP dir
@@ -311,11 +345,12 @@ if ( $ARGV[0] == 15 ){
 	  $chksum .= $md5sum_accepted_ftp_zip;
 	}
 
-	open(my $fh, ">md5sum" ) or die "Failed to create md5sum file\n";
+	my $chsumfile = "md5sum_".$release_date;
+	open(my $fh, ">$chsumfile" ) or die "Failed to create md5sum file\n";
 	printf $fh $chksum;
 
 
-	# move old data into archive
+	# move old data into archive dir
 	
 	if ( -d $ftp_archive ){
 	  system("mv *$last_release_date* $ftp_archive");
@@ -328,36 +363,41 @@ sub check_status {
 }
 
 
-# Release letter
+__END__
 
-__DATA__
+                            ----------------------
+                            Sample release letter:
+                            ----------------------
 
-                            Release date: 2005_09_26
+                            Release date: 2005_10_11
 
 The Sanger Xenopus tropicalis EST/cDNA project are pleased to announce the
 public availability of an enlarged set of X. tropicalis cDNA sequences finished
 at the Sanger Institute.
 
+In this release the polyA tails were added to the cDNA.
+
+
 Data are downloadable from:
 ftp://ftp.sanger.ac.uk/pub/EST_data/Xenopus/FINISHED_cDNAs
 
-File        : accepted_X_tropicalis_cDNAs_2005_09_26.fasta.gz
-Contents    : 4710 cDNA sequences
-Increase    : 206 added to the 2005-09-26 release
+File        : accepted_X_tropicalis_cDNAs_2005_10_11.fasta.gz
+Contents    : 5085 cDNA sequences
+Increase    : 375 added to the 2005-10-11 release
 
-The 4710 cDNA  seqs that passed quality control (QC), and accepted by EMBL
+The 5085 cDNA  seqs that passed quality control (QC), and accepted by EMBL
 should also be available from EMBL/GenBank.
 
 In the file, '>' header lines have the format: '> clone_name accession.version'
 
 And also:
-5628
-File        : all_X_tropicalis_cDNAs_2005_09_26.fasta.gz
-Contents    : 5535 cDNA sequences
-Increase    : 0 seqs added to the 2005-09-26 release
+
+File        : all_X_tropicalis_cDNAs_2005_10_11.fasta.gz
+Contents    : 6042 cDNA sequences
+Increase    : 507 seqs added to the 2005-10-11 release
 
 All cDNA sequences finished to date, including the unsubmitted sequences,
-that did not pass QC: 5535
+that did not pass QC: 6042
 
 In the file reason(s) for failure are indicated after the clone_name on '>'
 header lines. Firstly 'unsubmitted' appears in the place of the
@@ -366,13 +406,16 @@ accession.version, followed by 'unidentified' and/or 'frameshifted'
 
 Best regards
 
-Chao-Kung Chen
+Chao-Kung Chen (Sanger Institute: ck1@sanger.ac.uk)
+
+On behalf of the submitting authors:
+
+Amaya E., Harrow J.L., Bonfield J.K., Chen, C-K., Davies R.M.,
+Francis M.D., Garrett N., Gilchrist M.J., Grafham D.V., McLaren, S.,
+Papalopulu N., Rogers J., Smith J.C., Taylor R.G., Voigt J., Zorn A.M.
 
 
-__END__
-
-
-
+--------------------------------------------
 Mailing list (contains estdb mailing list *)
 --------------------------------------------
 Blumberg@uci.edu,
@@ -401,7 +444,7 @@ simon.hubbard@umist.ac.uk,
 th@sanger.ac.uk,
 wagner@ncbi.nlm.nih.gov,
 
-
+---------------------
 * estdb mailing list:
 ---------------------
 aaron.zorn@chmcc.org
