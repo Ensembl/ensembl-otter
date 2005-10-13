@@ -157,7 +157,9 @@ sub draw_evidence {
             );
     }
     
-    
+    $self->canvas->toplevel->configure(
+        -title => 'Evi: ' . $self->ExonCanvas->SubSeq->name,
+        );
     $self->fix_window_min_max_sizes;
 }
 
