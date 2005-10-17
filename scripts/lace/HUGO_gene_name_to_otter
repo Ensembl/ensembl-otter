@@ -32,10 +32,6 @@ elsif ( $sanger && !($dataset && $infile && $outfile) ) {
 
 #system("ensembl-otter/scripts/lace/check_for_duplicate_locus_names");
 
-
-
-
-
 print "\nStarting SANGER gene NAME update .......\n" if $sanger;
 print "\nStarting gene TYPE update .......\n"        if $gtype;
 print "\nStarting gene NAME update .......\n"        if $name;
@@ -245,7 +241,8 @@ eval
 			print "\nNo gene type to update. Job terminated\n\n";
 		}
 		else {
-			print "\nGene name update is OK.\n" if $name || $sanger;
+			print "\nGene name update is OK.\n" if $name || $sanger and !$test;
+			print "\nGene name update test is OK.\n" if $test;
 			print "\nGene type update is OK.\n" if $gtype;
 			$otter_db->commit unless $test;
 		}
