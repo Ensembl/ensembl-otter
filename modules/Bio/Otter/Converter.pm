@@ -689,15 +689,17 @@ sub otter_to_ace {
         my $start           = $tile->assembled_start - $chrstart + 1;
         my $end             = $tile->assembled_end   - $chrstart + 1;
 
+        my $tile_length = $end - $start + 1;
+
         my $contig_start    = $tile->component_start;
         my $name            = $tile->component_Seq->name;
 
         if ($tile->component_ori == 1) {
-            $str .= qq{AGP_Fragment "$name" $start $end Align $start $contig_start\n};
+            $str .= qq{AGP_Fragment "$name" $start $end Align $start $contig_start $tile_length\n};
         } else {
             # Clone in reverse orientaton in AGP is indicated
             # to acedb by first coordinate > second
-            $str .= qq{AGP_Fragment "$name" $end $start Align $end $contig_start\n};
+            $str .= qq{AGP_Fragment "$name" $end $start Align $end $contig_start $tile_length\n};
         }
     }
 
