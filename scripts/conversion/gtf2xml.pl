@@ -47,6 +47,7 @@ my $opt_v;
 
 my $opt_P;
 my $opt_v;
+my $opt_a;
 
 GetOptions(
 	   'chr:s',      \$chr,
@@ -64,6 +65,7 @@ GetOptions(
 	   'help', \$phelp,
 	   'h', \$help,
 	   'v',\$opt_v,
+	   'a',\$opt_a,
 	   );
 
 # help
@@ -84,6 +86,7 @@ gtf2xml.pl
   -email           char   email address for feedback on database ($email)
   -prefix          char   group prefix to prepend to gene_names and types ($prefix)
   -P                      parse input file only
+  -a                      hack - skip 'Annotation_remark-' prefix from locus remarks
 
   -v                      verbose
   -h                      this help
@@ -216,6 +219,7 @@ while(<IN>){
       if($standard_category{$val}){
 	$standard_category{$val}++;
       }else{
+	print "ERR: \'$val\' $_\n" if $opt_v;
 	$category{$val}++;
       }
     }
@@ -520,16 +524,20 @@ foreach my $gene_id (sort keys %genes){
     }
   }
 
+  # WRONG: this could be a transcript description
   if($values{'Description'}){
     $gene->description($values{'Description'});
   }
   # preserve import name as remark
-  my $remark="Annotation_remark- import $prefix2 name: $gene_id";
+  my $lr_prefix='Annotation_remark- ';
+  $lr_prefix='' if $opt_a;
+  my $remark=$lr_prefix."import $prefix2 name: $gene_id";
   $geneinfo->remark(new Bio::Otter::GeneRemark(-remark=>$remark));
-  if($values{'remark'}){
-    my $remark="Annotation_remark- import $prefix2 remark: ".$values{'remark'};
-    $geneinfo->remark(new Bio::Otter::GeneRemark(-remark=>$remark));
-  }
+  # WRONG: this is likely to be a transcript remark
+  #if($values{'remark'}){
+  #  my $remark="Annotation_remark- import $prefix2 remark: ".$values{'remark'};
+  #  $geneinfo->remark(new Bio::Otter::GeneRemark(-remark=>$remark));
+  #}
    
   # transcripts
   my $t_index='1';
@@ -556,6 +564,7 @@ foreach my $gene_id (sort keys %genes){
     my $transcript_name;
     if($tvalues{'transcript_name'}){
       $transcript_name=$tvalues{'transcript_name'};
+      if($prefix){$transcript_name="$prefix:$transcript_name";}
     }else{
       $transcript_name=next_transcript_name($gene_name,\$t_index);
     }
@@ -566,6 +575,11 @@ foreach my $gene_id (sort keys %genes){
     $traninfo->remark(new Bio::Otter::TranscriptRemark(-remark=>$remark));
     if($tvalues{'transcript_remark'}){
       my $remark="Annotation_remark- import $prefix2 remark: ".$tvalues{'transcript_remark'};
+      $traninfo->remark(new Bio::Otter::TranscriptRemark(-remark=>$remark));
+    }
+    # contains merge of unidentified tags
+    if($tvalues{'remark'}){
+      my $remark="Annotation_remark- import $prefix2 remark: ".$tvalues{'remark'};
       $traninfo->remark(new Bio::Otter::TranscriptRemark(-remark=>$remark));
     }
 

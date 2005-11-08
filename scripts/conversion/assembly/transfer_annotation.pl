@@ -36,6 +36,7 @@ my $filter_prefix;
 my $filter_obs;
 my $filter_for_vega;
 my $filter_anno;
+my $filter_anno_type;
 my $gene_type;
 my @gene_stable_ids;
 my @exclude_gene_stable_ids;
@@ -79,6 +80,7 @@ my $help;
 	     'l:s'              => \$opt_l,
 	     'o:s'              => \$opt_o,
              'filter_annotation'=> \$filter_anno,
+             'filter_anno_type' => \$filter_anno_type,
             );
 
 # help
@@ -189,11 +191,12 @@ print "Fetched ".scalar(@$genes)." genes\n";
 # find genes that have at least one exon in a clone with the remark 'annotated'
 my %okay_genes;
 my %parentclone;
+my %okay_gene_type;
 my $okaycount=0;
 if ($filter_anno) {
   my $sthx = $sdb->prepare(q{
-    select distinct gsi.stable_id, cl.name from 
-    gene g, gene_stable_id gsi, transcript t, exon_transcript et, exon e, contig c, clone cl, clone_info ci, clone_remark cr 
+    select distinct gsi.stable_id, cl.name, cr.remark, g.type from 
+    gene g, gene_stable_id gsi, transcript t, exon_transcript et, exon e, contig c, clone cl, current_clone_info ci, clone_remark cr 
     where gsi.gene_id = g.gene_id 
     and g.gene_id = t.gene_id 
     and t.transcript_id = et.transcript_id 
@@ -202,13 +205,35 @@ if ($filter_anno) {
     and c.clone_id = cl.clone_id 
     and cl.clone_id = ci.clone_id 
     and ci.clone_info_id = cr.clone_info_id 
-    and cr.remark like '%annotated%';
+    and cr.remark rlike '^Annotation_remark-[[:blank:]]*annotated';
   });
   $sthx->execute();
   while (my @row = $sthx->fetchrow_array) {
-    $okay_genes{$row[0]}++;
-    $parentclone{$row[0]} = $row[1];
-    $okaycount++;
+    my($gsi,$clone_name,$remark,$gene_type)=@row;
+
+    # optional extra filter on gene type, based on clone remark
+    my $flag;
+    if($filter_anno_type){
+      my $type;
+      if($remark=~/annotated_(\w+):/){
+	$type=$1;
+      }
+      if($gene_type=~/^(\w+):/){
+	if($type eq $1){
+	  $flag=1;
+	}
+      }elsif(!$type){
+	$flag=1;
+      }
+    }else{
+      $flag=1;
+    }
+
+    if($flag){
+      $okay_genes{$gsi}++;
+      $parentclone{$gsi} = $clone_name;
+      $okaycount++;
+    }
   }
   print "$okaycount genes were marked as annotated\n";
 }

@@ -11,7 +11,7 @@ $| = 1;
 
 {
     my( $dataset, $sequence_set, $chr_start_acc, $chr_end_acc, $gene_stable_id );
-    my( $tunnel, $remarks, $verbose, $seleno, $sql );
+    my( $tunnel, $remarks, $verbose, $seleno, $sql, $prefix );
     my $help = sub { exec('perldoc', $0) };
 
     Bio::Otter::Lace::Defaults::do_getopt(
@@ -25,6 +25,7 @@ $| = 1;
 	'seleno|selenocysteine' => \$seleno,
 	'sql:s'                 => \$sql,
 	'verbose|v'             => \$verbose,
+        'prefix:s'              => \$prefix,
         'h|help'                => $help,
         ) or $help->();
     $help->() unless $dataset;
@@ -97,12 +98,18 @@ $| = 1;
     }
     printf STDERR "Found %d current genes\n", scalar(@$gene_id_list);
     my $i = 0;
+
+    # if sql file name specified, writes sql to add annotation remarks for
+    # selenocysteine in correct format.
     if($sql){
       open(OUT2,">$sql") || die "cannot open $sql";
     }
     foreach my $id (@$gene_id_list) {
         $i++; print STDERR '.'; print STDERR " $i\n" unless $i % 50;
         my $gene = $gene_aptr->fetch_by_dbID($id);
+	my $gt=$gene->type;
+	next if($prefix && $gt!~/$prefix:/);
+	next if($gt eq 'obsolete');
         foreach my $trans (@{$gene->get_all_Transcripts}) {
             next unless $trans->translation;
             my $sqltxt=check_for_stops($gene, $trans, $remarks, $verbose, $seleno, $sql);
@@ -192,8 +199,8 @@ sub check_for_stops {
     my $flag_remark=0;
     my $flag_remark2=0;
     my $alabel='Annotation_remark- selenocysteine ';
-    my $out;
-    my $out2;
+    my $out='';
+    my $out2='';
     my $tiid;
     foreach my $remark ($trans->transcript_info->remark){
       my $dbid=$remark->dbID;
@@ -339,5 +346,4 @@ Reports transcripts containing stops labelled as such in remarks
 
 James Gilbert B<email> jgrg@sanger.ac.uk
 
-
-
+(Extended by Tim Hubbard B<email> th@sanger.ac.uk)

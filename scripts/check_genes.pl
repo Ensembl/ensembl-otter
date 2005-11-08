@@ -44,10 +44,18 @@ my $ext;
 my $inprogress;
 my $vega;
 my $set;
+my $anno;
 my $stats;
+my $ccds;
+my $ccds_stop;
+my $ccds_list;
 my $opt_k;
 my $report_ok_seleno;
 my $report_only;
+my $opt_n;
+my $ccds_id;
+
+$|=1;
 
 my $ncheck;
 
@@ -82,10 +90,16 @@ GetOptions(
 	   'progress',  \$inprogress,
 	   'vega',      \$vega,
 	   'set:s',     \$set,
+	   'anno',      \$anno,
 	   'stats',     \$stats,
+	   'ccds',      \$ccds,
+	   'ccds_stop', \$ccds_stop,
+	   'ccds_id:s', \$ccds_id,
+	   'ccds_list:s',\$ccds_list,
 	   'k:s',       \$opt_k,
 	   'report_ok_seleno', \$report_ok_seleno,
 	   'report_only:s', \$report_only,
+	   'n:s',       \$opt_n,
 	   );
 
 # help
@@ -122,6 +136,7 @@ Select sets (default is vega_sets tagged 'external' + 'internal', E+I)
   -external                 only consider vega_sets tagged as 'external' (E)
   -progress                 also consider vega_sets tagged as 'in progress' (E+I+P)
   -vega                     vega database (all sets in assembly table)
+  -anno                     clones marked as 'annotated' only
   -set            set       specified set only
 
   -stats                    calculate stats from cache file only
@@ -135,6 +150,8 @@ ENDOFTEXT
 
 my %report_only;
 %report_only=map{$_,1}split(/,/,$report_only);
+my %exclude;
+%exclude=map{$_,1}split(/,/,$exclude);
 
 # connect
 my $dbh;
@@ -170,7 +187,7 @@ if($read_cache){
     chomp;
     push(@data,[split(/\t/)]);
   }
-  if(!$report_only || $report_only{$ncheck}){
+  if(!$stats && (!$report_only || $report_only{$ncheck})){
     print "[$ncheck] Genes with missing descriptions - NOT CHECKED because -read_cache\n\n";
   }
 
@@ -184,11 +201,17 @@ if($read_cache){
   my %ao;
   my $sth;
   if($set){
-    # all assemblies - assume only contains assemblies of interest
-    $sth=$dbh->prepare("select a.contig_id, c.name, a.type, a.chr_start, a.chr_end, a.contig_start, a.contig_end, a.contig_ori, cl.embl_acc, cl.embl_version from contig ct, clone cl, chromosome c, assembly a where cl.clone_id=ct.clone_id and ct.contig_id=a.contig_id and a.chromosome_id=c.chromosome_id and a.type=\'$set\'");
+    if($anno){
+      # all assemblies - assume only contains assemblies of interest
+      $sth=$dbh->prepare("select a.contig_id, c.name, a.type, a.chr_start, a.chr_end, a.contig_start, a.contig_end, a.contig_ori, cl.embl_acc, cl.embl_version from contig ct, clone cl, chromosome c, assembly a, current_clone_info cci, clone_remark cr where cl.clone_id=ct.clone_id and ct.contig_id=a.contig_id and a.chromosome_id=c.chromosome_id and a.type=\'$set\' and cl.clone_id=cci.clone_id and cci.clone_info_id=cr.clone_info_id and cr.remark rlike '^Annotation_remark-[[:blank:]]*annotated'");
+    }else{
+      $sth=$dbh->prepare("select a.contig_id, c.name, a.type, a.chr_start, a.chr_end, a.contig_start, a.contig_end, a.contig_ori, cl.embl_acc, cl.embl_version from contig ct, clone cl, chromosome c, assembly a where cl.clone_id=ct.clone_id and ct.contig_id=a.contig_id and a.chromosome_id=c.chromosome_id and a.type=\'$set\'");
+    }
   }elsif($vega){
     # all assemblies - assume only contains assemblies of interest
     $sth=$dbh->prepare("select a.contig_id, c.name, a.type, a.chr_start, a.chr_end, a.contig_start, a.contig_end, a.contig_ori, cl.embl_acc, cl.embl_version from contig ct, clone cl, chromosome c, assembly a where cl.clone_id=ct.clone_id and ct.contig_id=a.contig_id and a.chromosome_id=c.chromosome_id");
+  }elsif($anno){
+    $sth=$dbh->prepare("select a.contig_id, c.name, a.type, a.chr_start, a.chr_end, a.contig_start, a.contig_end, a.contig_ori, cl.embl_acc, cl.embl_version, vs.vega_type from contig ct, clone cl, chromosome c, assembly a, sequence_set ss, current_clone_info cci, clone_remark cr left join vega_set vs on (vs.vega_set_id=ss.vega_set_id) where cl.clone_id=ct.clone_id and ct.contig_id=a.contig_id and a.chromosome_id=c.chromosome_id and a.type=ss.assembly_type and cl.clone_id=cci.clone_id and cci.clone_info_id=cr.clone_info_id and cr.remark rlike '^Annotation_remark-[[:blank:]]*annotated'");
   }else{
     $sth=$dbh->prepare("select a.contig_id, c.name, a.type, a.chr_start, a.chr_end, a.contig_start, a.contig_end, a.contig_ori, cl.embl_acc, cl.embl_version, vs.vega_type from contig ct, clone cl, chromosome c, assembly a, sequence_set ss left join vega_set vs on (vs.vega_set_id=ss.vega_set_id) where cl.clone_id=ct.clone_id and ct.contig_id=a.contig_id and a.chromosome_id=c.chromosome_id and a.type=ss.assembly_type");
   }
@@ -229,28 +252,45 @@ if($read_cache){
 
   # build a list of all gene_descriptions (not keeping gene_id so map to gene_stable_id)
   my %gdes;
-  my $sth=$dbh->prepare("select gsi.stable_id from gene_stable_id gsi, gene_description gd where gsi.gene_id=gd.gene_id");
-  $sth->execute();
-  while (my ($gsi) = $sth->fetchrow_array()){
-    $gdes{$gsi}++;
+  {
+    my $sth=$dbh->prepare("select gsi.stable_id from gene_stable_id gsi, gene_description gd where gsi.gene_id=gd.gene_id");
+    $sth->execute();
+    while (my ($gsi) = $sth->fetchrow_array()){
+      $gdes{$gsi}++;
+    }
   }
 
   # build a list of transcript_info_id's of all transcript remarks
   my %trii;
-  my $sth=$dbh->prepare("select transcript_info_id from transcript_remark");
-  $sth->execute();
-  while (my @row = $sth->fetchrow_array()){
-    my($trii)=@row;
-    $trii{$trii}++;
+  {
+    my $sth=$dbh->prepare("select transcript_info_id from transcript_remark");
+    $sth->execute();
+    while (my @row = $sth->fetchrow_array()){
+      my($trii)=@row;
+      $trii{$trii}++;
+    }
   }
 
   # build a list of translations
   my %tle;
-  my $sth=$dbh->prepare("select * from translation");
-  $sth->execute();
-  while (my @row = $sth->fetchrow_array()){
-    my($tlid,$est,$estid,$eed,$eedid)=@row;
-    $tle{$tlid}=[$est,$estid,$eed,$eedid];
+  {
+    my $sth=$dbh->prepare("select * from translation");
+    $sth->execute();
+    while (my @row = $sth->fetchrow_array()){
+      my($tlid,$est,$estid,$eed,$eedid)=@row;
+      $tle{$tlid}=[$est,$estid,$eed,$eedid];
+    }
+  }
+
+  # build list of currently editable 'visible' sequence sets
+  my %vss;
+  {
+    my $sth=$dbh->prepare("select assembly_type,hide from sequence_set");
+    $sth->execute();
+    while (my @row = $sth->fetchrow_array()){
+      my($type,$hide)=@row;
+      $vss{$type}=$hide;
+    }
   }
 
   # build list of all contigs, grouped by clone
@@ -418,7 +458,7 @@ if($read_cache){
   }
 
   # report all genes with missing descriptions
-  if(!$report_only || $report_only{$ncheck}){
+  if(!$stats && (!$report_only || $report_only{$ncheck})){
     print "[$ncheck] Genes with missing descriptions (see $opt_R) - add descriptions:\n";
     open (MOUT,">$opt_R") || die "cannot open missing descriptions file";
     foreach my $type (sort keys %missing_gdes){
@@ -757,7 +797,7 @@ if($opt_k){
       $flag=1;
       if($gn=~/(\w+):(.*)/){
 	my $prefix=$1;
-	if($exclude_all || ($exclude=~/$prefix/)){
+	if($exclude_all || $exclude{$prefix}){
 	  $ne++;
 	  $flag=0;
 	}
@@ -899,6 +939,523 @@ if($stats){
       printf "%-20s %-25s %6d %6d %6d %6d\n",
       $type,$type2,@{$stats{$type}->{$type2}};
     }
+  }
+  exit 0;
+}
+
+# another option for script, to use cache file to generate gene count stats
+if($ccds){
+
+  my %ccds_list;
+  if($ccds_list){
+    if(-e $ccds_list){
+      open(TMP,$ccds_list) || die "cannot open $ccds_list";
+      my $n=0;
+      my $no=0;
+      while(<TMP>){
+	chomp;
+	my($hugo,$ccds,$chr,$ensid)=split(/\t/);
+	if($ccds=~/^CCDS/){
+	  $ccds_list{"CCDS:$ccds"}=[$hugo,$chr,$ensid];
+	  $n++;
+	}else{
+	  $no++;
+	}
+      }
+      close(TMP);
+      print "Status of CCDS entries in list $ccds_list\n";
+      print "$n priority ccds ids read; $no in list not CCDS entries\n";
+    }else{
+      print "Failed to open CCDS list $ccds_list\n";
+      exit 0;
+    }
+  }
+
+  # build a list of translations
+  my %tle;
+  {
+    my $sth=$dbh->prepare("select * from translation");
+    $sth->execute();
+    while (my @row = $sth->fetchrow_array()){
+      my($tlid,$est,$estid,$eed,$eedid)=@row;
+      $tle{$tlid}=[$est,$estid,$eed,$eedid];
+    }
+  }
+
+  # tsi->tn via tsi_sum [should be CCDSid]
+  foreach my $type (keys %gsi){
+    my($label,$atype,$cname)=type2label($type);
+    print "\nChecking \'$atype\' (chr \'$cname\')\n";
+
+    my %ccds;
+    my %ct2g;
+    my %t2g;
+    my %tsi;
+    my %e2t;
+    my %eall;
+    my $ccds_tag;
+    foreach my $gsi (keys %{$gsi{$type}}){
+      my($gn,$gt)=@{$gsi_sum{$gsi}};
+      if($gn=~/CCDS:/){
+	$ccds_tag=1;
+      }else{
+	$ccds_tag=0;
+      }
+      foreach my $re (@{$gsi{$type}->{$gsi}}){
+	my($tsi,$erank,$eid,$ecst,$eced,$esr,$es,$ep,$eep,$tlid)=@$re;
+	# merge sticky (duplicate from elsewhere)
+	$erank--;
+	# id, st, ed, esr, strand, phase, endphase
+	if($tsi{$tsi}->[$erank]){
+	  # assume merging a sticky...
+	  my($eid2,$ecst2,$eced2,$esr2,$es2,$ep2,$eep2,$tlid2)=@{$tsi{$tsi}->[$erank]};
+	  if($esr==2 || $esr2==2){
+	    my $esr3;
+	    if($esr==1 || $esr2==1){
+	      # 1,2=>1
+	      $esr3=1;
+	    }else{
+	      # 2,3=>2
+	      $esr3=2;
+	    }
+	    if($eced+1==$ecst2){
+	      $eced=$eced2;
+	    }elsif($eced2+1==$ecst){
+	      $ecst=$ecst2;
+	    }else{
+	      my $out;
+	      my $diff;
+	      if($eced2-$ecst>$eced-$ecst2){
+		$out="$ecst-$eced..$ecst2-$eced2\n";
+		$diff=$ecst2-$eced;
+		$eced=$eced2;
+	      }else{
+		$out="$ecst2-$eced2..$ecst-$eced\n";
+		$diff=$ecst-$eced2;
+		$ecst=$ecst2;
+	      }
+	      if($diff>1){
+		print LOG "ERROR: merging sticky exons $eid over gap in $tsi: $out";
+	      }else{
+		print LOG "ERROR: merging overlapping sticky exons $eid in $tsi: $out";
+	      }
+	    }
+	    $tsi{$tsi}->[$erank]=[$eid,$ecst,$eced,$esr3,$es,$ep,$eep,$tlid2];
+	  }else{
+	    print LOG "FATAL: Duplicate rank for $tsi, $erank\n";
+	  }
+	}else{
+	  $tsi{$tsi}->[$erank]=[$eid,$ecst,$eced,$esr,$es,$ep,$eep,$tlid];
+	}
+	  
+	if($ccds_tag){
+	  # list of CCDS gene, transcript
+	  $ccds{$gsi}->{$tsi}=1;
+	  $ct2g{$tsi}=$gsi;
+	}else{
+	  $t2g{$tsi}=$gsi;
+	}
+      }
+    }
+    print " Found ".scalar(keys %tsi)." transcripts; ".
+	scalar(keys %ccds)." CCDS genes;\n";
+
+    # build translation set of exons
+    my %tsitl;
+    my($est,$estid,$eed,$eedid)=0;
+  LOOP:
+    foreach my $tsi (keys %tsi){
+      my $erankt=-1;
+      my $flag;
+      for(my $erank=0;$erank<scalar(@{$tsi{$tsi}});$erank++){
+	if(!$tsi{$tsi}->[$erank]){
+	  print "ERR: erank $erank does not exist for $tsi - off track genes?\n";
+	  next;
+	}
+	my($eid,$ecst,$eced,$esr,$es,$ep,$eep,$tlid)=@{$tsi{$tsi}->[$erank]};
+	next LOOP if $tlid==0;
+	if($erank==0){
+	  if($tle{$tlid}){
+	    ($est,$estid,$eed,$eedid)=@{$tle{$tlid}};
+	  }else{
+	    print "ERR: translation $tlid missing from DB\n";
+	    exit 0;
+	  }
+	}
+	if($flag==0 && $eid==$estid){
+	  # first exon
+	  my $necst=$ecst;
+	  my $neced=$eced;
+	  $flag=1;
+	  if($es==1){
+	    $necst=($ecst+$est-1);
+	    if($eid==$eedid){
+	      $flag=2;
+	      $neced=($ecst+$eed-1);
+	    }
+	  }else{
+	    $neced=($eced-$est+1);
+	    if($eid==$eedid){
+	      $flag=2;
+	      $necst=($eced-$eed+1);
+	    }
+	  }
+	  $erankt++;
+	  $tsitl{$tsi}->[$erankt]=[$eid,$necst,$neced,$esr,$es,$ep,$eep,$erank];
+	}elsif($flag==1){
+	  my $necst=$ecst;
+	  my $neced=$eced;
+	  if($eid==$eedid){
+	    if($es==1){
+	      $neced=($ecst+$eed-1);
+	    }else{
+	      $necst=($eced-$eed+1);
+	    }
+	    $flag=2;
+	    # temp hack - if CCDS were loaded without stop...trim here to match - wrong
+	    # think to do as stop could start a new exon...
+	    if($ccds_stop){
+	      $neced-=3;
+	      if($neced<$ecst){
+		print "error: $tsi ccds stop fix failed due to small exon\n";
+		$neced+=3;
+	      }
+	    }
+	  }
+	  $erankt++;
+	  $tsitl{$tsi}->[$erankt]=[$eid,$necst,$neced,$esr,$es,$ep,$eep,$erank];
+	}elsif($flag==2){
+	  $flag=3;
+	}
+	my $erankt_flag=-1;
+	if($flag==1 || $flag==2){
+	  $erankt_flag=$erankt;
+	}
+	my $ccds_flag=0;
+	if($ct2g{$tsi}){
+	  $ccds_flag=1;
+	}
+	push(@{$eall{$ecst}->{$eced}},[$tsi,$erank,$erankt_flag,$ccds_flag]);
+      }
+      if($flag<2){
+	# never found whole translation...
+	print "ERR: complete translation not found $tsi: $flag\n";
+      }
+    }
+    print " Found ".scalar(keys %tsitl)." translations;\n";
+    
+    # compare all CCDS to non CCDS
+    # loop over CCDS:
+    my $nccdsg=0;
+    my $nccdst=0;
+    my $nccdstp=0;
+    my $nccdsto=0;
+    my %nccdstp;
+    my %nccdsto;
+    my %nccdst;
+    my @matcht=(
+		'no overlap',
+		'overlap different strand',
+		'transcript exon overlap',
+		'transcript exon exact match',
+		'translation exon overlap',
+		'translation exon exact match, different phase',
+		'translation exon exact match',
+		);
+    my @matchc;
+    my @ccds;
+    {
+      my %t2g;
+      foreach my $gsi (keys %ccds){
+	foreach my $tsi (keys %{$ccds{$gsi}}){
+	  my($tn,$tt)=@{$tsi_sum{$tsi}};
+	  $t2g{$tn}=$gsi;
+	}
+      }
+      my %ugsi;
+      foreach my $tn (sort keys %t2g){
+	my $gsi=$t2g{$tn};
+	if(!$ugsi{$gsi}){
+	  $ugsi{$gsi}=1;
+	  push(@ccds,$gsi);
+	}
+      }
+    }
+    foreach my $gsi (@ccds){
+      my($gn,$gt)=@{$gsi_sum{$gsi}};
+      last if($opt_n && $nccdsg>$opt_n);
+      my $gsi_out="$gn ($gsi)\n";
+      foreach my $tsi (sort {$tsi_sum{$ccds{$gsi}->{$a}}->[0]<=>
+				 $tsi_sum{$ccds{$gsi}->{$a}}->[1]} keys %{$ccds{$gsi}}){
+	my($tn,$tt)=@{$tsi_sum{$tsi}};
+	next if($ccds_id && $ccds_id ne $tn);
+	next if($ccds_list && !$ccds_list{$tn});
+	if($gsi_out){
+	  $nccdsg++;
+	  print " [$nccdsg] ".$gsi_out;
+	  $gsi_out='';
+	}
+	print "  $tn ($tsi)\n";
+	$nccdst++;
+	my $nexon=scalar(@{$tsi{$tsi}});
+	# perfect march score
+	my $mmatch=$nexon*6;
+	# quality of matched exons by id
+	my %tsim;
+	my @ematch;
+	my %rmatch;
+	# loop over exons of this ccds transcript
+	for(my $erank=0;$erank<scalar(@{$tsi{$tsi}});$erank++){
+	  my $erank1=$erank+1;
+	  my($eid,$ecst,$eced,$esr,$es,$ep,$eep,$tlid);
+	  if($tsi{$tsi}->[$erank]){
+	    ($eid,$ecst,$eced,$esr,$es,$ep,$eep,$tlid)=@{$tsi{$tsi}->[$erank]};
+	  }else{
+	    print "ERR: no exon data for $gsi:$tsi:$erank\n";
+	    next;
+	  }
+	  # compare to others
+	  foreach my $ecst2 (sort {$a<=>$b} keys %eall){
+	    last if $ecst2>$eced;
+	    foreach my $eced2 (sort {$a<=>$b} keys %{$eall{$ecst2}}){
+	      next if $eced2<$ecst;
+	      # if match, record
+	      foreach my $rexon (@{$eall{$ecst2}->{$eced2}}){
+		my($tsi2,$erank2,$erankt2,$ccds_flag)=@$rexon;
+		# hack test
+		next if $tsi2 eq 'OTTHUMT00000102796';
+
+		# don't compare against self
+		next if $ccds_flag;
+
+		# compare overlap
+		my $match=0;
+		if(intersect($ecst,$eced,$ecst2,$eced2)){
+		  my($eid3,$ecst3,$eced3,$esr3,$es3,$ep3,$eep3,$erank4)=
+		      @{$tsi{$tsi2}->[$erank2]};
+		  if($es!=$es3){
+		    $match=1;
+		  }elsif($ecst==$ecst2 && $eced==$eced2){
+		    $match=3;
+		  }else{
+		    $match=2;
+		  }
+		}
+		# refine against translation if exists
+		# record
+		if($erankt2>=0 && $match>1){
+		  my($eid3,$ecst3,$eced3,$esr3,$es3,$ep3,$eep3,$erank4)=
+		      @{$tsitl{$tsi2}->[$erankt2]};
+		  $rmatch{$tsi2}->{$erankt2}=$erank1;
+		  #print "rmatch: $tsi2: $erankt2, $erank1\n";
+		  if(intersect($ecst,$eced,$ecst3,$eced3)){
+		    if($ecst==$ecst3 && $eced==$eced3){
+		      if($ep!=$ep3){
+			$match=5;
+		      }else{
+			$match=6;
+		      }
+		    }else{
+		      $match=4;
+		    }
+		  }
+		}
+		if($match){
+		  push(@{$ematch[$erank]->{$tsi2}},[$erank2,$erankt2,$match]);
+		}
+	      }
+	    }
+	  }
+	}
+	# count up scores afterwards, else where multiple matches can end up 
+	# with a perfect match by mistake
+	for(my $erank=0;$erank<scalar(@{$tsi{$tsi}});$erank++){
+	  foreach my $tsi2 (keys %{$ematch[$erank]}){
+	    my $matchmx=0;
+	    foreach my $rematch (@{$ematch[$erank]->{$tsi2}}){
+	      my($erank2,$erankt2,$match)=@$rematch;
+	      if($match>$matchmx){$matchmx=$match;}
+	    }
+	    $tsim{$tsi2}+=$matchmx;
+	    #print "$erank: $tsi2: $match, $tsim{$tsi2}\n";
+	  }
+	}
+		  
+
+	# check all matched translation to count exons not matched...
+	my %unused;
+	# number of unused exons by id (-ve for sorting)
+	my %tsim2;
+	foreach my $tsi2 (keys %tsim){
+	  my $unused='';
+	  my $nskip=0;
+	  my $nexon=scalar(@{$tsitl{$tsi2}});
+	  my @unused;
+	  my $first=0;
+	  my $flag_skipped=[];
+	  for(my $erank=0;$erank<$nexon;$erank++){
+	    my $erank1=$erank+1;
+	    if($rmatch{$tsi2}->{$erank}){
+	      my $erankx=($rmatch{$tsi2}->{$erank})-1;
+	      $first=1;
+	      if(scalar(@{$flag_skipped})){
+		push(@{$unused[1]},@{$flag_skipped});
+		#print "$tsi2: $erank: 1:\n";
+		$flag_skipped=[];
+	      }
+	    }else{
+	      #print "no match: $tsi2, $nexon\n";
+	      $nskip--;
+	      if($first==0){
+		# missing initial exons
+		push(@{$unused[0]},$erank1);
+	      }else{
+		push(@{$flag_skipped},$erank1);
+		#print "$tsi2: $erank: 0:\n";
+	      }
+	    }
+	  }
+	  if(scalar(@{$flag_skipped})){
+	    push(@{$unused[2]},@{$flag_skipped});
+	    #print "$tsi2: post: 2:\n";
+	  }
+	  if($unused[0] && scalar(@{$unused[0]})){
+	    $unused='Initial: '.join(',',@{$unused[0]});
+	  }
+	  if($unused[1] && scalar(@{$unused[1]})){
+	    if($unused){$unused.='; '}
+	    $unused.='Internal: '.join(',',@{$unused[1]});
+	  }
+	  if($unused[2] && scalar(@{$unused[2]})){
+	    if($unused){$unused.='; '}
+	    $unused='Terminal: '.join(',',@{$unused[2]});
+	  }
+	  $tsim2{$tsi2}=$nskip;
+	  $unused{$tsi2}=$unused;
+	  #print "count: $tsi2, $nexon, $nskip, $unused\n";
+	}
+
+	# report transcript(s) that have best match to CCDS
+
+	my $found=0;
+	my %pre;
+	foreach my $tsi2 (reverse sort {$tsim{$a}<=>$tsim{$b}
+					|| $tsim2{$a}<=>$tsim2{$b}
+					|| &order_by_prefix} keys %tsim){
+	  my($tn2,$tt2)=@{$tsi_sum{$tsi2}};
+	  my($pre)=($tn2=~/^(\w+):/);
+	  if($pre eq ''){
+	    $found=1;
+	  }elsif($pre{$pre}){
+	    $nccdst{$pre}=1;
+	    next;
+	  }
+	  $pre{$pre}=1;
+
+	  my $gsi2=$t2g{$tsi2};
+	  my($gn2,$gt2)=@{$gsi_sum{$gsi2}};
+	  my $nmatch=$tsim{$tsi2};
+	  my @out;
+	  my $mismatch_out='';
+	  my $multiple_out='';
+	  my $multiple_out1='';
+	  my $im=0;
+	  for(my $erank=0;$erank<$nexon;$erank++){
+	    my $erank1=$erank+1;
+	    my @rematch;
+	    if($ematch[$erank]->{$tsi2}){
+	      @rematch=@{$ematch[$erank]->{$tsi2}};
+	    }else{
+	      $rematch[0]=[-1,-1,0];
+	    }
+	    my @list;
+	    my @list1;
+	    foreach my $rematch (sort {$a->[1]<=>$b->[1]} @rematch){
+	      my($erank2,$erankt2,$match)=@$rematch;
+	      $matchc[$match]++;
+	      $out[0].=sprintf("%3d",$erank1);
+	      if($erankt2>=0){
+		push(@list,$erankt2+1);
+		$out[1].=sprintf("%3d",$erankt2+1);
+	      }else{
+		$out[1].='  -';
+	      }
+	      if($erank2>=0){
+		push(@list1,$erank2+1);
+		$out[2].=sprintf("%3d",$erank2+1);
+	      }else{
+		$out[2].='  -';
+	      }    
+	      $out[3].=sprintf("%3d",$match);
+	      if($match<6 && $match>0 && $erankt2>=0){
+		my($eid2,$ecst2,$eced2,$esr2,$es2,$ep2,$eep2,$erank2)=@{$tsi{$tsi}->[$erank]};
+		my($eid,$ecst,$eced,$esr,$es,$ep,$eep)=@{$tsitl{$tsi2}->[$erankt2]};		
+		$mismatch_out.="     [ccds exon $erank1] match $match: [CCDS]:$ecst2-$eced2 [Annotation]:$ecst-$eced\n";
+	      }
+	    }
+	    if(@list>1){
+	      if($multiple_out){$multiple_out.='; ';}
+	      $multiple_out.="$erank1->".join(',',@list);
+	    }
+	    if(@list1>1){
+	      if($multiple_out1){$multiple_out1.='; ';}
+	      $multiple_out1.="$erank1->".join(',',@list1);
+	    }
+	  }
+	  my $flag_perfect=0;
+	  if($nmatch==$mmatch && $unused{$tsi2} eq ''){
+	    $flag_perfect=1;
+	    # all CCDS exons match, but are there extra exons in tsi2?
+	    print "   PERFECT ";
+	    if($pre){
+	      $nccdstp{$pre}++;
+	    }else{
+	      $nccdstp++;
+	    }
+	  }else{
+	    print "   partial ";
+	    if($pre){
+	      $nccdsto{$pre}++;
+	    }else{
+	      $nccdsto++;
+	    }
+	  }
+	  print "match ($nmatch/$mmatch): ";
+	  print "$tn2 ($tsi2) $gn2 ($gsi2) $gt2\n";
+	  print $mismatch_out."\n";
+	  # don't output if perfect match:
+	  if(!$flag_perfect){
+	    print "    CCDS exons:        ".$out[0]."\n";
+	    print "    Translation exons: ".$out[1]."\n";
+	    print "    Transcript exons:  ".$out[2]."\n";
+	    print "    Match score:       ".$out[3]."\n";
+            print "     Unused translation exons: ".$unused{$tsi2}."\n" if $unused{$tsi2};
+            print "     Multiple translation exons: ".$multiple_out."\n" if $multiple_out;
+            print "     Multiple transcript exons: ".$multiple_out1."\n" if $multiple_out1;
+	  }
+	  print "\n";
+	  last if $found;
+	}
+      }
+    }
+    print "\n";
+    print " $nccdsg CCDS genes; $nccdst CCDS transcripts\n";
+    print " $nccdstp transcripts match perfectly; $nccdsto transcripts overlap\n";
+    print " Following transcripts with prefixes fit better than any trancript without prefix\n" 
+	if scalar (keys %nccdst);
+    foreach my $pre (sort keys %nccdst){
+      my $np=0;
+      if($nccdstp{$pre}){$np=$nccdstp{$pre};}
+      my $no=0;
+      if($nccdsto{$pre}){$no=$nccdsto{$pre};}
+      print " $pre: $np transcripts match perfectly; $no transcripts overlap\n";
+    }
+
+    print " matches by exon:\n";
+    for(my $i=0;$i<7;$i++){
+      printf "  %4d match score $i (%s)\n",$matchc[$i],$matcht[$i];
+    }
+
   }
   exit 0;
 }
@@ -1621,6 +2178,33 @@ sub _db_connect{
     return -2;
   }
 }
+
+sub intersect{
+    my($i,$j,$i2,$j2)=@_;
+    # 1    ---------           1 --------              1  -------------
+    # 2 --------               2    --------           2     ------
+    if(($i>=$i2 && $i<=$j2) || ($j>=$i2 && $j<=$j2) || ($i<$i2 && $j>$j2)){
+	return 1;
+    }else{
+	return 0;
+    }
+}
+
+
+sub order_by_prefix {
+  my($n1)=($tsi_sum{$a}->[0]=~/^(\w+):/);
+  my($n2)=($tsi_sum{$b}->[0]=~/^(\w+):/);
+  if($n1 eq $n2){
+    return 0;
+  }elsif($n1 eq ''){
+    return 1;
+  }elsif($n2 eq ''){
+    return -1;
+  }else{
+    return $n1 cmp $n2;
+  }
+}
+
 
 __END__
 
