@@ -7,11 +7,38 @@ use Bio::Otter::Lace::Defaults;
 
 {
     my( $dataset_name, $set_name );
+    my $method='TransFrags';
+    my $colour='CYAN';
+    my $width=1;
+    my $label_type='transcript_id';
+
+    my @colours=(
+		 'ORANGE',
+		 'LIGHTRED',
+		 'RED',
+		 'DARKRED',
+		 'MAGENTA',
+		 'PURPLE',
+		 'VIOLET',
+		 'DARKBLUE',
+		 'BLUE',
+		 'LIGHTBLUE',
+		 'DARKGREEN',
+		 'GREEN',
+		 'LIGHTGREEN',
+		 'BROWN',
+		 'DARKGRAY',
+		 'CERISE',
+		 );
 
     my $usage = sub { exec('perldoc', $0) };
     Bio::Otter::Lace::Defaults::do_getopt(
         'h|help!'       => $usage,
         'dataset=s'     => \$dataset_name,
+	'method=s'      => \$method,
+	'colour=s'      => \$colour,
+	'label_type=s'  => \$label_type,
+	'width=s'       => \$width,
         ) or $usage->();
     $usage->() unless $dataset_name;
     
@@ -24,13 +51,26 @@ use Bio::Otter::Lace::Defaults;
     my $otter_dba = $ds->get_cached_DBAdaptor;
     my $clone_aptr = $otter_dba->get_CloneAdaptor;
     
-    print qq{\nMethod "TransFrags"\nColour CYAN\n};
+    print qq{\nMethod "$method"\nColour $colour\nWidth $width\n};
     
     my $prev_acc_sv = '';
     while (<>) {
         next if /^#/;
         next if /^\s*$/;
-        my ($acc_sv, $start, $end, $score, $strand) = (split)[0,3,4,5,6];
+        my ($acc_sv, $source, $start, $end, $score, $strand, $valuepairs) = 
+	    (split(/\t/))[0,1,3,4,5,6,8];
+
+	# build label
+	my $label;
+	foreach my $pair (split(/;\s+/,$valuepairs)){
+	  if($pair=~/(\w+)\s+\"(.*)\"/){
+	    if($1 eq $label_type){
+	      $label.="$2";
+	    }
+	  }
+	}
+	$label.=" $source";
+
         if ($strand eq '-') {
             ($start, $end) = ($end, $start);
         }
@@ -41,7 +81,7 @@ use Bio::Otter::Lace::Defaults;
             $prev_acc_sv = $acc_sv;
         }
         
-        print qq{Feature "TransFrags" $start $end 1.0\n};
+        print qq{Feature "$method" $start $end 1.0 \"$label\"\n};
     }
 }
 

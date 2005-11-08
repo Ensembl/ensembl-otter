@@ -48,16 +48,18 @@ my $otdb = Bio::Otter::DBSQL::DBAdaptor->new(
 
 my %vers;
 my $sth1 = $otdb->prepare(q{
-    select distinct c.embl_acc, c.embl_version 
-    from clone_remark cr, clone_info ci, clone c  
+    select distinct c.embl_acc, c.embl_version, cr.remark 
+    from clone_remark cr, current_clone_info ci, clone c  
     where cr.clone_info_id = ci.clone_info_id 
     and c.clone_id = ci.clone_id 
-    and cr.remark like '%annotated%'
+    and cr.remark rlike '^Annotation_remark-[[:blank:]]*annotated'
 });
 
 $sth1->execute();
 while (my @row = $sth1->fetchrow_array) {
-    $vers{$row[0]}->{$row[1]}++;
+  if($row[2]=~/^Annotation_remark-\s+(annotated\S*)/){
+    $vers{$row[0]}->{$row[1]}=$1;
+  }
 }
 
 my $clone_aptr     = $db->get_CloneAdaptor;
@@ -69,6 +71,8 @@ my $author         = Bio::Otter::Author->new(
 
 CLONE:foreach my $acc (keys %vers) {
     VERS:foreach my $vers (keys %{$vers{$acc}}) {
+	# capture label (allows 'annotated' and 'annotated_PREFIX:' to be supported)
+        my $annotated_label=$vers{$acc}->{$vers};
         my $clone;
         eval {
             $clone = $clone_aptr->fetch_by_accession_version($acc,$vers);
@@ -83,6 +87,8 @@ CLONE:foreach my $acc (keys %vers) {
             -CLONE_ID => $clone->dbID,
             -KEYWORD  => [$info->keyword],
             -AUTHOR => $author,);
+	# BUG - I don't think the following works as expected
+	# remarks are added, not overwritten it seems
         foreach my $rem ($info->remark) {
             unless ($rem->remark =~ /^Annotation_remark-/) {
                 $new->remark($rem);
@@ -94,7 +100,7 @@ CLONE:foreach my $acc (keys %vers) {
         
 #        print "have ",scalar ($new->remark) ," remarks\n";
         my $newremark = Bio::Otter::CloneRemark->new(
-            -REMARK => 'Annotation_remark- annotated',);
+            -REMARK => "Annotation_remark- $annotated_label",);
         $new->remark($newremark);
 #        print "now have ",scalar ($new->remark) ," remarks\n";
 
