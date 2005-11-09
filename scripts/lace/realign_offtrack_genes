@@ -69,7 +69,7 @@ $| = 1;
             $chr_start_acc || 'NONE',
             $chr_end_acc   || 'NONE',
             ) unless $chr_start_acc and $chr_end_acc;
-        select_CloneSequence_contig($ss, $chr_start_acc, $chr_end_acc);
+        $ss->select_CloneSequences_by_start_end_accessions($chr_start_acc, $chr_end_acc);
     } else {
         $ss->selected_CloneSequences($ss->CloneSequence_list);
     }

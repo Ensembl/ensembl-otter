@@ -12,11 +12,14 @@ $| = 1;
     my $fix_flag = 0;
     my $strip_flag = 0;
     my $usage = sub { exec('perldoc', $0) };
+    my( $chr_start_acc, $chr_end_acc );
     Bio::Otter::Lace::Defaults::do_getopt(
         'dataset=s'     => \$dataset_name,
         'set|chr=s'     => \$set_name,
         'fix!'          => \$fix_flag,
         'strip!'        => \$strip_flag,
+        'start_acc=s'   => \$chr_start_acc,
+        'end_acc=s'     => \$chr_end_acc,
         ) or $usage->();
     $usage->() unless $dataset_name;
 
@@ -28,9 +31,11 @@ $| = 1;
         my $ss = $ds->get_SequenceSet_by_name($set_name);
         $ss_list = [$ss];
     } else {
+        if ($chr_start_acc or $chr_end_acc) {
+            die "Need to give sequence set name with accession arguments\n";
+        }
         $ss_list = $ds->get_all_SequenceSets;
     }
-    
     
     my $dba = $ds->get_cached_DBAdaptor;
     my $get_stable_name = $dba->prepare(q{
@@ -48,22 +53,31 @@ $| = 1;
           AND gsid.gene_id = ?
         });
 
+    my $slice_aptr = $dba->get_SliceAdaptor;
     foreach my $ss (@$ss_list) {
-        my( %name_sid );
         my $set_name = $ss->name;
         $dba->assembly_type($set_name);
         $ds->fetch_all_CloneSequences_for_SequenceSet($ss);
-        my $chrom = $ss->CloneSequence_list()->[0]->chromosome;
+        if ($chr_start_acc or $chr_end_acc) {
+            die sprintf("Need both start_acc (got '%s') and end_acc (got '%s')\n",
+                $chr_start_acc || 'NONE',
+                $chr_end_acc   || 'NONE',
+                ) unless $chr_start_acc and $chr_end_acc;
+            $ss->select_CloneSequences_by_start_end_accessions($chr_start_acc, $chr_end_acc);
+        } else {
+            $ss->selected_CloneSequences($ss->CloneSequence_list);
+        }
+        my ($chr, $chr_start, $chr_end) = $cl->chr_start_end_from_contig($ss->selected_CloneSequences);
+        my $slice = $slice_aptr->fetch_by_chr_start_end($chr, $chr_start, $chr_end);
+
 
         my $geneAd = $dba->get_GeneAdaptor; # Bio::Otter::AnnotatedGeneAdaptor
-
-        my $sliceAd = $dba->get_SliceAdaptor;
-        my $slice = $sliceAd->fetch_by_chr_name($chrom->name);
 
         my $latest_gene_id = $geneAd->list_current_dbIDs_for_Slice($slice);
         
         printf STDERR "Inspecting %d genes on %s\n", scalar(@$latest_gene_id), $set_name;
 
+        my %name_sid;
         foreach my $id ( @$latest_gene_id ) {
             $get_stable_name->execute($id);
             my ($stable, $name, $type, $info_id) = $get_stable_name->fetchrow;
