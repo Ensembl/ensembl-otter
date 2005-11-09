@@ -211,8 +211,12 @@ sub fix_names {
 
     my $gene          = $gene_aptr->fetch_by_dbID($id);
     my $old_gene_name = $gene->gene_info->name->name;
-    printf STDERR "\nGENE: $old_gene_name\n";
-    printf STDERR "  ROOT FIX\n" if $fix_root;
+    print STDERR "\nGENE: $old_gene_name\n";
+    if ($old_gene_name =~ /^(CCDS):/) {
+        print STDERR "SKIPPING $1 GENE\n";
+        return;
+    }
+    print STDERR "  ROOT FIX\n" if $fix_root;
 
     my ($gene_class, $gene_name) = get_class_and_name($old_gene_name);
     my ($clone3prime, $all_clone_names, $all_clones) =
