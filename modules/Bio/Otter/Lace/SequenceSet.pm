@@ -125,6 +125,38 @@ sub unselect_all_CloneSequences {
     $self->{'_selected_CloneSequences'} = undef;
 }
 
+sub select_CloneSequences_by_start_end_accessions {
+    my( $self, $start_acc, $end_acc ) = @_;
+    
+    my $ctg = [];
+    my $in_contig = 0;
+    my $cs_list = $self->CloneSequence_list;
+    foreach my $cs (@$cs_list) {
+        my $acc = $cs->accession;
+        if ($acc eq $start_acc) {
+            $in_contig = 1;
+        }
+        if ($in_contig) {
+            push(@$ctg, $cs);
+        }
+        if ($acc eq $end_acc) {
+            if ($in_contig) {
+                $in_contig = 0;
+            } else {
+                die "Found end '$end_acc' but not start '$start_acc'\n";
+            }
+        }
+    }
+    if (@$ctg == 0) {
+        die "Failed to find start '$start_acc'\n";
+    }
+    elsif ($in_contig) {
+        die "Failed to find end '$end_acc'\n";
+    }
+    
+    $self->selected_CloneSequences($ctg);
+}
+
 sub selected_CloneSequences_as_contig_list {
     my( $self ) = @_;
     

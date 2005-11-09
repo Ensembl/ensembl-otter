@@ -22,7 +22,7 @@ use Getopt::Long 'GetOptions';
     
     my $before_tmp = "/tmp/xml.$$.before";
     my  $after_tmp = "/tmp/xml.$$.after";
-    END{ unlink($before_tmp, $after_tmp) if $before_tmp; }
+    #END{ unlink($before_tmp, $after_tmp) if $before_tmp; }
     
     print_xml($before_tmp, @before_tran);
     print_xml( $after_tmp,  @after_tran);
