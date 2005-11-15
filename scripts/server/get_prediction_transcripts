@@ -46,7 +46,7 @@ foreach my $pt (@$pts) {
             # output an exon line
         my @pe_optvalues = ('PredictionExon');
         for my $opt (@pe_optnames) {
-            push @pe_optvalues, $pe->$opt();
+            push @pe_optvalues, $pe->$opt || 0;
         }
         push @pe_optvalues, $pt_id;
 
