@@ -98,11 +98,10 @@ Suggested usage:
 sub do_getopt {
     my (@script_args) = @_;
 
-    my @conf_files = list_config_files();
-
     $CONFIG_INIFILES = [];    # clear and add in case of multiple calls
     push(@$CONFIG_INIFILES, $HARDWIRED);
 
+    my @conf_files = list_config_files();
     my $file_options = [];
     foreach my $file (@conf_files) {
         if (my $file_opts = options_from_file($file)) {

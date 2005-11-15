@@ -32,6 +32,8 @@ use Bio::EnsEMBL::RepeatFeature;
 use Bio::EnsEMBL::RepeatConsensus;
 use Bio::EnsEMBL::PredictionTranscript;
 
+use Bio::Otter::FromXML;
+
 sub new {
     my( $pkg ) = @_;
     
@@ -371,6 +373,22 @@ sub to_sliceargs { # not a method!
         } : $arg;
 }
 
+sub create_detached_slice_from_sa { # not a method!
+    my $arg = shift @_;
+
+    if($arg->{cs} ne 'chromosome') {
+        die "expecting a slice on a chromosome";
+    }
+
+    my $slice = Bio::EnsEMBL::Slice->new(
+        -chr_start     => $arg->{start},
+        -chr_end       => $arg->{end},
+        -chr_name      => $arg->{name},
+        -assembly_type => $arg->{type},
+    );
+    return $slice;
+}
+
 =pod
 
 For all of the get_X methods below the 'sliceargs'
@@ -392,22 +410,6 @@ Examples:
 
 =cut
 
-sub get_dafs_from_dataset_sliceargs_analysis {  # get DnaAlignFeatures
-    my( $self, $dataset, $sa, $analysis_name, $enshead ) = @_;
-
-    return $self->get_afs_from_dataset_sliceargs_kind_analysis(
-        $dataset, $sa, 'dafs', $analysis_name, $enshead
-    );
-}
-
-sub get_pafs_from_dataset_sliceargs_analysis {  # get ProteinAlignFeatures
-    my( $self, $dataset, $sa, $analysis_name, $enshead ) = @_;
-
-    return $self->get_afs_from_dataset_sliceargs_kind_analysis(
-        $dataset, $sa, 'pafs', $analysis_name, $enshead
-    );
-}
-
 sub get_sfs_from_dataset_sliceargs_analysis {   # get SimpleFeatures
     my( $self, $dataset, $sa, $analysis_name, $enshead ) = @_;
 
@@ -423,7 +425,7 @@ sub get_sfs_from_dataset_sliceargs_analysis {   # get SimpleFeatures
     my $response = $self->general_http_dialog(
         0,
         'GET',
-        'get_sfs',
+        'get_simple_features',
         {
             %$sa,
             'enshead'  => $enshead ? 1 : 0,
@@ -461,6 +463,22 @@ sub get_sfs_from_dataset_sliceargs_analysis {   # get SimpleFeatures
     return \@sfs;
 }
 
+sub get_dafs_from_dataset_sliceargs_analysis {  # get DnaAlignFeatures
+    my( $self, $dataset, $sa, $analysis_name, $enshead ) = @_;
+
+    return $self->get_afs_from_dataset_sliceargs_kind_analysis(
+        $dataset, $sa, 'dafs', $analysis_name, $enshead
+    );
+}
+
+sub get_pafs_from_dataset_sliceargs_analysis {  # get ProteinAlignFeatures
+    my( $self, $dataset, $sa, $analysis_name, $enshead ) = @_;
+
+    return $self->get_afs_from_dataset_sliceargs_kind_analysis(
+        $dataset, $sa, 'pafs', $analysis_name, $enshead
+    );
+}
+
 sub get_afs_from_dataset_sliceargs_kind_analysis { # get AlignFeatures (Dna or Protein)
     my( $self, $dataset, $sa, $kind, $analysis_name, $enshead ) = @_;
 
@@ -481,7 +499,7 @@ sub get_afs_from_dataset_sliceargs_kind_analysis { # get AlignFeatures (Dna or P
     my $response = $self->general_http_dialog(
         0,
         'GET',
-        'get_afs',
+        'get_align_features',
         {
             %$sa,
             'enshead'  => $enshead ? 1 : 0,
@@ -560,7 +578,7 @@ sub get_rfs_from_dataset_sliceargs_analysis {   # get RepeatFeatures
     my $response = $self->general_http_dialog(
         0,
         'GET',
-        'get_rfs',
+        'get_repeat_features',
         {
             %$sa,
             'enshead'  => $enshead ? 1 : 0,
@@ -630,7 +648,7 @@ sub get_pts_from_dataset_sliceargs_analysis {   # get PredictionTranscripts
     my $response = $self->general_http_dialog(
         0,
         'GET',
-        'get_pts',
+        'get_prediction_transcripts',
         {
             %$sa,
             'enshead'  => $enshead ? 1 : 0,
@@ -693,6 +711,38 @@ sub get_pts_from_dataset_sliceargs_analysis {   # get PredictionTranscripts
     }
 
     return \@pts;
+}
+
+sub get_pipegenes_from_dataset_sliceargs_analysis { # get genes from pipeline db - e.g. HalfWise genes
+    my( $self, $dataset, $sa, $analysis_name, $enshead ) = @_;
+
+    $sa = to_sliceargs($sa); # normalization
+
+    if(!$analysis_name) {
+        die "Analysis name must be specified!";
+    }
+
+    my $response = $self->general_http_dialog(
+        0,
+        'GET',
+        'get_pipegenes',
+        {
+            %$sa,
+            'enshead'  => $enshead ? 1 : 0,
+            'dataset'  => $dataset->name(),
+            'analysis' => $analysis_name,
+        },
+        1,
+    );
+    my $slice = create_detached_slice_from_sa($sa);
+
+    my @resplines = split(/\n/,$response);
+
+    my $gene_parser = Bio::Otter::FromXML->new([ split(/\n/,$response) ], $slice);
+    my $genes = $gene_parser->build_Gene_array($slice);
+
+
+    return $genes;
 }
 
 sub lock_region_for_contig_from_Dataset{
