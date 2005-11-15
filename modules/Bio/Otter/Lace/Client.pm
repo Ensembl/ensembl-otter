@@ -725,7 +725,7 @@ sub get_pipegenes_from_dataset_sliceargs_analysis { # get genes from pipeline db
     my $response = $self->general_http_dialog(
         0,
         'GET',
-        'get_pipegenes',
+        'get_pipeline_genes',
         {
             %$sa,
             'enshead'  => $enshead ? 1 : 0,
