@@ -41,7 +41,7 @@ foreach my $rf (@$rfs) {
             # output a repeat consensus line
         my @rc_optvalues = ('RepeatConsensus');
         for my $opt (@rc_optnames) {
-            push @rc_optvalues, $rc->$opt();
+            push @rc_optvalues, $rc->$opt() || 0;
         }
         $output_string .= join("\t", @rc_optvalues)."\n";
 
