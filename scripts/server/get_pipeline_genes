@@ -1,0 +1,35 @@
+#!/usr/local/bin/perl5.8.0 -w
+
+my $enshead = $ENV{ENSHEAD}; # is set by the server for any GET request
+
+use strict;
+use OtterDefs;
+use CGI;
+use Bio::Otter::ServerSide (':all');
+use Bio::Otter::Lace::PipelineDB;
+use Bio::EnsEMBL::DBSQL::DBAdaptor;
+use Bio::Otter::DBSQL::DBAdaptor;
+use Bio::Otter::ToXML;
+
+$| = 1;
+
+my $cgi = new CGI;
+set_nph($cgi);
+my %cgi_args = $cgi->Vars;
+
+my $odb = get_DBAdaptor_from_CGI_species($cgi, $OTTER_SPECIES, $enshead);
+my ($pdb, $pipeline_slice, $pipe_connparms) = get_pipeline_adaptor_slice_parms($cgi, $odb, $enshead);
+
+my $analysis = $cgi_args{analysis};
+my $genes = $pipeline_slice->get_all_Genes($analysis);
+
+print STDERR "Total of ".scalar(@$genes)." $analysis genes found\n";
+
+my $output_string = '';
+
+foreach my $gene (@$genes) {
+    $output_string .= $gene->toXMLstring();
+}
+
+send_response($cgi, $output_string, 1);
+
