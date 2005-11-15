@@ -48,10 +48,15 @@ use Exporter();
 
 @ISA=qw(Exporter);
 
-$OTTER_SERVER_ROOT 	    = '/nfs/team71/analysis/lg4/work/ensembl-otter';
-$OTTER_ALTROOT    	    = '/nfs/team71/analysis/lg4/work/ensembl-otter/otter_alt';
-$OTTER_SCRIPTDIR            = $OTTER_SERVER_ROOT . '/scripts/server';
-$OTTER_SERVER		    = 'ecs2a.internal.sanger.ac.uk';#Sys::Hostname::hostname();  # Local machine name
+my $MAIN_DIR;
+
+$MAIN_DIR               = '/nfs/team71/analysis/lg4/work';
+# $MAIN_DIR               = '/humsql/test_otter';
+
+$OTTER_SERVER_ROOT 	    = $MAIN_DIR.'/ensembl-otter';
+$OTTER_ALTROOT    	    = $MAIN_DIR.'/ensembl-otter/otter_alt';
+$OTTER_SCRIPTDIR        = $OTTER_SERVER_ROOT . '/scripts/server';
+$OTTER_SERVER		    = Sys::Hostname::hostname();  # Local machine name
 $OTTER_MAX_CLIENTS          = 5;
 $OTTER_SERVER_PORT          = 33999;
 $OTTER_SCRIPT_TIMEOUT       = 60;
@@ -64,10 +69,11 @@ $OTTER_GET_SCRIPTS          = {'/perl/get_region'     => 'get_region',
                                '/perl/get_datasets'   => 'get_datasets',
                                '/perl/get_loci_names' => 'get_loci_names',
                                '/perl/lock_region'    => 'lock_region',
-                               '/perl/get_afs'        => 'get_afs',
-                               '/perl/get_sfs'        => 'get_sfs',
-                               '/perl/get_rfs'        => 'get_rfs',
-                               '/perl/get_pts'        => 'get_pts',
+                               '/perl/get_align_features'         => 'get_align_features',
+                               '/perl/get_simple_features'        => 'get_simple_features',
+                               '/perl/get_repeat_features'        => 'get_repeat_features',
+                               '/perl/get_prediction_transcripts' => 'get_prediction_transcripts',
+                               '/perl/get_pipeline_genes'         => 'get_pipeline_genes',
                               };
 $OTTER_POST_SCRIPTS         = {'/perl/write_region'   => 'write_region',
                                '/perl/unlock_region'  => 'unlock_region',
