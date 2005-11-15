@@ -1,0 +1,97 @@
+#!/usr/local/bin/perl -w
+
+### peri_dotter
+
+use strict;
+use Hum::EnsCmdLineDB;
+use CanvasWindow;
+
+## ~/.ensdb_defaults entry for Hum::EnsCmdLineDB
+
+=pod
+
+    # chr 9 peri VEGA
+    -host vegabuild
+    -port 3304
+    -user ottadmin
+    -password lutralutra
+    -dbname vega_homo_sapiens_chr9peri_20051103
+    -sgp chr9-16-peri
+
+=cut
+
+{
+    Hum::EnsCmdLineDB::do_getopt();
+    my $dba = Hum::EnsCmdLineDB::connect();
+    my $slice_aptr = $dba->get_SliceAdaptor;
+    my $ana_aptr   = $dba->get_AnalysisAdaptor;
+    
+    my $ana_logic = 'peri_dna';
+    my $chr_name  = '9';
+    
+    my $type = $dba->assembly_type;
+
+    my $ana = $ana_aptr->fetch_by_logic_name($ana_logic);
+    my $ana_id = $ana->dbID;
+    my $slice = $slice_aptr->fetch_by_chr_name($chr_name);
+    
+    my $peri_feat = $slice->get_all_DnaAlignFeatures($ana_logic);
+    warn "Found ", scalar(@$peri_feat), " features\n";
+    my %id_feat = map {$_->dbID, $_} @$peri_feat;
+    $peri_feat = undef;
+    
+    my $length = $slice->length;
+    
+    my $find_pairs = $dba->prepare(qq{
+        SELECT daf1.dna_align_feature_id
+          , daf2.dna_align_feature_id
+        FROM dna_align_feature daf1
+          , contig g1
+          , dna_align_feature daf2
+          , contig g2
+        WHERE daf1.contig_id = g1.contig_id
+          AND daf2.contig_id = g2.contig_id
+
+          AND daf1.hit_name = g2.name
+          AND daf2.hit_name = g1.name
+          AND daf1.contig_start = daf2.hit_start
+          AND daf1.contig_end = daf2.hit_end
+
+          AND daf1.analysis_id = daf2.analysis_id
+          AND daf2.analysis_id = ?
+        });
+    $find_pairs->execute($ana_id);
+    
+    my %id_pair;
+    my $pairs_count = 0;
+    while (my ($id1, $id2) = $find_pairs->fetchrow) {
+        $pairs_count++;
+        if (my $exist = $id_pair{$id1}) {
+            die "Already have pair ($exist) for feature $id1 (new = $id2)";
+        } else {
+            $id_pair{$id1} = $id2;
+        }
+    }
+    warn "Found $pairs_count pairs\n";
+    
+    foreach my $this_id (keys %id_feat) {
+        # Could check that hit is outside pericentromere
+        my $pair_id = $id_pair{$this_id} or next;
+        my $this = $id_feat{$this_id};
+        my $pair = $id_feat{$pair_id};
+    }
+    
+    my $mw = CanvasWindow::MainWindow->new;
+}
+
+
+
+
+__END__
+
+=head1 NAME - peri_dotter
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
