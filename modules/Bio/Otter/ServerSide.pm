@@ -88,8 +88,6 @@ sub get_pipeline_adaptor_slice_parms { # codebase-independent version for script
         $pipekey
     );
 
-    print STDERR "DEBUG: Pipeline_db is '".ref($pdb)."'\n";
-
     my %cgi_args = $cgi->Vars;
     my $pipeline_slice;
 
@@ -100,15 +98,22 @@ sub get_pipeline_adaptor_slice_parms { # codebase-independent version for script
     }
 
     if($enshead) {
+		# The following statement ensures
+		# that we use 'assembly type' as the chromosome name
+		# only for Otter chromosomes.
+		# Vega chromosomes will have simple names.
+	my $segment_name = (($cgi_args{cs} eq 'chromosome') && ($cgi_args{csver} eq 'Otter'))
+			? $cgi_args{type}
+		        : $cgi_args{name};
+
         $pipeline_slice = $pdb->get_SliceAdaptor()->fetch_by_region(
             $cgi_args{cs},
-            $cgi_args{name},    
+	    $segment_name,
             $cgi_args{start},
             $cgi_args{end},
             $cgi_args{strand},
             $cgi_args{csver},
         );
-        print STDERR "DEBUG: [enshead=1] Pipeline_slice is '".ref($pipeline_slice)."'\n";
     } else {
         $pdb->assembly_type($odb->assembly_type());
 
@@ -118,12 +123,10 @@ sub get_pipeline_adaptor_slice_parms { # codebase-independent version for script
                 $cgi_args{start},
                 $cgi_args{end},
             );
-        print STDERR "DEBUG: [enshead=0/chr] Pipeline_slice is '".ref($pipeline_slice)."'\n";
         } elsif($cgi_args{cs} eq 'contig') {
             $pipeline_slice = $pdb->get_RawContigAdaptor()->fetch_by_name(
                 $cgi_args{name},
             );
-        print STDERR "DEBUG: [enshead=0/ctg] Pipeline_slice is '".ref($pipeline_slice)."'\n";
         } else {
             die "Other coordinate systems are not supported";
         }
