@@ -85,6 +85,10 @@ sub error_exit {
 sub get_pipeline_adaptor_slice_parms { # codebase-independent version for scripts
     my ($cgi, $odb, $enshead) = @_;
 
+    my %cgi_args = $cgi->Vars;
+
+    server_log("called with: ".join(' ', map { "$_=$cgi_args{$_}" } keys %cgi_args) );
+
     my $pipekey = $enshead
         ? 'pipeline_db_head'
         : 'pipeline_db';
@@ -95,7 +99,6 @@ sub get_pipeline_adaptor_slice_parms { # codebase-independent version for script
         $pipekey
     );
 
-    my %cgi_args = $cgi->Vars;
     my $pipeline_slice;
 
         # CS defaults:
