@@ -44,6 +44,15 @@ my $CHILDREN = 0;     # current number of children
 
 #-------------------------------------------------------------#
 
+
+###############################################################################
+sub server_log {
+    my $line = shift @_;
+    print STDERR ''.(($line ne '') ? "[otter_srv:$$] $line\n" : "\n");
+}
+###############################################################################
+
+
 if (defined($ARGV[0]) && ($ARGV[0] eq '--alt')) {
     $HOME = $ALT_HOME;
 }
@@ -70,7 +79,7 @@ Bio::Otter::LogFile::make_log($ENV{'LOGFILE'});
 make_pid_file($PIDFILE);
 
 # Fork off  children.
-print "\nCreating Children...\n";
+server_log("Creating Children...");
 for (1 .. $PREFORK) {
     make_new_child();
 }
@@ -113,7 +122,7 @@ sub make_new_child {
 ###########################################################################################
         $CHILDREN{$pid} = 1;
         $CHILDREN++;
-        print "Child born: $pid (Total children: $CHILDREN)\n" if $DEBUG;
+        server_log("Child born: $pid (Total children: $CHILDREN)") if $DEBUG;
         return;
     }
     else {
@@ -160,11 +169,14 @@ sub make_new_child {
             $ENV{AUTHGROUPFILE} = "$OTTER_SERVER_ROOT/.htgroups"
               if -e "$OTTER_SERVER_ROOT/.htgroups";
 
+            server_log(''); # start a new entry
             my $uri = $r->url->path;
+            $ENV{CURRENT_SCRIPT_NAME} = $uri;
+
             if ($r->method eq 'GET' and $GET_SCRIPTS->{$uri}) {
                 my $program = $ENV{SCRIPT_FILENAME} =
                   "$SCRIPTDIR/" . $GET_SCRIPTS->{$uri};
-                print STDERR "\n*************  BEGIN $uri  *************\n";
+                server_log("Over to [$uri] ----------------");
                 my @args = ();
                 if (my $pid = open(my $fh, '-|')) {
                     eval {
@@ -207,6 +219,7 @@ sub make_new_child {
             elsif ($r->method eq 'POST' and $POST_SCRIPTS->{$uri}) {
                 my $program = $ENV{SCRIPT_FILENAME} =
                   "$SCRIPTDIR/" . $POST_SCRIPTS->{$uri};
+                server_log("Dual pipe to [$uri] ----------------\n");
                 my ($in, $out);
                 my $pid = open2($out, $in, $program);
                 print $in $r->content;
@@ -214,7 +227,7 @@ sub make_new_child {
                 open FPDBG, ">../data/test_server_wr.xml";
                 print FPDBG $r->content;
                 close FPDBG;
-                print STDERR "********** Printing response ***********";
+                server_log("Starting to send response from [$uri] =============\n");
 
                 while (<$out>) {
 
@@ -223,7 +236,7 @@ sub make_new_child {
                 }
 
                 #print $client $r->content;
-                print STDERR "************* End response *************";
+                server_log("Done sending response from [$uri] =============\n");
                 close $out;
                 waitpid $pid, 0;
             }
@@ -231,7 +244,7 @@ sub make_new_child {
 
                 my $message =
                   "Unknown command " . $r->method . " " . $r->url->path . "\n";
-                print STDERR $message;
+                server_log($message);
 
                 # $client->send_status_line(400);
                 $client->send_error(400, $message);
@@ -247,7 +260,7 @@ sub make_new_child {
               or die "Can't unblock SIGHUP after request: $!\n";
         }
 
-        print STDERR "Child $$: reached max client count - exiting.";
+        server_log("Child $$: reached max client count - exiting.");
         exit;    ## very, very important exit!
     }
 }
@@ -289,51 +302,46 @@ sub make_pid_file {
 
     my ($pidfile) = @_;
 
-    print STDERR "OTTER_SERVER : Starting up Otter server on $HOSTNAME....\n"
+    server_log('');
+    server_log("Starting up Otter server on $HOSTNAME....")
       if $DEBUG;
-    print STDERR "OTTER_SERVER : Using database configured from $HOME\n"
+    server_log("Using database configured from $HOME")
       if $DEBUG;
-    print STDERR "OTTER_SERVER : PID file at $pidfile\n" if $DEBUG;
+    server_log("PID file at $pidfile") if $DEBUG;
     open(PID, "> $pidfile") or die "Cannot write to pid file '$pidfile': $!\n";
     print PID "$$\n";
     close(PID);
-    print STDERR "OTTER_SERVER : [Parent pid on $HOSTNAME: $$]\n";
+    server_log("Parent pid on $HOSTNAME: $$");
     return;
 }
 
 ###########################################################
 sub DEF_HOME {
     $HOME = $DEFAULT_HOME;
-    print STDERR
-"OTTER_SERVER : Swapping to default directory location in $HOME (restarting children)...\n";
+    server_log("Swapping to default directory location in $HOME (restarting children)...");
     my @kids = keys %CHILDREN;    # get child PIDs
 
     foreach (@kids) {
         kill 'HUP', $_;           # ...and tell them
-        print STDERR "OTTER_SERVER : \tkilled $_\n" if $DEBUG;
+        server_log("\tkilled $_") if $DEBUG;
         sleep 5;
     }
-    print STDERR "OTTER_SERVER : Sent DEF HUP to children: ", join(",", @kids),
-      "\n"
-      if $DEBUG;
+    server_log("Sent DEF HUP to children: ". join(",", @kids) ) if $DEBUG;
     $SIG{USR1} = \&DEF_HOME;
 }
 
 ###########################################################
 sub ALT_HOME {
     $HOME = $ALT_HOME;
-    print STDERR
-"OTTER_SERVER : Swapping to backup directory location in $HOME (restarting children)...\n";
+    server_log("Swapping to backup directory location in $HOME (restarting children)...");
     my @kids = keys %CHILDREN;    # get child PIDs
 
     foreach (@kids) {
         kill 'HUP', $_;           # ...and tell them
-        print STDERR "OTTER_SERVER : \tkilled $_\n" if $DEBUG;
+        server_log("\tkilled $_") if $DEBUG;
         sleep 5;
     }
-    print STDERR "OTTER_SERVER : Sent ALT HUP to children: ", join(",", @kids),
-      "\n"
-      if $DEBUG;
+    server_log("Sent ALT HUP to children: ". join(",", @kids) ) if $DEBUG;
     $SIG{USR2} = \&ALT_HOME;
 }
 
@@ -361,7 +369,7 @@ sub REAPER {                      # takes care of dead children
 ###########################################################
 sub HUNTSMAN {    # signal handler for SIGINT
     local ($SIG{CHLD}) = 'IGNORE';    # we're going to kill our children
-    print "OTTER_SERVER : Killing children...\n" if $DEBUG;
+    server_log("Killing children...") if $DEBUG;
     kill 'INT' => keys %CHILDREN;
     exit;                             # clean up with dignity
 }
@@ -376,7 +384,7 @@ sub ROTATE_LOGS {
     my @kids = keys %CHILDREN;        # get child PIDs
     foreach (@kids) {
         kill 'HUP', $_;               # ...and tell them
-        print STDERR "Killed Child $_" if $DEBUG;
+        server_log("Killed Child $_") if $DEBUG;
         sleep 5;                      # good idea ??????
     }
     print STDOUT "OTTER_SERVER : Sent ALT HUP to children: "
@@ -387,7 +395,7 @@ sub ROTATE_LOGS {
     Bio::Otter::LogFile::make_log($ENV{'LOGFILE'});
 
     # note to log file reader
-    print STDERR "using this log file now as from $rotate_time\n";
+    server_log("using this log file now as from $rotate_time");
 
     # wake this script up a bit, and make children
     &{ $SIG{CHLD} };
