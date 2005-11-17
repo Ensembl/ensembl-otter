@@ -160,6 +160,9 @@ sub make_new_child {
               || '';    # to stop the server complaining about it
             set_cgi_env($r);
 
+	    server_log('');
+	    server_log('Request: http://'.$ENV{HOST}.$ENV{REQUEST_URI});
+
             $ENV{REMOTE_ADDR}  = $client->peerhost;
             $ENV{REMOTE_PORT}  = $client->peerport;
             $ENV{SERVER_ADDR}  = $client->sockhost;
@@ -169,14 +172,13 @@ sub make_new_child {
             $ENV{AUTHGROUPFILE} = "$OTTER_SERVER_ROOT/.htgroups"
               if -e "$OTTER_SERVER_ROOT/.htgroups";
 
-            server_log(''); # start a new entry
             my $uri = $r->url->path;
             $ENV{CURRENT_SCRIPT_NAME} = $uri;
 
             if ($r->method eq 'GET' and $GET_SCRIPTS->{$uri}) {
                 my $program = $ENV{SCRIPT_FILENAME} =
                   "$SCRIPTDIR/" . $GET_SCRIPTS->{$uri};
-                server_log("Over to [$uri] ----------------");
+                server_log("Over to [$uri]");
                 my @args = ();
                 if (my $pid = open(my $fh, '-|')) {
                     eval {
