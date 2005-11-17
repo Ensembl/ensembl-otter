@@ -30,12 +30,12 @@ export HOME
 cd ensembl-otter/scripts
 
 die(){
-    echo "$THISSCRIPT: $1" 1>&2
+    echo "[$THISSCRIPT] $1" 1>&2
     exit 1
 }
 
 message(){
-    echo "$THISSCRIPT: $1"
+    echo "[$THISSCRIPT] $1"
 }
 
 if [ -e $pid_file ]; then
