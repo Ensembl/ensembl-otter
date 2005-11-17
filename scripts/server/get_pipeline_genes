@@ -23,7 +23,7 @@ my ($pdb, $pipeline_slice, $pipe_connparms) = get_pipeline_adaptor_slice_parms($
 my $analysis = $cgi_args{analysis};
 my $genes = $pipeline_slice->get_all_Genes($analysis);
 
-print STDERR "Total of ".scalar(@$genes)." $analysis genes found\n";
+server_log("Total of ".scalar(@$genes)." $analysis genes found");
 
 my $output_string = '';
 

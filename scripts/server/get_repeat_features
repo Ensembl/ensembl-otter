@@ -26,7 +26,7 @@ my @rc_optnames = @{ $OrderOfOptions{RepeatConsensus} };
 my $analysis = $cgi_args{analysis};
 my $rfs = $pipeline_slice->get_all_RepeatFeatures($analysis);
 
-print STDERR "Total of ".scalar(@$rfs)." $analysis repeat features found\n";
+server_log("Total of ".scalar(@$rfs)." $analysis repeat features found");
 
 my $output_string = '';
 

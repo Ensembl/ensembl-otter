@@ -27,7 +27,7 @@ my $analysis = $cgi_args{analysis};
 my $pts = $pipeline_slice->get_all_PredictionTranscripts($analysis, 1);
     # last_arg=1 means "fetch all exons now"
 
-print STDERR "Total of ".scalar(@$pts)." $analysis prediction transcripts found\n";
+server_log("Total of ".scalar(@$pts)." $analysis prediction transcripts found");
 
 my $output_string = '';
 
