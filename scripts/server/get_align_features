@@ -34,7 +34,7 @@ my $method = {
 my $analysis = $cgi_args{analysis};
 my $afs = $pipeline_slice->$method($analysis);
 
-print STDERR "Total of ".scalar(@$afs)." $kind:$analysis features found\n";
+server_log("Total of ".scalar(@$afs)." $kind:$analysis features found");
 
     # Put the names into the hit_description hash:
 my %hd_hash = ();

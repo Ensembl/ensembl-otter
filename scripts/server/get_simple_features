@@ -25,7 +25,7 @@ my @sf_optnames = @{ $OrderOfOptions{SimpleFeature} };
 my $analysis = $cgi_args{analysis};
 my $sfs = $pipeline_slice->get_all_SimpleFeatures($analysis);
 
-print STDERR "Total of ".scalar(@$sfs)." $analysis simple features found\n";
+server_log("Total of ".scalar(@$sfs)." $analysis simple features found");
 
 my $output_string = '';
 
