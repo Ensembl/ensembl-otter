@@ -105,6 +105,9 @@ sub get_pipeline_adaptor_slice_parms { # codebase-independent version for script
     }
 
     if($enshead) {
+
+        server_log("connecting to the NEW pipeline using [$pipekey] meta entry");
+
 		# The following statement ensures
 		# that we use 'assembly type' as the chromosome name
 		# only for Otter chromosomes.
@@ -122,6 +125,9 @@ sub get_pipeline_adaptor_slice_parms { # codebase-independent version for script
             $cgi_args{csver},
         );
     } else {
+
+        server_log("connecting to the OLD pipeline using [$pipekey] meta entry");
+
         $pdb->assembly_type($odb->assembly_type());
 
         if($cgi_args{cs} eq 'chromosome') {
