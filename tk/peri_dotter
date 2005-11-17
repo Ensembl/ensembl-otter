@@ -16,7 +16,7 @@ use CanvasWindow;
     -user ottadmin
     -password wibble
     -dbname vega_homo_sapiens_chr9peri_20051103
-    -sgp chr9-16-peri
+    -sgp peri_short
 
 =cut
 
@@ -29,11 +29,11 @@ use CanvasWindow;
     my $ana_logic = 'peri_dna';
     my $chr_name  = '9';
     
-    my $type = $dba->assembly_type;
+    my $type = $dba->assembly_type('peri_short');
 
     my $ana = $ana_aptr->fetch_by_logic_name($ana_logic);
     my $ana_id = $ana->dbID;
-    my $slice = $slice_aptr->fetch_by_chr_name($chr_name);
+    my $slice = $slice_aptr->fetch_by_chr_start_end($chr_name, 1, 15481367);
     
     my $peri_feat = $slice->get_all_DnaAlignFeatures($ana_logic);
     warn "Found ", scalar(@$peri_feat), " features\n";
@@ -41,6 +41,7 @@ use CanvasWindow;
     $peri_feat = undef;
     
     my $length = $slice->length;
+    printf STDERR "Slice from %d to %d\n", $slice->chr_start, $slice->chr_end;
     
     my $find_pairs = $dba->prepare(qq{
         SELECT daf1.dna_align_feature_id
@@ -74,14 +75,82 @@ use CanvasWindow;
     }
     warn "Found $pairs_count pairs\n";
     
-    foreach my $this_id (keys %id_feat) {
-        # Could check that hit is outside pericentromere
-        my $pair_id = $id_pair{$this_id} or next;
-        my $this = $id_feat{$this_id};
-        my $pair = $id_feat{$pair_id};
+    
+    my $mw = CanvasWindow::MainWindow->new('chr9peri_dotter');
+    my $cw = CanvasWindow->new($mw);
+    my $canvas = $cw->canvas;
+    
+    my $size = 800;
+    my $scale = $length / $size;
+    
+    my @fill_map = (
+        ['#cccccc', '#4c4c4c'],
+        ['#4c4c4c', '#999999'],
+        );
+    
+    my $tile_path = $slice->get_tiling_path;
+    my %peri_contig_name = map {$_->component_Seq->name, $_} @$tile_path;
+    for (my $i = 0; $i < @$tile_path; $i++) {
+        my $x1 = $tile_path->[$i]->assembled_start / $scale;
+        my $x2 = $tile_path->[$i]->assembled_end   / $scale;
+        for (my $j = 0; $j < @$tile_path; $j++) {
+            my $y1 = $tile_path->[$j]->assembled_start / $scale;
+            my $y2 = $tile_path->[$j]->assembled_end   / $scale;
+
+            my $fill = @fill_map[$i % 2]->[$j % 2];
+
+            $canvas->createRectangle(
+                $x1,$y1, $x2,$y2,
+                -fill       => $fill,
+                -outline    => undef,
+                );
+        }
     }
     
-    my $mw = CanvasWindow::MainWindow->new;
+    my $missing = 0;
+    my $drawn   = 0;
+    foreach my $this_id (keys %id_feat) {
+        # Could check that hit is outside pericentromere
+        my $this = $id_feat{$this_id};
+        my $pair_id = $id_pair{$this_id};
+        unless ($pair_id) {
+            my $hit_name = $this->hseqname;
+            if ($peri_contig_name{$hit_name}) {
+                warn "No pair for $this_id matching $hit_name\n";
+            }
+            next;
+        }
+        
+        my $pair = $id_feat{$pair_id};
+        if ($pair) {
+            $drawn++;
+        } else {
+            warn "Feature $pair_id not in Slice\n";
+            $missing++;
+            next;
+        }
+        
+        my $x1 = $this->start / $scale;
+        my $x2 = $this->end   / $scale;
+        my $y1 = $pair->start / $scale;
+        my $y2 = $pair->end   / $scale;
+        
+        $canvas->createLine($x1,$y1, $x2,$y2,
+            -fill       => 'black',
+            -width      => 1,
+            );
+    }
+
+    $canvas->createRectangle(0,0, $size, $size,
+        -fill       => undef,
+        -outline    => 'black',
+        -width      => 0.5,
+        );
+    
+    warn "Could not find pair in slice for $missing features but drew $drawn\n";
+    
+    $cw->fix_window_min_max_sizes;
+    Tk::MainLoop();
 }
 
 
