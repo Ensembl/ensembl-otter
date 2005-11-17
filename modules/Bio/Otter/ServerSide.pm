@@ -42,7 +42,7 @@ sub set_nph{
     my ($cgi) = @_;
     error_exit('', 'I need a CGI object') unless $cgi && UNIVERSAL::isa($cgi, 'CGI');
     if ($ENV{SERVER_SOFTWARE} =~ /libwww-perl-daemon/) {
-        server_log('NOTE: Setting nph to 1');
+        # server_log('NOTE: Setting nph to 1');
         $cgi->nph(1);
     }
 }
