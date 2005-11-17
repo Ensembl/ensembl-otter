@@ -13,6 +13,7 @@ use Bio::Otter::LogFile;
 our @ISA       = qw(Exporter);
 our @EXPORT    = qw();
 our @EXPORT_OK = qw(
+                    &server_log
                     &set_nph
                     &send_response
                     &error_exit
@@ -21,6 +22,7 @@ our @EXPORT_OK = qw(
                     &get_DBAdaptor_from_CGI_species
                     );
 our %EXPORT_TAGS = (all => [qw(
+                               server_log
                                set_nph
                                send_response
                                error_exit
@@ -31,11 +33,16 @@ our %EXPORT_TAGS = (all => [qw(
                             ],
                     );
 
+sub server_log {
+    my $line = shift @_;
+    print STDERR "[$ENV{CURRENT_SCRIPT_NAME}] $line\n";
+}
+
 sub set_nph{
     my ($cgi) = @_;
     error_exit('', 'I need a CGI object') unless $cgi && UNIVERSAL::isa($cgi, 'CGI');
     if ($ENV{SERVER_SOFTWARE} =~ /libwww-perl-daemon/) {
-        print STDERR "NOTE : Setting nph to 1\n";
+        server_log('NOTE: Setting nph to 1');
         $cgi->nph(1);
     }
 }
@@ -43,7 +50,7 @@ sub set_nph{
 sub send_response{
     my ($cgi, $response, $wrap) = @_;
     error_exit('', 'I need a CGI object') unless $cgi && UNIVERSAL::isa($cgi, 'CGI');
-    print STDERR "************** PRINTING RESPONSE ******************\n";
+    server_log('Sending the response =====================');
     print $cgi->header('text/plain');
 
     if($wrap) {
@@ -70,7 +77,7 @@ sub error_exit {
   print qq`  </response>\n`;
   print qq`</otter>\n`;
 
-  print STDERR "ERROR: $reason\n";
+  server_log("ERROR: $reason\n");
 
   exit(1);
 }
@@ -186,7 +193,7 @@ sub get_DBAdaptor_from_CGI_species{
   
     my( $odb, $dnadb );
 
-    print STDERR "Database dbname : [$dbname] host : [$dbhost] user : [$dbuser] pass : [$dbpass] port : [$dbport]\n";
+    server_log("OtterDB='$dbname' host='$dbhost' user='$dbuser' pass='$dbpass' port='$dbport'");
     eval {
         $odb = $adaptor_class->new( -host   => $dbhost,
                                     -user   => $dbuser,
@@ -206,11 +213,10 @@ sub get_DBAdaptor_from_CGI_species{
         error_exit($cgi, "Failed opening dna database [$@]") if $@;
         $odb->dnadb($dnadb);
         
-        print STDERR "Connected to dna database\n";
+        server_log("Connected to dna database");
     }
     if(!$enshead) {
-        print STDERR "Assembly type " . $odb->assembly_type($type)."\n";
-    } else { # TODO: the version has to be propagated properly
+        server_log("Assembly_type='" . $odb->assembly_type($type)."'");
     }
     return $odb;
 }
