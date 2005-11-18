@@ -207,6 +207,9 @@ eval
 
 						elsif ( $gtype ) {
 
+						    # do not want to change gene type for pseudos
+						    next if $gene->type =~ /pseudogene/i;
+							
 							my $otter_type  = $gene->type;
 
 							# ----- update gene table -----
