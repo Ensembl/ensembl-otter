@@ -19,10 +19,14 @@ Bio::Otter::Lace::Defaults::do_getopt('ds|dataset=s' => \$dataset,
 									  'err=s'        => \$errlog
 									 ); # plus default options
 
-if ( !$sanger && !($dataset && $infile && $outfile && $errlog && ($name || $gtype))  ) {
-	exec('perldoc', $0);
-}
-elsif ( $sanger && !($dataset && $infile && $outfile) ) {
+#if ( !$sanger && !($dataset && $infile && $outfile && $errlog && ($name || $gtype))  ) {
+#	exec('perldoc', $0);
+#}
+#elsif ( $sanger && !($dataset && $infile && $outfile) ) {
+#	exec('perldoc', $0);
+#}
+
+if ( !($dataset && $infile) && ($name || $gtype || $sanger) ) {
 	exec('perldoc', $0);
 }
 
@@ -37,7 +41,7 @@ print "\nStarting gene TYPE update .......\n"        if $gtype;
 print "\nStarting gene NAME update .......\n"        if $name;
 
 my $client   = Bio::Otter::Lace::Defaults::make_Client(); # Bio::Otter::Lace::Client
-my $dset     = $client->get_DataSet_by_name($dataset); # Bio::Otter::Lace::DataSet
+my $dset     = $client->get_DataSet_by_name($dataset);    # Bio::Otter::Lace::DataSet
 my $otter_db = $dset->get_cached_DBAdaptor;
 
 my $geneAd  = $otter_db->get_GeneAdaptor;
@@ -120,19 +124,21 @@ eval
 		open( ERROR, ">$errlog") || die $!;
 
 		while (<FILE>) {
+
 			chomp;
 			$line++;
 			#if ( /^Diff\tApproved Symbol/ ) {
-			if ( /^Approved Symbol/ ) { 
+			if ( /^Approved Symbol/ ) {
 				$start = 1; next;
 			}
             elsif ( $start == 1 && $_ ne "") {
 
-				#($diff, $hugo_gname, $hugo_desc, $HGNC, $hugo_type, $otter_trans_stable_id) = split /\t/, $_;
+			#	($diff, $hugo_gname, $hugo_desc, $HGNC, $hugo_type, $otter_trans_stable_id) = split /\t/, $_;
 			  ($hugo_gname, $hugo_desc, $HGNC, $hugo_type, $otter_trans_stable_id) = split /\t/, $_;
-
-				#print "$diff, $hugo_gname, $hugo_desc, $HGNC, $hugo_type, $otter_trans_stable_id\n"; exit;
-
+		
+			  #print "$diff, $hugo_gname, $hugo_desc, $HGNC, $hugo_type, $otter_trans_stable_id\n"; die;
+			  #warn "$hugo_gname, $hugo_desc, $HGNC, $hugo_type, $otter_trans_stable_id\n";
+			
 				if ( !($hugo_gname && $hugo_desc && $HGNC && $hugo_type && $otter_trans_stable_id) ) {
 					print ERROR "\nERROR at line $line: raw data fields are not tab delimited [$_]\nThis needs to be fixed first.\n\n";
 					exit(1);
@@ -204,8 +210,10 @@ eval
 							my $otter_type  = $gene->type;
 
 							# ----- update gene table -----
+							# update only HAVANA annotations
+							# ie, omit any gene type with prefix, eg GD:xxx
 	
-							if ( lc($otter_type) ne lc($hugo_type) ) {
+							if ( $otter_type !~ /:/ and lc($otter_type) ne lc($hugo_type)  ) {
 
 								$changed .= "   Found <TYPE> update: old gene type was \"$otter_type\"\n";
 
@@ -241,9 +249,12 @@ eval
 			print "\nNo gene type to update. Job terminated\n\n";
 		}
 		else {
-			print "\nGene name update is OK.\n" if $name || $sanger and !$test;
-			print "\nGene name update test is OK.\n" if $test;
-			print "\nGene type update is OK.\n" if $gtype;
+			print "\nGene name update is OK.\n"      if !$test and ($name or $sanger);
+			print "\nGene name update test is OK.\n" if  $test and ($name or $sanger);
+
+			print "\nGene type update is OK.\n"      if !$test and $gtype;
+			print "\nGene type update test is OK.\n" if  $test and $gtype;
+
 			$otter_db->commit unless $test;
 		}
 };
