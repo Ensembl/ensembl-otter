@@ -1,6 +1,6 @@
 #!/usr/local/bin/perl -w
 
-### backup_all_otter_submissions_databases from otterslave and archive on cbi1
+### backup_otter_submissions_db from otterslave and archive on cbi1
 ### running this script as a cron job on cbi1
 
 use strict;
@@ -173,7 +173,7 @@ sub cleanup_old_otter_dbs {
 
 __END__
 
-=head1 NAME - backup_all_otter_submission_databases
+=head1 NAME - backup_otter_submissions_db
 
 =head1 AUTHOR
 
