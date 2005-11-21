@@ -1,0 +1,173 @@
+#!/usr/local/bin/perl -w
+
+# farm_info
+
+# displays essential farm info about hosts(availability, low memory), users' running jobs, etc
+# Author: Chao-Kung Chen
+# Date  : 2005-03-31
+
+use Getopt::Long 'GetOptions';
+use Term::ANSIColor;
+
+my $buser;
+GetOptions('u|user=s' => \$buser);
+
+my $sep = '-' x 60 . "\n";
+
+my $pipebin = '/usr/local/lsf/bin/';
+
+#--------------------
+#    LSF busers
+#--------------------
+
+print $sep;
+set_color("magenta", "FARM USERS");
+print "\n";
+printf("%-10s\t%s\t%s\t%s\t%s\t%s\n", "USER", "JOBS", "PEND", "RUN", "SSUSP", "USUSP");
+
+my @busers = `$pipebin/busers all`;
+
+foreach (@busers ) {
+  chomp;
+
+  if ( $_ !~ /^(USER|default)/ ){
+	my ($user, $c2, $c3, $jobs, $pend, $run, $SSUSP, $USUSP) = split(/\s+/, $_);
+	if ( $jobs != 0 ) {
+	  if ( $user eq $buser ){
+		set_color("red", $user);
+		$user = ''; 
+	  }
+	  printf("%-10s\t%s\t%s\t%s\t%s\t%s\n", $user, $jobs, $pend, $run, $SSUSP, $USUSP);
+	}
+  }
+}
+
+
+#--------------------
+#     LSF bhosts
+#--------------------
+
+print $sep;
+set_color("magenta", "HOST STATUS INFO");
+print "\n";
+
+my @bhosts = `$pipebin/bhosts`;
+my $status_host = {};
+
+foreach ( @bhosts ) {
+  chomp;
+
+  if ( $_ !~ /^HOST/ ){
+	my ($host, $status) = split(/\s+/, $_);
+	if ( $host =~ /^(\w+)-.+/ ){
+	  $host = $1;
+	}
+	elsif ( $host =~ /^ecs/ ){
+	  $host = 'ecs';
+	}
+	elsif ( $host =~ /^pfam/ ){
+	  $host = 'pfam';
+	}
+	$status_host->{$status}->{$host}++;
+  }
+}
+
+foreach my $status ( keys %$status_host ){
+  my $count = 0;
+  my $info;
+  my $info_s = sprintf("%-10s", $status);
+  foreach my $host ( keys %{$status_host->{$status}} ){
+	$info .= sprintf("%-5s(%d)\t", $host, $status_host->{$status}->{$host});
+	$count += $status_host->{$status}->{$host};
+  }
+  printf("%s(%d)\t- %s\n", $info_s, $count, $info);
+
+}
+
+#--------------------
+#    LSF lsload
+#--------------------
+
+print $sep;
+set_color("magenta", "HOST LOW /tmp MEM INFO");
+print "\n";
+
+my @lsload = `$pipebin/lsload -R'select[tmp<1000]' -Itmp`;
+
+printf("%-10s\t%s\t%s\n", "HOST", "STATUS", "/tmp MEM < 1GB");
+
+foreach ( @lsload ) {
+  chomp;
+  if ( $_ !~ /^HOST/ ){
+	my ($host, $status, $tmp) = split(/\s+/, $_);
+	printf("%-10s\t%s\t%s\n", $host, $status, $tmp);
+  }
+}
+
+
+#--------------------
+#     LSF bjobs
+#--------------------
+
+print $sep;
+set_color("magenta", "JOBS INFO - user $buser");
+print "\n";
+
+printf("%-10s\t\t%s\t\t%s\t%s\n", "DATABASE", "ANALYSIS", "STATUS", "JOBS");
+
+my @status = `$pipebin/bjobs -l -u $buser | /bin/egrep "(^Job|Status)"`;
+
+# This output format depends on user bsub command and 
+# works on our current setting
+#Job <3684107>, Job Name <human_finished:Est2genome_other>, User <ck1>, Project
+
+my ($db, $logic_name, $status);
+my $db_logic_name_jobs_status = {};
+
+foreach ( @status ) {
+  chomp;
+  if ( $_ =~ /Job Name <(.+):(\w+)>,.+/ ){
+	$db = $1;
+	$logic_name = $2;
+  }
+  if ( $_ =~ /Status <(\w+)>,.+/ ){
+	my $status = $1;
+	$db_logic_name_jobs_status->{$db}{$logic_name}{$status}++;
+  }
+}
+
+
+foreach my $db ( sort keys %$db_logic_name_jobs_status ){
+  set_color("cyan", "$db\n");
+  foreach my $logicN ( keys %{$db_logic_name_jobs_status->{$db}} ){
+	printf("\t\t\t%s\n", $logicN);
+	foreach my $status ( keys %{$db_logic_name_jobs_status->{$db}{$logicN}} ){
+	  printf("\t\t\t\t\t\t%s\t%d\n", $status, $db_logic_name_jobs_status->{$db}{$logicN}{$status});
+	}
+  }
+}
+
+sub set_color {
+
+  my ($color, $info) = @_;
+
+  print color($color), "$info";
+  print color 'reset';
+}
+
+
+__END__
+
+
+
+lsload -R'select[tmp<100]' -Itmp
+
+will show you which machines currently have less than 100 MB of tmp space free.
+
+If jobs use a lot of tmp space, you should include tmp in your select[] and rusage[] resource requirements.  Say you need a gigabyte, that would mean:
+
+select[tmp>1000] rusage[tmp=1000]
+
+Since you also need a memory requirement, say, 1.5GB, you probably should include mem statements as well, and also a memory limit so that LSF will kill the job if it explodes:
+
+bsub -M 1500000 -R'select[mem>1500 && tmp>1000] rusage[mem=1500:tmp=1000]' ... 
