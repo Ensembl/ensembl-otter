@@ -1,0 +1,25 @@
+#!/usr/local/bin/bash
+
+# just run it to create a new server codebase in the current directory
+
+	# bioperl:
+wget http://bio.perl.org/DIST/bioperl-0.7.2.tar.gz
+gunzip bioperl-0.7.2.tar.gz
+tar -xvf bioperl-0.7.2.tar
+rm bioperl-0.7.2.tar
+
+	# old API ensembl:
+cvs -d :ext:cvs.sanger.ac.uk:/nfs/ensembl/cvsroot checkout -r branch-ensembl-19 ensembl
+
+	# old API otter:
+cvs -d :ext:cvs.sanger.ac.uk:/nfs/ensembl/cvsroot checkout ensembl-otter
+
+	# new API ensembl:
+cvs -d :ext:cvs.sanger.ac.uk:/nfs/ensembl/cvsroot checkout -d ensembl_head ensembl
+
+	# stop complaining about version incompatibility:
+touch .ensemblapi_no_version_check
+
+	# make it updateable by anyone in the group:
+chmod -R g+w *
+
