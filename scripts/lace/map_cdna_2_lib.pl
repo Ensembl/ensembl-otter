@@ -1,109 +1,121 @@
 #!/usr/local/bin/perl -w
 
-# map_cdna_2_lib.pl
-
 # ck1
+# Maps clones on plate to their clone_name and source libraries
+#      and write out cons files for each library
 
-# maps clones on plate to their clone_name and source libraries
-# also outputs a composite cons file for plate19
-
+# Run this script in the /nfs/disk100/humpub/est/tropicalis_cdna/tropicalis_load_x directory
 
 use strict;
-use Getopt::Long 'GetOptions';
-use DBI;
-use ck1_modules::MySQL_DB;
 
-my $cons_file = $ARGV[0];
-my $release   = $ARGV[1];
-my $dbname    = $ARGV[2];
+# currently, there are only 2 plate sources
+my $cons_file_1 = $ARGV[0];
+my $cons_file_2 = $ARGV[1];
 
-unless ( @ARGV == 3 ){
-  print "\nCommand: map_cdna_2_lib.pl cons_file release_date dbname\n\n";
-  exit;
-}
+my @plate_libs = qw(plate19.lib plate20.lib);
+my $cdna_lib = {};
 
-my $db = new MySQL_DB;
-my $dbh = $db->connect_db($dbname, "otterpipe2", 3303, "ottro", "");
+foreach my $lib ( @plate_libs ) {
+  open(my $fh, "/nfs/team71/analysis/ck1/FROG_PLATE_LIB/$lib") or die $!;
 
-# maps   eg: >XTropTFL19a01 FIN.0.1 (in plate19 cons file)
-# to   this: >TEgg001a21 TEgg
+  while (<$fh> ) {
+	chomp;
 
-my $cdna_lib = get_clone_mapping();
+	# Format of platexx.lib
+	# Lib     Pos     Src     Plate           Well
+	# TEgg    30      A8      XTropTFL19      I11
 
-sub get_clone_mapping {
+	next if $_ =~ /^#/;
 
-  my $sql = $dbh->prepare("SELECT * FROM clone_map");
-  $sql->execute;
+	my ( $lib, $pos, $src, $plate, $well ) = split(/\s+/, $_);
 
-  my $cdna_lib = {};
-
-  while ( my $href = $sql->fetchrow_hashref ){
-	
-	my $lib        = $href->{library};
-	my $src_plate  = $href->{src_plate};
-	my $src_well   = $href->{src_well};
-	my $dest_plate = $href->{dest_plate};
-	my $dest_well  = $href->{dest_well};
-
-	if ( $dest_well =~ /^([A-Z])(\d+)$/ ){
+	if ( $well =~ /^([A-Z])(\d+)$/ ) {
 	  my $alpha = $1;
 	  my $num = sprintf("%02d", $2);
-	  $dest_well = $alpha.$num;
+	  $well = $alpha.$num;
 	}
 
-	if ( $src_well =~ /^([A-Z])(\d+)$/ ){
+	if ( $src =~ /^([A-Z])(\d+)$/ ) {
 	  my $alpha = $1;
 	  my $num = sprintf("%02d", $2);
-	  $src_well = $alpha.$num;
+	  $src = $alpha.$num;
 	}
-	
-	$src_plate = sprintf("%03d", $src_plate);
-	
-	my $clonename = $lib.$src_plate.lc($src_well);
 
-	print $dest_plate.lc($dest_well), $lib, $clonename, "\n"; die;
-	push(@{$cdna_lib->{$dest_plate.lc($dest_well)}}, $lib, $clonename );
+	$pos = sprintf("%03d", $pos);
+
+	my $clonename = $lib.$pos.lc($src);
+	print "$clonename\n" if length $clonename == 9;
+
+	push(@{$cdna_lib->{$plate.lc($well)}}, $lib, $clonename );
   }
-
-  return $cdna_lib;
 }
 
-open(my $fh, "$cons_file") or die $!;
+#foreach ( sort keys %$cdna_lib ){
+#  print "$_ => @{$cdna_lib->{$_}}\n";
+#}
+#die;
 
+my @cons_files = ($cons_file_1,$cons_file_2);
 my $cdna_fasta = {};
-my ( $cdna, $lib );
 
-while (<$fh> ){
+foreach my $cons_file ( @cons_files ) {
 
-  #XTropTFL19p17 FIN.0.8
+  open(my $fh, "$cons_file") or die $!;
 
-  if ( $_ =~ />(XTropTFL19.+)\s(.+)/ ){
-	$cdna = $1;
- 	$lib = $cdna_lib->{$cdna}->[0];
-	my $clonename = $cdna_lib->{$cdna}->[1];
+  my ($fasta, $cdna, $lib, $plate);
 
-	my $header = ">$clonename $lib\n";
-	push(@{$cdna_fasta->{$lib}->{$cdna}}, $header);
-  }
-	
-  else {
-	push(@{$cdna_fasta->{$lib}->{$cdna}}, $_);
+  $plate = $cons_file;
+  $plate =~ s/\..+//;  # eg, p19, p20
+
+  while (<$fh> ) {
+
+	# format of cons file FASTA header
+	# >XTropTFL19p17 FIN.0.8
+	# >XTrop20d06 FIN.0.7
+
+	if ( $_ =~ />(XTropTFL19.+|XTrop20.+)\s.+/ ) {
+	  $cdna = $1;
+
+	  # the finishers has inconsisten format in cons file and
+	  # lib mapping layout
+
+	  $cdna =~ s/XTrop/XTropTFL/ if $cdna =~ /XTrop20/;
+
+	  $lib = $cdna_lib->{$cdna}->[0];
+	  my $clonename = $cdna_lib->{$cdna}->[1];
+
+	  my $header = ">$clonename $lib\n";
+	  push(@{$cdna_fasta->{$plate}->{$lib}->{$cdna}}, $header);
+	  	print $header;
+	}
+	else {
+	  push(@{$cdna_fasta->{$plate}->{$lib}->{$cdna}}, $_);
+	}
   }
 }
 
-# this file is equivalent to all_x_trop_yyyy_mm_dd.fasta
-# and needs to be loaded into database before blasting
+foreach my $cons_file ( @cons_files ) {
 
-my ($plate19);
-my $fasta = "all_plate19_". $release . ".fasta";
-open($plate19, ">>$fasta");
+  $cons_file =~ /(.+)\.(.+)/;
+  my $plate    = $1;
+  my $cons_ver = $2;
+  my $cons_dir = $plate."Cons";
 
-foreach my $lib ( keys %$cdna_fasta ){
-  foreach my $cdna ( keys %{$cdna_fasta->{$lib}} ){
-	print $plate19 @{$cdna_fasta->{$lib}->{$cdna}};
+  my ($egg, $gas, $neu, $tpa, $tba, $hda);
+
+  my $fh;
+  foreach my $lib ( keys %{$cdna_fasta->{$plate}} ) {
+
+	# make dirs for libs found in cons file
+	system("mkdir -p $cons_dir/$lib");
+
+	open($fh, ">>$cons_dir/$lib/$cons_ver");
+
+	foreach my $cdna ( keys %{$cdna_fasta->{$plate}->{$lib}} ) {
+	  print $fh @{$cdna_fasta->{$plate}->{$lib}->{$cdna}}, "\n";
+	}
   }
 }
-
 
 
 

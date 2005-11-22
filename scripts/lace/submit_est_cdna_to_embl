@@ -8,17 +8,31 @@ use strict;
 # submit_est_cdna_to_embl: wrapper to run various scripts of the cdna_db packages
 #                          for submitting cDNA to EMBL
 
+# --- other file locations
+my $EST            = "/nfs/disk100/humpub/est";
+my @load_fldrs     = glob("$EST/tropicalis_cdna/tropicalis_load*");
+my $new_load_fldr  = $load_fldrs[-1];
 
-#### modify variables, eg date of release, before running a new submission
+#### modify variables, eg date of release, cons file before running a new submission
+# ---------------                 modify this first:               ---------------
+
+my $cdna_db  = "tropicalis_cdna_2005_11_21";
+
+# For plate 19:
+#   Create a p19.consX file linking to /nfs/repository/p385/XTrop19/assembly/consX
+#   at /nfs/disk100/humpub/est/tropicalis_cdna/tropicalis_load_X directory
+
+# Similary for plate 20:
+#   the target file is /nfs/repository/p714/XTrop20/assembly/consX
+
+#----------------------------------------------------------------------------------
 
 my $taxon_id = 8364;
-my $cdna_db  = "tropicalis_cdna_2005_10_11";
 
 $cdna_db =~ /tropicalis_cdna_(.+)/;
 my $release_date = $1;
 
-# --- db conf files ---
-
+# ---------- db conf files -------- ---
 my ($cdna_db_conf_pipe, $blast_db_conf, $cdna_db_conf);
 #$cdna_db_conf_pipe = $blast_db_conf = "/ecs4/work5/finished/production/cdna_est/conf/cDNA_DB_trop.conf";
 
@@ -27,17 +41,10 @@ $cdna_db_conf_pipe = $blast_db_conf = $cdna_db_conf = "/ecs4/work5/finished/prod
 my $cdna_db_cbi1_conf = "/nfs/team71/analysis/ck1/SCRIPT_CVS/cdna_db/conf/ck1_cDNA_test.conf";
 my $est_db_conf       = "/nfs/team71/analysis/ck1/SCRIPT_CVS/est_db/conf/TROP_SUB_TEST.conf";
 
-# --- other file locations
+#----------- other files and working directories -------------
 
-my $EST            = "/nfs/disk100/humpub/est";
-my @load_fldrs     = glob("$EST/tropicalis_cdna/tropicalis_load*");
-my $new_load_fldr  = $load_fldrs[-1];
-
-
-my $file_list      = glob("$new_load_fldr/file_list*.txt");
+my $file_list      = glob("$new_load_fldr/file_list_${release_date}.txt");
 my $all_fasta      = "$new_load_fldr/all_x_trop_".$release_date.".fasta";
-my $plate19_fasta  = "$new_load_fldr/all_plate19_".$release_date.".fasta";
-
 
 my $embl_file      = "$EST/embl_temp/Xtrop/X_trop_cDNA_$release_date.embl";
 my $accepted_accs  = "$new_load_fldr/accepted_X_tropicalis_cDNAs_$release_date.fasta";
@@ -51,13 +58,26 @@ my $pipe_base = "/ecs4/work5/finished/production/cdna_est";
 
 my ($cwd, $s);
 
+#   0.    Prepare file list for EXTRACTING FASTA
+
+# Run eg /ecs4/work5/finished/ck1/PIPELINE/scripts/map_cdna_2_lib.pl p19.consX p20.consx
+# in the same directory. This should create p19Cons/Egg p19Cons/Gas ... subfolders, each of which
+# contains a consX file
+
+# Then prepare a file_list_yyyy_mm_dd.txt in this directory similar to:
+
+# Location of TEgg /nfs/repository/p385/Egg/assembly/cons9
+# Location of TEgg /nfs/disk100/humpub/est/tropicalis_cdna/tropicalis_load_9/p19Cons/Egg/cons3
+
+
 
 #	1.    EXTRACTING FASTA
 
 if ( $ARGV[0] == 1 ){
+
   print STDOUT "1.    EXTRACTING FASTA\n\n";
 
-  $cwd = "$pipe_base/sanger";
+  $cwd = "$base/cdna_db/sanger";
   $s = system("$cwd/extract_fasta_from_finished_directories --dir_file=$file_list --use_library --output_file=$all_fasta");
   check_status($s);
 }
@@ -69,11 +89,9 @@ if ( $ARGV[0] == 1 ){
 if ( $ARGV[0] == 2 ){
   print STDOUT "2.   LOADING CLONES\n\n";
 
-  $cwd = "$pipe_base/scripts";
-  $s = system("$cwd/load_cdna_clones_from_fasta --db_conf=$cdna_db_conf_pipe --fasta_file=$all_fasta --taxon_id=$taxon_id");
-  check_status($s);
+  $cwd = "$base/cdna_db/scripts";
+  $s = system("perl $cwd/load_cdna_clones_from_fasta --db_conf=$cdna_db_cbi1_conf --fasta_file=$all_fasta --taxon_id=$taxon_id");
 
-  $s = system("$cwd/load_cdna_clones_from_fasta --db_conf=$cdna_db_conf_pipe --fasta_file=$plate19_fasta --taxon_id=$taxon_id");
 
  #$s = system("$cwd/test_sanger_id --db_conf=$cdna_db_conf_pipe --fasta_file=$all_fasta --taxon_id=$taxon_id");
   check_status($s);
@@ -119,7 +137,13 @@ if ( $ARGV[0] == 5 ){
   print STDOUT "5.   LOAD_ESTS\n\n";
 
   $cwd = "$pipe_base/sanger";
-  $s = system("$cwd/copy_EST_DB_to_cDNA_DB --clone_fasta=$all_fasta --est_db_conf=$est_db_conf --cdna_db_conf=$cdna_db_conf_pipe");
+
+  # to run on esc4
+  #$s = system("$cwd/copy_EST_DB_to_cDNA_DB --clone_fasta=$all_fasta --est_db_conf=$est_db_conf --cdna_db_conf=$cdna_db_conf_pipe");
+
+  # to run on cbi1
+  $s = system("perl $base/cdna_db/sanger/copy_EST_DB_to_cDNA_DB --clone_fasta=$all_fasta --est_db_conf=$est_db_conf --cdna_db_conf=$cdna_db_cbi1_conf");
+
   check_status($s);
 }
 
@@ -133,12 +157,18 @@ if ( $ARGV[0] == 6 ){
   print STDOUT "6.   CHECK CLONE IDENTITY\n\n";
 
 
-  #Checking the newly-loaded clones at 84%
-#  $cwd = "$pipe_base/scripts";
+  #Checking the newly-loaded clones
+
+  #  $cwd = "$pipe_base/scripts";
   $cwd = "$base/cdna_db/scripts";
-  $s = system("perl $cwd/check_clone_identity --db_conf=$cdna_db_cbi1_conf");
-  check_status($s);
+
+ # $s = system("perl $cwd/check_clone_identity --db_conf=$cdna_db_cbi1_conf");
+ # check_status($s);
   $s = system("perl $cwd/check_clone_identity --db_conf=$cdna_db_cbi1_conf --all_unconfirmed");
+
+  # for debugging
+  #$s = system("perl $cwd/check_clone_identity --db_conf=$cdna_db_cbi1_conf --all_unconfirmed --output_aligns --debug");
+
   check_status($s);
 }
 
@@ -169,6 +199,11 @@ if ( $ARGV[0] == 81 ){
 
 #	9.   UPDATE_CLONES_CURRENT_VERSION
 
+#   This does not change submission_status, ie,
+#   before submission the status of all new clones is always "created"
+#   After running this script the current_version value will be changed from "unchecked" to 
+#   "yes" or "no" based on identity_correct and frame_shift columns
+
 if ( $ARGV[0] == 9 ){
   print STDOUT "9.   UPDATE_CLONES_CURRENT_VERSION\n\n";
   $cwd = "$pipe_base/submissions";
@@ -181,7 +216,12 @@ if ( $ARGV[0] == 9 ){
 #         Note: clones with submission_status='withdrawing' need to be withdrawn
 #               by contacting the EMBL staff at EBI.
 #               Once withdrawn, their submission_status need to be set
-#               to 'withdrawn' in clone table
+#               to 'withdrawn' in clone table otherwise submit_and_withdraw_clones script will exit
+
+#               If accepted clone needed to be withdrawn, set manual_kill value to "yes"
+#               and the script will not submit it:
+#                accepted  ->check manual kill = 'no' may need to withdraw EMBL entry
+
 
 
 if ( $ARGV[0] == 10 ){
@@ -218,7 +258,6 @@ if ( $ARGV[0] == 11 ){
   print STDOUT "Created EMBL flatfile: $embl_file\n\n";
   check_status($s);
 }
-
 
 #------------------------------------
 #       PRE submission step
