@@ -764,7 +764,7 @@ sub write_pipeline_data {
     my $ens_db = $dataset->get_cached_DBAdaptor();
     my $fetch_pipe = Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
     if ($fetch_pipe) {
-	    my $pipe_db = Bio::Otter::Lace::PipelineDB::get_DBAdaptor($ens_db);
+	    my $pipe_db = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($ens_db);
 	    $ens_db = $pipe_db;
         #$pipe_db->dnadb($ens_db->dnadb);
     }
