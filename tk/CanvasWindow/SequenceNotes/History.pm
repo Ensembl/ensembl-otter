@@ -185,12 +185,11 @@ sub initialise {
 
     $self->make_button($button_frame, 'Close', sub { $top->withdraw }, 0);
 
-    # I think this is already bound.....
     # It all gets cleared up twice with it.
     # And I think normal behaviour without it.
     $self->bind_close_window($top);
 
-    $canvas->bind('<Destroy>', sub { $self = undef });
+    $canvas->Tk::bind('<Destroy>', sub { $self = undef });
     return $self;
 }
 
