@@ -48,7 +48,7 @@ my $CHILDREN = 0;     # current number of children
 ###############################################################################
 sub server_log {
     my $line = shift @_;
-    print STDERR ''.(($line ne '') ? "[otter_srv|$$] $line\n" : "\n");
+    print STDERR ''.(($line ne '') ? "[otter_srv:$OTTER_SERVER_PORT|$$] $line\n" : "\n");
 }
 ###############################################################################
 
