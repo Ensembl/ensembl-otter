@@ -41,6 +41,7 @@ sub Bio::EnsEMBL::DBEntry::toXMLstring {
     $str .= emit_tagpair('version', $dbentry->version(), 4);
     $str .= emit_tagpair('release', $dbentry->release(), 4);
     $str .= emit_tagpair('dbname', $dbentry->dbname(), 4);
+    $str .= emit_tagpair('description', $dbentry->description(), 4);
     $str .= emit_closing_tag('xref',2);
 
     return $str;
