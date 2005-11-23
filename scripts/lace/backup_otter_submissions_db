@@ -1,6 +1,6 @@
 #!/usr/local/bin/perl -w
 
-### backup_otter_submissions_db from otterslave and archive on cbi1
+### backup_all_otter_submissions_databases from otterslave and archive on cbi1
 ### running this script as a cron job on cbi1
 
 use strict;
@@ -11,7 +11,7 @@ use File::Path 'rmtree';
     umask(002);
     {
         my $path = $ENV{'PATH'};
-        $ENV{'PATH'} = "/usr/local/bin:/usr/apps/bin:$path";
+        $ENV{'PATH'} = "//usr/local/mysql-standard-4.1.14-dec-osf5.1b-alphaev67/bin:usr/local/bin:/usr/apps/bin:$path";
     }
 
     my $user = 'ottadmin';
@@ -32,8 +32,9 @@ use File::Path 'rmtree';
         $user, $password, {RaiseError => 1});
     my $dbs = list_otter_databases($dbh);
   
-#    my $mysql_dump = "mysqldump --opt --single-transaction --quick --user=$user --password=$password --host=$host --port=$port ";
-    my $mysql_dump = "mysqldump --opt --quick --user=$user --password=$password --host=$host --port=$port ";
+    # As all tables are Innodb skip locking with single transaction would give
+    # a consistent backup
+    my $mysql_dump = "mysqldump --skip-lock-tables --single-transaction --user=$user --password=$password --host=$host --port=$port ";
     
     my $err_count = 0;
     my $backup_start = time;
@@ -173,7 +174,7 @@ sub cleanup_old_otter_dbs {
 
 __END__
 
-=head1 NAME - backup_otter_submissions_db
+=head1 NAME - backup_all_otter_submission_databases
 
 =head1 AUTHOR
 
