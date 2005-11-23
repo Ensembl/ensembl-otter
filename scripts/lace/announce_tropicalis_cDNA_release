@@ -1,0 +1,90 @@
+#!/usr/local/bin/perl -w
+
+unless ( $ARGV[0] ){
+  die "\nNeed to enter release date of this database, eg, 2005_10_11\n\n";
+}
+
+#-----------------------------------------------
+# Mailing list (contains estdb mailing list *)
+#-----------------------------------------------
+
+my @emails = qw(
+Blumberg@uci.edu
+EALindquist@lbl.gov
+aaron.zorn@chmcc.org
+christophe.klopp@toulouse.inra.fr
+ck1@sanger.ac.uk
+dg1@sanger.ac.uk
+ea3@mole.bio.cam.ac.uk
+ealindquist@lbl.gov
+gerhardd@mail.nih.gov
+jgrg@sanger.ac.uk
+jim@gurdon.cam.ac.uk
+jkb@sanger.ac.uk
+jla1@sanger.ac.uk
+jrh@sanger.ac.uk
+kj2@sanger.ac.uk
+m.gilchrist@gurdon.cam.ac.uk
+np209@cam.ac.uk
+np209@mole.bio.cam.ac.uk
+pbbrokstein@lbl.gov
+rgt@sanger.ac.uk
+rmd@sanger.ac.uk
+simon.hubbard@umist.ac.uk
+th@sanger.ac.uk
+wagner@ncbi.nlm.nih.gov
+);
+
+# testing
+
+#my @emails = qw(
+#ck1@sanger.ac.uk
+#ckpapa@yahoo.com
+#ckchen@tiscali.co.uk
+#);
+
+my $mesg =<<MSG;
+
+Dear X. tropicalis researcher:
+
+A new release ($ARGV[0]) is now available at ftp://ftp.sanger.ac.uk/pub/EST_data/Xenopus/FINISHED_cDNAs/ .
+
+In this release it sees the addition of sequences from 2 new libraries:  
+'THdA' (dissected heads from tailbud embryos) and 'TTbA' (tailbud embryos).
+
+For more infomation regarding stats of this release please refer to the release letter on the FTP site.
+
+Best regards.
+
+Chao-Kung
+
+On behalf of the submitting authors:
+
+Amaya E., Harrow J.L., Bonfield J.K., Chen, C-K., Davies R.M.,
+Francis M.D., Garrett N., Gilchrist M.J., Grafham D.V., McLaren, S.,
+Papalopulu N., Rogers J., Smith J.C., Taylor R.G., Voigt J., Zorn A.M.
+
+
+==========================================
+ Chao-Kung Chen
+ Finished Sequence Analysis Group
+ The Wellcome Trust Sanger Institute,
+ Morgan Building
+ Hinxton, Cambridge, CB10 1HH, UK.
+ Tel: (+44) 1223 496872
+ Fax: (+44) 1223 494919
+==========================================
+
+MSG
+
+
+foreach my $email ( @emails ){
+
+  my ($name, $domain) = split(/@/, $email);
+
+  my $mail;
+  open $mail, "| mailx -s 'New X. tropicalis cDNA release' $name\@$domain " 
+	or die "Can't open email pipe: $!";
+
+  print $mail $mesg;
+}
