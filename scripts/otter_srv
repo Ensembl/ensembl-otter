@@ -48,7 +48,7 @@ my $CHILDREN = 0;     # current number of children
 ###############################################################################
 sub server_log {
     my $line = shift @_;
-    print STDERR ''.(($line ne '') ? "[otter_srv:$OTTER_SERVER_PORT|$$] $line\n" : "\n");
+    print STDERR ''.(($line ne '') ? "[otter_srv:$OTTER_SERVER_PORT|pid=$$] $line\n" : "\n");
 }
 ###############################################################################
 
@@ -122,7 +122,7 @@ sub make_new_child {
 ###########################################################################################
         $CHILDREN{$pid} = 1;
         $CHILDREN++;
-        server_log("Child born: $pid (Total children: $CHILDREN)") if $DEBUG;
+        server_log("Child born: pid=$pid (Total children: $CHILDREN)") if $DEBUG;
         return;
     }
     else {
@@ -313,7 +313,7 @@ sub make_pid_file {
     open(PID, "> $pidfile") or die "Cannot write to pid file '$pidfile': $!\n";
     print PID "$$\n";
     close(PID);
-    server_log("Parent pid on $HOSTNAME: $$");
+    server_log("Parent is $HOSTNAME|pid=$$");
     return;
 }
 
