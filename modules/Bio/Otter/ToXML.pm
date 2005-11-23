@@ -117,12 +117,9 @@ sub Bio::EnsEMBL::Transcript::toXMLstring {
         ($tl_start, $tl_end) = ($strand == 1)
                                 ? ($tran_low + $coord_offset, $tran_high + $coord_offset)
                                 : ($tran_high + $coord_offset, $tran_low + $coord_offset);
-        # $str .= emit_tagpair('translation_start', $tl_start, 4);
-        # $str .= emit_tagpair('translation_end', $tl_end, 4);
-        # $str .= emit_tagpair('translation_stable_id', $tsl->stable_id(), 4);
     }
 
-    EXON: foreach my $exon (sort {$a->start <=> $b->start} @{$transcript->get_all_Exons()}) {
+    EXON: foreach my $exon (@{$transcript->get_all_Exons()}) {
 
         # print STDERR "start=".$exon->start." end=".$exon->end." slice->length=".$slice_length."\n";
             # trimming done before sending - and we lose the translation :(
