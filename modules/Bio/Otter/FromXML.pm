@@ -344,6 +344,8 @@ sub build_DBEntry {
                 $dbentry->release($data);
             } elsif($tag eq 'dbname') {
                 $dbentry->dbname($data);
+            } elsif($tag eq 'description') {
+                $dbentry->description($data);
             }
         }
     }
