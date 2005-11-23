@@ -114,7 +114,7 @@ sub render {
 
         my( $left_overhang, $right_overhang );
         #if ($map_c->orientation == 1) {
-	if ($raw_ori == 1) {
+	    if ($raw_ori == 1) {
             $left_overhang  = $raw_start - 1;
             $right_overhang = $length - $raw_end;
         } else {
