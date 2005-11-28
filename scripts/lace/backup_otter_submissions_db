@@ -6,6 +6,7 @@
 use strict;
 use DBI;
 use File::Path 'rmtree';
+use Net::Netrc;
 
 {
     umask(002);
@@ -14,11 +15,9 @@ use File::Path 'rmtree';
         $ENV{'PATH'} = "//usr/local/mysql-standard-4.1.14-dec-osf5.1b-alphaev67/bin:usr/local/bin:/usr/apps/bin:$path";
     }
 
-    my $user = 'ottadmin';
     my $host = 'otterslave';
+    my $mach = Net::Netrc->lookup($host);
     my $port = '3311';
-    # Can add password with netrc if needed
-    my $password = 'wibble';
     my $base_dir = '/nfs/disk100/humpub/data/mysql_backup/otter_submissions';
     my $archive_dir = '/nfs/disk100/humpub/data/mysql_backup/otter_submissions/OTTER_SUBMISSIONS_ARCHIVE';
     cleanup_old_otter_dbs($base_dir);
@@ -26,9 +25,11 @@ use File::Path 'rmtree';
     my $working_dir = "$base_dir/$date_dir";
     mkdir($working_dir) or die "Can't create '$working_dir' directory : $!";
     chdir($working_dir) or die "Can't chdir to '$working_dir' : $!";
-    
+    my $user = $mach->login;
+    my $password = $mach->password;
+
     my $dbh = DBI->connect(
-        "DBI:mysql:host=otterslave:port=3311",
+        "DBI:mysql:host=$host:port=3311",
         $user, $password, {RaiseError => 1});
     my $dbs = list_otter_databases($dbh);
   
@@ -42,7 +43,9 @@ use File::Path 'rmtree';
         eval {
             print STDERR "Backing up '$db_name'\n";
             $dbh->do("use $db_name");
-            check_database_not_too_big($dbh);
+	    if ( $db_name =~  /^otter/i) {
+		check_database_not_too_big($dbh);
+	    }
             backup_otter_database($dbh, $mysql_dump, $db_name);
         };
         if ($@) {
