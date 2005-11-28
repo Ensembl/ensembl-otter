@@ -1,0 +1,72 @@
+#!/usr/local/bin/perl -w
+
+### fix_sick_kids_genes
+
+use strict;
+use Bio::Otter::Lace::Defaults;
+
+{
+    my $dataset_name = 'human';
+    my $set_name = 'chr7-02';
+
+    my $usage = sub { exec('perldoc', $0) };
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'       => $usage,
+        'dataset=s'     => \$dataset_name,
+        'set|chr=s'     => \$set_name,
+        ) or $usage->();
+    $usage->() unless $dataset_name and $set_name;
+    
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    
+    # SequenceSet contains a list of CloneSequence objects
+    # in the assembly.
+    my $ss = $ds->get_SequenceSet_by_name($set_name);
+    $ds->fetch_all_CloneSequences_for_SequenceSet($ss);
+    $ss->selected_CloneSequences($ss->CloneSequence_list);
+    
+    my $otter_dba = $ds->get_cached_DBAdaptor;
+    $otter_dba->assembly_type($set_name);   # Really shouldn't need this!
+    
+    my ($chr, $chr_start, $chr_end) = $cl->chr_start_end_from_contig($ss->selected_CloneSequences);
+    warn "$chr $chr_start $chr_end";
+    my $slice = $otter_dba->get_SliceAdaptor->fetch_by_chr_start_end($chr, $chr_start, $chr_end);
+    
+    my $geneAd = $otter_dba->get_GeneAdaptor;
+    my $latest_gene_id = $geneAd->list_current_dbIDs_for_Slice($slice);
+    @$latest_gene_id = sort {$b <=> $a} @$latest_gene_id;
+    
+    my $fix_type = $otter_dba->prepare(q{
+        UPDATE gene
+        SET type = ?
+        WHERE gene_id = ?
+        });
+    
+    foreach my $gene_id (@$latest_gene_id) {
+        my $gene = $geneAd->fetch_by_dbID($gene_id);
+        my $name = $gene->gene_info->name->name;
+        my $type = $gene->type;
+        if ($type =~ /^SK:/ and $name !~ /^SK:/) {
+            printf STDERR "$type gene_id=%d $name gene_info_id=%d\n", $gene_id, $gene->gene_info->dbID;
+            $type =~ s/^SK://;
+            $fix_type->execute($type, $gene_id);
+        }
+    }
+}
+
+
+
+
+
+__END__
+
+=head1 NAME - fix_sick_kids_genes
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
