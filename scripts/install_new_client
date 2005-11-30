@@ -1,0 +1,61 @@
+#!/usr/local/bin/perl -w
+
+if(scalar(@ARGV)!=3) {
+	print STDERR "usage:\n";
+	print STDERR "\t$0 humpub-release-NN new_directory your_CVS_username\n";
+	exit 0;
+}
+my ($new_tag, $new_dir, $user) = @ARGV;
+
+# ----------------------------------------------------------------------
+
+my %mod2location = (
+	'ace_skeleton'     => '/nfs/humace2/CVS_master',
+	'PerlModules'      => '/nfs/humace2/CVS_master',
+	'tk'               => '/nfs/humace2/CVS_master',
+	'ensembl-ace'      => ":ext:${user}\@cvs.sanger.ac.uk:/nfs/ensembl/cvsroot",
+	'ensembl-otter'    => ":ext:${user}\@cvs.sanger.ac.uk:/nfs/ensembl/cvsroot",
+
+	'ensembl'          => ":ext:${user}\@cvs.sanger.ac.uk:/nfs/ensembl/cvsroot",
+	'ensembl-pipeline' => ":ext:${user}\@cvs.sanger.ac.uk:/nfs/ensembl/cvsroot",
+);
+
+my %mod2tag = (
+	'ensembl'	   => 'branch-ensembl-19',
+	'ensembl-pipeline' => 'branch-finished-19',
+);
+
+my $tagfile = 'CVS_TAG';
+
+# ----------------------------------------------------------------------
+
+mkdir($new_dir);
+chdir($new_dir);
+system("echo $new_tag > $tagfile");
+
+foreach my $mod (keys %mod2location) {
+	my $location = $mod2location{$mod};
+	if($location=~/\@/) {
+		print "\nPlease enter your CVS password below\n";
+	}
+	my $this_tag = $mod2tag{$mod} || $new_tag;
+	system('cvs', '-d', $mod2location{$mod}, 'export', '-r', $this_tag, $mod);
+}
+
+system('cp', (map { 'ace_skeleton/'.$_ } ('methods.ace', 'otter_config', 'newpipe_otter_config')), '.');
+chdir('ace_skeleton');
+system('tar', '-cvf', '../lace_acedb.tar', 'database', 'wgf', 'wscripts', 'wspec');
+chdir('..');
+
+system('wget', 'http://bio.perl.org/DIST/bioperl-0.7.2.tar.gz');
+system('gunzip', 'bioperl-0.7.2.tar.gz');
+system('tar', '-xvf', 'bioperl-0.7.2.tar');
+system('rm', 'bioperl-0.7.2.tar');
+
+system('wget', 'http://bio.perl.org/DIST/bioperl-1.2.tar.gz');
+system('gunzip', 'bioperl-1.2.tar.gz');
+system('tar', '-xvf', 'bioperl-1.2.tar');
+system('rm', 'bioperl-1.2.tar');
+
+system('chmod -R g+w *');
+
