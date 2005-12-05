@@ -618,7 +618,7 @@ sub run_lace_on_slice{
             my $minOK = $cur_e >= $start || 0;
             my $maxOK = $cur_s <= $end   || 0;
             my $both  = $minOK & $maxOK;
-            warn "Comparing $cur_s to (<) $end and $cur_e to (>) $start, Found: $minOK, $maxOK, $both \n";
+            #warn "Comparing $cur_s to (<) $end and $cur_e to (>) $start, Found: $minOK, $maxOK, $both \n";
             push(@selection, $i) if $both;                                      
         }
         $selected = [ @{$cs_list}[@selection] ];
@@ -792,8 +792,6 @@ sub init_AceDatabase {
     $db->write_local_blast($ss);
     #warn "write_pipeline_data";
     $db->write_pipeline_data($ss);
-    #warn "write_das";
-    #$db->write_das($ss);
     #warn "write_methods_acefile";
     $db->write_methods_acefile;
     #warn "initialize_database";
