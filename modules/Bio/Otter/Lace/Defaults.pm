@@ -137,7 +137,6 @@ sub do_getopt {
             my $opts = options_from_file($_[1]);
             push(@$CONFIG_INIFILES, $opts) if $opts;
         },
-        'das!' => sub { $DEFAULTS->{$CLIENT_STANZA}->{'das'} = $_[1] },
         'log-file=s' => sub { die "log-file option is obsolete - use logdir" },
 
         # these are the caller script's options
@@ -498,7 +497,4 @@ annotation=Transcript
 prediction=ensembl,est_genes,fgenesh,genscan,HALFWISE
 simple=repeats,cpg_islands
 alignments=BLASTN,BLASTX,Uniprot
- 
-[ace.method.specialDASAnalysis]
-group=simple
-other=name
+

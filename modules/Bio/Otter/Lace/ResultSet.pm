@@ -7,8 +7,9 @@ package Bio::Otter::Lace::ResultSet;
 use Data::Dumper ;
 use strict;
 use Carp;
+use Hum::Sort 'ace_sort';
 
-my $DEBUG = 0;
+my $DEBUG = 1;
 
 sub new {
     my $pkg = shift;
@@ -48,14 +49,6 @@ sub get_all_SequenceSets{
     return $self->{'_rs_sequence_sets'};
 }
 
-sub search_array{
-    my ($self , $string) = @_ ;
-    if ($string){
-        $self->{'_search_string'} = $string ;           
-    }
-    return $self->{'_search_string'}; 
-}
-
 sub search_type{
     my ($self , $type) = @_;
 
@@ -88,7 +81,7 @@ sub execute_search{
     }
 }
 
-sub fetch_Clones_containing_stable_id{
+sub fetch_Clones_containing_stable_id {
     my ($self, $stable_ids) = @_;
 
     confess "Missing locus name argument " unless ($stable_ids);
@@ -100,9 +93,9 @@ sub fetch_Clones_containing_stable_id{
     my $prefix_species = $meta_con->get_species_prefix() || confess "Missing prefix.species in meta table ";
 
     my $stable_id_types = {};
-    foreach my $id(@$stable_ids){
+    foreach my $id (map uc, @$stable_ids) {
         if($id =~ /^$prefix_primary$prefix_species([TPGE])\d+/i){
-            push(@{$stable_id_types->{uc $1}}, $id);
+            push(@{$stable_id_types->{$1}}, $id);
         }else{
             print STDERR "'$id' doesn't look like a stable id. It doesn't start with '$prefix_primary$prefix_species'\n";
         }
@@ -111,7 +104,7 @@ sub fetch_Clones_containing_stable_id{
     my $geneAdapt       = $dba->get_GeneAdaptor();
     my $exonAdapt       = $dba->get_ExonAdaptor();
     my $transcriptAdapt = $dba->get_TranscriptAdaptor();
-    my $clone_names     = {};
+    my %contig_ids;
 
     $stable_id_types->{'G'} ||= [];
     foreach my $stable_id (@{$stable_id_types->{'G'}}){
@@ -120,9 +113,9 @@ sub fetch_Clones_containing_stable_id{
             my $geneObj     = $geneAdapt->fetch_by_stable_id($stable_id);
             # print STDERR "Found '$stable_id' with version " . $geneObj->version . "\n";
             foreach my $exonObj(@{$geneObj->get_all_Exons}){
-                my $clone_name = $exonObj->contig->clone->id();
-                #print STDERR "Found '$clone_name'\n";
-                $clone_names->{$clone_name} = 1;
+                my $contig_id = $exonObj->contig->dbID;
+                #print STDERR "Found '$contig_id'\n";
+                $contig_ids{$contig_id} = 1;
             }
         };        
         if ($@){
@@ -138,9 +131,9 @@ sub fetch_Clones_containing_stable_id{
             my $transcriptObj     = $transcriptAdapt->fetch_by_stable_id($stable_id);
             # print STDERR "Found '$stable_id' with version " . $transcriptObj->version . "\n";
             foreach my $exonObj(@{$transcriptObj->get_all_Exons}){
-                my $clone_name = $exonObj->contig->clone->id();
-                #print STDERR "Found '$clone_name'\n";
-                $clone_names->{$clone_name} = 1;
+                my $contig_id = $exonObj->contig->dbID;
+                #print STDERR "Found '$contig_id'\n";
+                $contig_ids{$contig_id} = 1;
             }
         };        
         if ($@){
@@ -156,9 +149,9 @@ sub fetch_Clones_containing_stable_id{
             my $transcriptObj     = $transcriptAdapt->fetch_by_translation_stable_id($stable_id);
             print STDERR "Found transcript with id '".$transcriptObj->stable_id."' & version " . $transcriptObj->version . "\n";
             foreach my $exonObj(@{$transcriptObj->get_all_Exons}){
-                my $clone_name = $exonObj->contig->clone->id();
-                #print STDERR "Found '$clone_name'\n";
-                $clone_names->{$clone_name} = 1;
+                my $contig_id = $exonObj->contig->dbID;
+                #print STDERR "Found '$contig_id'\n";
+                $contig_ids{$contig_id} = 1;
             }
         };        
         if ($@){
@@ -173,9 +166,9 @@ sub fetch_Clones_containing_stable_id{
             print STDERR "Looking for '$stable_id' and assuming it's an exon\n";
             my $exonObj     = $exonAdapt->fetch_by_stable_id($stable_id);
             print STDERR "Found exon with id '".$exonObj->stable_id."' & version " . $exonObj->version . "\n";
-            my $clone_name = $exonObj->contig->clone->id();
-            #print STDERR "Found '$clone_name'\n";
-            $clone_names->{$clone_name} = 1;
+            my $contig_id = $exonObj->contig->dbID;
+            #print STDERR "Found '$contig_id'\n";
+            $contig_ids{$contig_id} = 1;
         
         };        
         if ($@){
@@ -185,10 +178,9 @@ sub fetch_Clones_containing_stable_id{
 
     }
 
-    my @cl_names = keys(%$clone_names);
-    if (@cl_names){
-        print STDERR "Found " . join(', '=> @cl_names)  . "\n";
-        return $self->fetch_Clones_containing_CloneNames( \@cl_names);    
+    if (keys %contig_ids){
+        print STDERR "Found " . join(', ', keys %contig_ids)  . "\n";
+        return $self->fetch_Clones_containing_ContigIDs([keys %contig_ids]);    
     }
     else{
         return 0 ;
@@ -199,8 +191,6 @@ sub fetch_Clones_containing_locus{
     my ($self, $locus_names) = @_ ;
     
     confess "Missing locus name argument " unless ($locus_names);
-    
-    my $locus_names_string = join(',', map "'$_'", @$locus_names);
 
     my $dba = $self->DataSet->get_cached_DBAdaptor ;    
     
@@ -208,20 +198,18 @@ sub fetch_Clones_containing_locus{
     my $geneSynAdapt  = $dba->get_GeneSynonymAdaptor();
     my $geneInfoAdapt = $dba->get_GeneInfoAdaptor();
     my $geneAdapt     = $dba->get_GeneAdaptor();
-    my $clone_names   = {};
+    my %contig_ids;
     
     foreach my $locus_name (@$locus_names){
         eval{
-            print STDERR "Looking for $locus_name\n";
             my $geneNameObjList = $geneNameAdapt->fetch_by_name($locus_name);
             my $geneSynObjList  = $geneSynAdapt->fetch_by_name($locus_name);
             foreach my $geneNameObj (@$geneNameObjList, @$geneSynObjList){
                 my $geneInfoObj = $geneInfoAdapt->fetch_by_dbID($geneNameObj->gene_info_id());    
                 my $geneObj     = $geneAdapt->fetch_by_stable_id($geneInfoObj->gene_stable_id());
                 foreach my $exonObj(@{$geneObj->get_all_Exons}){
-                    my $clone_name = $exonObj->contig->clone->id();
-                    print STDERR "Found '$clone_name'\n";
-                    $clone_names->{$clone_name} = 1;
+                    my $contig_id = $exonObj->contig->dbID;
+                    $contig_ids{$contig_id} = 1;
                 }
             }
         };
@@ -232,71 +220,106 @@ sub fetch_Clones_containing_locus{
             print $@ if $DEBUG;
         }
     }
-    my @cl_names = keys(%$clone_names);
-    print STDERR "Found " . join(', '=> @cl_names)  . "\n";
-    if (@cl_names){
-        return $self->fetch_Clones_containing_CloneNames( \@cl_names);    
+    if (keys %contig_ids){
+        return $self->fetch_Clones_containing_ContigIDs(keys %contig_ids);    
     }
     else{
         return 0 ;
     }
 }
 
-sub fetch_Clones_containing_CloneNames{
-    my ($self , $clone_names) = @_ ;
-    
-    # this bit is not really necessary, but may be useful if we want a 'refresh' option 
-    if ($clone_names){
-        $self->search_array($clone_names) ;
-    }else{
-        $clone_names = $self->search_array;
-    }
-    confess "Missing clone names argument " unless $clone_names ;
-    
-    my $clone_names_string = join(',', map "'$_'", @$clone_names);
+sub fetch_Clones_containing_CloneNames {
+    my ($self, $clone_names) = @_;
+
+    # Matching of varchar and text columns in MySQL is case
+    # insensitive, but the matching from the CONCAT() command
+    # contained in the query below is case sensitive. We
+    # therefore uppcase the clone names in the string and
+    # use UPPER() around CONCAT() in the SQL.
+    my $clone_names_string = join(',', map "'\U$_'", @$clone_names);
     warn "looking for clone names $clone_names_string" if $DEBUG;
- 
-    
-    my $dba= $self->DataSet->get_cached_DBAdaptor ;
-    my %id_chr = map {$_->chromosome_id, $_} $self->DataSet->get_all_Chromosomes;
-    my %cs_hash ;
+    my $sql = qq{
+        SELECT DISTINCT g.contig_id
+        FROM clone c
+          , contig g
+        WHERE c.clone_id = g.clone_id
+          AND (c.name IN ($clone_names_string)
+               OR c.embl_acc IN ($clone_names_string)
+               OR UPPER(CONCAT(c.embl_acc
+                      , '.'
+                      , c.embl_version)) IN ($clone_names_string))
+        };
+    warn $sql if $DEBUG;
+    my $sth = $self->DataSet->get_cached_DBAdaptor->prepare($sql);
+    $sth->execute;
+    my $ctg_id_list = [];
+    while (my ($ctg_id) = $sth->fetchrow) {
+        push(@$ctg_id_list, $ctg_id);
+    }
+    if (@$ctg_id_list) {
+        return $self->fetch_Clones_containing_ContigIDs($ctg_id_list);
+    } else {
+        return 0;
+    }
+}
+
+sub fetch_Clones_containing_ContigIDs {
+    my ($self, $ctg_id_list) = @_;
+
+    my $ctg_str = join ',', @$ctg_id_list;
+
+    my %id_chr =
+      map { $_->chromosome_id, $_ } $self->DataSet->get_all_Chromosomes;
+    my %cs_hash;
 
     my $results = 0;
-    my $sth = $dba->prepare (qq{
-        SELECT 
---            DISTINCT 
-            cl.name, cl.embl_acc, cl.embl_version 
-            , c.contig_id, c.name, c.length	
-            , a.chromosome_id, a.chr_start, a.chr_end
-            , a.contig_start, a.contig_end, a.contig_ori
-            , a.type
-            , lk.clone_lock_id
-        FROM assembly a, contig c STRAIGHT_JOIN clone cl
-        LEFT JOIN clone_lock lk ON lk.clone_id = cl.clone_id
-        WHERE cl.clone_id = c.clone_id
-        AND a.contig_id = c.contig_id
-        AND (cl.name IN ($clone_names_string)
-             OR cl.embl_acc IN ($clone_names_string)
-             OR CONCAT(cl.embl_acc, '.', cl.embl_version) IN ($clone_names_string))
-        ORDER BY a.chromosome_id , a.chr_start
-    });
-
+    my $sql = qq{
+        SELECT c.name
+          , c.embl_acc
+          , c.embl_version
+          , g.contig_id
+          , g.name
+          , g.length
+          , a.chromosome_id
+          , a.chr_start
+          , a.chr_end
+          , a.contig_start
+          , a.contig_end
+          , a.contig_ori
+          , a.type
+          , lk.clone_lock_id
+        FROM assembly a
+          , sequence_set ss
+          , clone c
+          , contig g
+        LEFT JOIN clone_lock lk
+          ON lk.clone_id = c.clone_id
+        WHERE c.clone_id = g.clone_id
+          AND g.contig_id = a.contig_id
+          AND a.type = ss.assembly_type
+          AND ss.hide = 'N'
+          AND g.contig_id in ($ctg_str)
+        ORDER BY a.chromosome_id
+          , a.chr_start
+    };
+    warn $sql if $DEBUG;
+    my $sth = $self->DataSet->get_cached_DBAdaptor->prepare($sql);
     $sth->execute();
-    my(  $name, $acc,  $sv,
-         $ctg_id,  $ctg_name,  $ctg_length,
-         $chr_id,  $chr_start,  $chr_end,
-         $contig_start,  $contig_end,  $strand,
-         $type ,
-         $clone_lock_id );
+
+    my (
+        $name,     $acc,          $sv,         $ctg_id,
+        $ctg_name, $ctg_length,   $chr_id,     $chr_start,
+        $chr_end,  $contig_start, $contig_end, $strand,
+        $type,     $clone_lock_id
+    );
     $sth->bind_columns(
-        \$name, \$acc, \$sv,
-        \$ctg_id, \$ctg_name, \$ctg_length,
-        \$chr_id, \$chr_start, \$chr_end,
-        \$contig_start, \$contig_end, \$strand,
-        \$type ,
-        \$clone_lock_id
-        );
-    # add each CS to a diff anonymous array according to its assembly type - all the  
+        \$name,     \$acc,          \$sv,         \$ctg_id,
+        \$ctg_name, \$ctg_length,   \$chr_id,     \$chr_start,
+        \$chr_end,  \$contig_start, \$contig_end, \$strand,
+        \$type,     \$clone_lock_id
+    );
+
+# add each CS to a diff anonymous array according to its assembly type - all the
     while ($sth->fetch) {
         my $cl = Bio::Otter::Lace::CloneSequence->new;
         $cl->clone_name($name);
@@ -312,23 +335,27 @@ sub fetch_Clones_containing_CloneNames{
         $cl->contig_name($ctg_name);
         $cl->contig_id($ctg_id);
         $cl->is_match(1);
-        if (defined $clone_lock_id){
-            $cl->set_lock_status(1) ;
-        }   
-        push ( @{ $cs_hash{$type} }  , $cl )  ;
-        $results ++ ;      
+
+        if (defined $clone_lock_id) {
+            $cl->set_lock_status(1);
+        }
+        push(@{ $cs_hash{$type} }, $cl);
+        $results++;
     }
 
-    # for each element of the hash, create a sequenceSet and add it to the ResultSet
-    while ( my ($type , $cs_list)  = each (%cs_hash) ){
+    # For each element of the hash, get a new SequenceSet and add
+    # it to the ResultSet.
+    # Add them in the order determined by ace_sort() so that
+    # they are in the same order as the rest of the interface.
+    foreach my $type (sort { ace_sort($a, $b) } keys %cs_hash) {
+        my $cs_list = $cs_hash{$type};
         my $ss = $self->uncached_SequenceSet_by_name($type);
         $ss->CloneSequence_list($cs_list);
-#        $self->DataSet->status_refresh_for_SequenceSet($ss);
         $self->add_SequenceSet($ss);
     }
     $self->get_context_and_intron_clones();
-    ## sets the things in ResultSet, but the return value is the number of clones returned
-    return $results ;
+    # sets the things in ResultSet, but the return value is the number of clones returned
+    return $results;
 }
 
 sub get_context_and_intron_clones{

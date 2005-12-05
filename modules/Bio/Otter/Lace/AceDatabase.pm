@@ -764,7 +764,7 @@ sub write_pipeline_data {
     my $ens_db = $dataset->get_cached_DBAdaptor();
     my $fetch_pipe = Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
     if ($fetch_pipe) {
-	    my $pipe_db = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($ens_db);
+	    my $pipe_db = Bio::Otter::Lace::PipelineDB::get_DBAdaptor($ens_db);
 	    $ens_db = $pipe_db;
         #$pipe_db->dnadb($ens_db->dnadb);
     }
@@ -845,50 +845,38 @@ sub make_AceDataFactory {
         push(@analysis_names, 'otter');
     }
 
-
-    # require them
-    for my $analysis_type (@analysis_names) {
-        #warn " AceDatabase.pm: $analysis_type\n";
-        my $module = $module_options->{$analysis_type}->{module}
-          or confess "Filter module not set for '$analysis_type'";
-        my $file = "$module.pm";
-        $file =~ s{::}{/}g;
-
-        #warn " AceDatabase.pm: requiring $file\n";
-        eval { require "$file" };
-        if ($@) {
-            die "No such filter module '$file'\n$@";
-        }
-    }
-
     my $collect = $self->get_default_MethodCollection;
 
     foreach my $logic_name (@analysis_names) {
+        my %param = %{$module_options->{$logic_name}};
         # class successfully required already.
-        my $class = $module_options->{$logic_name}->{'module'}
+        my $class = delete $param{'module'}
           or confess "Module class for '$logic_name' missing from config";
-        my $filt  = $class->new;
+
+        # Load the filter module
+        my $file = "$class.pm";
+        $file =~ s{::}{/}g;
+        eval { require $file };
+        if ($@) {
+            die "Error attempting to load filter module '$file'\n$@";
+        }
+
+        my $filt = $class->new;
 
         # check there is an analysis
-        if (my $ana = $ana_adaptor->fetch_by_logic_name($logic_name)) {
-            $filt->analysis_object($ana);
-        }
-        else {
+        if ($filt->isa('Bio::EnsEMBL::Ace::Otter_Filter')) {
             # Otter_Filters do not need the analysis_object anymore
             $filt->analysis_name($logic_name);
-            warn
-"No analysis called '$logic_name' in *primary* pipeline_db (but may be in secondary)\n";
+        } else {
+            my $ana = $ana_adaptor->fetch_by_logic_name($logic_name)
+                or confess "No analysis object for '$logic_name' in database";
+            $filt->analysis_object($ana);
         }
         if ($filt) {
 
-            # find the options for the filter?
-            foreach my $option (keys(%{ $module_options->{"$logic_name"} })) {
-
-                #warn "checking $filt for method $option\n";
-                next unless $filt->can($option);
-                my $value = $module_options->{"$logic_name"}->{$option};
-
-                #warn "setting $option : $value \n";
+            # Options in the config file are methods on filter objects:
+            while (my ($option, $value) = each %param) {
+                #warn "setting '$option' to '$value'\n";
                 $filt->$option($value);
             }
 
@@ -1221,129 +1209,12 @@ sub get_all_LaceChromosomes {
     return($ch);
 }
 
-=pod
- 
-=head1
-
-    I want a dialog from SequenceNotes to pop up saying
- ----------------------------
- | Which Das do you want?
- | 
- | [ ] ensembl genes
- | [ ] ensembl estgenes
- | [ ] other das source 1
- | [ ] other das source 2
- | [ ] other das source 3
- |
- | [ Ok ] [ Cancel ] [ Add ]
- ---------------------------
-
-These will be populated from otter_config
-There will be source_is_compulsory flag
-There will be option to add
-
-=cut
-
-
-sub write_das{
-    my ($self, $ss) = @_;
-    return unless $ss;
-    my $Client      = $self->Client();
-    my $dasClient   = $Client->dasClient();
-    return unless $dasClient;
-    my $datasetObj  = $Client->get_DataSet_by_name($ss->dataset_name);
-    my $otter_db    = $datasetObj->get_cached_DBAdaptor();
-    $otter_db->assembly_type($ss->name);
-    my $sources  = [];
-    my $avail    = [];
-    my $ace_file = $self->home . '/rawdata/das.ace';
-    my $locators = $dasClient->locatorObjs() || [];
-    my $DasAceDataFactory = Bio::EnsEMBL::Ace::DataFactory->new();
-    #my $method_objects    = $self->make_ace_methods();
-    my $collect = $self->get_default_MethodCollection;
-    use Data::Dumper;
-    foreach my $locObj(@$locators){
-        my $dasObj = $locObj->get_DasObj();
-        print STDERR "url: $dasObj\n";
-        push(@$sources, @{$locObj->selected_sources});
-        
-        # get the class for the Filter
-        # this is just a quick fix
-        # please change for something more friendly!!
-        my $child = eval { return $locObj->filterclass() } || 'NULL';
-        my $class = "Bio::EnsEMBL::Ace::Filter::Das" . ($child ? "::$child" : '');
-        eval " use $class; "; warn "$class Load ".($@ ? "Error: $@": "OK"). ", PLEASE CHANGE THIS LOGIC 'aceDatabase.pm'\n";
-        # make the filter object
-        my $DasLocatorFilter = $class->new();
-
-        # get the method object for the Filter
-        my $current_tag      = $locObj->method_tag;
-        print STDERR "current tag is '$current_tag' \n";
-        #my $current_method   = $method_objects->{$current_tag};
-        my $current_method = $collect->get_Method_by_name($current_tag);
-        print STDERR Dumper $current_method;
-        $locObj->method_object($current_method);
-        $DasLocatorFilter->locator($locObj);
-        $DasLocatorFilter->helper_ace_filter(); # call this 
-        $DasAceDataFactory->add_AceFilter($DasLocatorFilter);
-        # check the sources
-        #foreach my $source(@{$locObj->selected_sources()}){
-            #my $dsnObj = $dasObj->fetch_dsn_by_id($source);
-            #$dasObj->fetch_features_for_dsn($dsnObj);
-        #}
-    }
-    my $fh;
-    if(ref($ace_file) eq 'GLOB'){
-        $fh = $ace_file;
-    }else{ 
-        $fh = gensym();
-        $self->add_acefile($ace_file);
-        open $fh, "> $ace_file" or confess "Can't write to '$ace_file' : $!";
-    }
-    $DasAceDataFactory->file_handle($fh);
-    my $slice_adaptor = $otter_db->get_SliceAdaptor();
-
-    # note: the next line returns a 2 dimensional array (not a one dimensional array)
-    # each subarray contains a list of clones that are together on the golden path
-    my $sel = $ss->selected_CloneSequences_as_contig_list ;
-    foreach my $cs (@$sel) {
-
-        my $first_ctg = $cs->[0];
-        my $last_ctg = $cs->[$#$cs];
-
-        my $chr = $first_ctg->chromosome->name;  
-        my $chr_start = $first_ctg->chr_start;
-        my $chr_end = $last_ctg->chr_end;
-
-        my $slice = $slice_adaptor->fetch_by_chr_start_end($chr, $chr_start, $chr_end);
-
-        # Check we got a slice
-        my $tp = $slice->get_tiling_path;
-        my $type = $slice->assembly_type;
-        #warn "assembly type = $type";
-        if (@$tp) {
-            foreach my $tile (@$tp) {
-                print STDERR "contig: ", $tile->component_Seq->name, "\n";
-            }
-        } else {
-            warn "No components in tiling path";
-        }
-
-        $DasAceDataFactory->ace_data_from_slice($slice);
-    }
-    $DasAceDataFactory->drop_file_handle;
-    close $fh;
-
-    
-}
-
 {
     my $default_collection = undef;
     
     sub get_default_MethodCollection {
         my( $self ) = @_;
         
-        #my $base_methods_files = Bio::Otter::Lace::Defaults::option_from_array([qw(client methods_files)]);
         unless ($default_collection) {
             # This file should be the default:
             my $method_file = $ENV{'OTTER_HOME'} . "/methods.ace";
@@ -1353,121 +1224,6 @@ sub write_das{
         return $default_collection;
     }
 }
-
-
-#{
-#    use AceParse qw(aceParse);
-#    
-#    sub read_Methods{
-#        my ($file) = @_;
-#        return unless $file;
-#        unless(exists($METHODS_CACHE->{$file})){
-#            my $tables = {};
-#            open my $fh, $file || return $tables;
-#            while(my $table = AceParse->aceTableFromStream($fh)){
-#                my $class = $table->class;
-#                my $name  = $table->name;
-#                next unless $class && $name;
-#                #print STDERR "have $class $name from $file\n";
-#                if($class eq 'Method'){
-#                    # rebless as a Bio::EnsEMBL::Ace::Method
-#                    $table = bless $table, 'Bio::EnsEMBL::Ace::Method';
-#                    $tables->{$name} = $table;
-#                }
-#            }
-#            close $fh;
-#            $METHODS_CACHE->{$file} = $tables;
-#        }
-#        my $ace_tables = $METHODS_CACHE->{$file};
-#        return $ace_tables; # these are the methods, keyed on their names
-#    }
-#
-#    sub Bio::EnsEMBL::Ace::Method::right_priority{
-#        return rand(100);
-#    }
-#
-#
-#
-## returns a hash of method objects 
-## keyed on Method name.
-## The methods are sourced from files held on disk accessed by the operating system
-#    sub make_ace_methods{
-#        my $self = shift;
-#        my $methods = {};
-#
-#        # get the required options from the config
-#        my $base_methods_files = Bio::Otter::Lace::Defaults::option_from_array([qw(client methods_files)]);
-#        my $groups             = Bio::Otter::Lace::Defaults::option_from_array([qw(client use_method_groups)]);
-#        return $methods unless $base_methods_files;
-#        return $methods unless $groups;
-#        my @order              = split(',', $groups); # need to keep the order
-#
-#        # make the objects for the base file
-#        foreach my $meth_file(split(",", $base_methods_files)){
-#            # so this just needs to find the methods somehow.
-#            $methods = { %$methods, %{read_Methods($meth_file)} };
-#        }
-#        
-#        # need to sort into groups
-#        # groups defined in the otter_conf
-#        # keep the order from there!
-#        my $grps  = {map { $_ => [] } @order};
-#        foreach my $group(@order){
-#            #print STDERR "looking at method_groups for '$group'\n";
-#            my $group_members =  Bio::Otter::Lace::Defaults::option_from_array(['method_groups', $group]);
-#            $grps->{$group}   = [ split(',', $group_members) ];
-#        }
-#        #print STDERR Dumper $grps;
-#
-#        # add further (DAS) objects here, setting right priority to big number (10000)
-#        # this means they end up at the end of the @sorted list below
-#        my %userMethods = %{Bio::Otter::Lace::Defaults::option_from_array([qw(ace method)])};
-#        # [ace_method.specialDASAnalysis] stanzas?
-#        foreach my $user_meth_name(keys %userMethods){
-#            my ($methdObj, $meth_group) = _create_ace_method($user_meth_name, $userMethods{$user_meth_name});
-#            # $meth_group should be one of @order members
-#            # check with 
-#            unless(grep { /^$meth_group$/ } @order){
-#                #print STDERR " *** Method '$user_meth_name' cannot be added to '$meth_group', $meth_group doesn't exist. try one of [@order]\n";
-#                next;
-#            }
-#            # add the meth name to the appropriate grp
-#            #print STDERR "Method '$user_meth_name' WILL be added to '$meth_group', $meth_group doesn't exist. try one of [@order]\n";
-#            push(@{$grps->{$meth_group}}, $user_meth_name);
-#            # add the object to 
-#            #push(@)
-#        }
-#
-#        # set up right_priority
-#        # need floor() here somewhere I think
-#        my $min = 1;
-#        my $max = 100;
-#        my $sep = ($max - $min + 1) / (scalar(@order) + 1);
-#        for my $i(0..scalar(@order)-1){
-#            my $group   = $order[$i];
-#            my $members = $grps->{$group};
-#            #print STDERR "members of grp '$group' are @$members\n";
-#            my $g_min   = $sep * $i;
-#            my $g_max   = $sep * ($i + 1);
-#            # get the method objects from the hash
-#            my @g_Objs  = grep { defined } @$methods{@$members};
-#            # sort them on their current right_priority
-#            my @sorted  = sort {$a->right_priority <=> $b->right_priority } @g_Objs;
-#            my $g_sep   = ($g_max - $g_min + 1) / (scalar(@sorted) + 1);
-#            my $c_rghtp = $g_min;
-#            foreach my $obj(@sorted){
-#                $obj->right_priority($g_min);
-#                $g_min += $g_sep;
-#            }
-#        }
-#
-#        return $methods;
-#    }
-#    sub _create_ace_method{
-#        return (0,0);
-#    }
-#}
-
 
 sub DESTROY {
     my( $self ) = @_;
