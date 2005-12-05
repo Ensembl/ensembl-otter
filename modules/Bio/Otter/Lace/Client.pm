@@ -9,30 +9,28 @@ use LWP;
 use Symbol 'gensym';
 use URI::Escape qw{ uri_escape };
 use MIME::Base64;
-use Bio::Otter::LogFile;
-use Bio::Otter::Lace::DataSet;
-use Bio::Otter::Lace::AceDatabase;
-use Bio::Otter::Lace::PersistentFile;
-#use Bio::Otter::Lace::DasClient;
-use Bio::Otter::Transform::DataSets;
-use Bio::Otter::Transform::SequenceSets;
-use Bio::Otter::Converter;
-use Bio::Otter::Lace::TempFile;
-use Hum::EnsCmdLineDB;
 
-use Bio::Otter::Lace::ViaText ('%OrderOfOptions');
 use Bio::EnsEMBL::Analysis;
 use Bio::EnsEMBL::DnaDnaAlignFeature;
 use Bio::EnsEMBL::DnaPepAlignFeature;
+use Bio::EnsEMBL::PredictionTranscript;
+use Bio::EnsEMBL::RepeatConsensus;
+use Bio::EnsEMBL::RepeatFeature;
+use Bio::EnsEMBL::SimpleFeature;
+
+use Bio::Otter::Converter;
 use Bio::Otter::DnaDnaAlignFeature;
 use Bio::Otter::DnaPepAlignFeature;
-use Bio::EnsEMBL::SimpleFeature;
-use Bio::Otter::HitDescription;
-use Bio::EnsEMBL::RepeatFeature;
-use Bio::EnsEMBL::RepeatConsensus;
-use Bio::EnsEMBL::PredictionTranscript;
-
 use Bio::Otter::FromXML;
+use Bio::Otter::HitDescription;
+use Bio::Otter::Lace::AceDatabase;
+use Bio::Otter::Lace::DataSet;
+use Bio::Otter::Lace::PersistentFile;
+use Bio::Otter::Lace::TempFile;
+use Bio::Otter::Lace::ViaText ('%OrderOfOptions');
+use Bio::Otter::LogFile;
+use Bio::Otter::Transform::DataSets;
+use Bio::Otter::Transform::SequenceSets;
 
 sub new {
     my( $pkg ) = @_;
@@ -348,7 +346,7 @@ sub general_http_dialog {
     } while ($psw_attempts_left-- && !$content);
 
     print STDERR "[$scriptname:"
-          .$params->{analysis}
+          . ($params->{analysis} || '')
           ."] CLIENT RECEIVED ["
           .length($content)
           ."] bytes over the TCP connection\n\n";
@@ -889,25 +887,6 @@ sub unlock_otter_xml {
         }
     );
     return 1;
-}
-
-sub dasClient{
-    my ($self) = @_;
-    
-    confess "Disabled";
-    
-    my $das_on = $self->option_from_array([qw( client das )]);
-    my $dasObj;
-    if($das_on){
-        $dasObj = $self->{'_dasClient'};
-        unless($dasObj){
-            $dasObj = Bio::Otter::Lace::DasClient->new();
-            $self->{'_dasClient'} = $dasObj;
-        }
-    }else{
-        print STDERR "To use Das start '$0 -das' (currently in development)\n";
-    }
-    return $dasObj;
 }
 
 1;
