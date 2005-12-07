@@ -45,6 +45,7 @@ $help->() unless ($dataset && (@sets || @clones || $clone_list) );
   my $atagCtgID_clnID = get_assembly_tagged_clones($otter_db);
 
 
+
   # options to populate assembly_tag table, see also POD
   if ( @sets ) {
 
@@ -227,6 +228,7 @@ sub fetch_by_clone_obj {
 
   # insert new data to assembly_tag table and update assembly_tagged_clone table
   if ( scalar keys %$contig_atag_data > 0 ){
+	warn "About to store new assembly tags ...\n";
 	store_and_update($contig_atag_data, $otter_db);
   }
   else {
@@ -464,11 +466,11 @@ sub store_and_update {
 									 });
 	$sql_2->execute;
 	$sql_2->finish;
+	$otter_db->commit;
   };
 
   if ( !$@ ){
 	printf(">Successful\n\n");
-	$otter_db->commit;
   }
   else {
 	print $@;
@@ -494,7 +496,7 @@ Script parameters: database_name (eg, fetch_assembly_tags B<-dataset> human B<-v
 
 4. B<-clist> filename (fetch from list of clones as [accession.version] from file, one clone per line)
 
-5. or specify acc.sv to see its existence/location of assembly_tag acefile.  B<-check> B<-clone> AL627402.10
+5. or specify acc.sv to see location of assembly_tag acefile.  B<-check> B<-clone> AL627402.10
 
 
 Verbose mode prints detailed info of assembly_tags.
