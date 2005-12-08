@@ -9,6 +9,8 @@ my ($new_tag, $new_dir, $user) = @ARGV;
 
 # ----------------------------------------------------------------------
 
+my $biolocation = '/nfs/team71/analysis/lg4/work/distrib';
+
 my %mod2location = (
 	'ace_skeleton'     => '/nfs/humace2/CVS_master',
 	'PerlModules'      => '/nfs/humace2/CVS_master',
@@ -47,15 +49,12 @@ chdir('ace_skeleton');
 system('tar', '-cvf', '../lace_acedb.tar', 'database', 'wgf', 'wscripts', 'wspec');
 chdir('..');
 
-system('wget', 'http://bio.perl.org/DIST/bioperl-0.7.2.tar.gz');
-system('gunzip', 'bioperl-0.7.2.tar.gz');
-system('tar', '-xvf', 'bioperl-0.7.2.tar');
-system('rm', 'bioperl-0.7.2.tar');
-
-system('wget', 'http://bio.perl.org/DIST/bioperl-1.2.tar.gz');
-system('gunzip', 'bioperl-1.2.tar.gz');
-system('tar', '-xvf', 'bioperl-1.2.tar');
-system('rm', 'bioperl-1.2.tar');
+for my $biodir ('bioperl-0.7.2', 'bioperl-1.2', 'biodas-1.02') {
+    system('cp', $biolocation.'/'.$biodir.'.tar.gz', '.');
+    system('gunzip', $biodir.'.tar.gz');
+    system('tar', '-xvf', $biodir.'.tar');
+    system('rm', $biodir.'.tar');
+}
 
 system('chmod -R g+w *');
 
