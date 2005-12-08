@@ -7,28 +7,37 @@ use strict;
 use Carp;
 use Bio::EnsEMBL::Analysis;
 
+my $ana_root = 'SubmitContig';
 
 sub new {
     return bless {}, shift;
 }
 
-# Can have single copy of the list of analyses and
-# the order they are in because the interface only
-# allows the user to connect to a single dataset
-# at a time.
-my( @rule_list );
+sub entry {
+    my ($self, $key, $value) = @_;
 
-sub set_rule_list {
-    my( $pkg, $list ) = @_;
-    
-    @rule_list = @$list;
+    if($value) {
+        $self->{_entries}{$key} = $value;
+    }
+    return $self->{_entries}{$key};
 }
 
-sub add_completed_analysis {
-    my( $self, $name, $created, $version ) = @_;
-    
-    $self->{$name}{'created'} = $created;
-    $self->{$name}{'version'} = $version;
+sub add_analysis {
+    my( $self, $ana_name, $values ) = @_;
+
+    if(@$values) {
+        $self->entry($ana_name, { 'created' => shift @$values, 'version' => shift @$values });
+        $self->{'completed_count'}++;
+    } else {
+        $self->entry($ana_name, {});
+    }
+}
+
+sub all_analyses {
+    my $self = shift @_;
+    return
+        sort { ($a eq $ana_root) ? -1 : ($b eq $ana_root) ? 1 : ($a cmp $b); }
+            keys %{$self->{_entries}};
 }
 
 # Returns an array used by CanvasWindow::SequenceNotes::Status
@@ -37,17 +46,23 @@ sub display_list {
     my( $self ) = @_;
     
     my $display_list = [];
-    foreach my $name (@rule_list) {
-        my $stat_hash = { name => $name };
-        if (my $ana = $self->{$name}) {
-            $stat_hash->{'status'} = 'completed';
-            while (my ($key, $val) = each %$ana) {
+    foreach my $ana_name ($self->all_analyses()) {
+        my $stat_hash;
+        if (my $entry = $self->entry($ana_name)) {
+            $stat_hash = {
+                'name'   => $ana_name,
+                'status' => 'completed',
+            };
+            while (my ($key, $val) = each %$entry) {
                 $stat_hash->{$key} = $val;
             }
         } else {
-            $stat_hash->{'status'}  = 'missing';
-            $stat_hash->{'created'} = '-';
-            $stat_hash->{'version'} = '-';
+            $stat_hash = {
+                'name'    => $ana_name,
+                'status'  => 'missing',
+                'created' => '-',
+                'version' => '-',
+            };
         }
         push(@$display_list, $stat_hash);
     }
@@ -58,18 +73,7 @@ sub display_list {
 sub short_display {
     my( $self ) = @_;
 
-    # Uncomment for debugging:
-    #my %rules = map {$_, 'rule '} @rule_list;
-    #foreach my $key (keys %$self) {
-    #    $rules{$key} .= 'done';
-    #}
-    #use Data::Dumper;
-    #print STDERR Dumper(\%rules);
-    #my $key_count = keys %$self;
-    #my $rule_count = scalar @rule_list;
-    #print STDERR "$rule_count rules vs $key_count analyses\n";
-
-    return keys %$self == @rule_list ? 'completed' : 'missing';
+    return $self->{'completed_count'} == scalar(keys %{$self->{_entries}}) ? 'completed' : 'missing';
 }
 
 1;
