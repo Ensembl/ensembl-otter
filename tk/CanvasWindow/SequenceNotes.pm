@@ -60,7 +60,7 @@ sub get_CloneSequence_list {
         my $ds = $self->SequenceSetChooser->DataSet;
         $ds->fetch_all_CloneSequences_for_SequenceSet($ss);
         $ds->fetch_all_SequenceNotes_for_SequenceSet($ss);
-        $ds->status_refresh_for_SequenceSet($ss);
+        $ds->status_refresh_for_SequenceSet($ss, $self->Client());
         $cs_list = $ss->CloneSequence_list;
         #print STDERR "done\n";
     }
@@ -108,7 +108,7 @@ sub _refresh_SequenceSet{
     my $ss = $self->SequenceSet;
     if ($column_number == 3){
         # this is the ana_status column - we have a separate (faster) query for this
-        $ds->status_refresh_for_SequenceSet($ss);
+        $ds->status_refresh_for_SequenceSet($ss, $self->Client());
     }
     elsif($column_number == 7){
         # padlock cloumn - again we have a query for this (hopefully faster also)

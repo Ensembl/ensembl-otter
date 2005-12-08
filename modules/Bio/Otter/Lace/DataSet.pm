@@ -249,89 +249,35 @@ sub fetch_all_CloneSequences_for_selected_SequenceSet {
 #   this forces a refresh of the $self->status query
 #   but doesn't re fetch all CloneSequences of the SequenceSet
 sub status_refresh_for_SequenceSet{
-    my ($self, $ss) = @_;
+    my ($self, $ss, $client) = @_;
+
+    my $pipehead = $client->option_from_array(['client', 'pipehead']) || 0;
 
     return unless Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
 
     my $dba = $self->get_cached_DBAdaptor;
     my $pipe_dba = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($dba);
+
     $self->fetch_pipeline_ctg_ids_for_SequenceSet($ss);
 
-    my( %id_cs );
+    my $status_hash = $client->get_analyses_status_from_dsname_ssname(
+        $self->name(),
+        $ss->name(),
+        $pipehead,
+    );
+
     foreach my $cs (@{$ss->CloneSequence_list}) {
         $cs->drop_pipelineStatus;
-        $id_cs{$cs->pipeline_contig_id} = $cs;
-    }
 
-    my $rule_list = []; # all the analysis which can run for this species.
-    my $ruleAdapt      = $pipe_dba->get_RuleAdaptor();
-    my %rules = map {$_->goalAnalysis->logic_name, $_} $ruleAdapt->fetch_all;
+        my $status = Bio::Otter::Lace::PipelineStatus->new;
+        my $contig_name = $cs->contig_name();
+        my $status_subhash = $status_hash->{$contig_name};
 
-    ### Would be nice to see rules in correct order.
-    #@rules = sort_rules_by_dependency(@rules);
-
-    my $root_analysis = 'SubmitContig';
-    my %root_analysis_rule;
-    # Only show analyses that descend from 'SubmitContig'
-    while (my ($name, $rule) = each %rules) {
-        my $will_be_run = 0;
-        foreach my $cond_name (@{$rule->list_conditions}) {
-            # The root analysis rule does not show up by itself
-            if ($cond_name eq $root_analysis or $rules{$cond_name}) {
-                #print STDERR "Including '$name' because of $cond_name\n";
-                $will_be_run = 1;
-            }
+        while(my ($ana_name, $values) = each %$status_subhash) {
+            $status->add_analysis($ana_name, $values);
         }
-        if ($will_be_run) {
-            $root_analysis_rule{$name} = 1;
-        }
-    }
 
-    ### Used to depend on the list of filters in the config file.
-    ### Maybe interface should reflect which analyses will be fetched?
-    #my $species = $self->species();
-    #my $filters = Bio::Otter::Lace::Defaults::option_from_array([$species, 'use_filters']);
-    #foreach my $s (keys %$filters){
-    #    # filter name can be present and have value 0.
-    #    next unless $filters->{$s};
-    #    push(@$rule_list, $s);
-    #}
-
-    # It is convenient to show the $root_analysis at the top of the list
-    Bio::Otter::Lace::PipelineStatus->set_rule_list([$root_analysis, (sort keys %root_analysis_rule)]);
-    $root_analysis_rule{$root_analysis} = 1;
-
-    my $sql = q{
-        SELECT c.contig_id
-          , y.logic_name
-          , i.created
-          , i.db_version
-        FROM analysis y
-          , input_id_analysis i
-          , contig c
-        WHERE c.name = i.input_id
-          AND y.analysis_id = i.analysis_id
-          AND i.input_id = c.name
-          AND c.contig_id IN (} . join(', ', keys %id_cs) . q{)};
-    #warn "pipeline status query = '$sql'";
-    my $sth = $pipe_dba->prepare($sql);
-    $sth->execute();
-    
-    my( $ctg_id, $ana_name, $created, $version );
-    $sth->bind_columns(\$ctg_id, \$ana_name, \$created, \$version);
-    
-    my( %id_status );
-    while ($sth->fetch) {
-        #print STDERR "$ctg_id, $ana_name, $created, $version\n";
-        next unless $root_analysis_rule{$ana_name};
-        my $status = $id_status{$ctg_id};
-        unless ($status) {
-            # Make a new PipelineStatus object, and attach it to its CloneSequence
-            $status = $id_status{$ctg_id} = Bio::Otter::Lace::PipelineStatus->new;
-            my $cs = $id_cs{$ctg_id};
-            $cs->pipelineStatus($status);
-        }
-        $status->add_completed_analysis($ana_name, $created, $version);
+        $cs->pipelineStatus($status);
     }
 
     Bio::Otter::Lace::SatelliteDB::disconnect_DBAdaptor($pipe_dba);

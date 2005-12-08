@@ -17,6 +17,7 @@ our @EXPORT_OK = qw(
                     &set_nph
                     &send_response
                     &error_exit
+                    &get_connected_pipeline_dbhandle
                     &get_pipeline_adaptor_slice_parms
                     &get_Author_from_CGI
                     &get_DBAdaptor_from_CGI_species
@@ -26,6 +27,7 @@ our %EXPORT_TAGS = (all => [qw(
                                set_nph
                                send_response
                                error_exit
+                               get_connected_pipeline_dbhandle
                                get_pipeline_adaptor_slice_parms
                                get_Author_from_CGI
                                get_DBAdaptor_from_CGI_species 
@@ -80,6 +82,38 @@ sub error_exit {
   server_log("ERROR: $reason\n");
 
   exit(1);
+}
+
+sub connect_with_params {
+        my %params = @_;
+                                                                                                                         
+        my $datasource = "DBI:mysql:$params{-DBNAME}:$params{-HOST}:$params{-PORT}";
+        my $username   = $params{-USER};
+        my $password   = $params{-PASS} || '';
+                                                                                                                         
+        return DBI->connect($datasource, $username, $password, { RaiseError => 1 });
+}
+
+sub get_connected_pipeline_dbhandle {
+    my ($cgi, $odb, $enshead) = @_;
+
+    my %cgi_args = $cgi->Vars;
+
+    server_log("called with: ".join(' ', map { "$_=$cgi_args{$_}" } keys %cgi_args) );
+
+    my $pipekey = $enshead
+        ? 'pipeline_db_head'
+        : 'pipeline_db';
+
+    my ($pdb, $pipedb_options) =
+    Bio::Otter::Lace::SatelliteDB::_get_DBAdaptor_and_options(
+        $odb,
+        $pipekey
+    );
+
+    my $dbh = connect_with_params(%$pipedb_options);
+
+    return $dbh;
 }
 
 sub get_pipeline_adaptor_slice_parms { # codebase-independent version for scripts

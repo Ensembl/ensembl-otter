@@ -345,8 +345,8 @@ sub general_http_dialog {
         $content = $self->_check_for_error($response, $psw_attempts_left, $unwrap);
     } while ($psw_attempts_left-- && !$content);
 
-    print STDERR "[$scriptname:"
-          . ($params->{analysis} || '')
+    print STDERR "[$scriptname"
+          .($params->{analysis} ? ':'.$params->{analysis} : '')
           ."] CLIENT RECEIVED ["
           .length($content)
           ."] bytes over the TCP connection\n\n";
@@ -407,6 +407,30 @@ Examples:
     }
 
 =cut
+
+sub get_analyses_status_from_dsname_ssname {
+    my( $self, $dsname, $ssname, $enshead ) = @_;
+
+    my $response = $self->general_http_dialog(
+        0,
+        'GET',
+        'get_analyses_status',
+        {
+            'type'     => $ssname,
+            'dataset'  => $dsname,
+            'enshead'  => $enshead ? 1 : 0,
+        },
+        1,
+    );
+
+    my %status_hash = ();
+    for my $line (split(/\n/,$response)) {
+        my ($c, $a, @rest) = split(/\t/, $line);
+        $status_hash{$c}{$a} = \@rest;
+    }
+
+    return \%status_hash;
+}
 
 sub get_sfs_from_dataset_sliceargs_analysis {   # get SimpleFeatures
     my( $self, $dataset, $sa, $analysis_name, $enshead ) = @_;

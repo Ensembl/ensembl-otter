@@ -37,7 +37,7 @@ sub get_CloneSequence_list{
     foreach my $ss(@$ss_list){
         my $ds = $self->SequenceSetChooser->DataSet();
         $ds->fetch_all_SequenceNotes_for_SequenceSet($ss);
-        $ds->status_refresh_for_SequenceSet($ss) if $force_update;
+        $ds->status_refresh_for_SequenceSet($ss, $self->Client()) if $force_update;
         push(@cs_list, @{$ss->CloneSequence_list});
     }
     return \@cs_list;
