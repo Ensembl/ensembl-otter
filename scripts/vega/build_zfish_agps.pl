@@ -11,7 +11,7 @@
 use strict;
 use Getopt::Long;
 
-my ($date,$test,$verbose,$skip,$haplo,$tags,$help,$stop,$chroms);
+my ($date,$test,$verbose,$skip,$haplo,$tags,$help,$stop,$chromsm,$path);
 GetOptions(
         'date:s'   => \$date,       # format YYMMDD 
         'test'     => \$test,       # doesn't execute system commands
@@ -21,7 +21,8 @@ GetOptions(
         'h'        => \$help,       # help
         'stop'     => \$stop,       # stops where you've put yuor exit(0) if ($stop)
         'haplo'    => \$haplo,      # deals with chr H clones (only)
-        'chr=s'    => \$chroms,     # overrides all chromosomes
+        'chr:s'    => \$chroms,     # overrides all chromosomes
+        'path:s'   => \$path,       # overrides /nfs/disk100/zfishpub/annotation/ana_notes_update
 );
 
 my @chroms = split /,/, $chroms if ($chroms);
@@ -31,6 +32,7 @@ if (($help) || (!$date)){
     print "              -skip            # skip steps in order agp, qc, region, fullagp, load\n";
     print "              -haplo           # loads chr H clones\n";
     print "              -chr             # runs for your comma separated list of chromosomes\n";
+    print "              -path            # path to build new agp folder in\n";
     print "              -tags            # load assembly tags\n";
     print "              -test            # don't execute system commands\n";
     print "              -verbose         # print commands\n";
@@ -43,14 +45,14 @@ my $moredate = "20".$date;
 my $fulldate = $day.".".$month.".20".$year;
 
 # paths
-my $path = "/nfs/disk100/zfishpub/annotation/ana_notes_update";
+$path = "/nfs/disk100/zfishpub/annotation/ana_notes_update" unless ($path);
 my $agp = "agp_".$date;
 my $agpdir; 
 $agpdir = $path."/".$agp       unless ($haplo);
 $agpdir = $path."/haplo_".$agp if ($haplo);
 @chroms = (1..25,"U") unless (@chroms);
 
-mkdir($agpdir,0777) or die "Cannot make agp_$date $!\n" unless (($test) || ($skip =~ /\S+/));
+mkdir($agpdir,0777) or die "ERROR: Cannot make agp_$date $!\n" unless (($test) || ($skip =~ /\S+/));
 chdir($agpdir);
 
 ############
@@ -60,8 +62,8 @@ chdir($agpdir);
 unless (($skip =~ /agp/) || ($skip =~ /qc/) || ($skip =~ /region/) || ($skip =~ /newagp/) || ($skip =~ /load/) || ($skip =~ /realign/)) {
     foreach my $chr (@chroms) {
         my $command; 
-        $command = "perl \$CHROMO/oracle2agp -species Zebrafish -chromosome $chr -subregion H_".$chr." > $agpdir/chr".$chr.".agp" if ($haplo);
-        $command = "perl \$CHROMO/oracle2agp -species Zebrafish -chromosome $chr > $agpdir/chr".$chr.".agp" unless ($haplo);
+        $command = "perl /nfs/team71/zfish/kj2/cvs_bin/fish/chromoview/oracle2agp -species Zebrafish -chromosome $chr -subregion H_".$chr." > $agpdir/chr".$chr.".agp" if ($haplo);
+        $command = "perl /nfs/team71/zfish/kj2/cvs_bin/fish/chromoview/oracle2agp -species Zebrafish -chromosome $chr > $agpdir/chr".$chr.".agp" unless ($haplo);
         eval {&runit($command)};
     }
     print "\n" if ($verbose);
@@ -95,11 +97,11 @@ unless (($skip =~ /region/) || ($skip =~ /newagp/) || ($skip =~ /load/) || ($ski
     
     # create only one agp.new file for chr H
     if ($haplo) {
-        open(OUT,">$agpdir/chrH.agp.new") or die "Cannot open $agpdir/chrH.fullagp $!\n";
+        open(OUT,">$agpdir/chrH.agp.new") or die "ERROR: Cannot open $agpdir/chrH.fullagp $!\n";
         foreach my $chr (@chroms) {
             my $line = "N	10000\n";
             my $file = "chr".$chr.".agp.new";
-            open(IN,"$agpdir/$file") or die "Cannot open $agpdir/$file $!\n";
+            open(IN,"$agpdir/$file") or die "ERROR: Cannot open $agpdir/$file $!\n";
             while (<IN>) {
                 print OUT;
             }
@@ -117,7 +119,7 @@ unless (($skip =~ /region/) || ($skip =~ /newagp/) || ($skip =~ /load/) || ($ski
 unless (($skip =~ /newagp/) || ($skip =~ /load/) || ($skip =~ /realign/)){
     @chroms = ("H") if ($haplo);
     foreach my $chr (@chroms) {
-        my $command = "perl \$CHROMO/regions_to_agp -chromosome $chr $agpdir/chr".$chr.".agp.new > $agpdir/chr".$chr.".fullagp";
+        my $command = "perl /nfs/team71/zfish/kj2/cvs_bin/fish/chromoview/regions_to_agp -chromosome $chr $agpdir/chr".$chr.".agp.new > $agpdir/chr".$chr.".fullagp";
         eval {&runit($command)};
     }
     print "\n" if ($verbose);
@@ -132,17 +134,17 @@ unless (($skip =~ /newagp/) || ($skip =~ /load/) || ($skip =~ /realign/)){
 unless (($skip =~ /load/) || ($skip =~ /realign/)) {
     @chroms = ("H") if ($haplo);
     foreach my $chr (@chroms) {
-        my $command = "\$OTTER/scripts/lace/load_otter_ensembl -no_submit -dataset zebrafish -description \"chromosome $chr $fulldate\" -set chr".$chr."_".$moredate." $agpdir/chr".$chr.".fullagp > &! $agpdir/".$chr.".log";
+        my $command = "/nfs/team71/zfish/kj2/cvs_bin/ensembl-otter/scripts/lace/load_otter_ensembl -no_submit -dataset zebrafish -description \"chromosome $chr $fulldate\" -set chr".$chr."_".$moredate." $agpdir/chr".$chr.".fullagp > &! $agpdir/".$chr.".log";
         &runit($command);
     }
     print "\n" if ($verbose);
     foreach my $chr (@chroms) {
-        my $command = "You have to run the following under head\nperl /nfs/farm/Fish/kj2/head/ensembl-pipeline/scripts/Finished/load_from_otter_to_pipeline.pl -chr chr".$chr."_20051206 -chromosome_cs_version Otter -oname otter_zebrafish -phost otterpipe2 -pport 3303 -pname pipe_zebrafish";
+        my $command = "ATTENTION: You have to run the following under head\nperl /nfs/farm/Fish/kj2/head/ensembl-pipeline/scripts/Finished/load_from_otter_to_pipeline.pl -chr chr".$chr."_20051206 -chromosome_cs_version Otter -oname otter_zebrafish -phost otterpipe2 -pport 3303 -pname pipe_zebrafish";
         print "$command\n";
     }
     print "\n" if ($verbose);
 }
-die "This is it for haplotype chromosomes, but you might want to set the otter sequence entries and alert anacode to start the analyses\n" if ($haplo);
+die "END OF: This is it for haplotype chromosomes, but you might want to set the otter sequence entries and alert anacode to start the analyses\n" if ($haplo);
 
 ##########################
 # realign offtrack genes #
@@ -152,7 +154,7 @@ die "This is it for haplotype chromosomes, but you might want to set the otter s
 
 unless ($skip =~ /realign/) {
     foreach my $chr (@chroms) {
-        my $command = "\$OTTER/scripts/lace/realign_offtrack_genes -dataset zebrafish -set chr".$chr."_".$moredate;
+        my $command = "/nfs/team71/zfish/kj2/cvs_bin/ensembl-otter/scripts/lace/realign_offtrack_genes -dataset zebrafish -set chr".$chr."_".$moredate;
         &runit($command);
     }
 }
@@ -164,7 +166,7 @@ unless ($skip =~ /realign/) {
 # start here with -skip realign
 
 if ($tags) {
-    my $command2 = "\$OTTER/scripts/lace/fetch_assembly_tags -dataset zebrafish -verbose -set all";
+    my $command2 = "/nfs/team71/zfish/kj2/cvs_bin/ensembl-otter/scripts/lace/fetch_assembly_tags -dataset zebrafish -verbose -set all";
     &runit($command2);
 }
 
@@ -172,7 +174,7 @@ if ($tags) {
 # and last #
 ############
 
-print STDERR "Don't forget to set the otter sequence_set entries, run \$OTTER/scripts/check_genes.pl and alert anacode to start the analyses!\n";
+print STDERR "ATTENTION: Don't forget to set the otter sequence_set entries, run /nfs/team71/zfish/kj2/cvs_bin/ensembl-otter/scripts/check_genes.pl and alert anacode to start the analyses!\n";
 
 
 
@@ -181,7 +183,7 @@ print STDERR "Don't forget to set the otter sequence_set entries, run \$OTTER/sc
 sub runit {
     my $command = shift;
     print $command,"\n" if ($verbose);
-    system("$command") and die "Cannot execute $command $!\n" unless ($test);
+    system("$command") and die "ERROR: Cannot execute $command $!\n" unless ($test);
 }
 
 
@@ -189,7 +191,7 @@ sub check_agps {
     my %seen;
     foreach my $chr (@chroms) {
         my $file = "chr".$chr.".agp";
-        open(IN,"$agpdir/$file") or die "Cannot open $agpdir/$file $!\n";
+        open(IN,"$agpdir/$file") or die "ERROR: Cannot open $agpdir/$file $!\n";
         while (<IN>) {
             my @a = split /\s+/;
             $seen{$a[5]}++ unless ($a[5] =~ /^\d+$/);
@@ -198,7 +200,7 @@ sub check_agps {
     my $alarm;  
     foreach my $clone (keys %seen) {
         if ($seen{$clone} > 1) {
-            print STDERR "$clone is in more than one chromosome\n";
+            print STDERR "ERROR: $clone is in more than one chromosome\n";
             $alarm++;
         }    
     }
