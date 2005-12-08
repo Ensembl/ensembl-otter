@@ -50,19 +50,19 @@ use Exporter();
 
 my $MAIN_DIR;
 
-$MAIN_DIR               = '/nfs/team71/analysis/lg4/work';
-# $MAIN_DIR               = '/humsql/test_otter';
+# $MAIN_DIR               = '/nfs/team71/analysis/lg4/work';
+$MAIN_DIR               = '/humsql/production_test_otter';
 
 $OTTER_SERVER_ROOT 	    = $MAIN_DIR.'/ensembl-otter';
 $OTTER_ALTROOT    	    = $MAIN_DIR.'/ensembl-otter/otter_alt';
 $OTTER_SCRIPTDIR        = $OTTER_SERVER_ROOT . '/scripts/server';
 $OTTER_SERVER		    = Sys::Hostname::hostname();  # Local machine name
 $OTTER_MAX_CLIENTS          = 5;
-$OTTER_SERVER_PORT          = 33999;
+$OTTER_SERVER_PORT          = 33988;
 $OTTER_SCRIPT_TIMEOUT       = 60;
 $OTTER_SPECIES_FILE         = $OTTER_SERVER_ROOT . "/conf/species.dat";
 $OTTER_SPECIES              = read_species($OTTER_SPECIES_FILE);
-$OTTER_DEFAULT_SPECIES      = 'test_human';
+$OTTER_DEFAULT_SPECIES      = 'human';
 $OTTER_PREFIX               = 'OTT';
 $OTTER_GET_SCRIPTS          = {'/perl/get_region'     => 'get_region',
                                '/perl/get_sequence'   => 'get_sequence',
@@ -74,6 +74,15 @@ $OTTER_GET_SCRIPTS          = {'/perl/get_region'     => 'get_region',
                                '/perl/get_repeat_features'        => 'get_repeat_features',
                                '/perl/get_prediction_transcripts' => 'get_prediction_transcripts',
                                '/perl/get_pipeline_genes'         => 'get_pipeline_genes',
+
+                               '/perl/get_afs'                => 'get_align_features',
+                               '/perl/get_sfs'                => 'get_simple_features',
+                               '/perl/get_rfs'                => 'get_repeat_features',
+                               '/perl/get_pts'                => 'get_prediction_transcripts',
+                               '/perl/get_pipegenes'          => 'get_pipeline_genes',
+
+                               '/perl/get_analyses_status'    => 'get_analyses_status',
+
                               };
 $OTTER_POST_SCRIPTS         = {'/perl/write_region'   => 'write_region',
                                '/perl/unlock_region'  => 'unlock_region',
