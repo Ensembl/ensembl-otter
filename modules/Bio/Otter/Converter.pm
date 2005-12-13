@@ -762,7 +762,7 @@ sub otter_to_ace {
         my $clone        = $tile->component_Seq->clone;
         my $name         = $tile->component_Seq->name;
         my $accession    = $clone->embl_id       or die "No embl_id on clone attached to '$name' in tile";
-        my $sv           = $clone->embl_version  or die "No embl_version on clone attached to '$name' in tile";;
+        my $sv           = $clone->embl_version; # or die "No embl_version on clone attached to '$name' in tile";;
         my $clone_info   = $clone->clone_info;
         my $orientation  = $tile->component_ori ;
         my $clone_length = $tile->component_end - $tile->component_start + 1 ;
