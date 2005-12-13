@@ -51,14 +51,14 @@ use Exporter();
 my $MAIN_DIR;
 
 # $MAIN_DIR               = '/nfs/team71/analysis/lg4/work';
-$MAIN_DIR               = '/humsql/production_test_otter';
+$MAIN_DIR               = '/humsql/test_otter';
 
 $OTTER_SERVER_ROOT 	    = $MAIN_DIR.'/ensembl-otter';
 $OTTER_ALTROOT    	    = $MAIN_DIR.'/ensembl-otter/otter_alt';
 $OTTER_SCRIPTDIR        = $OTTER_SERVER_ROOT . '/scripts/server';
 $OTTER_SERVER		    = Sys::Hostname::hostname();  # Local machine name
 $OTTER_MAX_CLIENTS          = 5;
-$OTTER_SERVER_PORT          = 33988;
+$OTTER_SERVER_PORT          = 33999;
 $OTTER_SCRIPT_TIMEOUT       = 60;
 $OTTER_SPECIES_FILE         = $OTTER_SERVER_ROOT . "/conf/species.dat";
 $OTTER_SPECIES              = read_species($OTTER_SPECIES_FILE);
