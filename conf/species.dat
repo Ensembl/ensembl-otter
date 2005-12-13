@@ -12,8 +12,29 @@ DNA_PASS ensembl
 [test_human]
 DBNAME  test_otter_human
 TYPE    chr9p12
-
+ 
 [test_mouse]
 DBNAME  test_otter_mouse
 TYPE    chr11
+ 
+[test_zebrafish]
+DBNAME  test_otter_zebrafish
+TYPE    zfish_01
+ 
+[dog]
+DBNAME  otter_dog
+TYPE    mhc-01
+ 
+[human]
+DBNAME  otter_human
+TYPE    chr11-hsa11_20040402
+ 
+[mouse]
+DBNAME  otter_mouse
+TYPE    chr11
+ 
+[zebrafish]
+DBNAME  otter_zebrafish
+TYPE    zfish_01
+ 
 
