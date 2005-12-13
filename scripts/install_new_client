@@ -1,15 +1,17 @@
 #!/usr/local/bin/perl -w
 
-if(scalar(@ARGV)!=3) {
+if(scalar(@ARGV)<2) {
 	print STDERR "usage:\n";
-	print STDERR "\t$0 humpub-release-NN new_directory your_CVS_username\n";
+    print STDERR "\t$0 your_CVS_username new_directory [humpub-release-NN]\n";
 	exit 0;
 }
-my ($new_tag, $new_dir, $user) = @ARGV;
+my ($user, $new_dir, $new_tag) = @ARGV;
 
 # ----------------------------------------------------------------------
 
 my $biolocation = '/nfs/team71/analysis/lg4/work/distrib';
+
+my $method = 'checkout'; # ||'export'
 
 my %mod2location = (
 	'ace_skeleton'     => '/nfs/humace2/CVS_master',
@@ -33,7 +35,6 @@ my $tagfile = 'CVS_TAG';
 
 mkdir($new_dir);
 chdir($new_dir);
-system("echo $new_tag > $tagfile");
 
 foreach my $mod (keys %mod2location) {
 	my $location = $mod2location{$mod};
@@ -41,8 +42,11 @@ foreach my $mod (keys %mod2location) {
 		print "\nPlease enter your CVS password below\n";
 	}
 	my $this_tag = $mod2tag{$mod} || $new_tag;
-	system('cvs', '-d', $mod2location{$mod}, 'export', '-r', $this_tag, $mod);
+	system('cvs', '-d', $mod2location{$mod}, $method, ($this_tag? ('-r', $this_tag) : ()), $mod);
 }
+
+$new_tag ||= 'HEAD';
+system("echo $new_tag > $tagfile");
 
 system('cp', (map { 'ace_skeleton/'.$_ } ('methods.ace', 'otter_config', 'newpipe_otter_config')), '.');
 chdir('ace_skeleton');
