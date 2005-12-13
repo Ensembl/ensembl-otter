@@ -45,11 +45,17 @@ sub get_options_for_key {
     
     my ($opt_str) = @{ $db->get_MetaContainer()->list_value_by_key($key) };
     if ($opt_str) {
-        my $options_hash = {eval $opt_str};
+        my %options_hash = (eval $opt_str);
         if ($@) {
             die "Error evaluating '$opt_str' : $@";
         }
-        return $options_hash
+
+        my %uppercased_hash = ();
+        while( my ($k,$v) = each %options_hash) {
+            $uppercased_hash{uc($k)} = $v;
+        }
+
+        return \%uppercased_hash;
     } else {
         return;
     }
