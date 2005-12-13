@@ -86,7 +86,7 @@ sub error_exit {
 
 sub connect_with_params {
         my %params = @_;
-                                                                                                                         
+
         my $datasource = "DBI:mysql:$params{-DBNAME}:$params{-HOST}:$params{-PORT}";
         my $username   = $params{-USER};
         my $password   = $params{-PASS} || '';
