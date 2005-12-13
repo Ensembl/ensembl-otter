@@ -816,7 +816,7 @@ sub write_pipeline_data {
 sub make_AceDataFactory {
     my( $self, $ens_db, $dataset ) = @_;
 
-    my $species = $dataset->species();
+    my $species = $dataset->name();
     warn "This species is '$species'\n";
 
     # create new datafactory object - contains all ace filters and produces the data from these
