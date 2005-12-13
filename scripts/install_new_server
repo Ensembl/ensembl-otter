@@ -1,25 +1,47 @@
-#!/usr/local/bin/bash
+#!/usr/local/bin/perl -w
 
-# just run it to create a new server codebase in the current directory
+if(scalar(@ARGV)<2) {
+	print STDERR "usage:\n";
+	print STDERR "\t$0 your_CVS_username new_directory [humpub-release-NN]\n";
+	exit 0;
+}
+my ($user, $new_dir, $new_tag) = @ARGV;
 
-	# bioperl:
-wget http://bio.perl.org/DIST/bioperl-0.7.2.tar.gz
-gunzip bioperl-0.7.2.tar.gz
-tar -xvf bioperl-0.7.2.tar
-rm bioperl-0.7.2.tar
+# ----------------------------------------------------------------------
 
-	# old API ensembl:
-cvs -d :ext:cvs.sanger.ac.uk:/nfs/ensembl/cvsroot checkout -r branch-ensembl-19 ensembl
+my $method = 'checkout'; # || 'export'
+my $tagfile = 'CVS_TAG';
 
-	# old API otter:
-cvs -d :ext:cvs.sanger.ac.uk:/nfs/ensembl/cvsroot checkout ensembl-otter
+my $biolocation = '/nfs/team71/analysis/lg4/work/distrib';
 
-	# new API ensembl:
-cvs -d :ext:cvs.sanger.ac.uk:/nfs/ensembl/cvsroot checkout -d ensembl_head ensembl
+my @cvs_locations = (
+	[":ext:${user}\@cvs.sanger.ac.uk:/nfs/ensembl/cvsroot", $method, '-r', 'branch-ensembl-19', 'ensembl'],
+	[":ext:${user}\@cvs.sanger.ac.uk:/nfs/ensembl/cvsroot", $method, (defined($new_tag)?('-r', $new_tag):()), 'ensembl-otter' ],
+	[":ext:${user}\@cvs.sanger.ac.uk:/nfs/ensembl/cvsroot", $method, '-d', 'ensembl_head', 'ensembl'],
+);
 
-	# stop complaining about version incompatibility:
-touch .ensemblapi_no_version_check
+# ----------------------------------------------------------------------
 
-	# make it updateable by anyone in the group:
-chmod -R g+w *
+mkdir($new_dir);
+chdir($new_dir);
+$new_tag ||= 'HEAD';
+system("echo $new_tag > $tagfile");
+
+foreach my $cvs_location (@cvs_locations) {
+	if($cvs_location->[0]=~/\@/) {
+		print "\nPlease enter your CVS password below\n";
+	}
+	system('cvs', '-d', @$cvs_location);
+}
+
+for my $biodir ('bioperl-0.7.2') {
+    system('cp', $biolocation.'/'.$biodir.'.tar.gz', '.');
+    system('gunzip', $biodir.'.tar.gz');
+    system('tar', '-xvf', $biodir.'.tar');
+    system('rm', $biodir.'.tar');
+}
+
+system('touch', '.ensemblapi_no_version_check');
+
+system('chmod -R g+w *');
 
