@@ -251,7 +251,7 @@ sub fetch_all_CloneSequences_for_selected_SequenceSet {
 sub status_refresh_for_SequenceSet{
     my ($self, $ss, $client) = @_;
 
-    my $pipehead = $client->option_from_array(['client', 'pipehead']) || 0;
+    my $pipehead = $client->option_from_array(['client', 'pipehead']);
 
     return unless Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
 

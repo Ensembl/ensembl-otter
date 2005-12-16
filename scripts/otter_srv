@@ -200,18 +200,18 @@ sub make_new_child {
                 else {
                     my $libpath = $ENV{PERL5LIB};
                     my $query   = $ENV{QUERY_STRING};
-                    if (($query =~ /\benshead=1\b/)
+                    if (($query =~ /\bpipehead=1\b/)
                         && ($libpath =~
                             s{ensembl/modules}{ensembl_head/modules}g))
                     {            # head ensembl
                         local $ENV{PERL5LIB} = $libpath;
-                        local $ENV{ENSHEAD}  =
+                        local $ENV{PIPEHEAD}  =
                           1;     # let the script know it runs ensembl v.32
                         exec($program, @args);
                         die q{Something went wrong here $!: } . $! . "\n";
                     }
                     else {
-                        local $ENV{ENSHEAD} =
+                        local $ENV{PIPEHEAD} =
                           0;     # let the script know it runs ensembl v.19
                         exec($program, @args);
                         die q{Something went wrong here $!: } . $! . "\n";
