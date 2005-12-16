@@ -1,6 +1,6 @@
 #!/usr/local/bin/perl5.8.0 -w
 
-my $enshead = $ENV{ENSHEAD}; # is set by the server for any GET request
+my $pipehead = $ENV{PIPEHEAD}; # is set by the server for any GET request
 
 use strict;
 use OtterDefs;
@@ -17,8 +17,8 @@ my $cgi = new CGI;
 set_nph($cgi);
 my %cgi_args = $cgi->Vars;
 
-my $odb = get_DBAdaptor_from_CGI_species($cgi, $OTTER_SPECIES, $enshead);
-my ($pdb, $pipeline_slice, $pipe_connparms) = get_pipeline_adaptor_slice_parms($cgi, $odb, $enshead);
+my $odb = get_DBAdaptor_from_CGI_species($cgi, $OTTER_SPECIES, $pipehead);
+my ($pdb, $pipeline_slice, $pipe_connparms) = get_pipeline_adaptor_slice_parms($cgi, $odb, $pipehead);
 
 my @rf_optnames = @{ $OrderOfOptions{RepeatFeature} };
 my @rc_optnames = @{ $OrderOfOptions{RepeatConsensus} };

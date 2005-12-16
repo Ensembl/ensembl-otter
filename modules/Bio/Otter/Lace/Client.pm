@@ -409,7 +409,7 @@ Examples:
 =cut
 
 sub get_analyses_status_from_dsname_ssname {
-    my( $self, $dsname, $ssname, $enshead ) = @_;
+    my( $self, $dsname, $ssname, $pipehead ) = @_;
 
     my $response = $self->general_http_dialog(
         0,
@@ -418,7 +418,7 @@ sub get_analyses_status_from_dsname_ssname {
         {
             'type'     => $ssname,
             'dataset'  => $dsname,
-            'enshead'  => $enshead ? 1 : 0,
+            'pipehead'  => $pipehead ? 1 : 0,
         },
         1,
     );
@@ -433,7 +433,7 @@ sub get_analyses_status_from_dsname_ssname {
 }
 
 sub get_sfs_from_dataset_sliceargs_analysis {   # get SimpleFeatures
-    my( $self, $dataset, $sa, $analysis_name, $enshead ) = @_;
+    my( $self, $dataset, $sa, $analysis_name, $pipehead ) = @_;
 
     $sa = to_sliceargs($sa); # normalization
         # cached values:
@@ -450,7 +450,7 @@ sub get_sfs_from_dataset_sliceargs_analysis {   # get SimpleFeatures
         'get_simple_features',
         {
             %$sa,
-            'enshead'  => $enshead ? 1 : 0,
+            'pipehead'  => $pipehead ? 1 : 0,
             'dataset'  => $dataset->name(),
             'analysis' => $analysis_name,
         },
@@ -486,23 +486,23 @@ sub get_sfs_from_dataset_sliceargs_analysis {   # get SimpleFeatures
 }
 
 sub get_dafs_from_dataset_sliceargs_analysis {  # get DnaAlignFeatures
-    my( $self, $dataset, $sa, $analysis_name, $enshead ) = @_;
+    my( $self, $dataset, $sa, $analysis_name, $pipehead ) = @_;
 
     return $self->get_afs_from_dataset_sliceargs_kind_analysis(
-        $dataset, $sa, 'dafs', $analysis_name, $enshead
+        $dataset, $sa, 'dafs', $analysis_name, $pipehead
     );
 }
 
 sub get_pafs_from_dataset_sliceargs_analysis {  # get ProteinAlignFeatures
-    my( $self, $dataset, $sa, $analysis_name, $enshead ) = @_;
+    my( $self, $dataset, $sa, $analysis_name, $pipehead ) = @_;
 
     return $self->get_afs_from_dataset_sliceargs_kind_analysis(
-        $dataset, $sa, 'pafs', $analysis_name, $enshead
+        $dataset, $sa, 'pafs', $analysis_name, $pipehead
     );
 }
 
 sub get_afs_from_dataset_sliceargs_kind_analysis { # get AlignFeatures (Dna or Protein)
-    my( $self, $dataset, $sa, $kind, $analysis_name, $enshead ) = @_;
+    my( $self, $dataset, $sa, $kind, $analysis_name, $pipehead ) = @_;
 
     $sa = to_sliceargs($sa); # normalization
         # cached values:
@@ -524,7 +524,7 @@ sub get_afs_from_dataset_sliceargs_kind_analysis { # get AlignFeatures (Dna or P
         'get_align_features',
         {
             %$sa,
-            'enshead'  => $enshead ? 1 : 0,
+            'pipehead'  => $pipehead ? 1 : 0,
             'dataset'  => $dataset->name(),
             'kind'     => $kind,
             'analysis' => $analysis_name,
@@ -589,7 +589,7 @@ sub get_afs_from_dataset_sliceargs_kind_analysis { # get AlignFeatures (Dna or P
 }
 
 sub get_rfs_from_dataset_sliceargs_analysis {   # get RepeatFeatures
-    my( $self, $dataset, $sa, $analysis_name, $enshead ) = @_;
+    my( $self, $dataset, $sa, $analysis_name, $pipehead ) = @_;
 
     $sa = to_sliceargs($sa); # normalization
 
@@ -603,7 +603,7 @@ sub get_rfs_from_dataset_sliceargs_analysis {   # get RepeatFeatures
         'get_repeat_features',
         {
             %$sa,
-            'enshead'  => $enshead ? 1 : 0,
+            'pipehead'  => $pipehead ? 1 : 0,
             'dataset'  => $dataset->name(),
             'analysis' => $analysis_name,
         },
@@ -659,7 +659,7 @@ sub get_rfs_from_dataset_sliceargs_analysis {   # get RepeatFeatures
 }
 
 sub get_pts_from_dataset_sliceargs_analysis {   # get PredictionTranscripts
-    my( $self, $dataset, $sa, $analysis_name, $enshead ) = @_;
+    my( $self, $dataset, $sa, $analysis_name, $pipehead ) = @_;
 
     $sa = to_sliceargs($sa); # normalization
 
@@ -673,7 +673,7 @@ sub get_pts_from_dataset_sliceargs_analysis {   # get PredictionTranscripts
         'get_prediction_transcripts',
         {
             %$sa,
-            'enshead'  => $enshead ? 1 : 0,
+            'pipehead'  => $pipehead ? 1 : 0,
             'dataset'  => $dataset->name(),
             'analysis' => $analysis_name,
         },
@@ -736,7 +736,7 @@ sub get_pts_from_dataset_sliceargs_analysis {   # get PredictionTranscripts
 }
 
 sub get_pipegenes_from_dataset_sliceargs_analysis { # get genes from pipeline db - e.g. HalfWise genes
-    my( $self, $dataset, $sa, $analysis_name, $enshead ) = @_;
+    my( $self, $dataset, $sa, $analysis_name, $pipehead ) = @_;
 
     $sa = to_sliceargs($sa); # normalization
 
@@ -750,7 +750,7 @@ sub get_pipegenes_from_dataset_sliceargs_analysis { # get genes from pipeline db
         'get_pipeline_genes',
         {
             %$sa,
-            'enshead'  => $enshead ? 1 : 0,
+            'pipehead'  => $pipehead ? 1 : 0,
             'dataset'  => $dataset->name(),
             'analysis' => $analysis_name,
         },

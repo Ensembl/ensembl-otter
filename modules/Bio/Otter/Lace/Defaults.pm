@@ -483,6 +483,7 @@ email=
 write_access=0
 debug=1
 pipeline=1 
+pipehead=0
 methods_files=/nfs/team71/analysis/rds/workspace/ace_skeleton/rawdata/methods.ace
 #####################################################
 # method groups

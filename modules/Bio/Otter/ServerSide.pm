@@ -95,13 +95,13 @@ sub connect_with_params {
 }
 
 sub get_connected_pipeline_dbhandle {
-    my ($cgi, $odb, $enshead) = @_;
+    my ($cgi, $odb, $pipehead) = @_;
 
     my %cgi_args = $cgi->Vars;
 
     server_log("called with: ".join(' ', map { "$_=$cgi_args{$_}" } keys %cgi_args) );
 
-    my $pipekey = $enshead
+    my $pipekey = $pipehead
         ? 'pipeline_db_head'
         : 'pipeline_db';
 
@@ -117,13 +117,13 @@ sub get_connected_pipeline_dbhandle {
 }
 
 sub get_pipeline_adaptor_slice_parms { # codebase-independent version for scripts
-    my ($cgi, $odb, $enshead) = @_;
+    my ($cgi, $odb, $pipehead) = @_;
 
     my %cgi_args = $cgi->Vars;
 
     server_log("called with: ".join(' ', map { "$_=$cgi_args{$_}" } keys %cgi_args) );
 
-    my $pipekey = $enshead
+    my $pipekey = $pipehead
         ? 'pipeline_db_head'
         : 'pipeline_db';
 
@@ -141,7 +141,7 @@ sub get_pipeline_adaptor_slice_parms { # codebase-independent version for script
         $cgi_args{csver} = 'Otter';
     }
 
-    if($enshead) {
+    if($pipehead) {
 
         server_log("connecting to the NEW pipeline using [$pipekey] meta entry");
 
@@ -199,9 +199,9 @@ sub get_Author_from_CGI{
 }
 
 sub get_DBAdaptor_from_CGI_species{
-    my ($cgi, $SPECIES, $enshead) = @_;
+    my ($cgi, $SPECIES, $pipehead) = @_;
 
-    my $adaptor_class = $enshead
+    my $adaptor_class = $pipehead
         ? 'Bio::EnsEMBL::DBSQL::DBAdaptor'
         : 'Bio::Otter::DBSQL::DBAdaptor';
 
@@ -258,7 +258,7 @@ sub get_DBAdaptor_from_CGI_species{
         
         server_log("Connected to dna database");
     }
-    if(!$enshead) {
+    if(!$pipehead) {
         server_log("Assembly_type='" . $odb->assembly_type($type)."'");
     }
     return $odb;
