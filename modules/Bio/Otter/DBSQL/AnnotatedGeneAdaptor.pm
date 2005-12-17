@@ -178,7 +178,7 @@ sub list_current_dbIDs_for_Slice_by_type {
     my( %sid_gid );
     while (my ($sid, $version, $gid, $type) = $sth->fetchrow) {
         $get_max->execute($sid);
-        my ($max) = $get_max->execute($sid);
+        my ($max) = $get_max->fetchrow;
         next unless $max == $version;
         $sid_gid{$sid} = [$gid, $type];
     }
