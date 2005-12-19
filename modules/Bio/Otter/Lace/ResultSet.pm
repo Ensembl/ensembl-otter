@@ -221,7 +221,7 @@ sub fetch_Clones_containing_locus{
         }
     }
     if (keys %contig_ids){
-        return $self->fetch_Clones_containing_ContigIDs(keys %contig_ids);    
+        return $self->fetch_Clones_containing_ContigIDs([keys %contig_ids]);    
     }
     else{
         return 0 ;
