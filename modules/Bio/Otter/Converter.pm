@@ -781,6 +781,7 @@ sub otter_to_ace {
 	      $str .= qq{EMBL_dump_info DE_line "$rem"\n};
 	    }
 	    else {
+            ### Shouldn't this be a Remark?
 	      $str .= qq{Annotation_remark "$rem"\n};
 	    }
 	}
@@ -860,12 +861,12 @@ sub ace_transcript_seq_objs_from_genes{
         foreach my $tran (@{ $gene->get_all_Transcripts }) {
             my $tran_name = $tran->transcript_info->name || $tran->stable_id;
 
-            $str .= qq{\n-D Sequence : "$tran_name"\n\n};
-
-            $str .= "Sequence : \"" . $tran_name . "\"\n";
-            $str .= "Transcript_id \"" . $tran->stable_id . "\"\n";
-            $str .= "Source \"" . $slice->display_id . "\"\n";
-            $str .= "Locus \"" . $gene_name . "\"\n";
+            $str .=
+                qq{\n-D Sequence : "$tran_name"\n\n}
+                . qq{Sequence : "$tran_name"\n}
+                . sprintf(qq{Transcript_id "%s"\n}, $tran->stable_id)
+                . sprintf(qq{Source "%s"\n},        $slice->display_id)
+                . qq{Locus "$gene_name"\n};
             if (my $author = $tran->transcript_info->author) {
                 my $name  = $author->name;
                 # author has a unique key in the database
@@ -1237,8 +1238,7 @@ sub ace_to_otter {
                     $at->end($end);
                     $at->strand($strand);
 
-                    my $assembly_tag_set = $curr_seq->{'assembly_tag_set'} ||=
-                      [];
+                    my $assembly_tag_set = $curr_seq->{'assembly_tag_set'} ||= [];
                     push @$assembly_tag_set, $at;
                 }
 
@@ -1343,7 +1343,7 @@ sub ace_to_otter {
                 elsif (/^Method $STRING/x) {
                     my $meth = ace_unescape($1);
                     # Strip any prefix from the method
-                    $meth =~ s/^[A-Z_]+://;
+                    $meth =~ s/^[^:]+://;
                     $curr_seq->{Method} = $meth;
                 }
                 elsif (/^(Processed_mRNA|Pseudogene)/) {
@@ -2339,7 +2339,7 @@ sub gene_type_from_transcript_set {
     my $class_set = {};
     foreach my $transcript (@$transcripts) {
         my $class = $transcript->transcript_info->class->name;
-        $class =~ s/^([^:]+)://;    # Strip leading GD. etc ...
+        $class =~ s/^[^:]+://;    # Strip leading GD: etc ...
         $class =~ s/_trunc$//;
         if ($class eq 'Artifact') {
             $has_artifact = 1;
