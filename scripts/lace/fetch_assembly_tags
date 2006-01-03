@@ -41,9 +41,9 @@ $help->() unless ($dataset && (@sets || @clones || $clone_list) );
   # first make sure new clones added by load_otter_ensembl are populated in the assembly_tagged_clone table
   prepare_new_clones_for_assembly_tag($otter_db);
 
+
   # hashref
   my $atagCtgID_clnID = get_assembly_tagged_clones($otter_db);
-
 
 
   # options to populate assembly_tag table, see also POD
@@ -138,7 +138,7 @@ sub prepare_new_clones_for_assembly_tag {
 	}
   }
   else {
-	warn "\nNo new clone ids added to assembly_tagged_clone table\n\n";
+	warn "\nAll new clone ids added to assembly_tagged_clone table\n\n";
   }
 }
 
@@ -213,7 +213,7 @@ sub fetch_by_clone_obj {
 		print "INFO: $ctg_name - no acefile at $dir/rawdata/\n" if !$humace_file and ($verbose or $check);
       }
 
-	  # use for checking existence/location of assembly_tag acefile of a clone (acc.sv)
+	  # info for location of assembly_tag acefile of a clone (acc.sv)
 	  if ( $check ){
 		print "$acc.$version => $humace_file\n";
 	  }
@@ -221,7 +221,6 @@ sub fetch_by_clone_obj {
 	  push(@{$atagClone_acefile_info->{$ctg_name}}, $humace_file, $ctg_strand, $ctg_id) if $humace_file and !$check;
     }
   }
-  exit if $check;
 
   # parsing acefile for all Sanger clones of an assembly type in one go
   my $contig_atag_data = parse_ace($atagClone_acefile_info, $otter_db);
