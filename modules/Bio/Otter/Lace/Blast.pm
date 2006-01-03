@@ -38,8 +38,9 @@ sub import {
     # had to put this inline here
     my %Config = (
                   
-                  DATA_DIR => '/usr/local/ensembl/data',
+                  DATA_DIR => '/data/blastdb/Supported',
                   LIB_DIR  => '/usr/local/ensembl/lib',
+                  ENS_DIR  => '/usr/local/ensembl/data',
                   
                   # location of output and error files
                   # (can also be specified on RuleManager command line)
@@ -151,7 +152,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.8 $ ';
+$revision='$Revision: 1.9 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
