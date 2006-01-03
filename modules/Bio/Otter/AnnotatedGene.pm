@@ -78,29 +78,22 @@ sub gene_info {
 
 =cut
 
-sub toXMLString{
+sub toXMLString {
     my ($self) = shift;
 
-
-# determine if gene is on a slice
-    my $exons = $self->get_all_Exons;
+    # determine if gene is on a slice
+    my $exons  = $self->get_all_Exons;
     my $offset = 0;
 
     if (scalar(@$exons)) {
-      my $contig = $exons->[0]->contig;
-      if (defined($contig) && $contig->isa("Bio::EnsEMBL::Slice")) {
-        $offset = $contig->chr_start-1;
-      }
+        my $contig = $exons->[0]->contig;
+        if (defined($contig) && $contig->isa("Bio::EnsEMBL::Slice")) {
+            $offset = $contig->chr_start - 1;
+        }
     }
 
-
-
-    my $str = "<locus>\n";
-    my $stableid = "";
-
-    if (defined($self->stable_id)) { $stableid = $self->stable_id;}
-   
-    $str .= "  <stable_id>" . $stableid . "</stable_id>\n";
+    my $str      = "<locus>\n";
+    $str .= "  <stable_id>" . ($self->stable_id || "") . "</stable_id>\n";
 
     my $info = $self->gene_info;
 
@@ -113,144 +106,149 @@ sub toXMLString{
         if (my $n = $info->name) {
             $name = $n->name;
         }
-	$str .= "  <name>" . $name . "</name>\n";
+        $str .= "  <name>" . $name . "</name>\n";
         $str .= "  <type>" . $self->type . "</type>\n";
 
         $str .= "  <known>" . $info->known_flag . "</known>\n";
         $str .= "  <truncated>" . $info->truncated_flag . "</truncated>\n";
 
-	foreach my $syn ($info->synonym) {
-	    $str .= "  <synonym>" . $syn->name . "<\/synonym>\n";
-	}
+        foreach my $syn ($info->synonym) {
+            $str .= "  <synonym>" . $syn->name . "<\/synonym>\n";
+        }
 
-	foreach my $rem ($info->remark) {
-	    $str .= "  <remark>" . $rem->remark . "</remark>\n";
-	}
+        foreach my $rem ($info->remark) {
+            $str .= "  <remark>" . $rem->remark . "</remark>\n";
+        }
 
         if (my $author = $info->author) {
             $str .= $author->toXMLString;
         }
     }
 
-    my @tran = @{$self->get_all_Transcripts};
+    my @tran = @{ $self->get_all_Transcripts };
 
     @tran = sort by_stable_id_or_name @tran;
 
     foreach my $tran (@tran) {
         my $tranid = "";
         if (defined($tran->stable_id)) {
-           $tranid = $tran->stable_id;
+            $tranid = $tran->stable_id;
         }
-	$str .= "  <transcript>\n";
-	$str .= "    <stable_id>$tranid</stable_id>\n";
-	
-	my $tinfo = $tran->transcript_info;
+        $str .= "  <transcript>\n";
+        $str .= "    <stable_id>$tranid</stable_id>\n";
 
-	if (defined($tinfo)) {
+        my $tinfo = $tran->transcript_info;
+
+        if (defined($tinfo)) {
 
             if (my $author = $tinfo->author) {
                 $str .= $author->toXMLString;
             }
 
-	    foreach my $remstr (sort map $_->remark, $tinfo->remark) {
+            foreach my $remstr (sort map $_->remark, $tinfo->remark) {
                 $remstr =~ s/\n/ /g;
-		$str .= "    <remark>$remstr</remark>\n";
-	    }
-	   
-            my $classname = "";
-	    my $tname    = "";
-
-            if (defined($tinfo->class)) {
-               if (defined($tinfo->class->name)) {
-                  $classname = $tinfo->class->name;
-               }
+                $str .= "    <remark>$remstr</remark>\n";
             }
- 
-	    if (defined($tinfo->name)) {
-		$tname = $tinfo->name;
-	    }
 
-            foreach my $method (qw{
+            foreach my $method (
+                qw{
                 cds_start_not_found
                 cds_end_not_found
                 mRNA_start_not_found
                 mRNA_end_not_found
-                })
+                }
+              )
             {
-                $str .= "  <$method>" . ($tinfo->$method() || 0) . "</$method>\n";
+                $str .=
+                  "  <$method>" . ($tinfo->$method() || 0) . "</$method>\n";
             }
-	    
-	    $str .= "    <transcript_class>$classname</transcript_class>\n";
-	    $str .= "    <name>$tname</name>\n";
-	    
+
+            my $classname = $tinfo->class->name || "";
+            my $tname     = $tinfo->name        || "";
+
+            $str .= "    <transcript_class>$classname</transcript_class>\n";
+            $str .= "    <name>$tname</name>\n";
+
             $str .= "    <evidence_set>\n";
 
             my $evidence = $tinfo->get_all_Evidence;
-            @$evidence = sort {$a->name cmp $b->name} @$evidence;
+            @$evidence = sort { $a->name cmp $b->name } @$evidence;
 
             foreach my $ev (@$evidence) {
-              $str .= "      <evidence>\n";
-              $str .= "        <name>" . $ev->name . "</name>\n";
-              $str .= "        <type>" . $ev->type . "</type>\n";
-              $str .= "      </evidence>\n";
+                $str .= "      <evidence>\n";
+                $str .= "        <name>" . $ev->name . "</name>\n";
+                $str .= "        <type>" . $ev->type . "</type>\n";
+                $str .= "      </evidence>\n";
             }
             $str .= "    </evidence_set>\n";
-	}
-
+        }
 
         my $tran_low  = undef;
         my $tran_high = undef;
         if (my $tl = $tran->translation) {
-          my $strand = $tl->start_Exon->strand;
-          $tran_low  = $tran->coding_region_start;
-          $tran_high = $tran->coding_region_end;
-          $str .= "    <translation_start>" . (($strand == 1) ? ($tran_low  + $offset) : ($tran_high + $offset)) . "</translation_start>\n";
-          $str .= "    <translation_end>"   . (($strand == 1) ? ($tran_high + $offset) : ($tran_low  + $offset)) . "</translation_end>\n";
+            my $strand = $tl->start_Exon->strand;
+            $tran_low  = $tran->coding_region_start;
+            $tran_high = $tran->coding_region_end;
+            $str .=
+              "    <translation_start>"
+              . (
+                ($strand == 1) ? ($tran_low + $offset) : ($tran_high + $offset))
+              . "</translation_start>\n";
+            $str .=
+              "    <translation_end>"
+              . (
+                ($strand == 1) ? ($tran_high + $offset) : ($tran_low + $offset))
+              . "</translation_end>\n";
             if (my $tl_id = $tl->stable_id) {
-                $str .= "    <translation_stable_id>$tl_id</translation_stable_id>\n";
+                $str .=
+                  "    <translation_stable_id>$tl_id</translation_stable_id>\n";
             }
         }
 
-	$str .= "    <exon_set>\n";
+        $str .= "    <exon_set>\n";
 
-        my @exon = @{$tran->get_all_Exons;};
+        my @exon = @{ $tran->get_all_Exons; };
 
-        @exon = sort {$a->start <=> $b->start} @exon;
+        @exon = sort { $a->start <=> $b->start } @exon;
 
         my $cds_snf = "";
         if (defined($tinfo->cds_start_not_found)) {
-          $cds_snf = $tinfo->cds_start_not_found;
+            $cds_snf = $tinfo->cds_start_not_found;
         }
-	foreach my $ex (@exon) {
+        foreach my $ex (@exon) {
             my $stable_id = "";
             if (defined($ex->stable_id)) {
-               $stable_id = $ex->stable_id;
+                $stable_id = $ex->stable_id;
             }
-	    $str .= "      <exon>\n";
-	    $str .= "        <stable_id>" . $stable_id . "</stable_id>\n";
-	    $str .= "        <start>"     . ($ex->start+$offset)     . "</start>\n";
-	    $str .= "        <end>"       . ($ex->end+$offset)       . "</end>\n";
-	    $str .= "        <strand>"    . $ex->strand    . "</strand>\n";
+            $str .= "      <exon>\n";
+            $str .= "        <stable_id>" . $stable_id . "</stable_id>\n";
+            $str .= "        <start>" . ($ex->start + $offset) . "</start>\n";
+            $str .= "        <end>" . ($ex->end + $offset) . "</end>\n";
+            $str .= "        <strand>" . $ex->strand . "</strand>\n";
+
             # Only coding exons have frame set
             ### Do we need to test for translation region - why not
             ### just rely on phase of exon, which will be -1 if non-coding?
-            if (defined($tran_low) && defined($tran_high) && 
-                $ex->end >= $tran_low && $ex->start <= $tran_high)
+            if (   defined($tran_low)
+                && defined($tran_high)
+                && $ex->end >= $tran_low
+                && $ex->start <= $tran_high)
             {
                 my $phase = $ex->phase;
                 my $frame = $phase == -1 ? 0 : (3 - $phase) % 3;
                 $str .= "        <frame>" . $frame . "</frame>\n";
             }
-	    $str .= "      </exon>\n";
-	}
-	$str .= "    </exon_set>\n";
+            $str .= "      </exon>\n";
+        }
+        $str .= "    </exon_set>\n";
 
-	$str .= "  </transcript>\n";
+        $str .= "  </transcript>\n";
     }
     $str .= "</locus>\n";
-    
+
     return $str;
 }
+
 
 sub by_stable_id_or_name {
 

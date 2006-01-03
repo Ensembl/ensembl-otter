@@ -223,21 +223,21 @@ sub truncated_flag {
 
 =cut
 
-sub toString{
+sub toString {
     my ($self) = shift;
 
-    my $str = "";
-    my $dbid = "";
+    my $str       = "";
+    my $dbid      = "";
     my $timestamp = "";
 
     if (defined($self->dbID)) {
-      $dbid = $self->dbID;
+        $dbid = $self->dbID;
     }
     if (defined($self->timestamp)) {
-	$timestamp = $self->timestamp;
+        $timestamp = $self->timestamp;
     }
 
-    $str .= "DbID       : " . $dbid      . "\n";
+    $str .= "DbID       : " . $dbid . "\n";
     $str .= "Stable id  : " . $self->gene_stable_id . "\n";
     $str .= "Timestamp  : " . $timestamp . "\n";
 
@@ -252,13 +252,13 @@ sub toString{
     $str .= "Gene info synonyms :-\n";
 
     foreach my $rem ($self->synonym) {
-	$str .= $rem->toString . "\n";
+        $str .= $rem->toString . "\n";
     }
 
     $str .= "Gene info remarks :-\n";
 
     foreach my $rem ($self->remark) {
-	$str .= $rem->toString() . "\n";
+        $str .= $rem->toString() . "\n";
     }
 
     return $str;
@@ -266,21 +266,23 @@ sub toString{
 }
 
 sub equals {
-    my ($self,$obj) = @_;
+    my ($self, $obj) = @_;
 
     if (!defined($obj)) {
-	$self->throw("Need an object to compare with");
+        $self->throw("Need an object to compare with");
     }
     if (!$obj->isa("Bio::Otter::GeneInfo")) {
-	$self->throw("[$obj] is not a Bio::Otter::GeneInfo");
+        $self->throw("[$obj] is not a Bio::Otter::GeneInfo");
     }
 
     if ($self->known_flag != $obj->known_flag) {
+
         #print STDERR "Known status mismatch";
         return 0;
     }
 
     if ($self->gene_stable_id ne $obj->gene_stable_id) {
+
         #print STDERR "Gene stable ID mismatch: '%s' vs '%s'\n",
         #    $self->gene_stable_id, $obj->gene_stable_id;
         return 0;
@@ -290,51 +292,56 @@ sub equals {
     my @remark2 = $obj->remark;
 
     if (scalar(@remark1) != scalar(@remark2)) {
+
         #print STDERR "Different remark count";
-      return 0;
+        return 0;
     }
 
     foreach my $rem (@remark1) {
-	my $found = 0;
-	
-	foreach my $rem2 (@remark2) {
-	    if ($rem->equals($rem2)) {
-		$found = 1;
-	    }
-	}
-	if ($found == 0) {
+        my $found = 0;
+
+        foreach my $rem2 (@remark2) {
+            if ($rem->equals($rem2)) {
+                $found = 1;
+            }
+        }
+        if ($found == 0) {
+
             #printf STDERR "Different remark for %s %s\n  '%s'\n",
             #    $self->gene_stable_id, $self->name->name, $rem->remark;
-	    return 0;
-	}
+            return 0;
+        }
     }
-
 
     my @syn1 = $self->synonym;
     my @syn2 = $obj->synonym;
 
     if (scalar(@syn1) != scalar(@syn2)) {
+
         #print STDERR "Different synonym count";
-      return 0;
+        return 0;
     }
 
     foreach my $rem (@syn1) {
-	my $found = 0;
-	foreach my $rem2 (@syn2) {
+        my $found = 0;
+        foreach my $rem2 (@syn2) {
+
             #print "Rem2  " . $rem->name . "\n";
-	    if ($rem->equals($rem2)) {
-		$found = 1;
-	    }
-	}
-	if ($found == 0) {
-            #print STDERR "Different synonym " . $rem->name . " for  " . $self->gene_stable_id . " " . $self->name->name . "\n";
-	    return 0;
-	}
+            if ($rem->equals($rem2)) {
+                $found = 1;
+            }
+        }
+        if ($found == 0) {
+
+#print STDERR "Different synonym " . $rem->name . " for  " . $self->gene_stable_id . " " . $self->name->name . "\n";
+            return 0;
+        }
     }
-    
+
     if (!$self->name->equals($obj->name)) {
-        #print STDERR "Different name " . $self->name  . " for  " . $self->gene_stable_id . " " . $self->name . "\n";
-	return 0;
+
+#print STDERR "Different name " . $self->name  . " for  " . $self->gene_stable_id . " " . $self->name . "\n";
+        return 0;
     }
 
     return 1;

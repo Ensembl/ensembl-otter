@@ -9,7 +9,7 @@ use strict;
 use Carp;
 use Hum::Sort 'ace_sort';
 
-my $DEBUG = 1;
+my $DEBUG = 0;
 
 sub new {
     my $pkg = shift;
