@@ -129,6 +129,8 @@ sub list_all_acefiles {
 sub write_local_blast{
     my ($self, $ss) = @_;
 
+    require Bio::Otter::Lace::Blast;
+
     my $cl         = $self->Client();
     my $fasta_file = $cl->option_from_array(['local_blast', 'database'])     || return 0;
     my $homol_tag  = $cl->option_from_array(['local_blast', 'homol_tag'])    || 'DNA_homol';
@@ -140,9 +142,6 @@ sub write_local_blast{
     my $pressdb    = $cl->option_from_array(['local_blast', 'blast_indexer']);
 
     return 0 unless -e $fasta_file;
-
-    eval "use Bio::Otter::Lace::Blast;";
-    if($@){ warn $@; return 0;}
 
     my $ds = $cl->get_DataSet_by_name($ss->dataset_name());
 
@@ -848,7 +847,12 @@ sub make_AceDataFactory {
     my $collect = $self->get_default_MethodCollection;
 
     foreach my $logic_name (@analysis_names) {
-        my %param = %{$module_options->{$logic_name}};
+        my $param_ref = $module_options->{$logic_name}
+            or die "No parameters for '$logic_name'";
+
+        # Take a copy of the parameters so that we can delete from it.
+        my %param = %$param_ref;
+
         # class successfully required already.
         my $class = delete $param{'module'}
           or confess "Module class for '$logic_name' missing from config";
@@ -872,26 +876,24 @@ sub make_AceDataFactory {
                 or confess "No analysis object for '$logic_name' in database";
             $filt->analysis_object($ana);
         }
-        if ($filt) {
 
-            # Options in the config file are methods on filter objects:
-            while (my ($option, $value) = each %param) {
-                #warn "setting '$option' to '$value'\n";
-                $filt->$option($value);
-            }
-
-            # does the filter need a method?
-            my $req = $filt->required_ace_method_names;
-            foreach my $tag (@$req) {
-                #print STDERR "Trying to get a method Object with tag '$tag' ... filter '$class' ... ";
-                my $methObj = $collect->get_Method_by_name($tag);
-                #print STDERR $methObj ? "found one\n" : "find failed\n";
-                $filt->add_method_object($methObj);    # or some other place
-            }
-
-            # add the filter to the factory
-            $factory->add_AceFilter($filt);
+        # Options in the config file are methods on filter objects:
+        while (my ($option, $value) = each %param) {
+            #warn "setting '$option' to '$value'\n";
+            $filt->$option($value);
         }
+
+        # does the filter need a method?
+        my $req = $filt->required_ace_method_names;
+        foreach my $tag (@$req) {
+            #print STDERR "Trying to get a method Object with tag '$tag' ... filter '$class' ... ";
+            my $methObj = $collect->get_Method_by_name($tag);
+            #print STDERR $methObj ? "found one\n" : "find failed\n";
+            $filt->add_method_object($methObj);    # or some other place
+        }
+
+        # add the filter to the factory
+        $factory->add_AceFilter($filt);
     }
 
     return $factory;

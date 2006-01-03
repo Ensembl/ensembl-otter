@@ -1,5 +1,4 @@
 
-
 package Bio::Otter::TranscriptInfo;
 
 # clone info file
@@ -8,51 +7,62 @@ use vars qw(@ISA);
 use strict;
 use Bio::EnsEMBL::Root;
 
-
 @ISA = qw(Bio::EnsEMBL::Root);
 
-
 sub new {
-  my($class,@args) = @_;
+    my ($class, @args) = @_;
 
-  my $self = bless {}, $class;
+    my $self = bless {}, $class;
 
-  my ($dbid,$stable_id,$name,$tclass,$start_nf,$end_nf,$mrna_start,$mrna_end,$author,$timestamp,$remark,$evidence) =
-      $self->_rearrange([qw(DBID STABLE_ID NAME CLASS CDS_START_NOT_FOUND CDS_END_NOT_FOUND 
-			    MRNA_START_NOT_FOUND MRNA_END_NOT_FOUND AUTHOR TIMESTAMP REMARK EVIDENCE)],@args);
+    my (
+        $dbid,     $stable_id, $name,       $tclass,
+        $start_nf, $end_nf,    $mrna_start, $mrna_end,
+        $author,   $timestamp, $remark,     $evidence
+      )
+      = $self->_rearrange(
+        [
+            qw(DBID STABLE_ID NAME CLASS CDS_START_NOT_FOUND CDS_END_NOT_FOUND
+              MRNA_START_NOT_FOUND MRNA_END_NOT_FOUND AUTHOR TIMESTAMP REMARK EVIDENCE)
+        ],
+        @args
+      );
 
-  $self->dbID($dbid);
-  $self->transcript_stable_id($stable_id);
-  $self->name($name);
-  $self->class($tclass);
-  $self->cds_start_not_found($start_nf);
-  $self->cds_end_not_found($end_nf);
-  $self->mRNA_start_not_found($mrna_start);
-  $self->mRNA_end_not_found($mrna_end);
-  $self->author($author);
-  $self->timestamp($timestamp);
+    $self->dbID($dbid);
+    $self->transcript_stable_id($stable_id);
+    $self->name($name);
+    $self->class($tclass);
+    $self->cds_start_not_found($start_nf);
+    $self->cds_end_not_found($end_nf);
+    $self->mRNA_start_not_found($mrna_start);
+    $self->mRNA_end_not_found($mrna_end);
+    $self->author($author);
+    $self->timestamp($timestamp);
 
-  $self->{_remark}   = [];
-  $self->flush_Evidence;
+    $self->{_remark} = [];
+    $self->flush_Evidence;
 
-  if (defined($evidence)) {
-      if (ref($evidence) eq "ARRAY") {
-	  $self->add_Evidence(@$evidence);
-      } else {
-	  $self->throw("Argument to evidence must be an array ref. Currently [$evidence]");
-      }
-  }
-  
-  if (defined($remark)) {
-      if (ref($remark) eq "ARRAY") {
-		  $self->remark(@$remark);
-      } else {
-		  $self->throw("Argument to remark must be an array ref. Currently [$remark]");
-      }
-  }
+    if (defined($evidence)) {
+        if (ref($evidence) eq "ARRAY") {
+            $self->add_Evidence(@$evidence);
+        }
+        else {
+            $self->throw(
+"Argument to evidence must be an array ref. Currently [$evidence]"
+            );
+        }
+    }
 
+    if (defined($remark)) {
+        if (ref($remark) eq "ARRAY") {
+            $self->remark(@$remark);
+        }
+        else {
+            $self->throw(
+                "Argument to remark must be an array ref. Currently [$remark]");
+        }
+    }
 
-  return $self;
+    return $self;
 }
 
 =head2 dbID
@@ -67,10 +77,10 @@ sub new {
 
 =cut
 
-sub dbID{
-   my ($obj,$value) = @_;
-   if( defined $value) {
-      $obj->{'dbID'} = $value;
+sub dbID {
+    my ($obj, $value) = @_;
+    if (defined $value) {
+        $obj->{'dbID'} = $value;
     }
     return $obj->{'dbID'};
 
@@ -89,15 +99,13 @@ sub dbID{
 =cut
 
 sub transcript_stable_id {
-   my ($obj,$value) = @_;
-   if( defined $value) {
-      $obj->{'stable_id'} = $value;
+    my ($obj, $value) = @_;
+    if (defined $value) {
+        $obj->{'stable_id'} = $value;
     }
     return $obj->{'stable_id'};
 
 }
-
-
 
 =head2 author
 
@@ -111,18 +119,19 @@ sub transcript_stable_id {
 
 =cut
 
-sub author{
+sub author {
 
-   my ($self,$value) = @_;
+    my ($self, $value) = @_;
 
-   if(defined($value)) {
-       if ($value->isa("Bio::Otter::Author")) {
-	   $self->{'author'} = $value;
-       } else {
-	   $self->throw("Argument [$value] is not a Bio::Otter::Author");
-       }
-   }
-   return $self->{'author'};
+    if (defined($value)) {
+        if ($value->isa("Bio::Otter::Author")) {
+            $self->{'author'} = $value;
+        }
+        else {
+            $self->throw("Argument [$value] is not a Bio::Otter::Author");
+        }
+    }
+    return $self->{'author'};
 }
 
 =head2 timestamp
@@ -137,10 +146,10 @@ sub author{
 
 =cut
 
-sub timestamp{
-   my ($obj,$value) = @_;
-   if( defined $value) {
-      $obj->{'timestamp'} = $value;
+sub timestamp {
+    my ($obj, $value) = @_;
+    if (defined $value) {
+        $obj->{'timestamp'} = $value;
     }
     return $obj->{'timestamp'};
 
@@ -159,13 +168,12 @@ sub timestamp{
 =cut
 
 sub name {
-   my ($obj,$value) = @_;
-   if( defined $value) {
-      $obj->{'name'} = $value;
+    my ($obj, $value) = @_;
+    if (defined $value) {
+        $obj->{'name'} = $value;
     }
     return $obj->{'name'};
 }
-
 
 =head2 class
 
@@ -180,18 +188,20 @@ sub name {
 =cut
 
 sub class {
-   my ($obj,$value) = @_;
-   if( defined $value) {
-       if ($value->isa("Bio::Otter::TranscriptClass")) {
-	   $obj->{'class'} = $value;
-       } else {
-	   $obj->throw("Argument to class should be a Transcriptclass object.  Currently [$value]");
-       }
-   }
-   return $obj->{'class'};
+    my ($obj, $value) = @_;
+    if (defined $value) {
+        if ($value->isa("Bio::Otter::TranscriptClass")) {
+            $obj->{'class'} = $value;
+        }
+        else {
+            $obj->throw(
+"Argument to class should be a Transcriptclass object.  Currently [$value]"
+            );
+        }
+    }
+    return $obj->{'class'};
 
 }
-
 
 =head2 cds_start_not_found
 
@@ -206,21 +216,22 @@ sub class {
 =cut
 
 sub cds_start_not_found {
-   my ($obj,$value) = @_;
+    my ($obj, $value) = @_;
 
-   if ( defined $value) {
+    if (defined $value) {
 
-       if ($value eq "true") {
-	   $value = 1;
-       } elsif ($value eq "false") {
-	   $value = 0;
-       }
+        if ($value eq "true") {
+            $value = 1;
+        }
+        elsif ($value eq "false") {
+            $value = 0;
+        }
 
-       if( $value != 0 && $value != 1 ) {
-	   $obj->throw("Value must be either 0 or 1");
-       }
-       
-       $obj->{'cds_start_not_found'} = $value;
+        if ($value != 0 && $value != 1) {
+            $obj->throw("Value must be either 0 or 1");
+        }
+
+        $obj->{'cds_start_not_found'} = $value;
     }
     return $obj->{'cds_start_not_found'} || 0;
 }
@@ -238,26 +249,24 @@ sub cds_start_not_found {
 =cut
 
 sub cds_end_not_found {
-   my ($obj,$value) = @_;
+    my ($obj, $value) = @_;
 
+    if (defined $value) {
 
-   if( defined $value) {
+        if ($value eq "true") {
+            $value = 1;
+        }
+        elsif ($value eq "false") {
+            $value = 0;
+        }
 
-       if ($value eq "true") {
-	   $value = 1;
-       } elsif ($value eq "false") {
-	   $value = 0;
-       }
-
-       if( $value ne '0' && $value ne '1' ) {
-	   $obj->throw("Value must be either 0 or 1");
-       }
-      $obj->{'cds_end_not_found'} = $value;
+        if ($value ne '0' && $value ne '1') {
+            $obj->throw("Value must be either 0 or 1");
+        }
+        $obj->{'cds_end_not_found'} = $value;
     }
     return $obj->{'cds_end_not_found'} || 0;
 }
-
-
 
 =head2 mRNA_start_not_found
 
@@ -272,19 +281,20 @@ sub cds_end_not_found {
 =cut
 
 sub mRNA_start_not_found {
-   my ($obj,$value) = @_;
-   if( defined $value) {
+    my ($obj, $value) = @_;
+    if (defined $value) {
 
-       if ($value eq "true") {
-	   $value = 1;
-       } elsif ($value eq "false") {
-	   $value = 0;
-       }
+        if ($value eq "true") {
+            $value = 1;
+        }
+        elsif ($value eq "false") {
+            $value = 0;
+        }
 
-       if( $value != 0 && $value != 1 ) {
-	   $obj->throw("Value must be either 0 or 1");
-       }
-      $obj->{'mRNA_start_not_found'} = $value;
+        if ($value != 0 && $value != 1) {
+            $obj->throw("Value must be either 0 or 1");
+        }
+        $obj->{'mRNA_start_not_found'} = $value;
     }
     return $obj->{'mRNA_start_not_found'} || 0;
 }
@@ -302,67 +312,65 @@ sub mRNA_start_not_found {
 =cut
 
 sub mRNA_end_not_found {
-   my ($obj,$value) = @_;
-   if( defined $value) {
+    my ($obj, $value) = @_;
+    if (defined $value) {
 
-       if ($value eq "true") {
-	   $value = 1;
-       } elsif ($value eq "false") {
-	   $value = 0;
-       }
+        if ($value eq "true") {
+            $value = 1;
+        }
+        elsif ($value eq "false") {
+            $value = 0;
+        }
 
-       if( $value != 0 && $value != 1 ) {
-	   $obj->throw("Value must be either 0 or 1");
-       }
-      $obj->{'mRNA_end_not_found'} = $value;
+        if ($value != 0 && $value != 1) {
+            $obj->throw("Value must be either 0 or 1");
+        }
+        $obj->{'mRNA_end_not_found'} = $value;
     }
     return $obj->{'mRNA_end_not_found'} || 0;
 }
 
-=head2 remark
-  
- Title   : remark
- Usage   : $obj->remark($newval)
- Function:
- Example :
- Returns : value of remark
- Args    : newvalue (optional)
-  
-
-=cut
-  
-sub remark{
+sub remark {
     my $obj = shift @_;
 
     while (my $rem = shift @_) {
-	if ($rem->isa("Bio::Otter::TranscriptRemark")) {
-	    push(@{$obj->{'_remark'}},$rem);
-	} else {
-	    $obj->throw("Object [$rem] is not a TranscriptRemark object");
-	}
+        if ($rem->isa("Bio::Otter::TranscriptRemark")) {
+            push(@{ $obj->{'_remark'} }, $rem);
+        }
+        else {
+            $obj->throw("Object [$rem] is not a TranscriptRemark object");
+        }
     }
 
-   return @{$obj->{'_remark'}};
+    return @{ $obj->{'_remark'} };
 
 }
-
 
 sub add_Evidence {
     my $self = shift;
 
     my $list = $self->{'_evidence'};
     while (my $ev = shift) {
-	if ($ev->isa("Bio::Otter::Evidence")) {
-	    push(@$list, $ev);
-	} else {
-	    $self->throw("Object [$ev] is not an Evidence object");
-	}
+        if ($ev->isa("Bio::Otter::Evidence")) {
+            push(@$list, $ev);
+            $self->{'_is_sorted'} = 0;
+        }
+        else {
+            $self->throw("Object [$ev] is not an Evidence object");
+        }
     }
 }
 
 sub get_all_Evidence {
     my $self = shift;
 
+    unless ($self->{'_is_sorted'}) {
+        # Ensures that we only sort the evidence array once
+        $self->{'_evidence'} =
+          [ sort { $a->type cmp $b->type || $a->name cmp $b->name }
+              @{ $self->{'_evidence'} } ];
+        $self->{'_is_sorted'} = 1;
+    }
     return $self->{'_evidence'};
 }
 
@@ -370,22 +378,10 @@ sub flush_Evidence {
     my $self = shift;
 
     $self->{'_evidence'} = [];
+    return 1;
 }
 
-
-=head2 toString
-
- Title   : toString
- Usage   :
- Function:
- Example :
- Returns : 
- Args    :
-
-
-=cut
-
-sub toString{
+sub toString {
     my ($self) = shift;
 
     my $str = "";
@@ -394,18 +390,20 @@ sub toString{
     my $timestamp;
 
     if (!defined($self->dbID)) {
-      $dbid = "";
-    } else {
-      $dbid = $self->dbID;
+        $dbid = "";
+    }
+    else {
+        $dbid = $self->dbID;
     }
 
     if (!defined($self->timestamp)) {
-      $timestamp = "";
-    } else {
-      $timestamp = $self->timestamp("");
+        $timestamp = "";
+    }
+    else {
+        $timestamp = $self->timestamp("");
     }
 
-    $str .= "DbID       : " . $dbid      . "\n";
+    $str .= "DbID       : " . $dbid . "\n";
     $str .= "Stable id  : " . $self->transcript_stable_id . "\n";
     $str .= "Timestamp  : " . $timestamp . "\n";
     $str .= "Name       : " . $self->name . "\n";
@@ -424,138 +422,153 @@ sub toString{
     $str .= "Gene info remarks :-\n";
 
     foreach my $rem ($self->remark) {
-	$str .= $rem->toString() . "\n";
+        $str .= $rem->toString() . "\n";
     }
 
     $str .= "Transcript evidence :-\n";
 
     $str .= "EV:\n";
-    foreach my $ev (@{$self->get_all_Evidence}) {
-	$str .= $ev->toString() . "\n";
+    foreach my $ev (@{ $self->get_all_Evidence }) {
+        $str .= $ev->toString() . "\n";
     }
     return $str;
 
 }
+
 sub validate {
     my ($self) = @_;
 
     if (!defined($self->transcript_stable_id)) {
-	$self->throw("No stable id");
+        $self->throw("No stable id");
     }
     if (!defined($self->author)) {
-	$self->throw("No author for transcript " . $self->transcript_stable_id);
+        $self->throw("No author for transcript " . $self->transcript_stable_id);
     }
     if (!defined($self->name)) {
-	$self->throw("No name for transcript " . $self->transcript_stable_id);
+        $self->throw("No name for transcript " . $self->transcript_stable_id);
     }
-#    if (!defined($self->cds_start_not_found)) {
-#	$self->throw("No cds_start_not_found");
-#    }
-#    if (!defined($self->cds_end_not_found)) {
-#	$self->throw("No cds_end_not_found");
-#    }
-#    if (!defined($self->mRNA_start_not_found)) {
-#	$self->throw("No mRNA start not found");
-#    }
-#    if (!defined($self->mRNA_end_not_found)) {
-#	$self->throw("No mRNA end not found");
-#    }
+
+    #    if (!defined($self->cds_start_not_found)) {
+    #	$self->throw("No cds_start_not_found");
+    #    }
+    #    if (!defined($self->cds_end_not_found)) {
+    #	$self->throw("No cds_end_not_found");
+    #    }
+    #    if (!defined($self->mRNA_start_not_found)) {
+    #	$self->throw("No mRNA start not found");
+    #    }
+    #    if (!defined($self->mRNA_end_not_found)) {
+    #	$self->throw("No mRNA end not found");
+    #    }
 }
-    
+
 sub equals {
-    my ($self,$obj) = @_;
+    my ($self, $obj) = @_;
 
     if (!defined($obj)) {
-	$self->throw("Need an object to compare with");
+        $self->throw("Need an object to compare with");
     }
     if (!$obj->isa("Bio::Otter::TranscriptInfo")) {
-	$self->throw("[$obj] is not a Bio::Otter::TranscriptInfo");
+        $self->throw("[$obj] is not a Bio::Otter::TranscriptInfo");
     }
-
 
     $self->validate;
     $obj->validate;
 
     if ($self->transcript_stable_id ne $obj->transcript_stable_id) {
-        print STDERR " FOUND DIFF : Stable id different " . $self->transcript_stable_id . " : " . $obj->transcript_stable_id . "\n";
+        print STDERR " FOUND DIFF : Stable id different "
+          . $self->transcript_stable_id . " : "
+          . $obj->transcript_stable_id . "\n";
         return 0;
-     }
-     if ($self->class->equals ($obj->class) == 0) {
-        print STDERR "FOUND DIFF : Different class " . $self->class->name . " : " . $obj->class->name . "\n";
+    }
+    if ($self->class->equals($obj->class) == 0) {
+        print STDERR "FOUND DIFF : Different class "
+          . $self->class->name . " : "
+          . $obj->class->name . "\n";
         return 0;
-     }
-     if ($self->name ne $obj->name) {      
-        print STDERR "FOUND DIFF : Name different " . $self->name . " : " . $obj->name . "\n";
+    }
+    if ($self->name ne $obj->name) {
+        print STDERR "FOUND DIFF : Name different "
+          . $self->name . " : "
+          . $obj->name . "\n";
         return 0;
-     }
-    
-     my $cdss = $self->cds_start_not_found;
-     my $cdse = $self->cds_end_not_found;
-     my $rnas = $self->mRNA_start_not_found;
-     my $rnae = $self->mRNA_end_not_found;
+    }
 
-     my $obj_cdss = $obj->cds_start_not_found;
-     my $obj_cdse = $obj->cds_end_not_found;
-     my $obj_rnas = $obj->mRNA_start_not_found;
-     my $obj_rnae = $obj->mRNA_end_not_found;
-     if( $cdss != $obj_cdss ) {
-       print STDERR "FOUND DIFF : Cds start not found different $cdss : $obj_cdss\n";
-       return 0;
-     }
-     if( $cdse != $obj_cdse ) {
-       print STDERR "FOUND DIFF : Cds end not found different $cdse : $obj_cdse\n";
-       return 0;
-     }
-     if( $rnas != $obj_rnas ) {
-       print STDERR "FOUND DIFF : Rna start not found different $rnas : $obj_rnas\n";
-       return 0;
-     }
-     if( $rnae != $obj_rnae ) {
-       print STDERR "FOUND DIFF : Rna end not found different $rnae : $obj_rnae\n";
-       return 0;
-     }
+    my $cdss = $self->cds_start_not_found;
+    my $cdse = $self->cds_end_not_found;
+    my $rnas = $self->mRNA_start_not_found;
+    my $rnae = $self->mRNA_end_not_found;
+
+    my $obj_cdss = $obj->cds_start_not_found;
+    my $obj_cdse = $obj->cds_end_not_found;
+    my $obj_rnas = $obj->mRNA_start_not_found;
+    my $obj_rnae = $obj->mRNA_end_not_found;
+    if ($cdss != $obj_cdss) {
+        print STDERR
+          "FOUND DIFF : Cds start not found different $cdss : $obj_cdss\n";
+        return 0;
+    }
+    if ($cdse != $obj_cdse) {
+        print STDERR
+          "FOUND DIFF : Cds end not found different $cdse : $obj_cdse\n";
+        return 0;
+    }
+    if ($rnas != $obj_rnas) {
+        print STDERR
+          "FOUND DIFF : Rna start not found different $rnas : $obj_rnas\n";
+        return 0;
+    }
+    if ($rnae != $obj_rnae) {
+        print STDERR
+          "FOUND DIFF : Rna end not found different $rnae : $obj_rnae\n";
+        return 0;
+    }
 
     my @remark1 = $self->remark;
     my @remark2 = $obj->remark;
 
     if (scalar(@remark1) != scalar(@remark2)) {
-        print STDERR "Different numbers of remarks " . scalar(@remark1) . " : " . scalar(@remark2) . "\n";
-	return 0;
+        print STDERR "Different numbers of remarks "
+          . scalar(@remark1) . " : "
+          . scalar(@remark2) . "\n";
+        return 0;
     }
 
     foreach my $rem (@remark1) {
-	my $found = 0;
-	
-	foreach my $rem2 (@remark2) {
-	    if ($rem->equals($rem2)) {
-		$found = 1;
-	    }
-	}
-	if ($found == 0) {
-            print "FOUND DIFF in remark\n"; 
-	    return 0;
-	}
+        my $found = 0;
+
+        foreach my $rem2 (@remark2) {
+            if ($rem->equals($rem2)) {
+                $found = 1;
+            }
+        }
+        if ($found == 0) {
+            print "FOUND DIFF in remark\n";
+            return 0;
+        }
     }
-	
+
     my $ev_list1 = $self->get_all_Evidence;
     my $ev_list2 = $obj->get_all_Evidence;
 
     if (@$ev_list1 != @$ev_list2) {
-        print STDERR "FOUND DIFF : Different evidence numbers " . scalar(@$ev_list1) . " : " . scalar(@$ev_list2) . "\n";
-	return 0;
+        print STDERR "FOUND DIFF : Different evidence numbers "
+          . scalar(@$ev_list1) . " : "
+          . scalar(@$ev_list2) . "\n";
+        return 0;
     }
     foreach my $ev1 (@$ev_list1) {
-	my $found = 0;
-	
-	foreach my $ev2 (@$ev_list2) {
-	    if ($ev1->equals($ev2)) {
-		$found = 1;
-	    }
-	}
-	if ($found == 0) {
+        my $found_diff = 0;
+
+        foreach my $ev2 (@$ev_list2) {
+            unless ($ev1->equals($ev2)) {
+                $found_diff = 1;
+            }
+        }
+        if ($found_diff == 1) {
             print STDERR "FOUND DIFF : in evidence\n";
-	    return 0;
-	}
+            return 0;
+        }
     }
 
     return 1;
