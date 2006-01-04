@@ -112,7 +112,7 @@ sub get_connected_pipeline_dbhandle {
         );
 
     error_exit("No connection parameters for '$pipekey' in otter database")
-        unless keys %$pipe_db_options;
+        unless keys %$pipedb_options;
 
     my $dbh = connect_with_params(%$pipedb_options);
 
