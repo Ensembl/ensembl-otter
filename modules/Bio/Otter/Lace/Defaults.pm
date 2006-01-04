@@ -50,18 +50,19 @@ my @CLIENT_OPTIONS = qw(
 # and if necessary add to hardwired defaults in do_getopt().
 
 my $save_option = sub {
-    my( $option, $value ) = @_;
+    my ($option, $value) = @_;
     $DEFAULTS->{$CLIENT_STANZA}->{$option} = $value;
 };
+
 my $save_deep_option = sub {
     my $getopt = $_[1];
-    my ($option, $value) = split(/=/, $getopt,2);
-    $option = [split(/\./, $option)];
+    my ($option, $value) = split(/=/, $getopt, 2);
+    $option = [ split(/\./, $option) ];
     my $param = pop @$option;
     return unless @$option;
-    local $" = '.';
-    $DEFAULTS->{"@$option"} ||= { };
-    $DEFAULTS->{"@$option"}->{param} = $value ;
+    my $opt_str = join('.', @$option);
+    $DEFAULTS->{$opt_str} ||= {};
+    $DEFAULTS->{$opt_str}->{$param} = $value;
 };
 
 
@@ -431,7 +432,7 @@ Here's an example config file:
   [client]
   port=33999
 
-  [default.use_FilteRs]
+  [default.use_filters]
   trf=1
   est2genome_mouse=1
 
@@ -478,24 +479,7 @@ __DATA__
 [client]
 host=localhost
 port=33999
-author=
-email=
 write_access=0
 debug=1
 pipeline=1 
 pipehead=0
-methods_files=/nfs/team71/analysis/rds/workspace/ace_skeleton/rawdata/methods.ace
-#####################################################
-# method groups
-# annotation - this is manually annotated stuff
-# prediction - automatic annotation
-# simple     - simple features repeats etc...
-# alignments - Blast results etc...
-use_method_groups=annotation,prediction,simple,alignments
-
-[method_groups]
-annotation=Transcript
-prediction=ensembl,est_genes,fgenesh,genscan,HALFWISE
-simple=repeats,cpg_islands
-alignments=BLASTN,BLASTX,Uniprot
-
