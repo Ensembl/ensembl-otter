@@ -29,7 +29,7 @@ my @chroms = split /,/, $chroms if ($chroms);
 
 if (($help) || (!$date)){
     print "build_zfish_agps.pl.pl -date YYMMDD\n";
-    print "                       -skip            # skip steps in order agp, qc, region, fullagp, load\n";
+    print "                       -skip            # skip steps in order agp, qc, region, fullagp, load, realign\n";
     print "                       -haplo           # loads chr H clones\n";
     print "                       -chr             # runs for your comma separated list of chromosomes\n";
     print "                       -path            # path to build new agp folder in\n";
@@ -146,7 +146,7 @@ unless (($skip =~ /load/) || ($skip =~ /realign/)) {
     }
     print "\n" if ($verbose);
 }
-#die "END OF: This is it for haplotype chromosomes, but you might want to set the otter sequence entries and alert anacode to start the analyses\n" if ($haplo);
+die "END OF: This is it for haplotype chromosomes, but you might want to set the otter sequence entries and alert anacode to start the analyses\n" if ($haplo);
 
 ##########################
 # realign offtrack genes #
