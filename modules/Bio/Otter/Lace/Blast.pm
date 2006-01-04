@@ -152,7 +152,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.9 $ ';
+$revision='$Revision: 1.10 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
@@ -445,6 +445,7 @@ sub indicate_fasta{
                          '--index',       $index,
                          '--parser',      $parser,
                          );
+    #warn "indexing command: @indicate_call\n";
     # @indicate_call = qw[/usr/local/ensembl/bin/indicate --data_dir ~/tmp --file_prefix subseq4roy.fa --index ~/tmp/local_search$$ --parser singleWordParser];
     (system(@indicate_call) == 0) || die "Can't do:\n\n@indicate_call\n";
     return 1;
@@ -459,9 +460,6 @@ sub indicate_index{
         $base =~ s/\.//g;
         my $idx = $self->db_dirname() . "/local_search_" . $base;
         $self->{'_indicate_index'} = $idx;
-    }
-    else{
-        
     }
     return $self->{'_indicate_index'};
 }

@@ -106,10 +106,13 @@ sub get_connected_pipeline_dbhandle {
         : 'pipeline_db';
 
     my ($pdb, $pipedb_options) =
-    Bio::Otter::Lace::SatelliteDB::_get_DBAdaptor_and_options(
-        $odb,
-        $pipekey
-    );
+        Bio::Otter::Lace::SatelliteDB::_get_DBAdaptor_and_options(
+            $odb,
+            $pipekey
+        );
+
+    error_exit("No connection parameters for '$pipekey' in otter database")
+        unless keys %$pipe_db_options;
 
     my $dbh = connect_with_params(%$pipedb_options);
 
