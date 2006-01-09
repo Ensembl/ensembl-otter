@@ -287,7 +287,7 @@ sub compare_genes {
         }
         if (scalar(@$tnew)) {
             $gene_modified = 1;
-            print STDERR "New transcripts ";
+            print STDERR "New transcripts\n";
             foreach my $tn (@$tnew) {
                 printf STDERR "  %s\n", $tn->stable_id;
                 $tn->transcript_info->author($current_author);
@@ -323,7 +323,6 @@ sub compare_genes {
         # We only need to look through all the exons if the gene is modified
         if ($gene_modified == 1) {
             $newg->gene_info->author($current_author);
-            $self->increment_versions_in_gene($newg);
             $modified_gene_ids{$geneid} = 1;
         }
 
@@ -333,33 +332,19 @@ sub compare_genes {
 
     foreach my $g (@$new) {
         print STDERR "Do I have a stableID? : " . $g->stable_id . "\n";
+        
+        ### Why get this from the newgenehash?
+        my $gene = $newgenehash{ $g->stable_id }
+            or die "No gene with stable_id '", $g->stable_id, "'";
 
-        my $gene_stable_id =
-          $self->db->get_StableIdAdaptor->fetch_new_gene_stable_id;
-        my $gene = $newgenehash{ $g->stable_id };
         $self->set_gene_created_version_modified($gene, $time);
         $gene->gene_info->author($current_author);
-        $gene->stable_id($gene_stable_id);
 
         foreach my $tran (@{ $g->get_all_Transcripts }) {
-            my $tid =
-              $self->db->get_StableIdAdaptor->fetch_new_transcript_stable_id;
-            $tran->stable_id($tid);
             $tran->transcript_info->author($current_author);
-
-            if (defined($tran->translation)) {
-                my $tid =
-                  $self->db->get_StableIdAdaptor
-                  ->fetch_new_translation_stable_id;
-                $tran->translation->stable_id($tid);
-            }
-
-        }
-        foreach my $ex (@{ $g->get_all_Exons }) {
-            my $eid = $self->db->get_StableIdAdaptor->fetch_new_exon_stable_id;
-            $ex->stable_id($eid);
         }
 
+        $self->increment_versions_in_gene($gene);
         my $event = Bio::Otter::AnnotationBroker::Event->new(
             -type => 'new',
             -new  => $gene
@@ -376,17 +361,8 @@ sub compare_genes {
         # Already deleted in old set
         if ($gene->type ne 'obsolete') {
             $gene->type('obsolete');
-            $self->increment_obj_version($gene);
-            foreach my $tran (@{ $gene->get_all_Transcripts }) {
-                $self->increment_obj_version($tran);
-                if (my $translation = $tran->translation) {
-                    $self->increment_obj_version($translation);
-                }
-                foreach my $exon (@{ $gene->get_all_Exons }) {
-                    $self->increment_obj_version($exon);
-                }
-            }
 
+            $self->increment_versions_in_gene($gene);
             my $event = Bio::Otter::AnnotationBroker::Event->new(
                 -type => 'deleted',
                 -old  => $gene
@@ -400,6 +376,7 @@ sub compare_genes {
         my $old_gene = $oldgenehash{$id};
         my $new_gene = $newgenehash{$id};
 
+        $self->increment_versions_in_gene($new_gene);
         my $event = Bio::Otter::AnnotationBroker::Event->new(
             -type => 'modified',
             -new  => $new_gene,
@@ -420,7 +397,6 @@ sub increment_versions_in_gene {
     $self->increment_obj_version($gene);
 
     foreach my $tn (@{$gene->get_all_Transcripts}) {
-        print STDERR "Transcript: ", $tn->stable_id, "\n";
         $self->increment_obj_version($tn);
         if (my $tp = $tn->translation) {
             $self->increment_obj_version($tp);
@@ -463,21 +439,6 @@ sub set_gene_created_version_modified {
     }
 }
 
-#sub increment_versions {
-#    my ($self, $id_version_hash, $new_gene) = @_;
-#
-#    $self->increment_obj_version($id_version_hash, $new_gene);
-#    foreach my $exon (@{$new_gene->get_all_Exons}) {
-#        $self->increment_obj_version($id_version_hash, $exon);
-#    }
-#    foreach my $tsct (@{$new_gene->get_all_Transcripts}) {
-#        $self->increment_obj_version($id_version_hash, $tsct);
-#        if (my $tnsl = $tsct->translation) {
-#            $self->increment_obj_version($id_version_hash, $tnsl);
-#        }
-#    }
-#}
-
 sub compare_obj {
     my ($self, $oldobjs, $newobjs) = @_;
 
@@ -489,30 +450,25 @@ sub compare_obj {
             $id_old{$old_id} = $oldobj;
         } else {
             my $thing = $self->obj_type($oldobj);
-            print STDERR "$thing from database missing stable_id\n";
+            die "$thing from database missing stable_id\n";
         }
     }
 
-    # Look through all the new objects, and add any without
-    # a stable_id, or with a stable id that is not in the list
-    # of old objects to the list of potentially modified objects.
+    # Look through all the new objects, and add any with a stable
+    # id that is not in the list of old objects to the list of
+    # potentially modified objects.
     foreach my $newobj (@$newobjs) {
-	if (my $new_id = $newobj->stable_id) {
-            # Might want to check if two objects in the list
-            # of new ones have the same stable_id?
-            if (my $oldobj = $id_old{$new_id}) {
-                delete($id_old{$new_id});
-                $newobj->created($oldobj->created);
-                $mod{$new_id}{'old'} = $oldobj;
-                $mod{$new_id}{'new'} = $newobj;
-                next;
-            }
+	my $new_id = $newobj->stable_id
+            or die "Object '$newobj' in data being saved is missing its stable_id";
+        # Might want to check if two objects in the list
+        # of new ones have the same stable_id?
+        if (my $oldobj = $id_old{$new_id}) {
+            delete($id_old{$new_id});
+            $newobj->created($oldobj->created);
+            $mod{$new_id}{'old'} = $oldobj;
+            $mod{$new_id}{'new'} = $newobj;
+            next;
         }
-
-        # This is here because the new object may not be new,
-        # but could be, for example, an existing transcript
-        # that has now been moved into another gene.
-        $self->increment_obj_version($newobj);
 
         push(@new, $newobj);
     }
