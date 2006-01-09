@@ -166,7 +166,7 @@ sub option_from_array{
     my ($array) = @_;
     $array    ||= [];
     my $value   = undef;
-    warn "option from array called // @$array //\n" if $DEBUG_CONFIG;
+    warn "\noption from array called // @$array //\n" if $DEBUG_CONFIG;
 
     my @arr_copy = @{$array};
     my $first    = shift @arr_copy;
@@ -203,6 +203,9 @@ sub option_from_array{
         $set_value->(
             __internal_option_from_array($conf, [ $first,       @arr_copy ]));
     }
+
+    printf(STDERR "Returning value '%s' for [@$array]\n\n", $value || 'undef')
+        if $DEBUG_CONFIG;
 
     return $value;
 }
@@ -313,15 +316,17 @@ sub __internal_option_from_array {
     my ($inifiles, $array) = @_;
 
     return unless tied(%$inifiles);
-    my $filename = tied(%$inifiles)->GetFileName();
+    
+    if ($DEBUG_CONFIG) {
+        my $filename = tied(%$inifiles)->GetFileName() || 'no filename';
 
-    warn
-"option from array inifile called // $inifiles @$array // looking at $filename\n"
-      if $DEBUG_CONFIG;
+        warn
+    "option from array inifile called // $inifiles @$array // looking at '$filename'\n";
+    }
 
     my $param = pop @$array;
     my $section = join(".", @$array);
-    warn sprintf "param '%s' and section '%s'", $param, $section
+    warn sprintf "param '%s' and section '%s'\n", $param, $section
       if $DEBUG_CONFIG;
     my $value = undef;
     my $found = 0;
