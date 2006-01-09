@@ -125,6 +125,11 @@ sub store {
 	    $obj->dbID($tmp->dbID);
 	    return;
 	}
+    ### Added to intercept MIT_OLD2: prefix bug:
+    else {
+        $self->throw(sprintf "No such transcript class '%s'", $obj->name);
+    }
+    
 	my $name = "";
 
 	my $desc = "";
