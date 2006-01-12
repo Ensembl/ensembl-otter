@@ -168,8 +168,7 @@ sub write_transcript_gtf {
           . ($exon->start + $sliceoffset) . "\t"
           . ($exon->end + $sliceoffset) . "\t" . "." . "\t"
           . $strand . "\t" . "." . "\t";
-        print_attribs($fh, $gene, $transcript, $count, 'exon',
-            $show_trim_attrib);
+        print_attribs($fh, $gene, $transcript, $count, 'exon');
 
          # remarks don't seem to exist in the ensembl schema as they do in otter
          # gene_description is used for something else, so is not appropriate
@@ -216,17 +215,14 @@ sub write_transcript_gtf {
                 && $exon_end >= $cdsexon->start
                 && !$instop)
             {
-                if (!$trimmed) {
-                    print $fh $idstr . "\t"
-                      . $gene->type . "\t" . 'CDS' . "\t"
-                      . ($exon_start + $sliceoffset) . "\t"
-                      . ($exon_end + $sliceoffset) . "\t" . "." . "\t"
-                      . $strand . "\t"
-                      . $phase . "\t";
-                    print_attribs($fh, $gene, $transcript, $count, 'CDS',
-                        $show_trim_attrib);
-                    print $fh "\n";
-                }
+                print $fh $idstr . "\t"
+                  . $gene->type . "\t" . 'CDS' . "\t"
+                  . ($exon_start + $sliceoffset) . "\t"
+                  . ($exon_end + $sliceoffset) . "\t" . "." . "\t"
+                  . $strand . "\t"
+                  . $phase . "\t";
+                print_attribs($fh, $gene, $transcript, $count, 'CDS');
+                print $fh "\n";
             }
         }
         if (   $transcript->translation
@@ -235,18 +231,15 @@ sub write_transcript_gtf {
         {
             my $tmpcnt = $count;
             foreach my $startc (@startcs) {
-                if (!$trimmed) {
-                    print $fh $idstr . "\t"
-                      . $gene->type . "\t"
-                      . 'start_codon' . "\t"
-                      . ($startc->start + $sliceoffset) . "\t"
-                      . ($startc->end + $sliceoffset) . "\t" . "." . "\t"
-                      . $strand . "\t"
-                      . $startc->phase . "\t";
-                    print_attribs($fh, $gene, $transcript, $tmpcnt++,
-                        'start_codon', $show_trim_attrib);
-                    print $fh "\n";
-                }
+                print $fh $idstr . "\t"
+                  . $gene->type . "\t"
+                  . 'start_codon' . "\t"
+                  . ($startc->start + $sliceoffset) . "\t"
+                  . ($startc->end + $sliceoffset) . "\t" . "." . "\t"
+                  . $strand . "\t"
+                  . $startc->phase . "\t";
+                print_attribs($fh, $gene, $transcript, $tmpcnt++, 'start_codon');
+                print $fh "\n";
             }
         }
         if ($transcript->translation
@@ -254,19 +247,16 @@ sub write_transcript_gtf {
         {
             if ($hasend) {
                 my $tmpcnt = $count - $#endcs;
-                if (!$trimmed) {
-                    foreach my $endc (@endcs) {
-                        print $fh $idstr . "\t"
-                          . $gene->type . "\t"
-                          . 'stop_codon' . "\t"
-                          . ($endc->start + $sliceoffset) . "\t"
-                          . ($endc->end + $sliceoffset) . "\t" . "." . "\t"
-                          . $strand . "\t"
-                          . $endc->phase . "\t";
-                        print_attribs($fh, $gene, $transcript, $tmpcnt++,
-                            'stop_codon', $show_trim_attrib);
-                        print $fh "\n";
-                    }
+                foreach my $endc (@endcs) {
+                    print $fh $idstr . "\t"
+                      . $gene->type . "\t"
+                      . 'stop_codon' . "\t"
+                      . ($endc->start + $sliceoffset) . "\t"
+                      . ($endc->end + $sliceoffset) . "\t" . "." . "\t"
+                      . $strand . "\t"
+                      . $endc->phase . "\t";
+                    print_attribs($fh, $gene, $transcript, $tmpcnt++, 'stop_codon');
+                    print $fh "\n";
                 }
             }
             $intrans = 0;
@@ -403,7 +393,7 @@ sub make_stop_codon_features {
 }
 
 sub print_description_attribs {
-    my ($fh, $gene, $transcript, $count, $exons_truncarted) = @_;
+    my ($fh, $gene, $transcript, $count, $exons_truncated) = @_;
     my $gene_description = undef;
     foreach my $remark ($gene->gene_info->remark) {
         $gene_description .= $remark->remark . " ";
@@ -417,6 +407,9 @@ sub print_description_attribs {
     if ($gene_description) {
         print $fh qq{ gene_description "$gene_description";};
     }
+    if ($exons_truncated) {
+        print $fh qq{ exons_off_assembly "$exons_truncated";};
+    }
     foreach my $remark ($transcript->transcript_info->remark) {
         my $rem = $remark->remark;
         unless ($rem =~ /^Annotation_remark-/) {
@@ -426,7 +419,7 @@ sub print_description_attribs {
 }
 
 sub print_attribs {
-    my ($fh, $gene, $transcript, $count, $type, $show_trim_attrib) = @_;
+    my ($fh, $gene, $transcript, $count, $type) = @_;
 
     my $gene_name;
     $gene_name = $gene->external_name;
@@ -448,10 +441,6 @@ sub print_attribs {
     elsif ($type eq 'CDS') {
         print $fh ' protein_id "'
           . get_translation_id($transcript->translation) . '";';
-    }
-    if ($show_trim_attrib) {
-        print $fh
-' clipped_transcript "full_extent_of_transcript_beyond_bounds_of_region";';
     }
 }
 
