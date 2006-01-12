@@ -40,6 +40,7 @@ use Symbol 'gensym';
         my $fh        = gensym();
         my $file_name = "$dataset_name.$set_name.gtf";
         open $fh, "> $file_name" or die "Can't write to '$file_name' : $!";
+        warn "Writing GTF data to '$file_name'\n";
 
         # Write the AGP file into the GTF header.
 
@@ -58,12 +59,26 @@ use Symbol 'gensym';
             next if $gene->type eq 'obsolete';
             $gene = $gene->transform($slice);
 
-            foreach my $tscpt (@{ $gene->get_all_Transcripts }) {
-                write_transcript_gtf($fh, $slice, $gene, $tscpt, $local_coords,
+            foreach my $tsct (@{ $gene->get_all_Transcripts }) {
+                next unless is_corf_transcript($tsct);
+                write_transcript_gtf($fh, $slice, $gene, $tsct, $local_coords,
                     $trim_to_slice, $include_codons, $fix_phases, $set_name);
             }
         }
     }
+}
+
+sub is_corf_transcript {
+    my( $tsct ) = @_;
+    
+    my $is_corf = 0;
+    foreach my $rem ($tsct->transcript_info->remark) {
+        if ($rem->remark =~ /^Annotation_remark\s*corf$/) {
+            $is_corf = 1;
+            last;
+        }
+    }
+    return $is_corf;
 }
 
 sub write_transcript_gtf {
