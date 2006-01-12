@@ -1,0 +1,510 @@
+#!/usr/local/bin/perl -w
+
+### dump_gtf
+
+use strict;
+use Bio::Otter::Lace::Defaults;
+use Symbol 'gensym';
+
+{
+    my ($dataset_name);
+    my $local_coords   = 0;
+    my $trim_to_slice  = 0;
+    my $include_codons = 1;
+    my $fix_phases     = 0;
+
+    my $usage = sub { exec('perldoc', $0) };
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'   => $usage,
+        'dataset=s' => \$dataset_name,
+      )
+      or $usage->();
+    $usage->() unless $dataset_name;
+
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+
+    my $otter_dba  = $ds->get_cached_DBAdaptor;
+    my $slice_aptr = $otter_dba->get_SliceAdaptor;
+    my $gene_aptr  = $otter_dba->get_GeneAdaptor;
+
+#my $pipe_dba = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($otter_dba);
+
+    foreach my $set_name (@ARGV) {
+        $otter_dba->assembly_type($set_name);
+
+        # Create the GTF file to write the genes into
+        my $fh        = gensym();
+        my $file_name = "$dataset_name.$set_name.gtf";
+        open $fh, "> $file_name" or die "Can't write to '$file_name' : $!";
+
+        # Write the AGP file into the GTF header.
+
+        # Get the slice of the whole sequence set
+        my $ss = $ds->get_SequenceSet_by_name($set_name);
+        $ds->selected_SequenceSet($ss);
+        $ds->fetch_all_CloneSequences_for_SequenceSet($ss);
+        my ($chr, $chr_start, $chr_end) =
+          $cl->chr_start_end_from_contig($ss->CloneSequence_list);
+        my $slice =
+          $slice_aptr->fetch_by_chr_start_end($chr, $chr_start, $chr_end);
+
+        my $gene_id_list = $gene_aptr->list_current_dbIDs_for_Slice($slice);
+        foreach my $gene_dbid (@$gene_id_list) {
+            my $gene = $gene_aptr->fetch_by_dbID($gene_dbid);
+            next if $gene->type eq 'obsolete';
+            $gene = $gene->transform($slice);
+
+            foreach my $tscpt (@{ $gene->get_all_Transcripts }) {
+                write_transcript_gtf($fh, $slice, $gene, $tscpt, $local_coords,
+                    $trim_to_slice, $include_codons, $fix_phases, $set_name);
+            }
+        }
+    }
+}
+
+sub write_transcript_gtf {
+    my ($fh, $slice, $gene, $transcript, $localcoords, $trim_to_slice,
+        $include_codons, $fix_phases, $seqname)
+      = @_;
+
+    my $sliceoffset = 0;
+    if (!$localcoords) {
+        $sliceoffset = $slice->chr_start - 1;
+    }
+
+    my @startcs =
+      make_start_codon_features($transcript, $transcript->stable_id);
+    my @endcs = make_stop_codon_features($transcript, $transcript->stable_id);
+
+    my $chrname;
+    $chrname = $slice->chr_name;
+
+    my $idstr;
+
+    if (defined($seqname)) {
+        $idstr = $seqname;
+    }
+    else {
+        $idstr = $chrname;
+    }
+
+    my ($hasstart, $hasend) = check_start_and_stop($slice, $transcript);
+
+    if (!$include_codons) {
+        $hasstart = $hasend = 0;
+    }
+
+    my @translateable_exons = @{ $transcript->get_all_translateable_Exons }
+      if $transcript->translation;
+
+    if ($fix_phases) {
+        my $phase = 0;
+        foreach my $exon (@translateable_exons) {
+            $exon->phase($phase);
+            $exon->end_phase(($exon->length + $exon->phase) % 3);
+            $phase = $exon->end_phase;
+        }
+    }
+
+    my $show_trim_attrib = $trim_to_slice
+      && ($transcript->start < 1 || $transcript->end > $slice->length);
+
+    my $count   = 1;
+    my $intrans = 0;
+    my $instop  = 0;
+
+    foreach my $exon (@{ $transcript->get_all_Exons }) {
+        my $strand = $exon->strand;
+
+        my $trimmed =
+          $trim_to_slice && ($exon->start < 1 || $exon->end > $slice->length);
+
+        if ($exon->strand == -1) {
+            $strand = "-";
+        }
+        elsif ($exon->strand == 1) {
+            $strand = "+";
+        }
+        elsif ($exon->strand == 0) {
+            $strand = ".";
+        }
+
+        if (   $transcript->translation
+            && $exon == $transcript->translation->start_Exon)
+        {
+            $intrans = 1;
+        }
+
+        if (!$trimmed) {
+            print $fh $idstr . "\t"
+              . $gene->type . "\t" . 'exon' . "\t"
+              . ($exon->start + $sliceoffset) . "\t"
+              . ($exon->end + $sliceoffset) . "\t" . "." . "\t"
+              . $strand . "\t" . "." . "\t";
+            print_attribs($fh, $gene, $transcript, $count, 'exon',
+                $show_trim_attrib);
+
+         # remarks don't seem to exist in the ensembl schema as they do in otter
+         # gene_description is used for something else, so is not appropriate
+            if ($count == 1) {
+                print_description_attribs($fh, $gene, $transcript, $count);
+            }
+
+            print $fh "\n";
+        }
+
+        if ($intrans) {
+
+            my $cdsexon = shift @translateable_exons;
+            my $phase   = $cdsexon->phase;
+            if ($cdsexon->phase == 1) {
+                $phase = 2;
+            }
+            elsif ($cdsexon->phase == 2) {
+                $phase = 1;
+            }
+            elsif ($cdsexon->phase == -1) {
+                $phase = 0;
+            }
+
+            my $exon_start = $cdsexon->start;
+            my $exon_end   = $cdsexon->end;
+            if (
+                $transcript->translation
+                &&
+
+                # $exon == $transcript->translation->end_Exon &&
+                $hasend && $exon->overlaps($endcs[0])
+              )
+            {
+
+                if ($cdsexon->strand == 1) {
+                    $exon_end = $cdsexon->end - $endcs[0]->length;
+                }
+                else {
+                    $exon_start = $cdsexon->start + $endcs[0]->length;
+                }
+            }
+
+            if (   $exon_start <= $cdsexon->end
+                && $exon_end >= $cdsexon->start
+                && !$instop)
+            {
+                if (!$trimmed) {
+                    print $fh $idstr . "\t"
+                      . $gene->type . "\t" . 'CDS' . "\t"
+                      . ($exon_start + $sliceoffset) . "\t"
+                      . ($exon_end + $sliceoffset) . "\t" . "." . "\t"
+                      . $strand . "\t"
+                      . $phase . "\t";
+                    print_attribs($fh, $gene, $transcript, $count, 'CDS',
+                        $show_trim_attrib);
+                    print $fh "\n";
+                }
+            }
+        }
+        if (   $transcript->translation
+            && $exon == $transcript->translation->start_Exon
+            && $hasstart)
+        {
+            my $tmpcnt = $count;
+            foreach my $startc (@startcs) {
+                if (!$trimmed) {
+                    print $fh $idstr . "\t"
+                      . $gene->type . "\t"
+                      . 'start_codon' . "\t"
+                      . ($startc->start + $sliceoffset) . "\t"
+                      . ($startc->end + $sliceoffset) . "\t" . "." . "\t"
+                      . $strand . "\t"
+                      . $startc->phase . "\t";
+                    print_attribs($fh, $gene, $transcript, $tmpcnt++,
+                        'start_codon', $show_trim_attrib);
+                    print $fh "\n";
+                }
+            }
+        }
+        if ($transcript->translation
+            && ($exon == $transcript->translation->end_Exon))
+        {
+            if ($hasend) {
+                my $tmpcnt = $count - $#endcs;
+                if (!$trimmed) {
+                    foreach my $endc (@endcs) {
+                        print $fh $idstr . "\t"
+                          . $gene->type . "\t"
+                          . 'stop_codon' . "\t"
+                          . ($endc->start + $sliceoffset) . "\t"
+                          . ($endc->end + $sliceoffset) . "\t" . "." . "\t"
+                          . $strand . "\t"
+                          . $endc->phase . "\t";
+                        print_attribs($fh, $gene, $transcript, $tmpcnt++,
+                            'stop_codon', $show_trim_attrib);
+                        print $fh "\n";
+                    }
+                }
+            }
+            $intrans = 0;
+        }
+
+        if (scalar(@endcs) && $exon->overlaps($endcs[0])) {
+            $instop = 1;
+        }
+
+        $count++;
+    }
+}
+
+sub make_start_codon_features {
+    my ($trans, $id) = @_;
+
+    if (!$trans->translation) {
+        return (());
+    }
+
+    my @translateable = @{ $trans->get_all_translateable_Exons };
+
+    my @pepgencoords = $trans->pep2genomic(1, 1);
+
+    if (scalar(@pepgencoords) > 2) {
+        die("pep start does not map cleanly\n");
+        next;
+    }
+    elsif (scalar(@pepgencoords) == 2) {
+        print "WOW got a 2 feature start codon for "
+          . $trans->stable_id
+          . " strand "
+          . $translateable[0]->strand . "\n";
+    }
+
+    unless ($pepgencoords[0]->isa('Bio::EnsEMBL::Mapper::Coordinate')) {
+        die("pep start maps to gap\n");
+        next;
+    }
+    unless (
+        $pepgencoords[$#pepgencoords]->isa('Bio::EnsEMBL::Mapper::Coordinate'))
+    {
+        die("pep start (end of) maps to gap\n");
+        next;
+    }
+
+    @translateable = @{ $trans->get_all_translateable_Exons };
+    my @startc_feat;
+    my $phase = 0;
+    foreach my $pepgencoord (@pepgencoords) {
+        push @startc_feat, new Bio::EnsEMBL::SeqFeature(
+            -seqname     => $id,
+            -source_tag  => 'starttrans',
+            -primary_tag => 'similarity',
+            -start       => $pepgencoord->start,
+            -end         => $pepgencoord->end,
+            -phase       => $phase,
+            -strand      => $translateable[0]->strand
+        );
+        $phase = 3 - ($pepgencoord->end - $pepgencoord->start + 1);
+
+# print "New phase = $phase given " . $pepgencoord->start . " " . $pepgencoord->end . " " . ( $pepgencoord->end - $pepgencoord->start+1) . "\n";
+    }
+    if ($translateable[0]->strand == 1) {
+        @startc_feat = sort { $a->start <=> $b->start } @startc_feat;
+    }
+    else {
+        @startc_feat = sort { $b->start <=> $a->start } @startc_feat;
+    }
+    return @startc_feat;
+
+}
+
+sub make_stop_codon_features {
+    my ($trans, $id) = @_;
+
+    if (!$trans->translation) {
+        return (());
+    }
+    my @translateable = @{ $trans->get_all_translateable_Exons };
+
+    my $cdna_endpos = $trans->cdna_coding_end;
+
+    my @pepgencoords = $trans->cdna2genomic($cdna_endpos - 2, $cdna_endpos);
+
+    if (scalar(@pepgencoords) > 2) {
+        die("pep end does not map cleanly\n");
+        next;
+    }
+    elsif (scalar(@pepgencoords) == 2) {
+        print "WOW got a 2 feature stop codon for "
+          . $trans->stable_id
+          . " strand "
+          . $translateable[0]->strand . "\n";
+    }
+
+    unless ($pepgencoords[0]->isa('Bio::EnsEMBL::Mapper::Coordinate')) {
+        die("pep end maps to gap\n");
+        next;
+    }
+    unless (
+        $pepgencoords[$#pepgencoords]->isa('Bio::EnsEMBL::Mapper::Coordinate'))
+    {
+        die("pep end (end of) maps to gap\n");
+        next;
+    }
+
+    my @stopc_feat;
+    my $phase = 0;
+    foreach my $pepgencoord (@pepgencoords) {
+        push @stopc_feat, new Bio::EnsEMBL::SeqFeature(
+            -seqname     => $id,
+            -source_tag  => 'endtrans',
+            -primary_tag => 'similarity',
+            -start       => $pepgencoord->start,
+            -end         => $pepgencoord->end,
+            -phase       => $phase,
+            -strand      => $translateable[0]->strand
+        );
+        $phase = 3 - ($pepgencoord->end - $pepgencoord->start + 1);
+
+# print "New phase = $phase given " . $pepgencoord->start . " " . $pepgencoord->end . " " . ($pepgencoord->end-$pepgencoord->start+1) . "\n";
+    }
+
+    if ($translateable[0]->strand == 1) {
+        @stopc_feat = sort { $a->start <=> $b->start } @stopc_feat;
+    }
+    else {
+        @stopc_feat = sort { $b->start <=> $a->start } @stopc_feat;
+    }
+
+    #print "Ended with " . scalar(@stopc_feat) . " stop codon features\n";
+    return @stopc_feat;
+}
+
+sub print_description_attribs {
+    my ($fh, $gene, $transcript, $count) = @_;
+    my $gene_description = undef;
+    foreach my $remark ($gene->gene_info->remark) {
+        $gene_description .= $remark->remark . " ";
+    }
+    if ($gene_description) {
+        chop $gene_description;
+        if ($gene_description eq "undef") {
+            $gene_description = undef;
+        }
+    }
+    my $trans_description = undef;
+    foreach my $remark ($transcript->transcript_info->remark) {
+        $trans_description .= $remark->remark . " ";
+    }
+    if ($trans_description) {
+        chop $trans_description;
+    }
+    print $fh (
+        $gene_description ? "gene_description \"$gene_description\"; " : "")
+      . (
+        $trans_description ? "trans_description \"$trans_description\"; " : "");
+}
+
+sub print_attribs {
+    my ($fh, $gene, $transcript, $count, $type, $show_trim_attrib) = @_;
+
+    my $gene_name;
+    $gene_name = $gene->external_name;
+
+    my $trans_name;
+    $trans_name = $transcript->external_name;
+
+    print $fh " gene_id \""
+      . get_gene_id($gene) . "\";"
+      . " transcript_id \""
+      . get_transcript_id($transcript) . "\";";
+    print $fh " exon_number \"$count\";";
+    print $fh " gene_name \"" . $gene_name . "\";"        if ($gene_name);
+    print $fh " transcript_name \"" . $trans_name . "\";" if ($trans_name);
+    if ($type eq 'exon') {
+
+        #  print $fh ' gbkey "mRNA";';
+    }
+    elsif ($type eq 'CDS') {
+        print $fh ' protein_id "'
+          . get_translation_id($transcript->translation) . '";';
+    }
+    if ($show_trim_attrib) {
+        print $fh
+' clipped_transcript "full_extent_of_transcript_beyond_bounds_of_region";';
+    }
+}
+
+
+
+sub get_gene_id {
+    my $gene = shift;
+
+    if (defined($gene->stable_id)) {
+        return $gene->stable_id;
+    }
+    return $gene->dbID;
+}
+
+sub get_transcript_id {
+    my $transcript = shift;
+
+    if (defined($transcript->stable_id)) {
+        return $transcript->stable_id;
+    }
+    return $transcript->dbID;
+}
+
+sub get_translation_id {
+    my $translation = shift;
+
+    if (defined($translation->stable_id)) {
+        return $translation->stable_id;
+    }
+    return $translation->dbID;
+}
+
+
+sub check_start_and_stop {
+    my ($slice, $trans) = @_;
+
+    return (0, 0) if (!defined($trans->translation));
+
+    my $tln = $trans->translation;
+
+    $trans->sort;
+
+    my $coding_start = $trans->cdna_coding_start;
+    my $coding_end   = $trans->cdna_coding_end;
+    my $cdna_seq     = uc($trans->spliced_seq);
+
+    my $startseq = substr($cdna_seq, $coding_start - 1, 3);
+    my $endseq   = substr($cdna_seq, $coding_end - 3,   3);
+
+    print "Codons: " . $startseq . " " . $endseq . "\n";
+
+    my $has_start = 1;
+    my $has_end   = 1;
+
+    $has_start = 0 if ($startseq ne "ATG");
+    $has_end = 0 if ($endseq ne "TAG" && $endseq ne "TGA" && $endseq ne "TAA");
+
+    return ($has_start, $has_end);
+}
+
+
+
+
+
+__END__
+
+=head1 NAME - dump_gtf
+
+=head1 EXAMPLE
+
+  ./dump_gtf -dataset human chr1-06 chr6-09
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
