@@ -1,5 +1,8 @@
 #!/usr/local/bin/perl -w
 
+# Purpose: to install a new otter server distribution
+# Author: lg4@sanger.ac.uk
+
 if(scalar(@ARGV)<2) {
 	print STDERR "usage:\n";
 	print STDERR "\t$0 your_CVS_username new_directory [humpub-release-NN]\n";
