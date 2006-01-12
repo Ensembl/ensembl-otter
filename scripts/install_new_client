@@ -53,7 +53,7 @@ chdir('ace_skeleton');
 system('tar', '-cvf', '../lace_acedb.tar', 'database', 'wgf', 'wscripts', 'wspec');
 chdir('..');
 
-for my $biodir ('bioperl-0.7.2', 'bioperl-1.2', 'biodas-1.02') {
+for my $biodir ('bioperl-0.7.2', 'bioperl-1.2.3-patched', 'biodas-1.02') {
     system('cp', $biolocation.'/'.$biodir.'.tar.gz', '.');
     system('gunzip', $biodir.'.tar.gz');
     system('tar', '-xvf', $biodir.'.tar');
