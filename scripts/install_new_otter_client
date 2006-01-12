@@ -1,0 +1,67 @@
+#!/usr/local/bin/perl -w
+
+# Purpose: to install a new otter client distribution
+# Author: lg4@sanger.ac.uk
+
+if(scalar(@ARGV)<2) {
+	print STDERR "usage:\n";
+    print STDERR "\t$0 your_CVS_username new_directory [humpub-release-NN]\n";
+	exit 0;
+}
+my ($user, $new_dir, $new_tag) = @ARGV;
+
+# ----------------------------------------------------------------------
+
+my $biolocation = '/nfs/team71/analysis/lg4/work/distrib';
+
+my $method = 'checkout'; # ||'export'
+
+my %mod2location = (
+	'ace_skeleton'     => '/nfs/humace2/CVS_master',
+	'PerlModules'      => '/nfs/humace2/CVS_master',
+	'tk'               => '/nfs/humace2/CVS_master',
+	'ensembl-ace'      => ":ext:${user}\@cvs.sanger.ac.uk:/nfs/ensembl/cvsroot",
+	'ensembl-otter'    => ":ext:${user}\@cvs.sanger.ac.uk:/nfs/ensembl/cvsroot",
+
+	'ensembl'          => ":ext:${user}\@cvs.sanger.ac.uk:/nfs/ensembl/cvsroot",
+	'ensembl-pipeline' => ":ext:${user}\@cvs.sanger.ac.uk:/nfs/ensembl/cvsroot",
+);
+
+my %mod2tag = (
+	'ensembl'	   => 'branch-ensembl-19',
+	'ensembl-pipeline' => 'branch-finished-19',
+);
+
+my $tagfile = 'CVS_TAG';
+
+# ----------------------------------------------------------------------
+
+mkdir($new_dir);
+chdir($new_dir);
+
+foreach my $mod (keys %mod2location) {
+	my $location = $mod2location{$mod};
+	if($location=~/\@/) {
+		print "\nPlease enter your CVS password below\n";
+	}
+	my $this_tag = $mod2tag{$mod} || $new_tag;
+	system('cvs', '-d', $mod2location{$mod}, $method, ($this_tag? ('-r', $this_tag) : ()), $mod);
+}
+
+$new_tag ||= 'HEAD';
+system("echo $new_tag > $tagfile");
+
+system('cp', (map { 'ace_skeleton/'.$_ } ('methods.ace', 'otter_config', 'newpipe_otter_config')), '.');
+chdir('ace_skeleton');
+system('tar', '-cvf', '../lace_acedb.tar', 'database', 'wgf', 'wscripts', 'wspec');
+chdir('..');
+
+for my $biodir ('bioperl-0.7.2', 'bioperl-1.2.3-patched', 'biodas-1.02') {
+    system('cp', $biolocation.'/'.$biodir.'.tar.gz', '.');
+    system('gunzip', $biodir.'.tar.gz');
+    system('tar', '-xvf', $biodir.'.tar');
+    system('rm', $biodir.'.tar');
+}
+
+system('chmod -R g+w *');
+
