@@ -54,7 +54,13 @@ use Symbol 'gensym';
           $slice_aptr->fetch_by_chr_start_end($chr, $chr_start, $chr_end);
 
         my $gene_id_list = $gene_aptr->list_current_dbIDs_for_Slice($slice);
+        my $i = 0;
         foreach my $gene_dbid (@$gene_id_list) {
+            $i++;
+            print STDERR ".";
+            unless ($i % 50) {
+                print STDERR " $i\n";
+            }
             my $gene = $gene_aptr->fetch_by_dbID($gene_dbid);
             next if $gene->type eq 'obsolete';
             $gene = $gene->transform($slice);
@@ -65,6 +71,9 @@ use Symbol 'gensym';
                     $trim_to_slice, $include_codons, $fix_phases, $set_name);
             }
         }
+        unless ($i % 50) {
+            print STDERR " $i\n";
+        }
     }
 }
 
@@ -73,7 +82,7 @@ sub is_corf_transcript {
     
     my $is_corf = 0;
     foreach my $rem ($tsct->transcript_info->remark) {
-        if ($rem->remark =~ /^Annotation_remark\s*corf$/) {
+        if ($rem->remark =~ /^Annotation_remark-\s*corf$/) {
             $is_corf = 1;
             last;
         }
