@@ -9,7 +9,6 @@ use Symbol 'gensym';
 {
     my ($dataset_name);
     my $local_coords   = 0;
-    my $trim_to_slice  = 0;
     my $include_codons = 1;
     my $fix_phases     = 0;
 
@@ -39,6 +38,9 @@ use Symbol 'gensym';
         # Create the GTF file to write the genes into
         my $fh        = gensym();
         my $file_name = "$dataset_name.$set_name.gtf";
+        if (-e $file_name) {
+            die "Error: file '$file_name' already exists\n";
+        }
         open $fh, "> $file_name" or die "Can't write to '$file_name' : $!";
         warn "Writing GTF data to '$file_name'\n";
 
@@ -57,23 +59,27 @@ use Symbol 'gensym';
         my $i = 0;
         foreach my $gene_dbid (@$gene_id_list) {
             $i++;
-            print STDERR ".";
-            unless ($i % 50) {
-                print STDERR " $i\n";
-            }
             my $gene = $gene_aptr->fetch_by_dbID($gene_dbid);
             next if $gene->type eq 'obsolete';
             $gene = $gene->transform($slice);
 
+            my $is_corf = 0;
             foreach my $tsct (@{ $gene->get_all_Transcripts }) {
                 next unless is_corf_transcript($tsct);
+                $is_corf = 1;
+                my $exons_truncated = $tsct->truncate_to_Slice($slice);
                 write_transcript_gtf($fh, $slice, $gene, $tsct, $local_coords,
-                    $trim_to_slice, $include_codons, $fix_phases, $set_name);
+                    $exons_truncated, $include_codons, $fix_phases, $set_name);
+            }
+            print STDERR $is_corf ? '+' : ".";
+            unless ($i % 50) {
+                print STDERR " $i\n";
             }
         }
         unless ($i % 50) {
             print STDERR " $i\n";
         }
+        close $fh or die "Error writing to '$file_name' : $!";
     }
 }
 
@@ -91,7 +97,7 @@ sub is_corf_transcript {
 }
 
 sub write_transcript_gtf {
-    my ($fh, $slice, $gene, $transcript, $localcoords, $trim_to_slice,
+    my ($fh, $slice, $gene, $transcript, $localcoords, $exons_truncated,
         $include_codons, $fix_phases, $seqname)
       = @_;
 
@@ -134,18 +140,12 @@ sub write_transcript_gtf {
         }
     }
 
-    my $show_trim_attrib = $trim_to_slice
-      && ($transcript->start < 1 || $transcript->end > $slice->length);
-
     my $count   = 1;
     my $intrans = 0;
     my $instop  = 0;
 
     foreach my $exon (@{ $transcript->get_all_Exons }) {
         my $strand = $exon->strand;
-
-        my $trimmed =
-          $trim_to_slice && ($exon->start < 1 || $exon->end > $slice->length);
 
         if ($exon->strand == -1) {
             $strand = "-";
@@ -163,23 +163,21 @@ sub write_transcript_gtf {
             $intrans = 1;
         }
 
-        if (!$trimmed) {
-            print $fh $idstr . "\t"
-              . $gene->type . "\t" . 'exon' . "\t"
-              . ($exon->start + $sliceoffset) . "\t"
-              . ($exon->end + $sliceoffset) . "\t" . "." . "\t"
-              . $strand . "\t" . "." . "\t";
-            print_attribs($fh, $gene, $transcript, $count, 'exon',
-                $show_trim_attrib);
+        print $fh $idstr . "\t"
+          . $gene->type . "\t" . 'exon' . "\t"
+          . ($exon->start + $sliceoffset) . "\t"
+          . ($exon->end + $sliceoffset) . "\t" . "." . "\t"
+          . $strand . "\t" . "." . "\t";
+        print_attribs($fh, $gene, $transcript, $count, 'exon',
+            $show_trim_attrib);
 
          # remarks don't seem to exist in the ensembl schema as they do in otter
          # gene_description is used for something else, so is not appropriate
-            if ($count == 1) {
-                print_description_attribs($fh, $gene, $transcript, $count);
-            }
-
-            print $fh "\n";
+        if ($count == 1) {
+            print_description_attribs($fh, $gene, $transcript, $count, $exons_truncated);
         }
+
+        print $fh "\n";
 
         if ($intrans) {
 
@@ -405,7 +403,7 @@ sub make_stop_codon_features {
 }
 
 sub print_description_attribs {
-    my ($fh, $gene, $transcript, $count) = @_;
+    my ($fh, $gene, $transcript, $count, $exons_truncarted) = @_;
     my $gene_description = undef;
     foreach my $remark ($gene->gene_info->remark) {
         $gene_description .= $remark->remark . " ";
@@ -416,17 +414,15 @@ sub print_description_attribs {
             $gene_description = undef;
         }
     }
-    my $trans_description = undef;
+    if ($gene_description) {
+        print $fh qq{ gene_description "$gene_description";};
+    }
     foreach my $remark ($transcript->transcript_info->remark) {
-        $trans_description .= $remark->remark . " ";
+        my $rem = $remark->remark;
+        unless ($rem =~ /^Annotation_remark-/) {
+            print $fh qq{ transcript_remark "$rem";};
+        }
     }
-    if ($trans_description) {
-        chop $trans_description;
-    }
-    print $fh (
-        $gene_description ? "gene_description \"$gene_description\"; " : "")
-      . (
-        $trans_description ? "trans_description \"$trans_description\"; " : "");
 }
 
 sub print_attribs {
@@ -505,7 +501,7 @@ sub check_start_and_stop {
     my $startseq = substr($cdna_seq, $coding_start - 1, 3);
     my $endseq   = substr($cdna_seq, $coding_end - 3,   3);
 
-    print "Codons: " . $startseq . " " . $endseq . "\n";
+    #print STDERR "Codons: " . $startseq . " " . $endseq . "\n";
 
     my $has_start = 1;
     my $has_end   = 1;
