@@ -724,7 +724,7 @@ sub visible_canvas_bbox {
     
     my $canvas = $self->canvas;
     
-    my $scroll      = $canvas->cget('scrollregion');
+    my $scroll      = $canvas->cget('scrollregion') || [0, 0, 0, 0];
     my ($xf1, $xf2) = $canvas->xview;
     my ($yf1, $yf2) = $canvas->yview;
     
