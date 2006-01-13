@@ -273,8 +273,10 @@ sub status_refresh_for_SequenceSet{
         my $contig_name = $cs->contig_name();
         my $status_subhash = $status_hash->{$contig_name};
 
-        while(my ($ana_name, $values) = each %$status_subhash) {
-            $status->add_analysis($ana_name, $values);
+        if($status_subhash) {
+            while(my ($ana_name, $values) = each %$status_subhash) {
+                $status->add_analysis($ana_name, $values);
+            }
         }
 
         $cs->pipelineStatus($status);

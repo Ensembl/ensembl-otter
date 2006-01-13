@@ -10,7 +10,10 @@ use Bio::EnsEMBL::Analysis;
 my $ana_root = 'SubmitContig';
 
 sub new {
-    return bless {}, shift;
+    return bless {
+        'completed_count' => 0,
+        '_entries' => {},
+    }, shift;
 }
 
 sub entry {
@@ -73,7 +76,14 @@ sub display_list {
 sub short_display {
     my( $self ) = @_;
 
-    return $self->{'completed_count'} == scalar(keys %{$self->{_entries}}) ? 'completed' : 'missing';
+    my $total_entries = scalar(keys %{$self->{_entries}});
+
+    return (!$total_entries)
+            ? 'empty'
+            : ($self->{'completed_count'} == $total_entries)
+                ? 'completed'
+                : 'missing';
+
 }
 
 1;
