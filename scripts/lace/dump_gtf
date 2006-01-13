@@ -35,6 +35,27 @@ use Symbol 'gensym';
     foreach my $set_name (@ARGV) {
         $otter_dba->assembly_type($set_name);
 
+        # Get the slice of the whole sequence set
+        my $ss = $ds->get_SequenceSet_by_name($set_name);
+        $ds->selected_SequenceSet($ss);
+        $ds->fetch_all_CloneSequences_for_SequenceSet($ss);
+        my ($chr, $chr_start, $chr_end) =
+          $cl->chr_start_end_from_contig($ss->CloneSequence_list);
+        my $slice =
+          $slice_aptr->fetch_by_chr_start_end($chr, $chr_start, $chr_end);
+        
+        # Write the AGP data into a separate file
+        my $agp = gensym();
+        my $agp_file = "$dataset_name.$set_name.agp";
+        if (-e $agp_file) {
+            die "Error: file '$agp_file' already exists\n";
+        }
+        open $agp, "> $agp_file" or die "Can't write to '$agp_file' : $!";
+        warn "Creating AGP file '$agp_file'\n";
+        print $agp @{$ss->agp_data};
+        close $agp or die "Error writing to '$agp_file' : $!";
+        #warn "APG DEBUG"; next;
+
         # Create the GTF file to write the genes into
         my $fh        = gensym();
         my $file_name = "$dataset_name.$set_name.gtf";
@@ -44,16 +65,6 @@ use Symbol 'gensym';
         open $fh, "> $file_name" or die "Can't write to '$file_name' : $!";
         warn "Writing GTF data to '$file_name'\n";
 
-        # Write the AGP file into the GTF header.
-
-        # Get the slice of the whole sequence set
-        my $ss = $ds->get_SequenceSet_by_name($set_name);
-        $ds->selected_SequenceSet($ss);
-        $ds->fetch_all_CloneSequences_for_SequenceSet($ss);
-        my ($chr, $chr_start, $chr_end) =
-          $cl->chr_start_end_from_contig($ss->CloneSequence_list);
-        my $slice =
-          $slice_aptr->fetch_by_chr_start_end($chr, $chr_start, $chr_end);
 
         my $gene_id_list = $gene_aptr->list_current_dbIDs_for_Slice($slice);
         my $i = 0;
