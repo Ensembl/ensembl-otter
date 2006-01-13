@@ -99,7 +99,12 @@ my %skeleton_hash = map { ($_ => []) } get_possible_analyses($dbh);
 my %result_hash   = ();
 
 ### Will this die produce a sensible error message?
-die "No input IDs" unless @input_ids;
+# die "No input IDs" unless @input_ids;
+if(! @input_ids) {
+    # error_exit($cgi, 'No input IDs');
+    send_response($cgi, '');
+    exit(0);
+}
 
 my $input_id_str = join(', ', map "'$_'", @input_ids);
 my $sql_statement = qq{
