@@ -27,9 +27,9 @@ if (!defined($OTTER_SPECIES->{$params{'dataset'}})) {
 my %defaults = %{$OTTER_SPECIES->{'defaults'}};
 my %dbinfo   = %{$OTTER_SPECIES->{$params{'dataset'}}};
 
-my $chr      = $params{chr}       || error_exit("No chromosome entered");
-my $chrstart = $params{chrstart}  || error_exit("No chromosome start coordinate entered");
-my $chrend   = $params{chrend}    || error_exit("No chromosome end coordinate entered");
+my $chr      = $params{chr}       || error_exit($q, "No chromosome entered");
+my $chrstart = $params{chrstart}  || error_exit($q, "No chromosome start coordinate entered");
+my $chrend   = $params{chrend}    || error_exit($q, "No chromosome end coordinate entered");
 my $type     = $params{type}      || $dbinfo{TYPE} || $defaults{TYPE};
 
 
