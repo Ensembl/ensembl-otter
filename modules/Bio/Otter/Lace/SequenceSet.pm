@@ -190,6 +190,46 @@ sub selected_CloneSequences_as_contig_list {
     #return $ctg_list;
 }
 
+sub agp_data {
+    my ($self) = @_;
+
+    my $cs_list = $self->CloneSequence_list;
+    confess "CloneSequence list not yet loaded"
+      unless @$cs_list;
+    my $chr_name = $self->name;
+
+    my $row  = 0;
+    my $pos  = 0;
+    my $data = [];
+    foreach my $cs (@$cs_list) {
+        $row++;
+        my $acc           = $cs->accession;
+        my $sv            = $cs->sv;
+        my $chr_start     = $cs->chr_start;
+        my $chr_end       = $cs->chr_end;
+        my $superctg_name = $cs->super_contig_name;
+        if (my $gap = ($chr_start - ($pos + 1))) {
+            push(@$data,
+                join("\t", $chr_name, $pos + 1, $pos + $gap, $row, 'N', $gap)
+                  . "\n");
+            $row++;
+        }
+        push(
+            @$data,
+            join("\t",
+                $chr_name,         $chr_start,
+                $chr_end,          $row,
+                'F',               "$acc.$sv",
+                $cs->contig_start, $cs->contig_end,
+                $cs->contig_strand eq '1' ? '+' : '-', "# $superctg_name")
+              . "\n"
+        );
+        $pos = $chr_end;
+    }
+    return $data;
+}
+
+
 ### Method for fetching completeness of analysis
 ### for all the CloneSequences in a SequenceSet
 
