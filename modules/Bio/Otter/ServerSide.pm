@@ -154,7 +154,7 @@ sub get_pipeline_adaptor_slice_parms { # codebase-independent version for script
 		# Vega chromosomes will have simple names.
 	my $segment_name = (($cgi_args{cs} eq 'chromosome') && ($cgi_args{csver} eq 'Otter'))
 			? $cgi_args{type}
-		        : $cgi_args{name};
+		    : $cgi_args{name};
 
         $pipeline_slice = $pdb->get_SliceAdaptor()->fetch_by_region(
             $cgi_args{cs},
