@@ -111,7 +111,7 @@ sub get_connected_pipeline_dbhandle {
             $pipekey
         );
 
-    error_exit("No connection parameters for '$pipekey' in otter database")
+    error_exit($cgi, "No connection parameters for '$pipekey' in otter database")
         unless keys %$pipedb_options;
 
     my $dbh = connect_with_params(%$pipedb_options);
@@ -144,9 +144,10 @@ sub get_pipeline_adaptor_slice_parms { # codebase-independent version for script
         $cgi_args{csver} = 'Otter';
     }
 
-    if($pipehead) {
+    server_log("connecting to the ".($pipehead?'NEW':'OLD')." pipeline using [$pipekey] meta entry...");
+    server_log("... with parameters: ".join(', ', map { "$_=".$pipedb_options->{$_} } keys %$pipedb_options ));
 
-        server_log("connecting to the NEW pipeline using [$pipekey] meta entry");
+    if($pipehead) {
 
 		# The following statement ensures
 		# that we use 'assembly type' as the chromosome name
@@ -164,9 +165,8 @@ sub get_pipeline_adaptor_slice_parms { # codebase-independent version for script
             $cgi_args{strand},
             $cgi_args{csver},
         );
-    } else {
 
-        server_log("connecting to the OLD pipeline using [$pipekey] meta entry");
+    } else {
 
         $pdb->assembly_type($odb->assembly_type());
 
@@ -183,6 +183,10 @@ sub get_pipeline_adaptor_slice_parms { # codebase-independent version for script
         } else {
             die "Other coordinate systems are not supported";
         }
+    }
+
+    if(!defined($pipeline_slice)) {
+        error_exit($cgi, "Could not get a slice!");
     }
 
     return ($pdb, $pipeline_slice, $pipedb_options);
