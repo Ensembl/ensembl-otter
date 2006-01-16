@@ -22,6 +22,10 @@ my %cgi_args = $cgi->Vars;
 my $odb = get_DBAdaptor_from_CGI_species($cgi, $OTTER_SPECIES, $pipehead);
 my ($pdb, $pipeline_slice, $pipe_connparms) = get_pipeline_adaptor_slice_parms($cgi, $odb, $pipehead);
 
+if(!defined($pipeline_slice)) {
+    error_exit($cgi, "Pipeline slice undefined!");
+}
+
 my @af_optnames = @{ $OrderOfOptions{AlignFeature} };
 my @hd_optnames = @{ $OrderOfOptions{HitDescription} };
 
