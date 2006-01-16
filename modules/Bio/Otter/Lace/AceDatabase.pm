@@ -79,7 +79,7 @@ sub tar_file {
         $self->{'_tar_file'} = $tar_file;
     }
     elsif (! $self->{'_tar_file'}) {
-        foreach my $root ($ENV{'OTTER_HOME'}, $ENV{'LACE_LOCAL'}, '/nfs/humace2/hum/data') {
+        foreach my $root ($ENV{'OTTER_HOME'}, $ENV{'LACE_LOCAL'}, '/nfs/disk100/humpub/otter_production_main') {
             next unless $root;
             my $file = "$root/lace_acedb.tar";
             if (-e $file) {
