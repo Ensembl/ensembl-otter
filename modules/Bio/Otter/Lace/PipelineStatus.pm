@@ -48,28 +48,17 @@ sub all_analyses {
 sub display_list {
     my( $self ) = @_;
     
-    my $display_list = [];
+    my @display_list = ();
     foreach my $ana_name ($self->all_analyses()) {
-        my $stat_hash;
-        if (my $entry = $self->entry($ana_name)) {
-            $stat_hash = {
+        my $entry = $self->entry($ana_name);
+        push @display_list, {
                 'name'   => $ana_name,
-                'status' => 'completed',
-            };
-            while (my ($key, $val) = each %$entry) {
-                $stat_hash->{$key} = $val;
-            }
-        } else {
-            $stat_hash = {
-                'name'    => $ana_name,
-                'status'  => 'missing',
-                'created' => '-',
-                'version' => '-',
-            };
-        }
-        push(@$display_list, $stat_hash);
+                (keys %$entry)
+                    ? ( 'status' => 'completed', %$entry )
+                    : ( 'status' => 'missing', 'created' => '-', 'version' => '-',),
+        };
     }
-    return $display_list;
+    return \@display_list;
 }
 
 # Called by CanvasWindow::SequenceNotes for displaying overall status of clone
@@ -79,7 +68,7 @@ sub short_display {
     my $total_entries = scalar(keys %{$self->{_entries}});
 
     return (!$total_entries)
-            ? 'empty'
+            ? 'unavailable'
             : ($self->{'completed_count'} == $total_entries)
                 ? 'completed'
                 : 'missing';
