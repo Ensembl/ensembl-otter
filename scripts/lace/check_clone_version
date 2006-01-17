@@ -1,0 +1,40 @@
+#!/usr/local/bin/perl -w
+
+### author: ck1
+### check version of clones in AGP is in sync with pfetch server
+
+print "Give path of AGP file(s) as argument\n\n" unless $ARGV[0];
+print "\nChecking sequence version of clones in AGP . . .\n\n";
+
+foreach my $agp ( @ARGV ) {
+
+  open($fh, "$agp") or die $!;
+
+  my $diff = 0;
+
+  while (<$fh>) {
+
+	chomp;
+	# agp format:
+	# chr11   1       176646  1       F       CR933541.6      1       176646  +
+
+	my @fields = split(/\t/, $_);
+
+	my $acc = $fields[5];
+
+	my $test_sv = `pfetch -F $acc | grep "^SV"`;
+	chomp $test_sv;
+	$test_sv =~ s/^SV\s+//;
+
+	if ( $acc !~ /^\d+/ and $test_sv ne $acc ) {
+	  $diff = 1;
+	  print "Version diff:\n";
+	  print "\tAGP: $acc\n";
+	  print "\tPFetch: $test_sv\n";
+	}
+  }
+
+  close $fh;
+  print "$agp AGP is up-to-date\n" if $diff == 0 ;
+}
+print "\n";
