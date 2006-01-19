@@ -27,7 +27,7 @@ Where options are:
  ----------------------------------
  -priority              analysis priority of the sequnce set
  -chromosome            name of the chromosome the set comes from [required when input is list]
- -no_submit				Used to avoid the pipeline priming with the SubmitContig analysis
+ -nosubmit				Used to avoid the pipeline priming with the SubmitContig analysis
  -help                  displays this documentation with PERLDOC
 
  ** plus the default otter options of Bio::Otter::Lace::Defaults **
@@ -95,7 +95,7 @@ my $DEBUG = 0;
       ; # default value for just now. - true value will be added by a different script
     my $help      = 0;
     my $at_sanger = 1;    # Set if we want to get sequence notes and clone names
-    my $no_submit = 0;	  # Set if we don't want to prime the pipeline with the SubmitContig analysis 
+    my $do_submit = 0;	  # Set if we don't want to prime the pipeline with the SubmitContig analysis 
 
     #---------------------------------------------------------------------------
     Bio::Otter::Lace::Defaults::do_getopt(
@@ -107,7 +107,8 @@ my $DEBUG = 0;
         'set|name=s'    => \$set_name,
         'debug'         => \$DEBUG,
         'sanger!'       => \$at_sanger,
-        'no_submit!'	=> \$no_submit,
+        'no_submit'     => sub{ $do_submit = 0 },
+        'submit!'	    => \$do_submit,
       )
       or useage();
     useage() if $help;
@@ -288,7 +289,7 @@ my $DEBUG = 0;
     # print STDERR join("\n", map { $_->name } @$pipe_contigs);
 
     # prime the pipeline database with SubmitContig analysis
-    store_input_id_analysis($pipe_contigs, $pipeline_db, $ana_obj) unless($no_submit);
+    store_input_id_analysis($pipe_contigs, $pipeline_db, $ana_obj) if $do_submit;
 
     # update chromosome lengths
     update_chromosome_length($pipeline_db, $pipe_chromosome);
