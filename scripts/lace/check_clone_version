@@ -20,17 +20,21 @@ foreach my $agp ( @ARGV ) {
 
 	my @fields = split(/\t/, $_);
 
-	my $acc = $fields[5];
+	my $acc_ori = $fields[5];
+	my $acc = $acc_ori;
+	$acc =~ s/\.\d+//;
 
 	my $test_sv = `pfetch -F $acc | grep "^SV"`;
 	chomp $test_sv;
-	$test_sv =~ s/^SV\s+//;
 
-	if ( $acc !~ /^\d+/ and $test_sv ne $acc ) {
+	$test_sv =~ s/^SV\s+//;
+	
+	
+	if ( $acc !~ /^\d+/ and $test_sv ne $acc_ori ) {
 	  $diff = 1;
 	  print "Version diff:\n";
-	  print "\tAGP: $acc\n";
-	  print "\tPFetch: $test_sv\n";
+	  printf("\t%-8s\t%s\n", "AGP:", $acc_ori);
+	  printf("\t%-8s\t%s\n", "Pfetch:", $test_sv);
 	}
   }
 
