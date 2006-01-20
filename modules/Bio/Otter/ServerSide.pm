@@ -185,8 +185,10 @@ sub get_pipeline_adaptor_slice_parms { # codebase-independent version for script
         }
     }
 
-    if(!defined($pipeline_slice)) {
-        error_exit($cgi, "Could not get a slice!");
+    if(!defined($pipeline_slice) && $pipehead) {
+        server_log('Could not get a slice, probably not yet loaded into new pipeline');
+        send_response($cgi, '', 1);
+        exit(0); # <--- this forces all the scripts to exit normally
     }
 
     return ($pdb, $pipeline_slice, $pipedb_options);
