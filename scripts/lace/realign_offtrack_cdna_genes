@@ -1,0 +1,486 @@
+#!/usr/local/bin/perl -w
+
+### realign_offtrack_genes
+
+use strict;
+
+use Bio::Otter::Lace::Defaults;
+use Bio::Otter::AnnotationBroker;
+use Hum::Analysis::Factory::ExonLocator;
+
+$| = 1;
+
+{
+    my ($dataset_name, $sequence_set, $chr_start_acc, $chr_end_acc,);
+    my $liberal   = 0;    # If set, doesn't care if it fails to find some exons
+    my $test_flag = 0;    # Don't write realigned genes to database
+
+    my $usage = sub { exec('perldoc', $0) };
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'     => $usage,
+        'dataset=s'   => \$dataset_name,
+        'chr|set=s'   => \$sequence_set,
+        'start_acc=s' => \$chr_start_acc,
+        'end_acc=s'   => \$chr_end_acc,
+        'liberal!'    => \$liberal,
+        'test!'       => \$test_flag,
+      )
+      or $usage->();
+    $usage->() unless $dataset_name and $sequence_set;
+
+    # Connect to Ensembl/Otter database and fetch adaptors
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    my $ss = $ds->get_SequenceSet_by_name($sequence_set);
+    $ds->selected_SequenceSet($ss);
+    $ds->fetch_all_CloneSequences_for_SequenceSet($ss);
+
+    my $dba = $ds->get_cached_DBAdaptor;
+    $dba->assembly_type($sequence_set);
+    my $slice_aptr = $dba->get_SliceAdaptor;
+
+    my $anal = $dba->get_AnalysisAdaptor->fetch_by_logic_name('otter');
+
+    my $cs_list     = $ss->CloneSequence_list;
+    my $found_start = 0;
+    my $found_end   = 0;
+    foreach my $cs (@$cs_list) {
+        if ($chr_start_acc and !$found_start) {
+            if ($cs->accession eq $chr_start_acc) {
+                $found_start = 1;
+            }
+            else {
+                next;
+            }
+        }
+
+        $ss->selected_CloneSequences([$cs]);
+        my ($chr, $chr_start, $chr_end) = $cl->chr_start_end_from_contig([$cs]);
+        my $slice =
+          $slice_aptr->fetch_by_chr_start_end($chr, $chr_start, $chr_end);
+
+        ### Call to module here with slice?
+        realign_genes_on_slice($slice,
+            $chr, $chr_start, $chr_end,
+            $sequence_set, $anal, $test_flag, $liberal);
+
+        if ($chr_end_acc) {
+            if ($cs->accession eq $chr_end_acc) {
+                $found_end = 1;
+                last;
+            }
+        }
+    }
+    if ($chr_start_acc and !$found_start) {
+        warn "Failed to find start accession '$chr_start_acc'\n";
+    }
+    if ($chr_end_acc and !$found_end) {
+        warn "Failed to find  end  accession '$chr_end_acc'\n";
+    }
+
+}
+
+sub realign_genes_on_slice {
+    my ($slice,
+        $chr, $chr_start, $chr_end,
+        $sequence_set, $anal, $test_flag, $liberal)
+      = @_;
+
+    my $dba        = $slice->adaptor->db;
+    my $tiles      = $slice->get_tiling_path;
+    my $gene_aptr  = $dba->get_GeneAdaptor;
+    my $slice_accs = accession_list_hash_from_tile_path($tiles);
+    my $dest_seq   = hum_seq_from_contig($slice);
+
+    my $gene_id_list =
+      $gene_aptr->list_current_dbIDs_linked_by_accession_for_Slice($slice);
+    foreach my $gene_dbid (@$gene_id_list) {
+        my $db_gene = $gene_aptr->fetch_by_dbID($gene_dbid);
+        next if $db_gene->type eq 'obsolete';
+
+        my $slice_gene = $db_gene->transform($slice);
+        $db_gene = $gene_aptr->fetch_by_dbID($gene_dbid);
+
+        my $name = $slice_gene->gene_info->name->name;
+        warn "Looking at gene '$name'\n";
+        my $stable_id = $slice_gene->stable_id;
+        unless (gene_is_truncated($slice_gene, $slice)) {
+            print STDERR "Found entire gene '$name' ($stable_id)\n";
+            next;
+        }
+        $slice_gene = undef;    # It has served its purpose
+
+        my $gene_accs;
+        if ($gene_accs = gene_accs_are_all_in_slice($db_gene, $slice_accs)) {
+            print STDERR "Found off track gene '$name' ($stable_id)\n";
+        }
+        else {
+            print STDERR
+              "Found gene with accs not in slice '$name' ($stable_id)\n";
+            next;
+        }
+
+        my $finder = Hum::Analysis::Factory::ExonLocator->new;
+        $finder->genomic_Sequence($dest_seq);
+
+        my $before_exon_count = @{ $db_gene->get_all_Exons };
+        if (remap_ens_Exons($finder, $db_gene, $slice, $liberal)) {
+            my $after_exon_count = @{ $db_gene->get_all_Exons };
+            warn "Remapped $after_exon_count of $before_exon_count exons OK\n";
+
+            # otter > XML > otter
+            my $temp = Bio::Otter::Lace::TempFile->new;
+            $temp->name("realign_offtrack.$$.xml");
+            my $w_fh = $temp->write_file_handle;
+            print $w_fh "<otter>\n<sequence_set>\n" ,
+              Bio::Otter::Converter::path_to_XML($chr, $chr_start, $chr_end,
+                $sequence_set, $tiles),
+              $db_gene->toXMLString, "</otter>\n</sequence_set>\n";
+            my $r_fh        = $temp->read_file_handle;
+            my ($gene_list) = Bio::Otter::Converter::XML_to_otter($r_fh);
+            my $xml_gene    = shift @$gene_list;
+            $xml_gene->analysis($anal);
+            save_new_gene($dba, $gene_aptr, $db_gene, $xml_gene, $slice,
+                $test_flag);
+        }
+    }
+}
+
+sub clone_sequence_contig_from_acc_hash {
+    my ($all_cs, $gene_accs) = @_;
+
+    my $ctg    = [];
+    my $in_ctg = 0;
+
+    #print STDERR "Gene accs:\n", map("  $_\n", keys %$gene_accs);
+    foreach my $cs (@$all_cs) {
+        my $acc = $cs->accession;
+        if ($gene_accs->{$acc}) {
+            $in_ctg = 1;
+            delete($gene_accs->{$acc});
+        }
+        push(@$ctg, $cs) if $in_ctg;
+        unless (keys %$gene_accs) {
+
+            # Have found all gene accs
+            $in_ctg = 0;
+            last;
+        }
+    }
+    if ($in_ctg or keys %$gene_accs) {
+        die "Failed to find gene accs:", map(" $_", keys %$gene_accs);
+    }
+
+    #print STDERR "Ctg accs:\n", map(sprintf("  %s\n", $_->accession), @$ctg);
+
+    return $ctg;
+}
+
+sub save_new_gene {
+    my ($dba, $gene_aptr, $db_gene, $xml_gene, $slice, $test_flag) = @_;
+
+    my $sida = $dba->get_StableIdAdaptor;
+    $sida->fetch_new_stable_ids_for_Gene($xml_gene);
+
+    my $broker = Bio::Otter::AnnotationBroker->new($dba);
+    $broker->make_id_version_hash([$db_gene]);
+    $broker->increment_versions_in_gene($xml_gene);
+    $gene_aptr->attach_to_Slice($xml_gene, $slice);
+
+    eval {
+        $dba->begin_work;
+        $xml_gene->detach_DBAdaptors;
+        $gene_aptr->store($xml_gene);
+    };
+    if ($@) {
+        $dba->rollback;
+        warn "Error saving remapped gene: $@";
+    }
+    elsif ($test_flag) {
+        warn "Test flag set - not saving\n";
+        $dba->rollback;
+    }
+    else {
+        $dba->commit;
+    }
+}
+
+sub gene_is_truncated {
+    my ($gene, $slice) = @_;
+
+    my $slice_length = $slice->length;
+    foreach my $exon (@{ $gene->get_all_Exons }) {
+        if (   $exon->contig != $slice
+            or $exon->start < 1
+            or $exon->end > $slice_length)
+        {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+sub gene_accs_are_all_in_slice {
+    my ($gene, $slice_acc) = @_;
+
+    my $gene_acc = {};
+    foreach my $exon (@{ $gene->get_all_Exons }) {
+        my $exon_list =
+            $exon->isa('Bio::EnsEMBL::StickyExon')
+          ? $exon->get_all_component_Exons
+          : [$exon];
+        foreach my $exon (@$exon_list) {
+            my $clone_acc = $exon->contig->clone->embl_id;
+            my $flag;
+            if ($slice_acc->{$clone_acc}) {
+                $gene_acc->{$clone_acc} = 1;
+            }
+            else {
+                return;
+            }
+        }
+    }
+
+    # We found all the accessions the gene is attached to
+    # in the list of accessions from the tile_path
+    return $gene_acc;
+}
+
+sub accession_list_hash_from_tile_path {
+    my ($tile_path) = @_;
+
+    my $acc_list = {};
+    foreach my $tile (@$tile_path) {
+        my $acc = $tile->component_Seq->clone->embl_id;
+        $acc_list->{$acc} = 1;
+    }
+    return $acc_list;
+}
+
+sub otter_objects_from_contig {
+    my ($cl, $ds, $ss) = @_;
+
+    my $tmp = Bio::Otter::Lace::TempFile->new;
+    $tmp->name("realign-$$.xml");
+    my $write      = $tmp->write_file_handle;
+    my $xml_string =
+      $cl->get_xml_for_contig_from_Dataset($ss->selected_CloneSequences, $ds);
+    print $write $xml_string ;
+
+    my ($genes, $slice, $sequence, $tiles, $feature_set) =
+      Bio::Otter::Converter::XML_to_otter($tmp->read_file_handle);
+    return ($genes, $tiles);
+}
+
+### Also in gene_stats - should be in a module
+sub select_CloneSequence_contig {
+    my ($ss, $start_acc, $end_acc) = @_;
+
+    my $ctg       = [];
+    my $in_contig = 0;
+    my $cs_list   = $ss->CloneSequence_list;
+    foreach my $cs (@$cs_list) {
+        my $acc = $cs->accession;
+        if ($acc eq $start_acc) {
+            $in_contig = 1;
+        }
+        if ($in_contig) {
+            push(@$ctg, $cs);
+        }
+        if ($acc eq $end_acc) {
+            if ($in_contig) {
+                $in_contig = 0;
+            }
+            else {
+                die "Found end '$end_acc' but not start '$start_acc'\n";
+            }
+        }
+    }
+    if (@$ctg == 0) {
+        die "Failed to find start '$start_acc'\n";
+    }
+    elsif ($in_contig) {
+        die "Failed to find end '$end_acc'\n";
+    }
+
+    $ss->selected_CloneSequences($ctg);
+}
+
+sub hum_seq_from_contig {
+    my ($ctg) = @_;
+
+    my $seq = Hum::Sequence::DNA->new;
+    $seq->sequence_string($ctg->seq);
+    $seq->name($ctg->name);
+    return $seq;
+}
+
+sub hum_seq_from_exon {
+    my ($exon) = @_;
+
+    my $seq = Hum::Sequence::DNA->new;
+    $seq->sequence_string($exon->seq->seq);
+    $seq->name($exon->stable_id);
+    return $seq;
+}
+
+sub remap_ens_Exons {
+    my ($finder, $gene, $dest_ctg, $liberal) = @_;
+
+    warn "remapping";
+
+    my $exons = $gene->get_all_Exons;
+
+    # Make a Hum::Sequence object for each exon
+    my $exon_seq = [];
+    for (my $i = 0 ; $i < @$exons ; $i++) {
+        push(@$exon_seq, hum_seq_from_exon($exons->[$i]));
+    }
+
+    # Find the exons (with cross_match)
+    my $fs = $finder->find_best_Feature_set($exon_seq);
+
+    # Give Exons new coords
+    my $sub_strand      = undef;
+    my $all_found       = 1;
+    my $exons_not_found = {};
+    for (my $i = 0 ; $i < @$exons ; $i++) {
+        my $exon = $exons->[$i];
+        warn "Looking at exon $i '", $exon->stable_id, "'\n";
+        my $name  = $exon->stable_id;
+        my $e_len = $exon->length;
+        if (my $feat = $fs->[$i]) {
+            my $start  = $feat->seq_start;
+            my $end    = $feat->seq_end;
+            my $strand = $feat->seq_strand;
+            my $h_len  = $feat->seq_length;
+
+            if ($sub_strand and $strand != $sub_strand) {
+
+                # Should trap this in ExonLocator
+                warn "Exons on different strands from same feature set\n";
+            }
+            else {
+                $sub_strand = $strand;
+            }
+
+            if ($h_len != $e_len) {
+                printf STDERR
+                  "Incomplete ($h_len of $e_len) to %10s %d %d %d\n", $name,
+                  $start, $end, $strand;
+            }
+            else {
+                printf STDERR "Found %10s %d %d %d\n", $name, $start, $end,
+                  $strand;
+            }
+            $exon->start($start);
+            $exon->end($end);
+            $exon->strand($strand);
+            $exon->contig($dest_ctg);
+        }
+        else {
+            printf STDERR "Failed to find %d bp exon '%s'\n", $exon->length,
+              $exon->stable_id;
+            $all_found = 0;
+            if ($liberal) {
+                $exons_not_found->{$exon} = 1;
+            }
+        }
+    }
+    if ($liberal) {
+
+        # Strip out any exons that weren't found
+        strip_unfound_exons_from_gene($exons_not_found, $gene);
+
+        # Only return true if we found any exons
+        return @{ $gene->get_all_Exons } ? 1 : 0;
+    }
+    else {
+        return $all_found;
+    }
+}
+
+sub strip_unfound_exons_from_gene {
+    my ($exons_not_found, $gene) = @_;
+
+    my $empty_transcripts = {};
+    foreach my $tran (@{ $gene->get_all_Transcripts }) {
+        my @exons = @{ $tran->get_all_Exons };
+        $tran->flush_Exons;
+        my $drop_translation = 0;
+        foreach my $ex (@exons) {
+            if ($exons_not_found->{$ex}) {
+                warn "Stripping unfound exon '", $ex->stable_id,
+                  "' from transcript\n";
+                $drop_translation = 1;
+            }
+            else {
+                $tran->add_Exon($ex);
+            }
+        }
+        if ($drop_translation) {
+            ### Would be better if we could keep translation
+            ### Same problem in truncate genes subroutine
+            warn "Discarding translation\n";
+            $tran->flush_Translation;
+        }
+        unless (@{ $tran->get_all_Exons }) {
+            $empty_transcripts->{$tran} = 1;
+        }
+    }
+
+    if (my $empt = keys %$empty_transcripts) {
+
+        # Remove empty transcripts from gene
+        warn "$empt transcripts have no exons left\n";
+        my @tran = @{ $gene->get_all_Transcripts };
+        $gene->flush_Transcripts;
+        foreach my $tr (@tran) {
+            if ($empty_transcripts->{$tr}) {
+                warn "Stripping empty transcript '", $tr->stable_id,
+                  "' from gene\n";
+            }
+            else {
+                $gene->add_Transcript($tr);
+            }
+        }
+    }
+}
+
+__END__
+
+=head1 NAME - realign_offtrack_genes
+
+=head1 SYNOPSIS
+
+  realign_offtrack_genes -dataset <NAME> -set <NAME> -start_acc <ACCESSION> -end_acc <ACCESSION>
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
+=head2 Example from Liz
+
+One for your 'greyed-out' list if you've got one
+-  clone AL603882 has been put in chr1-07 
+recently I think and contains evidence to extend
+an existing locus, RP4-533D7.1, which is
+unfortunately. greyed out - the objects
+associated with RP4-533D7.1 continue all the way
+down into AL358075/RP4-533D7 (481)).
+
+Thanks very much 
+Liz
+
+
+  473  RP11-291L19   AL451136
+  474  RP4-697E16    AL355480
+  475  RP11-767N6    AL604028
+GAP  50,000 bp
+  476  XX-FW85598E4  BX664740
+
+  477  RP11-630I5    AL603882
+  478  RP11-397E14   AL772251
+  479  RP11-735A5    AL603888
+  480  RP11-386M16   AL645480
+  481  RP4-533D7     AL358075
