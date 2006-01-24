@@ -48,11 +48,14 @@ use Exporter();
 
 @ISA=qw(Exporter);
 
-my $MAIN_DIR;
+my ($MAIN_DIR, $OTTER_RELEASE);
 
-# $MAIN_DIR             = '/nfs/team71/analysis/lg4/work';
 $OTTER_SERVER_PORT      = 33999;
-$MAIN_DIR               = "/humsql/ottersrv_rel40_port$OTTER_SERVER_PORT";
+$OTTER_RELEASE          = 40;
+
+# $MAIN_DIR               = '/nfs/team71/analysis/lg4/work';
+# $MAIN_DIR               = "/humsql/ottersrv_rel${OTTER_RELEASE}_port${OTTER_SERVER_PORT}";
+$MAIN_DIR               = "/mysql/otter-live-master/otter/ottersrv_rel${OTTER_RELEASE}_port${OTTER_SERVER_PORT}";
 
 $OTTER_SERVER_ROOT 	    = $MAIN_DIR.'/ensembl-otter';
 $OTTER_ALTROOT    	    = $MAIN_DIR.'/ensembl-otter/otter_alt';
@@ -74,13 +77,6 @@ $OTTER_GET_SCRIPTS          = {'/perl/get_region'     => 'get_region',
                                '/perl/get_repeat_features'        => 'get_repeat_features',
                                '/perl/get_prediction_transcripts' => 'get_prediction_transcripts',
                                '/perl/get_pipeline_genes'         => 'get_pipeline_genes',
-
-                               '/perl/get_afs'                => 'get_align_features',
-                               '/perl/get_sfs'                => 'get_simple_features',
-                               '/perl/get_rfs'                => 'get_repeat_features',
-                               '/perl/get_pts'                => 'get_prediction_transcripts',
-                               '/perl/get_pipegenes'          => 'get_pipeline_genes',
-
                                '/perl/get_analyses_status'    => 'get_analyses_status',
 
                               };
