@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl5.8.0 -w
+#!/usr/local/bin/perl -w
 
 my $pipehead = $ENV{PIPEHEAD}; # is set by the server for any GET request
 
