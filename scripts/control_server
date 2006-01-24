@@ -1,4 +1,4 @@
-#!/usr/local/bin/bash
+#!/bin/sh
 
 # Make sure files are group writable
 umask 0002
@@ -14,12 +14,16 @@ cd $ILIVEIN/$CVSBASE/..
 root=`pwd`
 pid_file=$root/ensembl-otter/otter_srv.pid
 
-# set PERL5LIB
+OLD_PERL5LIB="$PERL5LIB"
+
 PERL5LIB=\
 $root/ensembl-otter/modules:\
 $root/ensembl/modules:\
-$root/bioperl-0.7.2:\
-$root/CPAN
+$root/bioperl-0.7.2
+
+if [ -n "$OLD_PERL5LIB" ]; then
+    PERL5LIB=${PERL5LIB}:$OLD_PERL5LIB
+fi
 
 export PERL5LIB
 
