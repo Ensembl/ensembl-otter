@@ -31,10 +31,12 @@ $new_tag ||= 'HEAD';
 system("echo $new_tag > $tagfile");
 
 foreach my $cvs_location (@cvs_locations) {
+    my @cvscmd = ('cvs', '-d', @$cvs_location);
+    print "\nRunning:\n\t@cvscmd\n";
 	if($cvs_location->[0]=~/\@/) {
 		print "\nPlease enter your CVS password below\n";
 	}
-	system('cvs', '-d', @$cvs_location);
+	system(@cvscmd);
 }
 
 for my $biodir ('bioperl-0.7.2') {
