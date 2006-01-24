@@ -11,7 +11,7 @@ CVSBASE=..
 ## get to cvs check outs directory
 cd $ILIVEIN/$CVSBASE/..
 
-root=`pwd`
+root=`\pwd -P`
 pid_file=$root/ensembl-otter/otter_srv.pid
 
 OLD_PERL5LIB="$PERL5LIB"
