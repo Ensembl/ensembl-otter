@@ -89,21 +89,23 @@ foreach my $status ( keys %$status_host ){
 #--------------------
 
 print $sep;
-set_color("magenta", "HOST LOW /tmp MEM INFO");
+set_color("magenta", "HOST LOW /tmp MEM INFO (< 1GB )");
 print "\n";
 
 my @lsload = `$pipebin/lsload -R'select[tmp<1000]' -Itmp`;
+print "Ie, you are OK\n";
+if ( @lsload ) {
 
-printf("%-10s\t%s\t%s\n", "HOST", "STATUS", "/tmp MEM < 1GB");
+  printf("%-10s\t%s\t%s\n", "HOST", "STATUS", "/tmp MEM < 1GB");
 
-foreach ( @lsload ) {
-  chomp;
-  if ( $_ !~ /^HOST/ ){
-	my ($host, $status, $tmp) = split(/\s+/, $_);
-	printf("%-10s\t%s\t%s\n", $host, $status, $tmp);
+  foreach ( @lsload ) {
+	chomp;
+	if ( $_ !~ /^HOST/ ) {
+	  my ($host, $status, $tmp) = split(/\s+/, $_);
+	  printf("%-10s\t%s\t%s\n", $host, $status, $tmp);
+	}
   }
 }
-
 
 #--------------------
 #     LSF bjobs
@@ -113,7 +115,7 @@ print $sep;
 set_color("magenta", "JOBS INFO - user $buser");
 print "\n";
 
-printf("%-10s\t\t%s\t\t%s\t%s\n", "DATABASE", "ANALYSIS", "STATUS", "JOBS");
+printf("%-27s%-25s%-15s%s\n", "DATABASE", "ANALYSIS", "STATUS", "JOBS");
 
 my @status = `$pipebin/bjobs -l -u $buser | /bin/egrep "(^Job|Status)"`;
 
@@ -140,9 +142,9 @@ foreach ( @status ) {
 foreach my $db ( sort keys %$db_logic_name_jobs_status ){
   set_color("cyan", "$db\n");
   foreach my $logicN ( keys %{$db_logic_name_jobs_status->{$db}} ){
-	printf("\t\t\t%s\n", $logicN);
+	printf("%-27s%-25s\n", "", $logicN);
 	foreach my $status ( keys %{$db_logic_name_jobs_status->{$db}{$logicN}} ){
-	  printf("\t\t\t\t\t\t%s\t%d\n", $status, $db_logic_name_jobs_status->{$db}{$logicN}{$status});
+	  printf("%-27s%-25s%-15s%d\n", "", "", $status, $db_logic_name_jobs_status->{$db}{$logicN}{$status});
 	}
   }
 }
