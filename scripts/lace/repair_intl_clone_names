@@ -19,21 +19,24 @@ sub get_attrib_id_by_name {
 
 {
     my $dataset_name = undef;
-    my $force_flag = 0;    # Re-scan the names even if they are already in the database
-    my $head_flag  = 0;    # Whether it is a new or old schema database
-    my $otter_flag = 0;    # Whether we should patch the otter database itself
+    my $all_flag    = 0;    # Re-scan the names even if they are already in the database
+    my $head_flag   = 0;    # Whether it is a new or old schema database
+    my $otter_flag  = 0;    # Whether we should patch the otter database itself
+    my $change_flag = 0;    # Whether we should change or just show the stats
     Bio::Otter::Lace::Defaults::do_getopt(
 					  'dataset=s'   => \$dataset_name,
-					  'force!'      => \$force_flag,
+					  'all!'        => \$all_flag,
                       'head!'       => \$head_flag,
-                      'otter!'      => \$head_flag,
+                      'otter!'      => \$otter_flag,
+                      'change!'     => \$change_flag,
 					  ) || die "No arguments - don't know what to do";
     die "I need a dataset name, is that too much to ask?\n" unless $dataset_name;
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
     my $ds = $cl->get_DataSet_by_name($dataset_name);
     # Make a connection to the otter database
 
-    my ($intl_attrib, $acc_attrib, $np_select_srid_by_acc, $np_insert_pipe_query, $op_update_pipe_query,
+    my ($intl_attrib, $acc_attrib, $op_update_pipe_query,
+        $np_select_srid_and_old_by_acc, $np_insert_pipe_query, $np_update_pipe_query,
         $pipe_db, $pipedb_options);
 
     my $otter_db = $ds->get_cached_DBAdaptor;
@@ -53,21 +56,13 @@ sub get_attrib_id_by_name {
     if($head_flag) {
         $intl_attrib = get_attrib_id_by_name($pipe_db, 'intl_clone_name');
         $acc_attrib  = get_attrib_id_by_name($pipe_db, 'embl_accession');
-
-        if($force_flag) { # simply remove ALL international clone names:
-            my $delete_intl_names_query = $pipe_db->prepare(qq{
-                DELETE FROM seq_region_attrib
-                WHERE attrib_type_id = $intl_attrib
-            });
-            $delete_intl_names_query->execute();
-        }
     }
 
         # find the clones that need their international name to be updated:
     my $clones_acc_query = $pipe_db->prepare(
-        $head_flag
+      $head_flag
     ? qq{
-        SELECT a_acc.value, a_ver.value, s.seq_region_id
+        SELECT a_acc.value, a_ver.value, a_icn.value
         FROM seq_region s,
 	     seq_region_attrib a_acc,
 	     seq_region_attrib a_ver
@@ -75,37 +70,51 @@ sub get_attrib_id_by_name {
           ON  s.seq_region_id = a_icn.seq_region_id
          AND  a_icn.attrib_type_id = $intl_attrib
         WHERE s.coord_system_id = (SELECT coord_system_id FROM coord_system WHERE name = 'clone')
-          AND a_icn.value is NULL
+        }.( $all_flag
+            ? ''
+            : ' AND a_icn.value is NULL '
+        ).qq{
           AND s.seq_region_id = a_acc.seq_region_id
           AND a_acc.attrib_type_id = $acc_attrib
           AND s.seq_region_id = a_ver.seq_region_id
           AND a_ver.attrib_type_id = (SELECT attrib_type_id FROM attrib_type WHERE code = 'embl_version')
-    } : $force_flag
-        ? qq{
-            SELECT embl_acc, embl_version, clone_id
-            FROM clone
-        } : qq{
-            SELECT embl_acc, embl_version, clone_id
-            FROM clone
-            WHERE name = concat(embl_acc, '.', embl_version)
-        });
+        }
+    : qq{
+        SELECT embl_acc, embl_version, name
+        FROM clone
+        }.( $all_flag
+            ? ''
+            : " WHERE name = concat(embl_acc, '.', embl_version) "
+        )
+    );
     $clones_acc_query->execute;
 
 
     if($head_flag) {
-            # find srid using via accession only:
-        $np_select_srid_by_acc = $pipe_db->prepare(qq{
-            SELECT seq_region_id
-            FROM seq_region_attrib
-            WHERE attrib_type_id = $acc_attrib
-              AND value = ?
+            # find srid and old value via accession only:
+        $np_select_srid_and_old_by_acc = $pipe_db->prepare(qq{
+            SELECT a_acc.seq_region_id, a_icn.value
+            FROM seq_region_attrib a_acc
+            LEFT JOIN seq_region_attrib a_icn
+              ON  a_acc.seq_region_id = a_icn.seq_region_id
+             AND  a_icn.attrib_type_id = $intl_attrib
+            WHERE a_acc.attrib_type_id = $acc_attrib
+              AND a_acc.value = ?
         });
 
-            # update intl_clone_name in the new schema (one by one):
+            # insert a *new* intl_clone_name in the new schema (one by one):
         $np_insert_pipe_query = $pipe_db->prepare(qq{
             INSERT INTO seq_region_attrib
-            (attrib_type_id, seq_region_id, value)
-            VALUES  ($intl_attrib, ?, ?)
+            (value, seq_region_id, attrib_type_id)
+            VALUES (?, ?, $intl_attrib)
+        });
+
+            # update an intl_clone_name in the new schema
+        $np_update_pipe_query = $pipe_db->prepare(qq{
+            UPDATE seq_region_attrib
+            SET value = ?
+            WHERE seq_region_id = ?
+              AND attrib_type_id = $intl_attrib
         });
     } else {
         $op_update_pipe_query = $pipe_db->prepare(q{
@@ -118,29 +127,58 @@ sub get_attrib_id_by_name {
     
 
         # the actual update loop:
-    my $needed_count = 0;
-    my $done_count = 0;
-    while (my ($acc, $ver) = $clones_acc_query->fetchrow) {
-        my $intl = get_international_clone_name($acc) || '';
-        if($intl) {
-            if($head_flag) {
-                $np_select_srid_by_acc->execute($acc);
-                while (my ($srid) = $np_select_srid_by_acc->fetchrow) {
-                    $np_insert_pipe_query->execute($srid, $intl) || die $np_insert_pipe_query->errstr;
+    my $scanned_count = 0;
+    my $done_count    = 0;
+    my $diff_changed_count = 0;
+    my $diff_chback_count  = 0;
+
+    while (my ($acc, $ver, $old_intl) = $clones_acc_query->fetchrow) {
+        $old_intl ||= '';
+        my $new_intl = get_international_clone_name($acc) || '';
+
+        $scanned_count++;
+
+        my $changed_delim = '....';
+
+        if( ($new_intl ne $old_intl) && ($head_flag || $new_intl) ) {
+
+                # some stats about the discrepancy:
+            if($new_intl) {
+                $diff_changed_count++;
+            } elsif($old_intl=~/^\w+\-\w+/) {
+                $diff_chback_count++;
+            }
+
+            if($change_flag) { # be a man, change the world!
+                if($head_flag) {
+                    $np_select_srid_and_old_by_acc->execute($acc);
+                    while (my ($srid, $old) = $np_select_srid_and_old_by_acc->fetchrow) {
+                        if($old) {
+                            $np_update_pipe_query->execute($new_intl, $srid) || die $np_update_pipe_query->errstr;
+                        } else {
+                            $np_insert_pipe_query->execute($new_intl, $srid) || die $np_insert_pipe_query->errstr;
+                        }
+                        $done_count++;
+                    }
+                } else {
+                    $op_update_pipe_query->execute($new_intl, $acc, $ver);
                     $done_count++;
                 }
-            } else {
-                $op_update_pipe_query->execute($intl, $acc, $ver);
-                $done_count++;
+                $changed_delim = '--->';
             }
         }
-        $needed_count++;
-        print "$acc". ($intl ? " --> $intl\n" : "\n");
+        $old_intl ||= '(unknown)';
+        $new_intl ||= '(unknown)';
+        print "$scanned_count:\t$acc.$ver\t$old_intl $changed_delim $new_intl\n";
     }
 
     print STDERR "\n---------- Summary: ----------\n";
-    print STDERR "$needed_count clones needed an international clone name\n";
-    print STDERR "$done_count new names were found\n";
+    print STDERR "$scanned_count clones were scanned\n";
+    print STDERR "$diff_changed_count clones were found to have new names in ORACLE db\n";
+    if($all_flag) {
+        print STDERR "$diff_chback_count clones' names were found to have disappeared from ORACLE db\n";
+    }
+    print STDERR "$done_count names were actually changed\n";
 }
 
 
