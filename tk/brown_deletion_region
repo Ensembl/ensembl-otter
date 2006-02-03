@@ -192,6 +192,8 @@ use Bio::Otter::Lace::PipelineDB;
 
         if ($show_repeats) {
             my $repeat = GenomeCanvas::DensityBand::RepeatFeature->new;
+            $repeat->band_color('#000000');
+            $repeat->tile_pixels(5);
             $repeat->virtual_contig($pipe_vc);
             $repeat->title('Repeats');
             $repeat->repeat_classifier(\&repeat_class);

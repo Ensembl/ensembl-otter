@@ -1408,8 +1408,8 @@ sub edit_new_subsequence {
        return;
     }
     
-    my( @ints );
-    my $most_3prime = 1;
+    ### Choosing the clone name is broken if subseq is on negative strand
+    my( @ints, $most_3prime );
     if (@subseq) {
         # Find 3' most coordinate in subsequences
         foreach my $sub (@subseq) {
