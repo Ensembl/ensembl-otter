@@ -1,0 +1,100 @@
+#!/usr/local/bin/perl -w
+
+### cross_dotter
+
+use strict;
+use POSIX 'ceil';
+use Hum::Analysis::Factory::CrossMatch;
+use CanvasWindow;
+
+{
+    my $ffin = Hum::FastaFileIO->new_DNA_IO(\*ARGV);
+    my @seqs = $ffin->read_all_sequences;
+    my $query = shift(@seqs)
+        or die "No sequence found";
+    my $factory = Hum::Analysis::Factory::CrossMatch->new;
+    $factory->show_alignments(1);
+    $factory->show_all_matches(1);
+    #$factory->min_match_length(50);
+
+    while (my $subject = shift @seqs) {
+        cross_dotter($factory, $query, $subject);
+    }
+}
+
+sub cross_dotter {
+    my ($factory, $query, $subject) = @_;
+    
+    my $query_length   =   $query->sequence_length;
+    my $subject_length = $subject->sequence_length;
+    
+    foreach my $seq ($query, $subject) {
+        printf "%22s  %10d bp\n", $seq->name, $seq->sequence_length;
+    }
+
+    my $parser = $factory->run($query, $subject);
+
+    my $title = sprintf "cross_dotter %s vs %s", $query->name, $subject->name;
+    my $mw = CanvasWindow::MainWindow->new($title);
+    my $cw = CanvasWindow->new($mw);
+    my $scale = choose_scale($mw, $query, $subject);
+    
+    my $canvas = $cw->canvas;
+    $canvas->createRectangle(0, 0, $query_length / $scale, $subject_length / $scale,
+        -fill       => undef,
+        -outline    => 'lightGrey',
+        );
+    
+    print STDERR "Drawing matches...";
+    while (my $feat = $parser->next_Feature) {
+        my $query_start   = $feat->seq_start;
+        my $query_end     = $feat->seq_end;
+        my $subject_start = $feat->hit_start;
+        my $subject_end   = $feat->hit_end;
+        if ($feat->hit_strand == -1) {
+            ($subject_start, $subject_end) = ($subject_end, $subject_start);
+        }
+        my @pos = map $_ / $scale, (
+            $query_start, $subject_start,
+            $query_end,   $subject_end,
+            );
+        #print "coord ($query_start, $subject_start, $query_end, $subject_end)\n",
+        #      "  pos (@pos)\n";
+        $canvas->createLine(@pos,
+            -fill => 'black',
+            );
+    }
+    print STDERR " done\n";
+    
+    $cw->fix_window_min_max_sizes;
+    
+    Tk::MainLoop();
+}
+
+sub choose_scale {
+    my( $mw, $query, $subject ) = @_;
+    
+    my $border = 200;   # Leave at least this number of pixels around window
+    my ($display_max_x, $display_max_y) = map $_ - $border, $mw->maxsize;
+    
+    my $max_x_scale =   $query->sequence_length / $display_max_x;
+    my $max_y_scale = $subject->sequence_length / $display_max_y;
+    
+    my $max_scale = $max_x_scale > $max_y_scale ? $max_x_scale : $max_y_scale;
+    my $round = 10;     # Round scale to nearest
+    my $scale = $round * (ceil($max_scale / $round));
+    
+    printf STDERR "max_x=%.2f  max_y=%.2f scale=%d\n",
+        $max_y_scale, $max_x_scale, $scale;
+    return $scale;
+}
+
+
+__END__
+
+=head1 NAME - cross_dotter
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+

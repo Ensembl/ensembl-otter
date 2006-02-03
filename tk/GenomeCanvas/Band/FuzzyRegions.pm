@@ -61,7 +61,7 @@ sub render {
         next if /^\s*#/;
         next if /^\s*$/;
         
-        my ($name, $start_err, $start, $end, $end_err, $colour) = split;
+        my ($name, $start_err, $start, $end, $end_err, $colour, $arrow_end) = split;
 
         foreach ($start_err, $start, $end, $end_err) {
             $_ -= $global_offset;
@@ -101,6 +101,7 @@ sub render {
             -fill       => 'black',
             -width      => 1,
             -tags       => [@tags],
+            -arrow      => $arrow_end,
             );
         
         # Rectangle in front of error bars
