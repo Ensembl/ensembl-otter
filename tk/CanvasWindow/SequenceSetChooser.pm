@@ -277,7 +277,8 @@ sub open_sequence_set {
             ## Using this instead:
             $this_top->configure(-cursor => 'watch');
             
-            my $top = $this_top->Toplevel(-title => "SequenceSet $name");
+            my $pipe_name = $self->Client->pipe_name();
+            my $top = $this_top->Toplevel(-title => "SequenceSet $name [$pipe_name]");
             my $ss = $self->DataSet->get_SequenceSet_by_name($name);
           
             my $sn = CanvasWindow::SequenceNotes->new($top);

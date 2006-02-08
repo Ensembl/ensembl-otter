@@ -266,17 +266,23 @@ sub status_refresh_for_SequenceSet{
         $pipehead,
     );
 
+        # create a dummy hash with names only:
+    my $names_subhash = {};
+    if(my ($any_subhash) = (values %$status_hash)[0] ) {
+        while(my ($ana_name, $values) = each %$any_subhash) {
+            $names_subhash->{$ana_name} = [];
+        }
+    }
+
     foreach my $cs (@{$ss->CloneSequence_list}) {
         $cs->drop_pipelineStatus;
 
         my $status = Bio::Otter::Lace::PipelineStatus->new;
         my $contig_name = $cs->contig_name();
-        my $status_subhash = $status_hash->{$contig_name};
+        my $status_subhash = $status_hash->{$contig_name} || $names_subhash;
 
-        if($status_subhash) {
-            while(my ($ana_name, $values) = each %$status_subhash) {
-                $status->add_analysis($ana_name, $values);
-            }
+        while(my ($ana_name, $values) = each %$status_subhash) {
+            $status->add_analysis($ana_name, $values);
         }
 
         $cs->pipelineStatus($status);

@@ -93,7 +93,8 @@ sub open_dataset {
             my $client = $self->Client;
             my $ds = $client->get_DataSet_by_name($name);
 
-            my $top = $canvas->Toplevel(-title => "DataSet $name");
+            my $pipe_name = $client->pipe_name();
+            my $top = $canvas->Toplevel(-title => "DataSet $name [$pipe_name]");
             my $sc = CanvasWindow::SequenceSetChooser->new($top);
 
             $sc->name($name);
