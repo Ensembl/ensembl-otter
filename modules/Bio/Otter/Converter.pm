@@ -2390,7 +2390,12 @@ sub gene_type_from_transcript_set {
         }
     }
     # All genes containing protein coding transcripts are either Known or Novel_CDS
-    elsif ($class_set->{'Coding'}) {
+    elsif ($class_set->{'Coding'}
+        or $class_set->{'Known_CDS'}
+        or $class_set->{'Novel_CDS'}
+        or $class_set->{'Putative_CDS'}
+        )
+    {
         # Check for the known_flag flag on the GeneInfo object
         if ($known_flag) {
             $type = 'Known';
