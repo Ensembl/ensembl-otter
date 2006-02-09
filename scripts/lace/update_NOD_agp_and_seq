@@ -1,0 +1,286 @@
+#!/usr/local/bin/perl -w
+
+use Hum::Sort ('ace_sort');
+use File::Basename;
+use Tie::IxHash;
+
+use strict;
+
+my $nod = {
+		   'NOD_IDD5.1' => 1,
+		   'NOD_IDD3'   => 3,
+		   'NOD_IDD10'  => 3,
+		   'NOD_IDD18'  => 3,
+		   'NOD_IDD4'   => 11,
+		   'NOD_IDD16'  => 17,
+		   'CHORI29_IDD5_Test' => 1
+		  };
+#chr1_CHORI29_IDD5_Test.agp
+my $nod_base = "/nfs/team71/analysis/jgrg/work/mouse";
+my $dest_dir = "/nfs/WWWdev/SANGER_docs/htdocs/Projects/M_musculus-NOD/NOD_AGP";
+system("rm -f $dest_dir/*");
+
+my @latest_agps;
+
+foreach my $region (keys %$nod ){
+  my $chr = $nod->{$region};
+
+  my $agpfile = "chr$chr"."_$region-*agp";
+
+  my @sorted_files = sort { ace_sort($a, $b) } glob ("$nod_base/chr_$chr/$agpfile");
+
+  my $latest = $sorted_files[-1];
+  my $file = basename($latest);
+  $file =~ s/-\d+//;
+
+  my $outfile = "$dest_dir/$file";
+  my $fh;
+  open ( $fh, ">$outfile") or die $!;
+
+  my $cols =<<COLS;
+------------------------------------------------------------
+$region AGP
+------------------------------------------------------------
+col_1: chromosome name
+col_2: AGP start
+col_3: AGP_end
+col_4: assembly order (ranks)
+col_5: sequencing status: F(finished), N(unfinished)
+col_6: accession.version
+col_7: start position of clone sequence used in AGP
+col_8: end position of clone sequence used in AGP
+col_9: orientation
+------------------------------------------------------------
+
+COLS
+
+  print $fh $cols;
+  close $fh;
+
+  system("cat $latest >> $outfile");
+  push(@latest_agps, $latest);
+
+}
+warn "\n";
+
+# make latest region sequence of an agp file
+
+foreach my $file ( @latest_agps ){
+
+ # warn $file;
+  my $chk_gap = `egrep '(clone|contig|N	50000)' $file`;
+  if ( $chk_gap ){
+	warn "UNFINISHED: $file\n";
+
+	# Assembly sequences for these NOD regions with gaps
+	# note that these gaps will never be filled as they are of no interest
+	# and will stay as is except IDD4 on chr 11.
+	# So make contigs for consecutive clones.
+
+#	next if $file =~ /IDD4/;
+	assembly_contig_seq($file);
+	next;
+  }
+
+  my $fh;
+  open($fh, "$file") or die $!;
+
+  my $agpfile = basename($file);
+
+  $agpfile =~ s/-\d+//;
+  my $region_seq .= $agpfile.".seq";
+
+  open(AGPSEQ, ">$dest_dir/$region_seq") or die $!;
+  print AGPSEQ basename($file), "\n";
+
+  warn "Working on $agpfile";
+
+  my $non_n = 0;
+
+  my $seq;
+
+  while (<$fh>){
+	chomp;
+
+	#warn $_, "\n";
+	# agp format:
+	# chr11   1       176646  1       F       CR933541.6      1       176646  +
+
+	next if /^col/;
+
+	my ($start, $end, $rank, $status, $acc, $acc_ori, $strand) = get_fields($_);
+
+	$acc =~ s/\.\d+$//;
+
+	my $test_sv = `pfetch -F $acc | grep "^SV"`;
+	chomp $test_sv;
+	$test_sv =~ s/^SV\s+//;
+
+	# acc sequence
+	if ( $acc_ori !~ /^\d+/ ){
+
+	  $non_n = 1;
+
+	  if ( $test_sv eq $acc_ori ){
+
+		#warn $acc_ori;
+		my $acc_seq = `pfetch -q $acc`;
+
+		if ( $strand eq "+" ){
+		  $seq .= substr($acc_seq, $start-1, $end-$start+1);
+		}
+		else {
+		  $acc_seq = revcomp($acc_seq);
+		  $seq .= substr($acc_seq, $start-1, $end-$start+1);
+		}
+	  }
+	
+	  # stop if version does not match
+	  else {
+		#unlink("$file.seq");
+		warn "Unmatched versions: AGP [$acc_ori], Pfetch [$test_sv] in $file";
+	  }
+	}
+
+	# gap sequence
+	else {
+	  $seq .= "n" x $acc if $non_n == 1; # $acc here is eg, 50000 (bp of gap)
+	}
+  }
+  print AGPSEQ sixty_cols($seq);
+  close $fh;
+  close AGPSEQ;
+}
+
+# update NOD agp/seq files in live site
+
+
+warn "\n";
+
+sub get_fields {
+
+  my $info = shift;
+  chomp $info if $info =~ /\n/;
+
+  my @fields = split(/\t/, $info);
+
+  my $start   = $fields[6];
+  my $end     = $fields[7];
+  my $rank    = $fields[3];
+  my $status  = $fields[4];
+  my $acc     = $fields[5];
+  my $acc_ori = $acc;
+  my $strand  = $fields[8];
+
+  return ($start, $end, $rank, $status, $acc, $acc_ori, $strand);
+}
+
+sub assembly_contig_seq {
+
+  my $file = shift;
+  my $fh;
+  open ( $fh, "$file" ) or die $!;
+
+  my $seq;
+  my $N = 1;
+  my $contig_acc_start_end_strand = {};
+
+  # need to preserve the order of clones
+  tie %$contig_acc_start_end_strand, "Tie::IxHash";
+
+  while ( <$fh> ) {
+
+	my ($start, $end, $rank, $status, $acc, $acc_ori, $strand) = get_fields($_);
+
+	if ( $status eq "F" ) {
+	  push(@{$contig_acc_start_end_strand->{$acc}}, $rank, $start, $end, $strand);
+	}
+	elsif ( $status eq "N" ) {
+
+	  my $clones = scalar keys %$contig_acc_start_end_strand;
+
+	  if ( $clones < 2 ){
+		$contig_acc_start_end_strand = ();
+		tie %$contig_acc_start_end_strand, "Tie::IxHash";
+	  }
+
+#	  # assembly contig seq if there are > 1 consecutive clones
+	  elsif ( $clones >= 2 ) {
+		concat_seq($contig_acc_start_end_strand, $file);
+	
+		$contig_acc_start_end_strand = {};
+		tie %$contig_acc_start_end_strand, "Tie::IxHash";
+	  }
+	}
+  }
+
+  if ( scalar keys %$contig_acc_start_end_strand >= 2 ){
+	concat_seq($contig_acc_start_end_strand, $file);
+  }
+}
+
+sub concat_seq {
+  my ( $contig_acc_start_end_strand, $file ) = @_;
+
+  my $seq;
+  my $ranks = "Ranks_";
+  my @ranks;
+  $file = basename($file);
+  $file =~ s/-\d+\.agp$//;
+
+  foreach my $acc ( keys %$contig_acc_start_end_strand ) {
+#	warn "$file => $acc\n";
+
+	my $acc_ori = $acc;
+	$acc =~ s/\.\d+$//;
+	my $acc_seq = `pfetch -q $acc`;
+	my $strand = $contig_acc_start_end_strand->{$acc_ori}->[3];
+	my $start  = $contig_acc_start_end_strand->{$acc_ori}->[1];
+	my $end    = $contig_acc_start_end_strand->{$acc_ori}->[2];
+	my $rank   = $contig_acc_start_end_strand->{$acc_ori}->[0];
+	push(@ranks, $rank);
+
+	if ( $strand eq "+" ){
+	  $seq .= substr($acc_seq, $start-1, $end-$start+1);
+	}
+	else {
+	  $acc_seq = revcomp($acc_seq);
+	  $seq .= substr($acc_seq, $start-1, $end-$start+1);
+	}
+  }
+
+  $ranks .= $ranks[0]."-".$ranks[-1];
+
+  my $seq_file = $file."_$ranks".".seq";
+  my $outfile = "$dest_dir/$seq_file";
+  my $fh;
+  open ( $fh, ">$outfile" ) or die $!;
+
+  print $fh "$seq_file\n\n", sixty_cols($seq);
+}
+
+
+sub sixty_cols {
+
+  my $seq  = shift;
+  my $seqfrag;
+  my $len;
+  my $formatted;
+
+  while ($seq =~ /(.{1,60})/g) {
+	$seqfrag = $1;
+	$len += length($seqfrag);
+
+	$formatted .= sprintf("%-60s\t%d\n", $seqfrag, $len);
+  }
+  return lc($formatted);
+}
+
+sub revcomp {
+  my $seq = shift;
+  $seq = tr/ATCG/TAGC/;
+  $seq = reverse($seq);
+  return $seq;
+}
+
+__END__
