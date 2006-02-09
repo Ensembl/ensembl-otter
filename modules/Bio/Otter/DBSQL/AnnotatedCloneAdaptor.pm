@@ -14,8 +14,7 @@ use vars qw(@ISA);
 
 @ISA = qw ( Bio::EnsEMBL::DBSQL::CloneAdaptor);
 
-
-# This is assuming the otter info and the ensembl genes are in the same database 
+# This is assuming the otter info and the ensembl genes are in the same database
 # and so have the same adaptor
 
 ### JGRG - no reason for this to be different to new() in BaseAdaptor?
@@ -23,14 +22,14 @@ use vars qw(@ISA);
 #sub new {
 #    my ($class,$dbobj) = @_;
 #
-    #my $self = {};
-    #bless $self,$class;
+#my $self = {};
+#bless $self,$class;
 
-    #if( !defined $dbobj || !ref $dbobj ) {
-    #    $self->throw("Don't have a db [$dbobj] for new adaptor");
-    #}
+#if( !defined $dbobj || !ref $dbobj ) {
+#    $self->throw("Don't have a db [$dbobj] for new adaptor");
+#}
 
-    #$self->db($dbobj);
+#$self->db($dbobj);
 
 #    return $self;
 #}
@@ -48,16 +47,26 @@ use vars qw(@ISA);
 =cut
 
 sub fetch_by_accession_version {
-   my ($self,$accession,$version) = @_;
+    my ($self, $accession, $version) = @_;
 
-   my  $clone = $self->SUPER::fetch_by_accession_version($accession,$version);
+    my $clone = $self->SUPER::fetch_by_accession_version($accession, $version);
 
-   $self->annotate_clone($clone);
-   
-   return $clone;
-   
+    $self->annotate_clone($clone);
+
+    return $clone;
+
 }
 
+sub fetch_by_accession {
+    my ($self, $accession) = @_;
+
+    my $clone = $self->SUPER::fetch_by_accession($accession);
+
+    $self->annotate_clone($clone);
+
+    return $clone;
+
+}
 
 =head2 fetch_by_dbID
 
@@ -72,18 +81,18 @@ sub fetch_by_accession_version {
 =cut
 
 sub fetch_by_dbID {
-   my ($self,$id) = @_;
+    my ($self, $id) = @_;
 
-   my  $clone = $self->SUPER::fetch_by_dbID($id);
+    my $clone = $self->SUPER::fetch_by_dbID($id);
 
-   $self->annotate_clone($clone);
+    $self->annotate_clone($clone);
 
-   return $clone;
-   
+    return $clone;
+
 }
 
 sub annotate_clone {
-    my( $self, $clone ) = @_;
+    my ($self, $clone) = @_;
 
     # Make the clone an AnnotatedClone unless it is already
     unless ($clone->isa('Bio::Otter::AnnotatedClone')) {
@@ -91,7 +100,7 @@ sub annotate_clone {
     }
 
     my $clone_info_adaptor = $self->db->get_CloneInfoAdaptor();
-    my( $info );
+    my ($info);
     if (my $clone_id = $clone->dbID) {
         $info = $clone_info_adaptor->fetch_by_cloneID($clone_id);
     }
@@ -112,51 +121,53 @@ sub annotate_clone {
 =cut
 
 sub fetch_by_Slice {
-  my ( $self, $slice) = @_;
-  my @out;
-  my $mapper = $self->db->get_AssemblyMapperAdaptor->fetch_by_type
-    ( $slice->assembly_type() );
+    my ($self, $slice) = @_;
+    my @out;
+    my $mapper =
+      $self->db->get_AssemblyMapperAdaptor->fetch_by_type(
+        $slice->assembly_type());
 
-  $mapper->register_region( $slice->chr_name(),
-			    $slice->chr_start(),
-			    $slice->chr_end());
-  
-  my @cids = $mapper->list_contig_ids( $slice->chr_name(),
-				       $slice->chr_start(),
-				       $slice->chr_end());
-  # no contigs found so return
-  if ( scalar (@cids) == 0 ) {
-    return [];
-  }
+    $mapper->register_region($slice->chr_name(), $slice->chr_start(),
+        $slice->chr_end());
 
-  my @clones;
- 
-  foreach my $cid (@cids) {
-     my $contig = $self->db->get_RawContigAdaptor->fetch_by_dbID($cid);
+    my @cids =
+      $mapper->list_contig_ids($slice->chr_name(), $slice->chr_start(),
+        $slice->chr_end());
 
-     my $clone  = $contig->clone;
+    # no contigs found so return
+    if (scalar(@cids) == 0) {
+        return [];
+    }
 
-     $clone->annotate_clone;
+    my @clones;
 
-     push(@clones,$clone);
-  }
+    foreach my $cid (@cids) {
+        my $contig = $self->db->get_RawContigAdaptor->fetch_by_dbID($cid);
 
-  return \@clones;
-      
+        my $clone = $contig->clone;
+
+        $clone->annotate_clone;
+
+        push(@clones, $clone);
+    }
+
+    return \@clones;
+
 }
 
-sub store{
-    my ($self,$clone) = @_;
+sub store {
+    my ($self, $clone) = @_;
 
     if (!defined($clone)) {
         $self->throw("Must enter an AnnotatedClone object to the store method");
     }
     if (!$clone->isa("Bio::Otter::AnnotatedClone")) {
-        $self->throw("Object must be an AnnotatedClone object. Currently [$clone]");
+        $self->throw(
+            "Object must be an AnnotatedClone object. Currently [$clone]");
     }
 
     my $info = $clone->clone_info
-        || $self->throw("Annotated clone must have a clone info object");
+      || $self->throw("Annotated clone must have a clone info object");
 
     # print STDERR "Ann id " . $clone->stable_id . "\n";
 
@@ -164,18 +175,11 @@ sub store{
 
     ### Could SUPER::store if it doesn't have a dbID
     my $clone_id = $clone->dbID
-        || $self->throw('clone does not have a dbID');
+      || $self->throw('clone does not have a dbID');
     $clone->dbID($clone_id);
     $info->clone_id($clone_id);
     $clone_info_adaptor->store($info);
 }
 
-
 1;
-
-	
-
-
-
-
 
