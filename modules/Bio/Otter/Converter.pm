@@ -2393,7 +2393,7 @@ sub gene_type_from_transcript_set {
     elsif ($class_set->{'Coding'}
         or $class_set->{'Known_CDS'}
         or $class_set->{'Novel_CDS'}
-        or $class_set->{'Putative_CDS'}
+        or $class_set->{'Putative_CDS'} ### Is it right to have this here?
         )
     {
         # Check for the known_flag flag on the GeneInfo object
@@ -2410,6 +2410,8 @@ sub gene_type_from_transcript_set {
         or $class_set->{'Ambiguous_ORF'}
         or $class_set->{'Immature'}
         or $class_set->{'Antisense'}
+        or $class_set->{'Nonsense_mediated_decay'}
+        or $class_set->{'Disrupted_domain'}
         )
     {
         $type = 'Novel_Transcript';
