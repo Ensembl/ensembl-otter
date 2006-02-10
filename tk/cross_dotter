@@ -8,13 +8,14 @@ use Hum::Analysis::Factory::CrossMatch;
 use CanvasWindow;
 
 {
-    my $ffin = Hum::FastaFileIO->new_DNA_IO(\*ARGV);
-    my @seqs = $ffin->read_all_sequences;
+    my $ffin  = Hum::FastaFileIO->new_DNA_IO(\*ARGV);
+    my @seqs  = $ffin->read_all_sequences;
     my $query = shift(@seqs)
-        or die "No sequence found";
+      or die "No sequence found";
     my $factory = Hum::Analysis::Factory::CrossMatch->new;
     $factory->show_alignments(1);
     $factory->show_all_matches(1);
+
     #$factory->min_match_length(50);
 
     while (my $subject = shift @seqs) {
@@ -24,10 +25,10 @@ use CanvasWindow;
 
 sub cross_dotter {
     my ($factory, $query, $subject) = @_;
-    
-    my $query_length   =   $query->sequence_length;
+
+    my $query_length   = $query->sequence_length;
     my $subject_length = $subject->sequence_length;
-    
+
     foreach my $seq ($query, $subject) {
         printf "%22s  %10d bp\n", $seq->name, $seq->sequence_length;
     }
@@ -35,60 +36,143 @@ sub cross_dotter {
     my $parser = $factory->run($query, $subject);
 
     my $title = sprintf "cross_dotter %s vs %s", $query->name, $subject->name;
-    my $mw = CanvasWindow::MainWindow->new($title);
-    my $cw = CanvasWindow->new($mw);
+    my $mw    = CanvasWindow::MainWindow->new($title);
+    my $cw    = CanvasWindow->new($mw);
     my $scale = choose_scale($mw, $query, $subject);
-    
+
     my $canvas = $cw->canvas;
-    $canvas->createRectangle(0, 0, $query_length / $scale, $subject_length / $scale,
-        -fill       => undef,
-        -outline    => 'lightGrey',
-        );
-    
-    print STDERR "Drawing matches...";
+    $canvas->configure(-closeenough => 2);
+    $canvas->createRectangle(
+        0, 0, $query_length / $scale, $subject_length / $scale,
+        -fill    => undef,
+        -outline => 'lightGrey',
+    );
+
+    print STDERR "Finding matches...";
+    my $feat_str     = [];
+    my $match_i      = 0;
+    my $biggest      = '';
+    my $biggest_line = undef;
     while (my $feat = $parser->next_Feature) {
+        $match_i++;
         my $query_start   = $feat->seq_start;
         my $query_end     = $feat->seq_end;
         my $subject_start = $feat->hit_start;
         my $subject_end   = $feat->hit_end;
+        my $match_str     =
+            $feat->pretty_header
+          . $feat->pretty_string
+          . $feat->pretty_alignment_string;
+
+        $feat_str->[$match_i] = $match_str;
+
         if ($feat->hit_strand == -1) {
             ($subject_start, $subject_end) = ($subject_end, $subject_start);
         }
-        my @pos = map $_ / $scale, (
-            $query_start, $subject_start,
-            $query_end,   $subject_end,
-            );
-        #print "coord ($query_start, $subject_start, $query_end, $subject_end)\n",
-        #      "  pos (@pos)\n";
-        $canvas->createLine(@pos,
-            -fill => 'black',
-            );
+        my @pos = map $_ / $scale,
+          ($query_start - 1, $subject_start - 1, $query_end, $subject_end,);
+
+      #print "coord ($query_start, $subject_start, $query_end, $subject_end)\n",
+      #      "  pos (@pos)\n";
+        my $line = $canvas->createLine(
+            @pos,
+            -width => 1,
+            -fill  => 'black',
+            -tags  => [ 'match', $match_i ]
+        );
+
+        if (length($match_str) > length($biggest)) {
+            $biggest      = $match_str;
+            $biggest_line = $line;
+        }
     }
     print STDERR " done\n";
-    
+
+    $biggest ||= 'No matches found';
+
+    my $font_size = $cw->font_size;
+    my $text_x    = 2 * $font_size + ($query_length / $scale);
+    my $text      = $canvas->createText(
+        $text_x, 0,
+        -text   => $biggest,
+        -anchor => 'nw',
+        -font   => [ 'lucidiatypewriter', 10, 'normal' ],
+    );
+
+    if ($biggest_line) {
+        outline_match($canvas, $biggest_line);
+    }
+
+    $canvas->bind('match', '<Button-1>',
+        [ \&show_match, $cw, $text, $feat_str ]);
+    $canvas->bind('match', '<Enter>', \&highlight_match);
+    $canvas->bind('match', '<Leave>', \&lowlight_match);
+
     $cw->fix_window_min_max_sizes;
-    
+
     Tk::MainLoop();
 }
 
-sub choose_scale {
-    my( $mw, $query, $subject ) = @_;
-    
-    my $border = 200;   # Leave at least this number of pixels around window
-    my ($display_max_x, $display_max_y) = map $_ - $border, $mw->maxsize;
-    
-    my $max_x_scale =   $query->sequence_length / $display_max_x;
-    my $max_y_scale = $subject->sequence_length / $display_max_y;
-    
-    my $max_scale = $max_x_scale > $max_y_scale ? $max_x_scale : $max_y_scale;
-    my $round = 10;     # Round scale to nearest
-    my $scale = $round * (ceil($max_scale / $round));
-    
-    printf STDERR "max_x=%.2f  max_y=%.2f scale=%d\n",
-        $max_y_scale, $max_x_scale, $scale;
-    return $scale;
+sub highlight_match {
+    my ($canvas) = @_;
+
+    my $item = $canvas->find('withtag', 'current');
+    $canvas->itemconfigure($item, -width => 2);
 }
 
+sub lowlight_match {
+    my ($canvas) = @_;
+
+    my $item = $canvas->find('withtag', 'current');
+    $canvas->itemconfigure($item, -width => 1);
+}
+
+sub show_match {
+    my ($canvas, $cw, $text, $feat_str) = @_;
+
+    #print STDERR "ARGS: ", join(' ', map "'$_'", @_), "\n";
+
+    my $item = $canvas->find('withtag', 'current');
+    outline_match($canvas, $item);
+
+    #my @tags = $canvas->gettags($item);
+    #print STDERR "Clicked on: $item (@tags)\n";
+    my ($match) = grep /^\d+$/, $canvas->gettags($item);
+    $canvas->itemconfigure($text, -text => $feat_str->[$match]);
+}
+
+sub outline_match {
+    my ($canvas, $line) = @_;
+
+    $canvas->delete('match_outline');
+    my @coords = $canvas->coords($line);
+    my $out    = $canvas->createLine(
+        @coords,
+        -width     => 5,
+        -fill      => 'gold',
+        -joinstyle => 'round',
+        -tags      => ['match_outline'],
+    );
+    $canvas->lower($out, 'all');
+}
+
+sub choose_scale {
+    my ($mw, $query, $subject) = @_;
+
+    my $border = 200;    # Leave at least this number of pixels around window
+    my ($display_max_x, $display_max_y) = map $_ - $border, $mw->maxsize;
+
+    my $max_x_scale = $query->sequence_length / $display_max_x;
+    my $max_y_scale = $subject->sequence_length / $display_max_y;
+
+    my $max_scale = $max_x_scale > $max_y_scale ? $max_x_scale : $max_y_scale;
+    my $round = 10;                                     # Round scale to nearest
+    my $scale = $round * (ceil($max_scale / $round));
+
+    printf STDERR "max_x=%.2f  max_y=%.2f scale=%d\n", $max_y_scale,
+      $max_x_scale, $scale;
+    return $scale;
+}
 
 __END__
 
