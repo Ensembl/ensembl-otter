@@ -301,6 +301,25 @@ sub empty_Locus_cache {
     $self->{'_locus_cache'} = undef;
 }
 
+### Does not work
+#sub rename_Locus {
+#    my( $self, $old_name, $new_name ) = @_;
+#    
+#    $self->{'_locus_cache'}{$old_name} = $self->get_Locus($new_name);
+#        
+#    foreach my $name ($self->list_all_subseq_edit_window_names) {
+#        my $sub = $self->get_SubSeq($name) or next;
+#        my $locus = $sub->Locus or next;
+#        if ($locus->name eq $old_name) {
+#            warn "Renaming locus on SubSeq '$name'\n";
+#            my $ec = $self->get_subseq_edit_window($name) or next;
+#            $ec->update_Locus_from_XaceSeqChooser;
+#        }
+#    }
+#    delete $self->{'_locus_cache'}{$old_name};
+#}
+
+
 #------------------------------------------------------------------------------------------
 
 sub make_menu {
