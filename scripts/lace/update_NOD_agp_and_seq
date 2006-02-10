@@ -46,7 +46,7 @@ col_2: AGP start
 col_3: AGP_end
 col_4: assembly order (ranks)
 col_5: sequencing status: F(finished), N(unfinished)
-col_6: accession.version
+col_6: accession.version or gap (default 50,000 bp)
 col_7: start position of clone sequence used in AGP
 col_8: end position of clone sequence used in AGP
 col_9: orientation
