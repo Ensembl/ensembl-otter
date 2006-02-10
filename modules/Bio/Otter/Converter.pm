@@ -2410,6 +2410,7 @@ sub gene_type_from_transcript_set {
         or $class_set->{'Ambiguous_ORF'}
         or $class_set->{'Immature'}
         or $class_set->{'Antisense'}
+        or $class_set->{'Retained_intron'}
         or $class_set->{'Nonsense_mediated_decay'}
         or $class_set->{'Disrupted_domain'}
         )
