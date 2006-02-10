@@ -133,6 +133,7 @@ sub show_match {
     #print STDERR "ARGS: ", join(' ', map "'$_'", @_), "\n";
 
     my $item = $canvas->find('withtag', 'current');
+    $canvas->lower($item, 'all');
     outline_match($canvas, $item);
 
     #my @tags = $canvas->gettags($item);
