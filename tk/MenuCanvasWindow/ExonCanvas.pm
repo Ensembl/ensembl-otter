@@ -1269,6 +1269,17 @@ sub add_locus_editing_widgets {
                 );}
         );
 
+    ### Does not work:
+    ## Button for renaming locus
+    #$symbol_known_frame->Button(
+    #    -text    => 'Rename',
+    #    -command => sub {
+    #        eval { $self->rename_locus; };
+    #        if ($@) {
+    #            $self->exception_message($@, 'Error saving to acedb');
+    #        }
+    #    },
+    #)->pack(-side => 'left');
     
     $symbol_known_frame->Checkbutton(
         -text       => 'Known',
@@ -1381,6 +1392,27 @@ sub get_Locus_from_tk {
     
     return $locus;
 }
+
+### Does not work
+#sub rename_locus {
+#    my( $self ) = @_;
+#    
+#    my $sub_locus = $self->SubSeq->Locus or return;
+#    my $sub_name = $sub_locus->name;
+#    my $tk_name;
+#    if (my $sub = $self->get_SubSeq_if_changed) {
+#        $tk_name = $sub->Locus->name;
+#        if ($tk_name eq $sub_name) {
+#            $self->message("Locus name '$tk_name' has not changed");
+#            return;
+#        } else {
+#            warn "Renaming locus '$sub_name' to '$tk_name'";
+#        }
+#        $sub->validate;
+#        $self->xace_save($sub);
+#    }
+#    $self->XaceSeqChooser->rename_Locus($sub_name, $tk_name);
+#}
 
 sub update_Locus_from_XaceSeqChooser {
     my( $self ) = @_;
