@@ -12,7 +12,7 @@ use Getopt::Long 'GetOptions';
 use Symbol 'gensym';
 
 use Bio::EnsEMBL::Ace::DataFactory;
-use Bio::EnsEMBL::Ace::Filter::Repeatmasker;
+use Bio::EnsEMBL::Ace::Filter::RepeatMasker;
 use Bio::EnsEMBL::Ace::Filter::CpG;
 use Bio::EnsEMBL::Ace::Filter::DNA;
 use Bio::EnsEMBL::Ace::Filter::TRF;
@@ -498,7 +498,7 @@ sub fetch_sanger_data {
     $factory->add_AceFilter($DNAfilt);
     
     ##repeat masker
-    my $repeat_masker = Bio::EnsEMBL::Ace::Filter::Repeatmasker->new;  
+    my $repeat_masker = Bio::EnsEMBL::Ace::Filter::RepeatMasker->new;  
     $repeat_masker->analysis_object( $ana_adaptor->fetch_by_logic_name('RepeatMask'));
     $factory->add_AceFilter($repeat_masker);
     
