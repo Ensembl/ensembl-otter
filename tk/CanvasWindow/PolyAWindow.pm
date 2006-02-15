@@ -89,12 +89,13 @@ sub initialize{
     my @polyA_list;
     if (my @cs_list = $self->get_all_CloneSequences){
         foreach my $clone (@cs_list){
-            push (@polyA_list , $clone->get_all_PolyAs());
+            push (@polyA_list , $clone->get_SimpleFeatures('^polyA'));
         }
         
         my @site_array;
         my @signal_array;
         foreach my $polyA (@polyA_list){
+            print STDERR "\nPOLYA: [".join(', ',@$polyA)."]\n";
             my $start = $$polyA[1] ;
             my $end = $$polyA[2] ;
             if ($polyA->[0] =~ /site/ ){
