@@ -15,7 +15,7 @@ my $nod = {
 		   'NOD_IDD16'  => 17,
 		   'CHORI29_IDD5_Test' => 1
 		  };
-#chr1_CHORI29_IDD5_Test.agp
+
 my $nod_base = "/nfs/team71/analysis/jgrg/work/mouse";
 my $dest_dir = "/nfs/WWWdev/SANGER_docs/htdocs/Projects/M_musculus-NOD/NOD_AGP";
 system("rm -f $dest_dir/*");
@@ -77,7 +77,6 @@ foreach my $file ( @latest_agps ){
 	# and will stay as is except IDD4 on chr 11.
 	# So make contigs for consecutive clones.
 
-#	next if $file =~ /IDD4/;
 	assembly_contig_seq($file);
 	next;
   }
@@ -93,7 +92,7 @@ foreach my $file ( @latest_agps ){
   open(AGPSEQ, ">$dest_dir/$region_seq") or die $!;
   print AGPSEQ basename($file), "\n";
 
-  warn "Working on $agpfile";
+  warn "  FINISHED: $agpfile";
 
   my $non_n = 0;
 
@@ -123,15 +122,15 @@ foreach my $file ( @latest_agps ){
 
 	  if ( $test_sv eq $acc_ori ){
 
-		#warn $acc_ori;
 		my $acc_seq = `pfetch -q $acc`;
 
 		if ( $strand eq "+" ){
 		  $seq .= substr($acc_seq, $start-1, $end-$start+1);
 		}
 		else {
-		  $acc_seq = revcomp($acc_seq);
-		  $seq .= substr($acc_seq, $start-1, $end-$start+1);
+
+		  my $revcom_seq = revcomp($acc_seq);
+		  $seq .= substr($revcom_seq, $start-1, $end-$start+1);
 		}
 	  }
 	
@@ -153,8 +152,6 @@ foreach my $file ( @latest_agps ){
 }
 
 # update NOD agp/seq files in live site
-
-
 warn "\n";
 
 sub get_fields {
@@ -229,7 +226,6 @@ sub concat_seq {
   $file =~ s/-\d+\.agp$//;
 
   foreach my $acc ( keys %$contig_acc_start_end_strand ) {
-#	warn "$file => $acc\n";
 
 	my $acc_ori = $acc;
 	$acc =~ s/\.\d+$//;
@@ -278,8 +274,9 @@ sub sixty_cols {
 
 sub revcomp {
   my $seq = shift;
-  $seq = tr/ATCG/TAGC/;
+  $seq =~ tr/ATCG/TAGC/;
   $seq = reverse($seq);
+
   return $seq;
 }
 
