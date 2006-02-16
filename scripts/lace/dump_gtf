@@ -74,15 +74,16 @@ use Symbol 'gensym';
             $i++;
             $gene = $gene->transform($slice);
 
-            my $is_corf = 0;
+            my $tsct_dumped = 0;
             foreach my $tsct (@{ $gene->get_all_Transcripts }) {
-                next unless is_corf_transcript($tsct);
-                $is_corf = 1;
+                ### Can filter out unwanted transcripts here:
+                #next unless is_corf_transcript($tsct);
+                $tsct_dumped = 1;
                 my $exons_truncated = $tsct->truncate_to_Slice($slice);
                 write_transcript_gtf($fh, $slice, $gene, $tsct, $local_coords,
                     $exons_truncated, $include_codons, $fix_phases, $set_name);
             }
-            print STDERR $is_corf ? '+' : ".";
+            print STDERR $tsct_dumped ? '+' : ".";
             unless ($i % 50) {
                 print STDERR " $i\n";
             }
