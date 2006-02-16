@@ -11,6 +11,8 @@ use Symbol 'gensym';
     my $local_coords   = 0;
     my $include_codons = 1;
     my $fix_phases     = 0;
+    my $corf           = 0;
+    my $sanger         = 1;
 
     my $usage = sub { exec('perldoc', $0) };
     Bio::Otter::Lace::Defaults::do_getopt(
@@ -71,13 +73,17 @@ use Symbol 'gensym';
         foreach my $gene_dbid (@$gene_id_list) {
             my $gene = $gene_aptr->fetch_by_dbID($gene_dbid);
             next if $gene->type eq 'obsolete';
+            if ($sanger) {
+                next if $gene->gene_type_prefix;
+            }
             $i++;
             $gene = $gene->transform($slice);
 
             my $tsct_dumped = 0;
             foreach my $tsct (@{ $gene->get_all_Transcripts }) {
-                ### Can filter out unwanted transcripts here:
-                #next unless is_corf_transcript($tsct);
+                if ($corf) {
+                    next unless is_corf_transcript($tsct);
+                }
                 $tsct_dumped = 1;
                 my $exons_truncated = $tsct->truncate_to_Slice($slice);
                 write_transcript_gtf($fh, $slice, $gene, $tsct, $local_coords,
