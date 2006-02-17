@@ -18,10 +18,10 @@ sub get_possible_analyses {
     my %rule = ();
     my $sth = $dbh->prepare(qq{
         SELECT rc.condition
-          , a.logic_name
+             , a.logic_name
         FROM analysis a
-          , rule_goal rg
-          , rule_conditions rc
+           , rule_goal rg
+           , rule_conditions rc
         WHERE a.analysis_id = rg.goal
           AND rg.rule_id = rc.rule_id
         });
@@ -79,7 +79,9 @@ if($pipehead) {
     @input_ids = map {
         my $name = $_->[0];
         my @syll = split(/\./, $name);
-        join(':', $component_cs, '', $name, $syll[2], $syll[3], 1);
+        my $to = pop @syll;
+        my $from = pop @syll;
+        join(':', $component_cs, '', $name, $from, $to, 1);
     } @$contigvecs;
 
 } else {
