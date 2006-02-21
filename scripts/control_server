@@ -57,7 +57,7 @@ else
 fi
 
 start(){
-    if [ "$pidfile_exists" == "0" ]; then
+    if [ "$pidfile_exists" = "0" ]; then
         message "starting otter_srv..."
         exec ./otter_srv &
     else
@@ -71,12 +71,12 @@ unlock(){
 }
 
 stop(){
-    if [ "$pidfile_exists" == "1" ]; then
+    if [ "$pidfile_exists" = "1" ]; then
         pid=`cat $pid_file`
         if [ $pid -gt 0 ]; then
             message "pid exists so stopping $pid"
             kill -INT $pid  2>/dev/null
-            if [ "$?" == "0" ]; then
+            if [ "$?" = "0" ]; then
                 unlock
                 pidfile_exists=0
                 message "Successfully stopped the server"
@@ -92,12 +92,12 @@ stop(){
 }
 
 rotate_log(){
-    if [ "$pidfile_exists" == "1" ]; then
+    if [ "$pidfile_exists" = "1" ]; then
         pid=`cat $pid_file`
         if [ $pid -gt 0 ]; then
             message "rotating logs..."
             kill -HUP $pid 2>dev/null
-            if [ "$?" == "0" ]; then
+            if [ "$?" = "0" ]; then
                 message "successfully rotated logs."
             else
                 die "Failed to 'kill -HUP $pid' it is probably not owned by you."                
