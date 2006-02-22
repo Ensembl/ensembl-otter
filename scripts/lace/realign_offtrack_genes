@@ -87,11 +87,11 @@ $| = 1;
     # Make a hash of all the accs in the slice plus the "to" accs.
     my $all_accs = { %$slice_accs };
     while (my ($from, $to_list) = each %$accs_from_to) {
-        die "accession '$from' listed in other_accs argument is not in slice"
-            unless $slice_accs->{$from};
     	foreach my $acc (@$to_list) {
-            $all_accs->{$acc} = 1;
+            die "accession '$from' listed in other_accs argument is not in slice"
+                unless $slice_accs->{$acc};
         }
+        $all_accs->{$from} = 1;
     }    
 
     my $gene_id_list =
