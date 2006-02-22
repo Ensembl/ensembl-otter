@@ -1,0 +1,55 @@
+#!/usr/local/bin/perl -w
+
+### show_genes_from_transcript_stable_id
+
+use strict;
+use Bio::Otter::Lace::Defaults;
+
+{
+    my ($dataset_name);
+
+    my $usage = sub { exec('perldoc', $0) };
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'   => $usage,
+        'dataset=s' => \$dataset_name,
+      )
+      or $usage->();
+    $usage->() unless $dataset_name;
+
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+
+    my $otter_dba = $ds->get_cached_DBAdaptor;
+    my $tsct_aptr = $otter_dba->get_TranscriptAdaptor;
+    my $gene_aptr = $otter_dba->get_GeneAdaptor;
+
+    foreach my $tsct_stable_id (@ARGV) {
+        my $tsct         = $tsct_aptr->fetch_by_stable_id($tsct_stable_id);
+        my $gene         = $gene_aptr->fetch_by_transcript_id($tsct->dbID);
+        my $current_gene = $gene_aptr->fetch_by_stable_id($gene->stable_id);
+
+        my ($current_tsct) = grep $_->stable_id eq $tsct_stable_id, @{$current_gene->get_all_Transcripts};
+        
+        printf "%18s  %18s  %12s  %7s  %4s  %s\n",
+            $tsct_stable_id,
+            $current_gene->stable_id,
+            $current_gene->type,
+            #$current_gene->dbID == $gene->dbID ? 'current' : 'old',
+            $current_tsct ? 'present' : 'missing',
+            $current_gene->gene_info->author->name,
+            $current_gene->gene_info->name->name;
+            
+    }
+}
+
+__END__
+
+=head1 NAME - show_genes_from_transcript_stable_id
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
