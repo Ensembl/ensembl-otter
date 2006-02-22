@@ -19,7 +19,7 @@ $| = 1;
     my $liberal = 0;  # If set, doesn't care if it fails to find some exons
     my $test_flag = 0;  # Don't write realigned genes to database
     my $flank = 200_000;   # Extra space around gene to search
-    my $other_accs_raw;  # dangerous option to allow other transfer from non-current agp clones
+    my $accs_from_to_raw;  # dangerous option to allow other transfer from non-current agp clones
 
     my $usage = sub { exec('perldoc', $0) };
     Bio::Otter::Lace::Defaults::do_getopt(
@@ -31,22 +31,23 @@ $| = 1;
         'liberal!'         => \$liberal,
         'test!'            => \$test_flag,
         'flank=i'          => \$flank,
-        'other_accs:s'     => \$other_accs_raw,
+        'other_accs:s'     => \$accs_from_to_raw,
         ) or $usage->();
     $usage->() unless $dataset_name and $sequence_set;
 
     # process manual clone mappings
     my $gene_accs = undef;
-    my $other_accs={};
-    if($other_accs_raw){
-        foreach my $set (split(/;/,$other_accs_raw)){
-	        if($set=~/^(\w+):([\w,]+)$/){
-	            my($f,$rt)=($1,$2);
-	            my @t=split(/,/,$rt);
-	            push(@{$other_accs->{$f}},@t);
-	        }else{
-	            die "cannot parse -other_accs \'$other_accs_raw\'\n";
-	        }
+    my $accs_from_to = {};
+    if ($accs_from_to_raw) {
+        foreach my $set (split(/;/, $accs_from_to_raw)) {
+            if ($set =~ /^(\w+):([\w,]+)$/) {
+                my ($from, $rt) = ($1, $2);
+                my @to = split(/,/, $rt);
+                push(@{ $accs_from_to->{$from} }, @to);
+            }
+            else {
+                die "cannot parse -other_accs \'$accs_from_to_raw\'\n";
+            }
         }
     }
 
@@ -95,7 +96,7 @@ $| = 1;
         }
         $slice_gene = undef;    # It has served its purpose
         
-        if ($gene_accs = gene_accs_are_all_in_slice($db_gene, $slice_accs, $other_accs)) {
+        if ($gene_accs = gene_accs_are_all_in_slice($db_gene, $slice_accs, $accs_from_to)) {
             print STDERR "Found off track gene '$name' ($stable_id)\n";
         } else {
             print STDERR "Found gene with accs not in slice '$name' ($stable_id)\n";
@@ -204,7 +205,7 @@ sub gene_is_truncated {
 }
 
 sub gene_accs_are_all_in_slice {
-    my( $gene, $slice_acc, $other_accs ) = @_;
+    my( $gene, $slice_acc, $accs_from_to ) = @_;
     
     my $gene_acc = {};
     foreach my $exon (@{$gene->get_all_Exons}) {
@@ -216,9 +217,9 @@ sub gene_accs_are_all_in_slice {
 	        my $flag;
 	        if($slice_acc->{$clone_acc}){
 	          $gene_acc->{$clone_acc} = 1;
-	        }elsif($other_accs->{$clone_acc}){
+	        }elsif($accs_from_to->{$clone_acc}){
 	          # allows from->to relationships of clones to be specified manually
-	          foreach my $clone_acc2 (@{$other_accs->{$clone_acc}}){
+	          foreach my $clone_acc2 (@{$accs_from_to->{$clone_acc}}){
 		          if($slice_acc->{$clone_acc2}){
 		            $gene_acc->{$clone_acc2} = 1;
 		          }else{
