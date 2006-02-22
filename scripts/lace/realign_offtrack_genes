@@ -76,10 +76,26 @@ $| = 1;
     }
     my ($chr, $chr_start, $chr_end) = $cl->chr_start_end_from_contig($ss->selected_CloneSequences);
     my $slice = $slice_aptr->fetch_by_chr_start_end($chr, $chr_start, $chr_end);
-    my $tiles = $slice->get_tiling_path;
-    my $slice_accs = accession_list_hash_from_tile_path($tiles);
+    my $acc_list = $gene_aptr->list_all_accessions_in_Slice($slice);
+    
+    # Make a hash of all the accs in the slice
+    my $slice_accs = {};
+    foreach my $acc (@$acc_list) {
+        $slice_accs->{$acc} = 1;
+    }
+    
+    # Make a hash of all the accs in the slice plus the "to" accs.
+    my $all_accs = { %$slice_accs };
+    while (my ($from, $to_list) = each %$accs_from_to) {
+        die "accession '$from' listed in other_accs argument is not in slice"
+            unless $slice_accs->{$from};
+    	foreach my $acc (@$to_list) {
+            $all_accs->{$acc} = 1;
+        }
+    }    
 
-    my $gene_id_list = $gene_aptr->list_current_dbIDs_linked_by_accession_for_Slice($slice);
+    my $gene_id_list =
+      $gene_aptr->list_current_dbIDs_linked_by_accessions([ keys %$all_accs ]);
     foreach my $gene_dbid (@$gene_id_list) {
         my $db_gene = $gene_aptr->fetch_by_dbID($gene_dbid);
         next if $db_gene->type eq 'obsolete';
@@ -237,17 +253,6 @@ sub gene_accs_are_all_in_slice {
     # We found all the accessions the gene is attached to
     # in the list of accessions from the tile_path
     return $gene_acc;
-}
-
-sub accession_list_hash_from_tile_path {
-    my( $tile_path ) = @_;
-    
-    my $acc_list = {};
-    foreach my $tile (@$tile_path) {
-        my $acc = $tile->component_Seq->clone->embl_id;
-        $acc_list->{$acc} = 1;
-    }
-    return $acc_list;
 }
 
 sub otter_objects_from_contig {
