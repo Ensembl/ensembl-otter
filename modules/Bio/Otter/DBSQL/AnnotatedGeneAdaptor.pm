@@ -241,18 +241,33 @@ sub list_current_dbIDs_for_Slice {
 
 
 sub list_current_dbIDs_linked_by_accession_for_Slice {
-    my( $self, $slice ) = @_;
-    
-    my $tiling_path = $slice->get_tiling_path;
-    my $clone_acc_list = join(',', map("'" . $_->component_Seq->clone->embl_id . "'", @$tiling_path));
+    my ($self, $slice) = @_;
 
-    my $list_contigs = $self->db->prepare(qq{
+    my $tiling_path = $slice->get_tiling_path;
+    return $self->list_current_dbIDs_linked_by_accessions(
+        $self->list_all_accessions_in_Slice($slice));
+}
+
+sub list_all_accessions_in_Slice {
+    my ($self, $slice) = @_;
+
+    return [ map $_->component_Seq->clone->embl_id, @$tiling_path ];
+}
+
+sub list_current_dbIDs_linked_by_accessions {
+    my ($self, $acc_list) = @_;
+
+    my $clone_acc_list = join(',', map "'$_'", @$acc_list);
+
+    my $list_contigs = $self->db->prepare(
+        qq{
         SELECT g.contig_id
         FROM clone c
           , contig g
         WHERE c.clone_id = g.clone_id
           AND c.embl_acc IN ($clone_acc_list)
-        });
+        }
+    );
     $list_contigs->execute;
     my $ctg_list = [];
     while (my ($ctg_id) = $list_contigs->fetchrow) {
@@ -260,7 +275,8 @@ sub list_current_dbIDs_linked_by_accession_for_Slice {
     }
     my $ctg_id_list = join(',', @$ctg_list);
 
-    my $sth = $self->db->prepare(qq{
+    my $sth = $self->db->prepare(
+        qq{
         SELECT gsid.stable_id
           , gsid.version
           , g.gene_id
@@ -277,19 +293,20 @@ sub list_current_dbIDs_linked_by_accession_for_Slice {
         GROUP BY gsid.stable_id
           , gsid.version
         ORDER BY gsid.version ASC
-        });
+        }
+    );
     $sth->execute;
-    
+
     my $get_max = $self->_max_version_for_stable_sth;
 
-    my( %sid_gid );
+    my (%sid_gid);
     while (my ($sid, $version, $gid) = $sth->fetchrow) {
         $get_max->execute($sid);
         my ($max) = $get_max->fetchrow;
         next unless $max == $version;
         $sid_gid{$sid} = $gid;
     }
-    return [sort {$a <=> $b} values %sid_gid];
+    return [ sort { $a <=> $b } values %sid_gid ];
 }
 
 =head2 list_current_dbIDs_for_Contig
