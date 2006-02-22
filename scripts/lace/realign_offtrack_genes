@@ -31,7 +31,7 @@ $| = 1;
         'liberal!'         => \$liberal,
         'test!'            => \$test_flag,
         'flank=i'          => \$flank,
-        'other_accs:s'     => \$accs_from_to_raw,
+        'other_accs=s'     => \$accs_from_to_raw,
         ) or $usage->();
     $usage->() unless $dataset_name and $sequence_set;
 
