@@ -84,6 +84,9 @@ use Symbol 'gensym';
                 if ($corf) {
                     next unless is_corf_transcript($tsct);
                 }
+                if ($sanger) {
+                    next if is_corf_transcript($tsct);
+                }
                 $tsct_dumped = 1;
                 my $exons_truncated = $tsct->truncate_to_Slice($slice);
                 write_transcript_gtf($fh, $slice, $gene, $tsct, $local_coords,
@@ -94,7 +97,7 @@ use Symbol 'gensym';
                 print STDERR " $i\n";
             }
         }
-        unless ($i % 50) {
+        if ($i % 50) {
             print STDERR " $i\n";
         }
         close $fh or die "Error writing to '$file_name' : $!";
@@ -412,6 +415,8 @@ sub make_stop_codon_features {
 
 sub print_description_attribs {
     my ($fh, $gene, $transcript, $count, $exons_truncated) = @_;
+
+
     my $gene_description = undef;
     foreach my $remark ($gene->gene_info->remark) {
         $gene_description .= $remark->remark . " ";
@@ -428,6 +433,19 @@ sub print_description_attribs {
     if ($exons_truncated) {
         print $fh qq{ exons_off_assembly "$exons_truncated";};
     }
+
+    my $info = $transcript->transcript_info;
+    foreach my $method (
+        qw{
+        cds_start_not_found
+        cds_end_not_found
+        mRNA_start_not_found
+        mRNA_end_not_found
+        }
+      )
+    {
+        print $fh qq{ $method;} if $info->$method();
+    }
     foreach my $remark ($transcript->transcript_info->remark) {
         my $rem = $remark->remark;
         unless ($rem =~ /^Annotation_remark-/) {
@@ -435,6 +453,7 @@ sub print_description_attribs {
         }
     }
 }
+
 
 sub print_attribs {
     my ($fh, $gene, $transcript, $count, $type) = @_;
