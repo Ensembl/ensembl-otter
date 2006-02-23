@@ -41,7 +41,7 @@ my $update_type = 0; # default is not to do gene type update
 
 sub update_otter {
     my ($otter_dba, $hugo_data) = @_;
-    
+
     my $gene_aptr = $otter_dba->get_GeneAdaptor;
     foreach my $hugo (@$hugo_data) {
         my $gene_id = current_gene_id_for_transcript($otter_dba, $hugo->{'otter_tsct_id'})
@@ -58,7 +58,7 @@ sub update_otter {
 
 sub unexpected_gene_type {
     my( $gene ) = @_;
-    
+
     my $type = $gene->type;
     if ($type =~ /:/ or $type eq 'obsolete') {
         return 1;
@@ -74,7 +74,7 @@ sub update_otter_gene {
     update_gene_known($otter_dba, $hugo->{'category'},     $gene);
     print STDERR " after = '", $gene->type, "'\n";
 
-    # We don't want to alter any data for Pseudogenes.    
+    # We don't want to alter any data for Pseudogenes.
     return if $gene->type =~ /pseudo/i;
 
     update_gene_name( $otter_dba, $hugo->{'locus_symbol'}, $gene);
@@ -97,7 +97,7 @@ sub update_otter_gene {
             WHERE gene_info_id = ?
             });
         $sth->execute($name, $gene->gene_info->dbID);
-        
+
         my $found = 0;
         foreach my $syn ($gene->gene_info->synonym) {
             if ($syn->name eq $current_name) {
@@ -142,7 +142,8 @@ sub update_otter_gene {
                 SET type = ?
                 WHERE gene_id = ?
                 });
-            $sth->execute($type, $gene->dbID);
+
+            $type_sth->execute($type, $gene->dbID);
             $gene->type($type);
 		  }
 		}
