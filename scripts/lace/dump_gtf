@@ -84,9 +84,6 @@ use Symbol 'gensym';
                 if ($corf) {
                     next unless is_corf_transcript($tsct);
                 }
-                if ($sanger) {
-                    next if is_corf_transcript($tsct);
-                }
                 $tsct_dumped = 1;
                 my $exons_truncated = $tsct->truncate_to_Slice($slice);
                 write_transcript_gtf($fh, $slice, $gene, $tsct, $local_coords,
@@ -416,20 +413,19 @@ sub make_stop_codon_features {
 sub print_description_attribs {
     my ($fh, $gene, $transcript, $count, $exons_truncated) = @_;
 
-
-    my $gene_description = undef;
+    # Make gene description from its remarks
+    my @gene_desc;
     foreach my $remark ($gene->gene_info->remark) {
-        $gene_description .= $remark->remark . " ";
-    }
-    if ($gene_description) {
-        chop $gene_description;
-        if ($gene_description eq "undef") {
-            $gene_description = undef;
+        my $txt = $remark->remark;
+        unless ($txt =~ /^Annotation_remark-/) {
+            push(@gene_desc, $txt);
         }
     }
-    if ($gene_description) {
-        print $fh qq{ gene_description "$gene_description";};
+    if (@gene_desc) {
+        my $txt = join(', ', @gene_desc);
+        print $fh qq{ gene_description "$txt";};
     }
+
     if ($exons_truncated) {
         print $fh qq{ exons_off_assembly "$exons_truncated";};
     }
@@ -446,6 +442,7 @@ sub print_description_attribs {
     {
         print $fh qq{ $method;} if $info->$method();
     }
+
     foreach my $remark ($transcript->transcript_info->remark) {
         my $rem = $remark->remark;
         unless ($rem =~ /^Annotation_remark-/) {
