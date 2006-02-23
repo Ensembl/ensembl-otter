@@ -5,11 +5,14 @@
 use strict;
 use Bio::Otter::Lace::Defaults;
 
+my $update_type = 0; # default is not to do gene type update
+
 {
     my ($dataset_name);
 
     Bio::Otter::Lace::Defaults::do_getopt(
         'dataset=s' => \$dataset_name,
+		'type'      => \$update_type	# specify to do gene type update
       );
     Bio::Otter::Lace::Defaults::show_help() unless $dataset_name;
 
@@ -131,7 +134,9 @@ sub update_otter_gene {
             $sth->execute($known, $gene->gene_info->dbID);
             $gene->gene_info->known_flag($known);
         }
-        unless ($type eq $gene->type) {
+
+		if ( $update_type == 1 ){
+		  unless ($type eq $gene->type) {
             $type_sth ||= $otter_dba->prepare(q{
                 UPDATE gene
                 SET type = ?
@@ -139,7 +144,8 @@ sub update_otter_gene {
                 });
             $sth->execute($type, $gene->dbID);
             $gene->type($type);
-        }
+		  }
+		}
     }
 }
 
