@@ -18,38 +18,52 @@ use Bio::Otter::Lace::Defaults;
 					  'rescan!'     => \$rescan_flag,
                       'change!'     => \$change_flag,
 					  ) || die "No arguments - don't know what to do";
-    die "I need a dataset name, is that too much to ask?\n" unless $dataset_name;
+
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
-    my $ds = $cl->get_DataSet_by_name($dataset_name);
 
-    # Make a connection to the otter database
-    my $otter_db = $ds->get_cached_DBAdaptor;
+    my @datasets;
 
-    if(($which_db eq 'otter')
-     ||($which_db eq 'all') ) {
-        repair_one_db($otter_db, 0, $rescan_flag, $change_flag, $dataset_name, 'otter');
+    if($dataset_name) {
+        push @datasets, $cl->get_DataSet_by_name($dataset_name);
+    } else {
+        @datasets = $cl->get_all_DataSets();
     }
 
-    if(($which_db eq 'oldpipe')
-     ||($which_db eq 'all') ) {
+    for my $ds (@datasets) {
 
-        my ($oldpipe_db, $oldpipedb_options) =
-            Bio::Otter::Lace::SatelliteDB::_get_DBAdaptor_and_options(
-                $otter_db,
-                'pipeline_db_rw',
-        );
-        repair_one_db($oldpipe_db, 0, $rescan_flag, $change_flag, $dataset_name, 'oldpipe');
-    }
+        $dataset_name = $ds->name();
+        
+        print STDERR "\n=================== $dataset_name ===============\n";
 
-    if(($which_db eq 'newpipe')
-     ||($which_db eq 'all') ) {
+        # Make a connection to the otter database
+        my $otter_db = $ds->get_cached_DBAdaptor;
 
-        my ($newpipe_db, $newpipedb_options) =
-            Bio::Otter::Lace::SatelliteDB::_get_DBAdaptor_and_options(
-                $otter_db,
-                'pipeline_db_rw_head',
-        );
-        repair_one_db($newpipe_db, 1, $rescan_flag, $change_flag, $dataset_name, 'newpipe');
+        if(($which_db eq 'otter')
+         ||($which_db eq 'all') ) {
+            repair_one_db($otter_db, 0, $rescan_flag, $change_flag, $dataset_name, 'otter');
+        }
+
+        if(($which_db eq 'oldpipe')
+         ||($which_db eq 'all') ) {
+
+            my ($oldpipe_db, $oldpipedb_options) =
+                Bio::Otter::Lace::SatelliteDB::_get_DBAdaptor_and_options(
+                    $otter_db,
+                    'pipeline_db_rw',
+            );
+            repair_one_db($oldpipe_db, 0, $rescan_flag, $change_flag, $dataset_name, 'oldpipe');
+        }
+
+        if(($which_db eq 'newpipe')
+         ||($which_db eq 'all') ) {
+
+            my ($newpipe_db, $newpipedb_options) =
+                Bio::Otter::Lace::SatelliteDB::_get_DBAdaptor_and_options(
+                    $otter_db,
+                    'pipeline_db_rw_head',
+            );
+            repair_one_db($newpipe_db, 1, $rescan_flag, $change_flag, $dataset_name, 'newpipe');
+        }
     }
 }
 
@@ -69,14 +83,19 @@ sub repair_one_db {
 
     my ($dbh, $head_flag, $rescan_flag, $change_flag, $dataset_name, $which_db) = @_;
 
-    print STDERR "\n***** Reparing '$which_db' of '$dataset_name' species:\n";
+    if(! $dbh) {
+        print STDERR "\n***** '$which_db' database of '$dataset_name' species does not seem to exist\n";
+        return;
+    }
+
+    print STDERR "\n***** Reparing '$which_db' database of '$dataset_name' species:\n";
 
     my ($intl_attrib, $acc_attrib, $op_update_pipe_query,
         $np_select_srid_and_old_by_acc, $np_insert_pipe_query, $np_update_pipe_query);
 
     if($head_flag) {
-        $intl_attrib = get_attrib_id_by_name($dbh, 'intl_clone_name');
-        $acc_attrib  = get_attrib_id_by_name($dbh, 'embl_accession');
+        $intl_attrib = get_attrib_id_by_name($dbh, 'intl_clone_name') || die "'intl_clone_name' attrib not defined";
+        $acc_attrib  = get_attrib_id_by_name($dbh, 'embl_accession') || die "'embl_accession' attrib not defined";
     }
 
         # find the clones that need their international name to be updated:
