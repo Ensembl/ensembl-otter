@@ -243,14 +243,14 @@ sub list_current_dbIDs_for_Slice {
 sub list_current_dbIDs_linked_by_accession_for_Slice {
     my ($self, $slice) = @_;
 
-    my $tiling_path = $slice->get_tiling_path;
     return $self->list_current_dbIDs_linked_by_accessions(
         $self->list_all_accessions_in_Slice($slice));
 }
 
 sub list_all_accessions_in_Slice {
     my ($self, $slice) = @_;
-
+    
+    my $tiling_path = $slice->get_tiling_path;
     return [ map $_->component_Seq->clone->embl_id, @$tiling_path ];
 }
 
