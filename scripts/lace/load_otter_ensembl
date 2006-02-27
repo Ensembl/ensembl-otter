@@ -117,7 +117,7 @@ my $DEBUG = 0;
     useage() unless $dataset_name;
     $agp_file =
       $ARGV[0];    # takes the remaining argument as the filename to be read
-    $do_sumbit = 0 unless $populate_pipe;
+    $do_submit = 0 unless $populate_pipe;
 
     # some options checking to make sure there's some sanity
     warn 'cannot load assembly details, as there is no agp file'
@@ -133,7 +133,7 @@ my $DEBUG = 0;
     my $otter_db = $ds->get_cached_DBAdaptor;
 
     # Make a connection to the pipeline database
-    my $pipeline_db;
+    my ($pipeline_db, $ana_obj);
     if ($populate_pipe) {
         $pipeline_db =
           Bio::Otter::Lace::PipelineDB::get_pipeline_rw_DBAdaptor($otter_db);
