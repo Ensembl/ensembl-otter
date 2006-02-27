@@ -680,220 +680,247 @@ sub _tmp_table_by_name{
     return $self->{'temp_table_name_cache'}->{$id};
 }
 
-sub tmpstore_meta_info_for_SequenceSet{
+sub tmpstore_meta_info_for_SequenceSet {
     my ($self, $ss, $adaptors) = @_;
+
     # check I'm a nice sequence set in $ss
-    confess("$ss says I'm not a sequence set") unless $ss->isa("Bio::Otter::Lace::SequenceSet");
+    confess("$ss says I'm not a sequence set")
+      unless $ss->isa("Bio::Otter::Lace::SequenceSet");
+
     # write some sql
     my $tmp_tbl_meta   = $self->_tmp_table_by_name("meta_info");
-    my $create_tmp_tbl = qq{CREATE TEMPORARY TABLE $tmp_tbl_meta SELECT * FROM sequence_set WHERE 1 = 0};
-    my $insert_ss      = qq{INSERT INTO $tmp_tbl_meta (assembly_type, description, analysis_priority) VALUES(?, ?, ?)};
-    my $max_chr_end_q  = qq{SELECT IFNULL(MAX(a.chr_end), 0) AS max_chr_end 
+    my $create_tmp_tbl =
+qq{CREATE TEMPORARY TABLE $tmp_tbl_meta SELECT * FROM sequence_set WHERE 1 = 0};
+    my $insert_ss =
+qq{INSERT INTO $tmp_tbl_meta (assembly_type, description, analysis_priority) VALUES(?, ?, ?)};
+    my $max_chr_end_q = qq{SELECT IFNULL(MAX(a.chr_end), 0) AS max_chr_end 
 				   FROM $tmp_tbl_meta ss, assembly a 
 				   WHERE ss.assembly_type = a.type 
 				   && ss.assembly_type = ?};
+
     # some sequence set info
-    my $new_desc       = $ss->description();
-    my $new_name       = $ss->name();
-    my $new_priority   = $ss->priority() || 5;
-    my $max_chr_end    = 0;
+    my $new_desc     = $ss->description();
+    my $new_name     = $ss->name();
+    my $new_priority = $ss->priority() || 5;
+    my $max_chr_end  = 0;
 
     # create/fill/read temporary table
-    foreach my $adaptor(@$adaptors){
-	my $sth = $adaptor->prepare($create_tmp_tbl);
-	$sth->execute();
-	$sth->finish();
+    foreach my $adaptor (@$adaptors) {
+        my $sth = $adaptor->prepare($create_tmp_tbl);
+        $sth->execute();
+        $sth->finish();
 
-	$sth = $adaptor->prepare($insert_ss);
-	$sth->execute($new_name, $new_desc, $new_priority);
-	$sth->finish();
+        $sth = $adaptor->prepare($insert_ss);
+        $sth->execute($new_name, $new_desc, $new_priority);
+        $sth->finish();
 
-	$sth = $adaptor->prepare($max_chr_end_q);
-	$sth->execute($new_name);
-	my ($tmp) = $sth->fetchrow();
-	$sth->finish();
+        $sth = $adaptor->prepare($max_chr_end_q);
+        $sth->execute($new_name);
+        my ($tmp) = $sth->fetchrow();
+        $sth->finish();
 
-	$max_chr_end = ($tmp > $max_chr_end ? $tmp : $max_chr_end);
+        $max_chr_end = ($tmp > $max_chr_end ? $tmp : $max_chr_end);
     }
 
     return $max_chr_end;
 }
 
-sub store_SequenceSet{
+sub store_SequenceSet {
     my ($self, $ss, $seqfetch_code, $allow_update) = @_;
-    
-    # check I'm a nice sequence set in $ss
-    confess("$ss says I'm not a sequence set") unless $ss->isa("Bio::Otter::Lace::SequenceSet");
-    
-    # get the previous sequence_set with the same name.
-    eval { $self->get_SequenceSet_by_name($ss->name) };
-    if(!$@){ confess "Adding to a previos AGP with another is not allowed" unless $allow_update };
-    # write some sql
-    my $tmp_tbl_assembly = $self->_tmp_table_by_name("assembly");
-    my $create_tmp_tbl   = qq{CREATE TEMPORARY TABLE $tmp_tbl_assembly SELECT * FROM assembly WHERE 1 = 0};
-    my $insert_query     = qq{INSERT INTO $tmp_tbl_assembly (chromosome_id, chr_start,
-							     chr_end, superctg_name,
-							     superctg_start, superctg_end,
-							     superctg_ori,contig_id,
-							     contig_start, contig_end,
-							     contig_ori,type )
-				  VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
-			      };
-    # database connections
-    my $otter_db    = $self->get_cached_DBAdaptor;
-    my $pipeline_db = Bio::Otter::Lace::PipelineDB::get_pipeline_rw_DBAdaptor($otter_db)
-        or confess "Can't connect to pipeline db";
-    my $ens_db      = $self->make_EnsEMBL_DBAdaptor()
-        or confess "Can't connect to 'self' db";
-
-    my $max_chr_length = $self->tmpstore_meta_info_for_SequenceSet($ss, [$ens_db, $pipeline_db]);
-
-    # execute query to create temp
-    my $ens_sth = $ens_db->prepare($create_tmp_tbl);
-    $ens_sth->execute();
-    $ens_sth->finish();
-    my $pipeline_sth = $pipeline_db->prepare($create_tmp_tbl);
-    $pipeline_sth->execute();
-    $pipeline_sth->finish();
 
     require Bio::EnsEMBL::Clone;
     require Bio::EnsEMBL::RawContig;
 
-    # get clone_adaptors
-    my $ens_clone_adaptor  = $ens_db->get_CloneAdaptor;
-    my $pipe_clone_adaptor = $pipeline_db->get_CloneAdaptor;
-    my $adaptors           = [$ens_clone_adaptor, $pipe_clone_adaptor];
-    my @contigs            = (); # stores contig ids per adaptor/db
-    my $all_contigs        = [];
-    # prepare the assembly insert query for each db
-    $ens_sth      = $ens_db->prepare($insert_query);
-    $pipeline_sth = $pipeline_db->prepare($insert_query);
+    # check I'm a nice sequence set in $ss
+    confess("$ss says I'm not a sequence set")
+      unless $ss->isa("Bio::Otter::Lace::SequenceSet");
 
-    # go through the clones in the list storing them in the 
-    # clone/contig/dna tables
-    # temp assembly table
-    foreach my $cloneSeq(@{$ss->CloneSequence_list}){
-	my $acc    = $cloneSeq->accession();
-	my $sv     = $cloneSeq->sv();
-
-	my @clones = @{$self->_fetch_clones($adaptors, $acc, $sv, $seqfetch_code)};
-	for (my $i = 0; $i < @clones; $i++){
-	    my $clone  = $clones[$i];
-	    if(defined $clone->dbID){
-		my $contig = $clone->get_all_Contigs->[0];
-		$contigs[$i] = $contig;
-	    }else{
-		# store the clone
-		my ($contig) = $self->_store_clone($adaptors->[$i], $clone);
-		$contigs[$i] = $contig;
-	    }
-	    push(@{$all_contigs->[$i]}, $contigs[$i]);
-	}
-
-	# store the assembly
-	$ens_sth->execute($cloneSeq->chromosome, $cloneSeq->chr_start,
-			  $cloneSeq->chr_end, $cloneSeq->super_contig_name,
-			  $cloneSeq->chr_start, $cloneSeq->chr_end,
-			  1, # super_contig_orientation
-			  $contigs[0]->dbID, $cloneSeq->contig_start,
-			  $cloneSeq->contig_end, $cloneSeq->contig_strand,
-			  $ss->name
-			  );
-	$pipeline_sth->execute($cloneSeq->pipeline_chromosome, $cloneSeq->chr_start,
-			       $cloneSeq->chr_end, $cloneSeq->super_contig_name,
-			       $cloneSeq->chr_start, $cloneSeq->chr_end,
-			       1, # super_contig_orientation
-			       $contigs[1]->dbID, $cloneSeq->contig_start,
-			       $cloneSeq->contig_end, $cloneSeq->contig_strand,
-			       $ss->name
-			       );
+    # get the previous sequence_set with the same name.
+    eval { $self->get_SequenceSet_by_name($ss->name) };
+    if (!$@) {
+        confess "Adding to a previos AGP with another is not allowed"
+          unless $allow_update;
     }
-    ####################################################
-#    $self->__dump_table("assembly", [$pipeline_db, $ens_db]);
-#    $self->__dump_table("meta_info", [$pipeline_db, $ens_db]);
+
+    # write some sql
+    my $tmp_tbl_assembly = $self->_tmp_table_by_name("assembly");
+    my $create_tmp_tbl   = qq{
+        CREATE TEMPORARY TABLE $tmp_tbl_assembly
+        SELECT * FROM assembly WHERE 1 = 0
+        };
+    my $insert_query = qq{
+        INSERT INTO $tmp_tbl_assembly (chromosome_id
+              , chr_start
+              , chr_end
+              , superctg_name
+              , superctg_start
+              , superctg_end
+              , superctg_ori
+              , contig_id
+              , contig_start
+              , contig_end
+              , contig_ori
+              , type )
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+        };
+
+    # database connections
+    my $otter_db = $self->get_cached_DBAdaptor;
+    my $dba_list = [];
+    if (my $ens_db = $self->make_EnsEMBL_DBAdaptor) {
+        push(@$dba_list, $ens_db);
+    }
+    else {
+        confess "Can't connect to 'self' db";
+    }
+
+    # Only attempt to connect to pipeline_db
+    # if it is mentioned in the meta table.
+    if ($self->get_MetaContainer->list_value_by_key('pipeline_db')) {
+        my $pipeline_db =
+          Bio::Otter::Lace::PipelineDB::get_pipeline_rw_DBAdaptor($otter_db)
+          or confess "Can't connect to pipeline db";
+        push(@$dba_list, $pipeline_db);
+    }
+
+    my $max_chr_length =
+      $self->tmpstore_meta_info_for_SequenceSet($ss, $dba_list);
+
+    # execute query to create temp
+    my $pipe_contigs = [];
+    foreach my $dba (@$dba_list) {
+        my $is_pipe = $dba->isa('Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor');
+    
+        $dba->do($create_tmp_tbl);
+
+        # prepare the assembly insert query for each db
+        my $insert_sth = $dba->prepare($insert_query);
+
+        # get clone_adaptor
+        my $clone_adaptor = $dba->get_CloneAdaptor;
+
+        # go through the clones in the list storing them in the
+        # clone/contig/dna tables
+        # temp assembly table
+        foreach my $cloneSeq (@{ $ss->CloneSequence_list }) {
+            my $acc = $cloneSeq->accession();
+            my $sv  = $cloneSeq->sv();
+
+            my $clone = $self->_fetch_clone($clone_adaptor, $acc, $sv, $seqfetch_code);
+
+            $self->_store_clone($dba, $clone) unless $clone->dbID;
+            my $contig = $clone->get_all_Contigs->[0];
+
+            # store the assembly
+            $insert_sth->execute(
+                $cloneSeq->chromosome, $cloneSeq->chr_start,
+                $cloneSeq->chr_end,    $cloneSeq->super_contig_name,
+                $cloneSeq->chr_start,  $cloneSeq->chr_end,
+                1,    # super_contig_orientation
+                $contig->dbID,         $cloneSeq->contig_start,
+                $cloneSeq->contig_end, $cloneSeq->contig_strand,
+                $ss->name,
+            );
+
+            push(@$pipe_contigs, $contig) if $is_pipe;
+        }
+    }
+
+    #    $self->__dump_table("assembly", [$pipeline_db, $ens_db]);
+    #    $self->__dump_table("meta_info", [$pipeline_db, $ens_db]);
+
     # if everythings ok "commit" sequence_set table and assembly table
     # insert into sequence_set select from temporary table
-    my $tmp_tbl_mi    = $self->_tmp_table_by_name("meta_info");
-    my $copy_assembly = qq{INSERT IGNORE INTO assembly SELECT * FROM $tmp_tbl_assembly};
-    my $copy_seq_set  = qq{INSERT IGNORE INTO sequence_set SELECT * FROM $tmp_tbl_mi};
-    foreach my $dbA($ens_db, $pipeline_db){
-	my $sth = $dbA->prepare($copy_assembly);
-	$sth->execute();
-	$sth = $dbA->prepare($copy_seq_set);
-	$sth->execute();
+    my $tmp_tbl_mi = $self->_tmp_table_by_name("meta_info");
+    foreach my $dba (@$dba_list) {
+        $dba->do(qq{INSERT IGNORE INTO assembly SELECT * FROM $tmp_tbl_assembly});
+        $dba->do(qq{INSERT IGNORE INTO sequence_set SELECT * FROM $tmp_tbl_mi});
     }
-    return $all_contigs->[1]; # return the pipeline contigs
+    return $pipe_contigs;    # return the pipeline contigs
 }
 
 
-sub __dump_table{
+
+sub __dump_table {
     my ($self, $name, $adaptors, $other) = @_;
     my $tmp = ($other ? $other : $self->_tmp_table_by_name($name));
     return unless defined $tmp;
     my $query = "SELECT * FROM $tmp";
-    foreach my $adaptor(@$adaptors){
-	my $sth = $adaptor->prepare($query);
-	$sth->execute();
-	print STDERR "TABLE: $tmp\n";
-	while(my $row = $sth->fetchrow_arrayref){
-	    print STDERR join("\t", @$row) . "\n";
-	}
+    foreach my $adaptor (@$adaptors) {
+        my $sth = $adaptor->prepare($query);
+        $sth->execute();
+        print STDERR "TABLE: $tmp\n";
+        while (my $row = $sth->fetchrow_arrayref) {
+            print STDERR join("\t", @$row) . "\n";
+        }
     }
 }
 
-sub _fetch_clones{
-    my ($self, $clone_adaptors, $acc, $sv, $seqfetcher) = @_;
+sub _fetch_clone {
+    my ($self, $clone_adaptor, $acc, $sv, $seqfetcher) = @_;
+
     my $clones = [];
-    my $seq;
-    foreach my $clone_adaptor(@$clone_adaptors){
-	my $clone;
-	eval { $clone = $clone_adaptor->fetch_by_accession_version($acc, $sv) };
-	if($clone){
-	    warn "clone <".$clone->embl_id."> is already in the " . $clone_adaptor->db->dbname . " database\n" ;
-	    my $contigs = $clone->get_all_Contigs;
-            my $count = @$contigs;
-            unless ($count == 1) {
-                die "Clone '$acc' has $count contigs";
-            }
-	}else{
-	    my $acc_sv = "$acc.$sv";
-	    $seq ||= &$seqfetcher($acc_sv);
-	    $clone = $self->_make_clone($seq, $acc, $sv);
-	}
-	push(@$clones, $clone);
+
+    my $clone;
+    eval { $clone = $clone_adaptor->fetch_by_accession_version($acc, $sv) };
+    if ($clone) {
+        warn "clone <"
+          . $clone->embl_id
+          . "> is already in the "
+          . $clone_adaptor->db->dbname
+          . " database\n";
+        my $contigs = $clone->get_all_Contigs;
+        my $count   = @$contigs;
+        unless ($count == 1) {
+            die "Clone '$acc' has $count contigs";
+        }
     }
-    return $clones;
+    else {
+        my $acc_sv = "$acc.$sv";
+        my $seq = $seqfetcher->($acc_sv);
+        $clone = $self->_make_clone($seq, $acc, $sv);
+    }
+
+    return $clone;
 }
-sub _make_clone{
+
+sub _make_clone {
     my ($self, $seq, $acc, $sv) = @_;
+
     my $acc_sv = "$acc.$sv";
-    my $clone = Bio::EnsEMBL::Clone->new();
+
+    # Create the clone
+    my $clone  = Bio::EnsEMBL::Clone->new();
     $clone->id("$acc_sv");    ### Should set to international clone name
     $clone->embl_id($acc);
     $clone->embl_version($sv);
-    $clone->htg_phase(3);   ### Not all are "Finished" (phase 3)
+    $clone->htg_phase(3);     ### Not all are "Finished" (phase 3)
     $clone->version(1);
     $clone->created(time);
     $clone->modified(time);
-    
-    # fetch sequences
+
+    # Create the contig
     my $contig = Bio::EnsEMBL::RawContig->new;
-    my $end = $seq->length;
+    my $end    = $seq->length;
     $contig->name("$acc_sv.1." . $seq->length);
     $contig->length($seq->length);
     $contig->embl_offset(1);
     $contig->seq($seq->seq);
     $clone->add_Contig($contig);
+
     return $clone;
 }
-sub _store_clone{
-    my ($self, $clone_adaptor, $clone) = @_ ;
 
-    eval{ $clone_adaptor->store($clone);  };
-    if($@){
-	print STDERR "Problems writing " . $clone->id . " to database. \nProblem was " . $@;             
+sub _store_clone {
+    my ($self, $clone_adaptor, $clone) = @_;
+
+    eval { $clone_adaptor->store($clone); };
+    if ($@) {
+        print STDERR "Problems writing "
+          . $clone->id
+          . " to database. \nProblem was "
+          . $@;
     }
-    return $clone->get_all_Contigs->[0];
 }
 
 sub update_SequenceSet{
