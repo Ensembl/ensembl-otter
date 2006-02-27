@@ -273,7 +273,7 @@ my $DEBUG = 0;
         # $CloneSequence->clone_name();
         # $CloneSequence->length();
         $CloneSequence->chromosome($otter_chromosome->dbID);
-        $CloneSequence->pipeline_chromosome($pipe_chromosome->dbID);
+        $CloneSequence->pipeline_chromosome($pipe_chromosome->dbID) if $pipeline_db;
         $CloneSequence->chr_start($chr_start);
         $CloneSequence->chr_end($chr_end);
         $CloneSequence->super_contig_name($super_contig_name);
