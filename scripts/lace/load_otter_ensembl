@@ -96,6 +96,7 @@ my $DEBUG = 0;
     my $help      = 0;
     my $at_sanger = 1;    # Set if we want to get sequence notes and clone names
     my $do_submit = 0;	  # Set if we don't want to prime the pipeline with the SubmitContig analysis 
+    my $populate_pipe = 0;
 
     #---------------------------------------------------------------------------
     Bio::Otter::Lace::Defaults::do_getopt(
@@ -109,12 +110,14 @@ my $DEBUG = 0;
         'sanger!'       => \$at_sanger,
         'no_submit'     => sub{ $do_submit = 0 },
         'submit!'	    => \$do_submit,
+        'pipe!'         => \$populate_pipe,
       )
       or useage();
     useage() if $help;
     useage() unless $dataset_name;
     $agp_file =
       $ARGV[0];    # takes the remaining argument as the filename to be read
+    $do_sumbit = 0 unless $populate_pipe;
 
     # some options checking to make sure there's some sanity
     warn 'cannot load assembly details, as there is no agp file'
@@ -130,20 +133,23 @@ my $DEBUG = 0;
     my $otter_db = $ds->get_cached_DBAdaptor;
 
     # Make a connection to the pipeline database
-    my $pipeline_db =
-      Bio::Otter::Lace::PipelineDB::get_pipeline_rw_DBAdaptor($otter_db);
-    $pipeline_db->db_handle->{'PrintError'} =
-      0;    # turn off error writing for this db handle
-    
-    # Get SubmitContig analysis object for priming the pipeline
-    $pipe_analysis = $pipeline_db->get_AnalysisAdaptor;
-    my $ana_obj = $pipe_analysis->fetch_by_logic_name($submit_contig);
-    unless ($ana_obj) {
-        $ana_obj = new Bio::EnsEMBL::Pipeline::Analysis(
-            -LOGIC_NAME    => $submit_contig,
-            -INPUT_ID_TYPE => 'CONTIG',
-        );
-        $pipe_analysis->store($ana_obj);
+    my $pipeline_db;
+    if ($populate_pipe) {
+        $pipeline_db =
+          Bio::Otter::Lace::PipelineDB::get_pipeline_rw_DBAdaptor($otter_db);
+        $pipeline_db->db_handle->{'PrintError'} =
+          0;    # turn off error writing for this db handle
+
+        # Get SubmitContig analysis object for priming the pipeline
+        $pipe_analysis = $pipeline_db->get_AnalysisAdaptor;
+        my $ana_obj = $pipe_analysis->fetch_by_logic_name($submit_contig);
+        unless ($ana_obj) {
+            $ana_obj = new Bio::EnsEMBL::Pipeline::Analysis(
+                -LOGIC_NAME    => $submit_contig,
+                -INPUT_ID_TYPE => 'CONTIG',
+            );
+            $pipe_analysis->store($ana_obj);
+        }
     }
 
 #------------------------- read input file -----------------------------------------
@@ -171,11 +177,18 @@ my $DEBUG = 0;
       s/^chr//i;    # recheck chromosome name as it may have changed [AGP]
 
     my $otter_chromosome = get_chromosome($otter_db,    $chromosome_name);
-    my $pipe_chromosome  = get_chromosome($pipeline_db, $chromosome_name);
 
-    $end_coord =
-      $ds->tmpstore_meta_info_for_SequenceSet($SequenceSet,
-        [ $otter_db, $pipeline_db ]);
+    my $pipe_chromosome;
+    if ($pipeline_db) {
+        $pipe_chromosome = get_chromosome($pipeline_db, $chromosome_name);
+        $end_coord =
+          $ds->tmpstore_meta_info_for_SequenceSet($SequenceSet,
+            [ $otter_db, $pipeline_db ]);
+    } else {
+        $end_coord =
+          $ds->tmpstore_meta_info_for_SequenceSet($SequenceSet,
+            [ $otter_db ]);
+    }
 
     # $ds->__dump_table("meta_info", [$otter_db, $pipeline_db]);
     # warn "This is end_coord: $end_coord";
@@ -292,7 +305,7 @@ my $DEBUG = 0;
     store_input_id_analysis($pipe_contigs, $pipeline_db, $ana_obj) if $do_submit;
 
     # update chromosome lengths
-    update_chromosome_length($pipeline_db, $pipe_chromosome);
+    update_chromosome_length($pipeline_db, $pipe_chromosome) if $pipeline_db;
     update_chromosome_length($otter_db,    $otter_chromosome);
 
     # benchmarking
