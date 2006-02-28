@@ -24,6 +24,8 @@ use Bio::Otter::Lace::Defaults;
 
 use base 'MenuCanvasWindow';
 
+use MenuCanvasWindow::ZMapSeqChooser;
+
 sub new {
     my( $pkg, $tk ) = @_;
     
@@ -37,11 +39,10 @@ sub new {
 
 sub Client {
     my( $self, $Client ) = @_;
-    
+     
     if ($Client) {
         $self->{'_Client'} = $Client;
     } 
-
     return $self->{'_Client'};
 }
 
@@ -462,7 +463,19 @@ sub populate_menus {
     
     # File menu
     my $file = $self->make_menu('File');
-    
+
+    if($self->show_zmap) {
+        my $zmap_launch_command = sub { $self->zMapLaunchZmap };
+        $file->add('command',
+            -label          => 'Launch ZMap',
+            -command        => $zmap_launch_command,
+            -accelerator    => 'Ctrl+Z',
+            -underline      => 0,
+            );
+        $top->bind('<Control-z>', $zmap_launch_command);
+        $top->bind('<Control-Z>', $zmap_launch_command);
+    }
+
     # Launce xace
     my $xace_launch_command = sub { $self->launch_xace };
     $file->add('command',
@@ -1403,7 +1416,7 @@ sub current_clone_name {
 }
 
 sub edit_new_subsequence {
-    my( $self ) = @_;
+    my( $self, $zmap ) = @_;
     
     my @sub_names = $self->list_selected_subseq_names;
     my( $clone_name, @subseq );
@@ -1545,7 +1558,11 @@ sub edit_new_subsequence {
     $self->add_SubSeq($new);
     $self->do_subseq_display;
     $self->highlight_by_name('subseq', $seq_name);
-    $self->make_exoncanvas_edit_window($new);
+    if($zmap){
+        $self->zMap_make_exoncanvas_edit_window($new);
+    }else{
+        $self->make_exoncanvas_edit_window($new);
+    }
     
     $self->fix_window_min_max_sizes;
 }
@@ -2258,8 +2275,35 @@ sub run_dotter {
     return 1;
 }
 
+sub show_zmap {
+    my $self = shift @_;
+
+    return Bio::Otter::Lace::Defaults::option_from_array(['client', 'show_zmap']) || 0;
+}
+
+sub isZMap{
+    my($self, $x_or_z) = @_;
+    if(defined($x_or_z)){
+        $self->{'xace_or_zmap'} = $x_or_z;
+        $self->__hasEverZMap(1) if $x_or_z;
+    }
+    return ($self->{'xace_or_zmap'} ? 1 : 0);
+}
+sub __hasEverZMap{
+    my($self, $zmapped) = @_;
+    $self->{'zmapped'} = $zmapped if defined($zmapped);
+    return ($self->{'zmapped'} ? 1 : 0);
+}
+
 sub DESTROY {
     my( $self ) = @_;
+
+    if($self->__hasEverZMap){
+        $self->zMapKillZmap() if $self->can('zMapKillZmap');
+        ZMap::ConnectUtils::flush_bad_windows();
+        delete $self->{'_SGIF_LOCAL_SERVER'}; # shutdown server
+    }
+
     # need to undef AceDatabase for it's clean up.
     # warn "AceDatabase->unlock should now happen\n";
     delete $self->{'_AceDatabase'}; # unlock will now happen
@@ -2272,7 +2316,12 @@ sub DESTROY {
         # need to clean up the sequenceNotes reference
         delete $self->{'_sequence_notes'} ;
     }
-    warn "Destroying XaceSeqChooser for ", $self->ace_path, "\n";
+
+    if($self->isZMap){
+        warn "Destroying ZmapSeqChooser for ", $self->ace_path, "\n";
+    }else{
+        warn "Destroying XaceSeqChooser for ", $self->ace_path, "\n";
+    }
 }
 
 1;
