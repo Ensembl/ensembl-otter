@@ -1,0 +1,100 @@
+Index: XaceSeqChooser.pm
+===================================================================
+RCS file: /nfs/humace2/CVS_master/tk/MenuCanvasWindow/XaceSeqChooser.pm,v
+retrieving revision 1.125
+diff -u -u -r1.125 XaceSeqChooser.pm
+--- XaceSeqChooser.pm	10 Feb 2006 14:17:14 -0000	1.125
++++ XaceSeqChooser.pm	23 Feb 2006 14:04:35 -0000
+@@ -24,6 +24,8 @@
+ 
+ use base 'MenuCanvasWindow';
+ 
++use MenuCanvasWindow::ZMapSeqChooser;
++
+ sub new {
+     my( $pkg, $tk ) = @_;
+     
+@@ -463,6 +465,16 @@
+     # File menu
+     my $file = $self->make_menu('File');
+     
++    my $zmap_launch_command = sub { $self->zMapLaunchZmap };
++    $file->add('command',
++        -label          => 'Launch ZMap',
++        -command        => $zmap_launch_command,
++        -accelerator    => 'Ctrl+Z',
++        -underline      => 0,
++        );
++    $top->bind('<Control-z>', $zmap_launch_command);
++    $top->bind('<Control-Z>', $zmap_launch_command);
++
+     # Launce xace
+     my $xace_launch_command = sub { $self->launch_xace };
+     $file->add('command',
+@@ -1403,7 +1415,7 @@
+ }
+ 
+ sub edit_new_subsequence {
+-    my( $self ) = @_;
++    my( $self, $zmap ) = @_;
+     
+     my @sub_names = $self->list_selected_subseq_names;
+     my( $clone_name, @subseq );
+@@ -1545,7 +1557,11 @@
+     $self->add_SubSeq($new);
+     $self->do_subseq_display;
+     $self->highlight_by_name('subseq', $seq_name);
+-    $self->make_exoncanvas_edit_window($new);
++    if($zmap){
++        $self->zMap_make_exoncanvas_edit_window($new);
++    }else{
++        $self->make_exoncanvas_edit_window($new);
++    }
+     
+     $self->fix_window_min_max_sizes;
+ }
+@@ -2258,8 +2274,30 @@
+     return 1;
+ }
+ 
++
++sub isZMap{
++    my($self, $x_or_z) = @_;
++    if(defined($x_or_z)){
++        $self->{'xace_or_zmap'} = $x_or_z;
++        $self->__hasEverZMap(1) if $x_or_z;
++    }
++    return ($self->{'xace_or_zmap'} ? 1 : 0);
++}
++sub __hasEverZMap{
++    my($self, $zmapped) = @_;
++    $self->{'zmapped'} = $zmapped if defined($zmapped);
++    return ($self->{'zmapped'} ? 1 : 0);
++}
++
+ sub DESTROY {
+     my( $self ) = @_;
++
++    if($self->__hasEverZMap){
++        $self->zMapKillZmap() if $self->can('zMapKillZmap');
++        ZMap::ConnectUtils::flush_bad_windows();
++        delete $self->{'_SGIF_LOCAL_SERVER'}; # shutdown server
++    }
++
+     # need to undef AceDatabase for it's clean up.
+     # warn "AceDatabase->unlock should now happen\n";
+     delete $self->{'_AceDatabase'}; # unlock will now happen
+@@ -2272,7 +2310,12 @@
+         # need to clean up the sequenceNotes reference
+         delete $self->{'_sequence_notes'} ;
+     }
+-    warn "Destroying XaceSeqChooser for ", $self->ace_path, "\n";
++
++    if($self->isZMap){
++        warn "Destroying ZmapSeqChooser for ", $self->ace_path, "\n";
++    }else{
++        warn "Destroying XaceSeqChooser for ", $self->ace_path, "\n";
++    }
+ }
+ 
+ 1;
