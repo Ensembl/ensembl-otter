@@ -181,7 +181,7 @@ sub XML_to_otter {
           if (!defined($end_exon)) {warn "no end exon"};
 
 
-          print STDERR "ERROR: Failed mapping translation to transcript\n";
+          die "ERROR: Failed mapping translation to transcript\n";
         } else {
           my $translation = new Bio::EnsEMBL::Translation;
           $translation->stable_id($tl_stable_id);
@@ -206,7 +206,7 @@ sub XML_to_otter {
           $tran->translation($translation);
         }
        } elsif (defined($tl_start) || defined($tl_end)) {
-        print STDERR "ERROR: Either translation start or translation end undefined\n";
+        die "ERROR: Only half of translation start/ end pair is defined\n";
       }
       $tl_start     = undef;
       $tl_end       = undef;
