@@ -8,6 +8,7 @@ use ZMap::Connect qw(:all);
 use Sys::Hostname;
 use Tie::Watch;
 use Hum::Ace::LocalServer;
+use MenuCanvasWindow::ZMapExonCanvas;
 use Data::Dumper;
 
 my $ZMAP_DEBUG = 1;
@@ -35,12 +36,42 @@ on 'Launch ZMap' menu item in xaceseqchooser window.
 =cut
 
 sub printForFun{ print "Ha ha! @_\n"; }
-
+sub new_command{
+    my ($self) = @_;
+    return unless $self->current_state eq 'subseq';
+    $self->edit_new_subsequence(1);
+} 
+my $replace = 1;
+my $coexist = 0;
 my $ZMAP_MENUS = {
-    'Close'   => \&printForFun,
-    'Variant' => \&printForFun,
-    'Delete'  => \&printForFun,
+    'Close'   => [\&printForFun,$replace],
+    'Variant' => [\&printForFun,$replace],
+    'Delete'  => [\&printForFun,$replace],
+    'New'     => [\&new_command,$replace],
 };
+
+sub MenuCanvasWindow::XaceSeqChooser::zMap_make_exoncanvas_edit_window{
+    my( $self, $sub ) = @_;
+    
+    my $sub_name = $sub->name;
+    warn "subsequence-name $sub_name " ;
+#    warn "locus " . $sub->Locus->name ;
+    my $canvas = $self->canvas;
+    
+    # Make a new window
+    my $top = $canvas->Toplevel;
+    
+    # Make new MenuCanvasWindow::ExonCanvas object and initialize
+    my $ec = MenuCanvasWindow::ZMapExonCanvas->new($top, 345, 50);
+    $ec->name($sub_name);
+    $ec->XaceSeqChooser($self);
+    $ec->SubSeq($sub);
+    $ec->initialize;
+    
+    $self->save_subseq_edit_window($sub_name, $ec);
+    
+    return $ec;
+}
 
 sub MenuCanvasWindow::XaceSeqChooser::zMapReplaceMenuCommands {
     my ($self) = @_;
@@ -54,10 +85,30 @@ sub MenuCanvasWindow::XaceSeqChooser::zMapReplaceMenuCommands {
             for my $i(0..$max){
                 next unless $menu->type($i) eq 'command';
                 my $label = $menu->entrycget($i, '-label');
-                print "found $label\n";
-                if(my $replacement = $ZMAP_MENUS->{$label}){
+                my $original_cb = $menu->entrycget($i, '-command');
+                print "found $label with cb $original_cb\n";
+
+                if(my $replacement = $ZMAP_MENUS->{$label}->[0]){
                     print "reconfiguring $label\n";
-                    my $cb = sub { $self->$replacement };
+                    my $cb = undef;
+                    # This is to so we call both the original callback together we our own version
+                    if($ZMAP_MENUS->{$label}->[1]){
+                        $cb = sub { 
+                            print "$self \n";
+                            $self->$replacement(); 
+                        };
+                    }else{
+                         $cb = sub { 
+                            print "$self \n";
+                            $self->$replacement(); 
+                            if($#$original_cb){
+                                $original_cb->[0]->($original_cb->[1..$#$original_cb]);
+                            }else{
+                                $original_cb->[0]->();
+                            }
+                        };
+                    }
+
                     $menu->entryconfigure($i, -command => $cb );
                 }
             }
@@ -211,7 +262,7 @@ sub MenuCanvasWindow::XaceSeqChooser::zMapDotZmapContent{
                              ($seq ? 'true' : 'false'),
                              ($writebck ? 'true' : 'false'),
                              $style || $sets);
-    return $content;
+    return $content . qq`\n\nZMap\n{\nshow_mainwindow = false\n}\n`;
 }
 
 sub MenuCanvasWindow::XaceSeqChooser::zMapPort{
@@ -247,7 +298,7 @@ sub MenuCanvasWindow::XaceSeqChooser::zMapListMethodNames_ordered{
 
 sub MenuCanvasWindow::XaceSeqChooser::zMapCurrentXclient{
     my ($self) = @_;
-    return xclient_with_name(${$self->zMapEntryRef});
+    return xclient_with_name(${$self->zMapEntryRef}, 0, "$self");
 }
 sub MenuCanvasWindow::XaceSeqChooser::zMapEntryRef{
     my ($self) = @_;
@@ -264,9 +315,9 @@ sub MenuCanvasWindow::XaceSeqChooser::zMapSetEntryValue{
 
 sub MenuCanvasWindow::XaceSeqChooser::zMapRegisterClient{
     my ($self, $request) = @_;
-
+    my $mainWindowName = 'ZMap port #' . $self->zMapPort;
     my $p  = parse_request($request);
-    my $xr = xclient_with_name('main');
+    my $xr = xclient_with_name($mainWindowName, 0, "$self");
     my $z  = $self->zMapZmapConnector();
     my $h  = {
         response => {
@@ -290,10 +341,12 @@ sub MenuCanvasWindow::XaceSeqChooser::zMapRegisterClient{
         "Got '$request'\n";
         return (403, $z->basic_error("Bad Request!"));
     }
- 
-    xclient_with_name('main', $p->{'client'}->{'xwid'});
 
-    $self->zMapSetEntryValue('main');
+    warn "after first return zmapregisterclient..." if $ZMAP_DEBUG;
+ 
+    xclient_with_name($mainWindowName, $p->{'client'}->{'xwid'}, "$self");
+
+    $self->zMapSetEntryValue($mainWindowName);
 
     Tie::Watch->new(-variable => \$WAIT_VARIABLE,
                     -debug    => 1,
@@ -308,7 +361,7 @@ sub MenuCanvasWindow::XaceSeqChooser::zMapRegisterClient{
 #===========================================================
 
 sub MenuCanvasWindow::XaceSeqChooser::zMapMakeRequest{
-    my ($self, $xmlObject, $action) = @_;
+    my ($self, $xmlObject, $action, $xml_cmd_string) = @_;
 
     my $xr = $self->zMapCurrentXclient;
     unless($xr){
@@ -319,7 +372,13 @@ sub MenuCanvasWindow::XaceSeqChooser::zMapMakeRequest{
     my $handler ||= \&RESPONSE_HANDLER;
     my $error   ||= \&ERROR_HANDLER;
 
-    my @commands = obj_make_xml($xmlObject, $action);
+    my @commands;
+
+    if(!$xmlObject && !$action && $xml_cmd_string){
+        @commands = ($xml_cmd_string);
+    }else{
+        @commands = obj_make_xml($xmlObject, $action);
+    }
     warn "@commands" if $ZMAP_DEBUG;
     my @a = $xr->send_commands(@commands);
 
@@ -334,14 +393,15 @@ sub MenuCanvasWindow::XaceSeqChooser::zMapMakeRequest{
     return ;
 }
 
-sub MenuCanvasWindow::XaceSeqChooser::zMapUpdateMenu{
-    my ($self) = @_;
-    
-    my $menu_item = $self->{'_zMapMenuItem'};
+# This  menu stuff  needs  rewriting.  It doesn't  work  100% like  it
+# should.  It isn't  really needed  for production  so it's  not  a high
+# priority
+sub MenuCanvasWindow::XaceSeqChooser::zMapUpdateMenu{ 
+    my ($self) = @_; my $menu_item = $self->{'_zMapMenuItem'}; 
 
     my $cleanUpMenu = sub{
         my ($menuRoot, $this) = @_;
-        my @current = list_xclient_names();
+        my @current = list_xclient_names("$self");
         $this->{'_zMapSubMenuItems'} ||= {};
         my @remove = ();
         foreach my $k(keys(%{$this->{'_zMapSubMenuItems'}})){
@@ -379,7 +439,7 @@ sub MenuCanvasWindow::XaceSeqChooser::zMapUpdateMenu{
         $this->{'_zMapSubMenuItems'}->{$name} = scalar(keys(%{$this->{'_zMapSubMenuItems'}}));
         my $submi = $menuRoot->cascade(-label => $name, -tearoff => 0);
 
-        if($name eq 'main'){
+        if($name =~ /port/){
             $submi->command(-command => [ sub { 
                 my $self = shift;
                 my $z = newXMLObj('client');
@@ -406,7 +466,7 @@ sub MenuCanvasWindow::XaceSeqChooser::zMapUpdateMenu{
 
     $cleanUpMenu->($menu_item, $self);
 
-    foreach my $name (list_xclient_names()){
+    foreach my $name (list_xclient_names("$self")){
         $addSubMenuItem->($self, $menu_item, $name);
     }
 
@@ -462,7 +522,7 @@ sub RESPONSE_HANDLER{
     warn "In RESPONSE_HANDLER\n" if $ZMAP_DEBUG;
     my ($name, $id) = ($xml->{'response'}->{'zmapid'}, $xml->{'response'}->{'windowid'});
     if($name){
-        xclient_with_name($name, $id) if $id;
+        xclient_with_name($name, $id, "$self") if $id;
         $self->zMapSetEntryValue($name);
     }
     return ;
@@ -471,6 +531,9 @@ sub ERROR_HANDLER{
     my ($self, $status, $xml) = @_;
     $xml = $xml->{'error'}; # this is all we care about
     warn "In ERROR_HANDLER\n" if $ZMAP_DEBUG;
+    my $full = Dumper $xml;
+    warn "status $status, xml string '$full'\n" if $ZMAP_DEBUG;
+
     if($status == 400){
 
     }elsif($status == 401){
