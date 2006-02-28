@@ -12,7 +12,7 @@ use Term::ANSIColor;
 my $buser;
 GetOptions('u|user=s' => \$buser);
 
-my $sep = '-' x 60 . "\n";
+my $sep = '-' x 75 . "\n";
 
 my $pipebin = '/usr/local/lsf/bin/';
 
