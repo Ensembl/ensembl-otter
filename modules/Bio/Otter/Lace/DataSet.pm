@@ -776,7 +776,7 @@ sub store_SequenceSet {
 
     # Only attempt to connect to pipeline_db
     # if it is mentioned in the meta table.
-    if ($self->get_MetaContainer->list_value_by_key('pipeline_db')) {
+    if (@{ $otter_db->get_MetaContainer->list_value_by_key('pipeline_db') }) {
         my $pipeline_db =
           Bio::Otter::Lace::PipelineDB::get_pipeline_rw_DBAdaptor($otter_db)
           or confess "Can't connect to pipeline db";
@@ -808,7 +808,7 @@ sub store_SequenceSet {
 
             my $clone = $self->_fetch_clone($clone_adaptor, $acc, $sv, $seqfetch_code);
 
-            $self->_store_clone($dba, $clone) unless $clone->dbID;
+            $self->_store_clone($clone_adaptor, $clone) unless $clone->dbID;
             my $contig = $clone->get_all_Contigs->[0];
 
             # store the assembly
