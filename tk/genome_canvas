@@ -37,7 +37,7 @@ use Hum::EnsCmdLineDB;
     my $gene_labels     = 1;
     my $show_genes      = 1;
     my $show_repeats    = 1;
-    my $show_cpg        = 1;
+    my $show_cpg        = 0;
     my $show_gc_content = 1;
     my $homologies =    0;
     my $markers    =    0;
