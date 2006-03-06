@@ -24,8 +24,6 @@ use Bio::Otter::Lace::Defaults;
 
 use base 'MenuCanvasWindow';
 
-use MenuCanvasWindow::ZMapSeqChooser;
-
 sub new {
     my( $pkg, $tk ) = @_;
     
@@ -465,15 +463,26 @@ sub populate_menus {
     my $file = $self->make_menu('File');
 
     if($self->show_zmap) {
-        my $zmap_launch_command = sub { $self->zMapLaunchZmap };
-        $file->add('command',
-            -label          => 'Launch ZMap',
-            -command        => $zmap_launch_command,
-            -accelerator    => 'Ctrl+Z',
-            -underline      => 0,
-            );
-        $top->bind('<Control-z>', $zmap_launch_command);
-        $top->bind('<Control-Z>', $zmap_launch_command);
+        # eval uses quotes here.  Tries to use the ZMap module.  If that fails
+        # $INC{module_path} gets set, but must be deleted as we arrive here again.
+        eval "use MenuCanvasWindow::ZMapSeqChooser;";
+        if(!$@){
+            my $zmap_launch_command = sub { $self->zMapLaunchZmap };
+            $file->add('command',
+                       -label          => 'Launch ZMap',
+                       -command        => $zmap_launch_command,
+                       -accelerator    => 'Ctrl+Z',
+                       -underline      => 0,
+                       );
+            $top->bind('<Control-z>', $zmap_launch_command);
+            $top->bind('<Control-Z>', $zmap_launch_command);
+        }else{
+            delete($INC{'MenuCanvasWindow/ZMapSeqChooser.pm'});
+            delete($INC{'ZMap/Connect.pm'});
+            warn "You have show_zmap=true in your otter_config,".
+                " but I've failed to include requied modules to".
+                " make otterlace work with zmap.  The full error follows\n$@";
+        }
     }
 
     # Launce xace
