@@ -223,18 +223,18 @@ sub get_default_mutable_GeneMethod {
     }
 }
 
-sub update_ace_display{
-    my ($self , $ace) = @_ ;
+sub update_ace_display {
+    my ($self, $ace) = @_ ;
     
     
-    my $xr = $self->xace_remote  || $self->open_xace_dialogue;
+    my $xr = $self->xace_remote || $self->open_xace_dialogue;
     
     print STDERR "Sending:\n$ace";
     if ($xr) {
         $xr->load_ace($ace);
         $xr->save;
         $xr->send_command('gif ; seqrecalc');
-       
+        
         return 1;
     } else {
         $self->message("No xace attached");
@@ -1440,7 +1440,6 @@ sub edit_new_subsequence {
        return;
     }
     
-    ### Choosing the clone name is broken if subseq is on negative strand
     my( @ints, $most_3prime );
     if (@subseq) {
         # Find 3' most coordinate in subsequences
@@ -1470,7 +1469,9 @@ sub edit_new_subsequence {
     }
     
     my $clone = $self->get_CloneSeq($clone_name);
-    my $region_name = $clone->clone_name_overlapping($most_3prime) || $clone_name;
+    my $region_name = $most_3prime
+        ? $clone->clone_name_overlapping($most_3prime)
+        : $clone_name;
     #warn "Looking for clone overlapping '$most_3prime' in '$clone_name' found '$region_name'";
     
     # Trim sequence version from accession if clone_name ends .SV
