@@ -251,12 +251,9 @@ sub fetch_all_CloneSequences_for_selected_SequenceSet {
 sub status_refresh_for_SequenceSet{
     my ($self, $ss, $client) = @_;
 
-    my $pipehead = $client->option_from_array(['client', 'pipehead']);
-
     return unless Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
 
-    my $dba = $self->get_cached_DBAdaptor;
-    my $pipe_dba = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($dba);
+    my $pipehead = $client->pipehead;
 
     $self->fetch_pipeline_ctg_ids_for_SequenceSet($ss);
 
@@ -266,7 +263,7 @@ sub status_refresh_for_SequenceSet{
         $pipehead,
     );
 
-        # create a dummy hash with names only:
+    # create a dummy hash with names only:
     my $names_subhash = {};
     if(my ($any_subhash) = (values %$status_hash)[0] ) {
         while(my ($ana_name, $values) = each %$any_subhash) {
@@ -287,8 +284,6 @@ sub status_refresh_for_SequenceSet{
 
         $cs->pipelineStatus($status);
     }
-
-    Bio::Otter::Lace::SatelliteDB::disconnect_DBAdaptor($pipe_dba);
 }
 
 # used when the locks column on sequence notes needs to be refereshed , rather than query for every detail
@@ -434,7 +429,8 @@ sub fetch_pipeline_ctg_ids_for_SequenceSet{
     
     my $dba            = $self->get_cached_DBAdaptor;
     my $cloneSeqList   = $ss->CloneSequence_list();
-    my $pipeline_db    = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($dba);
+    my $pipeline_db    = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($dba)
+        or return;
     my $dbh            = $pipeline_db->db_handle();
 
     my( %ctgname_cs );
@@ -923,7 +919,7 @@ sub _store_clone {
     }
 }
 
-sub update_SequenceSet{
+sub update_SequenceSet {
     my ($self, $ss) = @_;
     # get the previous sequence_set with the same name.
     # eval { $self->get_SequenceSet_by_name($ss->name) };
@@ -937,13 +933,13 @@ sub update_SequenceSet{
     my $desc = $ss->description();
     my $pri  = $ss->priority();
     foreach my $adaptor($otter_db, $pipeline_db){
-	my $sth = $adaptor->prepare($update_meta_info);
-	$sth->execute($desc, $pri, $name);
+	    my $sth = $adaptor->prepare($update_meta_info);
+	    $sth->execute($desc, $pri, $name);
     }
 }
 
-sub refresh_locks{
-    my ($self , $ss ) = @_ ;
+sub refresh_locks {
+    my ($self, $ss) = @_ ;
     
     my $cs_list = $ss->CloneSequence_list ;
     my @contig_ids ; # or could use embl acc / version combo - but this seems simpler
@@ -981,7 +977,7 @@ sub refresh_locks{
         
 }
 
-sub delete_SequenceSet{
+sub delete_SequenceSet {
     my ($self, $ss) = @_;
 
     # database connections
@@ -993,10 +989,10 @@ sub delete_SequenceSet{
     my $name = $ss->name();
     warn "DELETING sequence set with name: $name \n";
     foreach my $adaptor($otter_db, $pipeline_db){
-	my $sth = $adaptor->prepare($delete_meta_info);
-	$sth->execute($name);
-	$sth    = $adaptor->prepare($delete_assembly);
-	$sth->execute($name);
+	    my $sth = $adaptor->prepare($delete_meta_info);
+	    $sth->execute($name);
+	    $sth    = $adaptor->prepare($delete_assembly);
+	    $sth->execute($name);
     }
 }
 

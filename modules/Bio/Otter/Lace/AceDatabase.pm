@@ -762,7 +762,8 @@ sub write_pipeline_data {
     $dataset->selected_SequenceSet($ss);    # Not necessary?
     my $ens_db = $dataset->get_cached_DBAdaptor();
     my $fetch_pipe = Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
-    if ($fetch_pipe) {
+    my $pipehead = $self->Client->pipehead;
+    if ($fetch_pipe and ! $pipehead) {
 	    my $pipe_db = Bio::Otter::Lace::PipelineDB::get_DBAdaptor($ens_db);
 	    $ens_db = $pipe_db;
         #$pipe_db->dnadb($ens_db->dnadb);
@@ -836,8 +837,13 @@ sub make_AceDataFactory {
     my @analysis_names;
     if ($fetch_all_pipeline_data) {
         @analysis_names = grep $logic_to_load->{$_}, keys %$logic_to_load;
+    }
+
+    ### This is kind of silly because we don't acutally
+    ### need the analysis object for the DNA filter.
+    if ($ens_db->isa('Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor')) {
         push(@analysis_names, 'submitcontig');
-    } else {
+    }else {
         # If we aren't fetching all the analysis, we only need the DNA
         ### Shouldn't we just have a "SubmitContig" method
         ### in the analysis table of each otter db?
@@ -873,7 +879,7 @@ sub make_AceDataFactory {
             $filt->analysis_name($logic_name);
         } else {
             my $ana = $ana_adaptor->fetch_by_logic_name($logic_name)
-                or confess "No analysis object for '$logic_name' in database";
+                or confess "No analysis object for '$logic_name' in database needed for '$filt'";
             $filt->analysis_object($ana);
         }
 
