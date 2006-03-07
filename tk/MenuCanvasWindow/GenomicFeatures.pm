@@ -147,13 +147,10 @@ sub add_genomic_feature {
             $subframe, $gf_type, $start, $end, $strand
     );
 
-    my $state = $self->write_access ? 'normal' : 'disabled';
-
     my $gf_type_menu = $subframe->Optionmenu(
        -options => [ map { [ $signal_info{$_}{fullname} => $_ ] } (keys %signal_info) ],
        -variable => \$genomic_feature->{gf_type},
        -relief       => 'flat',
-       -state       => $state,
     )->pack(-side => 'left');
 
         # It is necessary to set the current value from a separate variable.
@@ -166,21 +163,18 @@ sub add_genomic_feature {
        -textvariable => \$genomic_feature->{start},
        -width        => 10,
        -relief       => 'sunken',
-       -state       => $state,
     )->pack(-side => 'left');
 
     my $end_entry = $subframe->Entry(
        -textvariable => \$genomic_feature->{end},
        -width        => 10,
        -relief       => 'sunken',
-       -state       => $state,
     )->pack(-side => 'left');
 
     my $strand_menu = $subframe->Optionmenu(
        -options => [ map { [ $strand_name{$_} => $_ ] } (keys %strand_name) ],
        -variable => \$genomic_feature->{strand},
        -relief       => 'flat',
-       -state       => $state,
     )->pack(-side => 'left');
 
         # It is necessary to set the current value from a separate variable.
@@ -192,7 +186,6 @@ sub add_genomic_feature {
     my $delete_button = $subframe->Button(
         -text    => 'Delete',
         -command => sub { $self->delete_genomic_feature($gfid) },
-        -state  => $state,
     )->pack (-side => 'left');
 
     $self->fix_window_min_max_sizes;
@@ -244,7 +237,7 @@ sub save_to_ace {
 
     my ($current_ace_dump, $current_vectors) = $self->ace_and_vector_dump();
 
-    if($self->write_access() && ($current_ace_dump ne $self->stored_ace_dump())) {
+    if($current_ace_dump ne $self->stored_ace_dump()) {
 
         # Ok, we may need saving - but do we want it?
         if(! $force) {
@@ -294,9 +287,6 @@ sub try2save_and_quit {
 sub initialize {
     my($self) = @_;
 
-    my $write_access = $self->write_access();
-    my $state        = $write_access ? 'normal' : 'disabled';
-    
     my $file_menu = $self->make_menu('File');
     $file_menu->add('command',
         -label          => 'Reload',
@@ -308,7 +298,6 @@ sub initialize {
         -label          => 'Save',
         -command        => sub { $self->save_to_ace(1) }, # '1' means skip interactivity
         -accelerator    => 'Ctrl+S',
-        -state          => $state,
         -underline      => 1,
     );    
     $file_menu->add('command',
@@ -328,11 +317,10 @@ sub initialize {
         $add_menu->add('command',
             -label   => "$fullname (${length}bp)",
             -command => sub { $self->add_genomic_feature($gf_type); },
-            -state   => $state,
         );
     }
 
-    if(! $write_access) {
+    if(! $self->write_access()) {
         $self->menu_bar()->Label(
             -text       => 'Read Only',
             -foreground => 'red',
