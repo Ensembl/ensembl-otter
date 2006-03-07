@@ -463,6 +463,7 @@ sub populate_menus {
     # File menu
     my $file = $self->make_menu('File');
 
+    my $showing_zmap = 0;
     if($self->show_zmap) {
         # eval uses quotes here.  Tries to use the ZMap module.  If that fails
         # $INC{module_path} gets set, but must be deleted as we arrive here again.
@@ -477,6 +478,7 @@ sub populate_menus {
                        );
             $top->bind('<Control-z>', $zmap_launch_command);
             $top->bind('<Control-Z>', $zmap_launch_command);
+            $showing_zmap = 1;
         }else{
             delete($INC{'MenuCanvasWindow/ZMapSeqChooser.pm'});
             delete($INC{'ZMap/Connect.pm'});
@@ -549,7 +551,7 @@ sub populate_menus {
     ## Spawn dotter Ctrl .
     my $run_dotter_command = sub { $self->run_dotter };
     $file->add('command',
-        -label          => 'Dotter fMap hit',
+        -label          => 'Dotter fMap' . ($showing_zmap ? '/ZMap' : '').' hit',
         -hidemargin     => 1,
         -command        => $run_dotter_command,
         -accelerator    => 'Ctrl+.',
