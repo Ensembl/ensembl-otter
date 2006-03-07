@@ -25,6 +25,8 @@ use Bio::Otter::Lace::Defaults;
 
 use base 'MenuCanvasWindow';
 
+#use MenuCanvasWindow::ZMapSeqChooser;
+
 sub new {
     my( $pkg, $tk ) = @_;
     
@@ -796,9 +798,11 @@ sub populate_polyA_menu{
 }
 
 sub GenomicFeatures {
-    my ($self , $gfs) = @_ ;
+    my ($self, $gfs) = @_ ;
+
     if(defined($gfs)){
         $self->{_gfs} = $gfs;
+        weaken($self->{_gfs});
     }
     return $self->{_gfs};
 }
@@ -1823,9 +1827,9 @@ sub list_all_subseq_edit_window_names {
 }
 
 sub save_subseq_edit_window {
-    my( $self, $name, $top ) = @_;
+    my( $self, $name, $ec ) = @_;
     
-    $self->{'_subseq_edit_window'}{$name} = $top;
+    $self->{'_subseq_edit_window'}{$name} = $ec;
     weaken($self->{'_subseq_edit_window'}{$name});
 }
 
