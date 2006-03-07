@@ -130,11 +130,20 @@ sub create_genomic_feature {
 }
 
 sub add_genomic_feature {
+
     my $self    = shift @_;
     my $gf_type = shift @_;
-    my $start   = shift @_ || '';
-    my $end     = shift @_ || '';
-    my $strand  = shift @_ || 1;
+
+    my ($clip_start, $clip_end) = ($self->integers_from_clipboard(), '', '');
+    my $clip_strand = 1;
+    if($clip_start && $clip_end && ($clip_start > $clip_end)) {
+        ($clip_start, $clip_end) = ($clip_end, $clip_start);
+        $clip_strand = -1;
+    }
+
+    my $start   = shift @_ || $clip_start;
+    my $end     = shift @_ || $clip_end;
+    my $strand  = shift @_ || $clip_strand;
 
     my $subframe = $self->{_metaframe}->Frame()->pack(
         -padx   => 5,
@@ -307,7 +316,12 @@ sub initialize {
         -underline      => 1,
     );    
 
-    $self->top_window->protocol('WM_DELETE_WINDOW', sub {$self->try2save_and_quit();} );
+    my $top_window = $self->top_window();
+
+    $top_window->protocol('WM_DELETE_WINDOW', sub {$self->try2save_and_quit();} );
+    $top_window->bind('<Control-S>' , sub { $self->save_to_ace(1); } ) ;
+    $top_window->bind('<Control-s>' , sub { $self->save_to_ace(1); } ) ;
+
 
     my $add_menu = $self->make_menu('Add genomic feature');
     for my $gf_type (keys %signal_info) {
