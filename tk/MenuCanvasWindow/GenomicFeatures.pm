@@ -21,6 +21,7 @@ my %signal_info = (
     'TATA_box' => {
                         'length' => 8,
                         'fullname'  => 'TATA-box',
+                        'check'     => qr{^.{8}$},
                     },
     'RSS' => {
                         'length' => '?',
@@ -86,7 +87,7 @@ sub stored_ace_dump {
 sub ace_and_vector_dump {
     my($self) = @_;
     
-    my $header = 'Sequence "'.$self->slice_name().qq{"\n};
+    my $header = qq{Sequence "} . $self->slice_name . qq{"\n};
 
     my $ace_text = $header."-D Feature\n\n";
     my @vectors = ();
@@ -149,8 +150,6 @@ sub add_genomic_feature {
     my $strand  = shift @_ || $clip_strand;
 
     my $subframe = $self->{_metaframe}->Frame()->pack(
-        -padx   => 5,
-        -pady   => 5,
         -fill   => 'x',
         -expand => 1,
     );
@@ -159,11 +158,12 @@ sub add_genomic_feature {
             $subframe, $gf_type, $start, $end, $strand
     );
 
+    my @pack = (-side => 'left', -padx => 2);
+
     my $gf_type_menu = $subframe->Optionmenu(
        -options => [ map { [ $signal_info{$_}{fullname} => $_ ] } (keys %signal_info) ],
        -variable => \$genomic_feature->{gf_type},
-       -relief       => 'flat',
-    )->pack(-side => 'left');
+    )->pack(@pack);
 
         # It is necessary to set the current value from a separate variable.
         # If you first assign the correct value to a variable and then supply the ref,
@@ -174,20 +174,17 @@ sub add_genomic_feature {
     my $start_entry = $subframe->Entry(
        -textvariable => \$genomic_feature->{start},
        -width        => 10,
-       -relief       => 'sunken',
-    )->pack(-side => 'left');
+    )->pack(@pack);
 
     my $end_entry = $subframe->Entry(
        -textvariable => \$genomic_feature->{end},
        -width        => 10,
-       -relief       => 'sunken',
-    )->pack(-side => 'left');
+    )->pack(@pack);
 
     my $strand_menu = $subframe->Optionmenu(
        -options => [ map { [ $strand_name{$_} => $_ ] } (keys %strand_name) ],
        -variable => \$genomic_feature->{strand},
-       -relief       => 'flat',
-    )->pack(-side => 'left');
+    )->pack(@pack);
 
         # It is necessary to set the current value from a separate variable.
         # If you first assign the correct value to a variable and then supply the ref,
@@ -198,7 +195,8 @@ sub add_genomic_feature {
     my $delete_button = $subframe->Button(
         -text    => 'Delete',
         -command => sub { $self->delete_genomic_feature($gfid) },
-    )->pack (-side => 'left');
+    )->pack(@pack);
+    $delete_button->bind('<Destroy>', sub{ $self = undef });
 
     $self->fix_window_min_max_sizes;
 }
@@ -289,9 +287,6 @@ sub try2save_and_quit {
     $self->save_to_ace(0); # '0' means do it interactively
 
     $self->top_window->destroy();
-    if(my $xaceseqchooser = $self->XaceSeqChooser()) {
-        $xaceseqchooser->GenomicFeatures('');
-    }
 }
 
 # -------------[fill it in]------------------------------------
@@ -299,31 +294,43 @@ sub try2save_and_quit {
 sub initialize {
     my($self) = @_;
 
+    my $top_window = $self->top_window();
+
     my $file_menu = $self->make_menu('File');
+    my $reload = sub {
+        $self->clear_genomic_features();
+        $self->load_genomic_features()
+        };
     $file_menu->add('command',
         -label          => 'Reload',
-        -command        => sub { $self->clear_genomic_features(); $self->load_genomic_features() },
+        -command        => $reload,
         -accelerator    => 'Ctrl+R',
         -underline      => 1,
-    );    
+    );
+    $top_window->bind('<Control-R>', $reload) ;
+    $top_window->bind('<Control-r>', $reload) ;
+
+    my $save = sub { $self->save_to_ace(1); }; # '1' means skip interactivity
     $file_menu->add('command',
         -label          => 'Save',
-        -command        => sub { $self->save_to_ace(1) }, # '1' means skip interactivity
+        -command        => $save,
         -accelerator    => 'Ctrl+S',
         -underline      => 1,
     );    
+    $top_window->bind('<Control-S>', $save);
+    $top_window->bind('<Control-s>', $save);
+
+    my $close = sub { $self->try2save_and_quit() };
     $file_menu->add('command',
-        -label          => 'Quit',
-        -command        => sub { $self->try2save_and_quit() },
-        -accelerator    => 'Ctrl+Q',
+        -label          => 'Close',
+        -command        => $close,
+        -accelerator    => 'Ctrl+W',
         -underline      => 1,
-    );    
+    );
+    $top_window->protocol('WM_DELETE_WINDOW', $close);
+    $top_window->bind('<Control-W>', $close);
+    $top_window->bind('<Control-w>', $close);
 
-    my $top_window = $self->top_window();
-
-    $top_window->protocol('WM_DELETE_WINDOW', sub {$self->try2save_and_quit();} );
-    $top_window->bind('<Control-S>' , sub { $self->save_to_ace(1); } ) ;
-    $top_window->bind('<Control-s>' , sub { $self->save_to_ace(1); } ) ;
 
 
     my $add_menu = $self->make_menu('Add genomic feature');
@@ -359,6 +366,8 @@ sub initialize {
 
     my $tl = $self->top_window;
     $tl->title("Genomic features for '".$self->slice_name()."'");
+    
+    $self->canvas->Tk::bind('<Destroy>', sub{ $self = undef });
 }
 
 1;
