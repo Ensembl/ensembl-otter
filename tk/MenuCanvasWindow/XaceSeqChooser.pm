@@ -20,6 +20,7 @@ use Hum::Analysis::Factory::ExonLocator;
 use MenuCanvasWindow::ExonCanvas;
 use CanvasWindow::DotterWindow;
 use CanvasWindow::PolyAWindow;
+use MenuCanvasWindow::GenomicFeatures;
 use Bio::Otter::Lace::Defaults;
 
 use base 'MenuCanvasWindow';
@@ -769,22 +770,69 @@ sub bind_events {
 sub populate_polyA_menu{
     my ($self ) = @_;
     
+    my @clone_list = $self->clone_list;
     my $menu_frame = $self->menu_bar
             or confess 'No menu Bar';
-    my $menu = $self->make_menu("PolyA");
-    
-    my @clone_list = $self->clone_list;
-    
-    foreach my  $clone_name (@clone_list) {
 
-        #warn "adding $clone_name to polyA menu";
-        $menu->add( 'command' ,
+    my $polya_menu = $self->make_menu("PolyA");
+    foreach my  $clone_name (@clone_list) {
+        $polya_menu->add( 'command' ,
                     -label => $clone_name,    
                     -command => sub { $self->launch_polyA($clone_name) },
         );
     } 
-    
-    $menu->bind('<Destroy>', sub{ $self = undef });
+    $polya_menu->bind('<Destroy>', sub{ $self = undef });
+
+    my $gf_menu = $self->make_menu("GenomicFeatures");
+    foreach my  $clone_name (@clone_list) {
+        $gf_menu->add( 'command' ,
+                    -label => $clone_name,    
+                    -command => sub { $self->launch_GenomicFeatures($clone_name) },
+        );
+    } 
+    $gf_menu->bind('<Destroy>', sub{ $self = undef });
+}
+
+sub GenomicFeatures {
+    my ($self , $gfs) = @_ ;
+    if(defined($gfs)){
+        $self->{_gfs} = $gfs;
+    }
+    return $self->{_gfs};
+}
+
+sub launch_GenomicFeatures {
+    my( $self, $clone_name ) = @_;
+    eval {
+        if(my $gfs = $self->GenomicFeatures()) {
+
+            my $gfw = $gfs->top_window();
+            $gfw->deiconify;
+            $gfw->raise;
+        } else {
+            my $clone = $self->get_CloneSeq($clone_name); # MAKE SURE TO LOAD IT!
+
+            my $gfw = $self->canvas->Toplevel;
+
+            $gfs = MenuCanvasWindow::GenomicFeatures->new($gfw);
+            $self->GenomicFeatures($gfs);
+            $gfs->XaceSeqChooser($self);
+            $gfs->slice_name($clone_name);
+            $gfs->write_access($self->write_access());
+            $gfs->initialize;
+        }
+    };
+    if ($@) {
+        $self->exception_message("Error creating GenomicFeatures window for '$clone_name'", $@);
+    }
+}
+
+sub close_GenomicFeatures {
+    my $self = shift @_;
+
+    if(my $gfs = $self->GenomicFeatures()) {
+        $gfs->try2save_and_quit();
+    }
 }
 
 sub launch_polyA{
@@ -797,7 +845,7 @@ sub launch_polyA{
 	foreach my $hash_id(keys %$polyAs){
 	    next unless $polyAs->{"$hash_id"}->slice_name eq $clone_name;
 	    warn "launch_polyA found polyA with name : " . $polyAs->{"$hash_id"}->slice_name . "\n";
-	    $mw = $polyAs->{"$hash_id"}->toplevel;
+	    $mw = $polyAs->{"$hash_id"}->top_window;
 	    $mw->deiconify;
 	    $mw->raise;
             $mw->eventGenerate('<<redraw_polya>>'); ## redraw important part from saved data, rather than use potentially unsaved data from previous use 
@@ -806,7 +854,6 @@ sub launch_polyA{
 	    my $clone = $self->get_CloneSeq($clone_name) ;
 	    $mw = $self->canvas->Toplevel;
 	    my $polyA = CanvasWindow::PolyAWindow->new($mw);
-	    # $polyA->add_CloneSequence( $clone ) ; # added for polya
 	    $polyA->XaceSeqChooser($self);
 	    $polyA->slice_name($clone_name);
 	    $polyA->initialize;
@@ -844,7 +891,7 @@ sub close_all_PolyAWindows {
 
     foreach my $hash_id (keys %$polyAs) {
 	my $polyA = $polyAs->{"$hash_id"};
-        my $top = $polyA->toplevel;
+        my $top = $polyA->top_window;
         # Send save message
         $top->deiconify;
         $top->raise;
@@ -982,7 +1029,8 @@ sub exit_save_data {
     my $ace = $self->AceDatabase;
     unless ($self->write_access) {
         $ace->error_flag(0);
-	$self->close_all_PolyAWindows; # free some memory when read only
+        $self->close_all_PolyAWindows; # free some memory when read only
+        $self->close_GenomicFeatures;
         $self->kill_xace;
         return 1;
     }
@@ -1028,6 +1076,7 @@ sub close_all_edit_windows {
     
     $self->close_all_subseq_edit_windows or return;
     $self->close_all_PolyAWindows        or return; ### Needs looking at!
+    $self->close_GenomicFeatures;
     return 1;
 }
 
