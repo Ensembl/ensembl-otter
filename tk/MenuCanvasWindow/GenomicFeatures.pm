@@ -91,23 +91,26 @@ sub ace_and_vector_dump {
     my $ace_text = $header."-D Feature\n\n";
     my @vectors = ();
 
-    for my $subhash (sort {$a->{start} <=> $b->{start}} values %{$self->{_gfs}}) {
-        my $gf_type = $subhash->{gf_type};
-        my ($start, $end) =
-            ($subhash->{strand} == 1)
-            ? ($subhash->{start}, $subhash->{end})
-            : ($subhash->{end}, $subhash->{start});
-        my $display_label = $signal_info{$gf_type}{fullname};
-        
-        $ace_text .= $header;
-        $ace_text .= join(' ', 'Feature ', qq{"$gf_type"}, $start, $end, $score, qq{"$display_label"\n\n});
+    if(keys %{$self->{_gfs}}) {
 
-        push @vectors, [ $gf_type, $start, $end, $score, $display_label ];
+        $ace_text .= $header;
+
+        for my $subhash (sort {$a->{start} <=> $b->{start}} values %{$self->{_gfs}}) {
+            my $gf_type = $subhash->{gf_type};
+            my ($start, $end) =
+                ($subhash->{strand} == 1)
+                ? ($subhash->{start}, $subhash->{end})
+                : ($subhash->{end}, $subhash->{start});
+            my $display_label = $signal_info{$gf_type}{fullname};
+            
+            $ace_text .= join(' ', 'Feature ', qq{"$gf_type"}, $start, $end, $score, qq{"$display_label"\n});
+
+            push @vectors, [ $gf_type, $start, $end, $score, $display_label ];
+        }
+
+        $ace_text .= "\n";
     }
 
-    # print STDERR "*************** <ACEDUMP> ********************\n";
-    # print STDERR $ace_text;
-    # print STDERR "*************** </ACEDUMP> ********************\n\n\n";
     return ($ace_text, \@vectors);
 }
 
