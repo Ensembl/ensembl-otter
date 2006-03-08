@@ -843,7 +843,7 @@ sub get_all_DataSets {
     return @$ds;
 }
 
-sub get_all_SequenceSets_for_DataSet{
+sub get_all_SequenceSets_for_DataSet {
     my( $self, $dsObj ) = @_;
 
     return [] unless $dsObj;

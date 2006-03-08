@@ -174,7 +174,7 @@ sub get_all_SequenceSets {
         my $sth = $dba->prepare(q{
             SELECT assembly_type
               , description
-	      , analysis_priority
+	          , analysis_priority
               , hide
               , vega_set_id
             FROM sequence_set
@@ -200,7 +200,7 @@ sub get_all_SequenceSets {
             $set->name($name);
             $set->dataset_name($ds_name);
             $set->description($desc);
-	    $set->priority($priority);
+	        $set->priority($priority);
             $set->is_hidden($hide eq 'Y');
             $set->vega_set_id($vega_id);
             $set->write_access($write_flag);
@@ -809,8 +809,9 @@ sub store_SequenceSet {
 
             # store the assembly
             $insert_sth->execute(
-                $cloneSeq->chromosome, $cloneSeq->chr_start,
-                $cloneSeq->chr_end,    $cloneSeq->super_contig_name,
+                $is_pipe ? $cloneSeq->pipeline_chromosome : $cloneSeq->chromosome,
+                $cloneSeq->chr_start,  $cloneSeq->chr_end,
+                $cloneSeq->super_contig_name,
                 $cloneSeq->chr_start,  $cloneSeq->chr_end,
                 1,    # super_contig_orientation
                 $contig->dbID,         $cloneSeq->contig_start,
