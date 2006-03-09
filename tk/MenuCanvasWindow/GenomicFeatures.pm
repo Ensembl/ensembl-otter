@@ -24,7 +24,6 @@ my %signal_info = (
                         'check'     => qr{^.{8}$},
                     },
     'RSS' => {
-                        'length' => '?',
                         'fullname'  => 'Recombination signal sequence',
                     },
 );
@@ -133,6 +132,23 @@ sub create_genomic_feature {
     return ($gfid, $self->{_gfs}{$gfid});
 }
 
+sub update_entry {
+    my ($genomic_feature, $this_key) = @_;
+
+    my $gf_type   = $genomic_feature->{gf_type};
+    my $length    = $signal_info{$gf_type}{length};
+    my $this_value= $genomic_feature->{$this_key};
+
+    if($length && ($this_value=~/^\d+$/) ) {
+
+        my ($other_key, $diff_sign) = ($this_key eq 'start') ? ('end', 1) : ('start', -1);
+
+        $genomic_feature->{$other_key} =
+              $this_value
+            + $diff_sign * $genomic_feature->{strand} * ($length-1);
+    }
+}
+
 sub add_genomic_feature {
 
     my $self    = shift @_;
@@ -175,11 +191,13 @@ sub add_genomic_feature {
        -textvariable => \$genomic_feature->{start},
        -width        => 10,
     )->pack(@pack);
+    $start_entry->bind('<Return>', sub { update_entry($genomic_feature, 'start'); } );
 
     my $end_entry = $subframe->Entry(
        -textvariable => \$genomic_feature->{end},
        -width        => 10,
     )->pack(@pack);
+    $end_entry->bind('<Return>', sub { update_entry($genomic_feature, 'end'); } );
 
     my $strand_menu = $subframe->Optionmenu(
        -options => [ map { [ $strand_name{$_} => $_ ] } (keys %strand_name) ],
