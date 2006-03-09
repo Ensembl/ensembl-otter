@@ -132,7 +132,7 @@ sub create_genomic_feature {
     return ($gfid, $self->{_gfs}{$gfid});
 }
 
-sub update_entry {
+sub recalc_coords_via_length {
     my ($genomic_feature, $this_key) = @_;
 
     my $gf_type   = $genomic_feature->{gf_type};
@@ -149,17 +149,38 @@ sub update_entry {
     }
 }
 
-sub add_genomic_feature {
+sub start_stop_strand_from_clipboard {
+    my $self = shift @_;
 
+    my @ints = $self->integers_from_clipboard();
+    if(scalar(@ints) != 2) {
+        return ('', '', 1);
+    } elsif($ints[0]<$ints[1]) {
+        return ($ints[0], $ints[1], 1);
+    } else {
+        return ($ints[1], $ints[0], -1);
+    }
+}
+
+sub paste_coords_into_entry {
+    my ($self, $genomic_feature, $strand_menu) = @_;
+
+    my ($clip_start, $clip_end, $clip_strand) = $self->start_stop_strand_from_clipboard();
+    if($clip_start) {
+        $genomic_feature->{start}  = $clip_start;
+        $genomic_feature->{end}    = $clip_end;
+
+            # strictly in this order!
+        $strand_menu->setOption($strand_name{$clip_strand}, $clip_strand);
+        $genomic_feature->{strand} = $clip_strand;
+    }
+}
+
+sub add_genomic_feature {
     my $self    = shift @_;
     my $gf_type = shift @_;
 
-    my ($clip_start, $clip_end) = ($self->integers_from_clipboard(), '', '');
-    my $clip_strand = 1;
-    if($clip_start && $clip_end && ($clip_start > $clip_end)) {
-        ($clip_start, $clip_end) = ($clip_end, $clip_start);
-        $clip_strand = -1;
-    }
+    my ($clip_start, $clip_end, $clip_strand) = $self->start_stop_strand_from_clipboard();
 
     my $start   = shift @_ || $clip_start;
     my $end     = shift @_ || $clip_end;
@@ -191,13 +212,13 @@ sub add_genomic_feature {
        -textvariable => \$genomic_feature->{start},
        -width        => 10,
     )->pack(@pack);
-    $start_entry->bind('<Return>', sub { update_entry($genomic_feature, 'start'); } );
+    $start_entry->bind('<Return>', sub { recalc_coords_via_length($genomic_feature, 'start'); } );
 
     my $end_entry = $subframe->Entry(
        -textvariable => \$genomic_feature->{end},
        -width        => 10,
     )->pack(@pack);
-    $end_entry->bind('<Return>', sub { update_entry($genomic_feature, 'end'); } );
+    $end_entry->bind('<Return>', sub { recalc_coords_via_length($genomic_feature, 'end'); } );
 
     my $strand_menu = $subframe->Optionmenu(
        -options => [ map { [ $strand_name{$_} => $_ ] } (keys %strand_name) ],
@@ -217,6 +238,16 @@ sub add_genomic_feature {
     $delete_button->bind('<Destroy>', sub{ $self = undef });
 
     $self->fix_window_min_max_sizes;
+    
+        # bindings:
+    my $paste_callback = sub { $self->paste_coords_into_entry($genomic_feature, $strand_menu); };
+
+    for my $widget ($gf_type_menu, $start_entry, $end_entry, $strand_menu) {
+        for my $event ('<<Paste>>', '<ButtonRelease-2>') {
+            $widget->bind($event, $paste_callback);
+        }
+        $widget->bind('<Destroy>', sub{ $self=$genomic_feature=$strand_menu=undef; } );
+    }
 }
 
 sub load_genomic_features {
@@ -357,7 +388,7 @@ sub initialize {
         my $length   = $signal_info{$gf_type}{length};
 
         $add_menu->add('command',
-            -label   => "$fullname (${length}bp)",
+            -label   => $fullname.($length ? " (${length}bp)" : ''),
             -command => sub { $self->add_genomic_feature($gf_type); },
         );
     }
