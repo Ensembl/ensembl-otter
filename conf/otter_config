@@ -63,7 +63,7 @@ refseq_chicken=0
 refseq_human=0
 
 [default.filter.RepeatMask]
-module=Bio::EnsEMBL::Ace::Filter::Repeatmasker
+module=Bio::EnsEMBL::Ace::Filter::RepeatMasker
 
 [default.filter.trf]
 module=Bio::EnsEMBL::Ace::Filter::TRF

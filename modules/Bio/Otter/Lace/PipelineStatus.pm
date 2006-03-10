@@ -30,7 +30,7 @@ sub add_analysis {
 
     if(@$values) {
         $self->entry($ana_name, { 'created' => shift @$values, 'version' => shift @$values });
-        $self->{'completed_count'}++;
+        $self->{completed_count}++;
     } else {
         $self->entry($ana_name, {});
     }
