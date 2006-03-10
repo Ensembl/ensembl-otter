@@ -841,12 +841,9 @@ sub make_AceDataFactory {
 
     ### This is kind of silly because we don't acutally
     ### need the analysis object for the DNA filter.
-    if ($ens_db->isa('Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor')) {
+    if ($ana_adaptor->fetch_by_logic_name('submitcontig')) {
         push(@analysis_names, 'submitcontig');
-    }else {
-        # If we aren't fetching all the analysis, we only need the DNA
-        ### Shouldn't we just have a "SubmitContig" method
-        ### in the analysis table of each otter db?
+    } else {
         push(@analysis_names, 'otter');
     }
 

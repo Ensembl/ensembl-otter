@@ -239,7 +239,7 @@ sub highlight_evidence_by_name {
                 $ace->raw_query(qq{find $class "$prefix$acc$sv"});
                 my $txt =
                   Hum::Ace::AceText->new($ace->raw_query(qq{show -a DNA_homol}));
-                #print STDERR $$txt;
+                print STDERR $$txt;
                 my @seq = map $_->[1], $txt->get_values($class) or next;
                 if (@seq > 1) {
                     $self->message(join '', "Got multiple matches:\n", map "  $_\n", @seq);

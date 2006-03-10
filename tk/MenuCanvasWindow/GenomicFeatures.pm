@@ -233,11 +233,12 @@ sub add_genomic_feature {
 
     my $delete_button = $subframe->Button(
         -text    => 'Delete',
-        -command => sub { $self->delete_genomic_feature($gfid) },
+        -command => sub {
+            $self->delete_genomic_feature($gfid);
+            $self->fix_window_min_max_sizes;
+            },
     )->pack(@pack);
     $delete_button->bind('<Destroy>', sub{ $self = undef });
-
-    $self->fix_window_min_max_sizes;
     
         # bindings:
     my $paste_callback = sub { $self->paste_coords_into_entry($genomic_feature, $strand_menu); };
@@ -269,6 +270,8 @@ sub load_genomic_features {
     my ($current_ace_dump, $current_vectors) = $self->ace_and_vector_dump();
 
     $self->stored_ace_dump($current_ace_dump);
+    
+    $self->fix_window_min_max_sizes;
 }
 
 # -------------[removing things]-------------------------------
@@ -389,7 +392,10 @@ sub initialize {
 
         $add_menu->add('command',
             -label   => $fullname.($length ? " (${length}bp)" : ''),
-            -command => sub { $self->add_genomic_feature($gf_type); },
+            -command => sub {
+                $self->add_genomic_feature($gf_type);
+                $self->fix_window_min_max_sizes;
+                },
         );
     }
 
@@ -412,6 +418,7 @@ sub initialize {
     $self->canvas->configure(-background => $self->{_metaframe}->cget('-background') );
 
     $self->load_genomic_features();
+
 
     my $tl = $self->top_window;
     $tl->title("Genomic features for '".$self->slice_name()."'");

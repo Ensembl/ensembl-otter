@@ -19,7 +19,6 @@ use Hum::Ace;
 use Hum::Analysis::Factory::ExonLocator;
 use MenuCanvasWindow::ExonCanvas;
 use CanvasWindow::DotterWindow;
-use CanvasWindow::PolyAWindow;
 use MenuCanvasWindow::GenomicFeatures;
 use Bio::Otter::Lace::Defaults;
 
@@ -57,8 +56,8 @@ sub AceDatabase {
     return $self->{'_AceDatabase'};
 }
 
-sub SequenceNotes{
-    my ($self , $sn) = @_ ;
+sub SequenceNotes {
+    my ($self, $sn) = @_ ;
     
     if ($sn){
         $self->{'_sequence_notes'} = $sn ;
@@ -83,9 +82,7 @@ sub initialize {
     
     $self->draw_clone_list;
     
-    ## populate polyA menu here
-    ## wasn't possible to do it at the same time as other menus, as AceDB object wasnt added at that point.    
-    $self->populate_polyA_menu();
+    $self->populate_Features_menu;
     
     $self->_make_search;
     unless ($self->write_access) {
@@ -771,23 +768,14 @@ sub bind_events {
 }
 
 ## needs to be called when drawing the clone_sequences (clone sequence details not present when other menus are created)
-sub populate_polyA_menu{
-    my ($self ) = @_;
+sub populate_Features_menu {
+    my ($self) = @_;
     
     my @clone_list = $self->clone_list;
     my $menu_frame = $self->menu_bar
             or confess 'No menu Bar';
 
-    my $polya_menu = $self->make_menu("PolyA");
-    foreach my  $clone_name (@clone_list) {
-        $polya_menu->add( 'command' ,
-                    -label => $clone_name,    
-                    -command => sub { $self->launch_polyA($clone_name) },
-        );
-    } 
-    $polya_menu->bind('<Destroy>', sub{ $self = undef });
-
-    my $gf_menu = $self->make_menu("GenomicFeatures");
+    my $gf_menu = $self->make_menu("Features");
     foreach my  $clone_name (@clone_list) {
         $gf_menu->add( 'command' ,
                     -label => $clone_name,    
@@ -841,90 +829,6 @@ sub close_GenomicFeatures {
     }
 }
 
-sub launch_polyA{
-    my( $self, $clone_name ) = @_;
-       
-    eval {
-	my $mw = undef;
-	my $polyAs = $self->get_all_PolyAWindows();
-	
-	foreach my $hash_id(keys %$polyAs){
-	    next unless $polyAs->{"$hash_id"}->slice_name eq $clone_name;
-	    warn "launch_polyA found polyA with name : " . $polyAs->{"$hash_id"}->slice_name . "\n";
-	    $mw = $polyAs->{"$hash_id"}->top_window;
-	    $mw->deiconify;
-	    $mw->raise;
-            $mw->eventGenerate('<<redraw_polya>>'); ## redraw important part from saved data, rather than use potentially unsaved data from previous use 
-	}
-	unless ($mw){
-	    my $clone = $self->get_CloneSeq($clone_name) ;
-	    $mw = $self->canvas->Toplevel;
-	    my $polyA = CanvasWindow::PolyAWindow->new($mw);
-	    $polyA->XaceSeqChooser($self);
-	    $polyA->slice_name($clone_name);
-	    $polyA->initialize;
-	    $polyA->draw;
-	    
-	    $self->add_PolyAWindow($polyA);
-	}
-    };
-    if ($@) {
-	$self->exception_message("Error creating PolyA window for '$clone_name'", $@);
-    }
-}
-sub add_PolyAWindow{
-    my ($self, $polyA) = @_;
-    $self->{'_PolyAWindows'}{"$polyA"} = $polyA;
-}
-sub get_all_PolyAWindows{
-    my ($self) = @_;
-    return $self->{'_PolyAWindows'};
-}
-sub delete_PolyAWindow {
-    my( $self, $polyA ) = @_;
-    $self->{'_PolyAWindows'}{"$polyA"} = undef;
-    delete $self->{'_PolyAWindows'}->{"$polyA"};
-}
-sub withdraw_PolyAWindow {
-    my( $self, $polyA ) = @_;
-    $self->{'_PolyAWindows'}{"$polyA"}->toplevel->withdraw();
-}
-
-sub close_all_PolyAWindows {
-    my( $self ) = @_;
-
-    my $polyAs = $self->get_all_PolyAWindows();
-
-    foreach my $hash_id (keys %$polyAs) {
-	my $polyA = $polyAs->{"$hash_id"};
-        my $top = $polyA->top_window;
-        # Send save message
-        $top->deiconify;
-        $top->raise;
-        $top->update;
-        $top->focus;
-
-        my $opt = $polyA->close_window();
-	# wanted to use this method, but eventGenerate() doesn't seem to return
-	# the value of the code it executes for you.
-	# my $opt = $top->eventGenerate('<Control-w>');
-
-	# so $opt = 1 unless user hit cancel
-
-	# clean out the cache of polyAs, unless user hit cancel at some point
-	$self->delete_PolyAWindow($polyA) if $opt;
-
-	# not sure this was right
-	# if ($top) {
-	#     warn "polyA edit window '$hash_id' was not closed its still a $top\n";
-	#     return 0;
-	# }
-    }
-    $polyAs = $self->get_all_PolyAWindows() || {};
-    # check that all the polyAWindows have been removed
-    # return 0 if there are still polyAs
-    return scalar(keys %$polyAs) ? 0 : 1;
-}
 
 {
     my( @holding_pen );
@@ -1035,7 +939,6 @@ sub exit_save_data {
     my $ace = $self->AceDatabase;
     unless ($self->write_access) {
         $ace->error_flag(0);
-        $self->close_all_PolyAWindows; # free some memory when read only
         $self->close_GenomicFeatures;
         $self->kill_xace;
         return 1;
@@ -1081,7 +984,6 @@ sub close_all_edit_windows {
     my( $self ) = @_;
     
     $self->close_all_subseq_edit_windows or return;
-    $self->close_all_PolyAWindows        or return; ### Needs looking at!
     $self->close_GenomicFeatures;
     return 1;
 }
