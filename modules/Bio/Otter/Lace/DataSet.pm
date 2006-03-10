@@ -276,7 +276,12 @@ sub status_refresh_for_SequenceSet{
 
         my $status = Bio::Otter::Lace::PipelineStatus->new;
         my $contig_name = $cs->contig_name();
+        
         my $status_subhash = $status_hash->{$contig_name} || $names_subhash;
+
+        if($status_subhash == $names_subhash) {
+            warn "had to assign an empty subhash to contig '$contig_name'";
+        }
 
         while(my ($ana_name, $values) = each %$status_subhash) {
             $status->add_analysis($ana_name, $values);

@@ -140,6 +140,8 @@ sub do_getopt {
         },
         'log-file=s' => sub { die "log-file option is obsolete - use logdir" },
 
+        # 'prebinpath=s' => sub { $ENV{PATH} = "$_[1]:$ENV{PATH}"; },
+
         # these are the caller script's options
         @script_args,
       )
