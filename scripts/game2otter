@@ -273,25 +273,43 @@ sub end {
                 print "    <translation_end>$translation_end</translation_end>\n";
             }
 
+            # Supporting evidence
             print "    <evidence_set>\n";
             foreach my $e (@transcript_cdna_evidence) {
                 print
-"      <evidence>\n        <name>$e</name>\n        <type>cDNA</type>\n      </evidence>\n";
+                    "      <evidence>\n",
+                    "        <name>$e</name>\n",
+                    "        <type>cDNA</type>\n",
+                    "      </evidence>\n";
             }
             foreach my $e (@transcript_est_evidence) {
                 print
-"      <evidence>\n        <name>$e</name>\n        <type>EST</type>\n      </evidence>\n";
+                    "      <evidence>\n",
+                    "        <name>$e</name>\n",
+                    "        <type>EST</type>\n",
+                    "      </evidence>\n";
             }
             foreach my $e (@transcript_protein_evidence) {
                 print
-"      <evidence>\n        <name>$e</name>\n        <type>Protein</type>\n      </evidence>\n";
+                    "      <evidence>\n",
+                    "        <name>$e</name>\n",
+                    "        <type>Protein</type>\n",
+                    "      </evidence>\n";
             }
-            print "    </evidence_set>\n    <exon_set>\n";
+            print "    </evidence_set>\n";
+            
+            # Exons
+            print "    <exon_set>\n";
             for (my $i = 0 ; $i < @exon_start ; $i++) {
                 print
-"      <exon>\n        <start>$exon_start[$i]</start>\n        <end>$exon_end[$i]</end>\n        <strand>$exon_strand[$i]</strand>\n      </exon>\n";
+                    "      <exon>\n",
+                    "        <start>$exon_start[$i]</start>\n",
+                    "        <end>$exon_end[$i]</end>\n",
+                    "        <strand>$exon_strand[$i]</strand>\n",
+                    "      </exon>\n";
             }
             print "    </exon_set>\n";
+
             if (@featureset) {
                 foreach my $e (@featureset) {
                     my $featuretype;
