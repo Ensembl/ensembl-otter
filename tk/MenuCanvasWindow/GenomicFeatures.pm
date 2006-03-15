@@ -200,11 +200,13 @@ sub change_of_gf_type_callback {
     my ($genomic_feature) = @_;
 
     my $si = $signal_info{$genomic_feature->{gf_type}};
+    my @enable  = (-state => 'normal',   -background => 'white');
+    my @disable = (-state => 'disabled', -background => 'grey' );
     $genomic_feature->{score_entry}->configure(
-        -state => $si->{edit_score} ? 'normal' : 'disabled'
+        $si->{edit_score} ? @enable : @disable
     );
     $genomic_feature->{display_label_entry}->configure(
-        -state => $si->{edit_display_label} ? 'normal' : 'disabled'
+        $si->{edit_display_label} ? @enable : @disable
     );
 }
 
