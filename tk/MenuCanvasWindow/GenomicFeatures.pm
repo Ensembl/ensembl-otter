@@ -21,13 +21,14 @@ my %signal_info = (
     'TATA_box' => {
         'length'   => 8,
         'fullname' => 'TATA-box',
-        'check'    => qr{^.{8}$},
     },
     'RSS'    => {
         'fullname' => 'Recombination signal sequence',
-        },
+    },
     'EUCOMM' => {
         'fullname'  => 'exon(s) targetted for EUCOMM knockout',
+        'edit_score'         => 1,
+        'edit_display_label' => 1,
     },
 );
 
@@ -36,7 +37,12 @@ my %strand_name = (
     -1 => 'reverse',
 );
 
-my $score = 0.5;
+my %arrow = (
+     1 => '==>',
+    -1 => '<==',
+);
+
+my $def_score = 0.5;
 
 # ---------------[getters/setters]----------------
 
@@ -104,9 +110,10 @@ sub ace_and_vector_dump {
                 ($subhash->{strand} == 1)
                 ? ($subhash->{start}, $subhash->{end})
                 : ($subhash->{end}, $subhash->{start});
-            my $display_label = $signal_info{$gf_type}{fullname};
+            my $score = $subhash->{score} || $def_score;
+            my $display_label = $subhash->{display_labe} || $signal_info{$gf_type}{fullname};
             
-            $ace_text .= join(' ', 'Feature ', qq{"$gf_type"}, $start, $end, $score, qq{"$display_label"\n});
+            $ace_text .= join(' ', 'Feature', qq{"$gf_type"}, $start, $end, $score, qq{"$display_label"\n});
 
             push @vectors, [ $gf_type, $start, $end, $score, $display_label ];
         }
@@ -120,7 +127,7 @@ sub ace_and_vector_dump {
 # -------------[adding things]-------------------------------
 
 sub create_genomic_feature {
-    my ($self, $subframe, $gf_type, $start, $end, $strand) = @_;
+    my ($self, $subframe, $gf_type, $start, $end, $strand, $score, $display_label) = @_;
 
     my $gfid = ++$self->{_gfid}; # will be uniquely identifying items in the list
 
@@ -128,6 +135,8 @@ sub create_genomic_feature {
         'start'    => $start,
         'end'      => $end,
         'strand'   => $strand,
+        'score'    => $score,
+        'display_label' => $display_label,
         'gf_type'  => $gf_type,
         'subframe' => $subframe,
     };
@@ -165,8 +174,8 @@ sub start_stop_strand_from_clipboard {
     }
 }
 
-sub paste_coords_into_entry {
-    my ($self, $genomic_feature, $strand_menu) = @_;
+sub paste_coords_callback {
+    my ($self, $genomic_feature) = @_;
 
     my ($clip_start, $clip_end, $clip_strand) = $self->start_stop_strand_from_clipboard();
     if($clip_start) {
@@ -174,20 +183,42 @@ sub paste_coords_into_entry {
         $genomic_feature->{end}    = $clip_end;
 
             # strictly in this order!
-        $strand_menu->setOption($strand_name{$clip_strand}, $clip_strand);
+        $genomic_feature->{strand_menu}->setOption($strand_name{$clip_strand}, $clip_strand);
         $genomic_feature->{strand} = $clip_strand;
     }
+}
+
+sub change_of_direction_callback {
+    my ($genomic_feature) = @_;
+
+    $genomic_feature->{direction_arrow}->configure(
+        -text => $arrow{$genomic_feature->{strand}}
+    );
+}
+
+sub change_of_gf_type_callback {
+    my ($genomic_feature) = @_;
+
+    my $si = $signal_info{$genomic_feature->{gf_type}};
+    $genomic_feature->{score_entry}->configure(
+        -state => $si->{edit_score} ? 'normal' : 'disabled'
+    );
+    $genomic_feature->{display_label_entry}->configure(
+        -state => $si->{edit_display_label} ? 'normal' : 'disabled'
+    );
 }
 
 sub add_genomic_feature {
     my $self    = shift @_;
     my $gf_type = shift @_;
 
-    my ($clip_start, $clip_end, $clip_strand) = $self->start_stop_strand_from_clipboard();
+    # my ($clip_start, $clip_end, $clip_strand) = $self->start_stop_strand_from_clipboard();
 
-    my $start   = shift @_ || $clip_start;
-    my $end     = shift @_ || $clip_end;
-    my $strand  = shift @_ || $clip_strand;
+    my $start   = shift @_ || ''; # $clip_start;
+    my $end     = shift @_ || ''; # $clip_end;
+    my $strand  = shift @_ ||  1; # $clip_strand;
+    my $score   = shift @_ || '';
+    my $display_label = shift @_ || '';
 
     my $subframe = $self->{_metaframe}->Frame()->pack(
         -fill   => 'x',
@@ -195,44 +226,45 @@ sub add_genomic_feature {
     );
 
     my ($gfid, $genomic_feature) = $self->create_genomic_feature(
-            $subframe, $gf_type, $start, $end, $strand
+            $subframe, $gf_type, $start, $end, $strand, $score, $display_label
     );
 
     my @pack = (-side => 'left', -padx => 2);
 
-    my $gf_type_menu = $subframe->Optionmenu(
+    $genomic_feature->{gf_type_menu} = $subframe->Optionmenu(
        -options => [ map { [ $signal_info{$_}{fullname} => $_ ] } (keys %signal_info) ],
        -variable => \$genomic_feature->{gf_type},
     )->pack(@pack);
 
-        # It is necessary to set the current value from a separate variable.
-        # If you first assign the correct value to a variable and then supply the ref,
-        # it will do something opposite to normal intuition: spoil the original value
-        # by assigning the one that gets assigned by the interface.
-    $gf_type_menu->setOption($signal_info{$gf_type}{fullname}, $gf_type);
-
-    my $start_entry = $subframe->Entry(
+    $genomic_feature->{start_entry} = $subframe->Entry(
        -textvariable => \$genomic_feature->{start},
        -width        => 10,
     )->pack(@pack);
-    $start_entry->bind('<Return>', sub { recalc_coords_via_length($genomic_feature, 'start'); } );
+    $genomic_feature->{start_entry}->bind('<Return>', sub { recalc_coords_via_length($genomic_feature, 'start'); } );
 
-    my $end_entry = $subframe->Entry(
+    $genomic_feature->{direction_arrow} = $subframe->Label(
+    )->pack(@pack);
+
+    $genomic_feature->{end_entry} = $subframe->Entry(
        -textvariable => \$genomic_feature->{end},
        -width        => 10,
     )->pack(@pack);
-    $end_entry->bind('<Return>', sub { recalc_coords_via_length($genomic_feature, 'end'); } );
+    $genomic_feature->{end_entry}->bind('<Return>', sub { recalc_coords_via_length($genomic_feature, 'end'); } );
 
-    my $strand_menu = $subframe->Optionmenu(
+    $genomic_feature->{strand_menu} = $subframe->Optionmenu(
        -options => [ map { [ $strand_name{$_} => $_ ] } (keys %strand_name) ],
        -variable => \$genomic_feature->{strand},
     )->pack(@pack);
 
-        # It is necessary to set the current value from a separate variable.
-        # If you first assign the correct value to a variable and then supply the ref,
-        # it will do something opposite to normal intuition: spoil the original value
-        # by assigning the one that gets assigned by the interface.
-    $strand_menu->setOption($strand_name{$strand}, $strand);
+    $genomic_feature->{score_entry} = $subframe->Entry(
+       -textvariable => \$genomic_feature->{score},
+       -width        => 10,
+    )->pack(@pack);
+
+    $genomic_feature->{display_label_entry} = $subframe->Entry(
+       -textvariable => \$genomic_feature->{display_label},
+       -width        => 10,
+    )->pack(@pack);
 
     my $delete_button = $subframe->Button(
         -text    => 'Delete',
@@ -244,14 +276,30 @@ sub add_genomic_feature {
     $delete_button->bind('<Destroy>', sub{ $self = undef });
     
         # bindings:
-    my $paste_callback = sub { $self->paste_coords_into_entry($genomic_feature, $strand_menu); };
+    my $paste_callback = sub { $self->paste_coords_callback($genomic_feature); };
 
-    for my $widget ($gf_type_menu, $start_entry, $end_entry, $strand_menu) {
+    for my $widget ('gf_type_menu', 'start_entry', 'end_entry', 'strand_menu') {
         for my $event ('<<Paste>>', '<ButtonRelease-2>') {
-            $widget->bind($event, $paste_callback);
+            $genomic_feature->{$widget}->bind($event, $paste_callback);
         }
-        $widget->bind('<Destroy>', sub{ $self=$genomic_feature=$strand_menu=undef; } );
+        $genomic_feature->{$widget}->bind('<Destroy>', sub{ $self=$genomic_feature=undef; } );
     }
+
+        # unfortunately, you cannot bind these before the whole widget is made,
+        # as it tends to activate the -command on creation
+    $genomic_feature->{gf_type_menu}->configure(
+       -command => sub { change_of_gf_type_callback($genomic_feature); },
+    );
+    $genomic_feature->{strand_menu}->configure(
+       -command  => sub { change_of_direction_callback($genomic_feature); },
+    );
+
+        # It is necessary to set the current value from a separate variable.
+        # If you first assign the correct value to a variable and then supply the ref,
+        # it will do something opposite to normal intuition: spoil the original value
+        # by assigning the one that gets assigned by the interface.
+    $genomic_feature->{gf_type_menu}->setOption($signal_info{$gf_type}{fullname}, $gf_type);
+    $genomic_feature->{strand_menu}->setOption($strand_name{$strand}, $strand);
 }
 
 sub load_genomic_features {
@@ -261,11 +309,13 @@ sub load_genomic_features {
 
         foreach my $vector ( $clone->get_SimpleFeatures('') ) {
 
-            my ($gf_type, $start, $end) = @$vector;
+            my ($gf_type, $start, $end, $score, $display_label) = @$vector;
 
             $self->add_genomic_feature(
                 $gf_type,
-                ($start<$end) ? ($start, $end, 1) : ($end, $start, -1)
+                ($start<$end) ? ($start, $end, 1) : ($end, $start, -1),
+                $score,
+                $display_label
             );
         }
     }
@@ -339,7 +389,11 @@ sub save_to_ace {
 sub try2save_and_quit {
     my $self = shift @_;
 
-    $self->save_to_ace(0); # '0' means do it interactively
+    if($self->XaceSeqChooser()) {
+        $self->save_to_ace(0); # '0' means do it interactively
+    } else {
+        print STDERR "No XaceSeqChooser, nowhere to write\n";
+    }
 
     $self->top_window->destroy();
 }
@@ -356,7 +410,7 @@ sub initialize {
         $self->clear_genomic_features();
         $self->load_genomic_features()
         };
-    $file_menu->add('command',
+    $file_menu->command(
         -label          => 'Reload',
         -command        => $reload,
         -accelerator    => 'Ctrl+R',
@@ -366,7 +420,7 @@ sub initialize {
     $top_window->bind('<Control-r>', $reload) ;
 
     my $save = sub { $self->save_to_ace(1); }; # '1' means skip interactivity
-    $file_menu->add('command',
+    $file_menu->command(
         -label          => 'Save',
         -command        => $save,
         -accelerator    => 'Ctrl+S',
@@ -376,7 +430,7 @@ sub initialize {
     $top_window->bind('<Control-s>', $save);
 
     my $close = sub { $self->try2save_and_quit() };
-    $file_menu->add('command',
+    $file_menu->command(
         -label          => 'Close',
         -command        => $close,
         -accelerator    => 'Ctrl+W',
@@ -386,14 +440,29 @@ sub initialize {
     $top_window->bind('<Control-W>', $close);
     $top_window->bind('<Control-w>', $close);
 
-
+if(0) {
+    $self->{_direction} = -1;
+    my $view_menu = $self->make_menu('View');
+    $view_menu->radiobutton(
+        -label    => 'Along ~assembly mode',
+        -variable => \$self->{_direction},
+        -value    => -1,
+        -command  => sub { print STDERR "along assembly mode\n"; },
+    );
+    $view_menu->radiobutton(
+        -label    => '~Left-to-right mode',
+        -variable => \$self->{_direction},
+        -value    =>  1,
+        -command  => sub { print STDERR "left-to-right mode\n"; },
+    );
+}
 
     my $add_menu = $self->make_menu('Add genomic feature');
     for my $gf_type (keys %signal_info) {
         my $fullname = $signal_info{$gf_type}{fullname};
         my $length   = $signal_info{$gf_type}{length};
 
-        $add_menu->add('command',
+        $add_menu->command(
             -label   => $fullname.($length ? " (${length}bp)" : ''),
             -command => sub {
                 $self->add_genomic_feature($gf_type);
