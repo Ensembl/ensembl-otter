@@ -111,7 +111,6 @@ sub start {
     $geneflag = 1;
     $generef={};
     $transcript_count=-1;
-    #$exon_count=-1;
   }
   elsif ($tag eq "feature_set") {
     $geneflag = 0;
@@ -163,8 +162,8 @@ sub char {
       $exon_start = $value;
     }
     elsif ($element eq "end") {
-#      if ($current_type eq "exon" ) {
-      if ($current_type eq "exon" || $current_type eq "start_codon") {
+      if ($current_type eq "exon" ) {
+#      if ($current_type eq "exon" || $current_type eq "start_codon") {
 	$exon_count++;
     my $exon = $generef->{transcript}->[$transcript_count]->{exon_set}->[$exon_count] = {};
 	if ($exon_start < $value) {
