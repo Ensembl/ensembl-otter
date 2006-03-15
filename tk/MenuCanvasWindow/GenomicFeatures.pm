@@ -161,39 +161,46 @@ sub recalc_coords_callback {
     }
 }
 
-sub start_stop_strand_from_clipboard {
-    my $self = shift @_;
-
-    my @ints = $self->integers_from_clipboard();
-    if(scalar(@ints) != 2) {
-        return ('', '', 1);
-    } elsif($ints[0]<$ints[1]) {
-        return ($ints[0], $ints[1], 1);
-    } else {
-        return ($ints[1], $ints[0], -1);
-    }
-}
-
-sub paste_coords_callback {
-    my ($self, $genomic_feature) = @_;
-
-    my ($clip_start, $clip_end, $clip_strand) = $self->start_stop_strand_from_clipboard();
-    if($clip_start) {
-        $genomic_feature->{start}  = $clip_start;
-        $genomic_feature->{end}    = $clip_end;
-
-            # strictly in this order!
-        $genomic_feature->{strand_menu}->setOption($strand_name{$clip_strand}, $clip_strand);
-        $genomic_feature->{strand} = $clip_strand;
-    }
-}
-
 sub show_direction_callback {
     my ($genomic_feature) = @_;
 
     $genomic_feature->{direction_button}->configure(
         -text => $arrow{$genomic_feature->{strand}}
     );
+}
+
+sub paste_coords_callback {
+    my ($self, $genomic_feature) = @_;
+
+    my @ints = $self->integers_from_clipboard();
+    if(!@ints) {
+        return;
+    }
+
+    my $length    = $signal_info{$genomic_feature->{gf_type}}{length};
+
+    if(scalar(@ints)==1) {  # trust the strand information:
+
+        my ($this, $other) = ($genomic_feature->{strand} == 1)
+                            ? ('start', 'end')
+                            : ('end', 'start');
+        $genomic_feature->{$this} = shift @ints;
+        $genomic_feature->{$other} = '';
+        if($length) {
+            recalc_coords_callback($genomic_feature, $this);
+        }
+
+    } else {  # acquire strand information:
+
+        ( $genomic_feature->{start},
+          $genomic_feature->{end},
+          $genomic_feature->{strand} )
+         = ($ints[0]<$ints[1])
+            ? ($ints[0], $ints[1],  1)
+            : ($ints[1], $ints[0], -1);
+
+        show_direction_callback($genomic_feature);
+    }
 }
 
 sub flip_direction_callback {
@@ -222,11 +229,9 @@ sub add_genomic_feature {
     my $self    = shift @_;
     my $gf_type = shift @_;
 
-    # my ($clip_start, $clip_end, $clip_strand) = $self->start_stop_strand_from_clipboard();
-
-    my $start   = shift @_ || ''; # $clip_start;
-    my $end     = shift @_ || ''; # $clip_end;
-    my $strand  = shift @_ ||  1; # $clip_strand;
+    my $start   = shift @_ || '';
+    my $end     = shift @_ || '';
+    my $strand  = shift @_ ||  1;
     my $score   = shift @_ || '';
     my $display_label = shift @_ || '';
 
@@ -291,7 +296,7 @@ sub add_genomic_feature {
         # bindings:
     my $paste_callback = sub { $self->paste_coords_callback($genomic_feature); };
 
-    for my $widget ('gf_type_menu', 'start_entry', 'end_entry', 'direction_button') {
+    for my $widget ('start_entry', 'end_entry', 'direction_button') {
         for my $event ('<<Paste>>', '<ButtonRelease-2>') {
             $genomic_feature->{$widget}->bind($event, $paste_callback);
         }
