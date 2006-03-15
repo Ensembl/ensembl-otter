@@ -2010,6 +2010,28 @@ sub list_all_SubSeq_names {
     }
 }
 
+sub get_otter_ids_of_overlapping_exons {
+    my( $self, $name, $start, $end ) = @_;
+    
+    #warn "Looking for CDS exons in '$name' that overlap $start -> $end";
+    
+    my $search_exon = Hum::Ace::Exon->new;
+    $search_exon->start($start);
+    $search_exon->end($end);
+    
+    my %otter;
+    my $subseq = $self->get_SubSeq($name) or return;
+    return unless $subseq->translation_region_is_set;
+    foreach my $exon ($subseq->get_all_CDS_Exons) {
+        if ($exon->overlaps($search_exon)) {
+            if (my $id = $exon->otter_id) {
+                $otter{$id} = 1;
+            }
+        }
+    }
+    return sort keys %otter;
+}
+
 sub empty_SubSeq_cache {
     my( $self ) = @_;
     

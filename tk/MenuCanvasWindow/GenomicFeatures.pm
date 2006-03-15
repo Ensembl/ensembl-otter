@@ -7,25 +7,28 @@ use base 'MenuCanvasWindow';
 
 my %signal_info = (
     'polyA_signal' => {
-                        'length' => 6,
-                        'fullname'  => 'PolyA signal',
-                    },
-    'polyA_site'   => {
-                        'length' => 2,
-                        'fullname'  => 'PolyA site',
-                    },
+        'length'   => 6,
+        'fullname' => 'PolyA signal',
+    },
+    'polyA_site' => {
+        'length'   => 2,
+        'fullname' => 'PolyA site',
+    },
     'pseudo_polyA' => {
-                        'length' => 6,
-                        'fullname'  => 'Pseudo-PolyA signal',
-                    },
+        'length'   => 6,
+        'fullname' => 'Pseudo-PolyA signal',
+    },
     'TATA_box' => {
-                        'length' => 8,
-                        'fullname'  => 'TATA-box',
-                        'check'     => qr{^.{8}$},
-                    },
-    'RSS' => {
-                        'fullname'  => 'Recombination signal sequence',
-                    },
+        'length'   => 8,
+        'fullname' => 'TATA-box',
+        'check'    => qr{^.{8}$},
+    },
+    'RSS'    => {
+        'fullname' => 'Recombination signal sequence',
+        },
+    'EUCOMM' => {
+        'fullname'  => 'exon(s) targetted for EUCOMM knockout',
+    },
 );
 
 my %strand_name = (

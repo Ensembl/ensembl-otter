@@ -1417,10 +1417,14 @@ sub get_Locus_from_tk {
 sub paste_EUCOMM_exon {
     my ($self) = @_;
     
-    my ($start, $end) = $self->integers_from_clipboard;
-    return unless $start and $end;
+    my ($class, $name, $start, $end) = $self->class_object_start_end_from_clipboard;
+    return unless $class eq 'Sequence';
+    if ($start > $end) {
+        ($start, $end) = ($end, $start);
+    }
     
-    
+    my @otter = $self->XaceSeqChooser->get_otter_ids_of_overlapping_exons($name, $start, $end);
+    warn "Got '@otter'";
 }
 
 sub update_Locus_from_XaceSeqChooser {
