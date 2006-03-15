@@ -2,48 +2,60 @@
 
 =pod
 
+=head1 NAME - name
+
+game2otter
+
+=head1 DESCRIPTION
+
+Converts game xml files to otter xml file
+
+=head1 EXAMPLES
+
 Example usage:
 
   game2otter 3_* > otter_chr3.xml
+
+  Converts all chromosome 3 game xml files in the current directory to an otter_chr3.xml file. The input file names should be of the format 3_114848570_115188425.annos.xml
+
+=head1 AUTHOR
+
+B<Sindhu Pillai> Email sp1@sanger.ac.uk
 
 =cut
 
 use strict;
 use XML::Parser;
 use Hum::Sort 'ace_sort';
+use Getopt::Long;
 
-my $id;
+#parameters
+
+my $help = sub{ exec('perldoc',$0)};
+
+GetOptions(
+	   'h|help'=> $help,
+          ) or $help->();
+
+unless (@ARGV) {
+$help->();
+}
+
+#global variables for event handlers
 my $assembly_start;
 my $assembly_end;
 my $chr_name;
 my $strand;
-my $exon_chr_start;
-my $exon_chr_end;
 my $exon_start;
-my $exon_end;
-my $outfile;
 my $infile;
 my $value;
 my $element;
 my $current_type;
 my $geneflag;
-my $transcriptname;
-my @transcript_cdna_evidence    = ();
-my @transcript_est_evidence     = ();
-my @transcript_protein_evidence = ();
-my @exon_start                  = ();
-my @exon_end                    = ();
-my @exon_strand                 = ();
-my $genename;
 my $tran_name_flag;
-my $tran_val;
-my $translation_start;
-my $genetype;
-my $genedescription;
-my $genesynonym;
-my @generemark;
-my @transcriptremark;
-my @featureset;
+my $generef={};
+my $transcript_count;
+my $exon_count;
 
 my $parser = XML::Parser->new(
     Style    => 'Stream',
@@ -67,292 +79,283 @@ foreach $infile (@ARGV) {
     } else {
         $chr_name = $this_chr;
     }
-    $parser->parsefile($infile);
+    if ($assembly_start && $assembly_end) {
+      if ($assembly_start > $assembly_end) {
+	die "filename $infile has assembly start $assembly_start less than assembly end $assembly_end";
+      }
+    }
+    else {
+      die "filename $infile does not contain assembly start ,end values. assembly_start:$assembly_start assembly_end:$assembly_end\n";
+    }
+    if ( !($this_chr || $assembly_start || $assembly_end) ) {
+      die "filename $infile not of required format example:3_114848570_115188425.annos.xml.mod.final";
+    }
+    eval {
+      warn "Parsing $infile\n";
+      $parser->parsefile($infile);
+    };
+    if ($@) {
+      die "Parsing problem with file $infile\n $@ \n";
+    }
 }
 
 sub init {
-    my $e = shift;
-    print "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n";
-    print
-      "<otter>\n<sequence_set>\n";
+  my $e = shift;
+  print "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n";
+  print "<otter>\n<sequence_set>\n";
 }
 
 sub start {
-    my ($e, $tag, %attr) = @_;
-    if ($tag eq "annotation") {
-        print "  <locus>\n";
-        $geneflag = 1;
-        undef $genename;
-        undef $genetype;
-        undef $genedescription;
-        undef $genesynonym;
-        @generemark = ();
+  my ($e, $tag, %attr) = @_;
+  if ($tag eq "annotation") {
+    $geneflag = 1;
+    $generef={};
+    $transcript_count=-1;
+    #$exon_count=-1;
+  }
+  elsif ($tag eq "feature_set") {
+    $geneflag = 0;
+    $tran_name_flag=0;
+    if ($transcript_count == -1) {
+      $generef->{transcript}=[];
     }
-    elsif ($tag eq "feature_set") {
-        if (defined($genetype) && $geneflag == 1) {
-            print "    <type>$genetype</type>\n";
-        }
-        if (defined($genedescription) && $geneflag == 1) {
-            print "    <description>$genedescription</description>\n";
-        }
-        if (defined($genesynonym) && $geneflag == 1) {
-            print "    <synonym>$genesynonym</synonym>\n";
-        }
-        if (@generemark) {
-            foreach my $e (@generemark) {
-                print "    <remark>$e</remark>\n";
-            }
-        }
-        print "    <transcript>\n";
-        $geneflag       = 0;
-        $tran_name_flag = 0;
-        undef $tran_val;
-        undef $transcriptname;
-        undef $translation_start;
-        @transcriptremark            = ();
-        @transcript_est_evidence     = ();
-        @transcript_cdna_evidence    = ();
-        @transcript_protein_evidence = ();
-        @exon_start                  = ();
-        @exon_end                    = ();
-        @exon_strand                 = ();
-        @featureset                  = ();
-    }
-    elsif ($tag eq "start") {
-        undef $exon_start;
-        undef $exon_end;
-        undef $strand;
-    }
-    $element = $tag;
+    $transcript_count++;
+    $exon_count=-1;
+  }
+  $element = $tag;
 }
 
 sub char {
-    my ($e, $string) = @_;
-    $value = $string;
-    $value =~ s/^\s*//;
-    $value =~ s/\s*$//;
-    if (length($value)) {
-        if ($element eq "type") {
-            $current_type = $value;
-        }
-        elsif ($element eq "description") {
-            $genedescription = $value;
-        }
-        elsif ($element eq "name") {
-            if ($geneflag == 1) {
-                $genename = $value;
-                print "    <name>$value</name>\n";
-            }
-            elsif ($geneflag == 0 && $tran_name_flag == 0) {
-                $tran_name_flag = 1;
-                $tran_val       = $value;
-                if ($tran_val =~ /(.+)(\d+$)/) {
-                    if ($tran_val !~ /^ENS/) {
-                        my $version = $2;
-                        ### Much simpler:
-                        $transcriptname = sprintf "%s-%03d", $genename, $version;
-                        #if ($version > 0 && $version < 10) {
-                        #    $transcriptname = $genename . "-00" . $version;
-                        #}
-                        #if ($version > 9 && $version < 100) {
-                        #    $transcriptname = $genename . "-0" . $version;
-                        #}
-                        #if ($version > 99 && $version < 1000) {
-                        #    $transcriptname = $genename . "-" . $version;
-                        #}
-                    }
-                    else {
-                        $transcriptname = $value;
-                    }
-                }
-            }
-        }
-        elsif ($element eq "start") {
-            $exon_start = $value;
-        }
-        elsif ($element eq "end") {
-            $exon_end = $value;
-            if ($exon_start < $exon_end) {
-                $strand         = 1;
-                $exon_chr_start = $assembly_start + $exon_start - 1;
-                $exon_chr_end   = $assembly_start + $exon_end   - 1;
-            }
-            else {
-                $strand         = -1;
-                $exon_chr_start = $assembly_start + $exon_end   - 1;
-                $exon_chr_end   = $assembly_start + $exon_start - 1;
-            }
-
-            if ($current_type eq "exon") {
-                push @exon_start,  $exon_chr_start;
-                push @exon_end,    $exon_chr_end;
-                push @exon_strand, $strand;
-            }
-            elsif ($current_type eq "start_codon") {
-                $translation_start = $strand == 1 ? $exon_chr_start : $exon_chr_end;
-            }
-            elsif ($current_type ne 'status') {
-                warn "Unknown type '$current_type'";
-            }
-        }
-        elsif ($element eq "synonym" && $value ne "no_name") {
-            if ($geneflag == 1) {
-                $genesynonym = $value;
-            }
-        }
-        elsif ($element eq "text") {
-            ### You do not need to surround every element of a
-            ### regular expression with parentheses.
-            if ($value =~ /(\s*)(LOCUS:)(\s+)(\S+)(\s*)/i) {
-                $genetype = $4;
-            }
-            elsif ($value =~ /(cDNA)(.+)(\()(\S+)(\)$)/) {
-                push @transcript_cdna_evidence, $4;
-            }
-            elsif ($value =~ /(EST)(.+)(\()(\S+)(\)$)/) {
-                push @transcript_est_evidence, $4;
-            }
-            elsif ($value =~ /(protein)(.+)(\()(\S+)(\)$)/) {
-                push @transcript_protein_evidence, $4;
-            }
-            else {
-                if ($geneflag == 0) {
-                    if (   ($value !~ /PRODUCT:/)
-                        && ($value !~ /Poly-Adenalation/)
-                        && ($value !~ /not\s+found/))
-                    {
-                        push @transcriptremark, $value;
-                    }
-                    if (   $value =~ /Poly-Adenalation/
-                        && $value !~ /not\s+found/)
-                    {
-                        push @featureset, $value;
-                    }
-                }
-                else {
-                    push @generemark, $value;
-                }
-            }
-        }
+  my ($e, $string) = @_;
+  $value = $string;
+  $value =~ s/^\s*//;
+  $value =~ s/\s*$//;
+  if (length($value)) {
+    if ($element eq "description" && $geneflag==1) {
+      $generef->{gene_description}=$value;
     }
+    elsif ($element eq "description" && $geneflag==0) {
+      $generef->{transcript}->[$transcript_count]->{transcript_description}=$value;
+    }
+    elsif ($element eq "type") {
+      $current_type = $value;
+    }
+    elsif ($element eq "name") {
+      if ($geneflag == 1) {
+	$generef->{gene_name} = $value;
+      }
+      elsif ($geneflag == 0 && $tran_name_flag == 0) {
+	$tran_name_flag = 1;
+	if ($value =~ /(.+)(\d+$)/) {
+	  my $transcript_name;
+	  if ($value !~ /^ENS/) {
+	    $transcript_name=sprintf "%s-%03d", $generef->{gene_name}, $2;
+	  }
+	  else {
+	    $transcript_name=$value;
+	  }
+	  $generef->{transcript}->[$transcript_count]={transcript_name=>$transcript_name};
+	}
+      }
+    }
+    elsif ($element eq "start") {
+      undef $exon_start;
+      $exon_start = $value;
+    }
+    elsif ($element eq "end") {
+#      if ($current_type eq "exon" ) {
+      if ($current_type eq "exon" || $current_type eq "start_codon") {
+	$exon_count++;
+	if ($exon_start < $value) {
+	  $generef->{transcript}->[$transcript_count]->{exon_set}->[$exon_count]->{exon_start}=$assembly_start + $exon_start - 1;
+	  $generef->{transcript}->[$transcript_count]->{exon_set}->[$exon_count]->{exon_end}=$assembly_start + $value   - 1;
+	  $generef->{transcript}->[$transcript_count]->{exon_set}->[$exon_count]->{exon_strand}=1;
+	  $strand=1;
+	}
+	else {
+	  $generef->{transcript}->[$transcript_count]->{exon_set}->[$exon_count]->{exon_start}=$assembly_start + $value - 1;
+	  $generef->{transcript}->[$transcript_count]->{exon_set}->[$exon_count]->{exon_end}=$assembly_start + $exon_start - 1;
+	  $generef->{transcript}->[$transcript_count]->{exon_set}->[$exon_count]->{exon_strand}=-1;
+	  $strand=-1;
+	}
+      }
+      if ($current_type eq "start_codon") {
+	$generef->{transcript}->[$transcript_count]->{translation_start}=$assembly_start + $exon_start - 1;
+      }
+#      elsif ($current_type ne 'status') {
+	#warn "Unknown type '$current_type'";
+      #}
+    }
+    elsif ($element eq "synonym" && $value ne "no_name") {
+      if ($geneflag == 1) {
+	$generef->{gene_synonym} = $value;
+      }
+    }
+    elsif ($element eq "text") {
+      if ($value =~ /(\s*)(LOCUS:)(\s+)(\S+)(\s*)/i) {
+	$generef->{gene_type} = $4;
+      }
+      elsif ($value =~ /(cDNA)(.+)(\()(\S+)(\)$)/) {
+	push @{$generef->{transcript}->[$transcript_count]->{transcript_cdna_evidence}}, $4;
+      }
+      elsif ($value =~ /(EST)(.+)(\()(\S+)(\)$)/) {
+	push @{$generef->{transcript}->[$transcript_count]->{transcript_est_evidence}}, $4;
+      }
+      elsif ($value =~ /(protein)(.+)(\()(\S+)(\)$)/) {
+	push @{$generef->{transcript}->[$transcript_count]->{transcript_protein_evidence}}, $4;
+      }
+      else {
+	if ($geneflag == 0) {
+	  if (   ($value !~ /PRODUCT:/) && ($value !~ /Poly-Adenalation/) && ($value !~ /not\s+found/)) {
+	    push @{$generef->{transcript}->[$transcript_count]->{transcript_remark}}, $value;
+	  }
+	  if (   $value =~ /Poly-Adenalation/ && $value !~ /not\s+found/) {
+	    push @{$generef->{transcript}->[$transcript_count]->{feature_set}}, $value;
+	  }
+	}
+	else {
+	  push @{$generef->{gene_remark}}, $value;
+	}
+      }
+    }
+  }
 }
 
 sub end {
-    my ($e, $tag) = @_;
-    if ($tag eq "annotation") {
-        print "  </locus>\n";
+  my ($e, $tag) = @_;
+  if ($tag eq "annotation") {
+    print "  <locus>\n";
+    print "    <name>$generef->{gene_name}</name>\n";
+    print "    <type>$generef->{gene_type}</type>\n";
+    if (defined $generef->{gene_description}) {
+    print "    <description>$generef->{gene_description}</description>\n";
     }
-    if ($tag eq "feature_set") {
-        if ($geneflag == 0) {
-            if (defined($transcriptname)) {
-                print "    <name>$transcriptname</name>\n";
-            }
-            if (@transcriptremark) {
-                foreach my $e (@transcriptremark) {
-                    print "    <remark>$e</remark>\n";
-                }
-            }
-            warn "No exons in transcript $transcriptname" unless @exon_start;
-            my $strand;
-            foreach my $this_strand (@exon_strand) {
-                if ($strand) {
-                    warn "Exons on different strands" unless $strand == $this_strand;
-                } else {
-                    $strand = $this_strand;
-                }
-            }
-
-            if ($translation_start) {
-                print "    <translation_start>$translation_start</translation_start>\n";
-                my $translation_end;
-                if ($strand == 1) {
-                    $translation_end = $exon_end[$#exon_end];
-                } else {
-                    $translation_end = $exon_start[$#exon_end];
-                }
-                print "    <translation_end>$translation_end</translation_end>\n";
-            }
-
-            # Supporting evidence
-            print "    <evidence_set>\n";
-            foreach my $e (@transcript_cdna_evidence) {
-                print
-                    "      <evidence>\n",
-                    "        <name>$e</name>\n",
-                    "        <type>cDNA</type>\n",
-                    "      </evidence>\n";
-            }
-            foreach my $e (@transcript_est_evidence) {
-                print
-                    "      <evidence>\n",
-                    "        <name>$e</name>\n",
-                    "        <type>EST</type>\n",
-                    "      </evidence>\n";
-            }
-            foreach my $e (@transcript_protein_evidence) {
-                print
-                    "      <evidence>\n",
-                    "        <name>$e</name>\n",
-                    "        <type>Protein</type>\n",
-                    "      </evidence>\n";
-            }
-            print "    </evidence_set>\n";
-            
-            # Exons
-            print "    <exon_set>\n";
-            for (my $i = 0 ; $i < @exon_start ; $i++) {
-                print
-                    "      <exon>\n",
-                    "        <start>$exon_start[$i]</start>\n",
-                    "        <end>$exon_end[$i]</end>\n",
-                    "        <strand>$exon_strand[$i]</strand>\n",
-                    "      </exon>\n";
-            }
-            print "    </exon_set>\n";
-
-            if (@featureset) {
-                foreach my $e (@featureset) {
-                    my $featuretype;
-                    my $featurestart;
-                    my $featureend;
-                    # Poly-Adenalation signal at basepair 100680520
-                    if ($e =~ /Poly-Adenalation signal at basepair (\d+)/) {
-                        #my $pos = $1 + $assembly_start - 1;
-                        my $pos = $1;
-                        $featuretype  = "polyA_signal";
-                        if ($strand == 1) {
-                            $featurestart = $pos;
-                            $featureend   = $pos + 5;
-                        } else {
-                            $featurestart = $pos - 5;
-                            $featureend   = $pos;
-                        }
-                    }
-                    # Poly-Adenalation site at basepair 115079627
-                    elsif ($e =~ /Poly-Adenalation site at basepair (\d+)/) {
-                        #my $pos = $1 + $assembly_start - 1;
-                        my $pos = $1 - 1;
-                        $featuretype  = "polyA_site";
-                        if ($strand == 1) {
-                            $featurestart = $pos - 1;
-                            $featureend   = $pos;
-                        } else {
-                            $featurestart = $pos;
-                            $featureend   = $pos + 1;
-                        }
-                    }
-                    if (   defined($featuretype)
-                        && defined($featurestart)
-                        && defined($featureend))
-                    {
-                        print
-"    <feature_set>\n      <feature>\n        <type>$featuretype</type>\n        <start>$featurestart</start>\n        <end>$featureend</end>\n        <strand>$strand</strand>\n        <score>0.5</score>\n        <label>$featuretype</label>\n      </feature>\n    </feature_set>\n";
-                    }
-                }
-            }
-            print "    </transcript>\n";
+    if (defined $generef->{gene_synonym}) {
+    print "    <synonym>$generef->{gene_synonym}</synonym>\n";
+    }
+    if (defined @{$generef->{gene_remark}}) {
+    foreach my $gene_remark (@{$generef->{gene_remark}}) {
+    print "    <remark>$gene_remark";
+    print "    </remark>\n";
+    }
+    }
+    if (defined @{$generef->{transcript}}) {
+    foreach my $thref (@{$generef->{transcript}}) {
+    print "    <transcript>\n";
+    print "      <name>$thref->{transcript_name}</name>\n";
+    if (defined @{$thref->{transcript_remark}}) {
+    foreach my $transcript_remark (@{$thref->{transcript_remark}}) {
+    print "      <remark>$transcript_remark";
+    print "      </remark>\n";
+    }
+    }
+    if (defined	$thref->{translation_start}) {
+    print "      <translation_start>$thref->{translation_start}</translation_start>\n";
+    }
+    if (defined	$thref->{translation_end}) {
+    print "      <translation_end>$thref->{translation_end}</translation_end>\n";
+    }
+    my $evidence_set_flag=0;
+    if (defined @{$thref->{transcript_cdna_evidence}} || defined @{$thref->{transcript_protein_evidence}} || defined @{$thref->{transcript_est_evidence}}){
+    print "      <evidence_set>\n";
+    $evidence_set_flag=1;
+    }
+    if (defined @{$thref->{transcript_cdna_evidence}}){
+      foreach my $evidence (@{$thref->{transcript_cdna_evidence}}){
+    print "        <evidence>\n";
+    print "          <name>$evidence</name>\n";
+    print "          <type>cDNA</type>\n";
+    print "        </evidence>\n";
+      }
+    }
+    if (defined @{$thref->{transcript_protein_evidence}}){
+      foreach my $evidence (@{$thref->{transcript_protein_evidence}}){
+    print "        <evidence>\n";
+    print "          <name>$evidence</name>\n";
+    print "          <type>Protein</type>\n";
+    print "        </evidence>\n";
+      }
+    }
+    if (defined @{$thref->{transcript_est_evidence}}){
+      foreach my $evidence (@{$thref->{transcript_est_evidence}}){
+    print "        <evidence>\n";
+    print "          <name>$evidence</name>\n";
+    print "          <type>EST</type>\n";
+    print "        </evidence>\n";
+      }
+    }
+    if ($evidence_set_flag == 1) {
+    print "      </evidence_set>\n";
+    }
+    if (defined @{$thref->{exon_set}}){
+    print "      <exon_set>\n";
+    foreach my $exon (@{$thref->{exon_set}}){
+    print "        <exon>\n";
+    print "          <start>$exon->{exon_start}</start>\n";
+    print "          <end>$exon->{exon_end}</end>\n";
+    print "          <strand>$exon->{exon_strand}</strand>\n";
+    print "        </exon>\n";
+    }
+    print "      </exon_set>\n";
+    if (defined @{$thref->{feature_set}}) {
+    foreach my $feature (@{$thref->{feature_set}}) {
+      my $featuretype;
+      my $featurestart;
+      my $featureend;
+      # Poly-Adenalation signal at basepair 100680520
+      if ($feature =~ /Poly-Adenalation signal at basepair (\d+)/) {
+        my $pos = $1;
+        $featuretype  = "polyA_signal";
+        if ($strand == 1) {
+	  $featurestart = $pos;
+          $featureend   = $pos + 5;
+        } else {
+	  $featurestart = $pos - 5;
+          $featureend   = $pos;
         }
+      }
+      #Poly-Adenalation site at basepair 115079627
+      elsif ($feature =~ /Poly-Adenalation site at basepair (\d+)/) {
+        my $pos = $1 - 1;
+        $featuretype  = "polyA_site";
+        if ($strand == 1) {
+	  $featurestart = $pos - 1;
+          $featureend   = $pos;
+        } else {
+        $featurestart = $pos;
+        $featureend   = $pos + 1;
+        }
+      }
+      if (   defined($featuretype) && defined($featurestart) && defined($featureend)) {
+    print "    <feature_set>\n";
+    print "      <feature>\n";
+    print "        <type>$featuretype</type>\n";
+    print "        <start>$featurestart</start>\n";
+    print "        <end>$featureend</end>\n";
+    print "        <strand>$strand</strand>\n";
+    print "        <score>0.5</score>\n";
+    print "        <label>$featuretype</label>\n";
+    print"      </feature>\n";
+    print "    </feature_set>\n";
+      }
+      }
+      }
+    print "    </transcript>\n";
     }
+  }
+  }
+    print "  </locus>\n";
+  }
+
+  if ($tag eq "feature_set"){
+    if (defined	$generef->{transcript}->[$transcript_count]->{translation_start}) {
+      if ($generef->{transcript}->[$transcript_count]->{exon_set}->[$exon_count]->{exon_strand} == 1) {
+	$generef->{transcript}->[$transcript_count]->{translation_end}=$generef->{transcript}->[$transcript_count]->{exon_set}->[$exon_count]->{exon_end};
+      } else {
+	$generef->{transcript}->[$transcript_count]->{translation_end}=$generef->{transcript}->[$transcript_count]->{exon_set}->[$exon_count]->{exon_start};
+      }
+    }
+  }
 }
 
 sub final {
