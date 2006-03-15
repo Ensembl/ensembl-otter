@@ -968,33 +968,59 @@ sub next_message_id {
 ##### Moved from MenuCanvasWindow - clipboard manipulation:
 #
 
-sub integers_from_clipboard {
-    my( $self ) = @_;
+sub get_clipboard_text {
+    my ($self) = @_;
 
     my $canvas = $self->canvas;
 
-    my( $text );
-    eval {
-        $text = $canvas->SelectionGet;
-    };
-    return if $@;
+    my ($text);
+    eval { $text = $canvas->SelectionGet; };
+    if ($@) {
+        return;
+    } else {
+        return $text;
+    }
+}
+
+sub integers_from_clipboard {
+    my ($self) = @_;
+
+    my $text = $self->get_clipboard_text;
+
     #warn "Trying to parse: [$text]\n";
-    
-    my( @ints );
+
+    my (@ints);
+
     # match fMap "blue box" DNA selection
     if (@ints = $text =~ /Selection -?(\d+) ---> -?(\d+)/) {
         if ($ints[0] == $ints[1]) {
+
             # user clicked on single base pair
             @ints = ($ints[0]);
         }
-    } else {
+    }
+    else {
+
         # match general fMap "blue box" pattern
         unless (@ints = $text =~ /^\S+\s+-?(\d+)\s+-?(\d+)\s+\(\d+\)/) {
+
             # or just get all the integers
-            @ints = grep ! /\./, $text =~ /([\.\d]+)/g;
+            @ints = grep !/\./, $text =~ /([\.\d]+)/g;
         }
     }
     return @ints;
+}
+
+sub class_object_start_end_from_clipboard {
+    my ($self) = @_;
+    
+    my $text = $self->get_clipboard_text;
+    
+    # Sequence:"RP5-931H19.1-001"    -160499 -160298 (202)   Coding 
+    my ($class, $obj_name, $start, $end) = $text =~ /^([^:]+):"([^"]+)"\s+-?(\d+)\s+-?(\d+)/;
+    # Having odd numbers of " messes up my syntax highlighting
+    
+    return( $class, $obj_name, $start, $end );
 }
 
 =head2 hash_from_clipboard
@@ -1013,17 +1039,11 @@ Description: clipboard is split on space for the processing by supplied
 
 sub hash_from_clipboard {
     my( $self, $regex_hash ) = @_;
+
     warn "please pass me a nice hash" unless $regex_hash;
     my $results = { map { $_ => 0 } keys %$regex_hash };
 
-    my $canvas = $self->canvas;
-
-    my( $text );
-    eval {
-        $text = $canvas->SelectionGet;
-    };
-    return if $@;
-#    warn "Trying to parse: [$text]\n";
+    my $text = $self->get_clipboard_text;
 
     my @s = split(/\s+/, $text);
 
