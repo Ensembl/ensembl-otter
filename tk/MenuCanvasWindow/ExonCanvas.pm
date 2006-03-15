@@ -193,17 +193,17 @@ sub initialize {
         $canvas->Tk::bind('<Control-d>', $delete_exons);
         $canvas->Tk::bind('<Control-D>', $delete_exons);
 
-        # Entry on end for fetching/updating locus fields
+        # Entry on end for pasting EUCOMM exon as annotation remark
         $edit_menu->add('separator');
-        my $update_locus = sub{ $self->update_Locus_from_XaceSeqChooser };
+        my $paste_eucomm = sub{ $self->paste_EUCOMM_exon };
         $edit_menu->add('command',
-            -label          => 'Update locus',
-            -command        => $update_locus,
+            -label          => 'Paste EUCOMM',
+            -command        => $paste_eucomm,
             -accelerator    => 'Ctrl+U',
-            -underline      => 0,
+            -underline      => 7,
             );
-        $canvas->Tk::bind('<Control-u>', $update_locus);
-        $canvas->Tk::bind('<Control-U>', $update_locus);
+        $canvas->Tk::bind('<Control-u>', $paste_eucomm);
+        $canvas->Tk::bind('<Control-U>', $paste_eucomm);
 
         # Keyboard editing commands
         $canvas->Tk::bind('<Left>',      sub{ $self->canvas_text_go_left   });
@@ -1413,6 +1413,15 @@ sub get_Locus_from_tk {
 #    }
 #    $self->XaceSeqChooser->rename_Locus($sub_name, $tk_name);
 #}
+
+sub paste_EUCOMM_exon {
+    my ($self) = @_;
+    
+    my ($start, $end) = $self->integers_from_clipboard;
+    return unless $start and $end;
+    
+    
+}
 
 sub update_Locus_from_XaceSeqChooser {
     my( $self ) = @_;
