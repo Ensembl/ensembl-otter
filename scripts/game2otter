@@ -166,16 +166,17 @@ sub char {
 #      if ($current_type eq "exon" ) {
       if ($current_type eq "exon" || $current_type eq "start_codon") {
 	$exon_count++;
+    my $exon = $generef->{transcript}->[$transcript_count]->{exon_set}->[$exon_count] = {};
 	if ($exon_start < $value) {
-	  $generef->{transcript}->[$transcript_count]->{exon_set}->[$exon_count]->{exon_start}=$assembly_start + $exon_start - 1;
-	  $generef->{transcript}->[$transcript_count]->{exon_set}->[$exon_count]->{exon_end}=$assembly_start + $value   - 1;
-	  $generef->{transcript}->[$transcript_count]->{exon_set}->[$exon_count]->{exon_strand}=1;
+	  $exon->{exon_start}   = $assembly_start + $exon_start - 1;
+	  $exon->{exon_end}     = $assembly_start + $value   - 1;
+	  $exon->{exon_strand}  = 1;
 	  $strand=1;
 	}
 	else {
-	  $generef->{transcript}->[$transcript_count]->{exon_set}->[$exon_count]->{exon_start}=$assembly_start + $value - 1;
-	  $generef->{transcript}->[$transcript_count]->{exon_set}->[$exon_count]->{exon_end}=$assembly_start + $exon_start - 1;
-	  $generef->{transcript}->[$transcript_count]->{exon_set}->[$exon_count]->{exon_strand}=-1;
+	  $exon->{exon_start}   = $assembly_start + $value - 1;
+	  $exon->{exon_end}     = $assembly_start + $exon_start - 1;
+	  $exon->{exon_strand}  = -1;
 	  $strand=-1;
 	}
       }
