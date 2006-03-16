@@ -23,7 +23,10 @@ sub new {
     $mw->configure(
         -background     => '#bebebe',
         );
-    $mw->scaling(1);    # Sets 1 screen pixel = 1 point
+    $mw->scaling(1);    # Sets 1 screen pixel = 1 point.
+                        # This is important or text and objects print
+                        # in different proportions from the Canvas
+                        # compared to their appearance on screen.
     
     if (@command_line) {
         $mw->command([@command_line]);

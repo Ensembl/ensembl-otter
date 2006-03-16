@@ -7,30 +7,40 @@ use base 'MenuCanvasWindow';
 
 my %signal_info = (
     'polyA_signal' => {
+        'order'    => 1,
         'length'   => 6,
         'fullname' => 'PolyA signal',
     },
     'polyA_site' => {
+        'order'    => 2,
         'length'   => 2,
         'fullname' => 'PolyA site',
     },
     'pseudo_polyA' => {
+        'order'    => 3,
         'length'   => 6,
         'fullname' => 'Pseudo-PolyA signal',
     },
     'TATA_box' => {
+        'order'    => 4,
         'length'   => 8,
         'fullname' => 'TATA-box',
     },
     'RSS'    => {
-        'fullname' => 'Recombination signal sequence',
+        'order'    => 5,
+        'fullname' => 'Recomb. signal seq.',
     },
     'EUCOMM' => {
-        'fullname'  => 'exon(s) targetted for EUCOMM knockout',
+        'order'    => 6,
+        'fullname'  => 'EUCOMM exon(s)',
         'edit_score'         => 1,
         'edit_display_label' => 1,
     },
 );
+
+sub signal_keys_in_order {
+    return sort { $signal_info{$a}{'order'} <=> $signal_info{$b}{'order'} } keys %signal_info;
+}
 
 my %strand_name = (
      1 => 'forward',
@@ -206,7 +216,7 @@ sub paste_coords_callback {
 sub flip_direction_callback {
     my ($genomic_feature) = @_;
 
-    $genomic_feature->{strand}*=-1;
+    $genomic_feature->{strand} *= -1;
 
     show_direction_callback($genomic_feature);
 }
@@ -215,7 +225,7 @@ sub change_of_gf_type_callback {
     my ($genomic_feature) = @_;
 
     my $si = $signal_info{$genomic_feature->{gf_type}};
-    my @enable  = (-state => 'normal',   -background => '#d9d9d9');
+    my @enable  = (-state => 'normal',   -background => 'white');
     my @disable = (-state => 'disabled', -background => 'grey' );
     $genomic_feature->{score_entry}->configure(
         $si->{edit_score} ? @enable : @disable
@@ -247,25 +257,26 @@ sub add_genomic_feature {
     my @pack = (-side => 'left', -padx => 2);
 
     $genomic_feature->{gf_type_menu} = $subframe->Optionmenu(
-       -options => [ map { [ $signal_info{$_}{fullname} => $_ ] } (keys %signal_info) ],
+       -options => [ map { [ $signal_info{$_}{fullname} => $_ ] } signal_keys_in_order() ],
        -variable => \$genomic_feature->{gf_type},
     )->pack(@pack);
 
     $genomic_feature->{start_entry} = $subframe->Entry(
        -textvariable => \$genomic_feature->{start},
-       -width        => 10,
+       -width        => 7,
+       -justify      => 'right',
     )->pack(@pack);
     $genomic_feature->{start_entry}->bind('<Return>', sub { recalc_coords_callback($genomic_feature, 'start'); } );
 
     $genomic_feature->{direction_button} = $subframe->Button(
-        -relief  => 'flat',
         -command => sub { flip_direction_callback($genomic_feature); },
     )->pack(-side => 'left');
     show_direction_callback($genomic_feature); # show it once
 
     $genomic_feature->{end_entry} = $subframe->Entry(
        -textvariable => \$genomic_feature->{end},
-       -width        => 10,
+       -width        => 7,
+       -justify      => 'right',
     )->pack(@pack);
     $genomic_feature->{end_entry}->bind('<Return>', sub { recalc_coords_callback($genomic_feature, 'end'); } );
 
@@ -276,12 +287,12 @@ sub add_genomic_feature {
 
     $genomic_feature->{score_entry} = $subframe->Entry(
        -textvariable => \$genomic_feature->{score},
-       -width        => 10,
+       -width        => 4,
     )->pack(@pack);
 
     $genomic_feature->{display_label_entry} = $subframe->Entry(
        -textvariable => \$genomic_feature->{display_label},
-       -width        => 10,
+       -width        => 24,
     )->pack(@pack);
 
     my $delete_button = $subframe->Button(
@@ -323,25 +334,24 @@ sub add_genomic_feature {
 sub load_genomic_features {
     my ($self) = @_;
 
-    if (my $clone = $self->get_CloneSeq){
+    if (my $clone = $self->get_CloneSeq) {
 
-        foreach my $vector ( $clone->get_SimpleFeatures('') ) {
+        foreach my $vector (sort { $a->[1] <=> $b->[1] || $a->[2] <=> $b->[2] }
+            $clone->get_SimpleFeatures)
+        {
 
             my ($gf_type, $start, $end, $score, $display_label) = @$vector;
 
-            $self->add_genomic_feature(
-                $gf_type,
-                ($start<$end) ? ($start, $end, 1) : ($end, $start, -1),
-                $score,
-                $display_label
-            );
+            $self->add_genomic_feature($gf_type,
+                ($start < $end) ? ($start, $end, 1) : ($end, $start, -1),
+                $score, $display_label);
         }
     }
 
     my ($current_ace_dump, $current_vectors) = $self->ace_and_vector_dump();
 
     $self->stored_ace_dump($current_ace_dump);
-    
+
     $self->fix_window_min_max_sizes;
 }
 
@@ -370,7 +380,7 @@ sub save_to_ace {
 
     my ($current_ace_dump, $current_vectors) = $self->ace_and_vector_dump();
 
-    if($current_ace_dump ne $self->stored_ace_dump()) {
+    if ($current_ace_dump ne $self->stored_ace_dump()) {
 
         # Ok, we may need saving - but do we want it?
         if(! $force) {
@@ -458,8 +468,8 @@ sub initialize {
     $top_window->bind('<Control-W>', $close);
     $top_window->bind('<Control-w>', $close);
 
-    my $add_menu = $self->make_menu('Add genomic feature');
-    for my $gf_type (keys %signal_info) {
+    my $add_menu = $self->make_menu('Add feature');
+    for my $gf_type (signal_keys_in_order()) {
         my $fullname = $signal_info{$gf_type}{fullname};
         my $length   = $signal_info{$gf_type}{length};
 
