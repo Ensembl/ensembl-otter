@@ -180,7 +180,7 @@ sub show_direction_callback {
 }
 
 sub paste_coords_callback {
-    my ($self, $genomic_feature) = @_;
+    my ($self, $genomic_feature, $this) = @_;
 
     my @ints = $self->integers_from_clipboard();
     if(!@ints) {
@@ -191,11 +191,9 @@ sub paste_coords_callback {
 
     if(scalar(@ints)==1) {  # trust the strand information:
 
-        my ($this, $other) = ($genomic_feature->{strand} == 1)
-                            ? ('start', 'end')
-                            : ('end', 'start');
+        $this ||= ($genomic_feature->{strand} == 1) ? 'start' : 'end';
+
         $genomic_feature->{$this} = shift @ints;
-        $genomic_feature->{$other} = '';
         if($length) {
             recalc_coords_callback($genomic_feature, $this);
         }
@@ -305,12 +303,25 @@ sub add_genomic_feature {
     $delete_button->bind('<Destroy>', sub{ $self = undef });
     
         # bindings:
-    my $paste_callback = sub { $self->paste_coords_callback($genomic_feature); };
 
+    for my $event ('<<Paste>>', '<ButtonRelease-2>') {
+        $genomic_feature->{'start_entry'}->bind($event,
+            sub {
+                $self->paste_coords_callback($genomic_feature, 'start');
+            }
+        );
+        $genomic_feature->{'end_entry'}->bind($event,
+            sub {
+                $self->paste_coords_callback($genomic_feature, 'end');
+            }
+        );
+        $genomic_feature->{'direction_button'}->bind($event,
+            sub {
+                $self->paste_coords_callback($genomic_feature);
+            }
+        );
+    }
     for my $widget ('start_entry', 'end_entry', 'direction_button') {
-        for my $event ('<<Paste>>', '<ButtonRelease-2>') {
-            $genomic_feature->{$widget}->bind($event, $paste_callback);
-        }
         $genomic_feature->{$widget}->bind('<Destroy>', sub{ $self=$genomic_feature=undef; } );
     }
 
