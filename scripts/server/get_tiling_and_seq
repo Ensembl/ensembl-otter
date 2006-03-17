@@ -1,0 +1,48 @@
+#!/usr/local/bin/perl -w
+
+my $pipehead = $ENV{PIPEHEAD}; # is set by the server for any GET request
+
+use strict;
+use OtterDefs;
+use CGI;
+use Bio::Otter::ServerSide (':all');
+use Bio::Otter::Lace::PipelineDB;
+use Bio::EnsEMBL::DBSQL::DBAdaptor;
+use Bio::Otter::DBSQL::DBAdaptor;
+
+$| = 1;
+
+my $cgi = new CGI;
+set_nph($cgi);
+my %cgi_args = $cgi->Vars;
+
+my $dna_wanted = $cgi_args{dnawanted} || 0;
+
+my $odb = get_DBAdaptor_from_CGI_species($cgi, $OTTER_SPECIES, $pipehead);
+my $slice = get_old_schema_slice($cgi, $odb);
+
+my $tp = $slice->get_tiling_path;
+
+my $output_string = '';
+
+foreach my $tile (@{ $slice->get_tiling_path }) {
+    if(my $clone = $tile->component_Seq->clone) {
+        $output_string .= join("\t",
+            $tile->component_Seq()->clone()->id(),
+            $tile->component_Seq()->name(),
+
+            $tile->assembled_start(),
+            $tile->assembled_end(),
+            $tile->component_start(),
+            $tile->component_end(),
+            $tile->component_ori(),
+            length($tile->component_Seq()->seq()),
+
+            $dna_wanted ? ($tile->component_Seq()->seq()) : (),
+            "\n"
+        );
+    }
+}
+
+send_response($cgi, $output_string, 1);
+
