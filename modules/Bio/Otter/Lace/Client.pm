@@ -432,6 +432,52 @@ sub get_analyses_status_from_dsname_ssname {
     return \%status_hash;
 }
 
+sub get_tiling_path_and_sequence {
+    my ( $self, $dataset, $sa, $dna_wanted, $pipehead ) = @_;
+
+    $sa = to_sliceargs($sa); # normalization
+        # cached values:
+    my $seqname = delete $sa->{slicename};
+
+    my $response = $self->general_http_dialog(
+        0,
+        'GET',
+        'get_tiling_and_seq',
+        {
+            %$sa,
+            'dataset'   => $dataset->name(),
+            'pipehead'  => $pipehead ? 1 : 0,
+            'dnawanted' => $dna_wanted ? 1 : 0,
+        },
+        1,
+    );
+    my @tiling_path = ();
+    foreach my $respline ( split(/\n/,$response) ) {
+        my ($clone_name, $contig_name,
+            $asm_start, $asm_end,
+            $cmp_start, $cmp_end, $cmp_ori, $cmp_length,
+            $dna
+        ) = split(/\t/, $respline);
+
+            # SORRY, cannot use "real Tile"s while in schema transition period
+        my %tile = (
+            'clone_name'  => $clone_name,
+            'contig_name' => $contig_name,
+            'asm_start'   => $asm_start,
+            'asm_end'     => $asm_end,
+            'cmp_start'   => $cmp_start,
+            'cmp_end'     => $cmp_end,
+            'cmp_ori'     => $cmp_ori,
+            'cmp_length'  => $cmp_length,
+            $dna_wanted ? ('dna' => $dna) : (),
+        );
+
+        push @tiling_path, \%tile;
+    }
+
+    return \@tiling_path;
+}
+
 sub get_sfs_from_dataset_sliceargs_analysis {   # get SimpleFeatures
     my( $self, $dataset, $sa, $analysis_name, $pipehead ) = @_;
 

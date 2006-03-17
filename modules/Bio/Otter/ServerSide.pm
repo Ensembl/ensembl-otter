@@ -18,6 +18,7 @@ our @EXPORT_OK = qw(
                     &send_response
                     &error_exit
                     &get_connected_pipeline_dbhandle
+                    &get_old_schema_slice
                     &get_pipeline_adaptor_slice_parms
                     &get_Author_from_CGI
                     &get_DBAdaptor_from_CGI_species
@@ -28,6 +29,7 @@ our %EXPORT_TAGS = (all => [qw(
                                send_response
                                error_exit
                                get_connected_pipeline_dbhandle
+                               get_old_schema_slice
                                get_pipeline_adaptor_slice_parms
                                get_Author_from_CGI
                                get_DBAdaptor_from_CGI_species 
@@ -119,6 +121,36 @@ sub get_connected_pipeline_dbhandle {
     return $dbh;
 }
 
+sub get_old_schema_slice {
+    my ($cgi, $dbh) = @_;
+
+    my %cgi_args = $cgi->Vars;
+    my $name  = $cgi_args{name};
+    my $start = $cgi_args{start};
+    my $end   = $cgi_args{end};
+
+    my $slice;
+
+    if($cgi_args{cs} eq 'chromosome') {
+        $start ||= 1;
+        $end   ||= $dbh->get_ChromosomeAdaptor()->fetch_by_chr_name($name)->length();
+
+        $slice = $dbh->get_SliceAdaptor()->fetch_by_chr_start_end(
+            $name,
+            $start,
+            $end,
+        );
+    } elsif($cgi_args{cs} eq 'contig') {
+        $slice = $dbh->get_RawContigAdaptor()->fetch_by_name(
+            $cgi_args{name},
+        );
+    } else {
+        die "Other coordinate systems are not supported";
+    }
+
+    return $slice;
+}
+
 sub get_pipeline_adaptor_slice_parms { # codebase-independent version for scripts
     my ($cgi, $odb, $pipehead) = @_;
 
@@ -170,19 +202,7 @@ sub get_pipeline_adaptor_slice_parms { # codebase-independent version for script
 
         $pdb->assembly_type($odb->assembly_type());
 
-        if($cgi_args{cs} eq 'chromosome') {
-            $pipeline_slice = $pdb->get_SliceAdaptor()->fetch_by_chr_start_end(
-                $cgi_args{name},
-                $cgi_args{start},
-                $cgi_args{end},
-            );
-        } elsif($cgi_args{cs} eq 'contig') {
-            $pipeline_slice = $pdb->get_RawContigAdaptor()->fetch_by_name(
-                $cgi_args{name},
-            );
-        } else {
-            die "Other coordinate systems are not supported";
-        }
+        $pipeline_slice = get_old_schema_slice($cgi, $pdb);
     }
 
     if(!defined($pipeline_slice) && $pipehead) {
