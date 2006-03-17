@@ -1015,6 +1015,7 @@ sub class_object_start_end_from_clipboard {
     my ($self) = @_;
     
     my $text = $self->get_clipboard_text;
+    return unless defined $text;
     
     # Sequence:"RP5-931H19.1-001"    -160499 -160298 (202)   Coding 
     my ($class, $obj_name, $start, $end) = $text =~ /^([^:]+):"([^"]+)"\s+-?(\d+)\s+-?(\d+)/;
