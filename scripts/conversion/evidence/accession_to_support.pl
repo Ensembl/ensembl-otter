@@ -131,7 +131,7 @@ foreach my $chr (@chr){
 
   OUTER:
     foreach my $trans (@{$gene->get_all_Transcripts}) {
-      my $evidence = @{$trans->transcript_info->get_all_Evidence};
+      my $evidence = $trans->transcript_info->get_all_Evidence;
 
       foreach my $evi (@$evidence) {
 	my $acc = $evi->name;
