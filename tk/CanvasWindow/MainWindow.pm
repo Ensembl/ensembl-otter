@@ -36,7 +36,7 @@ sub new {
     
     #warn "Scaling = ", $mw->scaling, "\n";
     
-    $mw->read_custom_option_file;
+    $mw->add_default_options;
     
     $mw->add_default_bindings;
     
@@ -51,56 +51,58 @@ sub add_default_bindings {
     $mw->bind('<Control-Q>', $exit);
 }
 
-sub read_custom_option_file {
-    my( $mw ) = @_;
+sub add_default_options {
+    my ($mw) = @_;
     
-    my $xres_file = (getpwuid($<))[7] . "/.CanvasWindow.Xres";
-    my $mtime = (stat($xres_file))[9] || 0;
+    # Get warnings about "possible comments in qw"
+    no warnings "qw";
+    
+    # Priority level of 40 is equivalent to an
+    # application specific startup file.
+    my $priority = 40;
+    my @opt_val = qw{
+        CanvasWindow*color                      #ffd700
+        CanvasWindow*background                 #bebebe
+        CanvasWindow*foreground                 black
+        CanvasWindow*selectBackground           gold
+        CanvasWindow*selectColor                gold
+        CanvasWindow*activeBackground           #dfdfdf
+        CanvasWindow*troughColor                #aaaaaa
+        CanvasWindow*activecolor                #ffd700
+        CanvasWindow*borderWidth                1
+        CanvasWindow*activeborderWidth          1
+        CanvasWindow*font                       -*-helvetica-medium-r-*-*-12-*-*-*-*-*-*-*
 
-    ### Change time int here if you modify the X resources
-    if ($mtime < 1068827183) {
-        warn "Writing new X resource file '$xres_file'\n";
-        rename($xres_file, "$xres_file.bak") if $mtime;
-        
-        
-
-        local *XRES;
-        if (open XRES, "> $xres_file") {
-            print XRES qq{
-
-CanvasWindow*color: #ffd700
-CanvasWindow*background: #bebebe
-CanvasWindow*foreground: black
-CanvasWindow*selectBackground: gold
-CanvasWindow*selectColor: gold
-CanvasWindow*activeBackground: #dfdfdf
-CanvasWindow*troughColor: #aaaaaa
-CanvasWindow*activecolor: #ffd700
-CanvasWindow*borderWidth: 1
-CanvasWindow*activeborderWidth: 1
-CanvasWindow*font: -*-helvetica-medium-r-*-*-12-*-*-*-*-*-*-*
-
-CanvasWindow*TopLevel*background: #bebebe
-CanvasWindow*Frame.borderWidth: 0
-CanvasWindow*Scrollbar.width: 11
-CanvasWindow*Menubutton.padX: 6
-CanvasWindow*Menubutton.padY: 6
-CanvasWindow*Entry.relief: sunken
-CanvasWindow*Entry.foreground: black
-CanvasWindow*Entry.background: white
-
-};
-            close XRES;
-
-        }
+        CanvasWindow*TopLevel*background        #bebebe
+        CanvasWindow*Frame.borderWidth          0
+        CanvasWindow*Scrollbar.width            11
+        CanvasWindow*Menubutton.padX            6
+        CanvasWindow*Menubutton.padY            6
+    };
+    
+    for (my $i = 0; $i < @opt_val; $i += 2) {
+        my ($opt, $val) = @opt_val[$i, $i + 1];
+        #warn "Adding '$opt' : '$val'\n";
+        $mw->optionAdd($opt, $val, $priority);
     }
-    $mw->optionReadfile($xres_file);
+    
+    my @entry_class = qw{ Entry NoPasteEntry };
+    foreach my $class (@entry_class) {
+        $mw->optionAdd("CanvasWindow\*$class.relief",     'sunken', $priority);
+        $mw->optionAdd("CanvasWindow\*$class.foreground", 'black',  $priority);
+        $mw->optionAdd("CanvasWindow\*$class.background", 'white',  $priority);
+    }
     
     # lucidatypewriter size 15 on dec_osf looks the same as size 14 on other systems
     my $font_size = $^O eq 'dec_osf' ? 15 : 14;
-    $mw->optionAdd('CanvasWindow*Entry.font' =>
-        "-*-lucidatypewriter-medium-r-*-*-$font_size-*-*-*-*-*-*-*");
+    foreach my $class (@entry_class) {
+        $mw->optionAdd(
+            "CanvasWindow\*$class.font",
+            "-*-lucidatypewriter-medium-r-*-*-$font_size-*-*-*-*-*-*-*",
+            $priority);
+    }
 }
+
 
 1;
 

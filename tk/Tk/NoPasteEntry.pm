@@ -1,0 +1,60 @@
+
+### Tk::NoPasteEntry
+
+package Tk::NoPasteEntry;
+
+use strict;
+use base qw{ Tk::Derived Tk::Entry };
+
+our $VERSION = 1.0;
+
+Construct Tk::Widget 'NoPasteEntry';
+
+sub ClassInit {
+    my ($class, $mw) = @_;
+ 
+    $class->SUPER::ClassInit($mw);
+    
+    # Remove all the paste bindings
+    foreach my $sequence (qw{ <<Paste>> <<PasteSelection>> <Button-2> }) {
+        $mw->bind($class, $sequence, '');
+    }
+    
+    $mw->bind($class, '<Up>',   'increment_int');
+    $mw->bind($class, '<Down>', 'decrement_int');
+}
+
+sub increment_int {
+    my ($w) = @_;
+    
+    my $txt = $w->get;
+    #return unless length($txt);
+    if ($txt =~ /^-?\d+(\.\d*)?$/) {
+        $txt++;
+        $w->delete(0, 'end');
+        $w->insert(0, $txt);
+    }
+}
+
+sub decrement_int {
+    my ($w) = @_;
+    
+    my $txt = $w->get;
+    #return unless length($txt);
+    if ($txt =~ /^-?\d+(\.\d*)?$/) {
+        $txt--;
+        $w->delete(0, 'end');
+        $w->insert(0, $txt);
+    }
+}
+
+1;
+
+__END__
+
+=head1 NAME - Tk::NoPasteEntry
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+

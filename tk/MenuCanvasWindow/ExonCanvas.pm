@@ -193,18 +193,6 @@ sub initialize {
         $canvas->Tk::bind('<Control-d>', $delete_exons);
         $canvas->Tk::bind('<Control-D>', $delete_exons);
 
-        # Entry on end for pasting EUCOMM exon as annotation remark
-        $edit_menu->add('separator');
-        my $paste_eucomm = sub{ $self->paste_EUCOMM_exon };
-        $edit_menu->add('command',
-            -label          => 'Paste EUCOMM',
-            -command        => $paste_eucomm,
-            -accelerator    => 'Ctrl+U',
-            -underline      => 7,
-            );
-        $canvas->Tk::bind('<Control-u>', $paste_eucomm);
-        $canvas->Tk::bind('<Control-U>', $paste_eucomm);
-
         # Keyboard editing commands
         $canvas->Tk::bind('<Left>',      sub{ $self->canvas_text_go_left   });
         $canvas->Tk::bind('<Right>',     sub{ $self->canvas_text_go_right  });
@@ -1413,19 +1401,6 @@ sub get_Locus_from_tk {
 #    }
 #    $self->XaceSeqChooser->rename_Locus($sub_name, $tk_name);
 #}
-
-sub paste_EUCOMM_exon {
-    my ($self) = @_;
-    
-    my ($class, $name, $start, $end) = $self->class_object_start_end_from_clipboard;
-    return unless $class eq 'Sequence';
-    if ($start > $end) {
-        ($start, $end) = ($end, $start);
-    }
-    
-    my @otter = $self->XaceSeqChooser->get_otter_ids_of_overlapping_exons($name, $start, $end);
-    warn "Got '@otter'";
-}
 
 sub update_Locus_from_XaceSeqChooser {
     my( $self ) = @_;
