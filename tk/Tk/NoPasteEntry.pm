@@ -24,15 +24,15 @@ sub ClassInit {
     $mw->bind($class, '<Down>', 'decrement_int');
 }
 
+my $simple_float = qr{-?\d+(\.\d*)?};
+
 sub increment_int {
     my ($w) = @_;
     
     my $txt = $w->get;
-    #return unless length($txt);
-    if ($txt =~ /^-?\d+(\.\d*)?$/) {
+    if ($txt =~ /^$simple_float$/) {
         $txt++;
-        $w->delete(0, 'end');
-        $w->insert(0, $txt);
+        $w->set($txt);
     }
 }
 
@@ -40,12 +40,17 @@ sub decrement_int {
     my ($w) = @_;
     
     my $txt = $w->get;
-    #return unless length($txt);
-    if ($txt =~ /^-?\d+(\.\d*)?$/) {
+    if ($txt =~ /^$simple_float$/) {
         $txt--;
-        $w->delete(0, 'end');
-        $w->insert(0, $txt);
+        $w->set($txt);
     }
+}
+
+sub set {
+    my ($w, $txt) = @_;
+    
+    $w->delete(0, 'end');
+    $w->insert(0, $txt);
 }
 
 1;
