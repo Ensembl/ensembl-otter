@@ -68,7 +68,6 @@ $OTTER_SPECIES              = read_species($OTTER_SPECIES_FILE);
 $OTTER_DEFAULT_SPECIES      = 'human';
 $OTTER_PREFIX               = 'OTT';
 $OTTER_GET_SCRIPTS          = {'/perl/get_region'     => 'get_region',
-                               '/perl/get_sequence'   => 'get_sequence',
                                '/perl/get_datasets'   => 'get_datasets',
                                '/perl/get_loci_names' => 'get_loci_names',
                                '/perl/lock_region'    => 'lock_region',
@@ -77,7 +76,8 @@ $OTTER_GET_SCRIPTS          = {'/perl/get_region'     => 'get_region',
                                '/perl/get_repeat_features'        => 'get_repeat_features',
                                '/perl/get_prediction_transcripts' => 'get_prediction_transcripts',
                                '/perl/get_pipeline_genes'         => 'get_pipeline_genes',
-                               '/perl/get_analyses_status'    => 'get_analyses_status',
+                               '/perl/get_analyses_status'        => 'get_analyses_status',
+                               '/perl/get_tiling_and_seq'         => 'get_tiling_and_seq',
 
                               };
 $OTTER_POST_SCRIPTS         = {'/perl/write_region'   => 'write_region',
