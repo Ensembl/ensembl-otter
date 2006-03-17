@@ -4,6 +4,7 @@ package MenuCanvasWindow::GenomicFeatures;
 
 use strict;
 use base 'MenuCanvasWindow';
+use Tk::NoPasteEntry;
 
 my %signal_info = (
     'polyA_signal' => {
@@ -26,13 +27,14 @@ my %signal_info = (
         'length'   => 8,
         'fullname' => 'TATA-box',
     },
-    'RSS'    => {
-        'order'    => 5,
-        'fullname' => 'Recomb. signal seq.',
+    'RSS' => {
+        'order'              => 5,
+        'fullname'           => 'Recomb. signal seq.',
+        'edit_display_label' => 1,
     },
     'EUCOMM' => {
-        'order'    => 6,
-        'fullname'  => 'EUCOMM exon(s)',
+        'order'              => 6,
+        'fullname'           => 'EUCOMM exon(s)',
         'edit_score'         => 1,
         'edit_display_label' => 1,
     },
@@ -53,6 +55,73 @@ my %arrow = (
 );
 
 my $def_score = 0.5;
+
+
+# ---------------[EUCOMM]----------------
+
+sub paste_eucomm_data {
+    my ($self, $genomic_feature) = @_;
+    
+    my ($class, $name, $start, $end) = $self->class_object_start_end_from_clipboard;
+    if (! $class or $class ne 'Sequence') {
+        return;
+    }
+    
+    if ($start > $end) {
+        ($start, $end) = ($end, $start);
+    }
+    
+    my $otter = $self->get_otter_ids_of_overlapping_exons($name, $start, $end);
+    return unless keys %$otter;
+
+    # Decrease start if start from clipboard is less
+    if (my $gf_start = $genomic_feature->{'start'}) {
+        $genomic_feature->{'start'} = $start if $start < $gf_start;
+    } else {
+        $genomic_feature->{'start'} = $start;
+    }
+
+    # Increase end if end from clipboard is greater
+    if (my $gf_end = $genomic_feature->{'end'}) {
+        $genomic_feature->{'end'} = $end if $end > $gf_end;
+    } else {
+        $genomic_feature->{'end'} = $end;
+    }
+    
+    # Default the score to 1 if not set
+    $genomic_feature->{'score'} ||= 1;
+    
+    my $text = $genomic_feature->{'display_label'};
+    foreach my $id (split /\s+/, $text) {
+        $otter->{$id} = 1;
+    }
+    my $str = join(' ', sort keys %$otter);
+    $genomic_feature->{'display_label'} = $str;
+}
+
+sub get_otter_ids_of_overlapping_exons {
+    my( $self, $name, $start, $end ) = @_;
+    
+    #warn "Looking for CDS exons in '$name' that overlap $start -> $end";
+    
+    my $search_exon = Hum::Ace::Exon->new;
+    $search_exon->start($start);
+    $search_exon->end($end);
+    
+    my $otter = {};
+    my $subseq = $self->XaceSeqChooser->get_SubSeq($name) or return;
+    return unless $subseq->translation_region_is_set;
+    foreach my $exon ($subseq->get_all_CDS_Exons) {
+        if ($exon->overlaps($search_exon)) {
+            if (my $id = $exon->otter_id) {
+                $otter->{$id} = 1;
+            }
+        }
+    }
+    return $otter;
+}
+
+
 
 # ---------------[getters/setters]----------------
 
@@ -100,6 +169,7 @@ sub stored_ace_dump {
     return $self->{_sad};
 }
 
+
 # -------------[create ace representation]---------------------
 
 sub ace_and_vector_dump {
@@ -121,7 +191,7 @@ sub ace_and_vector_dump {
                 ? ($subhash->{start}, $subhash->{end})
                 : ($subhash->{end}, $subhash->{start});
             my $score = $subhash->{score} || $def_score;
-            my $display_label = $subhash->{display_labe} || $signal_info{$gf_type}{fullname};
+            my $display_label = $subhash->{display_label} || $signal_info{$gf_type}{fullname};
             
             $ace_text .= join(' ', 'Feature', qq{"$gf_type"}, $start, $end, $score, qq{"$display_label"\n});
 
@@ -177,6 +247,18 @@ sub show_direction_callback {
     $genomic_feature->{direction_button}->configure(
         -text => $arrow{$genomic_feature->{strand}}
     );
+}
+
+sub paste_label_callback {
+    my ($self, $genomic_feature, $this, $x) = @_;
+        
+    if ($genomic_feature->{'gf_type'} eq 'EUCOMM') {
+        $self->paste_eucomm_data($genomic_feature);
+    }
+    else {
+        # We allow the Entry's built in paste behaviour.
+        $genomic_feature->{$this}->Paste($x);
+    }
 }
 
 sub paste_coords_callback {
@@ -259,7 +341,7 @@ sub add_genomic_feature {
        -variable => \$genomic_feature->{gf_type},
     )->pack(@pack);
 
-    $genomic_feature->{start_entry} = $subframe->Entry(
+    $genomic_feature->{start_entry} = $subframe->NoPasteEntry(
        -textvariable => \$genomic_feature->{start},
        -width        => 7,
        -justify      => 'right',
@@ -271,7 +353,7 @@ sub add_genomic_feature {
     )->pack(-side => 'left');
     show_direction_callback($genomic_feature); # show it once
 
-    $genomic_feature->{end_entry} = $subframe->Entry(
+    $genomic_feature->{end_entry} = $subframe->NoPasteEntry(
        -textvariable => \$genomic_feature->{end},
        -width        => 7,
        -justify      => 'right',
@@ -283,15 +365,20 @@ sub add_genomic_feature {
     #   -variable => \$genomic_feature->{strand},
     # )->pack(@pack);
 
-    $genomic_feature->{score_entry} = $subframe->Entry(
+    $genomic_feature->{score_entry} = $subframe->NoPasteEntry(
        -textvariable => \$genomic_feature->{score},
        -width        => 4,
     )->pack(@pack);
 
-    $genomic_feature->{display_label_entry} = $subframe->Entry(
+    $genomic_feature->{display_label_entry} = $subframe->NoPasteEntry(
        -textvariable => \$genomic_feature->{display_label},
        -width        => 24,
     )->pack(@pack);
+    my $paste_otter_exon_ids = sub {
+        $self->paste_otter_exon_ids($genomic_feature->{display_label_entry});
+    };
+    $genomic_feature->{display_label_entry}->bind('<Control-e>', $paste_otter_exon_ids);
+    $genomic_feature->{display_label_entry}->bind('<Control-E>', $paste_otter_exon_ids);
 
     my $delete_button = $subframe->Button(
         -text    => 'Delete',
@@ -304,24 +391,40 @@ sub add_genomic_feature {
     
         # bindings:
 
-    for my $event ('<<Paste>>', '<ButtonRelease-2>') {
-        $genomic_feature->{'start_entry'}->bind($event,
+    for my $event ('<<Paste>>', '<Button-2>') {
+        $genomic_feature->{'start_entry'}->bind(
+            $event,
             sub {
                 $self->paste_coords_callback($genomic_feature, 'start');
             }
         );
-        $genomic_feature->{'end_entry'}->bind($event,
+        $genomic_feature->{'end_entry'}->bind(
+            $event,
             sub {
                 $self->paste_coords_callback($genomic_feature, 'end');
             }
         );
-        $genomic_feature->{'direction_button'}->bind($event,
+        $genomic_feature->{'direction_button'}->bind(
+            $event,
             sub {
                 $self->paste_coords_callback($genomic_feature);
             }
         );
+        $genomic_feature->{'display_label_entry'}->bind(
+            $event,
+            [
+                sub {
+                    my ($widget, $x) = @_;
+                    $self->paste_label_callback($genomic_feature,
+                        'display_label_entry', $x);
+                },
+                Tk::Ev('x')
+            ]
+        );
     }
-    for my $widget ('start_entry', 'end_entry', 'direction_button') {
+    
+    ### I don't think we need a destroy for all of these?
+    for my $widget ('start_entry', 'end_entry', 'direction_button', 'display_label_entry') {
         $genomic_feature->{$widget}->bind('<Destroy>', sub{ $self=$genomic_feature=undef; } );
     }
 
@@ -489,6 +592,8 @@ sub initialize {
             -command => sub {
                 $self->add_genomic_feature($gf_type);
                 $self->fix_window_min_max_sizes;
+                # Scroll window so new widgets are visible
+                $self->canvas->yviewMoveto(1);
                 },
         );
     }
