@@ -13,7 +13,7 @@ use Bio::Otter::Lace::Defaults;
     $cl->cleanup_log_dir('otterlace');
     $cl->make_log_file('otterlace');
 
-    my $pipe_name = $cl->pipe_name();
+    my $pipe_name = Bio::Otter::Lace::Defaults::pipe_name();
 
     my $mw = CanvasWindow::MainWindow->new("Choose DataSet [$pipe_name]");
     my $dc = CanvasWindow::DataSetChooser->new($mw);

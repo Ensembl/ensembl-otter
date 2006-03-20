@@ -190,15 +190,19 @@ sub write_local_blast{
             warn "fetching slice $chr $chr_start $chr_end \n";
             my $slice = $pipe_db->get_SliceAdaptor->fetch_by_chr_start_end($chr, $chr_start, $chr_end);
 
+            ## I think we shouldn't let AceDatabase see the tiling path (lg4)
+            ## This is a kind of information that will be available to DataFactory.
+            ##
             # Check we got a slice
             my $tp = $slice->get_tiling_path;
             if(@$tp){
                 foreach my $tile(@$tp){
                     warn "Getting " . $tile->component_Seq->name() . "\n";
                 }
-            }else{
-                warn "Didn't get slice\n";
-            }
+             }else{
+                 warn "Didn't get slice\n";
+             }
+
             $factory->ace_data_from_slice($slice);
         }
 
@@ -762,7 +766,7 @@ sub write_pipeline_data {
     $dataset->selected_SequenceSet($ss);    # Not necessary?
     my $ens_db = $dataset->get_cached_DBAdaptor();
     my $fetch_pipe = Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
-    my $pipehead = $self->Client->pipehead;
+    my $pipehead = Bio::Otter::Lace::Defaults::pipehead();
     if ($fetch_pipe and ! $pipehead) {
 	    my $pipe_db = Bio::Otter::Lace::PipelineDB::get_DBAdaptor($ens_db);
 	    $ens_db = $pipe_db;
@@ -793,6 +797,9 @@ sub write_pipeline_data {
         my( $chr, $chr_start, $chr_end ) = $self->Client->chr_start_end_from_contig($cs);
         my $slice = $slice_adaptor->fetch_by_chr_start_end($chr, $chr_start, $chr_end);
 
+        ## I think we shouldn't let AceDatabase see the tiling path (lg4)
+        ## This is a kind of information that will be available to DataFactory.
+        ##
         # Check we got a slice
         my $tp = $slice->get_tiling_path;
         my $type = $slice->assembly_type;
@@ -810,7 +817,9 @@ sub write_pipeline_data {
     $factory->drop_file_handle;
     close $fh;
 
-    Bio::Otter::Lace::SatelliteDB::disconnect_DBAdaptor($ens_db) if $fetch_pipe;
+    if ($fetch_pipe and ! $pipehead) {
+        Bio::Otter::Lace::SatelliteDB::disconnect_DBAdaptor($ens_db);
+    }
 }
 
 sub make_AceDataFactory {
@@ -822,11 +831,10 @@ sub make_AceDataFactory {
     # create new datafactory object - contains all ace filters and produces the data from these
     my $factory = Bio::EnsEMBL::Ace::DataFactory->new($self->Client(), $dataset);
     # $factory->add_all_Filters($ensdb);
-    my $ana_adaptor = $ens_db->get_AnalysisAdaptor;
 
     ##----------code to add all of the ace filters to data factory-----------------------------------
 
-    my $fetch_all_pipeline_data = Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
+    my $fetch_pipe = Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
     my $debug = $self->Client->debug();
     
     my $logic_to_load =
@@ -835,21 +843,27 @@ sub make_AceDataFactory {
       $self->Client->option_from_array([ $species, 'filter' ]);
 
     my @analysis_names;
-    if ($fetch_all_pipeline_data) {
+    if ($fetch_pipe) {
         @analysis_names = grep $logic_to_load->{$_}, keys %$logic_to_load;
+        push @analysis_names, 'submitcontig';
+    } else {
+        push @analysis_names, 'otter'; # or shall we drop this distinction at all?
     }
 
     ### This is kind of silly because we don't acutally
     ### need the analysis object for the DNA filter.
-    if ($ana_adaptor->fetch_by_logic_name('submitcontig')) {
-        push(@analysis_names, 'submitcontig');
-    } else {
-        push(@analysis_names, 'otter');
-    }
+    #if ($ana_adaptor->fetch_by_logic_name('submitcontig')) {
+    #    push(@analysis_names, 'submitcontig');
+    #} else {
+    #    push(@analysis_names, 'otter');
+    #}
 
     my $collect = $self->get_default_MethodCollection;
 
     foreach my $logic_name (@analysis_names) {
+
+        my $ana_adaptor; # maybe we won't need it after all
+
         my $param_ref = $module_options->{$logic_name}
             or die "No parameters for '$logic_name'";
 
@@ -875,6 +889,7 @@ sub make_AceDataFactory {
             # Otter_Filters do not need the analysis_object anymore
             $filt->analysis_name($logic_name);
         } else {
+            $ana_adaptor ||= $ens_db->get_AnalysisAdaptor; # still, some old filters do need it
             my $ana = $ana_adaptor->fetch_by_logic_name($logic_name)
                 or confess "No analysis object for '$logic_name' in database needed for '$filt'";
             $filt->analysis_object($ana);

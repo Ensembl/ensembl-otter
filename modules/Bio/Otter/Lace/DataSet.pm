@@ -253,7 +253,7 @@ sub status_refresh_for_SequenceSet{
 
     return unless Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
 
-    my $pipehead = $client->pipehead;
+    my $pipehead = Bio::Otter::Lace::Defaults::pipehead();
 
     $self->fetch_pipeline_ctg_ids_for_SequenceSet($ss);
 
