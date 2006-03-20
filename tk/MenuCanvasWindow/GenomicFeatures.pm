@@ -346,7 +346,10 @@ sub add_genomic_feature {
        -width        => 7,
        -justify      => 'right',
     )->pack(@pack);
-    $genomic_feature->{start_entry}->bind('<Return>', sub { recalc_coords_callback($genomic_feature, 'start'); } );
+    my $recalc_start = sub { recalc_coords_callback($genomic_feature, 'start'); };
+    $genomic_feature->{start_entry}->bind('<Return>', $recalc_start);
+    $genomic_feature->{start_entry}->bind('<Up>',     $recalc_start);
+    $genomic_feature->{start_entry}->bind('<Down>',   $recalc_start);
 
     $genomic_feature->{direction_button} = $subframe->Button(
         -command => sub { flip_direction_callback($genomic_feature); },
@@ -358,7 +361,10 @@ sub add_genomic_feature {
        -width        => 7,
        -justify      => 'right',
     )->pack(@pack);
-    $genomic_feature->{end_entry}->bind('<Return>', sub { recalc_coords_callback($genomic_feature, 'end'); } );
+    my $recalc_end = sub { recalc_coords_callback($genomic_feature, 'end'); };
+    $genomic_feature->{end_entry}->bind('<Return>', $recalc_end);
+    $genomic_feature->{end_entry}->bind('<Up>',     $recalc_end);
+    $genomic_feature->{end_entry}->bind('<Down>',   $recalc_end);
 
     # $genomic_feature->{strand_menu} = $subframe->Optionmenu(
     #   -options => [ map { [ $strand_name{$_} => $_ ] } (keys %strand_name) ],
