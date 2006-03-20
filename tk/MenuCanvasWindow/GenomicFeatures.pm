@@ -173,27 +173,33 @@ sub stored_ace_dump {
 # -------------[create ace representation]---------------------
 
 sub ace_and_vector_dump {
-    my($self) = @_;
-    
+    my ($self) = @_;
+
     my $header = qq{Sequence "} . $self->slice_name . qq{"\n};
 
-    my $ace_text = $header."-D Feature\n\n";
-    my @vectors = ();
+    my $ace_text = $header . "-D Feature\n\n";
+    my @vectors  = ();
 
-    if(keys %{$self->{_gfs}}) {
+    if (keys %{ $self->{_gfs} }) {
 
         $ace_text .= $header;
 
-        for my $subhash (sort {$a->{start} <=> $b->{start}} values %{$self->{_gfs}}) {
+        for my $subhash (
+            sort { $a->{start} <=> $b->{start} || $a->{end} <=> $b->{end} }
+            values %{ $self->{_gfs} })
+        {
             my $gf_type = $subhash->{gf_type};
             my ($start, $end) =
                 ($subhash->{strand} == 1)
-                ? ($subhash->{start}, $subhash->{end})
-                : ($subhash->{end}, $subhash->{start});
+              ? ($subhash->{start}, $subhash->{end})
+              : ($subhash->{end}, $subhash->{start});
             my $score = $subhash->{score} || $def_score;
-            my $display_label = $subhash->{display_label} || $signal_info{$gf_type}{fullname};
-            
-            $ace_text .= join(' ', 'Feature', qq{"$gf_type"}, $start, $end, $score, qq{"$display_label"\n});
+            my $display_label = $subhash->{display_label}
+              || $signal_info{$gf_type}{fullname};
+
+            $ace_text .= join(' ',
+                'Feature', qq{"$gf_type"}, $start, $end, $score,
+                qq{"$display_label"\n});
 
             push @vectors, [ $gf_type, $start, $end, $score, $display_label ];
         }
@@ -308,7 +314,7 @@ sub change_of_gf_type_callback {
     my @enable  = (-state => 'normal',   -background => 'white');
     my @disable = (-state => 'disabled', -background => 'grey' );
     $genomic_feature->{score_entry}->configure(
-        $si->{edit_score} ? @enable : @disable
+        $si->{edit_score}         ? @enable : @disable
     );
     $genomic_feature->{display_label_entry}->configure(
         $si->{edit_display_label} ? @enable : @disable
@@ -380,11 +386,6 @@ sub add_genomic_feature {
        -textvariable => \$genomic_feature->{display_label},
        -width        => 24,
     )->pack(@pack);
-    my $paste_otter_exon_ids = sub {
-        $self->paste_otter_exon_ids($genomic_feature->{display_label_entry});
-    };
-    $genomic_feature->{display_label_entry}->bind('<Control-e>', $paste_otter_exon_ids);
-    $genomic_feature->{display_label_entry}->bind('<Control-E>', $paste_otter_exon_ids);
 
     my $delete_button = $subframe->Button(
         -text    => 'Delete',
@@ -424,7 +425,7 @@ sub add_genomic_feature {
                     $self->paste_label_callback($genomic_feature,
                         'display_label_entry', $x);
                 },
-                Tk::Ev('x')
+                Tk::Ev('x') # Needed by default Entry paste handler
             ]
         );
     }
