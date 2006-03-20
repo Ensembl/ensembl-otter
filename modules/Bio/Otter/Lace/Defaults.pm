@@ -260,6 +260,10 @@ sub fetch_pipeline_switch {
     return option_from_array([ $CLIENT_STANZA, 'pipeline' ]) ? 1 : 0;
 }
 
+sub pipehead {
+    return option_from_array([ $CLIENT_STANZA, 'pipehead' ]) ? 1 : 0;
+}
+
 sub misc_acefile {
     return option_from_array([ $CLIENT_STANZA, 'misc_acefile' ]);
 }
@@ -267,6 +271,16 @@ sub misc_acefile {
 sub methods_acefile {
     return option_from_array([ $CLIENT_STANZA, 'methods_acefile' ]);
 }
+
+sub pipe_name {
+
+    return (!fetch_pipeline_switch())
+                ? 'no pipeline'
+                : pipehead()
+                    ? 'new pipeline'
+                    : 'old pipeline';
+}
+
 
 sub get_config_list{
     return $CONFIG_INIFILES;

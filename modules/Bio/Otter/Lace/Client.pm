@@ -959,25 +959,6 @@ sub unlock_otter_xml {
     return 1;
 }
 
-sub pipehead {
-    my ( $self ) = @_;
-
-    return $self->option_from_array(['client', 'pipehead']);
-}
-                                                                                          
-sub pipe_name {
-
-    my ( $self ) = @_;
-    
-    my $pipehead = $self->pipehead();
-
-    return !defined($pipehead)
-                ? 'undefined pipeline?!'
-                : $pipehead
-                    ? 'new pipeline'
-                    : 'old pipeline';
-}
-
 1;
 
 __END__
