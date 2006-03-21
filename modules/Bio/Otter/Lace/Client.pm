@@ -553,11 +553,8 @@ sub get_afs_from_dataset_sliceargs_kind_analysis { # get AlignFeatures (Dna or P
     $sa = to_sliceargs($sa); # normalization
         # cached values:
     my $seqname = delete $sa->{slicename};
-    my $analysis = Bio::EnsEMBL::Analysis->new( -logic_name => $analysis_name );
 
-    if(!$analysis_name) {
-        die "Analysis name must be specified!";
-    }
+    my %analyses = (); # keep cached analysis objects here
 
     my ($baseclass, $subclass) = @{ {
         'dafs' => [ qw(Bio::EnsEMBL::DnaDnaAlignFeature Bio::Otter::DnaDnaAlignFeature) ],
@@ -570,10 +567,10 @@ sub get_afs_from_dataset_sliceargs_kind_analysis { # get AlignFeatures (Dna or P
         'get_align_features',
         {
             %$sa,
-            'pipehead'  => $pipehead ? 1 : 0,
+            'pipehead' => $pipehead ? 1 : 0,
             'dataset'  => $dataset->name(),
             'kind'     => $kind,
-            'analysis' => $analysis_name,
+            $analysis_name ? ('analysis' => $analysis_name) : (),
         },
         1,
     );
@@ -588,7 +585,7 @@ sub get_afs_from_dataset_sliceargs_kind_analysis { # get AlignFeatures (Dna or P
     foreach my $respline (@resplines) {
 
         my @optvalues = split(/\t/,$respline);
-        my $linetype      = shift @optvalues; # 'AlignFeature' || 'HitDescription'
+        my $linetype  = shift @optvalues; # 'AlignFeature' || 'HitDescription'
 
         if($linetype eq 'HitDescription') {
 
@@ -601,6 +598,7 @@ sub get_afs_from_dataset_sliceargs_kind_analysis { # get AlignFeatures (Dna or P
             $hds{$hit_name} = $hd;
 
         } elsif($linetype eq 'AlignFeature') {
+            my $logic_name    = pop @optvalues;
             my $cigar_string  = pop @optvalues;
 
             my $af = $baseclass->new(
@@ -612,8 +610,12 @@ sub get_afs_from_dataset_sliceargs_kind_analysis { # get AlignFeatures (Dna or P
                 $af->$method($optvalues[$ind]);
             }
 
-                # use the cached values:
-            $af->analysis( $analysis );
+                # cache if needed, otherwise use the cached value:
+            $af->analysis(
+                $analyses{$logic_name} ||= Bio::EnsEMBL::Analysis->new(-logic_name => $logic_name)
+            );
+
+                # use the cached value:
             $af->seqname( $seqname );
 
                 # Now add the HitDescriptions to Bio::EnsEMBL::DnaXxxAlignFeatures

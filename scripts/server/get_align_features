@@ -38,6 +38,7 @@ my $method = {
 my $analysis = $cgi_args{analysis};
 my $afs = $pipeline_slice->$method($analysis);
 
+$analysis ||= '(any analysis)';
 server_log("Total of ".scalar(@$afs)." $kind:$analysis features found");
 
     # Put the names into the hit_description hash:
@@ -88,6 +89,8 @@ foreach my $af (@$afs) {
         push @af_optvalues, $af->$opt();
     }
     push @af_optvalues, $af->cigar_string();
+
+    push @af_optvalues, $af->analysis()->logic_name();
 
     $output_string .= join("\t", @af_optvalues)."\n";
 }
