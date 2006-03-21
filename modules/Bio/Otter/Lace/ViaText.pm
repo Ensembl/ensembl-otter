@@ -14,8 +14,8 @@ our %OrderOfOptions = (
     ],
     'AlignFeature' => [
         qw(start end strand hseqname hstart hend hstrand percent_id score),
-                ## Special treatment: 'cigar_string',
-                ## Not sent (cached): 'analysis->logic_name', 'seqname'
+                ## Special treatment: 'cigar_string', 'analysis->logic_name'
+                ## Not sent (cached): 'seqname'
     ],
 
     'SimpleFeature' => [
