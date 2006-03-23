@@ -693,7 +693,7 @@ sub tmpstore_meta_info_for_SequenceSet {
     my $create_tmp_tbl =
 qq{CREATE TEMPORARY TABLE $tmp_tbl_meta SELECT * FROM sequence_set WHERE 1 = 0};
     my $insert_ss =
-qq{INSERT INTO $tmp_tbl_meta (assembly_type, description, analysis_priority) VALUES(?, ?, ?)};
+qq{INSERT INTO $tmp_tbl_meta (assembly_type, description, analysis_priority, hide) VALUES(?, ?, ?, 'Y')};
     my $max_chr_end_q = qq{SELECT IFNULL(MAX(a.chr_end), 0) AS max_chr_end 
 				   FROM $tmp_tbl_meta ss, assembly a 
 				   WHERE ss.assembly_type = a.type 
