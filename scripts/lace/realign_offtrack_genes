@@ -74,6 +74,11 @@ $| = 1;
     } else {
         $ss->selected_CloneSequences($ss->CloneSequence_list);
     }
+
+    # Lock the slice so that we can safely write to it.
+    my $lock_xml = $cl->lock_region_for_contig_from_Dataset($ss->selected_CloneSequences, $ds)
+      unless $test_flag;
+
     my ($chr, $chr_start, $chr_end) = $cl->chr_start_end_from_contig($ss->selected_CloneSequences);
     my $slice = $slice_aptr->fetch_by_chr_start_end($chr, $chr_start, $chr_end);
     my $acc_list = $gene_aptr->list_all_accessions_in_Slice($slice);
@@ -150,6 +155,8 @@ $| = 1;
             save_new_gene($dba, $gene_aptr, $db_gene, $xml_gene, $slice, $test_flag);
         }
     }
+    $cl->unlock_otter_xml($lock_xml, $ds->name)
+      if $lock_xml;
 }
 
 sub clone_sequence_contig_from_acc_hash {
