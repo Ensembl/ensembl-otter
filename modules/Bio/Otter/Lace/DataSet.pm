@@ -727,7 +727,7 @@ qq{INSERT INTO $tmp_tbl_meta (assembly_type, description, analysis_priority, hid
 }
 
 sub store_SequenceSet {
-    my ($self, $ss, $seqfetch_code, $allow_update) = @_;
+    my ($self, $ss, $seqfetch_code, $allow_update, $store_pipe) = @_;
 
     require Bio::EnsEMBL::Clone;
     require Bio::EnsEMBL::RawContig;
@@ -776,8 +776,9 @@ sub store_SequenceSet {
     }
 
     # Only attempt to connect to pipeline_db
-    # if it is mentioned in the meta table.
-    if (@{ $otter_db->get_MetaContainer->list_value_by_key('pipeline_db') }) {
+    # if we are asked to write to it and
+    # it is mentioned in the meta table.
+    if ($store_pipe and @{ $otter_db->get_MetaContainer->list_value_by_key('pipeline_db') }) {
         my $pipeline_db =
           Bio::Otter::Lace::PipelineDB::get_pipeline_rw_DBAdaptor($otter_db)
           or confess "Can't connect to pipeline db";
