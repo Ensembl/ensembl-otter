@@ -77,6 +77,7 @@ use Symbol 'gensym';
                 next if $gene->gene_type_prefix;
             }
             $i++;
+            
             $gene = $gene->transform($slice);
 
             my $tsct_dumped = 0;
@@ -86,8 +87,12 @@ use Symbol 'gensym';
                 }
                 $tsct_dumped = 1;
                 my $exons_truncated = $tsct->truncate_to_Slice($slice);
-                write_transcript_gtf($fh, $slice, $gene, $tsct, $local_coords,
-                    $exons_truncated, $include_codons, $fix_phases, $set_name);
+                eval {
+                    write_transcript_gtf($fh, $slice, $gene, $tsct, $local_coords,
+                        $exons_truncated, $include_codons, $fix_phases, $set_name);
+
+                };
+                warn $@ if $@;
             }
             print STDERR $tsct_dumped ? '+' : ".";
             unless ($i % 50) {
@@ -126,7 +131,8 @@ sub write_transcript_gtf {
 
     my @startcs =
       make_start_codon_features($transcript, $transcript->stable_id);
-    my @endcs = make_stop_codon_features($transcript, $transcript->stable_id);
+    my @endcs =
+      make_stop_codon_features($transcript, $transcript->stable_id);
 
     my $chrname;
     $chrname = $slice->chr_name;

@@ -97,6 +97,7 @@ my $DEBUG = 0;
     my $at_sanger = 1;    # Set if we want to get sequence notes and clone names
     my $do_submit = 0;	  # Set if we don't want to prime the pipeline with the SubmitContig analysis 
     my $populate_pipe = 0;
+    my $old_set;
 
     #---------------------------------------------------------------------------
     Bio::Otter::Lace::Defaults::do_getopt(
@@ -111,6 +112,7 @@ my $DEBUG = 0;
         'no_submit'     => sub{ $do_submit = 0 },
         'submit!'	    => \$do_submit,
         'pipe!'         => \$populate_pipe,
+        'replace=s'     => \$old_set,
       )
       or useage();
     useage() if $help;
@@ -265,27 +267,27 @@ my $DEBUG = 0;
           unless $acc and $sv;
 
         # make a CloneSequence for each line
-        my $CloneSequence = Bio::Otter::Lace::CloneSequence->new();
+        my $cs = Bio::Otter::Lace::CloneSequence->new();
 
-        $CloneSequence->accession($acc);
-        $CloneSequence->sv($sv);
+        $cs->accession($acc);
+        $cs->sv($sv);
 
-        # $CloneSequence->clone_name();
-        # $CloneSequence->length();
-        $CloneSequence->chromosome($otter_chromosome->dbID);
-        $CloneSequence->pipeline_chromosome($pipe_chromosome->dbID) if $pipeline_db;
-        $CloneSequence->chr_start($chr_start);
-        $CloneSequence->chr_end($chr_end);
-        $CloneSequence->super_contig_name($super_contig_name);
+        # $cs->clone_name();
+        # $cs->length();
+        $cs->chromosome($otter_chromosome->dbID);
+        $cs->pipeline_chromosome($pipe_chromosome->dbID) if $pipeline_db;
+        $cs->chr_start($chr_start);
+        $cs->chr_end($chr_end);
+        $cs->super_contig_name($super_contig_name);
 
-        # $CloneSequence->contig_id();
-        # $CloneSequence->contig_name();
-        $CloneSequence->contig_start($ctg_start);
-        $CloneSequence->contig_end($ctg_end);
-        $CloneSequence->contig_strand($ctg_ori);
+        # $cs->contig_id();
+        # $cs->contig_name();
+        $cs->contig_start($ctg_start);
+        $cs->contig_end($ctg_end);
+        $cs->contig_strand($ctg_ori);
 
         # add CloneSequence to the SequenceSet (temporary array)
-        push(@{$clone_sequence_list}, $CloneSequence);
+        push(@{$clone_sequence_list}, $cs);
 
     }
     close $fh;
@@ -297,7 +299,11 @@ my $DEBUG = 0;
     $SequenceSet->CloneSequence_list($clone_sequence_list);
     my $pipe_contigs =
       $ds->store_SequenceSet($SequenceSet, \&pfetch_acc_sv,
-        $INPUT_TYPE eq 'LIST');
+        $INPUT_TYPE eq 'LIST',
+        $populate_pipe);
+
+    hide_old_set($otter_db, $old_set) if $old_set;
+
 
     # print STDERR join("\n", map { $_->name } @$pipe_contigs);
 
@@ -326,6 +332,19 @@ my $DEBUG = 0;
 #------------------end of main script ------------------------------------------
 #                     Subroutines
 #-------------------------------------------------------------------------------
+
+
+sub hide_old_set {
+    my( $dba, $name ) = @_;
+    
+    my $sth = $dba->prepare(q{
+        UPDATE sequence_set
+        SET hide = 'Y'
+        WHERE assembly_type = ?
+        });
+    $sth->execute($name);
+}
+
 #
 # check line
 #-------------------------------------------------------------------------------
@@ -425,10 +444,7 @@ sub get_chromosome {
     my $chr;
     eval { $chr = $chr_adp->fetch_by_chr_name($chr_name) };
 
-    if (!$@) {    # if no errors with getting the chromosome
-        return $chr;
-    }
-    else {
+    unless ($chr) {
         ## put a new chromosome into the db to get its id # note that the length value is a default value and will be set later
         my $chr = Bio::EnsEMBL::Chromosome->new(
             -chr_name => $chr_name,
@@ -436,8 +452,8 @@ sub get_chromosome {
             -length   => 1
         );
         $chr_adp->store($chr);
-        return $chr;
     }
+    return $chr;
 }
 
 #
