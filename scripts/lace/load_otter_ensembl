@@ -1,54 +1,6 @@
 #!/usr/local/bin/perl -w
 
-=head1 NAME
-
-load_otter_ensembl
-
-=head1 SYNOPSIS
- 
-  load_otter_ensembl <AGP>
-
-=head1 DESCRIPTION
-
-This script reads the assembly information from
-an agp file and pfetches the clone and contig
-details based on the accession.  It then
-populates the assembly table in both databases.
-
-BEWARE! It assumes 1 contig for each clone.
-
-=head1 USEAGE
-
-load_otter_ensembl [options] -dataset human -description 'just an example' -set example AGP_FILE
-
-Where options are:
-
- option       default   comment
- ----------------------------------
- -priority              analysis priority of the sequnce set
- -chromosome            name of the chromosome the set comes from [required when input is list]
- -nosubmit				Used to avoid the pipeline priming with the SubmitContig analysis
- -help                  displays this documentation with PERLDOC
-
- ** plus the default otter options of Bio::Otter::Lace::Defaults **
-
-user should also supply either a list of accession numbers (one per line) or a .agp (golden path) file.
-
-    
-=head1 SETUP
-
-  Before running this script the meta table must contain connection information
-for the pipeline database.  This is done by running B<save_satellite_db> possibly 
-in the following way:
-
- ./save_satellite_db -dataset DATASET -key pipeline_db [ db connection options ]
-
-=cut
-
 use strict;
-
-# for benchmarking
-use Time::HiRes qw(gettimeofday tv_interval);
 
 use Getopt::Long;
 use Bio::SeqIO;
@@ -67,10 +19,7 @@ use Bio::Otter::Lace::Defaults;
 
 use Data::Dumper;
 
-my $DEBUG = 0;
-
 {
-    my $t0 = [gettimeofday];
 
 # some important variables (and some less inportant ones that look neater up here)
     my $INPUT_TYPE;       # AGP or LIST
@@ -102,23 +51,22 @@ my $DEBUG = 0;
     #---------------------------------------------------------------------------
     Bio::Otter::Lace::Defaults::do_getopt(
         'dataset=s'     => \$dataset_name,
-        'h|help'        => \$help,
         'description=s' => \$description,
         'priority=i'    => \$analysis_priority,
         'chromosome=s'  => \$chromosome_name,
         'set|name=s'    => \$set_name,
-        'debug'         => \$DEBUG,
         'sanger!'       => \$at_sanger,
         'no_submit'     => sub{ $do_submit = 0 },
         'submit!'	    => \$do_submit,
         'pipe!'         => \$populate_pipe,
         'replace=s'     => \$old_set,
       )
-      or useage();
-    useage() if $help;
-    useage() unless $dataset_name;
-    $agp_file =
-      $ARGV[0];    # takes the remaining argument as the filename to be read
+      or Bio::Otter::Lace::Defaults::show_help();
+    Bio::Otter::Lace::Defaults::show_help() unless $dataset_name;
+
+    # takes the remaining argument as the filename to be read
+    $agp_file = $ARGV[0];
+
     $do_submit = 0 unless $populate_pipe;
 
     # some options checking to make sure there's some sanity
@@ -314,11 +262,6 @@ my $DEBUG = 0;
     update_chromosome_length($pipeline_db, $pipe_chromosome) if $pipeline_db;
     update_chromosome_length($otter_db,    $otter_chromosome);
 
-    # benchmarking
-
-    my $elapsed = tv_interval($t0, [gettimeofday]);
-    print STDERR "code took: $elapsed seconds\n" if $DEBUG;
-
     # Get sequence notes and clone names from fox and oracle
     if ($at_sanger) {
         my ($root) = $0 =~ m{^(.+?)[^/]+$};
@@ -503,11 +446,201 @@ sub store_input_id_analysis {
             $state_info->store_input_id_analysis($ctg_name, $ana_obj,
                 'localhost');
         };
-        warn "$ctg_name already has entry for "
-          . $ana_obj->logic_name
-          . " $@ \n"
-          if $@ && $DEBUG;
     }
 }
 sub useage { exit(exec('perldoc', $0)); }
+
+__END__
+
+
+=head1 NAME
+
+load_otter_ensembl
+
+=head1 SYNOPSIS
+ 
+  load_otter_ensembl -dataset <DATASET_NAME> -set <SET_NAME> [-replace <SET_NAME>]\
+    -description <DESC> [-[no]pipe] [-no[sanger]] [-no[submit] <AGP>
+
+  load_otter_ensembl -help
+
+=head1 DESCRIPTION
+
+Used to load sequence and assembly data into an
+otter database given an AGP file.
+
+=head1 PARAMATERS
+
+=over 4
+
+=item -dataset <DATASET_NAME>
+
+The name of the dataset
+
+=item -set <SET_NAME>
+
+The name of the new set to be loaded.
+
+=item -replace <SET_NAME>
+
+The name of the previous version of this assembly.
+This is very important to specify if there is one
+(see below).
+
+=item -description <DESC>
+
+Description of the sequence set. This appears in
+the SequenceSetChooser window. Especially
+important for small special-purpose sequence sets
+so that we know in the future why they are there.
+
+=item <AGP>
+
+The name of the AGP file to load.
+
+=back
+
+=head1 FLAGS
+
+=over 4
+
+=item -[no]pipe
+
+Whether or not to load the old pipeline database.
+Now defaults to B<no>.
+
+=item -[no]sanger
+
+Whether or not to load international clone names
+into otter. Defaults to B<yes>.
+
+=item -[no]submit
+
+Whether or not to add SubmitContig analyses for
+each contig in the old pipeline. Defaults to
+B<no>.
+
+=item -help
+
+Displays this help message.
+
+=back
+
+=head1 PROCEDURE TO LOAD A NEW AGP
+
+Please follow this procedure when loading a new AGP:
+
+=over 4
+
+=item B<1.> Check the AGP.
+
+If it you make it from chromoview with oracle2agp
+follow up any warnings, especially double 5' or 3'
+join errors. We need to sort out assembly problems
+before annotation begins.
+
+If it is an update to an existing assembly, use
+compare_agps to see if it looks sensible relative
+to the last one.
+
+Check the gaps - are there gaps where the TPF says
+clones should overlap?
+
+We have seen mistakes in non-Sanger and manually
+created AGPs. A quick test is to do:
+
+  chromoview/test_agp_parser new.agp > new-parsed.agp
+  chromoview/compare_agps new.agp new-parsed.agp
+
+test_agp_parser runs the agp through our parser,
+and prints it out again. If there is something
+wrong with the chromosomal coodinates, this will
+show up as differences in compare_agps. (Otherwise
+errors in chromosomal coordinates only appear when
+an annotator tries to open the clones in
+otterlace.)
+
+=item B<2.> Load the AGP with load_otter_ensembl.
+
+Example command line:
+
+  load_otter_ensembl -dataset mouse \
+    -set NOD_IDD10-04 \
+    -replace NOD_IDD10-03 \
+    -desc 'Chromosome 3 NOD strain IDD10 region (2006/03/23)' \
+    ~/work/mouse/chr_3/chr3_NOD_IDD10-04.agp
+
+The new set is created with hide=Y, and the old
+set (the -replace argument) is also hidden. Thus
+the annotators don't see the old or new sets until
+we have finished preparing them. They also do not
+appear in some of our command line tools such as
+"show_sequence_set". (FIXME: they will still be
+visible in running otterlace sessions. We need to
+add a "write" column to sequence_set that is
+looked at by the otterlace system to ensure that
+running otterlaces can't open data on sets where
+write=N.)
+
+NB: Make sure there aren't any even older sequence
+sets that the - replace set that are visible, or
+annotators might work on them! (I have just hidden
+a lot in mouse.)
+
+load_otter_ensembl now, by default, does not
+populate the old pipeline databases. Add the
+"-pipe" flag if you need this.
+
+=item B<3.> Load the AGP into the new pipeline database.
+
+As the new pipeline is based on schema version
+20+, you will need to use the new API to do that.
+After loading the AGP in otter, use the script
+below to copy the sequence set from otter into the
+new pipeline.
+
+Example command line:
+
+  ensembl-pipeline/scripts/Finished/load_from_otter_to_pipeline.pl \
+    -o_name otter_mouse \
+    -p_name pipe_mouse \
+    -set NOD_IDD10-04
+
+In this example the database connection parameters
+(login, password and port) are retrieved from the
+~/.netrc file and the otter and pipeline host
+(-o_host, -p_host) are the default values,
+otterlive and otterpipe1, so we dont need to set
+them here. Cf POD documentation for more info and
+ask Mustapha if you need a copy of ~/.netrc.
+
+NB: -set can be used several times
+
+=item B<4.> Run realign_offtrack_genes
+
+Example command line:
+
+  realign_offtrack_genes -dataset mouse -set NOD_IDD10-04
+
+realign_offtrack_genes now locks the region it is realigning, so you
+will get a failed lock error if an annotator has part of it open. I
+usually run it first with the -test flag to check if it looks like it
+is doing the right thing. Save the STDOUT and STDERR in a log file.
+
+=item B<5.> Make the new set visible
+
+If there were no off-track genes, or they were successfully
+realigned, then login to the otter database and set the hide column
+to "N" for the new set. eg:
+
+  UPDATE sequence_set
+  SET hide = 'N'
+  WHERE assembly_type = 'NOD_IDD10-04'
+
+=back
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk and a
+host of others over the years.
 
