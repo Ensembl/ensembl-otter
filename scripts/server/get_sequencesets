@@ -2,7 +2,6 @@
 
 use strict;
 use warnings;
-
 use CGI;
 use OtterDefs;
 use Bio::Otter::DBSQL::DBAdaptor;
@@ -13,22 +12,16 @@ use Bio::Otter::ServerSide qw(error_exit
 
 
 $| = 1;
-
 my $q = new CGI;
 set_nph($q);
 my %params = $q->Vars;
- 
 my $query_fail = "must be present to get a Sequence Set";
-
 my $email   = $params{'email'}    || error_exit($q,"'email' $query_fail");
 my $dataset = $params{'dataset'}  || error_exit($q,"'dataset' $query_fail");
 my $author  = $params{'author'}   || error_exit($q,"'author' $query_fail");
-
-
 unless ($OTTER_SPECIES->{$dataset}) {
     error_exit($q, "Unknown data set '$dataset'\n");
 }
-
 my $dbinfo   = $OTTER_SPECIES->{$dataset};
 my $defaults = $OTTER_SPECIES->{'defaults'};
 ## and set
@@ -37,10 +30,8 @@ my $user     = $dbinfo->{USER} || $defaults->{USER};
 my $pass     = $dbinfo->{PASS} || $defaults->{PASS};
 my $port     = $dbinfo->{PORT} || $defaults->{PORT};
 my $dbname   = $dbinfo->{DBNAME};
-
 print STDERR "Database [$dbname][$host][$user][$pass][$port]";
 print STDERR "Author [$author] email [$email] dataset [$dataset]";
-  
 my( $odb );
 eval {
     $odb = new Bio::Otter::DBSQL::DBAdaptor(-host   => $host,
@@ -52,7 +43,6 @@ eval {
 if ($@) {
     error_exit($q, "Failed opening otter database [$@]");
 }
-
 my $auth_adapt = $odb->get_AuthorAdaptor();
 my ($author_obj, $saved_err);
 eval{
@@ -67,56 +57,31 @@ if($@){
         error_exit($q,"Failed to get an author.\n$@") unless $author_obj;
     }
 }
-
-my $author_id  = $author_obj->dbID();
-my $a_email    = $author_obj->email();
-
-# Needs some work.  change the xml or Bio::Otter::Lace::SequenceSet methods
-# sort out logic for sequence set access list
-# other stuff
-
 my $sth = $odb->prepare(q{
-    SELECT ss.assembly_type
-         , ss.description
-         , ss.analysis_priority
-         , ss.vega_set_id
-         , ss.hide
-         , ssa.access_level
-      FROM sequence_set ss 
-         , sequence_set_access ssa 
-         , access_author aa
-         , author a 
-     WHERE a.author_id = aa.author_id
-       AND ss.assembly_type LIKE ssa.access_spec
-       AND aa.access_id = ssa.access_id
-       AND a.author_id = ?
-       });
-$sth->execute($author_id);
-
-
+            SELECT assembly_type
+              , description
+	          , analysis_priority
+              , hide
+              , vega_set_id
+            FROM sequence_set
+            ORDER BY assembly_type
+            });
+$sth->execute;
 my $xml = '';
-# $xml   .= qq`<otter schemaVersion="$SCHEMA_VERSION" xmlVersion="$XML_VERSION">\n`;
 $xml   .= qq`  <dataset name="$dataset">\n`;
 $xml   .= qq`    <sequencesets>\n`;
-
-while(my $row = $sth->fetchrow_hashref){
-    my $name  = $row->{'assembly_type'};
-    my $auth  = $row->{'access_level'} eq 'RW' ? 1 : 0;
-    my $hide  = $row->{'hide'}  eq 'Y' ? 1 : 0; 
-
-    $xml .= qq`      <sequenceset name="$name" hide="$hide" write_access="$auth">\n`;
-    foreach my $p(qw/description analysis_priority vega_set_id/){
-        # should escape xml here
-        $xml .= qq`        <$p>$row->{$p}</$p>\n`;
-    }
-    $xml .= qq`      </sequenceset>\n`;
+while (my ($name, $desc, $priority, $hide, $vega_id) = $sth->fetchrow) {
+  $hide=$hide eq 'Y' ? 1 : 0;
+  $xml .= qq`      <sequenceset name="$name" hide="$hide" >\n`;
+  $xml .= qq`        <description>"$desc"</description>\n`;
+  $xml .= qq`        <analysis_priority>"$priority"</analysis_priority>\n`;
+  $xml .= qq`        <vega_set_id>`;
+  $xml .=$vega_id;
+  $xml .= qq`</vega_set_id>\n`;
+  $xml .= qq`      </sequenceset>\n`;
 }
-
 $xml .= qq`    </sequencesets>\n`;
 $xml .= qq`  </dataset>\n`;
-# $xml .= qq`</otter>\n`;
-
-# print $xml;
 send_response($q, $xml, 1);
 
 __END__
@@ -131,5 +96,4 @@ return xml for sequence sets
 =head1 AUTHOR
 
 Roy Storey,,,, B<email> rds@sanger.ac.uk
-
-
+refactored by Sindhu K.Pillai B<email> sp1@sanger.ac.uk
