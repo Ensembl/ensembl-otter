@@ -128,7 +128,9 @@ sub draw {
     my $ds = $self->Client->get_DataSet_by_name($self->name);
     # uncomment the line below to make
     # xml sequence set transfer work. 
-    # $self->Client->get_all_SequenceSets_for_DataSet($ds);
+    # my $ss_list=$self->Client->get_all_SequenceSets_for_DataSet($ds);
+    #This is also to make xml transfer to work
+    $ds->{'_Client'}=$self->Client;
     my $ss_list = $ds->get_all_visible_SequenceSets;
     my $row_height = int $size * 1.5;
     my $x = $size;
