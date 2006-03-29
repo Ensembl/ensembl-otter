@@ -17,12 +17,23 @@ use Bio::Otter::Lace::PipelineDB;
 use Bio::Otter::Lace::SatelliteDB;
 use Bio::Otter::Lace::Defaults;
 use Bio::Otter::Lace::PipelineStatus;
+use Scalar::Util 'weaken';
 
 sub new {
     my( $pkg ) = @_;
 
     return bless {}, $pkg;
 }
+
+sub Client {
+  my( $self, $client ) = @_;
+  if ($client) {
+    $self->{'_Client'} = $client;
+    weaken $self->{'_Client'};
+  }
+  return $self->{'_Client'};
+}
+
 
 sub name {
     my( $self, $name ) = @_;
@@ -108,112 +119,54 @@ sub save_author_if_new{
 
 sub sequence_set_access_list {
     my( $self ) = @_;
-    
-    my( $al );
-    unless ($al = $self->{'_sequence_set_access_list'}) {
-        $al = $self->{'_sequence_set_access_list'} = {};
-        
-        my $dba = $self->get_cached_DBAdaptor;
-        my $sth = $dba->prepare(q{
-            SELECT ssa.assembly_type
-              , ssa.access_type
-              , au.author_name
-            FROM sequence_set_access ssa
-              , author au
-            WHERE ssa.author_id = au.author_id
-            });
-        $sth->execute;
-        
-        while (my ($set_name, $access, $author) = $sth->fetchrow) {
-            $al->{$author}{$set_name} = $access eq 'RW' ? 1 : 0;
-        }
+    unless ($self->{'_sequence_set_access_list'}) {
+        $self->{'_sequence_set_access_list'} = {};
+	my $client = $self->Client or confess "No otter Client attached";
+	$client->get_SequenceSet_AccessList_for_DataSet($self);
     }
-    
-    return $al;
+    return $self->{'_sequence_set_access_list'};
 }
 
 sub get_all_visible_SequenceSets {
-    my( $self ) = @_;
-    
-    my $ss_list = $self->get_all_SequenceSets;
-    my $visible = [];
-    foreach my $ss (@$ss_list) {
-        push(@$visible, $ss) unless $ss->is_hidden;
-    }
-    return $visible;
+  my( $self) = @_;
+  my $ss_list = $self->get_all_SequenceSets();
+  my $visible = [];
+  foreach my $ss (@$ss_list) {
+    push(@$visible, $ss) unless $ss->is_hidden;
+  }
+  return $visible;
 }
 
 sub get_all_SequenceSets {
-    my( $self, $ss_array ) = @_;
-
-    # If using xml transfer for sequence set remove old bit below
-    # note need to call $client->get_SequenceSets_for_DataSet($datasetObj) FIRST
-    # that's the rub when this object hasn't got a client or isn't using 
-    # a direct db connection. See SequenceSetChooser version 1.28 line 130
-    if($ss_array 
-       && ref($ss_array)
-       && ref($ss_array) eq 'ARRAY'){
-        $self->{'_sequence_sets'} = $ss_array;
+  my ($self)=@_;
+  unless ($self->{'_sequence_sets'}) {
+    my $client = $self->Client or confess "No otter Client attached";
+    $client->get_SequenceSet_AccessList_for_DataSet($self);
+    my $ssal=$self->{'_sequence_set_access_list'};
+    $self->{'_sequence_sets'} = [];
+    $self->{'_sequence_sets'} = $client->get_all_SequenceSets_for_DataSet($self);
+    my $write_flag;
+    my $this_author=$self->author;
+    foreach my $ss (@{$self->{'_sequence_sets'}}){
+      my $name = $ss->{'_name'};
+      if ($ssal->{$this_author} && $ssal->{$this_author}->{$name}) {
+	$write_flag = $ssal->{$this_author}->{$name};
+	#If an author has an entry in the sequence_set_access
+	#table for this set, then it is restricted to them.
+	next unless defined $write_flag;
+      } else {
+	# No entries for person in sequence_set_access table - person
+	# can write and see everything.
+	$write_flag = 1;
+      }
+      $ss->write_access($write_flag);
     }
-    # this is the old bit of this method.
-    # doesn't need $client->get_SequenceSets_for_DataSet($datasetObj)
-    # to be called first
-    my( $ss );
-    unless ($ss = $self->{'_sequence_sets'}) {
-        $ss = $self->{'_sequence_sets'} = [];
-        my @a = caller(0);
-        return [] if $a[0] eq 'Bio::Otter::Lace::Client';
-
-        warn "Client->get_SequenceSets_for_DataSet(DataSetObject) should replace this\n";
-
-        my $this_author = $self->author or confess "author not set";
-        my $ssal = $self->sequence_set_access_list;
-        
-    
-        my $dba = $self->get_cached_DBAdaptor;
-        my $sth = $dba->prepare(q{
-            SELECT assembly_type
-              , description
-	          , analysis_priority
-              , hide
-              , vega_set_id
-            FROM sequence_set
-            ORDER BY assembly_type
-            });
-        $sth->execute;
-        
-        my $ds_name = $self->name;
-        while (my ($name, $desc, $priority, $hide, $vega_id) = $sth->fetchrow) {
-            my( $write_flag );
-            if (%$ssal && $ssal->{$this_author}) {
-                $write_flag = $ssal->{$this_author}{$name};
-                # If an author doesn't have an entry in the sequence_set_access
-                # table for this set, then it is invisible to them.
-                next unless defined $write_flag;
-            } else {
-                # No entries for person in sequence_set_access table - person
-                # can write and see everything.
-                $write_flag = 1;
-            }
-        
-            my $set = Bio::Otter::Lace::SequenceSet->new;
-            $set->name($name);
-            $set->dataset_name($ds_name);
-            $set->description($desc);
-	        $set->priority($priority);
-            $set->is_hidden($hide eq 'Y');
-            $set->vega_set_id($vega_id);
-            $set->write_access($write_flag);
-            
-            push(@$ss, $set);
-        }
-    }
-    return $ss;
+  }
+  return $self->{'_sequence_sets'};
 }
 
 sub get_SequenceSet_by_name {
     my( $self, $name ) = @_;
-    
     confess "missing name argument" unless $name;
     my $ss_list = $self->get_all_SequenceSets;
     foreach my $ss (@$ss_list) {
@@ -223,9 +176,9 @@ sub get_SequenceSet_by_name {
     }
     confess "No SequenceSet called '$name'";
 }
+
 sub selected_SequenceSet {
     my( $self, $selected_SequenceSet ) = @_;
-    
     if ($selected_SequenceSet) {
         $self->{'_selected_SequenceSet'} = $selected_SequenceSet;
     }
@@ -234,7 +187,6 @@ sub selected_SequenceSet {
 
 sub unselect_SequenceSet {
     my( $self ) = @_;
-    
     $self->{'_selected_SequenceSet'} = undef;
 }
 
