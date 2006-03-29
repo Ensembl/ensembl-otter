@@ -51,7 +51,7 @@ use Exporter();
 my ($MAIN_DIR, $OTTER_RELEASE);
 
 $OTTER_SERVER_PORT      = 33999;
-$OTTER_RELEASE          = 42;
+$OTTER_RELEASE          = 43;
 
 # $MAIN_DIR               = '/nfs/team71/analysis/lg4/work';
 # $MAIN_DIR               = "/humsql/ottersrv_rel${OTTER_RELEASE}_port${OTTER_SERVER_PORT}";
@@ -78,7 +78,8 @@ $OTTER_GET_SCRIPTS          = {'/perl/get_region'     => 'get_region',
                                '/perl/get_pipeline_genes'         => 'get_pipeline_genes',
                                '/perl/get_analyses_status'        => 'get_analyses_status',
                                '/perl/get_tiling_and_seq'         => 'get_tiling_and_seq',
-
+			       '/perl/get_sequencesets' => 'get_sequencesets',
+			       '/perl/get_sequenceset_accesslist' => 'get_sequenceset_accesslist',
                               };
 $OTTER_POST_SCRIPTS         = {'/perl/write_region'   => 'write_region',
                                '/perl/unlock_region'  => 'unlock_region',
