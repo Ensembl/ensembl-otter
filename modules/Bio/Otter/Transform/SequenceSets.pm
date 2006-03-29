@@ -7,9 +7,8 @@ use Bio::Otter::Lace::SequenceSet;
 
 our @ISA = qw(Bio::Otter::Transform);
 
-
 # ones were interested in 
-my $SUB_ELE = { map { $_ => 1 } qw(description assembly_type vega_set_id analysis_priority)};
+my $SUB_ELE = { map { $_ => 1 } qw(description vega_set_id analysis_priority)};
 # super elements to the actual sequence set
 my $SUP_ELE = { map { $_ => 1 } qw(otter sequencesets) };
 
@@ -20,30 +19,26 @@ sub start_handler{
     my $ele  = lc shift;
     my $attr = {@_};
     $self->_check_version(@_) if $ele eq 'otter';
-
     if($ele eq 'sequenceset'){
         my $ss = Bio::Otter::Lace::SequenceSet->new();
         $ss->name($attr->{'name'});
         $ss->is_hidden($attr->{'hide'});
         $ss->dataset_name($self->get_property('dataset_name'));
-        $ss->write_access($attr->{'write_access'});
         $self->add_object($ss);
     }elsif($SUB_ELE->{$ele}){
-     #   print "* Interesting $ele\n";
+       # print "* Interesting $ele\n";
     }else{
-      #  print "Uninteresting $ele\n";
+       # print "Uninteresting $ele\n";
     }
-    
 }
 
 sub end_handler{ }
+
 sub char_handler{
     my $self = shift;
     my $xml  = shift;
     my $data = shift;
-    #my $context = ($xml->context)[-1];
     my $context = $xml->current_element();
-    #print "context '$context'\n";
     if($SUB_ELE->{$context}){
         my $context_method = $context;
         my $ss = $self->objects;
@@ -56,6 +51,16 @@ sub char_handler{
     }
 }
 
-
-
 1;
+__END__
+
+=head1 NAME - SequenceSets.pm
+
+
+=head1 DESCRIPTION
+
+XML Parsing for sequence sets. Parses xml file and converts to SequenceSet Objects
+
+=head1 AUTHOR
+
+Refactored by Sindhu K. Pillai B<email> sp1@sanger.ac.uk
