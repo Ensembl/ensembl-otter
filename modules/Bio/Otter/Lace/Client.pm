@@ -31,6 +31,7 @@ use Bio::Otter::Lace::ViaText ('%OrderOfOptions');
 use Bio::Otter::LogFile;
 use Bio::Otter::Transform::DataSets;
 use Bio::Otter::Transform::SequenceSets;
+use Bio::Otter::Transform::AccessList;
 
 sub new {
     my( $pkg ) = @_;
@@ -341,6 +342,7 @@ sub general_http_dialog {
         } else {
             confess "method '$method' is not supported";
         }
+
         my $response = $self->get_UserAgent->request($request);
         $content = $self->_check_for_error($response, $psw_attempts_left, $unwrap);
     } while ($psw_attempts_left-- && !$content);
@@ -871,51 +873,75 @@ sub get_xml_from_Dataset_type_chr_start_end {
 }
 
 sub get_all_DataSets {
-    my( $self ) = @_;
-    
-    my $ds = $self->{'_datasets'};
-    if (! $ds) {    
-        my $content = $self->general_http_dialog(
-            3,
-            'GET',
-            'get_datasets',
-            {},
-        );
-
-        my $dsp = Bio::Otter::Transform::DataSets->new();
-        $dsp->set_property('author', $self->author);
-        my $p = $dsp->my_parser();
-        $p->parse($content);
-        $ds = $self->{'_datasets'} = $dsp->sorted_objects;
-    }
-    return @$ds;
+  my( $self ) = @_;
+  my $ds = $self->{'_datasets'};
+  if (! $ds) {
+    my $content = $self->general_http_dialog(
+					     3,
+					     'GET',
+					     'get_datasets',
+					     {},
+					    );
+    # stream parsing expat non-validating parser
+    my $dsp = Bio::Otter::Transform::DataSets->new();
+    $dsp->set_property('author', $self->author);
+    my $p = $dsp->my_parser();
+    $p->parse($content);
+    $ds = $self->{'_datasets'} = $dsp->sorted_objects;
+  }
+  return @$ds;
 }
 
 sub get_all_SequenceSets_for_DataSet {
-    my( $self, $dsObj ) = @_;
+  my( $self, $dsObj ) = @_;
+  return [] unless $dsObj;
+  my $ss = $dsObj->{'_sequence_sets'};
+  return $ss if (defined $ss && scalar @$ss);
+  my $content = $self->general_http_dialog(
+					   3,
+					   'GET',
+					   'get_sequencesets',
+					   {
+					    'author'   => $self->author,
+					    'email'    => $self->email,
+					    'hostname' => $self->client_hostname,
+					    'dataset'  => $dsObj->name,
+					   }
+					  );
+  # stream parsing expat non-validating parser
+  my $ssp = Bio::Otter::Transform::SequenceSets->new();
+  $ssp->set_property('dataset_name', $dsObj->name);
+  my $p   = $ssp->my_parser();
+  $p->parse($content);
+  $ss=$ssp->objects;
+  $dsObj->{'_sequence_sets'}=$ss;
+  return $ss;
+}
 
-    return [] unless $dsObj;
-    my $cache = $dsObj->get_all_SequenceSets();
-    return $cache if scalar(@$cache);
- 
+sub get_SequenceSet_AccessList_for_DataSet {
+  my ($self,$dsObj) = @_;
+  return [] unless $dsObj;
+  unless($dsObj->{'_sequence_set_access_list'}){
+    $dsObj->{'_sequence_set_access_list'} = {};
     my $content = $self->general_http_dialog(
-        0,
-        'GET',
-        'get_sequencesets',
-        {
-            'author'   => $self->author,
-            'email'    => $self->email,
-            'hostname' => $self->client_hostname,
-            'dataset'  => $dsObj->name,
-        }
-    );
-    # stream parsing ????
-
-    my $ssp = Bio::Otter::Transform::SequenceSets->new();
-    $ssp->set_property('dataset_name', $dsObj->name);
-    my $p   = $ssp->my_parser();
+					     3,
+					     'GET',
+					     'get_sequenceset_accesslist',
+					     {
+					      'author'   => $self->author,
+					      'email'    => $self->email,
+					      'hostname' => $self->client_hostname,
+					      'dataset'  => $dsObj->name,
+					     }
+					    );
+    # stream parsing expat non-validating parser
+    my $ssa = Bio::Otter::Transform::AccessList->new();
+    $ssa->set_property('dataset_object', $dsObj);
+    my $p   = $ssa->my_parser();
     $p->parse($content);
-    return $dsObj->get_all_SequenceSets($ssp->objects);
+    my $al=$ssa->objects;
+  }
+  return $dsObj->{'_sequence_set_access_list'};
 }
 
 sub save_otter_xml {
@@ -960,6 +986,7 @@ sub unlock_otter_xml {
     );
     return 1;
 }
+
 
 1;
 
