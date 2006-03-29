@@ -245,6 +245,7 @@ sub fetch_otter_ace {
     my $ace = '';
     my $selected_count = 0;
     foreach my $dsObj ($client->get_all_DataSets) {
+	$dsObj->{'_Client'}=$self->Client;
         my $ss_list = $dsObj->get_all_SequenceSets;
         foreach my $ss (@$ss_list ) {
             if (my $ctg_list = $ss->selected_CloneSequences_as_contig_list) {
