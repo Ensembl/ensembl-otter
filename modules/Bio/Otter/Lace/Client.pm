@@ -18,6 +18,8 @@ use Bio::EnsEMBL::RepeatConsensus;
 use Bio::EnsEMBL::RepeatFeature;
 use Bio::EnsEMBL::SimpleFeature;
 
+use Bio::Otter::Author;
+use Bio::Otter::CloneLock;
 use Bio::Otter::Converter;
 use Bio::Otter::DnaDnaAlignFeature;
 use Bio::Otter::DnaPepAlignFeature;
@@ -434,6 +436,50 @@ sub get_analyses_status_from_dsname_ssname {
     return \%status_hash;
 }
 
+sub get_locks_from_dsname_ssname_author {
+    my( $self, $dsname, $ssname, $author ) = @_;
+
+    my $response = $self->general_http_dialog(
+        0,
+        'GET',
+        'get_locks',
+        {
+            'type'     => $ssname,
+            'dataset'  => $dsname,
+            $ssname ? ('type'   => $ssname) : (),
+            $author ? ('author' => $author) : (),
+        },
+        1,
+    );
+
+    my %lock_hash = ();
+    my %author_hash = ();
+
+    for my $line (split(/\n/,$response)) {
+        my ($intl_name, $embl_name, $ctg_name, $hostname, $timestamp, $aut_name, $aut_email)
+            = split(/\t/, $line);
+
+        $author_hash{$aut_name} ||= Bio::Otter::Author->new(
+            -name  => $aut_name,
+            -email => $aut_email,
+        );
+
+        # Which name should we use as the key? $intl_name or $embl_name?
+        #
+        # $lock_hash{$intl_name} ||= Bio::Otter::CloneLock->new(
+        # $lock_hash{$embl_name} ||= Bio::Otter::CloneLock->new(
+
+        $lock_hash{$ctg_name} ||= Bio::Otter::CloneLock->new(
+            -author    => $author_hash{$aut_name},
+            -hostname  => $hostname,
+            -timestamp => $timestamp,
+            # SHOULD WE HAVE ANY REFERENCE TO THE CLONE BEING LOCKED???
+        );
+    }
+
+    return \%lock_hash;
+}
+
 sub get_tiling_path_and_sequence {
     my ( $self, $dataset, $sa, $dna_wanted, $pipehead ) = @_;
 
@@ -448,8 +494,8 @@ sub get_tiling_path_and_sequence {
         {
             %$sa,
             'dataset'   => $dataset->name(),
-            'pipehead'  => $pipehead ? 1 : 0,
             'dnawanted' => $dna_wanted ? 1 : 0,
+            'pipehead'  => 0, # not to confuse the current server script
         },
         1,
     );
