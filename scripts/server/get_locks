@@ -1,0 +1,46 @@
+#!/usr/local/bin/perl -w
+
+my $pipehead = $ENV{PIPEHEAD}; # is set by the server for any GET request
+# but probably not needed now since we do not work with pipeline
+
+use strict;
+use OtterDefs;
+use CGI;
+use Bio::Otter::ServerSide (':all');
+use Bio::Otter::DBSQL::DBAdaptor;
+
+$| = 1;
+
+my $cgi = new CGI;
+set_nph($cgi);
+my %cgi_args = $cgi->Vars;
+
+my $odb = get_DBAdaptor_from_CGI_species($cgi, $OTTER_SPECIES, $pipehead);
+
+my $asm_type = $cgi_args{type};
+my $aut_name = $cgi_args{author};
+
+my $sth = $odb->prepare(qq{
+    SELECT DISTINCT c.name, concat(c.embl_acc, '.', c.embl_version), g.name,
+           l.hostname, l.timestamp, aut.author_name, aut.author_email
+      FROM clone c, contig g, assembly asm
+ LEFT JOIN clone_lock l ON c.clone_id = l.clone_id
+ LEFT JOIN author aut ON aut.author_id = l.author_id
+    WHERE asm.contig_id = g.contig_id
+      AND g.clone_id = c.clone_id
+}
+.($asm_type ? qq{ AND asm.type = "$asm_type" } : '')
+.($aut_name ? qq{ AND aut.author_name = "$aut_name" } : '')
+.qq{
+      AND l.clone_lock_id IS NOT NULL
+      ORDER BY l.timestamp
+});
+$sth->execute();
+
+my $output_string = '';
+while (my (@columns) = $sth->fetchrow()) {
+    $output_string .= join("\t", @columns)."\n";
+}
+
+send_response($cgi, $output_string, 1);
+
