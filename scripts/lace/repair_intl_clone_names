@@ -95,7 +95,7 @@ sub repair_one_db {
 
     if($head_flag) {
         $intl_attrib = get_attrib_id_by_name($dbh, 'intl_clone_name') || die "'intl_clone_name' attrib not defined";
-        $acc_attrib  = get_attrib_id_by_name($dbh, 'embl_accession') || die "'embl_accession' attrib not defined";
+        $acc_attrib  = get_attrib_id_by_name($dbh, 'embl_acc') || die "'embl_acc' attrib not defined";
     }
 
         # find the clones that need their international name to be updated:
