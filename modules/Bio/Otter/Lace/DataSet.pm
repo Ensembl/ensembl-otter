@@ -247,6 +247,22 @@ sub status_refresh_for_SequenceSet{
 sub lock_refresh_for_SequenceSet{
     my ($self , $ss) = @_ ;
  
+    my $ctgname2lock_hashref = $self->Client()->get_locks_from_dsname_ssname_author(
+        $self->name(), $ss->name()
+    );
+
+    foreach my $cs (@{$ss->CloneSequence_list()}) {
+        my $hashkey = $cs->contig_name();
+
+        if(my $lock = $ctgname2lock_hashref->{$hashkey}) {
+            $cs->set_lock_status($lock);
+        } else {
+            $cs->set_lock_status(0) ;
+        }
+    }
+
+=comment
+
     my $dba = $self->get_cached_DBAdaptor;
    
     my $type = $ss->name  ;
@@ -298,6 +314,9 @@ sub lock_refresh_for_SequenceSet{
             $clone->set_lock_status(0);
         }
     }
+
+=cut
+
 }
 
 
@@ -897,6 +916,8 @@ sub update_SequenceSet {
     }
 }
 
+=comment
+
 sub refresh_locks {
     my ($self, $ss) = @_ ;
     
@@ -933,8 +954,9 @@ sub refresh_locks {
         my $locked_clone  =  $cs_hash{$contig_id} ; 
         $locked_clone->set_lock_status(1) ;
     }
-        
 }
+
+=cut
 
 sub delete_SequenceSet {
     my ($self, $ss) = @_;
