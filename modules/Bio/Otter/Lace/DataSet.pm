@@ -260,66 +260,7 @@ sub lock_refresh_for_SequenceSet{
             $cs->set_lock_status(0) ;
         }
     }
-
-=comment
-
-    my $dba = $self->get_cached_DBAdaptor;
-   
-    my $type = $ss->name  ;
-    my @id_list ;
-    foreach my $clone ( @{$ss->CloneSequence_list}){
-        push (@id_list , $clone->contig_id);
-    }
-     
-    my $id_string =  join( ", " , map { qq`'$_'`} @id_list );        
-
-    my $sql = qq{
-        SELECT DISTINCT cl.clone_lock_id , g.contig_id, t.author_id
-            , t.author_name, t.author_email, cl.hostname
-        FROM assembly a
-          , contig g
-          , clone c
-        LEFT JOIN clone_lock cl ON cl.clone_id = c.clone_id
-        LEFT JOIN author t ON t.author_id = cl.author_id
-        WHERE a.contig_id = g.contig_id
-          AND g.clone_id = c.clone_id
---          AND a.type = "$type"
-          AND cl.clone_lock_id IS NOT NULL
-          AND g.contig_id in ($id_string)          
-        };
-        #warn $sql;
-        my $sth = $dba->prepare($sql);
-             
-    $sth->execute;
-    my ($clone_lock_id , $contig_id, $author_id,
-        $author_name, $author_email, $hostname);
-    $sth->bind_columns( \$clone_lock_id , \$contig_id, \$author_id,
-                        \$author_name, \$author_email, \$hostname );
-    my %lock_hash ;
-    while($sth->fetch) {
-        #if(defined($clone_lock_id)){
-            my $authorObj = Bio::Otter::Author->new(-dbid  => $author_id,
-                                                    -name  => $author_name,
-                                                    -email => $author_email);            
-            $lock_hash{$contig_id} = Bio::Otter::CloneLock->new(-author   => $authorObj,
-                                                                -hostname => $hostname,
-                                                                -dbID     => $clone_lock_id);
-        #}
-    }
-    
-    foreach my  $clone (@{$ss->CloneSequence_list}){
-        if (my $cloneLock = $lock_hash{$clone->contig_id} ){
-            $clone->set_lock_status($cloneLock);
-        }else{
-            $clone->set_lock_status(0);
-        }
-    }
-
-=cut
-
 }
-
-
 
 sub fetch_all_CloneSequences_for_SequenceSet {
     my( $self, $ss ) = @_;
@@ -434,56 +375,25 @@ sub fetch_pipeline_ctg_ids_for_SequenceSet{
 sub fetch_all_SequenceNotes_for_SequenceSet {
     my( $self, $ss ) = @_;
     
-    my $name = $ss->name or confess "No name in SequenceSet object";
-    my $cs_list = $ss->CloneSequence_list;
+    my $ctgname2notes_hashref = $self->Client()->get_sequence_notes_from_dsname_ssname_author(
+        $self->name(), $ss->name()
+    );
 
-    my $dba = $self->get_cached_DBAdaptor;
-    my $sth = $dba->prepare(qq{
-        SELECT n.contig_id
-          , n.note
-          , UNIX_TIMESTAMP(n.note_time)
-          , n.is_current
-          , au.author_name
-        FROM assembly ass
-          , sequence_note n
-          , author au
-        WHERE ass.contig_id = n.contig_id
-          AND n.author_id = au.author_id
-          AND ass.type = ?
-        });
-    $sth->execute($name);
-    
-    my( $ctg_id, $text, $time, $is_current, $author);
-    $sth->bind_columns(\$ctg_id, \$text, \$time, \$is_current, \$author);
-    
-    my( %ctg_notes );
-    while ($sth->fetch) {
-        my $note = Bio::Otter::Lace::SequenceNote->new;
-        $note->text($text);
-        $note->timestamp($time);
-        $note->is_current($is_current eq 'Y' ? 1 : 0);
-        $note->author($author);
-        
-        my $note_list = $ctg_notes{$ctg_id} ||= [];
-        push(@$note_list, $note);
-    }
-    
-    foreach my $cs (@$cs_list) {
-	# added so that the complete fresh set is ALL 
-	# that is in the cloneSequence's SequenceNotes [].
-	$cs->truncate_SequenceNotes(); 
-        if (my $notes = $ctg_notes{$cs->contig_id}) {
+    foreach my $cs (@{$ss->CloneSequence_list()}) {
+        my $hashkey = $cs->contig_name();
+
+        $cs->truncate_SequenceNotes(); 
+        if (my $notes = $ctgname2notes_hashref->{$hashkey}) {
             foreach my $sn (sort {$a->timestamp <=> $b->timestamp} @$notes) {
-		# logic in current_SequenceNote doesn't work
-		# unless this is done first
-		$cs->add_SequenceNote($sn); 
+                # logic in current_SequenceNote doesn't work
+                # unless sorting is done first
+                $cs->add_SequenceNote($sn); 
                 if ($sn->is_current) {
                     $cs->current_SequenceNote($sn);
                 }
             }
         }
     }
-    return %ctg_notes;
 }
 
 sub save_current_SequenceNote_for_CloneSequence {
@@ -915,48 +825,6 @@ sub update_SequenceSet {
 	    $sth->execute($desc, $pri, $name);
     }
 }
-
-=comment
-
-sub refresh_locks {
-    my ($self, $ss) = @_ ;
-    
-    my $cs_list = $ss->CloneSequence_list ;
-    my @contig_ids ; # or could use embl acc / version combo - but this seems simpler
-    
-    # put all the clones in a hash with the contig_id as the key, also put contig id's in an array for the query
-    my %cs_hash ;
-    foreach my $cs (@$cs_list){
-        $cs_hash{$cs->contig_id} = $cs ;
-        push @contig_ids , $cs->contig_id ;
-    }
-    my $comma_list = join ',' , @contig_ids  ;
-    
-    my $dba = $self->get_cached_DBAdaptor ;
-    my $sth = $dba->prepare(qq{
-        SELECT  cg.contig_id
-        FROM    clone_lock cl
-            ,   contig cg 
-        WHERE   cl.clone_id = cg.clone_id
-        AND     cg.contig_id IN ($comma_list)     
-        } ) ;
-    $sth->execute() ;
-    my ($contig_id) ;
-    $sth->bind_columns(\$contig_id) ;
-    
-    # set all locks to 0
-    while( my ($key , $clone) = each (%cs_hash)){
-        $clone->set_lock_status(0) ;
-    }
-    
-    # set the locked clones (from query result) to 1
-    while ($sth->fetch){
-        my $locked_clone  =  $cs_hash{$contig_id} ; 
-        $locked_clone->set_lock_status(1) ;
-    }
-}
-
-=cut
 
 sub delete_SequenceSet {
     my ($self, $ss) = @_;

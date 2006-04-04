@@ -28,6 +28,7 @@ use Bio::Otter::HitDescription;
 use Bio::Otter::Lace::AceDatabase;
 use Bio::Otter::Lace::DataSet;
 use Bio::Otter::Lace::PersistentFile;
+use Bio::Otter::Lace::SequenceNote;
 use Bio::Otter::Lace::TempFile;
 use Bio::Otter::Lace::ViaText ('%OrderOfOptions');
 use Bio::Otter::LogFile;
@@ -478,6 +479,41 @@ sub get_locks_from_dsname_ssname_author {
     }
 
     return \%lock_hash;
+}
+
+sub get_sequence_notes_from_dsname_ssname_author {
+    my( $self, $dsname, $ssname, $author ) = @_;
+
+    my $response = $self->general_http_dialog(
+        0,
+        'GET',
+        'get_sequence_notes',
+        {
+            'type'     => $ssname,
+            'dataset'  => $dsname,
+            $ssname ? ('type'   => $ssname) : (),
+            $author ? ('author' => $author) : (),
+        },
+        1,
+    );
+
+    my %ctgname2notes = ();
+
+    for my $line (split(/\n/,$response)) {
+        my ($ctg_name, $aut_name, $is_current, $datetime, $timestamp, $note_text)
+            = split(/\t/, $line, 6);
+
+        my $new_note = Bio::Otter::Lace::SequenceNote->new;
+        $new_note->text($note_text);
+        $new_note->timestamp($timestamp);
+        $new_note->is_current($is_current eq 'Y' ? 1 : 0);
+        $new_note->author($aut_name);
+
+        my $note_listp = $ctgname2notes{$ctg_name} ||= [];
+        push(@$note_listp, $new_note);
+    }
+
+    return \%ctgname2notes;
 }
 
 sub get_tiling_path_and_sequence {
