@@ -1,0 +1,71 @@
+#!/usr/local/bin/perl -w
+
+### load_new_gene_xml
+
+use strict;
+use Bio::Otter::Lace::Defaults;
+
+{
+    my( $dataset_name );
+
+    my $usage = sub { exec('perldoc', $0) };
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'       => $usage,
+        'dataset=s'     => \$dataset_name,
+        ) or $usage->();
+    $usage->() unless $dataset_name;
+    
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    
+    my $otter_dba = $ds->get_cached_DBAdaptor;
+    
+    # NB: Ignores other products of XML_to_otter() such as features (polyA)
+    my ($gene_list, $slice) = Bio::Otter::Converter::XML_to_otter(\*ARGV);
+
+    $dba->begin_work;
+    eval{
+        load_genes($otter_dba, $gene_list, $slice);
+    };
+    if ($@) {
+        $dba->rollback;
+        warn "Error saving new genes: $@";
+    }
+    else {
+        $dba->commit;
+    }
+}
+
+sub load_genes {
+    my( $dba, $gene_list, $slice ) = @_;
+
+    my $gene_aptr = $dba->get_GeneAdaptor;
+    my $sida      = $dba->get_StableIdAdaptor;
+    
+    foreach my $gene (@$gene_list) {
+        $sida->fetch_new_stable_ids_for_Gene($xml_gene);
+
+        my $broker = Bio::Otter::AnnotationBroker->new($dba);
+        #$broker->increment_versions_in_gene($xml_gene);
+        $gene_aptr->attach_to_Slice($xml_gene, $slice);
+
+        $xml_gene->detach_DBAdaptors;
+        $gene_aptr->store($xml_gene);
+    }
+}
+
+
+
+
+
+__END__
+
+=head1 NAME - load_new_gene_xml
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
