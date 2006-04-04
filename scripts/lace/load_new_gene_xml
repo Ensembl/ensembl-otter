@@ -46,14 +46,7 @@ sub load_genes {
 
     foreach my $gene (@$gene_list) {
         $sida->fetch_new_stable_ids_for_Gene($gene);
-
-        # Shouldn't need to do this, since all the components
-        # will be new and at version 1:
-        #my $broker = Bio::Otter::AnnotationBroker->new($dba);
-        #$broker->increment_versions_in_gene($gene);
-
         $gene_aptr->attach_to_Slice($gene, $slice);
-
         $gene->detach_DBAdaptors;
         $gene_aptr->store($gene);
     }
