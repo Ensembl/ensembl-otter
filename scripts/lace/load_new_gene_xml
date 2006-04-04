@@ -27,14 +27,14 @@ use Bio::Otter::Lace::Defaults;
     # NB: Ignores other products of XML_to_otter() such as features (polyA)
     my ($gene_list, $slice) = Bio::Otter::Converter::XML_to_otter(\*ARGV);
 
-    $dba->begin_work;
+    $otter_dba->begin_work;
     eval { load_genes($otter_dba, $gene_list, $slice); };
     if ($@) {
-        $dba->rollback;
+        $otter_dba->rollback;
         warn "Error saving new genes: $@";
     }
     else {
-        $dba->commit;
+        $otter_dba->commit;
     }
 }
 
@@ -45,17 +45,17 @@ sub load_genes {
     my $sida      = $dba->get_StableIdAdaptor;
 
     foreach my $gene (@$gene_list) {
-        $sida->fetch_new_stable_ids_for_Gene($xml_gene);
+        $sida->fetch_new_stable_ids_for_Gene($gene);
 
         # Shouldn't need to do this, since all the components
         # will be new and at version 1:
         #my $broker = Bio::Otter::AnnotationBroker->new($dba);
-        #$broker->increment_versions_in_gene($xml_gene);
+        #$broker->increment_versions_in_gene($gene);
 
-        $gene_aptr->attach_to_Slice($xml_gene, $slice);
+        $gene_aptr->attach_to_Slice($gene, $slice);
 
-        $xml_gene->detach_DBAdaptors;
-        $gene_aptr->store($xml_gene);
+        $gene->detach_DBAdaptors;
+        $gene_aptr->store($gene);
     }
 }
 
