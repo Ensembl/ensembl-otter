@@ -1,0 +1,59 @@
+#!/usr/local/bin/perl -w
+
+### fix_transcript_classes
+
+use strict;
+use Bio::Otter::Lace::Defaults;
+
+{
+    my $usage = sub { exec('perldoc', $0) };
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'       => $usage,
+        ) or $usage->();
+    
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    
+    foreach my $ds ($cl->get_all_DataSets) {
+        my $ds_name = $ds->name;
+        my $otter_dba = $ds->get_cached_DBAdaptor;
+        my $get_class_id = $otter_dba->prepare(q{
+            SELECT transcript_class_id
+            FROM transcript_class
+            WHERE name = ?
+            });
+        $get_class_id->execute('Immature');
+        my ($id_imm) = $get_class_id->fetchrow;
+        $get_class_id->execute('Retained_intron');
+        my ($id_ret) = $get_class_id->fetchrow;
+
+        my $rows = 0;
+        if ($id_imm and $id_ret) {
+            my $sth = $otter_dba->prepare(q{
+                UPDATE transcript_info
+                SET transcript_class_id = ?
+                WHERE transcript_class_id = ?
+                });
+            $sth->execute($id_ret, $id_imm);
+            $rows = $sth->rows;
+        }
+        
+        printf STDERR "%20s  Immature = %2s  Retained_intron = %2s %4d rows\n",
+            $ds_name, $id_imm || '-', $id_ret || '-', $rows;
+    }
+    
+}
+
+
+
+
+
+
+__END__
+
+=head1 NAME - fix_transcript_classes
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
