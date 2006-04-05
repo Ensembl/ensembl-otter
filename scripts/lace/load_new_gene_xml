@@ -23,12 +23,16 @@ use Bio::Otter::Lace::Defaults;
     my $ds = $cl->get_DataSet_by_name($dataset_name);
 
     my $otter_dba = $ds->get_cached_DBAdaptor;
+    my $slice_aptr = $otter_dba->get_SliceAdaptor;
+    my $analysis_aptr = $otter_dba->get_AnalysisAdaptor;
+    my $analysis=$analysis_aptr->fetch_by_logic_name('otter');
 
     # NB: Ignores other products of XML_to_otter() such as features (polyA)
     my ($gene_list, $slice) = Bio::Otter::Converter::XML_to_otter(\*ARGV);
+    $slice->adaptor($slice_aptr);
 
     $otter_dba->begin_work;
-    eval { load_genes($otter_dba, $gene_list, $slice); };
+    eval { load_genes($otter_dba, $gene_list, $slice, $analysis); };
     if ($@) {
         $otter_dba->rollback;
         warn "Error saving new genes: $@";
@@ -39,12 +43,13 @@ use Bio::Otter::Lace::Defaults;
 }
 
 sub load_genes {
-    my ($dba, $gene_list, $slice) = @_;
+    my ($dba, $gene_list, $slice, $analysis) = @_;
 
     my $gene_aptr = $dba->get_GeneAdaptor;
     my $sida      = $dba->get_StableIdAdaptor;
 
     foreach my $gene (@$gene_list) {
+        $gene->analysis($analysis);
         $sida->fetch_new_stable_ids_for_Gene($gene);
         $gene_aptr->attach_to_Slice($gene, $slice);
         $gene->detach_DBAdaptors;
