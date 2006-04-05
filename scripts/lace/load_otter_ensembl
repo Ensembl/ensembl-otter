@@ -550,12 +550,12 @@ We have seen mistakes in non-Sanger and manually
 created AGPs. A quick test is to do:
 
   chromoview/test_agp_parser new.agp > new-parsed.agp
-  chromoview/compare_agps new.agp new-parsed.agp
+  sdiff new.agp new-parsed.agp
 
 test_agp_parser runs the agp through our parser,
 and prints it out again. If there is something
 wrong with the chromosomal coodinates, this will
-show up as differences in compare_agps. (Otherwise
+show up as differences in sdiff. (Otherwise
 errors in chromosomal coordinates only appear when
 an annotator tries to open the clones in
 otterlace.)
@@ -583,9 +583,13 @@ running otterlaces can't open data on sets where
 write=N.)
 
 NB: Make sure there aren't any even older sequence
-sets that the - replace set that are visible, or
-annotators might work on them! (I have just hidden
-a lot in mouse.)
+sets that the B<-replace> set that are visible, or
+annotators might work on them!
+
+To avoid stalling the annotation process, consider
+leaving out the B<-replace> option if the set is
+currently being annotated and there is a lot of
+pipeline analysis to run on the new set.
 
 load_otter_ensembl now, by default, does not
 populate the old pipeline databases. Add the
@@ -616,7 +620,12 @@ ask Mustapha if you need a copy of ~/.netrc.
 
 NB: -set can be used several times
 
-=item B<4.> Run realign_offtrack_genes
+=item B<4.> Run the analysis pipeline
+
+This will take a long time if there are a lot of
+jobs to run. See note in B<2.> above.
+
+=item B<5.> Run realign_offtrack_genes
 
 Example command line:
 
@@ -627,7 +636,7 @@ will get a failed lock error if an annotator has part of it open. I
 usually run it first with the -test flag to check if it looks like it
 is doing the right thing. Save the STDOUT and STDERR in a log file.
 
-=item B<5.> Make the new set visible
+=item B<6.> Make the new set visible
 
 If there were no off-track genes, or they were successfully
 realigned, then login to the otter database and set the hide column
