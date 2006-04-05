@@ -54,8 +54,8 @@ my $current_type;
 my $geneflag;
 my $tran_name_flag;
 my $generef={};
-my $transcript_count;
-my $exon_count;
+my $transcript_count=-1;
+my $exon_count=-1;
 my $remark;
 my $ampflag=0;
 
@@ -259,6 +259,12 @@ sub char {
 sub end {
   my ($e, $tag) = @_;
   if ($tag eq "annotation") {
+    if ($transcript_count == -1) {
+      warn "gene without transcripts\n";
+    }
+    if ($exon_count == -1) {
+      warn "transcript without exons\n";
+    }
     print "  <locus>\n";
     print "    <name>$generef->{gene_name}</name>\n";
     if (defined $generef->{gene_type}){
