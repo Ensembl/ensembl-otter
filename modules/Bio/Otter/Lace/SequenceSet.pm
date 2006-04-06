@@ -68,6 +68,8 @@ sub vega_set_id {
     return $self->{'_vega_set_id'} || 0;
 }
 
+=comment
+
 sub have_fetched_pipeline_contig_ids {
     my( $self, $flag ) = @_;
     
@@ -76,6 +78,8 @@ sub have_fetched_pipeline_contig_ids {
     }
     return $self->{'_have_fetched_pipeline_contig_ids'};
 }
+
+=cut
 
 sub write_access {
     my( $self, $write_access ) = @_;
@@ -95,7 +99,7 @@ sub CloneSequence_list {
     
     if ($CloneSequence_list) {
         $self->{'_CloneSequence_list'} = $CloneSequence_list;
-        $self->have_fetched_pipeline_contig_ids(0);
+        # $self->have_fetched_pipeline_contig_ids(0);
     }
     return $self->{'_CloneSequence_list'};
 }
@@ -104,7 +108,7 @@ sub drop_CloneSequence_list {
     my( $self ) = @_;
     
     $self->{'_CloneSequence_list'} = undef;
-    $self->have_fetched_pipeline_contig_ids(0);
+    # $self->have_fetched_pipeline_contig_ids(0);
 }
 
 sub selected_CloneSequences {
