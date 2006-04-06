@@ -970,6 +970,9 @@ sub get_all_DataSets {
     my $p = $dsp->my_parser();
     $p->parse($content);
     $ds = $self->{'_datasets'} = $dsp->sorted_objects;
+    foreach my $dataset (@$ds) {
+        $dataset->Client($self);
+    }
   }
   return @$ds;
 }
