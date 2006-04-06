@@ -27,7 +27,7 @@ use Bio::Otter::Lace::Defaults;
     # in the assembly.
     my $ss = $ds->get_SequenceSet_by_name($set_name);
     $ds->fetch_all_CloneSequences_for_SequenceSet($ss);
-    $ds->fetch_pipeline_ctg_ids_for_SequenceSet($ss);
+    # $ds->fetch_pipeline_ctg_ids_for_SequenceSet($ss);
     
     my $otter_dba = $ds->get_cached_DBAdaptor;
     my $pipe_dba = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($otter_dba);
@@ -44,8 +44,9 @@ use Bio::Otter::Lace::Defaults;
     my $repeat_mask = ['trf', 'RepeatMask'];
     my $soft = 1;
     foreach my $cs (@$cs_list) {
-        my $ctg_id = $cs->pipeline_contig_id or die "No pipeline contig ID";
-        my $ctg = $ctg_aptr->fetch_by_dbID($ctg_id);
+        # my $ctg_id = $cs->pipeline_contig_id or die "No pipeline contig ID";
+        my $ctg_name = $cs->contig_name();
+        my $ctg = $ctg_aptr->fetch_by_name($ctg_name);
         my $seq = $ctg->get_repeatmasked_seq($repeat_mask, $soft);
         $seq_out->write_seq($seq);
     }
