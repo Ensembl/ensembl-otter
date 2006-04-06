@@ -5,8 +5,6 @@
 use strict;
 use Bio::Otter::Lace::Defaults;
 
-die "we can't rely on pipeline contig_id's anymore, the work has to be done via contig_names";
-
 {
   my ( $dataset, @sets, $action );
 
@@ -34,37 +32,31 @@ die "we can't rely on pipeline contig_id's anymore, the work has to be done via 
   my $otter_db  = $dset->get_cached_DBAdaptor;               # Bio::EnsEMBL::Container
   my $pipe_db   = Bio::Otter::Lace::PipelineDB::get_pipeline_rw_DBAdaptor($otter_db);
 
-  my $ctgId_ctgName = {}; # contig_name to contig_id mapping
+  my %contignames = (); # to emulate 'DISTINCT' when we have overlapping sequence sets
 
-  # first fetch all clones in a sequence set from otter or from a list of contig_name in a file
-  # and turn them into a %ctgId_ctgName hash
   if ( @sets ) {
       foreach my $name (@sets) {
           my $seqSet = $dset->get_SequenceSet_by_name($name);
 
-          ## Contigs don't know their pipeline-ids anymore
-	      # $dset->fetch_pipeline_ctg_ids_for_SequenceSet($seqSet);
-
 	      my $cs_list = $dset->fetch_all_CloneSequences_for_SequenceSet($seqSet);
 
-	      # CAREFUL: contig_id from pipeline db, NOT otter as they are auto-incremented
           foreach my $cs (@$cs_list) {
-              $ctgId_ctgName->{$cs->pipeline_contig_id} = $cs->contig_name;
+            $contignames{$cs->contig_name}++;
           }
 	  }
   } else {
         while (<>) {
             foreach my $contig_name (split) {
-                my $id = contig_name_to_contig_id($pipe_db, $contig_name);
-                $ctgId_ctgName->{$id} = $contig_name;
+                $contignames{$contig_name}++;
             }
         }
   }
 
   # then do things with each clone (as contig_name) in pipeline db
-  foreach my $ctg_id ( sort keys %$ctgId_ctgName ) {
+  foreach my $ctg_name ( sort keys %contignames ) {
 
-	my $ctg_name = $ctgId_ctgName->{$ctg_id};
+    my $ctg_id = contig_name_to_contig_id($pipe_db, $ctg_name);
+
 	if ( $ctg_name and $ctg_id ) {
 
 	  my $msg = "\nWorking on $dataset" . "_finished contig_id $ctg_id => $ctg_name\n";
@@ -76,8 +68,7 @@ die "we can't rely on pipeline contig_id's anymore, the work has to be done via 
 	  foreach my $k (@$order ) {
 		printf("\t\t%7d row(s) in $k table\n", $counter->{$k});
 	  }
-	}
-	else {
+	} else {
 	  warn "Need contig_name and contig_id info to proceed.";
 	}
   }
