@@ -207,8 +207,6 @@ sub status_refresh_for_SequenceSet{
 
     my $pipehead = Bio::Otter::Lace::Defaults::pipehead();
 
-    # $self->fetch_pipeline_ctg_ids_for_SequenceSet($ss);
-
     my $status_hash = $client->get_analyses_status_from_dsname_ssname(
         $self->name(),
         $ss->name(),
@@ -337,44 +335,6 @@ sub fetch_all_CloneSequences_for_SequenceSet {
 
     $ss->CloneSequence_list($cs);
 }
-
-=comment
-
-sub fetch_pipeline_ctg_ids_for_SequenceSet{
-    my ($self, $ss) = @_;
-    
-    return unless Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
-    return if $ss->have_fetched_pipeline_contig_ids;
-    
-    my $dba            = $self->get_cached_DBAdaptor;
-    my $cloneSeqList   = $ss->CloneSequence_list();
-    my $pipeline_db    = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($dba)
-        or return;
-    my $dbh            = $pipeline_db->db_handle();
-
-    my( %ctgname_cs );
-    foreach my $cs (@$cloneSeqList) {
-        next if $cs->pipeline_contig_id;
-        $ctgname_cs{$cs->contig_name} = $cs;
-    }
-    my $ctg_name_list = join(',', map $dbh->quote($_), keys %ctgname_cs);
-    my $sql = qq{SELECT c.name, c.contig_id FROM contig c WHERE c.name IN ($ctg_name_list)};
-    # warn $sql;
-    my $sth = $pipeline_db->prepare($sql);
-    $sth->execute();
-    my( $name, $ctg_id );
-    $sth->bind_columns(\$name, \$ctg_id);
-    while($sth->fetch){
-        $ctgname_cs{$name}->pipeline_contig_id($ctg_id);
-    }
-    
-    # Flag that we have fetched all the pipeline contig_ids that we can
-    $ss->have_fetched_pipeline_contig_ids(1);
-    Bio::Otter::Lace::SatelliteDB::disconnect_DBAdaptor($pipeline_db);
-
-}
-
-=cut
 
 sub fetch_all_SequenceNotes_for_SequenceSet {
     my( $self, $ss ) = @_;
