@@ -207,7 +207,7 @@ sub status_refresh_for_SequenceSet{
 
     my $pipehead = Bio::Otter::Lace::Defaults::pipehead();
 
-    $self->fetch_pipeline_ctg_ids_for_SequenceSet($ss);
+    # $self->fetch_pipeline_ctg_ids_for_SequenceSet($ss);
 
     my $status_hash = $client->get_analyses_status_from_dsname_ssname(
         $self->name(),
@@ -338,6 +338,8 @@ sub fetch_all_CloneSequences_for_SequenceSet {
     $ss->CloneSequence_list($cs);
 }
 
+=comment
+
 sub fetch_pipeline_ctg_ids_for_SequenceSet{
     my ($self, $ss) = @_;
     
@@ -371,6 +373,8 @@ sub fetch_pipeline_ctg_ids_for_SequenceSet{
     Bio::Otter::Lace::SatelliteDB::disconnect_DBAdaptor($pipeline_db);
 
 }
+
+=cut
 
 sub fetch_all_SequenceNotes_for_SequenceSet {
     my( $self, $ss ) = @_;
