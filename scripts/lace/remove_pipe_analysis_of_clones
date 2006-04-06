@@ -5,6 +5,8 @@
 use strict;
 use Bio::Otter::Lace::Defaults;
 
+die "we can't rely on pipeline contig_id's anymore, the work has to be done via contig_names";
+
 {
   my ( $dataset, @sets, $action );
 
@@ -39,7 +41,10 @@ use Bio::Otter::Lace::Defaults;
   if ( @sets ) {
       foreach my $name (@sets) {
           my $seqSet = $dset->get_SequenceSet_by_name($name);
-	      $dset->fetch_pipeline_ctg_ids_for_SequenceSet($seqSet);
+
+          ## Contigs don't know their pipeline-ids anymore
+	      # $dset->fetch_pipeline_ctg_ids_for_SequenceSet($seqSet);
+
 	      my $cs_list = $dset->fetch_all_CloneSequences_for_SequenceSet($seqSet);
 
 	      # CAREFUL: contig_id from pipeline db, NOT otter as they are auto-incremented
