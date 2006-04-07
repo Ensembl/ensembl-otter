@@ -14,6 +14,7 @@ use Hum::Sort 'ace_sort';
     my $acc_only = 0;
     my $show_agp = 0;
     my $acc_sv   = 0;
+    my $all      = 0;
 
     my $usage = sub { exec('perldoc', $0) };
     Bio::Otter::Lace::Defaults::do_getopt(
@@ -23,6 +24,7 @@ use Hum::Sort 'ace_sort';
         'acc_only!'     => \$acc_only,
         'sv!'           => \$acc_sv,
         'agp!'          => \$show_agp,
+        'all!'          => \$all,
         ) or $usage->();
 
     $usage->() if $acc_only and $acc_sv;
@@ -40,7 +42,7 @@ use Hum::Sort 'ace_sort';
                 print_sequence_set($ds, $sequence_set, $acc_only, $acc_sv);
             }
         } else {
-            print_set_list($ds);
+            print_set_list($ds, $all);
         }
     } else {
         print "Datasets:\n";
@@ -123,9 +125,11 @@ sub print_sequence_set {
 }
 
 sub print_set_list {
-    my( $ds ) = @_;
+    my( $ds, $all ) = @_;
     
-    my @ss_list = sort {ace_sort($a->name, $b->name)} @{$ds->get_all_visible_SequenceSets};
+    my $method = $all ? 'get_all_SequenceSets' : 'get_all_visible_SequenceSets';
+    
+    my @ss_list = sort {ace_sort($a->name, $b->name)} @{$ds->$method()};
     
     my $max = 0;
     foreach my $ss (@ss_list) {

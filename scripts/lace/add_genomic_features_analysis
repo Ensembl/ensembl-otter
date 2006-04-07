@@ -1,0 +1,62 @@
+#!/usr/local/bin/perl -w
+
+### add_genomic_features_analysis
+
+use strict;
+
+use Bio::Otter::Lace::Defaults;
+
+{
+    my $usage = sub { exec('perldoc', $0) };
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'       => $usage,
+        ) or $usage->();
+    
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    
+    my @analysis_needed = qw{
+        polyA_signal
+        polyA_site
+        pseudo_polyA
+        TATA_box
+        RSS
+        EUCOMM
+        };
+    
+    foreach my $ds ($cl->get_all_DataSets) {
+        print STDERR "\n", $ds->name, "\n";
+        my $otter_dba = $ds->get_cached_DBAdaptor;
+        my $get_ana = $otter_dba->prepare(q{
+            SELECT logic_name FROM analysis
+            });
+        $get_ana->execute;
+        
+        my %have_ana;
+        while (my ($name) = $get_ana->fetchrow) {
+            $have_ana{$name} = 1;
+        }
+
+        my $sth = $otter_dba->prepare(q{
+            INSERT analysis(logic_name, created)
+            VALUES (?, NOW())
+            });
+        foreach my $name (@analysis_needed) {
+            next if $have_ana{$name};
+            next if $name eq 'EUCOMM' and $ds->name ne 'mouse';
+            print STDERR "  $name\n";
+            $sth->execute($name);
+        }
+    }
+}
+
+
+
+__END__
+
+=head1 NAME - add_genomic_features_analysis
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
