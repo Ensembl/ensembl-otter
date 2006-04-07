@@ -41,7 +41,6 @@ use Bio::Otter::Lace::Defaults;
         printf STDERR "%20s  Immature = %2s  Retained_intron = %2s %4d rows\n",
             $ds_name, $id_imm || '-', $id_ret || '-', $rows;
     }
-    
 }
 
 
