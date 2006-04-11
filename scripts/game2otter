@@ -28,7 +28,7 @@ use strict;
 use XML::Parser;
 use Hum::Sort 'ace_sort';
 use Getopt::Long;
-
+use Data::Dumper;
 #parameters
 
 my $help = sub{ exec('perldoc',$0)};
@@ -58,6 +58,9 @@ my $transcript_count=-1;
 my $exon_count=-1;
 my $remark;
 my $ampflag=0;
+my $globgenename={};
+my $gg;
+my %globtransname;
 
 my $parser = XML::Parser->new(
     Style    => 'Stream',
@@ -71,8 +74,8 @@ my $parser = XML::Parser->new(
 );
 
 @ARGV = sort {ace_sort($a, $b)} @ARGV;
-print "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n";
-print "<otter>\n<sequence_set>\n";
+#print "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n";
+#print "<otter>\n<sequence_set>\n";
 
 foreach $infile (@ARGV) {
 
@@ -148,30 +151,51 @@ sub char {
     }
     elsif ($element eq "name") {
       if ($geneflag == 1) {
-	$generef->{gene_name} = $value;
+	$gg=$value;
+	if (! exists $globgenename->{$value}) {
+	  $globgenename->{$value}=[];
+	}
+	  $generef->{gene_name} = $value;	
       }
       elsif ($geneflag == 0 && $tran_name_flag == 0) {
 	$tran_name_flag = 1;
 	my $transcript_name;
-	if ($value =~ /var\S*\s*(\d+)\S*\s*/i) {
-	  if ($value !~ /^ENS/) {
-	    $transcript_name=sprintf "%s-%03d", $generef->{gene_name}, $1;
-	  }
-	  else {
-	    $transcript_name=$value;
+	if ($value =~ /^var/i) {
+	  if ($value =~ /(\d+$)/ || $value =~ /(\d+)(.+$)/  ) {
+	    if ($value !~ /^ENS/) {
+	      $transcript_name=sprintf "%s-%03d", $generef->{gene_name}, $1;
+	    }
+	    else {
+	      $transcript_name=$value;
+	    }
 	  }
 	}
 	elsif ($value =~ /no_name/){
-	  $transcript_name=sprintf "%s-%03d", $generef->{gene_name}, "1";
+	  my $variant_no=$transcript_count + 1;
+	  $transcript_name=sprintf "%s-%03d", $generef->{gene_name}, "$variant_no";
 	}
 	else {
+
 	  $transcript_name=$value;
 	}
 	if (!$transcript_name) {
 	  warn "not an expected transcript_name $value\n ";
 	}
-	$generef->{transcript}->[$transcript_count]={transcript_name=>$transcript_name};
+	if ($transcript_name eq $gg) {
+	  $transcript_name = $generef->{gene_name};
+	}
 
+	if (! exists $globtransname{$transcript_name} ){
+	  $globtransname{$transcript_name}=$generef->{gene_name};
+	}
+	else {
+	  warn "transcript_name $transcript_name which was in $globtransname{$transcript_name} is repeating now here for gene $generef->{gene_name}\n";
+	  my $newtranscript_name=$generef->{gene_name}.'-'.$transcript_name;
+	  warn "changing transcript_name to $newtranscript_name";
+	  $transcript_name=$newtranscript_name;
+	  $globtransname{$transcript_name}=$generef->{gene_name};
+	}
+	$generef->{transcript}->[$transcript_count]={transcript_name=>$transcript_name};
       }
     }
     elsif ($element eq "start") {
@@ -214,6 +238,34 @@ sub char {
     elsif ($element eq "text") {
       if ($value =~ /(\s*)(LOCUS:)(\s+)(\S+)(\s*)/i) {
 	$generef->{gene_type} = $4;
+	my $gn=$generef->{gene_name};
+	if (exists $globgenename->{$gn} ){
+	  push @{$globgenename->{$gn}},$4;
+	  my $ind=@{$globgenename->{$gn}};
+	  if ($4  =~ /Pseudogene/i){
+	    if ($ind > 1) {
+	      $generef->{gene_name}=$gn.'P'.$ind;
+	    }
+	    else {
+	      $generef->{gene_name}=$gn.'P';
+	    }
+	    push @{$generef->{gene_synonym}},$gg;
+	  }
+	  else {
+	    if ($ind > 1) {
+	      $generef->{gene_name}=$gn.'-'.$ind;
+	      push @{$generef->{gene_synonym}},$gg;
+	    }
+	    else {
+	      $generef->{gene_name}=$gn;
+	    }
+
+	  }
+
+	}
+	else {
+	  warn "gene name not formed in global hash";
+	}
       }
       elsif ($value =~ /(cDNA)(.+)(\()(\S+)(\)$)/) {
 	push @{$generef->{transcript}->[$transcript_count]->{transcript_cdna_evidence}}, $4;
@@ -261,9 +313,15 @@ sub end {
   if ($tag eq "annotation") {
     if ($transcript_count == -1) {
       warn "gene without transcripts\n";
+      warn "skipping gene $generef->{gene_name}";
+      $generef={};
+      return;
     }
     if ($exon_count == -1) {
       warn "transcript without exons\n";
+      warn "skipping gene $generef->{gene_name}";
+      $generef={};
+      return;
     }
     print "  <locus>\n";
     print "    <name>$generef->{gene_name}</name>\n";
@@ -391,16 +449,70 @@ sub end {
   }
     print "  </locus>\n";
   }
+  if ($tag eq "feature_set"){
+    if (defined	$generef->{transcript}->[$transcript_count]->{translation_start}) {
+      if ( ! defined	$generef->{transcript}->[$transcript_count]->{translation_end}){
+      if ($generef->{transcript}->[$transcript_count]->{exon_set}->[$exon_count]->{exon_strand} == 1) {
+	$generef->{transcript}->[$transcript_count]->{translation_end}=$generef->{transcript}->[$transcript_count]->{exon_set}->[$exon_count]->{exon_end};
+      } else {
+	$generef->{transcript}->[$transcript_count]->{translation_end}=$generef->{transcript}->[$transcript_count]->{exon_set}->[$exon_count]->{exon_start};
+      }
+    }
+    }
+    else {
+      if ($generef->{transcript}->[$transcript_count]->{exon_set}->[$exon_count]->{exon_strand} == 1) {
+	$generef->{transcript}->[$transcript_count]->{translation_end}=$generef->{transcript}->[$transcript_count]->{exon_set}->[$exon_count]->{exon_end};
+	$generef->{transcript}->[$transcript_count]->{translation_start}=$generef->{transcript}->[$transcript_count]->{exon_set}->[0]->{exon_start};
+      } else {
+	$generef->{transcript}->[$transcript_count]->{translation_end}=$generef->{transcript}->[$transcript_count]->{exon_set}->[$exon_count]->{exon_start};
+	$generef->{transcript}->[$transcript_count]->{translation_start}=$generef->{transcript}->[$transcript_count]->{exon_set}->[0]->{exon_end};
+      }
+    }
+    if (!defined $generef->{transcript}->[$transcript_count]->{translation_start} || !defined $generef->{transcript}->[$transcript_count]->{translation_end}) {
+      die "There are transcripts with no translation or partial translation\n";
+    }
+  
+    ##check for translation_stop is not split between exons
+    #warn Dumper($generef);
+    #      exit;
+    my @ea = @{$generef->{transcript}->[$transcript_count]->{exon_set}};
+    my $tend = $generef->{transcript}->[$transcript_count]->{translation_end};
+    # warn "translation end is $tend";
+    my $stop_flag=0;
+    my $s;
+    foreach my $exon (@ea){
+      if ($exon->{exon_start} < $exon->{exon_end}){
+	$s=1;
+      }
+      else {
+	$s = -1;
+      }
+      if ($s == 1) {
+	if ($tend >= $exon->{exon_start} && $tend <= $exon->{exon_end}){
+	  $stop_flag=1;
+	  #warn "setting stop flag $strand";
+	}
+      }
+      else {
+	if ( $tend >= $exon->{exon_end} && $tend <= $exon->{exon_start} ){
+	  $stop_flag=1;
+	  #warn "setting stop flag $strand";
+	}
+      }
+    }
+    if ($stop_flag == 0) {
+#      my $r=@{$generef->{transcript}};
+      warn $generef->{gene_name} . "has strand **$strand** has".$generef->{transcript}->[$transcript_count]->{transcript_name}."\n has split translation_stop at $tend";
+      foreach my $exon (@ea){
+	warn $exon->{exon_start}."\n";
+	warn $exon->{exon_end}."\n";
+	warn $exon->{exon_strand}."\n";
+      }
+	
+	
+    }
+  }
 
- # if ($tag eq "feature_set"){
-  #  if (defined	$generef->{transcript}->[$transcript_count]->{translation_start}) {
-   #   if ($generef->{transcript}->[$transcript_count]->{exon_set}->[$exon_count]->{exon_strand} == 1) {
-	#$generef->{transcript}->[$transcript_count]->{translation_end}=$generef->{transcript}->[$transcript_count]->{exon_set}->[$exon_count]->{exon_end};
-      #} else {
-#	$generef->{transcript}->[$transcript_count]->{translation_end}=$generef->{transcript}->[$transcript_count]->{exon_set}->[$exon_count]->{exon_start};
-   #  # }
-   # }
-  #}
 }
 
 sub final {
