@@ -140,6 +140,7 @@ sub write_local_blast{
     my $indicate   = $cl->option_from_array(['local_blast', 'indicate'])     || 'indicate';
     my $parser     = $cl->option_from_array(['local_blast', 'indicate_parser']);
     my $pressdb    = $cl->option_from_array(['local_blast', 'blast_indexer']);
+    my $right_pri  = $cl->option_from_array(['local_blast', 'right_priority']);
 
     return 0 unless -e $fasta_file;
 
@@ -164,6 +165,7 @@ sub write_local_blast{
         $blast->hide_error(0);
         $blast->run_on_selected_CloneSequences($ss, $pipe_db->get_SliceAdaptor);
         my $factory   = Bio::EnsEMBL::Ace::DataFactory->new($cl, $ds);
+
         my $filter    = Bio::EnsEMBL::Ace::Filter::FPSimilarity->new(-features => $blast->output());
         $filter->analysis_object($ana_obj);
         $filter->homol_tag($homol_tag);
@@ -171,6 +173,8 @@ sub write_local_blast{
         $filter->seqfetcher($blast->seqfetcher);
         $filter->needs_method(1);
         $filter->method_colour($color);
+        $filter->right_priority($right_pri);
+        
         $factory->add_AceFilter($filter);
 
         my $dir       = $self->home;
