@@ -46,7 +46,7 @@ my $assembly_start;
 my $assembly_end;
 my $chr_name;
 my $strand;
-my $exon_start;
+my $start;
 my $infile;
 my $value;
 my $element;
@@ -66,9 +66,9 @@ my $parser = XML::Parser->new(
     Style    => 'Stream',
     Handlers => {
         Init  => \&init,
-        Start => \&start,
+        Start => \&begin,
         Char  => \&char,
-        End   => \&end,
+        End   => \&finish,
         Final => \&final
     }
 );
@@ -115,7 +115,7 @@ sub init {
   my $e = shift;
 }
 
-sub start {
+sub begin {
   my ($e, $tag, %attr) = @_;
   if ($tag eq "annotation") {
     $geneflag = 1;
@@ -132,184 +132,187 @@ sub start {
     $exon_count=-1;
   }
   $element = $tag;
+  $value='';
 }
 
 sub char {
   my ($e, $string) = @_;
-  $value = $string;
-  $value =~ s/^\s*//;
-  $value =~ s/\s*$//;
-  if (length($value)) {
-    if ($element eq "description" && $geneflag==1) {
-      $generef->{gene_description}=$value;
-    }
-    elsif ($element eq "description" && $geneflag==0) {
-      $generef->{transcript}->[$transcript_count]->{transcript_description}=$value;
-    }
-    elsif ($element eq "type") {
-      $current_type = $value;
-    }
-    elsif ($element eq "name") {
-      if ($geneflag == 1) {
-	$gg=$value;
-	if (! exists $globgenename->{$value}) {
-	  $globgenename->{$value}=[];
-	}
-	  $generef->{gene_name} = $value;	
-      }
-      elsif ($geneflag == 0 && $tran_name_flag == 0) {
-	$tran_name_flag = 1;
-	my $transcript_name;
-	if ($value =~ /^var/i) {
-	  if ($value =~ /(\d+$)/ || $value =~ /(\d+)(.+$)/  ) {
-	    if ($value !~ /^ENS/) {
-	      $transcript_name=sprintf "%s-%03d", $generef->{gene_name}, $1;
-	    }
-	    else {
-	      $transcript_name=$value;
-	    }
-	  }
-	}
-	elsif ($value =~ /no_name/){
-	  my $variant_no=$transcript_count + 1;
-	  $transcript_name=sprintf "%s-%03d", $generef->{gene_name}, "$variant_no";
-	}
-	else {
-
-	  $transcript_name=$value;
-	}
-	if (!$transcript_name) {
-	  warn "not an expected transcript_name $value\n ";
-	}
-	if ($transcript_name eq $gg) {
-	  $transcript_name = $generef->{gene_name};
-	}
-
-	if (! exists $globtransname{$transcript_name} ){
-	  $globtransname{$transcript_name}=$generef->{gene_name};
-	}
-	else {
-	  warn "transcript_name $transcript_name which was in $globtransname{$transcript_name} is repeating now here for gene $generef->{gene_name}\n";
-	  my $newtranscript_name=$generef->{gene_name}.'-'.$transcript_name;
-	  warn "changing transcript_name to $newtranscript_name";
-	  $transcript_name=$newtranscript_name;
-	  $globtransname{$transcript_name}=$generef->{gene_name};
-	}
-	$generef->{transcript}->[$transcript_count]={transcript_name=>$transcript_name};
-      }
-    }
-    elsif ($element eq "start") {
-      undef $exon_start;
-      $exon_start = $value;
-    }
-    elsif ($element eq "end") {
-      if ($current_type eq "exon" ) {
-	#      if ($current_type eq "exon" || $current_type eq "start_codon") {
-	$exon_count++;
-	my $exon = $generef->{transcript}->[$transcript_count]->{exon_set}->[$exon_count] = {};
-	if ($exon_start < $value) {
-	  $exon->{exon_start}   = $assembly_start + $exon_start - 1;
-	  $exon->{exon_end}     = $assembly_start + $value   - 1;
-	  $exon->{exon_strand}  = 1;
-	  $strand=1;
-	}
-	else {
-	  $exon->{exon_start}   = $assembly_start + $value - 1;
-	  $exon->{exon_end}     = $assembly_start + $exon_start - 1;
-	  $exon->{exon_strand}  = -1;
-	  $strand=-1;
-	}
-      }
-      if ($current_type eq "start_codon") {
-	$generef->{transcript}->[$transcript_count]->{translation_start}=$assembly_start + $exon_start - 1;
-      }
-      if ($current_type eq "stop_codon") {
-	$generef->{transcript}->[$transcript_count]->{translation_end}=$assembly_start + $value - 1;
-      }
-#      elsif ($current_type ne 'status') {
-	#warn "Unknown type '$current_type'";
-      #}
-    }
-    elsif ($element eq "synonym" && $value ne "no_name") {
-      if ($geneflag == 1) {
-	push @{$generef->{gene_synonym}},$value;
-      }
-    }
-    elsif ($element eq "text") {
-      if ($value =~ /(\s*)(LOCUS:)(\s+)(\S+)(\s*)/i) {
-	$generef->{gene_type} = $4;
-	my $gn=$generef->{gene_name};
-	if (exists $globgenename->{$gn} ){
-	  push @{$globgenename->{$gn}},$4;
-	  my $ind=@{$globgenename->{$gn}};
-	  if ($4  =~ /Pseudogene/i){
-	    if ($ind > 1) {
-	      $generef->{gene_name}=$gn.'P'.$ind;
-	    }
-	    else {
-	      $generef->{gene_name}=$gn.'P';
-	    }
-	    push @{$generef->{gene_synonym}},$gg;
-	  }
-	  else {
-	    if ($ind > 1) {
-	      $generef->{gene_name}=$gn.'-'.$ind;
-	      push @{$generef->{gene_synonym}},$gg;
-	    }
-	    else {
-	      $generef->{gene_name}=$gn;
-	    }
-
-	  }
-
-	}
-	else {
-	  warn "gene name not formed in global hash";
-	}
-      }
-      elsif ($value =~ /(cDNA)(.+)(\()(\S+)(\)$)/) {
-	push @{$generef->{transcript}->[$transcript_count]->{transcript_cdna_evidence}}, $4;
-      }
-      elsif ($value =~ /(EST)(.+)(\()(\S+)(\)$)/) {
-	push @{$generef->{transcript}->[$transcript_count]->{transcript_est_evidence}}, $4;
-      }
-      elsif ($value =~ /(protein)(.+)(\()(\S+)(\)$)/) {
-	push @{$generef->{transcript}->[$transcript_count]->{transcript_protein_evidence}}, $4;
-      }
-      else {
-	if ($geneflag == 0) {
-	  if (   ($value !~ /PRODUCT:/) && ($value !~ /Poly-Adenalation/) && ($value !~ /not\s+found/)) {
-	    if ($value =~ /&/) {
-	      $remark=pop @{$generef->{transcript}->[$transcript_count]->{transcript_remark}};
-	      $ampflag=1;
-	    }
-	    else {
-	      if ($ampflag == 1){
-		$value=$remark." and ".$value;
-		push @{$generef->{transcript}->[$transcript_count]->{transcript_remark}}, $value;
-		undef $remark;
-		$ampflag=0;
-	      }
-	      else {
-		push @{$generef->{transcript}->[$transcript_count]->{transcript_remark}}, $value;
-		$ampflag=0;
-	      }
-	    }
-	  }
-	  if (   $value =~ /Poly-Adenalation/ && $value !~ /not\s+found/) {
-	    push @{$generef->{transcript}->[$transcript_count]->{feature_set}}, $value;
-	  }
-	}
-	else {
-	  push @{$generef->{gene_remark}}, $value;
-	}
-      }
-    }
+  #$string =~ s/^\s*//;
+  #$string =~ s/\s*$//;
+  if ($string ne ""){
+    $value .= $string;
   }
 }
 
-sub end {
+sub finish {
   my ($e, $tag) = @_;
+
+  if ($tag eq "description" && $geneflag==1) {
+    $generef->{gene_description} = $value;
+  }
+
+  if ($tag eq "description" && $geneflag==0) {
+    $generef->{transcript}->[$transcript_count]->{transcript_description} = $value;
+  }
+
+  if ($element eq "type") {
+    $current_type = $value;
+  }
+
+  if ($tag eq "name") {
+    if ($geneflag == 1) {
+      $gg = $value;
+      if (! exists $globgenename->{$gg}) {
+	$globgenename->{$gg}=[];
+      }
+      $generef->{gene_name} = $gg;	
+    }
+    elsif ($geneflag == 0 && $tran_name_flag == 0) {
+      my $transcript_name;
+      $tran_name_flag = 1;
+      if ($value =~ /^var/i) {
+	if ($value =~ /(\d+$)/ || $value =~ /(\d+)(.+$)/  ) {
+	  if ($value !~ /^ENS/) {
+	    $transcript_name=sprintf "%s-%03d", $generef->{gene_name}, $1;
+	  }
+	  else {
+	    $transcript_name=$value;
+	  }
+	}
+      }
+      elsif ($value =~ /no_name/){
+	my $variant_no=$transcript_count + 1;
+	$transcript_name=sprintf "%s-%03d", $generef->{gene_name}, "$variant_no";
+      }
+      else {
+	$transcript_name=$value;
+      }
+      if (!$transcript_name) {
+	warn "not an expected transcript_name $value\n ";
+      }
+      if ($transcript_name eq $gg) {
+	$transcript_name = $generef->{gene_name};
+      }
+      if (! exists $globtransname{$transcript_name} ){
+	$globtransname{$transcript_name}=$generef->{gene_name};
+      }
+      else {
+	warn "transcript_name $transcript_name which was in $globtransname{$transcript_name} is repeating now here for gene $generef->{gene_name}\n";
+	my $newtranscript_name=$generef->{gene_name}.'-'.$transcript_name;
+	warn "changing transcript_name to $newtranscript_name";
+	$transcript_name=$newtranscript_name;
+	$globtransname{$transcript_name}=$generef->{gene_name};
+      }
+      $generef->{transcript}->[$transcript_count]={transcript_name=>$transcript_name};
+    }
+  }
+
+  if ($tag eq "start") {
+    $start = $value;
+  }
+
+  if ($tag eq "end") {
+    my $end = $value;
+    if ($current_type eq "exon"){
+      $exon_count++;
+      my $exon = $generef->{transcript}->[$transcript_count]->{exon_set}->[$exon_count] = {};
+      if ($start < $end) {
+	$exon->{exon_start}   = $assembly_start + $start - 1;
+	$exon->{exon_end}     = $assembly_start + $end   - 1;
+	$exon->{exon_strand}  = 1;
+	$strand=1;
+      }
+      else {
+	$exon->{exon_start}   = $assembly_start + $end - 1;
+	$exon->{exon_end}     = $assembly_start + $start - 1;
+	$exon->{exon_strand}  = -1;
+	$strand=-1;
+      }
+    }
+    if ($current_type eq "start_codon") {
+      $generef->{transcript}->[$transcript_count]->{translation_start}=$assembly_start + $start - 1;
+    }
+    if ($current_type eq "stop_codon") {
+      $generef->{transcript}->[$transcript_count]->{translation_end}=$assembly_start + $end - 1;
+    }
+  }
+
+  if ($tag eq "synonym" && $value ne "no_name") {
+    if ($geneflag == 1) {
+      push @{$generef->{gene_synonym}},$value;
+    }
+  }
+
+  if ($tag eq "text") {
+    if ($value =~ /(\s*)(LOCUS:)(\s+)(\S+)(\s*)/i) {
+      $generef->{gene_type} = $4;
+      my $gn=$generef->{gene_name};
+      if (exists $globgenename->{$gn} ){
+	push @{$globgenename->{$gn}},$4;
+	my $ind=@{$globgenename->{$gn}};
+	if ($4  =~ /Pseudogene/i){
+	  if ($ind > 1) {
+	    $generef->{gene_name}=$gn.'P'.$ind;
+	  }
+	  else {
+	    $generef->{gene_name}=$gn.'P';
+	  }
+	  push @{$generef->{gene_synonym}},$gg;
+	}
+	else {
+	  if ($ind > 1) {
+	    $generef->{gene_name}=$gn.'-'.$ind;
+	    push @{$generef->{gene_synonym}},$gg;
+	  }
+	  else {
+	    $generef->{gene_name}=$gn;
+	  }
+	}
+      }
+      else {
+	warn "gene name not formed in global hash";
+      }
+    }
+    elsif ($value =~ /(cDNA)(.+)(\()(\S+)(\)$)/) {
+      push @{$generef->{transcript}->[$transcript_count]->{transcript_cdna_evidence}}, $4;
+    }
+    elsif ($value =~ /(EST)(.+)(\()(\S+)(\)$)/) {
+      push @{$generef->{transcript}->[$transcript_count]->{transcript_est_evidence}}, $4;
+    }
+    elsif ($value =~ /(protein)(.+)(\()(\S+)(\)$)/) {
+      push @{$generef->{transcript}->[$transcript_count]->{transcript_protein_evidence}}, $4;
+    }
+    else {
+      if ($geneflag == 0) {
+	if (   ($value !~ /PRODUCT:/) && ($value !~ /Poly-Adenalation/) && ($value !~ /not\s+found/)) {
+	  if ($value =~ /&/) {
+	    $remark=pop @{$generef->{transcript}->[$transcript_count]->{transcript_remark}};
+	    $ampflag=1;
+	  }
+	  else {
+	    if ($ampflag == 1){
+	      $value=$remark." and ".$value;
+	      push @{$generef->{transcript}->[$transcript_count]->{transcript_remark}}, $value;
+	      undef $remark;
+	      $ampflag=0;
+	    }
+	    else {
+	      push @{$generef->{transcript}->[$transcript_count]->{transcript_remark}}, $value;
+	      $ampflag=0;
+	    }
+	  }
+	}
+	if (   $value =~ /Poly-Adenalation/ && $value !~ /not\s+found/) {
+	  push @{$generef->{transcript}->[$transcript_count]->{feature_set}}, $value;
+	}
+      }
+      else {
+	push @{$generef->{gene_remark}}, $value;
+      }
+    }
+  }
+
+
   if ($tag eq "annotation") {
     if ($transcript_count == -1) {
       warn "gene without transcripts\n";
@@ -471,13 +474,9 @@ sub end {
     if (!defined $generef->{transcript}->[$transcript_count]->{translation_start} || !defined $generef->{transcript}->[$transcript_count]->{translation_end}) {
       die "There are transcripts with no translation or partial translation\n";
     }
-  
     ##check for translation_stop is not split between exons
-    #warn Dumper($generef);
-    #      exit;
     my @ea = @{$generef->{transcript}->[$transcript_count]->{exon_set}};
     my $tend = $generef->{transcript}->[$transcript_count]->{translation_end};
-    # warn "translation end is $tend";
     my $stop_flag=0;
     my $s;
     foreach my $exon (@ea){
@@ -501,18 +500,14 @@ sub end {
       }
     }
     if ($stop_flag == 0) {
-#      my $r=@{$generef->{transcript}};
       warn $generef->{gene_name} . "has strand **$strand** has".$generef->{transcript}->[$transcript_count]->{transcript_name}."\n has split translation_stop at $tend";
       foreach my $exon (@ea){
 	warn $exon->{exon_start}."\n";
 	warn $exon->{exon_end}."\n";
 	warn $exon->{exon_strand}."\n";
       }
-	
-	
     }
   }
-
 }
 
 sub final {
