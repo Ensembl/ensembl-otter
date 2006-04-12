@@ -15,17 +15,18 @@ use Tk;
         -width => 20,
         )->pack;
     
-    # Remove paste class bindings
     my $class = ref($entry);
-    $entry->bind($class, '<<Paste>>', '');
-    $entry->bind($class, '<<PasteSelection>>', '');
-    $entry->bind($class, '<Button-2>', '');
+
+    # Remove paste class bindings
+    #$entry->bind($class, '<<Paste>>', '');
+    #$entry->bind($class, '<<PasteSelection>>', '');
+    #$entry->bind($class, '<Button-2>', '');
 
     foreach my $sequence ($entry->bind($class)) {
-        if ($sequence =~ /Key/) {
+        #if ($sequence =~ /Key/) {
             print STDERR "seq=$sequence\n";
             #$entry->bind($class, $sequence, '');
-        }
+        #}
     }
 
     Tk::MainLoop();
