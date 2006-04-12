@@ -486,7 +486,7 @@ sub load_genomic_features {
     if (my $clone = $self->get_CloneSeq) {
 
         foreach my $vector (sort { $a->[1] <=> $b->[1] || $a->[2] <=> $b->[2] }
-            $clone->get_SimpleFeatures)
+            $clone->get_SimpleFeatures([keys %signal_info]) )
         {
 
             my ($gf_type, $start, $end, $score, $display_label) = @$vector;
