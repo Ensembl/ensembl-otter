@@ -1,0 +1,44 @@
+#!/usr/local/bin/perl -w
+
+### show_entry_bindings
+
+use strict;
+use CanvasWindow::MainWindow;
+use Tk;
+
+{
+    my $mw = CanvasWindow::MainWindow->new;
+    my $entry = $mw->Entry(
+        -width => 20,
+        )->pack;
+    my $entry2 = $mw->Entry(
+        -width => 20,
+        )->pack;
+    
+    # Remove paste class bindings
+    my $class = ref($entry);
+    $entry->bind($class, '<<Paste>>', '');
+    $entry->bind($class, '<<PasteSelection>>', '');
+    $entry->bind($class, '<Button-2>', '');
+
+    foreach my $sequence ($entry->bind($class)) {
+        #if ($sequence =~ /Key/) {
+        #    print STDERR "seq=$sequence\n";
+        #    $entry->bind($class, $sequence, '');
+        #}
+    }
+
+    Tk::MainLoop();
+}
+
+
+
+
+__END__
+
+=head1 NAME - show_entry_bindings
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
