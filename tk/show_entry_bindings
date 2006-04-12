@@ -22,10 +22,10 @@ use Tk;
     $entry->bind($class, '<Button-2>', '');
 
     foreach my $sequence ($entry->bind($class)) {
-        #if ($sequence =~ /Key/) {
-        #    print STDERR "seq=$sequence\n";
-        #    $entry->bind($class, $sequence, '');
-        #}
+        if ($sequence =~ /Key/) {
+            print STDERR "seq=$sequence\n";
+            #$entry->bind($class, $sequence, '');
+        }
     }
 
     Tk::MainLoop();
