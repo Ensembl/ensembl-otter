@@ -16,7 +16,8 @@ sub ClassInit {
     $class->SUPER::ClassInit($mw);
     
     # Remove all the paste bindings
-    foreach my $sequence (qw{ <<Paste>> <<PasteSelection>> <Button-2> }) {
+    foreach my $sequence (qw{ <<Paste>> <<PasteSelection>>
+                              <Button-2> <ButtonRelease-2> <B2-Motion> }) {
         $mw->bind($class, $sequence, '');
     }
     
