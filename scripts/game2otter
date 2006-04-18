@@ -146,7 +146,8 @@ sub char {
 
 sub finish {
   my ($e, $tag) = @_;
-
+  $value =~ s/^\s*//;
+  $value =~ s/\s*$//;
   if ($tag eq "description" && $geneflag==1) {
     $generef->{gene_description} = $value;
   }
@@ -285,22 +286,22 @@ sub finish {
     else {
       if ($geneflag == 0) {
 	if (   ($value !~ /PRODUCT:/) && ($value !~ /Poly-Adenalation/) && ($value !~ /not\s+found/)) {
-	  if ($value =~ /&/) {
-	    $remark=pop @{$generef->{transcript}->[$transcript_count]->{transcript_remark}};
-	    $ampflag=1;
-	  }
-	  else {
-	    if ($ampflag == 1){
-	      $value=$remark." and ".$value;
+	  #if ($value =~ /&/) {
+	   # $remark=pop @{$generef->{transcript}->[$transcript_count]->{transcript_remark}};
+	    #$ampflag=1;
+	  #}
+	  #else {
+	   # if ($ampflag == 1){
+	    #  $value=$remark." and ".$value;
 	      push @{$generef->{transcript}->[$transcript_count]->{transcript_remark}}, $value;
-	      undef $remark;
-	      $ampflag=0;
-	    }
-	    else {
-	      push @{$generef->{transcript}->[$transcript_count]->{transcript_remark}}, $value;
-	      $ampflag=0;
-	    }
-	  }
+	     # undef $remark;
+	      #$ampflag=0;
+	    #}
+	    #else {
+	     # push @{$generef->{transcript}->[$transcript_count]->{transcript_remark}}, $value;
+	      #$ampflag=0;
+	    #}
+	  #}
 	}
 	if (   $value =~ /Poly-Adenalation/ && $value !~ /not\s+found/) {
 	  push @{$generef->{transcript}->[$transcript_count]->{feature_set}}, $value;
@@ -360,6 +361,9 @@ sub finish {
     }
     if (defined	$thref->{translation_end}) {
     print "      <translation_end>$thref->{translation_end}</translation_end>\n";
+    }
+    if (defined	$thref->{transcript_class}) {
+    print "      <transcript_class>$thref->{transcript_class}</transcript_class>\n";
     }
     my $evidence_set_flag=0;
     if (defined @{$thref->{transcript_cdna_evidence}} || defined @{$thref->{transcript_protein_evidence}} || defined @{$thref->{transcript_est_evidence}}){
@@ -453,58 +457,74 @@ sub finish {
     print "  </locus>\n";
   }
   if ($tag eq "feature_set"){
+    my $transcript_class;
     if (defined	$generef->{transcript}->[$transcript_count]->{translation_start}) {
       if ( ! defined	$generef->{transcript}->[$transcript_count]->{translation_end}){
-      if ($generef->{transcript}->[$transcript_count]->{exon_set}->[$exon_count]->{exon_strand} == 1) {
-	$generef->{transcript}->[$transcript_count]->{translation_end}=$generef->{transcript}->[$transcript_count]->{exon_set}->[$exon_count]->{exon_end};
-      } else {
-	$generef->{transcript}->[$transcript_count]->{translation_end}=$generef->{transcript}->[$transcript_count]->{exon_set}->[$exon_count]->{exon_start};
+	if ($generef->{transcript}->[$transcript_count]->{exon_set}->[$exon_count]->{exon_strand} == 1) {
+	  $generef->{transcript}->[$transcript_count]->{translation_end}=$generef->{transcript}->[$transcript_count]->{exon_set}->[$exon_count]->{exon_end};
+	} else {
+	  $generef->{transcript}->[$transcript_count]->{translation_end}=$generef->{transcript}->[$transcript_count]->{exon_set}->[$exon_count]->{exon_start};
+	}
       }
-    }
+      if (defined $generef->{gene_type} && $generef->{gene_type} =~ /Pseudogene/){
+	$transcript_class='Pseudogene';
+      }
+      else {
+	$transcript_class='Coding';
+      }
     }
     else {
-      if ($generef->{transcript}->[$transcript_count]->{exon_set}->[$exon_count]->{exon_strand} == 1) {
-	$generef->{transcript}->[$transcript_count]->{translation_end}=$generef->{transcript}->[$transcript_count]->{exon_set}->[$exon_count]->{exon_end};
-	$generef->{transcript}->[$transcript_count]->{translation_start}=$generef->{transcript}->[$transcript_count]->{exon_set}->[0]->{exon_start};
-      } else {
-	$generef->{transcript}->[$transcript_count]->{translation_end}=$generef->{transcript}->[$transcript_count]->{exon_set}->[$exon_count]->{exon_start};
-	$generef->{transcript}->[$transcript_count]->{translation_start}=$generef->{transcript}->[$transcript_count]->{exon_set}->[0]->{exon_end};
-      }
+      #if ($generef->{transcript}->[$transcript_count]->{exon_set}->[$exon_count]->{exon_strand} == 1) {
+	#$generef->{transcript}->[$transcript_count]->{translation_end}=$generef->{transcript}->[$transcript_count]->{exon_set}->[$exon_count]->{exon_end};
+	#$generef->{transcript}->[$transcript_count]->{translation_start}=$generef->{transcript}->[$transcript_count]->{exon_set}->[0]->{exon_start};
+      #} else {
+	#$generef->{transcript}->[$transcript_count]->{translation_end}=$generef->{transcript}->[$transcript_count]->{exon_set}->[$exon_count]->{exon_start};
+	#$generef->{transcript}->[$transcript_count]->{translation_start}=$generef->{transcript}->[$transcript_count]->{exon_set}->[0]->{exon_end};
+      #}
+      $transcript_class = 'Transcript';
     }
-    if (!defined $generef->{transcript}->[$transcript_count]->{translation_start} || !defined $generef->{transcript}->[$transcript_count]->{translation_end}) {
-      die "There are transcripts with no translation or partial translation\n";
+    if (defined $transcript_class){
+      $generef->{transcript}->[$transcript_count]->{transcript_class}=$transcript_class;
+    }
+    else {
+      die "transcript_class not set for $generef->{gene_name} \n";
+    }
+    if (!defined $generef->{transcript}->[$transcript_count]->{translation_start} ) {
+      warn "There are transcripts with no translation\n";
     }
     ##check for translation_stop is not split between exons
     my @ea = @{$generef->{transcript}->[$transcript_count]->{exon_set}};
     my $tend = $generef->{transcript}->[$transcript_count]->{translation_end};
     my $stop_flag=0;
     my $s;
-    foreach my $exon (@ea){
-      if ($exon->{exon_start} < $exon->{exon_end}){
-	$s=1;
-      }
-      else {
-	$s = -1;
-      }
-      if ($s == 1) {
-	if ($tend >= $exon->{exon_start} && $tend <= $exon->{exon_end}){
-	  $stop_flag=1;
-	  #warn "setting stop flag $strand";
-	}
-      }
-      else {
-	if ( $tend >= $exon->{exon_end} && $tend <= $exon->{exon_start} ){
-	  $stop_flag=1;
-	  #warn "setting stop flag $strand";
-	}
-      }
-    }
-    if ($stop_flag == 0) {
-      warn $generef->{gene_name} . "has strand **$strand** has".$generef->{transcript}->[$transcript_count]->{transcript_name}."\n has split translation_stop at $tend";
+    if (defined $tend){
       foreach my $exon (@ea){
-	warn $exon->{exon_start}."\n";
-	warn $exon->{exon_end}."\n";
-	warn $exon->{exon_strand}."\n";
+	if ($exon->{exon_start} < $exon->{exon_end}){
+	  $s=1;
+	}
+	else {
+	  $s = -1;
+	}
+	if ($s == 1) {
+	  if ($tend >= $exon->{exon_start} && $tend <= $exon->{exon_end}){
+	    $stop_flag=1;
+	    #warn "setting stop flag $strand";
+	  }
+	}
+	else {
+	  if ( $tend >= $exon->{exon_end} && $tend <= $exon->{exon_start} ){
+	    $stop_flag=1;
+	    #warn "setting stop flag $strand";
+	  }
+	}
+      }
+      if ($stop_flag == 0) {
+	warn $generef->{gene_name} . "has strand **$strand** has".$generef->{transcript}->[$transcript_count]->{transcript_name}."\n has split translation_stop at $tend";
+	foreach my $exon (@ea){
+	  warn $exon->{exon_start}."\n";
+	  warn $exon->{exon_end}."\n";
+	  warn $exon->{exon_strand}."\n";
+	}
       }
     }
   }
