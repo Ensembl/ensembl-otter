@@ -125,13 +125,14 @@ sub get_old_schema_slice {
     my ($cgi, $dbh) = @_;
 
     my %cgi_args = $cgi->Vars;
+    my $cs    = $cgi_args{cs}; # error_exit
     my $name  = $cgi_args{name};
     my $start = $cgi_args{start};
     my $end   = $cgi_args{end};
 
     my $slice;
 
-    if($cgi_args{cs} eq 'chromosome') {
+    if($cs eq 'chromosome') {
         $start ||= 1;
         $end   ||= $dbh->get_ChromosomeAdaptor()->fetch_by_chr_name($name)->length();
 
@@ -140,12 +141,12 @@ sub get_old_schema_slice {
             $start,
             $end,
         );
-    } elsif($cgi_args{cs} eq 'contig') {
+    } elsif($cs eq 'contig') {
         $slice = $dbh->get_RawContigAdaptor()->fetch_by_name(
             $cgi_args{name},
         );
     } else {
-        die "Other coordinate systems are not supported";
+        error_exit($cgi,"Other coordinate systems are not supported");
     }
 
     return $slice;
