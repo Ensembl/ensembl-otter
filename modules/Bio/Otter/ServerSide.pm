@@ -218,11 +218,11 @@ sub get_pipeline_adaptor_slice_parms { # codebase-independent version for script
 sub get_Author_from_CGI{
     my ($cgi) = @_;
     error_exit('', 'I need a CGI object') unless $cgi && UNIVERSAL::isa($cgi, 'CGI');
-    my %params   = $cgi->Vars;
-    my $auth_name = $params{author} || 
-        error_exit($cgi, "Need author for this script...");
-    my $email     = $params{email}  || 
-        error_exit($cgi, "Need email for this script...");
+    my %cgi_args   = $cgi->Vars;
+
+    my $auth_name = $cgi_args{author} || error_exit($cgi, "Need author for this script...");
+    my $email     = $cgi_args{email}  || error_exit($cgi, "Need email for this script...");
+
     my $author    = Bio::Otter::Author->new(-name  => $auth_name,
                                             -email => $email);
     return $author;
@@ -237,32 +237,33 @@ sub get_DBAdaptor_from_CGI_species{
 
     error_exit('', 'I need two arguments') unless $cgi && $SPECIES;
     error_exit('', 'I need a CGI object') unless UNIVERSAL::isa($cgi, 'CGI');
-    my %params   = $cgi->Vars;
+    my %cgi_args   = $cgi->Vars;
+
     ####################################################################
-    # Check the dataset has been entered and it's valid
-    my $dataset = $params{'dataset'} || 
-        error_exit($cgi,"No dataset type entered.");
-    if (!defined($SPECIES->{$dataset})) {
-        error_exit($cgi, "Unknown data set $dataset");
-    }
-    # get the defaults from species.dat
-    my %defaults = %{$SPECIES->{'defaults'}};
+    # Check the dataset has been entered
+    my $dataset = $cgi_args{'dataset'} || error_exit($cgi, "No dataset type entered.");
+
     # get the overriding dataset options from species.dat 
-    my %dbinfo   = %{$SPECIES->{$dataset}};
-    my $type     = $params{type} || $dbinfo{TYPE} || $defaults{TYPE};
+    my $dbinfo   = $SPECIES->{$dataset} || error_exit($cgi, "Unknown data set $dataset");
+
+    # get the defaults from species.dat
+    my $defaults = $SPECIES->{'defaults'};
+
+    my $type     = $cgi_args{type} || $dbinfo->{TYPE} || $defaults->{TYPE};
 
     ########## AND DB CONNECTION #######################################
-    my $dbhost    = $dbinfo{HOST}     || $defaults{HOST},
-    my $dbuser    = $dbinfo{USER}     || $defaults{USER},
-    my $dbpass    = $dbinfo{PASS}     || $defaults{PASS},
-    my $dbport    = $dbinfo{PORT}     || $defaults{PORT},
-    my $dbname    = $dbinfo{DBNAME}   || 
+    my $dbhost    = $dbinfo->{HOST}     || $defaults->{HOST};
+    my $dbuser    = $dbinfo->{USER}     || $defaults->{USER};
+    my $dbpass    = $dbinfo->{PASS}     || $defaults->{PASS};
+    my $dbport    = $dbinfo->{PORT}     || $defaults->{PORT};
+    my $dbname    = $dbinfo->{DBNAME}   || 
         error_exit($cgi, "Failed opening otter database [No database name]");
-    my $dnahost    = $dbinfo{DNA_HOST}    || $defaults{DNA_HOST},
-    my $dnauser    = $dbinfo{DNA_USER}    || $defaults{DNA_USER},
-    my $dnapass    = $dbinfo{DNA_PASS}    || $defaults{DNA_PASS},
-    my $dnaport    = $dbinfo{DNA_PORT}    || $defaults{DNA_PORT},
-    my $dna_dbname = $dbinfo{DNA_DBNAME};
+
+    my $dnahost    = $dbinfo->{DNA_HOST}    || $defaults->{DNA_HOST};
+    my $dnauser    = $dbinfo->{DNA_USER}    || $defaults->{DNA_USER};
+    my $dnapass    = $dbinfo->{DNA_PASS}    || $defaults->{DNA_PASS};
+    my $dnaport    = $dbinfo->{DNA_PORT}    || $defaults->{DNA_PORT};
+    my $dna_dbname = $dbinfo->{DNA_DBNAME};
   
     my( $odb, $dnadb );
 
