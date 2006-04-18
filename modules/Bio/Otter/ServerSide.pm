@@ -125,8 +125,8 @@ sub get_old_schema_slice {
     my ($cgi, $dbh) = @_;
 
     my %cgi_args = $cgi->Vars;
-    my $cs    = $cgi_args{cs}; # error_exit
-    my $name  = $cgi_args{name};
+    my $cs    = $cgi_args{cs}   || error_exit($cgi, "Coordinate system type (cs attribute) not set");
+    my $name  = $cgi_args{name} || error_exit($cgi, "Coordinate system name (name attribute) not set");
     my $start = $cgi_args{start};
     my $end   = $cgi_args{end};
 
