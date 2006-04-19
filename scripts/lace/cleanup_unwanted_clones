@@ -1,0 +1,95 @@
+#!/usr/local/bin/perl -w
+
+### cleanup_unwanted_clones
+
+use strict;
+use Hum::AGP::Parser;
+
+use Bio::Otter::Lace::Defaults;
+use Bio::Otter::Lace::PipelineDB;
+use Hum::Submission 'accession_from_sanger_name';
+
+# This was to fix a problem when human NCBI36
+# chromosomes were loaded into otter_mouse
+
+{
+    my $dataset_name = 'mouse';
+    my $agp_dir = '/nfs/team71/analysis/jgrg/work/ncbi_agp/NCBI36';
+    
+    my $usage = sub { exec('perldoc', $0) };
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'   => $usage,
+        ) or $usage->();
+
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    my $otter_db = $ds->make_EnsEMBL_DBAdaptor;
+    my $clone_aptr = $otter_db->get_CloneAdaptor;
+    my $cleanup_assembly = $otter_db->prepare(q{
+        DELETE FROM assembly
+        WHERE contig_id = ?
+        });
+
+    my $agp_collection = parse_agps_in_dir($agp_dir);
+    foreach my $chr (sort keys %$agp_collection) {
+        my $agp = $agp_collection->{$chr};
+        warn "Chromosome $chr\n";
+        foreach my $row ($agp->fetch_all_Rows) {
+            next if $row->is_gap;
+            my $acc_sv = $row->accession_sv;
+            my ($acc, $sv) = split /\./, $acc_sv;
+            my $clone;
+            eval{ $clone = $clone_aptr->fetch_by_accession_version($acc, $sv); };
+            if ($@) {
+                die "Unexpected error: $@"
+                    unless $@ =~ /no clone with accession/;
+            }
+            next unless $clone;
+            print STDERR "  $acc_sv\n";
+            my $contig_id = $clone->get_all_Contigs->[0]->dbID
+                or die "no contig ID";
+            $cleanup_assembly->execute($contig_id);
+            $clone_aptr->remove($clone);
+        }
+    }
+}
+
+
+sub parse_agps_in_dir {
+    my( $dir ) = @_;
+        
+    my $parser = Hum::AGP::Parser->new;
+    
+    my $agp_collection = {};
+    
+    local *AGPDIR;
+    opendir AGPDIR, $dir or die "Can't opendir '$dir' : $!";
+    foreach my $file (grep /^chr.*\.agp$/, readdir AGPDIR) {
+        $parser->file("$dir/$file");
+
+        my $agp = $parser->parse;
+        my $chr = $agp->chr_name;
+        $chr =~ s/chr//i;
+        if ($agp_collection->{$chr}) {
+            die "Parsed '$file' but already have AGP for '$chr'\n";
+        } else {
+            warn "Parsed AGP for chr '$chr' from '$file'\n";
+            $agp_collection->{$chr} = $agp;
+        }
+    }
+    closedir AGPDIR or die "Error reading '$dir' : $!";
+    
+    return $agp_collection;
+}
+
+
+
+
+__END__
+
+=head1 NAME - cleanup_unwanted_clones
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
