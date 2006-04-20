@@ -1,0 +1,77 @@
+#!/usr/local/bin/perl -w
+
+### spline_hit
+
+use strict;
+use CanvasWindow;
+
+{
+    my $mw = CanvasWindow::MainWindow->new;
+    $mw->title('spline hit plot');
+    my $cw     = CanvasWindow->new($mw);
+    my $canvas = $cw->canvas;
+
+    my ($x1, $x2, $x3, $x4) = (10, 400, 90, 180);
+    my ($y1, $y2) = (0, 400);
+
+    my $x_50   = $x1 + (($x2 - $x1) * 0.50);
+
+    my $y_25   = $y1 + (($y2 - $y1) * 0.25);
+    my $y_50   = $y1 + (($y2 - $y1) * 0.50);
+    my $y_75   = $y1 + (($y2 - $y1) * 0.75);
+
+    $canvas->createArc(50,50, 250,250,
+        -extent => 720,
+        -fill       => 'red',
+        -outline    => 'black',
+        #-style      => 'arc',
+        );
+
+    my @spline = (
+        $x1,    $y1,
+        $x1,    $y_25,
+        $x_50,  $y_50,
+        $x2,    $y_75,
+        $x2,    $y2,
+        );
+    my $radius = 5;
+    for (my $i = 0; $i < @spline; $i += 2) {
+        my ($x, $y) = @spline[$i, $i+1];
+        #$canvas->createRectangle(
+        #    circle_points($radius, $x, $y),
+        #    -fill       => undef,
+        #    -outline    => 'black',
+        #    );
+        $canvas->createArc(
+            circle_points($radius, $x, $y),
+            -extent     => 360,
+            -fill       => 'black',
+            #-outline    => 'black',
+            );
+    }
+
+    $canvas->createLine(@spline,
+        -smooth  => 1,
+        -width   => 3,
+        -fill    => 'tomato',
+    );
+
+    $cw->fix_window_min_max_sizes;
+
+    Tk::MainLoop();
+}
+
+sub circle_points {
+    my( $radius, $x, $y ) = @_;
+    
+    return( $x - $radius, $y - $radius, $x + $radius, $y + $radius );
+}
+
+__END__
+
+=head1 NAME - spline_hit
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
