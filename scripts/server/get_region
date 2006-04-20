@@ -23,7 +23,7 @@ $| = 1;
 my $q = new CGI;
 set_nph($q);
 
-print STDERR "************* Getting region ************";
+server_log("************* Getting region ************");
 
 my $odb = get_DBAdaptor_from_CGI_species($q, $OTTER_SPECIES);
 
@@ -45,20 +45,20 @@ my $cl_host   = $params{hostname} || $ENV{REMOTE_ADDR};
 
 my $sgp  = $odb->get_SliceAdaptor;
 
-print STDERR "Getting slice... [$chr] [$chrstart] [$chrend]";
+server_log("Getting slice... [$chr] [$chrstart] [$chrend]");
 
 my $slice = $sgp->fetch_by_chr_start_end($chr,
                                          $chrstart,
                                          $chrend);
 
-print STDERR "Got slice [$chr] [$chrstart] [$chrend]";
+server_log("Got slice [$chr] [$chrstart] [$chrend]");
 
 
-print STDERR "Converting slice to XML...";
+server_log("Converting slice to XML...");
 
 my $xmlstr = Bio::Otter::Converter::slice_to_XML($slice,$odb);
 
-print STDERR "done. Length of xml " . length($xmlstr) . "";
+server_log("Done converting slice to XML. Length of XML = " . length($xmlstr) );
 
 
 send_response($q, "$xmlstr\n");

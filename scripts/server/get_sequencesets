@@ -6,10 +6,7 @@ use CGI;
 use OtterDefs;
 use Bio::Otter::DBSQL::DBAdaptor;
 use Bio::Otter::Version;
-use Bio::Otter::ServerSide qw(error_exit
-                              send_response
-                              set_nph);
-
+use Bio::Otter::ServerSide (':all');
 
 $| = 1;
 my $q = new CGI;
@@ -30,8 +27,8 @@ my $user     = $dbinfo->{USER} || $defaults->{USER};
 my $pass     = $dbinfo->{PASS} || $defaults->{PASS};
 my $port     = $dbinfo->{PORT} || $defaults->{PORT};
 my $dbname   = $dbinfo->{DBNAME};
-print STDERR "Database [$dbname][$host][$user][$pass][$port]";
-print STDERR "Author [$author] email [$email] dataset [$dataset]";
+server_log("Database [$dbname][$host][$user][$pass][$port]");
+server_log("Author [$author] email [$email] dataset [$dataset]");
 my( $odb );
 eval {
     $odb = new Bio::Otter::DBSQL::DBAdaptor(-host   => $host,
