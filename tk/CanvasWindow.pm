@@ -385,7 +385,6 @@ sub fix_window_min_max_sizes {
     my( $self ) = @_;
     
     my $mw = $self->top_window();
-    $mw->update;
     #$mw->withdraw;
     
     my( $max_x, $max_y, $display_max_x, $display_max_y )
@@ -427,11 +426,12 @@ sub fix_window_min_max_sizes {
 sub set_scroll_region_and_maxsize {
     my( $self ) = @_;
 
+    my $mw = $self->top_window();
+    $mw->update;
+
     my @bbox = $self->set_scroll_region;
     my $canvas_width  = $bbox[2] - $bbox[0];
     my $canvas_height = $bbox[3] - $bbox[1];
-    
-    my $mw = $self->top_window();
     
     my( $other_x, # other_x and other_y record the space occupied
         $other_y, # by the widgets other than the canvas in the
@@ -976,7 +976,8 @@ sub get_clipboard_text {
     my ($text);
     eval { $text = $canvas->SelectionGet; };
     if ($@) {
-        return;
+        warn "Clipboard error: $@";
+        return '';
     } else {
         return $text;
     }
