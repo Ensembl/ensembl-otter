@@ -27,6 +27,7 @@ use CanvasWindow;
         $x2,    $y_75,
         $x2,    $y2,
         );
+
     my $radius = 5;
     for (my $i = 0; $i < @spline; $i += 2) {
         my ($x, $y) = @spline[$i, $i+1];
