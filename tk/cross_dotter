@@ -5,11 +5,17 @@
 use strict;
 use POSIX 'ceil';
 use Hum::Analysis::Factory::CrossMatch;
+use Hum::Pfetch;
 use CanvasWindow;
 
 {
-    my $ffin  = Hum::FastaFileIO->new_DNA_IO(\*ARGV);
-    my @seqs  = $ffin->read_all_sequences;
+    my @seqs;
+    if (-e $ARGV[0]) {
+        my $ffin  = Hum::FastaFileIO->new_DNA_IO(\*ARGV);
+        @seqs  = $ffin->read_all_sequences;
+    } else {
+        @seqs = Hum::Pfetch::get_Sequences(@ARGV);
+    }
     my $query = shift(@seqs)
       or die "No sequence found";
     my $factory = Hum::Analysis::Factory::CrossMatch->new;

@@ -288,6 +288,7 @@ sub paste_label_callback {
         
     if ($genomic_feature->{'gf_type'} eq 'EUCOMM') {
         $self->paste_eucomm_data($genomic_feature);
+        return 1;
     }
     else {
         # We allow the Entry's built in paste behaviour.
