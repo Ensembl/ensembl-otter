@@ -100,11 +100,10 @@ if($pipehead) {
 my %skeleton_hash = map { ($_ => []) } get_possible_analyses($dbh);
 my %result_hash   = ();
 
-### Will this die produce a sensible error message?
-# die "No input IDs" unless @input_ids;
+# If there are no input IDs - just peacefully return an empty list:
 if(! @input_ids) {
-    # error_exit($cgi, 'No input IDs');
-    send_response($cgi, '');
+    server_log('No input IDs');
+    send_response($cgi, '', 1);
     exit(0);
 }
 

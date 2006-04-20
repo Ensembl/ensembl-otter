@@ -6,21 +6,21 @@ use CGI;
 use OtterDefs;
 use Bio::Otter::DBSQL::DBAdaptor;
 use Bio::Otter::Version;
-use Bio::Otter::ServerSide qw(error_exit
-                              send_response
-                              set_nph);
-
+use Bio::Otter::ServerSide (':all');
 
 $| = 1;
-my $q = new CGI;
-set_nph($q);
-my %params = $q->Vars;
-my $query_fail = "must be present to get an Access List";
-my $email   = $params{'email'}    || error_exit($q,"'email' $query_fail");
-my $dataset = $params{'dataset'}  || error_exit($q,"'dataset' $query_fail");
-my $author  = $params{'author'}   || error_exit($q,"'author' $query_fail");
+my $cgi = new CGI;
+set_nph($cgi);
+my %cgi_args = $cgi->Vars;
+
+my $query_fail = 'must be present to get an Access List';
+
+my $email   = $cgi_args{email}   || error_exit($cgi, "'email' $query_fail");
+my $dataset = $cgi_args{dataset} || error_exit($cgi, "'dataset' $query_fail");
+my $author  = $cgi_args{author}  || error_exit($cgi, "'author' $query_fail");
+
 unless ($OTTER_SPECIES->{$dataset}) {
-    error_exit($q, "Unknown data set '$dataset'\n");
+    error_exit($cgi, "Unknown data set '$dataset'\n");
 }
 my $dbinfo   = $OTTER_SPECIES->{$dataset};
 my $defaults = $OTTER_SPECIES->{'defaults'};
@@ -30,8 +30,8 @@ my $user     = $dbinfo->{USER} || $defaults->{USER};
 my $pass     = $dbinfo->{PASS} || $defaults->{PASS};
 my $port     = $dbinfo->{PORT} || $defaults->{PORT};
 my $dbname   = $dbinfo->{DBNAME};
-print STDERR "Database [$dbname][$host][$user][$pass][$port]";
-print STDERR "Author [$author] email [$email] dataset [$dataset]";
+server_log("Database [$dbname][$host][$user][$pass][$port]");
+server_log("Author [$author] email [$email] dataset [$dataset]");
 my( $odb );
 eval {
     $odb = new Bio::Otter::DBSQL::DBAdaptor(-host   => $host,
@@ -41,8 +41,9 @@ eval {
                                             -dbname => $dbname);
 };
 if ($@) {
-    error_exit($q, "Failed opening otter database [$@]");
+    error_exit($cgi, "Failed opening otter database [$@]");
 }
+
 my $auth_adapt = $odb->get_AuthorAdaptor();
 my ($author_obj, $saved_err);
 eval{
@@ -54,9 +55,10 @@ if($@){
         $author_obj = $auth_adapt->fetch_by_name($OTTER_GLOBAL_ACCESS_USER);
     };
     if($@){
-        error_exit($q,"Failed to get an author.\n$@") unless $author_obj;
+        error_exit($cgi, "Failed to get an author.\n$@") unless $author_obj;
     }
 }
+
 my $sth=$odb->prepare(q{
             SELECT ssa.assembly_type
               , ssa.access_type
@@ -79,7 +81,7 @@ while (my ($set_name, $access, $author) = $sth->fetchrow) {
 }
 $xml   .= qq`    </accesslist>\n`;
 $xml .= qq`  </dataset>\n`;
-send_response($q, $xml, 1);
+send_response($cgi, $xml, 1);
 
 __END__
 
