@@ -419,7 +419,8 @@ sub add_genomic_feature {
         -text    => 'Delete',
         -command => sub {
             $self->delete_genomic_feature($gfid);
-            $self->fix_window_min_max_sizes;
+            # $self->fix_window_min_max_sizes;
+            $self->set_scroll_region_and_maxsize;
             },
     )->pack(@pack);
     $delete_button->bind('<Destroy>', sub{ $self = undef });
@@ -626,7 +627,9 @@ sub initialize {
             -label   => $fullname.($length ? " (${length}bp)" : ''),
             -command => sub {
                 $self->add_genomic_feature($gf_type);
-                $self->fix_window_min_max_sizes;
+                # $self->fix_window_min_max_sizes;
+                $self->set_scroll_region_and_maxsize;
+
                 # Scroll window so new widgets are visible
                 $self->canvas->yviewMoveto(1);
                 },
