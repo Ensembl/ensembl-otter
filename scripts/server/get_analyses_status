@@ -4,7 +4,7 @@ my $pipehead = $ENV{PIPEHEAD}; # is set by the server for any GET request
 
 use strict;
 use OtterDefs;
-use CGI;
+use Bio::Otter::ServerQuery;
 use Bio::Otter::ServerSide (':all');
 use Bio::Otter::Lace::PipelineDB;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
@@ -47,15 +47,14 @@ sub get_possible_analyses {
 
 $| = 1;
 
-my $cgi = new CGI;
-set_nph($cgi);
-my %cgi_args = $cgi->Vars;
+my $sq = Bio::Otter::ServerQuery->new('dataset','type');
+set_nph($sq);
 
-my $odb = get_DBAdaptor_from_CGI_species($cgi, $OTTER_SPECIES, $pipehead);
+my $odb = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
 
-my $dbh = get_connected_pipeline_dbhandle($cgi, $odb, $pipehead);
+my $dbh = get_connected_pipeline_dbhandle($sq, $odb, $pipehead);
 
-my $assembly = $cgi_args{type};
+my $assembly = $sq->getarg('type') || error_exit($sq, "Please define the assembly type");
 
 my @input_ids;
 
@@ -103,7 +102,7 @@ my %result_hash   = ();
 # If there are no input IDs - just peacefully return an empty list:
 if(! @input_ids) {
     server_log('No input IDs');
-    send_response($cgi, '', 1);
+    send_response($sq, '', 1);
     exit(0);
 }
 
@@ -139,5 +138,5 @@ for my $input_id (sort keys %result_hash) {
             $output_string .= join("\t", $input_id, $logic_name, @{$result_hash{$input_id}{$logic_name}})."\n";
     }
 }
-send_response($cgi, $output_string, 1);
+send_response($sq, $output_string, 1);
 

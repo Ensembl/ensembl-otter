@@ -4,7 +4,7 @@ my $pipehead = $ENV{PIPEHEAD}; # is set by the server for any GET request
 
 use strict;
 use OtterDefs;
-use CGI;
+use Bio::Otter::ServerQuery;
 use Bio::Otter::ServerSide (':all');
 use Bio::Otter::Lace::PipelineDB;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
@@ -12,14 +12,15 @@ use Bio::Otter::DBSQL::DBAdaptor;
 
 $| = 1;
 
-my $cgi = new CGI;
-set_nph($cgi);
-my %cgi_args = $cgi->Vars;
+my $sq = Bio::Otter::ServerQuery->new('dataset',
+    'cs','csver','name','type','start','end','strand',
+    'dnawanted');
+set_nph($sq);
 
-my $dna_wanted = $cgi_args{dnawanted} || 0;
+my $dna_wanted = $sq->getarg('dnawanted') || 0;
 
-my $odb = get_DBAdaptor_from_CGI_species($cgi, $OTTER_SPECIES, $pipehead);
-my $slice = get_old_schema_slice($cgi, $odb);
+my $odb = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
+my $slice = get_old_schema_slice($sq, $odb);
 
 my $tp = $slice->get_tiling_path;
 
@@ -44,5 +45,5 @@ foreach my $tile (@{ $slice->get_tiling_path }) {
     }
 }
 
-send_response($cgi, $output_string, 1);
+send_response($sq, $output_string, 1);
 

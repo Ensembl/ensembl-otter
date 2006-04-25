@@ -5,20 +5,20 @@ my $pipehead = $ENV{PIPEHEAD}; # is set by the server for any GET request
 
 use strict;
 use OtterDefs;
-use CGI;
+use Bio::Otter::ServerQuery;
 use Bio::Otter::ServerSide (':all');
 use Bio::Otter::DBSQL::DBAdaptor;
 
 $| = 1;
 
-my $cgi = new CGI;
-set_nph($cgi);
-my %cgi_args = $cgi->Vars;
+my $sq = Bio::Otter::ServerQuery->new('dataset',
+    'type', 'author');
+set_nph($sq);
 
-my $odb = get_DBAdaptor_from_CGI_species($cgi, $OTTER_SPECIES, $pipehead);
+my $odb = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
 
-my $asm_type = $cgi_args{type};
-my $aut_name = $cgi_args{author};
+my $asm_type = $sq->getarg('type');
+my $aut_name = $sq->getarg('author');
 
 my $sth = $odb->prepare(qq{
     SELECT ctg.name as contig_name,
@@ -45,5 +45,5 @@ while (my (@columns) = $sth->fetchrow()) {
     $output_string .= join("\t", @columns)."\n";
 }
 
-send_response($cgi, $output_string, 1);
+send_response($sq, $output_string, 1);
 

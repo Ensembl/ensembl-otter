@@ -2,47 +2,24 @@
 
 use strict;
 use warnings;
-use CGI;
+use Bio::Otter::ServerQuery;
 use OtterDefs;
 use Bio::Otter::DBSQL::DBAdaptor;
 use Bio::Otter::Version;
 use Bio::Otter::ServerSide (':all');
 
 $| = 1;
-my $cgi = new CGI;
-set_nph($cgi);
-my %cgi_args = $cgi->Vars;
+my $sq = Bio::Otter::ServerQuery->new('dataset',
+    'author', 'email'
+);
+set_nph($sq);
 
 my $query_fail = 'must be present to get an Access List';
+my $dataset = $sq->getarg('dataset')  || error_exit($sq, "'dataset' $query_fail");
+my $author  = $sq->getarg('author')   || error_exit($sq, "'author' $query_fail");
+my $email   = $sq->getarg('email')    || error_exit($sq, "'email' $query_fail");
 
-my $email   = $cgi_args{email}   || error_exit($cgi, "'email' $query_fail");
-my $dataset = $cgi_args{dataset} || error_exit($cgi, "'dataset' $query_fail");
-my $author  = $cgi_args{author}  || error_exit($cgi, "'author' $query_fail");
-
-unless ($OTTER_SPECIES->{$dataset}) {
-    error_exit($cgi, "Unknown data set '$dataset'\n");
-}
-my $dbinfo   = $OTTER_SPECIES->{$dataset};
-my $defaults = $OTTER_SPECIES->{'defaults'};
-## and set
-my $host     = $dbinfo->{HOST} || $defaults->{HOST};
-my $user     = $dbinfo->{USER} || $defaults->{USER};
-my $pass     = $dbinfo->{PASS} || $defaults->{PASS};
-my $port     = $dbinfo->{PORT} || $defaults->{PORT};
-my $dbname   = $dbinfo->{DBNAME};
-server_log("Database [$dbname][$host][$user][$pass][$port]");
-server_log("Author [$author] email [$email] dataset [$dataset]");
-my( $odb );
-eval {
-    $odb = new Bio::Otter::DBSQL::DBAdaptor(-host   => $host,
-                                            -user   => $user,
-                                            -pass   => $pass,
-                                            -port   => $port,
-                                            -dbname => $dbname);
-};
-if ($@) {
-    error_exit($cgi, "Failed opening otter database [$@]");
-}
+my $odb = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, 0);
 
 my $auth_adapt = $odb->get_AuthorAdaptor();
 my ($author_obj, $saved_err);
@@ -55,7 +32,7 @@ if($@){
         $author_obj = $auth_adapt->fetch_by_name($OTTER_GLOBAL_ACCESS_USER);
     };
     if($@){
-        error_exit($cgi, "Failed to get an author.\n$@") unless $author_obj;
+        error_exit($sq, "Failed to get an author.\n$@") unless $author_obj;
     }
 }
 
@@ -72,7 +49,7 @@ my $xml = '';
 $xml   .= qq`  <dataset name="$dataset">\n`;
 $xml   .= qq`    <accesslist>\n`;
 while (my ($set_name, $access, $author) = $sth->fetchrow) {
-  $access eq 'RW' ? 1 : 0;
+  $access = ($access eq 'RW') ? 1 : 0;
   $xml   .= qq`    <access>\n`;
   $xml   .= qq`      <author>$author</author>\n`;
   $xml   .= qq`      <sequenceset_name>$set_name</sequenceset_name>\n`;
@@ -81,7 +58,7 @@ while (my ($set_name, $access, $author) = $sth->fetchrow) {
 }
 $xml   .= qq`    </accesslist>\n`;
 $xml .= qq`  </dataset>\n`;
-send_response($cgi, $xml, 1);
+send_response($sq, $xml, 1);
 
 __END__
 
@@ -94,5 +71,4 @@ return xml for sequence set access list
 =head1 AUTHOR
 
 Sindhu K. Pillai B<email> sp1@sanger.ac.uk
-
 

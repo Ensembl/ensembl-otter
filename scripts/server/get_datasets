@@ -3,7 +3,7 @@
 use OtterDefs;
 use strict;
 
-use CGI;
+use Bio::Otter::ServerQuery;
 
 use HTTPD::Authen;
 use Bio::Otter::Version;
@@ -14,11 +14,10 @@ my $DEBUG      = 0;
 my $ALLOW_ALL  = 0;
 my $ERROR_AUTH = 'unknown user or incorrect password';
 
-my $cgi        = new CGI;
-set_nph($cgi);
+my $sq = Bio::Otter::ServerQuery->new('author');
+set_nph($sq);
 
-my %cgi_args   = $cgi->Vars;
-my $user       = $cgi_args{'author'} || '**NOT Using Authorization**';
+my $user       = $sq->getarg('author') || '**NOT Using Authorization**';
 
 my $groupAd;
 
@@ -30,7 +29,7 @@ if($ENV{AUTHUSERFILE} && $ENV{AUTHGROUPFILE}){
 
 # This is a check so that $groupAd->exists won't die if
 # ALLOW_ALL is false when no authentication was passed
-error_exit($cgi, $ERROR_AUTH) unless $groupAd || $ALLOW_ALL;
+error_exit($sq, $ERROR_AUTH) unless $groupAd || $ALLOW_ALL;
 
 # find the ones they're allowed
 my @allowed_to_see = ();
@@ -61,7 +60,7 @@ foreach my $dataset(@allowed_to_see){
 }
 $xml .= qq`  </datasets>\n`;
 
-send_response($cgi, $xml, 1);
+send_response($sq, $xml, 1);
 
 1;
 
@@ -100,7 +99,7 @@ sub check_authorisation{
         }
     }else{
         server_log("user was NOT AUTHENTICATED") if $DEBUG;
-        error_exit($cgi, $ERROR_AUTH);
+        error_exit($sq, $ERROR_AUTH);
     }
     return $groupAdminObj, $user;
 

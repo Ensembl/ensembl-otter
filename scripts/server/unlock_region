@@ -3,7 +3,7 @@
 use OtterDefs;
 use strict;
 
-use CGI;
+use Bio::Otter::ServerQuery;
 
 use Bio::Otter::CloneLockBroker;
 use Bio::Otter::Converter;
@@ -11,28 +11,19 @@ use Bio::Otter::Lace::TempFile;
 
 use Bio::Otter::ServerSide qw(:all);
 
-####################################################################
-################ COMMON POST CGI SCRIPT BEGIN ######################
-####################################################################
 
 $| = 1;
-
-my $q = new CGI;
-set_nph($q);
+my $sq = Bio::Otter::ServerQuery->new('dataset',
+    'data', 'author', 'email',
+);
+set_nph($sq);
 
 server_log("******* Starting to unlock region *********");
 
-my $odb    = get_DBAdaptor_from_CGI_species($q, $OTTER_SPECIES);
-my $author = get_Author_from_CGI($q);
-####################################################################
-####################################################################
-####################################################################
-# Get all the params in nice variables
+my $odb    = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES);
+my $author = get_Author_from_CGI($sq);
 
-my %params = $q->Vars;
-
-my $xml_data  = $params{'data'}   || error_exit($q,"No xml data entered. Can't write region");
-delete $params{'data'};
+my $xml_data  = $sq->getarg('data') || error_exit($sq, "No xml data entered. Can't write region");
 server_log("Length of data " . length($xml_data) );
 
 my $auth_name = $author->name();
@@ -44,7 +35,7 @@ server_log("Writing xml to tmp file [$tmp_xml_name]");
 
 my $xml_fh = eval{
     $tmp_xml->write_file_handle();
-} || error_exit($q, "Can't write to '$tmp_xml_name' : $!");
+} || error_exit($sq, "Can't write to '$tmp_xml_name' : $!");
 print $xml_fh $xml_data;
 
 # Save a bit of memory
@@ -52,11 +43,6 @@ $xml_data = undef;
 
 server_log("Converting xml to otter...");
 my $fh = $tmp_xml->read_file_handle();
-
-####################################################################
-################ COMMON POST CGI SCRIPT _END_ ######################
-####################################################################
-
 
 ####################################################################
 
@@ -72,7 +58,7 @@ eval {
     server_log("Processed incoming xml file with slice: [$chrname] [$chrstart] [$chrend]");
 };
 if ($@) {
-  error_exit($q, "Failed converting XML to otter [$@]");
+  error_exit($sq, "Failed converting XML to otter [$@]");
 }
 server_log("Done converting.");
 
@@ -83,7 +69,7 @@ eval {
   $cb->check_locks_exist_by_slice($slice,$author);
 };
 if ($@) {
-  error_exit($q, "Failed checking locks [$@]");
+  error_exit($sq, "Failed checking locks [$@]");
 }
 server_log("Done checking region is locked.");
 
@@ -92,10 +78,10 @@ server_log("Unlocking clones...");
 eval{
     $cb->remove_by_slice($slice,$author);
 };
-error_exit($q, "Failed to unlock clones") if $@;
+error_exit($sq, "Failed to unlock clones") if $@;
 server_log("Done unlocking clones.");
 
 ####################################################################
 
-send_response($q, "<response>\n</response>\n", 1);
+send_response($sq, "<response>\n</response>\n", 1);
 
