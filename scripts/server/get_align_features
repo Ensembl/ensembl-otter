@@ -4,7 +4,7 @@ my $pipehead = $ENV{PIPEHEAD}; # is set by the server for any GET request
 
 use strict;
 use OtterDefs;
-use CGI;
+use Bio::Otter::ServerQuery;
 use Bio::Otter::ServerSide (':all');
 use Bio::Otter::Lace::PipelineDB;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
@@ -15,27 +15,28 @@ use Bio::Otter::HitDescription;
 
 $| = 1;
 
-my $cgi = new CGI;
-set_nph($cgi);
-my %cgi_args = $cgi->Vars;
+my $sq = Bio::Otter::ServerQuery->new('dataset',
+    'cs','csver','name','type','start','end','strand',
+    'kind','analysis');
+set_nph($sq);
 
-my $odb = get_DBAdaptor_from_CGI_species($cgi, $OTTER_SPECIES, $pipehead);
-my ($pdb, $pipeline_slice, $pipe_connparms) = get_pipeline_adaptor_slice_parms($cgi, $odb, $pipehead);
+my $odb = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
+my ($pdb, $pipeline_slice, $pipe_connparms) = get_pipeline_adaptor_slice_parms($sq, $odb, $pipehead);
 
 if(!defined($pipeline_slice)) {
-    error_exit($cgi, "Pipeline slice undefined!");
+    error_exit($sq, "Pipeline slice undefined!");
 }
 
 my @af_optnames = @{ $OrderOfOptions{AlignFeature} };
 my @hd_optnames = @{ $OrderOfOptions{HitDescription} };
 
-my $kind     = $cgi_args{kind};
+my $kind     = $sq->getarg('kind');
 my $method = {
     'dafs' => 'get_all_DnaAlignFeatures',
     'pafs' => 'get_all_ProteinAlignFeatures',
 }->{$kind};
 
-my $analysis = $cgi_args{analysis};
+my $analysis = $sq->getarg('analysis');
 my $afs = $pipeline_slice->$method($analysis);
 
 $analysis ||= '(any analysis)';
@@ -95,5 +96,5 @@ foreach my $af (@$afs) {
     $output_string .= join("\t", @af_optvalues)."\n";
 }
 
-send_response($cgi, $output_string, 1);
+send_response($sq, $output_string, 1);
 

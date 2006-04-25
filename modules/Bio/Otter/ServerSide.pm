@@ -39,25 +39,28 @@ our %EXPORT_TAGS = (all => [qw(
 
 sub server_log {
     my $line = shift @_;
-    print STDERR "[$ENV{CURRENT_SCRIPT_NAME}] $line\n";
+    my $csn = $ENV{CURRENT_SCRIPT_NAME} || $0;
+    print STDERR "[$csn] $line\n";
 }
 
 sub set_nph{
-    my ($cgi) = @_;
-    error_exit('', 'I need a CGI object') unless $cgi && UNIVERSAL::isa($cgi, 'CGI');
-    if ($ENV{SERVER_SOFTWARE} =~ /libwww-perl-daemon/) {
+    my ($sq) = @_;
+    error_exit('', 'I need a CGI object') unless $sq && UNIVERSAL::isa($sq, 'CGI');
+    if (defined($ENV{SERVER_SOFTWARE})
+    && ( $ENV{SERVER_SOFTWARE} =~ /libwww-perl-daemon/)) {
         # server_log('NOTE: Setting nph to 1');
-        $cgi->nph(1);
+        $sq->nph(1);
     }
 }
 
 sub send_response{
-    my ($cgi, $response, $wrap) = @_;
-    error_exit('', 'I need a CGI object') unless $cgi && UNIVERSAL::isa($cgi, 'CGI');
+    my ($sq, $response, $wrap) = @_;
+
     server_log('Sending the response =====================');
-    print $cgi->header('text/plain');
+    print $sq->header('text/plain') if $sq && UNIVERSAL::isa($sq, 'CGI');
 
     if($wrap) {
+        print qq`<?xml version="1.0" encoding="UTF-8"?>\n`;
         print qq`<otter schemaVersion="$SCHEMA_VERSION" xmlVersion="$XML_VERSION">\n`;
     }
 
@@ -69,21 +72,14 @@ sub send_response{
 }
 
 sub error_exit {
-  my ($cgi,$reason) = @_;
+    my ($sq, $reason) = @_;
 
-  print $cgi->header() if $cgi && UNIVERSAL::isa($cgi,'CGI');
+    chomp($reason);
 
-  chomp($reason);
+    send_response($sq, " <response>\n    ERROR:\n$reason\n </response>", 1);
+    server_log("ERROR: $reason\n");
 
-  print qq`<otter schemaVersion="$SCHEMA_VERSION" xmlVersion="$XML_VERSION">\n`;
-  print qq` <response>\n`;
-  print qq`    ERROR:\n$reason\n`;
-  print qq`  </response>\n`;
-  print qq`</otter>\n`;
-
-  server_log("ERROR: $reason\n");
-
-  exit(1);
+    exit(1);
 }
 
 sub connect_with_params {
@@ -97,11 +93,9 @@ sub connect_with_params {
 }
 
 sub get_connected_pipeline_dbhandle {
-    my ($cgi, $odb, $pipehead) = @_;
+    my ($sq, $odb, $pipehead) = @_;
 
-    my %cgi_args = $cgi->Vars;
-
-    server_log("called with: ".join(' ', map { "$_=$cgi_args{$_}" } keys %cgi_args) );
+    server_log("called with: ".join(' ', map { "$_=".$sq->getarg($_) } @{$sq->getargs()} ));
 
     my $pipekey = $pipehead
         ? 'pipeline_db_head'
@@ -113,7 +107,7 @@ sub get_connected_pipeline_dbhandle {
             $pipekey
         );
 
-    error_exit($cgi, "No connection parameters for '$pipekey' in otter database")
+    error_exit($sq, "No connection parameters for '$pipekey' in otter database")
         unless keys %$pipedb_options;
 
     my $dbh = connect_with_params(%$pipedb_options);
@@ -122,13 +116,12 @@ sub get_connected_pipeline_dbhandle {
 }
 
 sub get_old_schema_slice {
-    my ($cgi, $dbh) = @_;
+    my ($sq, $dbh) = @_;
 
-    my %cgi_args = $cgi->Vars;
-    my $cs    = $cgi_args{cs}   || error_exit($cgi, "Coordinate system type (cs attribute) not set");
-    my $name  = $cgi_args{name} || error_exit($cgi, "Coordinate system name (name attribute) not set");
-    my $start = $cgi_args{start};
-    my $end   = $cgi_args{end};
+    my $cs    = $sq->getarg('cs')   || error_exit($sq, "Coordinate system type (cs attribute) not set");
+    my $name  = $sq->getarg('name') || error_exit($sq, "Coordinate system name (name attribute) not set");
+    my $start = $sq->getarg('start');
+    my $end   = $sq->getarg('end');
 
     my $slice;
 
@@ -143,21 +136,19 @@ sub get_old_schema_slice {
         );
     } elsif($cs eq 'contig') {
         $slice = $dbh->get_RawContigAdaptor()->fetch_by_name(
-            $cgi_args{name},
+            $sq->getarg('name'),
         );
     } else {
-        error_exit($cgi,"Other coordinate systems are not supported");
+        error_exit($sq, "Other coordinate systems are not supported");
     }
 
     return $slice;
 }
 
 sub get_pipeline_adaptor_slice_parms { # codebase-independent version for scripts
-    my ($cgi, $odb, $pipehead) = @_;
+    my ($sq, $odb, $pipehead) = @_;
 
-    my %cgi_args = $cgi->Vars;
-
-    server_log("called with: ".join(' ', map { "$_=$cgi_args{$_}" } keys %cgi_args) );
+    server_log("called with: ".join(' ', map { "$_=".$sq->getarg($_) } @{$sq->getargs()} ));
 
     my $pipekey = $pipehead
         ? 'pipeline_db_head'
@@ -172,9 +163,10 @@ sub get_pipeline_adaptor_slice_parms { # codebase-independent version for script
     my $pipeline_slice;
 
         # CS defaults:
-    $cgi_args{cs} ||= 'chromosome';
-    if(!$cgi_args{csver} && ($cgi_args{cs} eq 'chromosome')) {
-        $cgi_args{csver} = 'Otter';
+    my $cs = $sq->getarg('cs') || 'chromosome';
+    my $csver = $sq->getarg('csver');
+    if(!$csver && ($cs eq 'chromosome')) {
+        $csver = 'Otter';
     }
 
     server_log("connecting to the ".($pipehead?'NEW':'OLD')." pipeline using [$pipekey] meta entry...");
@@ -186,29 +178,29 @@ sub get_pipeline_adaptor_slice_parms { # codebase-independent version for script
 		# that we use 'assembly type' as the chromosome name
 		# only for Otter chromosomes.
 		# Vega chromosomes will have simple names.
-	my $segment_name = (($cgi_args{cs} eq 'chromosome') && ($cgi_args{csver} eq 'Otter'))
-			? $cgi_args{type}
-		    : $cgi_args{name};
+	my $segment_name = (($cs eq 'chromosome') && ($csver eq 'Otter'))
+			? $sq->getarg('type')
+		    : $sq->getarg('name');
 
         $pipeline_slice = $pdb->get_SliceAdaptor()->fetch_by_region(
-            $cgi_args{cs},
+            $cs,
 	    $segment_name,
-            $cgi_args{start},
-            $cgi_args{end},
-            $cgi_args{strand},
-            $cgi_args{csver},
+            $sq->getarg('start'),
+            $sq->getarg('end'),
+            $sq->getarg('strand'),
+            $csver,
         );
 
     } else {
 
         $pdb->assembly_type($odb->assembly_type());
 
-        $pipeline_slice = get_old_schema_slice($cgi, $pdb);
+        $pipeline_slice = get_old_schema_slice($sq, $pdb);
     }
 
     if(!defined($pipeline_slice) && $pipehead) {
         server_log('Could not get a slice, probably not yet loaded into new pipeline');
-        send_response($cgi, '', 1);
+        send_response($sq, '', 1);
         exit(0); # <--- this forces all the scripts to exit normally
     }
 
@@ -216,12 +208,11 @@ sub get_pipeline_adaptor_slice_parms { # codebase-independent version for script
 }
 
 sub get_Author_from_CGI{
-    my ($cgi) = @_;
-    error_exit('', 'I need a CGI object') unless $cgi && UNIVERSAL::isa($cgi, 'CGI');
-    my %cgi_args   = $cgi->Vars;
+    my ($sq) = @_;
+    error_exit('', 'I need a CGI object') unless $sq && UNIVERSAL::isa($sq, 'CGI');
 
-    my $auth_name = $cgi_args{author} || error_exit($cgi, "Need author for this script...");
-    my $email     = $cgi_args{email}  || error_exit($cgi, "Need email for this script...");
+    my $auth_name = $sq->getarg('author') || error_exit($sq, "Need author for this script...");
+    my $email     = $sq->getarg('email')  || error_exit($sq, "Need email for this script...");
 
     my $author    = Bio::Otter::Author->new(-name  => $auth_name,
                                             -email => $email);
@@ -229,27 +220,26 @@ sub get_Author_from_CGI{
 }
 
 sub get_DBAdaptor_from_CGI_species{
-    my ($cgi, $SPECIES, $pipehead) = @_;
+    my ($sq, $SPECIES, $pipehead) = @_;
 
     my $adaptor_class = $pipehead
         ? 'Bio::EnsEMBL::DBSQL::DBAdaptor'
         : 'Bio::Otter::DBSQL::DBAdaptor';
 
-    error_exit('', 'I need two arguments') unless $cgi && $SPECIES;
-    error_exit('', 'I need a CGI object') unless UNIVERSAL::isa($cgi, 'CGI');
-    my %cgi_args   = $cgi->Vars;
+    error_exit('', 'I need two arguments') unless $sq && $SPECIES;
+    error_exit('', 'I need a CGI object') unless UNIVERSAL::isa($sq, 'CGI');
 
     ####################################################################
     # Check the dataset has been entered
-    my $dataset = $cgi_args{'dataset'} || error_exit($cgi, "No dataset type entered.");
+    my $dataset = $sq->getarg('dataset') || error_exit($sq, "No dataset type entered.");
 
     # get the overriding dataset options from species.dat 
-    my $dbinfo   = $SPECIES->{$dataset} || error_exit($cgi, "Unknown data set $dataset");
+    my $dbinfo   = $SPECIES->{$dataset} || error_exit($sq, "Unknown data set $dataset");
 
     # get the defaults from species.dat
     my $defaults = $SPECIES->{'defaults'};
 
-    my $type     = $cgi_args{type} || $dbinfo->{TYPE} || $defaults->{TYPE};
+    my $type     = $sq->getarg('type') || $dbinfo->{TYPE} || $defaults->{TYPE};
 
     ########## AND DB CONNECTION #######################################
     my $dbhost    = $dbinfo->{HOST}     || $defaults->{HOST};
@@ -257,7 +247,7 @@ sub get_DBAdaptor_from_CGI_species{
     my $dbpass    = $dbinfo->{PASS}     || $defaults->{PASS};
     my $dbport    = $dbinfo->{PORT}     || $defaults->{PORT};
     my $dbname    = $dbinfo->{DBNAME}   || 
-        error_exit($cgi, "Failed opening otter database [No database name]");
+        error_exit($sq, "Failed opening otter database [No database name]");
 
     my $dnahost    = $dbinfo->{DNA_HOST}    || $defaults->{DNA_HOST};
     my $dnauser    = $dbinfo->{DNA_USER}    || $defaults->{DNA_USER};
@@ -275,7 +265,7 @@ sub get_DBAdaptor_from_CGI_species{
                                     -port   => $dbport,
                                     -dbname => $dbname);
     };
-    error_exit($cgi, "Failed opening otter database [$@]") if $@;
+    error_exit($sq, "Failed opening otter database [$@]") if $@;
     if ($dna_dbname) {
         eval {
             $dnadb = new Bio::EnsEMBL::DBSQL::DBAdaptor(-host   => $dnahost,
@@ -284,7 +274,7 @@ sub get_DBAdaptor_from_CGI_species{
                                                         -port   => $dnaport,
                                                         -dbname => $dna_dbname);
         };
-        error_exit($cgi, "Failed opening dna database [$@]") if $@;
+        error_exit($sq, "Failed opening dna database [$@]") if $@;
         $odb->dnadb($dnadb);
         
         server_log("Connected to dna database");

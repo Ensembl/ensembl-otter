@@ -4,7 +4,7 @@ my $pipehead = $ENV{PIPEHEAD}; # is set by the server for any GET request
 
 use strict;
 use OtterDefs;
-use CGI;
+use Bio::Otter::ServerQuery;
 use Bio::Otter::ServerSide (':all');
 use Bio::Otter::Lace::PipelineDB;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
@@ -13,14 +13,15 @@ use Bio::Otter::ToXML;
 
 $| = 1;
 
-my $cgi = new CGI;
-set_nph($cgi);
-my %cgi_args = $cgi->Vars;
+my $sq = Bio::Otter::ServerQuery->new('dataset',
+    'cs','csver','name','type','start','end','strand',
+    'analysis');
+set_nph($sq);
 
-my $odb = get_DBAdaptor_from_CGI_species($cgi, $OTTER_SPECIES, $pipehead);
-my ($pdb, $pipeline_slice, $pipe_connparms) = get_pipeline_adaptor_slice_parms($cgi, $odb, $pipehead);
+my $odb = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
+my ($pdb, $pipeline_slice, $pipe_connparms) = get_pipeline_adaptor_slice_parms($sq, $odb, $pipehead);
 
-my $analysis = $cgi_args{analysis};
+my $analysis = $sq->getarg('analysis');
 my $genes = $pipeline_slice->get_all_Genes($analysis);
 
 server_log("Total of ".scalar(@$genes)." $analysis genes found");
@@ -31,5 +32,5 @@ foreach my $gene (@$genes) {
     $output_string .= $gene->toXMLstring();
 }
 
-send_response($cgi, $output_string, 1);
+send_response($sq, $output_string, 1);
 

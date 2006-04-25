@@ -3,7 +3,7 @@
 use OtterDefs;
 use strict;
 
-use CGI;
+use Bio::Otter::ServerQuery;
 
 use Bio::Otter::AnnotationBroker;
 use Bio::Otter::Converter;
@@ -16,26 +16,20 @@ use Bio::Otter::ServerSide qw(:all);
 ################ COMMON POST CGI SCRIPT BEGIN ######################
 ####################################################################
 
-local $| = 1;
-
-my $cgi = new CGI;
-set_nph($cgi);
+$| = 1;
+my $sq = Bio::Otter::ServerQuery->new('dataset',
+    'data', 'author', 'email', 'unlock',
+);
+set_nph($sq);
 
 server_log("******* Starting to write region *********");
 
-my $odb    = get_DBAdaptor_from_CGI_species($cgi, $OTTER_SPECIES);
-my $author = get_Author_from_CGI($cgi);
+my $odb    = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES);
+my $author = get_Author_from_CGI($sq);
 
 ####################################################################
-####################################################################
-####################################################################
 
-# Get all the params in nice variables
-
-my %cgi_args = $cgi->Vars;
-
-my $xml_data  = $cgi_args{'data'} || error_exit($cgi, "No xml data entered. Can't write region");
-delete $cgi_args{'data'};
+my $xml_data  = $sq->getarg('data') || error_exit($sq, "No xml data entered. Can't write region");
 server_log("Length of data " . length($xml_data) );
 
 my $auth_name = $author->name();
@@ -49,7 +43,7 @@ server_log("Writing xml to tmp file [$tmp_xml_name]");
 
 my $xml_fh = eval{
   $tmp_xml->write_file_handle();
-} || error_exit($cgi, "Can't write to '$tmp_xml_name' : $!");
+} || error_exit($sq, "Can't write to '$tmp_xml_name' : $!");
 
 print $xml_fh $xml_data;
 
@@ -78,8 +72,8 @@ eval {
   ($genes, $slice, $seqstr, $path, $new_feature_set, $new_assembly_tag_set) =
     Bio::Otter::Converter::XML_to_otter($fh, $odb);
 
-  error_exit($cgi, "no path from XML")    unless  $path;
-  error_exit($cgi, "empty path from XML") unless @$path;
+  error_exit($sq, "no path from XML")    unless  $path;
+  error_exit($sq, "empty path from XML") unless @$path;
 
   $chrname  = $slice->chr_name;
   $chrstart = $slice->chr_start;
@@ -91,7 +85,7 @@ eval {
 };
 
 if ($@) {
-  error_exit($cgi, "Failed converting XML [$genes,$chrname,$chrstart,$chrend] to otter [$@]");
+  error_exit($sq, "Failed converting XML [$genes,$chrname,$chrstart,$chrend] to otter [$@]");
 }
 
 server_log("Done converting.");
@@ -105,7 +99,7 @@ eval {
   $cb->check_locks_exist_by_slice($slice, $author);
 };
 
-error_exit($cgi, "Failed checking locks [$@]") if $@;
+error_exit($sq, "Failed checking locks [$@]") if $@;
 server_log("Done checking region is locked.");
 
 strip_incomplete_genes($genes);
@@ -129,11 +123,11 @@ eval {
 };
 
 if ($@) {
-  error_exit($cgi, "Failed fetching analysis [$@]");
+  error_exit($sq, "Failed fetching analysis [$@]");
 }
 
 if (!defined($anal)) {
-  error_exit($cgi, "No analysis object associated with otter");
+  error_exit($sq, "No analysis object associated with otter");
 }
 
 my $dbgenes;
@@ -145,7 +139,7 @@ eval {
 };
 
 if ($@) {
-  error_exit($cgi, "Failed fetching genes [$@]");
+  error_exit($sq, "Failed fetching genes [$@]");
 }
 server_log("Done fetching database genes.");
 
@@ -178,7 +172,7 @@ eval {
 };
 
 if ($@) {
-  error_exit($cgi, "Failed fully loading genes before write [$@]");
+  error_exit($sq, "Failed fully loading genes before write [$@]");
 }
 
 my( @gene_events, @changed_clones );
@@ -213,7 +207,7 @@ eval {
 };
 
 if ($@) {
-  error_exit($cgi, "Failed comparing annotations [$@]");
+  error_exit($sq, "Failed comparing annotations [$@]");
 }
 server_log("Done compating old genes to new ones.");
 
@@ -242,7 +236,7 @@ eval {
     # Need to save the original coordinates for the response XML.
     my( %exon_start_end_strand );
     foreach my $exon (@{$gene->get_all_Exons}) {
-        my $stable = $exon->stable_id or error_exit($cgi, "Missing exon stable ID");
+        my $stable = $exon->stable_id || error_exit($sq, "Missing exon stable ID");
         $exon_start_end_strand{$stable} = [$exon->start, $exon->end, $exon->strand];
     }
     server_log("Attaching gene to slice ". $gene->stable_id ." ". $gene->version );
@@ -254,9 +248,9 @@ eval {
     
     # Restore the pre-transform exon coordinates
     foreach my $exon (@{$gene->get_all_Exons}) {
-        my $stable = $exon->stable_id or error_exit($cgi, "Missing exon stable ID");
+        my $stable = $exon->stable_id || error_exit($sq, "Missing exon stable ID");
         my $ses = $exon_start_end_strand{$stable}
-            or error_exit($cgi, "Couldn't get pre-transformed coordinates for exon '$stable'");
+            or error_exit($sq, "Couldn't get pre-transformed coordinates for exon '$stable'");
         my ($start, $end, $strand) = @$ses;
         $exon->start($start);
         $exon->end($end);
@@ -313,13 +307,13 @@ eval {
 };
 
 if ($@) {
-  error_exit($cgi, "Failed writing annotations [$@]");
+  error_exit($sq, "Failed writing annotations [$@]");
 }
 
 $outputstr ||= "No changes to annotations";
 
 $output_xml = $path_as_XML . $output_xml ;
-send_response($cgi, $output_xml, 1);
+send_response($sq, $output_xml, 1);
 
      #-------------------------------------------
      #          S U B R O U T I N E S
@@ -364,12 +358,12 @@ sub attach_analysis_objects_and_transform_to_slice {
 
     if (@mapped == 1) {
       unless ($mapped[0]->isa($class)) {
-        error_exit($cgi, "Error, got '$mapped[0]' from transform");
+        error_exit($sq, "Error, got '$mapped[0]' from transform");
       }
       $sf_list->[$i] = $mapped[0];
     }
     else {
-      error_exit($cgi, "transform returned ".scalar(@mapped)." features: (@mapped)");
+      error_exit($sq, "transform returned ".scalar(@mapped)." features: (@mapped)");
     }
   }
 }
@@ -386,7 +380,7 @@ sub transform_assembly_tag_coordinates {
 
     if ( @mapped == 1 ) {
       unless ( $mapped[0]->isa(ref($at)) ) {
-	    error_exit($cgi, "Error, got '$mapped[0]' from transform, which is not a ".ref($at));
+	    error_exit($sq, "Error, got '$mapped[0]' from transform, which is not a ".ref($at));
       }
 
       # $mapped[0]->{_seqname} is contig_id,    # $mapped[0]->seqname : contig_name
@@ -398,7 +392,7 @@ sub transform_assembly_tag_coordinates {
     }
     else {
       # can't deal with assembly tags mapped to > 1 contig
-      error_exit($cgi, "transform returned ".scalar(@mapped)." AssemblyTag: (@mapped)");
+      error_exit($sq, "transform returned ".scalar(@mapped)." AssemblyTag: (@mapped)");
     }
   }
   return $new_sets;

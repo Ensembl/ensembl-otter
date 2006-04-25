@@ -2,44 +2,25 @@
 
 use strict;
 use warnings;
-use CGI;
 use OtterDefs;
 use Bio::Otter::DBSQL::DBAdaptor;
 use Bio::Otter::Version;
+use Bio::Otter::ServerQuery;
 use Bio::Otter::ServerSide (':all');
 
 $| = 1;
-my $q = new CGI;
-set_nph($q);
-my %params = $q->Vars;
+my $sq = Bio::Otter::ServerQuery->new('dataset',
+    'author', 'email'
+);
+set_nph($sq);
+
 my $query_fail = "must be present to get a Sequence Set";
-my $email   = $params{'email'}    || error_exit($q,"'email' $query_fail");
-my $dataset = $params{'dataset'}  || error_exit($q,"'dataset' $query_fail");
-my $author  = $params{'author'}   || error_exit($q,"'author' $query_fail");
-unless ($OTTER_SPECIES->{$dataset}) {
-    error_exit($q, "Unknown data set '$dataset'\n");
-}
-my $dbinfo   = $OTTER_SPECIES->{$dataset};
-my $defaults = $OTTER_SPECIES->{'defaults'};
-## and set
-my $host     = $dbinfo->{HOST} || $defaults->{HOST};
-my $user     = $dbinfo->{USER} || $defaults->{USER};
-my $pass     = $dbinfo->{PASS} || $defaults->{PASS};
-my $port     = $dbinfo->{PORT} || $defaults->{PORT};
-my $dbname   = $dbinfo->{DBNAME};
-server_log("Database [$dbname][$host][$user][$pass][$port]");
-server_log("Author [$author] email [$email] dataset [$dataset]");
-my( $odb );
-eval {
-    $odb = new Bio::Otter::DBSQL::DBAdaptor(-host   => $host,
-                                            -user   => $user,
-                                            -pass   => $pass,
-                                            -port   => $port,
-                                            -dbname => $dbname);
-};
-if ($@) {
-    error_exit($q, "Failed opening otter database [$@]");
-}
+my $dataset = $sq->getarg('dataset')  || error_exit($sq, "'dataset' $query_fail");
+my $author  = $sq->getarg('author')   || error_exit($sq, "'author' $query_fail");
+my $email   = $sq->getarg('email')    || error_exit($sq, "'email' $query_fail");
+
+my $odb = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, 0);
+
 my $auth_adapt = $odb->get_AuthorAdaptor();
 my ($author_obj, $saved_err);
 eval{
@@ -51,9 +32,10 @@ if($@){
         $author_obj = $auth_adapt->fetch_by_name($OTTER_GLOBAL_ACCESS_USER);
     };
     if($@){
-        error_exit($q,"Failed to get an author.\n$@") unless $author_obj;
+        error_exit($sq,"Failed to get an author.\n$@") unless $author_obj;
     }
 }
+
 my $sth = $odb->prepare(q{
             SELECT assembly_type
               , description
@@ -68,18 +50,18 @@ my $xml = '';
 $xml   .= qq`  <dataset name="$dataset">\n`;
 $xml   .= qq`    <sequencesets>\n`;
 while (my ($name, $desc, $priority, $hide, $vega_id) = $sth->fetchrow) {
-  $hide=$hide eq 'Y' ? 1 : 0;
+  $hide = ($hide eq 'Y') ? 1 : 0;
+
   $xml .= qq`      <sequenceset name="$name" hide="$hide" >\n`;
   $xml .= qq`        <description>$desc</description>\n`;
   $xml .= qq`        <analysis_priority>$priority</analysis_priority>\n`;
-  $xml .= qq`        <vega_set_id>`;
-  $xml .=$vega_id;
-  $xml .= qq`</vega_set_id>\n`;
+  $xml .= qq`        <vega_set_id>$vega_id</vega_set_id>\n`;
   $xml .= qq`      </sequenceset>\n`;
 }
 $xml .= qq`    </sequencesets>\n`;
 $xml .= qq`  </dataset>\n`;
-send_response($q, $xml, 1);
+
+send_response($sq, $xml, 1);
 
 __END__
 

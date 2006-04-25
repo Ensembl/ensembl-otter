@@ -1,58 +1,37 @@
 #!/usr/local/bin/perl -w
 
-
 use OtterDefs;
 use strict;
 
-use CGI;
+use Bio::Otter::ServerQuery;
+use Bio::Otter::ServerSide (':all');
 
 use Bio::Otter::DBSQL::DBAdaptor;
 use Bio::Otter::CloneLockBroker;
 use Bio::Otter::Converter;
 
-use Bio::Otter::ServerSide qw(:all);
-
-# use ......
-
-####################################################################
-################# COMMON GET CGI SCRIPT BEGIN ######################
-####################################################################
-
 $| = 1;
 
-my $q = new CGI;
-set_nph($q);
+my $sq = Bio::Otter::ServerQuery->new('dataset',
+    'chr', 'type', 'start', 'end', 'hostname'
+);
+set_nph($sq);
 
 server_log("************* Getting region ************");
 
-my $odb = get_DBAdaptor_from_CGI_species($q, $OTTER_SPECIES);
+my $odb = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES);
 
-####################################################################
-####################################################################
-####################################################################
-# Get all the params in nice variables
+my $chr     = $sq->getarg('chr')      || error_exit($sq, "No chromosome entered");
+my $type    = $sq->getarg('type')     || error_exit($sq, "No assembly type entered");
+my $start   = $sq->getarg('start')    || error_exit($sq, "No chromosome start coordinate entered");
+my $end     = $sq->getarg('end')      || error_exit($sq, "No chromosome end coordinate entered");
+my $cl_host = $sq->getarg('hostname') || $ENV{REMOTE_ADDR};
 
-my %params   = $q->Vars;
+server_log("Getting slice... [$chr | $type] [$start] [$end]");
 
-my $chr       = $params{chr}      || error_exit($q, "No chromosome entered");
-my $chrstart  = $params{chrstart} || error_exit($q, "No chromosome start coordinate entered");
-my $chrend    = $params{chrend}   || error_exit($q, "No chromosome end coordinate entered");
-my $cl_host   = $params{hostname} || $ENV{REMOTE_ADDR};
-
-####################################################################
-################# COMMON GET CGI SCRIPT _END_ ######################
-####################################################################
-
-my $sgp  = $odb->get_SliceAdaptor;
-
-server_log("Getting slice... [$chr] [$chrstart] [$chrend]");
-
-my $slice = $sgp->fetch_by_chr_start_end($chr,
-                                         $chrstart,
-                                         $chrend);
-
-server_log("Got slice [$chr] [$chrstart] [$chrend]");
-
+my $slice = $odb->get_SliceAdaptor->fetch_by_chr_start_end($chr,
+                                         $start,
+                                         $end);
 
 server_log("Converting slice to XML...");
 
@@ -60,7 +39,6 @@ my $xmlstr = Bio::Otter::Converter::slice_to_XML($slice,$odb);
 
 server_log("Done converting slice to XML. Length of XML = " . length($xmlstr) );
 
+send_response($sq, "$xmlstr\n");
 
-send_response($q, "$xmlstr\n");
-
-#####################################################################
+1;
