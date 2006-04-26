@@ -46,6 +46,63 @@ sub _generic_sql_fetch {
 }
 
 
+sub fetch_by_gene {
+    my ($self, $gene) = @_;
+    
+    my $gid = $gene->dbID
+        or $self->throw("Missing dbID");
+    my $stable_id = $gene->stable_id
+        or $self->throw("Missing stable_id");
+    
+    # This relies on there being the same number of
+    # entries in the gene_info table as there are in
+    # the gene_stable_id table for a gene, and that
+    # the rows in the two tables correspond to each
+    # other when sorted by modified in the stable_id
+    # table and timestamp in the gene_info_id table
+    my $find_row = $self->prepare(q{
+        SELECT gene_id
+        FROM gene_stable_id
+        WHERE stable_id = ?
+        ORDER BY modified ASC
+        });
+    $find_row->execute($stable_id);
+    
+    my $row;
+    for (my $i = 0; my ($this_gid) = $find_row->fetchrow; $i++) {
+        if ($this_gid == $gid) {
+            $row = $i;
+            last;
+        }
+    }
+    $find_row->finish;
+    $self->throw("Failed to find row number of gene('$gid') '$stable_id'")
+      unless defined $row;
+    
+    my $sth = $self->prepare(q{
+        SELECT gene_info_id
+        FROM gene_info
+        WHERE gene_stable_id = ?
+        ORDER BY timestamp ASC
+        });
+    $sth->execute($stable_id);
+    
+    my $info_id;
+    for (my $i = 0; my ($this_info_id) = $sth->fetchrow; $i++) {
+        if ($i == $row) {
+            $info_id = $this_info_id;
+            last;
+        }
+    }
+    $sth->finish;
+    if ($info_id) {
+        return $info_id;
+    } else {
+        $self->throw("Failed to get gene_info_id for gene '$stable_id' row '$row'");
+    }
+}
+
+
 =head2 fetch_by_gene_id
 
  Title   : fetch_by_gene_id

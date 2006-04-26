@@ -118,7 +118,7 @@ sub annotate_transcript {
    bless $trans, "Bio::Otter::AnnotatedTranscript";
 
    eval {
-     my $infoid = $ctia->fetch_by_transcript_id($trans->stable_id);
+     my $infoid = $ctia->fetch_by_transcript($trans);
      my $info = $transcript_info_adaptor->fetch_by_dbID($infoid);
   
      $trans->transcript_info($info);

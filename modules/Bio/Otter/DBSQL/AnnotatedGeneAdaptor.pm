@@ -66,13 +66,42 @@ sub fetch_by_stable_id{
    my ($dbID) = $sth->fetchrow_array();
 
    if( !defined $dbID ) {
-       $self->throw("No stable id with $id, cannot fetch");
+       $self->throw("No gene with stable id '$id'; cannot fetch");
    }
 
    my $gene = $self->fetch_by_dbID($dbID);
 
    return $gene;
     
+}
+
+sub fetch_by_stable_id_version {
+    my ($self, $stable_id, $version) = @_;
+
+    if (!defined($stable_id)) {
+        $self->throw("Must enter a gene id to fetch an AnnotatedGene");
+    }
+
+    # all this just to override this query
+    my $sth = $self->prepare(
+        q{
+        SELECT gene_id
+        FROM gene_stable_id
+        WHERE stable_id = ?
+          AND version = ?
+        }
+    );
+    $sth->execute($stable_id, $version);
+
+    my ($dbID) = $sth->fetchrow;
+
+    unless ($dbID) {
+        $self->throw("No gene with stable ID '$stable_id' and version '$version'; cannot fetch");
+    }
+
+    my $gene = $self->fetch_by_dbID($dbID);
+
+    return $gene;
 }
 
 =head2 fetch_by_dbID
@@ -115,23 +144,34 @@ sub fetch_by_dbID {
 =cut
 
 sub annotate_gene {
-   my ($self,$gene) = @_;
+    my ($self, $gene) = @_;
 
-   # Will this work - let's hope so
-   bless $gene,"Bio::Otter::AnnotatedGene";
+    # Will this work - let's hope so
+    bless $gene, "Bio::Otter::AnnotatedGene";
 
-   my $gene_info_adaptor         = $self->db->get_GeneInfoAdaptor();
-   my $current_gene_info_adaptor = $self->db->get_CurrentGeneInfoAdaptor();
+    my $gene_info_adaptor         = $self->db->get_GeneInfoAdaptor();
+    my $current_gene_info_adaptor = $self->db->get_CurrentGeneInfoAdaptor();
 
-   my $infoid = $current_gene_info_adaptor->fetch_by_gene_id($gene->stable_id);
-   my $info = $gene_info_adaptor->fetch_by_dbID($infoid);
+    my $infoid = $current_gene_info_adaptor->fetch_by_gene($gene);
+    my $info   = $gene_info_adaptor->fetch_by_dbID($infoid);
 
-   $gene->gene_info($info);
+    $gene->gene_info($info);
 
-   my $ata = $self->db->get_TranscriptAdaptor();
-   foreach my $tran (@{$gene->get_all_Transcripts}) {
-       $ata->annotate_transcript($tran);
-   }
+    my $ata      = $self->db->get_TranscriptAdaptor();
+    my $gene_time = $info->timestamp
+      or $self->throw("No timestamp on gene_info");
+    foreach my $tran (@{ $gene->get_all_Transcripts }) {
+        $ata->annotate_transcript($tran);
+        my $info_time = $tran->transcript_info->timestamp
+          or $self->throw("No timestamp on transcript_info");
+        if ($info_time < $gene_time or $info_time > ($gene_time + 60)) {
+            $self->throw(sprintf "Time on transcript_info of transcript '%s' version '%d' "
+              . "does not correspond to gene modfied time of gene(%d) '%s' version '%d'",    
+              $tran->stable_id, $tran->version,
+              $gene->dbID, $gene->stable_id, $gene->version,
+              );
+        }
+    }
 }
 
 =head2 list_current_dbIDs_for_Slice_by_type
