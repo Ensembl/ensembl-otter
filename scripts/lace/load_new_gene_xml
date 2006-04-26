@@ -4,17 +4,22 @@
 
 use strict;
 use Bio::Otter::Lace::Defaults;
-
+use Getopt::Long;
+use Bio::Otter::Author;
+use Data::Dumper;
 {
     my ($dataset_name);
-
+    my $author_name;
+    my $author_email;
     my $usage = sub { exec('perldoc', $0) };
     Bio::Otter::Lace::Defaults::do_getopt(
-        'h|help!'   => $usage,
+        'h|help'   => $usage,
         'dataset=s' => \$dataset_name,
-      )
-      or $usage->();
-    $usage->() unless $dataset_name;
+      ) ;
+
+    if ( !defined $dataset_name ){
+      $usage->();
+    }
 
     # Client communicates with otter HTTP server
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
@@ -26,13 +31,21 @@ use Bio::Otter::Lace::Defaults;
     my $slice_aptr = $otter_dba->get_SliceAdaptor;
     my $analysis_aptr = $otter_dba->get_AnalysisAdaptor;
     my $analysis=$analysis_aptr->fetch_by_logic_name('otter');
+    my $author;
+    my $aname=$cl->author();
+    my $aemail=$cl->email();
+    if ( defined $aname && defined $aemail){
+      $author=Bio::Otter::Author->new;
+      $author->email($aemail);
+      $author->name($aname);
+    }
 
     # NB: Ignores other products of XML_to_otter() such as features (polyA)
     my ($gene_list, $slice) = Bio::Otter::Converter::XML_to_otter(\*ARGV);
     $slice->adaptor($slice_aptr);
 
     $otter_dba->begin_work;
-    eval { load_genes($otter_dba, $gene_list, $slice, $analysis); };
+    eval { load_genes($otter_dba, $gene_list, $slice, $analysis,$author); };
     if ($@) {
         $otter_dba->rollback;
         warn "Error saving new genes: $@";
@@ -43,17 +56,49 @@ use Bio::Otter::Lace::Defaults;
 }
 
 sub load_genes {
-    my ($dba, $gene_list, $slice, $analysis) = @_;
-
+    my ($dba, $gene_list, $slice, $analysis,$author) = @_;
     my $gene_aptr = $dba->get_GeneAdaptor;
     my $sida      = $dba->get_StableIdAdaptor;
-
+    my $time=time;
+    my $sett=0;
+    my $setv=0;
+    my $seta=0;
     foreach my $gene (@$gene_list) {
-        $gene->analysis($analysis);
-        $sida->fetch_new_stable_ids_for_Gene($gene);
-        $gene_aptr->attach_to_Slice($gene, $slice);
-        $gene->detach_DBAdaptors;
-        $gene_aptr->store($gene);
+      $gene->analysis($analysis);
+      if ( ! defined $gene->created ){
+	$gene->created($time);
+	$sett=1;
+      }
+      if ( ! defined $gene->version ){
+	$gene->version(1);
+	$setv=1;
+      }
+      $sida->fetch_new_stable_ids_for_Gene($gene);
+      if (defined $author ){
+	my $a=$gene->gene_info->author->name;
+	if (! defined $a){
+	  $gene->gene_info->author($author);
+	  $seta=1;
+	}
+	else {
+	  die "\nauthor name **$a** and email already set in xml file, please don't overwrite! run without the authorname and authoremail options\n";
+	}
+      }
+      my @tran = @{ $gene->get_all_Transcripts };
+      foreach my $tran (@tran){
+	if ( $seta == 1){
+	  $tran->transcript_info->author($author);
+	}
+	if ( $sett == 1){
+	  $tran->created($time);
+	}
+	if ($setv == 1){
+	  $tran->version(1);
+	}
+      }
+      $gene_aptr->attach_to_Slice($gene, $slice);
+      $gene->detach_DBAdaptors;
+      $gene_aptr->store($gene);
     }
 }
 
@@ -63,7 +108,14 @@ __END__
 
 =head1 SYNOPSIS
 
+Example 1:
+
   load_new_gene_xml -dataset <NAME> <XML_FILE>
+
+Example 2:
+
+  load_new_gene_xml -dataset <NAME> -author <author-name> -email <author-email> <XML_FILE>
+
 
 =head1 AUTHOR
 
