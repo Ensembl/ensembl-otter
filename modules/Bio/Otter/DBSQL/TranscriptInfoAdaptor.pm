@@ -34,7 +34,7 @@ sub _generic_sql_fetch {
 		    mRNA_start_not_found,
 		    mRNA_end_not_found,
 		    author_id,
-		    timestamp 
+		    UNIX_TIMESTAMP(timestamp) as timestamp
 			FROM transcript_info } . $where_clause;
 
 	my $sth = $self->prepare($sql);

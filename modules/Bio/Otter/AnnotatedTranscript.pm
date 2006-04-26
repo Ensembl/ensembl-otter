@@ -94,7 +94,7 @@ sub truncate_to_Slice {
         $start_exon = $tsl->start_Exon;
         $end_exon   = $tsl->end_Exon;
     }
-                                                                                                                                       
+
     my $exons_truncated = 0;
     my $in_translation_zone = 0;
     my $slice_length = $slice->length;

@@ -79,6 +79,56 @@ sub fetch_by_transcript_id {
 
 }
 
+sub fetch_by_transcript {
+    my ($self, $transcript) = @_;
+    
+    my $tid = $transcript->dbID
+        or $self->throw("Missing dbID");
+    my $stable_id = $transcript->stable_id
+        or $self->throw("Missing stable_id");
+    
+    my $find_row = $self->prepare(q{
+        SELECT transcript_id
+        FROM transcript_stable_id
+        WHERE stable_id = ?
+        ORDER BY version ASC
+        });
+    $find_row->execute($stable_id);
+    
+    my $row;
+    for (my $i = 0; my ($this_tid) = $find_row->fetchrow; $i++) {
+        if ($this_tid == $tid) {
+            $row = $i;
+            last;
+        }
+    }
+    $find_row->finish;
+    $self->throw("Failed to find row number of transcript('$tid') '$stable_id'")
+      unless defined $row;
+    
+    my $sth = $self->prepare(q{
+        SELECT transcript_info_id
+        FROM transcript_info
+        WHERE transcript_stable_id = ?
+        ORDER BY timestamp ASC
+        });
+    $sth->execute($stable_id);
+    
+    my $info_id;
+    for (my $i = 0; my ($this_info_id) = $sth->fetchrow; $i++) {
+        if ($i == $row) {
+            $info_id = $this_info_id;
+            last;
+        }
+    }
+    $sth->finish;
+    if ($info_id) {
+        return $info_id;
+    } else {
+        $self->throw("Failed to get transcript_info_id for transcript '$stable_id' row '$row'");
+    }
+}
+
 =head2 fetch_by_info_id
 
  Title   : fetch_by_info_id

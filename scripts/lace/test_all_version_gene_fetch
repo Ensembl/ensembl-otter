@@ -1,0 +1,54 @@
+#!/usr/local/bin/perl -w
+
+### test_all_version_gene_fetch
+
+use strict;
+use Bio::Otter::Lace::Defaults;
+
+{
+    my( $dataset_name );
+
+    my $usage = sub { exec('perldoc', $0) };
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'       => $usage,
+        'dataset=s'     => \$dataset_name,
+        ) or $usage->();
+    $usage->() unless $dataset_name;
+    
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    my $otter_dba = $ds->get_cached_DBAdaptor;
+    
+    my $gene_aptr = $otter_dba->get_GeneAdaptor;
+    my $sth = $otter_dba->prepare("SELECT gene_id FROM gene");
+    $sth->execute;
+    
+    my $row = 0;
+    while (my ($dbID) = $sth->fetchrow) {
+        $row++;
+        eval{ $gene_aptr->fetch_by_dbID($dbID); };
+        warn $@ if $@;
+        if ($row % 50) {
+            print STDERR ".";
+        } else {
+            print STDERR ".\n";
+        }
+    }
+}
+
+
+
+
+
+
+__END__
+
+=head1 NAME - test_all_version_gene_fetch
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+

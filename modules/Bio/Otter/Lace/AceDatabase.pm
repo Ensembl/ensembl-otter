@@ -159,6 +159,8 @@ sub write_local_blast{
                                              -blast_idx_prog  => $pressdb,
                                              -indicate_parser => $parser);
     $blast->initialise();
+    
+    ### I don't think we need to connect to the pipeline database here.
     my $pipe_db = Bio::Otter::Lace::PipelineDB::get_DBAdaptor($ds->get_cached_DBAdaptor);
     $pipe_db->assembly_type($ss->name);
     eval{
