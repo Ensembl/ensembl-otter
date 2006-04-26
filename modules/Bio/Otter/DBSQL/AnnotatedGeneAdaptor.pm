@@ -158,21 +158,21 @@ sub annotate_gene {
     $gene->gene_info($info);
 
     my $ata      = $self->db->get_TranscriptAdaptor();
-    my $gene_time = $info->timestamp
-      or $self->throw("No timestamp on gene_info");
-    my $window_sec = 60;
+    #my $gene_time = $info->timestamp
+    #  or $self->throw("No timestamp on gene_info");
+    #my $window_sec = 60;
     foreach my $tran (@{ $gene->get_all_Transcripts }) {
         $ata->annotate_transcript($tran);
-        my $info_time = $tran->transcript_info->timestamp
-          or $self->throw("No timestamp on transcript_info");
-        if ($info_time < ($gene_time - $window_sec) or $info_time > ($gene_time + $window_sec)) {
-            $self->throw(sprintf "Time '%s' on transcript_info(%d) of transcript(%d) '%s' version '%d' "
-              . "does not correspond to gene modfied time '%s' of gene(%d) '%s' version '%d'",    
-              scalar(localtime $info_time), $info->dbID, $tran->dbID,
-              $tran->stable_id, $tran->version,
-              scalar(localtime $gene_time),
-              $gene->dbID, $gene->stable_id, $gene->version,
-              );
+    #    my $info_time = $tran->transcript_info->timestamp
+    #      or $self->throw("No timestamp on transcript_info");
+    #    if ($info_time < ($gene_time - $window_sec) or $info_time > ($gene_time + $window_sec)) {
+    #        $self->throw(sprintf "Time '%s' on transcript_info(%d) of transcript(%d) '%s' version '%d' "
+    #          . "does not correspond to gene modfied time '%s' of gene(%d) '%s' version '%d'",
+    #          scalar(localtime $info_time), $info->dbID, $tran->dbID,
+    #          $tran->stable_id, $tran->version,
+    #          scalar(localtime $gene_time),
+    #          $gene->dbID, $gene->stable_id, $gene->version,
+    #          );
         }
     }
 }
