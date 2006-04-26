@@ -164,7 +164,7 @@ sub annotate_gene {
         $ata->annotate_transcript($tran);
         my $info_time = $tran->transcript_info->timestamp
           or $self->throw("No timestamp on transcript_info");
-        if ($info_time < $gene_time or $info_time > ($gene_time + 60)) {
+        if ($info_time < ($gene_time - 30) or $info_time > ($gene_time + 30)) {
             $self->throw(sprintf "Time '%s' on transcript_info(%d) of transcript(%d) '%s' version '%d' "
               . "does not correspond to gene modfied time '%s' of gene(%d) '%s' version '%d'",    
               scalar(localtime $info_time), $info->dbID, $tran->dbID,
