@@ -14,7 +14,7 @@ Converts game xml files to otter xml file
 
 Example usage:
 
-  game2otter 3_* > otter_chr3.xml
+  game2otter -prefix 'BCM:' 3_* > otter_chr3.xml
 
   Converts all chromosome 3 game xml files in the current directory to an otter_chr3.xml file. The input file names should be of the format 3_114848570_115188425.annos.xml
 
@@ -32,12 +32,13 @@ use Data::Dumper;
 #parameters
 
 my $help = sub{ exec('perldoc',$0)};
-
+my $prefix='';
 GetOptions(
 	   'h|help'=> $help,
+	   'prefix:s'=> \$prefix,
           ) or $help->();
 
-unless (@ARGV) {
+unless (@ARGV ) {
 $help->();
 }
 
@@ -328,9 +329,9 @@ sub finish {
       return;
     }
     print "  <locus>\n";
-    print "    <name>$generef->{gene_name}</name>\n";
+    print "    <name>$prefix$generef->{gene_name}</name>\n";
     if (defined $generef->{gene_type}){
-      print "    <type>$generef->{gene_type}</type>\n";
+      print "    <type>$prefix$generef->{gene_type}</type>\n";
     }
     if (defined $generef->{gene_description}) {
     print "    <description>$generef->{gene_description}</description>\n";
@@ -349,7 +350,7 @@ sub finish {
     if (defined @{$generef->{transcript}}) {
     foreach my $thref (@{$generef->{transcript}}) {
     print "    <transcript>\n";
-    print "      <name>$thref->{transcript_name}</name>\n";
+    print "      <name>$prefix$thref->{transcript_name}</name>\n";
     if (defined @{$thref->{transcript_remark}}) {
     foreach my $transcript_remark (@{$thref->{transcript_remark}}) {
     print "      <remark>$transcript_remark";
