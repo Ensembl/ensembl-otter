@@ -34,7 +34,7 @@ use Bio::Otter::Lace::Defaults;
         if ($row % 50) {
             print STDERR ".";
         } else {
-            print STDERR ".\n";
+            printf STDERR ". %5d\n", $row;
         }
     }
 }
