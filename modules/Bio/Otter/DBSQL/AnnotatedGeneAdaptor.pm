@@ -173,7 +173,7 @@ sub annotate_gene {
     #          scalar(localtime $gene_time),
     #          $gene->dbID, $gene->stable_id, $gene->version,
     #          );
-        }
+    #    }
     }
 }
 
