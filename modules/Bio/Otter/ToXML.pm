@@ -71,7 +71,7 @@ sub Bio::EnsEMBL::Gene::toXMLstring {
     my $str  = emit_opening_tag('locus',0);
        $str .= emit_tagpair('stable_id', $gene->stable_id, 2);
        $str .= emit_tagpair('description', $gene->description, 2);
-       $str .= emit_tagpair('type', $gene->type, 2);
+       $str .= emit_tagpair('type', $gene->biotype, 2);
 
     for my $dbentry (@{$gene->get_all_DBEntries}) {
         $str .= $dbentry->toXMLstring();
