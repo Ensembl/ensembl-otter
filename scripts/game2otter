@@ -29,6 +29,11 @@ use XML::Parser;
 use Hum::Sort 'ace_sort';
 use Getopt::Long;
 use Data::Dumper;
+use Bio::Otter::AnnotatedTranscript;
+use Bio::Otter::TranscriptInfo;
+
+use Bio::Otter::Converter qw(gene_type_from_transcript_set);
+
 #parameters
 
 my $help = sub{ exec('perldoc',$0)};
@@ -328,6 +333,39 @@ sub finish {
       $generef={};
       return;
     }
+    if (defined @{$generef->{transcript}}) {
+      my $transcripts=();
+      my $right_gene_type;
+      my $known_flag=0;
+      my $trclass='';
+      foreach my $thref (@{$generef->{transcript}}) {
+	if (defined $thref->{transcript_class}) {
+	  $trclass= $thref->{transcript_class};
+	}
+	my $transcript_class=Bio::Otter::TranscriptClass->new();
+	$transcript_class->name($trclass);
+	my $transcript_info=Bio::Otter::TranscriptInfo->new();
+	$transcript_info->class($transcript_class);
+	my $transcript=Bio::Otter::AnnotatedTranscript->new();
+	$transcript->transcript_info($transcript_info);
+	push @$transcripts,$transcript;
+      }
+      if (defined $generef->{gene_type}){
+	if ($generef->{gene_type} =~ /known/i) {
+	  $known_flag=1;
+	}
+      }
+      else {
+	warn " gene type is undefined and hence will be taken as Novel\n";
+      }
+      $right_gene_type=Bio::Otter::Converter::gene_type_from_transcript_set($transcripts,$known_flag);
+      if (!defined $right_gene_type) {
+	die "gene type CANNOT BE changed from $generef->{gene_type} \n";
+      }
+      else {
+	$generef->{gene_type}=$right_gene_type;
+      }
+    }
     print "  <locus>\n";
     print "    <name>$prefix$generef->{gene_name}</name>\n";
     if (defined $generef->{gene_type}){
@@ -459,6 +497,9 @@ sub finish {
   }
   if ($tag eq "feature_set"){
     my $transcript_class;
+    if (defined $generef->{gene_type} && $generef->{gene_type} =~ /Pseudogene/i){
+      $transcript_class='Pseudogene';
+    }
     if (defined	$generef->{transcript}->[$transcript_count]->{translation_start}) {
       if ( ! defined	$generef->{transcript}->[$transcript_count]->{translation_end}){
 	if ($generef->{transcript}->[$transcript_count]->{exon_set}->[$exon_count]->{exon_strand} == 1) {
@@ -467,12 +508,14 @@ sub finish {
 	  $generef->{transcript}->[$transcript_count]->{translation_end}=$generef->{transcript}->[$transcript_count]->{exon_set}->[$exon_count]->{exon_start};
 	}
       }
-      if (defined $generef->{gene_type} && $generef->{gene_type} =~ /Pseudogene/){
-	$transcript_class='Pseudogene';
-      }
-      else {
+      #if (defined $generef->{gene_type} && $generef->{gene_type} =~ /Pseudogene/i){
+	#$transcript_class='Pseudogene';
+      #}
+      #else {
+      if (!defined $transcript_class){
 	$transcript_class='Coding';
       }
+      #}
     }
     else {
       #if ($generef->{transcript}->[$transcript_count]->{exon_set}->[$exon_count]->{exon_strand} == 1) {
@@ -482,7 +525,9 @@ sub finish {
 	#$generef->{transcript}->[$transcript_count]->{translation_end}=$generef->{transcript}->[$transcript_count]->{exon_set}->[$exon_count]->{exon_start};
 	#$generef->{transcript}->[$transcript_count]->{translation_start}=$generef->{transcript}->[$transcript_count]->{exon_set}->[0]->{exon_end};
       #}
-      $transcript_class = 'Transcript';
+      if (!defined $transcript_class) {
+	$transcript_class = 'Transcript';
+      }
     }
     if (defined $transcript_class){
       $generef->{transcript}->[$transcript_count]->{transcript_class}=$transcript_class;
