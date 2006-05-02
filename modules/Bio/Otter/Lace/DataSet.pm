@@ -144,23 +144,7 @@ sub get_all_SequenceSets {
     $client->get_SequenceSet_AccessList_for_DataSet($self);
     my $ssal=$self->{'_sequence_set_access_list'};
     $self->{'_sequence_sets'} = [];
-    $self->{'_sequence_sets'} = $client->get_all_SequenceSets_for_DataSet($self);
-    my $write_flag;
-    my $this_author=$self->author;
-    foreach my $ss (@{$self->{'_sequence_sets'}}){
-      my $name = $ss->{'_name'};
-      if ($ssal->{$this_author} && $ssal->{$this_author}->{$name}) {
-	$write_flag = $ssal->{$this_author}->{$name};
-	#If an author has an entry in the sequence_set_access
-	#table for this set, then it is restricted to them.
-	next unless defined $write_flag;
-      } else {
-	# No entries for person in sequence_set_access table - person
-	# can write and see everything.
-	$write_flag = 1;
-      }
-      $ss->write_access($write_flag);
-    }
+    $client->get_all_SequenceSets_for_DataSet($self,$ssal);
   }
   return $self->{'_sequence_sets'};
 }
