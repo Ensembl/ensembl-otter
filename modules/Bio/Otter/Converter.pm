@@ -179,6 +179,11 @@ sub XML_to_otter {
 
           if (!defined($start_exon)) {warn "no start exon"};
           if (!defined($end_exon)) {warn "no end exon"};
+          if($tl_stable_id) {
+            print STDERR "translation_stable_id=$tl_stable_id\n";
+            print STDERR "translation_start=$tl_start\n";
+            print STDERR "translation_end  =$tl_end\n";
+          }
 
 
           die "ERROR: Failed mapping translation to transcript\n";
