@@ -27,6 +27,7 @@ use Bio::Otter::FromXML;
 use Bio::Otter::HitDescription;
 use Bio::Otter::Lace::AceDatabase;
 use Bio::Otter::Lace::DataSet;
+use Bio::Otter::Lace::Locator;
 use Bio::Otter::Lace::PersistentFile;
 use Bio::Otter::Lace::SequenceNote;
 use Bio::Otter::Lace::TempFile;
@@ -437,6 +438,35 @@ sub get_analyses_status_from_dsname_ssname {
     return \%status_hash;
 }
 
+sub find_string_match_in_clones {
+    my( $self, $dsname, $qnames_list, $unhide_flag ) = @_;
+
+    my $qnames_string = join(',', @$qnames_list);
+
+    my $response = $self->general_http_dialog(
+        0,
+        'GET',
+        'find_clones',
+        {
+            'dataset'  => $dsname,
+            'qnames'   => $qnames_string,
+            'unhide'   => $unhide_flag || 0,
+        },
+        1,
+    );
+
+    my @results_list = ();
+
+    for my $line (split(/\n/,$response)) {
+        my ($qname, $qtype, $clone_name, $assemblies_string) = split(/\t/, $line);
+        my $assemblies_list = $assemblies_string ? [ split(/,/, $assemblies_string) ] : [];
+
+        push @results_list, Bio::Otter::Lace::Locator->new($qname, $qtype, $clone_name, $assemblies_list);
+    }
+
+    return \@results_list;
+}
+
 sub get_locks_from_dsname_ssname_author {
     my( $self, $dsname, $ssname, $author ) = @_;
 
@@ -445,8 +475,8 @@ sub get_locks_from_dsname_ssname_author {
         'GET',
         'get_locks',
         {
-            'type'     => $ssname,
             'dataset'  => $dsname,
+            'type'     => $ssname,
             $ssname ? ('type'   => $ssname) : (),
             $author ? ('author' => $author) : (),
         },
