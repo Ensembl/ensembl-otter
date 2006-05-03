@@ -42,6 +42,7 @@ $sth->execute();
 
 my $output_string = '';
 while (my (@columns) = $sth->fetchrow()) {
+    $columns[scalar(@columns)-1]=~s/\n/\ /g;
     $output_string .= join("\t", @columns)."\n";
 }
 
