@@ -10,18 +10,15 @@ use Symbol 'gensym';
 use Fcntl qw{ O_WRONLY O_CREAT };
 use Ace;
 
+use Bio::Otter::Converter;
 use Bio::Otter::Lace::Defaults;
 use Bio::Otter::Lace::PipelineDB;
 use Bio::Otter::Lace::SatelliteDB;
 use Bio::Otter::Lace::PersistentFile;
-use Bio::Otter::Converter;
+use Bio::Otter::Lace::Blast;
 
-use Bio::EnsEMBL::Pipeline::Analysis;
-
-use Bio::EnsEMBL::Ace::Filter::FPSimilarity;
 use Bio::EnsEMBL::Ace::DataFactory;
 use Bio::EnsEMBL::Ace::Filter::Gene;
-use Bio::EnsEMBL::Ace::Filter::DNA;
 
 use Hum::Ace::MethodCollection;
 
@@ -122,104 +119,30 @@ sub list_all_acefiles {
     }
 }
 
-sub write_local_blast{
+sub empty_acefile_list {
+    my( $self ) = @_;
+
+    $self->{'_acefile_list'} = undef;
+}
+
+sub write_local_blast {
     my ($self, $ss) = @_;
-
-    require Bio::Otter::Lace::Blast;
-
-    my $cl         = $self->Client();
-    my $fasta_file = $cl->option_from_array(['local_blast', 'database'])     || return 0;
-    my $homol_tag  = $cl->option_from_array(['local_blast', 'homol_tag'])    || 'DNA_homol';
-    my $method_tag = $cl->option_from_array(['local_blast', 'method_tag'])   || substr("blast*$fasta_file*",0,39);
-    my $color      = $cl->option_from_array(['local_blast', 'method_color']) || 'ORANGE';
-    my $logic_name = $cl->option_from_array(['local_blast', 'logic_name'])   || "blast*$fasta_file*";
-    my $indicate   = $cl->option_from_array(['local_blast', 'indicate'])     || 'indicate';
-    my $parser     = $cl->option_from_array(['local_blast', 'indicate_parser']);
-    my $pressdb    = $cl->option_from_array(['local_blast', 'blast_indexer']);
-    my $right_pri  = $cl->option_from_array(['local_blast', 'right_priority']);
-
-    return 0 unless -e $fasta_file;
-
-    my $ds = $cl->get_DataSet_by_name($ss->dataset_name());
-
-    my $ana_obj = Bio::EnsEMBL::Pipeline::Analysis->new(-LOGIC_NAME     => $logic_name,
-                                                        -INPUT_ID_TYPE  => 'CONTIG',
-                                                        -PARAMETERS     => 'cpus=1 E=1e-4 B=100000 Z=500000000 -hitdist=40 -wordmask=seg',
-                                                        -PROGRAM        => 'wublastn',
-                                                        -gff_source     => 'Est2Genome',
-                                                        -gff_feature    => 'similarity',
-                                                        -db_file        => $fasta_file,
-                                                        );
-    my $blast = Bio::Otter::Lace::Blast->new(-analysis        => $ana_obj,
-                                             -indicate        => $indicate,
-                                             -blast_idx_prog  => $pressdb,
-                                             -indicate_parser => $parser);
-    $blast->initialise();
     
-    ### I don't think we need to connect to the pipeline database here.
-    my $pipe_db = Bio::Otter::Lace::PipelineDB::get_DBAdaptor($ds->get_cached_DBAdaptor);
-    $pipe_db->assembly_type($ss->name);
-    eval{
-        $blast->hide_error(0);
-        $blast->run_on_selected_CloneSequences($ss, $pipe_db->get_SliceAdaptor);
-        my $factory   = Bio::EnsEMBL::Ace::DataFactory->new($cl, $ds);
+    # The Blast object gets all its configuration
+    # information from Lace::Defaults
+    ### Should be able to specify mulitple databases to search,
+    ### the results of each go into separate columns.
+    my $blast = Bio::Otter::Lace::Blast->new;
+    $blast->AceDatabase($self);
+    $blast->initialize or return;
+    my $ace = $blast->run or return;
+    my $dir = $self->home;
+    my $blast_ace = "$dir/rawdata/local_blast_search.ace";
+    open(my $fh, "> $blast_ace") or die "Can't write to '$blast_ace' : $!";
 
-        my $filter    = Bio::EnsEMBL::Ace::Filter::FPSimilarity->new(-features => $blast->output());
-        $filter->analysis_object($ana_obj);
-        $filter->homol_tag($homol_tag);
-        $filter->method_tag($method_tag);
-        $filter->seqfetcher($blast->seqfetcher);
-        $filter->needs_method(1);
-        $filter->method_colour($color);
-        $filter->right_priority($right_pri);
-        
-        $factory->add_AceFilter($filter);
-
-        my $dir       = $self->home;
-        my $blast_ace = "$dir/rawdata/local_blast_search.ace";
-        open(my $fh, "> $blast_ace") or die "Can't write to '$blast_ace'";
-        $factory->file_handle($fh);
-
-        my $sel = $ss->selected_CloneSequences_as_contig_list();
-        foreach my $cs(@$sel){
-            my $first_ctg = $cs->[0];
-            my $last_ctg = $cs->[$#$cs];
-
-            my $chr = $first_ctg->chromosome->name;  
-            my $chr_start = $first_ctg->chr_start;
-            my $chr_end = $last_ctg->chr_end;
-
-            warn "fetching slice $chr $chr_start $chr_end \n";
-            my $slice = $pipe_db->get_SliceAdaptor->fetch_by_chr_start_end($chr, $chr_start, $chr_end);
-
-            ## I think we shouldn't let AceDatabase see the tiling path (lg4)
-            ## This is a kind of information that will be available to DataFactory.
-            ##
-            # Check we got a slice
-            my $tp = $slice->get_tiling_path;
-            if(@$tp){
-                foreach my $tile(@$tp){
-                    warn "Getting " . $tile->component_Seq->name() . "\n";
-                }
-             }else{
-                 warn "Didn't get slice\n";
-             }
-
-            $factory->ace_data_from_slice($slice);
-        }
-
-        $factory->drop_file_handle;
-        close $fh;
-        $self->add_acefile($blast_ace);
-
-    };
-    Bio::Otter::Lace::SatelliteDB::disconnect_DBAdaptor($pipe_db) if $pipe_db;
-    if($@){
-        warn "Blast failed!\n$@\n";
-    }else{
-        warn "Blast completed succesfully\n";
-    }
-
+    print $fh, $ace;
+    close $fh or confess "Error writing to '$blast_ace' : $!";
+    $self->add_acefile($blast_ace);
 }
 
 sub write_otter_acefile {
@@ -711,13 +634,13 @@ sub initialize_database {
         $self->list_all_acefiles;
 
     my $parse_log = "$home/init_parse.log";
-    my $pipe = "| $tace $home > $parse_log";
+    my $pipe = "| $tace $home >> $parse_log";
 
     my $pipe_fh = gensym();
     open $pipe_fh, $pipe
         or die "Can't open pipe '$pipe' : $!";
     # Say "yes" to "initalize database?" question.
-    print $pipe_fh "y\n";
+    print $pipe_fh "y\n" unless $self->db_initialized;
     foreach my $com (@parse_commands) {
         print $pipe_fh $com;
     }
@@ -751,8 +674,21 @@ sub initialize_database {
     close $fh;
 
     confess "Error initializing database\n" if $errors;
+    $self->empty_acefile_list;
+    $self->db_initialized(1);
     return 1;
 }
+
+
+sub db_initialized {
+    my( $self, $db_initialized ) = @_;
+    
+    if (defined $db_initialized) {
+        $self->{'_db_initialized'} = $db_initialized ? 1 : 0;
+    }
+    return $self->{'_db_initialized'};
+}
+
 
 sub write_pipeline_data {
     my( $self, $ss, $ace_file ) = @_;

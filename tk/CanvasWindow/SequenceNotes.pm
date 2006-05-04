@@ -788,14 +788,17 @@ sub init_AceDatabase {
     $db->write_otter_acefile($ss);
     #warn "write_ensembl_data";
     $db->write_ensembl_data($ss);
-    #warn "write_local_blast";
-    $db->write_local_blast($ss);
     #warn "write_pipeline_data";
     $db->write_pipeline_data($ss);
     #warn "write_methods_acefile";
     $db->write_methods_acefile;
     #warn "initialize_database";
     $db->initialize_database;
+    #warn "write_local_blast";
+    if ($db->write_local_blast($ss)) {
+        # Must parse in new acefile
+        $db->initialize_database;
+    }
 }
 
 sub make_XaceSeqChooser {
