@@ -166,27 +166,21 @@ sub XaceSeqChooser{
     my ($self , $seq_chooser) = @_ ;
     if ($seq_chooser){
 
-        $self->{_XaceSeqChooser} = $seq_chooser;
+        $self->{'_XaceSeqChooser'} = $seq_chooser;
     }
-    return $self->{_XaceSeqChooser} ;
+    return $self->{'_XaceSeqChooser'} ;
 }
 
 sub slice_name {
-    my ($self , $name) = @_ ;
-    if ($name){
-        $self->{_slice_name} = $name ;
-    }
-    return $self->{_slice_name} || 'unknown';
+    my ($self) = @_ ;
+    
+    return $self->XaceSeqChooser->slice_name;
 }
 
 sub get_CloneSeq {
     my $self = shift @_;
-    my $xaceSeqChooser = $self->XaceSeqChooser();
-    my $slice_name     = $self->slice_name();
-    return ($xaceSeqChooser
-        ? $xaceSeqChooser->get_CloneSeq($slice_name)
-        : 0
-    );
+
+    return $self->XaceSeqChooser->get_CloneSeq;
 }
 
 sub stored_ace_dump {

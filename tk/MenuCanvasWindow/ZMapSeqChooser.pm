@@ -124,38 +124,28 @@ sub MenuCanvasWindow::XaceSeqChooser::zMapLaunchZmap {
     $self->zMapReplaceMenuCommands();
 
     $self->zMapKillZmap;
-    if (my $path = $self->ace_path) {
-        if(my $ok = $self->zMapSpawnSgifaceserver){
-            my $z = $self->zMapInsertZmapConnector();
-            $self->zMapWriteDotZmap();
-            $self->isZMap(1);
-            my @e = ('zmap', 
-                     '--conf_dir' => $self->zMapZmapDir,
-                     '--win_id'   => $z->server_window_id);
-            warn "export PATH=$ENV{PATH}\nexport LD_LIBRARY_PATH=$ENV{LD_LIBRARY_PATH}\n@e\n" if $ZMAP_DEBUG;
-            sleep(2);
-            my $ref = Hum::Ace::LocalServer::full_child_info();
-            my $pid = fork_exec(\@e, $ref, 0, sub { 
-                my ($info) = @_;
-                flush_bad_windows;
-                #use Data::Dumper;                
-                #warn "INFO: ", Dumper($info);
-            });
+    my $z = $self->zMapInsertZmapConnector();
+    $self->zMapWriteDotZmap();
+    $self->isZMap(1);
+    my @e = ('zmap', 
+             '--conf_dir' => $self->zMapZmapDir,
+             '--win_id'   => $z->server_window_id);
+    warn "export PATH=$ENV{PATH}\nexport LD_LIBRARY_PATH=$ENV{LD_LIBRARY_PATH}\n@e\n" if $ZMAP_DEBUG;
+    sleep(2);
+    my $ref = Hum::Ace::LocalServer::full_child_info();
+    my $pid = fork_exec(\@e, $ref, 0, sub { 
+        my ($info) = @_;
+        flush_bad_windows;
+        #use Data::Dumper;                
+        #warn "INFO: ", Dumper($info);
+    });
 
-            if($pid){
-                $self->zMapProcessIDList($pid);
-            }else{
-                my $mess = "Error: couldn't fork()\n";
-                warn $mess;
-                $self->message($mess);
-            }
-        } else {
-            my $mess = "Error: couldn't spawn sgifaceserver for some reason...";
-            warn $mess;
-            $self->message($mess);
-        }
-    } else {
-        warn "Error: ace_path not set";
+    if($pid){
+        $self->zMapProcessIDList($pid);
+    }else{
+        my $mess = "Error: couldn't fork()\n";
+        warn $mess;
+        $self->message($mess);
     }
 }
 sub MenuCanvasWindow::XaceSeqChooser::zMapKillZmap {
@@ -189,21 +179,6 @@ sub MenuCanvasWindow::XaceSeqChooser::zMapInsertZmapConnector{
 sub MenuCanvasWindow::XaceSeqChooser::zMapZmapConnector{
     return shift->zMapInsertZmapConnector(@_);
 }
-sub MenuCanvasWindow::XaceSeqChooser::zMapSpawnSgifaceserver{
-    my ($self) = @_;
-    my $sgif   = $self->{'_zMap_SGIF_LOCAL_SERVER'};
-    my $path   = $self->ace_path();
-    unless($sgif){
-        $sgif = Hum::Ace::LocalServer->new($path);
-        $sgif->server_executable('sgifaceserver');
-        $sgif->timeout_string('0:0');
-        $sgif->start_server() or return 0; # this only check the fork was successful
-        $sgif->ace_handle(1)  or return 0; # this checks it can connect
-        $self->zMapPort($sgif->port);
-        $self->{'_zMap_SGIF_LOCAL_SERVER'} = $sgif;
-    }
-    return 1;
-}
 
 sub MenuCanvasWindow::XaceSeqChooser::zMapWriteDotZmap{
     my ($self) = @_;
@@ -230,11 +205,14 @@ sub MenuCanvasWindow::XaceSeqChooser::zMapDotZmapContent{
 #    my $fmt = qq`source\n{\nurl = "%s://%s:%s@%s:%d"\nsequence = %s\nwriteback = %s\n}\n`;
     my $fmt = qq`source\n{\nurl = "%s://%s:%s@%s:%d"\nsequence = %s\nwriteback = %s\nfeaturesets = "%s"\n}\n`;
     # make the content
+    
+    my $server = $self->AceDatabase->ace_server;
+    
     my $protocol ||= "acedb";
     my $username ||= "any";
     my $password ||= "any";
-    my $host     ||= hostname();
-    my $port     ||= $self->zMapPort;
+    my $host     ||= $server->host;
+    my $port     ||= $server->port;
     my $seq      ||= 0;
     my $writebck ||= 0;
     my $style    ||= "";#"ZMap.styles";
@@ -263,12 +241,6 @@ sub MenuCanvasWindow::XaceSeqChooser::zMapDotZmapContent{
                              ($writebck ? 'true' : 'false'),
                              $style || $sets);
     return $content . qq`\n\nZMap\n{\nshow_mainwindow = false\n}\n`;
-}
-
-sub MenuCanvasWindow::XaceSeqChooser::zMapPort{
-    my ($self, $port)  = @_;
-    $self->{'_zmap_port'} = $port if $port;
-    return $self->{'_zmap_port'};
 }
 
 sub MenuCanvasWindow::XaceSeqChooser::zMapZmapDir {
@@ -315,7 +287,7 @@ sub MenuCanvasWindow::XaceSeqChooser::zMapSetEntryValue{
 
 sub MenuCanvasWindow::XaceSeqChooser::zMapRegisterClient{
     my ($self, $request) = @_;
-    my $mainWindowName = 'ZMap port #' . $self->zMapPort;
+    my $mainWindowName = 'ZMap port #' . $self->AceDatabase->ace_server->port;
     my $p  = parse_request($request);
     my $xr = xclient_with_name($mainWindowName, 0, "$self");
     my $z  = $self->zMapZmapConnector();

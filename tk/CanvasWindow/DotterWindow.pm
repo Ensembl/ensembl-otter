@@ -79,6 +79,7 @@ sub initialise {
     $self->genomic(
         $name_frame->Entry(
             -width  => 30,
+            -state  => 'readonly',
             )->pack(-side => 'left')
         );
 
@@ -177,14 +178,21 @@ sub initialise {
 sub update_from_XaceSeqChooser {
     my( $self, $xc ) = @_;
     
-    $self->set_query_Sequences($xc->get_Sequences_of_all_clones);
-    if (my $clone_name = $xc->current_clone_name) {
-        $self->set_entry('genomic', $clone_name);
-    }
+    $self->query_Sequence($xc->get_CloneSeq->Sequence);
+    $self->set_entry('genomic', $xc->slice_name);
     $self->update_from_clipboard;
     my $top = $self->top;
     $top->deiconify;
     $top->raise;
+}
+
+sub query_Sequence {
+    my( $self, $query_Sequence ) = @_;
+    
+    if ($query_Sequence) {
+        $self->{'_query_Sequence'} = $query_Sequence;
+    }
+    return $self->{'_query_Sequence'};
 }
 
 sub update_from_clipboard {
@@ -290,13 +298,12 @@ sub launch_dotter {
     my( $self ) = @_;
     
     my $match_name = $self->get_entry('match');
-    my $clone_name = $self->get_entry('genomic');
     my $start      = $self->get_entry('genomic_start');
     my $end        = $self->get_entry('genomic_end');
-    my $genomic    = $self->get_query_Sequence($clone_name);
+    my $genomic    = $self->query_Sequence;
     my $revcomp    = $self->revcomp_ref;
     
-    unless ($match_name and $clone_name and $start and $end and $genomic) {
+    unless ($match_name and $genomic and $start and $end and $genomic) {
         warn "Missing parameters\n";
         return;
     }
@@ -313,30 +320,6 @@ sub launch_dotter {
     $dotter->revcomp_subject($$revcomp);
     
     return $dotter->fork_dotter;
-}
-
-sub set_query_Sequences {
-    my( $self, @seq ) = @_;
-    
-    if (@seq) {
-        $self->{'_query_Sequences'} = {map {$_->name, $_} @seq}
-    }
-}
-
-sub list_query_sequence_names {
-    my( $self ) = @_;
-    
-    if (my $qs = $self->{'_query_Sequences'}) {
-        return sort keys %$qs;
-    } else {
-        return;
-    }
-}
-
-sub get_query_Sequence {
-    my( $self, $name ) = @_;
-    
-    return $self->{'_query_Sequences'}{$name};
 }
 
 sub name_start_end_from_fMap_blue_box {

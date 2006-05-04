@@ -51,7 +51,6 @@ sub AceDatabase {
     
     if ($AceDatabase) {
         $self->{'_AceDatabase'} = $AceDatabase;
-        $self->ace_path($AceDatabase->home);
     }
     return $self->{'_AceDatabase'};
 }
@@ -80,7 +79,7 @@ sub initialize {
     # take GeneMethods from methods.ace file
     $self->set_known_GeneMethods();
     
-    $self->draw_clone_list;
+    $self->draw_subseq_list;
     
     $self->populate_Features_menu;
     
@@ -122,15 +121,6 @@ sub subseq_menubutton {
         $self->{'_subseq_menubutton'} = $smb;
     }
     return $self->{'_subseq_menubutton'};
-}
-
-sub clone_sub_switch_var {
-    my( $self, $switch_ref ) = @_;
-    
-    if ($switch_ref) {
-        $self->{'_clone_sub_switch_var'} = $switch_ref;
-    }
-    return $self->{'_clone_sub_switch_var'};
 }
 
 # this method has been moved to Bio::Otter::Lace::Defaults.pm
@@ -227,8 +217,8 @@ sub update_ace_display {
     
     my $xr = $self->xace_remote || $self->open_xace_dialogue;
     
-    print STDERR "Sending:\n$ace";
     if ($xr) {
+        print STDERR "Sending:\n$ace";
         $xr->load_ace($ace);
         $xr->save;
         $xr->send_command('gif ; seqrecalc');
@@ -530,15 +520,6 @@ sub populate_menus {
     $top->bind('<Control-r>', $resync_command);
     $top->bind('<Control-R>', $resync_command);
     
-    ## Respawn
-    #$file->add('command',
-    #    -label          => 'Restart',
-    #    -hidemargin     => 1,
-    #    -command        => sub { $self->command_line_restart },
-    #    #-accelerator    => 'Ctrl+R',
-    #    #-underline      => 0,
-    #    );
-    
     ## Spawn dotter Ctrl .
     my $run_dotter_command = sub { $self->run_dotter };
     $file->add('command',
@@ -569,34 +550,12 @@ sub populate_menus {
     $top->bind('<Control-W>', $exit_command);
     $top->protocol('WM_DELETE_WINDOW', $exit_command);
     
-    # Show menu
-    my $mode = $self->make_menu('Show');
-    my $mode_var = 'clone';
-    $self->clone_sub_switch_var(\$mode_var);
-    my $mode_switch = sub {
-        $self->switch_state;
-    };
-    
-    $mode->add('radiobutton',
-        -label          => 'Clones',
-        -value          => 'clone',
-        -variable       => \$mode_var,
-        -command        => $mode_switch,
-        );
-    $mode->add('radiobutton',
-        -label          => 'SubSequences',
-        -value          => 'subseq',
-        -variable       => \$mode_var,
-        -command        => $mode_switch,
-        );
-    
     # Subseq menu
     my $subseq = $self->make_menu('SubSeq', 1);
     $self->subseq_menubutton($subseq->parent);
     
     # Edit subsequence
     my $edit_command = sub{
-        return unless $self->current_state eq 'subseq';
         $self->edit_subsequences;
         };
     $subseq->add('command',
@@ -610,7 +569,6 @@ sub populate_menus {
     
     # Close all open subseq windows
     my $close_subseq_command = sub{
-        return unless $self->current_state eq 'subseq';
         $self->close_all_subseq_edit_windows;
         };
     $subseq->add('command',
@@ -624,7 +582,6 @@ sub populate_menus {
 
     # Copy selected subseqs to holding pen
     my $copy_subseq = sub{
-        return unless $self->current_state eq 'subseq';
         $self->copy_selected_subseqs;
         };
     $subseq->add('command',
@@ -638,7 +595,6 @@ sub populate_menus {
 
     # Paste selected subseqs, realigning them to the genomic sequence
     my $paste_subseq = sub{
-        return unless $self->current_state eq 'subseq';
         eval {
             $self->paste_selected_subseqs;
         };
@@ -660,7 +616,6 @@ sub populate_menus {
     
     # New subsequence
     my $new_command = sub{
-        return unless $self->current_state eq 'subseq';
         $self->edit_new_subsequence;
         };
     $subseq->add('command',
@@ -674,7 +629,6 @@ sub populate_menus {
     
     # Make an variant of the current selected sequence
     my $variant_command = sub{
-        return unless $self->current_state eq 'subseq';
         $self->make_variant_subsequence;
         };
     $subseq->add('command',
@@ -688,7 +642,6 @@ sub populate_menus {
     
     # Delete subsequence
     my $delete_command = sub {
-        return unless $self->current_state eq 'subseq';
         $self->delete_subsequences;
         };
     $subseq->add('command',
@@ -788,7 +741,7 @@ sub GenomicFeatures {
 }
 
 sub launch_GenomicFeatures {
-    my( $self, $clone_name ) = @_;
+    my( $self ) = @_;
     eval {
         if(my $gfs = $self->GenomicFeatures()) {
 
@@ -796,14 +749,13 @@ sub launch_GenomicFeatures {
             $gfw->deiconify;
             $gfw->raise;
         } else {
-            my $clone = $self->get_CloneSeq($clone_name); # MAKE SURE TO LOAD IT!
+            my $clone = $self->get_CloneSeq;
 
             my $gfw = $self->canvas->Toplevel;
 
             $gfs = MenuCanvasWindow::GenomicFeatures->new($gfw);
             $self->GenomicFeatures($gfs);
             $gfs->XaceSeqChooser($self);
-            $gfs->slice_name($clone_name);
             $gfs->write_access($self->write_access());
             $gfs->initialize;
         }
@@ -856,14 +808,7 @@ sub close_GenomicFeatures {
             return;
         }
         
-        my @clone_names = $self->list_selected_clone_names;
-        unless (@clone_names == 1) {
-            $self->message(
-                "Can only paste if one clone is selected, but have:\n",
-                map "  '$_'\n", @clone_names);
-            return;
-        }
-        my $clone = $self->get_CloneSeq(shift @clone_names);
+        my $clone = $self->get_CloneSeq;
         
         # The ExonLoacator finds exons in a genomic sequence
         my $finder = Hum::Analysis::Factory::ExonLocator->new;
@@ -915,7 +860,7 @@ sub close_GenomicFeatures {
                 $self->message("Got zero exons from realigning '$name'");
             }
         }
-        $self->do_subseq_display;
+        $self->draw_subseq_list;
         $self->highlight_by_name('subseq', map $_->name, @new_subseq);
         $self->message(@msg) if @msg;
         foreach my $new (@new_subseq) {
@@ -1002,15 +947,15 @@ sub save_data {
 
     $top->Busy;
 
-    my $db = $self->AceDatabase;
     eval{
-        my $ace_data = $db->save_all_slices;
+        my $ace_data = $self->AceDatabase->save_all_slices;
         ## update_ace should be true unless this object is exiting
         if($update_ace && ref($ace_data) eq 'SCALAR'){
             $self->launch_xace;
             $self->update_ace_display($$ace_data);
             # resync here!
             $self->resync_with_db; # probably better to create a key event
+            ### Restart Zmap
         }
     };
     my $err = $@;
@@ -1025,24 +970,6 @@ sub save_data {
     }
 }
 
-sub command_line_restart {
-    my( $self ) = @_;
-
-    if (my @exec = @main::command_line) {
-        if (my $pid = fork) {
-            $self->top_window()->destroy;
-        }
-        elsif (defined $pid) {
-            exec(@exec);
-        }
-        else {
-            $self->message("Error: Can't fork");
-        }
-    } else {
-        $self->message("Can't see command_line in main package");
-    }
-}
-
 sub edit_double_clicked {
     my( $self ) = @_;
     
@@ -1050,13 +977,7 @@ sub edit_double_clicked {
     
     my $canvas = $self->canvas;
     $canvas->Busy;
-    if ($self->current_state eq 'clone') {
-        $self->save_selected_clone_names;
-        $self->current_state('subseq');
-        $self->draw_current_state;
-    } else {
-        $self->edit_subsequences;
-    }
+    $self->edit_subsequences;
     $canvas->Unbusy;
 }
 
@@ -1082,47 +1003,6 @@ sub shift_left_button_handler {
         } else {
             $self->highlight($obj);
         }
-    }
-}
-
-sub switch_state {
-    my( $self ) = @_;
-    
-    my $state = $self->current_state;
-    if ($state eq 'subseq') {
-        # We are going from clone to subseq so we
-        # need to save the highlighted clone names
-        $self->save_selected_clone_names;
-    }
-    $self->draw_current_state;
-}
-
-sub draw_current_state {
-    my( $self ) = @_;
-    
-    my $state = $self->current_state;
-    if ($state eq 'clone') {
-        $self->do_clone_display;
-    }
-    else {
-        $self->do_subseq_display;   
-    }
-    $self->fix_window_min_max_sizes;
-}
-
-
-
-sub do_subseq_display {
-    my( $self ) = @_;
-        
-    my @clone_names = $self->list_selected_clone_names;
-    $self->deselect_all;
-    $self->canvas->delete('all');
-    
-    if (@clone_names) {
-        $self->draw_subseq_list(@clone_names);
-    } else {
-        $self->message('No clone selected');
     }
 }
 
@@ -1217,53 +1097,16 @@ sub hunt_for_Entry_text{
     }
 }
 
-sub do_clone_display {
-    my( $self ) = @_;
-        
-    my @clone_names = $self->list_selected_clone_names;
-    $self->deselect_all;
-    $self->canvas->delete('all');
-    $self->draw_clone_list;
-    $self->highlight_by_name('clone', @clone_names);
-}
-
 sub ace_handle {
-    my( $self, $adbh ) = @_;
+    my( $self ) = @_;
     
-    #cluck "Called ace_handle";
-    
-    if ($adbh) {
-        $self->{'_ace_database_handle'} = $adbh;
-    } else {
-        unless ($adbh = $self->{'_ace_database_handle'}) {
-            if (my $local = $self->local_server) {
-                $adbh = $self->{'_ace_database_handle'} 
-                      = $local->ace_handle;
-            }
-            elsif (my $path = $self->ace_path) {
-                $adbh = $self->{'_ace_database_handle'}
-                      = Ace->connect(
-                    -PATH       => $path,
-                    -PROGRAM    => 'tace',
-                    ) or die "Can't connect to db '$path' :\n", Ace->error;
-            }
-            else {
-                confess "I don't know where the database is";
-            }
-        }
-        $adbh->auto_save(0);
-        $adbh->{database}->auto_save(0);
-    }
-    return $adbh;
+    return $self->AceDatabase->aceperl_db_handle;
 }
 
 sub ace_path {
-    my( $self, $path ) = @_;
+    my( $self ) = @_;
     
-    if ($path) {
-        $self->{'_ace_path'} = $path;
-    }
-    return $self->{'_ace_path'};
+    return $self->AceDatabase->home;
 }
 
 sub resync_with_db {
@@ -1278,64 +1121,38 @@ sub resync_with_db {
     $self->canvas->Busy(
         -recurse => 0,
         );
-    
-    # Disconnect aceperl
-    $self->{'_ace_database_handle'} = undef;
 
-    if (my $local = $self->local_server) {
-        $local->restart_server;
-    }
+    $self->AceDatabase->ace_server->restart_server;
     
     $self->empty_CloneSeq_cache;
     $self->empty_SubSeq_cache;
     $self->empty_Locus_cache;
     
     # Redisplay
-    $self->draw_current_state;
+    $self->draw_subseq_list;
     
     $self->canvas->Unbusy;
-}
-
-sub local_server {
-    my( $self, $local ) = @_;
-    
-    if ($local) {
-        $self->{'_local_ace_server'} = $local;
-    }
-    return $self->{'_local_ace_server'};
 }
 
 sub max_seq_list_length {
     return 1000;
 }
 
-sub list_genome_sequences {
-    my( $self, $offset ) = @_;
+sub slice_name {
+    my( $self ) = @_;
     
-    $offset ||= 0;
-    
-    my $adbh = $self->ace_handle;
-    my $max = $self->max_seq_list_length;
-    my @gen_seq_list = map $_->name,
-        $adbh->fetch(Assembly => '*');
-    my $total = @gen_seq_list;
-    my $end = $offset + $max - 1;
-    $end = $total - 1 if $end > $total;
-    my @slice = @gen_seq_list[$offset..$end];
-    return($total, @slice);
-}
-
-sub clone_list {
-    my( $self, @clones ) = @_;
-    
-    if (@clones) {
-        $self->{'_clone_list'} = [@clones];
+    my $slice_name;
+    unless ($slice_name = $self->{'_slice_name'}) {
+        my $adbh = $self->ace_handle;
+        my @slice_list = map $_->name,
+            $adbh->fetch(Assembly => '*');
+        if (@slice_list > 1) {
+            $self->message("Error: more than 1 assembly in database:", @slice_list);
+            return;
+        }
+        $slice_name = $self->{'_slice_name'} = $slice_list[0];
     }
-    if (my $slist = $self->{'_clone_list'}) {
-        return @$slist;
-    } else {
-        return;
-    }
+    return $slice_name;
 }
 
 sub edit_subsequences {
@@ -1356,48 +1173,16 @@ sub edit_subsequences {
     }
 }
 
-sub current_clone_name {
-    my( $self ) = @_;
-    
-    my $clone_name;
-    my @selected_clone = $self->list_selected_clone_names;
-    my      @all_clone = $self->clone_list;
-
-    if (@selected_clone == 1) {
-        $clone_name = $selected_clone[0];
-    }
-    elsif (@all_clone == 1) {
-        $clone_name = $all_clone[0];
-    }
-    
-    return $clone_name;
-}
-
 sub edit_new_subsequence {
     my( $self, $zmap ) = @_;
     
     my @sub_names = $self->list_selected_subseq_names;
-    my( $clone_name, @subseq );
+    my( @subseq );
     foreach my $sn (@sub_names) {
         my $sub = $self->get_SubSeq($sn);
-        my $this_clone = $sub->clone_Sequence->name;
-        if ($clone_name) {
-            if ($clone_name ne $this_clone) {
-                $self->message("ERROR: selected SubSequences are attached to different Sequences");
-                return;
-            }
-        } else {
-            $clone_name = $this_clone;
-        }
         push(@subseq, $sub);
     }
-    
-    $clone_name ||= $self->current_clone_name;
-    unless ($clone_name) {
-       $self->message("Unable to determine clone name");
-       return;
-    }
-    
+
     my( @ints, $most_3prime );
     if (@subseq) {
         # Find 3' most coordinate in subsequences
@@ -1426,10 +1211,10 @@ sub edit_new_subsequence {
         }
     }
     
-    my $clone = $self->get_CloneSeq($clone_name);
+    my $slice = $self->get_CloneSeq;
     my $region_name = $most_3prime
-        ? $clone->clone_name_overlapping($most_3prime)
-        : $clone_name;
+        ? $slice->clone_name_overlapping($most_3prime)
+        : $slice->ace_name;
     #warn "Looking for clone overlapping '$most_3prime' in '$clone_name' found '$region_name'";
     
     # Trim sequence version from accession if clone_name ends .SV
@@ -1600,7 +1385,7 @@ sub delete_subsequences {
         $self->delete_SubSeq($sub);
     }
     
-    $self->draw_current_state;
+    $self->draw_subseq_list;
 }
 
 sub make_variant_subsequence {
@@ -1665,7 +1450,7 @@ sub make_variant_subsequence {
     $self->add_SubSeq($var);
     $clone->add_SubSeq($var);
     
-    $self->draw_current_state;
+    $self->draw_subseq_list;
     $self->highlight_by_name('subseq', $name, $var_name);
     $self->edit_subsequences($var_name);
 }
@@ -1768,74 +1553,28 @@ sub update_all_locus_edit_fields {
     }
 }
 
-sub send_event {
-    my( $self, $toplevel, $event ) = @_;
-    
-    $toplevel->deiconify;
-    $toplevel->raise;
-    $toplevel->focus;
-    $toplevel->update;
-    $toplevel->eventGenerate($event);
-}
-
-sub draw_clone_list {
-    my( $self ) = @_;
-    
-    my @slist = $self->clone_list;
-    unless (@slist) {
-        my( $offset );  # To implement paging
-        ($offset, @slist) = $self->list_genome_sequences;
-        $self->clone_list(@slist);
-    }
-    
-    $self->draw_sequence_list('clone', @slist);
-    $self->subseq_menubutton->configure(-state => 'disabled');
-
-}
-
-
+### KEEP ###
 sub draw_subseq_list {
     my( $self, @selected_clones ) = @_;
-
     
     my $canvas = $self->canvas;
     
     my( @subseq );
     my $counter = 1;
-    foreach my $clone_name (@selected_clones) {
-        my $clone = $self->get_CloneSeq($clone_name)
-            or confess "Can't get Clone '$clone_name'";
-        foreach my $clust ($self->get_all_Subseq_clusters($clone)) {
-            push(@subseq, "") if @subseq;
-            push(@subseq, map($_->name, @$clust));
-        }
+    foreach my $clust ($self->get_all_Subseq_clusters) {
+        push(@subseq, "") if @subseq;
+        push(@subseq, map($_->name, @$clust));
     }
-    $self->opened_clones(@selected_clones);
     
     $self->draw_sequence_list('subseq', @subseq);
     $self->subseq_menubutton->configure(-state => 'normal');
 
 }
 
-sub opened_clones {
-    my( $self, @clones ) = @_;
-    
-    if (@clones) {
-        $self->{'_opened_clones'} = [@clones];
-    } else {
-        my $cl = $self->{'_opened_clones'};
-        if ($cl) {
-            return @$cl;
-        } else {
-            return;
-        }
-    }
-}
-
-
 sub get_all_Subseq_clusters {
-    my( $self, $clone ) = @_;
+    my( $self ) = @_;
     
+    my $clone = $self->get_CloneSeq;
     my @subseq = sort {
            $a->start  <=> $b->start
         || $a->end    <=> $b->end
@@ -1874,22 +1613,22 @@ sub get_all_Subseq_clusters {
 }
 
 sub get_CloneSeq {
-    my( $self, $clone_name ) = @_;
+    my( $self ) = @_;
     
     my $canvas = $self->canvas;
     
     my( $clone );
-    unless ($clone = $self->{'_clone_sequences'}{$clone_name}) {
+    unless ($clone = $self->{'_clone_sequence'}) {
         use Time::HiRes 'gettimeofday';
         my $before = gettimeofday();
         $canvas->Busy(
             -recurse => 0,
             );
-        $clone = $self->express_clone_and_subseq_fetch($clone_name);
+        $clone = $self->express_clone_and_subseq_fetch;
         my $after  = gettimeofday();
         $canvas->Unbusy;
         printf "Express fetch for '%s' took %4.3f\n", $clone_name, $after - $before;
-        $self->{'_clone_sequences'}{$clone_name} = $clone;
+        $self->{'_clone_sequence'} = $clone;
     }
     return $clone;
 }
@@ -1897,12 +1636,13 @@ sub get_CloneSeq {
 sub empty_CloneSeq_cache {
     my( $self ) = @_;
     
-    $self->{'_clone_sequences'} = undef;
+    $self->{'_clone_sequence'} = undef;
 }
 
 sub express_clone_and_subseq_fetch {
-    my( $self, $clone_name ) = @_;
+    my( $self ) = @_;
     
+    my $clone_name = $self->slice_name;
     my $ace = $self->ace_handle;
     my( $clone );
     eval {
@@ -1937,8 +1677,7 @@ sub replace_SubSeq {
     
     my $sub_name = $sub->name;
     $old_name ||= $sub_name;
-    my $clone_name = $sub->clone_Sequence->name;
-    my $clone = $self->get_CloneSeq($clone_name);
+    my $clone = $self->get_CloneSeq;
     $clone->replace_SubSeq($sub, $old_name);
     if ($sub_name ne $old_name) {
         $self->{'_subsequence_cache'}{$old_name} = undef;
@@ -1973,9 +1712,7 @@ sub delete_SubSeq {
     my( $self, $sub ) = @_;
     
     my $name = $sub->name;
-    my $clone_name = $sub->clone_Sequence->name;
-    my $clone = $self->get_CloneSeq($clone_name);
-    $clone->delete_SubSeq($name);
+    $self->get_CloneSeq->delete_SubSeq($name);
     
     if ($self->{'_subsequence_cache'}{$name}) {
         $self->{'_subsequence_cache'}{$name} = undef;
@@ -2169,30 +1906,6 @@ sub highlight_by_name {
     $self->highlight(@obj);
 }
 
-sub save_selected_clone_names {
-    my( $self ) = @_;
-
-    my $canvas = $self->canvas;
-    my( @names );
-    foreach my $obj ($self->list_selected) {
-        if (grep $_ eq 'clone', $canvas->gettags($obj)) {
-            my $n = $canvas->itemcget($obj, 'text');
-            push(@names, $n);
-        }
-    }
-    $self->{'_selected_clone_list'} = [@names];
-}
-
-sub list_selected_clone_names {
-    my( $self ) = @_;
-
-    if (my $n = $self->{'_selected_clone_list'}) {
-        return @$n;
-    } else {
-        return;
-    }
-}
-
 sub list_selected_subseq_names {
     my( $self ) = @_;
     
@@ -2205,16 +1918,6 @@ sub list_selected_subseq_names {
         }
     }
     return @names;
-}
-
-sub get_Sequences_of_all_clones {
-    my( $self ) = @_;
-    
-    my( @seq );
-    foreach my $name ($self->clone_list) {
-        push(@seq, $self->get_CloneSeq($name)->Sequence);
-    }
-    return @seq;
 }
 
 sub run_dotter {
