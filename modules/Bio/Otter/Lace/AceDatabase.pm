@@ -79,14 +79,10 @@ sub tar_file {
         $self->{'_tar_file'} = $tar_file;
     }
     elsif (! $self->{'_tar_file'}) {
-        foreach my $root ($ENV{'OTTER_HOME'}, $ENV{'LACE_LOCAL'}, '/nfs/disk100/humpub/otter_production_main') {
-            next unless $root;
-            my $file = "$root/lace_acedb.tar";
-            if (-e $file) {
-                warn "FOUND '$file'\n";
-                $self->{'_tar_file'} = $file;
-                last;
-            }
+        my $file = "$ENV{OTTER_HOME}/lace_acedb.tar";
+        if (-e $file) {
+            warn "FOUND '$file'\n";
+            $self->{'_tar_file'} = $file;
         }
     }
     return $self->{'_tar_file'};
@@ -408,7 +404,7 @@ sub save_all_slices {
     $self->error_flag(1);
 
     # Make sure we don't have a stale database handle
-    $self->drop_aceperl_db_handle;
+    $self->ace_server->kill_server;
 
     my $sd_h = $self->slice_dataset_hash;
     #warn "HASH = '$sd_h' has ", scalar(keys %$sd_h), " elements";
@@ -590,33 +586,25 @@ sub unlock_otter_slice{
     return $client->unlock_otter_xml($xml, $dataset_name);
 }
 
+sub ace_server {
+    my( $self ) = @_;
+    
+    my $sgif;
+    unless ($sgif = $self->{'_ace_server'}) {
+        $sgif = Hum::Ace::LocalServer->new($self->home);
+        $sgif->server_executable('sgifaceserver');
+        $sgif->timeout_string('0:0');
+        $sgif->start_server() or return 0; # this only check the fork was successful
+        $sgif->ace_handle(1)  or return 0; # this checks it can connect
+        $self->{'_ace_server'} = $sgif;
+    }
+    return $sgif;
+}
+
 sub aceperl_db_handle {
     my( $self ) = @_;
 
-    my( $dbh );
-    unless ($dbh = $self->{'_aceperl_db_handle'}) {
-        my $home = $self->home;
-        my $tace = $self->tace;
-
-        # Check for ACEDB.wrm, or tace will hang waiting for
-        # an answer to the "initialize database?" question.
-        my $init_file = "$home/database/ACEDB.wrm";
-        unless (-e $init_file) {
-            confess "The file '$init_file' is missing - database has not been initialized";
-        }
-
-        $dbh = $self->{'_aceperl_db_handle'}
-            = Ace->connect(-PATH => $home, -PROGRAM => $tace)
-                or confess "Can't connect to database in '$home': ", Ace->error;
-    }
-
-    return $dbh;
-}
-
-sub drop_aceperl_db_handle {
-    my( $self ) = @_;
-
-    $self->{'_aceperl_db_handle'} = undef;
+    return $self->ace_server->ace_handle;
 }
 
 sub make_database_directory {
