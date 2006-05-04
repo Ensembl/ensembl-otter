@@ -67,7 +67,7 @@ sub import {
     }
     else {
         my $bin_dir = '/usr/local/bin';
-        warn "Guessing BIN_DIR is '$bin_dir' for operating system '$^O'";
+        warn "Guessing BIN_DIR is '$bin_dir' for operating system '$^O'\n";
         $Config{'BIN_DIR'} = $bin_dir;
     }
 
@@ -82,15 +82,17 @@ sub import {
 
 
     foreach (@vars) {
-	if (defined $Config{ $_ }) {
+        if (defined $Config{$_}) {
             no strict 'refs';
-	    # Exporter does a similar job to the following
-	    # statement, but for function names, not
-	    # scalar variables:
-	    *{"${callpack}::$_"} = \$Config{ $_ };
-	} else {
-	    die "Error: Config: $_ not known (See Bio::Otter::Lace::Blast)\n";
-	}
+
+            # Exporter does a similar job to the following
+            # statement, but for function names, not
+            # scalar variables:
+            *{"${callpack}::$_"} = \$Config{$_};
+        }
+        else {
+            die "Error: Config: $_ not known (See Bio::Otter::Lace::Blast)\n";
+        }
     }
 }
 
@@ -152,7 +154,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.10 $ ';
+$revision='$Revision: 1.11 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
@@ -197,68 +199,28 @@ package Bio::Otter::Lace::Blast;
 
 use strict;
 use warnings;
+use Carp;
+use File::Basename;
+use File::Path 'rmtree';
+
+use Bio::EnsEMBL::Pipeline::Analysis;
 use Bio::EnsEMBL::Pipeline::SeqFetcher::OBDAIndexSeqFetcher;
 use Bio::EnsEMBL::Pipeline::Runnable::Finished_EST;
 use Bio::EnsEMBL::Pipeline::Runnable::Finished_Blast;
 use Bio::EnsEMBL::Pipeline::Config::General;
-use Bio::Otter::Lace::PersistentFile;
-use Bio::EnsEMBL::Root;
-use File::Basename;
-use File::Path 'rmtree';
 
-our @ISA = qw(Bio::EnsEMBL::Root);
+use Bio::Otter::Lace::PersistentFile;
+
+use Bio::EnsEMBL::Ace::Filter::Cigar_ace_parser;
 
 sub new{
-    my( $pkg, @args ) = @_;
-    my $self = bless {}, $pkg;
-    my ($database, $pressdb, $indicate, $analysis, $i_parser)  = 
-        $self->_rearrange([qw(DATABASE BLAST_IDX_PROG INDICATE ANALYSIS INDICATE_PARSER)],@args);
-
-    # required!!!
-    $self->analysis($analysis) || $self->throw("$self->new() needs an analysis obj");
-    
-    # use defaults
-    $database ||= $analysis->db_file;
-    $indicate ||= 'indicate';
-    $pressdb  ||= 'pressdb';
-    $i_parser ||= 'singleWordParser';
-
-    # set the options
-    $self->database($database) || $self->throw("$self->new() needs a database");
-    $self->indicate_program($indicate);
-    $self->blast_idx_program($pressdb);
-    $self->indicate_parser($i_parser);
-
-    return $self;
+    my( $pkg ) = @_;
+    return bless {}, $pkg;
 }
 
-sub database{
-    my ($self, $db) = @_;
-    if($db){
-        my @dbs = @{[split(/,/, $db)]};
-        my $dirnames  = {};
-        my $basenames = {};
-        my $analysis  = $self->analysis();
-        foreach my $file(@dbs){
-            next unless -e $file;
-            my $dirname             = dirname($file);
-            my $basename            = basename($file);
-            $dirnames->{$dirname}   = 1;
-            $basenames->{$basename} = 1;
-            $self->db_basenames($basename);
-            $self->db_dirname($dirname);
-            last;
-        }
-        warn "Only one db supported currently why not use `cat @dbs`" if scalar(@dbs) > 1;
-        $self->throw("files must exist") unless scalar(keys(%$basenames));
-        $self->throw("files must be in same directory " . join(" ", keys(%$dirnames)))
-            if scalar(keys(%$dirnames)) > 1;
-        # incase it wasn't set
-        $analysis->db_file($dbs[0]);
-        $analysis->db($self->indicate_index);
-    }
-    return $self->db_dirname() . "/" . $self->db_basenames();
-}
+
+
+
 
 sub db_basenames{
     my ($self, $basenames) = @_;
@@ -271,41 +233,206 @@ sub db_dirname{
     $self->{'_dirname'} = $dirname if $dirname;
     return $self->{'_dirname'};
 }
-sub hide_error{
-    my ($self, $hide) = @_;
-    $self->{'_hide_error'} = ($hide ? 1 : 0) if defined $hide;
-    return $self->{'_hide_error'};
-}
 
-sub analysis{
-    my ($self, $ana) = @_;
-    $self->{'_analysis'} = $ana if $ana;
-    return $self->{'_analysis'};
-}
+sub initialise {
+    my ($self) = @_;
 
-sub initialise{
-    my ($self, $seq) = @_;
-    my $fasta = $self->database();
-    $self->query($seq) if $seq;
+    # Get all the configuration options
+    my $cl = $self->AceDatabase->Client();
+    foreach my $attribute (qw{
+        database
+        homol_tag
+        method_tag
+        method_color
+        logic_name
+        indicate
+        indicate_parser
+        blast_indexer
+        right_priority
+      })
+    {
+        my $value = $cl->option_from_array([ 'local_blast', $attribute ]);
+        $self->$attribute($value);
+    }
+    
+    my $fasta_file = $self->database or return;
+    unless (-e $fasta_file) {
+        confess "Fasta file '$fasta_file' defined config does not exist";
+    }
+    
+    # Make the analysis object needed by the Runnable
+    my $ana_obj = Bio::EnsEMBL::Pipeline::Analysis->new(
+        -LOGIC_NAME    => $self->logic_name,
+        -INPUT_ID_TYPE => 'CONTIG',
+        -PARAMETERS    =>
+          'cpus=1 E=1e-4 B=100000 Z=500000000 -hitdist=40 -wordmask=seg',
+        -PROGRAM     => 'wublastn',
+        -GFF_SOURCE  => 'Est2Genome',
+        -GFF_FEATURE => 'similarity',
+        -DB_FILE     => $fasta_file,
+    );
+    $self->analysis($ana_obj);
 
-    # check for the file, & last modified 
+    # check for the file, & last modified
     # the function returns true if file is newer i.e. needs reindexing
-    if($self->_file_needs_indexing($fasta)){
-        eval{
-            $self->pressdb_fasta($fasta);
-            $self->indicate_fasta($fasta);
+    if ($self->_file_needs_indexing($fasta_file)) {
+        eval {
+            $self->pressdb_fasta($fasta_file);
+            $self->indicate_fasta($fasta_file);
         };
-        if($@){
-            warn "$@\n";
-            $self->_remove_files($fasta);
-            return 0;
+        if ($@) {
+            $self->_remove_files($fasta_file);
+            confess "Error creating indice for '$fasta_file' :\n", $@;
         }
     }
 
-    Bio::EnsEMBL::Pipeline::Runnable::Finished_Blast->add_regex($self->analysis->db_file, '(\S+)');
-
-    return 1;
+    Bio::EnsEMBL::Pipeline::Runnable::Finished_Blast->add_regex($fasta_file, '(\S+)');
 }
+
+# Attribute methods
+
+
+sub AceDatabase {
+    my( $self, $AceDatabase ) = @_;
+    
+    if ($AceDatabase) {
+        $self->{'_AceDatabase'} = $AceDatabase;
+    }
+    return $self->{'_AceDatabase'};
+}
+
+sub database {
+    my ($self, $db) = @_;
+    if ($db) {
+        my @dbs       = @{ [ split(/,/, $db) ] };
+        my $dirnames  = {};
+        my $basenames = {};
+        my $analysis  = $self->analysis();
+        foreach my $file (@dbs) {
+            next unless -e $file;
+            my $dirname  = dirname($file);
+            my $basename = basename($file);
+            $dirnames->{$dirname}   = 1;
+            $basenames->{$basename} = 1;
+            $self->db_basenames($basename);
+            $self->db_dirname($dirname);
+            last;
+        }
+        warn "Only one db supported currently why not use `cat @dbs`"
+          if scalar(@dbs) > 1;
+        confess("files must exist") unless scalar(keys(%$basenames));
+        confess(
+            "files must be in same directory " . join(" ", keys(%$dirnames)))
+          if scalar(keys(%$dirnames)) > 1;
+
+        # incase it wasn't set
+        $analysis->db_file($dbs[0]);
+        $analysis->db($self->indicate_index);
+    }
+    return $self->db_dirname() . "/" . $self->db_basenames();
+}
+
+sub homol_tag {
+    my( $self, $homol_tag ) = @_;
+    
+    if ($homol_tag) {
+        $self->{'_homol_tag'} = $homol_tag;
+    }
+    return $self->{'_homol_tag'} || 'DNA_homol';
+}
+
+sub method_tag {
+    my( $self, $method_tag ) = @_;
+    
+    if ($method_tag) {
+        $self->{'_method_tag'} = $method_tag;
+    }
+    return $self->{'_method_tag'} || substr(sprintf('blast*%s*', $self->database), 0, 39);
+}
+
+sub method_color {
+    my( $self, $method_color ) = @_;
+    
+    if ($method_color) {
+        $self->{'_method_color'} = $method_color;
+    }
+    return $self->{'_method_color'} || 'ORANGE';
+}
+
+sub logic_name {
+    my( $self, $logic_name ) = @_;
+    
+    if ($logic_name) {
+        $self->{'_logic_name'} = $logic_name;
+    }
+    return $self->{'_logic_name'} || sprintf('blast*%s*', $self->database);
+}
+
+sub indicate {
+    my ($self, $ind) = @_;
+    if ($ind) {
+        $self->{'_indicate_program'} = $ind;
+        if (my $add_to_path = dirname($ind)) {
+            $ENV{'PATH'} .= ":$add_to_path";
+        }
+    }
+    return $self->{'_indicate_program'} || 'indicate';
+}
+
+sub indicate_parser {
+    my( $self, $indicate_parser ) = @_;
+    
+    if ($indicate_parser) {
+        $self->{'_indicate_parser'} = $indicate_parser;
+    }
+    return $self->{'_indicate_parser'} || 'singleWordParser';
+}
+
+sub blast_indexer {
+    my( $self, $blast_indexer ) = @_;
+    
+    if ($blast_indexer) {
+        $self->{'_blast_indexer'} = $blast_indexer;
+    }
+    return $self->{'_blast_indexer'} || 'pressdb';
+}
+
+sub right_priority {
+    my( $self, $right_priority ) = @_;
+    
+    if ($right_priority) {
+        $self->{'_right_priority'} = $right_priority;
+    }
+    # Right_priority of 0.2 is what EGAG needed, so
+    # I have used it as the hard coded default.
+    return $self->{'_right_priority'} || 0.2;
+}
+
+
+sub ace_Method_string {
+    my ($self) = @_;
+
+    my $tag = $self->method_tag;
+    my $col = $self->method_colour;
+    my $pri = $self->right_priority;
+    
+    my $meth_ace = <<END_OF_METHOD;
+
+Method : "$tag"
+Colour   $col
+Gapped
+Score_by_width
+Score_bounds     70 130
+Width 2.0
+Right_priority $pri
+Max_mag  4000.000000
+Blixem_N
+
+END_OF_METHOD
+
+     return $meth_ace;
+}
+
 
 # returns true if fasta is newer
 # false otherwise
@@ -334,6 +461,7 @@ sub _file_needs_indexing{
     }
     return $ret;
 }
+
 sub _remove_files{
     my ($self, $fasta) = @_;
     my $filestamp = Bio::Otter::Lace::PersistentFile->new();
@@ -342,96 +470,161 @@ sub _remove_files{
     $filestamp->rm();
     rmtree($self->indicate_index());
 }
-sub add_output{
-    my ($self, @out) = @_;
+
+sub run {
+    my( $self ) = @_;
     
-    if (@out) {
-        my $name = $self->query->display_id;
-        foreach my $fp (@out) {
-            $fp->seqname($name);
-        }
-        push(@{$self->{'__output'}}, @out) if @out;
+    my $ace = '';
+    foreach my $name ($self->list_GenomeSequence_names) {
+        my ($masked, $unmasked) = $self->get_masked_unmasked_seq($ace, $name);
+        my $sf = $self->run_blast($masked, $unmasked);
+        $ace .= $self->format_ace_output($name, $sf);
     }
-    return undef;
+    $ace .= $self->ace_Method_string if $ace;
+    return $ace;
 }
-sub output{
-    my ($self) = @_;
-    return $self->{'__output'} || [];
-}
-sub seqfetcher{
-    my ($self, $fetcher) = @_;
-    $self->{'_seqfetcher'} = $fetcher if $fetcher;
-    return $self->{'_seqfetcher'};
-}
-sub run{
-    my ($self) = @_;
-    my $seq = $self->query();
+
+sub run_blast {
+    my ($self, $masked, $unmasked) = @_;
+
     my $analysis = $self->analysis();
 
     my $runnable = Bio::EnsEMBL::Pipeline::Runnable::Finished_EST->new(
         -analysis => $self->analysis(),
-        -query    => $seq->get_repeatmasked_seq($PIPELINE_REPEAT_MASKING),
-        -unmasked => $seq,
+        -query    => $masked,
+        -unmasked => $unmasked,
         );
     $runnable->run();
     $self->seqfetcher($runnable->seqfetcher) unless $self->seqfetcher();
-    $self->add_output($runnable->output());
-    
+    return $runnable->output;
 }
 
-sub run_on_selected_CloneSequences{
-    my ($self, $ss, $slice_adaptor) = @_;
-    my $sel = $ss->selected_CloneSequences_as_contig_list;
-    local *OLDERR;
-    if($self->hide_error){
-        open(OLDERR, ">&STDERR") || print "Couldn't copy STDERR\n";
-        open(STDERR, ">/dev/null")    || print "Couldn't reopen STDERR to /dev/null\n";
+sub format_ace_output {
+    my ($self, $contig_name, $fp_list) = @_;
+
+    unless (@$fp_list) {
+        warn "No hits found on '$contig_name'\n";
+        return '';
     }
 
-    foreach my $cs(@$sel){
-        my $first_ctg = $cs->[0];
-        my $last_ctg = $cs->[$#$cs];
-        
-        my $chr = $first_ctg->chromosome->name;  
-        my $chr_start = $first_ctg->chr_start;
-        my $chr_end = $last_ctg->chr_end;
-        
-        warn "fetching slice $chr $chr_start $chr_end \n";
-        my $slice = $slice_adaptor->fetch_by_chr_start_end($chr, $chr_start, $chr_end);
-        
-        ### Check we got a slice
-        my $tp = $slice->get_tiling_path;
-        if(@$tp){
-            foreach my $tile(@$tp){
-                my $seq = $tile->component_Seq();
-                printf STDERR "Searching sequence '%s'\n", $seq->display_id;
-                $self->query($seq);
-                $self->run();
+    my $is_protein = 0;
+    my $homol_tag    = $self->homol_tag;
+    my $homol_method = $self->homol_method;
+
+    my $ace = qq{\nSequence : "$contig_name"\n};
+    foreach my $fp (@$fp_list) {
+        # est2genome has strand info from splice sites which we are losing
+        # contig_strand is always 1 at the moment
+        # align_coords() will break if we fix this
+        my $strand = ($fp->strand || 1) * $fp->hstrand;
+
+        # Transforms the gapped alignment information in the cigar string
+        # into a series of Align blocks for acedb's Smap system. This
+        # enables gapped alignments to be displayed in blixem.
+        my ($seq_coord, $target_coord, $other) = Bio::EnsEMBL::Ace::Filter::Cigar_ace_parser::align_coords(
+            $fp->cigar, $fp->start, $fp->end, $fp->hstart, $strand, $is_protein);
+
+        # In acedb strand is encoded by start being greater
+        # than end if the feature is on the negative strand.
+        my $start = $fp->start;
+        my $end   = $fp->end;
+        if ($strand == -1){
+            ($start, $end) = ($end, $start);
+        }
+
+        # The first part of the line is all we need if there are no
+        # gaps in the alignment between genomic sequence and hit.
+        my $query_line = sprintf qq{Homol %s "%s" "%s" %.3f %d %d %d %d},
+          $homol_tag, $fp->hseqname, $homol_method, $fp->percent_id,
+          $fp->start, $fp->end, $fp->hstart, $fp->hend;
+
+
+        if (@$seq_coord > 1) {
+            # Gapped alignments need two or more Align blocks to describe
+            # them. The information at the start of the line is needed for
+            # each block so that they all end up under the same tag once
+            # they are parsed into acedb.
+            for (my $i = 0; $i < @$seq_coord; $i++){
+                $ace .=  $query_line . " Align $seq_coord->[$i] $target_coord->[$i] $other->[$i]\n";
             }
-        }else{
-            warn "Didn't get slice\n";
+        } else {
+            $ace .= $query_line . "\n";
         }
     }
-    if($self->hide_error){
-        close(STDERR)            || print "Couldn't close STDERR";
-        open(STDERR, ">&OLDERR") || print "Couldn't restore STDERR";
-        close(OLDERR);
-    }
+    
+    return $ace;
 }
+
+sub list_GenomeSequence_names {
+    my ($self) = @_;
+    
+    return map $_->name, $self->AceDatabase->aceperl_db_handle->fetch(GenomeSequence => '*');
+}
+
+sub get_masked_unmasked_seq {
+    my ($self, $name) = @_;
+    
+    my $ace = $self->AceDatabase->aceperl_db_handle;
+    my $dna_obj = $ace->fetch(DNA => $name)
+        or confess "Failed to get DNA object '$name' from acedb database";
+    my $dna_str = $dna_obj->fetch->at->name;
+    warn "Got DNA string ", length($dna_str), " long";
+
+    my $unmasked = Bio::Seq->new(
+        -id         => $name,
+        -seq        => $dna_str,
+        -alphabet   => 'dna',
+        );
+
+    $ace->raw_query("find Sequence $name");
+
+    # Mask DNA with trf features
+    my $feat_list = $ace->raw_query('show -a Feature');
+    my $feat_txt = Hum::Ace::AceText->new($feat_list);
+    foreach my $f ($feat_txt->get_values('Feature."?trf')) {
+        my ($start, $end) = @$f;
+        if ($start > $end) {
+            ($start, $end) = ($end, $start);
+        }
+        my $length = $end - $start + 1;
+        substr($dna_str, $start - 1, $length) = 'n' x $length;
+    }
+    
+    # Mask DNA with RepeatMakser features
+    my $repeat_list = $ace->raw_query('show -a Motif_homol');
+    my $repeat_txt = Hum::Ace::AceText->new($repeat_list);
+    foreach my $m ($repeat_txt->get_values('Motif_homol')) {
+        my ($start, $end) = @$m[3,4];
+        if ($start > $end) {
+            ($start, $end) = ($end, $start);
+        }
+        my $length = $end - $start + 1;
+        substr($dna_str, $start - 1, $length) = 'n' x $length;
+    }
+    
+    my $masked = Bio::Seq->new(
+        -id         => $name,
+        -seq        => $dna_str,
+        -alphabet   => 'dna',
+        );
+    
+    return ($masked, $unmasked);
+}
+
 
 sub pressdb_fasta{
     my ($self, $fasta) = @_;
-    my $pressdb = $self->blast_idx_program();
+    my $pressdb = $self->blast_indexer();
     (system($pressdb, 
             '-t', "'otterlace on-the-fly blast database'",
             $fasta
-            ) == 0) || die "Can't pressdb";
+            ) == 0) || confess "Can't pressdb";
 
 }
 sub indicate_fasta{
     my ($self, $fasta) = @_;
 
-    my $indicate = $self->indicate_program();
+    my $indicate = $self->indicate();
 
     
     my $parser        = $self->indicate_parser();
@@ -447,7 +640,7 @@ sub indicate_fasta{
                          );
     #warn "indexing command: @indicate_call\n";
     # @indicate_call = qw[/usr/local/ensembl/bin/indicate --data_dir ~/tmp --file_prefix subseq4roy.fa --index ~/tmp/local_search$$ --parser singleWordParser];
-    (system(@indicate_call) == 0) || die "Can't do:\n\n@indicate_call\n";
+    (system(@indicate_call) == 0) || confess "Can't do:\n\n@indicate_call\n";
     return 1;
 }
 
@@ -464,38 +657,6 @@ sub indicate_index{
     return $self->{'_indicate_index'};
 }
 
-sub indicate_parser{
-    my ($self, $parser) = @_;
-    if($parser){
-        $self->{'_indicate_parser'} = $parser;
-    }
-    return $self->{'_indicate_parser'};
-}
-sub indicate_program{
-    my ($self, $ind) = @_;
-    if($ind){
-        $self->{'_indicate_program'} = $ind;
-        if(my $add_to_path = dirname($ind)){
-            $ENV{'PATH'} .= ":$add_to_path";
-        }
-    }
-    return $self->{'_indicate_program'};
-}
-sub blast_idx_program{
-    my ($self, $idx) = @_;
-    if($idx){
-        $self->{'_blast_idx_program'} = $idx;
-    }
-    return $self->{'_blast_idx_program'};
-}
-sub query{
-    my ($self, $seq) = @_;
-    
-    if ($seq) {
-        $self->{'_query_seq'} = $seq;
-    }
-    return $self->{'_query_seq'};
-}
 sub lib_path{
     my ($self, $path) = @_;
     if($path){
