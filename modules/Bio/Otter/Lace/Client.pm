@@ -947,8 +947,8 @@ sub lock_region_for_contig_from_Dataset{
             'dataset'  => $dataset->name,
             'type'     => $ss->name,
             'chr'      => $chr_name,
-            'chrstart' => $start,
-            'chrend'   => $end,
+            'start'    => $start,
+            'end'      => $end,
         }
     );
 }
@@ -966,8 +966,8 @@ sub get_xml_from_Dataset_type_chr_start_end {
             'dataset'  => $dataset->name,
             'type'     => $type,
             'chr'      => $chr_name,
-            'chrstart' => $start,
-            'chrend'   => $end,
+            'start'    => $start,
+            'end'      => $end,
         }
     );
 
