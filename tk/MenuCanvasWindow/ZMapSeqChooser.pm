@@ -121,7 +121,7 @@ sub MenuCanvasWindow::XaceSeqChooser::zMapReplaceMenuCommands {
 sub MenuCanvasWindow::XaceSeqChooser::zMapLaunchZmap {
     my( $self ) = @_;
 
-    $self->zMapReplaceMenuCommands();
+    #$self->zMapReplaceMenuCommands();
 
     $self->zMapKillZmap;
     my $z = $self->zMapInsertZmapConnector();
@@ -474,11 +474,10 @@ sub open_clones{
     my ($watch) = @_;
     my ($self)  = @{$watch->Args('-store')};
 
-    my @clones = $self->clone_list;
-    my ($chr, $st, $end) = split(/\.|\-/, $clones[0]);
+    my ($chr, $st, $end) = split(/\.|\-/, $self->slice_name);
 
     my $seg = newXMLObj('segment');
-    setObjNameValue($seg, 'sequence', "@clones");
+    setObjNameValue($seg, 'sequence', $self->slice_name);
     setObjNameValue($seg, 'start', 1);
     setObjNameValue($seg, 'end', '0');
 

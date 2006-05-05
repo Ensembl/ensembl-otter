@@ -716,17 +716,14 @@ sub bind_events {
 sub populate_Features_menu {
     my ($self) = @_;
     
-    my @clone_list = $self->clone_list;
     my $menu_frame = $self->menu_bar
             or confess 'No menu Bar';
 
     my $gf_menu = $self->make_menu("Features");
-    foreach my  $clone_name (@clone_list) {
-        $gf_menu->add( 'command' ,
-                    -label => $clone_name,    
-                    -command => sub { $self->launch_GenomicFeatures($clone_name) },
-        );
-    } 
+    $gf_menu->add( 'command' ,
+                -label => $self->slice_name,    
+                -command => sub { $self->launch_GenomicFeatures },
+    );
     $gf_menu->bind('<Destroy>', sub{ $self = undef });
 }
 
@@ -761,7 +758,7 @@ sub launch_GenomicFeatures {
         }
     };
     if ($@) {
-        $self->exception_message("Error creating GenomicFeatures window for '$clone_name'", $@);
+        $self->exception_message("Error creating GenomicFeatures window", $@);
     }
 }
 
@@ -1222,7 +1219,7 @@ sub edit_new_subsequence {
 
     my $regex = qr{^(?:[^:]+:)?$region_name\.(\d+)}; # qr is a Perl 5.6 feature
     my $max = 0;
-    foreach my $sub ($clone->get_all_SubSeqs) {
+    foreach my $sub ($slice->get_all_SubSeqs) {
         my ($n) = $sub->name =~ /$regex/;
         if ($n and $n > $max) {
             $max = $n;
@@ -1260,7 +1257,7 @@ sub edit_new_subsequence {
     else {
         $new = Hum::Ace::SubSeq->new;
         $new->strand(1);
-        $new->clone_Sequence($clone->Sequence);
+        $new->clone_Sequence($slice->Sequence);
         
         if (@ints > 1) {
             # Make exons from coordinates from clipboard
@@ -1297,7 +1294,7 @@ sub edit_new_subsequence {
     
     $new->GeneMethod($gm);
 
-    $clone->add_SubSeq($new);
+    $slice->add_SubSeq($new);
 
     $self->add_SubSeq($new);
     $self->do_subseq_display;
@@ -1627,7 +1624,7 @@ sub get_CloneSeq {
         $clone = $self->express_clone_and_subseq_fetch;
         my $after  = gettimeofday();
         $canvas->Unbusy;
-        printf "Express fetch for '%s' took %4.3f\n", $clone_name, $after - $before;
+        printf "Express fetch for '%s' took %4.3f\n", $self->slice_name, $after - $before;
         $self->{'_clone_sequence'} = $clone;
     }
     return $clone;
@@ -1968,7 +1965,8 @@ sub DESTROY {
 
     # need to undef AceDatabase for it's clean up.
     # warn "AceDatabase->unlock should now happen\n";
-    delete $self->{'_AceDatabase'}; # unlock will now happen
+    ### Don't need this!
+    ###delete $self->{'_AceDatabase'}; # unlock will now happen
     # warn "AceDatabase->unlock should have happened\n";
     if (my $sn = $self->SequenceNotes){
         # then refresh locks
@@ -1976,10 +1974,11 @@ sub DESTROY {
         $sn->refresh_column(7) ; ## locks column
         # warn "lock refresh should have happened\n";
         # need to clean up the sequenceNotes reference
-        delete $self->{'_sequence_notes'} ;
+        ### No you don't!
+        ###delete $self->{'_sequence_notes'} ;
     }
 
-    if($self->isZMap){
+    if ($self->isZMap){
         warn "Destroying ZmapSeqChooser for ", $self->ace_path, "\n";
     }else{
         warn "Destroying XaceSeqChooser for ", $self->ace_path, "\n";
