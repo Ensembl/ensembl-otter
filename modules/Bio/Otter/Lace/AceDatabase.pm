@@ -134,13 +134,13 @@ sub write_local_blast {
     ### the results of each go into separate columns.
     my $blast = Bio::Otter::Lace::Blast->new;
     $blast->AceDatabase($self);
-    $blast->initialize or return;
+    $blast->initialise or return;
     my $ace = $blast->run or return;
     my $dir = $self->home;
     my $blast_ace = "$dir/rawdata/local_blast_search.ace";
     open(my $fh, "> $blast_ace") or die "Can't write to '$blast_ace' : $!";
 
-    print $fh, $ace;
+    print $fh $ace;
     close $fh or confess "Error writing to '$blast_ace' : $!";
     $self->add_acefile($blast_ace);
 }

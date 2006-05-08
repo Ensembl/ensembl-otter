@@ -154,7 +154,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.11 $ ';
+$revision='$Revision: 1.12 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
@@ -203,8 +203,9 @@ use Carp;
 use File::Basename;
 use File::Path 'rmtree';
 
+use Bio::DB::Flat::OBDAIndex;
+
 use Bio::EnsEMBL::Pipeline::Analysis;
-use Bio::EnsEMBL::Pipeline::SeqFetcher::OBDAIndexSeqFetcher;
 use Bio::EnsEMBL::Pipeline::Runnable::Finished_EST;
 use Bio::EnsEMBL::Pipeline::Runnable::Finished_Blast;
 use Bio::EnsEMBL::Pipeline::Config::General;
@@ -218,24 +219,10 @@ sub new{
     return bless {}, $pkg;
 }
 
-
-
-
-
-sub db_basenames{
-    my ($self, $basenames) = @_;
-    # $self->{'_basenames'} = $basenames if ref($basenames) eq 'ARRAY';
-    $self->{'_basenames'} = $basenames if $basenames;
-    return $self->{'_basenames'};    
-}
-sub db_dirname{
-    my ($self, $dirname) = @_;
-    $self->{'_dirname'} = $dirname if $dirname;
-    return $self->{'_dirname'};
-}
-
 sub initialise {
     my ($self) = @_;
+
+    warn "BLASTFILTER=$ENV{'BLASTFILTER'}\nWUBLASTFILTER=$ENV{'WUBLASTFILTER'}\n";
 
     # Get all the configuration options
     my $cl = $self->AceDatabase->Client();
@@ -259,6 +246,7 @@ sub initialise {
     unless (-e $fasta_file) {
         confess "Fasta file '$fasta_file' defined config does not exist";
     }
+    warn "Found blast database: '$fasta_file'\n";
     
     # Make the analysis object needed by the Runnable
     my $ana_obj = Bio::EnsEMBL::Pipeline::Analysis->new(
@@ -270,15 +258,18 @@ sub initialise {
         -GFF_SOURCE  => 'Est2Genome',
         -GFF_FEATURE => 'similarity',
         -DB_FILE     => $fasta_file,
+        -DB          => $self->indicate_index,
     );
     $self->analysis($ana_obj);
-
+    
     # check for the file, & last modified
     # the function returns true if file is newer i.e. needs reindexing
     if ($self->_file_needs_indexing($fasta_file)) {
         eval {
-            $self->pressdb_fasta($fasta_file);
-            $self->indicate_fasta($fasta_file);
+            rmtree($self->indicate_index);
+            $self->pressdb_fasta;
+            #$self->indicate_fasta;
+            $self->create_bioperl_OBDA_index;
         };
         if ($@) {
             $self->_remove_files($fasta_file);
@@ -301,35 +292,34 @@ sub AceDatabase {
     return $self->{'_AceDatabase'};
 }
 
-sub database {
-    my ($self, $db) = @_;
-    if ($db) {
-        my @dbs       = @{ [ split(/,/, $db) ] };
-        my $dirnames  = {};
-        my $basenames = {};
-        my $analysis  = $self->analysis();
-        foreach my $file (@dbs) {
-            next unless -e $file;
-            my $dirname  = dirname($file);
-            my $basename = basename($file);
-            $dirnames->{$dirname}   = 1;
-            $basenames->{$basename} = 1;
-            $self->db_basenames($basename);
-            $self->db_dirname($dirname);
-            last;
-        }
-        warn "Only one db supported currently why not use `cat @dbs`"
-          if scalar(@dbs) > 1;
-        confess("files must exist") unless scalar(keys(%$basenames));
-        confess(
-            "files must be in same directory " . join(" ", keys(%$dirnames)))
-          if scalar(keys(%$dirnames)) > 1;
-
-        # incase it wasn't set
-        $analysis->db_file($dbs[0]);
-        $analysis->db($self->indicate_index);
+sub analysis {
+    my( $self, $analysis ) = @_;
+    
+    if ($analysis) {
+        $self->{'_analysis'} = $analysis;
     }
-    return $self->db_dirname() . "/" . $self->db_basenames();
+    return $self->{'_analysis'};
+}
+
+sub database {
+    my( $self, $database ) = @_;
+    
+    if ($database) {
+        $self->{'_database'} = $database;
+    }
+    return $self->{'_database'};
+}
+
+sub db_basename {
+    my ($self) = @_;
+    
+    return basename($self->database);
+}
+
+sub db_dirname{
+    my ($self) = @_;
+    
+    return dirname($self->database);
 }
 
 sub homol_tag {
@@ -408,12 +398,20 @@ sub right_priority {
     return $self->{'_right_priority'} || 0.2;
 }
 
+sub sequence_fetcher {
+    my( $self, $sequence_fetcher ) = @_;
+    
+    if ($sequence_fetcher) {
+        $self->{'_sequence_fetcher'} = $sequence_fetcher;
+    }
+    return $self->{'_sequence_fetcher'};
+}
 
 sub ace_Method_string {
     my ($self) = @_;
 
     my $tag = $self->method_tag;
-    my $col = $self->method_colour;
+    my $col = $self->method_color;
     my $pri = $self->right_priority;
     
     my $meth_ace = <<END_OF_METHOD;
@@ -444,7 +442,7 @@ sub _file_needs_indexing{
     # create the info file for the fasta file
     my $filestamp = Bio::Otter::Lace::PersistentFile->new();
     $filestamp->root($self->db_dirname());
-    $filestamp->name('.efficient_indexing_'. $self->db_basenames());
+    $filestamp->name('.efficient_indexing_'. $self->db_basename());
 
     my ($fasta_mod) = (stat($fasta))[9];
     if(-e $filestamp->full_name){
@@ -462,11 +460,11 @@ sub _file_needs_indexing{
     return $ret;
 }
 
-sub _remove_files{
+sub _remove_files {
     my ($self, $fasta) = @_;
     my $filestamp = Bio::Otter::Lace::PersistentFile->new();
     $filestamp->root($self->db_dirname());
-    $filestamp->name('.efficient_indexing_'. $self->db_basenames());
+    $filestamp->name('.efficient_indexing_'. $self->db_basename());
     $filestamp->rm();
     rmtree($self->indicate_index());
 }
@@ -476,11 +474,34 @@ sub run {
     
     my $ace = '';
     foreach my $name ($self->list_GenomeSequence_names) {
-        my ($masked, $unmasked) = $self->get_masked_unmasked_seq($ace, $name);
-        my $sf = $self->run_blast($masked, $unmasked);
-        $ace .= $self->format_ace_output($name, $sf);
+        warn "Genomic query sequence: '$name'\n";
+        my ($masked, $unmasked) = $self->get_masked_unmasked_seq($name);
+        my $features = $self->run_blast($masked, $unmasked);
+        $ace .= $self->format_ace_output($name, $features);
     }
-    $ace .= $self->ace_Method_string if $ace;
+    if ($ace) {
+        $ace .= $self->ace_Method_string;
+        
+        my $fetcher = $self->sequence_fetcher;
+        my $names = $self->delete_all_hit_names;
+        foreach my $hit_name (@$names) {
+            my $seq = $fetcher->get_Seq_by_acc($hit_name)
+                or confess "Failed to fetch '$hit_name' by Acc using a '", ref($fetcher), "'";
+            $ace .= $self->ace_DNA($hit_name, $seq);
+        }
+    }
+    return $ace;
+}
+
+sub ace_DNA {
+    my ($self, $name, $seq) = @_;
+    
+    my $ace = qq{\nSequence "$name"\n\nDNA "$name"\n};
+    
+    my $dna_string = $seq->seq;
+    while ($dna_string =~ /(.{1,60})/g) {
+        $ace .= $1 . "\n";
+    }
     return $ace;
 }
 
@@ -495,8 +516,22 @@ sub run_blast {
         -unmasked => $unmasked,
         );
     $runnable->run();
-    $self->seqfetcher($runnable->seqfetcher) unless $self->seqfetcher();
-    return $runnable->output;
+    $self->sequence_fetcher($runnable->seqfetcher);
+    return [$runnable->output];
+}
+
+sub add_hit_name {
+    my( $self, $name ) = @_;
+    
+    $self->{'_hit_names'}{$name} = 1;
+}
+
+sub delete_all_hit_names {
+    my ($self) = @_;
+    
+    my $hit_names = [ sort keys %{$self->{'_hit_names'}} ];
+    $self->{'_hit_names'} = undef;
+    return $hit_names;
 }
 
 sub format_ace_output {
@@ -508,26 +543,30 @@ sub format_ace_output {
     }
 
     my $is_protein = 0;
-    my $homol_tag    = $self->homol_tag;
-    my $homol_method = $self->homol_method;
+    my $homol_tag   = $self->homol_tag;
+    my $method_tag  = $self->method_tag;
 
     my $ace = qq{\nSequence : "$contig_name"\n};
     foreach my $fp (@$fp_list) {
-        # est2genome has strand info from splice sites which we are losing
+        # est2genome has strand info from splice sites, which we are losing.
         # contig_strand is always 1 at the moment
         # align_coords() will break if we fix this
-        my $strand = ($fp->strand || 1) * $fp->hstrand;
+        my $strand = ($fp->hstrand || 1) * $fp->strand;
 
         # Transforms the gapped alignment information in the cigar string
         # into a series of Align blocks for acedb's Smap system. This
         # enables gapped alignments to be displayed in blixem.
         my ($seq_coord, $target_coord, $other) = Bio::EnsEMBL::Ace::Filter::Cigar_ace_parser::align_coords(
-            $fp->cigar, $fp->start, $fp->end, $fp->hstart, $strand, $is_protein);
+            $fp->cigar_string, $fp->start, $fp->end, $fp->hstart, $strand, $is_protein);
 
         # In acedb strand is encoded by start being greater
         # than end if the feature is on the negative strand.
         my $start = $fp->start;
         my $end   = $fp->end;
+        my $hname = $fp->hseqname;
+
+        $self->add_hit_name($hname);
+
         if ($strand == -1){
             ($start, $end) = ($end, $start);
         }
@@ -535,8 +574,8 @@ sub format_ace_output {
         # The first part of the line is all we need if there are no
         # gaps in the alignment between genomic sequence and hit.
         my $query_line = sprintf qq{Homol %s "%s" "%s" %.3f %d %d %d %d},
-          $homol_tag, $fp->hseqname, $homol_method, $fp->percent_id,
-          $fp->start, $fp->end, $fp->hstart, $fp->hend;
+          $homol_tag, $hname, $method_tag, $fp->percent_id,
+          $start, $end, $fp->hstart, $fp->hend;
 
 
         if (@$seq_coord > 1) {
@@ -558,14 +597,15 @@ sub format_ace_output {
 sub list_GenomeSequence_names {
     my ($self) = @_;
     
-    return map $_->name, $self->AceDatabase->aceperl_db_handle->fetch(GenomeSequence => '*');
+    my $ace_dbh = $self->AceDatabase->aceperl_db_handle;
+    return map $_->name, $ace_dbh->fetch(Genome_Sequence => '*');
 }
 
 sub get_masked_unmasked_seq {
     my ($self, $name) = @_;
     
     my $ace = $self->AceDatabase->aceperl_db_handle;
-    my $dna_obj = $ace->fetch(DNA => $name)
+    my ($dna_obj) = $ace->fetch(DNA => $name)
         or confess "Failed to get DNA object '$name' from acedb database";
     my $dna_str = $dna_obj->fetch->at->name;
     warn "Got DNA string ", length($dna_str), " long";
@@ -580,6 +620,7 @@ sub get_masked_unmasked_seq {
 
     # Mask DNA with trf features
     my $feat_list = $ace->raw_query('show -a Feature');
+    #warn "Features: $feat_list";
     my $feat_txt = Hum::Ace::AceText->new($feat_list);
     foreach my $f ($feat_txt->get_values('Feature."?trf')) {
         my ($start, $end) = @$f;
@@ -592,6 +633,7 @@ sub get_masked_unmasked_seq {
     
     # Mask DNA with RepeatMakser features
     my $repeat_list = $ace->raw_query('show -a Motif_homol');
+    #warn "Repeats: $repeat_list";
     my $repeat_txt = Hum::Ace::AceText->new($repeat_list);
     foreach my $m ($repeat_txt->get_values('Motif_homol')) {
         my ($start, $end) = @$m[3,4];
@@ -613,48 +655,66 @@ sub get_masked_unmasked_seq {
 
 
 sub pressdb_fasta{
-    my ($self, $fasta) = @_;
-    my $pressdb = $self->blast_indexer();
+    my ($self) = @_;
+
+    my $pressdb = $self->blast_indexer;
+    my $fasta   = $self->database;
     (system($pressdb, 
             '-t', "'otterlace on-the-fly blast database'",
             $fasta
             ) == 0) || confess "Can't pressdb";
-
 }
-sub indicate_fasta{
-    my ($self, $fasta) = @_;
 
-    my $indicate = $self->indicate();
-
+sub create_bioperl_OBDA_index {
+    my ($self) = @_;
     
-    my $parser        = $self->indicate_parser();
-    my $file_prefix   = $self->db_basenames();
-    my $data_dir      = $self->db_dirname();
-    my $index         = $self->indicate_index();
+    my $index = Bio::DB::Flat::OBDAIndex->new;
+    $index->format('fasta');
+    $index->start_pattern('^>');
+    $index->primary_pattern('^>\s*(\S+)');
+    $index->primary_namespace('ACC');
 
-    my @indicate_call = ($indicate,
-                         '--data_dir',    $data_dir,
-                         '--file_prefix', $file_prefix,
-                         '--index',       $index,
-                         '--parser',      $parser,
+    $index->index_directory($self->db_dirname);
+
+    $index->make_index(
+        $self->OBDA_dir,
+        $self->database,
+        );
+}
+
+sub indicate_fasta{
+    my ($self) = @_;
+
+    my @indicate_call = ($self->indicate,
+                         '--data_dir',    $self->db_dirname,
+                         '--file_prefix', $self->db_basename,
+                         '--index',       $self->indicate_index,
+                         '--parser',      $self->indicate_parser,
                          );
-    #warn "indexing command: @indicate_call\n";
-    # @indicate_call = qw[/usr/local/ensembl/bin/indicate --data_dir ~/tmp --file_prefix subseq4roy.fa --index ~/tmp/local_search$$ --parser singleWordParser];
-    (system(@indicate_call) == 0) || confess "Can't do:\n\n@indicate_call\n";
+    warn "OBDA indexing command: @indicate_call\n";
+    unless (system(@indicate_call) == 0) {
+        confess "Error: exit($?) running OBDA indexing command: @indicate_call\n";
+    }
     return 1;
 }
 
-sub indicate_index{
-    my ($self, $index) = @_;
-    if($index){
-        $self->{'_indicate_index'} = $index;
-    }elsif(!$self->{'_indicate_index'}){
-        my $base = $self->db_basenames();
+sub indicate_index {
+    my ($self) = @_;
+    
+    return $self->db_dirname . '/' . $self->OBDA_dir;
+}
+
+sub OBDA_dir {
+    my ($self) = @_;
+    
+    my $dir = $self->{'_OBDA_dir'};
+    unless ($dir) {
+        my $base = $self->db_basename;
         $base =~ s/\.//g;
-        my $idx = $self->db_dirname() . "/local_search_" . $base;
-        $self->{'_indicate_index'} = $idx;
+        $dir = "local_search_$base";
+        $self->{'_OBDA_dir'} = $dir;
     }
-    return $self->{'_indicate_index'};
+    return $dir;   
 }
 
 sub lib_path{
