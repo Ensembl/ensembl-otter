@@ -51,7 +51,7 @@ use Exporter();
 my ($MAIN_DIR, $OTTER_RELEASE);
 
 $OTTER_SERVER_PORT      = 33999;
-$OTTER_RELEASE          = 43;
+$OTTER_RELEASE          = 44;
 
 $MAIN_DIR               = '/nfs/team71/analysis/lg4/work';
 # $MAIN_DIR               = "/humsql/ottersrv_rel${OTTER_RELEASE}_port${OTTER_SERVER_PORT}";
