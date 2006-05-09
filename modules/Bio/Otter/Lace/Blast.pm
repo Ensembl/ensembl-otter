@@ -154,7 +154,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.12 $ ';
+$revision='$Revision: 1.13 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
@@ -222,12 +222,20 @@ sub new{
 sub initialise {
     my ($self) = @_;
 
-    warn "BLASTFILTER=$ENV{'BLASTFILTER'}\nWUBLASTFILTER=$ENV{'WUBLASTFILTER'}\n";
-
-    # Get all the configuration options
     my $cl = $self->AceDatabase->Client();
+    
+    # Just return if a blast database hasn't been defined
+    my $fasta_file = $cl->option_from_array([ 'local_blast', 'database' ]);
+    return unless $fasta_file;
+    $self->database($fasta_file);
+    unless (-e $fasta_file) {
+        confess "Fasta file '$fasta_file' defined in config does not exist";
+    }
+    warn "Found blast database: '$fasta_file'\n";
+    
+
+    # Get all the other configuration options
     foreach my $attribute (qw{
-        database
         homol_tag
         method_tag
         method_color
@@ -241,12 +249,6 @@ sub initialise {
         my $value = $cl->option_from_array([ 'local_blast', $attribute ]);
         $self->$attribute($value);
     }
-    
-    my $fasta_file = $self->database or return;
-    unless (-e $fasta_file) {
-        confess "Fasta file '$fasta_file' defined config does not exist";
-    }
-    warn "Found blast database: '$fasta_file'\n";
     
     # Make the analysis object needed by the Runnable
     my $ana_obj = Bio::EnsEMBL::Pipeline::Analysis->new(
@@ -337,7 +339,13 @@ sub method_tag {
     if ($method_tag) {
         $self->{'_method_tag'} = $method_tag;
     }
-    return $self->{'_method_tag'} || substr(sprintf('blast*%s*', $self->database), 0, 39);
+    if (my $tag = $self->{'_method_tag'}) {
+        return $tag;
+    } elsif ($self->db_basename =~ /(.{1,40})$/) {
+        return $1;
+    } else {
+        return;
+    }
 }
 
 sub method_color {
@@ -355,7 +363,7 @@ sub logic_name {
     if ($logic_name) {
         $self->{'_logic_name'} = $logic_name;
     }
-    return $self->{'_logic_name'} || sprintf('blast*%s*', $self->database);
+    return $self->{'_logic_name'} || $self->db_basename;
 }
 
 sub indicate {
@@ -545,50 +553,70 @@ sub format_ace_output {
     my $is_protein = 0;
     my $homol_tag   = $self->homol_tag;
     my $method_tag  = $self->method_tag;
-
-    my $ace = qq{\nSequence : "$contig_name"\n};
+    
+    my %name_fp_list;
     foreach my $fp (@$fp_list) {
-        # est2genome has strand info from splice sites, which we are losing.
-        # contig_strand is always 1 at the moment
-        # align_coords() will break if we fix this
-        my $strand = ($fp->hstrand || 1) * $fp->strand;
-
-        # Transforms the gapped alignment information in the cigar string
-        # into a series of Align blocks for acedb's Smap system. This
-        # enables gapped alignments to be displayed in blixem.
-        my ($seq_coord, $target_coord, $other) = Bio::EnsEMBL::Ace::Filter::Cigar_ace_parser::align_coords(
-            $fp->cigar_string, $fp->start, $fp->end, $fp->hstart, $strand, $is_protein);
-
-        # In acedb strand is encoded by start being greater
-        # than end if the feature is on the negative strand.
-        my $start = $fp->start;
-        my $end   = $fp->end;
         my $hname = $fp->hseqname;
+        my $list = $name_fp_list{$hname} ||= [];
+        push @$list, $fp;
+    }
 
+    my $ace = '';
+    foreach my $hname (sort keys %name_fp_list) {
+        # Save hit name. This is used to get the DNA sequence for
+        # each hit from the fasta file using the OBDA index.
         $self->add_hit_name($hname);
 
-        if ($strand == -1){
-            ($start, $end) = ($end, $start);
-        }
+        $ace       .= qq{\nSequence : "$contig_name"\n};
+        my $hit_ace = qq{\nSequence : "$hname"\n};
+        
+        foreach my $fp (@{ $name_fp_list{$hname} }) {
+        
+            # est2genome has strand info from splice sites, which we are losing.
+            # contig_strand is always 1 at the moment
+            # align_coords() will break if we fix this
+            my $strand = ($fp->hstrand || 1) * $fp->strand;
 
-        # The first part of the line is all we need if there are no
-        # gaps in the alignment between genomic sequence and hit.
-        my $query_line = sprintf qq{Homol %s "%s" "%s" %.3f %d %d %d %d},
-          $homol_tag, $hname, $method_tag, $fp->percent_id,
-          $start, $end, $fp->hstart, $fp->hend;
+            # Transforms the gapped alignment information in the cigar string
+            # into a series of Align blocks for acedb's Smap system. This
+            # enables gapped alignments to be displayed in blixem.
+            my ($seq_coord, $target_coord, $other) = Bio::EnsEMBL::Ace::Filter::Cigar_ace_parser::align_coords(
+                $fp->cigar_string, $fp->start, $fp->end, $fp->hstart, $strand, $is_protein);
 
+            # In acedb strand is encoded by start being greater
+            # than end if the feature is on the negative strand.
+            my $start = $fp->start;
+            my $end   = $fp->end;
 
-        if (@$seq_coord > 1) {
-            # Gapped alignments need two or more Align blocks to describe
-            # them. The information at the start of the line is needed for
-            # each block so that they all end up under the same tag once
-            # they are parsed into acedb.
-            for (my $i = 0; $i < @$seq_coord; $i++){
-                $ace .=  $query_line . " Align $seq_coord->[$i] $target_coord->[$i] $other->[$i]\n";
+            if ($strand == -1){
+                ($start, $end) = ($end, $start);
             }
-        } else {
-            $ace .= $query_line . "\n";
+
+            # Show coords in hit back to genomic sequence. (The annotators like this.)
+            $hit_ace .= sprintf qq{Homol %s "%s" "%s" %.3f %d %d %d %d\n},
+              $homol_tag, $contig_name, $method_tag, $fp->percent_id,
+              $fp->hstart, $fp->hend, $start, $end;
+
+            # The first part of the line is all we need if there are no
+            # gaps in the alignment between genomic sequence and hit.
+            my $query_line = sprintf qq{Homol %s "%s" "%s" %.3f %d %d %d %d},
+              $homol_tag, $hname, $method_tag, $fp->percent_id,
+              $start, $end, $fp->hstart, $fp->hend;
+
+            if (@$seq_coord > 1) {
+                # Gapped alignments need two or more Align blocks to describe
+                # them. The information at the start of the line is needed for
+                # each block so that they all end up under the same tag once
+                # they are parsed into acedb.
+                for (my $i = 0; $i < @$seq_coord; $i++){
+                    $ace .=  $query_line . " Align $seq_coord->[$i] $target_coord->[$i] $other->[$i]\n";
+                }
+            } else {
+                $ace .= $query_line . "\n";
+            }
         }
+        
+        $ace .= $hit_ace;
     }
     
     return $ace;
