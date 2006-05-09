@@ -124,7 +124,7 @@ sub new {
     )->pack(-side => 'left', -fill => 'x', -expand => 1);
 
     my $quit_button = $control_frame->Button(
-        -text       => 'Quit',
+        -text       => 'Close',
         -command    => sub { $self->hide_me() },
     )->pack(-side => 'right');
         
