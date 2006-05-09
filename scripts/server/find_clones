@@ -29,19 +29,21 @@ my ($cloneid2clonename, $cloneid2assemblies) = find_assemblies_by_clone_ids($sq,
 
 my $output_string = '';
 
-for my $qname (keys %qnames_types_clones) {
+for my $qname (sort keys %qnames_types_clones) {
     my $types_clones = $qnames_types_clones{$qname};
     if(keys %$types_clones) {
         for my $type (keys %$types_clones) {
             my $clones = $types_clones->{$type};
             for my $clone_id (keys %$clones) {
                 my $clone_name = $cloneid2clonename->{$clone_id};
-                $output_string .= join("\t", $qname, $type, $clone_name,
-                                            join(',', keys %{$cloneid2assemblies->{$clone_id}} ))."\n";
+                if($clone_name) {
+                    $output_string .= join("\t", $qname, $type, $clone_name,
+                                                join(',', keys %{$cloneid2assemblies->{$clone_id}} ))."\n";
+                }
             }
         }
     } else {
-        $output_string .= "$qname\n"; # an equivalent of asymmetric join
+        $output_string .= "$qname\n"; # i.e 'not found' - an equivalent of asymmetric join
     }
 }
 

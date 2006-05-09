@@ -205,6 +205,14 @@ sub get_lock_as_CloneLock{
     my ($self) = @_;
     return $self->{'_lock_status'};
 }
+
+sub is_match{
+    my ($self, $is_match) = @_;
+
+    $self->{'_is_match'} = $is_match if defined($is_match);
+    return $self->{'_is_match'};
+}
+
 1;
 
 __END__
