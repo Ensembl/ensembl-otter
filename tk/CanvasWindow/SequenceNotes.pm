@@ -67,6 +67,21 @@ sub get_CloneSequence_list {
     return $cs_list;
 }
 
+# Not sure whether it should belong here or to SequenceSet.pm
+#
+sub find_CloneSequence_index_by_name {
+    my ($self, $clone_name) = @_;
+
+    my $ind = 0;
+    for my $cs (@{$self->get_CloneSequence_list()}) {
+        if($cs->accession().'.'.$cs->sv() eq $clone_name) {
+            return $ind;
+        }
+        $ind++;
+    }
+    return undef;
+}
+
 ## now takes the column number to be refreshed (image or text) and refreshes it
 ## $i is the row index to start from - allows this method to be used by Searched SequenceNotes
 sub refresh_column {
@@ -148,13 +163,15 @@ sub column_methods {
                     my $cs = shift;
                     my $acc = $cs->accession;
                     my $sv  = $cs->sv;
-                    return {-text => "$acc.$sv", -font => $bold, -tags => ['searchable']};
+                    my $fontcolour = $cs->is_match() ? 'red' : 'black';
+                    return {-text => "$acc.$sv", -font => $bold, -fill => $fontcolour, -tags => ['searchable']};
                 }],
             [$text_method, 
                 sub{
                     # Use closure for font definition
                     my $cs = shift;
-                    return {-text => $cs->clone_name, -font => $bold, -tags => ['searchable'] };
+                    my $fontcolour = $cs->is_match() ? 'red' : 'black';
+                    return {-text => $cs->clone_name, -font => $bold, -fill => $fontcolour, -tags => ['searchable'] };
                 }],
             [$text_method, \&_column_text_seq_note_status],
 	        [$text_method , 
@@ -870,7 +887,7 @@ sub _user_last_clone_seq{
 sub max_per_page{
     my ($self, $max) = @_;
     $self->{'_max_per_page'} = $max if $max;
-    return $self->{'_max_per_page'} || 100;
+    return $self->{'_max_per_page'} || 35;
 }
 sub draw_paging_buttons{
     my ($self) = @_;
@@ -942,6 +959,23 @@ sub draw_paging_buttons{
                                 -width  => $width,
                                 -anchor => 'nw',
                                 -window => $pg_frame);
+}
+
+sub draw_around_clone_name {
+    my ($self, $clone_name, $pgsize) = @_;
+
+    my $pghalfsize = $pgsize ? int($pgsize/2)+1 : 15;
+
+    my $ind = $self->find_CloneSequence_index_by_name($clone_name);
+
+    if(defined($ind)) {
+        $self->_user_first_clone_seq($ind-$pghalfsize);
+        $self->_user_last_clone_seq($ind+$pghalfsize);
+        return $self->draw();
+    } else {
+        print STDERR "$clone_name not found in the SequenceSet '".
+            $self->SequenceSet()->name()."!\n";
+    }
 }
 
 sub draw_range{

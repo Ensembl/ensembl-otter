@@ -7,10 +7,13 @@ use strict;
 use Carp;
 use base 'CanvasWindow';
 use CanvasWindow::SequenceNotes;
+use CanvasWindow::SearchWindow;
 use CanvasWindow::SequenceNotes::SearchedSequenceNotes;
 use Hum::Sort 'ace_sort';
 use TransientWindow::SearchWindow;
 use TransientWindow::LogWindow;
+
+my $newsearch = 1;
 
 sub new {
     my( $pkg, @args ) = @_;
@@ -55,6 +58,7 @@ sub new {
         )->pack(-side => 'left');
     
     my $search_command = sub { $self->search_window };
+
     my $search = $button_frame->Button(
         -text       => 'Search' ,
         -command    => $search_command,
@@ -225,16 +229,16 @@ sub get_SequenceNotes_by_name{
     my ($self, $name) = @_;
     my $seqNotes = $self->{'_sequence_notes'} || {};
     foreach my $hash_id(keys %$seqNotes){
-	next unless $seqNotes->{$hash_id};
-	my $sn = $seqNotes->{$hash_id};
-	my $sn_name = $sn->name();
-	next unless $name eq $sn_name;
-	# See bind_close_window method of SequenceNotes.
-	# $sn->SequenceSetChooser($self);
+        next unless $seqNotes->{$hash_id};
+        my $sn = $seqNotes->{$hash_id};
+        my $sn_name = $sn->name();
+        next unless $name eq $sn_name;
+        # See bind_close_window method of SequenceNotes.
+        # $sn->SequenceSetChooser($self);
         $sn->canvas->find('withtag', 'all') || return ($sn->draw_range() + 1);
-	$sn->canvas->toplevel->deiconify();
-	$sn->canvas->toplevel->raise();
-	return 1;
+        $sn->canvas->toplevel->deiconify();
+        $sn->canvas->toplevel->raise();
+        return 1;
     }
     return 0;
 }
@@ -259,43 +263,40 @@ sub open_sequence_set {
         if ($tag =~ /^SequenceSet=(.+)/) {
             my $name = $1;
 
-	    # there's already a SequenceNotes obj available.
-            return 1 if $self->get_SequenceNotes_by_name($name);
-
-            my $this_top = $canvas->toplevel;
-            
-            ### in this case Busy() seems to globally grab pointer - why?
-            ### grabStatus reports 'local' - but it is a global grab.
-            #$this_top->Busy(
-            #    -recurse    => 1,
-            #    );   
-            #my $status = $this_top->grabStatus;
-            #warn "grab = $status\n";
-            
-            ## Using this instead:
-            $this_top->configure(-cursor => 'watch');
-            
-            my $pipe_name = Bio::Otter::Lace::Defaults::pipe_name();
-            my $top = $this_top->Toplevel(-title => "SequenceSet $name [$pipe_name]");
-            my $ss = $self->DataSet->get_SequenceSet_by_name($name);
-          
-            my $sn = CanvasWindow::SequenceNotes->new($top);
-            $sn->name($name);
-            $sn->Client($self->Client);
-            $sn->SequenceSet($ss);
-            $sn->SequenceSetChooser($self);
-            $sn->initialise;
-            #$sn->draw;   
-            $sn->draw_range;    
-            $self->add_SequenceNotes($sn);
-           
-            #$this_top->Unbusy;
-            $this_top->configure(-cursor => undef);
-            
+            $self->open_sequence_set_by_ssname_clonename($name);
             return 1;
         }
     }
     return;
+}
+
+sub open_sequence_set_by_ssname_clonename {
+    my ($self, $ss_name, $clone_name) = @_;
+    
+    return 1 if $self->get_SequenceNotes_by_name($ss_name);
+
+    my $this_top = $self->canvas->toplevel;
+    $this_top->configure(-cursor => 'watch');
+    
+    my $pipe_name = Bio::Otter::Lace::Defaults::pipe_name();
+    my $top = $this_top->Toplevel(-title => "SequenceSet $ss_name [$pipe_name]");
+    my $ss = $self->DataSet->get_SequenceSet_by_name($ss_name);
+  
+    my $sn = CanvasWindow::SequenceNotes->new($top);
+    $sn->name($ss_name);
+    $sn->Client($self->Client);
+    $sn->SequenceSet($ss);
+    $sn->SequenceSetChooser($self);
+    $sn->initialise;
+    if($clone_name) {
+        $ss->set_match_state( { $clone_name => 1 } );
+        $sn->draw_around_clone_name($clone_name);
+    } else {
+        $sn->draw_range;    
+    }
+    $self->add_SequenceNotes($sn);
+   
+    $this_top->configure(-cursor => undef);
 }
 
 # brings up a window for searching for loci / clones
@@ -305,12 +306,21 @@ sub search_window{
     my $search_window = $self->{'_search_window'};
   
     unless (defined ($search_window) ){
-        ## make a new window
-        $self->{'_search_window'} =
-            $search_window = TransientWindow::SearchWindow->new($self->canvas->toplevel, 'Find loci, stable_ids or clones');
-        $search_window->action('doSearch', sub{ my ($sw) = @_; $self->search($sw); });
-        $search_window->initialise();
-        $search_window->draw();
+        if($newsearch) {
+                my $actual_window = $self->canvas->toplevel->Toplevel(-title => 'Find loci, stable_ids or clones');
+            $self->{'_search_window'} =
+                $search_window = CanvasWindow::SearchWindow->new($actual_window);
+                $search_window->Client($self->Client());
+                $search_window->DataSet($self->DataSet());
+                $search_window->SequenceSetChooser($self);
+        } else {
+            ## make a new window
+            $self->{'_search_window'} =
+                $search_window = TransientWindow::SearchWindow->new($self->canvas->toplevel, 'Find loci, stable_ids or clones');
+            $search_window->action('doSearch', sub{ my ($sw) = @_; $self->search($sw); });
+            $search_window->initialise();
+            $search_window->draw();
+        }
     }    
     $search_window->show_me;
     return $search_window;
