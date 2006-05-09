@@ -37,6 +37,7 @@ my $sth = $odb->prepare(qq{
 .qq{       s.contig_id = ctg.contig_id }
 .($aut_name ? qq{ AND aut.author_name = "$aut_name" } : '')
 .qq{   AND s.author_id = aut.author_id
+  ORDER BY contig_name, s.note_time DESC
 });
 $sth->execute();
 

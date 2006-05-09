@@ -17,14 +17,6 @@ sub new {
     return bless {}, $pkg;
 }
 
-# possibly the most evil thing I've done in this module.
-# extends the CloneSequence obj
-sub Bio::Otter::Lace::CloneSequence::is_match{
-    my ($self, $is_match) = @_;
-    $self->{'_is_match'} = $is_match if defined($is_match);
-    return $self->{'_is_match'};
-}
-
 sub add_SequenceSet{
     my ($self, $ss) = @_ ;
     $self->{'_rs_sequence_sets'} ||= [];

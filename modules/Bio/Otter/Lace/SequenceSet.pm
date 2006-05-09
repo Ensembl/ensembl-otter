@@ -218,6 +218,21 @@ sub agp_data {
     return $data;
 }
 
+    # find clones my names and make them 'match'
+    # The only argument is name->wanted_state hash
+    #
+sub set_match_state { 
+    my ($self, $statehash) = @_;
+
+    my $cs_list = $self->CloneSequence_list;
+    foreach my $cs (@$cs_list) {
+        my $fullname = $cs->accession().'.'.$cs->sv();
+        if(exists($statehash->{$fullname})) {
+            $cs->is_match($statehash->{$fullname});
+            print STDERR "setting match state ".$statehash->{$fullname}." to clone $fullname\n";
+        }
+    }
+}
 
 ### Method for fetching completeness of analysis
 ### for all the CloneSequences in a SequenceSet
