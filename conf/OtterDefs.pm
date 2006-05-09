@@ -82,6 +82,7 @@ $OTTER_GET_SCRIPTS          = {'/perl/get_region'     => 'get_region',
                                '/perl/get_sequenceset_accesslist' => 'get_sequenceset_accesslist',
                                '/perl/get_locks'                  => 'get_locks',
                                '/perl/get_sequence_notes'         => 'get_sequence_notes',
+                               '/perl/find_clones'                => 'find_clones',
                               };
 $OTTER_POST_SCRIPTS         = {'/perl/write_region'   => 'write_region',
                                '/perl/unlock_region'  => 'unlock_region',
