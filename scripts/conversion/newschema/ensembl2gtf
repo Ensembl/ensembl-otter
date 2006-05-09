@@ -107,7 +107,7 @@ foreach my $chr (reverse sort bychrnum keys %$chrhash) {
 
   print "Fetching genes\n";
   my $genes = $aga->fetch_all_by_Slice($slice);
-  print "Done fetching genes\n";
+  print "Done fetching genes (".scalar(@$genes).")\n";
  
   my $nt=0;
   my $nccdst=0;
@@ -366,7 +366,7 @@ sub write_transcript_gtf {
       # in CCDS mode, only dump CDS region, so write both exon, CDS from CDS
     }else{
       print $fh $idstr . "\t" . 
-	  $gene->type . "\t" . 
+	  $gene->biotype .":". $gene->status . "\t" . 
 	  'exon' . "\t" . 
 	  ($exon->start+$sliceoffset) . "\t". 
 	  ($exon->end+$sliceoffset) . "\t". 
@@ -415,7 +415,7 @@ sub write_transcript_gtf {
 	if($ccds){
 	  # in CCDS mode, dump only CDS region, so write each as both exon and CDS
 	  print $fh $idstr . "\t" . 
-	      $gene->type . "\t" . 
+	      $gene->biotype .":". $gene->status . "\t" . 
 	      'exon' . "\t" . 
 	      ($exon_start+$sliceoffset) . "\t". 
 	      ($exon_end+$sliceoffset) . "\t". 
@@ -426,7 +426,7 @@ sub write_transcript_gtf {
 	  print $fh "\n";
 	}
         print $fh $idstr . "\t" . 
-                 $gene->type . "\t" . 
+                 $gene->biotype .":". $gene->status . "\t" . 
                  'CDS' . "\t" . 
                  ($exon_start+$sliceoffset) . "\t". 
                  ($exon_end+$sliceoffset) . "\t". 
@@ -448,7 +448,7 @@ sub write_transcript_gtf {
       my $tmpcnt = $count;
       foreach my $startc (@startcs) {
 	print $fh $idstr . "\t" . 
-	    $gene->type . "\t" . 
+	    $gene->biotype .":". $gene->status . "\t" . 
 	    'start_codon' . "\t" . 
 	    ($startc->start+$sliceoffset) . "\t". 
 	    ($startc->end+$sliceoffset) . "\t". 
@@ -469,7 +469,7 @@ sub write_transcript_gtf {
 	my $tmpcnt = $count - $#endcs;
 	foreach my $endc (@endcs) {
 	  print $fh $idstr . "\t" . 
-	      $gene->type . "\t" . 
+	      $gene->biotype .":". $gene->status . "\t" . 
 		'stop_codon' . "\t" . 
 		($endc->start+$sliceoffset) . "\t". 
 		($endc->end+$sliceoffset) . "\t". 
@@ -534,11 +534,15 @@ sub print_attribs {
   my $trans_name;
   $trans_name = $transcript->external_name;
 
+  my $trans_biotype;
+  $trans_biotype=$transcript->biotype .":". $transcript->status;
+
   print $fh "gene_id \"" .  $gene->stable_id . "\"; " .
             "transcript_id \"" . $transcript->stable_id . "\"; ";
   print $fh "exon_number \"$count\"; ";
   print $fh "gene_name \"" . $gene_name . "\"; " if ($gene_name);
   print $fh "transcript_name \"" . $trans_name . "\"; " if ($trans_name);
+  print $fh "transcript_biotype \"" . $trans_biotype . "\"; " if ($trans_biotype);
   if ($type eq 'exon') {
     print $fh 'gbkey "mRNA";';
   } elsif ($type eq 'CDS') {
