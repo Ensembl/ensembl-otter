@@ -36,6 +36,7 @@ use Bio::Otter::LogFile;
 use Bio::Otter::Transform::DataSets;
 use Bio::Otter::Transform::SequenceSets;
 use Bio::Otter::Transform::AccessList;
+use Bio::Otter::Transform::CloneSequences;
 
 sub new {
     my( $pkg ) = @_;
@@ -1010,71 +1011,94 @@ sub get_all_DataSets {
 sub get_all_SequenceSets_for_DataSet {
   my( $self, $dsObj, $ssal ) = @_;
   return [] unless $dsObj;
-  my $ss = $dsObj->{'_sequence_sets'};
-  unless (! defined $ss){
-    my $content = $self->general_http_dialog(
-					     3,
-					     'GET',
-					     'get_sequencesets',
-					     {
-					      'author'   => $self->author,
-					      'email'    => $self->email,
-					      'hostname' => $self->client_hostname,
-					      'dataset'  => $dsObj->name,
-					     }
-					    );
-    # stream parsing expat non-validating parser
-    my $ssp = Bio::Otter::Transform::SequenceSets->new();
-    $ssp->set_property('dataset_name', $dsObj->name);
-    my $p   = $ssp->my_parser();
-    $p->parse($content);
-    $ss=$ssp->objects;
+#  my $ss = $dsObj->sequence_sets_cached();
+#  return $ss if (defined $ss && scalar(@$ss));
+  my $content = $self->general_http_dialog(
+					   3,
+					   'GET',
+					   'get_sequencesets',
+					   {
+					    'dataset'  => $dsObj->name,
+					    'author'   => $dsObj->author,
+					   }
+					  );
+  # stream parsing expat non-validating parser
+  my $ssp = Bio::Otter::Transform::SequenceSets->new();
+  $ssp->set_property('dataset_name', $dsObj->name);
+  my $p   = $ssp->my_parser();
+  $p->parse($content);
+  my $ss=$ssp->objects;
+  my $this_author=$dsObj->author;
+  foreach my $set (@$ss){
     my $write_flag;
-    my $this_author=$dsObj->author;
-    foreach my $set (@$ss){
-      my $name = $set->{'_name'};
-      if ($ssal->{$this_author} && defined $ssal->{$this_author}->{$name}) {
-	$write_flag = $ssal->{$this_author}->{$name};
-	#If an author has an entry in the sequence_set_access
-	#table for this set, then it is restricted to them.
-	next unless defined $write_flag;
-      } else {
-	# No entries for person in sequence_set_access table - person
-	# can write and see everything.
-	$write_flag = 1;
+    my $name = $set->{'_name'};
+    foreach my $a (@$ssal) {
+      #If an author has an entry in the sequence_set_access
+      #table for this set, then it is restricted to them.
+      if ($a->author eq $this_author && $a->sequenceset_name eq $name) {
+	$write_flag = $a->access_type;
       }
-      $set->write_access($write_flag);
     }
+    # No entries for person in sequence_set_access table - person
+    # can write and see everything.
+    if ( !defined $write_flag){
+      $write_flag = 1;
+    }
+    $set->write_access($write_flag);
   }
-  $dsObj->{'_sequence_sets'}=$ss;
   return $ss;
 }
 
 sub get_SequenceSet_AccessList_for_DataSet {
   my ($self,$dsObj) = @_;
   return [] unless $dsObj;
-  unless($dsObj->{'_sequence_set_access_list'}){
-    $dsObj->{'_sequence_set_access_list'} = {};
-    my $content = $self->general_http_dialog(
-					     3,
-					     'GET',
-					     'get_sequenceset_accesslist',
-					     {
-					      'author'   => $self->author,
-					      'email'    => $self->email,
-					      'hostname' => $self->client_hostname,
-					      'dataset'  => $dsObj->name,
-					     }
-					    );
-    # stream parsing expat non-validating parser
-    my $ssa = Bio::Otter::Transform::AccessList->new();
-    $ssa->set_property('dataset_object', $dsObj);
-    my $p   = $ssa->my_parser();
-    $p->parse($content);
-    my $al=$ssa->objects;
-  }
-  return $dsObj->{'_sequence_set_access_list'};
+ # my $al = $dsObj->sequence_set_access_list_cached;
+ # return $al if defined($al && scalar(@$al));
+  my $content = $self->general_http_dialog(
+					   3,
+					   'GET',
+					   'get_sequenceset_accesslist',
+					   {
+					    'author'   => $self->author,
+					    'dataset'  => $dsObj->name,
+					   }
+					  );
+  # stream parsing expat non-validating parser
+  my $ssa = Bio::Otter::Transform::AccessList->new();
+  my $p   = $ssa->my_parser();
+  $p->parse($content);
+  my $al=$ssa->objects;
+  return $al;
 }
+
+
+
+
+sub get_all_CloneSequences_for_SequenceSet {
+  my( $self, $ssObj) = @_;
+  return [] unless $ssObj ;
+  my $cs = $ssObj->CloneSequence_list;
+  return $cs if (defined $cs && scalar @$cs);
+  my $content = $self->general_http_dialog(
+                                           3,
+                                           'GET',
+                                           'get_clonesequences',
+                                           {
+                                            'author'   => $self->author,
+                                            'dataset'  => $ssObj->dataset_name,
+                                            'sequenceset' => $ssObj->name
+                                           }
+                                          );
+  # stream parsing expat non-validating parser
+  my $csp = Bio::Otter::Transform::CloneSequences->new();
+  my $p   = $csp->my_parser();
+  $p->parse($content);
+  $cs=$csp->objects;
+  $ssObj->CloneSequence_list($cs);
+  return $cs;
+}
+
+
 
 sub save_otter_xml {
     my( $self, $xml, $dataset_name ) = @_;
