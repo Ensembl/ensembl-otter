@@ -1,0 +1,102 @@
+#!/usr/local/bin/perl -w
+
+use strict;
+use warnings;
+use CGI;
+use OtterDefs;
+use Bio::Otter::DBSQL::DBAdaptor;
+use Bio::Otter::Version;
+use Bio::Otter::ServerQuery;
+use Bio::Otter::ServerSide (':all');
+
+$| = 1;
+my $sq = Bio::Otter::ServerQuery->new('dataset','author', 'sequenceset');;
+set_nph($sq);
+
+my $query_fail = "must be present to get a set of Clone Sequences";
+my $dataset =  $sq->getarg('dataset') || error_exit($sq,"'dataset' $query_fail");
+my $author  =   $sq->getarg('author') || error_exit($sq,"'author' $query_fail");
+my $sequenceset =  $sq->getarg('sequenceset') || error_exit($sq,"'sequenceset' $query_fail");
+
+my $odb = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, 0);
+my $auth_adapt = $odb->get_AuthorAdaptor();
+my ($author_obj, $saved_err);
+eval{
+    $author_obj = $auth_adapt->fetch_by_name($author);
+};
+if($@){
+    $saved_err  = $@;
+    eval{
+        $author_obj = $auth_adapt->fetch_by_name($author);
+    };
+    if($@){
+        error_exit($sq,"Failed to get an author.\n$@") unless $author_obj;
+    }
+}
+my $sth = $odb->prepare(q{
+        SELECT c.name, c.embl_acc, c.embl_version
+          , g.contig_id, g.name, g.length
+          , ch.name,ch.length, a.chr_start, a.chr_end
+          , a.contig_start, a.contig_end, a.contig_ori
+          , cl.clone_lock_id, t.author_id, t.author_name
+         , t.author_email, cl.hostname, a.superctg_name
+       FROM assembly a
+          , contig g 
+          , clone c
+          , chromosome ch
+        LEFT JOIN clone_lock cl ON cl.clone_id = c.clone_id
+        LEFT JOIN author t ON t.author_id = cl.author_id
+        WHERE a.contig_id = g.contig_id
+          AND g.clone_id = c.clone_id
+          AND ch.chromosome_id = a.chromosome_id
+          AND a.type = ?
+        ORDER BY a.chromosome_id
+          , a.chr_start 
+            });
+$sth->execute($sequenceset);
+my $xml = '';
+$xml   .= qq`  <dataset name="$dataset">\n`;
+$xml   .= qq`    <sequenceset name="$sequenceset">\n`;
+$xml   .= qq`      <clonesequences>\n`;
+while (my ($name, $acc,  $sv,
+	   $ctg_id,  $ctg_name,  $ctg_length,
+	   $chr_name, $chr_length, $chr_start,  $chr_end,
+	   $contig_start,  $contig_end,  $strand,
+	   $clone_lock_id, $author_id, $author_name, 
+	   $author_email, $hostname, $superctg_name ) = $sth->fetchrow) {
+  $xml .= qq`        <clonesequence>\n`;
+  $xml .= qq`          <clone_name>$name</clone_name>\n`;
+  $xml .= qq`          <accession>$acc</accession>\n`;
+  $xml .= qq`          <sv>$sv</sv>\n`;
+  $xml .= qq`          <chr name="$chr_name" length="$chr_length"></chr>\n`;
+  $xml .= qq`          <chr_start>$chr_start</chr_start>\n`;
+  $xml .= qq`          <chr_end>$chr_end</chr_end>\n`;
+  $xml .= qq`          <contig_id>$ctg_id</contig_id>\n`;
+  $xml .= qq`          <contig_name>$ctg_name</contig_name>\n`;
+  $xml .= qq`          <length>$ctg_length</length>\n`;
+  $xml .= qq`          <contig_start>$contig_start</contig_start>\n`;
+  $xml .= qq`          <contig_end>$contig_end</contig_end>\n`;
+  $xml .= qq`          <contig_strand>$strand</contig_strand>\n`;
+  $xml .= qq`          <super_contig_name>$superctg_name</super_contig_name>\n`;
+  if (defined $clone_lock_id){
+    $xml .= qq`          <lock lock_id="$clone_lock_id" author_id="$author_id" author_name="$author_name" email="$author_email" host_name="$hostname"> </lock>\n`;
+  }
+  $xml .= qq`        </clonesequence>\n`;
+}
+$xml .= qq`      </clonesequences>\n`;
+$xml .= qq`    </sequenceset>\n`;
+$xml .= qq`  </dataset>\n`;
+send_response($sq, $xml, 1);
+
+__END__
+
+=head1 NAME - get_clonesequences
+
+
+=head1 DESCRIPTION
+
+return xml for Clone Sequences of a sequence set.
+
+=head1 AUTHOR
+
+Sindhu K.Pillai B<email> sp1@sanger.ac.uk
