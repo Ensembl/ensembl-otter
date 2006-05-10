@@ -225,23 +225,21 @@ sub add_SequenceNotes{
     return $self->{'_sequence_notes'}->{"$sn"};
 }
 
-sub get_SequenceNotes_by_name{
-    my ($self, $name) = @_;
+sub find_cached_SequenceNotes_by_name{
+    my ($self, $ss_name) = @_;
+
     my $seqNotes = $self->{'_sequence_notes'} || {};
     foreach my $hash_id(keys %$seqNotes){
         next unless $seqNotes->{$hash_id};
         my $sn = $seqNotes->{$hash_id};
         my $sn_name = $sn->name();
-        next unless $name eq $sn_name;
-        # See bind_close_window method of SequenceNotes.
-        # $sn->SequenceSetChooser($self);
-        $sn->canvas->find('withtag', 'all') || return ($sn->draw_range() + 1);
-        $sn->canvas->toplevel->deiconify();
-        $sn->canvas->toplevel->raise();
-        return 1;
+        next unless $ss_name eq $sn_name;
+
+        return $sn;
     }
     return 0;
 }
+
 sub clean_SequenceNotes{
     my ($self) = @_;
     my $seqNotes = $self->{'_sequence_notes'} || {};
@@ -273,13 +271,25 @@ sub open_sequence_set {
 sub open_sequence_set_by_ssname_clonename {
     my ($self, $ss_name, $clone_name) = @_;
     
-    return 1 if $self->get_SequenceNotes_by_name($ss_name);
+    if ( my $sn = $self->find_cached_SequenceNotes_by_name($ss_name) ) {
 
-    my $this_top = $self->canvas->toplevel;
-    $this_top->configure(-cursor => 'watch');
+        if( $clone_name ) {
+            my $ss = $sn->SequenceSet();
+            $ss->set_match_state( { $clone_name => 1 } );
+            $sn->draw_around_clone_name($clone_name);
+        } elsif(! $sn->canvas->find('withtag', 'all')) {
+            $sn->draw_range;    
+        }
+
+        $sn->top_window()->deiconify();
+        $sn->top_window()->raise();
+        return;
+    }
+
+    $self->watch_cursor();
     
     my $pipe_name = Bio::Otter::Lace::Defaults::pipe_name();
-    my $top = $this_top->Toplevel(-title => "SequenceSet $ss_name [$pipe_name]");
+    my $top = $self->top_window()->Toplevel(-title => "SequenceSet $ss_name [$pipe_name]");
     my $ss = $self->DataSet->get_SequenceSet_by_name($ss_name);
   
     my $sn = CanvasWindow::SequenceNotes->new($top);
@@ -296,7 +306,7 @@ sub open_sequence_set_by_ssname_clonename {
     }
     $self->add_SequenceNotes($sn);
    
-    $this_top->configure(-cursor => undef);
+    $self->default_cursor();
 }
 
 # brings up a window for searching for loci / clones

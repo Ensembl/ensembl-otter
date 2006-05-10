@@ -62,10 +62,7 @@ sub do_search {
 
     my $qnames = [ split(/[\s,]+/, ${$self->search_field()} ) ];
 
-    my $window = $self->canvas()->toplevel();
-
-    $window->configure(-cursor => 'watch'); # 'waiting state'
-    $window->update(); # proved to be necessary
+    $self->watch_cursor();
 
     my $results_list = $self->Client()->find_string_match_in_clones($self->DataSet->name(), $qnames);
     
@@ -100,8 +97,7 @@ sub do_search {
 
     $self->fix_window_min_max_sizes;
 
-    $window->configure(-cursor => undef); # 'active state'
-    $window->update(); # proved to be necessary
+    $self->default_cursor();
 }
 
 sub new {
