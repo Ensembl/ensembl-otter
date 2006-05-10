@@ -97,6 +97,22 @@ sub _author_id {
     return $id;
 }
 
+sub sequence_sets_cached {
+  my( $self, $ss ) = @_;
+  if ($ss) {
+    $self->{'_sequence_sets'} = $ss;
+  }
+  return $self->{'_sequence_sets'};
+}
+
+sub sequence_set_access_list_cached {
+  my( $self, $al ) = @_;
+  if ($al) {
+    $self->{'_sequence_set_access_list'} = $al;
+  }
+  return $self->{'_sequence_set_access_list'};
+}
+
 sub save_author_if_new{
     my ($self , $client) = @_;
     
@@ -117,19 +133,19 @@ sub save_author_if_new{
     $self->_author_id($id);
 }
 
-sub sequence_set_access_list {
+sub get_sequence_set_access_list {
     my( $self ) = @_;
-    unless ($self->{'_sequence_set_access_list'}) {
-        $self->{'_sequence_set_access_list'} = {};
-	my $client = $self->Client or confess "No otter Client attached";
-	$client->get_SequenceSet_AccessList_for_DataSet($self);
-    }
-    return $self->{'_sequence_set_access_list'};
+    my $al = $self->sequence_set_access_list_cached;
+    return $al if (defined $al && scalar(@$al));
+    my $client = $self->Client or confess "No otter Client attached";
+    $al = $client->get_SequenceSet_AccessList_for_DataSet($self);
+    $self->sequence_set_access_list_cached($al);
+    return $al;
 }
 
 sub get_all_visible_SequenceSets {
   my( $self) = @_;
-  my $ss_list = $self->get_all_SequenceSets();
+  my $ss_list= $self->get_all_SequenceSets();
   my $visible = [];
   foreach my $ss (@$ss_list) {
     push(@$visible, $ss) unless $ss->is_hidden;
@@ -139,14 +155,16 @@ sub get_all_visible_SequenceSets {
 
 sub get_all_SequenceSets {
   my ($self)=@_;
-  unless ($self->{'_sequence_sets'}) {
-    my $client = $self->Client or confess "No otter Client attached";
-    $client->get_SequenceSet_AccessList_for_DataSet($self);
-    my $ssal=$self->{'_sequence_set_access_list'};
-    $self->{'_sequence_sets'} = [];
-    $client->get_all_SequenceSets_for_DataSet($self,$ssal);
+  my $ss=$self->sequence_sets_cached;
+  return $ss if (defined $ss && scalar(@$ss));
+  my $client = $self->Client or confess "No otter Client attached";
+  my $ssal = $self->sequence_set_access_list_cached;
+  unless ( defined $ssal && scalar(@$ssal)){
+    $ssal=$client->get_SequenceSet_AccessList_for_DataSet($self);
   }
-  return $self->{'_sequence_sets'};
+  $ss = $client->get_all_SequenceSets_for_DataSet($self,$ssal);
+  $self->sequence_sets_cached($ss);
+  return $ss;
 }
 
 sub get_SequenceSet_by_name {
@@ -246,83 +264,15 @@ sub lock_refresh_for_SequenceSet{
 
 sub fetch_all_CloneSequences_for_SequenceSet {
     my( $self, $ss ) = @_;
-    
     confess "Missing SequenceSet argument" unless $ss;
-    #confess "CloneSequences already fetched" if $ss->CloneSequence_list;
-    
-    my %id_chr = map {$_->chromosome_id, $_} $self->get_all_Chromosomes;
-    my $cs = [];
-    
-    my $dba = $self->get_cached_DBAdaptor;
-    my $type = $ss->name;
-
-    my $sth = $dba->prepare(qq{
-        SELECT c.name, c.embl_acc, c.embl_version
-          , g.contig_id, g.name, g.length
-          , a.chromosome_id, a.chr_start, a.chr_end
-          , a.contig_start, a.contig_end, a.contig_ori
-          , cl.clone_lock_id, t.author_id, t.author_name
-          , t.author_email, cl.hostname, a.superctg_name
-        FROM assembly a
-          , contig g
-          , clone c
-        LEFT JOIN clone_lock cl ON cl.clone_id = c.clone_id
-        LEFT JOIN author t ON t.author_id = cl.author_id
-        WHERE a.contig_id = g.contig_id
-          AND g.clone_id = c.clone_id
-          AND a.type = ?
-        ORDER BY a.chromosome_id
-          , a.chr_start
-        });
-    $sth->execute($type);
-    my(  $name, $acc,  $sv,
-         $ctg_id,  $ctg_name,  $ctg_length,
-         $chr_id,  $chr_start,  $chr_end,
-         $contig_start,  $contig_end,  $strand,
-         $clone_lock_id, $author_id, $author_name, 
-         $author_email, $hostname, $superctg_name );
-    $sth->bind_columns(
-        \$name, \$acc, \$sv,
-        \$ctg_id, \$ctg_name, \$ctg_length,
-        \$chr_id, \$chr_start, \$chr_end,
-        \$contig_start, \$contig_end, \$strand,
-        \$clone_lock_id, \$author_id, 
-        \$author_name, \$author_email, \$hostname,
-        \$superctg_name
-        );
-    while ($sth->fetch) {
-        my $cl = Bio::Otter::Lace::CloneSequence->new;
-        $cl->clone_name($name);
-        $cl->accession($acc);
-        $cl->sv($sv);
-        $cl->length($ctg_length);
-        $cl->chromosome($id_chr{$chr_id});
-        $cl->chr_start($chr_start);
-        $cl->chr_end($chr_end);
-        $cl->contig_start($contig_start);
-        $cl->contig_end($contig_end);
-        $cl->contig_strand($strand);
-        $cl->contig_name($ctg_name);
-        $cl->contig_id($ctg_id);
-        $cl->super_contig_name($superctg_name);
-        if (defined $clone_lock_id){
-            my $authorObj = Bio::Otter::Author->new(-dbid  => $author_id,
-                                                    -name  => $author_name,
-                                                    -email => $author_email);
-            my $cloneLock = Bio::Otter::CloneLock->new(-author   => $authorObj,
-                                                       -hostname => $hostname,
-                                                       -dbID     => $clone_lock_id);
-            $cl->set_lock_status($cloneLock);
-        }
-        push(@$cs, $cl);
-    }
-
-    $ss->CloneSequence_list($cs);
+    my $client = $self->Client or confess "No otter Client attached";
+    my $cs=$client->get_all_CloneSequences_for_SequenceSet($ss);
+    return $cs;
 }
 
 sub fetch_all_SequenceNotes_for_SequenceSet {
     my( $self, $ss ) = @_;
-    
+
     my $ctgname2notes_hashref = $self->Client()->get_sequence_notes_from_dsname_ssname_author(
         $self->name(), $ss->name()
     );
