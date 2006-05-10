@@ -13,7 +13,7 @@ $| = 1;
 
 my $DEBUG=0;
 
-my $sq = Bio::Otter::ServerQuery->new('dataset','qnames','unhide');
+my $sq = Bio::Otter::ServerQuery->new('dataset','type','qnames','unhide');
 set_nph($sq);
 
 # This is a 3-level hash:
@@ -21,6 +21,7 @@ set_nph($sq);
 #
 my $unhide = $sq->getarg('unhide');
 my %qnames_types_clones = map {($_ => {})} split(',', $sq->getarg('qnames'));
+my $filter_atype = $sq->getarg('type');
 
 my $odb = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
 
@@ -37,8 +38,14 @@ for my $qname (sort keys %qnames_types_clones) {
             for my $clone_id (keys %$clones) {
                 my $clone_name = $cloneid2clonename->{$clone_id};
                 if($clone_name) {
-                    $output_string .= join("\t", $qname, $type, $clone_name,
+                    if($filter_atype) {
+                        if($cloneid2assemblies->{$clone_id}{$filter_atype}) {
+                            $output_string .= join("\t", $qname, $type, $clone_name, $filter_atype)."\n";
+                        }
+                    } else {
+                        $output_string .= join("\t", $qname, $type, $clone_name,
                                                 join(',', keys %{$cloneid2assemblies->{$clone_id}} ))."\n";
+                    }
                 }
             }
         }
