@@ -70,6 +70,24 @@ sub top_window {
 	return $self->canvas()->toplevel();
 }
 
+sub watch_cursor {
+    my( $self ) = @_;
+
+    my $w = $self->top_window();
+
+    $w->configure( -cursor => 'watch' );
+    $w->update;
+}
+
+sub default_cursor {
+    my( $self ) = @_;
+
+    my $w = $self->top_window();
+
+    $w->configure( -cursor => undef );
+    $w->update;
+}
+
 sub icon_pixmap {
     return;
 }
