@@ -3,6 +3,7 @@ package Bio::Otter::Transform::AccessList;
 use strict;
 use warnings;
 use Bio::Otter::Transform;
+use Bio::Otter::Lace::Access;
 
 our @ISA = qw(Bio::Otter::Transform);
 
@@ -10,8 +11,7 @@ our @ISA = qw(Bio::Otter::Transform);
 my $SUB_ELE = { map { $_ => 1 } qw(author sequenceset_name access_type )};
 # super elements to the actual sequence set
 my $SUP_ELE = { map { $_ => 1 } qw(otter dataset accesslist) };
-my $author;
-my $sequenceset_name;
+my $value;
 
 # this should be in xsl and use xslt to transform and create the objects
 sub start_handler{
@@ -19,11 +19,11 @@ sub start_handler{
     my $xml  = shift;
     my $ele  = lc shift;
     my $attr = {@_};
+    $value='';
     $self->_check_version(@_) if $ele eq 'otter';
-    if($ele eq 'accesslist'){
-      my $dsObj=$self->get_property('dataset_object');
-      $dsObj->{'_sequence_set_access_list'}={};
-      $self->add_object($dsObj);
+    if($ele eq 'access'){
+      my $al = Bio::Otter::Lace::Access->new();
+      $self->add_object($al);
     }elsif($SUB_ELE->{$ele}){
      #   print "* Interesting $ele\n";
     }else{
@@ -31,34 +31,32 @@ sub start_handler{
     }
   }
 
-sub end_handler{ }
-
-sub char_handler{
+sub end_handler{
     my $self = shift;
     my $xml  = shift;
-    my $data = shift;
-    my $context = $xml->current_element();
+    $value =~ s/^\s*//;
+    $value =~ s/\s*$//;
+    my $context = shift;
     if($SUB_ELE->{$context}){
-      my $ss = $self->objects;
-      my $current=$ss->[$#$ss];
-      my $ssal=$current->{'_sequence_set_access_list'};
-      if ($context eq 'author') {
-	$author=$data;
-	if (! defined $ssal->{$author}){
-	  $ssal->{$author}={};
-	}
-      }
-      if ($context eq 'sequenceset_name') {
-	$sequenceset_name=$data;
-	$ssal->{$author}->{$sequenceset_name}='';
-      }
-      if ($context eq 'access_type') {
-	$ssal->{$author}->{$sequenceset_name}=$data;
-      }
-      $current->{'_sequence_set_access_list'}=$ssal;
-
+        my $context_method = $context;
+        my $cs = $self->objects;
+        my $current = $cs->[$#$cs];
+        if($current->can($context_method)){
+            $current->$context_method($value);
+        }else{
+            print STDERR "$current can't $context_method\n";
+        }
     }
+ }
+
+sub char_handler{
+  my $self = shift;
+  my $xml  = shift;
+  my $data = shift;
+  if ($data ne ""){
+    $value .= $data;
   }
+}
 
 1;
 __END__
