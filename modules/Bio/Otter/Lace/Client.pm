@@ -440,7 +440,7 @@ sub get_analyses_status_from_dsname_ssname {
 }
 
 sub find_string_match_in_clones {
-    my( $self, $dsname, $qnames_list, $unhide_flag ) = @_;
+    my( $self, $dsname, $qnames_list, $ssname, $unhide_flag ) = @_;
 
     my $qnames_string = join(',', @$qnames_list);
 
@@ -452,6 +452,7 @@ sub find_string_match_in_clones {
             'dataset'  => $dsname,
             'qnames'   => $qnames_string,
             'unhide'   => $unhide_flag || 0,
+            defined($ssname) ? ('type' => $ssname ) : (),
         },
         1,
     );
@@ -1071,9 +1072,6 @@ sub get_SequenceSet_AccessList_for_DataSet {
   return $al;
 }
 
-
-
-
 sub get_all_CloneSequences_for_SequenceSet {
   my( $self, $ssObj) = @_;
   return [] unless $ssObj ;
@@ -1097,8 +1095,6 @@ sub get_all_CloneSequences_for_SequenceSet {
   $ssObj->CloneSequence_list($cs);
   return $cs;
 }
-
-
 
 sub save_otter_xml {
     my( $self, $xml, $dataset_name ) = @_;
@@ -1126,8 +1122,6 @@ sub save_otter_xml {
 
 sub unlock_otter_xml {
     my( $self, $xml, $dataset_name ) = @_;
-    
-    # print STDERR "<!-- BEGIN XML -->\n" . $xml . "<!-- END XML -->\n\n\n";
     
     my $content = $self->general_http_dialog(
         0,
