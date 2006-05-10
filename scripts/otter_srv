@@ -160,9 +160,6 @@ sub make_new_child {
               || '';    # to stop the server complaining about it
             set_cgi_env($r);
 
-	    server_log('');
-	    server_log('Request: http://'.$ENV{HOST}.$ENV{REQUEST_URI});
-
             $ENV{REMOTE_ADDR}  = $client->peerhost;
             $ENV{REMOTE_PORT}  = $client->peerport;
             $ENV{SERVER_ADDR}  = $client->sockhost;
@@ -171,6 +168,9 @@ sub make_new_child {
               if -e "$OTTER_SERVER_ROOT/.htpasswd";
             $ENV{AUTHGROUPFILE} = "$OTTER_SERVER_ROOT/.htgroups"
               if -e "$OTTER_SERVER_ROOT/.htgroups";
+
+            server_log('');
+            server_log('Request: http://'.$ENV{HOST}.$ENV{REQUEST_URI}.' from '.$ENV{REMOTE_ADDR});
 
             my $uri = $r->url->path;
             $ENV{CURRENT_SCRIPT_NAME} = $uri;
