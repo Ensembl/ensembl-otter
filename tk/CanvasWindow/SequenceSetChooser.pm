@@ -8,12 +8,8 @@ use Carp;
 use base 'CanvasWindow';
 use CanvasWindow::SequenceNotes;
 use CanvasWindow::SearchWindow;
-use CanvasWindow::SequenceNotes::SearchedSequenceNotes;
-use Hum::Sort 'ace_sort';
-use TransientWindow::SearchWindow;
 use TransientWindow::LogWindow;
-
-my $newsearch = 1;
+use Hum::Sort 'ace_sort';
 
 sub new {
     my( $pkg, @args ) = @_;
@@ -316,71 +312,14 @@ sub search_window{
     my $search_window = $self->{'_search_window'};
   
     unless (defined ($search_window) ){
-        if($newsearch) {
-                my $actual_window = $self->canvas->toplevel->Toplevel(-title => 'Find loci, stable_ids or clones');
-            $self->{'_search_window'} =
-                $search_window = CanvasWindow::SearchWindow->new($actual_window);
-                $search_window->Client($self->Client());
-                $search_window->DataSet($self->DataSet());
-                $search_window->SequenceSetChooser($self);
-        } else {
-            ## make a new window
-            $self->{'_search_window'} =
-                $search_window = TransientWindow::SearchWindow->new($self->canvas->toplevel, 'Find loci, stable_ids or clones');
-            $search_window->action('doSearch', sub{ my ($sw) = @_; $self->search($sw); });
-            $search_window->initialise();
-            $search_window->draw();
-        }
+        my $actual_window = $self->top_window()->Toplevel(-title => 'Find loci, stable_ids or clones');
+        $self->{'_search_window'} = $search_window = CanvasWindow::SearchWindow->new($actual_window);
+        $search_window->Client($self->Client());
+        $search_window->DataSet($self->DataSet());
+        $search_window->SequenceSetChooser($self);
     }    
     $search_window->show_me;
     return $search_window;
-}
-
-
-sub search{
-    my $self          = shift;
-    my $search_window = shift;
-
-    my $search_type   = ${$search_window->text_variable_ref('search_type')};
-    $search_type      = 'locus' unless defined $search_type; # defaults to locus search 
-    
-    my $rs = Bio::Otter::Lace::ResultSet->new ;
-    $rs->DataSet($self->DataSet) ;
-    my $search = ${$search_window->text_variable_ref('search_text')}; #$self->{'search_entry'}->get;
-    my @search_names = split(/\s+/, $search);
-    
-    if ($search_type eq 'clone') {
-        $rs->search_type('clone') ;
-    }elsif($search_type eq 'stable_id'){
-        $rs->search_type('stable_id');
-    } else {
-        $rs->search_type('locus') ; # defaults to locus 
-    }
-    $rs->context_size(${$search_window->text_variable_ref('context_size')});
-
-    my $clones_found = $rs->execute_search(\@search_names) ;
-    
-    if ( $clones_found > 0 ){
-        my $top = $self->canvas->toplevel->Toplevel(  -title  =>  'Search results for ' . $search );
-        my $sn = CanvasWindow::SequenceNotes::SearchedSequenceNotes->new($top);
-
-        $sn->name('Search Results'); 
-        $sn->Client($self->Client);
-        $sn->ResultSet($rs);
-        $sn->SequenceSetChooser($self);
-        $sn->initialise;
-        $sn->draw;
-        $top->raise ;
-        $self->add_SequenceNotes($sn) ;              
-    }
-    else{
-        ## send mesasage to main window
-        $self->message("no clones where found with $search_type of $search") ;
-    }
-    
-    # remove the window from viewing
-    $self->search_window->hide_me;   
-
 }
 
 sub DESTROY {
