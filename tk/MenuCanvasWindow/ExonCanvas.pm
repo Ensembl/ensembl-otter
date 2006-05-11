@@ -2570,11 +2570,15 @@ sub xace_save {
         $ace .= $sub->ace_string;
     }
     
+    my $xc = $self->XaceSeqChooser;
+    if ($xc->show_zmap) {
+        $self->zmap_save($sub);
+    }
+    
     # Add ace_string method from locus with rename as above
     
     print STDERR "Sending:\n$ace";
     
-    my $xc = $self->XaceSeqChooser;
     my $xr = $xc->xace_remote;
     if ($xr) {
         $xr->load_ace($ace);
@@ -2593,6 +2597,25 @@ sub xace_save {
         $self->message("No xace attached");
         return 0;
     }
+}
+
+sub zmap_save {
+    my( $self, $sub ) = @_;
+
+    confess "Missing SubSeq argument" unless $sub;
+
+    my $old = $self->SubSeq;
+    
+    # Do we need to rename?
+    my @xml;
+    if ($old->is_archival) {
+        push @xml, $old->zmap_delete_xml_string;
+    }
+    push @xml, $sub->zmap_create_xml_string;
+    
+    print STDERR "Sending:\n", @xml;
+
+    $self->XaceSeqChooser->send_zmap_commands(@xml);
 }
 
 sub Exons_from_canvas {

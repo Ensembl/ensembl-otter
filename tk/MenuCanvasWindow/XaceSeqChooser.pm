@@ -24,7 +24,9 @@ use Bio::Otter::Lace::Defaults;
 
 use base 'MenuCanvasWindow';
 
-#use MenuCanvasWindow::ZMapSeqChooser;
+use MenuCanvasWindow::ZMapSeqChooser;
+my $ZMAP_DEBUG = 1;
+
 
 sub new {
     my( $pkg, $tk ) = @_;
@@ -454,9 +456,6 @@ sub populate_menus {
 
     my $showing_zmap = 0;
     if($self->show_zmap) {
-        # eval uses quotes here.  Tries to use the ZMap module.  If that fails
-        # $INC{module_path} gets set, but must be deleted as we arrive here again.
-        require MenuCanvasWindow::ZMapSeqChooser;
         my $zmap_launch_command = sub { $self->zMapLaunchZmap };
         $file->add('command',
                    -label          => 'Launch ZMap',
@@ -1171,7 +1170,7 @@ sub edit_subsequences {
 }
 
 sub edit_new_subsequence {
-    my( $self, $zmap ) = @_;
+    my( $self ) = @_;
     
     my @sub_names = $self->list_selected_subseq_names;
     my( @subseq );
@@ -1299,11 +1298,7 @@ sub edit_new_subsequence {
     $self->add_SubSeq($new);
     $self->do_subseq_display;
     $self->highlight_by_name('subseq', $seq_name);
-    if($zmap){
-        $self->zMap_make_exoncanvas_edit_window($new);
-    }else{
-        $self->make_exoncanvas_edit_window($new);
-    }
+    $self->make_exoncanvas_edit_window($new);
     
     $self->fix_window_min_max_sizes;
 }
@@ -1376,6 +1371,13 @@ sub delete_subsequences {
     $xr->load_ace($ace);
     $xr->save;
     $xr->send_command('gif ; seqrecalc');
+    
+    # Delete from ZMap
+    if ($self->show_zmap) {
+        my $xml = '';
+        my @xml = map $_->zmap_delete_xml_string, @to_die;
+        $self->send_zmap_commands(@xml);
+    }
     
     # Remove from our objects
     foreach my $sub (@to_die) {
@@ -1564,8 +1566,6 @@ sub draw_subseq_list {
     }
     
     $self->draw_sequence_list('subseq', @subseq);
-    $self->subseq_menubutton->configure(-state => 'normal');
-
 }
 
 sub get_all_Subseq_clusters {
@@ -1690,7 +1690,7 @@ sub replace_SubSeq {
     $self->set_Locus($locus);
 
     ### Update all subseq edit windows
-    $self->draw_current_state;
+    $self->draw_subseq_list;
 }
 
 sub add_SubSeq {
@@ -1938,6 +1938,32 @@ sub show_zmap {
     my $self = shift @_;
 
     return Bio::Otter::Lace::Defaults::option_from_array(['client', 'show_zmap']) || 0;
+}
+
+sub send_zmap_commands {
+    my ($self, @xml) = @_;
+
+    my $xr = $self->zMapCurrentXclient;
+    unless ($xr) {
+        warn "No current window.";
+        return ;
+    }
+    warn "Current window " . $xr->window_id . " @_\n" if $ZMAP_DEBUG;
+    my $handler = \&RESPONSE_HANDLER;
+    my $error   = \&ERROR_HANDLER;
+
+    my @a = $xr->send_commands(@xml);
+
+    for(my $i = 0; $i < @xml; $i++){
+        my ($status, $xmlHash) = parse_response($a[$i]);
+        if($status =~ /^2\d\d/){ # 200s
+            $handler->($self, $xmlHash);
+        }else{
+            $error->($self, $status, $xmlHash);
+        }
+    }
+    return ;
+    
 }
 
 sub isZMap{
