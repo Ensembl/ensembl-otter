@@ -610,7 +610,7 @@ sub populate_menus {
     $top->bind('<Control-v>', $paste_subseq);
     $top->bind('<Control-V>', $paste_subseq);
     
-    #### Separator ####
+    #  --- Separator ---
     $subseq->add('separator');
     
     # New subsequence
@@ -951,7 +951,7 @@ sub save_data {
             $self->update_ace_display($$ace_data);
             # resync here!
             $self->resync_with_db; # probably better to create a key event
-            ### Restart Zmap
+            $self->zMapLaunchZmap;
         }
     };
     my $err = $@;
@@ -2004,11 +2004,7 @@ sub DESTROY {
         ###delete $self->{'_sequence_notes'} ;
     }
 
-    if ($self->isZMap){
-        warn "Destroying ZmapSeqChooser for ", $self->ace_path, "\n";
-    }else{
-        warn "Destroying XaceSeqChooser for ", $self->ace_path, "\n";
-    }
+    warn "Destroying XaceSeqChooser for ", $self->ace_path, "\n";
 }
 
 1;
