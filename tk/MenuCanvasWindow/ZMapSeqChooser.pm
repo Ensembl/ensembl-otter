@@ -1,6 +1,6 @@
 ### MenuCanvasWindow::ZmapSeqChooser
 
-package MenuCanvasWindow::ZMapSeqChooser;
+package MenuCanvasWindow::XaceSeqChooser;
 
 use strict;
 use Carp qw{ cluck confess };
@@ -8,10 +8,10 @@ use ZMap::Connect qw(:all);
 use Sys::Hostname;
 use Tie::Watch;
 use Hum::Ace::LocalServer;
-use MenuCanvasWindow::ZMapExonCanvas;
 use Data::Dumper;
 
 my $ZMAP_DEBUG = 1;
+
 #==============================================================================#
 #
 # WARNING: THESE ARE INJECTED METHODS!!!!
@@ -50,7 +50,7 @@ my $ZMAP_MENUS = {
     'New'     => [\&new_command,$replace],
 };
 
-sub MenuCanvasWindow::XaceSeqChooser::zMap_make_exoncanvas_edit_window{
+sub zMap_make_exoncanvas_edit_window{
     my( $self, $sub ) = @_;
     
     my $sub_name = $sub->name;
@@ -73,7 +73,7 @@ sub MenuCanvasWindow::XaceSeqChooser::zMap_make_exoncanvas_edit_window{
     return $ec;
 }
 
-sub MenuCanvasWindow::XaceSeqChooser::zMapReplaceMenuCommands {
+sub zMapReplaceMenuCommands {
     my ($self) = @_;
 
     return unless $ZMAP_MENUS;
@@ -118,7 +118,7 @@ sub MenuCanvasWindow::XaceSeqChooser::zMapReplaceMenuCommands {
     $ZMAP_MENUS = undef;
 
 }
-sub MenuCanvasWindow::XaceSeqChooser::zMapLaunchZmap {
+sub zMapLaunchZmap {
     my( $self ) = @_;
 
     #$self->zMapReplaceMenuCommands();
@@ -136,8 +136,8 @@ sub MenuCanvasWindow::XaceSeqChooser::zMapLaunchZmap {
     my $pid = fork_exec(\@e, $ref, 0, sub { 
         my ($info) = @_;
         flush_bad_windows;
-        #use Data::Dumper;                
-        #warn "INFO: ", Dumper($info);
+        use Data::Dumper;                
+        warn "INFO: ", Dumper($info);
     });
 
     if($pid){
@@ -148,15 +148,16 @@ sub MenuCanvasWindow::XaceSeqChooser::zMapLaunchZmap {
         $self->message($mess);
     }
 }
-sub MenuCanvasWindow::XaceSeqChooser::zMapKillZmap {
+sub zMapKillZmap {
     my( $self ) = @_;
     
     if (my $pid = $self->zMapProcessIDList) {
         warn "Killing zmap process '$pid'\n";
+        ### Do we really need a kill -9?
         CORE::kill 9, $pid;
     }
 }
-sub MenuCanvasWindow::XaceSeqChooser::zMapProcessIDList {
+sub zMapProcessIDList {
     my( $self, $zmap_process_id ) = @_;
     
     if ($zmap_process_id) {
@@ -164,7 +165,7 @@ sub MenuCanvasWindow::XaceSeqChooser::zMapProcessIDList {
     }
     return $self->{'_zMap_ZMAP_PROCESS_ID'};
 }
-sub MenuCanvasWindow::XaceSeqChooser::zMapInsertZmapConnector{
+sub zMapInsertZmapConnector{
     my ($self) = @_;
     my $zc = $self->{'_zMap_ZMAP_CONNECTOR'};
     if(!$zc){
@@ -176,11 +177,11 @@ sub MenuCanvasWindow::XaceSeqChooser::zMapInsertZmapConnector{
     }
     return $zc;
 }
-sub MenuCanvasWindow::XaceSeqChooser::zMapZmapConnector{
+sub zMapZmapConnector{
     return shift->zMapInsertZmapConnector(@_);
 }
 
-sub MenuCanvasWindow::XaceSeqChooser::zMapWriteDotZmap{
+sub zMapWriteDotZmap{
     my ($self) = @_;
     my $dir    = $self->zMapZmapDir();
     my $file   = "${dir}/ZMap";
@@ -199,7 +200,7 @@ sub MenuCanvasWindow::XaceSeqChooser::zMapWriteDotZmap{
     return 0;
 }
 
-sub MenuCanvasWindow::XaceSeqChooser::zMapDotZmapContent{
+sub zMapDotZmapContent{
     my ($self) = @_;
 #    my $fmt = qq`source\n{\nurl = "%s://%s:%s@%s:%d"\nsequence = %s\nwriteback = %s\nstylesfile = "%s"\n}\n`;
 #    my $fmt = qq`source\n{\nurl = "%s://%s:%s@%s:%d"\nsequence = %s\nwriteback = %s\n}\n`;
@@ -243,7 +244,7 @@ sub MenuCanvasWindow::XaceSeqChooser::zMapDotZmapContent{
     return $content . qq`\n\nZMap\n{\nshow_mainwindow = false\n}\n`;
 }
 
-sub MenuCanvasWindow::XaceSeqChooser::zMapZmapDir {
+sub zMapZmapDir {
     my( $self, $zmap_dir ) = @_;
     warn "Set using the Config file please.\n" if $zmap_dir;
     my $ace_path = $self->ace_path();
@@ -255,7 +256,7 @@ sub MenuCanvasWindow::XaceSeqChooser::zMapZmapDir {
     return $path;
 }
 
-sub MenuCanvasWindow::XaceSeqChooser::zMapListMethodNames_ordered{
+sub zMapListMethodNames_ordered{
     my $self = shift;
     my @list = ();
     my $collection = $self->AceDatabase->get_default_MethodCollection;
@@ -268,24 +269,24 @@ sub MenuCanvasWindow::XaceSeqChooser::zMapListMethodNames_ordered{
 
 #===========================================================
 
-sub MenuCanvasWindow::XaceSeqChooser::zMapCurrentXclient{
+sub zMapCurrentXclient{
     my ($self) = @_;
     return xclient_with_name(${$self->zMapEntryRef}, 0, "$self");
 }
-sub MenuCanvasWindow::XaceSeqChooser::zMapEntryRef{
+sub zMapEntryRef{
     my ($self) = @_;
     my $n = '';
     $self->{'_zMap_ENTRY_REF'} ||= \$n;
     return $self->{'_zMap_ENTRY_REF'};
 }
-sub MenuCanvasWindow::XaceSeqChooser::zMapSetEntryValue{
+sub zMapSetEntryValue{
     my ($self, $value) = @_;
     my $ref = $self->zMapEntryRef();
     $$ref   = $value;
 }
 
 
-sub MenuCanvasWindow::XaceSeqChooser::zMapRegisterClient{
+sub zMapRegisterClient{
     my ($self, $request) = @_;
     my $mainWindowName = 'ZMap port #' . $self->AceDatabase->ace_server->port;
     my $p  = parse_request($request);
@@ -332,7 +333,7 @@ sub MenuCanvasWindow::XaceSeqChooser::zMapRegisterClient{
 
 #===========================================================
 
-sub MenuCanvasWindow::XaceSeqChooser::zMapMakeRequest{
+sub zMapMakeRequest{
     my ($self, $xmlObject, $action, $xml_cmd_string) = @_;
 
     my $xr = $self->zMapCurrentXclient;
@@ -368,7 +369,7 @@ sub MenuCanvasWindow::XaceSeqChooser::zMapMakeRequest{
 # This  menu stuff  needs  rewriting.  It doesn't  work  100% like  it
 # should.  It isn't  really needed  for production  so it's  not  a high
 # priority
-sub MenuCanvasWindow::XaceSeqChooser::zMapUpdateMenu{ 
+sub zMapUpdateMenu{ 
     my ($self) = @_; my $menu_item = $self->{'_zMapMenuItem'}; 
 
     my $cleanUpMenu = sub{
@@ -483,7 +484,9 @@ sub open_clones{
 
     $self->zMapMakeRequest($seg, 'new');
 
-    $self->zMapUpdateMenu();
+    ### ZMap menu not needed for first ZMap test release
+    ### and now that we have a single slice.
+    #$self->zMapUpdateMenu();
     
     $watch->Unwatch;
 }
@@ -543,20 +546,20 @@ __END__
 
 =head1 REMOVE
 
-sub MenuCanvasWindow::XaceSeqChooser::update_display{
+sub update_display{
     my ($self , $ace) = @_ ;
     warn "cannot update display yet";
     return 1;
 }
 # this should be called when a user tries to save, but no ZMap is opened
-sub MenuCanvasWindow::XaceSeqChooser::open_dialogue{
+sub open_dialogue{
     my ($self) = @_ ;
     warn "cannot open dialogue yet";
     return undef;
 
 }
 
-sub MenuCanvasWindow::XaceSeqChooser::get_window_id {
+sub get_window_id {
     my( $self ) = @_;
 
     # be good if we could replace this with something more automatic....    
@@ -596,7 +599,7 @@ sub MenuCanvasWindow::XaceSeqChooser::get_window_id {
 }
 
 
-sub MenuCanvasWindow::XaceSeqChooser::attach {
+sub attach {
     my( $self ) = @_;
     
     if (my $xwid = $self->zmap_id) {
