@@ -79,7 +79,7 @@ sub paste_eucomm_data {
         $display_otter->{$id} = 1;
     }
 
-    my ($otter, $start, $end, $exon_length) =
+    my ($otter, $start, $end, $strand, $exon_length) =
       $self->get_overlapping_exon_otter_id_start_end($name, $clip_start, $clip_end, $display_otter);
 
     # Don't change anything if search failed
@@ -87,6 +87,7 @@ sub paste_eucomm_data {
 
     $genomic_feature->{'start'} = $start;
     $genomic_feature->{'end'}   = $end;
+    $genomic_feature->{'strand'}= $strand;
 
     # Default the score to 1 if not set
     $genomic_feature->{'score'} ||= 1;
@@ -113,6 +114,7 @@ sub get_overlapping_exon_otter_id_start_end {
     my $subseq = $self->XaceSeqChooser->get_SubSeq($name) or return;
     return unless $subseq->translation_region_is_set;
 
+    my $strand = $subseq->strand();
     my $new_otter = {};
     my $exon_length_total = 0;
     my ($start, $end);
@@ -143,7 +145,7 @@ sub get_overlapping_exon_otter_id_start_end {
         }
     }
     if ($in_zone) {
-        return ($new_otter, $start, $end, $exon_length_total);
+        return ($new_otter, $start, $end, $strand, $exon_length_total);
     } else {
         return;
     }
