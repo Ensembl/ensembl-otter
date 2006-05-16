@@ -23,6 +23,8 @@ sub DESTROY {
     delete $exon_list{$self};
     delete $gene_list{$self};
     delete $transcript_list{$self};
+    
+    bless $self, 'Bio::Vega::Transform';
 }
 
 sub initialize {

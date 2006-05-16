@@ -9,7 +9,7 @@ use Bio::Vega::Transform::Otter;
 {
     my $parser = Bio::Vega::Transform::Otter->new;
     $parser->parsefile(shift);
-    weaken($parser);
+    #$parser->DESTROY;
 }
 
 warn "Parser now out of scope\n";
