@@ -24,12 +24,14 @@ sub DESTROY {
     delete $gene_list{$self};
     delete $transcript_list{$self};
     
+    # So that DESTROY gets called in baseclass:
     bless $self, 'Bio::Vega::Transform';
 }
 
 sub initialize {
     my ($self) = @_;
 
+    # Register the tags that trigger the building of objects
     $self->object_builders(
         {
             exon                => 'build_Exon',

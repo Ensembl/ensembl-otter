@@ -103,16 +103,34 @@ sub set_multi_value_tags {
 }
 
 sub handle_start {
-    my ($self, $expat, $element, %attrib) = @_;
+    my $self    = shift;
+    my $expat   = shift;
+    my $element = shift;
     
     if ($object_builders{$self}{$element}) {
+        # This makes $element the "current context"
         unshift @{$tag_stack{$self}}, $element;
+
+        # Anything left in @_ are attribute key, value pairs
+        for (my $i = 0; $i < @_; $i += 2) {
+            $object_data{$self}{$element}{$_[$i]} = $_[$i + 1];
+        }
+    }
+    elsif (@_) {
+        # There are attribtes in a non-object creating tag.
+        $expat->xpcroak(
+          "This parser cannot handle attributes in '$element' tags:\n"
+          . Dumper({@_})
+        );
     }
 }
 
 sub handle_char {
     my ($self, $expat, $txt) = @_;
     
+    # The character handler may be called multiple times
+    # by Expat on a single string. We therefore need
+    # to append to the existing string.
     $current_string{$self} .= $txt;
 }
 
@@ -120,20 +138,28 @@ sub handle_end {
     my ($self, $expat, $element) = @_;
     
     if (my $builder = $object_builders{$self}{$element}) {
+        # It is the end of a tag that we use to make an object.
+        # We now have all the data needed, and pass it to the
+        # builder method.
         my $context = shift @{$tag_stack{$self}};
         my $data    = delete $object_data{$self}{$context};
         warn "\nCalling $builder at end of $context with: ", Dumper($data);
         $self->$builder($data);
     }
     elsif (defined( my $str = delete $current_string{$self} )) {
+        # It is a tag that encloses non-markup text (its value).
+        # We save it under its tag (the key) in the current context.
         my $context = $tag_stack{$self}[0];
         $str =~ s/(^\s+|\s+$)//g;
         #warn "Setting '$element' to '$str'\n";
+
         my $data = $object_data{$self}{$context};
         if ($is_multiple{$self}{$context}{$element}) {
+            # Tag can occur multiple times, so we save it in an array.
             my $list = $data->{$element} ||= [];
             push(@$list, $str);
         } else {
+            # Tag should only occur once, so check that it does not already have a value.
             if (defined( my $value = $data->{$element} )) {
                 # xpcroak method on Expat object gives
                 # some context in the XML.
