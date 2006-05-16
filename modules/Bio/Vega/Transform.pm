@@ -63,6 +63,7 @@ sub new_Parser {
     my ($self) = @_;
     
     my $parser = XML::Parser->new(
+        ErrorContext    => 3,
         Handlers => {
             Start => sub { 
                 $self->handle_start(@_);
