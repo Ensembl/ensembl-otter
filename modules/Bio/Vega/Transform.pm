@@ -5,6 +5,10 @@ package Bio::Vega::Transform;
 
 use strict;
 use XML::Parser;
+use Data::Dumper;   # For debugging
+
+# This misses the "$VAR1 = " bit out from the Dumper() output
+$Data::Dumper::Terse = 1;
 
 # Using inside-out object design for speed.
 
@@ -14,16 +18,21 @@ my(
     %current_string,
     %object_builders,
     %object_data,
+    %is_multiple,
     );
 
 sub DESTROY {
     my ($self) = @_;
     
+    printf STDERR "Destroying '%s'\n", ref($self);
+    
     delete $tag_stack{$self};
     delete $current_object{$self};
     delete $current_string{$self};
     delete $object_builders{$self};
-    delete $object_data{$self};
+    my $data = delete $object_data{$self};
+    warn "Unused data after parse:", Dumper($data);
+    delete $is_multiple{$self};
 }
 
 sub new {
@@ -78,6 +87,20 @@ sub object_builders {
     return $object_builders{$self};
 }
 
+sub set_multi_value_tags {
+    my ($self, $value) = @_;
+    
+    if ($value) {
+        foreach my $row (@$value) {
+            my ($context, @ele) = @$row;
+            foreach my $element (@ele) {
+                $is_multiple{$self}{$context}{$element} = 1;
+            }
+        }
+    }
+    return $is_multiple{$self};
+}
+
 sub handle_start {
     my ($self, $expat, $element, %attrib) = @_;
     
@@ -97,13 +120,27 @@ sub handle_end {
     
     if (my $builder = $object_builders{$self}{$element}) {
         my $context = shift @{$tag_stack{$self}};
-        $self->$builder(delete $object_data{$self}{$context});
+        my $data    = delete $object_data{$self}{$context};
+        warn "\nCalling $builder at end of $context with: ", Dumper($data);
+        $self->$builder($data);
     }
     elsif (defined( my $str = delete $current_string{$self} )) {
         my $context = $tag_stack{$self}[0];
         $str =~ s/(^\s+|\s+$)//g;
-        warn "Setting '$element' to '$str'\n";
-        $object_data{$self}{$context}{$element} = $str;
+        #warn "Setting '$element' to '$str'\n";
+        my $data = $object_data{$self}{$context};
+        if ($is_multiple{$self}{$context}{$element}) {
+            my $list = $data->{$element} ||= [];
+            push(@$list, $str);
+        } else {
+            if (defined( my $value = $data->{$element} )) {
+                # xpcroak method on Expat object gives
+                # some context in the XML.
+                $expat->xpcroak("Setting '$element' in '$context' to '$str' but already set to '$value'");
+            } else {
+                $object_data{$self}{$context}{$element} = $str;
+            }
+        }
     }
 }
 

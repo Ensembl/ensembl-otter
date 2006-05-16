@@ -11,6 +11,7 @@ use Bio::Vega::Transform::Otter;
     $parser->parsefile(shift);
 }
 
+warn "Parser now out of scope\n";
 
 
 __END__
