@@ -31,7 +31,7 @@ sub DESTROY {
     delete $current_string{$self};
     delete $object_builders{$self};
     my $data = delete $object_data{$self};
-    warn "Unused data after parse:", Dumper($data);
+    warn "Unused data after parse: ", Dumper($data);
     delete $is_multiple{$self};
 }
 
