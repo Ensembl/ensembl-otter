@@ -75,6 +75,7 @@ sub find_CloneSequence_index_by_name {
     my $ind = 0;
     for my $cs (@{$self->get_CloneSequence_list()}) {
         if($cs->accession().'.'.$cs->sv() eq $clone_name) {
+            print STDERR "find_CloneSequence_index_by_name: returning $ind for '$clone_name'\n";
             return $ind;
         }
         $ind++;
@@ -836,32 +837,45 @@ sub get_rows_list{
     my $max_cs_list = scalar(@$cs_list);
 
     if($self->_allow_paging()){
-        my ($offset, $length) = $self->_sanity_check_paging($max_cs_list);
-        warn "slice $offset .. $length\n";
-        $cs_list = [ @{$cs_list}[$offset..$length] ];
+        my ($offset1, $offset2) = $self->_sanity_check_paging($max_cs_list);
+        warn "slice $offset1 .. $offset2\n";
+        $cs_list = [ @{$cs_list}[$offset1..$offset2] ];
     }
     return $cs_list;
 }
+
+sub _min {
+    return ($_[0]<$_[1]) ? $_[0] : $_[1];
+}
+
+sub _max {
+    return ($_[0]<$_[1]) ? $_[1] : $_[0];
+}
+
 sub _sanity_check_paging{
     my ($self, $max) = @_;
     $max--;
     my $slice_a = $self->_user_first_clone_seq() - 1;
     my $slice_b = $self->_user_last_clone_seq()  - 1;
-    my $max_pp  = $self->max_per_page()          - 1;
+    my $max_pp  = $self->max_per_page();
     my $sanity_saved = 0;
 
     if($slice_a < 0){
         $sanity_saved = 1;
         $slice_a      = 0;
+        $slice_b      = _min($max_pp-1, $max); # 'bumping' against the 5" boundary: show first page
     }
     if($slice_b > $max){
         $sanity_saved = 1;
         $slice_b      = $max;
+        $slice_a      = _max(0, $max-$max_pp+1); # 'bumping' against the 3" boundary
     }
-    if($slice_a > $slice_b){
+
+    if($slice_a > $slice_b){ # some unexpected error?
         $sanity_saved        = 1;
-        ($slice_a, $slice_b) = (0, $max_pp);
+        ($slice_a, $slice_b) = (0, $max_pp-1); # show first page
     }
+
     $self->_user_first_clone_seq($slice_a + 1);
     $self->_user_last_clone_seq($slice_b + 1);    
     $self->max_per_page($slice_b - $slice_a + 1) unless $sanity_saved;
@@ -870,17 +884,15 @@ sub _sanity_check_paging{
 }
 sub _user_first_clone_seq{
     my ($self, $min) = @_;
-    if(defined($min)){
-        $min =~ s/\D//g;
-        $self->{'_user_min_element'} = $min;
+    if(defined($min) && $min=~/(-?\d+)/){
+        $self->{'_user_min_element'} = $1;
     }
     return $self->{'_user_min_element'} || 0;
 }
 sub _user_last_clone_seq{
     my ($self, $max) = @_;
-    if(defined($max)){
-        $max =~ s/\D//g;
-        $self->{'_user_max_element'} = $max;
+    if(defined($max) && $max=~/(-?\d+)/){
+        $self->{'_user_max_element'} = $1;
     }
     return $self->{'_user_max_element'} || scalar(@{$self->get_CloneSequence_list});
 }
@@ -903,11 +915,12 @@ sub draw_paging_buttons{
     my $prev_new_max = $cur_min - 1;
     my $next_new_min = $cur_max + 1;
     
-    my $prev_state   = ($cur_min - $ppg_max > 0 ? 'normal' : 'disabled');
-    my $next_state   = ($cur_max < $abs_max     ? 'normal' : 'disabled');
+    my $prev_state   = ($cur_min > 1 ? 'normal' : 'disabled');
+    my $next_state   = ($cur_max < $abs_max ? 'normal' : 'disabled');
 
     my $t = ceil( $abs_max / $ppg_max );
-    my $n = ceil( $cur_min / $ppg_max );
+    # my $n = ceil( $cur_min / $ppg_max );
+    my $n = int(10 * $cur_max / $ppg_max)/10; # leave only one digit after decimal point if at all
 
     return () if $prev_state eq 'disabled' && $next_state eq 'disabled';
 
@@ -967,6 +980,7 @@ sub draw_around_clone_name {
     my $pghalfsize = $pgsize ? int($pgsize/2)+1 : 15;
 
     my $ind = $self->find_CloneSequence_index_by_name($clone_name);
+    print STDERR "draw_around_clone_name: ind=$ind\n";
 
     if(defined($ind)) {
         $self->_user_first_clone_seq($ind-$pghalfsize);
@@ -1041,6 +1055,7 @@ sub draw {
     my( $self ) = @_;
     # gets a list of CloneSequence objects.
     # draws a row for each of them
+
     my $cs_list   = $self->get_rows_list;
 
     my $size      = $self->font_size;
@@ -1052,7 +1067,6 @@ sub draw {
     $canvas->delete('all');
     my $helv_def = ['Helvetica', $size, 'normal'];
 
-    #print STDERR "Drawing list...";
     my $gaps = 0;
     my $gap_pos = {};
     
