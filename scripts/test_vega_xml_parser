@@ -1,0 +1,23 @@
+#!/usr/local/bin/perl -w
+
+### test_vega_xml_parser
+
+use strict;
+
+use Bio::Vega::Transform::Otter;
+
+{
+    my $parser = Bio::Vega::Transform::Otter->new;
+    $parser->parsefile(shift);
+}
+
+
+
+__END__
+
+=head1 NAME - test_vega_xml_parser
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
