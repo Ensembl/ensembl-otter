@@ -265,43 +265,40 @@ sub open_sequence_set {
 }
 
 sub open_sequence_set_by_ssname_clonename {
-    my ($self, $ss_name, $clone_name) = @_;
+    my ($self, $ss_name, $clone_name, $set_as_matched) = @_;
     
-    if ( my $sn = $self->find_cached_SequenceNotes_by_name($ss_name) ) {
+    $self->watch_cursor();
 
-        if( $clone_name ) {
-            my $ss = $sn->SequenceSet();
-            $ss->set_match_state( { $clone_name => 1 } );
-            $sn->draw_around_clone_name($clone_name);
-        } elsif(! $sn->canvas->find('withtag', 'all')) {
-            $sn->draw_range;    
-        }
+    my $sn = $self->find_cached_SequenceNotes_by_name($ss_name);
 
+    if($sn) {
         $sn->top_window()->deiconify();
         $sn->top_window()->raise();
-        return;
+    } else {
+        my $pipe_name = Bio::Otter::Lace::Defaults::pipe_name();
+        my $top = $self->top_window()->Toplevel(-title => "SequenceSet $ss_name [$pipe_name]");
+        my $ss = $self->DataSet->get_SequenceSet_by_name($ss_name);
+      
+        $sn = CanvasWindow::SequenceNotes->new($top);
+        $sn->name($ss_name);
+        $sn->Client($self->Client);
+        $sn->SequenceSet($ss);
+        $sn->SequenceSetChooser($self);
+        $sn->initialise;
+        $self->add_SequenceNotes($sn);
     }
 
-    $self->watch_cursor();
-    
-    my $pipe_name = Bio::Otter::Lace::Defaults::pipe_name();
-    my $top = $self->top_window()->Toplevel(-title => "SequenceSet $ss_name [$pipe_name]");
-    my $ss = $self->DataSet->get_SequenceSet_by_name($ss_name);
-  
-    my $sn = CanvasWindow::SequenceNotes->new($top);
-    $sn->name($ss_name);
-    $sn->Client($self->Client);
-    $sn->SequenceSet($ss);
-    $sn->SequenceSetChooser($self);
-    $sn->initialise;
-    if($clone_name) {
-        $ss->set_match_state( { $clone_name => 1 } );
+    if( $clone_name ) {
+        my $ss = $sn->SequenceSet();
+        if(!$set_as_matched || !scalar(@$set_as_matched)) {
+            $set_as_matched = [ $clone_name ];
+        }
+        $ss->set_match_state( { map { ($_ => 1) } @$set_as_matched } );
         $sn->draw_around_clone_name($clone_name);
-    } else {
+    } elsif(! $sn->canvas->find('withtag', 'all')) {
         $sn->draw_range;    
     }
-    $self->add_SequenceNotes($sn);
-   
+
     $self->default_cursor();
 }
 

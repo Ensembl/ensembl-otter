@@ -460,10 +460,10 @@ sub find_string_match_in_clones {
     my @results_list = ();
 
     for my $line (split(/\n/,$response)) {
-        my ($qname, $qtype, $clone_name, $assemblies_string) = split(/\t/, $line);
-        my $assemblies_list = $assemblies_string ? [ split(/,/, $assemblies_string) ] : [];
+        my ($qname, $qtype, $clone_names, $assembly) = split(/\t/, $line);
+        my $clone_list = $clone_names ? [ split(/,/, $clone_names) ] : [];
 
-        push @results_list, Bio::Otter::Lace::Locator->new($qname, $qtype, $clone_name, $assemblies_list);
+        push @results_list, Bio::Otter::Lace::Locator->new($qname, $qtype, $clone_list, $assembly);
     }
 
     return \@results_list;

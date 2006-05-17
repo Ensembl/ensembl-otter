@@ -13,8 +13,8 @@ sub new {
 
     $self->qname(shift @_) if @_;
     $self->qtype(shift @_) if @_;
-    $self->clone_name(shift @_) if @_;
-    $self->assemblies(shift @_) if @_;
+    $self->clone_names(shift @_) if @_;
+    $self->assembly(shift @_) if @_;
     
     return $self;
 }
@@ -37,25 +37,26 @@ sub qtype { # a string
     return $self->{_qtype} || 'NOT FOUND';
 }
 
-sub clone_name { # a string
-    my( $self, $clone_name ) = @_;
+sub clone_names { # a list reference
+    my( $self, $clone_names ) = @_;
     
-    if ($clone_name) {
-        $self->{_clone_name} = $clone_name;
+    if ($clone_names) {
+        $self->{_clone_names} = $clone_names;
     }
-    return $self->{_clone_name} || 'NOT FOUND';
+    return $self->{_clone_names} || [];
 }
 
-sub assemblies { # a list reference
-    my( $self, $assemblies ) = @_;
+sub assembly { # a string
+    my( $self, $assembly ) = @_;
     
-    if ($assemblies) {
-        $self->{_assemblies} = $assemblies;
+    if ($assembly) {
+        $self->{_assembly} = $assembly;
     }
-    return $self->{_assemblies} || [];
+    return $self->{_assembly} || 'NOT FOUND';
 }
 
 1;
+
 __END__
 
 =head1 NAME - Bio::Otter::Lace::Locator
