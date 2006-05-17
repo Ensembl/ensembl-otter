@@ -248,7 +248,7 @@ sub embl_setup {
     $de->list($description);
     $embl->newXX;
     
-    #KW line
+    # KW line
     my @keywords;
     if ($self->keywords) {
         push(@keywords, $self->keywords);
