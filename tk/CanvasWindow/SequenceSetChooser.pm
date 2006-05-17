@@ -128,53 +128,57 @@ sub draw {
     my $ds = $self->Client->get_DataSet_by_name($self->name);
 
     my $ss_list = $ds->get_all_visible_SequenceSets;
-    my $row_height = int $size * 1.5;
-    my $x = $size;
 
-    $ss_list = [ sort { ace_sort($a->name, $b->name) } @$ss_list];
+    if(@$ss_list) {
 
-    for (my $i = 0; $i < @$ss_list; $i++) {
-        my $set = $ss_list->[$i];
-        my $row = $i + 1;
-        my $y = $row_height * $row;
-        $canvas->createText(
-            $x, $y,
-            -text   => $set->name,
-            -font   => $font_def,
-            -anchor => 'nw',
-            -tags   => ["row=$row", 'SetName', 'SequenceSet=' . $set->name],
-            );
-    }
+	my $row_height = int $size * 1.5;
+	my $x = $size;
+
+	$ss_list = [ sort { ace_sort($a->name, $b->name) } @$ss_list];
+
+	for (my $i = 0; $i < @$ss_list; $i++) {
+	    my $set = $ss_list->[$i];
+	    my $row = $i + 1;
+	    my $y = $row_height * $row;
+	    $canvas->createText(
+		$x, $y,
+		-text   => $set->name,
+		-font   => $font_def,
+		-anchor => 'nw',
+		-tags   => ["row=$row", 'SetName', 'SequenceSet=' . $set->name],
+		);
+	}
+	
+	$x = ($canvas->bbox('SetName'))[2] + ($size * 2);
+	for (my $i = 0; $i < @$ss_list; $i++) {
+	    my $set = $ss_list->[$i];
+	    my $row = $i + 1;
+	    my $y = $row_height * $row;
+	    $canvas->createText(
+		$x, $y,
+		-text   => $set->description,
+		-font   => $helv_def,
+		-anchor => 'nw',
+		-tags   => ["row=$row", 'SetDescription', 'SequenceSet=' . $set->name],
+		);
+	}
+	
+	$x = $size;
+	my $max_x = ($canvas->bbox('SetDescription'))[2];
+	for (my $i = 0; $i < @$ss_list; $i++) {
+	    my $set = $ss_list->[$i];
+	    my $row = $i + 1;
+	    my $y = $row_height * $row;
+	    my $rec = $canvas->createRectangle(
+		$x, $y, $max_x, $y + $size,
+		-fill       => undef,
+		-outline    => undef,
+		-tags   => ["row=$row", 'SetBackground', 'SequenceSet=' . $set->name],
+		);
+	    $canvas->lower($rec, "row=$row");
+	}
     
-    $x = ($canvas->bbox('SetName'))[2] + ($size * 2);
-    for (my $i = 0; $i < @$ss_list; $i++) {
-        my $set = $ss_list->[$i];
-        my $row = $i + 1;
-        my $y = $row_height * $row;
-        $canvas->createText(
-            $x, $y,
-            -text   => $set->description,
-            -font   => $helv_def,
-            -anchor => 'nw',
-            -tags   => ["row=$row", 'SetDescription', 'SequenceSet=' . $set->name],
-            );
     }
-    
-    $x = $size;
-    my $max_x = ($canvas->bbox('SetDescription'))[2];
-    for (my $i = 0; $i < @$ss_list; $i++) {
-        my $set = $ss_list->[$i];
-        my $row = $i + 1;
-        my $y = $row_height * $row;
-        my $rec = $canvas->createRectangle(
-            $x, $y, $max_x, $y + $size,
-            -fill       => undef,
-            -outline    => undef,
-            -tags   => ["row=$row", 'SetBackground', 'SequenceSet=' . $set->name],
-            );
-        $canvas->lower($rec, "row=$row");
-    }
-    
     
     $self->fix_window_min_max_sizes;
 }
