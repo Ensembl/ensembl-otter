@@ -8,13 +8,20 @@ use Carp;
 use Bio::EnsEMBL::Exon;
 use Bio::EnsEMBL::Transcript;
 use Bio::EnsEMBL::Gene;
+use Bio::EnsEMBL::SimpleFeature;
+use Bio::EnsEMBL::Analysis;
 
 use base 'Bio::Vega::Transform';
+#use Data::Dumper;   # For debugging
+
+# This misses the "$VAR1 = " bit out from the Dumper() output
+#$Data::Dumper::Terse = 1;
 
 my (
     %exon_list,
     %gene_list,
     %transcript_list,
+    %feature_list,
     );
 
 sub DESTROY {
@@ -48,6 +55,7 @@ sub initialize {
             exon_set            => 'report_set_end',
             evidence_set        => 'report_set_end',
             otter               => 'report_set_end',
+            feature_set   => 'report_set_end',
         }
     );
     $self->set_multi_value_tags(
@@ -77,7 +85,20 @@ sub build_Evidence {
 
 sub build_Feature {
     my ($self, $data) = @_;
-    
+    #warn "\nCalling Feature builder to build ", Dumper($data);
+    my( %logic_ana );
+    my $ana = $logic_ana{$data->{'type'}} ||= Bio::EnsEMBL::Analysis->new(-LOGIC_NAME => $data->{'type'});
+    my $feature = Bio::EnsEMBL::SimpleFeature->new(
+        -start     => $data->{'start'},
+        -end       => $data->{'end'},
+        -strand    => $data->{'strand'},
+	-analysis      => $ana,
+	-score     => $data->{'score'},
+	-display_label => $data->{'label'},
+    );
+    ##slice
+    my $list = $feature_list{$self} ||= [];
+    push @$list, $feature;
 }
 
 sub build_AssemblyTag {
