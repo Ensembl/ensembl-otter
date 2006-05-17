@@ -70,23 +70,26 @@ sub do_search {
         my $result_frame = $self->{_results_frame}->Frame(
         )->pack(-side => 'top', -fill => 'x');
 
+        my $asm = $locator->assembly();
+        my $clone_names = $locator->clone_names();
+
         my $label = $result_frame->Label(
             -text =>
                  $locator->qname()
                 .' ['
                 .$locator->qtype()
-                .']  found on '
-                .$locator->clone_name()
-                .'  in '
+                .']  found in '
+                .$asm
+                .'  on clone(s) '
         )->pack(-side => 'left', -fill => 'x');
 
-        foreach my $asm (@{$locator->assemblies()}) {
+        foreach my $clone_name (@$clone_names) {
             my $button = $result_frame->Button(
-                -text => $asm,
+                -text => $clone_name,
                 -command => sub {
-                    print STDERR "Opening $asm...\n";
+                    print STDERR "Opening $asm:$clone_name...\n";
                     $self->SequenceSetChooser()->open_sequence_set_by_ssname_clonename(
-                            $asm, $locator->clone_name()
+                            $asm, $clone_name, $clone_names
                     );
                 },
             )->pack(-side => 'right');

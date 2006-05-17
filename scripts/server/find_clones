@@ -35,9 +35,15 @@ for my $qname (sort keys %qnames_types_clones) {
     if(keys %$types_clones) {
         for my $type (keys %$types_clones) {
             my $clones = $types_clones->{$type};
+
+            my %asm2clonenames = ();
+
             for my $clone_id (keys %$clones) {
-                my $clone_name = $cloneid2clonename->{$clone_id};
-                if($clone_name) {
+                if(my $clone_name = $cloneid2clonename->{$clone_id}) {
+
+=comment
+
+                    # one clone - multiple assemblies
                     if($filter_atype) {
                         if($cloneid2assemblies->{$clone_id}{$filter_atype}) {
                             $output_string .= join("\t", $qname, $type, $clone_name, $filter_atype)."\n";
@@ -46,6 +52,22 @@ for my $qname (sort keys %qnames_types_clones) {
                         $output_string .= join("\t", $qname, $type, $clone_name,
                                                 join(',', keys %{$cloneid2assemblies->{$clone_id}} ))."\n";
                     }
+
+=cut
+
+                    for my $asm (keys %{$cloneid2assemblies->{$clone_id}}) {
+                        $asm2clonenames{$asm}{$clone_name}++;
+                    }
+
+                }
+            }
+
+            # one assembly - multiple clones
+            for my $asm (keys %asm2clonenames) {
+                if(!$filter_atype || ($filter_atype eq $asm)) {
+                    $output_string .= join("\t", $qname, $type,
+                        join(',', keys %{$asm2clonenames{$asm}}),
+                        $asm)."\n";
                 }
             }
         }
@@ -209,3 +231,4 @@ sub find_assemblies_by_clone_ids {
     }
     return ($cloneid2clonename, $cloneid2assemblies);
 }
+
