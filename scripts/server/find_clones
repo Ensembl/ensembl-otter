@@ -206,29 +206,32 @@ sub find_clones_by_qnames {
 sub find_assemblies_by_clone_ids {
     my ($sq, $dba, $clone_id_list, $unhide) = @_;
 
-    my $clone_ids = join(', ', map { "'$_'" } @$clone_id_list);
     my $cloneid2clonename = {};
     my $cloneid2assemblies = {};
 
-    my $sql = qq{
-        SELECT a.type, cl.clone_id, concat(cl.embl_acc,'.',cl.embl_version), ss.hide
-        FROM assembly a, contig co, clone cl, sequence_set ss
-        WHERE a.contig_id=co.contig_id AND co.clone_id=cl.clone_id AND a.type=ss.assembly_type
-        AND cl.clone_id IN ($clone_ids)
-    };
-    warn $sql if $DEBUG;
-    my $sth = $dba->prepare($sql);
-    $sth->execute;
-    
-    server_log("finding assemblies for clone names");
-    while (my ($atype, $clone_id, $clone_name, $hide) = $sth->fetchrow) {
-        my $hide = ($hide eq 'N') ? 0 : 1;
-        $cloneid2assemblies->{clone_id} ||= {};
-        if($unhide || !$hide) {
-            $cloneid2clonename->{$clone_id} = $clone_name;
-            $cloneid2assemblies->{$clone_id}{$atype}++;
+    if(@$clone_id_list) {
+        my $clone_ids = join(', ', map { "'$_'" } @$clone_id_list);
+        my $sql = qq{
+            SELECT a.type, cl.clone_id, concat(cl.embl_acc,'.',cl.embl_version), ss.hide
+            FROM assembly a, contig co, clone cl, sequence_set ss
+            WHERE a.contig_id=co.contig_id AND co.clone_id=cl.clone_id AND a.type=ss.assembly_type
+            AND cl.clone_id IN ($clone_ids)
+        };
+        warn $sql if $DEBUG;
+        my $sth = $dba->prepare($sql);
+        $sth->execute;
+        
+        server_log("finding assemblies for clone names");
+        while (my ($atype, $clone_id, $clone_name, $hide) = $sth->fetchrow) {
+            my $hide = ($hide eq 'N') ? 0 : 1;
+            $cloneid2assemblies->{clone_id} ||= {};
+            if($unhide || !$hide) {
+                $cloneid2clonename->{$clone_id} = $clone_name;
+                $cloneid2assemblies->{$clone_id}{$atype}++;
+            }
         }
     }
+
     return ($cloneid2clonename, $cloneid2assemblies);
 }
 
