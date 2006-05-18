@@ -6,6 +6,7 @@ use strict;
 use Carp;
 use base 'CanvasWindow';
 use Bio::Otter::Lace::Locator;
+use Hum::Sort 'ace_sort';
 
 sub Client {
     my( $self, $Client ) = @_;
@@ -45,11 +46,16 @@ sub found_elements {
 }
 
 sub search_field {
-    my ($self) = @_;
+    my ($self, $value) = @_;
 
     my $scalar = '';
+    $self->{_search_field} ||= \$scalar;
 
-    return $self->{_search_field} ||= \$scalar;
+    if(defined($value)) {
+        ${ $self->{_search_field} } = $value;
+    }
+
+    return $self->{_search_field};
 }
 
 sub do_search {
@@ -66,36 +72,43 @@ sub do_search {
 
     my $results_list = $self->Client()->find_string_match_in_clones($self->DataSet->name(), $qnames);
     
-    foreach my $locator (@$results_list) {
+    foreach my $locator (sort { ace_sort($a->qname(), $b->qname()) } @$results_list) {
+
         my $result_frame = $self->{_results_frame}->Frame(
         )->pack(-side => 'top', -fill => 'x');
 
-        my $asm = $locator->assembly();
-        my $clone_names = $locator->clone_names();
-
-        my $label = $result_frame->Label(
-            -text =>
-                 $locator->qname()
-                .' ['
-                .$locator->qtype()
-                .']  found in '
-                .$asm
-                .'  on clone(s) '
-        )->pack(-side => 'left', -fill => 'x');
-
-        foreach my $clone_name (@$clone_names) {
-            my $button = $result_frame->Button(
-                -text => $clone_name,
-                -command => sub {
-                    print STDERR "Opening $asm:$clone_name...\n";
-                    $self->SequenceSetChooser()->open_sequence_set_by_ssname_clonename(
-                            $asm, $clone_name, $clone_names
-                    );
-                },
-            )->pack(-side => 'right');
-        }
-        
         push @{$self->found_elements}, $result_frame;
+
+        my $qname        = $locator->qname();
+        my $qtype        = $locator->qtype();
+        my $asm          = $locator->assembly();
+        my $clone_names  = $locator->clone_names();
+        my $clone_number = scalar(@$clone_names);
+
+        if($clone_number) {
+            $qtype=~s/_/ /g; # underscores become spaces for readability
+
+            my $label = $result_frame->Label(
+                -text => "$qname [$qtype]  found in $asm  on clone"
+                            .(($clone_number>1) ? 's ' : ' '),
+            )->pack(-side => 'left', -fill => 'x');
+
+            foreach my $clone_name (@$clone_names) {
+                my $button = $result_frame->Button(
+                    -text => $clone_name,
+                    -command => sub {
+                        print STDERR "Opening $asm:$clone_name...\n";
+                        $self->SequenceSetChooser()->open_sequence_set_by_ssname_clonename(
+                                $asm, $clone_name, $clone_names
+                        );
+                    },
+                )->pack(-side => 'right');
+            }
+        } else {
+            my $label = $result_frame->Label(
+                -text => "$qname not found",
+            )->pack(-side => 'left', -fill => 'x');
+        }
     }
 
     $self->fix_window_min_max_sizes;
@@ -116,13 +129,30 @@ sub new {
     );
     $self->canvas->configure(-background => $self->{_results_frame}->cget('-background') );
 
+        # the 'help' message pretends to be one of the search results:
+    my $help_frame = $self->{_results_frame}->Frame(
+    )->pack(-side => 'top', -fill => 'x');
+
+    push @{$self->found_elements}, $help_frame;
+
+    $help_frame->Label(
+        -text => "Locus names, Gene/Transcript/Translation/Exon stable_IDs or clone names",
+    )->pack(-side => 'top', -fill => 'x');
+
+        # controls are all grouped below:
     my $control_frame = $self->canvas()->toplevel()->Frame->pack(-side => 'top', -fill => 'x');
 
+    my $clear_button = $control_frame->Button(
+        -text       => 'Clear',
+        -command    => sub { $self->search_field('') },
+    )->pack(-side => 'left');
+        
     my $search_entry = $control_frame->Entry(
         -textvariable => $self->search_field(),
+        -width => 36,
     )->pack(-side => 'left', -fill => 'x', -expand => 1);
 
-    my $quit_button = $control_frame->Button(
+    my $close_button = $control_frame->Button(
         -text       => 'Close',
         -command    => sub { $self->hide_me() },
     )->pack(-side => 'right');
@@ -140,7 +170,7 @@ sub new {
         # anti-disfunctional bindings:
     $search_button->bind('<Destroy>', sub { $self = undef });
     $search_entry->bind('<Destroy>', sub { $self = undef });
-    $quit_button->bind('<Destroy>', sub { $self = undef });
+    $close_button->bind('<Destroy>', sub { $self = undef });
     $window->bind('<Destroy>', sub { $self = undef });
 
     return $self;
