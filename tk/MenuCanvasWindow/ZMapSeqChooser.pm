@@ -256,11 +256,12 @@ sub zMapBlixemDefaults {
         qw{
             netid       "pubseq"
             port        22100
-            script      "blixem_standalone"
+            script      "blixem"
             scope       40000
             homol_max   0
         }
     );
+    # script could also be "blixem_standalone" sh wrapper (if needed)
 }
 
 sub zMapWindowDefaults {
