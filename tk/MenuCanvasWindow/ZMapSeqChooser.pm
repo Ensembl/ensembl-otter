@@ -152,9 +152,11 @@ sub zMapKillZmap {
     my( $self ) = @_;
     
     if (my $pid = $self->zMapProcessIDList) {
-        warn "Killing zmap process '$pid'\n";
-        ### Do we really need a kill -9?
-        CORE::kill 9, $pid;
+        my $mainWindowName = 'ZMap port #' . $self->AceDatabase->ace_server->port;
+        my $xr = xclient_with_name($mainWindowName, 0, "$self")
+            or return;
+        $xr->send_commands('<zmap action="shutdown" />');
+        ### Check shutdown by checking property set by ZMap?
     }
 }
 sub zMapProcessIDList {
@@ -202,46 +204,88 @@ sub zMapWriteDotZmap{
 
 sub zMapDotZmapContent{
     my ($self) = @_;
-#    my $fmt = qq`source\n{\nurl = "%s://%s:%s@%s:%d"\nsequence = %s\nwriteback = %s\nstylesfile = "%s"\n}\n`;
-#    my $fmt = qq`source\n{\nurl = "%s://%s:%s@%s:%d"\nsequence = %s\nwriteback = %s\n}\n`;
-    my $fmt = qq`source\n{\nurl = "%s://%s:%s@%s:%d"\nsequence = %s\nwriteback = %s\nfeaturesets = "%s"\n}\n`;
-    # make the content
+
+    return
+        $self->zMapZMapDefaults
+      . $self->zMapWindowDefaults
+      . $self->zMapBlixemDefaults
+      . $self->zMapServerDefaults
+      ;
+}
+
+sub zMapServerDefaults {
+    my ($self) = @_;
     
     my $server = $self->AceDatabase->ace_server;
     
-    my $protocol ||= "acedb";
-    my $username ||= "any";
-    my $password ||= "any";
-    my $host     ||= $server->host;
-    my $port     ||= $server->port;
-    my $seq      ||= 0;
-    my $writebck ||= 0;
-    my $style    ||= "";#"ZMap.styles";
-    # for now we'll get the list of method names and write them into featuresets.
-    # the featuresets list controls the order of columns/style and so we get them
-    # ordered by right priority...
-    my @methods    = $self->zMapListMethodNames_ordered();
-    my $sets     ||= join(" ", @methods);
-    if(0){
-        my @l = qw(Transcript Putative Processed_pseudogene Unprocessed_pseudogene
-                   RepeatMasker RepeatMasker_LINE RepeatMasker_SINE
-                   trf Predicted_CpG_island 
-                   vertebrate_mRNA EST_Human EST_Mouse EST_Other EST
-                   BLASTX ensembl Fgenesh Genscan
-                   genomewise REFSEQ 
-                   Saturated_BLASTX Saturated_EST
-                   Saturated_EST_Human Saturated_vertebrate_mRNA);
+    my $protocol    = 'acedb';
+    my $username    = 'any';
+    my $password    = 'any';
+
+    my $url = sprintf q{"%s://%s:%s@%s:%d"},
+        $protocol,
+        $username, $password,
+        $server->host, $server->port;
+    
+    return $self->formatZmapDefaults(
+        'source',
+        url         => $url,
+        writeback   => 'false',
+        sequence    => 'true',
+        featuresets => sprintf(q{"%s"}, join ' ', $self->zMapListMethodNames_ordered),
+        # Can specify a stylesfile instead of featuresets
+    );
+}
+
+sub zMapZMapDefaults {
+    my ($self) = @_;
+    
+    return $self->formatZmapDefaults(
+        'ZMap',
+        qw{
+            show_mainwindow     false
+        }
+    );
+}
+
+sub zMapBlixemDefaults {
+    my ($self) = @_;
+    
+    return $self->formatZmapDefaults(
+        'blixem',
+        qw{
+            netid       "pubseq"
+            port        22100
+            script      "blixem_standalone"
+            scope       40000
+            homol_max   0
+        }
+    );
+}
+
+sub zMapWindowDefaults {
+    my ($self) = @_;
+    
+    return $self->formatZmapDefaults(
+        'ZMapWindow',
+        qw{
+            feature_line_width          1
+            feature_spacing             4.0
+            colour_column_highlight     "CornSilk"
+        }
+    );
+}
+
+sub formatZmapDefaults {
+    my ($self, $key, %defaults) = @_;
+    
+    my $def_str = "\n$key\n{\n";
+    while (my ($setting, $value) = each %defaults) {
+        $def_str .= qq{$setting = $value\n};
     }
-    my $content    = sprintf($fmt,
-                             $protocol,
-                             $username,
-                             $password,
-                             $host,
-                             $port,
-                             ($seq ? 'true' : 'false'),
-                             ($writebck ? 'true' : 'false'),
-                             $style || $sets);
-    return $content . qq`\n\nZMap\n{\nshow_mainwindow = false\n}\n`;
+    $def_str .= "}\n";
+    
+    return $def_str;
 }
 
 sub zMapZmapDir {
