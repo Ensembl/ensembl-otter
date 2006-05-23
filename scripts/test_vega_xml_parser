@@ -5,10 +5,46 @@
 use strict;
 
 use Bio::Vega::Transform::Otter;
-
+use Bio::EnsEMBL::Slice;
+use Data::Dumper;
 {
     my $parser = Bio::Vega::Transform::Otter->new;
     $parser->parsefile(shift);
+#my $db = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
+    #-dbname => 'pipe_zebrafish',
+   # -host   => 'otterpipe2',
+    #-user   => 'ottro',
+    #-port   => '3303',
+    #-pass   => '',
+#);
+	# my $sa=$db->get_SliceAdaptor();
+	 my $slice=$parser->make_chromosome_slice;
+	 $parser->make_assembly;
+	 my $clone_projection = $parser->get_contig_clone_projection;
+	 print STDERR "Contig - Clone assembly";
+    foreach my $seg (@$clone_projection) {
+      my $contig = $seg->to_Slice();
+      print STDERR $slice->seq_region_name(), ':', $seg->from_start(), '-',
+            $seg->from_end(), ' -> ',
+            $contig->seq_region_name(), ':', $contig->start(), '-',$contig->end(),
+            $contig->strand(), "\n";
+    }
+	 my $chromosome_projection = $parser->get_contig_chromosome_projection;
+	 print STDERR "Contig - Chromosome assembly";
+    foreach my $seg (@$chromosome_projection) {
+      my $clone = $seg->to_Slice();
+      print STDERR $slice->seq_region_name(), ':', $seg->from_start(), '-',
+            $seg->from_end(), ' -> ',
+            $clone->seq_region_name(), ':', $clone->start(), '-',$clone->end(),
+            $clone->strand(), "\n";
+    }
+	 #insert $slice get chromosome slice_seq_region_id =asm_seq_region_id
+	 #insert each clone get clone slice seq_region_id  =cmp_seq_region_id
+	 #insert assembly asm_seq_region_id,cmp_seq_region_id,asm_start=seg->from_start,asm_end=seg->from->end(),cmp_start=clone->start,cmp_end=clone->end
+	 
+	 
+	# my $end=$slice->name;
+	# warn "\nend is ".Dumper($end);
     #$parser->DESTROY;
 }
 
