@@ -19,6 +19,7 @@ my(
     %object_builders,
     %object_data,
     %is_multiple,
+	 %init_builders,
     );
 
 sub DESTROY {
@@ -88,6 +89,14 @@ sub object_builders {
     return $object_builders{$self};
 }
 
+sub init_builders {
+    my ($self,$value) = @_;
+    if ($value) {
+        $init_builders{$self} = $value;
+    }
+    return $init_builders{$self};
+}
+
 sub set_multi_value_tags {
     my ($self, $value) = @_;
     
@@ -123,6 +132,15 @@ sub handle_start {
           . Dumper({@_})
         );
     }
+	 if (my $m=$init_builders{$self}{$element}){
+		print STDERR "initialize method called for $element\n";
+		if ($element eq 'otter'){
+		  $self->$m('otter');
+		}
+		elsif ($element eq 'vega'){
+		  $self->$m('vega');
+		}
+	 }
 }
 
 sub handle_char {
@@ -143,7 +161,7 @@ sub handle_end {
         # builder method.
         my $context = shift @{$tag_stack{$self}};
         my $data    = delete $object_data{$self}{$context};
-        warn "\nCalling $builder at end of $context with: ", Dumper($data);
+#        warn "\nCalling $builder at end of $context with: ", Dumper($data);
         $self->$builder($data);
     }
     elsif (defined( my $str = delete $current_string{$self} )) {
@@ -151,7 +169,7 @@ sub handle_end {
         # We save it under its tag (the key) in the current context.
         my $context = $tag_stack{$self}[0];
         $str =~ s/(^\s+|\s+$)//g;
-        #warn "Setting '$element' to '$str'\n";
+#        warn "Setting '$element' to '$str'\n";
 
         my $data = $object_data{$self}{$context};
         if ($is_multiple{$self}{$context}{$element}) {
