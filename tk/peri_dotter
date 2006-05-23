@@ -62,12 +62,13 @@ use CanvasWindow;
         );
     
     my $tile_path = $slice->get_tiling_path;
-    for (my $i = 0; $i < @$tile_path; $i++) {
-        my $x1 = $tile_path->[$i]->assembled_start / $scale;
-        my $x2 = $tile_path->[$i]->assembled_end   / $scale;
-        for (my $j = 0; $j < @$tile_path; $j++) {
-            my $y1 = $tile_path->[$j]->assembled_start / $scale;
-            my $y2 = $tile_path->[$j]->assembled_end   / $scale;
+    for (my $j = 0; $j < @$tile_path; $j++) {
+        my $y1 = $tile_path->[$j]->assembled_start / $scale;
+        my $y2 = $tile_path->[$j]->assembled_end   / $scale;
+        for (my $i = 0; $i < @$tile_path; $i++) {
+        #for (my $i = 0; $i <= $j; $i++) {
+            my $x1 = $tile_path->[$i]->assembled_start / $scale;
+            my $x2 = $tile_path->[$i]->assembled_end   / $scale;
 
             my $fill;
             if ($table_cloth_style) {
