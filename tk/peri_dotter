@@ -30,7 +30,8 @@ use CanvasWindow;
     my $ana_logic = 'peri_dna';
     my $chr_name  = '9';
     my $chr_start = 1;
-    my $chr_end   = 15481367;
+    my $chr_end   = 15655045;
+    my $table_cloth_style = 0;
 
     my $ana = $ana_aptr->fetch_by_logic_name($ana_logic);
     my $ana_id = $ana->dbID;
@@ -47,6 +48,14 @@ use CanvasWindow;
     my $size = 800;
     my $scale = $length / $size;
     
+    unless ($table_cloth_style) {
+        $canvas->createRectangle(
+            0,0, $size, $size,
+            -fill       => 'LightGrey',
+            -outline    => undef,
+            );
+    }
+    
     my @fill_map = (
         ['#cccccc', '#b2b2b2'],
         ['#b2b2b2', '#999999'],
@@ -60,7 +69,12 @@ use CanvasWindow;
             my $y1 = $tile_path->[$j]->assembled_start / $scale;
             my $y2 = $tile_path->[$j]->assembled_end   / $scale;
 
-            my $fill = @fill_map[$i % 2]->[$j % 2];
+            my $fill;
+            if ($table_cloth_style) {
+                $fill = @fill_map[$i % 2]->[$j % 2];
+            } else {
+                $fill = 'white';
+            }
 
             $canvas->createRectangle(
                 $x1,$y1, $x2,$y2,
