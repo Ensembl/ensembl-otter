@@ -136,8 +136,12 @@ sub new {
     push @{$self->found_elements}, $help_frame;
 
     $help_frame->Label(
-        -text => "Locus names, Gene/Transcript/Translation/Exon stable_IDs or clone names",
-    )->pack(-side => 'top', -fill => 'x');
+        -text => "Search for:\n\n"
+                ."* Locus names or synonyms,\n"
+                ."* Gene/Transcript/Translation/Exon stable_IDs or\n"
+                ."* international or EMBL clone names",
+        -justify => 'left',
+    )->pack(-side => 'top', -fill => 'both');
 
         # controls are all grouped below:
     my $control_frame = $self->canvas()->toplevel()->Frame->pack(-side => 'top', -fill => 'x');
@@ -172,6 +176,8 @@ sub new {
     $search_entry->bind('<Destroy>', sub { $self = undef });
     $close_button->bind('<Destroy>', sub { $self = undef });
     $window->bind('<Destroy>', sub { $self = undef });
+
+    $self->fix_window_min_max_sizes;
 
     return $self;
 }
