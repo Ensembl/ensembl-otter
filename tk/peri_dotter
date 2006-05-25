@@ -48,9 +48,12 @@ use CanvasWindow;
     my $size = 800;
     my $scale = $length / $size;
     
+    draw_scale($canvas, $scale, $size);
+    
     unless ($table_cloth_style) {
-        $canvas->createRectangle(
-            0,0, $size, $size,
+        # Grey triangle behind figure
+        $canvas->createPolygon(
+            0,0, $size, $size, 0,$size,
             -fill       => 'LightGrey',
             -outline    => undef,
             );
@@ -65,8 +68,8 @@ use CanvasWindow;
     for (my $j = 0; $j < @$tile_path; $j++) {
         my $y1 = $tile_path->[$j]->assembled_start / $scale;
         my $y2 = $tile_path->[$j]->assembled_end   / $scale;
-        for (my $i = 0; $i < @$tile_path; $i++) {
-        #for (my $i = 0; $i <= $j; $i++) {
+        #for (my $i = 0; $i < @$tile_path; $i++) {
+        for (my $i = 0; $i <= $j; $i++) {
             my $x1 = $tile_path->[$i]->assembled_start / $scale;
             my $x2 = $tile_path->[$i]->assembled_end   / $scale;
 
@@ -77,11 +80,19 @@ use CanvasWindow;
                 $fill = 'white';
             }
 
-            $canvas->createRectangle(
-                $x1,$y1, $x2,$y2,
-                -fill       => $fill,
-                -outline    => undef,
-                );
+            if ($i == $j) {
+                $canvas->createPolygon(
+                    $x1,$y1, $x2,$y2, $x1,$y2,
+                    -fill       => $fill,
+                    -outline    => undef,
+                    );
+            } else {
+                $canvas->createRectangle(
+                    $x1,$y1, $x2,$y2,
+                    -fill       => $fill,
+                    -outline    => undef,
+                    );
+            }
         }
     }
     
@@ -128,20 +139,25 @@ use CanvasWindow;
             if ($this->hstrand == -1) {
                 ($pair_start, $pair_end) = ($pair_end, $pair_start);
             }
+            
+            # Only plot lines who's start and end are within the triangle.
+            if (($this_start / $pair_start) < 1 and ($this_end / $pair_end) < 1) {
+                my $x1 = $this_start / $scale;
+                my $x2 = $this_end   / $scale;
+                my $y1 = $pair_start / $scale;
+                my $y2 = $pair_end   / $scale;
 
-            my $x1 = $this_start / $scale;
-            my $x2 = $this_end   / $scale;
-            my $y1 = $pair_start / $scale;
-            my $y2 = $pair_end   / $scale;
 
-            $canvas->createLine($x1,$y1, $x2,$y2,
-                -fill       => 'black',
-                -width      => 0.25,
-                );
+                $canvas->createLine($x1,$y1, $x2,$y2,
+                    -fill       => 'black',
+                    -width      => 0.25,
+                    );
+            }
         }
     }
 
-    $canvas->createRectangle(0,0, $size, $size,
+    # Outline triangle around figure
+    $canvas->createPolygon(0,0, $size,$size, 0,$size,
         -fill       => undef,
         -outline    => 'black',
         -width      => 0.5,
@@ -151,7 +167,62 @@ use CanvasWindow;
     Tk::MainLoop();
 }
 
+sub draw_scale {
+    my ($canvas, $scale, $size) = @_;
+    
+    my $height    = 10;
+    my $font_size = 14;
+    my $incr      = 1_000_000;
+    my $font      = ['helvetica', $font_size, 'bold'];
+    
+    my $x2 = $size - $height;
+    my $x1 = $x2 - ((10 * $incr) / $scale);
+    
+    my $y1 = $height * 4;
+    my $y2 = $y1 + $height;
+    
+    $canvas->createLine(
+        $x1,$y1, $x1,$y2, $x2,$y2, $x2,$y1,
+        -fill       => 'black',
+        -width      => 0.5,
+        );
+    
+    my $x_half = $x1 + ((5 * $incr) / $scale);
+    my $y_half = $y1 + ($height / 2);
 
+    $canvas->createLine(
+        $x_half,$y1, $x_half, $y2,
+        -fill       => 'black',
+        -width      => 0.5,
+        );
+    
+    foreach my $pos (qw{ 1 2 3 4   6 7 8 9 }) {
+        my $x = $x1 + (($pos * $incr) / $scale);
+        $canvas->createLine(
+            $x,$y_half, $x,$y2,
+            -fill       => 'black',
+            -width      => 0.5,
+            );
+    }
+    
+    foreach my $pos (qw{ 0 5 10 }) {
+        my $y = $y1 - ($font_size / 2);
+        my $x = $x1 + (($pos * $incr) / $scale);
+        $canvas->createText(
+            $x,$y,
+            -anchor => 's',
+            -font   => $font,
+            -text   => $pos,
+            );
+    }
+    
+    $canvas->createText(
+        $x_half, $y2 + $font_size,
+        -anchor => 'n',
+        -font   => $font,
+        -text   => 'Scale / Mbp',
+        );
+}
 
 
 __END__

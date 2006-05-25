@@ -1,0 +1,77 @@
+#!/usr/local/bin/perl -w
+
+### show_X11_colors
+
+use strict;
+
+use CanvasWindow;
+
+{
+    my $mw = CanvasWindow::MainWindow->new;
+    $mw->title('X11 colors');
+    my $cw = CanvasWindow->new($mw);
+    my $canvas = $cw->canvas;
+    my $rgb_txt_file = '/usr/X11R6/lib/X11/rgb.txt';
+
+    open RGB_TXT, $rgb_txt_file
+        or die "Can't read '$rgb_txt_file' : $!";
+
+    my $size = 15;
+    my $pad = $size / 2;
+    
+    my $font = ['Helvetica', $size, 'normal'];
+    my $i = 0;
+    while (<RGB_TXT>) {
+        next if /^\s*\!/;   # Skip comment lines
+        chomp;
+        my ($red, $green, $blue, $name) = split /\s+/, $_, 4;
+        
+        # Skip the names with spaces such as "old lace", which will still
+        # be shown as their CamelCase equivalents like "OldLace".
+        next if $name =~ /\s/;
+
+        my $hex = sprintf "#%02x%02x%02x", $red, $green, $blue;
+
+        my $x1 = $size;
+        my $x2 = $x1 + $size;
+        my $y1 = $size + (($size + $pad) * $i);
+        my $y2 = $y1 + $size;
+        $canvas->createRectangle(
+            $x1, $y1, $x2, $y2,
+            -fill       => undef,
+            -outline    => $hex,
+            );
+        
+        $canvas->createRectangle(
+            $x2 + $pad, $y1, $x2 + $pad + $size, $y2,
+            -fill       => $hex,
+            -outline    => 'black',
+            );
+        
+        $canvas->createText(
+            $x2 + $size + $size, $y1,
+            -text   => $name,
+            -anchor => 'nw',
+            -font   => $font,
+            );
+
+        $i++;
+    }
+
+    $cw->fix_window_min_max_sizes;
+
+    Tk::MainLoop();
+       
+}
+
+
+
+
+__END__
+
+=head1 NAME - show_X11_colors
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
