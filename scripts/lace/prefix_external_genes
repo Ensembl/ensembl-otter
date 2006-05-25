@@ -70,9 +70,16 @@ use Bio::Otter::Lace::Defaults;
         # already have the prefix before adding it.
         my $genes_fixed = 0;
         foreach my $gid (@$gene_id_list) {
-            # Add $prefix to all versions of gene and to transcript name
             my $did_fix = 0;
-            foreach my $gene (external_gene_versions($gene_aptr, $author, $gid)) {
+
+            ## Add $prefix to all versions of gene and to transcript name
+            #foreach my $gene (external_gene_versions($gene_aptr, $author, $gid)) {
+            
+            # Only change prefix if latest author is the external author
+            my @gene_list = $gene_aptr->fetch_by_dbID($gid);
+            foreach my $gene (@gene_list) {
+                next unless $gene->gene_info->author->name eq $author;
+
                 my $type = $gene->type;
                 if (missing_prefix($type, $prefix)) {
                     $did_fix++;
