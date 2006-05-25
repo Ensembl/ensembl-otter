@@ -111,8 +111,7 @@ sub build_SequenceFragment {
 						 );
 
 	 my $list = $fragment_list{$self} ||= [];
-    push @$list, $fragment;																  
-
+    push @$list, $fragment;																
 }
 
 sub build_Evidence {
@@ -142,14 +141,15 @@ sub build_AssemblyTag {
 
 sub build_Exon {
     my ($self, $data) = @_;
-
+	 my $slice = $self->make_ChromosomeSlice;
     my $exon = Bio::EnsEMBL::Exon->new(
         -start     => $data->{'start'},
         -end       => $data->{'end'},
         -strand    => $data->{'strand'},
         -stable_id => $data->{'stable_id'},
+		  -slice     => $slice,
     );
-    ### Need to add Slice here.
+
     my $list = $exon_list{$self} ||= [];
     push @$list, $exon;
 }
@@ -178,8 +178,7 @@ sub build_Locus {
 		  -slice => $slice,
         );
     foreach my $tsct (@$transcripts) {
-        ### Fails without slice attached
-       # $gene->add_Transcript($tsct);
+        $gene->add_Transcript($tsct);
     }
 
     my $list = $gene_list{$self} ||= [];
