@@ -45,17 +45,25 @@ sub signal_keys_in_order {
 }
 
 my %strand_name = (
-     1 => 'forward',
-    -1 => 'reverse',
-);
-
-my %arrow = (
-     1 => '==>',
-    -1 => '<==',
+     1 => 'Fwd',
+    -1 => 'Rev',
 );
 
 my $def_score = 0.5;
 
+# --------------- order-encoded-strand manupulation subroutines ------------
+
+sub order_coords_by_strand {
+    my ($coord1, $coord2, $strand) = @_;
+
+    return sort { ($a <=> $b)*$strand } ($coord1, $coord2);
+}
+
+sub get_strand_from_order {
+    my ($coord1, $coord2) = @_;
+
+    return ($coord1>$coord2) ? -1 : 1;
+}
 
 # ---------------[EUCOMM]----------------
 
@@ -74,7 +82,7 @@ sub paste_eucomm_data {
 
     # Parse the old otter exon IDs from the existing text field
     my $display_otter = {};
-    my $text = $genomic_feature->{'display_label'};
+    my $text = $genomic_feature->{display_label};
     foreach my $id (grep /E\d{11}$/, split /[^A-Z0-9]+/, $text) {
         $display_otter->{$id} = 1;
     }
@@ -85,12 +93,11 @@ sub paste_eucomm_data {
     # Don't change anything if search failed
     return unless $otter;
 
-    $genomic_feature->{'start'} = $start;
-    $genomic_feature->{'end'}   = $end;
-    $genomic_feature->{'strand'}= $strand;
+    ($genomic_feature->{fiveprime}, $genomic_feature->{threeprime})
+        = order_coords_by_strand($start, $end, $strand);
 
     # Default the score to 1 if not set
-    $genomic_feature->{'score'} ||= 1;
+    $genomic_feature->{score} ||= 1;
 
     my $count = keys %$otter;
     my $str = sprintf "%d exon%s phase %d from %s (%s)",
@@ -99,7 +106,7 @@ sub paste_eucomm_data {
         $exon_length % 3,
         $name,
         join(' ', sort keys %$otter);
-    $genomic_feature->{'display_label'} = $str;
+    $genomic_feature->{display_label} = $str;
 }
 
 sub get_overlapping_exon_otter_id_start_end {
@@ -209,14 +216,14 @@ sub ace_and_vector_dump {
         $ace_text .= $header;
 
         for my $subhash (
-            sort { $a->{start} <=> $b->{start} || $a->{end} <=> $b->{end} }
+            sort { (($a->{fiveprime}<$a->{threeprime})?$a->{fiveprime}:$a->{threeprime})
+               <=> (($b->{fiveprime}<$b->{threeprime})?$b->{fiveprime}:$b->{threeprime}) }
             values %{ $self->{_gfs} })
         {
             my $gf_type = $subhash->{gf_type};
             my ($start, $end) =
-                ($subhash->{strand} == 1)
-              ? ($subhash->{start}, $subhash->{end})
-              : ($subhash->{end}, $subhash->{start});
+                order_coords_by_strand($subhash->{fiveprime}, $subhash->{threeprime}, $subhash->{strand});
+
             my $score = $subhash->{score} || $def_score;
             my $display_label = $subhash->{display_label}
               || $signal_info{$gf_type}{fullname};
@@ -237,13 +244,13 @@ sub ace_and_vector_dump {
 # -------------[adding things]-------------------------------
 
 sub create_genomic_feature {
-    my ($self, $subframe, $gf_type, $start, $end, $strand, $score, $display_label) = @_;
+    my ($self, $subframe, $gf_type, $fiveprime, $threeprime, $strand, $score, $display_label) = @_;
 
     my $gfid = ++$self->{_gfid}; # will be uniquely identifying items in the list
 
     $self->{_gfs}{$gfid} = {
-        'start'    => $start,
-        'end'      => $end,
+        'fiveprime'     => $fiveprime,
+        'threeprime'    => $threeprime,
         'strand'   => $strand,
         'score'    => $score,
         'display_label' => $display_label,
@@ -263,11 +270,11 @@ sub recalc_coords_callback {
 
     if($length && ($this_value=~/^\d+$/) ) {
 
-        my ($other_key, $diff_sign) = ($this_key eq 'start') ? ('end', 1) : ('start', -1);
+        my ($other_key, $diff_sign) = ($this_key eq 'fiveprime') ? ('threeprime', 1) : ('fiveprime', -1);
 
         $genomic_feature->{$other_key} =
               $this_value
-            + $diff_sign * ($length-1);
+            + $diff_sign * $genomic_feature->{strand} * ($length-1);
     }
 }
 
@@ -275,7 +282,7 @@ sub show_direction_callback {
     my ($genomic_feature) = @_;
 
     $genomic_feature->{direction_button}->configure(
-        -text => $arrow{$genomic_feature->{strand}}
+        -text => $strand_name{$genomic_feature->{strand}}
     );
 }
 
@@ -304,7 +311,7 @@ sub paste_coords_callback {
 
     if(scalar(@ints)==1) {  # trust the strand information:
 
-        $this ||= ($genomic_feature->{strand} == 1) ? 'start' : 'end';
+        $this ||= ($genomic_feature->{strand} == 1) ? 'fiveprime' : 'threeprime';
 
         $genomic_feature->{$this} = shift @ints;
         if($length) {
@@ -313,12 +320,9 @@ sub paste_coords_callback {
 
     } else {  # acquire strand information:
 
-        ( $genomic_feature->{start},
-          $genomic_feature->{end},
-          $genomic_feature->{strand} )
-         = ($ints[0]<$ints[1])
-            ? ($ints[0], $ints[1],  1)
-            : ($ints[1], $ints[0], -1);
+        ( $genomic_feature->{fiveprime}, $genomic_feature->{threeprime} )
+            = ($ints[0], $ints[1]);
+        $genomic_feature->{strand} = get_strand_from_order($ints[0], $ints[1]);
 
         show_direction_callback($genomic_feature);
     }
@@ -328,6 +332,14 @@ sub flip_direction_callback {
     my ($genomic_feature) = @_;
 
     $genomic_feature->{strand} *= -1;
+
+    if( $genomic_feature->{fiveprime} && $genomic_feature->{threeprime} ) {
+        ($genomic_feature->{fiveprime}, $genomic_feature->{threeprime}) = 
+            order_coords_by_strand(map { $genomic_feature->{$_} } ('fiveprime', 'threeprime', 'strand'));
+    } else { # just swap them
+        ($genomic_feature->{fiveprime}, $genomic_feature->{threeprime}) =
+            ($genomic_feature->{threeprime}, $genomic_feature->{fiveprime});
+    }
 
     show_direction_callback($genomic_feature);
 }
@@ -350,8 +362,8 @@ sub add_genomic_feature {
     my $self    = shift @_;
     my $gf_type = shift @_;
 
-    my $start   = shift @_ || '';
-    my $end     = shift @_ || '';
+    my $fiveprime    = shift @_ || '';
+    my $threeprime   = shift @_ || '';
     my $strand  = shift @_ ||  1;
     my $score   = shift @_ || '';
     my $display_label = shift @_ || '';
@@ -362,7 +374,7 @@ sub add_genomic_feature {
     );
 
     my ($gfid, $genomic_feature) = $self->create_genomic_feature(
-            $subframe, $gf_type, $start, $end, $strand, $score, $display_label
+            $subframe, $gf_type, $fiveprime, $threeprime, $strand, $score, $display_label
     );
 
     my @pack = (-side => 'left', -padx => 2);
@@ -372,44 +384,34 @@ sub add_genomic_feature {
        -variable => \$genomic_feature->{gf_type},
     )->pack(@pack);
 
-    $genomic_feature->{start_entry} = $subframe->NoPasteEntry(
-       -textvariable => \$genomic_feature->{start},
+    $genomic_feature->{fiveprime_entry} = $subframe->NoPasteEntry(
+       -textvariable => \$genomic_feature->{fiveprime},
        -width        => 7,
        -justify      => 'right',
     )->pack(@pack);
-    my $recalc_start = sub { recalc_coords_callback($genomic_feature, 'start'); };
-    $genomic_feature->{start_entry}->bind('<Return>', $recalc_start);
-    $genomic_feature->{start_entry}->bind('<Up>',     $recalc_start);
-    $genomic_feature->{start_entry}->bind('<Down>',   $recalc_start);
+    my $recalc_fiveprime = sub { recalc_coords_callback($genomic_feature, 'fiveprime'); };
+    $genomic_feature->{fiveprime_entry}->bind('<Return>', $recalc_fiveprime);
+    $genomic_feature->{fiveprime_entry}->bind('<Up>',     $recalc_fiveprime);
+    $genomic_feature->{fiveprime_entry}->bind('<Down>',   $recalc_fiveprime);
 
     $genomic_feature->{direction_button} = $subframe->Button(
         -command => sub { flip_direction_callback($genomic_feature); },
     )->pack(-side => 'left');
     show_direction_callback($genomic_feature); # show it once
 
-    $genomic_feature->{end_entry} = $subframe->NoPasteEntry(
-       -textvariable => \$genomic_feature->{end},
+    $genomic_feature->{threeprime_entry} = $subframe->NoPasteEntry(
+       -textvariable => \$genomic_feature->{threeprime},
        -width        => 7,
        -justify      => 'right',
     )->pack(@pack);
-    my $recalc_end = sub { recalc_coords_callback($genomic_feature, 'end'); };
-    $genomic_feature->{end_entry}->bind('<Return>', $recalc_end);
-    $genomic_feature->{end_entry}->bind('<Up>',     $recalc_end);
-    $genomic_feature->{end_entry}->bind('<Down>',   $recalc_end);
-
-    # $genomic_feature->{strand_menu} = $subframe->Optionmenu(
-    #   -options => [ map { [ $strand_name{$_} => $_ ] } (keys %strand_name) ],
-    #   -variable => \$genomic_feature->{strand},
-    # )->pack(@pack);
+    my $recalc_threeprime = sub { recalc_coords_callback($genomic_feature, 'threeprime'); };
+    $genomic_feature->{threeprime_entry}->bind('<Return>', $recalc_threeprime);
+    $genomic_feature->{threeprime_entry}->bind('<Up>',     $recalc_threeprime);
+    $genomic_feature->{threeprime_entry}->bind('<Down>',   $recalc_threeprime);
 
     $genomic_feature->{score_entry} = $subframe->NoPasteEntry(
        -textvariable => \$genomic_feature->{score},
        -width        => 4,
-    )->pack(@pack);
-
-    $genomic_feature->{display_label_entry} = $subframe->NoPasteEntry(
-       -textvariable => \$genomic_feature->{display_label},
-       -width        => 24,
     )->pack(@pack);
 
     my $delete_button = $subframe->Button(
@@ -422,19 +424,24 @@ sub add_genomic_feature {
     )->pack(@pack);
     $delete_button->bind('<Destroy>', sub{ $self = undef });
     
+    $genomic_feature->{display_label_entry} = $subframe->NoPasteEntry(
+       -textvariable => \$genomic_feature->{display_label},
+       -width        => 24,
+    )->pack(@pack);
+
         # bindings:
 
     for my $event ('<<Paste>>', '<Button-2>') {
-        $genomic_feature->{'start_entry'}->bind(
+        $genomic_feature->{fiveprime_entry}->bind(
             $event,
             sub {
-                $self->paste_coords_callback($genomic_feature, 'start');
+                $self->paste_coords_callback($genomic_feature, 'fiveprime');
             }
         );
-        $genomic_feature->{'end_entry'}->bind(
+        $genomic_feature->{threeprime_entry}->bind(
             $event,
             sub {
-                $self->paste_coords_callback($genomic_feature, 'end');
+                $self->paste_coords_callback($genomic_feature, 'threeprime');
             }
         );
         $genomic_feature->{'direction_button'}->bind(
@@ -457,7 +464,7 @@ sub add_genomic_feature {
     }
     
     ### I don't think we need a destroy for all of these?
-    for my $widget ('start_entry', 'end_entry', 'direction_button', 'display_label_entry') {
+    for my $widget ('fiveprime_entry', 'threeprime_entry', 'direction_button', 'display_label_entry') {
         $genomic_feature->{$widget}->bind('<Destroy>', sub{ $self=$genomic_feature=undef; } );
     }
 
@@ -466,16 +473,12 @@ sub add_genomic_feature {
     $genomic_feature->{gf_type_menu}->configure(
        -command => sub { change_of_gf_type_callback($genomic_feature); },
     );
-    # $genomic_feature->{strand_menu}->configure(
-    #   -command  => sub { show_direction_callback($genomic_feature); },
-    # );
 
         # It is necessary to set the current value from a separate variable.
         # If you first assign the correct value to a variable and then supply the ref,
         # it will do something opposite to normal intuition: spoil the original value
         # by assigning the one that gets assigned by the interface.
     $genomic_feature->{gf_type_menu}->setOption($signal_info{$gf_type}{fullname}, $gf_type);
-    # $genomic_feature->{strand_menu}->setOption($strand_name{$strand}, $strand);
 }
 
 sub load_genomic_features {
@@ -487,10 +490,10 @@ sub load_genomic_features {
             $clone->get_SimpleFeatures([keys %signal_info]) )
         {
 
-            my ($gf_type, $start, $end, $score, $display_label) = @$vector;
+            my ($gf_type, $fiveprime, $threeprime, $score, $display_label) = @$vector;
 
-            $self->add_genomic_feature($gf_type,
-                ($start < $end) ? ($start, $end, 1) : ($end, $start, -1),
+            my $strand = get_strand_from_order($fiveprime, $threeprime);
+            $self->add_genomic_feature($gf_type, $fiveprime, $threeprime, $strand,
                 $score, $display_label);
         }
     }
@@ -639,7 +642,7 @@ sub initialize {
             -foreground => 'red',
             -padx       => 6,
         )->pack(
-            -side => 'right',
+            -side       => 'right',
         );
     }
 
