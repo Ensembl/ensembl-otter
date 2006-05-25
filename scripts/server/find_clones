@@ -13,68 +13,35 @@ $| = 1;
 
 my $DEBUG=0;
 
-my $sq = Bio::Otter::ServerQuery->new('dataset','type','qnames','unhide');
+my $sq = Bio::Otter::ServerQuery->new('dataset','qnames','type','maxpipehits','unhide');
 set_nph($sq);
 
 # This is a 3-level hash:
 # {query_name}{type_of_query}{clones_found}
 #
-my $unhide = $sq->getarg('unhide');
-my %qnames_types_clones = map {($_ => {})} split(',', $sq->getarg('qnames'));
-my $filter_atype = $sq->getarg('type');
+my $qnames_types_clones  = { map {($_ => {})} split(',', $sq->getarg('qnames')) };
+my $clone_name_set       = {};
+my $clonename2assemblies = {};
+my $filter_atype = $sq->getarg('type') || '';
+my $unhide = $sq->getarg('unhide') || 0;
+my $maxpipehits = $sq->getarg('maxpipehits');
 
 my $odb = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
+my $pdb = get_connected_pipeline_dbhandle($sq, $odb, $pipehead);
 
-my $clone_id_list = find_clones_by_qnames($sq, $odb, \%qnames_types_clones);
-my ($cloneid2clonename, $cloneid2assemblies) = find_assemblies_by_clone_ids($sq, $odb, $clone_id_list, $unhide);
-
-my $output_string = '';
-
-for my $qname (sort keys %qnames_types_clones) {
-    my $types_clones = $qnames_types_clones{$qname};
-    if(keys %$types_clones) {
-        for my $type (keys %$types_clones) {
-            my $clones = $types_clones->{$type};
-
-            my %asm2clonenames = ();
-
-            for my $clone_id (keys %$clones) {
-                if(my $clone_name = $cloneid2clonename->{$clone_id}) {
-
-=comment
-
-                    # one clone - multiple assemblies
-                    if($filter_atype) {
-                        if($cloneid2assemblies->{$clone_id}{$filter_atype}) {
-                            $output_string .= join("\t", $qname, $type, $clone_name, $filter_atype)."\n";
-                        }
-                    } else {
-                        $output_string .= join("\t", $qname, $type, $clone_name,
-                                                join(',', keys %{$cloneid2assemblies->{$clone_id}} ))."\n";
-                    }
-
-=cut
-
-                    for my $asm (keys %{$cloneid2assemblies->{$clone_id}}) {
-                        $asm2clonenames{$asm}{$clone_name}++;
-                    }
-
-                }
-            }
-
-            # one assembly - multiple clones
-            for my $asm (keys %asm2clonenames) {
-                if(!$filter_atype || ($filter_atype eq $asm)) {
-                    $output_string .= join("\t", $qname, $type,
-                        join(',', keys %{$asm2clonenames{$asm}}),
-                        $asm)."\n";
-                }
-            }
-        }
-    } else {
-        $output_string .= "$qname\n"; # i.e 'not found' - an equivalent of asymmetric join
-    }
+    # currently, since Otter is old schema and Pipe is new schema,
+    # we can only provide Otter in case $pipehead==0
+if(!$pipehead) {
+    find_otter_clones_by_qnames($sq, $odb, $qnames_types_clones, $clone_name_set);
 }
+
+find_pipe_clones_by_qnames($sq, $pdb, $qnames_types_clones, $clone_name_set, $pipehead, $maxpipehits);
+
+my $assembly_db = $pipehead ? $pdb : $odb;
+
+$clonename2assemblies = find_assemblies_by_clone_names($sq, $assembly_db, $clone_name_set, $pipehead, $unhide);
+
+my $output_string = generate_output($qnames_types_clones, $clonename2assemblies, $filter_atype);
 
 send_response($sq, $output_string, 1);
 
@@ -82,20 +49,59 @@ send_response($sq, $output_string, 1);
 
 ############## actual search subroutines: ################################
 sub exons2clones {
-    my ($qname, $type, $exons, $qnames_types_clones, $clone_id_list) = @_;
+    my ($qname, $type, $exons, $qnames_types_clones, $clone_name_set) = @_;
 
     server_log("'$qname' was found and contains ".scalar(@$exons)." exons.");
     foreach my $exon (@$exons) {
-        my $contigid = $exon->contig->dbID();
-        my $clone_id = $exon->contig()->clone()->dbID();
+        my $clone = $exon->contig()->clone();
+        my $clone_name = $clone->embl_id().'.'.$clone->embl_version();
 
-        $qnames_types_clones->{$qname}{$type}{$clone_id}++;
-        push @$clone_id_list, $clone_id;
+        $qnames_types_clones->{$qname}{$type}{$clone_name}++;
+        $clone_name_set->{$clone_name}++;
     }
 }
 
-sub find_clones_by_qnames {
-    my ($sq, $dba, $qnames_types_clones) = @_;
+sub find_pipe_clones_by_qnames {
+    my ($sq, $dba, $qnames_types_clones, $clone_name_set, $pipehead, $maxpipehits) = @_;
+
+    my $qnames_string = join(', ', map { "'$_'" } keys %$qnames_types_clones);
+
+    for my $feature_table ('dna_align_feature', 'protein_align_feature') {
+
+        my $sql = $pipehead
+        ? qq{
+            SELECT f.hit_name, f.score, cl.name
+            FROM $feature_table f, assembly asm, seq_region cl, coord_system cs
+            WHERE f.seq_region_id=asm.cmp_seq_region_id
+              AND asm.asm_seq_region_id=cl.seq_region_id
+              AND cl.coord_system_id=cs.coord_system_id
+              AND cs.name='clone'
+              AND f.hit_name in ($qnames_string)
+         ORDER BY f.score desc
+        }.($maxpipehits ? "LIMIT $maxpipehits" : '')
+        : qq{
+            SELECT f.hit_name, f.score, concat(cl.embl_acc,'.',cl.embl_version)
+              FROM $feature_table f, contig co, clone cl
+             WHERE f.contig_id=co.contig_id
+               AND co.clone_id=cl.clone_id
+               AND f.hit_name in ($qnames_string)
+          ORDER BY f.score desc
+        }.($maxpipehits ? "LIMIT $maxpipehits" : '')
+        ;
+        warn $sql if $DEBUG;
+        my $sth = $dba->prepare($sql);
+        $sth->execute;
+        
+        server_log("trying hits $qnames_string in $feature_table table");
+        while (my ($hit_name, $score, $clone_name) = $sth->fetchrow) {
+            $qnames_types_clones->{$hit_name}{$feature_table}{$clone_name}++;
+            $clone_name_set->{$clone_name}++;
+        }
+    }
+}
+
+sub find_otter_clones_by_qnames {
+    my ($sq, $dba, $qnames_types_clones, $clone_name_set) = @_;
 
     my $meta_con = $dba->get_MetaContainer();
     my $prefix_primary = $meta_con->get_primary_prefix() || error_exit($sq, "Missing prefix.primary in meta table");
@@ -107,8 +113,6 @@ sub find_clones_by_qnames {
     my $geneinfo_adaptor       = $dba->get_GeneInfoAdaptor();
     my $transcript_adaptor     = $dba->get_TranscriptAdaptor();
     my $exon_adaptor           = $dba->get_ExonAdaptor();
-
-    my $clone_id_list = [];
 
     foreach my $qname (keys %$qnames_types_clones) {
         if(uc($qname) =~ /^$prefix_primary$prefix_species([TPGE])\d+/i){ # try stable_ids
@@ -136,7 +140,7 @@ sub find_clones_by_qnames {
                 server_log("'$qname' looks like a stable id, but wasn't found.");
                 server_log($@)if $DEBUG;
             } else {
-                exons2clones($qname, $type, $exons, $qnames_types_clones, $clone_id_list);
+                exons2clones($qname, $type, $exons, $qnames_types_clones, $clone_name_set);
             }
         }
         if($qname =~ /^(\w+)(?:\.(\d+))?$/) { # try clone accessions with & without version number
@@ -144,7 +148,7 @@ sub find_clones_by_qnames {
             my $wanted_version = $2;
 
             my $sql = qq{
-                SELECT clone_id
+                SELECT concat(embl_acc, '.', embl_version)
                 FROM clone
                 WHERE embl_acc = '$wanted_acc'
             }. (defined($wanted_version) ? qq{ AND embl_version = '$wanted_version' } : '');
@@ -153,15 +157,15 @@ sub find_clones_by_qnames {
             $sth->execute;
             
             server_log("trying clone accession[.version] '$qname' ");
-            while (my ($clone_id) = $sth->fetchrow) {
-                $qnames_types_clones->{$qname}{clone_accession}{$clone_id}++;
-                push @$clone_id_list, $clone_id;
+            while (my ($clone_name) = $sth->fetchrow) {
+                $qnames_types_clones->{$qname}{clone_accession}{$clone_name}++;
+                $clone_name_set->{$clone_name}++;
             }
         }
 
         { # try intl. clone names:
             my $sql = qq{
-                SELECT clone_id
+                SELECT concat(embl_acc, '.', embl_version)
                 FROM clone
                 WHERE name = '$qname'
             };
@@ -170,9 +174,9 @@ sub find_clones_by_qnames {
             $sth->execute;
             
             server_log("trying intl. clone name '$qname' ");
-            while (my ($clone_id) = $sth->fetchrow) {
-                $qnames_types_clones->{$qname}{intl_clone_name}{$clone_id}++;
-                push @$clone_id_list, $clone_id;
+            while (my ($clone_name) = $sth->fetchrow) {
+                $qnames_types_clones->{$qname}{intl_clone_name}{$clone_name}++;
+                $clone_name_set->{$clone_name}++;
             }
         }
 
@@ -186,7 +190,7 @@ sub find_clones_by_qnames {
                 foreach my $geneNameObj (@$geneNameObjList, @$geneSynObjList){
                     my $geneInfoObj = $geneinfo_adaptor->fetch_by_dbID($geneNameObj->gene_info_id());    
                     $exons = $gene_adaptor->fetch_by_stable_id($geneInfoObj->gene_stable_id())->get_all_Exons();
-                    exons2clones($qname, 'gene_name_or_synonym', $exons, $qnames_types_clones, $clone_id_list);
+                    exons2clones($qname, 'gene_name_or_synonym', $exons, $qnames_types_clones, $clone_name_set);
                 }
             };
             if ($@){
@@ -199,39 +203,96 @@ sub find_clones_by_qnames {
         }
 
     } # foreach $qname
-
-    return $clone_id_list;
 }
 
-sub find_assemblies_by_clone_ids {
-    my ($sq, $dba, $clone_id_list, $unhide) = @_;
+sub find_assemblies_by_clone_names {
+    my ($sq, $dba, $clone_name_set, $pipehead, $unhide) = @_;
 
-    my $cloneid2clonename = {};
-    my $cloneid2assemblies = {};
+    my $clonename2assemblies = {};
 
-    if(@$clone_id_list) {
-        my $clone_ids = join(', ', map { "'$_'" } @$clone_id_list);
-        my $sql = qq{
-            SELECT a.type, cl.clone_id, concat(cl.embl_acc,'.',cl.embl_version), ss.hide
-            FROM assembly a, contig co, clone cl, sequence_set ss
-            WHERE a.contig_id=co.contig_id AND co.clone_id=cl.clone_id AND a.type=ss.assembly_type
-            AND cl.clone_id IN ($clone_ids)
-        };
+    # NB: for the pipeline we currently assume no SequenceSet is hidden!
+
+    if(keys %$clone_name_set) {
+
+        my $clones_string = join(', ', map { "'$_'" } keys %$clone_name_set);
+        my $sql = $pipehead
+        ? qq{
+            SELECT ss.name, cl.name
+            FROM seq_region   cl,
+                 assembly     co2cl,
+                 seq_region   co,
+                 assembly     co2ss,
+                 seq_region   ss
+           WHERE cl.coord_system_id=(select coord_system_id from coord_system where name='clone')
+             AND co2cl.cmp_seq_region_id=co.seq_region_id
+             AND co2cl.asm_seq_region_id=cl.seq_region_id
+             AND co.coord_system_id=(select coord_system_id from coord_system where name='contig')
+             AND co2ss.cmp_seq_region_id=co.seq_region_id
+             AND co2ss.asm_seq_region_id=ss.seq_region_id
+             AND ss.coord_system_id=(select coord_system_id from coord_system where version='Otter')
+             AND cl.name IN ($clones_string)
+        }
+        : qq{
+            SELECT ss.assembly_type, concat(cl.embl_acc,'.',cl.embl_version), ss.hide
+              FROM clone cl, contig co, assembly asm, sequence_set ss
+             WHERE concat(cl.embl_acc,'.',cl.embl_version) IN ($clones_string)
+               AND co.clone_id=cl.clone_id
+               AND asm.contig_id=co.contig_id
+               AND ss.assembly_type=asm.type
+        }.($unhide ? '' : "       AND ss.hide='N' ");
         warn $sql if $DEBUG;
         my $sth = $dba->prepare($sql);
         $sth->execute;
         
         server_log("finding assemblies for clone names");
-        while (my ($atype, $clone_id, $clone_name, $hide) = $sth->fetchrow) {
-            my $hide = ($hide eq 'N') ? 0 : 1;
-            $cloneid2assemblies->{clone_id} ||= {};
-            if($unhide || !$hide) {
-                $cloneid2clonename->{$clone_id} = $clone_name;
-                $cloneid2assemblies->{$clone_id}{$atype}++;
-            }
+        while (my ($atype, $clone_name, $hide) = $sth->fetchrow) {
+            $clonename2assemblies->{$clone_name} ||= {};
+            $clonename2assemblies->{$clone_name}{$atype}++;
         }
     }
 
-    return ($cloneid2clonename, $cloneid2assemblies);
+    return $clonename2assemblies;
+}
+
+sub generate_output {
+    my ($qnames_types_clones, $clonename2assemblies, $filter_atype) = @_;
+
+    my $output_string = '';
+
+    for my $qname (sort keys %$qnames_types_clones) {
+        my $types_set = $qnames_types_clones->{$qname};
+        if(keys %$types_set) {
+            for my $type (keys %$types_set) {
+                my $clones = $types_set->{$type};
+
+                my %asm2clonenames = ();
+
+                    # inversion and partial grouping:
+                for my $clone_name (keys %$clones) {
+                    for my $asm (keys %{$clonename2assemblies->{$clone_name}}) {
+                        $asm2clonenames{$asm}{$clone_name}++;
+                    }
+                }
+
+                if(keys %asm2clonenames) {
+                    for my $asm (keys %asm2clonenames) {
+                        if(!$filter_atype || ($filter_atype eq $asm)) {
+                            $output_string .= join("\t", $qname, $type,
+                                join(',', keys %{$asm2clonenames{$asm}}),
+                                $asm)."\n";
+                        }
+                    }
+                } else {
+                    $output_string .= "$qname\n";
+                    server_log("$qname found on some clone, but its assembly is hidden or inexistent");
+                }
+            }
+        } else {
+            $output_string .= "$qname\n";
+            server_log("$qname not found on any clone");
+        }
+    }
+
+    return $output_string;
 }
 
