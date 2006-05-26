@@ -154,7 +154,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.14 $ ';
+$revision='$Revision: 1.15 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
@@ -474,8 +474,6 @@ sub run {
         $ace .= $self->format_ace_output($name, $features);
     }
     if ($ace) {
-        $ace .= $self->ace_Method->ace_string;
-        
         my $fetcher = $self->sequence_fetcher;
         my $names = $self->delete_all_hit_names;
         foreach my $hit_name (@$names) {

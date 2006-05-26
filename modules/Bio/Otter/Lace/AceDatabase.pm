@@ -147,7 +147,12 @@ sub write_local_blast {
     my $method = $blast->ace_Method;
     unless ($coll->get_Method_by_name($method->name)) {
         $coll->add_Method($method);
+        warn "Added new method to collection from blast:\n",
+            $method->ace_string;
         $self->write_methods_acefile;
+    } else {
+        warn "Method was already in collection:\n",
+            $method->ace_string;
     }
 
     $self->add_acefile($blast_ace);
