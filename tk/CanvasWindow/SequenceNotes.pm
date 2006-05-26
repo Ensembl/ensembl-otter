@@ -816,6 +816,10 @@ sub init_AceDatabase {
     if ($db->write_local_blast($ss)) {
         # Must parse in new acefile
         $db->initialize_database;
+
+        # Need to restart the read-only sgifaceserver
+        # or it will not see any data added by blast.
+        $db->ace_server->restart_server;
     }
 }
 

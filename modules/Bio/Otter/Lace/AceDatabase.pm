@@ -139,9 +139,17 @@ sub write_local_blast {
     my $dir = $self->home;
     my $blast_ace = "$dir/rawdata/local_blast_search.ace";
     open(my $fh, "> $blast_ace") or die "Can't write to '$blast_ace' : $!";
-
     print $fh $ace;
     close $fh or confess "Error writing to '$blast_ace' : $!";
+
+    # Need to add new method to collection if we don't have it already
+    my $coll = $self->get_default_MethodCollection;
+    my $method = $blast->ace_Method;
+    unless ($coll->get_Method_by_name($method->name)) {
+        $coll->add_Method($method);
+        $self->write_methods_acefile;
+    }
+
     $self->add_acefile($blast_ace);
 }
 

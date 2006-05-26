@@ -1118,6 +1118,9 @@ sub resync_with_db {
         -recurse => 0,
         );
 
+    if ($self->show_zmap) {
+        $self->zMapKillZmap;
+    }
     $self->AceDatabase->ace_server->restart_server;
     
     $self->empty_CloneSeq_cache;
