@@ -154,7 +154,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.15 $ ';
+$revision='$Revision: 1.16 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
@@ -413,12 +413,12 @@ sub ace_Method {
         $method->color( $self->method_color );
         
         # This will put the results next to the annotated genes
-        $method->zone_nummber(2);
+        $method->zone_number(2);
         
         $method->gapped(1);
         $method->blixem_type('N');
         $method->width(2.0);
-        $method->score_by_width(1);
+        $method->score_method('width');
         $method->score_bounds(70, 130);
         $method->max_mag(4000);
     }
