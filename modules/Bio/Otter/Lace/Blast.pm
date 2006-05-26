@@ -154,7 +154,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.13 $ ';
+$revision='$Revision: 1.14 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
@@ -243,7 +243,6 @@ sub initialise {
         indicate
         indicate_parser
         blast_indexer
-        right_priority
       })
     {
         my $value = $cl->option_from_array([ 'local_blast', $attribute ]);
@@ -395,17 +394,6 @@ sub blast_indexer {
     return $self->{'_blast_indexer'} || 'pressdb';
 }
 
-sub right_priority {
-    my( $self, $right_priority ) = @_;
-    
-    if ($right_priority) {
-        $self->{'_right_priority'} = $right_priority;
-    }
-    # Right_priority of 0.2 is what EGAG needed, so
-    # I have used it as the hard coded default.
-    return $self->{'_right_priority'} || 0.2;
-}
-
 sub sequence_fetcher {
     my( $self, $sequence_fetcher ) = @_;
     
@@ -415,28 +403,26 @@ sub sequence_fetcher {
     return $self->{'_sequence_fetcher'};
 }
 
-sub ace_Method_string {
+sub ace_Method {
     my ($self) = @_;
-
-    my $tag = $self->method_tag;
-    my $col = $self->method_color;
-    my $pri = $self->right_priority;
     
-    my $meth_ace = <<END_OF_METHOD;
-
-Method : "$tag"
-Colour   $col
-Gapped
-Score_by_width
-Score_bounds     70 130
-Width 2.0
-Right_priority $pri
-Max_mag  4000.000000
-Blixem_N
-
-END_OF_METHOD
-
-     return $meth_ace;
+    my $method = $self->{'_ace_method'};
+    unless ($method) {
+        $method = $self->{'_ace_method'} = Hum::Ace::Method->new;
+        $method->name(  $self->method_tag   );
+        $method->color( $self->method_color );
+        
+        # This will put the results next to the annotated genes
+        $method->zone_nummber(2);
+        
+        $method->gapped(1);
+        $method->blixem_type('N');
+        $method->width(2.0);
+        $method->score_by_width(1);
+        $method->score_bounds(70, 130);
+        $method->max_mag(4000);
+    }
+    return $method;
 }
 
 
@@ -488,7 +474,7 @@ sub run {
         $ace .= $self->format_ace_output($name, $features);
     }
     if ($ace) {
-        $ace .= $self->ace_Method_string;
+        $ace .= $self->ace_Method->ace_string;
         
         my $fetcher = $self->sequence_fetcher;
         my $names = $self->delete_all_hit_names;
