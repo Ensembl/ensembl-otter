@@ -1035,7 +1035,7 @@ sub draw_range{
         $trim_window->action('openAll', sub { 
             my ($tw) = @_;
             $tw->hide_me;
-            $self->_user_first_clone_seq(0);
+            $self->_user_first_clone_seq(1);
             $self->_user_last_clone_seq(${$tw->text_variable_ref('total')});
             my $tl = $self->canvas->toplevel;
             $tl->deiconify; $tl->raise; $tl->focus;
