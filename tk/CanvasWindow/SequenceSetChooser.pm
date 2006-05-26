@@ -285,7 +285,7 @@ sub open_sequence_set_by_ssname_clonename {
         my $top = $self->top_window()->Toplevel(-title => "SequenceSet $ss_name [$pipe_name]");
         my $ss = $self->DataSet->get_SequenceSet_by_name($ss_name);
       
-        $sn = CanvasWindow::SequenceNotes->new($top);
+        $sn = CanvasWindow::SequenceNotes->new($top, 820, 100);
         $sn->name($ss_name);
         $sn->Client($self->Client);
         $sn->SequenceSet($ss);
@@ -316,7 +316,7 @@ sub search_window{
   
     unless (defined ($search_window) ){
         my $actual_window = $self->top_window()->Toplevel(-title => 'Find loci, stable_ids or clones');
-        $self->{'_search_window'} = $search_window = CanvasWindow::SearchWindow->new($actual_window);
+        $self->{'_search_window'} = $search_window = CanvasWindow::SearchWindow->new($actual_window, 500, 60);
         $search_window->Client($self->Client());
         $search_window->DataSet($self->DataSet());
         $search_window->SequenceSetChooser($self);
