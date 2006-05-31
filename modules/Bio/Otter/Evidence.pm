@@ -164,24 +164,4 @@ sub toString {
 }
 
 
-sub equals {
-    my ($self, $obj) = @_;
-
-    if (!defined($obj)) {
-        $self->throw("Need an object to compare with");
-    }
-    if (!$obj->isa("Bio::Otter::Evidence")) {
-        $self->throw("Can only compare with a Bio::Otter::Evidence object");
-    }
-
-    if ($self->name eq $obj->name) {
-        #	$self->type eq $obj->type) {
-        return 1;
-    }
-    else {
-        print STDERR "FOUND DIFF : " . $self->name . " : " . $obj->name . "\n";
-        return 0;
-    }
-}
-
 1;
