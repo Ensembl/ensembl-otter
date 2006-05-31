@@ -22,13 +22,25 @@ our %OrderOfOptions = (
         qw(start end strand display_label score),
     ],
 
-    'RepeatConsensus' => [
-        qw(name repeat_class repeat_consensus length dbID),
+    'MarkerFeature' => [
+        qw(start end map_weight),
+            ## Special treatment: marker_object_id
+            ## Not sent (cached): analysis, slice
     ],
+    'MarkerObject' => [ # 'slave' to MarkerFeature
+        qw(left_primer right_primer min_primer_dist max_primer_dist dbID),
+    ],
+    'MarkerSynonym' => [ # 'slave' to MarkerObject
+        qw(source name),
+    ],
+
     'RepeatFeature' => [
         qw(start end strand hstart hend score),
             ## Special treatment: repeat_consensus_id
             ## Not sent (cached): analysis, slice
+    ],
+    'RepeatConsensus' => [ # 'slave' to RepeatFeature
+        qw(name repeat_class repeat_consensus length dbID),
     ],
 
     'PredictionTranscript' => [

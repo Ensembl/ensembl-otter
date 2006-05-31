@@ -12,16 +12,17 @@ use Bio::Otter::DBSQL::DBAdaptor;
 $| = 1;
 
 my $sq = Bio::Otter::ServerQuery->new('dataset',
-    'type', 'author');
+    'contig', 'type', 'author');
 set_nph($sq);
 
 my $odb = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
 
 my $asm_type = $sq->getarg('type');
 my $aut_name = $sq->getarg('author');
+my $ctg_name = $sq->getarg('contig');
 
 my $sth = $odb->prepare(qq{
-    SELECT ctg.name as contig_name,
+    SELECT ctg.name,
            aut.author_name,
            s.is_current,
            s.note_time,
@@ -33,11 +34,12 @@ my $sth = $odb->prepare(qq{
            contig ctg,
            author aut
      WHERE }
+.($ctg_name ? qq{ ctg.name = "$ctg_name" AND } : '' )
 .($asm_type ? qq{ asm.type = "$asm_type" AND asm.contig_id = ctg.contig_id AND } : '' )
 .qq{       s.contig_id = ctg.contig_id }
 .($aut_name ? qq{ AND aut.author_name = "$aut_name" } : '')
 .qq{   AND s.author_id = aut.author_id
-  ORDER BY contig_name, s.note_time DESC
+  ORDER BY ctg.name, s.note_time DESC
 });
 $sth->execute();
 
