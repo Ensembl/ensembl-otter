@@ -9,6 +9,8 @@ use Bio::Otter::Lace::Defaults;
     my( $dataset_name, $set_name );
 
     my $usage = sub { exec('perldoc', $0) };
+    # This do_getopt() call is needed to parse the otter config files
+    # even if you aren't giving any arguments on the command line.
     Bio::Otter::Lace::Defaults::do_getopt(
         'h|help!'       => $usage,
         'dataset=s'     => \$dataset_name,
