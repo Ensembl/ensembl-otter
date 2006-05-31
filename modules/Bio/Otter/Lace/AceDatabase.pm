@@ -336,6 +336,7 @@ sub save_all_slices {
 
     # Make sure we don't have a stale database handle
     $self->ace_server->kill_server;
+    $self->ace_server->start_server;
 
     my $sd_h = $self->slice_dataset_hash;
     #warn "HASH = '$sd_h' has ", scalar(keys %$sd_h), " elements";
@@ -524,7 +525,6 @@ sub ace_server {
     unless ($sgif = $self->{'_ace_server'}) {
         $sgif = Hum::Ace::LocalServer->new($self->home);
         $sgif->server_executable('sgifaceserver');
-        $sgif->timeout_string('0:0');
         $sgif->start_server() or return 0; # this only check the fork was successful
         $sgif->ace_handle(1)  or return 0; # this checks it can connect
         $self->{'_ace_server'} = $sgif;

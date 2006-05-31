@@ -557,15 +557,10 @@ sub equals {
           . scalar(@$ev_list2) . "\n";
         return 0;
     }
+    
+    my %ev_names2 = map {$_->name, 1} @$ev_list2;
     foreach my $ev1 (@$ev_list1) {
-        my $found_diff = 0;
-
-        foreach my $ev2 (@$ev_list2) {
-            unless ($ev1->equals($ev2)) {
-                $found_diff = 1;
-            }
-        }
-        if ($found_diff == 1) {
+        unless ($ev_names2{$ev1->name}) {
             print STDERR "FOUND DIFF : in evidence\n";
             return 0;
         }
