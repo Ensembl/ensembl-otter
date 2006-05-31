@@ -17,6 +17,9 @@ use Bio::EnsEMBL::PredictionTranscript;
 use Bio::EnsEMBL::RepeatConsensus;
 use Bio::EnsEMBL::RepeatFeature;
 use Bio::EnsEMBL::SimpleFeature;
+use Bio::EnsEMBL::Map::MarkerSynonym;
+use Bio::EnsEMBL::Map::Marker;
+use Bio::EnsEMBL::Map::MarkerFeature;
 
 use Bio::Otter::Author;
 use Bio::Otter::CloneLock;
@@ -820,6 +823,92 @@ sub get_rfs_from_dataset_sliceargs_analysis {   # get RepeatFeatures
     }
 
     return \@rfs;
+}
+
+sub get_mfs_from_dataset_sliceargs_analysis {   # get MarkerFeatures
+    my( $self, $dataset, $sa, $analysis_name, $pipehead ) = @_;
+
+    $sa = to_sliceargs($sa); # normalization
+
+    if(!$analysis_name) {
+        die "Analysis name must be specified!";
+    }
+
+    my $response = $self->general_http_dialog(
+        0,
+        'GET',
+        'get_marker_features',
+        {
+            %$sa,
+            'pipehead'  => $pipehead ? 1 : 0,
+            'dataset'  => $dataset->name(),
+            'analysis' => $analysis_name,
+        },
+        1,
+    );
+
+    my @resplines = split(/\n/,$response);
+
+    my @mf_optnames = @{ $OrderOfOptions{MarkerFeature} };
+    my @mo_optnames = @{ $OrderOfOptions{MarkerObject} };
+    my @ms_optnames = @{ $OrderOfOptions{MarkerSynonym} };
+
+        # cached values:
+    my $analysis = Bio::EnsEMBL::Analysis->new( -logic_name => $analysis_name );
+
+    my %mos  = (); # cached marker objects, keyed by mo_id
+    my @mfs  = (); # marker features in a list
+    foreach my $respline (@resplines) {
+
+        my @optvalues = split(/\t/,$respline);
+        my $linetype  = shift @optvalues; # 'MarkerFeature' || 'MarkerObject' || 'MarkerSynonym'
+
+        if($linetype eq 'MarkerObject') {
+
+            my $mo_id = pop @optvalues;
+
+            my $mo = Bio::EnsEMBL::Map::Marker->new();
+            for my $ind (0..@mo_optnames-1) {
+                my $method = $mo_optnames[$ind];
+                $mo->$method($optvalues[$ind]);
+            }
+            $mos{mo_id} = $mo;
+
+        } elsif($linetype eq 'MarkerSynonym') {
+
+            my $mo_id = pop @optvalues;
+            my $mo = $mos{mo_id}; # should have been defined earlier!
+
+            my $ms = Bio::EnsEMBL::Map::MarkerSynonym->new();
+            for my $ind (0..@ms_optnames-1) {
+                my $method = $ms_optnames[$ind];
+                $ms->$method($optvalues[$ind]);
+            }
+            $mo->add_MarkerSynonyms($ms);
+
+        } elsif($linetype eq 'MarkerFeature') {
+
+            my $mo_id = pop @optvalues;
+            my $mo = $mos{mo_id}; # should have been defined earlier!
+
+            my $mf = Bio::EnsEMBL::Map::MarkerFeature->new();
+
+            for my $ind (0..@mf_optnames-1) {
+                my $method = $mf_optnames[$ind];
+                $mf->$method($optvalues[$ind]);
+            }
+            $mf->marker( $mo );
+            $mf->_marker_id( $mo_id );
+
+                # use the cached values:
+            $mf->analysis( $analysis );
+            $mf->strand( 0 );
+
+            push @mfs, $mf;
+        }
+    }
+
+    return \@mfs;
 }
 
 sub get_pts_from_dataset_sliceargs_analysis {   # get PredictionTranscripts
