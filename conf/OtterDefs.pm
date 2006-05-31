@@ -51,11 +51,18 @@ use Exporter();
 my ($MAIN_DIR, $OTTER_RELEASE);
 
 $OTTER_SERVER_PORT      = 33999;
-$OTTER_RELEASE          = 45;
+$OTTER_RELEASE          = 45; # || 'HEAD'
 
-# $MAIN_DIR               = '/nfs/team71/analysis/lg4/work';
+my $runner = `id --name --user`; chomp $runner;
+if($runner eq 'humpub') {
+    $MAIN_DIR = "/mysql/otter-live-master/otter/ottersrv_rel${OTTER_RELEASE}_port${OTTER_SERVER_PORT}";
+} else { # assume a regular user runs his own copy
+    $MAIN_DIR = "/nfs/team71/analysis/$runner/work";
+}
+
+## Or override it with direct assignment:
+#
 # $MAIN_DIR               = "/humsql/ottersrv_rel${OTTER_RELEASE}_port${OTTER_SERVER_PORT}";
-$MAIN_DIR               = "/mysql/otter-live-master/otter/ottersrv_rel${OTTER_RELEASE}_port${OTTER_SERVER_PORT}";
 
 $OTTER_SERVER_ROOT 	    = $MAIN_DIR.'/ensembl-otter';
 $OTTER_ALTROOT    	    = $MAIN_DIR.'/ensembl-otter/otter_alt';
@@ -74,6 +81,7 @@ $OTTER_GET_SCRIPTS          = {'/perl/get_region'     => 'get_region',
                                '/perl/get_align_features'         => 'get_align_features',
                                '/perl/get_simple_features'        => 'get_simple_features',
                                '/perl/get_repeat_features'        => 'get_repeat_features',
+                               '/perl/get_marker_features'        => 'get_marker_features',
                                '/perl/get_prediction_transcripts' => 'get_prediction_transcripts',
                                '/perl/get_pipeline_genes'         => 'get_pipeline_genes',
                                '/perl/get_analyses_status'        => 'get_analyses_status',
