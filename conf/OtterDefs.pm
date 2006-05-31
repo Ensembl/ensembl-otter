@@ -50,8 +50,13 @@ use Exporter();
 
 my ($MAIN_DIR, $OTTER_RELEASE);
 
-$OTTER_SERVER_PORT      = 33999;
-$OTTER_RELEASE          = 45; # || 'HEAD'
+$OTTER_RELEASE          = 45; # || 0 for head code
+
+if($OTTER_RELEASE) {
+    $OTTER_SERVER_PORT = 33000 + $OTTER_RELEASE;
+} else {
+    $OTTER_SERVER_PORT      = 33999;
+}
 
 my $runner = `id --name --user`; chomp $runner;
 if($runner eq 'humpub') {
@@ -63,6 +68,7 @@ if($runner eq 'humpub') {
 ## Or override it with direct assignment:
 #
 # $MAIN_DIR               = "/humsql/ottersrv_rel${OTTER_RELEASE}_port${OTTER_SERVER_PORT}";
+# $OTTER_SERVER_PORT      = 33999;
 
 $OTTER_SERVER_ROOT 	    = $MAIN_DIR.'/ensembl-otter';
 $OTTER_ALTROOT    	    = $MAIN_DIR.'/ensembl-otter/otter_alt';
