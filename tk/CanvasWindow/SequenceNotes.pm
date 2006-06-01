@@ -75,7 +75,7 @@ sub find_CloneSequence_index_by_name {
     my $ind = 0;
     for my $cs (@{$self->get_CloneSequence_list()}) {
         if($cs->accession().'.'.$cs->sv() eq $clone_name) {
-            print STDERR "find_CloneSequence_index_by_name: returning $ind for '$clone_name'\n";
+            # print STDERR "find_CloneSequence_index_by_name: returning $ind for '$clone_name'\n";
             return $ind;
         }
         $ind++;
@@ -984,7 +984,7 @@ sub draw_around_clone_name {
     my $pghalfsize = $pgsize ? int($pgsize/2)+1 : 15;
 
     my $ind = $self->find_CloneSequence_index_by_name($clone_name);
-    print STDERR "draw_around_clone_name: ind=$ind\n";
+    # print STDERR "draw_around_clone_name: ind=$ind\n";
 
     if(defined($ind)) {
         $self->_user_first_clone_seq($ind-$pghalfsize);
