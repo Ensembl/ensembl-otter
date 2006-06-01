@@ -340,12 +340,12 @@ sub general_http_dialog {
         if ($method eq 'GET') {
             my $get = $url . ($paramstring ? "?$paramstring" : '');
             $request->uri($get);
-            warn "url: $get";
+            print STDERR "GET  $get\n";
         } elsif ($method eq 'POST') {
             $request->uri($url);
             $request->content($paramstring);
 
-            warn "url: $url";
+            print STDERR "POST  $url\n";
             #warn "paramstring: $paramstring";
         } else {
             confess "method '$method' is not supported";
