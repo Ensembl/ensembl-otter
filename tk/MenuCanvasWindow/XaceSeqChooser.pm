@@ -1299,7 +1299,7 @@ sub edit_new_subsequence {
     $slice->add_SubSeq($new);
 
     $self->add_SubSeq($new);
-    $self->do_subseq_display;
+    $self->draw_subseq_list;
     $self->highlight_by_name('subseq', $seq_name);
     $self->make_exoncanvas_edit_window($new);
     
@@ -1557,7 +1557,7 @@ sub update_all_locus_edit_fields {
 
 ### KEEP ###
 sub draw_subseq_list {
-    my( $self, @selected_clones ) = @_;
+    my( $self ) = @_;
     
     my $canvas = $self->canvas;
     
