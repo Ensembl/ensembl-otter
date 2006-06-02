@@ -78,7 +78,7 @@ $OTTER_MAX_CLIENTS          = 5;
 $OTTER_SCRIPT_TIMEOUT       = 60;
 $OTTER_SPECIES_FILE         = $OTTER_SERVER_ROOT . "/conf/species.dat";
 $OTTER_SPECIES              = read_species($OTTER_SPECIES_FILE);
-$OTTER_DEFAULT_SPECIES      = 'test_human';
+$OTTER_DEFAULT_SPECIES      = ''; # false, if we don't want to have any default species
 $OTTER_PREFIX               = 'OTT';
 $OTTER_GET_SCRIPTS          = {'/perl/get_region'     => 'get_region',
                                '/perl/get_datasets'   => 'get_datasets',
@@ -111,23 +111,25 @@ $OTTER_GLOBAL_ACCESS_USER   = 'GLOBAL_READONLY';
 #
 ################################################################################################
 
-unless ($OTTER_SPECIES->{$OTTER_DEFAULT_SPECIES}) {
-    die "no information for default species '$OTTER_DEFAULT_SPECIES'";
+if($OTTER_DEFAULT_SPECIES) {
+    unless ($OTTER_SPECIES->{$OTTER_DEFAULT_SPECIES}) {
+        die "no information for default species '$OTTER_DEFAULT_SPECIES'";
+    }
+
+    $OTTER_DBNAME        = $OTTER_SPECIES->{$OTTER_DEFAULT_SPECIES}{DBNAME};
+    $OTTER_USER          = $OTTER_SPECIES->{$OTTER_DEFAULT_SPECIES}{USER} || $OTTER_SPECIES->{defaults}{USER};
+    $OTTER_HOST          = $OTTER_SPECIES->{$OTTER_DEFAULT_SPECIES}{HOST} || $OTTER_SPECIES->{defaults}{HOST};
+    $OTTER_PORT          = $OTTER_SPECIES->{$OTTER_DEFAULT_SPECIES}{PORT} || $OTTER_SPECIES->{defaults}{PORT};
+    $OTTER_PASS          = $OTTER_SPECIES->{$OTTER_DEFAULT_SPECIES}{PASS} || $OTTER_SPECIES->{defaults}{PASS};
+    $OTTER_TYPE          = $OTTER_SPECIES->{$OTTER_DEFAULT_SPECIES}{TYPE} || $OTTER_SPECIES->{defaults}{TYPE};
+
+    $OTTER_DNA_DBNAME    = $OTTER_SPECIES->{$OTTER_DEFAULT_SPECIES}{DNA_DBNAME};
+
+    $OTTER_DNA_HOST       = $OTTER_SPECIES->{$OTTER_DEFAULT_SPECIES}{DNA_HOST} || $OTTER_SPECIES->{defaults}{DNA_HOST};
+    $OTTER_DNA_USER       = $OTTER_SPECIES->{$OTTER_DEFAULT_SPECIES}{DNA_USER} || $OTTER_SPECIES->{defaults}{DNA_USER};
+    $OTTER_DNA_PORT       = $OTTER_SPECIES->{$OTTER_DEFAULT_SPECIES}{DNA_PORT} || $OTTER_SPECIES->{defaults}{DNA_PORT};
+    $OTTER_DNA_PASS       = $OTTER_SPECIES->{$OTTER_DEFAULT_SPECIES}{DNA_PASS} || $OTTER_SPECIES->{defaults}{DNA_PASS};
 }
-
-$OTTER_DBNAME        = $OTTER_SPECIES->{$OTTER_DEFAULT_SPECIES}{DBNAME};
-$OTTER_USER          = $OTTER_SPECIES->{$OTTER_DEFAULT_SPECIES}{USER} || $OTTER_SPECIES->{defaults}{USER};
-$OTTER_HOST          = $OTTER_SPECIES->{$OTTER_DEFAULT_SPECIES}{HOST} || $OTTER_SPECIES->{defaults}{HOST};
-$OTTER_PORT          = $OTTER_SPECIES->{$OTTER_DEFAULT_SPECIES}{PORT} || $OTTER_SPECIES->{defaults}{PORT};
-$OTTER_PASS          = $OTTER_SPECIES->{$OTTER_DEFAULT_SPECIES}{PASS} || $OTTER_SPECIES->{defaults}{PASS};
-$OTTER_TYPE          = $OTTER_SPECIES->{$OTTER_DEFAULT_SPECIES}{TYPE} || $OTTER_SPECIES->{defaults}{TYPE};
-
-$OTTER_DNA_DBNAME    = $OTTER_SPECIES->{$OTTER_DEFAULT_SPECIES}{DNA_DBNAME};
-
-$OTTER_DNA_HOST       = $OTTER_SPECIES->{$OTTER_DEFAULT_SPECIES}{DNA_HOST} || $OTTER_SPECIES->{defaults}{DNA_HOST};
-$OTTER_DNA_USER       = $OTTER_SPECIES->{$OTTER_DEFAULT_SPECIES}{DNA_USER} || $OTTER_SPECIES->{defaults}{DNA_USER};
-$OTTER_DNA_PORT       = $OTTER_SPECIES->{$OTTER_DEFAULT_SPECIES}{DNA_PORT} || $OTTER_SPECIES->{defaults}{DNA_PORT};
-$OTTER_DNA_PASS       = $OTTER_SPECIES->{$OTTER_DEFAULT_SPECIES}{DNA_PASS} || $OTTER_SPECIES->{defaults}{DNA_PASS};
 
 @EXPORT = qw
   (
