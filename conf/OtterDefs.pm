@@ -78,7 +78,7 @@ $OTTER_MAX_CLIENTS          = 5;
 $OTTER_SCRIPT_TIMEOUT       = 60;
 $OTTER_SPECIES_FILE         = $OTTER_SERVER_ROOT . "/conf/species.dat";
 $OTTER_SPECIES              = read_species($OTTER_SPECIES_FILE);
-$OTTER_DEFAULT_SPECIES      = 'human';
+$OTTER_DEFAULT_SPECIES      = 'test_human';
 $OTTER_PREFIX               = 'OTT';
 $OTTER_GET_SCRIPTS          = {'/perl/get_region'     => 'get_region',
                                '/perl/get_datasets'   => 'get_datasets',
@@ -98,6 +98,7 @@ $OTTER_GET_SCRIPTS          = {'/perl/get_region'     => 'get_region',
                                '/perl/get_sequence_notes'         => 'get_sequence_notes',
                                '/perl/find_clones'                => 'find_clones',
                                '/perl/get_clonesequences'         => 'get_clonesequences',
+                               '/perl/set_sequence_note'          => 'set_sequence_note',
                               };
 $OTTER_POST_SCRIPTS         = {'/perl/write_region'   => 'write_region',
                                '/perl/unlock_region'  => 'unlock_region',
