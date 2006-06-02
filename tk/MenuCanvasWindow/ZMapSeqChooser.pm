@@ -131,6 +131,26 @@ sub zMapLaunchZmap {
              '--conf_dir' => $self->zMapZmapDir,
              '--win_id'   => $z->server_window_id);
     warn "export PATH=$ENV{PATH}\nexport LD_LIBRARY_PATH=$ENV{LD_LIBRARY_PATH}\n@e\n" if $ZMAP_DEBUG;
+
+    # this makes it a lot easier to debug with ddd
+    if(my $command_file = $ENV{DEBUG_WITH_DDD}){
+        my $ddd_file = $self->zMapZmapDir() . "/xremote.ddd";
+        eval{
+            unlink($ddd_file);
+            open(my $ddd, ">$ddd_file");
+            open(my $input, "<$command_file");
+            while(<$input>){ print $ddd $_ }
+            close $input;
+            my $ld_library_path = "/nfs/team71/acedb/zmap/prefix/LINUX/lib";
+            print $ddd "set environment LD_LIBRARY_PATH $ld_library_path\n";
+            print $ddd "run --conf_dir ".$self->zMapZmapDir." --win_id ".$z->server_window_id. "\n";
+            close $ddd;
+        };
+        if(!$@){
+            @e = ('ddd', '--nx', '--command', $ddd_file, 'zmap');
+        }
+    }
+
     sleep(2);
     my $ref = Hum::Ace::LocalServer::full_child_info();
     my $pid = fork_exec(\@e, $ref, 0, sub { 
@@ -234,16 +254,17 @@ sub zMapServerDefaults {
         sequence    => 'true',
         featuresets => sprintf(q{"%s"}, join ' ', $self->zMapListMethodNames_ordered),
         # Can specify a stylesfile instead of featuresets
+
     );
 }
 
 sub zMapZMapDefaults {
     my ($self) = @_;
-    
+    # changed to be true for the moment, rather than have it flash up and disappear.
     return $self->formatZmapDefaults(
         'ZMap',
         qw{
-            show_mainwindow     false
+            show_mainwindow     true
         }
     );
 }
