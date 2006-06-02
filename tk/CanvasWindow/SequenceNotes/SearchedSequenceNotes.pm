@@ -264,6 +264,7 @@ sub popup_missing_analysis {
         my $top = $self->canvas->Toplevel();
         $top->transient($self->canvas->toplevel);
         my $hp  = CanvasWindow::SequenceNotes::Status->new($top, 650 , 50);
+        $hp->Client($self->Client());
 	    # $hp->SequenceNotes($self); # can't have reference to self if we're inheriting
 	    # clean up just won't work.
         $hp->SequenceSet($ss);
