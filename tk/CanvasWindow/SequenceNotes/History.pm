@@ -371,7 +371,7 @@ sub update_db_comment {
         my $confirm = $self->canvas->toplevel->messageBox(
             -title   => 'Update Sequence Note',
             -message =>
-              "Pleas Confirm that you wish to update this note in the database",
+              "Please Confirm that you wish to update this note in the database",
             -type => 'OKCancel'
         );
         return if ($confirm eq 'Cancel');
@@ -380,7 +380,17 @@ sub update_db_comment {
         my $contig_id = $clone_sequence->contig_id
           || confess "no contig_id for this clone_sequence ";
         $clone_sequence->current_SequenceNote($current_seq_note);
-        $dataset->update_current_SequenceNote($clone_sequence, $new_string);
+
+        # $dataset->update_current_SequenceNote($clone_sequence, $new_string);
+
+        $self->Client()->change_sequence_note(
+            $dataset->name(),
+            $clone_sequence->contig_name(),
+            $current_seq_note->author(),
+            $current_seq_note->timestamp(),
+            $current_seq_note->text(),
+        );
+
         $self->draw;
     }
     else {

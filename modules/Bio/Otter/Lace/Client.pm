@@ -412,7 +412,7 @@ Examples:
             'end'   => 17e6,
     };
     $sa2 = {
-            'cs'    => 'clone',
+            'cs'    => 'contig',
             'name'  => 'AL008715.1.1.101817',
     }
 
@@ -549,6 +549,39 @@ sub get_sequence_notes_from_dsname_ssname_author {
     }
 
     return \%ctgname2notes;
+}
+
+sub change_sequence_note {
+    my $self = shift @_;
+
+    $self->_sequence_note_action('change', @_);
+}
+
+sub push_sequence_note {
+    my $self = shift @_;
+
+    $self->_sequence_note_action('push', @_);
+}
+
+sub _sequence_note_action {
+    my( $self, $action, $dsname, $contig_name, $aut_name, $timestamp, $text ) = @_;
+
+    my $response = $self->general_http_dialog(
+        0,
+        'GET',
+        'set_sequence_note',
+        {
+            'action'    => $action,
+            'dataset'   => $dsname,
+            'contig'    => $contig_name,
+            'author'    => $aut_name,
+            'timestamp' => $timestamp,
+            'text'      => $text,
+        },
+        1,
+    );
+
+    # I guess we simply have to ignore the response!
 }
 
 sub get_tiling_path_and_sequence {

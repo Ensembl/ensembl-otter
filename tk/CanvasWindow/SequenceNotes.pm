@@ -1348,7 +1348,7 @@ sub layout_columns_and_rows {
 }
 
 sub save_sequence_notes {
-    my( $self, $comment ) = @_;
+    my( $self, $comment ) = @_;    # is $comment ever used???
 
     my $text = ${$self->set_note_ref()};
     $text =~ s/\s/ /g;
@@ -1359,17 +1359,32 @@ sub save_sequence_notes {
         return;
     }
     my $ds = $self->SequenceSetChooser->DataSet;
-    my $note = Bio::Otter::Lace::SequenceNote->new;
-    $note->text($text);
-    $note->author($self->Client->author);
+    my $new_note = Bio::Otter::Lace::SequenceNote->new;
+    $new_note->text($text);
+    $new_note->author($self->Client->author);
+    $new_note->timestamp(time());
     my $seq_list = $self->SequenceSet->selected_CloneSequences;
     
     $ds->save_author_if_new($self->Client);
     
-    foreach my $sequence (@$seq_list) {
-        $sequence->add_SequenceNote($note);    
-        $sequence->current_SequenceNote($note);
-        $ds->save_current_SequenceNote_for_CloneSequence($sequence );
+    foreach my $cs (@$seq_list) {
+        $cs->add_SequenceNote($new_note);    
+        $cs->current_SequenceNote($new_note);
+
+            # store new SequenceNote in the database
+        $self->Client()->push_sequence_note(
+            $ds->name(),
+            $cs->contig_name(),
+            $new_note->author(),
+            $new_note->timestamp(),
+            $new_note->text(),
+        );
+
+            # sync state of SequenceNote objects with database
+        for my $note (@{$cs->get_all_SequenceNotes()}) {
+            $note->is_current(0);
+        }
+        $new_note->is_current(1);
     } 
     $self->draw;
     $self->set_scroll_region_and_maxsize;
@@ -1425,6 +1440,7 @@ sub popup_ana_seq_history{
             my $top = $self->canvas->Toplevel();
             $top->transient($self->canvas->toplevel);
             my $hp  = CanvasWindow::SequenceNotes::History->new($top, 650 , 50);
+            $hp->Client($self->Client());
 	    # $hp->SequenceNotes($self); # can't have reference to self if we're inheriting
 	    # clean up just won't work.
             $hp->SequenceSet($self->SequenceSet);
