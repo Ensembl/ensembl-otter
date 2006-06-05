@@ -1,0 +1,133 @@
+#!/usr/local/bin/perl -w
+
+### draw_peri_contigs
+
+use strict;
+use Bio::Otter::Lace::Defaults;
+use GenomeCanvas;
+
+{
+    my @ctg_names = qw{
+        Chr_9ctg99
+        Chr_9ctg1001
+        Chr_9ctg1002
+        Chr_9ctg1003
+        Chr_9ctg1004
+        Chr_9ctg1005
+        Chr_9ctg1006
+        Chr_9ctg1007
+        Chr_9ctg1008
+        Chr_9ctg1009
+        Chr_9ctg1010
+        Chr_9ctg1011
+        Chr_9ctg1012
+        Chr_9ctg1013
+        Chr_9ctg1014
+        Chr_9ctg1015
+        Chr_9ctg1016
+        Chr_9ctg1017
+        Chr_9ctg1018
+        Chr_9ctg1019
+        Chr_9ctg1020
+        Chr_9ctg1021
+        Chr_9ctg1022
+        Chr_9ctg1023
+        Chr_9ctg1024
+        Chr_9ctg1025
+        Chr_9ctg1026
+        Chr_9ctg1027
+        Chr_9ctg1028
+        Chr_9ctg1029
+        Chr_9ctg1030
+        Chr_9ctg1031
+        Chr_9ctg1032
+        Chr_9ctg1033
+        Chr_9ctg100
+        };
+
+    my $dataset_name = 'human';
+    my $set_name = 'chr9-peri-17';
+
+    my $usage = sub { exec('perldoc', $0) };
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'       => $usage,
+        'dataset=s'     => \$dataset_name,
+        'set|chr=s'     => \$set_name,
+        ) or $usage->();
+    $usage->() unless $dataset_name and $set_name;
+    
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    
+    # SequenceSet contains a list of CloneSequence objects
+    # in the assembly.
+    my $ss = $ds->get_SequenceSet_by_name($set_name);
+    $ds->fetch_all_CloneSequences_for_SequenceSet($ss);
+    my $ctg_list = $ss->CloneSequence_contigs_split_on_gaps;
+    
+    my $otter_dba = $ds->get_cached_DBAdaptor;
+    my $pipe_dba = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($otter_dba);
+    
+    for (my $i = 0; $i < @$ctg_list; $i++) {
+        my $name = $ctg_names[$i];
+        my $ctg = $ctg_list->[$i];
+        my ($chr, $start, $end) = $cl->chr_start_end_from_contig($ctg);
+        print STDERR "$name: $chr $start -> $end\n";
+    }
+}
+
+
+
+__END__
+
+=head1 NAME - draw_peri_contigs
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
+
+Attached is my summary of the content of all
+contigs. This is hand drawn and I know it contains
+errors, but it is there or thereabouts.
+
+From left to right, aligning contigs against the
+following genes should include all contigs, and
+indicate orientation of most:
+
+CASPR3
+C9orf36
+ZNF658 (ZNF91 related in my drawing)
+Fk506pseudogene (and neighbouring CASPR3 fragment 2 - 746-196aa)
+CASPR3 fragment 3 (849-1074aa)
+RPL7A
+ANKKRD26
+AQP7
+COB-W
+PGM5
+- and Satellites alpha, 5 (with LTR array), 2 and REP522/TAR
+
+Any other "known" gene would ned to be shown, and
+any pseudogenes from above list could be removed
+if they become redundant.
+
+The two fragments of the CASPR3 gene are actually
+important - they are annotated as processed
+psedogenes of CASPR4 - but I've had a good look
+and there is intron/exon structure, and I think
+they are CASPR3 related. This makes sense in terms
+of their position, and helps to explain the
+evolution of the region - genes jumping into a
+CASPR3 pseudogene, and then the whole array being
+duplicated.
+
+I hope this is clear - and I know this may not
+actually be possible - or it may be possible, but
+far too much effort for anyone to attempt. I'm off
+to LA for a week or so, so any questions/opinions
+will have to wait until then.
+
+

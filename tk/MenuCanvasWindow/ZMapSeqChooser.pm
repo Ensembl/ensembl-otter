@@ -126,6 +126,7 @@ sub zMapLaunchZmap {
     $self->zMapKillZmap;
     my $z = $self->zMapInsertZmapConnector();
     $self->zMapWriteDotZmap();
+    $self->zMapWriteDotGtkrc();
     $self->isZMap(1);
     my @e = ('zmap', 
              '--conf_dir' => $self->zMapZmapDir,
@@ -310,13 +311,22 @@ sub formatZmapDefaults {
     return $def_str;
 }
 
+sub zMapWriteDotGtkrc {
+    my $self = shift;
+    
+    my $dir = $self->zMapZmapDir;
+    my $file = "$dir/.gtkrc";
+}
+
 sub zMapZmapDir {
-    my( $self, $zmap_dir ) = @_;
-    warn "Set using the Config file please.\n" if $zmap_dir;
+    my $self = shift;
+
+    confess "Cannot set ZMap directory directly" if @_;
+
     my $ace_path = $self->ace_path();
-    my $path = "$ace_path/.ZMap";
+    my $path = "$ace_path/ZMap";
     unless(-d $path){
-        mkdir($path, 0777);
+        mkdir $path;
         die "Can't mkdir('$path') : $!\n" unless -d $path;
     }
     return $path;
