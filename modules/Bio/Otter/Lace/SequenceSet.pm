@@ -179,6 +179,32 @@ sub selected_CloneSequences_as_contig_list {
     #return $ctg_list;
 }
 
+sub CloneSequence_contigs_split_on_gaps {
+    my ($self) = @_;
+    
+    my $cs_list = $self->CloneSequence_list;
+    
+    my $ctg = [];
+    my $ctg_list = [$ctg];
+    foreach my $this (sort {
+        $a->chr_start <=> $b->chr_start
+        } @$cs_list)
+    {
+        my $last = $ctg->[$#$ctg];
+        if ($last) {
+            if ($last->chr_end + 1 >= $this->chr_start) {
+                push(@$ctg, $this);
+            } else {
+                $ctg = [$this];
+                push(@$ctg_list, $ctg);
+            }
+        } else {
+            push(@$ctg, $this);
+        }
+    }
+    return $ctg_list;
+}
+
 sub agp_data {
     my ($self) = @_;
 
