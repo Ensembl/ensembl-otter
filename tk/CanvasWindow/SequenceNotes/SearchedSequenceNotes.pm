@@ -35,9 +35,12 @@ sub get_CloneSequence_list{
     my $ss_list = $rs->get_all_SequenceSets();
     my @cs_list;
     foreach my $ss(@$ss_list){
+
+        my $cl = $self->Client();
         my $ds = $self->SequenceSetChooser->DataSet();
-        $ds->fetch_all_SequenceNotes_for_SequenceSet($ss);
-        $ds->status_refresh_for_SequenceSet($ss, $self->Client()) if $force_update;
+        $cl->fetch_all_SequenceNotes_for_DataSet_SequenceSet($ds, $ss);
+
+        $cl->status_refresh_for_DataSet_SequenceSet($ds, $ss) if $force_update;
         push(@cs_list, @{$ss->CloneSequence_list});
     }
     return \@cs_list;

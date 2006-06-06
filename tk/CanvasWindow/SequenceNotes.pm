@@ -56,13 +56,15 @@ sub get_CloneSequence_list {
     my $ss = $self->SequenceSet;
     my $cs_list = $ss->CloneSequence_list;
     if ($force_update || !$cs_list ) {
-        #print STDERR "Fetching CloneSequence list...";
+
+        my $cl = $self->Client();
         my $ds = $self->SequenceSetChooser->DataSet;
+
         $ds->fetch_all_CloneSequences_for_SequenceSet($ss);
-        $ds->fetch_all_SequenceNotes_for_SequenceSet($ss);
-        $ds->status_refresh_for_SequenceSet($ss, $self->Client());
+        $cl->fetch_all_SequenceNotes_for_DataSet_SequenceSet($ds, $ss);
+        $cl->status_refresh_for_DataSet_SequenceSet($ds, $ss);
+
         $cs_list = $ss->CloneSequence_list;
-        #print STDERR "done\n";
     }
     return $cs_list;
 }
@@ -120,15 +122,16 @@ sub refresh_column {
 sub _refresh_SequenceSet{
     my ($self , $column_number ) = @_ ;
     $column_number ||= 0;
+    my $cl = $self->Client();
     my $ds = $self->SequenceSetChooser->DataSet();
-    my $ss = $self->SequenceSet;
+    my $ss = $self->SequenceSet();
     if ($column_number == 3){
-        # this is the ana_status column - we have a separate (faster) query for this
-        $ds->status_refresh_for_SequenceSet($ss, $self->Client());
+        # this is the ana_status column
+        $cl->status_refresh_for_DataSet_SequenceSet($ds, $ss);
     }
     elsif($column_number == 7){
-        # padlock cloumn - again we have a query for this (hopefully faster also)
-        $ds->lock_refresh_for_SequenceSet($ss) ;
+        # padlock column
+        $cl->lock_refresh_for_DataSet_SequenceSet($ds, $ss);
     }else{
         # no column number - just update the whole thing
         $self->get_CloneSequence_list(1)

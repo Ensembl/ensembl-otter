@@ -15,7 +15,6 @@ use Bio::Otter::Lace::SequenceNote;
 use Bio::Otter::Lace::PipelineDB;
 use Bio::Otter::Lace::SatelliteDB;
 use Bio::Otter::Lace::Defaults;
-use Bio::Otter::Lace::PipelineStatus;
 use Scalar::Util 'weaken';
 
 sub new {
@@ -199,98 +198,12 @@ sub fetch_all_CloneSequences_for_selected_SequenceSet {
     return $self->fetch_all_CloneSequences_for_SequenceSet($ss);
 }
 
-#   this forces a refresh of the $self->status query
-#   but doesn't re fetch all CloneSequences of the SequenceSet
-sub status_refresh_for_SequenceSet{
-    my ($self, $ss, $client) = @_;
-
-    return unless Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
-
-    my $pipehead = Bio::Otter::Lace::Defaults::pipehead();
-
-    my $status_hash = $client->get_analyses_status_from_dsname_ssname(
-        $self->name(),
-        $ss->name(),
-        $pipehead,
-    );
-
-    # create a dummy hash with names only:
-    my $names_subhash = {};
-    if(my ($any_subhash) = (values %$status_hash)[0] ) {
-        while(my ($ana_name, $values) = each %$any_subhash) {
-            $names_subhash->{$ana_name} = [];
-        }
-    }
-
-    foreach my $cs (@{$ss->CloneSequence_list}) {
-        $cs->drop_pipelineStatus;
-
-        my $status = Bio::Otter::Lace::PipelineStatus->new;
-        my $contig_name = $cs->contig_name();
-        
-        my $status_subhash = $status_hash->{$contig_name} || $names_subhash;
-
-        if($status_subhash == $names_subhash) {
-            warn "had to assign an empty subhash to contig '$contig_name'";
-        }
-
-        while(my ($ana_name, $values) = each %$status_subhash) {
-            $status->add_analysis($ana_name, $values);
-        }
-
-        $cs->pipelineStatus($status);
-    }
-}
-
-# used when the locks column on sequence notes needs to be refereshed , rather than query for every detail
-sub lock_refresh_for_SequenceSet{
-    my ($self , $ss) = @_ ;
- 
-    my $ctgname2lock_hashref = $self->Client()->get_locks_from_dsname_ssname_author(
-        $self->name(), $ss->name()
-    );
-
-    foreach my $cs (@{$ss->CloneSequence_list()}) {
-        my $hashkey = $cs->contig_name();
-
-        if(my $lock = $ctgname2lock_hashref->{$hashkey}) {
-            $cs->set_lock_status($lock);
-        } else {
-            $cs->set_lock_status(0) ;
-        }
-    }
-}
-
 sub fetch_all_CloneSequences_for_SequenceSet {
     my( $self, $ss ) = @_;
     confess "Missing SequenceSet argument" unless $ss;
     my $client = $self->Client or confess "No otter Client attached";
     my $cs=$client->get_all_CloneSequences_for_SequenceSet($ss);
     return $cs;
-}
-
-sub fetch_all_SequenceNotes_for_SequenceSet {
-    my( $self, $ss ) = @_;
-
-    my $ctgname2notes_hashref = $self->Client()->get_sequence_notes_from_dsname_ssname_author(
-        $self->name(), $ss->name()
-    );
-
-    foreach my $cs (@{$ss->CloneSequence_list()}) {
-        my $hashkey = $cs->contig_name();
-
-        $cs->truncate_SequenceNotes(); 
-        if (my $notes = $ctgname2notes_hashref->{$hashkey}) {
-            foreach my $sn (sort {$a->timestamp <=> $b->timestamp} @$notes) {
-                # logic in current_SequenceNote doesn't work
-                # unless sorting is done first
-                $cs->add_SequenceNote($sn); 
-                if ($sn->is_current) {
-                    $cs->current_SequenceNote($sn);
-                }
-            }
-        }
-    }
 }
 
 sub get_all_Chromosomes {

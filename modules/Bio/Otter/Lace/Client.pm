@@ -40,6 +40,7 @@ use Bio::Otter::Transform::DataSets;
 use Bio::Otter::Transform::SequenceSets;
 use Bio::Otter::Transform::AccessList;
 use Bio::Otter::Transform::CloneSequences;
+use Bio::Otter::Lace::PipelineStatus;
 
 sub new {
     my( $pkg ) = @_;
@@ -418,16 +419,20 @@ Examples:
 
 =cut
 
-sub get_analyses_status_from_dsname_ssname {
-    my( $self, $dsname, $ssname, $pipehead ) = @_;
+sub status_refresh_for_DataSet_SequenceSet{
+    my ($self, $ds, $ss) = @_;
+
+    return unless Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
+
+    my $pipehead = Bio::Otter::Lace::Defaults::pipehead();
 
     my $response = $self->general_http_dialog(
         0,
         'GET',
         'get_analyses_status',
         {
-            'type'     => $ssname,
-            'dataset'  => $dsname,
+            'dataset'  => $ds->name(),
+            'type'     => $ss->name(),
             'pipehead'  => $pipehead ? 1 : 0,
         },
         1,
@@ -439,7 +444,32 @@ sub get_analyses_status_from_dsname_ssname {
         $status_hash{$c}{$a} = \@rest;
     }
 
-    return \%status_hash;
+    # create a dummy hash with names only:
+    my $names_subhash = {};
+    if(my ($any_subhash) = (values %status_hash)[0] ) {
+        while(my ($ana_name, $values) = each %$any_subhash) {
+            $names_subhash->{$ana_name} = [];
+        }
+    }
+
+    foreach my $cs (@{$ss->CloneSequence_list}) {
+        $cs->drop_pipelineStatus;
+
+        my $status = Bio::Otter::Lace::PipelineStatus->new;
+        my $contig_name = $cs->contig_name();
+        
+        my $status_subhash = $status_hash{$contig_name} || $names_subhash;
+
+        if($status_subhash == $names_subhash) {
+            warn "had to assign an empty subhash to contig '$contig_name'";
+        }
+
+        while(my ($ana_name, $values) = each %$status_subhash) {
+            $status->add_analysis($ana_name, $values);
+        }
+
+        $cs->pipelineStatus($status);
+    }
 }
 
 sub find_string_match_in_clones {
@@ -472,18 +502,16 @@ sub find_string_match_in_clones {
     return \@results_list;
 }
 
-sub get_locks_from_dsname_ssname_author {
-    my( $self, $dsname, $ssname, $author ) = @_;
+sub lock_refresh_for_DataSet_SequenceSet {
+    my( $self, $ds, $ss ) = @_;
 
     my $response = $self->general_http_dialog(
         0,
         'GET',
         'get_locks',
         {
-            'dataset'  => $dsname,
-            'type'     => $ssname,
-            $ssname ? ('type'   => $ssname) : (),
-            $author ? ('author' => $author) : (),
+            'dataset'  => $ds->name(),
+            'type'     => $ss->name(),
         },
         1,
     );
@@ -513,27 +541,38 @@ sub get_locks_from_dsname_ssname_author {
         );
     }
 
-    return \%lock_hash;
+    foreach my $cs (@{$ss->CloneSequence_list()}) {
+        my $hashkey = $cs->contig_name();
+
+        if(my $lock = $lock_hash{$hashkey}) {
+            $cs->set_lock_status($lock);
+        } else {
+            $cs->set_lock_status(0) ;
+        }
+    }
 }
 
-sub get_sequence_notes_from_dsname_ssname_author {
-    my( $self, $dsname, $ssname, $author ) = @_;
+sub fetch_all_SequenceNotes_for_DataSet_SequenceSet {
+    my( $self, $ds, $ss ) = @_;
+
+    $ss ||= $ds->selected_SequenceSet
+        || die "no selected_SequenceSet attached to DataSet";
 
     my $response = $self->general_http_dialog(
         0,
         'GET',
         'get_sequence_notes',
         {
-            'type'     => $ssname,
-            'dataset'  => $dsname,
-            $ssname ? ('type'   => $ssname) : (),
-            $author ? ('author' => $author) : (),
+            'type'     => $ss->name(),
+            'dataset'  => $ds->name(),
         },
         1,
     );
 
     my %ctgname2notes = ();
 
+        # we allow the notes to come in any order, so simply fill the hash:
+        
     for my $line (split(/\n/,$response)) {
         my ($ctg_name, $aut_name, $is_current, $datetime, $timestamp, $note_text)
             = split(/\t/, $line, 6);
@@ -548,7 +587,25 @@ sub get_sequence_notes_from_dsname_ssname_author {
         push(@$note_listp, $new_note);
     }
 
-    return \%ctgname2notes;
+        # now, once everything has been loaded, let's fill in the structures:
+
+    foreach my $cs (@{$ss->CloneSequence_list()}) {
+        my $hashkey = $cs->contig_name();
+
+        $cs->truncate_SequenceNotes();
+        if (my $notes = $ctgname2notes{$hashkey}) {
+            foreach my $note (sort {$a->timestamp <=> $b->timestamp} @$notes) {
+                # logic in current_SequenceNote doesn't work
+                # unless sorting is done first
+
+                $cs->add_SequenceNote($note);
+                if ($note->is_current) {
+                    $cs->current_SequenceNote($note);
+                }
+            }
+        }
+    }
+
 }
 
 sub change_sequence_note {
