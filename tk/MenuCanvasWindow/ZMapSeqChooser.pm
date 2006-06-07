@@ -261,12 +261,16 @@ sub zMapServerDefaults {
 
 sub zMapZMapDefaults {
     my ($self) = @_;
-    # changed to be true for the moment, rather than have it flash up and disappear.
+
+    # make this configurable for those users where zmap doesn't start due to not having window
+    # id when doing XChangeProperty.
+    my $boolean   = { true => 'true', false => 'false'};
+    my $win       = Bio::Otter::Lace::Defaults::option_from_array([qw(client zmap_main_window)]);
+    my $show_main = $boolean->{$win} || $boolean->{'false'};
+    
     return $self->formatZmapDefaults(
         'ZMap',
-        qw{
-            show_mainwindow     true
-        }
+        show_mainwindow  => $show_main,
     );
 }
 
