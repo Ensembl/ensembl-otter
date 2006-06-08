@@ -340,11 +340,8 @@ sub zMapListMethodNames_ordered{
     my $self = shift;
     my @list = ();
     my $collection = $self->AceDatabase->get_default_MethodCollection;
-    foreach my $method (sort {$a->right_priority <=> $b->right_priority}
-                        @{$collection->get_all_Methods}) {
-        push(@list, $method->name);
-    }
-    return @list
+    $collection->order_by_right_priority;
+    return map $_->name, @{$collection->get_all_Methods};
 }
 
 #===========================================================
