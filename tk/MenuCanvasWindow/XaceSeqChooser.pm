@@ -950,7 +950,7 @@ sub save_data {
             $self->launch_xace;
             $self->update_ace_display($$ace_data);
             # resync here!
-            $self->resync_with_db; # probably better to create a key event
+            $self->resync_with_db;
             $self->zMapLaunchZmap;
         }
     };
