@@ -29,7 +29,6 @@ sub start_handler{
     if($ele eq 'dataset'){
         my $ds = Bio::Otter::Lace::DataSet->new();
         $ds->name($attr->{'name'});
-        $ds->author($self->get_property('author'));
         $self->add_object($ds);
     }elsif($SUB_ELE->{$ele}){
      #   print "* Interesting $ele\n";
