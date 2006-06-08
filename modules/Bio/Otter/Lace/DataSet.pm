@@ -32,7 +32,6 @@ sub Client {
   return $self->{'_Client'};
 }
 
-
 sub name {
     my( $self, $name ) = @_;
     
@@ -42,15 +41,6 @@ sub name {
     return $self->{'_name'};
 }
 
-sub author {
-    my( $self, $author ) = @_;
-    
-    if ($author) {
-        $self->{'_author'} = $author;
-        $self->{'_author_id'} = undef;
-    }
-    return $self->{'_author'};
-}
 sub taxon{
     my ($self) = @_;
     unless($self->{'_taxon_id'}){
@@ -60,39 +50,21 @@ sub taxon{
     }
     return $self->{'_taxon_id'};
 }
+
 sub species{
     my ($self) = @_;
     unless($self->{'_species'}){
-	my $dba      = $self->get_cached_DBAdaptor;
-	my $meta_con = $dba->get_MetaContainer;
-#	$self->{'_species'} = $meta_con->get_Species(); # this requires 'species.classification' meta key
-	my $t_species= $meta_con->list_value_by_key('species.common_name');
-	if ($t_species && scalar(@{$t_species})){
-	    $self->{'_species'} = $t_species->[0];
-	}else{
-	    warn "species unavailable, check <species.common_name> meta key\n";
-	}
+        my $dba      = $self->get_cached_DBAdaptor;
+        my $meta_con = $dba->get_MetaContainer;
+    #	$self->{'_species'} = $meta_con->get_Species(); # this requires 'species.classification' meta key
+        my $t_species= $meta_con->list_value_by_key('species.common_name');
+        if ($t_species && scalar(@{$t_species})){
+            $self->{'_species'} = $t_species->[0];
+        }else{
+            warn "species unavailable, check <species.common_name> meta key\n";
+        }
     }
     return $self->{'_species'};
-}
-sub _author_id {
-    my( $self ) = @_;
-    
-    my( $id );
-    unless ($id = $self->{'_author_id'}) {
-        my $author = $self->author or confess "author not set";
-        my $dba = $self->get_cached_DBAdaptor;
-        my $sth = $dba->prepare(q{
-            SELECT author_id
-            FROM author
-            WHERE author_name = ?
-            });
-        $sth->execute($author);
-        ($id) = $sth->fetchrow;
-        confess "No author_id for '$author'" unless $id;
-        $self->{'_author_id'} = $id;
-    }
-    return $id;
 }
 
 sub sequence_sets_cached {
@@ -109,26 +81,6 @@ sub sequence_set_access_list_cached {
     $self->{'_sequence_set_access_list'} = $al;
   }
   return $self->{'_sequence_set_access_list'};
-}
-
-sub save_author_if_new{
-    my ($self , $client) = @_;
-    
-    my( $id );   
-    eval{ $id =  $self->_author_id } ;
-    return if  $id ; 
-    my $username =  $self->author;
-    my $email = $client->email ;
-    my $dba = $self->get_cached_DBAdaptor;
-    my $add_author = $dba->prepare(q{
-        INSERT author ( author_email,
-                        author_name)
-        VALUES ( ?, ?)          
-    });    
-    $add_author->execute($email , $username);
-    $id = $add_author->{'mysql_insertid'}
-        or confess "Failed to get insertid";
-    $self->_author_id($id);
 }
 
 sub get_sequence_set_access_list {

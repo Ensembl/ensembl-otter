@@ -362,9 +362,11 @@ sub update_db_comment {
     my $clone_sequence   = $self->current_clone;
     my $current_seq_note = $clone_sequence->get_all_SequenceNotes->[$index];
 
+    my $cl = $self->Client();
+
     # check that author is valid to update note
     my $note_author  = $current_seq_note->author;
-    my $current_user = $dataset->author;
+    my $current_user = $cl->author;
     if ($note_author eq $current_user) {
 
         ###confirm that the user wants to update the entry
@@ -383,12 +385,10 @@ sub update_db_comment {
 
         # $dataset->update_current_SequenceNote($clone_sequence, $new_string);
 
-        $self->Client()->change_sequence_note(
+        $cl->change_sequence_note(
             $dataset->name(),
             $clone_sequence->contig_name(),
-            $current_seq_note->author(),
-            $current_seq_note->timestamp(),
-            $current_seq_note->text(),
+            $current_seq_note,
         );
 
         $self->draw;

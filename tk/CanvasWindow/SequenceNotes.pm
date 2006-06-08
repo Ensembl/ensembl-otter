@@ -1361,26 +1361,24 @@ sub save_sequence_notes {
         $self->message("No clones selected");
         return;
     }
+    my $cl = $self->Client();
     my $ds = $self->SequenceSetChooser->DataSet;
+
     my $new_note = Bio::Otter::Lace::SequenceNote->new;
+    $new_note->author($cl->author); # will be ignored by the client anyway, but let it be known to the interface
     $new_note->text($text);
-    $new_note->author($self->Client->author);
     $new_note->timestamp(time());
     my $seq_list = $self->SequenceSet->selected_CloneSequences;
-    
-    $ds->save_author_if_new($self->Client);
     
     foreach my $cs (@$seq_list) {
         $cs->add_SequenceNote($new_note);    
         $cs->current_SequenceNote($new_note);
 
             # store new SequenceNote in the database
-        $self->Client()->push_sequence_note(
+        $cl->push_sequence_note(
             $ds->name(),
             $cs->contig_name(),
-            $new_note->author(),
-            $new_note->timestamp(),
-            $new_note->text(),
+            $new_note,
         );
 
             # sync state of SequenceNote objects with database

@@ -32,6 +32,7 @@ use Bio::Otter::Lace::AceDatabase;
 use Bio::Otter::Lace::DataSet;
 use Bio::Otter::Lace::Locator;
 use Bio::Otter::Lace::PersistentFile;
+use Bio::Otter::Lace::PipelineStatus;
 use Bio::Otter::Lace::SequenceNote;
 use Bio::Otter::Lace::TempFile;
 use Bio::Otter::Lace::ViaText ('%OrderOfOptions');
@@ -40,7 +41,6 @@ use Bio::Otter::Transform::DataSets;
 use Bio::Otter::Transform::SequenceSets;
 use Bio::Otter::Transform::AccessList;
 use Bio::Otter::Transform::CloneSequences;
-use Bio::Otter::Lace::PipelineStatus;
 
 sub new {
     my( $pkg ) = @_;
@@ -87,6 +87,7 @@ sub email {
 
     return $self->option_from_array([qw( client email )]) || (getpwuid($<))[0];
 }
+
 sub debug{
     my ($self, $debug) = @_;
 
@@ -621,7 +622,12 @@ sub push_sequence_note {
 }
 
 sub _sequence_note_action {
-    my( $self, $action, $dsname, $contig_name, $aut_name, $timestamp, $text ) = @_;
+    my( $self, $action, $dsname, $contig_name, $seq_note ) = @_;
+
+    my $aut_name  = $self->author(); # should be identical to the note's author
+    my $aut_email = $self->email();
+    my $timestamp = $seq_note->timestamp();
+    my $text      = $seq_note->text();
 
     my $response = $self->general_http_dialog(
         0,
@@ -632,6 +638,7 @@ sub _sequence_note_action {
             'dataset'   => $dsname,
             'contig'    => $contig_name,
             'author'    => $aut_name,
+            'email'     => $aut_email,
             'timestamp' => $timestamp,
             'text'      => $text,
         },
@@ -1177,7 +1184,6 @@ sub get_all_DataSets {
 					    );
     # stream parsing expat non-validating parser
     my $dsp = Bio::Otter::Transform::DataSets->new();
-    $dsp->set_property('author', $self->author);
     my $p = $dsp->my_parser();
     $p->parse($content);
     $ds = $self->{'_datasets'} = $dsp->sorted_objects;
@@ -1189,26 +1195,28 @@ sub get_all_DataSets {
 }
 
 sub get_all_SequenceSets_for_DataSet {
-  my( $self, $dsObj, $ssal ) = @_;
-  return [] unless $dsObj;
-#  my $ss = $dsObj->sequence_sets_cached();
+  my( $self, $ds, $ssal ) = @_;
+  return [] unless $ds;
+#  my $ss = $ds->sequence_sets_cached();
 #  return $ss if (defined $ss && scalar(@$ss));
   my $content = $self->general_http_dialog(
 					   3,
 					   'GET',
 					   'get_sequencesets',
 					   {
-					    'dataset'  => $dsObj->name,
-					    'author'   => $dsObj->author,
+					    'dataset'  => $ds->name,
+					    'author'   => $self->author,
 					   }
 					  );
   # stream parsing expat non-validating parser
   my $ssp = Bio::Otter::Transform::SequenceSets->new();
-  $ssp->set_property('dataset_name', $dsObj->name);
+  $ssp->set_property('dataset_name', $ds->name);
   my $p   = $ssp->my_parser();
   $p->parse($content);
   my $ss=$ssp->objects;
-  my $this_author=$dsObj->author;
+
+  my $this_author=$self->author;
+
   foreach my $set (@$ss){
     my $write_flag;
     my $name = $set->{'_name'};
@@ -1216,7 +1224,7 @@ sub get_all_SequenceSets_for_DataSet {
       #If an author has an entry in the sequence_set_access
       #table for this set, then it is restricted to them.
       if ($a->author eq $this_author && $a->sequenceset_name eq $name) {
-	$write_flag = $a->access_type;
+        $write_flag = $a->access_type;
       }
     }
     # No entries for person in sequence_set_access table - person
@@ -1230,9 +1238,9 @@ sub get_all_SequenceSets_for_DataSet {
 }
 
 sub get_SequenceSet_AccessList_for_DataSet {
-  my ($self,$dsObj) = @_;
-  return [] unless $dsObj;
- # my $al = $dsObj->sequence_set_access_list_cached;
+  my ($self,$ds) = @_;
+  return [] unless $ds;
+ # my $al = $ds->sequence_set_access_list_cached;
  # return $al if defined($al && scalar(@$al));
   my $content = $self->general_http_dialog(
 					   3,
@@ -1240,7 +1248,7 @@ sub get_SequenceSet_AccessList_for_DataSet {
 					   'get_sequenceset_accesslist',
 					   {
 					    'author'   => $self->author,
-					    'dataset'  => $dsObj->name,
+					    'dataset'  => $ds->name,
 					   }
 					  );
   # stream parsing expat non-validating parser
