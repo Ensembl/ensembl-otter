@@ -738,32 +738,32 @@ sub _open_SequenceSet{
     
 }
 
-sub make_EviCollection {
-    my( $self, $ss ) = @_;
-    
-    return unless Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
-    my $dataset = $self->Client->get_DataSet_by_name($ss->dataset_name);
-    #$dataset->selected_SequenceSet($ss);
-    my $ctg = $ss->selected_CloneSequences;
-    my( $chr, $chr_start, $chr_end ) = $self->Client->chr_start_end_from_contig($ctg);
-    #print STDERR "EviSlice: $chr $chr_start-$chr_end\n";
-    
-    my $pipe_db = Bio::Otter::Lace::PipelineDB::get_DBAdaptor($dataset->get_cached_DBAdaptor);
-    $pipe_db->assembly_type($ss->name);
-    my $slice_adaptor = $pipe_db->get_SliceAdaptor;
-    my $slice = $slice_adaptor->fetch_by_chr_start_end($chr, $chr_start, $chr_end);
-    warn "No components in tiling path in Slice for EviCollection"
-        unless @{$slice->get_tiling_path};
-
-    return Evi::EviCollection->new_from_pipeline_Slice(
-        $pipe_db,
-        $slice,
-        [qw{ vertrna Est2genome_human Est2genome_mouse Est2genome_other }],
-        #[qw{ vertrna }],
-        #[qw{ Uniprot }],
-        [],
-       );
-}
+#sub make_EviCollection {
+#    my( $self, $ss ) = @_;
+#    
+#    return unless Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
+#    my $dataset = $self->Client->get_DataSet_by_name($ss->dataset_name);
+#    #$dataset->selected_SequenceSet($ss);
+#    my $ctg = $ss->selected_CloneSequences;
+#    my( $chr, $chr_start, $chr_end ) = $self->Client->chr_start_end_from_contig($ctg);
+#    #print STDERR "EviSlice: $chr $chr_start-$chr_end\n";
+#    
+#    my $pipe_db = Bio::Otter::Lace::PipelineDB::get_DBAdaptor($dataset->get_cached_DBAdaptor);
+#    $pipe_db->assembly_type($ss->name);
+#    my $slice_adaptor = $pipe_db->get_SliceAdaptor;
+#    my $slice = $slice_adaptor->fetch_by_chr_start_end($chr, $chr_start, $chr_end);
+#    warn "No components in tiling path in Slice for EviCollection"
+#        unless @{$slice->get_tiling_path};
+#
+#    return Evi::EviCollection->new_from_pipeline_Slice(
+#        $pipe_db,
+#        $slice,
+#        [qw{ vertrna Est2genome_human Est2genome_mouse Est2genome_other }],
+#        #[qw{ vertrna }],
+#        #[qw{ Uniprot }],
+#        [],
+#       );
+#}
 
 # creates a string based on the selected clones, with commas seperating individual values or dots to represent a continous sequence
 sub selected_sequence_string{
