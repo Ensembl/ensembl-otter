@@ -4,6 +4,7 @@
 
 use strict;
 use Bio::Otter::Lace::Defaults;
+use Bio::Otter::AnnotationBroker;
 
 {
     my $dataset_name = 'human';
@@ -26,10 +27,15 @@ use Bio::Otter::Lace::Defaults;
     my $gene_aptr   = $otter_dba->get_GeneAdaptor;
     
         #vega        chr22-02    C22:
+        #ralph       chr14-02    GC:
     my @author_set = qw{
-        ralph       chr14-02    GC:
         lhillier    chr7-02     WU:
         };
+    
+    my $broker_author = Bio::Otter::Author->new(
+        -name   => 'test',
+        -email  => 'jgrg@sanger.ac.uk',
+        );
     
     my $update_gene_type = $otter_dba->prepare(q{
         UPDATE gene
@@ -47,6 +53,8 @@ use Bio::Otter::Lace::Defaults;
         WHERE transcript_info_id = ?
         });
     
+    #my %do_not_skip = map {$_, 1} qw{ PRKAR2B HBP1 ADAM22 GNB2 STX1A };
+    
     for (my $i = 0; $i < @author_set; $i += 3) {
         my ($author, $set_name, $prefix) = @author_set[$i..$i+2];
         print STDERR "\n$set_name ($author)\n";
@@ -61,6 +69,7 @@ use Bio::Otter::Lace::Defaults;
 
         # List gene IDs by slice
         my $gene_id_list = $gene_aptr->list_current_dbIDs_for_Slice($slice);
+        #my $gene_id_list = [qw{ 64385 141025 64381 66046 64900 }];
         
         # More recent ones are more interesting
         @$gene_id_list = reverse @$gene_id_list;
@@ -69,17 +78,42 @@ use Bio::Otter::Lace::Defaults;
         # dataset because we check to see if the elements
         # already have the prefix before adding it.
         my $genes_fixed = 0;
-        foreach my $gid (@$gene_id_list) {
+      GENE: foreach my $gid (@$gene_id_list) {
             my $did_fix = 0;
 
             ## Add $prefix to all versions of gene and to transcript name
-            #foreach my $gene (external_gene_versions($gene_aptr, $author, $gid)) {
+            foreach my $gene (external_gene_versions($gene_aptr, $author, $gid)) {
             
-            # Only change prefix if latest author is the external author
-            my @gene_list = $gene_aptr->fetch_by_dbID($gid);
-            foreach my $gene (@gene_list) {
-                next unless $gene->gene_info->author->name eq $author;
+            ## Only change prefix if latest author is the external author
+            #my @gene_list = $gene_aptr->fetch_by_dbID($gid);
+            #foreach my $gene (@gene_list) {
+            #    next unless $gene->gene_info->author->name eq $author;
 
+
+            my @ext = external_gene_versions($gene_aptr, $author, $gid);
+            next unless @ext;
+
+            my $first = $ext[0];
+            my $last  = $ext[1];
+            #
+            #my $name = $last->gene_info->name->name;
+            ##next unless $do_not_skip{$name};
+            #
+            unless ($first == $last) {
+                my $broker = Bio::Otter::AnnotationBroker->new($otter_dba);
+                $broker->current_author($broker_author);
+                printf STDERR "Comparing gene '%s' %d to %d\n", $first->stable_id, $first->dbID, $last->dbID;
+                my @changes = $broker->compare_genes([$first], [$last]);
+                
+                
+                print STDERR @changes ? "DIFFERENT\n" : "SAME\n";
+                next GENE if @changes;
+            }
+            
+            foreach my $gene (@ext) {
+                
+                #$did_fix++; next;   # Debugging
+                
                 my $type = $gene->type;
                 if (missing_prefix($type, $prefix)) {
                     $did_fix++;

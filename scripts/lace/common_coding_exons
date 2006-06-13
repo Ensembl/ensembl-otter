@@ -1,0 +1,102 @@
+#!/usr/local/bin/perl -w
+
+### common_coding_exons
+
+use strict;
+
+use Bio::Otter::Lace::Defaults;
+
+{
+    my @gene_stable = qw{
+        OTTMUSG00000004402
+        OTTMUSG00000004405
+        };
+
+    my $dataset_name = 'mouse';
+
+    my $usage = sub { exec('perldoc', $0) };
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'       => $usage,
+        'dataset=s'     => \$dataset_name,
+        ) or $usage->();
+    $usage->() unless $dataset_name;
+    
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    
+    my $otter_dba = $ds->get_cached_DBAdaptor;
+    my $gene_aptr = $otter_dba->get_GeneAdaptor;
+    
+    foreach my $id (@gene_stable) {
+        printf "\n%s\n", $id;
+        my $gene = $gene_aptr->fetch_by_stable_id($id);
+
+        my $exons = common_coding_exons($gene);
+        foreach my $ex (@$exons) {
+            printf "  %s  %4d\n", $ex->stable_id, $ex->length;
+        }
+    }
+}
+
+sub common_coding_exons {
+    my ($gene) = @_;
+    
+    # Get list of coding transcripts
+    my @code_tscts = grep $_->translation, @{$gene->get_all_Transcripts};
+
+    my $common_exons = [];
+    for (my $i = 0; $i < @code_tscts; $i++) {
+        my $tsct = $code_tscts[$i];
+    
+        my $tsl = $tsct->translation or next;
+        my $start_Exon = $tsl->start_Exon;
+        my   $end_Exon = $tsl->end_Exon;
+        my $in_translation = 0;
+        
+        my %this_exons;
+        foreach my $exon (@{$tsct->get_all_Exons}) {
+            if ($exon == $start_Exon) {
+                $in_translation = 1;
+            }
+            
+            if ($in_translation) {
+                if ($i == 0) {
+                    push(@$common_exons, $exon);
+                }
+                $this_exons{$exon} = 1;
+            }
+            
+            if ($exon == $end_Exon) {
+                $in_translation = 0;
+                last;
+            }
+        }
+        die "Error: failed to find end Exon" if $in_translation;
+        
+        # Remove any exons from common_exons that weren't in
+        # this transcript.
+        for (my $j = 0; $j < @$common_exons;) {
+            my $exon = $common_exons->[$j];
+            if ($this_exons{$exon}) {
+                $j++;
+            } else {
+                splice(@$common_exons, $j, 1);
+            }
+        }
+    }
+    
+    return $common_exons;
+}
+
+
+__END__
+
+=head1 NAME - common_coding_exons
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
