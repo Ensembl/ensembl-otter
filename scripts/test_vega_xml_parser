@@ -23,10 +23,11 @@ test_vega_xml_parser -dbhost xxx -dbport xxx -dbname xxx -dbuser xxx -dbpass xxx
 use strict;
 
 use Bio::Vega::Transform::Otter;
+use Bio::Vega::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Slice;
 use Getopt::Long;
 use Data::Dumper;
-use Bio::EnsEMBL::Pipeline::SeqFetcher::Finished_Pfetch;
+
 
 {
   my $dbhost;
@@ -53,7 +54,7 @@ use Bio::EnsEMBL::Pipeline::SeqFetcher::Finished_Pfetch;
   my $parser = Bio::Vega::Transform::Otter->new;
   $parser->parsefile($xmlfile);
 
-  my $db = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
+  my $db = Bio::Vega::DBSQL::DBAdaptor->new(
 				 -dbname => $dbname,
 	          -host   => $dbhost,
              -user   => $dbuser,
@@ -61,8 +62,12 @@ use Bio::EnsEMBL::Pipeline::SeqFetcher::Finished_Pfetch;
              -pass   => $dbpass,
 	          );
 
+ # print Dumper($parser->get_AssemblySlices);
+  $parser->LoadAssemblySlices($db);
 
-  getSlicesForAssemblyLoading($parser,$db);
+
+
+=head2 COMMENT
 
   ##check if project and the assembly of parser yield the same segment list
   my $chr='20';
@@ -79,7 +84,7 @@ use Bio::EnsEMBL::Pipeline::SeqFetcher::Finished_Pfetch;
 			 ,"\n";
   }
 
- my $segment=$parser->make_Assembly;
+ my $segment=$parser->make_Assembly_ProjectionSegment;
 
   print "\n\nfrom xml parser chromosome - contig\n\n";
   my $chr_ctg = $segment->{chr_ctg};
@@ -123,108 +128,22 @@ use Bio::EnsEMBL::Pipeline::SeqFetcher::Finished_Pfetch;
 			 ,"\n";
   }
 
+=cut
+
   $parser->DESTROY;
-}
-
-sub getSlicesForAssemblyLoading {
-
-  my ($parser,$db)= @_;
-  my $dbc= $db->dbc();
-  my $segment=$parser->make_Assembly;
-  my $chr_slice=$parser->make_ChromosomeSlice;
-  my $asm_seq_reg_id=get_seq_region_id($chr_slice,$parser,$db);
-  my $chr_ctg = $segment->{chr_ctg};
-  ##insert all contigs
-  foreach my $seg (@$chr_ctg) {
-	 my $ctg_slice = $seg->to_Slice();
-	 my $cmp_seq_reg_id=get_seq_region_id($ctg_slice,$parser,$db);
-	 ##insert chromosome-contig assembly
-	 insert_Assembly($dbc,$asm_seq_reg_id,$cmp_seq_reg_id,$seg->from_start,$seg->from_end,$ctg_slice->start,$ctg_slice->end,$ctg_slice->strand);
-  }
-  my $cln_ctg = $segment->{cln_ctg};
-  ##insert all clones
-  foreach my $seg (@$cln_ctg) {
-	 my $ctg_slice = $seg->to_Slice();
-	 my ($cln_name)=$ctg_slice->seq_region_name =~ /^(.+\.\d+)\.\d+\.\d+$/;
-	 my $cs = $parser->make_CoordSystem('clone');
-	 my $cln_slice = $parser->make_Slice($cln_name,$seg->from_start,$seg->from_end,$seg->from_end,$ctg_slice->strand,$cs);
-	 $asm_seq_reg_id=get_seq_region_id($cln_slice,$parser,$db);
-	 my $cmp_seq_reg_id =get_seq_region_id($ctg_slice,$parser,$db);
-	 ##insert clone-contig assembly
-	 insert_Assembly($dbc,$asm_seq_reg_id,$cmp_seq_reg_id,$seg->from_start,$seg->from_end,$ctg_slice->start,$ctg_slice->end,$ctg_slice->strand);
-  }
 
 }
 
-sub get_seq_region_id {
 
-  my ($slice,$parser,$db)=@_;
-  my $dbc= $db->dbc();
-  my $sa=$db->get_SliceAdaptor();
-  my $csa = $db->get_CoordSystemAdaptor();
-  my ($seq_reg_id,$new_slice,$slice_cs,$cs);
-  ## check if the contig is already stored in db
-  $slice_cs=$slice->coord_system;
-  eval{
-	 $cs = $csa->fetch_by_name($slice_cs->name,$slice_cs->version,$slice_cs->rank);
-  };
-  if(!$cs){
-	 print STDERR "A coord_system matching the arguments does not exsist in the cord_system table, please ensure you have the right coord_system entry in the database";
-  }
-  $new_slice = $sa->fetch_by_name($slice->name);
-  if($new_slice){
-	 warn "slice <".$slice->seq_region_name."> is already in the database\n";
-	 $seq_reg_id = $sa->get_seq_region_id($new_slice);
-  }
-  else {
-		##make a new slice with the coord_system of the database for contig
-		$new_slice=$parser->make_Slice($slice->seq_region_name,1,$slice->end,$slice->end,1,$cs);
-		my $seq;
-		if ($slice_cs->name eq 'contig') {
-		  ##fetch sequence for contig
-		  my $seq_name=$slice->seq_region_name;
-		  my ($acc_ver)=$seq_name =~ /^(.+\.\d+)\.\d+\.\d+$/;
-		  my $seqobj = pfetch_acc_ver($acc_ver);
-		  $seq   = $seqobj->seq;
-		  #my $seqlen= $seqobj->length;
-		  ##insert slice
-		  $seq_reg_id = $sa->store($new_slice,\$seq);
-		}
-		else {
-		##insert slice
-	   $seq_reg_id = $sa->store($new_slice);
-		}
-	 }
-  return $seq_reg_id;
-}
-
-sub  insert_Assembly {
-  my($dbc,$asm_seq_reg_id,$cmp_seq_reg_id,$asm_start,$asm_end,$cmp_start,$cmp_end,$cmp_strand) = @_;
-  my  $insert_assembly=$dbc->prepare("insert into assembly 
-	  (asm_seq_region_id ,cmp_seq_region_id ,asm_start ,asm_end ,cmp_start ,cmp_end ,ori)
-	  values  (?, ?,?,?,?,?,?)");
-
-  $insert_assembly->execute($asm_seq_reg_id,$cmp_seq_reg_id,$asm_start,$asm_end
-									 ,$cmp_start,$cmp_end,$cmp_strand);
-}
-
-sub pfetch_acc_ver {
-  my( $acc_ver ) = @_;
-  my $pfetch         ||= Bio::EnsEMBL::Pipeline::SeqFetcher::Finished_Pfetch->new;
-  my $pfetch_archive ||= Bio::EnsEMBL::Pipeline::SeqFetcher::Finished_Pfetch->new(
-							 -PFETCH_PORT => 23100,);
-  my $seq = $pfetch->get_Seq_by_acc($acc_ver);
-  unless ($seq) {
-	 warn "Fetching '$acc_ver' from archive\n";
-	 $seq = $pfetch_archive->get_Seq_by_acc($acc_ver);
-  }
-  unless ($seq) {
-	 die "cannot fetch sequence\n";
-  }
-  return $seq;
-}
 
 warn "Parser now out of scope\n";
+
+
+
+
+
+
+
 
 __END__
 
