@@ -26,9 +26,9 @@ use Bio::Otter::AnnotationBroker;
     my $slice_aptr  = $otter_dba->get_SliceAdaptor;
     my $gene_aptr   = $otter_dba->get_GeneAdaptor;
     
-        #vega        chr22-02    C22:
-        #ralph       chr14-02    GC:
     my @author_set = qw{
+        vega        chr22-02    C22:
+        ralph       chr14-02    GC:
         lhillier    chr7-02     WU:
         };
     
@@ -81,8 +81,8 @@ use Bio::Otter::AnnotationBroker;
       GENE: foreach my $gid (@$gene_id_list) {
             my $did_fix = 0;
 
-            ## Add $prefix to all versions of gene and to transcript name
-            foreach my $gene (external_gene_versions($gene_aptr, $author, $gid)) {
+        ## Add $prefix to all versions of gene and to transcript name
+        #foreach my $gene (external_gene_versions($gene_aptr, $author, $gid)) {
             
             ## Only change prefix if latest author is the external author
             #my @gene_list = $gene_aptr->fetch_by_dbID($gid);
@@ -94,7 +94,7 @@ use Bio::Otter::AnnotationBroker;
             next unless @ext;
 
             my $first = $ext[0];
-            my $last  = $ext[1];
+            my $last  = $ext[$#ext];
             #
             #my $name = $last->gene_info->name->name;
             ##next unless $do_not_skip{$name};
@@ -154,7 +154,7 @@ sub external_gene_versions {
     my $latest_gene = $gene_aptr->fetch_by_dbID($gid);
     my $gene_name     = $latest_gene->gene_info->name->name;
     my $latest_author = $latest_gene->gene_info->author->name;
-    # Get version 1 of each gene
+    # Get all versions of gene
     my @all_versions = get_all_gene_versions($gene_aptr, $latest_gene);
     #warn "got: ", join(', ', map "'$_'", @all_versions), "\n";
     my $first_gene = $all_versions[0];
