@@ -29,6 +29,9 @@ use CanvasWindow;
         # Skip the names with spaces such as "old lace", which will still
         # be shown as their CamelCase equivalents like "OldLace".
         next if $name =~ /\s/;
+        
+        # Skip "grey" colours, which duplicate some of the "gray"s.
+        next if $name =~ /grey/i;
 
         my $hex = sprintf "#%02x%02x%02x", $red, $green, $blue;
 

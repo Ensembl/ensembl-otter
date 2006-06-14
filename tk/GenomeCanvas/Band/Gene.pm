@@ -51,7 +51,7 @@ sub draw_titles {
 
     $y_offset += $font_size * 2.2;
     
-    if (not $band->dont_show_key) {
+    unless ($band->dont_show_key) {
 	    # Print key
 
 	    # left
@@ -224,6 +224,8 @@ sub get_gene_span_data {
                 warn "Skipping '$id' gene\n";
                 next;
             }
+            #my $desc = $vg->description || 'NO DESCRIPTION';
+            #print STDERR "$id: $desc\n";
             my $type = $vg->type =~ /pseudo/i ? 'Pseudogene' : $vg->type;
             #warn join("\t", $id, $type, $vg->start, $vg->end, $vg->strand), "\n";
 	        push(@span, [$id, $type, $vg->start, $vg->end, $vg->strand]);
