@@ -5,44 +5,45 @@
 use strict;
 use Bio::Otter::Lace::Defaults;
 use GenomeCanvas;
+use GenomeCanvas::Band::ContigCartoon;
 
 {
     my @ctg_names = qw{
-        Chr_9ctg99
-        Chr_9ctg1001
-        Chr_9ctg1002
-        Chr_9ctg1003
-        Chr_9ctg1004
-        Chr_9ctg1005
-        Chr_9ctg1006
-        Chr_9ctg1007
-        Chr_9ctg1008
-        Chr_9ctg1009
-        Chr_9ctg1010
-        Chr_9ctg1011
-        Chr_9ctg1012
-        Chr_9ctg1013
-        Chr_9ctg1014
-        Chr_9ctg1015
-        Chr_9ctg1016
-        Chr_9ctg1017
-        Chr_9ctg1018
-        Chr_9ctg1019
-        Chr_9ctg1020
-        Chr_9ctg1021
-        Chr_9ctg1022
-        Chr_9ctg1023
-        Chr_9ctg1024
-        Chr_9ctg1025
-        Chr_9ctg1026
-        Chr_9ctg1027
-        Chr_9ctg1028
-        Chr_9ctg1029
-        Chr_9ctg1030
-        Chr_9ctg1031
-        Chr_9ctg1032
-        Chr_9ctg1033
-        Chr_9ctg100
+        99
+        1001
+        1002
+        1003
+        1004
+        1005
+        1006
+        1007
+        1008
+        1009
+        1010
+        1011
+        1012
+        1013
+        1014
+        1015
+        1016
+        1017
+        
+        1019
+        1020
+        1021
+        1022
+        1023
+        1024
+        1025
+        1026
+        1027
+        1028
+        1029
+        1030
+        1031
+        1032
+        1033
+        100
         };
 
     my $dataset_name = 'human';
@@ -69,14 +70,73 @@ use GenomeCanvas;
     my $ctg_list = $ss->CloneSequence_contigs_split_on_gaps;
     
     my $otter_dba = $ds->get_cached_DBAdaptor;
+    $otter_dba->assembly_type($set_name);
+    my $otter_slice_aptr = $otter_dba->get_SliceAdaptor;
     my $pipe_dba = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($otter_dba);
     
+    my $mw = CanvasWindow::MainWindow->new;
+    $mw->title('Chr 9 Pericentromeric contigs');
+    my $gc = GenomeCanvas->new($mw);
+    #$gc->font_size(18);
+    $gc->landscape(1);
+
+    unless (@ctg_names == @$ctg_list) {
+        die sprintf "Have %d contigs names but %d contigs from database",
+            scalar(@ctg_names), scalar(@$ctg_list);
+    }
+
     for (my $i = 0; $i < @$ctg_list; $i++) {
-        my $name = $ctg_names[$i];
+        my $name = 'Ctg ' . $ctg_names[$i];
         my $ctg = $ctg_list->[$i];
         my ($chr, $start, $end) = $cl->chr_start_end_from_contig($ctg);
         print STDERR "$name: $chr $start -> $end\n";
+        
+        my $vc = $otter_slice_aptr->fetch_by_chr_start_end($chr, $start, $end);
+        
+        my $cartoon = GenomeCanvas::Band::ContigCartoon->new;
+        $cartoon->title($name);
+        $cartoon->virtual_contig($vc);
+        $cartoon->Client($cl);
+        $cartoon->DataSet($ds);
+        $cartoon->config_file('peri_features.conf');
+        
+        $gc->add_Band($cartoon);
+        
+        #my $scale_track = GenomeCanvas::Band::Scale->new;
+        #$scale_track->title($name);
+        #$scale_track->virtual_contig($vc);
+        #$gc->add_Band($scale_track);
+
+        #my $gene_names = GenomeCanvas::Band::Gene->new;
+        #$gene_names->show_labels(1);
+        ## Don't show lablels with a dash or dot in the name
+        #$gene_names->ignore_label_sub(sub{ $_[0] =~ /[-\.]/ });
+        #$gene_names->label_type_color_list(
+        #    [ 'Known',                  'Known',                    '#4169e7' ],
+        #    [ 'Novel CDS',              'Novel_CDS',                '#86ceff' ],
+        #    [ 'Novel Transcript',       'Novel_Transcript',         '#ffa600' ],
+        #    [ 'Putative',               'Putative',                 '#cccccc' ],
+        #    [ 'Pseudogene',             'Pseudogene',               '#31ce31' ],
+        #    ); 
+        #$gene_names->virtual_contig($vc);
+        #$gene_names->tiling_direction(1);
+        #$gene_names->dont_show_key(1);
+        #$gc->add_Band($gene_names);
+        
+        
     }
+
+    $gc->residues_per_pixel(500);
+    $gc->render;
+    $gc->set_scroll_region;
+    $gc->fix_window_min_max_sizes;
+    
+    $gc->canvas->toplevel->bind('<Control-p>', sub {
+        warn "Printed to files:\n",
+            map "  $_\n", $gc->print_postscript($set_name);
+        });
+    
+    Tk::MainLoop();
 }
 
 
