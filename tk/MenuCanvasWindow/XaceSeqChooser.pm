@@ -951,7 +951,7 @@ sub save_data {
             $self->update_ace_display($$ace_data);
             # resync here!
             $self->resync_with_db;
-            $self->zMapLaunchZmap;
+            $self->zMapLaunchZmap if $self->show_zmap;
         }
     };
     my $err = $@;
@@ -1940,7 +1940,9 @@ sub run_dotter {
 sub show_zmap {
     my $self = shift @_;
 
-    return Bio::Otter::Lace::Defaults::option_from_array(['client', 'show_zmap']) || 0;
+    my $show = Bio::Otter::Lace::Defaults::option_from_array(['client', 'show_zmap']);
+    printf STDERR "show_zmap = %s\n", defined $show ? $show : 'undef';
+    return $show || 0;
 }
 
 sub send_zmap_commands {
