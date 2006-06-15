@@ -13,10 +13,10 @@ use Bio::Otter::DBSQL::DBAdaptor;
 my $ana_root = 'SubmitContig';
 
 sub get_possible_analyses {
-    my $dbh = shift @_;
+    my $pdbc = shift @_;
 
     my %rule = ();
-    my $sth = $dbh->prepare(qq{
+    my $sth = $pdbc->prepare(qq{
         SELECT rc.condition
              , a.logic_name
         FROM analysis a
@@ -50,19 +50,20 @@ $| = 1;
 my $sq = Bio::Otter::ServerQuery->new('dataset','type');
 set_nph($sq);
 
-my $odb = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
+my $odba = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
 
-my $dbh = get_connected_pipeline_dbhandle($sq, $odb, $pipehead);
+my $pdba = odba_to_pdba($sq, $odba, $pipehead);
+my $pdbc = $pipehead ? $pdba->dbc() : $pdba;
 
 my $assembly = $sq->getarg('type') || error_exit($sq, "Please define the assembly type");
 
-my @input_ids;
+my @input_ids = ();
 
 if($pipehead) {
 
     my $component_cs = 'contig';
 
-    my $contigvecs = $dbh->selectall_arrayref(qq{
+    my $sth = $pdbc->prepare(qq{
         SELECT cmp.name
         FROM coord_system cs
           , seq_region cmp
@@ -73,30 +74,33 @@ if($pipehead) {
           AND a.cmp_seq_region_id = cmp.seq_region_id
           AND cmp.coord_system_id = cs.coord_system_id
           AND cs.name = '$component_cs'
-        });
+    });
+    $sth->execute();
 
-    @input_ids = map {
-        my $name = $_->[0];
-        my @syll = split(/\./, $name);
+    while (my ($cmp_name) = $sth->fetchrow) {
+        my @syll = split(/\./, $cmp_name);
         my $to = pop @syll;
         my $from = pop @syll;
-        join(':', $component_cs, '', $name, $from, $to, 1);
-    } @$contigvecs;
+        push @input_ids, join(':', $component_cs, '', $cmp_name, $from, $to, 1);
+    }
 
 } else {
 
-    @input_ids = map $_->[0], @{
-      $dbh->selectall_arrayref(qq{
+    my $sth = $pdbc->prepare(qq{
         SELECT c.name
         FROM assembly a
           , contig c
         WHERE a.type = '$assembly'
           AND a.contig_id = c.contig_id
-        })
-      };
+    });
+    $sth->execute();
+
+    while (my ($cmp_name) = $sth->fetchrow) {
+        push @input_ids, $cmp_name;
+    }
 }
 
-my %skeleton_hash = map { ($_ => []) } get_possible_analyses($dbh);
+my %skeleton_hash = map { ($_ => []) } get_possible_analyses($pdbc);
 my %result_hash   = ();
 
 # If there are no input IDs - just peacefully return an empty list:
@@ -117,7 +121,7 @@ my $sql_statement = qq{
         WHERE a.analysis_id = i.analysis_id
           AND i.input_id IN ($input_id_str)
         };
-my $sth = $dbh->prepare($sql_statement);
+my $sth = $pdbc->prepare($sql_statement);
 $sth->execute();
 
 while(my ($input_id, $logic_name, $created, $db_version) = $sth->fetchrow_array) {

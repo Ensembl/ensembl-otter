@@ -19,8 +19,8 @@ set_nph($sq);
 
 my $dna_wanted = $sq->getarg('dnawanted') || 0;
 
-my $odb = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
-my $slice = get_old_schema_slice($sq, $odb);
+my $odba = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
+my $slice = get_slice($sq, $odba, 0); # temporarily we only support old schema
 
 my $tp = $slice->get_tiling_path;
 

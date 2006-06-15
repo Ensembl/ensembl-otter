@@ -26,20 +26,21 @@ my $filter_atype = $sq->getarg('type') || '';
 my $unhide = $sq->getarg('unhide') || 0;
 my $maxpipehits = $sq->getarg('maxpipehits');
 
-my $odb = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
-my $pdb = get_connected_pipeline_dbhandle($sq, $odb, $pipehead);
+my $odba = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
+my $pdba = odba_to_pdba($sq, $odba, $pipehead);
+my $pdbc = $pipehead ? $pdba->dbc() : $pdba;
 
     # currently, since Otter is old schema and Pipe is new schema,
     # we can only provide Otter in case $pipehead==0
 if(!$pipehead) {
-    find_otter_clones_by_qnames($sq, $odb, $qnames_types_clones, $clone_name_set);
+    find_otter_clones_by_qnames($sq, $odba, $qnames_types_clones, $clone_name_set);
 }
 
-find_pipe_clones_by_qnames($sq, $pdb, $qnames_types_clones, $clone_name_set, $pipehead, $maxpipehits);
+find_pipe_clones_by_qnames($sq, $pdbc, $qnames_types_clones, $clone_name_set, $pipehead, $maxpipehits);
 
-my $assembly_db = $pipehead ? $pdb : $odb;
+my $assembly_dbc = $pipehead ? $pdbc : $odba;
 
-$clonename2assemblies = find_assemblies_by_clone_names($sq, $assembly_db, $clone_name_set, $pipehead, $unhide);
+$clonename2assemblies = find_assemblies_by_clone_names($sq, $assembly_dbc, $clone_name_set, $pipehead, $unhide);
 
 my $output_string = generate_output($qnames_types_clones, $clonename2assemblies, $filter_atype);
 

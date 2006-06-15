@@ -3,25 +3,22 @@ package Bio::Otter::DBSQL::SimpleBindingAdaptor;
 use DBI;
 # use strict;
 
-sub connect_with_params {
-	my %params = @_;
-
-	my $datasource = "DBI:mysql:$params{-DBNAME}:$params{-HOST}:$params{-PORT}";
-	my $username   = $params{-USER};
-	my $password   = $params{-PASS} || '';
-
-	return DBI->connect($datasource, $username, $password, { RaiseError => 1 });
-}
+#sub connect_with_params {
+#	my %params = @_;
+#
+#	my $datasource = "DBI:mysql:$params{-DBNAME}:$params{-HOST}:$params{-PORT}";
+#	my $username   = $params{-USER};
+#	my $password   = $params{-PASS} || '';
+#
+#	return DBI->connect($datasource, $username, $password, { RaiseError => 1 });
+#}
 
 sub new {
-    my $pkg            = shift @_;
-    my %connect_params = @_;
+    my ($pkg, $dbc) = @_;
 
-    my $dbh = connect_with_params(%connect_params);
 
     my $self = bless {
-        '_connect_param_hp' => \%connect_params,
-        '_dbh'              => $dbh,
+        '_dbc'  => $dbc,
     }, $pkg;
 
     return $self;
@@ -42,7 +39,7 @@ sub fetch_into_hash {
             . join(', ', map { "'$_'" }  keys %$thehash)
             . ");\n";
 
-        my $sth = $self->{_dbh}->prepare($sql_statement);
+        my $sth = $self->{_dbc}->prepare($sql_statement);
         $sth->execute();
         
         my $bound_name;
@@ -65,7 +62,7 @@ sub fetch_into_hash {
 sub DESTROY {
     my $self = shift @_;
 
-    $self->{_dbh}->disconnect();
+    # $self->{_dbc}->disconnect();
 }
 
 1;

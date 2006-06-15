@@ -7,9 +7,8 @@ use strict;
 use Carp;
 use Bio::Otter::DBSQL::DBAdaptor;
 use Bio::Otter::Lace::CloneSequence;
-use Bio::Otter::CloneLock;
+#use Bio::Otter::CloneLock;
 use Bio::Otter::Author;
-use Bio::Otter::Lace::Chromosome;
 use Bio::Otter::Lace::SequenceSet;
 use Bio::Otter::Lace::SequenceNote;
 use Bio::Otter::Lace::PipelineDB;
@@ -156,73 +155,6 @@ sub fetch_all_CloneSequences_for_SequenceSet {
     my $client = $self->Client or confess "No otter Client attached";
     my $cs=$client->get_all_CloneSequences_for_SequenceSet($ss);
     return $cs;
-}
-
-sub get_all_Chromosomes {
-    my( $self ) = @_;
-    
-    my( $ch );
-    unless ($ch = $self->{'_chromosomes'}) {
-        $ch = $self->{'_chromosomes'} = [];
-        
-        my $dba = $self->get_cached_DBAdaptor;
-        
-        # Only want to show the user chomosomes
-        # that we have in the assembly table.
-        my $sth = $dba->prepare(q{
-            SELECT distinct(chromosome_id)
-            FROM assembly
-            });
-        $sth->execute;
-        
-        my( %have_chr );
-        while (my ($chr_id) = $sth->fetchrow) {
-            $have_chr{$chr_id} = 1;
-        }
-        
-        $sth = $dba->prepare(q{
-            SELECT chromosome_id
-              , name
-              , length
-            FROM chromosome
-            });
-        $sth->execute;
-        my( $chr_id, $name, $length );
-        $sth->bind_columns(\$chr_id, \$name, \$length);
-        
-        while ($sth->fetch) {
-            # Skip chromosomes not in assembly table
-            next unless $have_chr{$chr_id};
-            my $chr = Bio::Otter::Lace::Chromosome->new;
-            $chr->chromosome_id($chr_id);
-            $chr->name($name);
-            $chr->length($length);
-            
-            push(@$ch, $chr);
-        }
-        
-        # Sort chromosomes numerically then alphabetically
-        @$ch = sort {
-              my $a_name = $a->name;
-              my $b_name = $b->name;
-              my $a_name_is_num = $a_name =~ /^\d+$/;
-              my $b_name_is_num = $b_name =~ /^\d+$/;
-
-              if ($a_name_is_num and $b_name_is_num) {
-                  $a_name <=> $b_name;
-              }
-              elsif ($a_name_is_num) {
-                  -1
-              }
-              elsif ($b_name_is_num) {
-                  1;
-              }
-              else {
-                  $a_name cmp $b_name;
-              }
-            } @$ch;
-    }
-    return @$ch;
 }
 
 sub _tmp_table_by_name{
