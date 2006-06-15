@@ -42,28 +42,29 @@ sub name {
 
 sub taxon{
     my ($self) = @_;
-    unless($self->{'_taxon_id'}){
-	my $dba      = $self->get_cached_DBAdaptor;
-	my $meta_con = $dba->get_MetaContainer;
-	$self->{'_taxon_id'} = $meta_con->get_taxonomy_id();
+
+    unless($self->{_taxon_id}){
+        my $hashp = $self->Client()->get_meta($self->name(), 'otter', 'species.taxonomy_id');
+        if(my $taxon_id = $hashp->{'species.taxonomy_id'}[0]) {
+            $self->{_taxon_id} = $taxon_id;
+        } else {
+            warn "No 'species.taxonomy_id' key in meta table, please fix!";
+        }
     }
-    return $self->{'_taxon_id'};
+    return $self->{_taxon_id};
 }
 
 sub species{
     my ($self) = @_;
-    unless($self->{'_species'}){
-        my $dba      = $self->get_cached_DBAdaptor;
-        my $meta_con = $dba->get_MetaContainer;
-    #	$self->{'_species'} = $meta_con->get_Species(); # this requires 'species.classification' meta key
-        my $t_species= $meta_con->list_value_by_key('species.common_name');
-        if ($t_species && scalar(@{$t_species})){
-            $self->{'_species'} = $t_species->[0];
-        }else{
-            warn "species unavailable, check <species.common_name> meta key\n";
+    unless($self->{_species}){
+        my $hashp = $self->Client()->get_meta($self->name(), 'otter', 'species.common_name');
+        if(my $species = $hashp->{'species.common_name'}[0]) {
+            $self->{_species} = $species;
+        } else {
+            warn "No 'species.common_name' key in meta table, please fix!";
         }
     }
-    return $self->{'_species'};
+    return $self->{_species};
 }
 
 sub sequence_sets_cached {
