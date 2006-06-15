@@ -503,6 +503,33 @@ sub find_string_match_in_clones {
     return \@results_list;
 }
 
+sub get_meta {
+    my ( $self, $dsname, $which, $key) = @_;
+
+    my $pipehead = Bio::Otter::Lace::Defaults::pipehead();
+
+    my $response = $self->general_http_dialog(
+        0,
+        'GET',
+        'get_meta',
+        {
+            'dataset'  => $dsname,
+            defined($which) ? ('which' => $which ) : (),
+            defined($key)   ? ('key' => $key ) : (),
+            'pipehead'  => $pipehead ? 1 : 0,
+        },
+        1,
+    );
+
+    my %meta_hash = {};
+    for my $line (split(/\n/,$response)) {
+        my($meta_key, $meta_value) = split(/\t/,$line);
+        push @{$meta_hash{$meta_key}}, $meta_value; # as there can be multiple values for one key
+    }
+
+    return \%meta_hash;
+}
+
 sub lock_refresh_for_DataSet_SequenceSet {
     my( $self, $ds, $ss ) = @_;
 
