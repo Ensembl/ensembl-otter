@@ -10,21 +10,21 @@ use CanvasWindow;
     my $y = 800;
 
     my $mw = CanvasWindow::MainWindow->new;
-    $mw->title('Drag & Drop');
+    $mw->title('Click and drag to scroll canvas');
     
     my $cw = CanvasWindow->new($mw, $x / 3, $y / 3);
     
     my $canvas = $cw->canvas;
+    
+    # This implements scroll dragging of the canvas using
+    # the left mouse button. May need to use other mouse buttons
+    # in applications where button presses and releases are bound
+    # to other actions.
     $canvas->Tk::bind('<ButtonPress-1>',    [ \&save_current, Tk::Ev('x'), Tk::Ev('y') ] );
     $canvas->Tk::bind('<Button1-Motion>',   [ \&hand_scroll,  Tk::Ev('x'), Tk::Ev('y') ] );
     $canvas->Tk::bind('<ButtonRelease-1>',  \&restore_cursor);
 
-    $canvas->createRectangle(0,0, $x,$y,
-        -fill       => 'white',
-        -outline    => 'OliveDrab',
-        -tags       => ['bkgd_rec'],
-        );
-
+    # Draw some squares so that we can see the effect of dragging
     for (1..200) {
         my $x1 = rand($x);
         my $y1 = rand($y);
@@ -43,6 +43,8 @@ use CanvasWindow;
 sub save_current {
     my( $canvas, $x, $y ) = @_;
 
+    # The "fleur" cursor actually appears
+    # as a hand on many systems.
     $canvas->configure(-cursor => 'fleur');
     $canvas->scanMark($x, $y);
 }
@@ -50,12 +52,14 @@ sub save_current {
 sub hand_scroll {
     my( $canvas, $x, $y ) = @_;
 
+    # Third argument is "gain", which defaults to 10!
     $canvas->scanDragto($x, $y, 1);
 }
 
 sub restore_cursor {
     my ($canvas) = @_;
 
+    # Sets the cursor back to its default
     $canvas->configure(-cursor => undef);
 }
 
