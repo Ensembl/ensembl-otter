@@ -1,0 +1,69 @@
+#!/usr/local/bin/perl -w
+
+### hand_scroll
+
+use strict;
+use CanvasWindow;
+
+{
+    my $x = 1000;
+    my $y = 800;
+
+    my $mw = CanvasWindow::MainWindow->new;
+    $mw->title('Drag & Drop');
+    
+    my $cw = CanvasWindow->new($mw, $x / 3, $y / 3);
+    
+    my $canvas = $cw->canvas;
+    $canvas->Tk::bind('<ButtonPress-1>',    [ \&save_current, Tk::Ev('x'), Tk::Ev('y') ] );
+    $canvas->Tk::bind('<Button1-Motion>',   [ \&hand_scroll,  Tk::Ev('x'), Tk::Ev('y') ] );
+    $canvas->Tk::bind('<ButtonRelease-1>',  \&restore_cursor);
+
+    $canvas->createRectangle(0,0, $x,$y,
+        -fill       => 'white',
+        -outline    => 'OliveDrab',
+        -tags       => ['bkgd_rec'],
+        );
+
+    for (1..200) {
+        my $x1 = rand($x);
+        my $y1 = rand($y);
+        my $x2 = $x1 + 10;
+        my $y2 = $y1 + 10;
+        $canvas->createRectangle($x1,$y1, $x2,$y2,
+            -fill       => 'salmon',
+            -outline    => 'black',
+            );
+    }
+    
+    $cw->set_scroll_region;
+    Tk::MainLoop();  
+}
+
+sub save_current {
+    my( $canvas, $x, $y ) = @_;
+
+    $canvas->configure(-cursor => 'fleur');
+    $canvas->scanMark($x, $y);
+}
+
+sub hand_scroll {
+    my( $canvas, $x, $y ) = @_;
+
+    $canvas->scanDragto($x, $y, 1);
+}
+
+sub restore_cursor {
+    my ($canvas) = @_;
+
+    $canvas->configure(-cursor => undef);
+}
+
+__END__
+
+=head1 NAME - hand_scroll
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
