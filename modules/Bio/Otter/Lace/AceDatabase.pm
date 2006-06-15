@@ -756,8 +756,8 @@ sub write_pipeline_data {
 sub make_AceDataFactory {
     my( $self, $ens_db, $dataset ) = @_;
 
-    my $species = $dataset->name();
-    warn "This species is '$species'\n";
+    my $dsname = $dataset->name();
+    warn "This dataset is '$dsname'\n";
 
     # create new datafactory object - contains all ace filters and produces the data from these
     my $factory = Bio::EnsEMBL::Ace::DataFactory->new($self->Client(), $dataset);
@@ -769,9 +769,9 @@ sub make_AceDataFactory {
     my $debug = $self->Client->debug();
     
     my $logic_to_load =
-      $self->Client->option_from_array([ $species, 'use_filters' ]);
+      $self->Client->option_from_array([ $dsname, 'use_filters' ]);
     my $module_options =
-      $self->Client->option_from_array([ $species, 'filter' ]);
+      $self->Client->option_from_array([ $dsname, 'filter' ]);
 
     my @analysis_names;
     if ($fetch_pipe) {
@@ -857,9 +857,9 @@ sub write_ensembl_data {
     my ($self, $ss) = @_;
 
     my $dataset         = $self->Client->get_DataSet_by_name($ss->dataset_name);
-    my $species         = $dataset->species();
+    my $dsname          = $dataset->name();
     my $ensembl_sources =
-      $self->Client->option_from_array([ $species, 'ensembl_sources' ]);
+      $self->Client->option_from_array([ $dsname, 'ensembl_sources' ]);
 
     # Analysis logic names are taken from a comma separated list in
     while (my ($key, $logic_string) = each %$ensembl_sources) {

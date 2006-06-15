@@ -7,15 +7,6 @@ use strict;
 use Carp;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 
-## (lg4) This subroutine seems to have moved to PipelineDB::
-#
-# sub get_pipeline_DBAdaptor {
-#    my( $otter_db, $key ) = @_;
-#
-#    require 'Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor';
-#    return get_DBAdaptor($otter_db, $key, 'Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor');
-# }
-
 sub get_DBAdaptor {
 
     my ($satellite_db, $satellite_options) = _get_DBAdaptor_and_options( @_ );
@@ -30,14 +21,13 @@ sub _get_DBAdaptor_and_options {
 
     $class ||= 'Bio::EnsEMBL::DBSQL::DBAdaptor';
 
-    my $satellite_options = get_options_for_key($otter_db, $key) or return;
-    my $satellite_db = $class->new(%$satellite_options);
+    my $satellite_options = get_options_for_key($otter_db, $key)
+        or return;
 
-    if ($satellite_db) {
-        return ($satellite_db, $satellite_options);
-    } else {
-        confess "Couldn't connect to satellite db";
-    } 
+    my $satellite_db = $class->new(%$satellite_options)
+        or confess "Couldn't connect to satellite db";
+
+    return ($satellite_db, $satellite_options);
 }
 
 sub get_options_for_key {

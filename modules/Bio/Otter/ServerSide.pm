@@ -17,9 +17,8 @@ our @EXPORT_OK = qw(
                     &set_nph
                     &send_response
                     &error_exit
-                    &get_connected_pipeline_dbhandle
-                    &get_old_schema_slice
-                    &get_pipeline_adaptor_slice_parms
+                    &odba_to_pdba
+                    &get_slice
                     &get_Author_from_CGI
                     &get_DBAdaptor_from_CGI_species
                     );
@@ -28,9 +27,8 @@ our %EXPORT_TAGS = (all => [qw(
                                set_nph
                                send_response
                                error_exit
-                               get_connected_pipeline_dbhandle
-                               get_old_schema_slice
-                               get_pipeline_adaptor_slice_parms
+                               odba_to_pdba
+                               get_slice
                                get_Author_from_CGI
                                get_DBAdaptor_from_CGI_species 
                                )
@@ -82,18 +80,8 @@ sub error_exit {
     exit(1);
 }
 
-sub connect_with_params {
-        my %params = @_;
-
-        my $datasource = "DBI:mysql:$params{-DBNAME}:$params{-HOST}:$params{-PORT}";
-        my $username   = $params{-USER};
-        my $password   = $params{-PASS} || '';
-                                                                                                                         
-        return DBI->connect($datasource, $username, $password, { RaiseError => 1 });
-}
-
-sub get_connected_pipeline_dbhandle {
-    my ($sq, $odb, $pipehead) = @_;
+sub odba_to_pdba {
+    my ($sq, $odba, $pipehead) = @_;
 
     server_log("called with: ".join(' ', map { "$_=".$sq->getarg($_) } @{$sq->getargs()} ));
 
@@ -101,110 +89,92 @@ sub get_connected_pipeline_dbhandle {
         ? 'pipeline_db_head'
         : 'pipeline_db';
 
-    my ($pdb, $pipedb_options) =
+    server_log("connecting to the ".($pipehead?'NEW':'OLD')." pipeline using [$pipekey] meta entry...");
+
+    my ($pdba, $pipedb_options) =
         Bio::Otter::Lace::SatelliteDB::_get_DBAdaptor_and_options(
-            $odb,
+            $odba,
             $pipekey
         );
 
+    $pdba->assembly_type($odba->assembly_type()) unless $pipehead;
+
     error_exit($sq, "No connection parameters for '$pipekey' in otter database")
-        unless keys %$pipedb_options;
+        unless ($pipedb_options && keys %$pipedb_options);
 
-    my $dbh = connect_with_params(%$pipedb_options);
+    server_log("... with parameters: ".join(', ', map { "$_=".$pipedb_options->{$_} } keys %$pipedb_options ));
 
-    return $dbh;
+    return $pdba;
 }
 
-sub get_old_schema_slice {
-    my ($sq, $dbh) = @_;
-
-    my $cs    = $sq->getarg('cs')   || error_exit($sq, "Coordinate system type (cs attribute) not set");
-    my $name  = $sq->getarg('name') || error_exit($sq, "Coordinate system name (name attribute) not set");
-    my $start = $sq->getarg('start');
-    my $end   = $sq->getarg('end');
+sub get_slice { # codebase-independent version for scripts
+    my ($sq, $dba, $pipehead) = @_;
 
     my $slice;
 
-    if($cs eq 'chromosome') {
-        $start ||= 1;
-        $end   ||= $dbh->get_ChromosomeAdaptor()->fetch_by_chr_name($name)->length();
-
-        $slice = $dbh->get_SliceAdaptor()->fetch_by_chr_start_end(
-            $name,
-            $start,
-            $end,
-        );
-    } elsif($cs eq 'contig') {
-        $slice = $dbh->get_RawContigAdaptor()->fetch_by_name(
-            $sq->getarg('name'),
-        );
-    } else {
-        error_exit($sq, "Other coordinate systems are not supported");
-    }
-
-    return $slice;
-}
-
-sub get_pipeline_adaptor_slice_parms { # codebase-independent version for scripts
-    my ($sq, $odb, $pipehead) = @_;
-
-    server_log("called with: ".join(' ', map { "$_=".$sq->getarg($_) } @{$sq->getargs()} ));
-
-    my $pipekey = $pipehead
-        ? 'pipeline_db_head'
-        : 'pipeline_db';
-
-    my ($pdb, $pipedb_options) =
-    Bio::Otter::Lace::SatelliteDB::_get_DBAdaptor_and_options(
-        $odb,
-        $pipekey
-    );
-
-    my $pipeline_slice;
-
-        # CS defaults:
-    my $cs = $sq->getarg('cs') || 'chromosome';
-    my $csver = $sq->getarg('csver');
-    if(!$csver && ($cs eq 'chromosome')) {
-        $csver = 'Otter';
-    }
-
-    server_log("connecting to the ".($pipehead?'NEW':'OLD')." pipeline using [$pipekey] meta entry...");
-    server_log("... with parameters: ".join(', ', map { "$_=".$pipedb_options->{$_} } keys %$pipedb_options ));
+    my $cs    = $sq->getarg('cs') || 'chromosome';
+    my $name  = $sq->getarg('name');
+    my $type  = $sq->getarg('type');
+    my $start = $sq->getarg('start');
+    my $end   = $sq->getarg('end');
 
     if($pipehead) {
 
-		# The following statement ensures
-		# that we use 'assembly type' as the chromosome name
-		# only for Otter chromosomes.
-		# Vega chromosomes will have simple names.
-	my $segment_name = (($cs eq 'chromosome') && ($csver eq 'Otter'))
-			? $sq->getarg('type')
-		    : $sq->getarg('name');
+        my $strand= $sq->getarg('strand');
+        my $csver = $sq->getarg('csver');
+        if(!$csver && ($cs eq 'chromosome')) {
+            $csver = 'Otter';
+        }
 
-        $pipeline_slice = $pdb->get_SliceAdaptor()->fetch_by_region(
+            # The following statement ensures
+            # that we use 'assembly type' as the chromosome name
+            # only for Otter chromosomes.
+            # Vega chromosomes will have simple names.
+        my $segment_attr = (($cs eq 'chromosome') && ($csver eq 'Otter'))
+			? 'type'
+		    : 'name';
+        my $segment_name = $sq->getarg($segment_attr);
+
+        error_exit($sq, "$cs '$segment_attr' attribute not set") unless $segment_name;
+
+        $slice =  $dba->get_SliceAdaptor()->fetch_by_region(
             $cs,
-	    $segment_name,
-            $sq->getarg('start'),
-            $sq->getarg('end'),
-            $sq->getarg('strand'),
+	        $segment_name,
+            $start,
+            $end,
+            $strand,
             $csver,
         );
 
     } else {
 
-        $pdb->assembly_type($odb->assembly_type());
+        error_exit($sq, "$cs 'name' attribute not set") unless $name;
 
-        $pipeline_slice = get_old_schema_slice($sq, $pdb);
+        if($cs eq 'chromosome') {
+            $start ||= 1;
+            $end   ||= $dba->get_ChromosomeAdaptor()->fetch_by_chr_name($name)->length();
+
+            $slice = $dba->get_SliceAdaptor()->fetch_by_chr_start_end(
+                $name,
+                $start,
+                $end,
+            );
+        } elsif($cs eq 'contig') {
+            $slice = $dba->get_RawContigAdaptor()->fetch_by_name(
+                $name,
+            );
+        } else {
+            error_exit($sq, "Other coordinate systems are not supported");
+        }
     }
 
-    if(!defined($pipeline_slice) && $pipehead) {
+    if(!defined($slice) && $pipehead) {
         server_log('Could not get a slice, probably not yet loaded into new pipeline');
         send_response($sq, '', 1);
         exit(0); # <--- this forces all the scripts to exit normally
     }
 
-    return ($pdb, $pipeline_slice, $pipedb_options);
+    return $slice;
 }
 
 sub get_Author_from_CGI{
@@ -255,11 +225,11 @@ sub get_DBAdaptor_from_CGI_species{
     my $dnaport    = $dbinfo->{DNA_PORT}    || $defaults->{DNA_PORT};
     my $dna_dbname = $dbinfo->{DNA_DBNAME};
   
-    my( $odb, $dnadb );
+    my( $odba, $dnadb );
 
     server_log("OtterDB='$dbname' host='$dbhost' user='$dbuser' pass='$dbpass' port='$dbport'");
     eval {
-        $odb = $adaptor_class->new( -host   => $dbhost,
+       $odba = $adaptor_class->new( -host   => $dbhost,
                                     -user   => $dbuser,
                                     -pass   => $dbpass,
                                     -port   => $dbport,
@@ -275,14 +245,14 @@ sub get_DBAdaptor_from_CGI_species{
                                                         -dbname => $dna_dbname);
         };
         error_exit($sq, "Failed opening dna database [$@]") if $@;
-        $odb->dnadb($dnadb);
+        $odba->dnadb($dnadb);
         
         server_log("Connected to dna database");
     }
     if(!$pipehead) {
-        server_log("Assembly_type='" . $odb->assembly_type($type)."'");
+        server_log("Assembly_type='" . $odba->assembly_type($type)."'");
     }
-    return $odb;
+    return $odba;
 }
 
 1;
