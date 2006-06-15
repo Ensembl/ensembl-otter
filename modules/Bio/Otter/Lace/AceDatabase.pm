@@ -102,6 +102,7 @@ sub error_flag {
     }
     return ($self->{'_error_flag'} ? 1 : 0);
 }
+
 sub add_acefile {
     my( $self, $ace ) = @_;
 
@@ -332,7 +333,6 @@ sub save_all_slices {
     my( $self ) = @_;
 
     #warn "SAVING ALL SLICES";
-    $self->error_flag(1);
 
     # Make sure we don't have a stale database handle
     $self->ace_server->kill_server;
@@ -353,7 +353,6 @@ sub save_all_slices {
             $ace .= $self->save_otter_slice($slice, $ds_name);
         }
     }
-    $self->error_flag(0);
 
     return \$ace;
 }
@@ -361,7 +360,6 @@ sub save_all_slices {
 sub save_otter_slice {
     my( $self, $name, $dataset_name ) = @_;
 
-    $self->error_flag(1);
     confess "Missing slice name argument"   unless $name;
     confess "Missing DatsSet argument"      unless $dataset_name;
 
@@ -430,8 +428,6 @@ sub save_otter_slice {
 
     my $success = $client->save_otter_xml($xml, $dataset_name);
 
-    $self->error_flag($success ? 0 : 1); # not sure this is correct (check out).
-
     return $self->update_with_stable_ids($success);
 }
 
@@ -440,7 +436,6 @@ sub update_with_stable_ids{
     my ($self, $xml, $anything_else) = @_;
     return unless $xml;
 
-    $self->error_flag(1);
     ## get an aceperl handle
     my $ace = $self->aceperl_db_handle();
 
@@ -474,9 +469,6 @@ sub update_with_stable_ids{
     ## need to do genes, transcripts, translations and exons
 
     my $ace_txt = Bio::Otter::Converter::ace_transcripts_locus_people($genes, $slice);
-
-    ## everything went ok so error_flag = 0;
-    $self->error_flag(0);
 
     return $ace_txt;
 }
