@@ -843,11 +843,10 @@ sub get_rows_list{
     my $cs_list = $self->get_CloneSequence_list;
     my $max_cs_list = scalar(@$cs_list);
 
-    if($self->_allow_paging()){
-        my ($offset1, $offset2) = $self->_sanity_check_paging($max_cs_list);
-        warn "slice $offset1 .. $offset2\n";
-        $cs_list = [ @{$cs_list}[$offset1..$offset2] ];
-    }
+    my ($offset1, $offset2) = $self->_sanity_check($max_cs_list);
+    warn "slice $offset1 .. $offset2\n";
+    $cs_list = [ @{$cs_list}[$offset1..$offset2] ];
+
     return $cs_list;
 }
 
@@ -859,7 +858,7 @@ sub _max {
     return ($_[0]<$_[1]) ? $_[1] : $_[0];
 }
 
-sub _sanity_check_paging{
+sub _sanity_check{
     my ($self, $max) = @_;
     $max--;
     my $slice_a = $self->_user_first_clone_seq() - 1;
