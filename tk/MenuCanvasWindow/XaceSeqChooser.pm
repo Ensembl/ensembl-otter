@@ -292,6 +292,34 @@ sub empty_Locus_cache {
     $self->{'_locus_cache'} = undef;
 }
 
+sub update_Locus {
+    my( $self, $locus ) = @_;
+    
+    $self->set_Locus($locus);
+    
+    my $locus_name = $locus->name;
+        
+    foreach my $sub_name ($self->list_all_SubSeq_names) {
+        my $sub = $self->get_SubSeq($name) or next;
+        my $locus = $sub->Locus or next;
+        if ($locus->name eq $locus_name) {
+            $sub->Locus($locus);
+        }
+    }
+
+    foreach my $name ($self->list_all_subseq_edit_window_names) {
+        warn "Looking at: '$name'";
+        my $sub = $self->get_SubSeq($name) or next;
+        my $locus = $sub->Locus or next;
+        if ($locus->name eq $locus_name) {
+            warn "Updating '$name'";
+            my $ec = $self->get_subseq_edit_window($name) or next;
+            $ec->update_Locus_from_XaceSeqChooser;
+        }
+    }
+}
+
+
 ### Does not work
 #sub rename_Locus {
 #    my( $self, $old_name, $new_name ) = @_;
@@ -1538,21 +1566,6 @@ sub close_all_subseq_edit_windows {
     }
     
     return 1;
-}
-
-sub update_all_locus_edit_fields {
-    my( $self, $locus_name ) = @_;
-    
-    foreach my $name ($self->list_all_subseq_edit_window_names) {
-        warn "Looking at: '$name'";
-        my $sub = $self->get_SubSeq($name) or next;
-        my $locus = $sub->Locus or next;
-        if ($locus->name eq $locus_name) {
-            warn "Updating '$name'";
-            my $ec = $self->get_subseq_edit_window($name) or next;
-            $ec->update_Locus_from_XaceSeqChooser;
-        }
-    }
 }
 
 ### KEEP ###
