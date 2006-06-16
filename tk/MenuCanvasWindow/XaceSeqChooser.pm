@@ -300,7 +300,7 @@ sub update_Locus {
     my $locus_name = $locus->name;
         
     foreach my $sub_name ($self->list_all_SubSeq_names) {
-        my $sub = $self->get_SubSeq($name) or next;
+        my $sub = $self->get_SubSeq($sub_name) or next;
         my $locus = $sub->Locus or next;
         if ($locus->name eq $locus_name) {
             $sub->Locus($locus);
