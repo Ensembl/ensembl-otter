@@ -11,7 +11,7 @@ $| = 1;
 
 {
     my ($dataset, $sequence_set, $chr_start_acc, $chr_end_acc, $gene_stable_id);
-    my ($tunnel, $remarks, $verbose, $seleno, $sql, $prefix);
+    my ($tunnel, $remarks, $verbose, $seleno, $sql, $prefix, $ends);
     my $help = sub { exec('perldoc', $0) };
 
     Bio::Otter::Lace::Defaults::do_getopt(
@@ -24,6 +24,7 @@ $| = 1;
         'remarks'               => \$remarks,
         'seleno|selenocysteine' => \$seleno,
         'sql:s'                 => \$sql,
+        'ends:s'                => \$ends,
         'verbose|v'             => \$verbose,
         'prefix:s'              => \$prefix,
         'h|help'                => $help,
@@ -121,6 +122,9 @@ $| = 1;
     if ($sql) {
         open(OUT2, ">$sql") || die "cannot open $sql";
     }
+    if ($ends) {
+        open(OUT3, ">$ends") || die "cannot open $ends";
+    }
     foreach my $id (@$gene_id_list) {
         $i++;
         print STDERR '.';
@@ -131,13 +135,78 @@ $| = 1;
         next if ($gt eq 'obsolete');
         foreach my $trans (@{ $gene->get_all_Transcripts }) {
             next unless $trans->translation;
+
+	    # check for translations containing stop codons
             my $sqltxt =
               check_for_stops($gene, $trans, $remarks, $verbose, $seleno, $sql);
             print OUT2 $sqltxt if $sql;
+
+	    # check for translations not ending in a true stop
+	    print OUT3 check_translation_end($gene, $trans) if $ends;
+
         }
     }
     print STDERR " $i\n";
     close OUT2 if $sql;
+    close OUT3 if $ends;
+}
+
+sub check_translation_end {
+  my ($gene, $trans)=@_;
+  # 1. is there a s_n_f tag?
+  my $cdna_end_not_found=$trans->transcript_info->cds_end_not_found;
+  # 2. does the translation end in a valid stop
+  my $tsi=$trans->stable_id;
+  my $mrna=$trans->seq->seq;
+  my $cdna=$trans->translateable_seq;
+  my $valid_stop=0;
+  if(length($cdna) % 3 == 0){
+    if($cdna=~/(TAG|TGA|TAA)$/){
+      $valid_stop=1;
+    }
+  }
+  # 3. is translation end of transcript
+  my $cdna2=$cdna;
+  $cdna2=~s/^N+//;
+  my $utr5='';
+  my $utr3='';
+  if($mrna=~/(.*)$cdna2(.*)/){
+    $utr5=$1;
+    $utr3=$2;
+  }else{
+    print "ERROR: $cdna not found in $mrna\n";
+  }
+  my $abutted_translation_end=0;
+  if(length($utr3)==0){
+    $abutted_translation_end=1;
+  }
+  # at, vs, cenf
+  my $out;
+  if($valid_stop){
+    if($abutted_translation_end){
+      $out.=' WARN: valid stop, but transcript and translation same length';
+      # requires annotator investigation
+    }
+    if($cdna_end_not_found){
+      $out.=' ERR: valid stop, but cdna_end_not_found tag present';
+      # candidate for automatically fix - remove tag
+    }
+  }else{
+    if(!$abutted_translation_end){
+      $out.=' ERR: invalid stop, but translation stops before end of translation';
+      # requires annotator investigation
+    }
+    if(!$cdna_end_not_found){
+      $out.=' ERR: invalid stop, but cdna_end_not_found tag missing';
+      # requires annotator investigation
+    }
+  }
+  if($out){
+    $out=$tsi.$out."\n";
+  }else{
+    $out='';
+  }
+  return $out;
 }
 
 sub check_for_stops {
@@ -156,11 +225,12 @@ sub check_for_stops {
     my $pseq    = $peptide->seq;
 
     # exit if no stops
-    return unless ($pseq =~ /\*/);
+    return $sql unless ($pseq =~ /\*/);
 
     # contains stops: find out where and how many there are
     my @stop;
     my $tstop;
+    my $ttstop;
     {
         my $mrna        = $trans->translateable_seq;
         my $offset      = 0;
@@ -185,10 +255,13 @@ sub check_for_stops {
                       . $stop
                       . "\n", length($pseq1_f), length($mrna_f);
                 }
-                my $aaoffset = int($offset / 3);
+		### check should below be +1 ??? 
+                my $aaoffset = int($offset / 3)+1;
                 push(@stop, [ $stop, $aaoffset ]);
-                if ($tstop) { $tstop .= "; "; }
-                $tstop .= "$aaoffset:$stop";
+		if($tstop) { $tstop .= " "; }
+		$tstop .= "$aaoffset";
+                if ($ttstop) { $ttstop .= "; "; }
+                $ttstop .= "$aaoffset:$stop";
 
                 $offset += 3;
                 $last_offset = $offset;
@@ -221,9 +294,12 @@ sub check_for_stops {
     }
 
     # check remarks
-    my $flag_remark  = 0;
-    my $flag_remark2 = 0;
+    my $flag_remark  = 0; # 1 if word seleno has been used
+    my $flag_remark2 = 0; # 1 if existing remark has correct numbering
+    my $flag_remark3 = 0; # 1 if new remark or format of existing remark had to be updated
+
     my $alabel       = 'Annotation_remark- selenocysteine ';
+    my $alabel2      = 'selenocysteine ';
     my $out          = '';
     my $out2         = '';
     my $tiid;
@@ -231,27 +307,43 @@ sub check_for_stops {
         my $dbid = $remark->dbID;
         $tiid = $remark->transcript_info_id;
         my $text = $remark->remark;
+
+	# word seleno has been used
         if ($text =~ /seleno/i) {
             $flag_remark = 1;
         }
+
+        # check if existing remark has approved structure for
+        # automatic parsing 'Annotation_remark- selenocysteine XX[ YY]' 
+        # where XX, YY are the number of the aminoacid in the
+        # translation that is a selenocysteine
+	my $stops;
+	my $flag_patch=0;
         if ($text =~ /^$alabel(.*)/) {
-            my $stops      = $1;
+	  $stops=$1;
+	}elsif($text=~/^$alabel2(.*)/){
+	  my $tsid=$trans->stable_id;
+	  print STDERR "\nWARN: seleno remark for $tsid stored as plain remark\n";
+	  $flag_patch=1;
+	  $stops=$1;
+	}
+	if($stops){
             my $nmatch     = 0;
             my $i          = 0;
-            my $flag_patch = 0;
-            foreach my $rstop (split(/;\s/, $stops)) {
-                my ($offset, $stop) = split(/:/, $rstop);
-                if ($stop ne $scodon) {
-                    next;
-                }
+            foreach my $offset (split(/\s+/, $stops)) {
                 if ($i + 1 > $nstop) {
                     $nmatch = 0;
                     last;
                 }
-                if ($stop[$i]->[1] == $offset) {
+		if($offset!~/^\d+$/){
+		  # not a number - ignore
+		}
+                elsif ($stop[$i]->[1] == $offset) {
                     $nmatch++;
                 }
                 elsif (($stop[$i]->[1] * 3) == $offset) {
+		    # catch old annotations where number was in DNA
+		    # not peptide coordinates
                     $nmatch++;
                     $flag_patch = 1;
                 }
@@ -260,7 +352,7 @@ sub check_for_stops {
             if ($nmatch == $nstop) {
                 $flag_remark2 = 1;
                 if ($flag_patch) {
-
+		    $flag_remark3=1;
                     # existing structured remark is wrong - patch
                     $sql .=
 "update transcript_remark set remark=\'$alabel$tstop\' where transcript_remark_id=$dbid;\n";
@@ -286,6 +378,7 @@ sub check_for_stops {
             # remark indicates stop is a Selenocysteine
             $label = 'S-OK';
             if (!$flag_remark2) {
+	        $flag_remark3=1;
 
                 # unless structured remark exists, build appropriate sql
                 $sql .=
@@ -306,11 +399,11 @@ sub check_for_stops {
     }
 
     # don't report if perfectly tagged seleno, unless -seleno option
-    if ($seleno || $flag_remark2 == 0) {
+    if ($seleno || $flag_remark3 == 1) {
         printf "%-24s %-24s %18s %2d %12s %4s %2d %s\n",
           $gene->gene_info->name->name, $trans->transcript_info->name,
           $trans->stable_id, $trans->version, $trans_class, $label, $nstop,
-          $tstop;
+          $ttstop;
 
         print "$out$out2\n" if $remarks;
     }

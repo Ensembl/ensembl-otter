@@ -16,6 +16,7 @@ use Getopt::Long;
 use DBI;
 use Sys::Hostname;
 use Bio::Otter::Lace::SatelliteDB;
+use Bio::EnsEMBL::DBSQL::DBAdaptor;
 
 # hard wired
 my $driver="mysql";
@@ -159,11 +160,18 @@ my %sel_sequence_set;
 %sel_sequence_set=map{$_,1}split(/,/,$sel_sequence_set);
 
 # connect
-my $dbh;
-if(my $err=&_db_connect(\$dbh,$host,$db,$user,$pass,$port)){
-  print "failed to connect $db: $err\n";
-  exit 0;
-}
+my $dbh=Bio::EnsEMBL::DBSQL::DBAdaptor->new(
+					    -user   => $user,
+					    -dbname => $db,
+					    -host   => $host,
+					    -driver => 'mysql',
+					    -host   => $host,
+					    -pass   => $pass,
+					    );
+#if(my $err=&_db_connect(\$dbh,$host,$db,$user,$pass,$port)){
+#  print "failed to connect $db: $err\n";
+#  exit 0;
+#}
 
 # [1] global checks of vega tables for consistency
 
@@ -543,7 +551,7 @@ my $type_string;
 my %chr_id;
 my $filter_text;
 if($filter_annotation){$filter_text='-filter_annotation';}
-if(!$vega_internal){$filter_text.=" -filter_for_vega";}
+if(!$vega_internal){$filter_text.=" -filter_gd -filter_for_vega";}
 if($exclude_gene_stable_id){$filter_text.=" -exclude_gene_stable_id $exclude_gene_stable_id";}
 
 # loop over valid sequence sets and write transfer commands
@@ -569,7 +577,7 @@ foreach my $vega_set_id (sort {$a<=>$b} keys %vega_subset){
   if($type_string){$type_string.=',';}
   $type_string.="\'$ss\'";
   $chr_id{$chr_id}=1;
-  print OUT "$root_dir/src/trunk/ensembl-otter/scripts/conversion/assembly/transfer_annotation.pl -host $host -user $user -pass $pass -port $port -dbname $db -c_host $host -c_user $user -c_pass $pass -c_port $port -c_dbname $db -t_host $host2 -t_user $user2 -t_pass $pass2 -t_port $port2 -t_dbname $db2 -chr $chr -chrstart $chr_st -chrend $chr_ed -path $ss -c_path $ss -t_path $ss -filter_gd -filter_obs $filter_text $listcom >&! ogt_".$vega_name.".log \n";
+  print OUT "$root_dir/src/trunk/ensembl-otter/scripts/conversion/assembly/transfer_annotation.pl -host $host -user $user -pass $pass -port $port -dbname $db -c_host $host -c_user $user -c_pass $pass -c_port $port -c_dbname $db -t_host $host2 -t_user $user2 -t_pass $pass2 -t_port $port2 -t_dbname $db2 -chr $chr -chrstart $chr_st -chrend $chr_ed -path $ss -c_path $ss -t_path $ss -filter_obs $filter_text $listcom >&! ogt_".$vega_name.".log \n";
   print OUT "$root_dir/src/trunk/ensembl-otter/scripts/conversion/assembly/transfer_clone_annotation.pl -host $host -user $user -port $port -dbname $db -t_host $host2 -t_user $user2 -t_pass $pass2 -t_port $port2 -t_dbname $db2 -t_path $ss > ! oct_".$vega_name."_sf.log\n" unless $list;
 }
 print "\n";
@@ -624,8 +632,8 @@ print "Wrote files ok\n";
 
 #$dbh->do(qq{});
 
-$dbh->disconnect();
-$dbh2->disconnect() unless $list;
+#$dbh->disconnect();
+#$dbh2->disconnect() unless $list;
 
 exit 0;
 
