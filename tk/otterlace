@@ -75,6 +75,14 @@ use Bio::Otter::Lace::Defaults;
     Tk::MainLoop();
     
     print STDERR "Exiting\n";
+
+    local $SIG{'TERM'} = 'IGNORE';
+    
+    # Sending signal to negative of our PID sends
+    # signal to all the processes in our process
+    # group, ie: all of the children. This cleans
+    # up any stray processes we have launched.
+    kill TERM => -$$;
 }
 
 
