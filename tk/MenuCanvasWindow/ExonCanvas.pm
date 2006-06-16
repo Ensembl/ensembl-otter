@@ -2587,11 +2587,14 @@ sub xace_save {
         $xc->replace_SubSeq($sub, $old_name);
         $self->SubSeq($sub);
         $self->update_transcript_remark_widget($sub);
-        $self->update_Locus_tk_fields($sub->Locus);
+        
+        # This will get called later anyway
+        #$self->update_Locus_tk_fields($sub->Locus);
+        
         $self->name($new_name);
         $self->evidence_hash($sub->clone_evidence_hash);
+        $xc->update_Locus($sub->Locus);
         $sub->is_archival(1);
-        $xc->update_all_locus_edit_fields($sub->Locus->name);
         return 1;
     } else {
         $self->message("No xace attached");
