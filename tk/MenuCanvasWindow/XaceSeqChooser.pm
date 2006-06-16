@@ -293,28 +293,27 @@ sub empty_Locus_cache {
 }
 
 sub update_Locus {
-    my( $self, $locus ) = @_;
+    my( $self, $new_locus ) = @_;
     
-    $self->set_Locus($locus);
+    ### Maybe we could rename a locus by passing in an optional additional
+    ### parameter of the old locus name to this method?
+     
+    $self->set_Locus($new_locus);
     
-    my $locus_name = $locus->name;
-        
+    my $locus_name = $new_locus->name;
+
     foreach my $sub_name ($self->list_all_SubSeq_names) {
         my $sub = $self->get_SubSeq($sub_name) or next;
-        my $locus = $sub->Locus or next;
-        if ($locus->name eq $locus_name) {
-            $sub->Locus($locus);
-        }
-    }
-
-    foreach my $name ($self->list_all_subseq_edit_window_names) {
-        warn "Looking at: '$name'";
-        my $sub = $self->get_SubSeq($name) or next;
-        my $locus = $sub->Locus or next;
-        if ($locus->name eq $locus_name) {
-            warn "Updating '$name'";
-            my $ec = $self->get_subseq_edit_window($name) or next;
-            $ec->update_Locus_from_XaceSeqChooser;
+        my $old_locus = $sub->Locus or next;
+        
+        if ($old_locus->name eq $locus_name) {
+            # Replace locus in subseq with new copy
+            $sub->Locus($new_locus);
+            
+            # Is there an edit window open?
+            if (my $ec = $self->get_subseq_edit_window($sub_name)) {
+                $ec->update_Locus_from_XaceSeqChooser;
+            }
         }
     }
 }
@@ -1671,8 +1670,8 @@ sub express_clone_and_subseq_fetch {
     
     foreach my $sub ($clone->get_all_SubSeqs) {
         $self->add_SubSeq($sub);
-            
-	if (my $s_meth = $sub->GeneMethod) {
+
+	    if (my $s_meth = $sub->GeneMethod) {
             my $meth = $self->get_GeneMethod($s_meth->name);
             $sub->GeneMethod($meth);
         }
