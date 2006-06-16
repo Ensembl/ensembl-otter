@@ -312,7 +312,7 @@ sub update_Locus {
             
             # Is there an edit window open?
             if (my $ec = $self->get_subseq_edit_window($sub_name)) {
-                $ec->update_Locus_from_XaceSeqChooser;
+                $ec->update_Locus($new_locus);
             }
         }
     }

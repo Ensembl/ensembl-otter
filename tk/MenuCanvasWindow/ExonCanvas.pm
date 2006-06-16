@@ -1402,16 +1402,11 @@ sub get_Locus_from_tk {
 #    $self->XaceSeqChooser->rename_Locus($sub_name, $tk_name);
 #}
 
-sub update_Locus_from_XaceSeqChooser {
-    my( $self ) = @_;
+sub update_Locus {
+    my( $self, $locus ) = @_;
     
-    my $xc = $self->XaceSeqChooser;
-    if (my $locus = $self->SubSeq->Locus) {
-        printf STDERR "update_Locus_from_XaceSeqChooser for locus '%s'\n", $locus->name;
-        my $xc_locus = $xc->get_Locus($locus->name);
-        $self->update_Locus_tk_fields($xc_locus);
-        $self->SubSeq->Locus($xc_locus);
-    }
+    $self->update_Locus_tk_fields($locus);
+    $self->SubSeq->Locus($locus);
 }
 
 sub update_transcript_remark_widget {
@@ -2586,14 +2581,14 @@ sub xace_save {
         $xr->send_command('gif ; seqrecalc');
         $xc->replace_SubSeq($sub, $old_name);
         $self->SubSeq($sub);
-        $self->update_transcript_remark_widget($sub);
-        
-        # This will get called later anyway
-        #$self->update_Locus_tk_fields($sub->Locus);
-        
+        $self->update_transcript_remark_widget($sub);        
         $self->name($new_name);
         $self->evidence_hash($sub->clone_evidence_hash);
+        
+        # update_Locus in this object will be called
+        # from update_Locus in the XaceSeqChooser
         $xc->update_Locus($sub->Locus);
+
         $sub->is_archival(1);
         return 1;
     } else {
