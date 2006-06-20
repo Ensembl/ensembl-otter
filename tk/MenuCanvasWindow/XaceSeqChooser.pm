@@ -24,9 +24,29 @@ use Bio::Otter::Lace::Defaults;
 
 use base 'MenuCanvasWindow';
 
-use MenuCanvasWindow::ZMapSeqChooser;
 my $ZMAP_DEBUG = 1;
 
+# Work out whether or not we can use ZMap
+{
+    my $show;
+
+    eval {
+        require MenuCanvasWindow::ZMapSeqChooser;
+    };
+
+    if ($@) {
+        warn "ZMap not available\n";
+        $show = 0;
+    }
+
+    sub show_zmap {
+        unless (defined $show) {
+            $show = Bio::Otter::Lace::Defaults::option_from_array(['client', 'show_zmap'])
+              || 0;
+        }
+        return $show;
+    }
+}
 
 sub new {
     my( $pkg, $tk ) = @_;
@@ -1947,14 +1967,6 @@ sub run_dotter {
     $dw->update_from_XaceSeqChooser($self);
     
     return 1;
-}
-
-sub show_zmap {
-    my $self = shift @_;
-
-    my $show = Bio::Otter::Lace::Defaults::option_from_array(['client', 'show_zmap']);
-    printf STDERR "show_zmap = %s\n", defined $show ? $show : 'undef';
-    return $show || 0;
 }
 
 sub send_zmap_commands {
