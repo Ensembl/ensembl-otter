@@ -130,7 +130,7 @@ sub draw {
                             -anchor => 'nw',
                             -font   => $bold,
                             -tags   => [$row_tag->($row), 'gap_label'],
-                            -text   => "Assembly : $type    Chromosome : " . $cs_list->[0]->chromosome->name,
+                            -text   => "Assembly : $type    Chromosome : " . $cs_list->[0]->chromosome,
                             );
         $add_gap->($row);
         $row++; # increment the number after drawing this row
@@ -144,7 +144,7 @@ sub draw {
             # check for a gap here.
             my $gap_text = '';
             if($prev_cs->chromosome() != $cs->chromosome()){
-                $gap_text = "Chromosome : " . $cs->chromosome->name();
+                $gap_text = "Chromosome : " . $cs->chromosome();
             }elsif($cs->can('chr_start')){
                 my $gap = $cs->chr_start - $prev_cs->chr_end - 1;
                 if($gap > 0){
