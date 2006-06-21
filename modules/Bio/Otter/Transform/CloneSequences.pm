@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use Bio::Otter::Transform;
 use Bio::Otter::Lace::CloneSequence;
-use Bio::Otter::Lace::Chromosome;
+# use Bio::Otter::Lace::Chromosome;
 
 our @ISA = qw(Bio::Otter::Transform);
 
@@ -29,12 +29,16 @@ sub start_handler{
       $self->add_object($cl);
     }
     if($ele eq 'chr'){
-      my $ch = Bio::Otter::Lace::Chromosome->new();
       my $cs=$self->objects;
       my $cl=$cs->[$#$cs];
-      $ch->name($attr->{'name'});
-      $ch->length($attr->{'length'});
-      $cl->chromosome($ch);
+
+      # my $ch = Bio::Otter::Lace::Chromosome->new();
+      # $ch->name($attr->{'name'});
+      # $ch->length($attr->{'length'});
+      # $cl->chromosome($ch);
+
+        # from now on, just keep the chromosome's name
+      $cl->chromosome($attr->{name});
     }
     if($ele eq 'lock'){
       my $authorObj = Bio::Otter::Author->new(-dbid  => $attr->{'author_id'},

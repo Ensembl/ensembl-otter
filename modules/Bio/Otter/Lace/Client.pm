@@ -196,7 +196,7 @@ sub ace_readonly_tag{
 sub chr_start_end_from_contig {
     my( $self, $ctg ) = @_;
     
-    my $chr_name  = $ctg->[0]->chromosome->name;
+    my $chr_name  = $ctg->[0]->chromosome;
     my $start     = $ctg->[0]->chr_start;
     my $end       = $ctg->[$#$ctg]->chr_end;
     
