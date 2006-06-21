@@ -921,9 +921,6 @@ sub write_ensembl_data_for_key {
 
     my $type = $ens_db->assembly_type;
 
-    # later on will have to get chromsome names...not proper way to do it
-    my $ch = get_all_LaceChromosomes($ens_db);
-
     my $slice_adaptor = $ens_db->get_SliceAdaptor();
 
     my $sel = $ss->selected_CloneSequences_as_contig_list;
@@ -957,10 +954,10 @@ sub write_ensembl_data_for_key {
             my $first_ctg = $cs->[0];
             my $last_ctg  = $cs->[$#$cs];
 
-            my $chr       = $first_ctg->chromosome->name;
+            my $chr_name  = $first_ctg->chromosome;
             my $chr_start = $first_ctg->chr_start;
             my $chr_end   = $last_ctg->chr_end;
-            $otter_slice_name = "$chr.$chr_start-$chr_end";
+            $otter_slice_name = "$chr_name.$chr_start-$chr_end";
         }
 
         # check if agp of this DB is in sync for the selected clones
@@ -973,14 +970,14 @@ sub write_ensembl_data_for_key {
         my $slice_start;
         my $slice_end;
         my $fail;
-        my $chr;
+        my $chr_name;
 
         for (my $i = 0 ; $i < @$cs ; $i++) {
             my $ctg = $cs->[$i];
 
             my $ens_ctg_set =
-              get_LaceCloneSequence_by_sv($ens_db, $ch, $ctg->accession,
-                $ctg->sv, $type, $debug_flag);
+              get_LaceCloneSequence_by_sv(
+                $ens_db, $ctg->accession, $ctg->sv, $type, $debug_flag);
             my $pass = 0;
 
             # should get only one match (present, but not unfinished)
@@ -1031,7 +1028,7 @@ sub write_ensembl_data_for_key {
                         print "DEBUG: saved first $i\n" if $debug_flag;
                         $first = $i;
                         $last  = $i;
-                        $chr   = $ens_ctg->chromosome->name;
+                        $chr_name = $ens_ctg->chromosome;
                         if ($ens_ctg->contig_strand == $ctg->contig_strand) {
 
                             # same direction
@@ -1070,8 +1067,7 @@ sub write_ensembl_data_for_key {
             print "DEBUG: Fetching slice $first:$slice_start-$last:$slice_end\n"
               if $debug_flag;
             my $slice =
-              $slice_adaptor->fetch_by_chr_start_end($chr, $slice_start,
-                $slice_end);
+              $slice_adaptor->fetch_by_chr_start_end($chr_name, $slice_start, $slice_end);
             $slice->name($otter_slice_name);
             $factory->ace_data_from_slice($slice);
         }
@@ -1085,13 +1081,12 @@ sub write_ensembl_data_for_key {
 
 # look for contigs for this sv
 sub get_LaceCloneSequence_by_sv {
-    my ($dba, $ch, $acc, $sv, $type, $debug_flag) = @_;
+    my ($dba, $acc, $sv, $type, $debug_flag) = @_;
 
     print "DEBUG: checking $acc,$sv,$type\n" if $debug_flag;
 
-    my %id_chr = map { $_->chromosome_id, $_ } @$ch;
     my $sth = $dba->prepare(q{
-        SELECT a.chromosome_id
+        SELECT h.name
           , a.chr_start
           , a.chr_end
           , a.contig_start
@@ -1100,18 +1095,20 @@ sub get_LaceCloneSequence_by_sv {
         FROM assembly a
           , clone cl
           , contig c
+          , chromosome h
         WHERE cl.embl_acc= ?
           AND cl.embl_version= ?
           AND cl.clone_id=c.clone_id
           AND c.contig_id=a.contig_id
+          AND a.chromosome_id = h.chromosome_id
           AND a.type = ?
         });
     $sth->execute($acc, $sv, $type);
 
-    my ($chr_id, $chr_start, $chr_end,
+    my ($chr_name, $chr_start, $chr_end,
         $contig_start, $contig_end, $strand);
     $sth->bind_columns(
-        \$chr_id, \$chr_start, \$chr_end,
+        \$chr_name, \$chr_start, \$chr_end,
         \$contig_start, \$contig_end, \$strand);
 
     my $cs = [];
@@ -1121,7 +1118,10 @@ sub get_LaceCloneSequence_by_sv {
         #$cl->accession($acc);
         #$cl->sv($sv);
         #$cl->length($ctg_length);
-        $cl->chromosome($id_chr{$chr_id});
+        # $cl->chromosome($name_chr{$chr_name});
+
+        $cl->chromosome($chr_name);
+
         $cl->chr_start($chr_start);
         $cl->chr_end($chr_end);
         $cl->contig_start($contig_start);
@@ -1134,30 +1134,6 @@ sub get_LaceCloneSequence_by_sv {
           if $debug_flag;
     }
     return $cs;
-}
-
-
-sub get_all_LaceChromosomes {
-    my($dba)=@_;
-    my($ch);
-    my $sth = $dba->prepare(q{
-	SELECT chromosome_id
-	    , name
-	    , length
-	FROM chromosome
-	});
-    $sth->execute;
-    my( $chr_id, $name, $length );
-    $sth->bind_columns(\$chr_id, \$name, \$length);
-        
-    while ($sth->fetch) {
-	my $chr = Bio::Otter::Lace::Chromosome->new;
-	$chr->chromosome_id($chr_id);
-	$chr->name($name);
-	$chr->length($length);
-	push(@$ch, $chr);
-    }
-    return($ch);
 }
 
 {

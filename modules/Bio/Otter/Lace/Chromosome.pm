@@ -5,6 +5,8 @@ package Bio::Otter::Lace::Chromosome;
 
 use strict;
 
+# Not used by Otter Client, but still used by some scripts.
+
 sub new {
     my( $pkg ) = @_;
     
