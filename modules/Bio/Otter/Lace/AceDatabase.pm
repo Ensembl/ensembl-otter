@@ -699,9 +699,7 @@ sub write_pipeline_data {
     my $fetch_pipe = Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
     my $pipehead = Bio::Otter::Lace::Defaults::pipehead();
     if ($fetch_pipe and ! $pipehead) {
-	    my $pipe_db = Bio::Otter::Lace::PipelineDB::get_DBAdaptor($ens_db);
-	    $ens_db = $pipe_db;
-        #$pipe_db->dnadb($ens_db->dnadb);
+	    $ens_db = Bio::Otter::Lace::PipelineDB::get_DBAdaptor($ens_db);
     }
 
     $ens_db->assembly_type($ss->name);
@@ -1118,8 +1116,8 @@ sub get_LaceCloneSequence_by_sv {
         #$cl->accession($acc);
         #$cl->sv($sv);
         #$cl->length($ctg_length);
-        # $cl->chromosome($name_chr{$chr_name});
 
+        # $cl->chromosome($name_chr{$chr_name});
         $cl->chromosome($chr_name);
 
         $cl->chr_start($chr_start);
