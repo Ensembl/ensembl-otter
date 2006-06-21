@@ -48,6 +48,8 @@ $xml   .= qq`    <sequencesets>\n`;
 while (my ($name, $desc, $priority, $hide, $vega_id) = $sth->fetchrow) {
   $hide = ($hide eq 'Y') ? 1 : 0;
   $priority ||= 0;
+  $description =~ s/\</\&lt;/g;
+  $description =~ s/\>/\&gt;/g;
 
   $xml .= qq`      <sequenceset name="$name" hide="$hide">\n`;
   $xml .= qq`        <description>$desc</description>\n`;
