@@ -115,7 +115,7 @@ use Bio::Otter::AnnotationBroker;
                 #$did_fix++; next;   # Debugging
                 
                 my $type = $gene->type;
-                if (missing_prefix($type, $prefix)) {
+                if ($type ne 'obsolete' and missing_prefix($type, $prefix)) {
                     $did_fix++;
                     $update_gene_type->execute($prefix . $type, $gene->dbID);
                 }
