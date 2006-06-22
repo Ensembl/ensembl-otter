@@ -154,7 +154,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.16 $ ';
+$revision='$Revision: 1.17 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
@@ -470,6 +470,12 @@ sub run {
     foreach my $name ($self->list_GenomeSequence_names) {
         warn "Genomic query sequence: '$name'\n";
         my ($masked, $unmasked) = $self->get_masked_unmasked_seq($name);
+        
+        unless ($masked =~ /[acgtACGT]{5}/) {
+            warn "Sequence '$name' is entirely repeat\n";
+            next;
+        }
+        
         my $features = $self->run_blast($masked, $unmasked);
         $ace .= $self->format_ace_output($name, $features);
     }
