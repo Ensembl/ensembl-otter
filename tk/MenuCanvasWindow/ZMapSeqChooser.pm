@@ -253,7 +253,8 @@ sub zMapServerDefaults {
         url         => $url,
         writeback   => 'false',
         sequence    => 'true',
-        featuresets => sprintf(q{"%s"}, join ' ', $self->zMapListMethodNames_ordered),
+        
+        featuresets => sprintf(q{"%s"}, join ' ', map qq{\\"$_\\"}, $self->zMapListMethodNames_ordered),
         # Can specify a stylesfile instead of featuresets
 
     );
