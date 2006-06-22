@@ -154,7 +154,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.17 $ ';
+$revision='$Revision: 1.18 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
@@ -471,7 +471,7 @@ sub run {
         warn "Genomic query sequence: '$name'\n";
         my ($masked, $unmasked) = $self->get_masked_unmasked_seq($name);
         
-        unless ($masked =~ /[acgtACGT]{5}/) {
+        unless ($masked->seq =~ /[acgtACGT]{5}/) {
             warn "Sequence '$name' is entirely repeat\n";
             next;
         }

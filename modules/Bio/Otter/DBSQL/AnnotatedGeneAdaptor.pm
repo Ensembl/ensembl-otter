@@ -163,17 +163,17 @@ sub annotate_gene {
     #my $window_sec = 60;
     foreach my $tran (@{ $gene->get_all_Transcripts }) {
         $ata->annotate_transcript($tran);
-    #    my $info_time = $tran->transcript_info->timestamp
-    #      or $self->throw("No timestamp on transcript_info");
-    #    if ($info_time < ($gene_time - $window_sec) or $info_time > ($gene_time + $window_sec)) {
-    #        $self->throw(sprintf "Time '%s' on transcript_info(%d) of transcript(%d) '%s' version '%d' "
-    #          . "does not correspond to gene modfied time '%s' of gene(%d) '%s' version '%d'",
-    #          scalar(localtime $info_time), $info->dbID, $tran->dbID,
-    #          $tran->stable_id, $tran->version,
-    #          scalar(localtime $gene_time),
-    #          $gene->dbID, $gene->stable_id, $gene->version,
-    #          );
-    #    }
+        #my $info_time = $tran->transcript_info->timestamp
+        #  or $self->throw("No timestamp on transcript_info");
+        #if ($info_time < ($gene_time - $window_sec) or $info_time > ($gene_time + $window_sec)) {
+        #    $self->throw(sprintf "Time '%s' on transcript_info(%d) of transcript(%d) '%s' version '%d' "
+        #      . "does not correspond to gene modfied time '%s' of gene(%d) '%s' version '%d'",
+        #      scalar(localtime $info_time), $info->dbID, $tran->dbID,
+        #      $tran->stable_id, $tran->version,
+        #      scalar(localtime $gene_time),
+        #      $gene->dbID, $gene->stable_id, $gene->version,
+        #      );
+        #}
     }
 }
 
@@ -500,20 +500,12 @@ sub fetch_by_Slice {
         my $gene = $self->fetch_by_dbID($id)->transform($slice);
         
         # Skip any genes that aren't the latest version of that gene
+        # This can happen if there is a newer version on another assembly.
         next unless $self->Gene_is_current_version($gene);
         
-        # Skip any genes that are off slice
-        next unless $gene->start <= $slice->length and $gene->end >= 1;
+        my $g_info = $gene->gene_info;
         
-        push(@$latest_genes, $gene);
-    }
-
-    # Truncate gene components to Slice
-    for (my $j = 0; $j < @$latest_genes;) {
-        my $g = $latest_genes->[$j];
-        my $g_info = $g->gene_info;
-        my $tsct_list = $g->get_all_Transcripts;
-        
+        my $tsct_list = $gene->get_all_Transcripts;
         for (my $i = 0; $i < @$tsct_list;) {
             my $transcript = $tsct_list->[$i];
             my( $t_name );
@@ -553,9 +545,7 @@ sub fetch_by_Slice {
         
         # Remove any genes that don't have transcripts left.
         if (@$tsct_list) {
-            $j++;
-        } else {
-            splice(@$latest_genes, $j, 1);
+            push(@$latest_genes, $gene);
         }
     }
 
