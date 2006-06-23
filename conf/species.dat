@@ -1,91 +1,15 @@
 
 [defaults]
-HOST        otterlive
-PORT        3301
+HOST        otterpipe2
+PORT        3303
 USER        ottadmin
 PASS        lutralutra
-DNA_HOST    otterlive
-DNA_PORT    3301
+DNA_HOST    otterpipe2
+DNA_PORT    3303
 DNA_USER    ottadmin
 DNA_PASS    lutralutra
 
-[human]
-DBNAME      otter_human
+[test_human]
+DBNAME      test_otter_human
 TYPE        chr9p12
-
-[misc_human]
-DBNAME      otter_misc_human
-TYPE        22p
-
-[mouse]
-DBNAME      otter_mouse
-TYPE        mrc4
-
-[misc_mouse]
-HOST        humsrv1
-PORT        3306
-USER        ensadmin
-PASS        ensembl
-DNA_HOST    humsrv1
-DNA_PORT    3306
-DNA_USER    ensadmin
-DNA_PASS    ensembl
-DBNAME      otter_misc_mouse
-TYPE        misc
-
-[zebrafish]
-DBNAME      otter_zebrafish
-TYPE        zfish_01
-
-[marmoset]
-DBNAME      otter_marmoset
-TYPE        KIR-01
-
-[mus_spretus]
-DBNAME      otter_mus_spretus
-TYPE        mungal
-
-[rat]
-DBNAME      otter_rat
-TYPE        jena
-
-[gorilla]
-DBNAME      otter_gorilla
-TYPE        KIR-01
-
-[pig]
-DBNAME      otter_pig
-TYPE        Pig-MHC
-
-[dog]
-DBNAME      otter_dog
-TYPE        canine
-
-[cat]
-DBNAME      otter_cat
-TYPE        feline_mhc
-
-[chimp]
-DBNAME      otter_chimp
-TYPE        chimp
-
-[chicken]
-DBNAME      otter_chicken
-TYPE        chicken
-
-[platypus]
-DBNAME      otter_platypus
-TYPE        mungal
-
-[wallaby]
-DBNAME      otter_wallaby
-TYPE        UNKNOWN
-
-[tomato]
-DBNAME      otter_tomato
-TYPE        consK_H-01
-
-[tropicalis]
-DBNAME  otter_tropicalis
-TYPE    lw2_jgi-02
 
