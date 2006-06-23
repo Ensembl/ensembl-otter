@@ -27,7 +27,7 @@ my $unhide = $sq->getarg('unhide') || 0;
 my $maxpipehits = $sq->getarg('maxpipehits');
 
 my $odba = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
-my $pdba = odba_to_pdba($sq, $odba, $pipehead);
+my $pdba = odba_to_sdba($sq, $odba, $pipehead);
 my $pdbc = $pipehead ? $pdba->dbc() : $pdba;
 
     # currently, since Otter is old schema and Pipe is new schema,

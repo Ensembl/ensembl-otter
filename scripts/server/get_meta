@@ -21,7 +21,7 @@ my $key   = $sq->getarg('key');
 
 my $dba = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
 if($which eq 'pipe') {
-    $dba = odba_to_pdba($sq, $dba, $pipehead);
+    $dba = odba_to_sdba($sq, $dba, $pipehead);
 }
 my $dbc = $pipehead ? $dba->dbc() : $dba;
 
