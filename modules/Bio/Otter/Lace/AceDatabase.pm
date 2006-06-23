@@ -16,9 +16,11 @@ use Bio::Otter::Lace::PipelineDB;
 use Bio::Otter::Lace::SatelliteDB;
 use Bio::Otter::Lace::PersistentFile;
 use Bio::Otter::Lace::Blast;
+use Bio::Otter::Lace::Slice; # a new kind of Slice that knows how to get pipeline data
 
 use Bio::EnsEMBL::Ace::DataFactory;
 use Bio::EnsEMBL::Ace::Filter::Gene;
+use Bio::EnsEMBL::Ace::Otter_Filter::Gene::Proper;
 
 use Hum::Ace::MethodCollection;
 
@@ -693,17 +695,20 @@ sub db_initialized {
 sub write_pipeline_data {
     my( $self, $ss, $ace_file ) = @_;
 
-    my $dataset = $self->Client->get_DataSet_by_name($ss->dataset_name);
+    my $client  = $self->Client();
+    my $dataset = $client->get_DataSet_by_name($ss->dataset_name);
     $dataset->selected_SequenceSet($ss);    # Not necessary?
-    my $ens_db = $dataset->get_cached_DBAdaptor();
+
     my $fetch_pipe = Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
     my $pipehead = Bio::Otter::Lace::Defaults::pipehead();
-    if ($fetch_pipe and ! $pipehead) {
-	    $ens_db = Bio::Otter::Lace::PipelineDB::get_DBAdaptor($ens_db);
-    }
 
-    $ens_db->assembly_type($ss->name);
-    my $factory = $self->{'_pipeline_data_factory'} ||= $self->make_AceDataFactory($ens_db, $dataset);
+    my $pipe_db = $dataset->get_cached_DBAdaptor();
+    if ($fetch_pipe and ! $pipehead) {
+	    $pipe_db = Bio::Otter::Lace::PipelineDB::get_DBAdaptor($pipe_db);
+    }
+    $pipe_db->assembly_type($ss->name);
+
+    my $factory = $self->{'_pipeline_data_factory'} ||= $self->make_otterpipe_DataFactory($pipe_db, $dataset);
 
     # create file for output and add it to the acedb object
     $ace_file ||= $self->home . "/rawdata/pipeline.ace";
@@ -717,29 +722,18 @@ sub write_pipeline_data {
     }
     $factory->file_handle($fh);
 
-    my $slice_adaptor = $ens_db->get_SliceAdaptor();
+    my $slice_adaptor = $pipe_db->get_SliceAdaptor();
 
     # note: the next line returns a 2 dimensional array (not a one dimensional array)
     # each subarray contains a list of clones that are together on the golden path
     my $sel = $ss->selected_CloneSequences_as_contig_list ;
     foreach my $cs (@$sel) {
-        my( $chr, $chr_start, $chr_end ) = $self->Client->chr_start_end_from_contig($cs);
+        my( $chr, $chr_start, $chr_end ) = $client->chr_start_end_from_contig($cs);
+
         my $slice = $slice_adaptor->fetch_by_chr_start_end($chr, $chr_start, $chr_end);
 
-        ## I think we shouldn't let AceDatabase see the tiling path (lg4)
-        ## This is a kind of information that will be available to DataFactory.
-        ##
-        # Check we got a slice
-        my $tp = $slice->get_tiling_path;
-        my $type = $slice->assembly_type;
-        #warn "assembly type = $type";
-        if (@$tp) {
-            foreach my $tile (@$tp) {
-                print STDERR "contig: ", $tile->component_Seq->name, "\n";
-            }
-        } else {
-            warn "No components in tiling path";
-        }
+        ## to be substituted in future
+        # my $slice = Bio::Otter::Lace::Slice->new($chr, $chr_start, $chr_end, $ss->name);
 
         $factory->ace_data_from_slice($slice);
     }
@@ -747,29 +741,28 @@ sub write_pipeline_data {
     close $fh;
 
     if ($fetch_pipe and ! $pipehead) {
-        Bio::Otter::Lace::SatelliteDB::disconnect_DBAdaptor($ens_db);
+        Bio::Otter::Lace::SatelliteDB::disconnect_DBAdaptor($pipe_db);
     }
 }
 
-sub make_AceDataFactory {
-    my( $self, $ens_db, $dataset ) = @_;
+sub make_otterpipe_DataFactory {
+    my( $self, $pipe_db, $dataset ) = @_;
 
+    my $client = $self->Client();
     my $dsname = $dataset->name();
     warn "This dataset is '$dsname'\n";
 
     # create new datafactory object - contains all ace filters and produces the data from these
-    my $factory = Bio::EnsEMBL::Ace::DataFactory->new($self->Client(), $dataset);
+    my $factory = Bio::EnsEMBL::Ace::DataFactory->new($client, $dataset);
     # $factory->add_all_Filters($ensdb);
 
     ##----------code to add all of the ace filters to data factory-----------------------------------
 
     my $fetch_pipe = Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
-    my $debug = $self->Client->debug();
+    my $debug = $client->debug();
     
-    my $logic_to_load =
-      $self->Client->option_from_array([ $dsname, 'use_filters' ]);
-    my $module_options =
-      $self->Client->option_from_array([ $dsname, 'filter' ]);
+    my $logic_to_load  = $client->option_from_array([ $dsname, 'use_filters' ]);
+    my $module_options = $client->option_from_array([ $dsname, 'filter' ]);
 
     my @analysis_names;
     if ($fetch_pipe) {
@@ -779,19 +772,9 @@ sub make_AceDataFactory {
         push @analysis_names, 'otter'; # or shall we drop this distinction at all?
     }
 
-    ### This is kind of silly because we don't acutally
-    ### need the analysis object for the DNA filter.
-    #if ($ana_adaptor->fetch_by_logic_name('submitcontig')) {
-    #    push(@analysis_names, 'submitcontig');
-    #} else {
-    #    push(@analysis_names, 'otter');
-    #}
-
     my $collect = $self->get_default_MethodCollection;
 
     foreach my $logic_name (@analysis_names) {
-
-        my $ana_adaptor; # maybe we won't need it after all
 
         my $param_ref = $module_options->{$logic_name}
             or die "No parameters for '$logic_name'";
@@ -811,36 +794,32 @@ sub make_AceDataFactory {
             die "Error attempting to load filter module '$file'\n$@";
         }
 
-        my $filt = $class->new;
+        my $pipe_filter = $class->new;
 
-        # check there is an analysis
-        if ($filt->isa('Bio::EnsEMBL::Ace::Otter_Filter')) {
-            # Otter_Filters do not need the analysis_object anymore
-            $filt->analysis_name($logic_name);
-        } else {
-            $ana_adaptor ||= $ens_db->get_AnalysisAdaptor; # still, some old filters do need it
-            my $ana = $ana_adaptor->fetch_by_logic_name($logic_name)
-                or confess "No analysis object for '$logic_name' in database needed for '$filt'";
-            $filt->analysis_object($ana);
+            # filters should only ever need to know analysis_name
+        $pipe_filter->analysis_name($logic_name);
+
+        if (! $pipe_filter->isa('Bio::EnsEMBL::Ace::Otter_Filter')) {
+            $pipe_filter->dba($pipe_db);
         }
 
         # Options in the config file are methods on filter objects:
         while (my ($option, $value) = each %param) {
             #warn "setting '$option' to '$value'\n";
-            $filt->$option($value);
+            $pipe_filter->$option($value);
         }
 
         # does the filter need a method?
-        my $req = $filt->required_ace_method_names;
+        my $req = $pipe_filter->required_ace_method_names;
         foreach my $tag (@$req) {
             #print STDERR "Trying to get a method Object with tag '$tag' ... filter '$class' ... ";
             my $methObj = $collect->get_Method_by_name($tag);
             #print STDERR $methObj ? "found one\n" : "find failed\n";
-            $filt->add_method_object($methObj);    # or some other place
+            $pipe_filter->add_method_object($methObj);    # or some other place
         }
 
         # add the filter to the factory
-        $factory->add_AceFilter($filt);
+        $factory->add_AceFilter($pipe_filter);
     }
 
     return $factory;
@@ -854,60 +833,51 @@ sub make_AceDataFactory {
 sub write_ensembl_data {
     my ($self, $ss) = @_;
 
-    my $dataset         = $self->Client->get_DataSet_by_name($ss->dataset_name);
-    my $dsname          = $dataset->name();
-    my $ensembl_sources =
-      $self->Client->option_from_array([ $dsname, 'ensembl_sources' ]);
+    my $client          = $self->Client();
+    my $dsname          = $ss->dataset_name();
+    my $ensembl_sources = $client->option_from_array([ $dsname, 'ensembl_sources' ]);
 
     # Analysis logic names are taken from a comma separated list in
-    while (my ($key, $logic_string) = each %$ensembl_sources) {
-        warn "Fetching genes from '$key' with analysis names ($logic_string)\n";
-        $self->write_ensembl_data_for_key($ss, $key, $logic_string)
+    while (my ($key, $ana_names) = each %$ensembl_sources) {
+        warn "Fetching genes from '$key' with analysis names ($ana_names)\n";
+        $self->write_ensembl_data_for_key($ss, $key, $ana_names)
     }
 }
 
 sub make_ensembl_gene_DataFactory {
-    my ($self, $dataset, $ens_db, $logic_string) = @_;
+    my ($self, $dataset, $ens_db, $ana_names) = @_;
 
-    my $ana_adaptor = $ens_db->get_AnalysisAdaptor;
-    my @analysis_objects;
-    foreach my $logic_name (split /,/, $logic_string) {
-        if (my $ana_obj = $ana_adaptor->fetch_by_logic_name($logic_name)) {
-            push(@analysis_objects, $ana_obj);
-        }
-    }
-    
-    return unless @analysis_objects;
+    my @analysis_names = split /,/, $ana_names;
 
     my $factory = Bio::EnsEMBL::Ace::DataFactory->new($self->Client, $dataset);
     # Add a filter to the factory for each type of gene that we have
-    foreach my $ana (@analysis_objects) {
-        my $ens_filter = Bio::EnsEMBL::Ace::Filter::Gene->new;
+    foreach my $ana_name (@analysis_names) {
+        my $ens_filter = Bio::EnsEMBL::Ace::Otter_Filter::Gene::Proper->new;
         $ens_filter->url_string(
 'http\:\/\/www.ensembl.org\/Homo_sapiens\/contigview?highlight=%s&chr=%s&vc_start=%s&vc_end=%s'
         );
-        $ens_filter->analysis_object($ana);
+        $ens_filter->analysis_name($ana_name);
+        $ens_filter->dba($ens_db);
         $factory->add_AceFilter($ens_filter);
     }
     return $factory;
 }
 
 sub write_ensembl_data_for_key {
-    my ($self, $ss, $key, $logic_string) = @_;
+    my ($self, $ss, $key, $ana_names) = @_;
 
     my $debug_flag = 0;
 
     my $dataset = $self->Client->get_DataSet_by_name($ss->dataset_name);
     $dataset->selected_SequenceSet($ss);    # Not necessary?
-    my $ens_db =
-      Bio::Otter::Lace::SatelliteDB::get_DBAdaptor(
+    my $ens_db = Bio::Otter::Lace::SatelliteDB::get_DBAdaptor(
         $dataset->get_cached_DBAdaptor, $key)
       or return;
 
     # Get a factory, or return (which happens when there are no analyses
-    # of the types listed in $logic_string).
-    my $factory = $self->{'_ensembl_gene_data_factory'}{$logic_string} ||=
-      $self->make_ensembl_gene_DataFactory($dataset, $ens_db, $logic_string)
+    # of the types listed in $ana_names).
+    my $factory = $self->{'_ensembl_gene_data_factory'}{$ana_names} ||=
+      $self->make_ensembl_gene_DataFactory($dataset, $ens_db, $ana_names)
       || return;
 
     # create file for output and add it to the acedb object
@@ -1062,11 +1032,11 @@ sub write_ensembl_data_for_key {
 
         # if something was saved
         if ($first > -1) {
-            print "DEBUG: Fetching slice $first:$slice_start-$last:$slice_end\n"
-              if $debug_flag;
-            my $slice =
-              $slice_adaptor->fetch_by_chr_start_end($chr_name, $slice_start, $slice_end);
+            print "DEBUG: Fetching slice $first:$slice_start-$last:$slice_end\n" if $debug_flag;
+
+            my $slice = $slice_adaptor->fetch_by_chr_start_end($chr_name, $slice_start, $slice_end);
             $slice->name($otter_slice_name);
+
             $factory->ace_data_from_slice($slice);
         }
     }

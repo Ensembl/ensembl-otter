@@ -104,7 +104,7 @@ sub odba_to_sdba {
 
     $sdba->assembly_type($odba->assembly_type()) unless $pipehead;
 
-    error_exit($sq, "No connection parameters for '$pipekey' in otter database")
+    error_exit($sq, "No connection parameters for '$metakey' in otter database")
         unless ($sdb_options && keys %$sdb_options);
 
     server_log("... with parameters: ".join(', ', map { "$_=".$sdb_options->{$_} } keys %$sdb_options ));
