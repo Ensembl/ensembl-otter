@@ -20,7 +20,7 @@ use Bio::Otter::Lace::Slice; # a new kind of Slice that knows how to get pipelin
 
 use Bio::EnsEMBL::Ace::DataFactory;
 use Bio::EnsEMBL::Ace::Filter::Gene;
-use Bio::EnsEMBL::Ace::Otter_Filter::Gene::Proper;
+use Bio::EnsEMBL::Ace::Otter_Filter::Gene::EnsEMBL;
 
 use Hum::Ace::MethodCollection;
 
@@ -845,14 +845,16 @@ sub write_ensembl_data {
 }
 
 sub make_ensembl_gene_DataFactory {
-    my ($self, $dataset, $ens_db, $ana_names) = @_;
+    my ($self, $dataset, $ens_db, $metakey, $ana_names) = @_;
 
     my @analysis_names = split /,/, $ana_names;
 
     my $factory = Bio::EnsEMBL::Ace::DataFactory->new($self->Client, $dataset);
     # Add a filter to the factory for each type of gene that we have
     foreach my $ana_name (@analysis_names) {
-        my $ens_filter = Bio::EnsEMBL::Ace::Otter_Filter::Gene::Proper->new;
+        my $ens_filter = Bio::EnsEMBL::Ace::Otter_Filter::Gene::EnsEMBL->new;
+        $ens_filter->metakey($metakey);
+        $ens_filter->pipehead(0); # temporarily we are linked to old schema ensembl genes
         $ens_filter->url_string(
 'http\:\/\/www.ensembl.org\/Homo_sapiens\/contigview?highlight=%s&chr=%s&vc_start=%s&vc_end=%s'
         );
@@ -877,7 +879,7 @@ sub write_ensembl_data_for_key {
     # Get a factory, or return (which happens when there are no analyses
     # of the types listed in $ana_names).
     my $factory = $self->{'_ensembl_gene_data_factory'}{$ana_names} ||=
-      $self->make_ensembl_gene_DataFactory($dataset, $ens_db, $ana_names)
+      $self->make_ensembl_gene_DataFactory($dataset, $ens_db, $key, $ana_names)
       || return;
 
     # create file for output and add it to the acedb object

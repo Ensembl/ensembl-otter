@@ -1114,7 +1114,7 @@ sub get_pts_from_dataset_sliceargs_analysis {   # get PredictionTranscripts
 }
 
 sub get_pipegenes_from_dataset_sliceargs_analysis { # get genes from pipeline db - e.g. HalfWise genes
-    my( $self, $dataset, $sa, $analysis_name, $pipehead ) = @_;
+    my( $self, $dataset, $sa, $analysis_name, $pipehead, $metakey ) = @_;
 
     $sa = to_sliceargs($sa); # normalization
 
@@ -1125,12 +1125,13 @@ sub get_pipegenes_from_dataset_sliceargs_analysis { # get genes from pipeline db
     my $response = $self->general_http_dialog(
         0,
         'GET',
-        'get_pipeline_genes',
+        'get_genes',
         {
             %$sa,
             'pipehead'  => $pipehead ? 1 : 0,
             'dataset'  => $dataset->name(),
             'analysis' => $analysis_name,
+            $metakey ? ('metakey' => $metakey) : (),
         },
         1,
     );
