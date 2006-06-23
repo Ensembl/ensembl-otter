@@ -34,7 +34,7 @@ $| = 1;
         if ($chr_start_acc or $chr_end_acc) {
             die "Need to give sequence set name with accession arguments\n";
         }
-        $ss_list = $ds->get_all_SequenceSets;
+        $ss_list = $ds->get_all_visible_SequenceSets;
     }
     
     my $dba = $ds->get_cached_DBAdaptor;

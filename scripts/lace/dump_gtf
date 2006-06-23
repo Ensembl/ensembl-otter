@@ -462,10 +462,10 @@ sub print_attribs {
     my ($fh, $gene, $transcript, $count, $type) = @_;
 
     my $gene_name;
-    $gene_name = $gene->external_name;
+    $gene_name = $gene->gene_info->name->name;
 
     my $trans_name;
-    $trans_name = $transcript->external_name;
+    $trans_name = $transcript->transcript_info->name;
 
     print $fh " gene_id \""
       . get_gene_id($gene) . "\";"

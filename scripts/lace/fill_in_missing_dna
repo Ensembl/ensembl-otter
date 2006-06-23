@@ -3,7 +3,6 @@
 ### fill_in_missing_dna
 
 use strict;
-use Getopt::Long 'GetOptions';
 use Bio::Otter::Lace::Defaults;
 use Bio::Otter::Lace::PipelineDB;
 use Hum::Pfetch 'get_Sequences';
