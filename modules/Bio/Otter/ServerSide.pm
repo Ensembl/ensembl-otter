@@ -17,7 +17,7 @@ our @EXPORT_OK = qw(
                     &set_nph
                     &send_response
                     &error_exit
-                    &odba_to_pdba
+                    &odba_to_sdba
                     &get_slice
                     &get_Author_from_CGI
                     &get_DBAdaptor_from_CGI_species
@@ -27,7 +27,7 @@ our %EXPORT_TAGS = (all => [qw(
                                set_nph
                                send_response
                                error_exit
-                               odba_to_pdba
+                               odba_to_sdba
                                get_slice
                                get_Author_from_CGI
                                get_DBAdaptor_from_CGI_species 
@@ -80,31 +80,36 @@ sub error_exit {
     exit(1);
 }
 
-sub odba_to_pdba {
-    my ($sq, $odba, $pipehead) = @_;
+sub odba_to_sdba {
+    my ($sq, $odba, $pipehead, $metakey) = @_;
 
     server_log("called with: ".join(' ', map { "$_=".$sq->getarg($_) } @{$sq->getargs()} ));
 
-    my $pipekey = $pipehead
-        ? 'pipeline_db_head'
-        : 'pipeline_db';
+    my $kind = 'satellite DB';
 
-    server_log("connecting to the ".($pipehead?'NEW':'OLD')." pipeline using [$pipekey] meta entry...");
+    if(! $metakey) {
+        $metakey = $pipehead
+            ? 'pipeline_db_head'
+            : 'pipeline_db';
+        $kind = 'pipeline DB'
+    }
 
-    my ($pdba, $pipedb_options) =
+    server_log("connecting to the ".($pipehead?'NEW':'OLD')." schema $kind using [$metakey] meta entry...");
+
+    my ($sdba, $sdb_options) =
         Bio::Otter::Lace::SatelliteDB::_get_DBAdaptor_and_options(
             $odba,
-            $pipekey
+            $metakey
         );
 
-    $pdba->assembly_type($odba->assembly_type()) unless $pipehead;
+    $sdba->assembly_type($odba->assembly_type()) unless $pipehead;
 
     error_exit($sq, "No connection parameters for '$pipekey' in otter database")
-        unless ($pipedb_options && keys %$pipedb_options);
+        unless ($sdb_options && keys %$sdb_options);
 
-    server_log("... with parameters: ".join(', ', map { "$_=".$pipedb_options->{$_} } keys %$pipedb_options ));
+    server_log("... with parameters: ".join(', ', map { "$_=".$sdb_options->{$_} } keys %$sdb_options ));
 
-    return $pdba;
+    return $sdba;
 }
 
 sub get_slice { # codebase-independent version for scripts
