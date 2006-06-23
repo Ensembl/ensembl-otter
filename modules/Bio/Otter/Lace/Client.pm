@@ -371,7 +371,8 @@ sub general_http_dialog {
 sub to_sliceargs { # not a method!
     my $arg = shift @_;
 
-    return (UNIVERSAL::isa($arg, 'Bio::EnsEMBL::Slice'))
+    return (   UNIVERSAL::isa($arg, 'Bio::EnsEMBL::Slice')
+            || UNIVERSAL::isa($arg, 'Bio::Otter::Lace::Slice') )
         ? {
             'cs'    => 'chromosome',
             'csver' => 'Otter',
