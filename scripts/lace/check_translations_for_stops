@@ -11,7 +11,7 @@ $| = 1;
 
 {
     my ($dataset, $sequence_set, $chr_start_acc, $chr_end_acc, $gene_stable_id);
-    my ($tunnel, $remarks, $verbose, $seleno, $sql, $prefix, $ends);
+    my ($tunnel, $remarks, $verbose, $seleno, $sql, $prefix, $tags);
     my $help = sub { exec('perldoc', $0) };
 
     Bio::Otter::Lace::Defaults::do_getopt(
@@ -24,7 +24,7 @@ $| = 1;
         'remarks'               => \$remarks,
         'seleno|selenocysteine' => \$seleno,
         'sql:s'                 => \$sql,
-        'ends:s'                => \$ends,
+        'tags:s'                => \$tags,
         'verbose|v'             => \$verbose,
         'prefix:s'              => \$prefix,
         'h|help'                => $help,
@@ -122,8 +122,8 @@ $| = 1;
     if ($sql) {
         open(OUT2, ">$sql") || die "cannot open $sql";
     }
-    if ($ends) {
-        open(OUT3, ">$ends") || die "cannot open $ends";
+    if ($tags) {
+        open(OUT3, ">$tags") || die "cannot open $tags";
     }
     foreach my $id (@$gene_id_list) {
         $i++;
@@ -142,30 +142,42 @@ $| = 1;
             print OUT2 $sqltxt if $sql;
 
 	    # check for translations not ending in a true stop
-	    print OUT3 check_translation_end($gene, $trans) if $ends;
+	    print OUT3 check_start_end($gene, $trans) if $tags;
 
         }
     }
     print STDERR " $i\n";
     close OUT2 if $sql;
-    close OUT3 if $ends;
+    close OUT3 if $tags;
 }
 
-sub check_translation_end {
+sub check_start_end {
   my ($gene, $trans)=@_;
-  # 1. is there a s_n_f tag?
+
+  # 1. what tags are set tag?
+  my $mrna_start_not_found=$trans->transcript_info->mRNA_start_not_found;
+  my $cdna_start_not_found=$trans->transcript_info->cds_start_not_found;
   my $cdna_end_not_found=$trans->transcript_info->cds_end_not_found;
-  # 2. does the translation end in a valid stop
+  my $mrna_end_not_found=$trans->transcript_info->mRNA_end_not_found;
+
   my $tsi=$trans->stable_id;
   my $mrna=$trans->seq->seq;
   my $cdna=$trans->translateable_seq;
+
+  # 2. does the translation start with a valid start
+  my $valid_start=0;
+  if($cdna=~/^(ATG)/){
+    $valid_start=1;
+  }
+
+  # 3. does the translation end in a valid stop
   my $valid_stop=0;
   if(length($cdna) % 3 == 0){
     if($cdna=~/(TAG|TGA|TAA)$/){
       $valid_stop=1;
     }
   }
-  # 3. is translation end of transcript
+
   my $cdna2=$cdna;
   $cdna2=~s/^N+//;
   my $utr5='';
@@ -174,33 +186,79 @@ sub check_translation_end {
     $utr5=$1;
     $utr3=$2;
   }else{
-    print "ERROR: $cdna not found in $mrna\n";
+    # should never get this error
+    print "ERROR: $tsi: cDNA not found in mRNA: $cdna, $mrna\n";
   }
+
+  # 4. is translation start also start of transcript
+  my $abutted_translation_start=0;
+  if(length($utr5)==0){
+    $abutted_translation_start=1;
+  }
+  if($cdna ne $cdna2 && length($utr5)>0){
+    # should never get this error
+    print "ERROR: $tsi: cDNA truncated but not aligned with start".
+	" of mRNA: $cdna, $mrna\n";
+  }
+  
+  # 5. is translation end also end of transcript
   my $abutted_translation_end=0;
   if(length($utr3)==0){
     $abutted_translation_end=1;
   }
-  # at, vs, cenf
+
+  # look for inconsistencies:
   my $out;
+  if($valid_start){
+    if($abutted_translation_start){
+      $out.=' WARN11: valid start, but transcript and translation same length; ';
+      # requires annotator investigation
+    }
+    if($cdna_start_not_found){
+      $out.=' ERR11: valid start, but cdna_start_not_found tag present; ';
+      # candidate for automatically fix - remove tag
+    }
+  }else{
+    if(!$abutted_translation_start){
+      $out.=' ERR12: invalid start, but translation starts after start of transcript; ';
+      # requires annotator investigation
+    }
+    if(!$cdna_start_not_found){
+      $out.=' ERR13: invalid start, but cdna_start_not_found tag missing; ';
+      # requires annotator investigation
+    }
+  }
+  if($abutted_translation_start){
+    if(!$mrna_start_not_found){
+      $out.=' WARN12: abutted start, but mRNA_start_not_found tag not present; ';
+    }
+  }
+
   if($valid_stop){
     if($abutted_translation_end){
-      $out.=' WARN: valid stop, but transcript and translation same length';
+      $out.=' WARN21: valid stop, but transcript and translation same length; ';
       # requires annotator investigation
     }
     if($cdna_end_not_found){
-      $out.=' ERR: valid stop, but cdna_end_not_found tag present';
+      $out.=' ERR21: valid stop, but cdna_end_not_found tag present; ';
       # candidate for automatically fix - remove tag
     }
   }else{
     if(!$abutted_translation_end){
-      $out.=' ERR: invalid stop, but translation stops before end of translation';
+      $out.=' ERR22: invalid stop, but translation stops before end of transcript; ';
       # requires annotator investigation
     }
     if(!$cdna_end_not_found){
-      $out.=' ERR: invalid stop, but cdna_end_not_found tag missing';
+      $out.=' ERR23: invalid stop, but cdna_end_not_found tag missing; ';
       # requires annotator investigation
     }
   }
+  if($abutted_translation_end){
+    if(!$mrna_end_not_found){
+      $out.=' WARN22: abutted end, but mRNA_end_not_found tag not present; ';
+    }
+  }
+
   if($out){
     $out=$tsi.$out."\n";
   }else{
