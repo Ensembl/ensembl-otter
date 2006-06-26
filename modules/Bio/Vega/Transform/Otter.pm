@@ -19,7 +19,6 @@ use Bio::Vega::Author;
 use Bio::Vega::AuthorGroup;
 use Bio::Vega::ContigInfo;
 use Bio::Vega::Evidence;
-use Bio::Vega::Lace::SequenceSet;
 
 use Data::Dumper;   # For debugging
 # This misses the "$VAR1 = " bit out from the Dumper() output
