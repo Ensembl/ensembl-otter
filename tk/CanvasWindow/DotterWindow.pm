@@ -79,7 +79,7 @@ sub initialise {
     $self->genomic(
         $name_frame->Entry(
             -width  => 30,
-            -state  => 'readonly',
+            -state  => 'disabled',
             )->pack(-side => 'left')
         );
 
