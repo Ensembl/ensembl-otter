@@ -20,13 +20,24 @@ create table assembly_tagged_clone (
        UNIQUE KEY (clone_id)
 );
 
-create table author (
-	author_id  int(10) unsigned NOT NULL auto_increment,
-	author_email varchar(50),
-        author_name  varchar(50),
-        PRIMARY KEY (author_id),
-        UNIQUE (author_name)
+CREATE TABLE `author` (
+  `author_id` int(10) unsigned NOT NULL auto_increment,
+  `author_email` varchar(50) default NULL,
+  `author_name` varchar(50) default NULL,
+  `author_group_id` int(10) unsigned default NULL,
+  PRIMARY KEY  (`author_id`),
+  UNIQUE KEY `author_name` (`author_name`)
 );
+
+
+CREATE TABLE `author_group` (
+  `author_group_id` int(10) unsigned NOT NULL auto_increment,
+  `author_email` varchar(50) default NULL,
+  `author_name` varchar(50) default NULL,
+  PRIMARY KEY  (`author_group_id`),
+  UNIQUE KEY `author_name` (`author_name`)
+);
+
 create table keyword (
 	keyword_id  int(10) unsigned NOT NULL auto_increment,
         keyword_name  varchar(50),
