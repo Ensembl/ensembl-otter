@@ -16,6 +16,8 @@ use Bio::Otter::Lace::Defaults;
         'dataset=s'     => \$dataset_name,
         ) or $usage->();
     $usage->() unless $dataset_name;
+
+    my $xl_table = get_xl_table(\*ARGV);
     
     # Client communicates with otter HTTP server
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
@@ -52,7 +54,6 @@ use Bio::Otter::Lace::Defaults;
         $stable_gene_info{$stable} = [$name, $type, $gene_id];
     }
     
-    my $xl_table = get_xl_table();
     foreach my $stable (sort keys %stable_gene_info) {
         my ($name, $type, $gene_id) = @{$stable_gene_info{$stable}};
         
@@ -84,6 +85,11 @@ use Bio::Otter::Lace::Defaults;
         }
     }
     
+    foreach my $line (sort {$a->[0] <=> $b->[0]} values %$xl_table) {
+        my ($n, @info) = @$line;
+        print join("\t", @info), "\n";
+    }
+    
 }
 
 sub extract_rik {
@@ -95,129 +101,15 @@ sub extract_rik {
 }
 
 sub get_xl_table {
-
-    my $xl = q{
-ENSMUSG00000039219	Arid4b	13	KNOWN	4	100	9	12	Vector Complete
-ENSMUSG00000002748	Baz1b	5	KNOWN	6	100	8	2	Vector Complete
-ENSMUSG00000026918	Brd3	2	KNOWN	4	100	6	10	Vector Complete
-ENSMUSG00000031660	Brd7	8	KNOWN	4	100	3	0	Vector Complete
-ENSMUSG00000018666	Cbx1	11	KNOWN	6	101	29	81	Vector Complete
-ENSMUSG00000061589	Dot1l	10	KNOWN	4	100	8	5	Vector Complete
-ENSMUSG00000024240	Epc1	18	KNOWN	4	100	4	3	Vector Complete
-ENSMUSG00000034245	Hdac11	6	KNOWN	5	100	0	0	Vector Complete
-ENSMUSG00000042207	Jarid1b	1	KNOWN	6	100	15	82	Vector Complete
-ENSMUSG00000036792	Mbd5	2	KNOWN	4	100	0	0	Vector Complete
-ENSMUSG00000021144	Mta1	12	KNOWN	6	101	3	8	Vector Complete
-ENSMUSG00000055817	Mta3	17	KNOWN	7	100	18	95	Vector Complete
-ENSMUSG00000031540	Myst3	8	KNOWN	6	100	2	1	Vector Complete
-ENSMUSG00000037111	Set7	3	KNOWN	4	100	0	0	Vector Complete
-ENSMUSG00000015697	Setdb1	3	KNOWN	5	1000	24	15	Vector Complete
-ENSMUSG00000015149	Sirt2	7	KNOWN	4	100	0	4	Vector Complete
-ENSMUSG00000055067	Smyd3	1	KNOWN	4	100	10	10	Vector Complete
-ENSMUSG00000039231	Suv39h1	X	KNOWN	5	1000	0	0	Vector Complete
-ENSMUSG00000045098	Suv420h1	19	KNOWN	4	100	4	5	Vector Complete
-ENSMUSG00000034021	Aprin	5	KNOWN	4	100	7	12	Vega Annotation Complete
-ENSMUSG00000005470	Asf1b	8	KNOWN	4	100	1	2	Vega Annotation Complete
-ENSMUSG00000024335	Brd2	17	KNOWN	4	100	3	1	Vega Annotation Complete
-ENSMUSG00000029279	Brdt	5	KNOWN	4	100	0	0	Vega Annotation Complete
-ENSMUSG00000029836	Cbx3	6	KNOWN	6	200	13	2	Vega Annotation Complete
-ENSMUSG00000039989	Cbx4	11	KNOWN	4	100	0	0	Vega Annotation Complete
-ENSMUSG00000053411	Cbx7	15	KNOWN	7	100	16	42	Vega Annotation Complete
-ENSMUSG00000025578	Cbx8	11	KNOWN	5	100	0	0	Vega Annotation Complete
-ENSMUSG00000018474	Chd3	11	KNOWN	5	100	0	0	Vega Annotation Complete
-ENSMUSG00000005698	Ctcf	8	KNOWN	4	100	10	80	Vega Annotation Complete
-ENSMUSG00000029505	Ep400	5	KNOWN	4	100	8	4	Vega Annotation Complete
-ENSMUSG00000035623	Hbxap	7	KNOWN	4	100	5	21	Vega Annotation Complete
-ENSMUSG00000062906	Hdac10	15	KNOWN	6	100	0	0	Vega Annotation Complete
-ENSMUSG00000024454	Hdac3	18	KNOWN	8	100	0	3	Vega Annotation Complete
-ENSMUSG00000031161	Hdac6	X	KNOWN	7	100	0	2	Vega Annotation Complete
-ENSMUSG00000067567	Hdac8	X	KNOWN	6	100	3	0	Vega Annotation Complete
-ENSMUSG00000038664	Herc1	9	KNOWN	4	100	4	8	Vega Annotation Complete
-ENSMUSG00000020232	Hmg20b	10	KNOWN	4	100	2	14	Vega Annotation Complete
-ENSMUSG00000063049	Ing1l	8	KNOWN	4	100	1	1	Vega Annotation Complete
-ENSMUSG00000029670	Ing3	6	KNOWN	4	100	4	0	Vega Annotation Complete
-ENSMUSG00000025332	Jarid1c	X	KNOWN	6	100	2	10	Vega Annotation Complete
-ENSMUSG00000028397	Jmjd2c	4	KNOWN	5	100	34	190	Vega Annotation Complete
-ENSMUSG00000035576	L3mbtl	2	KNOWN	4	100	0	0	Vega Annotation Complete
-ENSMUSG00000071646 (was ENSMUSG00000003676)	Mta2	19	KNOWN	7	100	1	2	Vega Annotation Complete
-ENSMUSG00000029478	Ncor2	5	KNOWN	5	100	7	50	Vega Annotation Complete
-ENSMUSG00000041229	Phf8	X	KNOWN	4	100	1	0	Vega Annotation Complete
-ENSMUSG00000030254	Rad18	6	KNOWN	5	100	1	0	Vega Annotation Complete
-ENSMUSG00000057236	Rbbp4	4	KNOWN	6	100	4	12	Vega Annotation Complete
-ENSMUSG00000031353	Rbbp7	X	KNOWN	6	100	6	12	Vega Annotation Complete
-ENSMUSG00000024968	Rcor2	19	KNOWN	4	100	12	13	Vega Annotation Complete
-ENSMUSG00000024548	Setbp1	18	KNOWN	6	100	0	0	Vega Annotation Complete
-ENSMUSG00000020710	Smarcd2	11	KNOWN	4	100	1	0	Vega Annotation Complete
-ENSMUSG00000059851	Suv420h2	7	KNOWN	5	100	0	8	Vega Annotation Complete
-ENSMUSG00000045482	Trrap	5	KNOWN	5	1000	7	1	Vega Annotation Complete
-ENSMUSG00000024817	Uhrf2	19	KNOWN	4	100	2	3	Vega Annotation Complete
-ENSMUSG00000022634	Yaf2	15	KNOWN	4	100	0	1	Vega Annotation Complete
-ENSMUSG00000021264	Yy1	12	KNOWN	7	1000	2	4	Vega Annotation Complete
-ENSMUSG00000033237	Arid2	15	NOVEL	1	100	2	2	Vector Complete
-ENSMUSG00000034629	Arid4a	12	NOVEL	2	200	2	1	Vector Complete
-ENSMUSG00000026763	Epc2	2	NOVEL	2	100	9	13	Vector Complete
-ENSMUSG00000044770	Scml4	10	NOVEL	1	100	0	1	Vector Complete
-ENSMUSG00000026603	Smyd2	1	NOVEL	1	100	0	48	Vector Complete
-ENSMUSG00000020079	Supv3l1	10	NOVEL	3	101	0	2	Vector Complete
-ENSMUSG00000031671	0610039J04Rik	8	NOVEL	0	100	1	6	Vega Annotation Complete
-ENSMUSG00000063080	1700012L04Rik	X	NOVEL	1	100	0	0	Vega Annotation Complete
-ENSMUSG00000048155	1700014N06Rik	X	NOVEL	1	100	0	0	Vega Annotation Complete
-ENSMUSG00000049327	2410195B05Rik	5	NOVEL	1	100	3	35	Vega Annotation Complete
-ENSMUSG00000034269	2900045N06Rik	6	NOVEL	2	100	10	12	Vega Annotation Complete
-ENSMUSG00000021934	4930548G07Rik	14	NOVEL	1	100	1	4	Vega Annotation Complete
-ENSMUSG00000016831	5730589K01Rik	14	NOVEL	0	100	1	7	Vega Annotation Complete
-ENSMUSG00000022641	Bbx	16	NOVEL	1	100	10	16	Vega Annotation Complete
-ENSMUSG00000042308	BC010250	7	NOVEL	1	100	2	0	Vega Annotation Complete
-ENSMUSG00000022387	Brd1	15	NOVEL	5	100	2	4	Vega Annotation Complete
-ENSMUSG00000003778	Brd8	18	NOVEL	6	100	9	3	Vega Annotation Complete
-ENSMUSG00000063952	Brpf3	17	NOVEL	2	100	2	0	Vega Annotation Complete
-ENSMUSG00000020042	Btbd11	10	NOVEL	0	100	1	10	Vega Annotation Complete
-ENSMUSG00000039738	Btbd12	16	NOVEL	1	100	0	0	Vega Annotation Complete
-ENSMUSG00000062098	Btbd3	2	NOVEL	0	100	0	5	Vega Annotation Complete
-ENSMUSG00000042507	C130039O16Rik	12	NOVEL	0	100	4	9	Vega Annotation Complete
-ENSMUSG00000047534	C79407	12	NOVEL	0	100	3	25	Vega Annotation Complete
-ENSMUSG00000022421	Cbx6	15	NOVEL	2	100	1	0	Vega Annotation Complete
-ENSMUSG00000024791	Cdca5	19	NOVEL	1	100	1	5	Vega Annotation Complete
-ENSMUSG00000029804	Herc3	6	NOVEL	1	100	0	0	Vega Annotation Complete
-ENSMUSG00000034518	Hmgb2l1	8	NOVEL	1	100	3	14	Vega Annotation Complete
-ENSMUSG00000028759	Hp1bp3	4	NOVEL	0	100	1	12	Vega Annotation Complete
-ENSMUSG00000059474	Mbtd1	11	NOVEL	3	100	7	8	Vega Annotation Complete
-ENSMUSG00000057234	Mett5d1	2	NOVEL	0	100	0	10	Vega Annotation Complete
-ENSMUSG00000028522	Mier1	4	NOVEL	0	100	3	25	Vega Annotation Complete
-ENSMUSG00000022948	ORF21	16	NOVEL	1	100	0	10	Vega Annotation Complete
-ENSMUSG00000033623	Pcgf3	5	NOVEL	0	100	1	5	Vega Annotation Complete
-ENSMUSG00000029629	Phf14	6	NOVEL	3	100	4	23	Vega Annotation Complete
-ENSMUSG00000020387	Phf15	11	NOVEL	1	100	0	5	Vega Annotation Complete
-ENSMUSG00000037315	Phf16	X	NOVEL	2	100	2	0	Vega Annotation Complete
-ENSMUSG00000026873	Phf19	2	NOVEL	0	100	0	4	Vega Annotation Complete
-ENSMUSG00000038116	Phf20	2	NOVEL	1	100	30	176	Vega Annotation Complete
-ENSMUSG00000028016	Phf22	3	NOVEL	0	100	1	7	Vega Annotation Complete
-ENSMUSG00000034639	Setmar	6	NOVEL	3	100	0	0	Vega Annotation Complete
-ENSMUSG00000018809	Smyd4	11	NOVEL	0	100	0	17	Vega Annotation Complete
-ENSMUSG00000033706	Smyd5	6	NOVEL	0	100	0	7	Vega Annotation Complete
-ENSMUSG00000031026	Trim66	7	NOVEL	0	100	0	3	Vega Annotation Complete
-ENSMUSG00000037572	Wdhd1	14	NOVEL	0	100	1	3	Vega Annotation Complete
-ENSMUSG00000034333	Zbed4	15	NOVEL	0	100	0	24	Vega Annotation Complete
-ENSMUSG00000021156	Zmynd11	13	NOVEL	0	100	2	5	Vega Annotation Complete
-ENSMUSG00000036086	Zranb3	1	NOVEL	0	101	2	130	Vega Annotation Complete
-ENSMUSG00000039068	Zzz3	3	NOVEL	0	100	12	68	Vega Annotation Complete
-ENSMUSG00000028800		4	NOVEL	2	200	16	5	Vega Annotation Complete
-ENSMUSG00000040478		4	NOVEL	1	100	0	0	Vega Annotation Complete
-ENSMUSG00000042414		1	NOVEL	1	100	0	1	Vega Annotation Complete
-ENSMUSG00000058047		11	NOVEL	1	100	0	0	Vega Annotation Complete
-ENSMUSG00000061065		X	NOVEL	1	100	0	0	Vega Annotation Complete
-ENSMUSG00000068350		16	NOVEL	1	100	0	0	Vega Annotation Complete
-ENSMUSG00000069378		18	NOVEL	1	100	0	0	Vega Annotation Complete
-    };
+    my ($fh) = @_;
 
     my $table = {};
-    my $i = 0;
-    foreach my $line (split /\n/, $xl) {
-        chomp($line);
-        next unless $line =~ /\w/;
-        $i++;
-        my ($gene_name) = (split /\t/, $line)[1];
-        $table->{lc $gene_name} = [$i, $line];
+    while (<$fh>) {
+        chomp;
+        next unless /\w/;
+        my ($gene_name) = (split /\t/, $_)[1];
+        $gene_name ||= "row-$.";
+        $table->{lc $gene_name} = [$., $_];
     }
     return $table;
 }
