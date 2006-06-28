@@ -54,19 +54,24 @@ use Bio::Otter::Lace::Defaults;
         $stable_gene_info{$stable} = [$name, $type, $gene_id];
     }
     
+    my @not_in_xl;
     foreach my $stable (sort keys %stable_gene_info) {
         my ($name, $type, $gene_id) = @{$stable_gene_info{$stable}};
         
         my $gene = $gene_aptr->fetch_by_dbID($gene_id);
+
+        # Find Riken gene identifiers, wherever they are hidden:
         my $rik = {};
+        extract_rik($rik, $gene->description);
+        foreach my $syn ($gene->gene_info->synonym) {
+            extract_rik($rik, $syn->name);
+        }
         foreach my $rem ($gene->gene_info->remark) {
             extract_rik($rik, $rem->remark);
         }
-        unless ($rik) {
-            foreach my $trans (@{$gene->get_all_Transcripts}) {
-                foreach my $rem ($trans->transcript_info->remark) {
-                    extract_rik($rik, $rem->remark);
-                }
+        foreach my $trans (@{$gene->get_all_Transcripts}) {
+            foreach my $rem ($trans->transcript_info->remark) {
+                extract_rik($rik, $rem->remark);
             }
         }
         
@@ -80,16 +85,21 @@ use Bio::Otter::Lace::Defaults;
             }
         }
         
+        my $data = join("\t", $name, $rik_str, $type, $stable);
         if ($line) {
-            push @$line, join("\t", $name, $rik_str, $type, $stable);
+            push @$line, $data;
+        } else {
+            push @not_in_xl, $data;
         }
     }
     
     foreach my $line (sort {$a->[0] <=> $b->[0]} values %$xl_table) {
         my ($n, @info) = @$line;
-        print join("\t", @info), "\n";
+        print join("\t", @info), "\r";
     }
-    
+    foreach my $line (sort @not_in_xl) {
+        print "$line\r";
+    }
 }
 
 sub extract_rik {
@@ -102,6 +112,8 @@ sub extract_rik {
 
 sub get_xl_table {
     my ($fh) = @_;
+
+    local $/ = "\r";
 
     my $table = {};
     while (<$fh>) {
