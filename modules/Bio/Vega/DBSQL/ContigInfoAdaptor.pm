@@ -75,9 +75,11 @@ sub store {
           , is_current)
     VALUES (?,?,NOW(),1)
         });
+	 my $author=$contiginfo->author;
+	 my $author_id=$author->dbID;
     $sth->execute(
 						$seq_region_id,
-						$contiginfo->author->dbID,
+						$author_id,
 					  );
     my $contig_info_id = $sth->{'mysql_insertid'} or $self->throw("No insert id");
     $contiginfo->dbID($contig_info_id);
