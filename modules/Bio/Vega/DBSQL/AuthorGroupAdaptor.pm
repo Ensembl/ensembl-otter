@@ -23,7 +23,7 @@ sub fetch_id_by_name{
   my $sth = $self->prepare(q{
         SELECT group_id
         FROM author_group
-        WHERE name = ?
+        WHERE group_name = ?
         });
   $sth->execute($value);
   my $dbID=$sth->fetchrow;
@@ -35,9 +35,9 @@ sub fetch_id_by_name{
 sub store{
    my ($self,$value) = @_;
    my $sth = $self->prepare(q{
-        INSERT INTO author_group(name) VALUES (?)
+        INSERT INTO author_group(group_name,group_email) VALUES (?,?)
         });
-	$sth->execute($value->name);
+	$sth->execute($value->name,$value->email);
 	my $id = $sth->{'mysql_insertid'} or $self->throw('Failed to get autoincremented ID from statement handle');
 	$value->dbID($id);
 
