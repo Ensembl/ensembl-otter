@@ -34,8 +34,8 @@ CREATE TABLE `author_group` (
   `group_id` int(10) unsigned NOT NULL auto_increment,
   `group_email` varchar(50) default NULL,
   `group_name` varchar(50) default NULL,
-  PRIMARY KEY  (`author_group_id`),
-  UNIQUE KEY `author_name` (`author_name`)
+  PRIMARY KEY  (`group_id`),
+  UNIQUE KEY `group_name` (`group_name`)
 );
 
 create table keyword (
