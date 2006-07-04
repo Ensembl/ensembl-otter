@@ -1,4 +1,3 @@
-
 #!/usr/local/bin/perl -w
 
 ### dump_DNA_Protein_seqs_of_genes_in_fasta
@@ -83,9 +82,12 @@ sub get_latest_trans_or_prot_seq {
 
 	# transform contig coords of a gene into chrom. coords
 	my $gene;
-	$gene = $geneAd->fetch_by_dbID($id)->transform($slice) if $slice;
-	$gene = $geneAd->fetch_by_dbID($id)                    if !$slice;
-
+    if ($slice) {
+	    $gene = $geneAd->fetch_by_dbID($id)->transform($slice);
+    } else {
+	    $gene = $geneAd->fetch_by_dbID($id);
+    }
+    
 	# always filter out gene type = "obsolete"
 	next if $gene->type eq "obsolete";
 
@@ -98,9 +100,9 @@ sub get_latest_trans_or_prot_seq {
 	  my $geneNAME   = $gene->gene_info->name->name;
 
 
-	  # don't want these external ones
+	  # don't want these external ones (which begin with a "PREFIX:")
 
-	  if ( $geneNAME =~ /^MPI:|^ERI:|^GD:/ ){
+	  if ( $geneNAME =~ /^[\w+]:/ ){
 		 $counter++;
 		 print STDOUT "e";
 		 print STDOUT "\t$counter\n"  if $counter % 100 == 0;
