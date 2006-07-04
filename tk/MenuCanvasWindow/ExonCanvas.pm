@@ -175,12 +175,15 @@ sub initialize {
         $top->bind('<Control-O>',   $sort_command);
         
         # Merge overlapping exon coordinates
+        my $merge_overlapping_exons = sub{ $self->merge_position_pairs };
         $edit_menu->add('command',
             -label          => 'Merge',
-            -command        => sub{ $self->merge_position_pairs },
+            -command        => $merge_overlapping_exons,
             -accelerator    => 'Ctrl+M',
             -underline      => 0,
             );
+        $canvas->Tk::bind('<Control-m>', $merge_overlapping_exons);
+        $canvas->Tk::bind('<Control-M>', $merge_overlapping_exons);
 
         # Delete selected Exons
         my $delete_exons = sub{ $self->delete_selected_exons };
