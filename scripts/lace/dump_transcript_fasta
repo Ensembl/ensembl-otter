@@ -1,0 +1,47 @@
+#!/usr/local/bin/perl -w
+
+### dump_transcript_fasta
+
+use strict;
+use Bio::Otter::Lace::Defaults;
+
+{
+    my( $dataset_name, $set_name );
+
+    my $usage = sub { exec('perldoc', $0) };
+    # This do_getopt() call is needed to parse the otter config files
+    # even if you aren't giving any arguments on the command line.
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'       => $usage,
+        'dataset=s'     => \$dataset_name,
+        'set|chr=s'     => \$set_name,
+        ) or $usage->();
+    $usage->() unless $dataset_name and $set_name;
+    
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    
+    # SequenceSet contains a list of CloneSequence objects
+    # in the assembly.
+    my $ss = $ds->get_SequenceSet_by_name($set_name);
+    
+    my $otter_dba = $ds->get_cached_DBAdaptor;
+    my $gene_aptr = $otter_dba->get_GeneAdaptor;    
+    
+}
+
+
+
+
+
+__END__
+
+=head1 NAME - dump_transcript_fasta
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+

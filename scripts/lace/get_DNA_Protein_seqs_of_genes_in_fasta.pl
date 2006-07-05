@@ -1,4 +1,3 @@
-
 #!/usr/local/bin/perl -w
 
 ### get_DNA_Protein_seqs_of_genes_in_fasta
