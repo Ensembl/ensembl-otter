@@ -4,6 +4,7 @@
 
 use strict;
 use Bio::Otter::Lace::Defaults;
+use Bio::SeqIO;
 
 {
     my( $dataset_name, $set_name );
@@ -23,14 +24,45 @@ use Bio::Otter::Lace::Defaults;
     
     # DataSet interacts directly with an otter database
     my $ds = $cl->get_DataSet_by_name($dataset_name);
+    my $otter_dba = $ds->get_cached_DBAdaptor;
+    $otter_dba->assembly_type($set_name);
+
+    my $gene_aptr   = $otter_dba->get_GeneAdaptor;    
+    my $slice_aptr  = $otter_dba->get_SliceAdaptor;    
     
     # SequenceSet contains a list of CloneSequence objects
     # in the assembly.
     my $ss = $ds->get_SequenceSet_by_name($set_name);
+    $ds->fetch_all_CloneSequences_for_SequenceSet($ss);
+    my ($chr, $chr_start, $chr_end) = $cl->chr_start_end_from_contig($ss->CloneSequence_list);
+    my $slice = $slice_aptr->fetch_by_chr_start_end($chr, $chr_start, $chr_end);
     
-    my $otter_dba = $ds->get_cached_DBAdaptor;
-    my $gene_aptr = $otter_dba->get_GeneAdaptor;    
     
+    my $gene_id_list = $gene_aptr->list_current_dbIDs_for_Slice($slice);
+    
+    my $out = Bio::SeqIO->new(
+        -format => 'fasta',
+        );
+    
+    foreach my $gene_id (@$gene_id_list) {
+        my $gene = $gene_aptr->fetch_by_dbID($gene_id);
+        my $gene_name = $gene->gene_info->name->name;
+        
+        my $max_length = 0;
+        my $longest;
+        foreach my $tsct (@{$gene->get_all_Transcripts}) {
+            my $seq = $tsct->spliced_seq;
+            if (length($seq) > $max_length) {
+                $longest = Bio::PrimarySeq->new;
+                $longest->seq($seq);
+                $longest->id($gene_name);
+                $longest->desc($tsct->transcript_info->name);
+                $max_length = length($seq);
+            }
+        }
+        
+        $out->write_seq($longest);
+    }
 }
 
 
