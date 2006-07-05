@@ -85,7 +85,7 @@ use Bio::SeqIO;
         $gene_count += @found_genes;
         foreach my $gene (@found_genes) {
             my $name = $gene->gene_info->name->name;
-            if ($skip_list{$name} or $name =~ /^GD:/i) {
+            if ($skip_list{$name} or $name =~ /^[\w+]:/i) {
                 warn "Skipping '$name'\n";
                 next;
             }
