@@ -169,8 +169,12 @@ sub make_new_child {
             $ENV{AUTHGROUPFILE} = "$OTTER_SERVER_ROOT/.htgroups"
               if -e "$OTTER_SERVER_ROOT/.htgroups";
 
+            my $remote_name = `/usr/bin/host -i $ENV{REMOTE_ADDR} | /usr/bin/cut -f 3`;
+            chomp $remote_name;
+            $remote_name ||= $ENV{REMOTE_ADDR};
+
             server_log('');
-            server_log('Request: http://'.$ENV{HOST}.$ENV{REQUEST_URI}.' from '.$ENV{REMOTE_ADDR});
+            server_log('Request: http://'.$ENV{HOST}.$ENV{REQUEST_URI}.' from '.$remote_name;
 
             my $uri = $r->url->path;
             $ENV{CURRENT_SCRIPT_NAME} = $uri;
