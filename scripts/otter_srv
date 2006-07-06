@@ -174,7 +174,7 @@ sub make_new_child {
             $remote_name ||= $ENV{REMOTE_ADDR};
 
             server_log('');
-            server_log('Request: http://'.$ENV{HOST}.$ENV{REQUEST_URI}.' from '.$remote_name;
+            server_log('Request: http://'.$ENV{HOST}.$ENV{REQUEST_URI}.' from '.$remote_name);
 
             my $uri = $r->url->path;
             $ENV{CURRENT_SCRIPT_NAME} = $uri;
