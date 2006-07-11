@@ -50,7 +50,7 @@ use Exporter();
 
 my ($MAIN_DIR, $OTTER_RELEASE);
 
-$OTTER_RELEASE          = 45; # || 0 for head code
+$OTTER_RELEASE          = 46; # || 0 for head code
 
 if($OTTER_RELEASE) {
     $OTTER_SERVER_PORT = 33000 + $OTTER_RELEASE;
