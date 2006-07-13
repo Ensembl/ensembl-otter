@@ -27,7 +27,10 @@ if($pipehead && $metakey) { # a head version of ensembl_db (non-pipeline genes)
     my $pipe_slice = get_slice($sq, $pdba, $pipehead);
 
     my ($equiv_asm) = @{ $pipe_slice->get_all_Attributes('equiv_asm') };
+    $equiv_asm &&= $equiv_asm->value();
+
     my ($chr_name)  = @{ $pipe_slice->get_all_Attributes('chr') };
+    $chr_name &&= $chr_name->value();
 
     server_log("This chromosome is equivalent to '$chr_name' in '$equiv_asm' assembly");
 
