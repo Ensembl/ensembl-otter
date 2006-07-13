@@ -43,7 +43,12 @@ if($pipehead && $metakey) { # a head version of ensembl_db (non-pipeline genes)
         exit(0);
     }
 
-} else {
+} elsif($pipehead) { # a head version of pipeline_db
+
+    server_log("Working with pipeline_db directly, no remapping is needed.");
+
+} else { # non-head version, cannot guarantee correct mapping
+
     server_log("No remapping is being done, you're responsible for doing it on the client side.");
 }
 
