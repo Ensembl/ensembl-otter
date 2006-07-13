@@ -29,15 +29,11 @@ if($pipehead && $metakey) { # a head version of ensembl_db (non-pipeline genes)
     my ($equiv_asm) = @{ $pipe_slice->get_all_Attributes('equiv_asm') };
     $equiv_asm &&= $equiv_asm->value();
 
-    my ($chr_name)  = @{ $pipe_slice->get_all_Attributes('chr') };
-    $chr_name &&= $chr_name->value();
+    my $chr_name = $sq->getarg('name');
 
-    my $name = $sq->getarg('name');
-
-    server_log("This chromosome is equivalent to '$chr_name'=?'$name' in '$equiv_asm' assembly");
+    server_log("This chromosome is equivalent to '$chr_name' in '$equiv_asm' assembly");
 
     $sq->setarg('csver', $equiv_asm);
-    $sq->setarg('name', $chr_name);
 
 } else {
     server_log("No remapping is being done");
