@@ -19,6 +19,12 @@ sub new {
     return $self;
 }
 
+sub setarg {
+    my ($self, $argname, $argvalue) = @_;
+
+    $self->{_vars}->{$argname} = $argvalue;
+}
+
 sub getarg {
     my ($self, $argname) = @_;
 
