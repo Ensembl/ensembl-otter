@@ -796,12 +796,12 @@ sub make_otterpipe_DataFactory {
 
         my $pipe_filter = $class->new;
 
-            # filters should only ever need to know analysis_name
-        $pipe_filter->analysis_name($logic_name);
-
         if (! $pipe_filter->isa('Bio::EnsEMBL::Ace::Otter_Filter')) {
             $pipe_filter->dba($pipe_db);
         }
+
+            # analysis_name MUST be set, whether it is defined in the config or not:
+        $param{analysis_name} ||= $logic_name;
 
         # Options in the config file are methods on filter objects:
         while (my ($option, $value) = each %param) {
