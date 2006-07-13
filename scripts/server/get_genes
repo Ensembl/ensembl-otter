@@ -18,9 +18,29 @@ my $sq = Bio::Otter::ServerQuery->new('dataset',
     'metakey','analysis');
 set_nph($sq);
 
+my $odba = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
 my $metakey = $sq->getarg('metakey') || ''; # defaults to pipeline
 
-my $odba = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
+if($pipehead && $metakey) { # a head version of ensembl_db (non-pipeline genes)
+
+    my $pdba = odba_to_sdba($sq, $odba, $pipehead);
+    my $pipe_slice = get_slice($sq, $pdba, $pipehead);
+
+    my ($equiv_asm) = @{ $pipe_slice->get_all_Attributes('equiv_asm') };
+    my ($chr_name)  = @{ $pipe_slice->get_all_Attributes('chr') };
+
+    server_log("This chromosome is equivalent to '$chr_name' in '$equiv_asm' assembly");
+
+    $sq->setarg('csver', $equiv_asm);
+    $sq->setarg('name', $chr_name);
+
+} else {
+    server_log("No remapping is being done");
+}
+
+    # the common part for (1) pure pipeline genes,
+    #                     (2) ensembl_db head (with pre-mapping)
+    #                     (3) ensembl_db tail (assuming everything is 1:1)
 my $sdba = odba_to_sdba($sq, $odba, $pipehead, $metakey);
 my $satellite_slice = get_slice($sq, $sdba, $pipehead);
 
