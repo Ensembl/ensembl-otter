@@ -704,7 +704,7 @@ sub _open_SequenceSet{
     }
     # now initialise the database
     eval{
-        $self->init_AceDatabase($db, $ss);
+        $db->init_AceDatabase($ss);
     };
     if ($@) {
         $db->error_flag(0);
@@ -799,31 +799,6 @@ sub selected_sequence_string{
         }
     }
     return $string ;
-}
-
-sub init_AceDatabase {
-    my( $self, $db, $ss ) = @_;
-    
-    $db->add_misc_acefile;
-    #warn "write_otter_acefile";
-    $db->write_otter_acefile($ss);
-    #warn "write_ensembl_data";
-    $db->write_ensembl_data($ss);
-    #warn "write_pipeline_data";
-    $db->write_pipeline_data($ss);
-    #warn "write_methods_acefile";
-    $db->write_methods_acefile;
-    #warn "initialize_database";
-    $db->initialize_database;
-    #warn "write_local_blast";
-    if ($db->write_local_blast($ss)) {
-        # Must parse in new acefile
-        $db->initialize_database;
-
-        # Need to restart the read-only sgifaceserver
-        # or it will not see any data added by blast.
-        $db->ace_server->restart_server;
-    }
 }
 
 sub make_XaceSeqChooser {
