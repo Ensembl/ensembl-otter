@@ -48,8 +48,8 @@ sub home {
         $self->{'_home'} = $home;
     }
     elsif (! $self->{'_home'}) {
-	my $readonly_tag = $self->Client->write_access ? '' : $self->readonly_tag();
-	# warn "readonly_tag '$readonly_tag'\n";
+        my $readonly_tag = $self->Client->write_access ? '' : $self->readonly_tag();
+        # warn "readonly_tag '$readonly_tag'\n";
         $self->{'_home'} = "/var/tmp/lace.${$}${readonly_tag}";
     }
     return $self->{'_home'};
@@ -126,6 +126,25 @@ sub empty_acefile_list {
     my( $self ) = @_;
 
     $self->{'_acefile_list'} = undef;
+}
+
+sub init_AceDatabase {
+    my( $self, $ss ) = @_;
+
+    $self->add_misc_acefile;
+    $self->write_otter_acefile($ss);
+    $self->write_ensembl_data($ss);
+    $self->write_pipeline_data($ss);
+    $self->write_methods_acefile;
+    $self->initialize_database;
+    if ($self->write_local_blast($ss)) {
+        # Must parse in new acefile
+        $self->initialize_database;
+
+        # Need to restart the read-only sgifaceserver
+        # or it will not see any data added by blast.
+        $self->ace_server->restart_server;
+    }
 }
 
 sub write_local_blast {
