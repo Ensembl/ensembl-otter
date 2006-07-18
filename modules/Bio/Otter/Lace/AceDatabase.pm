@@ -226,7 +226,7 @@ sub fetch_otter_ace_for_SequenceSet {
 
     my $client = $self->Client
         or confess "No otter client attached";
-    my $dsObj = $client->get_DataSet_by_name($ss->dataset_name);
+    my $dsObj = $client->get_DataSet_by_name($ss->dataset_name());
     confess "Can't find DataSet that SequenceSet belongs to"
         unless $dsObj;
 
@@ -379,10 +379,10 @@ sub save_all_slices {
 }
 
 sub save_otter_slice {
-    my( $self, $name, $dataset_name ) = @_;
+    my( $self, $name, $dsname ) = @_;
 
     confess "Missing slice name argument"   unless $name;
-    confess "Missing DatsSet argument"      unless $dataset_name;
+    confess "Missing DatsSet argument"      unless $dsname;
 
     my $ace    = $self->aceperl_db_handle;
     my $client = $self->Client or confess "No Client attached";
@@ -447,7 +447,7 @@ sub save_otter_slice {
         warn "Debug switch is false\n";
     }
 
-    my $success = $client->save_otter_xml($xml, $dataset_name);
+    my $success = $client->save_otter_xml($xml, $dsname);
 
     return $self->update_with_stable_ids($success);
 }
@@ -510,16 +510,16 @@ sub unlock_all_slices {
 }
 
 sub unlock_otter_slice{
-    my( $self, $slice_name, $dataset_name ) = @_;
+    my( $self, $slice_name, $dsname ) = @_;
 
     confess "Missing slice name argument"   unless $slice_name;
-    confess "Missing DatsSet name argument" unless $dataset_name;
+    confess "Missing DatsSet name argument" unless $dsname;
 
     my $client   = $self->Client or confess "No Client attached";
 
     my $xml_file = Bio::Otter::Lace::PersistentFile->new;
     $xml_file->root($self->home);
-    $xml_file->name(".${slice_name}${dataset_name}${LOCK_REGION_XML_FILE}");
+    $xml_file->name(".${slice_name}${dsname}${LOCK_REGION_XML_FILE}");
     return unless -e $xml_file->full_name();
     my $xml = '';
     my $read = $xml_file->read_file_handle;
@@ -528,7 +528,7 @@ sub unlock_otter_slice{
     }
     return unless $xml;
 
-    return $client->unlock_otter_xml($xml, $dataset_name);
+    return $client->unlock_otter_xml($xml, $dsname);
 }
 
 sub ace_server {
@@ -714,20 +714,21 @@ sub db_initialized {
 sub write_pipeline_data {
     my( $self, $ss, $ace_file ) = @_;
 
-    my $client  = $self->Client();
-    my $dataset = $client->get_DataSet_by_name($ss->dataset_name);
-    $dataset->selected_SequenceSet($ss);    # Not necessary?
-
     my $fetch_pipe = Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
     my $pipehead = Bio::Otter::Lace::Defaults::pipehead();
 
+    my $client  = $self->Client();
+    my $dsname  = $ss->dataset_name();
+
+    my $dataset = $client->get_DataSet_by_name($dsname);
+    $dataset->selected_SequenceSet($ss);    # Not necessary?
     my $pipe_db = $dataset->get_cached_DBAdaptor();
     if ($fetch_pipe and ! $pipehead) {
 	    $pipe_db = Bio::Otter::Lace::PipelineDB::get_DBAdaptor($pipe_db);
     }
     $pipe_db->assembly_type($ss->name);
 
-    my $factory = $self->{'_pipeline_data_factory'} ||= $self->make_otterpipe_DataFactory($pipe_db, $dataset);
+    my $factory = $self->{'_pipeline_data_factory'} ||= $self->make_otterpipe_DataFactory($pipe_db, $dsname);
 
     # create file for output and add it to the acedb object
     $ace_file ||= $self->home . "/rawdata/pipeline.ace";
@@ -765,14 +766,13 @@ sub write_pipeline_data {
 }
 
 sub make_otterpipe_DataFactory {
-    my( $self, $pipe_db, $dataset ) = @_;
+    my( $self, $pipe_db, $dsname ) = @_;
 
     my $client = $self->Client();
-    my $dsname = $dataset->name();
     warn "This dataset is '$dsname'\n";
 
     # create new datafactory object - contains all ace filters and produces the data from these
-    my $factory = Bio::EnsEMBL::Ace::DataFactory->new($client, $dataset);
+    my $factory = Bio::EnsEMBL::Ace::DataFactory->new($client, $dsname);
     # $factory->add_all_Filters($ensdb);
 
     ##----------code to add all of the ace filters to data factory-----------------------------------
@@ -863,11 +863,11 @@ sub write_ensembl_data {
 }
 
 sub make_ensembl_gene_DataFactory {
-    my ($self, $dataset, $ens_db, $metakey, $ana_names) = @_;
+    my ($self, $dsname, $ens_db, $metakey, $ana_names) = @_;
 
     my @analysis_names = split /,/, $ana_names;
 
-    my $factory = Bio::EnsEMBL::Ace::DataFactory->new($self->Client, $dataset);
+    my $factory = Bio::EnsEMBL::Ace::DataFactory->new($self->Client, $dsname);
     # Add a filter to the factory for each type of gene that we have
     foreach my $ana_name (@analysis_names) {
         my $ens_filter = Bio::EnsEMBL::Ace::Otter_Filter::Gene::EnsEMBL->new;
@@ -888,7 +888,9 @@ sub write_ensembl_data_for_key {
 
     my $debug_flag = 0;
 
-    my $dataset = $self->Client->get_DataSet_by_name($ss->dataset_name);
+    my $dsname = $ss->dataset_name();
+
+    my $dataset = $self->Client->get_DataSet_by_name($dsname);
     $dataset->selected_SequenceSet($ss);    # Not necessary?
     my $ens_db = Bio::Otter::Lace::SatelliteDB::get_DBAdaptor(
         $dataset->get_cached_DBAdaptor, $key)
@@ -897,7 +899,7 @@ sub write_ensembl_data_for_key {
     # Get a factory, or return (which happens when there are no analyses
     # of the types listed in $ana_names).
     my $factory = $self->{'_ensembl_gene_data_factory'}{$ana_names} ||=
-      $self->make_ensembl_gene_DataFactory($dataset, $ens_db, $key, $ana_names)
+      $self->make_ensembl_gene_DataFactory($dsname, $ens_db, $key, $ana_names)
       || return;
 
     # create file for output and add it to the acedb object
