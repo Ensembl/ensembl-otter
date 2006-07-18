@@ -51,7 +51,8 @@ my $ZMAP_DEBUG = 1;
 sub new {
     my( $pkg, $tk ) = @_;
     
-    my $self = $pkg->SUPER::new($tk, 380, 200);
+    #my $self = $pkg->SUPER::new($tk, 380, 200);
+    my $self = $pkg->SUPER::new($tk);
 
     $self->populate_menus;
     $self->make_search_panel;
@@ -101,9 +102,6 @@ sub initialize {
     
     # take GeneMethods from methods.ace file
     $self->set_known_GeneMethods();
-    
-    
-    $self->populate_Features_menu;
     
     unless ($self->write_access) {
         $self->menu_bar()->Label(
@@ -500,42 +498,6 @@ sub populate_menus {
     
     # File menu
     my $file = $self->make_menu('File');
-
-    my $showing_zmap = 0;
-    if($self->show_zmap) {
-        my $zmap_launch_command = sub { $self->zMapLaunchZmap };
-        $file->add('command',
-                   -label          => 'Launch ZMap',
-                   -command        => $zmap_launch_command,
-                   -accelerator    => 'Ctrl+Z',
-                   -underline      => 0,
-                   );
-        $top->bind('<Control-z>', $zmap_launch_command);
-        $top->bind('<Control-Z>', $zmap_launch_command);
-        $showing_zmap = 1;
-    }
-
-    # Launce xace
-    my $xace_launch_command = sub { $self->launch_xace };
-    $file->add('command',
-        -label          => 'Launch Xace',
-        -command        => $xace_launch_command,
-        -accelerator    => 'Ctrl+L',
-        -underline      => 0,
-        );
-    $top->bind('<Control-l>', $xace_launch_command);
-    $top->bind('<Control-L>', $xace_launch_command);
-     
-    # Attach xace
-    my $xace_attach_command = sub { $self->attach_xace };
-    $file->add('command',
-        -label          => 'Attach Xace',
-        -command        => $xace_attach_command,
-        -accelerator    => 'Ctrl+X',
-        -underline      => 0,
-        );
-    $top->bind('<Control-x>', $xace_attach_command);
-    $top->bind('<Control-X>', $xace_attach_command);
     
     # Save annotations to otter
     my $save_command = sub {
@@ -565,20 +527,6 @@ sub populate_menus {
         );
     $top->bind('<Control-r>', $resync_command);
     $top->bind('<Control-R>', $resync_command);
-    
-    ## Spawn dotter Ctrl .
-    my $run_dotter_command = sub { $self->run_dotter };
-    $file->add('command',
-        -label          => 'Dotter fMap' . ($showing_zmap ? '/ZMap' : '').' hit',
-        -hidemargin     => 1,
-        -command        => $run_dotter_command,
-        -accelerator    => 'Ctrl+.',
-        -underline      => 0,
-        );
-    $top->bind('<Control-period>',  $run_dotter_command);
-    $top->bind('<Control-greater>', $run_dotter_command);
-    
-    $file->add('separator');
 
     # Close window
     my $exit_command = sub {
@@ -699,10 +647,6 @@ sub populate_menus {
     $top->bind('<Control-d>', $delete_command);
     $top->bind('<Control-D>', $delete_command);
 
-    $subseq->bind('<Destroy>', sub{
-        $self = undef;
-        });
-
     ### Unimplemented methods
     #$subseq->add('command',
     #    -label          => 'Merge',
@@ -726,6 +670,72 @@ sub populate_menus {
     #    -accelerator    => 'Ctrl+T',
     #    -underline      => 0,
     #    );
+
+    my $tools_menu = $self->make_menu("Tools");
+
+    # Launch Zmap
+    my $showing_zmap = 0;
+    if($self->show_zmap) {
+        my $zmap_launch_command = sub { $self->zMapLaunchZmap };
+        $tools_menu->add('command',
+                   -label          => 'Launch ZMap',
+                   -command        => $zmap_launch_command,
+                   -accelerator    => 'Ctrl+Z',
+                   -underline      => 0,
+                   );
+        $top->bind('<Control-z>', $zmap_launch_command);
+        $top->bind('<Control-Z>', $zmap_launch_command);
+        $showing_zmap = 1;
+    }
+
+    # Launce xace
+    my $xace_launch_command = sub { $self->launch_xace };
+    $tools_menu->add('command',
+        -label          => 'Launch Xace',
+        -command        => $xace_launch_command,
+        -accelerator    => 'Ctrl+L',
+        -underline      => 0,
+        );
+    $top->bind('<Control-l>', $xace_launch_command);
+    $top->bind('<Control-L>', $xace_launch_command);
+     
+    # Attach xace
+    my $xace_attach_command = sub { $self->attach_xace };
+    $tools_menu->add('command',
+        -label          => 'Attach Xace',
+        -command        => $xace_attach_command,
+        -accelerator    => 'Ctrl+X',
+        -underline      => 0,
+        );
+    $top->bind('<Control-x>', $xace_attach_command);
+    $top->bind('<Control-X>', $xace_attach_command);
+
+    # Genomic Features editing window
+    my $gf_command = sub { $self->launch_GenomicFeatures };
+    $tools_menu->add('command' ,
+        -label          => 'Genomic Features',    
+        -command        => $gf_command,
+        -accelerator    => 'Ctrl+G',
+    );
+    $top->bind('<Control-g>', $gf_command);
+    $top->bind('<Control-G>', $gf_command);    
+    
+    ## Spawn dotter Ctrl .
+    my $run_dotter_command = sub { $self->run_dotter };
+    $tools_menu->add('command',
+        -label          => 'Dotter fMap' . ($showing_zmap ? '/ZMap' : '').' hit',
+        -hidemargin     => 1,
+        -command        => $run_dotter_command,
+        -accelerator    => 'Ctrl+.',
+        -underline      => 0,
+        );
+    $top->bind('<Control-period>',  $run_dotter_command);
+    $top->bind('<Control-greater>', $run_dotter_command);
+
+
+    $subseq->bind('<Destroy>', sub{
+        $self = undef;
+        });
 
 }
 
@@ -756,21 +766,6 @@ sub bind_events {
         #cluck "Dealing with <Destroy> call";
         $self = undef;
         });
-}
-
-## needs to be called when drawing the clone_sequences (clone sequence details not present when other menus are created)
-sub populate_Features_menu {
-    my ($self) = @_;
-    
-    my $menu_frame = $self->menu_bar
-            or confess 'No menu Bar';
-
-    my $gf_menu = $self->make_menu("Features");
-    $gf_menu->add( 'command' ,
-                -label => $self->slice_name,    
-                -command => sub { $self->launch_GenomicFeatures },
-    );
-    $gf_menu->bind('<Destroy>', sub{ $self = undef });
 }
 
 sub GenomicFeatures {
