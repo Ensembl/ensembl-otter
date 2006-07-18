@@ -844,7 +844,6 @@ sub make_otterpipe_DataFactory {
     return $factory;
 }
 
-
 #  creates a data factory and adds all the appropriate filters to
 #  it. It then produces a slice from the ensembl db (using the
 #  $dataset coords) and produces output based on that slice in
