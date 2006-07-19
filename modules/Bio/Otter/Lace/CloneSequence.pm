@@ -38,13 +38,13 @@ sub clone_name {
     return $self->{'_clone_name'};
 }
 
-sub length {
-    my( $self, $length ) = @_;
+sub contig_name {
+    my( $self, $contig_name ) = @_;
     
-    if ($length) {
-        $self->{'_length'} = $length;
+    if ($contig_name) {
+        $self->{'_contig_name'} = $contig_name;
     }
-    return $self->{'_length'};
+    return $self->{'_contig_name'};
 }
 
 sub chromosome {
@@ -55,14 +55,16 @@ sub chromosome {
     }
     return $self->{'_chromosome'};
 }
-sub pipeline_chromosome {
-    my( $self, $chromosome ) = @_;
+
+sub assembly_type {
+    my( $self, $asm_type ) = @_;
     
-    if ($chromosome) {
-        $self->{'_pipeline_chromosome'} = $chromosome;
+    if ($asm_type) {
+        $self->{'_asm_type'} = $asm_type;
     }
-    return $self->{'_pipeline_chromosome'};
+    return $self->{'_asm_type'};
 }
+
 sub chr_start {
     my( $self, $chr_start ) = @_;
     
@@ -81,31 +83,6 @@ sub chr_end {
     return $self->{'_chr_end'};
 }
 
-sub contig_id {
-    my( $self, $contig_id ) = @_;
-    
-    if ($contig_id) {
-        $self->{'_contig_id'} = $contig_id;
-    }
-    return $self->{'_contig_id'};
-}
-
-sub contig_name {
-    my( $self, $contig_name ) = @_;
-    
-    if ($contig_name) {
-        $self->{'_contig_name'} = $contig_name;
-    }
-    return $self->{'_contig_name'};
-}
-sub super_contig_name {
-    my( $self, $contig_name ) = @_;
-    
-    if ($contig_name) {
-        $self->{'_super_contig_name'} = $contig_name;
-    }
-    return $self->{'_super_contig_name'};
-}
 sub contig_start {
     my( $self, $contig_start ) = @_;
     
@@ -132,6 +109,54 @@ sub contig_strand {
     }
     return $self->{'_contig_strand'};
 }
+
+sub length {
+    my( $self, $length ) = @_;
+    
+    if ($length) {
+        $self->{'_length'} = $length;
+    }
+    return $self->{'_length'};
+}
+
+sub sequence {
+    my( $self, $seq ) = @_;
+    
+    if ($seq) {
+        $self->{'_seq'} = $seq;
+    }
+    return $self->{'_seq'} || die 'sequence() not set';
+}
+
+# --------- check if we really need the following ones: ------------
+sub contig_id {
+    my( $self, $contig_id ) = @_;
+    
+    if ($contig_id) {
+        $self->{'_contig_id'} = $contig_id;
+    }
+    return $self->{'_contig_id'};
+}
+
+sub super_contig_name {
+    my( $self, $contig_name ) = @_;
+    
+    if ($contig_name) {
+        $self->{'_super_contig_name'} = $contig_name;
+    }
+    return $self->{'_super_contig_name'};
+}
+
+sub pipeline_chromosome {
+    my( $self, $chromosome ) = @_;
+    
+    if ($chromosome) {
+        $self->{'_pipeline_chromosome'} = $chromosome;
+    }
+    return $self->{'_pipeline_chromosome'};
+}
+# --------------------------------------------------------------------
+
 
 sub pipelineStatus {
     my( $self, $status ) = @_;

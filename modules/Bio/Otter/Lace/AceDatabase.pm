@@ -748,12 +748,10 @@ sub write_pipeline_data {
     # each subarray contains a list of clones that are together on the golden path
     my $sel = $ss->selected_CloneSequences_as_contig_list ;
     foreach my $cs (@$sel) {
-        my( $chr, $chr_start, $chr_end ) = $client->chr_start_end_from_contig($cs);
+        my( $chr_name, $chr_start, $chr_end ) = $client->chr_start_end_from_contig($cs);
 
-        my $slice = $slice_adaptor->fetch_by_chr_start_end($chr, $chr_start, $chr_end);
-
-        ## to be substituted in future
-        # my $slice = Bio::Otter::Lace::Slice->new($chr, $chr_start, $chr_end, $ss->name);
+        my $slice = Bio::Otter::Lace::Slice->new($client, $dsname, $ss->name(),
+            'chromosome', 'Otter', $chr_name, $chr_start, $chr_end);
 
         $factory->ace_data_from_slice($slice);
     }
@@ -773,7 +771,6 @@ sub make_otterpipe_DataFactory {
 
     # create new datafactory object - contains all ace filters and produces the data from these
     my $factory = Bio::EnsEMBL::Ace::DataFactory->new($client, $dsname);
-    # $factory->add_all_Filters($ensdb);
 
     ##----------code to add all of the ace filters to data factory-----------------------------------
 
