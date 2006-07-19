@@ -1,5 +1,10 @@
 #!/usr/local/bin/perl -w
 
+# TODO: currently this script uses old API's mechanism
+# for slice->[tiles*] decomposition.
+# We may need another (new API) solution for pipehead=1 case
+# (will make a smoother transition) - probably through new pipeline_db.
+
 my $pipehead = $ENV{PIPEHEAD}; # is set by the server for any GET request
 
 use strict;
@@ -29,11 +34,16 @@ my $output_string = '';
 foreach my $tile (@{ $slice->get_tiling_path }) {
     if(my $clone = $tile->component_Seq->clone) {
         $output_string .= join("\t",
-            $tile->component_Seq()->clone()->id(),
-            $tile->component_Seq()->name(),
+            $clone->embl_id(),
+            $clone->embl_version(),
+            $clone->id(), # international clone name
+            $tile->component_Seq()->name(), # contig name
 
+            $tile->assembled_Seq()->chr_name(),
+            $tile->assembled_Seq()->assembly_type(),
             $tile->assembled_start(),
             $tile->assembled_end(),
+
             $tile->component_start(),
             $tile->component_end(),
             $tile->component_ori(),
