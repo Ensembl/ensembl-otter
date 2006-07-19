@@ -19,85 +19,125 @@ use Bio::Otter::DnaDnaAlignFeature;
 use Bio::Otter::DnaPepAlignFeature;
 use Bio::Otter::FromXML;
 use Bio::Otter::HitDescription;
+use Bio::Otter::Lace::CloneSequence;
 use Bio::Otter::Lace::DataSet;
 use Bio::Otter::Lace::ViaText ('%OrderOfOptions');
 
 sub new {
-    my( $pkg, $chr_name, $chr_start, $chr_end, $asm_type ) = @_;
+    my( $pkg,
+        $Client, # object
+        $dsname, # e.g. 'human'
+        $ssname, # e.g. 'chr20-03'
+
+        $csname, # e.g. 'chromosome'
+        $csver,  # e.g. 'Otter'
+        $seqname,# e.g. '20'
+        $start,  # in the given coordinate system
+        $end,    # in the given coordinate system
+    ) = @_;
     
     return bless {
-        '_chr_name'  => $chr_name,
-        '_chr_start' => $chr_start,
-        '_chr_end'   => $chr_end,
-        '_asm_type'  => $asm_type,
+        '_Client'   => $Client,
+        '_dsname'   => $dsname,
+        '_ssname'   => $ssname,
+
+        '_csname'   => $csname,
+        '_csver'    => $csver  || '',
+        '_seqname'  => $seqname,
+        '_start'    => $start,
+        '_end'      => $end,
     }, $pkg;
 }
 
-sub chr_name {
+sub Client {
     my( $self, $dummy ) = @_;
 
-    die "You shouldn't need to change chr_name" if defined($dummy);
+    die "You shouldn't need to change Client" if defined($dummy);
 
-    return $self->{_chr_name};
+    return $self->{_Client};
 }
 
-sub chr_start {
+sub dsname {
     my( $self, $dummy ) = @_;
 
-    die "You shouldn't need to change chr_name" if defined($dummy);
+    die "You shouldn't need to change dsname" if defined($dummy);
 
-    return $self->{_chr_start};
+    return $self->{_dsname};
 }
 
-sub chr_end {
+sub ssname {
     my( $self, $dummy ) = @_;
 
-    die "You shouldn't need to change chr_end" if defined($dummy);
+    die "You shouldn't need to change ssname" if defined($dummy);
 
-    return $self->{_chr_end};
+    return $self->{_ssname};
 }
 
-sub assembly_type {
+
+sub csname {
     my( $self, $dummy ) = @_;
 
-    die "You shouldn't need to change assembly_type" if defined($dummy);
+    die "You shouldn't need to change csname" if defined($dummy);
 
-    return $self->{_asm_type};
+    return $self->{_csname};
+}
+
+sub csver {
+    my( $self, $dummy ) = @_;
+
+    die "You shouldn't need to change csver" if defined($dummy);
+
+    return $self->{_csver};
+}
+
+sub seqname {
+    my( $self, $dummy ) = @_;
+
+    die "You shouldn't need to change seqname" if defined($dummy);
+
+    return $self->{_seqname};
+}
+
+sub start {
+    my( $self, $dummy ) = @_;
+
+    die "You shouldn't need to change start" if defined($dummy);
+
+    return $self->{_start};
+}
+
+sub end {
+    my( $self, $dummy ) = @_;
+
+    die "You shouldn't need to change end" if defined($dummy);
+
+    return $self->{_end};
+}
+
+sub length {
+    my ( $self ) = @_;
+
+    return $self->end() - $self->start() + 1;
 }
 
 sub name {
     my( $self ) = @_;
-    return $self->chr_name().'.'.$self->chr_start().'-'.$self->chr_end();
+    return $self->seqname().'.'.$self->start().'-'.$self->end();
 }
 
-
-sub Client {
-    my( $self, $client ) = @_;
-    if ($client) {
-        $self->{_Client} = $client;
-    }
-    return $self->{_Client};
-}
-
-sub DataSet_name {
-    my( $self, $dsname ) = @_;
-    if ($dsname) {
-        $self->{_dsname} = $dsname;
-    }
-    return $self->{_dsname};
-}
 
 sub toHash {
     my $self = shift @_;
 
     return {
-            'dataset' => $self->DataSet_name(),
-            'cs'      => 'chromosome',
-            'csver'   => 'Otter',
-            'name'    => $self->chr_name(),
-            'start'   => $self->chr_start(),
-            'end'     => $self->chr_end(),
-            'type'    => $self->assembly_type(),
+            'dataset' => $self->dsname(),
+            'type'    => $self->ssname(),
+
+            'cs'      => $self->csname(),
+            'csver'   => $self->csver(),
+            'name'    => $self->seqname(),
+            'start'   => $self->start(),
+            'end'     => $self->end(),
     };
 }
 
@@ -105,10 +145,10 @@ sub create_detached_slice {
     my $self = shift @_;
 
     my $slice = Bio::EnsEMBL::Slice->new(
-        -chr_name      => $self->chr_name(),
-        -chr_start     => $self->chr_start(),
-        -chr_end       => $self->chr_end(),
-        -assembly_type => $self->assembly_type(),
+        -chr_name      => $self->seqname(),
+        -chr_start     => $self->start(),
+        -chr_end       => $self->end(),
+        -assembly_type => $self->ssname(),
     );
     return $slice;
 }
@@ -143,29 +183,53 @@ sub get_tiling_path_and_sequence {
         1,
     );
     foreach my $respline ( split(/\n/,$response) ) {
-        my ($clone_name, $contig_name,
-            $asm_start, $asm_end,
+        my ($embl_accession, $embl_version, $intl_clone_name, $contig_name,
+            $chr_name, $asm_type, $asm_start, $asm_end,
             $cmp_start, $cmp_end, $cmp_ori, $cmp_length,
             $dna
         ) = split(/\t/, $respline);
 
-            # cannot use "real Tile"s while in schema transition period
-        my %tile = (
-            'clone_name'  => $clone_name,
-            'contig_name' => $contig_name,
-            'asm_start'   => $asm_start,
-            'asm_end'     => $asm_end,
-            'cmp_start'   => $cmp_start,
-            'cmp_end'     => $cmp_end,
-            'cmp_ori'     => $cmp_ori,
-            'cmp_length'  => $cmp_length,
-            $dna_wanted ? ('dna' => $dna) : (),
-        );
+        my $cs = Bio::Otter::Lace::CloneSequence->new();
+        $cs->accession($embl_accession);    # e.g. 'AL161656'
+        $cs->sv($embl_version);             # e.g. '19'
+        $cs->clone_name($intl_clone_name);  # e.g. 'RP11-12M19'
+        $cs->contig_name($contig_name);     # e.g. 'AL161656.19.1.103370'
 
-        push @{ $self->{_tiling_path} }, \%tile;
+        $cs->chromosome($chr_name);         # e.g. '20'
+        $cs->assembly_type($asm_type);      # e.g. 'chr20-03'
+        $cs->chr_start($asm_start);         # FORMALLY INCORRECT, as slice_coords!=chromosomal_coords
+        $cs->chr_end($asm_end);             # but we shall temporarily keep superslice coords here.
+
+        $cs->contig_start($cmp_start);
+        $cs->contig_end($cmp_end);
+        $cs->contig_strand($cmp_ori);
+        $cs->length($cmp_length);
+
+        if($dna_wanted) {
+            $cs->sequence($dna);
+        }
+
+        push @{ $self->{_tiling_path} }, $cs;
     }
 
     return $self->{_tiling_path};
+}
+
+sub get_all_tiles_as_Slices {
+    my ( $self, $dna_wanted ) = @_;
+
+    my @subslices = ();
+
+    my $tiles = $self->get_tiling_path_and_sequence($dna_wanted);
+    for my $cs (@$tiles) {
+        my $newslice = ref($self)->new(
+            $self->Client(), $self->dsname(), $self->ssname(),
+            'contig', '', $cs->contig_name(),
+            1, $cs->length(), # assume we are interested in WHOLE contigs
+        );
+        push @subslices, $newslice;
+    }
+    return \@subslices;
 }
 
 sub get_all_SimpleFeatures {
@@ -220,17 +284,13 @@ sub get_all_SimpleFeatures {
 sub get_all_DnaAlignFeatures {
     my( $self, $analysis_name, $pipehead ) = @_;
 
-    return $self->get_all_AlignFeatures(
-        'dafs', $analysis_name, $pipehead
-    );
+    return $self->get_all_AlignFeatures( 'dafs', $analysis_name, $pipehead );
 }
 
 sub get_all_ProteinAlignFeatures {
     my( $self, $analysis_name, $pipehead ) = @_;
 
-    return $self->get_all_AlignFeatures(
-        'pafs', $analysis_name, $pipehead
-    );
+    return $self->get_all_AlignFeatures( 'pafs', $analysis_name, $pipehead );
 }
 
 sub get_all_AlignFeatures {
@@ -541,8 +601,8 @@ sub get_all_PredictionTranscripts {
     return \@pts;
 }
 
-sub get_all_PipelineGenes { # get genes from pipeline db - e.g. HalfWise genes
-    my( $self, $analysis_name, $pipehead ) = @_;
+sub get_all_PipelineGenes { # get genes from pipeline/ensembl db
+    my( $self, $analysis_name, $pipehead, $metakey ) = @_;
 
     if(!$analysis_name) {
         die "Analysis name must be specified!";
@@ -551,11 +611,12 @@ sub get_all_PipelineGenes { # get genes from pipeline db - e.g. HalfWise genes
     my $response = $self->Client()->general_http_dialog(
         0,
         'GET',
-        'get_pipeline_genes',
+        'get_genes',
         {
             %{$self->toHash},
             'analysis' => $analysis_name,
             'pipehead' => $pipehead ? 1 : 0,
+            $metakey ? ('metakey' => $metakey) : (),
         },
         1,
     );
