@@ -129,7 +129,9 @@ sub make_log_file {
         $log_file = "$log_dir/$file_root.$$-$i.log";
         $i++;
     } while (-e $log_file);
-    warn "Logging output to '$log_file'\n";
+    if($self->debug()) {
+        warn "Logging output to '$log_file'\n";
+    }
     Bio::Otter::LogFile::make_log($log_file);
 }
 
@@ -251,8 +253,9 @@ sub get_xml_for_contig_from_Dataset {
     my $ss = $dataset->selected_SequenceSet
         or confess "no selected_SequenceSet attached to DataSet";
     
-    printf STDERR "Fetching data from chr %s %s-%s\n",
-        $chr_name, $start, $end;
+    if($self->debug()) {
+        warn sprintf("Fetching data from chr %s %s-%s\n", $chr_name, $start, $end);
+    }
 
     return $self->get_xml_from_Dataset_type_chr_start_end(
         $dataset, $ss->name, $chr_name, $start, $end,
@@ -342,12 +345,16 @@ sub general_http_dialog {
         if ($method eq 'GET') {
             my $get = $url . ($paramstring ? "?$paramstring" : '');
             $request->uri($get);
-            print STDERR "GET  $get\n";
+            if($self->debug()) {
+                warn "GET  $get\n";
+            }
         } elsif ($method eq 'POST') {
             $request->uri($url);
             $request->content($paramstring);
 
-            print STDERR "POST  $url\n";
+            if($self->debug()) {
+                warn "POST  $url\n";
+            }
             #warn "paramstring: $paramstring";
         } else {
             confess "method '$method' is not supported";
@@ -357,11 +364,13 @@ sub general_http_dialog {
         $content = $self->_check_for_error($response, $psw_attempts_left, $unwrap);
     } while ($psw_attempts_left-- && !$content);
 
-    print STDERR "[$scriptname"
-          .($params->{analysis} ? ':'.$params->{analysis} : '')
-          ."] CLIENT RECEIVED ["
-          .length($content)
-          ."] bytes over the TCP connection\n\n";
+    if($self->debug()) {
+        warn "[$scriptname"
+              .($params->{analysis} ? ':'.$params->{analysis} : '')
+              ."] CLIENT RECEIVED ["
+              .length($content)
+              ."] bytes over the TCP connection\n\n";
+    }
 
     return $content;
 }

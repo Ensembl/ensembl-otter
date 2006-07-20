@@ -714,21 +714,11 @@ sub db_initialized {
 sub write_pipeline_data {
     my( $self, $ss, $ace_file ) = @_;
 
-    my $fetch_pipe = Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
-    my $pipehead = Bio::Otter::Lace::Defaults::pipehead();
-
     my $client  = $self->Client();
     my $dsname  = $ss->dataset_name();
+    my $ssname  = $ss->name();
 
-    my $dataset = $client->get_DataSet_by_name($dsname);
-    $dataset->selected_SequenceSet($ss);    # Not necessary?
-    my $pipe_db = $dataset->get_cached_DBAdaptor();
-    if ($fetch_pipe and ! $pipehead) {
-	    $pipe_db = Bio::Otter::Lace::PipelineDB::get_DBAdaptor($pipe_db);
-    }
-    $pipe_db->assembly_type($ss->name);
-
-    my $factory = $self->{'_pipeline_data_factory'} ||= $self->make_otterpipe_DataFactory($pipe_db, $dsname);
+    my $factory = $self->{'_pipeline_data_factory'} ||= $self->make_otterpipe_DataFactory($dsname, $ssname);
 
     # create file for output and add it to the acedb object
     $ace_file ||= $self->home . "/rawdata/pipeline.ace";
@@ -742,29 +732,27 @@ sub write_pipeline_data {
     }
     $factory->file_handle($fh);
 
-    my $slice_adaptor = $pipe_db->get_SliceAdaptor();
-
     # note: the next line returns a 2 dimensional array (not a one dimensional array)
     # each subarray contains a list of clones that are together on the golden path
     my $sel = $ss->selected_CloneSequences_as_contig_list ;
     foreach my $cs (@$sel) {
         my( $chr_name, $chr_start, $chr_end ) = $client->chr_start_end_from_contig($cs);
 
-        my $slice = Bio::Otter::Lace::Slice->new($client, $dsname, $ss->name(),
+        my $smart_slice = Bio::Otter::Lace::Slice->new($client, $dsname, $ss->name(),
             'chromosome', 'Otter', $chr_name, $chr_start, $chr_end);
 
-        $factory->ace_data_from_slice($slice);
+        $factory->ace_data_from_slice($smart_slice);
     }
     $factory->drop_file_handle;
     close $fh;
 
-    if ($fetch_pipe and ! $pipehead) {
-        Bio::Otter::Lace::SatelliteDB::disconnect_DBAdaptor($pipe_db);
+    if($self->{_pipe_db}) {
+        Bio::Otter::Lace::SatelliteDB::disconnect_DBAdaptor($self->{_pipe_db});
     }
 }
 
 sub make_otterpipe_DataFactory {
-    my( $self, $pipe_db, $dsname ) = @_;
+    my( $self, $dsname, $ssname ) = @_;
 
     my $client = $self->Client();
     warn "This dataset is '$dsname'\n";
@@ -783,10 +771,8 @@ sub make_otterpipe_DataFactory {
     my @analysis_names;
     if ($fetch_pipe) {
         @analysis_names = grep $logic_to_load->{$_}, keys %$logic_to_load;
-        push @analysis_names, 'submitcontig';
-    } else {
-        push @analysis_names, 'otter'; # or shall we drop this distinction at all?
     }
+    push @analysis_names, 'otter';
 
     my $collect = $self->get_default_MethodCollection;
 
@@ -812,8 +798,16 @@ sub make_otterpipe_DataFactory {
 
         my $pipe_filter = $class->new;
 
-        if (! $pipe_filter->isa('Bio::EnsEMBL::Ace::Otter_Filter')) {
-            $pipe_filter->dba($pipe_db);
+        if (! $pipe_filter->isa('Bio::EnsEMBL::Ace::Otter_Filter')) { # we might need a direct mysql connection
+
+            if(! $self->{_pipe_db} ) { # looks like we need to initialize it
+                my $dataset = $client->get_DataSet_by_name($dsname);
+                my $otter_db = $dataset->get_cached_DBAdaptor();
+                $self->{_pipe_db} = Bio::Otter::Lace::PipelineDB::get_DBAdaptor($otter_db);
+                $self->{_pipe_db}->assembly_type($ssname);
+            }
+
+            $pipe_filter->dba( $self->{_pipe_db} );
         }
 
             # analysis_name MUST be set, whether it is defined in the config or not:
@@ -840,6 +834,9 @@ sub make_otterpipe_DataFactory {
 
     return $factory;
 }
+
+
+
 
 #  creates a data factory and adds all the appropriate filters to
 #  it. It then produces a slice from the ensembl db (using the
