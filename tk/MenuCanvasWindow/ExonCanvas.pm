@@ -107,7 +107,6 @@ sub initialize {
     # Deselect all
     $canvas->Tk::bind('<Escape>', sub{ $self->deselect_all });
     
-    #if ($self->is_mutable && $self->XaceSeqChooser->write_access) {
     if ($self->is_mutable) {
 
         # Select supporting evidence for the transcript

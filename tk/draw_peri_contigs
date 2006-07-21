@@ -6,6 +6,7 @@ use strict;
 use Bio::Otter::Lace::Defaults;
 use GenomeCanvas;
 use GenomeCanvas::Band::ContigCartoon;
+use GenomeCanvas::Band::GeneKey;
 
 {
     my @ctg_names = qw{
@@ -78,18 +79,28 @@ use GenomeCanvas::Band::ContigCartoon;
     $mw->title('Chr 9 Pericentromeric contigs');
     my $gc = GenomeCanvas->new($mw);
     #$gc->font_size(18);
-    $gc->landscape(1);
+    $gc->landscape(0);
 
     unless (@ctg_names == @$ctg_list) {
         die sprintf "Have %d contigs names but %d contigs from database",
             scalar(@ctg_names), scalar(@$ctg_list);
     }
+    
+    my $styles = GenomeCanvas::Band::ContigCartoon->read_config_file('peri_contig_features.txt');
+    
+    my $key = GenomeCanvas::Band::GeneKey->new;
+    $key->styles($styles);
+    $key->title('Key');
+    $gc->add_Band($key);
 
     for (my $i = 0; $i < @$ctg_list; $i++) {
         my $name = 'Ctg ' . $ctg_names[$i];
         my $ctg = $ctg_list->[$i];
         my ($chr, $start, $end) = $cl->chr_start_end_from_contig($ctg);
         print STDERR "$name: $chr $start -> $end\n";
+        
+        my $ctg_style = $styles->{'feature'}{$name}
+          or die "No data for '$name'";
         
         my $vc = $otter_slice_aptr->fetch_by_chr_start_end($chr, $start, $end);
         
@@ -98,35 +109,12 @@ use GenomeCanvas::Band::ContigCartoon;
         $cartoon->virtual_contig($vc);
         $cartoon->Client($cl);
         $cartoon->DataSet($ds);
-        $cartoon->config_file('peri_features.conf');
+        $cartoon->styles($styles);
         
         $gc->add_Band($cartoon);
-        
-        #my $scale_track = GenomeCanvas::Band::Scale->new;
-        #$scale_track->title($name);
-        #$scale_track->virtual_contig($vc);
-        #$gc->add_Band($scale_track);
-
-        #my $gene_names = GenomeCanvas::Band::Gene->new;
-        #$gene_names->show_labels(1);
-        ## Don't show lablels with a dash or dot in the name
-        #$gene_names->ignore_label_sub(sub{ $_[0] =~ /[-\.]/ });
-        #$gene_names->label_type_color_list(
-        #    [ 'Known',                  'Known',                    '#4169e7' ],
-        #    [ 'Novel CDS',              'Novel_CDS',                '#86ceff' ],
-        #    [ 'Novel Transcript',       'Novel_Transcript',         '#ffa600' ],
-        #    [ 'Putative',               'Putative',                 '#cccccc' ],
-        #    [ 'Pseudogene',             'Pseudogene',               '#31ce31' ],
-        #    ); 
-        #$gene_names->virtual_contig($vc);
-        #$gene_names->tiling_direction(1);
-        #$gene_names->dont_show_key(1);
-        #$gc->add_Band($gene_names);
-        
-        
     }
 
-    $gc->residues_per_pixel(500);
+    $gc->residues_per_pixel(2000);
     $gc->render;
     $gc->set_scroll_region;
     $gc->fix_window_min_max_sizes;
@@ -138,6 +126,7 @@ use GenomeCanvas::Band::ContigCartoon;
     
     Tk::MainLoop();
 }
+
 
 
 
