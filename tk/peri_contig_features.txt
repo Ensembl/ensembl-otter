@@ -1,0 +1,402 @@
+
+
+Label  Sat 5/LTRs
+Ctg 1007   REP  Satellite:HSAT5
+Ctg 1008   REP  Satellite:HSAT5
+Ctg 1010   REP  Satellite:HSAT5
+Ctg 1021   REP  Satellite:HSAT5
+Ctg 1030   REP  Satellite:HSAT5
+
+
+Label  SAT II
+Ctg 1007   REP  Satellite/centr:GSATII
+Ctg 1013   REP  Satellite/centr:GSATII
+Ctg 1027   REP  Satellite/centr:GSATII
+Ctg 1033   REP  Satellite/centr:GSATII
+
+
+Label  HSREP522/TAR
+Ctg 1007   REP  Satellite/telo:REP522
+Ctg 1008   REP  Satellite/telo:REP522
+Ctg 1010   REP  Satellite/telo:REP522
+Ctg 1016   REP  Satellite/telo:REP522
+Ctg 1024   REP  Satellite/telo:REP522
+Ctg 1025   REP  Satellite/telo:REP522
+Ctg 1026   REP  Satellite/telo:REP522
+Ctg 1030   REP  Satellite/telo:REP522
+Ctg 1031   REP  Satellite/telo:REP522
+Ctg 1032   REP  Satellite/telo:REP522
+Ctg 1007   REP  Satellite/telo:TAR1
+Ctg 1008   REP  Satellite/telo:TAR1
+Ctg 1010   REP  Satellite/telo:TAR1
+Ctg 1013   REP  Satellite/telo:TAR1
+Ctg 1016   REP  Satellite/telo:TAR1
+Ctg 1022   REP  Satellite/telo:TAR1
+Ctg 1024   REP  Satellite/telo:TAR1
+Ctg 1025   REP  Satellite/telo:TAR1
+Ctg 1027   REP  Satellite/telo:TAR1
+Ctg 1030   REP  Satellite/telo:TAR1
+Ctg 1031   REP  Satellite/telo:TAR1
+Ctg 1032   REP  Satellite/telo:TAR1
+Ctg 1033   REP  Satellite/telo:TAR1
+
+
+Label  Sat R1
+Ctg 1029   REP  Satellite:SATR1
+Ctg 100   REP  Satellite:SATR1
+
+
+Label  Cer SAT
+Ctg 1008   REP  Satellite:CER
+Ctg 1023   REP  Satellite:CER
+Ctg 1024   REP  Satellite:CER
+Ctg 1025   REP  Satellite:CER
+Ctg 1027   REP  Satellite:CER
+Ctg 1028   REP  Satellite:CER
+Ctg 1029   REP  Satellite:CER
+Ctg 1030   REP  Satellite:CER
+Ctg 1031   REP  Satellite:CER
+
+
+Label  Alpha Sat
+Ctg 1008   REP  Satellite/centr:ALR/Alpha
+Ctg 1011   REP  Satellite/centr:ALR/Alpha
+Ctg 1023   REP  Satellite/centr:ALR/Alpha
+Ctg 1024   REP  Satellite/centr:ALR/Alpha
+Ctg 1025   REP  Satellite/centr:ALR/Alpha
+Ctg 1030   REP  Satellite/centr:ALR/Alpha
+Ctg 1031   REP  Satellite/centr:ALR/Alpha
+Ctg 1032   REP  Satellite/centr:ALR/Alpha
+
+
+Label  ANKRD26
+Ctg 1007  GENE  ANKRD20A2 "ankyrin repeat domain 20 family, member A2"
+Ctg 1008  GENE  ANKRD20A1 "ankyrin repeat domain 20 family, member A1"
+Ctg 1010  GENE  CR848007.1 "ankyrin repeat domain 20A (ANKRD20A) pseudogene"
+Ctg 1023  GENE  RP11-318K12.3 "pseudogene similar to part of novel gene (ankyrin-related UNQ2430)"
+Ctg 1024  GENE  RP11-350D23.1 "novel ankyrin repeat domain containing pseudogene"
+Ctg 1026  GENE  ANKRD20A3 "ankyrin repeat domain 20 family, member A3"
+Ctg 1030  GENE  AC125634.1 "novel ankyrin repeat domain protein pseudogene"
+Ctg 1030  GENE  ANKRD20A4 "ankyrin repeat domain 20 family, member A4"
+
+# CASPR3 related. (CNTNAP3). Ref protein Q9BZ76.
+# This one is complex, due to the fact that the gene
+# is large, there are incomplete copies in the
+# tiling path due to gaps, and two diverged
+# fragments of the gene appear to have been
+# duplicated independently of the whole gene
+# duplication events. However, for this reason the
+# distribution of these elements could tell us
+# something about the evolution of the whole region.
+# The genes and gene fragments will be obvious as
+# clustered exonic BLAST hits. If you look at the
+# distribution of BLAST hits, in addition to whole
+# genes or large fragments of the gene at high
+# identity (>80%), there will be groups of hits at
+# lower identity (50-80% aa) which span the
+# following regions of the protein
+#
+# A: a core of positions 270-746aa (up to 196-746)
+# B: a core of positions 849-998aa (up to 849-1074)
+#
+# In ctg 1007 (NT_078043.4) which starts with AL590491 (RP11-144A16) these map to:
+#
+# A. 269843-305509 (exons 269943-269953, 270689-270874, 305342-305509)
+# B. 507622-511605 (exons 507557-507770, 511605-511766)
+#
+# Since they have intron/exon structure, they are
+# not processed. Blasting these co-ordinates against
+# the pericentromeric sequence will identify the
+# recently created paralogues of these gene
+# fragments, all of which share >95% id at the DNA
+# level.
+
+Label  CASPR3 related
+  Ctg 99  GENE  CNTNAP3 "contactin associated protein-like 3"
+Ctg 1002  GENE  AL353791.1 "novel protein similar to contactin associated protein-like 3 (CNTNAP3)"
+Ctg 1003  GENE  RP11-111G23.1 "pseudogene similar to part of contactin associated protein-like 3 (CNTNAP3)"
+Ctg 1004  GENE  RP11-292B8.1 "pseudogene similar to part of contactin associated protein-like 3 (CNTNAP3)"
+Ctg 1006  GENE  RP11-95K23.7 "pseudogene similar to part of contactin associated protein-like 4 (CNTNAP4)"
+Ctg 1009  GENE  CNTNAP3B "contactin associated protein-like 3B"
+Ctg 1017  GENE  AL953854.2 "novel protein similar to contactin associated protein-like 3 (CNTNAP3)"
+
+
+MediumAquamarine black (746-196 aa)
+
+
+MediumAquamarine black (849-1074 aa)
+
+
+
+
+# C9orf36. Accession ID: Q5TZJ5 or Q81WB4. Should
+# hit 7 genes/pseudogenes in 9pericen data, all with
+# IDs of ~95% and above at DNA level.
+
+Label  C9orf36 / FAM75A
+  Ctg 99  GENE  C9orf36 "chromosome 9 open reading frame 36"
+Ctg 1001  GENE  FAM75A2 "family with sequence similarity 75, member A2"
+Ctg 1004  GENE  FAM75A3 "family with sequence similarity 75, member A3"
+Ctg 1006  GENE  FAM75A4 "family with sequence similarity 75, member A4"
+Ctg 1007  GENE  FAM75A5 "family with sequence similarity 75, member A5"
+Ctg 1009  GENE  FAM75A6 "family with sequence similarity 75, member A6"
+Ctg 1019  GENE  FAM75A7 "family with sequence similarity 75, member A7"
+Ctg 1006  GENE  RP11-95K23.3 "novel transcript"
+Ctg 1004  GENE  RP11-395E19.5 "novel transcript"
+
+
+#  ZNF91 related -- rename ZNF658 related. Ctg99 gene
+#  ZNF658B,Ctg 1004 Gene ZNF658 Should be two more in
+#  Ctg 1001 and Ctg 1007. One may be incomplete.
+#  Suggest these are identified by BLAST using ZNF658
+#  protein sequence Q5TYW1, or mRNA. This should
+#  distinguish these from other ZNF pseudogenes. All
+#  other items on list can then be cut.
+
+
+Label  ZNF658 related
+  Ctg 99  GENE  ZNF658B "zinc finger protein 658B"
+  Ctg 99  GENE  CTD-2173L22.1 "zinc finger protein pseudogene"
+Ctg 1004  GENE  ZNF658 "zinc finger protein 658"
+Ctg 1007  GENE  RP11-100J16.3 "novel zinc finger pseudogene"
+Ctg 1001  GENE  start=261060 end=260050 67% match to Q5TYW1 (840 aa)
+
+
+# These are not similar enough:
+# Ctg 1007  GENE  RP11-146D12.5 "zinc finger pseudogene"
+# Ctg 1010  GENE  CR848007.5 "novel zinc finger pseudogene"
+# Ctg 1021  GENE  RP11-459O16.3 "novel zinc finger protein pseudogene"
+# Ctg 1023  GENE  RP11-282E4.1 "pseudogene similar to part of a zinc finger protein"
+# Ctg 1023  GENE  AL954185.1 "pseudogene similar to part of a novel zinc finger protein"
+# Ctg 1024  GENE  RP11-350D23.2 "zinc finger protein 85 (HPF4, HTF1)  (ZNF85) pseudogene"
+# Ctg 1030  GENE  RP11-460N11.2 "zinc finger pseudogene"
+# Ctg 1030  GENE  CR769776.3 "novel zinc finger pseudogene"
+
+
+
+Label  H-2-K/RAB28
+Ctg 1007  GENE  RP11-104G3.5 "RAB28, member RAS oncogene family pseudogene (RAB28)"
+Ctg 1009  GENE  RP11-186G6.5 "RAB28, member RAS oncogene family (RAB28) pseudogene"
+Ctg 1010  GENE  RP11-475I24.6 "RAB28, member RAS oncogene family (RAB28) pseudogene"
+Ctg 1016  GENE  RP11-211N8.5 "RAB28, member RAS oncogene family (RAB28) pseudogene"
+Ctg 1020  GENE  RP11-120E5.2 "RAB28, member RAS oncogene family (RAB28) pseudogene"
+
+
+Label  KIAA0758
+
+
+Label  MyoVB
+Ctg 1013  GENE  RP11-4L24.1 "pseudogene similar to part of myosin VB (MYO5B)"
+Ctg 1022  GENE  RP11-262H14.8 "pseudogene similar to part of myosin VA (heavy polypeptide 12, myoxin) (MYO5A)"
+Ctg 1027  GENE  RP11-149F8.6 "pseudogene similar to part of myosin V family protein"
+
+
+# Srp19. I think there are two distinct 7SLRNA
+# psuedogene families in this region. Those in
+# RP11-374M1, 34H11 and 12A20 are the ones I was
+# after. Could probably be resolved by BLAST IDs,
+# but may not be required, so cut?
+#sienna black Srp19
+#  Ctg 99   REP  srpRNA:7SLRNA
+#Ctg 1001   REP  srpRNA:7SLRNA
+#Ctg 1004   REP  srpRNA:7SLRNA
+#Ctg 1007   REP  srpRNA:7SLRNA
+#Ctg 1009   REP  srpRNA:7SLRNA
+#Ctg 1013   REP  srpRNA:7SLRNA
+#Ctg 1014   REP  srpRNA:7SLRNA
+#Ctg 1016   REP  srpRNA:7SLRNA
+#Ctg 1026   REP  srpRNA:7SLRNA
+#Ctg 1027   REP  srpRNA:7SLRNA
+#Ctg 1028   REP  srpRNA:7SLRNA
+#Ctg 1029   REP  srpRNA:7SLRNA
+
+
+# KGF - Should be more of these. Could they be
+# identified by BLAST using KGF (FGF7) protein
+# (P21781) or mRNA?
+
+Label  kgf
+Ctg 1007  GENE  RP11-204M4.2 "novel transcript"
+Ctg 1010  GENE  BX005214.1 "pseudogene similar to part of fibroblast growth factor 7 (keratinocyte growth factor) (FGF7)"
+Ctg 1010  GENE  RP11-475I24.1 "pseudogene similar to part of fibroblast growth factor 7 (keratinocyte growth factor) (KGF, HBGF-7) (FGF7)"
+Ctg 1016  GENE  RP11-111F5.5 "pseudogene similar to part of fibroblast growth factor 7 (keratinocyte growth factor) (FGF7)"
+Ctg 1016  GENE  RP11-96J15.2 "pseudogene similar to part of fibroblast growth factor 7 (keratinocyte growth factor) (FGF7)"
+Ctg 1022  GENE  RP11-262H14.11 "pseudogene similar to part of fibroblast growth factor 7 (keratinocyte growth factor) (FGF7)"
+Ctg 1023 start=89702 end=91094 very good match to P21781.1 (194 aa)
+
+Label  DOC1
+Ctg 1013  GENE  RP11-4L24.2 "tumor suppressor deleted in oral cancer-related 1 (DOC-1R) pseudogene"
+Ctg 1022  GENE  RP11-262H14.2 "tumor suppressor deleted in oral cancer-related 1 (DOC-1R) pseudogene"
+Ctg 1027  GENE  RP11-149F8.8 "tumor suppressor deleted in oral cancer-related 1 (DOC-1R) pseudogene"
+
+
+Label  FRG related
+Ctg 1027  GENE  RP11-764K9.4 "FSHD region gene 1 (FRG1) pseudogene"
+Ctg 1028  GENE  RP11-391M20.1 "pseudogene similar to part of FSHD region gene 1 (FRG1)"
+Ctg 1029  GENE  RP11-87H9.2 "pseudogene similar to part of FSHD region gene 1 (FSG1) (FRG1)"
+
+
+Label  RPL7A
+Ctg 1007  GENE  AL772307.1 "pseudogene similar to part of ribosomal protein L7a (RPL7A)"
+Ctg 1013  GENE  RP11-187C18.3 "pseudogene similar to part of ribosomal protein L7a (RPL7A)"
+Ctg 1014  GENE  RP11-436G20.1 "pseudogene similar to part of ribosomal protein L7a (RPL7A)"
+Ctg 1016  GENE  RP11-111F5.2 "pseudogene similar to part of ribosomal protein L7a (RPL7A)"
+Ctg 1027  GENE  RP11-452D2.1 "pseudogene similar to part of ribosomal protein L7a (RPL7A)"
+
+
+
+# PCC-SR. - rename as Vomeronasal 2 family protein
+# pseudogene fragment One copy is within AL953854 Ð
+# position 103972-104680 /locus_tag="AL953854.1-001"
+# /note="match: proteins: Tr:O35190 Tr:O35191
+# Tr:O35266: Tr:O35363 Tr:O70409 Tr:Q6TAC4 Tr:Q80Z08
+# Tr:Q8CFT4, Tr:Q9QWK0" /pseudo /codon_start=1
+# /note="pseudogene similar to part of a vomeronasal
+# 2 family protein"
+
+
+Label  Vomeronasal 2 family
+Ctg 1002  GENE  AL353791.2 "pseudogene similar to part of vomeronasal 2 family"
+Ctg 1003  GENE  RP11-111G23.2 "pseudogene similar to part of vomeronasal 2 family"
+Ctg 1017  GENE  AL953854.1 "pseudogene similar to part of a vomeronasal 2 family protein"
+Ctg 1019  GENE  RP11-237M21.1 "pseudogene similar to part of a vomeronasal receptor"
+
+
+Label  P19 Cyclin A
+  Ctg 99  GENE  CTD-2173L22.3 "S-phase kinase-associated protein 1A (p19A) (SKP1A) pseudogene"
+  Ctg 99  GENE  RP11-381G8.1 "S-phase kinase-associated protein 1A (p19A) (OCP2, SKP1, EMC19, OCP-II, TCEB1L) (SKP1A) pseudogene"
+Ctg 1004  GENE  BX664608.1 "S-phase kinase-associated protein 1A (p19A) (SKP1A) pseudogene"
+Ctg 1007  GENE  RP11-100J16.4 "S-phase kinase-associated protein 1A (p19A) (SKP1A) pseudogene"
+
+
+Label  Fk506bp4 Psi
+  Ctg 99  GENE  AL590812.1 "FK506 binding protein 4, 59kDa pseudogene (FKBP4)"
+Ctg 1005  GENE  RP11-242D12.1 "FK506 binding protein 4, 59kDa (HBI, p52, Hsp56, FKBP52, FKBP59, PPIase) (FKBP4) pseudogene"
+Ctg 1005  GENE  CTD-2340F8.1 "FK506 binding protein 4, 59kDa (FKBP4) pseudogene"
+Ctg 1007  GENE  RP11-45O22.1 "FK506 binding protein 4, 59kDa (FKBP4) pseudogene"
+Ctg 1009  GENE  BX649597.4 "FK506 binding protein 4, 59kDa (FKBP4) pseudogene"
+Ctg 1010  GENE  AL162415.2 "FK506 binding protein 4, 59kDa (FKBP4) pseudogene"
+Ctg 1016  GENE  BX664724.1 "FK506 binding protein 4, 59kDa (FKBP4) pseudogene"
+Ctg 1020  GENE  RP11-120E5.5 "FK506 binding protein 4, 59kDa (FKBP4) pseudogene"
+Ctg 1020  GENE  RP11-93P10.3 "FK506 binding protein 4, 59kDa (FKBP4) pseudogene"
+
+
+Label  ATPSynth Alpha Psi
+  Ctg 99  GENE  AL590812.2 "pseudogene similar to part of ATP synthase alpha/beta family"
+Ctg 1005  GENE  CTD-2340F8.2 "pseudogene similar to part of ATP synthase, H+ transporting, mitochondrial F1 complex, alpha subunit, isoform 1, cardiac muscle (ATP5A1)"
+Ctg 1005  GENE  RP11-242D12.2 "ATP synthase, H+ transporting, mitochondrial F1complex, alpha subunit, isoform 1, cardiac muscle (ATP5A1) pseudogene"
+Ctg 1007  GENE  RP11-45O22.2 "pseudogene similar to part of ATP synthase, H+ transporting, mitochondrial F1 omplex, alpha subunit, isoform 1, cardiac muscle (ATP5A1)"
+Ctg 1009  GENE  BX649597.2 "pseudogene similar to part of ATP synthase, H+ transporting, mitochondrial F1 complex, alpha subunit, isoform 1, cardiac muscle (ATP5A1)"
+Ctg 1010  GENE  AL162415.3 "pseudogene similar to part of ATP synthase, H+ transporting, mitochondrial F1 complex, alpha subunit family"
+Ctg 1016  GENE  BX664724.2 "pseudogene similar to part of ATP synthase, H+ transporting, mitochondrial F1 complex, alpha subunit, isoform 1, cardiac muscle (ATP5A1)"
+Ctg 1020  GENE  RP11-93P10.1 "ATP synthase, H+ transporting, mitochondrial F1 complex, alpha subunit, isoform 2, non-cardiac muscle (ATP5A2) pseudogene"
+Ctg 1020  GENE  RP11-120E5.3 "ATP synthase, H+ transporting, mitochondrial F1 complex, alpha subunit, isoform 2, non-cardiac muscle (ATP5A2) pseudogene"
+
+
+Label  Ankyrin 18A
+Ctg 1007  GENE  ANKRD20A2 "ankyrin repeat domain 20 family, member A2"
+Ctg 1008  GENE  ANKRD20A1 "ankyrin repeat domain 20 family, member A1"
+Ctg 1010  GENE  CR848007.1 "ankyrin repeat domain 20A (ANKRD20A) pseudogene"
+Ctg 1023  GENE  RP11-318K12.3 "pseudogene similar to part of novel gene (ankyrin-related UNQ2430)"
+Ctg 1024  GENE  RP11-350D23.1 "novel ankyrin repeat domain containing pseudogene"
+Ctg 1026  GENE  ANKRD20A3 "ankyrin repeat domain 20 family, member A3"
+Ctg 1030  GENE  AC125634.1 "novel ankyrin repeat domain protein pseudogene"
+Ctg 1030  GENE  ANKRD20A4 "ankyrin repeat domain 20 family, member A4"
+
+
+Label  PGM5
+Ctg 1028  GENE  RP11-391M20.2 "phosphoglucomutase 5 (PGM5) pseudogene"
+Ctg 1029  GENE  RP11-87H9.1 "pseudogene similar to part of phosphoglucomutase 5 (PGRM) (PGM5)"
+Ctg 100  GENE  PGM5 "phosphoglucomutase 5"
+
+
+Label  RPL10
+Ctg 1007  GENE  RP11-204M4.1 "pseudogene similar to part of ribosomal protein L10 (RPL10)"
+Ctg 1013  GENE  RP11-266E16.1 "pseudogene similar to part of ribosomal protein L10 (RPL10)"
+Ctg 1014  GENE  RP11-157L3.3 "pseudogene similar to part of ribosomal protein L10 (RPL10)"
+Ctg 1016  GENE  RP11-111F5.1 "pseudogene similar to part of ribosomal protein L10 (RPL10)"
+Ctg 1026  GENE  RP11-12A20.8 "pseudogene similar to part of ribosomal protein L10 (RPL10)"
+
+
+# Hyp 6.1/13.1kd. Rename: FAM27 related Ð in contigs
+# 1011, 1012, 1015 and others: Protein - Q8N5T8.
+# Also pseudogenes in region, so mRNA may be better
+# for BLAST.
+Label  FAM27 related
+Ctg 1011  GENE  RP11-160N1.6 "novel pseudogene"
+Ctg 1011  GENE  RP11-160N1.7 "novel psueodgene"
+Ctg 1011  GENE  RP11-160N1.8 "novel pseudogene"
+Ctg 1012  GENE  FAM27C "family with sequence similarity 27, member C"
+Ctg 1013  GENE  FAM27A "family with sequence similarity 27, member A"
+Ctg 1013  GENE  FAM27E2 "family with sequence similarity 27, member E2"
+Ctg 1015  GENE  FAM27D1 "family with sequence similarity 27, member D1"
+Ctg 1015  GENE  FAM27E1 "family with sequence similarity 27, member E1"
+Ctg 1015  GENE  RP11-34H11.1 "novel pseudogene"
+Ctg 1015  GENE  RP11-34H11.3 "novel pseudogene"
+Ctg 1026  GENE  FAM27B "family with sequence similarity 27, member B"
+
+
+Label  FRG1
+Ctg 1027  GENE  RP11-764K9.4 "FSHD region gene 1 (FRG1) pseudogene"
+Ctg 1028  GENE  RP11-391M20.1 "pseudogene similar to part of FSHD region gene 1 (FRG1)"
+Ctg 1029  GENE  RP11-87H9.2 "pseudogene similar to part of FSHD region gene 1 (FSG1) (FRG1)"
+
+
+Label  IgKV1-5
+Ctg 1008  GENE  AC129778.7 "immunoglobulin kappa variable 1-5  pseudogene (IGKV1-5)"
+Ctg 1030  GENE  RP11-460N11.1 "mmunoglobulin kappa variable 1-5 (IGKV1-5) pseudogene"
+Ctg 1031  GENE  RP11-15J10.3 "immunoglobulin kappa variable 1-5 (IGKV1-5) pseudogene"
+Ctg 1032  GENE  RP11-460E7.1 "immunoglobulin kappa variable 1-5 (IGKV1-5) pseudogene"
+
+
+Label  AQP7
+Ctg 1008  GENE  AQP7P3 "aquaporin 7 pseudogene 3"
+Ctg 1024  GENE  RP11-381O7.2 "aquaporin 7 (AQP7) pseudogene"
+Ctg 1025  GENE  RP11-236F9.1 "aquaporin 7 (AQP7) pseudogene"
+Ctg 1030  GENE  RP11-574E24.1 "aquaporin 7 (AQP7) pseudogene"
+
+
+Label  Calponin
+Ctg 1007  GENE  RP11-341A11.1 "calponin 2 pseudogene (CNN2)"
+Ctg 1008  GENE  RP11-399F4.2 "calponin 2 (CNN2) psuedogene"
+Ctg 1008  GENE  RP11-15E1.1 "calponin 2 (CNN2) pseudogene"
+Ctg 1010  GENE  CR848007.4 "calponin 2 (CNN2) pseudogene"
+Ctg 1021  GENE  RP11-459O16.2 "calponin 2 (CNN2) pseudogene"
+Ctg 1030  GENE  RP11-250H24.5 "calponin 2 (CNN2) pseudogene"
+
+
+Label  CYT
+Ctg 1010  GENE  CR848007.7 "pseudogene similar to part of cytochrome P450, subfamily IVF"
+Ctg 1021  GENE  RP11-459O16.5 "pseudogene similar to part of cytochrome P450 family protein"
+Ctg 1030  GENE  RP11-793G16.2 "pseudogene similar to part of cytochrome P450 family protein"
+Ctg 1031  GENE  RP11-15J10.8 "pseudogene similar to part of cytochrome P450 family protein"
+
+
+Label  FOX
+Ctg 1008  GENE  FOXD4L2 "forkhead box D4-like 2"
+Ctg 1029  GENE  FOXD4L6 "forkhead box D4-like 6"
+Ctg 1031  GENE  FOXD4L5 "forkhead box D4-like 5"
+Ctg 1032  GENE  FOXD4L4 "forkhead box D4-like 4"
+Ctg 100  GENE  FOXD4L3 "forkhead box D4-like 3"
+
+
+Label  COB-W
+Ctg 1008  GENE  CBWD7 "COBW domain containing 7"
+Ctg 1029  GENE  CBWD6 "COBW domain containing 6"
+Ctg 1031  GENE  RP11-15J10.1 "pseudogene similar to part of COBW domain family protein"
+Ctg 1032  GENE  CBWD5 "COBW domain containing 5"
+Ctg 100  GENE  CBWD3 "COBW domain containing 3"
+
+
+#New - RP11-160N1.6-001. Vega pseudogene - paralogues in contigs 1011, 1012, 1015 and others:
+
+
+#New - RP11-160N1.7-001. Vega pseudogene - paralogues in contigs 1011, 1012, 1015 and others:
+
+
+#New - Rp11-160N1.8-001. Vega pseudogene - paralogues in contigs 1011, 1012, 1015 and others:
+
+
+
+
+

@@ -11,6 +11,7 @@ use CanvasWindow;
     $mw->title('X11 colors');
     my $cw = CanvasWindow->new($mw);
     my $canvas = $cw->canvas;
+    $canvas->SelectionHandle(\&return_selection);
     my $rgb_txt_file = '/usr/X11R6/lib/X11/rgb.txt';
 
     open RGB_TXT, $rgb_txt_file
@@ -18,6 +19,7 @@ use CanvasWindow;
 
     my $size = 15;
     my $pad = $size / 2;
+    
     
     my $font = ['Helvetica', $size, 'normal'];
     my $i = 0;
@@ -34,6 +36,8 @@ use CanvasWindow;
         next if $name =~ /grey/i;
 
         my $hex = sprintf "#%02x%02x%02x", $red, $green, $blue;
+        
+        my $tags = [$name];
 
         my $x1 = $size;
         my $x2 = $x1 + $size;
@@ -41,22 +45,30 @@ use CanvasWindow;
         my $y2 = $y1 + $size;
         $canvas->createRectangle(
             $x1, $y1, $x2, $y2,
-            -fill       => undef,
+            -fill       => 'white',
             -outline    => $hex,
+            -tags       => $tags,
             );
         
         $canvas->createRectangle(
             $x2 + $pad, $y1, $x2 + $pad + $size, $y2,
             -fill       => $hex,
             -outline    => 'black',
+            -tags       => $tags,
             );
         
-        $canvas->createText(
+        my $txt = $canvas->createText(
             $x2 + $size + $size, $y1,
-            -text   => $name,
-            -anchor => 'nw',
-            -font   => $font,
+            -text       => $name,
+            -anchor     => 'nw',
+            -font       => $font,
+            -tags       => $tags,
             );
+
+        $canvas->bind($name, '<Button-1>', sub{
+            set_selection($name);
+            $canvas->SelectionOwn;
+            });
 
         $i++;
     }
@@ -67,8 +79,21 @@ use CanvasWindow;
        
 }
 
+{
+    my $clip;
 
+    sub return_selection {
+        my ($offset, $max_bytes) = @_;
 
+        return unless $clip;
+
+        my $str = substr($clip, $offset, $max_bytes);
+    }
+
+    sub set_selection {
+        $clip = shift;
+    }
+}
 
 __END__
 
