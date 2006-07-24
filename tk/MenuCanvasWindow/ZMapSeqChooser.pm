@@ -157,7 +157,6 @@ sub zMapLaunchZmap {
     my $pid = fork_exec(\@e, $ref, 0, sub { 
         my ($info) = @_;
         flush_bad_windows;
-        use Data::Dumper;                
         warn "INFO: ", Dumper($info);
     });
 
@@ -263,11 +262,13 @@ sub zMapServerDefaults {
 sub zMapZMapDefaults {
     my ($self) = @_;
 
-    # make this configurable for those users where zmap doesn't start due to not having window
-    # id when doing XChangeProperty.
-    my $boolean   = { true => 'true', false => 'false'};
-    my $win       = Bio::Otter::Lace::Defaults::option_from_array([qw(client zmap_main_window)]);
-    my $show_main = $boolean->{$win} || $boolean->{'false'};
+    # make this configurable for those users where zmap doesn't start
+    # due to not having window id when doing XChangeProperty.
+    my $show_main = Bio::Otter::Lace::Defaults::option_from_array(
+        [qw(client zmap_main_window)]
+      )
+        ? 'true'
+        : 'false';
     
     return $self->formatZmapDefaults(
         'ZMap',
@@ -436,10 +437,9 @@ sub zMapSetEntryValue{
 }
 
 
-sub zMapRegisterClient{
-    my ($self, $request) = @_;
+sub zMapRegisterClient {
+    my ($self, $p) = @_;
     my $mainWindowName = 'ZMap port #' . $self->AceDatabase->ace_server->port;
-    my $p  = parse_request($request);
     my $xr = xclient_with_name($mainWindowName, 0, "$self");
     my $z  = $self->zMapZmapConnector();
     my $h  = {
@@ -460,8 +460,8 @@ sub zMapRegisterClient{
            && $p->{'client'}->{'request_atom'}
            && $p->{'client'}->{'response_atom'}){
         warn "mismatched request for register_client:\n", 
-        "id, request and response required\n",
-        "Got '$request'\n";
+          "id, request and response required\n",
+          "Got '", Dumper($p), "'\n";
         return (403, $z->basic_error("Bad Request!"));
     }
 
@@ -478,6 +478,23 @@ sub zMapRegisterClient{
     # this feels convoluted
     $h->{'response'}->{'client'}->[0]->{'created'} = 1;
     return (200, make_xml($h));
+}
+
+
+sub zMapEdit{
+    my ($self, $xml_hash) = @_;
+
+    my $response;
+    my $z  = $self->zMapZmapConnector();
+    if($xml_hash->{"action"} eq 'edit'){
+        #warn Dumper($xml_hash);
+        my $feat_hash = $xml_hash->{'featureset'}{'feature'}
+          or return return (403, $z->basic_error("No feature segments"));
+        
+        $self->edit_subsequences(keys %$feat_hash);
+    }
+
+    return (200, 'This should be a nice XML response');
 }
 
 
@@ -597,19 +614,6 @@ sub zMapUpdateMenu{
     return ;
 }
 
-sub zMapEdit{
-    my ($self, $xml_hash) = @_;
-
-    my $response;
-    if($xml_hash->{"action"} eq 'edit'){
-        my $feat_hash = $xml_hash->{'feature'};
-        
-        $self->edit_subsequences(keys %$feat_hash);
-    }
-
-    return (500, $response);
-}
-
 #===========================================================
 
 sub RECEIVE_FILTER {
@@ -645,7 +649,7 @@ sub RECEIVE_FILTER {
           )
         {
             # call the method to get the status and response
-            ($_status, $_response) = $_obj->$valid($refXML);
+            ($_status, $_response) = $_obj->$valid($reqXML);
             last;                  # no need to go any further...
         }
     }
