@@ -598,12 +598,13 @@ sub zMapUpdateMenu{
 }
 
 sub zMapEdit{
-    my ($self, $xml_string) = @_;
-    my $reqXML = parse_request($xml_string);
-    my $response;
+    my ($self, $xml_hash) = @_;
 
-    if($reqXML->{"action"} eq 'edit'){
-        $response = "so you want me to edit...";
+    my $response;
+    if($xml_hash->{"action"} eq 'edit'){
+        my $feat_hash = $xml_hash->{'feature'};
+        
+        $self->edit_subsequences(keys %$feat_hash);
     }
 
     return (500, $response);
@@ -611,41 +612,45 @@ sub zMapEdit{
 
 #===========================================================
 
-sub RECEIVE_FILTER{
+sub RECEIVE_FILTER {
     my ($_connect, $_request, $_obj, @list) = @_;
+
     # The default response code and message.
-    my ($_status, $_response) 
-        = (404, $_obj->zMapZmapConnector->basic_error("Unknown Command"));
+    my ($_status, $_response) =
+      (404, $_obj->zMapZmapConnector->basic_error("Unknown Command"));
 
     # The table of actions and functions...
-    # N.B. the action _must_ be in @list as well as this table 
+    # N.B. the action _must_ be in @list as well as this table
     my $lookup = {
         register_client => 'zMapRegisterClient',
         edit            => 'zMapEdit',
     };
+
     # @list could be dynamically created...
     # @list = keys(%$lookup);
 
     # find the action in the request XML
-    my $action = '';
     my $reqXML = parse_request($_request);
-    $action    = $reqXML->{'action'};
+    my $action = $reqXML->{'action'};
 
     warn "In RECEIVE_FILTER for action=$action\n" if $ZMAP_DEBUG;
 
     # find the method to call...
-    foreach my $valid(@list){
-        if($action eq $valid
-           && ($valid = $lookup->{$valid}) # N.B. THIS SHOULD BE ASSIGNMENT NOT EQUALITY 
-           && $_obj->can($valid)){
+    foreach my $valid (@list) {
+        if (
+            $action eq $valid
+            && ($valid =
+                $lookup->{$valid}) # N.B. THIS SHOULD BE ASSIGNMENT NOT EQUALITY
+            && $_obj->can($valid)
+          )
+        {
             # call the method to get the status and response
-            ($_status, $_response) 
-                = $_obj->$valid($_request);
-            last; # no need to go any further...
+            ($_status, $_response) = $_obj->$valid($refXML);
+            last;                  # no need to go any further...
         }
     }
-    
-    return ($_status, $_response) ;
+
+    return ($_status, $_response);
 }
 
 sub open_clones{
