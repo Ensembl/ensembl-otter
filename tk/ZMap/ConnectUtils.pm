@@ -61,7 +61,11 @@ into
 sub parse_request{
     my ($xml)  = shift;
     my $parser = XML::Simple->new();
-    my $hash   = $parser->XMLin($xml);
+    my $hash   = $parser->XMLin(
+        $xml,
+        KeyAttr => {feature => 'name'},
+        ForceArray => [ 'feature' ],
+        );
     return $hash;
 }
 
