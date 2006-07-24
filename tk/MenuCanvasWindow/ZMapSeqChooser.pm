@@ -194,7 +194,7 @@ sub zMapInsertZmapConnector{
     if(!$zc){
         my $mb   = $self->menu_bar();
         my $zmap = ZMap::Connect->new( -server => 1 );
-        $zmap->init($mb, \&RECEIVE_FILTER, [ $self, qw( register_client ) ]);
+        $zmap->init($mb, \&RECEIVE_FILTER, [ $self, qw( register_client edit ) ]);
         my $id = $zmap->server_window_id();
         $zc = $self->{'_zMap_ZMAP_CONNECTOR'} = $zmap;
     }
@@ -316,11 +316,83 @@ sub formatZmapDefaults {
     return $def_str;
 }
 
+sub formatGtkrcStyleDef{
+    my ($self, $style_class, %defaults) = @_;
+
+    my $style_string = qq`\nstyle "$style_class" {\n`;
+
+    while (my ($style_element, $value) = each %defaults){
+        $style_string .= qq`  $style_element = "$value" \n`;
+    }
+
+    $style_string .= qq`}\n`;
+
+    return $style_string;
+}
+sub formatGtkrcWidgetDef{
+    my ($self, $widget_path, $style_class) = @_;
+
+    my $widget_string = qq`\nwidget "$widget_path" style "$style_class"\n`;
+
+    return $widget_string;
+}
+sub formatGtkrcWidget{
+    my ($self, $widget_path, $style_class, %style_def) = @_;
+
+
+    my $full_def = $self->formatGtkrcStyleDef($style_class, %style_def);
+    $full_def   .= $self->formatGtkrcWidgetDef($widget_path, $style_class);
+
+    return $full_def;
+}
+
+sub zMapDotGtkrcContent{
+    my ($self) = @_;
+
+    # to create a coloured border for the focused view.
+    my $full_content = $self->formatGtkrcWidget("*.zmap-focus-view", 
+                                                "zmap-focus-view-frame",
+                                                qw{
+                                                    bg[NORMAL]      green
+                                                });
+    # to make the info labels stand out and look like input boxes...
+    $full_content   .= $self->formatGtkrcWidget("*.zmap-control-infopanel", 
+                                                "infopanel-labels",
+                                                qw{
+                                                    bg[NORMAL]      white
+                                                });
+    # to make the context menu titles blue
+    $full_content   .= $self->formatGtkrcWidget("*.zmap-menu-title.*", 
+                                                "menu-titles",
+                                                qw{
+                                                    fg[INSENSITIVE] blue
+                                                });
+    # to create a coloured border for the view with an unknown species. (Not sure this works properly...)
+    $full_content   .= $self->formatGtkrcStyleDef("default-species",
+                                                  qw{
+                                                      bg[NORMAL]    green
+                                                  });
+    # foreach (species){ self->formatGtkrcStyleDef("species", ... ) }
+}
+
 sub zMapWriteDotGtkrc {
     my $self = shift;
     
     my $dir = $self->zMapZmapDir;
     my $file = "$dir/.gtkrc";
+    my $fh;
+    eval{
+        # directory should be made already
+        open($fh, ">$file") or die "write_dot_zmap: error writing file '$file', $!";
+    };
+    warn "Error in :$@" if $@;
+    unless($@){
+        my $content = $self->zMapDotGtkrcContent();
+        print $fh $content;
+        return 1;
+    }
+    close $fh;
+    return 0;
 }
 
 sub zMapZmapDir {
@@ -434,11 +506,12 @@ sub zMapMakeRequest{
     my @a = $xr->send_commands(@commands);
 
     for(my $i = 0; $i < @commands; $i++){
+        warn "command $i '",substr($commands[$i], 0, 15),"' returned $a[$i] ";
         my ($status, $xmlHash) = parse_response($a[$i]);
         if($status =~ /^2\d\d/){ # 200s
-            $handler->($self, $xmlHash);
+            $handler->($self, $action, $xmlHash);
         }else{
-            $error->($self, $status, $xmlHash);
+            $error->($self, $action, $status, $xmlHash);
         }
     }
     return ;
@@ -524,28 +597,54 @@ sub zMapUpdateMenu{
     return ;
 }
 
+sub zMapEdit{
+    my ($self, $xml_string) = @_;
+    my $reqXML = parse_request($xml_string);
+    my $response;
+
+    if($reqXML->{"action"} eq 'edit'){
+        $response = "so you want me to edit...";
+    }
+
+    return (500, $response);
+}
 
 #===========================================================
 
 sub RECEIVE_FILTER{
     my ($_connect, $_request, $_obj, @list) = @_;
+    # The default response code and message.
     my ($_status, $_response) 
         = (404, $_obj->zMapZmapConnector->basic_error("Unknown Command"));
 
-    my $lookup = {register_client => 'zMapRegisterClient'};
+    # The table of actions and functions...
+    # N.B. the action _must_ be in @list as well as this table 
+    my $lookup = {
+        register_client => 'zMapRegisterClient',
+        edit            => 'zMapEdit',
+    };
+    # @list could be dynamically created...
+    # @list = keys(%$lookup);
+
+    # find the action in the request XML
     my $action = '';
     my $reqXML = parse_request($_request);
     $action    = $reqXML->{'action'};
 
+    warn "In RECEIVE_FILTER for action=$action\n" if $ZMAP_DEBUG;
+
+    # find the method to call...
     foreach my $valid(@list){
         if($action eq $valid
            && ($valid = $lookup->{$valid}) # N.B. THIS SHOULD BE ASSIGNMENT NOT EQUALITY 
            && $_obj->can($valid)){
+            # call the method to get the status and response
             ($_status, $_response) 
                 = $_obj->$valid($_request);
-            last;
+            last; # no need to go any further...
         }
     }
+    
     return ($_status, $_response) ;
 }
 
@@ -570,19 +669,24 @@ sub open_clones{
 }
 
 sub RESPONSE_HANDLER{
-    my ($self, $xml) = @_;
-    warn "In RESPONSE_HANDLER\n" if $ZMAP_DEBUG;
-    my ($name, $id) = ($xml->{'response'}->{'zmapid'}, $xml->{'response'}->{'windowid'});
-    if($name){
-        xclient_with_name($name, $id, "$self") if $id;
-        $self->zMapSetEntryValue($name);
+    my ($self, $action, $xml) = @_;
+    warn "In RESPONSE_HANDLER for action=$action\n" if $ZMAP_DEBUG;
+    if($action eq 'new'){
+        my ($name, $id) = ($xml->{'response'}->{'zmapid'}, $xml->{'response'}->{'windowid'});
+        if($name){
+            xclient_with_name($name, $id, "$self") if $id;
+            $self->zMapSetEntryValue($name);
+        }
+    }else{
+        warn "RESPONSE_HANDLER knows nothing about how to handle actions of type '$action'";
+        
     }
     return ;
 }
 sub ERROR_HANDLER{
-    my ($self, $status, $xml) = @_;
+    my ($self, $action, $status, $xml) = @_;
     $xml = $xml->{'error'}; # this is all we care about
-    warn "In ERROR_HANDLER\n" if $ZMAP_DEBUG;
+    warn "In ERROR_HANDLER for action=$action\n" if $ZMAP_DEBUG;
     my $full = Dumper $xml;
     warn "status $status, xml string '$full'\n" if $ZMAP_DEBUG;
 
