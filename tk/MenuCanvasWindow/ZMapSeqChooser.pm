@@ -486,15 +486,35 @@ sub zMapEdit{
 
     my $response;
     my $z  = $self->zMapZmapConnector();
-    if($xml_hash->{"action"} eq 'edit'){
+    if ($xml_hash->{"action"} eq 'edit') {
         #warn Dumper($xml_hash);
         my $feat_hash = $xml_hash->{'featureset'}{'feature'}
-          or return return (403, $z->basic_error("No feature segments"));
+          or return return(200, $z->handled_response(0));
         
-        $self->edit_subsequences(keys %$feat_hash);
+        # Are there any transcripts in the list of features?
+        my @subseq_names;
+      NAME: foreach my $name (keys %$feat_hash) {
+            my $feat = $feat_hash->{$name};
+            my $subs = $feat->{'subfeature'}
+                or next;
+            foreach my $s (@$subs) {
+                # Only transcripts have exons
+                if ($s->{'ontology'} eq 'exon') {
+                    push(@subseq_names, $name);
+                    next NAME;
+                }
+            }
+        }
+        
+        if (@subseq_names) {
+            $self->edit_subsequences(@subseq_names);
+            return(200, $z->handled_response(1));
+        } else {
+            return(200, $z->handled_response(0));
+        }
+    } else {
+        confess "Not an 'edit' action:\n", Dumper($xml_hash);
     }
-
-    return (200, 'This should be a nice XML response');
 }
 
 
@@ -619,10 +639,6 @@ sub zMapUpdateMenu{
 sub RECEIVE_FILTER {
     my ($_connect, $_request, $_obj, @list) = @_;
 
-    # The default response code and message.
-    my ($_status, $_response) =
-      (404, $_obj->zMapZmapConnector->basic_error("Unknown Command"));
-
     # The table of actions and functions...
     # N.B. the action _must_ be in @list as well as this table
     my $lookup = {
@@ -634,10 +650,15 @@ sub RECEIVE_FILTER {
     # @list = keys(%$lookup);
 
     # find the action in the request XML
+    #warn "Request = '$_request'";
     my $reqXML = parse_request($_request);
     my $action = $reqXML->{'action'};
 
     warn "In RECEIVE_FILTER for action=$action\n" if $ZMAP_DEBUG;
+
+    # The default response code and message.
+    my ($_status, $_response) =
+      (404, $_obj->zMapZmapConnector->basic_error("Unknown Command"));
 
     # find the method to call...
     foreach my $valid (@list) {
