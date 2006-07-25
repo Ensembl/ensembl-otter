@@ -25,27 +25,33 @@ sub _generic_sql_fetch {
 	 $author=new Bio::Vega::Author;
   }
   my $sql = "
-	     SELECT a.author_id,
-             a.author_email,
-             a.author_name,
-             g.group_id,
-             g.group_name
-	     FROM author a,author_group g "
-	 .$where_clause.
-		" AND a.group_id=g.group_id ";
+             SELECT a.author_id as author_id,
+                    a.author_email as author_email,
+                    a.author_name as author_name,
+                    g.group_id as group_id,
+                    g.group_name as group_name,
+                    g.group_email as group_email
+	          FROM author a,author_group g "
+	          .$where_clause.
+		       " AND a.group_id=g.group_id ";
+
   my $sth = $self->prepare($sql);
   $sth->execute();
+
   if (my $ref = $sth->fetchrow_hashref) {
-	 $author->dbID($ref->{author_id});
-	 $author->email($ref->{author_email});
-	 $author->name($ref->{author_name});
-	 my $group=new Bio::Vega::AuthorGroup;
-	 $group->dbID($ref->{group_id});
-	 $group->name($ref->{name});
-	 $author->group($group);
-	 return $author;
+         $author->dbID($ref->{author_id});
+         $author->email($ref->{author_email});
+         $author->name($ref->{author_name});
+         if (! defined $author->group){
+           my $group=new Bio::Otter::AuthorGroup;
+           $author->group($group);
+         }
+         $author->group->dbID($ref->{group_id});
+         $author->group->name($ref->{group_name});
+         $author->group->email($ref->{group_email});
+         return $author;
   } else {
-	 return;
+         return;
   }
 
 }
@@ -183,6 +189,30 @@ sub store {
   my $db_id = $sth->{'mysql_insertid'} || throw('Failed to get autoincremented ID from statement handle');
   $author->dbID($db_id);
 
+}
+
+sub store_gene_author {
+  my ($self,$gene_id,$author_id) = @_;
+  unless ($gene_id || $author_id) {
+	 throw("gene_id:$gene_id and author_id:$author_id must be present to store a gene_author");
+  }
+  # Insert new gene author
+  my $sth = $self->prepare(q{
+        INSERT INTO gene_author(gene_id, author_id) VALUES (?,?)
+        });
+  $sth->execute($gene_id,$author_id);
+}
+
+sub store_transcript_author {
+  my ($self,$transcript_id,$author_id) = @_;
+  unless ($transcript_id || $author_id) {
+	 throw("transcript_id:$transcript_id and author_id:$author_id must be present to store a transcript_author");
+  }
+  # Insert new gene author
+  my $sth = $self->prepare(q{
+        INSERT INTO transcript_author(transcript_id, author_id) VALUES (?,?)
+        });
+  $sth->execute($transcript_id,$author_id);
 }
 
 1;
