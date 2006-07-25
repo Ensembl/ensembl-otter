@@ -76,14 +76,17 @@ sub new{
 
 =head2 init(Tk, [handler, [data]])
 
-Initialises  the new  object  so  it is  useable.  Requires the  B<Tk>
-object.  The  B<handler> is  the callback which  gets called  when the
-window is sent a message via an  atom.  It is called by THIS module as
-C<<< $callback->($self, $request, @data) >>>.  Note the data supplied as
-a  list ref  to this  function gets  dereferenced when  passed  to the
-callback.   The request  string  is  supplied free  of  charge so  the
-callback does  not have to  navigate its way  to it from  this module
-(supplied as $self above).
+Initialises  the new  object  so  it is  useable. 
+Requires the  B<Tk> object.  The  B<handler> is 
+the callback which  gets called  when the window
+is sent a message via an  atom.  It is called by
+THIS module as C<<< $callback->($self, $request,
+@data) >>>.  Note the data supplied as a  list
+ref  to this  function gets  dereferenced when 
+passed  to the callback.   The request  string 
+is  supplied free  of  charge so  the callback
+does  not have to  navigate its way  to it from 
+this module (supplied as $self above).
 
  Usage:
 
@@ -193,9 +196,24 @@ Some xml which should be used in callback for error messages.
 
 =cut
 
-sub basic_error{
+sub handled_response {
+    my ($self, $value) = @_;
+    
+    my $hash = {
+        response => {
+                handled => $value ? 1 : 0,
+            }
+        };
+    $self->protocol_add_request($hash);
+    $self->protocol_add_meta($hash);
+    return make_xml($hash);
+}
+
+sub basic_error {
     my ($self, $message) = @_;
+
     $message ||=  (caller(1))[3] . " was lazy";
+
     my $hash   = { 
         error => {
             message => [ $message ],
@@ -206,28 +224,20 @@ sub basic_error{
     return make_xml($hash);
 }
 
-sub protocol_add_request{
-    my $self = shift;
-    $_[0] = {
-        %{$_[0]}, 
-        (
-            'request' => [ xml_escape($self->_current_request_string) ],
-        )
-    };
+sub protocol_add_request {
+    my ($self, $hash) = @_;
+    
+    $hash->{'request'} = [ xml_escape($self->_current_request_string) ];
 }
 
-sub protocol_add_meta{
-    my $self = shift;
-    $_[0] = {
-        %{$_[0]},
-        (
-            meta => {
-                display     => $ENV{DISPLAY},
-                windowid    => $self->server_window_id,
-                application => $self->xremote->application,
-                version     => $self->xremote->version,
-            }
-        )
+sub protocol_add_meta {
+    my ($self, $hash) = @_;
+
+    $hash->{'meta'} = {
+        display     => $ENV{DISPLAY},
+        windowid    => $self->server_window_id,
+        application => $self->xremote->application,
+        version     => $self->xremote->version,
     };
 }
 
@@ -323,8 +333,7 @@ sub respond_handler{
             "\$c->init(\$tk, \$callback, \$callback_data);\n";
     }
 }
-{
-    my $REQUEST_STRING = undef;#
+
 # ======================================================== #
 #                      INTERNALS                           #
 # ======================================================== #
@@ -353,8 +362,9 @@ sub _do_callback{
             "\n" if $DEBUG_CALLBACK;
         return ; # Tk->break
     }
-    $REQUEST_STRING = $self->xremote->request_string();
-    warn "Event has request string $REQUEST_STRING\n" if $DEBUG_CALLBACK;
+    my $request_string = $self->xremote->request_string();
+    $self->_current_request_string($request_string);
+    warn "Event has request string $request_string\n" if $DEBUG_CALLBACK;
     #=========================================================
     my $cb = $self->__callback();
     my @data = @{$self->__callback_data};
@@ -363,7 +373,7 @@ sub _do_callback{
     my $intSE = $self->basic_error("Internal Server Error");
     eval{ 
         X11::XRemote::block(); # this gets automatically unblocked for us, besides we have no way to do that!
-        my ($status,$xmlstr) = $cb->($self, $REQUEST_STRING, @data);
+        my ($status,$xmlstr) = $cb->($self, $request_string, @data);
         $status ||= 500; # If callback returns undef...
         $xmlstr ||= $intSE;
         $reply = sprintf($fstr, $status, $xmlstr);
@@ -373,15 +383,27 @@ sub _do_callback{
         $reply ||= sprintf($fstr, 500, $self->basic_error("Internal Server Error $@"));
     }
     $reply ||= sprintf($fstr, 500, $intSE);
-    $REQUEST_STRING = undef;
+    $self->_drop_current_request_string;
     warn "Connect $reply\n" if $DEBUG_CALLBACK;
     $self->xremote->send_reply($reply);
     $WAIT_VARIABLE++;
 }
-sub _current_request_string{
-    return $REQUEST_STRING;
+
+sub _drop_current_request_string {
+    my ($self) = @_;
+    
+    $self->{'_current_request_string'} = undef;
 }
+
+sub _current_request_string {
+    my ($self, $str) = @_;
+    
+    if ($str) {
+        $self->{'_current_request_string'} = $str;
+    }
+    return $self->{'_current_request_string'};
 }
+
 sub __callback_data{
     my($self, $dataRef) = @_;
     $self->{'_callback_data'} = $dataRef if ($dataRef && ref($dataRef) eq 'ARRAY');
