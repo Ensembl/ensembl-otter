@@ -12,35 +12,9 @@ use vars qw(@ISA @EXPORT);
 
 use Bio::EnsEMBL::Utils::Exception qw(throw);
 
-
-
-
-#sub new {
-
- # my $caller = shift;
-  #my $class = ref($caller) || $caller;
- # my ($obj1, $obj2) = rearrange(['OBJ1', 'OBJ2'],@_);
-
-  #return bless({'obj1' => $obj1, 'obj2' => $obj2}, $class);
-
-#}
-
-#sub obj1 {
- # my $self = shift;
-  #$self->{'obj1'} = shift if(@_);
-  #return $self->{'obj1'};
-#}
-
-#sub obj2 {
- # my $self = shift;
-  #$self->{'obj2'} = shift if(@_);
-  #return $self->{'obj2'};
-#}
-
 sub compare{
   my ($obj1,$obj2) = @_;
-#  my $obj1=$self->obj1;
- # my $obj2=$self->obj2;
+
   my $changed=0;
 
   unless ($obj1 && $obj2){
