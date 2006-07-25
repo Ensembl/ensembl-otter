@@ -15,15 +15,15 @@ sub new {
 }
 
 sub gene_author {
-  my ($obj,$value) = @_;
+  my ($self,$value) = @_;
   if( defined $value) {
 	 if ($value->isa("Bio::Vega::Author")) {
-		$obj->{'gene_author'} = $value;
+		$self->{'gene_author'} = $value;
 	 } else {
-		$obj->throw("Argument to gene_author must be a Bio::Vega::Author object.  Currently is [$value]");
+		$self->throw("Argument to gene_author must be a Bio::Vega::Author object.  Currently is [$value]");
 	 }
   }
-  return $obj->{'gene_author'};
+  return $self->{'gene_author'};
 }
 
 sub source  {
@@ -33,6 +33,106 @@ sub source  {
   return ( $self->{'source'} || "havana" );
 
 }
+
+sub hashkey_sub {
+
+  my $self = shift;
+  my $hashkey_sub={};
+  my $remarks = $self->get_all_Attributes('remark');
+  if (defined $remarks) {
+	 foreach my $rem (@$remarks){
+		$hashkey_sub->{$rem->value}=1;
+	 }
+  }
+  my $hidden_remarks = $self->get_all_Attributes('hidden_remark');
+  if (defined $hidden_remarks) {
+	 foreach my $rem (@$hidden_remarks){
+		$hashkey_sub->{$rem->value}=1;
+	 }
+  }
+  my $synonyms = $self->get_all_Attributes('synonym');
+  if (defined $synonyms) {
+	 foreach my $syn (@$synonyms){
+		$hashkey_sub->{$syn->value}=1;
+	 }
+  }
+  my $trans=$self->get_all_Transcripts;
+  foreach my $tran (@$trans){
+	 $hashkey_sub->{$tran->stable_id}=1;
+  }
+  return $hashkey_sub;
+
+}
+
+sub hashkey {
+
+  my $self=shift;
+  my $slice      = $self->{'slice'};
+  my $slice_name = ($slice) ? $slice->name() : undef;
+  my $start      = $self->{'start'};
+  my $end        = $self->{'end'};
+  my $strand     = $self->{'strand'};
+  my $biotype    = $self->{'biotype'};
+  my $status     = $self->{'status'};
+  my $source     = $self->{'source'};
+  my $trans      = $self->get_all_Transcripts;
+  my $tran_count = @$trans;
+  my $description = $self->{'description'} ? $self->{'description'}: '' ;
+  my $attribs     = $self->get_all_Attributes;
+  my $attrib_count = @$attribs ;
+  my $gene_name = $self->get_all_Attributes('name') ;
+
+  my $gn;
+
+  if (defined $gene_name) {
+	 if (@$gene_name > 1){
+		throw("Gene has more than one value for gene name attrib cannot generate correct hashkey");
+	 }
+	 $gn=$gene_name->[0]->value;
+  }
+
+  unless($slice_name) {
+    throw('Slice must be set to generate correct hashkey.');
+  }
+
+  unless($start) {
+    warning("start attribute must be defined to generate correct hashkey.");
+  }
+
+  unless($end) {
+    throw("end attribute must be defined to generate correct hashkey.");
+  }
+
+  unless($strand) {
+    throw("strand attribute must be defined to generate correct hashkey.");
+  }
+
+  unless($biotype) {
+    throw("biotype attribute must be defined to generate correct hashkey.");
+  }
+
+  unless($status) {
+    throw("status attribute must be defined to generate correct hashkey.");
+  }
+
+  unless($source) {
+    throw("source attribute must be defined to generate correct hashkey.");
+  }
+
+  unless($tran_count > 0) {
+    throw("there are no transcripts for this gene to generate correct hashkey");
+  }
+
+  unless($gene_name) {
+    throw('gene name must be defined to generate correct hashkey.');
+  }
+
+  my $hashkey_main="$slice_name-$start-$end-$strand-$biotype-$status-$source-$tran_count-$gn-$attrib_count-$description";
+
+  return ($hashkey_main);
+}
+
+
 
 =head2 truncated_flag
 
