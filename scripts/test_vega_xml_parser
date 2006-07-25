@@ -61,9 +61,57 @@ use Data::Dumper;
              -port   => $dbport,
              -pass   => $dbpass,
 	          );
+  my $genes=$parser->get_Genes;
+  my $gene_adaptor=$db->get_GeneAdaptor;
+  foreach my $gene (@$genes){
+	##gene slice, check if coord-system and its attribs are properly set
+#	my $sa = $db->get_SliceAdaptor();
+#	my $slice = $gene->slice;
+#	my $csa = $db->get_CoordSystemAdaptor();
+#	my $slice_cs = $slice->coord_system;
+#	my $coord_system_id=$slice->coord_system->dbID();
 
- # print Dumper($parser->get_AssemblySlices);
-  $parser->LoadAssemblySlices($db);
+#	unless ($slice_cs) {
+#	  throw("Coord System not set in gene slice \n");
+#	}
+#	unless ( $coord_system_id){
+	#  my $db_cs;
+	 # eval{
+		# $db_cs = $csa->fetch_by_name($slice_cs->name,$slice_cs->version,$slice_cs->rank);
+	 # };
+	  #if($@){
+		# print STDERR "A coord_system matching the arguments does not exsist in the coord_system table, please ensure you have the right coord_system entry in the database:$@";
+	 # }
+	 # my $new_slice = $sa->fetch_by_name($slice->name);
+	  #unless($new_slice){
+		# die "gene slice is not in the database\n";
+	 # }
+	 # $gene->slice($new_slice);
+	 # my $tref=$gene->get_all_Transcripts();
+	  #foreach my $tran (@$tref) {
+		# $tran->slice($new_slice);
+		# foreach my $exon (@{$tran->get_all_Exons}) {
+		#	$exon->slice($new_slice);
+		# }
+	 # }
+#	}
+	# print STDOUT Dumper($gene->slice);
+	 eval{
+		$db->begin_work();
+		$gene_adaptor->store($gene);
+	 
+	 };
+	 if ($@) {
+		$db->rollback;
+		print STDERR "Error saving genes from file:".$@;
+	 }
+	 else {
+		$db->commit;
+	 }
+	 
+	 exit;
+  }
+#  $parser->LoadAssemblySlices($db);
 
 
 

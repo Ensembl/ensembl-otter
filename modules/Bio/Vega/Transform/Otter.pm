@@ -100,16 +100,16 @@ sub initialize {
 							 );
   $biotype_status_mapping{$self}= 
 	 {'unprocessed_pseudogene' => ['unprocessed_pseudogene','UNKNOWN'],
-		'processed_pseudogene' => ['processed_pseudogene' ,'UNKNOWN'],
-		  'pseudogene' => ['pseudogene' ,'UNKNOWN'],
-			 'novel_transcript' => ['processed_transcript' ,'NOVEL'],
-				'known' => ['protein_coding' ,'KNOWN'],
-				  'novel_cds' => ['protein_coding' ,'NOVEL'],
-					 'putative' => ['processed_transcript' ,'PUTATIVE'],
-						'predicted_gene' => ['protein_coding' ,'PREDICTED'],
-						  'ig_pseudogene_segment' => ['Ig_pseudogene_segment' ,'UNKNOWN'],
-							 'ig_segment' => ['Ig_segment' ,'NOVEL'],
-						  };
+	  'processed_pseudogene' => ['processed_pseudogene' ,'UNKNOWN'],
+	  'pseudogene' => ['pseudogene' ,'UNKNOWN'],
+	  'novel_transcript' => ['processed_transcript' ,'NOVEL'],
+	  'known' => ['protein_coding' ,'KNOWN'],
+	  'novel_cds' => ['protein_coding' ,'NOVEL'],
+	  'putative' => ['processed_transcript' ,'PUTATIVE'],
+	  'predicted_gene' => ['protein_coding' ,'PREDICTED'],
+	  'ig_pseudogene_segment' => ['Ig_pseudogene_segment' ,'UNKNOWN'],
+	  'ig_segment' => ['Ig_segment' ,'NOVEL'],
+	 };
   $time_now{$self}=time;
 }
 
@@ -146,19 +146,18 @@ sub build_SequenceFragment {
   my $strand = $data->{'fragment_ori'};
   my $chrslice=$self->get_ChromosomeSlice;
   unless ($chrslice) {
-	 $chrslice = make_Slice($self,$chr_slice_name,$start,$end,$end,1,$chr_coord_system);
+	 $chrslice = make_Slice($self,$chr_slice_name,1,$end,$end,1,$chr_coord_system);
 	 $slice{$self}{'chr'} ||= $chrslice;
 	 my $chr_attrib=$self->make_Attribute('chr','Chromosome Name','Chromosome Name Contained in the Assembly',$data->{'chromosome'});
 	 my $chr_attrib_list = $slice{$self}{'chr_attrib'} ||= [];
 	 push @$chr_attrib_list,$chr_attrib;
-	 print Dumper($chr_attrib_list);
   }
   else {
 	 $chrslice=$slice{$self}{'chr'};
 	 my $slice_start=$chrslice->start();
-	 if ( $start < $slice_start ) {
-		$slice_start=$start;
-	 }
+#	 if ( $start < $slice_start ) {
+	#	$slice_start=$start;
+	 #}
 	 my $slice_end=$chrslice->end();
 	 if ( $end > $slice_end ) {
 		$slice_end=$end;
@@ -166,7 +165,8 @@ sub build_SequenceFragment {
 	 unless ($chrname and $start and $end and $offset and $strand) {
 		die "XML does not contain information needed to create slice:\nchr name='$chrname'  chr start='$start'  chr end='$end' offset='$offset' strand = '$strand'";
 	 }
-	 my $new_chr_slice=make_Slice($self,$chr_slice_name,$slice_start,$slice_end,$slice_end,1,$chr_coord_system);
+#	 my $new_chr_slice=make_Slice($self,$chr_slice_name,$slice_start,$slice_end,$slice_end,1,$chr_coord_system);
+	 my $new_chr_slice=make_Slice($self,$chr_slice_name,1,$slice_end,$slice_end,1,$chr_coord_system);
 	 $slice{$self}{'chr'}=$new_chr_slice;
   }
   my $cmp_start = $offset;
@@ -278,6 +278,7 @@ sub build_Exon {
 												 -end       => $data->{'end'},
 												 -strand    => $data->{'strand'},
 												 -stable_id => $data->{'stable_id'},
+												 #-version   => 1,
 												 -slice     => $slice,
 												 -created_date => $time_now{$self},
 												 -modified_date => $time_now{$self},
@@ -297,10 +298,13 @@ sub build_Exon {
 sub build_Transcript {
   my ($self, $data) = @_;
   my $exons = delete $exon_list{$self};
+  my $ana = $logic_ana{$self}{'Otter'} ||= Bio::EnsEMBL::Analysis->new(-logic_name => 'Otter');
   my $transcript = Bio::Vega::Transcript->new(
 															 -stable_id => $data->{'stable_id'},
+															 #-version   => 1,
 															 -created_date=>$time_now{$self},
 															 -modified_date=>$time_now{$self},
+															 -analysis=>$ana,
 															);
   ##translation start - end
   my $tran_start_pos=$data->{'translation_start'};
@@ -331,7 +335,7 @@ sub build_Transcript {
 																		);
 		$translation->start_Exon($start_Exon);
 		$translation->start($start_Exon_Pos);
-		$translation->version(1);
+#		$translation->version(1);
 		$translation->end_Exon($end_Exon);
 		$translation->end($end_Exon_Pos);
 		if ($start_Exon->strand == 1 && $start_Exon->start != $tran_start_pos) {
@@ -378,22 +382,22 @@ sub build_Transcript {
   my $transcript_attributes;
   my $mRNA_start_not_found = $data->{'mRNA_start_not_found'};
   if (defined $mRNA_start_not_found){
-	 my $attrib=$self->make_Attribute('mRNA_start_not_found','mRNA start not found','',$mRNA_start_not_found);
+	 my $attrib=$self->make_Attribute('mRNA_start_NF','mRNA start not found','',$mRNA_start_not_found);
 	 push @$transcript_attributes,$attrib;
   }
   my $mRNA_end_not_found = $data->{'mRNA_end_not_found'};
   if (defined $mRNA_end_not_found ){
-	 my $attrib=$self->make_Attribute('mRNA_end_not_found','mRNA end not found','',$mRNA_end_not_found);
+	 my $attrib=$self->make_Attribute('mRNA_end_NF','mRNA end not found ','',$mRNA_end_not_found);
 	 push @$transcript_attributes,$attrib;
   }
   my $cds_start_not_found = $data->{'cds_start_not_found'};
   if (defined $cds_start_not_found ){
-	 my $attrib= $self->make_Attribute('cds_start_not_found','cds start not found','',$cds_start_not_found);
+	 my $attrib= $self->make_Attribute('cds_start_NF','cds start not not','',$cds_start_not_found);
 	 push @$transcript_attributes,$attrib;
   }
   my $cds_end_not_found = $data->{'cds_end_not_found'};
   if (defined $cds_end_not_found ){
-	 my $attrib= $self->make_Attribute('cds_end_not_found','cds end not found','',$cds_end_not_found);
+	 my $attrib= $self->make_Attribute('cds_end_NF','cds end not found','',$cds_end_not_found);
 	 push @$transcript_attributes,$attrib;
   }
   my $remarks=$data->{'remark'};
@@ -445,13 +449,15 @@ sub build_Locus {
   ## transcript author group has been temporarily set to 'anything' ??
   my $slice = $self->get_ChromosomeSlice;
   my $chrstart=$slice->start;
+  my $ana = $logic_ana{$self}{'Otter'} ||= Bio::EnsEMBL::Analysis->new(-logic_name => 'Otter');
   my $gene = Bio::Vega::Gene->new(
 											 -stable_id => $data->{'stable_id'},
 											 -slice => $slice,
-											 -version => 1,
+											 #-version => 1,
 											 -created_date => $time_now{$self},
 											 -modified_date => $time_now{$self},
 											 -description => $data->{'description'},
+											 -analysis => $ana,
 											);
 
 
@@ -527,13 +533,15 @@ sub build_Locus {
   if (defined $truncated) {
 	 $gene->truncated_flag($truncated);
   }
-  ##convert all exon coordinates from chromosomal coordinated to slice coordinates
-  if ($chrstart != 2000000000) {
-	 foreach my $exon (@{$gene->get_all_Exons}) {
-		$exon->start($exon->start - $chrstart + 1);
-		$exon->end(  $exon->end   - $chrstart + 1);
-	 }
-  }
+
+  ##convert all exon coordinates from chromosomal coordinates to slice coordinates
+  # not sure if this conversion is necessary ??
+  #  if ($chrstart != 2000000000) {
+  # foreach my $exon (@{$gene->get_all_Exons}) {
+  #$exon->start($exon->start - $chrstart + 1);
+  #$exon->end(  $exon->end   - $chrstart + 1);
+  #}
+  #}
   my $list = $gene_list{$self} ||= [];
   push @$list, $gene;
 }
@@ -769,6 +777,11 @@ sub get_ChromosomeSlice {
 sub get_AssemblySlices {
   my $self=shift;
   return $slice{$self};
+}
+
+sub get_Genes {
+  my $self=shift;
+  return $gene_list{$self};
 }
 
 ###fetch sequence
