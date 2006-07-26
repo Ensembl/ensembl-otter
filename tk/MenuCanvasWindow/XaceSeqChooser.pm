@@ -699,16 +699,16 @@ sub populate_menus {
     $top->bind('<Control-l>', $xace_launch_command);
     $top->bind('<Control-L>', $xace_launch_command);
      
-    # Attach xace
-    my $xace_attach_command = sub { $self->attach_xace };
-    $tools_menu->add('command',
-        -label          => 'Attach Xace',
-        -command        => $xace_attach_command,
-        -accelerator    => 'Ctrl+X',
-        -underline      => 0,
-        );
-    $top->bind('<Control-x>', $xace_attach_command);
-    $top->bind('<Control-X>', $xace_attach_command);
+    ## Attach xace
+    #my $xace_attach_command = sub { $self->attach_xace };
+    #$tools_menu->add('command',
+    #    -label          => 'Attach Xace',
+    #    -command        => $xace_attach_command,
+    #    -accelerator    => 'Ctrl+X',
+    #    -underline      => 0,
+    #    );
+    #$top->bind('<Control-x>', $xace_attach_command);
+    #$top->bind('<Control-X>', $xace_attach_command);
 
     # Genomic Features editing window
     my $gf_command = sub { $self->launch_GenomicFeatures };
