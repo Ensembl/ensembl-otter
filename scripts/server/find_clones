@@ -19,7 +19,8 @@ set_nph($sq);
 # This is a 3-level hash:
 # {query_name}{type_of_query}{clones_found}
 #
-my $qnames_types_clones  = { map {($_ => {})} split(',', $sq->getarg('qnames')) };
+my $qnames = $sq->getarg('qnames') || error_exit($sq, "No 'qnames' argument entered");
+my $qnames_types_clones  = { map {($_ => {})} split(',', $qnames) };
 my $clone_name_set       = {};
 my $clonename2assemblies = {};
 my $filter_atype = $sq->getarg('type') || '';
