@@ -88,7 +88,7 @@ use Bio::EnsEMBL::Analysis;
 
   # now store simple features
   foreach my $sf (@simpleFeatures ){
-#	$sf_ad->store($sf);
+	$sf_ad->store($sf);
   }
 }
 
