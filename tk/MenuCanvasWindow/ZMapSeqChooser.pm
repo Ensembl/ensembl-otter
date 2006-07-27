@@ -294,13 +294,15 @@ sub zMapBlixemDefaults {
 
 sub zMapWindowDefaults {
     my ($self) = @_;
-    
+
+    # The canvas_maxsize probably needs some thought here.
     return $self->formatZmapDefaults(
         'ZMapWindow',
         qw{
             feature_line_width          1
             feature_spacing             4.0
             colour_column_highlight     "CornSilk"
+            canvas_maxsize              10000
         }
     );
 }
@@ -709,7 +711,7 @@ sub RESPONSE_HANDLER{
         }
     }else{
         warn "RESPONSE_HANDLER knows nothing about how to handle actions of type '$action'";
-        
+
     }
     return ;
 }
