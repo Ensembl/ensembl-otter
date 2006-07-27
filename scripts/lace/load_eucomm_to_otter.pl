@@ -9,7 +9,7 @@ use Bio::EnsEMBL::AssemblyMapper;
 use Bio::EnsEMBL::Analysis;
 {
 
-  my ($dataset, @sets, $vega_db, $eucommFile);
+  my ($dataset, @sets, $vega_db, $eucommFile, $verbose);
 
   my $help = sub { exec('perldoc', $0) };
 
@@ -17,7 +17,8 @@ use Bio::EnsEMBL::Analysis;
 										's|set=s@'     => \@sets,       # sequence set(s) to check
 										'h|help'       => $help,
 										'vegadb=s'     => \$vega_db,
-										'eucomm=s'     => \$eucommFile
+										'eucomm=s'     => \$eucommFile,
+										'verbose'      => \$verbose
 									   ) or $help->();                  # plus default options
   $help->() unless ( $dataset );
 
@@ -53,14 +54,14 @@ use Bio::EnsEMBL::Analysis;
 		my $mapper     = $mapper_ad->fetch_by_type($atype);
 		$mapper_ad->register_region($mapper, $atype, $chr_name, $chr_start, $chr_end);
 
-		print "Feat_start: $feat_start, Feat_end: $feat_end, Label: $feat_lbl\n";
+		print "Feat_start: $feat_start, Feat_end: $feat_end, Label: $feat_lbl\n" if $verbose;
 
 		# transforming chrom. coord to contig coord
 		my @raw_coordlist = $mapper->map_coordinates_to_rawcontig( $chr_name, $feat_start, $feat_end, $strand );
 		for my $coord (@raw_coordlist) {
 
 		  # make simplefeature obj
-		  print "mapped to: contig_id=".$coord->id().", start=".$coord->start().", end=".$coord->end().", strand=".$coord->strand().".\n";
+		  print "mapped to: contig_id=".$coord->id().", start=".$coord->start().", end=".$coord->end().", strand=".$coord->strand().".\n" if $verbose;
 
 		  my $analysis = new Bio::EnsEMBL::Analysis;
 
@@ -88,8 +89,6 @@ use Bio::EnsEMBL::Analysis;
 
   # now store simple features
   foreach my $sf (@simpleFeatures ){
-	map {warn "$_ : ", $sf->{$_}} keys %$sf;
-	print "\n\n";
 	$sf_ad->store($sf);
   }
 }
