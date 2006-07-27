@@ -1772,8 +1772,8 @@ sub ace_to_otter {
         my $cln = $sequence{$ctg_name}
           or die "No clone information for '$ctg_name'";
         my $acc = $cln->{Accession} or die "No Accession for '$ctg_name'";
-        my $sv = $cln->{Sequence_version}
-          or die "No Sequence_version for '$ctg_name'";
+        my $sv = $cln->{Sequence_version} || 0; # try not to die too soon;
+                                                #  or die "No Sequence_version for '$ctg_name'";
         my $auth = $cln->{author};
 
         $start -= $chr_start - 1;
