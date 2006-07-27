@@ -841,11 +841,6 @@ sub close_GenomicFeatures {
             return;
         }
         
-        unless ($self->current_state eq 'subseq') {
-            $self->message('Can only paste when in SubSequence view');
-            return;
-        }
-        
         my $clone = $self->get_CloneSeq;
         
         # The ExonLoacator finds exons in a genomic sequence
