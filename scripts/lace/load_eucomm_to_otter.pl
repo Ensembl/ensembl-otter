@@ -26,6 +26,7 @@ use Bio::EnsEMBL::Analysis;
   my $otter_db    = $dset->get_cached_DBAdaptor;                        # Bio::EnsEMBL::Containerr
   my $mapper_ad   = $otter_db->get_AssemblyMapperAdaptor();
   my $sf_ad       = $otter_db->get_SimpleFeatureAdaptor();
+  my $rca         = $otter_db->get_RawContigAdaptor;
   my $vega        = connect_vega_db($vega_db);
   my $atype_feats = parse_and_verify_eucomm_data($eucommFile, $vega);
 
@@ -62,7 +63,9 @@ use Bio::EnsEMBL::Analysis;
 		  print "mapped to: contig_id=".$coord->id().", start=".$coord->start().", end=".$coord->end().", strand=".$coord->strand().".\n";
 
 		  my $analysis = new Bio::EnsEMBL::Analysis;
-		  $analysis->logic_name("EUCOMM_AUTO");
+
+          $analysis->dbID(9);
+          $analysis->logic_name("EUCOMM_AUTO");
 
 		  my $sf = new Bio::EnsEMBL::SimpleFeature;
 		  $sf->dbID($coord->id);
@@ -72,6 +75,10 @@ use Bio::EnsEMBL::Analysis;
 		  $sf->analysis($analysis);
 		  $sf->display_label($feat_lbl);
 		  $sf->score(1);
+
+          # now attach a rawContig object to simplefeature
+          my $contig = $rca->fetch_by_dbID($coord->id);
+          $sf->attach_seq($contig);
 
 		  push(@simpleFeatures, $sf);
 		}
@@ -83,7 +90,7 @@ use Bio::EnsEMBL::Analysis;
   foreach my $sf (@simpleFeatures ){
 	map {warn "$_ : ", $sf->{$_}} keys %$sf;
 	print "\n\n";
-	#  $sf_ad->store($sf);
+	$sf_ad->store($sf);
   }
 }
 
