@@ -14,7 +14,6 @@ use Bio::EnsEMBL::Analysis;
   my $help = sub { exec('perldoc', $0) };
 
   Bio::Otter::Lace::Defaults::do_getopt('ds|dataset=s' => \$dataset,    # eg, human or mouse or zebrafish
-										's|set=s@'     => \@sets,       # sequence set(s) to check
 										'h|help'       => $help,
 										'vegadb=s'     => \$vega_db,
 										'eucomm=s'     => \$eucommFile,
@@ -89,7 +88,7 @@ use Bio::EnsEMBL::Analysis;
 
   # now store simple features
   foreach my $sf (@simpleFeatures ){
-	$sf_ad->store($sf);
+#	$sf_ad->store($sf);
   }
 }
 
