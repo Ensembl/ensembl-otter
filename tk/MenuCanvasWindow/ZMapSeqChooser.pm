@@ -38,7 +38,6 @@ on 'Launch ZMap' menu item in xaceseqchooser window.
 sub printForFun{ print "Ha ha! @_\n"; }
 sub new_command{
     my ($self) = @_;
-    return unless $self->current_state eq 'subseq';
     $self->edit_new_subsequence(1);
 } 
 my $replace = 1;
