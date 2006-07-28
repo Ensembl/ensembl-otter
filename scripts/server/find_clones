@@ -163,6 +163,22 @@ sub find_otter_clones_by_qnames {
                 $qnames_types_clones->{$qname}{clone_accession}{$clone_name}++;
                 $clone_name_set->{$clone_name}++;
             }
+        } elsif($qname =~ /^\w+\.\d+\.\d+\.\d+$/) { # try mapping contigs to clones
+            my $sql = qq{
+                SELECT concat(cl.embl_acc, '.', cl.embl_version)
+                FROM clone cl, contig co
+                WHERE co.name = '$qname'
+                  AND cl.clone_id = co.clone_id
+            };
+            warn $sql if $DEBUG;
+            my $sth = $dba->prepare($sql);
+            $sth->execute;
+            
+            server_log("trying contig name '$qname' ");
+            while (my ($clone_name) = $sth->fetchrow) {
+                $qnames_types_clones->{$qname}{contig_name}{$clone_name}++;
+                $clone_name_set->{$clone_name}++;
+            }
         }
 
         { # try intl. clone names:
