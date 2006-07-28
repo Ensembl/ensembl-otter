@@ -42,9 +42,10 @@ use Bio::EnsEMBL::Analysis;
 
 	  foreach my $feat (@{$atype_feats->{$atype}->{$chr_name}} ){
 
-		my $feat_start = $feat->[0];
-		my $feat_end   = $feat->[1];
-		my $feat_lbl   = $feat->[2];
+		my $exonSid    = $feat->[0];
+		my $feat_start = $feat->[1];
+		my $feat_end   = $feat->[2];
+		my $feat_lbl   = $exonSid."_$feat->[3]";
 		my $strand     = 1; # default by Eucomm
 		my $chr_start  = 1;
 		my $chr_end    = $otter_db->get_ChromosomeAdaptor()->fetch_by_chr_name($chr_name)->length();
@@ -110,7 +111,7 @@ sub parse_and_verify_eucomm_data {
 	my $feat_start = $cols[5];
 	my $feat_end   = $cols[6];
 
-	push(@{$exonID_data->{$exonSid}->{$chr}}, [$feat_start, $feat_end, $label]);
+	push(@{$exonID_data->{$exonSid}->{$chr}}, [$exonSid, $feat_start, $feat_end, $label]);
   }
   close EU;
 
