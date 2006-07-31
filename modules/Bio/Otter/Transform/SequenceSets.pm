@@ -8,7 +8,7 @@ use Bio::Otter::Lace::SequenceSet;
 our @ISA = qw(Bio::Otter::Transform);
 
 # ones were interested in 
-my $SUB_ELE = { map { $_ => 1 } qw(description vega_set_id priority)};
+my $SUB_ELE = { map { $_ => 1 } qw(description vega_set_id priority is_hidden write_access)};
 # super elements to the actual sequence set
 my $SUP_ELE = { map { $_ => 1 } qw(otter sequencesets) };
 my $value;
@@ -24,7 +24,6 @@ sub start_handler{
     if($ele eq 'sequenceset'){
         my $ss = Bio::Otter::Lace::SequenceSet->new();
         $ss->name($attr->{'name'});
-        $ss->is_hidden($attr->{'hide'});
         $ss->dataset_name($self->get_property('dataset_name'));
         $self->add_object($ss);
     }elsif($SUB_ELE->{$ele}){
