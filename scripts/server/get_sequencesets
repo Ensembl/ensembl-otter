@@ -53,6 +53,8 @@ $xml   .= qq`    <sequencesets>\n`;
 while (my ($name, $desc, $priority, $hide, $vega_id, $access) = $sth->fetchrow) {
   $access ||= 'none';
 
+  print STDERR "ds=$dataset, au=$author, hide='$hide', access='$access'\n";
+
   my $hidden   = (($access eq 'I' ) || ($hide eq 'Y')) ? 1 : 0;
   my $writable = (($access eq 'RW') || ($access eq 'none')) ? 1 : 0;
 
