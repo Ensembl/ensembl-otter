@@ -50,15 +50,15 @@ $sth->execute($author_obj->dbID);
 my $xml = '';
 $xml   .= qq`  <dataset name="$dataset">\n`;
 $xml   .= qq`    <sequencesets>\n`;
-while (my ($name, $desc, $priority, $hide, $vega_id, $access) = $sth->fetchrow) {
+while (my ($name, $desc, $priority, $hide, $vega_set_id, $access) = $sth->fetchrow) {
   $access ||= 'none';
 
   print STDERR "ds=$dataset, ss=$name, au=$author, hide='$hide', access='$access'\n";
 
-  my $hidden   = (($access eq 'none') ? ($hide eq 'Y') : ($access eq 'I'))
-               ? 1 : 0;
-  my $writable = (($access eq 'RW') || (($hide eq 'N') && ($access eq 'none')))
-               ? 1 : 0;
+  my $is_hidden    = (($access eq 'none') ? ($hide eq 'Y') : ($access eq 'I'))
+                   ? 1 : 0;
+  my $write_access = (($access eq 'RW') || (($hide eq 'N') && ($access eq 'none')))
+                   ? 1 : 0;
 
   $priority ||= 0;
   $desc =~ s/\</\&lt;/g;
@@ -67,9 +67,9 @@ while (my ($name, $desc, $priority, $hide, $vega_id, $access) = $sth->fetchrow) 
   $xml .= qq`      <sequenceset name="$name">\n`;
   $xml .= qq`        <description>$desc</description>\n`;
   $xml .= qq`        <priority>$priority</priority>\n`;
-  $xml .= qq`        <vega_set_id>$vega_id</vega_set_id>\n`;
-  $xml .= qq`        <hidden>$hidden</hidden>\n`;
-  $xml .= qq`        <writable>$writable</writable>\n`;
+  $xml .= qq`        <vega_set_id>$vega_set_id</vega_set_id>\n`;
+  $xml .= qq`        <is_hidden>$is_hidden</is_hidden>\n`;
+  $xml .= qq`        <write_access>$write_access</write_access>\n`;
   $xml .= qq`      </sequenceset>\n`;
 }
 $xml .= qq`    </sequencesets>\n`;
