@@ -57,7 +57,8 @@ while (my ($name, $desc, $priority, $hide, $vega_id, $access) = $sth->fetchrow) 
 
   my $hidden   = (($access eq 'none') ? ($hide eq 'Y') : ($access eq 'I'))
                ? 1 : 0;
-  my $writable = (($access eq 'RW') || ($access eq 'none')) ? 1 : 0;
+  my $writable = (($access eq 'RW') || (($hide eq 'N') && ($access eq 'none')))
+               ? 1 : 0;
 
   $priority ||= 0;
   $desc =~ s/\</\&lt;/g;
