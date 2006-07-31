@@ -87,6 +87,7 @@ sub get_sequence_set_access_list {
     my( $self ) = @_;
     my $al = $self->sequence_set_access_list_cached;
     return $al if (defined $al && scalar(@$al));
+
     my $client = $self->Client or confess "No otter Client attached";
     $al = $client->get_SequenceSet_AccessList_for_DataSet($self);
     $self->sequence_set_access_list_cached($al);
@@ -98,23 +99,23 @@ sub get_all_visible_SequenceSets {
   my $ss_list= $self->get_all_SequenceSets();
   my $visible = [];
   foreach my $ss (@$ss_list) {
-    push(@$visible, $ss) unless $ss->is_hidden;
+     unless($ss->is_hidden) {
+        push @$visible, $ss;
+     }
   }
   return $visible;
 }
 
 sub get_all_SequenceSets {
   my ($self)=@_;
-  my $ss=$self->sequence_sets_cached;
-  return $ss if (defined $ss && scalar(@$ss));
+  my $seq_sets =$self->sequence_sets_cached;
+  return $seq_sets if (defined($seq_sets) && scalar(@$seq_sets));
+
   my $client = $self->Client or confess "No otter Client attached";
-  my $ssal = $self->sequence_set_access_list_cached;
-  unless ( defined $ssal && scalar(@$ssal)){
-    $ssal=$client->get_SequenceSet_AccessList_for_DataSet($self);
-  }
-  $ss = $client->get_all_SequenceSets_for_DataSet($self,$ssal);
-  $self->sequence_sets_cached($ss);
-  return $ss;
+  $seq_sets = $client->get_all_SequenceSets_for_DataSet($self);
+  $self->sequence_sets_cached($seq_sets);
+
+  return $seq_sets;
 }
 
 sub get_SequenceSet_by_name {
@@ -502,13 +503,13 @@ sub _attach_DNA_DBAdaptor{
     }
 
     if(("@dna_args" eq "@ott_args") && @dna_args){
-	#warn "They are the same the DBAdaptor will just return itself\n";
+        #warn "They are the same the DBAdaptor will just return itself\n";
     }elsif(@dna_args){
-	#warn "@dna_args\n";
-	my $dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new(@dna_args);
-	$dba->dnadb($dnadb);
+        # warn "dna_args: @dna_args\n";
+        my $dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new(@dna_args);
+        $dba->dnadb($dnadb);
     }else{
-	warn "No DNA_* options found. *** CHECK species.dat ***\n";
+        warn "No DNA_* options found. *** CHECK species.dat ***\n";
     }
 }
 sub disconnect_DBAdaptor {

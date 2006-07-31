@@ -270,9 +270,9 @@ sub ace_from_contig_list {
 }
 
 sub write_lock_xml{
-    my ($self, $xml, $ds_name) = @_;
+    my ($self, $xml, $dsname) = @_;
 
-    if($xml && $ds_name){
+    if($xml && $dsname){
         my $lock_xml = Bio::Otter::Lace::PersistentFile->new();
         $lock_xml->root($self->home);
         $lock_xml->name($LOCK_REGION_XML_FILE);
@@ -283,18 +283,18 @@ sub write_lock_xml{
         my $read = $lock_xml->read_file_handle();
         my ($genes,$slice,$seqstr,$tiles) = Bio::Otter::Converter::XML_to_otter($read);
         my $slice_name = $slice->display_id();
-        $self->save_slice_dataset($slice_name, $ds_name);
-        $lock_xml->mv(".${slice_name}${ds_name}${LOCK_REGION_XML_FILE}");
+        $self->save_slice_dataset($slice_name, $dsname);
+        $lock_xml->mv(".${slice_name}${dsname}${LOCK_REGION_XML_FILE}");
     }
 }
 
 sub save_slice_dataset {
-    my( $self, $slice_name, $ds_name ) = @_;
+    my( $self, $slice_name, $dsname ) = @_;
 
-    if ($slice_name and $ds_name) {
-        print STDERR "Saving '$slice_name' in '$ds_name'\n";
-        $self->{'_slice_name_dataset'}->{$ds_name} ||= [];
-        push(@{$self->{'_slice_name_dataset'}->{$ds_name}}, $slice_name);
+    if ($slice_name and $dsname) {
+        print STDERR "Saving '$slice_name' in '$dsname'\n";
+        $self->{'_slice_name_dataset'}->{$dsname} ||= [];
+        push(@{$self->{'_slice_name_dataset'}->{$dsname}}, $slice_name);
     }
 }
 
@@ -322,10 +322,10 @@ sub save_slice_dataset_hash {
     $hash_file->name($DATASET_HASH_FILE);
     my $write = $hash_file->write_file_handle;
 
-    while (my ($ds_name, $slices) = each %$h) {
-        $ds_name =~ s/\t/\\t/g;      # Escape tab characterts in dataset name (likely ?)
+    while (my ($dsname, $slices) = each %$h) {
+        $dsname =~ s/\t/\\t/g;      # Escape tab characterts in dataset name (likely ?)
         map { s/\t/\\t/g } @$slices; # Escape tab characterts in slice   name (v. unlikely)
-        print $write "$ds_name\t@$slices\n";
+        print $write "$dsname\t@$slices\n";
     }
 }
 
@@ -342,10 +342,10 @@ sub recover_slice_dataset_hash {
 
     while (<$read>) {
         chomp;
-        my ($ds_name, @slices) = split(/\t/, $_);
-        $ds_name =~ s/\\t/\t/g;     # Unscape tab characterts in dataset name (v. unlikely)
+        my ($dsname, @slices) = split(/\t/, $_);
+        $dsname =~ s/\\t/\t/g;     # Unscape tab characterts in dataset name (v. unlikely)
         map { s/\\t/\t/g } @slices; # Unscape tab characterts in slice   name (v. unlikely)
-        $h->{$ds_name} = \@slices;
+        $h->{$dsname} = \@slices;
     }
 }
 
@@ -367,11 +367,11 @@ sub save_all_slices {
     ### so the iterator didn't get reset.
     #while (my ($name, $ds) = each %$sd_h) {
     my $ace = '';
-    foreach my $ds_name (keys %$sd_h) {
-        my $slices = $sd_h->{$ds_name};
+    foreach my $dsname (keys %$sd_h) {
+        my $slices = $sd_h->{$dsname};
         foreach my $slice(@$slices){
-            warn "SAVING SLICE '$slice' WITH DATASET '$ds_name' to the Otter Server\n";
-            $ace .= $self->save_otter_slice($slice, $ds_name);
+            warn "SAVING SLICE '$slice' WITH DATASET '$dsname' to the Otter Server\n";
+            $ace .= $self->save_otter_slice($slice, $dsname);
         }
     }
 
@@ -494,6 +494,22 @@ sub update_with_stable_ids{
     return $ace_txt;
 }
 
+sub unlock_trigger {
+    my ($self, $obj, $method) = @_;
+
+    if($obj && $method) {
+        $self->{_unlock_trigger_obj}    = $obj;
+        $self->{_unlock_trigger_method} = $method;
+    } else {
+        $obj    = $self->{_unlock_trigger_obj};
+        $method = $self->{_unlock_trigger_method};
+
+        if($obj && $method) {
+            $obj->$method();
+        }
+    }
+}
+
 sub unlock_all_slices {
     my( $self ) = @_;
 
@@ -501,10 +517,10 @@ sub unlock_all_slices {
 
     # if the unlock otter slice goes wrong half way through
     # the recover will try to unlock the clones again.
-    foreach my $ds_name (keys %$sd_h) {
-        my $slices = $sd_h->{$ds_name};
+    foreach my $dsname (keys %$sd_h) {
+        my $slices = $sd_h->{$dsname};
         foreach my $slice(splice(@$slices)){
-            $self->unlock_otter_slice($slice, $ds_name);
+            $self->unlock_otter_slice($slice, $dsname);
         }
     }
 }
@@ -1151,6 +1167,7 @@ sub DESTROY {
     eval{
         if($client){
             $self->unlock_all_slices();# if $client->write_access;
+            $self->unlock_trigger();
         }
     };
     rmtree($home) unless $@;

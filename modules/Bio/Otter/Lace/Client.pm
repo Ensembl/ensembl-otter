@@ -257,8 +257,8 @@ sub get_xml_for_contig_from_Dataset {
         warn sprintf("Fetching data from chr %s %s-%s\n", $chr_name, $start, $end);
     }
 
-    return $self->get_xml_from_Dataset_type_chr_start_end(
-        $dataset, $ss->name, $chr_name, $start, $end,
+    return $self->get_xml_region_from_dsname_ssname_chr_start_end(
+        $dataset->name, $ss->name, $chr_name, $start, $end,
     );
 }
 
@@ -709,8 +709,8 @@ sub lock_region_for_contig_from_Dataset{
     );
 }
 
-sub get_xml_from_Dataset_type_chr_start_end {
-    my( $self, $dataset, $type, $chr_name, $start, $end ) = @_;
+sub get_xml_region_from_dsname_ssname_chr_start_end {
+    my( $self, $dsname, $ssname, $chr_name, $chr_start, $chr_end ) = @_;
 
     my $xml = $self->general_http_dialog(
         0,
@@ -719,11 +719,11 @@ sub get_xml_from_Dataset_type_chr_start_end {
         {
             'author'   => $self->author,
             'email'    => $self->email,
-            'dataset'  => $dataset->name,
-            'type'     => $type,
+            'dataset'  => $dsname,
+            'type'     => $ssname,
             'chr'      => $chr_name,
-            'start'    => $start,
-            'end'      => $end,
+            'start'    => $chr_start,
+            'end'      => $chr_end,
         }
     );
 
@@ -763,10 +763,9 @@ sub get_all_DataSets {
 }
 
 sub get_all_SequenceSets_for_DataSet {
-  my( $self, $ds, $ssal ) = @_;
+  my( $self, $ds ) = @_;
   return [] unless $ds;
-#  my $ss = $ds->sequence_sets_cached();
-#  return $ss if (defined $ss && scalar(@$ss));
+
   my $content = $self->general_http_dialog(
 					   3,
 					   'GET',
@@ -781,35 +780,15 @@ sub get_all_SequenceSets_for_DataSet {
   $ssp->set_property('dataset_name', $ds->name);
   my $p   = $ssp->my_parser();
   $p->parse($content);
-  my $ss=$ssp->objects;
+  my $seq_sets = $ssp->objects;
 
-  my $this_author=$self->author;
-
-  foreach my $set (@$ss){
-    my $write_flag;
-    my $name = $set->{'_name'};
-    foreach my $a (@$ssal) {
-      #If an author has an entry in the sequence_set_access
-      #table for this set, then it is restricted to them.
-      if ($a->author eq $this_author && $a->sequenceset_name eq $name) {
-        $write_flag = $a->access_type;
-      }
-    }
-    # No entries for person in sequence_set_access table - person
-    # can write and see everything.
-    if ( !defined $write_flag){
-      $write_flag = 1;
-    }
-    $set->write_access($write_flag);
-  }
-  return $ss;
+  return $seq_sets;
 }
 
 sub get_SequenceSet_AccessList_for_DataSet {
   my ($self,$ds) = @_;
   return [] unless $ds;
- # my $al = $ds->sequence_set_access_list_cached;
- # return $al if defined($al && scalar(@$al));
+
   my $content = $self->general_http_dialog(
 					   3,
 					   'GET',

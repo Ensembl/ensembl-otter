@@ -46,7 +46,9 @@ use Data::Dumper;
     my $at_sanger = 1;    # Set if we want to get sequence notes and clone names
     my $do_submit = 0;	  # Set if we don't want to prime the pipeline with the SubmitContig analysis 
     my $populate_pipe = 0;
-    my $old_set;
+
+    my $old_set_name;   # an optional set_name to hide
+    my $unhide;         # set this if you want the set to be loaded NOT to be hidden
 
     #---------------------------------------------------------------------------
     Bio::Otter::Lace::Defaults::do_getopt(
@@ -59,9 +61,11 @@ use Data::Dumper;
         'no_submit'     => sub{ $do_submit = 0 },
         'submit!'	    => \$do_submit,
         'pipe!'         => \$populate_pipe,
-        'replace=s'     => \$old_set,
+        'replace=s'     => \$old_set_name,
+        'unhide!'       => \$unhide,
       )
-      or Bio::Otter::Lace::Defaults::show_help();
+    or Bio::Otter::Lace::Defaults::show_help();
+
     Bio::Otter::Lace::Defaults::show_help() unless $dataset_name;
 
     # takes the remaining argument as the filename to be read
@@ -80,6 +84,7 @@ use Data::Dumper;
     # make otter client and connect to database
     my $cl       = Bio::Otter::Lace::Defaults::make_Client();
     my $ds       = $cl->get_DataSet_by_name($dataset_name);
+
     my $otter_db = $ds->get_cached_DBAdaptor;
 
     # Make a connection to the pipeline database
@@ -127,6 +132,10 @@ use Data::Dumper;
       s/^chr//i;    # recheck chromosome name as it may have changed [AGP]
 
     my $otter_chromosome = get_chromosome($otter_db,    $chromosome_name);
+
+    if(!$otter_chromosome) {
+        die "Could not create a chromosome object";
+    }
 
     my $pipe_chromosome;
     if ($pipeline_db) {
@@ -250,7 +259,7 @@ use Data::Dumper;
         $INPUT_TYPE eq 'LIST',
         $populate_pipe);
 
-    hide_old_set($otter_db, $old_set) if $old_set;
+    hide_set($otter_db, $old_set_name) if $old_set_name;
 
 
     # print STDERR join("\n", map { $_->name } @$pipe_contigs);
@@ -267,9 +276,17 @@ use Data::Dumper;
         my ($root) = $0 =~ m{^(.+?)[^/]+$};
         $root =~ s{/$}{};
         system("$root/submissions_to_otter",
+            '-host', $cl->host(),
+            '-port', $cl->port(),
             '-dataset', $dataset_name);
-        system("$root/clones_to_otter", '-reverse', '-dataset', $dataset_name);
+        system("$root/clones_to_otter",
+            '-host', $cl->host(),
+            '-port', $cl->port(),
+            '-reverse',
+            '-dataset', $dataset_name);
     }
+
+    unhide_set($otter_db, $set_name) if $unhide;
 }
 
 #------------------end of main script ------------------------------------------
@@ -277,15 +294,26 @@ use Data::Dumper;
 #-------------------------------------------------------------------------------
 
 
-sub hide_old_set {
-    my( $dba, $name ) = @_;
+sub hide_set {
+    my( $dba, $ssname ) = @_;
     
     my $sth = $dba->prepare(q{
         UPDATE sequence_set
         SET hide = 'Y'
         WHERE assembly_type = ?
         });
-    $sth->execute($name);
+    $sth->execute($ssname);
+}
+
+sub unhide_set {
+    my( $dba, $ssname ) = @_;
+    
+    my $sth = $dba->prepare(q{
+        UPDATE sequence_set
+        SET hide = 'N'
+        WHERE assembly_type = ?
+        });
+    $sth->execute($ssname);
 }
 
 #
@@ -389,13 +417,16 @@ sub get_chromosome {
 
     unless ($chr) {
         ## put a new chromosome into the db to get its id # note that the length value is a default value and will be set later
-        my $chr = Bio::EnsEMBL::Chromosome->new(
+
+        $chr = Bio::EnsEMBL::Chromosome->new(
             -chr_name => $chr_name,
             -adaptor  => $chr_adp,
             -length   => 1
         );
+
         $chr_adp->store($chr);
     }
+
     return $chr;
 }
 
