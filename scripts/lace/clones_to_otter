@@ -14,7 +14,7 @@ use Bio::Otter::Lace::Defaults;
     my $reverse = 0;    # Set to true to resync out of sync pipeline db
     my $help         = 0;
     Bio::Otter::Lace::Defaults::do_getopt(
-					  'h|help!'     => \$help,
+					  'help!'     => \$help,
 					  'dataset=s'   => \$dataset_name,
                                           'reverse!'    => \$reverse,
 					  ) || usage();

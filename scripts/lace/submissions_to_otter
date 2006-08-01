@@ -29,7 +29,7 @@ my $otter_db;
     my $help         = 0;
     my $domain = 'sanger.ac.uk';
     Bio::Otter::Lace::Defaults::do_getopt(
-        'h|help!'     => \$help,
+        'help!'     => \$help,
         'dataset=s'   => \$dataset_name,
         'domain=s'    => \$domain,
         ) || usage();
