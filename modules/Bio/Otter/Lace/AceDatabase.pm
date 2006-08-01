@@ -494,22 +494,6 @@ sub update_with_stable_ids{
     return $ace_txt;
 }
 
-sub unlock_trigger {
-    my ($self, $obj, $method) = @_;
-
-    if($obj && $method) {
-        $self->{_unlock_trigger_obj}    = $obj;
-        $self->{_unlock_trigger_method} = $method;
-    } else {
-        $obj    = $self->{_unlock_trigger_obj};
-        $method = $self->{_unlock_trigger_method};
-
-        if($obj && $method) {
-            $obj->$method();
-        }
-    }
-}
-
 sub unlock_all_slices {
     my( $self ) = @_;
 
@@ -1167,12 +1151,10 @@ sub DESTROY {
     eval{
         if($client){
             $self->unlock_all_slices();# if $client->write_access;
-            $self->unlock_trigger();
         }
     };
     rmtree($home) unless $@;
 }
 
-
-
 1;
+
