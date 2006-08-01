@@ -102,13 +102,13 @@ sub odba_to_sdba {
             $metakey
         );
 
-    unless ($pipehead) {
-        my $atype = $odba->assembly_type();
-        $sdba->assembly_type($atype);
-    }
+    error_exit($sq, "Could not create satellite_db for '$metakey' in otter database")
+        unless ($sdba);
 
     error_exit($sq, "No connection parameters for '$metakey' in otter database")
         unless ($sdb_options && keys %$sdb_options);
+
+    $sdba->assembly_type($odba->assembly_type()) unless $pipehead;
 
     server_log("... with parameters: ".join(', ', map { "$_=".$sdb_options->{$_} } keys %$sdb_options ));
 
