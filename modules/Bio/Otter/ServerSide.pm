@@ -102,7 +102,10 @@ sub odba_to_sdba {
             $metakey
         );
 
-    $sdba->assembly_type($odba->assembly_type()) unless $pipehead;
+    unless ($pipehead) {
+        my $atype = $odba->assembly_type();
+        $sdba->assembly_type($atype);
+    }
 
     error_exit($sq, "No connection parameters for '$metakey' in otter database")
         unless ($sdb_options && keys %$sdb_options);
