@@ -22,14 +22,6 @@ DBNAME      otter_mouse
 TYPE        mrc4
 
 [misc_mouse]
-HOST        humsrv1
-PORT        3306
-USER        ensadmin
-PASS        ensembl
-DNA_HOST    humsrv1
-DNA_PORT    3306
-DNA_USER    ensadmin
-DNA_PASS    ensembl
 DBNAME      otter_misc_mouse
 TYPE        misc
 
