@@ -96,10 +96,15 @@ sub odba_to_sdba {
 
     server_log("connecting to the ".($pipehead?'NEW':'OLD')." schema $kind using [$metakey] meta entry...");
 
+    my $class = $pipehead
+        ? 'Bio::EnsEMBL::DBSQL::DBAdaptor'
+        : 'Bio::Otter::DBSQL::DBAdaptor';
+
     my ($sdba, $sdb_options) =
         Bio::Otter::Lace::SatelliteDB::_get_DBAdaptor_and_options(
             $odba,
-            $metakey
+            $metakey,
+            $class,
         );
 
     error_exit($sq, "Could not create satellite_db for '$metakey' in otter database")

@@ -58,6 +58,8 @@ if($pipehead && $metakey) { # a head version of ensembl_db (non-pipeline genes)
 my $sdba = odba_to_sdba($sq, $odba, $pipehead, $metakey);
 my $satellite_slice = get_slice($sq, $sdba, $pipehead);
 
+server_log("SDBA=".ref($sdba).", SLICE=".ref($satellite_slice));
+
 my $analysis = $sq->getarg('analysis');
 my $genes = $satellite_slice->get_all_Genes($analysis);
 
