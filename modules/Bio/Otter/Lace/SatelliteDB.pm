@@ -22,8 +22,6 @@ sub _get_DBAdaptor_and_options {
 
     $class ||= 'Bio::EnsEMBL::DBSQL::DBAdaptor';
 
-    require $class;
-
     my $satellite_options = get_options_for_key($otter_db, $key)
         or return;
 
