@@ -107,8 +107,6 @@ sub odba_to_sdba {
             $class,
         );
 
-    server_log("SS: got SDBA=".ref($sdba));
-
     error_exit($sq, "Could not create satellite_db for '$metakey' in otter database")
         unless ($sdba);
 
