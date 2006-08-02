@@ -6,6 +6,7 @@ package Bio::Otter::Lace::SatelliteDB;
 use strict;
 use Carp;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
+use Bio::Otter::DBSQL::DBAdaptor;
 
 sub get_DBAdaptor {
 
