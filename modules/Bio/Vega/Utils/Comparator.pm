@@ -22,12 +22,12 @@ sub compare{
   }
 
   if ( ref($obj1) ne ref($obj2)) {
-	 throw("Cannot compare two different types of objects. Objects should be of the same class \n");
+	 throw("Cannot compare two different types of objects. Objects should be of the same class $obj1 vs $obj2\n");
   }
   my $class = ref($obj1);
   
-  unless ( $class->isa('Bio::EnsEMBL::Exon') || $class->isa('Bio::Vega::Gene') || $class->isa('Bio::Vega::Transcript') || $class->isa('Bio::Vega::Translation') ) {
-	 throw('objects to be compared should be either Bio::Vega::Gene or Bio::EnsEMBL::Exon or Bio::Vega::Translation or Bio::Vega::Transcript');
+  unless ( $class->isa('Bio::EnsEMBL::Exon') || $class->isa('Bio::Vega::Gene') || $class->isa('Bio::Vega::Transcript') || $class->isa('Bio::Vega::Translation') || $class->isa('Bio::Vega::ContigInfo') ) {
+	 throw('objects to be compared should be either Bio::Vega::Gene or Bio::EnsEMBL::Exon or Bio::Vega::Translation or Bio::Vega::Transcript or Bio::Vega::ContigInfo' );
   }
   my $obj1_hash_key=$obj1->hashkey;
   my $obj2_hash_key=$obj2->hashkey;

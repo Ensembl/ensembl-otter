@@ -9,6 +9,7 @@ use Bio::Vega::DBSQL::StableIdAdaptor;
 use Bio::Vega::DBSQL::ExonAdaptor;
 use Bio::Vega::DBSQL::TranscriptAdaptor;
 use Bio::Vega::DBSQL::TranslationAdaptor;
+use Bio::Vega::DBSQL::AssemblyTagAdaptor;
 use base 'Bio::EnsEMBL::DBSQL::DBAdaptor';
 
 sub get_GeneAdaptor {
@@ -90,6 +91,15 @@ sub get_TranslationAdaptor {
 	 $self->{'VegaTranslation'}=$ad;
   }
   return $self->{'VegaTranslation'};
+}
+
+sub get_AssemblyTagAdaptor {
+  my $self = shift;
+  if ( !exists $self->{'AssemblyTag'} ){
+	 my $ad=Bio::Vega::DBSQL::AssemblyTagAdaptor->new($self);
+	 $self->{'AssemblyTag'}=$ad;
+  }
+  return $self->{'AssemblyTag'};
 }
 
 sub begin_work {
