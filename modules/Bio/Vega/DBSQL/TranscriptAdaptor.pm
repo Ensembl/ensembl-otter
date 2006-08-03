@@ -24,7 +24,9 @@ sub fetch_by_stable_id_version  {
 
   my $constraint = "tsi.stable_id = '$stable_id' AND tsi.version = $version";
   my ($transcript) = @{ $self->generic_fetch($constraint) };
-
+  if ($transcript){
+	 bless $transcript, "Bio::Vega::Transcript";
+  }
   return $transcript;
 
 }

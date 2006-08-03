@@ -51,24 +51,7 @@ sub add_Evidence {
   return;
 }
 
-#sub translation  {
 
- # my $self = shift;
-  #if( @_ ) {
-   # my $value = shift;
-    #if( defined($value) &&
-     #   (!ref($value) || !$value->isa('Bio::Vega::Translation'))) {
-      #throw("Bio::Vega::Translation argument expected.");
-    #}
-    #$self->{'translation'} = $value;
- # } elsif( !exists($self->{'translation'}) and defined($self->adaptor())) {
-  #  $self->{'translation'} =
-   #   $self->adaptor()->db()->get_TranslationAdaptor()->
-    #    fetch_by_Transcript( $self );
-  #}
-  #return $self->{'translation'};
-
-#}
 
 sub get_Evidence {
   my $self = shift;
@@ -203,6 +186,17 @@ sub hashkey {
 
   return ($hashkey_main);
 }
+
+#sub translation  {
+
+ # my $self = shift;
+  #my $translation = $self->SUPER::translation;
+  #if ($translation){
+	# bless $translation, "Bio::Vega::Translation";
+  #}
+  #return $translation;
+
+#}
 
 1;
 

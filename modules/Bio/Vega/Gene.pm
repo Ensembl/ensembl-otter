@@ -82,13 +82,15 @@ sub hashkey {
   my $attrib_count = @$attribs ;
   my $gene_name = $self->get_all_Attributes('name') ;
 
-  my $gn;
+  my $gn='';
 
-  if (defined $gene_name) {
+  if ($gene_name) {
 	 if (@$gene_name > 1){
 		throw("Gene has more than one value for gene name attrib cannot generate correct hashkey");
 	 }
-	 $gn=$gene_name->[0]->value;
+	 if ($gene_name->[0]){
+		$gn=$gene_name->[0]->value;
+	 }
   }
 
   unless($slice_name) {

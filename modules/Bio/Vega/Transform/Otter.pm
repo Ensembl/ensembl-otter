@@ -8,7 +8,7 @@ use Carp;
 use Bio::EnsEMBL::Exon;
 use Bio::Vega::Transcript;
 use Bio::Vega::Gene;
-use Bio::EnsEMBL::Translation;
+use Bio::Vega::Translation;
 use Bio::EnsEMBL::SimpleFeature;
 use Bio::EnsEMBL::Analysis;
 use Bio::EnsEMBL::Slice;
@@ -19,7 +19,7 @@ use Bio::Vega::Author;
 use Bio::Vega::AuthorGroup;
 use Bio::Vega::ContigInfo;
 use Bio::Vega::Evidence;
-
+use Bio::Vega::AssemblyTag;
 use Data::Dumper;   # For debugging
 # This misses the "$VAR1 = " bit out from the Dumper() output
 $Data::Dumper::Terse = 1;
@@ -30,6 +30,7 @@ my (
     %exon_list,
 	 %evidence_list,
     %gene_list,
+	 %assembly_tag_list,
     %transcript_list,
     %feature_list,
 	 %logic_ana,
@@ -48,6 +49,7 @@ sub DESTROY {
   delete $exon_list{$self};
   delete $evidence_list{$self};
   delete $gene_list{$self};
+  delete $assembly_tag_list{$self};
   delete $transcript_list{$self};
   delete $feature_list{$self};
   delete $logic_ana{$self};
@@ -128,6 +130,8 @@ sub build_SequenceFragment {
   my $chr_coord_system=$self->make_CoordSystem('chromosome');
   my $chrname=$sequence_set{$self}{'chrname'};
   my $chr_slice_name=$sequence_set{$self}{'assembly_type'};
+
+
   if (!defined $chr_slice_name) {
 	 die "cannot make chromosome slice without assembly type name\n";
   }
@@ -261,6 +265,19 @@ sub build_Feature {
 
 sub build_AssemblyTag {
   my ($self, $data) = @_;
+
+  my $at = Bio::Vega::AssemblyTag->new(
+													-start     => $data->{'contig_start'},
+													-end       => $data->{'contig_end'},
+													-strand    => $data->{'contig_strand'},
+													-tag_type  => $data->{'tag_type'},
+													-tag_info  => $data->{'tag_info'},
+													-contig_id => $data->{'contig_id'},
+													-contig_name => $data->{'contig_name'}
+													);
+
+  my $list = $assembly_tag_list{$self} ||= [];
+  push @$list, $at;
 }
 
 sub build_AssemblyType {
@@ -278,7 +295,6 @@ sub build_Exon {
 												 -end       => $data->{'end'},
 												 -strand    => $data->{'strand'},
 												 -stable_id => $data->{'stable_id'},
-												 #-version   => 1,
 												 -slice     => $slice,
 												 -created_date => $time_now{$self},
 												 -modified_date => $time_now{$self},
@@ -301,7 +317,6 @@ sub build_Transcript {
   my $ana = $logic_ana{$self}{'Otter'} ||= Bio::EnsEMBL::Analysis->new(-logic_name => 'Otter');
   my $transcript = Bio::Vega::Transcript->new(
 															 -stable_id => $data->{'stable_id'},
-															 #-version   => 1,
 															 -created_date=>$time_now{$self},
 															 -modified_date=>$time_now{$self},
 															 -analysis=>$ana,
@@ -330,7 +345,7 @@ sub build_Transcript {
 		  "\n undefined start exon:$start_Exon or undefined end exon:$end_Exon\n";
 	 }
 	 else {
-		my $translation = Bio::EnsEMBL::Translation->new(
+		my $translation = Bio::Vega::Translation->new(
 																		 -stable_id=>$data->{'translation_stable_id'},
 																		);
 		$translation->start_Exon($start_Exon);
@@ -349,6 +364,9 @@ sub build_Transcript {
 		$translation->created_date($time_now{$self});
 		$translation->modified_date($time_now{$self});
 		$transcript->translation($translation);
+		if ($translation) {
+		 # die  "\n\nFound translation\n\n".$translation->stable_id;
+		}
 		##translation - version ???
 	 }
   }
@@ -453,7 +471,6 @@ sub build_Locus {
   my $gene = Bio::Vega::Gene->new(
 											 -stable_id => $data->{'stable_id'},
 											 -slice => $slice,
-											 #-version => 1,
 											 -created_date => $time_now{$self},
 											 -modified_date => $time_now{$self},
 											 -description => $data->{'description'},
@@ -779,9 +796,29 @@ sub get_AssemblySlices {
   return $slice{$self};
 }
 
+sub get_CloneSlices {
+  my $self=shift;
+  my $clones=[];
+  foreach my $piece ($slice{$self}{'cln_ctg'}){
+	 my $cln_slice=$piece->[0];
+	 push @$clones,$cln_slice;
+  }
+  return $clones;
+}
+
 sub get_Genes {
   my $self=shift;
   return $gene_list{$self};
+}
+
+sub get_AssemblyTags {
+  my $self=shift;
+  return $assembly_tag_list{$self};
+}
+
+sub get_SimpleFeatures {
+  my $self=shift;
+  return $feature_list{$self};
 }
 
 ###fetch sequence

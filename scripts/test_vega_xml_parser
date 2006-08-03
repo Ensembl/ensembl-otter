@@ -37,7 +37,6 @@ use Data::Dumper;
   my $dbpass;
   my $help;
   my $xmlfile;
-
   &GetOptions(
 				  'dbhost=s'   => \$dbhost,
 				  'dbport=n'   => \$dbport,
@@ -50,142 +49,130 @@ use Data::Dumper;
   if ($help || !defined ($dbhost) || !defined($dbport) || !defined($dbname) || !defined($dbuser) || !defined($dbpass) ||!defined($xmlfile) ) {
     exec('perldoc', $0);
   }
-
   my $parser = Bio::Vega::Transform::Otter->new;
   $parser->parsefile($xmlfile);
-
   my $db = Bio::Vega::DBSQL::DBAdaptor->new(
-				 -dbname => $dbname,
-	          -host   => $dbhost,
-             -user   => $dbuser,
-             -port   => $dbport,
-             -pass   => $dbpass,
-	          );
-  my $genes=$parser->get_Genes;
-  my $gene_adaptor=$db->get_GeneAdaptor;
-  foreach my $gene (@$genes){
-	##gene slice, check if coord-system and its attribs are properly set
-#	my $sa = $db->get_SliceAdaptor();
-#	my $slice = $gene->slice;
-#	my $csa = $db->get_CoordSystemAdaptor();
-#	my $slice_cs = $slice->coord_system;
-#	my $coord_system_id=$slice->coord_system->dbID();
+														  -dbname => $dbname,
+														  -host   => $dbhost,
+														  -user   => $dbuser,
+														  -port   => $dbport,
+														  -pass   => $dbpass,
+														 );
+  ##Let begin a transaction and do all the database changes within a trnsaction
+  eval{
+	 $db->begin_work();
 
-#	unless ($slice_cs) {
-#	  throw("Coord System not set in gene slice \n");
-#	}
-#	unless ( $coord_system_id){
-	#  my $db_cs;
-	 # eval{
-		# $db_cs = $csa->fetch_by_name($slice_cs->name,$slice_cs->version,$slice_cs->rank);
-	 # };
-	  #if($@){
-		# print STDERR "A coord_system matching the arguments does not exsist in the coord_system table, please ensure you have the right coord_system entry in the database:$@";
-	 # }
-	 # my $new_slice = $sa->fetch_by_name($slice->name);
-	  #unless($new_slice){
-		# die "gene slice is not in the database\n";
-	 # }
-	 # $gene->slice($new_slice);
-	 # my $tref=$gene->get_all_Transcripts();
-	  #foreach my $tran (@$tref) {
-		# $tran->slice($new_slice);
-		# foreach my $exon (@{$tran->get_all_Exons}) {
-		#	$exon->slice($new_slice);
-		# }
-	 # }
-#	}
-	# print STDOUT Dumper($gene->slice);
-	 eval{
-		$db->begin_work();
+	 ##Uncomment the following to load a new Assembly or to load into an empty database
+	 ##This loads ContigInfo and its attributes.Takes care of is_current(loads a new contiginfo object and a set of attributes for the
+	 ##new contiginfo, only if the contiginfo object has changed
+	 #$parser->LoadAssemblySlices($db);
+
+	 ##Load genes,transcripts,translations,exons from XML - takes care of versioning
+	 ##if there is a change in gene and its components then the version is incremented otherwise, not
+	 my $genes=$parser->get_Genes;
+	 my $gene_adaptor=$db->get_GeneAdaptor;
+	 foreach my $gene (@$genes){
 		$gene_adaptor->store($gene);
-	 
-	 };
-	 if ($@) {
-		$db->rollback;
-		print STDERR "Error saving genes from file:".$@;
 	 }
-	 else {
-		$db->commit;
-	 }
-	 
-	 exit;
-  }
-#  $parser->LoadAssemblySlices($db);
 
-
+	 ##Load AssemblyTag - deletes old tags(tags not in xml) and stores the current tags in the XML
 
 =head2 COMMENT
+	 my $assembly_tags = $parser->get_AssemblyTags;
+	 my $ata=$db->get_AssemblyTagAdaptor;
 
-  ##check if project and the assembly of parser yield the same segment list
-  my $chr='20';
-  my $sa=$db->get_SliceAdaptor();
-  my $chr_slice=$sa->fetch_by_region('chromosome','20',1,3351238,1,'Otter');
-  print "\n\nfrom DB chromosome - contig\n\n";
-  for my $segment ( @{$chr_slice->project('contig')} ) {
-	 my $contig_slice=$segment->to_Slice();
-	 print "$chr:",$segment->from_start," to "
-		         ,$segment->from_end," vs "
-			 ,$contig_slice->seq_region_name,":"
-			 ,$contig_slice->start," to "
-			 ,$contig_slice->end
-			 ,"\n";
-  }
-
- my $segment=$parser->make_Assembly_ProjectionSegment;
-
-  print "\n\nfrom xml parser chromosome - contig\n\n";
-  my $chr_ctg = $segment->{chr_ctg};
-
-  for my $segment ( @{$chr_ctg} ) {
-	 my $contig_slice=$segment->to_Slice();
-	 print "$chr:",$segment->from_start," to "
-		         ,$segment->from_end," vs "
-			 ,$contig_slice->seq_region_name,":"
-			 ,$contig_slice->start," to "
-			 ,$contig_slice->end
-			 ,"\n";
-  }
-
-  print "\n\nfrom DB clone - contig\n\n";
-
-  my @cln_ids=('AL121905.23','AL160414.18','AL121891.22','AL109976.23','AL117334.29');
-  foreach my $cln (@cln_ids){
-	 my $cln_slice=$sa->fetch_by_region('clone',$cln);
-	 for my $segment ( @{$cln_slice->project('contig')} ) {
-		my $contig_slice=$segment->to_Slice();
-		print "$chr:",$segment->from_start," to "
-		  ,$segment->from_end," vs "
-			 ,$contig_slice->seq_region_name,":"
-				,$contig_slice->start," to "
-				  ,$contig_slice->end
-					 ,"\n";
+	 foreach my $at (@$assembly_tags){
+		my $slice;
+		if ($at->contig_id) {
+		  $slice=$at->slice_by_contig_id;
+		}
+		if ($at->contig_name){
+		  $slice=$at->slice_by_contig_name;
+		}
+		unless($slice) {
+		  print STDERR "assembly tag does not have a slice attached and hence not stored in db\n";
+		  next;
+		}
+		$ata->store($at);
 	 }
-  }
 
-  print "\n\nfrom xml parser clone - contig\n\n";
-  my $cln_ctg = $segment->{cln_ctg};
+	 ##Load SimpleFeatures - deletes old features(features not in xml) and stores the features in this XML
+	 my $simple_features=$parser->get_SimpleFeatures;
+	 my $sfa=$db->get_SimpleFeatureAdaptor;
 
-  for my $segment ( @{$cln_ctg} ) {
-	 my $contig_slice=$segment->to_Slice();
-	 print "$chr:",$segment->from_start," to "
-		         ,$segment->from_end," vs "
-			 ,$contig_slice->seq_region_name,":"
-			 ,$contig_slice->start," to "
-			 ,$contig_slice->end
-			 ,"\n";
-  }
+	 my $chr_slice=$parser->get_ChromosomeSlice;
+	 my $new_slice=$parser->get_SliceId($chr_slice,$db);
+	 my $db_features=$sfa->fetch_all_by_Slice($new_slice,'Otter');
+	 my ($delete,$save)=compare_feature_sets($db_features,$simple_features);
+	 foreach my $del_feat (@$delete){
+		$sfa->remove($del_feat);
+	 }
+	 
+	 foreach my $new_feat (@$save){
+		#die Dumper($new_feat);
+		$new_feat->slice($new_slice);
+		$sfa->store($new_feat);
+	 }
 
 =cut
+	 ##Create new XML and send as response
 
+  };
+  if ($@) {
+	 $db->rollback;
+	 print STDERR "\nError saving genes from file: Rolled back all data of this session - Please correct errors\n".$@;
+  }
+  else {
+	 $db->commit;
+	 print STDOUT "\nCommitted all session data from XML in database\n";
+  }
   $parser->DESTROY;
+}
+warn "\nParser now out of scope\n";
 
+sub compare_feature_sets {
+    my( $old_features, $new_features ) = @_;
+
+    my %old = map {SimpleFeature_key($_), $_} @$old_features;
+    my %new = map {SimpleFeature_key($_), $_} @$new_features;
+
+    # Features that were in the old, but not the new, should be deleted
+    my $delete = [];
+    while (my ($key, $old_sf) = each %old) {
+        unless ($new{$key}) {
+            push(@$delete, $old_sf);
+        }
+    }
+
+    # Features that are in the new but were not in the old should be saved
+    my $save = [];
+    while (my ($key, $new_sf) = each %new) {
+        unless ($old{$key}) {
+            push(@$save, $new_sf);
+        }
+    }
+
+    return($delete, $save);
+}
+
+sub SimpleFeature_key {
+    my( $sf ) = @_;
+
+    return join('^',
+        $sf->analysis->logic_name,
+        $sf->start,
+        $sf->end,
+        $sf->strand,
+        # sprintf ensures that 0.5 and 0.5000 become the same string
+        sprintf('%g', $sf->score),
+        $sf->display_label || '',
+        );
 }
 
 
 
-warn "Parser now out of scope\n";
 
+1;
 
 
 

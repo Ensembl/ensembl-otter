@@ -25,7 +25,7 @@ sub hashkey {
   my $start_exon=$self->start_Exon;
   my $end_exon  =$self->end_Exon;
   unless($start_exon) {
-    throw("there is no start_exon for this gene to generate correct hashkey");
+    throw("there is no start_exon for this translation to generate correct hashkey");
   }
   my $start_exon_hash_key=$start_exon->hashkey;
   my $end_exon_hash_key  =$end_exon->hashkey;
