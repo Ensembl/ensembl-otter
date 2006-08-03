@@ -1,0 +1,104 @@
+#!/usr/local/bin/perl -w
+
+# Lg4, 3.aug'2006 - 
+#
+# Extracts some transcript stats for "annotation consistency test" run 1-2.aug'2006
+# jla1 asked for this feature.
+
+use strict;
+use Bio::Otter::Lace::Defaults;
+
+{
+    my $dataset_name = '*';
+    my $chr_name     = 10;
+    my $set_name     = 'chr10-act';
+    my $help_flag    = 0;
+
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'help!'         => \$help_flag,
+        'dataset=s'     => \$dataset_name,
+        'chr=s'         => \$chr_name,
+        'set=s'         => \$set_name,
+    );
+
+    if($help_flag) { usage(); }
+    
+        # Client communicates with otter HTTP server:
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    $cl->debug(0);
+
+    if($dataset_name eq '*') {
+        foreach my $ds ($cl->get_all_DataSets) {
+            show_one_set($cl, $ds, $set_name, $chr_name);
+        }
+    } else {
+        my $ds = $cl->get_DataSet_by_name($dataset_name);
+        show_one_set($cl, $ds, $set_name, $chr_name);
+    }
+}
+
+sub show_one_set {
+    my ($cl, $ds, $ssname, $chr_name) = @_;
+
+    my $ss = $ds->get_SequenceSet_by_name($ssname);
+    my $csl = $cl->get_all_CloneSequences_for_SequenceSet($ss);
+
+    my $chr_start = $csl->[0]->chr_start();
+    my $chr_end   = $csl->[scalar(@$csl)-1]->chr_end();
+
+    print "DataSet='".$ds->name()."'";
+    # print ",  Chromosome='$chr_name'";
+    # print ",  SequenceSet='$ssname'";
+    print "\n\n";
+
+
+    my $otter_dba = $ds->get_cached_DBAdaptor;
+    $otter_dba->assembly_type($ssname);
+
+    my $otter_slice = $otter_dba->get_SliceAdaptor()
+        ->fetch_by_chr_start_end($chr_name, $chr_start, $chr_end);
+
+    my $genes = $otter_dba->get_GeneAdaptor->fetch_by_Slice($otter_slice);
+    for my $gene (@$genes) {
+        my $gene_name  = $gene->gene_info()->name()->name();
+        my $gene_type  = $gene->type();
+
+        my %trans_class = ();
+        my $all_transcripts = $gene->get_all_Transcripts();
+        for my $transcript (@$all_transcripts) {
+            my $trans_class =  (   $transcript->transcript_info()->class()
+                                && $transcript->transcript_info()->class()->name() )
+                             || 'UNKNOWN';
+
+            $trans_class{ $trans_class }++;
+        }
+        # print sprintf("%s\t%s\t%d\t%s\n",     ## better suitable for spreadsheet loading
+        print sprintf("%12s\t%10s\t%d\t%s\n",   ## better suitable for viewing with naked eye
+            $gene_name,
+            $gene_type,
+            scalar(@$all_transcripts),
+            join(',', map { "$_($trans_class{$_})" } (sort keys %trans_class) ),
+        );
+    }
+    print "\n".('-' x 64)."\n\n";
+
+}
+
+sub usage {
+    print STDERR "\nOutputs a tab-separated list with the following columns:\n\n";
+    print STDERR "gene name\n";
+    print STDERR "gene type\n";
+    print STDERR "gene start\n";
+    print STDERR "gene end\n";
+    print STDERR "gene length\n";
+    print STDERR "number of transcripts\n";
+    print STDERR "comma-separated transcript names\n";
+    print STDERR "\n";
+    print STDERR "usage:\n";
+    print STDERR "\t$0 --dataset=pig --chr=17 --set=chr17-SSC17_MAX1-03\n";
+    print STDERR "\t$0 --dataset=dog --chr=12 --set=mhc-01\n";
+    print STDERR "\t$0 --dataset=human --chr=20 --set=chr20-11 --start=48458950 --end=57913054\n";
+    print STDERR "...\t...\n\n";
+
+    exit;
+}
