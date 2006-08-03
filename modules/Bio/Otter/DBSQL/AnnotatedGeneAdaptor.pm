@@ -494,7 +494,7 @@ sub fetch_by_Slice {
     my ($self, $slice) = @_;
     
     my $latest_gene_id = $self->list_current_dbIDs_for_Slice($slice);
-    warn "Found ", scalar(@$latest_gene_id), " current gene IDs\n";
+    # warn "Found ", scalar(@$latest_gene_id), " current gene IDs\n";
     my $latest_genes = [];
     foreach my $id (@$latest_gene_id) {
         my $gene = $self->fetch_by_dbID($id)->transform($slice);
@@ -549,7 +549,7 @@ sub fetch_by_Slice {
         }
     }
 
-    warn "Returning ", scalar(@$latest_genes), " genes\n";
+    # warn "Returning ", scalar(@$latest_genes), " genes\n";
 
     return $latest_genes;
 }
