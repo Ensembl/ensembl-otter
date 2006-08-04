@@ -89,8 +89,11 @@ use Bio::EnsEMBL::Analysis;
 
   # now store simple features
   foreach my $sf (@simpleFeatures ){
-	$sf_ad->store($sf);
+	eval {
+      $sf_ad->store($sf);
+    };
   }
+  print "Losding successful!\n\n" unless $@;
 }
 
 sub parse_and_verify_eucomm_data {
