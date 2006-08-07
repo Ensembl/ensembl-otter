@@ -4,6 +4,15 @@ use strict;
 
 # ----------------[simplify some formatting]----------------------
 
+sub emit_value { # just make sure it does not contain triangular brackets:
+    my $value = shift @_;
+
+    $value=~s/\>/&gt;/g;
+    $value=~s/\</&lt;/g;
+
+    return $value;
+}
+
 sub emit_opening_tag {
     my ($tag, $offset) = (@_, 0);
 
