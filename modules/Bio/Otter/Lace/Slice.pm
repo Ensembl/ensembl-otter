@@ -630,5 +630,13 @@ sub get_all_PipelineGenes { # get genes from pipeline/ensembl db
     return $genes;
 }
 
+sub get_all_Genes { # non-default :)
+    my( $self, $analysis_name ) = @_;
+
+    $analysis_name ||= 'otter';
+
+    return $self->get_all_PipelineGenes($analysis_name, 0, '.');
+}
+
 1;
 
