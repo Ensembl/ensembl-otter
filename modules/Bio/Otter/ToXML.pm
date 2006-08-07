@@ -33,7 +33,7 @@ sub emit_tagpair {
 
     $offset ||= 0;
 
-    return ( (' ' x $offset) . '<' . $tag . '>' . $value . '</' . $tag . ">\n") ;
+    return ( (' ' x $offset) . '<' . $tag . '>' . emit_value($value) . '</' . $tag . ">\n") ;
 }
 
 
