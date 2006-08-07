@@ -18,50 +18,17 @@ my $sq = Bio::Otter::ServerQuery->new('dataset',
     'metakey','analysis');
 set_nph($sq);
 
+my $analysis = $sq->getarg('analysis');
+my $metakey  = $sq->getarg('metakey') || ''; # defaults to pipeline
+
 my $odba = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
-my $metakey = $sq->getarg('metakey') || ''; # defaults to pipeline
-
-my ($ref_asm_version) = @{ $odba->get_MetaContainer()->list_value_by_key('ref_asm_version') };
-
-if($pipehead && $metakey) { # a head version of ensembl_db (non-pipeline genes)
-
-    my $pdba = odba_to_sdba($sq, $odba, $pipehead);
-    my $pipe_slice = get_slice($sq, $pdba, $pipehead);
-
-    my ($equiv_asm) = map {$_->value()} @{ $pipe_slice->get_all_Attributes('equiv_asm') };
-
-    if($equiv_asm && ($equiv_asm eq $ref_asm_version)) { # we can do our trivial mapping
-
-        my $chr_name = $sq->getarg('name');
-        server_log("This chr is equivalent to '$chr_name' in our reference '$equiv_asm' assembly");
-        $sq->setarg('csver', $equiv_asm);
-
-    } else {
-
-        server_log("No remapping can be done at the moment, sorry. Returning empty list");
-        send_response($sq, '', 1);
-        exit(0);
-    }
-
-} elsif($pipehead) { # a head version of pipeline_db
-
-    server_log("Working with pipeline_db directly, no remapping is needed.");
-
-} else { # non-head version, cannot guarantee correct mapping
-
-    server_log("No remapping is being done, you're responsible for doing it on the client side.");
-}
-
-    # the common part for (1) pure pipeline genes,
-    #                     (2) ensembl_db head (with pre-mapping)
-    #                     (3) ensembl_db tail (assuming everything is 1:1)
 my $sdba = odba_to_sdba($sq, $odba, $pipehead, $metakey);
+pre_remapping($sq, $odba, $sdba, $pipehead);
 my $satellite_slice = get_slice($sq, $sdba, $pipehead);
 
-my $analysis = $sq->getarg('analysis');
 my $genes = $satellite_slice->get_all_Genes($analysis);
 
-server_log("Total of ".scalar(@$genes)." $analysis genes found");
+server_log("Total of ".scalar(@$genes)." '$analysis' genes found");
 
 my $output_string = '';
 
