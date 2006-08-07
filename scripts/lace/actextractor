@@ -22,43 +22,36 @@ use Bio::Otter::Lace::Defaults;
     );
 
     if($help_flag) { usage(); }
-    
+
         # Client communicates with otter HTTP server:
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
     $cl->debug(0);
+    
 
     if($dataset_name eq '*') {
         foreach my $ds ($cl->get_all_DataSets) {
-            show_one_set($cl, $ds, $set_name, $chr_name);
+            show_one_set($cl, $ds, $set_name);
         }
     } else {
         my $ds = $cl->get_DataSet_by_name($dataset_name);
-        show_one_set($cl, $ds, $set_name, $chr_name);
+        show_one_set($cl, $ds, $set_name);
     }
 }
 
 sub show_one_set {
-    my ($cl, $ds, $ssname, $chr_name) = @_;
+    my ($cl, $ds, $ssname) = @_;
 
     my $ss = $ds->get_SequenceSet_by_name($ssname);
     my $csl = $cl->get_all_CloneSequences_for_SequenceSet($ss);
+    my ( $chr_name, $chr_start, $chr_end ) = $cl->chr_start_end_from_contig($csl);
 
-    my $chr_start = $csl->[0]->chr_start();
-    my $chr_end   = $csl->[scalar(@$csl)-1]->chr_end();
+    print "DataSet='".$ds->name()."'\n\n";
 
-    print "DataSet='".$ds->name()."'";
-    # print ",  Chromosome='$chr_name'";
-    # print ",  SequenceSet='$ssname'";
-    print "\n\n";
+    my $slice = Bio::Otter::Lace::Slice->new($cl, $ds->name, $ssname,
+                'chromosome', 'Otter', $chr_name, $chr_start, $chr_end);
 
+    my $genes = $slice->get_all_Genes();
 
-    my $otter_dba = $ds->get_cached_DBAdaptor;
-    $otter_dba->assembly_type($ssname);
-
-    my $otter_slice = $otter_dba->get_SliceAdaptor()
-        ->fetch_by_chr_start_end($chr_name, $chr_start, $chr_end);
-
-    my $genes = $otter_dba->get_GeneAdaptor->fetch_by_Slice($otter_slice);
     for my $gene (@$genes) {
         my $gene_name  = $gene->gene_info()->name()->name();
         my $gene_type  = $gene->type();

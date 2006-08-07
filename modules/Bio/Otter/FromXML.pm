@@ -20,6 +20,7 @@ use Bio::Otter::Evidence;
 
 use Bio::Otter::AnnotatedGene;
 use Bio::Otter::GeneInfo;
+use Bio::Otter::GeneName;
 use Bio::Otter::GeneRemark;
 use Bio::Otter::GeneSynonym;
 
@@ -306,11 +307,11 @@ sub build_GeneInfo {
             last;
         } elsif($kind eq 'p') {
             if($tag eq 'name') {
-                $ginfo->name($data);
+                $ginfo->name(Bio::Otter::GeneName->new(-name=>$data));
             } elsif($tag eq 'truncated') {
-                $ginfo->truncated($data);
+                $ginfo->truncated_flag($data);
             } elsif($tag eq 'known') {
-                $ginfo->known($data);
+                $ginfo->known_flag($data);
             } elsif($tag eq 'remark') {
                 $ginfo->remark(Bio::Otter::GeneRemark->new(-remark=>$data));
             } elsif($tag eq 'synonym') {
