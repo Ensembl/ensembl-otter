@@ -74,7 +74,11 @@ sub parse_next_line {
             if($line=~m{^\s*$}) { # just opening tag
                 return ('o', $tag);
             } elsif($line=~m{^([^<]*)</$tag>\s*$}) { # tagpair
-                return ('p', $tag, $1);
+                my $data = $1;
+                $data=~s/&gt;/>/g;
+                $data=~s/&lt;/</g;
+
+                return ('p', $tag, $data);
             }
         }
     }
