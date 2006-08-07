@@ -232,8 +232,8 @@ sub get_all_tiles_as_Slices {
     return \@subslices;
 }
 
-sub get_all_SimpleFeatures {
-    my( $self, $analysis_name, $pipehead ) = @_;
+sub get_all_SimpleFeatures { # get simple features from otter/pipeline/ensembl db
+    my( $self, $analysis_name, $pipehead, $metakey ) = @_;
 
         # cached values:
     my $analysis = Bio::EnsEMBL::Analysis->new( -logic_name => $analysis_name );
@@ -250,6 +250,7 @@ sub get_all_SimpleFeatures {
             %{$self->toHash},
             'analysis' => $analysis_name,
             'pipehead' => $pipehead ? 1 : 0,
+            $metakey ? ('metakey' => $metakey) : (),
         },
         1,
     );
@@ -601,7 +602,7 @@ sub get_all_PredictionTranscripts {
     return \@pts;
 }
 
-sub get_all_PipelineGenes { # get genes from pipeline/ensembl db
+sub get_all_PipelineGenes { # get genes from otter/pipeline/ensembl db
     my( $self, $analysis_name, $pipehead, $metakey ) = @_;
 
     if(!$analysis_name) {
