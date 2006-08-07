@@ -18,6 +18,7 @@ our @EXPORT_OK = qw(
                     &send_response
                     &error_exit
                     &odba_to_sdba
+                    &pre_remapping
                     &get_slice
                     &get_Author_from_CGI
                     &get_DBAdaptor_from_CGI_species
@@ -28,6 +29,7 @@ our %EXPORT_TAGS = (all => [qw(
                                send_response
                                error_exit
                                odba_to_sdba
+                               pre_remapping
                                get_slice
                                get_Author_from_CGI
                                get_DBAdaptor_from_CGI_species 
@@ -85,6 +87,16 @@ sub odba_to_sdba {
 
     server_log("called with: ".join(' ', map { "$_=".$sq->getarg($_) } @{$sq->getargs()} ));
 
+        # It may well be true that the caller
+        # is interested in features from otter_db itself.
+        # (This is NOT the default behaviour,
+        #  so he has to specify it by setting metakey='.')
+
+    if($metakey eq '.') {
+        server_log("Connecting to the otter_db itself");
+        return $odba;      # and ignore $pipehead flag for now
+    }
+
     my $kind = 'satellite DB';
 
     if(! $metakey) {
@@ -118,6 +130,50 @@ sub odba_to_sdba {
     server_log("... with parameters: ".join(', ', map { "$_=".$sdb_options->{$_} } keys %$sdb_options ));
 
     return $sdba;
+}
+
+sub pre_remapping { # temporarily very trivial
+    my ($sq, $odba, $sdba, $pipehead) = @_;
+
+    my $metakey  = $sq->getarg('metakey') || ''; # defaults to pipeline
+
+    if($metakey eq '.') {
+        server_log("Working with otter_db directly, no remapping is needed.");
+        return;
+    }
+
+    if($pipehead && $metakey) { # a head version of ensembl_db (non-pipeline genes)
+
+        my ($sdb_def_asm) = @{ $sdba->get_MetaContainer()->list_value_by_key('default.assembly') };
+
+            # Currently we keep the necessary information in the pipeline_db_head.
+            # Once otter_db is converted into new schema, we can keep this information there.
+        my $pdba = odba_to_sdba($sq, $odba, 1);
+        my $pipe_slice = get_slice($sq, $pdba, 1);
+        my ($equiv_asm) = map {$_->value()} @{ $pipe_slice->get_all_Attributes('equiv_asm') };
+
+        if($equiv_asm && ($equiv_asm eq $sdb_def_asm)) { # we can do our trivial mapping
+
+            my $chr_name = $sq->getarg('name');
+            server_log("This chr is equivalent to '$chr_name' in our reference '$equiv_asm' assembly");
+            $sq->setarg('csver', $equiv_asm);
+
+        } else { # guaranteed to differ!
+
+            server_log("No remapping can be done at the moment, sorry. Returning empty list");
+            send_response($sq, '', 1);
+            exit(0);
+        }
+
+    } elsif($pipehead) { # a head version of pipeline_db
+
+        server_log("Working with pipeline_db directly, no remapping is needed.");
+
+    } else { # non-head version, cannot guarantee correct mapping
+
+        server_log("No remapping is being done, you're responsible for doing it on the client side.");
+
+    }
 }
 
 sub get_slice { # codebase-independent version for scripts
