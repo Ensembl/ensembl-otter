@@ -208,7 +208,12 @@ sub ace_and_vector_dump {
 
     my $header = qq{Sequence "} . $self->slice_name . qq{"\n};
 
-    my $ace_text = $header . "-D Feature\n\n";
+    my $ace_text = $header;
+    for my $ftype (keys %signal_info) { # only delete "known" features, not any
+        $ace_text .= qq{-D Feature "$ftype"\n};
+    }
+    $ace_text .= "\n";
+
     my @vectors  = ();
 
     if (keys %{ $self->{_gfs} }) {
