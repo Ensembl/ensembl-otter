@@ -282,20 +282,20 @@ sub get_all_SimpleFeatures { # get simple features from otter/pipeline/ensembl d
     return \@sfs;
 }
 
-sub get_all_DnaAlignFeatures {
-    my( $self, $analysis_name, $pipehead ) = @_;
+sub get_all_DnaAlignFeatures { # get dna align features from otter/pipeline/ensembl db
+    my( $self, $analysis_name, $pipehead, $metakey ) = @_;
 
     return $self->get_all_AlignFeatures( 'dafs', $analysis_name, $pipehead );
 }
 
-sub get_all_ProteinAlignFeatures {
-    my( $self, $analysis_name, $pipehead ) = @_;
+sub get_all_ProteinAlignFeatures { # get protein align features from otter/pipeline/ensembl db
+    my( $self, $analysis_name, $pipehead, $metakey ) = @_;
 
     return $self->get_all_AlignFeatures( 'pafs', $analysis_name, $pipehead );
 }
 
-sub get_all_AlignFeatures {
-    my( $self, $kind, $analysis_name, $pipehead ) = @_;
+sub get_all_AlignFeatures { # get align features from otter/pipeline/ensembl db
+    my( $self, $kind, $analysis_name, $pipehead, $metakey ) = @_;
 
     my %analyses = (); # keep cached analysis objects here
 
@@ -313,6 +313,7 @@ sub get_all_AlignFeatures {
             'kind'     => $kind,
             $analysis_name ? ('analysis' => $analysis_name) : (),
             'pipehead' => $pipehead ? 1 : 0,
+            $metakey ? ('metakey' => $metakey) : (),
         },
         1,
     );
@@ -378,8 +379,8 @@ sub get_all_AlignFeatures {
     return \@afs;
 }
 
-sub get_all_RepeatFeatures {
-    my( $self, $analysis_name, $pipehead ) = @_;
+sub get_all_RepeatFeatures { # get repeat features from otter/pipeline/ensembl db
+    my( $self, $analysis_name, $pipehead, $metakey ) = @_;
 
     if(!$analysis_name) {
         die "Analysis name must be specified!";
@@ -393,6 +394,7 @@ sub get_all_RepeatFeatures {
             %{$self->toHash},
             'analysis' => $analysis_name,
             'pipehead' => $pipehead ? 1 : 0,
+            $metakey ? ('metakey' => $metakey) : (),
         },
         1,
     );
@@ -445,8 +447,8 @@ sub get_all_RepeatFeatures {
     return \@rfs;
 }
 
-sub get_all_MarkerFeatures {
-    my( $self, $analysis_name, $pipehead ) = @_;
+sub get_all_MarkerFeatures { # get marker features from otter/pipeline/ensembl db
+    my( $self, $analysis_name, $pipehead, $metakey ) = @_;
 
     if(!$analysis_name) {
         die "Analysis name must be specified!";
@@ -460,6 +462,7 @@ sub get_all_MarkerFeatures {
             %{$self->toHash},
             'analysis' => $analysis_name,
             'pipehead' => $pipehead ? 1 : 0,
+            $metakey ? ('metakey' => $metakey) : (),
         },
         1,
     );
@@ -528,8 +531,8 @@ sub get_all_MarkerFeatures {
     return \@mfs;
 }
 
-sub get_all_PredictionTranscripts {
-    my( $self, $analysis_name, $pipehead ) = @_;
+sub get_all_PredictionTranscripts { # get prediction transcripts from otter/pipeline/ensembl db
+    my( $self, $analysis_name, $pipehead, $metakey ) = @_;
 
     if(!$analysis_name) {
         die "Analysis name must be specified!";
@@ -543,6 +546,7 @@ sub get_all_PredictionTranscripts {
             %{$self->toHash},
             'analysis' => $analysis_name,
             'pipehead' => $pipehead ? 1 : 0,
+            $metakey ? ('metakey' => $metakey) : (),
         },
         1,
     );
