@@ -87,6 +87,8 @@ sub odba_to_sdba {
 
     server_log("called with: ".join(' ', map { "$_=".$sq->getarg($_) } @{$sq->getargs()} ));
 
+    $metakey ||= '';
+
         # It may well be true that the caller
         # is interested in features from otter_db itself.
         # (This is NOT the default behaviour,
@@ -144,7 +146,7 @@ sub pre_remapping { # temporarily very trivial
 
     if($pipehead && $metakey) { # a head version of ensembl_db (non-pipeline genes)
 
-        my ($sdb_def_asm) = @{ $sdba->get_MetaContainer()->list_value_by_key('default.assembly') };
+        my ($sdb_def_asm) = (@{ $sdba->get_MetaContainer()->list_value_by_key('assembly.default') }, 'UNKNOWN');
 
             # Currently we keep the necessary information in the pipeline_db_head.
             # Once otter_db is converted into new schema, we can keep this information there.
