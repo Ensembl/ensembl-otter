@@ -15,18 +15,21 @@ $| = 1;
 
 my $sq = Bio::Otter::ServerQuery->new('dataset',
     'cs','csver','name','type','start','end','strand',
-    'analysis');
+    'metakey','analysis');
 set_nph($sq);
 
+my $analysis = $sq->getarg('analysis');
+my $metakey  = $sq->getarg('metakey') || ''; # defaults to pipeline
+
 my $odba = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
-my $pdba = odba_to_sdba($sq, $odba, $pipehead);
-my $pipeline_slice = get_slice($sq, $pdba, $pipehead);
+my $sdba = odba_to_sdba($sq, $odba, $pipehead, $metakey);
+pre_remapping($sq, $odba, $sdba, $pipehead);
+my $satellite_slice = get_slice($sq, $sdba, $pipehead);
 
 my @pt_optnames = @{ $OrderOfOptions{PredictionTranscript} };
 my @pe_optnames = @{ $OrderOfOptions{PredictionExon} };
 
-my $analysis = $sq->getarg('analysis');
-my $pts = $pipeline_slice->get_all_PredictionTranscripts($analysis, 1);
+my $pts = $satellite_slice->get_all_PredictionTranscripts($analysis, 1);
     # last_arg=1 means "fetch all exons now"
 
 server_log("Total of ".scalar(@$pts)." $analysis prediction transcripts found");

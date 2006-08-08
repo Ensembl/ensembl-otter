@@ -17,17 +17,21 @@ $| = 1;
 
 my $sq = Bio::Otter::ServerQuery->new('dataset',
     'cs','csver','name','type','start','end','strand',
-    'kind','analysis');
+    'kind','metakey','analysis');
 set_nph($sq);
 
+my $analysis = $sq->getarg('analysis');
+my $metakey  = $sq->getarg('metakey') || ''; # defaults to pipeline
+
 my $odba = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
-my $pdba = odba_to_sdba($sq, $odba, $pipehead);
-my $pipeline_slice = get_slice($sq, $pdba, $pipehead);
+my $sdba = odba_to_sdba($sq, $odba, $pipehead, $metakey);
+pre_remapping($sq, $odba, $sdba, $pipehead);
+my $satellite_slice = get_slice($sq, $sdba, $pipehead);
 
-my $pdbc = $pipehead ? $pdba->dbc() : $pdba; # needed for SimpleBindingAdaptor
+my $sdbc = $pipehead ? $sdba->dbc() : $sdba; # needed for SimpleBindingAdaptor
 
-if(!defined($pipeline_slice)) {
-    error_exit($sq, "Pipeline slice undefined!");
+if(!defined($satellite_slice)) {
+    error_exit($sq, "Satellite slice undefined!");
 }
 
 my @af_optnames = @{ $OrderOfOptions{AlignFeature} };
@@ -39,8 +43,7 @@ my $method = {
     'pafs' => 'get_all_ProteinAlignFeatures',
 }->{$kind};
 
-my $analysis = $sq->getarg('analysis');
-my $afs = $pipeline_slice->$method($analysis);
+my $afs = $satellite_slice->$method($analysis);
 
 $analysis ||= '(any analysis)';
 server_log("Total of ".scalar(@$afs)." $kind:$analysis features found");
@@ -52,7 +55,7 @@ foreach my $af (@$afs) {
 }
 
     # Fetch the hit descriptions:
-my $hd_adaptor = Bio::Otter::DBSQL::SimpleBindingAdaptor->new( $pdbc );
+my $hd_adaptor = Bio::Otter::DBSQL::SimpleBindingAdaptor->new( $sdbc );
 $hd_adaptor->fetch_into_hash(
     'hit_description',
     'hit_name',
