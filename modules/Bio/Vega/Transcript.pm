@@ -55,6 +55,14 @@ sub add_Evidence {
 
 sub get_Evidence {
   my $self = shift;
+  if ( ! exists $self->{'evidence' } ) {
+    if (!$self->adaptor() ) {
+      return [];
+    }
+
+    my $ta = $self->adaptor->db->get_TranscriptAdaptor();
+    $self->{'evidence'} = $ta->fetch_evidence($self);
+  }
   return $self->{'evidence'};
 }
 
@@ -63,6 +71,7 @@ sub hashkey_sub {
   my $self = shift;
   my $remarks = $self->get_all_Attributes('remark');
   my $hidden_remarks = $self->get_all_Attributes('hidden_remark');
+  my $evidence=$self->get_Evidence;
   my $hashkey_sub={};
   if (defined $remarks) {
 	 foreach my $rem (@$remarks){
@@ -72,6 +81,12 @@ sub hashkey_sub {
   if (defined $hidden_remarks) {
 	 foreach my $rem (@$hidden_remarks){
 		$hashkey_sub->{$rem->value}=1;
+	 }
+  }
+  if (defined $evidence) {
+	 foreach my $evi (@$evidence){
+		my $e=$evi->name.$evi->type;
+		$hashkey_sub->{$e}=1;
 	 }
   }
   my $exons=$self->get_all_Exons;
@@ -104,6 +119,12 @@ sub hashkey {
   my $mRNA_end_NF = $self->get_all_Attributes('mRNA_end_NF') ;
   my $cds_start_NF = $self->get_all_Attributes('cds_start_NF') ;
   my $cds_end_NF = $self->get_all_Attributes('cds_end_NF') ;
+  my $evidence= $self->get_Evidence;
+  my $evidence_count=0;
+
+  if (defined $evidence) {
+	 $evidence_count=@$evidence;
+  }
 
   my ($msNF,$meNF,$csNF,$ceNF,$tn);
 
@@ -182,7 +203,7 @@ sub hashkey {
     throw('transcript name must be defined to generate correct hashkey.');
   }
 
-  my $hashkey_main="$slice_name-$start-$end-$strand-$biotype-$status-$exon_count-$tn-$msNF-$meNF-$csNF-$ceNF-$attrib_count-$description";
+  my $hashkey_main="$slice_name-$start-$end-$strand-$biotype-$status-$exon_count-$tn-$msNF-$meNF-$csNF-$ceNF-$attrib_count-$description-$evidence_count";
 
   return ($hashkey_main);
 }
