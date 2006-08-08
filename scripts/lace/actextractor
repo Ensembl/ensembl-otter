@@ -52,7 +52,7 @@ sub show_one_set {
 
     my $genes = $slice->get_all_Genes();
 
-    for my $gene (@$genes) {
+    for my $gene (sort { $a->start <=> $b->start } @$genes) {
         my $gene_name  = $gene->gene_info()->name()->name();
         my $gene_type  = $gene->type();
 
