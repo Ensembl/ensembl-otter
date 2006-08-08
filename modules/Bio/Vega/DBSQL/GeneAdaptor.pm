@@ -62,13 +62,7 @@ sub check_for_change_in_gene_components {
 	 my $db_transcript=$ta->fetch_by_stable_id($tran->stable_id);
 	 my $translation_changed=0;
 	 $translation_changed=$self->translation_diff($sida,$tran,$db_transcript);
-	 #print "\ntranslationchanged:$translation_changed\n";
-	 #my $s=$tran->translation;
-	 
-	 #if ($s){
-		#die "\ntranslationversion:".$s->version."\n";
 
-	 #}
 	 ##check if transcript is new or old
 	 ##if transcript is old compare to see if transcript has changed
 	 my $transcript_changed=0;
@@ -77,15 +71,13 @@ sub check_for_change_in_gene_components {
 	 if ( $db_transcript){
 
 		$transcript_changed=compare($db_transcript,$tran);
-
 		my $db_version=$db_transcript->version;
+		if ($exon_changed==1 || $translation_changed==1 ) {
+		  $transcript_changed = 1;
+		#die "transcript hanged\n";
+		}
 		$db_transcript->is_current(0);
 		$ta->update($db_transcript);
-
-		  if ($exon_changed==1 || $translation_changed==1 ) {
-			 $transcript_changed = 1;
-		  }
-
 
 		##if transcript has changed then increment version
 		if ($transcript_changed==1 ) {
@@ -121,6 +113,7 @@ sub check_for_change_in_gene_components {
 		  }
 		  if ($transcript_changed == 1){
 			 $tran->version($old_version+1);
+
 		  }
 		}
 	 }
@@ -128,6 +121,7 @@ sub check_for_change_in_gene_components {
 		$tran_change_count++;
 	 }
   }
+
   my $transcripts_changed=0;
 
   if ($tran_change_count > 0) {
@@ -137,10 +131,37 @@ sub check_for_change_in_gene_components {
 }
 
 
+sub update_deleted_transcripts {
+  my ($self,$new_trs,$old_trs)=@_;
+  my %newhash = map { $_->stable_id => $_} @$new_trs;
+  my %oldhash = map { $_->stable_id => $_} @$old_trs;
+  my $ta=$self->db->get_TranscriptAdaptor;
+  while (my ($key, $old_t) = each %oldhash) {
+    unless ($newhash{$key}) {
+		$old_t->is_current(0);
+		$ta->update($old_t);
+    }
+  }
+
+}
+
+sub update_deleted_exons {
+  my ($self,$new_exons,$old_exons)=@_;
+  my %newhash = map { $_->stable_id => $_} @$new_exons;
+  my %oldhash = map { $_->stable_id => $_} @$old_exons;
+  my $ea=$self->db->get_ExonAdaptor;
+  while (my ($key, $old_e) = each %oldhash) {
+    unless ($newhash{$key}) {
+		$old_e->is_current(0);
+		$ea->update($old_e);
+    }
+  }
+
+}
+
 sub translation_diff{
 
   my ($self,$sida,$tran,$db_transcript)=@_;
-  print STDOUT "\n\nI am called :\n\n";
   my $translation_changed=0;
   my $translation;
   my $db_translation;
@@ -170,8 +191,6 @@ sub translation_diff{
 		throw('translation stable_ids of the same two transcripts are different\n');
 	 }
 	 else {
-		print "\nSTABLE_ID:".$translation->stable_id;
-		print "\ndb STBALEID:".$db_translation->stable_id;
 		$translation_changed=compare($db_translation,$translation);
 	 }
 
@@ -206,10 +225,11 @@ sub exons_diff {
 	 ##if exon is old compare to see if anything has changed
 	 if ( $db_exon){
 		my $db_version=$db_exon->version;
-		$db_exon->is_current(0);
-		$ea->update($db_exon);
       $exon_changed=compare($db_exon,$exon);
 		##if exon has changed then increment version
+		$db_exon->is_current(0);
+		$ea->update($db_exon);
+
 		if ($exon_changed == 1){
 		  $exon->version($db_version+1);
 		  $exon->is_current(1);
@@ -266,7 +286,7 @@ sub exons_diff {
 sub store{
 
    my ($self,$gene) = @_;
-
+	$self->db->begin_work;
    unless ($gene) {
        throw("Must enter a Gene object to the store method");
    }
@@ -318,42 +338,80 @@ sub store{
 	  $gene->slice->adaptor($sa);
 	}
 
-	##deleted gene make sure is_current is set to 0
-	my $type=$gene->biotype;
-	if ( $type eq 'obsolete') {
-	  $gene->is_current=0;
-	  $self->update($gene);
-	  ##??what will happen to transcripts and exons and translations??
-	  ##TO BE DONE -- translation change - translation version, stable_id???
-	  return;
-	}
-	
 	##new gene - assign stable_id
 	my $sida = $self->db->get_StableIdAdaptor();
 	unless ($gene->stable_id){
 	  $sida->fetch_new_stable_ids_for_Gene($gene);
 	}
-
-	##check if gene is new or old
-	my $db_gene=$self->fetch_by_stable_id($gene->stable_id);
-
 	##if gene is old compare to see if gene components have changed
 	my $gene_changed=0;
+	##check if gene is new or old
 
+	my $db_gene=$self->fetch_by_stable_id($gene->stable_id);
 
-	if ( $db_gene) {
+	##deleted gene make sure is_current is set to 0
 
+	my $type=$gene->biotype;
+
+	if ( $type eq 'obsolete') {
+	  if ($db_gene) {
+		 $db_gene->is_current(0);
+		 $self->update($db_gene);
+		 $gene_changed = 5;
+		 my $version=$db_gene->version;
+		 $gene->version($version);
+		 $gene->is_current(0);
+		 my $transcripts=$gene->get_all_Transcripts;
+		 my $ta=$self->db->get_TranscriptAdaptor;
+		 foreach my $tran (@$transcripts) {
+			unless ($tran->stable_id) {
+			  throw('Trying to delete a transcript without a stable_id');
+			}
+			my $db_transcript=$ta->fetch_by_stable_id($tran->stable_id);
+			my $version=$db_transcript->version;
+			$tran->version($version);
+			$tran->is_current(0);
+			$db_transcript->is_current(0);
+			$ta->update($db_transcript);
+			my $translation=$tran->translation;
+			if ($translation) {
+			  my $db_translation=$db_transcript->translation;
+			  unless ($db_translation || $translation->stable_id) {
+				 throw('Trying to delete an unknown translation, either translation not in db or stable_id not set');
+			  }
+			  my $version=$db_translation->version;
+			  $translation->version($version);
+			}
+		 }
+		 my $ea=$self->db->get_ExonAdaptor;
+		 my $exons=$gene->get_all_Exons;
+		 foreach my $exon(@$exons){
+			unless ($exon->stable_id){
+			  throw('Trying to delete an exon without a stable_id');
+			}
+			my $db_exon=$ea->fetch_by_stable_id($exon->stable_id);
+			my $version=$db_exon->version;
+			$exon->version($version);
+			$exon->is_current(0);
+			$db_exon->is_current(0);
+			$ea->update($db_exon);
+		 }
+	  }
+	  else {
+		 throw 'Trying to delete a gene that is already deleted OR Trying to delete a gene which is not present in database '.$gene->stable_id;
+	  }
+	}
+
+	if ( $db_gene && $gene_changed != 5) {
 	  $gene_changed=$self->check_for_change_in_gene_components($sida,$gene);
 
 	  my $db_version=$db_gene->version;
-
 	  if ($gene_changed == 0) {
 		 $gene_changed=compare($db_gene,$gene);
 	  }
-
+	  $gene->is_current(1);
 	  $db_gene->is_current(0);
 	  $self->update($db_gene);
-	  $gene->is_current(1);
 
 	  if ( $gene_changed == 1) {
 		 $gene->version($db_version+1);
@@ -364,9 +422,9 @@ sub store{
 		 $gene->version($db_version);
 	  }
 	}
-
+	my $old_gene;
 	##if gene is new /restored
-	else {
+	if (! $db_gene && $gene_changed != 5) {
 		my $restored_genes = $self->fetch_all_versions_by_stable_id($gene->stable_id);
 		##restored gene
 		if (@$restored_genes > 0){
@@ -386,13 +444,19 @@ sub store{
 		  else {
 			 ##compare this gene with the highest version of the old genes
 			 ##if gene changed
-			 my $old_gene=$self->fetch_by_stable_id_version($gene->stable_id,$old_version);
+			 $old_gene=$self->fetch_by_stable_id_version($gene->stable_id,$old_version);
 			 $gene_changed=compare($old_gene,$gene);
+
 			 if ($gene_changed == 1){
+
 				$gene->version($old_version+1);
 				##add synonym if old gene name is not a current gene synonym
 				$self->add_gene_synonym($old_gene,$gene);
 			 }
+			 else {
+				$gene_changed=3;
+			 }
+
 		  }
 		}
 		##new gene
@@ -405,11 +469,12 @@ sub store{
 		  ##store gene and its components
 		  $self->SUPER::store($gene);
 		}
-	}
-	if ($gene_changed == 1) {
+	 }
+
+	if ($gene_changed == 1 || $gene_changed == 3 || $gene_changed == 5) {
 	  $self->SUPER::store($gene);
 	}
-	if ($gene_changed==1 || $gene_changed==2){
+	if ($gene_changed==1 || $gene_changed==2 || $gene_changed == 3 || $gene_changed == 5){
 	  ##get author_id and store gene_id-author_id in gene_author table
 	  my $aa = $self->db->get_AuthorAdaptor;
 	  my $gene_author=$gene->gene_author;
@@ -430,8 +495,49 @@ sub store{
 		 $ta->store_Evidence($tran->dbID,$evidence_list);
 	  }
 	}
+	
 	if ($gene_changed == 0) {
-	  print STDERR "\nNone of the gene components or the gene(stable id:".$gene->stable_id." version:".$gene->version.") has changed and hence No change has been made to the database\n";
+	  $self->db->rollback;
+	  print STDOUT "\nUnchanged gene:".$gene->stable_id." Version:".$gene->version." nothing written in db\n";
+	}
+	if ($gene_changed == 1) {
+	  if ($db_gene){
+		 my $new_trs=$gene->get_all_Transcripts;
+		 my $old_trs;
+		 my $new_tr_count=@$new_trs;
+		 my $old_tr_count;
+		 $old_trs=$db_gene->get_all_Transcripts;
+		 $old_tr_count=@$old_trs;
+		 if ($old_tr_count > $new_tr_count) {
+			$self->update_deleted_transcripts($new_trs,$old_trs);
+		 }
+		 my $new_exons=$gene->get_all_Exons;
+		 my $old_exons;
+		 my $new_exon_count=@$new_exons;
+		 my $old_exon_count;
+		 $old_exons=$db_gene->get_all_Exons;
+		 $old_exon_count=@$old_exons;
+		 if ($old_exon_count > $new_exon_count) {
+			$self->update_deleted_exons($new_exons,$old_exons);
+		 }
+	  }
+	  $self->db->commit;
+	  print STDOUT "\nChanged gene:".$gene->stable_id." Current Version:".$gene->version." changes stored successfully in db\n";
+
+	}
+	if ($gene_changed == 2) {
+	  $self->db->commit;
+	  print STDOUT "\nNew gene:".$gene->stable_id." Version:".$gene->version." stored successfully in db\n";
+	}
+
+	if ($gene_changed == 3) {
+	  $self->db->commit;
+	  print STDOUT "\nRestored gene:".$gene->stable_id." Version:".$gene->version." restored successfully in db\n";
+	}
+	
+	if ($gene_changed == 5) {
+	  $self->db->commit;
+	  print STDOUT "\nDeleted gene:".$gene->stable_id." Version:".$gene->version." deleted successfully in db\n";
 	}
 
  }
@@ -442,8 +548,8 @@ sub add_gene_synonym{
   my $db_gn;
   if ($db_gene_name) {
 	 if (defined $db_gene_name->[0]){
-	 $db_gn=$db_gene_name->[0]->value;
-  }
+		$db_gn=$db_gene_name->[0]->value;
+	 }
   }
   my $synonyms = $gene->get_all_Attributes('synonym');
   my $se=0;

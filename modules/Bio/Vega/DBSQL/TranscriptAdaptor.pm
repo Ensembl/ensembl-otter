@@ -30,6 +30,40 @@ sub fetch_by_stable_id_version  {
   return $transcript;
 
 }
+
+sub fetch_evidence {
+
+  my ($self,$transcript)=@_;
+
+  if( !ref($transcript) || !$transcript->isa('Bio::EnsEMBL::Transcript') ) {
+    throw('Transcript argument is required.');
+  }
+
+  my $tid = $transcript->dbID();
+
+  if(!defined($tid)) {
+    throw("Transcript must have dbID.");
+  }
+
+  my $sth = $self->prepare("SELECT name,type " .
+                           "FROM evidence " .
+                           "WHERE transcript_id = ? ");
+
+  $sth->execute($tid);
+
+  my $results;
+  while  (my $ref = $sth->fetchrow_hashref) {
+	 my $obj=Bio::Vega::Evidence->new;
+	 $obj->name($ref->{name});
+	 $obj->type($ref->{type});
+	 push @$results,$obj;
+  }
+
+  $sth->finish();
+
+  return $results;
+}
+
 sub store_Evidence {
 
   my ($self,$transcript_id,$evidence_list) = @_;
