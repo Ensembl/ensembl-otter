@@ -261,7 +261,7 @@ sub Bio::Otter::TranscriptInfo::toXMLstring {
     foreach my $evidence (sort {$a->name cmp $b->name} @{$tinfo->get_all_Evidence}) {
         $str .= emit_opening_tag('evidence', 6);
         $str .= emit_tagpair('name', $evidence->name(), 8);
-        $str .= emit_tagpair('name', $evidence->type(), 8);
+        $str .= emit_tagpair('type', $evidence->type(), 8);
         $str .= emit_closing_tag('evidence', 6);
     }
 
