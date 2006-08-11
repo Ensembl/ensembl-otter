@@ -19,8 +19,7 @@ use Bio::Otter::Lace::Blast;
 use Bio::Otter::Lace::Slice; # a new kind of Slice that knows how to get pipeline data
 
 use Bio::EnsEMBL::Ace::DataFactory;
-use Bio::EnsEMBL::Ace::Filter::Gene;
-use Bio::EnsEMBL::Ace::Otter_Filter::Gene;
+use Bio::EnsEMBL::Ace::Otter_Filter::Gene::EnsEMBL;
 
 use Hum::Ace::MethodCollection;
 
@@ -864,7 +863,7 @@ sub make_ensembl_gene_DataFactory {
     my $factory = Bio::EnsEMBL::Ace::DataFactory->new($self->Client, $dsname);
     # Add a filter to the factory for each type of gene that we have
     foreach my $ana_name (@analysis_names) {
-        my $ens_filter = Bio::EnsEMBL::Ace::Otter_Filter::Gene->new;
+        my $ens_filter = Bio::EnsEMBL::Ace::Otter_Filter::Gene::EnsEMBL->new;
         $ens_filter->metakey($metakey);
         $ens_filter->pipehead(0); # temporarily we are linked to old schema ensembl genes
         $ens_filter->url_string(
