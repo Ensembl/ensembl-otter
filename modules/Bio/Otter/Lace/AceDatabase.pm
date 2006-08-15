@@ -21,6 +21,7 @@ use Bio::Otter::Lace::Slice; # a new kind of Slice that knows how to get pipelin
 use Bio::EnsEMBL::Ace::DataFactory;
 use Bio::EnsEMBL::Ace::Otter_Filter::Gene::EnsEMBL;
 
+use Hum::Ace::LocalServer;
 use Hum::Ace::MethodCollection;
 
 my $DATASET_HASH_FILE    = '.slice_dataset';
