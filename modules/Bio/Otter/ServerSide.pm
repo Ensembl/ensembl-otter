@@ -224,13 +224,15 @@ sub get_slice { # codebase-independent version for scripts
         if($cs eq 'chromosome') {
             $start ||= 1;
 
-	    eval {
-		my $chr_obj = $dba->get_ChromosomeAdaptor()->fetch_by_chr_name($name);
-		$end ||= $chr_obj->length();
-	    };
-	    if($@) {
-		print STDERR "something was wrong when fetching a chromosome by name '$name'\n";
-	    }
+            eval {
+                my $chr_obj = $dba->get_ChromosomeAdaptor()->fetch_by_chr_name($name);
+                $end ||= $chr_obj->length();
+            };
+            if($@) {
+                print STDERR "something was wrong when fetching a chromosome by name '$name'\n";
+                print STDERR "NAMELY:\n";
+                print STDERR "[[[$@]]]\n";
+            }
 
             $slice = $dba->get_SliceAdaptor()->fetch_by_chr_start_end(
                 $name,
