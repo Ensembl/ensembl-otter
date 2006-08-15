@@ -7,7 +7,6 @@ use Carp qw{ cluck confess };
 use ZMap::Connect qw(:all);
 use Sys::Hostname;
 use Tie::Watch;
-use Hum::Ace::LocalServer;
 use Data::Dumper;
 
 my $ZMAP_DEBUG = 1;
@@ -498,6 +497,9 @@ sub zMapEdit{
             my $feat = $feat_hash->{$name};
             my $subs = $feat->{'subfeature'}
                 or next;
+            unless (ref $subs eq 'ARRAY') {
+                die "Unexpected feature format: ", Dumper($feat);
+            }
             foreach my $s (@$subs) {
                 # Only transcripts have exons
                 if ($s->{'ontology'} eq 'exon') {
