@@ -229,9 +229,9 @@ sub get_slice { # codebase-independent version for scripts
                 $end ||= $chr_obj->length();
             };
             if($@) {
-                print STDERR "something was wrong when fetching a chromosome by name '$name'\n";
-                print STDERR "NAMELY:\n";
-                print STDERR "[[[$@]]]\n";
+                server_log('Could not get a chromosome, returning an empty list');
+                send_response($sq, '', 1);
+                exit(0); # <--- this forces all the scripts to exit normally
             }
 
             $slice = $dba->get_SliceAdaptor()->fetch_by_chr_start_end(
