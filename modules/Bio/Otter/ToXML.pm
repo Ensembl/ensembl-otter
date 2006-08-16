@@ -7,6 +7,7 @@ use strict;
 sub emit_value { # just make sure it does not contain triangular brackets:
     my $value = shift @_;
 
+    ### There are other characters that sould be escaped: & "
     $value=~s/\>/&gt;/g;
     $value=~s/\</&lt;/g;
 
@@ -129,6 +130,7 @@ sub Bio::EnsEMBL::Transcript::toXMLstring {
                                 : ($tran_high + $coord_offset, $tran_low + $coord_offset);
     }
 
+    ### Trimming exons should not be part of XML formatting code.
     EXON: foreach my $exon (@{$transcript->get_all_Exons()}) {
 
         # print STDERR "start=".$exon->start." end=".$exon->end." slice->length=".$slice_length."\n";
