@@ -256,8 +256,8 @@ sub get_slice { # codebase-independent version for scripts
         }
     }
 
-    if(!defined($slice) && $pipehead) {
-        server_log('Could not get a slice, probably not yet loaded into new pipeline');
+    if(not $slice) {
+        server_log('Could not get a slice, probably not (yet) loaded into satellite db');
         send_response($sq, '', 1);
         exit(0); # <--- this forces all the scripts to exit normally
     }
