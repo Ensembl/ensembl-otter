@@ -710,7 +710,7 @@ sub lock_region_for_contig_from_Dataset{
 }
 
 sub get_xml_region_from_dsname_ssname_chr_start_end {
-    my( $self, $dsname, $ssname, $chr_name, $chr_start, $chr_end ) = @_;
+    my( $self, $dsname, $ssname, $chr_name, $chr_start, $chr_end, $otterhead ) = @_;
 
     my $xml = $self->general_http_dialog(
         0,
@@ -724,6 +724,7 @@ sub get_xml_region_from_dsname_ssname_chr_start_end {
             'chr'      => $chr_name,
             'start'    => $chr_start,
             'end'      => $chr_end,
+            ($otterhead ? ( 'pipehead' => 1) : ('pipehead' => 0)),
         }
     );
 
