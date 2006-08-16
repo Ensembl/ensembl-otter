@@ -18,31 +18,33 @@ sub initialize {
 }
 
 sub get_transcript_class {
-  my ($self,$biotype,$status)=@_;
-  my $transcript_class_mapping = { "UNKNOWN" => {'unprocessed_pseudogene'=>'Unprocessed_pseudogene',
-															'processed_pseudogene'=>'Processed_pseudogene',
-															'pseudogene'=>'Pseudogene',
-															'Ig_pseudogene_segment'=>'Ig_pseudogene_segment',
-															'coding'=>'Coding',
-															},
-											  "KNOWN" => {'protein_coding'=>'Known'},
-											  "NOVEL" => {'protein_coding'=>'Novel_CDS',
-															  'Ig_segment'=>'Ig_segment',
-															  'processed_transcript'=>'Novel_transcript',
-															 },
-											  "PUTATIVE" => {'processed_transcript'=>'Putative',
-																 },
-											  "PREDICTED"=>{'protein_coding'=>'Predicted_gene',
-																}
-											};
+    my ($self, $biotype, $status) = @_;
+    my $transcript_class_mapping = {
+        "UNKNOWN" => {
+            'unprocessed_pseudogene' => 'Unprocessed_pseudogene',
+            'processed_pseudogene'   => 'Processed_pseudogene',
+            'pseudogene'             => 'Pseudogene',
+            'Ig_pseudogene_segment'  => 'Ig_pseudogene_segment',
+            'coding'                 => 'Coding',
+        },
+        "KNOWN" => { 'protein_coding' => 'Known' },
+        "NOVEL" => {
+            'protein_coding'       => 'Novel_CDS',
+            'Ig_segment'           => 'Ig_segment',
+            'processed_transcript' => 'Novel_transcript',
+        },
+        "PUTATIVE"  => { 'processed_transcript' => 'Putative', },
+        "PREDICTED" => { 'protein_coding'       => 'Predicted_gene', }
+    };
 
-  return $transcript_class_mapping->{$status}->{$biotype};
+    return $transcript_class_mapping->{$status}->{$biotype};
 }
 
 sub build_Genes {
   my ($self, $genes) = @_;
   my $xml='';
-  if($genes) {
+  
+  return unless $genes;
 	 
   foreach my $gene(@$genes){
 	 my $pp=$self->prettyprint('locus');
@@ -219,13 +221,9 @@ sub build_Genes {
 	 else {
 		throw "Cannot create Otter XML, no transcripts attched to this gene:$gene";
 	 }
-  $xml=$xml.$self->formatxml($pp);
+     $xml=$xml.$self->formatxml($pp);
   }
 
-  }
-  else {
-	 return;
-  }
   return $xml;
 }
 

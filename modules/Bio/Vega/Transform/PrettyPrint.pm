@@ -13,17 +13,6 @@ sub new {
   return $self;
 }
 
-sub attribvals {
-  my ($self,$value) = @_;
-  if (defined $value){
-	 unless ($self->{'attribvals'}){
-		$self->{'attribvals'}=[];
-	 }
-	 push @{$self->{'attribvals'}},$value;
-  }
-  return $self->{'attribvals'};
-}
-
 sub name {
   my ($self,$value) = @_;
   if( defined $value) {
@@ -58,6 +47,15 @@ sub xmlformat {
 	 $self->{'xmlformat'}=$self->{'xmlformat'}.$value;
   }
   return $self->{'xmlformat'};
+}
+
+sub attribvals {
+  my ($self,$value) = @_;
+  if (defined $value){
+     my $vals = $self->{'attribvals'} ||= [];
+	 push @$vals, $value;
+  }
+  return $self->{'attribvals'};
 }
 
 sub attribobjs {
