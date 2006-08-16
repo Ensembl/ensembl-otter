@@ -121,7 +121,7 @@ sub hashkey {
   my $cds_end_NF = $self->get_all_Attributes('cds_end_NF') ;
   my $evidence= $self->get_Evidence;
   my $evidence_count=0;
-
+##should transcript_class_name be added??
   if (defined $evidence) {
 	 $evidence_count=@$evidence;
   }

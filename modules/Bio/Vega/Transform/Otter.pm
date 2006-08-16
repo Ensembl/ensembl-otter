@@ -438,7 +438,7 @@ sub build_Transcript {
   $transcript->add_Attributes(@$transcript_attributes);
 
   ##evidence
-  my $evidence=delete $evidence_list{$self};;
+  my $evidence=delete $evidence_list{$self};
   if (defined $evidence) {
 	 $transcript->add_Evidence($evidence);
   }

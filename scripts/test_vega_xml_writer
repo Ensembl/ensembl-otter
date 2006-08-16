@@ -1,0 +1,74 @@
+#!/usr/local/bin/perl -w
+
+=head1 DESCRIPTION
+
+test_vega_xml_writer -dbhost xxx -dbport xxx -dbname xxx -dbuser xxx -dbpass xxx -xml filename
+
+=head1 OPTIONS
+
+-dbhost database host
+
+-dbport dataabse port
+
+-dbname database name
+
+-dbuser database user name
+
+-dbpass database user password
+
+-xml input otter xml file to be parsed
+
+=cut
+
+use strict;
+
+use Bio::Vega::Transform::Otter;
+use Bio::Vega::Transform::XML;
+use Getopt::Long;
+use Data::Dumper;
+
+
+{
+  my $dbhost;
+  my $dbport;
+  my $dbname;
+  my $dbuser;
+  my $dbpass;
+  my $help;
+  my $xmlfile;
+  &GetOptions(
+				  'dbhost=s'   => \$dbhost,
+				  'dbport=n'   => \$dbport,
+				  'dbname=s'   => \$dbname,
+				  'dbuser=s'   => \$dbuser,
+				  'dbpass=s'   => \$dbpass,
+				  'h|help'     => \$help,
+				  'xml=s'  => \$xmlfile,
+				 ) or ($help = 1);
+  if ($help || !defined ($dbhost) || !defined($dbport) || !defined($dbname) || !defined($dbuser) || !defined($dbpass) ||!defined($xmlfile) ) {
+    exec('perldoc', $0);
+  }
+
+  my $parser = Bio::Vega::Transform::Otter->new;
+  $parser->parsefile($xmlfile);
+ my $genes=$parser->get_Genes;
+  my $writer=Bio::Vega::Transform::XML->new;
+ # foreach my $gene (@$genes){
+	 print STDOUT $writer->getxml('gene',$genes);
+  #}
+ # my $features=$parser->get_SimpleFeatures;
+#	 print STDOUT $writer->getxml('feature',$features);
+
+warn "\nParser now out of scope\n";
+}
+1;
+
+
+__END__
+
+=head1 NAME - test_vega_xml_writer
+
+=head1 AUTHOR
+
+Sindhu Pillai B<email> sp1@sanger.ac.uk
+
