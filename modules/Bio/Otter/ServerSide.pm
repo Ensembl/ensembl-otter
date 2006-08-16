@@ -229,7 +229,7 @@ sub get_slice { # codebase-independent version for scripts
                 $end ||= $chr_obj->length();
             };
             if($@) {
-                server_log('Could not get a chromosome, returning an empty list');
+                server_log("Could not get chromosome '$name', returning an empty list");
                 send_response($sq, '', 1);
                 exit(0); # <--- this forces all the scripts to exit normally
             }
@@ -240,9 +240,17 @@ sub get_slice { # codebase-independent version for scripts
                 $end,
             );
         } elsif($cs eq 'contig') {
-            $slice = $dba->get_RawContigAdaptor()->fetch_by_name(
-                $name,
-            );
+            eval {
+                $slice = $dba->get_RawContigAdaptor()->fetch_by_name(
+                    $name,
+                );
+            };
+            if($@) {
+                server_log("Could not get contig '$name', returning an empty list");
+                send_response($sq, '', 1);
+                exit(0); # <--- this forces all the scripts to exit normally
+            }
+
         } else {
             error_exit($sq, "Other coordinate systems are not supported");
         }
