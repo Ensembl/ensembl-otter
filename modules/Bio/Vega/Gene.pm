@@ -2,7 +2,7 @@ package Bio::Vega::Gene;
 
 use strict;
 use Bio::EnsEMBL::Utils::Argument qw ( rearrange );
-
+use Bio::EnsEMBL::Utils::Exception qw ( throw warning );
 use base 'Bio::EnsEMBL::Gene';
 
 
@@ -20,7 +20,7 @@ sub gene_author {
 	 if ($value->isa("Bio::Vega::Author")) {
 		$self->{'gene_author'} = $value;
 	 } else {
-		$self->throw("Argument to gene_author must be a Bio::Vega::Author object.  Currently is [$value]");
+		throw("Argument to gene_author must be a Bio::Vega::Author object.  Currently is [$value]");
 	 }
   }
   return $self->{'gene_author'};
@@ -94,11 +94,11 @@ sub hashkey {
   }
 
   unless($slice_name) {
-    throw('Slice must be set to generate correct hashkey.');
+    throw("Slice must be set to generate correct hashkey.");
   }
 
   unless($start) {
-    warning("start attribute must be defined to generate correct hashkey.");
+    throw("start attribute must be defined to generate correct hashkey.");
   }
 
   unless($end) {
