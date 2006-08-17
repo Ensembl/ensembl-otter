@@ -2038,36 +2038,15 @@ sub export_highlighted_text_to_selection {
         }
     }
     
-    if (length($clip) > $max_bytes) {
-        die "Text string longer than $max_bytes: ", length($clip);
-    }
-    return $clip;
-}
-
-sub get_all_selected_text {
-    my( $self ) = @_;
-
-    my $canvas = $self->canvas;
-    my( @text );
-    foreach my $obj ($self->list_selected) {
-        if ($canvas->type($obj) eq 'text') {
-            my $t = $canvas->itemcget($obj, 'text');
-            push(@text, $t);
-        }
-    }
-    return @text;
+    return substr($clip, $offset, $max_bytes);
 }
 
 sub export_ace_subseq_to_selection {
     my( $self, $offset, $max_bytes ) = @_;
         
     my $sub = $self->new_SubSeq_from_tk;
-    my $text = $sub->ace_string;
-    if (length($text) > $max_bytes) {
-        die "text too big";
-    }
-    warn $text;
-    return $text;
+    
+    return substr($sub->ace_string, $offset, $max_bytes);
 }
     
 sub middle_button_paste {

@@ -372,8 +372,8 @@ sub initialise {
     $top->bind('<Control-H>', $hunter);
     
     my $refesher = sub{
-	$top->Busy;
-	$self->refresh_column(7) ;
+	    $top->Busy;
+	    $self->refresh_column(7) ;
         $top->Unbusy;
     };
     $self->make_button($button_frame_2, 'Refresh Locks', $refesher, 0);
