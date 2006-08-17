@@ -928,6 +928,28 @@ sub next_message_id {
         }
     }
 
+    # Extends the set of highlighted objects to include
+    # all objects within the rectangle bounding the current
+    # object and all highlighted objects, and which match the
+    # search spec argument.
+    sub extend_highlight {
+        my ($self, $search) = @_;
+
+        my $canvas = $self->canvas;
+
+        my %in_region =
+          map { $_, 1 }
+          $canvas->find('overlapping',
+            $canvas->bbox('current', $self->list_selected));
+
+        foreach my $obj ($canvas->find('withtag', $search)) {
+            next unless $in_region{$obj};
+            next if grep $_ eq $sel_tag, $canvas->gettags($obj);
+            next if $self->is_selected($obj);
+            $self->highlight($obj);
+        }
+    }
+
     sub deselect_all {
         my( $self ) = @_;
 
