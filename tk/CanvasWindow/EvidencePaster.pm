@@ -61,8 +61,9 @@ sub initialise {
     $top->bind('<Control-A>', $select_all);
     $canvas->SelectionHandle( sub{ $self->selected_text_to_clipboard(@_) });
 
-    $canvas->Tk::bind('<Button-1>',       sub{ $self->left_button_handler });
-    $canvas->Tk::bind('<Shift-Button-1>', sub{ $self->shift_left_button_handler });
+    $canvas->Tk::bind('<Button-1>',         sub{ $self->left_button_handler });
+    $canvas->Tk::bind('<Control-Button-1>', sub{ $self->control_left_button_handler });
+    $canvas->Tk::bind('<Shift-Button-1>',   sub{ $self->shift_left_button_handler });
 
     $canvas->Tk::bind('<Destroy>', sub{ $self = undef });
     
@@ -86,7 +87,22 @@ sub left_button_handler {
     
     return if $self->delete_message;
     $self->deselect_all;
-    $self->shift_left_button_handler;
+    $self->control_left_button_handler;
+}
+
+sub control_left_button_handler {
+    my( $self ) = @_;
+    
+    my $canvas = $self->canvas;
+
+    my ($obj)  = $canvas->find('withtag', 'current&&!IGNORE')
+      or return;
+
+    if ($self->is_selected($obj)) {
+        $self->remove_selected($obj);
+    } else {
+        $self->highlight($obj);
+    }
 }
 
 sub shift_left_button_handler {
@@ -94,16 +110,9 @@ sub shift_left_button_handler {
     
     my $canvas = $self->canvas;
 
-    my ($obj)  = $canvas->find('withtag', 'current')  or return;
-    if (grep $_ eq 'IGNORE', $canvas->gettags($obj)) {
-        return;
-    }
+    return unless $canvas->find('withtag', 'current&&!IGNORE');
 
-    if ($self->is_selected($obj)) {
-        $self->remove_selected($obj);
-    } else {
-        $self->highlight($obj);
-    }
+    $self->extend_highlight('!IGNORE');
 }
 
 sub select_all {
