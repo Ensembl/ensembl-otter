@@ -759,13 +759,25 @@ sub bind_events {
     
     $canvas->Tk::bind('<Escape>',   sub{ $self->deselect_all        });    
     $canvas->Tk::bind('<Return>',   sub{ $self->edit_double_clicked });    
-    $canvas->Tk::bind('<KP_Enter>', sub{ $self->edit_double_clicked });    
+    $canvas->Tk::bind('<KP_Enter>', sub{ $self->edit_double_clicked });
+
+    # Clipboard
+    $canvas->SelectionHandle( sub{ $self->selected_text_to_clipboard(@_) });
     
     # Object won't get DESTROY'd without:
     $canvas->Tk::bind('<Destroy>', sub{
         #cluck "Dealing with <Destroy> call";
         $self = undef;
         });
+}
+
+sub highlight {
+    my $self = shift;
+    
+    $self->SUPER::highlight(@_);
+    $self->canvas->SelectionOwn(
+        -command    => sub{ $self->deselect_all },
+        );
 }
 
 sub GenomicFeatures {

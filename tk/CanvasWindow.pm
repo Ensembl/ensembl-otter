@@ -982,6 +982,26 @@ sub next_message_id {
     }
 }
 
+sub get_all_selected_text {
+    my( $self ) = @_;
+
+    my $canvas = $self->canvas;
+    my( @text );
+    foreach my $obj ($self->list_selected) {
+        if ($canvas->type($obj) eq 'text') {
+            my $t = $canvas->itemcget($obj, 'text');
+            push(@text, $t);
+        }
+    }
+    return @text;
+}
+
+sub selected_text_to_clipboard {
+    my( $self, $offset, $max_bytes ) = @_;
+    
+    my $text = join "\n", $self->get_all_selected_text;
+    return substr($text, $offset, $max_bytes);
+}
 
 ##### Moved from MenuCanvasWindow - clipboard manipulation:
 #
