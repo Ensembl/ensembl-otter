@@ -239,6 +239,12 @@ sub get_slice { # codebase-independent version for scripts
                 $start,
                 $end,
             );
+
+            if($slice and ! @{ $slice->get_tiling_path() } ) {
+                server_log('Could not get a slice, probably not (yet) loaded into satellite db');
+                send_response($sq, '', 1);
+                exit(0); # <--- this forces all the scripts to exit normally
+            }
         } elsif($cs eq 'contig') {
             eval {
                 $slice = $dba->get_RawContigAdaptor()->fetch_by_name(
@@ -255,11 +261,6 @@ sub get_slice { # codebase-independent version for scripts
             error_exit($sq, "Other coordinate systems are not supported");
         }
 
-        if($slice and ! @{ $slice->get_tiling_path() } ) {
-            server_log('Could not get a slice, probably not (yet) loaded into satellite db');
-            send_response($sq, '', 1);
-            exit(0); # <--- this forces all the scripts to exit normally
-        }
     }
 
     if(not $slice) {
