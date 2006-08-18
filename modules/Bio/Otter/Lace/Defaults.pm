@@ -49,12 +49,14 @@ my @CLIENT_OPTIONS = qw(
 # $DEFAULTS->{$CLIENT_STANZA} hash.  To add another client option just include in above
 # and if necessary add to hardwired defaults in do_getopt().
 
-my $save_option = sub {
+    # not a method
+sub save_option {
     my ($option, $value) = @_;
     $DEFAULTS->{$CLIENT_STANZA}->{$option} = $value;
-};
+}
 
-my $save_deep_option = sub {
+    # not a method
+sub save_deep_option {
     my $getopt = $_[1];
     my ($option, $value) = split(/=/, $getopt, 2);
     $option = [ split(/\./, $option) ];
@@ -63,7 +65,7 @@ my $save_deep_option = sub {
     my $opt_str = join('.', @$option);
     $DEFAULTS->{$opt_str} ||= {};
     $DEFAULTS->{$opt_str}->{$param} = $value;
-};
+}
 
 
 my ($THIS_USER, $HOME_DIR) = (getpwuid($<))[0,7];    
@@ -99,6 +101,10 @@ Suggested usage:
 sub do_getopt {
     my (@script_args) = @_;
 
+    ## If you have any 'local defaults' that you want to take precedence
+    #  over the configuration files' settings, unshift them into @ARGV
+    #  before running do_getopt()
+
     $CONFIG_INIFILES = [];    # clear and add in case of multiple calls
     push(@$CONFIG_INIFILES, $HARDWIRED);
 
@@ -113,21 +119,19 @@ sub do_getopt {
     ############################################################################
     my $start = "Called as:\n\t$CALLED\nGetOptions() Error parsing options:";
     $GETOPT_ERRSTR = undef;    # in case this gets called more than once
-    my $show_help = \&show_help;
     GetOptions(
-        'h|help!' => $show_help,
+        'h|help!' => \&show_help,
 
         # map {} makes these lines dynamically from @CLIENT_OPTIONS
-        # 'host=s'        => $save_option,
-        (map { $_ => $save_option } @CLIENT_OPTIONS),
+        # 'host=s'        => \&save_option,
+        (map { $_ => \&save_option } @CLIENT_OPTIONS),
 
         # this allows setting of options as in the config file
-        'cfgstr=s' => $save_deep_option,
+        'cfgstr=s' => \&save_deep_option,
 
         # this is just a synonym feel free to add more
         'view' => sub { $DEFAULTS->{$CLIENT_STANZA}->{'write_access'} = 0 },
-        'local_fasta=s' =>
-          sub { $DEFAULTS->{'local_blast'}->{'database'} = $_[1] },
+        'local_fasta=s' => sub { $DEFAULTS->{'local_blast'}->{'database'} = $_[1] },
         'noblast' => sub {
             map { $_->{'local_blast'} = {} if exists $_->{'local_blast'} }
               @$CONFIG_INIFILES;
