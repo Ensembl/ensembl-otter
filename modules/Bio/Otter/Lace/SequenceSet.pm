@@ -248,15 +248,17 @@ sub agp_data {
     # The only argument is name->wanted_state hash
     #
 sub set_match_state { 
-    my ($self, $statehash) = @_;
+    my ($self, $statehash, $current_name) = @_;
+
+    $current_name ||= '';
 
     my $cs_list = $self->CloneSequence_list;
     foreach my $cs (@$cs_list) {
         my $fullname = $cs->accession().'.'.$cs->sv();
         if(exists($statehash->{$fullname})) {
             $cs->is_match($statehash->{$fullname});
-            print STDERR "setting match state ".$statehash->{$fullname}." to clone $fullname\n";
         }
+        $cs->current_match($fullname eq $current_name);
     }
 }
 
