@@ -238,6 +238,13 @@ sub is_match{
     return $self->{'_is_match'};
 }
 
+sub current_match{
+    my ($self, $current_match) = @_;
+
+    $self->{'_current_match'} = $current_match if defined($current_match);
+    return $self->{'_current_match'};
+}
+
 1;
 
 __END__
