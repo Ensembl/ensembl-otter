@@ -299,7 +299,7 @@ sub open_sequence_set_by_ssname_clonename {
         if(!$set_as_matched || !scalar(@$set_as_matched)) {
             $set_as_matched = [ $clone_name ];
         }
-        $ss->set_match_state( { map { ($_ => 1) } @$set_as_matched } );
+        $ss->set_match_state( { map { ($_ => 1) } @$set_as_matched }, $clone_name );
         $sn->draw_around_clone_name($clone_name);
     } elsif(! $sn->canvas->find('withtag', 'all')) {
         $sn->draw_range;    

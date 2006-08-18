@@ -60,13 +60,26 @@ sub get_CloneSequence_list {
         my $cl = $self->Client();
         my $ds = $self->SequenceSetChooser->DataSet;
 
-        $ds->fetch_all_CloneSequences_for_SequenceSet($ss);
+        $cl->get_all_CloneSequences_for_SequenceSet($ss);
         $cl->fetch_all_SequenceNotes_for_DataSet_SequenceSet($ds, $ss);
         $cl->status_refresh_for_DataSet_SequenceSet($ds, $ss);
+        $cl->lock_refresh_for_DataSet_SequenceSet($ds, $ss); # do we need it?
 
         $cs_list = $ss->CloneSequence_list;
     }
     return $cs_list;
+}
+
+sub refresh_and_redraw {
+    my $self = shift @_;
+    my $top    = $self->canvas->toplevel;
+
+	$top->Busy;
+
+    $self->get_CloneSequence_list(1);
+    $self->draw();
+
+	$top->Unbusy;
 }
 
 # Not sure whether it should belong here or to SequenceSet.pm
@@ -165,16 +178,23 @@ sub column_methods {
                 sub{
                     # Use closure for font definition
                     my $cs = shift;
-                    my $acc = $cs->accession;
-                    my $sv  = $cs->sv;
-                    my $fontcolour = $cs->is_match() ? 'red' : 'black';
-                    return {-text => "$acc.$sv", -font => $bold, -fill => $fontcolour, -tags => ['searchable']};
+                    my $acc_sv = $cs->accession .'.'. $cs->sv;
+                    my $fontcolour = $cs->current_match()
+                                    ? 'red'
+                                    : $cs->is_match()
+                                        ? 'darkred'
+                                        : 'black';
+                    return {-text => $acc_sv, -font => $bold, -fill => $fontcolour, -tags => ['searchable']};
                 }],
             [$text_method, 
                 sub{
                     # Use closure for font definition
                     my $cs = shift;
-                    my $fontcolour = $cs->is_match() ? 'red' : 'black';
+                    my $fontcolour = $cs->current_match()
+                                    ? 'red'
+                                    : $cs->is_match()
+                                        ? 'darkred'
+                                        : 'black';
                     return {-text => $cs->clone_name, -font => $bold, -fill => $fontcolour, -tags => ['searchable'] };
                 }],
             [$text_method, \&_column_text_seq_note_status],
