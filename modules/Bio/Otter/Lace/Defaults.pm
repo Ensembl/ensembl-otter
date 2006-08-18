@@ -415,6 +415,7 @@ Loads default values needed for creation of an
 otter client from:
 
   command line
+  anything that you have unshifted into @ARGV before running do_getopt
   ~/.otter_config
   $ENV{'OTTER_HOME'}/otter_config
   /etc/otter_config
@@ -482,8 +483,13 @@ above does.
 
   use Bio::Otter::Lace::Defaults;
 
-  # Script can add Getopt::Long compatible options
+  # Script can add Getopt::Long compatible options:
   my $foo = 'bar';
+
+  # or override the defaults from .otter_config onwards
+  # (but allow the user's command line options to take precedence) :
+  unshift @ARGV, '--port=33977', '--host=ottertest';
+
   Bio::Otter::Lace::Defaults::do_getopt(
       'foo=s'   => \$foo,     
       );
