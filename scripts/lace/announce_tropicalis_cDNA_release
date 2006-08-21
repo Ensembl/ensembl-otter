@@ -1,7 +1,20 @@
 #!/usr/local/bin/perl -w
 
-unless ( $ARGV[0] ){
-  die "\nNeed to enter release date of this database, eg, 2005_10_11\n\n";
+# Author: ck1@sanger.ac.uk
+
+
+use strict;
+use Getopt::Long;
+
+my ($old_rel, $new_rel, $test);
+
+GetOptions('old=s' => \$old_rel,
+		   'new=s' => \$new_rel,
+		   'test'  => \$test
+		  );
+
+unless ( $old_rel and $new_rel ){
+  die "\nNeed to enter release date of current and last databases, eg, -old 2006_07_04 -new 2006-08-16\n\n";
 }
 
 #-----------------------------------------------
@@ -33,28 +46,65 @@ rmd@sanger.ac.uk
 simon.hubbard@umist.ac.uk
 th@sanger.ac.uk
 wagner@ncbi.nlm.nih.gov
+jmdw@sanger.ac.uk
 );
 
 # testing
 
-#my @emails = qw(
-#ck1@sanger.ac.uk
-#ckpapa@yahoo.com
-#ckchen@tiscali.co.uk
-#);
+if ( $test ){
+  my @emails = qw(
+				  ck1@sanger.ac.uk
+				  ckpapa@yahoo.com
+				 );
+}
 
-my $mesg =<<MSG;
+my $accpt_cdna_file       = "accepted_X_tropicalis_cDNAs_$new_rel".".fasta.gz";
+my $all_cdna_file         = "all_X_tropicalis_cDNAs_$new_rel".".fasta.gz";
+my $last_accpt_cdna_file  = "Release_$old_rel"."_Finished_cDNA/accepted_X_tropicalis_cDNAs_$old_rel".".fasta.gz";
+my $last_all_cdna_file    = "Release_$old_rel"."_Finished_cDNA/all_X_tropicalis_cDNAs_$old_rel".".fasta.gz";
 
+my $cwd = chdir "/nfs/disk69/ftp/pub3/EST_data/Xenopus/FINISHED_cDNAs";
+
+my $curr_accptedted_cdnas = `gzip -cd $accpt_cdna_file | grep -c "^>"`; chomp $curr_accptedted_cdnas;
+my $last_accptedted_cdnas = `gzip -cd ../archive/$last_accpt_cdna_file | grep -c "^>"`; chomp $last_accptedted_cdnas;
+my $new_accepted_cdnas    = $curr_accptedted_cdnas - $last_accptedted_cdnas;
+
+my $curr_all_cdnas        = `gzip -cd $all_cdna_file | grep -c "^>"`; chomp $curr_all_cdnas;
+my $last_all_cdnas        = `gzip -cd ../archive/$last_all_cdna_file | grep -c "^>"`; chomp $last_all_cdnas;
+my $new_all_cdnas         = $curr_all_cdnas - $last_all_cdnas;
+
+my $letter=<<LTR;
 Dear X. tropicalis researcher:
 
-A new release ($ARGV[0]) is now available at ftp://ftp.sanger.ac.uk/pub/EST_data/Xenopus/FINISHED_cDNAs/ .
+The Sanger Xenopus tropicalis EST/cDNA project are pleased to announce the
+public availability of an enlarged set of X. tropicalis cDNA sequences finished
+at the Sanger Institute.
 
-In this release it sees the addition of sequences from 2 new libraries:  
-'THdA' (dissected heads from tailbud embryos) and 'TTbA' (tailbud embryos).
+Data are downloadable from:
+ftp://ftp.sanger.ac.uk/pub/EST_data/Xenopus/FINISHED_cDNAs
 
-For more infomation regarding stats of this release please refer to the release letter on the FTP site.
 
-Best regards.
+File        : $accpt_cdna_file
+Contents    : $curr_accptedted_cdnas cDNA seqs that passed quality control (QC),
+              and accepted by EMBL should also be available from EMBL/GenBank
+Increase    : $new_accepted_cdnas added to the $new_rel release
+Note        : '>' header lines have the format: '>clone_name accession.version'
+
+
+And also:
+
+File        : $all_cdna_file
+Contents    : $curr_all_cdnas cDNA sequences finished to date, including the unsubmitted sequences,
+              that did not pass QC
+Increase    : $new_all_cdnas seqs added to the $new_rel release
+Note        : reason(s) for failure are indicated after the clone_name on '>' header lines:
+              (1) 'unsubmitted' appears in the place of the accession.version, 
+                  followed by 'unidentified' and/or 'frameshifted'
+              (2) sequences not assigned an EMBL version the ">clone_name accession.version" format
+                  becomes ">clone_name accession"
+
+
+Best regards
 
 Chao-Kung
 
@@ -62,8 +112,8 @@ On behalf of the submitting authors:
 
 Amaya E., Harrow J.L., Bonfield J.K., Chen, C-K., Davies R.M.,
 Francis M.D., Garrett N., Gilchrist M.J., Grafham D.V., McLaren, S.,
-Papalopulu N., Rogers J., Smith J.C., Taylor R.G., Voigt J., Zorn A.M.
-
+Papalopulu N., Rogers J., Smith J.C., Taylor R.G., Voigt J.,
+Wood J., Zorn A.M.
 
 ==========================================
  Chao-Kung Chen
@@ -74,17 +124,19 @@ Papalopulu N., Rogers J., Smith J.C., Taylor R.G., Voigt J., Zorn A.M.
  Tel: (+44) 1223 496872
  Fax: (+44) 1223 494919
 ==========================================
+LTR
 
-MSG
-
+open(my $ltr, ">Release_letter_$new_rel") or die $!;
+print $ltr $letter;
+close $ltr;
 
 foreach my $email ( @emails ){
 
   my ($name, $domain) = split(/@/, $email);
 
   my $mail;
-  open $mail, "| mailx -s 'New X. tropicalis cDNA release' $name\@$domain " 
+  open $mail, "| mailx -s 'New X. tropicalis cDNA release - $new_rel' $name\@$domain "
 	or die "Can't open email pipe: $!";
 
-  print $mail $mesg;
+  print $mail $letter;
 }

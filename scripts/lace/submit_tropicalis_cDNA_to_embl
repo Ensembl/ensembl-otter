@@ -1,6 +1,7 @@
 #!/usr/local/bin/perl -w
 
 use strict;
+use Hum::Sort ('ace_sort');
 
 # Chao-Kung Chen
 
@@ -9,21 +10,15 @@ use strict;
 #                          for submitting cDNA to EMBL
 
 # --- other file locations
-my $EST            = "/nfs/disk100/humpub/est";
-my @load_fldrs     = glob("$EST/tropicalis_cdna/tropicalis_load*");
+my $EST        = "/nfs/disk100/humpub/est";
+my @load_fldrs =  sort { ace_sort($a, $b) } glob("$EST/tropicalis_cdna/tropicalis_load*");
+
 my $new_load_fldr  = $load_fldrs[-1];
 
 #### modify variables, eg date of release, cons file before running a new submission
 # ---------------                 modify this first:               ---------------
 
-my $cdna_db  = "tropicalis_cdna_2005_11_21";
-
-# For plate 19:
-#   Create a p19.consX file linking to /nfs/repository/p385/XTrop19/assembly/consX
-#   at /nfs/disk100/humpub/est/tropicalis_cdna/tropicalis_load_X directory
-
-# Similary for plate 20:
-#   the target file is /nfs/repository/p714/XTrop20/assembly/consX
+my $cdna_db  = "tropicalis_cdna_2006_08_16";
 
 #----------------------------------------------------------------------------------
 
@@ -33,13 +28,13 @@ $cdna_db =~ /tropicalis_cdna_(.+)/;
 my $release_date = $1;
 
 # ---------- db conf files -------- ---
+
 my ($cdna_db_conf_pipe, $blast_db_conf, $cdna_db_conf);
-#$cdna_db_conf_pipe = $blast_db_conf = "/ecs4/work5/finished/production/cdna_est/conf/cDNA_DB_trop.conf";
 
-$cdna_db_conf_pipe = $blast_db_conf = $cdna_db_conf = "/ecs4/work5/finished/production/cdna_est/conf/ck1_cDNA_test.conf";
+$cdna_db_conf_pipe = $blast_db_conf = $cdna_db_conf = "/ecs4/work5/finished/production/cdna_est/conf/current_cDNA_DB.conf";
 
-my $cdna_db_cbi1_conf = "/nfs/team71/analysis/ck1/SCRIPT_CVS/cdna_db/conf/ck1_cDNA_test.conf";
-my $est_db_conf       = "/nfs/team71/analysis/ck1/SCRIPT_CVS/est_db/conf/TROP_SUB_TEST.conf";
+my $cdna_db_cbi1_conf = "/nfs/team71/analysis/ck1/SCRIPT_CVS/cdna_db/conf/current_cDNA_DB.conf";
+my $est_db_conf       = "/nfs/team71/analysis/ck1/SCRIPT_CVS/est_db_tigr/conf/TROP_SUB_TEST.conf";
 
 #----------- other files and working directories -------------
 
@@ -55,21 +50,134 @@ my $cdna_db_dump_dir  = "$EST/txt_db_dump/$cdna_db";
 my $base      = "/nfs/team71/analysis/ck1/SCRIPT_CVS";
 my $pipe_base = "/ecs4/work5/finished/production/cdna_est";
 
+my $lib_mapping_file_loc = "$pipe_base/conf";
 
 my ($cwd, $s);
 
-#   0.    Prepare file list for EXTRACTING FASTA
+#   p0.    Prepare file list for EXTRACTING FASTA
 
-# Run eg /ecs4/work5/finished/ck1/PIPELINE/scripts/map_cdna_2_lib.pl p19.consX p20.consx
-# in the same directory. This should create p19Cons/Egg p19Cons/Gas ... subfolders, each of which
-# contains a consX file
+#   Run this step in the $new_load_fldr directory for cons other than XTrop19 and XTrop20
+#   cons files are given by the finishers
+#   This also prepare a file_list_yyyy_mm_dd.txt in this directory that reads similar to:
+#   Location of TEgg /nfs/repository/p385/Egg/assembly/cons9
+#   Location of TEgg /nfs/disk100/humpub/est/tropicalis_cdna/tropicalis_load_9/Xtrop21-24/TEgg/cons3
 
-# Then prepare a file_list_yyyy_mm_dd.txt in this directory similar to:
+if ( $ARGV[0] eq "p0" ){
 
-# Location of TEgg /nfs/repository/p385/Egg/assembly/cons9
-# Location of TEgg /nfs/disk100/humpub/est/tropicalis_cdna/tropicalis_load_9/p19Cons/Egg/cons3
+  print STDOUT "p0.    Prepare file list for EXTRACTING FASTA\n\n";
+
+  my $consfile = $ARGV[1];
+  my $plate    = $ARGV[2];
+  my $s = system("/ecs4/work5/finished/ck1/PIPELINE/scripts/make_xtropicalis_filelist.pl -dir $new_load_fldr -cons $ARGV[1] -plate $plate -list $file_list");
+
+  check_status($s);
+
+  # This should create cons files for each library in eg,
+  # /nfs/disk100/humpub/est/tropicalis_cdna/tropicalis_load_10/Xtrop21-24/TEgg/consX
+}
 
 
+#   p1.    Prepare file list for EXTRACTING FASTA
+
+#   Run this step in the $new_load_fldr directory for XTrop19 and XTrop20 cons
+
+#   lib_mapping file is in "/ecs4/work5/finished/production/cdna_est/conf/";
+#   This should create p19/TEgg p19/TGas ... subfolders, each of which
+#   contains a consX file
+#
+#   This also prepare a file_list_yyyy_mm_dd.txt in this directory that reads similar to:
+#   Location of TEgg /nfs/repository/p385/Egg/assembly/cons9
+#   Location of TEgg /nfs/disk100/humpub/est/tropicalis_cdna/tropicalis_load_9/p19Cons/Egg/cons3
+
+
+if ( $ARGV[0] eq "p1" ){
+
+  print STDOUT "p1.    Prepare file list for EXTRACTING FASTA\n\n";
+
+  my $cons_file        = $ARGV[1];
+  $cons_file =~ /p(\d+)/;
+  my $lib_mapping_file = "$lib_mapping_file_loc/frog_plate$1"."_lib_mapping";
+
+  my $test             = $ARGV[2];
+  my $fh;
+
+  open($fh, "<$lib_mapping_file") or die $!;
+
+  my $cdna_lib = {};
+
+  while (<$fh> ) {
+	chomp;
+	# TEgg    30      A8      XTropTFL19      I11
+
+	my ( $lib, $pos, $src, $plate, $well ) = split(/\s+/, $_);
+
+	if ( $well =~ /^([A-Z])(\d+)$/ ) {
+	  my $alpha = $1;
+	  my $num = sprintf("%02d", $2);
+	  $well = $alpha.$num;
+	}
+
+	if ( $src =~ /^([A-Z])(\d+)$/ ) {
+	  my $alpha = $1;
+	  my $num = sprintf("%02d", $2);
+	  $src = $alpha.$num;
+	}
+
+	$pos = sprintf("%03d", $pos);
+
+	my $clonename = $lib.$pos.lc($src);
+	#print "$clonename\n";# if length $clonename == 9; 
+
+	push(@{$cdna_lib->{$plate.lc($well)}}, $lib, $clonename );
+  }
+
+  if ( $test ) {
+	foreach ( sort keys %$cdna_lib ) {
+	  print "$_ => @{$cdna_lib->{$_}}\n";
+	}
+	die;
+  }
+
+  open($fh, "$cons_file") or die $!;
+
+  my ($fasta, $cdna, $lib);
+  my $cdna_fasta = {};
+
+  while (<$fh> ) {
+
+	# >XTropTFL19c08.p1kaSP6 FIN.0.1
+	# >XTropTFL20d02.q2kAh FIN.0.1
+
+	if ( $_ =~ /^>(XTropTFL.+)\..+\s.+/ ) {
+	  $cdna = $1;
+	  $lib = $cdna_lib->{$cdna}->[0];
+	  my $clonename = $cdna_lib->{$cdna}->[1];
+	
+	  my $header = ">$clonename $lib\n";
+	  push(@{$cdna_fasta->{$lib}->{$cdna}}, $header);
+	  #print $header;
+	} else {
+	  push(@{$cdna_fasta->{$lib}->{$cdna}}, $_);
+	}
+  }
+
+  $cons_file =~ /(.+)\.(.+)/;
+  my $plate    = $1;
+  my $cons_ver = $2;
+  open(my $FL, ">>$file_list") or die $!;
+
+  foreach my $lib ( keys %$cdna_fasta ) {
+	system("mkdir -p $plate/$lib");
+	open(my $fh, ">>$plate/$lib/$cons_ver");
+	
+	print $FL "Location of $lib $new_load_fldr/$plate/$lib/$cons_ver\n";
+
+	foreach my $cdna ( keys %{$cdna_fasta->{$lib}} ) {
+	  print $fh @{$cdna_fasta->{$lib}->{$cdna}};
+	}
+	close $fh;
+  }
+}
 
 #	1.    EXTRACTING FASTA
 
@@ -103,10 +211,11 @@ if ( $ARGV[0] == 2 ){
 
 if ( $ARGV[0] == 3 ){
   print STDOUT "3.   SETUP BLASTS\n\n";
+# my $cdna_db_conf_pipe = "/ecs4/work5/finished/production/cdna_est/conf/cdna_test.conf";
 
   $cwd = "$pipe_base/scripts";
   # blast_db is the value of external_db.dbname
-
+  warn "scriptdir: $cwd\n";
   # do incremental BLAST only
   $s = system("$cwd/setup_cDNA_DB_BLAST --db_conf=$cdna_db_conf_pipe --all_libs --search_conf_name='WuBLASTX_uniprot' --incremental");
 
@@ -129,6 +238,7 @@ if ( $ARGV[0] == 4 ){
 
   print STDOUT "4.   SUBMIT BLASTS\n\n";
 
+ # my $blast_db_conf = "/ecs4/work5/finished/production/cdna_est/conf/cdna_test.conf";
   $cwd = "$pipe_base/scripts";
   $s = system("$cwd/submit_cDNA_DB_jobs --db_conf=$blast_db_conf --search_conf_name=WuBLASTX_uniprot --host_type=bc_hosts");
   #$s = system("$cwd/submit_cDNA_DB_jobs --db_conf=$blast_db_conf --search_conf_name=WuBLASTX_uniprot --host_type=bc_hosts --lsf_queue=hugemem");
@@ -143,10 +253,10 @@ if ( $ARGV[0] == 5 ){
   $cwd = "$pipe_base/sanger";
 
   # to run on esc4
-  #$s = system("$cwd/copy_EST_DB_to_cDNA_DB --clone_fasta=$all_fasta --est_db_conf=$est_db_conf --cdna_db_conf=$cdna_db_conf_pipe");
+  $s = system("$cwd/copy_EST_DB_to_cDNA_DB --clone_fasta=$all_fasta --est_db_conf=$est_db_conf --cdna_db_conf=$cdna_db_conf_pipe");
 
   # to run on cbi1 (due to a library for GD.pm is out of date on ecs4)
-  $s = system("perl $base/cdna_db/sanger/copy_EST_DB_to_cDNA_DB --clone_fasta=$all_fasta --est_db_conf=$est_db_conf --cdna_db_conf=$cdna_db_cbi1_conf");
+  #$s = system("perl $base/cdna_db/sanger/copy_EST_DB_to_cDNA_DB --clone_fasta=$all_fasta --est_db_conf=$est_db_conf --cdna_db_conf=$cdna_db_cbi1_conf");
 
   check_status($s);
 }
@@ -163,19 +273,22 @@ if ( $ARGV[0] == 6 ){
 
   #Checking the newly-loaded clones
 
-  #  $cwd = "$pipe_base/scripts";
-  $cwd = "$base/cdna_db/scripts";
+  #  $cwd = "$pipe_base/scripts"; # ecs4
+  $cwd = "$base/cdna_db/scripts"; # cbi1
 
- # $s = system("perl $cwd/check_clone_identity --db_conf=$cdna_db_cbi1_conf");
  # check_status($s);
-  $s = system("perl $cwd/check_clone_identity --db_conf=$cdna_db_cbi1_conf --all_unconfirmed");
- # $s = system("perl $cwd/check_clone_identity --db_conf=$cdna_db_cbi1_conf --clone_name=TEgg011j04");
-#  $s = system("perl $cwd/check_clone_identity --db_conf=$cdna_db_cbi1_conf --clone_id=4097");
-# $s = system("perl $cwd/check_clone_identity --db_conf=$cdna_db_cbi1_conf --clone_id=5891 ");
-# $s = system("perl $cwd/check_clone_identity --db_conf=$cdna_db_cbi1_conf --clone_id=7255 ");
-  # for debugging
-  #$s = system("perl $cwd/check_clone_identity --db_conf=$cdna_db_cbi1_conf --all_unconfirmed --output_aligns --debug");
+  #$s = system("perl $cwd/check_clone_identity --db_conf=$cdna_db_cbi1_conf --all_unconfirmed");
 
+  # test
+  # $s = system("perl $cwd/check_clone_identity --db_conf=$cdna_db_cbi1_conf --clone_name=TEgg011j04");
+  # $s = system("perl $cwd/check_clone_identity --db_conf=$cdna_db_cbi1_conf --clone_id=4097");
+  # $s = system("perl $cwd/check_clone_identity --db_conf=$cdna_db_cbi1_conf --clone_id=5891");
+  # $s = system("perl $cwd/check_clone_identity --db_conf=$cdna_db_cbi1_conf --clone_id=7255");
+
+  # for debugging/testing
+  #$s = system("perl $cwd/check_clone_identity --db_conf=$cdna_db_cbi1_conf --all_unconfirmed --output_aligns --debug");
+  $s = system("perl $cwd/check_clone_identity --db_conf=$cdna_db_cbi1_conf --all_unconfirmed --test");
+  
   check_status($s);
 }
 
@@ -196,8 +309,8 @@ if ( $ARGV[0] == 7 ){
 if ( $ARGV[0] == 8 ){
   print STDOUT "8.   BACKED UP\n\n";
   print STDOUT "Your need to\n";
-  printf STDOUT ("%s\n%s\n%s\n%s\n", "(1) ssh to otterpipe2", "(2) Create directory 'mkdir $cdna_db_dump_dir'", "(3) chmod -R 777 $cdna_db_dump_dir",
-				 "(4) Run mysqldump -uottroot -plutrasuper -S /mysql/data_3303/otter-pipe2-master.sock --tab=$cdna_db_dump_dir/ --fields-terminated-by='\t' $cdna_db");
+  printf STDOUT ("%s\n%s\n%s\n", "(1) Create directory 'mkdir $cdna_db_dump_dir'", "(2) chmod -R 777 $cdna_db_dump_dir",
+				 "(3) Run mysqldump -uottroot -pxxx -hotterpipe2 -P3303 --tab=$cdna_db_dump_dir/ --fields-terminated-by='\t' $cdna_db");
 }
 
 if ( $ARGV[0] == 81 ){
@@ -275,7 +388,7 @@ if ( $ARGV[0] == 11 ){
   check_status($s);
 }
 
-#	11.1   MAKE EMBL FLATFILE
+#	11.   MAKE EMBL FLATFILE
 
 if ( $ARGV[0] == 111 ){
 
@@ -283,7 +396,8 @@ if ( $ARGV[0] == 111 ){
   $cwd = "$pipe_base/submissions";
   $s = system("$cwd/make_embl_flatfile --db_conf=$cdna_db_conf_pipe --taxon_id=$taxon_id > $embl_file");
   print STDOUT "Created EMBL flatfile: $embl_file\n\n";
-  my $count = system("grep -c '^ID' $embl_file");
+  my $count = `grep -c '^ID' $embl_file`;
+  chomp $count;
   print STDOUT "$count sequences to submit\n\n";
 
   check_status($s);
@@ -293,7 +407,6 @@ if ( $ARGV[0] == 111 ){
 #	12.   SUBMIT
 
 #         run ONLY on humsrv1
-
 
 if ( $ARGV[0] == 12 ){
   print STDOUT "12.   SUBMIT TO EMBL\n\n";
@@ -366,7 +479,7 @@ if ( $ARGV[0] == 15 ){
 	my $ftp_root = "/nfs/disk69/ftp/pub3/EST_data/Xenopus/";
 	my $ftp_live = $ftp_root."FINISHED_cDNAs/";
 
-	# makie archive dir
+	# make archive dir
 
 	my $last_release_date = `ls $ftp_live/accepted_X_tropicalis_cDNAs*`;
 	$last_release_date =~ /(\d+_\d+_\d+)/;
@@ -413,6 +526,23 @@ if ( $ARGV[0] == 15 ){
 	}	
 	
 }
+
+#	15. WRITE RELEASE LETTER
+
+#   Create the file and store as /nfs/disk69/ftp/pub3/EST_data/Xenopus/FINISHED_cDNAs/Release_letter_yyyy_mm_dd.
+#   (See template below)
+
+
+#	16. ANNOUNCE RELEASE
+
+#   Once the FTP has been refreshed with new data, run the script to announce release:
+
+if ( $ARGV[0] == 16 ){
+	print STDOUT "16.   ANNOUNCE RELEASE\n";
+	$s = system("/nfs/team71/analysis/ck1/bin/xenopus/announce_tropicalis_cDNA_release $release_date");
+	check_status($s);
+}
+
 
 sub check_status {
   shift == 0 ? print STDOUT "Command successful\n\n" : print STDOUT "command failed\n\n";
@@ -506,6 +636,8 @@ rmd@sanger.ac.uk,
 simon.hubbard@umist.ac.uk,
 th@sanger.ac.uk,
 wagner@ncbi.nlm.nih.gov,
+jmdw@sanger.ac.uk
+
 
 ---------------------
 * estdb mailing list:
