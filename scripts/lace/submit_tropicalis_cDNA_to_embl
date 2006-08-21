@@ -26,6 +26,8 @@ my $taxon_id = 8364;
 
 $cdna_db =~ /tropicalis_cdna_(.+)/;
 my $release_date = $1;
+my $last_rel_date = "???";  # check
+
 
 # ---------- db conf files -------- ---
 
@@ -539,7 +541,7 @@ if ( $ARGV[0] == 15 ){
 
 if ( $ARGV[0] == 16 ){
 	print STDOUT "16.   ANNOUNCE RELEASE\n";
-	$s = system("/nfs/team71/analysis/ck1/bin/xenopus/announce_tropicalis_cDNA_release $release_date");
+	$s = system("/nfs/team71/analysis/ck1/bin/xenopus/announce_tropicalis_cDNA_release -new $release_date -old $last_rel_date -test");
 	check_status($s);
 }
 
