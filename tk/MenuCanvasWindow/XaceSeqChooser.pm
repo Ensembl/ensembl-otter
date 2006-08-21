@@ -17,8 +17,8 @@ use Hum::Ace::XaceRemote;
 use Hum::Ace::DotterLauncher;
 use Hum::Ace;
 use Hum::Analysis::Factory::ExonLocator;
-use MenuCanvasWindow::ExonCanvas;
 use CanvasWindow::DotterWindow;
+use MenuCanvasWindow::ExonCanvas;
 use MenuCanvasWindow::GenomicFeatures;
 use Bio::Otter::Lace::Defaults;
 
@@ -77,6 +77,12 @@ sub AceDatabase {
         $self->{'_AceDatabase'} = $AceDatabase;
     }
     return $self->{'_AceDatabase'};
+}
+
+sub drop_AceDatabase {
+    my $self = shift;
+    
+    $self->{'_AceDatabase'} = undef;
 }
 
 sub SequenceNotes {
@@ -947,15 +953,9 @@ sub exit_save_data {
 
     # Will not want xace any more
     $self->kill_xace;
-    
-    # Unlock and cleanup (lace dir gets
-    # removed by AceDatabase->DESTROY)
 
-    # no need to unlock this gets done by 
-    # AceDatabase->DESTROY now.
-
-    # sequenceNotes clean up and lock refresh.
-    
+    # Unsetting the error_flag means that AceDatabase
+    # will remove its directory during DESTROY.
     $ace->error_flag(0);
     
     return 1;
@@ -2008,11 +2008,7 @@ sub DESTROY {
         delete $self->{'_SGIF_LOCAL_SERVER'}; # shutdown server
     }
 
-    # need to undef AceDatabase for it's clean up.
-    # warn "AceDatabase->unlock should now happen\n";
-    ### Don't need this!
-    ###delete $self->{'_AceDatabase'}; # unlock will now happen
-    # warn "AceDatabase->unlock should have happened\n";
+    $self->drop_AceDatabase;
     if (my $sn = $self->SequenceNotes){
         # then refresh locks
         # warn "lock refresh should now happen\n";

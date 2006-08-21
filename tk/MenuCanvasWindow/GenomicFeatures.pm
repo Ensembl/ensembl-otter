@@ -423,10 +423,11 @@ sub add_genomic_feature {
         -text    => 'Delete',
         -command => sub {
             $self->delete_genomic_feature($gfid);
-            # $self->fix_window_min_max_sizes;
             $self->set_scroll_region_and_maxsize;
             },
     )->pack(@pack);
+    
+    # Break circular reference caused by closure
     $delete_button->bind('<Destroy>', sub{ $self = undef });
     
     $genomic_feature->{display_label_entry} = $subframe->NoPasteEntry(
@@ -479,10 +480,10 @@ sub add_genomic_feature {
        -command => sub { change_of_gf_type_callback($genomic_feature); },
     );
 
-        # It is necessary to set the current value from a separate variable.
-        # If you first assign the correct value to a variable and then supply the ref,
-        # it will do something opposite to normal intuition: spoil the original value
-        # by assigning the one that gets assigned by the interface.
+    # It is necessary to set the current value from a separate variable.
+    # If you first assign the correct value to a variable and then supply the ref,
+    # it will do something opposite to normal intuition: spoil the original value
+    # by assigning the one that gets assigned by the interface.
     $genomic_feature->{gf_type_menu}->setOption($signal_info{$gf_type}{fullname}, $gf_type);
 }
 
@@ -556,10 +557,10 @@ sub save_to_ace {
         if($self->XaceSeqChooser()->update_ace_display($current_ace_dump)) {
             print STDERR "Genomic features successfully saved to acedb\n";
 
-                # after saving it becomes the 'current' version:
+            # after saving it becomes the 'current' version:
             $self->stored_ace_dump($current_ace_dump);
 
-                # Make the clone know the new vectors
+            # Make the clone know the new vectors
             $self->get_CloneSeq->set_SimpleFeatures(@$current_vectors);
         } else {
             print STDERR "There was an error saving genomic features to acedb\n";
