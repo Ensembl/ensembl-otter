@@ -2001,6 +2001,8 @@ sub __hasEverZMap{
 
 sub DESTROY {
     my( $self ) = @_;
+    
+    warn "Destroying XaceSeqChooser for ", $self->ace_path, "\n";
 
     if($self->__hasEverZMap){
         $self->zMapKillZmap() if $self->can('zMapKillZmap');
@@ -2018,8 +2020,6 @@ sub DESTROY {
         ### No you don't!
         ###delete $self->{'_sequence_notes'} ;
     }
-
-    warn "Destroying XaceSeqChooser for ", $self->ace_path, "\n";
 }
 
 1;
