@@ -302,6 +302,8 @@ sub build_Exon {
   my $frame=$data->{'frame'};
   if (defined($frame)) {
 	 $exon->phase((3-$frame)%3);
+  }
+  if (defined $exon->phase){
 	 $exon->end_phase(($exon->length + $exon->phase)%3);
   } else {
 	 $exon->phase(-1);
@@ -553,12 +555,12 @@ sub build_Locus {
 
   ##convert all exon coordinates from chromosomal coordinates to slice coordinates
   # not sure if this conversion is necessary ??
-  #  if ($chrstart != 2000000000) {
-  # foreach my $exon (@{$gene->get_all_Exons}) {
-  #$exon->start($exon->start - $chrstart + 1);
-  #$exon->end(  $exon->end   - $chrstart + 1);
-  #}
-  #}
+  if ($chrstart != 2000000000) {
+	 foreach my $exon (@{$gene->get_all_Exons}) {
+		$exon->start($exon->start - $chrstart + 1);
+		$exon->end(  $exon->end   - $chrstart + 1);
+	 }
+  }
   my $list = $gene_list{$self} ||= [];
   push @$list, $gene;
 }
@@ -819,6 +821,11 @@ sub get_AssemblyTags {
 sub get_SimpleFeatures {
   my $self=shift;
   return $feature_list{$self};
+}
+
+sub get_SequenceSet_AssemblyType {
+  my $self=shift;
+  return;
 }
 
 ###fetch sequence
