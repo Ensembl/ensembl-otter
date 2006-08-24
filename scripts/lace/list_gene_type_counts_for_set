@@ -51,7 +51,15 @@ use Bio::Otter::Lace::Defaults;
     
     my $total = 0;
     print "\nGene types in $dataset_name $set_name:\n";
-    foreach my $type (sort keys %type_count) {
+    
+    my @pre_type;
+    foreach my $type (keys %type_count) {
+        my ($pre, $root) = $type =~ /(?:(.+):)?(.+)/;
+        push @pre_type, [$pre || ' ', $root, $type];
+    }
+    
+    foreach my $prt (sort {$a->[1] cmp $b->[1] || $a->[0] cmp $b->[0]} @pre_type) {
+        my $type = $prt->[2];
         my $count = $type_count{$type};
         printf "%25s  %5d\n", $type, $count;
         $total += $count;
