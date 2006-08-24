@@ -62,20 +62,20 @@ use Bio::Otter::AnnotationBroker;
         my $old_type = $gene->type;
         my $new_type = $new_prefix . substr $old_type, length($old_prefix);
         warn "\n$old_type > $new_type\n";
-        #$update_gene_type->execute($new_type, $gene->dbID);
+        $update_gene_type->execute($new_type, $gene->dbID);
 
         my $gn = $gene->gene_info->name;
         my $old_name = $gn->name;
         my $new_name = $new_prefix . substr $old_name, length($old_prefix);
         warn "  $old_name > $new_name\n";
-        #$update_gene_name->execute($new_name, $gn->dbID);
+        $update_gene_name->execute($new_name, $gn->dbID);
                 
         foreach my $tsct (@{$gene->get_all_Transcripts}) {
             my $info = $tsct->transcript_info;
             my $old_name = $info->name;
             my $new_name = $new_prefix . substr $old_name, length($old_prefix);
             warn "    $old_name > $new_name\n";
-            #$update_transcript_name->execute($new_name, $info->dbID);
+            $update_transcript_name->execute($new_name, $info->dbID);
         }
     }
 }
