@@ -65,7 +65,7 @@ use Data::Dumper;
 	 ##Uncomment the following to load a new Assembly or to load into an empty database
 	 ##This loads ContigInfo and its attributes.Takes care of is_current(loads a new contiginfo object and a set of attributes for the
 	 ##new contiginfo, only if the contiginfo object has changed
-	 #$parser->LoadAssemblySlices($db);
+	 $parser->LoadAssemblySlices($db);
 
 	 ##Load genes,transcripts,translations,exons from XML - takes care of versioning
 	 ##if there is a change in gene and its components then the version is incremented otherwise, not
@@ -75,9 +75,24 @@ use Data::Dumper;
 		$gene_adaptor->store($gene);
 	 }
 
-	 ##Load AssemblyTag - deletes old tags(tags not in xml) and stores the current tags in the XML
+	 ##Load SimpleFeatures - deletes old features(features not in xml) and stores the current features in XML
+	 my $simple_features=$parser->get_SimpleFeatures;
+	 my $sfa=$db->get_SimpleFeatureAdaptor;
+	 my $chr_slice=$parser->get_ChromosomeSlice;
+	 my $new_slice=$parser->get_SliceId($chr_slice,$db);
+	 my $db_features=$sfa->fetch_all_by_Slice($new_slice,'Otter');
+	 my ($delete,$save)=compare_feature_sets($db_features,$simple_features);
+	 foreach my $del_feat (@$delete){
+		$sfa->remove($del_feat);
+	 }
+	 foreach my $new_feat (@$save){
+		$new_feat->slice($new_slice);
+		$sfa->store($new_feat);
+	 }
+
 
 =head2 COMMENT
+	 ##Load AssemblyTag - deletes old tags(tags not in xml) and stores the current tags in the XML
 	 my $assembly_tags = $parser->get_AssemblyTags;
 	 my $ata=$db->get_AssemblyTagAdaptor;
 
@@ -96,23 +111,6 @@ use Data::Dumper;
 		$ata->store($at);
 	 }
 
-	 ##Load SimpleFeatures - deletes old features(features not in xml) and stores the features in this XML
-	 my $simple_features=$parser->get_SimpleFeatures;
-	 my $sfa=$db->get_SimpleFeatureAdaptor;
-
-	 my $chr_slice=$parser->get_ChromosomeSlice;
-	 my $new_slice=$parser->get_SliceId($chr_slice,$db);
-	 my $db_features=$sfa->fetch_all_by_Slice($new_slice,'Otter');
-	 my ($delete,$save)=compare_feature_sets($db_features,$simple_features);
-	 foreach my $del_feat (@$delete){
-		$sfa->remove($del_feat);
-	 }
-	 
-	 foreach my $new_feat (@$save){
-		#die Dumper($new_feat);
-		$new_feat->slice($new_slice);
-		$sfa->store($new_feat);
-	 }
 
 =cut
 	 ##Create new XML and send as response
