@@ -18,7 +18,7 @@ our @EXPORT_OK = qw(
                     &send_response
                     &error_exit
                     &odba_to_sdba
-                    &pre_remapping
+                    &get_mapper_dba
                     &get_slice
                     &get_Author_from_CGI
                     &get_DBAdaptor_from_CGI_species
@@ -29,7 +29,7 @@ our %EXPORT_TAGS = (all => [qw(
                                send_response
                                error_exit
                                odba_to_sdba
-                               pre_remapping
+                               get_mapper_dba
                                get_slice
                                get_Author_from_CGI
                                get_DBAdaptor_from_CGI_species 
@@ -134,7 +134,7 @@ sub odba_to_sdba {
     return $sdba;
 }
 
-sub pre_remapping { # temporarily very trivial
+sub get_mapper_dba {
     my ($sq, $odba, $sdba, $pipehead) = @_;
 
     my $metakey  = $sq->getarg('metakey') || ''; # defaults to pipeline
@@ -159,22 +159,23 @@ sub pre_remapping { # temporarily very trivial
             my $chr_name = $sq->getarg('name');
             server_log("This chr is equivalent to '$chr_name' in our reference '$equiv_asm' assembly");
             $sq->setarg('csver', $equiv_asm);
-            return 0;
+            return;
 
         } else { # guaranteed to differ!
 
-            return 1;
+            my $mdba = odba_to_sdba($sq, $odba, 1, 'mapper_db');
+            return $mdba;
         }
 
     } elsif($pipehead) { # a head version of pipeline_db
 
         server_log("Working with pipeline_db directly, no remapping is needed.");
-        return 0;
+        return;
 
     } else { # non-head version, cannot guarantee correct mapping
 
         server_log("No remapping is being done, you're responsible for doing it on the client side.");
-        return 0;
+        return;
 
     }
 }
