@@ -23,7 +23,14 @@ my $metakey  = $sq->getarg('metakey') || ''; # defaults to pipeline
 
 my $odba = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
 my $sdba = odba_to_sdba($sq, $odba, $pipehead, $metakey);
-pre_remapping($sq, $odba, $sdba, $pipehead);
+my $mdba = get_mapper_dba($sq, $odba, $sdba, $pipehead);
+
+if($mdba) {
+    server_log("Assembly mapping not implemented yet");
+    send_response($sq, '', 1);
+    exit(0);
+}
+
 my $satellite_slice = get_slice($sq, $sdba, $pipehead);
 
 my @pt_optnames = @{ $OrderOfOptions{PredictionTranscript} };
