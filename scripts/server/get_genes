@@ -24,29 +24,29 @@ my $transcript_analyses = $sq->getarg('transcript_analyses') || '';
 
 my $odba = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
 my $sdba = odba_to_sdba($sq, $odba, $pipehead, $metakey);
-my $remapping_needed = pre_remapping($sq, $odba, $sdba, $pipehead);
+
+my $mdba = get_mapper_dba($sq, $odba, $sdba, $pipehead);
+
+if($mdba) {
+    server_log("Assembly mapping not implemented yet");
+    send_response($sq, '', 1);
+    exit(0);
+}
+
+my $satellite_slice = get_slice($sq, $sdba, $pipehead);
+
+my $genes = $satellite_slice->get_all_Genes($analysis);
+
+server_log("Total of ".scalar(@$genes)." '$analysis' genes found");
+
+my $allowed_transcript_analyses_hash = $transcript_analyses
+    ? { map { $_ => 1 } split(/,/, $transcript_analyses) }
+    : '';
 
 my $output_string = '';
 
-if($remapping_needed) {
-
-    server_log("No remapping can be done at the moment, sorry. Returning empty list");
-
-} else {
-
-    my $satellite_slice = get_slice($sq, $sdba, $pipehead);
-
-    my $genes = $satellite_slice->get_all_Genes($analysis);
-
-    server_log("Total of ".scalar(@$genes)." '$analysis' genes found");
-
-    my $allowed_transcript_analyses_hash = $transcript_analyses
-        ? { map { $_ => 1 } split(/,/, $transcript_analyses) }
-        : '';
-
-    foreach my $gene (@$genes) {
-        $output_string .= $gene->toXMLstring($allowed_transcript_analyses_hash);
-    }
+foreach my $gene (@$genes) {
+    $output_string .= $gene->toXMLstring($allowed_transcript_analyses_hash);
 }
 
 send_response($sq, $output_string, 1);
