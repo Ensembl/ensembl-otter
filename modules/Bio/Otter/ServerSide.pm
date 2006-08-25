@@ -159,21 +159,22 @@ sub pre_remapping { # temporarily very trivial
             my $chr_name = $sq->getarg('name');
             server_log("This chr is equivalent to '$chr_name' in our reference '$equiv_asm' assembly");
             $sq->setarg('csver', $equiv_asm);
+            return 0;
 
         } else { # guaranteed to differ!
 
-            server_log("No remapping can be done at the moment, sorry. Returning empty list");
-            send_response($sq, '', 1);
-            exit(0);
+            return 1;
         }
 
     } elsif($pipehead) { # a head version of pipeline_db
 
         server_log("Working with pipeline_db directly, no remapping is needed.");
+        return 0;
 
     } else { # non-head version, cannot guarantee correct mapping
 
         server_log("No remapping is being done, you're responsible for doing it on the client side.");
+        return 0;
 
     }
 }
