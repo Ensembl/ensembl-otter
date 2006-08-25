@@ -59,6 +59,7 @@ sub Bio::EnsEMBL::DBEntry::toXMLstring {
 
 sub Bio::EnsEMBL::Gene::toXMLstring {
     my $gene = shift @_;
+    my $allowed_transcript_analyses_hash = shift @_;
 
     my $coord_offset = 0;
     my $slice_length = 0;
@@ -95,7 +96,12 @@ sub Bio::EnsEMBL::Gene::toXMLstring {
     }
 
     foreach my $transcript (sort by_stable_id_or_name @{$gene->get_all_Transcripts}) {
-        $str .= $transcript->toXMLstring($coord_offset, $slice_length);
+        if(!$allowed_transcript_analyses_hash
+            or ($transcript->can('analysis')
+                and $allowed_transcript_analyses_hash->{$transcript->analysis()->logic_name()})
+        ) {
+            $str .= $transcript->toXMLstring($coord_offset, $slice_length);
+        }
     }
 
     $str .= emit_closing_tag('locus',0);
