@@ -17,10 +17,34 @@ sub fetch_by_stable_id  {
   my ($gene) = $self->SUPER::fetch_by_stable_id($stable_id);
   if ($gene){
 	 bless $gene, "Bio::Vega::Gene";
+	 $self->fetch_gene_author($gene);
+	 foreach my $tr ($gene->get_all_Transcripts){
+		bless $tr, "Bio::Vega::Transcript";
+	 }
   }
   return $gene;
 
 }
+
+sub fetch_all_by_Slice  {
+
+  my ($self,$slice,$logic_name,$load_transcripts)  = @_;
+  my ($genes) = $self->SUPER::fetch_all_by_Slice($slice,$logic_name,$load_transcripts);
+  if ($genes){
+	 foreach my $gene(@$genes){
+		bless $gene, "Bio::Vega::Gene";
+		$self->fetch_gene_author($gene);
+		my $transcripts=$gene->get_all_Transcripts;
+		foreach my $tr (@$transcripts){
+		  bless $tr, "Bio::Vega::Transcript";
+		  my $ta=$self->db->get_TranscriptAdaptor;
+		  $ta->fetch_transcript_author($tr);
+		}
+	 }
+  }
+  return $genes;
+}
+
 sub fetch_by_stable_id_version  {
 
   my ($self, $stable_id,$version) = @_;
@@ -32,11 +56,20 @@ sub fetch_by_stable_id_version  {
   my $constraint = "gsi.stable_id = '$stable_id' AND gsi.version = '$version'";
   my ($gene) = @{ $self->generic_fetch($constraint) };
   bless $gene, "Bio::Vega::Gene";
+  $self->fetch_gene_author($gene);
+  foreach my $tr ($gene->get_all_Transcripts){
+	 bless $tr, "Bio::Vega::Transcript";
+  }
   return $gene;
 
 }
 
-sub fetch_by_author {
+sub fetch_gene_author {
+  my ($self,$gene)=@_;
+  my $authad = $self->db->get_AuthorAdaptor;
+  my $author= $authad->fetch_gene_author($gene->dbID);
+  $gene->gene_author($author);
+  return $gene;
 }
 
 

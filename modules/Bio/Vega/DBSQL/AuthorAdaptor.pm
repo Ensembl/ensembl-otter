@@ -216,6 +216,38 @@ sub store_transcript_author {
   $sth->execute($transcript_id,$author_id);
 }
 
+sub fetch_gene_author {
+  my ($self,$gene_id) = @_;
+  unless ($gene_id) {
+	 throw("gene_id:$gene_id  must be present to fetch a gene_author");
+  }
+  my $sth = $self->prepare(q{
+        SELECT author_id from gene_author where gene_id=?
+        });
+  $sth->execute($gene_id);
+  return undef if($sth->rows() == 0);
+  my $author_id=$sth->fetchrow_array();
+  $sth->finish();
+  my $author=$self->fetch_by_dbID($author_id);
+  return $author;
+}
+
+sub fetch_transcript_author {
+  my ($self,$transcript_id) = @_;
+  unless ($transcript_id) {
+	 throw("transcript_id:$transcript_id  must be present to fetch a transcript_author");
+  }
+  my $sth = $self->prepare(q{
+        SELECT author_id from transcript_author where transcript_id=?
+        });
+  $sth->execute($transcript_id);
+  return undef if($sth->rows() == 0);
+  my $author_id=$sth->fetchrow_array();
+  $sth->finish();
+  my $author=$self->fetch_by_dbID($author_id);
+  return $author;
+}
+
 1;
 
 	
