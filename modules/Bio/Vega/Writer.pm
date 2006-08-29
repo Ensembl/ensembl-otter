@@ -2,43 +2,11 @@ package Bio::Vega::Writer;
 
 use strict;
 use Bio::Vega::Transform::PrettyPrint;
-use Bio::EnsEMBL::Utils::Exception qw ( throw );
-
-my %xml_builders;
-
-sub DESTROY {
-  my ($self) = @_;
-  delete $xml_builders{$self};
-}
 
 sub new {
   my ($pkg) = @_;
-  my $scalar;
-  my $self = bless \$scalar, $pkg;
-  $self->initialize;
-  return $self;
-}
-
-sub getxml {
-
-  my ($self,$type,$obj)=@_;
-  my $xml;
-  if (my $builder = $xml_builders{$self}{$type}) {
-	 $xml=$self->$builder($obj);
-  }
-  else {
-	 throw "this method not defined";
-  }
-  return $xml;
-}
-
-sub xml_builders {
-  my ($self, $value) = @_;
-  if ($value) {
-	 $xml_builders{$self} = $value;
-  }
-  #die Dumper($xml_builders{$self});
-  return $xml_builders{$self};
+  my $self;
+  return bless \$self, $pkg;
 }
 
 sub formatopentag{
@@ -82,7 +50,7 @@ sub formatxml {
 1;
 __END__
 
-=head1 NAME - Bio::Vega::Transform::XML
+=head1 NAME - Bio::Vega::Writer
 
 =head1 AUTHOR
 
