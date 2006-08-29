@@ -2,69 +2,166 @@ package Bio::Vega::Transform::XML;
 
 use strict;
 
-use Bio::EnsEMBL::Utils::Exception qw (throw);
+use Bio::EnsEMBL::Utils::Exception qw ( throw);
 use base 'Bio::Vega::Writer';
 
-my (
-	 %odb,
-	 %coord,
-	 %indent,
-);
-
-sub DESTROY {
-  my ($self) = @_;
-  bless $self, 'Bio::Vega::Writer';
-}
-
-sub initialize {
-  my ($self) = @_;
-  # Register the tags that trigger the building of objects
-  $self->xml_generators({
-								 gene => 'generate_Locus',
-								 feature => 'generate_FeatureSet',
-								 transcript => 'generate_Transcript',
-								 evidence => 'generate_EvidenceSet',
-								 exon => 'generate_ExonSet',
-								 sequenceset => 'generate_SequenceSet',
-								 sequencefragment => 'generate_SequenceFragment',
-								 assemblytype => 'generate_AssemblyType',
-								 dna => 'generate_DNA',
-								 prettyprint => 'PrettyPrint',
-								});
-}
 
 sub get_transcript_class {
-    my ($self, $biotype, $status) = @_;
-    my $transcript_class_mapping = {
-        "UNKNOWN" => {
-            'unprocessed_pseudogene' => 'Unprocessed_pseudogene',
-            'processed_pseudogene'   => 'Processed_pseudogene',
-            'pseudogene'             => 'Pseudogene',
-            'Ig_pseudogene_segment'  => 'Ig_pseudogene_segment',
-            'coding'                 => 'Coding',
-        },
-        "KNOWN" => { 'protein_coding' => 'Known' },
-        "NOVEL" => {
-            'protein_coding'       => 'Novel_CDS',
-            'Ig_segment'           => 'Ig_segment',
-            'processed_transcript' => 'Novel_transcript',
-        },
-        "PUTATIVE"  => { 'processed_transcript' => 'Putative', },
-        "PREDICTED" => { 'protein_coding'       => 'Predicted_gene', }
-    };
+  my ($self,$biotype,$status)=@_;
+  my $transcript_class_mapping = { "UNKNOWN" => {'unprocessed_pseudogene'=>'Unprocessed_pseudogene',
+															'processed_pseudogene'=>'Processed_pseudogene',
+															'pseudogene'=>'Pseudogene',
+															'Ig_pseudogene_segment'=>'Ig_pseudogene_segment',
+															'coding'=>'Coding',
+															},
+											  "KNOWN" => {'protein_coding'=>'Known'},
+											  "NOVEL" => {'protein_coding'=>'Novel_CDS',
+															  'Ig_segment'=>'Ig_segment',
+															  'processed_transcript'=>'Novel_transcript',
+															 },
+											  "PUTATIVE" => {'processed_transcript'=>'Putative',
+																 },
+											  "PREDICTED"=>{'protein_coding'=>'Predicted_gene',
+																}
+											};
 
-    return $transcript_class_mapping->{$status}->{$biotype};
+  return $transcript_class_mapping->{$status}->{$biotype};
 }
 
 sub generate_OtterXML{
   my ($self,$slices,$odb,$indent)=@_;
   my $ot=$self->prettyprint('otter');
-  
   $ot->indent($indent);
   foreach my $slice (@$slices){
 	 $ot->attribobjs($self->generate_SequenceSet($slice,$odb,$ot->indent+2));
   }
   return $self->formatxml($ot);
+}
+
+sub generate_SequenceSet{
+  my ($self,$slice,$odb)=@_;
+  my $ss=$self->prettyprint('sequence_set');
+  $ss->attribvals($self->generate_AssemblyType($slice));
+  my $slice_projection = $slice->project('contig');
+  foreach my $seg (@$slice_projection) {
+	 $ss->attribobjs($self->generate_SequenceFragment($seg,$slice,$odb));
+  }
+  my $features=$slice->get_all_SimpleFeatures;
+  $ss->attribobjs($self->generate_FeatureSet($features));
+  my $genes=$slice->get_all_Genes;
+  foreach my $gene(@$genes){
+	 $ss->attribobjs($self->generate_Locus($gene));
+  }
+  return $ss;
+}
+
+
+sub generate_AssemblyType{
+   my ($self,$slice)=@_;
+	my $at=$self->prettyprint('assembly_type',$slice->seq_region_name);
+	return $at;
+}
+
+sub generate_SequenceFragment{
+  my ($self,$seg,$slice,$odb)=@_;
+  my $sf = $self->prettyprint('sequence_fragment');
+  my $contig_slice = $seg->to_Slice();
+  my $clone_slice;
+  my $clone_projection=$contig_slice->project('clone');
+  foreach my $s (@$clone_projection) {
+	 $clone_slice=$s->to_Slice;
+	 last;
+  }
+  my $chrs = $slice->get_all_Attributes('chr');
+  my $chr_name;
+  if ($chrs) {
+	 if (@$chrs > 1){
+		throw("Chromosome Slice:$slice has more than one value for name attrib, cannot generate xml");
+	 }
+	 if ($chrs->[0]){
+		$chr_name=$chrs->[0]->value;
+	 }
+	 $sf->attribvals($self->prettyprint('chromosome',$chr_name));
+  }
+  my $accs=$clone_slice->get_all_Attributes('embl_accession');
+  if ($accs) {
+	 if (@$accs > 1){
+		throw("Clone Slice:$clone_slice has more than one value for accession attrib, cannot generate xml");
+	 }
+	 if ($accs->[0]){
+		my $acc_name=$accs->[0]->value;
+		$sf->attribvals($self->prettyprint('accession',$acc_name));
+	 }
+  }
+  else {
+	 throw("Missing clone accession, cannot generate xml:$clone_slice");
+  }
+  my $vers=$clone_slice->get_all_Attributes('embl_version');
+  if ($vers) {
+	 if (@$vers > 1){
+		throw("Clone Slice:$clone_slice has more than one value for version attrib, cannot generate xml");
+	 }
+	 if ($vers->[0]){
+		my $ver=$vers->[0]->value;
+		$sf->attribvals($self->prettyprint('version',$ver));
+	 }
+  }
+  else {
+	 throw("Missing clone version, cannot generate xml:$clone_slice");
+  }
+  if ($contig_slice->seq_region_name){
+	 $sf->attribvals($self->prettyprint('id',$contig_slice->seq_region_name));
+  }
+  if ($seg->from_start){
+	 $sf->attribvals($self->prettyprint('assembly_start',$seg->from_start));
+  }
+  else {
+	 throw("Missing assembly start, cannot generate xml:$seg");
+  }
+  if ($seg->from_end){
+	 $sf->attribvals($self->prettyprint('assembly_end',$seg->from_end));
+  }
+  else {
+	 throw("Missing assembly end, cannot generate xml:$seg");
+  }
+  if ($contig_slice->strand){
+	 $sf->attribvals($self->prettyprint('fragment_ori',$contig_slice->strand));
+  }
+  else {
+	 throw("Missing fragment orientation, cannot generate xml:$contig_slice");
+  }
+  if ($contig_slice->start){
+	 $sf->attribvals($self->prettyprint('fragment_offset',$contig_slice->start));
+  }
+  else {
+	 throw("Missing fragment offset, cannot generate xml:$contig_slice");
+  }
+  my $cia=$odb->get_ContigInfoAdaptor;
+  my $contig_slice_dbid=$contig_slice->get_seq_region_id;
+  my $ci=$cia->fetch_by_seq_region_id($contig_slice_dbid);
+  my $ci_attribs=$ci->get_all_Attributes;
+  foreach my $cia (@$ci_attribs){
+	 if ($cia->code eq 'keyword'){
+		$sf->attribvals($self->prettyprint('keyword',$cia->value));
+	 }
+  }
+  foreach my $cia (@$ci_attribs){
+	 if ($cia->code eq 'remark' || $cia->code eq 'hidden_remark' || $cia->code eq 'annotated' || $cia->code eq 'description'){
+		if ($cia->code eq 'annotated' && $cia->value eq 'T'){
+		  $cia->value('Annotation_remark- annotated');
+		}
+		if ($cia->code eq 'description') {
+		  $cia->value("EMBL_dump_info.DE_line- ".$cia->value);
+		}
+		  $sf->attribvals($self->prettyprint('remark',$cia->value));
+	 }
+  }
+  my $auth=$ci->author;
+  my $auth_name=$auth->name;
+  my $auth_email=$auth->email;
+  $sf->attribvals($self->prettyprint('author',$auth_name));
+  $sf->attribvals($self->prettyprint('author_email',$auth_email));
+  return $sf;
 }
 
 sub generate_Locus {
@@ -292,138 +389,13 @@ sub generate_FeatureSet {
 }
 
 
-sub generate_SequenceSet{
-  my ($self,$slice,$odb)=@_;
-  my $ss=$self->prettyprint('sequence_set');
-  $ss->attribvals($self->generate_AssemblyType($slice));
-  my $slice_projection = $slice->project('contig');
-  foreach my $seg (@$slice_projection) {
-	 $ss->attribobjs($self->generate_SequenceFragment($seg,$slice,$odb));
-  }
-  my $features=$slice->get_all_SimpleFeatures;
-  $ss->attribobjs($self->generate_FeatureSet($features));
-  my $genes=$slice->get_all_Genes;
-  foreach my $gene(@$genes){
-	 $ss->attribobjs($self->generate_Locus($gene));
-  }
-  return $ss;
-}
-
-
-sub generate_AssemblyType{
-   my ($self,$slice)=@_;
-	my $at=$self->prettyprint('assembly_type',$slice->seq_region_name);
-	return $at;
-}
-
-sub generate_SequenceFragment{
-  my ($self,$seg,$slice,$odb)=@_;
-  my $sf = $self->prettyprint('sequence_fragment');
-  my $contig_slice = $seg->to_Slice();
-  my $clone_slice;
-  my $clone_projection=$contig_slice->project('clone');
-  foreach my $s (@$clone_projection) {
-	 $clone_slice=$s->to_Slice;
-	 last;
-  }
-  my $chrs = $slice->get_all_Attributes('chr');
-  my $chr_name;
-  if ($chrs) {
-	 if (@$chrs > 1){
-		throw("Chromosome Slice:$slice has more than one value for name attrib, cannot generate xml");
-	 }
-	 if ($chrs->[0]){
-		$chr_name=$chrs->[0]->value;
-	 }
-	 $sf->attribvals($self->prettyprint('chromosome',$chr_name));
-  }
-  my $accs=$clone_slice->get_all_Attributes('embl_accession');
-  if ($accs) {
-	 if (@$accs > 1){
-		throw("Clone Slice:$clone_slice has more than one value for accession attrib, cannot generate xml");
-	 }
-	 if ($accs->[0]){
-		my $acc_name=$accs->[0]->value;
-		$sf->attribvals($self->prettyprint('accession',$acc_name));
-	 }
-  }
-  else {
-	 throw("Missing clone accession, cannot generate xml:$clone_slice");
-  }
-  my $vers=$clone_slice->get_all_Attributes('embl_version');
-  if ($vers) {
-	 if (@$vers > 1){
-		throw("Clone Slice:$clone_slice has more than one value for version attrib, cannot generate xml");
-	 }
-	 if ($vers->[0]){
-		my $ver=$vers->[0]->value;
-		$sf->attribvals($self->prettyprint('version',$ver));
-	 }
-  }
-  else {
-	 throw("Missing clone version, cannot generate xml:$clone_slice");
-  }
-  if ($contig_slice->seq_region_name){
-	 $sf->attribvals($self->prettyprint('id',$contig_slice->seq_region_name));
-  }
-  if ($seg->from_start){
-	 $sf->attribvals($self->prettyprint('assembly_start',$seg->from_start));
-  }
-  else {
-	 throw("Missing assembly start, cannot generate xml:$seg");
-  }
-  if ($seg->from_end){
-	 $sf->attribvals($self->prettyprint('assembly_end',$seg->from_end));
-  }
-  else {
-	 throw("Missing assembly end, cannot generate xml:$seg");
-  }
-  if ($contig_slice->strand){
-	 $sf->attribvals($self->prettyprint('fragment_ori',$contig_slice->strand));
-  }
-  else {
-	 throw("Missing fragment orientation, cannot generate xml:$contig_slice");
-  }
-  if ($contig_slice->start){
-	 $sf->attribvals($self->prettyprint('fragment_offset',$contig_slice->start));
-  }
-  else {
-	 throw("Missing fragment offset, cannot generate xml:$contig_slice");
-  }
-  my $cia=$odb->get_ContigInfoAdaptor;
-  my $contig_slice_dbid=$contig_slice->get_seq_region_id;
-  my $ci=$cia->fetch_by_seq_region_id($contig_slice_dbid);
-  my $ci_attribs=$ci->get_all_Attributes;
-  foreach my $cia (@$ci_attribs){
-	 if ($cia->code eq 'keyword'){
-		$sf->attribvals($self->prettyprint('keyword',$cia->value));
-	 }
-  }
-  foreach my $cia (@$ci_attribs){
-	 if ($cia->code eq 'remark' || $cia->code eq 'hidden_remark' || $cia->code eq 'annotated' || $cia->code eq 'description'){
-		if ($cia->code eq 'annotated' && $cia->value eq 'T'){
-		  $cia->value('Annotation_remark- annotated');
-		}
-		if ($cia->code eq 'description') {
-		  $cia->value("EMBL_dump_info.DE_line- ".$cia->value);
-		}
-		  $sf->attribvals($self->prettyprint('remark',$cia->value));
-	 }
-  }
-  my $auth=$ci->author;
-  my $auth_name=$auth->name;
-  my $auth_email=$auth->email;
-  $sf->attribvals($self->prettyprint('author',$auth_name));
-  $sf->attribvals($self->prettyprint('author_email',$auth_email));
-  return $sf;
-}
-
 sub generate_DNA {
   my ($self,$slice);
   my $dna=$slice->seq;
   my $d=$self->prettyprint('sequence_fragment',$dna);
   return $d;
 }
+
 
 1;
 __END__
