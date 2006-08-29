@@ -52,10 +52,8 @@ return undef if($sth->rows() == 0);
 	 my $authad = $self->db->get_AuthorAdaptor; 
 	 my $author=$authad->fetch_by_dbID($author_id);
 	 my $aa=$self->db->get_AttributeAdaptor;
-	 use Data::Dumper;
 	 my $ci=Bio::Vega::ContigInfo->new;
 	 $ci->dbID($contiginfo_id);
-	# die Dumper();
 	 my $attributes=$aa->fetch_all_by_ContigInfo($ci);
 	 return Bio::Vega::ContigInfo->new(-SLICE=>$slice,
 												  -AUTHOR=>$author,

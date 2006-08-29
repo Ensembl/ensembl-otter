@@ -1,5 +1,6 @@
 package Bio::Vega::DBSQL::AttributeAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
+
 use base 'Bio::EnsEMBL::DBSQL::AttributeAdaptor';
 
 sub fetch_all_by_ContigInfo  {
@@ -11,12 +12,10 @@ sub fetch_all_by_ContigInfo  {
   }
 
   my $ciid = $ci->dbID();
-  use Data::Dumper;
-  #die Dumper($ci);
+
   if(!defined($ciid)) {
     throw("ContigInfo must have dbID.");
   }
-
   my $sth = $self->prepare("SELECT at.code, at.name, at.description, " .
                            "       cia.value " .
                            "FROM contig_attrib cia, attrib_type at " .
