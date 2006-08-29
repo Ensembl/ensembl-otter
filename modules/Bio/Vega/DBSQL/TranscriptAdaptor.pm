@@ -4,6 +4,7 @@ use strict;
 
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 use Bio::Vega::Transcript;
+use Bio::Vega::Evidence;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 
 use base 'Bio::EnsEMBL::DBSQL::TranscriptAdaptor';
@@ -14,6 +15,7 @@ sub fetch_by_stable_id  {
   my ($transcript) = $self->SUPER::fetch_by_stable_id($stable_id);
   if ($transcript){
 	 bless $transcript, "Bio::Vega::Transcript";
+	 $self->fetch_transcript_author($transcript);
   }
   return $transcript;
 
@@ -26,9 +28,23 @@ sub fetch_by_stable_id_version  {
   my ($transcript) = @{ $self->generic_fetch($constraint) };
   if ($transcript){
 	 bless $transcript, "Bio::Vega::Transcript";
+	 $self->fetch_transcript_author($transcript);
   }
   return $transcript;
 
+}
+
+sub fetch_all_by_Slice  {
+
+  my ($self,$slice,$load_exons,$logic_name)  = @_;
+  my ($transcripts) = $self->SUPER::fetch_all_by_Slice($slice,$load_exons,$logic_name);
+  if ($transcripts){
+	 foreach my $transcript(@$transcripts){
+		bless $transcript, "Bio::Vega::Transcript";
+		$self->fetch_transcript_author($transcript);
+	 }
+  }
+  return $transcripts;
 }
 
 sub fetch_evidence {
@@ -81,6 +97,15 @@ sub store_Evidence {
 	 $sth->execute($transcript_id,$name,$type);
   }
 }
+
+sub fetch_transcript_author {
+  my ($self,$transcript)=@_;
+  my $authad = $self->db->get_AuthorAdaptor;
+  my $author= $authad->fetch_transcript_author($transcript->dbID);
+  $transcript->transcript_author($author);
+  return $transcript;
+}
+
 
 1;
 
