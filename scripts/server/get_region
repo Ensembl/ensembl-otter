@@ -13,7 +13,7 @@ use Bio::Vega::Transform::XML;
 $| = 1;
 
 my $sq = Bio::Otter::ServerQuery->new('dataset',
-    'chr', 'type', 'start', 'end', 'hostname'
+    'cs', 'csver', 'name', 'type', 'start', 'end', 'strand',
 );
 set_nph($sq);
 
@@ -21,13 +21,12 @@ server_log("************* Getting region ************");
 
 my $odb = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES,$pipehead);
 
-my $chr     = $sq->getarg('chr')      || error_exit($sq, "No chromosome entered");
+my $name    = $sq->getarg('name')     || error_exit($sq, "No chromosome entered");
 my $type    = $sq->getarg('type')     || error_exit($sq, "No assembly type entered");
 my $start   = $sq->getarg('start')    || error_exit($sq, "No chromosome start coordinate entered");
 my $end     = $sq->getarg('end')      || error_exit($sq, "No chromosome end coordinate entered");
-my $cl_host = $sq->getarg('hostname') || $ENV{REMOTE_ADDR};
 
-server_log("Getting slice... [$chr | $type] [$start] [$end]");
+server_log("Getting slice... [$name | $type] [$start] [$end]");
 
 my $slice = get_slice($sq, $odb, $pipehead);
 
