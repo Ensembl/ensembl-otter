@@ -721,7 +721,7 @@ sub get_xml_region_from_dsname_ssname_chr_start_end {
             'email'    => $self->email,
             'dataset'  => $dsname,
             'type'     => $ssname,
-            'chr'      => $chr_name,
+            'name'     => $chr_name,
             'start'    => $chr_start,
             'end'      => $chr_end,
             ($otterhead ? ( 'pipehead' => 1) : ('pipehead' => 0)),
