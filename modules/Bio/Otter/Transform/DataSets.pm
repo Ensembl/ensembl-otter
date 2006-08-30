@@ -12,7 +12,7 @@ our @ISA = qw(Bio::Otter::Transform);
 # ones were interested in
 my $SUB_ELE = {
     map { $_ => 1 }
-      qw(host port user pass dbname type
+      qw(host port user pass dbname type headcode
       dna_host dna_port dna_user dna_pass dna_dbname)
 };
 my $SUP_ELE = { map { $_ => 1 } qw(otter datasets) };
