@@ -146,7 +146,8 @@ sub get_mapper_dba {
 
     if($pipehead && $metakey) { # a head version of ensembl_db (non-pipeline genes)
 
-        my ($sdb_def_asm) = (@{ $sdba->get_MetaContainer()->list_value_by_key('assembly.default') }, 'UNKNOWN');
+        my ($sdb_def_asm) = (@{ $sdba->get_MetaContainer()->list_value_by_key('assembly.default') },
+            'UNKNOWN');
 
             # Currently we keep the necessary information in the pipeline_db_head.
             # Once otter_db is converted into new schema, we can keep this information there.
@@ -164,7 +165,7 @@ sub get_mapper_dba {
         } else { # guaranteed to differ!
 
             my $mdba = odba_to_sdba($sq, $odba, 1, 'mapper_db');
-            return $mdba;
+            return ($mdba, $sdb_def_asm);
         }
 
     } elsif($pipehead) { # a head version of pipeline_db
@@ -289,10 +290,6 @@ sub get_Author_from_CGI{
 sub get_DBAdaptor_from_CGI_species{
     my ($sq, $SPECIES, $pipehead) = @_;
 
-    my $adaptor_class = $pipehead
-        ? 'Bio::EnsEMBL::DBSQL::DBAdaptor'
-        : 'Bio::Otter::DBSQL::DBAdaptor';
-
     error_exit('', 'I need two arguments') unless $sq && $SPECIES;
     error_exit('', 'I need a CGI object') unless UNIVERSAL::isa($sq, 'CGI');
 
@@ -306,9 +303,14 @@ sub get_DBAdaptor_from_CGI_species{
     # get the defaults from species.dat
     my $defaults = $SPECIES->{'defaults'};
 
+    ########## CODEBASE tricks ########################################
+    my $headcode  = $dbinfo->{HEADCODE} || $defaults->{HEADCODE};
+    $pipehead ||= $headcode;
+
     my $type     = $sq->getarg('type') || $dbinfo->{TYPE} || $defaults->{TYPE};
 
     ########## AND DB CONNECTION #######################################
+
     my $dbhost    = $dbinfo->{HOST}     || $defaults->{HOST};
     my $dbuser    = $dbinfo->{USER}     || $defaults->{USER};
     my $dbpass    = $dbinfo->{PASS}     || $defaults->{PASS};
@@ -322,6 +324,17 @@ sub get_DBAdaptor_from_CGI_species{
     my $dnaport    = $dbinfo->{DNA_PORT}    || $defaults->{DNA_PORT};
     my $dna_dbname = $dbinfo->{DNA_DBNAME};
   
+
+    my $adaptor_class = $pipehead
+        ? ( $headcode
+                ? 'Bio::Vega::DBSQL::DBAdaptor'     # headcode anyway, get the best adaptor
+                : 'Bio::EnsEMBL::DBSQL::DBAdaptor'  # old pipeline of the new otter, get the minimal adaptor
+          )
+        : ( $headcode
+                ? 'Bio::EnsEMBL::DBSQL::DBAdaptor'  # new pipeline of the old otter, get the minimal adaptor
+                : 'Bio::Otter::DBSQL::DBAdaptor'    # oldcode anyway, get the best adaptor
+        );
+
     my( $odba, $dnadb );
 
     server_log("OtterDB='$dbname' host='$dbhost' user='$dbuser' pass='$dbpass' port='$dbport'");
