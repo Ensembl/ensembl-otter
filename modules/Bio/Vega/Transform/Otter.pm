@@ -78,17 +78,17 @@ sub initialize {
 								  feature             => 'build_Feature',
 								  assembly_tag        => 'build_AssemblyTag',
 								  sequence_fragment   => 'build_SequenceFragment',
-								  assembly_type        => 'build_AssemblyType',
+								  assembly_type       => 'build_AssemblyType',
+								  dna                 => 'build_DNA',
 								  # We don't currently do anything on encountering
 								  # these end tags:
 								  exon_set            => 'report_set_end',
 								  evidence_set        => 'report_set_end',
-								  feature_set   => 'report_set_end',
-								  otter         => 'report_set_end',
+								  feature_set         => 'report_set_end',
+								  otter               => 'report_set_end',
 								 }
 								  );
-  $self->set_multi_value_tags(
-										[
+  $self->set_multi_value_tags([
 										 [ locus             => qw{ remark synonym } ],
 										 [ transcript        => qw{ remark         } ],
 										 [ sequence_fragment => qw{ remark keyword } ],
@@ -102,15 +102,15 @@ sub initialize {
 							 );
   $biotype_status_mapping{$self}= 
 	 {'unprocessed_pseudogene' => ['unprocessed_pseudogene','UNKNOWN'],
-	  'processed_pseudogene' => ['processed_pseudogene' ,'UNKNOWN'],
-	  'pseudogene' => ['pseudogene' ,'UNKNOWN'],
-	  'novel_transcript' => ['processed_transcript' ,'NOVEL'],
-	  'known' => ['protein_coding' ,'KNOWN'],
-	  'novel_cds' => ['protein_coding' ,'NOVEL'],
-	  'putative' => ['processed_transcript' ,'PUTATIVE'],
-	  'predicted_gene' => ['protein_coding' ,'PREDICTED'],
-	  'ig_pseudogene_segment' => ['Ig_pseudogene_segment' ,'UNKNOWN'],
-	  'ig_segment' => ['Ig_segment' ,'NOVEL'],
+	  'processed_pseudogene'   => ['processed_pseudogene' ,'UNKNOWN'],
+	  'pseudogene'             => ['pseudogene' ,'UNKNOWN'],
+	  'novel_transcript'       => ['processed_transcript' ,'NOVEL'],
+	  'known'                  => ['protein_coding' ,'KNOWN'],
+	  'novel_cds'              => ['protein_coding' ,'NOVEL'],
+	  'putative'               => ['processed_transcript' ,'PUTATIVE'],
+	  'predicted_gene'         => ['protein_coding' ,'PREDICTED'],
+	  'ig_pseudogene_segment'  => ['Ig_pseudogene_segment' ,'UNKNOWN'],
+	  'ig_segment'             => ['Ig_segment' ,'NOVEL'],
 	 };
   $time_now{$self}=time;
 }
@@ -241,6 +241,10 @@ sub build_Evidence {
   push @$list, $evidence;
 }
 
+sub build_DNA {
+  my ($self, $data) = @_;
+  $dna{$self} = $data->{'dna'};
+}
 
 sub build_Feature {
   my ($self, $data) = @_;
