@@ -4,13 +4,11 @@ my $pipehead = $ENV{PIPEHEAD}; # is set by the server for any GET request
 
 use OtterDefs;
 use strict;
-
+use Data::Dumper;
 use Bio::Otter::ServerQuery;
 use Bio::Otter::ServerSide (':all');
-
-use Bio::Otter::DBSQL::DBAdaptor;
 use Bio::Otter::CloneLockBroker;
-use Bio::Otter::Converter;
+use Bio::Vega::Transform::XML;
 
 $| = 1;
 
@@ -21,7 +19,7 @@ set_nph($sq);
 
 server_log("************* Getting region ************");
 
-my $odb = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES);
+my $odb = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES,$pipehead);
 
 my $chr     = $sq->getarg('chr')      || error_exit($sq, "No chromosome entered");
 my $type    = $sq->getarg('type')     || error_exit($sq, "No assembly type entered");
@@ -31,13 +29,24 @@ my $cl_host = $sq->getarg('hostname') || $ENV{REMOTE_ADDR};
 
 server_log("Getting slice... [$chr | $type] [$start] [$end]");
 
-my $slice = $odb->get_SliceAdaptor->fetch_by_chr_start_end($chr,
-                                         $start,
-                                         $end);
+my $slice = get_slice($sq, $odb, $pipehead);
 
 server_log("Converting slice to XML...");
 
-my $xmlstr = Bio::Otter::Converter::slice_to_XML($slice,$odb);
+my $xmlstr;
+
+if ($odb->isa('Bio::Otter::DBSQL::DBAdaptor')) {
+  $xmlstr=Bio::Otter::Converter::slice_to_XML($slice,$odb);
+}
+elsif ($odb->isa('Bio::Vega::DBSQL::DBAdaptor')) {
+  my $slices=[];
+  push @$slices,$slice;
+  my $t=Bio::Vega::Transform::XML->new;
+  $xmlstr=$t->generate_OtterXML($slices,$odb,0);
+}
+else {
+  server_log("Require an Otter DB Adaptor and not:$odb");
+}
 
 server_log("Done converting slice to XML. Length of XML = " . length($xmlstr) );
 
