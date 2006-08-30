@@ -19,6 +19,7 @@ OLD_PERL5LIB="$PERL5LIB"
 PERL5LIB=\
 $root/ensembl-otter/modules:\
 $root/ensembl/modules:\
+$root/ensembl_head/modules:\
 $root/bioperl-0.7.2
 
 if [ -n "$OLD_PERL5LIB" ]; then

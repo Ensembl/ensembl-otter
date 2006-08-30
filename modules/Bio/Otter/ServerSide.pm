@@ -5,6 +5,7 @@ use Exporter;
 
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::Otter::DBSQL::DBAdaptor;
+use Bio::Vega::DBSQL::DBAdaptor;
 use Bio::Otter::Author;
 use Bio::Otter::Version;
 use Bio::Otter::Lace::SatelliteDB;
@@ -315,8 +316,8 @@ sub get_DBAdaptor_from_CGI_species{
     my $dbuser    = $dbinfo->{USER}     || $defaults->{USER};
     my $dbpass    = $dbinfo->{PASS}     || $defaults->{PASS};
     my $dbport    = $dbinfo->{PORT}     || $defaults->{PORT};
-    my $dbname    = $dbinfo->{DBNAME}   || 
-        error_exit($sq, "Failed opening otter database [No database name]");
+    my $dbname    = $dbinfo->{DBNAME}   ||
+		error_exit($sq, "Failed opening otter database [No database name]");
 
     my $dnahost    = $dbinfo->{DNA_HOST}    || $defaults->{DNA_HOST};
     my $dnauser    = $dbinfo->{DNA_USER}    || $defaults->{DNA_USER};
@@ -328,10 +329,10 @@ sub get_DBAdaptor_from_CGI_species{
     my $adaptor_class = $pipehead
         ? ( $headcode
                 ? 'Bio::Vega::DBSQL::DBAdaptor'     # headcode anyway, get the best adaptor
-                : 'Bio::EnsEMBL::DBSQL::DBAdaptor'  # old pipeline of the new otter, get the minimal adaptor
+                : 'Bio::EnsEMBL::DBSQL::DBAdaptor'  # new pipeline of the old otter, get the minimal adaptor
           )
         : ( $headcode
-                ? 'Bio::EnsEMBL::DBSQL::DBAdaptor'  # new pipeline of the old otter, get the minimal adaptor
+                ? 'Bio::EnsEMBL::DBSQL::DBAdaptor'  # old pipeline of the new otter, get the minimal adaptor
                 : 'Bio::Otter::DBSQL::DBAdaptor'    # oldcode anyway, get the best adaptor
         );
 
