@@ -5,6 +5,7 @@ my $pipehead = $ENV{PIPEHEAD}; # is set by the server for any GET request
 use OtterDefs;
 use strict;
 use Data::Dumper;
+use Bio::Otter::Converter;
 use Bio::Otter::ServerQuery;
 use Bio::Otter::ServerSide (':all');
 use Bio::Otter::CloneLockBroker;
