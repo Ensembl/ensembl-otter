@@ -531,8 +531,9 @@ sub list_all_db_properties {
         DNA_PORT
         DNA_HOST
         DNA_USER
-	DNA_DBNAME
+        DNA_DBNAME
         PORT
+        HEADCODE
         };
 }
 
@@ -632,7 +633,14 @@ sub PORT {
     }
     return $self->{'_PORT'};
 }
-
+sub HEADCODE {
+    my( $self, $HEADCODE ) = @_;
+    
+    if ($HEADCODE) {
+        $self->{'_HEADCODE'} = $HEADCODE;
+    }
+    return $self->{'_HEADCODE'};
+}
 
 1;
 
