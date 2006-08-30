@@ -258,7 +258,7 @@ sub get_xml_for_contig_from_Dataset {
     }
 
     return $self->get_xml_region_from_dsname_ssname_chr_start_end(
-        $dataset->name, $ss->name, $chr_name, $start, $end,
+        $dataset->name, $ss->name, $chr_name, $start, $end, $dataset->HEADCODE(),
     );
 }
 
