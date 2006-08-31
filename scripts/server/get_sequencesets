@@ -41,11 +41,15 @@ if($pipehead) {
     my $slice_adaptor     = $odba->get_SliceAdaptor();
     my $attribute_adaptor = $odba->get_AttributeAdaptor();
 
+=comment
+
     my $csa       = $odba->get_CoordSystemAdaptor();
     my $orig_cs   = $csa->fetch_by_name('chromosome', 'Otter');
 
     if(!$orig_cs) { $xml .= 'ERROR fetching coord_system!' }
     else { $xml .= 'OK fetching coord_system' }
+
+=cut
 
     foreach my $ss_slice (@{$slice_adaptor->fetch_all('chromosome', 'Otter')}) {
 
