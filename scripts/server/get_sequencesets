@@ -38,9 +38,16 @@ $xml   .= qq`    <sequencesets>\n`;
 
 if($pipehead) {
 
+    my $slice_adaptor     = $odba->get_SliceAdaptor();
     my $attribute_adaptor = $odba->get_AttributeAdaptor();
 
-    foreach my $ss_slice (@{$odba->get_SliceAdaptor->fetch_all('chromosome', 'Otter')}) {
+    my $csa       = $odba->get_CoordSystemAdaptor();
+    my $orig_cs   = $csa->fetch_by_name('chromosome', 'Otter');
+
+    if(!$orig_cs) { $xml .= 'ERROR fetching coord_system!' }
+    else { $xml .= 'OK fetching coord_system' }
+
+    foreach my $ss_slice (@{$slice_adaptor->fetch_all('chromosome', 'Otter')}) {
 
         my $name = $ss_slice->seq_region_name();
         my $description = ''; # default
