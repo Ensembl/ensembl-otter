@@ -40,7 +40,7 @@ if($pipehead) {
 
     my $attribute_adaptor = $odba->get_AttributeAdaptor();
 
-    foreach my $ss_slice (@{$odba->get_SliceAdaptor->fetch_all('chromosome')}) {
+    foreach my $ss_slice (@{$odba->get_SliceAdaptor->fetch_all('chromosome', 'Otter')}) {
 
         my $name = $ss_slice->seq_region_name();
         my $description = ''; # default
