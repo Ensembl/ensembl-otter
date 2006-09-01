@@ -723,7 +723,7 @@ sub show_subseq {
     my( $self ) = @_;
 
     
-    my $xr = $self->XaceSeqChooser->xace_remote  || $self->XaceSeqChooser->open_xace_dialogue;
+    my $xr = $self->XaceSeqChooser->xace_remote;
     if ($xr) {
         my $sub = $self->SubSeq;
         unless ($sub->is_archival) {
