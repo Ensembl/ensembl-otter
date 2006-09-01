@@ -243,6 +243,7 @@ sub highlight {
     $self->canvas->SelectionOwn(
         -command    => sub{ $self->deselect_all },
         );
+    weaken $self;
 }
 
 
