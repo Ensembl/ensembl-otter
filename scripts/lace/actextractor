@@ -14,8 +14,9 @@ use Bio::Otter::Lace::Defaults;
     my $set_name     = 'chr10-act';
     my $help_flag    = 0;
 
+    unshift @ARGV, '--port=33977'; # a 'local default'
+
     Bio::Otter::Lace::Defaults::do_getopt(
-        'help!'         => \$help_flag,
         'dataset=s'     => \$dataset_name,
         'chr=s'         => \$chr_name,
         'set=s'         => \$set_name,
@@ -42,7 +43,7 @@ sub show_one_set {
     my ($cl, $ds, $ssname) = @_;
 
     my $ss = $ds->get_SequenceSet_by_name($ssname);
-    my $csl = $cl->get_all_CloneSequences_for_SequenceSet($ss);
+    my $csl = $cl->get_all_CloneSequences_for_DataSet_SequenceSet($ds, $ss);
     my ( $chr_name, $chr_start, $chr_end ) = $cl->chr_start_end_from_contig($csl);
 
     print "DataSet='".$ds->name()."'\n\n";

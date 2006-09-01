@@ -812,29 +812,29 @@ sub get_SequenceSet_AccessList_for_DataSet {
   return $al;
 }
 
-sub get_all_CloneSequences_for_SequenceSet {
-  my( $self, $ssObj) = @_;
-  return [] unless $ssObj ;
-  my $cs = $ssObj->CloneSequence_list;
-  return $cs if (defined $cs && scalar @$cs);
+sub get_all_CloneSequences_for_DataSet_SequenceSet {
+  my( $self, $ds, $ss) = @_;
+  return [] unless $ss ;
+  my $csl = $ss->CloneSequence_list;
+  return $csl if (defined $csl && scalar @$csl);
+
   my $content = $self->general_http_dialog(
                                            3,
                                            'GET',
                                            'get_clonesequences',
                                            {
-                                            'author'      => $self->author,
-                                            'dataset'     => $ssObj->dataset_name,
-                                            'sequenceset' => $ssObj->name
-                                            'pipehead'    => 0, # temporarily
+                                            'author'      => $self->author(),
+                                            'dataset'     => $ds->name(),
+                                            'sequenceset' => $ss->name(),
+                                            'pipehead'    => $ds->HEADCODE(),
                                            }
                                           );
   # stream parsing expat non-validating parser
   my $csp = Bio::Otter::Transform::CloneSequences->new();
-  my $p   = $csp->my_parser();
-  $p->parse($content);
-  $cs=$csp->objects;
-  $ssObj->CloneSequence_list($cs);
-  return $cs;
+  $csp->my_parser()->parse($content);
+  $csl=$csp->objects;
+  $ss->CloneSequence_list($csl);
+  return $csl;
 }
 
 sub save_otter_xml {

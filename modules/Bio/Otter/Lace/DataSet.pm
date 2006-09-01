@@ -155,7 +155,7 @@ sub fetch_all_CloneSequences_for_SequenceSet {
     my( $self, $ss ) = @_;
     confess "Missing SequenceSet argument" unless $ss;
     my $client = $self->Client or confess "No otter Client attached";
-    my $cs=$client->get_all_CloneSequences_for_SequenceSet($ss);
+    my $cs=$client->get_all_CloneSequences_for_DataSet_SequenceSet($self, $ss);
     return $cs;
 }
 
@@ -540,7 +540,7 @@ sub list_all_db_properties {
 sub HOST {
     my( $self, $HOST ) = @_;
     
-    if ($HOST) {
+    if(defined($HOST)) {
         $self->{'_HOST'} = $HOST;
     }
     return $self->{'_HOST'};
@@ -549,7 +549,7 @@ sub HOST {
 sub USER {
     my( $self, $USER ) = @_;
     
-    if ($USER) {
+    if(defined($USER)) {
         $self->{'_USER'} = $USER;
     }
     return $self->{'_USER'};
@@ -558,7 +558,7 @@ sub USER {
 sub DNA_PASS {
     my( $self, $DNA_PASS ) = @_;
     
-    if ($DNA_PASS) {
+    if(defined($DNA_PASS)) {
         $self->{'_DNA_PASS'} = $DNA_PASS;
     }
     return $self->{'_DNA_PASS'};
@@ -567,7 +567,7 @@ sub DNA_PASS {
 sub PASS {
     my( $self, $PASS ) = @_;
     
-    if ($PASS) {
+    if(defined($PASS)) {
         $self->{'_PASS'} = $PASS;
     }
     return $self->{'_PASS'};
@@ -576,7 +576,7 @@ sub PASS {
 sub DBNAME {
     my( $self, $DBNAME ) = @_;
     
-    if ($DBNAME) {
+    if(defined($DBNAME)) {
         $self->{'_DBNAME'} = $DBNAME;
     }
     return $self->{'_DBNAME'};
@@ -585,7 +585,7 @@ sub DBNAME {
 sub TYPE {
     my( $self, $TYPE ) = @_;
     
-    if ($TYPE) {
+    if(defined($TYPE)) {
         $self->{'_TYPE'} = $TYPE;
     }
     return $self->{'_TYPE'};
@@ -594,7 +594,7 @@ sub TYPE {
 sub DNA_PORT {
     my( $self, $DNA_PORT ) = @_;
     
-    if ($DNA_PORT) {
+    if(defined($DNA_PORT)) {
         $self->{'_DNA_PORT'} = $DNA_PORT;
     }
     return $self->{'_DNA_PORT'};
@@ -603,7 +603,7 @@ sub DNA_PORT {
 sub DNA_HOST {
     my( $self, $DNA_HOST ) = @_;
     
-    if ($DNA_HOST) {
+    if(defined($DNA_HOST)) {
         $self->{'_DNA_HOST'} = $DNA_HOST;
     }
     return $self->{'_DNA_HOST'};
@@ -612,7 +612,7 @@ sub DNA_HOST {
 sub DNA_USER {
     my( $self, $DNA_USER ) = @_;
     
-    if ($DNA_USER) {
+    if(defined($DNA_USER)) {
         $self->{'_DNA_USER'} = $DNA_USER;
     }
     return $self->{'_DNA_USER'};
@@ -620,7 +620,7 @@ sub DNA_USER {
 sub DNA_DBNAME {
     my( $self, $DNA_DBNAME ) = @_;
     
-    if ($DNA_DBNAME) {
+    if(defined($DNA_DBNAME)) {
         $self->{'_DNA_DBNAME'} = $DNA_DBNAME;
     }
     return $self->{'_DNA_DBNAME'};
@@ -628,7 +628,7 @@ sub DNA_DBNAME {
 sub PORT {
     my( $self, $PORT ) = @_;
     
-    if ($PORT) {
+    if(defined($PORT)) {
         $self->{'_PORT'} = $PORT;
     }
     return $self->{'_PORT'};
@@ -636,7 +636,7 @@ sub PORT {
 sub HEADCODE {
     my( $self, $HEADCODE ) = @_;
     
-    if ($HEADCODE) {
+    if(defined($HEADCODE)) {
         $self->{'_HEADCODE'} = $HEADCODE;
     }
     return $self->{'_HEADCODE'};
