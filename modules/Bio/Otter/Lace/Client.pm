@@ -822,9 +822,10 @@ sub get_all_CloneSequences_for_SequenceSet {
                                            'GET',
                                            'get_clonesequences',
                                            {
-                                            'author'   => $self->author,
-                                            'dataset'  => $ssObj->dataset_name,
+                                            'author'      => $self->author,
+                                            'dataset'     => $ssObj->dataset_name,
                                             'sequenceset' => $ssObj->name
+                                            'pipehead'    => 0, # temporarily
                                            }
                                           );
   # stream parsing expat non-validating parser
