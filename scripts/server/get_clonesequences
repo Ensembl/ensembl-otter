@@ -34,54 +34,62 @@ if($@){
     }
 }
 
-my $sth = $odba->prepare(q{
-        SELECT c.name, c.embl_acc, c.embl_version
-          , ctg.name, ctg.length
-          , ch.name, ch.length, a.chr_start, a.chr_end
-          , a.contig_start, a.contig_end, a.contig_ori
-          , l.clone_lock_id, l.hostname
-          , aut.author_name, aut.author_email
-       FROM assembly a
-          , contig ctg 
-          , clone c
-          , chromosome ch
-        LEFT JOIN clone_lock l ON l.clone_id = c.clone_id
-        LEFT JOIN author aut ON aut.author_id = l.author_id
-        WHERE a.contig_id = ctg.contig_id
-          AND ctg.clone_id = c.clone_id
-          AND ch.chromosome_id = a.chromosome_id
-          AND a.type = ?
-        ORDER BY a.chr_start 
-            });
-$sth->execute($sequenceset);
 my $xml = '';
 $xml   .= qq`  <dataset name="$dataset">\n`;
 $xml   .= qq`    <sequenceset name="$sequenceset">\n`;
 $xml   .= qq`      <clonesequences>\n`;
-while (my ($name, $acc,  $sv,
-	   $ctg_name,  $ctg_length,
-	   $chr_name, $chr_length, $chr_start,  $chr_end,
-       $ctg_start, $ctg_end, $ctg_strand,
-	   $clone_lock_id, $hostname,
-       $author_name, $author_email ) = $sth->fetchrow) {
 
-  $xml .= qq`        <clonesequence>\n`;
-  $xml .= qq`          <clone_name>$name</clone_name>\n`;
-  $xml .= qq`          <accession>$acc</accession>\n`;
-  $xml .= qq`          <sv>$sv</sv>\n`;
-  $xml .= qq`          <contig_name>$ctg_name</contig_name>\n`;
-  $xml .= qq`          <length>$ctg_length</length>\n`;
-  $xml .= qq`          <chr name="$chr_name" length="$chr_length"></chr>\n`;
-  $xml .= qq`          <chr_start>$chr_start</chr_start>\n`;
-  $xml .= qq`          <chr_end>$chr_end</chr_end>\n`;
-  $xml .= qq`          <contig_start>$ctg_start</contig_start>\n`;
-  $xml .= qq`          <contig_end>$ctg_end</contig_end>\n`;
-  $xml .= qq`          <contig_strand>$ctg_strand</contig_strand>\n`;
-  if (defined $clone_lock_id){
-    $xml .= qq`          <lock lock_id="$clone_lock_id" author_name="$author_name" email="$author_email" host_name="$hostname"> </lock>\n`;
-  }
-  $xml .= qq`        </clonesequence>\n`;
-}
+if($pipehead) {
+
+} else {
+
+    my $sth = $odba->prepare(q{
+            SELECT c.name, c.embl_acc, c.embl_version
+              , ctg.name, ctg.length
+              , ch.name, ch.length, a.chr_start, a.chr_end
+              , a.contig_start, a.contig_end, a.contig_ori
+              , l.clone_lock_id, l.hostname
+              , aut.author_name, aut.author_email
+           FROM assembly a
+              , contig ctg 
+              , clone c
+              , chromosome ch
+            LEFT JOIN clone_lock l ON l.clone_id = c.clone_id
+            LEFT JOIN author aut ON aut.author_id = l.author_id
+            WHERE a.contig_id = ctg.contig_id
+              AND ctg.clone_id = c.clone_id
+              AND ch.chromosome_id = a.chromosome_id
+              AND a.type = ?
+            ORDER BY a.chr_start 
+                });
+    $sth->execute($sequenceset);
+    while (my ($name, $acc,  $sv,
+           $ctg_name,  $ctg_length,
+           $chr_name, $chr_length, $chr_start,  $chr_end,
+           $ctg_start, $ctg_end, $ctg_strand,
+           $clone_lock_id, $hostname,
+           $author_name, $author_email ) = $sth->fetchrow) {
+
+      $xml .= qq`        <clonesequence>\n`;
+      $xml .= qq`          <clone_name>$name</clone_name>\n`;
+      $xml .= qq`          <accession>$acc</accession>\n`;
+      $xml .= qq`          <sv>$sv</sv>\n`;
+      $xml .= qq`          <contig_name>$ctg_name</contig_name>\n`;
+      $xml .= qq`          <length>$ctg_length</length>\n`;
+      $xml .= qq`          <chr name="$chr_name" length="$chr_length"></chr>\n`;
+      $xml .= qq`          <chr_start>$chr_start</chr_start>\n`;
+      $xml .= qq`          <chr_end>$chr_end</chr_end>\n`;
+      $xml .= qq`          <contig_start>$ctg_start</contig_start>\n`;
+      $xml .= qq`          <contig_end>$ctg_end</contig_end>\n`;
+      $xml .= qq`          <contig_strand>$ctg_strand</contig_strand>\n`;
+      if (defined $clone_lock_id){
+        $xml .= qq`          <lock lock_id="$clone_lock_id" author_name="$author_name" email="$author_email" host_name="$hostname"> </lock>\n`;
+      }
+      $xml .= qq`        </clonesequence>\n`;
+    }
+
+} # if old API
+
 $xml .= qq`      </clonesequences>\n`;
 $xml .= qq`    </sequenceset>\n`;
 $xml .= qq`  </dataset>\n`;
