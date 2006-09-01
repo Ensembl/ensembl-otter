@@ -25,7 +25,7 @@ my $metakey  = $sq->getarg('metakey') || ''; # defaults to pipeline
 
 my $odba = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
 my $sdba = odba_to_sdba($sq, $odba, $pipehead, $metakey);
-my $mdba = get_mapper_dba($sq, $odba, $sdba, $pipehead);
+my ($mdba, $sdba_asm) = get_mapper_dba($sq, $odba, $sdba, $pipehead);
 
 if($mdba) {
     server_log("Assembly mapping not implemented yet");

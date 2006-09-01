@@ -1,11 +1,10 @@
 #!/usr/local/bin/perl -w
 
+my $pipehead = $ENV{PIPEHEAD}; # is set by the server for any GET request
+
 use strict;
 use warnings;
-use CGI;
 use OtterDefs;
-use Bio::Otter::DBSQL::DBAdaptor;
-use Bio::Otter::Version;
 use Bio::Otter::ServerQuery;
 use Bio::Otter::ServerSide (':all');
 
@@ -18,8 +17,9 @@ my $dataset =  $sq->getarg('dataset') || error_exit($sq,"'dataset' $query_fail")
 my $author  =   $sq->getarg('author') || error_exit($sq,"'author' $query_fail");
 my $sequenceset =  $sq->getarg('sequenceset') || error_exit($sq,"'sequenceset' $query_fail");
 
-my $odb = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, 0);
-my $auth_adapt = $odb->get_AuthorAdaptor();
+my $odba = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
+
+my $auth_adapt = $odba->get_AuthorAdaptor();
 my ($author_obj, $saved_err);
 eval{
     $author_obj = $auth_adapt->fetch_by_name($author);
@@ -33,25 +33,25 @@ if($@){
         error_exit($sq,"Failed to get an author.\n$@") unless $author_obj;
     }
 }
-my $sth = $odb->prepare(q{
+
+my $sth = $odba->prepare(q{
         SELECT c.name, c.embl_acc, c.embl_version
-          , g.contig_id, g.name, g.length
-          , ch.name,ch.length, a.chr_start, a.chr_end
+          , ctg.name, ctg.length
+          , ch.name, ch.length, a.chr_start, a.chr_end
           , a.contig_start, a.contig_end, a.contig_ori
-          , cl.clone_lock_id, t.author_id, t.author_name
-         , t.author_email, cl.hostname, a.superctg_name
+          , l.clone_lock_id, l.hostname
+          , aut.author_name, aut.author_email
        FROM assembly a
-          , contig g 
+          , contig ctg 
           , clone c
           , chromosome ch
-        LEFT JOIN clone_lock cl ON cl.clone_id = c.clone_id
-        LEFT JOIN author t ON t.author_id = cl.author_id
-        WHERE a.contig_id = g.contig_id
-          AND g.clone_id = c.clone_id
+        LEFT JOIN clone_lock l ON l.clone_id = c.clone_id
+        LEFT JOIN author aut ON aut.author_id = l.author_id
+        WHERE a.contig_id = ctg.contig_id
+          AND ctg.clone_id = c.clone_id
           AND ch.chromosome_id = a.chromosome_id
           AND a.type = ?
-        ORDER BY a.chromosome_id
-          , a.chr_start 
+        ORDER BY a.chr_start 
             });
 $sth->execute($sequenceset);
 my $xml = '';
@@ -59,27 +59,26 @@ $xml   .= qq`  <dataset name="$dataset">\n`;
 $xml   .= qq`    <sequenceset name="$sequenceset">\n`;
 $xml   .= qq`      <clonesequences>\n`;
 while (my ($name, $acc,  $sv,
-	   $ctg_id,  $ctg_name,  $ctg_length,
+	   $ctg_name,  $ctg_length,
 	   $chr_name, $chr_length, $chr_start,  $chr_end,
-	   $contig_start,  $contig_end,  $strand,
-	   $clone_lock_id, $author_id, $author_name, 
-	   $author_email, $hostname, $superctg_name ) = $sth->fetchrow) {
+       $ctg_start, $ctg_end, $ctg_strand,
+	   $clone_lock_id, $hostname,
+       $author_name, $author_email ) = $sth->fetchrow) {
+
   $xml .= qq`        <clonesequence>\n`;
   $xml .= qq`          <clone_name>$name</clone_name>\n`;
   $xml .= qq`          <accession>$acc</accession>\n`;
   $xml .= qq`          <sv>$sv</sv>\n`;
+  $xml .= qq`          <contig_name>$ctg_name</contig_name>\n`;
+  $xml .= qq`          <length>$ctg_length</length>\n`;
   $xml .= qq`          <chr name="$chr_name" length="$chr_length"></chr>\n`;
   $xml .= qq`          <chr_start>$chr_start</chr_start>\n`;
   $xml .= qq`          <chr_end>$chr_end</chr_end>\n`;
-  $xml .= qq`          <contig_id>$ctg_id</contig_id>\n`;
-  $xml .= qq`          <contig_name>$ctg_name</contig_name>\n`;
-  $xml .= qq`          <length>$ctg_length</length>\n`;
-  $xml .= qq`          <contig_start>$contig_start</contig_start>\n`;
-  $xml .= qq`          <contig_end>$contig_end</contig_end>\n`;
-  $xml .= qq`          <contig_strand>$strand</contig_strand>\n`;
-  $xml .= qq`          <super_contig_name>$superctg_name</super_contig_name>\n`;
+  $xml .= qq`          <contig_start>$ctg_start</contig_start>\n`;
+  $xml .= qq`          <contig_end>$ctg_end</ctg_end>\n`;
+  $xml .= qq`          <contig_strand>$ctg_strand</contig_strand>\n`;
   if (defined $clone_lock_id){
-    $xml .= qq`          <lock lock_id="$clone_lock_id" author_id="$author_id" author_name="$author_name" email="$author_email" host_name="$hostname"> </lock>\n`;
+    $xml .= qq`          <lock lock_id="$clone_lock_id" author_name="$author_name" email="$author_email" host_name="$hostname"> </lock>\n`;
   }
   $xml .= qq`        </clonesequence>\n`;
 }
