@@ -234,7 +234,7 @@ sub update_ace_display {
     my ($self, $ace) = @_ ;
     
     
-    my $xr = $self->xace_remote || $self->open_xace_dialogue;
+    my $xr = $self->xace_remote;
     
     if ($xr) {
         print STDERR "Sending:\n$ace";
@@ -248,20 +248,6 @@ sub update_ace_display {
         print STDERR "not able to send .ace file - no xace attached";
         return 0;
     }    
-}
-
-# this should be called when a user tries to save, but no Xace is opened
-sub open_xace_dialogue{
-    my ($self) = @_ ;
-    
-    my $answer = $self->top_window()->messageBox(-title => 'Please Reply', 
-     -message => 'No Xace attached, would you like to launch Xace?', 
-     -type => 'YesNo', -icon => 'question', -default => 'Yes');
-
-    if ($answer eq 'Yes'){
-        $self->launch_xace();
-    }
-    return $self->xace_remote;
 }
 
 sub get_Locus {
