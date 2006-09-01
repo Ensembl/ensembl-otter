@@ -9,7 +9,7 @@ use Bio::Otter::Lace::CloneSequence;
 our @ISA = qw(Bio::Otter::Transform);
 
 # ones were interested in 
-my $SUB_ELE = { map { $_ => 1 } qw(clone_name accession sv chromosome chr_start chr_end contig_id contig_name length contig_start contig_end contig_strand super_contig_name )};
+my $SUB_ELE = { map { $_ => 1 } qw(clone_name accession sv chromosome chr_start chr_end contig_name length contig_start contig_end contig_strand )};
 # super elements to the actual clonesequence
 my $SUP_ELE = { map { $_ => 1 } qw(otter dataset sequenceset clonesequences clonesequence) };
 my $chr;
@@ -32,16 +32,11 @@ sub start_handler{
       my $cs=$self->objects;
       my $cl=$cs->[$#$cs];
 
-      # my $ch = Bio::Otter::Lace::Chromosome->new();
-      # $ch->name($attr->{'name'});
-      # $ch->length($attr->{'length'});
-      # $cl->chromosome($ch);
-
         # from now on, just keep the chromosome's name
       $cl->chromosome($attr->{name});
     }
     if($ele eq 'lock'){
-      my $authorObj = Bio::Otter::Author->new(-dbid  => $attr->{'author_id'},
+      my $authorObj = Bio::Otter::Author->new(
 					      -name  => $attr->{'author_name'},
 					      -email => $attr->{'email'});
       my $cloneLock = Bio::Otter::CloneLock->new(-author   => $authorObj,

@@ -1,6 +1,6 @@
 package Bio::Vega::DBSQL::AttributeAdaptor;
-use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 
+use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use base 'Bio::EnsEMBL::DBSQL::AttributeAdaptor';
 
 sub fetch_all_by_ContigInfo  {
