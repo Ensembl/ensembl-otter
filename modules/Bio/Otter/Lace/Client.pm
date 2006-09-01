@@ -550,6 +550,7 @@ sub lock_refresh_for_DataSet_SequenceSet {
         {
             'dataset'  => $ds->name(),
             'type'     => $ss->name(),
+            'pipehead' => $ds->HEADCODE(),
         },
         1,
     );
@@ -603,6 +604,7 @@ sub fetch_all_SequenceNotes_for_DataSet_SequenceSet {
         {
             'type'     => $ss->name(),
             'dataset'  => $ds->name(),
+            'pipehead' => $ds->HEADCODE(),
         },
         1,
     );
@@ -705,6 +707,7 @@ sub lock_region_for_contig_from_Dataset{
             'chr'      => $chr_name,
             'start'    => $start,
             'end'      => $end,
+            'pipehead' => $dataset->HEADCODE(),
         }
     );
 }
@@ -772,8 +775,9 @@ sub get_all_SequenceSets_for_DataSet {
 					   'GET',
 					   'get_sequencesets',
 					   {
-					    'dataset'  => $ds->name,
 					    'author'   => $self->author,
+					    'dataset'  => $ds->name(),
+                        'pipehead' => $ds->HEADCODE(),
 					   }
 					  );
   # stream parsing expat non-validating parser
@@ -797,6 +801,7 @@ sub get_SequenceSet_AccessList_for_DataSet {
 					   {
 					    'author'   => $self->author,
 					    'dataset'  => $ds->name,
+                        'pipehead' => $ds->HEADCODE(),
 					   }
 					  );
   # stream parsing expat non-validating parser
