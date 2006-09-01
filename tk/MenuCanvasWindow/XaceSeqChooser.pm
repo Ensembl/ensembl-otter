@@ -61,15 +61,6 @@ sub new {
     return $self;
 }
 
-sub Client {
-    my( $self, $Client ) = @_;
-     
-    if ($Client) {
-        $self->{'_Client'} = $Client;
-    } 
-    return $self->{'_Client'};
-}
-
 sub AceDatabase {
     my( $self, $AceDatabase ) = @_;
     
@@ -120,6 +111,8 @@ sub initialize {
     }
 
     $self->draw_subseq_list;
+    $self->launch_xace;
+    $self->top_window->raise;
 }
 
 sub write_access {
@@ -537,8 +530,7 @@ sub populate_menus {
     # Close window
     my $exit_command = sub {
         $self->exit_save_data or return;
-        $self = undef;
-        $menu_frame->toplevel->destroy;
+        $self->top_window->destroy;
         };
     $file->add('command',
         -label          => 'Close',
@@ -781,9 +773,11 @@ sub highlight {
     my $self = shift;
     
     $self->SUPER::highlight(@_);
-    $self->canvas->SelectionOwn(
-        -command    => sub{ $self->deselect_all },
+    my $canvas = $self->canvas;
+    $canvas->SelectionOwn(
+        -command    => sub{ $self->deselect_all; },
         );
+    weaken $self;
 }
 
 sub GenomicFeatures {
@@ -992,6 +986,10 @@ sub save_data {
     $top->Busy;
 
     eval{
+        if ($self->show_zmap) {
+            # exit zmap
+            $self->zMapKillZmap;
+        }
         my $ace_data = $self->AceDatabase->save_all_slices;
         ## update_ace should be true unless this object is exiting
         if($update_ace && ref($ace_data) eq 'SCALAR'){
@@ -999,12 +997,15 @@ sub save_data {
             $self->update_ace_display($$ace_data);
             # resync here!
             $self->resync_with_db;
+            
+            # Restarts even if not yet launched!
             $self->zMapLaunchZmap if $self->show_zmap;
         }
     };
     my $err = $@;
     
     $top->Unbusy;
+    $top->raise;
     
     if ($err) {
         $self->exception_message($err, 'Error saving to otter');
@@ -1070,9 +1071,9 @@ sub make_search_panel {
     
     ## Is hunting in CanvasWindow?
     my $hunter = sub{
-	$top->Busy;
-	$self->hunt_for_Entry_text($search_box);
-	$top->Unbusy;
+	    $top->Busy;
+	    $self->hunt_for_Entry_text($search_box);
+	    $top->Unbusy;
     };
     my $button = $search_frame->Button(
          -text      => 'Find',
@@ -2007,7 +2008,6 @@ sub DESTROY {
     if($self->__hasEverZMap){
         $self->zMapKillZmap() if $self->can('zMapKillZmap');
         ZMap::ConnectUtils::flush_bad_windows();
-        delete $self->{'_SGIF_LOCAL_SERVER'}; # shutdown server
     }
 
     $self->drop_AceDatabase;

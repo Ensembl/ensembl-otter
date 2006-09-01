@@ -746,13 +746,11 @@ sub _open_SequenceSet{
 
     warn "Making XaceSeqChooser";
     my $xc = $self->make_XaceSeqChooser($title);
-    ### Maybe: $xc->SequenceNotes($self);
     $xc->SequenceNotes($self) ;
     $xc->AceDatabase($db);
 #    $xc->EviCollection($ec);
     my $write_flag = $cl->write_access ? $ss->write_access : 0;
     $xc->write_access($write_flag);  ### Can be part of interface in future
-    $xc->Client($self->Client);
     $xc->initialize;
     $self->refresh_column(7) ; # 7 is the locks column
     

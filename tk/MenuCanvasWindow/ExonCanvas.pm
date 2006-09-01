@@ -5,6 +5,7 @@ package MenuCanvasWindow::ExonCanvas;
 
 use strict;
 use Carp;
+use Scalar::Util 'weaken';
 use Tk::Dialog;
 use Tk::ROText;
 use Tk::LabFrame;
@@ -43,11 +44,6 @@ sub initialize {
             warn "Nothing selected";
         }
     };
-    
-    # Save changes on window close
-    my $window_close = sub {
-        $self->window_close or return;
-        };
 
     my $file_menu = $self->make_menu('File');
     
@@ -85,6 +81,11 @@ sub initialize {
         );
     $top->bind('<Control-period>',  $run_dotter);
     $top->bind('<Control-greater>', $run_dotter);
+    
+    # Save changes on window close
+    my $window_close = sub {
+        $self->window_close or return;
+        };
     
     # Trap window close
     $top->protocol('WM_DELETE_WINDOW', $window_close);
@@ -373,6 +374,7 @@ sub XaceSeqChooser {
     
     if ($chooser) {
         $self->{'_XaceSeqChooser'} = $chooser;
+        weaken $self->{'_XaceSeqChooser'};
     }
     return $self->{'_XaceSeqChooser'};
 }
@@ -712,7 +714,7 @@ sub window_close {
         }
     }
     #$self->delete_chooser_window_ref;
-    $self->canvas->toplevel->destroy;
+    $self->top_window->destroy;
    
     return 1;
 }
@@ -1040,6 +1042,7 @@ sub check_kozak{
                 )->pack(-side   => 'left');                         
         
         my $close_kozak = sub { $kozak_window->withdraw } ;
+        $kozak_window->bind('<Destroy>', sub{ $self = undef });
         my $kozak_butt = $kozak_window->Button( -text       => 'close' ,
                                             -command    => $close_kozak ,
                                             )->pack(-side => 'left')  ;

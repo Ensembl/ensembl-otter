@@ -242,7 +242,7 @@ sub make_XaceSeqChooser_windows {
         # as that calls $db->home which sets the home using whatever
         # $cl_write_setting is NOT the write status of the
         # db being recovered!
-	$cl->write_access($write);
+	    $cl->write_access($write);
 
         ### Can recover title from wspec/displays.wrm
         #my $title = "Recover $i";
