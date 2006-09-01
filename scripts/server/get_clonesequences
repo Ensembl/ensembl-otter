@@ -75,7 +75,7 @@ while (my ($name, $acc,  $sv,
   $xml .= qq`          <chr_start>$chr_start</chr_start>\n`;
   $xml .= qq`          <chr_end>$chr_end</chr_end>\n`;
   $xml .= qq`          <contig_start>$ctg_start</contig_start>\n`;
-  $xml .= qq`          <contig_end>$ctg_end</ctg_end>\n`;
+  $xml .= qq`          <contig_end>$ctg_end</contig_end>\n`;
   $xml .= qq`          <contig_strand>$ctg_strand</contig_strand>\n`;
   if (defined $clone_lock_id){
     $xml .= qq`          <lock lock_id="$clone_lock_id" author_name="$author_name" email="$author_email" host_name="$hostname"> </lock>\n`;
