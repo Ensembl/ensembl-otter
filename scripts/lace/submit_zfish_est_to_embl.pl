@@ -9,7 +9,8 @@ use Sys::Hostname;
 
 
 # submit_zfish_est_to_embl: wrapper to run various scripts of the est_db packages
-#                           for submitting est to EMBL
+#                           to submit est to EMBL, update ests and prepare
+#                           for est seach via web interface
 
 
 #------------------------------
@@ -21,8 +22,15 @@ my $taxon_id   = 7955;
 my $lib_name   = "ZF_mu";
 my $lib_desc   = "Zebrafish MyoBlast cDNA library";
 
-my $outfile_dir = "/nfs/disk100/humpub/est/zebrafish/$lib_name"."_$release";
-my $embl        = "$outfile_dir/$lib_name"."_$release".".embl";
+my $outfile_dir      = "/nfs/disk100/humpub/est/zebrafish/$lib_name"."_$release";
+my $embl             = "$outfile_dir/$lib_name"."_$release".".embl";
+my $est_dump         = "$outfile_dir/$lib_name"."_ESTs_$release.fasta";
+my $est_rm_dump      = "$outfile_dir/$lib_name"."Rmask_ESTs_$release.fasta";
+my $est_rm_acpt_dump = "$outfile_dir/$lib_name"."Rmask_accepted_ESTs_$release.fasta";
+my $ace              = "$outfile_dir/$lib_name"."_$release".".ACE";
+my $singletons       = "$outfile_dir/$lib_name"."_$release".".singletons";
+my $tigr_db_id       = 1; # increment for each release
+
 
 my $repository = "/nfs/repository/p700/ZF_mu_cDNA";
 my $passfile   = "fn.ZF_mu_cDNA.Pass";
@@ -47,8 +55,9 @@ elsif ( $host =~ /ecs/ ){
 # run on ecs4 is due to many script having #! lines pointing to perl binary on ecs cluster
 print STDERR "You are on $host\n";
 
-my $conf       = "$base/conf/zfish_est_submit_DB.conf";
-my $scripts    = "$base/scripts";
+my $conf           = "$base/conf/zfish_est_submit_DB.conf";
+my $scripts        = "$base/scripts";
+my $lsf_output_dir = "/ecs4/scratch4/ck1/est_out";
 
 #------------------------------------------------------------------------------
 #    First double check all primers used for EST directions
@@ -148,6 +157,7 @@ if ( $ARGV[0] == 4 and $host =~ /ecs/ ){
 
 #   5.    SUBMIT EST BLAST JOBS
 #         Make sure that  $parse_fasta_despatcher in EST_DB::Utils.pm has the key name the same as db_name col of the external_db table
+#         (and this is the same as the database filename on disk)
 #         The  sequence_source of the external_db table, when using OBDA, should be pointing to the name of the subdir of OBDAIndex
 #         named as the dbname col
 
@@ -243,6 +253,7 @@ if ( $ARGV[0] == 11 and $host eq "humsrv1" ){
   my $PIPELINE = "/nfs/team71/analysis/ck1/SCRIPT_CVS/est_db_tigr";
   print STDOUT "11.   SUBMIT TO EMBL\n";
   my $s = system("$base/submissions/submit_zfish_ests $embl");
+  check_status($s);
 }
 
 #------------------------------------
@@ -261,6 +272,8 @@ if ( $ARGV[0] == 12 and $host eq "humsrv1" ){
   # NOTE: can use --test first w/o writing immediately to estdb
   my $s = system("$base/submissions/update_est_submission_status --db_conf=$conf --err_log_file=errfile --test");
   #my $s = system("$base/submissions/update_est_submission_status --db_conf=$conf --err_log_file=$errfile");
+
+  check_status($s);
 }
 
 #   13.    DUMP ESTs AND UPDATE FTP SITE
@@ -271,16 +284,13 @@ if ( $ARGV[0] == 13 ){
 
   # FTP: /nfs/disk69/ftp/pub/EST_data/Zebrafish/Current_ESTs
 
-  my $estdump = "/nfs/disk100/humpub/est/txt_db_dump/zebrafish_est/Zebrafish_ZF_mu_ESTs_$release.fasta";
-  my $s = system("$scripts/utils/dump_ESTs --db_conf=$conf --library_name=$lib_name --file_name=$estdump
-                  --ftp_site_format --accepted");
+  my $s = system("$scripts/utils/dump_ESTs --db_conf=$conf --library_name=$lib_name --file_name=$est_dump -ftp_site_format -accepted");
 
   if ( $s == 0 ){
-	print "Zipping $estdump\n\n";
-	$s = system("gzip $estdump");
+	print "Zipping $est_dump\n\n";
+	$s = system("gzip $est_dump");
+	check_status($s);
   }
-
-
 }
 
 #-------------------------------------------
@@ -288,14 +298,14 @@ if ( $ARGV[0] == 13 ){
 #-------------------------------------------
 
 
-#   14.    RepeatMasking ESTs
-
+#   14.    Setup RepeatMasking jobs for ESTs
 
 if ( $ARGV[0] == 14 ){
 
-  print STDOUT "14.    RepeatMasking ESTs\n";
+  print STDOUT "14.    Setup RepeatMasking jobs for ESTs\n";
 
   my $s = system("$scripts/setup_EST_DB_RepeatMask --db_conf=$conf --library_name=$lib_name --conf_name=RepeatMask");
+  check_status($s);
 }
 
 #   15.    Submit RepeatMasking JOBS
@@ -303,114 +313,110 @@ if ( $ARGV[0] == 14 ){
 if ( $ARGV[0] == 15 ){
 
   print STDOUT "15.    Submit RepeatMasking JOBS\n";
-  my $s = system("$scripts/submit_EST_DB_jobs --db_conf=$conf --library_name=$lib_name --search_conf_name=RepeatMask");
+  my $s = system("$scripts/submit_EST_DB_jobs --db_conf=$conf --library_name=$lib_name --search_conf_name=RepeatMask --lsf_output_dir=$lsf_output_dir");
+  check_status($s);
 }
 
 
 #   16.    DUMP RepeatMasked EST SEQUENCES
 
-
 if ( $ARGV[0] == 16 ){
 
   print STDOUT "16.    DUMP RepeatMasked EST SEQUENCES\n";
 
- # my $estdump = "/nfs/disk100/humpub/est/txt_db_dump/zebrafish_est/Rmask_Zebrafish_ZF_mu_ESTs_$release.fasta";
+  my $s = system("$scripts/utils/dump_ESTs --db_conf=$conf --library_name=$lib_name --file_name=$est_rm_dump --ftp_site_format --repeatmasked");
 
- # my $s = system("$scripts/utils/dump_ESTs --db_conf=$conf --library_name=$lib_name --file_name=$estdump --ftp_site_format --repeatmasked");
-  my $estdump = "/nfs/disk100/humpub/est/txt_db_dump/zebrafish_est/starting_Seq.fasta";
-  my $s = system("$scripts/utils/dump_ESTs --db_conf=$conf --library_name=$lib_name --file_name=$estdump --ftp_site_format");
-
+  check_status($s);
 }
+
 #   17.    DUMP RepeatMasked ACCEPTED EST SEQUENCES
 
-#   prepares masked sequences for clustering using stackpack
+#   prepares masked sequences for clustering using TIGR tgicl clustering program
 
 if ( $ARGV[0] == 17 ){
 
   print STDOUT "17.    DUMP RepeatMasked ACCEPTED EST SEQUENCES\n";
 
-  my $estdump = "/nfs/disk100/humpub/est/txt_db_dump/zebrafish_est/Rmask_accepted_Zebrafish_ZF_m
-u_ESTs_$release.fasta";
-  my $s = system("$scripts/utils/dump_ESTs --db_conf=$conf --library_name=$lib_name --file_name=$estdump --ftp_site_format --repeatmasked_accepted");
+  my $s = system("$scripts/utils/dump_ESTs --db_conf=$conf --library_name=$lib_name --file_name=$est_rm_acpt_dump --ftp_site_format --repeatmasked_accepted");
+
+  check_status($s);
 }
 
+#--------------------------------------------
+#       EST CLUSTERING WITH TIGR TGICL
+#--------------------------------------------
 
-# STEPS TO DO AFTER STACKPACK CLUSTERING
-
-#   18.    TRANSFER CLUSTERING RESULTS FROM STACKPACK DB TO AN EST DB
+#   18.    TGICL CLUSTERING
+#   Using tigr tgicl program installed on bc-dev-32
+#   First copy over repeatmasked accepted EST fasta file to /ecs4/scratch4/ck1/tgicl_linux
+#   binary is /ecs4/scratch4/ck1/tgicl_linux/tgicl
+#   An acefile will be created in asm-1/ and filename.singletons file will be created in /ecs4/scratch4/ck1/tgicl_linux
+#   where filename is the name of the repeatmasked accepted EST fasta file
 
 if ( $ARGV[0] == 18 ){
 
-  print STDOUT "18.    TRANSFER CLUSTERING RESULTS FROM STACKPACK DB TO AN EST DB\n";
- # my $s = system("$scripts/load_stackPACK_to_EST_DB --db_conf=$conf --library_name=$lib_name --stack_db_conf=$stackdbconf");
-  my $s = system("$scripts/load_stackPACK_to_EST_DB --db_conf=$conf --library_name=$lib_name");
+  print STDOUT "18.    TGICL CLUSTERING\n";
+
+  my $repeatMasked_Accepted_ESTs = "/ecs4/scratch4/ck1/tgicl_linux/$lib_name"."Rmask_accepted_ESTs_$release"."fasta";
+
+  my $s = system("./tgicl $repeatMasked_Accepted_ESTs");
+  check_status($s);
+
 }
 
-#   19.    POPULATE consensus_est_count TABLE
+#   19.    PARSE TGICL CLUSTERING RESULTS AND LOAD THEM TO EST_DB TABLES
+
+#   First copy ACE and singleton files from /ecs4/scratch4/ck1/tgicl_linux/tgicl on bc-dev-32 to 
 
 if ( $ARGV[0] == 19 ){
 
-  print STDOUT "19.    POPULATE consensus_est_count TABLE of stack est_db\n";
-  my $s = system("$scripts/populate_consensus_est_count --db_conf=$conf --library_name=$lib_name");
+  print STDOUT "19.    PARSE TGICL CLUSTERING RESULTS AND LOAD THEM TO EST_DB TABLES\n";
+
+  warn "Cluster results in $ace\n";
+  warn "Singletons in $singletons\n";
+   my $s = system("$scripts/load_tgicl_to_EST_DB -ace $ace -db_conf $conf -singles $singletons -tigr_db_id $tigr_db_id -library_name $lib_name --no_consensus_recalc");
+
+  check_status($s);	
 }
 
-
-#   20.    INTEGRITY CHECK FOR CLUSTERING RESULTS
+#   20.    POPULATE consensus_est_count TABLE
 
 if ( $ARGV[0] == 20 ){
 
-  print STDOUT "20.    INTEGRITY CHECK FOR CLUSTERING RESULTS\n";
-  my $s = system("$scripts/utils/production_EST_DB_integrity_check --db_conf=$conf --library_name=$lib_name");
+  print STDOUT "20.    POPULATE consensus_est_count TABLE\n";
+  my $s = system("$scripts/populate_consensus_est_count --db_conf=$conf --library_name=$lib_name");
+
+  check_status($s);
 }
 
-#   21.    BUILD MISSING CLUSTERS AND CONSENSEI USING Dialign
 
-# This is to repair clusters that StackPACK (Phrep) failed to assemble
-# and write results to cluster, consensus, super tables of stack est_db
-
-# (1) This looks for ids in CLUSTER table (these are superclusters)
-#     that do not have entry in CONTIG table of the stack clustering db
-#     (a supercluster can have > 1 entries in CONTIG table)
-# (2) For each ids found in step (1), the dialign program tries to 
-#     take all ESTs (in SEQUENCE table) that made up the supercluster (in CLUSTER table)
-#     via  $stack_est_db->get_EST_ids_by_SuperCluster_id,
-#     ie
-#          SELECT id
-#          FROM SEQUENCE
-#          WHERE CLUSTER_id = 'supercluster_id'
-
-# (3) and creates a single cluster in stack est_db.cluster ( these have stack_contig_id column
-#     with the fake name "reconstructed"; the cluster_name looks like ZF_mu_C_34_1)
-# (4) Consensus (eg, ZF_mu_34_1_1) are then built from these ESTs
+#   21.    INTEGRITY CHECK FOR CLUSTERING RESULTS
 
 if ( $ARGV[0] == 21 ){
 
-  print STDOUT "21.    BUILD MISSING CLUSTERS AND CONSENSEI USING Dialign\n";
- # my $s = system("$scripts/build_missing_EST_DB_clusters --stack_db_conf=$stackdbconf --library_name=$lib_name --db_conf=$conf");
-  my $s = system("$scripts/build_missing_EST_DB_clusters --library_name=$lib_name --db_conf=$conf");
+  print STDOUT "21.    INTEGRITY CHECK FOR CLUSTERING RESULTS\n";
+  my $s = system("$scripts/utils/production_EST_DB_integrity_check --db_conf=$conf --library_name=$lib_name");
+
+  check_status($s);
 }
 
-#   22.    Run INTEGRITY CHECK FOR CLUSTERING RESULTS after Dialign
+
+#   22.    SETUP BLAST SEARCHES
 
 if ( $ARGV[0] == 22 ){
 
-  print STDOUT "22.    Rerun INTEGRITY CHECK FOR CLUSTERING RESULTS after Dialign\n";
-  my $s = system("$scripts/utils/production_EST_DB_integrity_check --db_conf=$conf --library_name=$lib_name");
-}
-
-#   SETUP BLAST SEARCHES
-
-if ( $ARGV[0] == 23 ){
-
-  print STDOUT "23.    SETUP BLAST SEARCHES - WuBLASTX consensei against UNIPROT\n";
+  print STDOUT "22.    SETUP BLAST SEARCHES - WuBLASTX consensei against UNIPROT\n";
   my $s = system("$scripts/setup_EST_DB_BLAST --db_conf=$conf --library_name=$lib_name --search_conf_name=WuBLASTX_uniprot --blast_db=uniprot --blast_type=wublastx --search_type=Consensus --search_description='Translated search of Consensus sequences vs. UNIPROT'");
 }
 
-if ( $ARGV[0] == 24 ){
+#   23.    SETUP BLAST SEARCHES - WuBLASTN consensei against EMBL/EMBLNEW vertebrate mRNA
 
-  print STDOUT "24.    SETUP BLAST SEARCHES - WuBLASTN consensei against EMBL/EMBLNEW vertebrate mRNA\n";
+ if ( $ARGV[0] == 23 ){
 
-  my @dbs = qw(embl_vertrna emnew_vertrna);
+  print STDOUT "23.    SETUP BLAST SEARCHES - WuBLASTN consensei against EMBL/EMBLNEW vertebrate mRNA\n";
+
+#  my @dbs = qw(embl_vertrna emnew_vertrna);
+ my @dbs = qw( emnew_vertrna);
   my %desc = ('embl_vertrna'  => 'WuBLASTN searches of Consensus sequences against EMBL vertebrate mRNA',
 			  'emnew_vertrna' => 'WuBLASTN searches of Consensus sequences against EMBLNEW vertebrate mRNA'
 			 );
@@ -423,35 +429,45 @@ if ( $ARGV[0] == 24 ){
 	my $sconf = $conf{$db};
 
 	my $s = system("$scripts/setup_EST_DB_BLAST --db_conf=$conf --library_name=$lib_name --search_conf_name=$sconf --blast_db=$db --blast_type=wublastn --search_type=Consensus --blast_db_loc='/data/blastdb/Ensembl' --search_description=$sdesc");
+	check_status($s);
   }
 }
 
-#   SUBMIT BLAST SEARCHES
+#   24.    SUBMIT BLAST SEARCHES AGAINST uniprot
+
+# NOTE: Utils::_parse_uniprot_id has hard-coded 'uniprot-1' which can cause problem
+#       Make sure Utils::pfetch_seq has $database eq 'uniprot-1' otherwise pfetch failure
+
+if ( $ARGV[0] == 24 ){
+
+  print STDOUT "24.    SUBMIT BLAST SEARCHES AGAINST uniprot\n";
+  print "Using: $scripts\n";
+
+  my $s = system("$scripts/submit_EST_DB_jobs --db_conf=$conf --library_name=$lib_name --search_conf_name=WuBLASTX_uniprot --lsf_queue=normal --lsf_output_dir=$lsf_output_dir");
+  check_status($s);
+}
+
+
+#   25.    SUBMIT BLAST SEARCHES AGAINST embl_vertrna
+
 if ( $ARGV[0] == 25 ){
 
-  print STDOUT "25.    SUBMIT BLAST SEARCHES AGAINST uniprot\n";
-print "$scripts";
-#  my $s = system("$scripts/submit_EST_DB_jobs --db_conf=$conf --library_name=$lib_name --search_conf_name=WuBLASTX_uniprot --lsf_queue=normal");
- #my $s = system("$scripts/run_EST_DB_jobs --db_conf=$conf --library_name=$lib_name --search_conf_name='WuBLASTX_uniprot' --lsf_queue=normal");
-  my $s = system("$scripts/submit_EST_DB_jobs --db_conf=$conf --library_name=$lib_name --search_conf_name=WuBLASTX_uniprot --lsf_queue=normal");
+  print STDOUT "25.    SUBMIT BLAST SEARCHES AGAINST embl_vertrna\n";
+  my $s = system("$scripts/submit_EST_DB_jobs --db_conf=$conf --library_name=$lib_name --search_conf_name=WuBLASTN_embl_vertrna --lsf_queue=normal --lsf_output_dir=$lsf_output_dir");
+  check_status($s);
 }
+
+#   26.    SUBMIT BLAST SEARCHES AGAINST emnew_vertrna
 
 if ( $ARGV[0] == 26 ){
 
-  print STDOUT "26.    SUBMIT BLAST SEARCHES AGAINST embl_vertrna\n";
-  my $s = system("$scripts/submit_EST_DB_jobs --db_conf=$conf --library_name=$lib_name --search_conf_name=WuBLASTN_embl_vertrna");
-
-}
-
-if ( $ARGV[0] == 27 ){
-
-  print STDOUT "27.    SUBMIT BLAST SEARCHES AGAINST emnew_vertrna\n";
-  my $s = system("$scripts/submit_EST_DB_jobs --db_conf=$conf --library_name=$lib_name --search_conf_name='WuBLASTN_emnew_vertrna'");
-
+  print STDOUT "26.    SUBMIT BLAST SEARCHES AGAINST emnew_vertrna\n";
+  my $s = system("$scripts/submit_EST_DB_jobs --db_conf=$conf --library_name=$lib_name --search_conf_name=WuBLASTN_emnew_vertrna --lsf_queue=normal --lsf_output_dir=$lsf_output_dir");
+  check_status($s);
 }
 
 #     POPULATE LIBRARY_SUMMARY TABLES
-#     Calculates and stores clustering and general summary 
+#     Calculates and stores clustering and general summary
 #     statistics for an EST_DB library, (or all libraries).
 
 #     Tables populated: library_summary
@@ -460,11 +476,13 @@ if ( $ARGV[0] == 27 ){
 #                       library_super_cluster_count
 #                       super_cluster_library_super_cluster_count
 
+#   27.    POPULATE LIBRARY SUMMARY TABLES
 
-if ( $ARGV[0] == 28 ){
+if ( $ARGV[0] == 27 ){
 
-  print STDOUT "28.    POPULATE LIBRARY SUMMARY TABLES\n";
+  print STDOUT "27.    POPULATE LIBRARY SUMMARY TABLES\n";
   my $s = system("$scripts/populate_est_db_summary_tables --db_conf=$conf --library_name=$lib_name");
+  check_status($s);
 }
 
 
@@ -479,17 +497,108 @@ if ( $ARGV[0] == 28 ){
 #     Only runs successfully on ecs headnodes, so checks hostname before commencement.
 
 
-if ( $ARGV[0] == 29 ){
+#   28.    POPULATE consensus_protein TABLE
 
-  print STDOUT "29.    POPULATE consensus_protein TABLE\n";
+if ( $ARGV[0] == 28 ){
+
+  print STDOUT "28.    POPULATE consensus_protein TABLE\n";
+
   my $s = system("$scripts/populate_consensus_protein --db_conf=$conf --library_name=$lib_name");
+  check_status($s);
 }
 
 
-#---------------------------------
+#   29.    POPULATE consensus_2_uniprot and uniprot_2_go TABLEs
+if ( $ARGV[0] == 29 ){
+
+  print STDOUT "29.    POPULATE consensus_2_uniprot and uniprot_2_go TABLEs\n";
+
+  # typical run: perl ~/bin/est/populate_uniprot_2_go_consensei_table.pl -dbname zfish_est_submission_2006_08_08 -dbhost otterpipe2  -dbpass lutralutra  -image go_graph_hierarchy.img  -goa gene_association.goa_uniprot.gz
+
+  # image file is prepared by Storable.pm
+  # goa file is from GOA
+
+
+  my $s = system("perl ~/bin/est/populate_uniprot_2_go_consensei_table.pl -dbname zfish_est_submission_2006_08_08 -dbhost otterpipe2  -dbpass lutralutra  -image go_graph_hierarchy.img  -goa gene_association.goa_uniprot.gz");
+
+  check_status($s);
+}
+
 
 sub check_status {
   shift == 0 ? print STDOUT "Command successful\n\n" : print STDOUT "command failed\n\n";
 }
 
+
+
 __END__
+
+
+#   WEBSITE RELEASE NOTES
+
+1) LOCATION OF SCRIPTS AND MODULES
+
+OLD system:
+
+Both scripts and modules can be copied to WWWdev server mounted as:
+/nfs/WWWdev/SANGER_docs/cgi-bin/Projects/X_tropicalis
+
+Script     : sang_est_db_search 
+Description: by library clustering of X. tropicalis ESTs
+Accessible : http://wwwdev.sanger.ac.uk/cgi-bin/Projects/X_tropicalis/sang_est_db_search
+
+Script     : sang_est_db_search_all ESTs
+Description: global clustering of X. tropicalis ESTs
+Accessible : wwwdev.sanger.ac.uk/cgi-bin/Projects/X_tropicalis/sang_est_db_search_all
+
+The EST_DB modules are located in the same directory, being EST_DB.pm and
+files located in the EST_DB directory
+
+Modules are also located in the same directory:
+/nfs/WWWdev/SANGER_docs/cgi-bin/Projects/X_tropicalis
+
+As of 30/11/04, these scripts write their temporary files to:
+/nfs/WWW/SANGER_docs/htdocs/tmp/mdr, and the scripts access the MySQL server
+located on the default port of webdbsrv
+
+
+New system:
+Script     : /nfs/WWWdev/SANGER_docs/cgi-bin/Projects/D_rerio/ESTs/sanger_zfish_est_db_search
+Description: by library clustering of Zebrafish ESTs
+Accessible : http://wwwdev.sanger.ac.uk/cgi-bin/Projects/cgi-bin/Projects/D_rerio/ESTs/sanger_zfish_est_db_search
+
+Modules    : /nfs/WWWdev/SANGER_docs/lib/humpub/EST_DB/
+
+
+
+2) ALTERATIONS TO CONF TABLE
+
+Inserts into library_conf table
+
+library_conf has the structure:
+
++------------+------------------+------+-----+---------+-------+
+| Field      | Type             | Null | Key | Default | Extra |
++------------+------------------+------+-----+---------+-------+
+| library_id | int(10) unsigned |      | PRI | 0       |       |
+| conf_id    | int(10) unsigned |      | PRI | 0       |       |
++------------+------------------+------+-----+---------+-------+
+
+For each search result one wants visible for a particular library in the web
+displays, insert a row of library_id and conf_id.
+
+04) Customising display of search results (conf table)
+
+Search confs have the following columns that affect the cosmetic appearance
+of the data.
+
+These are:
+    display_label varchar(40) for the name of the search.
+    and the following key-value pairs of conf_text
+    display_rank, colour magenta, colour_by_pid
+
+Examples are:
+    'display_rank 1', 'colour magenta', 'colour_by_pid 1'
+
+For more examples see the conf table of tropicalis_est_11 on otterpipe2
+
