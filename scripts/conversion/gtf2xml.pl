@@ -39,6 +39,7 @@ my $type='chr21';
 my $prefix='RI';
 
 my $opt_i='chr21-20030701_catalog_20031010_gtf.table';
+my $opt_j;
 my $opt_o='chr21.xml';
 
 my $author='Riken';
@@ -55,6 +56,7 @@ GetOptions(
 	   'chrend:i',   \$chrend,
 	   'type:s',     \$type,
 	   'i:s',        \$opt_i,
+	   'j:s',        \$opt_j,
 	   'o:s',        \$opt_o,
 	   'author:s',   \$author,
 	   'email:s',    \$email,
@@ -80,8 +82,9 @@ gtf2xml.pl
   -chrstart        num    start coordinate ($chrstart)
   -chrend          num    end coordinate ($chrend)
   -type            char   assembly type ($type)
-  -i               file   input filename ($opt_i)
-  -o               file   output filename ($opt_o)
+  -i               file   input gtf filename ($opt_i)
+  -j               file   optional input xml filename [for sequence_set] ($opt_j)
+  -o               file   output xml filename ($opt_o)
   -author          char   author label ($author)
   -email           char   email address for feedback on database ($email)
   -prefix          char   group prefix to prepend to gene_names and types ($prefix)
@@ -385,10 +388,42 @@ if(scalar(keys %other)){
 
 exit 0 if $opt_P;
 
+my $ss_xml;
+my $min_coord=100000000000;
+my $max_coord=0;
+my $ass;
+if($opt_j){
+  my $start=0;
+  open(IN,$opt_j) || die "cannot open $opt_j";
+  while(<IN>){
+    next if /^#/;
+    next if /^\s*$/;
+    if(/\<sequence_set\>/){
+      $start=1;
+    }elsif(/\<feature_set/){
+      last;
+    }
+    if(/\<chromosome\>(\S+)\</){
+      $chr=$1;
+    }elsif(/\<assembly_type\>(\S+)\</){
+      $ass=$1;
+    }elsif(/\<assembly_start\>(\d+)/){
+      if($1<$min_coord){$min_coord=$1;}
+    }elsif(/\<assembly_end\>(\d+)/){
+      if($1>$max_coord){$max_coord=$1;}
+    }
+    $ss_xml.=$_ if $start==1;
+  }
+  print "Extracted AGP range: $ass $chr:$min_coord-$max_coord\n";
+}
+
 open(OUT,">$opt_o") || die "could not open $opt_o";
 
-# write fake XML assembly block
-print OUT qq{
+# write fake XML assembly block, unless $opt_j
+if($opt_j){
+  print OUT "<otter>\n\n$ss_xml\n";
+}else{
+  print OUT qq{
 <otter>
 
 <sequence_set>
@@ -405,6 +440,7 @@ print OUT qq{
 </sequence_fragment>
 
 };
+}
 
 my $author = new Bio::Otter::Author(
     -name  => $author,
@@ -620,6 +656,16 @@ foreach my $gene_id (sort keys %genes){
 
       $tran->add_Exon($newexon);
       $newexon->phase(-1);
+
+      # range check:
+      if($opt_j){
+	my $est=$exon->{start};
+	my $eed=$exon->{end};
+	if($est<$min_coord || $eed>$max_coord){
+	  print "ERR: coord out of range: $gene_id: $transcript_id: $est-$eed\n";
+	}
+      }
+
     }
 
     # build translation on top of transcripts where defined
