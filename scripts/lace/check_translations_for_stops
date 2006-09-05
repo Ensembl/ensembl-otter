@@ -11,8 +11,10 @@ $| = 1;
 
 {
     my ($dataset, $sequence_set, $chr_start_acc, $chr_end_acc, $gene_stable_id);
-    my ($tunnel, $remarks, $verbose, $seleno, $sql, $prefix, $tags);
+    my ($tunnel, $remarks, $verbose, $seleno, $sql, $prefix, $tags, $tlen, 
+	$nmd, $nmds, $stat);
     my $help = sub { exec('perldoc', $0) };
+    my $min_len=30;
 
     Bio::Otter::Lace::Defaults::do_getopt(
         'ds|dataset=s'          => \$dataset,
@@ -27,6 +29,11 @@ $| = 1;
         'tags:s'                => \$tags,
         'verbose|v'             => \$verbose,
         'prefix:s'              => \$prefix,
+	'min_length:s'          => \$min_len,
+	'tlen:s'                => \$tlen,
+	'nmd:s'                 => \$nmd,
+	'nmds:s'                => \$nmds,
+	'stat:s'                => \$stat,
         'h|help'                => $help,
       )
       or $help->();
@@ -69,7 +76,9 @@ $| = 1;
             my $n = 0;
             foreach my $gsi (split(/,/, $gene_stable_id)) {
                 if ($gsi =~ /T\d+/) {
-
+		  # API call does not support versions
+		  print "ERROR: must use gene_id\n";
+		  exit 0;
                     # looks like a transcript_id
                     push(@$gene_id_list,
                         $gene_aptr->fetch_by_transcript_stable_id($gsi)->dbID);
@@ -81,6 +90,7 @@ $| = 1;
                 $n++;
             }
             print STDERR "checking $n $gene_stable_id only\n";
+	    print join(',',@$gene_id_list)."\n";
         }
     }
     elsif ($sequence_set) {
@@ -125,6 +135,18 @@ $| = 1;
     if ($tags) {
         open(OUT3, ">$tags") || die "cannot open $tags";
     }
+    if ($tlen) {
+        open(OUT4, ">$tlen") || die "cannot open $tlen";
+    }
+    if ($nmd) {
+        open(OUT5, ">$nmd") || die "cannot open $nmd";
+    }
+    if ($stat) {
+        open(OUT6, ">$stat") || die "cannot open $stat";
+    }
+    if ($nmds) {
+        open(OUT7, ">$nmds") || die "cannot open $nmds";
+    }
     foreach my $id (@$gene_id_list) {
         $i++;
         print STDERR '.';
@@ -133,34 +155,56 @@ $| = 1;
         my $gt   = $gene->type;
         next if ($prefix && $gt !~ /$prefix:/);
         next if ($gt eq 'obsolete');
+	my $ntrans=0;
+	my $nnmd=0;
         foreach my $trans (@{ $gene->get_all_Transcripts }) {
             next unless $trans->translation;
+	    $ntrans++;
 
 	    # check for translations containing stop codons
             my $sqltxt =
               check_for_stops($gene, $trans, $remarks, $verbose, $seleno, $sql);
             print OUT2 $sqltxt if $sql;
 
-	    # check for translations not ending in a true stop
+	    # check for translations with inconsistent 'snf, enf tags'
 	    print OUT3 check_start_end($gene, $trans) if $tags;
 
+	    # check for translations that are very short
+	    print OUT4 check_length($gene, $trans, $min_len) if $tlen;
+
+	    # check for translations when probably nmd
+	    print OUT5 check_nmd($gene, $trans, $stat, \$nnmd) if $nmd;
         }
+	if($ntrans>0){
+	  my $gid=$gene->stable_id;
+	  my $gn=$gene->gene_info->name->name;
+	  if($ntrans==$nnmd){
+	    print OUT5 "$gid ($gn): WARN: all translations flagged as NMD ($ntrans)\n";
+	  }
+	  if($nmds){
+	    print OUT7 "$gid ($gn)\t$ntrans\t$nnmd\n";
+	  }
+	}
     }
     print STDERR " $i\n";
     close OUT2 if $sql;
     close OUT3 if $tags;
+    close OUT4 if $tlen;
+    close OUT5 if $nmd;
 }
 
 sub check_start_end {
   my ($gene, $trans)=@_;
 
   # 1. what tags are set tag?
-  my $mrna_start_not_found=$trans->transcript_info->mRNA_start_not_found;
-  my $cdna_start_not_found=$trans->transcript_info->cds_start_not_found;
-  my $cdna_end_not_found=$trans->transcript_info->cds_end_not_found;
-  my $mrna_end_not_found=$trans->transcript_info->mRNA_end_not_found;
+  my $transcript_info=$trans->transcript_info;
+  my $mrna_start_not_found=$transcript_info->mRNA_start_not_found;
+  my $cdna_start_not_found=$transcript_info->cds_start_not_found;
+  my $cdna_end_not_found=$transcript_info->cds_end_not_found;
+  my $mrna_end_not_found=$transcript_info->mRNA_end_not_found;
 
   my $tsi=$trans->stable_id;
+  my $tn=$transcript_info->name;
   my $mrna=$trans->seq->seq;
   my $cdna=$trans->translateable_seq;
 
@@ -260,7 +304,128 @@ sub check_start_end {
   }
 
   if($out){
-    $out=$tsi.$out."\n";
+    $out="$tsi ($tn): $out\n";
+  }else{
+    $out='';
+  }
+  return $out;
+}
+
+sub check_length {
+  my ($gene, $trans, $min_len)=@_;
+
+  my $transcript_info=$trans->transcript_info;
+  my $tsi=$trans->stable_id;
+  my $tn=$transcript_info->name;
+
+  # extract original transcript name from remark (external imports only):
+  if($tn=~/^(\w+):/){
+    my $prefix=$1;
+    foreach my $remark ($transcript_info->remark) {
+      my $remark_txt=$remark->remark;
+      #print STDOUT "$tsi: $tn: $remark\n";
+      if($remark_txt=~/^$prefix\sname:\s(\w+)/){
+	$tn.="; $1";
+      }
+    }
+  }
+
+  # 6. short CDS sequences
+  my $out;
+  my $pseq = $trans->translate->seq;
+  my $lpseq=length($pseq);
+  if($lpseq<$min_len){
+    $out.=" WARN30: peptide is very short ($lpseq residues); ";
+  }
+
+  if($out){
+    $out="$tsi ($tn): $out\n";
+  }else{
+    $out='';
+  }
+  return $out;
+}
+
+sub check_nmd {
+
+  # rule is NMD if 
+  # 1. multi-exon gene
+  # 2. stop codon > 50 bp away from last slice site (i.e. last but 1 exon)
+
+  my ($gene, $trans, $stat, $rnnmd)=@_;
+
+  my $transcript_info=$trans->transcript_info;
+  my $tsi=$trans->stable_id;
+  my $tn=$transcript_info->name;
+  my $tc=$transcript_info->class->name;
+
+  my $gid=$gene->stable_id;
+
+  my $flag_nmd;
+
+  my $out;
+  if($tc eq 'Nonsense_mediated_decay'){
+    $out.=" ERR1: transcript with translation labelled as 'NMD'; ";
+  }
+
+  # process all exons and look for ones where last exon is not translated
+  my @exons = @{$trans->get_all_Exons()};
+
+  # processing depends on number of exons
+  my $ne=scalar(@exons);
+
+  if($ne>1){
+
+    # last exon
+    my $lexon=pop @exons;
+    my $pep_str = $lexon->peptide($trans)->seq;
+    if($pep_str eq ''){
+      # only process further if last exon has no translation at all
+      # last but one exon
+      my $l2exon=pop @exons;
+      my $pep_str = $l2exon->peptide($trans)->seq;
+      if($pep_str eq ''){
+	# if last exon has no translation, must be NMD
+	$flag_nmd='whole exon';
+      }else{
+	# get full sequence of transcript including this exon
+	# but excluding last
+	push(@exons,$l2exon);
+	my $eseq;
+	foreach my $exon (@exons){
+	  $eseq.=$exon->seq->seq;
+	}
+	# get transcript sequence
+	my $cds=$trans->translateable_seq;
+	# strip off leading N's
+	if($cds=~/^N{1,2}(.*)/){
+	  $cds=$1;
+	}
+	# compare cds with transcript to get length to exon boundary
+	if($eseq=~/$cds(.*)/){
+	  my $leseq=length($1);
+	  # write distance for all cases for analysis
+	  if($stat){
+	    print OUT6 "$leseq\t$tsi\t$tn\t$gid\n";
+	  }
+	  if($leseq>50){
+	    $flag_nmd="$leseq bases from spice";
+	  }
+	}else{
+	  print "ERR: translation not in transcript:\n $eseq\n $cds\n";
+	  exit 0;
+	}
+      }
+    }
+  }
+
+  if($flag_nmd){
+    $out.=" ERR2: appears NMD ($flag_nmd), but labelled as $tc; ";
+  }
+
+  if($out){
+    $out="$tsi ($tn) [$gid]: $out\n";
+    $$rnnmd++;
   }else{
     $out='';
   }
@@ -314,6 +479,7 @@ sub check_for_stops {
                       . "\n", length($pseq1_f), length($mrna_f);
                 }
 		### check should below be +1 ??? 
+		### (checked this - correct - should be +1)
                 my $aaoffset = int($offset / 3)+1;
                 push(@stop, [ $stop, $aaoffset ]);
 		if($tstop) { $tstop .= " "; }
@@ -402,6 +568,11 @@ sub check_for_stops {
                 elsif (($stop[$i]->[1] * 3) == $offset) {
 		    # catch old annotations where number was in DNA
 		    # not peptide coordinates
+                    $nmatch++;
+                    $flag_patch = 1;
+		}
+                elsif (($stop[$i]->[1]) == $offset+1) {
+		    # catch old annotations where number off by one
                     $nmatch++;
                     $flag_patch = 1;
                 }
