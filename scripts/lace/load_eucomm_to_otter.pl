@@ -147,7 +147,7 @@ sub load_simple_features {
   my $counter = 0;
   foreach my $sf (@simpleFeatures ) {
 	eval {
-	  #$sf_ad->store($sf);
+	  $sf_ad->store($sf);
 	};
 	$counter++ unless $@;
   }
