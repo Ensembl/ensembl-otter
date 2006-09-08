@@ -354,7 +354,7 @@ sub zMapDotGtkrcContent{
     my $full_content = $self->formatGtkrcWidget("*.zmap-focus-view", 
                                                 "zmap-focus-view-frame",
                                                 qw{
-                                                    bg[NORMAL]      green
+                                                    bg[NORMAL]      gold
                                                 });
     # to make the info labels stand out and look like input boxes...
     $full_content   .= $self->formatGtkrcWidget("*.zmap-control-infopanel", 
@@ -371,7 +371,7 @@ sub zMapDotGtkrcContent{
     # to create a coloured border for the view with an unknown species. (Not sure this works properly...)
     $full_content   .= $self->formatGtkrcStyleDef("default-species",
                                                   qw{
-                                                      bg[NORMAL]    green
+                                                      bg[NORMAL]    gold
                                                   });
     # foreach (species){ self->formatGtkrcStyleDef("species", ... ) }
 }
