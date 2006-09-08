@@ -86,7 +86,11 @@ use GenomeCanvas::Band::GeneKey;
             scalar(@ctg_names), scalar(@$ctg_list);
     }
     
-    my $styles = GenomeCanvas::Band::ContigCartoon->read_config_file('peri_contig_features.txt');
+    my $styles = GenomeCanvas::Band::ContigCartoon
+      ->read_config_file('peri_contig_features_240806.txt');
+    
+    #use Data::Dumper;
+    #die Dumper($styles);
     
     my $key = GenomeCanvas::Band::GeneKey->new;
     $key->styles($styles);

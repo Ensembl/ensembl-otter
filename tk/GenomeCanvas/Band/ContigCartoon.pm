@@ -6,6 +6,7 @@ package GenomeCanvas::Band::ContigCartoon;
 use strict;
 use Carp;
 use base 'GenomeCanvas::Band';
+use Bio::Otter::Lace::Slice;
 
 sub render {
     my ($self) = @_;
@@ -40,10 +41,22 @@ sub render {
             ],
     );
 
+    
+    
+    my $lace_slice = Bio::Otter::Lace::Slice->new(
+        $self->Client,
+        $self->DataSet->name,
+        $slice->assembly_type,
+        'chromosome',
+        'Otter',
+        $slice->chr_name,
+        $slice->chr_start,
+        $slice->chr_end,
+        );
+    
+    
     my $pipe_head = 1;
-    my $rep_feats =
-      $self->Client->get_rfs_from_dataset_sliceargs_analysis($self->DataSet,
-        $slice, 'RepeatMasker', $pipe_head,);
+    my $rep_feats = $lace_slice->get_all_RepeatFeatures('RepeatMasker', $pipe_head);
 
     my %seen;
     my $pattern = "%8s  %4s  %s\n";
@@ -135,7 +148,7 @@ sub render {
     }
 
     # Features added by hand
-    foreach my $name (keys %{ $styles->{'feature'} }) {
+    foreach my $name (keys %{ $styles->{'feature'}{$ctg_name} }) {
         my $feat_info = $styles->{'feature'}{$ctg_name}{$name};
         next unless $feat_info->{feature_start};
 
@@ -211,6 +224,9 @@ sub read_config_file {
     while (<$conf>) {
         my ($label) = /^Label\s+(.+)/im
           or next;
+        
+        warn "Label: <$label>\n";
+        
         my ($outline, $fill) = @{$out_fill->[$i]};
         $i++;
         #my ($outline)  = /^Outline\s+(.+)/im;
