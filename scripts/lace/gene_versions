@@ -1,0 +1,60 @@
+#!/usr/local/bin/perl -w
+
+### gene_versions
+
+use strict;
+use Bio::Otter::Lace::Defaults;
+
+{
+    my $dataset_name = 'mouse';
+
+    my $usage = sub { exec('perldoc', $0) };
+    # This do_getopt() call is needed to parse the otter config files
+    # even if you aren't giving any arguments on the command line.
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'       => $usage,
+        'dataset=s'     => \$dataset_name,
+        ) or $usage->();
+    $usage->() unless $dataset_name;
+    
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    
+    my $otter_dba = $ds->get_cached_DBAdaptor;
+    my $gene_aptr = $otter_dba->get_GeneAdaptor;
+    
+    foreach my $gsid (@ARGV) {
+        print "\n";
+        my $gene = $gene_aptr->fetch_by_stable_id($gsid);
+        print gene_summary($gene);
+        my $version = $gene->version;
+        for (my $i = $version - 1; $i > 0; $i--) {
+            my $gene = $gene_aptr->fetch_by_stable_id_version($gsid, $i);
+            print gene_summary($gene);
+        }
+    }
+}
+
+sub gene_summary {
+    my ($gene) = @_;
+    
+    my $name = $gene->gene_info->name->name;
+    my $sid = $gene->stable_id;
+    my $version = $gene->version;
+    my $type = $gene->type;
+    return "$sid.$version $type $name\n";
+}
+
+
+
+__END__
+
+=head1 NAME - gene_versions
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
