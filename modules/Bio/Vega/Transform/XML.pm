@@ -33,7 +33,7 @@ sub generate_OtterXML{
   my $ot=$self->prettyprint('otter');
   $ot->indent($indent);
   foreach my $slice (@$slices){
-	 $ot->attribobjs($self->generate_SequenceSet($slice,$odb,$ot->indent+2));
+	 $ot->attribobjs($self->generate_SequenceSet($slice,$odb));
   }
   return $self->formatxml($ot);
 }
@@ -48,7 +48,8 @@ sub generate_SequenceSet{
   }
   my $features=$slice->get_all_SimpleFeatures;
   $ss->attribobjs($self->generate_FeatureSet($features));
-  my $genes=$slice->get_all_Genes;
+  my $ga=$odb->get_GeneAdaptor;
+  my $genes=$ga->fetch_all_by_Slice($slice);
   foreach my $gene(@$genes){
 	 $ss->attribobjs($self->generate_Locus($gene));
   }
