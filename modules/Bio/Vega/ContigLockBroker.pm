@@ -51,7 +51,7 @@ sub check_locks_exist_by_slice {
 
 ##ported
 sub check_no_locks_exist_by_slice {
-  my ($self,$slice,$author) = @_;
+  my ($self,$slice,$author,$db) = @_;
   if (!defined($slice)) {
 	 throw("Can't check clone locks on a slice if no slice");
   }
@@ -77,7 +77,7 @@ sub check_no_locks_exist_by_slice {
 
 ##ported
 sub lock_clones_by_slice {
-  my ($self,$slice,$author) = @_;
+  my ($self,$slice,$author,$db) = @_;
   if (!defined($slice)) {
 	 throw("Can't lock clones on a slice if no slice");
   }
@@ -111,7 +111,7 @@ sub lock_clones_by_slice {
 	 if ($@) {
 		my $exlock = $self->get_ContigLockAdaptor->fetch_by_contig_id($ctg_seq_region_id);
 		push(@existing, $exlock);
-		$existing_contig{$contig_id} = $contig;
+		$existing_contig{$ctg_seq_region_id} = $contig;
 	 } else {
 		push(@new, $lock);
 	 }
@@ -125,7 +125,7 @@ sub lock_clones_by_slice {
 	 my $lock_error_str = "Can't lock contigs because some are already locked:\n";
 	 foreach my $lock (@existing) {
 		my $contig = $existing_contig{$lock->contig_id};
-		my $ctg_seq_region_id = $sa->get_seq_region_id($contig)
+		my $ctg_seq_region_id = $sa->get_seq_region_id($contig);
 		  $lock_error_str .= sprintf "  '%s' has been locked by '%s' since %s\n",
 			 $ctg_seq_region_id, $lock->author->name, scalar localtime($lock->timestamp);
 	 }
@@ -135,7 +135,7 @@ sub lock_clones_by_slice {
 
 ##ported
 sub remove_by_slice {
-  my ($self,$slice,$author) = @_;
+  my ($self,$slice,$author,$db) = @_;
   my $contig_list = Contig_listref_from_Slice($slice);
   my $aptr       = $self->get_CloneLockAdaptor;
   my $sa=$db->get_SliceAdaptor;
@@ -143,11 +143,11 @@ sub remove_by_slice {
 	 my $ctg_seq_region_id=$sa->get_seq_region_id($contig);
 	 if (my $lock = $self->get_CloneLockAdaptor->fetch_by_contig_id($ctg_seq_region_id)) {
 		unless ($lock->author->name eq $author->name) {
-		  throw("Author [" . $author->name . "] doesn't own lock for $clone");
+		  throw("Author [" . $author->name . "] doesn't own lock for $contig");
 		}
 		$aptr->remove($lock);
 	 } else {
-		$self->warn("Can't unlock contig [$clone]. Lock doesn't exist");
+		warning("Can't unlock contig [$contig]. Lock doesn't exist");
 	 }
   }
 }
