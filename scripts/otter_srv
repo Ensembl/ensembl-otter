@@ -211,7 +211,7 @@ sub make_new_child {
                         local $ENV{PERL5LIB} = $libpath;
 
                         local $ENV{PIPEHEAD}  =
-                          1;     # let the script know it runs ensembl v.32
+                          1;     # let the script know it runs ensembl v.20+
                         exec($program, @args);
                         die q{Something went wrong here $!: } . $! . "\n";
                     }
@@ -224,27 +224,43 @@ sub make_new_child {
                 }
             }
             elsif ($r->method eq 'POST' and $POST_SCRIPTS->{$uri}) {
+
+
                 my $program = $ENV{SCRIPT_FILENAME} =
                   "$SCRIPTDIR/" . $POST_SCRIPTS->{$uri};
+                my $query = $r->content;
+                my $libpath = $ENV{PERL5LIB};
+
                 server_log("Dual pipe to [$uri] ----------------\n");
-                my ($in, $out);
-                my $pid = open2($out, $in, $program);
-                print $in $r->content;
-                close $in;
-                open FPDBG, ">../data/test_server_wr.xml";
-                print FPDBG $r->content;
+                open  FPDBG, ">../data/test_server_wr.xml";
+                print FPDBG $query;
                 close FPDBG;
-                server_log("Starting to send response from [$uri] =============\n");
+                my ($in, $out, $pid);
 
-                while (<$out>) {
+                if (($query =~ /\bpipehead=1\b/)
+                    && ($libpath =~ s/(.*)(ensembl\/modules)(.*)(ensembl_head\/modules)(.*)/$1$4$3$2$5/))
+                {            # head ensembl
+                    local $ENV{PERL5LIB} = $libpath;
 
-                    #print STDERR $_;
-                    print $client $_;
+                    local $ENV{PIPEHEAD}  =
+                          1;     # let the script know it runs ensembl v.20+
+
+                    $pid = open2($out, $in, $program);
+                } else {
+                    local $ENV{PIPEHEAD} =
+                          0;     # let the script know it runs ensembl v.19
+                    $pid = open2($out, $in, $program);
                 }
 
-                #print $client $r->content;
-                server_log("Done sending response from [$uri] =============\n");
+                print $in $query;
+                close $in;
+                server_log("Starting to send response from [$uri] =============\n");
+                while (<$out>) {
+                    print $client $_;
+                }
                 close $out;
+
+                server_log("Done sending response from [$uri] =============\n");
                 waitpid $pid, 0;
             }
             else {
