@@ -10,6 +10,7 @@ use Bio::Vega::DBSQL::ExonAdaptor;
 use Bio::Vega::DBSQL::TranscriptAdaptor;
 use Bio::Vega::DBSQL::TranslationAdaptor;
 use Bio::Vega::DBSQL::AssemblyTagAdaptor;
+use Bio::Vega::DBSQL::ContigLockAdaptor;
 use base 'Bio::EnsEMBL::DBSQL::DBAdaptor';
 
 sub get_GeneAdaptor {
@@ -100,6 +101,15 @@ sub get_AssemblyTagAdaptor {
 	 $self->{'AssemblyTag'}=$ad;
   }
   return $self->{'AssemblyTag'};
+}
+
+sub get_ContigLockAdaptor {
+  my $self = shift;
+  if ( !exists $self->{'ContigLock'} ){
+	 my $ad=Bio::Vega::DBSQL::ContigLockAdaptor->new($self);
+	 $self->{'ContigLock'}=$ad;
+  }
+  return $self->{'ContigLock'};
 }
 
 sub begin_work {
