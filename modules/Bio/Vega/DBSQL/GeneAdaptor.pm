@@ -12,56 +12,98 @@ use Bio::Vega::Utils::Comparator qw(compare);
 use base 'Bio::EnsEMBL::DBSQL::GeneAdaptor';
 
 sub fetch_by_stable_id  {
-
   my ($self, $stable_id) = @_;
   my ($gene) = $self->SUPER::fetch_by_stable_id($stable_id);
   if ($gene){
-	 bless $gene, "Bio::Vega::Gene";
-	 $self->fetch_gene_author($gene);
-	 foreach my $tr ($gene->get_all_Transcripts){
-		bless $tr, "Bio::Vega::Transcript";
-	 }
+	 $self->reincarnate_gene($gene);
   }
   return $gene;
+}
 
+sub reincarnate_gene {
+  my ($self,$gene)=@_;
+  bless $gene, "Bio::Vega::Gene";
+  $self->fetch_gene_author($gene);
+  my $transcripts=$gene->get_all_Transcripts;
+  foreach my $tr (@$transcripts){
+	 bless $tr, "Bio::Vega::Transcript";
+	 my $ta=$self->db->get_TranscriptAdaptor;
+	 $ta->fetch_transcript_author($tr);
+  }
+  return $gene;
 }
 
 sub fetch_all_by_Slice  {
-
   my ($self,$slice,$logic_name,$load_transcripts)  = @_;
+  my $latest_genes = [];
   my ($genes) = $self->SUPER::fetch_all_by_Slice($slice,$logic_name,$load_transcripts);
   if ($genes){
 	 foreach my $gene(@$genes){
-		bless $gene, "Bio::Vega::Gene";
-		$self->fetch_gene_author($gene);
-		my $transcripts=$gene->get_all_Transcripts;
-		foreach my $tr (@$transcripts){
-		  bless $tr, "Bio::Vega::Transcript";
-		  my $ta=$self->db->get_TranscriptAdaptor;
-		  $ta->fetch_transcript_author($tr);
+		$self->reincarnate_gene($gene);
+		my $tsct_list = $gene->get_all_Transcripts;
+		for (my $i = 0; $i < @$tsct_list;) {
+		  my $transcript = $tsct_list->[$i];
+		  my( $t_name );
+		  eval{
+			 my $t_name_att = $transcript->get_all_Attributes('name') ;
+			 if ($t_name_att->[0]){
+				$t_name=$t_name_att->[0]->value;
+			 }
+		  };
+		  if ($@) {
+			 die sprintf("Error getting name of %s %s (%d):\n$@", 
+							 ref($transcript), $transcript->stable_id, $transcript->dbID);
+		  }
+		  my $exons_truncated = $transcript->truncate_to_Slice($slice);
+		  my $ex_list = $transcript->get_all_Exons;
+		  my $message;
+		  my $truncated=0;
+		  if (@$ex_list) {
+			 $i++;
+			 if ($exons_truncated) {
+				$message ="Transcript '$t_name' has $exons_truncated exon";
+				if ($exons_truncated > 1) {
+				  $message .= 's that are not in this slice';
+				} else {
+				  $message .= ' that is not in this slice';
+				}
+				$truncated=1;
+				
+			 }
+		  }
+		  else {
+			 # This will fail if get_all_Transcripts() ceases to return a ref
+			 # to the actual list of Transcripts inside the Gene object
+			 splice(@$tsct_list, $i, 1);
+			 $message="Transcript '$t_name' has no exons within the slice";
+			 $truncated=1;
+		  }
+		  if ($truncated == 1) {
+			 my $remark_att = Bio::EnsEMBL::Attribute->new(-CODE => 'remark',-NAME => 'Remark',-DESCRIPTION => 'Annotation Remark',-VALUE => $message);
+			 my $gene_att=$gene->get_all_Attributes;
+			 push @$gene_att, $remark_att ;
+			 $gene->truncated_flag(1);
+			 print STDERR "Found a truncated gene";
+		  }
+		}
+		# Remove any genes that don't have transcripts left.
+		if (@$tsct_list) {
+		  push(@$latest_genes, $gene);
 		}
 	 }
   }
-  return $genes;
+  return $latest_genes;
 }
 
 sub fetch_by_stable_id_version  {
-
   my ($self, $stable_id,$version) = @_;
-
   unless ($stable_id || $version) {
 	 throw("Must enter a gene stable id:$stable_id and version:$version to fetch a Gene");
   }
-
   my $constraint = "gsi.stable_id = '$stable_id' AND gsi.version = '$version'";
   my ($gene) = @{ $self->generic_fetch($constraint) };
-  bless $gene, "Bio::Vega::Gene";
-  $self->fetch_gene_author($gene);
-  foreach my $tr ($gene->get_all_Transcripts){
-	 bless $tr, "Bio::Vega::Transcript";
-  }
+  $self->reincarnate_gene($gene);
   return $gene;
-
 }
 
 sub fetch_gene_author {
@@ -74,7 +116,6 @@ sub fetch_gene_author {
 
 
 sub check_for_change_in_gene_components {
-
   ## check if any of the gene component (transcript,exons,translation) has changed
   my ($self,$sida,$gene) = @_;
   my $transcripts=$gene->get_all_Transcripts;
@@ -193,7 +234,6 @@ sub update_deleted_exons {
 }
 
 sub translation_diff{
-
   my ($self,$sida,$tran,$db_transcript)=@_;
   my $translation_changed=0;
   my $translation;
@@ -244,7 +284,6 @@ sub translation_diff{
 
 
 sub exons_diff {
-
   my ($self,$sida,$exons)=@_;
   my $exon_changed=0;
   my $ea=$self->db->get_ExonAdaptor;
@@ -317,7 +356,6 @@ sub exons_diff {
 =cut
 
 sub store{
-
    my ($self,$gene) = @_;
 	$self->db->begin_work;
    unless ($gene) {
