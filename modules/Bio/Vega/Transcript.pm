@@ -51,7 +51,60 @@ sub add_Evidence {
   return;
 }
 
-
+sub truncate_to_Slice {
+  my( $self, $slice ) = @_;
+  # start and end exon are set to zero so that we can
+  # safely use them in "==" without generating warnings
+  # as we loop through the list of exons.
+  ### Not used until we enable translation truncating
+  my $start_exon = 0;
+  my $end_exon   = 0;
+  my( $tsl );
+  if ($tsl = $self->translation) {
+	 $start_exon = $tsl->start_Exon;
+	 $end_exon   = $tsl->end_Exon;
+  }
+  my $exons_truncated = 0;
+  my $in_translation_zone = 0;
+  my $slice_length = $slice->length;
+  my $ex_list = $self->get_all_Exons;
+  for (my $i = 0; $i < @$ex_list;) {
+	 my $exon = $ex_list->[$i];
+	 my $exon_start = $exon->start;
+	 my $exon_end   = $exon->end;
+	 if ($exon->slice != $slice or $exon_end < 1 or $exon_start > $slice_length) {
+		#warn "removing exon that is off slice";
+		### This won't work if get_all_Exons() ceases to return
+		### a ref to the actual array of exons in the transcript.
+		splice(@$ex_list, $i, 1);
+		$exons_truncated++;
+	 } else {
+		#printf STDERR
+		#    "Checking if exon %s is within slice %s of length %d\n"
+		#    . "  being attached to %s and extending from %d to %d\n",
+		#    $exon->stable_id, $slice, $slice_length, $exon->contig, $exon_start, $exon_end;
+		$i++;
+		my $trunc_flag = 0;
+		if ($exon->start < 1) {
+		  #warn "truncating exon that overlaps start of slice";
+		  $trunc_flag = 1;
+		  $exon->start(1);
+		}
+		if ($exon->end > $slice_length) {
+		  #warn "truncating exon that overlaps end of slice";
+		  $trunc_flag = 1;
+		  $exon->end($slice_length);
+		}
+		$exons_truncated++ if $trunc_flag;
+	 }
+  }
+  ### Hack until we fiddle with translation stuff
+  if ($exons_truncated) {
+	 $self->{'translation'}     = undef;
+	 $self->{'_translation_id'} = undef;
+  }
+  return $exons_truncated;
+}
 
 sub get_Evidence {
   my $self = shift;
