@@ -841,6 +841,8 @@ sub save_otter_xml {
     my( $self, $xml, $dsname ) = @_;
     
     confess "Don't have write access" unless $self->write_access;
+
+    my $ds = $self->get_DataSet_by_name($dsname);
     
     my $content = $self->general_http_dialog(
         0,
@@ -850,6 +852,7 @@ sub save_otter_xml {
             'author'   => $self->author,
             'email'    => $self->email,
             'dataset'  => $dsname,
+            'pipehead' => $ds->HEADCODE(),
             'data'     => $xml,
             'unlock'   => 'false',  # We give the annotators the option to
                                     # save during sessions, not just on exit.
@@ -864,6 +867,8 @@ sub save_otter_xml {
 sub unlock_otter_xml {
     my( $self, $xml, $dsname ) = @_;
     
+    my $ds = $self->get_DataSet_by_name($dsname);
+
     my $content = $self->general_http_dialog(
         0,
         'POST',
@@ -872,6 +877,7 @@ sub unlock_otter_xml {
             'author'   => $self->author,
             'email'    => $self->email,
             'dataset'  => $dsname,
+            'pipehead' => $ds->HEADCODE(),
             'data'     => $xml,
         }
     );
