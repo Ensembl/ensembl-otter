@@ -210,7 +210,7 @@ sub get_slice { # codebase-independent version for scripts
 		    : 'name';
         my $segment_name = $sq->getarg($segment_attr);
 
-        error_exit($sq, "$cs '$segment_attr' attribute not set") unless $segment_name;
+        error_exit($sq, "$cs '$segment_attr' attribute not set ") unless $segment_name;
 
         $slice =  $dba->get_SliceAdaptor()->fetch_by_region(
             $cs,
@@ -277,15 +277,24 @@ sub get_slice { # codebase-independent version for scripts
 }
 
 sub get_Author_from_CGI{
-    my ($sq) = @_;
-    error_exit('', 'I need a CGI object') unless $sq && UNIVERSAL::isa($sq, 'CGI');
+  my ($sq,$pipehead) = @_;
+  error_exit('', 'I need a CGI object') unless $sq && UNIVERSAL::isa($sq, 'CGI');
+  my $auth_name = $sq->getarg('author') || error_exit($sq, "Need author for this script...");
+  my $email     = $sq->getarg('email')  || error_exit($sq, "Need email for this script...");
+  my $author;
+  unless($pipehead) {
+	 $pipehead=0;
+  }
 
-    my $auth_name = $sq->getarg('author') || error_exit($sq, "Need author for this script...");
-    my $email     = $sq->getarg('email')  || error_exit($sq, "Need email for this script...");
-
-    my $author    = Bio::Otter::Author->new(-name  => $auth_name,
-                                            -email => $email);
-    return $author;
+  if ($pipehead) {
+	 $author=Bio::Vega::Author->new(-name  => $auth_name,
+											  -email => $email);
+  }
+  else {
+	 $author    = Bio::Otter::Author->new(-name  => $auth_name,
+													  -email => $email);
+  }
+  return $author;
 }
 
 sub get_DBAdaptor_from_CGI_species{
