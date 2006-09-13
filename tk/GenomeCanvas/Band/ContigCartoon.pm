@@ -21,8 +21,11 @@ sub render {
     my $styles = $self->styles;
 
     my $slice  = $self->virtual_contig;
+
+    my $arrow_head_length = $font_size;
+    my $arrow_head_half_height = $font_size / 2;
     my $x1     = 0;
-    my $x2     = $x1 + ($slice->length / $rpp);
+    my $x2     = $x1 + ($slice->length / $rpp) + $arrow_head_length;
     my $y2     = $y1 + $font_size;
     my $y_half = $y1 + (($y2 - $y1) / 2);
 
@@ -35,9 +38,9 @@ sub render {
         -fill     => 'black',
         -arrow    => 'last',
         -arrowshape => [
-            $font_size,
-            $font_size * 1.5,
-            $font_size,
+            $arrow_head_length,
+            $arrow_head_length,
+            $arrow_head_half_height,
             ],
     );
 
@@ -53,7 +56,6 @@ sub render {
         $slice->chr_start,
         $slice->chr_end,
         );
-    
     
     my $pipe_head = 1;
     my $rep_feats = $lace_slice->get_all_RepeatFeatures('RepeatMasker', $pipe_head);
@@ -75,6 +77,12 @@ sub render {
 
         my $x1 = $feat->start / $rpp;
         my $x2 = $feat->end / $rpp;
+        
+        ($x1, $x2) = $self->pad_x_coords($x1, $x2, $font_size / 2);
+
+        my $y1 = $y1 + ($font_size / 8);
+        my $y2 = $y2 - ($font_size / 8);
+        
         $canvas->createRectangle(
             $x1, $y1, $x2, $y2,
             -outline => undef,
@@ -94,8 +102,6 @@ sub render {
             -tags    => [@tags],
         );
     }
-
-    my $min_gene_width = 10;    ### Could depend on font size
 
     # Draw long genes first so that the short genes get drawn on top.
     foreach
@@ -120,31 +126,24 @@ sub render {
         my $x1 = $gene->start / $rpp;
         my $x2 = $gene->end / $rpp;
 
-        if ($x1 > $x2) {
-            ($x1, $x2) = ($x2, $x1);
-        }
+        ($x1, $x2) = $self->pad_x_coords($x1, $x2, $font_size);
 
-        if (($x2 - $x1) < $min_gene_width) {
-            my $centre = $x1 + (($x2 - $x1) / 2);
-            $x1 = $centre - ($min_gene_width / 2);
-            $x2 = $centre + ($min_gene_width / 2);
-        }
-
-        my @dash = ();
-        if ($gene->type =~ /pseudo/i) {
-            #@dash = (-dash   => [$line_width, 2 * $line_width]);
-            @dash = (-dash   => '.');
-        }
-        $canvas->createOval(
+        my @oval_args = (
             $x1, $y1, $x2, $y2,
-            -width   => $line_width,
-            -outline => $style->{outline},
+            -width  => $line_width,
+            -tags   => [@tags],
+            );
 
-            # Stippled if pseudogene
-            @dash,
-            -fill => $style->{fill},
-            -tags => [@tags],
-        );
+        if ($gene->type =~ /pseudo/i) {
+            # Pseudogenes get dashed outline to oval
+            $self->dashed_oval($style, @oval_args);
+        } else {
+            $canvas->createOval(
+                @oval_args,
+                -outline => $style->{outline},
+                -fill    => $style->{fill},
+            );
+        }
     }
 
     # Features added by hand
@@ -158,27 +157,49 @@ sub render {
         my $x1 = $feat_info->{feature_start} / $rpp;
         my $x2 = $feat_info->{feature_end} / $rpp;
 
-        if ($x1 > $x2) {
-            ($x1, $x2) = ($x2, $x1);
-        }
+        ($x1, $x2) = $self->pad_x_coords($x1, $x2, $font_size);
 
-        if (($x2 - $x1) < $min_gene_width) {
-            my $centre = $x1 + (($x2 - $x1) / 2);
-            $x1 = $centre - ($min_gene_width / 2);
-            $x2 = $centre + ($min_gene_width / 2);
-        }
-
-        $canvas->createOval(
+        $self->dashed_oval($style,
             $x1, $y1, $x2, $y2,
-            -width   => $line_width,
-            -outline => $style->{outline},
-
-            # Always stippled
-            -dash   => [$line_width, $line_width],
-            -fill => $style->{fill},
-            -tags => [@tags],
-        );
+            -width  => $line_width,
+            -tags   => [@tags],
+            );
     }
+}
+
+sub pad_x_coords {
+    my ($self, $x1, $x2, $min_item_width) = @_;
+    
+    if ($x1 > $x2) {
+        ($x1, $x2) = ($x2, $x1);
+    }
+
+    if (($x2 - $x1) < $min_item_width) {
+        my $centre = $x1 + (($x2 - $x1) / 2);
+        $x1 = $centre - ($min_item_width / 2);
+        $x2 = $centre + ($min_item_width / 2);
+    }
+    return ($x1, $x2);
+}
+
+sub dashed_oval {
+    my ($self, $style, @oval_args) = @_;
+    
+    my $canvas = $self->canvas;
+    # Looks better if we have a dahsed line where
+    # the gaps in the dashes are filled by the
+    # colour of a line the same width behind.
+    $canvas->createOval(
+        @oval_args,
+        -outline => $style->{fill},
+        -fill    => $style->{fill},
+    );
+    $canvas->createOval(
+        @oval_args,
+        -dash   => '.',
+        -outline => $style->{outline},
+        -fill    => undef,
+    );
 }
 
 sub Client {

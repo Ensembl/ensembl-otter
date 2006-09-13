@@ -79,7 +79,7 @@ sub initialise {
     $self->genomic(
         $name_frame->Entry(
             -width  => 30,
-            -state  => 'disabled',
+            -state  => 'readonly',
             )->pack(-side => 'left')
         );
 
@@ -179,7 +179,9 @@ sub update_from_XaceSeqChooser {
     my( $self, $xc ) = @_;
     
     $self->query_Sequence($xc->get_CloneSeq->Sequence);
+    $self->genomic->configure(-state => 'normal');
     $self->set_entry('genomic', $xc->slice_name);
+    $self->genomic->configure(-state => 'readonly');
     $self->update_from_clipboard;
     my $top = $self->top;
     $top->deiconify;
@@ -306,6 +308,12 @@ sub launch_dotter {
     unless ($match_name and $genomic and $start and $end and $genomic) {
         warn "Missing parameters\n";
         return;
+    }
+    
+    if ($start > $end) {
+        ($start, $end) = ($end, $start);
+        $self->set_entry('genomic_start', $start);
+        $self->set_entry('genomic_end',   $end);
     }
     
     my $length = $genomic->sequence_length;
