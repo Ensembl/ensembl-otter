@@ -25,7 +25,8 @@ my $sql = $pipehead
            l.hostname, l.timestamp, aut.author_name, aut.author_email
       FROM seq_region cl,
            seq_region ctg,
-           assembly cl2ctg }
+           assembly cl2ctg,
+           seq_region_attrib embl_acc, seq_region_attrib embl_version }
 .($asm_type ? qq{ , assembly chr2ctg, seq_region chr } : '')
 .qq{
  LEFT JOIN contig_lock l ON ctg.seq_region_id = l.seq_region_id
@@ -33,7 +34,11 @@ my $sql = $pipehead
      WHERE cl2ctg.asm_seq_region_id=cl.seq_region_id
        AND cl2ctg.cmp_seq_region_id=ctg.seq_region_id
        AND cl.coord_system_id=(select coord_system_id from coord_system where name='clone')
-       AND ctg.coord_system_id=(select coord_system_id from coord_system where name='contig') }
+       AND ctg.coord_system_id=(select coord_system_id from coord_system where name='contig')
+       AND embl_acc.seq_region_id=cl.seq_region_id
+       AND embl_acc.attrib_type_id=(select attrib_type_id from attrib_type where code='embl_accession')
+       AND embl_version.seq_region_id=cl.seq_region_id
+       AND embl_version.attrib_type_id=(select attrib_type_id from attrib_type where code='embl_version') }
 .($asm_type ? qq{
        AND chr.name = "$asm_type"
        AND chr2ctg.asm_seq_region_id=chr.seq_region_id
