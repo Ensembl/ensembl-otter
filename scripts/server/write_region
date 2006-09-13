@@ -1,6 +1,6 @@
 #!/usr/local/bin/perl -w
 
-my $pipehead = $ENV{PIPEHEAD}; # is set by the server for any GET request
+my $pipehead = $ENV{PIPEHEAD}; # is set by the server for any GET/POST request
 
 use OtterDefs;
 use strict;
@@ -318,7 +318,6 @@ elsif ($odb->isa('Bio::Vega::DBSQL::DBAdaptor')) {
 
   ##check if clones are locked or not
   server_log("Checking region is locked...");
-#  die Dumper($slice);
   eval {
 	 Bio::Vega::ContigLockBroker::check_locks_exist_by_slice($slice, $author,$odb);
   };
