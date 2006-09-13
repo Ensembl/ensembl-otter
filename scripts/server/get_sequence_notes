@@ -1,7 +1,6 @@
 #!/usr/local/bin/perl -w
 
-my $pipehead = $ENV{PIPEHEAD}; # is set by the server for any GET request
-# but probably not needed now since we do not work with pipeline
+my $pipehead = $ENV{PIPEHEAD}; # is set by the server for any request
 
 use strict;
 use OtterDefs;
@@ -15,19 +14,44 @@ my $sq = Bio::Otter::ServerQuery->new('dataset',
     'contig', 'type', 'author');
 set_nph($sq);
 
-my $odb = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
-
 my $asm_type = $sq->getarg('type');
 my $aut_name = $sq->getarg('author');
 my $ctg_name = $sq->getarg('contig');
 
-my $sth = $odb->prepare(qq{
+my $odba = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
+my $odbc = $pipehead ? $odba->dbc() : $odba;
+
+my $sql = $pipehead
+? qq{
     SELECT ctg.name,
            aut.author_name,
-           s.is_current,
-           s.note_time,
-           UNIX_TIMESTAMP(s.note_time) as ts,
-           s.note
+           sn.is_current,
+           sn.note_time,
+           UNIX_TIMESTAMP(sn.note_time) as ts,
+           sn.note
+      FROM }
+.($asm_type ? qq{ assembly asm, seq_region chr,} : '' )
+.qq{
+           seq_region ctg,
+           sequence_note sn,
+           author aut
+     WHERE }
+.($ctg_name ? qq{ ctg.name = "$ctg_name" AND } : '' )
+.($asm_type ? qq{ chr.name = "$asm_type" AND
+                  asm.asm_seq_region_id = chr.seq_region_id AND
+                  asm.cmp_seq_region_id = ctg.seq_region_id AND } : '' )
+.qq{       sn.seq_region_id = ctg.seq_region_id }
+.($aut_name ? qq{ AND aut.author_name = "$aut_name" } : '')
+.qq{   AND sn.author_id = aut.author_id
+  ORDER BY ctg.name, sn.note_time DESC
+}
+: qq{
+    SELECT ctg.name,
+           aut.author_name,
+           sn.is_current,
+           sn.note_time,
+           UNIX_TIMESTAMP(sn.note_time) as ts,
+           sn.note
       FROM }
 .($asm_type ? qq{ assembly asm, } : '' )
 .qq{       sequence_note s,
@@ -36,17 +60,22 @@ my $sth = $odb->prepare(qq{
      WHERE }
 .($ctg_name ? qq{ ctg.name = "$ctg_name" AND } : '' )
 .($asm_type ? qq{ asm.type = "$asm_type" AND asm.contig_id = ctg.contig_id AND } : '' )
-.qq{       s.contig_id = ctg.contig_id }
+.qq{       sn.contig_id = ctg.contig_id }
 .($aut_name ? qq{ AND aut.author_name = "$aut_name" } : '')
-.qq{   AND s.author_id = aut.author_id
-  ORDER BY ctg.name, s.note_time DESC
-});
+.qq{   AND sn.author_id = aut.author_id
+  ORDER BY ctg.name, sn.note_time DESC
+};
+
+my $sth = $odbc->prepare($sql);
 $sth->execute();
 
 my $output_string = '';
-while (my (@columns) = $sth->fetchrow()) {
-    $columns[scalar(@columns)-1]=~s/\n/\ /g;
-    $output_string .= join("\t", @columns)."\n";
+while (my ($ctg_name, $author_name, $is_current, $note_time, $timestamp, $note) = $sth->fetchrow()) {
+    $note=~s/\n/\ /g;
+    if($is_current=~/^(.)/) {
+        $is_current = uc($1);
+    }
+    $output_string .= join("\t", $ctg_name, $author_name, $is_current, $note_time, $timestamp, $note)."\n";
 }
 
 send_response($sq, $output_string, 1);
