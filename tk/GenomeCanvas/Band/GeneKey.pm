@@ -37,6 +37,9 @@ sub render {
         my ($x1,$y1, $x2,$y2) = ($x,$y, $x + $font_size, $y + $font_size);
         
         if ($style->{'type'} eq 'REP') {
+            my $y1 = $y1 + ($font_size / 8);
+            my $y2 = $y2 - ($font_size / 8);
+
             $canvas->createRectangle(
                 $x1, $y1, $x2, $y2,
                 -outline => undef,
