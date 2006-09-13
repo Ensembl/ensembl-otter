@@ -21,7 +21,7 @@ my $aut_name = $sq->getarg('author');
 
 my $sql = $pipehead
 ? qq{
-    SELECT cl.name, concat(cl.embl_acc, '.', cl.embl_version), ctg.name,
+    SELECT cl.name, concat(embl_acc, '.', embl_version), ctg.name,
            l.hostname, l.timestamp, aut.author_name, aut.author_email
       FROM seq_region cl,
            seq_region ctg,
