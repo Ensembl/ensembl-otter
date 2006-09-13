@@ -4,13 +4,14 @@ use strict;
 use Bio::EnsEMBL::Utils::Exception qw ( throw warning );
 use Bio::Vega::ContigLock;
 
+my $client_hostname='deskpro014581';
 
 sub client_hostname {
-    my( $self, $client_hostname ) = @_;
+    my( $hostname ) = @_;
     if ($client_hostname) {
-        $self->{'_client_hostname'} = $client_hostname;
+        $client_hostname = $hostname;
     }
-    return $self->{'_client_hostname'};
+    return $client_hostname;
 }
 
 
@@ -75,9 +76,9 @@ sub check_no_locks_exist_by_slice {
   return 1;
 }
 
-##ported
+##ported && tested
 sub lock_clones_by_slice {
-  my ($self,$slice,$author,$db) = @_;
+  my ($slice,$author,$db) = @_;
   if (!defined($slice)) {
 	 throw("Can't lock clones on a slice if no slice");
   }
@@ -87,11 +88,11 @@ sub lock_clones_by_slice {
   if (!$slice->isa("Bio::EnsEMBL::Slice")) {
 	 throw("[$slice] is not a Bio::EnsEMBL::Slice");
   }
-  if (!$author->isa("Bio::Otter::Author")) {
+  if (!$author->isa("Bio::Vega::Author")) {
 	 throw("[$author] is not a Bio::Otter::Author");
   }
   my $contig_list = Contig_listref_from_Slice($slice);
-  my $aptr       = $self->get_ContigLockAdaptor;
+  my $aptr       = $db->get_ContigLockAdaptor;
   my $sa=$db->get_SliceAdaptor;
   my( @new,               # locks we manange to create
 		@existing,          # locks that already existed
@@ -100,17 +101,20 @@ sub lock_clones_by_slice {
   foreach my $contig (@$contig_list) {
 	 my $ctg_seq_region_id = $sa->get_seq_region_id($contig)
 		or throw('Contig does not have dbID set');
-	 my $lock = Bio::Vega::CloneLock->new(
+	 my $lock = Bio::Vega::ContigLock->new(
 													  -author     => $author,
 													  -contig_id   => $ctg_seq_region_id,
-													  -hostname   => $self->client_hostname,
+													  -hostname   => $client_hostname,
 													 );
 	 eval {
-		$self->get_ContigLockAdaptor->store($lock);
+		$db->get_ContigLockAdaptor->store($lock);
 	 };
 	 if ($@) {
-		my $exlock = $self->get_ContigLockAdaptor->fetch_by_contig_id($ctg_seq_region_id);
+		my $exlock = $db->get_ContigLockAdaptor->fetch_by_contig_id($ctg_seq_region_id);
+		if ($exlock){
 		push(@existing, $exlock);
+				die "\n\n***:$exlock";
+	 }
 		$existing_contig{$ctg_seq_region_id} = $contig;
 	 } else {
 		push(@new, $lock);
@@ -124,6 +128,7 @@ sub lock_clones_by_slice {
 	 # Give a nicely formatted error message about what is already locked
 	 my $lock_error_str = "Can't lock contigs because some are already locked:\n";
 	 foreach my $lock (@existing) {
+		#die "@existing";
 		my $contig = $existing_contig{$lock->contig_id};
 		my $ctg_seq_region_id = $sa->get_seq_region_id($contig);
 		  $lock_error_str .= sprintf "  '%s' has been locked by '%s' since %s\n",
@@ -135,13 +140,13 @@ sub lock_clones_by_slice {
 
 ##ported
 sub remove_by_slice {
-  my ($self,$slice,$author,$db) = @_;
+  my ($slice,$author,$db) = @_;
   my $contig_list = Contig_listref_from_Slice($slice);
-  my $aptr       = $self->get_CloneLockAdaptor;
+  my $aptr       = $db->get_CloneLockAdaptor;
   my $sa=$db->get_SliceAdaptor;
   foreach my $contig (@$contig_list) {
 	 my $ctg_seq_region_id=$sa->get_seq_region_id($contig);
-	 if (my $lock = $self->get_CloneLockAdaptor->fetch_by_contig_id($ctg_seq_region_id)) {
+	 if (my $lock = $db->get_CloneLockAdaptor->fetch_by_contig_id($ctg_seq_region_id)) {
 		unless ($lock->author->name eq $author->name) {
 		  throw("Author [" . $author->name . "] doesn't own lock for $contig");
 		}

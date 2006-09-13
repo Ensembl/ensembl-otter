@@ -20,7 +20,7 @@ sub _generic_sql_fetch {
         } . $where_clause);
   $sth->execute(@param);
   my $aad = $self->db->get_AuthorAdaptor;
-  my( @contiglock );
+  my $contiglocks=[];
   while (my $row = $sth->fetch) {
 	 my $author = $aad->fetch_by_dbID($row->[2]);
 	 my $contiglock = new Bio::Vega::ContigLock(
@@ -30,9 +30,9 @@ sub _generic_sql_fetch {
 															  -TIMESTAMP  => $row->[3],
 															  -HOSTNAME   => $row->[4],
 															 );
-	 push(@contiglock, $contiglock);
+	 push(@$contiglocks, $contiglock);
   }
-  return @contiglock;
+  return $contiglocks;
 }
 
 sub fetch_by_dbID {
@@ -41,7 +41,7 @@ sub fetch_by_dbID {
 	 throw("Id must be entered to fetch a ContigLock object");
   }
   my ($obj) = $self->_generic_sql_fetch("where contig_lock_id = ? ", $id);
-  return $obj;
+  return $obj->[0];
 }
 
 sub fetch_by_contig_id {
@@ -49,7 +49,7 @@ sub fetch_by_contig_id {
   throw("Contig seq_region_id must be entered to fetch a ContigLock object")
 	 unless $id;
   my ($obj) = $self->_generic_sql_fetch("where seq_region_id = ? ", $id);
-  return $obj;
+  return $obj->[0];
 }
 
 
@@ -57,8 +57,8 @@ sub list_by_author {
   my( $self, $auth ) = @_;
   throw("Author must be entered to fetch a ContigLock object")
 	 unless $auth;
-  my @locks = $self->_generic_sql_fetch("where author_id = ? ", $auth->dbID);
-  return @locks;
+  my $locks = $self->_generic_sql_fetch("where author_id = ? ", $auth->dbID);
+  return $locks;
 }
 
 
@@ -80,7 +80,7 @@ sub store {
   $authad->store($contig_lock->author);
   my $sth = $self->prepare(q{
         INSERT INTO contig_lock( contig_lock_id
-              , contig_id
+              , seq_region_id
               , author_id
               , timestamp
               , hostname)

@@ -201,7 +201,6 @@ sub chr_start_end_from_contig {
     my $chr_name  = $ctg->[0]->chromosome;
     my $start     = $ctg->[0]->chr_start;
     my $end       = $ctg->[$#$ctg]->chr_end;
-    
     return($chr_name, $start, $end);
 }
 
@@ -704,7 +703,7 @@ sub lock_region_for_contig_from_Dataset{
             'hostname' => $self->client_hostname,
             'dataset'  => $dataset->name,
             'type'     => $ss->name,
-            'chr'      => $chr_name,
+            'name'      => $chr_name,
             'start'    => $start,
             'end'      => $end,
             'pipehead' => $dataset->HEADCODE(),
