@@ -12,7 +12,7 @@ my ($user, $new_dir, $new_tag) = @ARGV;
 
 # ----------------------------------------------------------------------
 
-my $biolocation = '/nfs/team71/analysis/lg4/work/distrib';
+my $biolocation = '/nfs/disk100/humpub/data/dist';
 
 my $method = 'checkout'; # ||'export'
 
