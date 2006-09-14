@@ -391,8 +391,8 @@ sub check_nmd {
     eval{
       $pep_str=$lexon->peptide($trans)->seq;
     };
-    if(@$){
-      print STDERR "ERROR: $tsi $tn $gsi\n".@$;
+    if($@){
+      print STDERR "ERROR: $tsi $tn $gsi\n".$@;
     }
     if($pep_str eq ''){
       # only process further if last exon has no translation at all
