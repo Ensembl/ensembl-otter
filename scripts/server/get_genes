@@ -47,15 +47,15 @@ if($mdba) {
     my $ga_on_mapper = $mdba->get_GeneAdaptor();
 
     foreach my $segment (@$proj_segments_on_mapper) {
-        my $projected_slice = $segment->to_Slice();
+        my $projected_slice_on_mapper = $segment->to_Slice();
 
         my $target_slice_on_target = $sa_on_target->fetch_by_region(
-            $projected_slice->coord_system()->name(),
-            $projected_slice->seq_region_name(),
-            $projected_slice->start(),
-            $projected_slice->end(),
-            $projected_slice->strand(),
-            $projected_slice->coord_system()->version(),
+            $projected_slice_on_mapper->coord_system()->name(),
+            $projected_slice_on_mapper->seq_region_name(),
+            $projected_slice_on_mapper->start(),
+            $projected_slice_on_mapper->end(),
+            $projected_slice_on_mapper->strand(),
+            $projected_slice_on_mapper->coord_system()->version(),
         );
 
             # third parameter of $slice->get_all_Genes() helps preventing lazy-loading of transcripts
@@ -63,8 +63,8 @@ if($mdba) {
         server_log('***** : '.scalar(@$target_genes_on_target_segment).' found on a slice');
 
         foreach my $target_gene (@$target_genes_on_target_segment) {
-            server_log('ga is a '.ref($ga_on_mapper));
             $target_gene->adaptor($ga_on_mapper);
+            $target_gene->slice($projected_slice_on_mapper);
             push @$genes, $target_gene->transform($cs, $csver);
         }
     }
