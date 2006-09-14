@@ -44,6 +44,7 @@ if($mdba) {
     my $proj_segments_on_mapper = $original_slice_on_mapper->project( $cs, $sdba_asm );
 
     my $sa_on_target = $sdba->get_SliceAdaptor();
+    my $ga_on_mapper = $mdba->get_GeneAdaptor();
 
     foreach my $segment (@$proj_segments_on_mapper) {
         my $projected_slice = $segment->to_Slice();
@@ -62,8 +63,8 @@ if($mdba) {
         server_log('***** : '.scalar(@$target_genes_on_target_segment).' found on a slice');
 
         foreach my $target_gene (@$target_genes_on_target_segment) {
-            server_log('mdba is a '.ref($mdba));
-            $target_gene->adaptor($mdba);
+            server_log('ga is a '.ref($ga_on_mapper));
+            $target_gene->adaptor($ga_on_mapper);
             push @$genes, $target_gene->transform($cs, $csver);
         }
     }
