@@ -6,6 +6,7 @@ use strict;
 use Getopt::Long 'GetOptions';
 use Bio::Otter::Lace::Defaults;
 use Bio::Seq;
+use Bio::EnsEMBL::Intron;
 
 $| = 1;
 
@@ -241,7 +242,7 @@ sub check_start_end {
   }
   if($cdna ne $cdna2 && length($utr5)>0){
     # should never get this error
-    print "ERROR: $tsi: cDNA truncated but not aligned with start".
+    print STDERR "ERROR: $tsi: cDNA truncated but not aligned with start".
 	" of mRNA: $cdna, $mrna\n";
   }
   
@@ -359,6 +360,14 @@ sub check_nmd {
   my $tn=$transcript_info->name;
   my $tc=$transcript_info->class->name;
 
+  my $flag_exception;
+  foreach my $remark ($trans->transcript_info->remark) {
+    my $text = $remark->remark;
+    if($text=~/Annotation_remark- NMD_exception/i){
+      $flag_exception=1;
+    }
+  }
+
   my $gid=$gene->stable_id;
 
   my $flag_nmd;
@@ -381,46 +390,72 @@ sub check_nmd {
     my $pep_str = $lexon->peptide($trans)->seq;
     if($pep_str eq ''){
       # only process further if last exon has no translation at all
-      # last but one exon
+      # last-1 exon
       my $l2exon=pop @exons;
+
+      # get length of last intron
+      my $ilen=0;
+      eval{
+	my $intron = new Bio::EnsEMBL::Intron($l2exon, $lexon);
+	$ilen=$intron->end - $intron->start + 1;
+      };
+      if($@){
+	print STDERR "ERR: $tsi ($tn) $gid: exons on different slices\n";
+      }
+
       my $pep_str = $l2exon->peptide($trans)->seq;
+      # use $enum to allow processing of both e-1 and e-2 exons
+      my $enum;
       if($pep_str eq ''){
-	# if last exon has no translation, must be NMD
+	# if last-1 exon has no translation, must be NMD
 	$flag_nmd='whole exon';
+	$enum=-2;
+	# actually last but 2 exon
+	$l2exon=pop @exons;
       }else{
 	# get full sequence of transcript including this exon
 	# but excluding last
-	push(@exons,$l2exon);
-	my $eseq;
-	foreach my $exon (@exons){
-	  $eseq.=$exon->seq->seq;
+	$enum=-1;
+      }
+      push(@exons,$l2exon);
+
+      # get length of exon
+      my $elen=$l2exon->end - $l2exon->start +1;
+
+      my $eseq;
+      foreach my $exon (@exons){
+	$eseq.=$exon->seq->seq;
+      }
+      # get transcript sequence
+      my $cds=$trans->translateable_seq;
+      # strip off leading N's
+      if($cds=~/^N{1,2}(.*)/){
+	$cds=$1;
+      }
+      # compare cds with transcript to get length to exon boundary
+      if($eseq=~/$cds(.*)/){
+	my $leseq=length($1);
+	# write distance for all cases for analysis
+	if($stat){
+	  print OUT6 "$leseq\t$tsi\t$tn\t$gid\t$enum\t$ilen\t$elen\n";
 	}
-	# get transcript sequence
-	my $cds=$trans->translateable_seq;
-	# strip off leading N's
-	if($cds=~/^N{1,2}(.*)/){
-	  $cds=$1;
+	# only flag as NMD if considering -1 exon
+	if($leseq>50 && $enum==-1){
+	  $flag_nmd="$leseq bases from spice";
 	}
-	# compare cds with transcript to get length to exon boundary
-	if($eseq=~/$cds(.*)/){
-	  my $leseq=length($1);
-	  # write distance for all cases for analysis
-	  if($stat){
-	    print OUT6 "$leseq\t$tsi\t$tn\t$gid\n";
-	  }
-	  if($leseq>50){
-	    $flag_nmd="$leseq bases from spice";
-	  }
-	}else{
-	  print "ERR: translation not in transcript:\n $eseq\n $cds\n";
-	  exit 0;
-	}
+      }else{
+	print "ERR: translation not in transcript:\n $eseq\n $cds\n";
+	exit 0;
       }
     }
   }
 
   if($flag_nmd){
-    $out.=" ERR2: appears NMD ($flag_nmd), but labelled as $tc; ";
+    if($flag_exception){
+      $out.=" INFO: annotated as exception to NMD rule ($flag_nmd): labelled as $tc; ";
+    }else{
+      $out.=" ERR2: appears NMD ($flag_nmd), but labelled as $tc; ";
+    }
   }
 
   if($out){
