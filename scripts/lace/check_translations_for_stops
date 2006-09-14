@@ -387,7 +387,14 @@ sub check_nmd {
 
     # last exon
     my $lexon=pop @exons;
-    my $pep_str = $lexon->peptide($trans)->seq;
+    my $pep_str;
+    eval{
+      $pep_str=$lexon->peptide($trans)->seq;
+    };
+    if(@$){
+      print @$;
+      print "FATAL error: $tsi $tn $gsi\n";
+    }
     if($pep_str eq ''){
       # only process further if last exon has no translation at all
       # last-1 exon
