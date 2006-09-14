@@ -62,6 +62,7 @@ if($mdba) {
         server_log('***** : '.scalar(@$target_genes_on_target_segment).' found on a slice');
 
         foreach my $target_gene (@$target_genes_on_target_segment) {
+            server_log('mdba is a '.ref($mdba));
             $target_gene->adaptor($mdba);
             push @$genes, $target_gene->transform($cs, $csver);
         }
