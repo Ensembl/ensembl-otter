@@ -18,6 +18,8 @@ my $sq = Bio::Otter::ServerQuery->new('dataset',
     'metakey','analysis','transcript_analyses');
 set_nph($sq);
 
+my $cs       = $sq->getarg('cs')      || 'chromosome';
+my $csver    = $sq->getarg('csver')   || undef;
 my $analysis = $sq->getarg('analysis');
 my $metakey  = $sq->getarg('metakey') || ''; # defaults to pipeline
 my $transcript_analyses = $sq->getarg('transcript_analyses') || '';
@@ -31,15 +33,15 @@ my $sdba = odba_to_sdba($sq, $odba, $pipehead, $metakey);
 
 my ($mdba, $sdba_asm) = get_mapper_dba($sq, $odba, $sdba, $pipehead);
 
-my $satellite_slices = [];
+my $genes = [];
 
 if($mdba) {
-    server_log("Assembly mapping not implemented yet");
-    send_response($sq, '', 1);
-    exit(0);
+#    server_log("Assembly mapping not implemented yet");
+#    send_response($sq, '', 1);
+#    exit(0);
 
     my $local_slice   = get_slice($sq, $mdba, $pipehead);
-    my $proj_segments = $local_slice->project( 'chromosome', $sdba_asm );
+    my $proj_segments = $local_slice->project( $cs, $sdba_asm );
 
     my $sa = $sdba->get_SliceAdaptor();
 
@@ -55,14 +57,15 @@ if($mdba) {
             $projected_slice->coord_system()->version(),
         );
 
-        push @$satellite_slices, $foreign_slice;
+        foreach $foreign_gene (@{ $foreign_slice->get_all_Genes($analysis) }) {
+            push @$genes, $foreign_gene->transform($cs, $csver);
+        }
     }
 
 } else {
-    $satellite_slices = [ get_slice($sq, $sdba, $pipehead) ];
+    $original_slice = get_slice($sq, $sdba, $pipehead);
+    $genes = $original_slice->get_all_Genes($analysis);
 }
-
-my $genes = [ map { @{$_->get_all_Genes($analysis)} } @$satellite_slices ];
 
 server_log("Total of ".scalar(@$genes)." '$analysis' genes found");
 
