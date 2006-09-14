@@ -54,7 +54,7 @@ my $sql = $pipehead
            sn.note
       FROM }
 .($asm_type ? qq{ assembly asm, } : '' )
-.qq{       sequence_note s,
+.qq{       sequence_note sn,
            contig ctg,
            author aut
      WHERE }
