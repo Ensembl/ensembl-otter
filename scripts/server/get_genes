@@ -59,7 +59,7 @@ if($mdba) {
 
             # third parameter of $slice->get_all_Genes() helps preventing lazy-loading of transcripts
         my $target_genes_on_target_segment = $target_slice_on_target->get_all_Genes($analysis, undef, 1);
-        # server_log('***** : '.scalar(@$target_genes_on_target_segment).' found on a slice');
+        server_log('***** : '.scalar(@$target_genes_on_target_segment).' found on a slice');
 
         foreach my $target_gene (@$target_genes_on_target_segment) {
             $target_gene->adaptor($mdba);
@@ -72,7 +72,7 @@ if($mdba) {
     $genes = $original_slice->get_all_Genes($analysis);
 }
 
-server_log("Total of ".scalar(@$genes)." '$analysis' genes found");
+server_log("Total of ".scalar(@$genes)." '$analysis' genes sent");
 
 my $output_string = '';
 
