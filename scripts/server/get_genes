@@ -40,15 +40,15 @@ if($mdba) {
 #    send_response($sq, '', 1);
 #    exit(0);
 
-    my $local_slice   = get_slice($sq, $mdba, $pipehead);
-    my $proj_segments = $local_slice->project( $cs, $sdba_asm );
+    my $original_slice_on_mapper = get_slice($sq, $mdba, $pipehead);
+    my $proj_segments_on_mapper = $original_slice_on_mapper->project( $cs, $sdba_asm );
 
-    my $sa = $sdba->get_SliceAdaptor();
+    my $sa_on_target = $sdba->get_SliceAdaptor();
 
-    foreach my $segment (@$proj_segments) {
+    foreach my $segment (@$proj_segments_on_mapper) {
         my $projected_slice = $segment->to_Slice();
 
-        my $foreign_slice = $sa->fetch_by_region(
+        my $target_slice_on_target = $sa_on_target->fetch_by_region(
             $projected_slice->coord_system()->name(),
             $projected_slice->seq_region_name(),
             $projected_slice->start(),
@@ -57,11 +57,13 @@ if($mdba) {
             $projected_slice->coord_system()->version(),
         );
 
-        my $foreign_genes = $foreign_slice->get_all_Genes($analysis);
-        server_log('***** : '.scalar(@$foreign_genes).' found on a slice');
+            # third parameter of $slice->get_all_Genes() helps preventing lazy-loading of transcripts
+        my $target_genes_on_target_segment = $target_slice_on_target->get_all_Genes($analysis, undef, 1);
+        # server_log('***** : '.scalar(@$target_genes_on_target_segment).' found on a slice');
 
-        foreach my $foreign_gene (@$foreign_genes) {
-            push @$genes, $foreign_gene->transform($cs, $csver);
+        foreach my $target_gene (@$target_genes_on_target_segment) {
+            $target_gene->adaptor($mdba);
+            push @$genes, $target_gene->transform($cs, $csver);
         }
     }
 
