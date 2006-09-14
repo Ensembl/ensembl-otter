@@ -57,7 +57,10 @@ if($mdba) {
             $projected_slice->coord_system()->version(),
         );
 
-        foreach my $foreign_gene (@{ $foreign_slice->get_all_Genes($analysis) }) {
+        my $foreign_genes = $foreign_slice->get_all_Genes($analysis);
+        server_log('***** : '.scalar(@$foreign_genes).' found on a slice');
+
+        foreach my $foreign_gene (@$foreign_genes) {
             push @$genes, $foreign_gene->transform($cs, $csver);
         }
     }
