@@ -57,13 +57,13 @@ if($mdba) {
             $projected_slice->coord_system()->version(),
         );
 
-        foreach $foreign_gene (@{ $foreign_slice->get_all_Genes($analysis) }) {
+        foreach my $foreign_gene (@{ $foreign_slice->get_all_Genes($analysis) }) {
             push @$genes, $foreign_gene->transform($cs, $csver);
         }
     }
 
 } else {
-    $original_slice = get_slice($sq, $sdba, $pipehead);
+    my $original_slice = get_slice($sq, $sdba, $pipehead);
     $genes = $original_slice->get_all_Genes($analysis);
 }
 
