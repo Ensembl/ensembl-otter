@@ -368,7 +368,7 @@ sub check_nmd {
     }
   }
 
-  my $gid=$gene->stable_id;
+  my $gsi=$gene->stable_id;
 
   my $flag_nmd;
 
@@ -392,8 +392,7 @@ sub check_nmd {
       $pep_str=$lexon->peptide($trans)->seq;
     };
     if(@$){
-      print @$;
-      print "FATAL error: $tsi $tn $gsi\n";
+      print STDERR "ERROR: $tsi $tn $gsi\n".@$;
     }
     if($pep_str eq ''){
       # only process further if last exon has no translation at all
@@ -407,7 +406,7 @@ sub check_nmd {
 	$ilen=$intron->end - $intron->start + 1;
       };
       if($@){
-	print STDERR "ERR: $tsi ($tn) $gid: exons on different slices\n";
+	print STDERR "ERR: $tsi ($tn) $gsi: exons on different slices\n";
       }
 
       my $pep_str = $l2exon->peptide($trans)->seq;
@@ -444,7 +443,7 @@ sub check_nmd {
 	my $leseq=length($1);
 	# write distance for all cases for analysis
 	if($stat){
-	  print OUT6 "$leseq\t$tsi\t$tn\t$gid\t$enum\t$ilen\t$elen\n";
+	  print OUT6 "$leseq\t$tsi\t$tn\t$gsi\t$enum\t$ilen\t$elen\n";
 	}
 	# only flag as NMD if considering -1 exon
 	if($leseq>50 && $enum==-1){
@@ -466,7 +465,7 @@ sub check_nmd {
   }
 
   if($out){
-    $out="$tsi ($tn) [$gid]: $out\n";
+    $out="$tsi ($tn) [$gsi]: $out\n";
     $$rnnmd++;
   }else{
     $out='';
