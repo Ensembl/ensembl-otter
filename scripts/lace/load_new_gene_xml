@@ -11,10 +11,12 @@ use Data::Dumper;
     my ($dataset_name);
     my $author_name;
     my $author_email;
+    my $no_author;
     my $usage = sub { exec('perldoc', $0) };
     Bio::Otter::Lace::Defaults::do_getopt(
         'h|help'   => $usage,
         'dataset=s' => \$dataset_name,
+	'no_author' => \$no_author,
       ) ;
 
     if ( !defined $dataset_name ){
@@ -32,12 +34,14 @@ use Data::Dumper;
     my $analysis_aptr = $otter_dba->get_AnalysisAdaptor;
     my $analysis=$analysis_aptr->fetch_by_logic_name('otter');
     my $author;
-    my $aname=$cl->author();
-    my $aemail=$cl->email();
-    if ( defined $aname && defined $aemail){
-      $author=Bio::Otter::Author->new;
-      $author->email($aemail);
-      $author->name($aname);
+    if(!$no_author){
+      my $aname=$cl->author();
+      my $aemail=$cl->email();
+      if ( defined $aname && defined $aemail){
+	$author=Bio::Otter::Author->new;
+	$author->email($aemail);
+	$author->name($aname);
+      }
     }
 
     # NB: Ignores other products of XML_to_otter() such as features (polyA)
