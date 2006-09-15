@@ -63,8 +63,8 @@ if($mdba) {
         server_log('***** : '.scalar(@$target_genes_on_target_segment).' found on a slice');
 
         foreach my $target_gene (@$target_genes_on_target_segment) {
-            foreach my $target_transcript ($target_gene->get_all_Transcripts()) {
-                foreach my $target_exon ($target_transcript->get_all_Exons()) {
+            foreach my $target_transcript (@{ $target_gene->get_all_Transcripts() }) {
+                foreach my $target_exon (@{ $target_transcript->get_all_Exons() }) {
                     $target_exon->slice($projected_slice_on_mapper);
                 }
                 $target_transcript->slice($projected_slice_on_mapper);
