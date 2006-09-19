@@ -152,7 +152,7 @@ sub get_mapper_dba {
 
             # Currently we keep the necessary information in the pipeline_db_head.
             # Once otter_db is converted into new schema, we can keep this information there.
-        my $pdba = odba_to_sdba($sq, $odba, 1);
+        my $pdba = odba_to_sdba($sq, $odba, 1, ''); # ensures we get new pipeline
         my $pipe_slice = get_slice($sq, $pdba, 1);
         my ($equiv_asm) = map {$_->value()} @{ $pipe_slice->get_all_Attributes('equiv_asm') };
 
@@ -165,8 +165,14 @@ sub get_mapper_dba {
 
         } else { # guaranteed to differ!
 
-            my $mdba = odba_to_sdba($sq, $odba, 1, 'mapper_db');
-            return ($mdba, $sdb_def_asm);
+            if( @{$sdba->get_MetaContainer()->list_value_by_key('mapper_db')} ) { # if mapper is defined
+                my $mdba = odba_to_sdba($sq, $odba, 1, 'mapper_db');
+                return ($mdba, $sdb_def_asm);
+            } else {
+                server_log("No mapper_db defined in meta table => cannot map between assemblies => exiting");
+                send_response($sq, '', 1);
+                exit(0);
+            }
         }
 
     } elsif($pipehead) { # a head version of pipeline_db
