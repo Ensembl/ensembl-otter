@@ -36,10 +36,6 @@ my ($mdba, $sdba_asm) = get_mapper_dba($sq, $odba, $sdba, $pipehead);
 my $genes = [];
 
 if($mdba) {
-#    server_log("Assembly mapping not implemented yet");
-#    send_response($sq, '', 1);
-#    exit(0);
-
     my $original_slice_on_mapper = get_slice($sq, $mdba, $pipehead);
     my $proj_segments_on_mapper = $original_slice_on_mapper->project( $cs, $sdba_asm );
 
@@ -70,7 +66,6 @@ if($mdba) {
                 $target_transcript->slice($projected_slice_on_mapper);
             }
             $target_gene->slice($projected_slice_on_mapper);
-            #$target_gene->adaptor($ga_on_mapper);
             push @$genes, $target_gene->transform($cs, $csver);
         }
     }
