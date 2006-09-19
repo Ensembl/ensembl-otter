@@ -165,7 +165,7 @@ sub get_mapper_dba {
 
         } else { # guaranteed to differ!
 
-            if( @{$sdba->get_MetaContainer()->list_value_by_key('mapper_db')} ) { # if mapper is defined
+            if( @{$odba->get_MetaContainer()->list_value_by_key('mapper_db')} ) { # if mapper is defined
                 my $mdba = odba_to_sdba($sq, $odba, 1, 'mapper_db');
                 return ($mdba, $sdb_def_asm);
             } else {
