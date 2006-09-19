@@ -5,38 +5,43 @@
 
 if(scalar(@ARGV)<2) {
 	print STDERR "usage:\n";
-	print STDERR "\t$0 your_CVS_username new_directory [humpub-release-NN]\n";
+	print STDERR "\t$0 your_CVS_username new_directory [humpub-release-NN [branch-ensembl-MM]]\n";
 	exit 0;
 }
-my ($user, $new_dir, $new_tag) = @ARGV;
+my ($user, $new_dir, $otter_tag, $ensembl_tag) = @ARGV;
 
 # ----------------------------------------------------------------------
 
 my $method = 'checkout'; # || 'export'
-my $tagfile = 'CVS_TAG';
+my $otter_tagfile = 'CVS_TAG_otter';
+my $ensembl_tagfile = 'CVS_TAG_ensembl';
 
-my $biolocation = '/nfs/team71/analysis/lg4/work/distrib';
+my $biolocation = '/nfs/disk100/humpub/data/dist';
 
 my @cvs_locations = (
-	[":ext:${user}\@cvs.sanger.ac.uk:/nfs/ensembl/cvsroot", $method, '-r', 'branch-ensembl-19', 'ensembl'],
-	[":ext:${user}\@cvs.sanger.ac.uk:/nfs/ensembl/cvsroot", $method, (defined($new_tag)?('-r', $new_tag):()), 'ensembl-otter' ],
-	[":ext:${user}\@cvs.sanger.ac.uk:/nfs/ensembl/cvsroot", $method, '-d', 'ensembl_head', 'ensembl'],
+	[":ext:${user}\@cvs.sanger.ac.uk:/cvsroot/ensembl", $method,
+		'-r', 'branch-ensembl-19', 'ensembl'],
+
+	[":ext:${user}\@cvs.sanger.ac.uk:/cvsroot/ensembl", $method,
+		(defined($otter_tag)?('-r', $otter_tag):()), 'ensembl-otter' ],
+
+	[":ext:${user}\@cvs.sanger.ac.uk:/cvsroot/ensembl", $method,
+		(defined($ensembl_tag)?('-r', $ensembl_tag):()), '-d', 'ensembl_head', 'ensembl'],
 );
 
 # ----------------------------------------------------------------------
 
 mkdir($new_dir);
 chdir($new_dir);
-$new_tag ||= 'HEAD';
-system("echo $new_tag > $tagfile");
+$otter_tag ||= 'HEAD';
+system("echo $otter_tag > $otter_tagfile");
+system("echo $ensembl_tag > $ensembl_tagfile");
 
 foreach my $cvs_location (@cvs_locations) {
-    my @cvscmd = ('cvs', '-d', @$cvs_location);
-    print "\nRunning:\n\t@cvscmd\n";
 	if($cvs_location->[0]=~/\@/) {
 		print "\nPlease enter your CVS password below\n";
 	}
-	system(@cvscmd);
+	system('cvs', '-d', @$cvs_location);
 }
 
 for my $biodir ('bioperl-0.7.2') {
@@ -49,4 +54,7 @@ for my $biodir ('bioperl-0.7.2') {
 system('touch', '.ensemblapi_no_version_check');
 
 system('chmod -R g+w *');
+
+chdir('ensembl-otter/modules');
+system('ln -s ../conf/OtterDefs.pm');
 

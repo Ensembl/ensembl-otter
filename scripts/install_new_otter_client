@@ -12,7 +12,9 @@ my ($user, $new_dir, $new_tag) = @ARGV;
 
 # ----------------------------------------------------------------------
 
-my $biolocation = '/nfs/disk100/humpub/data/dist';
+my $gzlocation = '/nfs/disk100/humpub/data/dist';
+
+my @gzpacks = ('bioperl-0.7.2', 'bioperl-1.2.3-patched', 'biodas-1.02', 'perl');
 
 my $method = 'checkout'; # ||'export'
 
@@ -20,11 +22,11 @@ my %mod2location = (
 	'ace_skeleton'     => '/nfs/humace2/CVS_master',
 	'PerlModules'      => '/nfs/humace2/CVS_master',
 	'tk'               => '/nfs/humace2/CVS_master',
-	'ensembl-ace'      => ":ext:${user}\@cvs.sanger.ac.uk:/nfs/ensembl/cvsroot",
-	'ensembl-otter'    => ":ext:${user}\@cvs.sanger.ac.uk:/nfs/ensembl/cvsroot",
+	'ensembl-ace'      => ":ext:${user}\@cvs.sanger.ac.uk:/cvsroot/ensembl",
+	'ensembl-otter'    => ":ext:${user}\@cvs.sanger.ac.uk:/cvsroot/ensembl",
 
-	'ensembl'          => ":ext:${user}\@cvs.sanger.ac.uk:/nfs/ensembl/cvsroot",
-	'ensembl-pipeline' => ":ext:${user}\@cvs.sanger.ac.uk:/nfs/ensembl/cvsroot",
+	'ensembl'          => ":ext:${user}\@cvs.sanger.ac.uk:/cvsroot/ensembl",
+	'ensembl-pipeline' => ":ext:${user}\@cvs.sanger.ac.uk:/cvsroot/ensembl",
 );
 
 my %mod2tag = (
@@ -51,17 +53,30 @@ foreach my $mod (keys %mod2location) {
 $new_tag ||= 'HEAD';
 system("echo $new_tag > $tagfile");
 
-system('cp', (map { 'ace_skeleton/'.$_ } ('methods.ace', 'otter_config', 'newpipe_otter_config')), '.');
+system('cp', (map { 'ace_skeleton/'.$_ } ('methods.ace', 'otter_config', 'oldpipe_otter_config')), '.');
 chdir('ace_skeleton');
 system('tar', '-cvf', '../lace_acedb.tar', 'database', 'wgf', 'wscripts', 'wspec');
 chdir('..');
 
-for my $biodir ('bioperl-0.7.2', 'bioperl-1.2.3-patched', 'biodas-1.02') {
-    system('cp', $biolocation.'/'.$biodir.'.tar.gz', '.');
+for my $biodir (@gzpacks) {
+    system('cp', $gzlocation.'/'.$biodir.'.tar.gz', '.');
     system('gunzip', $biodir.'.tar.gz');
     system('tar', '-xvf', $biodir.'.tar');
     system('rm', $biodir.'.tar');
 }
 
+print STDERR "\nSetting the file permissions...\n";
 system('chmod -R g+w *');
+
+# now, the binaries:
+for my $dir ('bin', 'bin/LINUXbin', 'bin/MACOSXbin') {
+    system('mkdir', $dir);
+}
+
+print STDERR "\nCopying the binaries...\n";
+# system("cp /nfs/disk100/acedb/RELEASE.DEVELOPMENT/bin.ALPHA_5/* bin/OSFbin/");
+# system("cp /nfs/disk100/acedb/RELEASE.DEVELOPMENT/bin.LINUX_4/* bin/LINUXbin/");
+# system("cp /nfs/disk100/acedb/RELEASE.DEVELOPMENT/bin.DARWIN_4/* bin/MACOSXbin/");
+
+system("cp /nfs/team71/acedb/zmap/BIN.DEVELOPMENT/LINUX/bin/* bin/LINUXbin/");
 
