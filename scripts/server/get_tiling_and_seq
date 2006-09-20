@@ -43,7 +43,8 @@ if($pipehead) {
             $proj_slice->start(),
             $proj_slice->end(),
             $proj_slice->strand(),
-            $proj_slice->length(),
+            $proj_slice->seq_region_length(),
+            $proj_slice->seq_region_name(),
             $proj_slice->name(),
             "\n"
         );
