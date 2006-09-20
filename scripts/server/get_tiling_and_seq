@@ -32,6 +32,9 @@ my $slice = get_slice($sq, $sdba, $pipehead);
 my $output_string = '';
 
 if($pipehead) {
+
+    my $attribute_adaptor = $sdba->get_AttributeAdaptor();
+
     foreach my $tile (@{ $slice->project('clone') }) {
 
         my $proj_slice = $tile->to_Slice();
