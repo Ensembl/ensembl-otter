@@ -35,9 +35,29 @@ if($pipehead) {
     foreach my $tile (@{ $slice->project('clone') }) {
 
         my $proj_slice = $tile->to_Slice();
-        my $underlying_slice = $proj_slice->seq_region_Slice();
+        my $clone = $proj_slice->seq_region_Slice();
+
+        my ($embl_acc, $embl_version, $intl_clone_name);
+
+        for my $attrib (@{ $attribute_adaptor->fetch_all_by_Slice( $clone ) }) {
+            my ($code, $value) = ($attrib->code(), $attrib->value());
+            if($code eq 'embl_acc') {
+                $embl_acc  = $value;
+            } elsif($code eq 'embl_version') {
+                $embl_version  = $value;
+            } elsif($code eq 'intl_clone_name') {
+                $intl_clone_name  = $value;
+            }
+        }
+
+        $intl_clone_name ||= $clone->seq_region_name(); # if not defined
 
         $output_string .= join("\t",
+
+            $embl_acc,
+            $embl_version,
+            $intl_clone_name,
+
             $proj_slice->seq_region_name(),
             $proj_slice->name(),
 
@@ -48,8 +68,8 @@ if($pipehead) {
             $proj_slice->end(),
             $proj_slice->strand(),
 
-            $underlying_slice->length(),
-            $underlying_slice->seq(),
+            $clone->length(),
+            $clone->seq(),
             "\n"
         );
     }
