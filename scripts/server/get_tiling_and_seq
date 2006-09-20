@@ -33,16 +33,17 @@ my $output_string = '';
 
 if($pipehead) {
     foreach my $tile (@{ $slice->project('clone') }) {
-        my $from_start = $tile->from_start();
-        my $from_end   = $tile->from_end();
+
         my $proj_slice = $tile->to_Slice();
 
         $output_string .= join("\t",
-            $from_start,
-            $from_end,
+            $tile->from_start(),
+            $tile->from_end(),
+
             $proj_slice->start(),
             $proj_slice->end(),
             $proj_slice->strand(),
+            $proj_slice->length(),
             $proj_slice->name(),
             "\n"
         );
