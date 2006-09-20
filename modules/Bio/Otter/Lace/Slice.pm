@@ -171,6 +171,8 @@ sub get_tiling_path_and_sequence {
     $self->{_tiling_path} = [];
     $self->{_tiling_path_dna} = $dna_wanted;
 
+    my $ds_headcode = $self->Client()->get_DataSet_by_name($self->dsname())->HEADCODE();
+
     my $response = $self->Client()->general_http_dialog(
         0,
         'GET',
@@ -178,7 +180,12 @@ sub get_tiling_path_and_sequence {
         {
             %{$self->toHash},
             'dnawanted' => $dna_wanted,
-            'pipehead'  => 0, # not to confuse the current server script
+            'metakey'   => '.',             # get the slice from Otter_db
+            'pipehead'  => $ds_headcode,    # API version of Otter_db must be set in species.dat
+            #
+            # If you want to get the tiling_path from Pipe_db,
+            # omit 'metakey' and set 'pipehead' from the value in otter_config
+            #
         },
         1,
     );
