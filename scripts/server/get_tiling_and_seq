@@ -19,41 +19,56 @@ $| = 1;
 
 my $sq = Bio::Otter::ServerQuery->new('dataset',
     'cs','csver','name','type','start','end','strand',
-    'dnawanted');
+    'dnawanted', 'metakey');
 set_nph($sq);
 
+my $metakey  = $sq->getarg('metakey') || ''; # defaults to pipeline
 my $dna_wanted = $sq->getarg('dnawanted') || 0;
 
 my $odba = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
-my $slice = get_slice($sq, $odba, 0); # temporarily we only support old schema
-
-my $tp = $slice->get_tiling_path;
+my $sdba = odba_to_sdba($sq, $odba, $pipehead, $metakey);
+my $slice = get_slice($sq, $sdba, $pipehead);
 
 my $output_string = '';
 
-foreach my $tile (@{ $slice->get_tiling_path }) {
-    if(my $clone = $tile->component_Seq->clone) {
+if($pipehead) {
+    foreach my $tile (@{ $slice->project('clone') }) {
+        my $from_start = $tile->from_start();
+        my $from_end   = $tile->from_end();
+        my $proj_slice = $tile->to_Slice();
+
         $output_string .= join("\t",
-            $clone->embl_id(),
-            $clone->embl_version(),
-            $clone->id(), # international clone name
-            $tile->component_Seq()->name(), # contig name
-
-            $tile->assembled_Seq()->chr_name(),
-            $tile->assembled_Seq()->assembly_type(),
-            $tile->assembled_start(),
-            $tile->assembled_end(),
-
-            $tile->component_start(),
-            $tile->component_end(),
-            $tile->component_ori(),
-            length($tile->component_Seq()->seq()),
-
-            $dna_wanted ? ($tile->component_Seq()->seq()) : (),
+            $from_start,
+            $from_end,
+            $proj_slice->name(),
             "\n"
         );
     }
-}
+} else {
+    foreach my $tile (@{ $slice->get_tiling_path }) {
+        if(my $clone = $tile->component_Seq->clone) {
+            $output_string .= join("\t",
+                $clone->embl_id(),
+                $clone->embl_version(),
+                $clone->id(), # international clone name
+                $tile->component_Seq()->name(), # contig name
+
+                $tile->assembled_Seq()->chr_name(),
+                $tile->assembled_Seq()->assembly_type(),
+                $tile->assembled_start(),
+                $tile->assembled_end(),
+
+                $tile->component_start(),
+                $tile->component_end(),
+                $tile->component_ori(),
+                length($tile->component_Seq()->seq()),
+
+                $dna_wanted ? ($tile->component_Seq()->seq()) : (),
+                "\n"
+            );
+        }
+    } # foreach $tile
+} # if($pipehead) else...
 
 send_response($sq, $output_string, 1);
 
