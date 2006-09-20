@@ -9,15 +9,13 @@ use Hum::AnaStatus::Sequence;
 
 use Bio::Otter::Lace::Defaults;
 use Bio::Otter::AnnotatedClone;
-
 use Bio::EnsEMBL::DBSQL::CloneAdaptor;
 
-use Term::ANSIColor;
 use Getopt::Long 'GetOptions';
 
 $| = 1;
 
-my ($dataset, $verbose, @sets, @clones, $clone_list, $check);
+my ($dataset, $verbose, $check);
 
 my $help = sub { exec('perldoc', $0) };
 
@@ -25,14 +23,11 @@ my $help = sub { exec('perldoc', $0) };
 Bio::Otter::Lace::Defaults::do_getopt(
 									  'ds|dataset=s' => \$dataset,
 									  'v|verbose'    => \$verbose,
-									  's|set=s@'     => \@sets,
-									  'c|clone=s@'   => \@clones,
-									  'clist=s'      => \$clone_list,
 									  'check'        => \$check,
 									  'h|help'       => $help,
 									 ) or $help->(); # plus default options
 
-$help->() unless ($dataset && (@sets || @clones || $clone_list) );
+$help->() unless ( $dataset );
 
 
 my $client       = Bio::Otter::Lace::Defaults::make_Client();
@@ -41,58 +36,17 @@ my $otter_db     = $dset->get_cached_DBAdaptor;
 
 {
   # first make sure new clones added by load_otter_ensembl are populated in the assembly_tagged_clone table
-  prepare_new_clones_for_assembly_tag($otter_db);
+  my $acc_sv_list = prepare_new_clones_for_assembly_tag($otter_db);
 
-  # hashref
-  my $atagCtgID_clnID = get_assembly_tagged_clones($otter_db);
+  if ( defined $acc_sv_list->[0] ){
 
+	# hashref
+	my $atagCtgID_clnID = get_assembly_tagged_clones($otter_db);
 
-  # options to populate assembly_tag table, see also POD
-  if ( @sets ) {
-
-	# when specifying -set all
-	my @tmp;
-    if ( $sets[0] eq "all" ){
-
-      warn "Fetching all assembly types\n";
-
-      my $sth = $otter_db->prepare(q{SELECT assembly_type FROM sequence_set where hide='N'});
-      $sth->execute;
-
-	  while ( my ($type) = $sth->fetchrow_array()) {
-		push (@tmp, $type);
-      }
-      $sth->finish;
-      @sets = @tmp;
-	  undef @tmp;
-    }
-
-    my $type;
-    foreach $type ( @sets ) {
-
-      warn "\nWorking on $type\n";
-
-      $otter_db->assembly_type($type); # replace the default sequence set setting
-      my $seqSet = $dset->get_SequenceSet_by_name($type);
-      my $clones = $dset->fetch_all_CloneSequences_for_SequenceSet($seqSet);
-
-      fetch_by_clone_obj($clones, $otter_db, $atagCtgID_clnID, $type);
-    }
+	fetch_by_clone_name($acc_sv_list, $otter_db, $atagCtgID_clnID);
   }
-
-  elsif ( @clones ) {
-    fetch_by_clone_name(\@clones, $otter_db, $atagCtgID_clnID);
-  }
-
-  elsif ( $clone_list ){
-    my $clones = [];
-    open(my $fh, $clone_list) || die $!;
-    while (<$fh>){
-      chomp;
-      push(@$clones, $_) if $_; # ignore empty lines
-    }
-
-    fetch_by_clone_name($clones, $otter_db, $atagCtgID_clnID);
+  else {
+	exit 1;
   }
 }
 
@@ -103,6 +57,28 @@ my $otter_db     = $dset->get_cached_DBAdaptor;
 sub prepare_new_clones_for_assembly_tag {
   my $otter_db = shift;
 
+  my $clone_info = $otter_db->prepare(q{
+										   SELECT clone_id, embl_acc, embl_version
+										   FROM clone order by embl_acc
+										  });
+
+  $clone_info->execute;
+
+  my $embl_acc_cloneId_ver = {};
+
+  while ( my ($clnId, $embl_acc, $ver) = $clone_info->fetchrow ){
+	$embl_acc_cloneId_ver->{$embl_acc}->{$ver} = $clnId;
+  }
+
+  my $cloneID_latestAC_ver = {};
+
+  foreach my $acc ( keys %$embl_acc_cloneId_ver ){
+	my @sorted_ver = sort {$a<=>$b} keys %{$embl_acc_cloneId_ver->{$acc}};
+
+	my $id = $embl_acc_cloneId_ver->{$acc}->{$sorted_ver[-1]};
+	$cloneID_latestAC_ver->{$id} = $acc . "." . $sorted_ver[-1];
+  }
+
   my $new_clones = $otter_db->prepare(q{
 										SELECT cl.clone_id
 										FROM clone cl
@@ -110,38 +86,61 @@ sub prepare_new_clones_for_assembly_tag {
 										ON cl.clone_id = at.clone_id
 										WHERE at.clone_id is NULL
 									   });
-  $new_clones->execute;
-  my $rows;
+  $new_clones->execute();
+
+  my @new_cloneIDs;
+  my $acc_sv_list = [];
 
   while ( my $cln_id = $new_clones->fetchrow ) {
-	$rows .= "($cln_id),";
+	if ( exists $cloneID_latestAC_ver->{$cln_id} ){
+	  push(@new_cloneIDs, "($cln_id)");
+	  push(@{$acc_sv_list}, $cloneID_latestAC_ver->{$cln_id});
+	}
   }
   $new_clones->finish;
 
-  if ( $rows ) {
-	$rows =~ s/,$//;
-	my $added;
-
-	$otter_db->begin_work;
-	eval {
-	  my $cln = $otter_db->prepare("INSERT INTO assembly_tagged_clone (clone_id) VALUES $rows");
-	  $cln->execute();
-	  $added = $cln->rows;
-	  $cln->finish;
-	};
-
-	unless ( $@ ){
-	  $otter_db->commit;
-	  warn "$added NEW clone ids added to assembly_tagged_clone table";
+  if ( $check ){
+	my $num;
+	if ( scalar @new_cloneIDs ){
+	  $num = scalar @new_cloneIDs;
 	}
 	else {
-	  $otter_db->rollback;
+	  $num = 0;
+	}
+	print "Found $num NEW clone ids added to assembly_tagged_clone table\n\n";
+	return $acc_sv_list;
+  }
+
+  unless ( $check ){
+	if ( @new_cloneIDs ) {
+	
+	  my $rows = join(',', @new_cloneIDs);
+	  my $added;
+
+	  $otter_db->begin_work;
+	  eval {
+		my $cln = $otter_db->prepare("INSERT INTO assembly_tagged_clone (clone_id) VALUES $rows");
+		$cln->execute();
+		$added = $cln->rows;
+		$cln->finish;
+		$otter_db->commit;
+	  };
+
+	  unless ( $@ ){
+		warn "$added NEW clone ids added to assembly_tagged_clone table";
+		return $acc_sv_list;
+	  }
+	  else {
+		$otter_db->rollback;
+	  }
+	}
+	else {
+	  warn "\nNothing new to update\n\n";
+	  exit 1;
 	}
   }
-  else {
-	warn "\nAll new clone ids added to assembly_tagged_clone table\n\n";
-  }
 }
+
 
 sub fetch_by_clone_name {
 
@@ -178,7 +177,7 @@ sub fetch_by_clone_obj {
       $version    = $obj->embl_version;
       $ctg_strand = get_contig_strand($ctg_id, $otter_db);
     }
-
+	# does only clones not yet assembly_tag tagged
     elsif ( ref($obj) eq "Bio::Otter::Lace::CloneSequence" && !exists $atagCtgID_clnID->{$obj->contig_id} ){
 
       $to_do = 1;
@@ -211,8 +210,10 @@ sub fetch_by_clone_obj {
 		$humace_file = "$dir/rawdata/$seq_name.humace.ace.gz";
 	  }
 
-	  print "INFO: $ctg_name - no acefile at $dir/rawdata/\n" if $verbose and !$humace_file;
-	  print "INFO: $ctg_name - $humace_file\n"                if $verbose and  $humace_file;
+	  if ( $verbose ){
+		print "INFO: $ctg_name - no acefile at $dir/rawdata/\n" if !$humace_file;
+		print "INFO: $ctg_name - $humace_file\n"                if  $humace_file;
+	  }
 
 	  push(@{$atagClone_acefile_info->{$ctg_name}}, $humace_file, $ctg_strand, $ctg_id) if $humace_file;
     }
@@ -455,14 +456,17 @@ sub store_and_update {
       for ( my $i = 0; $i < scalar @values; $i=$i+6 ) {
 
 		# column contig_end/tag_info can be null for tag_type = clone_left_end or clone_right_end
-		$values[$i+5] = '' if  $values[$i+5] eq "Null";
-		push(@rows, "('', $values[$i], $values[$i+1], $values[$i+2], $values[$i+3], '$values[$i+4]', '$values[$i+5]')");
+		$values[$i+5] = '' if $values[$i+5] eq "Null";
+		$values[$i+3] = 1  unless $values[$i+3]; # strand
+
+		push(@rows, "('', $values[$i], $values[$i+1], $values[$i+2], $values[$i+3], \"$values[$i+4]\", \"$values[$i+5]\")");
 		push(@ctg_ids, $values[$i]);
 	  }
 	}
 	my $rows = join(',', @rows);
+
 	my $atag = $otter_db->prepare(qq{
-									 INSERT IGNORE INTO assembly_tag
+									 REPLACE INTO assembly_tag
 									 (tag_id, contig_id, contig_start, contig_end, contig_strand, tag_type, tag_info)
 									 VALUES $rows
 									});
@@ -509,14 +513,6 @@ sub store_and_update {
 	printf(">Failed\n\n");
 	$otter_db->rollback;
   }
-}
-
-sub set_color {
-
-  my ($color, $info) = @_;
-
-  print color($color), "$info";
-  print color 'reset';
 }
 
 
