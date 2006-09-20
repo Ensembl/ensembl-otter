@@ -43,7 +43,6 @@ my $otter_db     = $dset->get_cached_DBAdaptor;
   # first make sure new clones added by load_otter_ensembl are populated in the assembly_tagged_clone table
   prepare_new_clones_for_assembly_tag($otter_db);
 
-
   # hashref
   my $atagCtgID_clnID = get_assembly_tagged_clones($otter_db);
 
@@ -57,7 +56,7 @@ my $otter_db     = $dset->get_cached_DBAdaptor;
 
       warn "Fetching all assembly types\n";
 
-      my $sth = $otter_db->prepare(q{SELECT assembly_type FROM sequence_set});
+      my $sth = $otter_db->prepare(q{SELECT assembly_type FROM sequence_set where hide='N'});
       $sth->execute;
 
 	  while ( my ($type) = $sth->fetchrow_array()) {
