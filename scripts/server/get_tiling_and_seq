@@ -22,6 +22,9 @@ my $sq = Bio::Otter::ServerQuery->new('dataset',
     'dnawanted', 'metakey');
 set_nph($sq);
 
+my $name     = $sq->getarg('name');
+my $type     = $sq->getarg('type');
+
 my $metakey  = $sq->getarg('metakey') || ''; # defaults to pipeline
 my $dna_wanted = $sq->getarg('dnawanted') || 0;
 
@@ -53,16 +56,20 @@ if($pipehead) {
             }
         }
 
-        $intl_clone_name ||= $clone->seq_region_name(); # if not defined
+        my $clone_name   = $clone->seq_region_name();
+        my $clone_length = $clone->length();
+        my $contig_name  = $clone_name.'.1.'.$clone_length; # assuming it always has the same structure
+
+        $intl_clone_name ||= $clone_name; # if not defined
 
         $output_string .= join("\t",
-
             $embl_acc,
             $embl_version,
             $intl_clone_name,
+            $contig_name,
 
-            $proj_slice->seq_region_name(),
-            $proj_slice->name(),
+            $name,
+            $type,
 
             $tile->from_start(),
             $tile->from_end(),
@@ -72,7 +79,8 @@ if($pipehead) {
             $proj_slice->strand(),
 
             $clone->length(),
-            $clone->seq(),
+
+            $dna_wanted ? ($clone->seq()) : (),
             "\n"
         );
     }
