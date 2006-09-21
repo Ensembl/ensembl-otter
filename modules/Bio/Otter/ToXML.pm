@@ -115,6 +115,10 @@ sub Bio::EnsEMBL::Transcript::toXMLstring {
     my $str  = emit_opening_tag('transcript', 2);
        $str .= emit_tagpair('stable_id', $transcript->stable_id(), 4);
 
+    for my $dbentry (@{$transcript->get_all_DBEntries}) {
+       $str .= $dbentry->toXMLstring();
+    }
+
     if($transcript->can('transcript_info')) {   # do we have an AnnotatedTranscript?
             # was it originally a Transcript re-blessed into AnnotatedTranscript?
         if(my $tinfo = $transcript->transcript_info()) {
