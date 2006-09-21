@@ -38,16 +38,11 @@ my $otter_db     = $dset->get_cached_DBAdaptor;
   # first make sure new clones added by load_otter_ensembl are populated in the assembly_tagged_clone table
   my $acc_sv_list = prepare_new_clones_for_assembly_tag($otter_db);
 
-  if ( defined $acc_sv_list->[0] ){
+  # hashref
+  my $atagCtgID_clnID = get_assembly_tagged_clones($otter_db);
 
-	# hashref
-	my $atagCtgID_clnID = get_assembly_tagged_clones($otter_db);
+  fetch_by_clone_name($acc_sv_list, $otter_db, $atagCtgID_clnID);
 
-	fetch_by_clone_name($acc_sv_list, $otter_db, $atagCtgID_clnID);
-  }
-  else {
-	exit 1;
-  }
 }
 
 ###################################################################
@@ -107,8 +102,8 @@ sub prepare_new_clones_for_assembly_tag {
 	else {
 	  $num = 0;
 	}
-	print "Found $num NEW clone ids added to assembly_tagged_clone table\n\n";
-	return $acc_sv_list;
+	print "Found $num clones of newer version to update assembly_tag / assembly_tagged_clone tables.\n\n";
+	exit 1;
   }
 
   unless ( $check ){
@@ -224,12 +219,7 @@ sub fetch_by_clone_obj {
 
   my $new_tags =  scalar keys %$contig_atag_data;
 
-  # insert new data to assembly_tag table and update assembly_tagged_clone table
-  if ( $check ){
-	
-	print "\nFINISHED CHECKING - $new_tags contigs have new tags. nothing is written to database\n";
-  }
-  else {
+  unless ( $check ){
 	if ( $new_tags > 0 ){
 	  print "ABOUT TO STORE $new_tags NEW ASSEMBLY TAGS ...\n";
 	  store_and_update($contig_atag_data, $otter_db);
@@ -239,7 +229,6 @@ sub fetch_by_clone_obj {
 	}
   }
 }
-
 
 sub get_assembly_tagged_clones {
 
@@ -269,11 +258,11 @@ sub get_contig_strand {
 
   my ($ctg_id, $otter_db) = @_;
   my $ori = $otter_db->prepare(q{
-									SELECT e.contig_strand
-									FROM exon e, contig c
-									WHERE c.contig_id = ?
-									AND c.contig_id = e.contig_id
-								   });
+								 SELECT e.contig_strand
+								 FROM exon e, contig c
+								 WHERE c.contig_id = ?
+								 AND c.contig_id = e.contig_id
+								});
   $ori->execute($ctg_id);
 
   my $strand = $ori->fetchrow;
@@ -308,7 +297,9 @@ sub parse_ace {
     while ( $line = <$fh> ){
 
       my $ctg_strand = $atagClone_acefile_info->{$ctg_name}->[1];
-      my ( $tag_type, $tag_start, $tag_end, $tag_info);
+	  $ctg_strand = 1 unless $ctg_strand; # default to 1 if info not available
+
+	  my ( $tag_type, $tag_start, $tag_end, $tag_info);
 
       # omit Type "Oligo"
 
@@ -451,7 +442,7 @@ sub store_and_update {
     foreach my $ctg_name ( keys %$ctg_atag_data ) {
 
       my @values = @{$ctg_atag_data->{$ctg_name}};
-	  warn "NEW assembly_tagged contig: $ctg_name (ctgid: $values[0])\n";
+	  warn "NEW assembly_tagged contig: $ctg_name (ctgid: $values[0])\n" if $verbose;
 
       for ( my $i = 0; $i < scalar @values; $i=$i+6 ) {
 
