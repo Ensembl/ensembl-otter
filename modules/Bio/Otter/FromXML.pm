@@ -288,7 +288,9 @@ sub build_Transcript {
                 # $transcript->version(1);
             }
         } elsif($kind eq 'o') {
-            if($tag eq 'exon') {
+            if($tag eq 'xref') {
+                $transcript->add_DBEntry($self->build_DBEntry());
+            } elsif($tag eq 'exon') {
                 $transcript->add_Exon($self->build_Exon());
             } elsif($tag eq 'translation') {
                 $transcript->translation($self->build_Translation($transcript));
