@@ -215,14 +215,6 @@ sub check_start_end {
     $valid_start=1;
   }
 
-  # 3. does the translation end in a valid stop
-  my $valid_stop=0;
-  if(length($cdna) % 3 == 0){
-    if($cdna=~/(TAG|TGA|TAA)$/){
-      $valid_stop=1;
-    }
-  }
-
   my $cdna2=$cdna;
   $cdna2=~s/^N+//;
   my $utr5='';
@@ -233,6 +225,17 @@ sub check_start_end {
   }else{
     # should never get this error
     print "ERROR: $tsi: cDNA not found in mRNA: $cdna, $mrna\n";
+  }
+
+  # 3. does the translation end in a valid stop
+  my $valid_stop=0;
+  if(length($cdna) % 3 == 0){
+    if($cdna=~/(TAG|TGA|TAA)$/){
+      $valid_stop=1;
+      # if not a valid end, are next 3 bp potentially valid?
+    }elsif($utr3=~/^(TAG|TGA|TAA)/){
+      $out.=' ERR31: offset STOP - shift 3bp into UTR for valid stop; ';
+    }
   }
 
   # 4. is translation start also start of transcript
