@@ -60,41 +60,39 @@ $| = 1;
 
     my $gene_id_list;
     if ($gene_stable_id) {
-        if (-e $gene_stable_id) {
-
-            # 'gene_stable_id' is a file
-            my $n = 0;
-            open(IN, $gene_stable_id) || die "cannot open $gene_stable_id";
-            while (<IN>) {
-                chomp;
-                push(@$gene_id_list, $gene_aptr->fetch_by_stable_id($_)->dbID);
-                $n++;
-            }
-            close(IN);
-            print STDERR "checking $n gene_stable_ids only\n";
-        }
-        else {
-            my $n = 0;
-            foreach my $gsi (split(/,/, $gene_stable_id)) {
-                if ($gsi =~ /T\d+/) {
-		  # API call does not support versions
-		  print "ERROR: must use gene_id\n";
-		  exit 0;
-                    # looks like a transcript_id
-                    push(@$gene_id_list,
-                        $gene_aptr->fetch_by_transcript_stable_id($gsi)->dbID);
-                }
-                else {
-                    push(@$gene_id_list,
-                        $gene_aptr->fetch_by_stable_id($gsi)->dbID);
-                }
-                $n++;
-            }
-            print STDERR "checking $n $gene_stable_id only\n";
-	    print join(',',@$gene_id_list)."\n";
-        }
-    }
-    elsif ($sequence_set) {
+      my @list;
+      if (-e $gene_stable_id) {
+	# 'gene_stable_id' is a file
+	open(IN, $gene_stable_id) || die "cannot open $gene_stable_id";
+	while (<IN>) {
+	  chomp;
+	  push(@list,$_);
+	}
+	close(IN);
+      } else {
+	@list=(split(/,/, $gene_stable_id));
+      }
+      my $n=0;
+      foreach my $gsi (@list) {
+	# convert transcript_id into gene_id
+	if ($gsi =~ /T\d+/) {
+	  my $g;
+	  eval{
+	    $g=$gene_aptr->fetch_by_transcript_stable_id($gsi);
+	  };
+	  next if ($@);
+	  my $gsi2=$g->stable_id;
+	  print STDERR "$gsi -> $gsi2\n";
+	  $gsi=$gsi2;
+	}
+	eval{
+	  push(@$gene_id_list, $gene_aptr->fetch_by_stable_id($gsi)->dbID);
+	  $n++;
+	};
+      }
+      print STDERR "checking ".scalar(@list)." valid gene_stable_ids out of $n\n".
+	  print join(',',@$gene_id_list)."\n";
+    } elsif ($sequence_set) {
         my $slice_aptr = $otter_db->get_SliceAdaptor;
         $otter_db->assembly_type($sequence_set);
 
@@ -229,6 +227,7 @@ sub check_start_end {
 
   # 3. does the translation end in a valid stop
   my $valid_stop=0;
+  my $out;
   if(length($cdna) % 3 == 0){
     if($cdna=~/(TAG|TGA|TAA)$/){
       $valid_stop=1;
@@ -256,7 +255,6 @@ sub check_start_end {
   }
 
   # look for inconsistencies:
-  my $out;
   if($valid_start){
     if($abutted_translation_start){
       $out.=' WARN11: valid start, but transcript and translation same length; ';
