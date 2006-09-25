@@ -72,7 +72,14 @@ if($mdba) {
 
 } else {
     my $original_slice = get_slice($sq, $sdba, $pipehead);
-    $genes = $original_slice->get_all_Genes($analysis);
+
+    # old EnsEMBL API used to send you all the genes if $analysis was not fetchable.
+    # This is NOT what we want!
+
+    my $ana_object = $sdba->get_AnalysisAdaptor()->fetch_by_logic_name($analysis);
+    if($ana_object) {
+        $genes = $original_slice->get_all_Genes($analysis);
+    }
 }
 
 server_log("Total of ".scalar(@$genes)." '$analysis' genes sent");
