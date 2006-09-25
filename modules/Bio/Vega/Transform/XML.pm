@@ -43,8 +43,8 @@ sub generate_SequenceSet{
   my $ss=$self->prettyprint('sequence_set');
   $ss->attribvals($self->generate_AssemblyType($slice));
   my $slice_projection = $slice->project('contig');
-  foreach my $seg (@$slice_projection) {
-	 $ss->attribobjs($self->generate_SequenceFragment($seg,$slice,$odb));
+  foreach my $contig_seg (@$slice_projection) {
+	 $ss->attribobjs($self->generate_SequenceFragment($contig_seg,$slice,$odb));
   }
   my $features=$slice->get_all_SimpleFeatures;
   $ss->attribobjs($self->generate_FeatureSet($features));
@@ -64,15 +64,12 @@ sub generate_AssemblyType{
 }
 
 sub generate_SequenceFragment{
-  my ($self,$seg,$slice,$odb)=@_;
+  my ($self,$contig_seg,$slice,$odb)=@_;
+  my $assembly_offset = $slice->start()-1;
   my $sf = $self->prettyprint('sequence_fragment');
-  my $contig_slice = $seg->to_Slice();
-  my $clone_slice;
-  my $clone_projection=$contig_slice->project('clone');
-  foreach my $s (@$clone_projection) {
-	 $clone_slice=$s->to_Slice;
-	 last;
-  }
+  my $contig_slice = $contig_seg->to_Slice();
+  my ($clone_seg) = @{ $contig_slice->project('clone') };
+  my $clone_slice = $clone_seg->to_Slice();
   my $chrs = $slice->get_all_Attributes('chr');
   my $chr_name;
   if ($chrs) {
@@ -113,18 +110,8 @@ sub generate_SequenceFragment{
   if ($contig_slice->seq_region_name){
 	 $sf->attribvals($self->prettyprint('id',$contig_slice->seq_region_name));
   }
-  if ($seg->from_start){
-	 $sf->attribvals($self->prettyprint('assembly_start',$seg->from_start));
-  }
-  else {
-	 throw("Missing assembly start, cannot generate xml:$seg");
-  }
-  if ($seg->from_end){
-	 $sf->attribvals($self->prettyprint('assembly_end',$seg->from_end));
-  }
-  else {
-	 throw("Missing assembly end, cannot generate xml:$seg");
-  }
+  $sf->attribvals($self->prettyprint('assembly_start',$contig_seg->from_start + $assembly_offset));
+  $sf->attribvals($self->prettyprint('assembly_end',  $contig_seg->from_end   + $assembly_offset));
   if ($contig_slice->strand){
 	 $sf->attribvals($self->prettyprint('fragment_ori',$contig_slice->strand));
   }
@@ -182,7 +169,18 @@ sub generate_Locus {
   }
   $g->attribvals($self->prettyprint('name',$gene_name));
   my $gene_biotype=$gene->biotype;
-  $g->attribvals($self->prettyprint('type',$gene_biotype));
+  my $gene_status=$gene->status;
+  my $gene_source=$gene->source;
+  my $type=$self->get_transcript_class(lc($gene_biotype),$gene_status);
+  unless ($type){
+	 $type=$gene_biotype;
+  }
+  my $source;
+  if ($gene_source ne 'havana'){
+	 $source=$gene_source;
+	 $type=$source.':'.$type;
+  }
+  $g->attribvals($self->prettyprint('type',$type));
   my $known=0;
   if ($gene->is_known){
 	 $known=1;
@@ -217,7 +215,6 @@ sub generate_Locus {
 		$g->attribvals($self->prettyprint('synonym',$syn->value));
 	 }
   }
-
   my $exons=$gene->get_all_Exons;
   my $coord_offset=$exons->[0]->slice->start-1;
   my $transcripts=$gene->get_all_Transcripts;
@@ -295,7 +292,13 @@ sub generate_Transcript{
   ##<type> tag will be removed
   ##don't know if <known> tag is necessary
   if ($tran->biotype && $tran->status){
+	 #my $transcript_class='';
 	 my $transcript_class=$self->get_transcript_class(lc($tran->biotype),$tran->status);
+	 unless ($transcript_class) {
+		if ($tran->biotype){
+		  $transcript_class=$tran->biotype;
+		}
+	 }
 	 if ($transcript_class){
 		$t->attribvals($self->prettyprint('transcript_class',$transcript_class));
 	 }

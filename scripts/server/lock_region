@@ -31,7 +31,7 @@ my $type    = $sq->getarg('type')     || error_exit($sq, "No assembly type enter
 my $start   = $sq->getarg('start')    || error_exit($sq, "No chromosome start coordinate entered");
 my $end     = $sq->getarg('end')      || error_exit($sq, "No chromosome end coordinate entered");
 my $cl_host = $sq->getarg('hostname') || $ENV{REMOTE_ADDR};
-#die "\n\ntype:$type start:$start end:$end chr:$chr\n\n";
+
 ####################################################################
 my $cb;
 if ($pipehead){
@@ -42,14 +42,8 @@ else {
 $cb->client_hostname($cl_host);
 }
 
-
 server_log("Getting slice [$chr] [$start] [$end]");
 my $slice = get_slice($sq, $odb, $pipehead);
-use Data::Dumper;
-#die Dumper($slice);
-#my $slice = $odb->get_SliceAdaptor->fetch_by_chr_start_end($chr,
- #                                        $start,
-#                                         $end);
 
 ####################################################################
 # Now actually do the locking
@@ -69,7 +63,6 @@ server_log("Obtained the locks.");
 
 my $xml_string;
 if ($pipehead){
-
   my $slices;
   push @$slices,$slice;
   $xml_string = Bio::Vega::Transform::XML->generate_OtterXML($slices,$odb,0);

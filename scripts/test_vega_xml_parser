@@ -49,8 +49,12 @@ use Data::Dumper;
   if ($help || !defined ($dbhost) || !defined($dbport) || !defined($dbname) || !defined($dbuser) || !defined($dbpass) ||!defined($xmlfile) ) {
     exec('perldoc', $0);
   }
+
+  ##create a parse and parse the xmlfile and create vega objects
   my $parser = Bio::Vega::Transform::Otter->new;
   $parser->parsefile($xmlfile);
+
+  ##create a db handle
   my $db = Bio::Vega::DBSQL::DBAdaptor->new(
 														  -dbname => $dbname,
 														  -host   => $dbhost,
@@ -58,14 +62,23 @@ use Data::Dumper;
 														  -port   => $dbport,
 														  -pass   => $dbpass,
 														 );
-  ##Let begin a transaction and do all the database changes within a trnsaction
+
+
   eval{
+  ##Let begin a transaction and do all the database changes within a transaction
+
 	 $db->begin_work();
 
 	 ##Uncomment the following to load a new Assembly or to load into an empty database
 	 ##This loads ContigInfo and its attributes.Takes care of is_current(loads a new contiginfo object and a set of attributes for the
 	 ##new contiginfo, only if the contiginfo object has changed
-	 $parser->LoadAssemblySlices($db);
+	 eval {
+		$parser->LoadAssemblySlices($db);
+	 };
+	 if ($@){
+		$db->rollback;
+		die "problem with loading of Assembly\n$@\n";
+	 }
 
 	 ##Load genes,transcripts,translations,exons from XML - takes care of versioning
 	 ##if there is a change in gene and its components then the version is incremented otherwise, not
@@ -74,13 +87,13 @@ use Data::Dumper;
 	 foreach my $gene (@$genes){
 		$gene_adaptor->store($gene);
 	 }
-
 	 ##Load SimpleFeatures - deletes old features(features not in xml) and stores the current features in XML
 	 my $simple_features=$parser->get_SimpleFeatures;
 	 my $sfa=$db->get_SimpleFeatureAdaptor;
 	 my $chr_slice=$parser->get_ChromosomeSlice;
-	 my $new_slice=$parser->get_SliceId($chr_slice,$db);
-	 my $db_features=$sfa->fetch_all_by_Slice($new_slice,'Otter');
+	 # my $new_slice=$parser->get_SliceId($chr_slice,$db);
+	 my $new_slice=$parser->get_ChromosomeSliceDB($db);
+	 my $db_features=$sfa->fetch_all_by_Slice($new_slice);
 	 my ($delete,$save)=compare_feature_sets($db_features,$simple_features);
 	 foreach my $del_feat (@$delete){
 		$sfa->remove($del_feat);
@@ -89,31 +102,29 @@ use Data::Dumper;
 		$new_feat->slice($new_slice);
 		$sfa->store($new_feat);
 	 }
+	 ##Load AssemblyTag - deletes old tags(tags not in xml) and stores the current tags in the XML
+#	 my $assembly_tags = $parser->get_AssemblyTags;
+	# my $ata=$db->get_AssemblyTagAdaptor;
 
+	 #foreach my $at (@$assembly_tags){
+		#my $slice;
+		#if ($at->contig_id) {
+		 # $slice=$at->slice_by_contig_id;
+		#}
+		#if ($at->contig_name){
+		 # $slice=$at->slice_by_contig_name;
+		#}
+		#unless($slice) {
+		 # print STDERR "assembly tag does not have a slice attached and hence not stored in db\n";
+		  #next;
+		#}
+		#$ata->store($at);
+	 #}
 
 =head2 COMMENT
-	 ##Load AssemblyTag - deletes old tags(tags not in xml) and stores the current tags in the XML
-	 my $assembly_tags = $parser->get_AssemblyTags;
-	 my $ata=$db->get_AssemblyTagAdaptor;
-
-	 foreach my $at (@$assembly_tags){
-		my $slice;
-		if ($at->contig_id) {
-		  $slice=$at->slice_by_contig_id;
-		}
-		if ($at->contig_name){
-		  $slice=$at->slice_by_contig_name;
-		}
-		unless($slice) {
-		  print STDERR "assembly tag does not have a slice attached and hence not stored in db\n";
-		  next;
-		}
-		$ata->store($at);
-	 }
-
-
-=cut
 	 ##Create new XML and send as response
+=cut
+
 
   };
   if ($@) {
@@ -153,14 +164,16 @@ sub compare_feature_sets {
     return($delete, $save);
 }
 
+
+
 sub SimpleFeature_key {
     my( $sf ) = @_;
 
     return join('^',
         $sf->analysis->logic_name,
-        $sf->start,
-        $sf->end,
-        $sf->strand,
+        $sf->seq_region_start,
+        $sf->seq_region_end,
+        $sf->seq_region_strand,
         # sprintf ensures that 0.5 and 0.5000 become the same string
         sprintf('%g', $sf->score),
         $sf->display_label || '',

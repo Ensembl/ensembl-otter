@@ -13,7 +13,7 @@ use Bio::EnsEMBL::SimpleFeature;
 use Bio::EnsEMBL::Analysis;
 use Bio::EnsEMBL::Slice;
 use Bio::EnsEMBL::CoordSystem;
-use Bio::EnsEMBL::Pipeline::SeqFetcher::Finished_Pfetch;
+#use Bio::EnsEMBL::Pipeline::SeqFetcher::Finished_Pfetch;
 use Bio::EnsEMBL::Attribute;
 use Bio::Vega::Author;
 use Bio::Vega::AuthorGroup;
@@ -41,6 +41,7 @@ my (
 	 %seen_transcript_name,
 	 %seen_gene_name,
 	 %sequence_set,
+	 %dna,
     );
 
 
@@ -60,6 +61,7 @@ sub DESTROY {
   delete $seen_gene_name{$self};
   delete $seen_transcript_name{$self};
   delete $sequence_set{$self};
+  delete $dna{$self};
   # So that DESTROY gets called in baseclass:
   bless $self, 'Bio::Vega::Transform';
 }
@@ -250,10 +252,13 @@ sub build_Feature {
   my ($self, $data) = @_;
   my $ana = $logic_ana{$self}{$data->{'type'}} ||= Bio::EnsEMBL::Analysis->new(-logic_name => $data->{'type'});
   my $slice = $self->get_ChromosomeSlice;
-  # convert xml coordinates which are in chromosomal coords - to feature coords
+  ##convert xml coordinates which are in chromosomal coords - to feature coords
+  ##the conversion may not be necessary as the features are stored in chromosomal coordinates anyway
   my $offset = 1 - $slice->start ;
   my $feat_start = $data->{'start'} + $offset;
   my $feat_end =  $data->{'end'}   + $offset;
+ # my $feat_start=$data->{'start'};
+  #my $feat_end  =$data->{'end'};
   my $feature = Bio::EnsEMBL::SimpleFeature->new(
 																 -start     => $feat_start,
 																 -end       => $feat_end,
@@ -356,7 +361,6 @@ sub build_Transcript {
 																		);
 		$translation->start_Exon($start_Exon);
 		$translation->start($start_Exon_Pos);
-#		$translation->version(1);
 		$translation->end_Exon($end_Exon);
 		$translation->end($end_Exon_Pos);
 		if ($start_Exon->strand == 1 && $start_Exon->start != $tran_start_pos) {
@@ -370,10 +374,6 @@ sub build_Transcript {
 		$translation->created_date($time_now{$self});
 		$translation->modified_date($time_now{$self});
 		$transcript->translation($translation);
-		if ($translation) {
-		 # die  "\n\nFound translation\n\n".$translation->stable_id;
-		}
-		##translation - version ???
 	 }
   }
   elsif (defined $tran_start_pos || defined $tran_end_pos) {
@@ -487,8 +487,8 @@ sub build_Locus {
   ## biotype,source & status framed from gene type
   my ($biotype,$source,$status);
   my $gene_type=$data->{'type'};
+  my $type;
   if (defined $gene_type) {
-	 my $type;
 	 if ($gene_type =~ /(\S+):(.+)/){
 		##in future source will be a tag on itself indicating authority equivalent to group name
 		$source = $1;
@@ -504,7 +504,7 @@ sub build_Locus {
 	 $status=$mapref->[1];
   }
   if (defined $gene_type && !defined $biotype  ) {
-	 $biotype=$gene_type;
+	 $biotype=$type;
 	 $status = 'UNKNOWN';
   }
   if (!defined $gene_type || !defined $biotype)   {
@@ -558,7 +558,7 @@ sub build_Locus {
   }
 
   ##convert all exon coordinates from chromosomal coordinates to slice coordinates
-  # not sure if this conversion is necessary ??
+  # this conversion is not necessary since the exons are stored in chromosomal coordinates anyway ??
   if ($chrstart != 2000000000) {
 	 foreach my $exon (@{$gene->get_all_Exons}) {
 		$exon->start($exon->start - $chrstart + 1);
@@ -689,7 +689,7 @@ sub LoadAssemblySlices {
   };
   if ($@) {
 	 $db->rollback;
-	 print STDERR "Error saving genes from file:".$@;
+	 die "Error saving genes from file:".$@;
   }
   else {
 	 $db->commit;
@@ -750,7 +750,19 @@ sub get_SliceId {
 	 if ($slice_cs->name eq 'contig') {
 		##fetch sequence for contig
 		my ($acc_ver)=$seq_name =~ /^(.+\.\d+)\.\d+\.\d+$/;
-		my $seqobj = $self->pfetch_acc_ver($acc_ver);
+		my $seqobj;
+		eval {
+		  $seqobj = $self->pfetch_acc_ver($acc_ver);
+		};
+		
+		if ($@) {
+		  $db->rollback;
+		  unless ($seqobj){
+			 die "problem with pfetch for $acc_ver\n:$@\n";
+		  }
+		}
+		
+		  
 		$seq   = $seqobj->seq;
 		##insert slice
 		$seq_reg_id = $sa->store($new_slice,\$seq);
@@ -790,6 +802,29 @@ sub get_SliceId {
 sub get_AssemblyType {
   my $self=shift;
   return $sequence_set{$self};
+}
+
+sub get_ChromosomeSliceDB {
+  my ($self,$db)=@_;
+  my $slice= $slice{$self}{'chr'};
+  my $dbc= $db->dbc();
+  my $sa=$db->get_SliceAdaptor();
+  my $csa = $db->get_CoordSystemAdaptor();
+  my ($new_slice,$slice_cs,$cs);
+  $slice_cs=$slice->coord_system;
+  eval{
+	 $cs = $csa->fetch_by_name($slice_cs->name,$slice_cs->version,$slice_cs->rank);
+  };
+  if($@){
+	 print STDERR "A coord_system matching the arguments does not exsist in the cord_system table, please ensure you have the right coord_system entry in the database:$@";
+  }
+  #test
+  my $name=$slice->name;
+  my $start=$slice->start;
+  my $end=$slice->end;
+  #die "\n\nname:$name, start:$start  end:$end\n\n";
+  $new_slice = $sa->fetch_by_name($slice->name);
+  return $new_slice;
 }
 
 sub get_ChromosomeSlice {
@@ -839,7 +874,15 @@ sub pfetch_acc_ver {
   my $pfetch         ||= Bio::EnsEMBL::Pipeline::SeqFetcher::Finished_Pfetch->new;
   my $pfetch_archive ||= Bio::EnsEMBL::Pipeline::SeqFetcher::Finished_Pfetch->new(
 																											 -PFETCH_PORT => 23100,);
-  my $seq = $pfetch->get_Seq_by_acc($acc_ver);
+  my $seq;
+  eval {
+	 $seq = $pfetch->get_Seq_by_acc($acc_ver);
+  };
+  if ($@){
+	 unless ($pfetch){
+		die "\nproblem with pfetch:$@\n";
+	 }
+  }
   unless ($seq) {
 	 warn "Fetching '$acc_ver' from archive\n";
 	 $seq = $pfetch_archive->get_Seq_by_acc($acc_ver);
