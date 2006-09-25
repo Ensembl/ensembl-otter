@@ -89,7 +89,7 @@ sub lock_clones_by_slice {
 	 throw("[$slice] is not a Bio::EnsEMBL::Slice");
   }
   if (!$author->isa("Bio::Vega::Author")) {
-	 throw("[$author] is not a Bio::Otter::Author");
+	 throw("[$author] is not a Bio::Vega::Author");
   }
   my $contig_list = Contig_listref_from_Slice($slice);
   my $aptr       = $db->get_ContigLockAdaptor;
@@ -98,7 +98,9 @@ sub lock_clones_by_slice {
 		@existing,          # locks that already existed
 		%existing_contig,    # contigs that had locks existing (for nice error message)
 	 );
+
   foreach my $contig (@$contig_list) {
+
 	 my $ctg_seq_region_id = $sa->get_seq_region_id($contig)
 		or throw('Contig does not have dbID set');
 	 my $lock = Bio::Vega::ContigLock->new(
@@ -109,6 +111,7 @@ sub lock_clones_by_slice {
 	 eval {
 		$db->get_ContigLockAdaptor->store($lock);
 	 };
+
 	 if ($@) {
 		my $exlock = $db->get_ContigLockAdaptor->fetch_by_contig_id($ctg_seq_region_id);
 		if ($exlock){
@@ -142,11 +145,14 @@ sub lock_clones_by_slice {
 sub remove_by_slice {
   my ($slice,$author,$db) = @_;
   my $contig_list = Contig_listref_from_Slice($slice);
-  my $aptr       = $db->get_CloneLockAdaptor;
+  my $aptr       = $db->get_ContigLockAdaptor;
   my $sa=$db->get_SliceAdaptor;
+  #print STDERR "\n\n****Ia m called from remove locks @$contig_list\n\n";
+  #use Data::Dumper;
+  #print STDERR Dumper($slice);
   foreach my $contig (@$contig_list) {
 	 my $ctg_seq_region_id=$sa->get_seq_region_id($contig);
-	 if (my $lock = $db->get_CloneLockAdaptor->fetch_by_contig_id($ctg_seq_region_id)) {
+	 if (my $lock = $db->get_ContigLockAdaptor->fetch_by_contig_id($ctg_seq_region_id)) {
 		unless ($lock->author->name eq $author->name) {
 		  throw("Author [" . $author->name . "] doesn't own lock for $contig");
 		}
@@ -159,14 +165,19 @@ sub remove_by_slice {
 
 ##ported/tested
 sub Contig_listref_from_Slice {
-    my( $slice ) = @_;
-    my $contig_list = [];
-	 my $slice_projection = $slice->project('contig');
-	 foreach my $seg (@$slice_projection) {
-		my $contig_slice = $seg->to_Slice();
-		push(@$contig_list, $contig_slice);
-	 }
-    return $contig_list;
+
+  my ($slice)  = @_;
+  my $contig_list = [];
+  my $slice_projection = $slice->project('contig');
+  foreach my $seg (@$slice_projection) {
+
+	 my $contig_slice = $seg->to_Slice();
+	 #my $assembly_offset = $contigslice->start()-1;
+	 #$contig_slice->start($contig_seg->from_start+ $assembly_offset);
+	 push(@$contig_list, $contig_slice);
+  }
+
+  return $contig_list;
 }
 
 

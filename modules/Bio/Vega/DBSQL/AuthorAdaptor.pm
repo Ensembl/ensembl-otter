@@ -171,6 +171,10 @@ sub store {
 	 return 1;
   }
   my $group=$author->group;
+  ##not sure if this is right ?
+  unless ($group){
+	 $group=Bio::Vega::AuthorGroup->new('','');
+  }
   my $group_id=$group->dbID;
   my $group_name=$group->name;
   my $ga=$self->db->get_AuthorGroupAdaptor;

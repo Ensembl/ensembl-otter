@@ -82,40 +82,30 @@ elsif ($odb->isa('Bio::Vega::DBSQL::DBAdaptor')) {
 
 ##trying to unlock a new Otter db
   eval{
-  my $parser = Bio::Vega::Transform::Otter->new;
-  $parser->parsefile($tmp_xml_name);
-  my $cs='chromosome';
-  my $chr_slice=$parser->get_ChromosomeSlice;
-  my $chrstart=$chr_slice->start;
-  my $chrend=$chr_slice->end;
-  my $strand=$chr_slice->strand;
-  my $cs_version=$parser->init_CoordSystem_Version;
-  my $segment_name=$parser->get_AssemblyType->{'assembly_type'};
-  my $chrname=$chr_slice->seq_region_name;
-  my $slice =  $odb->get_SliceAdaptor()->fetch_by_region($cs,$segment_name,$chrstart,$chrend,$strand,$cs_version);
-  my $genes=$parser->get_Genes;
-  server_log("Processed incoming xml file with slice: [$chrname] [$chrstart] [$chrend]");
+	 my $parser = Bio::Vega::Transform::Otter->new;
+	 $parser->parsefile($tmp_xml_name);
+	 my $cs='chromosome';
+	 my $chr_slice=$parser->get_ChromosomeSliceDB($odb);
+	 my $chrstart=$chr_slice->start;
+	 my $chrend=$chr_slice->end;
+	 my $strand=$chr_slice->strand;
+	 my $cs_version=$parser->init_CoordSystem_Version;
+	 my $segment_name=$parser->get_AssemblyType->{'assembly_type'};
+	 my $chrname=$chr_slice->seq_region_name;
+	 $slice =  $odb->get_SliceAdaptor()->fetch_by_region($cs,$segment_name,$chrstart,$chrend,$strand,$cs_version);
+	 #unless ($slice) {
+		#die "no slice fetched for cs:$cs, segment_name:$segment_name,chrstart:$chrstart, chrend:$chrend, strand:$strand, cs-version:$cs_version";
+	 #}
+	 $genes=$parser->get_Genes;
+	 server_log("Processed incoming xml file with slice: [$chrname] [$chrstart] [$chrend]");
   };
   if ($@) {
 	 error_exit($sq, "Failed converting XML to otter [$@]");
   }
   server_log("Done converting.");
-  my $cb;
-  if (!$pipehead){
-	 $cb   = new Bio::Otter::CloneLockBroker($odb);
-  }
-
-	 
   server_log("Checking region is locked...");
   eval {
-	 if (!$pipehead){
-		$cb->check_locks_exist_by_slice($slice,$author);
-	 }
-	 else {
-		print "\ntest:$slice\n";
-		Bio::Vega::ContigLockBroker::check_locks_exist_by_slice($slice,$author);
-	 }
-
+	 Bio::Vega::ContigLockBroker::check_locks_exist_by_slice($slice,$author,$odb);
   };
   if ($@) {
 	 error_exit($sq, "Failed checking locks [$@]");
@@ -123,15 +113,9 @@ elsif ($odb->isa('Bio::Vega::DBSQL::DBAdaptor')) {
   server_log("Done checking region is locked.");
   server_log("Unlocking clones...");
   eval{
-	 if (!$pipehead){
-		$cb->remove_by_slice($slice,$author);
-	 }
-	 else {
-		Bio::Vega::ContigLockBroker::remove_by_slice($slice,$author);
-	 }
-
+	 Bio::Vega::ContigLockBroker::remove_by_slice($slice,$author,$odb);
   };
-  error_exit($sq, "Failed to unlock clones") if $@;
+  error_exit($sq, "Failed to unlock clones\n $@\n***\n") if $@;
   server_log("Done unlocking clones.");
   send_response($sq, "<response>\n</response>\n", 1);
 }

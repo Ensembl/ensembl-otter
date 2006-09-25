@@ -98,7 +98,7 @@ sub remove {
 	 unless $contig_lock;
   my $contig_id = $contig_lock->contig_id
 	 or $self->throw('contig_id not set on ContigLock object');
-  my $sth = $self->prepare("DELETE FROM contig_lock WHERE contig_id = ?");
+  my $sth = $self->prepare("DELETE FROM contig_lock WHERE seq_region_id = ?");
   $sth->execute($contig_id);
   $self->throw("Failed to remove ContigLock for contig " . $contig_id) unless $sth->rows;
 }
