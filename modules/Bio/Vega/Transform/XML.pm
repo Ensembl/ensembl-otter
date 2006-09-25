@@ -310,23 +310,23 @@ sub generate_Transcript{
   }
   $t->attribvals($self->prettyprint('name',$tran_name));
   $t->attribobjs($self->generate_EvidenceSet($tran));
-  $t->attribobjs($self->generate_ExonSet($tran,$tran_high,$tran_low));
+  $t->attribobjs($self->generate_ExonSet($tran,$coord_offset, $tran_low, $tran_high));
   return $t;
 }
 
 
 sub generate_ExonSet{
-  my ($self,$tran,$tran_high,$tran_low)=@_;
-  my $translation_ok = defined($tran_low) && defined($tran_high);
+  my ($self,$tran,$coord_offset,$tran_low, $tran_high)=@_;
   my $exon_set=$tran->get_all_Exons;
   my $exs=$self->prettyprint('exon_set');
   foreach my $exon (@$exon_set){
 	 my $e=$self->prettyprint('exon');
 	 $e->attribvals($self->prettyprint('stable_id',$exon->stable_id));
-	 $e->attribvals($self->prettyprint('start',$exon->start));
-	 $e->attribvals($self->prettyprint('end',$exon->end));
+	 $e->attribvals($self->prettyprint('start',$exon->start + $coord_offset));
+	 $e->attribvals($self->prettyprint('end',$exon->end + $coord_offset));
 	 $e->attribvals($self->prettyprint('strand',$exon->strand));
-	 if ( $translation_ok	&& $exon->start <= $tran_high && $tran_low <= $exon->end){
+	 if ( defined($tran_high) && $exon->start <= $tran_high &&
+         defined($tran_low)  && $tran_low <= $exon->end){
 		my $phase = $exon->phase;
 		my $frame = $phase == -1 ? 0 : (3 - $phase) % 3;
 		$e->attribvals($self->prettyprint('frame',$frame));
