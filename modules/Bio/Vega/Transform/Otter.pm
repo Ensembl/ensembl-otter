@@ -254,11 +254,11 @@ sub build_Feature {
   my $slice = $self->get_ChromosomeSlice;
   ##convert xml coordinates which are in chromosomal coords - to feature coords
   ##the conversion may not be necessary as the features are stored in chromosomal coordinates anyway
-  my $offset = 1 - $slice->start ;
-  my $feat_start = $data->{'start'} + $offset;
-  my $feat_end =  $data->{'end'}   + $offset;
- # my $feat_start=$data->{'start'};
-  #my $feat_end  =$data->{'end'};
+#  my $offset = 1 - $slice->start ;
+ # my $feat_start = $data->{'start'} + $offset;
+  #my $feat_end =  $data->{'end'}   + $offset;
+  my $feat_start=$data->{'start'};
+  my $feat_end  =$data->{'end'};
   my $feature = Bio::EnsEMBL::SimpleFeature->new(
 																 -start     => $feat_start,
 																 -end       => $feat_end,
@@ -559,12 +559,12 @@ sub build_Locus {
 
   ##convert all exon coordinates from chromosomal coordinates to slice coordinates
   # this conversion is not necessary since the exons are stored in chromosomal coordinates anyway ??
-  if ($chrstart != 2000000000) {
-	 foreach my $exon (@{$gene->get_all_Exons}) {
-		$exon->start($exon->start - $chrstart + 1);
-		$exon->end(  $exon->end   - $chrstart + 1);
-	 }
-  }
+#  if ($chrstart != 2000000000) {
+	# foreach my $exon (@{$gene->get_all_Exons}) {
+		#$exon->start($exon->start - $chrstart + 1);
+		#$exon->end(  $exon->end   - $chrstart + 1);
+	 #}
+  #}
   my $list = $gene_list{$self} ||= [];
   push @$list, $gene;
 }
