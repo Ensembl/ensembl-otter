@@ -147,27 +147,27 @@ sub get_mapper_dba {
 
     if($pipehead && $metakey) { # a head version of ensembl_db (non-pipeline genes)
 
-        my ($sdb_def_asm) = (@{ $sdba->get_MetaContainer()->list_value_by_key('assembly.default') },
+        my ($sdb_asm) = (@{ $sdba->get_MetaContainer()->list_value_by_key('assembly.default') },
             'UNKNOWN');
 
-            # Currently we keep the necessary information in the pipeline_db_head.
+            # Currently we keep assembly equivalency information in the pipeline_db_head seq_region_attrib.
             # Once otter_db is converted into new schema, we can keep this information there.
         my $pdba = odba_to_sdba($sq, $odba, 1, ''); # ensures we get new pipeline
         my $pipe_slice = get_slice($sq, $pdba, 1);
-        my ($equiv_asm) = map {$_->value()} @{ $pipe_slice->get_all_Attributes('equiv_asm') };
+        my %asm_is_equiv = map { ($_->value() => 1) } @{ $pipe_slice->get_all_Attributes('equiv_asm') };
 
-        if($equiv_asm && ($equiv_asm eq $sdb_def_asm)) { # we can do our trivial mapping
+        if($asm_is_equiv{$sdb_asm}) { # we can simply rename instead of mapping
 
             my $chr_name = $sq->getarg('name');
-            server_log("This chr is equivalent to '$chr_name' in our reference '$equiv_asm' assembly");
-            $sq->setarg('csver', $equiv_asm);
+            server_log("This chr is equivalent to '$chr_name' in our reference '$sdb_asm' assembly");
+            $sq->setarg('csver', $sdb_asm);
             return;
 
         } else { # guaranteed to differ!
 
             if( @{$odba->get_MetaContainer()->list_value_by_key('mapper_db')} ) { # if mapper is defined
                 my $mdba = odba_to_sdba($sq, $odba, 1, 'mapper_db');
-                return ($mdba, $sdb_def_asm);
+                return ($mdba, $sdb_asm);
             } else {
                 server_log("No mapper_db defined in meta table => cannot map between assemblies => exiting");
                 send_response($sq, '', 1);
