@@ -781,7 +781,7 @@ sub get_SliceId {
 		  my ($acc,$sv)= $seq_name=~/^(.+)\.(\d+)$/;
 		  push @attrib,$self->make_Attribute('htgs_phase','HTGS Phase','High Throughput Genome Sequencing Phase','3');
 		  push @attrib,$self->make_Attribute('intl_clone_name','International Clone Name','',$seq_name);
-		  push @attrib,$self->make_Attribute('embl_accession','EMBL Accession','',$acc);
+		  push @attrib,$self->make_Attribute('embl_acc','EMBL Accession','',$acc);
 		  push @attrib,$self->make_Attribute('embl_version','EMBL Version','',$sv);
 		  ##store clone attributes
 		  $aa->store_on_Slice($new_slice,\@attrib);

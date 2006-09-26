@@ -85,7 +85,7 @@ sub generate_SequenceFragment{
 	 }
 	 $sf->attribvals($self->prettyprint('chromosome',$chr_name));
   }
-  my $accs=$clone_slice->get_all_Attributes('embl_accession');
+  my $accs=$clone_slice->get_all_Attributes('embl_acc');
   if ($accs) {
 	 if (@$accs > 1){
 		throw("Clone Slice:$clone_slice has more than one value for accession attrib, cannot generate xml");
