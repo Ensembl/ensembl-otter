@@ -317,9 +317,10 @@ elsif ($odb->isa('Bio::Vega::DBSQL::DBAdaptor')) {
   }
 
   ##check if clones are locked or not
+  my $cb = new Bio::Vega::ContigLockBroker;
   server_log("Checking region is locked...");
   eval {
-	 Bio::Vega::ContigLockBroker::check_locks_exist_by_slice($slice, $author,$odb);
+	 $cb->check_locks_exist_by_slice($slice, $author,$odb);
   };
   error_exit($sq, "Failed checking locks [$@]") if $@;
   server_log("Done checking region is locked.");
