@@ -60,14 +60,15 @@ my $sql = $pipehead
 ? q{
     SELECT cl.name, embl_acc.value, embl_version.value,
            ctg.name, ctg.length,
-           chr.name, chr.length, chr2ctg.asm_start, chr2ctg.asm_end,
+           chr_name.value, chr.length, chr2ctg.asm_start, chr2ctg.asm_end,
            chr2ctg.cmp_start, chr2ctg.cmp_end, chr2ctg.ori,
            l.contig_lock_id, l.hostname,
            aut.author_name, aut.author_email
     FROM assembly chr2ctg,
          assembly cl2ctg,
          seq_region chr, seq_region ctg, seq_region cl,
-         seq_region_attrib embl_acc, seq_region_attrib embl_version
+         seq_region_attrib embl_acc, seq_region_attrib embl_version,
+         seq_region_attrib chr_name
 LEFT JOIN contig_lock l ON l.seq_region_id=ctg.seq_region_id
 LEFT JOIN author aut ON aut.author_id = l.author_id
     WHERE chr.name = ?
@@ -81,6 +82,8 @@ LEFT JOIN author aut ON aut.author_id = l.author_id
       AND embl_acc.attrib_type_id=(select attrib_type_id from attrib_type where code='embl_accession')
       AND embl_version.seq_region_id=cl.seq_region_id
       AND embl_version.attrib_type_id=(select attrib_type_id from attrib_type where code='embl_version')
+      AND chr_name.seq_region_id=chr.seq_region_id
+      AND chr_name.attrib_type_id=(select attrib_type_id from attrib_type where code='chr')
  ORDER BY chr2ctg.asm_start
 }
 : q{
