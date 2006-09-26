@@ -3,15 +3,23 @@ package Bio::Vega::ContigLockBroker;
 use strict;
 use Bio::EnsEMBL::Utils::Exception qw ( throw warning );
 use Bio::Vega::ContigLock;
+use Bio::EnsEMBL::Utils::Argument qw ( rearrange );
 
-my $client_hostname='deskpro014581';
+sub new {
+  my($class,@args) = @_;
+  my $self = bless {}, $class;
+  my ($hostname)  =
+        rearrange([qw(HOSTNAME)],@args);
+  $self->client_hostname($hostname);
+  return $self;
+}
 
 sub client_hostname {
-    my( $hostname ) = @_;
-    if ($client_hostname) {
-        $client_hostname = $hostname;
+    my( $self,$hostname ) = @_;
+    if ($hostname) {
+        $self->{'hostname'} = $hostname;
     }
-    return $client_hostname;
+    return $self->{'hostname'};
 }
 
 
@@ -21,7 +29,7 @@ sub client_hostname {
 
 ##ported/tested
 sub check_locks_exist_by_slice {
-  my ($slice,$author,$db) = @_;
+  my ($self,$slice,$author,$db) = @_;
   if (!defined($slice)) {
 	 throw("Can't check contig locks on a slice if no slice");
   }
@@ -34,7 +42,7 @@ sub check_locks_exist_by_slice {
   if (!$author->isa("Bio::Vega::Author")) {
 	 throw("[$author] is not a Bio::Vega::Author");
   }
-  my $contig_list = Contig_listref_from_Slice($slice);
+  my $contig_list = $self->Contig_listref_from_Slice($slice);
   my $aptr = $db->get_ContigLockAdaptor;
   my $sa=$db->get_SliceAdaptor();
   my( @locks );
@@ -65,7 +73,7 @@ sub check_no_locks_exist_by_slice {
   if (!$author->isa("Bio::Vega::Author")) {
 	 throw("[$author] is not a Bio::Vega::Author");
   }
-  my $contig_list = Contig_listref_from_Slice($slice);
+  my $contig_list = $self->Contig_listref_from_Slice($slice);
   my $aptr       = $self->get_ContigLockAdaptor;
   my $sa=$db->get_SliceAdaptor();
   foreach my $contig (@$contig_list) {
@@ -78,7 +86,7 @@ sub check_no_locks_exist_by_slice {
 
 ##ported && tested
 sub lock_clones_by_slice {
-  my ($slice,$author,$db) = @_;
+  my ($self,$slice,$author,$db) = @_;
   if (!defined($slice)) {
 	 throw("Can't lock clones on a slice if no slice");
   }
@@ -91,7 +99,7 @@ sub lock_clones_by_slice {
   if (!$author->isa("Bio::Vega::Author")) {
 	 throw("[$author] is not a Bio::Vega::Author");
   }
-  my $contig_list = Contig_listref_from_Slice($slice);
+  my $contig_list = $self->Contig_listref_from_Slice($slice);
   my $aptr       = $db->get_ContigLockAdaptor;
   my $sa=$db->get_SliceAdaptor;
   my( @new,               # locks we manange to create
@@ -106,7 +114,7 @@ sub lock_clones_by_slice {
 	 my $lock = Bio::Vega::ContigLock->new(
 													  -author     => $author,
 													  -contig_id   => $ctg_seq_region_id,
-													  -hostname   => $client_hostname,
+													  -hostname   => $self->client_hostname,
 													 );
 	 eval {
 		$db->get_ContigLockAdaptor->store($lock);
@@ -143,8 +151,8 @@ sub lock_clones_by_slice {
 
 ##ported
 sub remove_by_slice {
-  my ($slice,$author,$db) = @_;
-  my $contig_list = Contig_listref_from_Slice($slice);
+  my ($self,$slice,$author,$db) = @_;
+  my $contig_list = $self->Contig_listref_from_Slice($slice);
   my $aptr       = $db->get_ContigLockAdaptor;
   my $sa=$db->get_SliceAdaptor;
   #print STDERR "\n\n****Ia m called from remove locks @$contig_list\n\n";
@@ -166,7 +174,7 @@ sub remove_by_slice {
 ##ported/tested
 sub Contig_listref_from_Slice {
 
-  my ($slice)  = @_;
+  my ($self,$slice)  = @_;
   my $contig_list = [];
   my $slice_projection = $slice->project('contig');
   foreach my $seg (@$slice_projection) {

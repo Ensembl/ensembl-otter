@@ -104,8 +104,9 @@ elsif ($odb->isa('Bio::Vega::DBSQL::DBAdaptor')) {
   }
   server_log("Done converting.");
   server_log("Checking region is locked...");
+  my $cb=Bio::Vega::ContigLockBroker->new;
   eval {
-	 Bio::Vega::ContigLockBroker::check_locks_exist_by_slice($slice,$author,$odb);
+	 $cb->check_locks_exist_by_slice($slice,$author,$odb);
   };
   if ($@) {
 	 error_exit($sq, "Failed checking locks [$@]");
@@ -113,7 +114,7 @@ elsif ($odb->isa('Bio::Vega::DBSQL::DBAdaptor')) {
   server_log("Done checking region is locked.");
   server_log("Unlocking clones...");
   eval{
-	 Bio::Vega::ContigLockBroker::remove_by_slice($slice,$author,$odb);
+	 $cb->remove_by_slice($slice,$author,$odb);
   };
   error_exit($sq, "Failed to unlock clones\n $@\n***\n") if $@;
   server_log("Done unlocking clones.");

@@ -72,6 +72,10 @@ sub generate_SequenceFragment{
   my $clone_slice = $clone_seg->to_Slice();
   my $chrs = $slice->get_all_Attributes('chr');
   my $chr_name;
+  if ($contig_slice->seq_region_name){
+	 $sf->attribvals($self->prettyprint('id',$contig_slice->seq_region_name));
+  }
+
   if ($chrs) {
 	 if (@$chrs > 1){
 		throw("Chromosome Slice:$slice has more than one value for name attrib, cannot generate xml");
@@ -107,9 +111,33 @@ sub generate_SequenceFragment{
   else {
 	 throw("Missing clone version, cannot generate xml:$clone_slice");
   }
-  if ($contig_slice->seq_region_name){
-	 $sf->attribvals($self->prettyprint('id',$contig_slice->seq_region_name));
+  my $cia=$odb->get_ContigInfoAdaptor;
+  my $contig_slice_dbid=$contig_slice->get_seq_region_id;
+  my $ci=$cia->fetch_by_seq_region_id($contig_slice_dbid);
+  my $auth=$ci->author;
+  my $auth_name=$auth->name;
+  my $auth_email=$auth->email;
+  $sf->attribvals($self->prettyprint('author',$auth_name));
+  $sf->attribvals($self->prettyprint('author_email',$auth_email));
+  my $ci_attribs=$ci->get_all_Attributes;
+  foreach my $cia (@$ci_attribs){
+	 if ($cia->code eq 'remark' || $cia->code eq 'hidden_remark' || $cia->code eq 'annotated' || $cia->code eq 'description'){
+		if ($cia->code eq 'annotated' && $cia->value eq 'T'){
+		  $cia->value('Annotation_remark- annotated');
+		}
+		if ($cia->code eq 'description') {
+		  $cia->value("EMBL_dump_info.DE_line- ".$cia->value);
+		}
+		  $sf->attribvals($self->prettyprint('remark',$cia->value));
+	 }
   }
+  foreach my $cia (@$ci_attribs){
+	 if ($cia->code eq 'keyword'){
+		$sf->attribvals($self->prettyprint('keyword',$cia->value));
+	 }
+  }
+
+
   $sf->attribvals($self->prettyprint('assembly_start',$contig_seg->from_start + $assembly_offset));
   $sf->attribvals($self->prettyprint('assembly_end',  $contig_seg->from_end   + $assembly_offset));
   if ($contig_slice->strand){
@@ -124,31 +152,7 @@ sub generate_SequenceFragment{
   else {
 	 throw("Missing fragment offset, cannot generate xml:$contig_slice");
   }
-  my $cia=$odb->get_ContigInfoAdaptor;
-  my $contig_slice_dbid=$contig_slice->get_seq_region_id;
-  my $ci=$cia->fetch_by_seq_region_id($contig_slice_dbid);
-  my $ci_attribs=$ci->get_all_Attributes;
-  foreach my $cia (@$ci_attribs){
-	 if ($cia->code eq 'keyword'){
-		$sf->attribvals($self->prettyprint('keyword',$cia->value));
-	 }
-  }
-  foreach my $cia (@$ci_attribs){
-	 if ($cia->code eq 'remark' || $cia->code eq 'hidden_remark' || $cia->code eq 'annotated' || $cia->code eq 'description'){
-		if ($cia->code eq 'annotated' && $cia->value eq 'T'){
-		  $cia->value('Annotation_remark- annotated');
-		}
-		if ($cia->code eq 'description') {
-		  $cia->value("EMBL_dump_info.DE_line- ".$cia->value);
-		}
-		  $sf->attribvals($self->prettyprint('remark',$cia->value));
-	 }
-  }
-  my $auth=$ci->author;
-  my $auth_name=$auth->name;
-  my $auth_email=$auth->email;
-  $sf->attribvals($self->prettyprint('author',$auth_name));
-  $sf->attribvals($self->prettyprint('author_email',$auth_email));
+
   return $sf;
 }
 
@@ -191,6 +195,11 @@ sub generate_Locus {
 	 $truncated=1;
   }
   $g->attribvals($self->prettyprint('truncated',$truncated));
+  if (my $synonyms=$gene->get_all_Attributes('synonym')){
+	 foreach my $syn (@$synonyms){
+		$g->attribvals($self->prettyprint('synonym',$syn->value));
+	 }
+  }
   if (my $remarks = $gene->get_all_Attributes('remark')){
 	 foreach my $rem (@$remarks){
 		$g->attribvals($self->prettyprint('remark',$rem->value));
@@ -210,11 +219,6 @@ sub generate_Locus {
   }
   $g->attribvals($self->prettyprint('author',$author_name));
   $g->attribvals($self->prettyprint('author_email',$author_email));
-  if (my $synonyms=$gene->get_all_Attributes('synonym')){
-	 foreach my $syn (@$synonyms){
-		$g->attribvals($self->prettyprint('synonym',$syn->value));
-	 }
-  }
   my $exons=$gene->get_all_Exons;
   my $coord_offset=$exons->[0]->slice->start-1;
   my $transcripts=$gene->get_all_Transcripts;
@@ -230,6 +234,7 @@ sub generate_Locus {
 }
 
 sub generate_Transcript{
+
   my ($self,$tran,$coord_offset)=@_;
   my $t=$self->prettyprint('transcript');
   my $tran_stable_id='';
@@ -270,24 +275,6 @@ sub generate_Transcript{
 	 my $meNF=$mRNA_end_NF->[0]->value;
 	 $t->attribvals($self->prettyprint('mRNA_end_not_found',$meNF));
   }
-  my ($tran_low,$tran_high);
-  if (my $translation=$tran->translation){
-	 if ($translation->stable_id){
-		$t->attribvals($self->prettyprint('translation_stable_id',$translation->stable_id));
-	 }
-	 my $strand = $translation->start_Exon->strand;
-	 $tran_low  = $tran->coding_region_start;
-	 $tran_high = $tran->coding_region_end;
-	 my ($tl_start, $tl_end) = ($strand == 1)
-		? ($tran_low + $coord_offset, $tran_high + $coord_offset)
-		  : ($tran_high + $coord_offset, $tran_low + $coord_offset);
-	 if ($tl_start){
-		$t->attribvals($self->prettyprint('translation_start',$tl_start));
-	 }
-	 if ($tl_end){
-		$t->attribvals($self->prettyprint('translation_end',$tl_end));
-	 }
-  }
   ##in future <transcript_class> tag will be replaced by trancript <biotype> and <status> tags
   ##<type> tag will be removed
   ##don't know if <known> tag is necessary
@@ -303,13 +290,40 @@ sub generate_Transcript{
 		$t->attribvals($self->prettyprint('transcript_class',$transcript_class));
 	 }
   }
+
   my $tran_name_att = $tran->get_all_Attributes('name') ;
   my $tran_name='';
   if ($tran_name_att->[0]){
 	 $tran_name=$tran_name_att->[0]->value;
   }
   $t->attribvals($self->prettyprint('name',$tran_name));
-  $t->attribobjs($self->generate_EvidenceSet($tran));
+
+  my $es=$self->generate_EvidenceSet($tran);
+  if ($es) {
+	 $t->attribobjs($es);
+  }
+
+  my ($tran_low,$tran_high);
+  if (my $translation=$tran->translation){
+	 my $strand = $translation->start_Exon->strand;
+	 $tran_low  = $tran->coding_region_start;
+	 $tran_high = $tran->coding_region_end;
+	 my ($tl_start, $tl_end) = ($strand == 1)
+		? ($tran_low + $coord_offset, $tran_high + $coord_offset)
+		  : ($tran_high + $coord_offset, $tran_low + $coord_offset);
+	 if ($tl_start){
+		$t->attribvals($self->prettyprint('translation_start',$tl_start));
+	 }
+	 if ($tl_end){
+		$t->attribvals($self->prettyprint('translation_end',$tl_end));
+	 }
+	 if ($translation->stable_id){
+		$t->attribvals($self->prettyprint('translation_stable_id',$translation->stable_id));
+	 }
+
+  }
+
+
   $t->attribobjs($self->generate_ExonSet($tran,$coord_offset, $tran_low, $tran_high));
   return $t;
 }
@@ -347,7 +361,17 @@ sub generate_EvidenceSet{
 	 $e->attribvals($self->prettyprint('type',$evi->type));
 	 $es->attribobjs($e);
   }
-  return $es;
+  my $c=0;
+  if ($evidence){
+	 $c=@$evidence;
+  }
+
+  if ($c>0){
+	 return $es;
+  }
+  else {
+	 return;
+  }
 }
 
 sub generate_FeatureSet {
@@ -396,7 +420,7 @@ sub generate_FeatureSet {
 sub generate_DNA {
   my ($self,$slice);
   my $dna=$slice->seq;
-  my $d=$self->prettyprint('sequence_fragment',$dna);
+  my $d=$self->prettyprint('dna',$dna);
   return $d;
 }
 
