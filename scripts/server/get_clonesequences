@@ -106,7 +106,8 @@ LEFT JOIN author aut ON aut.author_id = l.author_id
     ORDER BY a.chr_start 
 };
 
-my $sth = $odba->prepare($sql);
+my $odbc = $pipehead ? $odba->dbc() : $odba;
+my $sth = $odbc->prepare($sql);
 $sth->execute($sequenceset);
 while (my ($name, $acc,  $sv,
        $ctg_name,  $ctg_length,
