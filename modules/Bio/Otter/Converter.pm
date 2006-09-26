@@ -855,6 +855,7 @@ sub ace_transcript_seq_objs_from_genes{
 
     # Add Sequence objects for Transcripts
     foreach my $gene (@$genes) {
+
         my $gene_name;
         my $info = $gene->gene_info;
         if (my $gn = $info->name) {
@@ -2041,8 +2042,11 @@ sub slice_to_XML {
   my @genes;
 
   if ($db->isa("Bio::Otter::DBSQL::DBAdaptor")) {
-     @genes = @{ $db->get_GeneAdaptor->fetch_by_Slice($slice) };
-   } else {
+     # @genes = @{ $db->get_GeneAdaptor->fetch_by_Slice($slice) };
+
+        # to prevent getting "unwanted" genes:
+     @genes = @{ $slice->get_all_Genes('otter') };
+  } else {
      # Is this ever used?  AnnotatedGenes from an non-otter database?
      my $tmpgenes = $db->get_GeneAdaptor->fetch_all_by_Slice($slice);
      foreach my $g (@$tmpgenes) {
