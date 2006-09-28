@@ -125,7 +125,8 @@ sub check_for_change_in_gene_components {
   foreach my $tran (@$transcripts) {
 	 ##assign stable_id for new trancript
 	 unless ($tran->stable_id) {
-		$sida->fetch_new_stable_ids_for_Transcript($tran);
+#		$sida->fetch_new_stable_ids_for_Transcript($tran);
+		$tran->stable_id($sida->fetch_new_transcript_stable_id);
 	 }
 	 ##check if exons are new or old and if old whether they have changed or not
 	 my $exons=$tran->get_all_Exons;
@@ -246,7 +247,8 @@ sub translation_diff{
   }
   if (defined $translation) {
 	 unless ($translation->stable_id) {
-		$sida->fetch_new_stable_ids_for_Translation($translation);
+#		$sida->fetch_new_stable_ids_for_Translation($translation);
+		$translation->stable_id($sida->fetch_new_translation_stable_id);
 		$translation->version(1);
 	 }
   }
@@ -291,7 +293,8 @@ sub exons_diff {
   foreach my $exon (@$exons){
 	 ##assign stable_id for new exon
 	 unless ($exon->stable_id) {
-		$sida->fetch_new_stable_ids_for_Exon($exon);
+#		$sida->fetch_new_stable_ids_for_Exon($exon);
+		$exon->stable_id($sida->fetch_new_exon_stable_id);
 	 }
 	 my $db_exon=$ea->fetch_by_stable_id($exon->stable_id);
 	 ##if exon is old compare to see if anything has changed

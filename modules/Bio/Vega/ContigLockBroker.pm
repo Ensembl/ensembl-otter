@@ -42,6 +42,7 @@ sub check_locks_exist_by_slice {
   if (!$author->isa("Bio::Vega::Author")) {
 	 throw("[$author] is not a Bio::Vega::Author");
   }
+
   my $contig_list = $self->Contig_listref_from_Slice($slice);
   my $aptr = $db->get_ContigLockAdaptor;
   my $sa=$db->get_SliceAdaptor();
@@ -49,7 +50,7 @@ sub check_locks_exist_by_slice {
   foreach my $contig (@$contig_list) {
 	 my $ctg_seq_region_id=$sa->get_seq_region_id($contig);
 	 my $lock = $aptr->fetch_by_contig_id($ctg_seq_region_id)
-		or throw(sprintf "Contig [%s] not locked by [%s]\n", $ctg_seq_region_id,$author->name);
+		or throw(sprintf "Contig [%s] not locked\n", $ctg_seq_region_id);
 	 unless ($lock->author->name eq $author->name) {
 		throw("Author [" . $author->name . "] doesn't own lock for $contig");
 	 }
@@ -155,9 +156,6 @@ sub remove_by_slice {
   my $contig_list = $self->Contig_listref_from_Slice($slice);
   my $aptr       = $db->get_ContigLockAdaptor;
   my $sa=$db->get_SliceAdaptor;
-  #print STDERR "\n\n****Ia m called from remove locks @$contig_list\n\n";
-  #use Data::Dumper;
-  #print STDERR Dumper($slice);
   foreach my $contig (@$contig_list) {
 	 my $ctg_seq_region_id=$sa->get_seq_region_id($contig);
 	 if (my $lock = $db->get_ContigLockAdaptor->fetch_by_contig_id($ctg_seq_region_id)) {
@@ -177,11 +175,11 @@ sub Contig_listref_from_Slice {
   my ($self,$slice)  = @_;
   my $contig_list = [];
   my $slice_projection = $slice->project('contig');
-  foreach my $seg (@$slice_projection) {
-
-	 my $contig_slice = $seg->to_Slice();
-	 #my $assembly_offset = $contigslice->start()-1;
-	 #$contig_slice->start($contig_seg->from_start+ $assembly_offset);
+  foreach my $contig_seg (@$slice_projection) {
+	 my $contig_slice = $contig_seg->to_Slice();
+	 my $assembly_offset = $contig_slice->start()-1;
+	 $contig_slice->start($contig_seg->from_start+ $assembly_offset);
+	 $contig_slice->end($contig_seg->from_end   + $assembly_offset);
 	 push(@$contig_list, $contig_slice);
   }
 
