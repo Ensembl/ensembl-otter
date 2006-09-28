@@ -11,6 +11,7 @@ use Bio::Vega::DBSQL::TranscriptAdaptor;
 use Bio::Vega::DBSQL::TranslationAdaptor;
 use Bio::Vega::DBSQL::AssemblyTagAdaptor;
 use Bio::Vega::DBSQL::ContigLockAdaptor;
+use Bio::Vega::DBSQL::MetaContainer;
 use base 'Bio::EnsEMBL::DBSQL::DBAdaptor';
 
 sub get_GeneAdaptor {
@@ -110,6 +111,14 @@ sub get_ContigLockAdaptor {
 	 $self->{'ContigLock'}=$ad;
   }
   return $self->{'ContigLock'};
+}
+
+sub get_MetaContainer {
+    my( $self ) = @_;
+	 if ( !exists $self->{'VegaMetaContainer'} ){
+		$self->{'VegaMetaContainer'}=Bio::Vega::DBSQL::MetaContainer->new($self);
+    }
+    return $self->{'VegaMetaContainer'};
 }
 
 sub begin_work {

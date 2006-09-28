@@ -152,7 +152,8 @@ sub build_SequenceFragment {
   my $strand = $data->{'fragment_ori'};
   my $chrslice=$self->get_ChromosomeSlice;
   unless ($chrslice) {
-	 $chrslice = make_Slice($self,$chr_slice_name,1,$end,$end,1,$chr_coord_system);
+#	 $chrslice = make_Slice($self,$chr_slice_name,1,$end,$end,1,$chr_coord_system);
+	 $chrslice = make_Slice($self,$chr_slice_name,$start,$end,$end,1,$chr_coord_system);
 	 $slice{$self}{'chr'} ||= $chrslice;
 	 my $chr_attrib=$self->make_Attribute('chr','Chromosome Name','Chromosome Name Contained in the Assembly',$data->{'chromosome'});
 	 my $chr_attrib_list = $slice{$self}{'chr_attrib'} ||= [];
@@ -161,9 +162,9 @@ sub build_SequenceFragment {
   else {
 	 $chrslice=$slice{$self}{'chr'};
 	 my $slice_start=$chrslice->start();
-#	 if ( $start < $slice_start ) {
-	#	$slice_start=$start;
-	 #}
+	 if ( $start < $slice_start ) {
+		$slice_start=$start;
+	 }
 	 my $slice_end=$chrslice->end();
 	 if ( $end > $slice_end ) {
 		$slice_end=$end;
@@ -171,8 +172,8 @@ sub build_SequenceFragment {
 	 unless ($chrname and $start and $end and $offset and $strand) {
 		die "XML does not contain information needed to create slice:\nchr name='$chrname'  chr start='$start'  chr end='$end' offset='$offset' strand = '$strand'";
 	 }
-#	 my $new_chr_slice=make_Slice($self,$chr_slice_name,$slice_start,$slice_end,$slice_end,1,$chr_coord_system);
-	 my $new_chr_slice=make_Slice($self,$chr_slice_name,1,$slice_end,$slice_end,1,$chr_coord_system);
+	 my $new_chr_slice=make_Slice($self,$chr_slice_name,$slice_start,$slice_end,$slice_end,1,$chr_coord_system);
+#	 my $new_chr_slice=make_Slice($self,$chr_slice_name,1,$slice_end,$slice_end,1,$chr_coord_system);
 	 $slice{$self}{'chr'}=$new_chr_slice;
   }
   my $cmp_start = $offset;
