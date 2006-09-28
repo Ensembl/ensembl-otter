@@ -163,10 +163,22 @@ sub get_mapper_dba {
             $sq->setarg('csver', $sdb_asm);
             return;
 
-        } else { # guaranteed to differ!
+        } else { # assemblies are guaranteed to differ!
 
-            if( @{$odba->get_MetaContainer()->list_value_by_key('mapper_db')} ) { # if mapper is defined
-                my $mdba = odba_to_sdba($sq, $odba, 1, 'mapper_db');
+                # see if 'mapper_db' meta link is defined:
+            my ($mapper_val) = @{$odba->get_MetaContainer()->list_value_by_key('mapper_db')};
+            if($mapper_val) {
+                my $mdba;
+
+                    # we may keep the mapping information in new otter|pipeline db or elsewhere:
+                if($mapper_val eq '=otter_head') {
+                    $mdba = $odba;
+                } elsif($mapper_val eq '=pipeline_head') {
+                    $mdba = $pdba;
+                } else {
+                    $mdba = odba_to_sdba($sq, $odba, 1, 'mapper_db');
+                }
+
                 return ($mdba, $sdb_asm);
             } else {
                 server_log("No mapper_db defined in meta table => cannot map between assemblies => exiting");
