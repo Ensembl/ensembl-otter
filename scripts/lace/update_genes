@@ -205,6 +205,7 @@ $| = 1;
 	$db_gene->gene_info->name->name($rename);
       }
       print STDERR "$gene_stable_id renamed from $oldname -> $rename\n";
+      push(@$genes,$db_gene);
     }elsif($merge){
       if(!$gene_merge->{$stable_id}){
 	print STDERR "merge mode: no genes found to merge for $stable_id\n";
