@@ -58,7 +58,7 @@ $| = 1;
     my $otter_db  = $dset->get_cached_DBAdaptor;
     my $gene_aptr = $otter_db->get_GeneAdaptor;
 
-    my $gene_id_list;
+    my $gene_id_list=[];
     if ($gene_stable_id) {
       my @list;
       if (-e $gene_stable_id) {
@@ -74,24 +74,26 @@ $| = 1;
       }
       my $n=0;
       foreach my $gsi (@list) {
+	$n++;
 	# convert transcript_id into gene_id
 	if ($gsi =~ /T\d+/) {
 	  my $g;
 	  eval{
 	    $g=$gene_aptr->fetch_by_transcript_stable_id($gsi);
 	  };
-	  next if ($@);
+	  next if ($@ || !$g);
 	  my $gsi2=$g->stable_id;
 	  print STDERR "$gsi -> $gsi2\n";
 	  $gsi=$gsi2;
 	}
 	eval{
 	  push(@$gene_id_list, $gene_aptr->fetch_by_stable_id($gsi)->dbID);
-	  $n++;
 	};
+	next if ($@);
       }
-      print STDERR "checking ".scalar(@list)." valid gene_stable_ids out of $n\n".
+      print STDERR "checking ".scalar(@$gene_id_list)." valid gene_stable_ids out of $n\n";
 	  print join(',',@$gene_id_list)."\n";
+      exit if scalar(@$gene_id_list)==0;
     } elsif ($sequence_set) {
         my $slice_aptr = $otter_db->get_SliceAdaptor;
         $otter_db->assembly_type($sequence_set);
@@ -157,6 +159,19 @@ $| = 1;
 	my $ntrans=0;
 	my $nnmd=0;
         foreach my $trans (@{ $gene->get_all_Transcripts }) {
+
+	    # for stats, also report transcripts that are labelled as NMD
+	    if($nmd){
+	      my $transcript_info=$trans->transcript_info;
+	      my $tc=$transcript_info->class->name;
+	      if($tc eq 'Nonsense_mediated_decay'){
+		my $tsi=$trans->stable_id;
+		my $tn=$transcript_info->name;
+		my $gsi=$gene->stable_id;
+		print OUT5 "$tsi ($tn) [$gsi]: INFO: annotated as NMD\n";
+	      }
+	    }
+
             next unless $trans->translation;
 	    $ntrans++;
 
@@ -362,7 +377,7 @@ sub check_nmd {
   my $tc=$transcript_info->class->name;
 
   my $flag_exception;
-  foreach my $remark ($trans->transcript_info->remark) {
+  foreach my $remark ($transcript_info->remark) {
     my $text = $remark->remark;
     if($text=~/Annotation_remark- NMD_exception/i){
       $flag_exception=1;
@@ -451,8 +466,7 @@ sub check_nmd {
 	  $flag_nmd="$leseq bases from spice";
 	}
       }else{
-	print "ERR: translation not in transcript:\n $eseq\n $cds\n";
-	exit 0;
+	print STDERR "ERR: translation not in transcript: $tsi $tn $gsi $enum\n $eseq\n $cds\n";
       }
     }
   }

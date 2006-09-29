@@ -19,6 +19,7 @@ my $db='mouse_vega040714_tmp';
 my $help;
 my $phelp;
 my $opt_v;
+my $opt_e;
 my $gene_type;
 
 $Getopt::Long::ignorecase=0;
@@ -34,6 +35,7 @@ GetOptions(
 	   'h', \$help,
 	   'v', \$opt_v,
 	   't:s', \$gene_type,
+	   'e', \$opt_e,
 	   );
 
 # help
@@ -51,6 +53,8 @@ split_gene.pl
   -h                        this help
   -help                     perldoc help
   -v                        verbose
+
+  -e                        ensembl db, not otter
 
 ENDOFTEXT
     exit 0;
@@ -70,12 +74,22 @@ delete_genes_by_type($dbh, $gene_type);
 
 sub delete_genes_by_type {
     my( $dbh, @gene_types ) = @_;
+
+    my $sql;
+    if($gene_types[0] eq 'all'){
+      $sql=qq{
+
+        SELECT e.exon_id
+        FROM exon e
+        };
+
+    }else{
     
-    my $name_str = join(',', map "'$_'", @gene_types);
-    print "removing genes of type: $name_str\n";
-    ### Get exon IDs then use Stephen's delete genes by chromosome script
+      my $name_str = join(',', map "'$_'", @gene_types);
+      print "removing genes of type: $name_str\n";
+      ### Get exon IDs then use Stephen's delete genes by chromosome script
     
-    my $sql = qq{
+      $sql = qq{
         SELECT e.exon_id
         FROM gene g
           , transcript t
@@ -87,6 +101,8 @@ sub delete_genes_by_type {
           AND g.type in ($name_str)
         GROUP BY e.exon_id
         };
+
+    }
     my $sth = $dbh->prepare($sql);
     $sth->execute;    
 
@@ -95,14 +111,14 @@ sub delete_genes_by_type {
     
     my( @exon );
     while ($sth->fetch) {
-        push(@exon, $exon_id);
+      push(@exon, $exon_id);
     }
     print "Deleting ",scalar(@exon)," distinct exon ids\n"; 
 
     foreach my $e_id (@exon) {
-        foreach my $table (qw{ exon supporting_feature exon_transcript exon_stable_id }) {
-            $dbh->do(qq{DELETE FROM $table WHERE exon_id = $e_id});
-        }
+      foreach my $table (qw{ exon supporting_feature exon_transcript exon_stable_id }) {
+	$dbh->do(qq{DELETE FROM $table WHERE exon_id = $e_id});
+      }
     }
 
     print "Done\n"; 
@@ -172,9 +188,11 @@ sub delete_genes_by_type {
     print "Done\n\n"; 
 
 
-    print "Deleting Annotation info\n";
+    unless ($opt_e){
 
-    my $gene_info_ids = $dbh->selectall_arrayref(qq{
+      print "Deleting Annotation info\n";
+
+      my $gene_info_ids = $dbh->selectall_arrayref(qq{
     SELECT gi.gene_info_id
     FROM gene_info gi
     LEFT JOIN gene_stable_id gsi
@@ -183,23 +201,23 @@ sub delete_genes_by_type {
 
 
 
-    print "Deleting ",scalar(@$gene_info_ids)," distinct gene_info ids\n"; 
+      print "Deleting ",scalar(@$gene_info_ids)," distinct gene_info ids\n"; 
+      
+
+      foreach my $gene_info_id(@$gene_info_ids) {
+	
+	$dbh->do(qq{delete from gene_info where gene_info_id = $gene_info_id->[0]});
+	$dbh->do(qq{delete from gene_name where gene_info_id = $gene_info_id->[0]});
+	$dbh->do(qq{delete from gene_remark where gene_info_id = $gene_info_id->[0]});
+	$dbh->do(qq{delete from gene_synonym where gene_info_id = $gene_info_id->[0]});
+	$dbh->do(qq{delete from current_gene_info where gene_info_id = $gene_info_id->[0]});
+
+      }
+
+      print "Done\n";
 
 
-    foreach my $gene_info_id(@$gene_info_ids) {
-
-       $dbh->do(qq{delete from gene_info where gene_info_id = $gene_info_id->[0]});
-       $dbh->do(qq{delete from gene_name where gene_info_id = $gene_info_id->[0]});
-       $dbh->do(qq{delete from gene_remark where gene_info_id = $gene_info_id->[0]});
-       $dbh->do(qq{delete from gene_synonym where gene_info_id = $gene_info_id->[0]});
-       $dbh->do(qq{delete from current_gene_info where gene_info_id = $gene_info_id->[0]});
-
-    }
-
-    print "Done\n";
-
-
-    my $trans_info_ids = $dbh->selectall_arrayref(qq{
+      my $trans_info_ids = $dbh->selectall_arrayref(qq{
     SELECT ti.transcript_info_id
     FROM transcript_info ti
     LEFT JOIN transcript_stable_id tsi
@@ -207,22 +225,22 @@ sub delete_genes_by_type {
       WHERE  tsi.stable_id IS NULL});
 
 
-    print "Deleting ",scalar(@$trans_info_ids)," distinct transcript_info ids\n"; 
+      print "Deleting ",scalar(@$trans_info_ids)," distinct transcript_info ids\n"; 
 
-    foreach my $trans_info_id(@$trans_info_ids) {
+      foreach my $trans_info_id(@$trans_info_ids) {
 
-       $dbh->do(qq{delete from transcript_info where transcript_info_id = $trans_info_id->[0]});
-       $dbh->do(qq{delete from transcript_remark where transcript_info_id = $trans_info_id->[0]});
-       $dbh->do(qq{delete from current_transcript_info where transcript_info_id = $trans_info_id->[0]});
-       $dbh->do(qq{delete from evidence where transcript_info_id = $trans_info_id->[0]});
+	$dbh->do(qq{delete from transcript_info where transcript_info_id = $trans_info_id->[0]});
+	$dbh->do(qq{delete from transcript_remark where transcript_info_id = $trans_info_id->[0]});
+	$dbh->do(qq{delete from current_transcript_info where transcript_info_id = $trans_info_id->[0]});
+	$dbh->do(qq{delete from evidence where transcript_info_id = $trans_info_id->[0]});
+	
+      }
+
+      print "Done\n";
 
     }
 
-    print "Done\n";
-
-
     print "Deleting Xrefs\n";
-
 
     my $gene_xref_ids = $dbh->selectall_arrayref(qq{
     SELECT ox.xref_id,
@@ -236,7 +254,7 @@ sub delete_genes_by_type {
       AND  g.gene_id IS NULL});
 
 
-
+    print "Deleting ",scalar(@$gene_xref_ids)," distinct gene xref ids\n"; 
 
     foreach my $gene_xref_id (@$gene_xref_ids) {
 
@@ -247,7 +265,7 @@ sub delete_genes_by_type {
 
     }
 
-
+    print "Done\n";
 
     my $trans_xref_ids = $dbh->selectall_arrayref(qq{
     SELECT ox.xref_id,
@@ -260,6 +278,7 @@ sub delete_genes_by_type {
       ox.ensembl_object_type = 'Transcript'
       AND  t.transcript_id IS NULL});
 
+    print "Deleting ",scalar(@$trans_xref_ids)," distinct transcript xref ids\n"; 
 
     foreach my $trans_xref_id (@$trans_xref_ids) {
 
@@ -269,6 +288,8 @@ sub delete_genes_by_type {
         $dbh->do(qq{DELETE FROM identity_xref WHERE object_xref_id = $trans_xref_id->[2]});
 
     }
+
+    print "Done\n";
 
     
 }

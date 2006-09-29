@@ -1,8 +1,7 @@
 #!/usr/local/bin/perl
 
-# script to carry out most of changes required (by SQL) to create
-# a new gene and move some of the transcripts to it - see help for
-# more details.
+# script to delete a gene based on SQL - useful when a gene store has partially 
+# failed and left a mess behind...
 
 use strict;
 use Getopt::Long;
@@ -93,9 +92,9 @@ sub delete_genes_by_name {
     my $name_str = join(',', map "'$_'", @gene_stable_ids);
     ### Get exon IDs then use Stephen's delete genes by chromosome script
     
-    # if contains OTT, assume names are stable id's
+    # if contains OTT,ENS assume names are stable id's
     my $sql;
-    if($name_str=~/OTT/){
+    if($name_str=~/OTT|ENS/){
       $sql= qq{
         SELECT e.exon_id
         FROM gene g
