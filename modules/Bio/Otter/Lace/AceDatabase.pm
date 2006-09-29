@@ -880,7 +880,7 @@ sub make_ensembl_gene_DataFactory {
 sub write_ensembl_data_for_key {
     my ($self, $ss, $key, $ana_names) = @_;
 
-    my $debug_flag = 0;
+    my $debug_flag = 1;
 
     my $dsname = $ss->dataset_name();
 
@@ -1038,11 +1038,14 @@ sub write_ensembl_data_for_key {
                     }
                 }
             }
+	    else {
+	        print "ERROR: multiple ens matches to slice - skipped\n";
+	    }
 
             # right now, if $first not set for $i=0 can't continue
             if ($i == 0 && $first == -1) { $fail = 1; }
 
-       # once started a slice with first, if fail then no point checking further
+	    # once started a slice with first, if fail then no point checking further
             last if $fail;
         }
 
