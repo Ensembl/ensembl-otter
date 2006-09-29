@@ -21,6 +21,7 @@ $| = 1;
   my $test_file;
   my $merge;
   my $make_nmd;
+  my $rename;
 
   my $usage = sub { exec('perldoc', $0) };
   Bio::Otter::Lace::Defaults::do_getopt(
@@ -34,6 +35,7 @@ $| = 1;
 	'test_file:s'           => \$test_file,
 	'merge'                 => \$merge,
         'make_nmd'              => \$make_nmd,
+	'rename:s'              => \$rename,
 
         ) or $usage->();
   $usage->() unless $dataset_name and $sequence_set;
@@ -124,6 +126,13 @@ $| = 1;
   }
   printf STDERR "Found %d current genes\n", scalar(@$gene_id_list);
 
+  # some options only work if single gene
+  if($rename){
+    if(scalar(@$gene_id_list)>1){
+      print STDERR "selected option only possible with single gene id\n";
+      exit 0;
+    }
+  }
 
   # loop over genes in list
   foreach my $gene_dbid (@$gene_id_list) {
@@ -136,19 +145,28 @@ $| = 1;
     }
 
     # work out where this gene is/these genes are
+    # (required for any option that involves multiple genes)
     my $slice1;
     if($merge){
+
+      # build appropriate gene list
+      my $genes;
+      if($merge){
+	push(@$genes,$stable_id,@{$gene_merge->{$stable_id}});
+      }
+
+      # get slice that covers all genes, checking on same chr
       my $err;
-      ($err,$slice1)=&containing_slice($slice_aptr,
-				       $stable_id,
-				       @{$gene_merge->{$stable_id}});
+      ($err,$slice1)=&containing_slice($slice_aptr,@$genes);
       if($err){
 	print STDERR "genes not all on same chromosome - ignored\n";
 	next;
       }
+
     }else{
       $slice1=$slice_aptr->fetch_by_gene_stable_id($stable_id);
     }
+
     # assuming this is in correct order, can get first and last...
     my $acc_list = $gene_aptr->list_all_accessions_in_Slice($slice1);
     my $chr_start_acc=$acc_list->[0];
@@ -167,12 +185,27 @@ $| = 1;
     }
     $slice_gene = undef;    # It has served its purpose
 
-    # get ready for xml manipulation
-
 
     # action on gene:
     my $genes;
-    if($merge){
+    if($rename){
+      # rename a gene or transcript
+      my $oldname;
+      if($gene_stable_id=~/T\d+$/){
+	foreach my $t (@{$db_gene->get_all_Transcripts}){
+	  # fix transcript name
+	  my $tsi=$t->stable_id;
+	  if($tsi eq $gene_stable_id){
+	    $oldname=$t->transcript_info->name;
+	    $t->transcript_info->name($rename);
+	  }
+	}
+      }else{
+	$oldname=$db_gene->gene_info->name->name;
+	$db_gene->gene_info->name->name($rename);
+      }
+      print STDERR "$gene_stable_id renamed from $oldname -> $rename\n";
+    }elsif($merge){
       if(!$gene_merge->{$stable_id}){
 	print STDERR "merge mode: no genes found to merge for $stable_id\n";
 	next;
@@ -337,38 +370,38 @@ sub containing_slice{
 
 __END__
 
-=head1 NAME - realign_offtrack_genes
+=head1 NAME - update_genes
 
 =head1 SYNOPSIS
 
-  realign_offtrack_genes -dataset <NAME> -set <NAME> -start_acc <ACCESSION> -end_acc <ACCESSION> -gene_stable_id <STABLE_ID>
+  update_genes -dataset <NAME> -set <NAME> -gene_stable_id <STABLE_ID> -option
 
 =head1 AUTHOR
 
-James Gilbert B<email> jgrg@sanger.ac.uk
+Tim Hubbard B<email> th@sanger.ac.uk
+(read/save based on James realign_offtrack_genes script)
 
-=head2 Example from Liz
+=head2 SUMMARY
 
-One for your 'greyed-out' list if you've got one
--  clone AL603882 has been put in chr1-07 
-recently I think and contains evidence to extend
-an existing locus, RP4-533D7.1, which is
-unfortunately. greyed out - the objects
-associated with RP4-533D7.1 continue all the way
-down into AL358075/RP4-533D7 (481)).
+Container script for any arbitary change that needs to be made to
+gene(s) in otter such that a new version of the gene is saved,
+preserving the old version.  Although this creates extra versions in
+the database, its good practices for annotation changes, as it means a
+record is kept of what was done and when.
 
-Thanks very much 
-Liz
+-merge
 
+uses -gene_stable_id to read list of gene_stable_ids from a file.
+Multiple ids on a line are merged with first entry (i.e. gene is made
+obsolete, but transcripts are copied to first gene).
 
-  473  RP11-291L19   AL451136
-  474  RP4-697E16    AL355480
-  475  RP11-767N6    AL604028
-GAP  50,000 bp
-  476  XX-FW85598E4  BX664740
+-make_nmd
 
-  477  RP11-630I5    AL603882
-  478  RP11-397E14   AL772251
-  479  RP11-735A5    AL603888
-  480  RP11-386M16   AL645480
-  481  RP4-533D7     AL358075
+uses -gene_stable_id to specify list of transcript_stable_ids to have
+their translation removed and become labelled as transcript_class
+'Nonsense_mediated_decay'
+
+-rename <NAME>
+
+uses -gene_stable_id to specify single gene_stable_id or
+transcript_stable_id to have its name changed.
