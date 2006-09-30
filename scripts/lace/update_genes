@@ -197,7 +197,7 @@ $| = 1;
 	  my $tsi=$t->stable_id;
 	  if($tsi eq $gene_stable_id){
 	    my $tl=$t->translation;
-	    my $ee=$tl->end_exon;
+	    my $ee=$tl->end_Exon;
 	    my $eest=$ee->start;
 	    my $eeed=$ee->end;
 	    my $elen=$eeed-$eest+1;
