@@ -22,6 +22,7 @@ $| = 1;
   my $merge;
   my $make_nmd;
   my $rename;
+  my $include_stop;
 
   my $usage = sub { exec('perldoc', $0) };
   Bio::Otter::Lace::Defaults::do_getopt(
@@ -36,6 +37,7 @@ $| = 1;
 	'merge'                 => \$merge,
         'make_nmd'              => \$make_nmd,
 	'rename:s'              => \$rename,
+	'include_stop'          => \$include_stop,
 
         ) or $usage->();
   $usage->() unless $dataset_name and $sequence_set;
@@ -188,7 +190,35 @@ $| = 1;
 
     # action on gene:
     my $genes;
-    if($rename){
+    if($include_stop){
+      my $flag=0;
+      if($gene_stable_id=~/T\d+$/){
+	foreach my $t (@{$db_gene->get_all_Transcripts}){
+	  my $tsi=$t->stable_id;
+	  if($tsi eq $gene_stable_id){
+	    my $tl=$t->translation;
+	    my $ee=$tl->end_exon;
+	    my $eest=$ee->start;
+	    my $eeed=$ee->end;
+	    my $elen=$eeed-$eest+1;
+	    my $tleee=$tl->end;
+	    $tleee+=3;
+	    if($tleee>$elen){
+	      print STDERR "extending length of exon impossible: $tleee > $elen\n";
+	    }else{
+	      $tl->end($tleee);
+	      $flag=1;
+	    }
+	  }
+	}
+      }
+      if($flag){
+	print STDERR "$gene_stable_id translation modified to include stop\n";
+	push(@$genes,$db_gene);
+      }else{
+	print STDERR "failed to modify translation for $gene_stable_id\n";
+      }
+    }elsif($rename){
       # rename a gene or transcript
       my $oldname;
       if($gene_stable_id=~/T\d+$/){
