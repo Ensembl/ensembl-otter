@@ -30,17 +30,6 @@ my $auth_name = $author->name;
 
 my $xml_data  = $sq->getarg('data') || error_exit($sq, "No xml data entered. Can't write region");
 
-##this is just for testing the newAPI
-#if ($pipehead == 1) {
- # my $x='';
-  #open(IN, "<".$xml_data);
-  #while(<IN>){
-	# $x=$x.$_;
-  #}
-  #close IN;
-  #$xml_data=$x;
-#}
-
 server_log("Length of data " . length($xml_data) );
 
 my $tmp_xml = Bio::Otter::Lace::TempFile->new;
@@ -270,15 +259,11 @@ send_response($sq, $output_xml, 1);
 }
 
 elsif ($odb->isa('Bio::Vega::DBSQL::DBAdaptor')) {
-
   ##trying store in a new Otter db
-
   my $parser = Bio::Vega::Transform::Otter->new;
   $parser->parsefile($tmp_xml_name);
-
   # check that the assembly is already loaded in the database and
   # is consistent with the current xml assembly
-
   my $cs='chromosome';
   my $chr_slice=$parser->get_ChromosomeSlice;
   my $start=$chr_slice->start;
@@ -286,7 +271,6 @@ elsif ($odb->isa('Bio::Vega::DBSQL::DBAdaptor')) {
   my $strand=$chr_slice->strand;
   my $cs_version=$parser->init_CoordSystem_Version;
   my $segment_name=$parser->get_AssemblyType->{'assembly_type'};
-
   my $slice =  $odb->get_SliceAdaptor()->fetch_by_region($cs,$segment_name,$start,$end,$strand,$cs_version);
   my $slice_projection = $slice->project('contig');
   my $xml_slice=$parser->get_AssemblySlices;
@@ -324,9 +308,6 @@ elsif ($odb->isa('Bio::Vega::DBSQL::DBAdaptor')) {
   };
   error_exit($sq, "Failed checking locks [$@]") if $@;
   server_log("Done checking region is locked.");
-
-
-
   ##update all contig_info and contig_info_attrib
   foreach my $piece (@$chr_ctg) {
 	 my $ctg_attrib_list=$piece->[2];
@@ -334,19 +315,28 @@ elsif ($odb->isa('Bio::Vega::DBSQL::DBAdaptor')) {
 	 my $ctg_name=$cmp_slice->seq_region_name;
 	 my $ctg_author=$piece->[3];
 	 my $ctg_slice=$xmlfrag{$ctg_name}{slice};
-	 my $ctg_info_id = insert_ContigInfo_Attributes($odb,$ctg_author,$ctg_slice,$ctg_attrib_list);
+	 my $ctg_info_id = insert_ContigInfo_Attributes($odb,$author,$ctg_slice,$ctg_attrib_list);
   }
-
   ## strip_incomplete_genes for the xml genes
   my $genes=$parser->get_Genes;
   strip_incomplete_genes($genes);
-
+  my $db_genes = $slice->get_all_Genes;
+  my $del_genes = find_deleted_genes($db_genes,$genes);
   ##update all gene and its components
   my $gene_adaptor=$odb->get_GeneAdaptor;
   foreach my $gene (@$genes){
+	 $gene->slice($slice);
+	 $gene->gene_author($author);
+	 my $tref=$gene->get_all_Transcripts();
+	 foreach my $tran (@$tref) {
+		$tran->slice($slice);
+		$tran->transcript_author($author);
+		foreach my $exon (@{$tran->get_all_Exons}) {
+		  $exon->slice($slice);
+		}
+	 }
 	 $gene_adaptor->store($gene);
   }
-
   ##update feature_sets
   ##SimpleFeatures - deletes old features(features not in xml) and stores the current features in XML
   my $simple_features=$parser->get_SimpleFeatures;
@@ -407,6 +397,22 @@ sub compare_feature_sets {
 
     }
     return($delete, $save);
+}
+
+sub find_deleted_genes {
+  my( $old_genes, $new_genes ) = @_;
+  my %old = map {$_->stable_id, $_} @$old_genes;
+  my %new = map {$_->stable_id, $_} @$new_genes;
+  # Genes that were in the old, but not the new, should be deleted, by setting artificially the gene type=obsolete, so that
+  # the GeneAdaptor updates the database
+  my $delete = [];
+  while (my ($key, $old_g) = each %old) {
+	 unless ($new{$key}) {
+		$old_g->biotype('obsolete');
+		push(@$delete, $old_g);
+	 }
+  }
+  return $delete;
 }
 
 sub SimpleFeature_key {
