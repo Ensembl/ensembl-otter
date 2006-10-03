@@ -152,7 +152,7 @@ sub build_SequenceFragment {
   my $strand = $data->{'fragment_ori'};
   my $chrslice=$self->get_ChromosomeSlice;
   unless ($chrslice) {
-#	 $chrslice = make_Slice($self,$chr_slice_name,1,$end,$end,1,$chr_coord_system);
+	 #$chrslice = make_Slice($self,$chr_slice_name,1,$end,$end,1,$chr_coord_system);
 	 $chrslice = make_Slice($self,$chr_slice_name,$start,$end,$end,1,$chr_coord_system);
 	 $slice{$self}{'chr'} ||= $chrslice;
 	 my $chr_attrib=$self->make_Attribute('chr','Chromosome Name','Chromosome Name Contained in the Assembly',$data->{'chromosome'});
@@ -173,7 +173,7 @@ sub build_SequenceFragment {
 		die "XML does not contain information needed to create slice:\nchr name='$chrname'  chr start='$start'  chr end='$end' offset='$offset' strand = '$strand'";
 	 }
 	 my $new_chr_slice=make_Slice($self,$chr_slice_name,$slice_start,$slice_end,$slice_end,1,$chr_coord_system);
-#	 my $new_chr_slice=make_Slice($self,$chr_slice_name,1,$slice_end,$slice_end,1,$chr_coord_system);
+	#my $new_chr_slice=make_Slice($self,$chr_slice_name,1,$slice_end,$slice_end,1,$chr_coord_system);
 	 $slice{$self}{'chr'}=$new_chr_slice;
   }
   my $cmp_start = $offset;
@@ -254,12 +254,11 @@ sub build_Feature {
   my $ana = $logic_ana{$self}{$data->{'type'}} ||= Bio::EnsEMBL::Analysis->new(-logic_name => $data->{'type'});
   my $slice = $self->get_ChromosomeSlice;
   ##convert xml coordinates which are in chromosomal coords - to feature coords
-  ##the conversion may not be necessary as the features are stored in chromosomal coordinates anyway
-#  my $offset = 1 - $slice->start ;
- # my $feat_start = $data->{'start'} + $offset;
-  #my $feat_end =  $data->{'end'}   + $offset;
-  my $feat_start=$data->{'start'};
-  my $feat_end  =$data->{'end'};
+  my $offset = 1 - $slice->start ;
+  my $feat_start = $data->{'start'} + $offset;
+  my $feat_end =  $data->{'end'}   + $offset;
+  #my $feat_start=$data->{'start'};
+  #my $feat_end  =$data->{'end'};
   my $feature = Bio::EnsEMBL::SimpleFeature->new(
 																 -start     => $feat_start,
 																 -end       => $feat_end,
@@ -326,13 +325,19 @@ sub build_Exon {
 sub build_Transcript {
   my ($self, $data) = @_;
   my $exons = delete $exon_list{$self};
+  my $slice = $self->get_ChromosomeSlice;
+  my $chrstart=$slice->start;
   my $ana = $logic_ana{$self}{'Otter'} ||= Bio::EnsEMBL::Analysis->new(-logic_name => 'Otter');
+
   my $transcript = Bio::Vega::Transcript->new(
 															 -stable_id => $data->{'stable_id'},
 															 -created_date=>$time_now{$self},
 															 -modified_date=>$time_now{$self},
 															 -analysis=>$ana,
+															 -slice     => $slice,
 															);
+
+
   ##translation start - end
   my $tran_start_pos=$data->{'translation_start'};
   my $tran_end_pos=$data->{'translation_end'};
@@ -449,6 +454,7 @@ sub build_Transcript {
   if (defined $evidence) {
 	 $transcript->add_Evidence($evidence);
   }
+
   my $list = $transcript_list{$self} ||= [];
   push @$list, $transcript;
 }
@@ -558,14 +564,20 @@ sub build_Locus {
 	 $gene->truncated_flag($truncated);
   }
 
-  ##convert all exon coordinates from chromosomal coordinates to slice coordinates
-  # this conversion is not necessary since the exons are stored in chromosomal coordinates anyway ??
-#  if ($chrstart != 2000000000) {
-	# foreach my $exon (@{$gene->get_all_Exons}) {
-		#$exon->start($exon->start - $chrstart + 1);
-		#$exon->end(  $exon->end   - $chrstart + 1);
-	 #}
-  #}
+  ##convert coordinates from chromosomal coordinates to slice coordinates
+  if ($chrstart != 2000000000) {
+	 foreach my $exon (@{$gene->get_all_Exons}) {
+		$exon->start($exon->start - $chrstart + 1);
+		$exon->end(  $exon->end   - $chrstart + 1);
+	 }
+  }
+  $gene->start($gene->start-$chrstart+1);
+  $gene->end($gene->end-$chrstart+1);
+  foreach my $transcript (@$transcripts){
+	 $transcript->start($transcript->start-$chrstart+1);
+	 $transcript->end($transcript->end-$chrstart+1);
+  }
+
   my $list = $gene_list{$self} ||= [];
   push @$list, $gene;
 }
@@ -762,8 +774,6 @@ sub get_SliceId {
 			 die "problem with pfetch for $acc_ver\n:$@\n";
 		  }
 		}
-		
-		  
 		$seq   = $seqobj->seq;
 		##insert slice
 		$seq_reg_id = $sa->store($new_slice,\$seq);
@@ -823,7 +833,6 @@ sub get_ChromosomeSliceDB {
   my $name=$slice->name;
   my $start=$slice->start;
   my $end=$slice->end;
-  #die "\n\nname:$name, start:$start  end:$end\n\n";
   $new_slice = $sa->fetch_by_name($slice->name);
   return $new_slice;
 }

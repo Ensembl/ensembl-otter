@@ -48,7 +48,9 @@ sub compare{
   }
   else {
 	 $changed=1;
+	 print STDERR "\nFrom comparator:changed object is:".ref($obj1)."Before key:$obj1_hash_key\n".ref($obj2)."After key:$obj2_hash_key";
   }
+
   return $changed;
 
 }

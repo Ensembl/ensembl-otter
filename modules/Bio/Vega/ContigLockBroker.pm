@@ -177,9 +177,9 @@ sub Contig_listref_from_Slice {
   my $slice_projection = $slice->project('contig');
   foreach my $contig_seg (@$slice_projection) {
 	 my $contig_slice = $contig_seg->to_Slice();
-	 my $assembly_offset = $contig_slice->start()-1;
-	 $contig_slice->start($contig_seg->from_start+ $assembly_offset);
-	 $contig_slice->end($contig_seg->from_end   + $assembly_offset);
+	# my $assembly_offset = $contig_slice->start()-1;
+	# $contig_slice->start($contig_seg->from_start+ $assembly_offset);
+	# $contig_slice->end($contig_seg->from_end   + $assembly_offset);
 	 push(@$contig_list, $contig_slice);
   }
 

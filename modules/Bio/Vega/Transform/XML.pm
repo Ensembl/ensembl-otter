@@ -308,6 +308,7 @@ sub generate_Transcript{
 	 my $strand = $translation->start_Exon->strand;
 	 $tran_low  = $tran->coding_region_start;
 	 $tran_high = $tran->coding_region_end;
+#	  my ($tl_start, $tl_end)=($tran_low,$tran_high);
 	 my ($tl_start, $tl_end) = ($strand == 1)
 		? ($tran_low + $coord_offset, $tran_high + $coord_offset)
 		  : ($tran_high + $coord_offset, $tran_low + $coord_offset);
@@ -337,7 +338,8 @@ sub generate_ExonSet{
 	 my $e=$self->prettyprint('exon');
 	 $e->attribvals($self->prettyprint('stable_id',$exon->stable_id));
 	 $e->attribvals($self->prettyprint('start',$exon->start + $coord_offset));
-	 $e->attribvals($self->prettyprint('end',$exon->end + $coord_offset));
+#	 $e->attribvals($self->prettyprint('start',$exon->seq_region_start ));
+	 $e->attribvals($self->prettyprint('end',$exon->end  + $coord_offset));
 	 $e->attribvals($self->prettyprint('strand',$exon->strand));
 	 if ( defined($tran_high) && $exon->start <= $tran_high &&
          defined($tran_low)  && $tran_low <= $exon->end){

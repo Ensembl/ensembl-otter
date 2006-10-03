@@ -3,9 +3,7 @@ package Bio::Vega::Transcript;
 use strict;
 use Bio::EnsEMBL::Utils::Argument qw ( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
-
 use base 'Bio::EnsEMBL::Transcript';
-
 
 sub new {
   my($class,@args) = @_;
@@ -174,7 +172,7 @@ sub hashkey {
   my $cds_end_NF = $self->get_all_Attributes('cds_end_NF') ;
   my $evidence= $self->get_Evidence;
   my $evidence_count=0;
-##should transcript_class_name be added??
+  ##should transcript_class_name be added??
   if (defined $evidence) {
 	 $evidence_count=@$evidence;
   }
@@ -260,17 +258,6 @@ sub hashkey {
 
   return ($hashkey_main);
 }
-
-#sub translation  {
-
- # my $self = shift;
-  #my $translation = $self->SUPER::translation;
-  #if ($translation){
-	# bless $translation, "Bio::Vega::Translation";
-  #}
-  #return $translation;
-
-#}
 
 1;
 
