@@ -216,14 +216,17 @@ sub ace_and_vector_dump {
 
     my @vectors  = ();
 
-    if (keys %{ $self->{_gfs} }) {
+    my $valid_gfs = [ grep { $_ && $_->{fiveprime} && $_->{threeprime} }
+                      (values %{ $self->{_gfs} }) ];
+
+    if(@$valid_gfs) {
 
         $ace_text .= $header;
 
         for my $subhash (
             sort { (($a->{fiveprime}<$a->{threeprime})?$a->{fiveprime}:$a->{threeprime})
                <=> (($b->{fiveprime}<$b->{threeprime})?$b->{fiveprime}:$b->{threeprime}) }
-            values %{ $self->{_gfs} })
+                 @$valid_gfs )
         {
             my $gf_type = $subhash->{gf_type};
             my ($start, $end) =
@@ -526,7 +529,7 @@ sub clear_genomic_features {
     for my $gfid (keys %{$self->{_gfs}}) {
         $self->delete_genomic_feature($gfid);
     }
-    $self->{_gfs} = undef;
+    $self->{_gfs} = {};
 }
 
 # -------------[save if needed (+optional interactivity) ]-------------------
