@@ -95,6 +95,44 @@ sub fetch_transcript_author {
   return $transcript;
 }
 
+sub get_deleted_Transcript_by_slice{
+  my ($self, $transcript,$tran_version) = @_;
+  unless ($transcript || $tran_version){
+	 throw("no transcript passed on to fetch old transcript or no version supplied");
+  }
+  my $tran_slice=$transcript->slice;
+  my $tran_stable_id=$transcript->stable_id;
+  my @out = grep { $_->stable_id eq $tran_stable_id and $_->version eq $tran_version }
+    @{$self->SUPER::fetch_all_by_Slice_constraint($tran_slice,
+    't.is_current = 0 ')};
+	if ($#out > 1) {
+	  die "there are more than one transcript retrived\n";
+	}
+  my $db_tran=$out[0];
+  if ($db_tran){
+	 $self->reincarnate_transcript($db_tran);
+  }
+  return $db_tran;
+}
+
+sub get_current_Transcript_by_slice{
+  my ($self, $transcript) = @_;
+  unless ($transcript){
+	 throw("no transcript passed on to fetch old transcript");
+  }
+  my $tran_slice=$transcript->slice;
+  my $tran_stable_id=$transcript->stable_id;
+  my @out = grep { $_->stable_id eq $tran_stable_id }
+    @{ $self->fetch_all_by_Slice($tran_slice)};
+	if ($#out > 1) {
+	  die "there are more than one transcript retrived\n";
+	}
+  my $db_tran=$out[0];
+  if ($db_tran){
+	 $self->reincarnate_transcript($db_tran);
+  }
+  return $db_tran;
+}
 
 1;
 

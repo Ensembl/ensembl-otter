@@ -2,7 +2,6 @@ package Bio::Vega::ContigInfo;
 
 use strict;
 use Bio::EnsEMBL::Utils::Argument qw ( rearrange );
-
 use base qw(Bio::EnsEMBL::Storable);
 
 

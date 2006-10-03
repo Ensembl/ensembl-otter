@@ -94,7 +94,7 @@ sub hashkey {
   }
 
   unless($slice_name) {
-    throw("Slice must be set to generate correct hashkey.");
+    throw("Slice name must be set to generate correct hashkey.");
   }
 
   unless($start) {
