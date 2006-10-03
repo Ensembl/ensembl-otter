@@ -45,8 +45,8 @@ sub copy_annotations {
   foreach my $haplotype ( keys %{$MHC_exonSID_start_end} ) {
 
 	# test
-#	next if $haplotype ne "MHC_APD-02";# COX";
-#	next if $haplotype ne "MCH_COX";
+	#	next if $haplotype ne "MHC_APD-02";# COX";
+
 
 	warn "#MHC: [$haplotype]";
 	
@@ -69,18 +69,11 @@ sub copy_annotations {
 		copy_partial_transfer($haplotype, $MHC_slice, $pgf, $geneSID);
 	  }
 	}
-#	warn "$haplotype done";
   }
 }
 
 sub copy_full_transfer {
   my ($haplotype, $MHC_slice, $pgf, $geneSID) = @_;
-
-# need to change genename so there is no duplacate within same sequence_set
-  my $geneName = $pgf->gene_info->name->name;
-  $geneName .= "-2";
-  my $gn =$pgf->gene_info->name;
-  $gn->name($geneName);
 
   foreach my $trans ( @{$pgf->get_all_Transcripts} ) {
 
@@ -118,8 +111,6 @@ sub copy_full_transfer {
 	warn "\n";
   }
 
-  # can't do it here otherwise get "MSG: Could not find start or end exon in transcript" error
-  #$pgf = deidentify($pgf);
   push(@{$MHC_geneObj->{$haplotype}}, $pgf);
 }
 
@@ -133,12 +124,6 @@ sub copy_partial_transfer {
 	next if $k eq "_transcript_array";
 	$new_gene->{$k} = $pgf->{$k};
   }
-
-  # need to change genename so there is no duplacate within same sequence_set
-  my $geneName = $new_gene->gene_info->name->name;
-  $geneName .= "-2";
-  my $gn =$new_gene->gene_info->name;
-  $gn->name($geneName);
 
   foreach my $trans ( @{$pgf->get_all_Transcripts} ) {
 	my $transSID = $trans->transcript_info->transcript_stable_id;
@@ -179,47 +164,7 @@ sub copy_partial_transfer {
 	warn "\n";
   }
 
-  # can't do it here otherwise get "MSG: Could not find start or end exon in transcript" error
-  #$pgf = deidentify($pgf);
-
   push(@{$MHC_geneObj->{$haplotype}}, $new_gene);
-}
-
-sub deidentify {
-
-  my $gene = shift;
-  my $time = time;
-
-  $gene->stable_id(undef);
-  $gene->created($time);
-  $gene->version(1);
-
-  foreach my $trans ( @{$gene->get_all_Transcripts} ) {
-	
-	$trans->stable_id(undef);
-	$trans->created($time);
-	$trans->version(1);
-	
-	# undef protein stable ID
-	if ( $trans->translation ) {
-	  my $translation =  $trans->translation;
-	  $translation->dbID(undef);
-	  $translation->stable_id(undef);
-	  $translation->version(1)
-	}
-
-	# remark for the script-modified transcript $t
-	my $remark = "Annotation_remark- automatic annotation transfer from PGF haplotype";
-	$trans->transcript_info->remark( new Bio::Otter::TranscriptRemark(-remark => $remark) );
-
-	foreach my $exon ( @{$trans->get_all_Exons} ){
-	  $exon->dbID(undef);
-	  $exon->stable_id(undef);
-	  $exon->created($time);
-	  $exon->version(1);
-	}
-  }
-  return $gene;
 }
 
 sub output_gene_to_XML {
