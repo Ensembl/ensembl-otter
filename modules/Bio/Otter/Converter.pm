@@ -1567,6 +1567,8 @@ sub ace_to_otter {
                 my $start_phase = $seq_data->{Start_not_found};
                 if (defined $start_phase) {
                     $traninfo->mRNA_start_not_found(1);
+                    
+                    ### Wrong test. Check if translation start equals transcript start too.
                     $traninfo->cds_start_not_found(1) if $start_phase != -1;
                 }
                 else {
@@ -1601,6 +1603,7 @@ sub ace_to_otter {
                         else {
                             $exon->phase($phase);
                         }
+                        ### I think this arithmetic is wrong for a single-exon gene:
                         $exon_cds_length = $exon_end - $cds_start + 1;
                         $translation->start_Exon($exon);
                         my $t_start = $cds_start - $exon_start + 1;
