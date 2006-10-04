@@ -233,8 +233,7 @@ sub ace_and_vector_dump {
                 order_coords_by_strand($subhash->{fiveprime}, $subhash->{threeprime}, $subhash->{strand});
 
             my $score = $subhash->{score} || $def_score;
-            my $display_label = $subhash->{display_label}
-              || $signal_info{$gf_type}{fullname};
+            my $display_label = $subhash->{display_label} || $gf_type;
 
             $ace_text .= join(' ',
                 'Feature', qq{"$gf_type"}, $start, $end, $score,
@@ -353,9 +352,24 @@ sub flip_direction_callback {
 }
 
 sub change_of_gf_type_callback {
-    my ($genomic_feature) = @_;
+    my ($genomic_feature, $wanted_type) = @_;
 
-    my $si = $signal_info{$genomic_feature->{gf_type}};
+    my $display_label_was_fake      # it was either empty or simply matched gf_type:
+        =  (not $genomic_feature->{display_label})
+        || ($genomic_feature->{gf_type} eq $genomic_feature->{display_label});
+
+    $genomic_feature->{gf_type} = $wanted_type;
+
+    my $si = $signal_info{$wanted_type};
+
+    if($display_label_was_fake) {
+        $genomic_feature->{display_label} = $si->{edit_display_label}
+            ? ''            # clean it
+            : $wanted_type; # let it remain a fake label
+    } else {
+        # let's assume it contained something precious
+    }
+
     my @enable  = (-state => 'normal',   -background => 'white');
     my @disable = (-state => 'disabled', -background => 'grey' );
     $genomic_feature->{score_entry}->configure(
@@ -374,7 +388,7 @@ sub add_genomic_feature {
     my $threeprime   = shift @_ || '';
     my $strand  = shift @_ ||  1;
     my $score   = shift @_ || '';
-    my $display_label = shift @_ || '';
+    my $display_label = shift @_ || $gf_type;
 
     my $subframe = $self->{_metaframe}->Frame()->pack(
         -fill   => 'x',
@@ -388,8 +402,7 @@ sub add_genomic_feature {
     my @pack = (-side => 'left', -padx => 2);
 
     $genomic_feature->{gf_type_menu} = $subframe->Optionmenu(
-       -options => [ map { [ $signal_info{$_}{fullname} => $_ ] } signal_keys_in_order() ],
-       -variable => \$genomic_feature->{gf_type},
+       -options  => [ map { [ $signal_info{$_}{fullname} => $_ ] } signal_keys_in_order() ],
     )->pack(@pack);
 
     $genomic_feature->{fiveprime_entry} = $subframe->NoPasteEntry(
@@ -480,7 +493,7 @@ sub add_genomic_feature {
         # unfortunately, you cannot bind these before the whole widget is made,
         # as it tends to activate the -command on creation
     $genomic_feature->{gf_type_menu}->configure(
-       -command => sub { change_of_gf_type_callback($genomic_feature); },
+       -command => sub { change_of_gf_type_callback($genomic_feature, shift @_); },
     );
 
     # It is necessary to set the current value from a separate variable.
