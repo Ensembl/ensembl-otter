@@ -48,6 +48,7 @@ $| = 1;
   my $otter_db = $dset->get_cached_DBAdaptor;
   my $gene_aptr  = $otter_db->get_GeneAdaptor;
   my $slice_aptr = $otter_db->get_SliceAdaptor;
+  my $tc_aptr = $otter_db->get_TranscriptClassAdaptor;
 
   $otter_db->assembly_type($sequence_set);
   my $ss = $dset->get_SequenceSet_by_name($sequence_set);
@@ -82,6 +83,7 @@ $| = 1;
       }
     }
     print STDERR "checking $n gene_stable_ids only\n";
+    my %gsi2;
     foreach my $gsi (@$gsi_list){
       if ($gsi =~ /T\d+/) {
 	my $g;
@@ -99,6 +101,12 @@ $| = 1;
 	my $gsi2=$g->stable_id;
 	print STDERR "$gsi -> $gsi2\n";
 	$gsi=$gsi2;
+      }
+      if($gsi2{$gsi}){
+	print STDERR "$gsi duplicate in list\n";
+	next;
+      }else{
+	$gsi2{$gsi}=1;
       }
       eval{
 	push(@$gene_id_list,
@@ -276,13 +284,19 @@ $| = 1;
 	my $tsi=$t->stable_id;
 	if($transcripts->{$tsi}){
 	  $t->remove_translation;
+	  # add remark
+	  my $rem="Annotation_remark- Translation removed and type set to NMD";
+	  $t->transcript_info->remark( new Bio::Otter::TranscriptRemark(-remark => $rem) );
+	  # change class
+	  my $tc=$tc_aptr->fetch_by_name("Nonsense_mediated_decay");
+	  $t->transcript_info->class($tc);
 	  $nrt++;
 	}
       }
       if($nrt){
 	push(@$genes,$db_gene);
       }else{
-	print STDERR "make_nmd mode: no translations removed $stable_id\n";
+	print STDERR "ERR: make_nmd mode: no translations removed for $stable_id\n";
 	next;
       }
     }else{
@@ -293,7 +307,13 @@ $| = 1;
     my $anal = $otter_db->get_AnalysisAdaptor->fetch_by_logic_name('otter');
 
     # Lock the slice so that we can safely write to it.
-    my $lock_xml = $client->lock_region_for_contig_from_Dataset($ss->selected_CloneSequences, $dset);
+    my $lock_xml;
+    eval{
+      $lock_xml=$client->lock_region_for_contig_from_Dataset($ss->selected_CloneSequences, $dset);
+    };
+    if($@){
+      print STDERR "WARN: Failed to lock region for $stable_id - next\n";
+    }
     #my ($chr, $chr_start, $chr_end) = $client->chr_start_end_from_contig($ss->selected_CloneSequences);
 
     my $short_tiles = $slice->get_tiling_path;
