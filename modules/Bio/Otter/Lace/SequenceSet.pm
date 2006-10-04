@@ -229,14 +229,21 @@ sub agp_data {
                   . "\n");
             $row++;
         }
+        
+        my @fields = (
+            $chr_name,         $chr_start,
+            $chr_end,          $row,
+            'F',               "$acc.$sv",
+            $cs->contig_start, $cs->contig_end,
+            $cs->contig_strand eq '1' ? '+' : '-',
+            );
+        if ($superctg_name) {
+            push(@fields, "# $superctg_name");
+        }
+        
         push(
             @$data,
-            join("\t",
-                $chr_name,         $chr_start,
-                $chr_end,          $row,
-                'F',               "$acc.$sv",
-                $cs->contig_start, $cs->contig_end,
-                $cs->contig_strand eq '1' ? '+' : '-', "# $superctg_name")
+            join("\t", @fields)
               . "\n"
         );
         $pos = $chr_end;
