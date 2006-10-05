@@ -928,7 +928,7 @@ sub exit_save_data {
     }
     elsif ($ans eq 'Yes') {
         # Return false if there is a problem saving
-        $self->save_data or return;
+        $self->save_data(0) or return;
     }
 
     # Will not want xace any more

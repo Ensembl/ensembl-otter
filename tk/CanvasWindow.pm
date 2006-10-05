@@ -1034,7 +1034,13 @@ sub get_clipboard_text {
     my $canvas = $self->canvas;
 
     my ($text);
-    eval { $text = $canvas->SelectionGet; };
+    use Time::HiRes 'gettimeofday';
+    eval {
+        my $t1 = gettimeofday();
+        $text = $canvas->SelectionGet();
+        my $t2 = gettimeofday();
+        printf STDERR "SelectionGet() took %.3f sec\n", $t2 - $t1;
+        };
     if ($@) {
         warn "Clipboard error: $@";
         return '';
