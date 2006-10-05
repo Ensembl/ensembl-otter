@@ -14,7 +14,8 @@ my $sq = Bio::Otter::ServerQuery->new('dataset',
     'contig','author','email','timestamp','text', 'action');
 set_nph($sq);
 
-my $odb = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
+my $odba = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
+my $odbc = $pipehead ? $odba->dbc() : $odba;
 
 my $contig_name = $sq->getarg('contig')    || error_exit($sq, "Please define 'contig' name");
 my $aut_name    = $sq->getarg('author')    || error_exit($sq, "Please define 'author' name");
@@ -26,12 +27,14 @@ my $action      = $sq->getarg('action')    || error_exit($sq, "Please choose the
 if($action=~/(change|modify|old)/) {
     server_log("Changing a sequence_note");
 
-    my $sth = $odb->prepare(qq{
+    my $sth = $odbc->prepare(qq{
         UPDATE sequence_note
            SET note      = ?
-         WHERE contig_id = (SELECT contig_id FROM contig where name=?)
-           AND author_id = (SELECT author_id FROM author where author_name=?)
-           AND note_time = FROM_UNIXTIME(?)
+         WHERE }. ($pipehead
+             ?  qq{seq_region_id = (SELECT seq_region_id FROM seq_region where name=?) }
+             :  qq{contig_id     = (SELECT contig_id     FROM contig     where name=?) }
+         ).qq{ AND author_id = (SELECT author_id FROM author where author_name=?)
+             AND note_time = FROM_UNIXTIME(?)
     });
     my $changed = $sth->execute($text, $contig_name, $aut_name, $timestamp);
     server_log("Changed $changed sequence_notes for contig $contig_name");
@@ -40,7 +43,7 @@ if($action=~/(change|modify|old)/) {
     server_log("Adding a new sequence_note");
 
         # check if such an author existed:
-    my $sth = $odb->prepare(qq{
+    my $sth = $odbc->prepare(qq{
         SELECT author_id
           FROM author
          WHERE author_name = ?
@@ -49,22 +52,28 @@ if($action=~/(change|modify|old)/) {
 
         # add him, if he didn't:
     if(! (my($aut_id) = $sth->fetchrow())) {
-        $sth = $odb->prepare(qq{
+        $sth = $odbc->prepare(qq{
             INSERT INTO author (author_name, author_email)
                  VALUES (?, ?)
         });
         $sth->execute($aut_name, $aut_email);
     }
 
-    $sth = $odb->prepare(qq{
+    $sth = $odbc->prepare( $pipehead
+    ? qq{
         UPDATE sequence_note
            SET is_current = 'N'
          WHERE contig_id = (SELECT contig_id FROM contig where name=?)
+    } : qq{
+        UPDATE sequence_note
+           SET is_current = 'no'
+         WHERE seq_region_id = (SELECT seq_region_id FROM seq_region where name=?)
     });
     my $non_curr=$sth->execute($contig_name);
     server_log("Contig $contig_name has $non_curr non-current sequence_notes now...");
 
-    $sth = $odb->prepare(qq{
+    $sth = $odbc->prepare( $pipehead
+    ? qq{
         INSERT INTO sequence_note (contig_id, author_id, note_time, is_current, note)
              VALUES (
                      (SELECT contig_id FROM contig where name=?),
@@ -72,7 +81,16 @@ if($action=~/(change|modify|old)/) {
                      FROM_UNIXTIME(?),
                      'Y',
                      ?
-              )
+             )
+    } : qq{
+        INSERT INTO sequence_note (seq_region_id, author_id, note_time, is_current, note)
+             VALUES (
+                     (SELECT seq_region_id FROM seq_region where name=?),
+                     (SELECT author_id FROM author where author_name=?),
+                     FROM_UNIXTIME(?),
+                     'yes',
+                     ?
+             )
     });
     my $curr=$sth->execute($contig_name, $aut_name, $timestamp, $text);
     server_log( "... and $curr current sequence_notes");
