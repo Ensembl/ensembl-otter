@@ -283,16 +283,17 @@ sub type_and_name_from_clipboard {
         # Sequence:Em:BU533776.1    82637 83110 (474)  EST_Human 99.4 (3 - 478) Em:BU533776.1
         # Sequence:Em:AB042555.1    85437 88797 (3361)  vertebrate_mRNA 99.3 (709 - 4071) Em:AB042555.1
         # Protein:Tr:Q7SYC3    75996 76703 (708)  BLASTX 77.0 (409 - 641) Tr:Q7SYC3
+        # Protein:"Sw:Q16635-4.1"    14669 14761 (93)  BLASTX 100.0 (124 - 154) Sw:Q16635-4.1
 
         if ($text =~
-    /^(?:Sequence|Protein):(\w\w:[\w\.]+)[\d\(\)\s]+(EST|vertebrate_mRNA|BLASTX)/
+    /^(?:Sequence|Protein):"?(\w\w:[\-\.\w]+)"?[\d\(\)\s]+(EST|vertebrate_mRNA|BLASTX)/
           )
         {
             my $name   = $1;
             my $column = $2;
             my $type   = $column_type{$column} or die "Can't match '$column'";
 
-            #warn "Got $type:$name\n";
+            #warn "Got blue box $type:$name\n";
             return ($type, $name);
         }
         elsif (
@@ -304,15 +305,17 @@ sub type_and_name_from_clipboard {
                   |                 # or, for TrEMBL,
                   [A-Z]\d[A-Z\d]{4} # a capital letter, a digit, then 4 letters and digits.
               )
+              (\-\d+)?              # Optional VARSPLICE suffix
               (\.\d+)?              # Optional .SV
                 /x
           )
         {
             my $prefix = $1 || '*';
             my $acc    = $2;
-            my $sv     = $3 || '*';
+            $acc .= $3 if $3;
+            my $sv     = $4 || '*';
 
-            #warn "Got '$prefix$acc$sv'";
+            #warn "Got name '$prefix$acc$sv'";
             my $ace = $self->ExonCanvas->XaceSeqChooser->ace_handle;
             my ($type, $name);
             foreach my $class (qw{ Sequence Protein }) {
