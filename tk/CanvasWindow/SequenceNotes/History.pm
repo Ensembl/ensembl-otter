@@ -379,11 +379,7 @@ sub update_db_comment {
         return if ($confirm eq 'Cancel');
 
         $current_seq_note->text($new_string);    #change text
-        my $contig_id = $clone_sequence->contig_id
-          || confess "no contig_id for this clone_sequence ";
         $clone_sequence->current_SequenceNote($current_seq_note);
-
-        # $dataset->update_current_SequenceNote($clone_sequence, $new_string);
 
         $cl->change_sequence_note(
             $dataset->name(),
