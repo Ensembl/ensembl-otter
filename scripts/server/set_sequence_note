@@ -60,35 +60,35 @@ if($action=~/(change|modify|old)/) {
     }
 
     $sth = $odbc->prepare( $pipehead
-    ? qq{
-        UPDATE sequence_note
-           SET is_current = 'N'
-         WHERE contig_id = (SELECT contig_id FROM contig where name=?)
-    } : qq{
         UPDATE sequence_note
            SET is_current = 'no'
          WHERE seq_region_id = (SELECT seq_region_id FROM seq_region where name=?)
+    ? qq{
+    } : qq{
+        UPDATE sequence_note
+           SET is_current = 'N'
+         WHERE contig_id = (SELECT contig_id FROM contig where name=?)
     });
     my $non_curr=$sth->execute($contig_name);
     server_log("Contig $contig_name has $non_curr non-current sequence_notes now...");
 
     $sth = $odbc->prepare( $pipehead
     ? qq{
-        INSERT INTO sequence_note (contig_id, author_id, note_time, is_current, note)
-             VALUES (
-                     (SELECT contig_id FROM contig where name=?),
-                     (SELECT author_id FROM author where author_name=?),
-                     FROM_UNIXTIME(?),
-                     'Y',
-                     ?
-             )
-    } : qq{
         INSERT INTO sequence_note (seq_region_id, author_id, note_time, is_current, note)
              VALUES (
                      (SELECT seq_region_id FROM seq_region where name=?),
                      (SELECT author_id FROM author where author_name=?),
                      FROM_UNIXTIME(?),
                      'yes',
+                     ?
+             )
+    } : qq{
+        INSERT INTO sequence_note (contig_id, author_id, note_time, is_current, note)
+             VALUES (
+                     (SELECT contig_id FROM contig where name=?),
+                     (SELECT author_id FROM author where author_name=?),
+                     FROM_UNIXTIME(?),
+                     'Y',
                      ?
              )
     });
