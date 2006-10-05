@@ -667,13 +667,16 @@ sub _sequence_note_action {
     my $timestamp = $seq_note->timestamp();
     my $text      = $seq_note->text();
 
+    my $ds = $self->get_DataSet_by_name($dsname);
+
     my $response = $self->general_http_dialog(
         0,
         'GET',
         'set_sequence_note',
         {
-            'action'    => $action,
             'dataset'   => $dsname,
+            'pipehead'  => $ds->HEADCODE(),
+            'action'    => $action,
             'contig'    => $contig_name,
             'author'    => $aut_name,
             'email'     => $aut_email,
