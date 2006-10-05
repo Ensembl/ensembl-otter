@@ -2056,6 +2056,7 @@ sub middle_button_paste {
     my( $self ) = @_;
 
     my $canvas = $self->canvas;
+    
     my @ints = $self->integers_from_clipboard;
     return unless @ints;
     
