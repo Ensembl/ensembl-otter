@@ -60,10 +60,10 @@ if($action=~/(change|modify|old)/) {
     }
 
     $sth = $odbc->prepare( $pipehead
+    ? qq{
         UPDATE sequence_note
            SET is_current = 'no'
          WHERE seq_region_id = (SELECT seq_region_id FROM seq_region where name=?)
-    ? qq{
     } : qq{
         UPDATE sequence_note
            SET is_current = 'N'
