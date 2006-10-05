@@ -10,6 +10,7 @@ use Tk::Dialog;
 use Tk::ROText;
 use Tk::LabFrame;
 use Tk::ComboBox;
+use Tk::SmartOptionmenu;
 use Hum::Ace::SubSeq;
 use Hum::Translator;
 use MenuCanvasWindow;
@@ -270,7 +271,7 @@ sub initialize {
             my $display_name = $gm->has_parent ? "    $name" : "$name ";
             push(@$menu_list, [$display_name, $name]);
         }
-        my $type_option_menu = $type_frame->Optionmenu(
+        my $type_option_menu = $type_frame->SmartOptionmenu(
             -options => $menu_list,
             -variable => \$current_method,
             -command => sub{
@@ -278,17 +279,6 @@ sub initialize {
                     $top->focus;  # Need this
                 },
             )->pack(-side => 'left');
-        
-        # There is a bug in Optionmenu. The current method does
-        # not get set on the menu (via the "-variable") unless
-        # we explicitly set it with its (internal) setOption method.
-        $current_method = $self->SubSeq->GeneMethod->name;
-        foreach my $pair (@$menu_list) {
-            if ($pair->[1] eq $current_method) {
-                $type_option_menu->setOption(@$pair);
-                last;
-            }
-        }
         
         # Start not found and end not found and method widgets
         $self->add_start_end_method_widgets($frame);
