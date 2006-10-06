@@ -80,6 +80,10 @@ sub initialise {
         $name_frame->Entry(
             -width  => 30,
             -state  => 'disabled',
+            # Recent versions of Tk::Entry have a
+            # third state "readonly" which allows
+            # the name to still be selected to copy
+            # it to the clipboard.
             )->pack(-side => 'left')
         );
 
