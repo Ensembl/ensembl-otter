@@ -68,6 +68,7 @@ my( $genes,
 my $path_as_XML;
 
 if ($odb->isa('Bio::Otter::DBSQL::DBAdaptor')) {
+
 eval {
   my( $seqstr );		# Don't need outside block
   ($genes, $slice, $seqstr, $path, $new_feature_set, $new_assembly_tag_set) =
@@ -259,6 +260,7 @@ send_response($sq, $output_xml, 1);
 }
 
 elsif ($odb->isa('Bio::Vega::DBSQL::DBAdaptor')) {
+
   ##trying store in a new Otter db
   my $parser = Bio::Vega::Transform::Otter->new;
   $parser->parsefile($tmp_xml_name);
@@ -299,7 +301,7 @@ elsif ($odb->isa('Bio::Vega::DBSQL::DBAdaptor')) {
 		die "Assembly doesn't match for contig $contig_name\n";
 	 }
   }
-
+  $odb->begin_work;
   ##check if clones are locked or not
   my $cb = new Bio::Vega::ContigLockBroker;
   server_log("Checking region is locked...");
@@ -308,6 +310,7 @@ elsif ($odb->isa('Bio::Vega::DBSQL::DBAdaptor')) {
   };
   error_exit($sq, "Failed checking locks [$@]") if $@;
   server_log("Done checking region is locked.");
+
   ##update all contig_info and contig_info_attrib
   foreach my $piece (@$chr_ctg) {
 	 my $ctg_attrib_list=$piece->[2];
@@ -320,12 +323,16 @@ elsif ($odb->isa('Bio::Vega::DBSQL::DBAdaptor')) {
   ## strip_incomplete_genes for the xml genes
   my $genes=$parser->get_Genes;
   strip_incomplete_genes($genes);
+
+  ##fetch database genes and compare to find the new/modified/deleted genes
   my $db_genes = $slice->get_all_Genes;
-  my $del_genes = find_deleted_genes($db_genes,$genes);
-  ##update all gene and its components
+  strip_incomplete_genes($db_genes);
+  my ($new_mod,$del) = compare_genes($db_genes,$genes);
   my $gene_adaptor=$odb->get_GeneAdaptor;
-  foreach my $gene (@$genes){
+  foreach my $gene (@$new_mod){
+	 ##attach gene and its components to the right slice
 	 $gene->slice($slice);
+	 ##update author in gene and transcript
 	 $gene->gene_author($author);
 	 my $tref=$gene->get_all_Transcripts();
 	 foreach my $tran (@$tref) {
@@ -335,10 +342,31 @@ elsif ($odb->isa('Bio::Vega::DBSQL::DBAdaptor')) {
 		  $exon->slice($slice);
 		}
 	 }
+	 ##update all gene and its components in db (new/mod/del)
 	 $gene_adaptor->store($gene);
   }
+
+  foreach my $gene (@$del){
+	 ##attach gene and its components to the right slice
+	 $gene->slice($slice);
+	 ##update author in gene and transcript
+	 $gene->gene_author($author);
+	 my $tref=$gene->get_all_Transcripts();
+	 foreach my $tran (@$tref) {
+		$tran->slice($slice);
+		$tran->transcript_author($author);
+		foreach my $exon (@{$tran->get_all_Exons}) {
+		  $exon->slice($slice);
+		}
+	 }
+	 ##update all gene and its components in db (new/mod/del)
+	 $gene_adaptor->store($gene);
+  }
+
+
   ##update feature_sets
-  ##SimpleFeatures - deletes old features(features not in xml) and stores the current features in XML
+  ##SimpleFeatures - deletes old features(features not in xml)
+  ##and stores the current featues in databse(features in xml)
   my $simple_features=$parser->get_SimpleFeatures;
   my $sfa=$odb->get_SimpleFeatureAdaptor;
   my $db_features=$sfa->fetch_all_by_Slice($slice);
@@ -361,7 +389,7 @@ elsif ($odb->isa('Bio::Vega::DBSQL::DBAdaptor')) {
   push @$slices,$new_slice;
   my $t=Bio::Vega::Transform::XML->new;
   my $xmlstr=$t->generate_OtterXML($slices,$odb,0);
-
+  $odb->commit;
   ##send the response
   send_response($sq,$xmlstr);
 }
@@ -399,20 +427,29 @@ sub compare_feature_sets {
     return($delete, $save);
 }
 
-sub find_deleted_genes {
+sub compare_genes {
   my( $old_genes, $new_genes ) = @_;
   my %old = map {$_->stable_id, $_} @$old_genes;
   my %new = map {$_->stable_id, $_} @$new_genes;
   # Genes that were in the old, but not the new, should be deleted, by setting artificially the gene type=obsolete, so that
   # the GeneAdaptor updates the database
   my $delete = [];
+  my $new_mod = [];
   while (my ($key, $old_g) = each %old) {
+	 #print STDERR "\noldgene:$key";
 	 unless ($new{$key}) {
-		$old_g->biotype('obsolete');
+		$old_g->is_current(0);
 		push(@$delete, $old_g);
+
 	 }
   }
-  return $delete;
+  while (my ($key, $new_g) = each %new) {
+	# print STDERR "\nnewgene:$key";
+	 $new_g->is_current(1);
+	 push(@$new_mod,$new_g);
+  }
+#		die "\nTEST\n";
+  return ($new_mod,$delete);
 }
 
 sub SimpleFeature_key {

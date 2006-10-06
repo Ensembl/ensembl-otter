@@ -49,14 +49,14 @@ sub get_deleted_Exon_by_slice{
   my $exon_slice=$exon->slice;
   my $exon_stable_id=$exon->stable_id;
   my @out = grep { $_->stable_id eq $exon_stable_id and $_->version eq $exon_version }
-    @{$self->SUPER::fetch_all_by_Slice_constraint($exon_slice,
-    't.is_current = 0 ')};
+    @{$self->SUPER::fetch_all_by_Slice_constraint($exon_slice,'t.is_current = 0 ')};
 	if ($#out > 1) {
-	  die "there are more than one exon retrived\n";
+	  die "\nthere are more than one exon retrived $exon_stable_id\n";
 	}
   my $db_exon=$out[0];
   return $db_exon;
 }
+
 sub get_current_Exon_by_slice{
   my ($self, $exon) = @_;
   unless ($exon){
@@ -67,7 +67,7 @@ sub get_current_Exon_by_slice{
   my @out = grep { $_->stable_id eq $exon_stable_id }
     @{ $self->fetch_all_by_Slice($exon_slice)};
 	if ($#out > 1) {
-	  die "there are more than one exon retrived\n";
+	  die "there are more than one exon retrived for $exon_stable_id\n";
 	}
   my $db_exon=$out[0];
   return $db_exon;

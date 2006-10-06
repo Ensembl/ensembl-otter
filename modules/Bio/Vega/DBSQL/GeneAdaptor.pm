@@ -360,6 +360,26 @@ sub get_current_Gene_by_slice{
   return $db_gene;
 }
 
+sub delete_gene {
+  my ($self,$del_gene)=@_;
+  ##update deleted genes
+  my $tref=$del_gene->get_all_Transcripts();
+  my $tran_adaptor=$self->db->get_TranscriptAdaptor;
+  my $exon_adaptor=$self->db->get_ExonAdaptor;
+  foreach my $del_tran (@$tref) {
+	 $del_tran->is_current(0);
+	 $tran_adaptor->update($del_tran);
+	 foreach my $del_exon (@{$del_tran->get_all_Exons}) {
+		$del_exon->is_current(0);
+		$exon_adaptor->update($del_exon);
+	 }
+  }
+  $del_gene->is_current(0);
+  $self->update($del_gene);
+
+
+}
+
 =head2 store
 
  Title   : store
@@ -374,7 +394,6 @@ sub get_current_Gene_by_slice{
 
 sub store{
    my ($self,$gene) = @_;
-	$self->db->begin_work;
    unless ($gene) {
        throw("Must enter a Gene object to the store method");
    }
@@ -428,69 +447,25 @@ sub store{
 	unless ($gene->slice->adaptor){
 	  $gene->slice->adaptor($sa);
 	}
+	my $gene_changed=0;
+	##deleted gene make sure is_current is set to 0
+	if ($gene->is_current == 0) {
+		 $self->delete_gene($gene);
+		 $gene_changed = 5;
+	}
 
-
+	else {
+	$self->db->begin_work;
 	##new gene - assign stable_id
 	my $sida = $self->db->get_StableIdAdaptor();
 	unless ($gene->stable_id){
 	  $sida->fetch_new_stable_ids_for_Gene($gene);
 	}
 	##if gene is old compare to see if gene components have changed
-	my $gene_changed=0;
+
 	##check if gene is new or old
 	my $gene_slice=$gene->slice;
 	my $db_gene=$self->get_current_Gene_by_slice($gene);
-
-	##deleted gene make sure is_current is set to 0
-	my $type=$gene->biotype;
-	if ( $type eq 'obsolete') {
-	  if ($db_gene) {
-		 $db_gene->is_current(0);
-		 $self->update($db_gene);
-		 $gene_changed = 5;
-		 my $version=$db_gene->version;
-		 $gene->version($version);
-		 $gene->is_current(0);
-		 my $transcripts=$gene->get_all_Transcripts;
-		 my $ta=$self->db->get_TranscriptAdaptor;
-		 foreach my $tran (@$transcripts) {
-			unless ($tran->stable_id) {
-			  throw('Trying to delete a transcript without a stable_id');
-			}
-			my $db_transcript=$ta->fetch_by_stable_id($tran->stable_id);
-			my $version=$db_transcript->version;
-			$tran->version($version);
-			$tran->is_current(0);
-			$db_transcript->is_current(0);
-			$ta->update($db_transcript);
-			my $translation=$tran->translation;
-			if ($translation) {
-			  my $db_translation=$db_transcript->translation;
-			  unless ($db_translation || $translation->stable_id) {
-				 throw('Trying to delete an unknown translation, either translation not in db or stable_id not set');
-			  }
-			  my $version=$db_translation->version;
-			  $translation->version($version);
-			}
-		 }
-		 my $ea=$self->db->get_ExonAdaptor;
-		 my $exons=$gene->get_all_Exons;
-		 foreach my $exon(@$exons){
-			unless ($exon->stable_id){
-			  throw('Trying to delete an exon without a stable_id');
-			}
-			my $db_exon=$ea->fetch_by_stable_id($exon->stable_id);
-			my $version=$db_exon->version;
-			$exon->version($version);
-			$exon->is_current(0);
-			$db_exon->is_current(0);
-			$ea->update($db_exon);
-		 }
-	  }
-	  else {
-		 throw 'Trying to delete a gene that is already deleted OR Trying to delete a gene which is not present in database '.$gene->stable_id;
-	  }
-	}
 
 	if ( $db_gene && $gene_changed != 5) {
 	  $gene_changed=$self->check_for_change_in_gene_components($sida,$gene);
@@ -583,11 +558,7 @@ sub store{
 		 $ta->store_Evidence($tran->dbID,$evidence_list);
 	  }
 	}
-	
-	if ($gene_changed == 0) {
-	  $self->db->rollback;
-	  print STDOUT "\nUnchanged gene:".$gene->stable_id." Version:".$gene->version." nothing written in db\n";
-	}
+
 	if ($gene_changed == 1) {
 	  if ($db_gene){
 		 my $new_trs=$gene->get_all_Transcripts;
@@ -609,22 +580,31 @@ sub store{
 			$self->update_deleted_exons($new_exons,$old_exons);
 		 }
 	  }
-	  $self->db->commit;
+	  #$self->db->commit;
 	  print STDOUT "\nChanged gene:".$gene->stable_id." Current Version:".$gene->version." changes stored successfully in db\n";
 
 	}
+
+ }
+
+	if ($gene_changed == 0) {
+	  $self->db->rollback;
+	  print STDOUT "\nTrying to store an Unchanged gene:".$gene->stable_id." Version:".$gene->version." nothing written in db\n";
+	}
+
+
 	if ($gene_changed == 2) {
-	  $self->db->commit;
+	#$self->db->commit;
 	  print STDOUT "\nNew gene:".$gene->stable_id." Version:".$gene->version." stored successfully in db\n";
 	}
 
 	if ($gene_changed == 3) {
-	  $self->db->commit;
+	 #$self->db->commit;
 	  print STDOUT "\nRestored gene:".$gene->stable_id." Version:".$gene->version." restored successfully in db\n";
 	}
 	
 	if ($gene_changed == 5) {
-	  $self->db->commit;
+	  #$self->db->commit;
 	  print STDOUT "\nDeleted gene:".$gene->stable_id." Version:".$gene->version." deleted successfully in db\n";
 	}
 
