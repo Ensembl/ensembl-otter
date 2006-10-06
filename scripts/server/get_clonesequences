@@ -39,104 +39,120 @@ $xml   .= qq`  <dataset name="$dataset">\n`;
 $xml   .= qq`    <sequenceset name="$sequenceset">\n`;
 $xml   .= qq`      <clonesequences>\n`;
 
-#############################################################################################
-##   should we actually care to use the API, or it will be much easier with a direct query?
-#
-#    my $asm_slice =  $odba->get_SliceAdaptor()->fetch_by_region('chromosome', $sequenceset)
-#    my $clone_projection = $asm_slice->project('clone');
-#
-#    foreach my $segment (@{ $asm_slice->project('contig') }) {
-#      my $clone = $segment->to_Slice();
-#      print $slice->seq_region_name(), ':', $seg->from_start(), '-',
-#            $seg->from_end(), ' -> ',
-#            $clone->seq_region_name(), ':', $clone->start(), '-',$clone->end(),
-#            $clone->strand(), "\n";
-#    }
-#
-# ...  ?
-#############################################################################################
+if($pipehead) {
 
-my $sql = $pipehead
-? q{
-    SELECT cl.name, embl_acc.value, embl_version.value,
-           ctg.name, ctg.length,
-           chr_name.value, chr.length, chr2ctg.asm_start, chr2ctg.asm_end,
-           chr2ctg.cmp_start, chr2ctg.cmp_end, chr2ctg.ori,
-           l.contig_lock_id, l.hostname,
-           aut.author_name, aut.author_email
-    FROM assembly chr2ctg,
-         assembly cl2ctg,
-         seq_region chr, seq_region ctg, seq_region cl,
-         seq_region_attrib embl_acc, seq_region_attrib embl_version,
-         seq_region_attrib chr_name
-LEFT JOIN contig_lock l ON l.seq_region_id=ctg.seq_region_id
-LEFT JOIN author aut ON aut.author_id = l.author_id
-    WHERE chr.name = ?
-      AND chr2ctg.asm_seq_region_id=chr.seq_region_id
-      AND chr2ctg.cmp_seq_region_id=ctg.seq_region_id
-      AND ctg.coord_system_id=(select coord_system_id from coord_system where name='contig')
-      AND cl2ctg.asm_seq_region_id=cl.seq_region_id
-      AND cl2ctg.cmp_seq_region_id=ctg.seq_region_id
-      AND cl.coord_system_id=(select coord_system_id from coord_system where name='clone')
-      AND embl_acc.seq_region_id=cl.seq_region_id
-      AND embl_acc.attrib_type_id=(select attrib_type_id from attrib_type where code='embl_acc')
-      AND embl_version.seq_region_id=cl.seq_region_id
-      AND embl_version.attrib_type_id=(select attrib_type_id from attrib_type where code='embl_version')
-      AND chr_name.seq_region_id=chr.seq_region_id
-      AND chr_name.attrib_type_id=(select attrib_type_id from attrib_type where code='chr')
- ORDER BY chr2ctg.asm_start
-}
-: q{
-    SELECT c.name, c.embl_acc, c.embl_version
-      , ctg.name, ctg.length
-      , ch.name, ch.length, a.chr_start, a.chr_end
-      , a.contig_start, a.contig_end, a.contig_ori
-      , l.clone_lock_id, l.hostname
-      , aut.author_name, aut.author_email
-   FROM assembly a
-      , contig ctg 
-      , clone c
-      , chromosome ch
-    LEFT JOIN clone_lock l ON l.clone_id = c.clone_id
-    LEFT JOIN author aut ON aut.author_id = l.author_id
-    WHERE a.contig_id = ctg.contig_id
-      AND ctg.clone_id = c.clone_id
-      AND ch.chromosome_id = a.chromosome_id
-      AND a.type = ?
-    ORDER BY a.chr_start 
-};
+  my $sa=$odba->get_SliceAdaptor;
+  my $la=$odba->get_ContigLockAdaptor;
+  my $dbc=$odba->dbc;
+  my $sth = $dbc->prepare(q{SELECT length from seq_region where name = ?});
+  $sth->execute($sequenceset);
+  my $end=$sth->fetchrow;
+  my $slice =  $odba->get_SliceAdaptor()->fetch_by_region('chromosome',$sequenceset,1,$end,1,'Otter');
+  my $chrs = $slice->get_all_Attributes('chr');
+  my $chr_name=$chrs->[0]->value;
+  my $chr_length=$slice->length;
+  my $contig_projection = $slice->project('contig');
 
-my $odbc = $pipehead ? $odba->dbc() : $odba;
-my $sth = $odbc->prepare($sql);
-$sth->execute($sequenceset);
-while (my ($name, $acc,  $sv,
-       $ctg_name,  $ctg_length,
-       $chr_name, $chr_length, $chr_start,  $chr_end,
-       $ctg_start, $ctg_end, $ctg_strand,
-       $clone_lock_id, $hostname,
-       $author_name, $author_email ) = $sth->fetchrow) {
+  foreach my $seg (@$contig_projection) {
+	 my $contig_slice = $seg->to_Slice();
+	 my $contig_name=$contig_slice->seq_region_name;
+	 my $contig_strand=$contig_slice->strand;
+	 my $contig_length=$contig_slice->length;
+	 my $contig_id=$sa->get_seq_region_id($contig_slice);
+	 my $contig_lock=$la->fetch_by_contig_id($contig_id);
+	 my $hostname;
+	 my $author_name;
+	 my $author_email;
+	 my $lock_id;
+	 if ($contig_lock){
+		$hostname=$contig_lock->hostname;
+		$author_name=$contig_lock->author->name;
+		$author_email=$contig_lock->author->email;
+		$lock_id=$contig_lock->dbID;
+	 }
+	 my $clone_projection = $contig_slice->project('clone');
+	 my $newseg=$clone_projection->[0];
+	 my $clone_slice = $newseg->to_Slice;
+	 my $accs=$clone_slice->get_all_Attributes('embl_acc');
+	 my $accession=$accs->[0]->value;
+	 my $vers=$clone_slice->get_all_Attributes('embl_version');
+	 my $version=$vers->[0]->value;
+	 my $clone_name=$clone_slice->seq_region_name;
+	 my $contig_asm_start=$seg->from_start;
+	 my $contig_asm_end=$seg->from_end;
+	 my $contig_cmp_start=$contig_slice->start;
+	 my $contig_cmp_end=$contig_slice->end;
+	 $xml .= qq`        <clonesequence>\n`;
+	 $xml .= qq`          <clone_name>$clone_name</clone_name>\n`;
+	 $xml .= qq`          <accession>$accession</accession>\n`;
+	 $xml .= qq`          <sv>$version</sv>\n`;
+	 $xml .= qq`          <contig_name>$contig_name</contig_name>\n`;
+	 $xml .= qq`          <length>$contig_length</length>\n`;
+	 $xml .= qq`          <chr name="$chr_name" length="$chr_length"></chr>\n`;
+	 $xml .= qq`          <chr_start>$contig_asm_start</chr_start>\n`;
+	 $xml .= qq`          <chr_end>$contig_asm_end</chr_end>\n`;
+	 $xml .= qq`          <contig_start>$contig_cmp_start</contig_start>\n`;
+	 $xml .= qq`          <contig_end>$contig_cmp_end</contig_end>\n`;
+	 $xml .= qq`          <contig_strand>$contig_strand</contig_strand>\n`;
+	 if (defined $lock_id){
+		$xml .= qq`          <lock lock_id="$lock_id" author_name="$author_name" email="$author_email" host_name="$hostname"> </lock>\n`;
+	 }
+	 $xml .= qq`        </clonesequence>\n`;
+  }
 
-  $xml .= qq`        <clonesequence>\n`;
-  $xml .= qq`          <clone_name>$name</clone_name>\n`;
-  $xml .= qq`          <accession>$acc</accession>\n`;
-  $xml .= qq`          <sv>$sv</sv>\n`;
-  $xml .= qq`          <contig_name>$ctg_name</contig_name>\n`;
-  $xml .= qq`          <length>$ctg_length</length>\n`;
-  $xml .= qq`          <chr name="$chr_name" length="$chr_length"></chr>\n`;
-  $xml .= qq`          <chr_start>$chr_start</chr_start>\n`;
-  $xml .= qq`          <chr_end>$chr_end</chr_end>\n`;
-  $xml .= qq`          <contig_start>$ctg_start</contig_start>\n`;
-  $xml .= qq`          <contig_end>$ctg_end</contig_end>\n`;
-  $xml .= qq`          <contig_strand>$ctg_strand</contig_strand>\n`;
-  if (defined $clone_lock_id){
-    $xml .= qq`          <lock lock_id="$clone_lock_id" author_name="$author_name" email="$author_email" host_name="$hostname"> </lock>\n`;
-  } # endif
-  $xml .= qq`        </clonesequence>\n`;
-} # endwhile
+} else {
+
+    my $sth = $odba->prepare(q{
+            SELECT c.name, c.embl_acc, c.embl_version
+              , ctg.name, ctg.length
+              , ch.name, ch.length, a.chr_start, a.chr_end
+              , a.contig_start, a.contig_end, a.contig_ori
+              , l.clone_lock_id, l.hostname
+              , aut.author_name, aut.author_email
+           FROM assembly a
+              , contig ctg 
+              , clone c
+              , chromosome ch
+            LEFT JOIN clone_lock l ON l.clone_id = c.clone_id
+            LEFT JOIN author aut ON aut.author_id = l.author_id
+            WHERE a.contig_id = ctg.contig_id
+              AND ctg.clone_id = c.clone_id
+              AND ch.chromosome_id = a.chromosome_id
+              AND a.type = ?
+            ORDER BY a.chr_start 
+                });
+    $sth->execute($sequenceset);
+    while (my ($name, $acc,  $sv,
+           $ctg_name,  $ctg_length,
+           $chr_name, $chr_length, $chr_start,  $chr_end,
+           $ctg_start, $ctg_end, $ctg_strand,
+           $clone_lock_id, $hostname,
+           $author_name, $author_email ) = $sth->fetchrow) {
+
+      $xml .= qq`        <clonesequence>\n`;
+      $xml .= qq`          <clone_name>$name</clone_name>\n`;
+      $xml .= qq`          <accession>$acc</accession>\n`;
+      $xml .= qq`          <sv>$sv</sv>\n`;
+      $xml .= qq`          <contig_name>$ctg_name</contig_name>\n`;
+      $xml .= qq`          <length>$ctg_length</length>\n`;
+      $xml .= qq`          <chr name="$chr_name" length="$chr_length"></chr>\n`;
+      $xml .= qq`          <chr_start>$chr_start</chr_start>\n`;
+      $xml .= qq`          <chr_end>$chr_end</chr_end>\n`;
+      $xml .= qq`          <contig_start>$ctg_start</contig_start>\n`;
+      $xml .= qq`          <contig_end>$ctg_end</contig_end>\n`;
+      $xml .= qq`          <contig_strand>$ctg_strand</contig_strand>\n`;
+      if (defined $clone_lock_id){
+        $xml .= qq`          <lock lock_id="$clone_lock_id" author_name="$author_name" email="$author_email" host_name="$hostname"> </lock>\n`;
+      }
+      $xml .= qq`        </clonesequence>\n`;
+    }
+
+} # if old API
 
 $xml .= qq`      </clonesequences>\n`;
 $xml .= qq`    </sequenceset>\n`;
 $xml .= qq`  </dataset>\n`;
+
 send_response($sq, $xml, 1);
 
 __END__
@@ -152,4 +168,3 @@ return xml for Clone Sequences of a sequence set.
 
 Sindhu K.Pillai B<email> sp1@sanger.ac.uk
 Leo Gordon B<email> lg4@sanger.ac.uk
-
