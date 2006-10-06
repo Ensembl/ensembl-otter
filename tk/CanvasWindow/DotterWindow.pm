@@ -79,7 +79,7 @@ sub initialise {
     $self->genomic(
         $name_frame->Entry(
             -width  => 30,
-            -state  => 'readonly',
+            -state  => 'disabled',
             )->pack(-side => 'left')
         );
 
@@ -181,7 +181,7 @@ sub update_from_XaceSeqChooser {
     $self->query_Sequence($xc->get_CloneSeq->Sequence);
     $self->genomic->configure(-state => 'normal');
     $self->set_entry('genomic', $xc->slice_name);
-    $self->genomic->configure(-state => 'readonly');
+    $self->genomic->configure(-state => 'disabled');
     $self->update_from_clipboard;
     my $top = $self->top;
     $top->deiconify;
