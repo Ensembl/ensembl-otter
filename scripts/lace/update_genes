@@ -23,6 +23,8 @@ $| = 1;
   my $make_nmd;
   my $rename;
   my $include_stop;
+  my $delete;
+  my $prefix;
 
   my $usage = sub { exec('perldoc', $0) };
   Bio::Otter::Lace::Defaults::do_getopt(
@@ -38,6 +40,8 @@ $| = 1;
 	'rename'                => \$rename,
         'make_nmd'              => \$make_nmd,
 	'include_stop'          => \$include_stop,
+	'delete'                => \$delete,
+	'prefix'                => \$prefix,
 
         ) or $usage->();
   $usage->() unless $dataset_name and $sequence_set;
@@ -297,6 +301,76 @@ $| = 1;
 	push(@$genes,$db_gene);
       }
 
+    }elsif($prefix){
+
+      # change prefix for gene and its transcript
+      # - gene_name
+      # - gene_prefix
+      # - transcript_name
+
+      my $nprefix;
+      my $oprefix;
+      my $eflag=0;
+      if($sids->{$stable_id}){
+	if(!$gsi_associated_list->{$stable_id}){
+	  print STDERR "prefix mode: no replacement prefix found for $stable_id\n";
+	  next;
+	}
+	($prefix)=@{$gsi_associated_list->{$stable_id}};
+
+	# get prefix and check
+	if($prefix=~/^(\w+)/){
+	  $prefix="$1:";
+	}
+	if($nprefix && $nprefix ne $prefix){
+	  $eflag=1;
+	}else{
+	  $nprefix=$prefix;
+	}
+
+	# gene name
+	my $oldname=$db_gene->gene_info->name->name;
+	if($oldname=~/(\w*:)(\S+)/){
+	  $oprefix=$1;
+	  $oldname=$2;
+	}else{
+	  $oprefix='';
+	}
+	my $newname=$nprefix.$oldname;
+	$db_gene->gene_info->name->name($newname);
+
+	# gene type
+	my $oldtype=$db_gene->type;
+	my $oprefix2='';
+	if($oldtype=~/(\w*:)(\S+)/){
+	  $oprefix2=$1;
+	  $oldtype=$2;
+	}
+	if($oprefix ne $oprefix2){
+	  $eflag=1;
+	}
+	my $newtype=$nprefix.$oldtype;
+	$db_gene->type($newtype);
+
+	foreach my $t (@{$db_gene->get_all_Transcripts}){
+	  my $oldname2=$t->transcript_info->name;
+	  my $oprefix2='';
+	  if($oldname=~/(\w*:)(\S+)/){
+	    $oprefix2=$1;
+	    $oldname2=$2;
+	  }
+	  if($oprefix ne $oprefix2){
+	    $eflag=1;
+	  }
+	  my $newname2=$nprefix.$oldname2;
+	  $t->transcript_info->name($newname2);
+	}
+	if(!$eflag){
+	  print STDERR "$gene_stable_id prefixed from $oldname -> $newname\n";
+	  push(@$genes,$db_gene);
+	}
+      }
+
     }elsif($merge){
 
       # for each gsi in list, merge any other gsi's on same line
@@ -336,6 +410,17 @@ $| = 1;
       }
       push(@$genes,$db_gene);
 
+    }elsif($delete){
+
+      # for each gsi in list, create an obs gene for each (delete)
+
+      if($db_gene->type eq 'obsolete'){
+	print STDERR "$stable_id ($name) is obsolete - ignored\n";
+	next;
+      }
+      $db_gene->type('obsolete');
+      push(@$genes,$db_gene);
+
     }elsif($make_nmd){
 
       # orginal list should be transcripts
@@ -362,6 +447,7 @@ $| = 1;
 	next;
       }
     }else{
+      print STDERR "no action for $stable_id ($name) requested - increment only\n";
       push(@$genes,$db_gene);
     }
 
