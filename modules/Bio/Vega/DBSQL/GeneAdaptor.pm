@@ -132,7 +132,7 @@ sub check_for_change_in_gene_components {
 	 my $exons=$tran->get_all_Exons;
 	 my $exon_changed=0;
 	 $exon_changed=$self->exons_diff($sida,$exons);
-
+	 
 	 ##check if translation has changed
 	 my $db_transcript=$ta->get_current_Transcript_by_slice($tran);
 	 my $translation_changed=0;
@@ -299,17 +299,20 @@ sub exons_diff {
 		my $db_version=$db_exon->version;
       $exon_changed=compare($db_exon,$exon);
 		##if exon has changed then increment version
-		$db_exon->is_current(0);
-		$ea->update($db_exon);
+#		$db_exon->is_current(0);
+	#	$ea->update($db_exon);
 
 		if ($exon_changed == 1){
+		  $db_exon->is_current(0);
+		  $ea->update($db_exon);
 		  $exon->version($db_version+1);
 		  $exon->is_current(1);
 		}
 		##if exon has not changed then retain the same old version
 		else {
-		  $exon->version($db_version);
-		  $exon->is_current(1);
+		  $exon=$db_exon;
+		  #$exon->version($db_version);
+		  #$exon->is_current(1);
 		}
 	 }
 	 ##if exon is new
@@ -349,7 +352,7 @@ sub get_current_Gene_by_slice{
   my $gene_slice=$gene->slice;
   my $gene_stable_id=$gene->stable_id;
   my @out = grep { $_->stable_id eq $gene_stable_id }
-    @{ $self->fetch_all_by_Slice($gene_slice)};
+    @{ $self->fetch_all_by_Slice_constraint($gene_slice,'g.is_current = 1 ')};
   if ($#out > 1) {
 	 die "there are more than one gene retrived\n";
   }
