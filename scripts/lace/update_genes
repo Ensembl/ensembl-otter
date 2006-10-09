@@ -308,24 +308,21 @@ $| = 1;
       # - gene_prefix
       # - transcript_name
 
-      my $nprefix;
-      my $oprefix;
-      my $eflag=0;
       if($sids->{$stable_id}){
 	if(!$gsi_associated_list->{$stable_id}){
 	  print STDERR "prefix mode: no replacement prefix found for $stable_id\n";
 	  next;
 	}
-	($prefix)=@{$gsi_associated_list->{$stable_id}};
 
-	# get prefix and check
-	if($prefix=~/^(\w+)/){
-	  $prefix="$1:";
-	}
-	if($nprefix && $nprefix ne $prefix){
-	  $eflag=1;
-	}else{
-	  $nprefix=$prefix;
+	my $oprefix;
+	my $cflag=0;
+	my $eflag=0;
+
+	my($mprefix)=@{$gsi_associated_list->{$stable_id}};
+
+	# standardize prefix
+	if($nprefix=~/^(\w+)/){
+	  $nprefix="$1:";
 	}
 
 	# gene name
@@ -335,6 +332,9 @@ $| = 1;
 	  $oldname=$2;
 	}else{
 	  $oprefix='';
+	}
+	if($nprefix ne $oprefix){
+	  $cflag++;
 	}
 	my $newname=$nprefix.$oldname;
 	$db_gene->gene_info->name->name($newname);
@@ -348,6 +348,10 @@ $| = 1;
 	}
 	if($oprefix ne $oprefix2){
 	  $eflag=1;
+	  print STDERR "ERR: $gsi: old prefix mismatch $oprefix type:$oprefix2\n";
+	}
+	if($oprefix2 ne $nprefix){
+	  $cflag++;
 	}
 	my $newtype=$nprefix.$oldtype;
 	$db_gene->type($newtype);
@@ -361,12 +365,18 @@ $| = 1;
 	  }
 	  if($oprefix ne $oprefix2){
 	    $eflag=1;
+	    print STDERR "ERR: $gsi: old prefix mismatch $oprefix t:$oprefix2\n";
+	  }
+	  if($oprefix2 ne $nprefix){
+	    $cflag++;
 	  }
 	  my $newname2=$nprefix.$oldname2;
 	  $t->transcript_info->name($newname2);
 	}
-	if(!$eflag){
-	  print STDERR "$gene_stable_id prefixed from $oldname -> $newname\n";
+	if(!$cflag){
+	  print STDERR "$stable_id already prefixed ok\n";
+	}elsif(!$eflag){
+	  print STDERR "$stable_id prefixed from $oldname -> $newname\n";
 	  push(@$genes,$db_gene);
 	}
       }
