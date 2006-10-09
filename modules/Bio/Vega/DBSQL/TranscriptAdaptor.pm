@@ -123,7 +123,7 @@ sub get_current_Transcript_by_slice{
   my $tran_slice=$transcript->slice;
   my $tran_stable_id=$transcript->stable_id;
   my @out = grep { $_->stable_id eq $tran_stable_id }
-    @{ $self->fetch_all_by_Slice($tran_slice)};
+    @{ $self->fetch_all_by_Slice_constraint($tran_slice,'t.is_current = 1 ')};
 	if ($#out > 1) {
 	  die "there are more than one transcript retrived\n";
 	}

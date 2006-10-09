@@ -49,9 +49,9 @@ sub get_deleted_Exon_by_slice{
   my $exon_slice=$exon->slice;
   my $exon_stable_id=$exon->stable_id;
   my @out = grep { $_->stable_id eq $exon_stable_id and $_->version eq $exon_version }
-    @{$self->SUPER::fetch_all_by_Slice_constraint($exon_slice,'t.is_current = 0 ')};
+    @{$self->SUPER::fetch_all_by_Slice_constraint($exon_slice,'e.is_current = 0 ')};
 	if ($#out > 1) {
-	  die "\nthere are more than one exon retrived $exon_stable_id\n";
+	  die "\ntrying to fetch an exon for deletion there are more than one exon retrived $exon_stable_id\n";
 	}
   my $db_exon=$out[0];
   return $db_exon;
@@ -65,9 +65,9 @@ sub get_current_Exon_by_slice{
   my $exon_slice=$exon->slice;
   my $exon_stable_id=$exon->stable_id;
   my @out = grep { $_->stable_id eq $exon_stable_id }
-    @{ $self->fetch_all_by_Slice($exon_slice)};
+    @{ $self->fetch_all_by_Slice_constraint($exon_slice,'e.is_current = 1 ')};
 	if ($#out > 1) {
-	  die "there are more than one exon retrived for $exon_stable_id\n";
+	  die "trying to fetch an exon for comparison, there are more than one exon retrived for $exon_stable_id\n";
 	}
   my $db_exon=$out[0];
   return $db_exon;
