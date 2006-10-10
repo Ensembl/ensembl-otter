@@ -43,11 +43,6 @@ if($pipehead) {
 
   my $sa=$odba->get_SliceAdaptor;
   my $la=$odba->get_ContigLockAdaptor;
-  my $dbc=$odba->dbc;
-  my $sth = $dbc->prepare(q{SELECT length from seq_region where name = ?});
-  $sth->execute($sequenceset);
-  my $end=$sth->fetchrow;
-  # my $slice =  $odba->get_SliceAdaptor()->fetch_by_region('chromosome',$sequenceset,1,$end,1,'Otter');
   my $slice =  $odba->get_SliceAdaptor()->fetch_by_region('chromosome',$sequenceset,undef,undef,undef,'Otter');
   my $chrs  = $slice->get_all_Attributes('chr')->[0];
   my $chr_name=$chrs ? $chrs->value() : die "unknown chromosome name";
