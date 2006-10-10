@@ -6,8 +6,6 @@ use strict;
 use OtterDefs;
 use Bio::Otter::ServerQuery;
 use Bio::Otter::ServerSide (':all');
-use Bio::EnsEMBL::DBSQL::DBAdaptor;
-use Bio::Otter::DBSQL::DBAdaptor;
 
 $| = 1;
 
@@ -22,7 +20,6 @@ set_nph($sq);
 my $qnames = $sq->getarg('qnames') || error_exit($sq, "No 'qnames' argument entered");
 my $qnames_types_clones  = { map {($_ => {})} split(',', $qnames) };
 my $clone_name_set       = {};
-my $clonename2assemblies = {};
 my $filter_atype = $sq->getarg('type') || '';
 my $unhide = $sq->getarg('unhide') || 0;
 my $maxpipehits = $sq->getarg('maxpipehits');
@@ -41,7 +38,8 @@ find_pipe_clones_by_qnames($sq, $pdbc, $qnames_types_clones, $clone_name_set, $p
 
 my $assembly_dbc = $pipehead ? $pdbc : $odba;
 
-$clonename2assemblies = find_assemblies_by_clone_names($sq, $assembly_dbc, $clone_name_set, $pipehead, $unhide);
+my $clonename2assemblies
+    = find_assemblies_by_clone_names($sq, $assembly_dbc, $clone_name_set, $pipehead, $unhide);
 
 my $output_string = generate_output($qnames_types_clones, $clonename2assemblies, $filter_atype);
 

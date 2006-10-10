@@ -32,6 +32,7 @@ use Bio::Otter::Lace::Defaults;
     for my $ds (@datasets) {
 
         $dataset_name = $ds->name();
+        my $headcode  = $ds->HEADCODE() || 0;
         
         print STDERR "\n=================== $dataset_name ===============\n";
 
@@ -40,7 +41,8 @@ use Bio::Otter::Lace::Defaults;
 
         if(($which_db eq 'otter')
          ||($which_db eq 'all') ) {
-            repair_one_db($otter_db, 0, $rescan_flag, $change_flag, $dataset_name, 'otter');
+            repair_one_db($otter_db, $headcode, $rescan_flag, $change_flag, $dataset_name,
+                $headcode ? 'head_otter' : 'otter');
         }
 
         if(($which_db eq 'oldpipe')
@@ -173,6 +175,7 @@ sub repair_one_db {
     my $diff_chback_count  = 0;
 
     while (my ($acc, $ver, $old_intl) = $clones_acc_query->fetchrow) {
+
         $old_intl ||= '';
         my $new_intl = get_international_clone_name($acc) || '';
 
