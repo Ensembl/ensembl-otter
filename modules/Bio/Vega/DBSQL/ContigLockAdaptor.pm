@@ -19,9 +19,11 @@ sub _generic_sql_fetch {
         FROM contig_lock
         } . $where_clause);
   $sth->execute(@param);
+
   my $aad = $self->db->get_AuthorAdaptor;
   my $contiglocks=[];
   while (my $row = $sth->fetch) {
+
 	 my $author = $aad->fetch_by_dbID($row->[2]);
 	 my $contiglock = new Bio::Vega::ContigLock(
 															  -DBID       => $row->[0],
@@ -31,6 +33,7 @@ sub _generic_sql_fetch {
 															  -HOSTNAME   => $row->[4],
 															 );
 	 push(@$contiglocks, $contiglock);
+
   }
   return $contiglocks;
 }
