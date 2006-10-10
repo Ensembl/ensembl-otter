@@ -100,6 +100,7 @@ $OTTER_GET_SCRIPTS          = {'/perl/get_region'     => 'get_region',
                                '/perl/get_sequence_notes'         => 'get_sequence_notes',
                                '/perl/find_clones'                => 'find_clones',
                                '/perl/get_clonesequences'         => 'get_clonesequences',
+                               '/perl/get_clonesequences_fast'    => 'get_clonesequences_fast',
                                '/perl/set_sequence_note'          => 'set_sequence_note',
                               };
 $OTTER_POST_SCRIPTS         = {'/perl/write_region'   => 'write_region',
