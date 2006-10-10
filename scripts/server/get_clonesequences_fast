@@ -121,7 +121,7 @@ while (my ($cl_name, $intl_name, $acc,  $sv,
   my $clone_name = $intl_name || $cl_name;
 
   $xml .= qq`        <clonesequence>\n`;
-  $xml .= qq`          <clone_name>$cl_name</clone_name>\n`;
+  $xml .= qq`          <clone_name>$clone_name</clone_name>\n`;
   $xml .= qq`          <accession>$acc</accession>\n`;
   $xml .= qq`          <sv>$sv</sv>\n`;
   $xml .= qq`          <contig_name>$ctg_name</contig_name>\n`;
