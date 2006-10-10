@@ -57,7 +57,7 @@ if($pipehead) {
 	 my $contig_slice = $seg->to_Slice();
 	 my $contig_name=$contig_slice->seq_region_name;
 	 my $contig_strand=$contig_slice->strand;
-	 my $contig_length=$contig_slice->length;
+	 my $contig_length=$contig_slice->seq_region_length;
 	 my $contig_id=$sa->get_seq_region_id($contig_slice);
 	 my $contig_lock=$la->fetch_by_contig_id($contig_id);
 	 my $hostname;
