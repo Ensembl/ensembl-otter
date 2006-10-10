@@ -93,23 +93,6 @@ CREATE TABLE translation_stable_id_pool (
 
 ################################################################################
 #
-# Table structure for table 'translation_attrib'
-# vega table
-# (_selenocysteine)
-
-CREATE TABLE translation_attrib (
-
-   translation_id INT(10) UNSIGNED NOT NULL DEFAULT '0',
-   attrib_type_id SMALLINT(5) UNSIGNED NOT NULL DEFAULT '0',
-   value TEXT NOT NULL DEFAULT '',
-
-   KEY type_val_idx (attrib_type_id, value(40)),
-   KEY translation_idx (translation_id)
-
-) TYPE=InnoDB;
-
-################################################################################
-#
 # Table structure for table 'exon_stable_id_pool'
 # otter table
 # Used to create the stable_id sequence for API
@@ -135,7 +118,7 @@ CREATE TABLE author (
   author_id	    INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
   author_email	    VARCHAR(50) NOT NULL,
   author_name	    VARCHAR(50) NOT NULL,
-  group_id          int(10) not null references author_group(group_id)
+  group_id          int(10) not null references author_group(group_id),
 
   PRIMARY KEY ( author_id ),
   UNIQUE (author_name,author_email),
@@ -156,8 +139,8 @@ CREATE TABLE author_group (
    group_name 	VARCHAR(100) NOT NULL default '',
    group_email VARCHAR(50),
 
-   PRIMARY KEY ( group_id )
-   UNIQUE ( name )
+   PRIMARY KEY ( group_id ),
+   UNIQUE gn_idx ( group_name )
 
 ) TYPE=InnoDB;
 
@@ -176,7 +159,7 @@ CREATE TABLE contig_info (
   created_date		DATETIME DEFAULT '0000-00-00 00:00:00' NOT NULL,
   is_current 		BOOLEAN DEFAULT 1 NOT NULL,
 
-  PRIMARY KEY ( contig_info_id ),
+  PRIMARY KEY ( contig_info_id )
 
 ) TYPE=InnoDB;
 
@@ -250,22 +233,7 @@ CREATE TABLE assembly_tagged_clone (
 
   UNIQUE KEY clone_id (clone_id)
 
-) TYPE=InnoDB 
-
-
-#################################################################################
-# Table structure for table 'assembly_tag_clone_info'
-# otter table
-#
-
-CREATE TABLE assembly_tag_clone_info (
-
-   clone_info_id	INT UNSIGNED NOT NULL REFERENCES clone_info(clone_info_id),
-   tag_id		INT(10) UNSIGNED NOT NULL REFERENCES assembly_tag(tag_id),
-
-   PRIMARY KEY ( clone_info_id, tag_id )
-
-) TYPE=InnoDB;
+) TYPE=InnoDB ;
 
 
 #################################################################################
@@ -284,7 +252,7 @@ CREATE TABLE sequence_note (
   PRIMARY KEY  ( seq_region_id,author_id,note_time ),
   KEY ( seq_region_id,is_current )
 
-) TYPE=InnoDB 
+) TYPE=InnoDB ;
 
 
 
