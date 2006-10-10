@@ -73,11 +73,11 @@ if($pipehead) {
 	 my $clone_projection = $contig_slice->project('clone');
 	 my $newseg=$clone_projection->[0];
 	 my $clone_slice = $newseg->to_Slice;
-	 my $accs=$clone_slice->get_all_Attributes('embl_acc');
-	 my $accession=$accs->[0]->value;
-	 my $vers=$clone_slice->get_all_Attributes('embl_version');
-	 my $version=$vers->[0]->value;
-	 my $clone_name=$clone_slice->seq_region_name;
+	 my $accession  = ($clone_slice->get_all_Attributes('embl_acc'))[0]->value();
+	 my $version    = ($clone_slice->get_all_Attributes('embl_version'))[0]->value();
+	 my $clone_name = ($clone_slice->get_all_Attributes('intl_clone_name'))[0]->value()
+                    || $clone_slice->seq_region_name;
+
 	 my $contig_asm_start=$seg->from_start;
 	 my $contig_asm_end=$seg->from_end;
 	 my $contig_cmp_start=$contig_slice->start;
