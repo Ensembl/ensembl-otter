@@ -4,6 +4,7 @@ package Bio::Vega::ContigLock;
 ### (instead of a clone_id)?
 
 use strict;
+use Bio::EnsEMBL::Utils::Exception qw ( throw warning );
 use Bio::EnsEMBL::Utils::Argument qw ( rearrange );
 use base qw(Bio::EnsEMBL::Storable);
 
@@ -12,15 +13,18 @@ sub new {
 
   my $self = bless {}, $class;
 
-  my ($dbID,$contig_id,$author,$timestamp,$hostname)  = 
-      rearrange([qw(DBID CONTIG_ID AUTHOR TIMESTAMP HOSTNAME
-                            )],@args);
-
+  my ($dbid,$contig_id,$author,$timestamp,$hostname)  = rearrange([qw(
+																					 DBID
+																					 CONTIG_ID
+																					 AUTHOR
+																					 TIMESTAMP
+																					 HOSTNAME
+																					)],@args);
+  $self->dbID($dbid);
   $self->contig_id($contig_id);
   $self->author($author);
   $self->timestamp($timestamp);
   $self->hostname($hostname);
-
   return $self;
 }
 
@@ -38,7 +42,7 @@ sub author{
 		 if ($value->isa("Bio::Vega::Author")) {
 			 $self->{'author'} = $value;
 		 } else {
-			 $self->throw("Argument [$value] is not a Bio::Vega::Author");
+			 throw("Argument [$value] is not a Bio::Vega::Author");
 		 }
 	 }
     return $self->{'author'};
