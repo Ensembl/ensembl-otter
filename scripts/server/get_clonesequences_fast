@@ -58,7 +58,7 @@ $xml   .= qq`      <clonesequences>\n`;
 
 my $sql = $pipehead
 ? q{
-    SELECT cl.name, embl_acc.value, embl_version.value,
+    SELECT cl.name, intl_clone_name.value, embl_acc.value, embl_version.value,
            ctg.name, ctg.length,
            chr_name.value, chr.length, chr2ctg.asm_start, chr2ctg.asm_end,
            chr2ctg.cmp_start, chr2ctg.cmp_end, chr2ctg.ori,
@@ -71,6 +71,8 @@ my $sql = $pipehead
          seq_region_attrib chr_name
 LEFT JOIN contig_lock l ON l.seq_region_id=ctg.seq_region_id
 LEFT JOIN author aut ON aut.author_id = l.author_id
+LEFT JOIN seq_region_attrib intl_clone_name ON intl_clone_name.seq_region_id = cl.seq_region_id
+      AND intl_clone_name.attrib_type=(select attrib_type_id from attrib_type where code='intl_clone_name')
     WHERE chr.name = ?
       AND chr2ctg.asm_seq_region_id=chr.seq_region_id
       AND chr2ctg.cmp_seq_region_id=ctg.seq_region_id
@@ -87,7 +89,7 @@ LEFT JOIN author aut ON aut.author_id = l.author_id
  ORDER BY chr2ctg.asm_start
 }
 : q{
-    SELECT c.name, c.embl_acc, c.embl_version
+    SELECT c.name, c.name, c.embl_acc, c.embl_version
       , ctg.name, ctg.length
       , ch.name, ch.length, a.chr_start, a.chr_end
       , a.contig_start, a.contig_end, a.contig_ori
@@ -109,15 +111,17 @@ LEFT JOIN author aut ON aut.author_id = l.author_id
 my $odbc = $pipehead ? $odba->dbc() : $odba;
 my $sth = $odbc->prepare($sql);
 $sth->execute($sequenceset);
-while (my ($name, $acc,  $sv,
+while (my ($cl_name, $intl_name, $acc,  $sv,
        $ctg_name,  $ctg_length,
        $chr_name, $chr_length, $chr_start,  $chr_end,
        $ctg_start, $ctg_end, $ctg_strand,
        $clone_lock_id, $hostname,
        $author_name, $author_email ) = $sth->fetchrow) {
 
+  my $clone_name = $intl_name || $cl_name;
+
   $xml .= qq`        <clonesequence>\n`;
-  $xml .= qq`          <clone_name>$name</clone_name>\n`;
+  $xml .= qq`          <clone_name>$cl_name</clone_name>\n`;
   $xml .= qq`          <accession>$acc</accession>\n`;
   $xml .= qq`          <sv>$sv</sv>\n`;
   $xml .= qq`          <contig_name>$ctg_name</contig_name>\n`;
