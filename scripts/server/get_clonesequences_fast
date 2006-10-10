@@ -72,7 +72,7 @@ my $sql = $pipehead
 LEFT JOIN contig_lock l ON l.seq_region_id=ctg.seq_region_id
 LEFT JOIN author aut ON aut.author_id = l.author_id
 LEFT JOIN seq_region_attrib intl_clone_name ON intl_clone_name.seq_region_id = cl.seq_region_id
-      AND intl_clone_name.attrib_type=(select attrib_type_id from attrib_type where code='intl_clone_name')
+      AND intl_clone_name.attrib_type_id=(select attrib_type_id from attrib_type where code='intl_clone_name')
     WHERE chr.name = ?
       AND chr2ctg.asm_seq_region_id=chr.seq_region_id
       AND chr2ctg.cmp_seq_region_id=ctg.seq_region_id
