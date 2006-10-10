@@ -48,8 +48,8 @@ if($pipehead) {
   $sth->execute($sequenceset);
   my $end=$sth->fetchrow;
   my $slice =  $odba->get_SliceAdaptor()->fetch_by_region('chromosome',$sequenceset,1,$end,1,'Otter');
-  my $chrs = $slice->get_all_Attributes('chr');
-  my $chr_name=$chrs->[0]->value;
+  my ($chrs) = $slice->get_all_Attributes('chr');
+  my $chr_name=$chrs->value;
   my $chr_length=$slice->length;
   my $contig_projection = $slice->project('contig');
 
@@ -73,10 +73,13 @@ if($pipehead) {
 	 my $clone_projection = $contig_slice->project('clone');
 	 my $newseg=$clone_projection->[0];
 	 my $clone_slice = $newseg->to_Slice;
-	 my $accession  = ($clone_slice->get_all_Attributes('embl_acc'))[0]->value();
-	 my $version    = ($clone_slice->get_all_Attributes('embl_version'))[0]->value();
-	 my $clone_name = ($clone_slice->get_all_Attributes('intl_clone_name'))[0]->value()
-                    || $clone_slice->seq_region_name;
+
+     my ($accs) = $clone_slice->get_all_Attributes('embl_acc');
+	 my $accession  = $accs->value();
+	 my ($vers) = $clone_slice->get_all_Attributes('embl_version');
+     my $version    = $vers->value();
+     my ($icns) = $clone_slice->get_all_Attributes('intl_clone_name');
+	 my $clone_name = $icns ? $icns->value : $clone_slice->seq_region_name;
 
 	 my $contig_asm_start=$seg->from_start;
 	 my $contig_asm_end=$seg->from_end;
