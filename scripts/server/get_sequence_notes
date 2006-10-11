@@ -43,7 +43,7 @@ my $sql = $pipehead
 .qq{       sn.seq_region_id = ctg.seq_region_id }
 .($aut_name ? qq{ AND aut.author_name = "$aut_name" } : '')
 .qq{   AND sn.author_id = aut.author_id
-  ORDER BY ctg.name, sn.note_time DESC
+  ORDER BY ctg.name, sn.note_time ASC
 }
 : qq{
     SELECT ctg.name,
