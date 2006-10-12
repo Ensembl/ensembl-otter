@@ -486,6 +486,7 @@ sub find_string_match_in_clones {
     my( $self, $dsname, $qnames_list, $ssname, $unhide_flag ) = @_;
 
     my $qnames_string = join(',', @$qnames_list);
+    my $ds = $self->get_DataSet_by_name($dsname);
 
     my $response = $self->general_http_dialog(
         0,
@@ -493,6 +494,7 @@ sub find_string_match_in_clones {
         'find_clones',
         {
             'dataset'  => $dsname,
+            'pipehead' => $ds->HEADCODE(),
             'qnames'   => $qnames_string,
             'unhide'   => $unhide_flag || 0,
             defined($ssname) ? ('type' => $ssname ) : (),

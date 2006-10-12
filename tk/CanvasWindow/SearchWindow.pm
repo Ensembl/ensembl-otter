@@ -82,7 +82,7 @@ sub do_search {
         my $qname        = $locator->qname();
         my $qtype        = $locator->qtype();
         my $asm          = $locator->assembly();
-        my $clone_names  = $locator->clone_names();
+        my $clone_names  = $locator->component_names();
         my $clone_number = scalar(@$clone_names);
 
         if($clone_number) {

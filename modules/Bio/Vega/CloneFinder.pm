@@ -62,6 +62,7 @@ sub register_feature {
         ? [ $feature->seq_region_name() ]
         : [ map { $_->to_Slice()->seq_region_name() } @{ $feature->project($component) } ];
 
+    $self->qnames_locators()->{$qname} ||= [];
     push @{ $self->qnames_locators()->{$qname} }, $loc;
 }
 
