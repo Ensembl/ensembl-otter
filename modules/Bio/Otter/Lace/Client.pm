@@ -503,10 +503,10 @@ sub find_string_match_in_clones {
     my @results_list = ();
 
     for my $line (split(/\n/,$response)) {
-        my ($qname, $qtype, $clone_names, $assembly) = split(/\t/, $line);
-        my $clone_list = $clone_names ? [ split(/,/, $clone_names) ] : [];
+        my ($qname, $qtype, $component_names, $assembly) = split(/\t/, $line);
+        my $component_list = $component_names ? [ split(/,/, $component_names) ] : [];
 
-        push @results_list, Bio::Otter::Lace::Locator->new($qname, $qtype, $clone_list, $assembly);
+        push @results_list, Bio::Otter::Lace::Locator->new($qname, $qtype, $component_list, $assembly);
     }
 
     return \@results_list;

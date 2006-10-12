@@ -1,5 +1,10 @@
 package Bio::Otter::CloneFinder;
 
+#
+# A module used by server script 'find_clones' to find things on clones
+# (old API version)
+#
+
 use strict;
 
 my $DEBUG=0; # do not show all SQL statements
@@ -220,6 +225,13 @@ sub find_assemblies_by_clone_names {
             $clonename2assemblies->{$clone_name}{$atype}++;
         }
     }
+}
+
+sub find {
+    my ($self, $unhide) = @_;
+
+    $self->find_otter_clones_by_qnames();
+    $self->find_assemblies_by_clone_names($unhide);
 }
 
 sub generate_output {
