@@ -65,7 +65,7 @@ sub register_feature {
     push @{ $self->qnames_locators()->{$qname} }, $loc;
 }
 
-sub find_stable_ids {
+sub find_by_stable_ids {
     my $self = shift @_;
 
     my $dba      = $self->dba();
@@ -194,6 +194,12 @@ sub find_stable_ids {
 =cut
 
     } # foreach $qname
+}
+
+sub find {
+    my ($self, $unhide) = @_;
+
+    $self->find_by_stable_ids();
 }
 
 sub generate_output {

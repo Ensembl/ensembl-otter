@@ -6,7 +6,8 @@ use strict;
 use OtterDefs;
 use Bio::Otter::ServerQuery;
 use Bio::Otter::ServerSide (':all');
-use Bio::Otter::CloneFinder; # pipehead=0 version only
+use Bio::Otter::CloneFinder; # pipehead==0 version
+use Bio::Vega::CloneFinder;  # pipehead==1 version
 
 $| = 1;
 
@@ -19,11 +20,13 @@ my $unhide = $sq->getarg('unhide') || 0;
 
 my $odba = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
 
-my $finder = Bio::Otter::CloneFinder->new($odba, [ split(',', $qnames) ]);
+my $finder_class = $pipehead
+    ? 'Bio::Vega::CloneFinder'
+    : 'Bio::Otter::CloneFinder';
 
-$finder->find_otter_clones_by_qnames();
+my $finder = $finder_class->new($odba, [ split(',', $qnames) ]);
 
-$finder->find_assemblies_by_clone_names($unhide);
+$finder->find($unhide);
 
 my $output_string = $finder->generate_output($filter_atype);
 
