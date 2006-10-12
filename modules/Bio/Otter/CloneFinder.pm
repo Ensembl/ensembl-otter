@@ -85,6 +85,7 @@ sub find_otter_clones_by_qnames {
     my $exon_adaptor           = $dba->get_ExonAdaptor();
 
     my $qnames_types_clones = $self->qnames_types_clones();
+    my $clone_name_set      = $self->clone_name_set();
 
     foreach my $qname (keys %$qnames_types_clones) {
         if(uc($qname) =~ /^$prefix_primary$prefix_species([TPGE])\d+/i){ # try stable_ids
