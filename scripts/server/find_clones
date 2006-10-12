@@ -25,7 +25,7 @@ $finder->find_otter_clones_by_qnames();
 
 $finder->find_assemblies_by_clone_names($unhide);
 
-my $output_string = generate_output($filter_atype);
+my $output_string = $finder->generate_output($filter_atype);
 
 send_response($sq, $output_string, 1);
 
