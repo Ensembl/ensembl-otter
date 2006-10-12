@@ -107,8 +107,8 @@ sub find_otter_clones_by_qnames {
             };
                 # Just imagine: they raise an EXCEPTION to indicate nothing was found. Terrific!
             if($@) {
-                server_log("'$qname' looks like a stable id, but wasn't found.");
-                server_log($@)if $DEBUG;
+                # server_log("'$qname' looks like a stable id, but wasn't found.");
+                # server_log($@)if $DEBUG;
             } else {
                 $self->exons2clones($qname, $type, $exons);
             }
@@ -126,7 +126,7 @@ sub find_otter_clones_by_qnames {
             my $sth = $dba->prepare($sql);
             $sth->execute;
             
-            server_log("trying clone accession[.version] '$qname' ");
+            # server_log("trying clone accession[.version] '$qname' ");
             while (my ($clone_name) = $sth->fetchrow) {
                 $qnames_types_clones->{$qname}{clone_accession}{$clone_name}++;
                 $clone_name_set->{$clone_name}++;
@@ -142,7 +142,7 @@ sub find_otter_clones_by_qnames {
             my $sth = $dba->prepare($sql);
             $sth->execute;
             
-            server_log("trying contig name '$qname' ");
+            # server_log("trying contig name '$qname' ");
             while (my ($clone_name) = $sth->fetchrow) {
                 $qnames_types_clones->{$qname}{contig_name}{$clone_name}++;
                 $clone_name_set->{$clone_name}++;
@@ -159,7 +159,7 @@ sub find_otter_clones_by_qnames {
             my $sth = $dba->prepare($sql);
             $sth->execute;
             
-            server_log("trying intl. clone name '$qname' ");
+            # server_log("trying intl. clone name '$qname' ");
             while (my ($clone_name) = $sth->fetchrow) {
                 $qnames_types_clones->{$qname}{intl_clone_name}{$clone_name}++;
                 $clone_name_set->{$clone_name}++;
@@ -170,7 +170,7 @@ sub find_otter_clones_by_qnames {
         { # try gene name or synonym:
             my $exons;
             eval{
-                server_log("trying gene name or synonym '$qname' ");
+                # server_log("trying gene name or synonym '$qname' ");
                 my $geneNameObjList = $genename_adaptor->fetch_by_name($qname);
                 my $geneSynObjList  = $genesyn_adaptor->fetch_by_name($qname);
                 foreach my $geneNameObj (@$geneNameObjList, @$geneSynObjList){
@@ -183,8 +183,8 @@ sub find_otter_clones_by_qnames {
                 ## assume error was caused by not being able to create a $geneNameObjList -
                 ## - as name didnt exist
                 #
-                server_log("no gene was found with name or synonym '$qname'"); 
-                server_log($@)if $DEBUG;
+                # server_log("no gene was found with name or synonym '$qname'"); 
+                # server_log($@)if $DEBUG;
             }
         }
 
@@ -211,7 +211,7 @@ sub find_assemblies_by_clone_names {
         
         my $clonename2assemblies = $self->clonename2assemblies();
 
-        server_log("finding assemblies for clone names");
+        # server_log("finding assemblies for clone names");
         while (my ($atype, $clone_name, $hide) = $sth->fetchrow) {
             $clonename2assemblies->{$clone_name} ||= {};
             $clonename2assemblies->{$clone_name}{$atype}++;
@@ -252,12 +252,12 @@ sub generate_output {
                     }
                 } else {
                     $output_string .= "$qname\n";
-                    server_log("$qname found on some clone, but its assembly is hidden or inexistent");
+                    # server_log("$qname found on some clone, but its assembly is hidden or inexistent");
                 }
             }
         } else {
             $output_string .= "$qname\n";
-            server_log("$qname not found on any clone");
+            # server_log("$qname not found on any clone");
         }
     }
 
