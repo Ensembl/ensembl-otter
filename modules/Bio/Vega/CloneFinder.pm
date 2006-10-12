@@ -218,7 +218,7 @@ sub generate_output {
             if(!$filter_atype || ($filter_atype eq $asm)) {
                 $output_string .= join("\t",
                     $qname, $loc->qtype(),
-                    join(',', $loc->component_names()),
+                    join(',', @{$loc->component_names()}),
                     $loc->assembly())."\n";
                 $count++;
             }
