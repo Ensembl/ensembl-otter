@@ -28,6 +28,10 @@ use Bio::EnsEMBL::Clone;
 use Bio::EnsEMBL::SimpleFeature;
 use Bio::Seq;
 
+use base 'Exporter';
+
+our @EXPORT_OK = qw{ xml_escape xml_unescape };
+
 sub XML_to_otter {
   my $fh = shift;
   my $db = shift;
@@ -109,7 +113,7 @@ sub XML_to_otter {
         $geneinfo->known_flag($1);
     }
     elsif (/<remark>(.*)<\/remark>/) {
-      my $remark = $1;
+      my $remark = xml_unescape($1);
       if ($currentobj eq 'gene') {
         my $rem = new Bio::Otter::GeneRemark(-remark => $remark);
         $geneinfo->remark($rem);
@@ -291,7 +295,7 @@ sub XML_to_otter {
     elsif (/<description>(.*)<\/description>/) {
 
       if ($currentobj eq 'gene') {
-        $gene->description($1);
+        $gene->description(xml_unescape($1));
       } else {
         die "ERROR: description tag only associated with gene objects. Object is [$currentobj]\n";
       }
@@ -1024,7 +1028,7 @@ sub ace_locus_objs_from_genes {
             $str .= qq{Full_name "$desc"\n};
         }
         foreach my $rem ( $info->remark ) {
-	        my $txt = $rem->remark;
+	        my $txt = ace_escape($rem->remark);
 
 	        if ($txt =~ s/^Annotation_remark- //) {
 	            $str .= qq{Annotation_remark "$txt"\n};
@@ -1990,7 +1994,7 @@ sub clone_to_XML {
         my @remarks  = sort map $_->remark, $info->remark;
         foreach my $rem (@remarks) {
             $rem =~ s/\n/ /g;
-            $str .= "  <remark>$rem<\/remark>\n";
+            $str .= "  <remark>" . xml_escape($rem) . "<\/remark>\n";
         }
 
         my @keywords = sort map $_->name,   $info->keyword;
@@ -2336,6 +2340,35 @@ sub ace_unescape {
     
     return $str;
 }
+
+sub xml_esacape {
+    my $str = shift;
+    
+    # Must do ampersand first!
+    $str =~ s/&/&amp;/g;
+
+    $str =~ s/</&lt;/g;
+    $str =~ s/>/&gt;/g;
+    $str =~ s/"/&quot;/g;
+    $str =~ s/'/&apos;/g;
+    
+    return $str;
+}
+
+sub xml_unesacape {
+    my $str = shift;
+    
+    $str =~ s/&apos;/'/g;
+    $str =~ s/&quot;/"/g;
+    $str =~ s/&gt;/>/g;
+    $str =~ s/&lt;/</g;
+
+    # Must do ampersand last!
+    $str =~ s/&amp;/&/g;
+    
+    return $str;
+}
+
 
 
 =head1 gene_type_from_transcript_set
