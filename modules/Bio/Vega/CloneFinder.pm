@@ -1,5 +1,6 @@
 package Bio::Vega::CloneFinder;
 
+use strict;
 use Bio::Otter::Lace::Locator;
 
 my $component = 'clone';
@@ -202,13 +203,18 @@ sub generate_output {
 
     for my $qname (sort keys %{$self->qnames_locators()}) {
         my $locators = $self->qnames_locators()->{$qname};
-        if(@$locators) {
-            for my $loc (@$locators) {
-                $output_string .= join("\t", $qname, $loc->qtype(),
+        my $count = 0;
+        for my $loc (@$locators) {
+            my $asm = $loc->assembly();
+            if(!$filter_atype || ($filter_atype eq $asm)) {
+                $output_string .= join("\t",
+                    $qname, $loc->qtype(),
                     join(',', $loc->component_names()),
                     $loc->assembly())."\n";
+                $count++;
             }
-        } else {
+        }
+        if(!$count) {
             $output_string .= "$qname\n"; # no matches for this qname
         }
     }
