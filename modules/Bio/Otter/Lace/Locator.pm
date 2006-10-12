@@ -13,7 +13,7 @@ sub new {
 
     $self->qname(shift @_) if @_;
     $self->qtype(shift @_) if @_;
-    $self->clone_names(shift @_) if @_;
+    $self->component_names(shift @_) if @_;
     $self->assembly(shift @_) if @_;
     
     return $self;
@@ -37,13 +37,13 @@ sub qtype { # a string
     return $self->{_qtype} || 'NOT FOUND';
 }
 
-sub clone_names { # a list reference
-    my( $self, $clone_names ) = @_;
+sub component_names { # a list reference
+    my( $self, $component_names ) = @_;
     
-    if ($clone_names) {
-        $self->{_clone_names} = $clone_names;
+    if ($component_names) {
+        $self->{_component_names} = $component_names;
     }
-    return $self->{_clone_names} || [];
+    return $self->{_component_names} || [];
 }
 
 sub assembly { # a string
