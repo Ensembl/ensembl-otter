@@ -19,7 +19,7 @@ my $unhide = $sq->getarg('unhide') || 0;
 
 my $odba = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
 
-my $finder = Bio::Otter::CloneFinder($odba, [ split(',', $qnames) ]);
+my $finder = Bio::Otter::CloneFinder->new($odba, [ split(',', $qnames) ]);
 
 $finder->find_otter_clones_by_qnames();
 
