@@ -1,5 +1,7 @@
 package Bio::Otter::CloneFinder;
 
+use strict;
+
 my $DEBUG=0; # do not show all SQL statements
 
 sub new {
@@ -66,7 +68,8 @@ sub exons2clones {
 sub find_otter_clones_by_qnames {
     my $self = shift @_;
 
-    my $meta_con = $self->dba->get_MetaContainer();
+    my $dba      = $self->dba();
+    my $meta_con = $dba->get_MetaContainer();
 
     my $prefix_primary = $meta_con->get_primary_prefix();
         # OR error_exit($sq, "Missing prefix.primary in meta table");
@@ -74,15 +77,14 @@ sub find_otter_clones_by_qnames {
     my $prefix_species = $meta_con->get_species_prefix();
         # OR error_exit($sq, "Missing prefix.species in meta table");
 
-    my $dba                 = $self->dba();
-    my $qnames_types_clones = $self->qnames_types_clones();
-
     my $gene_adaptor           = $dba->get_GeneAdaptor();
     my $genename_adaptor       = $dba->get_GeneNameAdaptor();
     my $genesyn_adaptor        = $dba->get_GeneSynonymAdaptor();
     my $geneinfo_adaptor       = $dba->get_GeneInfoAdaptor();
     my $transcript_adaptor     = $dba->get_TranscriptAdaptor();
     my $exon_adaptor           = $dba->get_ExonAdaptor();
+
+    my $qnames_types_clones = $self->qnames_types_clones();
 
     foreach my $qname (keys %$qnames_types_clones) {
         if(uc($qname) =~ /^$prefix_primary$prefix_species([TPGE])\d+/i){ # try stable_ids
@@ -206,7 +208,7 @@ sub find_assemblies_by_clone_names {
                AND ss.assembly_type=asm.type
         }.($unhide ? '' : "       AND ss.hide='N' ");
         warn $sql if $DEBUG;
-        my $sth = $dba->prepare($sql);
+        my $sth = $self->dba->prepare($sql);
         $sth->execute;
         
         my $clonename2assemblies = $self->clonename2assemblies();
