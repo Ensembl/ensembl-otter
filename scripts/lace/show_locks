@@ -56,10 +56,13 @@ $| = 1;
           , clone c
           , contig g
           , assembly a
+          , sequence_set ss
         WHERE au.author_id = l.author_id
           AND l.clone_id = c.clone_id
           AND c.clone_id = g.clone_id
           AND g.contig_id = a.contig_id
+          AND a.type = ss.assembly_type
+          AND ss.hide = 'N'
         };
     my( @param );
     if ($author) {
