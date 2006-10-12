@@ -2341,7 +2341,7 @@ sub ace_unescape {
     return $str;
 }
 
-sub xml_esacape {
+sub xml_escape {
     my $str = shift;
     
     # Must do ampersand first!
@@ -2355,7 +2355,7 @@ sub xml_esacape {
     return $str;
 }
 
-sub xml_unesacape {
+sub xml_unescape {
     my $str = shift;
     
     $str =~ s/&apos;/'/g;
