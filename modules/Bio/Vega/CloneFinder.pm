@@ -19,7 +19,7 @@ sub new {
 
     my $self = bless {
         '_dba' => $dba,
-        '_ql'  => ($qnames ? {map {($_ => {})} @$qnames } : {}),
+        '_ql'  => ($qnames ? {map {($_ => [])} @$qnames } : {}),
     }, $class;
 
     return $self;
@@ -54,16 +54,17 @@ sub register_feature {
 
     my $csname = $feature->slice()->coord_system_name();
 
-    my $assembly = ($csname eq 'chromosome')
+    $loc->assembly( ($csname eq 'chromosome')
         ? $feature->seq_region_name()
-        : $feature->project('chromosome')->[0]->to_Slice()->seq_region_name();
+        : $feature->project('chromosome')->[0]->to_Slice()->seq_region_name()
+    );
 
-    my $component_names = ($csname eq $component)
+    $loc->component_names( ($csname eq $component)
         ? [ $feature->seq_region_name() ]
-        : [ map { $_->to_Slice()->seq_region_name() } @{ $feature->project($component) } ];
+        : [ map { $_->to_Slice()->seq_region_name() } @{ $feature->project($component) } ]
+    );
 
     my $locs = $self->qnames_locators()->{$qname} ||= [];
-    # print STDERR "... q_l->{$qname} = <".join(':', keys %{$self->qnames_locators()->{$qname}}).">\n";
     push @$locs, $loc;
 }
 
