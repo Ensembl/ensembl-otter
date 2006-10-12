@@ -66,7 +66,7 @@ sub exons2clones {
 sub find_otter_clones_by_qnames {
     my $self = shift @_;
 
-    my $meta_con = $dba->get_MetaContainer();
+    my $meta_con = $self->dba->get_MetaContainer();
 
     my $prefix_primary = $meta_con->get_primary_prefix();
         # OR error_exit($sq, "Missing prefix.primary in meta table");
