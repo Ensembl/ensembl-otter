@@ -4,11 +4,8 @@ package Bio::Vega::Utils::Comparator;
 
 use strict;
 use warnings;
-use Exporter;
-use vars qw(@ISA @EXPORT);
-
-@ISA = qw(Exporter);
-@EXPORT = qw(compare);
+use base 'Exporter';
+our @EXPORT_OK = qw{ compare };
 
 use Bio::EnsEMBL::Utils::Exception qw(throw);
 
