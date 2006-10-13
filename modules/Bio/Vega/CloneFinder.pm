@@ -56,7 +56,7 @@ sub register_feature {
 
     $loc->assembly( ($cs_name eq 'chromosome')
         ? $feature->seq_region_name()
-        : $feature->project('chromosome')->[0]->to_Slice()->seq_region_name()
+        : $feature->project('chromosome', 'Otter')->[0]->to_Slice()->seq_region_name()
     );
 
     $loc->component_names( ($cs_name eq $component)
@@ -150,7 +150,7 @@ sub register_seqregion {
 
     $loc->assembly( ($cs_name eq 'chromosome')
         ? $sr_name
-        : $slice->project('chromosome')->[0]->to_Slice()->seq_region_name()
+        : $slice->project('chromosome', 'Otter')->[0]->to_Slice()->seq_region_name()
     );
 
     $loc->component_names( ($cs_name eq $component)
