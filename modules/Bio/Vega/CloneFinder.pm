@@ -122,6 +122,8 @@ sub find_by_attributes {
     my $dba      = $self->dba();
     my $adaptor;
 
+    print STDERR "entered find_by_attribytes($table, $adaptor_call)\n";
+
     while( my ($code,$qtype) = each %$code_hash ) {
         my $sql = qq{
             SELECT $id_field, value
