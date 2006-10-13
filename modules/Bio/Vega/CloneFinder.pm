@@ -81,9 +81,6 @@ sub find_by_stable_ids {
         || die "Missing prefix.species in meta table";
 
     my $gene_adaptor           = $dba->get_GeneAdaptor();
-    # my $genename_adaptor       = $dba->get_GeneNameAdaptor();
-    # my $genesyn_adaptor        = $dba->get_GeneSynonymAdaptor();
-    # my $geneinfo_adaptor       = $dba->get_GeneInfoAdaptor();
     my $transcript_adaptor     = $dba->get_TranscriptAdaptor();
     my $exon_adaptor           = $dba->get_ExonAdaptor();
 
@@ -116,93 +113,46 @@ sub find_by_stable_ids {
                 $self->register_feature($qname, $type, $feature);
             }
         }
-
-=comment
-
-        if($qname =~ /^(\w+)(?:\.(\d+))?$/) { # try clone accessions with & without version number
-            my $wanted_acc = $1;
-            my $wanted_version = $2;
-
-            my $sql = qq{
-                SELECT concat(embl_acc, '.', embl_version)
-                FROM clone
-                WHERE embl_acc = '$wanted_acc'
-            }. (defined($wanted_version) ? qq{ AND embl_version = '$wanted_version' } : '');
-            warn $sql if $DEBUG;
-            my $sth = $dba->prepare($sql);
-            $sth->execute;
-            
-            # server_log("trying clone accession[.version] '$qname' ");
-            while (my ($clone_name) = $sth->fetchrow) {
-                $qnames_types_clones->{$qname}{clone_accession}{$clone_name}++;
-                $clone_name_set->{$clone_name}++;
-            }
-        } elsif($qname =~ /^\w+\.\d+\.\d+\.\d+$/) { # try mapping contigs to clones
-            my $sql = qq{
-                SELECT concat(cl.embl_acc, '.', cl.embl_version)
-                FROM clone cl, contig co
-                WHERE co.name = '$qname'
-                  AND cl.clone_id = co.clone_id
-            };
-            warn $sql if $DEBUG;
-            my $sth = $dba->prepare($sql);
-            $sth->execute;
-            
-            # server_log("trying contig name '$qname' ");
-            while (my ($clone_name) = $sth->fetchrow) {
-                $qnames_types_clones->{$qname}{contig_name}{$clone_name}++;
-                $clone_name_set->{$clone_name}++;
-            }
-        }
-
-        { # try intl. clone names:
-            my $sql = qq{
-                SELECT concat(embl_acc, '.', embl_version)
-                FROM clone
-                WHERE name = '$qname'
-            };
-            warn $sql if $DEBUG;
-            my $sth = $dba->prepare($sql);
-            $sth->execute;
-            
-            # server_log("trying intl. clone name '$qname' ");
-            while (my ($clone_name) = $sth->fetchrow) {
-                $qnames_types_clones->{$qname}{intl_clone_name}{$clone_name}++;
-                $clone_name_set->{$clone_name}++;
-            }
-        }
-
-
-        { # try gene name or synonym:
-            my $exons;
-            eval{
-                # server_log("trying gene name or synonym '$qname' ");
-                my $geneNameObjList = $genename_adaptor->fetch_by_name($qname);
-                my $geneSynObjList  = $genesyn_adaptor->fetch_by_name($qname);
-                foreach my $geneNameObj (@$geneNameObjList, @$geneSynObjList){
-                    my $geneInfoObj = $geneinfo_adaptor->fetch_by_dbID($geneNameObj->gene_info_id());    
-                    $exons = $gene_adaptor->fetch_by_stable_id($geneInfoObj->gene_stable_id())->get_all_Exons();
-                    $self->exons2clones($qname, 'gene_name_or_synonym', $exons);
-                }
-            };
-            if ($@){
-                ## assume error was caused by not being able to create a $geneNameObjList -
-                ## - as name didnt exist
-                #
-                # server_log("no gene was found with name or synonym '$qname'"); 
-                # server_log($@)if $DEBUG;
-            }
-        }
-
-=cut
-
     } # foreach $qname
+}
+
+sub find_by_attributes {
+    my ($self, $quoted_qnames, $table, $id_field, $code_hash, $adaptor_call) = shift @_;
+
+    my $dba      = $self->dba();
+    my $adaptor;
+
+    while( my ($code,$qtype) = %$code_hash ) {
+        my $sql = qq{
+            SELECT $id_field, value
+            FROM $table
+            WHERE attrib_type_id = (SELECT attrib_type_id from attrib_type where code='$code')
+              AND value in ($quoted_qnames)
+        };
+
+        my $sth = $dba->prepare($sql);
+        $sth->execute();
+        if( my ($feature_id, $qname) = $sth->fetchrow() ) {
+            $adaptor ||= $dba->$adaptor_call; # only do it if we found something
+
+            my $feature = $adaptor->fetch_by_dbID($feature_id);
+            $self->register_feature($qname, $qtype, $feature);
+        }
+    }
 }
 
 sub find {
     my ($self, $unhide) = @_;
 
+    my $quoted_qnames = join(', ', map {"'$_'"} keys %{$self->qnames_locators()} );
+
     $self->find_by_stable_ids();
+    $self->find_by_attributes($quoted_qnames, 'gene_attrib', 'gene_id',
+        { 'name' => 'gene_name', 'synonym' => 'gene synonym'},
+        'get_GeneAdaptor');
+    $self->find_by_attributes($quoted_qnames, 'transcript_attrib', 'transcript_id',
+        { 'name' => 'transcript_name'},
+        'get_TranscriptAdaptor');
 }
 
 sub generate_output {
