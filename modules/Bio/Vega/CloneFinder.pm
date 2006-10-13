@@ -71,27 +71,6 @@ sub register_feature {
     push @$locs, $loc;
 }
 
-sub register_seqregion {
-    my ($self, $cs_name, $sr_name, $qtype, $qname) = @_;
-
-    my $loc = Bio::Otter::Lace::Locator->new($qname, $qtype);
-
-    my $slice = $self->dba()->get_SliceAdaptor->fetch_by_region($cs_name, $sr_name);
-
-    $loc->assembly( ($cs_name eq 'chromosome')
-        ? $sr_name
-        : $slice->project('chromosome', 'Otter')->[0]->to_Slice()->seq_region_name()
-    );
-
-    $loc->component_names( ($cs_name eq $component)
-        ? [ $sr_name ]
-        : [ map { $_->to_Slice()->seq_region_name() } @{ $slice->project($component) } ]
-    );
-
-    my $locs = $self->qnames_locators()->{$qname} ||= [];
-    push @$locs, $loc;
-}
-
 sub find_by_stable_ids {
     my $self = shift @_;
 
@@ -165,6 +144,27 @@ sub find_by_feature_attributes {
     }
 }
 
+sub find_by_seqregion_names {
+    my ($self, $quoted_qnames) = @_;
+
+    my $dbc      = $self->dbc();
+
+    my $sql = qq{
+        SELECT cs.name, sr.name
+        FROM seq_region sr, coord_system cs
+        WHERE sr.coord_system_id=cs.coord_system_id
+          AND sr.name in ($quoted_qnames)
+    };
+
+    my $sth = $dbc->prepare($sql);
+    $sth->execute();
+    while( my ($cs_name, $sr_name) = $sth->fetchrow() ) {
+        my $slice = $self->dba()->get_SliceAdaptor->fetch_by_region($cs_name, $sr_name);
+
+        $self->register_feature($sr_name, $cs_name.'_name', $slice);
+    }
+}
+
 sub find_by_seqregion_attributes {
     my ($self, $quoted_qnames, $cs_name, $code_hash) = @_;
 
@@ -187,7 +187,6 @@ sub find_by_seqregion_attributes {
             my $slice = $self->dba()->get_SliceAdaptor->fetch_by_region($cs_name, $sr_name);
 
             $self->register_feature($qname, $qtype, $slice);
-            # $self->register_seqregion($cs_name, $sr_name, $qtype, $qname);
         }
     }
 }
@@ -198,6 +197,8 @@ sub find {
     my $quoted_qnames = join(', ', map {"'$_'"} keys %{$self->qnames_locators()} );
 
     $self->find_by_stable_ids();
+
+    $self->find_by_seqregion_names($quoted_qnames);
 
     $self->find_by_feature_attributes($quoted_qnames, 'gene_attrib', 'gene_id',
         { 'name' => 'gene_name', 'synonym' => 'gene_synonym'},
