@@ -3,11 +3,9 @@ package Bio::Otter::AnnotatedGene;
 
 use vars qw(@ISA);
 use strict;
-use Bio::EnsEMBL::Gene;
-use Bio::Otter::Converter 'xml_escape';
+use base 'Bio::EnsEMBL::Gene';
 
-@ISA = qw(Bio::EnsEMBL::Gene);
-
+use Bio::Vega::Utils::XmlEscape qw{ xml_escape xml_unescape };
 
 sub new {
   my($class,@args) = @_;
