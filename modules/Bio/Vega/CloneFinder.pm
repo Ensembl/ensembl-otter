@@ -138,6 +138,8 @@ sub find_by_attributes {
 
             my $feature = $adaptor->fetch_by_dbID($feature_id);
             $self->register_feature($qname, $qtype, $feature);
+        } else {
+            print STDERR "Not found: $qtype/$code in ($quoted_qnames)\n";
         }
     }
 }
