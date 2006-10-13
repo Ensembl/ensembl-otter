@@ -153,6 +153,7 @@ sub find_by_seqregion_names {
         SELECT cs.name, sr.name
         FROM seq_region sr, coord_system cs
         WHERE sr.coord_system_id=cs.coord_system_id
+          AND cs.name <> 'chromosome'
           AND sr.name in ($quoted_qnames)
     };
 
