@@ -122,7 +122,7 @@ sub find_by_attributes {
     my $dba      = $self->dba();
     my $adaptor;
 
-    while( my ($code,$qtype) = %$code_hash ) {
+    while( my ($code,$qtype) = each %$code_hash ) {
         my $sql = qq{
             SELECT $id_field, value
             FROM $table
