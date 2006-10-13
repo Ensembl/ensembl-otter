@@ -122,8 +122,6 @@ sub find_by_attributes {
     my $dba      = $self->dba();
     my $adaptor;
 
-    print STDERR "entered find_by_attribytes($table, $adaptor_call)\n";
-
     while( my ($code,$qtype) = each %$code_hash ) {
         my $sql = qq{
             SELECT $id_field, value
@@ -135,13 +133,10 @@ sub find_by_attributes {
         my $sth = $dba->prepare($sql);
         $sth->execute();
         if( my ($feature_id, $qname) = $sth->fetchrow() ) {
-            print STDERR "Found: $feature_id, $qname, $qtype\n";
             $adaptor ||= $dba->$adaptor_call; # only do it if we found something
 
             my $feature = $adaptor->fetch_by_dbID($feature_id);
             $self->register_feature($qname, $qtype, $feature);
-        } else {
-            print STDERR "Not found: $qtype/$code in ($quoted_qnames)\n";
         }
     }
 }
