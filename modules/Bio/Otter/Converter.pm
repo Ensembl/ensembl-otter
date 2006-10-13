@@ -603,8 +603,9 @@ sub XML_to_otter {
     }
   }
 
+  my $all_exon_stable = {};
   foreach my $gene (@genes) {
-    prune_Exons($gene);
+    prune_Exons($gene, $all_exon_stable);
 
     foreach my $tran (@{$gene->get_all_Transcripts}) {
         my @exons = @{$tran->get_all_Exons};
@@ -1689,6 +1690,7 @@ sub ace_to_otter {
 
     # Make gene objects
     my @genes;
+    my $all_exon_stable = {};
     while (my ($gname, $gene_data) = each %genes) {
 
         #print STDERR "Gene name = $gname\n";
@@ -1753,7 +1755,7 @@ sub ace_to_otter {
             $gene->add_Transcript($tran);
         }
 
-        prune_Exons($gene);
+        prune_Exons($gene, $all_exon_stable);
 
         my $ace_type = $gene_data->{GeneType};
         if ($ace_type and $ace_type =~ /known/i) {
@@ -1884,7 +1886,7 @@ sub ace_to_XML {
 }
 
 sub prune_Exons {
-    my ($gene) = @_;
+    my ($gene, $all_exon_stable) = @_;
 
     # keep track of all unique exons found so far to avoid making duplicates
     # need to be very careful about translation->start_exon and translation->end_Exon
@@ -1915,14 +1917,20 @@ sub prune_Exons {
             push (@transcript_exons, $exon);
 
             # Make sure we don't have the same stable IDs
-            # for different exons (different keys).
+            # for different exons (different keys), or share
+            # them between genes.
             if (my $stable = $exon->stable_id) {
-                if (my $seen_key = $stable_key{$stable}) {
+                if ($all_exon_stable->{$stable}) {
+                    printf STDERR  "Already seen exon_id '$stable' on different gene\n";
+                    $exon->{'_stable_id'} = undef;
+                }
+                elsif (my $seen_key = $stable_key{$stable}) {
                     if ($seen_key ne $key) {
-                        $exon->{_stable_id} = undef;
+                        $exon->{'_stable_id'} = undef;
                         printf STDERR  "Already seen exon_id '$stable' on different exon\n";
                     }
-                } else {
+                }
+                else {
                     $stable_key{$stable} = $key;
                 }
             }
@@ -1931,6 +1939,11 @@ sub prune_Exons {
         foreach my $exon (@transcript_exons) {
             $tran->add_Exon($exon);
         }
+    }
+    foreach my $exon ($gene->get_all_Exons) {
+        if (my $stable = $exon->stable_id) {
+            $all_exon_stable->{$stable} = 1;
+        }        
     }
 }
 

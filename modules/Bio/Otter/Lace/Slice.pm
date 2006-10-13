@@ -14,13 +14,11 @@ use Bio::EnsEMBL::Map::MarkerSynonym;
 use Bio::EnsEMBL::Map::Marker;
 use Bio::EnsEMBL::Map::MarkerFeature;
 
-use Bio::Otter::Author;
 use Bio::Otter::DnaDnaAlignFeature;
 use Bio::Otter::DnaPepAlignFeature;
 use Bio::Otter::FromXML;
 use Bio::Otter::HitDescription;
 use Bio::Otter::Lace::CloneSequence;
-use Bio::Otter::Lace::DataSet;
 use Bio::Otter::Lace::ViaText ('%OrderOfOptions');
 
 sub new {
@@ -274,9 +272,9 @@ sub get_all_SimpleFeatures { # get simple features from otter/pipeline/ensembl d
 
         my $sf = Bio::EnsEMBL::SimpleFeature->new();
 
-        for my $ind (0..@sf_optnames-1) {
-            my $method = $sf_optnames[$ind];
-            $sf->$method($optvalues[$ind]);
+        for (my $i = 0; $i < @sf_optnames; $i++) {
+            my $method = $sf_optnames[$i];
+            $sf->$method($optvalues[$i]);
         }
 
             # use the cached values:

@@ -2,8 +2,6 @@ package Bio::Otter::ServerQuery;
 
 use strict;
 use Getopt::Long;
-use CGI;
-
 use base 'CGI';
 
 sub new {

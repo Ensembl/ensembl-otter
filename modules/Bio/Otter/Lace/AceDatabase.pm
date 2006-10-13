@@ -8,7 +8,6 @@ use Carp;
 use File::Path 'rmtree';
 use Symbol 'gensym';
 use Fcntl qw{ O_WRONLY O_CREAT };
-use Ace;
 
 use Bio::Otter::Converter;
 use Bio::Otter::Lace::Defaults;
