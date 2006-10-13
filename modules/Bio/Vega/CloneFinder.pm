@@ -133,6 +133,7 @@ sub find_by_attributes {
         my $sth = $dba->prepare($sql);
         $sth->execute();
         if( my ($feature_id, $qname) = $sth->fetchrow() ) {
+            print STDERR "Found: $feature_id, $qname, $qtype\n";
             $adaptor ||= $dba->$adaptor_call; # only do it if we found something
 
             my $feature = $adaptor->fetch_by_dbID($feature_id);
