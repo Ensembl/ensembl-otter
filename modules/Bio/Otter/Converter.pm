@@ -1940,10 +1940,10 @@ sub prune_Exons {
             $tran->add_Exon($exon);
         }
     }
-    foreach my $exon ($gene->get_all_Exons) {
+    foreach my $exon (@{$gene->get_all_Exons}) {
         if (my $stable = $exon->stable_id) {
             $all_exon_stable->{$stable} = 1;
-        }        
+        }
     }
 }
 
