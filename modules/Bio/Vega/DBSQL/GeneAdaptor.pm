@@ -415,7 +415,9 @@ sub store{
 	unless ($slice) {
 	  throw "gene does not have a slice attached to it, cannot store gene\n";
 	}
-=head3 COMMENT
+##test
+##=head3 COMMENT
+##test
 	my $csa = $self->db->get_CoordSystemAdaptor();
 	my $slice_cs = $slice->coord_system;
 	unless ($slice_cs) {
@@ -445,8 +447,9 @@ sub store{
 	  }
 			
 	}
-
-=cut
+##test
+##=cut
+##
 	unless ($gene->slice->adaptor){
 	  $gene->slice->adaptor($sa);
 	}
