@@ -52,16 +52,40 @@ sub register_feature {
 
     my $loc = Bio::Otter::Lace::Locator->new($qname, $qtype);
 
-    my $cs_name = $feature->slice()->coord_system_name();
+    my $cs_name = $feature->isa('Bio::EnsEMBL::Slice')
+        ? $feature->coord_system_name()
+        : $feature->slice()->coord_system_name();
+    my $sr_name = $feature->seq_region_name();
 
     $loc->assembly( ($cs_name eq 'chromosome')
-        ? $feature->seq_region_name()
+        ? $sr_name
         : $feature->project('chromosome', 'Otter')->[0]->to_Slice()->seq_region_name()
     );
 
     $loc->component_names( ($cs_name eq $component)
-        ? [ $feature->seq_region_name() ]
+        ? [ $sr_name ]
         : [ map { $_->to_Slice()->seq_region_name() } @{ $feature->project($component) } ]
+    );
+
+    my $locs = $self->qnames_locators()->{$qname} ||= [];
+    push @$locs, $loc;
+}
+
+sub register_seqregion {
+    my ($self, $cs_name, $sr_name, $qtype, $qname) = @_;
+
+    my $loc = Bio::Otter::Lace::Locator->new($qname, $qtype);
+
+    my $slice = $self->dba()->get_SliceAdaptor->fetch_by_region($cs_name, $sr_name);
+
+    $loc->assembly( ($cs_name eq 'chromosome')
+        ? $sr_name
+        : $slice->project('chromosome', 'Otter')->[0]->to_Slice()->seq_region_name()
+    );
+
+    $loc->component_names( ($cs_name eq $component)
+        ? [ $sr_name ]
+        : [ map { $_->to_Slice()->seq_region_name() } @{ $slice->project($component) } ]
     );
 
     my $locs = $self->qnames_locators()->{$qname} ||= [];
@@ -87,21 +111,21 @@ sub find_by_stable_ids {
     foreach my $qname (keys %{$self->qnames_locators()}) {
         if(uc($qname) =~ /^$prefix_primary$prefix_species([TPGE])\d+/i){ # try stable_ids
             my $typeletter = $1;
-            my $type;
+            my $qtype;
             my $feature;
 
             eval {
                 if($typeletter eq 'G') {
-                    $type = 'gene_stable_id';
+                    $qtype = 'gene_stable_id';
                     $feature = $gene_adaptor->fetch_by_stable_id($qname);
                 } elsif($typeletter eq 'T') {
-                    $type = 'transcript_stable_id';
+                    $qtype = 'transcript_stable_id';
                     $feature = $transcript_adaptor->fetch_by_stable_id($qname);
                 } elsif($typeletter eq 'P') {
-                    $type = 'translation_stable_id';
+                    $qtype = 'translation_stable_id';
                     $feature = $transcript_adaptor->fetch_by_translation_stable_id($qname);
                 } elsif($typeletter eq 'E') {
-                    $type = 'exon_stable_id';
+                    $qtype = 'exon_stable_id';
                     $feature = $exon_adaptor->fetch_by_stable_id($qname);
                 }
             };
@@ -110,7 +134,7 @@ sub find_by_stable_ids {
                 # server_log("'$qname' looks like a stable id, but wasn't found.");
                 # server_log($@)if $DEBUG;
             } else {
-                $self->register_feature($qname, $type, $feature);
+                $self->register_feature($qname, $qtype, $feature);
             }
         }
     } # foreach $qname
@@ -141,27 +165,6 @@ sub find_by_feature_attributes {
     }
 }
 
-sub register_seqregion {
-    my ($self, $cs_name, $sr_name, $qtype, $qname) = @_;
-
-    my $loc = Bio::Otter::Lace::Locator->new($qname, $qtype);
-
-    my $slice = $self->dba()->get_SliceAdaptor->fetch_by_region($cs_name, $sr_name);
-
-    $loc->assembly( ($cs_name eq 'chromosome')
-        ? $sr_name
-        : $slice->project('chromosome', 'Otter')->[0]->to_Slice()->seq_region_name()
-    );
-
-    $loc->component_names( ($cs_name eq $component)
-        ? [ $sr_name ]
-        : [ map { $_->to_Slice()->seq_region_name() } @{ $slice->project($component) } ]
-    );
-
-    my $locs = $self->qnames_locators()->{$qname} ||= [];
-    push @$locs, $loc;
-}
-
 sub find_by_seqregion_attributes {
     my ($self, $quoted_qnames, $cs_name, $code_hash) = @_;
 
@@ -181,7 +184,10 @@ sub find_by_seqregion_attributes {
         my $sth = $dbc->prepare($sql);
         $sth->execute();
         if( my ($sr_name, $qname) = $sth->fetchrow() ) {
-            $self->register_seqregion($cs_name, $sr_name, $qtype, $qname);
+            my $slice = $self->dba()->get_SliceAdaptor->fetch_by_region($cs_name, $sr_name);
+
+            $self->register_feature($qname, $qtype, $slice);
+            # $self->register_seqregion($cs_name, $sr_name, $qtype, $qname);
         }
     }
 }
@@ -192,14 +198,17 @@ sub find {
     my $quoted_qnames = join(', ', map {"'$_'"} keys %{$self->qnames_locators()} );
 
     $self->find_by_stable_ids();
+
     $self->find_by_feature_attributes($quoted_qnames, 'gene_attrib', 'gene_id',
         { 'name' => 'gene_name', 'synonym' => 'gene_synonym'},
         'get_GeneAdaptor');
+
     $self->find_by_feature_attributes($quoted_qnames, 'transcript_attrib', 'transcript_id',
         { 'name' => 'transcript_name'},
         'get_TranscriptAdaptor');
+
     $self->find_by_seqregion_attributes($quoted_qnames, 'clone',
-        { 'intl_clone_name' => 'international_clone_name', 'embl_acc' => 'clone_EMBL_accession' },
+        { 'intl_clone_name' => 'international_clone_name', 'embl_acc' => 'clone_accession' },
         );
 }
 
