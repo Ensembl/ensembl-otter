@@ -10,17 +10,6 @@ use Symbol 'gensym';
 use URI::Escape qw{ uri_escape };
 use MIME::Base64;
 
-use Bio::EnsEMBL::Analysis;
-use Bio::EnsEMBL::DnaDnaAlignFeature;
-use Bio::EnsEMBL::DnaPepAlignFeature;
-use Bio::EnsEMBL::PredictionTranscript;
-use Bio::EnsEMBL::RepeatConsensus;
-use Bio::EnsEMBL::RepeatFeature;
-use Bio::EnsEMBL::SimpleFeature;
-use Bio::EnsEMBL::Map::MarkerSynonym;
-use Bio::EnsEMBL::Map::Marker;
-use Bio::EnsEMBL::Map::MarkerFeature;
-
 use Bio::Otter::Author;
 use Bio::Otter::CloneLock;
 use Bio::Otter::Converter;
@@ -35,7 +24,6 @@ use Bio::Otter::Lace::PersistentFile;
 use Bio::Otter::Lace::PipelineStatus;
 use Bio::Otter::Lace::SequenceNote;
 use Bio::Otter::Lace::TempFile;
-use Bio::Otter::Lace::ViaText ('%OrderOfOptions');
 use Bio::Otter::LogFile;
 use Bio::Otter::Transform::DataSets;
 use Bio::Otter::Transform::SequenceSets;

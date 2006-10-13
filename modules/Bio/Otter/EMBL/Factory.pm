@@ -186,7 +186,6 @@ sub embl_setup {
     if ($self->secondary_accs) {
         @sec = @{$self->secondary_accs};
     }
-    my $entry_name = $self->entry_name or confess "entry_name not set";
     my $data_class = $self->data_class or confess "data_class not set";
     my $mol_type = $self->mol_type or confess "mol_type not set";
     my $clone_lib = $self->clone_lib;
@@ -202,8 +201,10 @@ sub embl_setup {
     }
     confess "division not set" unless $division;
     
+    # New format ID line
     my $id = $embl->newID;
-    $id->entryname($entry_name);
+    $id->accession($accession);
+    $id->version($seq_version);
     $id->dataclass($data_class);
     $id->molecule($mol_type);
     $id->division($division);
@@ -231,12 +232,6 @@ sub embl_setup {
     if (@sec) {
         $ac->secondaries(@sec);
     }
-    $embl->newXX;
-
-    # SV line
-    my $sv = $embl->newSV;
-    $sv->accession($accession);
-    $sv->version($seq_version);
     $embl->newXX;
 
     # DE line
@@ -434,22 +429,6 @@ sub keywords {
         $self->{'_bio_otter_embl_factory_keywords'} = $value;
     }
     return $self->{'_bio_otter_embl_factory_keywords'};
-}
-
-=head2 entry_name
-
-Get/set method for the EMBL entry name (shown in the ID line).
-Generally the same as the accession.
-
-=cut
-
-sub entry_name {
-    my ( $self, $value ) = @_;
-    
-    if ($value) {
-        $self->{'_bio_otter_embl_factory_entry_name'} = $value;
-    }
-    return $self->{'_bio_otter_embl_factory_entry_name'};
 }
 
 =head2 data_class
