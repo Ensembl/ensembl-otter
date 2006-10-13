@@ -117,7 +117,7 @@ sub find_by_stable_ids {
 }
 
 sub find_by_attributes {
-    my ($self, $quoted_qnames, $table, $id_field, $code_hash, $adaptor_call) = shift @_;
+    my ($self, $quoted_qnames, $table, $id_field, $code_hash, $adaptor_call) = @_;
 
     my $dba      = $self->dba();
     my $adaptor;
