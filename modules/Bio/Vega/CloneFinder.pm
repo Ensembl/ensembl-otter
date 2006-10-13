@@ -119,7 +119,7 @@ sub find_by_stable_ids {
 sub find_by_attributes {
     my ($self, $quoted_qnames, $table, $id_field, $code_hash, $adaptor_call) = @_;
 
-    my $dba      = $self->dba();
+    my $dbc      = $self->dbc();
     my $adaptor;
 
     while( my ($code,$qtype) = each %$code_hash ) {
@@ -130,10 +130,10 @@ sub find_by_attributes {
               AND value in ($quoted_qnames)
         };
 
-        my $sth = $dba->prepare($sql);
+        my $sth = $dbc->prepare($sql);
         $sth->execute();
         if( my ($feature_id, $qname) = $sth->fetchrow() ) {
-            $adaptor ||= $dba->$adaptor_call; # only do it if we found something
+            $adaptor ||= $self->dba()->$adaptor_call; # only do it if we found something
 
             my $feature = $adaptor->fetch_by_dbID($feature_id);
             $self->register_feature($qname, $qtype, $feature);
