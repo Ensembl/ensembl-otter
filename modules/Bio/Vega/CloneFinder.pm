@@ -153,7 +153,7 @@ sub find {
 
     $self->find_by_stable_ids();
     $self->find_by_attributes($quoted_qnames, 'gene_attrib', 'gene_id',
-        { 'name' => 'gene_name', 'synonym' => 'gene synonym'},
+        { 'name' => 'gene_name', 'synonym' => 'gene_synonym'},
         'get_GeneAdaptor');
     $self->find_by_attributes($quoted_qnames, 'transcript_attrib', 'transcript_id',
         { 'name' => 'transcript_name'},
