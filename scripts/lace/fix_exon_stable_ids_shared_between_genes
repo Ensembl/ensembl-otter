@@ -1,0 +1,212 @@
+#!/usr/local/bin/perl -w
+
+### fix_exon_stable_ids_shared_between_genes
+
+use strict;
+use Bio::Otter::Lace::Defaults;
+
+$| = 1;
+
+{
+    my( $dataset_name );
+
+    my $usage = sub { exec('perldoc', $0) };
+    # This do_getopt() call is needed to parse the otter config files
+    # even if you aren't giving any arguments on the command line.
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'       => $usage,
+        'dataset=s'     => \$dataset_name,
+        ) or $usage->();
+    $usage->() unless $dataset_name;
+    
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    
+    my $otter_dba = $ds->get_cached_DBAdaptor;
+    my $gene_aptr = $otter_dba->get_GeneAdaptor;
+    
+    my $gene_id_list = $gene_aptr->list_current_dbIDs;
+    
+    my $i = 1;
+    my $exon_gene_hash = {};
+    foreach my $gene_id (@$gene_id_list) {
+        #if (my $shared_list = gene_has_shared_exons($otter_dba, $gene_id)) {
+        #    print "\nGene $gene_id\n";
+        #    foreach my $row (@$shared_list) {
+        #        print join("  ", @$row), "\n";
+        #    }
+        #    print STDERR "x";
+        #} else {
+        #    print STDERR ".";
+        #}
+        list_exon_stable_ids_for_gene($otter_dba, $gene_id, $exon_gene_hash);
+        unless ($i % 500) {
+            printf STDERR "%6d\n", $i;
+        }
+        $i++;
+    }
+    foreach my $exon_sid (sort keys %$exon_gene_hash) {
+        my $gene_id_list = $exon_gene_hash->{$exon_sid};
+        next unless @$gene_id_list > 1;
+        my @gene_sv =
+          sort {$a->[0] cmp $b->[0]}
+          map gene_stable_id_version_from_dbID($otter_dba, $_), @$gene_id_list;
+        my $first = shift @gene_sv;
+        foreach my $other (@gene_sv) {
+            make_new_stable_exon($otter_dba, @$other, $exon_sid);
+        }
+    }
+}
+
+{
+    my %cache;
+    
+    sub gene_stable_id_version_from_dbID {
+        my ($dba, $gene_id) = @_;
+        
+        my $sth = $cache{$dba}{'gene_stable_id_from_dbID'} ||= $dba->prepare(q{
+            SELECT stable_id
+              , version
+            FROM gene_stable_id
+            WHERE gene_id = ?
+            });
+        $sth->execute($gene_id);
+        my ($stable, $version) = $sth->fetchrow;
+        return [$stable, $version];
+    }
+    
+    sub make_new_stable_exon {
+        my ($dba, $gsid, $version, $exon_sid) = @_;
+        
+        my $stab_aptr = $dba->get_StableIdAdaptor;
+        my $new_exon_sid = $stab_aptr->fetch_new_exon_stable_id;
+        #my $new_exon_sid = 'FAKE_NEW';
+        
+        my $get_exon_id = $cache{$dba}{'make_new_stable_exon.get_exon_id'} ||= $dba->prepare(q{
+            SELECT DISTINCT esid.exon_id
+              , esid.version
+            FROM gene_stable_id gsid
+              , transcript t
+              , exon_transcript et
+              , exon_stable_id esid
+            WHERE gsid.gene_id = t.gene_id
+              AND t.transcript_id = et.transcript_id
+              AND et.exon_id = esid.exon_id
+              AND gsid.stable_id = ?
+              AND gsid.version = ?
+              AND esid.stable_id = ?
+            });
+        
+        my $save_new_stable = $cache{$dba}{'make_new_stable_exon.save_new_stable'} ||= $dba->prepare(q{
+            UPDATE exon_stable_id
+            SET stable_id = ?
+              , version = ?
+            WHERE exon_id = ?
+            });
+        
+        my $sql_printf = qq{UPDATE exon_stable_id SET stable_id = '%s', version = %d WHERE stable_id = '%s' AND version = %d\n};
+        
+        my $new_exon_version = 0;
+        for (my $v = 1; $v <= $version; $v++) {
+            $get_exon_id->execute($gsid, $v, $exon_sid);
+            my @exon_sid_v;
+            while (my ($exon_db_id, $exon_version) = $get_exon_id->fetchrow) {
+                push(@exon_sid_v, [$exon_db_id, $exon_version]);
+            }
+
+            if (my $match = shift @exon_sid_v) {
+                my ($exon_db_id, $exon_version) = @$match;
+                $new_exon_version++;
+                $save_new_stable->execute($new_exon_sid, $new_exon_version, $exon_db_id);
+                printf $sql_printf,
+                  $new_exon_sid, $new_exon_version,
+                  $exon_sid, $exon_version;
+                print STDERR join("\t", 'NEW', $gsid, $v,
+                    $exon_sid, $exon_version,
+                    $new_exon_sid, $new_exon_version),
+                    "\n";
+            }
+            
+            foreach my $duplicate (@exon_sid_v) {
+                my ($exon_db_id, $exon_version) = @$duplicate;
+                my $dup_exon_sid = $stab_aptr->fetch_new_exon_stable_id;
+                #my $dup_exon_sid = "DUPL_NEW";
+                my $dup_exon_version = 1;
+                $save_new_stable->execute($dup_exon_sid, $dup_exon_version, $exon_db_id);
+                printf $sql_printf,
+                  $dup_exon_sid, $dup_exon_version,
+                  $exon_sid, $exon_version;
+                print STDERR join("\t", 'DUP', $gsid, $v,
+                    $exon_sid, $exon_version,
+                    $dup_exon_sid, $dup_exon_version),
+                    "\n";
+            }
+        }
+    }
+    
+    sub list_exon_stable_ids_for_gene {
+        my ($dba, $gene_id, $exon_gene_hash) = @_;
+        
+        my $sth = $cache{$dba}{'list_exon_stable_ids_for_gene'} ||= $dba->prepare(q{
+            SELECT DISTINCT esid.stable_id
+            FROM transcript t
+              , exon_transcript et
+              , exon_stable_id esid
+            WHERE t.transcript_id = et.transcript_id
+              AND et.exon_id = esid.exon_id
+              AND t.gene_id = ?
+            });
+        $sth->execute($gene_id);
+        
+        while (my ($exon_stable) = $sth->fetchrow) {
+            my $list = $exon_gene_hash->{$exon_stable} ||= [];
+            push(@$list, $gene_id);
+        }
+    }
+
+    # Not used
+    sub gene_has_shared_exons {
+        my ($dba, $gene_id) = @_;
+
+        my $sth = $cache{$dba}{'gene_has_shared_exons'} ||= $dba->prepare(q{
+            SELECT esid1.exon_id
+              , esid1.stable_id
+              , esid1.version
+              , esid2.exon_id
+              , esid2.stable_id
+              , esid2.version
+            FROM transcript t1
+              , exon_transcript et1
+              , exon_stable_id esid1
+              , exon_stable_id esid2
+            WHERE t1.transcript_id = et1.transcript_id
+              AND et1.exon_id = esid1.exon_id
+              AND esid1.stable_id = esid2.stable_id
+              AND esid1.exon_id < esid1.exon_id
+              AND t1.gene_id = ?
+            });
+        $sth->execute($gene_id);
+        
+        my $list = [];
+        while (my @row = $sth->fetchrow) {
+            push @$list, [@row];
+        }
+        return @$list ? $list : undef;
+    }
+}
+
+
+
+
+
+__END__
+
+=head1 NAME - fix_exon_stable_ids_shared_between_genes
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
