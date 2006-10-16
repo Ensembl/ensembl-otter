@@ -107,7 +107,7 @@ $| = 1;
             WHERE exon_id = ?
             });
         
-        my $sql_printf = qq{UPDATE exon_stable_id SET stable_id = '%s', version = %d WHERE stable_id = '%s' AND version = %d\n};
+        my $sql_printf = qq{UPDATE exon_stable_id SET stable_id = '%s', version = %d WHERE stable_id = '%s' AND version = %d;\n};
         
         my $new_exon_version = 0;
         for (my $v = 1; $v <= $version; $v++) {
