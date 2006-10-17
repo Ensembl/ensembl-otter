@@ -37,6 +37,7 @@ sub compare{
 		my $e_count=0;
 		foreach (keys %$obj1_hash_sub){
 		  $e_count++ unless exists $obj2_hash_sub->{$_};
+		  print STDERR "\nchanged or new attrib $_ in ".$obj1->stable_id."\n" unless exists $obj2_hash_sub->{$_};
 		}
 		if ($e_count > 0) {
 		  $changed=1;
@@ -45,9 +46,8 @@ sub compare{
   }
   else {
 	 $changed=1;
-	 print STDERR "\nFrom comparator:changed object is:".ref($obj1)."Before key:$obj1_hash_key\n".ref($obj2)."After key:$obj2_hash_key";
+	 print STDERR "\nFrom comparator object changed due to change in main key: obj1 stable".$obj1->stable_id."--".$obj1->version." obj2 stable:".$obj2->stable_id."--version:".$obj2->version."\n".ref($obj1)."\nBefore key:$obj1_hash_key\n".ref($obj2)."\nAfter  key:$obj2_hash_key";
   }
-
   return $changed;
 
 }
