@@ -262,134 +262,163 @@ send_response($sq, $output_xml, 1);
 elsif ($odb->isa('Bio::Vega::DBSQL::DBAdaptor')) {
 
   ##trying store in a new Otter db
-  my $parser = Bio::Vega::Transform::Otter->new;
-  $parser->parsefile($tmp_xml_name);
+  ##Parse the xml file
+
+  my $parser;
+  eval {
+	 $parser = Bio::Vega::Transform::Otter->new;
+	 $parser->parsefile($tmp_xml_name);
+  };
+  if ($@){
+	 error_exit($sq, "Failed converting XML to otter [$@]");
+  }
+
   # check that the assembly is already loaded in the database and
   # is consistent with the current xml assembly
-  my $cs='chromosome';
-  my $chr_slice=$parser->get_ChromosomeSlice;
-  my $start=$chr_slice->start;
-  my $end=$chr_slice->end;
-  my $strand=$chr_slice->strand;
-  my $cs_version=$parser->init_CoordSystem_Version;
-  my $segment_name=$parser->get_AssemblyType->{'assembly_type'};
-  my $slice =  $odb->get_SliceAdaptor()->fetch_by_region($cs,$segment_name,$start,$end,$strand,$cs_version);
-  my $slice_projection = $slice->project('contig');
-  my $xml_slice=$parser->get_AssemblySlices;
-  my $chr_ctg = $xml_slice->{'chr_ctg'};
+
+  my ($slice,$chr_ctg,$cs,$segment_name,$start,$end,$strand,$cs_version);
   my %xmlfrag;
-  foreach my $piece (@$chr_ctg) {
-	 my $xml_ctg_slice = $piece->[1];
-	 my $ctg_name=$xml_ctg_slice->seq_region_name;
-	 my $ctg_start=$xml_ctg_slice->start;
-	 my $ctg_end=$xml_ctg_slice->end;
-	 $xmlfrag{$ctg_name}{start}=$ctg_start;
-	 $xmlfrag{$ctg_name}{end}=$ctg_end;
-  }
-  foreach my $seg (@$slice_projection) {
-	 my $contig_slice = $seg->to_Slice();
-	 my $contig_name=$contig_slice->seq_region_name;
-	 my $contig_start=$contig_slice->start;
-	 my $contig_end=$contig_slice->end;
-	 if ( $xmlfrag{$contig_name}){
-		if (($xmlfrag{$contig_name}{start} != $contig_start) || ($xmlfrag{$contig_name}{end} != $contig_end)){
-		  die "Assembly doesn't match for contig $contig_name\n";
-		}
-		$xmlfrag{$contig_name}{slice}=$contig_slice;
-	 }
-	 else {
-		die "Assembly doesn't match for contig $contig_name\n";
-	 }
-  }
-  $odb->begin_work;
-  ##check if clones are locked or not
-  my $cb = new Bio::Vega::ContigLockBroker;
-  server_log("Checking region is locked...");
   eval {
-	 $cb->check_locks_exist_by_slice($slice, $author,$odb);
+	 $cs='chromosome';
+	 my $chr_slice=$parser->get_ChromosomeSlice;
+	 $start=$chr_slice->start;
+	 $end=$chr_slice->end;
+	 $strand=$chr_slice->strand;
+	 $cs_version=$parser->init_CoordSystem_Version;
+	 $segment_name=$parser->get_AssemblyType->{'assembly_type'};
+	 $slice =  $odb->get_SliceAdaptor()->fetch_by_region($cs,$segment_name,$start,$end,$strand,$cs_version);
+	 my $slice_projection = $slice->project('contig');
+	 my $xml_slice=$parser->get_AssemblySlices;
+	 $chr_ctg = $xml_slice->{'chr_ctg'};
+
+	 foreach my $piece (@$chr_ctg) {
+		my $xml_ctg_slice = $piece->[1];
+		my $ctg_name=$xml_ctg_slice->seq_region_name;
+		my $ctg_start=$xml_ctg_slice->start;
+		my $ctg_end=$xml_ctg_slice->end;
+		$xmlfrag{$ctg_name}{start}=$ctg_start;
+		$xmlfrag{$ctg_name}{end}=$ctg_end;
+	 }
+	 foreach my $seg (@$slice_projection) {
+		my $contig_slice = $seg->to_Slice();
+		my $contig_name=$contig_slice->seq_region_name;
+		my $contig_start=$contig_slice->start;
+		my $contig_end=$contig_slice->end;
+		if ( $xmlfrag{$contig_name}){
+		  if (($xmlfrag{$contig_name}{start} != $contig_start) || ($xmlfrag{$contig_name}{end} != $contig_end)){
+			 error_exit($sq,"Assembly doesn't match for contig $contig_name\n");
+		  }
+		  $xmlfrag{$contig_name}{slice}=$contig_slice;
+		}
+		else {
+		  error_exit($sq,"Assembly doesn't match for contig $contig_name\n");
+		}
+	 }
   };
-  error_exit($sq, "Failed checking locks [$@]") if $@;
-  server_log("Done checking region is locked.");
-
-  ##update all contig_info and contig_info_attrib
-  foreach my $piece (@$chr_ctg) {
-	 my $ctg_attrib_list=$piece->[2];
-	 my $cmp_slice = $piece->[1];
-	 my $ctg_name=$cmp_slice->seq_region_name;
-	 my $ctg_author=$piece->[3];
-	 my $ctg_slice=$xmlfrag{$ctg_name}{slice};
-	 my $ctg_info_id = insert_ContigInfo_Attributes($odb,$author,$ctg_slice,$ctg_attrib_list);
+  if ($@){
+	 error_exit($sq,"Failed at comparing xml assembly with database assembly [$@]\n");
   }
-  ## strip_incomplete_genes for the xml genes
-  my $genes=$parser->get_Genes;
-  strip_incomplete_genes($genes);
-
-  ##fetch database genes and compare to find the new/modified/deleted genes
-  my $db_genes = $slice->get_all_Genes;
-  strip_incomplete_genes($db_genes);
-  my ($new_mod,$del) = compare_genes($db_genes,$genes);
-  my $gene_adaptor=$odb->get_GeneAdaptor;
-  foreach my $gene (@$new_mod){
-	 ##attach gene and its components to the right slice
-	 $gene->slice($slice);
-	 ##update author in gene and transcript
-	 $gene->gene_author($author);
-	 my $tref=$gene->get_all_Transcripts();
-	 foreach my $tran (@$tref) {
-		$tran->slice($slice);
-		$tran->transcript_author($author);
-		foreach my $exon (@{$tran->get_all_Exons}) {
-		  $exon->slice($slice);
-		}
+  my $xmlstr;
+  eval {
+	 $odb->begin_work;
+	 ##check if clones are locked or not
+	 my $cb = new Bio::Vega::ContigLockBroker;
+	 server_log("Checking region is locked...");
+	 eval {
+		$cb->check_locks_exist_by_slice($slice, $author,$odb);
+	 };
+	 error_exit($sq, "Failed checking locks [$@]") if $@;
+	 server_log("Done checking region is locked.");
+	 ##update all contig_info and contig_info_attrib
+	 foreach my $piece (@$chr_ctg) {
+		my $ctg_attrib_list=$piece->[2];
+		my $cmp_slice = $piece->[1];
+		my $ctg_name=$cmp_slice->seq_region_name;
+		my $ctg_author=$piece->[3];
+		my $ctg_slice=$xmlfrag{$ctg_name}{slice};
+		my $ctg_info_id = insert_ContigInfo_Attributes($odb,$author,$ctg_slice,$ctg_attrib_list);
+		server_log("Updating contig info-attrib for ".$ctg_slice->seq_region_name);
 	 }
-	 ##update all gene and its components in db (new/mod/del)
-	 $gene_adaptor->store($gene);
-  }
-
-  foreach my $gene (@$del){
-	 ##attach gene and its components to the right slice
-	 $gene->slice($slice);
-	 ##update author in gene and transcript
-	 $gene->gene_author($author);
-	 my $tref=$gene->get_all_Transcripts();
-	 foreach my $tran (@$tref) {
-		$tran->slice($slice);
-		$tran->transcript_author($author);
-		foreach my $exon (@{$tran->get_all_Exons}) {
-		  $exon->slice($slice);
+	 ## strip_incomplete_genes for the xml genes
+	 my $genes=$parser->get_Genes;
+	 strip_incomplete_genes($genes);
+	 ##fetch database genes and compare to find the new/modified/deleted genes
+	 server_log("Fetching database genes for comparison...");
+	 my $db_genes = $slice->get_all_Genes;
+	 strip_incomplete_genes($db_genes);
+	 server_log("Comparing ". scalar(@$db_genes) ." old to ". scalar(@$genes) ." new gene(s)... ");
+	 my ($new_mod,$del) = compare_genes($db_genes,$genes);
+	 my $gene_adaptor=$odb->get_GeneAdaptor;
+	 server_log("Attaching gene to slice ");
+	 foreach my $gene (@$new_mod){
+		##attach gene and its components to the right slice
+		$gene->slice($slice);
+		##update author in gene and transcript
+		$gene->gene_author($author);
+		my $tref=$gene->get_all_Transcripts();
+		foreach my $tran (@$tref) {
+		  $tran->slice($slice);
+		  $tran->transcript_author($author);
+		  foreach my $exon (@{$tran->get_all_Exons}) {
+			 $exon->slice($slice);
+		  }
 		}
+		##update all gene and its components in db (new/mod/del)
+		$gene_adaptor->store($gene);
 	 }
-	 ##update all gene and its components in db (new/mod/del)
-	 $gene_adaptor->store($gene);
+	 server_log("Updated ".scalar(@$new_mod)." genes");
+	 foreach my $gene (@$del){
+		##attach gene and its components to the right slice
+		$gene->slice($slice);
+		##update author in gene and transcript
+		$gene->gene_author($author);
+		my $tref=$gene->get_all_Transcripts();
+		foreach my $tran (@$tref) {
+		  $tran->slice($slice);
+		  $tran->transcript_author($author);
+		  foreach my $exon (@{$tran->get_all_Exons}) {
+			 $exon->slice($slice);
+		  }
+		}
+		##update all gene and its components in db (new/mod/del)
+		$gene_adaptor->store($gene);
+	 }
+	 server_log("Deleted ".scalar(@$del)." Genes") if ($del);
+	 ##update feature_sets
+	 ##SimpleFeatures - deletes old features(features not in xml)
+	 ##and stores the current featues in databse(features in xml)
+	 my $simple_features=$parser->get_SimpleFeatures;
+	 my $sfa=$odb->get_SimpleFeatureAdaptor;
+	 my $db_features=$sfa->fetch_all_by_Slice($slice);
+	 my ($delete,$save)=compare_feature_sets($db_features,$simple_features);
+	 foreach my $del_feat (@$delete){
+		$sfa->remove($del_feat);
+	 }
+	 server_log("Deleting ".scalar(@$delete)." SimpleFeatures") unless $@;
+	 foreach my $new_feat (@$save){
+		$new_feat->slice($slice);
+		$sfa->store($new_feat);
+	 }
+	 server_log("Saving ".scalar(@$save)." SimpleFeatures") unless $@;
+
+	 ##assembly_tags are not taken into account for here, as they are not part of annotation nor versioned ,
+	 ##but may be required in the future
+	 ##fetch a new slice, and convert this new_slice to xml so that
+	 ##the response xml has all the above changes done in this session
+
+	 my $new_slice =  $odb->get_SliceAdaptor()->fetch_by_region($cs,$segment_name,$start,$end,$strand,$cs_version);
+	 my $slices=[];
+	 push @$slices,$new_slice;
+	 my $t=Bio::Vega::Transform::XML->new;
+	 $xmlstr=$t->generate_OtterXML($slices,$odb,0);
+  };
+  if ($@){
+	 error_exit($sq, "Failed writing annotations [$@]");
+	 $odb->rollback;
   }
-
-
-  ##update feature_sets
-  ##SimpleFeatures - deletes old features(features not in xml)
-  ##and stores the current featues in databse(features in xml)
-  my $simple_features=$parser->get_SimpleFeatures;
-  my $sfa=$odb->get_SimpleFeatureAdaptor;
-  my $db_features=$sfa->fetch_all_by_Slice($slice);
-  my ($delete,$save)=compare_feature_sets($db_features,$simple_features);
-  foreach my $del_feat (@$delete){
-	 $sfa->remove($del_feat);
+  else {
+	 $odb->commit;
   }
-  foreach my $new_feat (@$save){
-	 $new_feat->slice($slice);
-	 $sfa->store($new_feat);
-  }
-
-  ##assembly_tags are not taken into account for here, as they are not part of annotation nor versioned ,
-  ##but may be required in the future
-
-  ##fetch a new slice, and convert this new_slice to xml so that
-  ##the response xml has all the above changes done in this session
-  my $new_slice =  $odb->get_SliceAdaptor()->fetch_by_region($cs,$segment_name,$start,$end,$strand,$cs_version);
-  my $slices=[];
-  push @$slices,$new_slice;
-  my $t=Bio::Vega::Transform::XML->new;
-  my $xmlstr=$t->generate_OtterXML($slices,$odb,0);
-  $odb->commit;
   ##send the response
   send_response($sq,$xmlstr);
 }
