@@ -258,7 +258,7 @@ sub generate_output {
                 }
 
                 if(keys %asm2clonenames) {
-                    for my $asm (keys %asm2clonenames) {
+                    for my $asm (sort keys %asm2clonenames) {
                         if(!$filter_atype || ($filter_atype eq $asm)) {
                             $output_string .= join("\t", $qname, $type,
                                 join(',', keys %{$asm2clonenames{$asm}}),
