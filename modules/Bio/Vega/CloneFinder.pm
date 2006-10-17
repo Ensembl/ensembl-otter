@@ -59,11 +59,13 @@ sub register_feature {
 
     $loc->assembly( ($cs_name eq 'chromosome')
         ? $sr_name
+            # NOTE: the mapping of features on clones may not be unique. Solutions?
         : $feature->project('chromosome', 'Otter')->[0]->to_Slice()->seq_region_name()
     );
 
     $loc->component_names( ($cs_name eq $component)
         ? [ $sr_name ]
+            # NOTE: we hope that the mapping is ordered. If not, we can order it.
         : [ map { $_->to_Slice()->seq_region_name() } @{ $feature->project($component) } ]
     );
 
@@ -149,6 +151,7 @@ sub find_by_seqregion_names {
     my ($self, $quoted_qnames) = @_;
 
     my $dbc      = $self->dbc();
+    my $adaptor;
 
     my $sql = qq{
         SELECT cs.name, sr.name
@@ -161,7 +164,9 @@ sub find_by_seqregion_names {
     my $sth = $dbc->prepare($sql);
     $sth->execute();
     while( my ($cs_name, $sr_name) = $sth->fetchrow() ) {
-        my $slice = $self->dba()->get_SliceAdaptor->fetch_by_region($cs_name, $sr_name);
+        $adaptor ||= $self->dba()->get_SliceAdaptor();
+
+        my $slice = $adaptor->fetch_by_region($cs_name, $sr_name);
 
         $self->register_feature($sr_name, $cs_name.'_name', $slice);
     }
