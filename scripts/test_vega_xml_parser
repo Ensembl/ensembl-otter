@@ -2,7 +2,7 @@
 
 =head1 DESCRIPTION
 
-test_vega_xml_parser -dbhost xxx -dbport xxx -dbname xxx -dbuser xxx -dbpass xxx -xml filename
+test_vega_xml_parser -dbhost xxx -dbport xxx -dbname xxx -dbuser xxx -dbpass xxx -assembly 'yes|no' -xml filename
 
 =head1 OPTIONS
 
@@ -18,6 +18,8 @@ test_vega_xml_parser -dbhost xxx -dbport xxx -dbname xxx -dbuser xxx -dbpass xxx
 
 -xml input otter xml file to be parsed
 
+-assembly 'yes' | 'no' (yes loads only assembly data, i.e., populates seq_region,assembly,seq_region_attrib,contig_info,contig_attrib tables only; no loads genes and its components and simple features)
+
 =cut
 
 use strict;
@@ -26,6 +28,7 @@ use Bio::Vega::Transform::Otter;
 use Bio::Vega::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Slice;
 use Getopt::Long;
+use Bio::EnsEMBL::Pipeline::SeqFetcher::Finished_Pfetch;
 use Data::Dumper;
 
 my $dbhost;
@@ -35,6 +38,7 @@ my $dbuser;
 my $dbpass;
 my $help;
 my $xmlfile;
+my $assembly;
 &GetOptions(
 				'dbhost=s'   => \$dbhost,
 				'dbport=n'   => \$dbport,
@@ -43,13 +47,23 @@ my $xmlfile;
 				'dbpass=s'   => \$dbpass,
 				'h|help'     => \$help,
 				'xml=s'  => \$xmlfile,
+				'assembly=s' => \$assembly,
 			  ) or ($help = 1);
-if ($help || !defined ($dbhost) || !defined($dbport) || !defined($dbname) || !defined($dbuser) || !defined($dbpass) ||!defined($xmlfile) ) {
+if ($help || !defined ($dbhost) || !defined($dbport) || !defined($dbname) || !defined($dbuser) || !defined($dbpass) ||!defined($xmlfile) || !defined($assembly) ) {
   exec('perldoc', $0);
 }
+
+if ($assembly !~ /yes|no/ ) {
+  die "assembly value should be 'yes' or 'no' as a string value, yes indicates loading of assembly\nassembly:$assembly";
+}
+
 ##create a parse and parse the xmlfile and create vega objects
 my $parser = Bio::Vega::Transform::Otter->new;
+
+$parser->Assembly($assembly);
 $parser->parsefile($xmlfile);
+
+
 ##create a db handle
 my $db = Bio::Vega::DBSQL::DBAdaptor->new(
 														-dbname => $dbname,
@@ -63,42 +77,57 @@ my $db = Bio::Vega::DBSQL::DBAdaptor->new(
 eval{
   ##Let begin a transaction and do all the database changes within a transaction
   $db->begin_work();
-  ##Uncomment the following to load a new Assembly or to load into an empty database
-  ##This loads ContigInfo and its attributes.Takes care of is_current(loads a new contiginfo object and a set of attributes for the
-  ##new contiginfo, only if the contiginfo object has changed
-  eval {
-	 $parser->LoadAssemblySlices($db);
-  };
-  if ($@){
-	 $db->rollback;
-	 die "problem with loading of Assembly\n$@\n";
-  }
-=head2 COMMENT
 
-  ##Load genes,transcripts,translations,exons from XML - takes care of versioning
-  ##if there is a change in gene and its components then the version is incremented otherwise, not
-  my $genes=$parser->get_Genes;
-  my $gene_adaptor=$db->get_GeneAdaptor;
-  foreach my $gene (@$genes){
-	 $gene_adaptor->store($gene);
+  if ($assembly eq 'yes') {
+	 eval {
+		my $pfetch         ||= Bio::EnsEMBL::Pipeline::SeqFetcher::Finished_Pfetch->new;
+		my $pfetch_archive ||= Bio::EnsEMBL::Pipeline::SeqFetcher::Finished_Pfetch->new(
+																												  -PFETCH_PORT => 23100,);
+		$parser->LoadAssemblySlices($db,$pfetch,$pfetch_archive);
+	 };
+	 if ($@){
+		$db->rollback;
+		die "problem with loading of Assembly\n$@\n";
+	 }
   }
-  ##Load SimpleFeatures - deletes old features(features not in xml) and stores the current features in XML
-  my $simple_features=$parser->get_SimpleFeatures;
-  my $sfa=$db->get_SimpleFeatureAdaptor;
-  my $chr_slice=$parser->get_ChromosomeSlice;
-  # my $new_slice=$parser->get_SliceId($chr_slice,$db);
-  my $new_slice=$parser->get_ChromosomeSliceDB($db);
-  my $db_features=$sfa->fetch_all_by_Slice($new_slice);
-  my ($delete,$save)=compare_feature_sets($db_features,$simple_features);
-  foreach my $del_feat (@$delete){
-	 $sfa->remove($del_feat);
-  }
-  foreach my $new_feat (@$save){
-	 $new_feat->slice($new_slice);
-	 $sfa->store($new_feat);
+  else {
+	 ##Load genes,transcripts,translations,exons from XML - takes care of versioning
+	 ##if there is a change in gene and its components then the version is incremented otherwise, not
+	 my $genes=$parser->get_Genes;
+	 my $gene_adaptor=$db->get_GeneAdaptor;
+	 foreach my $gene (@$genes){
+		eval {
+		  $gene_adaptor->store($gene);
+		};
+		if ($@){
+		  $db->rollback;
+		  die "problem with loading of genes\n$@\n";
+		}
+	 }
+	 ##Load SimpleFeatures - deletes old features(features not in xml) and stores the current features in XML
+	 my $simple_features=$parser->get_SimpleFeatures;
+	 my $sfa=$db->get_SimpleFeatureAdaptor;
+	 my $chr_slice=$parser->get_ChromosomeSlice;
+	 # my $new_slice=$parser->get_SliceId($chr_slice,$db);
+	 my $new_slice=$parser->get_ChromosomeSliceDB($db);
+	 my $db_features=$sfa->fetch_all_by_Slice($new_slice);
+	 my ($delete,$save)=compare_feature_sets($db_features,$simple_features);
+	 foreach my $del_feat (@$delete){
+		$sfa->remove($del_feat);
+	 }
+	 foreach my $new_feat (@$save){
+		$new_feat->slice($new_slice);
+		eval{
+		  $sfa->store($new_feat);
+		};
+		if ($@){
+		  $db->rollback;
+		  die "problem with loading of simplefeatures\n$@\n";
+		}
+		
+	 }
   }
 
-=cut
 
 };
 if ($@) {

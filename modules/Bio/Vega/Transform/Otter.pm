@@ -13,7 +13,6 @@ use Bio::EnsEMBL::SimpleFeature;
 use Bio::EnsEMBL::Analysis;
 use Bio::EnsEMBL::Slice;
 use Bio::EnsEMBL::CoordSystem;
-#use Bio::EnsEMBL::Pipeline::SeqFetcher::Finished_Pfetch;
 use Bio::EnsEMBL::Attribute;
 use Bio::Vega::Author;
 use Bio::Vega::AuthorGroup;
@@ -42,6 +41,7 @@ my (
 	 %seen_gene_name,
 	 %sequence_set,
 	 %dna,
+	 %assembly,
     );
 
 
@@ -62,6 +62,7 @@ sub DESTROY {
   delete $seen_transcript_name{$self};
   delete $sequence_set{$self};
   delete $dna{$self};
+  delete $assembly{$self};
   # So that DESTROY gets called in baseclass:
   bless $self, 'Bio::Vega::Transform';
 }
@@ -115,7 +116,25 @@ sub initialize {
 	  'ig_segment'             => ['Ig_segment' ,'NOVEL'],
 	 };
   $time_now{$self}=time;
+  $assembly{$self}=0;
 }
+
+sub Assembly {
+
+  my ($self,$value)=@_;
+  if ($value) {
+	 if ($value eq 'yes'){
+		$value=1;
+	 }
+	 else {
+		$value=0;
+	 }
+	 $assembly{$self}=$value;
+  }
+  return $assembly{$self};
+
+}
+
 
 sub init_CoordSystem_Version {
   my ($self,$value)=@_;
@@ -152,8 +171,12 @@ sub build_SequenceFragment {
   my $strand = $data->{'fragment_ori'};
   my $chrslice=$self->get_ChromosomeSlice;
   unless ($chrslice) {
-	 #$chrslice = make_Slice($self,$chr_slice_name,1,$end,$end,1,$chr_coord_system);
-	 $chrslice = make_Slice($self,$chr_slice_name,$start,$end,$end,1,$chr_coord_system);
+	 if ($assembly{$self}==1){
+		$chrslice = make_Slice($self,$chr_slice_name,1,$end,$end,1,$chr_coord_system);
+	 }
+	 else {
+		$chrslice = make_Slice($self,$chr_slice_name,$start,$end,$end,1,$chr_coord_system);
+	 }
 	 $slice{$self}{'chr'} ||= $chrslice;
 	 my $chr_attrib=$self->make_Attribute('chr','Chromosome Name','Chromosome Name Contained in the Assembly',$data->{'chromosome'});
 	 my $chr_attrib_list = $slice{$self}{'chr_attrib'} ||= [];
@@ -172,8 +195,13 @@ sub build_SequenceFragment {
 	 unless ($chrname and $start and $end and $offset and $strand) {
 		die "XML does not contain information needed to create slice:\nchr name='$chrname'  chr start='$start'  chr end='$end' offset='$offset' strand = '$strand'";
 	 }
-	 my $new_chr_slice=make_Slice($self,$chr_slice_name,$slice_start,$slice_end,$slice_end,1,$chr_coord_system);
-	#my $new_chr_slice=make_Slice($self,$chr_slice_name,1,$slice_end,$slice_end,1,$chr_coord_system);
+	 my $new_chr_slice;
+	 if ($assembly{$self}==1){
+		$new_chr_slice=make_Slice($self,$chr_slice_name,1,$slice_end,$slice_end,1,$chr_coord_system);
+	 }
+	 else {
+		$new_chr_slice=make_Slice($self,$chr_slice_name,$slice_start,$slice_end,$slice_end,1,$chr_coord_system);
+	 }
 	 $slice{$self}{'chr'}=$new_chr_slice;
   }
   my $cmp_start = $offset;
@@ -656,27 +684,27 @@ sub report_set_end {
 ###load parsed otter objects to otter database
 
 sub LoadAssemblySlices {
-
+#use Bio::EnsEMBL::Pipeline::SeqFetcher::Finished_Pfetch;
 ##add more command-line sequence-set arguments like description,replace
 ##this would make the current sequence-set as the latest and hide=Y for the
 ##current sequence-set and the sequence set specified in the replace option
 ##update chromosome length
 
-  my ($self,$db)= @_;
+  my ($self,$db,$pfetch,$pfetch_archive)= @_;
   eval {
 	 $db->begin_work();
 	 my $dbc= $db->dbc();
 	 my $sa=$db->get_SliceAdaptor();
 	 my $slice=$self->get_AssemblySlices;
 	 my $chr_slice=$slice->{'chr'};
-	 my $new_slice=$self->get_SliceId($chr_slice,$db);
+	 my $new_slice=$self->get_SliceId($chr_slice,$db,$pfetch,$pfetch_archive);
 	 my $asm_seq_reg_id=$sa->get_seq_region_id($new_slice);
 	 my $chr_ctg = $slice->{'chr_ctg'};
 	 ##insert all contigs
 	 foreach my $piece (@$chr_ctg) {
 		my $asm_slice = $piece->[0];
 		my $cmp_slice = $piece->[1];
-		my $new_slice=$self->get_SliceId($cmp_slice,$db);
+		my $new_slice=$self->get_SliceId($cmp_slice,$db,$pfetch,$pfetch_archive);
 		my $cmp_seq_reg_id=$sa->get_seq_region_id($new_slice);
 		##insert chromosome-contig assembly
 		$self->insert_Assembly($dbc,$asm_seq_reg_id,$cmp_seq_reg_id,$asm_slice->start,$asm_slice->end,$cmp_slice->start,$cmp_slice->end,$cmp_slice->strand);
@@ -692,9 +720,9 @@ sub LoadAssemblySlices {
 	 foreach my $piece (@$cln_ctg) {
 		my $asm_slice = $piece->[0];
 		my $cmp_slice = $piece->[1];
-		my $new_slice=$self->get_SliceId($asm_slice,$db);
+		my $new_slice=$self->get_SliceId($asm_slice,$db,$pfetch,$pfetch_archive);
 		my $asm_seq_reg_id=$sa->get_seq_region_id($new_slice);
-		$new_slice=$self->get_SliceId($cmp_slice,$db);
+		$new_slice=$self->get_SliceId($cmp_slice,$db,$pfetch,$pfetch_archive);
 		my $cmp_seq_reg_id=$sa->get_seq_region_id($new_slice);
 		##insert clone-contig assembly
 		$self->insert_Assembly($dbc,$asm_seq_reg_id,$cmp_seq_reg_id,$asm_slice->start,$asm_slice->end,$cmp_slice->start,$cmp_slice->end,$cmp_slice->strand);
@@ -737,7 +765,7 @@ sub  insert_Assembly {
 ##get instant variable values of instantiated object
 
 sub get_SliceId {
-  my ($self,$slice,$db)=@_;
+  my ($self,$slice,$db,$pfetch,$pfetch_archive)=@_;
   my $dbc= $db->dbc();
   my $sa=$db->get_SliceAdaptor();
   my $csa = $db->get_CoordSystemAdaptor();
@@ -765,7 +793,7 @@ sub get_SliceId {
 		my ($acc_ver)=$seq_name =~ /^(.+\.\d+)\.\d+\.\d+$/;
 		my $seqobj;
 		eval {
-		  $seqobj = $self->pfetch_acc_ver($acc_ver);
+		  $seqobj = $self->pfetch_acc_ver($acc_ver,$pfetch,$pfetch_archive);
 		};
 		
 		if ($@) {
@@ -776,6 +804,17 @@ sub get_SliceId {
 		}
 		$seq   = $seqobj->seq;
 		##insert slice
+		##test to set the length right for API
+		if ($new_slice->length != length($seq)){
+		#  print STDERR "\n\n****length are not the same".$new_slice->length."-----seqlength----".length($seq)."start:".$new_slice->start."  end:".$new_slice->end;
+		 # $new_slice->length(length($seq));
+		  #$new_slice->end(length($seq));
+		  #$new_slice->start(1);
+		  #print STDERR "\n\nafter correction".$new_slice->length."-----seqlength----".length($seq)."start:".$new_slice->start."  end:".$new_slice->end;
+		  my $seq_len=length($seq);
+		  $new_slice=$self->make_Slice($slice->seq_region_name,1,$seq_len,$seq_len,1,$cs);
+		}
+		##test
 		$seq_reg_id = $sa->store($new_slice,\$seq);
 		##assign new slice
 		$slice=$new_slice;
@@ -880,10 +919,9 @@ sub get_SequenceSet_AssemblyType {
 ###fetch sequence
 
 sub pfetch_acc_ver {
-  my( $self,$acc_ver ) = @_;
-  my $pfetch         ||= Bio::EnsEMBL::Pipeline::SeqFetcher::Finished_Pfetch->new;
-  my $pfetch_archive ||= Bio::EnsEMBL::Pipeline::SeqFetcher::Finished_Pfetch->new(
-																											 -PFETCH_PORT => 23100,);
+  my( $self,$acc_ver,$pfetch,$pfetch_archive ) = @_;
+ # my $pfetch         ||= Bio::EnsEMBL::Pipeline::SeqFetcher::Finished_Pfetch->new;
+ # my $pfetch_archive ||= Bio::EnsEMBL::Pipeline::SeqFetcher::Finished_Pfetch->new(-PFETCH_PORT => 23100,);
   my $seq;
   eval {
 	 $seq = $pfetch->get_Seq_by_acc($acc_ver);
@@ -941,11 +979,13 @@ sub make_CoordSystem {
 	 if ($name eq 'chromosome') {
 		$version=$self->init_CoordSystem_Version;
 		if ($version eq 'otter'){
+		  $version='Otter';
 		  $rank=2;
 		  $default=0;
 		}
 		elsif ($version eq 'vega'){
 		  $rank=1;
+		  $version='Vega';
 		}
 	 }
 	 if ($name eq 'contig'){
