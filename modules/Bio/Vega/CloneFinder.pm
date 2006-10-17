@@ -135,10 +135,11 @@ sub find_by_feature_attributes {
 
         my $sth = $dbc->prepare($sql);
         $sth->execute();
-        if( my ($feature_id, $qname) = $sth->fetchrow() ) {
+        while( my ($feature_id, $qname) = $sth->fetchrow() ) {
             $adaptor ||= $self->dba()->$adaptor_call; # only do it if we found something
 
             my $feature = $adaptor->fetch_by_dbID($feature_id);
+
             $self->register_feature($qname, $qtype, $feature);
         }
     }
@@ -170,6 +171,7 @@ sub find_by_seqregion_attributes {
     my ($self, $quoted_qnames, $cs_name, $code_hash) = @_;
 
     my $dbc      = $self->dbc();
+    my $adaptor;
 
     while( my ($code,$qtype) = each %$code_hash ) {
         my $sql = qq{
@@ -184,8 +186,10 @@ sub find_by_seqregion_attributes {
 
         my $sth = $dbc->prepare($sql);
         $sth->execute();
-        if( my ($sr_name, $qname) = $sth->fetchrow() ) {
-            my $slice = $self->dba()->get_SliceAdaptor->fetch_by_region($cs_name, $sr_name);
+        while( my ($sr_name, $qname) = $sth->fetchrow() ) {
+            $adaptor ||= $self->dba()->get_SliceAdaptor();
+
+            my $slice = $adaptor->fetch_by_region($cs_name, $sr_name);
 
             $self->register_feature($qname, $qtype, $slice);
         }
