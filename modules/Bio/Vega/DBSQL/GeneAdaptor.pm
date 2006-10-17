@@ -617,6 +617,7 @@ sub store{
  }
 
 sub add_gene_synonym{
+
   my ($self,$db_gene,$gene)=@_;
   my $db_gene_name=$db_gene->get_all_Attributes('name');
   my $db_gn;
@@ -625,21 +626,27 @@ sub add_gene_synonym{
 		$db_gn=$db_gene_name->[0]->value;
 	 }
   }
-  my $synonyms = $gene->get_all_Attributes('synonym');
-  my $se=0;
-  if (defined $synonyms && defined $db_gn) {
-	 foreach my $syn (@$synonyms){
-		if ($syn eq $db_gn){
-		  $se=1;
-		}
+  my $gene_name=$gene->get_all_Attributes('name');
+  my $gn;
+  if ($gene_name) {
+	 if (defined $gene_name->[0]){
+		$gn=$gene_name->[0]->value;
 	 }
   }
-  if ($se==0){
-	 my $gene_attributes=[];
-	 my $syn_attrib=$self->make_Attribute('synonym','Synonym','',$db_gn);
-	 push @$gene_attributes,$syn_attrib;
-	 $gene->add_Attributes(@$gene_attributes);
+  my $synonyms = $gene->get_all_Attributes('synonym');
+  my %synonym;
+  if ($synonyms) {
+	 %synonym = map {$_->value, $_} @$synonyms;
   }
+  if ( $db_gn && $db_gn ne $gn) {
+	 if (!exists $synonym{$db_gn}){
+		my $gene_attributes=[];
+		my $syn_attrib=$self->make_Attribute('synonym','Synonym','',$db_gn);
+		push @$gene_attributes,$syn_attrib;
+		$gene->add_Attributes(@$gene_attributes);
+	 }
+  }
+
 }
 
 sub make_Attribute{
