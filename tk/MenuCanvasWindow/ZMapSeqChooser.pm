@@ -250,7 +250,11 @@ sub zMapServerDefaults {
         url         => $url,
         writeback   => 'false',
         sequence    => 'true',
-        
+        # navigator_sets specifies the feature sets to draw in the navigator pane.
+        # so far the requested columns are just scale, genomic_canonical and locus
+        # in line with keeping the columns to a minimum to save screen space.
+        navigator_sets => q`scale genomic_canonical locus`,
+
         featuresets => sprintf(q{"%s"}, join ' ', map qq{\\"$_\\"}, $self->zMapListMethodNames_ordered),
         # Can specify a stylesfile instead of featuresets
 
