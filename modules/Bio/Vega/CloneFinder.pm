@@ -63,7 +63,8 @@ sub register_feature {
     $loc->component_names( ($cs_name eq $component)
         ? [ $sr_name ]
         : [ map { $_->to_Slice()->seq_region_name() }
-                sort {$a->from_start() <=> $b->from_start()}
+                    # NOTE: order of projection segments WAS strand-dependent
+                sort { ($a->from_start() <=> $b->from_start())*$feature->strand() }
                     @{ $feature->project($component) } ]
     );
 
