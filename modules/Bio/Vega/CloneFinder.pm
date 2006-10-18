@@ -69,7 +69,7 @@ sub register_feature {
 
     if($cs_name ne $component) {
         warn "LIST in its order is: ".join(', ',  map { $_->to_Slice()->seq_region_name() }
-                        sort {$a->from_start() <=> $b->from_start()}
+                        sort { ($a->from_start() <=> $b->from_start())*$feature->strand() }
                                             @{ $feature->project($component) } )."\n";
     }
 
