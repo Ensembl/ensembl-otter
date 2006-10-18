@@ -8,7 +8,7 @@ package Bio::Otter::CloneFinder;
 use strict;
 use Bio::Otter::Lace::Locator;
 
-my $DEBUG=0; # do not show all SQL statements
+my $DEBUG=1; # do not show all SQL statements
 
 sub new {
     my ($class, $dba, $qnames) = @_;
@@ -42,7 +42,7 @@ sub register_clones {
 
     my $unhide = $self->{_unhide};
 
-    my $clones_string = join(', ', map { "'$_'" } @$clone_names);
+    my $clones_string = join(', ', map { "'$_'" } keys %$clone_names);
     my $sql = qq{
         SELECT asm.type, concat(cl.embl_acc,'.',cl.embl_version),
                asm.chr_start, asm.chr_end
@@ -92,13 +92,13 @@ sub register_clones {
 sub exons2clones {
     my ($self, $qname, $qtype, $exons) = @_;
 
-    my @clone_names = ();
+    my %clone_names = ();
     foreach my $exon (@$exons) {
         my $clone = $exon->contig()->clone();
-        push @clone_names, $clone->embl_id().'.'.$clone->embl_version();
+        $clone_names { $clone->embl_id().'.'.$clone->embl_version() } ++;
     }
 
-    $self->register_clones($qname, $qtype, \@clone_names);
+    $self->register_clones($qname, $qtype, \%clone_names);
 }
 
 sub find {
@@ -166,7 +166,7 @@ sub find {
             
             # server_log("trying clone accession[.version] '$qname' ");
             while (my ($clone_name) = $sth->fetchrow) {
-                $self->register_clones($qname, 'clone_accession', [$clone_name]);
+                $self->register_clones($qname, 'clone_accession', {$clone_name});
             }
         } elsif($qname =~ /^\w+\.\d+\.\d+\.\d+$/) { # try mapping contigs to clones
             my $sql = qq{
@@ -181,7 +181,7 @@ sub find {
             
             # server_log("trying contig name '$qname' ");
             while (my ($clone_name) = $sth->fetchrow) {
-                $self->register_clones($qname, 'contig_name', [$clone_name]);
+                $self->register_clones($qname, 'contig_name', {$clone_name});
             }
         }
 
@@ -197,7 +197,7 @@ sub find {
             
             # server_log("trying intl. clone name '$qname' ");
             while (my ($clone_name) = $sth->fetchrow) {
-                $self->register_clones($qname, 'intl_clone_name', [$clone_name]);
+                $self->register_clones($qname, 'intl_clone_name', {$clone_name});
             }
         }
 
