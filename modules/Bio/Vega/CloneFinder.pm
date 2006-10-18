@@ -1,17 +1,14 @@
 package Bio::Vega::CloneFinder;
 
-use strict;
-use Bio::Otter::Lace::Locator;
-
-my $component = 'clone';
-
 #
 # A module used by server script 'find_clones' to find things on clones
 # (new API version)
 #
 
 use strict;
+use Bio::Otter::Lace::Locator;
 
+my $component = 'clone';
 my $DEBUG=0; # do not show all SQL statements
 
 sub new {
@@ -69,8 +66,7 @@ sub register_feature {
         : [ map { $_->to_Slice()->seq_region_name() } @{ $feature->project($component) } ]
     );
 
-    my $locs = $self->qnames_locators()->{$qname} ||= [];
-    push @$locs, $loc;
+    push @{ $self->qnames_locators()->{$qname} }, $loc;
 }
 
 sub find_by_stable_ids {
