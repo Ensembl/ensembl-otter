@@ -232,9 +232,9 @@ sub generate_output {
     my $output_string = '';
 
     for my $qname (sort keys %{$self->qnames_locators()}) {
-        my $locators = $self->qnames_locators()->{$qname};
         my $count = 0;
-        for my $loc (@$locators) {
+        for my $loc (sort {$a->assembly cmp $b->assembly}
+                        @{ $self->qnames_locators()->{$qname} }) {
             my $asm = $loc->assembly();
             if(!$filter_atype || ($filter_atype eq $asm)) {
                 $output_string .= join("\t",
