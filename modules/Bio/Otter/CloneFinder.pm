@@ -75,7 +75,7 @@ sub register_clones {
             }
 
                 # prepare for the next one:
-            $curr_clone_names = [];
+            $curr_clone_names = [$clone_name];
             $curr_atype = $atype;
         } else {
             push @$curr_clone_names, $clone_name;
