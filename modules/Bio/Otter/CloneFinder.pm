@@ -8,7 +8,7 @@ package Bio::Otter::CloneFinder;
 use strict;
 use Bio::Otter::Lace::Locator;
 
-my $DEBUG=1; # do not show all SQL statements
+my $DEBUG=0; # do not show all SQL statements
 
 sub new {
     my ($class, $dba, $qnames) = @_;
