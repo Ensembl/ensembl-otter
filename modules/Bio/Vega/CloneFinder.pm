@@ -68,12 +68,6 @@ sub register_feature {
                     @{ $feature->project($component) } ]
     );
 
-    if($cs_name ne $component) {
-        warn "LIST in its order is: ".join(', ',  map { $_->to_Slice()->seq_region_name() }
-                        sort { ($a->from_start() <=> $b->from_start())*$feature->strand() }
-                                            @{ $feature->project($component) } )."\n";
-    }
-
     push @{ $self->qnames_locators()->{$qname} }, $loc;
 }
 
