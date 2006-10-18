@@ -62,8 +62,9 @@ sub register_feature {
 
     $loc->component_names( ($cs_name eq $component)
         ? [ $sr_name ]
-            # NOTE: we hope that the mapping is ordered. If not, we can order it.
-        : [ map { $_->to_Slice()->seq_region_name() } @{ $feature->project($component) } ]
+        : [ map { $_->to_Slice()->seq_region_name() }
+                sort {$a->from_start() <=> $b->from_start()}
+                    @{ $feature->project($component) } ]
     );
 
     push @{ $self->qnames_locators()->{$qname} }, $loc;
@@ -225,9 +226,9 @@ sub generate_output {
     my $output_string = '';
 
     for my $qname (sort keys %{$self->qnames_locators()}) {
-        my $locators = $self->qnames_locators()->{$qname};
         my $count = 0;
-        for my $loc (@$locators) {
+        for my $loc (sort {$a->assembly cmp $b->assembly}
+                        @{ $self->qnames_locators()->{$qname} }) {
             my $asm = $loc->assembly();
             if(!$filter_atype || ($filter_atype eq $asm)) {
                 $output_string .= join("\t",
