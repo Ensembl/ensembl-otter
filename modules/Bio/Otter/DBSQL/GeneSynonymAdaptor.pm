@@ -26,10 +26,10 @@ use vars qw(@ISA);
 sub _generic_sql_fetch {
 	my( $self, $where_clause ) = @_;
 	my $sql = q{
-		SELECT synonym_id,
-		       name,
-		       gene_info_id
-		FROM gene_synonym }
+		SELECT gs.synonym_id,
+		       gs.name,
+		       gs.gene_info_id
+		FROM gene_synonym gs }
 	. $where_clause
         . q{ ORDER BY synonym_id };
 
@@ -38,11 +38,11 @@ sub _generic_sql_fetch {
 
 	my @out;
 
-	while  (my $ref = $sth->fetchrow_hashref) {
+	while  (my ($synonym_id, $name, $gene_info_id) = $sth->fetchrow()) {
 	    my $obj = new Bio::Otter::GeneSynonym;
-	    $obj->dbID($ref->{synonym_id});
-	    $obj->name($ref->{name});
-	    $obj->gene_info_id($ref->{gene_info_id});
+	    $obj->dbID($synonym_id);
+	    $obj->name($name);
+	    $obj->gene_info_id($gene_info_id);
 	    push(@out,$obj);
 	  }
 	return @out;
@@ -98,6 +98,20 @@ sub fetch_by_name {
 	return \@obj;
 }
 
+sub fetch_current_by_name {
+	my ($self,$name) = @_;
+
+	if (!defined($name)) {
+		$self->throw("Name must be entered to fetch a GeneSynonym object");
+	}
+
+	my @obj = $self->_generic_sql_fetch(qq{
+        LEFT JOIN current_gene_info cgi
+               ON gs.gene_info_id=cgi.gene_info_id
+            WHERE name = \'$name\' AND gene_stable_id IS NOT NULL });
+
+	return \@obj;
+}
 
 =head2 fetch_by_gene_info_id
 

@@ -207,7 +207,7 @@ sub find {
             eval{
                 # server_log("trying gene name or synonym '$qname' ");
                 my $geneNameObjList = $genename_adaptor->fetch_current_by_name($qname);
-                my $geneSynObjList  = $genesyn_adaptor->fetch_by_name($qname);
+                my $geneSynObjList  = $genesyn_adaptor->fetch_current_by_name($qname);
                 foreach my $geneNameObj (@$geneNameObjList, @$geneSynObjList){
                     my $geneInfoObj = $geneinfo_adaptor->fetch_by_dbID($geneNameObj->gene_info_id());    
                     $exons = $gene_adaptor->fetch_by_stable_id($geneInfoObj->gene_stable_id())->get_all_Exons();
