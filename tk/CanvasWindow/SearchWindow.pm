@@ -102,7 +102,7 @@ sub do_search {
                                 $asm, $clone_name, $clone_names
                         );
                     },
-                )->pack(-side => 'right');
+                )->pack(-side => 'left');
             }
         } else {
             my $label = $result_frame->Label(
