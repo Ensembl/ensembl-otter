@@ -186,10 +186,10 @@ sub slice_name {
     return $self->XaceSeqChooser->slice_name;
 }
 
-sub get_CloneSeq {
+sub Assembly {
     my $self = shift @_;
 
-    return $self->XaceSeqChooser->get_CloneSeq;
+    return $self->XaceSeqChooser->Assembly;
 }
 
 sub stored_ace_dump {
@@ -506,18 +506,17 @@ sub add_genomic_feature {
 sub load_genomic_features {
     my ($self) = @_;
 
-    if (my $clone = $self->get_CloneSeq) {
+    my $assembly = $self->Assembly;
 
-        foreach my $vector (sort { $a->[1] <=> $b->[1] || $a->[2] <=> $b->[2] }
-            $clone->get_SimpleFeatures([keys %signal_info]) )
-        {
+    foreach my $vector (sort { $a->[1] <=> $b->[1] || $a->[2] <=> $b->[2] }
+        $assembly->get_SimpleFeatures([keys %signal_info]) )
+    {
 
-            my ($gf_type, $fiveprime, $threeprime, $score, $display_label) = @$vector;
+        my ($gf_type, $fiveprime, $threeprime, $score, $display_label) = @$vector;
 
-            my $strand = get_strand_from_order($fiveprime, $threeprime);
-            $self->add_genomic_feature($gf_type, $fiveprime, $threeprime, $strand,
-                $score, $display_label);
-        }
+        my $strand = get_strand_from_order($fiveprime, $threeprime);
+        $self->add_genomic_feature($gf_type, $fiveprime, $threeprime, $strand,
+            $score, $display_label);
     }
 
     my ($current_ace_dump, $current_vectors) = $self->ace_and_vector_dump();
@@ -577,7 +576,7 @@ sub save_to_ace {
             $self->stored_ace_dump($current_ace_dump);
 
             # Make the clone know the new vectors
-            $self->get_CloneSeq->set_SimpleFeatures(@$current_vectors);
+            $self->Assembly->set_SimpleFeatures(@$current_vectors);
         } else {
             print STDERR "There was an error saving genomic features to acedb\n";
         }

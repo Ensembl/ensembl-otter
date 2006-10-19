@@ -17,7 +17,7 @@ use Hum::Ace::XaceRemote;
 use Hum::Ace::DotterLauncher;
 use Hum::Ace;
 use Hum::Analysis::Factory::ExonLocator;
-use CanvasWindow::DotterWindow;
+use EditWindow::Dotter;
 use MenuCanvasWindow::ExonCanvas;
 use MenuCanvasWindow::GenomicFeatures;
 use Bio::Otter::Lace::Defaults;
@@ -785,7 +785,7 @@ sub launch_GenomicFeatures {
             $gfw->deiconify;
             $gfw->raise;
         } else {
-            my $clone = $self->get_CloneSeq;
+            my $clone = $self->Assembly;
 
             my $gfw = $self->canvas->Toplevel;
 
@@ -839,7 +839,7 @@ sub close_GenomicFeatures {
             return;
         }
         
-        my $clone = $self->get_CloneSeq;
+        my $clone = $self->Assembly;
         
         # The ExonLoacator finds exons in a genomic sequence
         my $finder = Hum::Analysis::Factory::ExonLocator->new;
@@ -1158,7 +1158,7 @@ sub resync_with_db {
     }
     $self->AceDatabase->ace_server->restart_server;
     
-    $self->empty_CloneSeq_cache;
+    $self->empty_Assembly_cache;
     $self->empty_SubSeq_cache;
     $self->empty_Locus_cache;
     
@@ -1245,7 +1245,7 @@ sub edit_new_subsequence {
         }
     }
     
-    my $slice = $self->get_CloneSeq;
+    my $slice = $self->Assembly;
     my $region_name = $most_3prime
         ? $slice->clone_name_overlapping($most_3prime)
         : $slice->ace_name;
@@ -1443,7 +1443,7 @@ sub make_variant_subsequence {
     }
     my $name = $sub_names[0];
     my $sub = $self->get_SubSeq($name);
-    my $clone = $self->get_CloneSeq($sub->clone_Sequence->name);
+    my $clone = $self->Assembly($sub->clone_Sequence->name);
     
     # Work out a name for the new variant
     my $var_name = $name;
@@ -1592,7 +1592,7 @@ sub draw_subseq_list {
 sub get_all_Subseq_clusters {
     my( $self ) = @_;
     
-    my $clone = $self->get_CloneSeq;
+    my $clone = $self->Assembly;
     my @subseq = sort {
            $a->start  <=> $b->start
         || $a->end    <=> $b->end
@@ -1630,31 +1630,31 @@ sub get_all_Subseq_clusters {
     return sort {$a->[0]->start <=> $b->[0]->start} @clust;
 }
 
-sub get_CloneSeq {
+sub Assembly {
     my( $self ) = @_;
     
     my $canvas = $self->canvas;
     
-    my( $clone );
-    unless ($clone = $self->{'_clone_sequence'}) {
+    my( $assembly );
+    unless ($assembly = $self->{'_assembly'}) {
         use Time::HiRes 'gettimeofday';
         my $before = gettimeofday();
         $canvas->Busy(
             -recurse => 0,
             );
-        $clone = $self->express_clone_and_subseq_fetch;
+        $assembly = $self->express_clone_and_subseq_fetch;
         my $after  = gettimeofday();
         $canvas->Unbusy;
         printf "Express fetch for '%s' took %4.3f\n", $self->slice_name, $after - $before;
-        $self->{'_clone_sequence'} = $clone;
+        $self->{'_assembly'} = $assembly;
     }
-    return $clone;
+    return $assembly;
 }
 
-sub empty_CloneSeq_cache {
+sub empty_Assembly_cache {
     my( $self ) = @_;
     
-    $self->{'_clone_sequence'} = undef;
+    $self->{'_assembly'} = undef;
 }
 
 sub express_clone_and_subseq_fetch {
@@ -1695,7 +1695,7 @@ sub replace_SubSeq {
     
     my $sub_name = $sub->name;
     $old_name ||= $sub_name;
-    my $clone = $self->get_CloneSeq;
+    my $clone = $self->Assembly;
     $clone->replace_SubSeq($sub, $old_name);
     if ($sub_name ne $old_name) {
         $self->{'_subsequence_cache'}{$old_name} = undef;
@@ -1730,7 +1730,7 @@ sub delete_SubSeq {
     my( $self, $sub ) = @_;
     
     my $name = $sub->name;
-    $self->get_CloneSeq->delete_SubSeq($name);
+    $self->Assembly->delete_SubSeq($name);
     
     if ($self->{'_subsequence_cache'}{$name}) {
         $self->{'_subsequence_cache'}{$name} = undef;
@@ -1937,7 +1937,7 @@ sub run_dotter {
         my $parent = $self->top_window();
         my $top = $parent->Toplevel(-title => 'run dotter');
         $top->transient($parent);
-        $dw = CanvasWindow::DotterWindow->new($top);
+        $dw = EditWindow::Dotter->new($top);
         $dw->initialise;
         $self->{'_dotter_window'} = $dw;
     }
