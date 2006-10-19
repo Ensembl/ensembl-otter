@@ -1,0 +1,62 @@
+#!/usr/local/bin/perl -w
+
+### fix_non_ott_exon_stable_ids
+
+use strict;
+
+
+use Bio::Otter::Lace::Defaults;
+
+$| = 1;
+
+{
+    my( $dataset_name );
+
+    my $usage = sub { exec('perldoc', $0) };
+    # This do_getopt() call is needed to parse the otter config files
+    # even if you aren't giving any arguments on the command line.
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'       => $usage,
+        'dataset=s'     => \$dataset_name,
+        ) or $usage->();
+    $usage->() unless $dataset_name;
+    
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    
+    my $otter_dba = $ds->get_cached_DBAdaptor;
+    my $stab_aptr = $otter_dba->get_StableIdAdaptor;
+    
+    my $list_non_otter = $otter_dba->prepare(q{
+        SELECT DISTINCT stable_id
+        FROM exon_stable_id
+        WHERE stable_id NOT like 'OTT%'
+        });
+    $list_non_otter->execute;
+    
+    my $update = $otter_dba->prepare(q{
+        UPDATE exon_stable_id
+        SET stable_id = ?
+        WHERE stable_id = ?
+        });
+    
+    while (my ($old_exon_sid) = $list_non_otter->fetchrow) {
+        my $new_exon_sid = $stab_aptr->fetch_new_exon_stable_id;
+        $update->execute($new_exon_sid, $old_exon_sid);
+        printf qq{UPDATE exon_stable_id SET stable_id = "%s" WHERE stable_id = "%s";\n},
+            $new_exon_sid, $old_exon_sid;
+    }
+}
+
+
+__END__
+
+=head1 NAME - fix_non_ott_exon_stable_ids
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
