@@ -419,7 +419,7 @@ sub zMapListMethodNames_ordered{
     my @list = ();
     my $collection = $self->AceDatabase->get_default_MethodCollection;
     $collection->order_by_right_priority;
-    return ("Locus", map $_->name, @{$collection->get_all_Methods});
+    return map $_->name, @{$collection->get_all_Methods};
 }
 
 #===========================================================
