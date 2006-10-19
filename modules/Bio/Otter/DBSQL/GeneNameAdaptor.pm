@@ -31,9 +31,7 @@ sub _generic_sql_fetch {
 		SELECT gn.gene_name_id,
 		       gn.name,
 		       gn.gene_info_id
-		FROM gene_name gn
-   LEFT JOIN current_gene_info cgi
-          ON gn.gene_info_id=cgi.gene_info_id }
+		FROM gene_name gn }
 	. ( $where_clause ? $where_clause : '' );
 
 	my $sth = $self->prepare($sql);
@@ -71,7 +69,7 @@ sub fetch_by_dbID {
         $self->throw("Id must be entered to fetch a GeneName object");
     }
 
-    my $geneNames = $self->_generic_sql_fetch("where gn.gene_name_id = ?", [$id]);
+    my $geneNames = $self->_generic_sql_fetch("WHERE gene_name_id = ?", [$id]);
 
     return @$geneNames ? $geneNames->[0] : undef; # not sure this is right, previous behaviour though
 }
@@ -101,7 +99,7 @@ sub fetch_by_name {
         $self->throw("Name must be entered to fetch a GeneName object");
     }
 
-    return $self->_generic_sql_fetch("where gn.name = ? ",[$name]);
+    return $self->_generic_sql_fetch("WHERE name = ? ",[$name]);
 }
 
 
@@ -112,7 +110,10 @@ sub fetch_current_by_name {
         $self->throw("Name must be entered to fetch a GeneName object");
     }
 
-    return $self->_generic_sql_fetch("WHERE gn.name = ? AND cgi.gene_stable_id IS NOT NULL",[$name]);
+    return $self->_generic_sql_fetch(q{
+       LEFT JOIN current_gene_info cgi
+              ON gn.gene_info_id=cgi.gene_info_id
+           WHERE name = ? AND gene_stable_id IS NOT NULL }, [$name]);
 }
 
 =head2 fetch_by_gene_info_id
@@ -134,7 +135,7 @@ sub fetch_by_gene_info_id{
        $self->throw("GeneInfo id must be entered to fetch a GeneName object");
 	}
 
-   my $geneNames = $self->_generic_sql_fetch("where gn.gene_info_id = ?",[$id]);
+   my $geneNames = $self->_generic_sql_fetch("WHERE gene_info_id = ?",[$id]);
 
    return @$geneNames ? $geneNames->[0] : undef; # not sure this is right, previous behaviour though
 
@@ -214,7 +215,7 @@ sub exists {
 	$self->throw("Can't check if a GeneName exists without a GeneInfo id");
     }
 
-    my $geneNames = $self->_generic_sql_fetch("where gn.name = ? and gn.gene_info_id = ?", [$obj->name, $obj->gene_info_id]);
+    my $geneNames = $self->_generic_sql_fetch("WHERE name = ? AND gene_info_id = ?", [$obj->name, $obj->gene_info_id]);
  
     return @$geneNames ? $geneNames->[0] : undef; # not sure this is right, previous behaviour though
 
