@@ -557,7 +557,7 @@ sub make_database_directory {
     my $tar  = $self->tar_file or confess "tar_file not set";
     mkdir($home, 0777) or die "Can't mkdir('$home') : $!\n";
 
-    my $tar_command = "cd $home ; tar xf $tar";
+    my $tar_command = qq{cd "$home" ; tar xf "$tar"};
     if (system($tar_command) != 0) {
         $self->error_flag(1);
         confess "Error running '$tar_command' exit($?)";
