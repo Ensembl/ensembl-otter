@@ -14,7 +14,7 @@ use Bio::Otter::ToXML;
 $| = 1;
 
 my $sq = Bio::Otter::ServerQuery->new('dataset',
-    'cs','csver','name','type','start','end','strand',
+        'cs','csver','name','type','start','end','strand',
     'metakey','analysis','transcript_analyses');
 set_nph($sq);
 
@@ -40,7 +40,6 @@ if($mdba) {
     my $proj_segments_on_mapper = $original_slice_on_mapper->project( $cs, $sdba_asm );
 
     my $sa_on_target = $sdba->get_SliceAdaptor();
-    my $ga_on_mapper = $mdba->get_GeneAdaptor();
 
     foreach my $segment (@$proj_segments_on_mapper) {
         my $projected_slice_on_mapper = $segment->to_Slice();
