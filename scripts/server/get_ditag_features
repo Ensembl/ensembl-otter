@@ -28,6 +28,9 @@ my ($mdba, $sdba_asm) = get_mapper_dba($sq, $odba, $sdba, $pipehead);
 my $dfs = [];
 my $dfa = $sdba->get_DitagFeatureAdaptor();
 
+if(!$dfa) {
+    error_exit($sq, "Failed to create a DitagFeatureAdaptor");
+}
 
 if($mdba) {
     my $original_slice_on_mapper = get_slice($sq, $mdba, $pipehead);
