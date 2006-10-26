@@ -514,27 +514,13 @@ __END__
 
 =head1 SYNOPSIS
 
-Run the script with a database name and either a dataset or a filename with a list of acc.ver or a single acc.ver plus -verbose or -check options.
+Running the script
 
-
-Eg, fetch_assembly_tags B<-dataset> zebrafish followed by one of the 4 options, eg:
-
-1. B<-check>: ONLY checks the number of new assembly tags of a contig without updating the database. Otherwise, it tries to update the database if data is available.
-
-2. B<-verbose>: shows acefile location and details of assembly tag info of a contig.
-
-3. B<-set> chr4 B<-set> -chr20  (fetch all clones from one or more chromosomes)
-
-4. B<-set> all (fetch all clones from all chromosomes)
-
-5. B<-clone> AC000094.x B<-clone> AC000095.x  (fetch single or multiple clones [accession.version])
-
-6. B<-clist> filename (fetch from file with list of clones as acc.ver, one clone per line)
-
+Eg, fetch_assembly_tags B<-dataset> zebrafish [-verbose][-check]
 
 =head1 DESCRIPTION
 
-There are assembly_tags info for Sanger clones submitted to EMBL. They are stored in "submissions" database (B<~jgrg/bin/sql>) and are available acefiles, eg, /nfs/disk100/humpub/analysis/projects/Chr_20/yR31BE7/20001221/rawdata/yR31BE7.humace.ace.
+There are assembly_tags info for Sanger clones submitted to EMBL. They are stored in "submissions" database and are available as acefiles, eg, /nfs/disk100/humpub/analysis/projects/Chr_20/yR31BE7/20001221/rawdata/yR31BE7.humace.ace.
 
 The Assembly_tags info is shown in AceDB under the Assembly_tags tag of a Sequence object and is stored in B<assembly_tag> table of an otter db.
 
