@@ -34,6 +34,15 @@ our %OrderOfOptions = (
         qw(source name),
     ],
 
+    'DitagFeature' => [
+        qw(start end strand hit_start hit_end hit_strand ditag_side),
+            ## Special treatment: ditag_id
+            ## Not sent (cached): analysis, slice
+    ],
+    'DitagObject'  => [ # 'slave' to DitagFeature
+        qw(name type sequence dbID),
+    ],
+
     'RepeatFeature' => [
         qw(start end strand hstart hend score),
             ## Special treatment: repeat_consensus_id
