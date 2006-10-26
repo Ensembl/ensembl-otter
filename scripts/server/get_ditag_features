@@ -1,0 +1,99 @@
+#!/usr/local/bin/perl -w
+
+my $pipehead = $ENV{PIPEHEAD}; # is set by the server for any GET request
+
+use strict;
+use OtterDefs;
+use Bio::Otter::ServerQuery;
+use Bio::Otter::ServerSide (':all');
+use Bio::Otter::Lace::ViaText ('%OrderOfOptions');
+
+$| = 1;
+
+my $sq = Bio::Otter::ServerQuery->new('dataset',
+    'cs','csver','name','type','start','end','strand',
+    'metakey','analysis');
+set_nph($sq);
+
+my $cs       = $sq->getarg('cs')      || 'chromosome';
+my $csver    = $sq->getarg('csver')   || undef;
+my $analysis = $sq->getarg('analysis');
+my $metakey  = $sq->getarg('metakey') || ''; # defaults to pipeline
+
+my $odba = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
+my $sdba = odba_to_sdba($sq, $odba, $pipehead, $metakey);
+
+my ($mdba, $sdba_asm) = get_mapper_dba($sq, $odba, $sdba, $pipehead);
+
+my $dfs = [];
+
+
+if($mdba) {
+    my $original_slice_on_mapper = get_slice($sq, $mdba, $pipehead);
+    my $proj_segments_on_mapper = $original_slice_on_mapper->project( $cs, $sdba_asm );
+
+    my $sa_on_target = $sdba->get_SliceAdaptor();
+
+    foreach my $segment (@$proj_segments_on_mapper) {
+        my $projected_slice_on_mapper = $segment->to_Slice();
+
+        my $target_slice_on_target = $sa_on_target->fetch_by_region(
+            $projected_slice_on_mapper->coord_system()->name(),
+            $projected_slice_on_mapper->seq_region_name(),
+            $projected_slice_on_mapper->start(),
+            $projected_slice_on_mapper->end(),
+            $projected_slice_on_mapper->strand(),
+            $projected_slice_on_mapper->coord_system()->version(),
+        );
+
+        my $target_dfs_on_target_segment = $target_slice_on_target->get_all_DitagFeatures($analysis);
+        server_log('***** : '.scalar(@$target_dfs_on_target_segment).' found on a slice');
+
+        foreach my $target_df (@$target_dfs_on_target_segment) {
+            $target_df->slice($projected_slice_on_mapper);
+            push @$dfs, $target_df->transform($cs, $csver);
+        }
+    }
+
+} else {
+    my $original_slice = get_slice($sq, $sdba, $pipehead);
+
+    $dfs = $original_slice->get_all_DitagFeatures($analysis); # $analysis acting as "ditag-type"
+}
+
+server_log("Total of ".scalar(@$dfs)." $analysis ditag features found");
+
+my @df_optnames = @{ $OrderOfOptions{DitagFeature} };
+my @do_optnames = @{ $OrderOfOptions{DitagObject} };
+my $output_string = '';
+
+    # Stringify only the simple fields:
+my %do_seen = (); # collect the seen ditag object ids here
+foreach my $df (@$dfs) {
+    my $do = $df->fetch_ditag(); # object
+    my $do_id = $do->dbID();
+
+    if(!exists($do_seen{$do_id})) { # a new one
+
+            # output a ditag object line:
+        my @do_optvalues = ('DitagObject');
+        for my $opt (@do_optnames) {
+            push @do_optvalues, $do->$opt() || 0;
+        }
+        $output_string .= join("\t", @do_optvalues)."\n";
+
+        $do_seen{$do_id}++;
+    }
+    
+        # output a ditag feature line:
+    my @df_optvalues = ('DitagFeature');
+    for my $opt (@df_optnames) {
+        push @df_optvalues, $df->$opt();
+    }
+    push @df_optvalues, $do_id;
+
+    $output_string .= join("\t", @df_optvalues)."\n";
+}
+
+send_response($sq, $output_string, 1);
+
