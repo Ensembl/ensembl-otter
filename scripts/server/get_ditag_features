@@ -17,7 +17,7 @@ set_nph($sq);
 
 my $cs       = $sq->getarg('cs')      || 'chromosome';
 my $csver    = $sq->getarg('csver')   || undef;
-my $analysis = $sq->getarg('analysis');
+my $analysis = $sq->getarg('analysis')|| undef;
 my $metakey  = $sq->getarg('metakey') || ''; # defaults to pipeline
 
 my $odba = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
@@ -27,10 +27,6 @@ my ($mdba, $sdba_asm) = get_mapper_dba($sq, $odba, $sdba, $pipehead);
 
 my $dfs = [];
 my $dfa = $sdba->get_DitagFeatureAdaptor();
-
-if(!$dfa) {
-    error_exit($sq, "Failed to create a DitagFeatureAdaptor");
-}
 
 if($mdba) {
     my $original_slice_on_mapper = get_slice($sq, $mdba, $pipehead);
