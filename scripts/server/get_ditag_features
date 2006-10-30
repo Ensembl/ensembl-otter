@@ -53,7 +53,8 @@ if($mdba) {
         );
 
         my $target_dfs_on_target_segment =
-            $dfa->fetch_all_by_Slice($target_slice_on_target, undef, $analysis) || [];
+            # $dfa->fetch_all_by_Slice($target_slice_on_target, undef, $analysis) || [];
+            $dfa->fetch_all_by_Slice($target_slice_on_target) || [];
 
         server_log('***** : '.scalar(@$target_dfs_on_target_segment).' found on a slice');
 
@@ -66,7 +67,8 @@ if($mdba) {
 } else {
     my $original_slice = get_slice($sq, $sdba, $pipehead);
 
-    $dfs = $dfa->fetch_all_by_Slice($original_slice, undef, $analysis) || [];
+    # $dfs = $dfa->fetch_all_by_Slice($original_slice, undef, $analysis) || [];
+    $dfs = $dfa->fetch_all_by_Slice($original_slice) || [];
 }
 
 server_log("Total of ".scalar(@$dfs).($analysis ? " $analysis":'')." ditag features found");
