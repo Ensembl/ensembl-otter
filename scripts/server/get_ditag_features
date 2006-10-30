@@ -63,9 +63,8 @@ if($mdba) {
 
         foreach my $target_df (@$target_dfs_on_target_segment) {
 
-            if(! $target_df->slice()) {
-                server_log("---- FEATURE NOT ATTACHED TO A SLICE ----\n");
-            }
+            my $att_slice = $target_df->slice();
+            server_log("\n feature was attached to ".$att_slice->name()."\n");
 
             server_log("Start: ".$target_df->start());
             server_log("End: ".$target_df->end());
@@ -78,6 +77,7 @@ if($mdba) {
             server_log("end: ".$target_df->end());
             server_log("srStart: ".$target_df->seq_region_start());
             server_log("srEnd: ".$target_df->seq_region_end());
+            server_log("\n");
 
             my $tdf_slice = $target_df->feature_Slice();
 
