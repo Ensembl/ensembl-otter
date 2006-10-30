@@ -64,7 +64,9 @@ if($mdba) {
             if($transformed) {
                 push @$dfs, $transformed;
             } else {
-                server_log("Could not transform ditag_feature #".$target_df->dbID());
+                my $projection = $target_df->project( $cs, $csver );
+                my $pieces = scalar(@$projection);
+                server_log("Could not transform ditag_feature #".$target_df->dbID()." as it projects in $pieces pieces");
             }
         }
     }
