@@ -63,9 +63,13 @@ if($mdba) {
         foreach my $target_df (@$target_dfs_on_target_segment) {
             $target_df->slice($projected_slice_on_mapper);
 
+            my $tdf_slice = $target_df->feature_Slice();
+
+            my $prosegs = $tdf_slice->project($cs, $csver);
+            server_log("feature_Slice projected in ".scalar(@$prosegs)." prosegs");
+
             # if( my $transformed = $target_df->transform($cs, $csver) ) {
             #   push @$dfs, $transformed;
-
             if( my $transferred = $target_df->transfer($original_slice_on_mapper) ) {
                 push @$dfs, $transferred;
             } else {
