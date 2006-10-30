@@ -15,6 +15,10 @@ my $sq = Bio::Otter::ServerQuery->new('dataset',
     'metakey','analysis');
 set_nph($sq);
 
+if(!$pipehead) {
+    error_exit($sq, "This kind of data is only available from new API databases. Set pipehead to 1");
+}
+
 my $cs       = $sq->getarg('cs')      || 'chromosome';
 my $csver    = $sq->getarg('csver')   || undef;
 my $analysis = $sq->getarg('analysis');
@@ -24,6 +28,8 @@ my $odba = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
 my $sdba = odba_to_sdba($sq, $odba, $pipehead, $metakey);
 
 my ($mdba, $sdba_asm) = get_mapper_dba($sq, $odba, $sdba, $pipehead);
+
+server_log(' ** sdba_asm: "'.$sdba_asm.'"');
 
 my $dfs = [];
 my $dfa = $sdba->get_DitagFeatureAdaptor();
