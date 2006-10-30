@@ -81,6 +81,7 @@ my %do_seen = (); # collect the seen ditag object ids here
 foreach my $df (@$dfs) {
 
     server_log("DF:$df;");
+    next unless $df;
 
     my $do = $df->fetch_ditag(); # object
     my $do_id = $do->dbID();
