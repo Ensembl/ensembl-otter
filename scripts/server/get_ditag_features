@@ -20,7 +20,7 @@ if(!$pipehead) {
 }
 
 my $cs       = $sq->getarg('cs')      || 'chromosome';
-my $csver    = $sq->getarg('csver')   || undef;
+my $csver    = $sq->getarg('csver')   || 'Otter';
 my $analysis = $sq->getarg('analysis');
 my $metakey  = $sq->getarg('metakey') || ''; # defaults to pipeline
 
@@ -28,8 +28,6 @@ my $odba = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
 my $sdba = odba_to_sdba($sq, $odba, $pipehead, $metakey);
 
 my ($mdba, $sdba_asm) = get_mapper_dba($sq, $odba, $sdba, $pipehead);
-
-server_log(' ** sdba_asm: "'.$sdba_asm.'"');
 
 my $dfs = [];
 my $dfa = $sdba->get_DitagFeatureAdaptor();
