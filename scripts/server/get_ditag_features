@@ -62,14 +62,20 @@ if($mdba) {
         server_log('Back_projection: '.$backproj_segments_on_mapper->[0]->to_Slice()->name());
 
         foreach my $target_df (@$target_dfs_on_target_segment) {
+            server_log("Start: ".$target_df->start());
+            server_log("End: ".$target_df->end());
+
             $target_df->slice($projected_slice_on_mapper);
 
-            # server_log();
+            server_log("start: ".$target_df->start());
+            server_log("end: ".$target_df->end());
 
             my $tdf_slice = $target_df->feature_Slice();
 
             my $prosegs = $tdf_slice->project($cs, $csver);
             server_log("feature_Slice <".$tdf_slice->name()."> projected in ".scalar(@$prosegs)." prosegs");
+            server_log("FS_start: ".$tdf_slice->start());
+            server_log("FS_end: ".$tdf_slice->end());
 
             # if( my $transformed = $target_df->transform($cs, $csver) ) {
             #   push @$dfs, $transformed;
