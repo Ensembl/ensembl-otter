@@ -58,7 +58,7 @@ if($mdba) {
                     .$target_slice_on_target->name());
 
         my $backproj_segments_on_mapper = $projected_slice_on_mapper->project( $cs, $csver );
-        server_log('BackProjection has '.scalar(@$backproj_segments_on_mapper).' segments.');
+        server_log('BackProjection is '.$backproj_segments_on_mapper->[0]->name());
 
         foreach my $target_df (@$target_dfs_on_target_segment) {
             $target_df->slice($projected_slice_on_mapper);
