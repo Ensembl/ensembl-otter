@@ -62,6 +62,11 @@ if($mdba) {
         server_log('Back_projection: '.$backproj_segments_on_mapper->[0]->to_Slice()->name());
 
         foreach my $target_df (@$target_dfs_on_target_segment) {
+
+            if(! $target_df->slice()) {
+                server_log("---- FEATURE NOT ATTACHED TO A SLICE ----\n");
+            }
+
             server_log("Start: ".$target_df->start());
             server_log("End: ".$target_df->end());
             server_log("srStart: ".$target_df->seq_region_start());
