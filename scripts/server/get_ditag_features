@@ -59,7 +59,13 @@ if($mdba) {
 
         foreach my $target_df (@$target_dfs_on_target_segment) {
             $target_df->slice($projected_slice_on_mapper);
-            push @$dfs, $target_df->transform($cs, $csver);
+            my $transformed = $target_df->transform($cs, $csver);
+
+            if($transformed) {
+                push @$dfs, $transformed;
+            } else {
+                server_log("Could not transform <".$target_df->name().">");
+            }
         }
     }
 
@@ -79,9 +85,6 @@ my $output_string = '';
     # Stringify only the simple fields:
 my %do_seen = (); # collect the seen ditag object ids here
 foreach my $df (@$dfs) {
-
-    server_log("DF:$df;");
-    next unless $df;
 
     my $do = $df->fetch_ditag(); # object
     my $do_id = $do->dbID();
