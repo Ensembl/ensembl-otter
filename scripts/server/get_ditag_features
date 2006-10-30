@@ -33,6 +33,8 @@ my $dfs = [];
 my $dfa = $sdba->get_DitagFeatureAdaptor();
 
 if($mdba) {
+    error_exit($sq, "mdba is a '$mdba'");
+
     my $original_slice_on_mapper = get_slice($sq, $mdba, $pipehead);
     my $proj_segments_on_mapper = $original_slice_on_mapper->project( $cs, $sdba_asm );
 
