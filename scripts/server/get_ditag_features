@@ -64,7 +64,7 @@ if($mdba) {
             if($transformed) {
                 push @$dfs, $transformed;
             } else {
-                server_log("Could not transform <".$target_df->name().">");
+                server_log("Could not transform ditag #".$target_df->dbID());
             }
         }
     }
