@@ -33,8 +33,6 @@ my $dfs = [];
 my $dfa = $sdba->get_DitagFeatureAdaptor();
 
 if($mdba) {
-    error_exit($sq, "mdba is a '$mdba'");
-
     my $original_slice_on_mapper = get_slice($sq, $mdba, $pipehead);
     my $proj_segments_on_mapper = $original_slice_on_mapper->project( $cs, $sdba_asm );
 
@@ -63,13 +61,12 @@ if($mdba) {
         server_log('BackProjection is '.$backproj_segments_on_mapper->[0]->to_Slice()->name());
 
         foreach my $target_df (@$target_dfs_on_target_segment) {
-            $target_df->adaptor($mdba);
             $target_df->slice($projected_slice_on_mapper);
 
             my $tdf_slice = $target_df->feature_Slice();
 
             my $prosegs = $tdf_slice->project($cs, $csver);
-            server_log("feature_Slice projected in ".scalar(@$prosegs)." prosegs");
+            server_log("feature_Slice <".$tdf_slice->name()."> projected in ".scalar(@$prosegs)." prosegs");
 
             # if( my $transformed = $target_df->transform($cs, $csver) ) {
             #   push @$dfs, $transformed;
