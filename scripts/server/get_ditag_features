@@ -64,11 +64,15 @@ if($mdba) {
         foreach my $target_df (@$target_dfs_on_target_segment) {
             server_log("Start: ".$target_df->start());
             server_log("End: ".$target_df->end());
+            server_log("srStart: ".$target_df->seq_region_start());
+            server_log("srEnd: ".$target_df->seq_region_end());
 
             $target_df->slice($projected_slice_on_mapper);
 
             server_log("start: ".$target_df->start());
             server_log("end: ".$target_df->end());
+            server_log("srStart: ".$target_df->seq_region_start());
+            server_log("srEnd: ".$target_df->seq_region_end());
 
             my $tdf_slice = $target_df->feature_Slice();
 
