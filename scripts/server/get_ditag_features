@@ -61,10 +61,9 @@ if($mdba) {
         server_log('BackProjection is '.$backproj_segments_on_mapper->[0]->to_Slice()->name());
 
         foreach my $target_df (@$target_dfs_on_target_segment) {
-            $target_df->slice($projected_slice_on_mapper);
-            my $transformed = $target_df->transform($cs, $csver);
+            # $target_df->slice($projected_slice_on_mapper);
 
-            if($transformed) {
+            if( my $transformed = $target_df->transform($cs, $csver) ) {
                 push @$dfs, $transformed;
             } else {
                 server_log("Could not transform ditag_feature #".$target_df->dbID()." onto {$cs:$csver}");
