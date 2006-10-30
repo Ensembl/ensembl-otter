@@ -61,6 +61,7 @@ if($mdba) {
         server_log('BackProjection is '.$backproj_segments_on_mapper->[0]->to_Slice()->name());
 
         foreach my $target_df (@$target_dfs_on_target_segment) {
+            $target_df->adaptor($mdba);
             $target_df->slice($projected_slice_on_mapper);
 
             my $tdf_slice = $target_df->feature_Slice();
