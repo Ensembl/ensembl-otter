@@ -54,14 +54,17 @@ if($mdba) {
             # $dfa->fetch_all_by_Slice($target_slice_on_target, undef, $analysis) || [];
             $dfa->fetch_all_by_Slice($target_slice_on_target) || [];
 
-        server_log('***** : '.scalar(@$target_dfs_on_target_segment).' found on the slice'
+        server_log('***** : '.scalar(@$target_dfs_on_target_segment).' found on the slice '
                     .$target_slice_on_target->name());
+        server_log("Projected_slice_on_mapper: ".$projected_slice_on_mapper->name());
 
         my $backproj_segments_on_mapper = $projected_slice_on_mapper->project( $cs, $csver );
-        server_log('BackProjection is '.$backproj_segments_on_mapper->[0]->to_Slice()->name());
+        server_log('Back_projection: '.$backproj_segments_on_mapper->[0]->to_Slice()->name());
 
         foreach my $target_df (@$target_dfs_on_target_segment) {
             $target_df->slice($projected_slice_on_mapper);
+
+            # server_log();
 
             my $tdf_slice = $target_df->feature_Slice();
 
