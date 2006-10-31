@@ -14,10 +14,12 @@ use Hum::Ace::SubSeq;
 use Hum::Ace::Locus;
 use Hum::Ace::Method;
 use Hum::Ace::XaceRemote;
-use Hum::Ace::DotterLauncher;
+use Hum::Ace::Assembly;
+use Hum::Ace::AceText;
 use Hum::Ace;
 use Hum::Analysis::Factory::ExonLocator;
 use EditWindow::Dotter;
+use EditWindow::Clone;
 use MenuCanvasWindow::ExonCanvas;
 use MenuCanvasWindow::GenomicFeatures;
 use Bio::Otter::Lace::Defaults;
@@ -665,7 +667,7 @@ sub populate_menus {
                    -label          => 'Launch ZMap',
                    -command        => $zmap_launch_command,
                    -accelerator    => 'Ctrl+Z',
-                   -underline      => 0,
+                   -underline      => 7,
                    );
         $top->bind('<Control-z>', $zmap_launch_command);
         $top->bind('<Control-Z>', $zmap_launch_command);
@@ -678,7 +680,7 @@ sub populate_menus {
         -label          => 'Launch Xace',
         -command        => $xace_launch_command,
         -accelerator    => 'Ctrl+L',
-        -underline      => 0,
+        -underline      => 7,
         );
     $top->bind('<Control-l>', $xace_launch_command);
     $top->bind('<Control-L>', $xace_launch_command);
@@ -700,10 +702,22 @@ sub populate_menus {
         -label          => 'Genomic Features',    
         -command        => $gf_command,
         -accelerator    => 'Ctrl+G',
+        -underline      => 0,
     );
     $top->bind('<Control-g>', $gf_command);
     $top->bind('<Control-G>', $gf_command);    
-    
+ 
+    # Clone properties editing
+    my $ce_command = sub { $self->launch_CloneEditor };
+    $tools_menu->add('command' ,
+        -label          => 'Clone editor',    
+        -command        => $ce_command,
+        -accelerator    => 'Ctrl+O',
+        -underline      => 2,
+    );
+    $top->bind('<Control-g>', $ce_command);
+    $top->bind('<Control-G>', $ce_command);    
+   
     ## Spawn dotter Ctrl .
     my $run_dotter_command = sub { $self->run_dotter };
     $tools_menu->add('command',
@@ -785,8 +799,6 @@ sub launch_GenomicFeatures {
             $gfw->deiconify;
             $gfw->raise;
         } else {
-            my $clone = $self->Assembly;
-
             my $gfw = $self->canvas->Toplevel;
 
             $gfs = MenuCanvasWindow::GenomicFeatures->new($gfw);
@@ -806,6 +818,38 @@ sub close_GenomicFeatures {
 
     if(my $gfs = $self->GenomicFeatures()) {
         $gfs->try2save_and_quit();
+    }
+}
+
+sub CloneEditor {
+    my ($self, $cl_edit) = @_ ;
+
+    if ($cl_edit) {
+        $self->{'_cl_edit'} = $cl_edit;
+        weaken($self->{'_cl_edit'});
+    }
+    return $self->{'_cl_edit'};
+}
+
+sub launch_CloneEditor {
+    my( $self ) = @_;
+    eval {
+        if (my $cl_edit = $self->CloneEditor) {
+            my $cl_win = $cl_edit->top;
+            $cl_win->deiconify;
+            $cl_win->raise;
+        } else {
+            # Make CloneEditor window, save references
+            # in both directions and initialise the window.
+            my $cl_win = $self->canvas->Toplevel;
+            $cl_edit = EditWindow::Clone->new($cl_win);
+            $self->CloneEditor($cl_edit);
+            $cl_edit->XaceSeqChooser($self);
+            $cl_edit->initialize;
+        }
+    };
+    if ($@) {
+        $self->exception_message("Error creating CloneEditor window", $@);
     }
 }
 
@@ -839,11 +883,11 @@ sub close_GenomicFeatures {
             return;
         }
         
-        my $clone = $self->Assembly;
+        my $assembly = $self->Assembly;
         
         # The ExonLoacator finds exons in a genomic sequence
         my $finder = Hum::Analysis::Factory::ExonLocator->new;
-        $finder->genomic_Sequence($clone->Sequence);
+        $finder->genomic_Sequence($assembly->Sequence);
 
         my( @msg, @new_subseq, $i );
         foreach my $sub (@holding_pen) {
@@ -871,8 +915,8 @@ sub close_GenomicFeatures {
                 $new->name($temp_name);
                 $new->strand($strand);
                 $new->replace_all_Exons(@new_exons);
-                $new->clone_Sequence($clone->Sequence);
-                $clone->add_SubSeq($new);
+                $new->clone_Sequence($assembly->Sequence);
+                $assembly->add_SubSeq($new);
                 if ($sub->translation_region_is_set) {
                     eval {
                         $new->set_translation_region_from_cds_coords($sub->cds_coords);
@@ -1248,7 +1292,7 @@ sub edit_new_subsequence {
     my $slice = $self->Assembly;
     my $region_name = $most_3prime
         ? $slice->clone_name_overlapping($most_3prime)
-        : $slice->ace_name;
+        : $slice->name;
     #warn "Looking for clone overlapping '$most_3prime' in '$clone_name' found '$region_name'";
     
     # Trim sequence version from accession if clone_name ends .SV
@@ -1443,7 +1487,7 @@ sub make_variant_subsequence {
     }
     my $name = $sub_names[0];
     my $sub = $self->get_SubSeq($name);
-    my $clone = $self->Assembly($sub->clone_Sequence->name);
+    my $assembly = $self->Assembly;
     
     # Work out a name for the new variant
     my $var_name = $name;
@@ -1453,7 +1497,7 @@ sub make_variant_subsequence {
         # Now get the maximum variant number for this root
         my $regex = qr{^$root-(\d{3,})$};
         my $max = 0;
-        foreach my $sub ($clone->get_all_SubSeqs) {
+        foreach my $sub ($assembly->get_all_SubSeqs) {
             my ($n) = $sub->name =~ /$regex/;
             if ($n and $n > $max) {
                 $max = $n;
@@ -1483,7 +1527,7 @@ sub make_variant_subsequence {
     $var->empty_annotation_remarks;
     $var->name($var_name);
     $self->add_SubSeq($var);
-    $clone->add_SubSeq($var);
+    $assembly->add_SubSeq($var);
     
     $self->draw_subseq_list;
     $self->highlight_by_name($name, $var_name);
@@ -1592,12 +1636,12 @@ sub draw_subseq_list {
 sub get_all_Subseq_clusters {
     my( $self ) = @_;
     
-    my $clone = $self->Assembly;
+    my $assembly = $self->Assembly;
     my @subseq = sort {
            $a->start  <=> $b->start
         || $a->end    <=> $b->end
         || $a->strand <=> $b->strand
-        } $clone->get_all_SubSeqs;
+        } $assembly->get_all_SubSeqs;
     my $first = $subseq[0] or return;
     my( @clust );
     my $ci = 0;
@@ -1660,21 +1704,21 @@ sub empty_Assembly_cache {
 sub express_clone_and_subseq_fetch {
     my( $self ) = @_;
     
-    my $clone_name = $self->slice_name;
-    my $ace = $self->ace_handle;
-    my( $clone );
+    my $name = $self->slice_name;
+    my $ace  = $self->ace_handle;
+    my( $assembly );
     eval {
-        $clone = Hum::Ace::CloneSeq
-            ->new_from_name_and_db_handle($clone_name, $ace);
+        $assembly = Hum::Ace::Assembly
+          ->new_from_name_and_db_handle($name, $ace);
     };
-    if ($clone) {
+    if ($assembly) {
         $self->exception_message($@) if $@;
     } else {
-        $self->exception_message($@, "Can't fetch CloneSeq '$clone_name'");
+        $self->exception_message($@, "Can't fetch Assembly '$name'");
         return;
     }
     
-    foreach my $sub ($clone->get_all_SubSeqs) {
+    foreach my $sub ($assembly->get_all_SubSeqs) {
         $self->add_SubSeq($sub);
 
 	    if (my $s_meth = $sub->GeneMethod) {
@@ -1687,7 +1731,7 @@ sub express_clone_and_subseq_fetch {
             $sub->Locus($locus);
         }
     }
-    return $clone;
+    return $assembly;
 }
 
 sub replace_SubSeq {
@@ -1695,8 +1739,7 @@ sub replace_SubSeq {
     
     my $sub_name = $sub->name;
     $old_name ||= $sub_name;
-    my $clone = $self->Assembly;
-    $clone->replace_SubSeq($sub, $old_name);
+    $self->Assembly->replace_SubSeq($sub, $old_name);
     if ($sub_name ne $old_name) {
         $self->{'_subsequence_cache'}{$old_name} = undef;
         $self->rename_subseq_edit_window($old_name, $sub_name);
