@@ -30,7 +30,6 @@ my $sdba = odba_to_sdba($sq, $odba, $pipehead, $metakey);
 my ($mdba, $sdba_asm) = get_mapper_dba($sq, $odba, $sdba, $pipehead);
 
 my $dfs = [];
-my $dfa = $sdba->get_DitagFeatureAdaptor();
 
 if($mdba) {
     my $original_slice_on_mapper = get_slice($sq, $mdba, $pipehead);
@@ -50,9 +49,8 @@ if($mdba) {
             $projected_slice_on_mapper->coord_system()->version(),
         );
 
-        my $target_dfs_on_target_segment =
-            # $dfa->fetch_all_by_Slice($target_slice_on_target, undef, $analysis) || [];
-            $dfa->fetch_all_by_Slice($target_slice_on_target) || [];
+        my $target_dfs_on_target_segment
+            = $target_slice_on_target->get_all_DitagFeatures(undef, $analysis);
 
         server_log('***** : '.scalar(@$target_dfs_on_target_segment).' found on the slice '
                     .$target_slice_on_target->name());
@@ -99,8 +97,7 @@ if($mdba) {
 } else {
     my $original_slice = get_slice($sq, $sdba, $pipehead);
 
-    # $dfs = $dfa->fetch_all_by_Slice($original_slice, undef, $analysis) || [];
-    $dfs = $dfa->fetch_all_by_Slice($original_slice) || [];
+    my $dfs = $original_slice->get_all_DitagFeatures(undef, $analysis);
 }
 
 server_log("Total of ".scalar(@$dfs).($analysis ? " $analysis":'')." ditag features found");
