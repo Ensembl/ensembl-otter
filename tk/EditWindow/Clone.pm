@@ -13,17 +13,29 @@ sub initialise {
     
     my $top = $self->top;
     
-    
+    my $choose = $top->SmartOptionmenu(
+        -options    => $self->clone_choices,
+        -variable   => $self->clone_i_var,
+        -command => sub{
+                printf STDERR "Clone index = %d\n", ${$self->clone_i_var};
+            },
+        )->pack(-side => 'left');
 }
 
-sub clone_hash {
+sub clone_choices {
     my ($self) = @_;
     
-    my $hash;
-    unless ($hash $self->{'_clone_hash'}) {
-        $hash = $self->{'_clone_hash'} = {};
+    my $choices = [];
+    my @all_clones = $self->XaceSeqChooser->Assembly->get_all_Clones;
+    for (my $i = 0; $i < @all_clones; $i++) {
+        my $cl = $all_clones[$i];
+        my $choice = sprintf "%s.%d  %s",
+            $cl->accession,
+            $cl->sequence_version,
+            $cl->clone_name;
+        push(@$choices, [$choice, $i]);
     }
-    return $str;
+    return $choices;
 }
 
 sub clone_i_var {
@@ -31,10 +43,25 @@ sub clone_i_var {
     
     my $str_ref;
     unless ($str_ref = $self->{'_clone_i_var'}) {
-        my $str = undef;
+        my $str = 0;
         $str_ref = $self->{'_clone_i_var'} = \$str;
     }
     return $str_ref;
+}
+
+sub XaceSeqChooser {
+    my( $self, $XaceSeqChooser ) = @_;
+    
+    if ($XaceSeqChooser) {
+        $self->{'_XaceSeqChooser'} = $XaceSeqChooser;
+    }
+    return $self->{'_XaceSeqChooser'};
+}
+
+sub write_access {
+    my( $self ) = @_;
+    
+    return $self->XaceSeqChooser->write_access;
 }
 
 1;
