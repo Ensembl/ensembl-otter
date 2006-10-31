@@ -52,29 +52,28 @@ if($mdba) {
         my $target_dfs_on_target_segment
             = $target_slice_on_target->get_all_DitagFeatures(undef, $analysis);
 
-        server_log('***** : '.scalar(@$target_dfs_on_target_segment).' found on the slice '
-                    .$target_slice_on_target->name());
-        server_log("Projected_slice_on_mapper: ".$projected_slice_on_mapper->name());
+        server_log('***** : '.scalar(@$target_dfs_on_target_segment).' found on the slice');
 
+        server_log("Projected_slice_on_mapper: ".$projected_slice_on_mapper->name());
         my $backproj_segments_on_mapper = $projected_slice_on_mapper->project( $cs, $csver );
         server_log('Back_projection: '.$backproj_segments_on_mapper->[0]->to_Slice()->name());
 
         foreach my $target_df (@$target_dfs_on_target_segment) {
 
             my $att_slice = $target_df->slice();
-            server_log("\n feature was attached to ".$att_slice->name()."\n");
+            server_log("\nBefore substitution, the feature was attached to ".$att_slice->name());
 
             server_log("Start: ".$target_df->start());
             server_log("End: ".$target_df->end());
-            server_log("srStart: ".$target_df->seq_region_start());
-            server_log("srEnd: ".$target_df->seq_region_end());
+            server_log("seq_region_Start: ".$target_df->seq_region_start());
+            server_log("seq_region_End: ".$target_df->seq_region_end());
 
             $target_df->slice($projected_slice_on_mapper);
-
+            server_log("\nAfter substitution, the feature was attached to ".$projected_slice_on_mapper->name());
             server_log("start: ".$target_df->start());
             server_log("end: ".$target_df->end());
-            server_log("srStart: ".$target_df->seq_region_start());
-            server_log("srEnd: ".$target_df->seq_region_end());
+            server_log("seq_region_Start: ".$target_df->seq_region_start());
+            server_log("seq_region_End: ".$target_df->seq_region_end());
             server_log("\n");
 
             my $tdf_slice = $target_df->feature_Slice();
