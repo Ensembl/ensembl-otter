@@ -7,6 +7,8 @@ use CanvasWindow::DataSetChooser;
 use Bio::Otter::Lace::Defaults;
 
 {
+    # Become leader of process group so that "kill -$$" at end works
+    setpgrp();
     
     Bio::Otter::Lace::Defaults::do_getopt() || die $Bio::Otter::Lace::Defaults::GETOPT_ERRSTR . "\n";
     my $cl = Bio::Otter::Lace::Defaults::make_Client();

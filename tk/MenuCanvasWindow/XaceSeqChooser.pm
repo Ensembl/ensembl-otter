@@ -113,6 +113,7 @@ sub initialize {
     }
 
     $self->draw_subseq_list;
+    $self->populate_clone_menu;
     $self->launch_xace;
     $self->top_window->raise;
 }
@@ -135,13 +136,13 @@ sub menu_bar {
     return $self->{'_menu_bar'};
 }
 
-sub subseq_menubutton {
-    my( $self, $smb ) = @_;
+sub clone_menu {
+    my( $self, $clone_menu ) = @_;
     
-    if ($smb) {
-        $self->{'_subseq_menubutton'} = $smb;
+    if ($clone_menu) {
+        $self->{'_clone_menu'} = $clone_menu;
     }
-    return $self->{'_subseq_menubutton'};
+    return $self->{'_clone_menu'};
 }
 
 # this method has been moved to Bio::Otter::Lace::Defaults.pm
@@ -532,7 +533,6 @@ sub populate_menus {
     
     # Subseq menu
     my $subseq = $self->make_menu('SubSeq', 1);
-    $self->subseq_menubutton($subseq->parent);
     
     # Edit subsequence
     my $edit_command = sub{
@@ -657,6 +657,9 @@ sub populate_menus {
     #    -underline      => 0,
     #    );
 
+    my $clone_menu = $self->make_menu("Clones");
+    $self->clone_menu($clone_menu);
+
     my $tools_menu = $self->make_menu("Tools");
 
     # Launch Zmap
@@ -734,7 +737,26 @@ sub populate_menus {
     $subseq->bind('<Destroy>', sub{
         $self = undef;
         });
+}
 
+sub populate_clone_menu {
+    my ($self) = @_;
+    
+    my $clone_menu = $self->clone_menu;
+    my @all_clones = $self->Assembly->get_all_Clones;
+    for (my $i = 0; $i < @all_clones; $i++) {
+        my $n = $i;
+        my $clone = $all_clones[$i];
+        my $name = $clone->clone_name;
+        $clone_menu->add('command',
+            -label      => $name,
+            -command    => sub{ $self->edit_Clone($n, $name) },
+            );
+    }
+    
+    $clone_menu->bind('<Destroy>', sub{
+        $self = undef;
+        });
 }
 
 sub bind_events {
@@ -1672,6 +1694,17 @@ sub get_all_Subseq_clusters {
     }
     
     return sort {$a->[0]->start <=> $b->[0]->start} @clust;
+}
+
+sub edit_Clone {
+    my ($self, $clone_i, $clone_name) = @_;
+    
+    my $clone = ($self->Assembly->get_all_Clones)[$clone_i];
+    unless ($clone->clone_name eq $clone_name) {
+        confess sprintf "Name of clone '%s' from assembly doesn't match expected clone name '%s'",
+            $clone->clone_name, $clone_name;
+    }
+    ### show Clone EditWindow
 }
 
 sub Assembly {
