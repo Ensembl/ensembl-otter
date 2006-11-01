@@ -55,8 +55,6 @@ if($mdba) {
 
         server_log('***** : '.scalar(@$target_dfs_on_target_segment).' found on the slice');
 
-        server_log("Projected_slice_on_mapper: ".$projected_slice_on_mapper->name());
-
         foreach my $target_df (@$target_dfs_on_target_segment) {
 
             $target_df->slice($projected_slice_on_mapper);
