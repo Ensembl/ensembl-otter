@@ -13,6 +13,8 @@ use Bio::EnsEMBL::SimpleFeature;
 use Bio::EnsEMBL::Map::MarkerSynonym;
 use Bio::EnsEMBL::Map::Marker;
 use Bio::EnsEMBL::Map::MarkerFeature;
+use Bio::EnsEMBL::Map::Ditag;
+use Bio::EnsEMBL::Map::DitagFeature;
 
 use Bio::Otter::DnaDnaAlignFeature;
 use Bio::Otter::DnaPepAlignFeature;
@@ -534,6 +536,76 @@ sub get_all_MarkerFeatures { # get marker features from otter/pipeline/ensembl d
     }
 
     return \@mfs;
+}
+
+sub get_all_DitagFeatures { # get ditag features from otter/pipeline/ensembl db
+    my( $self, $analysis_name, $pipehead, $metakey, $ditype ) = @_;
+
+    if(!$analysis_name) {
+        die "Analysis name must be specified!";
+    }
+
+    my $response = $self->Client()->general_http_dialog(
+        0,
+        'GET',
+        'get_ditag_features',
+        {
+            %{$self->toHash},
+            'analysis' => $analysis_name,
+            'pipehead' => $pipehead ? 1 : 0,
+            $metakey ? ('metakey' => $metakey) : (),
+            $ditype ? ('ditype' => $ditype) : (),
+        },
+        1,
+    );
+
+    my @resplines = split(/\n/,$response);
+
+    my @df_optnames = @{ $OrderOfOptions{DitagFeature} };
+    my @do_optnames = @{ $OrderOfOptions{DitagObject} };
+
+        # cached values:
+    my $analysis = Bio::EnsEMBL::Analysis->new( -logic_name => $analysis_name );
+
+    my %dos  = (); # cached marker objects, keyed by mo_id
+    my @dfs  = (); # marker features in a list
+    foreach my $respline (@resplines) {
+
+        my @optvalues = split(/\t/,$respline);
+        my $linetype  = shift @optvalues; # 'DitagFeature' || 'DitagObject'
+
+        if($linetype eq 'DitagObject') {
+
+            my $do_id = pop @optvalues;
+
+            my $do = Bio::EnsEMBL::Map::Ditag->new();
+            for my $ind (0..@do_optnames-1) {
+                my $method = $do_optnames[$ind];
+                $do->$method($optvalues[$ind]);
+            }
+            $dos{do_id} = $do;
+
+        } elsif($linetype eq 'DitagFeature') {
+
+            my $do_id = pop @optvalues;
+            my $do = $dos{do_id}; # should have been defined earlier!
+
+            my $df = Bio::EnsEMBL::Map::DitagFeature->new();
+
+            for my $ind (0..@df_optnames-1) {
+                my $method = $df_optnames[$ind];
+                $df->$method($optvalues[$ind]);
+            }
+            $df->ditag( $do );
+
+                # use the cached values:
+            $df->analysis( $analysis );
+
+            push @dfs, $df;
+        }
+    }
+
+    return \@dfs;
 }
 
 sub get_all_PredictionTranscripts { # get prediction transcripts from otter/pipeline/ensembl db
