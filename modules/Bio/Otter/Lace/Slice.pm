@@ -578,11 +578,10 @@ sub get_all_DitagFeatures { # get ditag features from otter/pipeline/ensembl db
 
             my $do_id = pop @optvalues;
 
-            my $do = Bio::EnsEMBL::Map::Ditag->new();
-            for my $ind (0..@do_optnames-1) {
-                my $method = $do_optnames[$ind];
-                $do->$method($optvalues[$ind]);
-            }
+            my $do = Bio::EnsEMBL::Map::Ditag->new(
+                map { ("-$do_optnames[$_]" => $optvalues[$_]) }
+                    (0..@do_optnames-1)
+            );
             $dos{do_id} = $do;
 
         } elsif($linetype eq 'DitagFeature') {
@@ -590,12 +589,10 @@ sub get_all_DitagFeatures { # get ditag features from otter/pipeline/ensembl db
             my $do_id = pop @optvalues;
             my $do = $dos{do_id}; # should have been defined earlier!
 
-            my $df = Bio::EnsEMBL::Map::DitagFeature->new();
-
-            for my $ind (0..@df_optnames-1) {
-                my $method = $df_optnames[$ind];
-                $df->$method($optvalues[$ind]);
-            }
+            my $df = Bio::EnsEMBL::Map::DitagFeature->new(
+                map { ("-$df_optnames[$_]" => $optvalues[$_]) }
+                    (0..@df_optnames-1)
+            );
             $df->ditag( $do );
 
                 # use the cached values:
