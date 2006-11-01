@@ -12,7 +12,7 @@ $| = 1;
 
 my $sq = Bio::Otter::ServerQuery->new('dataset',
     'cs','csver','name','type','start','end','strand',
-    'metakey','analysis');
+    'metakey','analysis','ditype');
 set_nph($sq);
 
 if(!$pipehead) {
@@ -21,8 +21,9 @@ if(!$pipehead) {
 
 my $cs       = $sq->getarg('cs')      || 'chromosome';
 my $csver    = $sq->getarg('csver')   || 'Otter';
-my $analysis = $sq->getarg('analysis');
 my $metakey  = $sq->getarg('metakey') || ''; # defaults to pipeline
+my $analysis = $sq->getarg('analysis');
+my $ditype   = $sq->getarg('ditype');
 
 my $odba = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
 my $sdba = odba_to_sdba($sq, $odba, $pipehead, $metakey);
@@ -50,38 +51,15 @@ if($mdba) {
         );
 
         my $target_dfs_on_target_segment
-            = $target_slice_on_target->get_all_DitagFeatures(undef, $analysis);
+            = $target_slice_on_target->get_all_DitagFeatures($ditype, $analysis);
 
         server_log('***** : '.scalar(@$target_dfs_on_target_segment).' found on the slice');
 
         server_log("Projected_slice_on_mapper: ".$projected_slice_on_mapper->name());
-        my $backproj_segments_on_mapper = $projected_slice_on_mapper->project( $cs, $csver );
-        server_log('Back_projection: '.$backproj_segments_on_mapper->[0]->to_Slice()->name());
 
         foreach my $target_df (@$target_dfs_on_target_segment) {
 
-            my $att_slice = $target_df->slice();
-            server_log("\nBefore substitution, the feature was attached to ".$att_slice->name());
-
-            server_log("Start: ".$target_df->start());
-            server_log("End: ".$target_df->end());
-            server_log("seq_region_Start: ".$target_df->seq_region_start());
-            server_log("seq_region_End: ".$target_df->seq_region_end());
-
             $target_df->slice($projected_slice_on_mapper);
-            server_log("\nAfter substitution, the feature was attached to ".$projected_slice_on_mapper->name());
-            server_log("start: ".$target_df->start());
-            server_log("end: ".$target_df->end());
-            server_log("seq_region_Start: ".$target_df->seq_region_start());
-            server_log("seq_region_End: ".$target_df->seq_region_end());
-            server_log("\n");
-
-            my $tdf_slice = $target_df->feature_Slice();
-
-            my $prosegs = $tdf_slice->project($cs, $csver);
-            server_log("feature_Slice <".$tdf_slice->name()."> projected in ".scalar(@$prosegs)." prosegs");
-            server_log("FS_start: ".$tdf_slice->start());
-            server_log("FS_end: ".$tdf_slice->end());
 
             # if( my $transformed = $target_df->transform($cs, $csver) ) {
             #   push @$dfs, $transformed;
@@ -96,10 +74,10 @@ if($mdba) {
 } else {
     my $original_slice = get_slice($sq, $sdba, $pipehead);
 
-    my $dfs = $original_slice->get_all_DitagFeatures(undef, $analysis);
+    my $dfs = $original_slice->get_all_DitagFeatures($ditype, $analysis);
 }
 
-server_log("Total of ".scalar(@$dfs).($analysis ? " $analysis":'')." ditag features found");
+server_log("Total of ".scalar(@$dfs).($ditype ? " <$ditype>":'').($analysis ? " {$analysis}":'')." ditag features found");
 
 my @df_optnames = @{ $OrderOfOptions{DitagFeature} };
 my @do_optnames = @{ $OrderOfOptions{DitagObject} };
