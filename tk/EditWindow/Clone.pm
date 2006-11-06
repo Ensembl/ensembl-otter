@@ -4,49 +4,244 @@
 package EditWindow::Clone;
 
 use strict;
+use Carp;
 
-use Tk::SmartOptionmenu;
 use base 'EditWindow';
+
+use Hum::Ace::Clone;
+
+=pod
+
+    -- Clone --
+
+    clone_name  accession  sequence_version
+    
+    sequence_length  golden_start  golden_end
+
+    -- Assembly --
+
+    assembly_start  assembly_end  assembly_strand    
+
+    -- Annotation --
+    
+    Keywords (Printable non-punctuation chars)
+    
+    Description
+    
+    Remarks
+
+=cut
 
 sub initialise {
     my ($self) = @_;
     
     my $top = $self->top;
     
-    my $choose = $top->SmartOptionmenu(
-        -options    => $self->clone_choices,
-        -variable   => $self->clone_i_var,
-        -command => sub{
-                printf STDERR "Clone index = %d\n", ${$self->clone_i_var};
-            },
+    my @frame_pack = (
+        -side   => 'top',
+        -fill   => 'x',
+        );
+    
+    my $clone_frame = $top->LabFrame(
+        -label      => 'Clone',
+        -labelside  => 'acrosstop',
+        -border     => 3,
+        )->pack(@frame_pack);
+    
+    my $info_frame = $clone_frame->Frame->pack(@frame_pack);
+    $self->make_entry($info_frame, 'Name: ',            'clone_name',           14);
+    $self->insert_pad($info_frame);
+    $self->make_entry($info_frame, 'Accession.SV: ',    'accession_version',    13);
+    
+    $clone_frame->Frame(
+        -height => 10,
+        )->pack(@frame_pack);
+    
+    my $length_frame = $clone_frame->Frame->pack(@frame_pack);
+    $self->make_entry($length_frame, 'Length: ',    'sequence_length',  7);
+    $self->insert_pad($length_frame);
+    $self->make_entry($length_frame, 'Start: ',     'golden_start',     7);
+    $self->insert_pad($length_frame);
+    $self->make_entry($length_frame, 'End: ',       'golden_end',       7);
+    
+    my $assembly_frame = $top->LabFrame(
+        -label      => 'Assembly',
+        -labelside  => 'acrosstop',
+        -border     => 3,
+        )->pack(@frame_pack);
+    $self->make_entry($assembly_frame, 'Start: ',   'assembly_start',           8);
+    $self->insert_pad($assembly_frame);
+    $self->make_entry($assembly_frame, 'End: ',     'assembly_end',             8);
+    $self->insert_pad($assembly_frame);
+    $self->make_entry($assembly_frame, 'Strand: ',  'display_assembly_strand',  4);
+    
+    my $edit_frame = $top->LabFrame(
+        -label      => 'Properties',
+        -labelside  => 'acrosstop',
+        -border     => 3,
+        )->pack(@frame_pack);
+    
+    $self->keyword_text(
+        $self->make_labelled_text_widget($edit_frame, 'Keywords: ',     16)
+        );
+    $self->description_text(
+        $self->make_labelled_text_widget($edit_frame, 'Description: ',   8)
+        );
+    $self->remark_text(
+        $self->make_labelled_text_widget($edit_frame, 'Remarks: ',       4)
+        );
+    
+    $self->fill_Entries;
+    $self->fill_Properties;
+}
+
+sub fill_Properties {
+    my ($self) = @_;
+
+    my ($clone) = $self->Clone
+      or confess "No clone attached";
+      
+    my $key = $self->keyword_text;
+    $key->delete('1.0', 'end');
+    $key->insert('end', map("$_\n", $clone->get_all_keywords));
+    
+    my $desc = $self->description_text;
+    $desc->delete('1.0', 'end');
+    $desc->insert('end', $clone->description);
+    
+    my $rem = $self->remark_text;
+    $rem->delete('1.0', 'end');
+    $rem->insert('end', map("$_\n", $clone->get_all_remarks));
+}
+
+sub make_labelled_text_widget {
+    my( $self, $widget, $name, $height ) = @_;
+    
+    my $std_border = 3;
+    my $frame = $widget->Frame(
+        -border => $std_border,
+        )->pack(-anchor => 'ne');
+
+    my $text = $frame->Scrolled('Text',
+        -scrollbars         => 'e',
+        -width              => 45,
+        -height             => $height,
+        -exportselection    => 1,
+        -background         => 'white', ### Add to Tk defaults
+        -wrap               => 'word',
+        )->pack( -side => 'right' );
+
+    my $tw = $text->Subwidget('text');
+    $tw->bind(ref($tw), '<Key>', '');
+    $tw->bind("<Key>", [\&insert_char, Tk::Ev('A')]);
+
+    $frame->Label(
+        -text   => $name,
+        -anchor => 'n',
+        )->pack(
+            -side   => 'right',
+            -fill   => 'y',
+            );
+    
+    return $text;
+}
+
+sub keyword_text {
+    my( $self, $keyword_text ) = @_;
+    
+    if ($keyword_text) {
+        $self->{'_keyword_text'} = $keyword_text;
+    }
+    return $self->{'_keyword_text'};
+}
+
+sub description_text {
+    my( $self, $description_text ) = @_;
+    
+    if ($description_text) {
+        $self->{'_description_text'} = $description_text;
+    }
+    return $self->{'_description_text'};
+}
+
+sub remark_text {
+    my( $self, $remark_text ) = @_;
+    
+    if ($remark_text) {
+        $self->{'_remark_text'} = $remark_text;
+    }
+    return $self->{'_remark_text'};
+}
+
+# Inserts (printing) characters with the same style as the rest of the line
+sub insert_char {
+    my( $text, $char ) = @_;
+    
+    warn "Looking at char: <$char>";
+    
+    # We only want to insert printing characters in the Text box!
+    # [:print:] is the POSIX class of printing characters.
+    return unless $char =~ /[[:print:]]/;
+    return if $char eq "\t";
+    
+    # Expected behaviour is that any selected text will
+    # be replaced by what the user types.
+    $text->deleteSelected;
+    
+    $text->insert('insert', $char);
+}
+
+sub fill_Entries {
+    my ($self) = @_;
+    
+    my $clone = $self->Clone
+      or confess "No Clone attached";
+    foreach my $method (keys %{$self->{'_clone_entry'}}) {
+        my $entry = $self->{'_clone_entry'}{$method};
+        $entry->configure(-state => 'normal');
+        my $text = $clone->$method();
+        $entry->delete(0, 'end');
+        $entry->insert(0, $text);
+        
+        # Not all versions of Entry have the "readonly" state
+        eval { $entry->configure(-state => 'readonly'); };
+        $entry->configure(-state => 'disabled') if $@;
+    }
+}
+
+sub make_entry {
+    my ($self, $widget, $label, $clone_method, $width) = @_;
+    
+    $width ||= 20;
+    
+    confess "Hash key '$clone_method' already in use"
+      if exists $self->{'_clone_entry'}{$clone_method};
+    
+    $widget->Label(
+        -text   => $label,
+        -anchor => 's',
+        -padx   => 6,
+        )->pack(-side => 'left', -fill => 'y');
+    $self->{'_clone_entry'}{$clone_method} = $widget->Entry(
+        -width => $width,
         )->pack(-side => 'left');
 }
 
-sub clone_choices {
-    my ($self) = @_;
+sub insert_pad {
+    my ($self, $widget) = @_;
     
-    my $choices = [];
-    my @all_clones = $self->XaceSeqChooser->Assembly->get_all_Clones;
-    for (my $i = 0; $i < @all_clones; $i++) {
-        my $cl = $all_clones[$i];
-        my $choice = sprintf "%s.%d  %s",
-            $cl->accession,
-            $cl->sequence_version,
-            $cl->clone_name;
-        push(@$choices, [$choice, $i]);
-    }
-    return $choices;
+    $widget->Frame(
+        -width  => 10,
+        )->pack(-side => 'left');
 }
 
-sub clone_i_var {
-    my ($self) = @_;
+sub Clone {
+    my( $self, $Clone ) = @_;
     
-    my $str_ref;
-    unless ($str_ref = $self->{'_clone_i_var'}) {
-        my $str = 0;
-        $str_ref = $self->{'_clone_i_var'} = \$str;
+    if ($Clone) {
+        $self->{'_Clone'} = $Clone;
     }
-    return $str_ref;
+    return $self->{'_Clone'};
 }
 
 sub XaceSeqChooser {
@@ -62,6 +257,14 @@ sub write_access {
     my( $self ) = @_;
     
     return $self->XaceSeqChooser->write_access;
+}
+
+sub DESTROY {
+    my ($self) = @_;
+    
+    my $name = $self->Clone->name;
+    my $type = ref($self);
+    warn "Destroying $type '$name'\n";
 }
 
 1;

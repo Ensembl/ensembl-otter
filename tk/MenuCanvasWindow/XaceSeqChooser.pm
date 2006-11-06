@@ -657,7 +657,7 @@ sub populate_menus {
     #    -underline      => 0,
     #    );
 
-    my $clone_menu = $self->make_menu("Clones");
+    my $clone_menu = $self->make_menu("Clone");
     $self->clone_menu($clone_menu);
 
     my $tools_menu = $self->make_menu("Tools");
@@ -743,14 +743,13 @@ sub populate_clone_menu {
     my ($self) = @_;
     
     my $clone_menu = $self->clone_menu;
-    my @all_clones = $self->Assembly->get_all_Clones;
-    for (my $i = 0; $i < @all_clones; $i++) {
-        my $n = $i;
-        my $clone = $all_clones[$i];
-        my $name = $clone->clone_name;
+    foreach my $clone ($self->Assembly->get_all_Clones) {
+        my $name = $clone->name;
         $clone_menu->add('command',
-            -label      => $name,
-            -command    => sub{ $self->edit_Clone($n, $name) },
+            -label          => $clone->clone_name,
+            # Not an accelerator - just for formatting!
+            -accelerator    => $clone->accession_version,
+            -command        => sub{ $self->edit_Clone($name) },
             );
     }
     
@@ -842,39 +841,6 @@ sub close_GenomicFeatures {
         $gfs->try2save_and_quit();
     }
 }
-
-sub CloneEditor {
-    my ($self, $cl_edit) = @_ ;
-
-    if ($cl_edit) {
-        $self->{'_cl_edit'} = $cl_edit;
-        weaken($self->{'_cl_edit'});
-    }
-    return $self->{'_cl_edit'};
-}
-
-sub launch_CloneEditor {
-    my( $self ) = @_;
-    eval {
-        if (my $cl_edit = $self->CloneEditor) {
-            my $cl_win = $cl_edit->top;
-            $cl_win->deiconify;
-            $cl_win->raise;
-        } else {
-            # Make CloneEditor window, save references
-            # in both directions and initialise the window.
-            my $cl_win = $self->canvas->Toplevel;
-            $cl_edit = EditWindow::Clone->new($cl_win);
-            $self->CloneEditor($cl_edit);
-            $cl_edit->XaceSeqChooser($self);
-            $cl_edit->initialize;
-        }
-    };
-    if ($@) {
-        $self->exception_message("Error creating CloneEditor window", $@);
-    }
-}
-
 
 {
     my( @holding_pen );
@@ -1387,6 +1353,7 @@ sub edit_new_subsequence {
     $new->empty_evidence_hash;
     $new->empty_remarks;
     $new->empty_annotation_remarks;
+    $new->drop_all_exon_otter_id;
     my $gm = $self->get_default_mutable_GeneMethod or confess "No default mutable GeneMethod";
     
 
@@ -1697,14 +1664,25 @@ sub get_all_Subseq_clusters {
 }
 
 sub edit_Clone {
-    my ($self, $clone_i, $clone_name) = @_;
+    my ($self, $name) = @_;
     
-    my $clone = ($self->Assembly->get_all_Clones)[$clone_i];
-    unless ($clone->clone_name eq $clone_name) {
-        confess sprintf "Name of clone '%s' from assembly doesn't match expected clone name '%s'",
-            $clone->clone_name, $clone_name;
+    my $clone = $self->Assembly->get_Clone($name);
+
+    # show Clone EditWindow
+    my $cew;
+    unless ($cew = $self->{'_clone_edit_window'}{$name}) {
+        $cew = EditWindow::Clone->new($self->top_window->Toplevel(
+            -title => sprintf("Clone: %s", $clone->clone_name),
+            ));
+        $cew->XaceSeqChooser($self);
+        $cew->Clone($clone);
+        $cew->initialise;
+        $self->{'_clone_edit_window'}{$name} = $cew;
+        weaken($self->{'_clone_edit_window'}{$name});
     }
-    ### show Clone EditWindow
+    my $top = $cew->top;
+    $top->deiconify;
+    $top->raise;
 }
 
 sub Assembly {
