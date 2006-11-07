@@ -91,6 +91,27 @@ sub initialise {
         $self->make_labelled_text_widget($edit_frame, 'Remarks: ',       4)
         );
     
+    my $button_frame = $top->Frame->pack(@frame_pack);
+
+    my $xace_save = sub { $self->xace_save };
+    $button_frame->Button(
+        -text       => 'Save',
+        -command    => $xace_save,
+        )->pack( -side => 'left' );
+    $top->bind('<Control-s>', $xace_save);
+    $top->bind('<Control-S>', $xace_save);
+
+    my $close_window = sub { $self->close_window };
+    $button_frame->Button(
+        -text       => 'Close',
+        -command    => $close_window,
+        )->pack( -side => 'right' );
+    $top->bind('<Control-s>', $close_window);
+    $top->bind('<Control-S>', $close_window);
+    $top->protocol('WM_DELETE_WINDOW', $close_window);
+    
+    $top->bind('<Destroy>', sub{ my $self = undef });
+    
     $self->fill_Entries;
     $self->fill_Properties;
 }
@@ -103,7 +124,7 @@ sub fill_Properties {
       
     my $key = $self->keyword_text;
     $key->delete('1.0', 'end');
-    $key->insert('end', map("$_\n", $clone->get_all_keywords));
+    $key->insert('end', join '', map("$_\n", $clone->get_all_keywords));
     
     my $desc = $self->description_text;
     $desc->delete('1.0', 'end');
@@ -111,7 +132,7 @@ sub fill_Properties {
     
     my $rem = $self->remark_text;
     $rem->delete('1.0', 'end');
-    $rem->insert('end', map("$_\n", $clone->get_all_remarks));
+    $rem->insert('end', join '', map("$_\n", $clone->get_all_remarks));
 }
 
 sub make_labelled_text_widget {
@@ -144,6 +165,107 @@ sub make_labelled_text_widget {
             );
     
     return $text;
+}
+
+sub xace_save {
+    my ($self) = @_;
+    
+    if (my $clone = $self->get_new_Clone_if_changed) {
+        return $self->xace_save_Clone($clone);
+    } else {
+        return;
+    }
+}
+
+sub xace_save_Clone {
+    my ($self, $clone) = @_;
+    
+    my $ace = $clone->ace_string;
+    
+    my $xr = $self->XaceSeqChooser->xace_remote
+      or $self->top->Message(
+        -text => 'No xace attached'
+        );
+
+    print STDERR "Sending:\n$ace";
+    $xr->load_ace($ace);
+    $xr->save;
+    
+    $self->XaceSeqChooser->Assembly->replace_Clone($clone);
+    $self->Clone($clone);
+}
+
+sub close_window {
+    my ($self) = @_;
+    
+    # Check for unsaved changes
+    if (my $clone = $self->get_new_Clone_if_changed) {
+        # Ask the user if changes should be saved
+        my $name = $clone->clone_name;
+        my $dialog = $self->top->Dialog(
+            -title          => 'Save changes?',
+            -bitmap         => 'question',
+            -text           => "Save changes to Clone '$name'?",
+            -default_button => 'Yes',
+            -buttons        => [qw{ Yes No Cancel }],
+            );
+        my $ans = $dialog->Show;
+
+        if ($ans eq 'Cancel') {
+            return; # Abandon window close
+        }
+        elsif ($ans eq 'Yes') {
+            $self->xace_save_Clone($clone) or return;
+        }
+    }
+    
+    $self->top->destroy;
+    return 1;
+}
+
+sub get_new_Clone_if_changed {
+    my ($self) = @_;
+    
+    my $old = $self->Clone;
+    my $new = $old->clone;
+    $new->drop_all_keywords;
+    $new->drop_all_remarks;
+    
+    foreach my $key ($self->get_cleaned_text($self->keyword_text)) {
+        $new->add_keyword($key);
+    }
+    
+    my $desc = join(' ', $self->get_cleaned_text($self->description_text));
+    $new->description($desc);
+    
+    foreach my $rem ($self->get_cleaned_text($self->remark_text)) {
+        $new->add_remark($rem);
+    }
+    
+    if ($old->ace_string ne $new->ace_string) {
+        printf STDERR "\nOLD: <%s>\n\nNEW: <%s>\n\n",
+            $old->ace_string, $new->ace_string;
+        return $new;
+    } else {
+        return;
+    }
+}
+
+sub get_cleaned_text {
+    my ($self, $widget) = @_;
+    
+    my @text;
+    foreach my $line (split /\n+/, $widget->get('1.0', 'end')) {
+        next unless $line =~ /\w/;
+        
+        # Shrink whitespace into single spaces
+        $line =~ s/\s+/ /g;
+        # Remove any trailing or leading space
+        $line =~ s/(^ | $)//g;
+        
+        push(@text, $line);
+    }
+    return @text;
 }
 
 sub keyword_text {
