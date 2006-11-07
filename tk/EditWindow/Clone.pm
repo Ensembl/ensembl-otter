@@ -298,9 +298,7 @@ sub remark_text {
 # Inserts (printing) characters with the same style as the rest of the line
 sub insert_char {
     my( $text, $char ) = @_;
-    
-    warn "Looking at char: <$char>";
-    
+        
     # We only want to insert printing characters in the Text box!
     # [:print:] is the POSIX class of printing characters.
     return unless $char =~ /[[:print:]]/;

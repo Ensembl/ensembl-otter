@@ -1016,7 +1016,7 @@ sub save_data {
             # resync here!
             $self->resync_with_db;
             
-            # Restarts even if not yet launched!
+            ### Restarts even if not yet launched!
             $self->zMapLaunchZmap if $self->show_zmap;
         }
     };
