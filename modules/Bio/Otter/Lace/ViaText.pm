@@ -35,7 +35,7 @@ our %OrderOfOptions = (
     ],
 
     'DitagFeature' => [
-        qw(start end strand hit_start hit_end hit_strand ditag_side),
+        qw(start end strand hit_start hit_end hit_strand ditag_side ditag_pair_id),
             ## Special treatment: ditag_id
             ## Not sent (cached): analysis, slice
     ],
