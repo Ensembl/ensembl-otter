@@ -32,7 +32,6 @@ sub hashkey {
 
   my $tl_start =$self->start;
   my $tl_end   =$self->end;
-
   my $hashkey_main="$start_exon_hash_key-$end_exon_hash_key-$tl_start-$tl_end";
   return $hashkey_main;
 }
