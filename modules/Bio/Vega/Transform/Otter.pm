@@ -248,7 +248,6 @@ sub build_SequenceFragment {
 	 $cln_attrib=$self->make_Attribute('keyword','Clone Keyword','',$key);
 	 push @$cln_attrib_list,$cln_attrib;
   }
-  ##in future a group_name tag is required
   my $cln_author=$self->make_Author($data->{'author'},$data->{'author_email'},'');
   my $cln_ctg_piece=[$cln_slice,$ctg_slice];
   my $cln_ctg_list = $slice{$self}{'cln_ctg'} ||= [];
@@ -285,8 +284,6 @@ sub build_Feature {
   my $offset = 1 - $slice->start ;
   my $feat_start = $data->{'start'} + $offset;
   my $feat_end =  $data->{'end'}   + $offset;
-  #my $feat_start=$data->{'start'};
-  #my $feat_end  =$data->{'end'};
   my $feature = Bio::EnsEMBL::SimpleFeature->new(
 																 -start     => $feat_start,
 																 -end       => $feat_end,
@@ -591,7 +588,6 @@ sub build_Locus {
   if (defined $truncated) {
 	 $gene->truncated_flag($truncated);
   }
-
   ##convert coordinates from chromosomal coordinates to slice coordinates
   if ($chrstart != 2000000000) {
 	 foreach my $exon (@{$gene->get_all_Exons}) {
@@ -605,7 +601,6 @@ sub build_Locus {
 	 $transcript->start($transcript->start-$chrstart+1);
 	 $transcript->end($transcript->end-$chrstart+1);
   }
-
   my $list = $gene_list{$self} ||= [];
   push @$list, $gene;
 }
@@ -806,11 +801,6 @@ sub get_SliceId {
 		##insert slice
 		##test to set the length right for API
 		if ($new_slice->length != length($seq)){
-		#  print STDERR "\n\n****length are not the same".$new_slice->length."-----seqlength----".length($seq)."start:".$new_slice->start."  end:".$new_slice->end;
-		 # $new_slice->length(length($seq));
-		  #$new_slice->end(length($seq));
-		  #$new_slice->start(1);
-		  #print STDERR "\n\nafter correction".$new_slice->length."-----seqlength----".length($seq)."start:".$new_slice->start."  end:".$new_slice->end;
 		  my $seq_len=length($seq);
 		  $new_slice=$self->make_Slice($slice->seq_region_name,1,$seq_len,$seq_len,1,$cs);
 		}
@@ -920,8 +910,6 @@ sub get_SequenceSet_AssemblyType {
 
 sub pfetch_acc_ver {
   my( $self,$acc_ver,$pfetch,$pfetch_archive ) = @_;
- # my $pfetch         ||= Bio::EnsEMBL::Pipeline::SeqFetcher::Finished_Pfetch->new;
- # my $pfetch_archive ||= Bio::EnsEMBL::Pipeline::SeqFetcher::Finished_Pfetch->new(-PFETCH_PORT => 23100,);
   my $seq;
   eval {
 	 $seq = $pfetch->get_Seq_by_acc($acc_ver);

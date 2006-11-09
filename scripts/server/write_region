@@ -261,7 +261,7 @@ send_response($sq, $output_xml, 1);
 
 elsif ($odb->isa('Bio::Vega::DBSQL::DBAdaptor')) {
 
-  ##trying store in a new Otter db
+  ##trying to store in a new Otter db
   ##Parse the xml file
 
   my $parser;
@@ -319,8 +319,8 @@ elsif ($odb->isa('Bio::Vega::DBSQL::DBAdaptor')) {
 	 error_exit($sq,"Failed at comparing xml assembly with database assembly [$@]\n");
   }
   my $xmlstr;
+  $odb->begin_work;
   eval {
-	 $odb->begin_work;
 	 ##check if clones are locked or not
 	 my $cb = new Bio::Vega::ContigLockBroker;
 	 server_log("Checking region is locked...");
@@ -363,7 +363,7 @@ elsif ($odb->isa('Bio::Vega::DBSQL::DBAdaptor')) {
 			 $exon->slice($slice);
 		  }
 		}
-		##update all gene and its components in db (new/mod/del)
+		##update all gene and its components in db (new/mod)
 		$gene_adaptor->store($gene);
 	 }
 	 server_log("Updated ".scalar(@$new_mod)." genes");
@@ -380,7 +380,7 @@ elsif ($odb->isa('Bio::Vega::DBSQL::DBAdaptor')) {
 			 $exon->slice($slice);
 		  }
 		}
-		##update all gene and its components in db (new/mod/del)
+		##update all gene and its components in db (del)
 		$gene_adaptor->store($gene);
 	 }
 	 server_log("Deleted ".scalar(@$del)." Genes") if ($del);
