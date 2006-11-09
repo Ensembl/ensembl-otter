@@ -46,8 +46,9 @@ sub generate_SequenceSet{
   foreach my $contig_seg (@$slice_projection) {
 	 $ss->attribobjs($self->generate_SequenceFragment($contig_seg,$slice,$odb));
   }
-  my $features=$slice->get_all_SimpleFeatures;
-  $ss->attribobjs($self->generate_FeatureSet($features));
+  my $sfa = $odb->get_SimpleFeatureAdaptor();
+  my $features = $sfa->fetch_all_by_Slice($slice);
+  $ss->attribobjs($self->generate_FeatureSet($features,$slice));
   my $ga=$odb->get_GeneAdaptor;
   my $genes=$ga->fetch_all_by_Slice($slice);
   foreach my $gene(@$genes){
@@ -313,7 +314,6 @@ sub generate_Transcript{
 	 my $strand = $translation->start_Exon->strand;
 	 $tran_low  = $tran->coding_region_start;
 	 $tran_high = $tran->coding_region_end;
-	# my ($tl_start, $tl_end) = ($tran_low,$tran_high);
 	 my ($tl_start, $tl_end) = ($strand == 1)
 		? ($tran_low + $coord_offset, $tran_high + $coord_offset)
 		  : ($tran_high + $coord_offset, $tran_low + $coord_offset);
@@ -344,8 +344,6 @@ sub generate_ExonSet{
 	 $e->attribvals($self->prettyprint('stable_id',$exon->stable_id));
 	 $e->attribvals($self->prettyprint('start',$exon->start + $coord_offset));
 	 $e->attribvals($self->prettyprint('end',$exon->end  + $coord_offset));
-	 #$e->attribvals($self->prettyprint('start',$exon->start ));
-	 #$e->attribvals($self->prettyprint('end',$exon->end  ));
 	 $e->attribvals($self->prettyprint('strand',$exon->strand));
 	 if ( defined($tran_high) && $exon->start <= $tran_high &&
          defined($tran_low)  && $tran_low <= $exon->end){
@@ -383,8 +381,9 @@ sub generate_EvidenceSet{
 }
 
 sub generate_FeatureSet {
-  my ($self, $features) = @_;
+  my ($self, $features,$slice) = @_;
   return unless $features;
+  my $offset=$slice->start-1;
   my $fs=$self->prettyprint('feature_set');
   foreach my $feature(@$features){
 	 my $f = $self->prettyprint('feature');
@@ -396,13 +395,13 @@ sub generate_FeatureSet {
 		throw "Cannot create Otter XML, feature type is absent:$feature";
 	 }
 	 if ($feature->start){
-		$f->attribvals($self->prettyprint('start',$feature->start));
+		$f->attribvals($self->prettyprint('start',$feature->start+$offset));
 	 }
 	 else {
 		throw "Cannot create Otter XML, feature type is absent:$feature";
 	 }
 	 if ($feature->end){
-		$f->attribvals($self->prettyprint('end',$feature->end));
+		$f->attribvals($self->prettyprint('end',$feature->end+$offset));
 	 }
 	 else {
 		throw "Cannot create Otter XML, feature type is absent:$feature";
