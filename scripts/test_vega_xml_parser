@@ -18,7 +18,8 @@ test_vega_xml_parser -dbhost xxx -dbport xxx -dbname xxx -dbuser xxx -dbpass xxx
 
 -xml input otter xml file to be parsed
 
--assembly 'yes' | 'no' (yes loads only assembly data, i.e., populates seq_region,assembly,seq_region_attrib,contig_info,contig_attrib tables only; no loads genes and its components and simple features)
+-assembly 'yes' | 'no' (yes loads only assembly data, i.e., populates seq_region,assembly,seq_region_attrib,contig_info,contig_attrib tables only; 'no' loads genes and its components and simple features)
+basically to load a comple assembly with gene and its components, the script with the xml file has to be run twice, first with assembly 'yes' and then with assembly 'no'
 
 =cut
 
@@ -57,7 +58,7 @@ if ($assembly !~ /yes|no/ ) {
   die "assembly value should be 'yes' or 'no' as a string value, yes indicates loading of assembly\nassembly:$assembly";
 }
 
-##create a parse and parse the xmlfile and create vega objects
+##create a parser and parse the xmlfile and create vega objects
 my $parser = Bio::Vega::Transform::Otter->new;
 
 $parser->Assembly($assembly);
@@ -73,11 +74,9 @@ my $db = Bio::Vega::DBSQL::DBAdaptor->new(
 														-pass   => $dbpass,
 													  );
 
-
+##Let begin a transaction and do all the database changes within a transaction
+$db->begin_work();
 eval{
-  ##Let begin a transaction and do all the database changes within a transaction
-  $db->begin_work();
-
   if ($assembly eq 'yes') {
 	 eval {
 		my $pfetch         ||= Bio::EnsEMBL::Pipeline::SeqFetcher::Finished_Pfetch->new;
@@ -86,8 +85,9 @@ eval{
 		$parser->LoadAssemblySlices($db,$pfetch,$pfetch_archive);
 	 };
 	 if ($@){
-		$db->rollback;
 		die "problem with loading of Assembly\n$@\n";
+		$db->rollback;
+		
 	 }
   }
   else {
@@ -100,8 +100,8 @@ eval{
 		  $gene_adaptor->store($gene);
 		};
 		if ($@){
-		  $db->rollback;
 		  die "problem with loading of genes\n$@\n";
+		  $db->rollback;
 		}
 	 }
 	 ##Load SimpleFeatures - deletes old features(features not in xml) and stores the current features in XML
@@ -121,23 +121,23 @@ eval{
 		  $sfa->store($new_feat);
 		};
 		if ($@){
-		  $db->rollback;
 		  die "problem with loading of simplefeatures\n$@\n";
+		  $db->rollback;
+
 		}
 		
 	 }
   }
-
-
-};
-if ($@) {
-  $db->rollback;
-  print STDERR "\nError saving genes from file: Rolled back all data of this session - Please correct errors\n".$@;
-}
-else {
   $db->commit;
   print STDOUT "\nCommitted all session data from XML in database\n";
+};
+if ($@) {
+  print STDERR "\nError saving genes from file: Rolled back all data of this session - Please correct errors\n".$@;
+  $db->rollback;
 }
+
+
+
 $parser->DESTROY;
 warn "\nParser now out of scope\n";
 

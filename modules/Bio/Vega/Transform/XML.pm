@@ -264,19 +264,19 @@ sub generate_Transcript{
   my $mRNA_end_NF = $tran->get_all_Attributes('mRNA_end_NF') ;
   my $cds_start_NF = $tran->get_all_Attributes('cds_start_NF') ;
   my $cds_end_NF = $tran->get_all_Attributes('cds_end_NF') ;
-  if ($cds_start_NF){
+  if (defined $cds_start_NF){
 	 my $csNF=$cds_start_NF->[0]->value;
 	 $t->attribvals($self->prettyprint('cds_start_not_found',$csNF));
   }
-  if ($cds_end_NF){
+  if (defined $cds_end_NF){
 	 my $ceNF=$cds_end_NF->[0]->value;
 	 $t->attribvals($self->prettyprint('cds_end_not_found',$ceNF));
   }
-  if ($mRNA_start_NF){
+  if (defined $mRNA_start_NF){
 	 my $msNF=$mRNA_start_NF->[0]->value;
 	 $t->attribvals($self->prettyprint('mRNA_start_not_found',$msNF));
   }
-  if ($mRNA_end_NF){
+  if (defined $mRNA_end_NF){
 	 my $meNF=$mRNA_end_NF->[0]->value;
 	 $t->attribvals($self->prettyprint('mRNA_end_not_found',$meNF));
   }
@@ -313,7 +313,7 @@ sub generate_Transcript{
 	 my $strand = $translation->start_Exon->strand;
 	 $tran_low  = $tran->coding_region_start;
 	 $tran_high = $tran->coding_region_end;
-#	  my ($tl_start, $tl_end)=($tran_low,$tran_high);
+	# my ($tl_start, $tl_end) = ($tran_low,$tran_high);
 	 my ($tl_start, $tl_end) = ($strand == 1)
 		? ($tran_low + $coord_offset, $tran_high + $coord_offset)
 		  : ($tran_high + $coord_offset, $tran_low + $coord_offset);
@@ -343,8 +343,9 @@ sub generate_ExonSet{
 	 my $e=$self->prettyprint('exon');
 	 $e->attribvals($self->prettyprint('stable_id',$exon->stable_id));
 	 $e->attribvals($self->prettyprint('start',$exon->start + $coord_offset));
-#	 $e->attribvals($self->prettyprint('start',$exon->seq_region_start ));
 	 $e->attribvals($self->prettyprint('end',$exon->end  + $coord_offset));
+	 #$e->attribvals($self->prettyprint('start',$exon->start ));
+	 #$e->attribvals($self->prettyprint('end',$exon->end  ));
 	 $e->attribvals($self->prettyprint('strand',$exon->strand));
 	 if ( defined($tran_high) && $exon->start <= $tran_high &&
          defined($tran_low)  && $tran_low <= $exon->end){
