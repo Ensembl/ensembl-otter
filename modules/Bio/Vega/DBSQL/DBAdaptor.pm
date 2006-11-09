@@ -114,27 +114,51 @@ sub get_ContigLockAdaptor {
 }
 
 sub get_MetaContainer {
-    my( $self ) = @_;
-	 if ( !exists $self->{'VegaMetaContainer'} ){
-		$self->{'VegaMetaContainer'}=Bio::Vega::DBSQL::MetaContainer->new($self);
-    }
-    return $self->{'VegaMetaContainer'};
+  my( $self ) = @_;
+  if ( !exists $self->{'VegaMetaContainer'} ){
+	 $self->{'VegaMetaContainer'}=Bio::Vega::DBSQL::MetaContainer->new($self);
+  }
+  return $self->{'VegaMetaContainer'};
 }
 
 sub begin_work {
-    my $self = shift;
-    $self->dbc->db_handle->do('BEGIN');
+  my $self = shift;
+  $self->dbc->db_handle->do('BEGIN');
 }
 
 sub commit {
-    my $self = shift;
-    $self->dbc->db_handle->do('COMMIT');
+  my $self = shift;
+  $self->dbc->db_handle->do('COMMIT');
 }
 
 sub rollback {
-    my $self = shift;
-    $self->dbc->db_handle->do('ROLLBACK');
+  my $self = shift;
+  $self->dbc->db_handle->do('ROLLBACK');
 }
+
+
+sub rollback_to_savepoint {
+  my ($self,$savepoint) = @_;
+  unless ($savepoint){
+	 $savepoint='x';
+  }
+  $self->dbc->db_handle->do('ROLLBACK TO SAVEPOINT '.$savepoint);
+}
+
+sub savepoint {
+  my ($self,$savepoint) = @_;
+  unless ($savepoint){
+	 $savepoint='x';
+  }
+  $self->dbc->db_handle->do('SAVEPOINT '.$savepoint);
+}
+
+sub check_for_transaction{
+  my $self=shift;
+  my $dbh=$self->dbc->db_handle;
+  return $dbh->{AutoCommit};
+}
+
 
 1;
 __END__
