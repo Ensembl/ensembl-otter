@@ -538,7 +538,11 @@ sub get_all_MarkerFeatures { # get marker features from otter/pipeline/ensembl d
     return \@mfs;
 }
 
-sub get_all_DitagFeatures { # get ditag features from otter/pipeline/ensembl db
+sub get_all_DitagFeatureGroups { # get ditag features from otter/pipeline/ensembl db
+    #
+    # the returned list is 2d, with features grouped by ditag_id.ditag_pair_id
+    # (even if there was only one feature per group)
+    #
     my( $self, $analysis_name, $pipehead, $metakey, $ditype ) = @_;
 
     if(!$analysis_name) {
@@ -567,8 +571,8 @@ sub get_all_DitagFeatures { # get ditag features from otter/pipeline/ensembl db
         # cached values:
     my $analysis = Bio::EnsEMBL::Analysis->new( -logic_name => $analysis_name );
 
-    my %dos  = (); # cached marker objects, keyed by mo_id
-    my @dfs  = (); # marker features in a list
+    my %dos  = (); # cached ditag objects, keyed by do_id
+    my %dfs  = (); # ditag features in a HoHoL {ditag_id}{ditag_pair_id} -> [L,R]
     foreach my $respline (@resplines) {
 
         my @optvalues = split(/\t/,$respline);
@@ -598,11 +602,12 @@ sub get_all_DitagFeatures { # get ditag features from otter/pipeline/ensembl db
                 # use the cached values:
             $df->analysis( $analysis );
 
-            push @dfs, $df;
+            my $uniq_group_id = $do_id.'.'.$df->ditag_pair_id;
+            push @{$dfs{$uniq_group_id}}, $df;
         }
     }
 
-    return \@dfs;
+    return [ values %dfs ];
 }
 
 sub get_all_PredictionTranscripts { # get prediction transcripts from otter/pipeline/ensembl db
