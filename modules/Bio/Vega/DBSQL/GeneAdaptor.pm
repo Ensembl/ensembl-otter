@@ -132,7 +132,6 @@ sub check_for_change_in_gene_components {
 	 my $exons=$tran->get_all_Exons;
 	 my $exon_changed=0;
 	 $exon_changed=$self->exons_diff($sida,$exons);
-	 
 	 ##check if translation has changed
 	 my $db_transcript=$ta->get_current_Transcript_by_slice($tran);
 	 my $translation_changed=0;
@@ -144,7 +143,7 @@ sub check_for_change_in_gene_components {
 
 	 $tran->is_current(1);
 	 if ( $db_transcript){
-
+		
 		$transcript_changed=compare($db_transcript,$tran);
 		my $db_version=$db_transcript->version;
 		if ($exon_changed==1 || $translation_changed==1 ) {
@@ -194,10 +193,53 @@ sub check_for_change_in_gene_components {
 	 if ($transcript_changed == 1) {
 		$tran_change_count++;
 	 }
+	 ##check to see if the start_Exon,end_Exon has been assigned right after comparisons
+	 my $translation = $tran->translation();
+	 if( defined $translation ) {
+		#make sure that the start and end exon are set correctly
+		my $start_exon = $translation->start_Exon();
+		my $end_exon   = $translation->end_Exon();
+		if(!$start_exon) {
+		  throw("Translation does not define a start exon.");
+		}
+		if(!$end_exon) {
+		  throw("Translation does not define an end exon.");
+		}
+		if(!$start_exon->dbID()) {
+		  my $key = $start_exon->hashkey();
+		  ($start_exon) = grep {$_->hashkey() eq $key} @$exons;
+		  if($start_exon) {
+			 $translation->start_Exon($start_exon);
+		  } else {
+			 ($start_exon) = grep {$_->stable_id eq $start_exon->stable_id} @$exons;
+			 if($start_exon) {
+				$translation->start_Exon($start_exon);
+			 }
+			 else {
+				throw("Translation's start_Exon does not appear to be one of the " .
+						"exons in its associated Transcript");
+			 }
+		  }
+		}
+		if(!$end_exon->dbID()) {
+		  my $key = $end_exon->hashkey();
+		  ($end_exon) = grep {$_->hashkey() eq $key} @$exons;
+		  if($end_exon) {
+			 $translation->end_Exon($end_exon);
+		  } else {
+			 ($end_exon) = grep {$_->stable_id eq $end_exon->stable_id} @$exons;
+			 if($end_exon) {
+				$translation->end_Exon($end_exon);
+			 }
+			 else {
+				throw("Translation's end_Exon does not appear to be one of the " .
+						"exons in its associated Transcript.");
+			 }
+		  }
+		}
+	 }
   }
-
   my $transcripts_changed=0;
-
   if ($tran_change_count > 0) {
 	 $transcripts_changed=1;
   }
@@ -299,9 +341,6 @@ sub exons_diff {
 		my $db_version=$db_exon->version;
       $exon_changed=compare($db_exon,$exon);
 		##if exon has changed then increment version
-#		$db_exon->is_current(0);
-	#	$ea->update($db_exon);
-
 		if ($exon_changed == 1){
 		  $db_exon->is_current(0);
 		  $ea->update($db_exon);
@@ -311,8 +350,6 @@ sub exons_diff {
 		##if exon has not changed then retain the same old version
 		else {
 		  $exon=$db_exon;
-		  #$exon->version($db_version);
-		  #$exon->is_current(1);
 		}
 	 }
 	 ##if exon is new
@@ -396,104 +433,109 @@ sub delete_gene {
 =cut
 
 sub store{
-   my ($self,$gene) = @_;
-   unless ($gene) {
-       throw("Must enter a Gene object to the store method");
-   }
-   unless ($gene->isa("Bio::Vega::Gene")) {
-       throw("Object must be a Bio::Vega::Gene object. Currently [$gene]");
-   }
-   unless ($gene->gene_author) {
-      throw("Bio::Vega::Gene must have a gene_author object set");
-   }
+  my ($self,$gene) = @_;
+  unless ($gene) {
+	 throw("Must enter a Gene object to the store method");
+  }
+  unless ($gene->isa("Bio::Vega::Gene")) {
+	 throw("Object must be a Bio::Vega::Gene object. Currently [$gene]");
+  }
+  unless ($gene->gene_author) {
+	 throw("Bio::Vega::Gene must have a gene_author object set");
+  }
+  ##checks for the gene object so that the gene object has all the right adaptors
+  ##like the slice adaptor, coord-system adaptor and its attribs are properly set for
+  ##storing it in the db
+  my $sa = $self->db->get_SliceAdaptor();
+  my $slice = $gene->slice;
+  unless ($slice) {
+	 throw "gene does not have a slice attached to it, cannot store gene\n";
+  }
+  my $csa = $self->db->get_CoordSystemAdaptor();
+  my $slice_cs = $slice->coord_system;
+  unless ($slice_cs) {
+	 throw("Coord System not set in gene slice \n");
+  }
+  my $coord_system_id=$slice->coord_system->dbID();
 
-	##checks for the gene object so that the gene object has all the right adaptors
-	##like the slice adaptor, coord-system adaptor and its attribs are properly set for
-	##storing it in the db
-	my $sa = $self->db->get_SliceAdaptor();
-	my $slice = $gene->slice;
-	unless ($slice) {
-	  throw "gene does not have a slice attached to it, cannot store gene\n";
-	}
-##test
-##=head3 COMMENT
-##test
-	my $csa = $self->db->get_CoordSystemAdaptor();
-	my $slice_cs = $slice->coord_system;
-	unless ($slice_cs) {
-	  throw("Coord System not set in gene slice \n");
-	}
-	my $coord_system_id=$slice->coord_system->dbID();
-	unless ( $coord_system_id){
-	  my $db_cs;
-	  eval{
-		 $db_cs = $csa->fetch_by_name($slice_cs->name,$slice_cs->version,$slice_cs->rank);
-	  };
-	  if($@){
-		 print STDERR "A coord_system matching the arguments does not exist in the coord_system".
-			"table, please ensure you have the right coord_system entry in the database:$@";
-	  }
-	  my $new_slice = $sa->fetch_by_name($slice->name);
-	  unless($new_slice){
-		 throw "gene slice is not in the database\n";
-	  }
-	  $gene->slice($new_slice);
-	  my $tref=$gene->get_all_Transcripts();
-	  foreach my $tran (@$tref) {
-		 $tran->slice($new_slice);
-		foreach my $exon (@{$tran->get_all_Exons}) {
-			$exon->slice($new_slice);
-		 }
-	  }
-			
-	}
-##test
-##=cut
 ##
-	unless ($gene->slice->adaptor){
-	  $gene->slice->adaptor($sa);
-	}
-	my $gene_changed=0;
-	##deleted gene make sure is_current is set to 0
-	if ($gene->is_current == 0) {
-		 $self->delete_gene($gene);
-		 $gene_changed = 5;
-	}
+##cut
+##
 
-	else {
-	$self->db->begin_work;
-	##new gene - assign stable_id
-	my $sida = $self->db->get_StableIdAdaptor();
-	unless ($gene->stable_id){
-	  $sida->fetch_new_stable_ids_for_Gene($gene);
-	}
-	##if gene is old compare to see if gene components have changed
+=COMMENT
 
-	##check if gene is new or old
-	my $gene_slice=$gene->slice;
-	my $db_gene=$self->get_current_Gene_by_slice($gene);
+  unless ( $coord_system_id){
+	 my $db_cs;
+	 eval{
+		$db_cs = $csa->fetch_by_name($slice_cs->name,$slice_cs->version,$slice_cs->rank);
+	 };
+	 if($@){
+		print STDERR "A coord_system matching the arguments does not exist in the coord_system".
+		  "table, please ensure you have the right coord_system entry in the database:$@";
+	 }
+	 my $new_slice = $sa->fetch_by_name($slice->name);
+	 unless($new_slice){
+		throw "gene slice is not in the database\n";
+	 }
+	 $gene->slice($new_slice);
+	 my $tref=$gene->get_all_Transcripts();
+	 foreach my $tran (@$tref) {
+		$tran->slice($new_slice);
+		foreach my $exon (@{$tran->get_all_Exons}) {
+		  $exon->slice($new_slice);
+		}
+	 }
+  }
 
-	if ( $db_gene && $gene_changed != 5) {
-	  $gene_changed=$self->check_for_change_in_gene_components($sida,$gene);
-	  my $db_version=$db_gene->version;
-	  if ($gene_changed == 0) {
-		 $gene_changed=compare($db_gene,$gene);
-	  }
-	  $gene->is_current(1);
-	  $db_gene->is_current(0);
-	  $self->update($db_gene);
-	  if ( $gene_changed == 1) {
-		 $gene->version($db_version+1);
-		 ##add synonym if old gene name is not a current gene synonym
-		 $self->add_gene_synonym($db_gene,$gene);
-	  }
-	  else {
-		 $gene->version($db_version);
-	  }
-	}
-	my $old_gene;
-	##if gene is new /restored
-	if (! $db_gene && $gene_changed != 5) {
+=cut
+
+##
+##cut
+##
+  unless ($gene->slice->adaptor){
+	 $gene->slice->adaptor($sa);
+  }
+  my $gene_changed=0;
+  unless ($self->db->check_for_transaction){
+	 throw "This is non-transactional , cannot proceed storing of gene\n";
+  }
+  $self->db->savepoint;
+  ##deleted gene
+  if ($gene->is_current == 0) {
+	 $self->delete_gene($gene);
+	 $gene_changed = 5;
+  }
+  else {
+	 ##new gene - assign stable_id
+	 my $sida = $self->db->get_StableIdAdaptor();
+	 unless ($gene->stable_id){
+		$sida->fetch_new_stable_ids_for_Gene($gene);
+	 }
+	 ##if gene is old compare to see if gene components have changed
+	 ##check if gene is new or old
+	 my $gene_slice=$gene->slice;
+	 my $db_gene=$self->get_current_Gene_by_slice($gene);
+	 if ( $db_gene && $gene_changed != 5) {
+		$gene_changed=$self->check_for_change_in_gene_components($sida,$gene);
+		my $db_version=$db_gene->version;
+		if ($gene_changed == 0) {
+		  $gene_changed=compare($db_gene,$gene);
+		}
+		$gene->is_current(1);
+		$db_gene->is_current(0);
+		$self->update($db_gene);
+		if ( $gene_changed == 1) {
+		  $gene->version($db_version+1);
+		  ##add synonym if old gene name is not a current gene synonym
+		  $self->add_gene_synonym($db_gene,$gene);
+		}
+		else {
+		  $gene->version($db_version);
+		}
+	 }
+	 my $old_gene;
+	 ##if gene is new /restored
+	 if (! $db_gene && $gene_changed != 5) {
 		my $restored_genes = $self->fetch_all_versions_by_stable_id($gene->stable_id);
 		##restored gene
 		if (@$restored_genes > 0){
@@ -515,9 +557,7 @@ sub store{
 			 ##if gene changed
 			 $old_gene=$self->fetch_by_stable_id_version($gene->stable_id,$old_version);
 			 $gene_changed=compare($old_gene,$gene);
-
 			 if ($gene_changed == 1){
-
 				$gene->version($old_version+1);
 				##add synonym if old gene name is not a current gene synonym
 				$self->add_gene_synonym($old_gene,$gene);
@@ -525,7 +565,6 @@ sub store{
 			 else {
 				$gene_changed=3;
 			 }
-
 		  }
 		}
 		##new gene
@@ -539,82 +578,69 @@ sub store{
 		  $self->SUPER::store($gene);
 		}
 	 }
-
-	if ($gene_changed == 1 || $gene_changed == 3 || $gene_changed == 5) {
-	  $self->SUPER::store($gene);
-	}
-	if ($gene_changed==1 || $gene_changed==2 || $gene_changed == 3 || $gene_changed == 5){
-	  ##get author_id and store gene_id-author_id in gene_author table
-	  my $aa = $self->db->get_AuthorAdaptor;
-	  my $gene_author=$gene->gene_author;
-	  $aa->store($gene_author);
-	  my $author_id=$gene_author->dbID;
-	  $aa->store_gene_author($gene->dbID,$author_id);
-	  ##transcript-author, transcript-evidence
-	  my $transcripts=$gene->get_all_Transcripts;
-	  my $ta = $self->db->get_TranscriptAdaptor;
-	  foreach my $tran (@$transcripts){
-		 ##author
-		 my $tran_author=$tran->transcript_author;
-		 $aa->store($tran_author);
-		 my $author_id=$tran_author->dbID;
-		 $aa->store_transcript_author($tran->dbID,$author_id);
-		 ##evidence
-		 my $evidence_list=$tran->get_Evidence;
-		 $ta->store_Evidence($tran->dbID,$evidence_list);
-	  }
-	}
-
-	if ($gene_changed == 1) {
-	  if ($db_gene){
-		 my $new_trs=$gene->get_all_Transcripts;
-		 my $old_trs;
-		 my $new_tr_count=@$new_trs;
-		 my $old_tr_count;
-		 $old_trs=$db_gene->get_all_Transcripts;
-		 $old_tr_count=@$old_trs;
-		 if ($old_tr_count > $new_tr_count) {
-			$self->update_deleted_transcripts($new_trs,$old_trs);
-		 }
-		 my $new_exons=$gene->get_all_Exons;
-		 my $old_exons;
-		 my $new_exon_count=@$new_exons;
-		 my $old_exon_count;
-		 $old_exons=$db_gene->get_all_Exons;
-		 $old_exon_count=@$old_exons;
-		 if ($old_exon_count > $new_exon_count) {
-			$self->update_deleted_exons($new_exons,$old_exons);
-		 }
-	  }
-	  #$self->db->commit;
-	  print STDOUT "\nChanged gene:".$gene->stable_id." Current Version:".$gene->version." changes stored successfully in db\n";
-
-	}
-
- }
-
-	if ($gene_changed == 0) {
-	  $self->db->rollback;
-	  print STDOUT "\nTrying to store an Unchanged gene:".$gene->stable_id." Version:".$gene->version." nothing written in db\n";
-	}
-
-
-	if ($gene_changed == 2) {
-	#$self->db->commit;
-	  print STDOUT "\nNew gene:".$gene->stable_id." Version:".$gene->version." stored successfully in db\n";
-	}
-
-	if ($gene_changed == 3) {
-	 #$self->db->commit;
-	  print STDOUT "\nRestored gene:".$gene->stable_id." Version:".$gene->version." restored successfully in db\n";
-	}
-	
-	if ($gene_changed == 5) {
-	  #$self->db->commit;
-	  print STDOUT "\nDeleted gene:".$gene->stable_id." Version:".$gene->version." deleted successfully in db\n";
-	}
-
- }
+	 if ($gene_changed == 1 || $gene_changed == 3 || $gene_changed == 5) {
+		$self->SUPER::store($gene);
+	 }
+	 if ($gene_changed==1 || $gene_changed==2 || $gene_changed == 3 || $gene_changed == 5){
+		##get author_id and store gene_id-author_id in gene_author table
+		my $aa = $self->db->get_AuthorAdaptor;
+		my $gene_author=$gene->gene_author;
+		$aa->store($gene_author);
+		my $author_id=$gene_author->dbID;
+		$aa->store_gene_author($gene->dbID,$author_id);
+		##transcript-author, transcript-evidence
+		my $transcripts=$gene->get_all_Transcripts;
+		my $ta = $self->db->get_TranscriptAdaptor;
+		foreach my $tran (@$transcripts){
+		  ##author
+		  my $tran_author=$tran->transcript_author;
+		  $aa->store($tran_author);
+		  my $author_id=$tran_author->dbID;
+		  $aa->store_transcript_author($tran->dbID,$author_id);
+		  ##evidence
+		  my $evidence_list=$tran->get_Evidence;
+		  $ta->store_Evidence($tran->dbID,$evidence_list);
+		}
+	 }
+	 if ($gene_changed == 1) {
+		if ($db_gene){
+		  my $new_trs=$gene->get_all_Transcripts;
+		  my $old_trs;
+		  my $new_tr_count=@$new_trs;
+		  my $old_tr_count;
+		  $old_trs=$db_gene->get_all_Transcripts;
+		  $old_tr_count=@$old_trs;
+		  if ($old_tr_count > $new_tr_count) {
+			 $self->update_deleted_transcripts($new_trs,$old_trs);
+		  }
+		  my $new_exons=$gene->get_all_Exons;
+		  my $old_exons;
+		  my $new_exon_count=@$new_exons;
+		  my $old_exon_count;
+		  $old_exons=$db_gene->get_all_Exons;
+		  $old_exon_count=@$old_exons;
+		  if ($old_exon_count > $new_exon_count) {
+			 $self->update_deleted_exons($new_exons,$old_exons);
+		  }
+		}
+		print STDOUT "\nChanged gene:".$gene->stable_id." Current Version:".$gene->version." changes stored successfully in db\n";
+		
+	 }
+  }
+  if ($gene_changed == 0) {
+	 $self->db->rollback_to_savepoint;
+	 print STDOUT "\nTrying to store an Unchanged gene:".$gene->stable_id." Version:".$gene->version." nothing written in db\n";
+  }
+  if ($gene_changed == 2) {
+	 print STDOUT "\nNew gene:".$gene->stable_id." Version:".$gene->version." stored successfully in db\n";
+  }
+  if ($gene_changed == 3) {
+	 print STDOUT "\nRestored gene:".$gene->stable_id." Version:".$gene->version." restored successfully in db\n";
+  }
+  if ($gene_changed == 5) {
+	 print STDOUT "\nDeleted gene:".$gene->stable_id." Version:".$gene->version." deleted successfully in db\n";
+  }
+}
 
 sub add_gene_synonym{
 
