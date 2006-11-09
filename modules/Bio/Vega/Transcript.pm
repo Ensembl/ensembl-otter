@@ -174,7 +174,7 @@ sub hashkey {
   my $evidence_count=0;
   ##should transcript_class_name be added??
   if (defined $evidence) {
-	 $evidence_count=@$evidence;
+	 $evidence_count= scalar(@$evidence);
   }
 
   my ($msNF,$meNF,$csNF,$ceNF,$tn);
