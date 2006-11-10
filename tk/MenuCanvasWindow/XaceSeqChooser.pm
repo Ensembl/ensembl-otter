@@ -977,6 +977,7 @@ sub close_all_edit_windows {
     my( $self ) = @_;
     
     $self->close_all_subseq_edit_windows or return;
+    $self->close_all_clone_edit_windows or return;
     $self->close_GenomicFeatures;
     return 1;
 }
@@ -1683,6 +1684,18 @@ sub edit_Clone {
     my $top = $cew->top;
     $top->deiconify;
     $top->raise;
+}
+
+sub close_all_clone_edit_windows {
+    my ($self) = @_;
+    
+    if (my $cew_hash = $self->{'_clone_edit_window'}) {
+        foreach my $win (values %$cew_hash) {
+            $win->close_window or return;
+        }
+    }
+    
+    return 1;
 }
 
 sub Assembly {

@@ -79,10 +79,10 @@ sub initialise {
         -label      => 'Properties',
         -labelside  => 'acrosstop',
         -border     => 3,
-        )->pack(@frame_pack);
+        )->pack(@frame_pack, -expand => 1, -fill => 'both' );
     
     $self->keyword_text(
-        $self->make_labelled_text_widget($edit_frame, 'Keywords: ',     16)
+        $self->make_labelled_text_widget($edit_frame, "Keywords: \n(one per\nline)",     16, -expand => 1, -fill => 'y')
         );
     $self->description_text(
         $self->make_labelled_text_widget($edit_frame, 'Description: ',   8)
@@ -106,14 +106,15 @@ sub initialise {
         -text       => 'Close',
         -command    => $close_window,
         )->pack( -side => 'right' );
-    $top->bind('<Control-s>', $close_window);
-    $top->bind('<Control-S>', $close_window);
+    $top->bind('<Control-w>', $close_window);
+    $top->bind('<Control-W>', $close_window);
     $top->protocol('WM_DELETE_WINDOW', $close_window);
     
     $top->bind('<Destroy>', sub{ my $self = undef });
     
     $self->fill_Entries;
     $self->fill_Properties;
+    $self->set_minsize;
 }
 
 sub fill_Properties {
@@ -121,7 +122,9 @@ sub fill_Properties {
 
     my ($clone) = $self->Clone
       or confess "No clone attached";
-      
+    
+    warn "Filling with:\n", $clone->ace_string;
+    
     my $key = $self->keyword_text;
     $key->delete('1.0', 'end');
     $key->insert('end', join '', map("$_\n", $clone->get_all_keywords));
@@ -136,12 +139,12 @@ sub fill_Properties {
 }
 
 sub make_labelled_text_widget {
-    my( $self, $widget, $name, $height ) = @_;
+    my( $self, $widget, $name, $height, @fill ) = @_;
     
     my $std_border = 3;
     my $frame = $widget->Frame(
         -border => $std_border,
-        )->pack(-anchor => 'ne');
+        )->pack( -anchor => 'ne', @fill );
 
     my $text = $frame->Scrolled('Text',
         -scrollbars         => 'e',
@@ -150,18 +153,20 @@ sub make_labelled_text_widget {
         -exportselection    => 1,
         -background         => 'white', ### Add to Tk defaults
         -wrap               => 'word',
-        )->pack( -side => 'right' );
+        )->pack( -side => 'right', @fill );
 
     my $tw = $text->Subwidget('text');
     $tw->bind(ref($tw), '<Key>', '');
     $tw->bind("<Key>", [\&insert_char, Tk::Ev('A')]);
 
     $frame->Label(
-        -text   => $name,
-        -anchor => 'n',
+        -text       => $name,
+        -anchor     => 'ne',
+        -justify    => 'right',
         )->pack(
             -side   => 'right',
             -fill   => 'y',
+            @fill,
             );
     
     return $text;
@@ -171,9 +176,8 @@ sub xace_save {
     my ($self) = @_;
     
     if (my $clone = $self->get_new_Clone_if_changed) {
-        return $self->xace_save_Clone($clone);
-    } else {
-        return;
+        $self->xace_save_Clone($clone);
+        $self->fill_Properties;
     }
 }
 
@@ -182,10 +186,13 @@ sub xace_save_Clone {
     
     my $ace = $clone->ace_string;
     
-    my $xr = $self->XaceSeqChooser->xace_remote
-      or $self->top->Message(
-        -text => 'No xace attached'
+    my $xr = $self->XaceSeqChooser->xace_remote;
+    unless ($xr) {
+        $self->top->Message(
+            -text => 'No xace attached',
         );
+        return;
+    }
 
     print STDERR "Sending:\n$ace";
     $xr->load_ace($ace);
@@ -193,6 +200,8 @@ sub xace_save_Clone {
     
     $self->XaceSeqChooser->Assembly->replace_Clone($clone);
     $self->Clone($clone);
+    
+    return 1;
 }
 
 sub close_window {
@@ -243,8 +252,8 @@ sub get_new_Clone_if_changed {
     }
     
     if ($old->ace_string ne $new->ace_string) {
-        printf STDERR "\nOLD: <%s>\n\nNEW: <%s>\n\n",
-            $old->ace_string, $new->ace_string;
+        #printf STDERR "\nOLD: <%s>\n\nNEW: <%s>\n\n",
+        #    $old->ace_string, $new->ace_string;
         return $new;
     } else {
         return;
