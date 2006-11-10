@@ -123,8 +123,6 @@ sub fill_Properties {
     my ($clone) = $self->Clone
       or confess "No clone attached";
     
-    warn "Filling with:\n", $clone->ace_string;
-    
     my $key = $self->keyword_text;
     $key->delete('1.0', 'end');
     $key->insert('end', join '', map("$_\n", $clone->get_all_keywords));
