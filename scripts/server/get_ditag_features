@@ -72,7 +72,7 @@ if($mdba) {
 } else {
     my $original_slice = get_slice($sq, $sdba, $pipehead);
 
-    my $dfs = $original_slice->get_all_DitagFeatures($ditype, $analysis);
+    $dfs = $original_slice->get_all_DitagFeatures($ditype, $analysis);
 }
 
 server_log("Total of ".scalar(@$dfs).($ditype ? " <$ditype>":'').($analysis ? " {$analysis}":'')." ditag features found");
