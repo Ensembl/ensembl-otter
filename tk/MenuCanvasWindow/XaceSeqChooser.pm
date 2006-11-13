@@ -1691,6 +1691,7 @@ sub close_all_clone_edit_windows {
     
     if (my $cew_hash = $self->{'_clone_edit_window'}) {
         foreach my $win (values %$cew_hash) {
+            next unless $win;   # Already closed
             $win->close_window or return;
         }
     }
