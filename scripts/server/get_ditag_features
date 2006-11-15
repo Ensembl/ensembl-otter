@@ -81,6 +81,12 @@ my $output_string = '';
 
     # Stringify only the simple fields:
 my %do_seen = (); # collect the seen ditag object ids here
+
+    # The following bug-circumventing block of code can be removed after EnsEMBL rel.42.
+    # It fixes the pair id for ensembl pre-42 releases (with ambiguous pair_id):
+my %last_feature_id_in_pair = ();   # keeps the last feature_id seen in a pair
+my %last_pair_id = ();              # keeps the last pair_id seen for the ditag_id
+
 foreach my $df (@$dfs) {
 
     my $do = $df->ditag(); # object
@@ -97,6 +103,17 @@ foreach my $df (@$dfs) {
 
         $do_seen{$do_id}++;
     }
+
+        # The following bug-circumventing block of code can be removed after EnsEMBL rel.42.
+    my $current_feature_id  = $df->dbID;
+    my $last_feature_id = $last_feature_id_in_pair{$do_id};
+    if( $last_feature_id
+     && (($current_feature_id - $last_feature_id)>1) ) { # open a new 'cluster'
+        $last_pair_id{$do_id}++;
+    }
+    $df->ditag_pair_id( $last_pair_id{$do_id} );
+    $last_feature_id_in_pair{$do_id} = $current_feature_id;
+
     
         # output a ditag feature line:
     my @df_optvalues = ('DitagFeature');
