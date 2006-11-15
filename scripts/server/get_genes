@@ -65,7 +65,12 @@ if($mdba) {
                 $target_transcript->slice($projected_slice_on_mapper);
             }
             $target_gene->slice($projected_slice_on_mapper);
-            push @$genes, $target_gene->transform($cs, $csver);
+
+            if(my $transferred = $target_gene->transfer($original_slice_on_mapper) ) {
+                push @$genes, $transferred;
+            } else {
+                server_log("Could not transfer gene id=".$target_gene->dbID()." onto {$cs:$csver}");
+            }
         }
     }
 
