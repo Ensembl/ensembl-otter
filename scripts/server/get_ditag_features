@@ -59,12 +59,10 @@ if($mdba) {
 
             $target_df->slice($projected_slice_on_mapper);
 
-            # if( my $transformed = $target_df->transform($cs, $csver) ) {
-            #   push @$dfs, $transformed;
             if( my $transferred = $target_df->transfer($original_slice_on_mapper) ) {
                 push @$dfs, $transferred;
             } else {
-                server_log("Could not transform ditag_feature #".$target_df->dbID()." onto {$cs:$csver}");
+                server_log("Could not transfer ditag_feature id=".$target_df->dbID()." onto {$cs:$csver}");
             }
         }
     }
