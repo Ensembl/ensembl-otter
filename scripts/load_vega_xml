@@ -2,7 +2,7 @@
 
 =head1 DESCRIPTION
 
-test_vega_xml_parser -dataset xxx -assembly 'yes|no' -xml filename
+load_vega_xml -dataset xxx -assembly 'yes|no' -xml filename
 
 =head1 OPTIONS
 
@@ -27,20 +27,15 @@ use Bio::EnsEMBL::Pipeline::SeqFetcher::Finished_Pfetch;
 use Data::Dumper;
 
 my ($dataset_name,$xmlfile,$assembly);
-#my $usage = sub { exec('perldoc', $0) };
+
 Bio::Otter::Lace::Defaults::do_getopt(
-	#											  'h|help'   => $usage,
 												  'dataset=s' => \$dataset_name,
 												  'xml=s'  => \$xmlfile,
 												  'assembly=s' => \$assembly,
 												 ) ;
-if ( !defined $dataset_name ){
+if ( !defined $dataset_name || !defined $assembly){
   Bio::Otter::Lace::Defaults::show_help();
 }
-
-#if ($help || !defined ($host) || !defined($port) ||!defined($xmlfile) || !defined($assembly) ) {
- # exec('perldoc', $0);
-#}
 
 if ($assembly !~ /yes|no/ ) {
   die "assembly value should be 'yes' or 'no' as a string value, yes indicates loading of assembly\nassembly:$assembly";
@@ -208,9 +203,9 @@ sub SimpleFeature_key {
 
 __END__
 
-=head1 NAME - test_vega_xml_parser
+=head1 NAME - load_vega_xml
 
 =head1 AUTHOR
 
-James Gilbert B<email> jgrg@sanger.ac.uk
+Sindhu K. Pillai B<email> sp1@sanger.ac.uk
 
