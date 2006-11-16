@@ -1,0 +1,216 @@
+#!/usr/local/bin/perl -w
+
+=head1 DESCRIPTION
+
+test_vega_xml_parser -dataset xxx -assembly 'yes|no' -xml filename
+
+=head1 OPTIONS
+
+-dataset somedatasetname
+
+-xml input otter xml file to be parsed
+
+-assembly 'yes' | 'no' (yes loads only assembly data, i.e., populates seq_region,assembly,seq_region_attrib,contig_info,contig_attrib tables only; 'no' loads genes and its components and simple features)
+basically to load a comple assembly with gene and its components, the script with the xml file has to be run twice, first with assembly 'yes' and then with assembly 'no'
+
+
+
+=cut
+
+use strict;
+
+use Bio::Vega::Transform::Otter;
+use Bio::Vega::DBSQL::DBAdaptor;
+use Bio::EnsEMBL::Slice;
+use Bio::Otter::Lace::Defaults;
+use Bio::EnsEMBL::Pipeline::SeqFetcher::Finished_Pfetch;
+use Data::Dumper;
+
+my ($dataset_name,$xmlfile,$assembly);
+#my $usage = sub { exec('perldoc', $0) };
+Bio::Otter::Lace::Defaults::do_getopt(
+	#											  'h|help'   => $usage,
+												  'dataset=s' => \$dataset_name,
+												  'xml=s'  => \$xmlfile,
+												  'assembly=s' => \$assembly,
+												 ) ;
+if ( !defined $dataset_name ){
+  Bio::Otter::Lace::Defaults::show_help();
+}
+
+#if ($help || !defined ($host) || !defined($port) ||!defined($xmlfile) || !defined($assembly) ) {
+ # exec('perldoc', $0);
+#}
+
+if ($assembly !~ /yes|no/ ) {
+  die "assembly value should be 'yes' or 'no' as a string value, yes indicates loading of assembly\nassembly:$assembly";
+}
+
+##create a parser and parse the xmlfile and create vega objects
+my $parser = Bio::Vega::Transform::Otter->new;
+
+$parser->Assembly($assembly);
+$parser->parsefile($xmlfile);
+
+
+##create a db handle
+my $cl = Bio::Otter::Lace::Defaults::make_Client();
+my $ds = $cl->get_DataSet_by_name($dataset_name);
+my $db = $ds->make_Vega_DBAdaptor;
+warn "\nConnecting to host:".$db->dbc->host." port:".$db->dbc->port." database:".$db->dbc->dbname." as user:".$db->dbc->username;
+my $aname=$cl->author();
+my $aemail=$cl->email();
+my $clauthor;
+if ( defined $aname && defined $aemail){
+  $clauthor=Bio::Otter::Author->new;
+  $clauthor->email($aemail);
+  $clauthor->name($aname);
+}
+
+##Let begin a transaction and do all the database changes within a transaction
+$db->begin_work();
+eval{
+  if ($assembly eq 'yes') {
+	 eval {
+		my $pfetch         ||= Bio::EnsEMBL::Pipeline::SeqFetcher::Finished_Pfetch->new;
+		my $pfetch_archive ||= Bio::EnsEMBL::Pipeline::SeqFetcher::Finished_Pfetch->new(
+																												  -PFETCH_PORT => 23100,);
+		$parser->LoadAssemblySlices($db,$pfetch,$pfetch_archive,$clauthor);
+	 };
+	 if ($@){
+		die "problem with loading of Assembly\n$@\n";
+		$db->rollback;
+		
+	 }
+  }
+  else {
+	 ##Load genes,transcripts,translations,exons from XML - takes care of versioning
+	 ##if there is a change in gene and its components then the version is incremented otherwise, not
+	 my $genes=$parser->get_Genes;
+	 my $gene_adaptor=$db->get_GeneAdaptor;
+	 foreach my $gene (@$genes){
+		eval{
+		if (defined $gene->gene_author->name && ! defined $gene->gene_author->email){
+		  die "gene author name set but not email";
+		}
+		if (!defined $gene->gene_author->name && defined $gene->gene_author->email){
+		  die "gene author name not set but email is set";
+		}
+		unless ($gene->gene_author->name && $gene->gene_author->email) {
+		  $gene->gene_author->name($clauthor->name);
+		  $gene->gene_author->email($clauthor->email);
+		  warn "gene author not set and setting author to client author\n";
+		}
+		my $transcripts = $gene->get_all_Transcripts ;
+      foreach my $tran (@$transcripts){
+		  if (defined $tran->transcript_author->name && ! defined $tran->transcript_author->email){
+			 die "transcript author name set but not email";
+		  }
+		  if (!defined $tran->transcript_author->name && defined $tran->transcript_author->email){
+			 die "transcript author name not set but email is set";
+		  }
+		  unless ($tran->transcript_author->name && $tran->transcript_author->email) {
+			 $tran->transcript_author->name($clauthor->name);
+			 $tran->transcript_author->email($clauthor->email);
+			 warn "transcript author not set and setting author to client author\n";
+		  }
+		}
+		};
+		if ($@){
+		  die "problem with loading of genes\n$@\n";
+		  $db->rollback;
+		}
+		eval {
+		  $gene_adaptor->store($gene);
+		};
+		if ($@){
+		  die "problem with loading of genes\n$@\n";
+		  $db->rollback;
+		}
+	 }
+	 ##Load SimpleFeatures - deletes old features(features not in xml) and stores the current features in XML
+	 my $simple_features=$parser->get_SimpleFeatures;
+	 my $sfa=$db->get_SimpleFeatureAdaptor;
+	 my $chr_slice=$parser->get_ChromosomeSlice;
+	 # my $new_slice=$parser->get_SliceId($chr_slice,$db);
+	 my $new_slice=$parser->get_ChromosomeSliceDB($db);
+	 my $db_features=$sfa->fetch_all_by_Slice($new_slice);
+	 my ($delete,$save)=compare_feature_sets($db_features,$simple_features);
+	 foreach my $del_feat (@$delete){
+		$sfa->remove($del_feat);
+	 }
+	 foreach my $new_feat (@$save){
+		$new_feat->slice($new_slice);
+		eval{
+		  $sfa->store($new_feat);
+		};
+		if ($@){
+		  die "problem with loading of simplefeatures\n$@\n";
+		  $db->rollback;
+
+		}
+		
+	 }
+  }
+  $db->commit;
+  print STDOUT "\nCommitted all session data from XML in database\n";
+};
+if ($@) {
+  print STDERR "\nError saving genes from file: Rolled back all data of this session - Please correct errors\n".$@;
+  $db->rollback;
+}
+
+
+
+$parser->DESTROY;
+warn "\nParser now out of scope\n";
+
+
+=head4 SUBROUTINES
+
+=cut
+
+sub compare_feature_sets {
+  my( $old_features, $new_features ) = @_;
+  my %old = map {SimpleFeature_key($_), $_} @$old_features;
+  my %new = map {SimpleFeature_key($_), $_} @$new_features;
+  # Features that were in the old, but not the new, should be deleted
+  my $delete = [];
+  while (my ($key, $old_sf) = each %old) {
+	 unless ($new{$key}) {
+		push(@$delete, $old_sf);
+	 }
+  }
+  # Features that are in the new but were not in the old should be saved
+  my $save = [];
+  while (my ($key, $new_sf) = each %new) {
+	 unless ($old{$key}) {
+		push(@$save, $new_sf);
+	 }
+  }
+  return($delete, $save);
+}
+
+sub SimpleFeature_key {
+  my( $sf ) = @_;
+  return join('^',
+				  $sf->analysis->logic_name,
+				  $sf->seq_region_start,
+				  $sf->seq_region_end,
+				  $sf->seq_region_strand,
+				  # sprintf ensures that 0.5 and 0.5000 become the same string
+				  sprintf('%g', $sf->score),
+				  $sf->display_label || '',
+				 );
+}
+
+1;
+
+__END__
+
+=head1 NAME - test_vega_xml_parser
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
