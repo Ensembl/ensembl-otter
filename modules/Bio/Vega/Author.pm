@@ -8,7 +8,7 @@ use base qw(Bio::EnsEMBL::Storable);
 
 sub new {
   my($class,@args) = @_;
-  my $self = bless {}, $class;
+  my $self = $class->SUPER::new(@args);
   my ($name,$email,$group)  = rearrange([qw(
 														  NAME
 														  EMAIL

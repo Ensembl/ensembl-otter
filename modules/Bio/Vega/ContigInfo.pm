@@ -7,7 +7,7 @@ use base qw(Bio::EnsEMBL::Storable);
 
 sub new {
   my($class,@args) = @_;
-  my $self = bless {}, $class;
+  my $self = $class->SUPER::new(@args);
   my ($slice,$author,$attributes)  =
         rearrange([qw(SLICE AUTHOR ATTRIBUTES)],@args);
   $self->slice($slice);
