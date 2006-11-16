@@ -1,4 +1,3 @@
-
 ### Bio::Vega::Transform::Otter
 
 package Bio::Vega::Transform::Otter;
@@ -685,7 +684,7 @@ sub LoadAssemblySlices {
 ##current sequence-set and the sequence set specified in the replace option
 ##update chromosome length
 
-  my ($self,$db,$pfetch,$pfetch_archive)= @_;
+  my ($self,$db,$pfetch,$pfetch_archive,$author)= @_;
   eval {
 	 $db->begin_work();
 	 my $dbc= $db->dbc();
@@ -707,7 +706,7 @@ sub LoadAssemblySlices {
 		##insert contig_info and attributes
 		my $ctg_attrib_list=$piece->[2];
 		my $ctg_author=$piece->[3];
-		my $ctg_info_id = $self->insert_ContigInfo_Attributes($db,$ctg_author,$new_slice,$ctg_attrib_list);
+		my $ctg_info_id = $self->insert_ContigInfo_Attributes($db,$ctg_author,$new_slice,$author,$ctg_attrib_list);
 		
 	 }
 	 my $cln_ctg = $slice->{'cln_ctg'};
@@ -733,10 +732,10 @@ sub LoadAssemblySlices {
 }
 
 sub insert_ContigInfo_Attributes {
-  my ($self,$db,$ctg_author,$ctg_slice,$ctg_attrib_list)=@_;
+  my ($self,$db,$ctg_author,$ctg_slice,$author,$ctg_attrib_list)=@_;
   my $dbc= $db->dbc();
   my $ca=$db->get_ContigInfoAdaptor();
-  my $contig_info=$self->make_ContigInfo($ctg_slice,$ctg_author,$ctg_attrib_list);
+  my $contig_info=$self->make_ContigInfo($ctg_slice,$ctg_author,$author,$ctg_attrib_list);
   $ca->store($contig_info);
 }
 
@@ -944,11 +943,22 @@ sub make_Attribute{
 }
 
 sub make_ContigInfo{
-  my ($self,$ctg_slice,$author,$attributes) = @_;
+  my ($self,$ctg_slice,$ctg_author,$author,$attributes) = @_;
+  if (defined $ctg_author->name && ! defined $ctg_author->email){
+	 die "contig author name set but not email";
+  }
+  if (!defined $ctg_author->name && defined $ctg_author->email){
+	 die "contig author name not set but email is set";
+  }
+  unless ($ctg_author->name && $ctg_author->email) {
+	 $ctg_author->name($author->name);
+	 $ctg_author->email($author->email);
+	 warn "contig author not set and setting author to client author\n";
+  }
   my $ctg_info = Bio::Vega::ContigInfo->new
 	 (
 	  -slice => $ctg_slice,
-	  -author => $author,
+	  -author => $ctg_author,
 	  -attributes => $attributes
 	 );
   return $ctg_info;

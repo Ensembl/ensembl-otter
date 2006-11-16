@@ -10,17 +10,14 @@ use base qw(Bio::EnsEMBL::Storable);
 
 sub new {
   my($class,@args) = @_;
+  my $self = $class->SUPER::new(@args);
 
-  my $self = bless {}, $class;
-
-  my ($dbid,$contig_id,$author,$timestamp,$hostname)  = rearrange([qw(
-																					 DBID
+  my ($contig_id,$author,$timestamp,$hostname)  = rearrange([qw(
 																					 CONTIG_ID
 																					 AUTHOR
 																					 TIMESTAMP
 																					 HOSTNAME
 																					)],@args);
-  $self->dbID($dbid);
   $self->contig_id($contig_id);
   $self->author($author);
   $self->timestamp($timestamp);
