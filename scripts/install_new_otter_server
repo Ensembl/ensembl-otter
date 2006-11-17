@@ -16,7 +16,9 @@ my $method = 'checkout'; # || 'export'
 my $otter_tagfile = 'CVS_TAG_otter';
 my $ensembl_tagfile = 'CVS_TAG_ensembl';
 
-my $biolocation = '/nfs/disk100/humpub/data/dist';
+my $gzlocation = '/nfs/disk100/humpub/data/dist';
+
+my @gzpacks = ('bioperl-0.7.2', 'biodas-1.02');
 
 my @cvs_locations = (
 	[":ext:${user}\@cvs.sanger.ac.uk:/cvsroot/ensembl", $method,
@@ -44,8 +46,8 @@ foreach my $cvs_location (@cvs_locations) {
 	system('cvs', '-d', @$cvs_location);
 }
 
-for my $biodir ('bioperl-0.7.2') {
-    system('cp', $biolocation.'/'.$biodir.'.tar.gz', '.');
+for my $biodir (@gzpacks) {
+    system('cp', $gzlocation.'/'.$biodir.'.tar.gz', '.');
     system('gunzip', $biodir.'.tar.gz');
     system('tar', '-xvf', $biodir.'.tar');
     system('rm', $biodir.'.tar');
