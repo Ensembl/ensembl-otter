@@ -1,0 +1,132 @@
+#!/usr/local/bin/perl -w
+
+### Author ck1@sanger.ac.uk
+### get_exon_seqs_of_otter_transSID
+
+use strict;
+use Bio::Otter::Lace::Defaults;
+
+my ($dataset, $cds_only, $all_exons, $flank_left, $flank_right, $infile);
+
+my $help = sub { exec('perldoc', $0) };
+
+Bio::Otter::Lace::Defaults::do_getopt('ds|dataset=s' => \$dataset,    # eg, human or mouse or zebrafish
+									  'all-exons'    => \$all_exons,  # output seqs for all exons
+									  'cds-only'     => \$cds_only,   # output seqs CDSes only
+									  'left=i'       => \$flank_left, # number of left flank bp
+									  'right=i'      => \$flank_right,# number of right flank bp
+									  'file=s'       => \$infile      # file with gene stable id (one each line)
+									 );
+
+$help->() unless ( $dataset and $flank_left and $flank_right and ($cds_only or $all_exons) and $infile);
+
+my $client   = Bio::Otter::Lace::Defaults::make_Client();
+my $dset     = $client->get_DataSet_by_name($dataset);
+my $otter_db = $dset->get_cached_DBAdaptor;
+my $sliceAd  = $otter_db->get_SliceAdaptor;
+my $geneAd   = $otter_db->get_GeneAdaptor;
+my $geneSID_list;
+
+if ( $infile ){
+  open(FH, "$infile") or die $!;
+  while (<FH>){
+	chomp;
+	push(@$geneSID_list, $_);
+  }
+}
+
+foreach my $gsid ( @$geneSID_list ){
+  my $gsidref = [$gsid];
+  my $locator = $client->find_string_match_in_clones($dataset, $gsidref)->[0];
+
+  my $asm_type = $locator->assembly;
+  $otter_db->assembly_type($asm_type);
+
+  my $gene = $geneAd->fetch_by_stable_id($gsid);
+  my $slice = $sliceAd->fetch_by_gene_stable_id($gsid, 200);
+
+  print $gene->stable_id, ": ", scalar @{$gene->get_all_Transcripts}, " transcripts\n\n";
+
+  foreach my $trans ( @{$gene->get_all_Transcripts} ) {
+
+	my $transSID = $trans->stable_id;
+
+	if ( $cds_only ) {
+	  if ( ! $trans->translation ) {
+		print $trans->stable_id, ": no translation available\n";
+	  }
+	  else {
+		print_exon_seq($transSID, 'CDS only', $trans, $gene, "get_all_translateable_Exons");
+	  }
+	}
+
+	if ( $all_exons ) {
+	  print_exon_seq($transSID, 'ALL exons', $trans, $gene, "get_all_Exons");
+	}
+  }
+}
+
+
+#-----------------------------
+#        subroutines
+#-----------------------------
+
+sub print_exon_seq {
+
+  # $mode: 'CDS only' or 'ALL exons'
+  my ($transSID, $mode, $trans, $gene, $method) = @_;
+
+  print "[$transSID: $mode]\n";
+  foreach my $exon ( @{$trans->$method} ) {
+
+	my ($exon_seq, $ori_len) = sixty_cols($exon->seq->seq);
+	printf(">%s\t%s\t%s\t%d\n%s\n", $exon->stable_id, $gene->stable_id, $gene->gene_info->name->name, $ori_len, $exon_seq);
+
+	if ( $flank_left and $flank_right ) {
+	  my ($flanked_seq, $new_len) = add_flank_seqs($exon, $ori_len, $flank_left, $flank_right);
+	  printf(">%s\t%s\t%s\t%d\n%s\n", $exon->stable_id, $gene->stable_id, $gene->gene_info->name->name, $new_len, $flanked_seq);
+	}
+  }
+  print "\n";
+}
+
+sub add_flank_seqs {
+  my ($exon, $ori_len, $flank_left, $flank_right) = @_;
+
+  $exon->start($exon->start - 100);
+  $exon->end($exon->end + 100 );
+
+  format_seq($ori_len, $exon->seq->seq, $flank_left, $flank_right);
+}
+
+sub format_seq {
+
+  my ($ori_len, $seq, $flant_left, $flank_right) = @_;
+
+  $seq = join('', split(/\n/, $seq));
+
+  my $flant_left_seq  = lc( substr($seq, 0, $flant_left) );
+  my $flank_right_seq = lc( substr($seq, -$flank_right, $flank_right) );
+
+  my $mid_seq  = substr($seq, $flant_left, $ori_len);
+
+  sixty_cols($flant_left_seq . $mid_seq . $flank_right_seq);
+
+}
+
+sub sixty_cols {
+
+  my $seq  = shift;
+  my $ori_len = length($seq);
+  my $format_seq;
+
+  while ($seq =~ /(.{1,60})/g) {
+	$format_seq .= $1 . "\n";
+  }
+  chomp $format_seq;
+
+  return ($format_seq, $ori_len);
+}
+
+
+__END__	
