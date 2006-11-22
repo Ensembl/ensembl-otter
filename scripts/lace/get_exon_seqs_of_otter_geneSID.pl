@@ -1,7 +1,7 @@
 #!/usr/local/bin/perl -w
 
 ### Author ck1@sanger.ac.uk
-### get_exon_seqs_of_otter_transSID
+### get_exon_seqs_of_otter_geneSID
 
 use strict;
 use Bio::Otter::Lace::Defaults;
@@ -127,6 +127,32 @@ sub sixty_cols {
 
   return ($format_seq, $ori_len);
 }
+
+=head1 NAME - get_exon_seqs_of_otter_geneSID
+
+=head1 SYNOPSIS
+
+eg, ./get_exon_seqs_of_otter_geneSID -ds human -cds-only -left 100 -right 100 -all-exons -file genelist_human
+
+
+=head1 DESCRIPTION
+
+Output individual exon sequence of a gene
+
+-all-exons: including UTRs
+
+-cds-only: CDSes
+
+-left /-right: bp of flank (the flanking seqs are lowercased)
+
+-file: filename with OTTIDs one per line
+
+=head1 AUTHOR
+
+Chao-Kung Chen B<email> ck1@sanger.ac.uk
+
+
+
 
 
 __END__	
