@@ -3,6 +3,8 @@ package Bio::Otter::ServerSide;
 use strict;
 use Exporter;
 
+use OtterDefs;
+use Bio::Otter::ServerQuery;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::Otter::DBSQL::DBAdaptor;
 use Bio::Vega::DBSQL::DBAdaptor;
@@ -21,6 +23,7 @@ our @EXPORT_OK = qw(
                     &odba_to_sdba
                     &get_mapper_dba
                     &get_slice
+                    &fetch_mapped_features
                     &get_Author_from_CGI
                     &get_DBAdaptor_from_CGI_species
                     );
@@ -32,6 +35,7 @@ our %EXPORT_TAGS = (all => [qw(
                                odba_to_sdba
                                get_mapper_dba
                                get_slice
+                               fetch_mapped_features
                                get_Author_from_CGI
                                get_DBAdaptor_from_CGI_species 
                                )
@@ -292,6 +296,70 @@ sub get_slice { # codebase-independent version for scripts
     }
 
     return $slice;
+}
+
+sub fetch_mapped_features {
+    my ($sq, $pipehead, $feature_name, $call_parms) = @_;
+
+    my $fetching_method = shift @$call_parms;
+
+    my $cs       = $sq->getarg('cs')      || 'chromosome';
+    my $csver    = $sq->getarg('csver')   || undef;
+    my $metakey  = $sq->getarg('metakey') || ''; # defaults to pipeline
+
+    my $odba = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
+    my $sdba = odba_to_sdba($sq, $odba, $pipehead, $metakey);
+
+    my ($mdba, $sdba_asm) = get_mapper_dba($sq, $odba, $sdba, $pipehead);
+
+    my $features = [];
+
+    if($mdba) {
+        my $original_slice_on_mapper = get_slice($sq, $mdba, $pipehead);
+        my $proj_segments_on_mapper = $original_slice_on_mapper->project( $cs, $sdba_asm );
+
+        my $sa_on_target = $sdba->get_SliceAdaptor();
+
+        foreach my $segment (@$proj_segments_on_mapper) {
+            my $projected_slice_on_mapper = $segment->to_Slice();
+
+            my $target_slice_on_target = $sa_on_target->fetch_by_region(
+                $projected_slice_on_mapper->coord_system()->name(),
+                $projected_slice_on_mapper->seq_region_name(),
+                $projected_slice_on_mapper->start(),
+                $projected_slice_on_mapper->end(),
+                $projected_slice_on_mapper->strand(),
+                $projected_slice_on_mapper->coord_system()->version(),
+            );
+
+            my $target_fs_on_target_segment
+                = $target_slice_on_target->$fetching_method(@$call_parms);
+
+            server_log('***** : '.scalar(@$target_fs_on_target_segment).' ${feature_name}s found on the slice');
+
+            foreach my $target_feature (@$target_fs_on_target_segment) {
+
+                if($target_feature->can('propagate_slice')) {
+                    $target_feature->propagate_slice($projected_slice_on_mapper);
+                } else {
+                    $target_feature->slice($projected_slice_on_mapper);
+                }
+
+                if( my $transferred = $target_feature->transfer($original_slice_on_mapper) ) {
+                    push @$features, $transferred;
+                } else {
+                    server_log("Could not transfer $feature_name id=".$target_feature->dbID()." onto {$cs:$csver}");
+                }
+            }
+        }
+
+    } else {
+        my $original_slice = get_slice($sq, $sdba, $pipehead);
+
+        $features = $original_slice->$fetching_method(@$call_parms);
+    }
+
+    return $features;
 }
 
 sub get_Author_from_CGI{

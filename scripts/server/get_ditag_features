@@ -3,8 +3,6 @@
 my $pipehead = $ENV{PIPEHEAD}; # is set by the server for any GET request
 
 use strict;
-use OtterDefs;
-use Bio::Otter::ServerQuery;
 use Bio::Otter::ServerSide (':all');
 use Bio::Otter::Lace::ViaText ('%OrderOfOptions');
 
@@ -19,61 +17,16 @@ if(!$pipehead) {
     error_exit($sq, "This kind of data is only available from new API databases. Set pipehead to 1");
 }
 
-my $cs       = $sq->getarg('cs')      || 'chromosome';
-my $csver    = $sq->getarg('csver')   || 'Otter';
-my $metakey  = $sq->getarg('metakey') || ''; # defaults to pipeline
 my $analysis = $sq->getarg('analysis');
 my $ditype   = $sq->getarg('ditype');
 
-my $odba = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
-my $sdba = odba_to_sdba($sq, $odba, $pipehead, $metakey);
+my $dfs = fetch_mapped_features($sq, $pipehead, 'ditag_feature', 
+            ['get_all_DitagFeatures', $ditype, $analysis] );
 
-my ($mdba, $sdba_asm) = get_mapper_dba($sq, $odba, $sdba, $pipehead);
-
-my $dfs = [];
-
-if($mdba) {
-    my $original_slice_on_mapper = get_slice($sq, $mdba, $pipehead);
-    my $proj_segments_on_mapper = $original_slice_on_mapper->project( $cs, $sdba_asm );
-
-    my $sa_on_target = $sdba->get_SliceAdaptor();
-
-    foreach my $segment (@$proj_segments_on_mapper) {
-        my $projected_slice_on_mapper = $segment->to_Slice();
-
-        my $target_slice_on_target = $sa_on_target->fetch_by_region(
-            $projected_slice_on_mapper->coord_system()->name(),
-            $projected_slice_on_mapper->seq_region_name(),
-            $projected_slice_on_mapper->start(),
-            $projected_slice_on_mapper->end(),
-            $projected_slice_on_mapper->strand(),
-            $projected_slice_on_mapper->coord_system()->version(),
-        );
-
-        my $target_dfs_on_target_segment
-            = $target_slice_on_target->get_all_DitagFeatures($ditype, $analysis);
-
-        server_log('***** : '.scalar(@$target_dfs_on_target_segment).' found on the slice');
-
-        foreach my $target_df (@$target_dfs_on_target_segment) {
-
-            $target_df->slice($projected_slice_on_mapper);
-
-            if( my $transferred = $target_df->transfer($original_slice_on_mapper) ) {
-                push @$dfs, $transferred;
-            } else {
-                server_log("Could not transfer ditag_feature id=".$target_df->dbID()." onto {$cs:$csver}");
-            }
-        }
-    }
-
-} else {
-    my $original_slice = get_slice($sq, $sdba, $pipehead);
-
-    $dfs = $original_slice->get_all_DitagFeatures($ditype, $analysis);
-}
-
-server_log("Total of ".scalar(@$dfs).($ditype ? " <$ditype>":'').($analysis ? " {$analysis}":'')." ditag features found");
+server_log("Total of ".scalar(@$dfs)
+          .($ditype ? " <$ditype>":'')
+          .($analysis ? " {$analysis}":'')
+          ." ditag features found");
 
 my @df_optnames = @{ $OrderOfOptions{DitagFeature} };
 my @do_optnames = @{ $OrderOfOptions{DitagObject} };
