@@ -5,6 +5,7 @@ package MenuCanvasWindow::GenomicFeatures;
 use strict;
 use base 'MenuCanvasWindow';
 use Tk::NoPasteEntry;
+use Hum::Ace::SeqFeature::Simple;
 
 my %signal_info = (
     'polyA_signal' => {
@@ -200,9 +201,27 @@ sub stored_ace_dump {
     return $self->{_sad};
 }
 
+sub Methods {
+    my ($self) = @_;
+    
+    my $feat_meths;
+    unless ($feat_meths = $self->{'_Method_objects'}) {
+        $feat_meths = $self->{'_Method_objects'} = [];
+        my $collection = $self->XaceSeqChooser->AceDatabase->get_default_MethodCollection;
+        foreach my $method (@{$collection->get_all_Methods}) {
+            # We want all the methods that are editable
+            # but are not transcript methods.
+            if ($method->mutable and ! $method->transcript_type) {
+                push @$feat_meths, $method;
+            }
+        }
+    }
+    return @$feat_meths;
+}
 
 # -------------[create ace representation]---------------------
 
+### This is a bit nasty. We have data code mixed up in the interface.
 sub ace_and_vector_dump {
     my ($self) = @_;
 
@@ -569,7 +588,13 @@ sub save_to_ace {
             }
         }
         
-        if($self->XaceSeqChooser()->update_ace_display($current_ace_dump)) {
+        my $xc = $self->XaceSeqChooser;
+        
+        if ($xc->show_zmap) {
+            
+        }
+        
+        if($xc->update_ace_display($current_ace_dump)) {        
             print STDERR "Genomic features successfully saved to acedb\n";
 
             # after saving it becomes the 'current' version:
@@ -578,7 +603,7 @@ sub save_to_ace {
             # Make the clone know the new vectors
             $self->Assembly->set_SimpleFeatures(@$current_vectors);
         } else {
-            print STDERR "There was an error saving genomic features to acedb\n";
+            $self->message("There was an error saving genomic features to acedb\n");
         }
     }
 }

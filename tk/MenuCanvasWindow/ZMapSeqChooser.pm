@@ -707,19 +707,21 @@ sub open_clones{
 
 sub RESPONSE_HANDLER{
     my ($self, $action, $xml) = @_;
+
     warn "In RESPONSE_HANDLER for action=$action\n" if $ZMAP_DEBUG;
-    if($action eq 'new'){
+    if ($action eq 'new'){
         my ($name, $id) = ($xml->{'response'}->{'zmapid'}, $xml->{'response'}->{'windowid'});
         if($name){
             xclient_with_name($name, $id, "$self") if $id;
             $self->zMapSetEntryValue($name);
         }
-    }else{
-        warn "RESPONSE_HANDLER knows nothing about how to handle actions of type '$action'";
-
+    }
+    else {
+        cluck "RESPONSE_HANDLER knows nothing about how to handle actions of type '$action'";
     }
     return ;
 }
+
 sub ERROR_HANDLER{
     my ($self, $action, $status, $xml) = @_;
     $xml = $xml->{'error'}; # this is all we care about
