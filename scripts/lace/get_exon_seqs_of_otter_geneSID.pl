@@ -10,12 +10,12 @@ my ($dataset, $cds_only, $all_exons, $flank_left, $flank_right, $infile);
 
 my $help = sub { exec('perldoc', $0) };
 
-Bio::Otter::Lace::Defaults::do_getopt('ds|dataset=s' => \$dataset,    # eg, human or mouse or zebrafish
-									  'all-exons'    => \$all_exons,  # output seqs for all exons
-									  'cds-only'     => \$cds_only,   # output seqs CDSes only
-									  'left=i'       => \$flank_left, # number of left flank bp
-									  'right=i'      => \$flank_right,# number of right flank bp
-									  'file=s'       => \$infile      # file with gene stable id (one each line)
+Bio::Otter::Lace::Defaults::do_getopt('ds|dataset=s' => \$dataset,      # eg, human or mouse or zebrafish
+									  'all-exons'    => \$all_exons,    # output seqs for all exons
+									  'cds-only'     => \$cds_only,     # output seqs CDSes only
+									  'left=i'       => \$flank_left,   # number of left flank bp
+									  'right=i'      => \$flank_right,  # number of right flank bp
+									  'file=s'       => \$infile        # file with gene stable id (one each line)
 									 );
 
 $help->() unless ( $dataset and $flank_left and $flank_right and ($cds_only or $all_exons) and $infile);
@@ -47,22 +47,30 @@ foreach my $gsid ( @$geneSID_list ){
 
   print $gene->stable_id, ": ", scalar @{$gene->get_all_Transcripts}, " transcripts\n\n";
 
-  foreach my $trans ( @{$gene->get_all_Transcripts} ) {
+  # first get the longest transcript
+  my ($len_trans, $trans);
+  foreach $trans ( @{$gene->get_all_Transcripts} ) {
+	$len_trans->{abs($trans->end - $trans->start) + 1} = $trans;
+  }
 
-	my $transSID = $trans->stable_id;
+  $trans = $len_trans->{(sort {$a<=>$b} keys %$len_trans)[-1]};
 
-	if ( $cds_only ) {
-	  if ( ! $trans->translation ) {
-		print $trans->stable_id, ": no translation available\n";
-	  }
-	  else {
-		print_exon_seq($transSID, 'CDS only', $trans, $gene, "get_all_translateable_Exons");
-	  }
+  my $transSID = $trans->stable_id;
+
+  if ( ! $trans->translation ) {
+	print $trans->stable_id, ": no translation available\n";
+  }
+  else {
+	if ( $cds_only) {
+	  my ($prot_seq, $prot_len) = sixty_cols($trans->translate->primary_seq->seq);
+	  my $protID = $trans->translation->stable_id;
+	  printf(">%s\t%s\t%d\n%s\n", $transSID, $protID, $prot_len, $prot_seq);
+
+	  print_exon_seq($transSID, 'CDS only', $trans, $gene, "get_all_translateable_Exons");
 	}
-
-	if ( $all_exons ) {
-	  print_exon_seq($transSID, 'ALL exons', $trans, $gene, "get_all_Exons");
-	}
+  }
+  if ( $all_exons ) {
+	print_exon_seq($transSID, 'ALL exons', $trans, $gene, "get_all_Exons");
   }
 }
 
@@ -78,7 +86,9 @@ sub print_exon_seq {
 
   print "[$transSID: $mode]\n";
   foreach my $exon ( @{$trans->$method} ) {
-	
+
+	next if $exon->stable_id =~ /^ENSMUSE/; # annotation errors
+
 	my $header = $exon->stable_id."\t" .$gene->stable_id."\t".$gene->gene_info->name->name;
 
 	if ( $flank_left and $flank_right ) {
