@@ -43,7 +43,7 @@ foreach my $gsid ( @$geneSID_list ){
   $otter_db->assembly_type($asm_type);
 
   my $gene = $geneAd->fetch_by_stable_id($gsid);
-  my $slice = $sliceAd->fetch_by_gene_stable_id($gsid, 200);
+  my $slice = $sliceAd->fetch_by_gene_stable_id( $gsid, ($flank_left + $flank_right) );
 
   print $gene->stable_id, ": ", scalar @{$gene->get_all_Transcripts}, " transcripts\n\n";
 
@@ -78,14 +78,16 @@ sub print_exon_seq {
 
   print "[$transSID: $mode]\n";
   foreach my $exon ( @{$trans->$method} ) {
+	
+	my $header = $exon->stable_id."\t" .$gene->stable_id."\t".$gene->gene_info->name->name;
 
 	if ( $flank_left and $flank_right ) {
-	  my ($flanked_seq, $new_len) = add_flank_seqs($exon, $ori_len, $flank_left, $flank_right);
-	  printf(">%s\t%s\t%s\t%d\n%s\n", $exon->stable_id, $gene->stable_id, $gene->gene_info->name->name, $new_len, $flanked_seq);
+	  my ($flanked_seq, $new_len) = add_flank_seqs($exon, length($exon->seq->seq), $flank_left, $flank_right);
+	  printf(">%s\t%d\n%s\n", $header, $new_len, $flanked_seq);
 	}
 	else {
 	  my ($exon_seq, $ori_len) = sixty_cols($exon->seq->seq);
-	  printf(">%s\t%s\t%s\t%d\n%s\n", $exon->stable_id, $gene->stable_id, $gene->gene_info->name->name, $ori_len, $exon_seq);
+	  printf(">%s\t%d\n%s\n", $header, $ori_len, $exon_seq);
 	}
   }
   print "\n";
