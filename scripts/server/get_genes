@@ -3,13 +3,21 @@
 my $pipehead = $ENV{PIPEHEAD}; # is set by the server for any GET request
 
 use strict;
-use OtterDefs;
-use Bio::Otter::ServerQuery;
 use Bio::Otter::ServerSide (':all');
-use Bio::Otter::Lace::PipelineDB;
-use Bio::EnsEMBL::DBSQL::DBAdaptor;
-use Bio::Otter::DBSQL::DBAdaptor;
 use Bio::Otter::ToXML;
+
+sub Bio::EnsEMBL::Gene::propagate_slice {
+    my ($gene, $slice) = @_;
+
+    foreach my $transcript (@{ $gene->get_all_Transcripts() }) {
+        foreach my $exon (@{ $transcript->get_all_Exons() }) {
+            $exon->slice($slice);
+        }
+        $transcript->slice($slice);
+    }
+    $gene->slice($slice);
+}
+
 
 $| = 1;
 
@@ -18,73 +26,26 @@ my $sq = Bio::Otter::ServerQuery->new('dataset',
     'metakey','analysis','transcript_analyses');
 set_nph($sq);
 
-my $cs       = $sq->getarg('cs')      || 'chromosome';
-my $csver    = $sq->getarg('csver')   || undef;
 my $analysis = $sq->getarg('analysis');
-my $metakey  = $sq->getarg('metakey') || ''; # defaults to pipeline
 my $transcript_analyses = $sq->getarg('transcript_analyses') || '';
 
 my $allowed_transcript_analyses_hash = $transcript_analyses
     ? { map { $_ => 1 } split(/,/, $transcript_analyses) }
     : '';
 
-my $odba = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
-my $sdba = odba_to_sdba($sq, $odba, $pipehead, $metakey);
+    # third parameter of $slice->get_all_Genes() helps preventing lazy-loading of transcripts
+my $genes = fetch_mapped_features($sq, $pipehead, 'gene',
+            ['get_all_Genes', $analysis, undef, 1]);
 
-my ($mdba, $sdba_asm) = get_mapper_dba($sq, $odba, $sdba, $pipehead);
-
-my $genes = [];
-
-if($mdba) {
-    my $original_slice_on_mapper = get_slice($sq, $mdba, $pipehead);
-    my $proj_segments_on_mapper = $original_slice_on_mapper->project( $cs, $sdba_asm );
-
-    my $sa_on_target = $sdba->get_SliceAdaptor();
-
-    foreach my $segment (@$proj_segments_on_mapper) {
-        my $projected_slice_on_mapper = $segment->to_Slice();
-
-        my $target_slice_on_target = $sa_on_target->fetch_by_region(
-            $projected_slice_on_mapper->coord_system()->name(),
-            $projected_slice_on_mapper->seq_region_name(),
-            $projected_slice_on_mapper->start(),
-            $projected_slice_on_mapper->end(),
-            $projected_slice_on_mapper->strand(),
-            $projected_slice_on_mapper->coord_system()->version(),
-        );
-
-            # third parameter of $slice->get_all_Genes() helps preventing lazy-loading of transcripts
-        my $target_genes_on_target_segment = $target_slice_on_target->get_all_Genes($analysis, undef, 1);
-        server_log('***** : '.scalar(@$target_genes_on_target_segment).' found on a slice');
-
-        foreach my $target_gene (@$target_genes_on_target_segment) {
-            foreach my $target_transcript (@{ $target_gene->get_all_Transcripts() }) {
-                foreach my $target_exon (@{ $target_transcript->get_all_Exons() }) {
-                    $target_exon->slice($projected_slice_on_mapper);
-                }
-                $target_transcript->slice($projected_slice_on_mapper);
-            }
-            $target_gene->slice($projected_slice_on_mapper);
-
-            if(my $transferred = $target_gene->transfer($original_slice_on_mapper) ) {
-                push @$genes, $transferred;
-            } else {
-                server_log("Could not transfer gene id=".$target_gene->dbID()." onto {$cs:$csver}");
-            }
-        }
-    }
-
-} else {
-    my $original_slice = get_slice($sq, $sdba, $pipehead);
-
-    # old EnsEMBL API used to send you all the genes if $analysis was not fetchable.
-    # This is NOT what we want!
-
-    my $ana_object = $sdba->get_AnalysisAdaptor()->fetch_by_logic_name($analysis);
-    if($ana_object) {
-        $genes = $original_slice->get_all_Genes($analysis);
-    }
-}
+    ## FIXME:
+    #
+    ## old EnsEMBL API used to send you all the genes if $analysis was not fetchable.
+    ## This is NOT what we want!
+    #
+    # my $ana_object = $sdba->get_AnalysisAdaptor()->fetch_by_logic_name($analysis);
+    # if($ana_object) {
+    #     $genes = $original_slice->get_all_Genes($analysis);
+    # }
 
 server_log("Total of ".scalar(@$genes)." '$analysis' genes sent");
 
