@@ -79,12 +79,13 @@ sub print_exon_seq {
   print "[$transSID: $mode]\n";
   foreach my $exon ( @{$trans->$method} ) {
 
-	my ($exon_seq, $ori_len) = sixty_cols($exon->seq->seq);
-	printf(">%s\t%s\t%s\t%d\n%s\n", $exon->stable_id, $gene->stable_id, $gene->gene_info->name->name, $ori_len, $exon_seq);
-
 	if ( $flank_left and $flank_right ) {
 	  my ($flanked_seq, $new_len) = add_flank_seqs($exon, $ori_len, $flank_left, $flank_right);
 	  printf(">%s\t%s\t%s\t%d\n%s\n", $exon->stable_id, $gene->stable_id, $gene->gene_info->name->name, $new_len, $flanked_seq);
+	}
+	else {
+	  my ($exon_seq, $ori_len) = sixty_cols($exon->seq->seq);
+	  printf(">%s\t%s\t%s\t%d\n%s\n", $exon->stable_id, $gene->stable_id, $gene->gene_info->name->name, $ori_len, $exon_seq);
 	}
   }
   print "\n";
