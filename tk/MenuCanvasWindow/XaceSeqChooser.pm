@@ -2030,9 +2030,10 @@ sub send_zmap_commands {
 
     for(my $i = 0; $i < @xml; $i++){
         my ($status, $xmlHash) = parse_response($a[$i]);
-        if($status =~ /^2\d\d/){ # 200s
-            $handler->($self, $xmlHash);
-        }else{
+        if ($status =~ /^2\d\d/) { # 200s
+            #$handler->($self, $xmlHash);
+            print "OK: $a[$i]";
+        } else {
             $error->($self, $status, $xmlHash);
         }
     }
