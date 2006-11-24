@@ -3,6 +3,7 @@
 my $pipehead = $ENV{PIPEHEAD}; # is set by the server for any GET request
 
 use strict;
+use Bio::Das;
 use Bio::Otter::ServerSide (':all');
 use Bio::Otter::Lace::ViaText ('%OrderOfOptions');
 
