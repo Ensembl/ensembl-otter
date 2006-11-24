@@ -206,8 +206,9 @@ sub make_new_child {
                     my $query   = $ENV{QUERY_STRING};
 						  
                     if (($query =~ /\bpipehead=1\b/)
-                        && ($libpath =~ s/(.*)(ensembl\/modules)(.*)(ensembl_head\/modules)(.*)/$1$4$3$2$5/))
-                    {            # head ensembl
+                        && ($libpath =~ s/(.*)(ensembl\/modules)(.*)(ensembl_head\/modules)(.*)/$1$4$3$2$5/)
+                        && ($libpath =~ s/(.*)(bioperl-0.7.2)(.*)(bioperl-1.2.3-patched)(.*)/$1$4$3$2$5/))
+                    {            # head ensembl&bioperl
                         local $ENV{PERL5LIB} = $libpath;
 
                         local $ENV{PIPEHEAD}  =
