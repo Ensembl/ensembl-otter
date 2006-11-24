@@ -315,6 +315,8 @@ sub fetch_mapped_features {
     my $features = [];
 
     if($mdba) {
+        server_log("Proceeding with mapping code");
+
         my $original_slice_on_mapper = get_slice($sq, $mdba, $pipehead);
         my $proj_segments_on_mapper = $original_slice_on_mapper->project( $cs, $sdba_asm );
 
@@ -354,6 +356,8 @@ sub fetch_mapped_features {
         }
 
     } else {
+        server_log("No mapping is needed, just fetching");
+
         my $original_slice = get_slice($sq, $sdba, $pipehead);
 
         $features = $original_slice->$fetching_method(@$call_parms);
