@@ -350,8 +350,11 @@ sub fetch_mapped_features {
                 if( my $transferred = $target_feature->transfer($original_slice_on_mapper) ) {
                     push @$features, $transferred;
                 } else {
-                    my $fid = $target_feature->dbID() || $target_feature->start().'..'.$target_feature->end();
-                    server_log("Could not transfer $feature_name id=$fid onto {$cs:$csver}");
+                    my $fname = sprintf( "%s [%d..%d]", 
+                                        $target_feature->display_id(),
+                                        $target_feature->start(),
+                                        $target_feature->end() );
+                    server_log("Could not transfer $feature_name $fname onto {$cs:$csver}");
                 }
             }
         }
