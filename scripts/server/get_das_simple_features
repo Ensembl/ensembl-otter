@@ -50,9 +50,9 @@ if(!$pipehead) {
     error_exit($sq, "This kind of data can only be fetched in pipehead==1 mode");
 }
 
-my $source   = $sq->getarg('source');
-my $dsn      = $sq->getarg('dsn');
-my $analysis = $sq->getarg('analysis');
+my $source   = $sq->getarg('source') || error_exit($sq, "Please supply DAS 'source'");
+my $dsn      = $sq->getarg('dsn')    || error_exit($sq, "Please supply DAS 'dsn'");
+my $analysis = $sq->getarg('analysis'); # defaults to *everything*
 
 my $das = Bio::Das->new(
     -source => $source,
