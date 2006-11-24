@@ -33,7 +33,7 @@ sub Bio::EnsEMBL::Slice::get_all_DasFeatures {
         $simple_feature->end(     $das_feature->stop()  - $chr_start + 1 );
         $simple_feature->strand( ($das_feature->orientation() eq '-') ? -1 : 1 );
         $simple_feature->score(  ($das_feature->score() eq '-') ? 100 : $das_feature->score() );
-        $simple_feature->display_label( $das_feature->feature_id() );
+        $simple_feature->display_label( $das_feature->id() );
 
         push @sfs, $simple_feature;
     }
