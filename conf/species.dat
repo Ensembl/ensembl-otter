@@ -81,3 +81,7 @@ TYPE        consK_H-01
 DBNAME  otter_tropicalis
 TYPE    lw2_jgi-02
 
+[medicago]
+DBNAME  otter_medicago
+TYPE    UNKNOWN
+
