@@ -26,7 +26,7 @@ sub Bio::EnsEMBL::Slice::get_all_DasFeatures {
 
     my @sfs = ();
     while (my $das_feature = $iterator->next_seq) {
-        my $simple_feature = Bio::Ensembl::SimpleFeature->new();
+        my $simple_feature = Bio::EnsEMBL::SimpleFeature->new();
         $simple_feature->slice(   $slice );
         $simple_feature->start(   $das_feature->start() - $chr_start + 1 );
         $simple_feature->end(     $das_feature->stop()  - $chr_start + 1 );
