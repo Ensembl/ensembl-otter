@@ -18,7 +18,7 @@ my $ensembl_tagfile = 'CVS_TAG_ensembl';
 
 my $gzlocation = '/nfs/disk100/humpub/data/dist';
 
-my @gzpacks = ('bioperl-0.7.2', 'biodas-1.02');
+my @gzpacks = ('bioperl-0.7.2', 'bioperl-1.2.3-patched', 'biodas-1.02');
 
 my @cvs_locations = (
 	[":ext:${user}\@cvs.sanger.ac.uk:/cvsroot/ensembl", $method,
