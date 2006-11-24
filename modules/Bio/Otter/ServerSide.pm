@@ -337,7 +337,7 @@ sub fetch_mapped_features {
             my $target_fs_on_target_segment
                 = $target_slice_on_target->$fetching_method(@$call_parms);
 
-            server_log('***** : '.scalar(@$target_fs_on_target_segment).' ${feature_name}s found on the slice');
+            server_log('***** : '.scalar(@$target_fs_on_target_segment)." ${feature_name}s found on the slice");
 
             foreach my $target_feature (@$target_fs_on_target_segment) {
 
@@ -350,7 +350,8 @@ sub fetch_mapped_features {
                 if( my $transferred = $target_feature->transfer($original_slice_on_mapper) ) {
                     push @$features, $transferred;
                 } else {
-                    server_log("Could not transfer $feature_name id=".$target_feature->dbID()." onto {$cs:$csver}");
+                    my $fid = $target_feature->dbID() || $target_feature->start().'..'.$target_feature->end();
+                    server_log("Could not transfer $feature_name id=$fid onto {$cs:$csver}");
                 }
             }
         }

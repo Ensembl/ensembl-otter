@@ -25,7 +25,7 @@ sub Bio::EnsEMBL::Slice::get_all_DasFeatures {
     my @feature_type  = $analysis ? ('-type' => $analysis) : ();
     my $iterator = $segment->features(-iterator => 1, @feature_type);
 
-    my @sfs = ();
+    my @dsfs = ();
     while (my $das_feature = $iterator->next_seq) {
         my $simple_feature = Bio::EnsEMBL::SimpleFeature->new();
         $simple_feature->slice(   $slice );
@@ -35,10 +35,10 @@ sub Bio::EnsEMBL::Slice::get_all_DasFeatures {
         $simple_feature->score(  ($das_feature->score() eq '-') ? 100 : $das_feature->score() );
         $simple_feature->display_label( $das_feature->id() );
 
-        push @sfs, $simple_feature;
+        push @dsfs, $simple_feature;
     }
 
-    return \@sfs;
+    return \@dsfs;
 }
 
 
@@ -66,17 +66,17 @@ my $das = Bio::Das->new(
     -dsn    => $dsn,
 );
 
-my $sfs = fetch_mapped_features($sq, $pipehead, 'ditag_feature', 
+my $dsfs = fetch_mapped_features($sq, $pipehead, 'das_simple_feature', 
             ['get_all_DasFeatures', $das, $chr_name, $analysis] );
 
-server_log("Total of ".scalar(@$sfs)
+server_log("Total of ".scalar(@$dsfs)
           .($analysis ? " {$analysis}":'')
           ." DAS features fetched+mapped from $source/$dsn");
 
 my @sf_optnames = @{ $OrderOfOptions{SimpleFeature} };
 my $output_string = '';
 
-foreach my $sf (@$sfs) {
+foreach my $sf (@$dsfs) {
         # output a SimpleFeature line
     my @sf_optvalues = ('SimpleFeature');
     for my $opt (@sf_optnames) {
