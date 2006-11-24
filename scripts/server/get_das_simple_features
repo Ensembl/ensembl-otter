@@ -10,7 +10,7 @@ use Bio::Otter::Lace::ViaText ('%OrderOfOptions');
 sub Bio::EnsEMBL::Slice::get_all_DasFeatures {
     my ($slice, $das, $analysis) = @_;
 
-    my $chr_name  = $slice->seqname();
+    my $chr_name  = $slice->seq_region_name();
     my $chr_start = $slice->start();
     my $chr_end   = $slice->end();
     my $segment_name  = "$chr_name:$chr_start,$chr_end";
