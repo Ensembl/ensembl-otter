@@ -15,8 +15,8 @@ sub Bio::EnsEMBL::Slice::get_all_DasFeatures {
     my $chr_end   = $slice->end();
     my $segment_name  = "$chr_name:$chr_start,$chr_end";
 
-    server_log( sprintf ("GET  %s/%s/features?segment=%s%s\n",
-                            $das->source, $das->dsn, $segment_name,
+    server_log( sprintf ("GET  %s/features?segment=%s%s\n",
+                            $das->default_url, $segment_name,
                             $analysis ? ";type=$analysis" : '') );
 
     my $segment = $das->segment($segment_name);
