@@ -155,6 +155,8 @@ sub check_for_change_in_gene_components {
 		##if transcript has changed then increment version
 		if ($transcript_changed==1 ) {
 		  $tran->version($db_version+1);
+		  ##add for transcript synonym
+		  $self->add_synonym($db_transcript,$tran);
 		}
 		##if transcript has not changed then retain the same old version
 		else {
@@ -186,7 +188,8 @@ sub check_for_change_in_gene_components {
 		  }
 		  if ($transcript_changed == 1){
 			 $tran->version($old_version+1);
-
+			 ##add for transcript synonym
+			 $self->add_synonym($old_transcript,$tran);
 		  }
 		}
 	 }
@@ -462,7 +465,7 @@ sub store{
 ##cut
 ##
 
-=COMMENT
+#COMMENT
 
   unless ( $coord_system_id){
 	 my $db_cs;
@@ -487,7 +490,7 @@ sub store{
 	 }
   }
 
-=cut
+#cut
 
 ##
 ##cut
@@ -527,7 +530,7 @@ sub store{
 		if ( $gene_changed == 1) {
 		  $gene->version($db_version+1);
 		  ##add synonym if old gene name is not a current gene synonym
-		  $self->add_gene_synonym($db_gene,$gene);
+		  $self->add_synonym($db_gene,$gene);
 		}
 		else {
 		  $gene->version($db_version);
@@ -560,7 +563,7 @@ sub store{
 			 if ($gene_changed == 1){
 				$gene->version($old_version+1);
 				##add synonym if old gene name is not a current gene synonym
-				$self->add_gene_synonym($old_gene,$gene);
+				$self->add_synonym($old_gene,$gene);
 			 }
 			 else {
 				$gene_changed=3;
@@ -642,34 +645,34 @@ sub store{
   }
 }
 
-sub add_gene_synonym{
+sub add_synonym{
 
-  my ($self,$db_gene,$gene)=@_;
-  my $db_gene_name=$db_gene->get_all_Attributes('name');
-  my $db_gn;
-  if ($db_gene_name) {
-	 if (defined $db_gene_name->[0]){
-		$db_gn=$db_gene_name->[0]->value;
+  my ($self,$db_obj,$obj)=@_;
+  my $db_obj_name=$db_obj->get_all_Attributes('name');
+  my $db_n;
+  if ($db_obj_name) {
+	 if (defined $db_obj_name->[0]){
+		$db_n=$db_obj_name->[0]->value;
 	 }
   }
-  my $gene_name=$gene->get_all_Attributes('name');
-  my $gn;
-  if ($gene_name) {
-	 if (defined $gene_name->[0]){
-		$gn=$gene_name->[0]->value;
+  my $obj_name=$obj->get_all_Attributes('name');
+  my $n;
+  if ($obj_name) {
+	 if (defined $obj_name->[0]){
+		$n=$obj_name->[0]->value;
 	 }
   }
-  my $synonyms = $gene->get_all_Attributes('synonym');
+  my $synonyms = $obj->get_all_Attributes('synonym');
   my %synonym;
   if ($synonyms) {
 	 %synonym = map {$_->value, $_} @$synonyms;
   }
-  if ( $db_gn && $db_gn ne $gn) {
-	 if (!exists $synonym{$db_gn}){
-		my $gene_attributes=[];
-		my $syn_attrib=$self->make_Attribute('synonym','Synonym','',$db_gn);
-		push @$gene_attributes,$syn_attrib;
-		$gene->add_Attributes(@$gene_attributes);
+  if ( $db_n && $db_n ne $n) {
+	 if (!exists $synonym{$db_n}){
+		my $obj_attributes=[];
+		my $syn_attrib=$self->make_Attribute('synonym','Synonym','',$db_n);
+		push @$obj_attributes,$syn_attrib;
+		$obj->add_Attributes(@$obj_attributes);
 	 }
   }
 
