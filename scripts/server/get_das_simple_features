@@ -20,7 +20,10 @@ sub Bio::EnsEMBL::Slice::get_all_DasFeatures {
                             $analysis ? ";type=$analysis" : '') );
 
     my $segment = $das->segment($segment_name);
-    unless($segment) { return []; }
+    unless($segment) {
+        server_log( "DAS source refused to serve the segment={$segment_name}");
+        return [];
+    }
 
     my @feature_type  = $analysis ? ('-type' => $analysis) : ();
     my $iterator = $segment->features(-iterator => 1, @feature_type);
