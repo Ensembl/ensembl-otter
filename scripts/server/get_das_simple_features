@@ -19,7 +19,7 @@ sub Bio::EnsEMBL::Slice::get_all_DasFeatures {
                             $das->default_url, $segment_name,
                             $analysis ? ";type=$analysis" : '') );
 
-    my $segment = $das->segment($segment_name);
+    my $segment = $das->segment($chr_name, $chr_start, $chr_end);
     unless($segment) {
         server_log( "DAS source refused to serve the segment={$segment_name}");
         return [];
