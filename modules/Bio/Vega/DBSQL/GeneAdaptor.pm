@@ -504,6 +504,7 @@ sub store{
   }
   $self->db->savepoint;
   ##deleted gene
+  my $db_gene;
   if ($gene->is_current == 0) {
 	 $self->delete_gene($gene);
 	 $gene_changed = 5;
@@ -517,7 +518,7 @@ sub store{
 	 ##if gene is old compare to see if gene components have changed
 	 ##check if gene is new or old
 	 my $gene_slice=$gene->slice;
-	 my $db_gene=$self->get_current_Gene_by_slice($gene);
+	 $db_gene=$self->get_current_Gene_by_slice($gene);
 	 if ( $db_gene && $gene_changed != 5) {
 		$gene_changed=$self->check_for_change_in_gene_components($sida,$gene);
 		my $db_version=$db_gene->version;
@@ -581,55 +582,69 @@ sub store{
 		  $self->SUPER::store($gene);
 		}
 	 }
-	 if ($gene_changed == 1 || $gene_changed == 3 || $gene_changed == 5) {
-		$self->SUPER::store($gene);
-	 }
-	 if ($gene_changed==1 || $gene_changed==2 || $gene_changed == 3 || $gene_changed == 5){
-		##get author_id and store gene_id-author_id in gene_author table
-		my $aa = $self->db->get_AuthorAdaptor;
-		my $gene_author=$gene->gene_author;
-		$aa->store($gene_author);
-		my $author_id=$gene_author->dbID;
-		$aa->store_gene_author($gene->dbID,$author_id);
-		##transcript-author, transcript-evidence
-		my $transcripts=$gene->get_all_Transcripts;
-		my $ta = $self->db->get_TranscriptAdaptor;
-		foreach my $tran (@$transcripts){
-		  ##author
-		  my $tran_author=$tran->transcript_author;
-		  $aa->store($tran_author);
-		  my $author_id=$tran_author->dbID;
-		  $aa->store_transcript_author($tran->dbID,$author_id);
-		  ##evidence
-		  my $evidence_list=$tran->get_Evidence;
-		  $ta->store_Evidence($tran->dbID,$evidence_list);
-		}
-	 }
-	 if ($gene_changed == 1) {
-		if ($db_gene){
-		  my $new_trs=$gene->get_all_Transcripts;
-		  my $old_trs;
-		  my $new_tr_count=@$new_trs;
-		  my $old_tr_count;
-		  $old_trs=$db_gene->get_all_Transcripts;
-		  $old_tr_count=@$old_trs;
-		  if ($old_tr_count > $new_tr_count) {
-			 $self->update_deleted_transcripts($new_trs,$old_trs);
-		  }
-		  my $new_exons=$gene->get_all_Exons;
-		  my $old_exons;
-		  my $new_exon_count=@$new_exons;
-		  my $old_exon_count;
-		  $old_exons=$db_gene->get_all_Exons;
-		  $old_exon_count=@$old_exons;
-		  if ($old_exon_count > $new_exon_count) {
-			 $self->update_deleted_exons($new_exons,$old_exons);
+  }
+  if ($gene_changed == 1 || $gene_changed == 3 || $gene_changed == 5) {
+	 if ($gene_changed == 5){
+		$gene->dbID(undef);
+		$gene->adaptor(undef);
+		my $tref=$gene->get_all_Transcripts();
+		foreach my $tran (@$tref) {
+		  $tran->dbID(undef);
+		  $tran->adaptor(undef);
+		  if ($tran->translation){
+			 $tran->translation->dbID(undef);
+			 $tran->translation->adaptor(undef);
 		  }
 		}
-		print STDOUT "\nChanged gene:".$gene->stable_id." Current Version:".$gene->version." changes stored successfully in db\n";
-		
+	 }
+	 $self->SUPER::store($gene);
+  }
+  if ($gene_changed==1 || $gene_changed==2 || $gene_changed == 3 || $gene_changed == 5){
+	 ##get author_id and store gene_id-author_id in gene_author table
+	 my $aa = $self->db->get_AuthorAdaptor;
+	 my $gene_author=$gene->gene_author;
+	 $aa->store($gene_author);
+	 my $author_id=$gene_author->dbID;
+	 $aa->store_gene_author($gene->dbID,$author_id);
+	 ##transcript-author, transcript-evidence
+	 my $transcripts=$gene->get_all_Transcripts;
+	 my $ta = $self->db->get_TranscriptAdaptor;
+	 foreach my $tran (@$transcripts){
+		##author
+		my $tran_author=$tran->transcript_author;
+		$aa->store($tran_author);
+		my $author_id=$tran_author->dbID;
+		$aa->store_transcript_author($tran->dbID,$author_id);
+		##evidence
+		my $evidence_list=$tran->get_Evidence;
+		$ta->store_Evidence($tran->dbID,$evidence_list);
 	 }
   }
+  if ($gene_changed == 1) {
+	 if ($db_gene){
+		my $new_trs=$gene->get_all_Transcripts;
+		my $old_trs;
+		my $new_tr_count=@$new_trs;
+		my $old_tr_count;
+		$old_trs=$db_gene->get_all_Transcripts;
+		$old_tr_count=@$old_trs;
+		if ($old_tr_count > $new_tr_count) {
+		  $self->update_deleted_transcripts($new_trs,$old_trs);
+		}
+		my $new_exons=$gene->get_all_Exons;
+		my $old_exons;
+		my $new_exon_count=@$new_exons;
+		my $old_exon_count;
+		$old_exons=$db_gene->get_all_Exons;
+		$old_exon_count=@$old_exons;
+		if ($old_exon_count > $new_exon_count) {
+		  $self->update_deleted_exons($new_exons,$old_exons);
+		}
+	 }
+	 print STDOUT "\nChanged gene:".$gene->stable_id." Current Version:".$gene->version." changes stored successfully in db\n";
+	 
+  }
+  
   if ($gene_changed == 0) {
 	 $self->db->rollback_to_savepoint;
 	 print STDOUT "\nTrying to store an Unchanged gene:".$gene->stable_id." Version:".$gene->version." nothing written in db\n";
