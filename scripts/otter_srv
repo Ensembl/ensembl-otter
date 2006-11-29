@@ -37,6 +37,7 @@ my $GET_SCRIPTS           = $OTTER_GET_SCRIPTS || {};
 my $POST_SCRIPTS          = $OTTER_POST_SCRIPTS || {};
 $ENV{'LOGFILE'}           = $DEFAULT_HOME . "/otter_srv.log";
 $ENV{'SCRIPT_NAME'}       = 'OTTER_SERVER';
+my $PROXY_LOCATION        = 'http://wwwcache.sanger.ac.uk:3128/'; # is needed by biodas
 
 #--------------------- global variables ----------------------#
 my %CHILDREN = ();    # keys are current child process IDs
@@ -152,7 +153,7 @@ sub make_new_child {
             my $vegadbsrc = $ENV{VEGADBSRC};
 
             %ENV            = ();
-	    $ENV{HOME}      = $ENV_HOME;
+            $ENV{HOME}      = $ENV_HOME;
             $ENV{PERL5OPT}  = 'MBio::Otter::LogFile';
             $ENV{PERL5LIB}  = $perl5lib;
             $ENV{PATH}      = $path;
@@ -168,6 +169,7 @@ sub make_new_child {
               if -e "$OTTER_SERVER_ROOT/.htpasswd";
             $ENV{AUTHGROUPFILE} = "$OTTER_SERVER_ROOT/.htgroups"
               if -e "$OTTER_SERVER_ROOT/.htgroups";
+            $ENV{http_proxy}   = $PROXY_LOCATION if $PROXY_LOCATION;
 
             my $remote_name = `/usr/bin/host -i $ENV{REMOTE_ADDR} | /usr/bin/cut -f 3`;
             chomp $remote_name;
@@ -239,7 +241,8 @@ sub make_new_child {
                 my ($in, $out, $pid);
 
                 if (($query =~ /\bpipehead=1\b/)
-                    && ($libpath =~ s/(.*)(ensembl\/modules)(.*)(ensembl_head\/modules)(.*)/$1$4$3$2$5/))
+                    && ($libpath =~ s/(.*)(ensembl\/modules)(.*)(ensembl_head\/modules)(.*)/$1$4$3$2$5/)
+                    && ($libpath =~ s/(.*)(bioperl-0.7.2)(.*)(bioperl-1.2.3-patched)(.*)/$1$4$3$2$5/))
                 {            # head ensembl
                     local $ENV{PERL5LIB} = $libpath;
 
