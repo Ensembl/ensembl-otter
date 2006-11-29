@@ -341,12 +341,12 @@ elsif ($odb->isa('Bio::Vega::DBSQL::DBAdaptor')) {
 	 }
 	 ## strip_incomplete_genes for the xml genes
 	 my $genes=$parser->get_Genes;
-	 strip_incomplete_genes($genes);
+	 strip_incomplete_genes($genes)  if (defined $genes);
 	 ##fetch database genes and compare to find the new/modified/deleted genes
 	 server_log("Fetching database genes for comparison...");
 	 my $db_genes = $slice->get_all_Genes;
-	 strip_incomplete_genes($db_genes);
-	 server_log("Comparing ". scalar(@$db_genes) ." old to ". scalar(@$genes) ." new gene(s)... ");
+	 strip_incomplete_genes($db_genes)  if (defined $db_genes);
+	 server_log("Comparing ". scalar(@$db_genes) ." old to ". scalar(@$genes) ." new gene(s)... ") if (defined $db_genes && defined $genes);
 	 my ($new_mod,$del) = compare_genes($db_genes,$genes);
 	 my $gene_adaptor=$odb->get_GeneAdaptor;
 	 server_log("Attaching gene to slice ");
@@ -465,7 +465,6 @@ sub compare_genes {
   my $delete = [];
   my $new_mod = [];
   while (my ($key, $old_g) = each %old) {
-	 #print STDERR "\noldgene:$key";
 	 unless ($new{$key}) {
 		$old_g->is_current(0);
 		push(@$delete, $old_g);
@@ -473,11 +472,9 @@ sub compare_genes {
 	 }
   }
   while (my ($key, $new_g) = each %new) {
-	# print STDERR "\nnewgene:$key";
 	 $new_g->is_current(1);
 	 push(@$new_mod,$new_g);
   }
-#		die "\nTEST\n";
   return ($new_mod,$delete);
 }
 
