@@ -92,7 +92,15 @@ sub store {
 	 }
 	 if (!defined $db_contiginfo || $change==1) {
 		my $authad = $self->db->get_AuthorAdaptor;
+		eval{
 		$authad->store($contiginfo->author);
+		};
+		if ($@){
+		  throw "\nerror at slice name:".$contiginfo->slice->name;
+		  throw "\nwith these attrib:".$contiginfo->hashkey_sub;
+		  throw "\nerror is:".$@;
+		}
+		
 		# Store a new row in the contig_info table and get contig_info_id
 		my $sth = $self->prepare(q{
                                INSERT INTO contig_info(
