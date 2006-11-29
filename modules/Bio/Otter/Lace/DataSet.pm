@@ -469,6 +469,12 @@ sub make_EnsEMBL_DBAdaptor {
     return $self->_make_DBAdptor_with_class('Bio::EnsEMBL::DBSQL::DBAdaptor');
 }
 
+sub make_Vega_DBAdaptor {
+    my( $self ) = @_;
+    
+    return $self->_make_DBAdptor_with_class('Bio::Vega::DBSQL::DBAdaptor');
+}
+
 sub make_DBAdaptor {
     my( $self ) = @_;
 
