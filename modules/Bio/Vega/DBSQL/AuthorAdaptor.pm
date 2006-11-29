@@ -171,21 +171,26 @@ sub store {
 	 return 1;
   }
   my $group=$author->group;
-  ##not sure if this is right ?
-  unless ($group){
-	 $group=Bio::Vega::AuthorGroup->new('','');
-  }
-  my $group_id=$group->dbID;
-  my $group_name=$group->name;
-  my $ga=$self->db->get_AuthorGroupAdaptor;
-  if (!defined $group_id){
-	 $group_id=$ga->fetch_id_by_name($group_name);
-  }
-  if (!defined $group_id){
-	 warning("about to store new author-group $group_name");
-	 $ga->store($group);
+  my $group_id;
+  my $group_name;
+  if ($group) {
 	 $group_id=$group->dbID;
+	 $group_name=$group->name;
   }
+  unless ($group || $group_id){
+	 unless ($group) {
+		$group=Bio::Vega::AuthorGroup->new('','');
+		$group_name='';
+	 }
+	 my $ga=$self->db->get_AuthorGroupAdaptor;
+	 $group_id=$ga->fetch_id_by_name($group_name);
+	 unless ($group_id){
+		warning("about to store new author-group $group_name");
+		$ga->store($group);
+		$group_id=$group->dbID;
+	 }
+  }
+
   # Insert new author entry
   my $sth = $self->prepare(q{
         INSERT INTO author(author_email,author_name, group_id) VALUES (?,?,?)
