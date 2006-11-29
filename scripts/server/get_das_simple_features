@@ -1,6 +1,7 @@
 #!/usr/local/bin/perl -w
 
-my $pipehead = $ENV{PIPEHEAD}; # is set by the server for any GET request
+my $pipehead   = $ENV{PIPEHEAD}; # is set by the server for any GET request
+my $http_proxy = $ENV{http_proxy};
 
 use strict;
 use Bio::Das;
@@ -68,6 +69,7 @@ my $das = Bio::Das->new(
     -source => $source,
     -dsn    => $dsn,
 );
+$das->proxy($http_proxy) if $http_proxy;
 
 my $dsfs = fetch_mapped_features($sq, $pipehead, 'das_simple_feature', 
             ['get_all_DasFeatures', $das, $chr_name, $analysis] );
