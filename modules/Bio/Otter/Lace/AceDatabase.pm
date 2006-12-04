@@ -387,8 +387,12 @@ sub save_otter_slice {
     my $client = $self->Client or confess "No Client attached";
 
     # Get the Assembly object ...
+    ### Need to change this query if we add lots of non-otter features to the assembly object.
+    ### (Or change the layout of the data in acedb, so that non- otter features are in a
+    ### different object.)
     $ace->raw_query(qq{find Assembly "$name"});
     my $ace_txt = $ace->raw_query('show -a');
+    $ace_txt =~ s/^Feature\s+"phastCons".*\n//mg;
 
     # ... its SubSequences ...
     $ace->raw_query('query follow SubSequence where ! CDS_predicted_by');
