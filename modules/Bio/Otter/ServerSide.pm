@@ -142,17 +142,26 @@ sub odba_to_sdba {
 sub get_mapper_dba {
     my ($sq, $odba, $sdba, $pipehead) = @_;
 
-    my $metakey  = $sq->getarg('metakey') || ''; # defaults to pipeline
+    my $metakey    = $sq->getarg('metakey')    || ''; # defaults to pipeline
+    my $target_asm = $sq->getarg('target_asm') || undef;
 
-    if($metakey eq '.') {
+    if(!$metakey) {
+        server_log("Working with pipeline_db directly, no remapping is needed.");
+        return;
+    } elsif($metakey eq '.') {
         server_log("Working with otter_db directly, no remapping is needed.");
         return;
     }
 
-    if($pipehead && $metakey) { # a head version of ensembl_db (non-pipeline genes)
+    my ($sdb_asm) = @{ $sdba->get_MetaContainer()->list_value_by_key('assembly.default') };
+    $sdb_asm ||= $target_asm || 'UNKNOWN';
 
-        my ($sdb_asm) = (@{ $sdba->get_MetaContainer()->list_value_by_key('assembly.default') },
-            'UNKNOWN');
+    if($sdb_asm eq 'Otter') {
+        server_log("No remapping is needed, the satellite_db is another Otter database.");
+        return;
+    }
+
+    if($pipehead) { # a head version of ensembl_db (non-pipeline genes)
 
             # Currently we keep assembly equivalency information in the pipeline_db_head seq_region_attrib.
             # Once otter_db is converted into new schema, we can keep this information there.
@@ -169,8 +178,10 @@ sub get_mapper_dba {
 
         } else { # assemblies are guaranteed to differ!
 
+            my $mapper_metakey = "mapper_db.${sdb_asm}";
+
                 # see if 'mapper_db' meta link is defined:
-            my ($mapper_val) = @{$odba->get_MetaContainer()->list_value_by_key('mapper_db')};
+            my ($mapper_val) = @{$odba->get_MetaContainer()->list_value_by_key($mapper_metakey)};
             if($mapper_val) {
                 my $mdba;
 
@@ -180,27 +191,21 @@ sub get_mapper_dba {
                 } elsif($mapper_val eq '=pipeline_head') {
                     $mdba = $pdba;
                 } else {
-                    $mdba = odba_to_sdba($sq, $odba, 1, 'mapper_db');
+                    $mdba = odba_to_sdba($sq, $odba, 1, $mapper_metakey);
                 }
 
                 return ($mdba, $sdb_asm);
             } else {
-                server_log("No mapper_db defined in meta table => cannot map between assemblies => exiting");
+                server_log("No '$mapper_metakey' defined in meta table => cannot map between assemblies => exiting");
                 send_response($sq, '', 1);
                 exit(0);
             }
         }
 
-    } elsif($pipehead) { # a head version of pipeline_db
-
-        server_log("Working with pipeline_db directly, no remapping is needed.");
-        return;
-
     } else { # non-head version, cannot guarantee correct mapping
 
         server_log("No remapping is being done, you're responsible for doing it on the client side.");
         return;
-
     }
 }
 
