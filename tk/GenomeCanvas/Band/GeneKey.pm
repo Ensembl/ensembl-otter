@@ -21,7 +21,8 @@ sub render {
     my $style_collection    = $self->styles->{'style'};
     
     my $pad = 2 * $font_size;
-    my $line_width = $font_size / 5;
+    my $line_width  = $font_size / 5;
+    my $half_height = $font_size / 2;
     
     my $x = 0;
     my $row = 0;
@@ -48,13 +49,13 @@ sub render {
             );
             $canvas->createLine(
                 $x1, $y1, $x2, $y1,
-                -width  => $line_width,
+                -width  => 1.5 * $line_width,
                 -fill   => $style->{'outline'},
                 -tags   => [@tags],
             );
             $canvas->createLine(
                 $x1, $y2, $x2, $y2,
-                -width  => $line_width,
+                -width  => 1.5 * $line_width,
                 -fill   => $style->{'outline'},
                 -tags   => [@tags],
             );
@@ -69,7 +70,7 @@ sub render {
         }
         
         $x1 = $x2 + $font_size;
-        $y1 = $y1 + (($y2 - $y1) / 2);
+        $y1 += $half_height;
         
         $canvas->createText(
             $x1,$y1,
@@ -88,6 +89,95 @@ sub render {
             $x = $max_x + (2 * $pad);
         }
     }
+    
+    $x = 0;
+    $y = ($self->band_bbox)[3] + (2 * $pad);
+    
+    my ($x1,$y1, $x2,$y2) = ($x,$y, $x + $font_size, $y + $font_size);
+
+    ### Yuk. Copy / paste code ahead:
+    
+    push(@tags, 'lastrow');
+    # Repeat
+    {
+        my $y1 = $y1 + ($font_size / 8);
+        my $y2 = $y2 - ($font_size / 8);
+
+        $canvas->createRectangle(
+            $x1, $y1, $x2, $y2,
+            -outline => undef,
+            -fill    => '#cccccc',
+            -tags    => [@tags],
+            );
+        $canvas->createLine(
+            $x1, $y1, $x2, $y1,
+            -width  => 1.5 * $line_width,
+            -fill   => 'black',
+            -tags   => [@tags],
+            );
+        $canvas->createLine(
+            $x1, $y2, $x2, $y2,
+            -width  => 1.5 * $line_width,
+            -fill   => 'black',
+            -tags   => [@tags],
+            );
+        $x1 = $x2 + $font_size;
+        $y1 += $half_height;
+        $canvas->createText(
+            $x1,$y1,
+            -text   => 'Repeat',
+            -anchor => 'w',
+            -font   => ['helvetica', $font_size, 'bold'],
+            -tags   => [@tags],
+            );
+    }
+    
+    $x = ($canvas->bbox('lastrow'))[2] + (2 * $pad);
+    ($x1,$y1, $x2,$y2) = ($x,$y, $x + $font_size, $y + $font_size);
+
+    # Active gene
+    $canvas->createPolygon(
+        $x1, $y1,
+        $x2 - $half_height, $y1,
+        $x2, $y1 + ($font_size / 2),
+        $x2 - $half_height, $y2,
+        $x1, $y2,
+        -outline    => 'black',
+        -fill       => '#cccccc',
+        -width      => $line_width,
+        -tags       => [@tags],
+        );
+    $x1 = $x2 + $font_size;
+    $y1 += $half_height;
+    $canvas->createText(
+        $x1,$y1,
+        -text   => 'Gene',
+        -anchor => 'w',
+        -font   => ['helvetica', $font_size, 'bold'],
+        -tags   => [@tags],
+        );
+    
+    $x = ($canvas->bbox('lastrow'))[2] + (2 * $pad);
+    ($x1,$y1, $x2,$y2) = ($x,$y, $x + $font_size, $y + $font_size);
+    
+    # Pseudogene
+    $canvas->createOval(
+        $x1,$y1, $x2,$y2,
+        -outline    => 'black',
+        -fill       => '#cccccc',
+        -width      => $line_width,
+        -tags       => [@tags],
+        );
+    $x1 = $x2 + $font_size;
+    $y1 += $half_height;
+    $canvas->createText(
+        $x1,$y1,
+        -text   => 'Pseudogene',
+        -anchor => 'w',
+        -font   => ['helvetica', $font_size, 'bold'],
+        -tags   => [@tags],
+        );
+    
 }
 
 sub styles {
