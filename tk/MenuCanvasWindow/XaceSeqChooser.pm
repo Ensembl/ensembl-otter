@@ -1733,12 +1733,15 @@ sub express_clone_and_subseq_fetch {
     my $ace  = $self->ace_handle;
     my( $assembly );
     eval {
-        $assembly = Hum::Ace::Assembly
-          ->new_from_name_and_db_handle($name, $ace);
+        $assembly = Hum::Ace::Assembly->new;
+        $assembly->name($name);
+        ### Assembly object could create MethodCollection
+        ### from methods in ace database
+        $assembly->MethodCollection(
+          $self->AceDatabase->get_default_MethodCollection);
+        $assembly->express_data_fetch($ace);
     };
-    if ($assembly) {
-        $self->exception_message($@) if $@;
-    } else {
+    if ($@) {
         $self->exception_message($@, "Can't fetch Assembly '$name'");
         return;
     }

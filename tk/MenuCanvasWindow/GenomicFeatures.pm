@@ -3,47 +3,14 @@
 package MenuCanvasWindow::GenomicFeatures;
 
 use strict;
+use Carp;
 use base 'MenuCanvasWindow';
+
 use Tk::NoPasteEntry;
+use Tk::SmartOptionmenu;
+
+use Hum::Ace::Assembly;
 use Hum::Ace::SeqFeature::Simple;
-
-my %signal_info = (
-    'polyA_signal' => {
-        'order'    => 1,
-        'length'   => 6,
-        'fullname' => 'PolyA signal',
-    },
-    'polyA_site' => {
-        'order'    => 2,
-        'length'   => 2,
-        'fullname' => 'PolyA site',
-    },
-    'pseudo_polyA' => {
-        'order'    => 3,
-        'length'   => 6,
-        'fullname' => 'Pseudo-PolyA signal',
-    },
-    'TATA_box' => {
-        'order'    => 4,
-        'length'   => 8,
-        'fullname' => 'TATA-box',
-    },
-    'RSS' => {
-        'order'              => 5,
-        'fullname'           => 'Recomb. signal seq.',
-        'edit_display_label' => 1,
-    },
-    'EUCOMM' => {
-        'order'              => 6,
-        'fullname'           => 'EUCOMM exon(s)',
-        'edit_score'         => 1,
-        'edit_display_label' => 1,
-    },
-);
-
-sub signal_keys_in_order {
-    return sort { $signal_info{$a}{'order'} <=> $signal_info{$b}{'order'} } keys %signal_info;
-}
 
 my %strand_name = (
      1 => 'Fwd',
@@ -181,126 +148,126 @@ sub XaceSeqChooser{
     return $self->{'_XaceSeqChooser'} ;
 }
 
-sub slice_name {
-    my ($self) = @_ ;
-    
-    return $self->XaceSeqChooser->slice_name;
-}
-
 sub Assembly {
     my $self = shift @_;
 
     return $self->XaceSeqChooser->Assembly;
 }
 
-sub stored_ace_dump {
-    my ($self , $sad) = @_ ;
-    if($sad){
-        $self->{_sad} = $sad;
-    }
-    return $self->{_sad};
-}
-
-sub Methods {
+sub get_all_Methods {
     my ($self) = @_;
     
     my $feat_meths;
     unless ($feat_meths = $self->{'_Method_objects'}) {
         $feat_meths = $self->{'_Method_objects'} = [];
         my $collection = $self->XaceSeqChooser->AceDatabase->get_default_MethodCollection;
-        foreach my $method (@{$collection->get_all_Methods}) {
-            # We want all the methods that are editable
-            # but are not transcript methods.
-            if ($method->mutable and ! $method->transcript_type) {
-                push @$feat_meths, $method;
-            }
-        }
+        @$feat_meths = $collection->get_all_mutable_non_transcript_Methods;
+        $self->{'_Method_index'} = {map {$_->name, $_} @$feat_meths};
     }
     return @$feat_meths;
 }
 
+sub get_Method_by_name {
+    my ($self, $name) = @_;
+    
+    my $method = $self->{'_Method_index'}{$name}
+      or confess "No Method with name '$name'";
+    return $method;
+}
+
 # -------------[create ace representation]---------------------
 
-### This is a bit nasty. We have data code mixed up in the interface.
-sub ace_and_vector_dump {
+
+sub Assembly_from_tk {
     my ($self) = @_;
-
-    my $header = qq{Sequence "} . $self->slice_name . qq{"\n};
-
-    my $ace_text = $header;
-    for my $ftype (keys %signal_info) { # only delete "known" features, not any
-        $ace_text .= qq{-D Feature "$ftype"\n};
+    
+    my $old_assembly = $self->Assembly;
+    
+    my $new_assembly = Hum::Ace::Assembly->new;
+    $new_assembly->name($old_assembly->name);
+    $new_assembly->MethodCollection($old_assembly->MethodCollection);
+    ### Can copy more properties of old_assembly if needed
+    
+    my @sf_list;
+    foreach my $hash (values %{$self->{'_gfs'}}) {
+        my $feat = $self->SeqFeature_from_gfs_hash($hash)
+          or next;
+        push(@sf_list, $feat);
     }
-    $ace_text .= "\n";
+    $new_assembly->add_SeqFeatures(@sf_list);
+    
+    return $new_assembly;
+}
 
-    my @vectors  = ();
-
-    my $valid_gfs = [ grep { $_ && $_->{fiveprime} && $_->{threeprime} }
-                      (values %{ $self->{_gfs} }) ];
-
-    if(@$valid_gfs) {
-
-        $ace_text .= $header;
-
-        for my $subhash (
-            sort { (($a->{fiveprime}<$a->{threeprime})?$a->{fiveprime}:$a->{threeprime})
-               <=> (($b->{fiveprime}<$b->{threeprime})?$b->{fiveprime}:$b->{threeprime}) }
-                 @$valid_gfs )
-        {
-            my $gf_type = $subhash->{gf_type};
-            my ($start, $end) =
-                order_coords_by_strand($subhash->{fiveprime}, $subhash->{threeprime}, $subhash->{strand});
-
-            my $score = $subhash->{score} || $def_score;
-            my $display_label = $subhash->{display_label} || $gf_type;
-
-            $ace_text .= join(' ',
-                'Feature', qq{"$gf_type"}, $start, $end, $score,
-                qq{"$display_label"\n});
-
-            push @vectors, [ $gf_type, $start, $end, $score, $display_label ];
-        }
-
-        $ace_text .= "\n";
+sub SeqFeature_from_gfs_hash {
+    my ($self, $hash) = @_;
+    
+    my $fiveprime  = $hash->{'fiveprime'}
+      or return;
+    my $threeprime = $hash->{'threeprime'}
+      or return;
+    my $strand     = $hash->{'strand'}
+      or confess "strand not set";
+    
+    my $feat = Hum::Ace::SeqFeauture::Simple->new;
+    if ($strand == 1) {
+        $feat->start($fiveprime);
+        $feat->end($threeprime);
+    } else {
+        $feat->start($threeprime);
+        $feat->end($fiveprime);
     }
-
-    return ($ace_text, \@vectors);
+    $feat->strand($strand);
+    $feat->score($hash->{'score'});
+    $feat->text($hash->{'display_label'});
+    $feat->Method($self->get_Method_by_name($hash->{'gf_type'}));
+    
+    return $feat;
 }
 
 # -------------[adding things]-------------------------------
 
 sub create_genomic_feature {
-    my ($self, $subframe, $gf_type, $fiveprime, $threeprime, $strand, $score, $display_label) = @_;
+    my ($self, $subframe, $feat) = @_;
 
-    my $gfid = ++$self->{_gfid}; # will be uniquely identifying items in the list
+    my $gf_type       = $feat->method_name;
+    my $strand        = $feat->strand;
+    my $score         = $feat->score;
+    my $display_label = $feat->text;
 
-    $self->{_gfs}{$gfid} = {
+    my $fiveprime  = $strand == 1 ? $feat->start : $feat->end;
+    my $threeprime = $strand == 1 ? $feat->end   : $feat->start;
+
+    my $gfid =
+      ++$self->{'_gfid'};    # will be uniquely identifying items in the list
+
+    $self->{'_gfs'}{$gfid} = {
         'fiveprime'     => $fiveprime,
         'threeprime'    => $threeprime,
-        'strand'   => $strand,
-        'score'    => $score,
+        'strand'        => $strand,
+        'score'         => $score,
         'display_label' => $display_label,
-        'gf_type'  => $gf_type,
-        'subframe' => $subframe,
+        'gf_type'       => $gf_type,
+        'subframe'      => $subframe,
     };
 
-    return ($gfid, $self->{_gfs}{$gfid});
+    return ($gfid, $self->{'_gfs'}{$gfid});
 }
 
 sub recalc_coords_callback {
-    my ($genomic_feature, $this_key) = @_;
+    my ($self, $genomic_feature, $this_key) = @_;
 
-    my $gf_type   = $genomic_feature->{gf_type};
-    my $length    = $signal_info{$gf_type}{length};
-    my $this_value= $genomic_feature->{$this_key};
+    my $this_value = $genomic_feature->{$this_key};
+    my $gf_type    = $genomic_feature->{'gf_type'};
+    my $length     = $self->get_Method_by_name($gf_type)->valid_length;
 
-    if($length && ($this_value=~/^\d+$/) ) {
+    if ($length && ($this_value =~ /^\d+$/)) {
 
-        my ($other_key, $diff_sign) = ($this_key eq 'fiveprime') ? ('threeprime', 1) : ('fiveprime', -1);
+        my ($other_key, $diff_sign) =
+          ($this_key eq 'fiveprime') ? ('threeprime', 1) : ('fiveprime', -1);
 
         $genomic_feature->{$other_key} =
-              $this_value
-            + $diff_sign * $genomic_feature->{strand} * ($length-1);
+          $this_value + $diff_sign * $genomic_feature->{strand} * ($length - 1);
     }
 }
 
@@ -329,25 +296,28 @@ sub paste_coords_callback {
     my ($self, $genomic_feature, $this) = @_;
 
     my @ints = $self->integers_from_clipboard();
-    if(!@ints) {
+    if (!@ints) {
         return;
     }
 
-    my $length    = $signal_info{$genomic_feature->{gf_type}}{length};
+    my $length =
+      $self->get_Method_by_name($genomic_feature->{gf_type})->valid_length;
 
-    if(scalar(@ints)==1) {  # trust the strand information:
+    if (scalar(@ints) == 1) {    # trust the strand information:
 
-        $this ||= ($genomic_feature->{strand} == 1) ? 'fiveprime' : 'threeprime';
+        $this ||=
+          ($genomic_feature->{strand} == 1) ? 'fiveprime' : 'threeprime';
 
         $genomic_feature->{$this} = shift @ints;
-        if($length) {
-            recalc_coords_callback($genomic_feature, $this);
+        if ($length) {
+            $self->recalc_coords_callback($genomic_feature, $this);
         }
 
-    } else {  # acquire strand information:
+    }
+    else {                       # acquire strand information:
 
-        ( $genomic_feature->{fiveprime}, $genomic_feature->{threeprime} )
-            = ($ints[0], $ints[1]);
+        ($genomic_feature->{fiveprime}, $genomic_feature->{threeprime}) =
+          ($ints[0], $ints[1]);
         $genomic_feature->{strand} = get_strand_from_order($ints[0], $ints[1]);
 
         show_direction_callback($genomic_feature);
@@ -371,57 +341,40 @@ sub flip_direction_callback {
 }
 
 sub change_of_gf_type_callback {
-    my ($genomic_feature, $wanted_type) = @_;
+    my ($self, $genomic_feature, $wanted_type) = @_;
 
-    my $display_label_was_fake      # it was either empty or simply matched gf_type:
-        =  (not $genomic_feature->{display_label})
-        || ($genomic_feature->{gf_type} eq $genomic_feature->{display_label});
-
-    $genomic_feature->{gf_type} = $wanted_type;
-
-    my $si = $signal_info{$wanted_type};
-
-    if($display_label_was_fake) {
-        $genomic_feature->{display_label} = $si->{edit_display_label}
-            ? ''            # clean it
-            : $wanted_type; # let it remain a fake label
-    } else {
-        # let's assume it contained something precious
-    }
-
+    my $method = $self->get_Method_by_name($wanted_type);
+    my $default_label = $method->remark || $method->name;
     my @enable  = (-state => 'normal',   -background => 'white');
     my @disable = (-state => 'disabled', -background => 'grey' );
-    $genomic_feature->{score_entry}->configure(
-        $si->{edit_score}         ? @enable : @disable
-    );
-    $genomic_feature->{display_label_entry}->configure(
-        $si->{edit_display_label} ? @enable : @disable
-    );
+
+    $genomic_feature->{'gf_type'}       = $wanted_type;
+    $genomic_feature->{'display_label'} =
+      $method->edit_display_label
+      ? ''
+      : $default_label;
+    $genomic_feature->{'score_entry'}
+      ->configure($method->edit_score         ? @enable : @disable);
+    $genomic_feature->{'display_label_entry'}
+      ->configure($method->edit_display_label ? @enable : @disable);
 }
 
 sub add_genomic_feature {
-    my $self    = shift @_;
-    my $gf_type = shift @_;
-
-    my $fiveprime    = shift @_ || '';
-    my $threeprime   = shift @_ || '';
-    my $strand  = shift @_ ||  1;
-    my $score   = shift @_ || '';
-    my $display_label = shift @_ || $gf_type;
+    my ($self, $feat) = @_;
 
     my $subframe = $self->{_metaframe}->Frame()->pack(
         -fill   => 'x',
         -expand => 1,
     );
 
-    my ($gfid, $genomic_feature) = $self->create_genomic_feature(
-            $subframe, $gf_type, $fiveprime, $threeprime, $strand, $score, $display_label
-    );
+    my ($gfid, $genomic_feature) = $self->create_genomic_feature($subframe, $feat);
 
     my @pack = (-side => 'left', -padx => 2);
 
-    $genomic_feature->{gf_type_menu} = $subframe->Optionmenu(
-       -options  => [ map { [ $signal_info{$_}{fullname} => $_ ] } signal_keys_in_order() ],
+    $genomic_feature->{gf_type_menu} = $subframe->SmartOptionmenu(
+       -options  => [ map { [ $_->remark => $_->name ] } ($self->get_all_Methods) ],
+       -variable => \$genomic_feature->{'gf_type'},
+       -command  => sub { $self->change_of_gf_type_callback($genomic_feature, shift @_); },
     )->pack(@pack);
 
     $genomic_feature->{fiveprime_entry} = $subframe->NoPasteEntry(
@@ -429,7 +382,7 @@ sub add_genomic_feature {
        -width        => 7,
        -justify      => 'right',
     )->pack(@pack);
-    my $recalc_fiveprime = sub { recalc_coords_callback($genomic_feature, 'fiveprime'); };
+    my $recalc_fiveprime = sub { $self->recalc_coords_callback($genomic_feature, 'fiveprime'); };
     $genomic_feature->{fiveprime_entry}->bind('<Return>', $recalc_fiveprime);
     $genomic_feature->{fiveprime_entry}->bind('<Up>',     $recalc_fiveprime);
     $genomic_feature->{fiveprime_entry}->bind('<Down>',   $recalc_fiveprime);
@@ -444,7 +397,7 @@ sub add_genomic_feature {
        -width        => 7,
        -justify      => 'right',
     )->pack(@pack);
-    my $recalc_threeprime = sub { recalc_coords_callback($genomic_feature, 'threeprime'); };
+    my $recalc_threeprime = sub { $self->recalc_coords_callback($genomic_feature, 'threeprime'); };
     $genomic_feature->{threeprime_entry}->bind('<Return>', $recalc_threeprime);
     $genomic_feature->{threeprime_entry}->bind('<Up>',     $recalc_threeprime);
     $genomic_feature->{threeprime_entry}->bind('<Down>',   $recalc_threeprime);
@@ -509,17 +462,11 @@ sub add_genomic_feature {
         $genomic_feature->{$widget}->bind('<Destroy>', sub{ $self=$genomic_feature=undef; } );
     }
 
-        # unfortunately, you cannot bind these before the whole widget is made,
-        # as it tends to activate the -command on creation
-    $genomic_feature->{gf_type_menu}->configure(
-       -command => sub { change_of_gf_type_callback($genomic_feature, shift @_); },
-    );
-
-    # It is necessary to set the current value from a separate variable.
-    # If you first assign the correct value to a variable and then supply the ref,
-    # it will do something opposite to normal intuition: spoil the original value
-    # by assigning the one that gets assigned by the interface.
-    $genomic_feature->{gf_type_menu}->setOption($signal_info{$gf_type}{fullname}, $gf_type);
+    #    # unfortunately, you cannot bind these before the whole widget is made,
+    #    # as it tends to activate the -command on creation
+    #$genomic_feature->{gf_type_menu}->configure(
+    #   -command => sub { change_of_gf_type_callback($genomic_feature, shift @_); },
+    #);
 }
 
 sub load_genomic_features {
@@ -527,20 +474,9 @@ sub load_genomic_features {
 
     my $assembly = $self->Assembly;
 
-    foreach my $vector (sort { $a->[1] <=> $b->[1] || $a->[2] <=> $b->[2] }
-        $assembly->get_SimpleFeatures([keys %signal_info]) )
-    {
-
-        my ($gf_type, $fiveprime, $threeprime, $score, $display_label) = @$vector;
-
-        my $strand = get_strand_from_order($fiveprime, $threeprime);
-        $self->add_genomic_feature($gf_type, $fiveprime, $threeprime, $strand,
-            $score, $display_label);
+    foreach my $feat ($assembly->get_all_SimpleFeatures) {
+        $self->add_genomic_feature($feat);
     }
-
-    my ($current_ace_dump, $current_vectors) = $self->ace_and_vector_dump();
-
-    $self->stored_ace_dump($current_ace_dump);
 
     $self->fix_window_min_max_sizes;
 }
@@ -568,16 +504,17 @@ sub clear_genomic_features {
 sub save_to_ace {
     my ($self, $force) = @_;
 
-    my ($current_ace_dump, $current_vectors) = $self->ace_and_vector_dump();
+    my $new_assembly = $self->Assembly_from_tk;
+    my $new_ace = $new_assembly->ace_string;
 
-    if ($current_ace_dump ne $self->stored_ace_dump()) {
+    if ($new_ace ne $self->Assembly->ace_string) {
 
         # Ok, we may need saving - but do we want it?
         if(! $force) {
             
             my $save_changes = $self->top_window->messageBox(
-                -title      => "Save genomic features for " ,
-                -message    => "Do you wish to save the changes for '" . $self->slice_name . "'?",
+                -title      => "Save genomic features?" ,
+                -message    => "Do you wish to save the changes for '" . $new_assembly->name . "'?",
                 -type       => 'YesNo',
                 -icon       => 'question',
                 -default    => 'Yes',
@@ -594,14 +531,11 @@ sub save_to_ace {
             
         }
         
-        if($xc->update_ace_display($current_ace_dump)) {        
+        if($xc->update_ace_display($new_ace)) {        
             print STDERR "Genomic features successfully saved to acedb\n";
 
-            # after saving it becomes the 'current' version:
-            $self->stored_ace_dump($current_ace_dump);
-
-            # Make the clone know the new vectors
-            $self->Assembly->set_SimpleFeatures(@$current_vectors);
+            # Save the new SimpleFeatures in the attached Assembly object
+            $self->Assembly->set_SimpleFeature_list($new_assembly->get_all_SimpleFeatures);
         } else {
             $self->message("There was an error saving genomic features to acedb\n");
         }
@@ -665,9 +599,10 @@ sub initialize {
     $top_window->bind('<Control-w>', $close);
 
     my $add_menu = $self->make_menu('Add feature');
-    for my $gf_type (signal_keys_in_order()) {
-        my $fullname = $signal_info{$gf_type}{fullname};
-        my $length   = $signal_info{$gf_type}{length};
+    foreach my $method ($self->get_all_Methods) {
+        my $gf_type  = $method->name;
+        my $fullname = $method->remark;
+        my $length   = $method->valid_length;
 
         $add_menu->command(
             -label   => $fullname.($length ? " (${length}bp)" : ''),
@@ -704,7 +639,7 @@ sub initialize {
 
 
     my $tl = $self->top_window;
-    $tl->title("Genomic features for '".$self->slice_name()."'");
+    $tl->title("Genomic features for '". $self->Assembly->name ."'");
     
     $self->canvas->Tk::bind('<Destroy>', sub{ $self = undef });
 }

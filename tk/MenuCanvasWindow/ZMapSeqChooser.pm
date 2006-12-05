@@ -304,6 +304,10 @@ sub zMapWindowDefaults {
             feature_line_width          1
             feature_spacing             4.0
             colour_column_highlight     "CornSilk"
+            colour_item_highlight       "gold"
+            colour_frame_0              "#ffe6e6"
+            colour_frame_1              "#e6ffe6"
+            colour_frame_2              "#e6e6ff"
             canvas_maxsize              10000
         }
     );

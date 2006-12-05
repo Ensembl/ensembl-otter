@@ -23,7 +23,7 @@ sub render {
     my $slice  = $self->virtual_contig;
 
     my $arrow_head_length = $font_size;
-    my $arrow_head_half_height = $font_size / 2;
+    my $half_height       = $font_size / 2;
     my $x1     = 0;
     my $x2     = $x1 + ($slice->length / $rpp) + $arrow_head_length;
     my $y2     = $y1 + $font_size;
@@ -40,7 +40,7 @@ sub render {
         -arrowshape => [
             $arrow_head_length,
             $arrow_head_length,
-            $arrow_head_half_height,
+            $half_height,
             ],
     );
 
@@ -91,13 +91,13 @@ sub render {
         );
         $canvas->createLine(
             $x1, $y1, $x2, $y1,
-            -width => $line_width,
+            -width => 1.5 * $line_width,
             -fill  => $style->{outline},
             -tags    => [@tags],
         );
         $canvas->createLine(
             $x1, $y2, $x2, $y2,
-            -width => $line_width,
+            -width => 1.5 * $line_width,
             -fill  => $style->{outline},
             -tags    => [@tags],
         );
@@ -115,10 +115,10 @@ sub render {
         }
         my $desc = $gene->description || 'NO DESCRIPTION';
 
+        printf STDERR $pattern, $ctg_name, 'GENE', qq{$name "$desc"};
         my $feat_info = $styles->{'feature'}{$ctg_name}{$name} or next;
         my $style     = $styles->{'style'}{ $feat_info->{'label'} };
 
-        printf STDERR $pattern, $ctg_name, 'GENE', qq{$name "$desc"};
         unless ($style) {
             next;
         }
@@ -128,21 +128,38 @@ sub render {
 
         ($x1, $x2) = $self->pad_x_coords($x1, $x2, $font_size);
 
-        my @oval_args = (
-            $x1, $y1, $x2, $y2,
-            -width  => $line_width,
-            -tags   => [@tags],
+        my @appearance = (
+            -width      => $line_width,
+            -tags       => [@tags],
+            -outline    => $style->{outline},
+            -fill       => $style->{fill},
             );
 
         if ($gene->type =~ /pseudo/i) {
-            # Pseudogenes get dashed outline to oval
-            $self->dashed_oval($style, @oval_args);
-        } else {
             $canvas->createOval(
-                @oval_args,
-                -outline => $style->{outline},
-                -fill    => $style->{fill},
+                $x1, $y1, $x2, $y2,
+                @appearance,
             );
+        } else {
+            my @coords;
+            if ($gene->strand == 1) {
+                @coords = (
+                    $x1, $y1,
+                    $x2 - $half_height, $y1,
+                    $x2, $y_half,
+                    $x2 - $half_height, $y2,
+                    $x1, $y2,
+                    );
+            } else {
+                @coords = (
+                    $x1, $y_half,
+                    $x1 + $half_height, $y1,
+                    $x2, $y1,
+                    $x2, $y2,
+                    $x1 + $half_height, $y2,
+                    );
+            }
+            $canvas->createPolygon( @coords, @appearance );
         }
     }
 
@@ -159,11 +176,13 @@ sub render {
 
         ($x1, $x2) = $self->pad_x_coords($x1, $x2, $font_size);
 
-        $self->dashed_oval($style,
+        $canvas->createOval(
             $x1, $y1, $x2, $y2,
             -width  => $line_width,
             -tags   => [@tags],
-            );
+            -outline => $style->{outline},
+            -fill    => $style->{fill},
+        );
     }
 }
 

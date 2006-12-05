@@ -7,12 +7,13 @@ use strict;
 use CanvasWindow;
 
 {
+    my $rgb_txt_file = shift || '/usr/X11R6/lib/X11/rgb.txt';
+
     my $mw = CanvasWindow::MainWindow->new;
     $mw->title('X11 colors');
     my $cw = CanvasWindow->new($mw);
     my $canvas = $cw->canvas;
     $canvas->SelectionHandle(\&return_selection);
-    my $rgb_txt_file = '/usr/X11R6/lib/X11/rgb.txt';
 
     open RGB_TXT, $rgb_txt_file
         or die "Can't read '$rgb_txt_file' : $!";
@@ -24,9 +25,12 @@ use CanvasWindow;
     my $font = ['Helvetica', $size, 'normal'];
     my $i = 0;
     while (<RGB_TXT>) {
-        next if /^\s*\!/;   # Skip comment lines
+        s/^\s+//;
         chomp;
+        next if /^\!/;   # Skip comment lines
         my ($red, $green, $blue, $name) = split /\s+/, $_, 4;
+        
+        warn join(',', map "'$_'", ($red, $green, $blue, $name)), "\n";
         
         # Skip the names with spaces such as "old lace", which will still
         # be shown as their CamelCase equivalents like "OldLace".
@@ -36,6 +40,8 @@ use CanvasWindow;
         next if $name =~ /grey/i;
 
         my $hex = sprintf "#%02x%02x%02x", $red, $green, $blue;
+
+        warn "$name = $hex\n";
         
         my $tags = [$name];
 
