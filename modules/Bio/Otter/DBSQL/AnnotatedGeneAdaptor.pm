@@ -502,6 +502,7 @@ sub fetch_by_Slice {
         # We have to prevent laziness in loading of certain by-ID things,
         # otherwise they will not map across databases:
         my $desc = $gene->description();
+        my $dbentries = $gene->get_all_DBEntries();
         
         # Skip any genes that aren't the latest version of that gene
         # This can happen if there is a newer version on another assembly.
