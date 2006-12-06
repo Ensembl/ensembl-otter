@@ -154,8 +154,8 @@ sub cleanup_old_otter_dbs {
     my @all = sort grep /^otter_sub_backup_/, readdir BACKUPS;
     closedir BACKUPS;
     
-    # Keep the most recent 24
-    foreach my $i (01..24) {
+    # Keep the most recent 12
+    foreach my $i (01..12) {
         my $backup = pop(@all);
         warn "Keeping $i: $backup\n";
         last unless @all;
