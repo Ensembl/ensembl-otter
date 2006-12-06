@@ -532,6 +532,13 @@ sub fetch_by_Slice {
             my $exons_truncated = $transcript->truncate_to_Slice($slice);
             my $ex_list = $transcript->get_all_Exons;
             if (@$ex_list) {
+
+                foreach my $exon(@$ex_list) {
+                    # We have to prevent laziness in loading of certain by-ID things,
+                    # otherwise they will not map across databases:
+                    my $exon_stable_id = $exon->stable_id();
+                }
+
                 $i++;
                 if ($exons_truncated) {
                     my $remark = Bio::Otter::GeneRemark->new;
