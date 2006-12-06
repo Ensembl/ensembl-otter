@@ -517,6 +517,9 @@ sub fetch_by_Slice {
             # We have to prevent laziness in loading of certain by-ID things,
             # otherwise they will not map across databases:
             my $transcript_dbentries = $transcript->get_all_DBEntries();
+            if (defined($transcript->translation)) {
+                my $tsl_stable_id = $transcript->translation->stable_id();
+            }
             
             my( $t_name );
             eval{
