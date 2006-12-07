@@ -48,12 +48,17 @@ sub get_deleted_Exon_by_slice{
   }
   my $exon_slice=$exon->slice;
   my $exon_stable_id=$exon->stable_id;
+  my $db_exon;
   my @out = grep { $_->stable_id eq $exon_stable_id and $_->version eq $exon_version }
     @{$self->SUPER::fetch_all_by_Slice_constraint($exon_slice,'e.is_current = 0 ')};
 	if ($#out > 1) {
-	  die "\ntrying to fetch an exon for deletion there are more than one exon retrived $exon_stable_id\n";
+	  ##test
+	  @out = sort {$a->dbID <=> $b->dbID} @out;
+	  $db_exon=pop @out;
+	  ##test
+	  #die "\ntrying to fetch an exon for deletion there are more than one exon retrived $exon_stable_id\n";
 	}
-  my $db_exon=$out[0];
+  $db_exon=$out[0];
   return $db_exon;
 }
 
