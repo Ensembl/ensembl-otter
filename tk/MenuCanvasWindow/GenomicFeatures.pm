@@ -526,7 +526,7 @@ sub save_to_ace {
     if ($new_ace ne $self->Assembly->ace_string) {
 
         # Ok, we may need saving - but do we want it?
-        if(! $force) {
+        unless ($force) {
             
             my $save_changes = $self->top_window->messageBox(
                 -title      => "Save genomic features?" ,
@@ -543,11 +543,12 @@ sub save_to_ace {
         
         my $xc = $self->XaceSeqChooser;
         
+        print STDERR $new_assembly->zmap_SimpleFeature_xml($self->Assembly);
         if ($xc->show_zmap) {
-            
+            my $xml = $new_assembly->zmap_SimpleFeature_xml($self->Assembly);
         }
         
-        if($xc->update_ace_display($new_ace)) {        
+        if($xc->update_ace_display($new_ace)) {    # And zmap updated OK    
             print STDERR "Genomic features successfully saved to acedb\n";
 
             # Save the new SimpleFeatures in the attached Assembly object
