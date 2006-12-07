@@ -830,7 +830,9 @@ sub launch_GenomicFeatures {
         }
     };
     if ($@) {
-        $self->exception_message("Error creating GenomicFeatures window", $@);
+        my $msg = "Error creating GenomicFeatures window: $@";
+        warn $msg;
+        $self->exception_message($msg);
     }
 }
 
