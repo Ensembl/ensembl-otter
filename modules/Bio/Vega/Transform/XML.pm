@@ -29,17 +29,17 @@ sub get_transcript_class {
 }
 
 sub generate_OtterXML{
-  my ($self,$slices,$odb,$indent)=@_;
+  my ($self,$slices,$odb,$indent,$genes,$sf)=@_;
   my $ot=$self->prettyprint('otter');
   $ot->indent($indent);
   foreach my $slice (@$slices){
-	 $ot->attribobjs($self->generate_SequenceSet($slice,$odb));
+	 $ot->attribobjs($self->generate_SequenceSet($slice,$odb,$genes,$sf));
   }
   return $self->formatxml($ot);
 }
 
 sub generate_SequenceSet{
-  my ($self,$slice,$odb)=@_;
+  my ($self,$slice,$odb,$genes,$features)=@_;
   my $ss=$self->prettyprint('sequence_set');
   $ss->attribvals($self->generate_AssemblyType($slice));
   my $slice_projection = $slice->project('contig');
@@ -47,10 +47,14 @@ sub generate_SequenceSet{
 	 $ss->attribobjs($self->generate_SequenceFragment($contig_seg,$slice,$odb));
   }
   my $sfa = $odb->get_SimpleFeatureAdaptor();
-  my $features = $sfa->fetch_all_by_Slice($slice);
+  unless ($features) {
+	 $features = $slice->get_all_SimpleFeatures;
+  }
   $ss->attribobjs($self->generate_FeatureSet($features,$slice));
   my $ga=$odb->get_GeneAdaptor;
-  my $genes=$ga->fetch_all_by_Slice($slice);
+  unless ($genes){
+  $genes=$slice->get_all_Genes;
+  }
   foreach my $gene(@$genes){
 	 $ss->attribobjs($self->generate_Locus($gene));
   }
