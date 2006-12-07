@@ -96,6 +96,31 @@ sub fetch_all_by_Slice  {
   return $latest_genes;
 }
 
+sub get_deleted_Gene_by_slice{
+  my ($self, $gene,$gene_version) = @_;
+  unless ($gene || $gene_version){
+	 throw("no gene passed on to fetch old gene or no version supplied");
+  }
+  my $gene_slice=$gene->slice;
+  my $gene_stable_id=$gene->stable_id;
+  my $db_gene;
+  my @out = grep { $_->stable_id eq $gene_stable_id and $_->version eq $gene_version }
+    @{$self->SUPER::fetch_all_by_Slice_constraint($gene_slice,
+    'g.is_current = 0 ')};
+	if ($#out > 1) {
+	  ##test
+	  @out = sort {$a->dbID <=> $b->dbID} @out;
+	  $db_gene=pop @out;
+	  ##test
+
+	}
+  $db_gene=$out[0];
+  if ($db_gene){
+	 $self->reincarnate_gene($db_gene);
+  }
+  return $db_gene;
+}
+
 sub fetch_by_stable_id_version  {
   my ($self, $stable_id,$version) = @_;
   unless ($stable_id || $version) {
@@ -559,7 +584,7 @@ sub store{
 		  else {
 			 ##compare this gene with the highest version of the old genes
 			 ##if gene changed
-			 $old_gene=$self->fetch_by_stable_id_version($gene->stable_id,$old_version);
+			 $old_gene=$self->get_deleted_Gene_by_slice($gene,$old_version);
 			 $gene_changed=compare($old_gene,$gene);
 			 if ($gene_changed == 1){
 				$gene->version($old_version+1);
@@ -641,22 +666,22 @@ sub store{
 		  $self->update_deleted_exons($new_exons,$old_exons);
 		}
 	 }
-	 print STDOUT "\nChanged gene:".$gene->stable_id." Current Version:".$gene->version." changes stored successfully in db\n";
+	 #print STDERR "\nChanged gene:".$gene->stable_id." Current Version:".$gene->version." changes stored successfully in db\n";
 	 
   }
   
   if ($gene_changed == 0) {
 	 $self->db->rollback_to_savepoint;
-	 print STDOUT "\nTrying to store an Unchanged gene:".$gene->stable_id." Version:".$gene->version." nothing written in db\n";
+#	 print STDERR "\nTrying to store an Unchanged gene:".$gene->stable_id." Version:".$gene->version." nothing written in db\n";
   }
   if ($gene_changed == 2) {
-	 print STDOUT "\nNew gene:".$gene->stable_id." Version:".$gene->version." stored successfully in db\n";
+	# print STDERR "\nNew gene:".$gene->stable_id." Version:".$gene->version." stored successfully in db\n";
   }
   if ($gene_changed == 3) {
-	 print STDOUT "\nRestored gene:".$gene->stable_id." Version:".$gene->version." restored successfully in db\n";
+	 #print STDERR "\nRestored gene:".$gene->stable_id." Version:".$gene->version." restored successfully in db\n";
   }
   if ($gene_changed == 5) {
-	 print STDOUT "\nDeleted gene:".$gene->stable_id." Version:".$gene->version." deleted successfully in db\n";
+	 #print STDERR "\nDeleted gene:".$gene->stable_id." Version:".$gene->version." deleted successfully in db\n";
   }
 }
 
