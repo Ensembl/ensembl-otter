@@ -320,6 +320,7 @@ elsif ($odb->isa('Bio::Vega::DBSQL::DBAdaptor')) {
   }
   my $xmlstr;
   $odb->begin_work;
+  
   eval {
 	 ##check if clones are locked or not
 	 my $cb = new Bio::Vega::ContigLockBroker;
@@ -382,6 +383,7 @@ elsif ($odb->isa('Bio::Vega::DBSQL::DBAdaptor')) {
 		}
 		##update all gene and its components in db (del)
 		$gene_adaptor->store($gene);
+		server_log("Deleted gene ".$gene->stable_id);
 	 }
 	 server_log("Deleted ".scalar(@$del)." Genes") if ($del);
 	 ##update feature_sets
@@ -406,11 +408,32 @@ elsif ($odb->isa('Bio::Vega::DBSQL::DBAdaptor')) {
 	 ##fetch a new slice, and convert this new_slice to xml so that
 	 ##the response xml has all the above changes done in this session
 
-	 my $new_slice =  $odb->get_SliceAdaptor()->fetch_by_region($cs,$segment_name,$start,$end,$strand,$cs_version);
+	 ##test
 	 my $slices=[];
-	 push @$slices,$new_slice;
+	 ##pass on to the xml generator the current set of genes , simple features
+	 my $slicegenes=$slice->get_all_Genes;
+	 my $xmlgenes;
+	 my %sg = map {$_->stable_id, $_} @$slicegenes;
+	 my %nm = map {$_->stable_id, $_} @$new_mod;
+	 my %d = map {$_->stable_id, $_} @$del;
+	 while (my ($key, $new) = each %nm) {
+		if ($sg{$key}){
+		  $sg{$key}=$new;
+		}
+		unless ($sg{$key}) {
+		  server_log("new gene added to slice for xml response".$key);
+		  $sg{$key}=$new;
+		}
+    }
+	 while (my ($key, $new) = each %sg) {
+		unless ($d{$key}){
+		  push @$xmlgenes,$new;
+		}
+	 }
+	 push @$slices,$slice;
+	 ##test
 	 my $t=Bio::Vega::Transform::XML->new;
-	 $xmlstr=$t->generate_OtterXML($slices,$odb,0);
+	 $xmlstr=$t->generate_OtterXML($slices,$odb,0,$xmlgenes,$simple_features);
   };
   if ($@){
 	 error_exit($sq, "Failed writing annotations [$@]");
