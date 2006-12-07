@@ -95,7 +95,7 @@ sub get_overlapping_exon_otter_id_start_end {
     my ($start, $end);
     my $in_zone = 0;
     #warn "Looking for $search_start - $search_end and (", join(', ', map "'$_'", keys %$display_otter), ")";
-    foreach my $exon ($subseq->get_all_CDS_Exons) {
+    foreach my $exon ($subseq->get_all_Exons) {
         my $id = $exon->otter_id
           or next;
         #warn "Looking at '$id'\n";
@@ -190,16 +190,24 @@ sub Assembly_from_tk {
     
     my @sf_list;
     foreach my $hash (values %{$self->{'_gfs'}}) {
-        my $feat = $self->SeqFeature_from_gfs_hash($hash)
+        my $feat = $self->SimpleFeature_from_gfs_hash($hash)
           or next;
         push(@sf_list, $feat);
     }
-    $new_assembly->add_SeqFeatures(@sf_list);
+    $new_assembly->add_SimpleFeatures(@sf_list);
     
     return $new_assembly;
 }
 
-sub SeqFeature_from_gfs_hash {
+sub new_SimpleFeature_from_method_name {
+    my ($self, $method_name) = @_;
+    
+    my $feat = Hum::Ace::SeqFeature::Simple->new;
+    $feat->Method($self->get_Method_by_name($method_name));
+    return $feat;
+}
+
+sub SimpleFeature_from_gfs_hash {
     my ($self, $hash) = @_;
     
     my $fiveprime  = $hash->{'fiveprime'}
@@ -209,18 +217,17 @@ sub SeqFeature_from_gfs_hash {
     my $strand     = $hash->{'strand'}
       or confess "strand not set";
     
-    my $feat = Hum::Ace::SeqFeauture::Simple->new;
+    my $feat = $self->new_SimpleFeature_from_method_name($hash->{'gf_type'});
     if ($strand == 1) {
-        $feat->start($fiveprime);
-        $feat->end($threeprime);
+        $feat->seq_start($fiveprime);
+        $feat->seq_end($threeprime);
     } else {
-        $feat->start($threeprime);
-        $feat->end($fiveprime);
+        $feat->seq_start($threeprime);
+        $feat->seq_end($fiveprime);
     }
-    $feat->strand($strand);
+    $feat->seq_strand($strand);
     $feat->score($hash->{'score'});
     $feat->text($hash->{'display_label'});
-    $feat->Method($self->get_Method_by_name($hash->{'gf_type'}));
     
     return $feat;
 }
@@ -231,12 +238,12 @@ sub create_genomic_feature {
     my ($self, $subframe, $feat) = @_;
 
     my $gf_type       = $feat->method_name;
-    my $strand        = $feat->strand;
+    my $strand        = $feat->seq_strand || 1;
     my $score         = $feat->score;
     my $display_label = $feat->text;
 
-    my $fiveprime  = $strand == 1 ? $feat->start : $feat->end;
-    my $threeprime = $strand == 1 ? $feat->end   : $feat->start;
+    my $fiveprime  = $strand == 1 ? $feat->seq_start : $feat->seq_end;
+    my $threeprime = $strand == 1 ? $feat->seq_end   : $feat->seq_start;
 
     my $gfid =
       ++$self->{'_gfid'};    # will be uniquely identifying items in the list
@@ -349,10 +356,17 @@ sub change_of_gf_type_callback {
     my @disable = (-state => 'disabled', -background => 'grey' );
 
     $genomic_feature->{'gf_type'}       = $wanted_type;
-    $genomic_feature->{'display_label'} =
-      $method->edit_display_label
-      ? ''
-      : $default_label;
+    my $txt = $genomic_feature->{'display_label'};
+
+    # Only change the text field if it is the default field
+    # or is empty. Editable fields are set to blank.
+    if (! $txt or ($txt eq $default_label)) {
+        $genomic_feature->{'display_label'} =
+          $method->edit_display_label
+          ? ''
+          : $default_label;
+    }
+
     $genomic_feature->{'score_entry'}
       ->configure($method->edit_score         ? @enable : @disable);
     $genomic_feature->{'display_label_entry'}
@@ -461,6 +475,8 @@ sub add_genomic_feature {
     for my $widget ('fiveprime_entry', 'threeprime_entry', 'direction_button', 'display_label_entry') {
         $genomic_feature->{$widget}->bind('<Destroy>', sub{ $self=$genomic_feature=undef; } );
     }
+
+    $self->change_of_gf_type_callback($genomic_feature, $feat->method_name);
 
     #    # unfortunately, you cannot bind these before the whole widget is made,
     #    # as it tends to activate the -command on creation
@@ -607,7 +623,8 @@ sub initialize {
         $add_menu->command(
             -label   => $fullname.($length ? " (${length}bp)" : ''),
             -command => sub {
-                $self->add_genomic_feature($gf_type);
+                my $feat = $self->new_SimpleFeature_from_method_name($gf_type);
+                $self->add_genomic_feature($feat);
                 # $self->fix_window_min_max_sizes;
                 $self->set_scroll_region_and_maxsize;
 
