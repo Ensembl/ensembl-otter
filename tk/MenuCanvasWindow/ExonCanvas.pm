@@ -768,6 +768,13 @@ sub show_peptide {
             -background => '#0000ef',
             -foreground => 'white',
             );
+        
+        # Light grey background for hydrophobic amino acids
+        $peptext->tagConfigure('greyphobic',
+            -background => '#cccccc',
+            -foreground => 'black',
+            );
+        
         # Gold for methionine codons
         $peptext->tagConfigure('goldmeth' ,
             -background => '#ffd700',
@@ -864,11 +871,21 @@ sub update_translation {
         my $line_length = 60;
         my $str = $pep->sequence_string;
         my $map = $sub->codon_start_map;
-        my %style = (
-            '*' => 'redstop',
-            'X' => 'blueunk',
-            'M' => 'goldmeth',
-            );
+        my %style = qw{
+            *   redstop
+            X   blueunk
+            M   goldmeth
+            
+            A   greyphobic
+            C   greyphobic
+            G   greyphobic
+            I   greyphobic
+            L   greyphobic
+            F   greyphobic
+            P   greyphobic
+            W   greyphobic
+            V   greyphobic
+            };
         my $pep_genomic = $self->{'_peptext_index_to_genomic_position'} = {};
         for (my $i = 0; $i < length($str); $i++) {
             my $char = substr($str, $i, 1);
