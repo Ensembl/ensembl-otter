@@ -296,6 +296,10 @@ sub zMapBlixemDefaults {
 
 sub zMapWindowDefaults {
     my ($self) = @_;
+    
+    # Turn off warning about "possible comment in qw()"
+    # caused by #hex colour names
+    no warnings 'qw';
 
     # The canvas_maxsize probably needs some thought here.
     return $self->formatZmapDefaults(
@@ -531,40 +535,6 @@ sub zMapEdit{
 
 #===========================================================
 
-sub zMapMakeRequest{
-    my ($self, $xmlObject, $action, $xml_cmd_string) = @_;
-
-    my $xr = $self->zMapCurrentXclient;
-    unless($xr){
-        warn "No current window.";
-        return ;
-    }
-    warn "Current window " . $xr->window_id . " @_\n" if $ZMAP_DEBUG;
-    my $handler ||= \&RESPONSE_HANDLER;
-    my $error   ||= \&ERROR_HANDLER;
-
-    my @commands;
-
-    if(!$xmlObject && !$action && $xml_cmd_string){
-        @commands = ($xml_cmd_string);
-    }else{
-        @commands = obj_make_xml($xmlObject, $action);
-    }
-    warn "@commands" if $ZMAP_DEBUG;
-    my @a = $xr->send_commands(@commands);
-
-    for(my $i = 0; $i < @commands; $i++){
-        warn "command $i '",substr($commands[$i], 0, 15),"' returned $a[$i] ";
-        my ($status, $xmlHash) = parse_response($a[$i]);
-        if($status =~ /^2\d\d/){ # 200s
-            $handler->($self, $action, $xmlHash);
-        }else{
-            $error->($self, $action, $status, $xmlHash);
-        }
-    }
-    return ;
-}
-
 # This  menu stuff  needs  rewriting.  It doesn't  work  100% like  it
 # should.  It isn't  really needed  for production  so it's  not  a high
 # priority
@@ -709,6 +679,38 @@ sub open_clones{
     $watch->Unwatch;
 }
 
+sub zMapMakeRequest{
+    my ($self, $xmlObject, $action, $xml_cmd_string) = @_;
+
+    my $xr = $self->zMapCurrentXclient;
+    unless($xr){
+        warn "No current window.";
+        return ;
+    }
+    warn "Current window " . $xr->window_id . " @_\n" if $ZMAP_DEBUG;
+
+    my @commands;
+
+    if(!$xmlObject && !$action && $xml_cmd_string){
+        @commands = ($xml_cmd_string);
+    }else{
+        @commands = obj_make_xml($xmlObject, $action);
+    }
+    warn "@commands" if $ZMAP_DEBUG;
+    my @a = $xr->send_commands(@commands);
+
+    for(my $i = 0; $i < @commands; $i++){
+        warn "command $i '",substr($commands[$i], 0, 15),"' returned $a[$i] ";
+        my ($status, $xmlHash) = parse_response($a[$i]);
+        if($status =~ /^2\d\d/){ # 200s
+            $self->RESPONSE_HANDLER($action, $xmlHash);
+        }else{
+            $self->ERROR_HANDLER($action, $status, $xmlHash);
+        }
+    }
+    return ;
+}
+
 sub RESPONSE_HANDLER{
     my ($self, $action, $xml) = @_;
 
@@ -729,9 +731,8 @@ sub RESPONSE_HANDLER{
 sub ERROR_HANDLER{
     my ($self, $action, $status, $xml) = @_;
     $xml = $xml->{'error'}; # this is all we care about
-    warn "In ERROR_HANDLER for action=$action\n" if $ZMAP_DEBUG;
-    my $full = Dumper $xml;
-    warn "status $status, xml string '$full'\n" if $ZMAP_DEBUG;
+    
+    warn "action=$action status=$status error=$xml" if $ZMAP_DEBUG;
 
     if($status == 400){
 
