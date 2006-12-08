@@ -22,7 +22,7 @@ use CanvasWindow;
     $factory->show_alignments(1);
     $factory->show_all_matches(1);
 
-    #$factory->min_match_length(50);
+    $factory->min_match_length(10);
 
     while (my $subject = shift @seqs) {
         cross_dotter($factory, $query, $subject);

@@ -2028,22 +2028,19 @@ sub send_zmap_commands {
         return ;
     }
     warn "Current window " . $xr->window_id . " @_\n" if $ZMAP_DEBUG;
-    my $handler = \&RESPONSE_HANDLER;
-    my $error   = \&ERROR_HANDLER;
 
     my @a = $xr->send_commands(@xml);
 
     for(my $i = 0; $i < @xml; $i++){
         my ($status, $xmlHash) = parse_response($a[$i]);
         if ($status =~ /^2\d\d/) { # 200s
-            #$handler->($self, $xmlHash);
-            print "OK: $a[$i]";
+            print STDERR "OK\n";
         } else {
-            $error->($self, $status, $xmlHash);
+            my $error = $xmlHash->{'error'}{'message'};
+            print STDERR "ERROR: $a[$i]\n$error\n";
+            die $error;
         }
-    }
-    return ;
-    
+    }    
 }
 
 sub isZMap{

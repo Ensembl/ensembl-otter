@@ -186,6 +186,7 @@ sub Assembly_from_tk {
     my $new_assembly = Hum::Ace::Assembly->new;
     $new_assembly->name($old_assembly->name);
     $new_assembly->MethodCollection($old_assembly->MethodCollection);
+    $new_assembly->Sequence($old_assembly->Sequence);
     ### Can copy more properties of old_assembly if needed
     
     my @sf_list;
