@@ -543,9 +543,9 @@ sub save_to_ace {
         
         my $xc = $self->XaceSeqChooser;
         
-        print STDERR $new_assembly->zmap_SimpleFeature_xml($self->Assembly);
         if ($xc->show_zmap) {
-            my $xml = $new_assembly->zmap_SimpleFeature_xml($self->Assembly);
+            my @xml = $new_assembly->zmap_SimpleFeature_xml($self->Assembly);
+            $self->XaceSeqChooser->send_zmap_commands(@xml);
         }
         
         if($xc->update_ace_display($new_ace)) {    # And zmap updated OK    
