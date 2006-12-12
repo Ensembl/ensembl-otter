@@ -448,6 +448,35 @@ sub delete_gene {
 
 }
 
+sub force_load {
+  my ($self,$gene)=@_;
+  ##get db gene ,if one and delete it
+  my $db_gene=$self->fetch_by_stable_id($gene->stable_id);
+  if ($db_gene){
+	 $self->delete_gene($db_gene);
+  }
+  $self->SUPER::store($gene);	
+  my $aa = $self->db->get_AuthorAdaptor;
+  my $gene_author=$gene->gene_author;
+  $aa->store($gene_author);
+  my $author_id=$gene_author->dbID;
+  $aa->store_gene_author($gene->dbID,$author_id);
+  ##transcript-author, transcript-evidence
+  my $transcripts=$gene->get_all_Transcripts;
+  my $ta = $self->db->get_TranscriptAdaptor;
+  foreach my $tran (@$transcripts){
+	 ##author
+	 my $tran_author=$tran->transcript_author;
+	 $aa->store($tran_author);
+	 my $author_id=$tran_author->dbID;
+	 $aa->store_transcript_author($tran->dbID,$author_id);
+	 ##evidence
+	 my $evidence_list=$tran->get_Evidence;
+	 $ta->store_Evidence($tran->dbID,$evidence_list);
+  }
+}
+
+
 =head2 store
 
  Title   : store
@@ -461,7 +490,8 @@ sub delete_gene {
 =cut
 
 sub store{
-  my ($self,$gene) = @_;
+  my ($self,$gene,$forceload) = @_;
+
   unless ($gene) {
 	 throw("Must enter a Gene object to the store method");
   }
@@ -523,6 +553,13 @@ sub store{
   unless ($gene->slice->adaptor){
 	 $gene->slice->adaptor($sa);
   }
+
+  if ($forceload) {
+	 $self->force_load($gene);
+  }
+
+  unless ($forceload) {
+
   my $gene_changed=0;
   unless ($self->db->check_for_transaction){
 	 throw "This is non-transactional , cannot proceed storing of gene\n";
@@ -683,6 +720,7 @@ sub store{
   if ($gene_changed == 5) {
 	 #print STDERR "\nDeleted gene:".$gene->stable_id." Version:".$gene->version." deleted successfully in db\n";
   }
+}
 }
 
 sub add_synonym{
