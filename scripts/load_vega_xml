@@ -26,12 +26,13 @@ use Bio::Otter::Lace::Defaults;
 use Bio::EnsEMBL::Pipeline::SeqFetcher::Finished_Pfetch;
 use Data::Dumper;
 
-my ($dataset_name,$xmlfile,$assembly);
+my ($dataset_name,$xmlfile,$assembly,$force_load);
 
 Bio::Otter::Lace::Defaults::do_getopt(
 												  'dataset=s' => \$dataset_name,
 												  'xml=s'  => \$xmlfile,
 												  'assembly=s' => \$assembly,
+												  'force_load' => \$force_load,
 												 ) ;
 if ( !defined $dataset_name || !defined $assembly){
   Bio::Otter::Lace::Defaults::show_help();
@@ -57,7 +58,7 @@ my $aname=$cl->author();
 my $aemail=$cl->email();
 my $clauthor;
 if ( defined $aname && defined $aemail){
-  $clauthor=Bio::Otter::Author->new;
+  $clauthor=Bio::Vega::Author->new;
   $clauthor->email($aemail);
   $clauthor->name($aname);
 }
@@ -85,38 +86,49 @@ eval{
 	 my $gene_adaptor=$db->get_GeneAdaptor;
 	 foreach my $gene (@$genes){
 		eval{
-		if (defined $gene->gene_author->name && ! defined $gene->gene_author->email){
-		  die "gene author name set but not email";
-		}
-		if (!defined $gene->gene_author->name && defined $gene->gene_author->email){
-		  die "gene author name not set but email is set";
-		}
-		unless ($gene->gene_author->name && $gene->gene_author->email) {
-		  $gene->gene_author->name($clauthor->name);
-		  $gene->gene_author->email($clauthor->email);
-		  warn "gene author not set and setting author to client author\n";
-		}
-		my $transcripts = $gene->get_all_Transcripts ;
-      foreach my $tran (@$transcripts){
-		  if (defined $tran->transcript_author->name && ! defined $tran->transcript_author->email){
-			 die "transcript author name set but not email";
+		  if (defined $gene->gene_author->name && ! defined $gene->gene_author->email){
+			 die "gene author name set but not email";
 		  }
-		  if (!defined $tran->transcript_author->name && defined $tran->transcript_author->email){
-			 die "transcript author name not set but email is set";
+		  if (!defined $gene->gene_author->name && defined $gene->gene_author->email){
+			 die "gene author name not set but email is set";
 		  }
-		  unless ($tran->transcript_author->name && $tran->transcript_author->email) {
-			 $tran->transcript_author->name($clauthor->name);
-			 $tran->transcript_author->email($clauthor->email);
-			 warn "transcript author not set and setting author to client author\n";
+		  unless ($gene->gene_author->name && $gene->gene_author->email) {
+			 $gene->gene_author->name($clauthor->name);
+			 $gene->gene_author->email($clauthor->email);
+			 warn "gene author not set and setting author to client author\n";
 		  }
-		}
+		  if ($force_load){
+			 $gene->is_current(1);
+		  }
+		  
+		  my $transcripts = $gene->get_all_Transcripts ;
+		  foreach my $tran (@$transcripts){
+			 if (defined $tran->transcript_author->name && ! defined $tran->transcript_author->email){
+				die "transcript author name set but not email";
+			 }
+			 if (!defined $tran->transcript_author->name && defined $tran->transcript_author->email){
+				die "transcript author name not set but email is set";
+			 }
+			 unless ($tran->transcript_author->name && $tran->transcript_author->email) {
+				$tran->transcript_author->name($clauthor->name);
+				$tran->transcript_author->email($clauthor->email);
+				warn "transcript author not set and setting author to client author\n";
+			 }
+			 $tran->is_current(1);
+			 if ($force_load){
+				foreach my $exon (@{$tran->get_all_Exons}) {
+				  $exon->is_current(1);
+				}
+			 }
+
+		  }
 		};
 		if ($@){
 		  die "problem with loading of genes\n$@\n";
 		  $db->rollback;
 		}
 		eval {
-		  $gene_adaptor->store($gene);
+		  $gene_adaptor->store($gene,$force_load);
 		};
 		if ($@){
 		  die "problem with loading of genes\n$@\n";
