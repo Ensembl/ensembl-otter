@@ -1,65 +1,124 @@
 #!/usr/local/bin/perl -w
 
+# ck1@sanger.ac.uk
+# compare chromoview NOD/CHORI agps with agps in ~jgrg/work/mouse
+# update if necessary and copy over new ones to /nfs/WWWdev/SANGER_docs/htdocs/Projects/M_musculus-NOD/NOD_AGP
+# which is used by /nfs/WWWdev/SANGER_docs/cgi-bin/Projects/M_musculus/mouse_NOD_clones_TPF script
+# to generate webpage at http://wwwdev.sanger.ac.uk/cgi-bin/Projects/M_musculus/mouse_NOD_clones_TPF
+# 
+
 use Hum::Sort ('ace_sort');
 use File::Basename;
 use Tie::IxHash;
-
+use Hum::Tracking ('prepare_track_statement');
 use strict;
 
-my $nod = {
-		   'NOD_IDD5.1' => 1,
-		   'NOD_IDD3'   => 3,
-		   'NOD_IDD10'  => 3,
-		   'NOD_IDD18'  => 3,
-		   'NOD_IDD4'   => 11,
-		   'NOD_IDD16'  => 17,
-		   'CHORI29_IDD5_Test' => 1
-		  };
+# get all NOD/CHORI subregions to chrom digit mapping
+my $nod = prepare_track_statement(qq{
+									 SELECT s.subregion, c.chromosome
+									 FROM subregion s, chromosomedict c
+									 WHERE s.chromosome=c.id_dict
+									 AND s.speciesname= ?
+									 AND s.SUBREGION LIKE ?
+									});
+$nod->execute('Mouse', 'NOD%');
+
+my $nod_chrdigit;
+while ( my ($subregion, $chr_digit)= $nod->fetchrow ){
+
+ # ignore old subregions - should have been remove by the finishers
+  next if ( $subregion eq "NOD_IDD3" or
+			$subregion eq "NOD_IDD4" or
+			$subregion eq "NOD_IDD10" or
+			$subregion eq "NOD_IDD16" or
+			$subregion eq "NOD_IDD18" or
+			$subregion eq "NOD_IDD6.1+2"
+		  );
+
+  $nod_chrdigit->{$subregion} = $chr_digit;
+}
+
+my $chori = prepare_track_statement(qq{
+									   SELECT s.subregion, c.chromosome
+									   FROM subregion s, chromosomedict c
+									   WHERE s.chromosome=c.id_dict
+									   AND s.speciesname= ?
+									   AND s.SUBREGION LIKE ?
+									  });
+$chori->execute('Mouse', 'CHO%');
+while ( my ($subregion, $chr_digit)= $chori->fetchrow ){
+
+  if ( $subregion eq "CHO_IDD5" ){
+	$subregion = "CHO_IDD5.1_Test";
+  }
+  $nod_chrdigit->{$subregion} = $chr_digit;
+
+}
+
+if ( $ARGV[0] eq "test" ){
+  foreach my $region (keys %$nod_chrdigit ){
+	warn "$region ", $nod_chrdigit->{$region};
+  }
+  die;
+}
 
 my $nod_base = "/nfs/team71/analysis/jgrg/work/mouse";
 my $dest_dir = "/nfs/WWWdev/SANGER_docs/htdocs/Projects/M_musculus-NOD/NOD_AGP";
+
 system("rm -f $dest_dir/*");
 
-my @latest_agps;
+my (@latest_agps);
 
-foreach my $region (keys %$nod ){
-  my $chr = $nod->{$region};
+foreach my $region (keys %$nod_chrdigit ){
+  my $chr = $nod_chrdigit->{$region};
 
   my $agpfile = "chr$chr"."_$region-*agp";
 
   my @sorted_files = sort { ace_sort($a, $b) } glob ("$nod_base/chr_$chr/$agpfile");
-
+  #warn "@sorted_files";
   my $latest = $sorted_files[-1];
   my $file = basename($latest);
+
+  my $is_current = check_agp_is_up_2_date($chr, $region, $file, $nod_base);
+  next if $is_current == 0;
+
   $file =~ s/-\d+//;
 
-  my $outfile = "$dest_dir/$file";
-  my $fh;
-  open ( $fh, ">$outfile") or die $!;
+  if ( $file =~ /(.*_)CHO(_.*)/ ){
+	$file = $1."CHORI29".$2;
+  }
 
-  my $cols =<<COLS;
-------------------------------------------------------------
+  my $outfile = "$dest_dir/$file";
+
+  if ( $file ){
+	
+	my $fh;
+	open ( $fh, ">$outfile") or die $!;
+	
+	my $cols =<<COLS;
+----------------------------------------------------------------------------
 $region AGP
-------------------------------------------------------------
+----------------------------------------------------------------------------
 col_1: chromosome name
 col_2: AGP start
 col_3: AGP_end
 col_4: assembly order (ranks)
-col_5: sequencing status: F(finished), N(unfinished)
+col_5: sequencing status: F(finished), N(unfinished), A(contiguous)
 col_6: accession.version or gap (default 50,000 bp)
 col_7: start position of clone sequence used in AGP
 col_8: end position of clone sequence used in AGP
 col_9: orientation
-------------------------------------------------------------
+-----------------------------------------------------------------------------
 
 COLS
+	
+	print $fh $cols;
+	close $fh;
 
-  print $fh $cols;
-  close $fh;
-
-  system("cat $latest >> $outfile");
-  push(@latest_agps, $latest);
-
+	system("cat $latest >> $outfile");
+	push(@latest_agps, $latest);
+	
+  }
 }
 warn "\n";
 
@@ -68,7 +127,8 @@ warn "\n";
 foreach my $file ( @latest_agps ){
 
  # warn $file;
-  my $chk_gap = `egrep '(clone|contig|N	50000)' $file`;
+  #my $chk_gap = `egrep '(clone|contig|N	50000)' $file`;
+  my $chk_gap = `egrep '(clone|contig|N	)' $file`;
   if ( $chk_gap ){
 	warn "UNFINISHED: $file\n";
 
@@ -86,13 +146,17 @@ foreach my $file ( @latest_agps ){
 
   my $agpfile = basename($file);
 
+  if ( $agpfile =~ /(.+_)CHO(_.+)/ ){
+	$agpfile = $1."CHORI29".$2;
+  }
+
   $agpfile =~ s/-\d+//;
   my $region_seq .= $agpfile.".seq";
 
   open(AGPSEQ, ">$dest_dir/$region_seq") or die $!;
-  print AGPSEQ basename($file), "\n";
+  print AGPSEQ basename($file), "\n\n";
 
-  warn "  FINISHED: $agpfile";
+  warn "  FINISHED: $agpfile [$region_seq]";
 
   my $non_n = 0;
 
@@ -111,9 +175,12 @@ foreach my $file ( @latest_agps ){
 
 	$acc =~ s/\.\d+$//;
 
-	my $test_sv = `pfetch -F $acc | grep "^SV"`;
+	my $test_sv = `pfetch -D $acc`;
 	chomp $test_sv;
-	$test_sv =~ s/^SV\s+//;
+	$test_sv =~ /^(.*\.\d+)\s.+/;
+	$test_sv = $1;
+
+#	warn "$acc_ori $acc $test_sv";
 
 	# acc sequence
 	if ( $acc_ori !~ /^\d+/ ){
@@ -121,19 +188,10 @@ foreach my $file ( @latest_agps ){
 	  $non_n = 1;
 
 	  if ( $test_sv eq $acc_ori ){
-
-		my $acc_seq = `pfetch -q $acc`;
-
-		if ( $strand eq "+" ){
-		  $seq .= substr($acc_seq, $start-1, $end-$start+1);
-		}
-		else {
-
-		  my $revcom_seq = revcomp($acc_seq);
-		  $seq .= substr($revcom_seq, $start-1, $end-$start+1);
-		}
+		
+		$seq .= `pfetch -s $start -e $end -q $acc`;
 	  }
-	
+
 	  # stop if version does not match
 	  else {
 		#unlink("$file.seq");
@@ -153,6 +211,35 @@ foreach my $file ( @latest_agps ){
 
 # update NOD agp/seq files in live site
 warn "\n";
+
+
+sub check_agp_is_up_2_date {
+
+  my ($chr, $region, $file, $nod_base) = @_;
+
+  $region = "CHO_IDD5" if $region eq "CHO_IDD5.1_Test";
+
+  my $script = "/nfs/team71/analysis/ck1/SCRIPT_CVS/chromoview/oracle2agp";
+  my $args = " -chromosome $chr -species Mouse -subregion $region -unfinished";
+
+  chdir $nod_base."/chr_$chr";
+
+  `$script $args > tmp`;
+  warn $args, " $file" if $region eq "CHO_IDD5";
+  my $diff = system("diff tmp $file");
+  if ( $diff != 0 ){
+	print "AGP changed in chromoview: $file\n";
+	$file =~ /(.+-)(\d+)(\.agp)/;
+	my $version = $2;
+	$version++;
+	my $newfile = $1.$version.$3;
+	`mv tmp $newfile`;
+  }
+  else {
+	unlink "tmp";
+  }
+  return $diff;
+}
 
 sub get_fields {
 
@@ -189,15 +276,16 @@ sub assembly_contig_seq {
 
 	my ($start, $end, $rank, $status, $acc, $acc_ori, $strand) = get_fields($_);
 
-	if ( $status eq "F" ) {
+	#warn "$start, $end, $rank, $status, $acc, $acc_ori, $strand";
+
+	if ( $status =~ /F|A/ ) { #eq "F" or $status eq "A" ) {
 	  push(@{$contig_acc_start_end_strand->{$acc}}, $rank, $start, $end, $strand);
 	}
-	elsif ( $status eq "N" ) {
-
+	elsif ( $status eq "N") {
 	  my $clones = scalar keys %$contig_acc_start_end_strand;
 
 	  if ( $clones < 2 ){
-		$contig_acc_start_end_strand = ();
+		$contig_acc_start_end_strand = {};
 		tie %$contig_acc_start_end_strand, "Tie::IxHash";
 	  }
 
@@ -220,29 +308,26 @@ sub concat_seq {
   my ( $contig_acc_start_end_strand, $file ) = @_;
 
   my $seq;
-  my $ranks = "Ranks_";
+  my $ranks = "No_";
   my @ranks;
   $file = basename($file);
   $file =~ s/-\d+\.agp$//;
 
+  if ( $file =~ /(.+_)CHO(_.+)/ ){
+	$file = $1."CHORI29".$2;
+  }
+
+  #warn $file, " ", keys %$contig_acc_start_end_strand;
   foreach my $acc ( keys %$contig_acc_start_end_strand ) {
 
 	my $acc_ori = $acc;
 	$acc =~ s/\.\d+$//;
-	my $acc_seq = `pfetch -q $acc`;
-	my $strand = $contig_acc_start_end_strand->{$acc_ori}->[3];
 	my $start  = $contig_acc_start_end_strand->{$acc_ori}->[1];
 	my $end    = $contig_acc_start_end_strand->{$acc_ori}->[2];
 	my $rank   = $contig_acc_start_end_strand->{$acc_ori}->[0];
 	push(@ranks, $rank);
 
-	if ( $strand eq "+" ){
-	  $seq .= substr($acc_seq, $start-1, $end-$start+1);
-	}
-	else {
-	  $acc_seq = revcomp($acc_seq);
-	  $seq .= substr($acc_seq, $start-1, $end-$start+1);
-	}
+	$seq .= `pfetch -s $start -e $end -q $acc`;
   }
 
   $ranks .= $ranks[0]."-".$ranks[-1];
@@ -252,6 +337,7 @@ sub concat_seq {
   my $fh;
   open ( $fh, ">$outfile" ) or die $!;
 
+  print "Writing to $seq_file\n";
   print $fh "$seq_file\n\n", sixty_cols($seq);
 }
 
