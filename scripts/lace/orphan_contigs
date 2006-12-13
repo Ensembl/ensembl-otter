@@ -1,0 +1,60 @@
+#!/usr/local/bin/perl -w
+
+# Shows contigs that do not belong to any assembly
+# and tries to give a possible hint
+# as to which assembly each contig could belong to
+# (based on the clone name match without the version)
+
+use strict;
+use Bio::Otter::Lace::Defaults;
+
+{
+    my $dataset_name    = 'human'; # 'test_human';      # 'mouse', ...
+
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'dataset=s'     => \$dataset_name,
+    );
+    
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    
+    my $otter_dba = $ds->get_cached_DBAdaptor;
+
+    my $sth_orphan = $otter_dba->prepare(qq{
+        SELECT c.name
+        FROM contig c
+        LEFT JOIN assembly a
+        ON a.contig_id=c.contig_id
+        WHERE a.type is NULL
+    });
+
+    my $sth_similar = $otter_dba->prepare(qq{
+        SELECT a.type, c.name
+        FROM contig c, assembly a
+        WHERE a.contig_id=c.contig_id
+        AND c.name LIKE concat(?,"%")
+    });
+
+    my $cnt = 0;
+
+    $sth_orphan->execute();
+    while( my ($contig_name) = $sth_orphan->fetchrow()) {
+        printf ("%4d    %s:", ++$cnt, $contig_name);
+
+        my %clone_to_asmlist = ();
+        my $proper_name = (split(/\./, $contig_name))[0];
+        $sth_similar->execute($proper_name);
+        while( my ($asm, $similar_name) = $sth_similar->fetchrow()) {
+            push @{$clone_to_asmlist{$similar_name}}, $asm;
+        }
+
+        foreach my $similar_name (keys %clone_to_asmlist) {
+            print "    $similar_name(".join(', ', @{$clone_to_asmlist{$similar_name}}).")";
+        }
+        print "\n";
+    }
+}
+
