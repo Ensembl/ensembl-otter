@@ -2045,6 +2045,36 @@ sub features_to_XML {
       return $xml;
 }
 
+sub specific_gene_versions_to_XML {
+    my ($db, $slice, $gene_db_ids) = @_;
+
+    print STDERR "Slice $slice\n";
+
+    my $xmlstr = "";
+
+    $xmlstr .= "<otter>\n";
+    $xmlstr .= "<sequence_set>\n";
+
+    my $path  = $slice->get_tiling_path;
+    my $chr      = $slice->chr_name;
+    my $chrstart = $slice->chr_start;
+    my $chrend   = $slice->chr_end;
+
+    $xmlstr .= Bio::Otter::Converter::path_to_XML($chr, $chrstart, $chrend, $db->assembly_type, $path);
+
+    my $gene_dba = $db->get_GeneAdaptor;
+    for my $gene_id (@$gene_db_ids) {
+        if(my $gene = $gene_dba->fetch_by_dbID($gene_id)) {
+            $xmlstr .= $gene->toXMLString . "\n";
+        }
+    }
+
+    $xmlstr .= "</sequence_set>\n";
+    $xmlstr .= "</otter>\n";
+
+    return $xmlstr;
+}
+
 sub slice_to_XML {
   my ($slice, $db, $writeseq) = @_;
 
@@ -2056,14 +2086,13 @@ sub slice_to_XML {
   $xmlstr .= "<sequence_set>\n";
 
   my $path  = $slice->get_tiling_path;
-  #my @genes = @{ $db->get_GeneAdaptor->fetch_by_Slice($slice) };
-  my @genes;
+
+  my @genes = ();
 
   if ($db->isa("Bio::Otter::DBSQL::DBAdaptor")) {
-     # @genes = @{ $db->get_GeneAdaptor->fetch_by_Slice($slice) };
 
-        # to prevent getting "unwanted" genes:
-     @genes = @{ $slice->get_all_Genes('otter') };
+    @genes = @{ $db->get_GeneAdaptor->fetch_by_Slice($slice) };
+
   } else {
      # Is this ever used?  AnnotatedGenes from an non-otter database?
      my $tmpgenes = $db->get_GeneAdaptor->fetch_all_by_Slice($slice);
@@ -2071,7 +2100,7 @@ sub slice_to_XML {
          my $ann = bless $g,"Bio::Otter::AnnotatedGene";
          my $ginfo = new Bio::Otter::GeneInfo;
          $ann->gene_info($ginfo);
-         push(@genes,$ann);
+         push @genes, $ann;
          my @tran;
 
           foreach my $t (@{$g->get_all_Transcripts}) {
@@ -2122,10 +2151,9 @@ sub slice_to_XML {
         $xmlstr .= "</dna>\n";
     }
 
-    @genes = sort by_stable_id_or_name @genes;
-    foreach my $g (@genes) {
+    foreach my $g (sort by_stable_id_or_name @genes) {
         #print STDERR "Gene type " . $g->type . "\n";
-        if ($g->type ne 'obsolete') {
+        if($g->type ne 'obsolete') {
             $xmlstr .= $g->toXMLString . "\n";
         }
     }
