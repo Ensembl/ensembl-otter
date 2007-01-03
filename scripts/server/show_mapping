@@ -47,6 +47,7 @@ my $sth = $mdbc->prepare(qq{
     AND a.cmp_seq_region_id=cmp.seq_region_id
     AND asm.coord_system_id = (select coord_system_id from coord_system where version='$csver_asm')
     AND cmp.coord_system_id = (select coord_system_id from coord_system where version='$csver_cmp')
+    ORDER BY asm.name, a.asm_start
 });
 $sth->execute;
 while (my ($asm_name, $cmp_name, $asm_start, $asm_end, $cmp_start, $cmp_end) = $sth->fetchrow) {
