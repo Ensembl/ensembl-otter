@@ -50,7 +50,7 @@ my $sth = $mdbc->prepare(qq{
 });
 $sth->execute;
 while (my ($asm_name, $cmp_name, $asm_start, $asm_end, $cmp_start, $cmp_end) = $sth->fetchrow) {
-    $output_string .= join("\t", $asm_name, $cmp_name, $asm_start, $asm_end, $cmp_start, $cmp_end)."\n";
+    $output_string .= "$asm_name($asm_start..$asm_end) <-- $cmp_name($cmp_start..$cmp_end)\n";
 }
 
 send_response($sq, $output_string, 1);
