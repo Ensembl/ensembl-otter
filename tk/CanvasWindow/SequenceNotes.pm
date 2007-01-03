@@ -74,17 +74,6 @@ sub get_CloneSequence_list {
     return $cs_list;
 }
 
-sub refresh_and_redraw {
-    my $self = shift @_;
-    my $top    = $self->canvas->toplevel;
-
-	$top->Busy;
-
-    $self->get_CloneSequence_list(1);
-    $self->draw();
-
-	$top->Unbusy;
-}
 
 # Not sure whether it should belong here or to SequenceSet.pm
 #
@@ -1438,8 +1427,7 @@ sub popup_ana_seq_history{
             $top->transient($self->canvas->toplevel);
             my $hp  = CanvasWindow::SequenceNotes::History->new($top, 650 , 50);
             $hp->Client($self->Client());
-	    # $hp->SequenceNotes($self); # can't have reference to self if we're inheriting
-	    # clean up just won't work.
+	        $hp->SequenceNotes($self);
             $hp->SequenceSet($self->SequenceSet);
             $hp->SequenceSetChooser($self->SequenceSetChooser);
             $hp->name($cs->contig_name);
