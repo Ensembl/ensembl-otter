@@ -509,7 +509,7 @@ sub zMapEdit{
             my $feat = $feat_hash->{$name};
             if (my $style = $feat->{'style'}) {
                 if ($style eq 'Genomic_canonical') {
-                    $genomic_canonical = 1;
+                    $genomic_canonical = $name;
                     last NAME;
                 }
             }
@@ -528,7 +528,7 @@ sub zMapEdit{
         }
         
         if ($genomic_canonical) {
-            $self->launch_GenomicFeatures;
+            $self->edit_Clone($genomic_canonical);
             return(200, $z->handled_response(1));
         }
         elsif (@subseq_names) {
