@@ -1,0 +1,57 @@
+#!/usr/local/bin/perl -w
+
+my $pipehead = $ENV{PIPEHEAD}; # is set by the server for any GET request
+
+use strict;
+use OtterDefs;
+use Bio::Otter::ServerQuery;
+use Bio::Otter::ServerSide (':all');
+
+$| = 1;
+
+my $sq = Bio::Otter::ServerQuery->new('dataset',
+    'csver');
+set_nph($sq);
+
+if(!$pipehead) {
+    error_exit($sq, "This kind of data is only available from new API databases. Set pipehead to 1");
+}
+
+my $csver_asm = 'Otter';
+my $csver_cmp = $sq->getarg('csver') || 'NCBI36';
+
+my $odba = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
+
+my $mapper_metakey = "mapper_db.${csver_cmp}";
+
+my ($mapper_val) = @{$odba->get_MetaContainer()->list_value_by_key($mapper_metakey)};
+my $mdba;
+
+if(!$mapper_val) {
+    error_exit($sq, "mapper_db is not properly defined");
+} elsif($mapper_val eq '=otter_head') {
+    $mdba = $odba;
+} elsif($mapper_val eq '=pipeline_head') {
+    $mdba = odba_to_sdba($sq, $odba, 1, '');
+} else {
+    $mdba = odba_to_sdba($sq, $odba, 1, $mapper_metakey);
+}
+
+my $mdbc = $mdba->dbc();
+my $output_string = '';
+
+my $sth = $mdbc->prepare(qq{
+    SELECT asm.name, cmp.name, a.asm_start, a.asm_end, a.cmp_start, a.cmp_end
+    FROM assembly a, seq_region asm, seq_region cmp
+    WHERE a.asm_seq_region_id=asm.seq_region_id
+    AND a.cmp_seq_region_id=cmp.seq_region_id
+    AND asm.coord_system_id = (select coord_system_id from coord_system where version='$csver_asm')
+    AND cmp.coord_system_id = (select coord_system_id from coord_system where version='$csver_cmp')
+});
+$sth->execute;
+while (my ($asm_name, $cmp_name, $asm_start, $asm_end, $cmp_start, $cmp_end) = $sth->fetchrow) {
+    $output_string .= join("\t", $asm_name, $cmp_name, $asm_start, $asm_end, $cmp_start, $cmp_end)."\n";
+}
+
+send_response($sq, $output_string, 1);
+
