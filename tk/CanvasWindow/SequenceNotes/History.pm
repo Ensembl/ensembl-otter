@@ -6,6 +6,7 @@ package CanvasWindow::SequenceNotes::History;
 use strict;
 use Carp;
 use Data::Dumper;
+use Scalar::Util 'weaken';
 use base 'CanvasWindow::SequenceNotes';
 
 ### Lots of duplicated code with CanvasWindow::SequenceNotes::Status
@@ -40,6 +41,17 @@ sub clone_index {
     }
     return $self->{'_clone_index'};
 }
+
+sub SequenceNotes {
+    my( $self, $SequenceNotes ) = @_;
+    
+    if ($SequenceNotes) {
+        $self->{'_SequenceNotes'} = $SequenceNotes;
+        weaken($self->{'_SequenceNotes'});
+    }
+    return $self->{'_SequenceNotes'};
+}
+
 
 sub next_button {
     my ($self, $next) = @_;
@@ -337,7 +349,8 @@ sub update_db_comment {
     my ($self) = @_;
 
     #gets the string from the varibale reference stored
-    my $new_string = ${ $self->entry_text_ref };
+    my $new_string = ${ $self->entry_text_ref } || '-';
+    
     my $dataset    = $self->SequenceSetChooser->DataSet;
     unless ($dataset) {
         warn
@@ -387,6 +400,7 @@ sub update_db_comment {
             $current_seq_note,
         );
 
+        $self->SequenceNotes->draw;
         $self->draw;
     }
     else {
