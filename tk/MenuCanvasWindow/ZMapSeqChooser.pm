@@ -504,9 +504,15 @@ sub zMapEdit{
           or return return(200, $z->handled_response(0));
         
         # Are there any transcripts in the list of features?
-        my @subseq_names;
+        my ($genomic_canonical, @subseq_names);
       NAME: foreach my $name (keys %$feat_hash) {
             my $feat = $feat_hash->{$name};
+            if (my $style = $feat->{'style'}) {
+                if ($style eq 'Genomic_canonical') {
+                    $genomic_canonical = 1;
+                    last NAME;
+                }
+            }
             my $subs = $feat->{'subfeature'}
                 or next;
             unless (ref $subs eq 'ARRAY') {
@@ -521,10 +527,15 @@ sub zMapEdit{
             }
         }
         
-        if (@subseq_names) {
+        if ($genomic_canonical) {
+            $self->launch_GenomicFeatures;
+            return(200, $z->handled_response(1));
+        }
+        elsif (@subseq_names) {
             $self->edit_subsequences(@subseq_names);
             return(200, $z->handled_response(1));
-        } else {
+        }
+        else {
             return(200, $z->handled_response(0));
         }
     } else {
