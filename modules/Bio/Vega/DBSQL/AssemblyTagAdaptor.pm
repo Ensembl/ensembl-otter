@@ -5,6 +5,7 @@ use Bio::Vega::AssemblyTag;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use base 'Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor';
 
+use Data::Dumper;
 
 sub _tables {
   my $self = shift;
@@ -18,67 +19,58 @@ sub _columns {
 
 sub _objs_from_sth {
   my ($self, $sth) = @_;
-
-  #my $rca = $self->db->get_RawContigAdaptor;
-  my $sa=$self->db->get_SliceAdaptor();
+  #my $sa=$self->db->get_SliceAdaptor();
   my $a_tags = [];
-
   my $hashref;
   while ($hashref = $sth->fetchrow_hashref()) {
 
-    my $contig = $sa->fetch_by_seq_region_id($hashref->{'seq_region_id'});
+    #my $chr_slice = $sa->fetch_by_seq_region_id($hashref->{'seq_region_id'});
     my $atags = Bio::Vega::AssemblyTag->new();
 
     $atags->seq_region_id($hashref->{seq_region_id});
-
-    $atags->tag_id  ($hashref->{tag_id});
-    $atags->strand  ($hashref->{seq_region_strand});
-    $atags->start   ($hashref->{seq_region_start});
-    $atags->end     ($hashref->{seq_region_end});
+    $atags->seq_region_strand  ($hashref->{seq_region_strand});
+    $atags->seq_region_start   ($hashref->{seq_region_start});
+    $atags->seq_region_end     ($hashref->{seq_region_end});
     $atags->tag_type($hashref->{tag_type});
-
     !$hashref->{tag_info} ?  ($atags->tag_info("-")) : ($atags->tag_info($hashref->{tag_info}));
-
-    # contig coords -> chrom. coords
-    $atags->attach_seq($contig);
     push @$a_tags, $atags;
   }
 
   return $a_tags;
 }
 
-sub remove {
-  my ($self, $del_at) = @_;
-
-  my ( $sth, $val, $sql, $cln_id );
-
-  foreach ( @$del_at ) {
-
-    print STDERR "----- assembly_tag tag_id ", $_->tag_id, " is deleted -----\n";
-
-    $sql = "DELETE FROM assembly_tag where tag_id = ?";
-    $val = $_->tag_id;
-    $sth = $self->db->prepare($sql);
-    $sth->execute($val);
-
-    $sql = "select a.asm_seq_region_id from assembly a, coord_system c, seq_region s where a.cmp_seq_region_id=?".
-		     " and a.asm_seq_region_id = s.seq_region_id and s.coord_system_id=c.coord_system_id and c.name='clone'";
-    $sth = $self->db->prepare($sql);
-    $sth->execute($_->contig_id);
-    $cln_id = $sth->fetchrow_array;
-    $sth->finish;
-
-    $sql = "DELETE FROM assembly_tagged_clone where clone_id = ?";
-    $sth = $self->db->prepare($sql);
-    $sth->execute($cln_id);
-    $sth->finish;
-  }
+sub list_dbIDs {
+   my ($self) = @_;
+   return $self->_list_dbIDs("assembly_tag");
 }
 
+sub remove {
+  my ($self, $del_at) = @_;
+  print STDERR "----- assembly_tag tag_id ", $del_at->dbID, " is deleted -----\n";
+  my $sql = "DELETE FROM assembly_tag where tag_id = ?";
+  my $sth = $self->db->prepare($sql);
+  $sth->execute($del_at->dbID);
+  #assembly tag is on a chromosome slice,transform to get a clone_slice
+  my $new_at = $del_at->transform('clone');
+  my $clone_slice=$new_at->slice;
+  my $sa=$self->db->get_SliceAdaptor();
+  my $clone_id=$sa->get_seq_region_id($clone_slice);
+  $self->update_assembly_tagged_clone($clone_id,"no");
+  return 1;
+}
+
+sub update_assembly_tagged_clone {
+  my ($self, $clone_id,$transferred) = @_;
+  my $sql = "UPDATE assembly_tagged_clone SET transferred = ? WHERE clone_id = ?";
+  my $sth = $self->db->prepare($sql);
+  $sth->execute($transferred,$clone_id);
+  $sth->finish;
+  return 1;
+}
+
+
 sub store {
-
   my ($self, $at) = @_;
-
   if (!ref $at || !$at->isa('Bio::Vega::AssemblyTag') ) {
     throw("Must store an AssemblyTag object, not a $at");
   }
@@ -86,51 +78,48 @@ sub store {
   if ($at->is_stored($db)) {
     return $at->dbID();
   }
-  my $slice = $at->slice;
-  unless ($slice) {
+  my $chr_slice = $at->slice;
+  unless ($chr_slice) {
 	 throw "AssemblyTag does not have a slice attached to it, cannot store AssemblyTag\n";
   }
   my $csa = $self->db->get_CoordSystemAdaptor();
   my $sa = $self->db->get_SliceAdaptor();
-  my $slice_cs = $slice->coord_system;
-  unless ($slice_cs) {
-	 throw("Coord System not set in assemblytag slice \n");
-  }
-  my $coord_system_id=$slice->coord_system->dbID();
-  unless ( $coord_system_id){
-	 my $db_cs;
-	 eval{
-		$db_cs = $csa->fetch_by_name($slice_cs->name,$slice_cs->version,$slice_cs->rank);
-	 };
-	 if($@){
-		print STDERR "A coord_system matching the arguments does not exist in the coord_system".
-		  "table, please ensure you have the right coord_system entry in the database:$@";
-	 }
-	 my $new_slice = $sa->fetch_by_name($slice->name);
-	 unless($new_slice){
-		throw "assembly slice is not in the database\n";
-	 }
-	 $at->slice($new_slice);
-  }
-  my $tag_info;
-  $at->tag_info eq "-" ? ( $tag_info = 'null' ) : ( $tag_info = $at->tag_info );
-  my $seq_region_id=$sa->get_seq_region_id($slice);
+
+
+  my $seq_region_id=$sa->get_seq_region_id($chr_slice);
   my $sql = "INSERT INTO assembly_tag (seq_region_id, seq_region_start, seq_region_end, seq_region_strand, tag_type, tag_info) VALUES (?,?,?,?,?,?)";
   my $sth = $self->prepare($sql);
-  $sth->execute($seq_region_id, $at->start, $at->end, $at->strand, $at->tag_type, $tag_info);
+  $sth->execute($seq_region_id, $at->seq_region_start, $at->seq_region_end, $at->seq_region_strand, $at->tag_type, $at->tag_info);
+  #update also assembly_tagged_clone table, which is initially populated with all clones having transferred col. set to "no"
+  #assembly tag is on a chromosome slice,transform to get a clone_slice
+  my $new_at = $at->transform('contig');
 
-  # update also assembly_tagged_clone table, which is initially populated with all clones having transferred col. set to "no"
-   my $sql_1 = "select a.asm_seq_region_id from assembly a, coord_system c, seq_region s where a.cmp_seq_region_id=?".
-		          " and a.asm_seq_region_id = s.seq_region_id and s.coord_system_id=c.coord_system_id and c.name='clone'";
-  my $sth_1 = $self->db->prepare($sql_1);
-  $sth_1->execute($seq_region_id);
-  my $cln_id = $sth_1->fetchrow_array;
-  my $sql_2 = "UPDATE assembly_tagged_clone SET transferred = ? WHERE clone_id = ?";
-  my $sth_2 = $self->db->prepare($sql_2);
-  $sth_2->execute("yes",$cln_id);
-  $sth_2->finish;
+  unless ($new_at) {
+	 print STDERR "assembly tag not loaded tag_info:".$at->tag_info." tag_type:".$at->tag_type." seq_region_start:".$at->seq_region_start." seq_region_end:".$at->seq_region_end." seq_region_id:".$seq_region_id."\n";
+	 throw "assembly tag $at cannot be transformed onto a contig slice from chromosome \n";
+  }
+
+
+  my $contig_slice=$new_at->slice;
+  
+  my $contig_id=$sa->get_seq_region_id($contig_slice);
+  $sql = "select a.asm_seq_region_id from assembly a,seq_region s,coord_system c where a.cmp_seq_region_id=? and a.asm_seq_region_id=s.seq_region_id and s.coord_system_id=c.coord_system_id and c.name='clone'";
+  $sth = $self->prepare($sql);
+  $sth->execute($contig_id);
+  my $clone_id;
+  if (my $ref = $sth->fetchrow_hashref) {
+	 $clone_id=$ref->{asm_seq_region_id};
+  }
+  unless ($clone_id) {
+	 throw "clone_id not fetched\n";
+  }
+  
+  $self->update_assembly_tagged_clone($clone_id,"yes");
+  print STDERR "tag_info:".$at->tag_info." tag_type:".$at->tag_type." seq_region_start:".$at->seq_region_start." seq_region_end:".$at->seq_region_end." seq_region_id:".$seq_region_id."\n";
+  print STDERR "contigid:$contig_id clone_id:$clone_id\n";
   return 1;
 }
+
 
 1;
 
