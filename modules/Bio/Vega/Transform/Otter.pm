@@ -174,7 +174,10 @@ sub build_SequenceFragment {
 		$chrslice = make_Slice($self,$chr_slice_name,1,$end,$end,1,$chr_coord_system);
 	 }
 	 else {
+#		print STDERR "chr_slice:$chr_slice_name, start:$start,end:$end\n";
+#		print Dumper($chr_coord_system);
 		$chrslice = make_Slice($self,$chr_slice_name,$start,$end,$end,1,$chr_coord_system);
+
 	 }
 	 $slice{$self}{'chr'} ||= $chrslice;
 	 my $chr_attrib=$self->make_Attribute('chr','Chromosome Name','Chromosome Name Contained in the Assembly',$data->{'chromosome'});
@@ -298,15 +301,18 @@ sub build_Feature {
 
 sub build_AssemblyTag {
   my ($self, $data) = @_;
-
+  my $slice = $self->get_ChromosomeSlice;
+  ##convert xml coordinates which are in chromosomal coords - to tag coords
+  my $offset = 1 - $slice->start ;
+  my $tag_start = $data->{'contig_start'} + $offset;
+  my $tag_end =  $data->{'contig_end'}   + $offset;
   my $at = Bio::Vega::AssemblyTag->new(
-													-start     => $data->{'contig_start'},
-													-end       => $data->{'contig_end'},
+													-start     => $tag_start,
+													-end       => $tag_end,
 													-strand    => $data->{'contig_strand'},
 													-tag_type  => $data->{'tag_type'},
 													-tag_info  => $data->{'tag_info'},
-													-contig_id => $data->{'contig_id'},
-													-contig_name => $data->{'contig_name'}
+													-slice => $slice,
 													);
 
   my $list = $assembly_tag_list{$self} ||= [];
