@@ -17,8 +17,9 @@ if(!$pipehead) {
     error_exit($sq, "This kind of data is only available from new API databases. Set pipehead to 1");
 }
 
+my $dataset   = $sq->getarg('dataset');
 my $csver_asm = 'Otter';
-my $csver_cmp = $sq->getarg('csver') || 'NCBI36';
+my $csver_cmp = $sq->getarg('csver') || ($dataset=~/mouse/ ? 'NCBIM36' : 'NCBI36');
 
 my $odba = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
 
@@ -28,7 +29,7 @@ my ($mapper_val) = @{$odba->get_MetaContainer()->list_value_by_key($mapper_metak
 my $mdba;
 
 if(!$mapper_val) {
-    error_exit($sq, "mapper_db is not properly defined");
+    error_exit($sq, "'$mapper_metakey' is not properly defined");
 } elsif($mapper_val eq '=otter_head') {
     $mdba = $odba;
 } elsif($mapper_val eq '=pipeline_head') {
