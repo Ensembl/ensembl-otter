@@ -2,7 +2,7 @@
 
 =head1 DESCRIPTION
 
-load_vega_xml -dataset xxx -assembly 'yes|no' -xml filename
+load_vega_xml -dataset xxx -assembly 'yes|no' -xml filename -force_load(optional)
 
 =head1 OPTIONS
 
@@ -13,6 +13,7 @@ load_vega_xml -dataset xxx -assembly 'yes|no' -xml filename
 -assembly 'yes' | 'no' (yes loads only assembly data, i.e., populates seq_region,assembly,seq_region_attrib,contig_info,contig_attrib tables only; 'no' loads genes and its components and simple features)
 basically to load a comple assembly with gene and its components, the script with the xml file has to be run twice, first with assembly 'yes' and then with assembly 'no'
 
+-force_load is optional. This is needed only when we want the version of genes to be force loaded
 
 
 =cut
@@ -158,6 +159,25 @@ eval{
 		}
 		
 	 }
+
+	 ##Load Assembly_Tags
+	 my $atags=$parser->get_AssemblyTags;
+	 my $ata = $db->get_AssemblyTagAdaptor;
+	 my $db_tags=$ata->fetch_all_by_Slice($new_slice);
+	 ($delete,$save)=compare_assembly_tag_sets($db_tags,$atags);
+	 foreach my $del_tag (@$delete){
+		$ata->remove($del_tag);
+	 }
+	 foreach my $new_tag (@$save){
+		$new_tag->slice($new_slice);
+		eval{
+		  $ata->store($new_tag);
+		};
+		if ($@){
+		  die "problem with loading of assemblytags\n$@\n";
+		  $db->rollback;
+		}
+	 }
   }
   $db->commit;
   print STDOUT "\nCommitted all session data from XML in database\n";
@@ -196,6 +216,38 @@ sub compare_feature_sets {
 	 }
   }
   return($delete, $save);
+}
+
+sub compare_assembly_tag_sets {
+  my( $old_tags, $new_tags ) = @_;
+  my %old = map {AssemblyTag_key($_), $_} @$old_tags;
+  my %new = map {AssemblyTag_key($_), $_} @$new_tags;
+  # Tags that were in the old, but not the new, should be deleted
+  my $delete = [];
+  while (my ($key, $old_at) = each %old) {
+	 unless ($new{$key}) {
+		push(@$delete, $old_at);
+	 }
+  }
+  # Tags that are in the new but were not in the old should be saved
+  my $save = [];
+  while (my ($key, $new_at) = each %new) {
+	 unless ($old{$key}) {
+		push(@$save, $new_at);
+	 }
+  }
+  return($delete, $save);
+}
+
+sub AssemblyTag_key {
+  my ($at) = @_;
+  return join('^',
+				  $at->seq_region_start,
+				  $at->seq_region_end,
+				  $at->seq_region_strand,
+				  $at->tag_type,
+				  $at->tag_info,
+				 );
 }
 
 sub SimpleFeature_key {
