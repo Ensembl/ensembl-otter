@@ -192,6 +192,11 @@ if($exon->end()<=0) { print STDERR "exon end is negative\n";}
             $str .= emit_tagpair('end', $tl_end, 6);
             $str .= emit_tagpair('stable_id', $tl_stable_id, 6);
         $str .= emit_closing_tag('translation', 4);
+
+        for my $dbentry (@{$tsl->get_all_DBEntries}) {
+            $str .= $dbentry->toXMLstring();
+        }
+
     }
 
     $str .= emit_closing_tag('transcript', 2);

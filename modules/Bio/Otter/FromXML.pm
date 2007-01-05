@@ -230,6 +230,10 @@ sub build_Translation {
                     # next 1 line is copied from Converter.pm without understanding:
                 # $translation->version(1);
             }
+        } elsif($kind eq 'o') {
+            if($tag eq 'xref') {
+                $translation->add_DBEntry($self->build_DBEntry());
+            }
         }
     }
 
