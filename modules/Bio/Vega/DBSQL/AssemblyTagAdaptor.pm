@@ -3,9 +3,8 @@ package Bio::Vega::DBSQL::AssemblyTagAdaptor;
 use strict;
 use Bio::Vega::AssemblyTag;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
-use base 'Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor';
 
-use Data::Dumper;
+use base 'Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor';
 
 sub _tables {
   my $self = shift;
@@ -41,13 +40,18 @@ sub list_dbIDs {
 
 sub remove {
   my ($self, $del_at) = @_;
+  my $sth;
   eval {
-  my $sql = "DELETE FROM assembly_tag where tag_id = ?";
-  my $sth = $self->prepare($sql);
-  $sth->execute($del_at->dbID);
+	 my $sql = "DELETE FROM assembly_tag where tag_id = ?";
+	 $sth = $self->prepare($sql);
+	 $sth->execute($del_at->dbID);
   };
   if ($@){
 	 throw "problem with deleting assembly_tag ".$del_at->dbID;
+  }
+  my $num=$sth->rows;
+  if ($num == 0) {
+	 throw "assembly tag with ".$del_at->dbID." not deleted , tag_id may not be present\n";
   }
   warning "----- assembly_tag tag_id ", $del_at->dbID, " is deleted -----\n";
 
@@ -67,17 +71,18 @@ sub remove {
 
 sub update_assembly_tagged_clone {
   my ($self, $clone_id,$transferred) = @_;
-  my $res;
+  my $num;
   eval{
 	 my $sql = "UPDATE assembly_tagged_clone SET transferred = ? WHERE clone_id = ?";
 	 my $sth = $self->prepare($sql);
-	 $res=$sth->execute($transferred,$clone_id);
-	 $sth->finish;
+	 $sth->execute($transferred,$clone_id);
+	 $num=$sth->rows;
+
   };
   if ($@) {
-	 throw "update failed:$@";
+	 throw "update of assembly_tagged_clone failed for clone id $clone_id:$@";
   }
-  if ($res != 1){
+  if ($num == 0){
 	 throw "update of assembly_tagged_clone failed:$clone_id may not be present";
   }
   return 1;
@@ -110,8 +115,7 @@ sub store {
   #assembly tag is on a chromosome slice,transform to get a clone_slice
   my $new_at = $at->transform('contig');
   unless ($new_at) {
-	 print STDERR "assembly tag not loaded tag_info:".$at->tag_info." tag_type:".$at->tag_type." seq_region_start:".$at->seq_region_start." seq_region_end:".$at->seq_region_end." seq_region_id:".$seq_region_id."\n";
-	 throw "assembly tag $at cannot be transformed onto a contig slice from chromosome \n";
+	 throw "assembly tag $at cannot be transformed onto a contig slice from chromosome \n assembly tag not loaded tag_info:".$at->tag_info." tag_type:".$at->tag_type." seq_region_start:".$at->seq_region_start." seq_region_end:".$at->seq_region_end." seq_region_id:".$seq_region_id."\n";;
   }
   my $contig_slice=$new_at->slice;
   my $contig_id=$sa->get_seq_region_id($contig_slice);
@@ -125,13 +129,7 @@ sub store {
   unless ($clone_id) {
 	 throw "clone_id not fetched\n";
   }
-  eval {
-	 $self->update_assembly_tagged_clone($clone_id,"yes");
-  };
-  if ($@){
-	 throw "Update of assembly_tagged_clone table for clone_id:$clone_id not done\n".$@;
-  }
-
+  $self->update_assembly_tagged_clone($clone_id,"yes");
   return 1;
 
 
