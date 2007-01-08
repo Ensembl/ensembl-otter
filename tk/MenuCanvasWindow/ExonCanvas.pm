@@ -846,7 +846,7 @@ sub update_translation {
 
     my $peptext = $self->{'_pep_peptext'} or return;
 
-    my $sub = $self->new_SubSeq_from_tk;
+    my $sub = $self->is_mutable ? $self->new_SubSeq_from_tk : $self->SubSeq;
     unless ($sub->GeneMethod->transcript_type eq 'coding') {
         if ($peptext) {
             $peptext->toplevel->withdraw;
