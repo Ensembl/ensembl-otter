@@ -58,8 +58,7 @@ sub Bio::EnsEMBL::DBEntry::toXMLstring {
 }
 
 sub Bio::EnsEMBL::Gene::toXMLstring {
-    my $gene = shift @_;
-    my $allowed_transcript_analyses_hash = shift @_;
+    my ($gene, $allowed_transcript_analyses_hash, $allowed_translation_xref_db_hash) = @_;
 
     my $coord_offset = 0;
     my $slice_length = 0;
@@ -100,7 +99,24 @@ sub Bio::EnsEMBL::Gene::toXMLstring {
             or ($transcript->can('analysis')
                 and $allowed_transcript_analyses_hash->{$transcript->analysis()->logic_name()})
         ) {
-            $str .= $transcript->toXMLstring($coord_offset, $slice_length);
+            my $clear = ! $allowed_translation_xref_db_hash;
+
+            if( not $clear ) {
+                if( $transcript->can('translation')
+                and my $translation = $transcript->translation() ) {
+                    ALL_DBEs: foreach my $xr (@{$translation->get_all_DBEntries()}) {
+                        if($allowed_translation_xref_db_hash->{$xr->dbname()}) {
+                            $clear = 1;
+                            break ALL_DBEs;
+                        }
+                    }
+                }
+
+            }
+
+            if($clear) {
+                $str .= $transcript->toXMLstring($coord_offset, $slice_length);
+            }
         }
     }
 

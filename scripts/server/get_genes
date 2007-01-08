@@ -23,15 +23,20 @@ $| = 1;
 
 my $sq = Bio::Otter::ServerQuery->new('dataset',
         'cs','csver','name','type','start','end','strand',
-    'metakey','analysis','transcript_analyses');
+    'metakey','analysis','transcript_analyses','translation_xref_dbs');
 set_nph($sq);
 
 my $analysis = $sq->getarg('analysis');
-my $transcript_analyses = $sq->getarg('transcript_analyses') || '';
+my $transcript_analyses  = $sq->getarg('transcript_analyses') || '';
+my $translation_xref_dbs = $sq->getarg('translation_xref_dbs') || '';
 
 my $allowed_transcript_analyses_hash = $transcript_analyses
     ? { map { $_ => 1 } split(/,/, $transcript_analyses) }
     : '';
+my $allowed_translation_xref_db_hash = $translation_xref_dbs
+    ? { map { $_ => 1 } split(/,/, $translation_xref_dbs) }
+    : '';
+
 
     # third parameter of $slice->get_all_Genes() helps preventing lazy-loading of transcripts
 my $genes = fetch_mapped_features($sq, $pipehead, 'gene',
@@ -52,7 +57,10 @@ server_log("Total of ".scalar(@$genes)." '$analysis' genes sent");
 my $output_string = '';
 
 foreach my $gene (@$genes) {
-    $output_string .= $gene->toXMLstring($allowed_transcript_analyses_hash);
+    $output_string .= $gene->toXMLstring(
+                                    $allowed_transcript_analyses_hash,
+                                    $allowed_translation_xref_db_hash
+                                );
 }
 
 send_response($sq, $output_string, 1);
