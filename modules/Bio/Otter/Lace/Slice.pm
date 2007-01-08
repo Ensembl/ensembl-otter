@@ -738,7 +738,7 @@ sub get_all_PredictionTranscripts { # get prediction transcripts from otter/pipe
 }
 
 sub get_all_PipelineGenes { # get genes from otter/pipeline/ensembl db
-    my( $self, $analysis_name, $pipehead, $metakey, $transcript_analyses ) = @_;
+    my( $self, $analysis_name, $pipehead, $metakey, $transcript_analyses, $translation_xref_dbs ) = @_;
 
     if(!$analysis_name) {
         die "Analysis name must be specified!";
@@ -754,6 +754,7 @@ sub get_all_PipelineGenes { # get genes from otter/pipeline/ensembl db
             'pipehead' => $pipehead ? 1 : 0,
             $metakey ? ('metakey' => $metakey) : (),
             $transcript_analyses ? ('transcript_analyses' => $transcript_analyses) : (),
+            $translation_xref_dbs ? ('translation_xref_dbs' => $translation_xref_dbs) : (),
         },
         1,
     );
