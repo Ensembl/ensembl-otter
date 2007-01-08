@@ -107,7 +107,7 @@ sub Bio::EnsEMBL::Gene::toXMLstring {
                     ALL_DBEs: foreach my $xr (@{$translation->get_all_DBEntries()}) {
                         if($allowed_translation_xref_db_hash->{$xr->dbname()}) {
                             $clear = 1;
-                            break ALL_DBEs;
+                            last ALL_DBEs;
                         }
                     }
                 }
