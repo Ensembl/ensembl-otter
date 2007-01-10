@@ -131,10 +131,11 @@ my %assembly_nonmatch_version = (
                 
                 my $transformed_gene = $gene->transform($slice);
 
-                if(!$@ && gene_transformed_successfully($gene,$slice)) {
+                if(gene_transformed_successfully($transformed_gene,$slice)) {
+                    my $gene_id = $transformed_gene->dbID();
                     print ''.('-'x40)."\n";
-                    print "$chr_name\t$atype\n";
-                    print $gene->toXMLString . "\n";
+                    print "$chr_name\t$atype\t$gene_id\n";
+                    print $transformed_gene->toXMLString . "\n";
                     print STDERR "--> $atype\n";
                     return;
                 }
@@ -151,9 +152,11 @@ my %assembly_nonmatch_version = (
 sub main {
 
     my $dataset_name    = 'human'; # 'test_human';      # 'mouse', ...
+    my $skip_to         = 0;
 
     Bio::Otter::Lace::Defaults::do_getopt(
         'dataset=s'     => \$dataset_name,
+        'skipto=s'      => \$skip_to,
 #        'set=s'         => \$set_name,
 #        'chr=s'         => \$chr_name,
     );
@@ -169,6 +172,7 @@ sub main {
     my $sth_gene_ids = $otter_dba->prepare(qq{
         SELECT gene_id, stable_id, version
         FROM gene_stable_id
+        WHERE gene_id > $skip_to
         ORDER by gene_id ASC
     });
     #   LIMIT 1000
