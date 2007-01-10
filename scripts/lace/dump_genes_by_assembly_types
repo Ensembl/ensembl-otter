@@ -8,6 +8,8 @@ my $otter_dba; # it's much cheaper to have these globally visible
 my $gene_adaptor;
 my $slice_adaptor;
 
+$|=1;
+
 my %assembly_nonmatch_version = (
     'chr1-7A'       => 7.5,
     'Chr1_final'    => 8,
