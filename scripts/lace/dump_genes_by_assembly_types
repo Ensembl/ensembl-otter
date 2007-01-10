@@ -1,11 +1,12 @@
 #!/usr/local/bin/perl -w
 
 use strict;
-use IO::File;
 use Bio::Otter::Converter;
 use Bio::Otter::Lace::Defaults;
 
-my $otter_dba; # it's much cheaper to have it globally visible
+my $otter_dba; # it's much cheaper to have these globally visible
+my $gene_adaptor;
+my $slice_adaptor;
 
 my %assembly_nonmatch_version = (
     'chr1-7A'       => 7.5,
@@ -99,47 +100,46 @@ my %assembly_nonmatch_version = (
 
 { # lexical environment for add_xml_gene
 
-    my $slice_adaptor;
-    my %assembly_fh = ();
+    my %slices_hash = (); # atype->Slice
 
-    sub add_xml_gene {
-        my ($gene, $asm_type, $chr_name) = @_;
+    sub gene_transformed_successfully {
+        my( $gene, $slice ) = @_;
 
-        $otter_dba->assembly_type($asm_type);
-
-        if(!$slice_adaptor) {
-            $slice_adaptor = $otter_dba->get_SliceAdaptor();
+        my $slice_length = $slice->length;
+        foreach my $exon (@{$gene->get_all_Exons}) {
+            if ($exon->contig != $slice or $exon->start < 1 or $exon->end > $slice_length) {
+                return 0;
+            }
         }
-
-        my $current_fh = $assembly_fh{$asm_type};
-
-        if(!$current_fh) {
-            my $filename = "assembly_dump.$asm_type";
-            $current_fh = $assembly_fh{$asm_type} = new IO::File("> $filename");
-
-            my $slice = $slice_adaptor->fetch_by_chr_name($chr_name);
-
-            my $path     = $slice->get_tiling_path;
-            my $chrstart = $slice->chr_start;
-            my $chrend   = $slice->chr_end;
-
-            my $xmlstr   = "<otter>\n<sequence_set>\n";
-            $xmlstr     .= Bio::Otter::Converter::path_to_XML($chr_name, $chrstart, $chrend, $asm_type, $path);
-
-            $current_fh->autoflush(1);
-
-            print $current_fh $xmlstr;
-        }
-
-        print $current_fh $gene->toXMLString . "\n";
+        return 1;
     }
 
-    sub finalize_files {
-        for my $asm_type (keys %assembly_fh) {
-            my $fh = delete $assembly_fh{$asm_type};
-            print $fh "</sequence_set>\n</otter>\n";
-            $fh->close();
-        }
+    sub add_xml_gene {
+        my ($gene, $chr_name, $version_2_asms) = @_;
+
+        for my $version (sort {$b <=> $a} keys %$version_2_asms) {
+            for my $atype (@{$version_2_asms->{$version}}) {
+                $otter_dba->assembly_type($atype);
+
+                my $slice;
+                unless($slice = $slices_hash{$atype}) {
+                    $slice = $slices_hash{$atype}
+                           = $slice_adaptor->fetch_by_chr_name($chr_name);
+                }
+                
+                my $transformed_gene = $gene->transform($slice);
+
+                if(!$@ && gene_transformed_successfully($gene,$slice)) {
+                    print ''.('-'x40)."\n";
+                    print "$chr_name\t$atype\n";
+                    print $gene->toXMLString . "\n";
+                    print STDERR "--> $atype\n";
+                    return;
+                }
+
+            } # for $atype
+        } # for $version
+        print STDERR "---FAILED TO MAP!\n";
     }
 
 } # lexical environment for add_xml_gene
@@ -159,24 +159,24 @@ sub main {
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
     my $ds = $cl->get_DataSet_by_name($dataset_name);
 
-    $otter_dba = $ds->get_cached_DBAdaptor; # now it is global
-
-    my $gene_adaptor  = $otter_dba->get_GeneAdaptor();
+        # init the global things:
+    $otter_dba     = $ds->get_cached_DBAdaptor; # now it is global
+    $gene_adaptor  = $otter_dba->get_GeneAdaptor();
+    $slice_adaptor = $otter_dba->get_SliceAdaptor();
 
     my $sth_gene_ids = $otter_dba->prepare(qq{
         SELECT gene_id, stable_id, version
         FROM gene_stable_id
         ORDER by gene_id ASC
     });
-    #    LIMIT 100
+    #   LIMIT 1000
 
     $sth_gene_ids->execute();
     while( my ($gene_id, $stable_id, $version) = $sth_gene_ids->fetchrow()) {
-        print "$gene_id\t$stable_id.$version\t";
+        print STDERR "$gene_id\t$stable_id.$version\t";
         my $gene = $gene_adaptor->fetch_by_dbID($gene_id);
         
         my $contig_id_set = {};
-        # my %contig_id_2_name = ();
         for my $transcript (@{$gene->get_all_Transcripts()}) {
             for my $exon (@{$transcript->get_all_Exons()}) {
                 my $rawcontig   = $exon->contig();
@@ -184,41 +184,30 @@ sub main {
                 my $contig_name = $rawcontig->name();
 
                 $contig_id_set->{$contig_id}++;
-                # $contig_id_2_name{$contig_id} = $contig_name;
             }
         }
 
-        # print join(', ', values %contig_id_2_name)." ";
-
         my $sth_ctgids_2_asm = execute_ctgids_2_asm($otter_dba, $contig_id_set);
 
-        my $current_atype    = 'none';
-        my $current_version  = 0;
-        my @other_atypes     = ();
-        my $current_chr_name = '';
+        my $common_chr_name = '';
+        my $version_2_asms = {}; # version->[list of asm_types]
 
         while( my ($atype, $chr_name) = $sth_ctgids_2_asm->fetchrow()) {
-            $current_chr_name ||= $chr_name;
+            $common_chr_name ||= $chr_name;
 
             my $version = ($atype=~/^chr\d+-0*(\d+)$/)
                 ? $1
                 : exists($assembly_nonmatch_version{$atype})
                     ? $assembly_nonmatch_version{$atype}
                     : 0;
-            if($version >= $current_version) {
-                ($current_atype, $current_version) = ($atype, $version);
-            } elsif(!$version) {
-                push @other_atypes, $atype;
-            }
-        }
-        print $current_atype.'; '.join(', ', @other_atypes)."\n";
+            push @{$version_2_asms->{$version}}, $atype;
 
-        if($current_atype ne 'none') {
-            add_xml_gene($gene, $current_atype, $current_chr_name);
-        }
-    }
+        } # ctgids_2_asm fetching loop
 
-    finalize_files();
+        if($common_chr_name) {
+            add_xml_gene($gene, $common_chr_name, $version_2_asms);
+        }
+    } # gene_id fetching loop
 
 } # main()
 
