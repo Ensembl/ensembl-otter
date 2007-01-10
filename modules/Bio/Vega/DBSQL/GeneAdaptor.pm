@@ -186,6 +186,8 @@ sub check_for_change_in_gene_components {
 		##if transcript has not changed then retain the same old version
 		else {
 		  $tran->version($db_version);
+		  ##retain old author
+		  $tran->transcript_author($db_transcript->transcript_author);
 		}	
 	 }
 	 ##if transcript is new
