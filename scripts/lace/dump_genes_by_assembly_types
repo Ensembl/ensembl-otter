@@ -117,10 +117,14 @@ my %assembly_nonmatch_version = (
     }
 
     sub add_xml_gene {
-        my ($gene, $chr_name, $version_2_asms) = @_;
+        my ($gene, $ver_2_asm_chr) = @_;
 
-        for my $version (sort {$b <=> $a} keys %$version_2_asms) {
-            for my $atype (@{$version_2_asms->{$version}}) {
+        for my $version (sort {$b <=> $a} keys %$ver_2_asm_chr) {
+            # print STDERR "VER=$version: ";
+            for my $pair (@{$ver_2_asm_chr->{$version}}) {
+                my ($atype, $chr_name) = @$pair;
+                # print STDERR "ATYPE=$atype(CHR=$chr_name) ";
+
                 $otter_dba->assembly_type($atype);
 
                 my $slice;
@@ -129,15 +133,17 @@ my %assembly_nonmatch_version = (
                            = $slice_adaptor->fetch_by_chr_name($chr_name);
                 }
                 
-                my $transformed_gene = $gene->transform($slice);
+                $gene->transform($slice);
 
-                if(gene_transformed_successfully($transformed_gene,$slice)) {
-                    my $gene_id = $transformed_gene->dbID();
+                if(gene_transformed_successfully($gene,$slice)) {
+                    my $gene_id = $gene->dbID();
                     print ''.('-'x40)."\n";
                     print "$chr_name\t$atype\t$gene_id\n";
-                    print $transformed_gene->toXMLString . "\n";
+                    print $gene->toXMLString . "\n";
                     print STDERR "--> $atype\n";
                     return;
+                } else { # re-fetch it to avoid transforming between versions of assembly
+                    $gene = $gene_adaptor->fetch_by_dbID($gene->dbID());
                 }
 
             } # for $atype
@@ -195,23 +201,21 @@ sub main {
 
         my $sth_ctgids_2_asm = execute_ctgids_2_asm($otter_dba, $contig_id_set);
 
-        my $common_chr_name = '';
-        my $version_2_asms = {}; # version->[list of asm_types]
+        my $ver_2_asm_chr = {}; # version->[list of [asm_type, chr_name] pairs]
 
         while( my ($atype, $chr_name) = $sth_ctgids_2_asm->fetchrow()) {
-            $common_chr_name ||= $chr_name;
 
             my $version = ($atype=~/^chr\d+-0*(\d+)$/)
                 ? $1
                 : exists($assembly_nonmatch_version{$atype})
                     ? $assembly_nonmatch_version{$atype}
                     : 0;
-            push @{$version_2_asms->{$version}}, $atype;
+            push @{$ver_2_asm_chr->{$version}}, [$atype, $chr_name];
 
         } # ctgids_2_asm fetching loop
 
-        if($common_chr_name) {
-            add_xml_gene($gene, $common_chr_name, $version_2_asms);
+        if(%$ver_2_asm_chr) {
+            add_xml_gene($gene, $ver_2_asm_chr);
         }
     } # gene_id fetching loop
 
