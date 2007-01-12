@@ -17,7 +17,7 @@ sub get_possible_analyses {
 
     my %rule = ();
     my $sth = $pdbc->prepare(qq{
-        SELECT rc.condition
+        SELECT rc.rule_condition
              , a.logic_name
         FROM analysis a
            , rule_goal rg
