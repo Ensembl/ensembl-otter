@@ -31,6 +31,7 @@ sub new {
 
     return bless {}, $pkg;
 }
+
 sub Client {
     my( $self, $client ) = @_;
 

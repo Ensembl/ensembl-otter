@@ -64,7 +64,7 @@ sub parse_request{
     my $hash   = $parser->XMLin(
         $xml,
         KeyAttr => {feature => 'name'},
-        ForceArray => [ 'feature' ],
+        ForceArray => [ 'feature', 'subfeature' ],
         );
     return $hash;
 }

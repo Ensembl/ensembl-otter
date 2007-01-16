@@ -205,6 +205,7 @@ sub zMapWriteDotZmap{
     my ($self) = @_;
     my $dir    = $self->zMapZmapDir();
     my $file   = "${dir}/ZMap";
+    
     my $fh;
     eval{
         # directory should be made already
@@ -393,6 +394,7 @@ sub zMapWriteDotGtkrc {
     
     my $dir = $self->zMapZmapDir;
     my $file = "$dir/.gtkrc";
+    
     my $fh;
     eval{
         # directory should be made already
@@ -402,10 +404,8 @@ sub zMapWriteDotGtkrc {
     unless($@){
         my $content = $self->zMapDotGtkrcContent();
         print $fh $content;
-        return 1;
     }
     close $fh;
-    return 0;
 }
 
 sub zMapZmapDir {
