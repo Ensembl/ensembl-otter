@@ -105,6 +105,24 @@ sub error_flag {
     return ($self->{'_error_flag'} ? 1 : 0);
 }
 
+sub MethodCollection {
+    my ($self, $coll) = @_;
+    
+    if ($coll) {
+        $self->{'_MethodCollection'} = $coll;
+    }
+    return $self->{'_MethodCollection'};
+}
+
+sub get_default_MethodCollection {
+    my( $self ) = @_;
+
+    # This file should be the default:
+    my $method_file = $ENV{'OTTER_HOME'} . "/methods.ace";
+
+    return Hum::Ace::MethodCollection->new_from_file($method_file);
+}
+
 sub add_acefile {
     my( $self, $ace ) = @_;
 
@@ -130,6 +148,8 @@ sub empty_acefile_list {
 
 sub init_AceDatabase {
     my( $self, $ss ) = @_;
+    
+    $self->MethodCollection($self->get_default_MethodCollection);
 
     $self->add_misc_acefile;
     $self->write_otter_acefile($ss);
@@ -165,7 +185,7 @@ sub write_local_blast {
     close $fh or confess "Error writing to '$blast_ace' : $!";
 
     # Need to add new method to collection if we don't have it already
-    my $coll = $self->get_default_MethodCollection;
+    my $coll = $self->MethodCollection;
     my $method = $blast->ace_Method;
     unless ($coll->get_Method_by_name($method->name)) {
         $coll->add_Method($method);
@@ -583,7 +603,7 @@ sub write_methods_acefile {
     
     my $home = $self->home;
     my $methods_file = "$home/rawdata/methods.ace";
-    my $collect = $self->get_default_MethodCollection;
+    my $collect = $self->MethodCollection;
     $collect->process_for_otterlace;
     $collect->write_to_file($methods_file);
     $self->add_acefile($methods_file);
@@ -778,7 +798,7 @@ sub make_otterpipe_DataFactory {
     }
     push @analysis_names, 'otter';
 
-    my $collect = $self->get_default_MethodCollection;
+    my $collect = $self->MethodCollection;
 
     foreach my $logic_name (@analysis_names) {
 
@@ -1125,22 +1145,6 @@ sub get_LaceCloneSequence_by_sv {
           if $debug_flag;
     }
     return $cs;
-}
-
-{
-    my $default_collection = undef;
-    
-    sub get_default_MethodCollection {
-        my( $self ) = @_;
-        
-        unless ($default_collection) {
-            # This file should be the default:
-            my $method_file = $ENV{'OTTER_HOME'} . "/methods.ace";
-
-            $default_collection = Hum::Ace::MethodCollection->new_from_file($method_file);
-        }
-        return $default_collection;
-    }
 }
 
 sub DESTROY {

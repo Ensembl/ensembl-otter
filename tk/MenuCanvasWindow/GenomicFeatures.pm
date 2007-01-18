@@ -160,7 +160,7 @@ sub get_all_Methods {
     my $feat_meths;
     unless ($feat_meths = $self->{'_Method_objects'}) {
         $feat_meths = $self->{'_Method_objects'} = [];
-        my $collection = $self->XaceSeqChooser->AceDatabase->get_default_MethodCollection;
+        my $collection = $self->XaceSeqChooser->Assembly->MethodCollection;
         @$feat_meths = $collection->get_all_mutable_non_transcript_Methods;
         $self->{'_Method_index'} = {map {$_->name, $_} @$feat_meths};
     }

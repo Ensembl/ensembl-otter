@@ -425,7 +425,7 @@ sub zMapZmapDir {
 sub zMapListMethodNames_ordered{
     my $self = shift;
     my @list = ();
-    my $collection = $self->AceDatabase->get_default_MethodCollection;
+    my $collection = $self->Assembly->MethodCollection;
     $collection->order_by_right_priority;
     return map $_->name, @{$collection->get_all_Methods};
 }
