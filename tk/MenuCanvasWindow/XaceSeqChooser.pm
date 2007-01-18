@@ -99,9 +99,6 @@ sub EviCollection {
 sub initialize {
     my( $self ) = @_;
     
-    # take GeneMethods from methods.ace file
-    $self->set_known_GeneMethods();
-    
     unless ($self->write_access) {
         $self->menu_bar()->Label(
             -text       => 'Read Only',
@@ -145,51 +142,14 @@ sub clone_menu {
     return $self->{'_clone_menu'};
 }
 
-# this method has been moved to Bio::Otter::Lace::Defaults.pm
-# but this has been left for backwards compatibility
-sub set_known_GeneMethods_via_Defaults{
-    my ($self) = @_ ;
-    Bio::Otter::Lace::Defaults->set_known_GeneMethods($self) ;
-}
-
 sub set_known_GeneMethods{
     my ($self) = @_ ;
 
-    my $collection = $self->AceDatabase->get_default_MethodCollection;
-    foreach my $method (@{$collection->get_all_Methods}) {
-        if ($method->transcript_type) {
-            $self->add_GeneMethod($method);
-        }
-    }
-}
-
-sub fetch_GeneMethod {
-    my( $self, $name ) = @_;
-    
-    confess "Missing name argument" unless $name;
-    my $ace = $self->ace_handle;
-    $ace->raw_query("find Method $name");
-    my $txt = Hum::Ace::AceText->new($ace->raw_query('show -a'));
-    my( $meth );
-    if ($txt->count_tag('Method')) {
-        $meth = Hum::Ace::Method->new_from_AceText($txt);
-    } else {
-        warn "Making method not in db: '$name'\n";
-        $meth = Hum::Ace::Method->new;
-        $meth->name($name);
-        $meth->color('BLUE');
-        $meth->cds_color('MIDBLUE');
-    }
-    return $meth;
-}
-
-sub add_GeneMethod {
-    my( $self, $meth ) = @_;
-    
-    my $name = $meth->name;
-    $self->{'_gene_methods'}{$name} = $meth;
-    my $list = $self->{'_gene_methods_list'} ||= [];
-    push(@$list, $meth);
+    my $lst = $self->{'_gene_methods_list'} = [
+        $self->Assembly->MethodCollection->get_all_transcript_Methods
+        ];
+    my $idx = $self->{'_gene_methods'} = {};
+    %$idx = map {$_->name, $_} @$lst;
 }
 
 sub get_GeneMethod {
@@ -197,9 +157,7 @@ sub get_GeneMethod {
     
     my( $meth );
     unless ($meth = $self->{'_gene_methods'}{$name}) {
-        $meth = $self->fetch_GeneMethod($name)
-            or confess "No such Method '$name'";
-        $self->add_GeneMethod($meth);
+        confess "No such Method '$name'";
     }
     return $meth;
 }
@@ -207,7 +165,7 @@ sub get_GeneMethod {
 sub get_all_GeneMethods {
     my( $self ) = @_;
     
-    return values %{$self->{'_gene_methods'}};
+    return @{$self->{'_gene_methods_list'}};
 }
 
 sub get_all_mutable_GeneMethods {
@@ -1705,63 +1663,50 @@ sub Assembly {
     my( $self ) = @_;
     
     my $canvas = $self->canvas;
+    my $name = $self->slice_name;
+    my $ace  = $self->ace_handle;
     
-    my( $assembly );
-    unless ($assembly = $self->{'_assembly'}) {
+    unless ($self->{'_assembly'}) {
         use Time::HiRes 'gettimeofday';
         my $before = gettimeofday();
         $canvas->Busy(
             -recurse => 0,
             );
-        $assembly = $self->express_clone_and_subseq_fetch;
+ 
+        my( $assembly );
+        eval {
+            $assembly = Hum::Ace::Assembly->new;
+            $assembly->name($name);
+            $assembly->express_data_fetch($ace);
+        };
+        if ($@) {
+            $self->exception_message($@, "Can't fetch Assembly '$name'");
+            return;
+        }
+
+        foreach my $sub ($assembly->get_all_SubSeqs) {
+            $self->add_SubSeq($sub);
+
+            if (my $s_loc = $sub->Locus) {
+                my $locus = $self->get_Locus($s_loc);
+                $sub->Locus($locus);
+            }
+        }
+
+        $self->{'_assembly'} = $assembly;
+        $self->set_known_GeneMethods;
+        
         my $after  = gettimeofday();
         $canvas->Unbusy;
         printf "Express fetch for '%s' took %4.3f\n", $self->slice_name, $after - $before;
-        $self->{'_assembly'} = $assembly;
     }
-    return $assembly;
+    return $self->{'_assembly'};
 }
 
 sub empty_Assembly_cache {
     my( $self ) = @_;
     
     $self->{'_assembly'} = undef;
-}
-
-sub express_clone_and_subseq_fetch {
-    my( $self ) = @_;
-    
-    my $name = $self->slice_name;
-    my $ace  = $self->ace_handle;
-    my( $assembly );
-    eval {
-        $assembly = Hum::Ace::Assembly->new;
-        $assembly->name($name);
-        ### Assembly object could create MethodCollection
-        ### from methods in ace database
-        $assembly->MethodCollection(
-          $self->AceDatabase->get_default_MethodCollection);
-        $assembly->express_data_fetch($ace);
-    };
-    if ($@) {
-        $self->exception_message($@, "Can't fetch Assembly '$name'");
-        return;
-    }
-    
-    foreach my $sub ($assembly->get_all_SubSeqs) {
-        $self->add_SubSeq($sub);
-
-	    if (my $s_meth = $sub->GeneMethod) {
-            my $meth = $self->get_GeneMethod($s_meth->name);
-            $sub->GeneMethod($meth);
-        }
-
-        if (my $s_loc = $sub->Locus) {
-            my $locus = $self->get_Locus($s_loc);
-            $sub->Locus($locus);
-        }
-    }
-    return $assembly;
 }
 
 sub replace_SubSeq {
