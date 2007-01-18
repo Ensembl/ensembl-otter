@@ -268,7 +268,7 @@ sub initialize {
             # "Coding" is shown as "Coding Coding" when the Menubutton
             # is first drawn if $display_name eq $name! (Hence space
             # on the end of $display_name.)
-            my $display_name = $gm->has_parent ? "    $name" : "$name ";
+            my $display_name = $gm->has_parent ? "    $name" : $name;
             push(@$menu_list, [$display_name, $name]);
         }
         my $type_option_menu = $type_frame->SmartOptionmenu(
