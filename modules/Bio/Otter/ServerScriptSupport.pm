@@ -7,6 +7,7 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::Otter::DBSQL::DBAdaptor;
 use Bio::Vega::DBSQL::DBAdaptor;
 use Bio::Otter::Author;
+use Bio::Vega::Author;
 use Bio::Otter::Version;
 
 use base 'Bio::Otter::ServerQuery';
@@ -185,6 +186,8 @@ sub otter_dba {
         );
 
     my( $odba, $dnadb );
+
+    $server->log("RunningHeadcode=$running_headcode, DatasetHeadcode=$dataset_headcode\n");
 
     $self->log("OtterDB='$dbname' host='$dbhost' user='$dbuser' pass='$dbpass' port='$dbport'");
     eval {
