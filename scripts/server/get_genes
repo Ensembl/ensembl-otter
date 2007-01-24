@@ -1,9 +1,7 @@
 #!/usr/local/bin/perl -w
 
-my $pipehead = $ENV{PIPEHEAD}; # is set by the server for any GET request
-
 use strict;
-use Bio::Otter::ServerSide (':all');
+use Bio::Otter::ServerScriptSupport;
 use Bio::Otter::ToXML;
 
 sub Bio::EnsEMBL::Gene::propagate_slice {
@@ -18,17 +16,13 @@ sub Bio::EnsEMBL::Gene::propagate_slice {
     $gene->slice($slice);
 }
 
-
-$| = 1;
-
-my $sq = Bio::Otter::ServerQuery->new('dataset',
+my $server = Bio::Otter::ServerScriptSupport->new('dataset',
         'cs','csver','name','type','start','end','strand',
     'metakey','analysis','transcript_analyses','translation_xref_dbs');
-set_nph($sq);
 
-my $analysis = $sq->getarg('analysis');
-my $transcript_analyses  = $sq->getarg('transcript_analyses') || '';
-my $translation_xref_dbs = $sq->getarg('translation_xref_dbs') || '';
+my $analysis             = $server->getarg('analysis');
+my $transcript_analyses  = $server->getarg('transcript_analyses')  || '';
+my $translation_xref_dbs = $server->getarg('translation_xref_dbs') || '';
 
 my $allowed_transcript_analyses_hash = $transcript_analyses
     ? { map { $_ => 1 } split(/,/, $transcript_analyses) }
@@ -37,9 +31,8 @@ my $allowed_translation_xref_db_hash = $translation_xref_dbs
     ? { map { $_ => 1 } split(/,/, $translation_xref_dbs) }
     : '';
 
-
     # third parameter of $slice->get_all_Genes() helps preventing lazy-loading of transcripts
-my $genes = fetch_mapped_features($sq, $pipehead, 'gene',
+my $genes = $server->fetch_mapped_features('gene',
             ['get_all_Genes', $analysis, undef, 1]);
 
     ## FIXME:
@@ -52,8 +45,6 @@ my $genes = fetch_mapped_features($sq, $pipehead, 'gene',
     #     $genes = $original_slice->get_all_Genes($analysis);
     # }
 
-server_log("Total of ".scalar(@$genes)." '$analysis' genes sent");
-
 my $output_string = '';
 
 foreach my $gene (@$genes) {
@@ -63,5 +54,7 @@ foreach my $gene (@$genes) {
                                 );
 }
 
-send_response($sq, $output_string, 1);
+$server->send_response($output_string, 1);
+
+1;
 

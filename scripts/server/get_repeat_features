@@ -1,44 +1,20 @@
 #!/usr/local/bin/perl -w
 
-my $pipehead = $ENV{PIPEHEAD}; # is set by the server for any GET request
-
 use strict;
-use OtterDefs;
-use Bio::Otter::ServerQuery;
-use Bio::Otter::ServerSide (':all');
-use Bio::Otter::Lace::PipelineDB;
-use Bio::EnsEMBL::DBSQL::DBAdaptor;
-use Bio::Otter::DBSQL::DBAdaptor;
+use Bio::Otter::ServerScriptSupport;
 use Bio::Otter::Lace::ViaText ('%OrderOfOptions');
 
-$| = 1;
-
-my $sq = Bio::Otter::ServerQuery->new('dataset',
+my $server = Bio::Otter::ServerScriptSupport->new('dataset',
     'cs','csver','name','type','start','end','strand',
     'metakey','analysis');
-set_nph($sq);
 
-my $analysis = $sq->getarg('analysis');
-my $metakey  = $sq->getarg('metakey') || ''; # defaults to pipeline
+my $analysis = $server->getarg('analysis');
 
-my $odba = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
-my $sdba = odba_to_sdba($sq, $odba, $pipehead, $metakey);
-my ($mdba, $sdba_asm) = get_mapper_dba($sq, $odba, $sdba, $pipehead);
-
-if($mdba) {
-    server_log("Assembly mapping not implemented yet");
-    send_response($sq, '', 1);
-    exit(0);
-}
-
-my $satellite_slice = get_slice($sq, $sdba, $pipehead);
+my $rfs = $server->fetch_mapped_features('repeat_feature',
+            ['get_all_RepeatFeatures', $analysis] );
 
 my @rf_optnames = @{ $OrderOfOptions{RepeatFeature} };
 my @rc_optnames = @{ $OrderOfOptions{RepeatConsensus} };
-
-my $rfs = $satellite_slice->get_all_RepeatFeatures($analysis);
-
-server_log("Total of ".scalar(@$rfs)." $analysis repeat features found");
 
 my $output_string = '';
 
@@ -70,5 +46,7 @@ foreach my $rf (@$rfs) {
     $output_string .= join("\t", @rf_optvalues)."\n";
 }
 
-send_response($sq, $output_string, 1);
+$server->send_response($output_string, 1);
+
+1;
 
