@@ -1,13 +1,9 @@
 #!/usr/local/bin/perl -w
 
-my $pipehead = $ENV{PIPEHEAD}; # is set by the server for any GET request
-
 use strict;
 use Bio::Otter::ServerScriptSupport;
-use Bio::Otter::CloneFinder; # pipehead==0 version
-use Bio::Vega::CloneFinder;  # pipehead==1 version
-
-$| = 1;
+use Bio::Otter::CloneFinder; # $server->running_headcode()==0 version
+use Bio::Vega::CloneFinder;  # $server->running_headcode()==1 version
 
 my $server = Bio::Otter::ServerScriptSupport->new(
     'dataset','qnames','type','maxpipehits','unhide');
@@ -16,13 +12,11 @@ my $qnames       = $server->require_argument('qnames');
 my $filter_atype = $server->getarg('type')   || '';
 my $unhide       = $server->getarg('unhide') || 0;
 
-my $odba = $server->otter_dba();
-
-my $finder_class = $pipehead
+my $finder_class = $server->running_headcode()
     ? 'Bio::Vega::CloneFinder'
     : 'Bio::Otter::CloneFinder';
 
-my $finder = $finder_class->new($odba, [ split(',', $qnames) ]);
+my $finder = $finder_class->new( $server->otter_dba(), [ split(',', $qnames) ]);
 
 $finder->find($unhide);
 
