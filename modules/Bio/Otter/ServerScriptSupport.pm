@@ -330,7 +330,6 @@ sub get_slice { # codebase-independent version for scripts
 
         $self->error_exit("$cs '$segment_attr' attribute not set ") unless $segment_name;
 
-        $self->log("Trying $cs/$segment_name/$start/$end/$strand/$csver...");
         $slice =  $dba->get_SliceAdaptor()->fetch_by_region(
             $cs,
 	        $segment_name,
