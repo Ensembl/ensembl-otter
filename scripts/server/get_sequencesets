@@ -1,42 +1,22 @@
 #!/usr/local/bin/perl -w
 
-my $pipehead = $ENV{PIPEHEAD}; # is set by the server for any GET request
-
 use strict;
-use warnings;
-use OtterDefs;
-use Bio::Otter::ServerQuery;
-use Bio::Otter::ServerSide (':all');
+use Bio::Otter::ServerScriptSupport;
 
-$| = 1;
-my $sq = Bio::Otter::ServerQuery->new('dataset','author');
-set_nph($sq);
+my $server = Bio::Otter::ServerScriptSupport->new('dataset','author');
 
-my $query_fail = "must be present to get the list of SequenceSets";
-my $dataset = $sq->getarg('dataset')  || error_exit($sq, "'dataset' $query_fail");
-my $author  = $sq->getarg('author')   || error_exit($sq, "'author' $query_fail");
+my $dataset      = $server->require_argument('dataset');
+my $author_name  = $server->require_argument('author');
 
-my $odba = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
+my $odba = $server->otter_dba();
 
-my $auth_adapt = $odba->get_AuthorAdaptor();
-my $author_obj;
-eval{
-    $author_obj = $auth_adapt->fetch_by_name($author);
-};
-if($@){
-    eval{
-        $author_obj = $auth_adapt->fetch_by_name($OTTER_GLOBAL_ACCESS_USER);
-    };
-    if($@){
-        error_exit($sq,"Failed to get an author.\n$@") unless $author_obj;
-    }
-}
+$server->fetch_Author_obj();  # will break if author cannot be fetched
 
 my $xml = '';
 $xml   .= qq`  <dataset name="$dataset">\n`;
 $xml   .= qq`    <sequencesets>\n`;
 
-if($pipehead) {
+if($server->running_headcode()) {
 
     my $slice_adaptor     = $odba->get_SliceAdaptor();
     my $attribute_adaptor = $odba->get_AttributeAdaptor();
@@ -81,7 +61,7 @@ if($pipehead) {
                  AND ssa.author_id = (select author_id from author where author_name = ?)
                 ORDER BY assembly_type
                 });
-    $sth->execute($author);
+    $sth->execute($author_name);
 
     while (my ($name, $desc, $priority, $hide, $vega_set_id, $access) = $sth->fetchrow) {
           $access ||= 'none';
@@ -97,8 +77,8 @@ if($pipehead) {
 
           $xml .= qq`      <sequenceset name="$name">\n`;
           $xml .= qq`        <description>$desc</description>\n`;
-          $xml .= qq`        <priority>$priority</priority>\n`;
-          $xml .= qq`        <vega_set_id>$vega_set_id</vega_set_id>\n`;
+          $xml .= qq`        <priority>$priority</priority>\n`;             # should go?
+          $xml .= qq`        <vega_set_id>$vega_set_id</vega_set_id>\n`;    # should go as well?
           $xml .= qq`        <is_hidden>$is_hidden</is_hidden>\n`;
           $xml .= qq`        <write_access>$write_access</write_access>\n`;
           $xml .= qq`      </sequenceset>\n`;
@@ -109,7 +89,9 @@ if($pipehead) {
 $xml .= qq`    </sequencesets>\n`;
 $xml .= qq`  </dataset>\n`;
 
-send_response($sq, $xml, 1);
+$server->send_response($xml, 1);
+
+1;
 
 __END__
 

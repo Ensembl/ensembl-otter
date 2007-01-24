@@ -1,74 +1,45 @@
 #!/usr/local/bin/perl -w
 
-my $pipehead = $ENV{PIPEHEAD}; # is set by the server for any GET request
-
 use strict;
-use warnings;
-use OtterDefs;
-use Bio::Otter::ServerQuery;
-use Bio::Otter::ServerSide (':all');
+use Bio::Otter::ServerScriptSupport;
 
-$| = 1;
-my $sq = Bio::Otter::ServerQuery->new('dataset','author', 'sequenceset');;
-set_nph($sq);
+my $server = Bio::Otter::ServerScriptSupport->new(
+    'dataset','author', 'sequenceset');;
 
-my $query_fail = "must be present to get a set of Clone Sequences";
-my $dataset =  $sq->getarg('dataset') || error_exit($sq,"'dataset' $query_fail");
-my $author  =   $sq->getarg('author') || error_exit($sq,"'author' $query_fail");
-my $sequenceset =  $sq->getarg('sequenceset') || error_exit($sq,"'sequenceset' $query_fail");
+my $dataset      =  $server->require_argument('dataset');
+my $sequenceset  =  $server->require_argument('sequenceset');
 
-my $odba = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
+my $odba = $server->otter_dba();
 
-my $auth_adapt = $odba->get_AuthorAdaptor();
-my ($author_obj, $saved_err);
-eval{
-    $author_obj = $auth_adapt->fetch_by_name($author);
-};
-if($@){
-    $saved_err  = $@;
-    eval{
-        $author_obj = $auth_adapt->fetch_by_name($author);
-    };
-    if($@){
-        error_exit($sq,"Failed to get an author.\n$@") unless $author_obj;
-    }
-}
+my $author_obj = $server->fetch_Author_obj(); # will break if author cannot be fetched
 
 my $xml = '';
 $xml   .= qq`  <dataset name="$dataset">\n`;
 $xml   .= qq`    <sequenceset name="$sequenceset">\n`;
 $xml   .= qq`      <clonesequences>\n`;
 
-if($pipehead) {
+if($server->running_headcode()) {
 
-  my $sa=$odba->get_SliceAdaptor;
-  my $la=$odba->get_ContigLockAdaptor;
-  my $slice =  $odba->get_SliceAdaptor()->fetch_by_region('chromosome',$sequenceset,undef,undef,undef,'Otter');
-  my $chrs  = $slice->get_all_Attributes('chr')->[0];
-  my $chr_name=$chrs ? $chrs->value() : die "unknown chromosome name";
-  my $chr_length=$slice->length;
-  my $contig_projection = $slice->project('contig');
+    my $la    = $odba->get_ContigLockAdaptor;
+    my $slice = $odba->get_SliceAdaptor()->fetch_by_region('chromosome',$sequenceset,undef,undef,undef,'Otter');
+    my $chrs  = $slice->get_all_Attributes('chr')->[0] || $server->error_exit("unknown chromosome name");
 
-  foreach my $seg (@$contig_projection) {
-	 my $contig_slice = $seg->to_Slice();
-	 my $contig_name=$contig_slice->seq_region_name;
-	 my $contig_strand=$contig_slice->strand;
-	 my $contig_length=$contig_slice->seq_region_length;
-	 my $contig_id=$sa->get_seq_region_id($contig_slice);
-	 my $contig_lock=$la->fetch_by_contig_id($contig_id);
-	 my $hostname;
-	 my $author_name;
-	 my $author_email;
-	 my $lock_id;
-	 if ($contig_lock){
-		$hostname=$contig_lock->hostname;
-		$author_name=$contig_lock->author->name;
-		$author_email=$contig_lock->author->email;
-		$lock_id=$contig_lock->dbID;
-	 }
-	 my $clone_projection = $contig_slice->project('clone');
-	 my $newseg=$clone_projection->[0];
-	 my $clone_slice = $newseg->to_Slice;
+    my $chr_name = $chrs->value();
+    my $chr_length=$slice->length;
+
+  foreach my $seg (@{ $slice->project('contig') }) {
+
+	 my $contig_asm_start = $seg->from_start;
+	 my $contig_asm_end   = $seg->from_end;
+	 my $contig_slice     = $seg->to_Slice();
+
+	 my $contig_cmp_start = $contig_slice->start;
+	 my $contig_cmp_end   = $contig_slice->end;
+	 my $contig_name      = $contig_slice->seq_region_name;
+	 my $contig_strand    = $contig_slice->strand;
+	 my $contig_length    = $contig_slice->seq_region_length;
+	 my $contig_id        = $contig_slice->get_seq_region_id();
+	 my $clone_slice      = $contig_slice->project('clone')->[0]->to_Slice;
 
      my $accs = $clone_slice->get_all_Attributes('embl_acc')->[0];
 	 my $accession  = $accs ? $accs->value() : die "unknown clone accession";
@@ -77,10 +48,6 @@ if($pipehead) {
      my $icns = $clone_slice->get_all_Attributes('intl_clone_name')->[0];
 	 my $clone_name = $icns ? $icns->value() : $clone_slice->seq_region_name;
 
-	 my $contig_asm_start=$seg->from_start;
-	 my $contig_asm_end=$seg->from_end;
-	 my $contig_cmp_start=$contig_slice->start;
-	 my $contig_cmp_end=$contig_slice->end;
 	 $xml .= qq`        <clonesequence>\n`;
 	 $xml .= qq`          <clone_name>$clone_name</clone_name>\n`;
 	 $xml .= qq`          <accession>$accession</accession>\n`;
@@ -93,7 +60,12 @@ if($pipehead) {
 	 $xml .= qq`          <contig_start>$contig_cmp_start</contig_start>\n`;
 	 $xml .= qq`          <contig_end>$contig_cmp_end</contig_end>\n`;
 	 $xml .= qq`          <contig_strand>$contig_strand</contig_strand>\n`;
-	 if (defined $lock_id){
+
+	 if(my $contig_lock=$la->fetch_by_contig_id($contig_id)) {
+		my $hostname=$contig_lock->hostname;
+		my $author_name=$contig_lock->author->name;
+		my $author_email=$contig_lock->author->email;
+		my $lock_id=$contig_lock->dbID;
 		$xml .= qq`          <lock lock_id="$lock_id" author_name="$author_name" email="$author_email" host_name="$hostname"> </lock>\n`;
 	 }
 	 $xml .= qq`        </clonesequence>\n`;
@@ -152,7 +124,9 @@ $xml .= qq`      </clonesequences>\n`;
 $xml .= qq`    </sequenceset>\n`;
 $xml .= qq`  </dataset>\n`;
 
-send_response($sq, $xml, 1);
+$server->send_response($xml, 1);
+
+1;
 
 __END__
 
