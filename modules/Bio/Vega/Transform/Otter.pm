@@ -357,7 +357,6 @@ sub build_Transcript {
   my ($self, $data) = @_;
   my $exons = delete $exon_list{$self};
   my $slice = $self->get_ChromosomeSlice;
-  my $chrstart=$slice->start;
   my $ana = $logic_ana{$self}{'Otter'} ||= Bio::EnsEMBL::Analysis->new(-logic_name => 'Otter');
 
   my $transcript = Bio::Vega::Transcript->new(
@@ -470,10 +469,10 @@ sub build_Transcript {
   }
   my $name=$data->{'name'};
   if (defined $name) {
-	 if ($seen_transcript_name{$name}) {
+	 if ($seen_transcript_name{$self}{$name}) {
 		die "more than one transcript has the name $name";
 	 } else {
-		$seen_transcript_name{$name} = 1;
+		$seen_transcript_name{$self}{$name} = 1;
 	 }
 	 my $attrib=$self->make_Attribute('name','Name','Alternative/long name',$name);
 	 push @$transcript_attributes,$attrib;
@@ -566,10 +565,10 @@ sub build_Locus {
   my $gene_attributes=[];
   my $gene_name=$data->{'name'};
   if (defined $gene_name ) {
-	 if ($seen_gene_name{$gene_name}) {
+	 if ($seen_gene_name{$self}{$gene_name}) {
 		die "more than one gene has the name $gene_name";
 	 } else {
-		$seen_gene_name{$gene_name} = 1;
+		$seen_gene_name{$self}{$gene_name} = 1;
 	 }
 	 my $name_attrib=$self->make_Attribute('name','Name','Alternative/long name',$gene_name);
 	 push @$gene_attributes,$name_attrib;
@@ -874,6 +873,12 @@ sub get_ChromosomeSliceDB {
   $new_slice = $sa->fetch_by_name($slice->name);
   return $new_slice;
 }
+
+sub set_ChromosomeSlice {
+  my ($self,$slice)=@_;
+  $slice{$self}{'chr'}=$slice;
+}
+
 
 sub get_ChromosomeSlice {
   my $self=shift;

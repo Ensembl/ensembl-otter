@@ -563,10 +563,14 @@ sub store{
   unless ($forceload) {
 
   my $gene_changed=0;
-  unless ($self->db->check_for_transaction){
+
+  if ($self->db->check_for_transaction != 0){
 	 throw "This is non-transactional , cannot proceed storing of gene\n";
   }
+
   $self->db->savepoint;
+
+
   ##deleted gene
   my $db_gene;
   if ($gene->is_current == 0) {
@@ -706,7 +710,7 @@ sub store{
 		}
 	 }
 	 #print STDERR "\nChanged gene:".$gene->stable_id." Current Version:".$gene->version." changes stored successfully in db\n";
-	 
+	$self->db->commit; 
   }
   
   if ($gene_changed == 0) {
@@ -714,12 +718,15 @@ sub store{
 #	 print STDERR "\nTrying to store an Unchanged gene:".$gene->stable_id." Version:".$gene->version." nothing written in db\n";
   }
   if ($gene_changed == 2) {
+#$self->db->commit;
 	# print STDERR "\nNew gene:".$gene->stable_id." Version:".$gene->version." stored successfully in db\n";
   }
   if ($gene_changed == 3) {
+#$self->db->commit;
 	 #print STDERR "\nRestored gene:".$gene->stable_id." Version:".$gene->version." restored successfully in db\n";
   }
   if ($gene_changed == 5) {
+#$self->db->commit;
 	 #print STDERR "\nDeleted gene:".$gene->stable_id." Version:".$gene->version." deleted successfully in db\n";
   }
 }
