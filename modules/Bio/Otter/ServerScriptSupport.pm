@@ -41,10 +41,31 @@ sub csn {
     return $ENV{CURRENT_SCRIPT_NAME} || $0;   # needed by logging mechanism
 }
 
-sub species_hash {
+sub species_hash {      # could move out into a separate class, living on top of species.dat
     my $self = shift @_;
 
     return $OTTER_SPECIES; # inherited from OtterDefs (ultimately from species.dat)
+}
+
+sub dataset_param {     # could move out into a separate class, living on top of species.dat
+    my ($self, $param) = @_;
+
+        # Check the dataset has been entered:
+    my $dataset = $self->require_argument('dataset');
+
+        # get the overriding dataset options from species.dat 
+    my $dbinfo   = $self->species_hash()->{$dataset} || $self->error_exit("Unknown data set $dataset");
+
+        # get the defaults from species.dat
+    my $defaults = $self->species_hash()->{'defaults'};
+
+    return $dbinfo->{$param} || $defaults->{$param};
+}
+
+sub dataset_headcode {
+    my $self = shift @_;
+
+    return $self->dataset_param('HEADCODE');
 }
 
 ############## I/O: ################################
@@ -116,6 +137,10 @@ sub make_Author_obj {
 sub fetch_Author_obj {
     my $self = shift @_;
 
+    if($self->running_headcode() != $self->dataset_headcode()) {
+        $self->error_exit("RunningHeadcode != DatasetHeadcode, cannot fetch Author");
+    }
+
     my $author_name    = $self->require_argument('author');
     my $author_adaptor = $self->otter_dba()->get_AuthorAdaptor();
 
@@ -143,37 +168,10 @@ sub otter_dba {
         return $self->{_odba};
     }
 
-    my $running_headcode = $self->running_headcode();
-
-        # Check the dataset has been entered:
-    my $dataset = $self->require_argument('dataset');
-
-        # get the overriding dataset options from species.dat 
-    my $dbinfo   = $self->species_hash()->{$dataset} || $self->error_exit("Unknown data set $dataset");
-
-        # get the defaults from species.dat
-    my $defaults = $self->species_hash()->{'defaults'};
-
     ########## CODEBASE tricks ########################################
-    my $dataset_headcode  = $dbinfo->{HEADCODE} || $defaults->{HEADCODE};
 
-    my $type     = $self->getarg('type') || $dbinfo->{TYPE} || $defaults->{TYPE};
-
-    ########## AND DB CONNECTION #######################################
-
-    my $dbhost    = $dbinfo->{HOST}     || $defaults->{HOST};
-    my $dbuser    = $dbinfo->{USER}     || $defaults->{USER};
-    my $dbpass    = $dbinfo->{PASS}     || $defaults->{PASS};
-    my $dbport    = $dbinfo->{PORT}     || $defaults->{PORT};
-    my $dbname    = $dbinfo->{DBNAME}   ||
-		$self->error_exit("Failed opening otter database [No database name]");
-
-    my $dnahost    = $dbinfo->{DNA_HOST}    || $defaults->{DNA_HOST};
-    my $dnauser    = $dbinfo->{DNA_USER}    || $defaults->{DNA_USER};
-    my $dnapass    = $dbinfo->{DNA_PASS}    || $defaults->{DNA_PASS};
-    my $dnaport    = $dbinfo->{DNA_PORT}    || $defaults->{DNA_PORT};
-    my $dna_dbname = $dbinfo->{DNA_DBNAME};
-  
+    my $running_headcode = $self->running_headcode();
+    my $dataset_headcode = $self->dataset_headcode();
 
     my $adaptor_class = $running_headcode
         ? ( $dataset_headcode
@@ -185,26 +183,31 @@ sub otter_dba {
                 : 'Bio::Otter::DBSQL::DBAdaptor'    # oldcode anyway, get the best adaptor
         );
 
+    ########## AND DB CONNECTION #######################################
+
     my( $odba, $dnadb );
 
-    $self->log("RunningHeadcode=$running_headcode, DatasetHeadcode=$dataset_headcode\n");
-
-    $self->log("OtterDB='$dbname' host='$dbhost' user='$dbuser' pass='$dbpass' port='$dbport'");
-    eval {
-       $odba = $adaptor_class->new( -host   => $dbhost,
-                                    -user   => $dbuser,
-                                    -pass   => $dbpass,
-                                    -port   => $dbport,
-                                    -dbname => $dbname);
-    };
-    $self->error_exit("Failed opening otter database [$@]") if $@;
-
-    if ($dna_dbname) {
+    if(my $dbname = $self->dataset_param('DBNAME')) {
         eval {
-            $dnadb = new Bio::EnsEMBL::DBSQL::DBAdaptor(-host   => $dnahost,
-                                                        -user   => $dnauser,
-                                                        -pass   => $dnapass,
-                                                        -port   => $dnaport,
+           $odba = $adaptor_class->new( -host   => $self->dataset_param('HOST'),
+                                        -port   => $self->dataset_param('PORT'),
+                                        -user   => $self->dataset_param('USER'),
+                                        -pass   => $self->dataset_param('PASS'),
+                                        -dbname => $dbname);
+        };
+        $self->error_exit("Failed opening otter database [$@]") if $@;
+
+        $self->log("Connected to otter database");
+    } else {
+		$self->error_exit("Failed opening otter database [No database name]");
+    }
+
+    if(my $dna_dbname = $self->dataset_param('DNA_DBNAME')) {
+        eval {
+            $dnadb = new Bio::EnsEMBL::DBSQL::DBAdaptor(-host   => $self->dataset_param('DNA_HOST'),
+                                                        -port   => $self->dataset_param('DNA_PORT'),
+                                                        -user   => $self->dataset_param('DNA_USER'),
+                                                        -pass   => $self->dataset_param('DNA_PASS'),
                                                         -dbname => $dna_dbname);
         };
         $self->error_exit("Failed opening dna database [$@]") if $@;
@@ -213,8 +216,10 @@ sub otter_dba {
         $self->log("Connected to dna database");
     }
 
-    if(!$running_headcode && !$dataset_headcode && $type) {
-        $self->log("Assembly_type='" . $odba->assembly_type($type)."'");
+    if(!$running_headcode && !$dataset_headcode) {
+        if(my $type = $self->getarg('type') || $self->dataset_param('TYPE')) {
+            $self->log("Assembly_type='" . $odba->assembly_type($type)."'");
+        }
     }
 
     return $self->{_odba} = $odba;
