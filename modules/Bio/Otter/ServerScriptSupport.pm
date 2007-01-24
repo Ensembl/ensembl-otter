@@ -408,7 +408,7 @@ sub cached_csver { # with optional override
 }
 
 sub get_mapper_dba {
-    my ($self, $metakey, $satehead, $cs, $override_csver, $name, $type) = @_;
+    my ($self, $metakey, $cs, $override_csver, $name, $type) = @_;
 
     if(!$metakey) {
         $self->log("Working with pipeline_db directly, no remapping is needed.");
@@ -429,13 +429,9 @@ sub get_mapper_dba {
         }
     }
 
-    my $running_headcode = $self->running_headcode();
-    if($running_headcode && !$satehead) {
+    if(!$self->running_headcode()) {
         $self->log("Working with unknown OLD API database, please do the remapping on client side.");
         return;
-    } elsif(!$running_headcode) {
-        $self->log("Can't possibly do any remapping while running OLD API code");
-        $self->return_emptyhanded();
     }
 
     ## What remains is head version of a non-otter satellite_db
@@ -469,7 +465,7 @@ sub get_mapper_dba {
 }
 
 sub fetch_mapped_features {
-    my ($self, $satehead, $feature_name, $call_parms) = @_;
+    my ($self, $feature_name, $call_parms) = @_;
 
     my $fetching_method = shift @$call_parms;
 
@@ -483,7 +479,7 @@ sub fetch_mapped_features {
     my $strand       = $self->getarg('strand');
 
     my $sdba = $self->satellite_dba( $metakey );
-    my ($mdba, $csver) = $self->get_mapper_dba( $metakey, $satehead, $cs, $csver_wanted, $name, $type);
+    my ($mdba, $csver) = $self->get_mapper_dba( $metakey, $cs, $csver_wanted, $name, $type);
 
     my $features = [];
 
