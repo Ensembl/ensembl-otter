@@ -3,22 +3,20 @@
 my $pipehead = $ENV{PIPEHEAD}; # is set by the server for any GET request
 
 use strict;
-use OtterDefs;
-use Bio::Otter::ServerQuery;
-use Bio::Otter::ServerSide (':all');
+use Bio::Otter::ServerScriptSupport;
 use Bio::Otter::CloneFinder; # pipehead==0 version
 use Bio::Vega::CloneFinder;  # pipehead==1 version
 
 $| = 1;
 
-my $sq = Bio::Otter::ServerQuery->new('dataset','qnames','type','maxpipehits','unhide');
-set_nph($sq);
+my $server = Bio::Otter::ServerScriptSupport->new(
+    'dataset','qnames','type','maxpipehits','unhide');
 
-my $qnames = $sq->getarg('qnames') || error_exit($sq, "No 'qnames' argument entered");
-my $filter_atype = $sq->getarg('type') || '';
-my $unhide = $sq->getarg('unhide') || 0;
+my $qnames       = $server->require_argument('qnames');
+my $filter_atype = $server->getarg('type')   || '';
+my $unhide       = $server->getarg('unhide') || 0;
 
-my $odba = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
+my $odba = $server->otter_dba();
 
 my $finder_class = $pipehead
     ? 'Bio::Vega::CloneFinder'
@@ -30,7 +28,7 @@ $finder->find($unhide);
 
 my $output_string = $finder->generate_output($filter_atype);
 
-send_response($sq, $output_string, 1);
+$server->send_response($output_string, 1);
 
 1;
 
