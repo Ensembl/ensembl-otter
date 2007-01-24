@@ -1,59 +1,24 @@
 #!/usr/local/bin/perl -w
 
-my $pipehead = $ENV{PIPEHEAD}; # is set by the server for any GET request
-
 use strict;
-use OtterDefs;
-use Bio::Otter::ServerQuery;
-use Bio::Otter::ServerSide (':all');
-use Bio::Otter::Lace::PipelineDB;
-use Bio::EnsEMBL::DBSQL::DBAdaptor;
-use Bio::Otter::DBSQL::DBAdaptor;
+use Bio::Otter::ServerScriptSupport;
 use Bio::Otter::Lace::ViaText ('%OrderOfOptions');
 use Bio::Otter::DBSQL::SimpleBindingAdaptor;
 use Bio::Otter::HitDescription;
 
-$| = 1;
-
-my $sq = Bio::Otter::ServerQuery->new('dataset',
+my $server = Bio::Otter::ServerScriptSupport->new('dataset',
     'cs','csver','name','type','start','end','strand',
     'kind','metakey','analysis');
-set_nph($sq);
 
-my $analysis = $sq->getarg('analysis');
-my $metakey  = $sq->getarg('metakey') || ''; # defaults to pipeline
-
-my $odba = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
-my $sdba = odba_to_sdba($sq, $odba, $pipehead, $metakey);
-my ($mdba, $sdba_asm) = get_mapper_dba($sq, $odba, $sdba, $pipehead);
-
-if($mdba) {
-    server_log("Assembly mapping not implemented yet");
-    send_response($sq, '', 1);
-    exit(0);
-}
-
-my $satellite_slice = get_slice($sq, $sdba, $pipehead);
-
-my $sdbc = $pipehead ? $sdba->dbc() : $sdba; # needed for SimpleBindingAdaptor
-
-if(!defined($satellite_slice)) {
-    error_exit($sq, "Satellite slice undefined!");
-}
-
-my @af_optnames = @{ $OrderOfOptions{AlignFeature} };
-my @hd_optnames = @{ $OrderOfOptions{HitDescription} };
-
-my $kind     = $sq->getarg('kind');
+my $analysis = $server->getarg('analysis');
+my $kind     = $server->getarg('kind');
 my $method = {
     'dafs' => 'get_all_DnaAlignFeatures',
     'pafs' => 'get_all_ProteinAlignFeatures',
 }->{$kind};
 
-my $afs = $satellite_slice->$method($analysis);
-
-$analysis ||= '(any analysis)';
-server_log("Total of ".scalar(@$afs)." $kind:$analysis features found");
+my $afs = $server->fetch_mapped_features('align_feature',
+            [$method, $analysis] );
 
     # Put the names into the hit_description hash:
 my %hd_hash = ();
@@ -61,7 +26,9 @@ foreach my $af (@$afs) {
     $hd_hash{$af->hseqname()} = '';
 }
 
-    # Fetch the hit descriptions:
+    # Fetch the hit descriptions from a pipeline (depending on $running_headcode):
+my $sdba = $server->satellite_dba( '' );
+my $sdbc = $server->running_headcode() ? $sdba->dbc() : $sdba;
 my $hd_adaptor = Bio::Otter::DBSQL::SimpleBindingAdaptor->new( $sdbc );
 $hd_adaptor->fetch_into_hash(
     'hit_description',
@@ -75,6 +42,9 @@ $hd_adaptor->fetch_into_hash(
     'Bio::Otter::HitDescription',
     \%hd_hash,
 );
+
+my @af_optnames = @{ $OrderOfOptions{AlignFeature} };
+my @hd_optnames = @{ $OrderOfOptions{HitDescription} };
 
 my $output_string = '';
 
@@ -109,5 +79,7 @@ foreach my $af (@$afs) {
     $output_string .= join("\t", @af_optvalues)."\n";
 }
 
-send_response($sq, $output_string, 1);
+$server->send_response($output_string, 1);
+
+1;
 

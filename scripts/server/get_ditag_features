@@ -18,11 +18,6 @@ my $ditype   = $server->getarg('ditype');
 my $dfs = $server->fetch_mapped_features('ditag_feature', 
             ['get_all_DitagFeatures', $ditype, $analysis] );
 
-server_log("Total of ".scalar(@$dfs)
-          .($ditype ? " <$ditype>":'')
-          .($analysis ? " {$analysis}":'')
-          ." ditag features found");
-
 my @df_optnames = @{ $OrderOfOptions{DitagFeature} };
 my @do_optnames = @{ $OrderOfOptions{DitagObject} };
 my $output_string = '';
