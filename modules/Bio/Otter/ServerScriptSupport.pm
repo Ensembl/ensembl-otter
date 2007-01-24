@@ -536,6 +536,9 @@ sub fetch_mapped_features {
         $features = $original_slice->$fetching_method(@$call_parms);
     }
 
+    $self->log("Total of ".scalar(@$features)." ${feature_name}s "
+              .join('/', @$call_parms)." sent to the client");
+
     return $features;
 }
 
