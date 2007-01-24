@@ -408,7 +408,7 @@ sub cached_csver { # with optional override
 }
 
 sub get_mapper_dba {
-    my ($self, $metakey, $cs, $override_csver, $name, $type) = @_;
+    my ($self, $metakey, $cs, $csver_orig, $csver_remote, $name, $type) = @_;
 
     if(!$metakey) {
         $self->log("Working with pipeline_db directly, no remapping is needed.");
@@ -418,7 +418,7 @@ sub get_mapper_dba {
         return;
     }
 
-    my $csver = $self->cached_csver($metakey, $cs, $override_csver);
+    my $csver = $self->cached_csver($metakey, $cs, $csver_remote);
     if($cs eq 'chromosome') {
         if($csver =~/^otter$/i) {
             $self->log("Working with another Otter database, no remapping is needed.");
@@ -442,7 +442,7 @@ sub get_mapper_dba {
 
         # this slice does not have to be completely defined (no start/end/strand),
         # as we only need it to get the attributes
-    my $pipe_slice = $self->get_slice($pdba, $cs, $name, $name, undef, undef, undef, $csver);
+    my $pipe_slice = $self->get_slice($pdba, $cs, $name, $name, undef, undef, undef, $csver_orig);
 
     my %asm_is_equiv = map { ($_->value() => 1) } @{ $pipe_slice->get_all_Attributes('equiv_asm') };
 
@@ -469,9 +469,10 @@ sub fetch_mapped_features {
 
     my $fetching_method = shift @$call_parms;
 
-    my $cs           = $self->getarg('cs')      || 'chromosome';
-    my $csver_wanted = $self->getarg('csver')   || undef;
-    my $metakey      = $self->getarg('metakey') || ''; # defaults to pipeline
+    my $cs           = $self->getarg('cs')           || 'chromosome';
+    my $csver_orig   = $self->getarg('csver')        || undef;
+    my $csver_remote = $self->getarg('csver_remote') || undef;
+    my $metakey      = $self->getarg('metakey')      || ''; # defaults to pipeline
     my $name         = $self->getarg('name');
     my $type         = $self->getarg('type');
     my $start        = $self->getarg('start');
@@ -479,14 +480,14 @@ sub fetch_mapped_features {
     my $strand       = $self->getarg('strand');
 
     my $sdba = $self->satellite_dba( $metakey );
-    my ($mdba, $csver) = $self->get_mapper_dba( $metakey, $cs, $csver_wanted, $name, $type);
+    my ($mdba, $csver) = $self->get_mapper_dba( $metakey, $cs, $csver_orig, $csver_remote, $name, $type);
 
     my $features = [];
 
     if($mdba) {
         $self->log("Proceeding with mapping code");
 
-        my $original_slice_on_mapper = $self->get_slice($mdba, $cs, $name, $type, $start, $end, $strand, $csver);
+        my $original_slice_on_mapper = $self->get_slice($mdba, $cs, $name, $type, $start, $end, $strand, $csver_orig);
         my $proj_segments_on_mapper = $original_slice_on_mapper->project( $cs, $csver );
 
         my $sa_on_target = $sdba->get_SliceAdaptor();
