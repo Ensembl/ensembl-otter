@@ -14,6 +14,8 @@ use base 'Bio::Otter::ServerQuery';
 sub new {
     my $pack = shift @_;
 
+    $|=1; # autoflush
+
     my $self = $pack->SUPER::new(@_);                       # ServerQuery is incorporated
 
     if( defined($ENV{SERVER_SOFTWARE})
@@ -36,6 +38,12 @@ sub csn {
     my $self = shift @_;
 
     return $ENV{CURRENT_SCRIPT_NAME} || $0;   # needed by logging mechanism
+}
+
+sub species_hash {
+    my $self = shift @_;
+
+    return $OTTER_SPECIES; # inherited from OtterDefs (ultimately from species.dat)
 }
 
 ############## I/O: ################################
@@ -119,10 +127,10 @@ sub otter_dba {
     my $dataset = $self->require_argument('dataset');
 
         # get the overriding dataset options from species.dat 
-    my $dbinfo   = $OTTER_SPECIES->{$dataset} || $self->error_exit("Unknown data set $dataset");
+    my $dbinfo   = $self->species_hash()->{$dataset} || $self->error_exit("Unknown data set $dataset");
 
         # get the defaults from species.dat
-    my $defaults = $OTTER_SPECIES->{'defaults'};
+    my $defaults = $self->species_hash()->{'defaults'};
 
     ########## CODEBASE tricks ########################################
     my $dataset_headcode  = $dbinfo->{HEADCODE} || $defaults->{HEADCODE};
