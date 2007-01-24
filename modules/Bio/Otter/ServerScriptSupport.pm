@@ -187,7 +187,7 @@ sub otter_dba {
 
     my( $odba, $dnadb );
 
-    $server->log("RunningHeadcode=$running_headcode, DatasetHeadcode=$dataset_headcode\n");
+    $self->log("RunningHeadcode=$running_headcode, DatasetHeadcode=$dataset_headcode\n");
 
     $self->log("OtterDB='$dbname' host='$dbhost' user='$dbuser' pass='$dbpass' port='$dbport'");
     eval {
