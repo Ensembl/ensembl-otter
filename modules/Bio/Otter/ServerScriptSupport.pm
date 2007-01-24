@@ -112,6 +112,27 @@ sub make_Author_obj {
     return $class->new(-name => $auth_name, -email => $email);
 }
 
+sub fetch_Author_obj {
+    my $self = shift @_;
+
+    my $auth_name    = $self->require_argument('author');
+    my $author_adapt = $self->otter_dba()->get_AuthorAdaptor();
+
+    my $author_obj;
+    eval{
+        $author_obj = $author_adapt->fetch_by_name($author);
+    };
+    if($@){
+        eval{
+            $author_obj = $auth_adapt->fetch_by_name($OTTER_GLOBAL_ACCESS_USER);
+        };
+        if($@){
+            $self->error_exit("Failed to get an author.\n$@") unless $author_obj;
+        }
+    }
+    return $author_obj;
+}
+
 ############## DB connections and slices: #######################
 
 sub otter_dba {
