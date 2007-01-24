@@ -28,6 +28,8 @@ if($server->running_headcode()) {
         my $write_access= 1;  # default
         my $is_hidden   = 0;  # default
 
+        # FIXME: we will need finer, by-author's-name control over visibility/writability of sequence sets
+
         for my $attrib (@{ $attribute_adaptor->fetch_all_by_Slice( $ss_slice ) }) {
             my ($code, $value) = ($attrib->code(), $attrib->value());
             if($code eq 'description') {
