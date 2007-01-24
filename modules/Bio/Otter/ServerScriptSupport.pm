@@ -443,7 +443,7 @@ sub get_mapper_dba {
 
         # this slice does not have to be completely defined (no start/end/strand),
         # as we only need it to get the attributes
-    my $pipe_slice = $self->get_slice($pdba, $cs, $name, $name, undef, undef, undef, $csver_orig);
+    my $pipe_slice = $self->get_slice($pdba, $cs, $name, $type, undef, undef, undef, $csver_orig);
 
     my %asm_is_equiv = map { ($_->value() => 1) } @{ $pipe_slice->get_all_Attributes('equiv_asm') };
 
