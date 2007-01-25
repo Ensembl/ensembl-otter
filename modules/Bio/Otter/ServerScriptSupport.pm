@@ -9,6 +9,7 @@ use Bio::Vega::DBSQL::DBAdaptor;
 use Bio::Otter::Author;
 use Bio::Vega::Author;
 use Bio::Otter::Version;
+use Bio::Otter::Lace::TempFile;
 
 use base 'Bio::Otter::ServerQuery';
 
@@ -35,10 +36,11 @@ sub running_headcode {
     return $ENV{PIPEHEAD};    # the actual running code (0=>rel.19, 1=>rel.20+)
 }
 
-sub csn {
+sub csn {   # needed by logging mechanism
     my $self = shift @_;
 
-    return $ENV{CURRENT_SCRIPT_NAME} || $0;   # needed by logging mechanism
+    my @syll = split(/\//, $ENV{CURRENT_SCRIPT_NAME} || $0);
+    return pop(@syll);
 }
 
 sub species_hash {      # could move out into a separate class, living on top of species.dat
@@ -122,16 +124,37 @@ sub return_emptyhanded {
     exit(0); # <--- this forces all the scripts to exit normally
 }
 
+sub tempfile_from_argument {
+    my $self      = shift @_;
+    my $argname   = shift @_;
+
+    my $file_name = shift @_ || $self->csn().'_'.$self->require_argument('author').'.xml';
+
+    my $tmp_file = Bio::Otter::Lace::TempFile->new;
+    $tmp_file->root('/tmp');
+    $tmp_file->name($file_name);
+    my $full_name = $tmp_file->full_name();
+
+    $self->log("Dumping the data to the temporary file '$full_name'");
+
+    my $write_fh = eval{
+        $tmp_file->write_file_handle();
+    } || $self->error_exit("Can't write to '$full_name' : $!");
+    print $write_fh $self->require_argument($argname);
+
+    return $tmp_file;
+}
+
 ############# Creation of an Author object from arguments #######
 
 sub make_Author_obj {
     my $self = shift @_;
 
-    my $auth_name = $self->require_argument('author');
-    my $email     = $self->require_argument('email');
-    my $class     = $self->running_headcode() ? 'Bio::Vega::Author' : 'Bio::Otter::Author';
+    my $author_name  = $self->require_argument('author');
+    my $author_email = $self->require_argument('email');
+    my $class        = $self->running_headcode() ? 'Bio::Vega::Author' : 'Bio::Otter::Author';
 
-    return $class->new(-name => $auth_name, -email => $email);
+    return $class->new(-name => $author_name, -email => $author_email);
 }
 
 sub fetch_Author_obj {
