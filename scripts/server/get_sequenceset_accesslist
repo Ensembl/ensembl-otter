@@ -6,11 +6,11 @@ use Bio::Otter::ServerScriptSupport;
 my $server = Bio::Otter::ServerScriptSupport->new('dataset','author');
 
 my $dataset = $server->require_argument('dataset');
-my $odb     = $server->otter_dba();
+my $odba    = $server->otter_dba();
 
 $server->fetch_Author_obj();  # will break if author cannot be fetched
 
-my $sth=$odb->prepare(q{
+my $sth=$odba->prepare(q{
             SELECT ssa.assembly_type
               , ssa.access_type
               , au.author_name
