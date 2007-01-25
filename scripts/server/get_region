@@ -31,7 +31,7 @@ if ($odba->isa('Bio::Vega::DBSQL::DBAdaptor')) {
 } elsif ($odba->isa('Bio::Otter::DBSQL::DBAdaptor')) {
     $xml=Bio::Otter::Converter::slice_to_XML($slice,$odba);
 } else {
-    $server->log("Require an Otter DB Adaptor and not '$odba'");
+    $server->error_exit("Require an Otter DB Adaptor and not '$odba'");
 }
 
 $server->log("Done converting slice to XML. Length of XML = " . length($xml) );
