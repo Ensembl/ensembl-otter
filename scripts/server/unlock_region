@@ -1,89 +1,63 @@
 #!/usr/local/bin/perl -w
 
-my $pipehead = $ENV{PIPEHEAD}; # is set by the server for any GET/POST request
-
-use OtterDefs;
 use strict;
-
-use Bio::Otter::ServerQuery;
-
+use Bio::Otter::ServerScriptSupport;
 use Bio::Otter::CloneLockBroker;
-use Bio::Vega::ContigLockBroker;
 use Bio::Otter::Converter;
+use Bio::Vega::ContigLockBroker;
 use Bio::Vega::Transform::Otter;
-use Bio::Otter::Lace::TempFile;
 
-use Bio::Otter::ServerSide qw(:all);
-
-
-$| = 1;
-my $sq = Bio::Otter::ServerQuery->new('dataset',
+my $server = Bio::Otter::ServerScriptSupport->new('dataset',
     'data', 'author', 'email',
 );
-set_nph($sq);
 
-server_log("******* Starting to unlock region *********");
-my $odb    = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES,$pipehead);
-my $author = get_Author_from_CGI($sq,$pipehead);
-my $auth_name = $author->name;
-my $xml_data  = $sq->getarg('data') || error_exit($sq, "No xml data entered. Can't write region");
-server_log("Length of data " . length($xml_data) );
-my $tmp_xml = Bio::Otter::Lace::TempFile->new;
-$tmp_xml->root('/tmp');
-$tmp_xml->name(qq`unlock_region_${auth_name}.xml`);
-my $tmp_xml_name = $tmp_xml->full_name();
-server_log("Writing xml to tmp file [$tmp_xml_name]");
+my $odb         = $server->otter_dba();
+my $author_obj  = $server->make_Author_obj();
 
-my $xml_fh = eval{
-    $tmp_xml->write_file_handle();
-} || error_exit($sq, "Can't write to '$tmp_xml_name' : $!");
-print $xml_fh $xml_data;
-
-# Save a bit of memory
-$xml_data = undef;
-
-server_log("Converting xml to otter...");
-my $fh = $tmp_xml->read_file_handle();
-
-####################################################################
 
 my( $genes, $slice );
 if ($odb->isa('Bio::Otter::DBSQL::DBAdaptor')) {
+
+  my $input_stream = $server->tempfile_from_argument('data')->read_file_handle();
+
   eval {
-    ($genes,$slice) = Bio::Otter::Converter::XML_to_otter($fh, $odb);
+    ($genes,$slice) = Bio::Otter::Converter::XML_to_otter($input_stream, $odb);
     my $chrname  = $slice->chr_name;
     my $chrstart = $slice->chr_start;
     my $chrend   = $slice->chr_end;
-    server_log("Processed incoming xml file with slice: [$chrname] [$chrstart] [$chrend]");
+    $server->log("Processed incoming xml file with slice: [$chrname] [$chrstart] [$chrend]");
   };
   if ($@) {
-	 error_exit($sq, "Failed converting XML to otter [$@]");
+	 $server->error_exit("Failed converting XML to otter [$@]");
   }
-  server_log("Done converting.");
+  $server->log("Done converting.");
   my $cb   = new Bio::Otter::CloneLockBroker($odb);
-  server_log("Checking region is locked...");
+  $server->log("Checking region is locked...");
   eval {
-	 $cb->check_locks_exist_by_slice($slice,$author);
+	 $cb->check_locks_exist_by_slice($slice,$author_obj);
   };
   if ($@) {
-	 error_exit($sq, "Failed checking locks [$@]");
+	 $server->error_exit("Failed checking locks [$@]");
   }
-  server_log("Done checking region is locked.");
-  server_log("Unlocking clones...");
+  $server->log("Done checking region is locked.");
+  $server->log("Unlocking clones...");
   eval{
-    $cb->remove_by_slice($slice,$author);
+    $cb->remove_by_slice($slice,$author_obj);
   };
-  error_exit($sq, "Failed to unlock clones") if $@;
-  server_log("Done unlocking clones.");
-  send_response($sq, "<response>\n</response>\n", 1);
-}
+  $server->error_exit("Failed to unlock clones") if $@;
+  $server->log("Done unlocking clones.");
+  $server->send_response("<response>\n</response>\n", 1);
 
-elsif ($odb->isa('Bio::Vega::DBSQL::DBAdaptor')) {
+} elsif ($odb->isa('Bio::Vega::DBSQL::DBAdaptor')) {
 
-##trying to unlock a new Otter db
+  my $input_filename = $server->tempfile_from_argument('data')->full_name();
+  #
+  # the original string lives here:
+  #     $xml_string = $server->require_argument('data');
+
   eval{
 	 my $parser = Bio::Vega::Transform::Otter->new;
-	 $parser->parsefile($tmp_xml_name);
+	 $parser->parsefile($input_filename);
 	 my $cs='chromosome';
 	 my $chr_slice=$parser->get_ChromosomeSliceDB($odb);
 	 my $chrstart=$chr_slice->start;
@@ -97,31 +71,32 @@ elsif ($odb->isa('Bio::Vega::DBSQL::DBAdaptor')) {
 		#die "no slice fetched for cs:$cs, segment_name:$segment_name,chrstart:$chrstart, chrend:$chrend, strand:$strand, cs-version:$cs_version";
 	 #}
 	 $genes=$parser->get_Genes;
-	 server_log("Processed incoming xml file with slice: [$chrname] [$chrstart] [$chrend]");
+	 $server->log("Processed incoming xml file with slice: [$chrname] [$chrstart] [$chrend]");
   };
   if ($@) {
-	 error_exit($sq, "Failed converting XML to otter [$@]");
+	 $server->error_exit("Failed converting XML to otter [$@]");
   }
-  server_log("Done converting.");
-  server_log("Checking region is locked...");
+  $server->log("Done converting.");
+  $server->log("Checking region is locked...");
   my $cb=Bio::Vega::ContigLockBroker->new;
   eval {
-	 $cb->check_locks_exist_by_slice($slice,$author,$odb);
+	 $cb->check_locks_exist_by_slice($slice,$author_obj,$odb);
   };
   if ($@) {
-	 error_exit($sq, "Failed checking locks [$@]");
+	 $server->error_exit("Failed checking locks [$@]");
   }
-  server_log("Done checking region is locked.");
-  server_log("Unlocking clones...");
+  $server->log("Done checking region is locked.");
+  $server->log("Unlocking clones...");
   eval{
-	 $cb->remove_by_slice($slice,$author,$odb);
+	 $cb->remove_by_slice($slice,$author_obj,$odb);
   };
-  error_exit($sq, "Failed to unlock clones\n $@\n***\n") if $@;
-  server_log("Done unlocking clones.");
-  send_response($sq, "<response>\n</response>\n", 1);
-}
-else {
-  server_log("Require an Otter DB Adaptor and not:$odb");
+  $server->error_exit("Failed to unlock clones\n $@\n***\n") if $@;
+  $server->log("Done unlocking clones.");
+  $server->send_response("<response>\n</response>\n", 1);
+
+} else {
+  $server->log("Require an Otter DB Adaptor and not:$odb");
 }
 
 1;
+

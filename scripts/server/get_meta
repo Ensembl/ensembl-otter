@@ -1,25 +1,18 @@
 #!/usr/local/bin/perl -w
 
-my $pipehead = $ENV{PIPEHEAD}; # is set by the server for any GET request
-
 use strict;
-use OtterDefs;
-use Bio::Otter::ServerQuery;
-use Bio::Otter::ServerSide (':all');
+use Bio::Otter::ServerScriptSupport;
 
-$| = 1;
+my $server = Bio::Otter::ServerScriptSupport->new('dataset','which','key');
 
-my $sq = Bio::Otter::ServerQuery->new('dataset','which','key');
-set_nph($sq);
+my $which = $server->getarg('which') || 'otter';
+my $key   = $server->getarg('key');
 
-my $which = $sq->getarg('which') || 'otter';
-my $key   = $sq->getarg('key');
+my $dba = ($which eq 'pipe')
+    ? $server->satellite_dba( '' )
+    : $server->otter_dba();
 
-my $dba = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
-if($which eq 'pipe') {
-    $dba = odba_to_sdba($sq, $dba, $pipehead);
-}
-my $dbc = $pipehead ? $dba->dbc() : $dba;
+my $dbc = $server->running_headcode() ? $dba->dbc() : $dba;
 
 my $sth = $dbc->prepare(qq{
     SELECT meta_key, meta_value
@@ -41,7 +34,9 @@ while (my ($meta_key, $meta_value) = $sth->fetchrow) {
     $counter++;
 }
 
-server_log("Total of $counter meta table pairs sent");
+$server->log("Total of $counter meta table pairs sent");
 
-send_response($sq, $output_string, 1);
+$server->send_response($output_string, 1);
+
+1;
 

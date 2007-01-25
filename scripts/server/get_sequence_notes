@@ -1,27 +1,20 @@
 #!/usr/local/bin/perl -w
 
-my $pipehead = $ENV{PIPEHEAD}; # is set by the server for any request
-
 use strict;
-use OtterDefs;
-use Bio::Otter::ServerQuery;
-use Bio::Otter::ServerSide (':all');
-use Bio::Otter::DBSQL::DBAdaptor;
+use Bio::Otter::ServerScriptSupport;
 
-$| = 1;
-
-my $sq = Bio::Otter::ServerQuery->new('dataset',
+my $server = Bio::Otter::ServerScriptSupport->new('dataset',
     'contig', 'type', 'author');
-set_nph($sq);
 
-my $asm_type = $sq->getarg('type');
-my $aut_name = $sq->getarg('author');
-my $ctg_name = $sq->getarg('contig');
+my $asm_type = $server->getarg('type');
+my $aut_name = $server->getarg('author');
+my $ctg_name = $server->getarg('contig');
 
-my $odba = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
-my $odbc = $pipehead ? $odba->dbc() : $odba;
+my $running_headcode = $server->running_headcode();
+my $odba = $server->otter_dba();
+my $odbc = $running_headcode ? $odba->dbc() : $odba;
 
-my $sql = $pipehead
+my $sql = $running_headcode
 ? qq{
     SELECT ctg.name,
            aut.author_name,
@@ -78,5 +71,7 @@ while (my ($ctg_name, $author_name, $is_current, $note_time, $timestamp, $note) 
     $output_string .= join("\t", $ctg_name, $author_name, $is_current, $note_time, $timestamp, $note)."\n";
 }
 
-send_response($sq, $output_string, 1);
+$server->send_response($output_string, 1);
+
+1;
 

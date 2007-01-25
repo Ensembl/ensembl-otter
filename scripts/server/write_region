@@ -1,61 +1,21 @@
 #!/usr/local/bin/perl -w
 
-my $pipehead = $ENV{PIPEHEAD}; # is set by the server for any GET/POST request
-
-use OtterDefs;
 use strict;
-use Bio::Otter::ServerQuery;
+use Bio::Otter::ServerScriptSupport;
 use Bio::Otter::AnnotationBroker;
 use Bio::Otter::Converter;
-use Bio::Otter::Lace::TempFile;
 use Bio::Otter::CloneLockBroker;
 use Bio::Vega::Transform::Otter;
-use Bio::Otter::ServerSide qw(:all);
 use Bio::Vega::Transform::XML;
 use Bio::Vega::ContigLockBroker;
-####################################################################
-################ COMMON POST CGI SCRIPT BEGIN ######################
-####################################################################
 
-$| = 1;
-my $sq = Bio::Otter::ServerQuery->new('dataset','data', 'author', 'email', 'unlock',);
-set_nph($sq);
-server_log("******* Starting to write region *********");
+my $server = Bio::Otter::ServerScriptSupport->new(
+    'dataset', 'data', 'author', 'email',
+    'unlock', # passed but never used?
+);
 
-my $odb    = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES,$pipehead);
-my $author = get_Author_from_CGI($sq,$pipehead);
-my $auth_name = $author->name;
-
-####################################################################
-
-my $xml_data  = $sq->getarg('data') || error_exit($sq, "No xml data entered. Can't write region");
-
-server_log("Length of data " . length($xml_data) );
-
-my $tmp_xml = Bio::Otter::Lace::TempFile->new;
-
-$tmp_xml->root('/tmp');
-$tmp_xml->name(qq`write_region_${auth_name}.xml`);
-my $tmp_xml_name = $tmp_xml->full_name();
-
-server_log("Writing xml to tmp file [$tmp_xml_name]");
-
-my $xml_fh = eval{
-  $tmp_xml->write_file_handle();
-} || error_exit($sq, "Can't write to '$tmp_xml_name' : $!");
-
-print $xml_fh $xml_data;
-
-# Save a bit of memory
-$xml_data = undef;
-
-server_log("Converting xml to otter...");
-my $fh = $tmp_xml->read_file_handle();
-
-####################################################################
-################ COMMON POST CGI SCRIPT _END_ ######################
-####################################################################
-
+my $odb        = $server->otter_dba();
+my $author_obj = $server->make_Author_obj();
 
 my( $genes,
     $slice,			# The slice is fetched from the database by XML_to_otter
@@ -70,31 +30,35 @@ my $path_as_XML;
 if ($odb->isa('Bio::Otter::DBSQL::DBAdaptor')) {
 
 eval {
+
+  my $input_stream = $server->tempfile_from_argument('data')->read_file_handle();
+
   my( $seqstr );		# Don't need outside block
   ($genes, $slice, $seqstr, $path, $new_feature_set, $new_assembly_tag_set) =
-    Bio::Otter::Converter::XML_to_otter($fh, $odb);
-  error_exit($sq, "no path from XML")    unless  $path;
-  error_exit($sq, "empty path from XML") unless @$path;
+    Bio::Otter::Converter::XML_to_otter($input_stream, $odb);
+
+  $server->error_exit("no path from XML")    unless  $path;
+  $server->error_exit("empty path from XML") unless @$path;
   $chrname  = $slice->chr_name;
   $chrstart = $slice->chr_start;
   $chrend   = $slice->chr_end;
   $path_as_XML = Bio::Otter::Converter::path_to_XML($chrname, $chrstart, $chrend, $slice->assembly_type, $slice->get_tiling_path);
-  server_log("Processed incoming xml file with slice: [$chrname] [$chrstart] [$chrend]"); 
+  $server->log("Processed incoming xml file with slice: [$chrname] [$chrstart] [$chrend]"); 
 };
 
 if ($@) {
-  error_exit($sq, "Failed converting XML [$genes,$chrname,$chrstart,$chrend] to otter [$@]");
+  $server->error_exit("Failed converting XML [$genes,$chrname,$chrstart,$chrend] to otter [$@]");
 }
 
-server_log("Done converting.");
-server_log("Found ". scalar(@$genes) ." genes on slice [$chrname] [$chrstart] [$chrend]");
+$server->log("Done converting.");
+$server->log("Found ". scalar(@$genes) ." genes on slice [$chrname] [$chrstart] [$chrend]");
 my $cb = new Bio::Otter::CloneLockBroker($odb);
-server_log("Checking region is locked...");
+$server->log("Checking region is locked...");
 eval {
-  $cb->check_locks_exist_by_slice($slice, $author);
+  $cb->check_locks_exist_by_slice($slice, $author_obj);
 };
-error_exit($sq, "Failed checking locks [$@]") if $@;
-server_log("Done checking region is locked.");
+$server->error_exit("Failed checking locks [$@]") if $@;
+$server->log("Done checking region is locked.");
 strip_incomplete_genes($genes);
 
 # Get stable IDs for any genes, transcripts, translations and exons that don't have them
@@ -103,7 +67,7 @@ foreach my $gene (@$genes) {
     $sida->fetch_new_stable_ids_for_Gene($gene);
 }
 my $ab = new Bio::Otter::AnnotationBroker($odb);
-$ab->current_author($author);
+$ab->current_author($author_obj);
 my $oaga = $odb->get_GeneAdaptor();
 $odb->assembly_type($slice->assembly_type);
 my $anal;
@@ -111,21 +75,21 @@ eval {
   $anal = $odb->get_AnalysisAdaptor()->fetch_by_logic_name('otter');
 };
 if ($@) {
-  error_exit($sq, "Failed fetching analysis [$@]");
+  $server->error_exit("Failed fetching analysis [$@]");
 }
 if (!defined($anal)) {
-  error_exit($sq, "No analysis object associated with otter");
+  $server->error_exit("No analysis object associated with otter");
 }
 my $dbgenes;
-server_log("Fetching database genes for comparison...");
+$server->log("Fetching database genes for comparison...");
 eval {
   $dbgenes = $oaga->fetch_by_Slice($slice);
   strip_incomplete_genes($dbgenes);
 };
 if ($@) {
-  error_exit($sq, "Failed fetching genes [$@]");
+  $server->error_exit("Failed fetching genes [$@]");
 }
-server_log("Done fetching database genes.");
+$server->log("Done fetching database genes.");
 foreach my $gene (@$genes) {
   $gene->analysis($anal);
 }
@@ -149,15 +113,15 @@ eval {
 };
 
 if ($@) {
-  error_exit($sq, "Failed fully loading genes before write [$@]");
+  $server->error_exit("Failed fully loading genes before write [$@]");
 }
 my( @gene_events, @changed_clones );
-server_log("Comparing ". scalar(@$dbgenes) ." old to ". scalar(@$genes) ." new gene(s)... ");
+$server->log("Comparing ". scalar(@$dbgenes) ." old to ". scalar(@$genes) ." new gene(s)... ");
 my( $del_sf, $save_sf, $del_at, $save_at );
 eval {
-  server_log("New clones");
+  $server->log("New clones");
   my $new_clones = clones_from_path($path);
-  server_log("Old clones");
+  $server->log("Old clones");
   my $old_clones = clones_from_path($slice->get_tiling_path);
   @gene_events = $ab->compare_genes($dbgenes, $genes);
   @changed_clones = $ab->compare_clones($old_clones, $new_clones);
@@ -172,18 +136,18 @@ eval {
   ($del_at, $save_at) = $ab->compare_assembly_tag_sets($old_assembly_tag_set, $new_assembly_tag_set);
 };
 if ($@) {
-  error_exit($sq, "Failed comparing annotations [$@]");
+  $server->error_exit("Failed comparing annotations [$@]");
 }
-server_log("Done compating old genes to new ones.");
+$server->log("Done compating old genes to new ones.");
 
 # the magic happens!
 my ($outputstr, $output_xml);
 eval {
   $odb->begin_work();
-  server_log("Found ". scalar(@gene_events) ." changed gene annotations");
+  $server->log("Found ". scalar(@gene_events) ." changed gene annotations");
   foreach my $event ( @gene_events ) {
     $outputstr .= $event->to_string;
-    server_log($event->to_string);
+    $server->log($event->to_string);
     my $gene;
     if ($event->type eq 'deleted') {
       $gene = $event->old_gene;
@@ -194,33 +158,33 @@ eval {
     # Need to save the original coordinates for the response XML.
     my( %exon_start_end_strand );
     foreach my $exon (@{$gene->get_all_Exons}) {
-        my $stable = $exon->stable_id || error_exit($sq, "Missing exon stable ID");
+        my $stable = $exon->stable_id || $server->error_exit("Missing exon stable ID");
         $exon_start_end_strand{$stable} = [$exon->start, $exon->end, $exon->strand];
     }
-    server_log("Attaching gene to slice ". $gene->stable_id ." ". $gene->version );
+    $server->log("Attaching gene to slice ". $gene->stable_id ." ". $gene->version );
     $oaga->attach_to_Slice($gene,$slice);
     $gene->detach_DBAdaptors;
-    server_log("Done attaching");
+    $server->log("Done attaching");
     $oaga->store($gene);
     # Restore the pre-transform exon coordinates
     foreach my $exon (@{$gene->get_all_Exons}) {
-        my $stable = $exon->stable_id || error_exit($sq, "Missing exon stable ID");
+        my $stable = $exon->stable_id || $server->error_exit("Missing exon stable ID");
         my $ses = $exon_start_end_strand{$stable}
-            or error_exit($sq, "Couldn't get pre-transformed coordinates for exon '$stable'");
+            or $server->error_exit("Couldn't get pre-transformed coordinates for exon '$stable'");
         my ($start, $end, $strand) = @$ses;
         $exon->start($start);
         $exon->end($end);
         $exon->strand($strand);
     }
     $output_xml .= $gene->toXMLString() unless $event->type eq 'deleted';
-    server_log("Stored gene");
+    $server->log("Stored gene");
     $outputstr .= " " . $gene->version . " " . $gene->gene_info->name->name . "";
   }
   my $oaca = $odb->get_CloneAdaptor;
   foreach my $clone (@changed_clones) {
     my $acc = $clone->embl_id;
     my $sv  = $clone->embl_version;
-    server_log("Storing new version of clone '$acc.$sv'");
+    $server->log("Storing new version of clone '$acc.$sv'");
     my $db_clone = $oaca->fetch_by_accession_version($acc, $sv);
     $db_clone->clone_info($clone->clone_info);
     $oaca->store($db_clone);
@@ -231,46 +195,47 @@ eval {
     foreach my $sf (@$del_sf) {
       $sfa->remove($sf);
     }
-    server_log("Deleting ".scalar(@$del_sf)." SimpleFeatures") unless $@;
+    $server->log("Deleting ".scalar(@$del_sf)." SimpleFeatures") unless $@;
   }
   if (@$save_sf) {
     attach_analysis_objects_and_transform_to_slice($odb, $slice, $save_sf);
     $sfa->store(@$save_sf);
-    server_log("Saving ".scalar(@$save_sf)." SimpleFeatures") unless $@;
+    $server->log("Saving ".scalar(@$save_sf)." SimpleFeatures") unless $@;
   }
   # Store Assembly_tags changes
   my $atag_Ad = $odb->get_AssemblyTagAdaptor;
   if (@$del_at) {
     $atag_Ad->remove($del_at);
-    server_log("Deleting ".scalar(@$del_at)." AssemblyTags") unless $@;
+    $server->log("Deleting ".scalar(@$del_at)." AssemblyTags") unless $@;
   }
   if (@$save_at) {
     my $c_save = transform_assembly_tag_coordinates($slice, $save_at);
     $atag_Ad->store($c_save);
-    server_log("Saving ".scalar(@$c_save)." AssemblyTags") unless $@;
+    $server->log("Saving ".scalar(@$c_save)." AssemblyTags") unless $@;
   }
   $odb->commit();
 };
 if ($@) {
-  error_exit($sq, "Failed writing annotations [$@]");
+  $server->error_exit("Failed writing annotations [$@]");
 }
 $outputstr ||= "No changes to annotations";
 $output_xml = $path_as_XML . $output_xml ;
-send_response($sq, $output_xml, 1);
-}
+send_response($output_xml, 1);
 
-elsif ($odb->isa('Bio::Vega::DBSQL::DBAdaptor')) {
+} elsif ($odb->isa('Bio::Vega::DBSQL::DBAdaptor')) {
 
-  ##trying to store in a new Otter db
-  ##Parse the xml file
+    my $input_filename = $server->tempfile_from_argument('data')->full_name();
+    #
+    # the original string lives here:
+    #     $xml_string = $server->require_argument('data');
 
   my $parser;
   eval {
 	 $parser = Bio::Vega::Transform::Otter->new;
-	 $parser->parsefile($tmp_xml_name);
+	 $parser->parsefile($input_filename);
   };
   if ($@){
-	 error_exit($sq, "Failed converting XML to otter [$@]");
+	 $server->error_exit("Failed converting XML to otter [$@]");
   }
 
   # check that the assembly is already loaded in the database and
@@ -306,17 +271,17 @@ elsif ($odb->isa('Bio::Vega::DBSQL::DBAdaptor')) {
 		my $contig_end=$contig_slice->end;
 		if ( $xmlfrag{$contig_name}){
 		  if (($xmlfrag{$contig_name}{start} != $contig_start) || ($xmlfrag{$contig_name}{end} != $contig_end)){
-			 error_exit($sq,"Assembly doesn't match for contig $contig_name\n");
+			 $server->error_exit("Assembly doesn't match for contig $contig_name\n");
 		  }
 		  $xmlfrag{$contig_name}{slice}=$contig_slice;
 		}
 		else {
-		  error_exit($sq,"Assembly doesn't match for contig $contig_name\n");
+		  $server->error_exit("Assembly doesn't match for contig $contig_name\n");
 		}
 	 }
   };
   if ($@){
-	 error_exit($sq,"Failed at comparing xml assembly with database assembly [$@]\n");
+	 $server->error_exit("Failed at comparing xml assembly with database assembly [$@]\n");
   }
   my $xmlstr;
   $odb->begin_work;
@@ -324,12 +289,12 @@ elsif ($odb->isa('Bio::Vega::DBSQL::DBAdaptor')) {
   eval {
 	 ##check if clones are locked or not
 	 my $cb = new Bio::Vega::ContigLockBroker;
-	 server_log("Checking region is locked...");
+	 $server->log("Checking region is locked...");
 	 eval {
-		$cb->check_locks_exist_by_slice($slice, $author,$odb);
+		$cb->check_locks_exist_by_slice($slice, $author_obj, $odb);
 	 };
-	 error_exit($sq, "Failed checking locks [$@]") if $@;
-	 server_log("Done checking region is locked.");
+	 $server->error_exit("Failed checking locks [$@]") if $@;
+	 $server->log("Done checking region is locked.");
 	 ##update all contig_info and contig_info_attrib
 	 foreach my $piece (@$chr_ctg) {
 		my $ctg_attrib_list=$piece->[2];
@@ -337,29 +302,29 @@ elsif ($odb->isa('Bio::Vega::DBSQL::DBAdaptor')) {
 		my $ctg_name=$cmp_slice->seq_region_name;
 		my $ctg_author=$piece->[3];
 		my $ctg_slice=$xmlfrag{$ctg_name}{slice};
-		my $ctg_info_id = insert_ContigInfo_Attributes($odb,$author,$ctg_slice,$ctg_attrib_list);
-		server_log("Updating contig info-attrib for ".$ctg_slice->seq_region_name);
+		my $ctg_info_id = insert_ContigInfo_Attributes($odb,$author_obj,$ctg_slice,$ctg_attrib_list);
+		$server->log("Updating contig info-attrib for ".$ctg_slice->seq_region_name);
 	 }
 	 ## strip_incomplete_genes for the xml genes
 	 my $genes=$parser->get_Genes;
 	 strip_incomplete_genes($genes)  if (defined $genes);
 	 ##fetch database genes and compare to find the new/modified/deleted genes
-	 server_log("Fetching database genes for comparison...");
+	 $server->log("Fetching database genes for comparison...");
 	 my $db_genes = $slice->get_all_Genes;
 	 strip_incomplete_genes($db_genes)  if (defined $db_genes);
-	 server_log("Comparing ". scalar(@$db_genes) ." old to ". scalar(@$genes) ." new gene(s)... ") if (defined $db_genes && defined $genes);
+	 $server->log("Comparing ". scalar(@$db_genes) ." old to ". scalar(@$genes) ." new gene(s)... ") if (defined $db_genes && defined $genes);
 	 my ($new_mod,$del) = compare_genes($db_genes,$genes);
 	 my $gene_adaptor=$odb->get_GeneAdaptor;
-	 server_log("Attaching gene to slice ");
+	 $server->log("Attaching gene to slice ");
 	 foreach my $gene (@$new_mod){
 		##attach gene and its components to the right slice
 		$gene->slice($slice);
 		##update author in gene and transcript
-		$gene->gene_author($author);
+		$gene->gene_author($author_obj);
 		my $tref=$gene->get_all_Transcripts();
 		foreach my $tran (@$tref) {
 		  $tran->slice($slice);
-		  $tran->transcript_author($author);
+		  $tran->transcript_author($author_obj);
 		  foreach my $exon (@{$tran->get_all_Exons}) {
 			 $exon->slice($slice);
 		  }
@@ -367,25 +332,25 @@ elsif ($odb->isa('Bio::Vega::DBSQL::DBAdaptor')) {
 		##update all gene and its components in db (new/mod)
 		$gene_adaptor->store($gene);
 	 }
-	 server_log("Updated ".scalar(@$new_mod)." genes");
+	 $server->log("Updated ".scalar(@$new_mod)." genes");
 	 foreach my $gene (@$del){
 		##attach gene and its components to the right slice
 		$gene->slice($slice);
 		##update author in gene and transcript
-		$gene->gene_author($author);
+		$gene->gene_author($author_obj);
 		my $tref=$gene->get_all_Transcripts();
 		foreach my $tran (@$tref) {
 		  $tran->slice($slice);
-		  $tran->transcript_author($author);
+		  $tran->transcript_author($author_obj);
 		  foreach my $exon (@{$tran->get_all_Exons}) {
 			 $exon->slice($slice);
 		  }
 		}
 		##update all gene and its components in db (del)
 		$gene_adaptor->store($gene);
-		server_log("Deleted gene ".$gene->stable_id);
+		$server->log("Deleted gene ".$gene->stable_id);
 	 }
-	 server_log("Deleted ".scalar(@$del)." Genes") if ($del);
+	 $server->log("Deleted ".scalar(@$del)." Genes") if ($del);
 	 ##update feature_sets
 	 ##SimpleFeatures - deletes old features(features not in xml)
 	 ##and stores the current featues in databse(features in xml)
@@ -396,12 +361,12 @@ elsif ($odb->isa('Bio::Vega::DBSQL::DBAdaptor')) {
 	 foreach my $del_feat (@$delete){
 		$sfa->remove($del_feat);
 	 }
-	 server_log("Deleting ".scalar(@$delete)." SimpleFeatures") unless $@;
+	 $server->log("Deleting ".scalar(@$delete)." SimpleFeatures") unless $@;
 	 foreach my $new_feat (@$save){
 		$new_feat->slice($slice);
 		$sfa->store($new_feat);
 	 }
-	 server_log("Saving ".scalar(@$save)." SimpleFeatures") unless $@;
+	 $server->log("Saving ".scalar(@$save)." SimpleFeatures") unless $@;
 
 	 ##assembly_tags are not taken into account for here, as they are not part of annotation nor versioned ,
 	 ##but may be required in the future
@@ -421,7 +386,7 @@ elsif ($odb->isa('Bio::Vega::DBSQL::DBAdaptor')) {
 		  $sg{$key}=$new;
 		}
 		unless ($sg{$key}) {
-		  server_log("new gene added to slice for xml response".$key);
+		  $server->log("new gene added to slice for xml response".$key);
 		  $sg{$key}=$new;
 		}
     }
@@ -436,17 +401,17 @@ elsif ($odb->isa('Bio::Vega::DBSQL::DBAdaptor')) {
 	 $xmlstr=$t->generate_OtterXML($slices,$odb,0,$xmlgenes,$simple_features);
   };
   if ($@){
-	 error_exit($sq, "Failed writing annotations [$@]");
+	 $server->error_exit("Failed writing annotations [$@]");
 	 $odb->rollback;
   }
   else {
 	 $odb->commit;
   }
   ##send the response
-  send_response($sq,$xmlstr);
+  send_response($xmlstr);
 }
 else {
-  server_log("Require an Otter DB Adaptor and not:$odb");
+  $server->log("Require an Otter DB Adaptor and not:$odb");
 }
 
 
@@ -523,11 +488,11 @@ sub insert_ContigInfo_Attributes {
 }
 
 sub make_ContigInfo{
-  my ($ctg_slice,$author,$attributes) = @_;
+  my ($ctg_slice,$author_name,$attributes) = @_;
   my $ctg_info = Bio::Vega::ContigInfo->new
 	 (
 	  -slice => $ctg_slice,
-	  -author => $author,
+	  -author => $author_name,
 	  -attributes => $attributes
 	 );
   return $ctg_info;
@@ -540,7 +505,7 @@ sub clones_from_path {
   foreach my $rawcontig (map $_->component_Seq, @$path) {
     my $clone = $rawcontig->clone;
     unless ($clone) {
-      server_log("No clone attached to '". $rawcontig->idi ."'");
+      $server->log("No clone attached to '". $rawcontig->idi ."'");
       next;
     }
     push(@$clones, $clone);
@@ -571,12 +536,12 @@ sub attach_analysis_objects_and_transform_to_slice {
 
     if (@mapped == 1) {
       unless ($mapped[0]->isa($class)) {
-        error_exit($sq, "Error, got '$mapped[0]' from transform");
+        $server->error_exit("Error, got '$mapped[0]' from transform");
       }
       $sf_list->[$i] = $mapped[0];
     }
     else {
-      error_exit($sq, "transform returned ".scalar(@mapped)." features: (@mapped)");
+      $server->error_exit("transform returned ".scalar(@mapped)." features: (@mapped)");
     }
   }
 }
@@ -593,7 +558,7 @@ sub transform_assembly_tag_coordinates {
 
     if ( @mapped == 1 ) {
       unless ( $mapped[0]->isa(ref($at)) ) {
-	    error_exit($sq, "Error, got '$mapped[0]' from transform, which is not a ".ref($at));
+	    $server->error_exit("Error, got '$mapped[0]' from transform, which is not a ".ref($at));
       }
 
       # $mapped[0]->{_seqname} is contig_id,    # $mapped[0]->seqname : contig_name
@@ -605,7 +570,7 @@ sub transform_assembly_tag_coordinates {
     }
     else {
       # can't deal with assembly tags mapped to > 1 contig
-      error_exit($sq, "transform returned ".scalar(@mapped)." AssemblyTag: (@mapped)");
+      $server->error_exit("transform returned ".scalar(@mapped)." AssemblyTag: (@mapped)");
     }
   }
   return $new_sets;
@@ -629,7 +594,7 @@ sub strip_incomplete_genes {
 		$gene_name=$gene_name_att->[0]->value;
 	 }
     if ($truncated_flag) {
-      server_log("Splicing out incomplete gene $gene_name");
+      $server->log("Splicing out incomplete gene $gene_name");
       splice(@$gene_list, $i, 1);
       next;
     } else {
@@ -639,5 +604,4 @@ sub strip_incomplete_genes {
 }
 
 1;
-__END__
 

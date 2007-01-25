@@ -1,46 +1,40 @@
 #!/usr/local/bin/perl -w
 
-my $pipehead = $ENV{PIPEHEAD}; # is set by the server for any GET request
-
 use strict;
 use OtterDefs;
-use Bio::Otter::ServerQuery;
-use Bio::Otter::ServerSide (':all');
-use Bio::Otter::DBSQL::DBAdaptor;
+use Bio::Otter::ServerScriptSupport;
 
-$| = 1;
-
-my $sq = Bio::Otter::ServerQuery->new('dataset',
+my $server = Bio::Otter::ServerScriptSupport->new('dataset',
     'contig','author','email','timestamp','text', 'action');
-set_nph($sq);
 
-my $odba = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
-my $odbc = $pipehead ? $odba->dbc() : $odba;
+my $contig_name = $server->require_argument('contig');
+my $timestamp   = $server->require_argument('timestamp');
+my $text        = $server->require_argument('text');
+my $action      = $server->require_argument('action');
+my $aut_name    = $server->require_argument('author');
+my $aut_email   = $server->getarg('email')  || $aut_name;
 
-my $contig_name = $sq->getarg('contig')    || error_exit($sq, "Please define 'contig' name");
-my $aut_name    = $sq->getarg('author')    || error_exit($sq, "Please define 'author' name");
-my $aut_email   = $sq->getarg('email')     || $aut_name;
-my $timestamp   = $sq->getarg('timestamp') || error_exit($sq, "Please define 'timestamp' attribute'");
-my $text        = $sq->getarg('text')      || error_exit($sq, "Please define 'text' attribute");
-my $action      = $sq->getarg('action')    || error_exit($sq, "Please choose the 'action'");
+my $running_headcode = $server->running_headcode();
+my $odba = $server->otter_dba();
+my $odbc = $running_headcode ? $odba->dbc() : $odba;
 
 if($action=~/(change|modify|old)/) {
-    server_log("Changing a sequence_note");
+    $server->log("Changing a sequence_note");
 
     my $sth = $odbc->prepare(qq{
         UPDATE sequence_note
            SET note      = ?
-         WHERE }. ($pipehead
+         WHERE }. ($running_headcode
              ?  qq{seq_region_id = (SELECT seq_region_id FROM seq_region where name=?) }
              :  qq{contig_id     = (SELECT contig_id     FROM contig     where name=?) }
          ).qq{ AND author_id = (SELECT author_id FROM author where author_name=?)
              AND note_time = FROM_UNIXTIME(?)
     });
     my $changed = $sth->execute($text, $contig_name, $aut_name, $timestamp);
-    server_log("Changed $changed sequence_notes for contig $contig_name");
+    $server->log("Changed $changed sequence_notes for contig $contig_name");
 
 } elsif($action=~/(add|push|new)/) {
-    server_log("Adding a new sequence_note");
+    $server->log("Adding a new sequence_note");
 
         # check if such an author existed:
     my $sth = $odbc->prepare(qq{
@@ -59,7 +53,7 @@ if($action=~/(change|modify|old)/) {
         $sth->execute($aut_name, $aut_email);
     }
 
-    $sth = $odbc->prepare( $pipehead
+    $sth = $odbc->prepare( $running_headcode
     ? qq{
         UPDATE sequence_note
            SET is_current = 'no'
@@ -70,9 +64,9 @@ if($action=~/(change|modify|old)/) {
          WHERE contig_id = (SELECT contig_id FROM contig where name=?)
     });
     my $non_curr=$sth->execute($contig_name);
-    server_log("Contig $contig_name has $non_curr non-current sequence_notes now...");
+    $server->log("Contig $contig_name has $non_curr non-current sequence_notes now...");
 
-    $sth = $odbc->prepare( $pipehead
+    $sth = $odbc->prepare( $running_headcode
     ? qq{
         INSERT INTO sequence_note (seq_region_id, author_id, note_time, is_current, note)
              VALUES (
@@ -93,8 +87,10 @@ if($action=~/(change|modify|old)/) {
              )
     });
     my $curr=$sth->execute($contig_name, $aut_name, $timestamp, $text);
-    server_log( "... and $curr current sequence_notes");
+    $server->log( "... and $curr current sequence_notes");
 }
 
-send_response($sq, "Done\n", 1);
+$server->send_response("Done\n", 1);
+
+1;
 

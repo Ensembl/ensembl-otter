@@ -1,40 +1,29 @@
 #!/usr/local/bin/perl -w
 
-# TODO: currently this script uses old API's mechanism
-# for slice->[tiles*] decomposition.
-# We may need another (new API) solution for pipehead=1 case
-# (will make a smoother transition) - probably through new pipeline_db.
-
-my $pipehead = $ENV{PIPEHEAD}; # is set by the server for any GET request
-
 use strict;
-use OtterDefs;
-use Bio::Otter::ServerQuery;
-use Bio::Otter::ServerSide (':all');
-use Bio::Otter::Lace::PipelineDB;
-use Bio::EnsEMBL::DBSQL::DBAdaptor;
-use Bio::Otter::DBSQL::DBAdaptor;
+use Bio::Otter::ServerScriptSupport;
 
-$| = 1;
-
-my $sq = Bio::Otter::ServerQuery->new('dataset',
+my $server = Bio::Otter::ServerScriptSupport->new('dataset',
     'cs','csver','name','type','start','end','strand',
     'dnawanted', 'metakey');
-set_nph($sq);
 
-my $name     = $sq->getarg('name');
-my $type     = $sq->getarg('type');
+my $cs         = $server->getarg('cs')     || 'chromosome';
+my $csver      = $server->getarg('csver')  || (($cs eq 'chromosome') ? 'Otter' : undef);
+my $name       = $server->require_argument('name');
+my $type       = $server->require_argument('type');
+my $start      = $server->getarg('start');
+my $end        = $server->getarg('end');
+my $strand     = $server->getarg('strand') || undef;
 
-my $metakey  = $sq->getarg('metakey') || ''; # defaults to pipeline
-my $dna_wanted = $sq->getarg('dnawanted') || 0;
+my $metakey    = $server->getarg('metakey')   || ''; # defaults to pipeline, but can be '.' or something else
+my $dna_wanted = $server->getarg('dnawanted') || 0;
 
-my $odba = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
-my $sdba = odba_to_sdba($sq, $odba, $pipehead, $metakey);
-my $slice = get_slice($sq, $sdba, $pipehead);
+my $sdba  = $server->satellite_dba( $metakey );
+my $slice = $server->get_slice($sdba, $cs, $name, $type, $start, $end, $strand, $csver);
 
 my $output_string = '';
 
-if($pipehead) {
+if($server->running_headcode()) {
 
     my $attribute_adaptor = $sdba->get_AttributeAdaptor();
 
@@ -108,7 +97,9 @@ if($pipehead) {
             );
         }
     } # foreach $tile
-} # if($pipehead) else...
+} # if($running_headcode) else...
 
-send_response($sq, $output_string, 1);
+$server->send_response($output_string, 1);
+
+1;
 

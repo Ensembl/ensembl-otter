@@ -1,41 +1,33 @@
 #!/usr/local/bin/perl -w
 
-my $pipehead = $ENV{PIPEHEAD}; # is set by the server for any GET request
-
 use strict;
-use OtterDefs;
-use Bio::Otter::ServerQuery;
-use Bio::Otter::ServerSide (':all');
+use Bio::Otter::ServerScriptSupport;
 
-$| = 1;
-
-my $sq = Bio::Otter::ServerQuery->new('dataset',
+my $server = Bio::Otter::ServerQuery->new('dataset',
     'csver');
-set_nph($sq);
 
-if(!$pipehead) {
-    error_exit($sq, "This kind of data is only available from new API databases. Set pipehead to 1");
+if(!$server->running_headcode()) {
+    $server->error_exit("This kind of data is only available from new API databases. Set pipehead to 1");
 }
 
-my $dataset   = $sq->getarg('dataset');
+my $dataset   = $server->getarg('dataset');
+my $csver_cmp = $server->getarg('csver') || ($dataset=~/mouse/ ? 'NCBIM36' : 'NCBI36');
 my $csver_asm = 'Otter';
-my $csver_cmp = $sq->getarg('csver') || ($dataset=~/mouse/ ? 'NCBIM36' : 'NCBI36');
-
-my $odba = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
-
 my $mapper_metakey = "mapper_db.${csver_cmp}";
+
+my $odba = $server->otter_dba();
 
 my ($mapper_val) = @{$odba->get_MetaContainer()->list_value_by_key($mapper_metakey)};
 my $mdba;
 
 if(!$mapper_val) {
-    error_exit($sq, "'$mapper_metakey' is not properly defined");
+    $server->error_exit("'$mapper_metakey' is not properly defined");
 } elsif($mapper_val eq '=otter_head') {
     $mdba = $odba;
 } elsif($mapper_val eq '=pipeline_head') {
-    $mdba = odba_to_sdba($sq, $odba, 1, '');
+    $mdba = $server->satellite_dba( '' );
 } else {
-    $mdba = odba_to_sdba($sq, $odba, 1, $mapper_metakey);
+    $mdba = $server->satellite_dba($mapper_metakey);
 }
 
 my $mdbc = $mdba->dbc();
@@ -55,5 +47,7 @@ while (my ($asm_name, $cmp_name, $asm_start, $asm_end, $cmp_start, $cmp_end) = $
     $output_string .= "$asm_name($asm_start..$asm_end) <-- $cmp_name($cmp_start..$cmp_end)\n";
 }
 
-send_response($sq, $output_string, 1);
+$server->send_response($output_string, 1);
+
+1;
 

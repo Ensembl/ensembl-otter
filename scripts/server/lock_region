@@ -1,73 +1,54 @@
 #!/usr/local/bin/perl -w
-my $pipehead = $ENV{PIPEHEAD}; # is set by the server for any GET/POST request
 
-use OtterDefs;
 use strict;
-
-use Bio::Otter::ServerQuery;
-
-use Bio::Otter::DBSQL::DBAdaptor;
+use Bio::Otter::ServerScriptSupport;
 use Bio::Vega::ContigLockBroker;
 use Bio::Otter::CloneLockBroker;
 use Bio::Otter::Converter;
 use Bio::Vega::Transform::Otter;
 use Bio::Vega::Transform::XML;
-use Bio::Otter::ServerSide qw(:all);
 
-$| = 1;
-
-my $sq = Bio::Otter::ServerQuery->new('dataset',
-    'name', 'type', 'start', 'end', 'hostname'
+my $server = Bio::Otter::ServerQuery->new('dataset',
+    'cs', 'csver', 'name', 'type', 'start', 'end', 'strand', 'hostname'
 );
-set_nph($sq);
 
-server_log("************* Locking region ************");
+my $cs     = $server->getarg('cs')     || 'chromosome';
+my $csver  = $server->getarg('csver')  || (($cs eq 'chromosome') ? 'Otter' : undef);
+my $name    = $server->requite_argument('name');
+my $type    = $server->requite_argument('type');
+my $start   = $server->requite_argument('start');
+my $end     = $server->requite_argument('end');
+my $strand = $server->getarg('strand') || undef;
+my $cl_host = $server->getarg('hostname') || $ENV{REMOTE_ADDR};
 
-my $odb = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES,$pipehead);
-my $author = get_Author_from_CGI($sq,$pipehead);
+my $running_headcode = $server->running_headcode();
+my $odb        = $server->otter_dba();
 
-my $chr     = $sq->getarg('name')      || error_exit($sq, "No chromosome entered");
-my $type    = $sq->getarg('type')     || error_exit($sq, "No assembly type entered");
-my $start   = $sq->getarg('start')    || error_exit($sq, "No chromosome start coordinate entered");
-my $end     = $sq->getarg('end')      || error_exit($sq, "No chromosome end coordinate entered");
-my $cl_host = $sq->getarg('hostname') || $ENV{REMOTE_ADDR};
-
-####################################################################
-my $cb;
-if ($pipehead){
-  $cb= Bio::Vega::ContigLockBroker->new;
-}
-else {
-  $cb=Bio::Otter::CloneLockBroker->new($odb);
-
-}
+my $cb = $running_headcode
+    ? Bio::Vega::ContigLockBroker->new
+    : Bio::Otter::CloneLockBroker->new($odb);
 $cb->client_hostname($cl_host);
-server_log("Getting slice [$chr] [$start] [$end]");
-my $slice = get_slice($sq, $odb, $pipehead);
 
-####################################################################
-# Now actually do the locking
-server_log("Attempting to lock clones...");
+$server->log("Getting slice [$name] [$start] [$end]");
+my $slice      = $server->get_slice($odb, $cs, $name, $type, $start, $end, $strand, $csver);
+my $author_obj = $server->make_Author_obj();
 
+$server->log("Attempting to lock clones...");
 eval {
-	 $cb->lock_clones_by_slice($slice,$author,$odb);
+    $cb->lock_clones_by_slice($slice,$author_obj,$odb);
 };
-error_exit($sq, "Clones locked - exiting [$@]") if $@;
+$server->error_exit("Clones locked - exiting [$@]") if $@;
 
-server_log("Obtained the locks.");
+$server->log("Obtained the locks.");
 
-my $xml_string;
-if ($pipehead){
-  my $slices;
-  push @$slices,$slice;
-  $xml_string = Bio::Vega::Transform::XML->generate_OtterXML($slices,$odb,0);
-  send_response($sq, $xml_string);
-}
-else {
-  my $tp         = $slice->get_tiling_path();
-  $xml_string = Bio::Otter::Converter::path_to_XML($chr, $start, $end, $odb->assembly_type(), $tp);
-  send_response($sq, $xml_string, 1);
+if($running_headcode) {
+    my $xml = Bio::Vega::Transform::XML->generate_OtterXML([$slice],$odb,0);
+    $server->send_response($xml);
+} else {
+    my $tp  = $slice->get_tiling_path();
+    my $xml = Bio::Otter::Converter::path_to_XML($name, $start, $end, $odb->assembly_type(), $tp);
+    $server->send_response($xml, 1);
 }
 
+1;
 
-####################################################################
