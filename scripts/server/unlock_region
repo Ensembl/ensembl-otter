@@ -95,7 +95,7 @@ if ($odba->isa('Bio::Otter::DBSQL::DBAdaptor')) {
   $server->send_response("<response>\n</response>\n", 1);
 
 } else {
-  $server->log("Require an Otter DB Adaptor and not '$odba'");
+  $server->error_exit("Require an Otter DB Adaptor and not '$odba'");
 }
 
 1;
