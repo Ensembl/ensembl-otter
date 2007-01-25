@@ -7,13 +7,14 @@ use Bio::Otter::Converter;
 use Bio::Vega::ContigLockBroker;
 use Bio::Vega::Transform::Otter;
 
-my $server = Bio::Otter::ServerScriptSupport->new('dataset',
-    'data', 'author', 'email',
+my $server = Bio::Otter::ServerScriptSupport->new(
+    'dataset',
+    'data',
+    'author', 'email',
 );
 
 my $odba        = $server->otter_dba();
 my $author_obj  = $server->make_Author_obj();
-
 
 my( $genes, $slice );
 if ($odba->isa('Bio::Otter::DBSQL::DBAdaptor')) {
