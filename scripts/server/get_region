@@ -19,22 +19,19 @@ my $strand = $server->getarg('strand') || undef;
 
 $server->log("Getting slice... [$name | $type] [$start] [$end]");
 
-my $odb   = $server->otter_dba();
-my $slice = $server->get_slice($odb, $cs, $name, $type, $start, $end, $strand, $csver);
+my $odba  = $server->otter_dba();
+my $slice = $server->get_slice($odba, $cs, $name, $type, $start, $end, $strand, $csver);
 
 $server->log("Converting slice to XML...");
 
 my $xml;
 
-if ($odb->isa('Bio::Otter::DBSQL::DBAdaptor')) {
-    $xml=Bio::Otter::Converter::slice_to_XML($slice,$odb);
-} elsif ($odb->isa('Bio::Vega::DBSQL::DBAdaptor')) {
-    my $slices=[];
-    push @$slices,$slice;
-    my $t=Bio::Vega::Transform::XML->new;
-    $xml=$t->generate_OtterXML($slices,$odb,0);
+if ($odba->isa('Bio::Vega::DBSQL::DBAdaptor')) {
+    $xml=Bio::Vega::Transform::XML->new->generate_OtterXML([$slice],$odba,0);
+} elsif ($odba->isa('Bio::Otter::DBSQL::DBAdaptor')) {
+    $xml=Bio::Otter::Converter::slice_to_XML($slice,$odba);
 } else {
-    $server->log("Require an Otter DB Adaptor and not:$odb");
+    $server->log("Require an Otter DB Adaptor and not '$odba'");
 }
 
 $server->log("Done converting slice to XML. Length of XML = " . length($xml) );
