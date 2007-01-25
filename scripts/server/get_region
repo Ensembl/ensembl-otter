@@ -5,8 +5,10 @@ use Bio::Otter::ServerScriptSupport;
 use Bio::Otter::Converter;
 use Bio::Vega::Transform::XML;
 
-my $server = Bio::Otter::ServerScriptSupport->new('dataset',
+my $server = Bio::Otter::ServerScriptSupport->new(
+    'dataset',
     'cs', 'csver', 'name', 'type', 'start', 'end', 'strand',
+    'author', 'email',
 );
 
 my $cs     = $server->getarg('cs')     || 'chromosome';

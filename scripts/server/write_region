@@ -10,8 +10,9 @@ use Bio::Vega::Transform::XML;
 use Bio::Vega::ContigLockBroker;
 
 my $server = Bio::Otter::ServerScriptSupport->new(
-    'dataset', 'data', 'author', 'email',
-    'unlock', # passed but never used?
+    'dataset',
+    'data',
+    'author', 'email',
 );
 
 my $odba       = $server->otter_dba();

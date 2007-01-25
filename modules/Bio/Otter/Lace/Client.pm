@@ -846,8 +846,6 @@ sub save_otter_xml {
             'dataset'  => $dsname,
             'pipehead' => $ds->HEADCODE(),
             'data'     => $xml,
-            'unlock'   => 'false',  # We give the annotators the option to
-                                    # save during sessions, not just on exit.
         }
     );
 
