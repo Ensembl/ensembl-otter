@@ -1,38 +1,16 @@
 #!/usr/local/bin/perl -w
 
-my $pipehead = $ENV{PIPEHEAD}; # is set by the server for any GET request
-
 use strict;
-use warnings;
-use OtterDefs;
-use Bio::Otter::ServerQuery;
-use Bio::Otter::ServerSide (':all');
+use Bio::Otter::ServerScriptSupport;
 
-$| = 1;
-my $sq = Bio::Otter::ServerQuery->new('dataset','author', 'sequenceset');;
-set_nph($sq);
+my $server = Bio::Otter::ServerScriptSupport->new('dataset','author', 'sequenceset');;
 
-my $query_fail = "must be present to get a set of Clone Sequences";
-my $dataset =  $sq->getarg('dataset') || error_exit($sq,"'dataset' $query_fail");
-my $author  =   $sq->getarg('author') || error_exit($sq,"'author' $query_fail");
-my $sequenceset =  $sq->getarg('sequenceset') || error_exit($sq,"'sequenceset' $query_fail");
+my $dataset     =  $server->require_argument('dataset');
+my $sequenceset =  $server->require_argument('sequenceset');
 
-my $odba = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
+my $odba = $server->otter_dba();
 
-my $auth_adapt = $odba->get_AuthorAdaptor();
-my ($author_obj, $saved_err);
-eval{
-    $author_obj = $auth_adapt->fetch_by_name($author);
-};
-if($@){
-    $saved_err  = $@;
-    eval{
-        $author_obj = $auth_adapt->fetch_by_name($author);
-    };
-    if($@){
-        error_exit($sq,"Failed to get an author.\n$@") unless $author_obj;
-    }
-}
+$server->fetch_Author_obj();  # will break if author cannot be fetched
 
 my $xml = '';
 $xml   .= qq`  <dataset name="$dataset">\n`;
@@ -141,7 +119,7 @@ while (my ($cl_name, $intl_name, $acc,  $sv,
 $xml .= qq`      </clonesequences>\n`;
 $xml .= qq`    </sequenceset>\n`;
 $xml .= qq`  </dataset>\n`;
-send_response($sq, $xml, 1);
+$server->send_response($xml, 1);
 
 __END__
 
