@@ -1,0 +1,106 @@
+#!/usr/local/bin/perl -w
+
+### find_distinct_exons_sharing_stable_id_in_gene
+
+use strict;
+use Bio::Otter::Lace::Defaults;
+
+{
+    my( $dataset_name );
+
+    my $usage = sub { exec('perldoc', $0) };
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'       => $usage,
+        'dataset=s'     => \$dataset_name,
+        ) or $usage->();
+    $usage->() unless $dataset_name;
+    
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+
+    my $otter_dba = $ds->get_cached_DBAdaptor;
+
+    my $gene_aptr = $otter_dba->get_GeneAdaptor;
+    my $exon_aptr = $otter_dba->get_ExonAdaptor;
+    my $gene_id_list = $gene_aptr->list_current_dbIDs;
+    
+    my $sth = $otter_dba->prepare(q{
+        SELECT distinct esid1.exon_id
+          , esid1.stable_id
+          , esid1.version
+
+        FROM transcript t1
+          , exon_transcript et1
+          , exon_stable_id esid1
+          , exon_stable_id esid2
+          , exon_transcript et2
+          , transcript t2
+
+        WHERE t1.transcript_id = et1.transcript_id
+          AND et1.exon_id = esid1.exon_id
+          AND esid1.stable_id = esid2.stable_id
+          AND esid2.exon_id = et2.exon_id
+          AND et2.transcript_id = t2.transcript_id
+
+          AND t1.gene_id = t2.gene_id
+          AND esid1.version != esid2.version
+          AND t1.gene_id = ?
+          
+        ORDER BY stable_id, version
+        });
+    
+    @$gene_id_list = sort {$a <=> $b} @$gene_id_list;
+    foreach my $gene_id (@$gene_id_list) {
+        $sth->execute($gene_id);
+        
+        my %distinct_exons = ();
+        my $str = '';
+        
+        while (my ($exon_id, $exon_stable, $exon_version) = $sth->fetchrow) {
+            my $exon = $exon_aptr->fetch_by_dbID($exon_id);
+            my $list = $distinct_exons{$exon_stable}{exon_hash_key($exon)} ||= [];
+            push( @$list, $exon );
+            #$str .= sprintf "%9d  %s.%d\n", $exon_id, $exon_stable, $exon_version;
+        }
+
+        foreach my $stable (keys %distinct_exons) {
+            my $uniq_exons = $distinct_exons{$stable};
+            if (keys %$uniq_exons > 1) {
+                $str .= "  $stable\n";
+                foreach my $exon_key (keys %$uniq_exons) {
+                    my @version_list = sort {$a <=> $b} map $_->version, @{$uniq_exons->{$exon_key}};
+                    $str .= "    $exon_key  (@version_list)\n";
+                }
+            }
+        }
+        print "\n$gene_id\n$str" if $str;
+    }
+}
+
+
+sub exon_hash_key {
+    my( $exon ) = @_;
+    
+    # This assumes that all the exons we
+    # compare will be on the same contig
+    return sprintf("%6d - %6d %2d <%2d %2d>",
+        $exon->start,
+        $exon->end,
+        $exon->strand,
+        $exon->phase,
+        $exon->end_phase);
+}
+
+
+
+__END__
+
+=head1 NAME - find_distinct_exons_sharing_stable_id_in_gene
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+

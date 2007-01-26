@@ -39,6 +39,8 @@ use Bio::Otter::Lace::Defaults;
             my $version = $exon->version;
             my $new_stable = $stab_aptr->fetch_new_exon_stable_id;
             print STDERR "Changing '$stable_id.$version' to '$new_stable.1'\n";
+            print qq{UPDATE exon_stable_id SET stable_id = '$new_stable', version = 1 },
+                qq{WHERE stable_id = '$stable_id' and version = $version;\n};
             $change_stable->execute($new_stable, $exon->dbID);
         }
     };
