@@ -68,9 +68,11 @@ use Bio::Otter::Lace::Defaults;
 
         foreach my $stable (keys %distinct_exons) {
             my $uniq_exons = $distinct_exons{$stable};
+            ### Give all exons with the same key the same version
             if (keys %$uniq_exons > 1) {
                 $str .= "  $stable\n";
                 foreach my $exon_key (keys %$uniq_exons) {
+                    ### Make new stable IDs for exons after the first key
                     my @version_list = sort {$a <=> $b} map $_->version, @{$uniq_exons->{$exon_key}};
                     $str .= "    $exon_key  (@version_list)\n";
                 }
