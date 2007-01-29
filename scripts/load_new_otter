@@ -17,100 +17,97 @@ use Bio::Vega::Transform::Otter;
 use Bio::Vega::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Slice;
 use Bio::EnsEMBL::CoordSystem;
-use Bio::Otter::Lace::Defaults;
-use Data::Dumper;
 use Bio::EnsEMBL::Utils::Exception qw ( throw warning );
 use IO::File;
-my ($dataset_name,$file,$in);
+use Data::Dumper;
+use Getopt::Long;
 
-Bio::Otter::Lace::Defaults::do_getopt(
-												  'dataset=s' => \$dataset_name,
-												  'file=s'  => \$file,
-												 ) ;
-if ( !defined $dataset_name || !defined $file){
-  Bio::Otter::Lace::Defaults::show_help();
+my $dbhost;
+my $dbport;
+my $dbname;
+my $dbuser;
+my $dbpass;
+my $help;
+my $file;
+
+&GetOptions(
+				'dbhost=s'   => \$dbhost,
+				'dbport=n'   => \$dbport,
+				'dbname=s'   => \$dbname,
+				'dbuser=s'   => \$dbuser,
+				'dbpass=s'   => \$dbpass,
+				'h|help'     => \$help,
+				'file=s'  => \$file,
+			  ) or ($help = 1);
+
+
+if ($help || !defined ($dbhost) || !defined($dbport) || !defined($dbname) || !defined($dbuser) || !defined($dbpass) ||!defined($file)) {
+  exec('perldoc', $0);
 }
-
-
-
-
-##create a db handle
-my $cl = Bio::Otter::Lace::Defaults::make_Client();
-my $ds = $cl->get_DataSet_by_name($dataset_name);
-my $db = $ds->make_Vega_DBAdaptor;
-warning "\nConnecting to host:".$db->dbc->host." port:".$db->dbc->port." database:".$db->dbc->dbname." as user:".$db->dbc->username;
-
 
 ##open mixed format input file
 $/="----------------------------------------\n";
-$in=IO::File->new("<$file") || throw ("Could not open file for reading :$file \n $!\n");
+my $in=IO::File->new("<$file") || throw ("Could not open file for reading :$file \n $!\n");
 my $out=IO::File->new(">>/nfs/team71/analysis/sp1/PROJECTS/LOADNEWOTTER/genes.out") || throw ("Could not open file for writing :/tmp/genes \n $!\n");
+##create a db handle
+my $db = Bio::Vega::DBSQL::DBAdaptor->new(
+														-dbname => $dbname,
+														-host   => $dbhost,
+														-user   => $dbuser,
+														-port   => $dbport,
+														-pass   => $dbpass,
+													  );
+
 my $dbid;
-eval{
-  my $slice;
+eval {
+my $ss_hash;
+while (defined(my $gene_xml=$in->getline())){
+  $db->begin_work;
   my $sa=$db->get_SliceAdaptor();
-  my $ss_hash;
   my $gene_adaptor=$db->get_GeneAdaptor;
-
-  while (defined(my $gene_xml=$in->getline())){
-	 chomp $gene_xml;
-	 if ($gene_xml=~/^\S+\s+(\S+)\s+(\S+)\s+(<locus>.*<\/locus>).*/ms){
-		my $ss=$1;
-		$dbid=$2;
-		$gene_xml=$3;
-		unless ($ss_hash->{$ss}){
-		  $ss_hash->{$ss}=$sa->fetch_by_region('chromosome',$ss,undef,undef,undef,'Otter');
-		}
-		$slice=$ss_hash->{$ss};
-		unless ($slice) {
-		  throw "slice for $ss is not in db";
-		}
-		##create a parser 
-		my $parser = Bio::Vega::Transform::Otter->new;
-
-		$parser->set_ChromosomeSlice($slice);
-		$parser->parse($gene_xml);
-		my $genes=$parser->get_Genes;
-		my $gene=$genes->[0];
-		my $gene_count=@$genes;
-		if ($gene_count > 1) {
-		  throw ("parser has returned more than one gene for geneid : $dbid");
-		}
-		$gene->is_current(1);
-		unless ($gene->gene_author->name || $gene->gene_author->email) {
-		  throw "gene author or email not set for gene dbid :$dbid \n";
-		}
-		my $transcripts = $gene->get_all_Transcripts ;
-		foreach my $tran (@$transcripts){
-		  unless ($tran->transcript_author->name || $tran->transcript_author->email) {
-			 throw "transcript author not set for gene dbid :$dbid \n";
-		  }
-		}
-		$db->begin_work;
-		eval {
-		  $gene_adaptor->store($gene);
-		  $db->commit;
-		};
-		
-		if ($@){
-		  $db->rollback;
-		  throw "problem with loading of gene geneid:$dbid\n$@\n";
-		}
-		$out->print("\nstored old gene $dbid as ".$gene->dbID. " in new db");
-		$parser->DESTROY;
-
+  chomp $gene_xml;
+  if ($gene_xml=~/^\S+\s+(\S+)\s+(\S+)\s+(<locus>.*<\/locus>).*/ms){
+	 my $ss=$1;
+	 $dbid=$2;
+	 $gene_xml=$3;
+	 unless ($ss_hash->{$ss}){
+		$ss_hash->{$ss}=$sa->fetch_by_region('chromosome',$ss,undef,undef,undef,'Otter');
 	 }
+	 my $slice=$ss_hash->{$ss};
+	 unless ($slice) {
+		throw "slice for $ss is not in db";
+	 }
+	 ##create a parser 
+	 my $parser = Bio::Vega::Transform::Otter->new;
+	 $parser->set_ChromosomeSlice($slice);
+	 $parser->parse($gene_xml);
+	 my $genes=$parser->get_Genes;
+	 my $gene=$genes->[0];
+	 my $gene_count=@$genes;
+	 if ($gene_count > 1 || $gene_count == 0) {
+		throw ("parser has returned more than one gene or no gene , gene count is :$gene_count for geneid : $dbid");
+	 }
+	 $gene->is_current(1);
+	 $gene_adaptor->store($gene);
+	 $out->print("\nstored old gene $dbid as ".$gene->dbID. " in new db");
+	 if ($gene->biotype =~ /^obsolete$/){
+		$gene_adaptor->delete_gene($gene);
+		$out->print("\nThe above gene was deleted in new db");
+	 }
+	 $db->commit;
+	 $parser->DESTROY;
   }
+}
 };
 if ($@) {
-  $in->close;
-  $out->close;
   $db->rollback;
-  throw "\nError saving genes from file: gene $dbid did not get loaded all genes above this have been loaded - Please correct errors\n".$@;
-
+  throw "\nError saving genes from file: gene $dbid did not get loaded \n All genes above this have been loaded - Please correct errors\n".$@;
 }
-print STDOUT "\nCommitted all session data from XML in database\n";
-$in->close;
-$out->close;
-warning "\nParser now out of scope\n";
+else {
+  $out->close;
+  $in->close;
+}
+
+
+1;
 
