@@ -33,8 +33,6 @@ sub Bio::EnsEMBL::Slice::get_all_ConsFeatures {
     my $conservation_score_adaptor = $reg->get_adaptor(
         "Multi", "compara", "ConservationScore");
 
-    $server->log("SLICE: $slice, ".$slice->name);
-
     my $conservation_scores = $conservation_score_adaptor->
         fetch_all_by_MethodLinkSpeciesSet_Slice($cons_score_mlss, $slice,
             $slice->length-1, 'AVERAGE', 1, 'NCBI36');
@@ -49,7 +47,7 @@ sub Bio::EnsEMBL::Slice::get_all_ConsFeatures {
         $simple_feature->start(  $position );
         $simple_feature->end(    $position );
         $simple_feature->strand( $strand );
-        $simple_feature->display_label( $cons_score->observed_score || 0 );
+        $simple_feature->display_label( $cons_score->observed_score );
 
         push @csfs, $simple_feature;
     }
