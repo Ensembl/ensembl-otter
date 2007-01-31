@@ -51,6 +51,7 @@ sub Bio::EnsEMBL::Slice::get_all_ConsFeatures {
         $simple_feature->strand( $strand );
         $simple_feature->display_label( $cons_score->observed_score );
 
+        push @csfs, $simple_feature;
     }
 
     return \@csfs;
