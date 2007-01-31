@@ -47,7 +47,7 @@ sub Bio::EnsEMBL::Slice::get_all_ConsFeatures {
         $simple_feature->start(  $position );
         $simple_feature->end(    $position );
         $simple_feature->strand( $strand );
-        $simple_feature->display_label( sprintf("%.3f", $cons_score->observed_score) );
+        $simple_feature->display_label( sprintf("%.6f", $cons_score->observed_score) );
 
         push @csfs, $simple_feature;
     }
