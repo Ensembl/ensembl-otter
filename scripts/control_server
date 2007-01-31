@@ -20,6 +20,7 @@ PERL5LIB=\
 $root/ensembl-otter/modules:\
 $root/ensembl/modules:\
 $root/ensembl_head/modules:\
+$root/ensembl-compara/modules:\
 $root/bioperl-0.7.2:\
 $root/bioperl-1.2.3-patched:\
 $root/biodas-1.02
