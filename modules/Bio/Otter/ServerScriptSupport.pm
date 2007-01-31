@@ -547,7 +547,7 @@ sub fetch_mapped_features {
                                         $target_feature->display_id(),
                                         $target_feature->start(),
                                         $target_feature->end() );
-                    $self->log("Could not transfer $feature_name $fname onto {".$original_slice_on_mapper->name.'}');
+                    $self->log("Could not transfer $feature_name $fname from {".$target_feature->slice->name."} onto {".$original_slice_on_mapper->name.'}');
                 }
             }
         }
