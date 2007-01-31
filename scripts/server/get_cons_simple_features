@@ -49,7 +49,7 @@ sub Bio::EnsEMBL::Slice::get_all_ConsFeatures {
         $simple_feature->start(  $position );
         $simple_feature->end(    $position );
         $simple_feature->strand( $strand );
-        $simple_feature->display_label( $cons_score->observed_score );
+        $simple_feature->display_label( $cons_score->observed_score || 0 );
 
         push @csfs, $simple_feature;
     }
