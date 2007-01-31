@@ -19,6 +19,10 @@ sub Bio::EnsEMBL::Slice::get_all_ConsFeatures {
     my $method_link_species_set_adaptor = $reg->get_adaptor(
         "Multi", "compara", "MethodLinkSpeciesSet");
 
+    unless($method_link_species_set_adaptor) {
+        $server->error_exit("Could not fetch method_link_species_set_adaptor from the Registry");
+    }
+
     my $cons_score_mlss = $method_link_species_set_adaptor->
         fetch_by_method_link_type_registry_aliases(
             "GERP_CONSERVATION_SCORE", ["Homo sapiens", "Pan troglodytes",
