@@ -1,7 +1,8 @@
 #!/usr/local/bin/perl -w
 
 use strict;
-use Bio::EnsEMBL::Registry;
+#use Bio::EnsEMBL::Registry;
+use Bio::EnsEMBL::Compara::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::SimpleFeature;
 use Bio::Otter::ServerScriptSupport;
 use Bio::Otter::Lace::ViaText ('%OrderOfOptions');
@@ -9,31 +10,39 @@ use Bio::Otter::Lace::ViaText ('%OrderOfOptions');
 sub Bio::EnsEMBL::Slice::get_all_ConsFeatures {
     my ($slice, $server) = @_;
 
-    my $reg = "Bio::EnsEMBL::Registry";
-    $reg->load_registry_from_db(
-        -host => "ensembldb.ensembl.org",
-        -user => "anonymous"
+#    my $reg = "Bio::EnsEMBL::Registry";
+#    $reg->load_registry_from_db(
+#        -host => "ensembldb.ensembl.org",
+#        -user => "anonymous"
+#    );
+#
+#    # Get all the MethodLinkSpeciesSet for teh 9 way GERP_CONSERVATION_SCORE
+#    my $mlssa = $reg->get_adaptor(
+#        "Multi", "compara", "MethodLinkSpeciesSet");
+
+    my $comp_dba = Bio::EnsEMBL::Compara::DBSQL::DBAdaptor->new(
+        -host   => 'ensembldb.ensembl.org',
+        -user   => 'anonymous',
+        -dbname => 'ensembl_compara_42',
     );
 
-    # Get all the MethodLinkSpeciesSet for teh 9 way GERP_CONSERVATION_SCORE
-    my $method_link_species_set_adaptor = $reg->get_adaptor(
-        "Multi", "compara", "MethodLinkSpeciesSet");
-
-    unless($method_link_species_set_adaptor) {
-        $server->error_exit("Could not fetch method_link_species_set_adaptor from the Registry");
+    my $mlssa = $comp_dba->get_MethodLinkSpeciesSetAdaptor();
+    unless($mlssa) {
+        $server->error_exit("Could not fetch MethodLinkSpeciesSetAdaptor");
     }
 
-    my $cons_score_mlss = $method_link_species_set_adaptor->
+    my $cons_score_mlss = $mlssa->
         fetch_by_method_link_type_registry_aliases(
             "GERP_CONSERVATION_SCORE", ["Homo sapiens", "Pan troglodytes",
             "Macaca mulatta", "Mus musculus", "Rattus norvegicus", 
             "Canis familiaris", "Bos taurus", "Gallus gallus", 
             "Monodelphis domestica"]);
 
-    my $conservation_score_adaptor = $reg->get_adaptor(
-        "Multi", "compara", "ConservationScore");
+    my $csa = $compara_dba->get_ConservationScoreAdaptor();
+#    my $csa = $reg->get_adaptor(
+#        "Multi", "compara", "ConservationScore");
 
-    my $conservation_scores = $conservation_score_adaptor->
+    my $conservation_scores = $csa->
         fetch_all_by_MethodLinkSpeciesSet_Slice($cons_score_mlss, $slice,
             $slice->length-1, 'AVERAGE', 1, 'NCBI36');
 
