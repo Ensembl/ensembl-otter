@@ -42,7 +42,8 @@ sub Bio::EnsEMBL::Slice::get_all_ConsFeatures {
     my $offset = ($strand>0) ? $slice->start() : $slice->end();
     foreach my $cons_score (@$conservation_scores) {
         my $simple_feature = Bio::EnsEMBL::SimpleFeature->new();
-        my $position = $offset + $strand*($cons_score->position() - 1);
+        #my $position = $offset + $strand*($cons_score->position() - 1);
+        my $position = $cons_score->position();
         $simple_feature->slice(  $slice );
         $simple_feature->start(  $position );
         $simple_feature->end(    $position );
