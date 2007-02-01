@@ -61,7 +61,7 @@ sub Bio::EnsEMBL::Slice::get_all_ConsFeatures {
         $simple_feature->end(    $position );
         $simple_feature->strand( $strand );
         $simple_feature->score(  $printable_score );
-        $simple_feature->display_label( 'ConsScore'.$printable_score );
+        $simple_feature->display_label( 'ConsScore='.$printable_score );
 
         push @csfs, $simple_feature;
     }
