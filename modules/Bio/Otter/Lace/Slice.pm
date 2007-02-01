@@ -341,6 +341,52 @@ sub get_all_DAS_SimpleFeatures { # get simple features from DAS source (via mapp
     return \@sfs;
 }
 
+sub get_all_Cons_SimpleFeatures { # get simple features from Compara 'GERP_CONSERVATION_SCORE'
+    my( $self, $analysis_name, $pipehead, $metakey ) = @_;
+
+        # cached values:
+    my $analysis = Bio::EnsEMBL::Analysis->new( -logic_name => $analysis_name );
+
+    my $response = $self->Client()->general_http_dialog(
+        0,
+        'GET',
+        'get_cons_simple_features',
+        {
+            %{$self->toHash},
+            'analysis' => $analysis_name,
+            'pipehead' => $pipehead ? 1 : 0,
+            $metakey   ? ('metakey' => $metakey) : (), # if you forget it, it will be 'Otter' by default!
+        },
+        1,
+    );
+
+    my @resplines = split(/\n/,$response);
+
+    my @sf_optnames = @{ $OrderOfOptions{SimpleFeature} };
+
+    my @sfs = (); # simple features in a list
+    foreach my $respline (@resplines) {
+
+        my @optvalues = split(/\t/,$respline);
+        my $linetype      = shift @optvalues; # 'SimpleFeature'
+
+        my $sf = Bio::EnsEMBL::SimpleFeature->new();
+
+        for (my $i = 0; $i < @sf_optnames; $i++) {
+            my $method = $sf_optnames[$i];
+            $sf->$method($optvalues[$i]);
+        }
+
+            # use the cached values:
+        $sf->analysis( $analysis );
+        $sf->seqname( $self->name() );
+
+        push @sfs, $sf;
+    }
+
+    return \@sfs;
+}
+
 sub get_all_DnaAlignFeatures { # get dna align features from otter/pipeline/ensembl db
     my( $self, $analysis_name, $pipehead, $metakey ) = @_;
 
