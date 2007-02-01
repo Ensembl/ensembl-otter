@@ -20,13 +20,13 @@ sub Bio::EnsEMBL::Slice::get_all_ConsFeatures {
 #    my $mlssa = $reg->get_adaptor(
 #        "Multi", "compara", "MethodLinkSpeciesSet");
 
-    my $comp_dba = Bio::EnsEMBL::Compara::DBSQL::DBAdaptor->new(
+    my $compara_dba = Bio::EnsEMBL::Compara::DBSQL::DBAdaptor->new(
         -host   => 'ensembldb.ensembl.org',
         -user   => 'anonymous',
         -dbname => 'ensembl_compara_42',
     );
 
-    my $mlssa = $comp_dba->get_MethodLinkSpeciesSetAdaptor();
+    my $mlssa = $compara_dba->get_MethodLinkSpeciesSetAdaptor();
     unless($mlssa) {
         $server->error_exit("Could not fetch MethodLinkSpeciesSetAdaptor");
     }
