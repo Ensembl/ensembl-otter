@@ -104,16 +104,18 @@ sub get_deleted_Transcript_by_slice{
   my $tran_stable_id=$transcript->stable_id;
   my $db_tran;
   my @out = grep { $_->stable_id eq $tran_stable_id and $_->version eq $tran_version }
-    @{$self->SUPER::fetch_all_by_Slice_constraint($tran_slice,
-    't.is_current = 0 ')};
-	if ($#out > 1) {
-	  ##test
-	  @out = sort {$a->dbID <=> $b->dbID} @out;
-	  $db_tran=pop @out;
-	  ##test
-	  #die "there are more than one transcript retrived\n".$db_tran->dbID;
-	}
-  $db_tran=$out[0];
+    @{$self->SUPER::fetch_all_by_Slice_constraint($tran_slice,'t.is_current = 0 ')};
+  if ($#out > 1) {
+	 ##test
+	 @out = sort {$a->dbID <=> $b->dbID} @out;
+	 $db_tran=pop @out;
+	 ##test
+	 #die "there are more than one transcript retrived\n".$db_tran->dbID;
+  }
+  else {
+	 $db_tran=$out[0];
+  }
+
   if ($db_tran){
 	 $self->reincarnate_transcript($db_tran);
   }

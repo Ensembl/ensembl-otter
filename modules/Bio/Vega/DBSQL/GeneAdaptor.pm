@@ -105,16 +105,16 @@ sub get_deleted_Gene_by_slice{
   my $gene_stable_id=$gene->stable_id;
   my $db_gene;
   my @out = grep { $_->stable_id eq $gene_stable_id and $_->version eq $gene_version }
-    @{$self->SUPER::fetch_all_by_Slice_constraint($gene_slice,
-    'g.is_current = 0 ')};
-	if ($#out > 1) {
-	  ##test
-	  @out = sort {$a->dbID <=> $b->dbID} @out;
-	  $db_gene=pop @out;
-	  ##test
-
-	}
-  $db_gene=$out[0];
+    @{$self->SUPER::fetch_all_by_Slice_constraint($gene_slice,'g.is_current = 0 ')};
+  if ($#out > 1) {
+	 ##test
+	 @out = sort {$a->dbID <=> $b->dbID} @out;
+	 $db_gene=pop @out;
+	 ##test
+  }
+  else {
+	 $db_gene=$out[0];
+  }
   if ($db_gene){
 	 $self->reincarnate_gene($db_gene);
   }
@@ -147,7 +147,7 @@ sub check_for_change_in_gene_components {
   my $transcripts=$gene->get_all_Transcripts;
   my $ta=$self->db->get_TranscriptAdaptor;
   my $tran_change_count=0;
-
+  my $shared_exons_bet_txs;
   foreach my $tran (@$transcripts) {
 	 ##assign stable_id for new trancript
 	 unless ($tran->stable_id) {
@@ -156,9 +156,11 @@ sub check_for_change_in_gene_components {
 	 ##check if exons are new or old and if old whether they have changed or not
 	 my $exons=$tran->get_all_Exons;
 	 my $exon_changed=0;
-	 $exon_changed=$self->exons_diff($sida,$exons);
+	 ($exon_changed,$shared_exons_bet_txs)=$self->exons_diff($sida,$exons,$shared_exons_bet_txs);
 	 ##check if translation has changed
-	 my $db_transcript=$ta->get_current_Transcript_by_slice($tran);
+#	 my $db_transcript=$ta->get_current_Transcript_by_slice($tran);
+	 ##note:with assembly
+	 my $db_transcript=$ta->fetch_by_stable_id($tran->stable_id);
 	 my $translation_changed=0;
 	 $translation_changed=$self->translation_diff($sida,$tran,$db_transcript);
 
@@ -206,7 +208,9 @@ sub check_for_change_in_gene_components {
 		  }
 		  $tran->version($old_version);
 		  ##check to see if the restored transcript has changed
-		  my $old_transcript=$ta->get_deleted_Transcript_by_slice($tran,$old_version);
+#		  my $old_transcript=$ta->get_deleted_Transcript_by_slice($tran,$old_version);
+		  ##note:with assembly
+		  my $old_transcript=$ta->fetch_by_stable_id_version($tran->stable_id,$old_version);
 		  my $old_translation=$old_transcript->translation;
 		  $translation_changed=$self->translation_diff($sida,$tran,$old_transcript);
 		  $transcript_changed=compare($old_transcript,$tran);
@@ -322,24 +326,34 @@ sub translation_diff{
 		$translation->version(1);
 	 }
   }
-  if (!$db_translation && $translation){
+  if (! defined $db_translation && defined $translation){
 	 $translation->version(1);
 	 $translation_changed=1;
 	 return 1;
   }
-  if (!$translation && $db_translation){
+  if (! defined $translation && defined $db_translation){
 	 $translation_changed=1;
 	 return 1;
   }
-  if (defined $db_translation && $translation){
+  if (defined $db_translation && defined $translation){
+	 my $db_version=$db_translation->version;
+
 	 if ($db_translation->stable_id ne $translation->stable_id) {
-		throw('translation stable_ids of the same two transcripts are different\n');
+		#Remember to uncomment this after loading and remove the line/s after
+		#	throw('translation stable_ids of the same two transcripts are different\n');
+		my $translation_adaptor=$self->db->get_TranslationAdaptor;
+		my $not_good_and_new_translation=$translation_adaptor->fetch_by_stable_id($translation->stable_id);
+		if (defined $not_good_and_new_translation){
+		  throw ("new translation stable_id for this transcript is already associated with someother gene's transcript");
+		}
+		$translation_changed=1;
+		$db_version=0;
 	 }
 	 else {
 		$translation_changed=compare($db_translation,$translation);
 	 }
 
-	 my $db_version=$db_translation->version;
+
 	 if ($translation_changed==1){
 		$translation->version($db_version+1);
 	 }
@@ -356,7 +370,7 @@ sub translation_diff{
 
 
 sub exons_diff {
-  my ($self,$sida,$exons)=@_;
+  my ($self,$sida,$exons,$shared)=@_;
   my $exon_changed=0;
   my $ea=$self->db->get_ExonAdaptor;
   ##check if exon is new or old
@@ -365,8 +379,9 @@ sub exons_diff {
 	 unless ($exon->stable_id) {
 		$exon->stable_id($sida->fetch_new_exon_stable_id);
 	 }
-	 my $db_exon=$ea->get_current_Exon_by_slice($exon);
-	 ##if exon is old compare to see if anything has changed
+#	 my $db_exon=$ea->get_current_Exon_by_slice($exon);
+	 ##note:with assembly
+	 my $db_exon=$ea->fetch_by_stable_id($exon->stable_id);
 	 if ( $db_exon){
 		my $db_version=$db_exon->version;
       $exon_changed=compare($db_exon,$exon);
@@ -377,7 +392,7 @@ sub exons_diff {
 		  $exon->version($db_version+1);
 		  $exon->is_current(1);
 		}
-		##if exon has not changed then retain the same old version
+		##if exon has not changed then use the same old db exon, saves db space by not creating exons with same version
 		else {
 		  $exon=$db_exon;
 		}
@@ -389,26 +404,40 @@ sub exons_diff {
 		  $exon->version(1);
 		  $exon->is_current(1);
 		}
-		##restored exon
+		##restored exon or a currently shared exon of the transcripts of the same gene 
+		##which has changed and hence deleted by a previous transcript
 		else {
-		  my $old_version=1;
-		  foreach my $e (@$restored_exons){
-			 if ($e->version > $old_version){
-				$old_version=$e->version;
-			 }
+		  ##shared exon
+		  if (exists $shared->{$exon->stable_id}){
+			 $exon=$shared->{$exon->stable_id};
 		  }
-		  $exon->version($old_version);
-		  $exon->is_current(1);
-		  ##check to see if the restored exon has changed
-		  my $old_exon=$ea->get_deleted_Exon_by_slice($exon,$old_version);
-		  $exon_changed=compare($old_exon,$exon);
-		  if ($exon_changed == 1){
-			 $exon->version($old_version+1);
+		  ##restored exon
+		  else {
+			 my $old_version=1;
+			 foreach my $e (@$restored_exons){
+				if ($e->version > $old_version){
+				  $old_version=$e->version;
+				}
+			 }
+			 $exon->version($old_version);
+			 $exon->is_current(1);
+			 ##check to see if the restored exon has changed
+			 #my $old_exon=$ea->get_deleted_Exon_by_slice($exon,$old_version);
+			 ##note:with assembly
+			 my $old_exon=$ea->fetch_by_stable_id_version($exon->stable_id,$old_version);
+			 $exon_changed=compare($old_exon,$exon);
+			 if ($exon_changed == 1){
+				$exon->version($old_version+1);
+			 }
 		  }
 		}
 	 }
+	 ##create a distinct list of all exons of all transcripts of the gene
+	 if (! exists $shared->{$exon->stable_id}){
+		$shared->{$exon->stable_id}=$exon;
+	 }
   }
-  return $exon_changed;
+  return ($exon_changed,$shared);
 }
 
 sub get_current_Gene_by_slice{
@@ -586,7 +615,9 @@ sub store{
 	 ##if gene is old compare to see if gene components have changed
 	 ##check if gene is new or old
 	 my $gene_slice=$gene->slice;
-	 $db_gene=$self->get_current_Gene_by_slice($gene);
+#	 $db_gene=$self->get_current_Gene_by_slice($gene);
+	 ##note:with assembly
+	 $db_gene=$self->fetch_by_stable_id($gene->stable_id);
 	 if ( $db_gene && $gene_changed != 5) {
 		$gene_changed=$self->check_for_change_in_gene_components($sida,$gene);
 		my $db_version=$db_gene->version;
@@ -605,7 +636,7 @@ sub store{
 		  $gene->version($db_version);
 		}
 	 }
-	 my $old_gene;
+	 
 	 ##if gene is new /restored
 	 if (! $db_gene && $gene_changed != 5) {
 		my $restored_genes = $self->fetch_all_versions_by_stable_id($gene->stable_id);
@@ -627,7 +658,9 @@ sub store{
 		  else {
 			 ##compare this gene with the highest version of the old genes
 			 ##if gene changed
-			 $old_gene=$self->get_deleted_Gene_by_slice($gene,$old_version);
+			 #my $old_gene=$self->get_deleted_Gene_by_slice($gene,$old_version);
+			 ##note:with assembly
+			 my $old_gene=$self->fetch_by_stable_id_version($gene->stable_id,$old_version);
 			 $gene_changed=compare($old_gene,$gene);
 			 if ($gene_changed == 1){
 				$gene->version($old_version+1);
@@ -710,27 +743,23 @@ sub store{
 		}
 	 }
 	 #print STDERR "\nChanged gene:".$gene->stable_id." Current Version:".$gene->version." changes stored successfully in db\n";
-	$self->db->commit; 
   }
-  
   if ($gene_changed == 0) {
 	 $self->db->rollback_to_savepoint;
 #	 print STDERR "\nTrying to store an Unchanged gene:".$gene->stable_id." Version:".$gene->version." nothing written in db\n";
   }
   if ($gene_changed == 2) {
-#$self->db->commit;
 	# print STDERR "\nNew gene:".$gene->stable_id." Version:".$gene->version." stored successfully in db\n";
   }
   if ($gene_changed == 3) {
-#$self->db->commit;
 	 #print STDERR "\nRestored gene:".$gene->stable_id." Version:".$gene->version." restored successfully in db\n";
   }
   if ($gene_changed == 5) {
-#$self->db->commit;
 	 #print STDERR "\nDeleted gene:".$gene->stable_id." Version:".$gene->version." deleted successfully in db\n";
   }
 }
 }
+
 
 sub add_synonym{
 
@@ -779,3 +808,10 @@ sub make_Attribute{
 
 
 1;
+__END__
+
+=head1 NAME - Bio::Vega::DBSQL::GeneAdaptor
+
+=head1 AUTHOR
+
+Sindhu K. Pillai B<email> sp1@sanger.ac.uk

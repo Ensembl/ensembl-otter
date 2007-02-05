@@ -16,10 +16,10 @@ sub compare{
 
   unless ($obj1 && $obj2){
 	 if ($obj1){
-		print STDERR "obj1:".$obj1->stable_id." key:".$obj1->hashkey;
+		print STDERR "\nobj1 to be compared:".$obj1->stable_id." key:".$obj1->hashkey;
 	 }
 	 if ($obj2){
-		print STDERR "obj2:".$obj2->stable_id." key:".$obj2->hashkey;
+		print STDERR "\nobj2 to be compared:".$obj2->stable_id." key:".$obj2->hashkey;
 	 }
 	 throw("Need two objects to compare \n Only one object set");
   }
@@ -52,8 +52,18 @@ sub compare{
   }
   else {
 	 $changed=1;
+	 my $obj2version;
+	 if (defined $obj2->version) {
+		$obj2version=$obj2->version;
+	 }
+	 else {
+		$obj2version='';
+	 }
+		
+		
+
 	 unless ($class->isa('Bio::Vega::ContigInfo')){
-		print STDERR "\nFrom comparator object changed due to change in main key: obj1 stable".$obj1->stable_id."--".$obj1->version." obj2 stable:".$obj2->stable_id."--version:".$obj2->version."\n".ref($obj1)."\nBefore key:$obj1_hash_key\n".ref($obj2)."\nAfter  key:$obj2_hash_key";
+		print STDERR "\nFrom comparator object changed due to change in main key: obj1 stable".$obj1->stable_id."--".$obj1->version." obj2 stable:".$obj2->stable_id."--version:".$obj2version."\n".ref($obj1)."\nBefore key:$obj1_hash_key\n".ref($obj2)."\nAfter  key:$obj2_hash_key";
 	 }
 	 if ($class->isa('Bio::Vega::ContigInfo')) {
 		print STDERR "\nFrom comparator ContigInfo changed due to change in main key \n Before key:$obj1_hash_key \n After  key:$obj2_hash_key";

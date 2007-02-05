@@ -41,6 +41,9 @@ sub fetch_by_stable_id_version  {
   return $exon;
 
 }
+
+
+
 sub get_deleted_Exon_by_slice{
   my ($self, $exon,$exon_version) = @_;
   unless ($exon || $exon_version){
@@ -51,14 +54,16 @@ sub get_deleted_Exon_by_slice{
   my $db_exon;
   my @out = grep { $_->stable_id eq $exon_stable_id and $_->version eq $exon_version }
     @{$self->SUPER::fetch_all_by_Slice_constraint($exon_slice,'e.is_current = 0 ')};
-	if ($#out > 1) {
-	  ##test
-	  @out = sort {$a->dbID <=> $b->dbID} @out;
-	  $db_exon=pop @out;
-	  ##test
-	  #die "\ntrying to fetch an exon for deletion there are more than one exon retrived $exon_stable_id\n";
-	}
-  $db_exon=$out[0];
+  if ($#out > 1) {
+	 ##test
+	 @out = sort {$a->dbID <=> $b->dbID} @out;
+	 $db_exon=pop @out;
+	 ##test
+	 #die "\ntrying to fetch an exon for deletion there are more than one exon retrived $exon_stable_id\n";
+  }
+  else {
+	 $db_exon=$out[0];
+  }
   return $db_exon;
 }
 
@@ -71,9 +76,9 @@ sub get_current_Exon_by_slice{
   my $exon_stable_id=$exon->stable_id;
   my @out = grep { $_->stable_id eq $exon_stable_id }
     @{ $self->fetch_all_by_Slice_constraint($exon_slice,'e.is_current = 1 ')};
-	if ($#out > 1) {
-	  die "trying to fetch an exon for comparison, there are more than one exon retrived for $exon_stable_id\n";
-	}
+  if ($#out > 1) {
+	 die "trying to fetch an exon for comparison, there are more than one exon retrived for $exon_stable_id\n";
+  }
   my $db_exon=$out[0];
   return $db_exon;
 }
@@ -82,9 +87,9 @@ sub get_current_Exon_by_slice{
 
 __END__
 
-=head1 NAME - Bio::Otter::DBSQL::AnnotatedExonAdaptor
+=head1 NAME - Bio::Vega::DBSQL::ExonAdaptor
 
 =head1 AUTHOR
 
-James Gilbert B<email> jgrg@sanger.ac.uk
+Sindhu K. Pillai B<email> sp1@sanger.ac.uk
 

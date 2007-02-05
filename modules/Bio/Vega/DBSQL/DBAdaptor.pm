@@ -123,10 +123,11 @@ sub get_MetaContainer {
 
 sub begin_work {
   my $self = shift;
-  #$self->dbc->db_handle->do('BEGIN');
+
   $self->dbc->db_handle->{AutoCommit}=0;
-  $self->dbc->do('START TRANSACTION');
-  $self->dbc->do('SET AUTOCOMMIT = 0');
+  $self->dbc->do('BEGIN');
+  #$self->dbc->do('START TRANSACTION');
+  #$self->dbc->do('SET AUTOCOMMIT = 0');
 
 
 }
