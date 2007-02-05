@@ -6,17 +6,21 @@ use Bio::Otter::Lace::ViaText ('%OrderOfOptions');
 
 my $server = Bio::Otter::ServerScriptSupport->new('dataset',
     'cs','csver','name','type','start','end','strand',
-    'metakey','analysis','ditype');
+    'metakey','analysis','ditypes');
 
 if(!$server->running_headcode()) {
     $server->error_exit("This kind of data is only available from new API databases. Set pipehead to 1");
 }
 
 my $analysis = $server->getarg('analysis');
-my $ditype   = $server->getarg('ditype');
+my $ditypes  = $server->getarg('ditypes');
+
+if($ditypes) {
+    $ditypes = [ split(',', $ditypes) ];
+}
 
 my $dfs = $server->fetch_mapped_features('ditag_feature', 
-            ['get_all_DitagFeatures', $ditype, $analysis] );
+            ['get_all_DitagFeatures', $ditypes, $analysis] );
 
 my @df_optnames = @{ $OrderOfOptions{DitagFeature} };
 my @do_optnames = @{ $OrderOfOptions{DitagObject} };

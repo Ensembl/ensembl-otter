@@ -641,7 +641,7 @@ sub get_all_DitagFeatureGroups { # get ditag features from otter/pipeline/ensemb
     # the returned list is 2d, with features grouped by ditag_id.ditag_pair_id
     # (even if there was only one feature per group)
     #
-    my( $self, $analysis_name, $pipehead, $metakey, $ditype ) = @_;
+    my( $self, $analysis_name, $pipehead, $metakey, $ditypes ) = @_;
 
     if(!$analysis_name) {
         die "Analysis name must be specified!";
@@ -656,7 +656,7 @@ sub get_all_DitagFeatureGroups { # get ditag features from otter/pipeline/ensemb
             'analysis' => $analysis_name,
             'pipehead' => $pipehead ? 1 : 0,
             $metakey ? ('metakey' => $metakey) : (),
-            $ditype ? ('ditype' => $ditype) : (),
+            $ditypes ? ('ditypes' => $ditypes) : (),
         },
         1,
     );
