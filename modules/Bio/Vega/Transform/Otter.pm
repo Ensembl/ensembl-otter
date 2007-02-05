@@ -334,7 +334,6 @@ sub build_Exon {
 												 -end       => $data->{'end'},
 												 -strand    => $data->{'strand'},
 												 -stable_id => $data->{'stable_id'},
-												 -version   => $data->{'stable_id_version'},
 												 -slice     => $slice,
 												 -created_date => $time_now{$self},
 												 -modified_date => $time_now{$self},
@@ -361,7 +360,6 @@ sub build_Transcript {
 
   my $transcript = Bio::Vega::Transcript->new(
 															 -stable_id => $data->{'stable_id'},
-															 -version   => $data->{'stable_id_version'},
 															 -created_date=>$time_now{$self},
 															 -modified_date=>$time_now{$self},
 															 -analysis=>$ana,
@@ -395,12 +393,12 @@ sub build_Transcript {
 	 else {
 		my $translation = Bio::Vega::Translation->new(
 																		 -stable_id=>$data->{'translation_stable_id'},
-																	 -version   => $data->{'translation_stable_id_version'},
 																		);
 		$translation->start_Exon($start_Exon);
 		$translation->start($start_Exon_Pos);
 		$translation->end_Exon($end_Exon);
 		$translation->end($end_Exon_Pos);
+		##probably add a check to see if $end_Exon_Pos is set or not
 		if ($start_Exon->strand == 1 && $start_Exon->start != $tran_start_pos) {
 		  $start_Exon->end_phase(($start_Exon->length-$start_Exon_Pos+1)%3);
 		} elsif ($start_Exon->strand == -1 && $start_Exon->end != $tran_start_pos) {
@@ -515,7 +513,6 @@ sub build_Locus {
   my $ana = $logic_ana{$self}{'Otter'} ||= Bio::EnsEMBL::Analysis->new(-logic_name => 'Otter');
   my $gene = Bio::Vega::Gene->new(
 											 -stable_id => $data->{'stable_id'},
-											 -version   => $data->{'stable_id_version'},
 											 -slice => $slice,
 											 -created_date => $time_now{$self},
 											 -modified_date => $time_now{$self},
