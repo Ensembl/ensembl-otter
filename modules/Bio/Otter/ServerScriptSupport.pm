@@ -558,7 +558,8 @@ sub fetch_mapped_features {
 
         my $original_slice = $self->get_slice($sdba, $cs, $name, $type, $start, $end, $strand, $csver);
 
-        $features = $original_slice->$fetching_method(@$call_parms);
+        $features = $original_slice->$fetching_method(@$call_parms)
+            || $self->error_exit("Could not fetch anything - analysis may be missing from the DB");
     }
 
     $self->log("Total of ".scalar(@$features).' '.join('/', grep { !ref($_) } @$call_parms)
