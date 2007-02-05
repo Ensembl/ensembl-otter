@@ -529,7 +529,7 @@ sub fetch_mapped_features {
 
             my $target_fs_on_target_segment
                 = $target_slice_on_target->$fetching_method(@$call_parms) ||
-                error_exit("Could not fetch anything - this analysis may be missing from the DB");
+                $self->error_exit("Could not fetch anything - this analysis may be missing from the DB");
 
             $self->log('***** : '.scalar(@$target_fs_on_target_segment)." ${feature_name}s found on the slice");
 
