@@ -45,15 +45,30 @@ sub new {
 }
 
 sub parse {
-  my ($self, $fh) = @_;
+  my ($self, $fh,$encoding) = @_;
   my $parser = $self->new_Parser;
-  $parser->parse($fh);
+  if (defined $encoding ){
+	 if ($encoding eq  'latin1'){
+		$parser->parse($fh,ProtocolEncoding => 'ISO-8859-1');
+	 }
+  }
+  else{
+	 $parser->parse($fh);
+  }
 }
 
 sub parsefile {
-  my ($self, $filename) = @_;
+  my ($self, $filename,$encoding) = @_;
   my $parser = $self->new_Parser;
-  $parser->parsefile($filename);
+  if (defined $encoding ){
+	 if ($encoding eq  'latin1'){
+		$parser->parsefile($filename,ProtocolEncoding => 'ISO-8859-1');
+	 }
+  }
+  else {
+	 $parser->parsefile($filename);
+  }
+
 }
 
 sub new_Parser {
