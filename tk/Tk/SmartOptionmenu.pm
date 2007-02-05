@@ -35,20 +35,12 @@ sub Populate {
     # configure -variable and -command now so that when -options
     # is set by main-line configure they are there to be set/called.
 
-    my $tvar = delete $args->{-textvariable};
-    my $vvar = delete $args->{-variable};
-    if (!defined($vvar)) {
-        if (defined $tvar) {
-            $vvar = $tvar;
-        }
-        else {
-            my $new;
-            $vvar = \$new;
-        }
+    if (my $tvar = delete $args->{-textvariable}) {
+        $w->configure(-textvariable => $tvar);
     }
-    $tvar = $vvar if (!defined($tvar));
-    $w->configure(-textvariable => $tvar, -variable => $vvar);
-    
+    if (my $vvar = delete $args->{-variable}) {
+        $w->configure(-variable => $vvar);
+    }
     if (my $command = delete $args->{-command}) {
         $w->configure(-command => $command);
     }
@@ -66,38 +58,45 @@ sub setOption {
 sub _setValues {
     my ($w, $label, $val) = @_;
 
-    my $tvar = $w->cget(-textvariable);
-    my $vvar = $w->cget(-variable);
     if (@_ == 2) {
         $val = $label;
     }
-
-    $$tvar = $label if $tvar;
-    $$vvar = $val   if $vvar;
+    if (my $tvar = $w->cget(-textvariable)) {
+        $$tvar = $label;
+    }
+    if (my $vvar = $w->cget(-variable)) {
+        $$vvar = $val;
+    }
 }
 
 sub addOptions {
-    my $w     = shift;
+    my $w = shift;
 
     my $menu  = $w->menu;
-    my $width = $w->cget('-width');
+    my $width = $w->cget('-width') || 0;
 
     my $tvar  = $w->cget(-textvariable);
-    my $oldt  = $$tvar;
+    my $oldt  = $tvar ? $$tvar : undef;
+    unless ($tvar) {
+        my $new = undef;
+        $w->configure(-textvariable => \$new);
+    }
     my $vvar  = $w->cget(-variable);
-    my $oldv  = $$vvar;
+    my $oldv  = $vvar ? $$vvar : undef;
+    unless ($vvar) {
+        my $new = undef;
+        $w->configure(-variable => \$new);
+    }
 
     my ($firstt, $firstv);
 
     while (@_) {
-        my $val   = shift;
-        my $label = $val;
-        if (ref $val) {
-            if ($vvar == $tvar) {
-                my $new = $label;
-                $w->configure(-textvariable => ($tvar = \$new));
-            }
-            ($label, $val) = @$val;
+        my $thing = shift;
+        my ($label, $val);
+        if (ref $thing) {
+            ($label, $val) = @$thing;
+        } else {
+            $label = $val = $thing;
         }
         
         # Fill in missing $oldv or $oldt with the other value of this pair
@@ -109,7 +108,7 @@ sub addOptions {
         }
         
         my $len = length($label);
-        $width = $len if (!defined($width) || $len > $width);
+        $width = $len if $len > $width;
         $menu->command(
             -label   => $label,
             -command => [ $w, 'setOption', $label, $val ]

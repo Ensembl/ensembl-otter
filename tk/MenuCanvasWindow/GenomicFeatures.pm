@@ -352,21 +352,13 @@ sub change_of_gf_type_callback {
     my ($self, $genomic_feature, $wanted_type) = @_;
 
     my $method = $self->get_Method_by_name($wanted_type);
-    my $default_label = $method->remark || $method->name;
     my @enable  = (-state => 'normal',   -background => 'white');
     my @disable = (-state => 'disabled', -background => 'grey' );
 
-    $genomic_feature->{'gf_type'}       = $wanted_type;
-    my $txt = $genomic_feature->{'display_label'};
-
-    # Only change the text field if it is the default field
-    # or is empty. Editable fields are set to blank.
-    if (! $txt or ($txt eq $default_label)) {
-        $genomic_feature->{'display_label'} =
-          $method->edit_display_label
-          ? ''
-          : $default_label;
-    }
+    $genomic_feature->{'display_label'} =
+      $method->edit_display_label
+        ? ''
+        : $method->remark || $method->name;
 
     $genomic_feature->{'score_entry'}
       ->configure($method->edit_score         ? @enable : @disable);
