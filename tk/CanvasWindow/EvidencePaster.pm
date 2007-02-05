@@ -272,6 +272,8 @@ sub type_and_name_from_clipboard {
         EST             => 'EST',
         vertebrate_mRNA => 'cDNA',
         BLASTX          => 'Protein',
+        SwissProt       => 'Protein',
+        TrEMBL          => 'Protein',
     );
 
     sub type_and_name_from_text {
