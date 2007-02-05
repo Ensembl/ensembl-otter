@@ -80,7 +80,7 @@ while (defined(my $gene_xml=$in->getline())){
 	 ##create a parser 
 	 my $parser = Bio::Vega::Transform::Otter->new;
 	 $parser->set_ChromosomeSlice($slice);
-	 $parser->parse($gene_xml);
+	 $parser->parse($gene_xml,'latin1');
 	 my $genes=$parser->get_Genes;
 	 my $gene=$genes->[0];
 	 my $gene_count=@$genes;
