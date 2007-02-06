@@ -355,10 +355,9 @@ sub change_of_gf_type_callback {
     my @enable  = (-state => 'normal',   -background => 'white');
     my @disable = (-state => 'disabled', -background => 'grey' );
 
-    $genomic_feature->{'display_label'} =
-      $method->edit_display_label
-        ? ''
-        : $method->remark || $method->name;
+    unless ($method->edit_display_label) {
+        $genomic_feature->{'display_label'} = $method->remark || $method->name;
+    }
 
     $genomic_feature->{'score_entry'}
       ->configure($method->edit_score         ? @enable : @disable);
