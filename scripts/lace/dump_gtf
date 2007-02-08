@@ -56,7 +56,6 @@ use Symbol 'gensym';
         warn "Creating AGP file '$agp_file'\n";
         print $agp @{$ss->agp_data};
         close $agp or die "Error writing to '$agp_file' : $!";
-        warn "APG DEBUG"; next;
 
         # Create the GTF file to write the genes into
         my $fh        = gensym();
