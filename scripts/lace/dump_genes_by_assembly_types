@@ -99,22 +99,39 @@ my %assembly_nonmatch_version = (
 } # lexical environment for &execute_ctgids_2_asm
 
 
+sub gene_transformed_successfully {
+    my( $gene, $slice ) = @_;
+
+    my $slice_length = $slice->length;
+    foreach my $exon (@{$gene->get_all_Exons}) {
+        if ($exon->contig != $slice or $exon->start < 1 or $exon->end > $slice_length) {
+            return 0;
+        }
+    }
+
+    # Check for overlapping exons in each transcript
+    foreach my $transcript (@{$gene->get_all_Transcripts}) {
+        my @exon_list = @{$transcript->get_all_Exons};
+        if ($exon_list[0]->strand == -1) {
+            # exons are in opposite order for reverse strand transcripts
+            @exon_list = reverse @exon_list;
+        }
+
+        my $last = 0;
+        foreach my $exon (@exon_list) {
+            if ($exon->start <= $last) {
+                return 0;
+            }
+            $last = $exon->end;
+        }
+    }
+
+    return 1;
+}
 
 { # lexical environment for add_xml_gene
 
     my %slices_hash = (); # atype->Slice
-
-    sub gene_transformed_successfully {
-        my( $gene, $slice ) = @_;
-
-        my $slice_length = $slice->length;
-        foreach my $exon (@{$gene->get_all_Exons}) {
-            if ($exon->contig != $slice or $exon->start < 1 or $exon->end > $slice_length) {
-                return 0;
-            }
-        }
-        return 1;
-    }
 
     sub add_xml_gene {
         my ($gene, $ver_2_asm_chr) = @_;
@@ -127,18 +144,16 @@ my %assembly_nonmatch_version = (
 
                 $otter_dba->assembly_type($atype);
 
-                my $slice;
-                unless($slice = $slices_hash{$atype}) {
-                    $slice = $slices_hash{$atype}
-                           = $slice_adaptor->fetch_by_chr_name($chr_name);
-                }
+                my $slice = $slices_hash{$atype}
+                  ||= $slice_adaptor->fetch_by_chr_name($chr_name);
                 
                 $gene->transform($slice);
 
-                if(gene_transformed_successfully($gene,$slice)) {
-                    my $gene_id = $gene->dbID();
+                if (gene_transformed_successfully($gene, $slice)) {
+                    my $gene_id  = $gene->dbID();
+                    my $modified = $gene->modified;
                     print ''.('-'x40)."\n";
-                    print "$chr_name\t$atype\t$gene_id\n";
+                    print "$chr_name\t$atype\t$gene_id\t$modified\n";
                     print $gene->toXMLString . "\n";
                     print STDERR "--> $atype\n";
                     return;
@@ -176,7 +191,7 @@ sub main {
     $slice_adaptor = $otter_dba->get_SliceAdaptor();
 
     my $sth_gene_ids = $otter_dba->prepare(qq{
-        SELECT gene_id, stable_id, version
+        SELECT gene_id, stable_id, version, UNIX_TIMESTAMP(modified)
         FROM gene_stable_id
         WHERE gene_id > $skip_to
         ORDER by gene_id ASC
@@ -184,8 +199,8 @@ sub main {
     #   LIMIT 1000
 
     $sth_gene_ids->execute();
-    while( my ($gene_id, $stable_id, $version) = $sth_gene_ids->fetchrow()) {
-        print STDERR "$gene_id\t$stable_id.$version\t";
+    while( my ($gene_id, $stable_id, $version, $modified) = $sth_gene_ids->fetchrow()) {
+        print STDERR "$gene_id\t$stable_id.$version\t$modified\t";
         my $gene = $gene_adaptor->fetch_by_dbID($gene_id);
         
         my $contig_id_set = {};
