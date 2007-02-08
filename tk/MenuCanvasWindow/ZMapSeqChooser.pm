@@ -4,10 +4,11 @@ package MenuCanvasWindow::XaceSeqChooser;
 
 use strict;
 use Carp qw{ cluck confess };
-use ZMap::Connect qw(:all);
+use ZMap::Connect qw{ :all };
 use Sys::Hostname;
 use Tie::Watch;
 use Data::Dumper;
+use Hum::Conf qw{ PFETCH_SERVER_LIST };
 
 my $ZMAP_DEBUG = 1;
 
@@ -284,11 +285,11 @@ sub zMapBlixemDefaults {
     
     return $self->formatZmapDefaults(
         'blixem',
+        netid  => qq{"$PFETCH_SERVER_LIST->[0][0]"},
+        port   =>     $PFETCH_SERVER_LIST->[0][1],
         qw{
-            netid       "pubseq"
-            port        22100
             script      "blixem"
-            scope       40000
+            scope       200000
             homol_max   0
         }
     );
