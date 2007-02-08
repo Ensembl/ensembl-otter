@@ -317,7 +317,7 @@ sub type_and_name_from_clipboard {
             $acc .= $3 if $3;
             my $sv     = $4 || '*';
 
-            warn "Got name '$prefix$acc$sv'";
+            #warn "Got name '$prefix$acc$sv'";
             my $ace = $self->ExonCanvas->XaceSeqChooser->ace_handle;
             my ($type, $name);
             foreach my $class (qw{ Sequence Protein }) {
@@ -345,7 +345,7 @@ sub type_and_name_from_clipboard {
             }
         }
         else {
-            warn "Didn't match: '$text'\n";
+            #warn "Didn't match: '$text'\n";
             return;
         }
     }
