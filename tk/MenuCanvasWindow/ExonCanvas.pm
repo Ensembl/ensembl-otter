@@ -22,6 +22,8 @@ use Hum::Ace;
 use Bio::Otter::Converter;
 @ISA = ('MenuCanvasWindow');
 
+my $highlight_hydrophobic = 0;
+
 # "new" is in MenuCanvasWindow
 
 sub initialize {
@@ -811,6 +813,18 @@ sub show_peptide {
         $top->bind('<Control-T>',   $trim_command);
         $top->bind('<Return>',      $trim_command);
         $top->bind('<KP_Enter>',    $trim_command);
+        
+        my $toggle_hydrophobic = sub {
+            $self->update_translation;
+            };
+        my $hydrophobic = $frame->CheckBox(
+            -command    => $toggle_hydrophobic,
+            -variable   => \$highlight_hydrophobic,
+            -text       => 'Highlight hydrophobic',
+            -underline  => 1,
+            )->pack(-side => 'left');
+        $top->bind('<Control-h>', $toggle_hydrophobic);
+        $top->bind('<Control-H>', $toggle_hydrophobic);
 
         # Close only unmaps it from the display
         my $close_command = sub{ $top->withdraw };
@@ -872,17 +886,20 @@ sub update_translation {
             *   redstop
             X   blueunk
             M   goldmeth
-            
-            A   greyphobic
-            C   greyphobic
-            G   greyphobic
-            I   greyphobic
-            L   greyphobic
-            F   greyphobic
-            P   greyphobic
-            W   greyphobic
-            V   greyphobic
             };
+        if ($highlight_hydrophobic) {
+            %style = (%style, qw{
+                A   greyphobic
+                C   greyphobic
+                G   greyphobic
+                I   greyphobic
+                L   greyphobic
+                F   greyphobic
+                P   greyphobic
+                W   greyphobic
+                V   greyphobic
+                });
+        }
         my $pep_genomic = $self->{'_peptext_index_to_genomic_position'} = {};
         for (my $i = 0; $i < length($str); $i++) {
             my $char = substr($str, $i, 1);
