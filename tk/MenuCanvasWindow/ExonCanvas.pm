@@ -814,16 +814,15 @@ sub show_peptide {
         $top->bind('<Return>',      $trim_command);
         $top->bind('<KP_Enter>',    $trim_command);
         
+        $self->{'_highlight_hydrophobic'} = $highlight_hydrophobic;
         my $toggle_hydrophobic = sub {
-            my $xc = $self->XaceSeqChooser;
-            foreach my $name ($xc->list_all_subseq_edit_window_names) {
-                my $ec = $xc->get_subseq_edit_window($name) or next;
-                $ec->update_translation;
-            }
+            # Save preferred state for next translation window
+            $highlight_hydrophobic = $self->{'_highlight_hydrophobic'};
+            $self->update_translation;
         };
         my $hydrophobic = $frame->Checkbutton(
             -command    => $toggle_hydrophobic,
-            -variable   => \$highlight_hydrophobic,
+            -variable   => \$self->{'_highlight_hydrophobic'},
             -text       => 'Highlight hydrophobic',
             -padx       => 6,
             )->pack(-side => 'left', -padx => 6);
@@ -889,7 +888,7 @@ sub update_translation {
             X   blueunk
             M   goldmeth
             };
-        if ($highlight_hydrophobic) {
+        if ($self->{'_highlight_hydrophobic'}) {
             %style = (%style, qw{
                 A   greyphobic
                 C   greyphobic
