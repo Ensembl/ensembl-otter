@@ -815,16 +815,18 @@ sub show_peptide {
         $top->bind('<KP_Enter>',    $trim_command);
         
         my $toggle_hydrophobic = sub {
-            $self->update_translation;
-            };
-        my $hydrophobic = $frame->CheckBox(
+            my $xc = $self->XaceSeqChooser;
+            foreach my $name ($xc->list_all_subseq_edit_window_names) {
+                my $ec = $xc->get_subseq_edit_window($name) or next;
+                $ec->update_translation;
+            }
+        };
+        my $hydrophobic = $frame->Checkbutton(
             -command    => $toggle_hydrophobic,
             -variable   => \$highlight_hydrophobic,
             -text       => 'Highlight hydrophobic',
-            -underline  => 1,
-            )->pack(-side => 'left');
-        $top->bind('<Control-h>', $toggle_hydrophobic);
-        $top->bind('<Control-H>', $toggle_hydrophobic);
+            -padx       => 6,
+            )->pack(-side => 'left', -padx => 6);
 
         # Close only unmaps it from the display
         my $close_command = sub{ $top->withdraw };
