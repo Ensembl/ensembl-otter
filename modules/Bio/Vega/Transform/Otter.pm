@@ -3,6 +3,7 @@
 package Bio::Vega::Transform::Otter;
 
 use strict;
+use warnings;
 use Carp;
 use Bio::EnsEMBL::Exon;
 use Bio::Vega::Transcript;
@@ -18,9 +19,9 @@ use Bio::Vega::AuthorGroup;
 use Bio::Vega::ContigInfo;
 use Bio::Vega::Evidence;
 use Bio::Vega::AssemblyTag;
-use Data::Dumper;   # For debugging
+#use Data::Dumper;   # For debugging
 # This misses the "$VAR1 = " bit out from the Dumper() output
-$Data::Dumper::Terse = 1;
+#$Data::Dumper::Terse = 1;
 
 use base 'Bio::Vega::Transform';
 
@@ -643,7 +644,7 @@ sub prune_exons {
 		if (my $stable = $exon->stable_id) {
 		  if (my $seen_key = $stable_key{$stable}) {
 			 if ($seen_key ne $key) {
-				$exon->{_stable_id} = undef;
+				$exon->stable_id(undef);
 				printf STDERR  "Already seen exon_id '$stable' on different exon\n";
 			 }
 		  } else {

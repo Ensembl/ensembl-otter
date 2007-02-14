@@ -15,11 +15,7 @@ load_new_otter -dataset xxx -file filename
 use strict;
 use Bio::Vega::Transform::Otter;
 use Bio::Vega::DBSQL::DBAdaptor;
-use Bio::EnsEMBL::Slice;
-use Bio::EnsEMBL::CoordSystem;
 use Bio::EnsEMBL::Utils::Exception qw ( throw warning );
-use IO::File;
-use Data::Dumper;
 use Getopt::Long;
 
 my $dbhost;
@@ -47,8 +43,9 @@ if ($help || !defined ($dbhost) || !defined($dbport) || !defined($dbname) || !de
 
 ##open mixed format input file
 $/="----------------------------------------\n";
-my $in=IO::File->new("<$file") || throw ("Could not open file for reading :$file \n $!\n");
-my $out=IO::File->new(">>/nfs/team71/analysis/sp1/PROJECTS/LOADNEWOTTER/genes.out") || throw ("Could not open file for writing :/tmp/genes \n $!\n");
+open (IN,"<$file") || throw ("Could not open file for reading :$file \n $!\n");
+#open (OUT,">>/nfs/team71/analysis/sp1/PROJECTS/LOADNEWOTTER/TESTOUT.log") || throw ("Could not open file for writing :/tmp/genes \n $!\n");
+#open (ERR,">>/nfs/team71/analysis/sp1/PROJECTS/LOADNEWOTTER/TESTERRORS.log") || throw ("Could not open error file for writing \n $! \n");
 ##create a db handle
 my $db = Bio::Vega::DBSQL::DBAdaptor->new(
 														-dbname => $dbname,
@@ -59,55 +56,55 @@ my $db = Bio::Vega::DBSQL::DBAdaptor->new(
 													  );
 
 my $dbid;
-eval {
 my $ss_hash;
-while (defined(my $gene_xml=$in->getline())){
-  $db->begin_work;
-  my $sa=$db->get_SliceAdaptor();
-  my $gene_adaptor=$db->get_GeneAdaptor;
-  chomp $gene_xml;
-  if ($gene_xml=~/^\S+\s+(\S+)\s+(\S+)\s+(<locus>.*<\/locus>).*/ms){
-	 my $ss=$1;
-	 $dbid=$2;
-	 $gene_xml=$3;
-	 unless ($ss_hash->{$ss}){
-		$ss_hash->{$ss}=$sa->fetch_by_region('chromosome',$ss,undef,undef,undef,'Otter');
+#LABEL:
+while (<IN>){
+  my $gene_xml=$_;
+  eval{
+	 $db->begin_work;
+	 my $sa=$db->get_SliceAdaptor();
+	 my $gene_adaptor=$db->get_GeneAdaptor;
+	 chomp $gene_xml;
+	 if ($gene_xml=~/^\S+\s+(\S+)\s+(\S+)\s+(<locus>.*<\/locus>).*/ms){
+		my $ss=$1;
+		$dbid=$2;
+		$gene_xml=$3;
+		unless ($ss_hash->{$ss}){
+		  $ss_hash->{$ss}=$sa->fetch_by_region('chromosome',$ss,undef,undef,undef,'Otter');
+		}
+		my $slice=$ss_hash->{$ss};
+		unless ($slice) {
+		  throw "slice for $ss is not in db";
+		}
+		##create a parser 
+		my $parser = Bio::Vega::Transform::Otter->new;
+		$parser->set_ChromosomeSlice($slice);
+		$parser->parse($gene_xml,'latin1');
+		my $genes=$parser->get_Genes;
+		my $gene=$genes->[0];
+		my $gene_count=@$genes;
+		if ($gene_count > 1 || $gene_count == 0) {
+		  throw ("parser has returned more than one gene or no gene , gene count is :$gene_count for geneid : $dbid");
+		}
+		$gene->is_current(1);
+		$gene_adaptor->store($gene,'chr_whole_slice');
+		print STDOUT ("\nstored old gene $dbid as ".$gene->dbID. " in new db");
+		if ($gene->biotype =~ /^obsolete$/){
+		  $gene_adaptor->delete_gene($gene);
+		  print STDOUT ("\nThe above gene was deleted in new db");
+		}
+		$db->commit;
+		$parser->DESTROY;
 	 }
-	 my $slice=$ss_hash->{$ss};
-	 unless ($slice) {
-		throw "slice for $ss is not in db";
-	 }
-	 ##create a parser 
-	 my $parser = Bio::Vega::Transform::Otter->new;
-	 $parser->set_ChromosomeSlice($slice);
-	 $parser->parse($gene_xml,'latin1');
-	 my $genes=$parser->get_Genes;
-	 my $gene=$genes->[0];
-	 my $gene_count=@$genes;
-	 if ($gene_count > 1 || $gene_count == 0) {
-		throw ("parser has returned more than one gene or no gene , gene count is :$gene_count for geneid : $dbid");
-	 }
-	 $gene->is_current(1);
-	 $gene_adaptor->store($gene);
-	 $out->print("\nstored old gene $dbid as ".$gene->dbID. " in new db");
-	 if ($gene->biotype =~ /^obsolete$/){
-		$gene_adaptor->delete_gene($gene);
-		$out->print("\nThe above gene was deleted in new db");
-	 }
-	 $db->commit;
-	 $parser->DESTROY;
+  };
+  if ($@) {
+	 $db->rollback;
+	 print STDERR ("\ngene $dbid did not get loaded due to \n" .$@);
+	 #next LABEL;
   }
 }
-};
-if ($@) {
-  $db->rollback;
-  throw "\nError saving genes from file: gene $dbid did not get loaded \n All genes above this have been loaded - Please correct errors\n".$@;
-}
-else {
-  $out->close;
-  $in->close;
-}
-
-
+close STDOUT;
+close IN;
+close STDERR;
 1;
 

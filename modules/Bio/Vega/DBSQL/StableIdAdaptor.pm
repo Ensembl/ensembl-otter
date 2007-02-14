@@ -62,7 +62,6 @@ sub _fetch_new_by_type {
       $sth->execute;
     }
   }
-
   my $prefix = $meta_container->get_primary_prefix() || "OTT";
 
   my $stableid = $prefix;
