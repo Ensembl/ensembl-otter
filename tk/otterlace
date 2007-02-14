@@ -10,6 +10,10 @@ use Bio::Otter::Lace::Defaults;
     # Become leader of process group so that "kill -$$" at end works
     setpgrp();
     
+    if ($^O eq 'dec_osf') {
+        die "\n\n  Sorry, this version of otterlace does not work on Alpha machines\n\n\n";
+    }
+    
     Bio::Otter::Lace::Defaults::do_getopt() || die $Bio::Otter::Lace::Defaults::GETOPT_ERRSTR . "\n";
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
     $cl->cleanup_log_dir('otterlace');
