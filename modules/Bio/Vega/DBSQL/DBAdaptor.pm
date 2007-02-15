@@ -121,6 +121,14 @@ sub get_MetaContainer {
   return $self->{'VegaMetaContainer'};
 }
 
+sub get_AnnotationBroker {
+  my( $self ) = @_;
+  if ( !exists $self->{'AnnotationBroker'} ){
+	 $self->{'AnnotationBroker'}=Bio::Vega::AnnotationBroker->new($self);
+  }
+  return $self->{'AnnotationBroker'};
+}
+
 sub begin_work {
   my $self = shift;
 
