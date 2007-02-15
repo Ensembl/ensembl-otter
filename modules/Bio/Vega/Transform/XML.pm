@@ -28,6 +28,13 @@ sub get_transcript_class {
   return $transcript_class_mapping->{$status}->{$biotype};
 }
 
+sub get_geneXML{
+  my ($self,$gene)=@_;
+  my $ppobj=$self->generate_Locus($gene,2);
+  my $gene_xml=$self->formatxml($ppobj);
+  return $gene_xml;
+}
+
 sub generate_OtterXML{
   my ($self,$slices,$odb,$indent,$genes,$sf)=@_;
   my $ot=$self->prettyprint('otter');
@@ -163,9 +170,12 @@ sub generate_SequenceFragment{
 }
 
 sub generate_Locus {
-  my ($self, $gene) = @_;
+  my ($self, $gene,$indent) = @_;
   return unless $gene;
   my $g=$self->prettyprint('locus');
+  if (defined $indent) {
+	 $g->indent($indent);
+  }
   $g->attribvals($self->prettyprint('stable_id',$gene->stable_id));
   my $gene_description='';
   if ($gene->description){
