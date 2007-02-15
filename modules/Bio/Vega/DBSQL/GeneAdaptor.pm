@@ -2,12 +2,11 @@ package Bio::Vega::DBSQL::GeneAdaptor;
 
 use strict;
 
-use Bio::EnsEMBL::DBSQL::BaseAdaptor;
-
 use Bio::Vega::Gene;
 use Bio::Vega::Transcript;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::Vega::Utils::Comparator qw(compare);
+use Bio::Vega::AnnotationBroker;
 use base 'Bio::EnsEMBL::DBSQL::GeneAdaptor';
 
 sub fetch_by_stable_id  {
@@ -138,326 +137,6 @@ sub fetch_gene_author {
   return $gene;
 }
 
-
-sub check_for_change_in_gene_components {
-  ## check if any of the gene component (transcript,exons,translation) has changed
-  my ($self,$sida,$gene,$method_chooser) = @_;
-  my $transcripts=$gene->get_all_Transcripts;
-  my $ta=$self->db->get_TranscriptAdaptor;
-  my $tran_change_count=0;
-  my $shared_exons_bet_txs;
-  foreach my $tran (@$transcripts) {
-	 ##assign stable_id for new trancript
-	 unless ($tran->stable_id) {
-		$tran->stable_id($sida->fetch_new_transcript_stable_id);
-	 }
-	 ##check if exons are new or old and if old whether they have changed or not
-	 my $exons=$tran->get_all_Exons;
-	 my $exon_changed=0;
-	 ($exon_changed,$shared_exons_bet_txs)=$self->exons_diff($sida,$method_chooser,$exons,$shared_exons_bet_txs);
-	 ##check if translation has changed
-	 ##only a partial chromosome slice is constructed when genes are saved through xml, from the otter lace client from the 
-    ##sequence_fragment tags.But in case of external loading when sequence fragments are not know only a complete chromosome slice 
-    ##be constructed from the sequence_set name.So the methods differ
-	 my $db_transcript;
-	 if ($method_chooser eq 'chr_gene_slice') {
-		$db_transcript=$ta->get_current_Transcript_by_slice($tran);
-	 }
-	 elsif ($method_chooser eq 'chr_whole_slice'){
-		$db_transcript=$ta->fetch_by_stable_id($tran->stable_id);
-	 }
-	 my $translation_changed=0;
-	 $translation_changed=$self->translation_diff($sida,$tran,$db_transcript);
-
-	 ##check if transcript is new or old
-	 ##if transcript is old compare to see if transcript has changed
-	 my $transcript_changed=0;
-
-	 $tran->is_current(1);
-	 if ( $db_transcript){
-		
-		$transcript_changed=compare($db_transcript,$tran);
-		my $db_version=$db_transcript->version;
-		if ($exon_changed==1 || $translation_changed==1 ) {
-		  $transcript_changed = 1;
-		}
-		$db_transcript->is_current(0);
-		$ta->update($db_transcript);
-
-		##if transcript has changed then increment version
-		if ($transcript_changed==1 ) {
-		  $tran->version($db_version+1);
-		  ##add for transcript synonym
-		  $self->add_synonym($db_transcript,$tran);
-		}
-		##if transcript has not changed then retain the same old version
-		else {
-		  $tran->version($db_version);
-		  ##retain old author
-		  $tran->transcript_author($db_transcript->transcript_author);
-		}	
-	 }
-	 ##if transcript is new
-	 else {
-		my $restored_transcripts=$ta->fetch_all_versions_by_stable_id($tran->stable_id);
-		if (@$restored_transcripts == 0){
-		  $tran->version(1);
-		}
-		##restored transcript
-		else {
-		  my $old_version=1;
-		  foreach my $t (@$restored_transcripts){
-			 if ($t->version > $old_version){
-				$old_version=$t->version;
-			 }
-		  }
-		  $tran->version($old_version);
-		  ##check to see if the restored transcript has changed
-		  my $old_transcript;
-		  if ($method_chooser eq 'chr_gene_slice'){
-			 $old_transcript=$ta->get_deleted_Transcript_by_slice($tran,$old_version);
-		  }
-		  elsif ($method_chooser eq 'chr_whole_slice'){
-			 $old_transcript=$ta->fetch_by_stable_id_version($tran->stable_id,$old_version);
-		  }
-		  my $old_translation=$old_transcript->translation;
-		  $translation_changed=$self->translation_diff($sida,$tran,$old_transcript);
-		  $transcript_changed=compare($old_transcript,$tran);
-		  if ($exon_changed == 1 || $translation_changed == 1) {
-			 $transcript_changed = 1;
-		  }
-		  if ($transcript_changed == 1){
-			 $tran->version($old_version+1);
-			 ##add for transcript synonym
-			 $self->add_synonym($old_transcript,$tran);
-		  }
-		}
-	 }
-	 if ($transcript_changed == 1) {
-		$tran_change_count++;
-	 }
-	 ##check to see if the start_Exon,end_Exon has been assigned right after comparisons
-	 ##this check is needed since we reuse exons
-	 my $translation = $tran->translation();
-	 if( defined $translation ) {
-		#make sure that the start and end exon are set correctly
-		my $start_exon = $translation->start_Exon();
-		my $end_exon   = $translation->end_Exon();
-		if(!$start_exon) {
-		  throw("Translation does not define a start exon.");
-		}
-		if(!$end_exon) {
-		  throw("Translation does not define an end exon.");
-		}
-		if(!$start_exon->dbID()) {
-		  my $key = $start_exon->hashkey();
-		  ($start_exon) = grep {$_->hashkey() eq $key} @$exons;
-		  if($start_exon) {
-			 $translation->start_Exon($start_exon);
-		  } else {
-			 ($start_exon) = grep {$_->stable_id eq $translation->start_Exon->stable_id} @$exons;
-			 if($start_exon) {
-				$translation->start_Exon($start_exon);
-			 }
-			 else {
-				throw("Translation's start_Exon does not appear to be one of the " .
-						"exons in its associated Transcript");
-			 }
-		  }
-		}
-		if(!$end_exon->dbID()) {
-		  my $key = $end_exon->hashkey();
-		  ($end_exon) = grep {$_->hashkey() eq $key} @$exons;
-		  if($end_exon) {
-			 $translation->end_Exon($end_exon);
-		  } else {
-			 ($end_exon) = grep {$_->stable_id eq $translation->end_Exon->stable_id} @$exons;
-			 if($end_exon) {
-				$translation->end_Exon($end_exon);
-			 }
-			 else {
-				throw("Translation's end_Exon does not appear to be one of the " .
-						"exons in its associated Transcript.");
-			 }
-		  }
-		}
-	 }
-  }
-  my $transcripts_changed=0;
-  if ($tran_change_count > 0) {
-	 $transcripts_changed=1;
-  }
-  return $transcripts_changed;
-}
-
-
-sub update_deleted_transcripts {
-  my ($self,$new_trs,$old_trs)=@_;
-  my %newhash = map { $_->stable_id => $_} @$new_trs;
-  my %oldhash = map { $_->stable_id => $_} @$old_trs;
-  my $ta=$self->db->get_TranscriptAdaptor;
-  while (my ($key, $old_t) = each %oldhash) {
-    unless ($newhash{$key}) {
-		$old_t->is_current(0);
-		$ta->update($old_t);
-    }
-  }
-
-}
-
-sub update_deleted_exons {
-  my ($self,$new_exons,$old_exons)=@_;
-  my %newhash = map { $_->stable_id => $_} @$new_exons;
-  my %oldhash = map { $_->stable_id => $_} @$old_exons;
-  my $ea=$self->db->get_ExonAdaptor;
-  while (my ($key, $old_e) = each %oldhash) {
-    unless ($newhash{$key}) {
-		$old_e->is_current(0);
-		$ea->update($old_e);
-    }
-  }
-
-}
-
-sub translation_diff{
-  my ($self,$sida,$tran,$db_transcript)=@_;
-  my $translation_changed=0;
-  my $translation;
-  my $db_translation;
-  if (defined $tran){
-	 $translation=$tran->translation;
-  }
-  if (defined $db_transcript) {
-	 $db_translation=$db_transcript->translation;
-  }
-  if (defined $translation) {
-	 unless ($translation->stable_id) {
-		$translation->stable_id($sida->fetch_new_translation_stable_id);
-		$translation->version(1);
-	 }
-  }
-  if (! defined $db_translation && defined $translation){
-	 $translation->version(1);
-	 $translation_changed=1;
-	 return 1;
-  }
-  if (! defined $translation && defined $db_translation){
-	 $translation_changed=1;
-	 return 1;
-  }
-  if (defined $db_translation && defined $translation){
-	 my $db_version=$db_translation->version;
-
-	 if ($db_translation->stable_id ne $translation->stable_id) {
-		#Remember to uncomment this after loading and remove the line/s after
-		#	throw('translation stable_ids of the same two transcripts are different\n');
-		my $translation_adaptor=$self->db->get_TranslationAdaptor;
-		my $not_good_and_new_translation=$translation_adaptor->fetch_by_stable_id($translation->stable_id);
-		if (defined $not_good_and_new_translation){
-		  throw ("new translation stable_id for this transcript is already associated with someother gene's transcript");
-		}
-		$translation_changed=1;
-		$db_version=0;
-	 }
-	 else {
-		$translation_changed=compare($db_translation,$translation);
-	 }
-
-
-	 if ($translation_changed==1){
-		$translation->version($db_version+1);
-	 }
-	 else {
-		$translation->version($db_version);
-	 }
-  }
-  if (!defined $translation && !defined $db_translation){
-	 $translation_changed=0;
-	 return $translation_changed;
-  }
-  return $translation_changed;
-}
-
-
-sub exons_diff {
-  my ($self,$sida,$method_chooser,$exons,$shared)=@_;
-  my $exon_changed=0;
-  my $ea=$self->db->get_ExonAdaptor;
-  ##check if exon is new or old
-  foreach my $exon (@$exons){
-	 ##assign stable_id for new exon
-	 unless ($exon->stable_id) {
-		$exon->stable_id($sida->fetch_new_exon_stable_id);
-	 }
-	 my $db_exon;
-	 if ($method_chooser eq 'chr_gene_slice') {
-		$db_exon=$ea->get_current_Exon_by_slice($exon);
-	 }
-	 elsif ($method_chooser eq 'chr_whole_slice') {
-		$db_exon=$ea->fetch_by_stable_id($exon->stable_id);
-	 }
-	 if ( $db_exon){
-		my $db_version=$db_exon->version;
-      $exon_changed=compare($db_exon,$exon);
-		##if exon has changed then increment version
-		if ($exon_changed == 1){
-		  $db_exon->is_current(0);
-		  $ea->update($db_exon);
-		  $exon->version($db_version+1);
-		  $exon->is_current(1);
-		}
-		##if exon has not changed then use the same old db exon, saves db space by not creating exons with same version
-		else {
-		  $exon=$db_exon;
-		}
-	 }
-	 ##if exon is new
-	 else {
-		my $restored_exons=$ea->fetch_all_versions_by_stable_id($exon->stable_id);
-		if (@$restored_exons == 0){
-		  $exon->version(1);
-		  $exon->is_current(1);
-		}
-		##restored exon or a currently shared exon of the transcripts of the same gene 
-		##which has changed and hence deleted by a previous transcript
-		else {
-		  ##shared exon
-		  if (exists $shared->{$exon->stable_id}){
-			 $exon=$shared->{$exon->stable_id};
-		  }
-		  ##restored exon
-		  else {
-			 my $old_version=1;
-			 foreach my $e (@$restored_exons){
-				if ($e->version > $old_version){
-				  $old_version=$e->version;
-				}
-			 }
-			 $exon->version($old_version);
-			 $exon->is_current(1);
-			 ##check to see if the restored exon has changed
-			 my $old_exon;
-			 if ($method_chooser eq 'chr_gene_slice'){
-				$old_exon=$ea->get_deleted_Exon_by_slice($exon,$old_version);
-			 }
-			 elsif ($method_chooser eq 'chr_whole_slice') {
-				$old_exon=$ea->fetch_by_stable_id_version($exon->stable_id,$old_version);
-			 }
-			 $exon_changed=compare($old_exon,$exon);
-			 if ($exon_changed == 1){
-				$exon->version($old_version+1);
-			 }
-		  }
-		}
-	 }
-	 ##create a distinct list of all exons of all transcripts of the gene
-	 if (! exists $shared->{$exon->stable_id}){
-		$shared->{$exon->stable_id}=$exon;
-	 }
-  }
-  return ($exon_changed,$shared);
-}
-
 sub get_current_Gene_by_slice{
   my ($self, $gene) = @_;
   unless ($gene){
@@ -493,25 +172,28 @@ sub delete_gene {
   }
   $del_gene->is_current(0);
   $self->update($del_gene);
-
-
 }
 
 =head2 store
 
  Title   : store
- Usage   :
- Function:
+ Usage   : store a gene from the otter_lace client, where genes and its components are attached to a gene_slice or 
+         : store a gene directly from a script where the gene is attached to the whole chromosome slice. If method_chooser argument is
+         : not given then the default is for gene_slice and is for the otter_lace client. Otherwise the argument should be
+         : 'chr_whole_slice' for a direct whole chromosome loading.This helps to choose the right method to fetch the database components
+ Function: every gene is compared with the database gene on itself and all its components and versions allocated accordingly
+         : version is incremented only if there is a change otherwise not. Re-using of exons between version of gene and between 
+           transcripts of the same gene
  Example :
- Returns : 
- Args    :
+ Returns : 1 if succeeded
+ Args    : gene to be stored (mandatory), 
+         : method_chooser (optional), allowed values: 'chr_gene_slice' or 'chr_whole_slice', default value: 'chr_gene_slice'
 
 
 =cut
 
 sub store{
   my ($self,$gene,$method_chooser) = @_;
-
   unless ($gene) {
 	 throw("Must enter a Gene object to the store method");
   }
@@ -524,73 +206,33 @@ sub store{
   unless ($method_chooser) {
 	 $method_chooser='chr_gene_slice';
   }
-  ##checks for the gene object so that the gene object has all the right adaptors
-  ##like the slice adaptor, coord-system adaptor and its attribs are properly set for
-  ##storing it in the db
-  my $sa = $self->db->get_SliceAdaptor();
   my $slice = $gene->slice;
   unless ($slice) {
 	 throw "gene does not have a slice attached to it, cannot store gene\n";
   }
-  my $csa = $self->db->get_CoordSystemAdaptor();
-  my $slice_cs = $slice->coord_system;
-  unless ($slice_cs) {
+  unless ($slice->coord_system) {
 	 throw("Coord System not set in gene slice \n");
   }
-  my $coord_system_id=$slice->coord_system->dbID();
-
-##
-##cut
-##
-
-#COMMENT
-
-#  unless ( $coord_system_id){
-#	 my $db_cs;
-#	 eval{
-#		$db_cs = $csa->fetch_by_name($slice_cs->name,$slice_cs->version,$slice_cs->rank);
-#	 };
-#	 if($@){
-#		print STDERR "A coord_system matching the arguments does not exist in the coord_system".
-#		  "table, please ensure you have the right coord_system entry in the database:$@";
-#	 }
-#	 my $new_slice = $sa->fetch_by_name($slice->name);
-#	 unless($new_slice){
-#		throw "gene slice is not in the database\n";
-#	 }
-#	 $gene->slice($new_slice);
-#	 my $tref=$gene->get_all_Transcripts();
-#	 foreach my $tran (@$tref) {
-#		$tran->slice($new_slice);
-#		foreach my $exon (@{$tran->get_all_Exons}) {
-#		  $exon->slice($new_slice);
-#		}
-#	 }
-#  }
-
-#cut
-
-##
-##cut
-##
   unless ($gene->slice->adaptor){
+	 my $sa = $self->db->get_SliceAdaptor();
 	 $gene->slice->adaptor($sa);
   }
+  my $gene_changed="none-0";
 
-  my $gene_changed=0;
-
+  ##check for a transaction for every gene annotation that is stored
+  ##and start a savepoint, for having a checkpoint to rollback to if necessary
   if ($self->db->check_for_transaction != 0){
 	 throw "This is non-transactional , cannot proceed storing of gene\n";
   }
-
   $self->db->savepoint;
-
+  my $db_gene;
+  ##create Annotation Broker for comparing
+  my $broker=$self->db->get_AnnotationBroker();
 
   ##deleted gene
-  my $db_gene;
   if ($gene->is_current == 0) {
 	 $self->delete_gene($gene);
-	 $gene_changed = 5;
+	 $gene_changed = "deleted-5";
   }
   else {
 	 ##new gene - assign stable_id
@@ -598,36 +240,34 @@ sub store{
 	 unless ($gene->stable_id){
 		$sida->fetch_new_stable_ids_for_Gene($gene);
 	 }
-	 ##if gene is old compare to see if gene components have changed
-	 ##check if gene is new or old
-	 my $gene_slice=$gene->slice;
+	 ##fetch database gene by the right method
 	 if ($method_chooser eq 'chr_gene_slice'){
 		$db_gene=$self->get_current_Gene_by_slice($gene);
 	 }
 	 elsif ($method_chooser eq 'chr_whole_slice'){
 		$db_gene=$self->fetch_by_stable_id($gene->stable_id);
 	 }
-	 if ( $db_gene && $gene_changed != 5) {
-		$gene_changed=$self->check_for_change_in_gene_components($sida,$gene,$method_chooser);
+	 ##old gene
+	 if ( $db_gene && $gene_changed ne "deleted-5") {
+		$gene_changed=$broker->check_for_change_in_gene_components($sida,$gene,$method_chooser);
 		my $db_version=$db_gene->version;
-		if ($gene_changed == 0) {
+		if ($gene_changed eq "none-0") {
 		  $gene_changed=compare($db_gene,$gene);
 		}
 		$gene->is_current(1);
 		$db_gene->is_current(0);
 		$self->update($db_gene);
-		if ( $gene_changed == 1) {
+		if ( $gene_changed eq "changed-1") {
 		  $gene->version($db_version+1);
 		  ##add synonym if old gene name is not a current gene synonym
-		  $self->add_synonym($db_gene,$gene);
+		  $broker->compare_synonyms_add($db_gene,$gene);
 		}
 		else {
 		  $gene->version($db_version);
 		}
 	 }
-	 
 	 ##if gene is new /restored
-	 if (! $db_gene && $gene_changed != 5) {
+	 if ( !$db_gene && $gene_changed ne "deleted-5") {
 		my $restored_genes = $self->fetch_all_versions_by_stable_id($gene->stable_id);
 		##restored gene
 		if (@$restored_genes > 0){
@@ -640,8 +280,8 @@ sub store{
 		  ##check to see change in components
 		  $gene->version($old_version);
 		  $gene->is_current(1);
-		  $gene_changed=$self->check_for_change_in_gene_components($sida,$gene,$method_chooser);
-		  if ($gene_changed == 1)  {
+		  $gene_changed=$broker->check_for_change_in_gene_components($sida,$gene,$method_chooser);
+		  if ($gene_changed eq "changed-1")  {
 			 $gene->version($old_version+1);
 		  }
 		  else {
@@ -655,13 +295,13 @@ sub store{
 				$old_gene=$self->fetch_by_stable_id_version($gene->stable_id,$old_version);
 			 }
 			 $gene_changed=compare($old_gene,$gene);
-			 if ($gene_changed == 1){
+			 if ($gene_changed eq "changed-1"){
 				$gene->version($old_version+1);
 				##add synonym if old gene name is not a current gene synonym
-				$self->add_synonym($old_gene,$gene);
+				$broker->compare_synonyms_add($old_gene,$gene);
 			 }
 			 else {
-				$gene_changed=3;
+				$gene_changed="restored-with-no-change-3";
 			 }
 		  }
 		}
@@ -670,15 +310,25 @@ sub store{
 		  $gene->version(1);
 		  $gene->is_current(1);
 		  ##check if any of the gene components are old and if so have changed
-		  ($gene_changed)=$self->check_for_change_in_gene_components($sida,$gene,$method_chooser);
-		  $gene_changed=2;
-		  ##store gene and its components
-		  $self->SUPER::store($gene);
+		  ($gene_changed)=$broker->check_for_change_in_gene_components($sida,$gene,$method_chooser);
+		  $gene_changed="new-2";
+		  ##storing a new gene and its components
+		  #$self->SUPER::store($gene);
 		}
 	 }
   }
-  if ($gene_changed == 1 || $gene_changed == 3 || $gene_changed == 5) {
-	 if ($gene_changed == 5){
+
+  ##storing gene for the cases of
+  ## new gene     :new-2
+  ## changed-gene :changed-1
+  ## restored gene: restored-with-no-change-3
+  ## deleted gene : deleted-5
+
+  if ($gene_changed eq "new-2" || $gene_changed eq "changed-1" || $gene_changed eq "restored-with-no-change-3" || $gene_changed eq "deleted-5") {
+	 if ($gene_changed eq "deleted-5"){
+		##As with this current gene object we have already deleted the database gene, and as we want to store the author info
+		##for the deleted gene,a new record has to be inserted again with the current copy. dbid, adaptor is made undef, so a new record 
+		##can be inserted with the deleted author info
 		$gene->dbID(undef);
 		$gene->adaptor(undef);
 		my $tref=$gene->get_all_Transcripts();
@@ -693,7 +343,9 @@ sub store{
 	 }
 	 $self->SUPER::store($gene);
   }
-  if ($gene_changed==1 || $gene_changed==2 || $gene_changed == 3 || $gene_changed == 5){
+
+  ##Now that gene and its components have been stored, store the author,and evidence
+  if ($gene_changed eq "changed-1" || $gene_changed eq "new-2" || $gene_changed eq "restored-with-no-change-3" || $gene_changed eq "deleted-5"){
 	 ##get author_id and store gene_id-author_id in gene_author table
 	 my $aa = $self->db->get_AuthorAdaptor;
 	 my $gene_author=$gene->gene_author;
@@ -714,7 +366,10 @@ sub store{
 		$ta->store_Evidence($tran->dbID,$evidence_list);
 	 }
   }
-  if ($gene_changed == 1) {
+
+  ##Also don't forget to delete the deleted transcripts/exons if the status of gene is 'changed-1'
+  if ($gene_changed eq "changed-1") {
+	 ##need not worry for a restored-gene as the old copy is already in a deleted state
 	 if ($db_gene){
 		my $new_trs=$gene->get_all_Transcripts;
 		my $old_trs;
@@ -737,68 +392,25 @@ sub store{
 	 }
 	 #print STDERR "\nChanged gene:".$gene->stable_id." Current Version:".$gene->version." changes stored successfully in db\n";
   }
-  if ($gene_changed == 0) {
+
+  ##if after all the comparisons we see that gene and all its components have not changed then just rollback to the checkpoint, 
+  ##in case something has been updated during the comparisons.
+  if ($gene_changed eq "none-0") {
 	 $self->db->rollback_to_savepoint;
-#	 print STDERR "\nTrying to store an Unchanged gene:".$gene->stable_id." Version:".$gene->version." nothing written in db\n";
+	 #	 print STDERR "\nTrying to store an Unchanged gene:".$gene->stable_id." Version:".$gene->version." nothing written in db\n";
   }
-  if ($gene_changed == 2) {
-	# print STDERR "\nNew gene:".$gene->stable_id." Version:".$gene->version." stored successfully in db\n";
-  }
-  if ($gene_changed == 3) {
+
+  #if ($gene_changed eq "new-2") {
+  # print STDERR "\nNew gene:".$gene->stable_id." Version:".$gene->version." stored successfully in db\n";
+  #}
+  #if ($gene_changed == "restored-with-no-change-3") {
 	 #print STDERR "\nRestored gene:".$gene->stable_id." Version:".$gene->version." restored successfully in db\n";
-  }
-  if ($gene_changed == 5) {
+  #}
+  #if ($gene_changed == "deleted-5") {
 	 #print STDERR "\nDeleted gene:".$gene->stable_id." Version:".$gene->version." deleted successfully in db\n";
-  }
-
+  #}
+  return 1;
 }
-
-
-sub add_synonym{
-
-  my ($self,$db_obj,$obj)=@_;
-  my $db_obj_name=$db_obj->get_all_Attributes('name');
-  my $db_n;
-  if ($db_obj_name) {
-	 if (defined $db_obj_name->[0]){
-		$db_n=$db_obj_name->[0]->value;
-	 }
-  }
-  my $obj_name=$obj->get_all_Attributes('name');
-  my $n;
-  if ($obj_name) {
-	 if (defined $obj_name->[0]){
-		$n=$obj_name->[0]->value;
-	 }
-  }
-  my $synonyms = $obj->get_all_Attributes('synonym');
-  my %synonym;
-  if ($synonyms) {
-	 %synonym = map {$_->value, $_} @$synonyms;
-  }
-  if ( $db_n && $db_n ne $n) {
-	 if (!exists $synonym{$db_n}){
-		my $obj_attributes=[];
-		my $syn_attrib=$self->make_Attribute('synonym','Synonym','',$db_n);
-		push @$obj_attributes,$syn_attrib;
-		$obj->add_Attributes(@$obj_attributes);
-	 }
-  }
-
-}
-
-sub make_Attribute{
-  my ($self,$code,$name,$description,$value) = @_;
-  my $attrib = Bio::EnsEMBL::Attribute->new
-	 (
-	  -CODE => $code,
-	  -NAME => $name,
-	  -DESCRIPTION => $description,
-	  -VALUE => $value
-	 );
-  return $attrib;
-}
-
 
 1;
 __END__
