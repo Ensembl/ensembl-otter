@@ -200,6 +200,9 @@ sub main {
 
     $sth_gene_ids->execute();
     while( my ($gene_id, $stable_id, $version, $modified) = $sth_gene_ids->fetchrow()) {
+    
+        ### Ignore gene_ids in Chao-Kung's file
+    
         print STDERR "$gene_id\t$stable_id.$version\t$modified\t";
         my $gene = $gene_adaptor->fetch_by_dbID($gene_id);
         
