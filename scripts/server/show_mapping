@@ -3,7 +3,7 @@
 use strict;
 use Bio::Otter::ServerScriptSupport;
 
-my $server = Bio::Otter::ServerQuery->new('dataset',
+my $server = Bio::Otter::ServerScriptSupport->new('dataset',
     'csver');
 
 if(!$server->running_headcode()) {
