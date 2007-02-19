@@ -7,25 +7,25 @@ use Bio::Vega::Utils::Comparator qw(compare);
 
 use base qw ( Bio::EnsEMBL::DBSQL::BaseAdaptor);
 
-sub fetch_by_dbID {
-    my( $self, $id ) = @_;
+#sub fetch_by_dbID {
+#    my( $self, $id ) = @_;
 
-    unless ($id) {
-        throw("Id must be entered to fetch a ContigInfo object");
-    }
+#    unless ($id) {
+#        throw("Id must be entered to fetch a ContigInfo object");
+#    }
 
-    my $sth = $self->prepare(q{
-        SELECT contig_info_id
-          , seq_region_id
-          , author_id
-          , FROM_UNIXTIME(created_date)
-        FROM contig_info
-        WHERE contig_info_id = ?
-        });
-    $sth->execute($id);
+#    my $sth = $self->prepare(q{
+#        SELECT contig_info_id
+#          , seq_region_id
+#          , author_id
+#          , FROM_UNIXTIME(created_date)
+#        FROM contig_info
+#        WHERE contig_info_id = ?
+#        });
+#    $sth->execute($id);
 
-    return $self->_obj_from_sth($sth);
-}
+#    return $self->_obj_from_sth($sth);
+#}
 
 sub fetch_by_seq_region_id {
     my( $self, $id ) = @_;
@@ -52,13 +52,15 @@ return undef if($sth->rows() == 0);
 	 my $authad = $self->db->get_AuthorAdaptor; 
 	 my $author=$authad->fetch_by_dbID($author_id);
 	 my $aa=$self->db->get_AttributeAdaptor;
-	 my $ci=Bio::Vega::ContigInfo->new;
-	 $ci->dbID($contiginfo_id);
-	 my $attributes=$aa->fetch_all_by_ContigInfo($ci);
-	 return Bio::Vega::ContigInfo->new(-SLICE=>$slice,
+	 my $ci= Bio::Vega::ContigInfo->new(-dbID=>$contiginfo_id,
+												  -SLICE=>$slice,
 												  -AUTHOR=>$author,
-												  -ATTRIBUTES=>$attributes
 												  );
+	 
+	 my $attributes=$aa->fetch_all_by_ContigInfo($ci);
+	 $ci->add_Attributes($attributes);
+	 return $ci;
+
 }
 
 
