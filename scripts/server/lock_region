@@ -16,10 +16,10 @@ my $server = Bio::Otter::ServerQuery->new(
 
 my $cs      = $server->getarg('cs')       || 'chromosome';
 my $csver   = $server->getarg('csver')    || (($cs eq 'chromosome') ? 'Otter' : undef);
-my $name    = $server->requite_argument('name');
-my $type    = $server->requite_argument('type');
-my $start   = $server->requite_argument('start');
-my $end     = $server->requite_argument('end');
+my $name    = $server->require_argument('name');
+my $type    = $server->require_argument('type');
+my $start   = $server->require_argument('start');
+my $end     = $server->require_argument('end');
 my $strand  = $server->getarg('strand')   || undef;
 my $cl_host = $server->getarg('hostname') || $ENV{REMOTE_ADDR};
 
