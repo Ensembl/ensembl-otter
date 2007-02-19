@@ -221,7 +221,7 @@ if ($@) {
 }
 $outputstr ||= "No changes to annotations";
 $output_xml = $path_as_XML . $output_xml ;
-send_response($output_xml, 1);
+$server->send_response($output_xml, 1);
 
 } elsif ($odba->isa('Bio::Vega::DBSQL::DBAdaptor')) {
 
@@ -409,7 +409,7 @@ send_response($output_xml, 1);
 	 $odba->commit;
   }
   ##send the response
-  send_response($xmlstr);
+  $server->send_response($xmlstr);
 }
 else {
   $server->error_exit("Require an Otter DB Adaptor and not '$odba'");
