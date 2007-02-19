@@ -8,7 +8,7 @@ use Bio::Otter::Converter;
 use Bio::Vega::Transform::Otter;
 use Bio::Vega::Transform::XML;
 
-my $server = Bio::Otter::ServerQuery->new(
+my $server = Bio::Otter::ServerScriptSupport->new(
     'dataset',
     'cs', 'csver', 'name', 'type', 'start', 'end', 'strand',
     'author', 'email', 'hostname',
