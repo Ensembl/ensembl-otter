@@ -7,6 +7,7 @@ use strict;
 use 5.006_001;  # For qr support
 use Carp qw{ cluck confess };
 use Tk::Dialog;
+use Tk qw{ exit };
 use Symbol 'gensym';
 use Scalar::Util 'weaken';
 
@@ -1149,7 +1150,15 @@ sub resync_with_db {
     if ($self->show_zmap) {
         $self->zMapKillZmap;
     }
-    $self->AceDatabase->ace_server->restart_server;
+    eval {
+        $self->AceDatabase->ace_server->restart_server;
+    };
+    if ($@) {
+        my $time_to_die = 10;
+        $self->message("Failed to restart sgifaceserver. Will self-destruct in $time_to_die seconds:\n$@");
+        sleep $time_to_die;
+        kill TERM => -$$;
+    }
     
     $self->empty_Assembly_cache;
     $self->empty_SubSeq_cache;
