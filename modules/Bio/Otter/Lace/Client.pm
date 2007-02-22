@@ -169,20 +169,10 @@ sub client_hostname {
     return $client_hostname;
 }
 
-sub new_AceDatabase {
-    my( $self ) = @_;
-    
-    my $db = Bio::Otter::Lace::AceDatabase->new;
-    $db->Client($self);
-    my $home = $db->home;
-    my $i = ++$self->{'_last_db'};
-    $db->home("${home}_$i");
-    return $db;
-}
-sub ace_readonly_tag{
-    return Bio::Otter::Lace::AceDatabase::readonly_tag();
-}
-
+#
+# now used by scripts only;
+# please switch everywhere to using AceDatabase::region_coordinates()
+#
 sub chr_start_end_from_contig {
     my( $self, $ctg ) = @_;
     
@@ -231,24 +221,6 @@ sub password_prompt{
     }
     return $callback;
 }
-
-    # called by AceDatabase.pm:
-sub get_xml_for_contig_from_Dataset {
-    my( $self, $ctg, $dataset ) = @_;
-    
-    my ($chr_name, $start, $end) = $self->chr_start_end_from_contig($ctg);
-    my $ss = $dataset->selected_SequenceSet
-        or confess "no selected_SequenceSet attached to DataSet";
-    
-    if($self->debug()) {
-        warn sprintf("Fetching data from chr %s %s-%s\n", $chr_name, $start, $end);
-    }
-
-    return $self->get_xml_region_from_dsname_ssname_chr_start_end(
-        $dataset->name, $ss->name, $chr_name, $start, $end, $dataset->HEADCODE(),
-    );
-}
-
 
 # ---- HTTP protocol related routines:
 
@@ -652,11 +624,6 @@ sub push_sequence_note {
 sub _sequence_note_action {
     my( $self, $action, $dsname, $contig_name, $seq_note ) = @_;
 
-    my $aut_name  = $self->author(); # should be identical to the note's author
-    my $aut_email = $self->email();
-    my $timestamp = $seq_note->timestamp();
-    my $text      = $seq_note->text();
-
     my $ds = $self->get_DataSet_by_name($dsname);
 
     my $response = $self->general_http_dialog(
@@ -668,10 +635,10 @@ sub _sequence_note_action {
             'pipehead'  => $ds->HEADCODE(),
             'action'    => $action,
             'contig'    => $contig_name,
-            'author'    => $aut_name,
-            'email'     => $aut_email,
-            'timestamp' => $timestamp,
-            'text'      => $text,
+            'author'    => $self->author(), # should be identical to the note's author
+            'email'     => $self->email(),
+            'timestamp' => $seq_note->timestamp(),
+            'text'      => $seq_note->text(),
         },
         1,
     );
@@ -679,13 +646,11 @@ sub _sequence_note_action {
     # I guess we simply have to ignore the response
 }
 
-sub lock_region_for_contig_from_Dataset{
-    my( $self, $ctg, $dataset ) = @_;
+sub lock_region {
+    my($self, $dsname, $ssname, $chr_name, $chr_start, $chr_end ) = @_;
     
-    my ($chr_name, $start, $end) = $self->chr_start_end_from_contig($ctg);
-    my $ss = $dataset->selected_SequenceSet
-        or confess "no selected_SequenceSet attached to DataSet";
-    
+    my $ds = $self->get_DataSet_by_name($dsname);
+
     return $self->general_http_dialog(
         0,
         'GET',
@@ -694,18 +659,24 @@ sub lock_region_for_contig_from_Dataset{
             'author'   => $self->author,
             'email'    => $self->email,
             'hostname' => $self->client_hostname,
-            'dataset'  => $dataset->name,
-            'type'     => $ss->name,
-            'name'      => $chr_name,
-            'start'    => $start,
-            'end'      => $end,
-            'pipehead' => $dataset->HEADCODE(),
+            'dataset'  => $dsname,
+            'type'     => $ssname,
+            'name'     => $chr_name,
+            'start'    => $chr_start,
+            'end'      => $chr_end,
+            'pipehead' => $ds->HEADCODE(),
         }
     );
 }
 
-sub get_xml_region_from_dsname_ssname_chr_start_end {
-    my( $self, $dsname, $ssname, $chr_name, $chr_start, $chr_end, $otterhead ) = @_;
+sub get_xml_region {
+    my( $self, $dsname, $ssname, $chr_name, $chr_start, $chr_end ) = @_;
+
+    if($self->debug()) {
+        warn sprintf("Fetching data from chr %s %s-%s\n", $chr_name, $chr_start, $chr_end);
+    }
+
+    my $ds = $self->get_DataSet_by_name($dsname);
 
     my $xml = $self->general_http_dialog(
         0,
@@ -719,7 +690,7 @@ sub get_xml_region_from_dsname_ssname_chr_start_end {
             'name'     => $chr_name,
             'start'    => $chr_start,
             'end'      => $chr_end,
-            ($otterhead ? ( 'pipehead' => 1) : ('pipehead' => 0)),
+            'pipehead' => $ds->HEADCODE(),
         }
     );
 
