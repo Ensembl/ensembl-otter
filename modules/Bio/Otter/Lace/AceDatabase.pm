@@ -18,7 +18,6 @@ use Bio::Otter::Lace::Blast;
 use Bio::Otter::Lace::Slice; # a new kind of Slice that knows how to get pipeline data
 
 use Bio::EnsEMBL::Ace::DataFactory;
-use Bio::EnsEMBL::Ace::Otter_Filter::Gene::EnsEMBL;
 
 use Hum::Ace::LocalServer;
 use Hum::Ace::MethodCollection;
@@ -41,19 +40,31 @@ sub Client {
     return $self->{'_Client'};
 }
 
+sub write_access {
+    my( $self, $write_access ) = @_;
+
+    if(defined($write_access)) {
+        $self->{'_write_access'} = $write_access;
+    }
+    return $self->{'_write_access'};
+}
+
 sub home {
-    my( $self, $home ) = @_;
+    my( $self, $home, $write_flag ) = @_;
 
     if ($home) {
         $self->{'_home'} = $home;
-    }
-    elsif (! $self->{'_home'}) {
-        my $readonly_tag = $self->Client->write_access ? '' : $self->readonly_tag();
+    } elsif (! $self->{'_home'}) {
+        if(!defined($write_flag)) { # if it's defined, follow it, ignore the client
+            $write_flag = $self->Client->write_access();
+        }
+        my $readonly_tag = $write_flag ? '' : $self->readonly_tag();
         # warn "readonly_tag '$readonly_tag'\n";
         $self->{'_home'} = "/var/tmp/lace.${$}${readonly_tag}";
     }
     return $self->{'_home'};
 }
+
 sub readonly_tag{
     my ($self) = @_;
     return '.ro';
@@ -153,7 +164,6 @@ sub init_AceDatabase {
 
     $self->add_misc_acefile;
     $self->write_otter_acefile($ss);
-    $self->write_ensembl_data($ss);
     $self->write_pipeline_data($ss);
     $self->write_methods_acefile;
     $self->initialize_database;
@@ -198,68 +208,25 @@ sub write_local_blast {
 sub write_otter_acefile {
     my( $self, $ss ) = @_;
 
+    my $dsname   = $ss->dataset_name();
+    my $ssname   = $ss->name();
+    my $ctg_list = $ss->selected_CloneSequences_as_contig_list
+        or confess "No CloneSequences selected";
+
     my $dir = $self->home;
     my $otter_ace = "$dir/rawdata/otter.ace";
     my $fh = gensym();
     open $fh, "> $otter_ace" or die "Can't write to '$otter_ace'";
-    if ($ss) {
-        print $fh $self->fetch_otter_ace_for_SequenceSet($ss);
-    } else {
-        print $fh $self->fetch_otter_ace;
-    }
+    print $fh $self->ace_from_dsname_ssname_contig_list($dsname, $ssname, $ctg_list);
     close $fh or confess "Error writing to '$otter_ace' : $!";
     $self->add_acefile($otter_ace);
     $self->save_slice_dataset_hash;
 }
 
-sub fetch_otter_ace {
-    my( $self ) = @_;
-
-    my $client = $self->Client or confess "No otter Client attached";
-
-    my $ace = '';
-    my $selected_count = 0;
-    foreach my $dsObj ($client->get_all_DataSets) {
-	$dsObj->{'_Client'}=$self->Client;
-        my $ss_list = $dsObj->get_all_SequenceSets;
-        foreach my $ss (@$ss_list ) {
-            if (my $ctg_list = $ss->selected_CloneSequences_as_contig_list) {
-                $dsObj->selected_SequenceSet($ss);
-                $ace .= $self->ace_from_contig_list($ctg_list, $dsObj);
-                foreach my $ctg (@$ctg_list) {
-                    warn "$ctg\n";
-                    $selected_count += @$ctg;
-                }
-            }
-        }
-    }
-
-    if ($selected_count) {
-        return $ace;
-    } else {
-        return;
-    }
-}
-
-sub fetch_otter_ace_for_SequenceSet {
-    my( $self, $ss ) = @_;
-
-    my $client = $self->Client
-        or confess "No otter client attached";
-    my $dsObj = $client->get_DataSet_by_name($ss->dataset_name());
-    confess "Can't find DataSet that SequenceSet belongs to"
-        unless $dsObj;
-
-    $dsObj->selected_SequenceSet($ss);
-    my $ctg_list = $ss->selected_CloneSequences_as_contig_list
-        or confess "No CloneSequences selected";
-    return $self->ace_from_contig_list($ctg_list, $dsObj);
-}
-
 # this now just gets the ace via http/xml -> xml_to_otter -> otter_to_ace
 
-sub ace_from_contig_list {
-    my( $self, $ctg_list, $dsObj ) = @_;
+sub ace_from_dsname_ssname_contig_list {
+    my( $self, $dsname, $ssname, $ctg_list) = @_;
 
     my $client = $self->Client or confess "No otter Client attached";
     my $ace = '';
@@ -268,7 +235,9 @@ sub ace_from_contig_list {
         my $xml        = Bio::Otter::Lace::TempFile->new;
         $xml->name('lace.xml');
         my $write      = $xml->write_file_handle;
-        my $xml_string = $client->get_xml_for_contig_from_Dataset($ctg, $dsObj);
+
+        my($chr_name, $chr_start, $chr_end) = $self->region_coordinates($ctg);
+        my $xml_string = $client->get_xml_region($dsname, $ssname, $chr_name, $chr_start, $chr_end);
 
         print $write $xml_string ;
         # If we're here we now have all the locks!!!
@@ -283,10 +252,27 @@ sub ace_from_contig_list {
         # from so that we know where to save it back to.
         # this gets done in the write_lock_xml so only need to do it here
         # if we haven't got write access.
-#        $self->save_slice_dataset($slice->display_id, $dsObj->name) unless $write_access;
+#        $self->save_slice_dataset($slice->display_id, $dsname) unless $write_access;
     }
 
     return $ace;
+}
+
+sub try_and_lock_the_block {
+    my ($self, $ss) = @_;
+
+    my $client = $self->Client or confess "No otter Client attached";
+    my $dsname = $ss->dataset_name;
+    my $ssname = $ss->name;
+
+    my $ctg_list = $ss->selected_CloneSequences_as_contig_list()
+            or confess "No CloneSequences selected";
+    foreach my $ctg (@$ctg_list){
+        my ($chr_name, $chr_start, $chr_end) = $self->region_coordinates($ctg);
+
+        my $lock_xml = $client->lock_region($dsname, $ssname, $chr_name, $chr_start, $chr_end);
+        $self->write_lock_xml($lock_xml, $dsname);
+    }
 }
 
 sub write_lock_xml{
@@ -734,6 +720,14 @@ sub db_initialized {
     return $self->{'_db_initialized'};
 }
 
+sub region_coordinates {
+    my( $self, $ctg ) = @_;
+
+    my $chr_name  = $ctg->[0]->chromosome;
+    my $chr_start = $ctg->[0]->chr_start;
+    my $chr_end   = $ctg->[$#$ctg]->chr_end;
+    return($chr_name, $chr_start, $chr_end);
+}
 
 sub write_pipeline_data {
     my( $self, $ss, $ace_file ) = @_;
@@ -758,11 +752,11 @@ sub write_pipeline_data {
 
     # note: the next line returns a 2 dimensional array (not a one dimensional array)
     # each subarray contains a list of clones that are together on the golden path
-    my $sel = $ss->selected_CloneSequences_as_contig_list ;
-    foreach my $cs (@$sel) {
-        my( $chr_name, $chr_start, $chr_end ) = $client->chr_start_end_from_contig($cs);
+    my $sel = $ss->selected_CloneSequences_as_contig_list;
+    foreach my $ctg (@$sel) {
+        my( $chr_name, $chr_start, $chr_end ) = $self->region_coordinates($ctg);
 
-        my $smart_slice = Bio::Otter::Lace::Slice->new($client, $dsname, $ss->name(),
+        my $smart_slice = Bio::Otter::Lace::Slice->new($client, $dsname, $ssname,
             'chromosome', 'Otter', $chr_name, $chr_start, $chr_end);
 
         $factory->ace_data_from_slice($smart_slice);
@@ -859,293 +853,6 @@ sub make_otterpipe_DataFactory {
     return $factory;
 }
 
-
-
-
-#  creates a data factory and adds all the appropriate filters to
-#  it. It then produces a slice from the ensembl db (using the
-#  $dataset coords) and produces output based on that slice in
-#  ensembl.ace
-sub write_ensembl_data {
-    my ($self, $ss) = @_;
-
-    my $client          = $self->Client();
-    my $dsname          = $ss->dataset_name();
-    my $ensembl_sources = $client->option_from_array([ $dsname, 'ensembl_sources' ]);
-
-    # Analysis logic names are taken from a comma separated list in
-    while (my ($key, $ana_names) = each %$ensembl_sources) {
-        warn "Fetching genes from '$key' with analysis names ($ana_names)\n";
-        $self->write_ensembl_data_for_key($ss, $key, $ana_names)
-    }
-}
-
-sub make_ensembl_gene_DataFactory {
-    my ($self, $dsname, $ens_db, $metakey, $ana_names) = @_;
-
-    my @analysis_names = split /,/, $ana_names;
-
-    my $factory = Bio::EnsEMBL::Ace::DataFactory->new($self->Client, $dsname);
-    # Add a filter to the factory for each type of gene that we have
-    foreach my $ana_name (@analysis_names) {
-        my $ens_filter = Bio::EnsEMBL::Ace::Otter_Filter::Gene::EnsEMBL->new;
-        $ens_filter->metakey($metakey);
-        $ens_filter->pipehead(0); # temporarily we are linked to old schema ensembl genes
-        $ens_filter->url_string(
-'http\:\/\/www.ensembl.org\/Homo_sapiens\/contigview?highlight=%s&chr=%s&vc_start=%s&vc_end=%s'
-        );
-        $ens_filter->analysis_name($ana_name);
-        $ens_filter->dba($ens_db);
-        $factory->add_AceFilter($ens_filter);
-    }
-    return $factory;
-}
-
-sub write_ensembl_data_for_key {
-    my ($self, $ss, $key, $ana_names) = @_;
-
-    my $debug_flag = 1;
-
-    my $dsname = $ss->dataset_name();
-
-    my $dataset = $self->Client->get_DataSet_by_name($dsname);
-    $dataset->selected_SequenceSet($ss);    # Not necessary?
-    my $ens_db = Bio::Otter::Lace::SatelliteDB::get_DBAdaptor(
-        $dataset->get_cached_DBAdaptor, $key)
-      or return;
-
-    # Get a factory, or return (which happens when there are no analyses
-    # of the types listed in $ana_names).
-    my $factory = $self->{'_ensembl_gene_data_factory'}{$ana_names} ||=
-      $self->make_ensembl_gene_DataFactory($dsname, $ens_db, $key, $ana_names)
-      || return;
-
-    # create file for output and add it to the acedb object
-    my $ace_file = $self->home . "/rawdata/$key.ace";
-    my $fh       = gensym();
-    open $fh, "> $ace_file" or confess "Can't write to '$ace_file' : $!";
-    $factory->file_handle($fh);
-    $self->add_acefile($ace_file);
-
-    my $type = $ens_db->assembly_type;
-
-    my $slice_adaptor = $ens_db->get_SliceAdaptor();
-
-    my $sel = $ss->selected_CloneSequences_as_contig_list;
-
-    # unlike sanger (pipeline) databases, where data is clone based,
-    # in this case we need to deal with slice as a whole
-
-    # Slightly smarter than rejecting entire slice if anything
-    # different.  Is able to build a subslice if beginning or end
-    # is incorrect, but can't build multiple subslices (all kinds
-    # of duplicate partial gene problems could result in such
-    # cases).
-
-    # Since locally the agp could be correct, but globally wrong
-    # has to deal with clone order walking in the wrong direction
-
-    # Various patalogical cases are not dealt with optimally.  If
-    # A matches; B doesn't but C, D, E and F match, will make a
-    # subslice out of A.  Could be handelled, but would require a
-    # double pass.
-
-    foreach my $cs (@$sel) {
-
-        my $otter_slice_name;
-        {
-
-            # need to get name of slice in otter space (fetch from ensembl
-            # will be in a different coordinate space, but because of
-            # checks they are guarenteed to be equivalent)
-
-            my $first_ctg = $cs->[0];
-            my $last_ctg  = $cs->[$#$cs];
-
-            my $chr_name  = $first_ctg->chromosome;
-            my $chr_start = $first_ctg->chr_start;
-            my $chr_end   = $last_ctg->chr_end;
-            $otter_slice_name = "$chr_name.$chr_start-$chr_end";
-        }
-
-        # check if agp of this DB is in sync for the selected clones
-        # dump if in sync, else skip
-        my $off   = 0;
-        my $first = -1;
-        my $first_dir;
-        my $last;
-        my $last_edge;
-        my $slice_start;
-        my $slice_end;
-        my $fail;
-        my $chr_name;
-
-        for (my $i = 0 ; $i < @$cs ; $i++) {
-            my $ctg = $cs->[$i];
-
-            my $ens_ctg_set =
-              get_LaceCloneSequence_by_sv(
-                $ens_db, $ctg->accession, $ctg->sv, $type, $debug_flag);
-            my $pass = 0;
-
-            # should get only one match (present, but not unfinished)
-            if (scalar(@$ens_ctg_set) == 1) {
-                my $ens_ctg = $ens_ctg_set->[0];
-
-                # check if same part of contig is part of external agp
-                if (   $ens_ctg->contig_start == $ctg->contig_start
-                    && $ens_ctg->contig_end == $ctg->contig_end)
-                {
-                    print "DEBUG: same contig used\n" if $debug_flag;
-
-                    # if first clone, save; else check order is still ok
-                    if ($first > -1) {
-                        $fail = 1;
-
-                        # check sequential
-                        if ($i = $last + 1) {
-
-                            # check consistent direction
-                            my $this_dir = -1;
-                            if ($ens_ctg->contig_strand == $ctg->contig_strand)
-                            {
-                                $this_dir = 1;
-                            }
-                            if ($first_dir == $this_dir) {
-
-                                # check agp consecutive
-                                if (   $first_dir == 1
-                                    && $ens_ctg->chr_start == $last_edge + 1)
-                                {
-                                    $last      = $i;
-                                    $last_edge = $ens_ctg->chr_end;
-                                    $slice_end = $ens_ctg->chr_end;
-                                    $fail      = 0;
-                                }
-                                elsif ($first_dir == -1
-                                    && $ens_ctg->chr_end == $last_edge - 1)
-                                {
-
-                                    # -ve direction not handled...so
-                                    confess "ERR: should never get here!!";
-                                }
-                            }
-                        }
-                    }
-                    else {
-                        print "DEBUG: saved first $i\n" if $debug_flag;
-                        $first = $i;
-                        $last  = $i;
-                        $chr_name = $ens_ctg->chromosome;
-                        if ($ens_ctg->contig_strand == $ctg->contig_strand) {
-
-                            # same direction
-                            $last_edge   = $ens_ctg->chr_end;
-                            $slice_start = $ens_ctg->chr_start;
-                            $slice_end   = $ens_ctg->chr_end;
-                            $first_dir   = 1;
-                        }
-                        else {
-                            $last_edge   = $ens_ctg->chr_start;
-                            $slice_start = $ens_ctg->chr_end;
-                            $slice_end   = $ens_ctg->chr_start;
-                            $first_dir   = -1;
-
-                            # reverse direction
-
-                            # FIXME temporary:
-                            print "WARN: agp is in reverse direction";
-                            print " - not currently handled\n";
-                            $first = -1;
-
-                        }
-                    }
-                }
-            }
-	    else {
-	        print "ERROR: multiple ens matches to slice - skipped\n";
-	    }
-
-            # right now, if $first not set for $i=0 can't continue
-            if ($i == 0 && $first == -1) { $fail = 1; }
-
-	    # once started a slice with first, if fail then no point checking further
-            last if $fail;
-        }
-
-        # if something was saved
-        if ($first > -1) {
-            print "DEBUG: Fetching slice $first:$slice_start-$last:$slice_end\n" if $debug_flag;
-
-            my $slice = $slice_adaptor->fetch_by_chr_start_end($chr_name, $slice_start, $slice_end);
-            $slice->name($otter_slice_name);
-
-            $factory->ace_data_from_slice($slice);
-        }
-    }
-    close $fh;
-
-    # Disconnect Ensembl DBAdaptor
-    Bio::Otter::Lace::SatelliteDB::disconnect_DBAdaptor($ens_db);
-}
-
-
-# look for contigs for this sv
-sub get_LaceCloneSequence_by_sv {
-    my ($dba, $acc, $sv, $type, $debug_flag) = @_;
-
-    print "DEBUG: checking $acc,$sv,$type\n" if $debug_flag;
-
-    my $sth = $dba->prepare(q{
-        SELECT h.name
-          , a.chr_start
-          , a.chr_end
-          , a.contig_start
-          , a.contig_end
-          , a.contig_ori
-        FROM assembly a
-          , clone cl
-          , contig c
-          , chromosome h
-        WHERE cl.embl_acc= ?
-          AND cl.embl_version= ?
-          AND cl.clone_id=c.clone_id
-          AND c.contig_id=a.contig_id
-          AND a.chromosome_id = h.chromosome_id
-          AND a.type = ?
-        });
-    $sth->execute($acc, $sv, $type);
-
-    my ($chr_name, $chr_start, $chr_end,
-        $contig_start, $contig_end, $strand);
-    $sth->bind_columns(
-        \$chr_name, \$chr_start, \$chr_end,
-        \$contig_start, \$contig_end, \$strand);
-
-    my $cs = [];
-    while ($sth->fetch) {
-        my $cl = Bio::Otter::Lace::CloneSequence->new;
-
-        #$cl->accession($acc);
-        #$cl->sv($sv);
-        #$cl->length($ctg_length);
-
-        # $cl->chromosome($name_chr{$chr_name});
-        $cl->chromosome($chr_name);
-
-        $cl->chr_start($chr_start);
-        $cl->chr_end($chr_end);
-        $cl->contig_start($contig_start);
-        $cl->contig_end($contig_end);
-        $cl->contig_strand($strand);
-
-        #$cl->contig_name($ctg_name);
-        push(@$cs, $cl);
-        print "DEBUG: $chr_start-$chr_end; $contig_start-$contig_end\n"
-          if $debug_flag;
-    }
-    return $cs;
-}
 
 sub DESTROY {
     my( $self ) = @_;
