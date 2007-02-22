@@ -192,7 +192,7 @@ sub zMapInsertZmapConnector{
     if(!$zc){
         my $mb   = $self->menu_bar();
         my $zmap = ZMap::Connect->new( -server => 1 );
-        $zmap->init($mb, \&RECEIVE_FILTER, [ $self, qw( register_client edit ) ]);
+        $zmap->init($mb, \&RECEIVE_FILTER, [ $self, qw( register_client edit single_select multiple_select) ]);
         my $id = $zmap->server_window_id();
         $zc = $self->{'_zMap_ZMAP_CONNECTOR'} = $zmap;
     }
@@ -544,6 +544,18 @@ sub zMapEdit{
     }
 }
 
+sub zMapHighlight{
+    my ($self, $xml_hash) = @_;
+
+    # Needs to do something interesting to find the object to highlight.
+    if ($xml_hash->{"action"} eq 'single_select') {
+
+    } elsif($xml_hash->{"action"} eq 'multiple_select') {
+
+    } else { confess "Not a 'select' action\n"; }
+
+    return (200, "");
+}
 
 #===========================================================
 
@@ -637,6 +649,8 @@ sub RECEIVE_FILTER {
     my $lookup = {
         register_client => 'zMapRegisterClient',
         edit            => 'zMapEdit',
+        single_select   => 'zMapHighlight',
+        multiple_select => 'zMapHighlight',
     };
 
     # @list could be dynamically created...
