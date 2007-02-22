@@ -383,7 +383,7 @@ sub XaceSeqChooser {
 sub write_access {
     my( $self ) = @_;
     
-    return $self->XaceSeqChooser->write_access;
+    return $self->XaceSeqChooser->AceDatabase->write_access;
 }
 
 sub DESTROY {
