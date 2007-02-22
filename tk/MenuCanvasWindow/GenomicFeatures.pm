@@ -126,18 +126,7 @@ sub get_overlapping_exon_otter_id_start_end {
     }
 }
 
-
-
 # ---------------[getters/setters]----------------
-
-sub write_access {
-    my( $self, $write_access ) = @_;
-
-    if (defined $write_access) {
-        $self->{_write_access} = $write_access;
-    }
-    return $self->{_write_access} || 0;
-}
 
 sub XaceSeqChooser{
     my ($self , $seq_chooser) = @_ ;
@@ -146,6 +135,12 @@ sub XaceSeqChooser{
         $self->{'_XaceSeqChooser'} = $seq_chooser;
     }
     return $self->{'_XaceSeqChooser'} ;
+}
+
+sub AceDatabase {
+    my $self = shift @_;
+
+    return $self->XaceSeqChooser->AceDatabase;
 }
 
 sub Assembly {
@@ -627,7 +622,7 @@ sub initialize {
         );
     }
 
-    if(! $self->write_access()) {
+    if(! $self->AceDatabase->write_access()) {
         $self->menu_bar()->Label(
             -text       => 'Read Only',
             -foreground => 'red',

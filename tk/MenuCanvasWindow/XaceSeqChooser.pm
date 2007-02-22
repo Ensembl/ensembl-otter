@@ -100,7 +100,10 @@ sub EviCollection {
 sub initialize {
     my( $self ) = @_;
     
-    unless ($self->write_access) {
+    # take GeneMethods from methods.ace file
+    $self->set_known_GeneMethods();
+    
+    unless ($self->AceDatabase->write_access) {
         $self->menu_bar()->Label(
             -text       => 'Read Only',
             -foreground => 'red',
@@ -114,15 +117,6 @@ sub initialize {
     $self->populate_clone_menu;
     $self->launch_xace;
     $self->top_window->raise;
-}
-
-sub write_access {
-    my( $self, $write_access ) = @_;
-    
-    if (defined $write_access) {
-        $self->{'_write_access'} = $write_access;
-    }
-    return $self->{'_write_access'} || 0;
 }
 
 sub menu_bar {
@@ -784,7 +778,6 @@ sub launch_GenomicFeatures {
             $gfs = MenuCanvasWindow::GenomicFeatures->new($gfw);
             $self->GenomicFeatures($gfs);
             $gfs->XaceSeqChooser($self);
-            $gfs->write_access($self->write_access());
             $gfs->initialize;
         }
     };
@@ -896,9 +889,9 @@ sub close_GenomicFeatures {
 sub exit_save_data {
     my( $self ) = @_;
 
-    my $ace = $self->AceDatabase;
-    unless ($self->write_access) {
-        $ace->error_flag(0);
+    my $adb = $self->AceDatabase;
+    unless ($adb->write_access) {
+        $adb->error_flag(0);
         $self->close_GenomicFeatures;
         $self->kill_xace;
         return 1;
@@ -929,7 +922,7 @@ sub exit_save_data {
 
     # Unsetting the error_flag means that AceDatabase
     # will remove its directory during DESTROY.
-    $ace->error_flag(0);
+    $adb->error_flag(0);
     
     return 1;
 }
@@ -957,7 +950,7 @@ sub save_data {
         eval{ $xr->save; };
     }
 
-    unless ($self->write_access) {
+    unless ($self->AceDatabase->write_access) {
         warn "Read only session - not saving\n";
         return 1;   # Can't save - but is OK
     }
