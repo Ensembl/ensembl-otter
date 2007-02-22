@@ -115,6 +115,12 @@ sub DataSetChooser {
     return $self->{'_DataSetChooser'};
 }
 
+sub LocalDatabaseFactory {
+    my $self = shift @_;
+
+    return $self->DataSetChooser->LocalDatabaseFactory();
+}
+
 sub draw {
     my( $self ) = @_;
     

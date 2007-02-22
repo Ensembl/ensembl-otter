@@ -49,6 +49,12 @@ sub SequenceSetChooser {
     return $self->{'_SequenceSetChooser'};
 }
 
+sub LocalDatabaseFactory {
+    my $self = shift @_;
+
+    return $self->SequenceSetChooser->LocalDatabaseFactory();
+}
+
 sub get_CloneSequence_list {
     my( $self , $force_update ) = @_;
     
@@ -60,11 +66,7 @@ sub get_CloneSequence_list {
         my $cl = $self->Client();
         my $ds = $self->SequenceSetChooser->DataSet;
 
-        if ($cl->can('get_all_CloneSequences_for_DataSet_SequenceSet')) {
-            $cl->get_all_CloneSequences_for_DataSet_SequenceSet($ds, $ss);
-        } else {
-            $cl->get_all_CloneSequences_for_SequenceSet($ss);
-        }
+        $cl->get_all_CloneSequences_for_DataSet_SequenceSet($ds, $ss);
         $cl->fetch_all_SequenceNotes_for_DataSet_SequenceSet($ds, $ss);
         $cl->status_refresh_for_DataSet_SequenceSet($ds, $ss);
         $cl->lock_refresh_for_DataSet_SequenceSet($ds, $ss); # do we need it?
@@ -671,32 +673,21 @@ sub _open_SequenceSet{
     my ($self , $ss , $title) = @_ ;
         
     my $cl = $self->Client;
-#    my $title = $self->selected_sequence_string($ss);
 
-    my $db = $cl->new_AceDatabase;
-    $db->error_flag(1);
-    $db->title($title);
-    $db->make_database_directory;
-
-    my $write_access = $cl->write_access();
+    my $write_access = $cl->write_access() && $ss->write_access;
+    my $adb = $self->LocalDatabaseFactory->new_AceDatabase($write_access);
+    $adb->error_flag(1);
+    $adb->title($title);
+    $adb->make_database_directory;
 
     if($write_access){
         # only lock the region if we have write access.
         eval{
-            my $dsObj = $cl->get_DataSet_by_name($ss->dataset_name);
-            confess "Can't find DataSet that SequenceSet belongs to"
-                unless $dsObj;
-            $dsObj->selected_SequenceSet($ss);
-            my $ctg_list = $ss->selected_CloneSequences_as_contig_list()
-                or confess "No CloneSequences selected";
-            foreach my $ctg(@$ctg_list){
-                my $lock_xml = $cl->lock_region_for_contig_from_Dataset($ctg, $dsObj);
-                $db->write_lock_xml($lock_xml, $dsObj->name);
-            }
+            $adb->try_and_lock_the_block($ss);
         };
         
         if($@){ 
-            $db->error_flag(0);
+            $adb->error_flag(0);
             if ($@ =~ /Clones locked/){
                 # if our error is because of locked clones, display these to the user
                 my $message = "Some of the clones you are trying to open are locked\n";
@@ -717,10 +708,10 @@ sub _open_SequenceSet{
     }
     # now initialise the database
     eval{
-        $db->init_AceDatabase($ss);
+        $adb->init_AceDatabase($ss);
     };
     if ($@) {
-        $db->error_flag(0);
+        $adb->error_flag(0);
         $self->exception_message($@, 'Error initialising database');
         return;
     }    
@@ -732,18 +723,19 @@ sub _open_SequenceSet{
 #        $ec = $self->make_EviCollection($ss);
 #    };
 #    if ($@) {
-#        $db->error_flag(0);
+#        $adb->error_flag(0);
 #        $self->exception_message($@, 'Error creating EviCollection for supporting evidence selection');
 #        return;
 #    }
 
     warn "Making XaceSeqChooser";
-    my $xc = $self->make_XaceSeqChooser($title);
-    $xc->SequenceNotes($self) ;
-    $xc->AceDatabase($db);
+    my $top = $self->canvas->Toplevel(
+        -title  => $title,
+    );
+    my $xc = MenuCanvasWindow::XaceSeqChooser->new($top);
+    $xc->SequenceNotes($self);
+    $xc->AceDatabase($adb);
 #    $xc->EviCollection($ec);
-    my $write_flag = $cl->write_access ? $ss->write_access : 0;
-    $xc->write_access($write_flag);  ### Can be part of interface in future
     $xc->initialize;
     $self->refresh_column(7) ; # 7 is the locks column
     
@@ -810,16 +802,6 @@ sub selected_sequence_string{
         }
     }
     return $string ;
-}
-
-sub make_XaceSeqChooser {
-    my( $self, $title ) = @_;
-    
-    my $top = $self->canvas->Toplevel(
-        -title  => $title,
-        );
-    my $xc = MenuCanvasWindow::XaceSeqChooser->new($top);
-    return $xc;
 }
 
 

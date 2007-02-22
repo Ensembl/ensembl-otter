@@ -7,7 +7,7 @@ use strict;
 use Carp;
 use base 'CanvasWindow';
 use CanvasWindow::SequenceSetChooser;
-use File::Path 'rmtree';
+use Bio::Otter::Lace::LocalDatabaseFactory;
 
 sub new {
     my( $pkg, @args ) = @_;
@@ -64,6 +64,14 @@ sub Client {
     return $self->{'_Client'};
 }
 
+sub LocalDatabaseFactory {
+    my $self = shift @_;
+
+    $self->{_ldf} ||= Bio::Otter::Lace::LocalDatabaseFactory->new($self->Client());
+
+    return $self->{_ldf};
+}
+
 sub select_dataset {
     my( $self ) = @_;
     
@@ -79,13 +87,12 @@ sub select_dataset {
 sub open_dataset {
     my( $self ) = @_;
     
-    return if $self->recover_old_sessions;
+    return if $self->recover_old_sessions_dialogue;
     
     my ($obj) = $self->list_selected;
     return unless $obj;
     
     my $canvas = $self->canvas;
-    my $this_top = $canvas->toplevel;
     $canvas->Busy;
     foreach my $tag ($canvas->gettags($obj)) {
         if ($tag =~ /^DataSet=(.+)/) {
@@ -95,13 +102,13 @@ sub open_dataset {
 
             my $pipe_name = Bio::Otter::Lace::Defaults::pipe_name();
             my $top = $canvas->Toplevel(-title => "DataSet $name [$pipe_name]");
-            my $sc = CanvasWindow::SequenceSetChooser->new($top);
+            my $ssc = CanvasWindow::SequenceSetChooser->new($top);
 
-            $sc->name($name);
-            $sc->Client($client);
-            $sc->DataSet($ds);
-            $sc->DataSetChooser($self);
-            $sc->draw;
+            $ssc->name($name);
+            $ssc->Client($client);
+            $ssc->DataSet($ds);
+            $ssc->DataSetChooser($self);
+            $ssc->draw;
             $canvas->toplevel->withdraw;
             $canvas->Unbusy;
             return 1;
@@ -140,42 +147,14 @@ sub draw {
     $self->fix_window_min_max_sizes;
 }
 
-sub recover_old_sessions {
+sub recover_old_sessions_dialogue {
     my( $self ) = @_;
     
-    my $existing_pid = $self->list_all_current_pid;
+    my $lace_sessions = $self->LocalDatabaseFactory->sessions_needing_recovery();
     
-    my $tmp_dir = '/var/tmp';
-    local *VAR_TMP;
-    opendir VAR_TMP, $tmp_dir or die "Cannot read '$tmp_dir' : $!";
-    my( @lace );
-    foreach (readdir VAR_TMP) {
-        if (/^lace\.(\d+)/) {
-            my $pid = $1;
-            next if $existing_pid->{$pid};
-            my $lace_dir = "$tmp_dir/$_";
-            # Skip if directory is not ours
-            my $owner = (stat($lace_dir))[4];
-            next unless $< == $owner;
-            push(@lace, $lace_dir);
-        }
-    }
-    closedir VAR_TMP or die "Error closing directory '$tmp_dir' : $!";
-    
-    for (my $i = 0; $i < @lace;) {
-        my $ace_wrm = "$lace[$i]/database/ACEDB.wrm";
-        if (-e $ace_wrm) {
-            $i++;
-        } else {
-            print STDERR "\nNo such file: '$ace_wrm'\nDeleting uninitialized database '$lace[$i]'\n";
-            rmtree($lace[$i]);
-            splice(@lace, $i, 1);
-        }
-    }
-    
-    if (@lace) {
+    if (@$lace_sessions) {
         my $text = "Recover these lace sessions?\n"
-            . join('', map "$_\n", @lace);
+            . join('', map "$_\n", @$lace_sessions);
         
         # Ask the user if changes should be saved
         my $dialog = $self->canvas->toplevel->Dialog(
@@ -192,7 +171,19 @@ sub recover_old_sessions {
         }
         elsif ($ans eq 'Yes') {
             eval{
-                $self->make_XaceSeqChooser_windows(@lace);
+                my $canvas = $self->canvas;
+
+                foreach my $dir (@$lace_sessions) {
+                    my $adb = $self->LocalDatabaseFactory->recover_session($dir);
+
+                    # Bring up GUI
+                    my $top = $canvas->Toplevel(
+                        -title  => $adb->title(),
+                    );
+                    my $xc = MenuCanvasWindow::XaceSeqChooser->new($top);
+                    $xc->AceDatabase($adb);
+                    $xc->initialize;
+                }
             };
             if ($@) {
                 $self->exception_message($@, 'Error recovering lace sessions');
@@ -203,97 +194,6 @@ sub recover_old_sessions {
         return 0;
     }
 }
-
-sub list_all_current_pid {
-    my( $self ) = @_;
-    
-    my $current = {};
-    
-    local *PID;
-
-    my $pipe = $^O =~ /solaris/i ? "ps -A |" : "ps ax |";
-    open PID, $pipe or die "Cannot open pipe '$pipe' : $!";
-    while (<PID>) {
-        my ($pid) = split;
-        next unless $pid =~ /^\d+$/;
-        $current->{$pid} = 1;
-    }
-    close PID or die "Error running '$pipe' : exit $?";
-    
-    return $current;
-}
-
-sub make_XaceSeqChooser_windows {
-    my( $self, @dirs ) = @_;
-    
-    my $canvas = $self->canvas;
-    my $cl     = $self->Client;
-    
-    my $i = 1;
-    
-    my $cl_write_setting = $cl->write_access();
-    my $readonly_tag     = $cl->ace_readonly_tag();
-    $readonly_tag        =~ s{(\W)}{\\$1}g;
-
-    foreach my $dir (@dirs) {
-
-        my $write = ($dir =~ /$readonly_tag/ ? 0 : 1);
-        # Has to be set before call to $cl->new_AceDatabase
-        # as that calls $db->home which sets the home using whatever
-        # $cl_write_setting is NOT the write status of the
-        # db being recovered!
-	    $cl->write_access($write);
-
-        ### Can recover title from wspec/displays.wrm
-        #my $title = "Recover $i";
-        my $db = $cl->new_AceDatabase;
-        $db->error_flag(1);
-
-	
-        my $home = $db->home;
-        rename($dir, $home) or die "Cannot move '$dir' to '$home' : $!";
-        
-        # warn "home directory $home";
-        
-        my $title = "Recover ". $self->add_title($db);
-        
-        $db->title($title);
-        
-        $db->recover_slice_dataset_hash;
-
-        # Bring up GUI
-        my $top = $canvas->Toplevel(
-            -title  => $title,
-            );
-        my $xc = MenuCanvasWindow::XaceSeqChooser->new($top);
-        $xc->AceDatabase($db);
-        $xc->write_access($write);
-        $xc->initialize;
-
-        $i++;
-    }
-    # restore client's original setting
-    $cl->write_access($cl_write_setting);
-}
-
-sub add_title{
-    my ($self , $db ) = @_ ;
-    
-    my $file =   $db->home . '/wspec/displays.wrm';
-    warn "opening file $file";
-    open ( DISPLAY , $file) || die "$!"   ;
-        
-    foreach my $line (<DISPLAY>){
-        #my ($name ) = ($line  =~ /_DDtMain -g TEXT_FIT -t "(.*)"/ ) ; 
-        my ($name ) = ($line  =~ /_DDtMain.*-t\s*"(.*)"/ ) ;
-        if ($name){
-            #warn   "\n\n'$name'\n\n";
-            return $name;
-        }    
-    }
-    warn "\n\nno name found in $file\n\n";
-}
-
 
 
 1;
