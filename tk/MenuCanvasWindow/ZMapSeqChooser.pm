@@ -467,8 +467,13 @@ sub zMapRegisterClient {
 
     $self->zMapEntryRef();
     
-    return (200, make_xml($h)) if $xr;
-
+    warn " *** zMapRegisterClient (1)..." if $ZMAP_DEBUG;
+    
+    # commented out as it was causing issue if zmap had crashed
+    # why this wasn't caught by SIGCHLD though I don't know.
+    #
+    # return (200, make_xml($h)) if $xr && ;
+    
     unless($p->{'client'}->{'xwid'} 
            && $p->{'client'}->{'request_atom'}
            && $p->{'client'}->{'response_atom'}){
@@ -478,7 +483,7 @@ sub zMapRegisterClient {
         return (403, $z->basic_error("Bad Request!"));
     }
 
-    warn "after first return zmapregisterclient..." if $ZMAP_DEBUG;
+    warn " *** zMapRegisterClient (2)..." if $ZMAP_DEBUG;
  
     xclient_with_name($mainWindowName, $p->{'client'}->{'xwid'}, "$self");
 
@@ -688,6 +693,8 @@ sub RECEIVE_FILTER {
 sub open_clones{
     my ($watch) = @_;
     my ($self)  = @{$watch->Args('-store')};
+
+    warn "Running open_clones ...\n" if $ZMAP_DEBUG;
 
     my ($chr, $st, $end) = split(/\.|\-/, $self->slice_name);
 
