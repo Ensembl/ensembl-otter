@@ -7,7 +7,10 @@ use Bio::Otter::Lace::Defaults;
 my $otter_dba; # it's much cheaper to have these globally visible
 my $gene_adaptor;
 my $slice_adaptor;
-
+my $red_hash;
+my $load_str;
+my $reduncount=0;
+my $loadcount=0;
 $|=1;
 
 my %assembly_nonmatch_version = (
@@ -168,16 +171,40 @@ sub gene_transformed_successfully {
 
 } # lexical environment for add_xml_gene
 
+sub create_red_list {
+  my $redfile=shift;
+  open (IN,"<$redfile") || die ("Could not open redundant file for reading :$redfile \n $!\n");
+  while(<IN>){
+	 if ($_ =~ /(\S+)/){
+		$red_hash->{$1}=1;
+	 }
+  }
+  close IN;
+}
 
+sub create_load_string {
+  my $loadfile=shift;
+  open (IN,"<$loadfile") || die ("Could not open load file for reading :$loadfile \n $!\n");
+  $load_str=0;
+  while(<IN>){
+	 if ($_ =~ /(\S+)/){
+		$load_str=$load_str.','.$1;
+	 }
+  }
+  close IN;
+}
 
 sub main {
 
     my $dataset_name    = 'human'; # 'test_human';      # 'mouse', ...
     my $skip_to         = 0;
+	 my ($redunfile,$loadfile);
 
     Bio::Otter::Lace::Defaults::do_getopt(
         'dataset=s'     => \$dataset_name,
         'skipto=s'      => \$skip_to,
+		  'redunfile=s'   => \$redunfile,
+		  'loadfile=s'    => \$loadfile,
 #        'set=s'         => \$set_name,
 #        'chr=s'         => \$chr_name,
     );
@@ -189,23 +216,48 @@ sub main {
     $otter_dba     = $ds->get_cached_DBAdaptor; # now it is global
     $gene_adaptor  = $otter_dba->get_GeneAdaptor();
     $slice_adaptor = $otter_dba->get_SliceAdaptor();
-
-    my $sth_gene_ids = $otter_dba->prepare(qq{
+	 
+	 #if redundant file is present create a hash of redundant dbids
+	 if ($redunfile) {
+		create_red_list($redunfile);
+	 }
+	 my $sth_gene_ids;
+	 if ($loadfile) {
+		create_load_string($loadfile);
+		$sth_gene_ids = $otter_dba->prepare(qq{
+        SELECT gene_id, stable_id, version, UNIX_TIMESTAMP(modified)
+        FROM gene_stable_id
+        WHERE gene_id IN (}.$load_str.qq{)
+        ORDER by gene_id ASC
+    });
+	 }
+	 else {
+		$sth_gene_ids = $otter_dba->prepare(qq{
         SELECT gene_id, stable_id, version, UNIX_TIMESTAMP(modified)
         FROM gene_stable_id
         WHERE gene_id > $skip_to
         ORDER by gene_id ASC
     });
+	 }
+	 
     #   LIMIT 1000
 
     $sth_gene_ids->execute();
+
     while( my ($gene_id, $stable_id, $version, $modified) = $sth_gene_ids->fetchrow()) {
-    
-        ### Ignore gene_ids in Chao-Kung's file
-    
+
+		### Ignore gene_ids in Chao-Kung's file(redundant file)
+
+		if ($redunfile && exists $red_hash->{$gene_id}){
+		  $reduncount++;
+		  # print STDERR "redundant - not loaded $gene_id\t$stable_id.$version\t$modified\n";
+		  next;
+		  
+		}
+		$loadcount++;
         print STDERR "$gene_id\t$stable_id.$version\t$modified\t";
+
         my $gene = $gene_adaptor->fetch_by_dbID($gene_id);
-        
         my $contig_id_set = {};
         for my $transcript (@{$gene->get_all_Transcripts()}) {
             for my $exon (@{$transcript->get_all_Exons()}) {
@@ -241,4 +293,8 @@ sub main {
 
 main();
 
+print STDERR "\nneglected $reduncount ids\n";
+print STDERR "\nloaded $loadcount ids\n";
 
+
+1;
