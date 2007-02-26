@@ -3,9 +3,19 @@ package Bio::Vega::AnnotationBroker;
 use strict;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::Vega::Utils::Comparator qw(compare);
+#use base 'Bio::Vega::DBSQL::GeneAdaptor';
 use base 'Bio::EnsEMBL::DBSQL::BaseAdaptor';
 
-sub update_deleted_transcripts {
+sub current_time {
+  my ($self,$time)=@_;
+  if (defined $time){
+	 $self->{current_time}=$time;
+  }
+  return $self->{current_time};
+}
+
+
+sub find_update_deleted_transcripts_status {
   my ($self,$new_trs,$old_trs)=@_;
   my %newhash = map { $_->stable_id => $_} @$new_trs;
   my %oldhash = map { $_->stable_id => $_} @$old_trs;
@@ -19,7 +29,7 @@ sub update_deleted_transcripts {
 
 }
 
-sub update_deleted_exons {
+sub find_update_deleted_exons_status {
   my ($self,$new_exons,$old_exons)=@_;
   my %newhash = map { $_->stable_id => $_} @$new_exons;
   my %oldhash = map { $_->stable_id => $_} @$old_exons;
@@ -48,6 +58,12 @@ sub translation_diff{
 	 unless ($translation->stable_id) {
 		$translation->stable_id($sida->fetch_new_translation_stable_id);
 		$translation->version(1);
+		unless($translation->created_date){
+		  $translation->created_date($self->current_time);
+		}
+		unless($translation->modified_date){
+		  $translation->modified_date($self->current_time);
+		}
 	 }
   }
   if (! defined $db_translation && defined $translation){
@@ -61,7 +77,7 @@ sub translation_diff{
   }
   if (defined $db_translation && defined $translation){
 	 my $db_version=$db_translation->version;
-
+	 $translation->created_date($db_translation->created_date);
 	 if ($db_translation->stable_id ne $translation->stable_id) {
 		#Remember to uncomment this after loading and remove the line/s after
 		#	throw('translation stable_ids of the same two transcripts are different\n');
@@ -77,6 +93,7 @@ sub translation_diff{
 		$translation_changed=compare($db_translation,$translation);
 	 }
 	 if ($translation_changed==1){
+		$translation_changed=1;
 		$translation->version($db_version+1);
 	 }
 	 else {
@@ -100,6 +117,7 @@ sub exons_diff {
 	 unless ($exon->stable_id) {
 		$exon->stable_id($sida->fetch_new_exon_stable_id);
 	 }
+
 	 my $db_exon;
 	 if ($method_chooser eq 'chr_gene_slice') {
 		$db_exon=$ea->get_current_Exon_by_slice($exon);
@@ -116,11 +134,19 @@ sub exons_diff {
 		  $ea->update($db_exon);
 		  $exon->version($db_version+1);
 		  $exon->is_current(1);
+		  unless ($exon->modified_date){
+			 $exon->modifed_date($self->current_time);
+		  }
+		  $exon->created_date($db_exon->created_date);
+
+
 		}
 		##if exon has not changed then use the same old db exon, saves db space by not creating exons with same version
 		else {
 		  $exon=$db_exon;
 		}
+
+
 	 }
 	 ##if exon is new
 	 else {
@@ -128,6 +154,13 @@ sub exons_diff {
 		if (@$restored_exons == 0){
 		  $exon->version(1);
 		  $exon->is_current(1);
+		  unless ($exon->modified_date){
+			 $exon->modifed_date($self->current_time);
+		  }
+		  unless ($exon->created_date){
+			 $exon->created_date($self->current_time);
+		  }
+
 		}
 		##restored exon or a currently shared exon of the transcripts of the same gene 
 		##which has changed and hence deleted by a previous transcript
@@ -153,6 +186,10 @@ sub exons_diff {
 			 }
 			 elsif ($method_chooser eq 'chr_whole_slice') {
 				$old_exon=$ea->fetch_by_stable_id_version($exon->stable_id,$old_version);
+			 }
+			 $exon->created_date($old_exon->created_date);
+			 unless ($exon->modified_date){
+				$exon->modified_date($self->current_time);
 			 }
 			 $exon_changed=compare($old_exon,$exon);
 			 if ($exon_changed == 1){
@@ -214,7 +251,8 @@ sub make_Attribute{
 
 sub check_for_change_in_gene_components {
   ## check if any of the gene component (transcript,exons,translation) has changed
-  my ($self,$sida,$gene,$method_chooser) = @_;
+  my ($self,$sida,$gene,$method_chooser,$time) = @_;
+  $self->current_time($time);
   my $transcripts=$gene->get_all_Transcripts;
   my $ta=$self->db->get_TranscriptAdaptor;
   my $tran_change_count=0;
@@ -248,7 +286,10 @@ sub check_for_change_in_gene_components {
 
 	 $tran->is_current(1);
 	 if ( $db_transcript){
-		
+		$tran->created_date($db_transcript->created_date);
+		unless ($tran->modified_date){
+		  $tran->modified_date($self->current_time);
+		}
 		$transcript_changed=compare($db_transcript,$tran);
 		my $db_version=$db_transcript->version;
 		if ($exon_changed==1 || $translation_changed==1 ) {
@@ -275,6 +316,12 @@ sub check_for_change_in_gene_components {
 		my $restored_transcripts=$ta->fetch_all_versions_by_stable_id($tran->stable_id);
 		if (@$restored_transcripts == 0){
 		  $tran->version(1);
+		  unless ($tran->modified_date){
+			 $tran->modified_date($self->current_time);
+		  }
+		  unless ($tran->created_date){
+			 $tran->created_date($self->current_time);
+		  }
 		}
 		##restored transcript
 		else {
@@ -292,6 +339,10 @@ sub check_for_change_in_gene_components {
 		  }
 		  elsif ($method_chooser eq 'chr_whole_slice'){
 			 $old_transcript=$ta->fetch_by_stable_id_version($tran->stable_id,$old_version);
+		  }
+		  $tran->created_date($old_transcript->created_date);
+		  unless ($tran->modified_date){
+			 $tran->modified_date($self->current_time);
 		  }
 		  my $old_translation=$old_transcript->translation;
 		  $translation_changed=$self->translation_diff($sida,$tran,$old_transcript);
