@@ -131,24 +131,17 @@ sub get_AnnotationBroker {
 
 sub begin_work {
   my $self = shift;
-
   $self->dbc->db_handle->{AutoCommit}=0;
   $self->dbc->do('BEGIN');
-  #$self->dbc->do('START TRANSACTION');
-  #$self->dbc->do('SET AUTOCOMMIT = 0');
-
-
 }
 
 sub commit {
   my $self = shift;
-#  $self->dbc->db_handle->do('COMMIT');
   $self->dbc->do('COMMIT');
 }
 
 sub rollback {
   my $self = shift;
-#  $self->dbc->db_handle->do('ROLLBACK');
   $self->dbc->do('ROLLBACK');
 }
 
@@ -158,7 +151,6 @@ sub rollback_to_savepoint {
   unless ($savepoint){
 	 $savepoint='x';
   }
-#  $self->dbc->db_handle->do('ROLLBACK TO SAVEPOINT '.$savepoint);
   $self->dbc->do('ROLLBACK TO SAVEPOINT '.$savepoint);
 }
 
@@ -167,7 +159,6 @@ sub savepoint {
   unless ($savepoint){
 	 $savepoint='x';
   }
-#  $self->dbc->db_handle->do('SAVEPOINT '.$savepoint);
   $self->dbc->do('SAVEPOINT '.$savepoint);
 }
 
