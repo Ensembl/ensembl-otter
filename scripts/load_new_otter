@@ -25,7 +25,7 @@ my $dbuser;
 my $dbpass;
 my $help;
 my $file;
-
+$|=1;
 &GetOptions(
 				'dbhost=s'   => \$dbhost,
 				'dbport=n'   => \$dbport,
@@ -41,11 +41,6 @@ if ($help || !defined ($dbhost) || !defined($dbport) || !defined($dbname) || !de
   exec('perldoc', $0);
 }
 
-##open mixed format input file
-$/="----------------------------------------\n";
-open (IN,"<$file") || throw ("Could not open file for reading :$file \n $!\n");
-#open (OUT,">>/nfs/team71/analysis/sp1/PROJECTS/LOADNEWOTTER/TESTOUT.log") || throw ("Could not open file for writing :/tmp/genes \n $!\n");
-#open (ERR,">>/nfs/team71/analysis/sp1/PROJECTS/LOADNEWOTTER/TESTERRORS.log") || throw ("Could not open error file for writing \n $! \n");
 ##create a db handle
 my $db = Bio::Vega::DBSQL::DBAdaptor->new(
 														-dbname => $dbname,
@@ -55,9 +50,15 @@ my $db = Bio::Vega::DBSQL::DBAdaptor->new(
 														-pass   => $dbpass,
 													  );
 
+
+
+###start working with the actual dump file
+
 my $dbid;
 my $ss_hash;
-#LABEL:
+##open mixed format input file
+$/="----------------------------------------\n";
+open (IN,"<$file") || throw ("Could not open file for reading :$file \n $!\n");
 while (<IN>){
   my $gene_xml=$_;
   eval{
@@ -65,10 +66,12 @@ while (<IN>){
 	 my $sa=$db->get_SliceAdaptor();
 	 my $gene_adaptor=$db->get_GeneAdaptor;
 	 chomp $gene_xml;
-	 if ($gene_xml=~/^\S+\s+(\S+)\s+(\S+)\s+(<locus>.*<\/locus>).*/ms){
+	 if ($gene_xml=~/^\S+\s+(\S+)\s+(\S+)\s+(\S+)\s+(<locus>.*<\/locus>).*/ms){
+		
 		my $ss=$1;
 		$dbid=$2;
-		$gene_xml=$3;
+		my $modified=$3;
+		$gene_xml=$4;
 		unless ($ss_hash->{$ss}){
 		  $ss_hash->{$ss}=$sa->fetch_by_region('chromosome',$ss,undef,undef,undef,'Otter');
 		}
@@ -87,10 +90,25 @@ while (<IN>){
 		  throw ("parser has returned more than one gene or no gene , gene count is :$gene_count for geneid : $dbid");
 		}
 		$gene->is_current(1);
+		$gene->created_date($modified);
+		$gene->modified_date($modified);
+		my $transcripts=$gene->get_all_Transcripts;
+		foreach my $tran(@$transcripts){
+		  $tran->created_date($modified);
+		  $tran->modified_date($modified);
+		  if ($tran->translation){
+			 $tran->translation->created_date($modified);
+			 $tran->translation->modified_date($modified);
+		  }
+		  foreach my $exon(@{$tran->get_all_Exons}){
+			 $exon->created_date($modified);
+			 $exon->modified_date($modified);
+		  }
+		}
 		$gene_adaptor->store($gene,'chr_whole_slice');
-		print STDOUT ("\nstored old gene $dbid as ".$gene->dbID. " in new db");
-		if ($gene->biotype =~ /^obsolete$/){
-		  $gene_adaptor->delete_gene($gene);
+		print STDOUT ("\nstored old gene $dbid as ".$gene->stable_id.".".$gene->version. " in new db");
+		if ($gene->biotype =~ /obsolete/){
+		  $gene_adaptor->update_deleted_gene_status($gene);
 		  print STDOUT ("\nThe above gene was deleted in new db");
 		}
 		$db->commit;
@@ -100,11 +118,10 @@ while (<IN>){
   if ($@) {
 	 $db->rollback;
 	 print STDERR ("\ngene $dbid did not get loaded due to \n" .$@);
-	 #next LABEL;
   }
 }
-close STDOUT;
+
 close IN;
-close STDERR;
+
 1;
 
