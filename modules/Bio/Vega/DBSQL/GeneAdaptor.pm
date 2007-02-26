@@ -23,6 +23,60 @@ sub fetch_by_stable_id  {
   return $gene;
 }
 
+sub fetch_by_name {
+  my ($self,$genename)=@_;
+  unless ($genename) {
+	 throw("Must enter a gene name to fetch a Gene");
+  }
+  my $genes=$self->fetch_by_attribute_code_value('name',$genename);
+  my $gene;
+  my $dbid;
+  if ($genes){
+	 my $stable_id;
+	 foreach my $g (@$genes){
+		if ($stable_id && $stable_id ne $g->stable_id){
+		  die "more than one gene has the same name\n";
+		}
+		$stable_id=$g->stable_id;
+		if ($dbid ){
+		  if ($g->dbID > $dbid){
+			 $dbid=$g->dbID;
+		  }
+		}
+		else {
+		  $dbid=$g->dbID;
+		}
+	 }
+  }
+  if ($dbid){
+	 print STDOUT "gene found\n";
+	 $gene=$self->fetch_by_dbID($dbid);
+	 $self->reincarnate_gene($gene);
+  }
+
+  return $gene;
+}
+
+sub fetch_by_attribute_code_value {
+  my ($self,$attrib_code,$attrib_value)=@_;
+  my $sth=$self->prepare("SELECT ga.gene_id ".
+								 "FROM attrib_type a , gene_attrib ga ".
+                         "WHERE ga.attrib_type_id = a.attrib_type_id and ".
+								 "a.code=? and ga.value =?");
+  $sth->execute($attrib_code,$attrib_value);
+  my @array = @{$sth->fetchall_arrayref()};
+  $sth->finish();
+  my @geneids = map {$_->[0]} @array;
+  
+  if ($#geneids > 0){
+	return $self->fetch_all_by_dbID_list(\@geneids);
+  }
+  else {
+	 return 0;
+  }
+
+}
+
 sub reincarnate_gene {
   my ($self,$gene)=@_;
   bless $gene, "Bio::Vega::Gene";
