@@ -8,6 +8,11 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::Vega::Utils::Comparator qw(compare);
 use Bio::Vega::AnnotationBroker;
 use base 'Bio::EnsEMBL::DBSQL::GeneAdaptor';
+use constant CHANGED => 1;
+use constant NEW => 2;
+use constant  UNCHANGED => 0;
+use constant  RESTORED => 3;
+use constant  DELETED => 5;
 
 sub fetch_by_stable_id  {
   my ($self, $stable_id) = @_;
@@ -156,7 +161,7 @@ sub get_current_Gene_by_slice{
   return $db_gene;
 }
 
-sub delete_gene {
+sub update_deleted_gene_status {
   my ($self,$del_gene)=@_;
   ##update deleted genes
   my $tref=$del_gene->get_all_Transcripts();
@@ -177,23 +182,31 @@ sub delete_gene {
 =head2 store
 
  Title   : store
- Usage   : store a gene from the otter_lace client, where genes and its components are attached to a gene_slice or 
-         : store a gene directly from a script where the gene is attached to the whole chromosome slice. If method_chooser argument is
-         : not given then the default is for gene_slice and is for the otter_lace client. Otherwise the argument should be
-         : 'chr_whole_slice' for a direct whole chromosome loading.This helps to choose the right method to fetch the database components
- Function: every gene is compared with the database gene on itself and all its components and versions allocated accordingly
-         : version is incremented only if there is a change otherwise not. Re-using of exons between version of gene and between 
-           transcripts of the same gene
+ Usage   : store a gene from the otter_lace client, where genes and its components are attached to a gene_slice or
+         : store a gene directly from a script where the gene is attached to the whole chromosome slice.
+         : If method_chooser argument is not given then the default is for gene_slice and is for the otter_lace client.
+         : Otherwise the argument should be 'chr_whole_slice' for a direct whole chromosome loading.
+         : This helps to choose the right method to fetch the database components
+ Function: Every gene is compared with the database gene on itself and all its components and versions allocated accordingly.
+         : Version is incremented only if there is a change otherwise not. Re-using of exons between version of gene and between
+         : transcripts of the same gene.
+         : stores a deleted gene
+         : stores a changed gene
+         : stores a restored gene
+         : stores a new gene
+         : does not store if gene is unchanged.
  Example :
  Returns : 1 if succeeded
- Args    : gene to be stored (mandatory), 
+ Args    : gene to be stored (mandatory)
          : method_chooser (optional), allowed values: 'chr_gene_slice' or 'chr_whole_slice', default value: 'chr_gene_slice'
 
 
 =cut
 
 sub store{
+  
   my ($self,$gene,$method_chooser) = @_;
+  my $time=time;
   unless ($gene) {
 	 throw("Must enter a Gene object to the store method");
   }
@@ -217,7 +230,7 @@ sub store{
 	 my $sa = $self->db->get_SliceAdaptor();
 	 $gene->slice->adaptor($sa);
   }
-  my $gene_changed="none-0";
+  my $gene_changed=UNCHANGED;
 
   ##check for a transaction for every gene annotation that is stored
   ##and start a savepoint, for having a checkpoint to rollback to if necessary
@@ -228,11 +241,10 @@ sub store{
   my $db_gene;
   ##create Annotation Broker for comparing
   my $broker=$self->db->get_AnnotationBroker();
-
   ##deleted gene
   if ($gene->is_current == 0) {
-	 $self->delete_gene($gene);
-	 $gene_changed = "deleted-5";
+	 $self->update_deleted_gene_status($gene);
+	 $gene_changed = DELETED;
   }
   else {
 	 ##new gene - assign stable_id
@@ -248,26 +260,32 @@ sub store{
 		$db_gene=$self->fetch_by_stable_id($gene->stable_id);
 	 }
 	 ##old gene
-	 if ( $db_gene && $gene_changed ne "deleted-5") {
-		$gene_changed=$broker->check_for_change_in_gene_components($sida,$gene,$method_chooser);
+	 if ( $db_gene && $gene_changed != DELETED) {
+		$gene_changed=$broker->check_for_change_in_gene_components($sida,$gene,$method_chooser,$time);
 		my $db_version=$db_gene->version;
-		if ($gene_changed eq "none-0") {
+		if ($gene_changed == UNCHANGED) {
 		  $gene_changed=compare($db_gene,$gene);
+
 		}
 		$gene->is_current(1);
 		$db_gene->is_current(0);
 		$self->update($db_gene);
-		if ( $gene_changed eq "changed-1") {
+		if ( $gene_changed == CHANGED) {
 		  $gene->version($db_version+1);
 		  ##add synonym if old gene name is not a current gene synonym
 		  $broker->compare_synonyms_add($db_gene,$gene);
+		  $gene->created_date($db_gene->created_date);
+		  unless ($gene->modified_date){
+			 $gene->modified_date($time);
+		  }
 		}
 		else {
 		  $gene->version($db_version);
 		}
+
 	 }
 	 ##if gene is new /restored
-	 if ( !$db_gene && $gene_changed ne "deleted-5") {
+	 if ( !$db_gene && $gene_changed != DELETED) {
 		my $restored_genes = $self->fetch_all_versions_by_stable_id($gene->stable_id);
 		##restored gene
 		if (@$restored_genes > 0){
@@ -277,31 +295,35 @@ sub store{
 				$old_version=$g->version;
 			 }
 		  }
+		  my $old_gene;
+		  if ($method_chooser eq 'chr_gene_slice'){
+			 $old_gene=$self->get_deleted_Gene_by_slice($gene,$old_version);
+		  }
+		  elsif ($method_chooser eq 'chr_whole_slice'){
+			 $old_gene=$self->fetch_by_stable_id_version($gene->stable_id,$old_version);
+		  }
+		  $gene->created_date($old_gene->created_date);
+		  unless($gene->modified_date){
+			 $gene->modified_date($time);
+		  }
 		  ##check to see change in components
 		  $gene->version($old_version);
 		  $gene->is_current(1);
 		  $gene_changed=$broker->check_for_change_in_gene_components($sida,$gene,$method_chooser);
-		  if ($gene_changed eq "changed-1")  {
+		  if ($gene_changed == CHANGED)  {
 			 $gene->version($old_version+1);
 		  }
 		  else {
 			 ##compare this gene with the highest version of the old genes
 			 ##if gene changed
-			 my $old_gene;
-			 if ($method_chooser eq 'chr_gene_slice'){
-				$old_gene=$self->get_deleted_Gene_by_slice($gene,$old_version);
-			 }
-			 elsif ($method_chooser eq 'chr_whole_slice'){
-				$old_gene=$self->fetch_by_stable_id_version($gene->stable_id,$old_version);
-			 }
 			 $gene_changed=compare($old_gene,$gene);
-			 if ($gene_changed eq "changed-1"){
+			 if ($gene_changed == CHANGED){
 				$gene->version($old_version+1);
 				##add synonym if old gene name is not a current gene synonym
 				$broker->compare_synonyms_add($old_gene,$gene);
 			 }
 			 else {
-				$gene_changed="restored-with-no-change-3";
+				$gene_changed=RESTORED;
 			 }
 		  }
 		}
@@ -311,7 +333,7 @@ sub store{
 		  $gene->is_current(1);
 		  ##check if any of the gene components are old and if so have changed
 		  ($gene_changed)=$broker->check_for_change_in_gene_components($sida,$gene,$method_chooser);
-		  $gene_changed="new-2";
+		  $gene_changed=NEW;
 		  ##storing a new gene and its components
 		  #$self->SUPER::store($gene);
 		}
@@ -324,28 +346,40 @@ sub store{
   ## restored gene: restored-with-no-change-3
   ## deleted gene : deleted-5
 
-  if ($gene_changed eq "new-2" || $gene_changed eq "changed-1" || $gene_changed eq "restored-with-no-change-3" || $gene_changed eq "deleted-5") {
-	 if ($gene_changed eq "deleted-5"){
+  if ($gene_changed == NEW || $gene_changed == CHANGED || $gene_changed == RESTORED || $gene_changed == DELETED) {
+	 if ($gene_changed == DELETED){
 		##As with this current gene object we have already deleted the database gene, and as we want to store the author info
 		##for the deleted gene,a new record has to be inserted again with the current copy. dbid, adaptor is made undef, so a new record 
 		##can be inserted with the deleted author info
 		$gene->dbID(undef);
 		$gene->adaptor(undef);
+		$gene->modified_date($time);
 		my $tref=$gene->get_all_Transcripts();
 		foreach my $tran (@$tref) {
 		  $tran->dbID(undef);
 		  $tran->adaptor(undef);
+		  $tran->modified_date($time);
 		  if ($tran->translation){
 			 $tran->translation->dbID(undef);
 			 $tran->translation->adaptor(undef);
+			 $tran->translation->modified_date($time);
 		  }
 		}
 	 }
+	 if ($gene_changed == NEW){
+		unless ($gene->created_date){
+		  $gene->created_date($time);
+		}
+		unless ($gene->modified_date){
+		  $gene->modified_date($time);
+		}
+	 }
+
 	 $self->SUPER::store($gene);
   }
 
   ##Now that gene and its components have been stored, store the author,and evidence
-  if ($gene_changed eq "changed-1" || $gene_changed eq "new-2" || $gene_changed eq "restored-with-no-change-3" || $gene_changed eq "deleted-5"){
+  if ($gene_changed == CHANGED || $gene_changed == NEW || $gene_changed == RESTORED || $gene_changed == DELETED){
 	 ##get author_id and store gene_id-author_id in gene_author table
 	 my $aa = $self->db->get_AuthorAdaptor;
 	 my $gene_author=$gene->gene_author;
@@ -368,7 +402,7 @@ sub store{
   }
 
   ##Also don't forget to delete the deleted transcripts/exons if the status of gene is 'changed-1'
-  if ($gene_changed eq "changed-1") {
+  if ($gene_changed == CHANGED) {
 	 ##need not worry for a restored-gene as the old copy is already in a deleted state
 	 if ($db_gene){
 		my $new_trs=$gene->get_all_Transcripts;
@@ -378,7 +412,7 @@ sub store{
 		$old_trs=$db_gene->get_all_Transcripts;
 		$old_tr_count=@$old_trs;
 		if ($old_tr_count > $new_tr_count) {
-		  $self->update_deleted_transcripts($new_trs,$old_trs);
+		  $broker->find_update_deleted_transcripts_status($new_trs,$old_trs);
 		}
 		my $new_exons=$gene->get_all_Exons;
 		my $old_exons;
@@ -387,7 +421,7 @@ sub store{
 		$old_exons=$db_gene->get_all_Exons;
 		$old_exon_count=@$old_exons;
 		if ($old_exon_count > $new_exon_count) {
-		  $self->update_deleted_exons($new_exons,$old_exons);
+		  $broker->find_update_deleted_exons_status($new_exons,$old_exons);
 		}
 	 }
 	 #print STDERR "\nChanged gene:".$gene->stable_id." Current Version:".$gene->version." changes stored successfully in db\n";
@@ -395,7 +429,7 @@ sub store{
 
   ##if after all the comparisons we see that gene and all its components have not changed then just rollback to the checkpoint, 
   ##in case something has been updated during the comparisons.
-  if ($gene_changed eq "none-0") {
+  if ($gene_changed == UNCHANGED) {
 	 $self->db->rollback_to_savepoint;
 	 #	 print STDERR "\nTrying to store an Unchanged gene:".$gene->stable_id." Version:".$gene->version." nothing written in db\n";
   }
