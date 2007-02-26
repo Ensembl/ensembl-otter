@@ -51,13 +51,13 @@ use Data::Dumper;
 
   my $parser = Bio::Vega::Transform::Otter->new;
   $parser->parsefile($xmlfile);
- my $genes=$parser->get_Genes;
+  my $genes=$parser->get_Genes;
   my $writer=Bio::Vega::Transform::XML->new;
- # foreach my $gene (@$genes){
-	 print STDOUT $writer->getxml('gene',$genes);
+  # foreach my $gene (@$genes){
+  print STDOUT $writer->getxml('gene',$genes);
   #}
- # my $features=$parser->get_SimpleFeatures;
-#	 print STDOUT $writer->getxml('feature',$features);
+  # my $features=$parser->get_SimpleFeatures;
+  # print STDOUT $writer->getxml('feature',$features);
 
 warn "\nParser now out of scope\n";
 }
