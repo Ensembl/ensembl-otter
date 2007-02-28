@@ -28,6 +28,7 @@ sub fetch_by_name {
   unless ($genename) {
 	 throw("Must enter a gene name to fetch a Gene");
   }
+
   my $genes=$self->fetch_by_attribute_code_value('name',$genename);
   my $gene;
   my $dbid;
@@ -65,16 +66,78 @@ sub fetch_by_attribute_code_value {
 								 "a.code=? and ga.value =?");
   $sth->execute($attrib_code,$attrib_value);
   my @array = @{$sth->fetchall_arrayref()};
+
   $sth->finish();
   my @geneids = map {$_->[0]} @array;
-  
+
   if ($#geneids > 0){
+
 	return $self->fetch_all_by_dbID_list(\@geneids);
   }
   else {
 	 return 0;
   }
+}
 
+sub fetch_stable_id_by_name {
+
+  # can search either genename or transname by name or synonym
+  # returns a reference to a list of gene stable ids if successful
+  # $mode is either 'gene' or 'transcript' which corresponds to genename or transname
+  # search uses LIKE command
+
+  my ($self, $name, $mode) = @_;
+
+  unless ($name) {
+	 throw("Must enter a gene name to fetch a Gene");
+  }
+
+  my $mode_attrib;
+  ($mode eq 'gene') ? ($mode_attrib = 'gene_attrib') : ($mode_attrib = 'transcript_attrib');
+
+  my ($attrib_code,$attrib_value, $gsids, $join);
+
+  foreach ( qw(name synonym) ){
+	$attrib_code = $_;
+	$attrib_value = $name;
+
+	if ( $mode eq 'gene' ){
+	  $attrib_value =~ s/-\d+$//;
+	  $join = "m.gene_id = ma.gene_id";
+	}
+	else {
+	  $attrib_value =~ /(.*)-\d+.*/; # eg, ABO-001
+	  $attrib_value =~ /(.*\.\d+).*/;  # want sth. like RP11-195F19.20, trim away eg, -001, -002-2-2
+	  $attrib_value = $1;
+	  $join = "m.transcript_id = ma.transcript_id";
+	}
+
+	my $sth=$self->prepare(qq{
+							  SELECT distinct gsi.stable_id, ma.value
+							  FROM gene_stable_id gsi, $mode m, attrib_type a , $mode_attrib ma
+							  WHERE gsi.gene_id=m.gene_id
+							  AND $join
+							  AND ma.attrib_type_id = a.attrib_type_id
+							  AND a.code=? 
+							  AND ma.value LIKE ?
+							 }
+						  );
+warn"$attrib_value%";
+	$sth->execute($attrib_code, "$attrib_value%");
+
+	while (my ($gsid, $value) = $sth->fetchrow ){
+	  # exclude eg, SET7 SETX where search is 'SET%' (ie, allow SET-2)
+	  if ( $value eq $attrib_value or $value =~ /$attrib_value-\d+/ ){
+		push(@$gsids, $gsid);
+	  }
+	}
+	$sth->finish();
+
+	# return if search by 'name' succeeds, else search by 'synonym'
+	if ( $gsids ){
+	  return $gsids;
+	}
+  }
 }
 
 sub reincarnate_gene {
@@ -186,6 +249,40 @@ sub fetch_by_stable_id_version  {
   my ($gene) = @{ $self->generic_fetch($constraint) };
   $self->reincarnate_gene($gene);
   return $gene;
+}
+
+sub fetch_by_transcript_stable_id_constraint {
+
+  # Ensembl has fetch_by_transcript_stable_id
+  # but this is restricted to is_current == 1
+
+  # here, is_current is not restricted to 1
+  # use for tracking gene history
+  # returns a reference to a list of vega gene objects
+
+    my ($self, $trans_stable_id) = @_;
+
+    my $sth = $self->prepare(qq(
+        SELECT  tr.gene_id
+		FROM	transcript tr, transcript_stable_id tcl
+        WHERE   tcl.stable_id = ?
+        AND     tr.transcript_id = tcl.transcript_id
+    ));
+
+    $sth->execute($trans_stable_id);
+
+	my ($genes, $seen_genes);
+
+	# a transcript may be pointed to > 1 gene stable_ids
+	while ( my $geneid = $sth->fetchrow ){
+	  throw("No gene id found: invalid gene stable id") unless $geneid;
+	  my $gene = $self->fetch_by_dbID($geneid);
+	  my $gsid = $gene->stable_id;
+	  $seen_genes->{$gsid}++;
+	  push(@$genes, $self->reincarnate_gene($gene)) if $seen_genes->{$gsid} == 1;
+	}
+	
+    return $genes;
 }
 
 sub fetch_gene_author {
