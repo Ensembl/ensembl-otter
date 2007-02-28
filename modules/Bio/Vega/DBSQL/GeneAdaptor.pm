@@ -122,7 +122,7 @@ sub fetch_stable_id_by_name {
 							  AND ma.value LIKE ?
 							 }
 						  );
-warn"$attrib_value%";
+
 	$sth->execute($attrib_code, "$attrib_value%");
 
 	while (my ($gsid, $value) = $sth->fetchrow ){
