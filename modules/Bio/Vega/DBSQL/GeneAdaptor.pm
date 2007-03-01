@@ -28,7 +28,6 @@ sub fetch_by_name {
   unless ($genename) {
 	 throw("Must enter a gene name to fetch a Gene");
   }
-
   my $genes=$self->fetch_by_attribute_code_value('name',$genename);
   my $gene;
   my $dbid;
@@ -66,19 +65,17 @@ sub fetch_by_attribute_code_value {
 								 "a.code=? and ga.value =?");
   $sth->execute($attrib_code,$attrib_value);
   my @array = @{$sth->fetchall_arrayref()};
-
   $sth->finish();
   my @geneids = map {$_->[0]} @array;
-
+  
   if ($#geneids > 0){
-
 	return $self->fetch_all_by_dbID_list(\@geneids);
   }
   else {
 	 return 0;
   }
-}
 
+}
 sub fetch_stable_id_by_name {
 
   # can search either genename or transname by name or synonym
@@ -250,7 +247,6 @@ sub fetch_by_stable_id_version  {
   $self->reincarnate_gene($gene);
   return $gene;
 }
-
 sub fetch_by_transcript_stable_id_constraint {
 
   # Ensembl has fetch_by_transcript_stable_id
@@ -575,25 +571,25 @@ sub store{
 		  $broker->find_update_deleted_exons_status($new_exons,$old_exons);
 		}
 	 }
-	 #print STDERR "\nChanged gene:".$gene->stable_id." Current Version:".$gene->version." changes stored successfully in db\n";
+	 print STDERR "***WARNING***CHANGED gene:".$gene->stable_id.".".$gene->version."\n-------------------------------------------\n\n";
   }
 
   ##if after all the comparisons we see that gene and all its components have not changed then just rollback to the checkpoint, 
   ##in case something has been updated during the comparisons.
   if ($gene_changed == UNCHANGED) {
 	 $self->db->rollback_to_savepoint;
-	 #	 print STDERR "\nTrying to store an Unchanged gene:".$gene->stable_id." Version:".$gene->version." nothing written in db\n";
+	 print STDERR "***WARNING***UNCHANGED gene:".$gene->stable_id.".".$gene->version."\n-------------------------------------------\n\n";
   }
 
-  #if ($gene_changed eq "new-2") {
-  # print STDERR "\nNew gene:".$gene->stable_id." Version:".$gene->version." stored successfully in db\n";
-  #}
-  #if ($gene_changed == "restored-with-no-change-3") {
-	 #print STDERR "\nRestored gene:".$gene->stable_id." Version:".$gene->version." restored successfully in db\n";
-  #}
-  #if ($gene_changed == "deleted-5") {
-	 #print STDERR "\nDeleted gene:".$gene->stable_id." Version:".$gene->version." deleted successfully in db\n";
-  #}
+  if ($gene_changed == NEW) {
+	 print STDERR "***WARNING***NEW gene:".$gene->stable_id.".".$gene->version."\n-------------------------------------------\n\n";
+  }
+  if ($gene_changed == RESTORED) {
+	 print STDERR "***WARNING***RESTORED gene:".$gene->stable_id.".".$gene->version."\n-------------------------------------------\n\n";
+  }
+  if ($gene_changed == DELETED) {
+	 print STDERR "***WARNING***DELETED gene:".$gene->stable_id.".".$gene->version."\n-------------------------------------------\n\n";
+  }
   return 1;
 }
 
