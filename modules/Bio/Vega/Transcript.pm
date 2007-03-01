@@ -126,24 +126,24 @@ sub hashkey_sub {
   my $hashkey_sub={};
   if (defined $remarks) {
 	 foreach my $rem (@$remarks){
-		$hashkey_sub->{$rem->value}=1;
+		$hashkey_sub->{$rem->value}='remark';
 	 }
   }
   if (defined $hidden_remarks) {
 	 foreach my $rem (@$hidden_remarks){
-		$hashkey_sub->{$rem->value}=1;
+		$hashkey_sub->{$rem->value}='hidden_remark';
 	 }
   }
   if (defined $evidence) {
 	 foreach my $evi (@$evidence){
 		my $e=$evi->name.$evi->type;
-		$hashkey_sub->{$e}=1;
+		$hashkey_sub->{$e}='evidence';
 	 }
   }
   my $exons=$self->get_all_Exons;
 
   foreach my $exon (@$exons){
-	 $hashkey_sub->{$exon->stable_id}=1;
+	 $hashkey_sub->{$exon->stable_id}='exon_stable_id';
   }
   return $hashkey_sub;
 
@@ -172,6 +172,7 @@ sub hashkey {
   my $cds_end_NF = $self->get_all_Attributes('cds_end_NF') ;
   my $evidence= $self->get_Evidence;
   my $evidence_count=0;
+  
   ##should transcript_class_name be added??
   if (defined $evidence) {
 	 $evidence_count= scalar(@$evidence);
@@ -254,7 +255,7 @@ sub hashkey {
     throw('transcript name must be defined to generate correct hashkey.');
   }
 
-  my $hashkey_main="$slice_name-$start-$end-$strand-$biotype-$status-$exon_count-$tn-$msNF-$meNF-$csNF-$ceNF-$attrib_count-$description-$evidence_count";
+  my $hashkey_main="$slice_name-$start-$end-$strand-$biotype-$status-$exon_count-$tn-$msNF-$meNF-$csNF-$ceNF-$description-$evidence_count-$attrib_count";
 
   return ($hashkey_main);
 }
