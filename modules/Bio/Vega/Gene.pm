@@ -41,28 +41,30 @@ sub hashkey_sub {
   my $remarks = $self->get_all_Attributes('remark');
   if (defined $remarks) {
 	 foreach my $rem (@$remarks){
-		$hashkey_sub->{$rem->value}=1;
+		$hashkey_sub->{$rem->value}='remark';
 	 }
   }
   my $hidden_remarks = $self->get_all_Attributes('hidden_remark');
   if (defined $hidden_remarks) {
 	 foreach my $rem (@$hidden_remarks){
-		$hashkey_sub->{$rem->value}=1;
+		$hashkey_sub->{$rem->value}='hidden_remark';
 	 }
   }
   my $synonyms = $self->get_all_Attributes('synonym');
   if (defined $synonyms) {
 	 foreach my $syn (@$synonyms){
-		$hashkey_sub->{$syn->value}=1;
+		$hashkey_sub->{$syn->value}='synonym';
 	 }
   }
   my $trans=$self->get_all_Transcripts;
   foreach my $tran (@$trans){
-	 $hashkey_sub->{$tran->stable_id}=1;
+	 $hashkey_sub->{$tran->stable_id}='transcript-stable-id';
   }
   return $hashkey_sub;
 
 }
+
+
 
 sub hashkey {
 
@@ -129,7 +131,7 @@ sub hashkey {
     throw('gene name must be defined to generate correct hashkey.');
   }
 
-  my $hashkey_main="$slice_name-$start-$end-$strand-$biotype-$status-$source-$tran_count-$gn-$attrib_count-$description";
+  my $hashkey_main="$slice_name-$start-$end-$strand-$biotype-$status-$source-$gn-$description-$tran_count-$attrib_count";
 
   return ($hashkey_main);
 }

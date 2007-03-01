@@ -45,6 +45,16 @@ sub fetch_all_by_Slice  {
   }
   return $transcripts;
 }
+sub fetch_all_by_Gene  {
+  my ($self,$gene)  = @_;
+  my ($transcripts) = $self->SUPER::fetch_all_by_Gene($gene);
+  if ($transcripts){
+	 foreach my $transcript(@$transcripts){
+		$self->reincarnate_transcript($transcript);
+	 }
+  }
+  return $transcripts;
+}
 
 sub fetch_evidence {
   my ($self,$transcript)=@_;
