@@ -637,20 +637,17 @@ sub make_embl_ft {
 
         my $gene_id_list = $gene_aptr->list_current_dbIDs_for_Slice($slice);
         foreach my $gid (@$gene_id_list) {
-
             my $gene = $gene_aptr->fetch_by_dbID($gid);
             my $type = $gene->type;
-            
             # Don't dump deleted or non-Havana genes
             next if $type eq 'obsolete';
             next if $type =~ /^[A-Z]+:/;
-            
+
             $self->_do_Gene($gene, $set);
         }
 
         #PolyA signals and sites for the slice
         $self->_do_polyA($slice_contig, $set);
-       
         # assembly_tags on the slice
 	$self->_do_assembly_tag($slice_contig, $set);
     }
@@ -954,7 +951,6 @@ sub _do_Gene {
     #Bio::Otter::AnnotatedTranscript, isa Bio::EnsEMBL::Transcript
     #Transcript here give an mRNA, potentially + a CDS in EMBL record.
     foreach my $transcript (@{$gene->get_all_Transcripts}) {
-
         my $transcript_info = $transcript->transcript_info;
         my $locus_tag = $transcript->transcript_info->name
             or warn "No transcript_info->name for locus_tag\n";
@@ -963,17 +959,17 @@ sub _do_Gene {
             warn "Skipping non-Havana transcript '$locus_tag'\n";
             next;
         }
- 
+
         #Do the mRNA
         my $all_transcript_Exons = $transcript->get_all_Exons;
         if ($all_transcript_Exons) {
-            
+
             my $mRNA_exonlocation = Hum::EMBL::ExonLocation->new;
-            
+
             #This will only return true if one or more Exons are on the Slice.
             if ($self->_add_exons_to_exonlocation($mRNA_exonlocation
                 , $all_transcript_Exons)) {
-                    
+
                 my $ft = $set->newFeature;
                 if ($gene->type !~ /pseudo/i) {
                     $ft->key('mRNA');
@@ -983,10 +979,10 @@ sub _do_Gene {
                 $ft->location($mRNA_exonlocation);
                 $mRNA_exonlocation->start_not_found($transcript_info->mRNA_start_not_found);
                 $mRNA_exonlocation->end_not_found($transcript_info->mRNA_end_not_found);
-            
+
                 $self->_add_gene_qualifiers($gene, $ft);
                 $ft->addQualifierStrings('locus_tag', $locus_tag);
-                
+
                 if ($gene->type !~ /pseudo/i) {
                     $self->_supporting_evidence($transcript_info, $ft, 'EST', 'cDNA');
                 } else {
@@ -996,29 +992,30 @@ sub _do_Gene {
         } else {
             warn "No mRNA exons\n";
         }
-        
+
         #Do the CDS, if it has a translation
         if ($transcript->translation) {
 
             my $all_CDS_Exons = $transcript->get_all_translateable_Exons;
+
             if ($all_CDS_Exons) {
-            
                 my $CDS_exonlocation = Hum::EMBL::ExonLocation->new;
                 if ($self->_add_exons_to_exonlocation($CDS_exonlocation
                     , $all_CDS_Exons)) {
-            
+
                     my $ft = $set->newFeature;
                     $ft->key('CDS');
                     $ft->location($CDS_exonlocation);
                     if ($transcript_info->cds_start_not_found) {
                         $CDS_exonlocation->start_not_found(1);
-                        my $phase = $all_transcript_Exons->[0]->phase;
+
+                        my $phase = $all_CDS_Exons->[0]->phase;
                         my $embl_phase = $ens2embl_phase{$phase}
-                            or confess "Bad exon phase '$phase'";
+                          or confess "Bad exon phase '$phase'";
                         $ft->addQualifierStrings('codon_start', $embl_phase);
                     }
                     $CDS_exonlocation->end_not_found($transcript_info->cds_end_not_found);
-                    
+
                     $self->_add_gene_qualifiers($gene, $ft);
                     $self->_supporting_evidence($transcript_info, $ft, 'Protein');
                     $ft->addQualifierStrings('standard_name', $transcript->translation->stable_id);
