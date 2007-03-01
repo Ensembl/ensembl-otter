@@ -2,8 +2,18 @@
 
 =head1 DESCRIPTION
 
+get the history comparisons of all versions or particular versions of a gene of a particular stable_id
+if output is redirected to file the tab separated output can be opened in excel 
 
 =head1 OPTIONS
+
+can run like this 
+~/work/ensembl-otter/scripts/test_history_of_genes -dbhost otterpipe2 -dbport 3303 -dbpass wibble -dbuser ottadmin -dbname sp1_human_new_corrected   -stable 'OTTHUMG00000003732'
+
+or this
+~/work/ensembl-otter/scripts/test_history_of_genes -dbhost otterpipe2 -dbport 3303 -dbpass wibble -dbuser ottadmin -dbname sp1_human_new_corrected  -short -stable 'OTTHUMG00000003732'
+
+
 
 =cut
 
@@ -19,7 +29,11 @@ my $dbname;
 my $dbuser;
 my $dbpass;
 my $help;
+my $short;
+my $stable;
+
 $|=1;
+
 &GetOptions(
 				'dbhost=s'   => \$dbhost,
 				'dbport=n'   => \$dbport,
@@ -27,10 +41,12 @@ $|=1;
 				'dbuser=s'   => \$dbuser,
 				'dbpass=s'   => \$dbpass,
 				'h|help'     => \$help,
+				'stable=s'   => \$stable,
+				'short'      => \$short,
 			  ) or ($help = 1);
 
 
-if ($help || !defined ($dbhost) || !defined($dbport) || !defined($dbname) || !defined($dbuser) || !defined($dbpass) ) {
+if ($help || !defined ($dbhost) || !defined($dbport) || !defined($dbname) || !defined($dbuser) || !defined($dbpass) || !defined($stable) ) {
   exec('perldoc', $0);
 }
 
@@ -50,11 +66,12 @@ my $db = Bio::Vega::DBSQL::DBAdaptor->new(
 
 my $history;
 my $gene_adaptor=$db->get_GeneAdaptor;
-my $genes=$gene_adaptor->fetch_all_versions_by_stable_id('OTTHUMG00000003732');
+my $genes=$gene_adaptor->fetch_all_versions_by_stable_id($stable);
 foreach my $gene (@$genes){
   push @$history,$gene;
 }
-history($history);
+
+history($history,$short);
 
 
 
