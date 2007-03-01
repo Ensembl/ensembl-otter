@@ -292,9 +292,15 @@ sub main {
 } # main()
 
 main();
-
-print STDERR "\nneglected $reduncount ids\n";
-print STDERR "\nloaded $loadcount ids\n";
-
+print STDERR "\nLOG of the dump";
+print STDERR "\nneglected $reduncount redundant ids";
+print STDERR "\ndumped $loadcount ids to output file\n";
+undef $otter_dba;
+undef $gene_adaptor;
+undef $slice_adaptor;
+undef $red_hash;
+undef $load_str;
+undef $reduncount;
+undef $loadcount;
 
 1;
