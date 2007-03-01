@@ -10,7 +10,7 @@ our @EXPORT_OK = qw{ history };
 use Bio::EnsEMBL::Utils::Exception qw(throw);
 
 sub history{
-  my ($genes) = shift;
+  my ($genes,$short) = @_;
   my $c=0;
   my $printarray;
   my $stable_version;push @$stable_version,"stable_id.version";
@@ -117,9 +117,10 @@ sub history{
   while (my ($key, $ta) = each %{$alltxs}) {
 	 my $tsv;
 	 my $t_s_v_ref;push @$t_s_v_ref,"trans-stable-version";
+	 my $s_s_v_ref;push @$s_s_v_ref,"translation-stable-version";
 	 my $t_start_ref;push @$t_start_ref,"transcript_start";
 	 my $t_slice_name;push @$t_slice_name,"tran_slice_name";my $t_end;push @$t_end,"tran-end";my $t_strand;push @$t_strand,"tran-strand";my $t_biotype; push @$t_biotype,"tran-biotype";my $t_status;push @$t_status,"tran-status";my $t_exon_count; push @$t_exon_count,"tran-exon-count";my $t_desc;push @$t_desc,"tran-description";my $t_name;push @$t_name,"tran-name";my $t_att_count;push @$t_att_count,"tran-att-count";my $t_msnf;push @$t_msnf,"tran-msNF";my $t_menf;push @$t_menf,"tran-meNF";my $t_csnf;push @$t_csnf,"tran-csNF";my $t_cenf;push @$t_cenf,"tran-ceNF";my $t_evi_count;push @$t_evi_count,"tran_evi_count";my $t_remarks;push @$t_remarks,"tran-remarks";my $t_hidden_remarks;push @$t_hidden_remarks,"tran-hid-remarks";my $t_evidence;push @$t_evidence,"tran-evidence";
-
+	 
 	 for (my $i=0;$i<$gene_count;$i++){
 		if ($ta->[$i]){
 		  $tsv=$ta->[$i]->stable_id;
@@ -134,9 +135,9 @@ sub history{
 		  my $status     = $t->status;
 		  my $exons      = $t->get_all_Exons;
 		  my $exon_count = @$exons;
-			foreach my $ex (@$exons){
-				$exonsvstring=$exonsvstring.$ex->stable_id;
-			}
+		  foreach my $ex (@$exons){
+			 $exonsvstring=$exonsvstring.$ex->stable_id;
+		  }
 		  my $description = $t->description;
 		  my $attribs     = $t->get_all_Attributes;
 		  my $attrib_count = @$attribs ;
@@ -151,6 +152,11 @@ sub history{
 		  my $remarks;
 		  my $remstring="";
 		  my $hidden_remarks;
+		  my $translation=$t->translation;
+		  my $trans_sv_string="";
+		  if ($translation){
+			 $trans_sv_string=$trans_sv_string.$translation->stable_id.".".$translation->version;
+		  }
 		  if (defined $evidence) {
 			 $evidence_count= scalar(@$evidence);
 			 $evistring="";
@@ -215,10 +221,13 @@ sub history{
 		  push @$t_evidence,$evistring;
 		  push @$t_remarks,$remstring;
 		  push @$t_hidden_remarks,$hremstring;
+		  push @$s_s_v_ref,$trans_sv_string;
+
 
 		}
 		else {
 		  push @$t_s_v_ref ,"-";
+		  push @$s_s_v_ref,"-";
 		  push @$t_start_ref,"-";
 		  push @$t_slice_name,"-";
 		  push @$t_end,"";
@@ -242,21 +251,47 @@ sub history{
 	 if (exists $allexons->{$tsv}){
 		my $thisexons=$allexons->{$tsv};
 		while (my ($ekey, $exarray) = each %{$thisexons}) {
-		  my $trial; push @$trial,"exarray";
+		  my $trial; push @$trial,"exon-stable-version";
+		  my $exon_slice_name; push @$exon_slice_name,"exon-slice-name";
+		  my $exon_start; push @$exon_start,"exon-start";
+		  my $exon_end; push @$exon_end,"exon-end";
+		  my $exon_strand; push @$exon_strand,"exon-strand";
+		  my $exon_phase; push @$exon_phase,"exon-phase";
+		  my $exon_end_phase; push @$exon_end_phase,"exon-end-phase";
 		  for (my $k=0;$k<$gene_count;$k++){
 			 if ($exarray->[$k]){
 				my $trye=$exarray->[$k];
 				push @$trial,$trye->stable_id.".".$trye->version;
+				push @$exon_slice_name,$trye->slice->name;
+				push @$exon_start,$trye->start;
+				push @$exon_end,$trye->end;
+				push @$exon_strand,$trye->strand;
+				push @$exon_phase,$trye->phase;
+				push @$exon_end_phase,$trye->end_phase;
+				
 			 }
 			 else {
 				push @$trial,"-";
+				push @$exon_slice_name,"-";
+				push @$exon_start,"-";
+				push @$exon_end,"-";
+				push @$exon_strand,"-";
+				push @$exon_phase,"-";
+				push @$exon_end_phase,"-";
 			 }
 		  }
 		  push @$printarray,$trial;
-		  undef $trial;
+		  push @$printarray,$exon_slice_name;
+		  push @$printarray,$exon_start;
+		  push @$printarray,$exon_end;
+		  push @$printarray,$exon_strand;
+		  push @$printarray,$exon_phase;
+		  push @$printarray,$exon_end_phase;
+#		  undef $trial;
 		}
 	 }
 	 push @$printarray,$t_s_v_ref;
+	 push @$printarray,$s_s_v_ref;
 	 push @$printarray,$t_slice_name;
 	 push @$printarray,$t_start_ref;
 	 push @$printarray,$t_end;
@@ -272,9 +307,11 @@ sub history{
 	 push @$printarray,$t_csnf;
 	 push @$printarray,$t_cenf;
 	 push @$printarray,$t_evi_count;
-	 #push @$printarray,$t_evidence;
-	 #push @$printarray,$t_remarks;
-	 #push @$printarray,$t_hidden_remarks;
+	 unless ($short){
+		push @$printarray,$t_evidence;
+		push @$printarray,$t_remarks;
+		push @$printarray,$t_hidden_remarks;
+	 }
   }
 
 
@@ -313,10 +350,21 @@ sub history{
 		my $spacelen=$hash{$sc};
 		my $space=$spacelen-$len;
 		if ($x){
-		  print STDOUT $x.(' ' x $space)."\t";
+		  if ($short){
+			 print STDOUT $x.(' ' x $space)."|";
+		  }
+		  else {
+			 print STDOUT $x.(' ' x $space)."\t";
+		  }
 		}
 		else {
-		  print STDOUT (' ' x $space)."\t";
+		  if ($short){
+			 print STDOUT (' ' x $space)."|";
+		  }
+		  else {
+			 print STDOUT (' ' x $space)."\t";
+		  }
+
 		}
 		$sc++;
 	 }
