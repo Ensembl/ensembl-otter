@@ -56,6 +56,7 @@ my $db = Bio::Vega::DBSQL::DBAdaptor->new(
 
 my $dbid;
 my $ss_hash;
+
 ##open mixed format input file
 $/="----------------------------------------\n";
 open (IN,"<$file") || throw ("Could not open file for reading :$file \n $!\n");
@@ -106,10 +107,10 @@ while (<IN>){
 		  }
 		}
 		$gene_adaptor->store($gene,'chr_whole_slice');
-		print STDOUT ("\nstored old gene $dbid as ".$gene->stable_id.".".$gene->version. " in new db");
+		print STDOUT ("stored old gene dbid:$dbid as new gene dbid:".$gene->dbID." and the curent version is:".$gene->stable_id.".".$gene->version. "\n");
 		if ($gene->biotype =~ /obsolete/){
 		  $gene_adaptor->update_deleted_gene_status($gene);
-		  print STDOUT ("\nThe above gene was deleted in new db");
+		  print STDOUT ("The above gene ".$gene->dbID." was deleted in new db\n");
 		}
 		$db->commit;
 		$parser->DESTROY;
@@ -121,7 +122,12 @@ while (<IN>){
   }
 }
 
+
+
 close IN;
+
+
+
 
 1;
 
