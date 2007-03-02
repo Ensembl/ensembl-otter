@@ -948,6 +948,8 @@ my %ens2embl_phase = (
 sub _do_Gene {
     my ( $self, $gene, $set ) = @_;
 
+    my $gtype = $gene->type;
+
     #Bio::Otter::AnnotatedTranscript, isa Bio::EnsEMBL::Transcript
     #Transcript here give an mRNA, potentially + a CDS in EMBL record.
     foreach my $transcript (@{$gene->get_all_Transcripts}) {
@@ -971,7 +973,7 @@ sub _do_Gene {
                 , $all_transcript_Exons)) {
 
                 my $ft = $set->newFeature;
-                if ($gene->type !~ /pseudo/i) {
+                if ($gtype !~ /pseudo/i) {
                     $ft->key('mRNA');
                 } else {
                     $ft->key('CDS');
@@ -980,10 +982,11 @@ sub _do_Gene {
                 $mRNA_exonlocation->start_not_found($transcript_info->mRNA_start_not_found);
                 $mRNA_exonlocation->end_not_found($transcript_info->mRNA_end_not_found);
 
-                $self->_add_gene_qualifiers($gene, $ft);
+                $self->_add_gene_qualifiers($gene, $ft) if $gtype ne "Transposon";
                 $ft->addQualifierStrings('locus_tag', $locus_tag);
+                $ft->addQualifierStrings('mobile_element', $locus_tag) if $gtype eq "Transposon";
 
-                if ($gene->type !~ /pseudo/i) {
+                if ($gtype !~ /pseudo/i) {
                     $self->_supporting_evidence($transcript_info, $ft, 'EST', 'cDNA');
                 } else {
                     $self->_supporting_evidence($transcript_info, $ft, 'Protein');
@@ -992,6 +995,8 @@ sub _do_Gene {
         } else {
             warn "No mRNA exons\n";
         }
+
+        next if $gtype eq "Transposon";
 
         #Do the CDS, if it has a translation
         if ($transcript->translation) {
@@ -1003,7 +1008,7 @@ sub _do_Gene {
                 if ($self->_add_exons_to_exonlocation($CDS_exonlocation
                     , $all_CDS_Exons)) {
 
-                    my $ft = $set->newFeature;
+ warn                   my $ft = $set->newFeature;
                     $ft->key('CDS');
                     $ft->location($CDS_exonlocation);
                     if ($transcript_info->cds_start_not_found) {
