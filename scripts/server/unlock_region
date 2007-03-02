@@ -51,14 +51,11 @@ if ($odba->isa('Bio::Otter::DBSQL::DBAdaptor')) {
 
 } elsif ($odba->isa('Bio::Vega::DBSQL::DBAdaptor')) {
 
-  my $input_filename = $server->tempfile_from_argument('data')->full_name();
-  #
   # the original string lives here:
-  #     $xml_string = $server->require_argument('data');
-
+  my    $xml_string = $server->require_argument('data');
   eval{
 	 my $parser = Bio::Vega::Transform::Otter->new;
-	 $parser->parsefile($input_filename);
+	 $parser->parse($xml_string);
 	 my $cs='chromosome';
 	 my $chr_slice=$parser->get_ChromosomeSliceDB($odba);
 	 my $chrstart=$chr_slice->start;
