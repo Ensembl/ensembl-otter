@@ -972,7 +972,7 @@ sub save_data {
             $self->resync_with_db;
             
             ### Restarts even if not yet launched!
-            $self->zMapLaunchZmap if $self->show_zmap;
+            #$self->zMapLaunchZmap if $self->show_zmap;
         }
     };
     my $err = $@;
