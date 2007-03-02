@@ -963,11 +963,11 @@ sub save_data {
             # exit zmap
             $self->zMapKillZmap;
         }
-        my $ace_data = $self->AceDatabase->save_all_slices;
+        my $ace_data_ref = $self->AceDatabase->save_ace_to_otter;
         ## update_ace should be true unless this object is exiting
-        if($update_ace && ref($ace_data) eq 'SCALAR'){
+        if($update_ace && ref($ace_data_ref) eq 'SCALAR'){
             $self->launch_xace;
-            $self->update_ace_display($$ace_data);
+            $self->update_ace_display($$ace_data_ref);
             # resync here!
             $self->resync_with_db;
             
@@ -1240,10 +1240,10 @@ sub edit_new_subsequence {
         }
     }
     
-    my $slice = $self->Assembly;
+    my $assembly = $self->Assembly;
     my $region_name = $most_3prime
-        ? $slice->clone_name_overlapping($most_3prime)
-        : $slice->name;
+        ? $assembly->clone_name_overlapping($most_3prime)
+        : $assembly->name;
     #warn "Looking for clone overlapping '$most_3prime' in '$clone_name' found '$region_name'";
     
     # Trim sequence version from accession if clone_name ends .SV
@@ -1251,7 +1251,7 @@ sub edit_new_subsequence {
 
     my $regex = qr{^(?:[^:]+:)?$region_name\.(\d+)}; # qr is a Perl 5.6 feature
     my $max = 0;
-    foreach my $sub ($slice->get_all_SubSeqs) {
+    foreach my $sub ($assembly->get_all_SubSeqs) {
         my ($n) = $sub->name =~ /$regex/;
         if ($n and $n > $max) {
             $max = $n;
@@ -1289,7 +1289,7 @@ sub edit_new_subsequence {
     else {
         $new = Hum::Ace::SubSeq->new;
         $new->strand(1);
-        $new->clone_Sequence($slice->Sequence);
+        $new->clone_Sequence($assembly->Sequence);
         
         if (@ints > 1) {
             # Make exons from coordinates from clipboard
@@ -1327,7 +1327,7 @@ sub edit_new_subsequence {
     
     $new->GeneMethod($gm);
 
-    $slice->add_SubSeq($new);
+    $assembly->add_SubSeq($new);
 
     $self->add_SubSeq($new);
     $self->draw_subseq_list;
@@ -1665,7 +1665,7 @@ sub Assembly {
     my( $self ) = @_;
     
     my $canvas = $self->canvas;
-    my $name = $self->slice_name;
+    my $slice_name = $self->slice_name;
     my $ace  = $self->ace_handle;
     
     unless ($self->{'_assembly'}) {
@@ -1678,11 +1678,11 @@ sub Assembly {
         my( $assembly );
         eval {
             $assembly = Hum::Ace::Assembly->new;
-            $assembly->name($name);
+            $assembly->name($slice_name);
             $assembly->express_data_fetch($ace);
         };
         if ($@) {
-            $self->exception_message($@, "Can't fetch Assembly '$name'");
+            $self->exception_message($@, "Can't fetch Assembly '$slice_name'");
             return;
         }
 

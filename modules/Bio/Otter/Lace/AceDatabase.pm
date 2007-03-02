@@ -22,7 +22,6 @@ use Bio::EnsEMBL::Ace::DataFactory;
 use Hum::Ace::LocalServer;
 use Hum::Ace::MethodCollection;
 
-my $DATASET_HASH_FILE    = '.slice_dataset';
 my $LOCK_REGION_XML_FILE = '.lock_region.xml';
 
 sub new {
@@ -187,11 +186,11 @@ sub write_local_blast {
     my $blast = Bio::Otter::Lace::Blast->new;
     $blast->AceDatabase($self);
     $blast->initialise or return;
-    my $ace = $blast->run or return;
+    my $ace_text = $blast->run or return;
     my $dir = $self->home;
     my $blast_ace = "$dir/rawdata/local_blast_search.ace";
     open(my $fh, "> $blast_ace") or die "Can't write to '$blast_ace' : $!";
-    print $fh $ace;
+    print $fh $ace_text;
     close $fh or confess "Error writing to '$blast_ace' : $!";
 
     # Need to add new method to collection if we don't have it already
@@ -213,191 +212,115 @@ sub write_otter_acefile {
     my $ctg_list = $ss->selected_CloneSequences_as_contig_list
         or confess "No CloneSequences selected";
 
-    my $dir = $self->home;
-    my $otter_ace = "$dir/rawdata/otter.ace";
-    my $fh = gensym();
-    open $fh, "> $otter_ace" or die "Can't write to '$otter_ace'";
-    print $fh $self->ace_from_dsname_ssname_contig_list($dsname, $ssname, $ctg_list);
-    close $fh or confess "Error writing to '$otter_ace' : $!";
-    $self->add_acefile($otter_ace);
-    $self->save_slice_dataset_hash;
-}
-
-# this now just gets the ace via http/xml -> xml_to_otter -> otter_to_ace
-
-sub ace_from_dsname_ssname_contig_list {
-    my( $self, $dsname, $ssname, $ctg_list) = @_;
-
+        # Getting XML from the Client
+    my ($chr_name, $chr_start, $chr_end) = $self->region_coordinates($ctg_list->[0]);
     my $client = $self->Client or confess "No otter Client attached";
-    my $ace = '';
+    my $xml_string = $client->get_xml_region($dsname, $ssname, $chr_name, $chr_start, $chr_end);
 
-    foreach my $ctg (@$ctg_list) {
-        my $xml        = Bio::Otter::Lace::TempFile->new;
-        $xml->name('lace.xml');
-        my $write      = $xml->write_file_handle;
+        # Storing that XML in a temp.file
+    my $xml_file = Bio::Otter::Lace::TempFile->new;
+    $xml_file->name('lace.xml');
+    my $write_fh = $xml_file->write_file_handle();
+    print $write_fh $xml_string;
+    # If we're here we now have all the locks!!!
 
-        my($chr_name, $chr_start, $chr_end) = $self->region_coordinates($ctg);
-        my $xml_string = $client->get_xml_region($dsname, $ssname, $chr_name, $chr_start, $chr_end);
+        # XML->otter->ace conversion:
+    my ($genes, $slice, $sequence, $tiles, $feature_set, $assembly_tag_set) =
+        Bio::Otter::Converter::XML_to_otter($xml_file->read_file_handle);
+    #
+    #  We should have dsname contained in XML, really!
+    #  
+    my $ace_text .= Bio::Otter::Converter::otter_to_ace($dsname, $genes, $slice, $sequence, $tiles, $feature_set, $assembly_tag_set);
 
-        print $write $xml_string ;
-        # If we're here we now have all the locks!!!
-
-        ### Nasty that genes and slice arguments are in
-        ### different order in these two subroutines
-        my ($genes, $slice, $sequence, $tiles, $feature_set, $assembly_tag_set) =
-            Bio::Otter::Converter::XML_to_otter($xml->read_file_handle);
-
-        $ace .= Bio::Otter::Converter::otter_to_ace($slice, $genes, $tiles, $sequence, $feature_set, $assembly_tag_set);
-        # We need to record which dataset each slice came
-        # from so that we know where to save it back to.
-        # this gets done in the write_lock_xml so only need to do it here
-        # if we haven't got write access.
-#        $self->save_slice_dataset($slice->display_id, $dsname) unless $write_access;
-    }
-
-    return $ace;
+        # Storing ace_text in a file
+    my $dir = $self->home;
+    my $ace_file_name = "$dir/rawdata/otter.ace";
+    my $ace_file = gensym();
+    open $ace_file, "> $ace_file_name" or die "Can't write to '$ace_file_name'";
+    print $ace_file $ace_text;
+    close $ace_file or confess "Error writing to '$ace_file_name' : $!";
+    $self->add_acefile($ace_file_name);
 }
 
 sub try_and_lock_the_block {
     my ($self, $ss) = @_;
 
-    my $client = $self->Client or confess "No otter Client attached";
     my $dsname = $ss->dataset_name;
     my $ssname = $ss->name;
 
     my $ctg_list = $ss->selected_CloneSequences_as_contig_list()
             or confess "No CloneSequences selected";
-    foreach my $ctg (@$ctg_list){
-        my ($chr_name, $chr_start, $chr_end) = $self->region_coordinates($ctg);
 
-        my $lock_xml = $client->lock_region($dsname, $ssname, $chr_name, $chr_start, $chr_end);
-        $self->write_lock_xml($lock_xml, $dsname);
-    }
-}
+    my ($chr_name, $chr_start, $chr_end) = $self->region_coordinates($ctg_list->[0]);
+    my $client = $self->Client or confess "No otter Client attached";
 
-sub write_lock_xml{
-    my ($self, $xml, $dsname) = @_;
+    my $lock_xml = $client->lock_region($dsname, $ssname, $chr_name, $chr_start, $chr_end);
 
-    if($xml && $dsname){
-        my $lock_xml = Bio::Otter::Lace::PersistentFile->new();
-        $lock_xml->root($self->home);
-        $lock_xml->name($LOCK_REGION_XML_FILE);
-        my $write = $lock_xml->write_file_handle();
+    if($lock_xml && $dsname){
+        my $lock_xml_file = Bio::Otter::Lace::PersistentFile->new();
+        $lock_xml_file->root($self->home);
+        $lock_xml_file->name($LOCK_REGION_XML_FILE);
 
-        print $write $xml;
+        my $write_fh = $lock_xml_file->write_file_handle();
+        print $write_fh $lock_xml;
 
-        my $read = $lock_xml->read_file_handle();
+        my $read = $lock_xml_file->read_file_handle();
         my ($genes,$slice,$seqstr,$tiles) = Bio::Otter::Converter::XML_to_otter($read);
-        my $slice_name = $slice->display_id();
-        $self->save_slice_dataset($slice_name, $dsname);
-        $lock_xml->mv(".${slice_name}${dsname}${LOCK_REGION_XML_FILE}");
+
+        my $slice_name = $slice->display_id(); # it must be the same as the one kept in AceDB (retrievable by get_slicename_dsname)
+
+        $lock_xml_file->mv(".${slice_name}${dsname}${LOCK_REGION_XML_FILE}");
     }
 }
 
-sub save_slice_dataset {
-    my( $self, $slice_name, $dsname ) = @_;
+sub get_slicename_dsname {
+    my ($self) = @_;
 
-    if ($slice_name and $dsname) {
-        print STDERR "Saving '$slice_name' in '$dsname'\n";
-        $self->{'_slice_name_dataset'}->{$dsname} ||= [];
-        push(@{$self->{'_slice_name_dataset'}->{$dsname}}, $slice_name);
+    unless( $self->{_slicename_dsname} ) {
+        my $ace_handle = $self->aceperl_db_handle;
+
+        my ($slicename, $dsname);
+
+            ## NOTE: The following query assumes we only have one Assembly per DB!
+        $ace_handle->raw_query('find Assembly *');
+        my $ace_text = $ace_handle->AceText_from_tag('Species');
+
+        if (my ($species_values) = $ace_text->get_values('Species')) {
+            $dsname = $species_values->[0];
+        } else {
+            die "'Species' not defined in ace database";
+        }
+
+        if (my ($assembly_slice_name_values) = $ace_text->get_values('Sequence')) {
+            $slicename = $assembly_slice_name_values->[1]; # the 0'th element is a colon
+        } else {
+            die "Could not retrieve the name of the Assembly from AceDB";
+        }
+
+        $self->{_slicename_dsname} = [ $slicename, $dsname ];
     }
+
+    return @{ $self->{_slicename_dsname} };
 }
 
-sub slice_dataset_hash {
-    my $self = shift;
-    confess "slice_dataset_hash method is read-only" if @_;
-
-    my $h = $self->{'_slice_name_dataset'};
-    unless ($h) {
-        #warn "Creating empty hash";
-        $h = $self->{'_slice_name_dataset'} = {};
-    }
-    return $h;
-}
-
-# Makes hash persistent for "lace -recover"
-# (Could store in Dataset_name tag in database?)
-sub save_slice_dataset_hash {
+sub save_ace_to_otter {
     my( $self ) = @_;
-
-    my $h    = $self->slice_dataset_hash;
-
-    my $hash_file = Bio::Otter::Lace::PersistentFile->new;
-    $hash_file->root($self->home);
-    $hash_file->name($DATASET_HASH_FILE);
-    my $write = $hash_file->write_file_handle;
-
-    while (my ($dsname, $slices) = each %$h) {
-        $dsname =~ s/\t/\\t/g;      # Escape tab characterts in dataset name (likely ?)
-        map { s/\t/\\t/g } @$slices; # Escape tab characterts in slice   name (v. unlikely)
-        print $write "$dsname\t@$slices\n";
-    }
-}
-
-sub recover_slice_dataset_hash {
-    my( $self ) = @_;
-
-    my $cl   = $self->Client or confess "No Otter Client attached";
-    my $h    = $self->slice_dataset_hash;
-
-    my $hash_file = Bio::Otter::Lace::PersistentFile->new;
-    $hash_file->root($self->home);
-    $hash_file->name($DATASET_HASH_FILE);
-    my $read = $hash_file->read_file_handle;
-
-    while (<$read>) {
-        chomp;
-        my ($dsname, @slices) = split(/\t/, $_);
-        $dsname =~ s/\\t/\t/g;     # Unscape tab characterts in dataset name (v. unlikely)
-        map { s/\\t/\t/g } @slices; # Unscape tab characterts in slice   name (v. unlikely)
-        $h->{$dsname} = \@slices;
-    }
-}
-
-
-sub save_all_slices {
-    my( $self ) = @_;
-
-    #warn "SAVING ALL SLICES";
 
     # Make sure we don't have a stale database handle
     $self->ace_server->kill_server;
     $self->ace_server->start_server;
 
-    my $sd_h = $self->slice_dataset_hash;
-    #warn "HASH = '$sd_h' has ", scalar(keys %$sd_h), " elements";
-    ### This call to each was failing to return anything
-    ### the second time it was called, proabably because
-    ### we were exiting each the first with an exception
-    ### so the iterator didn't get reset.
-    #while (my ($name, $ds) = each %$sd_h) {
-    my $ace = '';
-    foreach my $dsname (keys %$sd_h) {
-        my $slices = $sd_h->{$dsname};
-        foreach my $slice(@$slices){
-            warn "SAVING SLICE '$slice' WITH DATASET '$dsname' to the Otter Server\n";
-            $ace .= $self->save_otter_slice($slice, $dsname);
-        }
-    }
-
-    return \$ace;
-}
-
-sub save_otter_slice {
-    my( $self, $name, $dsname ) = @_;
-
-    confess "Missing slice name argument"   unless $name;
-    confess "Missing DatsSet argument"      unless $dsname;
-
     my $ace    = $self->aceperl_db_handle;
     my $client = $self->Client or confess "No Client attached";
 
+    my ($slicename, $dsname) = $self->get_slicename_dsname();
+    
     # Get the Assembly object ...
     ### Need to change this query if we add lots of non-otter features to the assembly object.
     ### (Or change the layout of the data in acedb, so that non- otter features are in a
     ### different object.)
-    $ace->raw_query(qq{find Assembly "$name"});
+    $ace->raw_query(qq{find Assembly "$slicename"});
+
     my $ace_txt = $ace->raw_query('show -a');
     $ace_txt =~ s/^Feature\s+"phastCons".*\n//mg;
 
@@ -414,7 +337,7 @@ sub save_otter_slice {
     $ace_txt .= $ace->raw_query('show -a');
 
     # Then get the information for the TilePath
-    $ace->raw_query(qq{find Assembly "$name"});
+    $ace->raw_query('find Assembly *');
     $ace->raw_query('Follow AGP_Fragment');
     # Do show -a on a restricted list of tags
     foreach my $tag (qw{
@@ -433,37 +356,39 @@ sub save_otter_slice {
     if($self->Client->debug){
         my $debug_file = Bio::Otter::Lace::PersistentFile->new();
         $debug_file->name("otter-debug.$$.save.ace");
-        my $fh = $debug_file->write_file_handle();
-        print $fh $ace_txt;
-        close $fh;
+        my $debug_ace_fh = $debug_file->write_file_handle();
+        print $debug_ace_fh $ace_txt;
+        close $debug_ace_fh;
     }else{
         warn "Debug switch is false\n";
     }
     
     my $ace_file = Bio::Otter::Lace::TempFile->new;
     $ace_file->name('lace_edited.ace');
-    my $write = $ace_file->write_file_handle;
-    print $write $ace_txt;
+    my $write_fh = $ace_file->write_file_handle;
+    print $write_fh $ace_txt;
     my $xml = Bio::Otter::Converter::ace_to_XML($ace_file->read_file_handle);
-    close $write;
+    close $write_fh;
 
     if($self->Client->debug){
         my $debug_file = Bio::Otter::Lace::PersistentFile->new();
         $debug_file->name("otter-debug.$$.save.xml");
-        my $fh = $debug_file->write_file_handle();
-        print $fh $xml;
-        close $fh;
+        my $debug_xml_fh = $debug_file->write_file_handle();
+        print $debug_xml_fh $xml;
+        close $debug_xml_fh;
     }else{
         warn "Debug switch is false\n";
     }
 
     my $success = $client->save_otter_xml($xml, $dsname);
 
-    return $self->update_with_stable_ids($success);
+    my $update_ace_output = $self->update_with_stable_ids($success);
+
+    return \$update_ace_output;
 }
 
 
-sub update_with_stable_ids{
+sub update_with_stable_ids {
     my ($self, $xml, $anything_else) = @_;
     return unless $xml;
 
@@ -504,41 +429,24 @@ sub update_with_stable_ids{
     return $ace_txt;
 }
 
-sub unlock_all_slices {
+sub unlock_otter_slice {
     my( $self ) = @_;
 
-    my $sd_h = $self->slice_dataset_hash;
-
-    # if the unlock otter slice goes wrong half way through
-    # the recover will try to unlock the clones again.
-    foreach my $dsname (keys %$sd_h) {
-        my $slices = $sd_h->{$dsname};
-        foreach my $slice(splice(@$slices)){
-            $self->unlock_otter_slice($slice, $dsname);
-        }
-    }
-}
-
-sub unlock_otter_slice{
-    my( $self, $slice_name, $dsname ) = @_;
-
-    confess "Missing slice name argument"   unless $slice_name;
-    confess "Missing DatsSet name argument" unless $dsname;
-
+    my ($slicename, $dsname) = $self->get_slicename_dsname();
     my $client   = $self->Client or confess "No Client attached";
 
     my $xml_file = Bio::Otter::Lace::PersistentFile->new;
     $xml_file->root($self->home);
-    $xml_file->name(".${slice_name}${dsname}${LOCK_REGION_XML_FILE}");
+    $xml_file->name(".${slicename}${dsname}${LOCK_REGION_XML_FILE}");
     return unless -e $xml_file->full_name();
-    my $xml = '';
+    my $xml_text = '';
     my $read = $xml_file->read_file_handle;
     while(<$read>){
-        $xml .= $_;
+        $xml_text .= $_;
     }
-    return unless $xml;
+    return unless $xml_text;
 
-    return $client->unlock_otter_xml($xml, $dsname);
+    return $client->unlock_otter_xml($xml_text, $dsname);
 }
 
 sub ace_server {
@@ -867,11 +775,15 @@ sub DESTROY {
     }
     my $client = $self->Client;
     eval{
-        if($client){
-            $self->unlock_all_slices();# if $client->write_access;
+        if($client) {
+            $self->unlock_otter_slice();# if $client->write_access;
         }
     };
-    rmtree($home) unless $@;
+    if($@) {
+        warn "Error in AceDatabase::DESTROY : $@";
+    } else {
+        rmtree($home);
+    }
 }
 
 1;

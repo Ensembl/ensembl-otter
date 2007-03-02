@@ -110,7 +110,6 @@ sub recover_session {
     rename($dir, $home) or die "Cannot move '$dir' to '$home' : $!";
     my $title = "Recover ". $self->add_title($adb);
     $adb->title($title);
-    $adb->recover_slice_dataset_hash;
 
     return $adb;
 }

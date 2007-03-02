@@ -674,12 +674,13 @@ my %ens2ace_phase = (
     );
 
 sub otter_to_ace {
-    my ($slice, $genes, $path, $seq, $feature_set, $assembly_tag_set) = @_;
+    my ($dsname, $genes, $slice, $seq, $path, $feature_set, $assembly_tag_set) = @_;
 
     my $slice_name = $slice->display_id;
 
 
     my $str =  qq{\n\nSequence : "$slice_name"\nAssembly\n};
+    $str .= sprintf qq{Species "%s"\n}, $dsname;
     $str .= sprintf qq{Assembly_name "%s"\n}, $slice->assembly_type;
 
     unless (@$path) {
@@ -804,7 +805,7 @@ sub otter_to_ace {
         $target_start = $tile->assembled_start  - $original_start + 1;
         $contig_length = $tile->assembled_end - $tile->assembled_start  + 1;
 
-        $clone_context .= qq{\nSequence "CloneCtxt-$name" \n} ;
+        $clone_context .= qq{\nSequence : "CloneCtxt-$name" \n} ;
         if ($orientation == 1 ){
             $clone_context .= qq{AGP_Fragment "$slice_name" $contig_start $contig_end Align $gp_start $target_start $contig_length\n} ;
         }else{
@@ -1134,6 +1135,7 @@ sub ace_to_otter {
         %frags,        # hashes used to capture genomic fragment tiling data
         %logic_ana,    # Analysis objects for SimpleFeatures keyed by logic name
         $slice_name,   # Name of the parent Genomic sequence
+        $dataset_name,
         $assembly_type,
         $chr_name,
         $chr_start,
@@ -1178,11 +1180,10 @@ sub ace_to_otter {
                     $sequence{$name}{end}    = $end;
                     $sequence{$name}{parent} = $currname;
                     $sequence{$name}{strand} = $strand;
-                }
-                elsif (/Assembly_name $STRING/x) {
+                } elsif (/Species $STRING/x) {
+                    $dataset_name = ace_unescape($1);
+                } elsif (/Assembly_name $STRING/x) {
                     $assembly_type = ace_unescape($1);
-
-                    #print STDERR $1, "\n";
                 }
 
                 # SMap assembly information is formatted like this:
@@ -1841,12 +1842,10 @@ sub ace_to_otter {
     my $assembly_tag_set = $sequence{$slice_name}{'assembly_tag_set'};
 
     return (
-        \@genes,  $tile_path,   $assembly_type,
+        \@genes,  $tile_path,   $dataset_name, $assembly_type,
         $dna,     $chr_name,    $chr_start,
         $chr_end, $feature_set, $assembly_tag_set
     );
-
-#   return(\@genes, $tile_path, $assembly_type, $dna, $chr_name, $chr_start, $chr_end, $feature_set);
 }
 
 
@@ -1866,11 +1865,11 @@ sub decide_strand {
 sub ace_to_XML {
     my( $fh ) = @_;
 
-    #my( $genes, $frags, $type, $dna, $chr, $chrstart, $chrend ) = ace_to_otter($fh);
-    my( $genes, $tile_path, $type, $dna, $chr, $chrstart, $chrend, $feature_set, $assembly_tag_set) = ace_to_otter($fh);
+    my( $genes, $tile_path, $dataset_name, $assembly_type,
+        $dna, $chr, $chrstart, $chrend, $feature_set, $assembly_tag_set) = ace_to_otter($fh);
 
     my $xml = "<otter>\n<sequence_set>\n"
-        . path_to_XML($chr, $chrstart, $chrend, $type, $tile_path)
+        . path_to_XML($chr, $chrstart, $chrend, $assembly_type, $tile_path)
         . (defined $feature_set->[0] ? features_to_XML($chrstart, $feature_set) : '')
         . ($assembly_tag_set ? assembly_tags_to_XML($assembly_tag_set) : '');
 
@@ -1959,10 +1958,10 @@ sub exon_hash_key {
 }
 
 sub path_to_XML {
-  my ($chr,$chrstart,$chrend,$type,$path) = @_;
+  my ($chr,$chrstart,$chrend,$assembly_type,$path) = @_;
   my $xmlstr;
 
-  $xmlstr .= "  <assembly_type>" . $type . "<\/assembly_type>\n";
+  $xmlstr .= "  <assembly_type>" . $assembly_type . "<\/assembly_type>\n";
 
   @$path = sort {$a->assembled_start <=> $b->assembled_start} @$path;
 
