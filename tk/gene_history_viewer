@@ -658,6 +658,7 @@ sub build_tree_for_transinfo {
 
 	foreach my $t ( @{$tsid_t->{$len}} ){
 
+warn %$t;
 	  my $tsid = $t->stable_id;
 
 	  # get evidences and remark
@@ -671,7 +672,7 @@ sub build_tree_for_transinfo {
 		$tremark = $t->get_all_Attributes('remark')->[0]->value;
 	  };
 	  $tremark = 'NA' unless $tremark;
-		
+
 	  build_tree("$heirarchy.$tsid", $t->stable_id);
 	  build_tree("$heirarchy.$tsid.TransInfo", 'TransInfo');
 	  build_tree("$heirarchy.$tsid.TransInfo.Length",       "Length $space ".$t->length." bp");
@@ -681,6 +682,11 @@ sub build_tree_for_transinfo {
 	  build_tree("$heirarchy.$tsid.TransInfo.Biotype",      "Biotype $space ".$t->biotype);
 	  build_tree("$heirarchy.$tsid.TransInfo.TransRemark",  "TransRemark $space ".$tremark);
 	  build_tree("$heirarchy.$tsid.TransInfo.Evidence",     "Evidence $space ".$evidence);
+
+      # *not_found tags
+      foreach ( "mRNA_start_NF", "mRNA_end_NF", "cds_start_NF", "cds_end_NF" ){
+		build_tree("$heirarchy.$tsid.TransInfo.$_",         "$_ $space ".$t->get_all_Attributes("$_")->[0]->value);
+	  }
 	}
   }
 }
