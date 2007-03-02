@@ -660,7 +660,7 @@ sub window_close {
     
     my $xc = $self->XaceSeqChooser;
     
-    if ($self->is_mutable && $xc->write_access) {
+    if ($self->is_mutable && $xc->AceDatabase->write_access) {
         my( $sub );
         eval{
             if ($sub = $self->get_SubSeq_if_changed) {
