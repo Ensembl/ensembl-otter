@@ -225,15 +225,15 @@ $server->send_response($output_xml, 1);
 
 } elsif ($odba->isa('Bio::Vega::DBSQL::DBAdaptor')) {
 
-    my $input_filename = $server->tempfile_from_argument('data')->full_name();
+    #my $input_filename = $server->tempfile_from_argument('data')->full_name();
     #
     # the original string lives here:
-    #     $xml_string = $server->require_argument('data');
+  my $xml_string = $server->require_argument('data');
 
   my $parser;
   eval {
 	 $parser = Bio::Vega::Transform::Otter->new;
-	 $parser->parsefile($input_filename);
+	 $parser->parse($xml_string);
   };
   if ($@){
 	 $server->error_exit("Failed converting XML to otter [$@]");
