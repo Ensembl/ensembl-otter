@@ -126,12 +126,23 @@ sub generate_SequenceFragment{
   my $cia=$odb->get_ContigInfoAdaptor;
   my $contig_slice_dbid=$contig_slice->get_seq_region_id;
   my $ci=$cia->fetch_by_seq_region_id($contig_slice_dbid);
-  my $auth=$ci->author;
-  my $auth_name=$auth->name;
-  my $auth_email=$auth->email;
+  ##test
+  my $auth;
+  my $auth_name;
+  my $auth_email;
+  if ($ci){
+	 $auth=$ci->author;
+  }
+  if ($auth){
+	 $auth_name=$auth->name;
+	 $auth_email=$auth->email;
+  }
   $sf->attribvals($self->prettyprint('author',$auth_name));
   $sf->attribvals($self->prettyprint('author_email',$auth_email));
-  my $ci_attribs=$ci->get_all_Attributes;
+  my $ci_attribs;
+  if ($ci){
+	 $ci_attribs=$ci->get_all_Attributes;
+  }
   foreach my $cia (@$ci_attribs){
 	 if ($cia->code eq 'remark' || $cia->code eq 'hidden_remark' || $cia->code eq 'annotated' || $cia->code eq 'description'){
 		if ($cia->code eq 'annotated' && $cia->value eq 'T'){
