@@ -1008,7 +1008,8 @@ sub _do_Gene {
                 if ($self->_add_exons_to_exonlocation($CDS_exonlocation
                     , $all_CDS_Exons)) {
 
- warn                   my $ft = $set->newFeature;
+                    my $ft = $set->newFeature;
+
                     $ft->key('CDS');
                     $ft->location($CDS_exonlocation);
                     if ($transcript_info->cds_start_not_found) {
