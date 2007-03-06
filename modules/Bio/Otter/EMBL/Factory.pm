@@ -973,7 +973,11 @@ sub _do_Gene {
                 , $all_transcript_Exons)) {
 
                 my $ft = $set->newFeature;
-                if ($gtype !~ /pseudo/i) {
+                if ( $gtype eq "Transposon" ){
+                  $ft->key('repeat_region');
+                  $ft->addQualifierStrings('mobile_element', "transposon");
+                }
+                elsif ($gtype !~ /pseudo/i) {
                     $ft->key('mRNA');
                 } else {
                     $ft->key('CDS');
@@ -984,7 +988,6 @@ sub _do_Gene {
 
                 $self->_add_gene_qualifiers($gene, $ft) if $gtype ne "Transposon";
                 $ft->addQualifierStrings('locus_tag', $locus_tag);
-                $ft->addQualifierStrings('mobile_element', $locus_tag) if $gtype eq "Transposon";
 
                 if ($gtype !~ /pseudo/i) {
                     $self->_supporting_evidence($transcript_info, $ft, 'EST', 'cDNA');
