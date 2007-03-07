@@ -1,3 +1,6 @@
+drop index stable_id on translation_stable_id;
+create index stable_id on translation_stable_id (stable_id,version);
+#################################################################################
 #
 # Table structure for table 'gene_stable_id_pool'
 # otter table
