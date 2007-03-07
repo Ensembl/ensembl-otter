@@ -43,7 +43,7 @@ use Net::Netrc;
         eval {
             print STDERR "Backing up '$db_name'\n";
             $dbh->do("use $db_name");
-	    if ( $db_name =~  /^otter/i) {
+	    if ( $db_name =~  /^(otter|loutre)/i) {
 		check_database_not_too_big($dbh);
 	    }
             backup_otter_database($dbh, $mysql_dump, $db_name);
