@@ -69,21 +69,23 @@ sub remove {
   return 1;
 }
 
-sub update_assembly_tagged_clone {
-  my ($self, $clone_id,$transferred) = @_;
+sub update_assembly_tagged_contig {
+  my ($self, $seq_region_id) = @_;
+
   my $num;
   eval{
-	 my $sql = "UPDATE assembly_tagged_clone SET transferred = ? WHERE clone_id = ?";
-	 my $sth = $self->prepare($sql);
-	 $sth->execute($transferred,$clone_id);
-	 $num=$sth->rows;
-
+	my $sql = "UPDATE assembly_tagged_contig SET transferred = 'yes' WHERE seq_region_id = $seq_region_id";
+	warn "$sql\n";
+	my $sth = $self->prepare(qq{$sql});
+	$sth->execute();
+	$num=$sth->rows;
   };
   if ($@) {
-	 throw "update of assembly_tagged_clone failed for clone id $clone_id:$@";
+	 throw "update of assembly_tagged_contig failed for seq_region_id $seq_region_id:$@";
   }
   if ($num == 0){
-	 throw "update of assembly_tagged_clone failed:$clone_id may not be present";
+	 #throw "update of assembly_tagged_contig failed:$seq_region_id may not be present";
+	 warn "update of assembly_tagged_contig failed: $seq_region_id may not be present\n";
   }
   return 1;
 }
@@ -97,12 +99,21 @@ sub store {
   if ($at->is_stored($self->db->dbc)) {
     return $at->dbID();
   }
-  my $chr_slice = $at->slice;
-  unless ($chr_slice) {
-	 throw "AssemblyTag does not have a slice attached to it, cannot store AssemblyTag\n";
+
+  # assembly tag is on a chromosome slice,transform to get a clone_slice
+  my $at_c = $at->transform('contig');
+  unless ($at_c){
+	throw "assembly tag $at cannot be transformed onto a contig slice from chromosome \n assembly tag not loaded tag_info:".$at->tag_info." tag_type:".$at->tag_type." seq_region_start:".$at->seq_region_start." seq_region_end:".$at->seq_region_end;
+  }
+
+  my $contig_slice = $at_c->slice;
+
+  unless ($contig_slice) {	
+	 throw "AssemblyTag does not have a contig slice attached to it, cannot store AssemblyTag\n";
   }
   my $sa = $self->db->get_SliceAdaptor();
-  my $seq_region_id=$sa->get_seq_region_id($chr_slice);
+  my $seq_region_id=$sa->get_seq_region_id($contig_slice);
+
   my $sql = "INSERT INTO assembly_tag (seq_region_id, seq_region_start, seq_region_end, seq_region_strand, tag_type, tag_info) VALUES (?,?,?,?,?,?)";
   my $sth = $self->prepare($sql);
   eval{
@@ -111,28 +122,10 @@ sub store {
   if ($@){
 	 throw "insert of assembly_tag failed:$@";
   }
-  #update also assembly_tagged_clone table, which is initially populated with all clones having transferred col. set to "no"
-  #assembly tag is on a chromosome slice,transform to get a clone_slice
-  my $new_at = $at->transform('contig');
-  unless ($new_at) {
-	 throw "assembly tag $at cannot be transformed onto a contig slice from chromosome \n assembly tag not loaded tag_info:".$at->tag_info." tag_type:".$at->tag_type." seq_region_start:".$at->seq_region_start." seq_region_end:".$at->seq_region_end." seq_region_id:".$seq_region_id."\n";;
-  }
-  my $contig_slice=$new_at->slice;
-  my $contig_id=$sa->get_seq_region_id($contig_slice);
-  $sql = "select a.asm_seq_region_id from assembly a,seq_region s,coord_system c where a.cmp_seq_region_id=? and a.asm_seq_region_id=s.seq_region_id and s.coord_system_id=c.coord_system_id and c.name='clone'";
-  $sth = $self->prepare($sql);
-  $sth->execute($contig_id);
-  my $clone_id;
-  if (my $ref = $sth->fetchrow_hashref) {
-	 $clone_id=$ref->{asm_seq_region_id};
-  }
-  unless ($clone_id) {
-	 throw "clone_id not fetched\n";
-  }
-  $self->update_assembly_tagged_clone($clone_id,"yes");
+
+  $self->update_assembly_tagged_contig($seq_region_id); # is contig_id
+
   return 1;
-
-
 }
 
 
