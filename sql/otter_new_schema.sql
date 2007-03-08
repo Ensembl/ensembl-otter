@@ -232,12 +232,12 @@ CREATE TABLE assembly_tag (
 # otter table
 #
 
-CREATE TABLE assembly_tagged_clone (
+CREATE TABLE assembly_tagged_contig (
 
-  clone_id int(10) unsigned NOT NULL default '0',
+  seq_region_id int(10) unsigned NOT NULL default '0',
   transferred enum('yes','no') NOT NULL default 'no',
 
-  UNIQUE KEY clone_id (clone_id)
+  UNIQUE KEY seq_region_id (seq_region_id)
 
 ) TYPE=InnoDB ;
 
