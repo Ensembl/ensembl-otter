@@ -1,5 +1,8 @@
 drop index stable_id on translation_stable_id;
 create index stable_id on translation_stable_id (stable_id,version);
+insert into meta (meta_key,meta_value) values('last_gene_old_dbid',0);
+insert into meta (meta_key,meta_value) values ('last_contig_info_old_dbid',0);
+
 #################################################################################
 #
 # Table structure for table 'gene_stable_id_pool'
