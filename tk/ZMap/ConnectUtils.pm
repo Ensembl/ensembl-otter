@@ -181,9 +181,11 @@ return the xclient with specified name, creating if id supplied.
             if(my ($cachedid) = grep { $CACHED_CLIENTS->{$_}->[1] eq $name &&
                                        $CACHED_CLIENTS->{$_}->[2] eq $scope } keys %$CACHED_CLIENTS){
                 unless($id eq $cachedid){
-                    warn "we've already got name $name with id $cachedid".
-                        " cannot add id $id, try delete_xclient_with_id($id) first\n";
-                    return undef;
+                    warn "We've already got name $name with id $cachedid".
+                        " cannot add id $id, try delete_xclient_with_id($cachedid) first\n";
+                    warn "However, we'll do the delete_xclient_with_id($cachedid) for you\n";
+                    delete_xclient_with_id($cachedid);
+                    #return undef;
                 }
             }
         }
