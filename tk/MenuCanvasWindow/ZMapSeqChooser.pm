@@ -6,7 +6,7 @@ use strict;
 use Carp qw{ cluck confess };
 use ZMap::Connect qw{ :all };
 use Sys::Hostname;
-use Tie::Watch;
+#use Tie::Watch;
 use Data::Dumper;
 use Hum::Conf qw{ PFETCH_SERVER_LIST };
 
@@ -117,12 +117,10 @@ sub zMapReplaceMenuCommands {
     $ZMAP_MENUS = undef;
 
 }
-sub zMapLaunchZmap {
-    my( $self ) = @_;
 
-    #$self->zMapReplaceMenuCommands();
+sub _launchZMap{
+    my ($self) = @_;
 
-    $self->zMapKillZmap;
     my $z = $self->zMapInsertZmapConnector();
     $self->zMapWriteDotZmap();
     $self->zMapWriteDotGtkrc();
@@ -155,7 +153,7 @@ sub zMapLaunchZmap {
     my $ref = Hum::Ace::LocalServer::full_child_info();
     my $pid = fork_exec(\@e, $ref, 0, sub { 
         my ($info) = @_;
-        flush_bad_windows;
+        flush_bad_windows();
         warn "INFO: ", Dumper($info);
     });
 
@@ -167,16 +165,54 @@ sub zMapLaunchZmap {
         $self->message($mess);
     }
 }
-sub zMapKillZmap {
+
+sub zMapLaunchZmap {
     my( $self ) = @_;
+
+    my $relaunch = 1;
+
+    if(!$self->zMapKillZmap($relaunch)){
+        $self->_launchZMap();
+    }
+
+    return ;
+}
+
+sub zMapRelaunchZMap{
+    my ($self, $xml) = @_;
+
+    warn "In zMapRelaunchZMap $self $self->{'_relaunch_zmap'}" if $ZMAP_DEBUG;
+
+    if($self->{'_relaunch_zmap'}){
+        $self->_launchZMap();
+        $self->{'_relaunch_zmap'} = 0;
+    }else { 
+        warn "not able to relaunch..." if $ZMAP_DEBUG; 
+    }
+
+    return (200, "all closed");
+}
+
+sub zMapKillZmap {
+    my( $self, $relaunch ) = @_;
     
     if (my $pid = $self->zMapProcessIDList) {
+        flush_bad_windows();
         my $mainWindowName = 'ZMap port #' . $self->AceDatabase->ace_server->port;
         my $xr = xclient_with_name($mainWindowName, 0, "$self")
-            or return;
+            or return 0;
+
+        $self->{'_relaunch_zmap'} = $relaunch;
+
         $xr->send_commands('<zmap action="shutdown" />');
+        
+        delete_xclient_with_id($xr->window_id());
+        
         ### Check shutdown by checking property set by ZMap?
+
+        return 1;
     }
+    return 0;
 }
 sub zMapProcessIDList {
     my( $self, $zmap_process_id ) = @_;
@@ -192,7 +228,7 @@ sub zMapInsertZmapConnector{
     if(!$zc){
         my $mb   = $self->menu_bar();
         my $zmap = ZMap::Connect->new( -server => 1 );
-        $zmap->init($mb, \&RECEIVE_FILTER, [ $self, qw( register_client edit single_select multiple_select) ]);
+        $zmap->init($mb, \&RECEIVE_FILTER, [ $self, qw( register_client edit single_select multiple_select finalised) ]);
         my $id = $zmap->server_window_id();
         $zc = $self->{'_zMap_ZMAP_CONNECTOR'} = $zmap;
     }
@@ -489,10 +525,11 @@ sub zMapRegisterClient {
 
     $self->zMapSetEntryValue($mainWindowName);
 
-    Tie::Watch->new(-variable => \$WAIT_VARIABLE,
-                    -debug    => 1,
-                    -store    => [ \&open_clones, $self ],
-                    );
+    $z->post_respond_handler(\&open_clones, [$self]);
+#    Tie::Watch->new(-variable => \$WAIT_VARIABLE,
+#                    -debug    => 1,
+#                    -store    => [ \&old_open_clones, $self ],
+#                    );
     # this feels convoluted
     $h->{'response'}->{'client'}->[0]->{'created'} = 1;
     return (200, make_xml($h));
@@ -656,6 +693,7 @@ sub RECEIVE_FILTER {
         edit            => 'zMapEdit',
         single_select   => 'zMapHighlight',
         multiple_select => 'zMapHighlight',
+        finalised       => 'zMapRelaunchZMap',
     };
 
     # @list could be dynamically created...
@@ -691,10 +729,27 @@ sub RECEIVE_FILTER {
 }
 
 sub open_clones{
+    my ($zmap, $self) = @_;
+
+    my ($chr, $st, $end) = split(/\.|\-/, $self->slice_name);
+
+    warn "Running open_clones [$chr, $st, $end]...\n" if $ZMAP_DEBUG;
+
+    my $seg = newXMLObj('segment');
+    setObjNameValue($seg, 'sequence', $self->slice_name);
+    setObjNameValue($seg, 'start', 1);
+    setObjNameValue($seg, 'end', '0');
+
+    $self->zMapMakeRequest($seg, 'new');
+
+    $zmap->post_respond_handler(); # clear the handler...
+}
+
+sub old_open_clones{
     my ($watch) = @_;
     my ($self)  = @{$watch->Args('-store')};
 
-    warn "Running open_clones ...\n" if $ZMAP_DEBUG;
+    warn "Running old_open_clones ...\n" if $ZMAP_DEBUG;
 
     my ($chr, $st, $end) = split(/\.|\-/, $self->slice_name);
 
