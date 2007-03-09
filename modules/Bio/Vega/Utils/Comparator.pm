@@ -47,7 +47,13 @@ sub compare{
 			 if ($e_count == 1) {
 				print STDERR "*Changes observed\n";
 			 }
-			 print STDERR $obj1->stable_id.".".$obj1->version." now has changed or new attrib $_  \n";
+			 if (!$class->isa('Bio::Vega::ContigInfo')) {
+				print STDERR $obj1->stable_id.".".$obj1->version." now has changed or new attrib $_  \n";
+			 }
+			 else {
+				print STDERR $obj1->slice->name." contig info now has changed or new attrib $_  \n";
+			 }
+
 		  }
 		}
 		if ($e_count > 0) {
@@ -57,13 +63,13 @@ sub compare{
   }
   else {
 	 $changed=1;
-	 my $obj2version;
-	 if (defined $obj2->version) {
-		$obj2version=$obj2->version;
-	 }
-	 else {
-		$obj2version='';
-	 }
+#	 my $obj2version;
+	# if (defined $obj2->version) {
+		#$obj2version=$obj2->version;
+	 #}
+	 #else {
+		#$obj2version='';
+	 #}
 	 print STDERR "*Changes observed\n";
 	 if ($class->isa('Bio::Vega::ContigInfo')) {
 		print STDERR "ContigInfo has changed due to change in main key \nBefore-key:$obj1_hash_key\nAfter-key :$obj2_hash_key\n";
