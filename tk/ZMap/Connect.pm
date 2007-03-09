@@ -334,6 +334,19 @@ sub respond_handler{
     }
 }
 
+
+sub post_respond_handler{
+    my ($self, $callback, $data) = @_;
+    if($callback && $data){
+        $self->__post_callback($callback);
+        $self->__post_callback_data($data);
+    }else{
+        $self->{'_post_callback_data'} = $self->{'_post_callback'} = undef;
+    }
+        
+    return 1;
+}
+
 # ======================================================== #
 #                      INTERNALS                           #
 # ======================================================== #
@@ -386,7 +399,12 @@ sub _do_callback{
     $self->_drop_current_request_string;
     warn "Connect $reply\n" if $DEBUG_CALLBACK;
     $self->xremote->send_reply($reply);
-    $WAIT_VARIABLE++;
+    #$WAIT_VARIABLE++;
+
+    if(my $post_cb = $self->__post_callback()){
+        my @post_data = @{$self->__post_callback_data()};
+        $post_cb->($self, @post_data);
+    }
 }
 
 sub _drop_current_request_string {
@@ -417,6 +435,17 @@ sub __callback{
 sub _is_server{
     my ($self) = @_;
     return ($self->{'_server'} ? 1 : 0);
+}
+
+sub __post_callback_data{
+    my($self, $dataRef) = @_;
+    $self->{'_post_callback_data'} = $dataRef if ($dataRef && ref($dataRef) eq 'ARRAY');
+    return $self->{'_post_callback_data'} || [];
+}
+sub __post_callback{
+    my($self, $codeRef) = @_;
+    $self->{'_post_callback'} = $codeRef if ($codeRef && ref($codeRef) eq 'CODE');
+    return $self->{'_post_callback'};
 }
 
 # ======================================================== #
