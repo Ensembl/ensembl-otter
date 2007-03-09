@@ -98,9 +98,7 @@ sub store {
 		$authad->store($contiginfo->author);
 		};
 		if ($@){
-		  throw "\nerror at slice name:".$contiginfo->slice->name;
-		  throw "\nwith these attrib:".$contiginfo->hashkey_sub;
-		  throw "\nerror is:".$@;
+		  throw "\nerror due to contig_info author".$contiginfo->author->name."author email".$contiginfo->author->email." slice name:".$contiginfo->slice->name."\nerror is:".$@;
 		}
 		
 		# Store a new row in the contig_info table and get contig_info_id

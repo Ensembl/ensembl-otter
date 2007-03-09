@@ -53,10 +53,13 @@ my $db = Bio::Vega::DBSQL::DBAdaptor->new(
 
 
 ###start working with the actual dump file
+#unless ($mc->list_value_by_key('last_gene_old_dbid')){
+#$mc->store_key_value('last_gene_old_dbid',0);
+#}
 
 my $dbid;
 my $ss_hash;
-
+my $start=time();
 ##open mixed format input file
 $/="----------------------------------------\n";
 open (IN,"<$file") || throw ("Could not open file for reading :$file \n $!\n");
@@ -66,6 +69,7 @@ while (<IN>){
 	 $db->begin_work;
 	 my $sa=$db->get_SliceAdaptor();
 	 my $gene_adaptor=$db->get_GeneAdaptor;
+	 my $mc=$db->get_MetaContainer();
 	 chomp $gene_xml;
 	 if ($gene_xml=~/^\S+\s+(\S+)\s+(\S+)\s+(\S+)\s+(<locus>.*<\/locus>).*/ms){
 		
@@ -108,6 +112,7 @@ while (<IN>){
 		}
 		$gene_adaptor->store($gene,'chr_whole_slice');
 		print STDOUT ("stored old gene dbid:$dbid as new gene dbid:".$gene->dbID." and the curent version is:".$gene->stable_id.".".$gene->version. "\n");
+		$mc->update_key_value('last_gene_old_dbid',$dbid);
 		if ($gene->biotype =~ /obsolete/){
 		  $gene_adaptor->update_deleted_gene_status($gene);
 		  print STDOUT ("The above gene ".$gene->dbID." was deleted in new db\n");
@@ -125,7 +130,9 @@ while (<IN>){
 
 
 close IN;
-
+my $end=time();
+my $total_time=$end-$start;
+print STDOUT "Total time for storing the above genes is $total_time\n";
 
 
 
