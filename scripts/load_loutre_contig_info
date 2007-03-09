@@ -1,0 +1,211 @@
+#!/usr/local/bin/perl -w
+
+=head1 DESCRIPTION
+
+load_loutre_contig_info -dbhost otterlive -dbport 3301 -dbname loutre_pig -dbuser ottadmin -dbpass lutralutra 
+
+=head1 OPTIONS
+
+
+use otter_pig;
+drop table if exists loutre_pig.test_contig_info;
+create table loutre_pig.test_contig_info (contig_info_id int(10) unsigned not null,contig_name varchar(40) not null,author_name varchar(50) not null,author_email varchar(50) not null,timestamp datetime not null, code varchar(15) not null, value text not null);
+
+insert into loutre_pig.test_contig_info(contig_info_id,contig_name,author_name,author_email,timestamp,code,value) 
+select ci.clone_info_id,co.name,a.author_name,a.author_email,ci.timestamp,"remark",cr.remark
+ from clone_info ci,clone_remark cr,author a,contig co, clone cl 
+where ci.clone_info_id=cr.clone_info_id and ci.author_id=a.author_id and ci.clone_id=cl.clone_id and 
+cl.clone_id=co.clone_id;
+
+insert into loutre_pig.test_contig_info(contig_info_id,contig_name,author_name,author_email,timestamp,code,value) 
+ select ci.clone_info_id,co.name,a.author_name,a.author_email,ci.timestamp,"keyword",k.keyword_name 
+ from clone_info ci,clone_info_keyword cik,keyword k,author a,contig co, clone cl 
+ where ci.clone_info_id=cik.clone_info_id and cik.keyword_id=k.keyword_id and ci.author_id=a.author_id 
+ and ci.clone_id=cl.clone_id and cl.clone_id=co.clone_id ;
+
+With the above table created in loutre_pig, this script can be run as shown in description, to populate tables contig_info and contig_attrib
+
+
+=cut
+
+use strict;
+use Bio::Vega::DBSQL::DBAdaptor;
+use Bio::EnsEMBL::Utils::Exception qw ( throw warning );
+use Getopt::Long;
+
+my $dbhost;
+my $dbport;
+my $dbname;
+my $dbuser;
+my $dbpass;
+my $help;
+$|=1;
+&GetOptions(
+				'dbhost=s'   => \$dbhost,
+				'dbport=n'   => \$dbport,
+				'dbname=s'   => \$dbname,
+				'dbuser=s'   => \$dbuser,
+				'dbpass=s'   => \$dbpass,
+				'h|help'     => \$help,
+			  ) or ($help = 1);
+
+
+if ($help || !defined ($dbhost) || !defined($dbport) || !defined($dbname) || !defined($dbuser) || !defined($dbpass) ) {
+  exec('perldoc', $0);
+}
+
+##create a db handle
+my $db = Bio::Vega::DBSQL::DBAdaptor->new(
+														-dbname => $dbname,
+														-host   => $dbhost,
+														-user   => $dbuser,
+														-port   => $dbport,
+														-pass   => $dbpass,
+													  );
+
+
+my $sth=$db->dbc->prepare(q{
+        SELECT contig_info_id,contig_name,author_name,author_email,timestamp,code,value from test_contig_info order by contig_info_id
+        });
+$sth->execute;
+die "There are no rows in test_contig_info" if($sth->rows() == 0);
+
+my $contig_info_hash;
+my $sa=$db->get_SliceAdaptor();
+my $cln_attrib_list;
+my $contig_info;
+my $prev_contig_info_id;
+my $ca=$db->get_ContigInfoAdaptor();
+my $mc=$db->get_MetaContainer();
+my $flag=0;
+
+
+while (my ($contig_info_id,$contig_name,$author_name,$author_email,$timestamp,$code,$value)=$sth->fetchrow_array()){
+
+  if (! exists $contig_info_hash->{$contig_info_id}){
+
+	 eval{
+		$db->begin_work;
+		if (defined $prev_contig_info_id && exists $contig_info_hash->{$prev_contig_info_id}){
+		  $ca->store($contig_info_hash->{$prev_contig_info_id});		
+		  print STDOUT "stored old cloneinfo dbid:$prev_contig_info_id as new contig info dbid:".$contig_info_hash->{$prev_contig_info_id}->dbID."\n";
+		  delete $contig_info_hash->{$prev_contig_info_id};
+		  $flag=0;
+		}
+		$mc->update_key_value('last_contig_info_old_dbid',$prev_contig_info_id);
+		$db->commit;
+	 };
+	 if ($@) {
+		$db->rollback;
+		print STDERR "\ncontig info $prev_contig_info_id did not get loaded due to \n" .$@;
+	 }
+
+	 my $slice = $sa->fetch_by_region('contig',$contig_name);
+	 unless ($slice){
+		if ($flag==0){
+		  print  STDERR "slice not found  for $contig_name so contig_info $contig_info_id not loaded\n";
+		}
+
+		$flag=1;
+		$prev_contig_info_id=$contig_info_id;
+		next;
+	 }
+	 my $cln_author=make_Author($author_name,$author_email);
+	 $contig_info_hash->{$contig_info_id}=make_ContigInfo($slice,$cln_author);
+	 $contig_info=$contig_info_hash->{$contig_info_id};
+	 $cln_attrib_list=$contig_info->{'attributes'}=[];
+	 $contig_info->created_date($timestamp);
+  }
+  my $cln_attrib;
+  if ($code eq "remark" ) {
+	 my $rem;
+	 if ( $value =~ /EMBL_dump_info.DE_line-\s+(.+)/) {
+		$cln_attrib=make_Attribute('description','EMBL Header Description','',$1);
+	 }
+	 elsif ($value =~ /Annotation_remark-\s+(.+)/) {
+		$rem=$1;
+		if ($rem =~ /annotated/){
+		  $rem=$1;
+		  $cln_attrib=make_Attribute('annotated','Clone Annotation Status','','T');
+		}
+		else {
+		  $cln_attrib=make_Attribute('hidden_remark','Hidden Remark','',$rem);
+		}
+	 }
+	 else {
+		$cln_attrib=make_Attribute('remark','Remark','Annotation Remark',$rem);
+	 }
+
+  }
+  if ($code eq "keyword"){
+	 $cln_attrib=make_Attribute('keyword','Clone Keyword','',$value);
+  }
+  push @$cln_attrib_list,$cln_attrib;
+  $prev_contig_info_id=$contig_info_id;
+
+}##enswhile
+
+#this is for the last record
+	 eval{
+		$db->begin_work;
+		if (defined $prev_contig_info_id && exists $contig_info_hash->{$prev_contig_info_id}){
+		  $ca->store($contig_info_hash->{$prev_contig_info_id});		
+		  print STDOUT "stored old cloneinfo dbid:$prev_contig_info_id as new contig info dbid:".$contig_info_hash->{$prev_contig_info_id}->dbID."\n";
+		  delete $contig_info_hash->{$prev_contig_info_id};
+		  $flag=0;
+		}
+		$mc->update_key_value('last_contig_info_old_dbid',$prev_contig_info_id);
+		$db->commit;
+	 };
+	 if ($@) {
+		$db->rollback;
+		print STDERR "\ncontig info $prev_contig_info_id did not get loaded due to \n" .$@;
+	 }
+
+
+
+
+
+
+sub make_ContigInfo{
+  my ($ctg_slice,$author_name,$attributes) = @_;
+  my $ctg_info = Bio::Vega::ContigInfo->new
+  (
+   -slice => $ctg_slice,
+   -author => $author_name,
+   -attributes => $attributes
+  );
+  return $ctg_info;
+}
+
+sub make_Attribute{
+  my ($code,$name,$description,$value) = @_;
+  my $attrib = Bio::EnsEMBL::Attribute->new
+	 (
+	  -CODE => $code,
+	  -NAME => $name,
+	  -DESCRIPTION => $description,
+	  -VALUE => $value
+	 );
+  return $attrib;
+}
+
+sub make_Author {
+  my ($name,$email,$group_name)=@_;
+  my $group = Bio::Vega::AuthorGroup->new
+	 (
+	  -name   => $group_name,
+	 );
+  my $author = Bio::Vega::Author->new
+	 (
+	  -name   => $name,
+	  -email  => $email,
+	  -group  => $group,
+	 );
+  return $author;
+}
+
+
+
+1;
+
