@@ -1,0 +1,142 @@
+    Process of transferring otter_'species'
+    database to loutre_'species' database
+------------------------------------------------------------------
+
+1)make the loutre_'species' database on otterlive with all the needed
+assemblies
+
+2)otterlive is used for dumping and loading the
+files.Create needed directories
+
+2.1)ssh otterlive
+2.2)cd /mysql/otter-live-master/otter/loutre_load/
+2.3)mkdir 'species'
+2.4)mkdir 'species'/genes
+2.5)mkdir 'species'/contig_info
+
+3)Dump genes from otter_'species'.But before
+dumping check if there is a redundant genedbid
+file created by Chao.
+
+3.1)
+In a bash shell run the following script,
+ensembl-otter/scripts/lace/dump_genes_by_assembly_types
+-redunfile
+~ck1/bin/otter/xml/redundant_'species'_gene_dbids_to_skip_for_newotter
+-dataset dsn-name >> dump_genes.out 2>>
+dump_error.log &
+
+3.2)
+notes:
+dsn-name is the data source name pointing to the otter_'species'
+database from which the dump will be taken
+
+dump_genes.out is a mixed format text-xml
+file which is needed by the loading script
+
+3.3)some sanity checks
+tail err.log you get the count of geneids not
+dumped like,
+total read from db :3000 
+neglected redundant ids from file:732
+neglected ids during dumping:52
+dumped ids in the dump_genes file:2216
+
+Just check that (3000-(732 + 52 )) = 2216 and also
+check if the wc -l ~ck1/bin/otter/xml/redundant_'species'_gene_dbids_to_skip_for_newotter
+matches 732
+grep -c "<locus>" dump_genes.out , should match
+2216
+select count(*) from gene from otter_'species'
+should match 3000
+
+4)Take a dump of the loutre_'species' before
+loading, incase something goes wrong
+mysqldump --opt -u ottroot -p -P 3301 -h otterlive
+loutre_'species' > loutre_'species'.dump
+
+5)CHECK that translation_stable_id does not have a
+unique key on (stable_id,version)
+
+6)create a key 'last_gene_old_dbid' in meta table
+which tracks of the last gene dbid dumped and
+loaded , if this key does not exists already in
+loutre_'species' database
+insert into meta (meta_key,meta_value) values('last_gene_old_dbid',0);
+
+7)load the dump_genes.out file to the
+loutre_'species' database like,
+
+ensembl-otter/scripts/load_new_otter -dbhost otterlive -dbport 3301 -dbpass 
+lutralutra -dbuser ottadmin -dbname
+loutre_'species'  -file
+/mysql/otter-live-master/otter/loutre_load/'species'/genes/dump_genes.out 
+>>load_genes.log 2>>load_error.log
+
+7.1) grep -c "as new gene dbid: and" load_genes.log
+This give a count of unchanged genes that were
+rejected during the loading
+
+7.2) grep -c "EXCEPTION" load_error.log
+This gives the gene ids rejected due to some sort
+of exception and these genes have to be carefully
+analysed.If the genes can be really neglected,
+then the loading is complete.But if not see if a
+separate loading of these genes will be okay. If
+not the loading has to be repeated , for which the
+database dump will be useful to begin loading
+again
+
+-----------------------------------------------------------------------
+
+CONTIG_INFO loading:
+
+This is going to be by creating a temporary table
+in loutre_'species' database. And by 'two sql
+transfers given below
+all contig_info from otter_'species' to
+loutre_'species'.test_contig_info table, is
+transferred and run the load_loutre_contig_info
+script in ensembl-otter/scripts as shown below.
+
+
+1.use otter_'species';
+2.drop table if exists loutre_'species'.test_contig_info;
+3.create table loutre_'species'.test_contig_info 
+  (contig_info_id int(10) unsigned not null,contig_name varchar(40) not null,
+  author_name varchar(50) not null,author_email varchar(50) not null,
+  timestamp datetime not null, code varchar(15) not null, value text not null);
+
+4.insert into loutre_'species'.test_contig_info(contig_info_id,contig_name,author_name,author_email,timestamp,code,value) 
+  select ci.clone_info_id,co.name,a.author_name,a.author_email,ci.timestamp,"remark",cr.remark
+  from clone_info ci,clone_remark cr,author a,contig co, clone cl 
+  where ci.clone_info_id=cr.clone_info_id and ci.author_id=a.author_id and ci.clone_id=cl.clone_id and 
+  cl.clone_id=co.clone_id;
+
+5.insert into loutre_'species'.test_contig_info(contig_info_id,contig_name,author_name,author_email,timestamp,code,value) 
+  select ci.clone_info_id,co.name,a.author_name,a.author_email,ci.timestamp,"keyword",k.keyword_name 
+  from clone_info ci,clone_info_keyword cik,keyword k,author a,contig co, clone cl 
+  where ci.clone_info_id=cik.clone_info_id and cik.keyword_id=k.keyword_id and ci.author_id=a.author_id 
+  and ci.clone_id=cl.clone_id and cl.clone_id=co.clone_id ;
+
+6.check for meta table entry for last_contig_info_old_dbid
+insert into meta (meta_key,meta_value) values ('last_contig_info_old_dbid',0);
+This tracks the last contig_info_dbid transferred
+
+With the above table created in loutre_'species',
+run the following.
+
+/ensembl-otter/scripts/load_loutre_contig_info
+-dbhost otterlive -dbport 3301 -dbpass lutralutra
+-dbuser ottadmin -dbname loutre_'species'
+>>load_contig_info.log 2>>load_contig_info_error.log
+
+Similar to the gene loading sanity checking ,
+a) grep -c "old cloneinfo dbid: as new" load_contig_info.log
+will give a count of unchanged contig_infos
+rejected
+b)grep -c not "loaded" load_contig_info_error.log
+
+will give a count of contig_info's not loaded
+c) also grep for EXCEPTION in the error log
+
