@@ -140,46 +140,66 @@ sub draw {
         my $row_height = int $size * 1.5;
         my $x = $size;
 
+        my $client_write_access = $self->Client->write_access;
+
         $ss_list = [ sort { ace_sort($a->name, $b->name) } @$ss_list];
 
         for (my $i = 0; $i < @$ss_list; $i++) {
-            my $set = $ss_list->[$i];
+            my $ss = $ss_list->[$i];
             my $row = $i + 1;
             my $y = $row_height * $row;
+            my $ss_write_access = $client_write_access && $ss->write_access;
             $canvas->createText(
             $x, $y,
-            -text   => $set->name,
+            -text   => $ss->name,
             -font   => $font_def,
+            -fill   => ($ss_write_access ? 'darkgreen' : 'darkred'),
             -anchor => 'nw',
-            -tags   => ["row=$row", 'SetName', 'SequenceSet=' . $set->name],
+            -tags   => ["row=$row", 'SetName', 'SequenceSet=' . $ss->name],
             );
         }
         
         $x = ($canvas->bbox('SetName'))[2] + ($size * 2);
         for (my $i = 0; $i < @$ss_list; $i++) {
-            my $set = $ss_list->[$i];
+            my $ss = $ss_list->[$i];
             my $row = $i + 1;
             my $y = $row_height * $row;
             $canvas->createText(
             $x, $y,
-            -text   => $set->description,
+            -text   => $ss->description,
             -font   => $helv_def,
             -anchor => 'nw',
-            -tags   => ["row=$row", 'SetDescription', 'SequenceSet=' . $set->name],
+            -tags   => ["row=$row", 'SetDescription', 'SequenceSet=' . $ss->name],
+            );
+        }
+        
+        $x = ($canvas->bbox('SetDescription'))[2] + ($size * 2);
+        for (my $i = 0; $i < @$ss_list; $i++) {
+            my $ss = $ss_list->[$i];
+            my $row = $i + 1;
+            my $y = $row_height * $row;
+            my $ss_write_access = $client_write_access && $ss->write_access;
+            $canvas->createText(
+            $x, $y,
+            -text   => ($ss_write_access ? '' : 'r-o'),
+            -font   => $font_def,
+            -fill   => ($ss_write_access ? 'darkgreen' : 'darkred'),
+            -anchor => 'nw',
+            -tags   => ["row=$row", 'SetDescription', 'SequenceSet=' . $ss->name],
             );
         }
         
         $x = $size;
         my $max_x = ($canvas->bbox('SetDescription'))[2];
         for (my $i = 0; $i < @$ss_list; $i++) {
-            my $set = $ss_list->[$i];
+            my $ss = $ss_list->[$i];
             my $row = $i + 1;
             my $y = $row_height * $row;
             my $rec = $canvas->createRectangle(
             $x, $y, $max_x, $y + $size,
             -fill       => undef,
             -outline    => undef,
-            -tags   => ["row=$row", 'SetBackground', 'SequenceSet=' . $set->name],
+            -tags   => ["row=$row", 'SetBackground', 'SequenceSet=' . $ss->name],
             );
 	    $canvas->lower($rec, "row=$row");
         }

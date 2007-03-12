@@ -75,12 +75,10 @@ sub write_access {
         $self->{'_write_access'} = $write_access ? 1 : 0;
     }
     $write_access = $self->{'_write_access'};
-    if (defined $write_access) {
-        return $write_access;
-    } else {
-        return 1;
-    }
+
+    return defined($write_access) ? $write_access : 1;
 }
+
 sub CloneSequence_list {
     my( $self, $CloneSequence_list ) = @_;
     

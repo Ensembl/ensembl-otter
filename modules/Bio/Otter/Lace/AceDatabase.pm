@@ -43,7 +43,7 @@ sub write_access {
     my( $self, $write_access ) = @_;
 
     if(defined($write_access)) {
-        $self->{'_write_access'} = $write_access;
+        $self->{'_write_access'} = $write_access ? 1 : 0;
     }
     return $self->{'_write_access'};
 }
@@ -134,10 +134,10 @@ sub get_default_MethodCollection {
 }
 
 sub add_acefile {
-    my( $self, $ace ) = @_;
+    my( $self, $acefile ) = @_;
 
     my $af = $self->{'_acefile_list'} ||= [];
-    push(@$af, $ace);
+    push(@$af, $acefile);
 }
 
 sub list_all_acefiles {
@@ -166,7 +166,7 @@ sub init_AceDatabase {
     $self->write_pipeline_data($ss);
     $self->write_methods_acefile;
     $self->initialize_database;
-    if ($self->write_local_blast($ss)) {
+    if ($self->write_local_blast()) {
         # Must parse in new acefile
         $self->initialize_database;
 
@@ -177,7 +177,7 @@ sub init_AceDatabase {
 }
 
 sub write_local_blast {
-    my ($self, $ss) = @_;
+    my ($self) = @_;
     
     # The Blast object gets all its configuration
     # information from Lace::Defaults
