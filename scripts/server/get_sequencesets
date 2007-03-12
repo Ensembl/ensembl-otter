@@ -24,9 +24,9 @@ if($server->running_headcode()) {
     foreach my $ss_slice (@{$slice_adaptor->fetch_all('chromosome', 'Otter')}) {
 
         my $name = $ss_slice->seq_region_name();
-        my $description = ''; # default
-        my $write_access= 1;  # default
-        my $is_hidden   = 0;  # default
+        my $description  = ''; # default
+        my $write_access = 1;  # default
+        my $hidden       = 0;  # default
 
         # FIXME: we will need finer, by-author's-name control over visibility/writability of sequence sets
 
@@ -36,14 +36,14 @@ if($server->running_headcode()) {
                 $description  = $value;
             }elsif($code eq 'write_access') {
                 $write_access = $value;
-            }elsif($code eq 'is_hidden') {
-                $is_hidden    = $value;
+            }elsif($code eq 'hidden') {
+                $hidden       = $value;
             }
         }
 
         $xml .= qq`      <sequenceset name="$name">\n`;
         $xml .= qq`        <description>$description</description>\n`;
-        $xml .= qq`        <is_hidden>$is_hidden</is_hidden>\n`;
+        $xml .= qq`        <is_hidden>$hidden</is_hidden>\n`;
         $xml .= qq`        <write_access>$write_access</write_access>\n`;
         $xml .= qq`      </sequenceset>\n`;
     }
