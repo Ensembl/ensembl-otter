@@ -29,7 +29,7 @@ use MenuCanvasWindow::XaceSeqChooser;
     my $db = $cl->new_AceDatabase;
     $db->add_misc_acefile;
     $db->write_otter_acefile($ss);
-    $db->write_local_blast($ss);
+    $db->write_local_blast();
     $db->write_pipeline_data($ss);
     $db->initialize_database;
    

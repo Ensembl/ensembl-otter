@@ -289,22 +289,13 @@ sub max_column_width {
     return $self->{'_max_column_width'} || 40 * $self->font_size;
 }
 
-sub _write_access{
-    my ($self) = @_ ;
-    my $ss = $self->SequenceSet or confess "No SequenceSet attached";
-    return $ss->write_access;
-}
-
-
 sub initialise {
     my( $self ) = @_;
 
     # Use a slightly smaller font so that more info fits on the screen
     $self->font_size(12);
 
-#    my $ss     = $self->SequenceSet or confess "No SequenceSet attached";
-#    my $write  = $ss->write_access;
-    my $write  = $self->Client->write_access;
+    my $write_access  = $self->Client->write_access && $self->SequenceSet->write_access;
     my $canvas = $self->canvas;
     my $top    = $canvas->toplevel;
     
@@ -325,7 +316,7 @@ sub initialise {
     my ( $comment, $comment_label );
     my ( $button_frame_1, $button_frame_2 );
 
-    if ($write) {
+    if ($write_access) {
 	$button_frame_1 = $top->Frame->pack(-side => 'top');
 
 	$button_frame_2 = $top->Frame->pack(-side => 'top');
@@ -424,21 +415,6 @@ sub initialise {
     $top->bind('<Control-l>', $run_lace);
     $top->bind('<Control-L>', $run_lace);
 
-    #if ($write) {
-    #    
-    #    my $do_embl_dump = sub{
-    #        watch_cursor($top);
-    #        my @sequence_name_list = list_selected_sequence_names($canvas);
-    #        foreach my $seq (@sequence_name_list) {
-    #            do_embl_dump($seq);
-    #        }
-    #        default_cursor($top);
-    #        };
-    #    $self->make_button($button_frame2, 'EMBL dump', $do_embl_dump, 0);
-    #    $top->bind('<Control-e>', $do_embl_dump);
-    #    $top->bind('<Control-E>', $do_embl_dump);
-    #}
-    
     my $print_to_file = sub {
 	    $self->page_width(591);
 	    $self->page_height(841);
@@ -674,13 +650,13 @@ sub _open_SequenceSet{
         
     my $cl = $self->Client;
 
-    my $write_access = $cl->write_access() && $ss->write_access;
-    my $adb = $self->LocalDatabaseFactory->new_AceDatabase($write_access);
+    my $adb_write_access = $cl->write_access() && $ss->write_access;
+    my $adb = $self->LocalDatabaseFactory->new_AceDatabase($adb_write_access);
     $adb->error_flag(1);
     $adb->title($title);
     $adb->make_database_directory;
 
-    if($write_access){
+    if($adb_write_access){
         # only lock the region if we have write access.
         eval{
             $adb->try_and_lock_the_block($ss);
