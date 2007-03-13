@@ -69,7 +69,7 @@ use Bio::Otter::Lace::Defaults;
 
         foreach my $stable (keys %distinct_exons) {
             my $uniq_exons = $distinct_exons{$stable};
-            ### Give all exons with the same key the same version
+            # Give all exons with the same key the same version
             if (keys %$uniq_exons > 1) {
                 $str .= "  $stable\n";
                 my $keep = 1;
