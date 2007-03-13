@@ -380,6 +380,8 @@ sub get_gene_history {
   }
   elsif ( $query_str =~ /OTT\w{3,3}T\d+/ ) {
 	my $genes = $ga->fetch_by_transcript_stable_id_constraint($query_str);
+	$query_sid = $query_str;
+
 	foreach my $g ( @$genes ){
 	  $gsid = $g->stable_id;
 	  push(@$gsids, $gsid);
@@ -404,11 +406,11 @@ sub get_gene_history {
   # if gene is not obsolete, look via transnames of gsids for
   # possible obsolete ones it has replaced
   #-----------------------------------------------------------
-  my $gsid_found_by_tname = 0;
-  unless ( find_obsolete_gene($ga, $gsids) ) {
-    warn "LIVE";
-	$gsid_found_by_tname = get_all_gsids_via_geneTransNames_of_gsid($ga, $gsids, 'transcript', $query_sid);
-  }
+#  my $gsid_found_by_tname = 0;
+#  unless ( find_obsolete_gene($ga, $gsids) ) {
+ #   warn "LIVE";
+	my $gsid_found_by_tname = get_all_gsids_via_geneTransNames_of_gsid($ga, $gsids, 'transcript', $query_sid);
+ # }
 
   # if no new gsids found by transnames, look via genenames of gsids
   my $gsid_found_by_gname;
@@ -505,7 +507,7 @@ sub get_all_gsids_via_geneTransNames_of_gsid {
   my @diff_gsids = array_comp($gsids, $found_gsids);
   if ( @diff_gsids ){
 	push(@diff_gsids, @$gsids);
-	warn "<DIFF: @diff_gsids: checking exons overlap against $query_sid>\n";
+	warn "<DIFF: @diff_gsids: reference $query_sid>\n";
 
 	# check if exons overlaps
 	return get_gsids_with_overlapped_exons($ga, @diff_gsids, $query_sid);
