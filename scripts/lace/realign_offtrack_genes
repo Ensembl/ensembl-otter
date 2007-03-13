@@ -329,9 +329,6 @@ sub hum_seq_from_exon {
 sub remap_ens_Exons {
     my( $finder, $gene, $dest_ctg, $liberal ) = @_;
 
-
-    warn "remapping";
-
     my $exons = $gene->get_all_Exons;
 
     # Make a Hum::Sequence object for each exon
