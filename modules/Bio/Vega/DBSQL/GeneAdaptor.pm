@@ -78,7 +78,8 @@ sub fetch_by_attribute_code_value {
 }
 sub fetch_stable_id_by_name {
 
-  # can search either genename or transname by name or synonym
+  # can search either genename or transname by name or synonym,
+  # support CASE INSENSITIVE search
   # returns a reference to a list of gene stable ids if successful
   # $mode is either 'gene' or 'transcript' which corresponds to genename or transname
   # search uses LIKE command
@@ -103,11 +104,13 @@ sub fetch_stable_id_by_name {
 	  $join = "m.gene_id = ma.gene_id";
 	}
 	else {
-	  $attrib_value =~ /(.*)-\d+.*/; # eg, ABO-001
+	  $attrib_value =~ /(.*)-\d+.*/;   # eg, ABO-001
 	  $attrib_value =~ /(.*\.\d+).*/;  # want sth. like RP11-195F19.20, trim away eg, -001, -002-2-2
 	  $attrib_value = $1;
 	  $join = "m.transcript_id = ma.transcript_id";
 	}
+
+	$attrib_value = lc($attrib_value); # for case-insensitive comparison later
 
 	my $sth=$self->prepare(qq{
 							  SELECT distinct gsi.stable_id, ma.value
@@ -122,9 +125,9 @@ sub fetch_stable_id_by_name {
 
 	$sth->execute($attrib_code, "$attrib_value%");
 
-	while (my ($gsid, $value) = $sth->fetchrow ){
+	while ( my ($gsid, $value) = $sth->fetchrow ){
 	  # exclude eg, SET7 SETX where search is 'SET%' (ie, allow SET-2)
-	  if ( $value eq $attrib_value or $value =~ /$attrib_value-\d+/ ){
+	  if ( lc($value) eq $attrib_value or lc($value) =~ /$attrib_value-\d+/ ){
 		push(@$gsids, $gsid);
 	  }
 	}
@@ -260,9 +263,9 @@ sub fetch_by_transcript_stable_id_constraint {
 
     my $sth = $self->prepare(qq(
         SELECT  tr.gene_id
-		FROM	transcript tr, transcript_stable_id tcl
-        WHERE   tcl.stable_id = ?
-        AND     tr.transcript_id = tcl.transcript_id
+		FROM	transcript tr, transcript_stable_id tsi
+        WHERE   tsi.stable_id = ?
+        AND     tr.transcript_id = tsi.transcript_id
     ));
 
     $sth->execute($trans_stable_id);
