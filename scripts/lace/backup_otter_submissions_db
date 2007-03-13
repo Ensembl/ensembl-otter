@@ -98,7 +98,7 @@ sub check_database_not_too_big {
         };
         warn $@ if $@;
     }
-    my $max_rows = 100_000;
+    my $max_rows = 500_000;
     if ($row_count > $max_rows) {
         die "ERROR: Database has $row_count rows in feature tables: limit is $max_rows\n";
     }

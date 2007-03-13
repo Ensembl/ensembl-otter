@@ -25,6 +25,7 @@ use Bio::Otter::Lace::Defaults;
 
     my $gene_aptr = $otter_dba->get_GeneAdaptor;
     my $exon_aptr = $otter_dba->get_ExonAdaptor;
+    my $stab_aptr = $otter_dba->get_StableIdAdaptor;
     my $gene_id_list = $gene_aptr->list_current_dbIDs;
     
     my $sth = $otter_dba->prepare(q{
@@ -71,14 +72,26 @@ use Bio::Otter::Lace::Defaults;
             ### Give all exons with the same key the same version
             if (keys %$uniq_exons > 1) {
                 $str .= "  $stable\n";
+                my $keep = 1;
                 foreach my $exon_key (keys %$uniq_exons) {
-                    ### Make new stable IDs for exons after the first key
                     my @version_list = sort {$a <=> $b} map $_->version, @{$uniq_exons->{$exon_key}};
                     $str .= "    $exon_key  (@version_list)\n";
+                    if ($keep) {
+                        $keep = 0;
+                        next;
+                    }
+                    # Make new stable IDs for exons after the first key
+                    my $new_stable = $stab_aptr->fetch_new_exon_stable_id;
+                    my $new_version = 1;
+                    foreach my $version (@version_list) {
+                        print qq{UPDATE exon_stable_id SET stable_id = '$new_stable', version = $new_version },
+                            qq{WHERE stable_id = '$stable' and version = $version;\n};
+                        $new_version++;
+                    }
                 }
             }
         }
-        print "\n$gene_id\n$str" if $str;
+        print STDERR "\n$gene_id\n$str" if $str;
     }
 }
 
