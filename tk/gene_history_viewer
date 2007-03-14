@@ -368,71 +368,52 @@ sub get_gene_history {
 
   my $ga = $otter_db->get_GeneAdaptor;
   my $ta = $otter_db->get_TranscriptAdaptor;
+  my $gsids; # list ref
 
-  # first get relevant info of a gene
-  my ($gsids, $gsid, $query_sid);
-
+  # first get relevant info of a gene from query
   if ( $query_str =~ /OTT\w{3,3}G\d+/ ) {
-    $gsid = $query_sid = $query_str;
-	
-	# this returns all gene stable ids that its transcript_stable_ids point to
-	$gsids = get_all_gsids_via_transSID_of_geneSID($gsid, $ga);
+	@$gsids = $query_str if check_query_exists($query_str, 'gene');
   }
   elsif ( $query_str =~ /OTT\w{3,3}T\d+/ ) {
+	check_query_exists($query_str, 'trans');
 	my $genes = $ga->fetch_by_transcript_stable_id_constraint($query_str);
-	$query_sid = $query_str;
 
 	foreach my $g ( @$genes ){
-	  $gsid = $g->stable_id;
+	  my $gsid = $g->stable_id;
 	  push(@$gsids, $gsid);
 	}
   }
   else {
     # assuming gene_name
-	# list_ref or 0
-	my $gSIDs = $ga->fetch_stable_id_by_name($query_str, 'gene');
-	gene_not_found_err() unless ref($gSIDs) eq "ARRAY";
-
-	my $g_to_check_ref;
-
-	foreach $gsid ( @$gSIDs ){
-	  # get all gsids that a name associates with
-	  push(@$g_to_check_ref, @{get_all_gsids_via_transSID_of_geneSID($gsid, $ga)});
-	}
-	push(@$gsids, uniq($g_to_check_ref));
+	check_query_exists($query_str, 'name');
+	push(@$gsids, uniq($ga->fetch_stable_id_by_name($query_str, 'gene')));
   }
 
-  #-----------------------------------------------------------
-  # if gene is not obsolete, look via transnames of gsids for
-  # possible obsolete ones it has replaced
-  #-----------------------------------------------------------
-#  my $gsid_found_by_tname = 0;
-#  unless ( find_obsolete_gene($ga, $gsids) ) {
- #   warn "LIVE";
-	my $gsid_found_by_tname = get_all_gsids_via_geneTransNames_of_gsid($ga, $gsids, 'transcript', $query_sid);
- # }
+  #----------------------------------------------------------------------
+  # now get all possible gsids associates with gene_name and trans names
+  # this will pull out all possible obsolete ones in the history
+  #----------------------------------------------------------------------
+  my $gsids_found_by_gname = get_all_gsids_via_geneTransNames_of_gsid($ga, $gsids, 'gene');
+  my $gsids_found_by_tname = get_all_gsids_via_geneTransNames_of_gsid($ga, $gsids, 'transcript');
 
-  # if no new gsids found by transnames, look via genenames of gsids
-  my $gsid_found_by_gname;
-  if ( $gsid_found_by_tname == 0 ){
-	warn "None via tname";
-	$gsid_found_by_gname = get_all_gsids_via_geneTransNames_of_gsid($ga, $gsids, 'gene', $query_sid);
+  map { push(@$gsids, @$_) if $_ } ($gsids_found_by_gname, $gsids_found_by_tname);
+  @$gsids = uniq($gsids);
+  warn "@$gsids";
 
-	if ( $gsid_found_by_gname != 0 ){
-	  $gsids = $gsid_found_by_gname;
-	  warn "Found via gname";
-	}
-	else {
-	  warn "None via gname";
-	}
-  }
-  else {
-	warn "Found via tname";
-	$gsid = $gsid_found_by_tname;
-  }
-
-  gene_not_found_err() unless $gsids->[0];
   print_all_gene_infos($ga, $gsids);
+}
+
+sub check_query_exists {
+  my ($query, $mode) = @_;
+  my $mode_sql = { gene  => qq{select count(*) from gene_stable_id where stable_id=?},
+				   trans => qq{select count(*) from transcript_stable_id where stable_id=?},
+				   name  => qq{select count(*) from gene_attrib where value=?}
+				 };
+
+  my $sth = $otter_db->prepare($mode_sql->{$mode});
+  $sth->execute($query);
+
+  ( $sth->fetchrow ) ? ( return 1 ) : ( gene_not_found_err() );
 }
 
 sub find_obsolete_gene {
@@ -446,36 +427,14 @@ sub find_obsolete_gene {
   return 0;
 }
 
-sub get_all_gsids_via_transSID_of_geneSID {
-
-  # including obsolete ones
-
-  my ($gsid, $ga)= @_;
-  my ($g_to_check, $gsid_seen);
-
-  foreach my $gene ( @{$ga->fetch_all_versions_by_stable_id($gsid)} ){
-	foreach my $t ( @{$gene->get_all_Transcripts} ){
-	  foreach my $g (@{$ga->fetch_by_transcript_stable_id_constraint($t->stable_id)} ){
-		my $gsid = $g->stable_id;
-		$gsid_seen->{$gsid}++;
-		if ( $gsid_seen->{$gsid} == 1 ){
-		  push(@$g_to_check, $gsid);
-		}
-	  }
-	}
-  }
-  return $g_to_check;
-}
-
 sub get_all_gsids_via_geneTransNames_of_gsid {
 
   # $mode is either 'gene' or 'transcript'
-  my ($ga, $gsids, $mode, $query_sid) = @_;
+  my ($ga, $gsids, $mode) = @_;
 
   my (@names, $seen_names);
   foreach my $gsid ( @$gsids ){
 	foreach my $g ( @{$ga->fetch_all_versions_by_stable_id($gsid)} ){
-
 	  if ( $mode eq 'gene' ){
 		#warn "GENE";
 		my $gname = $g->get_all_Attributes('name')->[0]->value;
@@ -495,49 +454,60 @@ sub get_all_gsids_via_geneTransNames_of_gsid {
 
   my ($found_gsids, $seen_gsids);
   foreach ( @names ){
-	warn "<Follow history via $mode name: $_>\n";
-	my $Gsids = $ga->fetch_stable_id_by_name($_, $mode);
-	foreach my $gsid ( @$Gsids ){
+	warn "<Follow history via $mode name: $_  from @$gsids>\n";
+	foreach my $gsid ( @{$ga->fetch_stable_id_by_name($_, $mode)}) {
 	  $seen_gsids->{$gsid}++;
-	  push(@$found_gsids, $gsid) if $seen_gsids->{$gsid} == 1;
+	 # warn $gsid;
+	  push(@$found_gsids, $gsid) if grep { $gsid ne $_ } @$gsids and $seen_gsids->{$gsid} == 1;
 	}
   }
 
-  # check if gsids found via transname is same as orignal gsids
+  # check if gsids found via gene/transname is same as orignal gsids
+  return 0 unless $found_gsids;
+
   my @diff_gsids = array_comp($gsids, $found_gsids);
   if ( @diff_gsids ){
-	push(@diff_gsids, @$gsids);
-	warn "<DIFF: @diff_gsids: reference $query_sid>\n";
+	warn "<DIFF: @diff_gsids: reference @$gsids>\n";
 
 	# check if exons overlaps
-	return get_gsids_with_overlapped_exons($ga, @diff_gsids, $query_sid);
+	return get_gsids_with_overlapped_exons($ga, \@diff_gsids, $gsids);
   }
 }
 
 sub get_gsids_with_overlapped_exons {
-  my ($ga, @diff_gsids, $query_sid) = @_;
+  my ($ga, $diff_gsids, $gsids) = @_;
 
   my $SE_gsid;
-  foreach my $g ( @{$ga->fetch_all_versions_by_stable_id($query_sid)} ){
-	foreach my $e ( @{$g->get_all_Exons} ){
-	  my $se_str = $e->start."-".$e->end;
-	  $SE_gsid->{$se_str} = 1;
-	}
-  }
-
-  my @gsids_with_overlapped_exons;
-  foreach my $gsid (@diff_gsids){
+  foreach my $gsid ( @$gsids ){
 	foreach my $g ( @{$ga->fetch_all_versions_by_stable_id($gsid)} ){
 	  foreach my $e ( @{$g->get_all_Exons} ){
 		my $se_str = $e->start."-".$e->end;
-		push(@gsids_with_overlapped_exons, $gsid) if exists $SE_gsid->{$se_str};
+		$SE_gsid->{$se_str} = 1;
+	  }
+	}
+  }
+
+  my (@gsids_with_overlapped_exons, $seen);
+
+  foreach my $gsid (@$diff_gsids){
+	next if grep {$gsid eq $_ } @$gsids;
+	warn "CHECKING $gsid";
+
+	foreach my $g ( @{$ga->fetch_all_versions_by_stable_id($gsid)} ){
+	  $seen->{$gsid}++;
+	  foreach my $e ( @{$g->get_all_Exons} ){
+		my $se_str = $e->start."-".$e->end;
+		if ( exists $SE_gsid->{$se_str} and $seen->{$gsid} == 1 ){
+		  push(@gsids_with_overlapped_exons, $gsid);
+		  last;
+		}
 	  }
 	}
   }
 
   warn "FOUND OVERLAPPED: @gsids_with_overlapped_exons";
 
-  ( $#gsids_with_overlapped_exons > 0 )
+  ( $#gsids_with_overlapped_exons >= 0 )
 	? ( return \@gsids_with_overlapped_exons )
 	  : ( return 0 );
 }
@@ -582,70 +552,79 @@ sub print_all_gene_infos {
   # remove tree data if exists
   $tree->delete('all');
 
+  # sort appearance of gene stable ids by created time
+  my $created_gsid;
+  map { push(@{$created_gsid->{ $ga->fetch_by_stable_id_version($_, 1)->created_date}}, $_) }
+	@$gsids;
+
   my ($gvers, $obsolete, $dead_g);
 
-  foreach my $gsid ( @$gsids ) {
-	$g_count++;
+  foreach my $created_time ( sort { $a<=>$b } keys %$created_gsid ) {
 
-	my $ver_gene;
-	foreach my $gene ( @{$ga->fetch_all_versions_by_stable_id($gsid)} ){
-	  $ver_gene->{$gene->version} = $gene;
-	}
+	foreach my $gsid ( @{$created_gsid->{$created_time}} ){
 
-	my $last_ver = (sort scalar keys %$ver_gene)[-1];
-	$gvers += scalar keys %$ver_gene;
+	  $g_count++;
 
-	my $created = convert_unix_time($ver_gene->{$last_ver}->created_date);
-	my $top = "G$g_count";
-
-	my $gnote;
-	if ( $ver_gene->{$last_ver}->biotype eq "obsolete" ){
-	  $gnote = "[G$g_count] $gsid  OBSOLETE";
-	  $obsolete = 1;
-	  $dead_g = $ver_gene->{$last_ver};
-	}
-	else {
-	  $gnote = "[G$g_count] $gsid  $created";
-	}
-
-	build_tree($top, $gnote);
-
-	foreach my $gver ( sort {$a<=>$b} keys %$ver_gene ){
-
-	  my $gene = $ver_gene->{$gver};
-	  $gene = $ga->reincarnate_gene($gene);
-
-	  my $mtime       = convert_unix_time($gene->modified_date);
-	  my $trans_count = scalar @{$gene->get_all_Transcripts};
-	  my $exon_count  = scalar @{$gene->get_all_Exons};
-	  my $desc = $gene->description;
-	  $desc = 'NA' unless $desc;
-
-	  my $gremark;
-	  eval{
-		$gremark = $gene->get_all_Attributes('remark')->[0]->value;
-	  };
-	  $gremark = 'NA' unless $gremark;
-	
-	  my $gsyms;
-	  foreach my $sy ( @{$gene->get_all_Attributes('synonym')} ) {
-		push(@$gsyms, $sy->value);
+	  my $ver_gene;
+	  foreach my $gene ( @{$ga->fetch_all_versions_by_stable_id($gsid)} ){
+		$ver_gene->{$gene->version} = $gene;
 	  }
-	  @$gsyms = 'NA' unless $gsyms;
 
-	  my $space = "-" x 5;
-	  my $snode = "V$gver.GeneInfo";
+	  my $last_ver = (sort scalar keys %$ver_gene)[-1];
+	  $gvers += scalar keys %$ver_gene;
 
-	  build_tree($top.".V$gver", "V$gver (T: $trans_count, E: $exon_count, $mtime)", $gene);
-	  build_tree($top.".$snode", 'GeneInfo');
-	  build_tree($top.".$snode.Assembly", "Assembly $space ".$gene->chr_name);
-	  build_tree($top.".$snode.GeneName", "GeneName $space ".$gene->get_all_Attributes('name')->[0]->value);
-	  build_tree($top.".$snode.Synonym",  "Synonym $space @$gsyms");
-	  build_tree($top.".$snode.GeneType", "GeneType $space ".$gene->status);
-	  build_tree($top.".$snode.Desc",     "Desc  $space ".$desc);
-	  build_tree($top.".$snode.Remark",   "Remark $space ".$gremark);
+	  my $created = convert_unix_time($ver_gene->{$last_ver}->created_date);
+	  my $top = "G$g_count";
 
-	  build_tree_for_transinfo($gene, $top.".V$gver", $space);
+	  my $gnote;
+	  if ( $ver_gene->{$last_ver}->biotype eq "obsolete" ){
+		$gnote = "[G$g_count] $gsid  OBSOLETE";
+		$obsolete = 1;
+		$dead_g = $ver_gene->{$last_ver};
+	  }
+	  else {
+		$gnote = "[G$g_count] $gsid  $created";
+	  }
+
+	  build_tree($top, $gnote);
+
+	  foreach my $gver ( sort {$a<=>$b} keys %$ver_gene ){
+
+		my $gene = $ver_gene->{$gver};
+		$gene = $ga->reincarnate_gene($gene);
+
+		my $mtime       = convert_unix_time($gene->modified_date);
+		my $trans_count = scalar @{$gene->get_all_Transcripts};
+		my $exon_count  = scalar @{$gene->get_all_Exons};
+		my $desc = $gene->description;
+		$desc = 'NA' unless $desc;
+
+		my $gremark;
+		eval{
+		  $gremark = $gene->get_all_Attributes('remark')->[0]->value;
+		};
+		$gremark = 'NA' unless $gremark;
+	
+		my $gsyms;
+		foreach my $sy ( @{$gene->get_all_Attributes('synonym')} ) {
+		  push(@$gsyms, $sy->value);
+		}
+		@$gsyms = 'NA' unless $gsyms;
+
+		my $space = "-" x 5;
+		my $snode = "V$gver.GeneInfo";
+
+		build_tree($top.".V$gver", "V$gver (T: $trans_count, E: $exon_count, $mtime)", $gene);
+		build_tree($top.".$snode", 'GeneInfo');
+		build_tree($top.".$snode.Assembly", "Assembly $space ".$gene->chr_name);
+		build_tree($top.".$snode.GeneName", "GeneName $space ".$gene->get_all_Attributes('name')->[0]->value);
+		build_tree($top.".$snode.Synonym",  "Synonym $space @$gsyms");
+		build_tree($top.".$snode.GeneType", "GeneType $space ".$gene->status);
+		build_tree($top.".$snode.Desc",     "Desc  $space ".$desc);
+		build_tree($top.".$snode.Remark",   "Remark $space ".$gremark);
+
+		build_tree_for_transinfo($gene, $top.".V$gver", $space);
+	  }
 	}
   }
 
