@@ -74,6 +74,31 @@ my %assembly_nonmatch_version = (
     'chr_Y_01'      => 1,
 },
 'pig' => {
+	'chr17-SSC17_MAX1-05'    => 5,
+	'chr17-SSC17_MAX1-04'    => 4,
+	'chr17-SSC17_MAX1-03'    => 3,
+	'chr17-SSC17_MAX1-02'    => 2,
+	'chr17-01'   => 1.5,
+	'chr17-SSC17_MAX1-01'    => 1,
+	'bE447P16-01'    => 0,
+	'CR974431_CpG'   => 0,
+	'phrap_test-01'  => 0,
+	'chr4_HSD3B-01'  => 1,
+	'SSC6_test1-01'  => 3,
+	'Chr_6_NKG-02'   => 2,
+	'Chr_6_NKG'  => 1,
+	'mhc-08' => 8,
+	'mhc-07' => 7,
+	'mhc-06' => 6,
+	'mhc-05' => 5,
+	'mhc-04' => 4,  # ? didn't find the agp
+	'SSC7_test2-02'  => 3.6
+	'SSC7_test2-01'  => 3.3
+	'mhc-03' => 3,
+	'mhc-02' => 2,
+	'mhc-01' => 1,
+	'MHC_class-I'    => 0.6,
+	'MHC_class-II'   => 0.3,
 },
 'dog' => {
 },
