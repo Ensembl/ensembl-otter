@@ -1,0 +1,138 @@
+#!/usr/local/bin/perl -w
+
+use strict;
+use Getopt::Long 'GetOptions';
+use Bio::Otter::Lace::Defaults;
+use DBI;
+use Bio::EnsEMBL::RawContig;
+
+
+my ($dataset, $new_otter_db, $chk_agp, $passwd);
+
+Bio::Otter::Lace::Defaults::do_getopt('ds|dataset=s' => \$dataset, # eg, human or mouse or zebrafish
+									  'newdb=s'      => \$new_otter_db,
+									  'agp'          => \$chk_agp,
+ 									  'pass=s'       => \$passwd
+									 );
+
+die "Specify -ds and -newdb and -pass\n" unless ($dataset and $new_otter_db and $passwd);
+
+my $client   = Bio::Otter::Lace::Defaults::make_Client();
+my $dset     = $client->get_DataSet_by_name($dataset);	
+my $otter_db = $dset->get_cached_DBAdaptor;
+my $rca      = $otter_db->get_RawContigAdaptor;
+
+my $ctgs = $rca->fetch_all;
+my $ctgID_ctgname;
+
+foreach my $ctg (@$ctgs ){
+  $ctgID_ctgname->{$ctg->dbID} = $ctg->name;
+};
+
+my $new_otter_dbh = DBI->connect("DBI:mysql:$new_otter_db:otterlive:3301", 'ottadmin', $passwd,
+						 {RaiseError => 1, AutoCommit => 0}) || die "cannot connect to $new_otter_db, $DBI::errstr";
+
+my $ctgname_2_seqRegionID = convert_ctg_name_2_seq_regon_id($new_otter_dbh);
+
+
+my $sn = $otter_db->prepare("SELECT * FROM sequence_note");
+$sn->execute;
+
+my ($omit, $count_errors, $seen_ctgs, @values);
+
+while ( my $h = $sn->fetchrow_hashref ) {
+
+  my $seqReg_id;
+  my $ctgname = $ctgID_ctgname->{$h->{contig_id}};
+
+  unless ( $ctgname ){
+	$omit .= "contig Id " . $h->{contig_id} . " is not in contig table\n";
+	$count_errors++;
+	next;
+  }
+
+  # make use APGs can be restored in otter db before transfer sequence_notes
+  if ( $chk_agp ){
+	check_agp($ctgname)
+  }
+
+  else {
+	insert_table($h);
+  }
+}
+
+print "Found $count_errors sequence_notes have contig_id not in otter contig_table: ignored\n";
+
+#----------------------------------
+#           subroutines
+#----------------------------------
+
+sub check_agp {
+
+  my $ctgname = shift;
+
+  $seen_ctgs->{$ctgname}++;
+  return if $seen_ctgs->{$ctgname} > 1;
+
+  my @msg;
+  unless ( $ctgname_2_seqRegionID->{$ctgname} ){
+	print "$ctgname not in seq_regon of new otter db\n";
+	$ctgname =~ /(.+\.\d+)\.\d+\.\d+/;
+	my $acc = $1;
+
+	my @dirs = glob("/nfs/team71/analysis/jgrg/work/human/*");
+	foreach my $dir ( @dirs ) {
+	  if ( my @found = `ggrep -r $acc $dir/*.agp` ) {
+		print @found;
+		last;
+	  }
+	}
+  }
+}
+
+sub insert_table {
+
+  my $h = shift;
+
+  my $ctg_id     = $h->{contig_id};
+  my $seqReg_id  = $ctgname_2_seqRegionID->{$ctgID_ctgname->{$ctg_id}};
+  my $author_id  = $h->{author_id};
+  my $note_time  = $h->{note_time};
+  my $is_current = $h->{is_current};
+
+  # otter enum is diff. from new_otter enum
+  ($is_current eq 'Y') ? ($is_current = 'yes') : ($is_current = 'no');
+
+  my $note;
+  ($h->{note}) ? ($note = $h->{note}) : ($note = '');
+
+  if ( $seqReg_id ){
+	my $insert = $new_otter_dbh->prepare(qq{INSERT IGNORE INTO sequence_note VALUES (?,?,?,?,?)});
+	eval {$insert->execute($seqReg_id, $author_id, $note_time, $is_current, $note)};
+	$new_otter_dbh->commit;
+	$new_otter_dbh->rollback if $@;
+  }
+  else {
+	print $ctgID_ctgname->{$ctg_id}," not in new_otter_human\n";
+  }
+}
+
+sub convert_ctg_name_2_seq_regon_id {
+  my $new_otter_dbh = shift;
+
+  my $qry = $new_otter_dbh->prepare(qq{
+									  select seq_region_id, name from seq_region where coord_system_id=5
+									 }
+								  );
+
+  my $ctgname_2_seqRegionID = {};
+  $qry->execute;
+  while ( my ( $seq_region_id, $ctgname ) = $qry->fetchrow ){
+	$ctgname_2_seqRegionID->{$ctgname} = $seq_region_id;
+  }
+
+  return $ctgname_2_seqRegionID;
+}
+
+
+__END__
