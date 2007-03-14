@@ -14,6 +14,7 @@ my $loadcount=0;
 $|=1;
 
 my %assembly_nonmatch_version = (
+'human' => {
     'chr1-7A'       => 7.5,
     'Chr1_final'    => 8,
 
@@ -71,6 +72,11 @@ my %assembly_nonmatch_version = (
     'chrX-07A'      => 7.5,
 
     'chr_Y_01'      => 1,
+},
+'pig' => {
+},
+'dog' => {
+},
 );
 
 { # lexical environment for &execute_ctgids_2_asm
@@ -277,8 +283,8 @@ sub main {
 
             my $version = ($atype=~/^chr\d+-0*(\d+)$/)
                 ? $1
-                : exists($assembly_nonmatch_version{$atype})
-                    ? $assembly_nonmatch_version{$atype}
+                : exists($assembly_nonmatch_version{$dataset_name}{$atype})
+                    ? $assembly_nonmatch_version{$dataset_name}{$atype}
                     : 0;
             push @{$ver_2_asm_chr->{$version}}, [$atype, $chr_name];
 
