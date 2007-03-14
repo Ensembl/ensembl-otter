@@ -107,7 +107,7 @@ sub fetch_stable_id_by_name {
 	  $attrib_value =~ /(.*)-\d+.*/;   # eg, ABO-001
 	  $attrib_value =~ /(.*\.\d+).*/;  # want sth. like RP11-195F19.20, trim away eg, -001, -002-2-2
 	  $attrib_value = $1;
-	  $join = "m.transcript_id = ma.transcript_id";
+ 	  $join = "m.transcript_id = ma.transcript_id";
 	}
 
 	$attrib_value = lc($attrib_value); # for case-insensitive comparison later
@@ -118,7 +118,7 @@ sub fetch_stable_id_by_name {
 							  WHERE gsi.gene_id=m.gene_id
 							  AND $join
 							  AND ma.attrib_type_id = a.attrib_type_id
-							  AND a.code=? 
+							  AND a.code=?
 							  AND ma.value LIKE ?
 							 }
 						  );
@@ -132,12 +132,9 @@ sub fetch_stable_id_by_name {
 	  }
 	}
 	$sth->finish();
-
-	# return if search by 'name' succeeds, else search by 'synonym'
-	if ( $gsids ){
-	  return $gsids;
-	}
   }
+
+  return $gsids;
 }
 
 sub reincarnate_gene {
