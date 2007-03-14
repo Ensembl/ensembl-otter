@@ -11,10 +11,12 @@ use Bio::Otter::Lace::Defaults;
 {
     my $dataset_name    = 'human'; # 'test_human';      # 'mouse', ...
     my $with_genes      = 0; # whether we take into account only contigs containing annotated genes
+    my $without_genes   = 0; # whether we take into account only contigs containing no annotated genes
 
     Bio::Otter::Lace::Defaults::do_getopt(
-        'dataset=s'     => \$dataset_name,
-        'with_genes!'   => \$with_genes,
+        'dataset=s'      => \$dataset_name,
+        'with_genes!'    => \$with_genes,
+        'without_genes!' => \$without_genes,
     );
     
     # Client communicates with otter HTTP server
@@ -33,7 +35,16 @@ use Bio::Otter::Lace::Defaults;
         ON a.contig_id=c.contig_id
         WHERE e.contig_id=c.contig_id
         AND a.type IS NULL;
-
+    } : $without_genes
+    ? qq {
+        SELECT DISTINCT c.name
+        FROM contig c
+        LEFT JOIN exon e
+        ON e.contig_id=c.contig_id
+        LEFT JOIN assembly a
+        ON a.contig_id=c.contig_id
+        WHERE e.exon_id IS NULL
+        AND   a.type    IS NULL;
     } : qq{
         SELECT c.name
         FROM contig c
