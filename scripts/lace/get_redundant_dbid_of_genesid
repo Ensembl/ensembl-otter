@@ -1,0 +1,91 @@
+#!/usr/local/bin/perl -w
+
+# ck1@sanger.ac.uk
+
+use strict;
+use Bio::Otter::Lace::Defaults;
+
+my ($dataset_name, $stable_id);
+
+Bio::Otter::Lace::Defaults::do_getopt(
+                                      'ds|dataset=s' => \$dataset_name,
+                                     );
+
+my $client   = Bio::Otter::Lace::Defaults::make_Client();
+my $dset     = $client->get_DataSet_by_name($dataset_name);
+my $ssets    = $dset->get_all_visible_SequenceSets;
+my $otter_db = $dset->get_cached_DBAdaptor;
+my $sliceAd  = $otter_db->get_SliceAdaptor;
+my $geneAd   = $otter_db->get_GeneAdaptor;
+
+foreach my $atype ( @$ssets ){
+#  next  if $atype->name !~ /^chr1-11/;
+
+  my $gids = get_gene_dbid_list_of_atype($atype->name);
+  foreach my $gid ( @$gids ){
+    get_redundant_db_ids($gid);
+  }
+}
+
+#---------------------
+#     subroutines
+#---------------------
+
+sub get_gene_dbid_list_of_atype {
+
+  my $atype = shift;
+  print STDOUT "Working on $atype\n";
+
+  $otter_db->assembly_type($atype); # replace the default sequence set setting
+
+  my $seqSet = $dset->get_SequenceSet_by_name($atype);
+  $dset->fetch_all_CloneSequences_for_SequenceSet($seqSet);
+	
+  my $chrom = $seqSet->CloneSequence_list()->[0]->chromosome;
+  my $slice = $sliceAd->fetch_by_chr_name($chrom);
+  my $latest_gene_ids = $geneAd->list_current_dbIDs_for_Slice($slice);
+
+  return $latest_gene_ids;
+}
+
+sub get_redundant_db_ids {
+
+  my $gid = shift;
+  my $gene = $geneAd->fetch_by_dbID($gid);
+  my $gsid = $gene->stable_id;
+  my $latest_ver = $gene->version;
+  my ($ver_dbid, $ver_xml);
+
+  foreach my $ver ( 1..$latest_ver ){
+    my $curr_g;
+    # some gsid do not have version 1 in db
+    # and the versioning may not be contiguous
+    eval {
+      $curr_g = $geneAd->fetch_by_stable_id_version($gsid, $ver);
+    };
+
+    if ( $curr_g ){
+      $ver_dbid->{$ver} = $curr_g->dbID;
+      $ver_xml->{$ver} = join "\n", grep ! /<(stable_id|author|author_email|translation_stable_id)>/,  split "\n", $curr_g->toXMLString;
+    }
+  }
+
+  # version comparison via xml string
+  my @unwanted_dbIDs;
+
+  # make sure the version order is ascending
+  # and that versioning may not be contiguous
+  my @vers = sort { $a<=>$b } keys %$ver_xml;
+
+  for ( my $i=0; $i < scalar @vers-1; $i++ ){
+    if ( $ver_xml->{$vers[$i]} eq $ver_xml->{$vers[$i+1]} ){
+	  push(@unwanted_dbIDs, $ver_dbid->{$vers[$i]});
+    }
+  }
+
+  print "$gsid ($latest_ver) @unwanted_dbIDs\n" if @unwanted_dbIDs;
+}
+
+__END__
+
+
