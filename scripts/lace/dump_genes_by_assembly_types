@@ -92,11 +92,11 @@ my %assembly_nonmatch_version = (
 	'mhc-06' => 6,
 	'mhc-05' => 5,
 	'mhc-04' => 4,  # ? didn't find the agp
-	'SSC7_test2-02'  => 3.6
-	'SSC7_test2-01'  => 3.3
 	'mhc-03' => 3,
 	'mhc-02' => 2,
 	'mhc-01' => 1,
+	'SSC7_test2-02'  => 0.8,
+	'SSC7_test2-01'  => 0.7,
 	'MHC_class-I'    => 0.6,
 	'MHC_class-II'   => 0.3,
 },
