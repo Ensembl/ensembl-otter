@@ -562,7 +562,7 @@ sub fetch_mapped_features {
             || $self->error_exit("Could not fetch anything - analysis may be missing from the DB");
     }
 
-    $self->log("Total of ".scalar(@$features).' '.join('/', grep { !ref($_) } @$call_parms)
+    $self->log("Total of ".scalar(@$features).' '.join('/', grep { defined($_) && !ref($_) } @$call_parms)
               ." ${feature_name}s have been sent to the client");
 
     return $features;
