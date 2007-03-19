@@ -103,7 +103,7 @@ sub initialize {
 								vega                   => 'init_CoordSystem_Version',
 							  }
 							 );
-  $biotype_status_mapping{$self}= 
+  $biotype_status_mapping{$self}=
 	 {'unprocessed_pseudogene' => ['unprocessed_pseudogene','UNKNOWN'],
 	  'processed_pseudogene'   => ['processed_pseudogene' ,'UNKNOWN'],
 	  'pseudogene'             => ['pseudogene' ,'UNKNOWN'],
@@ -373,7 +373,7 @@ sub build_Transcript {
   my $tran_end_pos=$data->{'translation_end'};
 
   ##adding exon to transcript and finding translation position
-  my ($start_Exon,$start_Exon_Pos,$end_Exon,$end_Exon_Pos);		
+  my ($start_Exon,$start_Exon_Pos,$end_Exon,$end_Exon_Pos);
   foreach my $exon (@$exons) {
 	 $transcript->add_Exon($exon);
 	 if ( defined $tran_start_pos && !defined $start_Exon_Pos){
@@ -421,7 +421,7 @@ sub build_Transcript {
   my ($biotype,$status);
   my $tr_class_name=$data->{'transcript_class'};
   $tr_class_name=lc($tr_class_name);
-  my $mapref=$biotype_status_mapping{$self}->{$tr_class_name};		
+  my $mapref=$biotype_status_mapping{$self}->{$tr_class_name};
   $biotype=$mapref->[0];
   $status=$mapref->[1];
   if ( defined $tr_class_name && !defined $biotype  ) {
@@ -537,7 +537,7 @@ sub build_Locus {
 		$source = 'havana';
 	 }
 	 $type=lc($type);
-	 my $mapref=$biotype_status_mapping{$self}->{$type};		
+	 my $mapref=$biotype_status_mapping{$self}->{$type};
 	 $biotype=$mapref->[0];
 	 $status=$mapref->[1];
   }
@@ -709,12 +709,12 @@ sub LoadAssemblySlices {
 		my $cmp_seq_reg_id=$sa->get_seq_region_id($new_slice);
 		##insert chromosome-contig assembly
 		$self->insert_Assembly($dbc,$asm_seq_reg_id,$cmp_seq_reg_id,$asm_slice->start,$asm_slice->end,$cmp_slice->start,$cmp_slice->end,$cmp_slice->strand);
-		
+
 		##insert contig_info and attributes
 		my $ctg_attrib_list=$piece->[2];
 		my $ctg_author=$piece->[3];
 		my $ctg_info_id = $self->insert_ContigInfo_Attributes($db,$ctg_author,$new_slice,$author,$ctg_attrib_list);
-		
+
 	 }
 	 my $cln_ctg = $slice->{'cln_ctg'};
 	 ##insert all clones
@@ -796,7 +796,7 @@ sub get_SliceId {
 		eval {
 		  $seqobj = $self->pfetch_acc_ver($acc_ver,$pfetch,$pfetch_archive);
 		};
-		
+
 		if ($@) {
 		  $db->rollback;
 		  unless ($seqobj){
@@ -825,7 +825,7 @@ sub get_SliceId {
 		  my @attrib;
 		  my $aa = $db->get_AttributeAdaptor();
 		  my ($acc,$sv)= $seq_name=~/^(.+)\.(\d+)$/;
-		  push @attrib,$self->make_Attribute('htgs_phase','HTGS Phase','High Throughput Genome Sequencing Phase','3');
+		  push @attrib,$self->make_Attribute('htg_phase','High throughput phase','High throughput genomic sequencing phase','3');
 		  push @attrib,$self->make_Attribute('intl_clone_name','International Clone Name','',$seq_name);
 		  push @attrib,$self->make_Attribute('embl_acc','EMBL Accession','',$acc);
 		  push @attrib,$self->make_Attribute('embl_version','EMBL Version','',$sv);
