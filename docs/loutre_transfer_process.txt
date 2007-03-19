@@ -106,7 +106,7 @@ again
 
 8) Do the big switch:
 
-Warn users that we are going to switch, and wait
+8.1) Warn users that we are going to switch, and wait
 for edit sessions to clear - lock tables will
 become empty.
 
@@ -114,26 +114,27 @@ become empty.
   We think the system will still permit users to
   save open write-access sessions. (Leo's idea.)
 
-Remove dataset entry for species from server.
+8.2) Remove dataset entry for species from server.
 
-Check again that there are no locks in otter.
+8.3) Check again that there are no locks in otter.
 
-Make an incremental dump of genes as in 3.1) above and load it.
+8.4) Make an incremental dump of genes as in 3.1) above and load it.
 
-Load contig_info (instructions at end of file).
+8.5) Load contig_info (instructions at end of file).
 
-Load sequence notes.
+8.6) Load sequence notes.
 
-Load assembly tags.
+8.7) Load assembly tags.
 
-Need to set the auto increment counter in the
+8.8) Need to set the auto increment counter in the
 stable ID pool tables to the last value used in
 the otter db.
 
-Change config of dataset to point at new schema
+8.9) Change config of dataset to point at new schema
 and switch dataset back on.
 
-Celebrate.
+
+9) Celebrate.
 
 ------------------------------------------------
 
