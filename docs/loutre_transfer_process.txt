@@ -2,58 +2,66 @@
     database to loutre_'species' database
 ------------------------------------------------------------------
 
-1) make the loutre_'species' database on otterlive with all the needed
-assemblies
+1) Make the loutre_'species' database on otterlive
+with all the needed assemblies
+
+1.1) Make a dump of the database so that we can
+easily re-start transfer if needed.
 
 2) otterlive is used for dumping and loading the
 files.Create needed directories
 
-2.1) ssh otterlive
-2.2) cd /mysql/otter-live-master/otter/loutre_load/
-2.3) mkdir 'species'
-2.4) mkdir 'species'/genes
-2.5) mkdir 'species'/contig_info
+  ssh otterlive
+  cd /mysql/otter-live-master/otter/loutre_load/
+  mkdir 'species'
+  mkdir 'species'/genes
+  mkdir 'species'/contig_info
 
-3) Dump genes from otter_'species'.But before
-dumping check if there is a redundant genedbid
-file created by Chao-Kung.
+2.1) Run Chao-Kung's script which creates a list
+of the redundant gene_id's.
 
-3.1)
-In a bash shell run the following script,
-ensembl-otter/scripts/lace/dump_genes_by_assembly_types
--redunfile
-~ck1/bin/otter/xml/redundant_'species'_gene_dbids_to_skip_for_newotter
--dataset dsn-name >> dump_genes.out 2>>
-dump_error.log &
+3) Dump genes from otter_'species', using the
+redundant gene_id list.
 
-3.2)
-notes:
-dsn-name is the data source name pointing to the otter_'species'
-database from which the dump will be taken
+3.1) In a bash shell run the following script:
 
-dump_genes.out is a mixed format text-xml
-file which is needed by the loading script
+  ensembl-otter/scripts/lace/dump_genes_by_assembly_types \
+  -redunfile ~ck1/bin/otter/xml/redundant_'species'_gene_dbids_to_skip_for_newotter \
+  -dataset dsn-name >> dump_genes.out 2>> dump_error.log &
+
+notes: dsn-name is the data source name pointing
+to the otter_'species' database from which the
+dump will be taken
+
+dump_genes.out is a mixed format text-xml file
+which is needed by the loading script
 
 3.3) some sanity checks
-tail err.log you get the count of geneids not
-dumped like,
-total read from db :3000 
-neglected redundant ids from file:732
-neglected ids during dumping:52
-dumped ids in the dump_genes file:2216
+tail dump_error.log you get the count of geneids not
+dumped like:
 
-Just check that (3000-(732 + 52 )) = 2216 and also
-check if the wc -l ~ck1/bin/otter/xml/redundant_'species'_gene_dbids_to_skip_for_newotter
-matches 732
-grep -c "<locus>" dump_genes.out , should match
-2216
-select count(*) from gene from otter_'species'
-should match 3000
+  total read from db:3000 
+  neglected redundant ids from file:732
+  neglected ids during dumping:52
+  dumped ids in the dump_genes file:2216
+
+Just check that:
+
+  (3000-(732 + 52 )) = 2216
+
+  wc -l ~ck1/bin/otter/xml/redundant_'species'_gene_dbids_to_skip_for_newotter matches 732
+
+  grep -c "<locus>" dump_genes.out should match 2216
+
+  select count(*) from gene from otter_'species' should match 3000
 
 4) Take a dump of the loutre_'species' before
 loading, incase something goes wrong
 mysqldump --opt -u ottroot -p -P 3301 -h otterlive
 loutre_'species' > loutre_'species'.dump
+
+  We do have nightly backups - so you might be
+  able to just use them.
 
 5) CHECK that translation_stable_id does not have a
 unique key on (stable_id,version)
@@ -87,7 +95,19 @@ not the loading has to be repeated , for which the
 database dump will be useful to begin loading
 again
 
------------------------------------------------------------------------
+------------------------------------------------
+
+Warn users that we are going to switch, and wait
+for edit sessions to clear - lock tables will
+become empty.
+
+  Maybe we can lock all the otter sequence_sets?
+  We think the system will still permit users to
+  save open write-access sessions. (Leo's idea.)
+
+
+
+------------------------------------------------
 
 CONTIG_INFO loading:
 
@@ -192,8 +212,10 @@ b)grep -c not "loaded" load_contig_info_error.log
 will give a count of contig_info's not loaded
 c) also grep for EXCEPTION in the error log
 
-----------------------------------------------------------
+------------------------------------------------
 
-Need to set the auto increment counter in the stable ID pool tables to the last value used in the otter db.
+Need to set the auto increment counter in the
+stable ID pool tables to the last value used in
+the otter db.
 
 
