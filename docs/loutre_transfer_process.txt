@@ -60,9 +60,6 @@ loading, incase something goes wrong
 mysqldump --opt -u ottroot -p -P 3301 -h otterlive
 loutre_'species' > loutre_'species'.dump
 
-  We do have nightly backups - so you might be
-  able to just use them.
-
 5) CHECK that translation_stable_id does not have a
 unique key on (stable_id,version)
 
@@ -97,6 +94,8 @@ again
 
 ------------------------------------------------
 
+8) Do the big switch:
+
 Warn users that we are going to switch, and wait
 for edit sessions to clear - lock tables will
 become empty.
@@ -105,9 +104,29 @@ become empty.
   We think the system will still permit users to
   save open write-access sessions. (Leo's idea.)
 
+Remove dataset entry for species from server.
 
+Check again that there are no locks in otter.
+
+Make an incremental dump of genes as in 3.1) above and load it.
+
+Load contig_info (instructions at end of file).
+
+Load sequence notes.
+
+Load assembly tags.
+
+Need to set the auto increment counter in the
+stable ID pool tables to the last value used in
+the otter db.
+
+Change config of dataset to point at new schema
+and switch dataset back on.
+
+Celebrate.
 
 ------------------------------------------------
+
 
 CONTIG_INFO loading:
 
@@ -120,8 +139,8 @@ transferred and run the load_loutre_contig_info
 script in ensembl-otter/scripts as shown below.
 
 
-1.use otter_'species';
-2.drop table if exists loutre_'species'.test_contig_info;
+1. use otter_'species';
+2. drop table if exists loutre_'species'.test_contig_info;
 3.
 
 CREATE TABLE loutre_'species'.test_contig_info (
@@ -212,10 +231,5 @@ b)grep -c not "loaded" load_contig_info_error.log
 will give a count of contig_info's not loaded
 c) also grep for EXCEPTION in the error log
 
-------------------------------------------------
-
-Need to set the auto increment counter in the
-stable ID pool tables to the last value used in
-the otter db.
 
 
