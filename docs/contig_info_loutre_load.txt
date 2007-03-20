@@ -83,7 +83,7 @@ WHERE ci.clone_info_id = cik.clone_info_id
 6. 
 
 check for meta table entry for last_contig_info_old_dbid
-insert into meta (meta_key, meta_value) values ('last_contig_info_old_dbid', 0);
+insert into loutre_'species'.meta (meta_key, meta_value) values ('last_contig_info_old_dbid', 0);
 This tracks the last contig_info_dbid transferred
 
 With the above table created in loutre_'species',
@@ -98,7 +98,7 @@ Similar to the gene loading sanity checking ,
 a) grep -c "old cloneinfo dbid: as new" load_contig_info.log
 will give a count of unchanged contig_infos
 rejected
-b)grep -c not "loaded" load_contig_info_error.log
+b)grep -c "not loaded" load_contig_info_error.log
 
 will give a count of contig_info's not loaded
 c) also grep for EXCEPTION in the error log
