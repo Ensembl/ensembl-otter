@@ -1,0 +1,163 @@
+#!/usr/local/bin/perl -w
+
+# Show the transcript_info_id-s that do not correspond to any transcript.
+# You may want to back them up in a separate table before removal.
+# The removal is actually necessary if you want the API to work correctly.
+
+use strict;
+use Bio::Otter::Lace::Defaults;
+
+{
+    my $dataset_name    = 'human'; # 'test_human';      # 'mouse', ...
+
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'dataset=s'      => \$dataset_name,
+    );
+    
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    
+    my $otter_dba = $ds->get_cached_DBAdaptor;
+
+
+
+    my @orphan_tsis = ();
+
+    my $sth_orphan_transcript_stable_ids = $otter_dba->prepare(
+    qq{
+        SELECT      # finds transcript_stable_ids that have a mismatch
+            tsi_inner.stable_id stable_id,
+            count(*) tsi_count,
+            (   SELECT count(*)
+                FROM transcript_info ti_inner
+                WHERE ti_inner.transcript_stable_id=tsi_inner.stable_id
+            ) AS ti_count
+        FROM
+            transcript_stable_id tsi_inner
+        GROUP BY tsi_inner.stable_id
+        HAVING tsi_count!=ti_count
+    });
+
+    $sth_orphan_transcript_stable_ids->execute();
+    while( my ($transcript_stable_id, $tsi_count, $ti_count) = $sth_orphan_transcript_stable_ids->fetchrow()) {
+
+        push @orphan_tsis, $transcript_stable_id;
+    }
+
+    my $orphan_tsis_string = join(', ', map { "'$_'" } @orphan_tsis);
+
+    if(!$orphan_tsis_string) {
+        print "\nNo orphan transcript_info lines was found in the database.\n";
+        exit(0);
+    }
+
+    my %tsi_id2timestamp = ();
+
+    my $sth_tsi_id2timestamp = $otter_dba->prepare(
+    qq{
+        SELECT      # maps orphan transcript_stable_ids to timestamps taken from genes
+            tsi.stable_id,
+            tsi.transcript_id,
+            UNIX_TIMESTAMP(gsi.modified)
+        FROM transcript_stable_id tsi,
+            transcript t,
+            gene_stable_id gsi
+        WHERE
+            tsi.stable_id IN ($orphan_tsis_string)
+        AND t.transcript_id=tsi.transcript_id
+        AND gsi.gene_id=t.gene_id
+    });
+
+    $sth_tsi_id2timestamp->execute();
+    while( my ($transcript_stable_id, $transcript_id, $timestamp) = $sth_tsi_id2timestamp->fetchrow()) {
+        $tsi_id2timestamp{$transcript_stable_id}{$transcript_id} = $timestamp;
+    }
+
+
+    
+    my %ti_id2timestamp = ();
+
+    my $sth_ti_id2timestamp = $otter_dba->prepare(
+    qq{
+        SELECT      # only work with the potential
+            transcript_stable_id,
+            transcript_info_id,
+            UNIX_TIMESTAMP(timestamp)
+        FROM transcript_info
+        WHERE transcript_stable_id IN ($orphan_tsis_string)
+    });
+
+    $sth_ti_id2timestamp->execute();
+    while( my ($transcript_stable_id, $transcript_info_id, $timestamp) = $sth_ti_id2timestamp->fetchrow()) {
+        $ti_id2timestamp{$transcript_stable_id}{$transcript_info_id} = $timestamp;
+    }
+
+    my @togo = (); # transcript_info_ids that will have to go
+
+    # Now, try to align things grouped by transcript_stable_id
+
+    for my $sti (sort @orphan_tsis) {
+
+        
+        my $tsi_subhash = $tsi_id2timestamp{$sti};
+        my $ti_subhash  = $ti_id2timestamp{$sti};
+
+        my @tsi_order = sort { $tsi_subhash->{$a} <=> $tsi_subhash->{$b} } keys %$tsi_subhash;
+        my @ti_order  = sort { $ti_subhash->{$a}  <=> $ti_subhash->{$b}  } keys %$ti_subhash;
+
+        print "\n$sti\n";
+
+        my ($score, $g_info) = align_lists(0,
+                                        $tsi_subhash, \@tsi_order, 0,
+                                        $ti_subhash, \@ti_order, 0, scalar(@ti_order)-scalar(@tsi_order));
+        my %bad_index = map { ($_ => 1); } @$g_info;
+        my $i=0;
+        for my $j (0..scalar(@ti_order)-1) {
+            my $tsi = $bad_index{$j} ? '----------' : $tsi_subhash->{$tsi_order[$i++]};
+            my $ti  = $ti_subhash->{$ti_order[$j]};
+
+            if($bad_index{$j}) {
+                push @togo, $ti_order[$j];
+            }
+
+            print "$tsi\t$ti\n";
+        }
+        print "\n";
+    }
+
+    print "\ntranscript_info_ids that do not correspond to any transcript:\n".join(', ', @togo)."\n";
+
+    print "\n\n\tPlease run the following commands as MySQL-root:\n";
+    print "\n";
+    print 'CREATE TABLE IF NOT EXISTS transcript_info_orphans REPLACE ',
+          ' SELECT * FROM transcript_info WHERE transcript_info_id IN ('. join(', ', @togo). ");\n";
+    print "\n";
+    print 'DELETE FROM transcript_info WHERE transcript_info_id IN ('. join(', ', @togo). ");\n";
+    print "\n";
+}
+
+sub align_lists {
+    my ($prev, $x_hash, $x_list, $x_curr, $y_hash, $y_list, $y_curr, $y_gaps) = @_;
+
+    if(($x_curr == scalar(@$x_list)) && ($y_curr == scalar(@$y_list))) { return ($prev, []); }
+
+    my ($score, $g_info) = (99999999, []);
+    if(($x_curr < scalar(@$x_list)) && ($y_curr < scalar(@$y_list))) {
+        ($score, $g_info) = align_lists( $prev + abs($x_hash->{$x_list->[$x_curr]}-$y_hash->{$y_list->[$y_curr]}),
+                                        $x_hash, $x_list, $x_curr+1,
+                                        $y_hash, $y_list, $y_curr+1, $y_gaps);
+    }
+    if($y_gaps) {
+        my ($gap_score, $gap_g_info) = align_lists( $prev + 10000,
+                                        $x_hash, $x_list, $x_curr,
+                                        $y_hash, $y_list, $y_curr+1, $y_gaps-1);
+        if($gap_score<$score) {
+            ($score, $g_info) = ($gap_score, [$y_curr, @$gap_g_info]);
+        }
+    }
+    return ($score, $g_info);
+}
+
