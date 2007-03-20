@@ -126,11 +126,13 @@ become empty.
 
 8.7) Load assembly tags.
 
-8.8) Need to set the auto increment counter in the
+8.8) Load simple_features
+
+8.9) Need to set the auto increment counter in the
 stable ID pool tables to the last value used in
 the otter db.
 
-8.9) Change config of dataset to point at new schema
+8.10) Change config of dataset to point at new schema
 and switch dataset back on.
 
 
