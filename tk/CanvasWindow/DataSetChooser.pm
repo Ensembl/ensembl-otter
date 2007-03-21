@@ -109,7 +109,7 @@ sub open_dataset {
             $ssc->DataSet($ds);
             $ssc->DataSetChooser($self);
             $ssc->draw;
-            $canvas->toplevel->withdraw;
+            # $canvas->toplevel->withdraw;
             $canvas->Unbusy;
             return 1;
         }
