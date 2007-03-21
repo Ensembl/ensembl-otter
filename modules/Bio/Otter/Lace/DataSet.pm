@@ -466,7 +466,7 @@ sub get_cached_DBAdaptor {
 sub make_DBAdaptor {
     my( $self ) = @_;
 
-    return $self->HEADCODE() ? $self->make_Vega_DBAdaptor() : make_Otter_DBAdaptor();
+    return $self->HEADCODE() ? $self->make_Vega_DBAdaptor() : $self->make_Otter_DBAdaptor();
 }
 
 sub make_Otter_DBAdaptor {
