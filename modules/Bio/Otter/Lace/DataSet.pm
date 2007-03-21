@@ -463,6 +463,18 @@ sub get_cached_DBAdaptor {
     return $self->{'_dba_cache'};
 }
 
+sub make_DBAdaptor {
+    my( $self ) = @_;
+
+    return $self->HEADCODE() ? $self->make_Vega_DBAdaptor() : make_Otter_DBAdaptor();
+}
+
+sub make_Otter_DBAdaptor {
+    my( $self ) = @_;
+
+    return $self->_make_DBAdptor_with_class('Bio::Otter::DBSQL::DBAdaptor');
+}
+
 sub make_EnsEMBL_DBAdaptor {
     my( $self ) = @_;
     
@@ -473,12 +485,6 @@ sub make_Vega_DBAdaptor {
     my( $self ) = @_;
     
     return $self->_make_DBAdptor_with_class('Bio::Vega::DBSQL::DBAdaptor');
-}
-
-sub make_DBAdaptor {
-    my( $self ) = @_;
-
-    return $self->_make_DBAdptor_with_class('Bio::Otter::DBSQL::DBAdaptor');
 }
 
 sub _make_DBAdptor_with_class {
