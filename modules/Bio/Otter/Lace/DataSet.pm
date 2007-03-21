@@ -6,6 +6,7 @@ package Bio::Otter::Lace::DataSet;
 use strict;
 use Carp;
 use Bio::Otter::DBSQL::DBAdaptor;
+use Bio::Vega::DBSQL::DBAdaptor;
 use Bio::Otter::Lace::CloneSequence;
 #use Bio::Otter::CloneLock;
 use Bio::Otter::Author;
