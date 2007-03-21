@@ -1,0 +1,48 @@
+#!/usr/local/bin/perl -w
+
+# Author: ck1@sanger.ac.uk
+
+use strict;
+use Bio::Otter::Lace::Defaults;
+use Bio::Vega::DBSQL::DBAdaptor;
+use Bio::Vega::Transform::XML;
+use Bio::Vega::Transform::PrettyPrint;
+
+my ($dataset, $gsid);
+Bio::Otter::Lace::Defaults::do_getopt('ds|dataset=s' => \$dataset,
+									 );
+
+my $client   = Bio::Otter::Lace::Defaults::make_Client(); # Bio::Otter::Lace::Client
+my $dset     = $client->get_DataSet_by_name($dataset);    # Bio::Otter::Lace::DataSet
+my $otter_db = $dset->make_Vega_DBAdaptor;                # Bio::Vega::DBSQL::DBAdaptor
+my $ga       = $otter_db->get_GeneAdaptor;
+my $ta       = $otter_db->get_TranscriptAdaptor;
+
+my $gver_tsid_info;
+
+my $sql = $otter_db->prepare("select transcript_id, stable_id, version, modified_date from transcript_stable_id");
+$sql->execute;
+
+my $id_ver;
+while ( my ( $tid, $id, $ver, $modtime) = $sql->fetchrow ){
+  $id_ver->{$id}->{$ver}->{$modtime} = $tid;
+}
+
+foreach my $tsid ( keys %$id_ver ){
+  foreach my $ver ( keys %{$id_ver->{$tsid}} ){
+	if ( scalar keys %{$id_ver->{$tsid}->{$ver}} > 1 ){
+#	  warn "$tsid Ver $ver: @{$id_ver->{$tsid}->{$ver}}";
+	  my @sorted_time = sort keys %{$id_ver->{$tsid}->{$ver}};
+	  my $count;
+	  foreach my $time ( @sorted_time ){
+		$count++;
+		my $tid = $id_ver->{$tsid}->{$ver}->{$time};
+		print "$tsid Ver $ver: transID: $tid $time\n";
+		print "UPDATE transcript_stable_id set modified_date ='".$sorted_time[0], "' WHERE transcript_id = $tid;\n" if $count != 1;
+	  }
+	print "\n";
+	}
+  }
+}
+
+
