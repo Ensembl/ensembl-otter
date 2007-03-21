@@ -1,0 +1,198 @@
+#!/usr/local/bin/perl -w
+
+use strict;
+
+use Bio::Vega::Transform::Otter;
+use Bio::Vega::DBSQL::DBAdaptor;
+use Bio::EnsEMBL::Slice;
+use Bio::Otter::Lace::Defaults;
+
+
+my ($dataset_name, $xmlfile, $input_dir);
+
+Bio::Otter::Lace::Defaults::do_getopt(
+									  'ds|dataset=s'  => \$dataset_name,
+									  'indir=s'       => \$input_dir,
+									 ) ;
+
+
+if ( !defined $dataset_name || ! $input_dir){
+  Bio::Otter::Lace::Defaults::show_help();
+}
+
+my $parser;
+
+foreach my $file ( `ls $input_dir` ) {
+  chomp $file;
+  next unless $file =~ /.xml$/;
+  $file =~ /(.*)\.xml/;
+
+  my $xmlfile = "$input_dir/$file";
+
+  warn "Parsing $xmlfile\n";
+
+  ##create an XML parser
+  $parser = Bio::Vega::Transform::Otter->new;
+  $parser->parsefile($xmlfile);
+
+  my $cl = Bio::Otter::Lace::Defaults::make_Client();
+  my $ds = $cl->get_DataSet_by_name($dataset_name);
+  my $db = $ds->make_Vega_DBAdaptor;
+  warn "\nConnecting to host:".$db->dbc->host." port:".$db->dbc->port." database:".$db->dbc->dbname." as user:".$db->dbc->username;
+
+  my $aname=$cl->author();
+  my $aemail=$cl->email();
+  my $clauthor;
+  if ( defined $aname && defined $aemail) {
+	$clauthor=Bio::Vega::Author->new;
+	$clauthor->email($aemail);
+	$clauthor->name($aname);
+  }
+
+  ##Let begin a transaction and do all the database changes within a transaction
+  $db->begin_work();
+
+  eval{
+	# Load SimpleFeatures - deletes old features(features not in xml) and stores the current features in XML
+
+	my $chr_slice=$parser->get_ChromosomeSlice;
+	my $new_slice=$parser->get_SliceId($chr_slice,$db);
+	#  my $snew_slice=$parser->get_ChromosomeSliceDB($db);
+
+	my $simple_features=$parser->get_SimpleFeatures;
+	my $sfa=$db->get_SimpleFeatureAdaptor;
+	my $db_features=$sfa->fetch_all_by_Slice($new_slice);
+
+	my ($delete,$save)=compare_feature_sets($db_features,$simple_features);
+
+	foreach my $del_feat (@$delete) {
+	  warn $del_feat;
+	  $sfa->remove($del_feat);
+	}
+	foreach my $new_feat (@$save) {
+
+	  $new_feat->slice($new_slice);
+	  eval{
+		$sfa->store($new_feat);
+	  };
+	  if ($@) {
+		die "problem with loading of simplefeatures\n$@\n";
+		$db->rollback;
+	  }
+	}
+
+	# Load Assembly_Tags
+	my $atags=$parser->get_AssemblyTags;
+	my $ata = $db->get_AssemblyTagAdaptor;
+
+	my $db_tags=$ata->fetch_all_by_Slice($new_slice);
+
+	($delete,$save)=compare_assembly_tag_sets($db_tags,$atags);
+
+	foreach my $del_tag (@$delete) {
+	  $ata->remove($del_tag);
+	}
+	foreach my $new_tag (@$save) {
+	  $new_tag->slice($new_slice);
+	  eval{
+		$ata->store($new_tag);
+	  };
+	  if ($@) {
+		die "problem with loading of assemblytags\n$@\n";
+		$db->rollback;
+	  }
+	}
+  };
+  $db->commit;
+  print STDOUT "\nCommitted all session data from XML in database\n";
+
+  if ($@) {
+	print STDERR "\nError saving genes from file: Rolled back all data of this session - Please correct errors\n".$@;
+	$db->rollback;
+  }
+}
+
+$parser->DESTROY;
+warn "\nParser now out of scope\n";
+
+
+=head4 SUBROUTINES
+
+=cut
+
+sub compare_feature_sets {
+  my( $old_features, $new_features ) = @_;
+  my %old = map {SimpleFeature_key($_), $_} @$old_features;
+  my %new = map {SimpleFeature_key($_), $_} @$new_features;
+  # Features that were in the old, but not the new, should be deleted
+  my $delete = [];
+
+  while (my ($key, $old_sf) = each %old) {
+	 unless ($new{$key}) {
+		push(@$delete, $old_sf);
+	 }
+  }
+  # Features that are in the new but were not in the old should be saved
+  my $save = [];
+  while (my ($key, $new_sf) = each %new) {
+	 unless ($old{$key}) {
+		push(@$save, $new_sf);
+	 }
+  }
+  return($delete, $save);
+}
+
+sub compare_assembly_tag_sets {
+  my( $old_tags, $new_tags ) = @_;
+  my %old = map {AssemblyTag_key($_), $_} @$old_tags;
+  my %new = map {AssemblyTag_key($_), $_} @$new_tags;
+  # Tags that were in the old, but not the new, should be deleted
+  my $delete = [];
+  while (my ($key, $old_at) = each %old) {
+	 unless ($new{$key}) {
+		push(@$delete, $old_at);
+	 }
+  }
+  # Tags that are in the new but were not in the old should be saved
+  my $save = [];
+  while (my ($key, $new_at) = each %new) {
+	 unless ($old{$key}) {
+		push(@$save, $new_at);
+	 }
+  }
+  return($delete, $save);
+}
+
+sub AssemblyTag_key {
+  my ($at) = @_;
+  return join('^',
+				  $at->seq_region_start,
+				  $at->seq_region_end,
+				  $at->seq_region_strand,
+				  $at->tag_type,
+				  $at->tag_info,
+				 );
+}
+
+sub SimpleFeature_key {
+  my( $sf ) = @_;
+
+  return join('^',
+				  $sf->analysis->logic_name,
+				  $sf->seq_region_start,
+				  $sf->seq_region_end,
+				  $sf->seq_region_strand,
+				  # sprintf ensures that 0.5 and 0.5000 become the same string
+				  #sprintf('%g', $sf->score),
+			      "0.5",
+				  $sf->display_label || '',
+				 );
+}
+
+1;
+
+=head1 DESCRIPTION
+
+load_vega_xml -dataset loutre_'species' -indir input_dir_of_XML_files
+
+=cut
