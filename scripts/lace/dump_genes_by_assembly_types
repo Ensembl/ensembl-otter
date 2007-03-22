@@ -13,6 +13,8 @@ my $reduncount=0;
 my $loadcount=0;
 $|=1;
 
+my $gene_count;
+
 my %assembly_nonmatch_version = (
 'human' => {
     'chr1-7A'       => 7.5,
@@ -184,6 +186,8 @@ sub gene_transformed_successfully {
                 $gene->transform($slice);
 
                 if (gene_transformed_successfully($gene, $slice)) {
+
+                    $gene_count++;
                     my $gene_id  = $gene->dbID();
                     my $modified = $gene->modified;
                     print ''.('-'x40)."\n";
@@ -324,8 +328,9 @@ sub main {
 
 main();
 print STDERR "\nLOG of the dump";
-print STDERR "\nneglected $reduncount redundant ids";
-print STDERR "\ndumped $loadcount ids to output file\n";
+print STDERR "\nneglected $reduncount redundant gene db ids";
+print STDERR "\nGot $loadcount gene db ids to dump\n";
+print STDERR "\nDumped $gene_count gene db ids to output file\n";
 undef $otter_dba;
 undef $gene_adaptor;
 undef $slice_adaptor;
