@@ -8,14 +8,57 @@ sub new {
 
   my($class,@args) = @_;
   my $self = $class->SUPER::new(@args);
-  my ($tag_type,$tag_info)  = rearrange([qw(TAG_TYPE TAG_INFO)],@args);
+  my ($seq_region_id, $seq_region_start, $seq_region_end, $seq_region_strand, $tag_type, $tag_info) =
+    rearrange([qw(SEQ_REGION_ID SEQ_REGION_START SEQ_REGION_END SEQ_REGION_STRAND TAG_TYPE TAG_INFO)],@args);
+
+  $self->tag_type($seq_region_id);
+  $self->tag_type($seq_region_start);
+  $self->tag_type($seq_region_end);
+  $self->tag_type($seq_region_strand);
   $self->tag_type($tag_type);
   $self->tag_info($tag_info);
   return $self;
 
 }
 
-# start, end, strand, dbID(tag_id), slice methods are inherited
+# although start, end, strand, dbID(tag_id) can be inherited
+# the assembly_tag has "seq_region_" prefixed
+
+sub seq_region_id {
+ my ($self, $val) = @_;
+  if ($val){
+    $self->{seq_region_id} = $val;
+  }
+
+  return $self->{seq_region_id};
+}
+
+sub seq_region_start {
+ my ($self, $val) = @_;
+  if ($val){
+    $self->{seq_region_start} = $val;
+  }
+
+  return $self->{seq_region_start};
+}
+
+sub seq_region_end {
+ my ($self, $val) = @_;
+  if ($val){
+    $self->{seq_region_end} = $val;
+  }
+
+  return $self->{seq_region_end};
+}
+
+sub seq_region_strand {
+ my ($self, $val) = @_;
+  if ($val){
+    $self->{seq_region_strand} = $val;
+  }
+
+  return $self->{seq_region_strand};
+}
 
 sub tag_type {
  my ($self, $val) = @_;

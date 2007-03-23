@@ -1,6 +1,11 @@
     Process of transferring otter_'species'
     database to loutre_'species' database
 ------------------------------------------------------------------
+# UPDATE attrib_type table: make sure to use most up-to-date code from HEADCODE
+
+Run ensembl-HEAD/misc-scripts/attribute_types/upload_attributes.pl \
+    -host otterlive -user ottroot -port 3301 -pass xx -dbnames loutre_'species' \
+    -file attrib_type.txt
 
 1) Make the loutre_'species' database on otterlive
 with all the needed assemblies
@@ -19,6 +24,9 @@ files.Create needed directories
 
 2.1) Run Chao-Kung's script which creates a list
 of the redundant gene_id's.
+
+ ensembl-otter/scripts/lace/get_redundant_dbid_of_genesid \
+ -ds otter_dataset_name (eg, human) > outfile
 
 3) Dump genes from otter_'species', using the
 redundant gene_id list.
@@ -40,20 +48,24 @@ which is needed by the loading script
 tail dump_error.log you get the count of geneids not
 dumped like:
 
-  total read from db:3000 
-  neglected redundant ids from file:732
-  neglected ids during dumping:52
-  dumped ids in the dump_genes file:2216
+  total gene db ids from otter_db: T   ( select count(*) from otter_'species'.gene)
+  neglected R redundant ids            ( wc -l ~ck1/bin/otter/xml/redundant_'species'_gene_dbids_to_skip_for_newotter )
+  Got D gene db ids to dump
+  Dumped O gene db ids to output file  ( grep -c "<locus>" dump_genes.out )
+  Failed to map: F                     ( grep -c "FAILED TO MAP" dump_error.log )
 
 Just check that:
 
-  (3000-(732 + 52 )) = 2216
+  D = O+F AND T = R+O+F
+  
+If not, check dump_error.log
 
-  wc -l ~ck1/bin/otter/xml/redundant_'species'_gene_dbids_to_skip_for_newotter matches 732
+Alternatively, to quickly see which gene dbid is not dumped, 
+ Run 
+ perl ~/bin/otter/check_missing_gene_db_id.pl -ds human \
+ -redunfile ~/bin/otter/xml/redundant_human_gene_dbids_to_skip_for_newotter \
+ -dumperr dump_error_human.log -limit xxx (highest dbid at the time of dump)
 
-  grep -c "<locus>" dump_genes.out should match 2216
-
-  select count(*) from gene from otter_'species' should match 3000
 
 4) Take a dump of the loutre_'species' before
 loading, incase something goes wrong:
@@ -102,6 +114,24 @@ not the loading has to be repeated, for which the
 database dump will be useful to begin loading
 again
 
+7.3)
+
+  grep -c "did not get loaded due" load_error.log       
+
+  Check for the reasons why they are not loaded.
+
+
+# INSERT meta key for foreign gene stable ids
+INSERT INTO meta VALUES (null, 'prefix.primary', 'LDR');
+
+
+# PATCH modified time of unchanged transcripts
+
+Run ensembl-otter/scripts/lace/patch_transcript_modified_time \
+    -dataset loutre_dataset_name -port 33999 > outfile
+
+grep "UPDATE" outfile | mysql -uottadmin -pwibble -P3301 -hotterlive loutre_'species'
+
 ------------------------------------------------
 
 8) Do the big switch:
@@ -139,3 +169,7 @@ and switch dataset back on.
 9) Celebrate.
 
 ------------------------------------------------
+
+
+
+
