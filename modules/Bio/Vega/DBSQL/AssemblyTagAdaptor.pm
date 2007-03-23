@@ -90,7 +90,6 @@ sub update_assembly_tagged_contig {
   return 1;
 }
 
-
 sub store {
   my ($self, $at) = @_;
   if (!ref $at || !$at->isa('Bio::Vega::AssemblyTag') ) {
@@ -100,22 +99,38 @@ sub store {
     return $at->dbID();
   }
 
-  # assembly tag is on a chromosome slice,transform to get a clone_slice
-  my $at_c = $at->transform('contig');
-  unless ($at_c){
-	throw "assembly tag $at cannot be transformed onto a contig slice from chromosome \n assembly tag not loaded tag_info:".$at->tag_info." tag_type:".$at->tag_type." seq_region_start:".$at->seq_region_start." seq_region_end:".$at->seq_region_end;
+  # check assembly tag is on a chromosome slice,transform to get a contig_slice if not already
+  # id, XML dump has atags on chr. slice, but fetch_assembly_tags script prepares atags in contig slice
+
+  my $contig_slice;
+
+  if ( $at->slice->coord_system->name ne "contig") {
+
+    my $at_c = $at->transform('contig');
+    unless ($at_c){
+      throw("assembly tag $at cannot be transformed onto a contig slice from chromosome \n" .
+            "assembly tag not loaded tag_info:".$at->tag_info." tag_type:".$at->tag_type.
+            " seq_region_start:".$at->seq_region_start." seq_region_end:".$at->seq_region_end);
+    }
+
+    $contig_slice = $at_c->slice;
+
+    unless ($contig_slice) {	
+      throw "AssemblyTag does not have a contig slice attached to it, cannot store AssemblyTag\n";
+    }
+  }
+  else {
+    $contig_slice = $at->slice;
   }
 
-  my $contig_slice = $at_c->slice;
-
-  unless ($contig_slice) {	
-	 throw "AssemblyTag does not have a contig slice attached to it, cannot store AssemblyTag\n";
-  }
   my $sa = $self->db->get_SliceAdaptor();
   my $seq_region_id=$sa->get_seq_region_id($contig_slice);
 
-  my $sql = "INSERT INTO assembly_tag (seq_region_id, seq_region_start, seq_region_end, seq_region_strand, tag_type, tag_info) VALUES (?,?,?,?,?,?)";
+  map { print "$_ -> ", $at->{$_}, " " } keys %$at;
+  print "\n";
+  my $sql = "REPLACE INTO assembly_tag (seq_region_id, seq_region_start, seq_region_end, seq_region_strand, tag_type, tag_info) VALUES (?,?,?,?,?,?)";
   my $sth = $self->prepare($sql);
+
   eval{
 	 $sth->execute($seq_region_id, $at->seq_region_start, $at->seq_region_end, $at->seq_region_strand, $at->tag_type, $at->tag_info);
   };

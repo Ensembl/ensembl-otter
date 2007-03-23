@@ -63,6 +63,7 @@ my $start=time();
 ##open mixed format input file
 $/="----------------------------------------\n";
 open (IN,"<$file") || throw ("Could not open file for reading :$file \n $!\n");
+
 while (<IN>){
   my $gene_xml=$_;
   eval{
@@ -72,7 +73,7 @@ while (<IN>){
 	 my $mc=$db->get_MetaContainer();
 	 chomp $gene_xml;
 	 if ($gene_xml=~/^\S+\s+(\S+)\s+(\S+)\s+(\S+)\s+(<locus>.*<\/locus>).*/ms){
-		
+
 		my $ss=$1;
 		$dbid=$2;
 		my $modified=$3;
@@ -110,12 +111,14 @@ while (<IN>){
 			 $exon->modified_date($modified);
 		  }
 		}
+
 		$gene_adaptor->store($gene,'chr_whole_slice');
 		print STDOUT ("stored old gene dbid:$dbid as new gene dbid:".$gene->dbID." and the curent version is:".$gene->stable_id.".".$gene->version. "\n");
+
 		$mc->update_key_value('last_gene_old_dbid',$dbid);
 		if ($gene->biotype =~ /obsolete/){
 		  $gene_adaptor->update_deleted_gene_status($gene);
-		  print STDOUT ("The above gene ".$gene->dbID." was deleted in new db\n");
+		  print STDOUT ("The above gene ".$gene->dbID."is stored as obsolete in new db\n");
 		}
 		$db->commit;
 		$parser->DESTROY;
@@ -126,8 +129,6 @@ while (<IN>){
 	 print STDERR ("\ngene $dbid did not get loaded due to \n" .$@);
   }
 }
-
-
 
 close IN;
 my $end=time();
