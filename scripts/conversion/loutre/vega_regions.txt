@@ -1,0 +1,22 @@
+#This file defines the regions to be exported from a loutre database for Vega
+#database production, and attributes to be given to those regions (by 
+#prepare_loutre). Entries must be tab delimited, and with the exception of
+#ensembl_name (used for ensembl_vega production) are compulsory.
+
+#loutre_id        = seq_region.name in loutre (minus the numerical suffix)
+#vega_name        = seq_region.name in Vega
+#name             = human readable name (for Vega mapview)
+#vega_export_mode = External (E) or Internal (I)
+#ack              = Acknowledgement for group doing annotation
+#ensembl_name     = Name of equivalent seqregion in Ensembl
+
+#loutre_id	#vega_name	#name	#vega_export_mode	#ack	#ensembl_name	
+--pig--
+mhc	7-MHC	MHC region of Chromosome 7	External	Havana
+chr17-SSC17_MAX1	17-H20q13	H20q13 fragment of Chromosome 17	External	Havana
+Chr_6_NKG	6-LRC	LRC region of Chromosome 6	External	Havana
+--end--
+
+--human--
+chr1	1	Chromosome 1	External	Havana	1
+--end--
