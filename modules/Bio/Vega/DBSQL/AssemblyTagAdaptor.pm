@@ -38,6 +38,21 @@ sub list_dbIDs {
    return $self->_list_dbIDs("assembly_tag");
 }
 
+sub check_seq_region_id_is_transferred {
+
+  my ($self, $seq_region_id) = @_;
+  my $sth = $self->prepare(qq{
+							  SELECT seq_region_id
+							  FROM assembly_tagged_contig
+							  WHERE seq_region_id = $seq_region_id
+							  AND transferred = 'yes'
+							  limit 1
+							 }
+						  );
+  $sth->execute;
+  $sth->fetchrow ? (return 1) : (return 0);
+}
+
 sub remove {
   my ($self, $del_at) = @_;
   my $sth;
