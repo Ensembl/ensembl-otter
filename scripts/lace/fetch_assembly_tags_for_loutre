@@ -8,11 +8,9 @@ use Hum::Tracking ('intl_clone_name');
 use Hum::AnaStatus::Sequence;
 
 use Bio::Otter::Lace::Defaults;
-#use Bio::Otter::AnnotatedClone;
 use Bio::EnsEMBL::DBSQL::CloneAdaptor;
 use Bio::Vega::DBSQL::DBAdaptor;
 use Bio::Vega::AssemblyTag;
-
 
 use Getopt::Long 'GetOptions';
 
@@ -33,11 +31,12 @@ Bio::Otter::Lace::Defaults::do_getopt(
 $help->() unless ( $dataset );
 
 
-my $client   = Bio::Otter::Lace::Defaults::make_Client();
-my $dset     = $client->get_DataSet_by_name($dataset);
+my $client    = Bio::Otter::Lace::Defaults::make_Client();
+my $dset      = $client->get_DataSet_by_name($dataset);
 my $loutre_db = $dset->make_Vega_DBAdaptor;
-my $sliceAd  = $loutre_db->get_SliceAdaptor();
-my $atags = [];
+my $sliceAd   = $loutre_db->get_SliceAdaptor();
+my $atagAd    = $loutre_db->get_AssemblyTagAdaptor;
+my $atags     = [];
 
 {
   update_assembly_tagged_contig_table();
@@ -56,31 +55,41 @@ my $atags = [];
 sub update_database {
 
   my ($atags) = @_;
-  my $asmblyTagAd  = $loutre_db->get_AssemblyTagAdaptor;
 
   foreach my $atag ( @$atags ) {
-    $asmblyTagAd->store($atag);
+    $atagAd->store($atag);
   }
 }
 
 sub update_assembly_tagged_contig_table {
-  my $sth = $loutre_db->prepare(q{
-                                  SELECT sr.seq_region_id
-                                  FROM seq_region sr
-                                  LEFT JOIN assembly_tagged_contig atc
-                                  ON sr.seq_region_id = atc.seq_region_id
-                                  WHERE sr.coord_system_id = 5
-                                  AND atc.seq_region_id IS NULL
-                                }
-                              );
+
+  my $sth = $loutre_db->prepare(qq{
+								   SELECT sr.seq_region_id
+								   FROM seq_region sr
+								   LEFT JOIN assembly_tagged_contig atc
+								   ON sr.seq_region_id = atc.seq_region_id
+								   WHERE sr.coord_system_id = 5
+								   AND atc.seq_region_id IS NULL
+								  }
+							   );
   $sth->execute;
+
   my @seqids;
+
   while ( my $id = $sth->fetchrow ){
     push(@seqids, "($id)");
   }
   $sth->finish;
 
-  return unless @seqids;
+  unless ( @seqids ){
+	warn "All contigs already in assembly_tagged_contigs table.\n\n";
+	return;
+  }
+
+  if ( $check ){
+	print STDERR "Found ", scalar @seqids, " clones to update\n\n";
+	exit;
+  }
 
   my $vals = join(',', @seqids);
   my $insert = $loutre_db->prepare(qq{INSERT INTO assembly_tagged_contig (seq_region_id) VALUES $vals});
@@ -97,10 +106,9 @@ sub prepare_assembly_tag_data {
   foreach my $cl ( @$clones ) {
     $cl->seq_region_name =~ /(.*)\.(\d+)/;
 
-    my $cln_db_ver = $2;
-    my $acc = $1;
-    #   map {warn "$_ => ", $cl->{$_}, "\n" } keys %$cl;
-    my $contig_name =  $cl->seq_region_name.".".$cl->start.".".$cl->end;
+    my $cln_db_ver  = $2;
+    my $acc         = $1;
+    my $contig_name = $cl->seq_region_name.".".$cl->start.".".$cl->end;
 
     my $seq;
     eval {
@@ -110,14 +118,22 @@ sub prepare_assembly_tag_data {
     unless ( $@ ) {
       my $seq_ver =  $seq->sequence_version;
       unless ( $seq_ver ){
-        print STDERR "ERROR: $acc has no version - cannot update, Investigate!\n";
+        print STDERR "ERROR: $acc has no version in submissions db - cannot update, Investigate!\n";
         next;
       }
 
-      if ( $cln_db_ver ne $seq_ver ) { # no update
-        my $dir = $seq->analysis_directory;
-        #map { warn "$_ -> ", $seq->{$_}, "******\n" } keys %$seq;
+	  # only update if the version of loutre contig match that of submissions db
+      if ( $cln_db_ver eq $seq_ver ) {
 
+		my $contig   = $sliceAd->fetch_by_region('contig', $contig_name);
+		my $seq_region_id = $sliceAd->get_seq_region_id($contig);
+
+		if ( $atagAd->check_seq_region_id_is_transferred($seq_region_id) ){
+		  print STDERR "$contig_name (srid $seq_region_id) is already transferred\n";
+		  next;
+		}
+
+        my $dir      = $seq->analysis_directory;
         my $seq_ver  = $seq->sequence_version;
         my $seq_name = $seq->sequence_name;
 
@@ -126,7 +142,7 @@ sub prepare_assembly_tag_data {
           my $acefile = "$dir/rawdata/$seq_name.humace.ace";
           print STDERR "INFO: updating $acc.$seq_ver: $acefile\n";
 
-          parse_ace($contig_name, $acefile, $loutre_db, $sliceAd); # create a list of atag objs
+          parse_ace($contig, $seq_region_id, $acefile, $loutre_db, $sliceAd); # create a list of atag objs
         } else {
           print STDERR "No update for $acc.$seq_ver: MISSING  $dir/rawdata/$seq_name.humace.ace\n";
         }
@@ -139,10 +155,9 @@ sub prepare_assembly_tag_data {
 
 sub parse_ace {
 
-  my ($contig_name, $acefile, $loutre_db, $sliceAd)  = @_;
+  my ($contig, $seq_region_id, $acefile, $loutre_db, $sliceAd)  = @_;
 
-  my $contig = $sliceAd->fetch_by_region('contig', $contig_name);
-#map { warn "$_ -> ", $contig->{$_}} keys %$contig;
+  my $contig_name       = $contig->seq_region_name;
   my $ctg_seq_region_id = $sliceAd->get_seq_region_id($contig);
   my $ctg_strand        = $contig->strand;
   my $ctg_len           = $contig->seq_region_length;
@@ -248,10 +263,10 @@ sub trim {
 
 sub make_atags {
   my ($contig, $ctg_seq_region_id, $tag_type, $ctg_strand, $tag_start, $tag_end, $tag_info) = @_;
-#warn ">>>$ctg_seq_region_id, $tag_type, $ctg_strand, $tag_start, $tag_end, $tag_info";
+
   my $atag = Bio::Vega::AssemblyTag->new();
 
-#  $atag->seq_region_id($ctg_seq_region_id);
+#  $atag->seq_region_id($ctg_seq_region_id); # handled by atag adaptor
   $atag->seq_region_start($tag_start);
   $atag->seq_region_end($tag_end);
   $atag->seq_region_strand($ctg_strand);
