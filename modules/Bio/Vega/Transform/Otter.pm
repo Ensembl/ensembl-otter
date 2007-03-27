@@ -431,10 +431,19 @@ sub build_Transcript {
   if ( !defined $tr_class_name || !defined $biotype  ) {
 	 die "transcript biotype and the status could not be mapped or found \n";
   }
-  my $group='anything';
+
   my $author_name = $data->{'author'};
   my $author_email = $data->{'author_email'};
-  my $author=$self->make_Author($author_name,$author_email,'');
+
+  my $group;
+  if ( $data->{'name'} =~ /(\S+):(.+)/){
+	$group = $1;
+  }
+  else {
+    $group = 'havana';
+  }
+
+  my $author=$self->make_Author($author_name,$author_email, $group);
   $transcript->transcript_author($author);
   $transcript->biotype($biotype);
   $transcript->status($status);
@@ -506,6 +515,7 @@ sub translation_pos {
 
 sub build_Locus {
   my ($self, $data) = @_;
+
   ## version and is_current ??
   my $transcripts = delete $transcript_list{$self};
   ## transcript author group has been temporarily set to 'anything' ??
@@ -525,6 +535,7 @@ sub build_Locus {
   ## biotype,source & status framed from gene type
   my ($biotype,$source,$status);
   my $gene_type=$data->{'type'};
+
   my $type;
   if (defined $gene_type) {
 	 if ($gene_type =~ /(\S+):(.+)/){
@@ -557,6 +568,7 @@ sub build_Locus {
   $author_name = $data->{'author'};
   $author_email = $data->{'author_email'};
   $author=$self->make_Author($author_name,$author_email,$source);
+
   $gene->gene_author($author);
 
   ##gene attributes name,synonym,remark
@@ -1035,10 +1047,14 @@ sub make_Slice {
 }
 
 sub make_Author {
-  my ($self,$name,$email,$group_name)=@_;
+  my ($self,$name, $email, $group_name)=@_;
+
+  # for other groups, current strategy is to patch the database by hand
+  my $group_email = "vega\@sanger.ac.uk" if $email =~ /sanger/;
   my $group = Bio::Vega::AuthorGroup->new
 	 (
 	  -name   => $group_name,
+	  -email  => $group_email,
 	 );
   my $author = Bio::Vega::Author->new
 	 (
