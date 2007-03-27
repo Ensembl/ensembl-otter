@@ -57,8 +57,7 @@ sub remove {
   my ($self, $del_at) = @_;
   my $sth;
   eval {
-	 my $sql = "DELETE FROM assembly_tag where tag_id = ?";
-	 $sth = $self->prepare($sql);
+	 $sth = $self->prepare("DELETE FROM assembly_tag where tag_id = ?");
 	 $sth->execute($del_at->dbID);
   };
   if ($@){
@@ -89,13 +88,15 @@ sub update_assembly_tagged_contig {
 
   my $num;
   eval{
-	my $sql = "UPDATE assembly_tagged_contig SET transferred = 'yes' WHERE seq_region_id = $seq_region_id";
-	warn "$sql\n";
-	my $sth = $self->prepare(qq{$sql});
+	my $sth = $self->prepare(qq{
+								UPDATE assembly_tagged_contig 
+								SET transferred = 'yes' 
+								WHERE seq_region_id = $seq_region_id
+							   });
 	$sth->execute();
   };
   if ($@) {
-	 throw "update of assembly_tagged_contig failed for seq_region_id $seq_region_id:$@";
+	 throw "Update of assembly_tagged_contig failed for seq_region_id $seq_region_id: $@";
   }
 
   return 1;
@@ -110,8 +111,9 @@ sub store {
     return $at->dbID();
   }
 
-  # check assembly tag is on a chromosome slice,transform to get a contig_slice if not already
-  # id, XML dump has atags on chr. slice, but fetch_assembly_tags script prepares atags in contig slice
+  # Assembly tags use contig coords rather than chrom. coords.
+  # if assembly tag is on a chromosome slice, transform it to get a contig_slice
+  # => XML dump has atags on chr. slice, but fetch_assembly_tags_for_loutre script prepares atags in contig slice already
 
   my $contig_slice;
 
