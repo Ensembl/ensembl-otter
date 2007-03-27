@@ -1,0 +1,130 @@
+#!/usr/local/bin/perl -w
+
+=head1 DESCRIPTION
+
+load_new_otter -dataset dsname <filenames>*
+
+=head1 OPTIONS
+
+-dataset dsname
+
+<filenames>* are input files to be parsed in mixed format (text_header+otter_xml)
+             Input is taken from STDIN if there are no filenames.
+
+=cut
+
+    # run it as a new schema script:
+BEGIN {
+    foreach my $path (@INC) {
+        unless( $path=~s{ensembl/modules}{ensembl_head/modules}g ) {
+            $path=~s{ensembl_head/modules}{ensembl/modules}g;
+        };
+    }
+}
+
+
+use strict;
+use Bio::Otter::Lace::Defaults;
+use Bio::Vega::Transform::Otter;
+use Bio::Vega::DBSQL::DBAdaptor;
+use Bio::EnsEMBL::Utils::Exception qw ( throw warning );
+
+$|=1;
+
+my $dsname = '';
+
+Bio::Otter::Lace::Defaults::do_getopt(
+    'dataset=s' => \$dsname,
+);
+
+my $cl = Bio::Otter::Lace::Defaults::make_Client();
+my $ds = $cl->get_DataSet_by_name($dsname);
+
+if(!$ds->HEADCODE()) {
+    die "Can only load things into a new API database";
+}
+
+my $dba = $ds->get_cached_DBAdaptor;
+
+###start working with the actual dump file
+#unless ($mc->list_value_by_key('last_gene_old_dbid')){
+#$mc->store_key_value('last_gene_old_dbid',0);
+#}
+
+my $mc=$dba->get_MetaContainer();
+my $sa=$dba->get_SliceAdaptor();
+my $gene_adaptor=$dba->get_GeneAdaptor();
+
+my $dbid;
+my $ss_hash;
+my $start=time();
+
+$/="----------------------------------------\n";
+## read from STDIN + @ARGV filenames
+while (<>){
+  my $gene_xml=$_;
+  eval{
+	 $dba->begin_work;
+	 chomp $gene_xml;
+	 if ($gene_xml=~/^\S+\s+(\S+)\s+(\S+)\s+(\S+)\s+(<locus>.*<\/locus>).*/ms){
+		
+		my $ss=$1;
+		$dbid=$2;
+		my $modified=$3;
+		$gene_xml=$4;
+		unless ($ss_hash->{$ss}){
+		  $ss_hash->{$ss}=$sa->fetch_by_region('chromosome',$ss,undef,undef,undef,'Otter');
+		}
+		my $slice=$ss_hash->{$ss};
+		unless ($slice) {
+		  throw "slice for $ss is not in db";
+		}
+		##create a parser 
+		my $parser = Bio::Vega::Transform::Otter->new;
+		$parser->set_ChromosomeSlice($slice);
+		$parser->parse($gene_xml,'latin1');
+		my $genes=$parser->get_Genes;
+		my $gene_count=@$genes;
+		if ($gene_count > 1 || $gene_count == 0) {
+		  throw ("parser has returned more than one gene or no gene , gene count is :$gene_count for geneid : $dbid");
+		}
+
+		my $gene=$genes->[0];
+		$gene->is_current(1);
+		$gene->created_date($modified);
+		$gene->modified_date($modified);
+		my $transcripts=$gene->get_all_Transcripts;
+		foreach my $tran(@$transcripts){
+		  $tran->created_date($modified);
+		  $tran->modified_date($modified);
+		  if ($tran->translation){
+			 $tran->translation->created_date($modified);
+			 $tran->translation->modified_date($modified);
+		  }
+		  foreach my $exon(@{$tran->get_all_Exons}){
+			 $exon->created_date($modified);
+			 $exon->modified_date($modified);
+		  }
+		}
+		$gene_adaptor->store($gene,'chr_whole_slice');
+		print STDOUT ("stored old gene dbid:$dbid as new gene dbid:".$gene->dbID." and the curent version is:".$gene->stable_id.".".$gene->version. "\n");
+		$mc->update_key_value('last_gene_old_dbid',$dbid);
+		if ($gene->biotype =~ /obsolete/){
+		  $gene_adaptor->update_deleted_gene_status($gene);
+		  print STDOUT ("The above gene ".$gene->dbID." was deleted in new db\n");
+		}
+		$dba->commit;
+		$parser->DESTROY;
+	 }
+  };
+  if ($@) {
+	 $dba->rollback;
+	 print STDERR ("\ngene $dbid did not get loaded due to \n" .$@);
+  }
+}
+
+my $end=time();
+my $total_time=$end-$start;
+print STDOUT "Total time for storing the above genes is $total_time\n";
+
+1;
