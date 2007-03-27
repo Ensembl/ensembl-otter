@@ -78,15 +78,11 @@ sub update_assembly_tagged_contig {
 	warn "$sql\n";
 	my $sth = $self->prepare(qq{$sql});
 	$sth->execute();
-	$num=$sth->rows;
   };
   if ($@) {
 	 throw "update of assembly_tagged_contig failed for seq_region_id $seq_region_id:$@";
   }
-  if ($num == 0){
-	 #throw "update of assembly_tagged_contig failed:$seq_region_id may not be present";
-	 warn "update of assembly_tagged_contig failed: $seq_region_id may not be present\n";
-  }
+
   return 1;
 }
 
@@ -126,8 +122,6 @@ sub store {
   my $sa = $self->db->get_SliceAdaptor();
   my $seq_region_id=$sa->get_seq_region_id($contig_slice);
 
-  map { print "$_ -> ", $at->{$_}, " " } keys %$at;
-  print "\n";
   my $sql = "REPLACE INTO assembly_tag (seq_region_id, seq_region_start, seq_region_end, seq_region_strand, tag_type, tag_info) VALUES (?,?,?,?,?,?)";
   my $sth = $self->prepare($sql);
 
