@@ -41,31 +41,61 @@ sub name {
     return $self->{'_name'};
 }
 
-sub taxon{
+sub meta_hash {
     my ($self) = @_;
 
-    unless($self->{_taxon_id}){
-        my $hashp = $self->Client()->get_meta($self->name(), 'otter', 'species.taxonomy_id');
-        if(my $taxon_id = $hashp->{'species.taxonomy_id'}[0]) {
-            $self->{_taxon_id} = $taxon_id;
-        } else {
-            warn "No 'species.taxonomy_id' key in meta table, please fix!";
-        }
+    my $meta;
+    unless ($meta = $self->{'_meta_hash'}) {
+
+        # Get all of meta table in one call
+        $meta = $self->{'_meta_hash'} =
+          $self->Client()->get_meta($self->name, 'otter');
     }
-    return $self->{_taxon_id};
+    return $meta;
 }
 
-sub species{
-    my ($self) = @_;
-    unless($self->{_species}){
-        my $hashp = $self->Client()->get_meta($self->name(), 'otter', 'species.common_name');
-        if(my $species = $hashp->{'species.common_name'}[0]) {
-            $self->{_species} = $species;
-        } else {
-            warn "No 'species.common_name' key in meta table, please fix!";
-        }
+sub get_meta_value {
+    my ($self, $key) = @_;
+
+    if (my $val = $self->meta_hash->{$key}) {
+        # Return string of all values (often just one!) in scalar context
+        return wantarray ? @$val : "@$val";
     }
-    return $self->{_species};
+    else {
+        warn "No entry in meta table under key '$key'";
+    }
+}
+
+sub taxon {
+    my ($self) = @_;
+
+    unless ($self->{'_taxon_id'}) {
+        $self->{'_taxon_id'} = $self->get_meta_value('species.taxonomy_id');
+    }
+    return $self->{'_taxon_id'};
+}
+
+sub species {
+    my ($self) = @_;
+
+    unless ($self->{'_species'}) {
+        $self->{'_species'} = $self->get_meta_value('species.common_name');
+    }
+    return $self->{'_species'};
+}
+
+sub stable_id_prefix {
+    my ($self) = @_;
+
+    unless ($self->{'_stable_id_prefix'}) {
+        my $pri = $self->get_meta_value('prefix.primary');
+        my $spe = $self->get_meta_value('prefix.species');
+        confess
+"Need entries for both 'prefix.primary' and 'prefix.species' in otter meta table"
+          unless $pri and $spe;
+        $self->{'_stable_id_prefix'} = "$pri$spe";
+    }
+    return $self->{'_stable_id_prefix'};
 }
 
 sub sequence_sets_cached {

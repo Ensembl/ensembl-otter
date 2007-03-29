@@ -123,7 +123,7 @@ sub fetch_stable_id_by_name {
 							 }
 						  );
 
-	$sth->execute($attrib_code, "$attrib_value%");
+	$sth->execute($attrib_code, qq{$attrib_value%});
 
 	while ( my ($gsid, $value) = $sth->fetchrow ){
 	  # exclude eg, SET7 SETX where search is 'SET%' (ie, allow SET-2)
@@ -571,24 +571,24 @@ sub store{
 		  $broker->find_update_deleted_exons_status($new_exons,$old_exons);
 		}
 	 }
-	 print STDERR "***WARNING***CHANGED gene:".$gene->stable_id.".".$gene->version."\n-------------------------------------------\n\n";
+	 print STDERR "CHANGED gene:".$gene->stable_id.".".$gene->version."\n-------------------------------------------\n\n";
   }
 
   ##if after all the comparisons we see that gene and all its components have not changed then just rollback to the checkpoint, 
   ##in case something has been updated during the comparisons.
   if ($gene_changed == UNCHANGED) {
 	 $self->db->rollback_to_savepoint;
-	 print STDERR "***WARNING***UNCHANGED gene:".$gene->stable_id.".".$gene->version."\n-------------------------------------------\n\n";
+	 print STDERR "UNCHANGED gene:".$gene->stable_id.".".$gene->version."\n-------------------------------------------\n\n";
   }
 
   if ($gene_changed == NEW) {
-	 print STDERR "***WARNING***NEW gene:".$gene->stable_id.".".$gene->version."\n-------------------------------------------\n\n";
+	 print STDERR "NEW gene:".$gene->stable_id.".".$gene->version."\n-------------------------------------------\n\n";
   }
   if ($gene_changed == RESTORED) {
-	 print STDERR "***WARNING***RESTORED gene:".$gene->stable_id.".".$gene->version."\n-------------------------------------------\n\n";
+	 print STDERR "RESTORED gene:".$gene->stable_id.".".$gene->version."\n-------------------------------------------\n\n";
   }
   if ($gene_changed == DELETED) {
-	 print STDERR "***WARNING***DELETED gene:".$gene->stable_id.".".$gene->version."\n-------------------------------------------\n\n";
+	 print STDERR "DELETED gene:".$gene->stable_id.".".$gene->version."\n-------------------------------------------\n\n";
   }
   return 1;
 }

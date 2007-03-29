@@ -492,13 +492,13 @@ sub get_meta {
         1,
     );
 
-    my %meta_hash = {};
+    my $meta_hash = {};
     for my $line (split(/\n/,$response)) {
         my($meta_key, $meta_value) = split(/\t/,$line);
-        push @{$meta_hash{$meta_key}}, $meta_value; # as there can be multiple values for one key
+        push @{$meta_hash->{$meta_key}}, $meta_value; # as there can be multiple values for one key
     }
 
-    return \%meta_hash;
+    return $meta_hash;
 }
 
 sub lock_refresh_for_DataSet_SequenceSet {
