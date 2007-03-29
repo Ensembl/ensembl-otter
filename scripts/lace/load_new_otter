@@ -57,7 +57,7 @@ my $gene_adaptor=$dba->get_GeneAdaptor();
 
 my $dbid;
 my $ss_hash;
-my $start=time();
+my $loading_started=time();
 
 $/="----------------------------------------\n";
 ## read from STDIN + @ARGV filenames
@@ -72,10 +72,9 @@ while (<>){
 		$dbid=$2;
 		my $modified=$3;
 		$gene_xml=$4;
-		unless ($ss_hash->{$ss}){
-		  $ss_hash->{$ss}=$sa->fetch_by_region('chromosome',$ss,undef,undef,undef,'Otter');
-		}
-		my $slice=$ss_hash->{$ss};
+
+		my $slice = $ss_hash->{$ss} ||= $sa->fetch_by_region('chromosome',$ss,undef,undef,undef,'Otter') ;
+
 		unless ($slice) {
 		  throw "slice for $ss is not in db";
 		}
@@ -85,34 +84,25 @@ while (<>){
 		$parser->parse($gene_xml,'latin1');
 		my $genes=$parser->get_Genes;
 		my $gene_count=@$genes;
-		if ($gene_count > 1 || $gene_count == 0) {
-		  throw ("parser has returned more than one gene or no gene , gene count is :$gene_count for geneid : $dbid");
+		if ($gene_count!=1) {
+            throw "parser has returned $gene_count genes (instead of 1) for geneid : $dbid";
 		}
 
 		my $gene=$genes->[0];
-		$gene->is_current(1);
-		$gene->created_date($modified);
-		$gene->modified_date($modified);
-		my $transcripts=$gene->get_all_Transcripts;
-		foreach my $tran(@$transcripts){
-		  $tran->created_date($modified);
-		  $tran->modified_date($modified);
-		  if ($tran->translation){
-			 $tran->translation->created_date($modified);
-			 $tran->translation->modified_date($modified);
-		  }
-		  foreach my $exon(@{$tran->get_all_Exons}){
-			 $exon->created_date($modified);
-			 $exon->modified_date($modified);
-		  }
-		}
-		$gene_adaptor->store($gene,'chr_whole_slice');
-		print STDOUT ("stored old gene dbid:$dbid as new gene dbid:".$gene->dbID." and the curent version is:".$gene->stable_id.".".$gene->version. "\n");
+        my $current = ($gene->biotype =~ /obsolete/) ? 1 : 0;
+
+		$gene->is_current( $current );
+		$gene_adaptor->store($gene,'chr_whole_slice', $modified);
+
+        if($current) {
+            print STDOUT "stored old gene dbid:$dbid as new gene dbid:".$gene->dbID
+                        ." and the curent version is:".$gene->stable_id.".".$gene->version. "\n";
+        } else {
+            print STDOUT "The gene ".$gene->dbID." was deleted from the database\n";
+        }
+
 		$mc->update_key_value('last_gene_old_dbid',$dbid);
-		if ($gene->biotype =~ /obsolete/){
-		  $gene_adaptor->update_deleted_gene_status($gene);
-		  print STDOUT ("The above gene ".$gene->dbID." was deleted in new db\n");
-		}
+
 		$dba->commit;
 		$parser->DESTROY;
 	 }
@@ -123,8 +113,8 @@ while (<>){
   }
 }
 
-my $end=time();
-my $total_time=$end-$start;
+my $loading_finished=time();
+my $total_time=$loading_finished-$loading_started;
 print STDOUT "Total time for storing the above genes is $total_time\n";
 
 1;
