@@ -43,67 +43,53 @@ sub find_update_deleted_exons_status {
 
 }
 
-sub translation_diff{
-  my ($self,$sida,$tran,$db_transcript)=@_;
+sub translation_diff {
+  my ($self,$sida,$transcript,$db_transcript)=@_;
+
+  my $translation    = $transcript    && $transcript   ->translation();
+  my $db_translation = $db_transcript && $db_transcript->translation();
+
   my $translation_changed=0;
-  my $translation;
-  my $db_translation;
-  if (defined $tran){
-	 $translation=$tran->translation;
-  }
-  if (defined $db_transcript) {
-	 $db_translation=$db_transcript->translation;
-  }
-  if (defined $translation) {
-	 unless ($translation->stable_id) {
+
+  if($translation) {
+	unless ($translation->stable_id) {
 		$translation->stable_id($sida->fetch_new_translation_stable_id);
 		$translation->version(1);
-		unless($translation->created_date){
-		  $translation->created_date($self->current_time);
-		}
-		unless($translation->modified_date){
-		  $translation->modified_date($self->current_time);
-		}
-	 }
+	}
+
+    my ($created_time, $db_version);
+
+    if ($db_translation) {
+        $created_time = $db_translation->created_date();
+        $db_version   = $db_translation->version();
+
+        if ($db_translation->stable_id ne $translation->stable_id) {
+            #Remember to uncomment this after loading and remove the line/s after
+            #	throw('translation stable_ids of the same two transcripts are different\n');
+            my $translation_adaptor=$self->db->get_TranslationAdaptor;
+            my $not_good_and_new_translation=$translation_adaptor->fetch_by_stable_id($translation->stable_id);
+            if($not_good_and_new_translation){
+              throw ("new translation stable_id for this transcript is already associated with someother gene's transcript");
+            }
+            $db_version          = 0;
+            $translation_changed = 1;
+        } else {
+            $translation_changed = compare($db_translation,$translation);
+        }
+    } else {
+        $created_time        = $self->current_time();
+        $db_version          = 0;
+        $translation_changed = 1;
+    }
+
+    $translation->created_date($created_time);
+    $translation->modified_date($translation_changed ? $self->current_time : $created_time );
+    $translation->version($db_version+$translation_changed);
+
+  } elsif($db_translation) { # translation disappeared
+    $translation_changed=1;
   }
-  if (! defined $db_translation && defined $translation){
-	 $translation->version(1);
-	 $translation_changed=1;
-	 return 1;
-  }
-  if (! defined $translation && defined $db_translation){
-	 $translation_changed=1;
-	 return 1;
-  }
-  if (defined $db_translation && defined $translation){
-	 my $db_version=$db_translation->version;
-	 $translation->created_date($db_translation->created_date);
-	 if ($db_translation->stable_id ne $translation->stable_id) {
-		#Remember to uncomment this after loading and remove the line/s after
-		#	throw('translation stable_ids of the same two transcripts are different\n');
-		my $translation_adaptor=$self->db->get_TranslationAdaptor;
-		my $not_good_and_new_translation=$translation_adaptor->fetch_by_stable_id($translation->stable_id);
-		if (defined $not_good_and_new_translation){
-		  throw ("new translation stable_id for this transcript is already associated with someother gene's transcript");
-		}
-		$translation_changed=1;
-		$db_version=0;
-	 }
-	 else {
-		$translation_changed=compare($db_translation,$translation);
-	 }
-	 if ($translation_changed==1){
-		$translation_changed=1;
-		$translation->version($db_version+1);
-	 }
-	 else {
-		$translation->version($db_version);
-	 }
-  }
-  if (!defined $translation && !defined $db_translation){
-	 $translation_changed=0;
-	 return $translation_changed;
-  }
+
   return $translation_changed;
 }
 
@@ -135,7 +121,7 @@ sub exons_diff {
 		  $exon->version($db_version+1);
 		  $exon->is_current(1);
 		  unless ($exon->modified_date){
-			 $exon->modifed_date($self->current_time);
+			 $exon->modified_date($self->current_time);
 		  }
 		  $exon->created_date($db_exon->created_date);
 
@@ -155,7 +141,7 @@ sub exons_diff {
 		  $exon->version(1);
 		  $exon->is_current(1);
 		  unless ($exon->modified_date){
-			 $exon->modifed_date($self->current_time);
+			 $exon->modified_date($self->current_time);
 		  }
 		  unless ($exon->created_date){
 			 $exon->created_date($self->current_time);
@@ -252,12 +238,12 @@ sub make_Attribute{
 sub check_for_change_in_gene_components {
   ## check if any of the gene component (transcript,exons,translation) has changed
   my ($self,$sida,$gene,$method_chooser,$time) = @_;
+
   $self->current_time($time);
-  my $transcripts=$gene->get_all_Transcripts;
   my $ta=$self->db->get_TranscriptAdaptor;
   my $tran_change_count=0;
   my $shared_exons_bet_txs;
-  foreach my $tran (@$transcripts) {
+  foreach my $tran (@{ $gene->get_all_Transcripts }) {
 	 ##assign stable_id for new trancript
 	 unless ($tran->stable_id) {
 		$tran->stable_id($sida->fetch_new_transcript_stable_id);
@@ -270,41 +256,41 @@ sub check_for_change_in_gene_components {
 	 ##only a partial chromosome slice is constructed when genes are saved through xml, from the otter lace client from the 
     ##sequence_fragment tags.But in case of external loading when sequence fragments are not know only a complete chromosome slice 
     ##be constructed from the sequence_set name.So the methods differ
-	 my $db_transcript;
-	 if ($method_chooser eq 'chr_gene_slice') {
-		$db_transcript=$ta->get_current_Transcript_by_slice($tran);
-	 }
-	 elsif ($method_chooser eq 'chr_whole_slice'){
-		$db_transcript=$ta->fetch_by_stable_id($tran->stable_id);
-	 }
-	 my $translation_changed=0;
-	 $translation_changed=$self->translation_diff($sida,$tran,$db_transcript);
+
+	 my $db_transcript = ($method_chooser eq 'chr_gene_slice')
+        ? $ta->get_current_Transcript_by_slice($tran)
+        : $ta->fetch_by_stable_id($tran->stable_id);
+
+	 my $translation_changed=$self->translation_diff($sida,$tran,$db_transcript);
 
 	 ##check if transcript is new or old
 	 ##if transcript is old compare to see if transcript has changed
 	 my $transcript_changed=0;
 
 	 $tran->is_current(1);
-	 if ( $db_transcript){
+	 if($db_transcript) {
 		$tran->created_date($db_transcript->created_date);
-		unless ($tran->modified_date){
-		  $tran->modified_date($self->current_time);
-		}
-		$transcript_changed=compare($db_transcript,$tran);
-		my $db_version=$db_transcript->version;
-		if ($exon_changed==1 || $translation_changed==1 ) {
-		  $transcript_changed = 1;
-		}
+
+		$transcript_changed = $exon_changed || $translation_changed || compare($db_transcript,$tran);
+
+        unless($tran->modified_date) {
+            $tran->modified_date( $transcript_changed
+                ? $self->current_time
+                : $db_transcript->modified_date()
+            );
+        }
+
 		$db_transcript->is_current(0);
 		$ta->update($db_transcript);
 
+		my $db_version=$db_transcript->version;
+
 		##if transcript has changed then increment version
-		if ($transcript_changed==1 ) {
+		if ($transcript_changed ) {
 		  $tran->version($db_version+1);
 		  ##add for transcript synonym
 		  $self->compare_synonyms_add($db_transcript,$tran);
 		}
-		##if transcript has not changed then retain the same old version
 		else {
 		  $tran->version($db_version);
 		  ##retain old author
@@ -314,7 +300,7 @@ sub check_for_change_in_gene_components {
 	 ##if transcript is new
 	 else {
 		my $restored_transcripts=$ta->fetch_all_versions_by_stable_id($tran->stable_id);
-		if (@$restored_transcripts == 0){
+		if (!@$restored_transcripts){
 		  $tran->version(1);
 		  unless ($tran->modified_date){
 			 $tran->modified_date($self->current_time);

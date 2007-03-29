@@ -8,11 +8,12 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::Vega::Utils::Comparator qw(compare);
 use Bio::Vega::AnnotationBroker;
 use base 'Bio::EnsEMBL::DBSQL::GeneAdaptor';
-use constant CHANGED => 1;
-use constant NEW => 2;
-use constant  UNCHANGED => 0;
-use constant  RESTORED => 3;
-use constant  DELETED => 5;
+
+use constant UNCHANGED => 0;
+use constant CHANGED   => 1;
+use constant NEW       => 2;
+use constant RESTORED  => 3;
+use constant DELETED   => 5;
 
 sub fetch_by_stable_id  {
   my ($self, $stable_id) = @_;
@@ -310,11 +311,11 @@ sub get_current_Gene_by_slice{
 
 sub update_deleted_gene_status {
   my ($self,$del_gene)=@_;
-  ##update deleted genes
-  my $tref=$del_gene->get_all_Transcripts();
+
   my $tran_adaptor=$self->db->get_TranscriptAdaptor;
   my $exon_adaptor=$self->db->get_ExonAdaptor;
-  foreach my $del_tran (@$tref) {
+
+  foreach my $del_tran (@{ $del_gene->get_all_Transcripts() }) {
 	 $del_tran->is_current(0);
 	 $tran_adaptor->update($del_tran);
 	 foreach my $del_exon (@{$del_tran->get_all_Exons}) {
@@ -352,8 +353,10 @@ sub update_deleted_gene_status {
 
 sub store{
   
-  my ($self,$gene,$method_chooser) = @_;
-  my $time=time;
+  my ($self,$gene,$method_chooser, $time_now) = @_;
+
+  $time_now ||= time;
+
   unless ($gene) {
 	 throw("Must enter a Gene object to the store method");
   }
@@ -377,7 +380,6 @@ sub store{
 	 my $sa = $self->db->get_SliceAdaptor();
 	 $gene->slice->adaptor($sa);
   }
-  my $gene_changed=UNCHANGED;
 
   ##check for a transaction for every gene annotation that is stored
   ##and start a savepoint, for having a checkpoint to rollback to if necessary
@@ -385,15 +387,15 @@ sub store{
 	 throw "This is non-transactional , cannot proceed storing of gene\n";
   }
   $self->db->savepoint;
+
+  my $gene_changed=UNCHANGED;
+
   my $db_gene;
-  ##create Annotation Broker for comparing
   my $broker=$self->db->get_AnnotationBroker();
-  ##deleted gene
-  if ($gene->is_current == 0) {
-	 $self->update_deleted_gene_status($gene);
+
+  if (!$gene->is_current) {
 	 $gene_changed = DELETED;
-  }
-  else {
+  } else {
 	 ##new gene - assign stable_id
 	 my $sida = $self->db->get_StableIdAdaptor();
 	 unless ($gene->stable_id){
@@ -406,9 +408,9 @@ sub store{
 	 elsif ($method_chooser eq 'chr_whole_slice'){
 		$db_gene=$self->fetch_by_stable_id($gene->stable_id);
 	 }
-	 ##old gene
-	 if ( $db_gene && $gene_changed != DELETED) {
-		$gene_changed=$broker->check_for_change_in_gene_components($sida,$gene,$method_chooser,$time);
+
+	 if ( $db_gene) {    ## old gene
+		$gene_changed=$broker->check_for_change_in_gene_components($sida,$gene,$method_chooser,$time_now);
 		my $db_version=$db_gene->version;
 		if ($gene_changed == UNCHANGED) {
 		  $gene_changed=compare($db_gene,$gene);
@@ -423,19 +425,16 @@ sub store{
 		  $broker->compare_synonyms_add($db_gene,$gene);
 		  $gene->created_date($db_gene->created_date);
 		  unless ($gene->modified_date){
-			 $gene->modified_date($time);
+			 $gene->modified_date($time_now);
 		  }
-		}
-		else {
+		} else {
 		  $gene->version($db_version);
 		}
 
-	 }
-	 ##if gene is new /restored
-	 if ( !$db_gene && $gene_changed != DELETED) {
+	 } else {    ## gene is new/restored
+
 		my $restored_genes = $self->fetch_all_versions_by_stable_id($gene->stable_id);
-		##restored gene
-		if (@$restored_genes > 0){
+		if (@$restored_genes){   ##restored gene
 		  my $old_version=1;
 		  foreach my $g (@$restored_genes){
 			 if ($g->version > $old_version){
@@ -451,7 +450,7 @@ sub store{
 		  }
 		  $gene->created_date($old_gene->created_date);
 		  unless($gene->modified_date){
-			 $gene->modified_date($time);
+			 $gene->modified_date($time_now);
 		  }
 		  ##check to see change in components
 		  $gene->version($old_version);
@@ -459,8 +458,7 @@ sub store{
 		  $gene_changed=$broker->check_for_change_in_gene_components($sida,$gene,$method_chooser);
 		  if ($gene_changed == CHANGED)  {
 			 $gene->version($old_version+1);
-		  }
-		  else {
+		  } else {
 			 ##compare this gene with the highest version of the old genes
 			 ##if gene changed
 			 $gene_changed=compare($old_gene,$gene);
@@ -468,21 +466,16 @@ sub store{
 				$gene->version($old_version+1);
 				##add synonym if old gene name is not a current gene synonym
 				$broker->compare_synonyms_add($old_gene,$gene);
-			 }
-			 else {
+			 } else {
 				$gene_changed=RESTORED;
 			 }
 		  }
-		}
-		##new gene
-		else {
+		} else { ## new gene
 		  $gene->version(1);
 		  $gene->is_current(1);
 		  ##check if any of the gene components are old and if so have changed
 		  ($gene_changed)=$broker->check_for_change_in_gene_components($sida,$gene,$method_chooser);
 		  $gene_changed=NEW;
-		  ##storing a new gene and its components
-		  #$self->SUPER::store($gene);
 		}
 	 }
   }
@@ -493,40 +486,52 @@ sub store{
   ## restored gene: restored-with-no-change-3
   ## deleted gene : deleted-5
 
-  if ($gene_changed == NEW || $gene_changed == CHANGED || $gene_changed == RESTORED || $gene_changed == DELETED) {
+  if ($gene_changed != UNCHANGED) {
 	 if ($gene_changed == DELETED){
 		##As with this current gene object we have already deleted the database gene, and as we want to store the author info
 		##for the deleted gene,a new record has to be inserted again with the current copy. dbid, adaptor is made undef, so a new record 
 		##can be inserted with the deleted author info
 		$gene->dbID(undef);
 		$gene->adaptor(undef);
-		$gene->modified_date($time);
-		my $tref=$gene->get_all_Transcripts();
-		foreach my $tran (@$tref) {
+		$gene->modified_date($time_now); # only the gene's date/time is modified
+		foreach my $tran (@{ $gene->get_all_Transcripts() }) {
 		  $tran->dbID(undef);
 		  $tran->adaptor(undef);
-		  $tran->modified_date($time);
+          foreach my $exon (@{ $tran->get_all_Exons() }) {
+             $exon->dbID(undef);
+             $exon->adaptor(undef);
+          }
 		  if ($tran->translation){
 			 $tran->translation->dbID(undef);
 			 $tran->translation->adaptor(undef);
-			 $tran->translation->modified_date($time);
 		  }
 		}
-	 }
-	 if ($gene_changed == NEW){
-		unless ($gene->created_date){
-		  $gene->created_date($time);
-		}
-		unless ($gene->modified_date){
-		  $gene->modified_date($time);
-		}
+	 } elsif ($gene_changed == NEW){
+		$gene->created_date($time_now);
+		$gene->modified_date($time_now);
+        foreach my $tran (@{ $gene->get_all_Transcripts() }) {
+            $tran->created_date($time_now);
+            $tran->modified_date($time_now);
+            foreach my $exon (@{ $tran->get_all_Exons() }) {
+                $exon->created_date($time_now);
+                $exon->modified_date($time_now);
+            }
+            if (my $trl = $tran->translation){
+                $trl->created_date($time_now);
+                $trl->modified_date($time_now);
+            }
+        }
 	 }
 
 	 $self->SUPER::store($gene);
+
+     if($gene_changed == DELETED) {
+            $self->update_deleted_gene_status($gene);
+     }
   }
 
   ##Now that gene and its components have been stored, store the author,and evidence
-  if ($gene_changed == CHANGED || $gene_changed == NEW || $gene_changed == RESTORED || $gene_changed == DELETED){
+  if ($gene_changed != UNCHANGED) {
 	 ##get author_id and store gene_id-author_id in gene_author table
 	 my $aa = $self->db->get_AuthorAdaptor;
 	 my $gene_author=$gene->gene_author;

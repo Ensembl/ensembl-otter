@@ -35,7 +35,7 @@ my (
 	 %logic_ana,
 	 %coord_system,
 	 %slice,
-	 %time_now,
+#	 %time_now,
 	 %biotype_status_mapping,
 	 %seen_transcript_name,
 	 %seen_gene_name,
@@ -56,7 +56,7 @@ sub DESTROY {
   delete $logic_ana{$self};
   delete $coord_system{$self};
   delete $slice{$self};
-  delete $time_now{$self};
+# delete $time_now{$self};
   delete $biotype_status_mapping{$self};
   delete $seen_gene_name{$self};
   delete $seen_transcript_name{$self};
@@ -115,7 +115,7 @@ sub initialize {
 	  'ig_pseudogene_segment'  => ['Ig_pseudogene_segment' ,'UNKNOWN'],
 	  'ig_segment'             => ['Ig_segment' ,'NOVEL'],
 	 };
-  $time_now{$self}=time;
+# $time_now{$self}=time;
   $assembly{$self}=0;
 }
 
@@ -336,8 +336,8 @@ sub build_Exon {
 												 -strand    => $data->{'strand'},
 												 -stable_id => $data->{'stable_id'},
 												 -slice     => $slice,
-												 -created_date => $time_now{$self},
-												 -modified_date => $time_now{$self},
+#												 -created_date => $time_now{$self},
+#												 -modified_date => $time_now{$self},
 												);
   my $frame=$data->{'frame'};
   if (defined($frame)) {
@@ -361,8 +361,8 @@ sub build_Transcript {
 
   my $transcript = Bio::Vega::Transcript->new(
 															 -stable_id => $data->{'stable_id'},
-															 -created_date=>$time_now{$self},
-															 -modified_date=>$time_now{$self},
+#															 -created_date=>$time_now{$self},
+#															 -modified_date=>$time_now{$self},
 															 -analysis=>$ana,
 															 -slice     => $slice,
 															);
@@ -408,8 +408,8 @@ sub build_Transcript {
 		if ($end_Exon->length >= $end_Exon_Pos) {
 		  $end_Exon->end_phase(-1);
 		}
-		$translation->created_date($time_now{$self});
-		$translation->modified_date($time_now{$self});
+#		$translation->created_date($time_now{$self});
+#		$translation->modified_date($time_now{$self});
 		$transcript->translation($translation);
 	 }
   }
@@ -525,8 +525,8 @@ sub build_Locus {
   my $gene = Bio::Vega::Gene->new(
 											 -stable_id => $data->{'stable_id'},
 											 -slice => $slice,
-											 -created_date => $time_now{$self},
-											 -modified_date => $time_now{$self},
+#											 -created_date => $time_now{$self},
+#											 -modified_date => $time_now{$self},
 											 -description => $data->{'description'},
 											 -analysis => $ana,
 											);
