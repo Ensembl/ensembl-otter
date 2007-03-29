@@ -10,11 +10,13 @@ use Bio::Otter::Lace::Defaults;
     my $usage = sub { exec('perldoc', $0) };
     my $tran_info_flag = 0;
     my $list_alias_flag = 0;
+    my $count_only = 0;
     Bio::Otter::Lace::Defaults::do_getopt(
         'dataset=s'         => \$dataset_name,
         'set|chr=s'         => \$set_name,
         'transcript!'       => \$tran_info_flag,
         'alias|synonym!'    => \$list_alias_flag,
+        'count!'            => \$count_only,
         ) or $usage->();
     $usage->() unless $dataset_name;
 
@@ -39,6 +41,11 @@ use Bio::Otter::Lace::Defaults;
         $gene_id_list = $gene_aptr->list_current_dbIDs_for_Slice($slice);
     } else {
         $gene_id_list = $gene_aptr->list_current_dbIDs;
+    }
+    
+    if ($count_only) {
+        printf "Found %d genes\n", scalar @$gene_id_list;
+        exit 0;
     }
     
     my( $get_tsct_syn );

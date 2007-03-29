@@ -1,13 +1,13 @@
 #!/usr/local/bin/perl -w
 
 use strict;
-#use Bio::Otter::ServerScriptSupport;
-#use Bio::Otter::AnnotationBroker;
-#use Bio::Otter::Converter;
-#use Bio::Otter::CloneLockBroker;
-#use Bio::Vega::Transform::Otter;
-#use Bio::Vega::Transform::XML;
-#use Bio::Vega::ContigLockBroker;
+use Bio::Otter::ServerScriptSupport;
+use Bio::Otter::AnnotationBroker;
+use Bio::Otter::Converter;
+use Bio::Otter::CloneLockBroker;
+use Bio::Vega::Transform::Otter;
+use Bio::Vega::Transform::XML;
+use Bio::Vega::ContigLockBroker;
 
 my $server =
   Bio::Otter::ServerScriptSupport->new('dataset', 'data', 'author', 'email',);
