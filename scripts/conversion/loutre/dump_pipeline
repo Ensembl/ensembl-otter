@@ -15,6 +15,9 @@ Options:
     --vega_release=NUM                  vega release number
     --release_type=STRING               type of release, ie External
     --no_feature=BOOLEAN                choose to dump *align_features or not
+    --add_chr=LIST                      comma seperated list of chromsomes to add to an existing
+                                        Vega db
+    --ignore_chr=LIST                   comma seperated list of chromsomes to ignore
     --sql_dump_location=LOC             location of MySQLdump file
     --file_name=NAME                    name of MySQLdump file (defaults to db name)
  
@@ -58,8 +61,11 @@ previously in the loutre database using another script - prepare_loutre.
 Transfer of features from the dna_ and protein_align_feature tables can be prevented using
 the -no_feature option
 
-To do: add an option to add one or more seq_regions rather than having to start from scratch
-every time
+The 'add_chr' option specifies a comma separated list of chromosomes to add - uses just insert
+MySQL commands without any create table statments
+
+The 'ignore_chr' option specifies a comma separated list of chromosomes to ignore - this does use
+create table statements
 
 =head1 LICENCE
 
@@ -115,6 +121,8 @@ $support->parse_extra_options(
 	'vega_release=s',
 	'release_type=s',
 	'no_feature=s',
+	'add_chr=s',
+	'ignore_chr=s',
 	'sql_dump_location=s',
 	'file_name=s',
 );
@@ -127,6 +135,8 @@ $support->allowed_params(
 	'vega_release',
 	'release_type',
 	'no_feature',
+	'add_chr',
+	'ignore_chr',
 	'sql_dump_location',
 	'file_name',
 	$support->get_common_params,
@@ -149,10 +159,19 @@ if ($support->param('help') or $support->error) {
     pod2usage(1);
 }
 
+$support->comma_to_list('add_chr');
+$support->comma_to_list('ignore_chr');
+
 # ask user to confirm parameters to proceed
 $support->confirm_params;
 # get log filehandle and print heading and parameters to logfile
 $support->init_log;
+
+#sanity check
+if ($support->param('add_chr') && $support->param('ignore_chr') ) {
+	$support->log_warning("This script cannot use both \'add_chr\' and \'ignore_chr\' options. Please fix.\n");
+	exit;
+}
 
 #for debugging, are we dumping align_features (can be slow) or just the table structure
 my $no_feature = $support->param('no_feature') || '';
@@ -181,26 +200,35 @@ my $aa = $dba->get_AttributeAdaptor();
 my $chroms = $support->fetch_non_hidden_slice($aa,$sa);
 
 #identify non-hidden chromosomes that have correct
-#attributes for export mode and release number
+#attributes for export mode and release number, or take from the add_chr list
 my @chr_names_wanted;
 my $export_mode = $support->param('release_type');
 my $release = $support->param('vega_release');
-CHROM:
-foreach my $chrom (@$chroms) {
-	my $attribs = $aa->fetch_all_by_Slice($chrom);
-	my $vals = $support->get_attrib_values($attribs,'vega_export_mod');
-	if (scalar(@$vals > 1)) {
-		$support->log_warning ("Multiple attribs for \'vega_export_mod\', please fix before continuing");
-		exit;
+if (! $support->param('add_chr')) {
+ CHROM:
+	foreach my $chrom (@$chroms) {
+		my $attribs = $aa->fetch_all_by_Slice($chrom);
+		my $vals = $support->get_attrib_values($attribs,'vega_export_mod');
+		if (scalar(@$vals > 1)) {
+			$support->log_warning ("Multiple attribs for \'vega_export_mod\', please fix before continuing");
+			exit;
+		}
+		next CHROM if (! grep { $_ eq $export_mode} @$vals);
+		$vals =  $support->get_attrib_values($attribs,'vega_release',$release);	
+		if (scalar(@$vals > 1)) {
+			$support->log_warning ("Multiple attribs for \'vega_release\' value = $release , please fix before continuing");
+			exit;
+		}
+		next CHROM if (! grep { $_ eq $release} @$vals);
+		my $name = $chrom->seq_region_name;
+		if (my @ignored = $support->param('ignore_chr')) {
+			next CHROM if (grep {$_ eq $name} @ignored);
+		}
+		push @chr_names_wanted, $name;
 	}
-	next CHROM if (! grep { $_ eq $export_mode} @$vals);
-	$vals =  $support->get_attrib_values($attribs,'vega_release',$release);	
-	if (scalar(@$vals > 1)) {
-		$support->log_warning ("Multiple attribs for \'vega_release\' value = $release , please fix before continuing");
-		exit;
-	}
-	next CHROM if (! grep { $_ eq $release} @$vals);
-	push @chr_names_wanted, $chrom->seq_region_name;
+}
+else {
+	@chr_names_wanted = $support->param('add_chr');
 }
 
 my $seq_regions = join "\n", @chr_names_wanted; 
@@ -222,21 +250,21 @@ my ($no_tot_chr) = $pdbh->selectrow_array(qq
      and cs.name = 'chromosome'
      and cs.version = 'Otter'
 ));
-my $no_chromosome;
+my $no_chromosome = 0;
 my ($no_tot_contig) = $pdbh->selectrow_array(qq
 	(select count(*) 
      from seq_region sr, coord_system cs
      where sr.coord_system_id = cs.coord_system_id
      and cs.name = 'contig'
 ));
-my $no_contig;
+my $no_contig = 0;
 my ($no_tot_clone)= $pdbh->selectrow_array(qq
 	(select count(*) 
      from seq_region sr, coord_system cs
      where sr.coord_system_id = cs.coord_system_id
      and cs.name = 'clone'
 ));
-my $no_clone;
+my $no_clone = 0;
 
 my $chr_ids = "('" . (join "','", @chr_names_wanted) . "')";
 
@@ -471,6 +499,18 @@ foreach my $table (keys %sets) {
 	}
 }
 
+#don't dump structure-only tables, or other generic tables if we're adding data
+if ($support->param('add_chr')) {
+	foreach my $table (keys %constraints) {
+		if ($constraints{$table}[0] eq 's') {
+			delete $constraints{$table};
+		}
+		if (grep {$table eq $_ } qw(analysis meta_coord attrib_type coord_system meta) ) {
+			delete $constraints{$table};
+		}
+	}
+}
+
 #do some logging:
 my $sorted;
 foreach my $table (keys %constraints) {
@@ -514,7 +554,8 @@ my $user   = $support->param('pipeuser');
 my $dbname = $support->param('pipedbname');
 my $host   = $support->param('pipehost');
 my $port   = $support->param('pipeport');
-my $mcom= "mysqldump --opt --skip-lock-tables $sei $cs --single-transaction -q -u $user -P $port -h $host $dbname";
+my $nocreate = $support->param('add_chr') ? '-t' : '';
+my $mcom   = "mysqldump --opt --skip-lock-tables $sei $cs --single-transaction -q -u $user -P $port -h $host $dbname $nocreate";
 
 #open file to dump the sql into
 my $filename = $support->param('file_name') || ($support->param('dbname') . '_create.sql');
