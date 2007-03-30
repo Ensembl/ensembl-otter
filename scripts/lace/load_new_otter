@@ -89,7 +89,7 @@ while (<>){
 		}
 
 		my $gene=$genes->[0];
-        my $current = ($gene->biotype =~ /obsolete/) ? 1 : 0;
+        my $current = ($gene->biotype !~ /obsolete/) ? 1 : 0;
 
 		$gene->is_current( $current );
 		$gene_adaptor->store($gene,'chr_whole_slice', $modified);
