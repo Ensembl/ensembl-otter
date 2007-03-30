@@ -125,9 +125,6 @@ if (! (($species) = $support->param('loutredbname') =~ /loutre_(\S+)/ ) ) {
 
 my $rel_type = $support->param('release_type');
 
-#hack for development
-$species = 'pig';
-
 my $IN = $support->filehandle('<', $support->param('definition_file'));
 my $active_record = 0;
 my $regions_wanted_details;
@@ -246,7 +243,7 @@ foreach my $k (keys %$regions_wanted_details ) {
 		#add another 'vega_release' attribute if the value is new (ie don't replace old values)
 		if ($code eq 'vega_release') {
 			my $existings =  $support->get_attrib_values($attribs_present,$code,$value);
-			if (! grep { $value eq $_->value } @$existings) {
+			if (! grep { $value eq $_ } @$existings) {
 				if (! $support->param('dry_run')) {
 					$r = $support->store_new_attribute($sr_id,$code,$value);
 				}
