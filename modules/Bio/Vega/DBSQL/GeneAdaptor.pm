@@ -77,6 +77,7 @@ sub fetch_by_attribute_code_value {
   }
 
 }
+
 sub fetch_stable_id_by_name {
 
   # can search either genename or transname by name or synonym,
@@ -248,6 +249,7 @@ sub fetch_by_stable_id_version  {
   $self->reincarnate_gene($gene);
   return $gene;
 }
+
 sub fetch_by_transcript_stable_id_constraint {
 
   # Ensembl has fetch_by_transcript_stable_id
@@ -351,87 +353,80 @@ sub update_deleted_gene_status {
 
 =cut
 
-sub store{
-  
-  my ($self,$gene,$method_chooser, $time_now) = @_;
+sub store {
+    my ($self, $gene, $method_chooser, $time_now) = @_;
 
-  $time_now ||= time;
+    $method_chooser ||= 'chr_gene_slice';
+    $time_now       ||= time;
 
-  unless ($gene) {
-	 throw("Must enter a Gene object to the store method");
-  }
-  unless ($gene->isa("Bio::Vega::Gene")) {
-	 throw("Object must be a Bio::Vega::Gene object. Currently [$gene]");
-  }
-  unless ($gene->gene_author) {
-	 throw("Bio::Vega::Gene must have a gene_author object set");
-  }
-  unless ($method_chooser) {
-	 $method_chooser='chr_gene_slice';
-  }
-  my $slice = $gene->slice;
-  unless ($slice) {
-	 throw "gene does not have a slice attached to it, cannot store gene\n";
-  }
-  unless ($slice->coord_system) {
-	 throw("Coord System not set in gene slice \n");
-  }
-  unless ($gene->slice->adaptor){
-	 my $sa = $self->db->get_SliceAdaptor();
-	 $gene->slice->adaptor($sa);
-  }
+    unless ($gene) {
+     throw("Must enter a Gene object to the store method");
+    }
+    unless ($gene->isa("Bio::Vega::Gene")) {
+     throw("Object must be a Bio::Vega::Gene object. Currently [$gene]");
+    }
+    unless ($gene->gene_author) {
+     throw("Bio::Vega::Gene must have a gene_author object set");
+    }
 
-  ##check for a transaction for every gene annotation that is stored
-  ##and start a savepoint, for having a checkpoint to rollback to if necessary
-  if ($self->db->check_for_transaction != 0){
-	 throw "This is non-transactional , cannot proceed storing of gene\n";
-  }
-  $self->db->savepoint;
+    my $slice = $gene->slice;
+    unless ($slice) {
+     throw "gene does not have a slice attached to it, cannot store gene\n";
+    }
+    unless ($slice->coord_system) {
+     throw("Coord System not set in gene slice \n");
+    }
+    unless ($gene->slice->adaptor){
+     my $sa = $self->db->get_SliceAdaptor();
+     $gene->slice->adaptor($sa);
+    }
 
-  my $gene_changed=UNCHANGED;
+    ##check for a transaction for every gene annotation that is stored
+    ##and start a savepoint, for having a checkpoint to rollback to if necessary
+    if($self->db->check_for_transaction) {
+     throw "This is non-transactional , cannot proceed storing of gene\n";
+    }
+    $self->db->savepoint;
 
-  my $db_gene;
-  my $broker=$self->db->get_AnnotationBroker();
+    my $gene_changed=UNCHANGED;
 
-  if (!$gene->is_current) {
-	 $gene_changed = DELETED;
-  } else {
-	 ##new gene - assign stable_id
-	 my $sida = $self->db->get_StableIdAdaptor();
-	 unless ($gene->stable_id){
-		$sida->fetch_new_stable_ids_for_Gene($gene);
-	 }
-	 ##fetch database gene by the right method
-	 if ($method_chooser eq 'chr_gene_slice'){
-		$db_gene=$self->get_current_Gene_by_slice($gene);
-	 }
-	 elsif ($method_chooser eq 'chr_whole_slice'){
-		$db_gene=$self->fetch_by_stable_id($gene->stable_id);
-	 }
+    my $broker=$self->db->get_AnnotationBroker();
 
-	 if ( $db_gene) {    ## old gene
-		$gene_changed=$broker->check_for_change_in_gene_components($sida,$gene,$method_chooser,$time_now);
-		my $db_version=$db_gene->version;
-		if ($gene_changed == UNCHANGED) {
-		  $gene_changed=compare($db_gene,$gene);
+    ##new gene - assign stable_id
+    my $sida = $self->db->get_StableIdAdaptor();
+    unless ($gene->stable_id){
+        $sida->fetch_new_stable_ids_for_Gene($gene);
+    }
+    ##fetch database gene by the right method
+    my $db_gene = ($method_chooser eq 'chr_gene_slice')
+        ? $self->get_current_Gene_by_slice($gene)
+        : $self->fetch_by_stable_id($gene->stable_id);
 
-		}
-		$gene->is_current(1);
+    if($db_gene) {    ## old gene [which MAY be being deleted]
+
+        $gene_changed=$broker->check_for_change_in_gene_components($sida,$gene,$method_chooser,$time_now);
+        if($gene->is_current) { # just an old one - may become CHANGED or UNCHANGED
+            if ($gene_changed == UNCHANGED) {
+              $gene_changed=compare($db_gene,$gene);
+            }
+        } else {
+            $gene_changed = DELETED;
+        }
+
 		$db_gene->is_current(0);
 		$self->update($db_gene);
-		if ( $gene_changed == CHANGED) {
+        my $db_version=$db_gene->version;
+		if($gene_changed == CHANGED) {
 		  $gene->version($db_version+1);
 		  ##add synonym if old gene name is not a current gene synonym
 		  $broker->compare_synonyms_add($db_gene,$gene);
 		  $gene->created_date($db_gene->created_date);
-		  unless ($gene->modified_date){
-			 $gene->modified_date($time_now);
-		  }
+		  $gene->modified_date($time_now);
 		} else {
 		  $gene->version($db_version);
 		}
 
-	 } else {    ## gene is new/restored
+	} else {    ## gene is new/restored
 
 		my $restored_genes = $self->fetch_all_versions_by_stable_id($gene->stable_id);
 		if (@$restored_genes){   ##restored gene
@@ -441,21 +436,15 @@ sub store{
 				$old_version=$g->version;
 			 }
 		  }
-		  my $old_gene;
-		  if ($method_chooser eq 'chr_gene_slice'){
-			 $old_gene=$self->get_deleted_Gene_by_slice($gene,$old_version);
-		  }
-		  elsif ($method_chooser eq 'chr_whole_slice'){
-			 $old_gene=$self->fetch_by_stable_id_version($gene->stable_id,$old_version);
-		  }
+		  my $old_gene = ($method_chooser eq 'chr_gene_slice')
+                ? $self->get_deleted_Gene_by_slice($gene,$old_version)
+                : $self->fetch_by_stable_id_version($gene->stable_id,$old_version);
 		  $gene->created_date($old_gene->created_date);
 		  unless($gene->modified_date){
 			 $gene->modified_date($time_now);
 		  }
-		  ##check to see change in components
 		  $gene->version($old_version);
-		  $gene->is_current(1);
-		  $gene_changed=$broker->check_for_change_in_gene_components($sida,$gene,$method_chooser);
+		  $gene_changed=$broker->check_for_change_in_gene_components($sida,$gene,$method_chooser,$time_now);
 		  if ($gene_changed == CHANGED)  {
 			 $gene->version($old_version+1);
 		  } else {
@@ -472,13 +461,11 @@ sub store{
 		  }
 		} else { ## new gene
 		  $gene->version(1);
-		  $gene->is_current(1);
-		  ##check if any of the gene components are old and if so have changed
-		  ($gene_changed)=$broker->check_for_change_in_gene_components($sida,$gene,$method_chooser);
+		  ##check if any of the gene components are old and if so have changed --- what???
+		  $broker->check_for_change_in_gene_components($sida,$gene,$method_chooser,$time_now);
 		  $gene_changed=NEW;
 		}
-	 }
-  }
+	}
 
   ##storing gene for the cases of
   ## new gene     :new-2
