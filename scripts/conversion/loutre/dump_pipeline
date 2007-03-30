@@ -1,0 +1,624 @@
+#!/usr/local/bin/perl
+
+=head1 NAME
+
+dump_pipeline - script to dump pipeline database
+
+=head1 SYNOPSIS
+
+dump_pipeline [options]
+
+Options:
+
+    --conffile, --conf=FILE             read script parameters from FILE
+                                        (default: conf/Conversion.ini)
+    --vega_release=NUM                  vega release number
+    --release_type=STRING               type of release, ie External
+    --no_feature=BOOLEAN                choose to dump *align_features or not
+    --sql_dump_location=LOC             location of MySQLdump file
+    --file_name=NAME                    name of MySQLdump file (defaults to db name)
+ 
+    --pipedbname=NAME                   use pipeline database NAME
+    --pipehost=HOST                     use pipeline database host HOST
+    --pipeport=PORT                     use pipeline database port PORT
+    --pipeuser=USER                     use pipeline database user USER
+    --pipepass=PASS                     use pipeline database password PASS
+
+    --loutredbname=NAME                 use loutre database NAME
+    --loutrehost=HOST                   use loutre database host HOST
+    --loutreport=PORT                   use loutre database port PORT
+    --loutreuser=USER                   use loutre database username USER
+    --loutrepass=PASS                   use loutre database password PASS
+
+    --logfile, --log=FILE               log to FILE (default: *STDOUT)
+    --logpath=PATH                      write logfile to PATH (default: .)
+    -v, --verbose                       verbose logging (default: false)
+    -i, --interactive=0|1               run script interactively (default: true)
+    -n, --dry_run, --dry=0|1            don't write results to database
+    -h, --help, -?                      print help (this message)
+
+
+=head1 DESCRIPTION
+
+This script uses MySQLdump to read a pipeline database into a file that can be used
+to create a new Vega database. The structure of all tables in the pipeline database will
+be read into the file, with the exceptions of tables that are defined in the HEREDOC
+at the end of the script.
+
+The HEREDOC defines (i) tables for which all data is to be transferred, (ii) tables
+which are to be completely ignored (ie not even structure), and (iii) tables for which
+only some of the data is to be transferred.
+
+Two types of constraints are used for the last of these - analysis_id (effectively hard-coded)
+and seq_region_id. The latter are read from a loutre database as the non-hidden chromsomes
+that have the correct seq_region_attributes for export_mode and vega_release. The wanted
+values are defined in the configuration for this script, and should have been set
+previously in the loutre database using another script - prepare_loutre.
+
+Transfer of features from the dna_ and protein_align_feature tables can be prevented using
+the -no_feature option
+
+To do: add an option to add one or more seq_regions rather than having to start from scratch
+every time
+
+=head1 LICENCE
+
+This code is distributed under an Apache style licence:
+Please see http://www.ensembl.org/code_licence.html for details
+
+=head1 AUTHOR
+
+Steve Trevanion <st3@sanger.ac.uk>
+Based on code from Tim Hubbard (mysqlcopy_sequence_set.pl)
+
+=head1 CONTACT
+
+Post questions to the EnsEMBL development list ensembl-dev@ebi.ac.uk
+
+=cut
+
+use strict;
+use warnings;
+no warnings 'uninitialized';
+
+use FindBin qw($Bin);
+use vars qw($SERVERROOT);
+
+BEGIN {
+    $SERVERROOT = "$Bin/../../../..";
+    unshift(@INC, "$SERVERROOT/ensembl-otter/modules");
+    unshift(@INC, "$SERVERROOT/ensembl/modules");
+    unshift(@INC, "$SERVERROOT/bioperl-live");
+}
+
+use Getopt::Long;
+use Pod::Usage;
+use Data::Dumper;
+use Bio::EnsEMBL::Utils::ConversionSupport;
+
+$| = 1;
+
+my $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
+
+# parse options
+$support->parse_common_options(@_);
+$support->parse_extra_options(
+	'pipedbname=s',
+	'pipehost=s',
+	'pipeport=s',
+	'pipeuser=s',
+	'loutrehost=s',
+	'loutreport=s',
+	'loutreuser=s',
+	'loutrepass=s',
+	'loutredbname=s',
+	'vega_release=s',
+	'release_type=s',
+	'no_feature=s',
+	'sql_dump_location=s',
+	'file_name=s',
+);
+$support->allowed_params(
+	'pipedbname',
+	'pipehost',
+	'pipeport',
+	'pipeuser',
+	$support->get_loutre_params,
+	'vega_release',
+	'release_type',
+	'no_feature',
+	'sql_dump_location',
+	'file_name',
+	$support->get_common_params,
+);
+
+$support->check_required_params(
+	'pipedbname',
+	'pipehost',
+	'pipeport',
+	'pipeuser',
+	$support->get_loutre_params,
+	'definition_file',
+	'vega_release',
+	'release_type',
+	'sql_dump_location',
+	'dbname',
+);
+if ($support->param('help') or $support->error) {
+    warn $support->error if $support->error;
+    pod2usage(1);
+}
+
+# ask user to confirm parameters to proceed
+$support->confirm_params;
+# get log filehandle and print heading and parameters to logfile
+$support->init_log;
+
+#for debugging, are we dumping align_features (can be slow) or just the table structure
+my $no_feature = $support->param('no_feature') || '';
+
+#character set
+my $character_set='latin1';
+
+#database type
+my $dbtype='MyISAM';
+
+#hard coded extend character_set - need to check what this option to MySQLDump does!!
+my $opt_c;
+
+# connect to pipeline database and get adaptors
+my $pdba = $support->get_database('core','pipe');
+my $psa  = $pdba->get_SliceAdaptor();
+my $paa  = $pdba->get_AttributeAdaptor();
+my $pdbh = $pdba->dbc->db_handle;
+
+# connect to loutre database and get adaptors
+my $dba = $support->get_database('loutre','loutre');
+my $sa = $dba->get_SliceAdaptor();
+my $aa = $dba->get_AttributeAdaptor();
+
+#get non-hidden chromosomes from loutre
+my $chroms = $support->fetch_non_hidden_slice($aa,$sa);
+
+#identify non-hidden chromosomes that have correct
+#attributes for export mode and release number
+my @chr_names_wanted;
+my $export_mode = $support->param('release_type');
+my $release = $support->param('vega_release');
+CHROM:
+foreach my $chrom (@$chroms) {
+	my $attribs = $aa->fetch_all_by_Slice($chrom);
+	my $vals = $support->get_attrib_values($attribs,'vega_export_mod');
+	if (scalar(@$vals > 1)) {
+		$support->log_warning ("Multiple attribs for \'vega_export_mod\', please fix before continuing");
+		exit;
+	}
+	next CHROM if (! grep { $_ eq $export_mode} @$vals);
+	$vals =  $support->get_attrib_values($attribs,'vega_release',$release);	
+	if (scalar(@$vals > 1)) {
+		$support->log_warning ("Multiple attribs for \'vega_release\' value = $release , please fix before continuing");
+		exit;
+	}
+	next CHROM if (! grep { $_ eq $release} @$vals);
+	push @chr_names_wanted, $chrom->seq_region_name;
+}
+
+my $seq_regions = join "\n", @chr_names_wanted; 
+if (! $support->user_proceed("The following seq_region names will be dumped from the pipeline database, proceed ?\n\n$seq_regions\n")) {
+	exit;
+}
+
+######################################################################
+# get seq_region_ids for all coord_systems for the above chromosomes #
+######################################################################
+
+$support->log("\nBuilding constraints for table dumping...\n");
+
+#for logging...
+my ($no_tot_chr) = $pdbh->selectrow_array(qq
+	(select count(*) 
+     from seq_region sr, coord_system cs
+     where sr.coord_system_id = cs.coord_system_id
+     and cs.name = 'chromosome'
+     and cs.version = 'Otter'
+));
+my $no_chromosome;
+my ($no_tot_contig) = $pdbh->selectrow_array(qq
+	(select count(*) 
+     from seq_region sr, coord_system cs
+     where sr.coord_system_id = cs.coord_system_id
+     and cs.name = 'contig'
+));
+my $no_contig;
+my ($no_tot_clone)= $pdbh->selectrow_array(qq
+	(select count(*) 
+     from seq_region sr, coord_system cs
+     where sr.coord_system_id = cs.coord_system_id
+     and cs.name = 'clone'
+));
+my $no_clone;
+
+my $chr_ids = "('" . (join "','", @chr_names_wanted) . "')";
+
+#store seq_region_ids here
+my %seqregions;
+
+##get chr seq_region_ids
+my $sth = $pdbh->prepare(qq(
+    select seq_region_id, sr.coord_system_id, cs.name
+    from seq_region sr, coord_system cs
+    where sr.coord_system_id = cs.coord_system_id
+    and sr.name in $chr_ids
+    ));
+
+##get contig seq_region_ids
+my $sth1 =  $pdbh->prepare(qq(
+    select a.cmp_seq_region_id, cs.name
+    from assembly a, seq_region sr, coord_system cs
+    where a.cmp_seq_region_id = sr.seq_region_id
+    and sr.coord_system_id = cs.coord_system_id
+    and a.asm_seq_region_id = ?
+    ));
+
+##get clone seq_region_ids:
+#links from contig_asm_seq_region_id to cmp_seq_region_id where the latter is not on the
+#chromosome coord system
+my $sth2 =  $pdbh->prepare(qq(
+    select a.asm_seq_region_id, cs.name
+    from assembly a, seq_region sr, coord_system cs
+    where a.asm_seq_region_id = sr.seq_region_id
+    and sr.coord_system_id = cs.coord_system_id
+    and a.cmp_seq_region_id = ?
+    and sr.coord_system_id != ?
+));
+$sth->execute;
+while ((my ($id, $cs_id, $csname) = $sth->fetchrow_array)) {
+	$no_chromosome++;
+	push @{$seqregions{$csname}},$id;
+	$sth1->execute($id);
+	while ((my ($id, $csname) = $sth1->fetchrow_array)) {
+		$no_contig++;
+		push @{$seqregions{$csname}},$id;
+		$sth2->execute($id,$cs_id);
+		while ((my ($id, $csname) = $sth2->fetchrow_array)) {
+			$no_clone++;
+			push @{$seqregions{$csname}},$id;
+		}
+	}	
+}
+
+$support->log("$no_chromosome chromosomes accepted from a total of $no_tot_chr will be dumped\n",1);
+$support->log("$no_contig contigs accepted from a total of $no_tot_contig will be dumped\n",1);
+$support->log("$no_clone clones accepted from a total of $no_tot_clone will be dumped\n",1);
+
+##########################################
+# get info for constrained sets ('code') #
+##########################################
+
+#hold details of all constraints here
+my %sets;
+
+# meta_coord - tables that have entries in meta_coord [must exclude gene,transcript,exon]
+# also create seq_region entries for each of these tables
+my $gtn = $pdbh->prepare(qq(
+    select mc.table_name, cs.name
+    from meta_coord mc, coord_system cs
+    where mc.coord_system_id = cs.coord_system_id
+    ));
+$gtn->execute();
+my $n  = 0;
+my $na = 0;
+while (my ($table_name, $cs_name) = $gtn->fetchrow){
+    $na++;
+    if ($table_name!~/^(gene|transcript|exon)$/){
+		unless (grep {$_ eq $table_name} @{$sets{'meta_coord'}{'table_name'}} ) {
+			push @{$sets{'meta_coord'}{'table_name'}}, "\'$table_name\'";
+			$n++;
+		}
+		foreach my $sr (@{$seqregions{$cs_name}}) {
+			push @{$sets{$table_name}{'seq_region_id'}}, $sr;
+		}
+	}
+}
+$support->log("$n table_name entries out of $na accepted from meta_coord\n",1);
+
+# analysis, *_align_features [must be non raw types]
+# and simple_feature [exclude *_align_feature coverage features]
+$gtn = $pdbh->prepare(qq(
+    select distinct analysis_id,logic_name
+    from analysis
+    ));
+$gtn->execute();
+$n = 0;
+my $n2 = 0;
+$na = 0;
+my $ln = "\n\t";
+while (my ($analysis_id,$logic_name) = $gtn->fetchrow){
+    $na++;
+    next if($logic_name=~/\_raw$/);
+    $n++;
+	foreach my $t qw(analysis protein_align_feature dna_align_feature) {
+		push @{$sets{$t}{'analysis_id'}}, $analysis_id;
+	}
+    next if($logic_name=~/vertrna|est2genome|uniprot|exonerate|refseq/i);
+    $ln .= $logic_name . "\n\t";
+    push @{$sets{'simple_feature'}{'analysis_id'}}, $analysis_id;
+    $n2++;
+}
+$support->log("$n analysis_id entries out of $na accepted (analysis protein_align_feature dna_align_feature)\n",1);
+$support->log("$n2 analysis_id_sf entries out of $na accepted from analysis\n",1);
+$support->log("logicnames for simple_feature are:$ln\n",1);
+
+#seq_region_attributes
+$gtn = $pdbh->prepare(qq(
+    select distinct(cs.name)
+    from seq_region_attrib sra, seq_region sr, coord_system cs
+    where sra.seq_region_id = sr.seq_region_id
+    and sr.coord_system_id = cs.coord_system_id
+    ));
+$gtn->execute();
+$n  = 0;
+$na = 0;
+while (my ($cs_name) = $gtn->fetchrow){
+	foreach my $sr (@{$seqregions{$cs_name}}) {
+		push @{$sets{'seq_region_attrib'}{'seq_region_id'}}, $sr;
+	}
+}
+
+#dna
+$gtn = $pdbh->prepare(qq(
+    select distinct(cs.name)
+    from dna d, seq_region sr, coord_system cs
+    where d.seq_region_id = sr.seq_region_id
+    and sr.coord_system_id = cs.coord_system_id
+));
+$gtn->execute();
+while (my ($cs_name) = $gtn->fetchrow){
+	foreach my $sr (@{$seqregions{$cs_name}}) {
+		push @{$sets{'dna'}{'seq_region_id'}}, $sr;
+	}
+}
+
+#seq_region
+foreach my $cs_name (qw(chromosome contig clone)) {	
+	foreach my $sr (@{$seqregions{$cs_name}}) {
+		push @{$sets{'seq_region'}{'seq_region_id'}}, $sr;
+	}
+}
+
+#assembly - select on both asm_seq_region (for clones and chromosomes) and 
+# cmp_seq_region (for contigs)
+foreach my $cs_name (qw(chromosome clone)) {	
+	foreach my $sr (@{$seqregions{$cs_name}}) {
+		push @{$sets{'assembly'}{'asm_seq_region_id'}}, $sr;
+	}
+}
+foreach my $sr (@{$seqregions{'contig'}}) {
+	push @{$sets{'assembly'}{'cmp_seq_region_id'}}, $sr;
+}
+
+#################################################################################
+# Read in all tables and set constraint to 's' (ie dump structure only). Then   #
+# read in the contraints in the HEREDOC, updating the above as needed ('s' =    #
+# table structure only, 'a' = table structure and all data, 'c' = constrained)  #
+#################################################################################
+
+my %constraints;
+
+#read all tables;
+map { $_ =~ s/`//g; $constraints{$_} = ['s']; } $pdbh->tables;
+
+#read details of constrained tables from HEREDOC
+my @ignored_tables;
+my $txt = &constraints;
+TABLE:
+foreach my $line (split(/\n/,$txt)){
+	next if ($line =~ /^\s*$/);
+	next if ($line =~ /^\#/);
+    if($line=~/^(.+)\#/){
+		$line=$1;
+    }
+
+    my ($table,@constraints) = split(/\s+/,$line);
+
+	#sanity check
+	if (! exists($constraints{$table})) {
+		$support->log_warning("You have definitions for a table ($table) that is not found in the pipeline database. Skipping\n\n");
+		next TABLE;
+	}
+	
+	#if we don't want to dump align_features features for then set type from 'a' to 's'
+	if ($table=~/align_feature$/ && $no_feature) {
+		$support->log("\'no_feature\' option used: skipping features from $table\n");
+		$constraints{$table} = ['s'];
+		next TABLE;
+	}
+
+	#dump all data if that is how it's defined
+    if ($constraints[0] eq 'a'){
+		$constraints{$table} = ['a'];
+		next TABLE;
+    }
+	
+	# ignore tables that have been defined as not being part of ensembl
+	if ($constraints[0] eq 'i'){
+		delete $constraints{$table};
+		push @ignored_tables, $table;
+		next TABLE;
+	}
+
+	#otherwise read in the constraints
+	$constraints{$table} = ['c'];	
+	foreach my $cons (@constraints) {
+		my ($col,$method) = split ':',$cons;
+		if ($method eq 'code') {
+			push @{$constraints{$table}}, $col; 
+		}
+		else {
+			$support->log_warning("You have an unrecognised method for constraint $col\n");
+		}
+	}
+}
+
+#more sanity checking - ensure that the tables parsed in the script (ie code) do have an entry in the HEREDOC
+foreach my $table (keys %sets) {
+	my $method = $constraints{$table}[0];
+	if ($method ne 'c') {
+		unless ($table=~/align_feature$/ && $no_feature) {
+			$support->log_warning("You have constraints for a table ($table) generated in the code, but this is not defined in the HEREDOC in the script, please check. Skipping this table\n\n");
+			delete $constraints{$table};
+		}
+	}
+}
+
+#do some logging:
+my $sorted;
+foreach my $table (keys %constraints) {
+	my $t = $constraints{$table}->[0];
+	#	push @{$sorted->{$t}}, { $table => $constraints{$table} };
+	$sorted->{$t}{$table} = $constraints{$table};
+}
+
+my $log = "The following tables will be ignored (ie not put into Vega):\n";
+foreach my $table (@ignored_tables) {
+	$log .="\t$table\n";
+}
+$log .= "The following tables will be dumped with all their data:\n";
+foreach my $table (keys %{$sorted->{'a'}}) {
+	$log .= "\t$table\n";
+}
+$log .= "The following tables will be filtered as follows:\n";
+foreach my $table (keys %{$sorted->{'c'}}) {
+	my @filters =  @{$constraints{$table}};
+	shift @filters;
+	my $t = join ' and ', @filters;
+	$log .= "\t$table: $t\n";
+}
+$log .= "The rest of the pipeline tables will be copied just with their structure (no data)\n";
+
+#$support->log($log);
+unless ($support->user_proceed("$log\nDo you want to proceed ?")) {
+	exit;
+}
+
+#########################
+# create mysql commands #
+#########################
+
+#initialise mysqldump statements
+my $cs;
+if($character_set) {$cs="--default-character-set=\"$character_set\"";}
+my $sei;
+if($opt_c) {$sei='--skip-extended-insert';}
+my $user   = $support->param('pipeuser');
+my $dbname = $support->param('pipedbname');
+my $host   = $support->param('pipehost');
+my $port   = $support->param('pipeport');
+my $mcom= "mysqldump --opt --skip-lock-tables $sei $cs --single-transaction -q -u $user -P $port -h $host $dbname";
+
+#open file to dump the sql into
+my $filename = $support->param('file_name') || ($support->param('dbname') . '_create.sql');
+my $file = $support->param('sql_dump_location') . '/' . $filename;
+open(OUT,">$file") || die "cannot open $file";
+
+#create statements
+my @mysql_commands;
+while (my ($table,$details) = each (%constraints) ) {
+	my $condition = shift @$details;
+	if ($condition eq 's') {
+		push @mysql_commands, "$mcom -d $table";
+	}
+	elsif ($condition eq 'a') {
+		push @mysql_commands, "$mcom $table";
+	}
+	elsif ($condition eq 'c') {
+		my $extra = " --where \"";
+		my $i = 0;
+		foreach my $cons (@$details) {
+			my @values = @{$sets{$table}{$cons}};
+			my $set = join ',', @values;
+			my $join = $i ? ' and' : '';
+			$extra .=  "$join $cons in ($set)";
+			$i++;
+		}
+		$extra .= " \" $table";
+		push @mysql_commands, "$mcom $extra";
+	}	
+}
+
+##################
+# do the dumping #
+##################
+
+if (!$support->param('dry_run')) {
+	foreach my $command (@mysql_commands) {
+		open(MYSQL,"$command |") || die "cannot open mysql";
+		my $enable;
+		my $flag_disable;
+		while (<MYSQL>) {
+			s/(TYPE|ENGINE)=(\w+)/$1=$dbtype/;
+			if (/ALTER\sTABLE\s\S+\sENABLE\sKEYS/){
+				$enable=$_;
+			}
+			elsif (/ALTER\sTABLE\s\S+\sDISABLE\sKEYS/){
+				if(!$flag_disable){
+					# only write once
+					$flag_disable=1;
+					print OUT;
+				}
+			}
+			else {
+				print OUT;
+			}
+		}
+		print OUT $enable if ($enable);
+		close(MYSQL);
+	}
+	close(OUT);
+	$support->log("SQL dumped to $file\n");
+}
+else {
+	$support->log("\nNo SQL dumped since this is a dry run\n");
+}
+
+$support->finish_log;
+
+#######################################################################
+# define the contraints on tables where data is to be transferred     #
+# all tables not specified here will have only their structure copied #
+#######################################################################
+
+# All tables are by default dumped with just their structure. Tables for which data is also to be dumped
+# are defined here, with a white space seperated list defining the columns on which to constrain mysqldump.
+# A value of 'a' determines that all data in the table is to be dumped, and i that the table should be ignored.
+# For others, the value after the colon
+# is usefull in that it defines how the specific values of the column are identified.
+# - code -> specific entry in the code above
+# - clone / contig / chromosome -> explicitly define the coord_system to used
+
+sub constraints {
+	my $txt;
+	$txt=<<ENDOFTEXT;
+analysis              analysis_id:code      # filtering in code (without _raw)
+assembly              asm_seq_region_id:code      cmp_seq_region_id:code
+dna                   seq_region_id:code
+dna_align_feature     seq_region_id:code          analysis_id:code
+protein_align_feature seq_region_id:code          analysis_id:code
+simple_feature        seq_region_id:code          analysis_id:code
+
+meta_coord            table_name:code       # special filtering in code (no exon/transcript/gene)
+prediction_exon       seq_region_id:code
+prediction_transcript seq_region_id:code
+repeat_feature        seq_region_id:code
+seq_region            seq_region_id:code    # use all coord_systems
+seq_region_attrib     seq_region_id:code    # work out which coord_systems are used 
+
+attrib_type           a                     # should be identical to Vega
+coord_system          a
+meta                  a                     # should be identical to Vega
+
+dnac                  i
+ENDOFTEXT
+	return $txt;
+}
+
