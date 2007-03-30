@@ -1,0 +1,132 @@
+#!/usr/local/bin/perl -w
+
+### example_script
+
+use strict;
+use Bio::Otter::Lace::Defaults;
+
+{
+    my $dataset_name = 'mouse';
+
+    my $usage = sub { exec('perldoc', $0) };
+    # This do_getopt() call is needed to parse the otter config files
+    # even if you aren't giving any arguments on the command line.
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'       => $usage,
+        'dataset=s'     => \$dataset_name,
+        ) or $usage->();
+    $usage->() unless $dataset_name;
+    
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    
+
+    my $otter_dba = $ds->get_cached_DBAdaptor;
+    my $gene_aptr  = $otter_dba->get_GeneAdaptor;
+    my $slice_aptr = $otter_dba->get_SliceAdaptor;
+    
+    print join("\t",
+        "Gene stable ID",
+        "Gene type",
+        "Exons in transcript with most exons",
+        "Span on genome",
+        "Sequence set name",
+        ), "\n";
+
+    my %slices_hash;
+    foreach my $gsid (@ARGV) {
+        my $gene = $gene_aptr->fetch_by_stable_id($gsid);
+        my %exon_ctg;
+        foreach my $exon (@{$gene->get_all_Exons}) {
+            $exon_ctg{$exon->contig->dbID} = 1;
+        }
+        my $ctg_list = join(',', sort keys %exon_ctg);
+        my $sql = qq{
+            SELECT DISTINCT ss.assembly_type, c.name
+            FROM assembly a
+              , sequence_set ss
+              , chromosome c
+            WHERE a.type = ss.assembly_type
+              AND a.chromosome_id = c.chromosome_id
+              AND a.contig_id IN ($ctg_list)
+              AND ss.hide = 'N'
+              AND ss.assembly_type like 'chr%'
+            ORDER BY ss.assembly_type DESC
+            };
+        my $sth = $otter_dba->prepare($sql);
+        $sth->execute;
+        my ($asm_type, $chr_name) = $sth->fetchrow;
+        $sth->finish;
+        
+        # Get the slice
+        $otter_dba->assembly_type($asm_type);
+        my $slice = $slices_hash{$asm_type}
+          ||= $slice_aptr->fetch_by_chr_name($chr_name);
+
+        $gene->transform($slice);
+        die "$gsid didn't transform onto '$asm_type'"
+            unless gene_transformed_successfully($gene, $slice);
+        
+        print join("\t",
+            $gsid,
+            $gene->type,
+            exon_count_in_most_exony_transcript($gene),
+            $gene->length,
+            $asm_type,
+            ), "\n";
+    }
+}
+
+sub exon_count_in_most_exony_transcript {
+    my ($gene) = @_;
+    
+    my $max = 0;
+    
+    foreach my $tran (@{$gene->get_all_Transcripts}) {
+        my $count = scalar @{$tran->get_all_Exons};
+        $max = $count if $count > $max;
+    }
+    return $max;
+}
+
+sub gene_transformed_successfully {
+    my( $gene, $slice ) = @_;
+
+    my $slice_length = $slice->length;
+    foreach my $exon (@{$gene->get_all_Exons}) {
+        if ($exon->contig != $slice or $exon->start < 1 or $exon->end > $slice_length) {
+            return 0;
+        }
+    }
+
+    # Check for overlapping exons in each transcript
+    foreach my $transcript (@{$gene->get_all_Transcripts}) {
+        my @exon_list = @{$transcript->get_all_Exons};
+        if ($exon_list[0]->strand == -1) {
+            # exons are in opposite order for reverse strand transcripts
+            @exon_list = reverse @exon_list;
+        }
+
+        my $last = 0;
+        foreach my $exon (@exon_list) {
+            if ($exon->start <= $last) {
+                return 0;
+            }
+            $last = $exon->end;
+        }
+    }
+
+    return 1;
+}
+
+__END__
+
+=head1 NAME - example_script
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
