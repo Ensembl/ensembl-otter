@@ -3,7 +3,6 @@ package Bio::Vega::AnnotationBroker;
 use strict;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::Vega::Utils::Comparator qw(compare);
-#use base 'Bio::Vega::DBSQL::GeneAdaptor';
 use base 'Bio::EnsEMBL::DBSQL::BaseAdaptor';
 
 sub current_time {
@@ -104,40 +103,28 @@ sub exons_diff {
 		$exon->stable_id($sida->fetch_new_exon_stable_id);
 	 }
 
-	 my $db_exon;
-	 if ($method_chooser eq 'chr_gene_slice') {
-		$db_exon=$ea->get_current_Exon_by_slice($exon);
-	 }
-	 elsif ($method_chooser eq 'chr_whole_slice') {
-		$db_exon=$ea->fetch_by_stable_id($exon->stable_id);
-	 }
-	 if ( $db_exon){
+	 my $db_exon = ($method_chooser eq 'chr_gene_slice')
+        ? $ea->get_current_Exon_by_slice($exon)
+        : $ea->fetch_by_stable_id($exon->stable_id);
+	 if($db_exon) {
 		my $db_version=$db_exon->version;
-      $exon_changed=compare($db_exon,$exon);
+        $exon_changed=compare($db_exon,$exon);
 		##if exon has changed then increment version
-		if ($exon_changed == 1){
+		if($exon_changed){
 		  $db_exon->is_current(0);
 		  $ea->update($db_exon);
 		  $exon->version($db_version+1);
 		  $exon->is_current(1);
+		  $exon->created_date($db_exon->created_date);
 		  unless ($exon->modified_date){
 			 $exon->modified_date($self->current_time);
 		  }
-		  $exon->created_date($db_exon->created_date);
-
-
-		}
-		##if exon has not changed then use the same old db exon, saves db space by not creating exons with same version
-		else {
+		} else { ## reuse the exon
 		  $exon=$db_exon;
 		}
-
-
-	 }
-	 ##if exon is new
-	 else {
+	 } else {   ##if exon is new
 		my $restored_exons=$ea->fetch_all_versions_by_stable_id($exon->stable_id);
-		if (@$restored_exons == 0){
+		if(!@$restored_exons){
 		  $exon->version(1);
 		  $exon->is_current(1);
 		  unless ($exon->modified_date){
@@ -166,13 +153,9 @@ sub exons_diff {
 			 $exon->version($old_version);
 			 $exon->is_current(1);
 			 ##check to see if the restored exon has changed
-			 my $old_exon;
-			 if ($method_chooser eq 'chr_gene_slice'){
-				$old_exon=$ea->get_deleted_Exon_by_slice($exon,$old_version);
-			 }
-			 elsif ($method_chooser eq 'chr_whole_slice') {
-				$old_exon=$ea->fetch_by_stable_id_version($exon->stable_id,$old_version);
-			 }
+			 my $old_exon = ($method_chooser eq 'chr_gene_slice')
+                ? $ea->get_deleted_Exon_by_slice($exon,$old_version)
+                : $ea->fetch_by_stable_id_version($exon->stable_id,$old_version);
 			 $exon->created_date($old_exon->created_date);
 			 unless ($exon->modified_date){
 				$exon->modified_date($self->current_time);
@@ -244,7 +227,6 @@ sub check_for_change_in_gene_components {
   my $tran_change_count=0;
   my $shared_exons_bet_txs;
   foreach my $tran (@{ $gene->get_all_Transcripts }) {
-	 ##assign stable_id for new trancript
 	 unless ($tran->stable_id) {
 		$tran->stable_id($sida->fetch_new_transcript_stable_id);
 	 }
@@ -267,7 +249,8 @@ sub check_for_change_in_gene_components {
 	 ##if transcript is old compare to see if transcript has changed
 	 my $transcript_changed=0;
 
-	 $tran->is_current(1);
+	 $tran->is_current(1); # why???
+
 	 if($db_transcript) {
 		$tran->created_date($db_transcript->created_date);
 
@@ -285,22 +268,17 @@ sub check_for_change_in_gene_components {
 
 		my $db_version=$db_transcript->version;
 
-		##if transcript has changed then increment version
 		if ($transcript_changed ) {
 		  $tran->version($db_version+1);
-		  ##add for transcript synonym
 		  $self->compare_synonyms_add($db_transcript,$tran);
-		}
-		else {
+		} else {
 		  $tran->version($db_version);
 		  ##retain old author
 		  $tran->transcript_author($db_transcript->transcript_author);
 		}	
-	 }
-	 ##if transcript is new
-	 else {
+	 } else {   ##if transcript is new or restored
 		my $restored_transcripts=$ta->fetch_all_versions_by_stable_id($tran->stable_id);
-		if (!@$restored_transcripts){
+		if (!@$restored_transcripts){ ## new transcript:
 		  $tran->version(1);
 		  unless ($tran->modified_date){
 			 $tran->modified_date($self->current_time);
@@ -308,9 +286,7 @@ sub check_for_change_in_gene_components {
 		  unless ($tran->created_date){
 			 $tran->created_date($self->current_time);
 		  }
-		}
-		##restored transcript
-		else {
+		} else { ## restored transcript:
 		  my $old_version=1;
 		  foreach my $t (@$restored_transcripts){
 			 if ($t->version > $old_version){
@@ -319,37 +295,31 @@ sub check_for_change_in_gene_components {
 		  }
 		  $tran->version($old_version);
 		  ##check to see if the restored transcript has changed
-		  my $old_transcript;
-		  if ($method_chooser eq 'chr_gene_slice'){
-			 $old_transcript=$ta->get_deleted_Transcript_by_slice($tran,$old_version);
-		  }
-		  elsif ($method_chooser eq 'chr_whole_slice'){
-			 $old_transcript=$ta->fetch_by_stable_id_version($tran->stable_id,$old_version);
-		  }
+		  my $old_transcript = ($method_chooser eq 'chr_gene_slice')
+                ? $ta->get_deleted_Transcript_by_slice($tran,$old_version)
+                : $ta->fetch_by_stable_id_version($tran->stable_id,$old_version);
 		  $tran->created_date($old_transcript->created_date);
 		  unless ($tran->modified_date){
 			 $tran->modified_date($self->current_time);
 		  }
-		  my $old_translation=$old_transcript->translation;
-		  $translation_changed=$self->translation_diff($sida,$tran,$old_transcript);
-		  $transcript_changed=compare($old_transcript,$tran);
-		  if ($exon_changed == 1 || $translation_changed == 1) {
-			 $transcript_changed = 1;
-		  }
-		  if ($transcript_changed == 1){
+
+		  $translation_changed = $self->translation_diff($sida,$tran,$old_transcript);
+		  $transcript_changed = $exon_changed || $translation_changed || compare($old_transcript,$tran);
+
+		  if($transcript_changed){
 			 $tran->version($old_version+1);
-			 ##add for transcript synonym
 			 $self->compare_synonyms_add($old_transcript,$tran);
 		  }
 		}
 	 }
-	 if ($transcript_changed == 1) {
+	 if ($transcript_changed ) {
 		$tran_change_count++;
 	 }
+
 	 ##check to see if the start_Exon,end_Exon has been assigned right after comparisons
 	 ##this check is needed since we reuse exons
 	 my $translation = $tran->translation();
-	 if( defined $translation ) {
+	 if( $translation ) {
 		#make sure that the start and end exon are set correctly
 		my $start_exon = $translation->start_Exon();
 		my $end_exon   = $translation->end_Exon();
@@ -400,9 +370,8 @@ sub check_for_change_in_gene_components {
   return $transcripts_changed;
 }
 
-
-
 1;
+
 __END__
 
 =head1 NAME - Bio::Vega::AnnotationBroker
