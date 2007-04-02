@@ -117,9 +117,9 @@ sub initialise {
     # Define how the table gets drawn by supplying a column_methods array
     my $norm = [$self->font, $self->font_size, 'normal'];
     my $bold = [$self->font, $self->font_size, 'bold'];   
-    my $status_colors = {'completed'   => 'darkgreen', 
+    my $status_colors = {'completed'   => 'DarkGreen', 
                          'missing'     => 'red', 
-                         'unavailable' => 'darkred'};
+                         'unavailable' => 'DarkRed'};
 	my $write_text  = \&CanvasWindow::SequenceNotes::_write_text ;
     $self->column_methods([
         [$write_text, sub{

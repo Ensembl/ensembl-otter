@@ -153,7 +153,7 @@ sub draw {
             $x, $y,
             -text   => $ss->name,
             -font   => $font_def,
-            -fill   => ($ss_write_access ? 'darkgreen' : 'darkred'),
+            -fill   => ($ss_write_access ? 'DarkGreen' : 'DarkRed'),
             -anchor => 'nw',
             -tags   => ["row=$row", 'SetName', 'SequenceSet=' . $ss->name],
             );
@@ -183,7 +183,7 @@ sub draw {
             $x, $y,
             -text   => ($ss_write_access ? '' : 'r-o'),
             -font   => $font_def,
-            -fill   => ($ss_write_access ? 'darkgreen' : 'darkred'),
+            -fill   => ($ss_write_access ? 'DarkGreen' : 'DarkRed'),
             -anchor => 'nw',
             -tags   => ["row=$row", 'SetDescription', 'SequenceSet=' . $ss->name],
             );
