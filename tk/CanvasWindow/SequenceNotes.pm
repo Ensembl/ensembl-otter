@@ -177,7 +177,7 @@ sub column_methods {
                     my $fontcolour = $cs->current_match()
                                     ? 'red'
                                     : $cs->is_match()
-                                        ? 'darkred'
+                                        ? 'DarkRed'
                                         : 'black';
                     return {-text => $acc_sv, -font => $bold, -fill => $fontcolour, -tags => ['searchable']};
                 }],
@@ -188,7 +188,7 @@ sub column_methods {
                     my $fontcolour = $cs->current_match()
                                     ? 'red'
                                     : $cs->is_match()
-                                        ? 'darkred'
+                                        ? 'DarkRed'
                                         : 'black';
                     return {-text => $cs->clone_name, -font => $bold, -fill => $fontcolour, -tags => ['searchable'] };
                 }],
@@ -267,11 +267,11 @@ sub _column_text_seq_note_status {
     my $cs = shift;
     
     my $text  = 'unavailable';
-    my $color = 'darkred';
+    my $color = 'DarkRed';
 
     if (my $pipeStatus = $cs->pipelineStatus) {
         $text  = $pipeStatus->short_display;
-        $color = $text eq 'completed' ? 'darkgreen' : 'red';
+        $color = $text eq 'completed' ? 'DarkGreen' : 'red';
     }
     return {
         -text => $text,
