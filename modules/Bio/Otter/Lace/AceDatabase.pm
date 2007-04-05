@@ -14,7 +14,6 @@ use Bio::Otter::Lace::Defaults;
 use Bio::Otter::Lace::PipelineDB;
 use Bio::Otter::Lace::SatelliteDB;
 use Bio::Otter::Lace::PersistentFile;
-use Bio::Otter::Lace::Blast;
 use Bio::Otter::Lace::Slice; # a new kind of Slice that knows how to get pipeline data
 
 use Bio::EnsEMBL::Ace::DataFactory;
@@ -179,6 +178,8 @@ sub init_AceDatabase {
 sub write_local_blast {
     my ($self) = @_;
     
+    require Bio::Otter::Lace::Blast;
+
     # The Blast object gets all its configuration
     # information from Lace::Defaults
     ### Should be able to specify mulitple databases to search,
