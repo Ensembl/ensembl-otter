@@ -242,12 +242,7 @@ sub get_all_tiles_as_Slices {
 sub get_all_SimpleFeatures { # get simple features from otter/pipeline/ensembl db
     my( $self, $analysis_name, $pipehead, $metakey ) = @_;
 
-        # cached values:
-    my $analysis = Bio::EnsEMBL::Analysis->new( -logic_name => $analysis_name );
-
-    if(!$analysis_name) {
-        die "Analysis name must be specified!";
-    }
+    my %analyses = (); # keep cached analysis objects here
 
     my $response = $self->Client()->general_http_dialog(
         0,
@@ -255,7 +250,7 @@ sub get_all_SimpleFeatures { # get simple features from otter/pipeline/ensembl d
         'get_simple_features',
         {
             %{$self->toHash},
-            'analysis' => $analysis_name,
+            $analysis_name ? ('analysis' => $analysis_name) : (),
             'pipehead' => $pipehead ? 1 : 0,
             $metakey ? ('metakey' => $metakey) : (),
         },
@@ -269,8 +264,11 @@ sub get_all_SimpleFeatures { # get simple features from otter/pipeline/ensembl d
     my @sfs = (); # simple features in a list
     foreach my $respline (@resplines) {
 
-        my @optvalues = split(/\t/,$respline);
-        my $linetype      = shift @optvalues; # 'SimpleFeature'
+        my @optvalues  = split(/\t/,$respline);
+        my $linetype   = shift @optvalues; # 'SimpleFeature'
+
+            # note this is optional now, depending on trueness of $analysis_name:
+        my $logic_name = $analysis_name || pop @optvalues;
 
         my $sf = Bio::EnsEMBL::SimpleFeature->new();
 
@@ -279,8 +277,12 @@ sub get_all_SimpleFeatures { # get simple features from otter/pipeline/ensembl d
             $sf->$method($optvalues[$i]);
         }
 
-            # use the cached values:
-        $sf->analysis( $analysis );
+            # cache if needed, otherwise use the cached value:
+        $sf->analysis(
+            $analyses{$logic_name} ||= Bio::EnsEMBL::Analysis->new(-logic_name => $logic_name)
+        );
+
+            # cached value:
         $sf->seqname( $self->name() );
 
         push @sfs, $sf;
