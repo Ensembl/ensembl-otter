@@ -8,10 +8,10 @@ my $server = Bio::Otter::ServerScriptSupport->new('dataset',
     'cs','csver','name','type','start','end','strand',
     'metakey','analysis');
 
-my $analysis = $server->getarg('analysis');
+my $analysis_name = $server->getarg('analysis');
 
 my $rfs = $server->fetch_mapped_features('repeat_feature',
-            ['get_all_RepeatFeatures', $analysis] );
+            ['get_all_RepeatFeatures', $analysis_name] );
 
 my @rf_optnames = @{ $OrderOfOptions{RepeatFeature} };
 my @rc_optnames = @{ $OrderOfOptions{RepeatConsensus} };
@@ -42,6 +42,10 @@ foreach my $rf (@$rfs) {
         push @rf_optvalues, $rf->$opt();
     }
     push @rf_optvalues, $rc_id;
+
+    if(!$analysis_name) {
+        push @rf_optvalues, $rf->analysis()->logic_name();
+    }
 
     $output_string .= join("\t", @rf_optvalues)."\n";
 }

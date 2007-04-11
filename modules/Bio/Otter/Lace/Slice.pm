@@ -294,12 +294,12 @@ sub get_all_SimpleFeatures { # get simple features from otter/pipeline/ensembl d
 sub get_all_DAS_SimpleFeatures { # get simple features from DAS source (via mapping Otter server)
     my( $self, $analysis_name, $pipehead, $metakey, $source, $dsn ) = @_;
 
-        # cached values:
-    my $analysis = Bio::EnsEMBL::Analysis->new( -logic_name => $analysis_name );
-
     if(!$analysis_name) {
         die "Analysis name must be specified!";
     }
+
+        # cached values:
+    my $analysis = Bio::EnsEMBL::Analysis->new( -logic_name => $analysis_name );
 
     my $response = $self->Client()->general_http_dialog(
         0,
@@ -345,6 +345,10 @@ sub get_all_DAS_SimpleFeatures { # get simple features from DAS source (via mapp
 
 sub get_all_Cons_SimpleFeatures { # get simple features from Compara 'GERP_CONSERVATION_SCORE'
     my( $self, $analysis_name, $pipehead, $metakey ) = @_;
+
+    if(!$analysis_name) {
+        die "Analysis name must be specified!";
+    }
 
         # cached values:
     my $analysis = Bio::EnsEMBL::Analysis->new( -logic_name => $analysis_name );
@@ -448,7 +452,10 @@ sub get_all_AlignFeatures { # get align features from otter/pipeline/ensembl db
             $hds{$hit_name} = $hd;
 
         } elsif($linetype eq 'AlignFeature') {
-            my $logic_name    = pop @optvalues;
+
+                # note this is optional now, depending on trueness of $analysis_name:
+            my $logic_name    = $analysis_name || pop @optvalues;
+
             my $cigar_string  = pop @optvalues;
 
             my $af = $baseclass->new(
@@ -489,9 +496,7 @@ sub get_all_AlignFeatures { # get align features from otter/pipeline/ensembl db
 sub get_all_RepeatFeatures { # get repeat features from otter/pipeline/ensembl db
     my( $self, $analysis_name, $pipehead, $metakey ) = @_;
 
-    if(!$analysis_name) {
-        die "Analysis name must be specified!";
-    }
+    my %analyses = (); # keep cached analysis objects here
 
     my $response = $self->Client()->general_http_dialog(
         0,
@@ -499,7 +504,7 @@ sub get_all_RepeatFeatures { # get repeat features from otter/pipeline/ensembl d
         'get_repeat_features',
         {
             %{$self->toHash},
-            'analysis' => $analysis_name,
+            $analysis_name ? ('analysis' => $analysis_name) : (),
             'pipehead' => $pipehead ? 1 : 0,
             $metakey ? ('metakey' => $metakey) : (),
         },
@@ -534,6 +539,9 @@ sub get_all_RepeatFeatures { # get repeat features from otter/pipeline/ensembl d
 
         } elsif($linetype eq 'RepeatFeature') {
 
+                # note this is optional now, depending on trueness of $analysis_name:
+            my $logic_name    = $analysis_name || pop @optvalues;
+
             my $rc_id = pop @optvalues;
 
             my $rf = Bio::EnsEMBL::RepeatFeature->new();
@@ -543,8 +551,12 @@ sub get_all_RepeatFeatures { # get repeat features from otter/pipeline/ensembl d
                 $rf->$method($optvalues[$ind]);
             }
 
+                # cache if needed, otherwise use the cached value:
+            $rf->analysis(
+                $analyses{$logic_name} ||= Bio::EnsEMBL::Analysis->new(-logic_name => $logic_name)
+            );
+
                 # use the cached values:
-            $rf->analysis( $analysis );
             $rf->repeat_consensus( $rcs{$rc_id} );
 
             push @rfs, $rf;
@@ -557,9 +569,7 @@ sub get_all_RepeatFeatures { # get repeat features from otter/pipeline/ensembl d
 sub get_all_MarkerFeatures { # get marker features from otter/pipeline/ensembl db
     my( $self, $analysis_name, $pipehead, $metakey ) = @_;
 
-    if(!$analysis_name) {
-        die "Analysis name must be specified!";
-    }
+    my %analyses = (); # keep cached analysis objects here
 
     my $response = $self->Client()->general_http_dialog(
         0,
@@ -567,7 +577,7 @@ sub get_all_MarkerFeatures { # get marker features from otter/pipeline/ensembl d
         'get_marker_features',
         {
             %{$self->toHash},
-            'analysis' => $analysis_name,
+            $analysis_name ? ('analysis' => $analysis_name) : (),
             'pipehead' => $pipehead ? 1 : 0,
             $metakey ? ('metakey' => $metakey) : (),
         },
@@ -579,9 +589,6 @@ sub get_all_MarkerFeatures { # get marker features from otter/pipeline/ensembl d
     my @mf_optnames = @{ $OrderOfOptions{MarkerFeature} };
     my @mo_optnames = @{ $OrderOfOptions{MarkerObject} };
     my @ms_optnames = @{ $OrderOfOptions{MarkerSynonym} };
-
-        # cached values:
-    my $analysis = Bio::EnsEMBL::Analysis->new( -logic_name => $analysis_name );
 
     my %mos  = (); # cached marker objects, keyed by mo_id
     my @mfs  = (); # marker features in a list
@@ -615,6 +622,9 @@ sub get_all_MarkerFeatures { # get marker features from otter/pipeline/ensembl d
 
         } elsif($linetype eq 'MarkerFeature') {
 
+                # note this is optional now, depending on trueness of $analysis_name:
+            my $logic_name    = $analysis_name || pop @optvalues;
+
             my $mo_id = pop @optvalues;
             my $mo = $mos{mo_id}; # should have been defined earlier!
 
@@ -627,8 +637,12 @@ sub get_all_MarkerFeatures { # get marker features from otter/pipeline/ensembl d
             $mf->marker( $mo );
             $mf->_marker_id( $mo_id );
 
+                # cache if needed, otherwise use the cached value:
+            $mf->analysis(
+                $analyses{$logic_name} ||= Bio::EnsEMBL::Analysis->new(-logic_name => $logic_name)
+            );
+
                 # use the cached values:
-            $mf->analysis( $analysis );
             $mf->strand( 0 );
 
             push @mfs, $mf;
@@ -645,9 +659,7 @@ sub get_all_DitagFeatureGroups { # get ditag features from otter/pipeline/ensemb
     #
     my( $self, $analysis_name, $pipehead, $metakey, $ditypes ) = @_;
 
-    if(!$analysis_name) {
-        die "Analysis name must be specified!";
-    }
+    my %analyses = (); # keep cached analysis objects here
 
     my $response = $self->Client()->general_http_dialog(
         0,
@@ -655,7 +667,7 @@ sub get_all_DitagFeatureGroups { # get ditag features from otter/pipeline/ensemb
         'get_ditag_features',
         {
             %{$self->toHash},
-            'analysis' => $analysis_name,
+            $analysis_name ? ('analysis' => $analysis_name) : (),
             'pipehead' => $pipehead ? 1 : 0,
             $metakey ? ('metakey' => $metakey) : (),
             $ditypes ? ('ditypes' => $ditypes) : (),
@@ -667,9 +679,6 @@ sub get_all_DitagFeatureGroups { # get ditag features from otter/pipeline/ensemb
 
     my @df_optnames = @{ $OrderOfOptions{DitagFeature} };
     my @do_optnames = @{ $OrderOfOptions{DitagObject} };
-
-        # cached values:
-    my $analysis = Bio::EnsEMBL::Analysis->new( -logic_name => $analysis_name );
 
     my %dos  = (); # cached ditag objects, keyed by do_id
     my %dfs  = (); # ditag features in a HoHoL {ditag_id}{ditag_pair_id} -> [L,R]
@@ -690,6 +699,9 @@ sub get_all_DitagFeatureGroups { # get ditag features from otter/pipeline/ensemb
 
         } elsif($linetype eq 'DitagFeature') {
 
+                # note this is optional now, depending on trueness of $analysis_name:
+            my $logic_name    = $analysis_name || pop @optvalues;
+
             my $do_id = pop @optvalues;
             my $do = $dos{do_id}; # should have been defined earlier!
 
@@ -699,8 +711,10 @@ sub get_all_DitagFeatureGroups { # get ditag features from otter/pipeline/ensemb
             );
             $df->ditag( $do );
 
-                # use the cached values:
-            $df->analysis( $analysis );
+                # cache if needed, otherwise use the cached value:
+            $df->analysis(
+                $analyses{$logic_name} ||= Bio::EnsEMBL::Analysis->new(-logic_name => $logic_name)
+            );
 
             my $uniq_group_id = $do_id.'.'.$df->ditag_pair_id;
             push @{$dfs{$uniq_group_id}}, $df;
@@ -713,9 +727,7 @@ sub get_all_DitagFeatureGroups { # get ditag features from otter/pipeline/ensemb
 sub get_all_PredictionTranscripts { # get prediction transcripts from otter/pipeline/ensembl db
     my( $self, $analysis_name, $pipehead, $metakey ) = @_;
 
-    if(!$analysis_name) {
-        die "Analysis name must be specified!";
-    }
+    my %analyses = (); # keep cached analysis objects here
 
     my $response = $self->Client()->general_http_dialog(
         0,
@@ -723,7 +735,7 @@ sub get_all_PredictionTranscripts { # get prediction transcripts from otter/pipe
         'get_prediction_transcripts',
         {
             %{$self->toHash},
-            'analysis' => $analysis_name,
+            $analysis_name ? ('analysis' => $analysis_name) : (),
             'pipehead' => $pipehead ? 1 : 0,
             $metakey ? ('metakey' => $metakey) : (),
         },
@@ -735,9 +747,6 @@ sub get_all_PredictionTranscripts { # get prediction transcripts from otter/pipe
     my @pt_optnames = @{ $OrderOfOptions{PredictionTranscript} };
     my @pe_optnames = @{ $OrderOfOptions{PredictionExon} };
 
-        # cached values:
-    my $analysis = Bio::EnsEMBL::Analysis->new( -logic_name => $analysis_name );
-
     my @pts = (); # prediction transcripts in a list
     my $curr_pt;
     my $curr_ptid;
@@ -748,12 +757,19 @@ sub get_all_PredictionTranscripts { # get prediction transcripts from otter/pipe
 
         if($linetype eq 'PredictionTranscript') {
 
+                # note this is optional now, depending on trueness of $analysis_name:
+            my $logic_name    = $analysis_name || pop @optvalues;
+
             my $pt = Bio::EnsEMBL::PredictionTranscript->new();
             for my $ind (0..@pt_optnames-1) {
                 my $method = $pt_optnames[$ind];
                 $pt->$method($optvalues[$ind]);
             }
-            $pt->analysis( $analysis );
+
+                # cache if needed, otherwise use the cached value:
+            $pt->analysis(
+                $analyses{$logic_name} ||= Bio::EnsEMBL::Analysis->new(-logic_name => $logic_name)
+            );
 
             $curr_pt = $pt;
             $curr_ptid = $pt->dbID();
@@ -771,10 +787,10 @@ sub get_all_PredictionTranscripts { # get prediction transcripts from otter/pipe
                 $pe->$method($optvalues[$ind]);
             }
 
-                # use the cached values:
-            $pe->analysis( $analysis );
-
             if($pt_id == $curr_ptid) {
+                    # copy over:
+                $pe->analysis( $curr_pt->analysis() );
+
                 $curr_pt->add_Exon( $pe );
             } else {
                 die "Wrong order of exons in the stream!";

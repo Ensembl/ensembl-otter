@@ -10,15 +10,16 @@ my $server = Bio::Otter::ServerScriptSupport->new('dataset',
     'cs','csver','name','type','start','end','strand',
     'kind','metakey','analysis');
 
-my $analysis = $server->getarg('analysis');
-my $kind     = $server->getarg('kind');
+my $analysis_name = $server->getarg('analysis') || undef; # which means 'all analyses'
+
+my $kind          = $server->getarg('kind');
 my $method = {
     'dafs' => 'get_all_DnaAlignFeatures',
     'pafs' => 'get_all_ProteinAlignFeatures',
 }->{$kind};
 
 my $afs = $server->fetch_mapped_features('align_feature',
-            [$method, $analysis] );
+            [$method, $analysis_name] );
 
     # Put the names into the hit_description hash:
 my %hd_hash = ();
@@ -74,7 +75,9 @@ foreach my $af (@$afs) {
     }
     push @af_optvalues, $af->cigar_string();
 
-    push @af_optvalues, $af->analysis()->logic_name();
+    if(!$analysis_name) {
+        push @af_optvalues, $af->analysis()->logic_name();
+    }
 
     $output_string .= join("\t", @af_optvalues)."\n";
 }

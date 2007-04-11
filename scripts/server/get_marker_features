@@ -8,10 +8,10 @@ my $server = Bio::Otter::ServerScriptSupport->new('dataset',
     'cs','csver','name','type','start','end','strand',
     'metakey','analysis');
 
-my $analysis = $server->getarg('analysis');
+my $analysis_name = $server->getarg('analysis');
 
 my $mfs = $server->fetch_mapped_features('marker_feature',
-            ['get_all_MarkerFeatures', $analysis] );
+            ['get_all_MarkerFeatures', $analysis_name] );
 
 my @mf_optnames = @{ $OrderOfOptions{MarkerFeature} };
 my @mo_optnames = @{ $OrderOfOptions{MarkerObject} };
@@ -53,6 +53,10 @@ foreach my $mf (@$mfs) {
         push @mf_optvalues, $mf->$opt();
     }
     push @mf_optvalues, $mo_id;
+
+    if(!$analysis_name) {
+        push @mf_optvalues, $mf->analysis()->logic_name();
+    }
 
     $output_string .= join("\t", @mf_optvalues)."\n";
 }

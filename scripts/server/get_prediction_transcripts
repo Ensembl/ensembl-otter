@@ -8,11 +8,11 @@ my $server = Bio::Otter::ServerScriptSupport->new('dataset',
     'cs','csver','name','type','start','end','strand',
     'metakey','analysis');
 
-my $analysis = $server->getarg('analysis');
-my $metakey  = $server->getarg('metakey') || ''; # defaults to pipeline
+my $analysis_name = $server->getarg('analysis');
+my $metakey       = $server->getarg('metakey') || ''; # defaults to pipeline
 
 my $pts = $server->fetch_mapped_features('prediction_transcript',
-            ['get_all_PredictionTranscripts', $analysis, 1] );
+            ['get_all_PredictionTranscripts', $analysis_name, 1] );
                     # last_arg=1 means "fetch all exons now"
 
 my @pt_optnames = @{ $OrderOfOptions{PredictionTranscript} };
@@ -26,6 +26,9 @@ foreach my $pt (@$pts) {
     my @pt_optvalues = ('PredictionTranscript');
     for my $opt (@pt_optnames) {
         push @pt_optvalues, $pt->$opt();
+    }
+    if(!$analysis_name) {
+        push @pt_optvalues, $pt->analysis()->logic_name();
     }
     $output_string .= join("\t", @pt_optvalues)."\n";
 
