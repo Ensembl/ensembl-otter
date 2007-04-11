@@ -49,6 +49,11 @@ by the prepare_loutre script.
 When the 'ignore_chr' option is used, loutre is examined to see which chromoseomes shuld be dumped, and then
 those specified are removed from that list.
 
+** The -prune 1 option removes all data transferred by previous runs of this script. Note that the simple features
+from the pipeline tables are kept according to their analysis.logic_name, and seq_region_attributes according to
+their attrib_type.name. Since these are currently HARD CODED into the script, new types in the pipeline databases
+will be removed by this script unless the script is altered - there must be a better way to do this ! (use a backup_table ?)
+
 =head1 LICENCE
 
 This code is distributed under an Apache style licence:
@@ -88,7 +93,6 @@ use Bio::EnsEMBL::Utils::ConversionSupport;
 use Bio::EnsEMBL::Gene;
 use Bio::EnsEMBL::Transcript;
 use Bio::EnsEMBL::Exon;
-#use Gene;
 
 $| = 1;
 
@@ -137,6 +141,8 @@ $support->comma_to_list('add_chr');
 $support->comma_to_list('ignore_chr');
 $support->comma_to_list('chr');
 
+warn $support->param('chr');
+
 # ask user to confirm parameters to proceed
 $support->confirm_params;
 # get log filehandle and print heading and parameters to logfile
@@ -163,16 +169,20 @@ my $vsa  = $vdba->get_SliceAdaptor();
 my $vga  = $vdba->get_GeneAdaptor();
 #my $vaa  = $vdba->get_AttributeAdaptor();
 my $vpfa = $vdba->get_ProteinFeatureAdaptor;
+my $vaa  = $vdba->get_AnalysisAdaptor;
+my $vsfa = $vdba->get_SimpleFeatureAdaptor();
 my $vdbh = $vdba->dbc->db_handle;
 
 #attrib_type.code from pipeline table
 my @pipeline_attributes = qw(chr description embl_acc embl_version htg intl_clone_name);
-my $attribs_to_keep = "('";
-$attribs_to_keep .= join '\',\'',@pipeline_attributes;
-$attribs_to_keep .= "\')";
+my $attribs_to_keep = "('" . (join '\',\'',@pipeline_attributes) . "\')";
+
+#simple_feature details from pipeline
+my @pipeline_features = qw(CpG Eponine Fgenesh Genscan Augustus Halfwise RepeatMasker SubmitContig trf tRNAscan);
+my $features_to_keep =  "('" . (join '\',\'',@pipeline_features) . "\')";
 
 # if desired, delete entries from previous runs of this script
-if ($support->param('prune') && $support->user_proceed("Do you want to delete all entries from  previous runs of this script?\n")) {
+if ($support->param('prune') && $support->user_proceed("Do you want to delete *all* entries from  previous runs of this script?\n")) {
     $support->log("Deleting db entries from previous runs of this script...\n");
     $vdbh->do(qq(DELETE FROM exon));
     $vdbh->do(qq(DELETE FROM exon_stable_id));
@@ -201,12 +211,14 @@ if ($support->param('prune') && $support->user_proceed("Do you want to delete al
         WHERE sra.attrib_type_id = at.attrib_type_id
         AND at.code NOT IN $attribs_to_keep
     ));
+	$vdbh->do(qq(
+        DELETE sf
+        FROM simple_feature sf, analysis a
+        WHERE sf.analysis_id = a.analysis_id
+        AND a.logic_name NOT IN $features_to_keep
+    ));
     $support->log("Done.\n");
 }
-
-# deleting the other, seq_region based features (eg misc_features) might need constriants to be known ??
-
-
 
 ##################
 # get contraints #
@@ -394,19 +406,9 @@ if (! $support->param('add_chr')) {
 	}
 }
 
-
-##################################
-# copy seq_region based features #
-##################################
-
-
-
-
-
-
-##############################################
-# do the real work and copy the genes across #
-##############################################
+#################################################################
+# do the real work and copy the genes and other features across #
+#################################################################
 
 #get non-hidden chromosomes from loutre
 my $chroms = $support->fetch_non_hidden_slice($laa,$lsa);
@@ -414,12 +416,18 @@ my $chroms = $support->fetch_non_hidden_slice($laa,$lsa);
 #identify non-hidden chromosomes that have correct
 #attributes for export mode and release number, or take from the add_chr list
 
-#(this code is copied exactly from dump_pipeline so should be seperated out)
+#(this code is copied exactly from dump_pipeline)
 
 my @chr_names_wanted;
 my $export_mode = $support->param('release_type');
 my $release = $support->param('vega_release');
-if (! $support->param('add_chr')) {
+if ($support->param('chr')) {
+	@chr_names_wanted = $support->param('chr');
+}
+elsif ($support->param('add_chr')) {
+	@chr_names_wanted = $support->param('add_chr');
+}
+else {
  CHROM:
 	foreach my $chrom (@$chroms) {
 		my $attribs = $laa->fetch_all_by_Slice($chrom);
@@ -441,9 +449,7 @@ if (! $support->param('add_chr')) {
 		}
 		push @chr_names_wanted, $name;
 	}
-}
-else {
-	@chr_names_wanted = $support->param('add_chr');
+
 }
 
 my $seq_regions = join "\n", @chr_names_wanted; 
@@ -456,23 +462,66 @@ foreach my $name (@chr_names_wanted) {
 	my $vslice = $vsa->fetch_by_region('chromosome',$name,undef,undef,undef,'Otter');
 	$support->log("Looking at Chromosome $name...\n");
 	my $c = 0;
+
+	#transfer genes and associated features
+	my $previous_seen = 0;
+ GENE:
 	foreach my $lgene (@{$lga->fetch_all_by_Slice($lslice)} ) {
 
 		##put any filters here
 
 		$c++;
-
+		#create new gene
 		my $v_gene = &create_vega_gene($lgene,$vslice);
 
+		#check if the 'new' gene already exists in Vega
+		my $sid = $v_gene->stable_id;
+		if (my $previous_gene = $vga->fetch_by_stable_id($sid) ) {
+			$support->log_warning("Gene $sid already exists in vega - either there is duplication in Loutre or this has already been stored in Vega. Moving onto next gene...\n");
+			$previous_seen = 1;
+			next GENE;
+		}
 
-
-		#how to prevent getting duplicates ?
-
+		#store the gene
 		unless ($support->param('dry_run')) {
 			$vga->store($v_gene);	
+
+			#store evidence table entries using api, or do I have to use mysql?
+#			&store_evidence($l_gene,$v_gene);
+			#sql for evidence table - hopefully redundant
+			#my $sth = $vdbh->prepare(qq(insert into evidence values (?,?,?));
+
         }
 	}
 	$support->log("Retrieved $c genes from chromosome $name\n",1);
+
+	#transfer simple features
+	if (! $support->param('dry_run')) {
+		if ($previous_seen) {
+			if ($support->user_proceed("Duplicate genes have been seen - are you sure you want to transfer simple_features?\n")) { 
+				&transfer_simple_features($lslice,$vslice);
+			}
+		}
+		else {
+			&transfer_simple_features($lslice,$vslice);
+		}
+	}
+
+	#transfer misc_features
+	if (! $support->param('dry_run')) {
+		if ($previous_seen) {
+			if ($support->user_proceed("Duplicate genes have been seen - are you sure you want to transfer simple_features?\n")) { 
+				&transfer_misc_features($lslice,$vslice);
+			}
+		}
+		else {
+			&transfer_misc_features($lslice,$vslice);
+		}
+	}
+	
+
+	##what about clone remarks ?
+
 }
 
 
@@ -484,9 +533,110 @@ foreach my $name (@chr_names_wanted) {
 ##post conversion:##
 # need to convert gene.source -> gene.analysis_id
 # then gene.source -> 'Vega'
+# updating of the vega chr name occur
 
-#where does the updating of the vega chr name occur ? at the end I guess
+###carefully check all attrib types
 
+=head2 transfer_misc_features
+
+  Arg[1]      : Bio::Vega::Slice - Loutre source chromosome
+  Arg[1]      : Bio::Vega::Slice - Vega destination chromosome
+  Description : Stores the misc features on a Loutre chromosome onto a Vega one
+  Return type : none
+  Exceptions  : none
+  Caller      : internal
+
+=cut
+
+sub transfer_misc_features {
+
+}
+
+=head2 transfer_simple_features
+
+  Arg[1]      : Bio::Vega::Slice - Loutre source chromosome
+  Arg[1]      : Bio::Vega::Slice - Vega destination chromosome
+  Description : Stores the simple features on a Loutre chromosome onto a Vega one
+  Return type : none
+  Exceptions  : none
+  Caller      : internal
+
+=cut
+
+sub transfer_simple_features {
+	my $lslice = shift;
+	my $vslice = shift;
+	my $c = 0;
+	my @features;
+	foreach my $l_feature (@{$lslice->get_all_SimpleFeatures()}) {
+		my $l_analysis = $l_feature->analysis;
+		my $l_logic_name = $l_analysis->logic_name;
+		my ($v_feature,$v_analysis);
+		$v_analysis = $vaa->fetch_by_logic_name($l_logic_name);
+		if (!$v_analysis) {
+			$v_analysis = Bio::EnsEMBL::Analysis->new(
+				-logic_name      => $l_logic_name,
+				-created         => $l_analysis->created,
+			);			
+		}
+		$v_feature = Bio::EnsEMBL::SimpleFeature->new(
+			-start    => $l_feature->start,
+            -end      => $l_feature->end,
+			-strand   => $l_feature->strand,
+			-slice    => $vslice,
+			-analysis => $v_analysis,
+			-score    => $l_feature->score,
+			-display_label => $l_feature->display_label,
+		);
+		push @features,$v_feature;
+#		warn Dumper($v_feature);
+#		exit;
+		$c++;
+	}
+	$vsfa->store(@features) if (@features);
+	$support->log("$c simple features transferred for chromosome ".$lslice->seq_region_name."\n",1); 
+}
+
+
+=head2 store_evidence
+
+  Arg[1]      : Bio::Vega::Gene - Loutre source gene
+  Arg[1]      : Bio::Vega::Gene - Vega destination gene
+  Description : Stores the evidence for a Loutre gene onto a Vega one. Must be called after create_vega_gene
+                since needs the dbID
+  Return type : none
+  Exceptions  : none
+  Caller      : internal
+
+=cut
+
+
+#none of this checked yet!
+sub store_evidence {
+	my $l_gene = shift;
+	my $v_gene = shift;
+	my $evidences;
+
+	#get all vega transcripts keyed on their stable ID
+	my %vega_trans;
+    foreach my $V_trans (@{ $v_gene->get_all_Transcripts }) {	
+		my $V_id = $V_trans->stable_id;
+		$vega_trans{$V_id} = $V_trans;
+	}
+	
+	#get evidence for each Loutre transcript
+    foreach my $L_trans (@{ $l_gene->get_all_Transcripts }) {
+		my $L_id = $L_trans->stable_id;
+
+		#get equivalent Vega transcript (ie same stable ID)
+		my $V_trans = $vega_trans{$L_id};
+		my $V_dbID = $V_trans->dbID;
+		my $V_trans_adaptor = $V_trans->adaptor;
+
+		my $evidence = $L_trans->fetch_evidence;
+		$V_trans_adaptor->store_Evidence($V_dbID,$evidence);
+	}
+}
 
 
 =head2 create_vega_gene
@@ -576,11 +726,10 @@ sub create_vega_transcript {
     $V_transcript->add_Attributes(@{$L_transcript->get_all_Attributes});
 
     # transcript supporting evidence - not checked since none in db yet!
-    foreach my $L_sf (@{ $L_transcript->get_all_supporting_features }) {		
+    foreach my $L_sf (@{$L_transcript->get_all_supporting_features }) {		
 		#probably have to create new object on the new Slice as usual
 #		$V_transcript->add_TranscriptSupportingFeature($L_sf);
 	}
-
 
 	#get translation data
 	my ($L_translation,$L_translation_start_exon,$L_translation_end_exon);
