@@ -12,15 +12,15 @@ if(!$server->running_headcode()) {
     $server->error_exit("This kind of data is only available from new API databases. Set pipehead to 1");
 }
 
-my $analysis = $server->getarg('analysis');
-my $ditypes  = $server->getarg('ditypes');
+my $analysis_name = $server->getarg('analysis');
+my $ditypes       = $server->getarg('ditypes');
 
 if($ditypes) {
     $ditypes = [ split(',', $ditypes) ];
 }
 
 my $dfs = $server->fetch_mapped_features('ditag_feature', 
-            ['get_all_DitagFeatures', $ditypes, $analysis] );
+            ['get_all_DitagFeatures', $ditypes, $analysis_name] );
 
 my @df_optnames = @{ $OrderOfOptions{DitagFeature} };
 my @do_optnames = @{ $OrderOfOptions{DitagObject} };
@@ -52,6 +52,10 @@ foreach my $df (@$dfs) {
         push @df_optvalues, $df->$opt();
     }
     push @df_optvalues, $do_id;
+
+    if(!$analysis_name) {
+        push @df_optvalues, $df->analysis()->logic_name();
+    }
 
     $output_string .= join("\t", @df_optvalues)."\n";
 }
