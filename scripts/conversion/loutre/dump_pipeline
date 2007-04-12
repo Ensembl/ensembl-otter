@@ -19,7 +19,7 @@ Options:
                                         Vega db
     --ignore_chr=LIST                   comma seperated list of chromsomes to ignore
     --sql_dump_location=LOC             location of MySQLdump file
-    --file_name=NAME                    name of MySQLdump file (defaults to db name)
+    --file_name=NAME                    name of MySQLdump file (defaults to dbname_create.sql)
  
     --pipedbname=NAME                   use pipeline database NAME
     --pipehost=HOST                     use pipeline database host HOST
@@ -75,7 +75,7 @@ Please see http://www.ensembl.org/code_licence.html for details
 =head1 AUTHOR
 
 Steve Trevanion <st3@sanger.ac.uk>
-Based on code from Tim Hubbard (mysqlcopy_sequence_set.pl)
+Based on code from Tim Hubbard (make_vega.pl and mysqlcopy_sequence_set.pl)
 
 =head1 CONTACT
 
@@ -148,7 +148,6 @@ $support->check_required_params(
 	'pipeport',
 	'pipeuser',
 	$support->get_loutre_params,
-	'definition_file',
 	'vega_release',
 	'release_type',
 	'sql_dump_location',
@@ -368,7 +367,7 @@ while (my ($analysis_id,$logic_name) = $gtn->fetchrow){
 	foreach my $t qw(analysis protein_align_feature dna_align_feature) {
 		push @{$sets{$t}{'analysis_id'}}, $analysis_id;
 	}
-    next if($logic_name=~/vertrna|est2genome|uniprot|exonerate|refseq/i);
+    next if ($logic_name=~/vertrna|est2genome|uniprot|exonerate|refseq/i);
     $ln .= $logic_name . "\n\t";
     push @{$sets{'simple_feature'}{'analysis_id'}}, $analysis_id;
     $n2++;
@@ -631,11 +630,11 @@ $support->finish_log;
 
 # All tables are by default dumped with just their structure. Tables for which data is also to be dumped
 # are defined here, with a white space seperated list defining the columns on which to constrain mysqldump.
-# A value of 'a' determines that all data in the table is to be dumped, and i that the table should be ignored.
-# For others, the value after the colon
-# is usefull in that it defines how the specific values of the column are identified.
-# - code -> specific entry in the code above
-# - clone / contig / chromosome -> explicitly define the coord_system to used
+# A value of 'a' determines that all data in the table is to be dumped, and 'i' that the table should be
+# ignored. For others, the value after the colon is usefull in that it defines how the specific values of
+# the column are identified.
+# - code -> specific code in the script above
+# - clone / contig / chromosome -> explicitly define the coord_system to used (not actually used)
 
 sub constraints {
 	my $txt;
@@ -658,8 +657,19 @@ attrib_type           a                     # should be identical to Vega
 coord_system          a
 meta                  a                     # should be identical to Vega
 
-dnac                  i
+dna_align_feature_history        i
+hit_description                  i
+input_id_analysis                i
+input_id_seq_region              i
+input_id_type_analysis           i
+job                              i
+job_status                       i
+protein_align_feature_history    i
+rule_conditions                  i
+rule_goal                        i
+
 ENDOFTEXT
 	return $txt;
 }
 
+#need assembly_exception entries
