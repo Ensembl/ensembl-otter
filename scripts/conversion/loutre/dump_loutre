@@ -18,8 +18,7 @@ Options:
     --add_chr=LIST                      comma seperated list of chromsomes to *add to an existing Vega db*
     --chr=LIST                          explicit list of chromosomes to use to create a Vega database
     --ignore_chr=LIST                   comma seperated list of chromsomes to ignore
-    --sql_dump_location=LOC             location of MySQLdump file
-    --file_name=NAME                    name of MySQLdump file (defaults to dbname_insert.sql)
+    --dump_assembly_tags=BOOLEAN        choose to dump or not dump assembly_tag misc_features
 
     --loutredbname=NAME                 use loutre database NAME
     --loutrehost=HOST                   use loutre database host HOST
@@ -53,6 +52,10 @@ those specified are removed from that list.
 from the pipeline tables are kept according to their analysis.logic_name, and seq_region_attributes according to
 their attrib_type.name. Since these are currently HARD CODED into the script, new types in the pipeline databases
 will be removed by this script unless the script is altered - there must be a better way to do this ! (use a backup_table ?)
+
+To Do:
+- when we use B::V::GeneAdaptor->store then deal with evidence and author info
+- where are clone remarks kept ?
 
 =head1 LICENCE
 
@@ -113,6 +116,7 @@ $support->parse_extra_options(
 	'chr=s',
 	'ignore_chr=s',
 	'prune=s',
+	'dump_assembly_tags=s',
 );
 $support->allowed_params(
 	$support->get_loutre_params,
@@ -123,6 +127,7 @@ $support->allowed_params(
 	'chr',
 	'ignore_chr',
 	'prune',
+	'dump_assembly_tags',
 	$support->get_common_params,
 );
 
@@ -140,8 +145,6 @@ if ($support->param('help') or $support->error) {
 $support->comma_to_list('add_chr');
 $support->comma_to_list('ignore_chr');
 $support->comma_to_list('chr');
-
-warn $support->param('chr');
 
 # ask user to confirm parameters to proceed
 $support->confirm_params;
@@ -167,22 +170,29 @@ my $vdba = $support->get_database('ensembl');
 #my $vdba = $support->get_database('loutre');
 my $vsa  = $vdba->get_SliceAdaptor();
 my $vga  = $vdba->get_GeneAdaptor();
-#my $vaa  = $vdba->get_AttributeAdaptor();
+#my $vata  = $vdba->get_AttributeAdaptor();
 my $vpfa = $vdba->get_ProteinFeatureAdaptor;
 my $vaa  = $vdba->get_AnalysisAdaptor;
 my $vsfa = $vdba->get_SimpleFeatureAdaptor();
+my $vmsa = $vdba->get_MiscSetAdaptor;
+my $vmfa = $vdba->get_MiscFeatureAdaptor();
 my $vdbh = $vdba->dbc->db_handle;
+
+#####################################
+# delete entries from previous runs #
+#####################################
+
+##hardcoded entries to not delete##
 
 #attrib_type.code from pipeline table
 my @pipeline_attributes = qw(chr description embl_acc embl_version htg intl_clone_name);
 my $attribs_to_keep = "('" . (join '\',\'',@pipeline_attributes) . "\')";
-
 #simple_feature details from pipeline
 my @pipeline_features = qw(CpG Eponine Fgenesh Genscan Augustus Halfwise RepeatMasker SubmitContig trf tRNAscan);
 my $features_to_keep =  "('" . (join '\',\'',@pipeline_features) . "\')";
 
-# if desired, delete entries from previous runs of this script
-if ($support->param('prune') && $support->user_proceed("Do you want to delete *all* entries from  previous runs of this script?\n")) {
+# do the deletions
+if ($support->param('prune') && $support->user_proceed("Do you want to delete all entries from  previous runs of this script?\n")) {
     $support->log("Deleting db entries from previous runs of this script...\n");
     $vdbh->do(qq(DELETE FROM exon));
     $vdbh->do(qq(DELETE FROM exon_stable_id));
@@ -217,6 +227,9 @@ if ($support->param('prune') && $support->user_proceed("Do you want to delete *a
         WHERE sf.analysis_id = a.analysis_id
         AND a.logic_name NOT IN $features_to_keep
     ));
+    $vdbh->do(qq(DELETE FROM misc_feature));
+    $vdbh->do(qq(DELETE FROM misc_feature_misc_set));
+    $vdbh->do(qq(DELETE FROM misc_set));
     $support->log("Done.\n");
 }
 
@@ -259,32 +272,6 @@ foreach my $line (split(/\n/,$txt)){
 		$constraints{$table} = ['u'];
 		next TABLE;
     }
-
-	
-	#dump all data if that is how it's defined
-#    if ($constraints[0] eq 'a'){
-#		$constraints{$table} = ['a'];
-#		next TABLE;
-#    }
-	
-	# ignore tables that have been defined as not being part of ensembl
-#	if ($constraints[0] eq 'i'){
-#		delete $constraints{$table};
-#		push @ignored_tables, $table;
-#		next TABLE;
-#	}
-
-	#otherwise read in the constraints
-#	$constraints{$table} = ['c'];	
-#	foreach my $cons (@constraints) {
-#		my ($col,$method) = split ':',$cons;
-#		if ($method eq 'code') {
-#			push @{$constraints{$table}}, $col; 
-#		}
-#		else {
-#			$support->log_warning("You have an unrecognised method for constraint $col\n");
-#		}
-#	}
 }
 
 
@@ -312,7 +299,7 @@ while (my ($name,$group1,$group2,$group_email) = $lsth->fetchrow_array ) {
 #check HEREDOC definition
 my $c = $constraints{'attrib_type'};
 if (shift @$c ne 'u') {
-	if (! $support->user_proceed("You haven't defined that the attrib_type table be checked and updated. Is that really correct ?\n") ) {
+	if (! $support->user_proceed("You haven't defined that the attrib_type table be checked and updated. Is that really correct ?\n")){
 		exit;
 	}
 }
@@ -413,8 +400,7 @@ if (! $support->param('add_chr')) {
 #get non-hidden chromosomes from loutre
 my $chroms = $support->fetch_non_hidden_slice($laa,$lsa);
 
-#identify non-hidden chromosomes that have correct
-#attributes for export mode and release number, or take from the add_chr list
+#identify non-hidden chromosomes that have correct attributes for export mode and release number, or take from the add_chr list
 
 #(this code is copied exactly from dump_pipeline)
 
@@ -468,7 +454,9 @@ foreach my $name (@chr_names_wanted) {
  GENE:
 	foreach my $lgene (@{$lga->fetch_all_by_Slice($lslice)} ) {
 
-		##put any filters here
+		########################
+		##put any filters here##
+		########################
 
 		$c++;
 		#create new gene
@@ -498,35 +486,27 @@ foreach my $name (@chr_names_wanted) {
 	#transfer simple features
 	if (! $support->param('dry_run')) {
 		if ($previous_seen) {
-			if ($support->user_proceed("Duplicate genes have been seen - are you sure you want to transfer simple_features?\n")) { 
+			if ($support->user_proceed("Duplicate genes have been seen - are you sure you want to transfer simple_ and any misc_features?\n")) { 
 				&transfer_simple_features($lslice,$vslice);
+				#transfer assembly_tag misc_features
+				if ($support->param('dump_assembly_tags')) {
+					&transfer_misc_features($lslice,$vslice,'atag');
+				}				
 			}
 		}
 		else {
 			&transfer_simple_features($lslice,$vslice);
-		}
-	}
-
-	#transfer misc_features
-	if (! $support->param('dry_run')) {
-		if ($previous_seen) {
-			if ($support->user_proceed("Duplicate genes have been seen - are you sure you want to transfer simple_features?\n")) { 
-				&transfer_misc_features($lslice,$vslice);
+			if ($support->param('dump_assembly_tags')) {
+				&transfer_misc_features($lslice,$vslice,'atag');
 			}
 		}
-		else {
-			&transfer_misc_features($lslice,$vslice);
-		}
 	}
-	
 
-	##what about clone remarks ?
+	##clone remarks
 
+	##seq_region_attributes
 }
 
-
-
-#####mysql copy analysis entries from loutre to the newly created vega db ? ('otter' is it created by the api)#####
 
 #thoughts for a finish_loutre script:
 
@@ -535,12 +515,12 @@ foreach my $name (@chr_names_wanted) {
 # then gene.source -> 'Vega'
 # updating of the vega chr name occur
 
-###carefully check all attrib types
 
 =head2 transfer_misc_features
 
   Arg[1]      : Bio::Vega::Slice - Loutre source chromosome
-  Arg[1]      : Bio::Vega::Slice - Vega destination chromosome
+  Arg[2]      : Bio::Vega::Slice - Vega destination chromosome
+  Arg[3]      : attrib_type.code (or root, eg atag) on which to limit transfer
   Description : Stores the misc features on a Loutre chromosome onto a Vega one
   Return type : none
   Exceptions  : none
@@ -549,7 +529,55 @@ foreach my $name (@chr_names_wanted) {
 =cut
 
 sub transfer_misc_features {
+	my $lslice = shift;
+	my $vslice = shift;
+	my $type   = shift;
+	my @v_features;
+	my $c = 0;
+ FEAT:
+	foreach my $l_feature (@{$lslice->get_all_MiscFeatures()}) {
+		next FEAT if (! grep {$_->code =~ /$type/} @{$l_feature->get_all_MiscSets});
+		$c++;
 
+		#create feature
+		my $v_feature = Bio::EnsEMBL::MiscFeature->new(
+			-start    => $l_feature->start,
+			-end      => $l_feature->end,
+			-strand   => $l_feature->strand,
+			-slice    => $vslice,
+		);
+
+		#create a new misc set if necc; add misc sets to features
+		foreach my $l_miscset (@{$l_feature->get_all_MiscSets}) {
+			my $v_miscset = $vmsa->fetch_by_code($l_miscset->code);
+			if (! $v_miscset) {
+				$v_miscset = Bio::EnsEMBL::MiscSet->new(
+					-CODE            => $l_miscset->code,
+					-NAME            => $l_miscset->name,
+					-DESCRIPTION     => $l_miscset->description,
+					-LONGEST_FEATURE => $l_miscset->longest_feature,
+				);
+				$vmsa->store($v_miscset);
+			}
+			$v_feature->add_MiscSet($v_miscset);
+		}			
+
+		#create a new attribute if necc; add attributes to feature
+		foreach my $l_attribute (@{$l_feature->get_all_Attributes}) {
+			my $v_attribute = Bio::EnsEMBL::Attribute->new(
+				-NAME        => $l_attribute->name,
+				-CODE        => $l_attribute->code,
+				-VALUE       => $l_attribute->value,
+				-DESCRIPTION => $l_attribute->description,
+			);
+			$v_feature->add_Attribute($v_attribute);	
+		}
+		push @v_features, $v_feature;
+	}
+
+	#store all features on this slice
+	$vmfa->store(@v_features);
+	$support->log("Transferred $c misc_features for chromosome ".$lslice->seq_region_name."\n",1);	
 }
 
 =head2 transfer_simple_features
@@ -589,12 +617,10 @@ sub transfer_simple_features {
 			-display_label => $l_feature->display_label,
 		);
 		push @features,$v_feature;
-#		warn Dumper($v_feature);
-#		exit;
 		$c++;
 	}
 	$vsfa->store(@features) if (@features);
-	$support->log("$c simple features transferred for chromosome ".$lslice->seq_region_name."\n",1); 
+	$support->log("$c simple features transferred for chromosome ".$lslice->seq_region_name."\n",1);
 }
 
 
