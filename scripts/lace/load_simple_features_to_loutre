@@ -80,29 +80,8 @@ foreach my $file ( `ls $input_dir` ) {
 		$db->rollback;
 	  }
 	}
-
-	# Load Assembly_Tags
-	my $atags=$parser->get_AssemblyTags;
-	my $ata = $db->get_AssemblyTagAdaptor;
-
-	my $db_tags=$ata->fetch_all_by_Slice($new_slice);
-
-	($delete,$save)=compare_assembly_tag_sets($db_tags,$atags);
-
-	foreach my $del_tag (@$delete) {
-	  $ata->remove($del_tag);
-	}
-	foreach my $new_tag (@$save) {
-	  $new_tag->slice($new_slice);
-	  eval{
-		$ata->store($new_tag);
-	  };
-	  if ($@) {
-		die "problem with loading of assemblytags\n$@\n";
-		$db->rollback;
-	  }
-	}
   };
+
   $db->commit;
   print STDOUT "\nCommitted all session data from XML in database\n";
 
