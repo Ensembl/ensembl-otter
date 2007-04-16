@@ -777,7 +777,7 @@ sub DESTROY {
     my $client = $self->Client;
     eval{
         if($client) {
-            $self->unlock_otter_slice();# if $client->write_access;
+            $self->unlock_otter_slice() if $self->write_access;
         }
     };
     if($@) {

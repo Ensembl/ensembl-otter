@@ -407,9 +407,9 @@ sub initialise {
     $self->make_button($button_frame_2, 'Open from chr coords', $run_lace_on_slice);
     
     my $run_lace = sub{
-	$top->Busy;
-	$self->run_lace;
-	$top->Unbusy;
+	    $top->Busy;
+	    $self->run_lace;
+	    $top->Unbusy;
     };
     $self->make_button($button_frame_2, 'Run lace', $run_lace, 4);
     $top->bind('<Control-l>', $run_lace);
@@ -664,6 +664,7 @@ sub _open_SequenceSet{
         
         if($@){ 
             $adb->error_flag(0);
+            $adb->write_access(0);  # Stops AceDatabase DESTROY from trying to unlock clones
             if ($@ =~ /Clones locked/){
                 # if our error is because of locked clones, display these to the user
                 my $message = "Some of the clones you are trying to open are locked\n";
