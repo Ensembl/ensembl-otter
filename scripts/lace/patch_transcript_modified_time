@@ -12,15 +12,15 @@ my ($dataset, $gsid);
 Bio::Otter::Lace::Defaults::do_getopt('ds|dataset=s' => \$dataset,
 									 );
 
-my $client   = Bio::Otter::Lace::Defaults::make_Client(); # Bio::Otter::Lace::Client
-my $dset     = $client->get_DataSet_by_name($dataset);    # Bio::Otter::Lace::DataSet
-my $otter_db = $dset->make_Vega_DBAdaptor;                # Bio::Vega::DBSQL::DBAdaptor
-my $ga       = $otter_db->get_GeneAdaptor;
-my $ta       = $otter_db->get_TranscriptAdaptor;
+my $client    = Bio::Otter::Lace::Defaults::make_Client(); # Bio::Otter::Lace::Client
+my $dset      = $client->get_DataSet_by_name($dataset);    # Bio::Otter::Lace::DataSet
+my $loutre_db = $dset->make_Vega_DBAdaptor;               # Bio::Vega::DBSQL::DBAdaptor
+my $ga        = $loutre_db->get_GeneAdaptor;
+my $ta        = $loutre_db->get_TranscriptAdaptor;
 
 my $gver_tsid_info;
 
-my $sql = $otter_db->prepare("select transcript_id, stable_id, version, modified_date from transcript_stable_id");
+my $sql = $loutre_db->prepare("select transcript_id, stable_id, version, modified_date from transcript_stable_id");
 $sql->execute;
 
 my $id_ver;
