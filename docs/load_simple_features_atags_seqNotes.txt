@@ -1,0 +1,19 @@
+
+1. dump simple_features in XML format into your outfile
+
+   1.1. Run ensembl-otter/scripts/lace/dump_otter_SFeature_Atag_by_assembly -ds otter_dataset_name (eg, pig, human, mouse)
+		
+
+2. Load XML files of step 1 to loutre_'species'
+
+   2.1. Run ensembl-otter/scripts/lace/load_simple_features_to_loutre -ds loutre_species_datasetname (eg, ns_pig) -port 33999 -indir XMLfile_dir
+
+
+3. Load assembly_tags to loutre db
+   Run scripts/lace/fetch_assebmly_tags_for_loutre -dataset otter_dset_name
+
+
+4. load sequence_notes to loutre db
+   Run scripts/lace/copy_sequence_notes_2_new_otter -ds otter_dset_name -newdb loutre_dbname -pass lutralutra
+
+
