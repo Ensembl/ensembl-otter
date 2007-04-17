@@ -1,6 +1,6 @@
 #!/usr/local/bin/perl -w
 
-### fetch_assembly_tags
+### fetch_assembly_tags_to_misc_features
 
 use strict;
 use Hum::Submission ('prepare_statement');
@@ -10,7 +10,11 @@ use Hum::AnaStatus::Sequence;
 use Bio::Otter::Lace::Defaults;
 use Bio::EnsEMBL::DBSQL::CloneAdaptor;
 use Bio::Vega::DBSQL::DBAdaptor;
-use Bio::Vega::AssemblyTag;
+
+use Bio::EnsEMBL::MiscFeature;
+use Bio::EnsEMBL::MiscSet;
+use Bio::EnsEMBL::Attribute;
+
 
 use Getopt::Long 'GetOptions';
 
@@ -34,9 +38,9 @@ $help->() unless ( $dataset );
 my $client    = Bio::Otter::Lace::Defaults::make_Client();
 my $dset      = $client->get_DataSet_by_name($dataset);
 my $loutre_db = $dset->make_Vega_DBAdaptor;
-my $sliceAd   = $loutre_db->get_SliceAdaptor();
-my $atagAd    = $loutre_db->get_AssemblyTagAdaptor;
-my $atags     = [];
+my $mfeats    = [];
+my $mfeatAd   = $loutre_db->get_MiscFeatureAdaptor;
+
 
 {
   update_assembly_tagged_contig_table();
@@ -45,21 +49,12 @@ my $atags     = [];
   my $clones = $sliceAd->fetch_all('clone');
   prepare_assembly_tag_data($clones);
 
-  update_database($atags);
+  $mfeatAd->store(@$mfeats);
 }
 
 #--------------------
 #    subroutines
 #--------------------
-
-sub update_database {
-
-  my ($atags) = @_;
-
-  foreach my $atag ( @$atags ) {
-    $atagAd->store($atag);
-  }
-}
 
 sub update_assembly_tagged_contig_table {
 
@@ -129,8 +124,8 @@ sub prepare_assembly_tag_data {
 		my $seq_region_id = $sliceAd->get_seq_region_id($contig);
 
 		if ( $atagAd->check_seq_region_id_is_transferred($seq_region_id) ){
-		  print STDERR "$contig_name (srid $seq_region_id) is already transferred\n";
-		  next;
+		  #print STDERR "$contig_name (srid $seq_region_id) is already transferred\n";
+		  #next;
 		}
 
         my $dir      = $seq->analysis_directory;
@@ -221,7 +216,8 @@ sub parse_ace {
           $info .= "$ctg_seq_region_id : $tag_type : $ctg_strand : $tag_start : $tag_end : $tag_info\n";
         }
 
-        make_atags($contig, $ctg_seq_region_id, $tag_type, $ctg_strand, $tag_start, $tag_end, $tag_info);
+		make_misc_feats_for_atags($contig, $ctg_seq_region_id, $tag_type, $ctg_strand, $tag_start, $tag_end, $tag_info);
+        #make_atags($contig, $ctg_seq_region_id, $tag_type, $ctg_strand, $tag_start, $tag_end, $tag_info);
       }
     }
 
@@ -241,7 +237,8 @@ sub parse_ace {
       $name .= $tag_info." (intl name)";
 
       $info .= "$ctg_seq_region_id : $tag_type : $ctg_strand : $tag_start : $tag_end : $tag_info --- [$name]\n" if $verbose;
-      make_atags($contig, $ctg_seq_region_id, $tag_type, $ctg_strand, $tag_start, $tag_end, $tag_info);
+	  make_misc_feats_for_atags($contig, $ctg_seq_region_id, $tag_type, $ctg_strand, $tag_start, $tag_end, $tag_info);
+      #make_atags($contig, $ctg_seq_region_id, $tag_type, $ctg_strand, $tag_start, $tag_end, $tag_info);
     }
   }
 
@@ -261,26 +258,41 @@ sub trim {
   return $st;
 }
 
-sub make_atags {
+sub make_misc_feats_for_atags {
   my ($contig, $ctg_seq_region_id, $tag_type, $ctg_strand, $tag_start, $tag_end, $tag_info) = @_;
 
-  my $atag = Bio::Vega::AssemblyTag->new();
+  my $tag_type_val = {
+					  'Unsure'          => 133,
+					  'Clone_left_end'  => 134,
+					  'Clone_right_end' => 135,
+					  'Misc'            => 136
+					 };
 
-#  $atag->seq_region_id($ctg_seq_region_id); # handled by atag adaptor
-  $atag->seq_region_start($tag_start);
-  $atag->seq_region_end($tag_end);
-  $atag->seq_region_strand($ctg_strand);
-  $atag->tag_type($tag_type);
-  $atag->tag_info($tag_info);
-  $atag->slice($contig);
+  my $mfeat = Bio::EnsEMBL::MiscFeature->new(-START  => $tag_start,
+                                             -END    => $tag_end,
+                                             -STRAND => $ctg_strand,
+                                             -SLICE  => $contig);
 
-  push(@$atags, $atag);
+  push(@$mfeats, $mfeat);
+
+  my $atag_set = Bio::EnsEMBL::MiscSet->new(-CODE            => 'AssemblyTag',
+											-NAME            => 'Assembly tag',
+											-DESCRIPTION     => 'Assembly tag',
+											-LONGEST_FEATURE => 1e6);
+
+  my $atag_attrib = Bio::EnsEMBL::Attribute->new(-VALUE => $tag_info,
+												 -CODE  => 'assembly_tag',
+												 -NAME  => $tag_type);
+
+  $mfeat->add_MiscSet($atag_set);
+  $mfeat->add_Attribute($atag_attrib);
+
 }
 
 __END__
 
 
-=head1 NAME - fetch_assembly_tags
+=head1 NAME - fetch_assembly_tags_to_misc_features
 
 =head1 SYNOPSIS
 
