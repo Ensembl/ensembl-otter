@@ -14,7 +14,6 @@ Options:
                                         (default: conf/Conversion.ini)
     --vega_release=NUM                  vega release number
     --release_type=STRING               type of release, ie External
-    --no_feature=BOOLEAN                choose to dump *align_features or not
     --add_chr=LIST                      comma seperated list of chromsomes to *add to an existing Vega db*
     --chr=LIST                          explicit list of chromosomes to use to create a Vega database
     --ignore_chr=LIST                   comma seperated list of chromsomes to ignore
@@ -25,6 +24,12 @@ Options:
     --loutreport=PORT                   use loutre database port PORT
     --loutreuser=USER                   use loutre database username USER
     --loutrepass=PASS                   use loutre database password PASS
+
+    --dbname=NAME                       use Vega database NAME
+    --host=HOST                         use Vega database host HOST
+    --port=PORT                         use Vega database port PORT
+    --user=USER                         use Vega database username USER
+    --pass=PASS                         use Vega database password PASS
 
     --logfile, --log=FILE               log to FILE (default: *STDOUT)
     --logpath=PATH                      write logfile to PATH (default: .)
@@ -37,21 +42,21 @@ Options:
 =head1 DESCRIPTION
 
 This script uses the API to transfer genes and features associated with genes, and mysqldump to transfer
-other features in the loutre database 
+other features in the loutre database.
 
 The 'chr' and 'add_chr' options specify a comma separated list of chromosomes to use, but they have quite
 different behaviours - 'chr' is used to specify the chromosomes to use the first time data is dumped from loutre,
 whereas 'add_chr' is used to specify chromosomes to add to existing loutre dump. In the abscence of either
-of these the script examines loutre database to see which chromosomes to dump according to what was set
-by the prepare_loutre script.
+of these the script examines the loutre database to see which chromosomes should be dumped (according to what
+was set by the prepare_loutre script).
 
 When the 'ignore_chr' option is used, loutre is examined to see which chromoseomes shuld be dumped, and then
 those specified are removed from that list.
 
-** The -prune 1 option removes all data transferred by previous runs of this script. Note that the simple features
-from the pipeline tables are kept according to their analysis.logic_name, and seq_region_attributes according to
-their attrib_type.name. Since these are currently HARD CODED into the script, new types in the pipeline databases
-will be removed by this script unless the script is altered - there must be a better way to do this ! (use a backup_table ?)
+**seq_region_attribs to be transferred from loutre are also hardcoded
+
+The -prune 1 option can be used to remove all entries from previous runs of this script
+
 
 To Do:
 - when we use B::V::GeneAdaptor->store then deal with evidence and author info
@@ -84,7 +89,6 @@ BEGIN {
     $SERVERROOT = "$Bin/../../../..";
     unshift(@INC, "$SERVERROOT/ensembl-otter/modules");
     unshift(@INC, "$SERVERROOT/ensembl/modules");
-#	unshift(@INC, "./modules");
     unshift(@INC, "$SERVERROOT/bioperl-live");
 }
 
@@ -111,7 +115,6 @@ $support->parse_extra_options(
 	'loutredbname=s',
 	'vega_release=s',
 	'release_type=s',
-	'no_feature=s',
 	'add_chr=s',
 	'chr=s',
 	'ignore_chr=s',
@@ -122,7 +125,6 @@ $support->allowed_params(
 	$support->get_loutre_params,
 	'vega_release',
 	'release_type',
-	'no_feature',
 	'add_chr',
 	'chr',
 	'ignore_chr',
@@ -170,7 +172,7 @@ my $vdba = $support->get_database('ensembl');
 #my $vdba = $support->get_database('loutre');
 my $vsa  = $vdba->get_SliceAdaptor();
 my $vga  = $vdba->get_GeneAdaptor();
-#my $vata  = $vdba->get_AttributeAdaptor();
+my $vata  = $vdba->get_AttributeAdaptor();
 my $vpfa = $vdba->get_ProteinFeatureAdaptor;
 my $vaa  = $vdba->get_AnalysisAdaptor;
 my $vsfa = $vdba->get_SimpleFeatureAdaptor();
@@ -178,18 +180,34 @@ my $vmsa = $vdba->get_MiscSetAdaptor;
 my $vmfa = $vdba->get_MiscFeatureAdaptor();
 my $vdbh = $vdba->dbc->db_handle;
 
+#seq_region_attributes to transfer from loutre
+my $att_types = [qw(name toplevel ack vega_name)];
+
 #####################################
 # delete entries from previous runs #
 #####################################
 
-##hardcoded entries to not delete##
+#attrib_type.code that have not been transferred from the pipeline table
+my $attribs_to_delete = "('" . (join '\',\'',@{$att_types}) . "\')"; 
 
-#attrib_type.code from pipeline table
-my @pipeline_attributes = qw(chr description embl_acc embl_version htg intl_clone_name);
-my $attribs_to_keep = "('" . (join '\',\'',@pipeline_attributes) . "\')";
-#simple_feature details from pipeline
-my @pipeline_features = qw(CpG Eponine Fgenesh Genscan Augustus Halfwise RepeatMasker SubmitContig trf tRNAscan);
-my $features_to_keep =  "('" . (join '\',\'',@pipeline_features) . "\')";
+# get simple_features that were previously transferred from the pipeline db
+# (a backup table is used to store these the first tiem the script is run)
+my (%tabs);
+map { $_ =~ s/`//g; $tabs{$_} += 1; } $vdbh->tables;
+if (! exists ($tabs{'backup_simple_feature_names'})) {
+	$support->log("Creating table of simple_feature logic_names\n");
+	$vdbh->do("CREATE table backup_simple_feature_names
+               SELECT distinct(a.logic_name)
+               FROM   simple_feature sf, analysis a
+               WHERE  sf.analysis_id = a.analysis_id");
+
+}
+my $vsth = $vdbh->prepare(qq(
+               SELECT logic_name
+               FROM   backup_simple_feature_names));
+$vsth->execute;
+my $pipeline_features = $vsth->fetchall_arrayref;
+my $features_to_keep =  "('" . (join '\',\'',@{$pipeline_features}) . "\')";
 
 # do the deletions
 if ($support->param('prune') && $support->user_proceed("Do you want to delete all entries from  previous runs of this script?\n")) {
@@ -199,7 +217,6 @@ if ($support->param('prune') && $support->user_proceed("Do you want to delete al
     $vdbh->do(qq(DELETE FROM exon_transcript));
     $vdbh->do(qq(DELETE FROM gene));
     $vdbh->do(qq(DELETE FROM gene_stable_id));
-    $vdbh->do(qq(DELETE FROM protein_align_feature));
     $vdbh->do(qq(DELETE FROM protein_feature));
     $vdbh->do(qq(DELETE FROM transcript));
     $vdbh->do(qq(DELETE FROM transcript_stable_id));
@@ -219,7 +236,7 @@ if ($support->param('prune') && $support->user_proceed("Do you want to delete al
         DELETE sra
         FROM seq_region_attrib sra, attrib_type at
         WHERE sra.attrib_type_id = at.attrib_type_id
-        AND at.code NOT IN $attribs_to_keep
+        AND at.code IN $attribs_to_delete
     ));
 	$vdbh->do(qq(
         DELETE sf
@@ -230,7 +247,7 @@ if ($support->param('prune') && $support->user_proceed("Do you want to delete al
     $vdbh->do(qq(DELETE FROM misc_feature));
     $vdbh->do(qq(DELETE FROM misc_feature_misc_set));
     $vdbh->do(qq(DELETE FROM misc_set));
-    $support->log("Done.\n");
+    $support->log("Done deleting previous entries.\n");
 }
 
 ##################
@@ -483,15 +500,24 @@ foreach my $name (@chr_names_wanted) {
 	}
 	$support->log("Retrieved $c genes from chromosome $name\n",1);
 
-	#transfer simple features
+	#transfer other seq_region based features
 	if (! $support->param('dry_run')) {
 		if ($previous_seen) {
-			if ($support->user_proceed("Duplicate genes have been seen - are you sure you want to transfer simple_ and any misc_features?\n")) { 
+			if ($support->user_proceed("Duplicate genes have been seen - are you sure you want to proceed with transfer simple_features, seq_region_attributes etc?\n")) {	
+				
+				#transfer simple features 
 				&transfer_simple_features($lslice,$vslice);
+				
 				#transfer assembly_tag misc_features
 				if ($support->param('dump_assembly_tags')) {
 					&transfer_misc_features($lslice,$vslice,'atag');
-				}				
+				}
+				
+				#transfer seq_region_attributes
+				&transfer_sra($lslice,$vslice,$att_types);
+
+				#transfer contig_attribs
+				&transfer_contig_attribs($lslice,$vslice);
 			}
 		}
 		else {
@@ -499,21 +525,70 @@ foreach my $name (@chr_names_wanted) {
 			if ($support->param('dump_assembly_tags')) {
 				&transfer_misc_features($lslice,$vslice,'atag');
 			}
+			&transfer_sra($lslice,$vslice,$att_types);
+			&transfer_contig_attribs($lslice,$vslice);
 		}
 	}
+}
 
-	##clone remarks
+=head2 transfer_contig_attribs
 
-	##seq_region_attributes
+  Arg[1]      : Bio::Vega::Slice - Loutre source chromosome
+  Arg[2]      : Bio::Vega::Slice - Vega destination chromosome
+  ARG[3]      : arrayref of attrib_type.codes
+  Description : Transfers the contig attributes from Loutre contigs onto Vega ones
+  Return type : none
+  Exceptions  : none
+  Caller      : internal
+
+=cut
+
+sub transfer_contig_attribs {
+
+#needs to be written when api support is there
+
 }
 
 
-#thoughts for a finish_loutre script:
+=head2 transfer_sra
 
-##post conversion:##
-# need to convert gene.source -> gene.analysis_id
-# then gene.source -> 'Vega'
-# updating of the vega chr name occur
+  Arg[1]      : Bio::Vega::Slice - Loutre source chromosome
+  Arg[2]      : Bio::Vega::Slice - Vega destination chromosome
+  ARG[3]      : arrayref of attrib_type.codes
+  Description : Stores the seqregion attributes on a Loutre chromosome onto a Vega one
+  Return type : none
+  Exceptions  : none
+  Caller      : internal
+
+=cut
+
+sub transfer_sra {
+	my $lslice  = shift;
+	my $vslice  = shift;
+	my $types   = shift;
+	my $attribs;
+	my $c = 0;
+
+	foreach my $type (@{$types}) {
+		my $l_attributes = $lslice->get_all_Attributes($type);
+
+		#create a new attribute if necc; add attributes to feature
+		foreach my $l_attribute (@{$l_attributes}) {
+			$c++;
+			my $v_attribute = Bio::EnsEMBL::Attribute->new(
+				-NAME        => $l_attribute->name,
+				-CODE        => $l_attribute->code,
+				-VALUE       => $l_attribute->value,
+				-DESCRIPTION => $l_attribute->description,
+			);
+		push @{$attribs}, $v_attribute;
+		}
+	}
+	#store all features on this slice
+	$vata->store_on_Slice($vslice,$attribs);
+	$support->log("Transferred $c seq_region_attributes for chromosome ".$lslice->seq_region_name."\n",1);	
+}
+
 
 
 =head2 transfer_misc_features
@@ -857,8 +932,28 @@ sub create_vega_exon {
 sub constraints {
 	my $txt;
 	$txt=<<ENDOFTEXT;
-attrib_type           u      # should be identical to pipeline but check and add any entries / report conflicts
-#analysis              u      # might have to check this for other than Otter, don't know
+attrib_type                   u   # should be identical to pipeline but check and add any entries / report conflicts
+
+author                        s   #author_group info is not accurate so no point in parsing it
+gene_author                   s
+transcript_author             s
+author_group                  s
+evidence                      s   # will have to be fixed (ie removed from loutre) eventually but OK for now
+contig_attrib                 s
+contig_info                   s
+
+assembly_tagged_contig        i   #check with jgrg
+
+assembly_tag                  i   #fixed by CK
+
+contig_lock                   i   #check with jgrg
+exon_stable_id_pool           i   #check with jgrg
+gene_stable_id_pool           i   #check with jgrg
+sequence_note                 i   #check with jgrg
+sequence_set_access           i   #check with jgrg
+test_contig_info              i   #check with jgrg
+transcript_stable_id_pool     i   #check with jgrg
+translation_stable_id_pool    i   #check with jgrg
 
 
 ##filter on seq_region_id:
@@ -869,31 +964,11 @@ attrib_type           u      # should be identical to pipeline but check and add
 ##filter on attrib_type_id:
 #seq_region_attrib
 
-assembly_tag                  i   #fixed by CK
-
-author                        s   #author_group info is not accurate so no point in parsing it
-gene_author                   s
-transcript_author             s
-author_group                  s
-evidence                      s   # will have to be fixed (ie removed from loutre) eventually but OK for now
-
-assembly_tagged_contig         i   #check with jgrg
-contig_attrib                  i   #check with jgrg
-contig_info                    i   #check with jgrg
-contig_lock                    i   #check with jgrg
-exon_stable_id_pool            i   #check with jgrg
-gene_stable_id_pool            i   #check with jgrg
-sequence_note                  i   #check with jgrg
-sequence_set_access            i   #check with jgrg
-test_contig_info               i   #check with jgrg
-transcript_stable_id_pool      i   #check with jgrg
-translation_stable_id_pool     i   #check with jgrg
 
 
 ##these are tables have to be dealt with
 
 ##make sure the api does the following
-#gene: source converted to analysis_id
 #alt_allele
 #external_synonym
 
