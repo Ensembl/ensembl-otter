@@ -33,6 +33,12 @@ Options:
     --loutreuser=USER                   use loutre database username USER
     --loutrepass=PASS                   use loutre database password PASS
 
+    --dbname=NAME                       use Vega database NAME
+    --host=HOST                         use Vega database host HOST
+    --port=PORT                         use Vega database port PORT
+    --user=USER                         use Vega database username USER
+    --pass=PASS                         use Vega database password PASS
+
     --logfile, --log=FILE               log to FILE (default: *STDOUT)
     --logpath=PATH                      write logfile to PATH (default: .)
     -v, --verbose                       verbose logging (default: false)
