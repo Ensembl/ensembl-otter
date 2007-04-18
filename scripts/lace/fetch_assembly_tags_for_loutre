@@ -38,6 +38,7 @@ $help->() unless ( $dataset );
 my $client    = Bio::Otter::Lace::Defaults::make_Client();
 my $dset      = $client->get_DataSet_by_name($dataset);
 my $loutre_db = $dset->make_Vega_DBAdaptor;
+my $sliceAd   = $loutre_db->get_SliceAdaptor;
 my $mfeats    = [];
 my $mfeatAd   = $loutre_db->get_MiscFeatureAdaptor;
 
@@ -123,10 +124,10 @@ sub prepare_assembly_tag_data {
 		my $contig   = $sliceAd->fetch_by_region('contig', $contig_name);
 		my $seq_region_id = $sliceAd->get_seq_region_id($contig);
 
-		if ( $atagAd->check_seq_region_id_is_transferred($seq_region_id) ){
+		#if ( $atagAd->check_seq_region_id_is_transferred($seq_region_id) ){
 		  #print STDERR "$contig_name (srid $seq_region_id) is already transferred\n";
 		  #next;
-		}
+		#}
 
         my $dir      = $seq->analysis_directory;
         my $seq_ver  = $seq->sequence_version;
@@ -145,7 +146,7 @@ sub prepare_assembly_tag_data {
     }
   }
 
-  return $atags;
+  #return $atags;
 }
 
 sub parse_ace {
@@ -244,8 +245,8 @@ sub parse_ace {
 
   # log/info message
   if ( $info ) {
-    $info = "\n".$contig_name." => ".$acefile."\n".$info;
-    print $info if $verbose;
+    $info = $contig_name." => ".$acefile."\n".$info;
+    print "$info\n" if $verbose;
   } else {
     print "\nNOTE: ".$contig_name." => ".$acefile." (no assembly_tag data)\n" if $verbose;
   }
