@@ -1,0 +1,382 @@
+#!/usr/local/bin/perl
+
+=head1 NAME
+
+finish_vega_creation - script to tweak newly created vega database for attaching to a website
+
+=head1 SYNOPSIS
+
+finish_vega_creation [options]
+
+Options:
+
+    --conffile, --conf=FILE             read script parameters from FILE
+                                        (default: conf/Conversion.ini)
+
+    --dbname=NAME                       use Vega database NAME
+    --host=HOST                         use Vega database host HOST
+    --port=PORT                         use Vega database port PORT
+    --user=USER                         use Vega database username USER
+    --pass=PASS                         use Vega database password PASS
+
+    --vega_release=NUM                  vega release number
+    --release_type=STRING               type of release, ie External
+    --no_feature=BOOLEAN                choose to dump *align_features or not
+
+    --prune
+
+    --logfile, --log=FILE               log to FILE (default: *STDOUT)
+    --logpath=PATH                      write logfile to PATH (default: .)
+    -v, --verbose                       verbose logging (default: false)
+    -i, --interactive=0|1               run script interactively (default: true)
+    -n, --dry_run, --dry=0|1            don't write results to database
+    -h, --help, -?                      print help (this message)
+
+
+=head1 DESCRIPTION
+
+=head1 LICENCE
+
+This code is distributed under an Apache style licence:
+Please see http://www.ensembl.org/code_licence.html for details
+
+=head1 AUTHOR
+
+Steve Trevanion <st3@sanger.ac.uk>
+
+=head1 CONTACT
+
+Post questions to the EnsEMBL development list ensembl-dev@ebi.ac.uk
+
+=cut
+
+use strict;
+use warnings;
+no warnings 'uninitialized';
+
+use FindBin qw($Bin);
+use vars qw($SERVERROOT);
+
+BEGIN {
+    $SERVERROOT = "$Bin/../../../..";
+    unshift(@INC, "$SERVERROOT/ensembl-otter/modules");
+    unshift(@INC, "$SERVERROOT/ensembl/modules");
+    unshift(@INC, "$SERVERROOT/bioperl-live");
+}
+
+use Getopt::Long;
+use Pod::Usage;
+use Data::Dumper;
+use Bio::EnsEMBL::Utils::ConversionSupport;
+use POSIX qw(strftime);
+use Bio::EnsEMBL::Gene;
+use Bio::EnsEMBL::Transcript;
+use Bio::EnsEMBL::Exon;
+
+$| = 1;
+
+my $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
+
+# parse options
+$support->parse_common_options(@_);
+$support->parse_extra_options(
+	'vega_release=s',
+	'release_type=s',
+	'prune=s',
+);
+$support->allowed_params(
+	'vega_release',
+	'release_type',
+	'prune',
+	$support->get_common_params,
+);
+
+$support->check_required_params(
+	'vega_release',
+	'release_type',
+	'dbname',
+);
+if ($support->param('help') or $support->error) {
+    warn $support->error if $support->error;
+    pod2usage(1);
+}
+
+# ask user to confirm parameters to proceed
+$support->confirm_params;
+
+# get log filehandle and print heading and parameters to logfile
+$support->init_log;
+
+# connect to vega database and get adaptors
+my $vdba = $support->get_database('ensembl');
+my $vsa  = $vdba->get_SliceAdaptor();
+my $vaa  = $vdba->get_AnalysisAdaptor();
+my $vdbh = $vdba->dbc->db_handle;
+
+#get tables from database - if there are no backups of the originals make them
+my @tables = qw(coord_system meta seq_region analysis gene transcript);  
+my (%tabs);
+map { $_ =~ s/`//g; $tabs{$_} += 1; } $vdbh->tables;
+foreach my $name (@tables) {
+	my $backup_name = 'backup_original_'.$name;
+	if (! exists($tabs{$backup_name})) {
+		$vdbh->do("CREATE table $backup_name SELECT * from $name");
+	}
+}
+
+# undo changes from previous runs of this script
+if ($support->param('prune') && $support->user_proceed("\nDo you want to undo all changes from previous runs of this script?\n")) {
+	foreach my $name (@tables) {
+		my $backup_name = 'backup_original_'.$name;
+		if (exists($tabs{$backup_name})) {
+			$support->log("Resetting values for table $name\n");
+			$vdbh->do("DELETE from $name");
+			$vdbh->do("INSERT into $name SELECT * from $backup_name");	
+		}
+	}
+}
+
+########################################################################
+# patch analysis_ids of genes and transcripts according to gene.source #
+# also update the chromosome names to match the attrib_type            #
+########################################################################
+
+#make sure a case difference doesn't ever come back to haunt us later
+$vdbh->do("UPDATE analysis SET logic_name = \'otter\' WHERE logic_name = \'Otter\'");
+
+$support->log("Checking sources of genes...\n");
+
+#define the logic_name to use for each gene.source
+my %all_logic_names = (
+	'havana' => 'otter',
+	'WU'     => 'otter_external',
+	'JGI'    => 'otter_external',
+	#etc
+);
+
+#get all the logic names that are used
+my %used_logic_names;
+my $sth = $vdbh->prepare(qq(
+              SELECT distinct(source)
+              FROM gene));
+$sth->execute;
+my $new = 0;
+while (my ($source) = $sth->fetchrow_array) {
+	if (! exists($all_logic_names{$source})) {
+		$support->log_warning("You haven't defined the analysis.logic_name to use with genes of source $source, please fix\n");
+		$new = 1;
+	}
+	else {
+		$used_logic_names{$source} = $all_logic_names{$source};
+	}
+}
+exit if ($new);
+
+#add entries to analysis table
+foreach my $source (keys %used_logic_names) {
+    $support->log("Adding analysis object for source \'$used_logic_names{$source}\'\n");
+    my $analysis = new Bio::EnsEMBL::Analysis (
+        -program     => "finish_vega_creation",
+        -logic_name  => $used_logic_names{$source},
+    );
+	if (! $support->param('dry_run')) {
+		my $analysis_id = $vaa->store($analysis);
+		$support->log_error("Couldn't store analysis $used_logic_names{$source}\n") unless $analysis_id;
+	}
+}
+
+#SQL to update chromosome name
+$sth = $vdbh->prepare(qq(
+           UPDATE seq_region 
+           SET    name = ?
+           WHERE  seq_region_id = ?
+));
+
+#loop through chromosomes
+foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
+	my $loutre_name = $chrom->seq_region_name;
+	my $sr_id = $chrom->get_seq_region_id;
+	my $vega_name;
+    $support->log("\nRetrieving chromosome $loutre_name...\n");
+	my @vega_names = @{$chrom->get_all_Attributes('vega_name')};
+	if (scalar(@vega_names) > 1) {
+		$support->log_warning("Multiple vega_name attributes for loutre chromosome $loutre_name - ".(join ' ',@vega_names)."\n",1);
+	}
+	elsif (! @vega_names) {
+		$support->log_warning("No vega_name attribute for loutre chromosome $loutre_name\n",1);
+	}
+	else {
+		my $att = pop @vega_names;
+		$vega_name = $att->value;
+		$support->log("...patching name to $vega_name\n",1);
+		if (! $support->param('dry_run')) {
+			$sth->execute($vega_name,$sr_id);
+		}
+	}
+
+	$support->log("Patching analysis_ids for genes and transcripts on vega chromosome $vega_name...\n",1);
+
+	#SQL to update gene analysis_id
+ 	my $gsth = $vdbh->prepare(qq(
+                   UPDATE gene g, analysis a
+                   SET    g.analysis_id = a.analysis_id
+                   WHERE  g.gene_id = ?
+                   AND    a.logic_name = ?
+    ));
+
+	#SQL to update gene source
+ 	my $gssth = $vdbh->prepare(qq(
+                   UPDATE gene
+                   SET    source = ?
+                   WHERE  gene_id = ?
+    ));
+
+	#SQL to update transcript analysis_id
+ 	my $tsth = $vdbh->prepare(qq(
+                   UPDATE transcript t, gene g
+                   SET    t.analysis_id = g.analysis_id
+                   WHERE  t.gene_id = g.gene_id
+                   AND    t.transcript_id = ?
+    ));	
+
+	#loop through genes
+	foreach my $gene (@{$chrom->get_all_Genes()}) {
+		my $gsid = $gene->stable_id;
+		my $gid  = $gene->dbID;
+		my $old_source = $gene->source;
+		my $old_gln = $gene->analysis->logic_name;
+		my $new_ln = $used_logic_names{$old_source};
+
+		#set source to 'vega'
+		$support->log_verbose("Patching gene $gsid ($gid) source from \'$old_source\' to \'vega\'\n",2);
+		if (! $support->param('dry_run')) {
+			$gssth->execute('vega',$gid);
+		}
+
+		if ($new_ln ne $old_gln) {
+			$support->log_verbose("gene $gsid ($gid) logic_name patched from $old_gln to $new_ln\n",3);
+
+			#patch analysis_ids
+			if (! $support->param('dry_run')) {
+				$gsth->execute($gid,$new_ln);
+			}
+		}
+		else {
+			$support->log_verbose("Gene $gsid ($gid) logic name not changed\n",4);
+		}
+
+		#loop through transcripts
+		foreach my $trans (@{$gene->get_all_Transcripts()}){
+			my $tsid = $trans->stable_id;
+			my $tid  = $trans->dbID;
+			my $old_tln = $trans->analysis->logic_name;
+			if ($new_ln ne $old_tln) {
+				$support->log_verbose("Patching transcript $tsid ($tid) from $old_tln to $new_ln\n",4);
+
+				#patch analysis_ids
+				if (! $support->param('dry_run')) {
+					$tsth->execute($tid);
+				}
+			}
+			else {
+				$support->log_verbose("Transcript $tsid ($tid) logic name not changed\n",4);
+			}
+		}		
+	}
+}
+	
+##############
+# misc fixes #
+##############
+		
+my @sql_fixes;
+
+#check the coord_system table
+my $count = $vdbh->selectrow_array(qq(
+                SELECT count(*)
+				FROM   coord_system
+				WHERE   name = 'chromosome'));
+
+if (!$count) {
+	$support->log_warning("There are no chromosome coord_systems, which is seriously wrong!\n");
+	exit;
+}
+elsif ($count == 1) {
+	$support->log("Only one chromosome coord_system, no changes made to assembly\n");
+}
+# remove NCBI* coordinates as long as they're not in the seq_region table (which would represent a mistake)
+elsif ($count <= 3) {
+	my ($other_coord_version,$other_coord_id) = $vdbh->selectrow_array(qq(
+                                                    SELECT version, coord_system_id
+					                        		FROM   coord_system
+                      							    WHERE  version NOT IN ('Otter','Vega')));
+	if ($other_coord_version =~ /NCBI/) {
+		my $ncbi_used =  $vdbh->selectrow_array(qq(
+                             SELECT count(*) 
+                             FROM   seq_region
+                             WHERE  coord_system_id = $other_coord_id));
+		if (! $ncbi_used) {			
+			push @sql_fixes, "DELETE from coord_system WHERE coord_system_id = $other_coord_id;\n";
+		}
+		else {
+			$support->log_warning("slices with a coord_system.version of $other_coord_version are present in the seq_region table. This should not happen, please investigate\n");
+			exit;
+		}
+	}
+	elsif ($other_coord_version) {
+		$support->log_warning("There is an unexpected coord_system ($other_coord_version) - you need to investigate\n");
+		exit;
+	}
+
+	#if the Otter coord_system is actually used for the (longest) chromosome
+	#then rename it to Vega
+	my $chr_coord_id = $vdbh->selectrow_array(qq(
+                           SELECT coord_system_id 
+						   FROM   seq_region 
+						   ORDER  by length desc 
+						   LIMIT  1));
+	my $otter_coord_id = $vdbh->selectrow_array(qq(
+                             SELECT coord_system_id
+							 FROM   coord_system
+							 WHERE  version = 'Otter'));
+	if ($chr_coord_id == $otter_coord_id) {
+		$support->log("\nChanging assembly from \'Otter\' to \'VEGA\'\n");
+		push @sql_fixes, "DELETE from coord_system WHERE version = \'Vega\';\n";
+		push @sql_fixes, "UPDATE coord_system set version = \'VEGA\' WHERE version = \'Otter\';\n";
+		push @sql_fixes, "UPDATE coord_system set attrib = \'default_version\' WHERE version = \'VEGA\';\n";
+		push @sql_fixes, "UPDATE coord_system set rank = 1 WHERE version = \'VEGA\' and name = \'chromosome\';\n";
+		push @sql_fixes, "INSERT into meta (meta_key,meta_value) VALUES (\'assembly.default\',\'VEGA\');\n";
+		push @sql_fixes, "UPDATE meta set meta_value = \'chromosome:VEGA|contig\' WHERE meta_value = \'chromosome:Otter|contig\';\n";
+		push @sql_fixes, "UPDATE meta set meta_value = \'chromosome:VEGA|contig|clone\' WHERE meta_value = \'chromosome:Otter|contig|clone\';\n";	
+	}
+	else {
+		$support->log_warning("Otter assembly not used for longest chromosome in seq_region table - check what\'s going on\n");
+		exit;
+	}
+}
+else {
+	$support->log_warning("There is an unexpected number ($count) of chromosome coordinate systems - you need to investigate\n");
+	exit;
+}
+
+#add misc info to meta table
+my $date = strftime "%Y-%m", localtime;
+my $gene_build = $date.'-vega';
+push @sql_fixes, "INSERT ignore into meta (meta_key,meta_value) VALUES (\'genebuild.version\',\'$gene_build\');\n";
+
+#delete patch script entries
+push @sql_fixes, "DELETE from meta WHERE meta_key = \'patch\';\n";
+
+if (! $support->param('dry_run')) {
+	foreach my $fix (@sql_fixes) {
+		my $r = $vdbh->do("$fix");
+		$support->log_warning("Failed fix: $fix\n") if (!$r);
+		$support->log_warning("$fix - affected no rows at all\n") if ($r eq '0E0');
+	}
+}
+
+if ($support->param('dry_run')) {
+	$support->log("\nNo changes made to database since this is a dry run\n");
+}
+
+$support->finish_log;
