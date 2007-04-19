@@ -35,6 +35,19 @@ Options:
 
 =head1 DESCRIPTION
 
+This script does a number of jobs:
+- updates gene.analysis_id and transcript.analysis_id depending on gene.source
+- then updates gene.source -> 'vega'
+- sets seq_region.name for chromsomes to that defined by the seqregion_attrib 'vega_name'
+- removes unwanted prediction_transcripts (hardcoded)
+- tidies up coord_system and related tables (meta) - removes NCBI types, sets the default
+  to 'Vega' from 'Otter'
+- adds misc entries to meta
+
+The first time it is run it creates backup copies of the original tables; then when run
+subsequently with the -prune 1 option it restores these tables to their original state. Can
+therefore reset the table using a combination of -prune 1 -dry-run 1
+
 =head1 LICENCE
 
 This code is distributed under an Apache style licence:
@@ -111,10 +124,11 @@ $support->init_log;
 my $vdba = $support->get_database('ensembl');
 my $vsa  = $vdba->get_SliceAdaptor();
 my $vaa  = $vdba->get_AnalysisAdaptor();
+my $vpta = $vdba->get_PredictionTranscriptAdaptor();
 my $vdbh = $vdba->dbc->db_handle;
 
 #get tables from database - if there are no backups of the originals make them
-my @tables = qw(coord_system meta seq_region analysis gene transcript);  
+my @tables = qw(coord_system meta seq_region analysis gene transcript prediction_transcript prediction_exon);  
 my (%tabs);
 map { $_ =~ s/`//g; $tabs{$_} += 1; } $vdbh->tables;
 foreach my $name (@tables) {
@@ -138,7 +152,8 @@ if ($support->param('prune') && $support->user_proceed("\nDo you want to undo al
 
 ########################################################################
 # patch analysis_ids of genes and transcripts according to gene.source #
-# also update the chromosome names to match the attrib_type            #
+# also update the chromosome names to match the attrib_type and remove #
+# unwanted prediction transcripts
 ########################################################################
 
 #make sure a case difference doesn't ever come back to haunt us later
@@ -283,8 +298,15 @@ foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
 			}
 		}		
 	}
+
+	#remove unwanted prediction transcripts and prediction exons
+	foreach my $pred_trans (@{$slice->get_all_PredictionTranscripts()}){
+		if ($pred_trans->logic_name =~ /Fgenesh|Augustus_svar/i) {
+			$vpta->remove($pred_transcript);
+		}
+	}
 }
-	
+
 ##############
 # misc fixes #
 ##############
