@@ -22,7 +22,15 @@ files.Create needed directories
   mkdir 'species'/genes
   mkdir 'species'/contig_info
 
-2.1) Run Chao-Kung's script which creates a list
+2.1) Make sure hidden sequence set gets a row in seq_region_attribe:
+     select sr.*, sa.value from seq_region sr, seq_region_attrib sa 
+     where sr.seq_region_id=sa.seq_region_id and sa.attrib_type_id=129 and sa.value=0;
+
+     If not use /ensembl-otter/scripts/lace/transfer_hidden_attribute -old_dataset otter_dset_name \
+     -new_dataset loutre_dsname -code hidden -port 33999 -change to patch the data
+     NOTE: omit -change to preview the changes that will be make
+
+2.2) Run Chao-Kung's script which creates a list
 of the redundant gene_id's.
 
  ensembl-otter/scripts/lace/get_redundant_dbid_of_genesid \
@@ -89,9 +97,8 @@ loutre_'species' database
 7) load the dump_genes.out file to the
 loutre_'species' database like,
 
-  ensembl-otter/scripts/load_new_otter -dbhost otterlive -dbport 3301 -dbpass \
-    lutralutra -dbuser ottadmin -dbname loutre_'species' \
-    -file /mysql/otter-live-master/otter/loutre_load/'species'/genes/dump_genes.out \
+  ensembl-otter/scripts/lace/load_new_otter -dataset ns_'species' \
+     /mysql/otter-live-master/otter/loutre_load/'species'/genes/dump_genes.out \
     >> load_genes.log 2>> load_error.log
 
 7.1)
