@@ -94,20 +94,14 @@ my $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
 # parse options
 $support->parse_common_options(@_);
 $support->parse_extra_options(
-	'vega_release=s',
-	'release_type=s',
 	'prune=s',
 );
 $support->allowed_params(
-	'vega_release',
-	'release_type',
 	'prune',
 	$support->get_common_params,
 );
 
 $support->check_required_params(
-	'vega_release',
-	'release_type',
 	'dbname',
 );
 if ($support->param('help') or $support->error) {
