@@ -5,7 +5,6 @@ use warnings;
 use Exporter;
 use X11::XRemote;
 use XML::Simple;
-use POSIX qw(:signal_h :sys_wait_h);
 
 
 our @ISA    = qw(Exporter);
@@ -24,9 +23,7 @@ our @EXPORT_OK = qw(xclient_with_id
                     list_xclient_names
                     delete_xclient_with_id
                     delete_xclient_with_name
-                    flush_bad_windows
                     fork_exec
-                    reset_sigCHLD
                     );
 our %EXPORT_TAGS = ('caching' => [@EXPORT_OK],
                     'all'     => [@EXPORT, @EXPORT_OK]
@@ -138,7 +135,6 @@ sub xml_escape{
     my $CACHED_CLIENTS = {
         #'0x000000' => ['<X11::XRemote>', 'name', 'scope']
     };
-    my $AUTO_INCREMENT = 0;
 
 =head1 FUNCTIONS TO CACHE CLIENTS
 
@@ -148,21 +144,6 @@ sub xml_escape{
 
 =back
 
-=head2 xclient_with_id(id)
-
-return the xclient with specified id, creating if necessary.
-
-=cut
-
-    sub xclient_with_id{
-        my ($id) = @_;
-
-        # user can't use a name for some reason, lets make one up
-        my $name = __PACKAGE__ . $AUTO_INCREMENT++;
-
-        return xclient_with_name($name, $id);
-    }
-
 =head2 xclient_with_name(name, [id])
 
 return the xclient with specified name, creating if id supplied.
@@ -171,6 +152,11 @@ return the xclient with specified name, creating if id supplied.
 
     sub xclient_with_name{
         my ($name, $id, $scope) = @_;
+        
+        use Carp 'cluck';  cluck;
+        use Data::Dumper;
+        print STDERR Dumper($CACHED_CLIENTS);
+        
         $scope ||= __FILE__;
 
         if(!$id){
@@ -181,11 +167,10 @@ return the xclient with specified name, creating if id supplied.
             if(my ($cachedid) = grep { $CACHED_CLIENTS->{$_}->[1] eq $name &&
                                        $CACHED_CLIENTS->{$_}->[2] eq $scope } keys %$CACHED_CLIENTS){
                 unless($id eq $cachedid){
-                    warn "We've already got name $name with id $cachedid".
-                        " cannot add id $id, try delete_xclient_with_id($cachedid) first\n";
-                    warn "However, we'll do the delete_xclient_with_id($cachedid) for you\n";
-                    delete_xclient_with_id($cachedid);
-                    #return undef;
+                    warn "name '$name' is curently linked to id '$cachedid'\n",
+                        "deleting xclient with id = '$id'\n";
+                    delete_xclient_with_id($id);
+                    return undef;
                 }
             }
         }
@@ -212,7 +197,6 @@ return the xclient with specified name, creating if id supplied.
     sub list_xclient_names{
         my ($scope) = @_;
         $scope ||= __FILE__;
-        flush_bad_windows();
         my @list = ();
         foreach my $obj_name(values(%$CACHED_CLIENTS)){
             next if $obj_name->[0]->_is_server();
@@ -225,6 +209,7 @@ return the xclient with specified name, creating if id supplied.
     sub list_xclient_ids{
         return keys %$CACHED_CLIENTS;
     }
+
 
 =over 5
 
@@ -253,91 +238,23 @@ remove the xclient with specified name.
         my ($id) = grep { $CACHED_CLIENTS->{$_}->[1] eq $name } keys %$CACHED_CLIENTS;
         delete_xclient_with_id($id);
     }
-
-    sub flush_bad_windows{
-        foreach my $id(keys %$CACHED_CLIENTS){
-            my $obj = xclient_with_id($id);
-            $obj->ping || delete_xclient_with_id($id);
-        }
-    }
 }
 
-{
-    # so we can continue to catch sigCHLD 
-    # and also provide this clean up to reset sigCHLD
-    my $REAPER_REF = undef;
-
-    sub reset_sigCHLD{
-        $$REAPER_REF = undef;
-        if ($SIG{CHLD}){
-            $SIG{CHLD} = 'DEFAULT';
-        }
-    }
-
-    sub fork_exec{
-        my ($command, $children, $filenos, $cleanup) = @_;
-
-        my @command = (ref($command) eq 'ARRAY' ? @$command : ());
-        return unless @command;
-
-        $children ||= {};
-        $cleanup  = (ref($cleanup) eq 'CODE' ? $cleanup : sub {warn "child: cleaning up..." if $DEBUG_FORK_EXEC});
-
-        my $REAPER = sub {
-            my ($child, $continue) = (0,1);
-            # If a second child dies while in the signal handler caused by the
-            # first death, we won't get another signal. So must loop here else
-            # we will leave the unreaped child as a zombie. And the next time
-            # two children die we get another zombie. And so on.
-            while (($child = waitpid(-1,WNOHANG)) > 0) {
-                $children->{$child}->{'CHILD_ERROR'} = $?;
-                $children->{$child}->{'ERRNO'} = $!;
-                #$children->{$child}->{'ERRNO_HASH'} = \%!;
-                $children->{$child}->{'EXTENDED_OS_ERROR'} = $^E;
-                #$children->{$child}->{'ENV'} = \%ENV;
-                eval { $cleanup->($children) } if WIFEXITED($?);
-                if ($@){ 
-                    warn "$cleanup->($child) Error, will reset SIGCHLD: $@"; 
-                    $continue = 0; 
-                }
-            }
-            #$SIG{CHLD} = \&REAPER;    # THIS DOESN'T WORK
-            $SIG{CHLD} = $$REAPER_REF; # ODD BUT THIS DOES....still loathe sysV
-            reset_sigCHLD() unless $continue;
-        };
-        $REAPER_REF = \$REAPER;
-        $SIG{CHLD} = $REAPER;
-        my $pid;
-        if($pid = fork){
-            warn "parent: fork() succeeded\n" if $DEBUG_FORK_EXEC;
-            $children->{$pid}->{'ARGV'} = "@command";
-            $children->{$pid}->{'PID'}  = $pid;
-        }elsif($pid == 0){
-            my $closeSTDIN  = ($filenos & 1);
-            my $closeSTDOUT = ($filenos & (fileno(STDOUT) << 1));
-            my $closeSTDERR = ($filenos & (fileno(STDERR) << 1));
-            if($DEBUG_FORK_EXEC){
-                warn "child: PID = '$$'\n";
-                warn "child: closing FILEHANDLES:" 
-                    . join(", ",( $closeSTDIN?'STDIN':'')
-                           , ( $closeSTDOUT?'STDOUT':'')
-                           , ( $closeSTDERR?'STDERR':''))
-                    . "\n";
-            }
-            close(STDIN)  if $closeSTDIN;
-            close(STDOUT) if $closeSTDOUT;
-            close(STDERR) if $closeSTDERR;
-            { exec @command; }
-            # HAVE to use CORE::exit as tk redefines it!!!
-            warn "child: exec '@command' FAILED\n ** ERRNO $!\n ** CHILD_ERROR $?\n";
-            CORE::exit(); 
-            # circular and lexicals don't get cleaned up though
-            # global destruction cleans them up for us...
-            # As we're exiting I don't think we care though
-        }else{
-            return undef;
-        }
+sub fork_exec {
+    my ($command) = @_;
+    
+    if (my $pid = fork) {
+        #$SIG{'CHLD'} = 'IGNORE';
         return $pid;
+    }
+    elsif (defined $pid) {
+    
+        exec @$command;
+        warn "exec(@$command) failed : $!";
+        CORE::exit();
+    }
+    else {
+        die "fork failed: $!";
     }
 }
 

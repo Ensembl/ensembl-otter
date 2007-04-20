@@ -970,9 +970,6 @@ sub save_data {
             $self->update_ace_display($$ace_data_ref);
             # resync here!
             $self->resync_with_db;
-            
-            ### Restarts even if not yet launched!
-            #$self->zMapLaunchZmap if $self->show_zmap;
         }
     };
     my $err = $@;
@@ -2011,7 +2008,6 @@ sub DESTROY {
 
     if($self->__hasEverZMap){
         $self->zMapKillZmap() if $self->can('zMapKillZmap');
-        ZMap::ConnectUtils::flush_bad_windows();
     }
 
     $self->drop_AceDatabase;

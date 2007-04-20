@@ -149,13 +149,8 @@ sub _launchZMap{
         }
     }
 
-    sleep(2);
-    my $ref = Hum::Ace::LocalServer::full_child_info();
-    my $pid = fork_exec(\@e, $ref, 0, sub { 
-        my ($info) = @_;
-        flush_bad_windows();
-        warn "INFO: ", Dumper($info);
-    });
+    sleep(2);   ### Why?
+    my $pid = fork_exec(\@e);
 
     if($pid){
         $self->zMapProcessIDList($pid);
@@ -196,8 +191,8 @@ sub zMapRelaunchZMap{
 sub zMapKillZmap {
     my( $self, $relaunch ) = @_;
     
+    ### We're only using the pid as marker for zmap having been started
     if (my $pid = $self->zMapProcessIDList) {
-        flush_bad_windows();
         my $mainWindowName = 'ZMap port #' . $self->AceDatabase->ace_server->port;
         my $xr = xclient_with_name($mainWindowName, 0, "$self")
             or return 0;
@@ -206,10 +201,11 @@ sub zMapKillZmap {
 
         $xr->send_commands('<zmap action="shutdown" />');
         
+        warn sprintf "About to delete client %s", $xr->window_id;
         delete_xclient_with_id($xr->window_id());
         
         ### Check shutdown by checking property set by ZMap?
-
+        
         return 1;
     }
     return 0;
