@@ -2,11 +2,11 @@
 
 =head1 NAME
 
-delete_redundant_vega_tables.pl - delete non-ensembl tables from a Vega db
+compare_databases - compare tables and entries in tables between two databases
 
 =head1 SYNOPSIS
 
-delete_redundant_vega_tables.pl [options]
+compare_databases [options]
 
 General options:
     --conffile, --conf=FILE             read parameters from FILE
@@ -26,18 +26,13 @@ General options:
 
 Specific options:
 
-	  --masterhost=HOST                 master schema host
-   	  --masterport=PORT                 master schema port
-	  --masteruser=USER                 master schema user
-	  --masterpass=PASS                 master schema pass
-	  --masterdbname=NAME               master schema name
+	  --anotherdbname=NAME              master schema name
 
 =head1 DESCRIPTION
 
-Use this script to remove all non-ensembl tables from a vega database prior to release.
-It will also check that all ensembl tables are indeed present. It does this by comparison
-with a master schema database - if this doesn't exist one can easily be created using
-/ensembl/sql/table.sql
+Use this script to compare two databases. Simply compares each table, reporting the presence /
+abscence of a particular table, or any differences in the number of entries in the same table
+in the two databases.
 
 =head1 LICENCE
 
@@ -84,6 +79,14 @@ $support->parse_extra_options(
 $support->allowed_params(
 	$support->get_common_params,
 	'anotherdbname',
+);
+
+$support->check_required_params(
+	'anotherdbname',
+	'dbname',
+	'host',
+	'pass',
+	'port',
 );
 
 if ($support->param('help') or $support->error) {
