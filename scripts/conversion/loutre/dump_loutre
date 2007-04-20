@@ -221,13 +221,15 @@ if (! exists ($tabs{'backup_simple_feature_names'})) {
                FROM   simple_feature sf, analysis a
                WHERE  sf.analysis_id = a.analysis_id");
 }
-
+my @pipeline_features;
 my $vsth = $vdbh->prepare(qq(
                SELECT logic_name
                FROM   backup_simple_feature_names));
 $vsth->execute;
-my $pipeline_features = $vsth->fetchall_arrayref;
-my $features_to_keep =  "('" . (join '\',\'',@{$pipeline_features}) . "\')";
+while (my ($logic_name) = $vsth->fetchrow_array) {
+	push @pipeline_features, $logic_name;
+}
+my $features_to_keep =  "('" . (join '\',\'',@pipeline_features) . "\')";
 
 # do the deletions
 if ($support->param('prune') && $support->user_proceed("\nDo you want to delete all entries from all previous runs of this script?")) {
