@@ -50,12 +50,12 @@ whereas 'add_chr' is used to specify chromosomes to add to existing loutre dump.
 of these the script examines the loutre database to see which chromosomes should be dumped (according to what
 was set by the prepare_loutre script).
 
-When the 'ignore_chr' option is used, loutre is examined to see which chromoseomes shuld be dumped, and then
+When the 'ignore_chr' option is used, loutre is examined to see which chromosomes shuld be dumped, and then
 those specified are removed from that list.
 
 **seq_region_attribs to be transferred from loutre are also hardcoded
 
-The -prune 1 option can be used to remove all entries from previous runs of this script
+The -prune 1 option can be used to remove all entries from all previous runs of this script
 
 
 To Do:
@@ -89,6 +89,7 @@ BEGIN {
     $SERVERROOT = "$Bin/../../../..";
     unshift(@INC, "$SERVERROOT/ensembl-otter/modules");
     unshift(@INC, "$SERVERROOT/ensembl/modules");
+	unshift(@INC, "modules");
     unshift(@INC, "$SERVERROOT/bioperl-live");
 }
 
@@ -96,6 +97,7 @@ use Getopt::Long;
 use Pod::Usage;
 use Data::Dumper;
 use Bio::EnsEMBL::Utils::ConversionSupport;
+use Slice;
 
 use Bio::EnsEMBL::Gene;
 use Bio::EnsEMBL::Transcript;
@@ -153,6 +155,12 @@ $support->confirm_params;
 # get log filehandle and print heading and parameters to logfile
 $support->init_log;
 
+#sanity check 1
+if ($support->param('add_chr') && $support->param('ignore_chr') ) {
+	$support->log_warning("This script cannot use both \'add_chr\' and \'ignore_chr\' options. Please fix. Exiting.\n");
+	exit;
+}
+
 #info for MySQL dumping
 #character set
 my $character_set='latin1';
@@ -183,6 +191,18 @@ my $vdbh = $vdba->dbc->db_handle;
 #seq_region_attributes to transfer from loutre
 my $att_types = [qw(name toplevel ack vega_name)];
 
+#sanity check 2
+if ($support->param('chr') || $support->param('ignore_chr') ) {
+	my ($count) = $vdbh->selectrow_array(
+		qq(select count(*)
+           from gene)
+	);
+	if ($count) {
+		$support->log_warning("There are already genes in this Vega database so you cannot use \'chr\' or \'ignore_chr\' - your only option is to use 'add_chr'. Exiting.\n");
+		exit;
+	}
+}
+
 #####################################
 # delete entries from previous runs #
 #####################################
@@ -195,13 +215,13 @@ my $attribs_to_delete = "('" . (join '\',\'',@{$att_types}) . "\')";
 my (%tabs);
 map { $_ =~ s/`//g; $tabs{$_} += 1; } $vdbh->tables;
 if (! exists ($tabs{'backup_simple_feature_names'})) {
-	$support->log("Creating table of simple_feature logic_names\n");
+	$support->log_verbose("Creating table of simple_feature logic_names\n\n");
 	$vdbh->do("CREATE table backup_simple_feature_names
                SELECT distinct(a.logic_name)
                FROM   simple_feature sf, analysis a
                WHERE  sf.analysis_id = a.analysis_id");
-
 }
+
 my $vsth = $vdbh->prepare(qq(
                SELECT logic_name
                FROM   backup_simple_feature_names));
@@ -210,7 +230,7 @@ my $pipeline_features = $vsth->fetchall_arrayref;
 my $features_to_keep =  "('" . (join '\',\'',@{$pipeline_features}) . "\')";
 
 # do the deletions
-if ($support->param('prune') && $support->user_proceed("Do you want to delete all entries from  previous runs of this script?\n")) {
+if ($support->param('prune') && $support->user_proceed("\nDo you want to delete all entries from all previous runs of this script?")) {
     $support->log("Deleting db entries from previous runs of this script...\n");
     $vdbh->do(qq(DELETE FROM exon));
     $vdbh->do(qq(DELETE FROM exon_stable_id));
@@ -247,6 +267,7 @@ if ($support->param('prune') && $support->user_proceed("Do you want to delete al
     $vdbh->do(qq(DELETE FROM misc_feature));
     $vdbh->do(qq(DELETE FROM misc_feature_misc_set));
     $vdbh->do(qq(DELETE FROM misc_set));
+	$vdbh->do(qq(DELETE FROM misc_attrib));
     $support->log("Done deleting previous entries.\n");
 }
 
@@ -314,43 +335,44 @@ while (my ($name,$group1,$group2,$group_email) = $lsth->fetchrow_array ) {
 #(ie that made by dumping from pipeline)
 
 #check HEREDOC definition
-my $c = $constraints{'attrib_type'};
-if (shift @$c ne 'u') {
-	if (! $support->user_proceed("You haven't defined that the attrib_type table be checked and updated. Is that really correct ?\n")){
-		exit;
+if (! $support->param('add_chr') ) {
+	my $c = $constraints{'attrib_type'};
+	if (shift @$c ne 'u') {
+		if (! $support->user_proceed("You haven't defined that the attrib_type table be checked and updated. Is that really correct ?\n")){
+			exit;
+		}
 	}
-}
-else {
-	my $vsth = $vdbh->prepare(qq(select attrib_type_id, code from attrib_type));
-	$vsth->execute;
-	my (%v_attrib_codes,%v_attrib_ids);
-	while (my ($id,$code) = $vsth->fetchrow_array) {
-		$v_attrib_codes{$id} = $code;
-		$v_attrib_ids{$code} = $id
-	}
-	my $lsth = $ldbh->prepare(qq(select * from attrib_type));
-	$lsth->execute;
-	while (my ($id,$code,$name,$desc) = $lsth->fetchrow_array) {
-		#is this entry completely missing from Vega ?
-		if (! grep { $code eq $_} keys %v_attrib_ids) {
-			if (! grep { $id eq $_} keys %v_attrib_codes) {
-				my $r = $vdbh->do(
-					qq(insert into attrib_type
+	else {
+		my $vsth = $vdbh->prepare(qq(select attrib_type_id, code from attrib_type));
+		$vsth->execute;
+		my (%v_attrib_codes,%v_attrib_ids);
+		while (my ($id,$code) = $vsth->fetchrow_array) {
+			$v_attrib_codes{$id} = $code;
+			$v_attrib_ids{$code} = $id
+		}
+		my $lsth = $ldbh->prepare(qq(select * from attrib_type));
+		$lsth->execute;
+		while (my ($id,$code,$name,$desc) = $lsth->fetchrow_array) {
+			#is this entry completely missing from Vega ?
+			if (! grep { $code eq $_} keys %v_attrib_ids) {
+				if (! grep { $id eq $_} keys %v_attrib_codes) {
+					my $r = $vdbh->do(
+						qq(insert into attrib_type
                    values (?,?,?,?)),
-						{},
-					($id,$name,$code,$desc)
-				);
-				unless ($support->param('dry_run')) {
-					$support->log("Inserted attrib_type_id $id, code $code into vega database\n");
+							{},
+						($id,$name,$code,$desc)
+					);
+					unless ($support->param('dry_run')) {
+						$support->log("Inserted attrib_type_id $id, code $code into vega database\n");
+					}
 				}
 			}
-		}
-		elsif ($v_attrib_ids{$code} ne $id) {
-			$support->log_warning("attrib_type.code $code has a different attrib_type_id in vega (".$v_attrib_ids{$code}.") and loutre ($id). Please fix before continuing");
+			elsif ($v_attrib_ids{$code} ne $id) {
+				$support->log_warning("attrib_type.code $code has a different attrib_type_id in vega (".$v_attrib_ids{$code}.") and loutre ($id). Please fix before continuing\n");
+			}
 		}
 	}
 }
-
 ###################################################################
 # create extra tables from loutre using MySQLdump direct transfer #
 ###################################################################
@@ -414,53 +436,24 @@ if (! $support->param('add_chr')) {
 # do the real work and copy the genes and other features across #
 #################################################################
 
-#get non-hidden chromosomes from loutre
-my $chroms = $support->fetch_non_hidden_slice($laa,$lsa);
-
-#identify non-hidden chromosomes that have correct attributes for export mode and release number, or take from the add_chr list
-
-#(this code is copied exactly from dump_pipeline)
-
-my @chr_names_wanted;
-my $export_mode = $support->param('release_type');
-my $release = $support->param('vega_release');
+#get chromosomes, either from a user defined list, or non-hidden ones with the correct attributes for export mode and release number
+my $chr_names_wanted;
 if ($support->param('chr')) {
-	@chr_names_wanted = $support->param('chr');
+	$chr_names_wanted = [ $support->param('chr') ];
 }
 elsif ($support->param('add_chr')) {
-	@chr_names_wanted = $support->param('add_chr');
+	$chr_names_wanted = [ $support->param('add_chr') ];
 }
 else {
- CHROM:
-	foreach my $chrom (@$chroms) {
-		my $attribs = $laa->fetch_all_by_Slice($chrom);
-		my $vals = $support->get_attrib_values($attribs,'vega_export_mod');
-		if (scalar(@$vals > 1)) {
-			$support->log_warning ("Multiple attribs for \'vega_export_mod\', please fix before continuing");
-			exit;
-		}
-		next CHROM if (! grep { $_ eq $export_mode} @$vals);
-		$vals =  $support->get_attrib_values($attribs,'vega_release',$release);	
-		if (scalar(@$vals > 1)) {
-			$support->log_warning ("Multiple attribs for \'vega_release\' value = $release , please fix before continuing");
-			exit;
-		}
-		next CHROM if (! grep { $_ eq $release} @$vals);
-		my $name = $chrom->seq_region_name;
-		if (my @ignored = $support->param('ignore_chr')) {
-			next CHROM if (grep {$_ eq $name} @ignored);
-		}
-		push @chr_names_wanted, $name;
-	}
-
+	$chr_names_wanted = &Slice::get_wanted_chromosomes($support,$laa,$lsa);
 }
 
-my $seq_regions = join "\n", @chr_names_wanted; 
-if (! $support->user_proceed("Annotation on the following seq_regions will be dumped from loutre, proceed ?\n\n$seq_regions\n")) {
+my $seq_regions = join "\n", @{$chr_names_wanted}; 
+if (! $support->user_proceed("\nAnnotation on the following seq_regions will be dumped from loutre, proceed ?\n$seq_regions")) {
 	exit;
 }
 
-foreach my $name (@chr_names_wanted) {
+foreach my $name (@{$chr_names_wanted}) {
 	my $lslice = $lsa->fetch_by_region('chromosome',$name,undef,undef,undef,'Otter');
 	my $vslice = $vsa->fetch_by_region('chromosome',$name,undef,undef,undef,'Otter');
 	$support->log("Looking at Chromosome $name...\n");
@@ -503,7 +496,7 @@ foreach my $name (@chr_names_wanted) {
 	#transfer other seq_region based features
 	if (! $support->param('dry_run')) {
 		if ($previous_seen) {
-			if ($support->user_proceed("Duplicate genes have been seen - are you sure you want to proceed with transfer simple_features, seq_region_attributes etc?\n")) {	
+			if ($support->user_proceed("Duplicate genes have been seen - are you sure you want to proceed with transferring simple_features, seq_region_attributes etc?\n")) {	
 				
 				#transfer simple features 
 				&transfer_simple_features($lslice,$vslice);

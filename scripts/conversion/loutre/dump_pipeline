@@ -67,11 +67,11 @@ previously in the loutre database using another script - prepare_loutre.
 Transfer of features from the dna_ and protein_align_feature tables can be prevented using
 the -no_feature option
 
-The 'add_chr' option specifies a comma separated list of chromosomes to add - uses just insert
-MySQL commands without any create table statments
-
-The 'ignore_chr' option specifies a comma separated list of chromosomes to ignore - this does use
-create table statements
+The 'add_chr' option specifies a comma separated list of chromosomes to add to an existing
+database - uses just insert MySQL commands without any create table statments. In contrast
+the 'chr' option manually defines a set of chromosomes to dump, ignoring the attributes set by
+prepare_loutre, and uses create table statements. The 'ignore_chr' option specifies a comma
+separated list of chromosomes to ignore - this does use create table statements.
 
 =head1 LICENCE
 
@@ -100,6 +100,7 @@ BEGIN {
     $SERVERROOT = "$Bin/../../../..";
     unshift(@INC, "$SERVERROOT/ensembl-otter/modules");
     unshift(@INC, "$SERVERROOT/ensembl/modules");
+    unshift(@INC, "modules");
     unshift(@INC, "$SERVERROOT/bioperl-live");
 }
 
@@ -107,6 +108,7 @@ use Getopt::Long;
 use Pod::Usage;
 use Data::Dumper;
 use Bio::EnsEMBL::Utils::ConversionSupport;
+use Slice;
 
 $| = 1;
 
@@ -119,16 +121,13 @@ $support->parse_extra_options(
 	'pipehost=s',
 	'pipeport=s',
 	'pipeuser=s',
-	'loutrehost=s',
-	'loutreport=s',
-	'loutreuser=s',
-	'loutrepass=s',
-	'loutredbname=s',
+	$support->get_loutre_params,
 	'vega_release=s',
 	'release_type=s',
 	'no_feature=s',
 	'add_chr=s',
 	'ignore_chr=s',
+	'chr=s',
 	'sql_dump_location=s',
 	'file_name=s',
 );
@@ -143,11 +142,11 @@ $support->allowed_params(
 	'no_feature',
 	'add_chr',
 	'ignore_chr',
+	'chr',
 	'sql_dump_location',
 	'file_name',
 	$support->get_common_params,
 );
-
 $support->check_required_params(
 	'pipedbname',
 	'pipehost',
@@ -166,9 +165,11 @@ if ($support->param('help') or $support->error) {
 
 $support->comma_to_list('add_chr');
 $support->comma_to_list('ignore_chr');
+$support->comma_to_list('chr');
 
 # ask user to confirm parameters to proceed
 $support->confirm_params;
+
 # get log filehandle and print heading and parameters to logfile
 $support->init_log;
 
@@ -197,46 +198,25 @@ my $paa  = $pdba->get_AttributeAdaptor();
 my $pdbh = $pdba->dbc->db_handle;
 
 # connect to loutre database and get adaptors
-my $dba = $support->get_database('loutre','loutre');
-my $sa = $dba->get_SliceAdaptor();
-my $aa = $dba->get_AttributeAdaptor();
+my $ldba = $support->get_database('loutre','loutre');
+my $lsa  = $ldba->get_SliceAdaptor();
+my $laa  = $ldba->get_AttributeAdaptor();
 
-#get non-hidden chromosomes from loutre
-my $chroms = $support->fetch_non_hidden_slice($aa,$sa);
-
-#identify non-hidden chromosomes that have correct
-#attributes for export mode and release number, or take from the add_chr list
-my @chr_names_wanted;
+#get chromosomes, either from a user defined list, or non-hidden ones with the correct attributes for export mode and release number
+my $chr_names_wanted;
 my $export_mode = $support->param('release_type');
 my $release = $support->param('vega_release');
-if (! $support->param('add_chr')) {
- CHROM:
-	foreach my $chrom (@$chroms) {
-		my $attribs = $aa->fetch_all_by_Slice($chrom);
-		my $vals = $support->get_attrib_values($attribs,'vega_export_mod');
-		if (scalar(@$vals > 1)) {
-			$support->log_warning ("Multiple attribs for \'vega_export_mod\', please fix before continuing");
-			exit;
-		}
-		next CHROM if (! grep { $_ eq $export_mode} @$vals);
-		$vals =  $support->get_attrib_values($attribs,'vega_release',$release);	
-		if (scalar(@$vals > 1)) {
-			$support->log_warning ("Multiple attribs for \'vega_release\' value = $release , please fix before continuing");
-			exit;
-		}
-		next CHROM if (! grep { $_ eq $release} @$vals);
-		my $name = $chrom->seq_region_name;
-		if (my @ignored = $support->param('ignore_chr')) {
-			next CHROM if (grep {$_ eq $name} @ignored);
-		}
-		push @chr_names_wanted, $name;
-	}
+if ($support->param('chr')) {
+	$chr_names_wanted = [ $support->param('chr') ];
+}
+elsif ($support->param('add_chr')) {
+	$chr_names_wanted = [ $support->param('add_chr') ];
 }
 else {
-	@chr_names_wanted = $support->param('add_chr');
+	$chr_names_wanted = &Slice::get_wanted_chromosomes($support,$laa,$lsa);
 }
 
-my $seq_regions = join "\n", @chr_names_wanted; 
+my $seq_regions = join "\n", @{$chr_names_wanted}; 
 if (! $support->user_proceed("The following seq_region names will be dumped from the pipeline database, proceed ?\n\n$seq_regions\n")) {
 	exit;
 }
@@ -271,7 +251,7 @@ my ($no_tot_clone)= $pdbh->selectrow_array(qq
 ));
 my $no_clone = 0;
 
-my $chr_ids = "('" . (join "','", @chr_names_wanted) . "')";
+my $chr_ids = "('" . (join "','", @{$chr_names_wanted}) . "')";
 
 #store seq_region_ids here
 my %seqregions;
@@ -334,10 +314,10 @@ my %sets;
 # meta_coord - tables that have entries in meta_coord [must exclude gene,transcript,exon]
 # also create seq_region entries for each of these tables
 my $gtn = $pdbh->prepare(qq(
-    select mc.table_name, cs.name
-    from meta_coord mc, coord_system cs
-    where mc.coord_system_id = cs.coord_system_id
-    ));
+              SELECT mc.table_name, cs.name
+              FROM   meta_coord mc, coord_system cs
+              WHERE  mc.coord_system_id = cs.coord_system_id
+          ));
 $gtn->execute();
 my $n  = 0;
 my $na = 0;
@@ -358,8 +338,8 @@ $support->log("$n table_name entries out of $na accepted from meta_coord\n",1);
 # analysis, *_align_features [must be non raw types]
 # and simple_feature [exclude *_align_feature coverage features]
 $gtn = $pdbh->prepare(qq(
-    select distinct analysis_id,logic_name
-    from analysis
+           SELECT distinct analysis_id,logic_name
+           FROM analysis
     ));
 $gtn->execute();
 $n = 0;
@@ -368,7 +348,8 @@ $na = 0;
 my $ln = "\n\t";
 while (my ($analysis_id,$logic_name) = $gtn->fetchrow){
     $na++;
-    next if($logic_name=~/\_raw$/);
+	#exclude for align_features
+    next if ($logic_name=~/\_raw$/);
     $n++;
 	foreach my $t qw(analysis protein_align_feature dna_align_feature) {
 		push @{$sets{$t}{'analysis_id'}}, $analysis_id;
@@ -380,7 +361,7 @@ while (my ($analysis_id,$logic_name) = $gtn->fetchrow){
 }
 $support->log("$n analysis_id entries out of $na accepted (analysis protein_align_feature dna_align_feature)\n",1);
 $support->log("$n2 analysis_id_sf entries out of $na accepted from analysis\n",1);
-$support->log("logicnames for simple_feature are:$ln\n",1);
+$support->log("logicnames for simple_feature and prediction_transcript are:$ln\n",1);
 
 #seq_region_attributes
 $gtn = $pdbh->prepare(qq(
@@ -653,7 +634,8 @@ protein_align_feature seq_region_id:code          analysis_id:code
 simple_feature        seq_region_id:code          analysis_id:code
 
 meta_coord            table_name:code       # special filtering in code (no exon/transcript/gene)
-prediction_exon       seq_region_id:code
+prediction_exon       seq_region_id:code    # there is filtering on analysis_id, but because of link to
+                                            # prediction_exon then do this finish_vega_creation
 prediction_transcript seq_region_id:code
 repeat_feature        seq_region_id:code
 seq_region            seq_region_id:code    # use all coord_systems
@@ -662,6 +644,7 @@ seq_region_attrib     seq_region_id:code    # work out which coord_systems are u
 attrib_type           a                     # should be identical to Vega
 coord_system          a
 meta                  a                     # should be identical to Vega
+repeat_consensus      a                     # delete extra entries in finsh_vega_creation
 
 dna_align_feature_history        i
 hit_description                  i
