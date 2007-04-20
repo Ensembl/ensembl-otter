@@ -39,7 +39,8 @@ This script does a number of jobs:
 - updates gene.analysis_id and transcript.analysis_id depending on gene.source
 - then updates gene.source -> 'vega'
 - sets seq_region.name for chromsomes to that defined by the seqregion_attrib 'vega_name'
-- removes unwanted prediction_transcripts (hardcoded)
+- removes unwanted prediction_transcripts (hardcoded logic_names)
+- removes unlinked repeat_consensus entries
 - tidies up coord_system and related tables (meta) - removes NCBI types, sets the default
   to 'Vega' from 'Otter'
 - adds misc entries to meta
@@ -128,7 +129,7 @@ my $vpta = $vdba->get_PredictionTranscriptAdaptor();
 my $vdbh = $vdba->dbc->db_handle;
 
 #get tables from database - if there are no backups of the originals make them
-my @tables = qw(coord_system meta seq_region analysis gene transcript prediction_transcript prediction_exon);  
+my @tables = qw(coord_system meta seq_region analysis gene transcript prediction_transcript prediction_exon repeat_consensus);  
 my (%tabs);
 map { $_ =~ s/`//g; $tabs{$_} += 1; } $vdbh->tables;
 foreach my $name (@tables) {
@@ -139,11 +140,11 @@ foreach my $name (@tables) {
 }
 
 # undo changes from previous runs of this script
-if ($support->param('prune') && $support->user_proceed("\nDo you want to undo all changes from previous runs of this script?\n")) {
+if ($support->param('prune') && $support->user_proceed("\nDo you want to undo all changes from previous runs of this script?")) {
 	foreach my $name (@tables) {
 		my $backup_name = 'backup_original_'.$name;
 		if (exists($tabs{$backup_name})) {
-			$support->log("Resetting values for table $name\n");
+			$support->log_verbose("Resetting values for table $name\n");
 			$vdbh->do("DELETE from $name");
 			$vdbh->do("INSERT into $name SELECT * from $backup_name");	
 		}
@@ -159,7 +160,7 @@ if ($support->param('prune') && $support->user_proceed("\nDo you want to undo al
 #make sure a case difference doesn't ever come back to haunt us later
 $vdbh->do("UPDATE analysis SET logic_name = \'otter\' WHERE logic_name = \'Otter\'");
 
-$support->log("Checking sources of genes...\n");
+$support->log("\nChecking sources of genes...\n");
 
 #define the logic_name to use for each gene.source
 my %all_logic_names = (
@@ -178,7 +179,7 @@ $sth->execute;
 my $new = 0;
 while (my ($source) = $sth->fetchrow_array) {
 	if (! exists($all_logic_names{$source})) {
-		$support->log_warning("You haven't defined the analysis.logic_name to use with genes of source $source, please fix\n");
+		$support->log_warning("You haven't defined the analysis.logic_name to use with genes of source $source, please fix.\n");
 		$new = 1;
 	}
 	else {
@@ -189,7 +190,7 @@ exit if ($new);
 
 #add entries to analysis table
 foreach my $source (keys %used_logic_names) {
-    $support->log("Adding analysis object for source \'$used_logic_names{$source}\'\n");
+    $support->log("...adding analysis object for source \'$used_logic_names{$source}\'\n",1);
     my $analysis = new Bio::EnsEMBL::Analysis (
         -program     => "finish_vega_creation",
         -logic_name  => $used_logic_names{$source},
@@ -229,7 +230,7 @@ foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
 		}
 	}
 
-	$support->log("Patching analysis_ids for genes and transcripts on vega chromosome $vega_name...\n",1);
+	$support->log("Patching analysis_ids for genes and transcripts, setting source...\n",1);
 
 	#SQL to update gene analysis_id
  	my $gsth = $vdbh->prepare(qq(
@@ -300,12 +301,24 @@ foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
 	}
 
 	#remove unwanted prediction transcripts and prediction exons
-	foreach my $pred_trans (@{$slice->get_all_PredictionTranscripts()}){
-		if ($pred_trans->logic_name =~ /Fgenesh|Augustus_svar/i) {
-			$vpta->remove($pred_transcript);
+	$support->log("Removing unwanted prediction_transcripts...\n",1);
+	my $c = 0;
+	foreach my $pred_trans (@{$chrom->get_all_PredictionTranscripts()}){
+		if ($pred_trans->analysis->logic_name =~ /Fgenesh|Augustus_svar/i) {
+			$c++;
+			$vpta->remove($pred_trans);
 		}
 	}
+	$support->log("...$c unwanted prediction_transcripts removed\n",2);
 }
+
+#delete unlinked entries from repeat_consensus
+my $r = $vdbh->do("DELETE rc
+                   FROM repeat_consensus rc LEFT JOIN repeat_feature rf 
+                       ON rc.repeat_consensus_id = rf.repeat_consensus_id 
+                       WHERE rf.repeat_consensus_id IS NULL");
+$support->log("\nRemoved $r entries from repeat_consensus\n");
+
 
 ##############
 # misc fixes #
