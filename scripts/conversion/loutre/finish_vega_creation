@@ -132,7 +132,6 @@ foreach my $name (@tables) {
 		$vdbh->do("CREATE table $backup_name SELECT * from $name");
 	}
 }
-
 # undo changes from previous runs of this script
 if ($support->param('prune') && $support->user_proceed("\nDo you want to undo all changes from previous runs of this script?")) {
 	foreach my $name (@tables) {
@@ -151,8 +150,10 @@ if ($support->param('prune') && $support->user_proceed("\nDo you want to undo al
 # unwanted prediction transcripts
 ########################################################################
 
-#make sure a case difference doesn't ever come back to haunt us later
-$vdbh->do("UPDATE analysis SET logic_name = \'otter\' WHERE logic_name = \'Otter\'");
+if (! $support->param('dry_run')) {
+	#make sure a case difference doesn't ever come back to haunt us later
+	$vdbh->do("UPDATE analysis SET logic_name = \'otter\' WHERE logic_name = \'Otter\'");
+}
 
 $support->log("\nChecking sources of genes...\n");
 
@@ -300,18 +301,35 @@ foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
 	foreach my $pred_trans (@{$chrom->get_all_PredictionTranscripts()}){
 		if ($pred_trans->analysis->logic_name =~ /Fgenesh|Augustus_svar/i) {
 			$c++;
-			$vpta->remove($pred_trans);
+			if (! $support->param('dry_run')) {
+				$vpta->remove($pred_trans);
+			}
 		}
 	}
-	$support->log("...$c unwanted prediction_transcripts removed\n",2);
+	$support->log("...$c unwanted prediction_transcripts removed using the API\n",2);
+	if (! $support->param('dry_run')) {
+		my $r = $vdbh->do("DELETE pt
+                           FROM prediction_transcript pt, analysis a
+                           WHERE pt.analysis_id = a.analysis_id
+                           AND a.logic_name in ('Fgenesh','Augustus_svar')"
+					  );
+		$vdbh->do("DELETE pe
+                   FROM prediction_exon pe LEFT JOIN prediction_transcript pt
+                        ON pe.prediction_transcript_id = pt.prediction_transcript_id
+                   WHERE pt.prediction_transcript_id IS NULL");
+		$support->log("...$r remaining unwanted prediction_transcripts removed using MySQL\n",2);
+	}
 }
 
 #delete unlinked entries from repeat_consensus
-my $r = $vdbh->do("DELETE rc
-                   FROM repeat_consensus rc LEFT JOIN repeat_feature rf 
+$support->log("Removing unlinked entries from repeat_consensus...\n",1);
+if (! $support->param('dry_run')) {
+	my $r = $vdbh->do("DELETE rc
+                       FROM repeat_consensus rc LEFT JOIN repeat_feature rf 
                        ON rc.repeat_consensus_id = rf.repeat_consensus_id 
                        WHERE rf.repeat_consensus_id IS NULL");
-$support->log("\nRemoved $r entries from repeat_consensus\n");
+	$support->log("\n...removed $r entries from repeat_consensus\n",2);
+}
 
 
 ##############
@@ -330,21 +348,23 @@ if (!$count) {
 	$support->log_warning("There are no chromosome coord_systems, which is seriously wrong!\n");
 	exit;
 }
-elsif ($count == 1) {
-	$support->log("Only one chromosome coord_system, no changes made to assembly\n");
+elsif ($count > 2) {
+	$support->log_warning("There is an unexpected number ($count) of chromosome coordinate systems - you need to investigate\n");
+	exit;
 }
 # remove NCBI* coordinates as long as they're not in the seq_region table (which would represent a mistake)
-elsif ($count <= 3) {
+elsif ($count == 2) {
 	my ($other_coord_version,$other_coord_id) = $vdbh->selectrow_array(qq(
                                                     SELECT version, coord_system_id
 					                        		FROM   coord_system
-                      							    WHERE  version NOT IN ('Otter','Vega')));
+                      							    WHERE  version NOT IN ('Otter')));
 	if ($other_coord_version =~ /NCBI/) {
 		my $ncbi_used =  $vdbh->selectrow_array(qq(
                              SELECT count(*) 
                              FROM   seq_region
                              WHERE  coord_system_id = $other_coord_id));
-		if (! $ncbi_used) {			
+		if (! $ncbi_used) {
+			$support->log("\nDeleting $ncbi_used coordinate system\n");			
 			push @sql_fixes, "DELETE from coord_system WHERE coord_system_id = $other_coord_id;\n";
 		}
 		else {
@@ -356,35 +376,29 @@ elsif ($count <= 3) {
 		$support->log_warning("There is an unexpected coord_system ($other_coord_version) - you need to investigate\n");
 		exit;
 	}
+}
 
-	#if the Otter coord_system is actually used for the (longest) chromosome
-	#then rename it to Vega
-	my $chr_coord_id = $vdbh->selectrow_array(qq(
-                           SELECT coord_system_id 
-						   FROM   seq_region 
-						   ORDER  by length desc 
-						   LIMIT  1));
-	my $otter_coord_id = $vdbh->selectrow_array(qq(
-                             SELECT coord_system_id
-							 FROM   coord_system
-							 WHERE  version = 'Otter'));
-	if ($chr_coord_id == $otter_coord_id) {
-		$support->log("\nChanging assembly from \'Otter\' to \'VEGA\'\n");
-		push @sql_fixes, "DELETE from coord_system WHERE version = \'Vega\';\n";
-		push @sql_fixes, "UPDATE coord_system set version = \'VEGA\' WHERE version = \'Otter\';\n";
-		push @sql_fixes, "UPDATE coord_system set attrib = \'default_version\' WHERE version = \'VEGA\';\n";
-		push @sql_fixes, "UPDATE coord_system set rank = 1 WHERE version = \'VEGA\' and name = \'chromosome\';\n";
-		push @sql_fixes, "INSERT into meta (meta_key,meta_value) VALUES (\'assembly.default\',\'VEGA\');\n";
-		push @sql_fixes, "UPDATE meta set meta_value = \'chromosome:VEGA|contig\' WHERE meta_value = \'chromosome:Otter|contig\';\n";
-		push @sql_fixes, "UPDATE meta set meta_value = \'chromosome:VEGA|contig|clone\' WHERE meta_value = \'chromosome:Otter|contig|clone\';\n";	
-	}
-	else {
-		$support->log_warning("Otter assembly not used for longest chromosome in seq_region table - check what\'s going on\n");
-		exit;
-	}
+#sanity check - if the Otter coord_system is actually used for the (longest) chromosome then rename it to Vega
+my $chr_coord_id = $vdbh->selectrow_array(qq(
+                       SELECT coord_system_id 
+				       FROM   seq_region 
+					   ORDER  by length desc 
+					   LIMIT  1));
+my $otter_coord_id = $vdbh->selectrow_array(qq(
+                         SELECT coord_system_id
+					     FROM   coord_system
+						 WHERE  version = 'Otter'));
+if ($chr_coord_id == $otter_coord_id) {
+	$support->log("\nChanging assembly from \'Otter\' to \'VEGA\'\n");
+	push @sql_fixes, "UPDATE coord_system set version = \'VEGA\' WHERE version = \'Otter\';\n";
+	push @sql_fixes, "UPDATE coord_system set attrib = \'default_version\' WHERE version = \'VEGA\';\n";
+	push @sql_fixes, "UPDATE coord_system set rank = 1 WHERE version = \'VEGA\' and name = \'chromosome\';\n";
+	push @sql_fixes, "INSERT into meta (meta_key,meta_value) VALUES (\'assembly.default\',\'VEGA\');\n";
+	push @sql_fixes, "UPDATE meta set meta_value = \'chromosome:VEGA|contig\' WHERE meta_value = \'chromosome:Otter|contig\';\n";
+	push @sql_fixes, "UPDATE meta set meta_value = \'chromosome:VEGA|contig|clone\' WHERE meta_value = \'chromosome:Otter|contig|clone\';\n";	
 }
 else {
-	$support->log_warning("There is an unexpected number ($count) of chromosome coordinate systems - you need to investigate\n");
+	$support->log_warning("Otter assembly not used for longest chromosome in seq_region table - check what\'s going on\n");
 	exit;
 }
 
