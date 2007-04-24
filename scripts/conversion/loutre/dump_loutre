@@ -358,19 +358,20 @@ if (! $support->param('add_chr') ) {
 			#is this entry completely missing from Vega ?
 			if (! grep { $code eq $_} keys %v_attrib_ids) {
 				if (! grep { $id eq $_} keys %v_attrib_codes) {
-					my $r = $vdbh->do(
-						qq(insert into attrib_type
-                   values (?,?,?,?)),
-							{},
-						($id,$name,$code,$desc)
-					);
-					unless ($support->param('dry_run')) {
+					unless ($support->param('dry_run')) {		
+						my $r = $vdbh->do(qq(
+                                    insert into attrib_type
+                                    values (?,?,?,?)),
+									{},
+									($id,$code,$name,$desc)
+								  );
 						$support->log("Inserted attrib_type_id $id, code $code into vega database\n");
 					}
 				}
 			}
 			elsif ($v_attrib_ids{$code} ne $id) {
 				$support->log_warning("attrib_type.code $code has a different attrib_type_id in vega (".$v_attrib_ids{$code}.") and loutre ($id). Please fix before continuing\n");
+				exit;
 			}
 		}
 	}
@@ -427,7 +428,7 @@ if (! $support->param('add_chr')) {
 		}
 		close(OUT);
 		my $tables = join ',',@tables_to_report;
-		$support->log("\nDefinitions for extra tables ($tables) transferred from loutre to Vega database\n\n");
+		$support->log("\nDefinitions for extra tables ($tables) transferred from loutre to Vega database\n");
 	}
 	else {
 		$support->log("\nNo extra table definitions transferred since this is a dry run\n");
@@ -483,7 +484,7 @@ foreach my $name (@{$chr_names_wanted}) {
 		}
 
 		#store the gene
-		unless ($support->param('dry_run')) {
+		if (! $support->param('dry_run')) {
 			$vga->store($v_gene);	
 
 			#store evidence table entries using api, or do I have to use mysql?
