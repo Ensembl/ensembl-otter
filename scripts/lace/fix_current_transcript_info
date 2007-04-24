@@ -1,0 +1,79 @@
+#!/usr/local/bin/perl -w
+
+# Show the orphane current_transcript_info entries and the recommended changes
+# (the script itself does not make any changes, but you can copy-and-paste MySQL commands).
+# The removal of the records is actually necessary if you want the API to work correctly.
+
+use strict;
+use Bio::Otter::Lace::Defaults;
+
+{
+    my $dataset_name    = 'human'; # 'test_human';      # 'mouse', ...
+
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'dataset=s'      => \$dataset_name,
+    );
+    
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    
+    my $otter_dba = $ds->get_cached_DBAdaptor;
+
+
+
+    my $sth_orphan_cti = $otter_dba->prepare(
+    qq{
+        SELECT cti.transcript_info_id, cti.transcript_stable_id
+        FROM current_transcript_info cti
+        LEFT JOIN transcript_info ti
+        ON cti.transcript_info_id = ti.transcript_info_id
+        WHERE ti.transcript_info_id IS NULL
+    });
+
+    $sth_orphan_cti->execute();
+
+    my %tiid2stid = ();
+    while( my ($transcript_info_id, $transcript_stable_id) = $sth_orphan_cti->fetchrow()) {
+        $tiid2stid{$transcript_info_id} = $transcript_stable_id;
+    }
+
+    if(! %tiid2stid) {
+        print "\nNo orphan current_transcript_info records were found in the database.\n";
+        exit(0);
+    }
+
+    my $sth_tsi2tid = $otter_dba->prepare(
+    qq{
+        SELECT transcript_info_id
+        FROM transcript_info
+        WHERE transcript_stable_id=?
+        ORDER BY transcript_info_id DESC
+        LIMIT 1
+    });
+
+    my %ntiid2stid = ();
+    print "Recommended change to the latest versions of transcript_info:\n\n";
+
+    while (my ($wrong_tiid, $transcript_stable_id) = each %tiid2stid) {
+        $sth_tsi2tid->execute($transcript_stable_id);
+        if(my ($right_tiid) = $sth_tsi2tid->fetchrow()) {
+            $ntiid2stid{$right_tiid} = $transcript_stable_id;
+            print "$transcript_stable_id: $wrong_tiid -> $right_tiid\n";
+        }
+    }
+
+    print "\n\n\tPlease run the following commands as MySQL-root:\n";
+    print "\n";
+    print 'CREATE TABLE IF NOT EXISTS current_transcript_info_orphans REPLACE ',
+          ' SELECT * FROM current_transcript_info WHERE transcript_info_id IN ('. join(', ', keys %tiid2stid). ");\n";
+    print "\n";
+    print 'DELETE FROM current_transcript_info WHERE transcript_info_id IN ('. join(', ', keys %tiid2stid). ");\n";
+    print "\n";
+    print 'INSERT INTO current_transcript_info (transcript_info_id, transcript_stable_id) VALUES '.
+            join(', ', map { '('.$_.", '".$ntiid2stid{$_}."')" } keys %ntiid2stid ).";\n";
+
+}
+
