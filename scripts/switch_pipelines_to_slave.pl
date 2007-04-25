@@ -41,7 +41,7 @@ sub main {
         $sthm->execute();
         while(my ($meta_key, $meta_value) = $sthm->fetchrow()) {
             $meta_value=~s/\n/ /g;
-            if($meta_value=~/otterslave/) {
+            if($meta_value=~/otterpipe\d/) {
                 print "$dbname : $meta_key\n\t$meta_value\n-------------\n";
                 if($meta_value=~s/3302/3312/) {
                     $meta_value=~s/otterpipe1/otterslave/;
