@@ -208,17 +208,11 @@ sub write_local_blast {
 sub write_otter_acefile {
     my( $self, $ss ) = @_;
 
-    my $dsname   = $ss->dataset_name();
-    my $ssname   = $ss->name();
-    my $ctg_list = $ss->selected_CloneSequences_as_contig_list
-        or confess "No CloneSequences selected";
-
-        # Getting XML from the Client
-    my ($chr_name, $chr_start, $chr_end) = $self->region_coordinates($ctg_list->[0]);
+    # Getting XML from the Client
     my $client = $self->Client or confess "No otter Client attached";
-    my $xml_string = $client->get_xml_region($dsname, $ssname, $chr_name, $chr_start, $chr_end);
+    my $xml_string = $client->get_xml_region($ss->selected_CloneSequences_parameters);
 
-        # Storing that XML in a temp.file
+    # Storing that XML in a temp.file
     my $xml_file = Bio::Otter::Lace::TempFile->new;
     $xml_file->name('lace.xml');
     my $write_fh = $xml_file->write_file_handle();
@@ -231,7 +225,7 @@ sub write_otter_acefile {
     #
     #  We should have dsname contained in XML, really!
     #  
-    my $ace_text .= Bio::Otter::Converter::otter_to_ace($dsname, $genes, $slice, $sequence, $tiles, $feature_set, $assembly_tag_set);
+    my $ace_text .= Bio::Otter::Converter::otter_to_ace($ss->dataset_name, $genes, $slice, $sequence, $tiles, $feature_set, $assembly_tag_set);
 
         # Storing ace_text in a file
     my $dir = $self->home;
@@ -246,18 +240,12 @@ sub write_otter_acefile {
 sub try_and_lock_the_block {
     my ($self, $ss) = @_;
 
-    my $dsname = $ss->dataset_name;
-    my $ssname = $ss->name;
-
-    my $ctg_list = $ss->selected_CloneSequences_as_contig_list()
-            or confess "No CloneSequences selected";
-
-    my ($chr_name, $chr_start, $chr_end) = $self->region_coordinates($ctg_list->[0]);
+    
     my $client = $self->Client or confess "No otter Client attached";
 
-    my $lock_xml = $client->lock_region($dsname, $ssname, $chr_name, $chr_start, $chr_end);
+    my $lock_xml = $client->lock_region($ss->selected_CloneSequences_parameters);
 
-    if($lock_xml && $dsname){
+    if ($lock_xml) {
         my $lock_xml_file = Bio::Otter::Lace::PersistentFile->new();
         $lock_xml_file->root($self->home);
         $lock_xml_file->name($LOCK_REGION_XML_FILE);
@@ -269,6 +257,7 @@ sub try_and_lock_the_block {
         my ($genes,$slice,$seqstr,$tiles) = Bio::Otter::Converter::XML_to_otter($read);
 
         my $slice_name = $slice->display_id(); # it must be the same as the one kept in AceDB (retrievable by get_slicename_dsname)
+        my $dsname = $ss->dataset_name;
 
         $lock_xml_file->mv(".${slice_name}${dsname}${LOCK_REGION_XML_FILE}");
     }
@@ -629,21 +618,11 @@ sub db_initialized {
     return $self->{'_db_initialized'};
 }
 
-sub region_coordinates {
-    my( $self, $ctg ) = @_;
-
-    my $chr_name  = $ctg->[0]->chromosome;
-    my $chr_start = $ctg->[0]->chr_start;
-    my $chr_end   = $ctg->[$#$ctg]->chr_end;
-    return($chr_name, $chr_start, $chr_end);
-}
-
 sub write_pipeline_data {
     my( $self, $ss, $ace_file ) = @_;
 
     my $client  = $self->Client();
-    my $dsname  = $ss->dataset_name();
-    my $ssname  = $ss->name();
+    my ($dsname, $ssname, $chr_name, $chr_start, $chr_end) = $ss->selected_CloneSequences_parameters;
 
     my $factory = $self->{'_pipeline_data_factory'} ||= $self->make_otterpipe_DataFactory($dsname, $ssname);
 
@@ -659,21 +638,14 @@ sub write_pipeline_data {
     }
     $factory->file_handle($fh);
 
-    # note: the next line returns a 2 dimensional array (not a one dimensional array)
-    # each subarray contains a list of clones that are together on the golden path
-    my $sel = $ss->selected_CloneSequences_as_contig_list;
-    foreach my $ctg (@$sel) {
-        my( $chr_name, $chr_start, $chr_end ) = $self->region_coordinates($ctg);
+    my $smart_slice = Bio::Otter::Lace::Slice->new($client, $dsname, $ssname,
+        'chromosome', 'Otter', $chr_name, $chr_start, $chr_end);
 
-        my $smart_slice = Bio::Otter::Lace::Slice->new($client, $dsname, $ssname,
-            'chromosome', 'Otter', $chr_name, $chr_start, $chr_end);
-
-        $factory->ace_data_from_slice($smart_slice);
-    }
+    $factory->ace_data_from_slice($smart_slice);
     $factory->drop_file_handle;
     close $fh;
 
-    if($self->{_pipe_db}) {
+    if ($self->{_pipe_db}) {
         Bio::Otter::Lace::SatelliteDB::disconnect_DBAdaptor($self->{_pipe_db});
     }
 }

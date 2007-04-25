@@ -4,6 +4,9 @@ use vars qw(@ISA);
 use strict;
 use Bio::EnsEMBL::Transcript;
 
+use Bio::Vega::Utils::XmlEscape qw{ xml_escape xml_unescape };
+
+
 @ISA = qw(Bio::EnsEMBL::Transcript);
 
 sub new {
@@ -67,6 +70,21 @@ sub flush_Translation {
   $self->{'_translation_id'} = undef;
 }
 
+sub patch_Translation {
+    my ($self) = @_;
+    
+    return unless my $tsl = $self->translation;
+    my $patched = 0;
+    if ($tsl->start > $tsl->start_Exon->length) {
+        $tsl->start($tsl->start_Exon->length);
+        $patched++;
+    }
+    if ($tsl->end > $tsl->end_Exon->length) {
+        $tsl->end($tsl->end_Exon->length);
+        $patched++;
+    }
+    return $patched;
+}
 
 sub stable_id {
   my ($self,$arg) = @_;
@@ -450,6 +468,125 @@ sub _reset_end_phase {
     my $exon_length = ($exon->end - $exon->start + 1) ;
     my $new_phase = ($exon->phase + $exon_length) %3 ;
     $exon->end_phase($new_phase) ;
+}
+
+sub toXMLString {
+    my ($self, $offset) = @_;
+    
+    use Carp 'confess';
+    confess("No offset given") unless defined $offset;
+
+    my $str = "";
+
+    my $tranid = "";
+    if (defined($self->stable_id)) {
+        $tranid = $self->stable_id;
+    }
+    $str .= "  <transcript>\n";
+    $str .= "    <stable_id>$tranid</stable_id>\n";
+
+    my $tinfo = $self->transcript_info;
+
+    if (defined($tinfo)) {
+
+        if (my $author = $tinfo->author) {
+            $str .= $author->toXMLString;
+        }
+
+        foreach my $remstr (sort map $_->remark, $tinfo->remark) {
+            $remstr =~ s/\n/ /g;
+            $str .= "    <remark>" . xml_escape($remstr) . "</remark>\n";
+        }
+
+        foreach my $method (
+            qw{
+            cds_start_not_found
+            cds_end_not_found
+            mRNA_start_not_found
+            mRNA_end_not_found
+            }
+          )
+        {
+            $str .=
+              "  <$method>" . ($tinfo->$method() || 0) . "</$method>\n";
+        }
+
+        my $classname = $tinfo->class->name || "";
+        my $tname     = $tinfo->name        || "";
+
+        $str .= "    <transcript_class>$classname</transcript_class>\n";
+        $str .= "    <name>$tname</name>\n";
+
+        $str .= "    <evidence_set>\n";
+
+        my $evidence = $tinfo->get_all_Evidence;
+        @$evidence = sort { $a->name cmp $b->name } @$evidence;
+
+        foreach my $ev (@$evidence) {
+            $str .= "      <evidence>\n";
+            $str .= "        <name>" . $ev->name . "</name>\n";
+            $str .= "        <type>" . $ev->type . "</type>\n";
+            $str .= "      </evidence>\n";
+        }
+        $str .= "    </evidence_set>\n";
+    }
+
+    my $tran_low  = undef;
+    my $tran_high = undef;
+    if (my $tl = $self->translation) {
+        my $strand = $tl->start_Exon->strand;
+        $tran_low  = $offset + $self->coding_region_start;
+        $tran_high = $offset + $self->coding_region_end;
+        $str .= sprintf "    <translation_start>%d</translation_start>\n",
+            $strand == 1 ? $tran_low : $tran_high;
+        $str .= sprintf "    <translation_end>%d</translation_end>\n",
+            $strand == 1 ? $tran_high : $tran_low;
+        if (my $tl_id = $tl->stable_id) {
+            $str .=
+              "    <translation_stable_id>$tl_id</translation_stable_id>\n";
+        }
+    }
+
+    $str .= "    <exon_set>\n";
+
+    my @exon = @{ $self->get_all_Exons; };
+
+    @exon = sort { $a->start <=> $b->start } @exon;
+
+    my $cds_snf = "";
+    if (defined($tinfo->cds_start_not_found)) {
+        $cds_snf = $tinfo->cds_start_not_found;
+    }
+    foreach my $ex (@exon) {
+        my $stable_id = "";
+        if (defined($ex->stable_id)) {
+            $stable_id = $ex->stable_id;
+        }
+        $str .= "      <exon>\n";
+        $str .= "        <stable_id>" . $stable_id . "</stable_id>\n";
+        $str .= "        <start>" . ($ex->start + $offset) . "</start>\n";
+        $str .= "        <end>" . ($ex->end + $offset) . "</end>\n";
+        $str .= "        <strand>" . $ex->strand . "</strand>\n";
+
+        # Only coding exons have frame set
+        ### Do we need to test for translation region - why not
+        ### just rely on phase of exon, which will be -1 if non-coding?
+        if (   defined($tran_low)
+            && defined($tran_high)
+            && $ex->end >= $tran_low
+            && $ex->start <= $tran_high)
+        {
+            my $phase = $ex->phase;
+            my $frame = $phase == -1 ? 0 : (3 - $phase) % 3;
+            $str .= "        <frame>" . $frame . "</frame>\n";
+        }
+        $str .= "      </exon>\n";
+    }
+    $str .= "    </exon_set>\n";
+
+    $str .= "  </transcript>\n";
+    
+    return $str;
 }
 
 1;

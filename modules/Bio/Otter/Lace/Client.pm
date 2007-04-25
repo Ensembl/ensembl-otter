@@ -171,7 +171,7 @@ sub client_hostname {
 
 #
 # now used by scripts only;
-# please switch everywhere to using AceDatabase::region_coordinates()
+# please switch everywhere to using SequenceSet::region_coordinates()
 #
 sub chr_start_end_from_contig {
     my( $self, $ctg ) = @_;

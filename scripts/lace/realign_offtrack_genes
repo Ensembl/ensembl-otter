@@ -76,10 +76,10 @@ $| = 1;
     }
 
     # Lock the slice so that we can safely write to it.
-    my $lock_xml = $cl->lock_region_for_contig_from_Dataset($ss->selected_CloneSequences, $ds)
+    my $lock_xml = $cl->lock_region($ss->selected_CloneSequences_parameters)
       unless $test_flag;
 
-    my ($chr, $chr_start, $chr_end) = $cl->chr_start_end_from_contig($ss->selected_CloneSequences);
+    my ($chr, $chr_start, $chr_end) = $ss->region_coordinates($ss->selected_CloneSequences);
     my $slice = $slice_aptr->fetch_by_chr_start_end($chr, $chr_start, $chr_end);
     my $acc_list = $gene_aptr->list_all_accessions_in_Slice($slice);
     
@@ -139,6 +139,18 @@ $| = 1;
         if (remap_ens_Exons($finder, $db_gene, $short_slice, $liberal)) {
             my $after_exon_count = @{$db_gene->get_all_Exons};
             warn "Remapped $after_exon_count of $before_exon_count exons OK\n";
+            
+            foreach my $tsct (@{$db_gene->get_all_Transcripts}) {
+                if ($tsct->patch_Translation) {
+                    printf STDERR "Translation coordinates adjusted for transcript '%s'\n",
+                        $tsct->stable_id;
+                    my $remark = Bio::Otter::TranscriptRemark->new;
+                    $remark->remark("Annotation_remark- Check translation (was changed by realign_offtrack_genes)");
+                    $tsct->transcript_info->remark($remark);
+                    #print STDERR $tsct->toXMLString(0);
+                }
+            }
+            
             # otter > XML > otter
             my $temp = Bio::Otter::Lace::TempFile->new;
             $temp->name("realign_offtrack.$$.xml");
