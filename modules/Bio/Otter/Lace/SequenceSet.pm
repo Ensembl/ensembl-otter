@@ -177,6 +177,30 @@ sub selected_CloneSequences_as_contig_list {
     #return $ctg_list;
 }
 
+sub selected_CloneSequences_parameters {
+    my ($self) = @_;
+    
+    my $ssname  = $self->name;
+    my $dsname  = $self->dataset_name;
+    my $cs_list = $self->selected_CloneSequences;
+
+    confess "No CloneSequences selected" unless @$cs_list;
+
+    my ($chr_name, $chr_start, $chr_end) = $self->region_coordinates($cs_list);
+
+    return ($dsname, $ssname, $chr_name, $chr_start, $chr_end);
+}
+
+sub region_coordinates {
+    my( $self, $ctg ) = @_;
+
+    my $chr_name  = $ctg->[0]->chromosome;
+    my $chr_start = $ctg->[0]->chr_start;
+    my $chr_end   = $ctg->[$#$ctg]->chr_end;
+    return ($chr_name, $chr_start, $chr_end);
+}
+
+
 sub CloneSequence_contigs_split_on_gaps {
     my ($self) = @_;
     
