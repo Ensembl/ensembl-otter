@@ -16,7 +16,7 @@ my $gene_count=0;
 
 my %assembly_nonmatch_version = (
 
-'human' => {
+'mouse' => {
     'CR293526_B1' => 0
 
     'mrc4' => 0
