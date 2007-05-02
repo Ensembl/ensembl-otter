@@ -112,12 +112,12 @@ my %assembly_nonmatch_version = (
         'chr4-10'          => 10,
         'chr4-NCBIM36'     => 11,
 
-        'chr5-01'       => 0,
-        'chr5-02'       => 1,
-        'chr5_steel-01' => 2,
-        'chr5_steel-02' => 3,
-        'chr5_steel-03' => 4,
-        'chr5_steel-04' => 5,
+        'chr5_steel-01' => 1,
+        'chr5_steel-02' => 2,
+        'chr5_steel-03' => 3,
+        'chr5_steel-04' => 4,
+        'chr5-01'       => 5,
+        'chr5-02'       => 6,
 
         'chr6.deafness.AGP'  => 0,
         'chr6_steel-01'      => 1,
@@ -131,10 +131,10 @@ my %assembly_nonmatch_version = (
         'chr6-01'            => 9,
         'chr6-02'            => 10,
 
-        'chr7-01'        => 0,
-        'chr7-02'        => 1,
-        'black6_Abpa-01' => 2,
-        'black6_Abpa-02' => 3,
+        'black6_Abpa-01' => 1,
+        'black6_Abpa-02' => 2,
+        'chr7-01'        => 3,
+        'chr7-02'        => 4,
 
         'chr8-01' => 0,
         'chr8-02' => 1,
