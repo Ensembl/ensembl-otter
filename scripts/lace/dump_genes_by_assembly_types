@@ -15,277 +15,275 @@ $|=1;
 my $gene_count=0;
 
 my %assembly_nonmatch_version = (
+    'human' => {
+        'CR293526_B1' => 0,
 
-'mouse' => {
-    'CR293526_B1' => 0
+        'mrc4'    => 0,
+        'mrc4-2'  => 1,
+        'mrc4-3'  => 2,
+        'mrc4-4'  => 3,
+        'mrc4-06' => 4,
+        'mrc4-07' => 5,
+        'mrc4-08' => 6,
 
-    'mrc4' => 0
-    'mrc4-2' => 1
-    'mrc4-3' => 2
-    'mrc4-4' => 3
-    'mrc4-06' => 4
-    'mrc4-07' => 5
-    'mrc4-08' => 6
+        'NOD_IDD3'    => 0,
+        'NOD_IDD3-01' => 1,
+        'NOD_IDD3-02' => 2,
 
-    'NOD_IDD3' => 0
-    'NOD_IDD3-01' => 1
-    'NOD_IDD3-02' => 2
+        'NOD_IDD4'      => 0,
+        'NOD_IDD4.1-02' => 1,
+        'NOD_IDD4-06'   => 2,
+        'NOD_IDD4-07'   => 3,
+        'NOD_IDD4-08'   => 4,
+        'NOD_IDD4.1-09' => 5,
 
-    'NOD_IDD4' => 0
-    'NOD_IDD4.1-02' => 1
-    'NOD_IDD4-06' => 2
-    'NOD_IDD4-07' => 3
-    'NOD_IDD4-08' => 4
-    'NOD_IDD4.1-09' => 5
+        'NOD_IDD5.1'    => 0,
+        'NOD_IDD5.1-03' => 1,
+        'NOD_IDD5.1-05' => 2,
 
-    'NOD_IDD5.1' => 0
-    'NOD_IDD5.1-03' => 1
-    'NOD_IDD5.1-05' => 2
+        'NOD_IDD10'    => 0,
+        'NOD_IDD10-02' => 1,
+        'NOD_IDD10-03' => 2,
+        'NOD_IDD10-04' => 3,
 
-    'NOD_IDD10' => 0
-    'NOD_IDD10-02' => 1
-    'NOD_IDD10-03' => 2
-    'NOD_IDD10-04' => 3
+        'NOD_IDD16-02' => 0,
+        'NOD_IDD16-03' => 1,
 
-    'NOD_IDD16-02' => 0
-    'NOD_IDD16-03' => 1
+        'NOD_IDD18-01'   => 0,
+        'NOD_IDD18.2-04' => 1,
 
-    'NOD_IDD18-01' => 0
-    'NOD_IDD18.2-04' => 1
+        '129_IDD3'    => 0,
+        '129_IDD3-02' => 1,
 
-    '129_IDD3' => 0
-    '129_IDD3-02' => 1
+        '129_MUP-01' => 0,
+        '129_MUP-02' => 1,
+        '129_MUP-03' => 2,
 
-    '129_MUP-01' => 0
-    '129_MUP-02' => 1
-    '129_MUP-03' => 2
+        'AL928605.11' => 0,
 
-    'AL928605.11' => 0
+        'chr17_mhc_129-01' => 0,
 
-    'chr17_mhc_129-01' => 0
+        'bM74C21-01' => 0,
 
-    'bM74C21-01' => 0
+        'bM421B5-01' => 0,
 
-    'bM421B5-01' => 0
+        'CHED1' => 0,
 
-    'CHED1' => 0
+        'CHO_IDD16.1-02' => 0,
 
-    'CHO_IDD16.1-02' => 0
+        'CHORI29_IDD5.1_test-01' => 0,
+        'CHORI29_IDD5.1_test-02' => 1,
 
-    'CHORI29_IDD5.1_test-01' => 0
-    'CHORI29_IDD5.1_test-02' => 1
+        'black6_IDD5.1'    => 0,
+        'black6_IDD5.1-02' => 1,
+        'black6_IDD5.3-01' => 2,
+        'black6_IDD5.3-02' => 3,
+        'black6_IDD5.4-01' => 4,
+        'black6_IDD5.4-02' => 5,
+        'chr1-01'          => 6,
+        'chr1-02'          => 7,
 
-    'black6_IDD5.1' => 0
-    'black6_IDD5.1-02' => 1
-    'black6_IDD5.3-01' => 2
-    'black6_IDD5.3-02' => 3
-    'black6_IDD5.4-01' => 4
-    'black6_IDD5.4-02' => 5
-    'chr1-01' => 6
-    'chr1-02' => 7
+        'chr2-01'      => 0,
+        'chr2-02'      => 1,
+        'chr2-03'      => 2,
+        'chr2-NCBIM36' => 3,
 
-    'chr2-01' => 0
-    'chr2-02' => 1
-    'chr2-03' => 2
-    'chr2-NCBIM36' => 3
+        'black6_IDD3'       => 0,
+        'black6_IDD3-02'    => 1,
+        'black6_IDD10'      => 2,
+        'black6_IDD10-02'   => 3,
+        'black6_IDD18'      => 4,
+        'black6_IDD18-02'   => 5,
+        'black6_IDD18.2-01' => 6,
+        'black6_IDD18.2-02' => 7,
+        'chr3-01'           => 8,
+        'chr3-02'           => 9,
 
-    'black6_IDD3' => 0
-    'black6_IDD3-02' => 1
-    'black6_IDD10' => 2
-    'black6_IDD10-02' => 3
-    'black6_IDD18' => 4
-    'black6_IDD18-02' => 5
-    'black6_IDD18.2-01' => 6
-    'black6_IDD18.2-02' => 7
-    'chr3-01' => 8
-    'chr3-02' => 9
+        'lace_chr4_clones' => 0,
+        'black6_IDD9.1-01' => 1,
+        'black6_IDD9.2-01' => 2,
+        'black6_IDD9.3-01' => 3,
+        'chr4-04'          => 4,
+        'chr4-05'          => 5,
+        'chr4-06'          => 6,
+        'chr4-07'          => 7,
+        'chr4-08'          => 8,
+        'chr4-09'          => 9,
+        'chr4-10'          => 10,
+        'chr4-NCBIM36'     => 11,
 
-    'lace_chr4_clones' => 0
-    'black6_IDD9.1-01' => 1
-    'black6_IDD9.2-01' => 2
-    'black6_IDD9.3-01' => 3
-    'chr4-04' => 4
-    'chr4-05' => 5
-    'chr4-06' => 6
-    'chr4-07' => 7
-    'chr4-08' => 8
-    'chr4-09' => 9
-    'chr4-10' => 10
-    'chr4-NCBIM36' => 11
+        'chr5-01'       => 0,
+        'chr5-02'       => 1,
+        'chr5_steel-01' => 2,
+        'chr5_steel-02' => 3,
+        'chr5_steel-03' => 4,
+        'chr5_steel-04' => 5,
 
-    'chr5-01' => 0
-    'chr5-02' => 1
-    'chr5_steel-01' => 2
-    'chr5_steel-02' => 3
-    'chr5_steel-03' => 4
-    'chr5_steel-04' => 5
+        'chr6.deafness.AGP'  => 0,
+        'chr6_steel-01'      => 1,
+        'chr6_steel-02'      => 2,
+        'chr6_steel-04'      => 3,
+        'chr6_steel-05'      => 4,
+        'black6_IDD6.1_2-01' => 5,
+        'black6_IDD6.1_2-02' => 6,
+        'black6_IDD6.3-01'   => 7,
+        'black6_IDD6.3-02'   => 8,
+        'chr6-01'            => 9,
+        'chr6-02'            => 10,
 
-    'chr6.deafness.AGP' => 0
-    'chr6_steel-01' => 1
-    'chr6_steel-02' => 2
-    'chr6_steel-04' => 3
-    'chr6_steel-05' => 4
-    'black6_IDD6.1_2-01' => 5
-    'black6_IDD6.1_2-02' => 6
-    'black6_IDD6.3-01' => 7
-    'black6_IDD6.3-02' => 8
-    'chr6-01' => 9
-    'chr6-02' => 10
+        'chr7-01'        => 0,
+        'chr7-02'        => 1,
+        'black6_Abpa-01' => 2,
+        'black6_Abpa-02' => 3,
 
-    'chr7-01' => 0
-    'chr7-02' => 1
-    'black6_Abpa-01' => 2
-    'black6_Abpa-02' => 3
+        'chr8-01' => 0,
+        'chr8-02' => 1,
 
-    'chr8-01' => 0
-    'chr8-02' => 1
+        'chr9-01' => 0,
+        'chr9-02' => 1,
+        'chr9-03' => 2,
 
-    'chr9-01' => 0
-    'chr9-02' => 1
-    'chr9-03' => 2
+        'chr10-01' => 0,
+        'chr10-02' => 1,
 
-    'chr10-01' => 0
-    'chr10-02' => 1
+        'lace_chr11_clones3' => 0,
+        'lace_chr11_clones4' => 1,
+        'black6_IDD4.1'      => 2,
+        'black6_IDD4.2-01'   => 3,
+        'black6_IDD4.2Q-01'  => 4,
+        'chr11'              => 5,
+        'chr11-04'           => 6,
+        'chr11-05'           => 7,
+        'chr11-06'           => 8,
+        'chr11-07'           => 9,
+        'chr11-NCBIM36'      => 10,
 
-    'lace_chr11_clones3' => 0
-    'lace_chr11_clones4' => 1
-    'black6_IDD4.1' => 2
-    'black6_IDD4.2-01' => 3
-    'black6_IDD4.2Q-01' => 4
-    'chr11' => 5
-    'chr11-04' => 6
-    'chr11-05' => 7
-    'chr11-06' => 8
-    'chr11-07' => 9
-    'chr11-NCBIM36' => 10
+        'chr12-01' => 0,
+        'chr12-02' => 1,
 
-    'chr12-01' => 0
-    'chr12-02' => 1
+        'del36H_set' => 0,
+        'chr13-01'   => 1,
+        'chr13-02'   => 2,
 
-    'del36H_set' => 0
-    'chr13-01' => 1
-    'chr13-02' => 2
+        'chr14-01' => 0,
+        'chr14-02' => 1,
 
-    'chr14-01' => 0
-    'chr14-02' => 1
+        'chr15-01' => 0,
+        'chr15-02' => 1,
 
-    'chr15-01' => 0
-    'chr15-02' => 1
+        'chr16-01' => 0,
+        'chr16-02' => 1,
 
-    'chr16-01' => 0
-    'chr16-02' => 1
+        'clone_AF050157.1'  => 0,
+        'mhc_4_clones-01'   => 1,
+        'black6_IDD16.1-01' => 2,
+        'black6_IDD16.1-02' => 3,
+        'chr17-01'          => 4,
+        'chr17-02'          => 5,
 
-    'clone_AF050157.1' => 0
-    'mhc_4_clones-01' => 1
-    'black6_IDD16.1-01' => 2
-    'black6_IDD16.1-02' => 3
-    'chr17-01' => 4
-    'chr17-02' => 5
+        'chr18-01' => 0,
+        'chr18-02' => 1,
 
-    'chr18-01' => 0
-    'chr18-02' => 1
+        'chr19-01' => 0,
+        'chr19-02' => 1,
 
-    'chr19-01' => 0
-    'chr19-02' => 1
+        'ChrX-01'      => 0,
+        'ChrX-02'      => 1,
+        'chrX-03'      => 2,
+        'chrX-04'      => 3,
+        'chrX-NCBIM36' => 4,
 
-    'ChrX-01' => 0
-    'ChrX-02' => 1
-    'chrX-03' => 2
-    'chrX-04' => 3
-    'chrX-NCBIM36' => 4
-
-    'chrY-01' => 0
-    'chrY-02' => 1
+        'chrY-01' => 0,
+        'chrY-02' => 1,
     },
-    
-'human' => {
-    'chr1-7A'       => 7.5,
-    'Chr1_final'    => 8,
 
-    'chr2'          => 1,
+    'human' => {
+        'chr1-7A'    => 7.5,
+        'Chr1_final' => 8,
 
-    'chr3-00'       => 0.5,
+        'chr2' => 1,
 
-    'chr3-01B'      => 1.6,
+        'chr3-00' => 0.5,
 
-    'chr4'          => 1,
+        'chr3-01B' => 1.6,
 
-    'chr6-14A'      => 14.5,
+        'chr4' => 1,
 
-    'chr7'          => 1,
-    'chr7-01A'      => 1.5,
+        'chr6-14A' => 14.5,
 
-    'chr8_jena1'    => 0, # parallel branch?
-    'chr8_jena2'    => 0, # parallel branch?
+        'chr7'     => 1,
+        'chr7-01A' => 1.5,
 
-    'chr9p12'       => 6,
-    'Chr9_09'       => 9,
-    'chr9-14A'      => 14.5,
-    'chr9-16-peri'  => 0, # parallel branch?
-    'chr9-peri-17'  => 0, # parallel branch?
-    'chr9_hetero'   => 0, # ?
+        'chr8_jena1' => 0,    # parallel branch?
+        'chr8_jena2' => 0,    # parallel branch?
 
-    'chr11-hsa11_20030701' => 0, # ?
-    'chr11-hsa11_20040402' => 0, # ?
+        'chr9p12'      => 6,
+        'Chr9_09'      => 9,
+        'chr9-14A'     => 14.5,
+        'chr9-16-peri' => 0,      # parallel branch?
+        'chr9-peri-17' => 0,      # parallel branch?
+        'chr9_hetero'  => 0,      # ?
 
-    'chr12-00'      => 0.5,
-    'chr12-01A'     => 1.3,
-    'chr12-01B'     => 1.6,
+        'chr11-hsa11_20030701' => 0,    # ?
+        'chr11-hsa11_20040402' => 0,    # ?
 
-    'chr13-10A'     => 10.5,
+        'chr12-00'  => 0.5,
+        'chr12-01A' => 1.3,
+        'chr12-01B' => 1.6,
 
-    'chr14'         => 1,
+        'chr13-10A' => 10.5,
 
-    'chr16-00'      => 0.5,
+        'chr14' => 1,
 
-    'chr17_mm11'    => 0, # ?
+        'chr16-00' => 0.5,
 
-    'chr18p-01'     => 0, # seems to be only one half of the whole assembly?
-    'chr18q-01'     => 0, # seems to be the other half?
+        'chr17_mm11' => 0,              # ?
 
-    'chr19'         => 1,
+        'chr18p-01' => 0,    # seems to be only one half of the whole assembly?
+        'chr18q-01' => 0,    # seems to be the other half?
 
-    'chr20-ncbi33'  => 0, # ? not the freshest, definitely
-    'chr20-10A'     => 10.5,
+        'chr19' => 1,
 
-    'chr21-hsa21_20030701' => 0, # no clues
+        'chr20-ncbi33' => 0,      # ? not the freshest, definitely
+        'chr20-10A'    => 10.5,
 
-    'chr22p-03'     => 0, # a half?
-    'chr22'         => 1,
+        'chr21-hsa21_20030701' => 0,    # no clues
 
-    'chrX-07A'      => 7.5,
+        'chr22p-03' => 0,               # a half?
+        'chr22'     => 1,
 
-    'chr_Y_01'      => 1,
-},
-'pig' => {
-	'chr17-SSC17_MAX1-05'    => 5,
-	'chr17-SSC17_MAX1-04'    => 4,
-	'chr17-SSC17_MAX1-03'    => 3,
-	'chr17-SSC17_MAX1-02'    => 2,
-	'chr17-01'               => 1,
-	'chr17-SSC17_MAX1-01'    => 0.8,
-	'bE447P16-01'    => 0,
-	'CR974431_CpG'   => 0,
-	'phrap_test-01'  => 0,
-	'chr4_HSD3B-01'  => 1,
-	'SSC6_test1-01'  => 3,
-	'Chr_6_NKG-02'   => 2,
-	'Chr_6_NKG'  => 1,
-	'mhc-08' => 8,
-	'mhc-07' => 7,
-	'mhc-06' => 6,
-	'mhc-05' => 5,
-	'mhc-04' => 4,  # ? didn't find the agp
-	'mhc-03' => 3,
-	'mhc-02' => 2,
-	'mhc-01' => 1,
-	'SSC7_test2-02'  => 0.8,
-	'SSC7_test2-01'  => 0.7,
-	'MHC_class-I'    => 0.6,
-	'MHC_class-II'   => 0.3,
-},
-'dog' => {
-},
+        'chrX-07A' => 7.5,
+
+        'chr_Y_01' => 1,
+    },
+    'pig' => {
+        'chr17-SSC17_MAX1-05' => 5,
+        'chr17-SSC17_MAX1-04' => 4,
+        'chr17-SSC17_MAX1-03' => 3,
+        'chr17-SSC17_MAX1-02' => 2,
+        'chr17-01'            => 1,
+        'chr17-SSC17_MAX1-01' => 0.8,
+        'bE447P16-01'         => 0,
+        'CR974431_CpG'        => 0,
+        'phrap_test-01'       => 0,
+        'chr4_HSD3B-01'       => 1,
+        'SSC6_test1-01'       => 3,
+        'Chr_6_NKG-02'        => 2,
+        'Chr_6_NKG'           => 1,
+        'mhc-08'              => 8,
+        'mhc-07'              => 7,
+        'mhc-06'              => 6,
+        'mhc-05'              => 5,
+        'mhc-04'              => 4,     # ? didn't find the agp
+        'mhc-03'              => 3,
+        'mhc-02'              => 2,
+        'mhc-01'              => 1,
+        'SSC7_test2-02'       => 0.8,
+        'SSC7_test2-01'       => 0.7,
+        'MHC_class-I'         => 0.6,
+        'MHC_class-II'        => 0.3,
+    },
+    'dog' => {},
 );
 
 { # lexical environment for &execute_ctgids_2_asm
