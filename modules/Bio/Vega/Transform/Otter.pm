@@ -5,7 +5,7 @@ package Bio::Vega::Transform::Otter;
 use strict;
 use warnings;
 use Carp;
-use Bio::EnsEMBL::Exon;
+use Bio::Vega::Exon;
 use Bio::Vega::Transcript;
 use Bio::Vega::Gene;
 use Bio::Vega::Translation;
@@ -330,7 +330,7 @@ sub build_Exon {
   my ($self, $data) = @_;
   ##version ?? is_current
   my $slice = $self->get_ChromosomeSlice;
-  my $exon = Bio::EnsEMBL::Exon->new(
+  my $exon = Bio::Vega::Exon->new(
 												 -start     => $data->{'start'},
 												 -end       => $data->{'end'},
 												 -strand    => $data->{'strand'},
@@ -360,12 +360,12 @@ sub build_Transcript {
   my $ana = $logic_ana{$self}{'Otter'} ||= Bio::EnsEMBL::Analysis->new(-logic_name => 'Otter');
 
   my $transcript = Bio::Vega::Transcript->new(
-															 -stable_id => $data->{'stable_id'},
-#															 -created_date=>$time_now{$self},
-#															 -modified_date=>$time_now{$self},
-															 -analysis=>$ana,
-															 -slice     => $slice,
-															);
+			 -stable_id => $data->{'stable_id'},
+#			 -created_date=>$time_now{$self},
+#			 -modified_date=>$time_now{$self},
+			 -analysis=>$ana,
+			 -slice     => $slice,
+  );
 
 
   ##translation start - end
@@ -385,6 +385,7 @@ sub build_Transcript {
 		$end_Exon=$exon;
 	 }
   }
+
   ##add translation to transcript
   if (defined $tran_start_pos && defined $tran_end_pos ){
 	 if (!defined($start_Exon) || !defined($end_Exon)) {
@@ -393,8 +394,8 @@ sub build_Transcript {
 	 }
 	 else {
 		my $translation = Bio::Vega::Translation->new(
-																		 -stable_id=>$data->{'translation_stable_id'},
-																		);
+            -stable_id=>$data->{'translation_stable_id'},
+        );
 		$translation->start_Exon($start_Exon);
 		$translation->start($start_Exon_Pos);
 		$translation->end_Exon($end_Exon);

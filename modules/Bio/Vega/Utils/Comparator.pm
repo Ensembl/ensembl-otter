@@ -26,8 +26,8 @@ sub compare{
 	 throw("Cannot compare two different types of objects. Objects should be of the same class $obj1 vs $obj2\n");
   }
   my $class = ref($obj1);
-  unless ( $class->isa('Bio::EnsEMBL::Exon') || $class->isa('Bio::Vega::Gene') || $class->isa('Bio::Vega::Transcript') || $class->isa('Bio::Vega::Translation') || $class->isa('Bio::Vega::ContigInfo') ) {
-	 throw('objects to be compared should be either Bio::Vega::Gene or Bio::EnsEMBL::Exon or Bio::Vega::Translation or Bio::Vega::Transcript or Bio::Vega::ContigInfo' );
+  unless ( $class->isa('Bio::Vega::Exon') || $class->isa('Bio::Vega::Gene') || $class->isa('Bio::Vega::Transcript') || $class->isa('Bio::Vega::Translation') || $class->isa('Bio::Vega::ContigInfo') ) {
+	 throw('objects to be compared should be either Bio::Vega::Gene or Bio::Vega::Exon or Bio::Vega::Translation or Bio::Vega::Transcript or Bio::Vega::ContigInfo' );
   }
 
   ##do actual comparisons
@@ -37,7 +37,7 @@ sub compare{
   ##compare main keys only if main key is same then sub keys are compared
   if ($obj1_hash_key eq $obj2_hash_key) {
 	 ##Exon doesn't have a hash_sub_key, so for others
-	 if ($class ne 'Bio::EnsEMBL::Exon'){
+	 if ($class ne 'Bio::Vega::Exon'){
 		my $obj1_hash_sub = $obj1->hashkey_sub;
 		my $obj2_hash_sub = $obj2->hashkey_sub;
 		my $e_count=0;
@@ -85,7 +85,7 @@ sub compare{
 		elsif ($class->isa('Bio::Vega::Translation')){
 		 print STDERR "start_exon_hash_key-end_exon_hash_key-tl_start-tl_end\n";
 		}
-		elsif ($class->isa('Bio::EnsEMBL::Exon')){
+		elsif ($class->isa('Bio::Vega::Exon')){
 		  print STDERR "slice_name-start-end-strand-phase-end_phase\n";
 		}
 		print STDERR "Before-key:$obj1_hash_key\nAfter-key :$obj2_hash_key\n";

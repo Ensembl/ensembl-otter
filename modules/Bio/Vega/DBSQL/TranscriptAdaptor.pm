@@ -9,55 +9,18 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 
 use base 'Bio::EnsEMBL::DBSQL::TranscriptAdaptor';
 
-sub fetch_by_stable_id  {
-  my ($self, $stable_id) = @_;
-  my ($transcript) = $self->SUPER::fetch_by_stable_id($stable_id);
-  if ($transcript){
-	 $self->reincarnate_transcript($transcript);
-  }
-  return $transcript;
-}
+sub fetch_transcript_author {
+  my ($self,$transcript)=@_;
 
-sub reincarnate_transcript{
-  my ($self,$transcript) = @_;
-  bless $transcript, "Bio::Vega::Transcript";
-  $self->fetch_transcript_author($transcript);
-  return $transcript;
-}
+  my $author= $self->db->get_AuthorAdaptor->fetch_transcript_author($transcript->dbID);
+  $transcript->transcript_author($author);
 
-sub fetch_by_stable_id_version  {
-  my ($self, $stable_id,$version) = @_;
-  my $constraint = "tsi.stable_id = '$stable_id' AND tsi.version = $version";
-  my ($transcript) = @{ $self->generic_fetch($constraint) };
-  if ($transcript){
-	 $self->reincarnate_transcript($transcript);
-  }
   return $transcript;
-}
-
-sub fetch_all_by_Slice  {
-  my ($self,$slice,$load_exons,$logic_name)  = @_;
-  my ($transcripts) = $self->SUPER::fetch_all_by_Slice($slice,$load_exons,$logic_name);
-  if ($transcripts){
-	 foreach my $transcript(@$transcripts){
-		$self->reincarnate_transcript($transcript);
-	 }
-  }
-  return $transcripts;
-}
-sub fetch_all_by_Gene  {
-  my ($self,$gene)  = @_;
-  my ($transcripts) = $self->SUPER::fetch_all_by_Gene($gene);
-  if ($transcripts){
-	 foreach my $transcript(@$transcripts){
-		$self->reincarnate_transcript($transcript);
-	 }
-  }
-  return $transcripts;
 }
 
 sub fetch_evidence {
   my ($self,$transcript)=@_;
+
   if( !ref($transcript) || !$transcript->isa('Bio::EnsEMBL::Transcript') ) {
     throw('Transcript argument is required.');
   }
@@ -77,11 +40,13 @@ sub fetch_evidence {
 	 push @$results,$obj;
   }
   $sth->finish();
+
   return $results;
 }
 
 sub store_Evidence {
   my ($self,$transcript_id,$evidence_list) = @_;
+
   unless ($evidence_list || $transcript_id) {
 	 throw("evidence object list :$evidence_list and transcript_id:$transcript_id must be entered to store an evidence");
   }
@@ -97,16 +62,69 @@ sub store_Evidence {
   }
 }
 
-sub fetch_transcript_author {
-  my ($self,$transcript)=@_;
-  my $authad = $self->db->get_AuthorAdaptor;
-  my $author= $authad->fetch_transcript_author($transcript->dbID);
-  $transcript->transcript_author($author);
+sub reincarnate_transcript {
+    my ($self, $transcript) = @_;
+
+    bless $transcript, 'Bio::Vega::Transcript';
+    $self->fetch_transcript_author($transcript);
+
+    ### FIXME: shouldn't we also load the evidence at this point?
+
+    return $transcript;
+}
+
+sub fetch_by_stable_id  {
+  my ($self, $stable_id) = @_;
+
+  my ($transcript) = $self->SUPER::fetch_by_stable_id($stable_id);
+  if ($transcript){
+	 $self->reincarnate_transcript($transcript);
+  }
+
   return $transcript;
+}
+
+sub fetch_by_stable_id_version  {
+  my ($self, $stable_id, $version) = @_;
+
+  my $constraint = "tsi.stable_id = '$stable_id' AND tsi.version = $version";
+  my ($transcript) = @{ $self->generic_fetch($constraint) };
+  if ($transcript){
+	 $self->reincarnate_transcript($transcript);
+  }
+
+  return $transcript;
+}
+
+sub fetch_all_by_Slice  {
+  my ($self,$slice,$load_exons,$logic_name)  = @_;
+
+  my ($transcripts) = $self->SUPER::fetch_all_by_Slice($slice,$load_exons,$logic_name);
+  if ($transcripts){
+	 foreach my $transcript(@$transcripts){
+		$self->reincarnate_transcript($transcript);
+	 }
+  }
+
+  return $transcripts;
+}
+
+sub fetch_all_by_Gene  {
+  my ($self,$gene)  = @_;
+
+  my ($transcripts) = $self->SUPER::fetch_all_by_Gene($gene);
+  if ($transcripts){
+	 foreach my $transcript(@$transcripts){
+		$self->reincarnate_transcript($transcript);
+	 }
+  }
+
+  return $transcripts;
 }
 
 sub get_deleted_Transcript_by_slice{
   my ($self, $transcript,$tran_version) = @_;
+
   unless ($transcript || $tran_version){
 	 throw("no transcript passed on to fetch old transcript or no version supplied");
   }
@@ -129,11 +147,13 @@ sub get_deleted_Transcript_by_slice{
   if ($db_tran){
 	 $self->reincarnate_transcript($db_tran);
   }
+
   return $db_tran;
 }
 
-sub get_current_Transcript_by_slice{
+sub get_current_Transcript_by_slice {
   my ($self, $transcript) = @_;
+
   unless ($transcript){
 	 throw("no transcript passed on to fetch old transcript");
   }
@@ -148,14 +168,33 @@ sub get_current_Transcript_by_slice{
   if ($db_tran){
 	 $self->reincarnate_transcript($db_tran);
   }
+
   return $db_tran;
 }
 
+sub fetch_last_version {
+    my ($self, $transcript, $on_whole_chromosome) = @_;
+
+    my $transcript_stable_id=$transcript->stable_id;
+
+    my @candidates = $on_whole_chromosome
+        ? @{ $self->generic_fetch( "tsi.stable_id = '$transcript_stable_id'" ) }
+        : (grep { $_->stable_id eq $transcript_stable_id }
+               @{ $self->fetch_all_by_Slice($transcript->slice()) });
+
+    unless(scalar @candidates) {
+        return;
+    }
+
+    my $last = shift @candidates;
+    foreach my $candidate (@candidates) {
+        if($candidate->version > $last->version) {
+            $last = $candidate;
+        }
+    }
+
+    return $self->reincarnate_transcript($last);
+}
+
 1;
-
-	
-
-
-
-
 
