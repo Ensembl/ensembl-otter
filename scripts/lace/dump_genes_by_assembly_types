@@ -16,15 +16,10 @@ my $gene_count=0;
 
 my %assembly_nonmatch_version = (
     'mouse' => {
+
         'CR293526_B1' => 0,
 
-        'mrc4'    => 0,
-        'mrc4-2'  => 1,
-        'mrc4-3'  => 2,
-        'mrc4-4'  => 3,
-        'mrc4-06' => 4,
-        'mrc4-07' => 5,
-        'mrc4-08' => 6,
+        'AL928605.11' => 0,
 
         'NOD_IDD3'    => 0,
         'NOD_IDD3-01' => 1,
@@ -59,9 +54,7 @@ my %assembly_nonmatch_version = (
         '129_MUP-02' => 1,
         '129_MUP-03' => 2,
 
-        'AL928605.11' => 0,
-
-        'chr17_mhc_129-01' => 0,
+        'chr17_mhc_129-01'  => 0,
 
         'bM74C21-01' => 0,
 
@@ -75,29 +68,37 @@ my %assembly_nonmatch_version = (
         'CHORI29_IDD5.1_test-02' => 1,
 
         'black6_IDD5.1'    => 0,
-        'black6_IDD5.1-02' => 1,
-        'black6_IDD5.3-01' => 2,
-        'black6_IDD5.3-02' => 3,
-        'black6_IDD5.4-01' => 4,
-        'black6_IDD5.4-02' => 5,
-        'chr1-01'          => 6,
-        'chr1-02'          => 7,
+        'black6_IDD5.1-02' => 0.1,
+        'black6_IDD5.3-01' => 0.2,
+        'black6_IDD5.3-02' => 0.3,
+        'black6_IDD5.4-01' => 0.4,
+        'black6_IDD5.4-02' => 0.5,
+        'chr1-01'          => 1,
+        'chr1-02'          => 2,
 
-        'chr2-01'      => 0,
-        'chr2-02'      => 1,
-        'chr2-03'      => 2,
-        'chr2-NCBIM36' => 3,
+        'chr2-01'      => 1,
+        'chr2-02'      => 2,
+        'chr2-03'      => 3,
+#       'chr2-NCBIM36' => 4,
 
         'black6_IDD3'       => 0,
-        'black6_IDD3-02'    => 1,
-        'black6_IDD10'      => 2,
-        'black6_IDD10-02'   => 3,
-        'black6_IDD18'      => 4,
-        'black6_IDD18-02'   => 5,
-        'black6_IDD18.2-01' => 6,
-        'black6_IDD18.2-02' => 7,
-        'chr3-01'           => 8,
-        'chr3-02'           => 9,
+        'black6_IDD3-02'    => 0.1,
+        'black6_IDD10'      => 0.2,
+        'black6_IDD10-02'   => 0.3,
+        'black6_IDD18'      => 0.4,
+        'black6_IDD18-02'   => 0.5,
+        'black6_IDD18.2-01' => 0.6,
+        'black6_IDD18.2-02' => 0.7,
+        'chr3-01'           => 1,
+        'chr3-02'           => 2,
+
+        'mrc4'    => 0,
+        'mrc4-2'  => 1,
+        'mrc4-3'  => 2,
+        'mrc4-4'  => 3,
+        'mrc4-06' => 4,
+        'mrc4-07' => 5,
+        'mrc4-08' => 6,
 
         'lace_chr4_clones' => 0,
         'black6_IDD9.1-01' => 1,
@@ -110,91 +111,91 @@ my %assembly_nonmatch_version = (
         'chr4-08'          => 8,
         'chr4-09'          => 9,
         'chr4-10'          => 10,
-        'chr4-NCBIM36'     => 11,
+#       'chr4-NCBIM36'     => 11,
 
-        'chr5_steel-01' => 1,
-        'chr5_steel-02' => 2,
-        'chr5_steel-03' => 3,
-        'chr5_steel-04' => 4,
-        'chr5-01'       => 5,
-        'chr5-02'       => 6,
+        'chr5_steel-01' => 0.1,
+        'chr5_steel-02' => 0.2,
+        'chr5_steel-03' => 0.3,
+        'chr5_steel-04' => 0.4,
+        'chr5-01'       => 1,
+        'chr5-02'       => 2,
 
         'chr6.deafness.AGP'  => 0,
-        'chr6_steel-01'      => 1,
-        'chr6_steel-02'      => 2,
-        'chr6_steel-04'      => 3,
-        'chr6_steel-05'      => 4,
-        'black6_IDD6.1_2-01' => 5,
-        'black6_IDD6.1_2-02' => 6,
-        'black6_IDD6.3-01'   => 7,
-        'black6_IDD6.3-02'   => 8,
-        'chr6-01'            => 9,
-        'chr6-02'            => 10,
+        'chr6_steel-01'      => 0.1,
+        'chr6_steel-02'      => 0.2,
+        'chr6_steel-04'      => 0.3,
+        'chr6_steel-05'      => 0.4,
+        'black6_IDD6.1_2-01' => 0.5,
+        'black6_IDD6.1_2-02' => 0.6,
+        'black6_IDD6.3-01'   => 0.7,
+        'black6_IDD6.3-02'   => 0.8,
+        'chr6-01'            => 1,
+        'chr6-02'            => 2,
 
-        'black6_Abpa-01' => 1,
-        'black6_Abpa-02' => 2,
-        'chr7-01'        => 3,
-        'chr7-02'        => 4,
+        'black6_Abpa-01' => 0.1,
+        'black6_Abpa-02' => 0.2,
+        'chr7-01'        => 1,
+        'chr7-02'        => 2,
 
-        'chr8-01' => 0,
-        'chr8-02' => 1,
+        'chr8-01' => 1,
+        'chr8-02' => 2,
 
-        'chr9-01' => 0,
-        'chr9-02' => 1,
-        'chr9-03' => 2,
+        'chr9-01' => 1,
+        'chr9-02' => 2,
+        'chr9-03' => 3,
 
-        'chr10-01' => 0,
-        'chr10-02' => 1,
+        'chr10-01' => 1,
+        'chr10-02' => 2,
 
         'lace_chr11_clones3' => 0,
-        'lace_chr11_clones4' => 1,
-        'black6_IDD4.1'      => 2,
-        'black6_IDD4.2-01'   => 3,
-        'black6_IDD4.2Q-01'  => 4,
-        'chr11'              => 5,
-        'chr11-04'           => 6,
-        'chr11-05'           => 7,
-        'chr11-06'           => 8,
-        'chr11-07'           => 9,
-        'chr11-NCBIM36'      => 10,
+        'lace_chr11_clones4' => 0.1,
+        'black6_IDD4.1'      => 0.2,
+        'black6_IDD4.2-01'   => 0.3,
+        'black6_IDD4.2Q-01'  => 0.4,
+        'chr11'              => 0.5,
+        'chr11-04'           => 4,
+        'chr11-05'           => 5,
+        'chr11-06'           => 6,
+        'chr11-07'           => 7,
+#       'chr11-NCBIM36'      => 8,
 
-        'chr12-01' => 0,
-        'chr12-02' => 1,
+        'chr12-01' => 1,
+        'chr12-02' => 2,
 
         'del36H_set' => 0,
         'chr13-01'   => 1,
         'chr13-02'   => 2,
 
-        'chr14-01' => 0,
-        'chr14-02' => 1,
+        'chr14-01' => 1,
+        'chr14-02' => 2,
 
-        'chr15-01' => 0,
-        'chr15-02' => 1,
+        'chr15-01' => 1,
+        'chr15-02' => 2,
 
-        'chr16-01' => 0,
-        'chr16-02' => 1,
+        'chr16-01' => 1,
+        'chr16-02' => 2,
 
         'clone_AF050157.1'  => 0,
-        'mhc_4_clones-01'   => 1,
-        'black6_IDD16.1-01' => 2,
-        'black6_IDD16.1-02' => 3,
-        'chr17-01'          => 4,
-        'chr17-02'          => 5,
+        'mhc_4_clones-01'   => 0.1,
+        'black6_IDD16.1-01' => 0.2,
+        'black6_IDD16.1-02' => 0.3,
+        'chr17-01'          => 1,
+        'chr17-02'          => 2,
 
-        'chr18-01' => 0,
-        'chr18-02' => 1,
+        'chr18-01' => 1,
+        'chr18-02' => 2,
 
-        'chr19-01' => 0,
-        'chr19-02' => 1,
+        'chr19-01' => 1,
+        'chr19-02' => 2,
 
-        'ChrX-01'      => 0,
-        'ChrX-02'      => 1,
-        'chrX-03'      => 2,
-        'chrX-04'      => 3,
-        'chrX-NCBIM36' => 4,
+        'ChrX-01'      => 1,
+        'ChrX-02'      => 2,
+        'chrX-03'      => 3,
+#       'chrX-NCBIM36' => 3.5,
+        'chrX-04'      => 4,
 
-        'chrY-01' => 0,
-        'chrY-02' => 1,
+        'chrY-01' => 1,
+        'chrY-02' => 2,
     },
 
     'human' => {
@@ -321,6 +322,7 @@ sub gene_transformed_successfully {
     my $slice_length = $slice->length;
     foreach my $exon (@{$gene->get_all_Exons}) {
         if ($exon->contig != $slice or $exon->start < 1 or $exon->end > $slice_length) {
+            print STDERR "[exon out of boundaries]\n";
             return 0;
         }
     }
@@ -336,6 +338,7 @@ sub gene_transformed_successfully {
         my $last = 0;
         foreach my $exon (@exon_list) {
             if ($exon->start <= $last) {
+                print STDERR "[exons out of order]\n";
                 return 0;
             }
             $last = $exon->end;
