@@ -1,7 +1,6 @@
 #!/usr/local/bin/perl -w
 
 use strict;
-use Bio::Otter::Converter;
 use Bio::Otter::Lace::Defaults;
 
 my $otter_dba; # it's much cheaper to have these globally visible
@@ -13,7 +12,7 @@ my $reduncount=0;
 my $loadcount=0;
 $|=1;
 
-my $gene_count;
+my $gene_count=0;
 
 my %assembly_nonmatch_version = (
 'human' => {

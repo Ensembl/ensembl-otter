@@ -80,9 +80,12 @@ while (<>){  ## read from STDIN + @ARGV filenames
 		my $gene=$genes->[0];
         my $current = ($gene->biotype !~ /obsolete/) ? 1 : 0;
 		$gene->is_current( $current );
-		$ga->store($gene,'chr_whole_slice', $modified);
 
-        if($current) {
+		my $any_change = $ga->store($gene, 1, $modified);
+
+        if(!$any_change) {
+            print STDOUT "The gene ".$gene->stable_id." was not modified, so no new version was stored\n";
+        } elsif($current) {
             print STDOUT "stored old gene dbid:$dbid as new gene dbid:".$gene->dbID
                         ." and the curent version is:".$gene->stable_id.".".$gene->version. "\n";
         } else {
@@ -97,7 +100,10 @@ while (<>){  ## read from STDIN + @ARGV filenames
   };
   if ($@) {
 	 $dba->rollback;
-	 print STDERR ("\ngene $dbid did not get loaded due to \n" .$@);
+	 print STDERR ("\ngene $dbid did not get loaded due to \n", $@);
+     if($@!~/more than one transcript has the name/) { # temporarily skip those errors to count how many such cases there are
+         die "Dying in stript";
+     }
   }
 }
 

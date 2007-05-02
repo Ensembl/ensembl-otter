@@ -1,37 +1,41 @@
-
 package Bio::Vega::DBSQL::ExonAdaptor;
 
 use strict;
 use base 'Bio::EnsEMBL::DBSQL::ExonAdaptor';
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 
+    # trying to substitute the class in all possible places at once (a hack)
+sub _objs_from_sth {
+    my $self = shift @_;
+
+    my $array = $self->SUPER::_objs_from_sth(@_);
+
+    for my $exon (@$array) {
+        bless $exon, 'Bio::Vega::Exon';
+    }
+
+    return $array;
+}
+
 sub update  {
 
   my ($self, $exon) = @_;
-  my $update = 0;
 
-  if ( !defined $exon || !ref $exon || !$exon->isa('Bio::EnsEMBL::Exon') ) {
+  if ( !$exon || !ref $exon || !$exon->isa('Bio::Vega::Exon') ) {
     throw("Must update an exon object, not a $exon");
   }
 
-  my $update_exon_sql = qq(
+  my $sth = $self->prepare(qq{
        UPDATE exon
           SET 
               is_current = ?
         WHERE exon_id = ?
-  );
+  });
 
-
-  my $sth = $self->prepare( $update_exon_sql );
-  $sth->bind_param(1, $exon->is_current);
-
-  $sth->bind_param(2, $exon->dbID);
-
-  $sth->execute();
-
+  $sth->execute( $exon->is_current, $exon->dbID );
 }
 
-sub fetch_by_stable_id_version  {
+sub fetch_by_stable_id_version {
 
   my ($self, $stable_id,$version) = @_;
 
@@ -39,49 +43,63 @@ sub fetch_by_stable_id_version  {
   my ($exon) = @{ $self->generic_fetch($constraint) };
 
   return $exon;
-
 }
 
-
-
-sub get_deleted_Exon_by_slice{
-  my ($self, $exon,$exon_version) = @_;
+sub get_deleted_Exon_by_slice {
+  my ($self, $exon, $exon_version) = @_;
   unless ($exon || $exon_version){
 	 throw("no exon passed on to fetch old exon or no version supplied");
   }
-  my $exon_slice=$exon->slice;
+
   my $exon_stable_id=$exon->stable_id;
-  my $db_exon;
-  my @out = grep { $_->stable_id eq $exon_stable_id and $_->version eq $exon_version }
-    @{$self->SUPER::fetch_all_by_Slice_constraint($exon_slice,'e.is_current = 0 ')};
-  if ($#out > 1) {
-	 ##test
-	 @out = sort {$a->dbID <=> $b->dbID} @out;
-	 $db_exon=pop @out;
-	 ##test
-	 #die "\ntrying to fetch an exon for deletion there are more than one exon retrived $exon_stable_id\n";
-  }
-  else {
-	 $db_exon=$out[0];
-  }
-  return $db_exon;
+  my @noncurrent_exons =    # NB: reverse order, to get the last one:
+        sort {$b->dbID <=> $a->dbID}
+        grep { $_->stable_id eq $exon_stable_id and $_->version eq $exon_version }
+        @{$self->fetch_all_by_Slice_constraint($exon->slice(), 'e.is_current = 0 ')};
+
+  return $noncurrent_exons[0];
 }
 
-sub get_current_Exon_by_slice{
+sub get_current_Exon_by_slice {
   my ($self, $exon) = @_;
   unless ($exon){
 	 throw("no exon passed on to fetch old exon");
   }
-  my $exon_slice=$exon->slice;
+
   my $exon_stable_id=$exon->stable_id;
-  my @out = grep { $_->stable_id eq $exon_stable_id }
-    @{ $self->fetch_all_by_Slice_constraint($exon_slice,'e.is_current = 1 ')};
-  if ($#out > 1) {
-	 die "trying to fetch an exon for comparison, there are more than one exon retrived for $exon_stable_id\n";
+  my @current_exons =
+        grep { $_->stable_id eq $exon_stable_id }
+        @{ $self->fetch_all_by_Slice_constraint($exon->slice, 'e.is_current = 1 ')};
+  if (@current_exons > 1) {
+	 die "there are ".scalar(@current_exons)." current $exon_stable_id exons in the db\n";
   }
-  my $db_exon=$out[0];
-  return $db_exon;
+  return $current_exons[0];
 }
+
+sub fetch_last_version {
+    my ($self, $exon, $on_whole_chromosome) = @_;
+
+    my $exon_stable_id=$exon->stable_id;
+
+    my @candidates = $on_whole_chromosome
+        ? @{ $self->generic_fetch( "esi.stable_id = '$exon_stable_id'" ) }
+        : (grep { $_->stable_id eq $exon_stable_id }
+               @{ $self->fetch_all_by_Slice($exon->slice()) });
+
+    unless(scalar @candidates) {
+        return;
+    }
+
+    my $last = shift @candidates;
+    foreach my $candidate (@candidates) {
+        if($candidate->version > $last->version) {
+            $last = $candidate;
+        }
+    }
+
+    return $last;
+}
+
 
 1;
 
