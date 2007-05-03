@@ -487,7 +487,6 @@ sub main {
                 my $rawcontig   = $exon->contig();
                 my $contig_id   = $rawcontig->dbID();
                 my $contig_name = $rawcontig->name();
-                print STDERR "CTG: $contig_name\n";
 
                 $contig_id_set->{$contig_id}++;
             }
@@ -498,8 +497,6 @@ sub main {
         my $ver_2_asm_chr = {}; # version->[list of [asm_type, chr_name] pairs]
 
         while( my ($atype, $chr_name) = $sth_ctgids_2_asm->fetchrow()) {
-
-            print STDERR "ATYPE=$atype, CHRNAME=$chr_name\n";
 
             my $version = ($atype=~/^chr\d+-0*(\d+)$/)
                 ? $1
