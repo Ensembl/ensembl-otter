@@ -42,7 +42,7 @@ redundant gene_id list.
 3.1) In a bash shell run the following script:
 
   ensembl-otter/scripts/lace/dump_genes_by_assembly_types \
-    -redunfile ~ck1/bin/otter/xml/redundant_'species'_gene_dbids_to_skip_for_newotter \
+    -redunfile /nfs/team71/analysis/ck1/TMP/loutre_species_backup/redundant_'species'_gene_dbids_to_skip_for_newotter \
     -dataset dsn-name >> dump_genes.out 2>> dump_error.log &
 
 notes: dsn-name is the data source name pointing
