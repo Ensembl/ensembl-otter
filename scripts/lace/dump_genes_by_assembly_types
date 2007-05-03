@@ -388,7 +388,7 @@ sub gene_transformed_successfully {
 
             } # for $atype
         } # for $version
-        print STDERR "--- FAILED TO MAP!\n";
+        print STDERR "--- FAILED TO MAP\n";
     }
 
 } # lexical environment for add_xml_gene
@@ -474,7 +474,7 @@ sub main {
 
 		if ($redunfile && exists $red_hash->{$gene_id}){
 		  $reduncount++;
-		  print STDERR "-- REDUNDANT\n";
+		  print STDERR "--- REDUNDANT\n";
 		  next;
 		  
 		}
