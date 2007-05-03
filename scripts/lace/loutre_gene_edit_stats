@@ -1,0 +1,132 @@
+#!/usr/local/bin/perl -w
+
+use lib '/Users/jgrg/work/ensembl-head/modules';
+
+### loutre_gene_edit_stats
+
+use strict;
+use Bio::Otter::Lace::Defaults;
+use Bio::Vega::DBSQL::DBAdaptor;
+
+
+{
+    my $dataset_name = 'ns_human';
+    my $source_name = 'havana';
+
+    my $usage = sub { exec('perldoc', $0) };
+    # This do_getopt() call is needed to parse the otter config files
+    # even if you aren't giving any arguments on the command line.
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'       => $usage,
+        'dataset=s'     => \$dataset_name,
+        ) or $usage->();
+    $usage->() unless $dataset_name;
+    
+    print "loutre gene counts for $source_name genes in $dataset_name\n",
+        "Month\tNew\tModified\tDeleted\n";
+    
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    
+    my $otter_dba = $ds->get_cached_DBAdaptor->dbc;
+    
+    my $get_total = $otter_dba->prepare(q{
+        SELECT count(*)
+        FROM gene
+        WHERE is_current = 1
+          AND source = ?
+        });
+    $get_total->execute($source_name);
+    my ($total_current) = $get_total->fetchrow;
+    
+    # So we can tell when we get the latest version of a gene if it is deleted
+    my $get_max = $otter_dba->prepare(q{
+        SELECT stable_id
+          , MAX(version)
+        FROM gene_stable_id
+        GROUP BY stable_id
+        });
+    $get_max->execute;
+    my %stable_max;
+    while (my ($stable, $max) = $get_max->fetchrow) {
+        $stable_max{$stable} = $max;
+    }
+    
+    my $list_genes = $otter_dba->prepare(q{
+        SELECT s.stable_id
+          , s.version
+          , DATE_FORMAT(s.modified_date, "%Y-%m")
+          , g.is_current
+          , g.source
+        FROM gene g
+          , gene_stable_id s
+        WHERE g.gene_id = s.gene_id
+          AND g.source = ?
+        ORDER BY s.modified_date ASC
+        });
+    $list_genes->execute($source_name);
+
+    my (%seen_stable, %seen_mod, %new_this_month);
+    my $last_month = "";
+    my ($new, $mod, $del) = (0,0,0);
+    my $total_genes = 0;
+    while (my ($stable, $version, $mod_month, $is_current, $source) = $list_genes->fetchrow) {
+        # Print report for last month, and zero variables, when we reach a new month
+        if ($mod_month ne $last_month) {
+            if ($last_month) {
+                print join("\t", $last_month, $new, $mod, $del), "\n";
+                $total_genes += $new;
+                ($new, $mod, $del) = (0,0,0);
+                %seen_mod = ();
+                %new_this_month = ();
+            }
+            $last_month = $mod_month;
+        }
+
+        my $was_new = 0;
+        if ($seen_stable{$stable}) {
+            # Don't count same gene modfied in same month more than once
+            unless ($seen_mod{$stable}) {
+                $mod++;
+                $seen_mod{$stable} = 1;
+            }
+        } else {
+            $seen_stable{$stable} = 1;
+            # Skip deleted genes from another source
+            next if $version != 1 and $source ne $source_name;
+            $new++;
+            $new_this_month{$stable} = 1;
+            $was_new = 1;
+        }
+        
+        # Is the gene version the latest one?
+        if ($version == $stable_max{$stable}) {
+            if ($is_current == 0) {
+                # Latest, but not current, means it is deleted
+                $del++;
+                $new-- if $new_this_month{$stable};
+            }
+        }
+    }
+    # Print last month left in queue
+    print join("\t", $last_month, $new, $mod, $del), "\n";
+
+    $total_genes += $new;
+    print "Total genes\t$total_genes\n",
+        "Current genes\t$total_current\n";
+}
+
+
+
+
+__END__
+
+=head1 NAME - loutre_gene_edit_stats
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
