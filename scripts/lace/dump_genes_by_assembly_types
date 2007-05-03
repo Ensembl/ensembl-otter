@@ -339,6 +339,10 @@ sub gene_transformed_successfully {
         foreach my $exon (@exon_list) {
             if ($exon->start <= $last) {
                 print STDERR "[exons out of order]\n";
+                for my $i (0..@exon_list-1) {
+                    my $ex = $exon_list[$i];
+                    print STDERR "exon_${i}: ".$ex->start()."..".$ex->end()." (".$ex->strand().") dbID=".$ex->dbID().", slice=".$ex->contig()->name."\n";
+                }
                 return 0;
             }
             $last = $exon->end;
@@ -384,7 +388,7 @@ sub gene_transformed_successfully {
 
             } # for $atype
         } # for $version
-        print STDERR "---FAILED TO MAP!\n";
+        print STDERR "--- FAILED TO MAP!\n";
     }
 
 } # lexical environment for add_xml_gene
@@ -466,15 +470,16 @@ sub main {
 
 		### Ignore gene_ids in Chao-Kung's file(redundant file)
 
+        print STDERR "$gene_id\t$stable_id.$version\t$modified\t";
+
 		if ($redunfile && exists $red_hash->{$gene_id}){
 		  $reduncount++;
-		  # print STDERR "redundant - not loaded $gene_id\t$stable_id.$version\t$modified\n";
+		  print STDERR "-- REDUNDANT\n";
 		  next;
 		  
 		}
-		$loadcount++;
-        print STDERR "$gene_id\t$stable_id.$version\t$modified\t";
 
+		$loadcount++;
         my $gene = $gene_adaptor->fetch_by_dbID($gene_id);
         my $contig_id_set = {};
         for my $transcript (@{$gene->get_all_Transcripts()}) {
@@ -482,6 +487,7 @@ sub main {
                 my $rawcontig   = $exon->contig();
                 my $contig_id   = $rawcontig->dbID();
                 my $contig_name = $rawcontig->name();
+                print STDERR "CTG: $contig_name\n";
 
                 $contig_id_set->{$contig_id}++;
             }
@@ -492,6 +498,8 @@ sub main {
         my $ver_2_asm_chr = {}; # version->[list of [asm_type, chr_name] pairs]
 
         while( my ($atype, $chr_name) = $sth_ctgids_2_asm->fetchrow()) {
+
+            print STDERR "ATYPE=$atype, CHRNAME=$chr_name\n";
 
             my $version = ($atype=~/^chr\d+-0*(\d+)$/)
                 ? $1
@@ -504,6 +512,8 @@ sub main {
 
         if(%$ver_2_asm_chr) {
             add_xml_gene($gene, $ver_2_asm_chr);
+        } else {
+            print STDERR "--- EXONS ON ORPHAN CONTIGS!\n";
         }
     } # gene_id fetching loop
 
@@ -517,10 +527,6 @@ print STDERR "\nDumped $gene_count gene db ids to output file\n";
 undef $otter_dba;
 undef $gene_adaptor;
 undef $slice_adaptor;
-undef $red_hash;
-undef $load_str;
-undef $reduncount;
-undef $loadcount;
 
 1;
 
