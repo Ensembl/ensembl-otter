@@ -578,7 +578,7 @@ sub gene_transformed_successfully {
     my $slice_length = $slice->length;
     foreach my $exon (@{$gene->get_all_Exons}) {
         if ($exon->contig != $slice or $exon->start < 1 or $exon->end > $slice_length) {
-            print STDERR "[exon out of boundaries]\n";
+            print STDERR "[exon out of boundaries] ";
             return 0;
         }
     }
@@ -594,10 +594,10 @@ sub gene_transformed_successfully {
         my $last = 0;
         foreach my $exon (@exon_list) {
             if ($exon->start <= $last) {
-                print STDERR "[exons out of order]\n";
+                print STDERR "[exons out of order] ";
                 for my $i (0..@exon_list-1) {
                     my $ex = $exon_list[$i];
-                    print STDERR "exon_${i}: ".$ex->start()."..".$ex->end()." (".$ex->strand().") dbID=".$ex->dbID().", slice=".$ex->contig()->name."\n";
+                    # print STDERR "exon_${i}: ".$ex->start()."..".$ex->end()." (".$ex->strand().") dbID=".$ex->dbID().", slice=".$ex->contig()->name."\n";
                 }
                 return 0;
             }
