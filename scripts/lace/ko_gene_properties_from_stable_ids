@@ -53,13 +53,19 @@ use Bio::Otter::Lace::Defaults;
               AND a.chromosome_id = c.chromosome_id
               AND a.contig_id IN ($ctg_list)
               AND ss.hide = 'N'
-              AND ss.assembly_type like 'chr%'
             ORDER BY ss.assembly_type DESC
             };
         my $sth = $otter_dba->prepare($sql);
         $sth->execute;
-        my ($asm_type, $chr_name) = $sth->fetchrow;
-        $sth->finish;
+        
+        my @asm;
+        while (my ($asm_type, $chr_name) = $sth->fetchrow) {
+            next unless $asm_type =~ /^chr([0-9]{1,2}|[xyXY])-\d{2}$/;
+            push(@asm, [$asm_type, $chr_name]);
+        }
+        
+        die "No whole chromosomes for '$gsid'" unless @asm;
+        my ($asm_type, $chr_name) = @{$asm[0]};
         
         # Get the slice
         $otter_dba->assembly_type($asm_type);
