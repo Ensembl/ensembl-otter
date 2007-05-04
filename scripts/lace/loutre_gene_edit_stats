@@ -9,8 +9,9 @@ use Bio::Otter::Lace::Defaults;
 use Bio::Vega::DBSQL::DBAdaptor;
 
 
+my $dataset_name = 'ns_human';
+
 {
-    my $dataset_name = 'ns_human';
     my $source_name = 'havana';
 
     my $usage = sub { exec('perldoc', $0) };
@@ -23,40 +24,61 @@ use Bio::Vega::DBSQL::DBAdaptor;
         ) or $usage->();
     $usage->() unless $dataset_name;
     
-    print "loutre gene counts for $source_name genes in $dataset_name\n",
-        "Month\tNew\tModified\tDeleted\n";
-    
     # Client communicates with otter HTTP server
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
     
     # DataSet interacts directly with an otter database
     my $ds = $cl->get_DataSet_by_name($dataset_name);
-    
+
     my $otter_dba = $ds->get_cached_DBAdaptor->dbc;
     
-    my $get_total = $otter_dba->prepare(q{
+    do_gene_counts($otter_dba, $source_name);
+    do_transcript_counts($otter_dba, $source_name);
+}
+
+sub do_transcript_counts {
+    my ($otter_dba, $source_name) = @_;
+    
+    my $count_transcripts = $otter_dba->prepare(q{
+        SELECT count(*)
+        FROM transcript t
+          , gene g
+        WHERE t.gene_id = g.gene_id
+          AND g.is_current = 1
+          AND g.biotype != 'obsolete'
+          AND g.source = ?
+        });
+    
+    # List transcripts in order of modification
+    my $list_transcripts = $otter_dba->prepare(q{
+        SELECT s.stable_id
+          , s.version
+          , DATE_FORMAT(s.modified_date, "%Y-%m")
+          , g.is_current
+          , g.biotype
+        FROM transcript t
+          , gene g
+          , transcript_stable_id s
+        WHERE g.gene_id = t.gene_id
+          AND t.transcript_id = s.transcript_id
+          AND g.source = ?
+        ORDER BY s.modified_date ASC
+        });
+    
+    do_counts('transcript', $otter_dba, $source_name, $count_transcripts, $list_transcripts);
+}
+
+sub do_gene_counts {
+    my ($otter_dba, $source_name) = @_;
+    
+    my $count_genes = $otter_dba->prepare(q{
         SELECT count(*)
         FROM gene
         WHERE is_current = 1
+          AND biotype != 'obsolete'
           AND source = ?
         });
-    $get_total->execute($source_name);
-    my ($total_current) = $get_total->fetchrow;
     
-    # So we can tell when we get the latest version of a gene if it is deleted
-    my $get_max = $otter_dba->prepare(q{
-        SELECT stable_id
-          , MAX(version)
-        FROM gene_stable_id
-        GROUP BY stable_id
-        });
-    $get_max->execute;
-    my %stable_max;
-    while (my ($stable, $max) = $get_max->fetchrow) {
-        $stable_max{$stable} = $max;
-    }
-    
-    # List genes in order of modification
     my $list_genes = $otter_dba->prepare(q{
         SELECT s.stable_id
           , s.version
@@ -69,18 +91,45 @@ use Bio::Vega::DBSQL::DBAdaptor;
           AND g.source = ?
         ORDER BY s.modified_date ASC
         });
-    $list_genes->execute($source_name);
+    
+    do_counts('gene', $otter_dba, $source_name, $count_genes, $list_genes);
+}
+
+sub do_counts {
+    my ($object, $otter_dba, $source_name, $get_total, $list_sth) = @_;
+    
+    print "loutre $object counts for $source_name genes in $dataset_name\n",
+        "Month\tNew\tModified\tDeleted\n";
+
+    $get_total->execute($source_name);
+    my ($total_current) = $get_total->fetchrow;
+    
+    # So we can tell when we get the latest version of a object if it is deleted
+    my $get_max = $otter_dba->prepare(qq{
+        SELECT stable_id
+          , MAX(version)
+        FROM ${object}_stable_id
+        GROUP BY stable_id
+        });
+    $get_max->execute;
+    my %stable_max;
+    while (my ($stable, $max) = $get_max->fetchrow) {
+        $stable_max{$stable} = $max;
+    }
+    
+    $list_sth->execute($source_name);
 
     my (%seen_stable, %seen_mod, %new_this_month);
     my $last_month = "";
     my ($new, $mod, $del) = (0,0,0);
-    my $total_genes = 0;
-    while (my ($stable, $version, $mod_month, $is_current, $biotype) = $list_genes->fetchrow) {
+    my $total_objects = 0;
+    while (my ($stable, $version, $mod_month, $is_current, $biotype) = $list_sth->fetchrow) {
+
         # Print report for last month, and zero variables, when we reach a new month
         if ($mod_month ne $last_month) {
             if ($last_month) {
-                print join("\t", $last_month, $new, $mod, $del), "\n";
-                $total_genes += $new;
+                print join("\t", $last_month, $new, $mod - $del, $del), "\n";
+                $total_objects += $new;
                 ($new, $mod, $del) = (0,0,0);
                 %seen_mod = ();
                 %new_this_month = ();
@@ -89,34 +138,34 @@ use Bio::Vega::DBSQL::DBAdaptor;
         }
 
         if ($seen_stable{$stable}) {
-            # Don't count same gene modfied in same month more than once
+            # Don't count same object modfied in same month more than once
             unless ($seen_mod{$stable}) {
                 $mod++;
                 $seen_mod{$stable} = 1;
             }
         } else {
-            # Skip deleted genes from another source
-            next if $version != 1 and $biotype eq 'obsolete';
+            # Skip deleted objects from another source
+            next if $biotype eq 'obsolete';
             $seen_stable{$stable} = 1;
             $new++;
             $new_this_month{$stable} = 1;
         }
         
-        # Is the gene version the latest one?
+        # Is the object version the latest one?
         if ($version == $stable_max{$stable}) {
             if ($is_current == 0) {
                 # Latest, but not current, means it is deleted
                 $del++;
-                $new-- if $new_this_month{$stable};
+                #$new-- if $new_this_month{$stable};
             }
         }
     }
     # Print last month left in queue
-    print join("\t", $last_month, $new, $mod, $del), "\n";
-    $total_genes += $new;
+    print join("\t", $last_month, $new, $mod - $del, $del), "\n";
+    $total_objects += $new;
 
-    print "Total genes\t$total_genes\n",
-        "Current genes\t$total_current\n";
+    print "Total ${object}s\t$total_objects\n",
+        "Current ${object}s\t$total_current\n\n";
 }
 
 
