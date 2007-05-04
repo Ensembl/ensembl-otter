@@ -608,12 +608,11 @@ sub build_Locus {
 	 $gene->truncated_flag($truncated);
   }
   ##convert coordinates from chromosomal coordinates to slice coordinates
-  if ($chrstart != 2000000000) {
-	 foreach my $exon (@{$gene->get_all_Exons}) {
-		$exon->start($exon->start - $chrstart + 1);
-		$exon->end(  $exon->end   - $chrstart + 1);
-	 }
+  foreach my $exon (@{$gene->get_all_Exons}) {
+    $exon->start($exon->start - $chrstart + 1);
+    $exon->end(  $exon->end   - $chrstart + 1);
   }
+
   $gene->start($gene->start-$chrstart+1);
   $gene->end($gene->end-$chrstart+1);
   foreach my $transcript (@$transcripts){
