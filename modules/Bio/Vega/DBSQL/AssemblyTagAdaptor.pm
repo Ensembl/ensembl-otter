@@ -89,8 +89,8 @@ sub update_assembly_tagged_contig {
   my $num;
   eval{
 	my $sth = $self->prepare(qq{
-								UPDATE assembly_tagged_contig 
-								SET transferred = 'yes' 
+								UPDATE assembly_tagged_contig
+								SET transferred = 'yes'
 								WHERE seq_region_id = $seq_region_id
 							   });
 	$sth->execute();
@@ -118,7 +118,6 @@ sub store {
   my $contig_slice;
 
   if ( $at->slice->coord_system->name ne "contig") {
-
     my $at_c = $at->transform('contig');
     unless ($at_c){
       throw("assembly tag $at cannot be transformed onto a contig slice from chromosome \n" .
@@ -139,7 +138,7 @@ sub store {
   my $sa = $self->db->get_SliceAdaptor();
   my $seq_region_id=$sa->get_seq_region_id($contig_slice);
 
-  my $sql = "REPLACE INTO assembly_tag (seq_region_id, seq_region_start, seq_region_end, seq_region_strand, tag_type, tag_info) VALUES (?,?,?,?,?,?)";
+  my $sql = "INSERT IGNORE INTO assembly_tag (seq_region_id, seq_region_start, seq_region_end, seq_region_strand, tag_type, tag_info) VALUES (?,?,?,?,?,?)";
   my $sth = $self->prepare($sql);
 
   eval{
