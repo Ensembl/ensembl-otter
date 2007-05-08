@@ -64,14 +64,15 @@ sub update_database {
 sub update_assembly_tagged_contig_table {
 
   my $sth = $loutre_db->prepare(qq{
-								   SELECT sr.seq_region_id
-								   FROM seq_region sr
-								   LEFT JOIN assembly_tagged_contig atc
-								   ON sr.seq_region_id = atc.seq_region_id
-								   WHERE sr.coord_system_id = 5
-								   AND atc.seq_region_id IS NULL
-								  }
-							   );
+                                   SELECT sr.seq_region_id
+                                   FROM seq_region sr, coord_system cs
+                                   LEFT JOIN assembly_tagged_contig atc
+                                   ON sr.seq_region_id = atc.seq_region_id
+                                   WHERE cs.coord_system_id=sr.coord_system_id
+                                   AND cs.name='contig'
+                                   AND atc.seq_region_id IS NULL
+                                 }
+                               );
   $sth->execute;
 
   my @seqids;
