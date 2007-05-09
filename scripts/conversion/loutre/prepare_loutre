@@ -40,7 +40,7 @@ Since API support for B::E::Attributes is very rudimentary, modification of attr
 using MySQL. Consequently the attribute table in the loutre database must be upto date before
 running this script.
 
-Support for setting attrib_type export_mode to a value of 'I' is not guaranteed
+Support for setting attrib_type export_mode to a value of 'I' has not been tested and is not guaranteed.
 
 =head1 LICENCE
 
@@ -159,8 +159,9 @@ my $aa = $dba->get_AttributeAdaptor();
 
 #get chromosomes without a hidden attribute
 my $chroms = $support->fetch_non_hidden_slice($aa,$sa);
+
 #get all chromosomes
-my $all_chromsomes = $sa->fetch_all('Chromosome','Otter');
+my $all_chromosomes = $sa->fetch_all('Chromosome','Otter');
 
 #for each chromosome that we want
 SLICE:
@@ -168,18 +169,32 @@ foreach my $k (keys %$regions_wanted_details ) {
 
 	#see which of the non hidden chromosomes best match what we want
 	my $sr_name_to_use;
+	my $saved_extra = '';
 	my %possibles = map {$_->seq_region_name => $_} grep { $_->seq_region_name =~ /^$k-/ } @$chroms;
 	if (scalar(keys %possibles) > 1) {
 		my $max_version = 0;
 		foreach my $sr_name ( keys %possibles ) {
 			my ($assembly,$version,$extra) = $sr_name =~ /(.*)-(\d*)(\D*)/;
-			if ( (! $extra) && ($version > $max_version) ) {
-				$max_version = $version;
-				$sr_name_to_use = $sr_name;
+			if ($assembly && $version) {
+				if ( (! $extra) && ($version > $max_version) ) {
+					$max_version = $version;
+					$sr_name_to_use = $sr_name;
+				}
+				elsif ($extra) {
+#					warn "---$version---$max_version---";
+					if ($version >= $max_version) {
+#						warn "--$extra--$saved_extra--";
+						if ($extra gt $saved_extra) {
+							$max_version = $version;
+							$sr_name_to_use = $sr_name;
+							$saved_extra = $extra;
+							$support->log_warning("There is a non numerical assembly version you might want to check- $sr_name");
+						}
+					}
+				}
 			}
-			elsif ( $extra && ($version >= $max_version) ) {
-				$support->log_warning("There is a non numerical assembly name - $sr_name - so you might want to investigate\n");
-				$sr_name_to_use = $sr_name;
+			else {
+				$support->log_warning("There is a non standard assembly name in loutre which has been ignored - $sr_name");
 			}
 		}
 	}
@@ -220,7 +235,7 @@ foreach my $k (keys %$regions_wanted_details ) {
 	
 	# mark any old assemblies export_mode as 'None'
  CHROM:
-	foreach my $chrom (@{$all_chromsomes}) {
+	foreach my $chrom (@{$all_chromosomes}) {
 		my $chr_name = $chrom->seq_region_name;
 		my $chr_id   = $chrom->get_seq_region_id;
 		if ($chr_name =~ /^$k-/) {
@@ -260,8 +275,6 @@ foreach my $k (keys %$regions_wanted_details ) {
 	}
 }
 
-
-
 #do a final sanity check and report:
 #all of these attributes should only be present once for each chromosome that going to be exported.
 #The exception is vega_release which can have multiple values
@@ -269,7 +282,7 @@ foreach my $k (keys %$regions_wanted_details ) {
 $support->log("\n\nSUMMARY\nRelevant attributes for chromosomes with a vega_export_mod attribute of value \'$rel_type\' are as follows:\n\n");
 
 #set up printing format
-my $template = "%-20s%-10s%-35s%-10s%-10s%-7s%-30s\n";
+my $template = "%-15s%-10s%-35s%-15s%-10s%-7s%-30s\n";
 my $txt = sprintf $template, qw(loutre_id vega_id name ack toplevel hidden releases);
 $txt .= "-"x110 . "\n";
 
@@ -291,7 +304,7 @@ foreach my $chrom ( @{$sa->fetch_all('Chromosome','Otter')}) {
 			$val{$k} = join ',', @$c;
 		}
 		$txt .= sprintf $template, ($val{'loutre_id'},$val{'vega_name'},$val{'name'},$val{'ack'},$val{'toplevel'},$val{'hidden'},$val{'vega_release'});
-		$txt .=	"\n";
+#		$txt .=	"\n";
 	}
 	elsif (scalar(@$c > 1)) {
 		$support->log_warning("CRITICAL - chromosome $name has multiple vega_export_mod attributes with a value of \'$rel_type\'\n");
