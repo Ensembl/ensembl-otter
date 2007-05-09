@@ -44,7 +44,7 @@ my $atags  = [];
                                       'misc'         => \$do_misc    # load atag data as misc features (4 tables)
 									 ) or $help->(); # plus default options
 
-  $help->() unless ( $dataset );
+  $help->() unless ( $dataset and ($do_misc or $do_atag) );
 
   my $client    = Bio::Otter::Lace::Defaults::make_Client();
   my $dset      = $client->get_DataSet_by_name($dataset);
@@ -362,7 +362,7 @@ __END__
 
 Running the script
 
-Eg, fetch_assembly_tags B<-dataset> zebrafish [-verbose][-check]
+Eg, fetch_assembly_tags B<-dataset> zebrafish [-verbose][-check][-misc and/or -atag]
 
 =head1 DESCRIPTION
 
