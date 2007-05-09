@@ -15,58 +15,84 @@ use Bio::EnsEMBL::MiscFeature;
 use Bio::EnsEMBL::MiscSet;
 use Bio::EnsEMBL::Attribute;
 
+use Bio::Vega::AssemblyTag;
 
 use Getopt::Long 'GetOptions';
 
 $| = 1;
 
-my ($dataset, $verbose, $check);
+# global
+my $mfeats = [];
+my $atags  = [];
 
-my $help = sub { exec('perldoc', $0) };
+{
+  my ($dataset, $verbose, $check, $do_atag, $do_misc);
+
+  #default
+  $do_misc = $do_atag = 0;
+
+  my $help = sub { exec('perldoc', $0) };
 
 
-Bio::Otter::Lace::Defaults::do_getopt(
+  Bio::Otter::Lace::Defaults::do_getopt(
 									  'ds|dataset=s' => \$dataset,
 									  'v|verbose'    => \$verbose,
 									  'check'        => \$check,
 									  'h|help'       => $help,
+                                      'atag'         => \$do_atag,   # load atag data into assembly_tag table
+                                                                     # (will eventually become obsolete)
+                                      'misc'         => \$do_misc    # load atag data as misc features (4 tables)
 									 ) or $help->(); # plus default options
 
-$help->() unless ( $dataset );
+  $help->() unless ( $dataset );
 
+  my $client    = Bio::Otter::Lace::Defaults::make_Client();
+  my $dset      = $client->get_DataSet_by_name($dataset);
+  my $loutre_db = $dset->make_Vega_DBAdaptor;
+  my $sliceAd   = $loutre_db->get_SliceAdaptor;
+  my $mfeatAd   = $loutre_db->get_MiscFeatureAdaptor;
+  my $atagAd    = $loutre_db->get_AssemblyTagAdaptor;
 
-my $client    = Bio::Otter::Lace::Defaults::make_Client();
-my $dset      = $client->get_DataSet_by_name($dataset);
-my $loutre_db = $dset->make_Vega_DBAdaptor;
-my $sliceAd   = $loutre_db->get_SliceAdaptor;
-my $mfeats    = [];
-my $mfeatAd   = $loutre_db->get_MiscFeatureAdaptor;
-
-
-{
-  update_assembly_tagged_contig_table();
+  update_assembly_tagged_contig_table($loutre_db, $check);
 
   # fetch acefile with assembly_tag info of clones
   my $clones = $sliceAd->fetch_all('clone');
-  prepare_assembly_tag_data($clones);
+  prepare_assembly_tag_data($sliceAd, $atagAd, $loutre_db, $clones, $verbose, $do_misc, $do_atag);
 
-  $mfeatAd->store(@$mfeats);
-  warn scalar @$mfeats, " misc_feats to be loaded\n";
+  if ( $do_misc ){
+    $mfeatAd->store(@$mfeats);
+    warn scalar @$mfeats, " misc_feats to be loaded\n";
+  }
+  if ( $do_atag ){
+    update_database($atags, $atagAd);
+  }
+
 }
 
 #--------------------
 #    subroutines
 #--------------------
 
+sub update_database {
+
+  my ($atags, $atagAd) = @_;
+
+  foreach my $atag ( @$atags ) {
+    $atagAd->store($atag);
+  }
+}
+
 sub update_assembly_tagged_contig_table {
 
+  my ($loutre_db, $check) = @_;
   my $sth = $loutre_db->prepare(qq{
-								   SELECT sr.seq_region_id
-								   FROM seq_region sr
-								   LEFT JOIN assembly_tagged_contig atc
-								   ON sr.seq_region_id = atc.seq_region_id
-								   WHERE sr.coord_system_id = 5
-								   AND atc.seq_region_id IS NULL
+                                   SELECT sr.seq_region_id
+                                   FROM seq_region sr, coord_system cs
+                                   LEFT JOIN assembly_tagged_contig atc
+                                   ON sr.seq_region_id = atc.seq_region_id
+                                   WHERE cs.coord_system_id=sr.coord_system_id
+                                   AND cs.name='contig'
+                                   AND atc.seq_region_id IS NULL
 								  }
 							   );
   $sth->execute;
@@ -98,7 +124,7 @@ sub update_assembly_tagged_contig_table {
 
 sub prepare_assembly_tag_data {
 
-  my $clones = shift;
+  my ($sliceAd, $atagAd, $loutre_db, $clones, $verbose, $do_misc, $do_atag) = @_;
 
   foreach my $cl ( @$clones ) {
     $cl->seq_region_name =~ /(.*)\.(\d+)/;
@@ -109,8 +135,8 @@ sub prepare_assembly_tag_data {
 
     my $seq;
     eval {
-      # turn off
-      # Use of uninitialized value in concatenation (.) or string at 
+      # turn off warning temporarily
+      # Use of uninitialized value in concatenation (.) or string at
       # /nfs/team71/analysis/ck1/SCRIPT_CVS/PerlModules/Hum/AnaStatus/Sequence.pm line 176.
       local $^W = 0;
       $seq = Hum::AnaStatus::Sequence->new_from_accession($acc);
@@ -129,6 +155,12 @@ sub prepare_assembly_tag_data {
 		my $contig   = $sliceAd->fetch_by_region('contig', $contig_name);
 		my $seq_region_id = $sliceAd->get_seq_region_id($contig);
 
+        # all clones should be redone for each new assembly as clones left/right may change
+        #if ( $atagAd->check_seq_region_id_is_transferred($seq_region_id) ){
+		#  print STDERR "$contig_name (srid $seq_region_id) is already transferred\n";
+		#  next;
+		#}
+
         my $dir      = $seq->analysis_directory;
         my $seq_ver  = $seq->sequence_version;
         my $seq_name = $seq->sequence_name;
@@ -138,7 +170,7 @@ sub prepare_assembly_tag_data {
           my $acefile = "$dir/rawdata/$seq_name.humace.ace";
           print STDERR "INFO: updating $acc.$seq_ver: $acefile\n" if $verbose;
 
-          parse_ace($contig, $seq_region_id, $acefile, $loutre_db, $sliceAd); # create a list of atag objs
+          parse_ace($contig, $seq_region_id, $acefile, $loutre_db, $sliceAd, $verbose, $do_misc, $do_atag); # create a list of atag objs
         } else {
           # external clones: omit
           #print STDERR "No update for $acc.$seq_ver: MISSING  $dir/rawdata/$seq_name.humace.ace\n";
@@ -146,13 +178,11 @@ sub prepare_assembly_tag_data {
       }
     }
   }
-
-  #return $atags;
 }
 
 sub parse_ace {
 
-  my ($contig, $seq_region_id, $acefile, $loutre_db, $sliceAd)  = @_;
+  my ($contig, $seq_region_id, $acefile, $loutre_db, $sliceAd, $verbose, $do_misc, $do_atag) = @_;
   my $contig_name       = $contig->seq_region_name;
   my $ctg_seq_region_id = $sliceAd->get_seq_region_id($contig);
   my $ctg_strand        = $contig->strand;
@@ -164,16 +194,22 @@ sub parse_ace {
 
   open( my $fh, $acefile ) || die "Failed to read $acefile";
 
-  my $info;
+  my ($info, $seen_lines);
 
   while ( my $line = <$fh> ) {
+    chomp $line;
+
+    $seen_lines->{$line}++;
 
     $ctg_strand = 1 unless $ctg_strand; # default to 1 if info not available
 
     my ( $tag_type, $tag_start, $tag_end, $tag_info);
 
     # omit Type "Oligo"
+
     if ( $line =~ /^Assembly_tags\s+(-|\"-\"|unsure)\s+(\d+)\s+(\d+)\s+\"(.+)\"/i ) {
+
+      next if $seen_lines->{$line} > 1;  # duplicate lines happens
 
       ($1 eq "-" || $1 eq "\"-\"") ? ($tag_type = "Misc") : ($tag_type = $1);
 
@@ -217,11 +253,14 @@ sub parse_ace {
           $info .= "$ctg_seq_region_id : $tag_type : $ctg_strand : $tag_start : $tag_end : $tag_info\n";
         }
 
-		make_misc_feats_for_atags($contig, $ctg_seq_region_id, $tag_type, $ctg_strand, $tag_start, $tag_end, $tag_info);
+		make_misc_feats_for_atags($contig, $ctg_seq_region_id, $tag_type, $ctg_strand, $tag_start, $tag_end, $tag_info) if $do_misc;
+        make_atags($contig, $ctg_seq_region_id, $tag_type, $ctg_strand, $tag_start, $tag_end, $tag_info) if $do_atag;
       }
     }
 
     if ( $line =~ /^(Clone_\w+_end)\s+(.+)\s+(\d+)/i ) {
+
+      next if $seen_lines->{$line} > 1;
 
       $tag_type   = $1;
       $tag_start  = $3;
@@ -237,7 +276,8 @@ sub parse_ace {
       $name .= $tag_info." (intl name)";
 
       $info .= "$ctg_seq_region_id : $tag_type : $ctg_strand : $tag_start : $tag_end : $tag_info --- [$name]\n" if $verbose;
-	  make_misc_feats_for_atags($contig, $ctg_seq_region_id, $tag_type, $ctg_strand, $tag_start, $tag_end, $tag_info);
+	  make_misc_feats_for_atags($contig, $ctg_seq_region_id, $tag_type, $ctg_strand, $tag_start, $tag_end, $tag_info) if $do_misc;
+      make_atags($contig, $ctg_seq_region_id, $tag_type, $ctg_strand, $tag_start, $tag_end, $tag_info) if $do_atag;
     }
   }
 
@@ -293,6 +333,25 @@ sub make_misc_feats_for_atags {
   $mfeat->add_Attribute($atag_attrib);
 
 }
+
+sub make_atags {
+  my ($contig, $ctg_seq_region_id, $tag_type, $ctg_strand, $tag_start, $tag_end, $tag_info) = @_;
+
+  my $atag = Bio::Vega::AssemblyTag->new();
+
+#  $atag->seq_region_id($ctg_seq_region_id); # handled by atag adaptor
+  $atag->seq_region_start($tag_start);
+  $atag->seq_region_end($tag_end);
+  $atag->seq_region_strand($ctg_strand);
+  $atag->tag_type(ucfirst($tag_type)); # eg, unsure/Unsure
+  $atag->tag_info($tag_info);
+  $atag->slice($contig);
+
+  push(@$atags, $atag);
+}
+
+
+
 
 __END__
 
