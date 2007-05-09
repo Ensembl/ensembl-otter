@@ -10,7 +10,7 @@ create table assembly_tag (
        tag_info		    TEXT       NULL, 		    
 
        PRIMARY KEY (tag_id),
-       UNIQUE KEY (contig_id, contig_start, contig_end, contig_strand, tag_type)
+       UNIQUE KEY (contig_id, contig_start, contig_end, contig_strand, tag_type, tag_info(500))
 );
 
 create table assembly_tagged_clone (
