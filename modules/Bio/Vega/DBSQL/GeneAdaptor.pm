@@ -500,13 +500,12 @@ sub store {
             $self->update_changed_components($gene);
         }
 
-    } else { # NEW gene, but may have old components (as a result of a split)
+    } else { # NEW or INITIALLY_DELETED (happened during migration) gene, but may have old components (as a result of a split)
 
         $gene_state=NEW;
 
         $gene->version(1);
         $gene->created_date($time_now);
-        $gene->is_current(1);
     }
     $gene->modified_date($time_now);
 
