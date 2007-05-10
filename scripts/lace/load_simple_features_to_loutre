@@ -25,11 +25,16 @@ my $parser;
 foreach my $file ( `ls $input_dir` ) {
   chomp $file;
   next unless $file =~ /.xml$/;
+  if ( -s $file == 0 ){
+    warn "Skip $file: no features\n";
+    next;
+  }
   $file =~ /(.*)\.xml/;
 
   my $xmlfile = "$input_dir/$file";
 
   warn "Parsing $xmlfile\n";
+
 
   ##create an XML parser
   $parser = Bio::Vega::Transform::Otter->new;
@@ -53,23 +58,16 @@ foreach my $file ( `ls $input_dir` ) {
   $db->begin_work();
 
   eval{
-	# Load SimpleFeatures - deletes old features(features not in xml) and stores the current features in XML
+	# Load SimpleFeatures in xml
 
 	my $chr_slice=$parser->get_ChromosomeSlice;
 	my $new_slice=$parser->get_SliceId($chr_slice,$db);
 	#  my $snew_slice=$parser->get_ChromosomeSliceDB($db);
 
 	my $simple_features=$parser->get_SimpleFeatures;
-	my $sfa=$db->get_SimpleFeatureAdaptor;
-	my $db_features=$sfa->fetch_all_by_Slice($new_slice);
+    my $sfa=$db->get_SimpleFeatureAdaptor;
 
-	my ($delete,$save)=compare_feature_sets($db_features,$simple_features);
-
-	foreach my $del_feat (@$delete) {
-	  warn $del_feat;
-	  $sfa->remove($del_feat);
-	}
-	foreach my $new_feat (@$save) {
+	foreach my $new_feat (@$simple_features) {
 
 	  $new_feat->slice($new_slice);
 	  eval{
@@ -82,6 +80,7 @@ foreach my $file ( `ls $input_dir` ) {
 	}
   };
 
+
   $db->commit;
   print STDOUT "\nCommitted all session data from XML in database\n";
 
@@ -93,80 +92,6 @@ foreach my $file ( `ls $input_dir` ) {
 
 $parser->DESTROY;
 warn "\nParser now out of scope\n";
-
-
-=head4 SUBROUTINES
-
-=cut
-
-sub compare_feature_sets {
-  my( $old_features, $new_features ) = @_;
-  my %old = map {SimpleFeature_key($_), $_} @$old_features;
-  my %new = map {SimpleFeature_key($_), $_} @$new_features;
-  # Features that were in the old, but not the new, should be deleted
-  my $delete = [];
-
-  while (my ($key, $old_sf) = each %old) {
-	 unless ($new{$key}) {
-		push(@$delete, $old_sf);
-	 }
-  }
-  # Features that are in the new but were not in the old should be saved
-  my $save = [];
-  while (my ($key, $new_sf) = each %new) {
-	 unless ($old{$key}) {
-		push(@$save, $new_sf);
-	 }
-  }
-  return($delete, $save);
-}
-
-sub compare_assembly_tag_sets {
-  my( $old_tags, $new_tags ) = @_;
-  my %old = map {AssemblyTag_key($_), $_} @$old_tags;
-  my %new = map {AssemblyTag_key($_), $_} @$new_tags;
-  # Tags that were in the old, but not the new, should be deleted
-  my $delete = [];
-  while (my ($key, $old_at) = each %old) {
-	 unless ($new{$key}) {
-		push(@$delete, $old_at);
-	 }
-  }
-  # Tags that are in the new but were not in the old should be saved
-  my $save = [];
-  while (my ($key, $new_at) = each %new) {
-	 unless ($old{$key}) {
-		push(@$save, $new_at);
-	 }
-  }
-  return($delete, $save);
-}
-
-sub AssemblyTag_key {
-  my ($at) = @_;
-  return join('^',
-				  $at->seq_region_start,
-				  $at->seq_region_end,
-				  $at->seq_region_strand,
-				  $at->tag_type,
-				  $at->tag_info,
-				 );
-}
-
-sub SimpleFeature_key {
-  my( $sf ) = @_;
-
-  return join('^',
-				  $sf->analysis->logic_name,
-				  $sf->seq_region_start,
-				  $sf->seq_region_end,
-				  $sf->seq_region_strand,
-				  # sprintf ensures that 0.5 and 0.5000 become the same string
-				  #sprintf('%g', $sf->score),
-			      "0.5",
-				  $sf->display_label || '',
-				 );
-}
 
 1;
 
