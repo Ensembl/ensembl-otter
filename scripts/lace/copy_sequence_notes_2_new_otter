@@ -9,9 +9,9 @@ use Bio::EnsEMBL::RawContig;
 
 my ($dataset, $new_otter_db, $chk_agp, $passwd);
 
-Bio::Otter::Lace::Defaults::do_getopt('ds|dataset=s' => \$dataset, # eg, human or mouse or zebrafish
-									  'newdb=s'      => \$new_otter_db,
-									  'agp'          => \$chk_agp,
+Bio::Otter::Lace::Defaults::do_getopt('ds|dataset=s' => \$dataset,      # otter dset, eg, human or mouse or zebrafish
+									  'newdb=s'      => \$new_otter_db, # loutre dbname
+									  'agp'          => \$chk_agp,      # if only wants to see which contigs are not in AGP
  									  'pass=s'       => \$passwd
 									 );
 
@@ -23,7 +23,7 @@ my $otter_db = $dset->get_cached_DBAdaptor;
 my $rca      = $otter_db->get_RawContigAdaptor;
 
 my $ctgs = $rca->fetch_all;
-my $ctgID_ctgname;
+my $ctgID_ctgname; # otter_db contigs
 
 foreach my $ctg (@$ctgs ){
   $ctgID_ctgname->{$ctg->dbID} = $ctg->name;
@@ -34,24 +34,25 @@ my $new_otter_dbh = DBI->connect("DBI:mysql:$new_otter_db:otterlive:3301", 'otta
 
 my $ctgname_2_seqRegionID = convert_ctg_name_2_seq_regon_id($new_otter_dbh);
 
-
 my $sn = $otter_db->prepare("SELECT * FROM sequence_note");
 $sn->execute;
 
-my ($omit, $count_errors, $seen_ctgs, @values);
+my ($omit, $count_errors, $seen_ctgs, @values, $notes);
 
 while ( my $h = $sn->fetchrow_hashref ) {
 
+  $notes++;
   my $seqReg_id;
   my $ctgname = $ctgID_ctgname->{$h->{contig_id}};
 
+  # only take contignames mapped to a contig_id in otter db
   unless ( $ctgname ){
-	$omit .= "contig Id " . $h->{contig_id} . " is not in contig table\n";
+	$omit .= "contig Id " . $h->{contig_id} . " not in contig table\n";
 	$count_errors++;
 	next;
   }
 
-  # make use APGs can be restored in otter db before transfer sequence_notes
+  # NO LOADING, only checks which contigs are not in APGs
   if ( $chk_agp ){
 	check_agp($ctgname)
   }
@@ -61,7 +62,10 @@ while ( my $h = $sn->fetchrow_hashref ) {
   }
 }
 
-print "Found $count_errors sequence_notes have contig_id not in otter contig_table: ignored\n";
+print $omit;
+print "Found $count_errors sequence_notes have contig_id not in otter contig_table: IGNORED\n";
+print "Check that loutre db has ", $notes - $count_errors, " sequence notes entries\n";
+
 
 #----------------------------------
 #           subroutines
@@ -112,8 +116,11 @@ sub insert_table {
 	$new_otter_dbh->commit;
 	$new_otter_dbh->rollback if $@;
   }
+
+  # ignore contignames not mapped to a seq_region_id in loutre db
   else {
-	print $ctgID_ctgname->{$ctg_id}," not in new_otter_human\n";
+    $count_errors++;
+	print $ctgID_ctgname->{$ctg_id}," not in $new_otter_db\n";
   }
 }
 
@@ -121,7 +128,10 @@ sub convert_ctg_name_2_seq_regon_id {
   my $new_otter_dbh = shift;
 
   my $qry = $new_otter_dbh->prepare(qq{
-									  select seq_region_id, name from seq_region where coord_system_id=5
+                                       SELECT sr.seq_region_id, sr.name
+                                       FROM seq_region sr, coord_system cs
+                                       WHERE sr.coord_system_id = cs.coord_system_id
+                                       AND cs.name = 'contig'
 									 }
 								  );
 
