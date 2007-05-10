@@ -28,7 +28,7 @@ sub get_wanted_chromosomes {
 	my $export_mode = $support->param('release_type');
 	my $release = $support->param('vega_release');
 	my $names;
-	my $chroms  = &fetch_non_hidden_slices($support,$aa,$sa,$cs,$cv);
+	my $chroms  = $support->fetch_non_hidden_slices($aa,$sa,$cs,$cv);
  CHROM:
 	foreach my $chrom (@$chroms) {
 		my $attribs = $aa->fetch_all_by_Slice($chrom);
@@ -52,36 +52,5 @@ sub get_wanted_chromosomes {
 	}
 	return $names;
 }
-
-
-=head2 fetch_non_hidden_slices
-
-  Arg[1]      : B::E::U::ConversionSupport
-  Arg[2]      : B::E::SliceAdaptor
-  Arg[2]      : B::E::AttributeAdaptor
-  Arg[3]      : string $coord_system_name (optional) - 'chromosome' by default
-  Arg[4]      : string $coord_system_version (optional) - 'otter' by default
-  Example     : $chroms = $support->fetch_non_hidden_slice($sa,$aa);
-  Description : retrieve all slices from a lutra database that don't have a hidden attribute
-  Return type : arrayref
-  Caller      : general
-  Status      : stable
-
-=cut
-
-sub fetch_non_hidden_slices {
-	my $support = shift;
-	my $aa   = shift or throw("You must supply an attribute adaptor");
-	my $sa   = shift or throw("You must supply a slice adaptor");
-	my $cs = shift || 'chromosome';
-	my $cv = shift || 'Otter';
-	my $visible_chroms;
-	foreach my $chrom ( @{$sa->fetch_all($cs,$cv)} ) {
-		my $attribs = $aa->fetch_all_by_Slice($chrom);
-		push @$visible_chroms, $chrom if @{$support->get_attrib_values($attribs,'hidden','N')};
-	}
-	return $visible_chroms;
-}
-
 
 1;
