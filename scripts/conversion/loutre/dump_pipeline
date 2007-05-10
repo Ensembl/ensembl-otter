@@ -217,7 +217,7 @@ else {
 }
 
 my $seq_regions = join "\n", @{$chr_names_wanted}; 
-if (! $support->user_proceed("The following seq_region names will be dumped from the pipeline database, proceed ?\n\n$seq_regions\n")) {
+if (! $support->user_proceed("The following assembly names will be dumped from the pipeline database, proceed ?\n\n$seq_regions\n")) {
 	exit;
 }
 
@@ -411,6 +411,9 @@ foreach my $sr (@{$seqregions{'contig'}}) {
 	push @{$sets{'assembly'}{'cmp_seq_region_id'}}, $sr;
 }
 
+
+#warn Dumper(\%sets);
+
 #################################################################################
 # Read in all tables and set constraint to 's' (ie dump structure only). Then   #
 # read in the contraints in the HEREDOC, updating the above as needed ('s' =    #
@@ -429,14 +432,14 @@ TABLE:
 foreach my $line (split(/\n/,$txt)){
 	next if ($line =~ /^\s*$/);
 	next if ($line =~ /^\#/);
-    if($line=~/^(.+)\#/){
+    if ($line=~/^(.+)\#/){
 		$line=$1;
     }
 
     my ($table,@constraints) = split(/\s+/,$line);
 
 	#sanity check
-	if (! exists($constraints{$table})) {
+	if ($table && (! exists($constraints{$table}))) {
 		$support->log_warning("You have definitions for a table ($table) that is not found in the pipeline database. Skipping\n\n");
 		next TABLE;
 	}
@@ -550,6 +553,7 @@ open(OUT,">$file") || die "cannot open $file";
 
 #create statements
 my @mysql_commands;
+
 while (my ($table,$details) = each (%constraints) ) {
 	my $condition = shift @$details;
 	if ($condition eq 's') {
@@ -576,6 +580,8 @@ while (my ($table,$details) = each (%constraints) ) {
 ##################
 # do the dumping #
 ##################
+
+#warn Dumper(\@mysql_commands);
 
 if (!$support->param('dry_run')) {
 	foreach my $command (@mysql_commands) {
@@ -634,8 +640,7 @@ protein_align_feature seq_region_id:code          analysis_id:code
 simple_feature        seq_region_id:code          analysis_id:code
 
 meta_coord            table_name:code       # special filtering in code (no exon/transcript/gene)
-prediction_exon       seq_region_id:code    # there is filtering on analysis_id, but because of link to
-                                            # prediction_exon then do this finish_vega_creation
+prediction_exon       seq_region_id:code    # there is filtering on analysis_id, but because of link to prediction_exon then do this finish_vega_creation
 prediction_transcript seq_region_id:code
 repeat_feature        seq_region_id:code
 seq_region            seq_region_id:code    # use all coord_systems
