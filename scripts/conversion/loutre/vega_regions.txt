@@ -19,4 +19,29 @@ Chr_6_NKG	6-LRC	LRC region of Chromosome 6	External	Havana
 
 --human--
 chr1	1	Chromosome 1	External	Havana	1
+chr2	2	Chromosome 2	External	Havana	2
+chr3	3	Chromosome 3	External	BCM	3
+chr4	4	Chromosome 4	External	Havana	4
+chr5	5	Chromosome 5	External	Havana	5
+chr6	6	Chromosome 6	External	Havana	6
+chr7	7	Chromosome 7	External	Wash. U. / SK	7
+chr8	8	Chromosome 8	External	Broad	8
+chr9	9	Chromosome 9	External	Havana	9
+chr10	10	Chromosome 10	External	Havana	10
+chr11	11	Chromosome 11	External	Havana	11
+chr12	12	Chromosome 12	External	BCM	12
+chr13	13	Chromosome 13	External	Havana	13
+chr14	14	Chromosome 14	External	Genoscope	14
+chr15	15	Chromosome 15	External	Broad	15
+chr16	16	Chromosome 16	External	JGI	16
+chr17	17	Chromosome 17	External	Broad	17
+chr18	18	Chromosome 18	External	Broad	18
+chr19	19	Chromosome 19	External	JGI	19
+chr20	20	Chromosome 20	External	Havana	20
+chr21	21	Chromosome 21	External	Havana	21
+chr22	22	Chromosome 22	External	Sanger	22
+chrX	X	Chromosome X	External	Havana / GAG	X
+chrY	Y	Chromosome Y	External	Havana	Y
+MHC_COX	6-COX	Chromosome 6-COX	External	Havana	c6_COX
+MHC_QBL	6-QBL	Chromosome 6-QBL	External	Havana	c6_QBL
 --end--
