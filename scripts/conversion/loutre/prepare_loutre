@@ -158,7 +158,7 @@ my $sa = $dba->get_SliceAdaptor();
 my $aa = $dba->get_AttributeAdaptor();
 
 #get chromosomes without a hidden attribute
-my $chroms = $support->fetch_non_hidden_slice($aa,$sa);
+my $chroms = $support->fetch_non_hidden_slices($aa,$sa);
 
 #get all chromosomes
 my $all_chromosomes = $sa->fetch_all('Chromosome','Otter');
