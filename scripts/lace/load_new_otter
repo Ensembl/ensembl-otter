@@ -51,6 +51,8 @@ my $ga  = $dba->get_GeneAdaptor();
 my $ss_hash;
 my $loading_started=time();
 
+$mc->update_key_value('prefix.primary','LDR');
+
 $/="----------------------------------------\n";
 while (<>){  ## read from STDIN + @ARGV filenames
   my $dbid;
@@ -106,6 +108,8 @@ while (<>){  ## read from STDIN + @ARGV filenames
      }
   }
 }
+
+$mc->update_key_value('prefix.primary','OTT');
 
 my $loading_finished=time();
 my $total_time=$loading_finished-$loading_started;
