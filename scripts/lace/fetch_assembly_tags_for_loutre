@@ -198,7 +198,10 @@ sub parse_ace {
 
   while ( my $line = <$fh> ) {
     chomp $line;
+    $line =~ s/\s+\"$//;  # some have excess white spaces
+    $line .= '"';
 
+    # track duplicates
     $seen_lines->{$line}++;
 
     $ctg_strand = 1 unless $ctg_strand; # default to 1 if info not available
@@ -209,7 +212,7 @@ sub parse_ace {
 
     if ( $line =~ /^Assembly_tags\s+(-|\"-\"|unsure)\s+(\d+)\s+(\d+)\s+\"(.+)\"/i ) {
 
-      next if $seen_lines->{$line} > 1;  # duplicate lines happens
+      next if $seen_lines->{$line} > 1;
 
       ($1 eq "-" || $1 eq "\"-\"") ? ($tag_type = "Misc") : ($tag_type = $1);
 
