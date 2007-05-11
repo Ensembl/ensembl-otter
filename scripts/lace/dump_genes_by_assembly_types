@@ -3,6 +3,8 @@
 use strict;
 use Bio::Otter::Lace::Defaults;
 
+my $debug = 0;
+
 my $otter_dba; # it's much cheaper to have these globally visible
 my $gene_adaptor;
 my $slice_adaptor;
@@ -595,9 +597,14 @@ sub gene_transformed_successfully {
         foreach my $exon (@exon_list) {
             if ($exon->start <= $last) {
                 print STDERR "[exons out of order] ";
-                for my $i (0..@exon_list-1) {
-                    my $ex = $exon_list[$i];
-                    # print STDERR "exon_${i}: ".$ex->start()."..".$ex->end()." (".$ex->strand().") dbID=".$ex->dbID().", slice=".$ex->contig()->name."\n";
+                if($debug) {
+                    print STDERR "\n";
+                    for my $i (0..@exon_list-1) {
+                        my $ex = $exon_list[$i];
+                        print STDERR "exon_${i}: ".$ex->start()."..".$ex->end()." (".$ex->strand()
+                                    .") dbID=".$ex->dbID().", slice=".$ex->contig()->name."\n";
+                    }
+                    print STDERR "\n";
                 }
                 return 0;
             }
@@ -644,7 +651,7 @@ sub gene_transformed_successfully {
 
             } # for $atype
         } # for $version
-        print STDERR "--- FAILED TO MAP\n";
+        print STDERR "--- FAILED TO MAP (".$gene->type().")\n";
     }
 
 } # lexical environment for add_xml_gene
@@ -674,19 +681,24 @@ sub create_load_string {
 
 sub main {
 
-    my $dataset_name    = 'human'; # 'test_human';      # 'mouse', ...
+    my $dataset_name    = ''; # 'test_human';      # 'mouse', ...
     my $skip_to         = 0;
 	 my ($redunfile,$loadfile);
 
     Bio::Otter::Lace::Defaults::do_getopt(
         'dataset=s'     => \$dataset_name,
         'skipto=s'      => \$skip_to,
-		  'redunfile=s'   => \$redunfile,
-		  'loadfile=s'    => \$loadfile,
+		'redunfile=s'   => \$redunfile,
+		'loadfile=s'    => \$loadfile,
+        'debug!'        => \$debug,
 #        'set=s'         => \$set_name,
 #        'chr=s'         => \$chr_name,
     );
-    
+
+    if(! $dataset_name) {
+        die "At least dataset needs to be specified";
+    }
+
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
     my $ds = $cl->get_DataSet_by_name($dataset_name);
 
@@ -718,8 +730,6 @@ sub main {
     });
 	 }
 	 
-    #   LIMIT 1000
-
     $sth_gene_ids->execute();
 
     while( my ($gene_id, $stable_id, $version, $modified) = $sth_gene_ids->fetchrow()) {
