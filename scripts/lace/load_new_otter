@@ -43,10 +43,10 @@ if(!$ds->HEADCODE()) {
     die "Can only load things into a new API database";
 }
 
-my $dba = $ds->get_cached_DBAdaptor;
-my $mc  = $dba->get_MetaContainer();
-my $sa  = $dba->get_SliceAdaptor();
-my $ga  = $dba->get_GeneAdaptor();
+my $loutre_dba = $ds->get_cached_DBAdaptor;
+my $mc  = $loutre_dba->get_MetaContainer();
+my $sa  = $loutre_dba->get_SliceAdaptor();
+my $ga  = $loutre_dba->get_GeneAdaptor();
 
 my $ss_hash;
 my $loading_started=time();
@@ -58,7 +58,7 @@ while (<>){  ## read from STDIN + @ARGV filenames
   my $dbid;
   my $gene_xml=$_;
   eval{
-	 $dba->begin_work;
+	 $loutre_dba->begin_work;
 	 if ($gene_xml=~/^\S+\s+(\S+)\s+(\S+)\s+(\S+)\s+(<locus>.*<\/locus>).*/ms){
 		
            ($dbid, $gene_xml) = ($2, $4);
@@ -96,12 +96,12 @@ while (<>){  ## read from STDIN + @ARGV filenames
 
 		$mc->update_key_value('last_gene_old_dbid',$dbid);
 
-		$dba->commit;
+		$loutre_dba->commit;
 		$parser->DESTROY;
 	 }
   };
   if ($@) {
-	 $dba->rollback;
+	 $loutre_dba->rollback;
 	 print STDERR ("\ngene $dbid did not get loaded due to \n", $@);
      if($@!~/more than one transcript has the name/) { # temporarily skip those errors to count how many such cases there are
          die "Dying in stript";
@@ -114,5 +114,34 @@ $mc->update_key_value('prefix.primary','OTT');
 my $loading_finished=time();
 my $total_time=$loading_finished-$loading_started;
 print STDOUT "Total time for storing the above genes is $total_time\n";
+
+##################################################################################
+#                                                                                #
+# The following snippet has been copied from repair_autoincrement_values:        #
+#                                                                                #
+##################################################################################
+
+my $loutre_dbc = $loutre_dba->dbc();
+
+my $commandstack = '';
+
+print STDERR "\n\n\nExisting maximum stable_id values:\n";
+foreach my $component ('gene', 'transcript', 'translation', 'exon') {
+
+    my $sql = " SELECT MAX(CAST(SUBSTRING(stable_id,8) AS UNSIGNED)) from ${component}_stable_id ";
+
+    my $sth = $loutre_dbc->prepare($sql);
+    $sth->execute();
+    my ($maxval) = $sth->fetchrow();
+
+    printf STDERR "%-12s %10d\n",$component, $maxval;
+
+    $maxval++;
+
+    $commandstack .= "ALTER TABLE ${component}_stable_id_pool AUTO_INCREMENT = $maxval ;\n";
+}
+
+print STDERR "\nDON'T FORGET TO run the following commands as the super-user:\n\n";
+print $commandstack."\n";
 
 1;
