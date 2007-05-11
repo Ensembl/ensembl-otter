@@ -25,7 +25,7 @@ use Bio::EnsEMBL::Attribute;
 
 {
     my $old_dsname  = 'human';
-    my $new_dsname  = 'ns_human_old';
+    my $new_dsname  = 'ns_human';
     my $code_wanted = 'hidden';
     my $change      = 0; # dry run
 
