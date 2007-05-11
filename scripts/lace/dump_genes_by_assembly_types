@@ -8,10 +8,6 @@ my $debug = 0;
 my $otter_dba; # it's much cheaper to have these globally visible
 my $gene_adaptor;
 my $slice_adaptor;
-my $red_hash;
-my $load_str;
-my $reduncount=0;
-my $loadcount=0;
 $|=1;
 
 my $gene_count=0;
@@ -544,6 +540,24 @@ my %assembly_nonmatch_version = (
     'dog' => {},
 );
 
+sub find_last_dbid {
+    my $filename = shift @_;
+
+    my $skip_to = 0;
+
+    open(PREV, "<$filename");
+    local $/="----------------------------------------\n";
+    while (<PREV>) {
+        my $gene_xml=$_;
+        if ($gene_xml=~/^\S+\s+\S+\s+(\S+)\s+\S+\s+<locus>.*<\/locus>.*/ms){
+            $skip_to = $1;
+        }
+    }
+    close PREV;
+
+    return $skip_to;
+}
+
 
 { # lexical environment for &execute_ctgids_2_asm
 
@@ -656,47 +670,60 @@ sub gene_transformed_successfully {
 
 } # lexical environment for add_xml_gene
 
-sub create_red_list {
-  my $redfile=shift;
-  open (IN,"<$redfile") || die ("Could not open redundant file for reading :$redfile \n $!\n");
+sub build_redundant_set {
+  my $filename = shift @_;
+
+  my $redundant_set = {};
+
+  open (IN,"<$filename") || die ("Could not open redundant file '$filename' for reading:\n $!\n");
   while(<IN>){
 	 if ($_ =~ /(\S+)/){
-		$red_hash->{$1}=1;
+		$redundant_set->{$1}=1;
 	 }
   }
   close IN;
+  return $redundant_set;
 }
 
-sub create_load_string {
-  my $loadfile=shift;
-  open (IN,"<$loadfile") || die ("Could not open load file for reading :$loadfile \n $!\n");
-  $load_str=0;
+sub get_valid_gene_ids {
+  my $filename = shift @_;
+
+  my $list_of_gene_ids = '0';
+
+  open (IN,"<$filename") || die ("Could not open load file '$filename' for reading:\n $!\n");
   while(<IN>){
 	 if ($_ =~ /(\S+)/){
-		$load_str=$load_str.','.$1;
+		$list_of_gene_ids .= ",$1";
 	 }
   }
   close IN;
+  return $list_of_gene_ids;
 }
 
 sub main {
 
     my $dataset_name    = ''; # 'test_human';      # 'mouse', ...
-    my $skip_to         = 0;
-	 my ($redunfile,$loadfile);
+    my $skip_to    = 0;
+    my $reduncount = 0;
+    my $loadcount  = 0;
+	my ($redunfile,$loadfile,$prevdump);
+    my $redundant_set = {};
 
     Bio::Otter::Lace::Defaults::do_getopt(
         'dataset=s'     => \$dataset_name,
         'skipto=s'      => \$skip_to,
+        'prevdump=s'    => \$prevdump,
 		'redunfile=s'   => \$redunfile,
 		'loadfile=s'    => \$loadfile,
-        'debug!'        => \$debug,
-#        'set=s'         => \$set_name,
-#        'chr=s'         => \$chr_name,
+        'mydebug!'      => \$debug,
     );
 
     if(! $dataset_name) {
         die "At least dataset needs to be specified";
+    }
+
+    if($prevdump) {
+        $skip_to = find_last_dbid($prevdump);
     }
 
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
@@ -709,15 +736,15 @@ sub main {
 	 
 	 #if redundant file is present create a hash of redundant dbids
 	 if ($redunfile) {
-		create_red_list($redunfile);
+		$redundant_set = build_redundant_set($redunfile);
 	 }
 	 my $sth_gene_ids;
 	 if ($loadfile) {
-		create_load_string($loadfile);
+		my $list_of_gene_ids = get_valid_gene_ids($loadfile);
 		$sth_gene_ids = $otter_dba->prepare(qq{
         SELECT gene_id, stable_id, version, UNIX_TIMESTAMP(modified)
         FROM gene_stable_id
-        WHERE gene_id IN (}.$load_str.qq{)
+        WHERE gene_id IN (}.$list_of_gene_ids.qq{)
         ORDER by gene_id ASC
     });
 	 }
@@ -734,11 +761,11 @@ sub main {
 
     while( my ($gene_id, $stable_id, $version, $modified) = $sth_gene_ids->fetchrow()) {
 
-		### Ignore gene_ids in Chao-Kung's file(redundant file)
+		### Ignore gene_ids in Chao-Kung's list of redundant gene_dbids
 
         print STDERR "$gene_id\t$stable_id.$version\t$modified\t";
 
-		if ($redunfile && exists $red_hash->{$gene_id}){
+		if ($redunfile && exists $redundant_set->{$gene_id}){
 		  $reduncount++;
 		  print STDERR "--- REDUNDANT\n";
 		  next;
@@ -780,16 +807,22 @@ sub main {
         }
     } # gene_id fetching loop
 
+    print STDERR "\nLOG of the dump\n";
+    if($prevdump) {
+        print STDERR "Using '$prevdump' as the base for incremental update\n";
+    }
+    if($skip_to) {
+        print STDERR "Skipped to gene_id=$skip_to\n";
+    }
+    print STDERR "Neglected $reduncount redundant gene db ids\n";
+    print STDERR "Got $loadcount gene db ids to dump\n";
+    print STDERR "Dumped $gene_count gene db ids to output file\n";
+
+    undef $otter_dba; # to avoid the 'Memory leak' message
+
 } # main()
 
 main();
-print STDERR "\nLOG of the dump";
-print STDERR "\nneglected $reduncount redundant gene db ids";
-print STDERR "\nGot $loadcount gene db ids to dump\n";
-print STDERR "\nDumped $gene_count gene db ids to output file\n";
-undef $otter_dba;
-undef $gene_adaptor;
-undef $slice_adaptor;
 
 1;
 
