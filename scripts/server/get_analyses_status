@@ -39,9 +39,10 @@ sub get_possible_analyses {
 }
 
 
-my $server = Bio::Otter::ServerScriptSupport->new('dataset','type');
+my $server = Bio::Otter::ServerScriptSupport->new('dataset','type','component_cs');
 
 my $assembly = $server->require_argument('type');
+my $component_cs = $server->getarg('component_cs') || 'contig';
 
 my $running_headcode = $server->running_headcode();
 my $pdba = $server->satellite_dba( '' ); # pipeline
@@ -50,8 +51,6 @@ my $pdbc = $running_headcode ? $pdba->dbc() : $pdba;
 my @input_ids = ();
 
 if($running_headcode) {
-
-    my $component_cs = 'contig';
 
     my $sth = $pdbc->prepare(qq{
         SELECT cmp.name, cs.version
@@ -115,7 +114,7 @@ my $sth = $pdbc->prepare($sql_statement);
 $sth->execute();
 
 while(my ($input_id, $logic_name, $created, $db_version) = $sth->fetchrow_array) {
-    $input_id=~s/^contig:[^:]*:([^:]+):.*$/$1/;
+    $input_id=~s/^$component_cs:[^:]*:([^:]+):.*$/$1/;
 
     if(!exists($result_hash{$input_id})) {
         %{$result_hash{$input_id}} = %skeleton_hash;
