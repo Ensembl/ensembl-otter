@@ -54,7 +54,7 @@ if($running_headcode) {
     my $component_cs = 'contig';
 
     my $sth = $pdbc->prepare(qq{
-        SELECT cmp.name
+        SELECT cmp.name, cs.version
         FROM coord_system cs
           , seq_region cmp
           , assembly a
@@ -67,11 +67,12 @@ if($running_headcode) {
     });
     $sth->execute();
 
-    while (my ($cmp_name) = $sth->fetchrow) {
+    while (my ($cmp_name, $cs_version) = $sth->fetchrow) {
         my @syll = split(/\./, $cmp_name);
         my $to = pop @syll;
         my $from = pop @syll;
-        push @input_ids, join(':', $component_cs, '', $cmp_name, $from, $to, 1);
+        if(!defined($cs_version)) { $cs_version = ''; }
+        push @input_ids, join(':', $component_cs, $cs_version, $cmp_name, $from, $to, 1);
     }
 
 } else {
