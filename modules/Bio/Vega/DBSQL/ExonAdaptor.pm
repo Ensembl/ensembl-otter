@@ -4,6 +4,8 @@ use strict;
 use base 'Bio::EnsEMBL::DBSQL::ExonAdaptor';
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 
+use Bio::Vega::Exon;
+
     # trying to substitute the class in all possible places at once (a hack)
 sub _objs_from_sth {
     my $self = shift @_;
