@@ -133,6 +133,7 @@ sub prepare_assembly_tag_data {
     my $acc         = $1;
     my $contig_name = $cl->seq_region_name.".".$cl->start.".".$cl->end;
 
+ #   warn $contig_name if $contig_name =~ /AL022337|AL139002|AL360297|AL360297AC098484|AC095035|AC096536/;
     my $seq;
     eval {
       # turn off warning temporarily
@@ -164,6 +165,14 @@ sub prepare_assembly_tag_data {
         my $dir      = $seq->analysis_directory;
         my $seq_ver  = $seq->sequence_version;
         my $seq_name = $seq->sequence_name;
+
+        # test
+     #   if ( $contig_name =~ /AL022337|AL139002|AL360297|AL360297AC098484|AC095035|AC096536/ ){
+#          warn "$contig_name: $dir/rawdata/$seq_name.humace.ace";
+#        }
+#        else {
+#          next;
+#        }
 
         # double check existence of acefile
         if ( -e "$dir/rawdata/$seq_name.humace.ace" ) {
@@ -270,7 +279,7 @@ sub parse_ace {
       $tag_end    = $3;         # set end value to start value as no end value present
       $tag_info   = $2;
       $ctg_strand = 1;
-      $tag_info   =~ s/\"//g;
+     # $tag_info   =~ s/\"//g;
       $tag_info   = trim($tag_info);
 	
       # replace internal Sanger name (= $tag_info) with international clone name
@@ -297,6 +306,9 @@ sub trim {
   my $st = shift;
   $st =~ s/\\n/ /g;
   $st =~ s/\s{1,}/ /g;
+  $st =~ s/\"//g;
+  $st =~ s/\.$//;
+
   return $st;
 }
 
