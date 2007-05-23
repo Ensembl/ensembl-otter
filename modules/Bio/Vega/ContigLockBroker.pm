@@ -113,10 +113,11 @@ sub lock_clones_by_slice {
 	 my $ctg_seq_region_id = $sa->get_seq_region_id($contig)
 		or throw('Contig does not have dbID set');
 	 my $lock = Bio::Vega::ContigLock->new(
-													  -author     => $author,
-													  -contig_id   => $ctg_seq_region_id,
-													  -hostname   => $self->client_hostname,
-													 );
+          -author     => $author,
+          -contig_id   => $ctg_seq_region_id,
+          -hostname   => $self->client_hostname,
+     );
+
 	 eval {
 		$db->get_ContigLockAdaptor->store($lock);
 	 };
@@ -124,10 +125,9 @@ sub lock_clones_by_slice {
 	 if ($@) {
 		my $exlock = $db->get_ContigLockAdaptor->fetch_by_contig_id($ctg_seq_region_id);
 		if ($exlock){
-		push(@existing, $exlock);
-				die "\n\n***:$exlock";
-	 }
-		$existing_contig{$ctg_seq_region_id} = $contig;
+            push(@existing, $exlock);
+         }
+		 $existing_contig{$ctg_seq_region_id} = $contig;
 	 } else {
 		push(@new, $lock);
 	 }
@@ -143,8 +143,11 @@ sub lock_clones_by_slice {
 		#die "@existing";
 		my $contig = $existing_contig{$lock->contig_id};
 		my $ctg_seq_region_id = $sa->get_seq_region_id($contig);
-		  $lock_error_str .= sprintf "  '%s' has been locked by '%s' since %s\n",
-			 $ctg_seq_region_id, $lock->author->name, scalar localtime($lock->timestamp);
+		  $lock_error_str .= sprintf "  '%s' has been locked by '%s'@%s since %s\n",
+			 $ctg_seq_region_id,
+             $lock->author->name,
+             $lock->hostname,
+             scalar localtime($lock->timestamp);
 	 }
 	 throw($lock_error_str);
   }
