@@ -18,8 +18,9 @@ use Net::Netrc;
     my $host = 'otterslave';
     my $mach = Net::Netrc->lookup($host);
     my $port = '3311';
-    my $base_dir = '/nfs/disk100/humpub/data/mysql_backup/otter_submissions';
-    my $archive_dir = '/nfs/disk100/humpub/data/mysql_backup/otter_submissions/OTTER_SUBMISSIONS_ARCHIVE';
+    my $base_dir = '/lustre/cbi4/work1/humpub/data/mysql_backup/otter_submissions';
+    my $archive_dir = "$base_dir/OTTER_SUBMISSIONS_ARCHIVE";
+
     cleanup_old_otter_dbs($base_dir);
     my $date_dir = date_dir();
     my $working_dir = "$base_dir/$date_dir";
@@ -56,7 +57,7 @@ use Net::Netrc;
 
     my $backup_end = time;
     printf STDERR "otter backup took %d minutes\n", ($backup_end - $backup_start) / 60;
-    
+
     # tar and gzip the working directory and delete the working_dir
     # archive($archive_dir,$working_dir,$date_dir);
 
