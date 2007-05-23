@@ -144,7 +144,7 @@ sub lock_clones_by_slice {
 		my $contig = $existing_contig{$lock->contig_id};
 		my $ctg_seq_region_id = $sa->get_seq_region_id($contig);
 		  $lock_error_str .= sprintf "  '%s' has been locked by '%s'@%s since %s\n",
-			 $ctg_seq_region_id,
+			 $contig->seq_region_name,
              $lock->author->name,
              $lock->hostname,
              scalar localtime($lock->timestamp);
