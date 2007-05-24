@@ -1,0 +1,113 @@
+#!/usr/local/bin/perl -w
+
+# Eliminate repetitions in new schema gene names (attributes)
+
+BEGIN {
+    foreach my $path (@INC) {
+        unless( $path=~s{ensembl/modules}{ensembl_head/modules}g ) {
+            $path=~s{ensembl_head/modules}{ensembl/modules}g;
+        };
+    }
+}
+
+use strict;
+use Bio::Otter::Lace::Defaults;
+
+{
+    my $dsname  = 'cow';
+    my $change  = 0; # dry run
+
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'dataset=s'     => \$dsname,
+        'change!'       => \$change,
+    );
+
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name($dsname);
+
+    # Sanity check:
+    if(!$ds->HEADCODE()) {
+        print STDERR "New dataset must be based on schema-20+\n";
+        exit(1);
+    }
+    
+    my $loutre_dbc = $ds->get_cached_DBAdaptor->dbc();
+
+    foreach my $component ('gene', 'transcript') {
+
+        print "------- $component ---------\n";
+
+        my %name2stid = ();
+        my %disambig = ();
+        
+        my $sql = qq{
+            SELECT DISTINCT gn1.value, gsi1.${component}_id, gsi1.stable_id, gsi1.version, g1.is_current
+            FROM    ${component}_stable_id gsi1,
+                    ${component}_stable_id gsi2,
+                    ${component}_attrib gn1,
+                    ${component}_attrib gn2,
+                    $component g1,
+                    attrib_type at
+            WHERE    at.code='name'
+            AND gn1.attrib_type_id=at.attrib_type_id
+            AND gn2.attrib_type_id=at.attrib_type_id
+            AND gn1.value=gn2.value
+            AND gn1.${component}_id=gsi1.${component}_id
+            AND g1.${component}_id=gsi1.${component}_id
+            AND gn2.${component}_id=gsi2.${component}_id
+            AND gsi1.stable_id != gsi2.stable_id
+            ORDER BY gn1.value, gsi1.stable_id, gsi1.version
+        };
+
+        my $sth = $loutre_dbc->prepare($sql);
+        $sth->execute();
+        while( my($name, $dbid, $stable_id, $version, $currency) = $sth->fetchrow() ) {
+            print "$name  $dbid  $stable_id  $version $currency  ";
+
+            my $change_to_this;
+
+            if(!$name2stid{$name}) { # was empty - let's grab it!
+                $name2stid{$name} = $stable_id;
+                print "grabbing it\n";
+            } elsif($name2stid{$name} ne $stable_id) { # conflict
+                
+                my $change_to_this;
+
+                if($change_to_this = $disambig{$name}{$stable_id}) {
+                    print "name '$change_to_this' already created \n";
+                } else {
+                    $change_to_this = $name.'-'.(1+scalar(keys %{$disambig{$name}}));
+
+                    $disambig{$name}{$stable_id} = $change_to_this;
+
+                    print "created new name '$change_to_this'\n";
+                }
+
+                my $change_sql = qq{
+                    UPDATE ${component}_attrib
+                    SET value='$change_to_this'
+                    WHERE ${component}_id = $dbid
+                    AND   attrib_type_id = (SELECT attrib_type_id FROM attrib_type where code='name')
+                };
+
+                if($change) {
+                    print "\nEXECUTING: $change_sql\n\n";
+                    my $change_sth = $loutre_dbc->prepare($change_sql);
+                    $change_sth->execute();
+                } else {
+                    print "\nPRETENDING TO EXECUTE: $change_sql\n\n";
+                }
+
+            } else {
+                print "one of those lucky ones\n";
+            }
+        }
+
+        print "\n\n";
+        
+    }
+}
+
