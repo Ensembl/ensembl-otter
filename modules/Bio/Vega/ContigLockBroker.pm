@@ -103,8 +103,8 @@ sub lock_clones_by_slice {
   my $contig_list = $self->Contig_listref_from_Slice($slice);
   my $aptr       = $db->get_ContigLockAdaptor;
   my $sa=$db->get_SliceAdaptor;
-  my( @new,               # locks we manange to create
-		@existing,          # locks that already existed
+  my(   @successful_locks,   # locks we manange to create
+		@unsuccessful_locks, # locks that already existed
 		%existing_contig,    # contigs that had locks existing (for nice error message)
 	 );
 
@@ -125,24 +125,22 @@ sub lock_clones_by_slice {
 	 if ($@) {
 		my $exlock = $db->get_ContigLockAdaptor->fetch_by_contig_id($ctg_seq_region_id);
 		if ($exlock){
-            push(@existing, $exlock);
-         }
-		 $existing_contig{$ctg_seq_region_id} = $contig;
+            push(@unsuccessful_locks, $exlock);
+        }
+		$existing_contig{$ctg_seq_region_id} = $contig;
 	 } else {
-		push(@new, $lock);
+		push(@successful_locks, $lock);
 	 }
   }
-  if (@existing) {
+  if (@unsuccessful_locks) {
 	 # Unlock any that we just locked (could do this with rollback?)
-	 foreach my $lock (@new) {
+	 foreach my $lock (@successful_locks) {
 		$aptr->remove($lock);
 	 }
 	 # Give a nicely formatted error message about what is already locked
 	 my $lock_error_str = "Can't lock contigs because some are already locked:\n";
-	 foreach my $lock (@existing) {
-		#die "@existing";
+	 foreach my $lock (@unsuccessful_locks) {
 		my $contig = $existing_contig{$lock->contig_id};
-		my $ctg_seq_region_id = $sa->get_seq_region_id($contig);
 		  $lock_error_str .= sprintf "  '%s' has been locked by '%s'@%s since %s\n",
 			 $contig->seq_region_name,
              $lock->author->name,
@@ -174,8 +172,8 @@ sub remove_by_slice {
 
 ##ported/tested
 sub Contig_listref_from_Slice {
-
   my ($self,$slice)  = @_;
+
   my $contig_list = [];
   my $slice_projection = $slice->project('contig');
   foreach my $contig_seg (@$slice_projection) {
@@ -188,8 +186,5 @@ sub Contig_listref_from_Slice {
 
   return $contig_list;
 }
-
-
-
 
 1;

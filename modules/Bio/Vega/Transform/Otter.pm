@@ -463,7 +463,7 @@ sub build_Transcript {
   }
   my $cds_start_not_found = $data->{'cds_start_not_found'};
   if (defined $cds_start_not_found ){
-	 my $attrib= $self->make_Attribute('cds_start_NF','cds start not not','',$cds_start_not_found);
+	 my $attrib= $self->make_Attribute('cds_start_NF','cds start not found','',$cds_start_not_found);
 	 push @$transcript_attributes,$attrib;
   }
   my $cds_end_not_found = $data->{'cds_end_not_found'};
@@ -912,17 +912,17 @@ sub get_CloneSlices {
 
 sub get_Genes {
   my $self=shift;
-  return $gene_list{$self};
+  return $gene_list{$self} || [];
 }
 
 sub get_AssemblyTags {
   my $self=shift;
-  return $assembly_tag_list{$self};
+  return $assembly_tag_list{$self} || [];
 }
 
 sub get_SimpleFeatures {
   my $self=shift;
-  return $feature_list{$self};
+  return $feature_list{$self} || [];
 }
 
 sub get_SequenceSet_AssemblyType {
