@@ -251,7 +251,7 @@ sub build_SequenceFragment {
 	 $cln_attrib=$self->make_Attribute('keyword','Clone Keyword','',$key);
 	 push @$cln_attrib_list,$cln_attrib;
   }
-  my $cln_author=$self->make_Author($data->{'author'},$data->{'author_email'},'');
+  my $cln_author=$self->make_Author($data->{'author'} || 'nobody' ,$data->{'author_email'} || 'nobody' ,'');
   my $cln_ctg_piece=[$cln_slice,$ctg_slice];
   my $cln_ctg_list = $slice{$self}{'cln_ctg'} ||= [];
   push @$cln_ctg_list,$cln_ctg_piece;
@@ -1049,6 +1049,7 @@ sub make_Slice {
 sub make_Author {
   my ($self,$name, $email, $group_name)=@_;
 
+  print STDERR "make_Author called: name=[$name], email=[$email], group_name=[$group_name]\n";
   # for other groups, current strategy is to patch the database by hand
   my $group_email = "vega\@sanger.ac.uk" if $email =~ /sanger/;
   my $group = Bio::Vega::AuthorGroup->new
