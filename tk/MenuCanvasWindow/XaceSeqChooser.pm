@@ -662,17 +662,6 @@ sub populate_menus {
     );
     $top->bind('<Control-g>', $gf_command);
     $top->bind('<Control-G>', $gf_command);    
- 
-    # Clone properties editing
-    my $ce_command = sub { $self->launch_CloneEditor };
-    $tools_menu->add('command' ,
-        -label          => 'Clone editor',    
-        -command        => $ce_command,
-        -accelerator    => 'Ctrl+O',
-        -underline      => 2,
-    );
-    $top->bind('<Control-g>', $ce_command);
-    $top->bind('<Control-G>', $ce_command);    
    
     ## Spawn dotter Ctrl .
     my $run_dotter_command = sub { $self->run_dotter };
