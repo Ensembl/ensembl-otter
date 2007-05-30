@@ -261,7 +261,6 @@ sub transcripts_diff {
   my ($self, $gene, $time) = @_;
 
   $self->current_time($time);
-  my $ta=$self->db->get_TranscriptAdaptor;
   my $any_transcript_changed=0;
   my $shared_exons = {};
   foreach my $tran (@{ $gene->get_all_Transcripts }) {
@@ -293,7 +292,6 @@ sub transcripts_diff {
             $tran->modified_date($self->current_time);
 
             $tran->is_current(1);
-            $db_transcript->is_current(0);
         } else {
             $tran->version($db_transcript->version);
             $tran->modified_date($db_transcript->modified_date());

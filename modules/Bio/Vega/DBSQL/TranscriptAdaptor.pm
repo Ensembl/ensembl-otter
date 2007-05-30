@@ -178,7 +178,7 @@ sub fetch_last_version {
     my $transcript_stable_id=$transcript->stable_id;
 
     my @candidates = $on_whole_chromosome
-        ? @{ $self->generic_fetch( "tsi.stable_id = '$transcript_stable_id'" ) }
+        ? @{ $self->fetch_all_versions_by_stable_id($transcript_stable_id) }
         : (grep { $_->stable_id eq $transcript_stable_id }
                @{ $self->fetch_all_by_Slice($transcript->slice()) });
 
