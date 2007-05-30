@@ -84,7 +84,7 @@ sub fetch_last_version {
     my $exon_stable_id=$exon->stable_id;
 
     my @candidates = $on_whole_chromosome
-        ? @{ $self->generic_fetch( "esi.stable_id = '$exon_stable_id'" ) }
+        ? @{ $self->fetch_all_versions_by_stable_id($exon_stable_id) }
         : (grep { $_->stable_id eq $exon_stable_id }
                @{ $self->fetch_all_by_Slice($exon->slice()) });
 

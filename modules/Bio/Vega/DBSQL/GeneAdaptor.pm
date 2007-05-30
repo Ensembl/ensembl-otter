@@ -156,12 +156,103 @@ sub reincarnate_gene {
   return $gene;
 }
 
+sub fetch_all_by_Slice_constraint {
+  my $self  = shift;
+  my $slice = shift;
+  my $constraint = shift || '1 = 1'; # this should not break the primitive MySQL patterns
+  my $logic_name = shift;
+  my $load_transcripts = shift;
+
+  my $genes = $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint, $logic_name) || [];
+
+  ## if there are 0 or 1 genes still do lazy-loading
+  if(!$load_transcripts || @$genes < 2) {
+          return $genes;
+  }
+
+  # preload all of the transcripts now, instead of lazy loading later
+  # faster than 1 query per transcript
+
+  # first check if transcripts are already preloaded
+  # coorectly we should check all of them ..
+  return $genes if( exists $genes->[0]->{'_transcript_array'} );
+
+  # get extent of region spanned by transcripts
+  my ($min_start, $max_end);
+  foreach my $g (@$genes) {
+    if(!defined($min_start) || $g->seq_region_start() < $min_start) {
+      $min_start = $g->seq_region_start();
+    }
+    if(!defined($max_end) || $g->seq_region_end() > $max_end) {
+      $max_end   = $g->seq_region_end();
+    }
+  }
+
+  my $ext_slice;
+
+  if($min_start >= $slice->start() && $max_end <= $slice->end()) {
+    $ext_slice = $slice;
+  } else {
+    my $sa = $self->db()->get_SliceAdaptor();
+    $ext_slice = $sa->fetch_by_region
+      ($slice->coord_system->name(), $slice->seq_region_name(),
+       $min_start,$max_end, $slice->strand(), $slice->coord_system->version());
+  }
+
+  # associate transcript identifiers with genes
+
+  my %g_hash = map {$_->dbID => $_} @$genes;
+
+  my $g_id_str = '(' . join(',', keys %g_hash) . ')';
+
+  my $sth = $self->prepare("SELECT gene_id, transcript_id " .
+                           "FROM   transcript " .
+                           "WHERE  gene_id IN $g_id_str");
+
+  $sth->execute();
+
+  my ($g_id, $tr_id);
+  $sth->bind_columns(\$g_id, \$tr_id);
+
+  my %tr_g_hash;
+
+  while($sth->fetch()) {
+    $tr_g_hash{$tr_id} = $g_hash{$g_id};
+  }
+
+  $sth->finish();
+
+  my $ta = $self->db()->get_TranscriptAdaptor();
+  my $transcripts = $ta->fetch_all_by_Slice($ext_slice, 1);
+
+  # move transcripts onto gene slice, and add them to genes
+  foreach my $tr (@$transcripts) {
+    if( !exists $tr_g_hash{$tr->dbID()} ) {
+      next;
+    }
+
+    my $new_tr;
+    if($slice != $ext_slice) {
+      $new_tr = $tr->transfer($slice) if($slice != $ext_slice);
+      if(!$new_tr) {
+	throw("Unexpected. Transcript could not be transfered onto Gene slice.");
+      }
+    } else {
+      $new_tr = $tr;
+    }
+
+    $tr_g_hash{$tr->dbID()}->add_Transcript($new_tr);
+  }
+
+  return $genes;
+}
+
 sub fetch_all_by_Slice  {
   my ($self,$slice,$logic_name,$load_transcripts)  = @_;
   my $latest_genes = [];
-  my ($genes) = $self->SUPER::fetch_all_by_Slice($slice,$logic_name,$load_transcripts);
-  if ($genes){
-	 foreach my $gene(@$genes){
+  my ($genes) = $self->fetch_all_by_Slice_constraint($slice, undef, $logic_name, $load_transcripts);
+
+  foreach my $gene(@$genes){
 		$self->reincarnate_gene($gene);
 		my $tsct_list = $gene->get_all_Transcripts;
 		for (my $i = 0; $i < @$tsct_list;) {
@@ -193,16 +284,20 @@ sub fetch_all_by_Slice  {
 				$truncated=1;
 				
 			 }
-		  }
-		  else {
+		  } else {
 			 # This will fail if get_all_Transcripts() ceases to return a ref
 			 # to the actual list of Transcripts inside the Gene object
 			 splice(@$tsct_list, $i, 1);
 			 $message="Transcript '$t_name' has no exons within the slice";
 			 $truncated=1;
 		  }
-		  if ($truncated == 1) {
-			 my $remark_att = Bio::EnsEMBL::Attribute->new(-CODE => 'remark',-NAME => 'Remark',-DESCRIPTION => 'Annotation Remark',-VALUE => $message);
+		  if ($truncated) {
+			 my $remark_att = Bio::EnsEMBL::Attribute->new(
+                -CODE => 'remark',
+                -NAME => 'Remark',
+                -DESCRIPTION => 'Annotation Remark',
+                -VALUE => $message);
+
 			 my $gene_att=$gene->get_all_Attributes;
 			 push @$gene_att, $remark_att ;
 			 $gene->truncated_flag(1);
@@ -211,29 +306,10 @@ sub fetch_all_by_Slice  {
 		}
 		# Remove any genes that don't have transcripts left.
 		if (@$tsct_list) {
-		  push(@$latest_genes, $gene);
+		  push @$latest_genes, $gene;
 		}
-	 }
   }
   return $latest_genes;
-}
-
-sub get_deleted_Gene_by_slice {
-  my ($self, $gene, $gene_version) = @_;
-  unless ($gene || $gene_version) {
-	 throw("no gene passed on to fetch old gene or no version supplied");
-  }
-  my $gene_stable_id=$gene->stable_id;
-  my @out =
-    sort {$b->dbID <=> $a->dbID }
-    grep { $_->stable_id eq $gene_stable_id and $_->version eq $gene_version }
-    @{$self->SUPER::fetch_all_by_Slice_constraint($gene->slice,'g.is_current = 0 ')};
-
-  my $db_gene=$out[0];
-  if ($db_gene){
-	 $self->reincarnate_gene($db_gene);
-  }
-  return $db_gene;
 }
 
 sub fetch_by_stable_id_version  {
@@ -300,46 +376,6 @@ sub get_current_Gene_by_slice {
   return $db_gene;
 }
 
-sub find_and_update_deleted_components { # either transcripts or exons
-    my ($self, $component_adaptor, $old_components, $new_components) = @_;
-
-    my %newhash = map { $_->stable_id => $_} @$new_components;
-    my %oldhash = map { $_->stable_id => $_} @$old_components;
-
-    while (my ($stable_id, $old_component) = each %oldhash) {
-        unless ($newhash{$stable_id}) {
-            $old_component->is_current(0);
-            $component_adaptor->update($old_component);
-        }
-    }
-}
-
-    # iterate through last_db_versions of gene components and update the ones marked non-current:
-sub update_changed_components {
-    my ($self, $gene) = @_;
-
-    my $db_gene = $gene->last_db_version();
-    if($db_gene && !$db_gene->is_current()) {
-        $self->db->get_GeneAdaptor->update($db_gene);
-    }
-
-    my $ta = $self->db->get_TranscriptAdaptor;
-    for my $transcript (@{$gene->get_all_Transcripts()}) {
-        my $db_transcript=$transcript->last_db_version();
-        if($db_transcript && !$db_transcript->is_current()) {
-            $ta->update($db_transcript);
-        }
-    }
-
-    my $ea = $self->db->get_ExonAdaptor;
-    for my $exon (@{$gene->get_all_Exons()}) {
-        my $db_exon=$exon->last_db_version();
-        if($db_exon && !$db_exon->is_current()) {
-            $ea->update($db_exon);
-        }
-    }
-}
-
     #
     # Fetch and reincarnate the last version of the gene with the same stable_id (whether current or not).
     # If $on_whole_chromosome is true, do not use any mapping, just fetch directly on the chromosome.
@@ -350,9 +386,9 @@ sub fetch_last_version {
     my $gene_stable_id=$gene->stable_id;
 
     my @candidates = $on_whole_chromosome
-        ? @{ $self->generic_fetch( "gsi.stable_id = '$gene_stable_id'" ) }
+        ? @{ $self->fetch_all_versions_by_stable_id($gene_stable_id) }
         : (grep { $_->stable_id eq $gene_stable_id }
-               @{ $self->fetch_all_by_Slice($gene->slice()) });
+               @{ $self->fetch_all_by_Slice_constraint($gene->slice(), '') });
 
     unless(scalar @candidates) {
         return;
@@ -474,30 +510,48 @@ sub store {
             }
         }
 
+            # now it is safe to mark the existing gene non-current:
+		$db_gene->is_current(0);
+        $self->update($db_gene);
+            # transcripts cannot be shared between different versions of genes, so make them non-current, too:
+        my $ta = $self->db->get_TranscriptAdaptor();
+        foreach my $db_gene_tran (@{ $db_gene->get_all_Transcripts() }) {
+            $db_gene_tran->is_current(0);
+            $ta->update($db_gene_tran);
+        }
+            # exons CAN be shared between different versions of genes, so update the non-currency of the deleted ones
+            # (assuming that exons are never shared between genes with different stable_ids. IS THAT TRUE ACTUALLY?)
+        my $ea = $self->db->get_ExonAdaptor();
+        my %old_set = map { $_->stable_id => $_} @{ $db_gene->get_all_Exons() };
+        my %new_set = map { $_->stable_id => $_} @{ $gene->get_all_Exons() };
+        while (my ($stable_id, $db_gene_exon) = each %old_set) {
+            unless ($new_set{$stable_id}) {
+                $db_gene_exon->is_current(0);
+                $ea->update($db_gene_exon);
+            }
+        }
+            # also, update the non-currency of the changed exons (marked by AnnotationBroker) :
+        while (my ($stable_id, $gene_exon) = each %new_set) {
+            my $db_exon=$gene_exon->last_db_version();
+            if($db_exon && !$db_exon->is_current()) {
+                $ea->update($db_exon);
+            }
+        }
+
         $gene->version($db_gene->version()+1);          # CHANGED||RESTORED||DELETED will affect the author, so get a new version
         $gene->created_date($db_gene->created_date());
-		$db_gene->is_current(0);
 
             # If a gene is marked is non-current, we assume it was intended for deletion.
             # We also assume unsetting is_current() is the only thing needed to declare such intention.
             # So let's mark all of its' components for deletion as well:
         if($gene_state == DELETED) {
+            $gene->biotype('obsolete');
             foreach my $del_tran (@{ $gene->get_all_Transcripts() }) {
                 $del_tran->is_current(0);
                 foreach my $del_exon (@{$del_tran->get_all_Exons}) {
                     $del_exon->is_current(0);
                 }
             }
-        } else { # but still changed! - mark the deleted/changed components non-current and update them
-
-                # transcripts and exons under $db_gene that are not under $gene anymore:
-            $self->find_and_update_deleted_components(
-                $self->db->get_TranscriptAdaptor, $db_gene->get_all_Transcripts, $gene->get_all_Transcripts);
-            $self->find_and_update_deleted_components(
-                $self->db->get_ExonAdaptor, $db_gene->get_all_Exons, $gene->get_all_Exons);
-
-                # anything under $gene that has is_current()==0 must be updated as well
-            $self->update_changed_components($gene);
         }
 
     } else { # NEW or INITIALLY_DELETED (happened during migration) gene, but may have old components (as a result of a split)
@@ -508,21 +562,6 @@ sub store {
         $gene->created_date($time_now);
     }
     $gene->modified_date($time_now);
-
-        # NB: this is here only to cover the cases where setting timestamps failed in the components
-        #
-#    foreach my $tran (@{ $gene->get_all_Transcripts() }) {
-#        $tran->created_date($time_now)  unless $tran->created_date();
-#        $tran->modified_date($time_now) unless $tran->modified_date();
-#        foreach my $exon (@{ $tran->get_all_Exons() }) {
-#            $exon->created_date($time_now)  unless $exon->created_date();
-#            $exon->modified_date($time_now) unless $exon->modified_date();
-#        }
-#        if(my $trl = $tran->translation) {
-#            $trl->created_date($time_now)  unless $trl->created_date();
-#            $trl->modified_date($time_now) unless $trl->modified_date();
-#        }
-#    }
 
         # Here we assume that the parent method will update all is_current() fields,
         # trusting the values that we have just set.
