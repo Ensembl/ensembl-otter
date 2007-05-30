@@ -32,8 +32,10 @@ use Bio::Otter::Lace::Defaults;
     for my $ds (@datasets) {
 
         $dataset_name = $ds->name();
+        next if $dataset_name eq "cow"; # temp solution
+
         my $headcode  = $ds->HEADCODE() || 0;
-        
+
         print STDERR "\n=================== $dataset_name ===============\n";
 
         # Make a connection to the otter database
