@@ -156,7 +156,7 @@ sub reincarnate_gene {
   return $gene;
 }
 
-sub fetch_all_by_Slice_constraint {
+sub fetch_all_versions_by_Slice_constraint {
   my $self  = shift;
   my $slice = shift;
   my $constraint = shift || '1 = 1'; # this should not break the primitive MySQL patterns
@@ -250,7 +250,7 @@ sub fetch_all_by_Slice_constraint {
 sub fetch_all_by_Slice  {
   my ($self,$slice,$logic_name,$load_transcripts)  = @_;
   my $latest_genes = [];
-  my ($genes) = $self->fetch_all_by_Slice_constraint($slice, undef, $logic_name, $load_transcripts);
+  my ($genes) = $self->fetch_all_by_Slice_constraint($slice, 'g.is_current = 1', $logic_name, $load_transcripts);
 
   foreach my $gene(@$genes){
 		$self->reincarnate_gene($gene);
@@ -388,7 +388,7 @@ sub fetch_last_version {
     my @candidates = $on_whole_chromosome
         ? @{ $self->fetch_all_versions_by_stable_id($gene_stable_id) }
         : (grep { $_->stable_id eq $gene_stable_id }
-               @{ $self->fetch_all_by_Slice_constraint($gene->slice(), '') });
+               @{ $self->fetch_all_versions_by_Slice_constraint($gene->slice(), '') });
 
     unless(scalar @candidates) {
         return;
