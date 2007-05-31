@@ -43,7 +43,7 @@ $server->error_exit("Clones locked - exiting [$@]") if $@;
 $server->log("Obtained the locks.");
 
 if ($odba->isa('Bio::Vega::DBSQL::DBAdaptor')) {
-    my $xml = Bio::Vega::Transform::XML->generate_OtterXML([$slice],$odba,0);
+    my $xml = Bio::Vega::Transform::XML->generate_OtterXML([$slice],$odba,0, []);
     $server->send_response($xml);
 } elsif ($odba->isa('Bio::Otter::DBSQL::DBAdaptor')) {
     my $xml = Bio::Otter::Converter::path_to_XML($name, $start, $end,

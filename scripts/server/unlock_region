@@ -16,13 +16,16 @@ my $server = Bio::Otter::ServerScriptSupport->new(
 my $odba        = $server->otter_dba();
 my $author_obj  = $server->make_Author_obj();
 
-my( $genes, $slice );
 if ($odba->isa('Bio::Otter::DBSQL::DBAdaptor')) {
 
-  my $input_stream = $server->tempfile_from_argument('data')->read_file_handle();
+    my $input_stream = $server->tempfile_from_argument('data')->read_file_handle();
+    my $slice;
+
 
   eval {
-    ($genes,$slice) = Bio::Otter::Converter::XML_to_otter($input_stream, $odba);
+    my $dummy_genes;
+    ($dummy_genes,$slice) = Bio::Otter::Converter::XML_to_otter($input_stream, $odba);
+
     my $chrname  = $slice->chr_name;
     my $chrstart = $slice->chr_start;
     my $chrend   = $slice->chr_end;
@@ -51,6 +54,8 @@ if ($odba->isa('Bio::Otter::DBSQL::DBAdaptor')) {
 
 } elsif ($odba->isa('Bio::Vega::DBSQL::DBAdaptor')) {
 
+  my $slice;
+
   # the original string lives here:
   my    $xml_string = $server->require_argument('data');
   eval{
@@ -65,10 +70,6 @@ if ($odba->isa('Bio::Otter::DBSQL::DBAdaptor')) {
 	 my $segment_name=$parser->get_AssemblyType->{'assembly_type'};
 	 my $chrname=$chr_slice->seq_region_name;
 	 $slice =  $odba->get_SliceAdaptor()->fetch_by_region($cs,$segment_name,$chrstart,$chrend,$strand,$cs_version);
-	 #unless ($slice) {
-		#die "no slice fetched for cs:$cs, segment_name:$segment_name,chrstart:$chrstart, chrend:$chrend, strand:$strand, cs-version:$cs_version";
-	 #}
-	 $genes=$parser->get_Genes;
 	 $server->log("Processed incoming xml file with slice: [$chrname] [$chrstart] [$chrend]");
   };
   if ($@) {
