@@ -5,27 +5,30 @@ use Bio::Vega::Utils::XmlEscape qw (xml_escape);
 use Bio::EnsEMBL::Utils::Exception qw ( throw);
 use base 'Bio::Vega::Writer';
 
+{
+    my %transcript_class_mapping = (
+        'UNKNOWN' => {
+            'unprocessed_pseudogene'=>'Unprocessed_pseudogene',
+            'processed_pseudogene'=>'Processed_pseudogene',
+            'pseudogene'=>'Pseudogene',
+            'Ig_pseudogene_segment'=>'Ig_pseudogene_segment',
+            'coding'=>'Coding',
+        },
+        'KNOWN' => {'protein_coding'=>'Known'},
+        'NOVEL' => {
+            'protein_coding'=>'Novel_CDS',
+            'Ig_segment'=>'Ig_segment',
+            'processed_transcript'=>'Novel_transcript',
+        },
+        'PUTATIVE' => {'processed_transcript'=>'Putative' },
+        'PREDICTED'=> {'protein_coding'=>'Predicted_gene' }
+    );
 
-sub get_transcript_class {
-  my ($self,$biotype,$status)=@_;
-  my $transcript_class_mapping = { "UNKNOWN" => {'unprocessed_pseudogene'=>'Unprocessed_pseudogene',
-															'processed_pseudogene'=>'Processed_pseudogene',
-															'pseudogene'=>'Pseudogene',
-															'Ig_pseudogene_segment'=>'Ig_pseudogene_segment',
-															'coding'=>'Coding',
-															},
-											  "KNOWN" => {'protein_coding'=>'Known'},
-											  "NOVEL" => {'protein_coding'=>'Novel_CDS',
-															  'Ig_segment'=>'Ig_segment',
-															  'processed_transcript'=>'Novel_transcript',
-															 },
-											  "PUTATIVE" => {'processed_transcript'=>'Putative',
-																 },
-											  "PREDICTED"=>{'protein_coding'=>'Predicted_gene',
-																}
-											};
+    sub get_transcript_class {
+        my ($self,$biotype,$status)=@_;
 
-  return $transcript_class_mapping->{$status}->{$biotype};
+        return $transcript_class_mapping{$status}{$biotype};
+    }
 }
 
 sub get_geneXML{
@@ -60,7 +63,7 @@ sub generate_SequenceSet{
   $ss->attribobjs($self->generate_FeatureSet($features,$slice));
   my $ga=$odb->get_GeneAdaptor;
   unless ($genes){
-  $genes=$slice->get_all_Genes;
+      $genes=$slice->get_all_Genes;
   }
   foreach my $gene(@$genes){
 	 $ss->attribobjs($self->generate_Locus($gene));
