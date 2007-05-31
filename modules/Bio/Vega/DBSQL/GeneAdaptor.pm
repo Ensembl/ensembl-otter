@@ -467,7 +467,7 @@ sub store {
 
     my $gene_state;
 
-        # first step: compare the subcomponents to their previous versions PLUS some side-effects
+        # first step: compare the components to their previous versions PLUS some side-effects
         # (set timestamps and versions, but do not update anything in the database)
     my $gene_changed = $broker->transcripts_diff($gene, $time_now);
 
@@ -493,26 +493,8 @@ sub store {
         ##add synonym if old gene name is not a current gene synonym
         $broker->compare_synonyms_add($db_gene,$gene);
 
-        print STDERR "Before splitting: gene=$gene (id=".$gene->dbID."), db_gene=$db_gene (id=".$db_gene->dbID.")\n";
 
-            # If there was either a structural or mere author change,
-            # but the gene is still associated with the last fetchable version,
-            # it has to be dissociated from the DB to get a new set of dbIDs:
-        if($gene->dbID() && ($gene->dbID() == $db_gene->dbID())) {
-            $gene->dbID(undef);
-            $gene->adaptor(undef);
-            foreach my $tran (@{ $gene->get_all_Transcripts() }) {
-                $tran->dbID(undef);
-                $tran->adaptor(undef);
-                    # NB: exons do not need to be duplicated
-                if ($tran->translation){
-                    $tran->translation->dbID(undef);
-                    $tran->translation->adaptor(undef);
-                }
-            }
-        }
-
-            # now it is safe to mark the existing gene non-current:
+            # mark the existing gene non-current:
 		$db_gene->is_current(0);
         $self->update($db_gene);
             # transcripts cannot be shared between different versions of genes, so make them non-current, too:
@@ -540,8 +522,22 @@ sub store {
             }
         }
 
-        $gene->version($db_gene->version()+1);          # CHANGED||RESTORED||DELETED will affect the author, so get a new version
-        $gene->created_date($db_gene->created_date());
+            # If the gene is still associated with the last fetchable version,
+            # (for example, if it is being DELETED or RESTORED)
+            # it has to be dissociated from the DB to get a new set of dbIDs:
+        if($gene->dbID() && ($gene->dbID() == $db_gene->dbID())) {
+            $gene->dbID(undef);
+            $gene->adaptor(undef);
+            foreach my $tran (@{ $gene->get_all_Transcripts() }) {
+                $tran->dbID(undef);
+                $tran->adaptor(undef);
+                    # NB: exons do not need to be duplicated
+                if ($tran->translation){
+                    $tran->translation->dbID(undef);
+                    $tran->translation->adaptor(undef);
+                }
+            }
+        }
 
             # If a gene is marked is non-current, we assume it was intended for deletion.
             # We also assume unsetting is_current() is the only thing needed to declare such intention.
@@ -556,7 +552,11 @@ sub store {
             }
         }
 
-    } else { # NEW or NEW_DELETED (happened during migration) gene, but may have old components (as a result of a split)
+        $gene->version($db_gene->version()+1);          # CHANGED||RESTORED||DELETED will affect the author, so get a new version
+        $gene->created_date($db_gene->created_date());
+
+    } else { # NEW or NEW_DELETED (happens during loading/migration) gene,
+             # but may have inherited 'old' components (as a result of a split)
 
         $gene_state=NEW;
 
