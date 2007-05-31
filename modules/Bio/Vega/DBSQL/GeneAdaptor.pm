@@ -493,6 +493,8 @@ sub store {
         ##add synonym if old gene name is not a current gene synonym
         $broker->compare_synonyms_add($db_gene,$gene);
 
+        print STDERR "Before splitting: gene=$gene (id=".$gene->dbID."), db_gene=$db_gene (id=".$db_gene->dbID.")\n";
+
             # If there was either a structural or mere author change,
             # but the gene is still associated with the last fetchable version,
             # it has to be dissociated from the DB to get a new set of dbIDs:
@@ -554,7 +556,7 @@ sub store {
             }
         }
 
-    } else { # NEW or INITIALLY_DELETED (happened during migration) gene, but may have old components (as a result of a split)
+    } else { # NEW or NEW_DELETED (happened during migration) gene, but may have old components (as a result of a split)
 
         $gene_state=NEW;
 
@@ -573,19 +575,16 @@ sub store {
         ##get author_id and store gene_id-author_id in gene_author table
     my $gene_author=$gene->gene_author;
     $aa->store($gene_author);
-    my $author_id=$gene_author->dbID;
-    $aa->store_gene_author($gene->dbID,$author_id);
+    $aa->store_gene_author($gene->dbID, $gene_author->dbID);
 
         ##transcript-author, transcript-evidence
     my $ta = $self->db->get_TranscriptAdaptor;
     foreach my $tran (@{ $gene->get_all_Transcripts }) {
         my $tran_author=$tran->transcript_author;
         $aa->store($tran_author);
-        my $author_id=$tran_author->dbID;
-        $aa->store_transcript_author($tran->dbID,$author_id);
+        $aa->store_transcript_author($tran->dbID, $tran_author->dbID);
 
-        my $evidence_list=$tran->get_Evidence;
-        $ta->store_Evidence($tran->dbID,$evidence_list);
+        $ta->store_Evidence($tran->dbID, $tran->get_Evidence);
     }
 
     if($gene_state == CHANGED) {
