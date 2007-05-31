@@ -1,10 +1,16 @@
 #!/usr/local/bin/perl -w
 
+# Need to point at ensembl head API
+use lib '/nfs/team71/analysis/jgrg/work/ensembl-head/modules';
+use lib '/nfs/team71/analysis/jgrg/work/ensembl-pipeline-head/modules';
+
 ### get_softmasked_seq_for_set
 
 use strict;
 
+use Bio::SeqIO;
 use Bio::Otter::Lace::Defaults;
+use Bio::Vega::DBSQL::DBAdaptor;
 
 {
     my( $dataset_name, $set_name );
@@ -27,11 +33,16 @@ use Bio::Otter::Lace::Defaults;
     # in the assembly.
     my $ss = $ds->get_SequenceSet_by_name($set_name);
     $ds->fetch_all_CloneSequences_for_SequenceSet($ss);
+    $ds->HEADCODE(1);
     # $ds->fetch_pipeline_ctg_ids_for_SequenceSet($ss);
     
     my $otter_dba = $ds->get_cached_DBAdaptor;
-    my $pipe_dba = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($otter_dba);
-    my $ctg_aptr = $pipe_dba->get_RawContigAdaptor;
+    my $pipe_dba = Bio::Otter::Lace::SatelliteDB::get_DBAdaptor(
+        $otter_dba, 'pipeline_db_head', 'Bio::EnsEMBL::DBSQL::DBAdaptor',
+        );
+    my $slice_aptr = $pipe_dba->get_SliceAdaptor;
+    #my $pipe_dba = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($otter_dba);
+    #my $ctg_aptr = $pipe_dba->get_RawContigAdaptor;
 
     my $cs_list = $ss->CloneSequence_list;
     
@@ -41,13 +52,16 @@ use Bio::Otter::Lace::Defaults;
         -format => 'fasta',
         );
     
-    my $repeat_mask = ['trf', 'RepeatMask'];
+    my $repeat_mask = ['trf', 'RepeatMasker'];
     my $soft = 1;
     foreach my $cs (@$cs_list) {
         # my $ctg_id = $cs->pipeline_contig_id or die "No pipeline contig ID";
         my $ctg_name = $cs->contig_name();
-        my $ctg = $ctg_aptr->fetch_by_name($ctg_name);
-        my $seq = $ctg->get_repeatmasked_seq($repeat_mask, $soft);
+        my $slice = $slice_aptr->fetch_by_region('contig', $ctg_name);
+        my $seq = $slice->get_repeatmasked_seq($repeat_mask, $soft);
+        #my $ctg = $ctg_aptr->fetch_by_name($ctg_name)
+        #  or die "No such contig '$ctg_name'";
+        #my $seq = $ctg->get_repeatmasked_seq($repeat_mask, $soft);
         $seq_out->write_seq($seq);
     }
 }
