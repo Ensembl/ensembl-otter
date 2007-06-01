@@ -107,7 +107,7 @@ sub compare_clones {
     my %new = map {$_->embl_id . "." . $_->embl_version, $_} @$new_clones;
     my %old = map {$_->embl_id . "." . $_->embl_version, $_} @$old_clones;
 
-    my( @changed );
+    my @changed = ();
     foreach my $acc_sv (keys %old) {
         my $old_clone = $old{$acc_sv};
         my $new_clone = $new{$acc_sv}
@@ -119,7 +119,7 @@ sub compare_clones {
             push(@changed, $new_clone);
         }
     }
-    return @changed;
+    return \@changed;
 }
 
 sub make_id_version_hash {
@@ -214,7 +214,7 @@ sub compare_genes {
     my ($del, $new, $mod) = $self->compare_obj($old_genes, $new_genes);
 
     my %modified_gene_ids;
-    my @events;
+    my @gene_events = ();
     foreach my $geneid (keys %$mod) {
         my $gene_modified = 0;
 
@@ -349,7 +349,7 @@ sub compare_genes {
             -type => 'new',
             -new  => $gene
         );
-        push(@events, $event);
+        push(@gene_events, $event);
     }
 
     # Flag deleted genes
@@ -367,7 +367,7 @@ sub compare_genes {
                 -type => 'deleted',
                 -old  => $gene
             );
-            push(@events, $event);
+            push(@gene_events, $event);
         }
     }
 
@@ -383,12 +383,12 @@ sub compare_genes {
             -old  => $old_gene
         );
 
-        push(@events, $event);
+        push(@gene_events, $event);
     }
 
     $self->drop_id_version_hash;
 
-    return @events;
+    return \@gene_events;
 }
 
 sub increment_versions_in_gene {

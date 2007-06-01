@@ -75,14 +75,17 @@ sub translations_diff {
         my $db_version   = $db_translation->version();
 
         if ($db_translation->stable_id ne $translation->stable_id) {
-            print STDERR "Translations being compared have different stable_ids: '".$db_translation->stable_id."' and '".$translation->stable_id."'\n";
+            print STDERR "Translations being compared have different stable_ids: '"
+                        .$db_translation->stable_id."' and '".$translation->stable_id."'\n";
             #
             ##Remember to uncomment this after loading and remove the line/s after
             #	throw('translation stable_ids of the same two transcripts are different\n');
             #
             my $existing_translation=$self->db->get_TranslationAdaptor->fetch_by_stable_id($translation->stable_id);
             if($existing_translation){
-                throw ("new translation stable_id(".$translation->stable_id.") for this transcript(".$transcript->stable_id().") is already associated with another transcript");
+                throw ("new translation stable_id(".$translation->stable_id
+                      .") for this transcript(".$transcript->stable_id()
+                      .") is already associated with another transcript");
             } else { # NEW, but with a given stable_id
                 $db_version          = 0;
                 $translation_changed = 1;
@@ -108,61 +111,74 @@ sub translations_diff {
 sub exons_diff {
   my ($self, $exons, $shared_exons)=@_;
 
-  my $any_exon_changed=0;
+  my $exons_changed=0;
 
-  foreach my $exon (@$exons){
+  my $sa = $self->db->get_StableIdAdaptor();
 
-    my $exon_changed = 0;
+  foreach my $exon (@$exons) {
 
-	if(my $db_exon=$exon->last_db_version()) { # non-NEW
-        if($db_exon->is_current()) { # either CHANGED or UNCHANGED
-
-            if($exon_changed=compare($db_exon,$exon)) {
-                $exon->version($db_exon->version+1);
-                $exon->created_date($db_exon->created_date);
-                $exon->modified_date($self->current_time);
-
-                $exon->is_current(1);
-                $db_exon->is_current(0);
-            } else { ## reuse the exon
-                $exon=$db_exon;
-            }
-        } else { # RESTORED or SHARED
-            ##restored exon or a currently shared exon of the transcripts of the same gene 
-            ##which has changed and hence deleted by a previous transcript <---- ??? (lg4)
-
-		  if (exists $shared_exons->{$exon->stable_id}){ # SHARED
-			 $exon=$shared_exons->{$exon->stable_id};
-		  } else { # RESTORED
-			 $exon->created_date($db_exon->created_date);
-
-			 ##check to see if the restored exon has changed
-			 if($exon_changed=compare($db_exon,$exon)) {
-				 $exon->version($db_exon->version+1);
-				 $exon->modified_date($self->current_time);
-			 } else {
-                 $exon->version($db_exon->version);
-				 $exon->modified_date($db_exon->modified_date());
-             }
-		  }
-          $exon->is_current(1);
+    if(my $hashed_exon = $shared_exons->{$exon->stable_id}) { # we've seen it already in the new set
+        if(compare($hashed_exon, $exon)) { # it's different, so split and find a new stable_id
+            $exon->stable_id($sa->fetch_new_exon_stable_id);
+            $exon->version(1);
+            $exon->created_date($self->current_time);
+            $exon->modified_date($self->current_time);
+            $exon->is_current(1);
+            $exons_changed ||= 1;
+        } else { # just reuse it
+            $exon = $hashed_exon;
         }
-    } else { # NEW
+    } elsif(my $db_exon = $exon->last_db_version()) { # haven't seen yet, but it was in the prev.version
+        if(compare($db_exon, $exon)) { # make a new version
+			$exon->created_date($db_exon->created_date);
+            $exon->version($db_exon->version+1);
+            $exon->modified_date($self->current_time);
+            $exon->is_current(1);
+            $exons_changed ||= 1;
+        } else { # again, just reuse it
+            $exon = $db_exon;
+        }
+    } else { # a completely new exon, but trust the stable_id we have
         $exon->version(1);
         $exon->created_date($self->current_time);
         $exon->modified_date($self->current_time);
         $exon->is_current(1);
+        $exons_changed ||= 1; # a birth of a new exon is clearly a change :)
     }
 
-    ## maintain a distinct list of all exons of all transcripts of the gene
-    if (! exists $shared_exons->{$exon->stable_id}){
+    ## maintain a set of all exons of all transcripts of the gene
+    if (! $shared_exons->{$exon->stable_id}) {
         $shared_exons->{$exon->stable_id}=$exon;
     }
-
-    $any_exon_changed ||= $exon_changed;
-
   }
-  return $any_exon_changed;
+  return $exons_changed;
+}
+
+    # Because exons can be shared (potentially between genes!),
+    # deleting them is a complex issue:
+sub hide_unused_exons {
+    my ($self, $db_genes, $stored_genes) = @_; # we need two lists of genes
+                                               # (each list may contain just one or be empty)
+
+    my %stored_exons_hash = ();
+    foreach my $stored_gene (@$stored_genes) {
+        foreach my $stored_exon (@{ $stored_gene->get_all_Exons() }) {
+            $stored_exons_hash{$stored_exon->stable_id.'.'.$stored_exon->version} = $stored_exon;
+        }
+    }
+    my %db_exons_hash = ();
+    foreach my $db_gene (@$db_genes) {
+        foreach my $dbexon (@{ $db_gene->get_all_Exons() }) {
+            $db_exons_hash{$dbexon->stable_id.'.'.$dbexon->version} = $dbexon;
+        }
+    }
+    my $exon_adaptor = $self->db->get_ExonAdaptor();
+    while (my ($key, $dbexon) = each %db_exons_hash) {
+        unless($stored_exons_hash{$key}) {
+            $dbexon->is_current(0);
+            $exon_adaptor->update($dbexon);
+        }
+    }
 }
 
 sub compare_synonyms_add {
@@ -314,6 +330,44 @@ sub transcripts_diff {
   }
 
   return $any_transcript_changed;
+}
+
+##################### SimpleFeature related subs ##############################33
+
+sub compare_feature_sets {
+    my ($self, $old_features, $new_features) = @_;
+    my %old = map { $self->SimpleFeature_key($_), $_ } @$old_features;
+    my %new = map { $self->SimpleFeature_key($_), $_ } @$new_features;
+
+    # Features that were in the old, but not the new, should be deleted
+    my @delete = ();
+    while (my ($key, $old_sf) = each %old) {
+        unless ($new{$key}) {
+            push(@delete, $old_sf);
+        }
+    }
+
+    # Features that are in the new but were not in the old should be saved
+    my @save = ();
+    while (my ($key, $new_sf) = each %new) {
+        unless ($old{$key}) {
+            push(@save, $new_sf);
+        }
+    }
+    return (\@delete, \@save);
+}
+
+sub SimpleFeature_key {
+    my ($self, $sf) = @_;
+    return join(
+        '^',
+        $sf->analysis->logic_name,
+        $sf->start,
+        $sf->end,
+        $sf->strand,
+        sprintf('%g', $sf->score),  # sprintf ensures that 0.5 and 0.5000 become the same string
+        $sf->display_label || '',
+    );
 }
 
 1;
