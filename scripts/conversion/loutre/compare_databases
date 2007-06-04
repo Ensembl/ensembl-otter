@@ -31,8 +31,8 @@ Specific options:
 =head1 DESCRIPTION
 
 Use this script to compare two databases. Simply compares each table, reporting the presence /
-abscence of a particular table, or any differences in the number of entries in the same table
-in the two databases.
+abscence of a particular table, or any differences in the number of entries for that table in
+the two databases.
 
 =head1 LICENCE
 
