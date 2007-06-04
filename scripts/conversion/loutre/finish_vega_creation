@@ -307,6 +307,7 @@ foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
 		}
 	}
 	$support->log("...$c unwanted prediction_transcripts removed using the API\n",2);
+
 	if (! $support->param('dry_run')) {
 		my $r = $vdbh->do("DELETE pt
                            FROM prediction_transcript pt, analysis a
@@ -379,6 +380,7 @@ elsif ($count == 2) {
 }
 
 #sanity check - if the Otter coord_system is actually used for the (longest) chromosome then rename it to Vega
+#also patch contig.version is coord_system
 my $chr_coord_id = $vdbh->selectrow_array(qq(
                        SELECT coord_system_id 
 				       FROM   seq_region 
@@ -393,6 +395,7 @@ if ($chr_coord_id == $otter_coord_id) {
 	push @sql_fixes, "UPDATE coord_system set version = \'VEGA\' WHERE version = \'Otter\';\n";
 	push @sql_fixes, "UPDATE coord_system set attrib = \'default_version\' WHERE version = \'VEGA\';\n";
 	push @sql_fixes, "UPDATE coord_system set rank = 1 WHERE version = \'VEGA\' and name = \'chromosome\';\n";
+	push @sql_fixes, "UPDATE coord_system set version = NULL WHERE version = \'none\' and name = \'contig\';\n";
 	push @sql_fixes, "INSERT into meta (meta_key,meta_value) VALUES (\'assembly.default\',\'VEGA\');\n";
 	push @sql_fixes, "UPDATE meta set meta_value = \'chromosome:VEGA|contig\' WHERE meta_value = \'chromosome:Otter|contig\';\n";
 	push @sql_fixes, "UPDATE meta set meta_value = \'chromosome:VEGA|contig|clone\' WHERE meta_value = \'chromosome:Otter|contig|clone\';\n";	
