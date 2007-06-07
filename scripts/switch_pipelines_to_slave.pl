@@ -11,7 +11,7 @@
 use DBI;
 use strict;
 
-my @affected_keys = qw( pipeline_db pipeline_db_head );
+my @affected_keys = qw( pipeline_db pipeline_db_head mapper_db mapper_db.NCBI36 );
 my $affected_list = join(', ', map { "'$_'" } @affected_keys);
 
 sub connect_with_params {
