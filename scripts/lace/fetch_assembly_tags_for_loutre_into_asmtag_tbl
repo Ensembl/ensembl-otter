@@ -129,10 +129,10 @@ sub prepare_assembly_tag_data {
 		my $contig   = $sliceAd->fetch_by_region('contig', $contig_name);
 		my $seq_region_id = $sliceAd->get_seq_region_id($contig);
 
-		if ( $atagAd->check_seq_region_id_is_transferred($seq_region_id) ){
-		  print STDERR "$contig_name (srid $seq_region_id) is already transferred\n";
-		  next;
-		}
+		#if ( $atagAd->check_seq_region_id_is_transferred($seq_region_id) ){
+		#  print STDERR "$contig_name (srid $seq_region_id) is already transferred\n";
+		#  next;
+		#}
 
         my $dir      = $seq->analysis_directory;
         my $seq_ver  = $seq->sequence_version;
@@ -178,7 +178,7 @@ sub parse_ace {
     my ( $tag_type, $tag_start, $tag_end, $tag_info);
 
     # omit Type "Oligo"
-    if ( $line =~ /^Assembly_tags\s+(-|\"-\"|unsure)\s+(\d+)\s+(\d+)\s+\"(.+)\"/i ) {
+    if ( $line =~ /^Assembly_tags\s+(-|\"-\"|unsure)\s+(\d+)\s+(\d+)\s+\"(.+)\"&/i ) {
 
       ($1 eq "-" || $1 eq "\"-\"") ? ($tag_type = "Misc") : ($tag_type = $1);
 
@@ -271,7 +271,7 @@ sub make_atags {
   $atag->seq_region_start($tag_start);
   $atag->seq_region_end($tag_end);
   $atag->seq_region_strand($ctg_strand);
-  $atag->tag_type($tag_type);
+  $atag->tag_type(ucfirst($tag_type)); # eg, unsure/Unsure
   $atag->tag_info($tag_info);
   $atag->slice($contig);
 
