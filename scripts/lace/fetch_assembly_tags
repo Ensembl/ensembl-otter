@@ -29,12 +29,31 @@ Bio::Otter::Lace::Defaults::do_getopt(
 
 $help->() unless ( $dataset );
 
-
-my $client       = Bio::Otter::Lace::Defaults::make_Client();
-my $dset         = $client->get_DataSet_by_name($dataset);
-my $otter_db     = $dset->get_cached_DBAdaptor;
+my @dsets = qw(
+#			   cat
+#			   chicken
+#			   chimp
+#			   dog
+#			   gorilla
+#			   marmoset
+#			   medicago
+#			   misc_human
+#			   misc_mouse
+#			   misc_test
+#			   misc_zebrafish
+#			   mus_spretus
+#			   pig
+#			   platypus
+#			   rat
+#			   tomato
+#			   wallaby
+);
 
 {
+  my $client = Bio::Otter::Lace::Defaults::make_Client();
+  my $dset         = $client->get_DataSet_by_name($dataset);
+  my $otter_db     = $dset->get_cached_DBAdaptor;
+
   # first make sure new clones added by load_otter_ensembl are populated in the assembly_tagged_clone table
   my $acc_sv_list = prepare_new_clones_for_assembly_tag($otter_db);
 
@@ -42,7 +61,6 @@ my $otter_db     = $dset->get_cached_DBAdaptor;
   my $atagCtgID_clnID = get_assembly_tagged_clones($otter_db);
 
   fetch_by_clone_name($acc_sv_list, $otter_db, $atagCtgID_clnID);
-
 }
 
 ###################################################################
@@ -53,9 +71,9 @@ sub prepare_new_clones_for_assembly_tag {
   my $otter_db = shift;
 
   my $clone_info = $otter_db->prepare(q{
-										   SELECT clone_id, embl_acc, embl_version
-										   FROM clone order by embl_acc
-										  });
+										SELECT clone_id, embl_acc, embl_version
+										FROM clone order by embl_acc
+									   });
 
   $clone_info->execute;
 
@@ -144,7 +162,7 @@ sub fetch_by_clone_name {
   my $cl_obj = [];
 
   foreach ( @$clones ){
-    push( @$cl_obj, $cloneAd->fetch_by_accession_version( split(/\./, $_)) );
+    eval {push( @$cl_obj, $cloneAd->fetch_by_accession_version( split(/\./, $_)) )};
   }
 
   fetch_by_clone_obj($cl_obj, $otter_db, $atagCtgID_clnID);
@@ -303,7 +321,7 @@ sub parse_ace {
 
       # omit Type "Oligo"
 
-      if ( $line =~ /^Assembly_tags\s+(-|\"-\"|unsure)\s+(\d+)\s+(\d+)\s+\"(.+)\"/i ){
+      if ( $line =~ /^Assembly_tags\s+(-|\"-\"|unsure)\s+(\d+)\s+(\d+)\s+\"(.+)\"&/i ){
 
 		($1 eq "-" || $1 eq "\"-\"") ? ($tag_type = "Misc") : ($tag_type = $1);
 
@@ -338,7 +356,7 @@ sub parse_ace {
 
 		my $skip = 1;
 		if ( $tag_type =~ /unsure/i ){
-		  my $ctg_len = get_length_of_contig_id($ctg_id);
+		  my $ctg_len = get_length_of_contig_id($ctg_id, $otter_db);
 
 		  if ( $tag_end > $ctg_len ){
 			$skip = 0;
@@ -400,7 +418,7 @@ sub trim {
 }
 
 sub get_length_of_contig_id {
-  my $ctg_id = shift;
+  my ($ctg_id, $otter_db )= @_;
 
   my $length = $otter_db->prepare("SELECT length FROM contig WHERE contig_id = $ctg_id");
   $length->execute;

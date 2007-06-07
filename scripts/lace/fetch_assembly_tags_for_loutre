@@ -219,7 +219,7 @@ sub parse_ace {
 
     # omit Type "Oligo"
 
-    if ( $line =~ /^Assembly_tags\s+(-|\"-\"|unsure)\s+(\d+)\s+(\d+)\s+\"(.+)\"/i ) {
+    if ( $line =~ /^Assembly_tags\s+(-|\"-\"|unsure)\s+(\d+)\s+(\d+)\s+\"(.+)\"&/i ) {
 
       next if $seen_lines->{$line} > 1;
 
