@@ -6,7 +6,7 @@ package Bio::Otter::Lace::DataSet;
 use strict;
 use Carp;
 use Bio::Otter::DBSQL::DBAdaptor;
-#use Bio::Vega::DBSQL::DBAdaptor;
+use Bio::Vega::DBSQL::DBAdaptor;
 use Bio::Otter::Lace::CloneSequence;
 #use Bio::Otter::CloneLock;
 use Bio::Otter::Author;
@@ -514,7 +514,7 @@ sub make_EnsEMBL_DBAdaptor {
 
 sub make_Vega_DBAdaptor {
     my( $self ) = @_;
-    
+
     return $self->_make_DBAdptor_with_class('Bio::Vega::DBSQL::DBAdaptor');
 }
 

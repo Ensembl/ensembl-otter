@@ -490,6 +490,14 @@ sub store {
             return 0;
         }
                     
+        ###
+        ##
+        # Start of code where order is critical.
+        # (sometimes we get the same gene object under $gene and $db_gene,
+        #  but we want the code to behave in the same way as when they are different objects)
+        ##
+        ###
+
         ##add synonym if old gene name is not a current gene synonym
         $broker->compare_synonyms_add($db_gene,$gene);
 
@@ -538,6 +546,12 @@ sub store {
                 }
             }
         }
+
+        ###
+        ##
+        # End of code where order is critical
+        ##
+        ###
 
             # If a gene is marked is non-current, we assume it was intended for deletion.
             # We also assume unsetting is_current() is the only thing needed to declare such intention.
