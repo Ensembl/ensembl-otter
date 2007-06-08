@@ -154,7 +154,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.18 $ ';
+$revision='$Revision: 1.19 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
@@ -227,6 +227,11 @@ sub initialise {
     # Just return if a blast database hasn't been defined
     my $fasta_file = $cl->option_from_array([ 'local_blast', 'database' ]);
     return unless $fasta_file;
+    
+    unless ($fasta_file =~ m{^/}) {
+        confess "fasta file '$fasta_file' is not an absolute path";
+    }
+    
     $self->database($fasta_file);
     unless (-e $fasta_file) {
         confess "Fasta file '$fasta_file' defined in config does not exist";
