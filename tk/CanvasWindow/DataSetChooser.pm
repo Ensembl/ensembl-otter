@@ -149,12 +149,14 @@ sub draw {
 
 sub recover_old_sessions_dialogue {
     my( $self ) = @_;
+
+    my $ldf = $self->LocalDatabaseFactory();
     
-    my $lace_sessions = $self->LocalDatabaseFactory->sessions_needing_recovery();
+    my $lace_sessions = $ldf->sessions_needing_recovery();
     
     if (@$lace_sessions) {
-        my $text = "Recover these lace sessions?\n"
-            . join('', map "$_\n", @$lace_sessions);
+        my $text = "Recover these lace sessions?\n\n"
+            . join('', map $ldf->make_title($_)."\n in $_\n\n", @$lace_sessions);
         
         # Ask the user if changes should be saved
         my $dialog = $self->canvas->toplevel->Dialog(
@@ -168,13 +170,12 @@ sub recover_old_sessions_dialogue {
 
         if ($ans eq 'No') {
             return 0;
-        }
-        elsif ($ans eq 'Yes') {
+        } elsif ($ans eq 'Yes') {
             eval{
                 my $canvas = $self->canvas;
 
                 foreach my $dir (@$lace_sessions) {
-                    my $adb = $self->LocalDatabaseFactory->recover_session($dir);
+                    my $adb = $ldf->recover_session($dir);
 
                     # Bring up GUI
                     my $top = $canvas->Toplevel(
