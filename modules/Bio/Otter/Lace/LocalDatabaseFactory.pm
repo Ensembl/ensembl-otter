@@ -58,42 +58,47 @@ sub sessions_needing_recovery {
             my $pid = $1;
             next if $existing_pid->{$pid};
             my $lace_dir = "$tmp_dir/$_";
-            # Skip if directory is not ours
+                # Skip if directory is not ours
             my $owner = (stat($lace_dir))[4];
-            next unless $< == $owner;
-            push(@recovered, $lace_dir);
+            next if $< != $owner;
+
+            my $ace_wrm = "$lace_dir/database/ACEDB.wrm";
+            if(-e $ace_wrm) {
+                push(@recovered, $lace_dir);
+            } else {
+                print STDERR "\nNo such file: '$ace_wrm'\nDeleting uninitialized database '$lace_dir'\n";
+                rmtree($lace_dir);
+            }
         }
     }
     closedir VAR_TMP or die "Error closing directory '$tmp_dir' : $!";
 
-    for (my $i = 0; $i < @recovered;) {
-        my $ace_wrm = "$recovered[$i]/database/ACEDB.wrm";
-        if (-e $ace_wrm) {
-            $i++;
-        } else {
-            print STDERR "\nNo such file: '$ace_wrm'\nDeleting uninitialized database '$recovered[$i]'\n";
-            rmtree($recovered[$i]);
-            splice(@recovered, $i, 1);
-        }
-    }
-
     return \@recovered;
 }
 
-sub add_title {
-    my ($self , $adb ) = @_ ;
+sub first_occurence {
+    my ($self, $filename, $pattern) = @_;
 
-    my $file = $adb->home . '/wspec/displays.wrm';
-    warn "opening file $file";
-    open ( DISPLAY , $file) || die "$!"   ;
-
-    foreach my $line (<DISPLAY>){
-        my ($name ) = ($line  =~ /_DDtMain.*-t\s*"(.*)"/ ) ;
-        if ($name){
-            return $name;
+    warn "Looking for a value in $filename\n";
+    open ( FILE, $filename ) || die "$!";
+    foreach my $line (<FILE>) {
+        my ($value) = ($line =~ /$pattern/);
+        if($value) {
+            return $value;
         }
     }
-    warn "\n\nno name found in $file\n\n";
+    warn "\n\nNo value found in $filename\n\n";
+}
+
+sub make_title {
+    my ($self, $adb_or_dir ) = @_ ;
+
+    my $dir = ref($adb_or_dir) ? $adb_or_dir->home : $adb_or_dir;
+
+    my $tail    = $self->first_occurence($dir.'/wspec/displays.wrm', qr{_DDtMain.*-t\s*"(?:lace\s+)(.*)"});
+    my $species = $self->first_occurence($dir.'/rawdata/otter.ace', qr{^Species\s+"(.*)"});
+
+    return $species.' '.$tail;
 }
 
 sub recover_session {
@@ -108,7 +113,7 @@ sub recover_session {
     $adb->error_flag(1);
     my $home = $adb->home;
     rename($dir, $home) or die "Cannot move '$dir' to '$home' : $!";
-    my $title = "Recover ". $self->add_title($adb);
+    my $title = "Recovered lace ". $self->make_title($adb);
     $adb->title($title);
 
     return $adb;
