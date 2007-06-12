@@ -132,7 +132,7 @@ sub new_AceDatabase {
 
     my $adb = Bio::Otter::Lace::AceDatabase->new;
     $adb->write_access($write_access);
-    $adb->Client($self->Client());
+    $adb->Client( $self->Client() );
     my $home = $adb->home();
     my $i = ++$self->{'_last_db'};
     $adb->home("${home}_$i");

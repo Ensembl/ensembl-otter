@@ -19,38 +19,54 @@ sub new {
             $self->deselect_all;
             $self->select_dataset;
         });
-    my $edit_command = sub{ $self->open_dataset; };
-    $canvas->Tk::bind('<Double-Button-1>',  $edit_command);
-    $canvas->Tk::bind('<Return>',           $edit_command);
-    $canvas->Tk::bind('<KP_Enter>',         $edit_command);
-    $canvas->Tk::bind('<Control-o>',        $edit_command);
-    $canvas->Tk::bind('<Control-O>',        $edit_command);
+    my $open_command = sub{ $self->open_dataset; };
+    $canvas->Tk::bind('<Double-Button-1>',  $open_command);
+    $canvas->Tk::bind('<Return>',           $open_command);
+    $canvas->Tk::bind('<KP_Enter>',         $open_command);
+    $canvas->Tk::bind('<Control-o>',        $open_command);
+    $canvas->Tk::bind('<Control-O>',        $open_command);
     $canvas->Tk::bind('<Escape>', sub{ $self->deselect_all });
     
-    my $close_window = sub{
+    my $quit_command = sub{
         $self->canvas->toplevel->destroy;
         $self = undef;  # $self gets nicely DESTROY'd with this
-        };
-    $canvas->Tk::bind('<Control-q>',    $close_window);
-    $canvas->Tk::bind('<Control-Q>',    $close_window);
+    };
+    $canvas->Tk::bind('<Control-q>',    $quit_command);
+    $canvas->Tk::bind('<Control-Q>',    $quit_command);
     $canvas->toplevel
-        ->protocol('WM_DELETE_WINDOW',  $close_window);
+        ->protocol('WM_DELETE_WINDOW',  $quit_command);
         
     my $top = $canvas->toplevel;
     my $button_frame = $top->Frame->pack(-side => 'top', -fill => 'x');
+
     my $open = $button_frame->Button(
         -text       => 'Open',
-        -command    => sub {
+        -command    => sub{
             unless ($self->open_dataset) {
                 $self->message("No dataset selected - click on a name to select one");
             }
         },
+    )->pack(-side => 'left');
+
+=comment
+
+    ## This button should either disappear or become inactive after (some) sessions have been recovered. Or else.
+
+    if( my $to_be_rec = scalar(@{$self->LocalDatabaseFactory()->sessions_needing_recovery()}) ) {
+        my $recover = $button_frame->Button(
+            -text       => "Recover ($to_be_rec)",
+            -command    => sub{
+                $self->recover_old_sessions_dialogue();
+            },
         )->pack(-side => 'left');
+    }
+
+=cut
 
     my $quit = $button_frame->Button(
         -text       => 'Quit',
-        -command    => $close_window,
-        )->pack(-side => 'right');
+        -command    => $quit_command,
+    )->pack(-side => 'right');
         
     return $self;
 }
@@ -60,6 +76,7 @@ sub Client {
     
     if ($Client) {
         $self->{'_Client'} = $Client;
+        $self->LocalDatabaseFactory->Client($Client);
     }
     return $self->{'_Client'};
 }
@@ -67,7 +84,7 @@ sub Client {
 sub LocalDatabaseFactory {
     my $self = shift @_;
 
-    $self->{_ldf} ||= Bio::Otter::Lace::LocalDatabaseFactory->new($self->Client());
+    $self->{_ldf} ||= Bio::Otter::Lace::LocalDatabaseFactory->new();
 
     return $self->{_ldf};
 }
