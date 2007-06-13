@@ -86,7 +86,7 @@ __END__
 
 =head1 SYNOPSIS
 
- ./save_satellite_db -key <key> -dataset <dataset> [-view] [-satdb* options]
+ ./save_satellite_db -key <key> -dataset <dataset> [-show] [-satdb* options]
 
 =head1 DESCRIPTION
 
@@ -99,7 +99,7 @@ already stored in the database for the B<key>.
     help           - print this pod
     key (required) - meta_key to use in the meta table
     dataset (req)  - otter dataset to use [human]
-    view           - view the current settings
+    show           - view the current settings
     sathost        - host for the satellite DB
     satport        - port for the satellite DB
     satuser        - user for the satellite DB
