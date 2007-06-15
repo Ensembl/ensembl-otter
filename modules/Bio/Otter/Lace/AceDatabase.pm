@@ -755,7 +755,16 @@ sub DESTROY {
     if($@) {
         warn "Error in AceDatabase::DESTROY : $@";
     } else {
-        rmtree($home);
+        # rmtree fails with:
+        #     Can't fetch initial working directory
+        # if the user's NFS mounted home directory has
+        # been dropped and remounted while running otterlace.
+        # /var/tmp is always local to the machine, so going
+        # here first guarantees that we won't see this error.
+        chdir("/var/tmp")
+          or die "Can't chdir to /var/tmp : $!";
+        rmtree($home)
+          or die "Error removing lace database directory";
     }
 }
 
