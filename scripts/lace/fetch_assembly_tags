@@ -3,6 +3,8 @@
 ### fetch_assembly_tags
 
 use strict;
+use lib "/nfs/team71/analysis/ck1/SCRIPT_CVS/perl/lib/perl/5.8.4";
+
 use Hum::Submission ('prepare_statement');
 use Hum::Tracking ('intl_clone_name');
 use Hum::AnaStatus::Sequence;
@@ -11,6 +13,28 @@ use Bio::Otter::Lace::Defaults;
 use Bio::Otter::AnnotatedClone;
 use Bio::EnsEMBL::DBSQL::CloneAdaptor;
 
+##my $ace_file="/lustre/cbi4/work1/humpub/analysis/projects/Chr_1/bA373M8/20030603/rawdata/bA373M8.humace.ace";
+
+##  open( my $fh, $ace_file ) || die "Failed to read $ace_file";
+	
+
+##    while ( my $line = <$fh> ){
+###      chomp $line;
+##	  my ( $tag_type, $tag_start, $tag_end, $tag_info);
+
+##      # omit Type "Oligo"
+## #     print "$line\n";
+###      if ( $line =~ /^Assembly_tags\s+(-|\"-\"|unsure)\s+(\d+)\s+(\d+)\s+\"(.*)\"/i ){
+##      if ( $line =~ /Assembly_tags\s*(-|\"-\"|unsure)\s*(\d+)\s*(\d+)\s*\"(.*)\"/i){
+
+##		($1 eq "-" || $1 eq "\"-\"") ? ($tag_type = "Misc") : ($tag_type = $1);
+
+##        warn "*******TAG TYPE: $tag_type\n";
+
+##      }
+##    }
+
+##__END__
 use Getopt::Long 'GetOptions';
 
 $| = 1;
@@ -29,7 +53,7 @@ Bio::Otter::Lace::Defaults::do_getopt(
 
 $help->() unless ( $dataset );
 
-my @dsets = qw(
+#my @dsets = qw(
 #			   cat
 #			   chicken
 #			   chimp
@@ -47,7 +71,7 @@ my @dsets = qw(
 #			   rat
 #			   tomato
 #			   wallaby
-);
+#);
 
 {
   my $client = Bio::Otter::Lace::Defaults::make_Client();
@@ -61,6 +85,7 @@ my @dsets = qw(
   my $atagCtgID_clnID = get_assembly_tagged_clones($otter_db);
 
   fetch_by_clone_name($acc_sv_list, $otter_db, $atagCtgID_clnID);
+
 }
 
 ###################################################################
@@ -176,7 +201,7 @@ sub fetch_by_clone_obj {
   my ($atagClone_acefile_info, $to_do, $acc, $ctg_name, $seq_name, $ctg_id, $version, $ctg_strand, $humace_file);
 
   foreach my $obj (@$clones) {
-
+	
     $to_do = 0;
     # does only clones not yet assembly_tag tagged
     if ( ref($obj) eq "Bio::Otter::AnnotatedClone" && !exists $atagCtgID_clnID->{$obj->get_all_Contigs->[0]->dbID} ){
@@ -216,7 +241,7 @@ sub fetch_by_clone_obj {
 	  my $dir = $seq->analysis_directory;
 
       # double check existence of acefile
-      if ( -e "$dir/rawdata/$seq_name.humace.ace" ){
+	  if ( -e "$dir/rawdata/$seq_name.humace.ace" ){
 		$humace_file = "$dir/rawdata/$seq_name.humace.ace";
 	  }
       elsif ( -e "$dir/rawdata/$seq_name.humace.ace.gz" ){
@@ -310,8 +335,8 @@ sub parse_ace {
     }
 
     open( $fh, $ace_file ) || die "Failed to read $ace_file";
+	
     my $info;
-
     while ( $line = <$fh> ){
 
       my $ctg_strand = $atagClone_acefile_info->{$ctg_name}->[1];
@@ -321,8 +346,8 @@ sub parse_ace {
 
       # omit Type "Oligo"
 
-      if ( $line =~ /^Assembly_tags\s+(-|\"-\"|unsure)\s+(\d+)\s+(\d+)\s+\"(.+)\"&/i ){
-
+	  if ( $line =~ /Assembly_tags\s*(-|\"-\"|unsure)\s*(\d+)\s*(\d+)\s*\"(.*)\"/i){
+		
 		($1 eq "-" || $1 eq "\"-\"") ? ($tag_type = "Misc") : ($tag_type = $1);
 
 		# convertion for Ensembl/otter_db: starting coord is always smaller, so flip if not so
