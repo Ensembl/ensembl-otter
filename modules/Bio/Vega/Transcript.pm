@@ -117,41 +117,7 @@ sub get_Evidence {
   return $self->{'evidence'};
 }
 
-sub hashkey_sub {
-
-  my $self = shift;
-  my $remarks = $self->get_all_Attributes('remark');
-  my $hidden_remarks = $self->get_all_Attributes('hidden_remark');
-  my $evidence=$self->get_Evidence;
-  my $hashkey_sub={};
-  if (defined $remarks) {
-	 foreach my $rem (@$remarks){
-		$hashkey_sub->{$rem->value}='remark';
-	 }
-  }
-  if (defined $hidden_remarks) {
-	 foreach my $rem (@$hidden_remarks){
-		$hashkey_sub->{$rem->value}='hidden_remark';
-	 }
-  }
-  if (defined $evidence) {
-	 foreach my $evi (@$evidence){
-		my $e=$evi->name.$evi->type;
-		$hashkey_sub->{$e}='evidence';
-	 }
-  }
-  my $exons=$self->get_all_Exons;
-
-  foreach my $exon (@$exons){
-	 $hashkey_sub->{$exon->stable_id}='exon_stable_id';
-  }
-  return $hashkey_sub;
-
-}
-
-
 sub hashkey {
-
   my $self=shift;
   my $slice      = $self->{'slice'};
   my $slice_name = ($slice) ? $slice->name() : undef;
@@ -228,7 +194,7 @@ sub hashkey {
   }
 
   unless($start) {
-    warning("start attribute must be defined to generate correct hashkey.");
+    throw("start attribute must be defined to generate correct hashkey.");
   }
 
   unless($end) {
@@ -255,10 +221,45 @@ sub hashkey {
     throw('transcript name must be defined to generate correct hashkey.');
   }
 
-  my $hashkey_main="$slice_name-$start-$end-$strand-$biotype-$status-$exon_count-$tn-$msNF-$meNF-$csNF-$ceNF-$description-$evidence_count-$attrib_count";
-
-  return ($hashkey_main);
+  return "$slice_name-$start-$end-$strand-$biotype-$status-$exon_count-$tn-$msNF-$meNF-$csNF-$ceNF-$description-$evidence_count-$attrib_count";
 }
+
+sub hashkey_structure {
+    return 'slice_name-start-end-strand-biotype-status-exon_count-transcript_name-mRNAstartNF-mRNAendNF-cDNAstartNF-cDNAendNF-description-evidence_count-attrib_count';
+}
+
+sub hashkey_sub {
+
+  my $self = shift;
+  my $remarks = $self->get_all_Attributes('remark');
+  my $hidden_remarks = $self->get_all_Attributes('hidden_remark');
+  my $evidence=$self->get_Evidence;
+  my $hashkey_sub={};
+  if (defined $remarks) {
+	 foreach my $rem (@$remarks){
+		$hashkey_sub->{$rem->value}='remark';
+	 }
+  }
+  if (defined $hidden_remarks) {
+	 foreach my $rem (@$hidden_remarks){
+		$hashkey_sub->{$rem->value}='hidden_remark';
+	 }
+  }
+  if (defined $evidence) {
+	 foreach my $evi (@$evidence){
+		my $e=$evi->name.$evi->type;
+		$hashkey_sub->{$e}='evidence';
+	 }
+  }
+  my $exons=$self->get_all_Exons;
+
+  foreach my $exon (@$exons){
+	 $hashkey_sub->{$exon->stable_id}='exon_stable_id';
+  }
+  return $hashkey_sub;
+
+}
+
 
 # This is to be used by storing mechanism of GeneAdaptor,
 # to simplify the loading during comparison.
