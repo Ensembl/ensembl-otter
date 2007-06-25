@@ -3,6 +3,10 @@ package Bio::Vega::Exon;
 use strict;
 use base 'Bio::EnsEMBL::Exon';
 
+sub hashkey_structure {
+    return 'slice_name-start-end-strand-phase-end_phase';
+}
+
 # This is to be used by storing mechanism of GeneAdaptor,
 # to simplify the loading during comparison.
 

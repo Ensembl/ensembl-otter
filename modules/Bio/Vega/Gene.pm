@@ -34,40 +34,7 @@ sub source  {
 
 }
 
-sub hashkey_sub {
-
-  my $self = shift;
-  my $hashkey_sub={};
-  my $remarks = $self->get_all_Attributes('remark');
-  if (defined $remarks) {
-	 foreach my $rem (@$remarks){
-		$hashkey_sub->{$rem->value}='remark';
-	 }
-  }
-  my $hidden_remarks = $self->get_all_Attributes('hidden_remark');
-  if (defined $hidden_remarks) {
-	 foreach my $rem (@$hidden_remarks){
-		$hashkey_sub->{$rem->value}='hidden_remark';
-	 }
-  }
-  my $synonyms = $self->get_all_Attributes('synonym');
-  if (defined $synonyms) {
-	 foreach my $syn (@$synonyms){
-		$hashkey_sub->{$syn->value}='synonym';
-	 }
-  }
-  my $trans=$self->get_all_Transcripts;
-  foreach my $tran (@$trans){
-	 $hashkey_sub->{$tran->stable_id}='transcript-stable-id';
-  }
-  return $hashkey_sub;
-
-}
-
-
-
 sub hashkey {
-
   my $self=shift;
   my $slice      = $self->{'slice'};
   my $slice_name = ($slice) ? $slice->name() : undef;
@@ -131,11 +98,42 @@ sub hashkey {
     throw('gene name must be defined to generate correct hashkey.');
   }
 
-  my $hashkey_main="$slice_name-$start-$end-$strand-$biotype-$status-$source-$gn-$description-$tran_count-$attrib_count";
-
-  return ($hashkey_main);
+  return "$slice_name-$start-$end-$strand-$biotype-$status-$source-$gn-$description-$tran_count-$attrib_count";
 }
 
+sub hashkey_structure {
+    return 'slice_name-start-end-strand-biotype-status-source-genename-description-transcript_count-attrib_count';
+}
+
+sub hashkey_sub {
+
+  my $self = shift;
+  my $hashkey_sub={};
+  my $remarks = $self->get_all_Attributes('remark');
+  if (defined $remarks) {
+	 foreach my $rem (@$remarks){
+		$hashkey_sub->{$rem->value}='remark';
+	 }
+  }
+  my $hidden_remarks = $self->get_all_Attributes('hidden_remark');
+  if (defined $hidden_remarks) {
+	 foreach my $rem (@$hidden_remarks){
+		$hashkey_sub->{$rem->value}='hidden_remark';
+	 }
+  }
+  my $synonyms = $self->get_all_Attributes('synonym');
+  if (defined $synonyms) {
+	 foreach my $syn (@$synonyms){
+		$hashkey_sub->{$syn->value}='synonym';
+	 }
+  }
+  my $trans=$self->get_all_Transcripts;
+  foreach my $tran (@$trans){
+	 $hashkey_sub->{$tran->stable_id}='transcript-stable-id';
+  }
+  return $hashkey_sub;
+
+}
 
 
 =head2 truncated_flag
