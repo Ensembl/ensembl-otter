@@ -1,5 +1,4 @@
 
-### MenuCanvasWindow::XaceSeqChooser
 
 package MenuCanvasWindow::XaceSeqChooser;
 
@@ -61,6 +60,8 @@ sub new {
     $self->make_search_panel;
     $self->bind_events;
     $self->minimum_scroll_bbox(0,0, 380,200);
+    $self->set_clipboard_on_highlight(1);
+
     return $self;
 }
 
@@ -732,15 +733,29 @@ sub bind_events {
         });
 }
 
+sub set_clipboard_on_highlight{
+    my ($self, $sets) = @_;
+    $self->{'_include_clipboard'} = ( $sets ? 0 : 1 );
+    return $sets;
+}
+
+sub highlight_sets_clipboard{
+    my ($self) = @_;
+    return ($self->{'_include_clipboard'} ? 0 : 1);
+}
+
 sub highlight {
     my $self = shift;
     
     $self->SUPER::highlight(@_);
-    my $canvas = $self->canvas;
-    $canvas->SelectionOwn(
-        -command    => sub{ $self->deselect_all; },
-        );
-    weaken $self;
+    
+    if($self->highlight_sets_clipboard()){
+        my $canvas = $self->canvas;
+        $canvas->SelectionOwn(
+                              -command    => sub{ $self->deselect_all; },
+                              );
+        weaken $self;
+    }
 }
 
 sub GenomicFeatures {
@@ -1127,7 +1142,7 @@ sub resync_with_db {
         );
 
     if ($self->show_zmap) {
-        $self->zMapKillZmap;
+        $self->zMapKillZmap(1);
     }
     eval {
         $self->AceDatabase->ace_server->restart_server;
