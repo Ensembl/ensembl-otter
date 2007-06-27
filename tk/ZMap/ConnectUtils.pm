@@ -18,12 +18,7 @@ our @EXPORT = qw(parse_params
                  setObjNameValue
                  $WAIT_VARIABLE
                  );
-our @EXPORT_OK = qw(xclient_with_id
-                    xclient_with_name
-                    list_xclient_names
-                    delete_xclient_with_id
-                    delete_xclient_with_name
-                    fork_exec
+our @EXPORT_OK = qw(fork_exec
                     );
 our %EXPORT_TAGS = ('caching' => [@EXPORT_OK],
                     'all'     => [@EXPORT, @EXPORT_OK]
@@ -130,115 +125,6 @@ sub xml_escape{
     return $escaped;
 }
 
-{
-    # functions to cache clients
-    my $CACHED_CLIENTS = {
-        #'0x000000' => ['<X11::XRemote>', 'name', 'scope']
-    };
-
-=head1 FUNCTIONS TO CACHE CLIENTS
-
-=over 5
-
-=item I<create and retrieve>
-
-=back
-
-=head2 xclient_with_name(name, [id])
-
-return the xclient with specified name, creating if id supplied.
-
-=cut
-
-    sub xclient_with_name{
-        my ($name, $id, $scope) = @_;
-        
-        use Carp 'cluck';  cluck;
-        use Data::Dumper;
-        print STDERR Dumper($CACHED_CLIENTS);
-        
-        $scope ||= __FILE__;
-
-        if(!$id){
-            # we need to look it up
-            ($id) = grep { $CACHED_CLIENTS->{$_}->[1] eq $name } keys %$CACHED_CLIENTS;
-        }else{ 
-            # check we haven't already got that name
-            if(my ($cachedid) = grep { $CACHED_CLIENTS->{$_}->[1] eq $name &&
-                                       $CACHED_CLIENTS->{$_}->[2] eq $scope } keys %$CACHED_CLIENTS){
-                unless($id eq $cachedid){
-                    warn "name '$name' is curently linked to id '$cachedid'\n",
-                        "deleting xclient with id = '$id'\n";
-                    delete_xclient_with_id($id);
-                    return undef;
-                }
-            }
-        }
-        return unless $id;
-
-        local *xclient = sub{
-            my ($id, $name, $scope)   = @_;
-            my $client = $CACHED_CLIENTS->{$id}->[0];
-            if(!$client){
-                $client = X11::XRemote->new(-id     => $id, 
-                                            -server => 0,
-                                            -_DEBUG => 1
-                                            );
-                $CACHED_CLIENTS->{$id} = [ $client, $name, $scope ];
-            }
-            #print $client->window_id;
-
-            return $client;
-        };
-
-        return xclient($id, $name, $scope);
-    }
-
-    sub list_xclient_names{
-        my ($scope) = @_;
-        $scope ||= __FILE__;
-        my @list = ();
-        foreach my $obj_name(values(%$CACHED_CLIENTS)){
-            next if $obj_name->[0]->_is_server();
-            next if $obj_name->[2] ne $scope;
-            push(@list, $obj_name->[1]);
-        }
-        return @list;
-    }
-
-    sub list_xclient_ids{
-        return keys %$CACHED_CLIENTS;
-    }
-
-
-=over 5
-
-=item I<removal>
-
-=head2 delete_xclient_with_id(id)
-
-remove the xclient with specified id.
-
-=cut
-
-    # remove
-    sub delete_xclient_with_id{
-        my ($id) = @_;
-        delete $CACHED_CLIENTS->{$id};
-    }
-
-=head2 delete_xclient_with_name(name)
-
-remove the xclient with specified name.
-
-=cut
-
-    sub delete_xclient_with_name{
-        my ($name) = @_;
-        my ($id) = grep { $CACHED_CLIENTS->{$_}->[1] eq $name } keys %$CACHED_CLIENTS;
-        delete_xclient_with_id($id);
-    }
-}
 
 sub fork_exec {
     my ($command) = @_;
