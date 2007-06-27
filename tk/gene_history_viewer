@@ -3,6 +3,15 @@
 # gene_history_viewer.pl
 # Author: ck1@sanger.ac.uk
 
+## force it to run as a new schema script:
+BEGIN {
+    foreach my $path (@INC) {
+        unless( $path=~s{ensembl/modules}{ensembl_head/modules}g ) {
+            $path=~s{ensembl_head/modules}{ensembl/modules}g;
+        };
+    }
+}
+
 use strict;
 use Tk;
 use Tk::Font;
@@ -14,16 +23,18 @@ use Tk::X11Font;
 use Text::Tabs;
 use FileHandle;
 use Bio::Otter::Lace::Defaults;
+use Bio::Otter::Lace::DataSet;
 use Bio::Vega::DBSQL::DBAdaptor;
 use Bio::Vega::Transform::XML;
 use Bio::Vega::Transform::PrettyPrint;
 
-my $dataset;
-Bio::Otter::Lace::Defaults::do_getopt('ds|dataset=s' => \$dataset);
+my $dataset_name;
+Bio::Otter::Lace::Defaults::do_getopt('ds|dataset=s' => \$dataset_name);
+$dataset_name ||= 'human';
 
-my $client   = Bio::Otter::Lace::Defaults::make_Client(); # Bio::Otter::Lace::Client
-my $dset     = $client->get_DataSet_by_name($dataset);    # Bio::Otter::Lace::DataSet
-my $otter_db = $dset->make_Vega_DBAdaptor;                # Bio::Vega::DBSQL::DBAdaptor
+my $client   = Bio::Otter::Lace::Defaults::make_Client();      # Bio::Otter::Lace::Client
+my $dset     = $client->get_DataSet_by_name($dataset_name);    # Bio::Otter::Lace::DataSet
+my $otter_db = $dset->make_DBAdaptor;                          # Bio::Vega::DBSQL::DBAdaptor
 
 my $mw = new MainWindow;
 $mw->configure (title => 'Gene History Viewer');
@@ -47,8 +58,7 @@ $query_f->Button(-text=>'Clear', -command=>sub {$entry1->delete('0.0', 'end')})-
 
 $query_f->Label(-text=>'Dataset (eg, human, mouse)')->pack(-side=>'left');
 
-my $ds = 'human'; # default
-my $entry2 = $query_f->Entry(-textvariable=>\$ds, -width => 15, -bg=>'white')->pack(-side=>'left');
+my $entry2 = $query_f->Entry(-textvariable=>\$dataset_name, -width => 15, -bg=>'white')->pack(-side=>'left');
 # reset
 $query_f->Button(-text=>'Clear', -command=>sub {$entry2->delete('0.0', 'end')})->pack(-side=>'left');
 
@@ -68,15 +78,15 @@ my $btn_cmp = $btn_f->Button(-text=>'Compare 2 Selected Gene Versions',
 
 my $found_versions; # when both are evaluated to 1 make it non-responsive 
 
-my $btn_all_nodes = $btn_f->Button(-text=>'Close All Nodes',
+my $btn_all_nodes = $btn_f->Button(-text=>'Collapse All Nodes',
                               -font=>$font_hl,
                               -command=>\&open_or_close_all_nodes)->pack(-side=>'left');
 
-my $btn_V_nodes   = $btn_f->Button(-text=>'Close V Nodes',
+my $btn_V_nodes   = $btn_f->Button(-text=>'Collapse V Nodes',
                               -font=>$font_hl,
                               -command=>\&open_close_V_nodes)->pack(-side=>'left');
 
-my $btn_GT_nodes  = $btn_f->Button(-text=>'Close Gene/TransInfo Nodes',
+my $btn_GT_nodes  = $btn_f->Button(-text=>'Collapse Gene/TransInfo Nodes',
                               -font=>$font_hl,
                               -command=>\&open_close_geneTrans_info_nodes)->pack(-side=>'left');
 my $srchtxt;
@@ -149,23 +159,21 @@ sub compare_gene_versions {
 	if ( $_ !~ /^G\d+\.V\d+$/ ){
 	  show_err_msg();
 	  next;
-	}
+    }
   }
   if ( scalar @paths != 2 ){
 	show_err_msg();
-	next;
+	return;
   }
 
   my $outdir = '/var/tmp';
-  system("rm $outdir/G*.V*");
-
-  my @files;
+  my @files = ();
+  my $xmlg = new Bio::Vega::Transform::XML;
 
   # $path is the hierarchy in tree widget
   foreach my $path (@paths ){
 
 	my $geneobj = $tree->info('data', $path);
-    my $xmlg = new Bio::Vega::Transform::XML;
     my $file = "$outdir/$path"."_$$";
     open( my $fh, ">$file") or die;
     print $fh $xmlg->get_geneXML($geneobj);
@@ -177,71 +185,84 @@ sub compare_gene_versions {
   $fh->open("$cmd|") or die;
   my @xmlcmp = <$fh>;
 
+  foreach my $filename (@files) {
+    unlink $filename;
+  }
+
   my $tabstr = join('-', @paths);
 
   # add pages to notebook to display XML comparison of 2 gene versions
   $nb = $xml_f->NoteBook(-backpagecolor=>'#BFBFBF', -font=>$font_cr)
 	->pack(-side=>'left', -fill=>'both', -expand=>1 ) if !$nb;
 
-  $tab = $nb->add($tabstr, -label=>$tabstr);
-  $pagetxt = $tab->Scrolled(
-							'ROText',
-							-font=>$font_cr,
-							-scrollbars=>'se',
-							-bg=>'#EEEEE0',
-							-selectbackground=>'#EEC900',
-						   )->pack(-fill=>'both', -expand=>1);
+  eval {
+      $tab = $nb->add($tabstr, -label=>$tabstr);
+  };
 
-  # dealing with tab spaces that disrupts formatting
-  @xmlcmp = expand(@xmlcmp);
+  unless($@) {
 
-  # greyout (tags) /highlight (data) of XML
-  $pagetxt->tagConfigure('greyout', -foreground=>'#616161');
-  $pagetxt->tagConfigure('highlight', -foreground=>'#8B0000');
+      $pagetxt = $tab->Scrolled(
+                                'ROText',
+                                -font=>$font_cr,
+                                -scrollbars=>'se',
+                                -bg=>'#EEEEE0',
+                                -selectbackground=>'#EEC900',
+                               )->pack(-fill=>'both', -expand=>1);
 
-  foreach my $line ( @xmlcmp ){
-	if ( $line =~ /locus|transcript|evidence_set|evidence|exon_set|exon/ ){
-	  $pagetxt->insert('end', $line, 'greyout');
-    }
-    # identical in left and right
-    elsif ( $line =~ /(^\s+<.*>)(.*)(<\/.*>\s+)(<.*>)(.*)(<\/.*>)/ ){
-      $pagetxt->insert('end', $1, 'greyout');
-      $pagetxt->insert('end', $2, 'highlight');
-      $pagetxt->insert('end', $3, 'greyout');
-      $pagetxt->insert('end', $4, 'greyout');
-      $pagetxt->insert('end', $5, 'highlight');
-      $pagetxt->insert('end', "$6\n", 'greyout');
-    }
-    # diff in left and right (|)
-    elsif ( $line =~ /(^\s+<.*>)(.*)(<\/.*>\s+)(\|)(\s+<.*>)(.*)(<\/.*>)/ ){
-	  $pagetxt->insert('end', $1, 'greyout');
-      $pagetxt->insert('end', $2, 'highlight');
-      $pagetxt->insert('end', $3, 'greyout');
-      $pagetxt->insert('end', $4, 'greyout');
-      $pagetxt->insert('end', $5, 'greyout');
-      $pagetxt->insert('end', $6, 'highlight');
-      $pagetxt->insert('end', "$7\n", 'greyout');
-    }
-    # new in left (<)
-    elsif ( $line =~ /(^\s+<.*>)(.*)(<\/.*>\s+)(<\s+)/ ){
-      $pagetxt->insert('end', $1, 'greyout');
-      $pagetxt->insert('end', $2, 'highlight');
-      $pagetxt->insert('end', $3, 'greyout');
-      $pagetxt->insert('end', $4);
-    }
-    # new in right (>)
-    elsif ( $line =~ /(\s+>\s+)(<.*>)(.*)(<\/.*>)/ ){
-      $pagetxt->insert('end', $1);
-      $pagetxt->insert('end', $2, 'greyout');
-      $pagetxt->insert('end', $3, 'highlight');
-	  $pagetxt->insert('end', "$4\n", 'greyout');
-    }
+      # dealing with tab spaces that disrupts formatting
+      @xmlcmp = expand(@xmlcmp);
+
+      # greyout (tags) /highlight (data) of XML
+      $pagetxt->tagConfigure('greyout', -foreground=>'#616161');
+      $pagetxt->tagConfigure('highlight', -foreground=>'#8B0000');
+
+      foreach my $line ( @xmlcmp ){
+        if ( $line =~ /locus|transcript|evidence_set|evidence|exon_set|exon/ ){
+          $pagetxt->insert('end', $line, 'greyout');
+        }
+        # identical in left and right
+        elsif ( $line =~ /(^\s+<.*>)(.*)(<\/.*>\s+)(<.*>)(.*)(<\/.*>)/ ){
+          $pagetxt->insert('end', $1, 'greyout');
+          $pagetxt->insert('end', $2, 'highlight');
+          $pagetxt->insert('end', $3, 'greyout');
+          $pagetxt->insert('end', $4, 'greyout');
+          $pagetxt->insert('end', $5, 'highlight');
+          $pagetxt->insert('end', "$6\n", 'greyout');
+        }
+        # diff in left and right (|)
+        elsif ( $line =~ /(^\s+<.*>)(.*)(<\/.*>\s+)(\|)(\s+<.*>)(.*)(<\/.*>)/ ){
+          $pagetxt->insert('end', $1, 'greyout');
+          $pagetxt->insert('end', $2, 'highlight');
+          $pagetxt->insert('end', $3, 'greyout');
+          $pagetxt->insert('end', $4, 'greyout');
+          $pagetxt->insert('end', $5, 'greyout');
+          $pagetxt->insert('end', $6, 'highlight');
+          $pagetxt->insert('end', "$7\n", 'greyout');
+        }
+        # new in left (<)
+        elsif ( $line =~ /(^\s+<.*>)(.*)(<\/.*>\s+)(<\s+)/ ){
+          $pagetxt->insert('end', $1, 'greyout');
+          $pagetxt->insert('end', $2, 'highlight');
+          $pagetxt->insert('end', $3, 'greyout');
+          $pagetxt->insert('end', $4);
+        }
+        # new in right (>)
+        elsif ( $line =~ /(\s+>\s+)(<.*>)(.*)(<\/.*>)/ ){
+          $pagetxt->insert('end', $1);
+          $pagetxt->insert('end', $2, 'greyout');
+          $pagetxt->insert('end', $3, 'highlight');
+          $pagetxt->insert('end', "$4\n", 'greyout');
+        }
+      }
+
+      # mappings of tab to text widget
+      $page_txtobj->{$tabstr}= $pagetxt;
+
   }
 
-  # mappings of tab to text widget
-  $page_txtobj->{$tabstr}= $pagetxt;
+  $nb->raise($tabstr);
 
-  MainLoop;
+  # MainLoop;
 }
 
 sub show_err_msg {
@@ -255,29 +276,28 @@ sub show_err_msg {
 sub open_or_close_all_nodes {
 
   my @all_sub_nodes = get_all_sub_nodes();
-  if ( $btn_all_nodes->cget('-text') =~ /Close/ ){
-    $btn_all_nodes->configure(-text=>'Open All Nodes');
+  if ( $btn_all_nodes->cget('-text') =~ /Collapse/ ){
+    $btn_all_nodes->configure(-text=>'Expand All Nodes');
 
     # make sure the behavior of button $btn_GT_nodes makes sense
     # when button $btn_all_nodes text is changed
-    $btn_GT_nodes->configure(-state=>'disabled', -text=>'Close Gene/TransInfo Nodes');
-	$btn_V_nodes->configure(-state=>'disabled', -text=>'Close V Nodes');
+    $btn_GT_nodes->configure(-state=>'disabled', -text=>'Collapse Gene/TransInfo Nodes');
+	$btn_V_nodes->configure(-state=>'disabled', -text=>'Collapse V Nodes');
     foreach my $sn ( @all_sub_nodes ){
       if ( $sn =~ /G\d+$/ ){
         $tree->close($sn);
         next;
       }
     }
-  }
-  else {
-    $btn_all_nodes->configure(-text=>'Close All Nodes');
+  } else {
+    $btn_all_nodes->configure(-text=>'Collapse All Nodes');
     foreach my $sn ( @all_sub_nodes ){
       $tree->open($sn);
     }
     # make sure the behavior of button $btn_GT_nodes makes sense
     # when button $btn_all_nodes text is changed
-    $btn_GT_nodes->configure(-state=>'active', -text=>'Close Gene/TransInfo Nodes');
-	$btn_V_nodes->configure(-state=>'active', -text=>'Close V Nodes');
+    $btn_GT_nodes->configure(-state=>'active', -text=>'Collapse Gene/TransInfo Nodes');
+	$btn_V_nodes->configure(-state=>'active', -text=>'Collapse V Nodes');
   }
 }
 
@@ -285,8 +305,8 @@ sub open_close_geneTrans_info_nodes {
 
   my @all_sub_nodes = get_all_sub_nodes();
 
-  if ( $btn_GT_nodes->cget('-text') =~ /Close/ ){
-    $btn_GT_nodes->configure(-text=>'Open Gene/TransInfo Nodes');
+  if ( $btn_GT_nodes->cget('-text') =~ /Collapse/ ){
+    $btn_GT_nodes->configure(-text=>'Expand Gene/TransInfo Nodes');
 
     foreach my $sn ( @all_sub_nodes ){
       if ( $sn =~ /GeneInfo$|TransInfo$/ ){
@@ -295,7 +315,7 @@ sub open_close_geneTrans_info_nodes {
     }
   }
   else {
-    $btn_GT_nodes->configure(-text=>'Close Gene/TransInfo Nodes');
+    $btn_GT_nodes->configure(-text=>'Collapse Gene/TransInfo Nodes');
 
     foreach my $sn ( @all_sub_nodes ){
       if ( $sn =~ /GeneInfo$|TransInfo$/ ){
@@ -309,18 +329,17 @@ sub open_close_V_nodes {
 
   my @all_sub_nodes = get_all_sub_nodes();
 
-  if ( $btn_V_nodes->cget('-text') =~ /Close/ ){
-    $btn_V_nodes->configure(-text=>'Open V Nodes');
-	$btn_GT_nodes->configure(-text=>'Close Gene/TransInfo Nodes', -state=>'disabled');
+  if ( $btn_V_nodes->cget('-text') =~ /Collapse/ ){
+    $btn_V_nodes->configure(-text=>'Expand V Nodes');
+	$btn_GT_nodes->configure(-text=>'Collapse Gene/TransInfo Nodes', -state=>'disabled');
     foreach my $sn ( @all_sub_nodes ){
       if ( $sn =~ /V\d+/ ){
         $tree->close($sn);
       }
     }
-  }
-  else {
-    $btn_V_nodes->configure(-text=>'Close V Nodes');
-	$btn_GT_nodes->configure(-text=>'Close Gene/TransInfo Nodes', -state=>'active');
+  } else {
+    $btn_V_nodes->configure(-text=>'Collapse V Nodes');
+	$btn_GT_nodes->configure(-text=>'Collapse Gene/TransInfo Nodes', -state=>'active');
     foreach my $sn ( @all_sub_nodes ){
       if ( $sn =~ /V\d+/ ){
         $tree->open($sn);
@@ -356,15 +375,12 @@ sub get_gene_history {
   map { $nb->delete($_) } $nb->pages if $nb;
 
   # default to close on each submit
-  $btn_all_nodes->configure(-text=>'Close All Nodes');
-  $btn_GT_nodes->configure(-text=>'Close Gene/TransInfo Nodes', -state=>'active');
-  $btn_V_nodes->configure(-text=>'Close V Nodes', -state=>'active');
+  $btn_all_nodes->configure(-text=>'Collapse All Nodes');
+  $btn_GT_nodes->configure(-text=>'Collapse Gene/TransInfo Nodes', -state=>'active');
+  $btn_V_nodes->configure(-text=>'Collapse V Nodes', -state=>'active');
 
   my $query_str = ${$entry1->cget(-textvariable)};
   $query_str =~ s/^\s+|\s+$//g; # trim leading/trailing spaces
-
-#  my $dataset   = ${$entry2->cget(-textvariable)};
-#  my $atype = sid_2_atype($dataset, $query_str);
 
   my $ga = $otter_db->get_GeneAdaptor;
   my $ta = $otter_db->get_TranscriptAdaptor;
@@ -373,8 +389,7 @@ sub get_gene_history {
   # first get relevant info of a gene from query
   if ( $query_str =~ /OTT\w{3,3}G\d+/ ) {
 	@$gsids = $query_str if check_query_exists($query_str, 'gene');
-  }
-  elsif ( $query_str =~ /OTT\w{3,3}T\d+/ ) {
+  } elsif ( $query_str =~ /OTT\w{3,3}T\d+/ ) {
 	check_query_exists($query_str, 'trans');
 	my $genes = $ga->fetch_by_transcript_stable_id_constraint($query_str);
 
@@ -382,8 +397,7 @@ sub get_gene_history {
 	  my $gsid = $g->stable_id;
 	  push(@$gsids, $gsid);
 	}
-  }
-  else {
+  } else {
     # assuming gene_name
 	check_query_exists($query_str, 'name');
 	push(@$gsids, uniq($ga->fetch_stable_id_by_name($query_str, 'gene')));
@@ -405,15 +419,25 @@ sub get_gene_history {
 
 sub check_query_exists {
   my ($query, $mode) = @_;
-  my $mode_sql = { gene  => qq{select count(*) from gene_stable_id where stable_id=?},
-				   trans => qq{select count(*) from transcript_stable_id where stable_id=?},
-				   name  => qq{select count(*) from gene_attrib where value=?}
-				 };
+  my %mode_sql = ( 'gene'  => qq{select count(*) from gene_stable_id where stable_id=?},
+				   'trans' => qq{select count(*) from transcript_stable_id where stable_id=?},
+				   'name'  => qq{select count(*) from gene_attrib where value=?}
+				   # name  => qq{select count(*) from gene_name where name=?}
+				 );
 
-  my $sth = $otter_db->prepare($mode_sql->{$mode});
-  $sth->execute($query);
+    my $otter_dbc = $dset->HEADCODE() ? $otter_db->dbc() : $otter_db;
+    my $sth = $otter_dbc->prepare($mode_sql{$mode});
+    $sth->execute($query);
 
-  ( $sth->fetchrow ) ? ( return 1 ) : ( gene_not_found_err() );
+    if($sth->fetchrow) {
+        return 1;
+    } else {
+          $mw->messageBox(-title => 'Gene not found!',
+                          -font => $font_hl,
+                          -message=>"Please double check you query and try again.\n".
+                                    "If this is a software error, please report to anacoders.\nThanks",
+                          -default_button => 'OK' );
+    }
 }
 
 sub find_obsolete_gene {
@@ -536,15 +560,6 @@ sub array_comp {
   return @diff;
 }
 
-sub gene_not_found_err {
-
-  $mw->messageBox(-title => 'Gene not found!',
-                  -font => $font_hl,
-                  -message=>"Please double check you query and try again.\n".
-                            "If this is a software error, please report to anacoders.\nThanks",
-                  -default_button => 'OK' );
-}
-
 sub print_all_gene_infos {
   my ($ga, $gsids) = @_;
   my $g_count;
@@ -616,7 +631,7 @@ sub print_all_gene_infos {
 
 		build_tree($top.".V$gver", "V$gver (T: $trans_count, E: $exon_count, $mtime)", $gene);
 		build_tree($top.".$snode", 'GeneInfo');
-		build_tree($top.".$snode.Assembly", "Assembly $space ".$gene->chr_name);
+		build_tree($top.".$snode.Assembly", "Assembly $space ".$gene->slice()->seq_region_name());
 		build_tree($top.".$snode.GeneName", "GeneName $space ".$gene->get_all_Attributes('name')->[0]->value);
 		build_tree($top.".$snode.Synonym",  "Synonym $space @$gsyms");
 		build_tree($top.".$snode.GeneType", "GeneType $space ".$gene->status);
@@ -694,54 +709,3 @@ sub convert_unix_time {
   return sprintf("%d-%02d-%02d %02d:%02d:%02d", $yr, $mon, $day, $hr, $min, $sec);
 }
 
-sub sid_2_atype {
-
-  my ($dataset, $stable_id)= @_;
-
-  my ($stable_id_type, $mol);
-
-  if ( $stable_id =~ /OTT.*G/ ) {
-	$stable_id_type = "gene_stable_id";
-	$mol = "gene";
-  } elsif ( $stable_id =~ /OTT.*T/ ) {
-	$stable_id_type = "transcript_stable_id";
-	$mol = "transcript";
-  }
-
-  my $mol_col = $mol."_id";
-  my $host = 'otterlive';
-  my $user = 'ottro';
-  my $pass = '';
-  my $port = 3301;
-
-  my $dbnames = {
-                 #human => 'ck1_human_new_history',
-                 human => 'loutre_human'
-                };
-
-  my $db = $dbnames->{$dataset};
-
-
-  my $otter_db = new Bio::EnsEMBL::DBSQL::DBConnection(
-													   -host   => $host,
-													   -user   => $user,
-													   -pass   => $pass,
-													   -port   => $port,
-													   -dbname => $db);
-
-  my $qry = $otter_db->prepare(qq{
-								  SELECT sr.name
-								  FROM $stable_id_type sid, $mol m, seq_region sr, assembly a
-								  WHERE sid.stable_id = ?
-								  AND sid.$mol_col=m.$mol_col
-								  AND m.seq_region_id=sr.seq_region_id
-								  AND sr.seq_region_id=a.asm_seq_region_id
-								  AND sr.coord_system_id=2
-								 });
-
-  $qry->execute($stable_id);
-  return $qry->fetchrow;
-}
-
-
-__END__
