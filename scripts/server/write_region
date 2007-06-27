@@ -334,6 +334,8 @@ if ($odba->isa('Bio::Otter::DBSQL::DBAdaptor')) {
         my $gene_adaptor = $odba->get_GeneAdaptor;
         $server->log("Attaching gene to slice ");
 
+        my $time_now = time(); # one common timestamp for the whole writing session
+
         foreach my $gene (@$xml_genes) {
             ##attach gene and its components to the right slice
             $gene->slice($slice);
@@ -349,7 +351,7 @@ if ($odba->isa('Bio::Otter::DBSQL::DBAdaptor')) {
             }
             ##update all gene and its components in db (new/mod)
             $gene->is_current(1);
-            $gene_adaptor->store($gene);
+            $gene_adaptor->store($gene, 0, $time_now);
         }
         $server->log("Updated " . scalar(@$xml_genes) . " genes");
         
@@ -375,7 +377,7 @@ if ($odba->isa('Bio::Otter::DBSQL::DBAdaptor')) {
             
             # Setting is_current to 0 will cause the store method to delete it.
             $dbgene->is_current(0);
-            $gene_adaptor->store($dbgene);
+            $gene_adaptor->store($dbgene, 0, $time_now);
             $del_count++;
             $server->log("Deleted gene " . $dbgene->stable_id);
         }
