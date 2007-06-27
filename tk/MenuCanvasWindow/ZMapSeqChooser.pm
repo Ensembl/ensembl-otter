@@ -6,9 +6,10 @@ use strict;
 use Carp qw{ cluck confess };
 use ZMap::Connect qw{ :all };
 use Sys::Hostname;
-#use Tie::Watch;
+use ZMap::XRemoteCache;
 use Data::Dumper;
 use Hum::Conf qw{ PFETCH_SERVER_LIST };
+
 
 my $ZMAP_DEBUG = 1;
 
@@ -125,6 +126,11 @@ sub _launchZMap{
     $self->zMapWriteDotZmap();
     $self->zMapWriteDotGtkrc();
     $self->isZMap(1);
+
+    unless($self->xremote_cache()){
+        $self->xremote_cache(ZMap::XRemoteCache->new());
+    }
+
     my @e = ('zmap', 
              '--conf_dir' => $self->zMapZmapDir,
              '--win_id'   => $z->server_window_id);
@@ -193,21 +199,27 @@ sub zMapKillZmap {
     
     ### We're only using the pid as marker for zmap having been started
     if (my $pid = $self->zMapProcessIDList) {
-        my $mainWindowName = 'ZMap port #' . $self->AceDatabase->ace_server->port;
-        my $xr = xclient_with_name($mainWindowName, 0, "$self")
-            or return 0;
+        my $rval = 0;
+        my $main_window_name = $self->main_window_name();
+        
+        if(my $xr = $self->xremote_cache->get_client_with_name($main_window_name)){
+            $self->{'_relaunch_zmap'} = $relaunch;
+            
+            $xr->send_commands('<zmap action="shutdown" />');
+            
+            warn sprintf "About to delete client %s", $xr->window_id;
+            $self->xremote_cache->remove_client_with_id($xr->window_id());
+            $rval = 1;
 
-        $self->{'_relaunch_zmap'} = $relaunch;
+            ### Check shutdown by checking property set by ZMap?
+        }
+        
+        $self->xremote_cache->remove_client_with_name($main_window_name);
+        $self->xremote_cache->remove_client_with_name($self->current_view_name());
 
-        $xr->send_commands('<zmap action="shutdown" />');
-        
-        warn sprintf "About to delete client %s", $xr->window_id;
-        delete_xclient_with_id($xr->window_id());
-        
-        ### Check shutdown by checking property set by ZMap?
-        
-        return 1;
+        return $rval;
     }
+
     return 0;
 }
 sub zMapProcessIDList {
@@ -224,7 +236,7 @@ sub zMapInsertZmapConnector{
     if(!$zc){
         my $mb   = $self->menu_bar();
         my $zmap = ZMap::Connect->new( -server => 1 );
-        $zmap->init($mb, \&RECEIVE_FILTER, [ $self, qw( register_client edit single_select multiple_select finalised) ]);
+        $zmap->init($mb, \&RECEIVE_FILTER, [ $self, qw( register_client edit single_select multiple_select finalised feature_details) ]);
         my $id = $zmap->server_window_id();
         $zc = $self->{'_zMap_ZMAP_CONNECTOR'} = $zmap;
     }
@@ -466,26 +478,44 @@ sub zMapListMethodNames_ordered{
 #===========================================================
 
 sub zMapCurrentXclient{
-    my ($self) = @_;
-    return xclient_with_name(${$self->zMapEntryRef}, 0, "$self");
-}
-sub zMapEntryRef{
-    my ($self) = @_;
-    my $n = '';
-    $self->{'_zMap_ENTRY_REF'} ||= \$n;
-    return $self->{'_zMap_ENTRY_REF'};
-}
-sub zMapSetEntryValue{
-    my ($self, $value) = @_;
-    my $ref = $self->zMapEntryRef();
-    $$ref   = $value;
+    my ($self, $cache, $name, $client) = @_;
+    if($cache = $self->xremote_cache()){
+        $name = $self->current_view_name();
+        $client = $cache->get_client_with_name($name);
+    }
+    return $client;
 }
 
+sub xremote_cache{
+    my ($self, $cache) = @_;
+
+    if($cache){ $self->{'_xremote_cache'} = $cache; }
+    else{       $cache = $self->{'_xremote_cache'}; }
+    
+    return $cache;
+}
+
+sub current_view_name{
+    my ($self, $name) = @_;
+
+    if($name){ $self->{'_current_view_name'} = $name; }
+    else{      $name = $self->{'_current_view_name'}; }
+
+    return $name;
+}
+
+sub main_window_name{
+    my ($self, $name) = @_;
+    
+    $name = 'ZMap port #' . $self->AceDatabase->ace_server->port();
+    
+    return $name;
+}
 
 sub zMapRegisterClient {
     my ($self, $p) = @_;
-    my $mainWindowName = 'ZMap port #' . $self->AceDatabase->ace_server->port;
-    my $xr = xclient_with_name($mainWindowName, 0, "$self");
+    my $main_window_name = $self->main_window_name();
+    my $xr = $self->xremote_cache->get_client_with_name($main_window_name);
     my $z  = $self->zMapZmapConnector();
     my $h  = {
         response => {
@@ -497,8 +527,6 @@ sub zMapRegisterClient {
     };
     $z->protocol_add_meta($h);
 
-    $self->zMapEntryRef();
-    
     warn " *** zMapRegisterClient (1)..." if $ZMAP_DEBUG;
     
     # commented out as it was causing issue if zmap had crashed
@@ -517,17 +545,13 @@ sub zMapRegisterClient {
 
     warn " *** zMapRegisterClient (2)..." if $ZMAP_DEBUG;
  
-    xclient_with_name($mainWindowName, $p->{'client'}->{'xwid'}, "$self");
-
-    $self->zMapSetEntryValue($mainWindowName);
+    $self->xremote_cache->create_client_with_name_id($main_window_name, $p->{'client'}->{'xwid'});
 
     $z->post_respond_handler(\&open_clones, [$self]);
-#    Tie::Watch->new(-variable => \$WAIT_VARIABLE,
-#                    -debug    => 1,
-#                    -store    => [ \&old_open_clones, $self ],
-#                    );
+
     # this feels convoluted
     $h->{'response'}->{'client'}->[0]->{'created'} = 1;
+
     return (200, make_xml($h));
 }
 
@@ -587,94 +611,60 @@ sub zMapHighlight{
 
     # Needs to do something interesting to find the object to highlight.
     if ($xml_hash->{"action"} eq 'single_select') {
-
+        $self->deselect_all();
+        my $feature = $xml_hash->{'featureset'}->{'feature'} || {};
+        $self->set_clipboard_on_highlight(0);
+        foreach my $name(keys(%$feature)){
+            $self->highlight_by_name($name);
+        }
+        $self->set_clipboard_on_highlight(1);
     } elsif($xml_hash->{"action"} eq 'multiple_select') {
-
+        my $feature = $xml_hash->{'featureset'}->{'feature'} || {};
+        $self->set_clipboard_on_highlight(0);
+        foreach my $name(keys(%$feature)){
+            $self->highlight_by_name($name);
+        }
+        $self->set_clipboard_on_highlight(1);
     } else { confess "Not a 'select' action\n"; }
 
     return (200, "");
 }
 
-#===========================================================
+sub zMapTagValues{
+    my ($self, $xml_hash) = @_;
+    my $otter_id = undef;
+    my $otter_exon_ids = "";
+    my $exon_ids = [];
 
-# This  menu stuff  needs  rewriting.  It doesn't  work  100% like  it
-# should.  It isn't  really needed  for production  so it's  not  a high
-# priority
-sub zMapUpdateMenu{ 
-    my ($self) = @_; my $menu_item = $self->{'_zMapMenuItem'}; 
-
-    my $cleanUpMenu = sub{
-        my ($menuRoot, $this) = @_;
-        my @current = list_xclient_names("$self");
-        $this->{'_zMapSubMenuItems'} ||= {};
-        my @remove = ();
-        foreach my $k(keys(%{$this->{'_zMapSubMenuItems'}})){
-            my $idx = $this->{'_zMapSubMenuItems'}->{$k};
-            print "This is $k \n" if $ZMAP_DEBUG;
-            if(!(grep /^$k$/, @current)){
-                delete $this->{'_zMapSubMenuItems'}->{$k};
-                push(@remove, $idx);
+    if($xml_hash->{'action'} eq 'feature_details'){
+        my $feature = $xml_hash->{'featureset'}->{'feature'} || {};
+        foreach my $name(keys(%$feature)){
+            if(my $subseq = $self->get_SubSeq($name)){ 
+                $otter_id = $subseq->Locus->otter_id if ($subseq->Locus); 
+                foreach my $exon($subseq->get_all_Exons_in_transcript_order()){
+                    push(@$exon_ids, $exon->otter_id()) if ($exon->otter_id);
+                }
             }
         }
-        map { $menuRoot->delete($_) } @remove;
-    };
+    }
+    my $handled = ($otter_id ? "true" : "false");
+    $otter_id ||= "unable to fetch otter id";
 
-    my $fullCleanUpMenu = sub {
-        my ($button, $this) = @_;
-        if(my $menu = $button->cget('-menu')){
-            $cleanUpMenu->($menu, $this);
-        }        
-    };
-
-    unless($menu_item){
-        my $frame  = $self->menu_bar;
-        my $button = $frame->Menubutton(-text => 'ZMap')->pack(-side => 'left');
-        my $menu   = $button->Menu(-tearoff => 0);
-        $button->configure(-menu => $menu);
-        $button->bind('<Button-1>', [ $fullCleanUpMenu, $self ]);
-
-        $self->{'_zMapMenuItem'} = 
-            $menu_item = $button; #$self->make_menu('ZMap', 1);
+    foreach my $id(@$exon_ids){
+        $otter_exon_ids .= qq{<tagvalue name="Otter Exon ID" type="simple">$id</tagvalue>};
     }
 
-    my $addSubMenuItem = sub {
-        my ($this, $menuRoot, $name) = @_;
-        $this->{'_zMapSubMenuItems'} ||= {};
-        $this->{'_zMapSubMenuItems'}->{$name} = scalar(keys(%{$this->{'_zMapSubMenuItems'}}));
-        my $submi = $menuRoot->cascade(-label => $name, -tearoff => 0);
-
-        if($name =~ /port/){
-            $submi->command(-command => [ sub { 
-                my $self = shift;
-                my $z = newXMLObj('client');
-                $self->zMapSetEntryValue($name); 
-                $self->zMapMakeRequest($z, 'close');
-            }, $self ],-label => 'Shutdown ZMap');     
-        }else{
-            $submi->command(-command => [ sub { 
-                my $this = shift;
-                my $z    = newXMLObj('zoom_in');
-                $this->zMapSetEntryValue($name); 
-                $this->zMapMakeRequest($z, 'zoom_in');
-            }, $self ], 
-                            -label => 'Zoom In');             
-            $submi->command(-command => [ sub { 
-                my $this = shift;
-                my $z    = newXMLObj('zoom_in');
-                $self->zMapSetEntryValue($name); 
-                $self->zMapMakeRequest($z, 'zoom_out');
-            }, $self ], 
-                            -label => 'Zoom Out');             
-        }
-    };
-
-    $cleanUpMenu->($menu_item, $self);
-
-    foreach my $name (list_xclient_names("$self")){
-        $addSubMenuItem->($self, $menu_item, $name);
-    }
-
-    return ;
+    return (200, qq{
+  <response handled="$handled">
+    <notebook>
+      <page name="OTTER">
+        <paragraph name="Otter" type="tagvalue_table">
+          <tagvalue name="Otter Gene ID" type="simple">$otter_id</tagvalue>
+          $otter_exon_ids
+        </paragraph>
+      </page>
+    </notebook>
+  </response>});
 }
 
 #===========================================================
@@ -690,6 +680,7 @@ sub RECEIVE_FILTER {
         single_select   => 'zMapHighlight',
         multiple_select => 'zMapHighlight',
         finalised       => 'zMapRelaunchZMap',
+        feature_details => 'zMapTagValues',
     };
 
     # @list could be dynamically created...
@@ -766,6 +757,7 @@ sub old_open_clones{
 sub zMapMakeRequest{
     my ($self, $xmlObject, $action, $xml_cmd_string) = @_;
 
+    $self->current_view_name($self->main_window_name());
     my $xr = $self->zMapCurrentXclient;
     unless($xr){
         warn "No current window.";
@@ -801,9 +793,9 @@ sub RESPONSE_HANDLER{
     warn "In RESPONSE_HANDLER for action=$action\n" if $ZMAP_DEBUG;
     if ($action eq 'new'){
         my ($name, $id) = ($xml->{'response'}->{'zmapid'}, $xml->{'response'}->{'windowid'});
-        if($name){
-            xclient_with_name($name, $id, "$self") if $id;
-            $self->zMapSetEntryValue($name);
+        if($name && $id){
+            $self->xremote_cache->create_client_with_name_id($name, $id);
+            $self->current_view_name($name);
         }
     }
     else {
@@ -830,7 +822,7 @@ sub ERROR_HANDLER{
         # could do something clever here so that we don't send the same window this command again.
         my $message = $xml->{'message'};
     }elsif($status == 412){
-        delete_xclient_with_id($xml->{'windowid'});
+        $self->xremote_cache->remove_client_with_id($xml->{'windowid'});
     }elsif($status == 500){
     
     }elsif($status == 501){
