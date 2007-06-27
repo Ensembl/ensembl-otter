@@ -1069,7 +1069,7 @@ sub integers_from_clipboard {
     else {
 
         # match general fMap "blue box" pattern
-        unless (@ints = $text =~ /^\S+\s+-?(\d+)\s+-?(\d+)\s+\(\d+\)/) {
+        unless (@ints = $text =~ /^\S+\s+-?(\d+)\s+-?(\d+)\s+\(\d+\)/mg) {
 
             # or just get all the integers
             @ints = grep !/\./, $text =~ /([\.\d]+)/g;
