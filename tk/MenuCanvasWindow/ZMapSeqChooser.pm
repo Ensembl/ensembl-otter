@@ -194,6 +194,15 @@ sub zMapRelaunchZMap{
     return (200, "all closed");
 }
 
+=head1 zMapKillZmap
+
+Attempts  to kill  zmap,  return true  if  it succeeded  and false  on
+failure.  If relaunch = true and zMapKillZmap returns true then zmap 
+should relaunch, any other combination probably means no relaunch will
+occur.
+
+=cut
+
 sub zMapKillZmap {
     my( $self, $relaunch ) = @_;
     
@@ -203,17 +212,26 @@ sub zMapKillZmap {
         my $main_window_name = $self->main_window_name();
         
         if(my $xr = $self->xremote_cache->get_client_with_name($main_window_name)){
-            $self->{'_relaunch_zmap'} = $relaunch;
-            
-            $xr->send_commands('<zmap action="shutdown" />');
-            
+            # check we can ping...
+            if($xr->ping()){
+                $self->{'_relaunch_zmap'} = $relaunch;
+                
+                $xr->send_commands('<zmap action="shutdown" />');
+                
+                $rval = 1; # everything has been as successful as can be
+                ### Check shutdown by checking property set by ZMap?
+                ### This is done in zMapRelaunchZMap...
+            }else{
+                # zmap probably died without sending us a message... seg fault...
+                warn sprintf "Failed to ping %s, zmap probably crashed.", $xr->window_id();
+                $rval = 0;
+            }
+
             warn sprintf "About to delete client %s", $xr->window_id;
             $self->xremote_cache->remove_client_with_id($xr->window_id());
-            $rval = 1;
-
-            ### Check shutdown by checking property set by ZMap?
         }
-        
+
+        # always remove the clients...
         $self->xremote_cache->remove_client_with_name($main_window_name);
         $self->xremote_cache->remove_client_with_name($self->current_view_name());
 
@@ -845,76 +863,6 @@ __END__
 
 
 =pod
-
-=head1 REMOVE
-
-sub update_display{
-    my ($self , $ace) = @_ ;
-    warn "cannot update display yet";
-    return 1;
-}
-# this should be called when a user tries to save, but no ZMap is opened
-sub open_dialogue{
-    my ($self) = @_ ;
-    warn "cannot open dialogue yet";
-    return undef;
-
-}
-
-sub get_window_id {
-    my( $self ) = @_;
-
-    # be good if we could replace this with something more automatic....    
-    my $mid = $self->message("Please click on the xace main window with the cross-hairs");
-    $self->delete_message($mid);
-    local *XWID;
-    open XWID, "xwininfo |"
-        or confess("Can't open pipe from xwininfo : $!");
-    my( $xwid );
-    while (<XWID>) {
-        # xwininfo: Window id: 0x7c00026 "ACEDB 4_9c, lace bA314N13"
-
-      # HACK
-      # above format NOT returnd by xwininfo on Sun OS 5.7:
-      #  tace version:
-      #  ACEDB 4_9r,  build dir: RELEASE.2003_05_01
-      # 2 lines before modified to support xace at RIKEN
-
-        # BEFORE: if (/Window id: (\w+) "([^"]+)/) {
-        if (/Window id: (\w+) "([^"]+)/ || /Window id: (\w+)/) {
-            my $id   = $1;
-            my $name = $2;
-	    # BEFORE: if ($name =~ /^ACEDB/){
-            if ($name =~ /^ACEDB/ || $name eq '') {
-                $xwid = $id;
-                $self->message("Attached to:\n$name");
-            } else {
-                $self->message("'$name' is not an xace main window");
-            }
-        }
-    }
-    if (close XWID) {
-        return $xwid;
-    } else {
-        $self->message("Error running xwininfo: $?");
-    }
-}
-
-
-sub attach {
-    my( $self ) = @_;
-    
-    if (my $xwid = $self->zmap_id) {
-        my $xrem = Hum::Ace::XaceRemote->new($xwid);
-        $self->xace_remote($xrem);
-        #$xrem->send_command('save');
-# This command may be redundant with zmap + lace
-#        $xrem->send_command('writeaccess -gain');
-    } else {
-        warn "no xwindow id: $xwid";
-    }
-}
-
 
 =head1 NAME - MenuCanvasWindow::ZmapSeqChooser
 
