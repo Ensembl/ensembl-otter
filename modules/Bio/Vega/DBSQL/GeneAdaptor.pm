@@ -534,17 +534,7 @@ sub store {
             # (for example, if it is being DELETED or RESTORED)
             # it has to be dissociated from the DB to get a new set of dbIDs:
         if($gene->dbID() && ($gene->dbID() == $db_gene->dbID())) {
-            $gene->dbID(undef);
-            $gene->adaptor(undef);
-            foreach my $tran (@{ $gene->get_all_Transcripts() }) {
-                $tran->dbID(undef);
-                $tran->adaptor(undef);
-                    # NB: exons do not need to be duplicated
-                if ($tran->translation){
-                    $tran->translation->dbID(undef);
-                    $tran->translation->adaptor(undef);
-                }
-            }
+            $gene->dissociate();
         }
 
         ###
