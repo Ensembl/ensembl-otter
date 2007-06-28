@@ -165,6 +165,22 @@ sub last_db_version {
     return $self->{_last_db_version};
 }
 
+sub dissociate {
+    my $self = shift @_;
+
+    $self->dbID(undef);
+    $self->adaptor(undef);
+    foreach my $tran (@{ $self->get_all_Transcripts() }) {
+        $tran->dbID(undef);
+        $tran->adaptor(undef);
+        # NB: exons do not need to be duplicated
+        if ($tran->translation){
+            $tran->translation->dbID(undef);
+            $tran->translation->adaptor(undef);
+        }
+    }
+}
+
 1;
 
 __END__
