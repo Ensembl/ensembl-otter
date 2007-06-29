@@ -8,6 +8,9 @@ use LWP;
 use HTTP::Cookies;
 
 {
+    ### Should probably get these two values from a config file
+    ### but I was trying to keep the code for this server
+    ### as small as possible.
     my $port = 22400;
     my $jar_file = "$ENV{HOME}/.otter/cookie_jar";
 
@@ -23,7 +26,7 @@ use HTTP::Cookies;
         Type        => SOCK_STREAM,
         Reuse       => 1,
         Listen      => 10,
-        ) or die "Failed to create server socket on port '$port' : $@\n";
+        ) or die "Failed to create server socket on port '$port' $@\n";
     
     my $cookie_time = file_m_time($jar_file);
 

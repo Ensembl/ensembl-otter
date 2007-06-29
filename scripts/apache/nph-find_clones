@@ -1,0 +1,29 @@
+#!/usr/local/bin/perl -Tw
+
+use strict;
+use SangerPaths qw{ otter48 ensembl44 bioperl123 core };
+
+use Bio::Otter::ServerScriptSupport;
+use Bio::Otter::CloneFinder; # $server->running_headcode()==0 version
+use Bio::Vega::CloneFinder;  # $server->running_headcode()==1 version
+
+my $server = Bio::Otter::ServerScriptSupport->new;
+
+my $qnames       = $server->require_argument('qnames');
+my $filter_atype = $server->param('type')   || '';
+my $unhide       = $server->param('unhide') || 0;
+
+my $finder_class = $server->running_headcode()
+    ? 'Bio::Vega::CloneFinder'
+    : 'Bio::Otter::CloneFinder';
+
+my $finder = $finder_class->new( $server->otter_dba(), [ split(',', $qnames) ]);
+
+$finder->find($unhide);
+
+my $output_string = $finder->generate_output($filter_atype);
+
+$server->send_response($output_string, 1);
+
+1;
+

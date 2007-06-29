@@ -1,0 +1,33 @@
+#!/usr/local/bin/perl -Tw
+
+use strict;
+use SangerPaths qw{ otter48 ensembl44 bioperl123 core };
+
+use Bio::Otter::ServerScriptSupport;
+use Bio::Vega::Transform::XML;
+
+my $server = Bio::Otter::ServerScriptSupport->new;
+
+my $cs     = $server->param('cs')     || 'chromosome';
+my $csver  = $server->param('csver')  || (($cs eq 'chromosome') ? 'Otter' : undef);
+my $name   = $server->require_argument('name');
+my $type   = $server->require_argument('type');
+my $start  = $server->require_argument('start');
+my $end    = $server->require_argument('end');
+my $strand = $server->param('strand') || undef;
+
+$server->log("Getting slice... [$name | $type] [$start] [$end]");
+
+my $odba  = $server->otter_dba();
+my $slice = $server->get_slice($odba, $cs, $name, $type, $start, $end, $strand, $csver);
+
+$server->log("Converting slice to XML...");
+
+my $xml=Bio::Vega::Transform::XML->new->generate_OtterXML([$slice],$odba,0);
+
+$server->log("Done converting slice to XML. Length of XML = " . length($xml) );
+
+$server->send_response("$xml\n");
+
+1;
+
