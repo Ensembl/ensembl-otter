@@ -21,7 +21,6 @@ use Tk::NoteBook;
 use Tk::ROText;
 use Tk::X11Font;
 use Text::Tabs;
-use FileHandle;
 use Bio::Otter::Lace::Defaults;
 use Bio::Otter::Lace::DataSet;
 use Bio::Vega::DBSQL::DBAdaptor;
@@ -30,7 +29,7 @@ use Bio::Vega::Transform::PrettyPrint;
 
 my $dataset_name;
 Bio::Otter::Lace::Defaults::do_getopt('ds|dataset=s' => \$dataset_name);
-$dataset_name ||= 'human';
+$dataset_name ||= 'cow';
 
 my $client   = Bio::Otter::Lace::Defaults::make_Client();      # Bio::Otter::Lace::Client
 my $dset     = $client->get_DataSet_by_name($dataset_name);    # Bio::Otter::Lace::DataSet
@@ -181,9 +180,8 @@ sub compare_gene_versions {
   }
 
   my $cmd = "sdiff -w 170 @files";
-  my $fh = new FileHandle;
-  $fh->open("$cmd|") or die;
-  my @xmlcmp = <$fh>;
+  open(SDIFF, "$cmd|") or die;
+  my @xmlcmp = <SDIFF>;
 
   foreach my $filename (@files) {
     unlink $filename;
