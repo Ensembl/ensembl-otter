@@ -1,0 +1,81 @@
+#!/usr/local/bin/perl -w
+
+### local_pfetch
+
+use strict;
+use IO::Socket;
+use LWP;
+use HTTP::Cookies;
+use Getopt::Long 'GetOptions';
+
+
+{
+    my $port;
+    my $jar_file = $ENV{'OTTERLACE_COOKIE_JAR'};
+    GetOptions(
+        'port=i'   => \$port,
+        'jar=s'    => \$jar_file,
+        ) or die "Error processsing command line options";
+    unless ($port and $jar_file) {
+        die "Must provide both port ('$port') and cookie jar file ('$jar_file')";
+    }
+
+    END{
+        print STDERR "local_pfetch on port '$port' exiting\n";
+    }
+    
+    my $pfetch = LWP::UserAgent->new;
+    $pfetch->protocols_allowed([qw{ http https }]);
+    $pfetch->agent('local_pfetch/0.1 ');
+    push @{ $pfetch->requests_redirectable }, 'POST';
+    $pfetch->cookie_jar(HTTP::Cookies->new( file => $jar_file ));
+    
+    my $sock = IO::Socket::INET->new(
+        LocalPort   => $port,
+        Type        => SOCK_STREAM,
+        Reuse       => 1,
+        Listen      => 10,
+        ) or die "Failed to create server socket on port '$port' $@\n";
+    
+    my $cookie_time = file_m_time($jar_file);
+
+    while (my $client = $sock->accept) {
+        local $SIG{'TERM'} = 'IGNORE';
+        my $request_str = <$client>;
+        
+        my $req = HTTP::Request->new;
+        $req->method('POST');
+        $req->uri('http://wwwdev.sanger.ac.uk:80/cgi-bin/otter/48/nph-pfetch');
+        $req->content("request=$request_str");
+        
+        # Reload cookie from jar if it has been updated
+        my $new_time = file_m_time($jar_file);
+        if ($new_time > $cookie_time) {
+            $pfetch->cookie_jar->load;
+        }
+        
+        my $data = $pfetch->request($req);
+        if ($data->is_success) {
+            print $client $data->content;
+        } else {
+            print STDERR "Error: ",
+                $data->status_line, "\n",
+                $data->content, "\n";
+        }
+        close $client;
+    }
+}
+
+sub file_m_time {
+    return (stat(shift))[9];
+}
+
+
+__END__
+
+=head1 NAME - local_pfetch
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
