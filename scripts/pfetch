@@ -1,0 +1,41 @@
+#!/usr/local/bin/perl -w
+
+### pfetch
+
+use strict;
+use LWP;
+use HTTP::Cookies;
+use URI::Escape qw{ uri_escape };
+
+{
+    my $jar_file = $ENV{'OTTERLACE_COOKIE_JAR'}
+        or die "OTTERLACE_COOKIE_JAR not set\n";
+    my $req_str = "request=" . uri_escape("@ARGV");
+
+    my $web = LWP::UserAgent->new;
+    $pfetch->protocols_allowed([qw{ http https }]);
+    $pfetch->agent('local_pfetch/0.1 ');
+    push @{ $pfetch->requests_redirectable }, 'POST';
+    $pfetch->cookie_jar(HTTP::Cookies->new( file => $jar_file ));
+
+    my $request = HTTP::Request->new;
+    $request->method('POST');
+    $request->uri('http://wwwdev.sanger.ac.uk/cgi-bin/otter/48/nph-pfetch');
+    $request->content($req_str);
+
+    my $response = $web->request($request);
+
+    print $response->content;
+}
+
+
+
+
+__END__
+
+=head1 NAME - pfetch
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
