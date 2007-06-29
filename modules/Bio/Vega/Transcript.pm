@@ -8,16 +8,13 @@ use base 'Bio::EnsEMBL::Transcript';
 sub new {
   my($class,@args) = @_;
   my $self = $class->SUPER::new(@args);
-  my ($transcript_author,$evidence)  = rearrange([qw(AUTHOR EVIDENCE)],@args);
+  my ($transcript_author,$evidence_list)  = rearrange([qw(AUTHOR EVIDENCE)],@args);
   $self->transcript_author($transcript_author);
-  if (defined($evidence)) {
-	 if (ref($evidence) eq "ARRAY") {
-		$self->add_Evidence(@$evidence);
-	 }
-	 else {
-		$self->throw(
-						 "Argument to evidence must be an array ref. Currently [$evidence]"
-						);
+  if (defined($evidence_list)) {
+	 if (ref($evidence_list) eq "ARRAY") {
+		$self->evidence_list($evidence_list);
+	 } else {
+		$self->throw( "Argument to evidence must be an array ref. Currently [$evidence_list]");
 	 }
   }
   return $self;
@@ -35,19 +32,50 @@ sub transcript_author {
   return $self->{'transcript_author'};
 }
 
-sub add_Evidence {
-  my ($self,$evidenceref) = @_;
-  if( ! exists $self->{'evidence'} ) {
-    $self->{'evidence'} = [];
-  }
-  foreach my $evidence ( @$evidenceref ) {
-    if( ! $evidence->isa( "Bio::Vega::Evidence" )) {
-		throw( "Argument to add_Evidence has to be an Bio::Vega::Evidence" );
+sub evidence_list {
+    my ($self, $given_list) = @_;
+
+    my $stored_list = $self->{'evidence_list'} ||= [];
+
+    if($given_list) {
+            # don't copy the arrayref, copy the elements instead:
+        my $class = 'Bio::Vega::Evidence';
+        foreach my $evidence (@$given_list) {
+            unless( $evidence->isa($class) ) {
+                throw( "evidence_list can only store objects of '$class', not $evidence" );
+            }
+            push @$stored_list, @$given_list;
+        }
     }
-    push( @{$self->{'evidence'}}, $evidence );
-  }
-  return;
+    return $stored_list;
 }
+
+# sub get_Evidence {
+#   my $self = shift;
+#   if ( ! exists $self->{'evidence' } ) {
+#     if (!$self->adaptor() ) {
+#       return [];
+#     }
+# 
+#     my $ta = $self->adaptor->db->get_TranscriptAdaptor();
+#     $self->{'evidence'} = $ta->fetch_evidence($self);
+#   }
+#   return $self->{'evidence'};
+# }
+# 
+# sub add_Evidence {
+#   my ($self,$evidence_list) = @_;
+# 
+#   $self->{'evidence'} ||= [];
+# 
+#   foreach my $evidence ( @$evidence_list ) {
+#     if( ! $evidence->isa( "Bio::Vega::Evidence" )) {
+# 		throw( "Argument to add_Evidence has to be an Bio::Vega::Evidence" );
+#     }
+#     push( @{$self->{'evidence'}}, $evidence );
+#   }
+#   return;
+# }
 
 sub truncate_to_Slice {
   my( $self, $slice ) = @_;
@@ -104,19 +132,6 @@ sub truncate_to_Slice {
   return $exons_truncated;
 }
 
-sub get_Evidence {
-  my $self = shift;
-  if ( ! exists $self->{'evidence' } ) {
-    if (!$self->adaptor() ) {
-      return [];
-    }
-
-    my $ta = $self->adaptor->db->get_TranscriptAdaptor();
-    $self->{'evidence'} = $ta->fetch_evidence($self);
-  }
-  return $self->{'evidence'};
-}
-
 sub hashkey {
   my $self=shift;
   my $slice      = $self->{'slice'};
@@ -136,7 +151,7 @@ sub hashkey {
   my $mRNA_end_NF = $self->get_all_Attributes('mRNA_end_NF') ;
   my $cds_start_NF = $self->get_all_Attributes('cds_start_NF') ;
   my $cds_end_NF = $self->get_all_Attributes('cds_end_NF') ;
-  my $evidence= $self->get_Evidence;
+  my $evidence= $self->evidence_list();
   my $evidence_count=0;
   
   ##should transcript_class_name be added??
@@ -233,7 +248,7 @@ sub hashkey_sub {
   my $self = shift;
   my $remarks = $self->get_all_Attributes('remark');
   my $hidden_remarks = $self->get_all_Attributes('hidden_remark');
-  my $evidence=$self->get_Evidence;
+  my $evidence=$self->evidence_list();
   my $hashkey_sub={};
   if (defined $remarks) {
 	 foreach my $rem (@$remarks){

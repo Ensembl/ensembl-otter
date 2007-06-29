@@ -146,7 +146,7 @@ sub history{
 		  my $mRNA_end_NF = $t->get_all_Attributes('mRNA_end_NF') ;
 		  my $cds_start_NF = $t->get_all_Attributes('cds_start_NF') ;
 		  my $cds_end_NF = $t->get_all_Attributes('cds_end_NF') ;
-		  my $evidence= $t->get_Evidence;
+		  my $evidence= $t->evidence_list();
 		  my $evidence_count=0;
 		  my $evistring="";
 		  my $remarks;

@@ -267,9 +267,9 @@ sub build_SequenceFragment {
 sub build_Evidence {
   my ($self, $data) = @_;
   my $evidence = Bio::Vega::Evidence->new(
-														-name     => $data->{'name'},
-														-type       => $data->{'type'},
-													  );
+    -name     => $data->{'name'},
+    -type     => $data->{'type'},
+  );
   my $list = $evidence_list{$self} ||= [];
   push @$list, $evidence;
 }
@@ -288,14 +288,14 @@ sub build_Feature {
   my $feat_start = $data->{'start'} + $offset;
   my $feat_end =  $data->{'end'}   + $offset;
   my $feature = Bio::EnsEMBL::SimpleFeature->new(
-																 -start     => $feat_start,
-																 -end       => $feat_end,
-																 -strand    => $data->{'strand'},
-																 -analysis  => $ana,
-																 -score     => $data->{'score'},
-																 -display_label => $data->{'label'},
-																 -slice => $slice,
-																);
+     -start     => $feat_start,
+     -end       => $feat_end,
+     -strand    => $data->{'strand'},
+     -analysis  => $ana,
+     -score     => $data->{'score'},
+     -display_label => $data->{'label'},
+     -slice => $slice,
+    );
   my $list = $feature_list{$self} ||= [];
   push @$list, $feature;
 }
@@ -491,10 +491,8 @@ sub build_Transcript {
   $transcript->add_Attributes(@$transcript_attributes);
 
   ##evidence
-  my $evidence=delete $evidence_list{$self};
-  if (defined $evidence) {
-	 $transcript->add_Evidence($evidence);
-  }
+  my $evidence_l = delete $evidence_list{$self} || [];
+  $transcript->evidence_list($evidence_l);
 
   my $list = $transcript_list{$self} ||= [];
   push @$list, $transcript;
@@ -508,8 +506,7 @@ sub translation_pos {
 	 } else {
 		return (($exon->end - $loc) + 1);
 	 }
-  }
-  else {
+  } else {
 	 return (undef);
   }
 }

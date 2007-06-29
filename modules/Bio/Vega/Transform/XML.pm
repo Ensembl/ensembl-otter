@@ -385,9 +385,9 @@ sub generate_ExonSet{
 }
 
 
-sub generate_EvidenceSet{
+sub generate_EvidenceSet {
   my ($self,$tran)=@_;
-  my $evidence=$tran->get_Evidence;
+  my $evidence=$tran->evidence_list();
   my $es=$self->prettyprint('evidence_set');
   foreach my $evi (@$evidence){
 	 my $e=$self->prettyprint('evidence');
@@ -395,15 +395,11 @@ sub generate_EvidenceSet{
 	 $e->attribvals($self->prettyprint('type',$evi->type));
 	 $es->attribobjs($e);
   }
-  my $c=0;
-  if ($evidence){
-	 $c=@$evidence;
-  }
+  my $c= $evidence ? scalar(@$evidence) : 0;
 
   if ($c>0){
 	 return $es;
-  }
-  else {
+  } else {
 	 return;
   }
 }

@@ -65,10 +65,16 @@ sub store_Evidence {
 sub reincarnate_transcript {
     my ($self, $transcript) = @_;
 
-    bless $transcript, 'Bio::Vega::Transcript';
-    $self->fetch_transcript_author($transcript);
+    my $this_class = 'Bio::Vega::Transcript';
 
-    ### FIXME: shouldn't we also load the evidence at this point?
+    if($transcript->isa($this_class)) {
+        # warn "Transcript is already $this_class, probably due to caching\n";
+    } else {
+        bless $transcript, $this_class;
+        $self->fetch_transcript_author($transcript);
+    }
+
+    $transcript->evidence_list($self->fetch_evidence);
 
     return $transcript;
 }
@@ -188,12 +194,33 @@ sub fetch_last_version {
 
     my $last = shift @candidates;
     foreach my $candidate (@candidates) {
-        if($candidate->version > $last->version) {
+        if( ($candidate->version > $last->version)
+         || ( ($candidate->version == $last->version) && ($candidate->is_current > $last->is_current) )
+        ) {
             $last = $candidate;
         }
     }
 
     return $self->reincarnate_transcript($last);
+}
+
+sub store {
+    my ($self, $transcript, $gene_dbID, $analysis_id) = @_;
+
+    if( ! ref $transcript || !$transcript->isa('Bio::Vega::Transcript') ) {
+        throw("$transcript is not a Vega transcript - not storing");
+    }
+
+    my $transcript_dbID = $self->SUPER::store($transcript, $gene_dbID, $analysis_id);
+
+    my $author_adaptor = $self->db->get_AuthorAdaptor;
+    my $transcript_author=$transcript->transcript_author;
+    $author_adaptor->store($transcript_author);
+    $author_adaptor->store_transcript_author($transcript->dbID, $transcript_author->dbID);
+
+    $self->store_Evidence($transcript->dbID, $transcript->evidence_list );
+
+    return $transcript_dbID;
 }
 
 1;

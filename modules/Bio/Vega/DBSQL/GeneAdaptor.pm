@@ -140,20 +140,25 @@ sub fetch_stable_id_by_name {
 }
 
 sub reincarnate_gene {
-  my ($self,$gene)=@_;
+    my ($self,$gene)=@_;
 
-  bless $gene, 'Bio::Vega::Gene';
+    my $this_class = 'Bio::Vega::Gene';
 
-  my $author = $self->db->get_AuthorAdaptor->fetch_gene_author($gene->dbID);
-  $gene->gene_author($author);
+    if($gene->isa($this_class)) {
+        # warn "Gene is already a $this_class, possibly due to caching";
+    } else {
+        bless $gene, $this_class;
 
-  my $ta=$self->db->get_TranscriptAdaptor;
-  foreach my $transcript (@{ $gene->get_all_Transcripts }) {
-	 bless $transcript, 'Bio::Vega::Transcript';
-	 $ta->fetch_transcript_author($transcript);
-  }
+        my $author = $self->db->get_AuthorAdaptor->fetch_gene_author($gene->dbID);
+        $gene->gene_author($author);
 
-  return $gene;
+        my $ta=$self->db->get_TranscriptAdaptor;
+        foreach my $transcript (@{ $gene->get_all_Transcripts }) {
+            $ta->reincarnate_transcript($transcript);
+        }
+    }
+
+    return $gene;
 }
 
 sub fetch_all_versions_by_Slice_constraint {
@@ -396,7 +401,9 @@ sub fetch_last_version {
 
     my $last = shift @candidates;
     foreach my $candidate (@candidates) {
-        if($candidate->version > $last->version) {
+        if( ($candidate->version > $last->version)
+         || ( ($candidate->version == $last->version) && ($candidate->is_current > $last->is_current) )
+        ) {
             $last = $candidate;
         }
     }
@@ -573,23 +580,12 @@ sub store {
         # trusting the values that we have just set.
     $self->SUPER::store($gene);
 
-        ## Now store the author and evidence:
-    my $aa = $self->db->get_AuthorAdaptor;
-
-        ##get author_id and store gene_id-author_id in gene_author table
+        ## Now store the gene author
+        # (transcripts' authors and evidence has already been stored by TranscriptAdaptor::store )
+    my $author_adaptor = $self->db->get_AuthorAdaptor;
     my $gene_author=$gene->gene_author;
-    $aa->store($gene_author);
-    $aa->store_gene_author($gene->dbID, $gene_author->dbID);
-
-        ##transcript-author, transcript-evidence
-    my $ta = $self->db->get_TranscriptAdaptor;
-    foreach my $tran (@{ $gene->get_all_Transcripts }) {
-        my $tran_author=$tran->transcript_author;
-        $aa->store($tran_author);
-        $aa->store_transcript_author($tran->dbID, $tran_author->dbID);
-
-        $ta->store_Evidence($tran->dbID, $tran->get_Evidence);
-    }
+    $author_adaptor->store($gene_author);
+    $author_adaptor->store_gene_author($gene->dbID, $gene_author->dbID);
 
     if($gene_state == CHANGED) {
         print STDERR "CHANGED gene:".$gene->stable_id.".".$gene->version."\n-------------------------------------------\n\n";
