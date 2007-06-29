@@ -1,0 +1,54 @@
+#!/usr/local/bin/perl -Tw
+
+use strict;
+use SangerPaths qw{ otter48 ensembl44 bioperl123 core };
+
+use Bio::Otter::ServerScriptSupport;
+
+
+my $DEBUG = 0;
+
+my $server = Bio::Otter::ServerScriptSupport->new;
+my $user = $server->authorized_user;
+
+my $xml;
+eval {
+    my $species_hash = $server->species_hash();
+
+    $xml   .= qq{  <datasets>\n};
+    foreach my $dataset (keys %$species_hash) {
+        $server->log("Testing user '$user' in dataset '$dataset'") if $DEBUG;
+
+        $server->log("Allowing user '$user' access to dataset '$dataset'") if $DEBUG;
+
+        my $species_subhash = $species_hash->{$dataset};
+
+        $xml .= qq{    <dataset name="$dataset">\n};
+        foreach my $key (keys %$species_subhash) {
+            my $lckey = lc($key);
+            $xml .= '      <'.$lckey.'>'.$species_subhash->{$key}.'</'.$lckey.">\n";
+        }
+        $xml .= qq{    </dataset>\n};
+    }
+    $xml .= qq{  </datasets>\n};
+};
+
+if ($@) {
+    $server->error_exit($@);
+} else {
+    $server->send_response($xml, 1);
+}
+
+1;
+
+=pod
+
+=head1 get_datasets
+
+=head1 DESCRIPTION
+
+Returns a list of datasets to the Client.
+Will only return the list the user has access to see
+if the server has been setup (see ../../conf/README.user.pod).
+
+=cut

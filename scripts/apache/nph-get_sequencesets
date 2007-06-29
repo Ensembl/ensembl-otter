@@ -1,0 +1,78 @@
+#!/usr/local/bin/perl -Tw
+
+use strict;
+use SangerPaths qw{ otter48 ensembl44 bioperl123 core };
+
+use Bio::Otter::ServerScriptSupport;
+
+my $server = Bio::Otter::ServerScriptSupport->new;
+my $xml = '';
+
+eval {
+
+    my $dataset      = $server->require_argument('dataset');
+
+    my $odba = $server->otter_dba();
+
+    $server->fetch_Author_obj();  # will break if author cannot be fetched
+
+    $xml   .= qq`  <dataset name="$dataset">\n`;
+    $xml   .= qq`    <sequencesets>\n`;
+
+    my $slice_adaptor     = $odba->get_SliceAdaptor();
+    my $attribute_adaptor = $odba->get_AttributeAdaptor();
+
+    foreach my $ss_slice (@{$slice_adaptor->fetch_all('chromosome', 'Otter')}) {
+
+        my $name = $ss_slice->seq_region_name();
+        my $description  = ''; # default
+        my $write_access = 1;  # default
+        my $hidden       = 0;  # default
+
+        # FIXME: we will need finer, by-author's-name control over visibility/writability of sequence sets
+
+        for my $attrib (@{ $attribute_adaptor->fetch_all_by_Slice( $ss_slice ) }) {
+            my ($code, $value) = ($attrib->code(), $attrib->value());
+            if($code eq 'description') {
+                $description  = $value;
+            }elsif($code eq 'write_access') {
+                $write_access = $value;
+            }elsif($code eq 'hidden') {
+                $hidden       = $value;
+            }
+        }
+
+        $xml .= qq`      <sequenceset name="$name">\n`;
+        $xml .= qq`        <description>$description</description>\n`;
+        $xml .= qq`        <is_hidden>$hidden</is_hidden>\n`;
+        $xml .= qq`        <write_access>$write_access</write_access>\n`;
+        $xml .= qq`      </sequenceset>\n`;
+    }
+
+    $xml .= qq`    </sequencesets>\n`;
+    $xml .= qq`  </dataset>\n`;
+};
+
+if ($@) {
+    $server->error_exit($@);
+} else {
+    $server->send_response($xml, 1);
+}
+
+1;
+
+__END__
+
+=head1 NAME - get_sequencesets
+
+
+=head1 DESCRIPTION
+
+return xml for sequence sets
+
+=head1 AUTHOR
+
+Roy Storey,,,, B<email> rds@sanger.ac.uk
+refactored by Sindhu K.Pillai B<email> sp1@sanger.ac.uk
+Leo Gordon B<email> lg4@sanger.ac.uk - support for the new schema
+

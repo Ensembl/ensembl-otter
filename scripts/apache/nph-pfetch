@@ -1,0 +1,69 @@
+#!/usr/local/bin/perl -Tw
+
+use strict;
+
+use SangerPaths qw{ core };
+use SangerWeb;
+use IO::Socket;
+use CGI;
+
+my $q;
+
+eval {
+    $q = CGI->new;
+    $q->nph(1);
+    
+    my $sw = SangerWeb->new({ cgi => $q });
+    die "Not authorized\n"
+      unless $sw->username;
+};
+
+if ($@) {
+    print $q->header(
+        -status => 403,
+        -type   => 'text/plain',
+        );
+    print $@;
+    exit(1);
+}
+
+my $socket;
+
+eval {
+    # Get request string and de-taint
+    my $req = $q->param('request');
+    $req =~ s/\s+/ /g;
+    $req =~ s/[^\w\-\.\: ]//g;
+
+    die "Empty request\n" unless $req =~ /\S/;
+
+    $socket = IO::Socket::INET->new(
+        PeerAddr 	=> '172.18.62.3',
+        PeerPort 	=> 22400,
+        Proto    	=> 'tcp',
+        Type     	=> SOCK_STREAM,
+        Timeout  	=> 10,
+        ) or die "Connect to pfetch server failed";
+    
+    print $socket $req, "\n";
+};
+
+if ($@) {
+    print $q->header(
+        -status => 500,
+        -type   => 'text/plain',
+        );
+    print $@;
+    exit(1);
+} else {
+    print $q->header(
+        -status => 200,
+        -type   => 'text/plain',
+        );
+    
+    while (<$socket>) {
+        print;
+    }
+    close $socket;
+    exit(0);
+}

@@ -1,0 +1,239 @@
+#!/usr/local/bin/perl -Tw
+
+use strict;
+use SangerPaths qw{ otter48 ensembl44 bioperl123 core };
+
+use Bio::Otter::ServerScriptSupport;
+use Bio::Vega::Transform::Otter;
+use Bio::Vega::Transform::XML;
+use Bio::Vega::ContigLockBroker;
+
+
+{
+    my $server = Bio::Otter::ServerScriptSupport->new;
+
+    my $odba       = $server->otter_dba();
+    my $author_obj = $server->make_Author_obj();
+
+    my $xml_string = $server->require_argument('data');
+
+    my $parser = Bio::Vega::Transform::Otter->new;
+    eval {
+        $parser->parse($xml_string);
+    };
+    if ($@) {
+        $server->error_exit("Failed converting XML to otter [$@]");
+    }
+
+    # check that the assembly is already loaded in the database and
+    # is consistent with the current xml assembly
+
+    my ($slice, $chr_ctg);
+    my %xmlfrag = ();
+    eval {
+        my $cs           = 'chromosome';
+        my $segment_name = $parser->get_AssemblyType->{'assembly_type'};
+        my $chr_slice    = $parser->get_ChromosomeSlice;
+        my $start        = $chr_slice->start;
+        my $end          = $chr_slice->end;
+        my $strand       = $chr_slice->strand;
+        my $cs_version   = $parser->init_CoordSystem_Version;
+
+        $slice = $odba->get_SliceAdaptor()->fetch_by_region(
+                            $cs, $segment_name, $start, $end, $strand, $cs_version);
+
+        $chr_ctg = $parser->get_AssemblySlices->{'chr_ctg'};
+
+        foreach my $piece (@$chr_ctg) {
+            my $xml_ctg_slice = $piece->[1];
+            my $ctg_name      = $xml_ctg_slice->seq_region_name;
+            my $ctg_start     = $xml_ctg_slice->start;
+            my $ctg_end       = $xml_ctg_slice->end;
+            $xmlfrag{$ctg_name}{start} = $ctg_start;
+            $xmlfrag{$ctg_name}{end}   = $ctg_end;
+        }
+        my $slice_projection = $slice->project('contig');
+        foreach my $seg (@$slice_projection) {
+            my $contig_slice = $seg->to_Slice();
+            my $contig_name  = $contig_slice->seq_region_name;
+            my $contig_start = $contig_slice->start;
+            my $contig_end   = $contig_slice->end;
+            if ($xmlfrag{$contig_name}) {
+                if (   ($xmlfrag{$contig_name}{start} != $contig_start)
+                    || ($xmlfrag{$contig_name}{end} != $contig_end))
+                {
+                    $server->error_exit( "Assembly doesn't match for contig $contig_name");
+                }
+                $xmlfrag{$contig_name}{slice} = $contig_slice;
+            } else {
+                $server->error_exit( "Assembly doesn't match for contig $contig_name");
+            }
+        }
+    };
+    if ($@) {
+        $server->error_exit("Failed at comparing xml assembly with database assembly [$@]");
+    }
+    my $output_xml;
+    $odba->begin_work;
+
+    eval {
+    
+        ##check if clones are locked or not
+        my $cb = new Bio::Vega::ContigLockBroker;
+        $server->log("Checking region is locked...");
+        eval { $cb->check_locks_exist_by_slice($slice, $author_obj, $odba); };
+        $server->error_exit("Failed checking locks [$@]") if $@;
+        $server->log("Done checking region is locked.");
+        ##update all contig_info and contig_info_attrib
+        foreach my $piece (@$chr_ctg) {
+            my $ctg_attrib_list = $piece->[2];
+            my $cmp_slice       = $piece->[1];
+            my $ctg_name        = $cmp_slice->seq_region_name;
+            my $ctg_author      = $piece->[3];
+            my $ctg_slice       = $xmlfrag{$ctg_name}{slice};
+
+            insert_ContigInfo_Attributes($odba, $author_obj, $ctg_slice, $ctg_attrib_list);
+            $server->log("Updating contig info-attrib for " . $ctg_slice->seq_region_name);
+        }
+
+        ## strip_incomplete_genes for the xml genes
+        my $xml_genes = $parser->get_Genes || [];
+        strip_incomplete_genes($odba, $server, $xml_genes);
+
+        ##fetch database genes and compare to find the new/modified/deleted genes
+        $server->log("Fetching database genes for comparison...");
+        my $db_genes = $slice->get_all_Genes || [];
+        strip_incomplete_genes($odba, $server, $db_genes);
+        $server->log("Comparing " . scalar(@$db_genes) . " old to " . scalar(@$xml_genes) . " new gene(s)... ");
+
+        my $gene_adaptor = $odba->get_GeneAdaptor;
+        $server->log("Attaching gene to slice ");
+
+        my $time_now = time;
+        foreach my $gene (@$xml_genes) {
+            ##attach gene and its components to the right slice
+            $gene->slice($slice);
+            ##update author in gene and transcript
+            $gene->gene_author($author_obj);
+            my $tref = $gene->get_all_Transcripts();
+            foreach my $tran (@$tref) {
+                $tran->slice($slice);
+                $tran->transcript_author($author_obj);
+                foreach my $exon (@{ $tran->get_all_Exons }) {
+                    $exon->slice($slice);
+                }
+            }
+            ##update all gene and its components in db (new/mod)
+            $gene->is_current(1);
+            $gene_adaptor->store($gene, 0, $time_now);
+        }
+        $server->log("Updated " . scalar(@$xml_genes) . " genes");
+        
+        my %stored_genes_hash = map {$_->stable_id, $_} @$xml_genes;
+        
+        my $del_count = 0;
+        foreach my $dbgene (@$db_genes) {
+            next if $stored_genes_hash{$dbgene->stable_id};
+
+            ##attach gene and its components to the right slice
+            $dbgene->slice($slice);
+            ##update author in gene and transcript
+            $dbgene->gene_author($author_obj);
+            my $tref = $dbgene->get_all_Transcripts();
+            foreach my $tran (@$tref) {
+                $tran->slice($slice);
+                $tran->transcript_author($author_obj);
+                foreach my $exon (@{ $tran->get_all_Exons }) {
+                    $exon->slice($slice);
+                }
+            }
+            ##update all gene and its components in db (del)
+            
+            # Setting is_current to 0 will cause the store method to delete it.
+            $dbgene->is_current(0);
+            $gene_adaptor->store($dbgene, 0, $time_now);
+            $del_count++;
+            $server->log("Deleted gene " . $dbgene->stable_id);
+        }
+        $server->log("Deleted $del_count Genes") if ($del_count);
+
+        my $ab = $odba->get_AnnotationBroker();
+
+            # Because exons can be shared (potentially between genes!),
+            # deleting them is a complex issue:
+        $ab->hide_unused_exons($db_genes, $xml_genes);
+
+        ##update feature_sets
+        ##SimpleFeatures - deletes old features(features not in xml)
+        ##and stores the current featues in databse(features in xml)
+        my $xml_simple_features = $parser->get_SimpleFeatures;
+        my $sfa                 = $odba->get_SimpleFeatureAdaptor;
+        my $db_simple_features  = $sfa->fetch_all_by_Slice($slice);
+
+        my ($delete_sf, $save_sf) = $ab->compare_feature_sets($db_simple_features, $xml_simple_features);
+        foreach my $del_feat (@$delete_sf) {
+            $sfa->remove($del_feat);
+        }
+        $server->log("Deleted " . scalar(@$delete_sf) . " SimpleFeatures") unless $@;
+        foreach my $new_feat (@$save_sf) {
+            $new_feat->slice($slice);
+            $sfa->store($new_feat);
+        }
+        $server->log("Saved " . scalar(@$save_sf) . " SimpleFeatures") unless $@;
+
+        ##assembly_tags are not taken into account here, as they are not part of annotation nor versioned ,
+        ##but may be required in the future
+        ##fetch a new slice, and convert this new_slice to xml so that
+        ##the response xml has all the above changes done in this session
+
+        ##pass on to the xml generator the current set of genes , simple features
+        $output_xml =  Bio::Vega::Transform::XML->new->generate_OtterXML([$slice], $odba, 0, $xml_genes, $xml_simple_features);
+    };
+    if ($@) {
+        $server->error_exit("Failed writing annotations [$@]");
+        $odba->rollback;
+    }
+    else {
+        $odba->commit;
+    }
+    ##send the response
+    $server->send_response($output_xml);
+}
+
+#-------------------------------------------
+#          S U B R O U T I N E S
+#-------------------------------------------
+
+
+sub insert_ContigInfo_Attributes {
+    my ($db, $ctg_author, $ctg_slice, $ctg_attrib_list) = @_;
+    my $contig_info =  Bio::Vega::ContigInfo->new(
+                        -author     => $ctg_author,
+                        -slice      => $ctg_slice,
+                        -attributes => $ctg_attrib_list,
+    );
+    $db->get_ContigInfoAdaptor->store($contig_info);
+}
+
+sub strip_incomplete_genes {
+    my ($odba, $server, $gene_list) = @_;
+    my $truncated_flag;
+    for (my $i = 0 ; $i < @$gene_list ;) {
+        my $gene = $gene_list->[$i];
+        my $gene_name;
+        $truncated_flag = $gene->truncated_flag;
+        my $gene_name_att = $gene->get_all_Attributes('name');
+        $gene_name = $gene_name_att->[0]->value;
+        if ($truncated_flag) {
+            $server->log("Splicing out incomplete gene $gene_name");
+            splice(@$gene_list, $i, 1);
+            next;
+        }
+        else {
+            $i++;
+        }
+    }
+}
+
+1;
+

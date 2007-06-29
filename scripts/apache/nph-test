@@ -1,0 +1,31 @@
+#!/usr/local/bin/perl -Tw
+
+use CGI::Carp 'fatalsToBrowser';
+
+use strict;
+use SangerPaths qw{ otter48 ensembl44 bioperl123 core };
+use SangerWeb;
+
+use Bio::Otter::ServerScriptSupport;
+
+my $server = Bio::Otter::ServerScriptSupport->new;
+my $web = SangerWeb->new({
+    'cgi'   => $server,
+    });
+
+my $user = $web->username;
+
+my $env = "ENV:\n";
+foreach my $var (sort keys %ENV) {
+    $env .= sprintf "%24s  %s\n", $var, $ENV{$var};
+}
+
+$env .= "\nCGI param:\n";
+foreach my $var ($server->param) {
+    $env .= sprintf "%24s  %s\n", $var, $server->param($var);
+}
+
+$env .= sprintf "\nSagnerWeb cgi = %s\n", $web->cgi;
+$env .= sprintf "\nSagnerWeb username = %s\n", $web->username;
+
+$server->send_response($env);
