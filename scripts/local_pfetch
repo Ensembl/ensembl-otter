@@ -19,10 +19,6 @@ use Getopt::Long 'GetOptions';
     unless ($port and $jar_file) {
         die "Must provide both port ('$port') and cookie jar file ('$jar_file')";
     }
-
-    END{
-        print STDERR "local_pfetch on port '$port' exiting\n";
-    }
     
     my $pfetch = LWP::UserAgent->new;
     $pfetch->protocols_allowed([qw{ http https }]);

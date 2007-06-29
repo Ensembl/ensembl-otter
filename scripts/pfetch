@@ -12,7 +12,7 @@ use URI::Escape qw{ uri_escape };
         or die "OTTERLACE_COOKIE_JAR not set\n";
     my $req_str = "request=" . uri_escape("@ARGV");
 
-    my $web = LWP::UserAgent->new;
+    my $pfetch = LWP::UserAgent->new;
     $pfetch->protocols_allowed([qw{ http https }]);
     $pfetch->agent('local_pfetch/0.1 ');
     push @{ $pfetch->requests_redirectable }, 'POST';
@@ -23,7 +23,7 @@ use URI::Escape qw{ uri_escape };
     $request->uri('http://wwwdev.sanger.ac.uk/cgi-bin/otter/48/nph-pfetch');
     $request->content($req_str);
 
-    my $response = $web->request($request);
+    my $response = $pfetch->request($request);
 
     print $response->content;
 }
