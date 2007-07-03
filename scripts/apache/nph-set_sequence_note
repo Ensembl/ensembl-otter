@@ -7,77 +7,91 @@ use Bio::Otter::ServerScriptSupport;
 
 my $server = Bio::Otter::ServerScriptSupport->new;
 
-my $contig_name = $server->require_argument('contig');
-my $timestamp   = $server->require_argument('timestamp');
-my $text        = $server->require_argument('text');
-my $action      = $server->require_argument('action');
-my $aut_name    = $server->authorized_user;
-my $aut_email   = $server->param('email')  || $aut_name;
+eval {
+    my $contig_name = $server->require_argument('contig');
+    my $timestamp   = $server->require_argument('timestamp');
+    my $text        = $server->require_argument('text');
+    my $action      = $server->require_argument('action');
+    my $aut_name    = $server->authorized_user;
+    my $aut_email   = $server->param('email')  || $aut_name;
 
-my $odbc = $server->otter_dba->dbc;
+    my $odbc = $server->otter_dba->dbc;
 
-if($action=~/(change|modify|old)/) {
-    $server->log("Changing a sequence_note");
+    if ($action=~/(change|modify|old)/) {
+        $server->log("Changing a sequence_note");
 
-    my $sth = $odbc->prepare(qq{
-        UPDATE sequence_note
-        SET note = ?
-        WHERE seq_region_id =
-        (SELECT seq_region_id
-            FROM seq_region
-            WHERE name = ?
-              AND author_id =
-            (SELECT author_id
-                FROM author
-                WHERE author_name = ?)
-              AND note_time = FROM_UNIXTIME(?)
-        });
-    my $changed = $sth->execute($text, $contig_name, $aut_name, $timestamp);
-    $server->log("Changed $changed sequence_notes for contig $contig_name");
-
-} elsif($action=~/(add|push|new)/) {
-    $server->log("Adding a new sequence_note");
-
-        # check if such an author existed:
-    my $sth = $odbc->prepare(qq{
-        SELECT author_id
-          FROM author
-         WHERE author_name = ?
-    });
-    $sth->execute($aut_name);
-
-        # add him, if he didn't:
-    if(! (my($aut_id) = $sth->fetchrow())) {
-        $sth = $odbc->prepare(qq{
-            INSERT INTO author (author_name, author_email)
-                 VALUES (?, ?)
-        });
-        $sth->execute($aut_name, $aut_email);
+        my $sth = $odbc->prepare(qq{
+            UPDATE sequence_note
+            SET note = ?
+            WHERE seq_region_id =
+              (SELECT seq_region_id
+                  FROM seq_region
+                  WHERE name = ?)
+            AND author_id =
+              (SELECT author_id
+                  FROM author
+                  WHERE author_name = ?)
+            AND note_time = FROM_UNIXTIME(?)
+            });
+        $server->log(
+            "Arguments = ("
+            . join(', ', map "'$_'", ($text, $contig_name, $aut_name, $timestamp))
+            . ")\n");
+        my $changed = $sth->execute($text, $contig_name, $aut_name, $timestamp);
+        $server->log("Changed $changed sequence_notes for contig $contig_name");
+        die "Failed to change sequence note" unless $changed;
     }
+    elsif ($action=~/(add|push|new)/) {
+        $server->log("Adding a new sequence_note");
 
-    $sth = $odbc->prepare(qq{
-        UPDATE sequence_note
-           SET is_current = 'no'
-         WHERE seq_region_id = (SELECT seq_region_id FROM seq_region where name = ?)
-    });
-    my $non_curr=$sth->execute($contig_name);
-    $server->log("Contig $contig_name has $non_curr non-current sequence_notes now...");
+            # check if such an author existed:
+        my $sth = $odbc->prepare(qq{
+            SELECT author_id
+              FROM author
+             WHERE author_name = ?
+        });
+        $sth->execute($aut_name);
 
-    $sth = $odbc->prepare(qq{
-        INSERT INTO sequence_note (seq_region_id, author_id, note_time, is_current, note)
-             VALUES (
-                     (SELECT seq_region_id FROM seq_region where name=?),
-                     (SELECT author_id FROM author where author_name=?),
-                     FROM_UNIXTIME(?),
-                     'yes',
-                     ?
-             )
-    });
-    my $curr=$sth->execute($contig_name, $aut_name, $timestamp, $text);
-    $server->log( "... and $curr current sequence_notes");
+            # add him, if he didn't:
+        if(! (my($aut_id) = $sth->fetchrow())) {
+            $sth = $odbc->prepare(qq{
+                INSERT INTO author (author_name, author_email)
+                     VALUES (?, ?)
+            });
+            $sth->execute($aut_name, $aut_email);
+        }
+
+        $sth = $odbc->prepare(qq{
+            UPDATE sequence_note
+               SET is_current = 'no'
+             WHERE seq_region_id = (SELECT seq_region_id FROM seq_region where name = ?)
+        });
+        my $non_curr=$sth->execute($contig_name);
+        $server->log("Contig $contig_name has $non_curr non-current sequence_notes now...");
+
+        $sth = $odbc->prepare(qq{
+            INSERT INTO sequence_note (seq_region_id, author_id, note_time, is_current, note)
+                 VALUES (
+                         (SELECT seq_region_id FROM seq_region where name=?),
+                         (SELECT author_id FROM author where author_name=?),
+                         FROM_UNIXTIME(?),
+                         'yes',
+                         ?
+                 )
+        });
+        my $curr = $sth->execute($contig_name, $aut_name, $timestamp, $text);
+        $server->log( "... and $curr current sequence_notes");
+        die "Failed to add new note" unless $curr;
+    }
+    else {
+        die "Unknown action '$action'";
+    }
+};
+if ($@) {
+    $server->error_exit($@);
+} else {
+    $server->send_response("Done\n", 1);
 }
-
-$server->send_response("Done\n", 1);
 
 1;
 
