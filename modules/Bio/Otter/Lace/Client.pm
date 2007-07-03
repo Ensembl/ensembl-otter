@@ -287,6 +287,8 @@ sub _check_for_error {
 sub general_http_dialog {
     my ($self, $psw_attempts_left, $method, $scriptname, $params, $unwrap) = @_;
 
+    $scriptname = "nph-$scriptname";
+
     my $url = $self->url_root.'/'.$scriptname;
     my $paramstring = join('&',
         map { $_.'='.uri_escape($params->{$_}) } (keys %$params)

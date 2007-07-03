@@ -90,7 +90,7 @@ sub error_exit {
 sub odba_to_sdba {
     my ($sq, $odba, $pipehead, $metakey) = @_;
 
-    server_log("called with: ".join(' ', map { "$_=".$sq->getarg($_) } @{$sq->getargs()} ));
+    server_log("called with: ".join(' ', map { "$_=".$sq->param($_) } $sq->param ));
 
     $metakey ||= '';
 
@@ -142,8 +142,8 @@ sub odba_to_sdba {
 sub get_mapper_dba {
     my ($sq, $odba, $sdba, $pipehead) = @_;
 
-    my $metakey    = $sq->getarg('metakey')    || ''; # defaults to pipeline
-    my $target_asm = $sq->getarg('target_asm') || undef;
+    my $metakey    = $sq->param('metakey')    || ''; # defaults to pipeline
+    my $target_asm = $sq->param('target_asm') || undef;
 
     if(!$metakey) {
         server_log("Working with pipeline_db directly, no remapping is needed.");
@@ -171,9 +171,9 @@ sub get_mapper_dba {
 
         if($asm_is_equiv{$sdb_asm}) { # we can simply rename instead of mapping
 
-            my $chr_name = $sq->getarg('name');
+            my $chr_name = $sq->param('name');
             server_log("This chr is equivalent to '$chr_name' in our reference '$sdb_asm' assembly");
-            $sq->setarg('csver', $sdb_asm);
+            $sq->param('csver', $sdb_asm);
             return;
 
         } else { # assemblies are guaranteed to differ!
@@ -214,16 +214,16 @@ sub get_slice { # codebase-independent version for scripts
 
     my $slice;
 
-    my $cs    = $sq->getarg('cs') || 'chromosome';
-    my $name  = $sq->getarg('name');
-    my $type  = $sq->getarg('type');
-    my $start = $sq->getarg('start');
-    my $end   = $sq->getarg('end');
+    my $cs    = $sq->param('cs') || 'chromosome';
+    my $name  = $sq->param('name');
+    my $type  = $sq->param('type');
+    my $start = $sq->param('start');
+    my $end   = $sq->param('end');
 
     if($pipehead) {
 
-        my $strand= $sq->getarg('strand');
-        my $csver = $sq->getarg('csver');
+        my $strand= $sq->param('strand');
+        my $csver = $sq->param('csver');
         if(!$csver && ($cs eq 'chromosome')) {
             $csver = 'Otter';
         }
@@ -235,7 +235,7 @@ sub get_slice { # codebase-independent version for scripts
         my $segment_attr = (($cs eq 'chromosome') && ($csver eq 'Otter'))
 			? 'type'
 		    : 'name';
-        my $segment_name = $sq->getarg($segment_attr);
+        my $segment_name = $sq->param($segment_attr);
 
         error_exit($sq, "$cs '$segment_attr' attribute not set ") unless $segment_name;
 
@@ -308,9 +308,9 @@ sub fetch_mapped_features {
 
     my $fetching_method = shift @$call_parms;
 
-    my $cs       = $sq->getarg('cs')      || 'chromosome';
-    my $csver    = $sq->getarg('csver')   || undef;
-    my $metakey  = $sq->getarg('metakey') || ''; # defaults to pipeline
+    my $cs       = $sq->param('cs')      || 'chromosome';
+    my $csver    = $sq->param('csver')   || undef;
+    my $metakey  = $sq->param('metakey') || ''; # defaults to pipeline
 
     my $odba = get_DBAdaptor_from_CGI_species($sq, $OTTER_SPECIES, $pipehead);
     my $sdba = odba_to_sdba($sq, $odba, $pipehead, $metakey);
@@ -378,8 +378,8 @@ sub fetch_mapped_features {
 sub get_Author_from_CGI{
   my ($sq,$pipehead) = @_;
   error_exit('', 'I need a CGI object') unless $sq && UNIVERSAL::isa($sq, 'CGI');
-  my $auth_name = $sq->getarg('author') || error_exit($sq, "Need author for this script...");
-  my $email     = $sq->getarg('email')  || error_exit($sq, "Need email for this script...");
+  my $auth_name = $sq->param('author') || error_exit($sq, "Need author for this script...");
+  my $email     = $sq->param('email')  || error_exit($sq, "Need email for this script...");
   my $author;
   unless($pipehead) {
 	 $pipehead=0;
@@ -404,7 +404,7 @@ sub get_DBAdaptor_from_CGI_species{
 
     ####################################################################
     # Check the dataset has been entered
-    my $dataset = $sq->getarg('dataset') || error_exit($sq, "No dataset type entered.");
+    my $dataset = $sq->param('dataset') || error_exit($sq, "No dataset type entered.");
 
     # get the overriding dataset options from species.dat 
     my $dbinfo   = $SPECIES->{$dataset} || error_exit($sq, "Unknown data set $dataset");
@@ -416,7 +416,7 @@ sub get_DBAdaptor_from_CGI_species{
     my $headcode  = $dbinfo->{HEADCODE} || $defaults->{HEADCODE};
     $pipehead ||= $headcode;
 
-    my $type     = $sq->getarg('type') || $dbinfo->{TYPE} || $defaults->{TYPE};
+    my $type     = $sq->param('type') || $dbinfo->{TYPE} || $defaults->{TYPE};
 
     ########## AND DB CONNECTION #######################################
 

@@ -2,7 +2,6 @@ package Bio::Otter::ServerScriptSupport;
 
 use strict;
 
-use OtterDefs;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::Otter::DBSQL::DBAdaptor;
 use Bio::Vega::DBSQL::DBAdaptor;
@@ -11,20 +10,17 @@ use Bio::Vega::Author;
 use Bio::Otter::Version;
 use Bio::Otter::Lace::TempFile;
 
-use base 'Bio::Otter::ServerQuery';
+use SangerWeb;
+
+use base 'CGI';
+
+CGI->nph(1);
 
 sub new {
-    my $pack = shift @_;
-
-    $|=1; # autoflush
-
-    my $self = $pack->SUPER::new(@_);                       # ServerQuery is incorporated
-
-    if( defined($ENV{SERVER_SOFTWARE})
-    && ( $ENV{SERVER_SOFTWARE} =~ /libwww-perl-daemon/)) {
-        $self->nph(1);
-    }
-
+    my $pkg = shift;
+    
+    my $self = $pkg->SUPER::new(@_);
+    $self->authorized_user;
     return $self;
 }
 
@@ -33,20 +29,102 @@ sub new {
 sub running_headcode {
     my $self = shift @_;
 
-    return $ENV{PIPEHEAD};    # the actual running code (0=>rel.19, 1=>rel.20+)
+    #return $ENV{PIPEHEAD};    # the actual running code (0=>rel.19, 1=>rel.20+)
+    return 1;
 }
 
 sub csn {   # needed by logging mechanism
     my $self = shift @_;
 
-    my @syll = split(/\//, $ENV{CURRENT_SCRIPT_NAME} || $0);
-    return pop(@syll);
+    my $csn;
+    unless ($csn = $self->{'_current_script_name'}) {
+        ($csn) = $ENV{'SCRIPT_NAME'} =~ m{([^/]+)$};
+        die "Can't parse script name from '$ENV{SCRIPT_NAME}'"
+          unless $csn;
+        $self->{'_current_script_name'} = $csn;
+    }
+    return $csn
 }
 
-sub species_hash {      # could move out into a separate class, living on top of species.dat
+sub otter_version {
+    my ($self) = @_;
+    
+    my $ver;
+    unless ($ver = $self->{'_otter_version'}) {
+        ($ver) = $ENV{'SCRIPT_NAME'} =~ m{/otter/(\d+)/};
+        die "Unexpected script location '$ENV{SCRIPT_NAME}'"
+          unless $ver;
+        $self->{'_otter_version'} = $ver;
+    }
+    return $ver;
+}
+
+sub server_root {
+    my ($self) = @_;
+    
+    my $root;
+    unless ($root = $self->{'server_root'}) {
+        $root = $ENV{'DOCUMENT_ROOT'};
+        # Trim off the trailing /dir
+        $root =~ s{/[^/]+$}{}
+          or die "Unexpected DOCUMENT_ROOT format '$ENV{DOCUMENT_ROOT}'";
+        $self->{'server_root'} = $root;
+    }
+    return $root;
+}
+
+sub species_hash {
     my $self = shift @_;
 
-    return $OTTER_SPECIES; # inherited from OtterDefs (ultimately from species.dat)
+    my $sp;
+    unless ($sp = $self->{'_species_hash'}) {
+        # '/GPFS/data1/WWW/SANGER_docs/data/otter/48/species.dat';
+        my $file = join('/', $self->server_root, 'data', 'otter', $self->otter_version, 'species.dat');
+
+        open my $dat, $file or die "Can't read species file '$file' : $!";
+
+        my $cursect = undef;
+        my $defhash = {};
+        my $curhash = undef;
+
+        while (<$dat>) {
+            next if /^\#/;
+            next unless /\w+/;
+            chomp;
+
+            if (/\[(.*)\]/) {
+                if (!defined($cursect) && $1 ne "defaults") {
+                    die "ERROR: First section in species.dat should be defaults\n";
+                }
+                elsif ($1 eq "defaults") {
+	                #print STDERR "Got default section\n";
+                    $curhash = $defhash;
+                }
+                else {
+                    $curhash = {};
+                    foreach my $key (keys %$defhash) {
+                        $key =~ tr/a-z/A-Z/;
+                        $curhash->{$key} = $defhash->{$key};
+                    }
+                }
+                $cursect = $1;
+                $sp->{$cursect} = $curhash;
+
+            }
+            elsif (/(\S+)\s+(\S+)/) {
+                #print "Reading entry $1 $2\n";
+                $curhash->{$1} = $2;
+            }
+        }
+        
+        close $dat or die "Error reading '$file' : $!";
+        
+        # Have finished with defaults, so we can remove them.
+        delete $sp->{'defaults'};
+        
+        $self->{'_species_hash'} = $sp;
+    }
+    return $sp;
 }
 
 sub dataset_param {     # could move out into a separate class, living on top of species.dat
@@ -70,6 +148,21 @@ sub dataset_headcode {
     return $self->dataset_param('HEADCODE');
 }
 
+sub authorized_user {
+    my ($self) = @_;
+    
+    my $user;
+    unless ($user = $self->{'_authorized_user'}) {
+        my $sw = SangerWeb->new({ cgi => $self });
+        if ($user = $sw->username) {
+            $self->{'_authorized_user'} = $user;
+        } else {
+            $self->unauth_exit('User not authorized');
+        }
+    }
+    return $user;
+}
+
 ############## I/O: ################################
 
 sub log {
@@ -81,17 +174,35 @@ sub log {
 sub send_response{
     my ($self, $response, $wrap) = @_;
 
-    $self->log('Sending the response =====================');
-    print $self->header('text/plain');
+    print $self->header(
+        -status => 200,
+        -type   => 'text/plain',
+        );
 
-    if($wrap) {
-        print qq`<?xml version="1.0" encoding="UTF-8"?>\n`;
-        print qq`<otter schemaVersion="$SCHEMA_VERSION" xmlVersion="$XML_VERSION">\n`;
-        print $response;
-        print "</otter>\n";
+    if ($wrap) {
+        print $self->wrap_response($response);
     } else {
         print $response;
     }
+}
+
+sub wrap_response {
+    my ($self, $response) = @_;
+    
+    return qq{<?xml version="1.0" encoding="UTF-8"?>\n}
+      . qq{<otter schemaVersion="$SCHEMA_VERSION" xmlVersion="$XML_VERSION">\n}
+      . $response
+      . qq{</otter>\n};
+}
+
+sub unauth_exit {
+    my ($self, $reason) = @_;
+    
+    print $self->header(
+        -status => 403,
+        -type   => 'text/plain',
+        ), $reason;
+    exit(1);
 }
 
 sub error_exit {
@@ -99,7 +210,11 @@ sub error_exit {
 
     chomp($reason);
 
-    $self->send_response(" <response>\n    ERROR:\n$reason\n </response>", 1);
+    print $self->header(
+        -status => 500,
+        -type   => 'text/plain',
+        ),
+      $self->wrap_response(" <response>\n    ERROR: $reason\n </response>\n");
     $self->log("ERROR: $reason\n");
 
     exit(1);
@@ -108,12 +223,12 @@ sub error_exit {
 sub require_argument {
     my ($self, $argname) = @_;
 
-    my $value = $self->getarg($argname);
+    my $value = $self->param($argname);
     
-    if(!defined($value)) {
-        $self->error_exit("No '$argname' argument defined");
-    } else {
+    if (defined $value) {
         return $value;
+    } else {
+        $self->error_exit("No '$argname' argument defined");
     }
 }
 
@@ -148,9 +263,10 @@ sub tempfile_from_argument {
 ############# Creation of an Author object from arguments #######
 
 sub make_Author_obj {
-    my $self = shift @_;
+    my ($self, $author_name) = @_;
 
-    my $author_name  = $self->require_argument('author');
+    $author_name ||= $self->authorized_user;
+    
     my $author_email = $self->require_argument('email');
     my $class        = $self->running_headcode() ? 'Bio::Vega::Author' : 'Bio::Otter::Author';
 
@@ -158,13 +274,14 @@ sub make_Author_obj {
 }
 
 sub fetch_Author_obj {
-    my $self = shift @_;
+    my ($self, $author_name) = @_;
+
+    $author_name ||= $self->authorized_user;
 
     if($self->running_headcode() != $self->dataset_headcode()) {
         $self->error_exit("RunningHeadcode != DatasetHeadcode, cannot fetch Author");
     }
 
-    my $author_name    = $self->require_argument('author');
     my $author_adaptor = $self->otter_dba()->get_AuthorAdaptor();
 
     my $author_obj;
@@ -173,7 +290,7 @@ sub fetch_Author_obj {
     };
     if($@){
         eval{
-            $author_obj = $author_adaptor->fetch_by_name($OTTER_GLOBAL_ACCESS_USER);
+            $author_obj = $author_adaptor->fetch_by_name('GLOBAL_READONLY');
         };
         if($@){
             $self->error_exit("Failed to get an author.\n$@") unless $author_obj;
@@ -240,7 +357,7 @@ sub otter_dba {
     }
 
     if(!$running_headcode && !$dataset_headcode) {
-        if(my $type = $self->getarg('type') || $self->dataset_param('TYPE')) {
+        if(my $type = $self->param('type') || $self->dataset_param('TYPE')) {
             $self->log("Assembly_type='" . $odba->assembly_type($type)."'");
         }
     }
@@ -492,15 +609,15 @@ sub fetch_mapped_features {
 
     my $fetching_method = shift @$call_parms;
 
-    my $cs           = $self->getarg('cs')           || 'chromosome';
-    my $csver_orig   = $self->getarg('csver')        || undef;
-    my $csver_remote = $self->getarg('csver_remote') || undef;
-    my $metakey      = $self->getarg('metakey')      || ''; # defaults to pipeline
-    my $name         = $self->getarg('name');
-    my $type         = $self->getarg('type');
-    my $start        = $self->getarg('start');
-    my $end          = $self->getarg('end');
-    my $strand       = $self->getarg('strand');
+    my $cs           = $self->param('cs')           || 'chromosome';
+    my $csver_orig   = $self->param('csver')        || undef;
+    my $csver_remote = $self->param('csver_remote') || undef;
+    my $metakey      = $self->param('metakey')      || ''; # defaults to pipeline
+    my $name         = $self->param('name');
+    my $type         = $self->param('type');
+    my $start        = $self->param('start');
+    my $end          = $self->param('end');
+    my $strand       = $self->param('strand');
 
     my $sdba = $self->satellite_dba( $metakey );
     my ($mdba, $csver) = $self->get_mapper_dba( $metakey, $cs, $csver_orig, $csver_remote, $name, $type);
