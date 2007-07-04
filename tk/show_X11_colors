@@ -30,7 +30,7 @@ use CanvasWindow;
         next if /^\!/;   # Skip comment lines
         my ($red, $green, $blue, $name) = split /\s+/, $_, 4;
         
-        warn join(',', map "'$_'", ($red, $green, $blue, $name)), "\n";
+        #warn join(',', map "'$_'", ($red, $green, $blue, $name)), "\n";
         
         # Skip the names with spaces such as "old lace", which will still
         # be shown as their CamelCase equivalents like "OldLace".
@@ -41,7 +41,7 @@ use CanvasWindow;
 
         my $hex = sprintf "#%02x%02x%02x", $red, $green, $blue;
 
-        warn "$name = $hex\n";
+        #warn "$name = $hex\n";
         
         my $tags = [$name];
 

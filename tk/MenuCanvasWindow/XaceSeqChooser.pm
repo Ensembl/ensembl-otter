@@ -6,7 +6,6 @@ use strict;
 use 5.006_001;  # For qr support
 use Carp qw{ cluck confess };
 use Tk::Dialog;
-use Tk qw{ exit };
 use Symbol 'gensym';
 use Scalar::Util 'weaken';
 
@@ -18,6 +17,7 @@ use Hum::Ace::Assembly;
 use Hum::Ace::AceText;
 use Hum::Ace;
 use Hum::Analysis::Factory::ExonLocator;
+use Hum::Conf qw{ PFETCH_SERVER_LIST };
 use EditWindow::Dotter;
 use EditWindow::Clone;
 use MenuCanvasWindow::ExonCanvas;
@@ -359,7 +359,9 @@ sub launch_xace {
             $self->get_xwindow_id_from_readlock;
         }
         elsif (defined($pid)) {
+            no warnings;
             exec('xace', '-fmapcutcoords', $path);
+            exit(1);
         }
         else {
             confess "Error: can't fork : $!";
@@ -668,7 +670,6 @@ sub populate_menus {
     my $run_dotter_command = sub { $self->run_dotter };
     $tools_menu->add('command',
         -label          => 'Dotter fMap' . ($showing_zmap ? '/ZMap' : '').' hit',
-        -hidemargin     => 1,
         -command        => $run_dotter_command,
         -accelerator    => 'Ctrl+.',
         -underline      => 0,
@@ -676,6 +677,15 @@ sub populate_menus {
     $top->bind('<Control-period>',  $run_dotter_command);
     $top->bind('<Control-greater>', $run_dotter_command);
 
+    # (Re)start local pfetch server
+    if ($PFETCH_SERVER_LIST->[0][0] eq 'localhost') {
+        $tools_menu->add('command',
+            -label          => 'Restart local pfetch server',
+            -command        => sub{ $self->AceDatabase->Client->fork_local_pfetch_server },
+            #-accelerator    => 'Ctrl+P',
+            -underline      => 0,
+            );
+    }
 
     $subseq->bind('<Destroy>', sub{
         $self = undef;

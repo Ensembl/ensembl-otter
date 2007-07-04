@@ -6,7 +6,6 @@ use Exporter;
 use X11::XRemote;
 use XML::Simple;
 
-
 our @ISA    = qw(Exporter);
 our @EXPORT = qw(parse_params 
                  parse_request
@@ -130,14 +129,13 @@ sub fork_exec {
     my ($command) = @_;
     
     if (my $pid = fork) {
-        #$SIG{'CHLD'} = 'IGNORE';
         return $pid;
     }
     elsif (defined $pid) {
     
         exec @$command;
         warn "exec(@$command) failed : $!";
-        CORE::exit();
+        CORE::exit();   # Still triggers DESTROY
     }
     else {
         die "fork failed: $!";

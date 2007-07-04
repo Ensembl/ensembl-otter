@@ -4,7 +4,9 @@
 
 use strict;
 use CanvasWindow::DataSetChooser;
+use EditWindow::Password;
 use Bio::Otter::Lace::Defaults;
+use POSIX ":sys_wait_h";
 
 {
     # Become leader of process group so that "kill -$$" at end works
@@ -18,66 +20,40 @@ use Bio::Otter::Lace::Defaults;
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
     $cl->cleanup_log_dir('otterlace');
     $cl->make_log_file('otterlace');
+    $cl->fork_local_pfetch_server;
 
     my $pipe_name = Bio::Otter::Lace::Defaults::pipe_name();
 
     my $mw = CanvasWindow::MainWindow->new("Choose DataSet [$pipe_name]");
+    $mw->DoWhenIdle(
+        # Avoid Zombies.
+        # Get Tk to clean up dead processes for us when it isn't busy.
+        sub {
+            while ((my $dead_pid = waitpid(-1, WNOHANG)) > 0) {
+                warn "Process $dead_pid exited $?\n";
+            }
+        });
     my $dc = CanvasWindow::DataSetChooser->new($mw);
     $dc->Client($cl);
 
     my $prompt_sub = sub {
-        my $self   = shift;
-        my $user   = $self->username();
-        my $pass   = '';
-        my $dialog = $mw->toplevel->DialogBox(
-                                              -title   => "Please enter your password ($user)", 
-                                              -buttons => [qw(Ok)], -default_button => 'Ok',
-                                              -width   => 100,
-                                              );
-        my $uframe = $dialog->add('Frame')->pack(-side => 'top');
-        $uframe->Label(-text => 'Username: ')->pack(-side => 'left');
-        $uframe->Entry(
-                       -textvariable => \$user,
-                       -width        => 20,
-                       -foreground   => 'black',
-                       -background   => 'white',
-                       -relief       => 'sunken',
-                                  #-state        => 'disabled',
-                       )->pack(
-                               -side => 'left',
-                               -expand => 1,
-                               -fill => 'x'
-                               );
-        my $pframe = $dialog->add('Frame')->pack(-side => 'top');
-        $pframe->Label(-text => 'Password: ')->pack(-side => 'left');
-        $pframe->Entry(
-                       -textvariable => \$pass,
-                       -show         => '*',
-                       -width        => 20,
-                       -foreground   => 'black',
-                       -background   => 'white',
-                       -relief       => 'sunken',
-                       )->pack(
-                               -side =>'left',
-                               -expand => 1,
-                               -fill => 'x'
-                               );
-        $dialog->resizable(1,0);
-        my $result = $dialog->Show();
-        if($result eq 'Ok'){
-            if($user ne $self->username){
-                warn "Changing user from '" . $self->username . "' to '$user' \n";
-                my $c = Bio::Otter::Lace::Defaults::get_config_list();
-                # this gets the last array member which is the command line options Config::IniFiles hash
-                $c->[$#$c]->{'client'}->{'author'} = $user;
-            }
-            $self->password($pass);
-        }
-        $self = undef;
-    };
+        my $self = shift;
+        my $user = $self->author;
+        
+        warn "Going to ask for password for '$user'";
+        
+        my $pass = '';
+        my $pass_win = EditWindow::Password->new($mw->Toplevel(-title => 'Enter password'));
+        $pass_win->prompt_string("Enter password for '$user'");
+        $pass_win->passref(\$pass);
+        $pass_win->initialise;
+        $pass_win->get_password;
+        return $pass;
+        };
 
     $cl->password_prompt($prompt_sub);
     $dc->draw;
+
 
     Tk::MainLoop();
     
