@@ -173,7 +173,7 @@ sub recover_old_sessions_dialogue {
     
     if (@$lace_sessions) {
         my $text = "Recover these lace sessions?\n\n"
-            . join('', map $ldf->make_title($_)."\n in $_\n\n", @$lace_sessions);
+          . join('', map $ldf->make_title($_) . "\n  in $_\n", @$lace_sessions);
         
         # Ask the user if changes should be saved
         my $dialog = $self->canvas->toplevel->Dialog(
