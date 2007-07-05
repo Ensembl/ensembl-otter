@@ -9,6 +9,9 @@ use LWP;
 use Symbol 'gensym';
 use URI::Escape qw{ uri_escape };
 use MIME::Base64;
+use HTTP::Cookies;
+
+use Hum::Conf qw{ PFETCH_SERVER_LIST };
 
 use Bio::Otter::Author;
 use Bio::Otter::CloneLock;
@@ -33,6 +36,7 @@ use Bio::Otter::Transform::CloneSequences;
 sub new {
     my( $pkg ) = @_;
     
+    $ENV{'OTTERLACE_COOKIE_JAR'} ||= "$ENV{HOME}/.otter/cookie_jar";
     return bless {}, $pkg;
 }
 
@@ -50,6 +54,14 @@ sub port {
     warn "Set using the Config file please.\n" if $port;
 
     return $self->option_from_array([qw( client port )]);
+}
+
+sub version {
+    my( $self, $version ) = @_;
+    
+    warn "Set using the Config file please.\n" if $version;
+
+    return $self->option_from_array([qw( client version )]);
 }
 
 sub write_access {
@@ -83,6 +95,25 @@ sub debug{
 
     return $self->option_from_array([qw( client debug )]) ? 1 : 0;
 }
+
+sub password_attempts {
+    my( $self, $password_attempts ) = @_;
+    
+    if (defined $password_attempts) {
+        $self->{'_password_attempts'} = $password_attempts;
+    }
+    return $self->{'_password_attempts'} || 3;
+}
+
+sub pfetch_server_pid {
+    my( $self, $pfetch_server_pid ) = @_;
+    
+    if ($pfetch_server_pid) {
+        $self->{'_pfetch_server_pid'} = $pfetch_server_pid;
+    }
+    return $self->{'_pfetch_server_pid'};
+}
+
 
 sub get_log_dir {
     my( $self ) = @_;
@@ -193,20 +224,36 @@ sub get_DataSet_by_name {
     confess "No such DataSet '$name'";
 }
 
-sub username{
-    my $self = shift;
-    warn "get only, use author() method to set" if @_;
-    return $self->author();
-}
-sub password{
-    my ($self, $pass) = @_;
-    if($pass){
-        $self->{'__password'} = $pass;
+sub fork_local_pfetch_server {
+    my ($self) = @_;
+    
+    my ($host, $port) = @{$PFETCH_SERVER_LIST->[0]};
+    if ($host ne 'localhost') {
+        # Only run local_pfetch if host is set to localhost
+        return 0;
     }
-    return $self->{'__password'} || $self->option_from_array([qw( client password )]);
+    
+    if (my $pid = $self->pfetch_server_pid) {
+        # 15 is TERM
+        kill 15, $pid;
+    }
+    
+    if (my $pid = fork) {
+        $self->pfetch_server_pid($pid);
+        return 1;
+    }
+    elsif (defined $pid) {
+        exec('local_pfetch', -port => $port);
+        exit(1);    # If exec fails
+    }
+    else {
+        die "Can't fork local_pfetch server: $!";
+    }
 }
+
 sub password_prompt{
     my ($self, $callback) = @_;
+    
     if($callback){
         $self->{'_password_prompt_callback'} = $callback;
     }
@@ -214,7 +261,7 @@ sub password_prompt{
     unless($callback){
         $callback = sub {
             my $self = shift;
-            my $user = $self->username();
+            my $user = $self->author;
             $self->password(Hum::EnsCmdLineDB::prompt_for_password("Please enter your password ($user): "));
         };
         $self->{'_password_prompt_callback'} = $callback;
@@ -222,118 +269,160 @@ sub password_prompt{
     return $callback;
 }
 
+sub authorize {
+    my ($self) = @_;
+    
+    my $user = $self->author;
+    my $password = $self->password_prompt()->($self)
+      or die "No password given";
+    my $req = HTTP::Request->new;
+    $req->method('POST');
+    $req->uri("https://enigma.sanger.ac.uk/LOGIN");
+    $req->content_type('application/x-www-form-urlencoded');
+    $req->content("credential_0=$user&credential_1=$password&destination=/");
+
+    my $web = $self->get_UserAgent;
+    my $response = $web->request($req);
+
+    if ($response->is_success) {
+        # Cookie will have been given to UserAgent
+        warn sprintf "Authorized OK: %s (%s)\n", $response->status_line;
+        $web->cookie_jar->save
+          or die "Failed to save cookie";
+        return 1;
+    } else {
+        warn sprintf "Authorize failed: %s (%s)\n", $response->status_line;
+        return;
+    }
+}
+
 # ---- HTTP protocol related routines:
 
 sub get_UserAgent {
     my( $self ) = @_;
     
-    return LWP::UserAgent->new(timeout => 9000);
-}
-sub new_http_request{
-    my ($self, $method) = @_;
-    my $request = HTTP::Request->new();
-    $request->method($method || 'GET');
-
-    if(defined(my $password = $self->password())){
-        my $encoded = MIME::Base64::encode_base64($self->username() . ":$password");
-        $request->header(Authorization => qq`Basic $encoded`);
+    my $ua;
+    unless ($ua = $self->{'_lwp_useragent'}) {
+        $ua = LWP::UserAgent->new(timeout => 9000);
+        $ua->protocols_allowed([qw{ http https }]);
+        $ua->agent('LoginTest/0.1 ');
+        push @{ $ua->requests_redirectable }, 'POST';
+        $ua->cookie_jar(HTTP::Cookies->new(
+            file => $ENV{'OTTERLACE_COOKIE_JAR'},
+            ));
     }
-    return $request;
+    return $ua;
 }
+
 sub url_root {
     my( $self ) = @_;
     
-    my $host = $self->host or confess "host not set";
-    my $port = $self->port or confess "port not set";
+    my $host    = $self->host    or confess "host not set";
+    my $port    = $self->port    or confess "port not set";
+    my $version = $self->version or confess "version not set";
     $port =~ s/\D//g; # port only wants to be a number! no spaces etc
-    return "http://$host:$port/perl";
+    return "http://$host:$port/cgi-bin/otter/$version";
 }
 
-=pod 
-
-=head1 _check_for_error
-
-     Args: HTTP::Response Obj, $dont_confess_otter_errors Boolean
-  Returns: HTTP::Response->content after checking it for errors
-    and "otter" errors.  It will confess (see B<Carp>) the 
-    error if there is an error unless Boolean is true, in which 
-    case it returns undef. 
-
-=cut
-
-sub _check_for_error {
-    my( $self, $response, $dont_confess_otter_errors, $unwrap ) = @_;
-
+# Returns the content string from the http response object
+# with the <otter> tags removed.
+sub otter_response_content {
+    my ($self, $method, $scriptname, $params) = @_;
+    
+    my $response = $self->general_http_dialog($method, $scriptname, $params);
+    
     my $xml = $response->content();
 
-    if($unwrap && $xml =~ m{<otter[^\>]*\>\s*(.*)</otter>\s*}s) {
-        $xml = $1;
-    }
-
-    if ($xml =~ m{<response>(.+?)</response>}s) {
-        # response can be empty on success
-        my $err = $1;
-        if($err =~ /\w/){
-            return if $dont_confess_otter_errors;
-            confess $err;
+    if (my ($content) = $xml =~ m{<otter[^\>]*\>\s*(.*)</otter>}s) {
+        if ($self->debug) {
+            warn $self->response_info($scriptname, $params, length($content));
         }
-    }elsif($response->is_error()){
-        my $err = $response->message() . "\nServer replied:\n" . $response->content();
-        confess $err;
+        return $content;
+    } else {
+        confess "No <otter> tags in response content: [$xml]";
+    }
+}
+
+# Returns the full content string from the http response object
+sub http_response_content {
+    my ($self, $method, $scriptname, $params) = @_;
+    
+    my $response = $self->general_http_dialog($method, $scriptname, $params);
+    
+    my $xml = $response->content();
+
+    if ($self->debug) {
+        warn $self->response_info($scriptname, $params, length($xml));
     }
     return $xml;
 }
 
+sub response_info {
+    my ($self, $scriptname, $params, $length) = @_;
+    
+    my $ana = $params->{'analysis'}
+      ? ":$params->{analysis}"
+      : '';
+    return "$scriptname$ana - client received $length bytes from server\n";
+}
+
 sub general_http_dialog {
-    my ($self, $psw_attempts_left, $method, $scriptname, $params, $unwrap) = @_;
+    my ($self, $method, $scriptname, $params) = @_;
+
+    my $password_attempts = $self->password_attempts;
+    my $response;
+    for (my $i = 0; $i < $password_attempts; $i++) {
+        $response = $self->do_http_request($method, $scriptname, $params);
+        last if $response->is_success;
+        if ($response->code == 403) {
+            # Unauthorized
+            $self->authorize;
+        } else {
+            confess sprintf "%d (%s)", $response->code, $response->content;
+        }
+    }
+    return $response;
+}
+
+sub escaped_param_string {
+    my ($self, $params) = @_;
+    
+    return join '&', map { $_ . '=' . uri_escape($params->{$_}) } (keys %$params);
+}
+
+sub do_http_request {
+    my ($self, $method, $scriptname, $params) = @_;
 
     $scriptname = "nph-$scriptname";
 
     my $url = $self->url_root.'/'.$scriptname;
-    my $paramstring = join('&',
-        map { $_.'='.uri_escape($params->{$_}) } (keys %$params)
-    );
-    my $try_password = 0; # first try without it
-    my $content      = '';
+    my $paramstring = $self->escaped_param_string($params);
 
-    do {
-        if($try_password++) { # definitely try it next time
-            $self->password_prompt()->($self);
-            my $pass = $self->password || '';
-            warn "Attempting to connect using password '" . '*' x length($pass) . "'\n";
+    my $request = HTTP::Request->new;
+    $request->method($method);
+
+    if ($method eq 'GET') {
+        my $get = $url . ($paramstring ? "?$paramstring" : '');
+        $request->uri($get);
+
+        if($self->debug()) {
+            warn "GET  $get\n";
         }
-        my $request = $self->new_http_request($method);
-        if ($method eq 'GET') {
-            my $get = $url . ($paramstring ? "?$paramstring" : '');
-            $request->uri($get);
-            if($self->debug()) {
-                warn "GET  $get\n";
-            }
-        } elsif ($method eq 'POST') {
-            $request->uri($url);
-            $request->content($paramstring);
+    }
+    elsif ($method eq 'POST') {
+        $request->uri($url);
+        $request->content($paramstring);
 
-            if($self->debug()) {
-                warn "POST  $url\n";
-            }
-            #warn "paramstring: $paramstring";
-        } else {
-            confess "method '$method' is not supported";
+        if($self->debug()) {
+            warn "POST  $url\n";
         }
-
-        my $response = $self->get_UserAgent->request($request);
-        $content = $self->_check_for_error($response, $psw_attempts_left, $unwrap);
-    } while ($psw_attempts_left-- && !$content);
-
-    if($self->debug()) {
-        warn "[$scriptname"
-              .($params->{analysis} ? ':'.$params->{analysis} : '')
-              ."] CLIENT RECEIVED ["
-              .length($content)
-              ."] bytes over the TCP connection\n\n";
+        #warn "paramstring: $paramstring";
+    }
+    else {
+        confess "method '$method' is not supported";
     }
 
-    return $content;
+    return $self->get_UserAgent->request($request);
 }
 
 # ---- specific HTTP-requests:
@@ -398,8 +487,7 @@ sub status_refresh_for_DataSet_SequenceSet{
 
     my $pipehead = Bio::Otter::Lace::Defaults::pipehead();
 
-    my $response = $self->general_http_dialog(
-        0,
+    my $response = $self->otter_response_content(
         'GET',
         'get_analyses_status',
         {
@@ -407,7 +495,6 @@ sub status_refresh_for_DataSet_SequenceSet{
             'type'     => $ss->name(),
             'pipehead'  => $pipehead ? 1 : 0,
         },
-        1,
     );
 
     my %status_hash = ();
@@ -450,8 +537,7 @@ sub find_string_match_in_clones {
     my $qnames_string = join(',', @$qnames_list);
     my $ds = $self->get_DataSet_by_name($dsname);
 
-    my $response = $self->general_http_dialog(
-        0,
+    my $response = $self->otter_response_content(
         'GET',
         'find_clones',
         {
@@ -461,7 +547,6 @@ sub find_string_match_in_clones {
             'unhide'   => $unhide_flag || 0,
             defined($ssname) ? ('type' => $ssname ) : (),
         },
-        1,
     );
 
     my @results_list = ();
@@ -481,8 +566,7 @@ sub get_meta {
 
     my $pipehead = Bio::Otter::Lace::Defaults::pipehead();
 
-    my $response = $self->general_http_dialog(
-        0,
+    my $response = $self->otter_response_content(
         'GET',
         'get_meta',
         {
@@ -491,7 +575,6 @@ sub get_meta {
             defined($key)   ? ('key' => $key ) : (),
             'pipehead'  => $pipehead ? 1 : 0,
         },
-        1,
     );
 
     my $meta_hash = {};
@@ -506,8 +589,7 @@ sub get_meta {
 sub lock_refresh_for_DataSet_SequenceSet {
     my( $self, $ds, $ss ) = @_;
 
-    my $response = $self->general_http_dialog(
-        0,
+    my $response = $self->otter_response_content(
         'GET',
         'get_locks',
         {
@@ -515,7 +597,6 @@ sub lock_refresh_for_DataSet_SequenceSet {
             'type'     => $ss->name(),
             'pipehead' => $ds->HEADCODE(),
         },
-        1,
     );
 
     my %lock_hash = ();
@@ -560,8 +641,7 @@ sub fetch_all_SequenceNotes_for_DataSet_SequenceSet {
     $ss ||= $ds->selected_SequenceSet
         || die "no selected_SequenceSet attached to DataSet";
 
-    my $response = $self->general_http_dialog(
-        0,
+    my $response = $self->otter_response_content(
         'GET',
         'get_sequence_notes',
         {
@@ -569,7 +649,6 @@ sub fetch_all_SequenceNotes_for_DataSet_SequenceSet {
             'dataset'  => $ds->name(),
             'pipehead' => $ds->HEADCODE(),
         },
-        1,
     );
 
     my %ctgname2notes = ();
@@ -628,8 +707,7 @@ sub _sequence_note_action {
 
     my $ds = $self->get_DataSet_by_name($dsname);
 
-    my $response = $self->general_http_dialog(
-        0,
+    my $response = $self->http_response_content(
         'GET',
         'set_sequence_note',
         {
@@ -637,12 +715,10 @@ sub _sequence_note_action {
             'pipehead'  => $ds->HEADCODE(),
             'action'    => $action,
             'contig'    => $contig_name,
-            'author'    => $self->author(), # should be identical to the note's author
             'email'     => $self->email(),
             'timestamp' => $seq_note->timestamp(),
             'text'      => $seq_note->text(),
         },
-        1,
     );
 
     # I guess we simply have to ignore the response
@@ -653,12 +729,10 @@ sub lock_region {
     
     my $ds = $self->get_DataSet_by_name($dsname);
 
-    return $self->general_http_dialog(
-        0,
+    return $self->http_response_content(
         'GET',
         'lock_region',
         {
-            'author'   => $self->author,
             'email'    => $self->email,
             'hostname' => $self->client_hostname,
             'dataset'  => $dsname,
@@ -680,12 +754,10 @@ sub get_xml_region {
 
     my $ds = $self->get_DataSet_by_name($dsname);
 
-    my $xml = $self->general_http_dialog(
-        0,
+    my $xml = $self->http_response_content(
         'GET',
         'get_region',
         {
-            'author'   => $self->author,
             'email'    => $self->email,
             'dataset'  => $dsname,
             'type'     => $ssname,
@@ -696,14 +768,12 @@ sub get_xml_region {
         }
     );
 
-    if ($self->debug){
+    if ($self->debug) {
         my $debug_file = Bio::Otter::Lace::PersistentFile->new();
         $debug_file->name("otter-debug.$$.fetch.xml");
         my $fh = $debug_file->write_file_handle();
         print $fh $xml;
         close $fh;
-    }else{
-        warn "Debug switch is false\n";
     }
     
     return $xml;
@@ -713,12 +783,12 @@ sub get_all_DataSets {
   my( $self ) = @_;
   my $ds = $self->{'_datasets'};
   if (! $ds) {
-    my $content = $self->general_http_dialog(
-					     3,
-					     'GET',
-					     'get_datasets',
-					     {},
-					    );
+    my $content = $self->http_response_content(
+        'GET',
+        'get_datasets',
+        {},
+    );
+        
     # stream parsing expat non-validating parser
     my $dsp = Bio::Otter::Transform::DataSets->new();
     my $p = $dsp->my_parser();
@@ -735,12 +805,10 @@ sub get_all_SequenceSets_for_DataSet {
   my( $self, $ds ) = @_;
   return [] unless $ds;
 
-  my $content = $self->general_http_dialog(
-					   3,
+  my $content = $self->http_response_content(
 					   'GET',
 					   'get_sequencesets',
 					   {
-					    'author'   => $self->author,
 					    'dataset'  => $ds->name(),
                         'pipehead' => $ds->HEADCODE(),
 					   }
@@ -759,12 +827,10 @@ sub get_SequenceSet_AccessList_for_DataSet {
   my ($self,$ds) = @_;
   return [] unless $ds;
 
-  my $content = $self->general_http_dialog(
-					   3,
+  my $content = $self->http_response_content(
 					   'GET',
 					   'get_sequenceset_accesslist',
 					   {
-					    'author'   => $self->author,
 					    'dataset'  => $ds->name,
                         'pipehead' => $ds->HEADCODE(),
 					   }
@@ -783,17 +849,15 @@ sub get_all_CloneSequences_for_DataSet_SequenceSet {
   my $csl = $ss->CloneSequence_list;
   return $csl if (defined $csl && scalar @$csl);
 
-  my $content = $self->general_http_dialog(
-                                           3,
-                                           'GET',
-                                           'get_clonesequences',
-                                           {
-                                            'author'      => $self->author(),
-                                            'dataset'     => $ds->name(),
-                                            'sequenceset' => $ss->name(),
-                                            'pipehead'    => $ds->HEADCODE(),
-                                           }
-                                          );
+  my $content = $self->http_response_content(
+        'GET',
+        'get_clonesequences',
+        {
+            'dataset'     => $ds->name(),
+            'sequenceset' => $ss->name(),
+            'pipehead'    => $ds->HEADCODE(),
+        }
+    );
   # stream parsing expat non-validating parser
   my $csp = Bio::Otter::Transform::CloneSequences->new();
   $csp->my_parser()->parse($content);
@@ -809,12 +873,10 @@ sub save_otter_xml {
 
     my $ds = $self->get_DataSet_by_name($dsname);
     
-    my $content = $self->general_http_dialog(
-        0,
+    my $content = $self->http_response_content(
         'POST',
         'write_region',
         {
-            'author'   => $self->author,
             'email'    => $self->email,
             'dataset'  => $dsname,
             'pipehead' => $ds->HEADCODE(),
@@ -832,12 +894,10 @@ sub unlock_otter_xml {
     
     my $ds = $self->get_DataSet_by_name($dsname);
 
-    my $content = $self->general_http_dialog(
-        0,
+    $self->general_http_dialog(
         'POST',
         'unlock_region',
         {
-            'author'   => $self->author,
             'email'    => $self->email,
             'dataset'  => $dsname,
             'pipehead' => $ds->HEADCODE(),

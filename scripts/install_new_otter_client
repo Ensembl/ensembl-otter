@@ -23,7 +23,7 @@ my $method = 'checkout'; # ||'export'
 
 my %dir2params = (
 	'ace_skeleton'     => ['/nfs/humace2/CVS_master', $otter_tag ],
-	'PerlModules'      => ['/nfs/humace2/CVS_master', $otter_tag ],
+	'PerlModules/Hum'  => ['/nfs/humace2/CVS_master', $otter_tag ],
 	'tk'               => ['/nfs/humace2/CVS_master', $otter_tag ],
 	'ensembl-ace'      => [":ext:${user}\@cvs.sanger.ac.uk:/cvsroot/ensembl", $otter_tag],
 	'ensembl-otter'    => [":ext:${user}\@cvs.sanger.ac.uk:/cvsroot/ensembl", $otter_tag],

@@ -644,10 +644,6 @@ sub write_pipeline_data {
     $factory->ace_data_from_slice($smart_slice);
     $factory->drop_file_handle;
     close $fh;
-
-    if ($self->{_pipe_db}) {
-        Bio::Otter::Lace::SatelliteDB::disconnect_DBAdaptor($self->{_pipe_db});
-    }
 }
 
 sub make_otterpipe_DataFactory {
@@ -697,19 +693,7 @@ sub make_otterpipe_DataFactory {
 
         my $pipe_filter = $class->new;
 
-        if (! $pipe_filter->isa('Bio::EnsEMBL::Ace::Otter_Filter')) { # we might need a direct mysql connection
-
-            if(! $self->{_pipe_db} ) { # looks like we need to initialize it
-                my $dataset = $client->get_DataSet_by_name($dsname);
-                my $otter_db = $dataset->get_cached_DBAdaptor();
-                $self->{_pipe_db} = Bio::Otter::Lace::PipelineDB::get_DBAdaptor($otter_db);
-                $self->{_pipe_db}->assembly_type($ssname);
-            }
-
-            $pipe_filter->dba( $self->{_pipe_db} );
-        }
-
-            # analysis_name MUST be set, whether it is defined in the config or not:
+        # analysis_name MUST be set, whether it is defined in the config or not:
         $param{analysis_name} ||= $logic_name;
 
         # Options in the config file are methods on filter objects:
