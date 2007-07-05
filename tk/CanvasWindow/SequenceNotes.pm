@@ -690,6 +690,7 @@ sub _open_SequenceSet{
     if ($@) {
         $adb->error_flag(0);
         $self->exception_message($@, 'Error initialising database');
+        ### Explicitly call cleanup
         return;
     }    
 
