@@ -19,7 +19,7 @@ sub fetch_transcript_author {
 }
 
 sub fetch_evidence {
-  my ($self,$transcript)=@_;
+  my ($self, $transcript)=@_;
 
   if( !ref($transcript) || !$transcript->isa('Bio::EnsEMBL::Transcript') ) {
     throw('Transcript argument is required.');
@@ -74,7 +74,7 @@ sub reincarnate_transcript {
         $self->fetch_transcript_author($transcript);
     }
 
-    $transcript->evidence_list($self->fetch_evidence);
+    $transcript->evidence_list($self->fetch_evidence($transcript));
 
     return $transcript;
 }
