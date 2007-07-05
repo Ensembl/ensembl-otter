@@ -98,7 +98,7 @@ sub make_title {
     my $tail    = $self->first_occurence($dir.'/wspec/displays.wrm', qr{_DDtMain.*-t\s*"(?:lace\s+)(.*)"});
     my $species = $self->first_occurence($dir.'/rawdata/otter.ace', qr{^Species\s+"(.*)"});
 
-    return $species.' '.$tail;
+    return "$species $tail";
 }
 
 sub recover_session {

@@ -542,11 +542,12 @@ sub _attach_DNA_DBAdaptor{
     return unless $dba;
 
     my(@ott_args, @dna_args);
-    foreach my $prop (grep /^DNA/, $self->list_all_db_properties) {
-	$prop =~ /DNA_(\w+)/;
-        if (my $val = $self->$prop()) {
-            push(@dna_args, "-$1", $val);
-            push(@ott_args, "-$1", $self->$1);
+    foreach my $this ($self->list_all_db_properties) {
+        if (my ($prop) = $this =~ /^DNA_(\w+)/) {
+            if (my $val = $self->$this()) {
+                push(@dna_args, "-$prop", $val);
+                push(@ott_args, "-$prop", $self->$prop());
+            }
         }
     }
 
