@@ -243,6 +243,7 @@ sub fork_local_pfetch_server {
         return 1;
     }
     elsif (defined $pid) {
+        no warnings;
         exec('local_pfetch', -port => $port);
         exit(1);    # If exec fails
     }
