@@ -20,7 +20,7 @@ use URI::Escape qw{ uri_escape };
 
     my $request = HTTP::Request->new;
     $request->method('POST');
-    $request->uri('http://wwwdev.sanger.ac.uk/cgi-bin/otter/48/nph-pfetch');
+    $request->uri('http://www.sanger.ac.uk/cgi-bin/otter/48/nph-pfetch');
     $request->content($req_str);
 
     my $response = $pfetch->request($request);
