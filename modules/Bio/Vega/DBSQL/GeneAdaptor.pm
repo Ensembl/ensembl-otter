@@ -152,10 +152,12 @@ sub reincarnate_gene {
         my $author = $self->db->get_AuthorAdaptor->fetch_gene_author($gene->dbID);
         $gene->gene_author($author);
 
-        my $ta=$self->db->get_TranscriptAdaptor;
-        foreach my $transcript (@{ $gene->get_all_Transcripts }) {
-            $ta->reincarnate_transcript($transcript);
-        }
+        my $force_loading_and_reincarnation_of_transcripts = $gene->get_all_Transcripts();
+
+        # my $ta=$self->db->get_TranscriptAdaptor;
+        # foreach my $transcript (@{ $gene->get_all_Transcripts }) {
+        #    $ta->reincarnate_transcript($transcript);
+        # }
     }
 
     return $gene;
