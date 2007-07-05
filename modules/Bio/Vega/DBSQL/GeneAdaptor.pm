@@ -153,11 +153,6 @@ sub reincarnate_gene {
         $gene->gene_author($author);
 
         my $force_loading_and_reincarnation_of_transcripts = $gene->get_all_Transcripts();
-
-        # my $ta=$self->db->get_TranscriptAdaptor;
-        # foreach my $transcript (@{ $gene->get_all_Transcripts }) {
-        #    $ta->reincarnate_transcript($transcript);
-        # }
     }
 
     return $gene;
