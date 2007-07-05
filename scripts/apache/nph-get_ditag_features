@@ -1,5 +1,13 @@
 #!/usr/local/bin/perl -Tw
 
+# Author:        jgrg
+# Group:         anacode
+# Maintainer:    jgrg
+# Last modified: $Date: 2007-07-05 16:28:24 $
+# Id:            $Id: nph-get_ditag_features,v 1.2 2007-07-05 16:28:24 jgrg Exp $
+# Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_ditag_features,v $
+# $HeadURL$
+
 use strict;
 use SangerPaths qw{ otter48 ensembl44 bioperl123 core };
 

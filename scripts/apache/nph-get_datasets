@@ -1,5 +1,13 @@
 #!/usr/local/bin/perl -Tw
 
+# Author:        jgrg
+# Group:         anacode
+# Maintainer:    jgrg
+# Last modified: $Date: 2007-07-05 16:28:24 $
+# Id:            $Id: nph-get_datasets,v 1.2 2007-07-05 16:28:24 jgrg Exp $
+# Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_datasets,v $
+# $HeadURL$
+
 use strict;
 use SangerPaths qw{ otter48 ensembl44 bioperl123 core };
 
@@ -24,10 +32,14 @@ eval {
         my $species_subhash = $species_hash->{$dataset};
 
         $xml .= qq{    <dataset name="$dataset">\n};
+
         foreach my $key (keys %$species_subhash) {
+            ### Don't send mysql user names and passwords over internet
             my $lckey = lc($key);
+            next unless $lckey eq 'headcode';
             $xml .= '      <'.$lckey.'>'.$species_subhash->{$key}.'</'.$lckey.">\n";
         }
+
         $xml .= qq{    </dataset>\n};
     }
     $xml .= qq{  </datasets>\n};
