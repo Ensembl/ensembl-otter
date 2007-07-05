@@ -521,7 +521,12 @@ sub make_Vega_DBAdaptor {
 sub _make_DBAdptor_with_class {
     my( $self, $class ) = @_;
     
-    my(@args);
+    my(@args) = (
+        # Extra arguments to stop Bio::EnsEMBL::Registry issuing warnings
+        -GROUP      => 'otter',
+        -SPECIES    => $self->name,
+        );
+
     foreach my $prop ($self->list_all_db_properties) {
         if (my $val = $self->$prop()) {
             #print STDERR "-$prop  $val\n";
@@ -549,7 +554,12 @@ sub _attach_DNA_DBAdaptor{
         #warn "They are the same the DBAdaptor will just return itself\n";
     }elsif(@dna_args){
         # warn "dna_args: @dna_args\n";
-        my $dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new(@dna_args);
+        my $dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
+            @dna_args,
+            # Extra arguments to stop Bio::EnsEMBL::Registry issuing warnings
+            -GROUP      => 'dnadb',
+            -SPECIES    => $self->name,
+            );
         $dba->dnadb($dnadb);
     }else{
         warn "No DNA_* options found. *** CHECK species.dat ***\n";

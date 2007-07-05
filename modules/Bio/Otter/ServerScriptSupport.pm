@@ -24,6 +24,17 @@ sub new {
     return $self;
 }
 
+sub dataset_name {
+    my( $self ) = @_;
+    
+    my $dataset_name;
+    unless ($dataset_name = $self->{'_dataset_name'}) {
+        $self->{'_dataset_name'} = $dataset_name = $self->require_argument('dataset');
+    }
+    return $dataset_name;
+}
+
+
 ############## getters: ###########################
 
 sub running_headcode {
@@ -131,7 +142,7 @@ sub dataset_param {     # could move out into a separate class, living on top of
     my ($self, $param) = @_;
 
         # Check the dataset has been entered:
-    my $dataset = $self->require_argument('dataset');
+    my $dataset = $self->dataset_name;
 
         # get the overriding dataset options from species.dat 
     my $dbinfo   = $self->species_hash()->{$dataset} || $self->error_exit("Unknown data set $dataset");
@@ -304,8 +315,8 @@ sub fetch_Author_obj {
 sub otter_dba {
     my $self = shift @_;
 
-    if($self->{_odba}) {            # cached value
-        return $self->{_odba};
+    if ($self->{'_odba'}) {            # cached value
+        return $self->{'_odba'};
     }
 
     ########## CODEBASE tricks ########################################
@@ -329,11 +340,14 @@ sub otter_dba {
 
     if(my $dbname = $self->dataset_param('DBNAME')) {
         eval {
-           $odba = $adaptor_class->new( -host   => $self->dataset_param('HOST'),
-                                        -port   => $self->dataset_param('PORT'),
-                                        -user   => $self->dataset_param('USER'),
-                                        -pass   => $self->dataset_param('PASS'),
-                                        -dbname => $dbname);
+           $odba = $adaptor_class->new( -host       => $self->dataset_param('HOST'),
+                                        -port       => $self->dataset_param('PORT'),
+                                        -user       => $self->dataset_param('USER'),
+                                        -pass       => $self->dataset_param('PASS'),
+                                        -dbname     => $dbname,
+                                        -group      => 'otter',
+                                        -species    => $self->dataset_name,
+                                        );
         };
         $self->error_exit("Failed opening otter database [$@]") if $@;
 
@@ -344,11 +358,14 @@ sub otter_dba {
 
     if(my $dna_dbname = $self->dataset_param('DNA_DBNAME')) {
         eval {
-            $dnadb = new Bio::EnsEMBL::DBSQL::DBAdaptor(-host   => $self->dataset_param('DNA_HOST'),
-                                                        -port   => $self->dataset_param('DNA_PORT'),
-                                                        -user   => $self->dataset_param('DNA_USER'),
-                                                        -pass   => $self->dataset_param('DNA_PASS'),
-                                                        -dbname => $dna_dbname);
+            $dnadb = new Bio::EnsEMBL::DBSQL::DBAdaptor( -host      => $self->dataset_param('DNA_HOST'),
+                                                         -port      => $self->dataset_param('DNA_PORT'),
+                                                         -user      => $self->dataset_param('DNA_USER'),
+                                                         -pass      => $self->dataset_param('DNA_PASS'),
+                                                         -dbname    => $dna_dbname,
+                                                         -group     => 'dnadb',
+                                                         -species   => $self->dataset_name,
+                                                         );
         };
         $self->error_exit("Failed opening dna database [$@]") if $@;
         $odba->dnadb($dnadb);
@@ -356,13 +373,7 @@ sub otter_dba {
         $self->log("Connected to dna database");
     }
 
-    if(!$running_headcode && !$dataset_headcode) {
-        if(my $type = $self->param('type') || $self->dataset_param('TYPE')) {
-            $self->log("Assembly_type='" . $odba->assembly_type($type)."'");
-        }
-    }
-
-    return $self->{_odba} = $odba;
+    return $self->{'_odba'} = $odba;
 }
 
 sub satellite_dba {
