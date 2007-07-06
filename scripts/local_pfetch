@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl -w
+#!/usr/bin/perl -w
 
 ### local_pfetch
 
@@ -41,7 +41,7 @@ use Getopt::Long 'GetOptions';
         
         my $req = HTTP::Request->new;
         $req->method('POST');
-        $req->uri('http://wwwdev.sanger.ac.uk:80/cgi-bin/otter/48/nph-pfetch');
+        $req->uri('http://www.sanger.ac.uk:80/cgi-bin/otter/48/nph-pfetch');
         $req->content("request=$request_str");
         
         # Reload cookie from jar if it has been updated
