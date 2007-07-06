@@ -473,17 +473,17 @@ sub store {
 
         # first step: compare the components to their previous versions PLUS some side-effects
         # (set timestamps and versions, but do not update anything in the database)
-    my $gene_changed = $broker->transcripts_diff($gene, $time_now);
+    my ($any_changes, $seq_changes) = $broker->transcripts_diff($gene, $time_now);
 
     if(my $db_gene=$gene->last_db_version() ) { # the gene is not NEW,
                    # so we either CHANGE, RESTORE(possibly changed), DELETE(possibly changed) or leave UNCHANGED
 
             # second step: since there was a previous version, it may have changed:
-        $gene_changed ||= compare($db_gene,$gene);
+        $any_changes ||= compare($db_gene,$gene);
 
         $gene_state = $gene->is_current()
             ? $db_gene->is_current()
-                ? $gene_changed
+                ? $any_changes
                     ? CHANGED
                     : UNCHANGED
                 : RESTORED
@@ -560,7 +560,7 @@ sub store {
             }
         }
 
-        $gene->version($db_gene->version()+1);          # CHANGED||RESTORED||DELETED will affect the author, so get a new version
+        $gene->version($db_gene->version() + $seq_changes);  # CHANGED||RESTORED||DELETED will affect the author, so get a new version
         $gene->created_date($db_gene->created_date());
 
     } else { # NEW or NEW_DELETED (happens during loading/migration) gene,
