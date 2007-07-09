@@ -38,17 +38,17 @@ sub initialise {
         -width => $pad,
         )->pack(-side => 'left');
     
-    my $submit = sub {
-        $self->top->toplevel->Unbusy;
-        $top->destroy;
-    };
-    $self->submit_button(
-        $entry_frame->Button(
-            -default    => 'active',
-            -command    => $submit,
-            -text       => 'Send',
-            )->pack( -side => 'left' )
-        );
+    my $button = $entry_frame->Button(
+        -default    => 'active',
+        -text       => 'Send',
+        -command    => sub {
+            $top->toplevel->Unbusy;
+            $top->destroy if Tk::Exists($top);
+            },
+        )->pack( -side => 'left' );
+    $self->submit_button($button);
+    
+    my $submit = sub{ $button->focus; $button->invoke };
     $top->bind('<Return>',                  $submit);
     $top->bind('<KP_Enter>',                $submit);
     $top->protocol('WM_DELETE_WINDOW' =>    $submit);
