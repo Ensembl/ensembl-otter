@@ -138,6 +138,33 @@ sub species_hash {
     return $sp;
 }
 
+sub users_hash {
+    my ($self) = @_;
+    
+    my $usr;
+    unless ($usr = $self->{'_users_hash'}) {
+        my $usr_file = join('/', $self->server_root, 'data', 'otter', $self->otter_version, 'users.txt');
+        $usr = $self->{'_users_hash'} = $self->read_user_file($usr_file);
+    }
+    return $usr;
+}
+
+sub read_user_file {
+    my ($self, $usr_file) = @_;
+    
+    my $usr_hash = {};
+    if (open my $list, $usr_file) {
+        while (<$list>) {
+            s/#.*//;            # Remove comments
+            s/(^\s+|\s+$)//g;   # Remove leading or trailing spaces
+            next if /^$/;       # Skip lines which are now blank
+            $usr_hash->{$_} = 1;
+        }
+        close $list or die "Error reading '$list'; $!";
+    }
+    return $usr_hash;
+}
+
 sub dataset_param {     # could move out into a separate class, living on top of species.dat
     my ($self, $param) = @_;
 
@@ -165,7 +192,17 @@ sub authorized_user {
     my $user;
     unless ($user = $self->{'_authorized_user'}) {
         my $sw = SangerWeb->new({ cgi => $self });
+        my $auth_flag = 0;
         if ($user = $sw->username) {
+            if ($user =~ /^[a-z1-9]+$/) {
+                # Internal users (simple user name)
+                $auth_flag = 1;
+            } else {
+                # Check external users (email address)
+                $auth_flag = 1 if $self->users_hash->{$user};
+            }
+        }
+        if ($auth_flag) {
             $self->{'_authorized_user'} = $user;
         } else {
             $self->unauth_exit('User not authorized');
@@ -178,6 +215,8 @@ sub authorized_user {
 
 sub log {
     my ($self, $line) = @_;
+
+    return unless $self->param('log');
 
     print STDERR '['.$self->csn()."] $line\n";
 }
