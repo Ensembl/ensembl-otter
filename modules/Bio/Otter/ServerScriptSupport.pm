@@ -317,10 +317,10 @@ sub make_Author_obj {
 
     $author_name ||= $self->authorized_user;
     
-    my $author_email = $self->require_argument('email');
+    #my $author_email = $self->require_argument('email');
     my $class        = $self->running_headcode() ? 'Bio::Vega::Author' : 'Bio::Otter::Author';
 
-    return $class->new(-name => $author_name, -email => $author_email);
+    return $class->new(-name => $author_name, -email => $author_name);
 }
 
 sub fetch_Author_obj {
@@ -339,12 +339,7 @@ sub fetch_Author_obj {
         $author_obj = $author_adaptor->fetch_by_name($author_name);
     };
     if($@){
-        eval{
-            $author_obj = $author_adaptor->fetch_by_name('GLOBAL_READONLY');
-        };
-        if($@){
-            $self->error_exit("Failed to get an author.\n$@") unless $author_obj;
-        }
+        $self->error_exit("Failed to get an author.\n$@") unless $author_obj;
     }
     return $author_obj;
 }

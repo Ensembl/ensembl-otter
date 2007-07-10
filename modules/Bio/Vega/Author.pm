@@ -10,10 +10,10 @@ sub new {
   my($class,@args) = @_;
   my $self = $class->SUPER::new(@args);
   my ($name,$email,$group)  = rearrange([qw(
-														  NAME
-														  EMAIL
-														  GROUP
-														 )],@args);
+    NAME
+    EMAIL
+    GROUP
+    )],@args);
 
   $self->name($name);
   $self->email($email);

@@ -21,40 +21,38 @@ use base 'Bio::EnsEMBL::DBSQL::BaseAdaptor';
 =cut
 
 sub _generic_sql_fetch {
-  my( $self, $where_clause,$author ) = @_;
-  if (! defined $author ){
-	 $author=new Bio::Vega::Author;
-  }
-  my $sql = "
-             SELECT a.author_id as author_id,
-                    a.author_email as author_email,
-                    a.author_name as author_name,
-                    g.group_id as group_id,
-                    g.group_name as group_name,
-                    g.group_email as group_email
-	          FROM author a,author_group g "
-	          .$where_clause.
-		       " AND a.group_id=g.group_id ";
+    my ($self, $where_clause, @args) = @_;
 
-  my $sth = $self->prepare($sql);
-  $sth->execute();
+    my $sql = qq{
+        SELECT a.author_id as author_id
+          , a.author_email as author_email
+          , a.author_name as author_name
+          , g.group_id as group_id
+          , g.group_name as group_name
+          , g.group_email as group_email
+        FROM author a
+          , author_group g
+        WHERE $where_clause
+          AND a.group_id = g.group_id
+        };
 
-  if (my $ref = $sth->fetchrow_hashref) {
-         $author->dbID($ref->{author_id});
-         $author->email($ref->{author_email});
-         $author->name($ref->{author_name});
-         if (! defined $author->group){
-           my $group=new Bio::Vega::AuthorGroup;
-           $author->group($group);
-         }
-         $author->group->dbID($ref->{group_id});
-         $author->group->name($ref->{group_name});
-         $author->group->email($ref->{group_email});
-         return $author;
-  } else {
-         return;
-  }
+    my $sth = $self->prepare($sql);
+    $sth->execute(@args);
 
+    if (my $ref = $sth->fetchrow_hashref) {
+        my $author = Bio::Vega::Author->new;
+        $author->dbID($ref->{author_id});
+        $author->email($ref->{author_email});
+        $author->name($ref->{author_name});
+        my $group = Bio::Vega::AuthorGroup->new;
+        $group->dbID($ref->{group_id});
+        $group->name($ref->{group_name});
+        $group->email($ref->{group_email});
+        $author->group($group);
+        return $author;
+    } else {
+        return;
+    }
 }
 
 =head2 fetch_by_dbID
@@ -76,9 +74,7 @@ sub fetch_by_dbID {
 		$self->throw("Id must be entered to fetch an author object");
 	}
 
-	my $author = $self->_generic_sql_fetch(" where author_id = $id ");
-
-	return $author;
+	return $self->_generic_sql_fetch("author_id = ?", $id);
 }
 
 =head2 fetch_by_name
@@ -95,15 +91,13 @@ sub fetch_by_dbID {
 
 
 sub fetch_by_name {
-	my ($self,$name) = @_;
+	my ($self, $name) = @_;
 
-	if (!defined($name)) {
+	unless ($name) {
 		$self->throw("Name must be entered to fetch an author object");
 	}
 
-	my $author = $self->_generic_sql_fetch("where author_name = \'$name\'");
-
-	return $author;
+	return $self->_generic_sql_fetch("author_name = ?", $name);
 }
 
 =head2 fetch_by_email
@@ -119,29 +113,32 @@ sub fetch_by_name {
 =cut
 
 sub fetch_by_email {
-	my ($self,$email) = @_;
+	my ($self, $email) = @_;
 
-	if (!defined($email)) {
+	unless ($email) {
 		$self->throw("Email address must be entered to fetch an author object");
 	}
 
-	my $author = $self->_generic_sql_fetch("where author_email= \'$email\'");
+	my $author = $self->_generic_sql_fetch("author_email = ?", $email);
 
 	return $author;
 }
 	
 sub exists_in_db {
-  my ($self,$author) = @_;
-  if (!defined($author->name)) {
+  my ($self, $author) = @_;
+
+  unless ($author->name) {
 	 throw("Name is empty in the author object - should be set to check for exsistence");
   }
-  if (!defined($author->email)) {
-	 throw("email is empty in the author object - should be set to check for exsistence");
+
+  if (my $db_author = $self->fetch_by_name($author->name)) {
+    foreach my $method (qw{ dbID name email group }) {
+        $author->$method($db_author->$method());
+    }
+    return $author;
+  } else {
+    return 0;
   }
-  my $author_email=$author->email;
-  my $author_name=$author->name;
-  $author = $self->_generic_sql_fetch("where author_email= \'$author_email\' and author_name=\'$author_name\' ",$author);
-  return $author;
 }
 
 =head2 store
