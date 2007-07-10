@@ -271,20 +271,21 @@ use Data::Dumper;
     update_chromosome_length($pipeline_db, $pipe_chromosome) if $pipeline_db;
     update_chromosome_length($otter_db,    $otter_chromosome);
 
-    # Get sequence notes and clone names from fox and oracle
-    if ($at_sanger) {
-        my ($root) = $0 =~ m{^(.+?)[^/]+$};
-        $root =~ s{/$}{};
-        system("$root/submissions_to_otter",
-            '-host', $cl->host(),
-            '-port', $cl->port(),
-            '-dataset', $dataset_name);
-        system("$root/clones_to_otter",
-            '-host', $cl->host(),
-            '-port', $cl->port(),
-            '-reverse',
-            '-dataset', $dataset_name);
-    }
+    # repair_intl_clone names now used to replace clones_to_otter
+    ## Get sequence notes and clone names from fox and oracle
+    #if ($at_sanger) {
+    #    my ($root) = $0 =~ m{^(.+?)[^/]+$};
+    #    $root =~ s{/$}{};
+    #    system("$root/submissions_to_otter",
+    #        '-host', $cl->host(),
+    #        '-port', $cl->port(),
+    #        '-dataset', $dataset_name);
+    #    system("$root/clones_to_otter",
+    #        '-host', $cl->host(),
+    #        '-port', $cl->port(),
+    #        '-reverse',
+    #        '-dataset', $dataset_name);
+    #}
 
     unhide_set($otter_db, $set_name) if $unhide;
 }
@@ -372,15 +373,20 @@ sub check_line {
 #  the archive pfetch server is tried.
 #
 {
-    my ($pfetch);
+    my ($pfetch, $pfetch_archive);
 
     sub pfetch_acc_sv {
         my ($acc_ver) = @_;
 
         $pfetch ||= Bio::EnsEMBL::Pipeline::SeqFetcher::Finished_Pfetch->new;
-
+        $pfetch_archive ||=
+          Bio::EnsEMBL::Pipeline::SeqFetcher::Finished_Pfetch->new(
+            -PFETCH_PORT => 23100,);
         my $seq = $pfetch->get_Seq_by_acc($acc_ver);
-
+        unless ($seq) {
+            warn "Fetching '$acc_ver' from archive\n";
+            $seq = $pfetch_archive->get_Seq_by_acc($acc_ver);
+        }
         unless ($seq) {
             my $seq_file = "$acc_ver.seq";
             warn
