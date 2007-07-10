@@ -42,8 +42,6 @@ use POSIX ":sys_wait_h";
         my $self = shift;
         my $user = $self->author;
         
-        warn "Going to ask for password for '$user'";
-        
         my $pass = '';
         my $pass_win = EditWindow::Password->new($mw->Toplevel(-title => 'Enter password'));
         $pass_win->prompt_string("Enter password for '$user'");

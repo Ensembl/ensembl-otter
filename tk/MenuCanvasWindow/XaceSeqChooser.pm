@@ -391,7 +391,7 @@ sub get_xwindow_id_from_readlock {
     # Find the readlock file for the process we just launched
     my $lock_dir = "$path/database/readlocks";
     my( $lock_file );
-    my $wait_seconds = 40;
+    my $wait_seconds = 120;
     for (my $i = 0; $i < $wait_seconds; $i++, sleep 1) {
         opendir LOCK_DIR, $lock_dir or confess "Can't opendir '$lock_dir' : $!";
         ($lock_file) = grep /\.$pid$/, readdir LOCK_DIR;
