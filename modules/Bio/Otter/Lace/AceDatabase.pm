@@ -178,7 +178,10 @@ sub init_AceDatabase {
 sub write_local_blast {
     my ($self) = @_;
     
-    require Bio::Otter::Lace::Blast;
+    eval {
+        require Bio::Otter::Lace::Blast;
+    };
+    return 0 if $@;
 
     # The Blast object gets all its configuration
     # information from Lace::Defaults
