@@ -54,7 +54,7 @@ use Getopt::Long 'GetOptions';
         if ($data->is_success) {
             print $client $data->content;
         } else {
-            print STDERR "Error: ",
+            die "Error: ",
                 $data->status_line, "\n",
                 $data->content, "\n";
         }
