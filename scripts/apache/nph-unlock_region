@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2007-07-05 16:29:56 $
-# Id:            $Id: nph-unlock_region,v 1.3 2007-07-05 16:29:56 jgrg Exp $
+# Last modified: $Date: 2007-07-16 16:12:52 $
+# Id:            $Id: nph-unlock_region,v 1.4 2007-07-16 16:12:52 lg4 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-unlock_region,v $
 
 use strict;
@@ -33,7 +33,7 @@ use Bio::Vega::Transform::Otter;
 	 my $chrend=$chr_slice->end;
 	 my $strand=$chr_slice->strand;
 	 my $cs_version=$parser->init_CoordSystem_Version;
-	 my $segment_name=$parser->get_AssemblyType->{'assembly_type'};
+	 my $segment_name=$parser->get_AssemblyType;
 	 my $chrname=$chr_slice->seq_region_name;
 	 $slice =  $odba->get_SliceAdaptor()->fetch_by_region($cs,$segment_name,$chrstart,$chrend,$strand,$cs_version);
 	 $server->log("Processed incoming xml file with slice: [$chrname] [$chrstart] [$chrend]");
