@@ -67,7 +67,7 @@ if ($odba->isa('Bio::Otter::DBSQL::DBAdaptor')) {
 	 my $chrend=$chr_slice->end;
 	 my $strand=$chr_slice->strand;
 	 my $cs_version=$parser->init_CoordSystem_Version;
-	 my $segment_name=$parser->get_AssemblyType->{'assembly_type'};
+	 my $segment_name=$parser->get_AssemblyType;
 	 my $chrname=$chr_slice->seq_region_name;
 	 $slice =  $odba->get_SliceAdaptor()->fetch_by_region($cs,$segment_name,$chrstart,$chrend,$strand,$cs_version);
 	 $server->log("Processed incoming xml file with slice: [$chrname] [$chrstart] [$chrend]");

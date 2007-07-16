@@ -258,7 +258,7 @@ if ($odba->isa('Bio::Otter::DBSQL::DBAdaptor')) {
     my %xmlfrag = ();
     eval {
         my $cs           = 'chromosome';
-        my $segment_name = $parser->get_AssemblyType->{'assembly_type'};
+        my $segment_name = $parser->get_AssemblyType;
         my $chr_slice    = $parser->get_ChromosomeSlice;
         my $start        = $chr_slice->start;
         my $end          = $chr_slice->end;
