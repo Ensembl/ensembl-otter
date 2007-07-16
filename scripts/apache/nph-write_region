@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2007-07-16 16:07:21 $
-# Id:            $Id: nph-write_region,v 1.4 2007-07-16 16:07:21 jgrg Exp $
+# Last modified: $Date: 2007-07-16 16:12:52 $
+# Id:            $Id: nph-write_region,v 1.5 2007-07-16 16:12:52 lg4 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-write_region,v $
 
 use strict;
@@ -39,7 +39,7 @@ use Bio::Vega::ContigLockBroker;
     my %xmlfrag = ();
     eval {
         my $cs           = 'chromosome';
-        my $segment_name = $parser->get_AssemblyType->{'assembly_type'};
+        my $segment_name = $parser->get_AssemblyType;
         my $chr_slice    = $parser->get_ChromosomeSlice;
         my $start        = $chr_slice->start;
         my $end          = $chr_slice->end;
