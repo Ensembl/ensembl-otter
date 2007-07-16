@@ -67,11 +67,16 @@ sub reincarnate_transcript {
 
     my $this_class = 'Bio::Vega::Transcript';
 
-    if($transcript->isa($this_class)) {
+    if ($transcript->isa($this_class)) {
         # warn "Transcript is already $this_class, probably due to caching\n";
-    } else {
-        bless $transcript, $this_class;
-        $self->fetch_transcript_author($transcript);
+        return $transcript;
+    }
+    
+    bless $transcript, $this_class;
+    $self->fetch_transcript_author($transcript);
+    
+    if (my $transl = $transcript->translation) {
+        bless $transl, 'Bio::Vega::Translation';
     }
 
     $transcript->evidence_list($self->fetch_evidence($transcript));
@@ -178,30 +183,13 @@ sub get_current_Transcript_by_slice {
   return $db_tran;
 }
 
-sub fetch_last_version {
-    my ($self, $transcript, $on_whole_chromosome) = @_;
+sub fetch_latest_by_stable_id {
+  my ($self, $stable_id) = @_;
 
-    my $transcript_stable_id=$transcript->stable_id;
+  my $constraint = "tsi.stable_id = '$stable_id' ORDER BY tsi.modified_date DESC LIMIT 1";
+  my ($transcript) = @{ $self->generic_fetch($constraint) };
 
-    my @candidates = $on_whole_chromosome
-        ? @{ $self->fetch_all_versions_by_stable_id($transcript_stable_id) }
-        : (grep { $_->stable_id eq $transcript_stable_id }
-               @{ $self->fetch_all_by_Slice($transcript->slice()) });
-
-    unless(scalar @candidates) {
-        return;
-    }
-
-    my $last = shift @candidates;
-    foreach my $candidate (@candidates) {
-        if( ($candidate->version > $last->version)
-         || ( ($candidate->version == $last->version) && ($candidate->is_current > $last->is_current) )
-        ) {
-            $last = $candidate;
-        }
-    }
-
-    return $self->reincarnate_transcript($last);
+  return $self->reincarnate_transcript($transcript);
 }
 
 sub store {

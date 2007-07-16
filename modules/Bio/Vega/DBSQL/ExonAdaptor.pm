@@ -78,28 +78,14 @@ sub get_current_Exon_by_slice {
   return $current_exons[0];
 }
 
-sub fetch_last_version {
-    my ($self, $exon, $on_whole_chromosome) = @_;
 
-    my $exon_stable_id=$exon->stable_id;
+sub fetch_latest_by_stable_id {
+  my ($self, $stable_id) = @_;
 
-    my @candidates = $on_whole_chromosome
-        ? @{ $self->fetch_all_versions_by_stable_id($exon_stable_id) }
-        : (grep { $_->stable_id eq $exon_stable_id }
-               @{ $self->fetch_all_by_Slice($exon->slice()) });
+  my $constraint = "esi.stable_id = '$stable_id' ORDER BY esi.modified_date DESC LIMIT 1";
+  my ($exon) = @{ $self->generic_fetch($constraint) };
 
-    unless(scalar @candidates) {
-        return;
-    }
-
-    my $last = shift @candidates;
-    foreach my $candidate (@candidates) {
-        if($candidate->version > $last->version) {
-            $last = $candidate;
-        }
-    }
-
-    return $last;
+  return $exon;
 }
 
 
