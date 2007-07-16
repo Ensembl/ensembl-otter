@@ -6,27 +6,37 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 
 use base 'Bio::EnsEMBL::Translation';
 
-sub hashkey {
-  my $self=shift;
-  my $start_exon=$self->start_Exon;
-  my $end_exon  =$self->end_Exon;
-  unless($start_exon) {
-    throw("there is no start_exon for this translation to generate correct hashkey");
+sub vega_hashkey {
+  my $self = shift;
+
+  my $start_exon = $self->start_Exon;
+  my $end_exon   = $self->end_Exon;
+  
+  my $in_coding = 0;
+  my $coding_exons_hashkey = '';
+  foreach my $exon (@{$self->get_all_Exons}) {
+    unless ($in_coding) {
+        if ($exon == $start_exon) {
+            $in_coding = 1;
+        } else {
+            next;
+        }
+    }
+    $coding_exons_hashkey .= $exon->vega_hashkey;
+    last if $exon == $end_exon;
   }
-  my $start_exon_hash_key=$start_exon->hashkey;
-  my $end_exon_hash_key  =$end_exon->hashkey;
 
-  my $tl_start =$self->start;
-  my $tl_end   =$self->end;
+  my $tl_start = $self->start;
+  my $tl_end   = $self->end;
 
-  return "$start_exon_hash_key-$end_exon_hash_key-$tl_start-$tl_end";
+  return "$tl_start-$tl_end-$coding_exons_hashkey";
 }
 
-sub hashkey_structure {
-    return 'start_exon_hash_key-end_exon_hash_key-tl_start-tl_end';
+sub vega_hashkey_structure {
+    return 'tl_start-tl_end-coding_exons_hashkey';
 }
 
-sub hashkey_sub {
+sub vega_hashkey_sub {
 
   my $self = shift;
   my $sel = $self->get_all_Attributes('_selenocystine');

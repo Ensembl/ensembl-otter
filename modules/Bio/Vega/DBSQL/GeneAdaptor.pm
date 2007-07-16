@@ -36,11 +36,13 @@ sub fetch_by_name {
 	 my $stable_id;
 	 foreach my $g (@$genes){
 		if ($stable_id && $stable_id ne $g->stable_id){
+            ### Does this make sense? Why not return a list of genes?
 		  die "more than one gene has the same name\n";
 		}
 		$stable_id=$g->stable_id;
 		if ($dbid ){
 		  if ($g->dbID > $dbid){
+            ## Why not just keep the gene?
 			 $dbid=$g->dbID;
 		  }
 		}
@@ -59,18 +61,22 @@ sub fetch_by_name {
 }
 
 sub fetch_by_attribute_code_value {
-  my ($self,$attrib_code,$attrib_value)=@_;
-  my $sth=$self->prepare("SELECT ga.gene_id ".
-								 "FROM attrib_type a , gene_attrib ga ".
-                         "WHERE ga.attrib_type_id = a.attrib_type_id and ".
-								 "a.code=? and ga.value =?");
+  my ($self, $attrib_code, $attrib_value) = @_;
+
+  my $sth=$self->prepare(q{
+    SELECT ga.gene_id
+    FROM attrib_type a
+      , gene_attrib ga
+    WHERE ga.attrib_type_id = a.attrib_type_id
+      AND a.code = ?
+      AND ga.value = ?
+    });
   $sth->execute($attrib_code,$attrib_value);
-  my @array = @{$sth->fetchall_arrayref()};
+  my $geneids = [map {$_->[0]} @{$sth->fetchall_arrayref()}];
   $sth->finish();
-  my @geneids = map {$_->[0]} @array;
   
-  if ($#geneids > 0){
-	return $self->fetch_all_by_dbID_list(\@geneids);
+  if (@$geneids){
+	return $self->fetch_all_by_dbID_list($geneids);
   }
   else {
 	 return 0;
@@ -378,34 +384,13 @@ sub get_current_Gene_by_slice {
   return $db_gene;
 }
 
-    #
-    # Fetch and reincarnate the last version of the gene with the same stable_id (whether current or not).
-    # If $on_whole_chromosome is true, do not use any mapping, just fetch directly on the chromosome.
-    #
-sub fetch_last_version {
-    my ($self, $gene, $on_whole_chromosome) = @_;
+# Fetch and reincarnate the last version of the gene with the same stable_id (whether current or not).
+sub fetch_latest_by_stable_id {
+    my ($self, $stable_id) = @_;
 
-    my $gene_stable_id=$gene->stable_id;
-
-    my @candidates = $on_whole_chromosome
-        ? @{ $self->fetch_all_versions_by_stable_id($gene_stable_id) }
-        : (grep { $_->stable_id eq $gene_stable_id }
-               @{ $self->fetch_all_versions_by_Slice_constraint($gene->slice(), '') });
-
-    unless(scalar @candidates) {
-        return;
-    }
-
-    my $last = shift @candidates;
-    foreach my $candidate (@candidates) {
-        if( ($candidate->version > $last->version)
-         || ( ($candidate->version == $last->version) && ($candidate->is_current > $last->is_current) )
-        ) {
-            $last = $candidate;
-        }
-    }
-
-    return $self->reincarnate_gene($last);
+    my $constraint = "gsi.stable_id = '$stable_id' ORDER BY gsi.modified_date DESC LIMIT 1";
+    my ($gene) = @{ $self->generic_fetch($constraint) };
+    return $self->reincarnate_gene($gene);
 }
 
 =head2 store
@@ -438,7 +423,7 @@ sub fetch_last_version {
 =cut
 
 sub store {
-    my ($self, $gene, $on_whole_chromosome, $time_now) = @_;
+    my ($self, $gene, $time_now) = @_;
 
     $time_now       ||= time;
 
@@ -464,10 +449,11 @@ sub store {
      $gene->slice->adaptor($sa);
     }
 
+    ### What's the point of an AnnotationBroker object at this level?
     my $broker=$self->db->get_AnnotationBroker();
 
         ## assign stable_ids for all new components at once:
-    $broker->fetch_new_stable_ids_or_prefetch_latest_db_components($gene, $on_whole_chromosome);
+    $broker->fetch_new_stable_ids_or_prefetch_latest_db_components($gene);
 
     my $gene_state;
 

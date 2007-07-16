@@ -132,25 +132,29 @@ sub truncate_to_Slice {
   return $exons_truncated;
 }
 
-sub hashkey {
+# Duplicated in Bio::Vega::Gene
+sub all_Attributes_string {
+    my ($self) = @_;
+    
+    return join ('-',
+        map {$_->key . '=' . $_->value}
+        sort {$a->key cmp $b->key || $a->value cmp $b->value}
+        @{$self->get_all_Attributes});
+}
+
+sub vega_hashkey {
   my $self=shift;
-  my $slice      = $self->{'slice'};
-  my $slice_name = ($slice) ? $slice->name() : undef;
-  my $start      = $self->{'start'};
-  my $end        = $self->{'end'};
-  my $strand     = $self->{'strand'};
-  my $biotype    = $self->{'biotype'};
-  my $status     = $self->{'status'};
-  my $exons      = $self->get_all_Exons;
-  my $exon_count = @$exons;
+  my $seq_region_name   = $self->seq_region_name    || throw(  'seq_region_name must be set to generate correct vega_hashkey.');
+  my $seq_region_start  = $self->seq_region_start   || throw( 'seq_region_start must be set to generate correct vega_hashkey.');
+  my $seq_region_end    = $self->seq_region_end     || throw(   'seq_region_end must be set to generate correct vega_hashkey.');
+  my $seq_region_strand = $self->seq_region_strand  || throw('seq_region_strand must be set to generate correct vega_hashkey.');
+  my $biotype           = $self->biotype            || throw(          'biotype must be set to generate correct vega_hashkey.');
+  my $status            = $self->status             || throw(           'status must be set to generate correct vega_hashkey.');
+
+  my $exon_count = scalar @{$self->get_all_Exons} || throw("there are no exons for this transcript to generate correct vega_hashkey");
   my $description = $self->{'description'} ? $self->{'description'}: '' ;
-  my $attribs     = $self->get_all_Attributes;
-  my $attrib_count = @$attribs ;
-  my $transcript_name = $self->get_all_Attributes('name') ;
-  my $mRNA_start_NF = $self->get_all_Attributes('mRNA_start_NF') ;
-  my $mRNA_end_NF = $self->get_all_Attributes('mRNA_end_NF') ;
-  my $cds_start_NF = $self->get_all_Attributes('cds_start_NF') ;
-  my $cds_end_NF = $self->get_all_Attributes('cds_end_NF') ;
+  my $attrib_string = $self->all_Attributes_string;
+
   my $evidence= $self->evidence_list();
   my $evidence_count=0;
   
@@ -159,119 +163,31 @@ sub hashkey {
 	 $evidence_count= scalar(@$evidence);
   }
 
-  my ($msNF,$meNF,$csNF,$ceNF,$tn);
-
-  if (defined $mRNA_start_NF){
-	 if (@$mRNA_start_NF > 1){
-		throw("Transcript has more than one value for mRNA_start_NF attrib cannot generate correct hashkey");
-	 }
-	 $msNF=$mRNA_start_NF->[0]->value;
-  }
-  else {
-	 $msNF='';
-  }
-  if (defined $mRNA_end_NF){
-	 if (@$mRNA_end_NF > 1){
-		throw("Transcript has more than one value for mRNA_end_NF attrib cannot generate correct hashkey");
-	 }
-	 $meNF=$mRNA_end_NF->[0]->value;
-  }
-  else {
-	 $meNF='';
-  }
-  if (defined $cds_start_NF){
-	 if (@$cds_start_NF > 1){
-		throw("Transcript has more than one value for cds_start_NF attrib cannot generate correct hashkey");
-	 }
-	 $csNF=$cds_start_NF->[0]->value;
-  }
-  else {
-	 $csNF='';
-  }
-  if (defined $cds_end_NF){
-	 if (@$cds_end_NF > 1){
-		throw("Transcript has more than one value for cds_end_NF attrib cannot generate correct hashkey");
-	 }
-	 $ceNF=$cds_end_NF->[0]->value;
-  }
-  else {
-	 $ceNF='';
-  }
-  if (defined $transcript_name) {
-	 if (@$transcript_name > 1){
-		throw("Transcript has more than one value for transcript name attrib cannot generate correct hashkey");
-	 }
-	 $tn=$transcript_name->[0]->value;
-  }
-
-  unless($slice_name) {
-    throw('Slice must be set to generate correct hashkey.');
-  }
-
-  unless($start) {
-    throw("start attribute must be defined to generate correct hashkey.");
-  }
-
-  unless($end) {
-    throw("end attribute must be defined to generate correct hashkey.");
-  }
-
-  unless($strand) {
-    throw("strand attribute must be defined to generate correct hashkey.");
-  }
-
-  unless($biotype) {
-    throw("biotype attribute must be defined to generate correct hashkey.");
-  }
-
-  unless($status) {
-    throw("status attribute must be defined to generate correct hashkey.");
-  }
-
-  unless($exon_count > 0) {
-    throw("there are no exons for this transcript to generate correct hashkey");
-  }
-
-  unless($transcript_name) {
-    throw('transcript name must be defined to generate correct hashkey.');
-  }
-
-  return "$slice_name-$start-$end-$strand-$biotype-$status-$exon_count-$tn-$msNF-$meNF-$csNF-$ceNF-$description-$evidence_count-$attrib_count";
+  return "$seq_region_name-$seq_region_start-$seq_region_end-$seq_region_strand-$biotype-$status-$exon_count-$description-$evidence_count-$attrib_string";
 }
 
-sub hashkey_structure {
-    return 'slice_name-start-end-strand-biotype-status-exon_count-transcript_name-mRNAstartNF-mRNAendNF-cDNAstartNF-cDNAendNF-description-evidence_count-attrib_count';
+sub vega_hashkey_structure {
+    return 'seq_region_name-seq_region_start-seq_region_end-seq_region_strand-biotype-status-exon_count-description-evidence_count-attrib_string';
 }
 
-sub hashkey_sub {
+sub vega_hashkey_sub {
 
   my $self = shift;
-  my $remarks = $self->get_all_Attributes('remark');
-  my $hidden_remarks = $self->get_all_Attributes('hidden_remark');
   my $evidence=$self->evidence_list();
-  my $hashkey_sub={};
-  if (defined $remarks) {
-	 foreach my $rem (@$remarks){
-		$hashkey_sub->{$rem->value}='remark';
-	 }
-  }
-  if (defined $hidden_remarks) {
-	 foreach my $rem (@$hidden_remarks){
-		$hashkey_sub->{$rem->value}='hidden_remark';
-	 }
-  }
+  my $vega_hashkey_sub={};
+
   if (defined $evidence) {
 	 foreach my $evi (@$evidence){
 		my $e=$evi->name.$evi->type;
-		$hashkey_sub->{$e}='evidence';
+		$vega_hashkey_sub->{$e}='evidence';
 	 }
   }
   my $exons=$self->get_all_Exons;
 
   foreach my $exon (@$exons){
-	 $hashkey_sub->{$exon->stable_id}='exon_stable_id';
+	 $vega_hashkey_sub->{$exon->stable_id}='exon_stable_id';
   }
-  return $hashkey_sub;
+  return $vega_hashkey_sub;
 
 }
 

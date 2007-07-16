@@ -8,6 +8,9 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 
 use base 'Bio::EnsEMBL::DBSQL::TranslationAdaptor';
 
+### This module is not used any more.
+### We take care of this in Bio::Vega::Transcript::reincarnate_transcript() instead
+
 sub fetch_by_stable_id  {
 
   my ($self, $stable_id) = @_;

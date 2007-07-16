@@ -34,104 +34,47 @@ sub source  {
 
 }
 
-sub hashkey {
+# Duplicated in Bio::Vega::Transcript
+sub all_Attributes_string {
+    my ($self) = @_;
+    
+    return join ('-',
+        map {$_->key . '=' . $_->value}
+        sort {$a->key cmp $b->key || $a->value cmp $b->value}
+        @{$self->get_all_Attributes});
+}
+
+sub vega_hashkey {
   my $self=shift;
-  my $slice      = $self->{'slice'};
-  my $slice_name = ($slice) ? $slice->name() : undef;
-  my $start      = $self->{'start'};
-  my $end        = $self->{'end'};
-  my $strand     = $self->{'strand'};
-  my $biotype    = $self->{'biotype'};
-  my $status     = $self->{'status'};
-  my $source     = $self->{'source'};
-  my $trans      = $self->get_all_Transcripts;
-  my $tran_count = @$trans;
-  my $description = $self->{'description'} ? $self->{'description'}: '' ;
-  my $attribs     = $self->get_all_Attributes;
-  my $attrib_count = @$attribs ;
-  my $gene_name = $self->get_all_Attributes('name') ;
 
-  my $gn='';
+  my $seq_region_name   = $self->seq_region_name    || throw(  'seq_region_name must be set to generate vega_hashkey');
+  my $start             = $self->seq_region_start   || throw( 'seq_region_start must be set to generate vega_hashkey');
+  my $end               = $self->seq_region_end     || throw(   'seq_region_end must be set to generate vega_hashkey');
+  my $strand            = $self->seq_region_strand  || throw('seq_region_strand must be set to generate vega_hashkey');
+  my $biotype           = $self->biotype            || throw(          'biotype must be set to generate vega_hashkey');
+  my $status            = $self->status             || throw(           'status must be set to generate vega_hashkey');
+  my $source            = $self->source             || throw(           'source must be set to generate vega_hashkey');
+  my $tran_count = scalar @{$self->get_all_Transcripts}
+    || throw("there are no transcripts for this gene to generate correct vega_hashkey");;
+  my $description = $self->description || '';
+  my $attrib_string = $self->all_Attributes_string;
 
-  if ($gene_name) {
-	 if (@$gene_name > 1){
-		throw("Gene has more than one value for gene name attrib cannot generate correct hashkey");
-	 }
-	 if ($gene_name->[0]){
-		$gn=$gene_name->[0]->value;
-	 }
-  }
-
-  unless($slice_name) {
-    throw("Slice name must be set to generate correct hashkey.");
-  }
-
-  unless($start) {
-    throw("start attribute must be defined to generate correct hashkey.");
-  }
-
-  unless($end) {
-    throw("end attribute must be defined to generate correct hashkey.");
-  }
-
-  unless($strand) {
-    throw("strand attribute must be defined to generate correct hashkey.");
-  }
-
-  unless($biotype) {
-    throw("biotype attribute must be defined to generate correct hashkey.");
-  }
-
-  unless($status) {
-    throw("status attribute must be defined to generate correct hashkey.");
-  }
-
-  unless($source) {
-    throw("source attribute must be defined to generate correct hashkey.");
-  }
-
-  unless($tran_count > 0) {
-    throw("there are no transcripts for this gene to generate correct hashkey");
-  }
-
-  unless($gene_name) {
-    throw('gene name must be defined to generate correct hashkey.');
-  }
-
-  return "$slice_name-$start-$end-$strand-$biotype-$status-$source-$gn-$description-$tran_count-$attrib_count";
+  return "$seq_region_name-$start-$end-$strand-$biotype-$status-$source-$description-$tran_count-$attrib_string";
 }
 
-sub hashkey_structure {
-    return 'slice_name-start-end-strand-biotype-status-source-genename-description-transcript_count-attrib_count';
+sub vega_hashkey_structure {
+    return 'seq_region_name-seq_region_start-seq_region_end-seq_region_strand-biotype-status-source-description-transcript_count-all_attrib_string';
 }
 
-sub hashkey_sub {
+sub vega_hashkey_sub {
 
   my $self = shift;
-  my $hashkey_sub={};
-  my $remarks = $self->get_all_Attributes('remark');
-  if (defined $remarks) {
-	 foreach my $rem (@$remarks){
-		$hashkey_sub->{$rem->value}='remark';
-	 }
-  }
-  my $hidden_remarks = $self->get_all_Attributes('hidden_remark');
-  if (defined $hidden_remarks) {
-	 foreach my $rem (@$hidden_remarks){
-		$hashkey_sub->{$rem->value}='hidden_remark';
-	 }
-  }
-  my $synonyms = $self->get_all_Attributes('synonym');
-  if (defined $synonyms) {
-	 foreach my $syn (@$synonyms){
-		$hashkey_sub->{$syn->value}='synonym';
-	 }
-  }
+  my $vega_hashkey_sub={};
   my $trans=$self->get_all_Transcripts;
   foreach my $tran (@$trans){
-	 $hashkey_sub->{$tran->stable_id}='transcript-stable-id';
+	 $vega_hashkey_sub->{$tran->stable_id}='transcript-stable-id';
   }
-  return $hashkey_sub;
+  return $vega_hashkey_sub;
 
 }
 

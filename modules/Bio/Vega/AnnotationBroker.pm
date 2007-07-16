@@ -19,15 +19,15 @@ sub current_time {
     #    with the same stable_id pre-loaded for later comparison.
     #
 sub fetch_new_stable_ids_or_prefetch_latest_db_components {
-    my ($self, $gene, $on_whole_chromosome) = @_;
+    my ($self, $gene) = @_;
 
     my $ga = $self->db->get_GeneAdaptor;
     my $ta = $self->db->get_TranscriptAdaptor;
     my $ea = $self->db->get_ExonAdaptor;
     my $sa = $self->db->get_StableIdAdaptor();
 
-    if(my $gene_stid = $gene->stable_id()) {
-        $gene->last_db_version( $ga->fetch_last_version($gene, $on_whole_chromosome) );
+    if (my $gene_stid = $gene->stable_id()) {
+        $gene->last_db_version( $ga->fetch_lastest_by_stable_id($gene_stid) );
     } else {
         $gene->stable_id($sa->fetch_new_gene_stable_id);
     }
@@ -35,18 +35,15 @@ sub fetch_new_stable_ids_or_prefetch_latest_db_components {
     foreach my $transcript (@{$gene->get_all_Transcripts}) {
         my $db_transcript;
         if(my $transcript_stid = $transcript->stable_id() ) {
-            $transcript->last_db_version( $db_transcript = $ta->fetch_last_version($transcript, $on_whole_chromosome) );
+            $db_transcript = $ta->fetch_lastest_by_stable_id($transcript_stid);
+            $transcript->last_db_version($db_transcript);
         } else {
             $transcript->stable_id($sa->fetch_new_transcript_stable_id);
         }
 
         if (my $translation = $transcript->translation()) {
 
-            if(my $translation_stid = $translation->stable_id()) {
-                if($db_transcript) {
-                    $translation->last_db_version( $db_transcript->translation() );
-                }
-            } else {
+            unless ($translation->stable_id()) {
                 $translation->stable_id($sa->fetch_new_translation_stable_id);
             }
         }
@@ -57,7 +54,7 @@ sub fetch_new_stable_ids_or_prefetch_latest_db_components {
         #
     foreach my $exon (@{$gene->get_all_Exons}) {
         if(my $exon_stid = $exon->stable_id()) {
-            $exon->last_db_version( $ea->fetch_last_version($exon, $on_whole_chromosome) );
+            $exon->last_db_version( $ea->fetch_lastest_by_stable_id($exon_stid) );
         } else {
             $exon->stable_id($sa->fetch_new_exon_stable_id)
         }
@@ -71,7 +68,7 @@ sub translations_diff {
   my $translation_seq_changes = 0;
 
   if(my $translation=$transcript->translation()) {
-    if (my $db_translation=$translation->last_db_version()) {
+    if (my $db_translation=$transcript->last_db_version->translation) {
         my $created_time = $db_translation->created_date();
         my $db_version   = $db_translation->version();
 
@@ -115,6 +112,8 @@ sub translations_diff {
 
 sub exons_diff {
   my ($self, $exons, $shared_exons)=@_;
+  
+  ### Why pass in $shared_exons as an argument?  Shouldn't it be a property of the AnnotationBroker?
 
   my $exons_any_changes = 0;
   my $exons_seq_changes = 0;
@@ -249,8 +248,8 @@ sub check_start_and_end_of_translation {
     }
 
     if(!$start_exon->dbID()) {
-      my $key = $start_exon->hashkey();
-      ($start_exon) = grep {$_->hashkey() eq $key} @$exons;
+      my $key = $start_exon->vega_hashkey();
+      ($start_exon) = grep {$_->vega_hashkey() eq $key} @$exons;
       if($start_exon) {
          $translation->start_Exon($start_exon);
       } else {
@@ -265,8 +264,8 @@ sub check_start_and_end_of_translation {
     }
 
     if(!$end_exon->dbID()) {
-      my $key = $end_exon->hashkey();
-      ($end_exon) = grep {$_->hashkey() eq $key} @$exons;
+      my $key = $end_exon->vega_hashkey();
+      ($end_exon) = grep {$_->vega_hashkey() eq $key} @$exons;
       if($end_exon) {
          $translation->end_Exon($end_exon);
       } else {

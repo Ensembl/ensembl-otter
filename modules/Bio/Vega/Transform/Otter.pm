@@ -278,14 +278,12 @@ sub build_Feature {
     my $ana = $logic_ana{$self}{$data->{'type'}} ||= Bio::EnsEMBL::Analysis->new(-logic_name => $data->{'type'});
     my $slice = $self->get_ChromosomeSlice;
 
-        ##convert xml coordinates which are in chromosomal coords - to feature coords
+       ##convert xml coordinates which are in chromosomal coords - to feature coords
     my $slice_offset = $slice->start - 1;
-    my $feat_start   = $data->{'start'} - $slice_offset;
-    my $feat_end     = $data->{'end'}   - $slice_offset;
 
     my $feature = Bio::EnsEMBL::SimpleFeature->new(
-        -start         => $feat_start,
-        -end           => $feat_end,
+        -start         => $data->{'start'} - $slice_offset,
+        -end           => $data->{'end'}   - $slice_offset,
         -strand        => $data->{'strand'},
         -analysis      => $ana,
         -score         => $data->{'score'},
@@ -301,14 +299,12 @@ sub build_AssemblyTag {
 
     my $slice = $self->get_ChromosomeSlice;
 
-    ##convert xml coordinates which are in chromosomal coords - to tag coords
+    #convert xml coordinates which are in chromosomal coords - to tag coords
     my $slice_offset = $slice->start - 1;
-    my $tag_start = $data->{'contig_start'} - $slice_offset;
-    my $tag_end   = $data->{'contig_end'}   - $slice_offset;
 
     my $at = Bio::Vega::AssemblyTag->new(
-        -start     => $tag_start,
-        -end       => $tag_end,
+        -start     => $data->{'contig_start'} - $slice_offset,
+        -end       => $data->{'contig_end'}   - $slice_offset,
         -strand    => $data->{'contig_strand'},
         -tag_type  => $data->{'tag_type'},
         -tag_info  => $data->{'tag_info'},
@@ -590,7 +586,7 @@ sub build_Locus {
 	 $gene->truncated_flag($truncated);
   }
 
-  ##convert coordinates from chromosomal coordinates to slice coordinates
+  #convert coordinates from chromosomal coordinates to slice coordinates
 
   my $slice_offset = $slice->start - 1;
 
@@ -600,8 +596,8 @@ sub build_Locus {
   }
 
   foreach my $transcript (@$transcripts){
-	 $transcript->start($transcript->start - $slice_offset);
-	 $transcript->end(  $transcript->end   - $slice_offset);
+     $transcript->start($transcript->start - $slice_offset);
+     $transcript->end(  $transcript->end   - $slice_offset);
   }
   
   $gene->start($gene->start - $slice_offset);
@@ -676,168 +672,6 @@ sub exon_hash_key {
 sub do_nothing {
 }
 
-###load parsed otter objects to otter database
-
-sub LoadAssemblySlices {
-#use Bio::EnsEMBL::Pipeline::SeqFetcher::Finished_Pfetch;
-##add more command-line sequence-set arguments like description,replace
-##this would make the current sequence-set as the latest and hide=Y for the
-##current sequence-set and the sequence set specified in the replace option
-##update chromosome length
-
-  my ($self,$db,$pfetch,$pfetch_archive,$author)= @_;
-  eval {
-	 $db->begin_work();
-	 my $dbc= $db->dbc();
-	 my $sa=$db->get_SliceAdaptor();
-	 my $slice=$self->get_AssemblySlices;
-	 my $chr_slice=$self->get_ChromosomeSlice();
-	 my $new_slice=$self->get_SliceId($chr_slice,$db,$pfetch,$pfetch_archive);
-	 my $asm_seq_reg_id=$sa->get_seq_region_id($new_slice);
-
-	 my $chr_ctg = $slice->{'chr_ctg'};
-	 ##insert all contigs
-	 foreach my $piece (@$chr_ctg) {
-
-        my ($asm_slice, $cmp_slice, $ctg_attrib_list, $ctg_author) = @$piece;
-
-		my $new_slice=$self->get_SliceId($cmp_slice,$db,$pfetch,$pfetch_archive);
-		my $cmp_seq_reg_id=$sa->get_seq_region_id($new_slice);
-		##insert chromosome-contig assembly
-		$self->insert_Assembly($dbc,$asm_seq_reg_id,$cmp_seq_reg_id,
-                            $asm_slice->start,$asm_slice->end,
-                            $cmp_slice->start,$cmp_slice->end,$cmp_slice->strand);
-
-		##insert contig_info and attributes
-		my $ctg_info_id = $self->insert_ContigInfo_Attributes($db,$ctg_author,$new_slice,$author,$ctg_attrib_list);
-	 }
-
-	 my $cln_ctg = $slice->{'cln_ctg'};
-	 ##insert all clones
-	 foreach my $piece (@$cln_ctg) {
-
-        my ($asm_slice, $cmp_slice) = @$piece;
-
-		my $new_slice=$self->get_SliceId($asm_slice,$db,$pfetch,$pfetch_archive);
-		my $asm_seq_reg_id=$sa->get_seq_region_id($new_slice);
-		$new_slice=$self->get_SliceId($cmp_slice,$db,$pfetch,$pfetch_archive);
-		my $cmp_seq_reg_id=$sa->get_seq_region_id($new_slice);
-		##insert clone-contig assembly
-		$self->insert_Assembly($dbc,$asm_seq_reg_id,$cmp_seq_reg_id,$asm_slice->start,$asm_slice->end,$cmp_slice->start,$cmp_slice->end,$cmp_slice->strand);
-	 }
-  };
-  if($@) {
-	 $db->rollback;
-	 die "Error saving genes from file:".$@;
-  } else {
-	 $db->commit;
-  }
-}
-
-sub insert_ContigInfo_Attributes {
-  my ($self,$db,$ctg_author,$ctg_slice,$author,$ctg_attrib_list)=@_;
-  my $dbc= $db->dbc();
-  my $ca=$db->get_ContigInfoAdaptor();
-  my $contig_info=$self->make_ContigInfo($ctg_slice,$ctg_author,$author,$ctg_attrib_list);
-  $ca->store($contig_info);
-}
-
-sub  insert_Assembly {
-  my($self,$dbc,$asm_seq_reg_id,$cmp_seq_reg_id,$asm_start,$asm_end,$cmp_start,$cmp_end,$cmp_strand) = @_;
-  my $select_assembly=$dbc->prepare("select count(*) from assembly where asm_seq_region_id = ? and cmp_seq_region_id = ? and asm_start =? and asm_end = ? and cmp_start = ? and cmp_end = ? and ori = ?");
-  $select_assembly->execute($asm_seq_reg_id,$cmp_seq_reg_id,$asm_start,$asm_end,$cmp_start,$cmp_end,$cmp_strand);
-  my ($count) = $select_assembly->fetchrow;
-  if ($count > 0) {
-	 print STDERR "assembly already in table with asm_seq_reg_id :$asm_seq_reg_id, and so not loaded\n";
-  } else {
-	 my  $insert_assembly=$dbc->prepare("insert into assembly
-	  (asm_seq_region_id ,cmp_seq_region_id ,asm_start ,asm_end ,cmp_start ,cmp_end ,ori)
-	  values  (?, ?, ?, ?, ?, ?, ?)");
-	 $insert_assembly->execute($asm_seq_reg_id,$cmp_seq_reg_id,$asm_start,$asm_end,
-							   $cmp_start,$cmp_end,$cmp_strand);
-  }
-}
-
-##get instant variable values of instantiated object
-
-sub get_SliceId {
-  my ($self,$slice,$db,$pfetch,$pfetch_archive)=@_;
-  my $dbc= $db->dbc();
-  my $sa=$db->get_SliceAdaptor();
-  my ($seq_reg_id,$new_slice,$slice_cs,$cs);
-  ## check if the contig is already stored in db
-  $slice_cs=$slice->coord_system;
-  eval{
-	 $cs = $db->get_CoordSystemAdaptor()->fetch_by_name($slice_cs->name,$slice_cs->version,$slice_cs->rank);
-  };
-  if($@){
-	 print STDERR "A coord_system matching the arguments does not exsist in the cord_system table,\n"
-                 ." Please make sure you have the right coord_system entry in the database:$@";
-  }
-  $new_slice = $sa->fetch_by_name($slice->name);
-  if($new_slice){
-	 warn "slice <".$slice->seq_region_name."> is already in the database\n";
-	 $seq_reg_id = $sa->get_seq_region_id($new_slice);
-  } else {
-	 ##make a new slice with the coord_system of the database for contig
-	 $new_slice=$self->make_Slice($slice->seq_region_name,1,$slice->end,$slice->end,1,$cs);
-	 my $seq;
-	 my $seq_name=$slice->seq_region_name;
-	 if ($slice_cs->name eq 'contig') {
-		##fetch sequence for contig
-		my ($acc_ver)=$seq_name =~ /^(.+\.\d+)\.\d+\.\d+$/;
-		my $seqobj;
-		eval {
-		  $seqobj = $self->pfetch_acc_ver($acc_ver,$pfetch,$pfetch_archive);
-		};
-
-		if ($@) {
-		  $db->rollback;
-		  unless ($seqobj){
-			 die "problem with pfetch for $acc_ver\n:$@\n";
-		  }
-		}
-		$seq   = $seqobj->seq;
-		##insert slice
-		##test to set the length right for API
-		if ($new_slice->length != length($seq)){
-		  my $seq_len=length($seq);
-		  $new_slice=$self->make_Slice($slice->seq_region_name,1,$seq_len,$seq_len,1,$cs);
-		}
-		##test
-		$seq_reg_id = $sa->store($new_slice,\$seq);
-		##assign new slice
-		$slice=$new_slice;
-	 } else {
-		##insert slice
-		$seq_reg_id = $sa->store($new_slice);
-		##assign new slice
-		$slice=$new_slice;
-		if ($slice_cs->name eq 'clone') {
-		  ##make clone attributes
-		  my @attrib;
-		  my $aa = $db->get_AttributeAdaptor();
-		  my ($acc,$sv)= $seq_name=~/^(.+)\.(\d+)$/;
-		  push @attrib,$self->make_Attribute('htg_phase','High throughput phase','High throughput genomic sequencing phase','3');
-		  push @attrib,$self->make_Attribute('intl_clone_name','International Clone Name','',$seq_name);
-		  push @attrib,$self->make_Attribute('embl_acc','EMBL Accession','',$acc);
-		  push @attrib,$self->make_Attribute('embl_version','EMBL Version','',$sv);
-		  ##store clone attributes
-		  $aa->store_on_Slice($new_slice,\@attrib);
-		}
-		if ($slice_cs->name eq 'chromosome') {
-		  ##make chromosome attributes
-		  my $attrib=$slice{$self}{'chr_attrib'};
-		  if (defined $attrib){
-			 my $aa = $db->get_AttributeAdaptor();
-			 $aa->store_on_Slice($new_slice,$attrib);
-		  }
-		}
-	 }
-  }
-  return $new_slice;
-}
-
 sub get_AssemblyType {
   my $self=shift;
   return $assembly_type{$self};
@@ -851,24 +685,6 @@ sub set_ChromosomeSlice {
 sub get_ChromosomeSlice {
   my $self=shift;
   return $slice{$self}{'chr'};
-}
-
-sub get_ChromosomeSliceDB {
-  my ($self,$db)=@_;
-
-  my $slice    = $self->get_ChromosomeSlice();
-  my $slice_cs = $slice->coord_system;
-  my $cs;
-  eval{
-	 $cs = $db->get_CoordSystemAdaptor()->fetch_by_name($slice_cs->name,$slice_cs->version,$slice_cs->rank);
-  };
-  if($@){
-	 print STDERR "A coord_system matching the arguments does not exsist in the cord_system table,"
-                 ." Please make sure you have the right coord_system entry in the database:$@";
-  }
-
-  my $new_slice = $db->get_SliceAdaptor()->fetch_by_name($slice->name);
-  return $new_slice;
 }
 
 sub get_AssemblySlices {
@@ -906,28 +722,6 @@ sub get_SequenceSet_AssemblyType {
   return;
 }
 
-###fetch sequence
-
-sub pfetch_acc_ver {
-  my( $self,$acc_ver,$pfetch,$pfetch_archive ) = @_;
-  my $seq;
-  eval {
-	 $seq = $pfetch->get_Seq_by_acc($acc_ver);
-  };
-  if ($@){
-	 unless ($pfetch){
-		die "\nproblem with pfetch:$@\n";
-	 }
-  }
-  unless ($seq) {
-	 warn "Fetching '$acc_ver' from archive\n";
-	 $seq = $pfetch_archive->get_Seq_by_acc($acc_ver);
-  }
-  unless ($seq) {
-	 die "cannot fetch sequence\n";
-  }
-  return $seq;
-}
 
 ##make Otter objects methods
 
@@ -1034,6 +828,8 @@ sub make_Author {
     );
     return $author;
 }
+
+
 
 1;
 

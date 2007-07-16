@@ -63,7 +63,7 @@ sub add_Attributes  {
   return;
 }
 
-sub hashkey_sub {
+sub vega_hashkey_sub {
   my $self = shift;
   my $attributes = $self->get_all_Attributes;
   my $hashkey_sub={};
@@ -73,12 +73,10 @@ sub hashkey_sub {
   return $hashkey_sub;
 }
 
-sub hashkey {
+sub vega_hashkey {
   my $self = shift;
-  my $attributes = $self->get_all_Attributes;
-  my $count=@$attributes;
-  my $hashkey=$count;
-  return $hashkey;
+
+  return scalar @{$self->get_all_Attributes};
 }
 
 sub get_all_Attributes  {

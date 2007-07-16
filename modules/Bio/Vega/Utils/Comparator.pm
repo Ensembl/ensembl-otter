@@ -14,21 +14,21 @@ sub compare{
 
       ## sanity checks:
     if(!$obj1) {
-        throw("compare(): Cannot compare NULL to ".$obj2->stable_id." (key=".$obj2->hashkey.")");
+        throw("compare(): Cannot compare NULL to ".$obj2->stable_id." (key=".$obj2->vega_hashkey.")");
     } elsif(!$obj2) {
-        throw("compare(): Cannot compare ".$obj1->stable_id." (key=".$obj1->hashkey.") to NULL");
+        throw("compare(): Cannot compare ".$obj1->stable_id." (key=".$obj1->vega_hashkey.") to NULL");
     } elsif(ref($obj1) ne ref($obj2)) {
         throw("Cannot compare $obj1 to $obj2. Objects have to belong to the same class.");
     }
 
     my $class = ref($obj1);
-    if(!$obj1->can('hashkey')) {
-        throw("I need to run 'hashkey' method on the objects, which is not available for class $class.");
+    if(!$obj1->can('vega_hashkey')) {
+        throw("I need to run 'vega_hashkey' method on the objects, which is not available for class $class.");
     }
-    my $obj1_hash_key=$obj1->hashkey;
-    my $obj2_hash_key=$obj2->hashkey;
+    my $obj1_hash_key=$obj1->vega_hashkey;
+    my $obj2_hash_key=$obj2->vega_hashkey;
 
-    ## First compare the main keys. If failed, try hashkey_sub:
+    ## First compare the main keys. If failed, try vega_hashkey_sub:
     my $changed=0;
     if ($obj1_hash_key ne $obj2_hash_key) {
         $changed=1;
@@ -36,14 +36,14 @@ sub compare{
         if ($class->isa('Bio::Vega::ContigInfo')) {
             print STDERR "ContigInfo has changed due to change in main key\n";
         } else {
-            print STDERR $obj1->stable_id.".".$obj1->version." now has changed main key ".$obj1->hashkey_structure()."\n";
+            print STDERR $obj1->stable_id.".".$obj1->version." now has changed main key ".$obj1->vega_hashkey_structure()."\n";
         }
         print STDERR "Before-key: $obj1_hash_key\nAfter-key: $obj2_hash_key\n";
 
-    } elsif($obj1->can('hashkey_sub')) { # So exons (which have no hashkey_sub) are excluded:
+    } elsif($obj1->can('vega_hashkey_sub')) { # So exons (which have no vega_hashkey_sub) are excluded:
 
-        my $obj1_hash_sub = $obj1->hashkey_sub;
-        my $obj2_hash_sub = $obj2->hashkey_sub;
+        my $obj1_hash_sub = $obj1->vega_hashkey_sub;
+        my $obj2_hash_sub = $obj2->vega_hashkey_sub;
         my $e_count=0;
         foreach my $subkey (keys %$obj1_hash_sub) {
             unless (exists $obj2_hash_sub->{$subkey}) {

@@ -8,7 +8,7 @@ use Bio::Vega::DBSQL::GeneAdaptor;
 use Bio::Vega::DBSQL::StableIdAdaptor;
 use Bio::Vega::DBSQL::ExonAdaptor;
 use Bio::Vega::DBSQL::TranscriptAdaptor;
-use Bio::Vega::DBSQL::TranslationAdaptor;
+#use Bio::Vega::DBSQL::TranslationAdaptor;
 use Bio::Vega::DBSQL::AssemblyTagAdaptor;
 use Bio::Vega::DBSQL::ContigLockAdaptor;
 use Bio::Vega::DBSQL::MetaContainer;
@@ -86,14 +86,15 @@ sub get_TranscriptAdaptor {
   return $self->{'VegaTranscript'};
 }
 
-sub get_TranslationAdaptor {
-  my $self = shift;
-  if ( !exists $self->{'VegaTranslation'} ){
-	 my $ad=Bio::Vega::DBSQL::TranslationAdaptor->new($self);
-	 $self->{'VegaTranslation'}=$ad;
-  }
-  return $self->{'VegaTranslation'};
-}
+# We now rebless Translation inside Bio::Vega::Transcript::reincarnate_transcript() instead
+#sub get_TranslationAdaptor {
+#  my $self = shift;
+#  if ( !exists $self->{'VegaTranslation'} ){
+#     my $ad=Bio::Vega::DBSQL::TranslationAdaptor->new($self);
+#     $self->{'VegaTranslation'}=$ad;
+#  }
+#  return $self->{'VegaTranslation'};
+#}
 
 sub get_AssemblyTagAdaptor {
   my $self = shift;
