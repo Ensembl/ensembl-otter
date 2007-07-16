@@ -351,7 +351,7 @@ if ($odba->isa('Bio::Otter::DBSQL::DBAdaptor')) {
             }
             ##update all gene and its components in db (new/mod)
             $gene->is_current(1);
-            $gene_adaptor->store($gene, 0, $time_now);
+            $gene_adaptor->store($gene, $time_now);
         }
         $server->log("Updated " . scalar(@$xml_genes) . " genes");
         
@@ -377,7 +377,7 @@ if ($odba->isa('Bio::Otter::DBSQL::DBAdaptor')) {
             
             # Setting is_current to 0 will cause the store method to delete it.
             $dbgene->is_current(0);
-            $gene_adaptor->store($dbgene, 0, $time_now);
+            $gene_adaptor->store($dbgene, $time_now);
             $del_count++;
             $server->log("Deleted gene " . $dbgene->stable_id);
         }
