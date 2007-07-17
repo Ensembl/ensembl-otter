@@ -4,6 +4,7 @@ use strict;
 use Bio::EnsEMBL::Utils::Argument qw ( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use base 'Bio::EnsEMBL::Transcript';
+use Bio::Vega::Translation;
 
 sub new {
   my($class,@args) = @_;
