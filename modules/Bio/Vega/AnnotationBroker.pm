@@ -68,7 +68,8 @@ sub translations_diff {
   my $translation_seq_changes = 0;
 
   if(my $translation=$transcript->translation()) {
-    if (my $db_translation=$transcript->last_db_version->translation) {
+    my $db_transcript = $transcript->last_db_version();
+    if($db_transcript && (my $db_translation = $db_transcript->translation())) {
         my $created_time = $db_translation->created_date();
         my $db_version   = $db_translation->version();
 
