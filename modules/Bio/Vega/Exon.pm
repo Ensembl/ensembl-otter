@@ -22,7 +22,7 @@ sub vega_hashkey {
         $self->seq_region_name,
         $self->seq_region_start,
         $self->seq_region_end,
-        $self->seq_regin_strand,
+        $self->seq_region_strand,
         $self->phase,
         $self->end_phase,
         );
