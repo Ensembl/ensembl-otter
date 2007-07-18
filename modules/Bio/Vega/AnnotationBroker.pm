@@ -32,11 +32,13 @@ sub fetch_new_stable_ids_or_prefetch_latest_db_components {
         $gene->stable_id($sa->fetch_new_gene_stable_id);
     }
 
+        # to prevent identical exons (which are shared in DB but not in memory)
+        # from getting different stable_ids
+    my %exon_key_2_stable_id = ();
+
     foreach my $transcript (@{$gene->get_all_Transcripts}) {
-        my $db_transcript;
         if(my $transcript_stid = $transcript->stable_id() ) {
-            $db_transcript = $ta->fetch_lastest_by_stable_id($transcript_stid);
-            $transcript->last_db_version($db_transcript);
+            $transcript->last_db_version( $ta->fetch_lastest_by_stable_id($transcript_stid) );
         } else {
             $transcript->stable_id($sa->fetch_new_transcript_stable_id);
         }
@@ -47,18 +49,21 @@ sub fetch_new_stable_ids_or_prefetch_latest_db_components {
                 $translation->stable_id($sa->fetch_new_translation_stable_id);
             }
         }
-    }
 
-        # since we ask for exons OF A GENE, we get them without repetition
-        # (the uniqueness is taken care of by means of hashing them in Bio::EnsEMBL::Gene)
-        #
-    foreach my $exon (@{$gene->get_all_Exons}) {
-        if(my $exon_stid = $exon->stable_id()) {
-            $exon->last_db_version( $ea->fetch_lastest_by_stable_id($exon_stid) );
-        } else {
-            $exon->stable_id($sa->fetch_new_exon_stable_id)
+        foreach my $exon (@{$transcript->get_all_Exons}) {
+            if(my $exon_stid = $exon->stable_id()) {
+                $exon->last_db_version( $ea->fetch_lastest_by_stable_id($exon_stid) );
+            } else {
+                my $this_hashkey = $exon->hashkey();
+                if(my $seen_stable_id = $exon_key_2_stable_id{$this_hashkey}) {
+                    $exon->stable_id( $seen_stable_id );
+                } else {
+                    $exon->stable_id( $exon_key_2_stable_id{$this_hashkey} = $sa->fetch_new_exon_stable_id );
+                }
+            }
         }
     }
+
 }
 
 sub translations_diff {
