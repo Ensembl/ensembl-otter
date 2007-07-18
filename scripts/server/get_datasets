@@ -3,7 +3,6 @@
 use strict;
 
 use Bio::Otter::ServerScriptSupport;
-use HTTPD::Authen;
 
 my $DEBUG      = 0;
 my $ALLOW_ALL  = 0;
@@ -58,6 +57,8 @@ $server->send_response( $xml, 1);
 
 sub check_authorisation{
     my ($groupAdminObj, $authinfo, $authen);
+
+    require 'HTTPD::Authen';
 
     $authinfo = $ENV{'HTTP_AUTHORIZATION'} || 'Basic xxxxxxx';
     $authen = HTTPD::Authen->new(DB     => $ENV{AUTHUSERFILE},
