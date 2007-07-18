@@ -3,6 +3,14 @@ package Bio::Vega::Exon;
 use strict;
 use base 'Bio::EnsEMBL::Exon';
 
+sub adjust_start_end {
+    my $self = shift @_;
+
+    my $ensembl_exon = $self->SUPER::adjust_start_end(@_);
+
+    return bless $ensembl_exon, 'Bio::Vega::Exon';
+}
+
 sub vega_hashkey_structure {
     return 'seq_region_name-seq_region_start-seq_region_end-seq_region_strand-phase-end_phase';
 }
