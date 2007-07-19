@@ -1038,7 +1038,10 @@ sub get_clipboard_text {
     use Time::HiRes 'gettimeofday';
     eval {
         my $t1 = gettimeofday();
-        $text = $canvas->SelectionGet();
+        $text = $canvas->SelectionGet(
+            -selection => 'PRIMARY',
+            -type      => 'STRING',
+            );
         my $t2 = gettimeofday();
         printf STDERR "SelectionGet() took %.3f sec\n", $t2 - $t1;
         };
