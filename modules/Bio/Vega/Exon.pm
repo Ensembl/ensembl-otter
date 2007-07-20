@@ -40,5 +40,17 @@ sub last_db_version {
     return $self->{_last_db_version};
 }
 
+sub swap_slice {
+    my ($self, $new_slice) = @_;
+    
+    my $old_slice = $self->slice;
+    return if $old_slice == $new_slice;
+    
+    my $offset = $old_slice->start - $new_slice->start;
+    $self->start($self->start + $offset);
+    $self->end(  $self->end   + $offset);
+    $self->slice($new_slice);
+}
+
 1;
 

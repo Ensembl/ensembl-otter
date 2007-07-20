@@ -28,16 +28,14 @@ sub fetch_evidence {
   if(!defined($tid)) {
     throw("Transcript must have dbID.");
   }
-  my $sth = $self->prepare("SELECT name,type " .
-                           "FROM evidence " .
-                           "WHERE transcript_id = ? ");
+  my $sth = $self->prepare("SELECT name, type FROM evidence WHERE transcript_id = ? ");
   $sth->execute($tid);
-  my $results;
+  my $results = [];
   while  (my $ref = $sth->fetchrow_hashref) {
 	 my $obj=Bio::Vega::Evidence->new;
 	 $obj->name($ref->{name});
 	 $obj->type($ref->{type});
-	 push @$results,$obj;
+	 push @$results, $obj;
   }
   $sth->finish();
 
@@ -52,13 +50,13 @@ sub store_Evidence {
   }
   # Insert new evidence
   my $sth = $self->prepare(q{
-        INSERT INTO evidence(transcript_id, name,type) VALUES (?,?,?)
+        INSERT INTO evidence(transcript_id, name, type) VALUES (?,?,?)
         });
 
   foreach my $evidence (@$evidence_list) {
-	 my $name=$evidence->name;
-	 my $type=$evidence->type;
-	 $sth->execute($transcript_id,$name,$type);
+	 my $name = $evidence->name;
+	 my $type = $evidence->type;
+	 $sth->execute($transcript_id, $name, $type);
   }
 }
 
@@ -204,9 +202,9 @@ sub store {
     my $author_adaptor = $self->db->get_AuthorAdaptor;
     my $transcript_author=$transcript->transcript_author;
     $author_adaptor->store($transcript_author);
-    $author_adaptor->store_transcript_author($transcript->dbID, $transcript_author->dbID);
+    $author_adaptor->store_transcript_author($transcript_dbID, $transcript_author->dbID);
 
-    $self->store_Evidence($transcript->dbID, $transcript->evidence_list );
+    $self->store_Evidence($transcript_dbID, $transcript->evidence_list );
 
     return $transcript_dbID;
 }

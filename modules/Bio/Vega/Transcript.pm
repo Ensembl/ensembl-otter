@@ -38,15 +38,15 @@ sub evidence_list {
 
     my $stored_list = $self->{'evidence_list'} ||= [];
 
-    if($given_list) {
+    if ($given_list) {
             # don't copy the arrayref, copy the elements instead:
         my $class = 'Bio::Vega::Evidence';
         foreach my $evidence (@$given_list) {
             unless( $evidence->isa($class) ) {
                 throw( "evidence_list can only store objects of '$class', not $evidence" );
             }
-            push @$stored_list, @$given_list;
         }
+        push @$stored_list, @$given_list;
     }
     return $stored_list;
 }
@@ -138,8 +138,8 @@ sub all_Attributes_string {
     my ($self) = @_;
     
     return join ('-',
-        map {$_->key . '=' . $_->value}
-        sort {$a->key cmp $b->key || $a->value cmp $b->value}
+        map {$_->code . '=' . $_->value}
+        sort {$a->code cmp $b->code || $a->value cmp $b->value}
         @{$self->get_all_Attributes});
 }
 
@@ -156,13 +156,7 @@ sub vega_hashkey {
   my $description = $self->{'description'} ? $self->{'description'}: '' ;
   my $attrib_string = $self->all_Attributes_string;
 
-  my $evidence= $self->evidence_list();
-  my $evidence_count=0;
-  
-  ##should transcript_class_name be added??
-  if (defined $evidence) {
-	 $evidence_count= scalar(@$evidence);
-  }
+  my $evidence_count = scalar(@{$self->evidence_list});
 
   return "$seq_region_name-$seq_region_start-$seq_region_end-$seq_region_strand-$biotype-$status-$exon_count-$description-$evidence_count-$attrib_string";
 }
@@ -192,6 +186,11 @@ sub vega_hashkey_sub {
 
 }
 
+sub translatable_Exons_vega_hashkey {
+    my $self = shift;
+    
+    return join('+', map $_->vega_hashkey, @{$self->get_all_translateable_Exons});
+}
 
 # This is to be used by storing mechanism of GeneAdaptor,
 # to simplify the loading during comparison.

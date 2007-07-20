@@ -425,6 +425,8 @@ sub fetch_latest_by_stable_id {
 sub store {
     my ($self, $gene, $time_now) = @_;
 
+    $gene->prune_Exons;
+
     $time_now       ||= time;
 
     unless ($gene) {

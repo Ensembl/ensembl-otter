@@ -43,6 +43,7 @@ my (
     %chromosome_name,
 	%dna,
 	%assembly,
+    %author_cache,
 );
 
 
@@ -65,6 +66,7 @@ sub DESTROY {
     delete $chromosome_name{$self};
     delete $dna{$self};
     delete $assembly{$self};
+    delete $author_cache{$self};
 
         # So that DESTROY gets called in baseclass:
     bless $self, 'Bio::Vega::Transform';
@@ -247,7 +249,7 @@ sub build_SequenceFragment {
         ##make chromosome - contig slice
     my $chr_asm_slice = $self->make_Slice($assembly_type,$start,$end,$end,$strand,$chr_coord_system);
     my $ctg_cmp_slice = $self->make_Slice($ctg_name,$cmp_start,$cmp_end,$cmp_end,$strand,$ctg_coord_system);
-    my $cln_author=$self->make_Author($data->{'author'} || 'nobody', $data->{'author_email'} || 'nobody', '');
+    my $cln_author=$self->make_Author($data->{'author'}, $data->{'author_email'});
 
     my $chr_ctg_piece = [$chr_asm_slice,$ctg_cmp_slice,$cln_attrib_list,$cln_author];
     my $chr_ctg_list = $slice{$self}{'chr_ctg'} ||= [];
@@ -426,9 +428,7 @@ sub build_Transcript {
   my $author_name  = $data->{'author'};
   my $author_email = $data->{'author_email'};
 
-  my $group = ( $data->{'name'} =~ /(\S+):.+/ ) ? $1 : 'havana';
-
-  my $author=$self->make_Author($author_name, $author_email, $group);
+  my $author=$self->make_Author($author_name, $author_email);
   $transcript->transcript_author($author);
   $transcript->biotype($biotype);
   $transcript->status($status);
@@ -577,7 +577,10 @@ sub build_Locus {
 	 }
   }
   ##share exons among transcripts of this gene
-  $self->prune_exons($gene,$transcripts);
+  foreach my $tran (@$transcripts) {
+    $gene->add_Transcript($tran);
+  }
+  $gene->prune_Exons;
   ##add all gene attributes
   $gene->add_Attributes(@$gene_attributes);
   ##truncated flag
@@ -605,68 +608,6 @@ sub build_Locus {
 
   my $list = $gene_list{$self} ||= [];
   push @$list, $gene;
-}
-
-  # keep track of all unique exons found so far to avoid making duplicates
-  # share exons of a gene among all transcripts
-  # need to be very careful about translation->start_exon and translation->end_Exon
-  #
-sub prune_exons {
-  my ($self,$generef,$tref) = @_;
-
-  my( %stable_key, %unique_exons );
-  foreach my $tran (@$tref) {
-	 my (@transcript_exons);
-	 foreach my $exon (@{$tran->get_all_Exons}) {
-		my $exon_key = $self->exon_hash_key($exon);
-		if (my $found = $unique_exons{$exon_key}) {
-		  # Use the found exon in the translation
-		  if ($tran->translation) {
-			 if ($exon == $tran->translation->start_Exon) {
-				$tran->translation->start_Exon($found);
-			 }
-			 if ($exon == $tran->translation->end_Exon) {
-				$tran->translation->end_Exon($found);
-			 }
-		  }
-		  # re-use existing exon in this transcript
-		  $exon = $found;
-		} else {
-		  $unique_exons{$exon_key} = $exon;
-		}
-		push (@transcript_exons, $exon);
-		# Make sure we don't have the same stable IDs
-		# for different exons (different keys).
-		if (my $stable = $exon->stable_id) {
-		  if (my $seen_key = $stable_key{$stable}) {
-			 if ($seen_key ne $exon_key) {
-				$exon->stable_id(undef);
-				printf STDERR  "Already seen exon_id '$stable' on different exon\n";
-			 }
-		  } else {
-			 $stable_key{$stable} = $exon_key;
-		  }
-		}
-	 }
-	 $tran->flush_Exons;
-     my $transcript_strand = $transcript_exons[0]->strand;
-	 foreach my $exon ( sort { ($a->start<=>$b->start)*$transcript_strand } @transcript_exons) {
-		$tran->add_Exon($exon);
-	 }
-	 $generef->add_Transcript($tran);
-  }
-}
-
-sub exon_hash_key {
-  my( $self,$exon ) = @_;
-  # This assumes that all the exons we
-  # compare will be on the same contig
-  return join(" ",
-				  $exon->start,
-				  $exon->end,
-				  $exon->strand,
-				  $exon->phase,
-				  $exon->end_phase);
 }
 
 sub do_nothing {
@@ -811,21 +752,32 @@ sub make_Slice {
 }
 
 sub make_Author {
-    my ($self,$name, $email, $group_name)=@_;
+    my ($self, $name, $email, $group_name) = @_;
 
-    print STDERR "make_Author called: name=[$name], email=[$email], group_name=[$group_name]\n";
-    # for other groups, current strategy is to patch the database by hand
-    my $group_email = "vega\@sanger.ac.uk" if $email =~ /sanger/;
-    my $group = Bio::Vega::AuthorGroup->new (
-        -name   => $group_name,
-        -email  => $group_email,
-    );
+    $name  ||= 'nobody';
+    $email ||= 'nobody';
 
-    my $author = Bio::Vega::Author->new (
-        -name   => $name,
-        -email  => $email,
-        -group  => $group,
-    );
+    my $author;
+    unless ($author = $author_cache{$self}{$email}) {
+        print STDERR "make_Author called: name=[$name], email=[$email], group_name=[$group_name]\n";
+        # for other groups, current strategy is to patch the database by hand
+        my $group_email;
+        if ($email =~ /[^\w\-]/) {
+            $group_email = 'vega@sanger.ac.uk';
+            $group_name ||= 'havana';
+        }
+        my $group = Bio::Vega::AuthorGroup->new (
+            -name   => $group_name,
+            -email  => $group_email,
+        );
+
+        $author = Bio::Vega::Author->new (
+            -name   => $name,
+            -email  => $email,
+            -group  => $group,
+        );
+        $author_cache{$self}{$email} = $author;
+    }
     return $author;
 }
 
