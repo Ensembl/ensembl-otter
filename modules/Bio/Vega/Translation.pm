@@ -7,33 +7,24 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use base 'Bio::EnsEMBL::Translation';
 
 sub vega_hashkey {
-  my $self = shift;
+  my $self=shift;
 
   my $start_exon = $self->start_Exon;
   my $end_exon   = $self->end_Exon;
-  
-  my $in_coding = 0;
-  my $coding_exons_hashkey = '';
-  foreach my $exon (@{$self->get_all_Exons}) {
-    unless ($in_coding) {
-        if ($exon == $start_exon) {
-            $in_coding = 1;
-        } else {
-            next;
-        }
-    }
-    $coding_exons_hashkey .= $exon->vega_hashkey;
-    last if $exon == $end_exon;
+  unless ($start_exon and $end_exon) {
+    throw("need both start_exon and end_exon for this translation to generate correct hashkey");
   }
+  my $start_exon_hash_key = $start_exon->vega_hashkey;
+  my $end_exon_hash_key   = $end_exon->vega_hashkey;
 
-  my $tl_start = $self->start;
-  my $tl_end   = $self->end;
+  my $tl_start =$self->start;
+  my $tl_end   =$self->end;
 
-  return "$tl_start-$tl_end-$coding_exons_hashkey";
+  return "$start_exon_hash_key-$end_exon_hash_key-$tl_start-$tl_end";
 }
 
 sub vega_hashkey_structure {
-    return 'tl_start-tl_end-coding_exons_hashkey';
+    return 'start_exon_vega_hashkey-end_exon_vega_hashkey-tl_start-tl_end';
 }
 
 sub vega_hashkey_sub {

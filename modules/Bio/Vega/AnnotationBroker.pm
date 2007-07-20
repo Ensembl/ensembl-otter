@@ -27,7 +27,7 @@ sub fetch_new_stable_ids_or_prefetch_latest_db_components {
     my $sa = $self->db->get_StableIdAdaptor();
 
     if (my $gene_stid = $gene->stable_id()) {
-        $gene->last_db_version( $ga->fetch_lastest_by_stable_id($gene_stid) );
+        $gene->last_db_version( $ga->fetch_latest_by_stable_id($gene_stid) );
     } else {
         $gene->stable_id($sa->fetch_new_gene_stable_id);
     }
@@ -38,7 +38,7 @@ sub fetch_new_stable_ids_or_prefetch_latest_db_components {
 
     foreach my $transcript (@{$gene->get_all_Transcripts}) {
         if(my $transcript_stid = $transcript->stable_id() ) {
-            $transcript->last_db_version( $ta->fetch_lastest_by_stable_id($transcript_stid) );
+            $transcript->last_db_version( $ta->fetch_latest_by_stable_id($transcript_stid) );
         } else {
             $transcript->stable_id($sa->fetch_new_transcript_stable_id);
         }
@@ -49,18 +49,16 @@ sub fetch_new_stable_ids_or_prefetch_latest_db_components {
                 $translation->stable_id($sa->fetch_new_translation_stable_id);
             }
         }
+    }
 
-        foreach my $exon (@{$transcript->get_all_Exons}) {
-            if(my $exon_stid = $exon->stable_id()) {
-                $exon->last_db_version( $ea->fetch_lastest_by_stable_id($exon_stid) );
-            } else {
-                my $this_hashkey = $exon->hashkey();
-                if(my $seen_stable_id = $exon_key_2_stable_id{$this_hashkey}) {
-                    $exon->stable_id( $seen_stable_id );
-                } else {
-                    $exon->stable_id( $exon_key_2_stable_id{$this_hashkey} = $sa->fetch_new_exon_stable_id );
-                }
-            }
+        # since we ask for exons OF A GENE, we get them without repetition
+        # (the uniqueness is taken care of by means of hashing them in Bio::EnsEMBL::Gene)
+        #
+    foreach my $exon (@{$gene->get_all_Exons}) {
+        if(my $exon_stid = $exon->stable_id()) {
+            $exon->last_db_version( $ea->fetch_latest_by_stable_id($exon_stid) );
+        } else {
+            $exon->stable_id($sa->fetch_new_exon_stable_id)
         }
     }
 
@@ -74,7 +72,7 @@ sub translations_diff {
 
   if(my $translation=$transcript->translation()) {
     my $db_transcript = $transcript->last_db_version();
-    if($db_transcript && (my $db_translation = $db_transcript->translation())) {
+    if ($db_transcript && (my $db_translation = $db_transcript->translation())) {
         my $created_time = $db_translation->created_date();
         my $db_version   = $db_translation->version();
 
@@ -85,6 +83,7 @@ sub translations_diff {
             ##Remember to uncomment this after loading and remove the line/s after
             #	throw('translation stable_ids of the same two transcripts are different\n');
             #
+            
             my $existing_translation=$self->db->get_TranslationAdaptor->fetch_by_stable_id($translation->stable_id);
             if($existing_translation){
                 throw ("new translation stable_id(".$translation->stable_id
@@ -96,13 +95,13 @@ sub translations_diff {
                 $translation_seq_changes = 1;
             }
         } else {
-            $translation_any_changes = compare($db_translation,$translation);
-
-            $translation_seq_changes = $translation_any_changes && ($db_translation->seq() ne $translation->seq());
+            $translation_any_changes = compare($db_translation, $translation)
+                || ($db_transcript->translatable_Exons_vega_hashkey ne $transcript->translatable_Exons_vega_hashkey);
+            $translation_seq_changes = $translation_any_changes && ($db_transcript->translate->seq() ne $transcript->translate->seq());
         }
 
         $translation->created_date($db_translation->created_date());
-        $translation->modified_date($translation_any_changes ? $self->current_time : $created_time );
+        $translation->modified_date($translation_any_changes ? $self->current_time : $db_translation->modified_date );
         $translation->version($db_version + $translation_seq_changes);
     } else { # NEW
         $translation->created_date($self->current_time());
@@ -117,7 +116,12 @@ sub translations_diff {
 }
 
 sub exons_diff {
-  my ($self, $exons, $shared_exons)=@_;
+  my ($self, $transcript, $shared_exons) = @_;
+  
+  ### DANGER: This code depends on get_all_Exons() returning
+  ### a ref to the actual list of exons in the object 
+  my $actual_exon_list = $transcript->get_all_Exons;
+  my $transl = $transcript->translation;
   
   ### Why pass in $shared_exons as an argument?  Shouldn't it be a property of the AnnotationBroker?
 
@@ -126,10 +130,13 @@ sub exons_diff {
 
   my $sa = $self->db->get_StableIdAdaptor();
 
-  foreach my $exon (@$exons) {
+  foreach my $exon (@$actual_exon_list) {
 
-    if(my $hashed_exon = $shared_exons->{$exon->stable_id}) { # we've seen it already in the new set
-        if(compare($hashed_exon, $exon)) { # it's different, so split and find a new stable_id
+    my $save_exon = $exon;
+    if (my $hashed_exon = $shared_exons->{$exon->stable_id}) {
+        # we've seen it already in the new set
+        if (compare($hashed_exon, $exon)) {
+            # it's different, so split and find a new stable_id
             $exon->is_current(1);
             $exon->stable_id($sa->fetch_new_exon_stable_id);
             $exon->created_date($self->current_time);
@@ -137,24 +144,34 @@ sub exons_diff {
             $exon->version(1);
             $exons_any_changes = 1;
             $exons_seq_changes = 1; # could be, at least, as it is on the same seq_region as the hashed one
-        } else { # just reuse it
+        } else {
+            # just reuse it
+            $hashed_exon->swap_slice($exon->slice);
             $exon = $hashed_exon;
         }
-    } elsif(my $db_exon = $exon->last_db_version()) { # haven't seen yet, but it had a prev.version
-        if(compare($db_exon, $exon)) { # the coords are different, make a new/old version
+    }
+    elsif (my $db_exon = $exon->last_db_version()) {
+        # haven't seen yet, but it had a prev.version
+        if (compare($db_exon, $exon)) {
+            # the coords are different, make a new/old version
             $exon->is_current(1);
 			$exon->created_date($db_exon->created_date);
             $exon->modified_date($self->current_time);
 
-            my $seq_diff = $db_exon->seq() ne $exon->seq(); # has the sequence of the exon changed?
+            # has the sequence of the exon changed?
+            my $seq_diff = $db_exon->seq() ne $exon->seq();
             $exon->version($db_exon->version + $seq_diff);
             $exons_any_changes   = 1;
             $exons_seq_changes ||= $seq_diff;
 
-        } else { # again, just reuse it
+        } else {
+            # again, just reuse it
+            $db_exon->swap_slice($exon->slice);
             $exon = $db_exon;
         }
-    } else { # a completely new exon, but trust the stable_id we have
+    }
+    else {
+        # a completely new exon, but trust the stable_id we have
         $exon->version(1);
         $exon->created_date($self->current_time);
         $exon->modified_date($self->current_time);
@@ -163,11 +180,24 @@ sub exons_diff {
         $exons_seq_changes = 1; # including the change in the sequence
     }
 
-    ## maintain a set of all exons of all transcripts of the gene
+    # maintain a set of all exons of all transcripts of the gene
     if (! $shared_exons->{$exon->stable_id}) {
-        $shared_exons->{$exon->stable_id}=$exon;
+        $shared_exons->{$exon->stable_id} = $exon;
     }
+    
+    # If we have used an exon from the database, we must
+    # check to see if the translation uses it.
+    if ($transl and $exon != $save_exon) {
+        if ($save_exon == $transl->start_Exon) {
+            $transl->start_Exon($exon);
+        }
+        if ($save_exon == $transl->end_Exon) {
+            $transl->end_Exon($exon);
+        }
+    }
+    
   }
+
   return ($exons_any_changes, $exons_seq_changes);
 }
 
@@ -304,7 +334,7 @@ sub transcripts_diff {
         ## check if exons are new or old
         #  and if old whether they have changed or not:
         #  and if changed, was there any change in sequence?
-    my ($exons_any_changes, $exons_seq_changes) = $self->exons_diff( $tran->get_all_Exons(), $shared_exons);
+    my ($exons_any_changes, $exons_seq_changes) = $self->exons_diff($tran, $shared_exons);
 
         # has to be run exactly once, so not suitable as a part of '||' expression:
     my ($translation_any_changes, $translation_seq_changes) = $self->translations_diff($tran);
@@ -359,7 +389,7 @@ sub transcripts_diff {
   return ($transcripts_any_changes, $transcripts_seq_changes);
 }
 
-##################### SimpleFeature related subs ##############################33
+##################### SimpleFeature related subs ##############################
 
 sub compare_feature_sets {
     my ($self, $old_features, $new_features) = @_;

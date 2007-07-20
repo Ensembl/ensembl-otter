@@ -21,8 +21,8 @@ sub compare{
         throw("Cannot compare $obj1 to $obj2. Objects have to belong to the same class.");
     }
 
-    my $class = ref($obj1);
     if(!$obj1->can('vega_hashkey')) {
+        my $class = ref($obj1);
         throw("I need to run 'vega_hashkey' method on the objects, which is not available for class $class.");
     }
     my $obj1_hash_key=$obj1->vega_hashkey;
@@ -33,12 +33,14 @@ sub compare{
     if ($obj1_hash_key ne $obj2_hash_key) {
         $changed=1;
         print STDERR "*Changes observed\n";
-        if ($class->isa('Bio::Vega::ContigInfo')) {
+        if ($obj1->isa('Bio::Vega::ContigInfo')) {
             print STDERR "ContigInfo has changed due to change in main key\n";
         } else {
             print STDERR $obj1->stable_id.".".$obj1->version." now has changed main key ".$obj1->vega_hashkey_structure()."\n";
         }
-        print STDERR "Before-key: $obj1_hash_key\nAfter-key: $obj2_hash_key\n";
+        print STDERR
+            " Before-key: $obj1_hash_key\n",
+            "  After-key: $obj2_hash_key\n";
 
     } elsif($obj1->can('vega_hashkey_sub')) { # So exons (which have no vega_hashkey_sub) are excluded:
 

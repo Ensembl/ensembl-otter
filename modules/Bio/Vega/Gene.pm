@@ -39,8 +39,8 @@ sub all_Attributes_string {
     my ($self) = @_;
     
     return join ('-',
-        map {$_->key . '=' . $_->value}
-        sort {$a->key cmp $b->key || $a->value cmp $b->value}
+        map {$_->code . '=' . $_->value}
+        sort {$a->code cmp $b->code || $a->value cmp $b->value}
         @{$self->get_all_Attributes});
 }
 
@@ -123,6 +123,54 @@ sub dissociate {
         }
     }
 }
+
+# keep track of all unique exons found so far to avoid making duplicates
+# share exons of a gene among all transcripts
+# need to be very careful about translation->start_exon and translation->end_Exon
+sub prune_Exons {
+  my ($self) = @_;
+
+  my( %stable_key, %unique_exons );
+  foreach my $tran (@{$self->get_all_Transcripts}) {
+	 my (@transcript_exons);
+	 foreach my $exon (@{$tran->get_all_Exons}) {
+		my $exon_key = $exon->vega_hashkey;
+		if (my $found = $unique_exons{$exon_key}) {
+		  # Use the found exon in the translation
+		  if ($tran->translation) {
+			 if ($exon == $tran->translation->start_Exon) {
+				$tran->translation->start_Exon($found);
+			 }
+			 if ($exon == $tran->translation->end_Exon) {
+				$tran->translation->end_Exon($found);
+			 }
+		  }
+		  # re-use existing exon in this transcript
+		  $exon = $found;
+		} else {
+		  $unique_exons{$exon_key} = $exon;
+		}
+		push (@transcript_exons, $exon);
+		# Make sure we don't have the same stable IDs
+		# for different exons (different keys).
+		if (my $stable = $exon->stable_id) {
+		  if (my $seen_key = $stable_key{$stable}) {
+			 if ($seen_key ne $exon_key) {
+				printf STDERR  "Already seen exon_id '$stable' on different exon\n";
+				$exon->stable_id(undef);
+			 }
+		  } else {
+			 $stable_key{$stable} = $exon_key;
+		  }
+		}
+	 }
+	 $tran->flush_Exons;
+	 foreach my $exon (@transcript_exons) {
+		$tran->add_Exon($exon);
+	 }
+  }
+}
+
 
 1;
 
