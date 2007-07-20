@@ -250,11 +250,7 @@ sub highlight {
 sub type_and_name_from_clipboard {
     my ($self) = @_;
 
-    my $canvas = $self->canvas;
-
-    my ($clip);
-    eval { $clip = $canvas->SelectionGet; };
-    return if $@;
+    my $clip = $self->get_clipboard_text or return;
 
     my $clip_hash = {};
     foreach my $text (split /\n+/, $clip) {

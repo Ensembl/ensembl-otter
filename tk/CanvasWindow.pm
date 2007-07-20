@@ -1042,8 +1042,8 @@ sub get_clipboard_text {
             );
         };
     if ($@) {
-        warn "Clipboard error: $@";
-        return '';
+        #warn "Clipboard error: $@";
+        return;
     } else {
         return $text;
     }
@@ -1052,7 +1052,7 @@ sub get_clipboard_text {
 sub integers_from_clipboard {
     my ($self) = @_;
 
-    my $text = $self->get_clipboard_text;
+    my $text = $self->get_clipboard_text or return;
 
     #warn "Trying to parse: [$text]\n";
 
@@ -1081,8 +1081,7 @@ sub integers_from_clipboard {
 sub class_object_start_end_from_clipboard {
     my ($self) = @_;
     
-    my $text = $self->get_clipboard_text;
-    return unless defined $text;
+    my $text = $self->get_clipboard_text or return;
     
     # Sequence:"RP5-931H19.1-001"    -160499 -160298 (202)   Coding 
     my ($class, $obj_name, $start, $end) = $text =~ /^([^:]+):"([^"]+)"\s+-?(\d+)\s+-?(\d+)/;
@@ -1111,7 +1110,7 @@ sub hash_from_clipboard {
     warn "please pass me a nice hash" unless $regex_hash;
     my $results = { map { $_ => 0 } keys %$regex_hash };
 
-    my $text = $self->get_clipboard_text;
+    my $text = $self->get_clipboard_text or return;
 
     my @s = split(/\s+/, $text);
 

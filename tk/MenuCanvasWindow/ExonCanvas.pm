@@ -2654,12 +2654,8 @@ sub Exons_from_canvas {
 sub run_dotter {
     my( $self ) = @_;
     
-    my( $txt );
-    eval{
-        $txt = $self->canvas->SelectionGet;
-    };
     my( $hit_name );
-    if ($txt) {
+    if (my $txt = $self->get_clipboard_text) {
         # Match fMap "blue box"
         ($hit_name) = $txt =~ /^(?:<?(?:Protein|Sequence)[:>]?)?\"?([^\"\s]+)\"?/;
     }

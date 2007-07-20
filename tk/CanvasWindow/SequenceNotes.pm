@@ -490,11 +490,7 @@ sub hunt_for_selection {
     
     my $canvas = $self->canvas;
     
-    my( $query_str );
-    eval {
-        $query_str = $canvas->SelectionGet;
-    };
-    return if $@;
+    my $query_str = $self->get_clipboard_text or return;
     #warn "Looking for '$query_str'";
     my $matcher = $self->make_matcher($query_str);
     
