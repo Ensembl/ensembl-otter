@@ -322,11 +322,7 @@ sub name_start_end_from_fMap_blue_box {
     
     my $tk = $self->top;
 
-    my( $text );
-    eval {
-        $text = $tk->SelectionGet;
-    };
-    return if $@;
+    my $text = $self->get_clipboard_text or return;
     
     #warn "clipboard: $text";
     
