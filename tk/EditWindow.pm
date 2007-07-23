@@ -31,6 +31,27 @@ sub set_minsize {
     $top->minsize($top->width, $top->height);
 }
 
+sub get_clipboard_text {
+    my ($self) = @_;
+
+    my $canvas = $self->canvas;
+    return unless Tk::Exists($canvas);
+
+    my ($text);
+    eval {
+        $text = $canvas->SelectionGet(
+            -selection => 'PRIMARY',
+            -type      => 'STRING',
+            );
+        };
+    if ($@) {
+        #warn "Clipboard error: $@";
+        return;
+    } else {
+        return $text;
+    }
+}
+
 1;
 
 __END__
