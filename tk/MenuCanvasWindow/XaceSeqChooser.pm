@@ -630,6 +630,14 @@ sub populate_menus {
                    );
         $top->bind('<Control-z>', $zmap_launch_command);
         $top->bind('<Control-Z>', $zmap_launch_command);
+
+        $zmap_launch_command = sub { $self->zMapLaunchInAZmap };
+        $tools_menu->add('command',
+                   -label          => 'Launch In A ZMap',
+                   -command        => $zmap_launch_command,
+                   -underline      => 7,
+                   );
+
         $showing_zmap = 1;
     }
 
@@ -1205,11 +1213,14 @@ sub edit_subsequences {
         next if $self->raise_subseq_edit_window($sub_name);
         
         # Get a copy of the subseq
-        my $sub = $self->get_SubSeq($sub_name);
-        my $edit = $sub->clone;
-        $edit->is_archival($sub->is_archival);
+        if(my $sub = $self->get_SubSeq($sub_name)){
+            my $edit = $sub->clone;
+            $edit->is_archival($sub->is_archival);
         
-        $self->make_exoncanvas_edit_window($edit);
+            $self->make_exoncanvas_edit_window($edit);
+        }else{
+            warn "Failed to get_SubSeq($sub_name)";
+        }
     }
 }
 
@@ -1980,7 +1991,7 @@ sub run_dotter {
 sub send_zmap_commands {
     my ($self, @xml) = @_;
 
-    my $xr = $self->zMapCurrentXclient;
+    my $xr = $self->zMapGetXRemoteClientForView();
     unless ($xr) {
         warn "No current window.";
         return ;
@@ -1996,6 +2007,7 @@ sub send_zmap_commands {
         } else {
             my $error = $xmlHash->{'error'}{'message'};
             print STDERR "ERROR: $a[$i]\n$error\n";
+            $self->xremote_cache->remove_clients_to_bad_windows();
             die $error;
         }
     }    
