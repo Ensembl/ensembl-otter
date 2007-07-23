@@ -373,21 +373,15 @@ sub check_line {
 #  the archive pfetch server is tried.
 #
 {
-    my ($pfetch, $pfetch_archive);
+    my ($pfetch);
 
     sub pfetch_acc_sv {
         my ($acc_ver) = @_;
 
         $pfetch ||= Bio::EnsEMBL::Pipeline::SeqFetcher::Finished_Pfetch->new;
-        $pfetch_archive ||=
-          Bio::EnsEMBL::Pipeline::SeqFetcher::Finished_Pfetch->new(
-            -PFETCH_SERVER => 'cbi3c.internal.sanger.ac.uk',
-            -PFETCH_PORT   => 22100);
+
         my $seq = $pfetch->get_Seq_by_acc($acc_ver);
-        unless ($seq) {
-            warn "Fetching '$acc_ver' from archive\n";
-            $seq = $pfetch_archive->get_Seq_by_acc($acc_ver);
-        }
+
         unless ($seq) {
             my $seq_file = "$acc_ver.seq";
             warn
