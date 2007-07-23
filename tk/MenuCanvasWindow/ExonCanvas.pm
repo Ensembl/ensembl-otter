@@ -728,6 +728,41 @@ sub show_subseq {
     } else {
         $self->message("No xace attached");
     }
+
+    my $xc = $self->XaceSeqChooser();
+    if($xc->show_zmap){
+        my $client;
+
+        # We can't  rely on the cached object  here... The explanation
+        # is  long and tedious  but boils  down to  the fact  that the
+        # window  that receives  the  events changes  within zmap.  We
+        # therefore need to remove  the ZMapWindow cached clients, ask
+        # for the current list  from the window that knows, repopulate
+        # the cache and find a window that can zoom_to
+
+        my $id = $xc->xremote_cache->lookup_value('ZMapWindow');
+        $xc->xremote_cache->remove_client_with_id($id);
+        for(my $i = 0; $i < 10; $i++){
+            if($id = $xc->xremote_cache->lookup_value('ZMapWindow.'.$i)){
+                $xc->xremote_cache->remove_client_with_id($id);
+            }
+        }
+        
+        if($client = $xc->zMapGetXRemoteClientByAction('list_windows', 1)){
+            $xc->zMapDoRequest($client, "list_windows", qq{<zmap action="list_windows" />});
+        }
+        if($client = $xc->zMapGetXRemoteClientByAction('zoom_to', 1)){
+            my $xml = qq{<zmap action="zoom_to">\n}   .
+                qq{\t<featureset>\n}                  .
+                qq{\t\t}                              .
+                $self->SubSeq->zmap_xml_feature_tag() .
+                qq{\t\t</feature>\n}                  .
+                qq{\t</featureset>\n}                 .
+                qq{</zmap>\n};
+            $xc->zMapDoRequest($client, "zoom_to", $xml);
+        }
+    }
+
 };
 
 
