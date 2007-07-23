@@ -381,7 +381,8 @@ sub check_line {
         $pfetch ||= Bio::EnsEMBL::Pipeline::SeqFetcher::Finished_Pfetch->new;
         $pfetch_archive ||=
           Bio::EnsEMBL::Pipeline::SeqFetcher::Finished_Pfetch->new(
-            -PFETCH_PORT => 23100,);
+            -PFETCH_SERVER => 'cbi3c.internal.sanger.ac.uk',
+            -PFETCH_PORT   => 22100);
         my $seq = $pfetch->get_Seq_by_acc($acc_ver);
         unless ($seq) {
             warn "Fetching '$acc_ver' from archive\n";
