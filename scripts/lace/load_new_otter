@@ -83,7 +83,7 @@ while (<>){  ## read from STDIN + @ARGV filenames
         my $current = ($gene->biotype !~ /obsolete/) ? 1 : 0;
 		$gene->is_current( $current );
 
-		my $any_change = $ga->store($gene, 1, $modified);
+		my $any_change = $ga->store($gene, $modified);
 
         if(!$any_change) {
             print STDOUT "The gene ".$gene->stable_id." was not modified, so no new version was stored\n";
