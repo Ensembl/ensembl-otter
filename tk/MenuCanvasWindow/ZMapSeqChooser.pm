@@ -697,15 +697,25 @@ response.
 
 sub zMapTagValues{
     my ($self, $xml_hash) = @_;
-    my $otter_id       = undef;
-    my $transcript_id  = undef;
-    my $otter_exon_ids = "";
-    my $exon_ids       = [];
+    my $page    = "";
+    my $handled = "false";
 
     if($xml_hash->{'action'} eq 'feature_details'){
-        my $feature = $xml_hash->{'featureset'}->{'feature'} || {};
+        my $subseq_list   = [];
+        my $feature       = $xml_hash->{'featureset'}->{'feature'} || {};
+
         foreach my $name(keys(%$feature)){
             if(my $subseq = $self->get_SubSeq($name)){ 
+                push(@$subseq_list, $subseq);
+            }
+        }
+
+        if(scalar(@$subseq_list)){
+            my $otter_id       = undef;
+            my $transcript_id  = undef;
+            my $otter_exon_ids = "";
+            my $exon_ids       = [];
+            foreach my $subseq(@$subseq_list){
                 $transcript_id = $subseq->otter_id() if ($subseq->otter_id());
 
                 $otter_id = $subseq->Locus->otter_id if ($subseq->Locus); 
@@ -714,30 +724,81 @@ sub zMapTagValues{
                     push(@$exon_ids, $exon->otter_id()) if ($exon->otter_id);
                 }
             }
+            $handled    = ($otter_id ? "true" : "false");
+            $otter_id ||= "unable to fetch otter id";
+            
+            $transcript_id ||= "unable to fetch transcript id";
+
+            my $counter = 1;
+            foreach my $id(@$exon_ids){
+                $otter_exon_ids .= qq{\t\t\t\t<tagvalue name="Otter Exon ID [$counter]" type="simple">$id</tagvalue>\n};
+                $counter++;
+            }
+            
+            $page = qq{\t\t<page name="OTTER">\n}       .
+                qq{\t\t\t<paragraph name="Otter" type="tagvalue_table">\n} .
+                qq{\t\t\t\t<tagvalue name="Otter Gene ID" type="simple">$otter_id</tagvalue>\n} .
+                qq{\t\t\t\t<tagvalue name="Otter Transcript ID" type="simple">$transcript_id</tagvalue>\n} .
+                qq{$otter_exon_ids}      .
+                qq{\t\t\t</paragraph>\n} .
+                qq{\t\t</page>\n}        ;
+        }else{
+            foreach my $name($self->list_all_SubSeq_names()){
+                my $subseq = $self->get_SubSeq($name);
+                push(@$subseq_list, $subseq);
+            }
+            my $used_subseq_names = [];
+            foreach my $subseq(@$subseq_list){
+                my $evi_hash = $subseq->evidence_hash();
+
+                # evidence_hash looks like this
+                # evidence = { 
+                #   type    => [ qw(evidence names) ],
+                #   EST     => [ qw(Em:BC01234.1 Em:CR01234.2) ],
+                #   cDNA    => [ qw(Em:AB01221.3) ],
+                #   Protein => [ qw(Sw:Q99IVF1) ]
+                # }
+
+                foreach my $evi_type(keys %$evi_hash){
+
+                    my $evi_array = $evi_hash->{$evi_type};
+                    foreach my $evi_name(@$evi_array){
+
+                        if(my $req_evi = $feature->{$evi_name}){
+                            # check overlapping to see if it really is used.
+                            if(!(($req_evi->{'start'} > $subseq->end) &&
+                                 ($req_evi->{'end'}   < $subseq->start))){
+                                push(@$used_subseq_names, $subseq->name);
+                            }else{
+                                warn sprintf("Object %s does not overlap %s",
+                                             $subseq->name,
+                                             $evi_name);
+                            }
+                        }
+                    }
+                }
+            }
+            if(scalar(@$used_subseq_names)){
+                $handled      = "true";
+                my $names_xml = "";
+                foreach my $name(@$used_subseq_names){
+                    $names_xml .= qq{\t\t\t\t<tagvalue name="Parent Object" type="simple">$name</tagvalue>};
+                }
+                $page = qq{\t\t<page name="OTTER">\n}       .
+                    qq{\t\t\t<paragraph name="Otter" type="tagvalue_table">\n} .
+                    qq{$names_xml}           .
+                    qq{\t\t\t</paragraph>\n} .
+                    qq{\t\t</page>\n}        ;
+            }
         }
-    }
-    my $handled = ($otter_id ? "true" : "false");
-    $otter_id ||= "unable to fetch otter id";
-
-    $transcript_id ||= "unable to fetch transcript id";
-
-    my $counter = 1;
-    foreach my $id(@$exon_ids){
-        $otter_exon_ids .= qq{\t\t\t\t<tagvalue name="Otter Exon ID [$counter]" type="simple">$id</tagvalue>\n};
-        $counter++;
+            
     }
 
     return (200, 
             qq{<response handled="$handled">\n} .
             qq{\t<notebook>\n}                  .
-            qq{\t\t<page name="OTTER">\n}       .
-            qq{\t\t\t<paragraph name="Otter" type="tagvalue_table">\n} .
-            qq{\t\t\t\t<tagvalue name="Otter Gene ID" type="simple">$otter_id</tagvalue>\n} .
-            qq{\t\t\t\t<tagvalue name="Otter Transcript ID" type="simple">$transcript_id</tagvalue>\n} .
-            qq{$otter_exon_ids}      .
-            qq{\t\t\t</paragraph>\n} .
-            qq{\t\t</page>\n}        .
-            qq{\t</notebook>\n}      .
+            qq{$page}                           .
+            qq{\t</notebook>\n}                 .
             qq{</response>});
 }
 
