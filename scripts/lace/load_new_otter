@@ -48,7 +48,7 @@ my $mc  = $loutre_dba->get_MetaContainer();
 my $sa  = $loutre_dba->get_SliceAdaptor();
 my $ga  = $loutre_dba->get_GeneAdaptor();
 
-my $ss_hash;
+my %ss_hash = ();
 my $loading_started=time();
 
 $mc->update_key_value('prefix.primary','LDR');
@@ -64,7 +64,7 @@ while (<>){  ## read from STDIN + @ARGV filenames
            ($dbid, $gene_xml) = ($2, $4);
         my ($ss, $modified)   = ($1, $3);
 
-		my $slice = $ss_hash->{$ss} ||= $sa->fetch_by_region('chromosome',$ss,undef,undef,undef,'Otter') ;
+		my $slice = $ss_hash{$ss} ||= $sa->fetch_by_region('chromosome',$ss,undef,undef,undef,'Otter') ;
 
 		unless ($slice) {
 		  throw "slice for $ss is not in db";
