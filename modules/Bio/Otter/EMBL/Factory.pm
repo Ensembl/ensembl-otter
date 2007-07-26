@@ -638,6 +638,8 @@ sub make_embl_ft {
         $self->Slice_contig($slice_contig);
 
 		# add component_start/end of accession to indicate region of annotation
+        # the position of this code here makes it appears as the first FT line
+        # in the embl dump
 		my $feat = $embl->newFT;
 		$feat->key('misc_feature');
 		$feat->location(simple_location($cmp_start, $cmp_end));
