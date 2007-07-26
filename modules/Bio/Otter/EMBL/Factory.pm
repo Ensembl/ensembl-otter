@@ -632,8 +632,17 @@ sub make_embl_ft {
         my $tile_path = $self->get_tiling_path_for_Slice($slice);
 
         #Bio::EnsEMBL::RawContig: turn slice coords. into RawContig coord
+		my $cmp_start    = $tile_path->[0]->component_start;
+		my $cmp_end      = $tile_path->[0]->component_end;
         my $slice_contig = $tile_path->[0]->component_Seq;
         $self->Slice_contig($slice_contig);
+
+		# add component_start/end of accession to indicate region of annotation
+		my $feat = $embl->newFT;
+		$feat->key('misc_feature');
+		$feat->location(simple_location($cmp_start, $cmp_end));
+		$feat->addQualifierStrings('note', "annotated region of clone");
+
 
         my $gene_id_list = $gene_aptr->list_current_dbIDs_for_Slice($slice);
         foreach my $gid (@$gene_id_list) {
@@ -649,7 +658,7 @@ sub make_embl_ft {
         #PolyA signals and sites for the slice
         $self->_do_polyA($slice_contig, $set);
         # assembly_tags on the slice
-	$self->_do_assembly_tag($slice_contig, $set);
+		$self->_do_assembly_tag($slice_contig, $set);
     }
 
     #Finish up
