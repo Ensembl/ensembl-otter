@@ -607,6 +607,8 @@ sub gene_transformed_successfully {
             @exon_list = reverse @exon_list;
         }
 
+        my $potentially_translateable_cnt = 0;
+
         my $last = 0;
         foreach my $exon (@exon_list) {
             if ($exon->start <= $last) {
@@ -623,6 +625,15 @@ sub gene_transformed_successfully {
                 return 0;
             }
             $last = $exon->end;
+
+            if($exon->phase() != -1) {
+                $potentially_translateable_cnt++;
+            }
+        }
+
+        if($transcript->translation() && ! $potentially_translateable_cnt) {
+            print STDERR "[no translateable exons] ";
+            return 0;
         }
     }
 
