@@ -482,7 +482,7 @@ my %assembly_nonmatch_version = (
         'chr11-hsa11_20040402' => 0,    # ?
 
         'chr12-00'  => 0.5,
-        'chr12-01A' => 1.3,
+        'chr12-01A' => -1.3, # FAULTY: (chr_end-chr_start) != (contig_end-contig_start)
         'chr12-01B' => 1.6,
 
         'chr13-10A' => 10.5,
@@ -807,7 +807,9 @@ sub main {
                 : exists($assembly_nonmatch_version{$dataset_name}{$atype})
                     ? $assembly_nonmatch_version{$dataset_name}{$atype}
                     : 0;
-            push @{$ver_2_asm_chr->{$version}}, [$atype, $chr_name];
+            if($version>=0) { # negative values mean we want to exclude this sequence set altogether
+                push @{$ver_2_asm_chr->{$version}}, [$atype, $chr_name];
+            }
 
         } # ctgids_2_asm fetching loop
 
