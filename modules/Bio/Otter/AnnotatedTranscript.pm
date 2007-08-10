@@ -121,11 +121,13 @@ sub truncate_to_Slice {
         my $exon = $ex_list->[$i];
         my $exon_start = $exon->start;
         my $exon_end   = $exon->end;
-        if ($exon->contig != $slice or $exon_end < 1 or $exon_start > $slice_length) {
+        if(($exon->contig != $slice) or ($exon_end < 1) or ($exon_start > $slice_length)
+	   or ($exon->{_previously_truncated})) {
             #warn "removing exon that is off slice";
             ### This won't work if get_all_Exons() ceases to return
             ### a ref to the actual array of exons in the transcript.
             splice(@$ex_list, $i, 1);
+
             $exons_truncated++;
         } else {
             #printf STDERR
@@ -136,24 +138,26 @@ sub truncate_to_Slice {
             my $trunc_flag = 0;
             if ($exon->start < 1) {
                 #warn "truncating exon that overlaps start of slice";
+	        $exon->{_previously_truncated} = 1;
                 $trunc_flag = 1;
                 $exon->start(1);
             }
             if ($exon->end > $slice_length) {
                 #warn "truncating exon that overlaps end of slice";
+	        $exon->{_previously_truncated} = 1;
                 $trunc_flag = 1;
                 $exon->end($slice_length);
             }
             $exons_truncated++ if $trunc_flag;
         }
     }
-                                                                                                                                       
+
     ### Hack until we fiddle with translation stuff
     if ($exons_truncated) {
         $self->{'translation'}     = undef
         $self->{'_translation_id'} = undef;
     }
-                                                                                                                                       
+
     return $exons_truncated;
 }
 
