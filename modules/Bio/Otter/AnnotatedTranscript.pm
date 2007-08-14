@@ -539,12 +539,12 @@ sub toXMLString {
     my $tran_high = undef;
     if (my $tl = $self->translation) {
         my $strand = $tl->start_Exon->strand;
-        $tran_low  = $offset + $self->coding_region_start;
-        $tran_high = $offset + $self->coding_region_end;
+        $tran_low  = $self->coding_region_start;
+        $tran_high = $self->coding_region_end;
         $str .= sprintf "    <translation_start>%d</translation_start>\n",
-            $strand == 1 ? $tran_low : $tran_high;
+            $offset + ($strand == 1 ? $tran_low : $tran_high);
         $str .= sprintf "    <translation_end>%d</translation_end>\n",
-            $strand == 1 ? $tran_high : $tran_low;
+            $offset + ($strand == 1 ? $tran_high : $tran_low);
         if (my $tl_id = $tl->stable_id) {
             $str .=
               "    <translation_stable_id>$tl_id</translation_stable_id>\n";
