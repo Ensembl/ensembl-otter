@@ -10,7 +10,12 @@ use URI::Escape qw{ uri_escape };
 {
     my $jar_file = $ENV{'OTTERLACE_COOKIE_JAR'}
         or die "OTTERLACE_COOKIE_JAR not set\n";
-    my $req_str = "request=" . uri_escape("@ARGV");
+
+    # The pfetch command line client understands "--client=blah"
+    # but the server only accepts "--client blah".
+    my $argv = "@ARGV";
+	$argv =~ s/--(\w+)=/--$1 /g;
+    my $req_str = "request=" . uri_escape($argv);
 
     my $pfetch = LWP::UserAgent->new;
     $pfetch->protocols_allowed([qw{ http https }]);
