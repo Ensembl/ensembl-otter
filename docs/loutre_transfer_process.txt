@@ -1,40 +1,52 @@
     Process of transferring otter_'species'
     database to loutre_'species' database
 ------------------------------------------------------------------
-# UPDATE attrib_type table: make sure to use most up-to-date code from HEADCODE
-
-Run ensembl-HEAD/misc-scripts/attribute_types/upload_attributes.pl \
-    -host otterlive -user ottroot -port 3301 -pass xx -dbnames loutre_'species' \
-    -file attrib_type.txt
+# UPDATE 
 
 1) Make the loutre_'species' database on otterlive
 with all the needed assemblies
 
-1.1) Make a dump of the database so that we can
+1.1) attrib_type table: to make sure that we are using the most up-to-date
+values from HEADCODE run:
+
+ensembl-HEAD/misc-scripts/attribute_types/upload_attributes.pl \
+    -host otterlive -user ottroot -port 3301 -pass xx -dbnames loutre_'species' \
+    -file attrib_type.txt
+
+1.2) Make a dump of the database so that we can
 easily re-start transfer if needed.
 
 2) otterlive is used for dumping and loading the
 files.Create needed directories
 
-  ssh otterlive
-  cd /mysql/otter-live-master/otter/loutre_load/
-  mkdir 'species'
-  mkdir 'species'/genes
-  mkdir 'species'/contig_info
+	 ssh otterlive
+	 cd /mysql/otter-live-master/otter/loutre_load/
+	 mkdir 'species'
+	 mkdir 'species'/genes
+	 mkdir 'species'/contig_info
 
 2.1) Make sure hidden sequence set gets a row in seq_region_attribe:
-     select sr.*, sa.value from seq_region sr, seq_region_attrib sa 
-     where sr.seq_region_id=sa.seq_region_id and sa.attrib_type_id=129 and sa.value=0;
+     
+	SELECT sr.*
+	  , sa.value
+	FROM seq_region sr
+	  , seq_region_attrib sa
+	WHERE sr.seq_region_id = sa.seq_region_id
+	  AND sa.attrib_type_id = 129
+	  AND sa.value = 0;
 
-     If not use /ensembl-otter/scripts/lace/transfer_hidden_attribute -old_dataset otter_dset_name \
-     -new_dataset loutre_dsname -code hidden -port 33999 -change to patch the data
-     NOTE: omit -change to preview the changes that will be make
+If not use:
+
+  ensembl-otter/scripts/lace/transfer_hidden_attribute -old_dataset otter_dset_name \
+     -new_dataset loutre_dsname -code hidden -port 33999 -change
+
+to patch the data. NOTE: omit "-change" to preview the changes that will be made.
 
 2.2) Run Chao-Kung's script which creates a list
 of the redundant gene_id's.
 
- ensembl-otter/scripts/lace/get_redundant_dbid_of_genesid \
- -ds otter_dataset_name (eg, human) > outfile
+	ensembl-otter/scripts/lace/get_redundant_dbid_of_genesid \
+		-ds 'species' > outfile
 
 3) Dump genes from otter_'species', using the
 redundant gene_id list.
@@ -43,7 +55,7 @@ redundant gene_id list.
 
   ensembl-otter/scripts/lace/dump_genes_by_assembly_types \
     -redunfile /nfs/team71/analysis/ck1/TMP/loutre_species_backup/redundant_'species'_gene_dbids_to_skip_for_newotter \
-    -dataset dsn-name >> dump_genes.out 2>> dump_error.log &
+    -dataset 'species' >> dump_genes.out 2>> dump_error.log &
 
 notes: dsn-name is the data source name pointing
 to the otter_'species' database from which the
@@ -53,6 +65,7 @@ dump_genes.out is a mixed format text-xml file
 which is needed by the loading script
 
 3.3) some sanity checks
+
 tail dump_error.log you get the count of geneids not
 dumped like:
 
