@@ -31,7 +31,8 @@ use Net::SFTP::Foreign;
 
   my $sftp = connect_to_HGNC_sftp_host('ash.gene.ucl.ac.uk');
 
-  print STDERR "Start checking HGNC update at ", `date`, "\n";
+  my $sep = '-' x 10;
+  print STDERR "$sep Start checking HGNC update $sep\n";
 
   my $changed = 0;
 
