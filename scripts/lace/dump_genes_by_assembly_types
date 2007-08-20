@@ -2,6 +2,7 @@
 
 use strict;
 use Bio::Otter::Lace::Defaults;
+use Bio::Otter::TranscriptRemark;
 
 my $debug = 0;
 
@@ -509,6 +510,23 @@ my %assembly_nonmatch_version = (
         'chrX-07A' => 7.5,
 
         'chr_Y_01' => 1,
+
+        'MHC_APD-01' => 1,
+        'MHC_APD-02' => 2,
+        'MHC_COX'    => 1,
+        'MHC_COX-02' => 2,
+        'MHC_DBB-01' => 1,
+        'MHC_DBB-02' => 2,
+        'MHC_MANN-01'=> 1,
+        'MHC_MANN-02'=> 2,
+        'MHC_MCF-01' => 1,
+        'MHC_MCF-02' => 2,
+        'MHC_PGF'    => 1,
+        'MHC_QBL'    => 1,
+        'MHC_QBL-03' => 3,
+        'MHC_SSTO'   => 1,
+        'MHC_SSTO-02'=> 2,
+        'MHC_SSTO-03'=> 3,
     },
     'pig' => {
         'chr17-SSC17_MAX1-05' => 5,
@@ -587,6 +605,116 @@ sub find_last_dbid {
     }
 } # lexical environment for &execute_ctgids_2_asm
 
+sub is_selenoprotein {
+    my $transcript = shift @_;
+
+    for my $line (map $_->remark, $transcript->transcript_info()->remark()) {
+        if($line=~/selenocysteine/i) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+sub no_premature_stops {
+    my $transcript = shift @_;
+
+    return $transcript->translate()->seq()!~/\*/;
+}
+
+sub fix_phases {
+    my ($transcript, $start_phase) = @_;
+
+    my $translation = $transcript->translation();
+            # the following two should have been set by 'transform' method:
+    my $start_exon  = $translation->start_Exon;
+    my $end_exon    = $translation->end_Exon;
+
+    my $phase       = -1;
+    my $end_phase   = -1;
+    my $fixing_log  = '';
+
+    foreach my $exon(@{ $transcript->get_all_Exons() }) {
+
+        my $length = $exon->length();
+        my $strand = $exon->strand();
+
+        if(($exon == $start_exon) || ($phase!=-1)) { # inside coding:
+
+            if($exon == $start_exon) {
+
+                $phase = $start_phase;
+                
+                unless((1<=$translation->start) && ($translation->start<=$length)) {
+                    return $fixing_log.' ERROR:[translation->start not within translation->start_Exon]';
+                }
+                $length -= $translation->start()-1;
+            }
+            $end_phase = ($length + $phase) % 3;
+        }
+        if(($exon == $end_exon) || ($phase==-1)) { # outside coding:
+            $end_phase = -1;
+        }
+
+        my $start  = $exon->start();
+        my $end    = $exon->end();
+        my $esi    = $exon->stable_id();
+
+        if($exon->phase != $phase) {
+            $fixing_log .= "[$esi START_PHASE ".$exon->phase."->$phase] ";
+            $exon->phase($phase);
+        }
+        if($exon->end_phase != $end_phase) {
+            $fixing_log .= "[$esi END_PHASE ".$exon->end_phase."->$end_phase] ";
+            $exon->end_phase($end_phase);
+        }
+
+        $phase = $end_phase;
+    }
+
+    if($start_phase) {
+        unless($transcript->transcript_info->cds_start_not_found()) {
+            $fixing_log .= "[cds_start_not_found was not set -> fixed] ";
+            $transcript->transcript_info->cds_start_not_found(1);
+        }
+        unless($transcript->transcript_info->mRNA_start_not_found()) {
+            $fixing_log .= "[mRNA_start_not_found was not set -> fixed] ";
+            $transcript->transcript_info->mRNA_start_not_found(1);
+        }
+    }
+
+    return $fixing_log;
+}
+
+sub translation_qc {
+    my ($transcript) = @_;
+
+    if(my $translation = $transcript->translation()) {
+
+        my $trans_name = '     '.$transcript->stable_id.'.'.$transcript->version().': ';
+        my $original_phase = $translation->start_Exon()->phase();
+        if(is_selenoprotein($transcript) || no_premature_stops($transcript)) {
+            my $curr_attempt = fix_phases($transcript, $original_phase);
+            return $curr_attempt ? $trans_name.$curr_attempt : '';
+        } else { # try other phases:
+            foreach my $start_phase (grep { $_!=$original_phase } (0..2)) {
+                my $curr_attempt = fix_phases($transcript, $start_phase);
+                if(($curr_attempt!~/ERROR/) && no_premature_stops($transcript)) {
+                    $transcript->transcript_info->remark(Bio::Otter::TranscriptRemark->new(-remark=>"LoutreTransfer: start phase $start_phase is translateable whereas $original_phase was not"));
+                    return $trans_name."(translatable_phase=$start_phase) ".$curr_attempt;
+                }
+            }
+
+                # just restore the original one:
+            $translation->start_Exon()->phase($original_phase);
+            $transcript->transcript_info->remark(Bio::Otter::TranscriptRemark->new(-remark=>"LoutreTransfer: could not find a translateable phase"));
+
+            return $trans_name.' [Could not fix the phases] ';
+        }
+    }
+
+    return '';
+}
 
 sub gene_transformed_successfully {
     my( $gene, $slice ) = @_;
@@ -594,20 +722,20 @@ sub gene_transformed_successfully {
     my $slice_length = $slice->length;
     foreach my $exon (@{$gene->get_all_Exons}) {
         if ($exon->contig != $slice or $exon->start < 1 or $exon->end > $slice_length) {
-            print STDERR "[exon out of boundaries] ";
+            my $esi = $exon->stable_id;
+            print STDERR "[$esi out of boundaries] ";
             return 0;
         }
     }
 
     # Check for overlapping exons in each transcript
-    foreach my $transcript (@{$gene->get_all_Transcripts}) {
-        my @exon_list = @{$transcript->get_all_Exons};
+    foreach my $transcript (sort {$a->stable_id cmp $b->stable_id} @{$gene->get_all_Transcripts}) {
+        my $original_exons = $transcript->get_all_Exons;
+        my @exon_list = @$original_exons;
         if ($exon_list[0]->strand == -1) {
             # exons are in opposite order for reverse strand transcripts
             @exon_list = reverse @exon_list;
         }
-
-        my $potentially_translateable_cnt = 0;
 
         my $last = 0;
         foreach my $exon (@exon_list) {
@@ -626,17 +754,17 @@ sub gene_transformed_successfully {
             }
             $last = $exon->end;
 
-            if($exon->phase() != -1) {
-                $potentially_translateable_cnt++;
+        }
+
+            # fix the phases/end_phases:
+        if(my $trl_log = translation_qc($transcript)) {
+            print STDERR $trl_log;
+            if($trl_log=~/ERROR/) {
+                return 0;
             }
         }
 
-        if($transcript->translation() && ! $potentially_translateable_cnt) {
-            print STDERR "[no translateable exons] ";
-            return 0;
-        }
     }
-
     return 1;
 }
 
@@ -651,7 +779,8 @@ sub gene_transformed_successfully {
             # print STDERR "VER=$version: ";
             for my $pair (@{$ver_2_asm_chr->{$version}}) {
                 my ($atype, $chr_name) = @$pair;
-                # print STDERR "ATYPE=$atype(CHR=$chr_name) ";
+
+                print STDERR "[trying $atype($chr_name)] ";
 
                 $otter_dba->assembly_type($atype);
 
@@ -676,7 +805,14 @@ sub gene_transformed_successfully {
 
             } # for $atype
         } # for $version
-        print STDERR "--- FAILED TO MAP (".$gene->type().")\n";
+
+        my $latest_version = $gene_adaptor->fetch_by_stable_id($gene->stable_id)->version();
+
+        if($latest_version == $gene->version()) {
+            print STDERR "--- FAILED TO MAP (LATEST_VER: ".$gene->type().")\n";
+        } else {
+            print STDERR "--- FAILED TO MAP (OLDER_VER: ".$gene->type().")\n";
+        }
     }
 
 } # lexical environment for add_xml_gene
