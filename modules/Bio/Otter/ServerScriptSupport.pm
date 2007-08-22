@@ -89,52 +89,70 @@ sub species_hash {
 
     my $sp;
     unless ($sp = $self->{'_species_hash'}) {
-        # '/GPFS/data1/WWW/SANGER_docs/data/otter/48/species.dat';
-        my $file = join('/', $self->server_root, 'data', 'otter', $self->otter_version, 'species.dat');
-
-        open my $dat, $file or die "Can't read species file '$file' : $!";
-
-        my $cursect = undef;
-        my $defhash = {};
-        my $curhash = undef;
-
-        while (<$dat>) {
-            next if /^\#/;
-            next unless /\w+/;
-            chomp;
-
-            if (/\[(.*)\]/) {
-                if (!defined($cursect) && $1 ne "defaults") {
-                    die "ERROR: First section in species.dat should be defaults\n";
-                }
-                elsif ($1 eq "defaults") {
-	                #print STDERR "Got default section\n";
-                    $curhash = $defhash;
-                }
-                else {
-                    $curhash = {};
-                    foreach my $key (keys %$defhash) {
-                        $key =~ tr/a-z/A-Z/;
-                        $curhash->{$key} = $defhash->{$key};
-                    }
-                }
-                $cursect = $1;
-                $sp->{$cursect} = $curhash;
-
-            }
-            elsif (/(\S+)\s+(\S+)/) {
-                #print "Reading entry $1 $2\n";
-                $curhash->{$1} = $2;
-            }
-        }
-        
-        close $dat or die "Error reading '$file' : $!";
-        
-        # Have finished with defaults, so we can remove them.
-        delete $sp->{'defaults'};
-        
+        $sp = $self->read_species_dat_file;
+        $self->remove_unauthorized_species($sp);
         $self->{'_species_hash'} = $sp;
     }
+    return $sp;
+}
+
+sub remove_unauthorized_species {
+    my ($self, $sp) = @_;
+    
+    my $user = $self->authorized_user;
+    my $allowed = $self->users_hash->{$user};
+    foreach my $species (keys %$sp) {
+        delete($sp->{$species}) unless $allowed->{$species};
+    }
+}
+
+sub read_species_dat_file {
+    my ($self) = @_;
+    
+    # '/GPFS/data1/WWW/SANGER_docs/data/otter/48/species.dat';
+    my $file = join('/', $self->server_root, 'data', 'otter', $self->otter_version, 'species.dat');
+
+    open my $dat, $file or die "Can't read species file '$file' : $!";
+
+    my $cursect = undef;
+    my $defhash = {};
+    my $curhash = undef;
+
+    while (<$dat>) {
+        next if /^\#/;
+        next unless /\w+/;
+        chomp;
+
+        if (/\[(.*)\]/) {
+            if (!defined($cursect) && $1 ne "defaults") {
+                die "ERROR: First section in species.dat should be defaults\n";
+            }
+            elsif ($1 eq "defaults") {
+	            #print STDERR "Got default section\n";
+                $curhash = $defhash;
+            }
+            else {
+                $curhash = {};
+                foreach my $key (keys %$defhash) {
+                    $key =~ tr/a-z/A-Z/;
+                    $curhash->{$key} = $defhash->{$key};
+                }
+            }
+            $cursect = $1;
+            $sp->{$cursect} = $curhash;
+
+        }
+        elsif (/(\S+)\s+(\S+)/) {
+            #print "Reading entry $1 $2\n";
+            $curhash->{$1} = $2;
+        }
+    }
+
+    close $dat or die "Error reading '$file' : $!";
+
+    # Have finished with defaults, so we can remove them.
+    delete $sp->{'defaults'};
+
     return $sp;
 }
 
@@ -158,7 +176,10 @@ sub read_user_file {
             s/#.*//;            # Remove comments
             s/(^\s+|\s+$)//g;   # Remove leading or trailing spaces
             next if /^$/;       # Skip lines which are now blank
-            $usr_hash->{$_} = 1;
+            my ($user_name, @allowed_datasets) = split;
+            foreach my $ds (@allowed_datasets) {
+                $usr_hash->{$user_name}{$ds} = 1;
+            }
         }
         close $list or die "Error reading '$list'; $!";
     }
