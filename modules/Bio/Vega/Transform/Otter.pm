@@ -110,15 +110,15 @@ sub initialize {
 							 );
   $biotype_status_mapping{$self}=
 	 {'unprocessed_pseudogene' => ['unprocessed_pseudogene','UNKNOWN'],
-	  'processed_pseudogene'   => ['processed_pseudogene' ,'UNKNOWN'],
-	  'pseudogene'             => ['pseudogene' ,'UNKNOWN'],
-	  'novel_transcript'       => ['processed_transcript' ,'NOVEL'],
-	  'known'                  => ['protein_coding' ,'KNOWN'],
-	  'novel_cds'              => ['protein_coding' ,'NOVEL'],
-	  'putative'               => ['processed_transcript' ,'PUTATIVE'],
-	  'predicted_gene'         => ['protein_coding' ,'PREDICTED'],
-	  'ig_pseudogene_segment'  => ['Ig_pseudogene_segment' ,'UNKNOWN'],
-	  'ig_segment'             => ['Ig_segment' ,'NOVEL'],
+	  'processed_pseudogene'   => ['processed_pseudogene',  'UNKNOWN'],
+	  'pseudogene'             => ['pseudogene',            'UNKNOWN'],
+	  'novel_transcript'       => ['processed_transcript',  'NOVEL'],
+	  'known'                  => ['protein_coding',        'KNOWN'],
+	  'novel_cds'              => ['protein_coding',        'NOVEL'],
+	  'putative'               => ['processed_transcript',  'PUTATIVE'],
+	  'predicted_gene'         => ['protein_coding',        'PREDICTED'],
+	  'ig_pseudogene_segment'  => ['Ig_pseudogene_segment', 'UNKNOWN'],
+	  'ig_segment'             => ['Ig_segment',            'NOVEL'],
 	 };
 
     # means we do not want to load the assembly:
@@ -425,11 +425,11 @@ sub build_Transcript {
 	 die "transcript biotype and the status could not be mapped or found \n";
   }
 
-  my $author_name  = $data->{'author'};
-  my $author_email = $data->{'author_email'};
+  my $author_name       = $data->{'author'};
+  my $author_email      = $data->{'author_email'};
+  my $transcript_author = $self->make_Author($author_name, $author_email);
+  $transcript->transcript_author($transcript_author);
 
-  my $author=$self->make_Author($author_name, $author_email);
-  $transcript->transcript_author($author);
   $transcript->biotype($biotype);
   $transcript->status($status);
 
@@ -501,6 +501,7 @@ sub build_Locus {
   ## version and is_current ??
   my $transcripts = delete $transcript_list{$self};
   ## transcript author group has been temporarily set to 'anything' ??
+
   my $slice = $self->get_ChromosomeSlice;
   my $ana = $logic_ana{$self}{'Otter'} ||= Bio::EnsEMBL::Analysis->new(-logic_name => 'Otter');
   my $gene = Bio::Vega::Gene->new(
@@ -521,10 +522,9 @@ sub build_Locus {
 		##in future source will be a tag on itself indicating authority equivalent to group name
 		$source = $1;
 		$type=$2;
-	 }
-	 else {
-		$type=$gene_type;
+	 } else {
 		$source = 'havana';
+		$type=$gene_type;
 	 }
 	 $type=lc($type);
 	 my $mapref=$biotype_status_mapping{$self}->{$type};
@@ -543,12 +543,12 @@ sub build_Locus {
   $gene->source($source);
 
   ##gene author
-  my ($author,$author_name,$author_email);
-  $author_name = $data->{'author'};
+  my ($gene_author,$author_name,$author_email);
+  $author_name  = $data->{'author'};
   $author_email = $data->{'author_email'};
-  $author=$self->make_Author($author_name, $author_email, $source);
+  $gene_author  = $self->make_Author($author_name, $author_email, $source);
 
-  $gene->gene_author($author);
+  $gene->gene_author($gene_author);
 
   ##gene attributes name,synonym,remark
   my $gene_attributes=[];
@@ -755,16 +755,16 @@ sub make_Author {
     my ($self, $name, $email, $group_name) = @_;
 
     $name  ||= 'nobody';
-    $email ||= 'nobody';
+    $email ||= $name;
 
     my $author;
     unless ($author = $author_cache{$self}{$email}) {
-        print STDERR "make_Author called: name=[$name], email=[$email], group_name=[$group_name]\n";
+        # print STDERR "make_Author called: name=[$name], email=[$email], group_name=[$group_name]\n";
         # for other groups, current strategy is to patch the database by hand
         my $group_email;
         if ($email =~ /[^\w\-]/) {
-            $group_email = 'vega@sanger.ac.uk';
-            $group_name ||= 'havana';
+            $group_name  ||= 'havana';
+            $group_email   = 'vega@sanger.ac.uk';
         }
         my $group = Bio::Vega::AuthorGroup->new (
             -name   => $group_name,
@@ -780,8 +780,6 @@ sub make_Author {
     }
     return $author;
 }
-
-
 
 1;
 

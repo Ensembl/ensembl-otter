@@ -8,20 +8,26 @@ use base 'Bio::Vega::Writer';
 {
     my %transcript_class_mapping = (
         'UNKNOWN' => {
-            'unprocessed_pseudogene'=>'Unprocessed_pseudogene',
-            'processed_pseudogene'=>'Processed_pseudogene',
-            'pseudogene'=>'Pseudogene',
-            'Ig_pseudogene_segment'=>'Ig_pseudogene_segment',
-            'coding'=>'Coding',
+            'unprocessed_pseudogene' => 'Unprocessed_pseudogene',
+            'processed_pseudogene'   => 'Processed_pseudogene',
+            'pseudogene'             => 'Pseudogene',
+            'Ig_pseudogene_segment'  => 'Ig_pseudogene_segment',
+            'coding'                 => 'Coding',
         },
-        'KNOWN' => {'protein_coding'=>'Known'},
+        'KNOWN' => {
+            'protein_coding'         => 'Known',
+        },
         'NOVEL' => {
-            'protein_coding'=>'Novel_CDS',
-            'Ig_segment'=>'Ig_segment',
-            'processed_transcript'=>'Novel_transcript',
+            'protein_coding'         => 'Novel_CDS',
+            'Ig_segment'             => 'Ig_segment',
+            'processed_transcript'   => 'Novel_transcript',
         },
-        'PUTATIVE' => {'processed_transcript'=>'Putative' },
-        'PREDICTED'=> {'protein_coding'=>'Predicted_gene' }
+        'PUTATIVE' => {
+            'processed_transcript'   => 'Putative',
+        },
+        'PREDICTED'=> {
+            'protein_coding'         => 'Predicted_gene',
+        },
     );
 
     sub get_transcript_class {
