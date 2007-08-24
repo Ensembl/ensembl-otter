@@ -19,6 +19,7 @@ use Bio::Vega::AuthorGroup;
 use Bio::Vega::ContigInfo;
 use Bio::Vega::Evidence;
 use Bio::Vega::AssemblyTag;
+use Bio::Vega::Utils::GeneTranscriptBiotypeStatus 'method2biotype_status';
 
 #use Data::Dumper;   # For debugging
 # This misses the "$VAR1 = " bit out from the Dumper() output
@@ -108,18 +109,6 @@ sub initialize {
 								vega                   => 'init_CoordSystem_Version',
 							  }
 							 );
-  $biotype_status_mapping{$self}=
-	 {'unprocessed_pseudogene' => ['unprocessed_pseudogene','UNKNOWN'],
-	  'processed_pseudogene'   => ['processed_pseudogene',  'UNKNOWN'],
-	  'pseudogene'             => ['pseudogene',            'UNKNOWN'],
-	  'novel_transcript'       => ['processed_transcript',  'NOVEL'],
-	  'known'                  => ['protein_coding',        'KNOWN'],
-	  'novel_cds'              => ['protein_coding',        'NOVEL'],
-	  'putative'               => ['processed_transcript',  'PUTATIVE'],
-	  'predicted_gene'         => ['protein_coding',        'PREDICTED'],
-	  'ig_pseudogene_segment'  => ['Ig_pseudogene_segment', 'UNKNOWN'],
-	  'ig_segment'             => ['Ig_segment',            'NOVEL'],
-	 };
 
     # means we do not want to load the assembly:
   $self->Assembly('no');
@@ -410,28 +399,16 @@ sub build_Transcript {
 	 die "ERROR: Only half of translation start/ end pair is defined\n";
   }
 
-  ##biotype and status from transcript class name
-  my ($biotype,$status);
-  my $tr_class_name=$data->{'transcript_class'};
-  $tr_class_name=lc($tr_class_name);
-  my $mapref=$biotype_status_mapping{$self}->{$tr_class_name};
-  $biotype=$mapref->[0];
-  $status=$mapref->[1];
-  if ( defined $tr_class_name && !defined $biotype  ) {
-	 $biotype=$data->{'transcript_class'};
-	 $status = 'UNKNOWN';
-  }
-  if ( !defined $tr_class_name || !defined $biotype  ) {
-	 die "transcript biotype and the status could not be mapped or found \n";
-  }
+  # biotype and status from transcript class name
+  my ($biotype, $status) = method2biotype_status($data->{'transcript_class'});
+  $transcript->biotype($biotype);
+  $transcript->status($status);
 
   my $author_name       = $data->{'author'};
   my $author_email      = $data->{'author_email'};
   my $transcript_author = $self->make_Author($author_name, $author_email);
   $transcript->transcript_author($transcript_author);
 
-  $transcript->biotype($biotype);
-  $transcript->status($status);
 
   ##transcript attributes
   my $transcript_attributes;
@@ -496,118 +473,109 @@ sub translation_pos {
 }
 
 sub build_Locus {
-  my ($self, $data) = @_;
+	my ($self, $data) = @_;
 
-  ## version and is_current ??
-  my $transcripts = delete $transcript_list{$self};
-  ## transcript author group has been temporarily set to 'anything' ??
+	## version and is_current ??
+	my $transcripts = delete $transcript_list{$self};
+	## transcript author group has been temporarily set to 'anything' ??
 
-  my $slice = $self->get_ChromosomeSlice;
-  my $ana = $logic_ana{$self}{'Otter'} ||= Bio::EnsEMBL::Analysis->new(-logic_name => 'Otter');
-  my $gene = Bio::Vega::Gene->new(
-											 -stable_id => $data->{'stable_id'},
-											 -slice => $slice,
-											 -description => $data->{'description'},
-											 -analysis => $ana,
-											);
+	my $slice = $self->get_ChromosomeSlice;
+	my $ana = $logic_ana{$self}{'Otter'} ||= Bio::EnsEMBL::Analysis->new(-logic_name => 'Otter');
+	my $gene = Bio::Vega::Gene->new(
+		-stable_id => $data->{'stable_id'},
+		-slice => $slice,
+		-description => $data->{'description'},
+		-analysis => $ana,
+		);
 
 
-  ## biotype,source & status framed from gene type
-  my ($biotype,$source,$status);
-  my $gene_type=$data->{'type'};
+	# biotype, source & status framed from gene type
+	my ($source, $type);
+	if (my $gene_type = $data->{'type'}) {
+		if ($gene_type =~ /(\S+):(.+)/){
+			##in future source will be a tag on itself indicating authority equivalent to group name
+			$source = $1;
+			$type   = $2;
+		} else {
+			$source = 'havana';
+			$type   = $gene_type;
+		}
+	} else {
+		die "Gene type missing";
+	}
+	my ($biotype, $status) = method2biotype_status($type);
+	$status = 'KNOWN' if $data->{'known'};
 
-  my $type;
-  if (defined $gene_type) {
-	 if ($gene_type =~ /(\S+):(.+)/){
-		##in future source will be a tag on itself indicating authority equivalent to group name
-		$source = $1;
-		$type=$2;
-	 } else {
-		$source = 'havana';
-		$type=$gene_type;
-	 }
-	 $type=lc($type);
-	 my $mapref=$biotype_status_mapping{$self}->{$type};
-	 $biotype=$mapref->[0];
-	 $status=$mapref->[1];
-  }
-  if (defined $gene_type && !defined $biotype  ) {
-	 $biotype=$type;
-	 $status = 'UNKNOWN';
-  }
-  if (!defined $gene_type || !defined $biotype)   {
-	 die "gene biotype, source and the status could not be mapped or found \n";
-  }
-  $gene->biotype($biotype);
-  $gene->status($status);
-  $gene->source($source);
+	$gene->source($source);
+	$gene->biotype($biotype);
+	$gene->status($status);
 
-  ##gene author
-  my ($gene_author,$author_name,$author_email);
-  $author_name  = $data->{'author'};
-  $author_email = $data->{'author_email'};
-  $gene_author  = $self->make_Author($author_name, $author_email, $source);
+	##gene author
+	my ($gene_author,$author_name,$author_email);
+	$author_name  = $data->{'author'};
+	$author_email = $data->{'author_email'};
+	$gene_author  = $self->make_Author($author_name, $author_email, $source);
 
-  $gene->gene_author($gene_author);
+	$gene->gene_author($gene_author);
 
-  ##gene attributes name,synonym,remark
-  my $gene_attributes=[];
-  my $gene_name=$data->{'name'};
-  if (defined $gene_name ) {
-	 if ($seen_gene_name{$self}{$gene_name}) {
-		die "more than one gene has the name $gene_name";
-	 } else {
-		$seen_gene_name{$self}{$gene_name} = 1;
-	 }
-	 my $name_attrib=$self->make_Attribute('name','Name','Alternative/long name',$gene_name);
-	 push @$gene_attributes,$name_attrib;
-  }
-  my $gene_synonym=$data->{'synonym'};
-  if (defined $gene_synonym){
-	 foreach my $a (@$gene_synonym) {
-		my $syn_attrib=$self->make_Attribute('synonym','Synonym','',$a);
-		push @$gene_attributes,$syn_attrib;
-	 }
-  }
-  my $gene_remark= $data->{'remark'};
-  if (defined $gene_remark){
-	 foreach my $rem (@$gene_remark){
-		my $rem_attrib=$self->make_Attribute('remark','Remark','Annotation Remark',$rem);
-		push @$gene_attributes,$rem_attrib;
-	 }
-  }
-  ##share exons among transcripts of this gene
-  foreach my $tran (@$transcripts) {
-    $gene->add_Transcript($tran);
-  }
-  $gene->prune_Exons;
-  ##add all gene attributes
-  $gene->add_Attributes(@$gene_attributes);
-  ##truncated flag
-  my $truncated=$data->{'truncated'};
-  if (defined $truncated) {
-	 $gene->truncated_flag($truncated);
-  }
+	##gene attributes name,synonym,remark
+	my $gene_attributes=[];
+	my $gene_name=$data->{'name'};
+	if (defined $gene_name ) {
+		if ($seen_gene_name{$self}{$gene_name}) {
+			die "more than one gene has the name $gene_name";
+		} else {
+			$seen_gene_name{$self}{$gene_name} = 1;
+		}
+		my $name_attrib=$self->make_Attribute('name','Name','Alternative/long name',$gene_name);
+		push @$gene_attributes,$name_attrib;
+	}
+	my $gene_synonym=$data->{'synonym'};
+	if (defined $gene_synonym){
+		foreach my $a (@$gene_synonym) {
+			my $syn_attrib=$self->make_Attribute('synonym','Synonym','',$a);
+			push @$gene_attributes,$syn_attrib;
+		}
+	}
+	my $gene_remark= $data->{'remark'};
+	if (defined $gene_remark){
+		foreach my $rem (@$gene_remark){
+			my $rem_attrib=$self->make_Attribute('remark','Remark','Annotation Remark',$rem);
+			push @$gene_attributes,$rem_attrib;
+		}
+	}
+	##share exons among transcripts of this gene
+	foreach my $tran (@$transcripts) {
+		$gene->add_Transcript($tran);
+	}
+	$gene->prune_Exons;
+	##add all gene attributes
+	$gene->add_Attributes(@$gene_attributes);
+	##truncated flag
+	my $truncated=$data->{'truncated'};
+	if (defined $truncated) {
+		$gene->truncated_flag($truncated);
+	}
 
-  #convert coordinates from chromosomal coordinates to slice coordinates
+	#convert coordinates from chromosomal coordinates to slice coordinates
 
-  my $slice_offset = $slice->start - 1;
+	my $slice_offset = $slice->start - 1;
 
-  foreach my $exon (@{$gene->get_all_Exons}) {
-    $exon->start($exon->start - $slice_offset);
-    $exon->end(  $exon->end   - $slice_offset);
-  }
+	foreach my $exon (@{$gene->get_all_Exons}) {
+		$exon->start($exon->start - $slice_offset);
+		$exon->end(  $exon->end   - $slice_offset);
+	}
 
-  foreach my $transcript (@$transcripts){
-     $transcript->start($transcript->start - $slice_offset);
-     $transcript->end(  $transcript->end   - $slice_offset);
-  }
-  
-  $gene->start($gene->start - $slice_offset);
-  $gene->end(  $gene->end   - $slice_offset);
+	foreach my $transcript (@$transcripts){
+		$transcript->start($transcript->start - $slice_offset);
+		$transcript->end(  $transcript->end   - $slice_offset);
+	}
 
-  my $list = $gene_list{$self} ||= [];
-  push @$list, $gene;
+	$gene->start($gene->start - $slice_offset);
+	$gene->end(  $gene->end   - $slice_offset);
+
+	my $list = $gene_list{$self} ||= [];
+	push @$list, $gene;
 }
 
 sub do_nothing {
