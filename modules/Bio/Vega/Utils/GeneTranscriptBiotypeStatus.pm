@@ -76,7 +76,7 @@ sub biotype_status2method {
     my $method =
            $method_to_biotype_status{"$biotype.$status"}
         || $method_to_biotype_status{$biotype}
-        || ucfirst lc $method;
+        || ucfirst lc $biotype;
 }
 
 1;
