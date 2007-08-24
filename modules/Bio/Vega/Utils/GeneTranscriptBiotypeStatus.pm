@@ -16,7 +16,7 @@ my @method_biotype_status = qw{
         Nonsense_mediated_decay     =                       -
                                     
     Transcript                      processed_transcript    -
-        Non_coding                  processed_transcript    -
+        Non_coding                  =                       -
         Ambiguous_ORF               =                       -
         Retained_intron             =                       -
         Antisense                   =                       -
