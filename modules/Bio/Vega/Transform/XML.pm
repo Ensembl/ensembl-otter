@@ -32,12 +32,10 @@ sub generate_SequenceSet{
   foreach my $contig_seg (@$slice_projection) {
 	 $ss->attribobjs($self->generate_SequenceFragment($contig_seg,$slice,$odb));
   }
-  my $sfa = $odb->get_SimpleFeatureAdaptor();
   unless ($features) {
 	 $features = $slice->get_all_SimpleFeatures;
   }
   $ss->attribobjs($self->generate_FeatureSet($features,$slice));
-  my $ga=$odb->get_GeneAdaptor;
   unless ($genes){
       $genes=$slice->get_all_Genes;
   }
