@@ -37,7 +37,6 @@ my (
 	%logic_ana,
 	%coord_system,
 	%slice,
-	%biotype_status_mapping,
 	%seen_transcript_name,
 	%seen_gene_name,
 	%assembly_type,
@@ -60,7 +59,6 @@ sub DESTROY {
     delete $logic_ana{$self};
     delete $coord_system{$self};
     delete $slice{$self};
-    delete $biotype_status_mapping{$self};
     delete $seen_gene_name{$self};
     delete $seen_transcript_name{$self};
     delete $assembly_type{$self};

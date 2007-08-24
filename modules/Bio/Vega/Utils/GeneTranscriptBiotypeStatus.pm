@@ -5,7 +5,7 @@ package Bio::Vega::Utils::GeneTranscriptBiotypeStatus;
 
 use strict;
 use base 'Exporter';
-my @EXPORT_OK = qw{ method2biotype_status biotype_status2method };
+our @EXPORT_OK = qw{ method2biotype_status biotype_status2method };
 
 my @method_biotype_status = qw{
 
@@ -73,8 +73,7 @@ sub method2biotype_status {
 sub biotype_status2method {
     my ($biotype, $status) = @_;
     
-    my $method =
-           $method_to_biotype_status{"$biotype.$status"}
+    return $method_to_biotype_status{"$biotype.$status"}
         || $method_to_biotype_status{$biotype}
         || ucfirst lc $biotype;
 }
