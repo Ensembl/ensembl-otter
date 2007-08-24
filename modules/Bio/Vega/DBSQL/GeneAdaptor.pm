@@ -327,7 +327,9 @@ sub fetch_by_stable_id_version  {
   }
   my $constraint = "gsi.stable_id = '$stable_id' AND gsi.version = '$version'";
   my ($gene) = @{ $self->generic_fetch($constraint) };
-  $self->reincarnate_gene($gene);
+  if($gene) {
+      $self->reincarnate_gene($gene);
+  }
   return $gene;
 }
 
@@ -390,7 +392,10 @@ sub fetch_latest_by_stable_id {
 
     my $constraint = "gsi.stable_id = '$stable_id' ORDER BY gsi.modified_date DESC LIMIT 1";
     my ($gene) = @{ $self->generic_fetch($constraint) };
-    return $self->reincarnate_gene($gene);
+    if($gene) {
+        $self->reincarnate_gene($gene);
+    }
+    return $gene;
 }
 
 =head2 store

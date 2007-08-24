@@ -47,36 +47,36 @@ sub fetch_by_stable_id_version {
   return $exon;
 }
 
-sub get_deleted_Exon_by_slice {
-  my ($self, $exon, $exon_version) = @_;
-  unless ($exon || $exon_version){
-	 throw("no exon passed on to fetch old exon or no version supplied");
-  }
-
-  my $exon_stable_id=$exon->stable_id;
-  my @noncurrent_exons =    # NB: reverse order, to get the last one:
-        sort {$b->dbID <=> $a->dbID}
-        grep { $_->stable_id eq $exon_stable_id and $_->version eq $exon_version }
-        @{$self->fetch_all_by_Slice_constraint($exon->slice(), 'e.is_current = 0 ')};
-
-  return $noncurrent_exons[0];
-}
-
-sub get_current_Exon_by_slice {
-  my ($self, $exon) = @_;
-  unless ($exon){
-	 throw("no exon passed on to fetch old exon");
-  }
-
-  my $exon_stable_id=$exon->stable_id;
-  my @current_exons =
-        grep { $_->stable_id eq $exon_stable_id }
-        @{ $self->fetch_all_by_Slice_constraint($exon->slice, 'e.is_current = 1 ')};
-  if (@current_exons > 1) {
-	 die "there are ".scalar(@current_exons)." current $exon_stable_id exons in the db\n";
-  }
-  return $current_exons[0];
-}
+#sub get_deleted_Exon_by_slice {
+#  my ($self, $exon, $exon_version) = @_;
+#  unless ($exon || $exon_version){
+#	 throw("no exon passed on to fetch old exon or no version supplied");
+#  }
+#
+#  my $exon_stable_id=$exon->stable_id;
+#  my @noncurrent_exons =    # NB: reverse order, to get the last one:
+#        sort {$b->dbID <=> $a->dbID}
+#        grep { $_->stable_id eq $exon_stable_id and $_->version eq $exon_version }
+#        @{$self->fetch_all_by_Slice_constraint($exon->slice(), 'e.is_current = 0 ')};
+#
+#  return $noncurrent_exons[0];
+#}
+#
+#sub get_current_Exon_by_slice {
+#  my ($self, $exon) = @_;
+#  unless ($exon){
+#	 throw("no exon passed on to fetch old exon");
+#  }
+#
+#  my $exon_stable_id=$exon->stable_id;
+#  my @current_exons =
+#        grep { $_->stable_id eq $exon_stable_id }
+#        @{ $self->fetch_all_by_Slice_constraint($exon->slice, 'e.is_current = 1 ')};
+#  if (@current_exons > 1) {
+#	 die "there are ".scalar(@current_exons)." current $exon_stable_id exons in the db\n";
+#  }
+#  return $current_exons[0];
+#}
 
 
 sub fetch_latest_by_stable_id {
