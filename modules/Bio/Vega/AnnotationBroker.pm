@@ -97,7 +97,21 @@ sub translations_diff {
         } else {
             $translation_any_changes = compare($db_translation, $translation)
                 || ($db_transcript->translatable_Exons_vega_hashkey ne $transcript->translatable_Exons_vega_hashkey);
-            $translation_seq_changes = $translation_any_changes && ($db_transcript->translate->seq() ne $transcript->translate->seq());
+
+            if($translation_any_changes) {
+                if((my $db_translate = $db_transcript->translate()) && (my $translate = $transcript->translate())) {
+                    $translation_seq_changes = $db_translate->seq() ne $translate->seq();
+                } else {
+                    if(! $db_translate) {
+                        warn "db_translate does not exist for ".$db_transcript->stable_id.'('.$db_transcript->dbID.')';
+                        #die "db_translate does not exist for ".$db_transcript->stable_id.'('.$db_transcript->dbID.')';
+                    } elsif(! $translate) {
+                        warn "translate does not exist for ".$transcript->stable_id;
+                        #die "translate does not exist for ".$transcript->stable_id;
+                    }
+                    $translation_seq_changes = 1; # to draw some attention!
+                }
+            }
         }
 
         $translation->created_date($db_translation->created_date());

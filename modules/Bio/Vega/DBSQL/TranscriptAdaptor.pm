@@ -186,8 +186,10 @@ sub fetch_latest_by_stable_id {
 
   my $constraint = "tsi.stable_id = '$stable_id' ORDER BY tsi.modified_date DESC LIMIT 1";
   my ($transcript) = @{ $self->generic_fetch($constraint) };
-
-  return $self->reincarnate_transcript($transcript);
+  if($transcript) {
+    $self->reincarnate_transcript($transcript);
+  }
+  return $transcript;
 }
 
 sub store {
