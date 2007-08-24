@@ -4,38 +4,8 @@ use strict;
 use Bio::Vega::Utils::XmlEscape qw (xml_escape);
 use Bio::EnsEMBL::Utils::Exception qw ( throw);
 use base 'Bio::Vega::Writer';
+use Bio::Vega::Utils::GeneTranscriptBiotypeStatus 'biotype_status2method';
 
-{
-    my %transcript_class_mapping = (
-        'UNKNOWN' => {
-            'unprocessed_pseudogene' => 'Unprocessed_pseudogene',
-            'processed_pseudogene'   => 'Processed_pseudogene',
-            'pseudogene'             => 'Pseudogene',
-            'Ig_pseudogene_segment'  => 'Ig_pseudogene_segment',
-            'coding'                 => 'Coding',
-        },
-        'KNOWN' => {
-            'protein_coding'         => 'Known',
-        },
-        'NOVEL' => {
-            'protein_coding'         => 'Novel_CDS',
-            'Ig_segment'             => 'Ig_segment',
-            'processed_transcript'   => 'Novel_transcript',
-        },
-        'PUTATIVE' => {
-            'processed_transcript'   => 'Putative',
-        },
-        'PREDICTED'=> {
-            'protein_coding'         => 'Predicted_gene',
-        },
-    );
-
-    sub get_transcript_class {
-        my ($self,$biotype,$status)=@_;
-
-        return $transcript_class_mapping{$status}{$biotype};
-    }
-}
 
 sub get_geneXML{
   my ($self,$gene)=@_;
@@ -209,29 +179,17 @@ sub generate_Locus {
 	 $gene_name=$gene_name_att->[0]->value;
   }
   $g->attribvals($self->prettyprint('name',$gene_name));
-  my $gene_biotype=$gene->biotype;
-  my $gene_status=$gene->status;
-  my $gene_source=$gene->source;
-  my $type=$self->get_transcript_class(lc($gene_biotype),$gene_status);
-  unless ($type){
-	 $type=$gene_biotype;
-  }
-  my $source;
-  if ($gene_source ne 'havana'){
-	 $source=$gene_source;
-	 $type=$source.':'.$type;
+
+  my ($type) = biotype_status2method($gene->biotype, $gene->status);
+
+  my $source = $gene->source;
+  if ($source ne 'havana'){
+	 $type = "$source:$type";
   }
   $g->attribvals($self->prettyprint('type',$type));
-  my $known=0;
-  if ($gene->is_known){
-	 $known=1;
-  }
-  $g->attribvals($self->prettyprint('known',$known));
-  my $truncated=0;
-  if ($gene->truncated_flag){
-	 $truncated=1;
-  }
-  $g->attribvals($self->prettyprint('truncated',$truncated));
+
+  $g->attribvals($self->prettyprint('known',$gene->is_known || 0));
+  $g->attribvals($self->prettyprint('truncated',$gene->truncated_flag));
   if (my $synonyms=$gene->get_all_Attributes('synonym')){
 	 foreach my $syn (@$synonyms){
 		$g->attribvals($self->prettyprint('synonym',$syn->value));
@@ -317,19 +275,8 @@ sub generate_Transcript{
   }
   ##in future <transcript_class> tag will be replaced by trancript <biotype> and <status> tags
   ##<type> tag will be removed
-  ##don't know if <known> tag is necessary
-  if ($tran->biotype && $tran->status){
-	 #my $transcript_class='';
-	 my $transcript_class=$self->get_transcript_class(lc($tran->biotype),$tran->status);
-	 unless ($transcript_class) {
-		if ($tran->biotype){
-		  $transcript_class=$tran->biotype;
-		}
-	 }
-	 if ($transcript_class){
-		$t->attribvals($self->prettyprint('transcript_class',$transcript_class));
-	 }
-  }
+  my ($class) = biotype_status2method($tran->biotype, $tran->status);
+  $self->prettyprint('transcript_class', $class);
 
   my $tran_name_att = $tran->get_all_Attributes('name') ;
   my $tran_name='';
