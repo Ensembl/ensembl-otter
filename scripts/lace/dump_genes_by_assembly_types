@@ -692,6 +692,14 @@ sub translation_qc {
     if(my $translation = $transcript->translation()) {
 
         my $trans_name = '     '.$transcript->stable_id.'.'.$transcript->version().': ';
+
+        if($transcript->coding_region_end()-$transcript->coding_region_start()<3) {
+            delete $transcript->{'translation'};
+            delete $transcript->{'_translation_id'};
+            $transcript->transcript_info->remark(Bio::Otter::TranscriptRemark->new(-remark=>"LoutreTransfer: translation unrecoverable"));
+            return $trans_name.' [Translation unrecoverable, deleted] ';
+        }
+
         my $original_phase = $translation->start_Exon()->phase();
         if(is_selenoprotein($transcript) || no_premature_stops($transcript)) {
             my $curr_attempt = fix_phases($transcript, $original_phase);
@@ -768,6 +776,40 @@ sub gene_transformed_successfully {
     return 1;
 }
 
+sub try_and_fix_exon_strands {
+    my $gene = shift @_;
+
+    foreach my $transcript (@{$gene->get_all_Transcripts}) {
+        my $pos_count = 0;
+        my $neg_count = 0;
+        foreach my $exon (@{$transcript->get_all_Exons}) {
+            my $strand = $exon->strand();
+            if($strand == 1) {
+                $pos_count++;
+            } elsif($strand == -1) {
+                $neg_count++;
+            }
+        }
+        if($pos_count && $neg_count) { # "unwanted trans-splicing"
+            my $forced_strand = ($pos_count >= $neg_count) ? 1 : -1;
+            foreach my $exon (@{$transcript->get_all_Exons}) {
+                $exon->strand($forced_strand);
+            }
+            $transcript->transcript_info->remark(Bio::Otter::TranscriptRemark->new(-remark=>"LoutreTransfer: forced equal strands by majority rule"));
+            print STDERR " [forced all strands to $forced_strand by majority rule] ";
+
+                # fix the phases/end_phases:
+            if(my $trl_log = translation_qc($transcript)) {
+                print STDERR $trl_log;
+                if($trl_log=~/ERROR/) {
+                    return 0;
+                }
+            }
+        }
+    }
+    return 1;
+}
+
 { # lexical environment for add_xml_gene
 
     my %slices_hash = (); # atype->Slice
@@ -789,7 +831,7 @@ sub gene_transformed_successfully {
                 
                 $gene->transform($slice);
 
-                if (gene_transformed_successfully($gene, $slice)) {
+                if (gene_transformed_successfully($gene, $slice) && try_and_fix_exon_strands($gene)) {
 
                     $gene_count++;
                     my $gene_id  = $gene->dbID();
