@@ -8,9 +8,9 @@
 
 # output stats of
 # (A) encode regions for Havana annotated clones blasted against
-#   (1) ESTs (est2genome - EST_best/all) and
-#   (2) cDNAs (vertrna - cDNA_best/all) and
-#   (3) Uniprot_raw, Uniprot_SW, Uniprot_TR
+#   (1) ESTs                                (est2genome - EST_best/ _all)
+#   (2) cDNAs                               (vertrna    - cDNA_best / _all)
+#   (3) Uniprot_raw, Uniprot_SW, Uniprot_TR (uniprot    - Prot_SW / Prot_TR / Prot_all)
 # (B) number of transcript evidences used for building Havana annotated genes (EST_evi/cDNA_evi/Prot_evi) in specified time windows
 
 ### Example output:
@@ -68,80 +68,91 @@ printf("%-20s %-10s %-10s %-10s %-10s %-10s %-10s %-10s %-10s %-10s %-10s %-10s 
                                                 "cDNA_best", "cDNA_all", "cDNA_evi",
                                                 "Prot_SW", "Prot_TR", "Prot_all", "Prot_evi");
 
-if ( @sets ) {
-  foreach my $set ( @sets ) {
-	warn  $set, "\n";
 
-	$otter_db->assembly_type($set); # replace the default sequence set setting
+foreach my $set ( @sets ) {
+  warn  $set, "\n";
 
-	my $seqSet    = $dset->get_SequenceSet_by_name($set);
-	$dset->fetch_all_CloneSequences_for_SequenceSet($seqSet);
-	my $chrom;
-	$chrom = $seqSet->CloneSequence_list()->[0]->chromosome;
+  $otter_db->assembly_type($set); # replace the default sequence set setting
 
-	my $slice   = $sliceAd->fetch_by_chr_name($chrom);
+  my $seqSet    = $dset->get_SequenceSet_by_name($set);
+  $dset->fetch_all_CloneSequences_for_SequenceSet($seqSet);
+  my $chrom;
+  $chrom = $seqSet->CloneSequence_list()->[0]->chromosome;
 
-	my $pipe_slice = Bio::Otter::Lace::Slice->new($client, $dataset, $set, 'chromosome', 'Otter',
-												   $slice->chr_name, $slice->chr_start, $slice->chr_end);
+  my $slice   = $sliceAd->fetch_by_chr_name($chrom);
 
-	my $region_evidences;
+  my $pipe_slice = Bio::Otter::Lace::Slice->new($client, $dataset, $set, 'chromosome', 'Otter',
+                                                $slice->chr_name, $slice->chr_start, $slice->chr_end);
 
-	# 1: newpipe 0: oldpipe
-	my @analysis = qw(Est2genome_human Est2genome_mouse Est2genome_other
-					  Est2genome_human_raw Est2genome_mouse_raw Est2genome_other_raw
-					  vertrna vertrna_raw
-                     );
+  my $region_evidences;
 
-	foreach my $analysis_name ( @analysis ){
+  # 1: newpipe 0: oldpipe
+  my @analysis = qw(Est2genome_human Est2genome_mouse Est2genome_other
+  					  Est2genome_human_raw Est2genome_mouse_raw Est2genome_other_raw
+  					  vertrna vertrna_raw
+                       );
+  foreach my $analysis_name ( @analysis ) {
+    my $dafs = $pipe_slice->get_all_DnaAlignFeatures($analysis_name, 1);
+    #warn %{$dafs->[0]};
 
-	  my $dafs = $pipe_slice->get_all_DnaAlignFeatures($analysis_name, 1);
-	  #warn %{$dafs->[0]};
-	
-	  # only want non-human hits
-	  if ( $analysis_name =~ /vertrna/ ){
-		next if `pfetch -D $dafs->[0]->{_hseqname} | grep "Homo sapiens"`;
-	  }
-
-      if ( $analysis_name =~ /^Est.*_.*_.*/ ){
-        $region_evidences->{$set}->{'EST_raw'} += scalar @$dafs;
+    # only want non-human hits for cDNA
+    if ( $analysis_name =~ /vertrna/ ) {
+      foreach my $daf ( @$dafs ) {
+        my $human = 0;
+        eval { $human = $daf->get_HitDescription->description =~ /Homo sapiens/i;};
+        shift @$dafs if !$@ and $human == 1;
       }
-      elsif ( $analysis_name =~ /^Est/ ){
-        $region_evidences->{$set}->{'EST'} += scalar @$dafs;
-      }
-	  $region_evidences->{$set}->{'cDNA'} = scalar @$dafs if $analysis_name eq 'vertrna';
-      $region_evidences->{$set}->{'cDNA_raw'} = scalar @$dafs if $analysis_name eq 'vertrna_raw';
-
-      print ">$set $analysis_name: ", scalar @$dafs, "\n";
-	}
-
-    foreach my $ana (qw(Uniprot_raw Uniprot_SW Uniprot_TR)){
-      my $pafs = $pipe_slice->get_all_ProteinAlignFeatures($ana, 1);
-      $region_evidences->{$set}->{$ana} = scalar @$pafs;
-      warn "$ana: ", scalar @$pafs;
     }
 
-    my $latest_gene_ids = $geneAd->list_current_dbIDs_for_Slice($slice);
-	my ($region_updated, $total_gene, $region_cdnaESTprot_evidences) = get_encode_stats($set, $latest_gene_ids);
+    my $feats_num = scalar @$dafs;
 
-	foreach my $region ( sort keys %$region_updated ){
-      warn $region;
-	  my $est     = $region_evidences->{$region}->{'EST'};
-      my $est_r   = $region_evidences->{$region}->{'EST_raw'};
-	  my $cdna    = $region_evidences->{$region}->{'cDNA'};
-      my $cdna_r  = $region_evidences->{$region}->{'cDNA_raw'};
-	  my $prot_sw = $region_evidences->{$region}->{'Uniprot_SW'};
-      my $prot_tr = $region_evidences->{$region}->{'Uniprot_TR'};
-      my $prot_r  = $region_evidences->{$region}->{'Uniprot_raw'};
-      my $est_e   = $region_cdnaESTprot_evidences->{$region}->{'EST'};
-      my $cdna_e  = $region_cdnaESTprot_evidences->{$region}->{'cDNA'};
-      my $prot_e  = $region_cdnaESTprot_evidences->{$region}->{'Protein'};
+    if ( $analysis_name =~ /^Est.*_raw/ ) {
+      $region_evidences->{$set}->{'EST_raw'} += $feats_num;
+    } elsif ( $analysis_name =~ /^Est/ ) {
+      $region_evidences->{$set}->{'EST'} += $feats_num;
+    } elsif ( $analysis_name eq 'vertrna' ) {
+      $region_evidences->{$set}->{'cDNA'} = $feats_num;
+    } else {
+      $region_evidences->{$set}->{'cDNA_raw'} = $feats_num;
+    }
 
-	  printf("%-20s %-10d %-10d %-10d %-10d %-10d %-10d %-10d %-10d %-10d %-10d %-10d %d\n",
-                                                      $region, $total_gene->{$region}, $region_updated->{$region},
-                                                      $est,  $est_r,  $est_e,
-                                                      $cdna, $cdna_r, $cdna_e,
-                                                      $prot_sw, $prot_tr, $prot_r, $prot_e);
-	}
+    print ">$set $analysis_name: ", $feats_num, "\n";
+  }
+
+  foreach my $ana (qw(Uniprot_raw Uniprot_SW Uniprot_TR)){
+    my $pafs = $pipe_slice->get_all_ProteinAlignFeatures($ana, 1);
+    $region_evidences->{$set}->{$ana} = scalar @$pafs;
+    print ">$set $ana: ",  scalar @$pafs, "\n";
+  }
+
+  my $latest_gene_ids = $geneAd->list_current_dbIDs_for_Slice($slice);
+  my ($region_updated, $total_gene, $region_cdnaESTprot_evidences) = get_encode_stats($set, $latest_gene_ids);
+
+  foreach my $region ( sort keys %$region_updated ) {
+    warn $region;
+    my $est     = $region_evidences->{$region}->{'EST'};
+    my $est_r   = $region_evidences->{$region}->{'EST_raw'};
+    my $cdna    = $region_evidences->{$region}->{'cDNA'};
+    my $cdna_r  = $region_evidences->{$region}->{'cDNA_raw'};
+    my $prot_sw = $region_evidences->{$region}->{'Uniprot_SW'};
+    my $prot_tr = $region_evidences->{$region}->{'Uniprot_TR'};
+    my $prot_r  = $region_evidences->{$region}->{'Uniprot_raw'};
+   # my $est     = 0;
+#    my $est_r   = 0;
+#    my $cdna    = 0;
+#    my $cdna_r  = 0;
+#    my $prot_sw = 0;
+#    my $prot_tr = 0;
+#    my $prot_r  = 0;
+    my $est_e   = $region_cdnaESTprot_evidences->{$region}->{'EST'};
+    my $cdna_e  = $region_cdnaESTprot_evidences->{$region}->{'cDNA'};
+    my $prot_e  = $region_cdnaESTprot_evidences->{$region}->{'Protein'};
+
+    printf("%-20s %-10d %-10d %-10d %-10d %-10d %-10d %-10d %-10d %-10d %-10d %-10d %d\n",
+           $region, $total_gene->{$region}, $region_updated->{$region},
+           $est,  $est_r,  $est_e,
+           $cdna, $cdna_r, $cdna_e,
+           $prot_sw, $prot_tr, $prot_r, $prot_e);
   }
 }
 
@@ -206,7 +217,15 @@ sub get_encode_stats {
     }
   }
 
+  unless ( $region_updated->{$set} ){
+    $region_updated->{$set} = 0;
+    $region_cdnaESTprot_evidences->{$set}->{EST} = 0;
+    $region_cdnaESTprot_evidences->{$set}->{cDNA} = 0;
+    $region_cdnaESTprot_evidences->{$set}->{Protein} = 0;
+  }
+
   return $region_updated, $total_gene, $region_cdnaESTprot_evidences;
 }
+
 __END__
 
