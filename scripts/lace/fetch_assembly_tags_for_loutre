@@ -106,7 +106,7 @@ sub update_assembly_tagged_contig_table {
 
   unless ( @seqids ){
 	warn "All contigs already in assembly_tagged_contigs table.\n\n";
-	return;
+	exit;
   }
 
   if ( $check ){
@@ -152,26 +152,11 @@ sub prepare_assembly_tag_data {
 	  # only update if the version of loutre contig match that of submissions db
       if ( $cln_db_ver eq $seq_ver ) {
 
-		my $contig   = $sliceAd->fetch_by_region('contig', $contig_name);
-		my $seq_region_id = $sliceAd->get_seq_region_id($contig);
-
-        # all clones should be redone for each new assembly as clones left/right may change
-        #if ( $atagAd->check_seq_region_id_is_transferred($seq_region_id) ){
-		#  print STDERR "$contig_name (srid $seq_region_id) is already transferred\n";
-		#  next;
-		#}
-
         my $dir      = $seq->analysis_directory;
         my $seq_ver  = $seq->sequence_version;
         my $seq_name = $seq->sequence_name;
-
-        # test
-     #   if ( $contig_name =~ /AL022337|AL139002|AL360297|AL360297AC098484|AC095035|AC096536/ ){
-#          warn "$contig_name: $dir/rawdata/$seq_name.humace.ace";
-#        }
-#        else {
-#          next;
-#        }
+        my $contig   = $sliceAd->fetch_by_region('contig', $contig_name);
+		my $seq_region_id = $sliceAd->get_seq_region_id($contig);
 
         # double check existence of acefile
         if ( -e "$dir/rawdata/$seq_name.humace.ace" ) {
@@ -248,17 +233,15 @@ sub parse_ace {
 
         if ( $tag_end > $ctg_len ) {
           $skip = 0;
-          $info .= "Unsure tag out of bound (loutre contig seq_region_id $ctg_seq_region_id)\n" .
+          $info .= "Unsure tag out of bound (contig seq_region_id $ctg_seq_region_id)\n" .
             "\t [tag coord: $tag_end VS contig length: $ctg_len) - SKIPPED\n";
         }
       }
 
       # filter out unsure tag out of bound
       if (  $skip == 1 ) {
-        if ( $verbose ){
-          $info .= "flip\n" if $2>$3;
-          $info .= "$ctg_seq_region_id : $tag_type : $ctg_strand : $tag_start : $tag_end : $tag_info\n";
-        }
+        $info .= "flip\n" if $2>$3;
+        $info .= "$ctg_seq_region_id : $tag_type : $ctg_strand : $tag_start : $tag_end : $tag_info\n";
 
 		make_misc_feats_for_atags($contig, $ctg_seq_region_id, $tag_type, $ctg_strand, $tag_start, $tag_end, $tag_info) if $do_misc;
         make_atags($contig, $ctg_seq_region_id, $tag_type, $ctg_strand, $tag_start, $tag_end, $tag_info) if $do_atag;
@@ -266,8 +249,6 @@ sub parse_ace {
     }
 
     if ( $line =~ /^(Clone_\w+_end)\s+(.+)\s+(\d+)/i and $dataset ne "tomato" ) {
-
-      next if $seen_lines->{$line} > 1;
 
       $tag_type   = $1;
       $tag_start  = $3;
@@ -289,11 +270,13 @@ sub parse_ace {
   }
 
   # log/info message
-  if ( $info ) {
-    $info = $contig_name." => ".$acefile."\n".$info;
-    print "$info\n" if $verbose;
-  } else {
-    print "\nNOTE: ".$contig_name." => ".$acefile." (no assembly_tag data)\n" if $verbose;
+  if ( $verbose ){
+    if ($info) {
+      print $contig_name." => ".$acefile."\n".$info."\n";
+    }
+    else {
+      print "\nNOTE: ".$contig_name." => ".$acefile." (no assembly_tag data)\n";
+    }
   }
 }
 
