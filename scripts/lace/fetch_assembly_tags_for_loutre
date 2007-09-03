@@ -344,8 +344,6 @@ sub make_atags {
 }
 
 
-
-
 __END__
 
 
@@ -355,23 +353,20 @@ __END__
 
 Running the script
 
-Eg, fetch_assembly_tags B<-dataset> zebrafish [-verbose][-check][-misc and/or -atag]
+Eg, fetch_assembly_tags B<-dataset> zebrafish -misc and/or -atag [-verbose][-check]
 
 =head1 DESCRIPTION
 
-There are assembly_tags info for Sanger clones submitted to EMBL. They are stored in "submissions" database and are available as acefiles, eg, /nfs/disk100/humpub/analysis/projects/Chr_20/yR31BE7/20001221/rawdata/yR31BE7.humace.ace.
+Assembly_tags info of Sanger clones are submitted to EMBL. They are stored in acefiles
+The filepaths are kept in sequence.file_path of submissions db. Eg, /lustre/cbi4/work1/humpub/analysis/
 
-The Assembly_tags info is shown in AceDB under the Assembly_tags tag of a Sequence object and is stored in B<assembly_tag> table of an otter db.
+The Assembly_tags info is shown in AceDB under the Assembly_tags tag of a Sequence object and is stored in B<assembly_tag> table of a loutre db.
 
-This script populates and updates the otter B<assembly_tag> and B<assemlby_tagged_clone> tables, respectively.
-The latter table is populated by "INSERT INTO assembly_tagged_clone (clone_id) SELECT clone_id FROM clone;"
-before hand, where all clones have the transferred column with value initially set to "no".
+This script populates and updates the loutre B<assembly_tag> and B<assemlby_tagged_contig> tables.
+All clones in the B<assemlby_tagged_contig> table have the transferred value initially set to "no".
 For clones which have assembly_tag data, it will be updated to "yes".
 
-The B<assembly_tagged_clone> table allows quick look up of clones that have assembly_tag info.
-
-Assembly_tag info in the otter DB is dumped out in EMBL format via the script B<emblDump> in the humscripts directory.
-(To check out: cvs -d /nfs/humace2/CVS_master checkout humscripts)
+The B<assembly_tagged_contig> table allows quick look up of clones that have assembly_tag info.
 
 =head1 AUTHOR
 
