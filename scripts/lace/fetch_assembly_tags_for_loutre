@@ -26,7 +26,7 @@ my $mfeats = [];
 my $atags  = [];
 
 {
-  my ($dataset, $verbose, $check, $do_atag, $do_misc);
+  my ($dataset, $verbose, $check, $do_atag, $do_misc, $update);
 
   #default
   $do_misc = $do_atag = 0;
@@ -37,6 +37,7 @@ my $atags  = [];
   Bio::Otter::Lace::Defaults::do_getopt(
 									  'ds|dataset=s' => \$dataset,
 									  'v|verbose'    => \$verbose,
+                                      'update'       => \$update,
 									  'check'        => \$check,
 									  'h|help'       => $help,
                                       'atag'         => \$do_atag,   # load atag data into assembly_tag table
@@ -53,7 +54,10 @@ my $atags  = [];
   my $mfeatAd   = $loutre_db->get_MiscFeatureAdaptor;
   my $atagAd    = $loutre_db->get_AssemblyTagAdaptor;
 
-  update_assembly_tagged_contig_table($loutre_db, $check);
+  # need to update assembly_tag data following change of AGP
+  delete_old_assembly_tags($loutre_db, $mfeatAd) if $update;
+
+  populate_assembly_tagged_contig_table($loutre_db, $check);
 
   # fetch acefile with assembly_tag info of clones
   my $clones = $sliceAd->fetch_all('clone');
@@ -61,10 +65,11 @@ my $atags  = [];
 
   if ( $do_misc ){
     $mfeatAd->store(@$mfeats);
-    warn scalar @$mfeats, " misc_feats to be loaded\n";
+    print "Loaded ", scalar @$mfeats, " misc_feats\n";
   }
   if ( $do_atag ){
     update_database($atags, $atagAd);
+    print "Loaded ", scalar @$atags, " assembly_tags\n";
   }
 
 }
@@ -72,6 +77,27 @@ my $atags  = [];
 #--------------------
 #    subroutines
 #--------------------
+
+sub delete_old_assembly_tags {
+  my ($loutre_db, $mfa) = @_;
+
+  my $misc_feat_ids;
+  foreach my $code ( qw(atag_CLE atag_CRE atag_Misc atag_Unsure) ) {
+    foreach my $mf ( @{$mfa->fetch_all_by_attribute_type_value($code)} ) {
+      push(@$misc_feat_ids, $mf->dbID);
+    }
+  }
+  my $ids = join(',', @$misc_feat_ids);
+  foreach my $t ( qw(misc_feature misc_attrib misc_feature_misc_set) ) {
+    my $del_misc_feat = $loutre_db->dbc->prepare(qq{DELETE FROM $t WHERE misc_feature_id in ($ids)});
+    $del_misc_feat->execute;
+  }
+  foreach my $t ( qw(assembly_tag assembly_tagged_contig) ) {
+    my $del_atag = $loutre_db->dbc->prepare("DELETE FROM $t");
+    $del_atag->execute();
+  }
+  print STDERR "=== Old assembly_tags deleted ===\n";
+}
 
 sub update_database {
 
@@ -82,7 +108,7 @@ sub update_database {
   }
 }
 
-sub update_assembly_tagged_contig_table {
+sub populate_assembly_tagged_contig_table {
 
   my ($loutre_db, $check) = @_;
   my $sth = $loutre_db->dbc->prepare(qq{
@@ -103,11 +129,6 @@ sub update_assembly_tagged_contig_table {
     push(@seqids, "($id)");
   }
   $sth->finish;
-
-  unless ( @seqids ){
-	warn "All contigs already in assembly_tagged_contigs table.\n\n";
-	exit;
-  }
 
   if ( $check ){
 	print STDERR "Found ", scalar @seqids, " clones to update\n\n";
@@ -205,20 +226,23 @@ sub parse_ace {
     if ( $line =~ /Assembly_tags\s*(-|\"-\"|unsure)\s*(\d+)\s*(\d+)\s*\"(.*)\"/i){
       ($1 eq "-" || $1 eq "\"-\"") ? ($tag_type = "Misc") : ($tag_type = $1);
 
+      my $s = $2;
+      my $e = $3;
+
       # convertion for Ensembl/otter_db: starting coord is always smaller, so flip if not so
       #                                  starting coord > end coord means minus strand
 
-      if ( $2 > $3 ) {
-        $tag_start = $3;
-        $tag_end   = $2;
+      if ( $s > $e ) {
+        $tag_start = $e;
+        $tag_end   = $s;
         if ( $ctg_strand == -1 ) {
           $ctg_strand = 1;
         }
-      } elsif ( $2 < $3 ) {
-        $tag_start  = $2;
-        $tag_end    = $3;
-      } elsif ( $2 == $3 ) {
-        $tag_start = $tag_end = $2;
+      } elsif ( $s < $e ) {
+        $tag_start  = $s;
+        $tag_end    = $e;
+      } elsif ( $s == $e ) {
+        $tag_start = $tag_end = $s;
         $ctg_strand = 1;        # default setting
       }
 
@@ -240,7 +264,7 @@ sub parse_ace {
 
       # filter out unsure tag out of bound
       if (  $skip == 1 ) {
-        $info .= "flip\n" if $2>$3;
+        $info .= "flip\n" if $s>$e;
         $info .= "$ctg_seq_region_id : $tag_type : $ctg_strand : $tag_start : $tag_end : $tag_info\n";
 
 		make_misc_feats_for_atags($contig, $ctg_seq_region_id, $tag_type, $ctg_strand, $tag_start, $tag_end, $tag_info) if $do_misc;
