@@ -26,7 +26,7 @@ my $mfeats = [];
 my $atags  = [];
 
 {
-  my ($dataset, $verbose, $check, $do_atag, $do_misc, $update);
+  my ($dataset, $verbose, $do_atag, $do_misc, $update);
 
   #default
   $do_misc = $do_atag = 0;
@@ -38,9 +38,8 @@ my $atags  = [];
 									  'ds|dataset=s' => \$dataset,
 									  'v|verbose'    => \$verbose,
                                       'update'       => \$update,
-									  'check'        => \$check,
 									  'h|help'       => $help,
-                                      'atag'         => \$do_atag,   # load atag data into assembly_tag table
+                                      'atag'         => \$do_atag,   # load atag data into assembly_tag / assembly_tagged_contig tables
                                                                      # (will eventually become obsolete)
                                       'misc'         => \$do_misc    # load atag data as misc features (4 tables)
 									 ) or $help->(); # plus default options
@@ -57,7 +56,7 @@ my $atags  = [];
   # need to update assembly_tag data following change of AGP
   delete_old_assembly_tags($loutre_db, $mfeatAd) if $update;
 
-  populate_assembly_tagged_contig_table($loutre_db, $check);
+  populate_assembly_tagged_contig_table($loutre_db);
 
   # fetch acefile with assembly_tag info of clones
   my $clones = $sliceAd->fetch_all('clone');
@@ -110,7 +109,7 @@ sub update_database {
 
 sub populate_assembly_tagged_contig_table {
 
-  my ($loutre_db, $check) = @_;
+  my ($loutre_db) = @_;
   my $sth = $loutre_db->dbc->prepare(qq{
                                    SELECT sr.seq_region_id
                                    FROM seq_region sr, coord_system cs
@@ -130,10 +129,7 @@ sub populate_assembly_tagged_contig_table {
   }
   $sth->finish;
 
-  if ( $check ){
-	print STDERR "Found ", scalar @seqids, " clones to update\n\n";
-	exit;
-  }
+  print STDERR "Found ", scalar @seqids, " clones to update\n\n";
 
   my $vals = join(',', @seqids);
   my $insert = $loutre_db->dbc->prepare(qq{INSERT INTO assembly_tagged_contig (seq_region_id) VALUES $vals});
