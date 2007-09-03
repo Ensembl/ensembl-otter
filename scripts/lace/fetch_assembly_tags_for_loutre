@@ -57,7 +57,7 @@ my $atags  = [];
 
   # fetch acefile with assembly_tag info of clones
   my $clones = $sliceAd->fetch_all('clone');
-  prepare_assembly_tag_data($sliceAd, $atagAd, $loutre_db, $clones, $verbose, $do_misc, $do_atag);
+  prepare_assembly_tag_data($sliceAd, $atagAd, $loutre_db, $clones, $verbose, $do_misc, $do_atag, $dataset);
 
   if ( $do_misc ){
     $mfeatAd->store(@$mfeats);
@@ -85,7 +85,7 @@ sub update_database {
 sub update_assembly_tagged_contig_table {
 
   my ($loutre_db, $check) = @_;
-  my $sth = $loutre_db->prepare(qq{
+  my $sth = $loutre_db->dbc->prepare(qq{
                                    SELECT sr.seq_region_id
                                    FROM seq_region sr, coord_system cs
                                    LEFT JOIN assembly_tagged_contig atc
@@ -115,7 +115,7 @@ sub update_assembly_tagged_contig_table {
   }
 
   my $vals = join(',', @seqids);
-  my $insert = $loutre_db->prepare(qq{INSERT INTO assembly_tagged_contig (seq_region_id) VALUES $vals});
+  my $insert = $loutre_db->dbc->prepare(qq{INSERT INTO assembly_tagged_contig (seq_region_id) VALUES $vals});
   eval {
     $insert->execute;
   };
@@ -124,7 +124,7 @@ sub update_assembly_tagged_contig_table {
 
 sub prepare_assembly_tag_data {
 
-  my ($sliceAd, $atagAd, $loutre_db, $clones, $verbose, $do_misc, $do_atag) = @_;
+  my ($sliceAd, $atagAd, $loutre_db, $clones, $verbose, $do_misc, $do_atag, $dataset) = @_;
 
   foreach my $cl ( @$clones ) {
     $cl->seq_region_name =~ /(.*)\.(\d+)/;
@@ -133,7 +133,6 @@ sub prepare_assembly_tag_data {
     my $acc         = $1;
     my $contig_name = $cl->seq_region_name.".".$cl->start.".".$cl->end;
 
- #   warn $contig_name if $contig_name =~ /AL022337|AL139002|AL360297|AL360297AC098484|AC095035|AC096536/;
     my $seq;
     eval {
       # turn off warning temporarily
@@ -179,7 +178,7 @@ sub prepare_assembly_tag_data {
           my $acefile = "$dir/rawdata/$seq_name.humace.ace";
           print STDERR "INFO: updating $acc.$seq_ver: $acefile\n" if $verbose;
 
-          parse_ace($contig, $seq_region_id, $acefile, $loutre_db, $sliceAd, $verbose, $do_misc, $do_atag); # create a list of atag objs
+          parse_ace($contig, $seq_region_id, $acefile, $loutre_db, $sliceAd, $verbose, $do_misc, $do_atag, $dataset); # create a list of atag objs
         } else {
           # external clones: omit
           #print STDERR "No update for $acc.$seq_ver: MISSING  $dir/rawdata/$seq_name.humace.ace\n";
@@ -191,11 +190,12 @@ sub prepare_assembly_tag_data {
 
 sub parse_ace {
 
-  my ($contig, $seq_region_id, $acefile, $loutre_db, $sliceAd, $verbose, $do_misc, $do_atag) = @_;
+  my ($contig, $seq_region_id, $acefile, $loutre_db, $sliceAd, $verbose, $do_misc, $do_atag, $dataset) = @_;
   my $contig_name       = $contig->seq_region_name;
   my $ctg_seq_region_id = $sliceAd->get_seq_region_id($contig);
-  my $ctg_strand        = $contig->strand;
   my $ctg_len           = $contig->seq_region_length;
+  my $ctg_strand        = $contig->strand;
+  $ctg_strand = 1 unless $ctg_strand; # default to 1 if info not available
 
   if ($acefile =~ /\.gz$/) {
     $acefile = "gzip -cd $acefile |";
@@ -212,17 +212,12 @@ sub parse_ace {
 
     # track duplicates
     $seen_lines->{$line}++;
-
-    $ctg_strand = 1 unless $ctg_strand; # default to 1 if info not available
+    next if $seen_lines->{$line} > 1;
 
     my ( $tag_type, $tag_start, $tag_end, $tag_info);
 
     # omit Type "Oligo"
-
-    if ( $line =~ /^Assembly_tags\s+(-|\"-\"|unsure)\s+(\d+)\s+(\d+)\s+\"(.+)\"&/i ) {
-
-      next if $seen_lines->{$line} > 1;
-
+    if ( $line =~ /Assembly_tags\s*(-|\"-\"|unsure)\s*(\d+)\s*(\d+)\s*\"(.*)\"/i){
       ($1 eq "-" || $1 eq "\"-\"") ? ($tag_type = "Misc") : ($tag_type = $1);
 
       # convertion for Ensembl/otter_db: starting coord is always smaller, so flip if not so
@@ -270,7 +265,7 @@ sub parse_ace {
       }
     }
 
-    if ( $line =~ /^(Clone_\w+_end)\s+(.+)\s+(\d+)/i ) {
+    if ( $line =~ /^(Clone_\w+_end)\s+(.+)\s+(\d+)/i and $dataset ne "tomato" ) {
 
       next if $seen_lines->{$line} > 1;
 
