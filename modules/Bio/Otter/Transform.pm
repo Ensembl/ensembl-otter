@@ -125,7 +125,7 @@ sub get_property{
 
 sub objects{
     my $self = shift;
-    return $self->{'_objects'};
+    return $self->{'_objects'} || [];
 }
 sub add_object{
     my $self = shift;
