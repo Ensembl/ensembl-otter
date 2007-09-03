@@ -645,8 +645,12 @@ sub make_embl_ft {
 		$feat->location(simple_location($cmp_start, $cmp_end));
 		$feat->addQualifierStrings('note', "annotated region of clone");
 
-
         my $gene_id_list = $gene_aptr->list_current_dbIDs_for_Slice($slice);
+
+        # won't include this FT line if no genes are annotated
+        # originally to deal with tomato clones
+        $feat->addQualifierStrings('note', "annotated region of clone") if $gene_id_list;
+
         foreach my $gid (@$gene_id_list) {
             my $gene = $gene_aptr->fetch_by_dbID($gid);
             my $type = $gene->type;
