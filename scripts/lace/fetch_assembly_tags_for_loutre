@@ -8,13 +8,13 @@ use Hum::Tracking ('intl_clone_name');
 use Hum::AnaStatus::Sequence;
 
 use Bio::Otter::Lace::Defaults;
-use Bio::EnsEMBL::DBSQL::CloneAdaptor;
-use Bio::Vega::DBSQL::DBAdaptor;
 
+use Bio::EnsEMBL::DBSQL::CloneAdaptor;
 use Bio::EnsEMBL::MiscFeature;
 use Bio::EnsEMBL::MiscSet;
 use Bio::EnsEMBL::Attribute;
 
+use Bio::Vega::DBSQL::DBAdaptor;
 use Bio::Vega::AssemblyTag;
 
 use Getopt::Long 'GetOptions';
@@ -373,20 +373,28 @@ __END__
 
 Running the script
 
-Eg, fetch_assembly_tags B<-dataset> zebrafish -misc and/or -atag [-verbose][-check]
+Eg, fetch_assembly_tags B<-dataset> zebrafish -misc and/or -atag [-verbose][-update]
+
+B<-update>: use when there is no existing assembly_tag data in database
+
+B<-misc>:   loads assembly_tag data as misc_features to B<misc_set>, B<misc_feature_misc_set>, B<misc_attrib> and B<misc_feature> tables
+
+B<-atag>:   loads assembly_tag data to B<assembly_tag> and B<assembly_tagged_contig> tables
 
 =head1 DESCRIPTION
 
-Assembly_tags info of Sanger clones are submitted to EMBL. They are stored in acefiles
-The filepaths are kept in sequence.file_path of submissions db. Eg, /lustre/cbi4/work1/humpub/analysis/
+Assembly_tags info of Sanger clones are submitted to EMBL. They are parsed from acefiles kept on disc, eg /lustre/cbi4/work1/humpub/analysis/
+The filepaths are kept in sequence.file_path of submissions db.
 
-The Assembly_tags info is shown in AceDB under the Assembly_tags tag of a Sequence object and is stored in B<assembly_tag> table of a loutre db.
+The Assembly_tags info is shown in AceDB under the Assembly_tags tag of a Sequence object.
 
 This script populates and updates the loutre B<assembly_tag> and B<assemlby_tagged_contig> tables.
 All clones in the B<assemlby_tagged_contig> table have the transferred value initially set to "no".
 For clones which have assembly_tag data, it will be updated to "yes".
 
 The B<assembly_tagged_contig> table allows quick look up of clones that have assembly_tag info.
+
+In the future, assembly_tag data will all become misc_features.
 
 =head1 AUTHOR
 
