@@ -13,6 +13,7 @@ use Bio::Otter::Lace::TempFile;
 use SangerWeb;
 
 use base 'CGI';
+#use CGI::Carp 'fatalsToBrowser';
 
 CGI->nph(1);
 
@@ -99,9 +100,14 @@ sub species_hash {
 sub remove_unauthorized_species {
     my ($self, $sp) = @_;
     
+    # Internal users see all species
+    return if $self->internal_user;
+    
+    # External users only see datasets listed after their names in users.txt file
     my $user = $self->authorized_user;
     my $allowed = $self->users_hash->{$user};
     foreach my $species (keys %$sp) {
+        #printf STDERR "Species %s is %sallowed\n", $species, $allowed->{$species} ? '' : 'not ';
         delete($sp->{$species}) unless $allowed->{$species};
     }
 }
@@ -117,6 +123,7 @@ sub read_species_dat_file {
     my $cursect = undef;
     my $defhash = {};
     my $curhash = undef;
+    my $sp = {};
 
     while (<$dat>) {
         next if /^\#/;
@@ -213,11 +220,13 @@ sub authorized_user {
     my $user;
     unless ($user = $self->{'_authorized_user'}) {
         my $sw = SangerWeb->new({ cgi => $self });
-        my $auth_flag = 0;
+        my $auth_flag     = 0;
+        my $internal_user = 0;
         if ($user = $sw->username) {
             if ($user =~ /^[a-z1-9]+$/) {
                 # Internal users (simple user name)
                 $auth_flag = 1;
+                $internal_user = 1;
             } else {
                 # Check external users (email address)
                 $auth_flag = 1 if $self->users_hash->{$user};
@@ -225,11 +234,20 @@ sub authorized_user {
         }
         if ($auth_flag) {
             $self->{'_authorized_user'} = $user;
+            $self->{'_internal_user'}   = $internal_user;
         } else {
             $self->unauth_exit('User not authorized');
         }
     }
     return $user;
+}
+
+sub internal_user {
+    my ($self) = @_;
+    
+    # authorized_user sets '_internal_user', and is called
+    # by new(), so this hash key will be populated.
+    return $self->{'_internal_user'};
 }
 
 ############## I/O: ################################

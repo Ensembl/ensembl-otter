@@ -351,6 +351,7 @@ sub http_response_content {
     my $response = $self->general_http_dialog($method, $scriptname, $params);
     
     my $xml = $response->content();
+    #warn $xml;
 
     if ($self->debug) {
         warn $self->response_info($scriptname, $params, length($xml));
