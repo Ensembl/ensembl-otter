@@ -72,7 +72,7 @@ sub biotype_status2method {
     my $biotype = lc shift;
     my $status  = uc shift;
     
-    warn "TESTING FOR: '$biotype.$status'";
+    #warn "TESTING FOR: '$biotype.$status'";
     return $biotype_status_to_method{"$biotype.$status"}
         || $biotype_status_to_method{$biotype}
         || ucfirst lc $biotype;
