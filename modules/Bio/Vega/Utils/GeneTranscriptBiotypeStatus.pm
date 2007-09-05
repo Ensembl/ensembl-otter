@@ -57,9 +57,6 @@ for (my $i = 0; $i < @method_biotype_status; $i += 3) {
     $method_to_biotype_status{$method} = [$biotype, $status];
 }
 
-use Data::Dumper;
-warn Dumper(\%method_to_biotype_status, \%biotype_status_to_method);
-
 sub method2biotype_status {
     my ($method) = @_;
     
