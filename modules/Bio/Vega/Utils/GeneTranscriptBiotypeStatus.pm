@@ -49,15 +49,16 @@ for (my $i = 0; $i < @method_biotype_status; $i += 3) {
 
     # biotype defaults to lower case of status
     $biotype = lc $method if $biotype eq '=';
+    $status = 'UNKNOWN'   if $status  eq '-';
 
-    $biotype_status_to_method{$biotype} = $method;
-    if ($status eq '-') {
-        $status = 'UNKNOWN';
-    } else {
-        $biotype_status_to_method{"$biotype.$status"} = $method;
-    }
+    $biotype_status_to_method{"$biotype.$status"}   = $method;
+    $biotype_status_to_method{$biotype}           ||= $method;
+
     $method_to_biotype_status{$method} = [$biotype, $status];
 }
+
+use Data::Dumper;
+warn Dumper(\%method_to_biotype_status, \%biotype_status_to_method);
 
 sub method2biotype_status {
     my ($method) = @_;
@@ -71,10 +72,12 @@ sub method2biotype_status {
 }
 
 sub biotype_status2method {
-    my ($biotype, $status) = @_;
+    my $biotype = lc shift;
+    my $status  = uc shift;
     
-    return $method_to_biotype_status{"$biotype.$status"}
-        || $method_to_biotype_status{$biotype}
+    warn "TESTING FOR: '$biotype.$status'";
+    return $biotype_status_to_method{"$biotype.$status"}
+        || $biotype_status_to_method{$biotype}
         || ucfirst lc $biotype;
 }
 
