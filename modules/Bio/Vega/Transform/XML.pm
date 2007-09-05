@@ -274,7 +274,7 @@ sub generate_Transcript{
   ##in future <transcript_class> tag will be replaced by trancript <biotype> and <status> tags
   ##<type> tag will be removed
   my ($class) = biotype_status2method($tran->biotype, $tran->status);
-  $self->prettyprint('transcript_class', $class);
+  $t->attribvals($self->prettyprint('transcript_class', $class));
 
   my $tran_name_att = $tran->get_all_Attributes('name') ;
   my $tran_name='';
