@@ -1428,8 +1428,14 @@ sub delete_subsequences {
     
     # Delete from ZMap
     if ($self->show_zmap) {
-        my $xml = '';
-        my @xml = map $_->zmap_delete_xml_string, @to_die;
+        my @xml;
+        foreach my $sub (@to_die) {
+            # Only attempt to delete sequences from Zmap
+            # which have actually been saved!
+            if ($sub->is_arhival) {
+                push @xml, $sub->zmap_delete_xml_string;
+            }
+        }
         $self->send_zmap_commands(@xml);
     }
     
