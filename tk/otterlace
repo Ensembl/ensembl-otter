@@ -20,8 +20,7 @@ use POSIX ":sys_wait_h";
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
     $cl->cleanup_log_dir('otterlace');
     $cl->make_log_file('otterlace');
-    if(exists($ENV{'PFETCH_SERVER_LIST'})
-     && ($ENV{'PFETCH_SERVER_LIST'} =~ /^localhost/)) {
+    if ($ENV{'PFETCH_SERVER_LIST'} and $ENV{'PFETCH_SERVER_LIST'} =~ /^localhost/) {
         $cl->fork_local_pfetch_server;
     }
 
