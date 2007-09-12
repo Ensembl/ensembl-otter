@@ -8,46 +8,53 @@ use Getopt::Long 'GetOptions';
 use Bio::Otter::Lace::Defaults;
 use Bio::Otter::Converter;
 
-my ($dataset);
+{
+  my ($dataset, $last_sf_id);
 
-Bio::Otter::Lace::Defaults::do_getopt('ds|dataset=s' => \$dataset # eg, human or mouse or zebrafish
-									 );
+  Bio::Otter::Lace::Defaults::do_getopt('ds|dataset=s' => \$dataset, # eg, human or mouse or zebrafish
+						#				'set=s'        => \$set,
+                                        'last_id=i'    => \$last_sf_id
+									   );
 
-my $client   = Bio::Otter::Lace::Defaults::make_Client();
-my $dset     = $client->get_DataSet_by_name($dataset);	
-my $otter_db = $dset->get_cached_DBAdaptor;
-my $sliceAd  = $otter_db->get_SliceAdaptor;
-my $ssets    = $client->get_all_SequenceSets_for_DataSet($dset);
+  my $client     = Bio::Otter::Lace::Defaults::make_Client();
+  my $dset       = $client->get_DataSet_by_name($dataset);	
+  my $otter_db   = $dset->get_cached_DBAdaptor;
+  my $sliceAd    = $otter_db->get_SliceAdaptor;
+  my $ssets      = $client->get_all_SequenceSets_for_DataSet($dset);
+#  my $last_sf_id = $last_sf_id;
 
-foreach my $ss ( @$ssets ){
+  foreach my $ss ( @$ssets ) {
+	my $asm_type = $ss->name;
 
-  my $asm_type = $ss->name;
+	#next unless $asm_type = "nitr"; #testing
 
- # $asm_type = "chr20-11"; #testing
+	print STDERR "$asm_type\n";
 
-  print STDERR "$asm_type\n";
+	$otter_db->assembly_type($asm_type); # replace the default sequence set setting
 
-  $otter_db->assembly_type($asm_type); # replace the default sequence set setting
+	my $seqSet = $dset->get_SequenceSet_by_name($asm_type);
+	$dset->fetch_all_CloneSequences_for_SequenceSet($seqSet);
 
-  my $seqSet = $dset->get_SequenceSet_by_name($asm_type);
-  $dset->fetch_all_CloneSequences_for_SequenceSet($seqSet);
+	my $chrom = $seqSet->CloneSequence_list()->[0]->chromosome;
 
-  my $chrom = $seqSet->CloneSequence_list()->[0]->chromosome;
-  my $slice = $sliceAd->fetch_by_chr_name($chrom);
+	my $oldslice = $sliceAd->fetch_by_chr_name($chrom); #Ensembl slice
 
-  my $xmlfile = $asm_type . ".xml";
-  open( my $fh, ">$xmlfile") or die $!;
+	# Otter slice
+	my $newslice = Bio::Otter::Lace::Slice->new($client, $dataset, $asm_type,
+												'chromosome', 'Otter', $chrom, $oldslice->chr_start, $oldslice->chr_end);
 
-  my $xml = slice_to_XML($slice, $otter_db);
+	my $xmlfile = $asm_type . ".xml";
+	open( my $fh, ">$xmlfile") or die $!;
 
-  print $fh $xml;
-  close $fh;
+	my $xml = slice_to_XML($oldslice, $newslice, $otter_db);
 
- # die;
+	print $fh $xml;
+	close $fh;
+  }
 }
 
 sub slice_to_XML {
-  my ($slice, $db) = @_;
+  my ($oldslice, $newslice, $db) = @_;
 
   my $xmlstr = "";
 
@@ -56,27 +63,36 @@ sub slice_to_XML {
 
   my $path;
   # captures cases like eg, "MSG: Cannot deal with mis-lengthed mappings so far"
-  eval {$path = $slice->get_tiling_path};
+  eval {$path = $oldslice->get_tiling_path};
   unless ( $path ){
 	print STDERR print $@;
 	next;
   }
 
-  my $chr      = $slice->chr_name;
-  my $chrstart = $slice->chr_start;
-  my $chrend   = $slice->chr_end;
+  my $chr      = $oldslice->chr_name;
+  my $chrstart = $oldslice->chr_start;
+  my $chrend   = $oldslice->chr_end;
 
-  $xmlstr .= Bio::Otter::Converter::path_to_XML($chr, $chrstart, $chrend, $db->assembly_type, $path);
+  $xmlstr .= Bio::Otter::Converter::path_to_XML($chr, $chrstart, $chrend, $oldslice->assembly_type, $path);
+
+  my $feats = $newslice->get_all_SimpleFeatures('', 0, '.'); # 1st argument is logic_name, leave as '' to be taken care of by server
+  print $oldslice->assembly_type,  " -> ", scalar @$feats, "\n";
+
+ # my $wanted_feats;
+#  foreach my $feat ( @$feats ){
+#    warn $feat;
+#    warn "DBID: ", $feat->dbID;
+#    map {warn "$_=> ", $feat->{$_} } keys %$feat;die;
+#    push(@$wanted_feats, $feat); #if $feat->dbID > $last_sf_id;
+#  }
 
   # Simple features for polyA signals and sites etc...
-  if (my $feats = $slice->get_all_SimpleFeatures) {
-	if ( defined $feats->[0] ) {
-	  $xmlstr .= Bio::Otter::Converter::features_to_XML($chrstart, $feats);
-	}
+  if ( defined $feats->[0] ) {
+	$xmlstr .= Bio::Otter::Converter::features_to_XML($chrstart, $feats);
   }
 
   # get all assembly tag data
-  my $atag_str = Bio::Otter::Converter::assembly_tags_to_XML($slice, $db);
+  my $atag_str = Bio::Otter::Converter::assembly_tags_to_XML($oldslice, $db);
   $xmlstr .= $atag_str if $atag_str;
 
   $xmlstr .= "</sequence_set>\n";
