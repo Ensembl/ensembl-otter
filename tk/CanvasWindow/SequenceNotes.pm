@@ -355,9 +355,9 @@ sub initialise {
 
     ### Is hunting in CanvasWindow?
     my $hunter = sub{
-	$top->Busy;
-	$self->hunt_for_selection;
-	$top->Unbusy;
+	    $top->Busy;
+	    $self->hunt_for_selection;
+	    $top->Unbusy;
     };
 
     if( @{$self->get_CloneSequence_list()} > $self->max_per_page() ){
@@ -388,13 +388,13 @@ sub initialise {
     $top->bind('<F5>',        $refesher);
     
     my $refresh_status = sub {
-	$top->Busy;
+	    $top->Busy;
         # we want this to refresh all columns
         $self->_refresh_SequenceSet();
         #$self->_refresh_SequenceSet(3);
         #$self->refresh_column(3);
-	$self->draw();
-	$top->Unbusy;
+	    $self->draw();
+	    $top->Unbusy;
     };
     $self->make_button($button_frame_2, 'Refresh Ana. Status', $refresh_status, 8);
     $top->bind('<Control-a>', $refresh_status);
@@ -402,7 +402,7 @@ sub initialise {
     $top->bind('<F6>',        $refresh_status);
     
     my $run_lace_on_slice = sub{
-	$self->slice_window;
+	    $self->slice_window;
     };
     $self->make_button($button_frame_2, 'Open from chr coords', $run_lace_on_slice);
     
@@ -959,7 +959,6 @@ sub draw_range{
 
     unless ($trim_window){
         my $master = $self->canvas->toplevel;
-        $master->withdraw(); # only do this first time
         $self->{'_trim_window'} = $trim_window = TransientWindow::OpenRange->new($master, 'Open Range');
         
         $trim_window->text_variable_ref('user_min', 1                  , 1);
