@@ -126,7 +126,7 @@ my $character_set='latin1';
 my $dbtype='MyISAM';
 
 #open file to dump the sql into
-my $filename = $support->param('file_name') || ($support->param('dbname') . '_create.sql');
+my $filename = $support->param('file_name') || ($support->param('pipedbname') . '_create.sql');
 my $file = $support->param('sql_dump_location') . '/' . $filename;
 open(OUT,">$file") || die "cannot open $file";
 
