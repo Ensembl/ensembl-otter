@@ -17,6 +17,13 @@ use base 'CGI';
 
 CGI->nph(1);
 
+BEGIN {
+    warn "otter script start: $0\n";
+}
+END {
+    warn "otter script end: $0\n";
+}
+
 sub new {
     my $pkg = shift;
     
