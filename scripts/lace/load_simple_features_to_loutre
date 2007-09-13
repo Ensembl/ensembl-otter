@@ -43,6 +43,8 @@ foreach my $file ( `ls $input_dir` ) {
   my $cl = Bio::Otter::Lace::Defaults::make_Client();
   my $ds = $cl->get_DataSet_by_name($dataset_name);
   my $db = $ds->make_Vega_DBAdaptor;
+  my $sa = $db->get_SliceAdaptor();
+
   warn "\nConnecting to host:".$db->dbc->host." port:".$db->dbc->port." database:".$db->dbc->dbname." as user:".$db->dbc->username;
 
   my $aname=$cl->author();
@@ -61,8 +63,8 @@ foreach my $file ( `ls $input_dir` ) {
 	# Load SimpleFeatures in xml
 
 	my $chr_slice=$parser->get_ChromosomeSlice;
-	my $new_slice=$parser->get_SliceId($chr_slice,$db);
-	#  my $snew_slice=$parser->get_ChromosomeSliceDB($db);
+
+    my $new_slice = $sa->fetch_by_name($chr_slice->name);
 
 	my $simple_features=$parser->get_SimpleFeatures;
     my $sfa=$db->get_SimpleFeatureAdaptor;
