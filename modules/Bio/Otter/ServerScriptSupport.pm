@@ -513,7 +513,7 @@ sub satellite_dba {
     }
 
     my %anycase_options = (
-         -group     => 'satellite',
+         -group     => $metakey,
          -species   => $self->dataset_name,
         eval $opt_str,
     );
