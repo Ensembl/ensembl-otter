@@ -678,12 +678,12 @@ sub make_CoordSystem {
 
         my ($rank, $seq_level, $default, $version) = @{ {
             'chromosome'  => {
-                'vega'  => [ 1, 0, 1, 'Vega' ],
+                #'vega'  => [ 1, 0, 1, 'Vega' ],
                 'otter' => [ 2, 0, 0, 'Otter'],
             },
-            'supercontig' => {
-                '' =>      [ 3, 0, 1, undef],
-            },
+            #'supercontig' => {
+            #    '' =>      [ 3, 0, 1, undef],
+            #},
             'clone'       => {
                 '' =>      [ 4, 0, 1, undef],
             },
@@ -695,7 +695,7 @@ sub make_CoordSystem {
         $coord_system{$self}{$name} =  Bio::EnsEMBL::CoordSystem->new(
             -name           => $name,
             -rank           => $rank,
-            -sequence_level => $seq_level
+            -sequence_level => $seq_level,
             -default        => $default,
             -version        => $version,
         );
