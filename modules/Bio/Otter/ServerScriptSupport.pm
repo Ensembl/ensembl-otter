@@ -18,10 +18,10 @@ use base 'CGI';
 CGI->nph(1);
 
 BEGIN {
-    warn "otter script start: $0\n";
+    warn "otter_srv script start: $0\n";
 }
 END {
-    warn "otter script end: $0\n";
+    warn "otter_srv script end: $0\n";
 }
 
 sub new {
@@ -512,7 +512,11 @@ sub satellite_dba {
         return $self->satellite_dba($1, $satehead);
     }
 
-    my %anycase_options = (eval $opt_str);
+    my %anycase_options = (
+         -group     => 'satellite',
+         -species   => $self->dataset_name,
+        eval $opt_str,
+    );
     if ($@) {
         $self->error_exit("Error evaluating '$opt_str' : $@");
     }
