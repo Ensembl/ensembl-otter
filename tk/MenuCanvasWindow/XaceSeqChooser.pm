@@ -1432,7 +1432,7 @@ sub delete_subsequences {
         foreach my $sub (@to_die) {
             # Only attempt to delete sequences from Zmap
             # which have actually been saved!
-            if ($sub->is_arhival) {
+            if ($sub->is_archival) {
                 push @xml, $sub->zmap_delete_xml_string;
             }
         }
