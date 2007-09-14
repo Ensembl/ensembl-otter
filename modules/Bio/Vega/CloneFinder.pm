@@ -47,28 +47,40 @@ sub qnames_locators {
 sub register_feature {
     my ($self, $qname, $qtype, $feature) = @_;
 
-    my $loc = Bio::Otter::Lace::Locator->new($qname, $qtype);
+    my $unhide = $self->{_unhide};
 
-    my $cs_name = $feature->isa('Bio::EnsEMBL::Slice')
-        ? $feature->coord_system_name()
-        : $feature->slice()->coord_system_name();
-    my $sr_name = $feature->seq_region_name();
+    my $feature_slice = $feature->isa('Bio::EnsEMBL::Slice')
+        ? $feature
+        : $feature->slice();
+    my $cs_name = $feature_slice->coord_system_name();
 
-    $loc->assembly( ($cs_name eq 'chromosome')
-        ? $sr_name
-            # NOTE: the mapping of features on clones may not be unique. Solutions?
-        : $feature->project('chromosome', 'Otter')->[0]->to_Slice()->seq_region_name()
-    );
-
-    $loc->component_names( ($cs_name eq $component)
-        ? [ $sr_name ]
-        : [ map { $_->to_Slice()->seq_region_name() }
+    my $component_names = [ ($cs_name eq $component)
+        ? $feature_slice->seq_region_name
+        : map { $_->to_Slice()->seq_region_name() }
                     # NOTE: order of projection segments WAS strand-dependent
                 sort { ($a->from_start() <=> $b->from_start())*$feature->strand() }
-                    @{ $feature->project($component) } ]
-    );
+                    @{ $feature->project($component) } ];
 
-    push @{ $self->qnames_locators()->{$qname} }, $loc;
+    my $found_assembly_slices = [ ($cs_name eq 'chromosome')
+        ? $feature_slice
+        : map { $_->to_Slice() } @{$feature->project('chromosome','Otter')}
+    ];
+
+    foreach my $asm_slice (@$found_assembly_slices) {
+
+        unless($unhide) {
+            my ($hidden) = ((map {$_->value()} @{$asm_slice->get_all_Attributes('hidden')}), 1);
+
+            next if $hidden;
+        }
+
+        my $loc = Bio::Otter::Lace::Locator->new($qname, $qtype);
+
+        $loc->assembly( $asm_slice->seq_region_name() );
+        $loc->component_names( $component_names );
+
+        push @{ $self->qnames_locators()->{$qname} }, $loc;
+    }
 }
 
 sub find_by_stable_ids {
@@ -201,6 +213,8 @@ sub find_by_seqregion_attributes {
 
 sub find {
     my ($self, $unhide) = @_;
+
+    $self->{_unhide} = $unhide;
 
     my $quoted_qnames = join(', ', map {"'$_'"} keys %{$self->qnames_locators()} );
 
