@@ -980,7 +980,7 @@ sub main {
 
         while( my ($atype, $chr_name) = $sth_ctgids_2_asm->fetchrow()) {
 
-            my $version = ($atype=~/^chr\d+-0*(\d+)$/)
+            my $version = ($atype=~/^chr\w+-0*(\d+)$/)
                 ? $1
                 : exists($assembly_nonmatch_version{$dataset_name}{$atype})
                     ? $assembly_nonmatch_version{$dataset_name}{$atype}
