@@ -47,14 +47,41 @@ sub qnames_locators {
 sub find_containing_assemblies {
     my ($self, $slice) = @_;
 
-        # EnsEMBL as of rel46 cannot perform ambigous clone->contig->chromosome mapping
-        # in one operation. So we split it manually into two:
+        # EnsEMBL as of rel46 cannot perform ambigous clone->contig->chromosome mapping correctly.
+        # So we prefer to do it using direct SQL:
         #
     my $seq_level_slice = $slice->coord_system->is_sequence_level()
         ? $slice
         : $slice->project('seqlevel')->[0]->to_Slice();
 
-    return [ map { $_->to_Slice() } @{$seq_level_slice->project('chromosome','Otter')} ];
+    my $sql = qq{
+        SELECT chr.name
+        FROM    assembly a,
+                seq_region chr,
+                seq_region cmp,
+                coord_system cs
+        WHERE   cs.name='chromosome'
+        AND     cs.version='Otter'
+        AND     cs.coord_system_id=chr.coord_system_id
+        AND     chr.seq_region_id=a.asm_seq_region_id
+        AND     cmp.seq_region_id=a.cmp_seq_region_id
+        AND     cmp.name=?
+    };
+
+    my $sth = $self->dbc()->prepare($sql);
+    $sth->execute($seq_level_slice->seq_region_name());
+
+    my @asm_slices = ();
+    my $adaptor;
+
+    while( my ($atype) = $sth->fetchrow() ) {
+        $adaptor ||= $self->dba()->get_SliceAdaptor();
+
+        my $asm_slice = $adaptor->fetch_by_region('chromosome', $atype, undef, undef, undef, 'Otter');
+        push @asm_slices, $asm_slice;
+    }
+
+    return \@asm_slices;
 }
 
 sub register_feature {
