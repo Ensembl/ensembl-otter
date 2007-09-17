@@ -898,6 +898,10 @@ sub main {
 	my ($redunfile,$loadfile,$prevdump);
     my $redundant_set = {};
 
+        # only include the following (comma-separated list of) chromosome names
+    my $onlychrs   = '';
+    my $chr_ok;
+
     Bio::Otter::Lace::Defaults::do_getopt(
         'dataset=s'     => \$dataset_name,
         'skipto=s'      => \$skip_to,
@@ -905,6 +909,7 @@ sub main {
 		'redunfile=s'   => \$redunfile,
 		'loadfile=s'    => \$loadfile,
         'mydebug!'      => \$debug,
+        'onlychrs=s'    => \$onlychrs,
     );
 
     if(! $dataset_name) {
@@ -913,6 +918,10 @@ sub main {
 
     if($prevdump) {
         $skip_to = find_last_dbid($prevdump);
+    }
+
+    if($onlychrs) {
+        $chr_ok = { map {(uc($_) => 1)} split(',',$onlychrs) };
     }
 
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
@@ -978,6 +987,8 @@ sub main {
 
         my $ver_2_asm_chr = {}; # version->[list of [asm_type, chr_name] pairs]
 
+        my $unwanted_chr = 0;
+
         while( my ($atype, $chr_name) = $sth_ctgids_2_asm->fetchrow()) {
 
             my $version = ($atype=~/^chr\w+-0*(\d+)$/)
@@ -986,13 +997,19 @@ sub main {
                     ? $assembly_nonmatch_version{$dataset_name}{$atype}
                     : 0;
             if($version>=0) { # negative values mean we want to exclude this sequence set altogether
-                push @{$ver_2_asm_chr->{$version}}, [$atype, $chr_name];
+                if(!$onlychrs || $chr_ok->{uc($chr_name)}) {
+                    push @{$ver_2_asm_chr->{$version}}, [$atype, $chr_name];
+                } else {
+                    $unwanted_chr = 1;
+                }
             }
 
         } # ctgids_2_asm fetching loop
 
         if(%$ver_2_asm_chr) {
             add_xml_gene($gene, $ver_2_asm_chr);
+        } elsif($unwanted_chr) {
+            print STDERR "--- EXCLUDED CHR\n";
         } else {
             print STDERR "--- EXONS ON ORPHAN CONTIGS!\n";
         }
