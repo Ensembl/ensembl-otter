@@ -230,7 +230,7 @@ sub authorized_user {
         my $auth_flag     = 0;
         my $internal_user = 0;
         if ($user = $sw->username) {
-            if ($user =~ /^[a-z1-9]+$/) {
+            if ($user =~ /^[a-z0-9]+$/) {
                 # Internal users (simple user name)
                 $auth_flag = 1;
                 $internal_user = 1;
