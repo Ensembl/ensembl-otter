@@ -8,7 +8,7 @@ package Bio::Vega::CloneFinder;
 use strict;
 use Bio::Otter::Lace::Locator;
 
-my $component = 'clone';
+my $component = 'clone'; # this is the type of components we want the found matches mapped on
 my $DEBUG=0; # do not show all SQL statements
 
 sub new {
@@ -44,6 +44,19 @@ sub qnames_locators {
     return $self->{_ql};
 }
 
+sub find_containing_assemblies {
+    my ($self, $slice) = @_;
+
+        # EnsEMBL as of rel46 cannot perform ambigous clone->contig->chromosome mapping
+        # in one operation. So we split it manually into two:
+        #
+    my $seq_level_slice = $slice->coord_system->is_sequence_level()
+        ? $slice
+        : $slice->project('seqlevel')->[0]->to_Slice();
+
+    return [ map { $_->to_Slice() } @{$seq_level_slice->project('chromosome','Otter')} ];
+}
+
 sub register_feature {
     my ($self, $qname, $qtype, $feature) = @_;
 
@@ -51,7 +64,7 @@ sub register_feature {
 
     my $feature_slice = $feature->isa('Bio::EnsEMBL::Slice')
         ? $feature
-        : $feature->slice();
+        : $feature->feature_Slice();
     my $cs_name = $feature_slice->coord_system_name();
 
     my $component_names = [ ($cs_name eq $component)
@@ -59,12 +72,11 @@ sub register_feature {
         : map { $_->to_Slice()->seq_region_name() }
                     # NOTE: order of projection segments WAS strand-dependent
                 sort { ($a->from_start() <=> $b->from_start())*$feature->strand() }
-                    @{ $feature->project($component) } ];
+                    @{ $feature_slice->project($component) } ];
 
-    my $found_assembly_slices = [ ($cs_name eq 'chromosome')
-        ? $feature_slice
-        : map { $_->to_Slice() } @{$feature->project('chromosome','Otter')}
-    ];
+    my $found_assembly_slices = ($cs_name eq 'chromosome')
+        ? [ $feature_slice ]
+        : $self->find_containing_assemblies($feature_slice);
 
     foreach my $asm_slice (@$found_assembly_slices) {
 
@@ -90,10 +102,10 @@ sub find_by_stable_ids {
     my $meta_con = $dba->get_MetaContainer();
 
     my $prefix_primary = $meta_con->get_primary_prefix()
-        || die "Missing prefix.primary in meta table";
+        || die "'prefix.primary' missing from meta table";
 
     my $prefix_species = $meta_con->get_species_prefix()
-        || die "Missing prefix.species in meta table";
+        || die "'prefix.species' missing from meta table";
 
     my $gene_adaptor           = $dba->get_GeneAdaptor();
     my $transcript_adaptor     = $dba->get_TranscriptAdaptor();
