@@ -60,6 +60,15 @@ sub store_Evidence {
   }
 }
 
+sub remove_evidence {
+    my ($self, $transcript) = @_;
+    
+    my $sth = $self->prepare(q{
+        DELETE FROM evidence WHERE transcript_id = ?
+        });
+    $sth->execute($transcript->dbID);
+}
+
 sub reincarnate_transcript {
     my ($self, $transcript) = @_;
 
@@ -209,6 +218,20 @@ sub store {
     $self->store_Evidence($transcript_dbID, $transcript->evidence_list );
 
     return $transcript_dbID;
+}
+
+sub remove {
+    my ($self, $transcript) = @_;
+    
+    # Evidence
+    $self->remove_evidence($transcript);
+    
+    # Author
+    if (my $author = $transcript->transcript_author) {
+        $self->get_AuthorAdaptor->remove_transcript_author($transcript->dbID, $author->dbID);
+    }
+    
+    $self->SUPER::remove($transcript);
 }
 
 1;

@@ -214,6 +214,15 @@ sub store_gene_author {
   $sth->execute($gene_id,$author_id);
 }
 
+sub remove_gene_author {
+    my ($self, $gene_id, $author_id) = @_;
+    
+    my $sth = $self->prepare(q{
+        DELETE FROM gene_author where gene_id = ? AND author_id = ?
+        });
+    $sth->execute($gene_id, $author_id);
+}
+
 sub store_transcript_author {
   my ($self,$transcript_id,$author_id) = @_;
   unless ($transcript_id || $author_id) {
@@ -224,6 +233,15 @@ sub store_transcript_author {
         INSERT INTO transcript_author(transcript_id, author_id) VALUES (?,?)
         });
   $sth->execute($transcript_id,$author_id);
+}
+
+sub remove_transcript_author {
+    my ($self, $transcript_id, $author_id) = @_;
+    
+    my $sth = $self->prepare(q{
+        DELETE FROM transcript_author where transcript_id = ? AND author_id = ?
+        });
+    $sth->execute($transcript_id, $author_id);
 }
 
 sub fetch_gene_author {

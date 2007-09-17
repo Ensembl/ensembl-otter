@@ -496,7 +496,7 @@ sub store {
         ###
 
         ##add synonym if old gene name is not a current gene synonym
-        $broker->compare_synonyms_add($db_gene,$gene);
+        $broker->compare_synonyms_add($db_gene, $gene);
 
 
             # mark the existing gene non-current:
@@ -588,6 +588,17 @@ sub store {
     }
 
     return 1;
+}
+
+sub remove {
+    my ($self, $gene) = @_;
+    
+    # Author
+    if (my $author = $gene->gene_author) {
+        $self->get_AuthorAdaptor->remove_gene_author($gene->dbID, $author->dbID);
+    }
+    
+    $self->SUPER::remove($gene);
 }
 
 1;
