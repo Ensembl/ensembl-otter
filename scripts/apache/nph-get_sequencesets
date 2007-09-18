@@ -3,12 +3,12 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2007-07-05 16:29:56 $
-# Id:            $Id: nph-get_sequencesets,v 1.3 2007-07-05 16:29:56 jgrg Exp $
+# Last modified: $Date: 2007-09-18 09:33:33 $
+# Id:            $Id: nph-get_sequencesets,v 1.4 2007-09-18 09:33:33 jgrg Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_sequencesets,v $
 
 use strict;
-use SangerPaths qw{ otter48 ensembl44 bioperl123 core };
+use SangerPaths qw{ otter48 ensembl46 bioperl123 core };
 
 use Bio::Otter::ServerScriptSupport;
 
