@@ -257,6 +257,12 @@ sub internal_user {
     return $self->{'_internal_user'};
 }
 
+sub admin_user {
+    my ($self) = @_;
+    
+    return $self->internal_user && $self->users_hash->{$user}{'admin'};
+}
+
 ############## I/O: ################################
 
 sub log {
