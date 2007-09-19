@@ -228,7 +228,7 @@ sub remove {
     
     # Author
     if (my $author = $transcript->transcript_author) {
-        $self->get_AuthorAdaptor->remove_transcript_author($transcript->dbID, $author->dbID);
+        $self->db->get_AuthorAdaptor->remove_transcript_author($transcript->dbID, $author->dbID);
     }
     
     $self->SUPER::remove($transcript);

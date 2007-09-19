@@ -15,6 +15,16 @@ use constant NEW       => 2;
 use constant RESTORED  => 3;
 use constant DELETED   => 5;
 
+sub fetch_by_dbID {
+    my ($self, $db_id) = @_;
+    
+    if (my $gene = $self->SUPER::fetch_by_dbID($db_id)) {
+        $self->reincarnate_gene($gene);
+    } else {
+        return;
+    }
+}
+
 sub fetch_by_stable_id  {
   my ($self, $stable_id) = @_;
   my ($gene) = $self->SUPER::fetch_by_stable_id($stable_id);
@@ -595,7 +605,7 @@ sub remove {
     
     # Author
     if (my $author = $gene->gene_author) {
-        $self->get_AuthorAdaptor->remove_gene_author($gene->dbID, $author->dbID);
+        $self->db->get_AuthorAdaptor->remove_gene_author($gene->dbID, $author->dbID);
     }
     
     $self->SUPER::remove($gene);

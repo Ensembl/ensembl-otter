@@ -1,0 +1,66 @@
+#!/usr/local/bin/perl -w
+
+### remove_genes
+
+use strict;
+
+use Bio::Otter::Lace::Defaults;
+use Bio::Vega::DBSQL::DBAdaptor;
+
+{
+    my $dsname  = 'human';
+
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'dataset=s'     => \$dsname,
+    );
+
+    if (1) {
+        my $dba = Bio::Vega::DBSQL::DBAdaptor->new(
+            -host   => 'otterpipe2',
+            -port   => 3303,
+            -user   => 'ottadmin',
+            -pass   => 'lutralutra',
+            -dbname => 'jgrg_human_del_test',
+            );
+        my $gene_dba = $dba->get_GeneAdaptor;
+        my $sth = $dba->dbc->prepare(q{
+            SELECT gene_id FROM gene_stable_id WHERE stable_id = ?
+            });
+        while (<>) {
+            foreach my $stable (split) {
+                $sth->execute($stable);
+                while (my ($gene_db_id) = $sth->fetchrow) {
+                    print STDERR "$stable\t$gene_db_id\n";
+                    my $gene = $gene_dba->fetch_by_dbID($gene_db_id);
+                    $gene_dba->remove($gene);
+                }
+            }
+        }
+    } else {
+        # Client communicates with otter HTTP server
+        my $cl = Bio::Otter::Lace::Defaults::make_Client();
+
+        # DataSet interacts directly with an otter database
+        my $ds = $cl->get_DataSet_by_name($dsname);
+
+        my $dba = $ds->get_cached_DBAdaptor;
+        my $gene_dba = $dba->get_GeneAdaptor;
+        while (<>) {
+            foreach my $gene_db_id (split) {
+                my $gene = $gene_dba->fetch_by_dbID($gene_db_id);
+                $gene_dba->remove($gene);
+            }
+        }
+    }
+}
+
+
+
+__END__
+
+=head1 NAME - remove_genes
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
