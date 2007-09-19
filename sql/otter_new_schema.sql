@@ -60,7 +60,7 @@ CREATE TABLE transcript_author (
    transcript_id	     INT UNSIGNED NOT NULL REFERENCES transcript(transcript_id),
    author_id		     INT(10) UNSIGNED NOT NULL REFERENCES author(author_id),
    
-   PRIMARY KEY (transcript_id)
+   PRIMARY KEY (transcript_id),
    KEY (author_id)
 
 ) TYPE=InnoDB;
