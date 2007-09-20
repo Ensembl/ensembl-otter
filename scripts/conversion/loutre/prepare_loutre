@@ -116,22 +116,26 @@ $support->confirm_params;
 # get log filehandle and print heading and parameters to logfile
 $support->init_log;
 
-#parse input file and store details
+#identify species we're working with
 my $species;
-if (! (($species) = $support->param('loutredbname') =~ /loutre_(\S+)/ ) ) {
-	$support->log_warning("No species name interpreted from loutredbname, check configuration\n");
+if (! (($species) = $support->param('loutredbname') =~ /loutre_(\S+)_/ ) ) {
+	$support->log_warning("No species name interpreted from loutredbname ".$support->param('loutredbname')." check configuration\n");
+	exit;
+}
+unless (grep {$_ eq $species} qw(human mouse dog pig zebrafish)) {
+	$support->log_warning("Species $species not recognised, please check\n");
 	exit;
 }
 
+#parse input file and store details
 my $rel_type = $support->param('release_type');
-
 my $IN = $support->filehandle('<', $support->param('definition_file'));
 my $active_record = 0;
 my $regions_wanted_details;
 REC:
 while (my $rec = <$IN>) {
 	next if $rec =~ /^[#;]/;
-	next if $rec =~ /^\s.$/;
+	next if $rec =~ /^\s*$/;
 	chomp $rec;
 	if ($rec =~ /^--(\S+)--$/) {
 		$active_record = 1 if ($1 eq $species);
@@ -194,7 +198,7 @@ foreach my $k (keys %$regions_wanted_details ) {
 				}
 			}
 			else {
-				$support->log_warning("There is a non standard assembly name in loutre which has been ignored - $sr_name");
+				$support->log_warning("There is a non standard assembly name in loutre which has been ignored - $sr_name\n");
 			}
 		}
 	}
@@ -213,7 +217,7 @@ foreach my $k (keys %$regions_wanted_details ) {
 	my $sr_id           = $slice->get_seq_region_id;
 	my $attribs_present = $aa->fetch_all_by_Slice($slice);
 
-	#prompt use to use this seq_region (ie update vega_export_mode attrib_type)
+	#prompt user to use this seq_region (ie update vega_export_mode attrib_type)
 	#only if it has not been used in this export mode before...
 	my $attrib = 'vega_export_mod';
 	my $export_mode = $attribs_wanted->{$attrib};
