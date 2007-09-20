@@ -295,6 +295,7 @@ rule_goal                        i
 
 assembly                         d
 seq_region                       d
+seq_region_attrib                d
 meta_coord                       d
 coord_system                     d
 dna                              d
@@ -307,6 +308,7 @@ prediction_exon                  d
 prediction_transcript            d
 repeat_consensus                 d
 repeat_feature                   d
+simple_feature                   d
 ENDOFTEXT
 	return $txt;
 }
