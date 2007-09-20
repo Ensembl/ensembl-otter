@@ -178,6 +178,9 @@ sub init_AceDatabase {
 sub write_local_blast {
     my ($self) = @_;
     
+    # Do not have local blast searching working on the Mac yet
+    return if $^O eq 'darwin';
+    
     eval {
         require Bio::Otter::Lace::Blast;
     };
