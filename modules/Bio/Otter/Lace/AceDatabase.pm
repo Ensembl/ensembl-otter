@@ -246,7 +246,6 @@ sub write_otter_acefile {
 sub try_and_lock_the_block {
     my ($self, $ss) = @_;
 
-    
     my $client = $self->Client or confess "No otter Client attached";
 
     my $lock_xml = $client->lock_region($ss->selected_CloneSequences_parameters);
@@ -267,7 +266,7 @@ sub try_and_lock_the_block {
 
         $lock_xml_file->mv(".${slice_name}${dsname}${LOCK_REGION_XML_FILE}");
 
-        $self->{_slicename_dsname} = [ $slicename, $dsname ];
+        $self->{_slicename_dsname} = [ $slice_name, $dsname ];
     }
 }
 
@@ -277,7 +276,7 @@ sub get_slicename_dsname {
     unless( $self->{_slicename_dsname} ) {
         my $ace_handle = $self->aceperl_db_handle;
 
-        my ($slicename, $dsname);
+        my ($slice_name, $dsname);
 
             ## NOTE: The following query assumes we only have one Assembly per DB!
         $ace_handle->raw_query('find Assembly *');
@@ -290,12 +289,12 @@ sub get_slicename_dsname {
         }
 
         if (my ($assembly_slice_name_values) = $ace_text->get_values('Sequence')) {
-            $slicename = $assembly_slice_name_values->[1]; # the 0'th element is a colon
+            $slice_name = $assembly_slice_name_values->[1]; # the 0'th element is a colon
         } else {
             die "Could not retrieve the name of the Assembly from AceDB";
         }
 
-        $self->{_slicename_dsname} = [ $slicename, $dsname ];
+        $self->{_slicename_dsname} = [ $slice_name, $dsname ];
     }
 
     return @{ $self->{_slicename_dsname} };
@@ -311,13 +310,13 @@ sub save_ace_to_otter {
     my $ace    = $self->aceperl_db_handle;
     my $client = $self->Client or confess "No Client attached";
 
-    my ($slicename, $dsname) = $self->get_slicename_dsname();
+    my ($slice_name, $dsname) = $self->get_slicename_dsname();
     
     # Get the Assembly object ...
     ### Need to change this query if we add lots of non-otter features to the assembly object.
     ### (Or change the layout of the data in acedb, so that non-otter features are in a
     ### different object.)
-    $ace->raw_query(qq{find Assembly "$slicename"});
+    $ace->raw_query(qq{find Assembly "$slice_name"});
 
     my $ace_txt = $ace->raw_query('show -a');
     $ace_txt =~ s/^Feature\s+"phastCons".*\n//mg;
@@ -430,12 +429,12 @@ sub update_with_stable_ids {
 sub unlock_otter_slice {
     my( $self ) = @_;
 
-    my ($slicename, $dsname) = $self->get_slicename_dsname();
+    my ($slice_name, $dsname) = $self->get_slicename_dsname();
     my $client   = $self->Client or confess "No Client attached";
 
     my $xml_file = Bio::Otter::Lace::PersistentFile->new;
     $xml_file->root($self->home);
-    $xml_file->name(".${slicename}${dsname}${LOCK_REGION_XML_FILE}");
+    $xml_file->name(".${slice_name}${dsname}${LOCK_REGION_XML_FILE}");
     return unless -e $xml_file->full_name();
     my $xml_text = '';
     my $read = $xml_file->read_file_handle;
