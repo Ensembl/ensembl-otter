@@ -266,6 +266,8 @@ sub try_and_lock_the_block {
         my $dsname = $ss->dataset_name;
 
         $lock_xml_file->mv(".${slice_name}${dsname}${LOCK_REGION_XML_FILE}");
+
+        $self->{_slicename_dsname} = [ $slicename, $dsname ];
     }
 }
 
