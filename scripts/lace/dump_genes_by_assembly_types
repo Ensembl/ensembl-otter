@@ -6,6 +6,8 @@ use Bio::Otter::TranscriptRemark;
 
 my $debug = 0;
 
+my $remark_prefix = 'Annotation_remark-  LoutreTransfer:';
+
 my $otter_dba; # it's much cheaper to have these globally visible
 my $gene_adaptor;
 my $slice_adaptor;
@@ -696,7 +698,7 @@ sub translation_qc {
         if($transcript->coding_region_end()-$transcript->coding_region_start()<3) {
             delete $transcript->{'translation'};
             delete $transcript->{'_translation_id'};
-            $transcript->transcript_info->remark(Bio::Otter::TranscriptRemark->new(-remark=>"LoutreTransfer: translation unrecoverable"));
+            $transcript->transcript_info->remark(Bio::Otter::TranscriptRemark->new(-remark=>"$remark_prefix translation unrecoverable"));
             return $trans_name.' [Translation unrecoverable, deleted] ';
         }
 
@@ -708,14 +710,14 @@ sub translation_qc {
             foreach my $start_phase (grep { $_!=$original_phase } (0..2)) {
                 my $curr_attempt = fix_phases($transcript, $start_phase);
                 if(($curr_attempt!~/ERROR/) && no_premature_stops($transcript)) {
-                    $transcript->transcript_info->remark(Bio::Otter::TranscriptRemark->new(-remark=>"LoutreTransfer: start phase $start_phase is translateable whereas $original_phase was not"));
+                    $transcript->transcript_info->remark(Bio::Otter::TranscriptRemark->new(-remark=>"$remark_prefix start phase $start_phase is translateable whereas $original_phase was not"));
                     return $trans_name."(translatable_phase=$start_phase) ".$curr_attempt;
                 }
             }
 
                 # just restore the original one:
             $translation->start_Exon()->phase($original_phase);
-            $transcript->transcript_info->remark(Bio::Otter::TranscriptRemark->new(-remark=>"LoutreTransfer: could not find a translateable phase"));
+            $transcript->transcript_info->remark(Bio::Otter::TranscriptRemark->new(-remark=>"$remark_prefix could not find a translateable phase"));
 
             return $trans_name.' [Could not fix the phases] ';
         }
@@ -795,7 +797,7 @@ sub try_and_fix_exon_strands {
             foreach my $exon (@{$transcript->get_all_Exons}) {
                 $exon->strand($forced_strand);
             }
-            $transcript->transcript_info->remark(Bio::Otter::TranscriptRemark->new(-remark=>"LoutreTransfer: forced equal strands by majority rule"));
+            $transcript->transcript_info->remark(Bio::Otter::TranscriptRemark->new(-remark=>"$remark_prefix forced equal strands by majority rule"));
             print STDERR " [forced all strands to $forced_strand by majority rule] ";
 
                 # fix the phases/end_phases:
