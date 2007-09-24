@@ -379,6 +379,8 @@ sub general_http_dialog {
         if ($response->code == 403) {
             # Unauthorized
             $self->authorize;
+        } elsif($response->code == 500) {
+            die "The server ".$self->url_root()." seems to be down, please check your host/port settings or try again later";
         } else {
             confess sprintf "%d (%s)", $response->code, $response->content;
         }
