@@ -60,11 +60,25 @@ sub get_password {
     my ($self) = @_;
     
     my $pass = '';
+
+    # Check to see if another window has grabbed input
+    # (or the user won't be able to type their password
+    # into the password field!)
+    my $grab_window = $self->top->grabCurrent;
+    if ($grab_window) {
+        $grab_window->grabRelease;
+    }
+
     $self->top->toplevel->Busy;
     $self->password_field->focus;
     $self->top->Popup;
     $self->set_minsize;     # Does an "update"
     $self->submit_button->waitWindow;
+    
+    # Restore input grab to original window
+    if ($grab_window) {
+        $grab_window->grab;
+    }
 }
 
 sub passref {
