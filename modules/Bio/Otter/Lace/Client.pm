@@ -276,6 +276,9 @@ sub authorize {
     my $user = $self->author;
     my $password = $self->password_prompt()->($self)
       or die "No password given";
+    # need to encode these :(
+    $user     = content_encode($user); # possibly not worth it...
+    $password = content_encode($password); # definitely worth it!
     my $req = HTTP::Request->new;
     $req->method('POST');
     $req->uri("https://enigma.sanger.ac.uk/LOGIN");
@@ -911,6 +914,17 @@ sub unlock_otter_xml {
     return 1;
 }
 
+sub content_encode {
+    my $data = $_[0];
+
+    # The  string "%x"  means,  "take the  input  and turn  it into  a
+    # hexadecimal character  string. Ord converts a  character into an
+    # ASCII code  equivalent in decimal;  the %2.2x format  turns that
+    # into an exactly two-digit hex number.
+    $data =~ s/([\W])/"%" . uc(sprintf("%2.2x",ord($1)))/eg;
+
+    return $data;
+}
 
 1;
 
