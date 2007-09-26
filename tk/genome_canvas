@@ -19,63 +19,96 @@ use GenomeCanvas::Band::GeneCluster;
 use GenomeCanvas::Band::Scale;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Hum::Submission 'prepare_statement'; # For Sanger sequence names
-use Getopt::Long 'GetOptions';
 use Hum::EnsCmdLineDB;
 
 {
-    my $scale = 2000;
-    my $v_tiles = 0;
-    my $h_tiles = 0;
-    my $fpc      = '';
-    my $chr_name = '';
-    my $chr_start = 0;
-    my $chr_end = 0;
-    my $font_size = 12;
-    my $sanger_names = 0;
-    my $landscape = 1;
-    my $portrait = 0;
+    my $scale           = 2000;
+    my $v_tiles         = 0;
+    my $h_tiles         = 0;
+    my $fpc             = '';
+    my $chr_name        = '';
+    my $chr_start       = 0;
+    my $chr_end         = 0;
+    my $font_size       = 12;
+    my $sanger_names    = 0;
+    my $landscape       = 1;
+    my $portrait        = 0;
     my $gene_labels     = 1;
     my $show_genes      = 1;
     my $show_repeats    = 1;
     my $show_cpg        = 0;
     my $show_gc_content = 1;
-    my $homologies =    0;
-    my $markers    =    0;
-    my $clusters   =    0;
-    my $snps       =    0;
-    my $psdir      =    '.';
+    my $show_ruler      = 0;
+    my $show_key        = 1;
+    my $homologies      = 0;
+    my $markers         = 0;
+    my $clusters        = 0;
+    my $snps            = 0;
+    my $psdir           = '.';
     my $big_picture     = 0;
-    my $eps_file    = undef;
-    my( $span_file );
+    my $otter           = 0;
+    my $eps_file        = undef;
+    my $span_file       = undef;
+    my $dataset_name    = undef;
+    my $set_name        = undef;
+    
+    # Otter/Ensembl switch
+    my $command_line_sub = \&Hum::EnsCmdLineDB::do_getopt;
+    for (my $i = 0; $i < @ARGV; $i++) {
+        if ($ARGV[$i] eq '-otter') {
+            $otter = 1;
+            splice(@ARGV, $i, 1);
+            require Bio::Otter::Lace::Defaults;
+            $command_line_sub = \&Bio::Otter::Lace::Defaults::do_getopt;
+            last;
+        }
+    }   
     
     my $usage = sub{ exec('perldoc', $0) };
-    Hum::EnsCmdLineDB::do_getopt(				 
-        'fpc=s'         => \$fpc,
-        'scale=s'       => \$scale,
-        'htiles=i'      => \$h_tiles,
-        'vtiles=i'      => \$v_tiles,
-        'chr=s'         => \$chr_name,
-        'start=s'       => \$chr_start,
-        'end=s'         => \$chr_end,
-        'font_size=i'   => \$font_size,
-        'sanger!'       => \$sanger_names,
-        'landscape!'    => \$landscape,
-        'portrait!'     => \$portrait,
-        'gene_labels!'  => \$gene_labels,
-        'genes!'        => \$show_genes,
-        'gene_spans=s'  => \$span_file,
-        'repeats!'      => \$show_repeats,
-        'cpg!'          => \$show_cpg,
-        'gc_content!'   => \$show_gc_content,
-	    'homologies=s'  => \$homologies,
-	    'markers=s'     => \$markers,
-	    'clusters=s'    => \$clusters,
-        'snps=s'        => \$snps,
-        'psdir=s'       => \$psdir,
-        'big!'          => \$big_picture,
-        'help'          => $usage,
-        'eps=s'         => \$eps_file,
-        ) or $usage->();
+    $command_line_sub->(				 
+        'scale=s'           => \$scale,
+        'htiles=i'          => \$h_tiles,
+        'vtiles=i'          => \$v_tiles,
+        'start=s'           => \$chr_start,
+        'end=s'             => \$chr_end,
+        'font_size=i'       => \$font_size,
+        'sanger!'           => \$sanger_names,
+        'landscape!'        => \$landscape,
+        'portrait!'         => \$portrait,
+        'gene_labels!'      => \$gene_labels,
+        'genes!'            => \$show_genes,
+        'gene_spans=s'      => \$span_file,
+        'repeats!'          => \$show_repeats,
+        'cpg!'              => \$show_cpg,
+        'gc_content!'       => \$show_gc_content,
+        'ruler!'            => \$show_ruler,
+        'key!'              => \$show_key,
+	    'homologies=s'      => \$homologies,
+	    'markers=s'         => \$markers,
+	    'clusters=s'        => \$clusters,
+        'snps=s'            => \$snps,
+        'psdir=s'           => \$psdir,
+        'big!'              => \$big_picture,
+        'help'              => $usage,
+        'eps=s'             => \$eps_file,
+        'dataset=s'         => \$dataset_name,
+        'chr=s'             => \$chr_name,
+        'set=s'             => \$set_name,
+        );
+    
+    my( $db, $ds, $cl );
+    if ($otter) {
+        unless ($dataset_name and $set_name) {
+            die "otter connection requires dataset_name and set";
+        }
+        $cl = Bio::Otter::Lace::Defaults::make_Client();
+        $ds = $cl->get_DataSet_by_name($dataset_name);
+
+        $db = $ds->get_cached_DBAdaptor;
+        $db->assembly_type($set_name);
+    } else {
+        $db = Hum::EnsCmdLineDB::connect();
+    }
 
     if ($eps_file) {
         $eps_file .= '.eps' unless $eps_file =~ /\.eps$/i;
@@ -120,7 +153,6 @@ use Hum::EnsCmdLineDB;
     my $canvas = $gc->canvas;
 
     {
-        my $db = Hum::EnsCmdLineDB::connect();
 
         $chr_name ||= $fpc;
         if ($chr_start and ! $chr_end) {
@@ -135,16 +167,16 @@ use Hum::EnsCmdLineDB;
         my( $vc );
         if ($chr_start) {
             print STDERR "Fetching region of chr '$chr_name' from $chr_start to $chr_end\n";
-	    $vc = $stadp->fetch_by_chr_start_end(
+	        $vc = $stadp->fetch_by_chr_start_end(
                 $chr_name,
                 $chr_start,
                 $chr_end,
                 );
         } else {
             print STDERR "Fetching virtual contig for all of fpc contig '$fpc'\n";
-	    $vc = $stadp->fetch_by_supercontig_name($fpc);
+	        $vc = $stadp->fetch_by_supercontig_name($fpc);
         }
-                
+        
         my $tiling = GenomeCanvas::Band::TilingPath->new($vc);
         $tiling->title("Contig\nTiling\nPath");
         if ($sanger_names) {
@@ -166,6 +198,11 @@ use Hum::EnsCmdLineDB;
         if ($show_repeats) {
             my $repeat = GenomeCanvas::DensityBand::RepeatFeature->new;
             $repeat->virtual_contig($vc);
+            if ($otter) {
+                warn "Attaching Client and Dataset to band";
+                $repeat->Client($cl);
+                $repeat->DataSet($ds);
+            }
             $repeat->title('Repeats');
             $repeat->repeat_classifier(\&repeat_class);
             $gc->add_Band($repeat);
@@ -175,9 +212,9 @@ use Hum::EnsCmdLineDB;
             my $plot = GenomeCanvas::Band::Plot->new;
             $plot->title('C+G Content');
             $plot->virtual_contig($vc);
-            $plot->range(0.1,0.7);
-            $plot->x_major(0.3);
-	        $plot->show_horizontal_scale(0);
+            $plot->range(0.3, 0.7);
+            $plot->x_major(0.2);
+	        $plot->show_horizontal_scale(1);
             $gc->add_Band($plot);
         }
         
@@ -215,10 +252,12 @@ use Hum::EnsCmdLineDB;
 	        $gc->add_Band($track);
 	    }
 
-	    my $scale_track = GenomeCanvas::Band::Scale->new;
-	    # $scale_track->title("scale");
-	    $scale_track->virtual_contig($vc);
-	    $gc->add_Band($scale_track);
+        if ($show_ruler) {
+	        my $scale_track = GenomeCanvas::Band::Scale->new;
+	        $scale_track->title("scale");
+	        $scale_track->virtual_contig($vc);
+	        $gc->add_Band($scale_track);
+        }
 
 	    if ($clusters) {
 	        my $track = GenomeCanvas::Band::GeneCluster->new();
@@ -250,7 +289,7 @@ use Hum::EnsCmdLineDB;
             $gene_names->virtual_contig($vc);
             $gene_names->span_file($span_file);
             $gene_names->tiling_direction(1);
-            $gene_names->dont_show_key(1);
+            $gene_names->show_key($show_key);
             $gc->add_Band($gene_names);
         }
 

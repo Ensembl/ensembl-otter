@@ -91,14 +91,9 @@ sub add_default_options {
         $mw->optionAdd("CanvasWindow\*$class.relief",     'sunken', $priority);
         $mw->optionAdd("CanvasWindow\*$class.foreground", 'black',  $priority);
         $mw->optionAdd("CanvasWindow\*$class.background", 'white',  $priority);
-    }
-    
-    # lucidatypewriter size 15 on dec_osf looks the same as size 14 on other systems
-    my $font_size = $^O eq 'dec_osf' ? 15 : 14;
-    foreach my $class (@entry_class) {
         $mw->optionAdd(
             "CanvasWindow\*$class.font",
-            "-*-lucidatypewriter-medium-r-*-*-$font_size-*-*-*-*-*-*-*",
+            "-*-lucidatypewriter-medium-r-*-*-14-140-*-*-*-*-*-*",
             $priority);
     }
 }

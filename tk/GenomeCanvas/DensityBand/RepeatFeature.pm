@@ -67,7 +67,9 @@ sub draw_repeat_features_on_sub_vc {
     my @class_list = $band->repeat_classes;
     my $other_class = $class_list[$#class_list];
     my %class = map {$_, []} @class_list;
-    foreach my $r (@{$vc->get_all_RepeatFeatures}) {
+
+    my $pipe_vc = $band->LaceSlice_from_vc($vc);
+    foreach my $r (@{$pipe_vc->get_all_RepeatFeatures('RepeatMasker', 1)}) {
         my $c = &$repeat_classifier($band, $r) || $other_class;
 	    if (defined $c) {
 	        push @{$class{$c}}, $r;
