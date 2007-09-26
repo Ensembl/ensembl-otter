@@ -51,7 +51,7 @@ sub draw_titles {
 
     $y_offset += $font_size * 2.2;
     
-    unless ($band->dont_show_key) {
+    if ($band->show_key) {
 	    # Print key
 
 	    # left
@@ -243,13 +243,13 @@ sub ignore_label_sub {
     return $self->{'_ignore_label_sub'};
 }
 
-sub dont_show_key {
-    my( $self, $dont_show_key) = @_;
-
-    if (defined $dont_show_key) {
-	$self->{'_dont_show_key'} = $dont_show_key;
+sub show_key {
+    my( $self, $show_key ) = @_;
+    
+    if ($show_key) {
+        $self->{'_show_key'} = $show_key;
     }
-    return $self->{'_dont_show_key'}
+    return $self->{'_show_key'};
 }
 
 sub draw_gene_features_on_vc {
@@ -321,9 +321,9 @@ sub draw_gene_features_on_vc {
 		        $band->draw_gene_rectangle($x1, $x2, $rectangle_height, @tags, $group);
 	        }
 
-            #if ($i <= 1 and $band->show_labels) {
-                #warn "Hack to only show labels for certain classes of gene";
-            if ($band->show_labels) {
+            if ($i <= 3 and $band->show_labels) {
+                warn "Hack to only show labels for certain classes of gene";
+            #if ($band->show_labels) {
                 
                 my( $anchor, $y1 );
                 if ($y_dir == 1) {

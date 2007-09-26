@@ -223,14 +223,56 @@ sub virtual_contig {
     my( $band, $vc ) = @_;
     
     if ($vc) {
-        #confess "Not a Bio::EnsEMBL::Virtual::Contig : '$vc'"
-        #    unless ref($vc) and $vc->isa('Bio::EnsEMBL::Virtual::Contig');
         confess "Not a Bio::EnsEMBL::Slice : '$vc'"
             unless ref($vc) and $vc->isa('Bio::EnsEMBL::Slice');
         $band->{'_virtual_contig'} = $vc;
     }
     return $band->{'_virtual_contig'};
 }
+
+sub pipeline_virtual_contig {
+    my ($band) = @_;
+    
+    my $vc = $band->virtual_contig;
+    if ($band->Client) {
+        $vc = $band->LaceSlice_from_vc($vc);
+    }
+    return $vc;
+}
+
+sub LaceSlice_from_vc {
+    my ($band, $vc) = @_;
+    
+    return Bio::Otter::Lace::Slice->new(
+        $band->Client,
+        $band->DataSet->name,
+        $vc->assembly_type,
+        'chromosome',
+        'Otter',
+        $vc->chr_name,
+        $vc->chr_start,
+        $vc->chr_end,
+        );
+}
+
+sub Client {
+    my( $self, $Client ) = @_;
+    
+    if ($Client) {
+        $self->{'_Client'} = $Client;
+    }
+    return $self->{'_Client'};
+}
+
+sub DataSet {
+    my( $self, $DataSet ) = @_;
+    
+    if ($DataSet) {
+        $self->{'_DataSet'} = $DataSet;
+    }
+    return $self->{'_DataSet'};
+}
+
 
 sub nudge_into_free_space {
     my( $band, $tag_or_id, $y_inc ) = @_;
@@ -311,7 +353,6 @@ sub sequence_gap_map {
     if (not @gaps) {
       if (not exists($band->{'_map_gap_positions'})) {
         my $prev_end = 0;
-        #my @map_contig_list = $vc->_vmap->each_MapContig;
         my @map_contig_list = @{$vc->get_tiling_path};
         for (my $i = 0; $i < @map_contig_list; $i++) {
           my $map_c = $map_contig_list[$i];
@@ -401,7 +442,6 @@ sub next_sub_VirtualContig {
     }
     
     my $global_chr_start = $big_vc->chr_start;
-    my $sgp_adapt        = $big_vc->adaptor;
     my $chr_name         = $big_vc->chr_name;
     
     my $max_vc_length = $band->sub_vc_size;
@@ -429,11 +469,28 @@ sub next_sub_VirtualContig {
     my $chr_end   = $global_chr_start + $end - 1;
     #warn "Drawing repeat features from $chr_start to $chr_end\n";
     #my $vc = $sgp_adapt->fetch_VirtualContig_by_chr_start_end(
-    my $vc = $sgp_adapt->fetch_by_chr_start_end(
-        $chr_name,
-        $chr_start,
-        $chr_end,
-        );
+    
+    my $vc;
+    if (my $cl = $band->Client) {
+        warn "Fetching pipeline data from otter";
+        $vc = Bio::Otter::Lace::Slice->new(
+            $cl,
+            $band->DataSet->name,
+            $big_vc->assembly_type,
+            'chromosome',
+            'Otter',
+            $chr_name,
+            $chr_start,
+            $chr_end,
+            );
+    } else {
+        warn "Fetching pipeline data from ens db";
+        $vc = $big_vc->adaptor->fetch_by_chr_start_end(
+            $chr_name,
+            $chr_start,
+            $chr_end,
+            );
+    }
 
     return ($vc, $i);
 }

@@ -62,9 +62,9 @@ my ($pipeline_db); # pipeline database adaptor (holds the submission status deta
     # create subroutine that call be called from anywhere to return
     # user
     {
-	sub main_user {
-	    return $user;
-	}
+		sub main_user {
+		    return $user;
+		}
     }
 
     # list based on R/RW permissions of user
