@@ -2481,7 +2481,7 @@ sub gene_type_from_transcript_set {
         # Gene type is the same as the transcript type
         unless ($type = $class_list[0]) {
             if ($has_artifact) {
-                # Artifact it the only transcript type in the gene
+                # Artifact is the only transcript type in the gene
                 $type = 'Artifact';
             } else {
                 confess "No transcript classes";
