@@ -93,16 +93,39 @@ sub do_search {
                             .(($clone_number>1) ? 's ' : ' '),
             )->pack(-side => 'left', -fill => 'x');
 
-            foreach my $clone_name (@$clone_names) {
-                my $button = $result_frame->Button(
-                    -text => $clone_name,
-                    -command => sub {
-                        print STDERR "Opening $asm:$clone_name...\n";
-                        $self->SequenceSetChooser()->open_sequence_set_by_ssname_clonename(
-                                $asm, $clone_name, $clone_names
-                        );
-                    },
-                )->pack(-side => 'left');
+            my $center_index = int(($clone_number-1)/2);
+            my %show_clone_index = (
+                0               => 1,               # always show the first one
+                ($center_index==2) ? (1 => 1) : (), # show the second one if there is only one in the gap
+                $center_index   => 1,               # always show the middle one
+                ($clone_number==5) ? (3 => 1) : (), # show the fourth one if there is only one in the gap
+                $clone_number-1 => 1,               # always show the last one
+            );
+
+            my $skipped_number = 0;
+            foreach my $i (0..scalar(@$clone_names)-1) {
+
+                if($show_clone_index{$i}) {
+                    if($skipped_number) {
+                        my $skipped_button = $result_frame->Label(
+                            -text => "...($skipped_number clones skipped)...",
+                        )->pack(-side => 'left', -fill => 'x');
+                        $skipped_number = 0;
+                    }
+
+                    my $clone_name = $clone_names->[$i];
+                    my $button = $result_frame->Button(
+                        -text => $clone_name,
+                        -command => sub {
+                            print STDERR "Opening $asm:$clone_name...\n";
+                            $self->SequenceSetChooser()->open_sequence_set_by_ssname_clonename(
+                                    $asm, $clone_name, $clone_names
+                            );
+                        },
+                    )->pack(-side => 'left');
+                } else {
+                    $skipped_number++;
+                }
             }
         } else {
             my $label = $result_frame->Label(
