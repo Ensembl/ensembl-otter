@@ -44,44 +44,49 @@ sub qnames_locators {
     return $self->{_ql};
 }
 
-sub find_containing_assemblies {
+sub find_containing_chromosomes {
     my ($self, $slice) = @_;
 
-        # EnsEMBL as of rel46 cannot perform ambigous clone->contig->chromosome mapping correctly.
+        # EnsEMBL as of rel46 cannot perform ambigous clone|subregion->contig->chromosome mapping correctly.
         # So we prefer to do it using direct SQL:
-        #
-    my $seq_level_slice = $slice->coord_system->is_sequence_level()
-        ? $slice
-        : $slice->project('seqlevel')->[0]->to_Slice();
+        
+    my $sa = $self->dba()->get_SliceAdaptor();
 
+        # map the original slice onto contig_ids
+    my $seq_level_slice_ids = [ $slice->coord_system->is_sequence_level()
+        ? $sa->get_seq_region_id($slice)
+        : map { $sa->get_seq_region_id($_->to_Slice()) } @{$slice->project('seqlevel')}
+    ];
+
+        # now map those contig_ids back onto a chromosome
     my $sql = qq{
-        SELECT chr.name
+        SELECT  chr.name,
+                count(*) as cmp_cnt
         FROM    assembly a,
                 seq_region chr,
-                seq_region cmp,
                 coord_system cs
         WHERE   cs.name='chromosome'
         AND     cs.version='Otter'
         AND     cs.coord_system_id=chr.coord_system_id
         AND     chr.seq_region_id=a.asm_seq_region_id
-        AND     cmp.seq_region_id=a.cmp_seq_region_id
-        AND     cmp.name=?
+        AND     a.cmp_seq_region_id IN (
+    }.join(', ', @$seq_level_slice_ids).qq{
+                )
+     GROUP BY chr.name
     };
 
     my $sth = $self->dbc()->prepare($sql);
-    $sth->execute($seq_level_slice->seq_region_name());
+    $sth->execute();
 
-    my @asm_slices = ();
-    my $adaptor;
-
-    while( my ($atype) = $sth->fetchrow() ) {
-        $adaptor ||= $self->dba()->get_SliceAdaptor();
-
-        my $asm_slice = $adaptor->fetch_by_region('chromosome', $atype, undef, undef, undef, 'Otter');
-        push @asm_slices, $asm_slice;
+    my @chr_slices = ();
+    while( my ($atype, $cmp_cnt) = $sth->fetchrow() ) {
+        if($cmp_cnt == scalar(@$seq_level_slice_ids)) {
+            my $chr_slice = $sa->fetch_by_region('chromosome', $atype, undef, undef, undef, 'Otter');
+            push @chr_slices, $chr_slice;
+        }
     }
 
-    return \@asm_slices;
+    return \@chr_slices;
 }
 
 sub register_feature {
@@ -101,21 +106,21 @@ sub register_feature {
                 sort { ($a->from_start() <=> $b->from_start())*$feature->strand() }
                     @{ $feature_slice->project($component) } ];
 
-    my $found_assembly_slices = ($cs_name eq 'chromosome')
+    my $found_chromosome_slices = ($cs_name eq 'chromosome')
         ? [ $feature_slice ]
-        : $self->find_containing_assemblies($feature_slice);
+        : $self->find_containing_chromosomes($feature_slice);
 
-    foreach my $asm_slice (@$found_assembly_slices) {
+    foreach my $chr_slice (@$found_chromosome_slices) {
 
         unless($unhide) {
-            my ($hidden) = ((map {$_->value()} @{$asm_slice->get_all_Attributes('hidden')}), 1);
+            my ($hidden) = ((map {$_->value()} @{$chr_slice->get_all_Attributes('hidden')}), 1);
 
             next if $hidden;
         }
 
         my $loc = Bio::Otter::Lace::Locator->new($qname, $qtype);
 
-        $loc->assembly( $asm_slice->seq_region_name() );
+        $loc->assembly( $chr_slice->seq_region_name() );
         $loc->component_names( $component_names );
 
         push @{ $self->qnames_locators()->{$qname} }, $loc;
