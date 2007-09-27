@@ -906,7 +906,10 @@ sub draw_subset {
 
     my $pghalfsize = $pgsize ? int($pgsize/2)+1 : 15;
 
-    my $ind = $self->SequenceSet()->get_subsets_first_index($subset_tag);
+    my $ss = $self->SequenceSet();
+    my $ind = $ss->get_subsets_first_index($subset_tag);
+
+    warn "SS=$ss, SS_name=".$ss->name().", ind=$ind";
 
     if(defined($ind)) {
         $self->_user_first_clone_seq($ind-$pghalfsize);
