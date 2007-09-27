@@ -3,11 +3,9 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2007-09-27 13:22:08 $
-# Id:            $Id: nph-test,v 1.5 2007-09-27 13:22:08 jgrg Exp $
+# Last modified: $Date: 2007-09-27 15:34:20 $
+# Id:            $Id: nph-test,v 1.6 2007-09-27 15:34:20 jgrg Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-test,v $
-
-use CGI::Carp 'fatalsToBrowser';
 
 use strict;
 use SangerPaths qw{ otter48 ensembl46 bioperl123 core };

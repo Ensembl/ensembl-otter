@@ -3,24 +3,24 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2007-09-18 09:33:33 $
-# Id:            $Id: nph-get_datasets,v 1.4 2007-09-18 09:33:33 jgrg Exp $
+# Last modified: $Date: 2007-09-27 15:34:20 $
+# Id:            $Id: nph-get_datasets,v 1.5 2007-09-27 15:34:20 jgrg Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_datasets,v $
 
 use strict;
+
 use SangerPaths qw{ otter48 ensembl46 bioperl123 core };
 
 use Bio::Otter::ServerScriptSupport;
 
 my $server = Bio::Otter::ServerScriptSupport->new;
-my $user = $server->authorized_user;
 
 my $xml;
 eval {
     my $species_hash = $server->species_hash();
     
     # Only admin users get to see mysql connection details
-    my $admin = $server->admin_user;
+    my $show_details = $server->local_user || $server->admin_user;
 
     $xml   .= qq{  <datasets>\n};
     foreach my $dataset (keys %$species_hash) {
@@ -28,12 +28,12 @@ eval {
 
         $xml .= qq{    <dataset name="$dataset">\n};
 
-        ### Once everything is "headcode=1" we can put an if ($admin) around the foreach()
+        ### Once everything is "headcode=1" we can put an if ($show_details) around the foreach()
         foreach my $key (keys %$species_subhash) {
             my $lckey = lc($key);
-            unless ($admin) {
+            unless ($lckey eq 'headcode') {
                 # Don't send mysql user names and passwords over internet
-                next unless $lckey eq 'headcode';
+                next unless $show_details;
             }
             $xml .= qq{      <$lckey>$species_subhash->{$key}</$lckey>\n};
         }
