@@ -86,6 +86,12 @@ sub do_search {
         my $clone_number = scalar(@$clone_names);
 
         if($clone_number) {
+
+                # set the subset in the SequenceSet
+            my $ss = $self->DataSet->get_SequenceSet_by_name($asm);
+            my $subset_tag = "$asm:Found:$qname";
+            $ss->set_subset($subset_tag, $clone_names);
+
             $qtype=~s/_/ /g; # underscores become spaces for readability
 
             my $label = $result_frame->Label(
@@ -118,8 +124,8 @@ sub do_search {
                         -text => $clone_name,
                         -command => sub {
                             print STDERR "Opening $asm:$clone_name...\n";
-                            $self->SequenceSetChooser()->open_sequence_set_by_ssname_clonename(
-                                    $asm, $clone_name, $clone_names
+                            $self->SequenceSetChooser()->open_sequence_set_by_ssname_subset(
+                                    $asm, $subset_tag
                             );
                         },
                     )->pack(-side => 'left');

@@ -21,6 +21,15 @@ sub name {
     return $self->{'_name'};
 }
 
+sub chr_name { # for SequenceSets that are subsets of chromosomes ->name() and ->chr_name() are different
+    my( $self, $chr_name ) = @_;
+    
+    if ($chr_name) {
+        $self->{'_chr_name'} = $chr_name;
+    }
+    return $self->{'_chr_name'} || $self->name();
+}
+
 sub dataset_name {
     my( $self, $dataset_name ) = @_;
     
