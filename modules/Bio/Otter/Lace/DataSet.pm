@@ -183,11 +183,18 @@ sub fetch_all_CloneSequences_for_selected_SequenceSet {
 }
 
 sub fetch_all_CloneSequences_for_SequenceSet {
-    my( $self, $ss ) = @_;
+    my( $self, $ss, $other_things_too ) = @_;
     confess "Missing SequenceSet argument" unless $ss;
     my $client = $self->Client or confess "No otter Client attached";
-    my $cs=$client->get_all_CloneSequences_for_DataSet_SequenceSet($self, $ss);
-    return $cs;
+
+    my $cs_list=$client->get_all_CloneSequences_for_DataSet_SequenceSet($self, $ss);
+    if($other_things_too) {
+        $client->fetch_all_SequenceNotes_for_DataSet_SequenceSet($self, $ss);
+        $client->status_refresh_for_DataSet_SequenceSet($self, $ss);
+        $client->lock_refresh_for_DataSet_SequenceSet($self, $ss);
+    }
+
+    return $cs_list;
 }
 
 sub _tmp_table_by_name{
