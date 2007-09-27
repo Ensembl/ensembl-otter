@@ -88,7 +88,10 @@ sub do_search {
         if($clone_number) {
 
                 # set the subset in the SequenceSet
-            my $ss = $self->DataSet->get_SequenceSet_by_name($asm);
+            my $ds = $self->DataSet();
+            my $ss = $ds->get_SequenceSet_by_name($asm);
+            $ds->fetch_all_CloneSequences_for_SequenceSet($ss, 1);
+
             my $subset_tag = "$asm:Found:$qname";
             $ss->set_subset($subset_tag, $clone_names);
             warn "SS=$ss, subset_tag=$subset_tag, clone_names=".join(',',@$clone_names);
