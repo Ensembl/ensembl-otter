@@ -91,6 +91,7 @@ sub do_search {
             my $ss = $self->DataSet->get_SequenceSet_by_name($asm);
             my $subset_tag = "$asm:Found:$qname";
             $ss->set_subset($subset_tag, $clone_names);
+            warn "SS=$ss, subset_tag=$subset_tag, clone_names=".join(',',@$clone_names);
 
             $qtype=~s/_/ /g; # underscores become spaces for readability
 

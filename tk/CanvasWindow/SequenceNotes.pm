@@ -914,7 +914,7 @@ sub draw_subset {
         return $self->draw();
     } else {
         print STDERR "subset '$subset_tag' not found in the SequenceSet '".
-            $self->SequenceSet()->name()."!\n";
+            $self->SequenceSet()->name()."' !\n";
     }
 }
 
