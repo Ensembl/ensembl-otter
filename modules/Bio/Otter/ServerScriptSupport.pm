@@ -28,7 +28,11 @@ sub new {
     my $pkg = shift;
     
     my $self = $pkg->SUPER::new(@_);
-    $self->authorized_user;
+    if ($self->local_user) {
+        $self->authenticate_user;
+    } else {
+        $self->authorized_user
+    }
     return $self;
 }
 
@@ -98,7 +102,9 @@ sub species_hash {
     my $sp;
     unless ($sp = $self->{'_species_hash'}) {
         $sp = $self->read_species_dat_file;
-        $self->remove_unauthorized_species($sp);
+        unless ($self->local_user) {
+            $self->remove_unauthorized_species($sp);
+        }
         $self->{'_species_hash'} = $sp;
     }
     return $sp;
@@ -221,30 +227,38 @@ sub dataset_headcode {
     return $self->dataset_param('HEADCODE');
 }
 
+sub authenticate_user {
+    my ($self) = @_;
+    
+    my $sw = SangerWeb->new({ cgi => $self });
+    my $auth_flag     = 0;
+    my $internal_flag = 0;
+    
+    my $user;
+    if ($user = $sw->username) {
+        if ($user =~ /^[a-z0-9]+$/) {
+            # Internal users (simple user name)
+            $auth_flag = 1;
+            $internal_flag = 1;
+        } else {
+            # Check external users (email address)
+            $auth_flag = 1 if $self->users_hash->{$user};
+        }
+    }
+    if ($auth_flag) {
+        $self->{'_authorized_user'} = $user;
+        $self->{'_internal_user'}   = $internal_flag;
+    }
+}
+
 sub authorized_user {
     my ($self) = @_;
     
     my $user;
     unless ($user = $self->{'_authorized_user'}) {
-        my $sw = SangerWeb->new({ cgi => $self });
-        my $auth_flag     = 0;
-        my $internal_user = 0;
-        if ($user = $sw->username) {
-            if ($user =~ /^[a-z0-9]+$/) {
-                # Internal users (simple user name)
-                $auth_flag = 1;
-                $internal_user = 1;
-            } else {
-                # Check external users (email address)
-                $auth_flag = 1 if $self->users_hash->{$user};
-            }
-        }
-        if ($auth_flag) {
-            $self->{'_authorized_user'} = $user;
-            $self->{'_internal_user'}   = $internal_user;
-        } else {
-            $self->unauth_exit('User not authorized');
-        }
+        $self->authenticate_user;
+        $self->unauth_exit('User not authorized')
+            unless $self->{'_authorized_user'};
     }
     return $user;
 }
@@ -262,6 +276,10 @@ sub admin_user {
     
     my $user = $self->authorized_user;
     return $self->internal_user && $self->users_hash->{$user}{'admin'};
+}
+
+sub local_user {
+    return $ENV{'localuser'} =~ /local/ ? 1 : 0;
 }
 
 ############## I/O: ################################
@@ -314,7 +332,7 @@ sub error_exit {
     chomp($reason);
 
     print $self->header(
-        -status => 500,
+        -status => 417,
         -type   => 'text/plain',
         ),
       $self->wrap_response(" <response>\n    ERROR: $reason\n </response>\n");

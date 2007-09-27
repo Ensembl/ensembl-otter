@@ -15,12 +15,12 @@ use Hum::Conf qw{ PFETCH_SERVER_LIST };
 
 use Bio::Otter::Author;
 use Bio::Otter::CloneLock;
-use Bio::Otter::Converter;
-use Bio::Otter::DnaDnaAlignFeature;
-use Bio::Otter::DnaPepAlignFeature;
-use Bio::Otter::FromXML;
-use Bio::Otter::HitDescription;
-use Bio::Otter::Lace::AceDatabase;
+#use Bio::Otter::Converter;
+#use Bio::Otter::DnaDnaAlignFeature;
+#use Bio::Otter::DnaPepAlignFeature;
+#use Bio::Otter::FromXML;
+#use Bio::Otter::HitDescription;
+#use Bio::Otter::Lace::AceDatabase;
 use Bio::Otter::Lace::DataSet;
 use Bio::Otter::Lace::Locator;
 use Bio::Otter::Lace::PersistentFile;
@@ -292,12 +292,16 @@ sub authorize {
 
     if ($response->is_success) {
         # Cookie will have been given to UserAgent
-        warn sprintf "Authorized OK: %s (%s)\n", $response->status_line;
+        warn sprintf "Authorized OK: %s\n",
+            $response->status_line;
+        $self->fix_cookie_jar_file_permission;
         $web->cookie_jar->save
           or die "Failed to save cookie";
         return 1;
     } else {
-        warn sprintf "Authorize failed: %s (%s)\n", $response->status_line;
+        warn sprintf "Authorize failed: %s (%s)\n",
+            $response->status_line,
+            $response->decoded_content;
         return;
     }
 }
@@ -318,6 +322,26 @@ sub get_UserAgent {
             ));
     }
     return $ua;
+}
+
+sub fix_cookie_jar_file_permission {
+    my ($self) = @_;
+    
+    my $jar = $ENV{'OTTERLACE_COOKIE_JAR'};
+    if (-e $jar) {
+        # Fix mode if not already mode 600
+        my $mode = (stat(_))[2];
+        if ($mode != 0600) {
+            chmod(0600, $jar) or confess "chmod(0600, '$jar') failed; $!";
+        }
+    } else {
+        # Create file with mode 600
+        my $save_mask = umask;
+        umask(066);
+        open my $fh, "> $jar"
+            or confess "Can't create '$jar'; $!";
+        umask($save_mask);
+    }
 }
 
 sub url_root {
@@ -381,13 +405,16 @@ sub general_http_dialog {
     for (my $i = 0; $i < $password_attempts; $i++) {
         $response = $self->do_http_request($method, $scriptname, $params);
         last if $response->is_success;
-        if ($response->code == 403) {
-            # Unauthorized
+        my $code = $response->code;
+        if ($code == 401 or $code == 403) {
+            # Unauthorized (We are swtiching from 403 to 401 from humpub-release-49.)
             $self->authorize;
-        } elsif($response->code == 500) {
-            die "The server ".$self->url_root()." seems to be down, please check your host/port settings or try again later";
+        } elsif ($code == 500) {
+            die "Error on server ($code). Please inform anacode\@sanger.ac.uk\n", $response->decoded_content;
+        } elsif ($code == 503 or $code == 504) {
+            die "The server timed out ($code). Please try again.\n";
         } else {
-            confess sprintf "%d (%s)", $response->code, $response->content;
+            confess sprintf "%d (%s)", $response->code, $response->decoded_content;
         }
     }
     return $response;
