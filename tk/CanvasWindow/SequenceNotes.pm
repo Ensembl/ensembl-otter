@@ -112,10 +112,12 @@ sub _refresh_SequenceSet{
     if ($column_number == 3){
         # this is the ana_status column
         $cl->status_refresh_for_DataSet_SequenceSet($ds, $ss);
-    }
-    elsif($column_number == 7){
+    } elsif($column_number == 7){
         # padlock column
         $cl->lock_refresh_for_DataSet_SequenceSet($ds, $ss);
+    } elsif($column_number == 8){
+        # here we do nothing, but rely heavily on the order (that 8 gets called after 7)
+        
     }else{
         # no column number - just update the whole thing
         $self->get_CloneSequence_list(1)
@@ -179,7 +181,8 @@ sub column_methods {
                 }],
             [$text_method,  \&_column_text_seq_note_author],
             [$text_method,  \&_column_text_seq_note_text],
-            [$image_method, \&_padlock_icon ]
+            [$image_method, \&_padlock_icon ],
+            [$text_method,  \&_who_locked ]
             ];
     }
     return $self->{'_column_methods'};
@@ -352,6 +355,7 @@ sub initialise {
     my $refesher = sub{
 	    $top->Busy;
 	    $self->refresh_column(7) ;
+	    $self->refresh_column(8) ;
         $top->Unbusy;
     };
     $self->make_button($button_frame_2, 'Refresh Locks', $refesher, 0);
@@ -363,8 +367,6 @@ sub initialise {
 	    $top->Busy;
         # we want this to refresh all columns
         $self->_refresh_SequenceSet();
-        #$self->_refresh_SequenceSet(3);
-        #$self->refresh_column(3);
 	    $self->draw();
 	    $top->Unbusy;
     };
@@ -684,6 +686,7 @@ sub _open_SequenceSet{
 #    $xc->EviCollection($ec);
     $xc->initialize;
     $self->refresh_column(7) ; # 7 is the locks column
+    $self->refresh_column(8) ; # 8 is the locks authors column
     
 }
 
@@ -1430,6 +1433,16 @@ sub _padlock_icon{
     
     return { -image => $pixmap } ;
 }    
+
+sub _who_locked {
+    my( $cs ) = @_;
+    
+    if (my $lock = $cs->get_lock_as_CloneLock) {
+        return { -text => $lock->author };
+    } else {
+        return {};
+    }
+}
 
 sub closed_padlock_pixmap {
     my( $self ) = @_;
