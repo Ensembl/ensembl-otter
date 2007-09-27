@@ -902,8 +902,6 @@ sub draw_subset {
     my $ss = $self->SequenceSet();
     my $ind = $ss->get_subsets_first_index($subset_tag);
 
-    warn "SS=$ss, SS_name=".$ss->name().", ind=$ind";
-
     if(defined($ind)) {
         $self->_user_first_clone_seq($ind-$pghalfsize);
         $self->_user_last_clone_seq($ind+$pghalfsize);

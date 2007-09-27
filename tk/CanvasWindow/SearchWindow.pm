@@ -94,9 +94,7 @@ sub do_search {
 
             my $subset_tag = "$asm:Found:$qname";
             $ss->set_subset($subset_tag, $clone_names);
-            warn "SS=$ss, subset_tag=$subset_tag, clone_names=".join(',',@$clone_names);
             my $ind = $ss->get_subsets_first_index($subset_tag);
-            warn "IND=$ind";
 
             $qtype=~s/_/ /g; # underscores become spaces for readability
 
