@@ -87,14 +87,10 @@ sub do_search {
 
         if($clone_number) {
 
-                # set the subset in the SequenceSet
+                # PREPARE TO set the subset in the SequenceSet
             my $ds = $self->DataSet();
             my $ss = $ds->get_SequenceSet_by_name($asm);
-            $ds->fetch_all_CloneSequences_for_SequenceSet($ss, 1);
-
             my $subset_tag = "$asm:Found:$qname";
-            $ss->set_subset($subset_tag, $clone_names);
-            my $ind = $ss->get_subsets_first_index($subset_tag);
 
             $qtype=~s/_/ /g; # underscores become spaces for readability
 
@@ -128,6 +124,12 @@ sub do_search {
                         -text => $clone_name,
                         -command => sub {
                             print STDERR "Opening '$subset_tag'...\n";
+
+                                # ACTUALLY SETTING the subset in the SequenceSet
+                                # (the first line forcefully reloads, has to be more flexible)
+                            $ds->fetch_all_CloneSequences_for_SequenceSet($ss, 1);
+                            $ss->set_subset($subset_tag, $clone_names);
+
                             $self->SequenceSetChooser()->open_sequence_set_by_ssname_subset(
                                     $asm, $subset_tag
                             );
