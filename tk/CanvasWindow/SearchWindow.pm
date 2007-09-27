@@ -92,6 +92,8 @@ sub do_search {
             my $subset_tag = "$asm:Found:$qname";
             $ss->set_subset($subset_tag, $clone_names);
             warn "SS=$ss, subset_tag=$subset_tag, clone_names=".join(',',@$clone_names);
+            my $ind = $ss->get_subsets_first_index($subset_tag);
+            warn "IND=$ind";
 
             $qtype=~s/_/ /g; # underscores become spaces for readability
 
@@ -124,7 +126,7 @@ sub do_search {
                     my $button = $result_frame->Button(
                         -text => $clone_name,
                         -command => sub {
-                            print STDERR "Opening $asm:$clone_name...\n";
+                            print STDERR "Opening '$subset_tag'...\n";
                             $self->SequenceSetChooser()->open_sequence_set_by_ssname_subset(
                                     $asm, $subset_tag
                             );
