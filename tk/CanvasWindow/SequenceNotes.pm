@@ -63,15 +63,8 @@ sub get_CloneSequence_list {
     my $cs_list = $ss->CloneSequence_list;
     if ($force_update || !$cs_list ) {
 
-        my $cl = $self->Client();
         my $ds = $self->SequenceSetChooser->DataSet;
-
-        $cl->get_all_CloneSequences_for_DataSet_SequenceSet($ds, $ss);
-        $cl->fetch_all_SequenceNotes_for_DataSet_SequenceSet($ds, $ss);
-        $cl->status_refresh_for_DataSet_SequenceSet($ds, $ss);
-        $cl->lock_refresh_for_DataSet_SequenceSet($ds, $ss); # do we need it?
-
-        $cs_list = $ss->CloneSequence_list;
+        $cs_list = $ds->fetch_all_CloneSequences_for_SequenceSet($ss, 1);
     }
     return $cs_list;
 }
@@ -1272,7 +1265,7 @@ sub layout_columns_and_rows {
 }
 
 sub save_sequence_notes {
-    my( $self, $comment ) = @_;    # is $comment ever used???
+    my( $self ) = @_;
 
     my $text = ${$self->set_note_ref()};
     $text =~ s/\s/ /g;
