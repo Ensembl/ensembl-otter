@@ -1438,7 +1438,7 @@ sub _who_locked {
     my( $cs ) = @_;
     
     if (my $lock = $cs->get_lock_as_CloneLock) {
-        return { -text => $lock->author };
+        return { -text => $lock->author->name() };
     } else {
         return {};
     }
