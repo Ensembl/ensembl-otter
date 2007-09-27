@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2007-09-18 09:33:33 $
-# Id:            $Id: nph-test,v 1.4 2007-09-18 09:33:33 jgrg Exp $
+# Last modified: $Date: 2007-09-27 13:22:08 $
+# Id:            $Id: nph-test,v 1.5 2007-09-27 13:22:08 jgrg Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-test,v $
 
 use CGI::Carp 'fatalsToBrowser';
@@ -32,7 +32,11 @@ foreach my $var ($server->param) {
     $env .= sprintf "%24s  %s\n", $var, $server->param($var);
 }
 
-$env .= sprintf "\nSagnerWeb cgi = %s\n", $web->cgi;
-$env .= sprintf "\nSagnerWeb username = %s\n", $web->username;
+$env .= sprintf "\nSangerWeb cgi = %s\n", $web->cgi;
+$env .= sprintf "\nSangerWeb username = %s\n", $web->username;
 
-$server->send_response($env);
+if ($ENV{'localuser'} eq 'localuser') {
+    $server->send_response($env);
+} else {
+    $server->send_response("You are an external user\n");
+}
