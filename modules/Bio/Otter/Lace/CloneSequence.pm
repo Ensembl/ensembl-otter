@@ -231,18 +231,21 @@ sub get_lock_as_CloneLock{
     return $self->{'_lock_status'};
 }
 
-sub is_match{
-    my ($self, $is_match) = @_;
+sub belongs_to { # the same CloneSequence may belong to multiple subsets (subregions|search_results)
+    my ($self, $subset_tag, $belongs_flag) = @_;
 
-    $self->{'_is_match'} = $is_match if defined($is_match);
-    return $self->{'_is_match'};
-}
+    unless($subset_tag) { # counts how many subsets it belongs to: a convenient property
+        return scalar(keys %{$self->{'_belongs_to'}});
+    }
 
-sub current_match{
-    my ($self, $current_match) = @_;
-
-    $self->{'_current_match'} = $current_match if defined($current_match);
-    return $self->{'_current_match'};
+    if(defined($belongs_flag)) {
+        if($belongs_flag) { # we have to do this the long way to maintain the previous property
+            $self->{'_belongs_to'}{$subset_tag} = 1;
+        } else {
+            delete $self->{'_belongs_to'}{$subset_tag};
+        }
+    }
+    return $self->{'_belongs_to'}{$subset_tag};
 }
 
 1;

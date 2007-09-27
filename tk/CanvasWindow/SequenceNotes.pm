@@ -76,23 +76,6 @@ sub get_CloneSequence_list {
     return $cs_list;
 }
 
-
-# Not sure whether it should belong here or to SequenceSet.pm
-#
-sub find_CloneSequence_index_by_name {
-    my ($self, $clone_name) = @_;
-
-    my $ind = 0;
-    for my $cs (@{$self->get_CloneSequence_list()}) {
-        if($cs->accession().'.'.$cs->sv() eq $clone_name) {
-            # print STDERR "find_CloneSequence_index_by_name: returning $ind for '$clone_name'\n";
-            return $ind;
-        }
-        $ind++;
-    }
-    return undef;
-}
-
 ## now takes the column number to be refreshed (image or text) and refreshes it
 ## $i is the row index to start from - allows this method to be used by Searched SequenceNotes
 sub refresh_column {
@@ -174,9 +157,7 @@ sub column_methods {
                     # Use closure for font definition
                     my $cs = shift;
                     my $acc_sv = $cs->accession .'.'. $cs->sv;
-                    my $fontcolour = $cs->current_match()
-                                    ? 'red'
-                                    : $cs->is_match()
+                    my $fontcolour = $cs->belongs_to() # currently we are only interested in whether it belongs *anywhere* or not
                                         ? 'DarkRed'
                                         : 'black';
                     return {-text => $acc_sv, -font => $bold, -fill => $fontcolour, -tags => ['searchable']};
@@ -185,9 +166,7 @@ sub column_methods {
                 sub{
                     # Use closure for font definition
                     my $cs = shift;
-                    my $fontcolour = $cs->current_match()
-                                    ? 'red'
-                                    : $cs->is_match()
+                    my $fontcolour = $cs->belongs_to() # currently we are only interested in whether it belongs *anywhere* or not
                                         ? 'DarkRed'
                                         : 'black';
                     return {-text => $cs->clone_name, -font => $bold, -fill => $fontcolour, -tags => ['searchable'] };
@@ -922,20 +901,19 @@ sub draw_paging_buttons{
                                 -window => $pg_frame);
 }
 
-sub draw_around_clone_name {
-    my ($self, $clone_name, $pgsize) = @_;
+sub draw_subset {
+    my ($self, $subset_tag, $pgsize) = @_;
 
     my $pghalfsize = $pgsize ? int($pgsize/2)+1 : 15;
 
-    my $ind = $self->find_CloneSequence_index_by_name($clone_name);
-    # print STDERR "draw_around_clone_name: ind=$ind\n";
+    my $ind = $self->SequenceSet()->get_subsets_first_index($subset_tag);
 
     if(defined($ind)) {
         $self->_user_first_clone_seq($ind-$pghalfsize);
         $self->_user_last_clone_seq($ind+$pghalfsize);
         return $self->draw();
     } else {
-        print STDERR "$clone_name not found in the SequenceSet '".
+        print STDERR "subset '$subset_tag' not found in the SequenceSet '".
             $self->SequenceSet()->name()."!\n";
     }
 }

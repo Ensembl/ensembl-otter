@@ -287,17 +287,19 @@ sub open_sequence_set {
     my $canvas = $self->canvas;
     foreach my $tag ($canvas->gettags($obj)) {
         if ($tag =~ /^SequenceSet=(.+)/) {
-            my $name = $1;
+            my $ss_name = $1;
 
-            $self->open_sequence_set_by_ssname_clonename($name);
+            my $ss = $self->DataSet->get_SequenceSet_by_name($ss_name);
+
+            $self->open_sequence_set_by_ssname_subset($ss_name);
             return 1;
         }
     }
     return;
 }
 
-sub open_sequence_set_by_ssname_clonename {
-    my ($self, $ss_name, $clone_name, $set_as_matched) = @_;
+sub open_sequence_set_by_ssname_subset {
+    my ($self, $ss_name, $subset_tag) = @_;
     
     $self->watch_cursor();
 
@@ -320,13 +322,8 @@ sub open_sequence_set_by_ssname_clonename {
         $self->add_SequenceNotes($sn);
     }
 
-    if( $clone_name ) {
-        my $ss = $sn->SequenceSet();
-        if(!$set_as_matched || !scalar(@$set_as_matched)) {
-            $set_as_matched = [ $clone_name ];
-        }
-        $ss->set_match_state( { map { ($_ => 1) } @$set_as_matched }, $clone_name );
-        $sn->draw_around_clone_name($clone_name);
+    if( $subset_tag ) { # we assume that whoever calls this has set the subset previously
+        $sn->draw_subset($subset_tag);
     } elsif(! $sn->canvas->find('withtag', 'all')) {
         $sn->draw_range;    
     }
