@@ -21,15 +21,6 @@ sub name {
     return $self->{'_name'};
 }
 
-sub chr_name { # for SequenceSets that are subsets of chromosomes ->name() and ->chr_name() are different
-    my( $self, $chr_name ) = @_;
-    
-    if ($chr_name) {
-        $self->{'_chr_name'} = $chr_name;
-    }
-    return $self->{'_chr_name'} || $self->name();
-}
-
 sub dataset_name {
     my( $self, $dataset_name ) = @_;
     
@@ -282,7 +273,7 @@ sub agp_data {
     return $data;
 }
 
-    # find clones my names and make them 'match'
+    # find clones by names and make them 'match'
     # The only argument is name->wanted_state hash
     #
 sub set_match_state { 
@@ -300,8 +291,51 @@ sub set_match_state {
     }
 }
 
-### Method for fetching completeness of analysis
-### for all the CloneSequences in a SequenceSet
+sub set_subset {
+    my ($self, $subset_tag, $state_array_or_hash) = @_;
+
+    my $state_hash = (ref($state_array_or_hash) eq 'HASH')
+        ? $state_array_or_hash
+        : { map { ($_ => 1) } @$state_array_or_hash };
+
+    my $cs_list = $self->CloneSequence_list;
+    foreach my $cs (@$cs_list) {
+        my $fullname = $cs->accession().'.'.$cs->sv();
+        if(exists($state_hash->{$fullname})) {
+            $cs->belongs_to($subset_tag, $state_hash->{$fullname});
+        }
+    }
+}
+
+sub get_subset_hash {
+    my ($self, $subset_tag) = @_;
+
+    my %state_hash = ();
+
+    my $cs_list = $self->CloneSequence_list;
+    foreach my $cs (@$cs_list) {
+        my $fullname = $cs->accession().'.'.$cs->sv();
+        if($cs->belongs_to($subset_tag)) {
+            $state_hash{$fullname} = 1;
+        }
+    }
+
+    return \%state_hash;
+}
+
+sub get_subsets_first_index {
+    my ($self, $subset_tag) = @_;
+
+    my $cs_list = $self->CloneSequence_list;
+    foreach my $i (0..scalar(@$cs_list)-1) {
+        my $cs = $cs_list->[$i];
+        my $fullname = $cs->accession().'.'.$cs->sv();
+        if($cs->belongs_to($subset_tag)) {
+            return $i;
+        }
+    }
+    return;
+}
 
 1;
 
