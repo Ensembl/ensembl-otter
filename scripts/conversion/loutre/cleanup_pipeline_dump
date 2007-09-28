@@ -2,7 +2,7 @@
 
 =head1 NAME
 
-dump_pipeline - script to dump pipeline database
+cleanup_pipeline_dump - script to dump pipeline database
 
 =head1 SYNOPSIS
 
@@ -14,30 +14,20 @@ Options:
                                         (default: conf/Conversion.ini)
     --vega_release=NUM                  vega release number
     --release_type=STRING               type of release, ie External
-    --no_feature=BOOLEAN                choose to dump *align_features or not
-    --add_chr=LIST                      comma seperated list of chromsomes to add to an existing
-                                        Vega db
-    --ignore_chr=LIST                   comma seperated list of chromsomes to ignore
-    --sql_dump_location=LOC             location of MySQLdump file
-    --file_name=NAME                    name of MySQLdump file (defaults to dbname_create.sql)
- 
-    --pipedbname=NAME                   use pipeline database NAME
-    --pipehost=HOST                     use pipeline database host HOST
-    --pipeport=PORT                     use pipeline database port PORT
-    --pipeuser=USER                     use pipeline database user USER
-    --pipepass=PASS                     use pipeline database password PASS
+
+    --count_rows=1                      if enabled then counts entries in tables and exits
+
+    --pipedumpdbname=NAME               use pipeline dump database NAME
+    --pipedumphost=HOST                 use pipeline dump database host HOST
+    --pipedumpport=PORT                 use pipeline dump database port PORT
+    --pipedumpuser=USER                 use pipeline dump database user USER
+    --pipedumppass=PASS                 use pipeline dump database password PASS
 
     --loutredbname=NAME                 use loutre database NAME
     --loutrehost=HOST                   use loutre database host HOST
     --loutreport=PORT                   use loutre database port PORT
     --loutreuser=USER                   use loutre database username USER
     --loutrepass=PASS                   use loutre database password PASS
-
-    --dbname=NAME                       use Vega database NAME
-    --host=HOST                         use Vega database host HOST
-    --port=PORT                         use Vega database port PORT
-    --user=USER                         use Vega database username USER
-    --pass=PASS                         use Vega database password PASS
 
     --logfile, --log=FILE               log to FILE (default: *STDOUT)
     --logpath=PATH                      write logfile to PATH (default: .)
@@ -49,29 +39,29 @@ Options:
 
 =head1 DESCRIPTION
 
-This script uses MySQLdump to read a pipeline database into a file that can be used
-to create a new Vega database. The structure of all tables in the pipeline database will
-be read into the file, with the exceptions of tables that are defined in the HEREDOC
-at the end of the script.
+This script cleans up a dump of the pipeline database prepared using dump_pipeline.
+It assumes that no *_raw have been transferred into the *_align_feature tables by
+this previous script and therefore does no removal of any *_raw features.
 
-The HEREDOC defines (i) tables for which all data is to be transferred, (ii) tables
-which are to be completely ignored (ie not even structure), and (iii) tables for which
-only some of the data is to be transferred.
+The cleanup is done on both logic_name and seq_region_id:
 
-Two types of constraints are used for the last of these - analysis_id (effectively hard-coded)
-and seq_region_id. The latter are read from a loutre database as the non-hidden chromsomes
-that have the correct seq_region_attributes for export_mode and vega_release. The wanted
-values are defined in the configuration for this script, and should have been set
-previously in the loutre database using another script - prepare_loutre.
+First, there are numerous features in the pipeline database that are not wanted in
+Vega, for example different types of simple_features. The tables and the logic_names
+of the features wanted in each of those tables are hardcoded in the script in the
+lns_to_stay hash. In addition, the lns_to_go hash defines the features that we know
+are to be deleted. By hard coding them, then any new ones that arise in the future
+can be flagged and a decision made as to whether to delete or include them.
 
-Transfer of features from the dna_ and protein_align_feature tables can be prevented using
-the -no_feature option
+Second, the pipeline database contains many seq_regions not wanted in Vega, for example
+old assemblies. The regions that are wanted are defined in the loutre database using
+seq_region_attributes. These attributes (export_mode and vega_release) should have been
+set with another script, prepare_loutre, before running this one. This script then
+filters on seq_region, keeping only those regions whose export_mode and vega_release
+attributes match those given as arguments. Tables cleaned up include seq_region, dna,
+assembly, prediction-* and the *_feature tables.
 
-The 'add_chr' option specifies a comma separated list of chromosomes to add to an existing
-database - uses just insert MySQL commands without any create table statments. In contrast
-the 'chr' option manually defines a set of chromosomes to dump, ignoring the attributes set by
-prepare_loutre, and uses create table statements. The 'ignore_chr' option specifies a comma
-separated list of chromosomes to ignore - this does use create table statements.
+The -count_rows=1 option is used as a diagnostic - when enabled it counts features and
+other entries (eg dna), does a Data::Dumper, and then exits without doing anything further.
 
 =head1 LICENCE
 
@@ -111,6 +101,38 @@ use Slice;
 
 $| = 1;
 
+#define tables and logic_names for features that are to be kept
+my %lns_to_stay = (
+	'prediction_transcript' => { map {$_,1} qw(Augustus Genscan) },
+	'simple_feature'        => { map {$_,1} qw(CpG Eponine tRNAscan) },
+	'repeat_feature'        => { map {$_,1} qw(RepeatMasker trf) },
+);
+
+#define logic names that we know are to be deleted
+my %lns_to_go = map {$_,1}
+	qw(Est2genome_clusters_raw
+	   Est2genome_clusters
+	   Est2genome_fish_raw
+	   Est2genome_fish
+	   Est2genome_other_raw
+	   Est2genome_other
+	   Est2genome_human_raw
+	   Est2genome_human
+	   Est2genome_mouse_raw
+	   Est2genome_mouse
+	   Uniprot_raw
+	   Uniprot
+	   Uniprot_TR
+	   Uniprot_SW
+	   vertrna_raw
+	   vertrna
+	   Augustus_svar
+	   Fgenesh
+	   Halfwise
+	   RepeatMasker_new
+	   trf_new
+   );
+
 my $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
 
 # parse options
@@ -122,6 +144,7 @@ $support->parse_extra_options(
 	'pipedumpuser=s',
 	'vega_release=s',
 	'release_type=s',
+	'count_rows=s',
 	$support->get_loutre_params,
 );
 $support->allowed_params(
@@ -131,6 +154,7 @@ $support->allowed_params(
 	'pipedumpuser',
 	'vega_release',
 	'release_type',
+	'count_rows',
 	$support->get_loutre_params,
 	$support->get_common_params,
 );
@@ -162,90 +186,175 @@ my $ldba = $support->get_database('loutre','loutre');
 my $lsa  = $ldba->get_SliceAdaptor();
 my $laa  = $ldba->get_AttributeAdaptor();
 
+#these are tables that will be cleaned up (defined here just for logging, nothng else)
+my @target_tables = qw(analysis
+					   assembly
+					   dna
+					   dna_align_feature
+					   protein_align_feature
+					   simple_feature
+					   meta_coord
+					   prediction_exon
+					   prediction_transcript
+					   repeat_feature
+					   repeat_consensus
+					   seq_region
+					   seq_region_attrib
+					   meta_coord
+					);
+
+#store counts of original number of features in each table
+my %table_rows;
+foreach my $t (@target_tables) {
+	($table_rows{$t}{'original'}) = $pddbh->selectrow_array("SELECT COUNT(*) FROM $t");
+}
+
+#dump a count of entries in all the relevant tables if requested
+if ($support->param('count_rows')) {
+	my %report;
+	foreach my $t (@target_tables) {
+		warn "table $t...";
+		if ($t =~ /_feature/) {	
+			warn "--table $t...";
+			my $s = $pddbh->prepare(qq(
+                   SELECT a.logic_name, count(*)
+                   FROM analysis a, $t
+                   WHERE a.analysis_id = $t.analysis_id
+                   GROUP BY a.logic_name
+                ));
+			$s->execute;
+			while (my ($logic_name,$c) = $s->fetchrow){
+				$report{$t}{$logic_name} = $c;
+			}
+		}
+		else {
+			$report{$t} = 	$table_rows{$t}{'original'};
+		}
+	}	
+	warn Dumper(\%report);
+	exit;
+}
+
 #get wanted chromosomes - non-hidden ones with the correct attributes for export mode and release number
 my $export_mode = $support->param('release_type');
 my $release = $support->param('vega_release');
 my $chr_names_wanted = &Slice::get_wanted_chromosomes($support,$laa,$lsa);
 
 my $seq_regions = join "\n", @{$chr_names_wanted};
-if (! $support->user_proceed("Data on the following assembly names will be retained in the pipeline database dump, proceed ?\n\n$seq_regions\n")) {
+if (! $support->user_proceed("Data on the following assemblies will be retained in the pipeline database dump, proceed ?\n\n$seq_regions\n")) {
 	exit;
 }
-
-#these are tables that are going to be cleaned up
-my @target_tables = qw (analysis
-						assembly
-						dna
-						dna_align_feature
-						protein_align_feature
-						simple_feature
-						meta_coord
-						prediction_exon
-						prediction_transcript
-						repeat_feature
-						seq_region
-						seq_region_attrib
-						
-					);
-
-#store counts of no of features in each table
-%table_rows;
-foreach my $t (@target_tables) {
-	($table_rows{$t}{'original'}) = $pddbh->selectrow_array("SELECT COUNT(*) FROM $t");
-}
-
+$support->log("Retained data on the following assemblies\n$seq_regions\n");
 
 #####################################################
 # delete any unwanted entries from meta_coord table #
 #####################################################
-my $target_tables = join("','",@target_tables);
-my $c = $pddbh->do(qq(DELETE FROM meta_coord where table_name not in ('$target_tables')));
-$support->log("Removed $c entries from meta_coord table\n");
+my $noentry_tables = join("','",qw(gene transcript exon));
 
+if (! $support->param('dry_run')) {
+	my $c = $pddbh->do(qq(DELETE FROM meta_coord where table_name in ('$noentry_tables')));
+	$support->log("Removed $c entries from meta_coord table\n");
+}
 
 ################
 # analysis ids #
 ################
 
-#identify analysis_ids that are to be kept
-my %ids_to_stay;
+#make a note of analysis_ids, and numbers of original features grouped by logic_name
+my %original_lncounts;
+foreach my $t (keys %lns_to_stay) {
+	my $s = $pddbh->prepare(qq(
+                SELECT a.logic_name, a.analysis_id, count(*)
+                FROM analysis a, $t
+                WHERE a.analysis_id = $t.analysis_id
+                GROUP BY a.logic_name
+));
+	$s->execute;
+	while (my ($logic_name,$analysis_id,$c) = $s->fetchrow){
+		$original_lncounts{$t}{$logic_name} = $c;
+	}
+}
+#warn Dumper(\%original_lncounts);
+
+#compare the logic names present with those that we know we are going to keep
+#and those that we know we are going to delete -> will identify any new ones
+my $problem = 0;
+foreach my $t (keys %original_lncounts) {
+	foreach my $ln (keys %{$original_lncounts{$t}}) {
+		if (! exists($lns_to_stay{$t}{$ln}) ) {
+			if (! exists($lns_to_go{$ln}) ) {
+				$support->log_warning("I don't know what to do with logic name $ln for table $t, please help me out\n");
+				$problem = 1;
+			}
+			else {
+				$support->log("Will delete features of logic name $ln from table $t\n");
+			}
+		}
+		else {
+			$support->log("Keeping features of logic name $ln from table $t\n");
+		}
+	}
+}
+
+if ($problem) {
+	if (! $support->user_proceed("There are features with logic names that I don't know what to do with, please look at the logs. Do you really want to proceed?\n")) {
+		exit;
+	}
+	$support->log_warning("There are logic_names that will be deleted even though this is not specifically defined\n");
+}
+
+#calculate analysis_ids that are to be kept
 my $idsth = $pddbh->prepare(qq(
-              SELECT distinct analysis_id,logic_name
-              FROM analysis
+               SELECT distinct analysis_id,logic_name
+               FROM analysis
     ));
 $idsth->execute();
+my %ids_to_stay;
 while (my ($analysis_id,$logic_name) = $idsth->fetchrow){
-	#exclude _raw features for all tables
-	next if ($logic_name=~/\_raw$/);
-	foreach my $t qw(analysis protein_align_feature dna_align_feature) {
-		push @{$ids_to_stay{$t}}, $analysis_id;
+	foreach my $t (keys %lns_to_stay) {
+		foreach my $ln (keys %{$lns_to_stay{$t}}) {
+			if ($logic_name eq $ln) {				
+				push @{$ids_to_stay{$t}}, $analysis_id;
+				#make a note of all analysis_ids for cleaning up analysis table
+				unless (grep {$_ eq $analysis_id} @{$ids_to_stay{'analysis'}} ) {
+					push @{$ids_to_stay{'analysis'}}, $analysis_id;
+				}
+			}
+		}
 	}
-	#exclude Fgenesh for prediction_transcripts
-	push @{$ids_to_stay{'prediction_transcript'}}, $analysis_id unless ($logic_name eq 'Fgenesh');
-	
-	#exclude some logic_names from simple_feature
-	next if ($logic_name=~/vertrna|est2genome|uniprot|exonerate|refseq/i);
-	push @{$ids_to_stay{'simple_feature'}}, $analysis_id;
 }
 
-#delete by analysis_id
-my @tables_to_clean =  qw (analysis
-						   dna_align_feature
-						   protein_align_feature
-						   simple_feature
-						   prediction_transcript
-						   repeat_feature
-					   );
-foreach my $t (@tables_to_clean) {
+#add analysis_ids from *_align_feature tables
+foreach my $t ('dna_align_feature','protein_align_feature') {
+	$idsth = $pddbh->prepare(qq(SELECT distinct(analysis_id) from $t));
+	$idsth->execute;
+	while (my ($analysis_id) = $idsth->fetchrow) {
+		unless (grep {$_ eq $analysis_id} @{$ids_to_stay{'analysis'}} ) {
+			push @{$ids_to_stay{'analysis'}}, $analysis_id;
+		}
+	}
+}
+
+#warn "lns to stay ",Dumper(\%ids_to_stay);
+
+#delete by analysis_id - faster to create tmp tables and truncate rather than delete
+foreach my $t (keys %ids_to_stay) {
 	my $ids_to_keep = join("','",@{$ids_to_stay{$t}});
-	my $sql = qq(DELETE from $t WHERE analysis_id not in ('$ids_to_keep'));
+	my $sql = qq(CREATE TABLE tmp_$t SELECT * from $t WHERE analysis_id in ('$ids_to_keep'));
 	if (! $support->param('dry_run')) {
 		$support->log_stamped("Deleting from $t by analysis_id...\n",1);
-		$table_rows{$t}{'deleted_by_anlaysis_id'} = $pddbh->execute($sql);
-		$support->log_stamped("...finished deleting from $t by analysis_id...\n\n",1);
+		$pddbh->do($sql);
+		$pddbh->do(qq(TRUNCATE $t));
+		$pddbh->do(qq(INSERT into $t select * from tmp_$t));
+		$pddbh->do(qq(DROP TABLE tmp_$t));
+		$support->log_stamped("...finished deleting from $t by analysis_id.\n\n",1);
 	}
 }
-
+foreach my $t (keys %ids_to_stay) {
+	my $c1 = $table_rows{$t}{'original'};
+	my $c2 = $pddbh->selectrow_array("SELECT COUNT(*) FROM $t");
+	$table_rows{$t}{'deleted_by_analysis_id'} = $c1-$c2;
+}
 
 ##################
 # seq_region_ids #
@@ -259,7 +368,7 @@ my $sth = $pddbh->prepare(qq(
         select seq_region_id, sr.coord_system_id, cs.name
         from seq_region sr, coord_system cs
         where sr.coord_system_id = cs.coord_system_id
-        and sr.name in ('$chr_name')
+        and sr.name in ('$chr_to_keep')
     ));
 
 #contig seq_region_ids
@@ -282,10 +391,12 @@ my $sth2 =  $pddbh->prepare(qq(
     ));
 $sth->execute;
 
-#there might need to be some code here for other coord systems, eg zfish scaffolds ?
-#if so then will need to code up deleting of these from assembly table as well (see below)
+#####
+#there will need to be some code here for other coord systems such as zfish scaffolds.
+#Will also need to code up deleting of these from assembly table as well (see below)
+#####
 
-#get all relevant IDs
+#get IDs of all seqregions to be kept
 my %seqregions;
 my @all_ids;
 my @assembled_ids;
@@ -297,37 +408,34 @@ while ((my ($id, $cs_id, $csname) = $sth->fetchrow_array)) {
 	while ((my ($id, $csname) = $sth1->fetchrow_array)) {
 		push @{$seqregions{$csname}},$id;
 		push @all_ids,$id;
-		push @assembled_ids,$id;
 		$sth2->execute($id,$cs_id);
 		while ((my ($id, $csname) = $sth2->fetchrow_array)) {
 			push @{$seqregions{$csname}},$id;
 			push @all_ids,$id;
+			push @assembled_ids,$id;
 		}
 	}	
 }
 
-warn Dumper(\%seqregions);
-
+#warn Dumper(\%seqregions);
 # get coordinate systems used from meta_coord
-$cssth = $pddbh->prepare(qq(
+my $cssth = $pddbh->prepare(qq(
                SELECT mc.table_name, cs.name
                FROM   meta_coord mc, coord_system cs
                WHERE  mc.coord_system_id = cs.coord_system_id
-               AND    mc.table_name in ('$target_tables')
        ));
 $cssth->execute();
 
 #delete from feature tables
-while (my ($t, $cs_name) = $cssth->fetchrow){
+while (my ($t, $cs_name) = $cssth->fetchrow_array){
 	if (! $support->param('dry_run')) {
-		my $ids_to_keep = join("','",@{$seq_regions{$cs_name}});
+		my $ids_to_keep = join("','",@{$seqregions{$cs_name}});
 		my $sql = qq(DELETE from $t WHERE seq_region_id not in ('$ids_to_keep'));
 		$support->log_stamped("Deleting from $t by seq_region_id...\n",1);
 		$table_rows{$t}{'deleted_by_seq_region_id'} = $pddbh->do($sql);
-		$support->log_stamped("...finished deleting from $t by seq_region_id...\n\n",1);
+		$support->log_stamped("...finished deleting from $t by seq_region_id.\n\n",1);
 	}
 }
-
 
 ##################
 # seq_region etc #
@@ -345,328 +453,53 @@ if (! $support->param('dry_run')) {
 	$support->log_stamped("Deleting from assembly by seq_region_id...\n",1);	
 	my $sql = qq(DELETE FROM assembly where asm_seq_region_id not in ('$assembled_ids_to_stay'));
 	$table_rows{'assembly'}{'deleted_by_seq_region_id'} = $pddbh->do($sql);
-	$support->log_stamped("...finished deleting from assembly by seq_region_id...\n\n",1);
-	}
+	$support->log_stamped("...finished deleting from assembly by seq_region_id.\n\n",1);
+
+	################
+	# other tables #
+	################
+	
+	#repeat consensus
+	$support->log_stamped("Deleting from repeat_consensus by null values...\n",1);
+	$sql = qq(DELETE    rc
+              FROM      repeat_consensus rc
+              LEFT JOIN repeat_feature rf
+              ON        rc.repeat_consensus_id = rf.repeat_consensus_id
+              WHERE     rf.repeat_consensus_id IS NULL);
+	$table_rows{'repeat_consensus'}{'deleted_by_null_values'} = $pddbh->do($sql);
+	$support->log_stamped("...finished deleting from repeat_consensus by null values.\n\n",1);
+
+	#prediction exon
+	$support->log_stamped("Deleting from prediction exon by null values...\n",1);
+	$sql = qq(DELETE    pe
+              FROM      prediction_exon pe
+              LEFT JOIN prediction_transcript pt
+              ON        pe.prediction_transcript_id = pt.prediction_transcript_id
+              WHERE     pt.prediction_transcript_id IS NULL);
+	$table_rows{'prediction_exon'}{'deleted_by_null_values'} = $pddbh->do($sql);
+	$support->log_stamped("...finished deleting from prediction_exon by null values.\n\n",1);
 }
 
-
-
-
-#########################
-# seq_region_attributes #
-#########################
-
-	$gtn = $pdbh->prepare(qq(
-        select distinct(cs.name)
-        from seq_region_attrib sra, seq_region sr, coord_system cs
-        where sra.seq_region_id = sr.seq_region_id
-        and sr.coord_system_id = cs.coord_system_id
-        and sr.name =  \'$chr_name\'
-    ));
-	$gtn->execute();
-	$n  = 0;
-	$na = 0;
-	while (my ($cs_name) = $gtn->fetchrow){
-		foreach my $sr (@{$seqregions{$cs_name}}) {
-			push @{$sets{'seq_region_attrib'}{'seq_region_id'}}, $sr;
-		}
-	}
-	
-	#dna
-	$gtn = $pdbh->prepare(qq(
-        select distinct(cs.name)
-        from dna d, seq_region sr, coord_system cs
-        where d.seq_region_id = sr.seq_region_id
-        and sr.coord_system_id = cs.coord_system_id
-     ));
-	$gtn->execute();
-	while (my ($cs_name) = $gtn->fetchrow){
-		foreach my $sr (@{$seqregions{$cs_name}}) {
-			push @{$sets{'dna'}{'seq_region_id'}}, $sr;
-		}
-	}
-	
-	#seq_region
-	foreach my $cs_name (qw(chromosome contig clone)) {	
-		foreach my $sr (@{$seqregions{$cs_name}}) {
-			push @{$sets{'seq_region'}{'seq_region_id'}}, $sr;
-		}
-	}
-	
-	#assembly - select on both asm_seq_region (for clones and chromosomes) and 
-	# cmp_seq_region (for contigs)
-	foreach my $cs_name (qw(chromosome clone)) {	
-		foreach my $sr (@{$seqregions{$cs_name}}) {
-			push @{$sets{'assembly'}{'asm_seq_region_id'}}, $sr;
-		}
-	}
-	foreach my $sr (@{$seqregions{'contig'}}) {
-		push @{$sets{'assembly'}{'cmp_seq_region_id'}}, $sr;
-	}
-	
-	
-#	warn Dumper(\%sets);
-	
-	#################################################################################
-	# Read in all tables and set constraint to 's' (ie dump structure only). Then   #
-	# read in the contraints in the HEREDOC, updating the above as needed ('s' =    #
-	# table structure only, 'a' = table structure and all data, 'c' = constrained)  #
-	#################################################################################
-	
-	my %constraints;
-	
-	#read all tables;
-	map { $_ =~ s/`//g; $constraints{$_} = ['s']; } $pdbh->tables;
-	
-	#read details of constrained tables from HEREDOC
-	my @ignored_tables;
-	my $txt = &constraints;
- TABLE:
-	foreach my $line (split(/\n/,$txt)){
-		next if ($line =~ /^\s*$/);
-		next if ($line =~ /^\#/);
-		if ($line=~/^(.+)\#/){
-			$line=$1;
-		}
-		
-		my ($table,@constraints) = split(/\s+/,$line);
-		
-		#sanity check
-		if ($table && (! exists($constraints{$table}))) {
-			$support->log_warning("You have definitions for a table ($table) that is not found in the pipeline database. Skipping\n\n");
-			next TABLE;
-	}
-		
-		#if we don't want to dump align_features features for then set type from 'a' to 's'
-		if ($table=~/align_feature$/ && $no_feature) {
-			$support->log("\'no_feature\' option used: skipping features from $table\n");
-			$constraints{$table} = ['s'];
-			next TABLE;
-		}
-		
-		#dump all data if that is how it's defined
-		if ($constraints[0] eq 'a'){
-			$constraints{$table} = ['a'];
-			next TABLE;
-		}
-		
-		# ignore tables that have been defined as not being part of ensembl
-		if ($constraints[0] eq 'i'){
-			delete $constraints{$table};
-			push @ignored_tables, $table;
-			next TABLE;
-		}
-		
-		#otherwise read in the constraints
-		$constraints{$table} = ['c'];	
-		foreach my $cons (@constraints) {
-			my ($col,$method) = split ':',$cons;
-			if ($method eq 'code') {
-				push @{$constraints{$table}}, $col; 
-			}
-			else {
-				$support->log_warning("You have an unrecognised method for constraint $col\n");
-			}
-		}
-	}
-	
-	#more sanity checking - ensure that the tables parsed in the script (ie code) do have an entry in the HEREDOC
-	foreach my $table (keys %sets) {
-		my $method = $constraints{$table}[0];
-		if ($method ne 'c') {
-			unless ($table=~/align_feature$/ && $no_feature) {
-				$support->log_warning("You have constraints for a table ($table) generated in the code, but this is not defined in the HEREDOC in the script, please check. Skipping this table\n\n");
-				delete $constraints{$table};
-			}
-		}
-	}
-	
-	#don't dump structure-only tables, or other generic tables if we're adding data
-	if ($support->param('add_chr') || (! $first_chr )) {
-		foreach my $table (keys %constraints) {
-			if ($constraints{$table}[0] eq 's') {
-				delete $constraints{$table};
-			}
-			if (grep {$table eq $_ } qw(analysis meta_coord attrib_type coord_system meta) ) {
-				delete $constraints{$table};
-			}
-		}
-	}
-	
-	#do some logging the first time around:
-	if ($first_chr) {
-		my $sorted;
-		foreach my $table (keys %constraints) {
-			my $t = $constraints{$table}->[0];
-			#	push @{$sorted->{$t}}, { $table => $constraints{$table} };
-			$sorted->{$t}{$table} = $constraints{$table};
-		}
-		
-		my $log = "The following tables will be ignored (ie not put into Vega):\n";
-		foreach my $table (@ignored_tables) {
-			$log .="\t$table\n";
-		}
-		$log .= "The following tables will be dumped with all their data:\n";
-		foreach my $table (keys %{$sorted->{'a'}}) {
-			$log .= "\t$table\n";
-		}
-		$log .= "The following tables will be filtered as follows:\n";
-		foreach my $table (keys %{$sorted->{'c'}}) {
-			my @filters =  @{$constraints{$table}};
-			shift @filters;
-			my $t = join ' and ', @filters;
-			$log .= "\t$table: $t\n";
-		}
-		$log .= "The rest of the pipeline tables will be copied just with their structure (no data)\n";
-		
-		unless ($support->user_proceed("$log\nDo you want to proceed ?")) {
-			exit;
-		}
-	}
-
-	#########################
-	# create mysql commands #
-	#########################
-	
-	#initialise mysqldump statements
-	my $cs;
-	if($character_set) {$cs="--default-character-set=\"$character_set\"";}
-	my $sei;
-	if($opt_c) {$sei='--skip-extended-insert';}
-	my $user   = $support->param('pipeuser');
-	my $dbname = $support->param('pipedbname');
-	my $host   = $support->param('pipehost');
-	my $port   = $support->param('pipeport');
-	my $nocreate = '';
-	if ($support->param('add_chr') || (! $first_chr) ) {
-		$nocreate = '-t';
-	}
-	my $mcom   = "mysqldump --opt --skip-lock-tables $sei $cs --single-transaction -q -u $user -P $port -h $host $dbname $nocreate";
-
-	#create statements
-	my @mysql_commands;
-
-#	warn Dumper(\%constraints);
-	
-	while (my ($table,$details) = each (%constraints) ) {
-		my $condition = shift @$details;
-		if ($condition eq 's') {
-			push @mysql_commands, "$mcom -d $table";
-		}
-		elsif ($condition eq 'a') {
-			push @mysql_commands, "$mcom $table";
-		}
-		elsif ($condition eq 'c') {
-			my $extra = " --where \"";
-			my $i = 0;
-			foreach my $cons (@$details) {
-#				warn "$table--$cons";
-				my @values = @{$sets{$table}{$cons}};
-				my $set = join ',', @values;
-				my $join = $i ? ' and' : '';
-				$extra .=  "$join $cons in ($set)";
-				$i++;
-			}
-			$extra .= " \" $table";
-			push @mysql_commands, "$mcom $extra";
-		}	
-	}
-
-	##################
-	# do the dumping #
-	##################
-	
-	#warn Dumper(\@mysql_commands);
-	
-	if (!$support->param('dry_run')) {
-		foreach my $command (@mysql_commands) {
-			open(MYSQL,"$command |") || die "cannot open mysql";
-			my $enable;
-			my $flag_disable;
-			while (<MYSQL>) {
-				s/(TYPE|ENGINE)=(\w+)/$1=$dbtype/;
-				if (/ALTER\sTABLE\s\S+\sENABLE\sKEYS/){
-					$enable=$_;
-				}
-				elsif (/ALTER\sTABLE\s\S+\sDISABLE\sKEYS/){
-					if(!$flag_disable){
-						# only write once
-						$flag_disable=1;
-						print OUT;
-					}
-				}
-				else {
-					print OUT;
-				}
-			}
-			print OUT $enable if ($enable);
-			close(MYSQL);
-		}
-		$support->log("SQL for chr $chr_name dumped to $file\n");
-	}
-	else {
-		$support->log("\nNo SQL dumped since this is a dry run\n");
-	}
-	$first_chr = 0;
-
+#count no of entries left
+foreach my $t (@target_tables) {
+	($table_rows{$t}{'final'}) = $pddbh->selectrow_array("SELECT COUNT(*) FROM $t");
 }
-close(OUT);
+
+$support->log("\nSUMMARY\\n=======\n");
+foreach my $t (sort keys %table_rows) {
+	my $c = '-' x length($t);
+	$support->log("\nTable $t\n$c\n");
+	foreach my $type (sort keys %{$table_rows{$t}}) {
+		next unless ($type =~ /original|final/);
+		$support->log("$type number of entries = $table_rows{$t}{$type}\n",1);
+	}
+	foreach my $type (keys %{$table_rows{$t}}) {
+		next if ($type =~ /original|final/);
+		$support->log("$type = $table_rows{$t}{$type}\n",2);
+	}
+}
+	
+#warn Dumper(\%table_rows);
 
 $support->finish_log;
 
-#######################################################################
-# define the contraints on tables where data is to be transferred     #
-# all tables not specified here will have only their structure copied #
-#######################################################################
-
-# All tables are by default dumped with just their structure. Tables for which data is also to be dumped
-# are defined here, with a white space seperated list defining the columns on which to constrain mysqldump.
-# A value of 'a' determines that all data in the table is to be dumped, and 'i' that the table should be
-# ignored. For others, the value after the colon is usefull in that it defines how the specific values of
-# the column are identified.
-# - code -> specific code in the script above
-# - clone / contig / chromosome -> explicitly define the coord_system to used (not actually used)
-
-sub constraints {
-	my $txt;
-	$txt=<<ENDOFTEXT;
-analysis              analysis_id:code      # filtering in code (without _raw)
-assembly              asm_seq_region_id:code      cmp_seq_region_id:code
-dna                   seq_region_id:code
-dna_align_feature     seq_region_id:code          analysis_id:code
-protein_align_feature seq_region_id:code          analysis_id:code
-simple_feature        seq_region_id:code          analysis_id:code
-
-meta_coord            table_name:code       # special filtering in code (no exon/transcript/gene)
-prediction_exon       seq_region_id:code    # there is filtering on analysis_id, but because of link to prediction_exon then do this finish_vega_creation
-prediction_transcript seq_region_id:code
-repeat_feature        seq_region_id:code
-seq_region            seq_region_id:code    # use all coord_systems
-seq_region_attrib     seq_region_id:code    # work out which coord_systems are used 
-
-attrib_type           a                     # should be identical to Vega
-coord_system          a
-meta                  a                     # should be identical to Vega
-repeat_consensus      a                     # delete extra entries in finsh_vega_creation
-
-dna_align_feature_history        i
-hit_description                  i
-input_id_analysis                i
-input_id_seq_region              i
-input_id_type_analysis           i
-job                              i
-job_status                       i
-protein_align_feature_history    i
-rule_conditions                  i
-rule_goal                        i
-
-ENDOFTEXT
-	return $txt;
-}
-
-
-#need assembly_exception entries ?
-
-#meta_coord table ?
-
-#repeat consensus
