@@ -16,7 +16,7 @@ sub new {
 
     my $self = bless {
         '_dba' => $dba,
-        '_ql'  => ($qnames ? {map {($_ => [])} @$qnames } : {}),
+        '_ql'  => ($qnames ? {map {(uc($_) => [])} @$qnames } : {}),
     }, $class;
 
     return $self;
@@ -123,7 +123,7 @@ sub register_feature {
         $loc->assembly( $chr_slice->seq_region_name() );
         $loc->component_names( $component_names );
 
-        push @{ $self->qnames_locators()->{$qname} }, $loc;
+        push @{ $self->qnames_locators()->{uc($qname)} }, $loc;
     }
 }
 
@@ -291,7 +291,8 @@ sub generate_output {
             my $asm = $loc->assembly();
             if(!$filter_atype || ($filter_atype eq $asm)) {
                 $output_string .= join("\t",
-                    $qname, $loc->qtype(),
+                    $loc->qname(), # take it from $loc to avoid case confusion
+                    $loc->qtype(),
                     join(',', @{$loc->component_names()}),
                     $loc->assembly())."\n";
                 $count++;
