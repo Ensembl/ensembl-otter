@@ -352,16 +352,16 @@ sub initialise {
     $top->bind('<Control-h>', $hunter);
     $top->bind('<Control-H>', $hunter);
     
-    my $refesher = sub{
+    my $refresh_locks = sub{
 	    $top->Busy;
 	    $self->refresh_column(7) ;
 	    $self->refresh_column(8) ;
         $top->Unbusy;
     };
-    $self->make_button($button_frame_2, 'Refresh Locks', $refesher, 0);
-    $top->bind('<Control-r>', $refesher);
-    $top->bind('<Control-R>', $refesher);
-    $top->bind('<F5>',        $refesher);
+    $self->make_button($button_frame_2, 'Refresh Locks', $refresh_locks, 0);
+    $top->bind('<Control-r>', $refresh_locks);
+    $top->bind('<Control-R>', $refresh_locks);
+    $top->bind('<F5>',        $refresh_locks);
     
     my $refresh_status = sub {
 	    $top->Busy;
@@ -614,6 +614,7 @@ sub run_lace_on_slice{
     my $title = qq`lace for SLICE $start - $end ` . $self->name;
     $self->_open_SequenceSet($ss, $title);
 }
+
 ## allows Searched SequenceNotes.pm to inherit the main part of the run_lace method
 sub _open_SequenceSet{
     my ($self , $ss , $title) = @_ ;
@@ -826,7 +827,6 @@ sub max_per_page{
 }
 sub draw_paging_buttons{
     my ($self) = @_;
-    return () unless $self->_allow_paging();
 
     my $cur_min = $self->_user_first_clone_seq();
     my $cur_max = $self->_user_last_clone_seq();
@@ -897,41 +897,61 @@ sub draw_paging_buttons{
                                 -window => $pg_frame);
 }
 
-sub draw_subset {
-    my ($self, $subset_tag, $pgsize) = @_;
+sub draw_all {
+    my ($self)   = @_;
 
-    my $pghalfsize = $pgsize ? int($pgsize/2)+1 : 15;
+    $self->_currently_paging(0);
+
+    my $no_of_cs = scalar(@{ $self->get_CloneSequence_list() });
+
+    $self->_user_first_clone_seq(1);
+    $self->_user_last_clone_seq($no_of_cs);
+    return $self->draw();
+}
+
+sub draw_subset {
+    my ($self, $subset_tag) = @_;
 
     my $ss = $self->SequenceSet();
-    my $ind = $ss->get_subsets_first_index($subset_tag);
+    my ($first, $last) = $ss->get_subsets_first_last_index($subset_tag);
 
-    if(defined($ind)) {
-        $self->_user_first_clone_seq($ind-$pghalfsize);
-        $self->_user_last_clone_seq($ind+$pghalfsize);
-        return $self->draw();
+    if(defined($first)) {
+        if($self->_currently_paging()) {
+            my $length = $last - $first + 1;
+            my $max_pp   = $self->max_per_page;
+
+            my $start = ($length+2 <= $max_pp)  # first & last are 0-based!
+                ? int(($last+$first-$max_pp)/2)
+                : $first;
+            my $end   = $start + $max_pp - 1;
+
+            $self->_user_first_clone_seq( $start );
+            $self->_user_last_clone_seq(  $end );
+
+            return $self->draw();
+        } else {
+            return $self->draw_all();
+        }
     } else {
-        print STDERR "subset '$subset_tag' not found in the SequenceSet '".
-            $self->SequenceSet()->name()."' !\n";
+        $self->message("subset '$subset_tag' not found in the SequenceSet '"
+                        .$self->SequenceSet()->name()."' !");
+        return $self->draw_all();
     }
 }
 
-sub draw_range{
+sub draw_range {
     my ($self)   = @_;
-    my $cs_list  = $self->get_CloneSequence_list;
-    my $no_of_cs = scalar(@$cs_list);
-    my $max_pp   = $self->max_per_page;
 
     unless($self->_allow_paging()){
-        $self->_user_first_clone_seq(1);
-        $self->_user_last_clone_seq($no_of_cs);
-        return $self->draw();
+        return $self->draw_all();
     }
 
-    my $trim_window = $self->{'_trim_window'}; 
-
+    my $no_of_cs = scalar(@{ $self->get_CloneSequence_list() });
+    my $max_pp   = $self->max_per_page;
     $self->_user_first_clone_seq(1);
     $self->_user_last_clone_seq($max_pp);
 
+    my $trim_window = $self->{'_trim_window'}; 
     unless ($trim_window){
         my $master = $self->canvas->toplevel;
         $self->{'_trim_window'} = $trim_window = TransientWindow::OpenRange->new($master, 'Open Range');
@@ -945,6 +965,9 @@ sub draw_range{
             $tw->hide_me;
             my $tl = $self->canvas->toplevel;
             $tl->deiconify; $tl->raise; $tl->focus;
+            
+            $self->_currently_paging(1);
+
             # need to copy input across.
             $self->_user_first_clone_seq(${$tw->text_variable_ref('user_min')});
             $self->_user_last_clone_seq (${$tw->text_variable_ref('user_max')});
@@ -953,11 +976,10 @@ sub draw_range{
         $trim_window->action('openAll', sub { 
             my ($tw) = @_;
             $tw->hide_me;
-            $self->_user_first_clone_seq(1);
-            $self->_user_last_clone_seq(${$tw->text_variable_ref('total')});
             my $tl = $self->canvas->toplevel;
             $tl->deiconify; $tl->raise; $tl->focus;
-            $self->draw();
+
+            $self->draw_all();
         });
         $trim_window->initialise();
         $trim_window->draw();
@@ -967,10 +989,16 @@ sub draw_range{
     return 1;
 }
 
-sub _allow_paging{
+sub _allow_paging {
     my $self = shift;
     $self->{'_allow_paging'} = shift if @_;
     return ($self->{'_allow_paging'} ? 1 : 0);
+}
+
+sub _currently_paging {
+    my $self = shift;
+    $self->{'_currently_paging'} = shift if @_;
+    return ($self->{'_currently_paging'} ? 1 : 0);
 }
 
 sub draw {
@@ -1057,7 +1085,9 @@ sub draw {
     $self->draw_row_backgrounds($row_count, $gap_pos);
     #print STDERR " done\n";
 
-    $self->draw_paging_buttons();
+    if($self->_currently_paging()) {
+        $self->draw_paging_buttons();
+    }
 
     $self->message($self->empty_canvas_message) unless scalar @$cs_list;
     $self->fix_window_min_max_sizes;
