@@ -196,7 +196,9 @@ sub find_by_feature_attributes {
 
             my $feature = $adaptor->fetch_by_dbID($feature_id);
 
-            $self->register_feature($qname, $qtype, $feature);
+            if($feature->is_current()) {
+                $self->register_feature($qname, $qtype, $feature);
+            }
         }
     }
 }
