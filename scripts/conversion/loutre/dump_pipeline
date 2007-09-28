@@ -33,14 +33,15 @@ Options:
 
 This script uses MySQLdump to read a pipeline database (InnoDB) into a file that can be used
 to create a new Vega (MyISAM) database. By default only the structure for the tables will be
-read into the file. The exceptions are tables defined in the HEREDOC at the end of the script
-- tables to be ignored ('i'), tables where all data is also dumped ('d'), and tables where the
-features being dumped are restricted by analysis_id ('analysis_id'). Note that earlier versions
-of this script (eg 1.6) attempted to restrict the transfer of all features on analysis_id and
-seq_region_id - this worked for small database but fell over with human.
+read into the file - the exceptions are tables defined in the HEREDOC at the end of the script
+- tables to be completely ignored ('i'), tables where all data is also dumped ('d'), and
+tables where the features being dumped are restricted by analysis_id ('analysis_id'). This
+last filter is just for *_raw features for *_align_feature tables - if you want to transfer
+all align_features then just edit the HEREDOC.
+Note that earlier versions of this script (eg 1.6) attempted to restrict the transfer of all features on analysis_id and seq_region_id - this worked for small database but fell over with human.
 
-Transfer of features from the dna_ and protein_align_feature tables can be prevented using
-the -no_feature option
+Transfer of features from the dna_ and protein_align_feature tables can be completely
+prevented using the -no_feature option to the script.
 
 To do: create database and load from .sql file
 
@@ -155,8 +156,6 @@ while (my ($analysis_id,$logic_name) = $gtn->fetchrow){
 	foreach my $t qw(analysis protein_align_feature dna_align_feature) {
 		push @{$analysis_ids{$t}{'analysis_id'}}, $analysis_id;
 	}
-#	next if ($logic_name=~/vertrna|est2genome|uniprot|exonerate|refseq/i);
-#	push @{$analysis_ids{'simple_feature'}{'analysis_id'}}, $analysis_id;
 }
 
 #warn Dumper(\%analysis_ids);
@@ -189,7 +188,7 @@ foreach my $line (split(/\n/,$txt)){
 		next TABLE;
 	}
 		
-	#if we don't want to dump align_features features for then set type to 's'
+	#if we don't want to dump align_features features then set type to 's'
 	if ($table=~/align_feature$/ && $no_feature) {
 		$support->log("\'no_feature\' option used: skipping features from $table\n");
 		$table_constraints{$table} = 's';
@@ -264,7 +263,6 @@ my $mcom   = "mysqldump --opt --skip-lock-tables $sei $cs --single-transaction -
 
 #create statements
 my @mysql_commands;
-
 while (my ($table,$condition) = each (%table_constraints) ) {
 	next if ($condition eq 'i');
 	if ($condition eq 's') {
