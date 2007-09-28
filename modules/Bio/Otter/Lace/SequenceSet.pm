@@ -323,18 +323,20 @@ sub get_subset_hash {
     return \%state_hash;
 }
 
-sub get_subsets_first_index {
+sub get_subsets_first_last_index { # They are 0-based indices
     my ($self, $subset_tag) = @_;
 
+    my ($first, $last);
     my $cs_list = $self->CloneSequence_list;
     foreach my $i (0..scalar(@$cs_list)-1) {
         my $cs = $cs_list->[$i];
         my $fullname = $cs->accession().'.'.$cs->sv();
         if($cs->belongs_to($subset_tag)) {
-            return $i;
+            unless(defined($first)) { $first = $i; }
+            $last = $i;
         }
     }
-    return;
+    return ($first, $last);
 }
 
 1;

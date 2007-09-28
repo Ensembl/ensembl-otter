@@ -325,7 +325,7 @@ sub open_sequence_set_by_ssname_subset {
     if( $subset_tag ) { # we assume that whoever calls this has set the subset previously
         $sn->draw_subset($subset_tag);
     } elsif(! $sn->canvas->find('withtag', 'all')) {
-        $sn->draw_range;    
+        $sn->draw_all();    
     }
 
     $self->default_cursor();
