@@ -81,7 +81,7 @@ sub do_search {
 
         my $qname        = $locator->qname();
         my $qtype        = $locator->qtype();
-        my $asm          = $locator->assembly();
+        my $ssname       = $locator->assembly();
         my $clone_names  = $locator->component_names();
         my $clone_number = scalar(@$clone_names);
 
@@ -89,56 +89,35 @@ sub do_search {
 
                 # PREPARE TO set the subset in the SequenceSet
             my $ds = $self->DataSet();
-            my $ss = $ds->get_SequenceSet_by_name($asm);
-            my $subset_tag = "$asm:Found:$qname";
+            my $ss = $ds->get_SequenceSet_by_name($ssname);
+            my $subset_tag = "$ssname:Found:$qname";
 
             $qtype=~s/_/ /g; # underscores become spaces for readability
 
-            my $label = $result_frame->Label(
-                -text => "$qname [$qtype]  found in $asm  on clone"
-                            .(($clone_number>1) ? 's ' : ' '),
+            my $label1 = $result_frame->Label(
+                -text => "$qname [$qtype] found on ",
             )->pack(-side => 'left', -fill => 'x');
 
-            my $center_index = int(($clone_number-1)/2);
-            my %show_clone_index = (
-                0               => 1,               # always show the first one
-                ($center_index==2) ? (1 => 1) : (), # show the second one if there is only one in the gap
-                $center_index   => 1,               # always show the middle one
-                ($clone_number==5) ? (3 => 1) : (), # show the fourth one if there is only one in the gap
-                $clone_number-1 => 1,               # always show the last one
-            );
+            my $button = $result_frame->Button(
+                -text => $ssname,
+                -command => sub {
+                    print STDERR "Opening '$subset_tag'...\n";
 
-            my $skipped_number = 0;
-            foreach my $i (0..scalar(@$clone_names)-1) {
+                        # ACTUALLY SETTING the subset in the SequenceSet
+                        # (the first line forcefully reloads, has to be more flexible)
+                    $ds->fetch_all_CloneSequences_for_SequenceSet($ss, 1);
+                    $ss->set_subset($subset_tag, $clone_names);
 
-                if($show_clone_index{$i}) {
-                    if($skipped_number) {
-                        my $skipped_button = $result_frame->Label(
-                            -text => "...($skipped_number clones skipped)...",
-                        )->pack(-side => 'left', -fill => 'x');
-                        $skipped_number = 0;
-                    }
+                    $self->SequenceSetChooser()->open_sequence_set_by_ssname_subset(
+                            $ssname, $subset_tag
+                    );
+                },
+            )->pack(-side => 'left');
 
-                    my $clone_name = $clone_names->[$i];
-                    my $button = $result_frame->Button(
-                        -text => $clone_name,
-                        -command => sub {
-                            print STDERR "Opening '$subset_tag'...\n";
+            my $label2 = $result_frame->Label(
+                -text => " ($clone_number clone".(($clone_number>1) ? 's) ' : ') '),
+            )->pack(-side => 'left', -fill => 'x');
 
-                                # ACTUALLY SETTING the subset in the SequenceSet
-                                # (the first line forcefully reloads, has to be more flexible)
-                            $ds->fetch_all_CloneSequences_for_SequenceSet($ss, 1);
-                            $ss->set_subset($subset_tag, $clone_names);
-
-                            $self->SequenceSetChooser()->open_sequence_set_by_ssname_subset(
-                                    $asm, $subset_tag
-                            );
-                        },
-                    )->pack(-side => 'left');
-                } else {
-                    $skipped_number++;
-                }
-            }
         } else {
             my $label = $result_frame->Label(
                 -text => "$qname not found",
