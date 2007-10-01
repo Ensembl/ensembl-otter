@@ -692,7 +692,7 @@ sub make_otterpipe_DataFactory {
     if ($fetch_pipe) {
         @analysis_names = grep $logic_to_load->{$_}, keys %$logic_to_load;
     }
-    push @analysis_names, 'otter';
+    # push @analysis_names, 'otter';
 
     my $collect = $self->MethodCollection;
 
