@@ -163,7 +163,12 @@ sub init_AceDatabase {
     $self->add_misc_acefile;
     $self->write_otter_acefile($ss);
     $self->write_dna_data($ss);
-    $self->write_pipeline_data($ss);
+
+    my $fetch_pipe = Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
+    if ($fetch_pipe) {
+        $self->write_pipeline_data($ss);
+    }
+
     $self->write_methods_acefile;
     $self->initialize_database;
     if ($self->write_local_blast()) {
@@ -682,17 +687,12 @@ sub make_otterpipe_DataFactory {
 
     ##----------code to add all of the ace filters to data factory-----------------------------------
 
-    my $fetch_pipe = Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
     my $debug = $client->debug();
     
     my $logic_to_load  = $client->option_from_array([ $dsname, 'use_filters' ]);
     my $module_options = $client->option_from_array([ $dsname, 'filter' ]);
 
-    my @analysis_names;
-    if ($fetch_pipe) {
-        @analysis_names = grep $logic_to_load->{$_}, keys %$logic_to_load;
-    }
-    # push @analysis_names, 'otter';
+    my @analysis_names = grep $logic_to_load->{$_}, keys %$logic_to_load;
 
     my $collect = $self->MethodCollection;
 
