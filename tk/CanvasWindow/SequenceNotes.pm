@@ -153,7 +153,7 @@ sub column_methods {
                     my $cs = shift;
                     my $acc_sv = $cs->accession .'.'. $cs->sv;
                     my $fontcolour = $cs->belongs_to() # currently we are only interested in whether it belongs *anywhere* or not
-                                        ? 'DarkRed'
+                                        ? 'red'
                                         : 'black';
                     return {-text => $acc_sv, -font => $bold, -fill => $fontcolour, -tags => ['searchable']};
                 }],
@@ -162,7 +162,7 @@ sub column_methods {
                     # Use closure for font definition
                     my $cs = shift;
                     my $fontcolour = $cs->belongs_to() # currently we are only interested in whether it belongs *anywhere* or not
-                                        ? 'DarkRed'
+                                        ? 'red'
                                         : 'black';
                     return {-text => $cs->clone_name, -font => $bold, -fill => $fontcolour, -tags => ['searchable'] };
                 }],
@@ -916,7 +916,7 @@ sub draw_subset {
     my ($first, $last) = $ss->get_subsets_first_last_index($subset_tag);
 
     if(defined($first)) {
-        if($self->_currently_paging()) {
+        # if($self->_currently_paging()) {
             my $length = $last - $first + 1;
             my $max_pp   = $self->max_per_page;
 
@@ -929,9 +929,9 @@ sub draw_subset {
             $self->_user_last_clone_seq(  $end );
 
             return $self->draw();
-        } else {
-            return $self->draw_all();
-        }
+        # } else {
+        #     return $self->draw_all();
+        # }
     } else {
         $self->message("subset '$subset_tag' not found in the SequenceSet '"
                         .$self->SequenceSet()->name()."' !");
