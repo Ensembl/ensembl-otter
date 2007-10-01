@@ -644,7 +644,6 @@ sub write_dna_data {
         'chromosome', 'Otter', $chr_name, $chr_start, $chr_end);
     print $ace_fh $dna_filter->ace_data($smart_slice);
 
-    $dna_filter->drop_file_handle;
     close $ace_fh;
 }
 
