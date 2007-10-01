@@ -639,11 +639,10 @@ sub write_dna_data {
     $self->add_acefile($ace_filename);
     my $ace_fh = gensym();
     open $ace_fh, "> $ace_filename" or confess "Can't write to '$ace_filename' : $!";
-    $dna_filter->file_handle($ace_fh);
 
     my $smart_slice = Bio::Otter::Lace::Slice->new($client, $dsname, $ssname,
         'chromosome', 'Otter', $chr_name, $chr_start, $chr_end);
-    $dna_filter->ace_data($smart_slice);
+    print $ace_fh $dna_filter->ace_data($smart_slice);
 
     $dna_filter->drop_file_handle;
     close $ace_fh;
