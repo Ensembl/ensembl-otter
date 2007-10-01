@@ -917,6 +917,9 @@ sub draw_subset {
 
     if(defined($first)) {
         # if($self->_currently_paging()) {
+
+            $self->_currently_paging(1);
+
             my $length = $last - $first + 1;
             my $max_pp   = $self->max_per_page;
 
