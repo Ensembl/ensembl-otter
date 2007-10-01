@@ -162,6 +162,7 @@ sub init_AceDatabase {
 
     $self->add_misc_acefile;
     $self->write_otter_acefile($ss);
+    $self->write_dna_data($ss);
     $self->write_pipeline_data($ss);
     $self->write_methods_acefile;
     $self->initialize_database;
@@ -194,11 +195,11 @@ sub write_local_blast {
     $blast->AceDatabase($self);
     $blast->initialise or return;
     my $ace_text = $blast->run or return;
-    my $dir = $self->home;
-    my $blast_ace = "$dir/rawdata/local_blast_search.ace";
-    open(my $fh, "> $blast_ace") or die "Can't write to '$blast_ace' : $!";
-    print $fh $ace_text;
-    close $fh or confess "Error writing to '$blast_ace' : $!";
+
+    my $ace_filename = $self->home . '/rawdata/local_blast_search.ace';
+    open(my $ace_fh, "> $ace_filename") or die "Can't write to '$ace_filename' : $!";
+    print $ace_fh $ace_text;
+    close $ace_fh or confess "Error writing to '$ace_filename' : $!";
 
     # Need to add new method to collection if we don't have it already
     my $coll = $self->MethodCollection;
@@ -208,7 +209,7 @@ sub write_local_blast {
         $self->write_methods_acefile;
     }
 
-    $self->add_acefile($blast_ace);
+    $self->add_acefile($ace_filename);
 }
 
 sub write_otter_acefile {
@@ -234,13 +235,12 @@ sub write_otter_acefile {
     my $ace_text .= Bio::Otter::Converter::otter_to_ace($ss->dataset_name, $genes, $slice, $sequence, $tiles, $feature_set, $assembly_tag_set);
 
         # Storing ace_text in a file
-    my $dir = $self->home;
-    my $ace_file_name = "$dir/rawdata/otter.ace";
-    my $ace_file = gensym();
-    open $ace_file, "> $ace_file_name" or die "Can't write to '$ace_file_name'";
-    print $ace_file $ace_text;
-    close $ace_file or confess "Error writing to '$ace_file_name' : $!";
-    $self->add_acefile($ace_file_name);
+    my $ace_filename = $self->home . '/rawdata/otter.ace';
+    my $ace_fh = gensym();
+    open $ace_fh, "> $ace_filename" or die "Can't write to '$ace_filename'";
+    print $ace_fh $ace_text;
+    close $ace_fh or confess "Error writing to '$ace_filename' : $!";
+    $self->add_acefile($ace_filename);
 }
 
 sub try_and_lock_the_block {
@@ -625,36 +625,56 @@ sub db_initialized {
     return $self->{'_db_initialized'};
 }
 
-sub write_pipeline_data {
-    my( $self, $ss, $ace_file ) = @_;
+sub write_dna_data {
+    my( $self, $ss ) = @_;
 
     my $client  = $self->Client();
     my ($dsname, $ssname, $chr_name, $chr_start, $chr_end) = $ss->selected_CloneSequences_parameters;
 
-    my $factory = $self->{'_pipeline_data_factory'} ||= $self->make_otterpipe_DataFactory($dsname, $ssname);
+    require Bio::EnsEMBL::Ace::Otter_Filter::DNA;
+    my $dna_filter = Bio::EnsEMBL::Ace::Otter_Filter::DNA->new;
+    $dna_filter->method_tag('NonGolden');
+
+    my $ace_filename = $self->home . '/rawdata/dna.ace';
+    $self->add_acefile($ace_filename);
+    my $ace_fh = gensym();
+    open $ace_fh, "> $ace_filename" or confess "Can't write to '$ace_filename' : $!";
+    $dna_filter->file_handle($ace_fh);
+
+    my $smart_slice = Bio::Otter::Lace::Slice->new($client, $dsname, $ssname,
+        'chromosome', 'Otter', $chr_name, $chr_start, $chr_end);
+    $dna_filter->ace_data($smart_slice);
+
+    $dna_filter->drop_file_handle;
+    close $ace_fh;
+}
+
+sub write_pipeline_data {
+    my( $self, $ss ) = @_;
+
+    my $client  = $self->Client();
+    my ($dsname, $ssname, $chr_name, $chr_start, $chr_end) = $ss->selected_CloneSequences_parameters;
+
+    my $factory = $self->make_otterpipe_DataFactory($dsname);
 
     # create file for output and add it to the acedb object
-    $ace_file ||= $self->home . "/rawdata/pipeline.ace";
-    my $fh;
-    if(ref($ace_file) eq 'GLOB'){
-        $fh = $ace_file;
-    }else{ 
-        $fh = gensym();
-        $self->add_acefile($ace_file);
-        open $fh, "> $ace_file" or confess "Can't write to '$ace_file' : $!";
-    }
-    $factory->file_handle($fh);
+    my $ace_filename = $self->home . '/rawdata/pipeline.ace';
+
+    my $ace_fh = gensym();
+    $self->add_acefile($ace_filename);
+    open $ace_fh, "> $ace_filename" or confess "Can't write to '$ace_filename' : $!";
+    $factory->file_handle($ace_fh);
 
     my $smart_slice = Bio::Otter::Lace::Slice->new($client, $dsname, $ssname,
         'chromosome', 'Otter', $chr_name, $chr_start, $chr_end);
 
     $factory->ace_data_from_slice($smart_slice);
     $factory->drop_file_handle;
-    close $fh;
+    close $ace_fh;
 }
 
 sub make_otterpipe_DataFactory {
-    my( $self, $dsname, $ssname ) = @_;
+    my( $self, $dsname ) = @_;
 
     my $client = $self->Client();
     warn "This dataset is '$dsname'\n";
