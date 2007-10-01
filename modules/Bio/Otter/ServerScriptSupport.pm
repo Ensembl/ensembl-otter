@@ -770,7 +770,10 @@ sub fetch_mapped_features {
 
             $self->log('***** : '.scalar(@$target_fs_on_target_segment)." ${feature_name}s found on the slice");
 
-            foreach my $target_feature (@$target_fs_on_target_segment) {
+            # foreach my $target_feature (@$target_fs_on_target_segment) {
+            ## this is supposed to be faster:
+            #
+            while (my $target_feature = shift @$target_fs_on_target_segment) {
 
                 if($target_feature->can('propagate_slice')) {
                     $target_feature->propagate_slice($projected_slice_on_mapper);
