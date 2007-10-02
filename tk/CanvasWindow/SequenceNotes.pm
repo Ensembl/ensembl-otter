@@ -364,30 +364,38 @@ sub initialise {
     $top->bind('<Control-R>', $refresh_locks);
     $top->bind('<F5>',        $refresh_locks);
     
-    my $refresh_status = sub {
+    my $refresh_all = sub {
 	    $top->Busy;
         # we want this to refresh all columns
         $self->_refresh_SequenceSet();
 	    $self->draw();
 	    $top->Unbusy;
     };
-    $self->make_button($button_frame_2, 'Refresh Ana. Status', $refresh_status, 8);
-    $top->bind('<Control-a>', $refresh_status);
-    $top->bind('<Control-A>', $refresh_status);
-    $top->bind('<F6>',        $refresh_status);
+    $self->make_button($button_frame_2, 'Refresh Ana. Status', $refresh_all, 8);
+    $top->bind('<Control-a>', $refresh_all);
+    $top->bind('<Control-A>', $refresh_all);
+    $top->bind('<F6>',        $refresh_all);
     
     my $run_lace_on_slice = sub{
 	    $self->slice_window;
     };
     $self->make_button($button_frame_2, 'Open from chr coords', $run_lace_on_slice);
 
-    # HERE: add the 'load pipeline data' checkbox
+    my $conditional_refresh_analyses = sub{
+        my ($flag) = @_;
+        if($flag) {
+            $top->Busy;
+            $self->refresh_column(3) ;
+            $top->Unbusy;
+        }
+    };
     $self->{'_fetch_pipeline_var'} = Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
     $button_frame_2->Checkbutton(
         -variable    => \$self->{'_fetch_pipeline_var'},
         -text        => 'Load pipeline data',
         -borderwidth => 2,
         -relief      => 'groove',
+        -command     => [ $conditional_refresh_analyses , \$self->{'_fetch_pipeline_var'} ],
     )->pack(-side => 'left', -pady => 2, -fill => 'x');
 
     my $run_lace = sub{
