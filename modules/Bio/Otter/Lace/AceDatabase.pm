@@ -156,7 +156,12 @@ sub empty_acefile_list {
 }
 
 sub init_AceDatabase {
-    my( $self, $ss ) = @_;
+    my( $self, $ss, $with_pipeline ) = @_;
+
+        # For compatibility:
+    unless(defined($with_pipeline)) {
+        $with_pipeline = Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
+    }
     
     $self->MethodCollection($self->get_default_MethodCollection);
 
@@ -164,8 +169,7 @@ sub init_AceDatabase {
     $self->write_otter_acefile($ss);
     $self->write_dna_data($ss);
 
-    my $fetch_pipe = Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
-    if ($fetch_pipe) {
+    if($with_pipeline) {
         $self->write_pipeline_data($ss);
     }
 
@@ -497,8 +501,7 @@ sub make_database_directory {
 sub write_methods_acefile {
     my( $self ) = @_;
     
-    my $home = $self->home;
-    my $methods_file = "$home/rawdata/methods.ace";
+    my $methods_file = $self->home . '/rawdata/methods.ace';
     my $collect = $self->MethodCollection;
     $collect->process_for_otterlace;
     $collect->write_to_file($methods_file);
