@@ -292,40 +292,40 @@ sub initialise {
     my ( $button_frame_1, $button_frame_2 );
 
     if ($write_access) {
-	$button_frame_1 = $top->Frame->pack(-side => 'top');
+        $button_frame_1 = $top->Frame->pack(-side => 'top');
 
-	$button_frame_2 = $top->Frame->pack(-side => 'top');
+        $button_frame_2 = $top->Frame->pack(-side => 'top');
 
-	$comment_label = $button_frame_1->Label(-text => 'Note text:',);
-	$comment_label->pack(-side => 'left',);
-	my $comment_text = '';
+        $comment_label = $button_frame_1->Label(-text => 'Note text:',);
+        $comment_label->pack(-side => 'left',);
+        my $comment_text = '';
         $self->set_note_ref(\$comment_text);
-	$comment = $button_frame_1->Entry(-width        => 55,
+        $comment = $button_frame_1->Entry(-width        => 55,
                                           -textvariable => $self->set_note_ref(),
-					  -font         => ['Helvetica', $self->font_size, 'normal'],
-					  );
-	$comment->pack(-side => 'left');
+                                          -font         => ['Helvetica', $self->font_size, 'normal'],
+        );
+        $comment->pack(-side => 'left');
         my $clear_button = $button_frame_1->Button(-text    => 'clear'   ,
                                                    -command => sub { my $ref = $self->set_note_ref(); $$ref = undef; }
                                                    )->pack(-side => 'right');
 	
-	# Remove Control-H binding from Entry
-	$comment->bind(ref($comment), '<Control-h>', '');
-	$comment->bind(ref($comment), '<Control-H>', '');
-	$button_frame_1->bind('<Destroy>', sub { $self = undef });
+        # Remove Control-H binding from Entry
+        $comment->bind(ref($comment), '<Control-h>', '');
+        $comment->bind(ref($comment), '<Control-H>', '');
+        $button_frame_1->bind('<Destroy>', sub { $self = undef });
 
-	my $set_reviewed = sub{
-	    $self->save_sequence_notes($comment);
-	};
-	$self->make_button($button_frame_1, 'Set note', $set_reviewed, 0);
-	$top->bind('<Control-s>', $set_reviewed);
-	$top->bind('<Control-S>', $set_reviewed);
+        my $set_reviewed = sub{
+            $self->save_sequence_notes($comment);
+        };
+        $self->make_button($button_frame_1, 'Set note', $set_reviewed, 0);
+        $top->bind('<Control-s>', $set_reviewed);
+        $top->bind('<Control-S>', $set_reviewed);
 
-    }else{
-	$button_frame_2 = $top->Frame->pack(-side => 'top');
+    } else {
+        $button_frame_2 = $top->Frame->pack(-side => 'top');
         $button_frame_2->Label(-text => 'Read Only   ', 
                                -foreground => 'red')->pack(-side => 'left');
-	$button_frame_2->bind('<Destroy>', sub { $self = undef });
+        $button_frame_2->bind('<Destroy>', sub { $self = undef });
     }
 
     ### Is hunting in CanvasWindow?
@@ -379,7 +379,16 @@ sub initialise {
 	    $self->slice_window;
     };
     $self->make_button($button_frame_2, 'Open from chr coords', $run_lace_on_slice);
-    
+
+    # HERE: add the 'load pipeline data' checkbox
+    $self->{'_fetch_pipeline_var'} = Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
+    $self->Checkbutton(
+        -variable    => \$self->{'_fetch_pipeline_var'},
+        -text        => 'Load pipeline data',
+        -borderwidth => 2,
+        -relief      => 'groove',
+    )->pack(-side => 'left', -pady => 2, -fill => 'x');
+
     my $run_lace = sub{
 	    $top->Busy;
 	    $self->run_lace;
@@ -621,6 +630,11 @@ sub _open_SequenceSet{
         
     my $cl = $self->Client;
 
+        # FIXME: it would be better to take it from some interfacy check-box,
+        # which would be in turn initialized by $cl->write_access().
+        # If the $ss is read-only, this check-box would be inactive and False.
+        # This way we'd let users to run read-only lace sessions from within a read-write mode.
+        #
     my $adb_write_access = $cl->write_access() && $ss->write_access;
     my $adb = $self->LocalDatabaseFactory->new_AceDatabase($adb_write_access);
     $adb->error_flag(1);
@@ -656,7 +670,9 @@ sub _open_SequenceSet{
     }
     # now initialise the database
     eval{
-        $adb->init_AceDatabase($ss);
+        # my $with_pipeline = Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
+        my $with_pipeline = $self->{'_fetch_pipeline_var'};
+        $adb->init_AceDatabase($ss, $with_pipeline);
     };
     if ($@) {
         $adb->error_flag(0);
