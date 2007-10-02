@@ -382,8 +382,9 @@ sub initialise {
     $self->make_button($button_frame_2, 'Open from chr coords', $run_lace_on_slice);
 
     my $conditional_refresh_analyses = sub{
-        my ($flag) = @_;
-        if($flag) {
+        my ($flag_ref) = @_;
+        print STDERR "Flag_ref=$flag_ref, flag=$$flag_ref, params=".scalar(@_)."\n";
+        if($$flag_ref) {
             $top->Busy;
             $self->refresh_column(3) ;
             $top->Unbusy;
