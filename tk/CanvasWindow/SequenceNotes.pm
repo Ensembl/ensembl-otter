@@ -274,13 +274,22 @@ sub fetch_pipeline_var_ref {
     return \$self->{'_fetch_pipeline_var'};
 }
 
+sub write_access_var_ref {
+    my $self = shift @_;
+
+    unless(exists($self->{'_write_access_var'})) {
+        $self->{'_write_access_var'} = $self->Client->write_access && $self->SequenceSet->write_access;
+    }
+    return \$self->{'_write_access_var'};
+}
+
 sub initialise {
     my( $self ) = @_;
 
     # Use a slightly smaller font so that more info fits on the screen
     $self->font_size(12);
 
-    my $write_access  = $self->Client->write_access && $self->SequenceSet->write_access;
+    my $initial_write_access  = ${$self->write_access_var_ref()};
     my $canvas = $self->canvas;
     my $top    = $canvas->toplevel;
     
@@ -301,7 +310,7 @@ sub initialise {
     my ( $comment, $comment_label );
     my ( $button_frame_1, $button_frame_2 );
 
-    if ($write_access) {
+    if ($initial_write_access) {
         $button_frame_1 = $top->Frame->pack(-side => 'top');
 
         $button_frame_2 = $top->Frame->pack(-side => 'top');
@@ -330,6 +339,13 @@ sub initialise {
         $self->make_button($button_frame_1, 'Set note', $set_reviewed, 0);
         $top->bind('<Control-s>', $set_reviewed);
         $top->bind('<Control-S>', $set_reviewed);
+
+        $button_frame_2->Checkbutton(
+            -variable    => $self->write_access_var_ref(),
+            -text        => 'write access',
+            -borderwidth => 2,
+            -relief      => 'groove',
+        )->pack(-side => 'left', -pady => 2, -fill => 'x');
 
     } else {
         $button_frame_2 = $top->Frame->pack(-side => 'top');
@@ -398,7 +414,6 @@ sub initialise {
             $top->Unbusy;
         }
     };
-    $self->{'_fetch_pipeline_var'} = Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
     $button_frame_2->Checkbutton(
         -variable    => $self->fetch_pipeline_var_ref(),
         -text        => 'Load pipeline data',
@@ -603,9 +618,9 @@ sub run_lace{
     
     ### Prevent opening of sequences already in lace sessions
     return unless $self->set_selected_from_canvas;
-    my $ss = $self->SequenceSet;
+
     my $title = 'lace '. $self->name . $self->selected_sequence_string;
-    $self->_open_SequenceSet($ss , $title) ;
+    $self->_open_SequenceSet($title) ;
 }
 sub run_lace_on_slice{
     my ($self, $start, $end) = @_;
@@ -639,21 +654,17 @@ sub run_lace_on_slice{
         return;
     }
     my $title = qq`lace for SLICE $start - $end ` . $self->name;
-    $self->_open_SequenceSet($ss, $title);
+    $self->_open_SequenceSet($title);
 }
 
 ## allows Searched SequenceNotes.pm to inherit the main part of the run_lace method
 sub _open_SequenceSet{
-    my ($self , $ss , $title) = @_ ;
+    my ($self, $title) = @_ ;
         
     my $cl = $self->Client;
+    my $ss = $self->SequenceSet;
 
-        # FIXME: it would be better to take it from some interfacy check-box,
-        # which would be in turn initialized by $cl->write_access().
-        # If the $ss is read-only, this check-box would be inactive and False.
-        # This way we'd let users to run read-only lace sessions from within a read-write mode.
-        #
-    my $adb_write_access = $cl->write_access() && $ss->write_access;
+    my $adb_write_access = ${$self->write_access_var_ref()};
     my $adb = $self->LocalDatabaseFactory->new_AceDatabase($adb_write_access);
     $adb->error_flag(1);
     $adb->title($title);
@@ -688,8 +699,7 @@ sub _open_SequenceSet{
     }
     # now initialise the database
     eval{
-        # my $with_pipeline = Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
-        my $with_pipeline = $self->{'_fetch_pipeline_var'};
+        my $with_pipeline = ${$self->fetch_pipeline_var_ref()};
         $adb->init_AceDatabase($ss, $with_pipeline);
     };
     if ($@) {
