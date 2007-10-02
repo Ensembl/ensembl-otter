@@ -576,16 +576,8 @@ sub store {
     }
     $gene->modified_date($time_now);
 
-        # Here we assume that the parent method will update all is_current() fields,
-        # trusting the values that we have just set.
-    $self->SUPER::store($gene);
-
-        ## Now store the gene author
-        # (transcripts' authors and evidence has already been stored by TranscriptAdaptor::store )
-    my $author_adaptor = $self->db->get_AuthorAdaptor;
-    my $gene_author=$gene->gene_author;
-    $author_adaptor->store($gene_author);
-    $author_adaptor->store_gene_author($gene->dbID, $gene_author->dbID);
+    # Actually save the gene to the database
+    $self->store_only($gene);
 
     if($gene_state == CHANGED) {
         print STDERR "CHANGED gene:".$gene->stable_id.".".$gene->version."\n-------------------------------------------\n\n";
@@ -598,6 +590,21 @@ sub store {
     }
 
     return 1;
+}
+
+sub store_only {
+    my ($self, $gene) = @_;
+    
+    # Here we assume that the parent method will update all is_current() fields,
+    # trusting the values that we have just set.
+    $self->SUPER::store($gene);
+
+    ## Now store the gene author
+    # (transcripts' authors and evidence has already been stored by TranscriptAdaptor::store )
+    my $author_adaptor = $self->db->get_AuthorAdaptor;
+    my $gene_author = $gene->gene_author;
+    $author_adaptor->store($gene_author);
+    $author_adaptor->store_gene_author($gene->dbID, $gene_author->dbID);
 }
 
 sub remove {
