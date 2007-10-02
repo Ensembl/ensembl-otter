@@ -12,6 +12,7 @@ use CanvasWindow::SequenceNotes::Status;
 use TransientWindow::OpenRange;
 use Evi::EviCollection;
 use POSIX qw(ceil);
+use Tk::Checkbutton;
 
 sub name {
     my( $self, $name ) = @_;
