@@ -265,6 +265,15 @@ sub max_column_width {
     return $self->{'_max_column_width'} || 40 * $self->font_size;
 }
 
+sub fetch_pipeline_var_ref {
+    my $self = shift @_;
+
+    unless(exists($self->{'_fetch_pipeline_var'})) {
+        $self->{'_fetch_pipeline_var'} = Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
+    }
+    return \$self->{'_fetch_pipeline_var'};
+}
+
 sub initialise {
     my( $self ) = @_;
 
@@ -383,7 +392,6 @@ sub initialise {
 
     my $conditional_refresh_analyses = sub{
         my ($flag_ref) = @_;
-        print STDERR "Flag_ref=$flag_ref, flag=$$flag_ref, params=".scalar(@_)."\n";
         if($$flag_ref) {
             $top->Busy;
             $self->refresh_column(3) ;
@@ -392,11 +400,11 @@ sub initialise {
     };
     $self->{'_fetch_pipeline_var'} = Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
     $button_frame_2->Checkbutton(
-        -variable    => \$self->{'_fetch_pipeline_var'},
+        -variable    => $self->fetch_pipeline_var_ref(),
         -text        => 'Load pipeline data',
         -borderwidth => 2,
         -relief      => 'groove',
-        -command     => [ $conditional_refresh_analyses , \$self->{'_fetch_pipeline_var'} ],
+        -command     => [ $conditional_refresh_analyses , $self->fetch_pipeline_var_ref() ],
     )->pack(-side => 'left', -pady => 2, -fill => 'x');
 
     my $run_lace = sub{
