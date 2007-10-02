@@ -383,7 +383,7 @@ sub initialise {
 
     # HERE: add the 'load pipeline data' checkbox
     $self->{'_fetch_pipeline_var'} = Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
-    $self->Checkbutton(
+    $button_frame_2->Checkbutton(
         -variable    => \$self->{'_fetch_pipeline_var'},
         -text        => 'Load pipeline data',
         -borderwidth => 2,
