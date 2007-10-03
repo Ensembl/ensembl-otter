@@ -126,25 +126,23 @@ sub do_search {
                 $clone_number-1 => 1,               # always show the last one
             );
 
-            my $clone_names_text = '';
+            my @clone_names_to_show = ();
             my $skipped_number = 0;
             foreach my $i (0..scalar(@$clone_names)-1) {
-
                 if($show_clone_index{$i}) {
                     if($skipped_number) {
-                        $clone_names_text .= "...($skipped_number clones skipped)...";
+                        push @clone_names_to_show, '...';
                         $skipped_number = 0;
                     }
-
                     my $clone_name = $clone_names->[$i];
-                    $clone_names_text .= '['.$clone_name.'] ';
+                    push @clone_names_to_show, $clone_name;
                 } else {
                     $skipped_number++;
                 }
             }
 
             my $label2 = $result_frame->Label(
-                -text => $clone_names_text,
+                -text => ' [ '.join(', ', @clone_names_to_show).' ]',
             )->pack(-side => 'left', -fill => 'x');
 
         } else {
