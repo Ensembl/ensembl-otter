@@ -99,7 +99,7 @@ sub do_search {
             )->pack(-side => 'left', -fill => 'x');
 
             my $button = $result_frame->Button(
-                -text => $ssname,
+                -text => "$clone_number clone".(($clone_number>1) ? 's' : '')." on $ssname",
                 -command => sub {
                     print STDERR "Opening '$subset_tag'...\n";
 
@@ -116,8 +116,35 @@ sub do_search {
                 },
             )->pack(-side => 'left');
 
+
+            my $center_index = int(($clone_number-1)/2);
+            my %show_clone_index = (
+                0               => 1,               # always show the first one
+                ($center_index==2) ? (1 => 1) : (), # show the second one if there is only one in the gap
+                $center_index   => 1,               # always show the middle one
+                ($clone_number==5) ? (3 => 1) : (), # show the fourth one if there is only one in the gap
+                $clone_number-1 => 1,               # always show the last one
+            );
+
+            my $clone_names_text = '';
+            my $skipped_number = 0;
+            foreach my $i (0..scalar(@$clone_names)-1) {
+
+                if($show_clone_index{$i}) {
+                    if($skipped_number) {
+                        $clone_names_text .= "...($skipped_number clones skipped)...";
+                        $skipped_number = 0;
+                    }
+
+                    my $clone_name = $clone_names->[$i];
+                    $clone_names_text .= '['.$clone_name.'] ';
+                } else {
+                    $skipped_number++;
+                }
+            }
+
             my $label2 = $result_frame->Label(
-                -text => " ($clone_number clone".(($clone_number>1) ? 's) ' : ') '),
+                -text => $clone_names_text,
             )->pack(-side => 'left', -fill => 'x');
 
         } else {
