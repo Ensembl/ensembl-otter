@@ -846,7 +846,7 @@ sub _sanity_check{
 
     $self->_user_first_clone_seq($slice_a + 1);
     $self->_user_last_clone_seq($slice_b + 1);    
-    $self->max_per_page($slice_b - $slice_a + 1) unless $sanity_saved;
+    # $self->max_per_page($slice_b - $slice_a + 1) unless $sanity_saved;
     
     return ($slice_a, $slice_b);
 }
@@ -864,11 +864,22 @@ sub _user_last_clone_seq{
     }
     return $self->{'_user_max_element'} || scalar(@{$self->get_CloneSequence_list});
 }
-sub max_per_page{
-    my ($self, $max) = @_;
-    $self->{'_max_per_page'} = $max if $max;
-    return $self->{'_max_per_page'} || 35;
-}
+
+
+{ # scoping curlies
+
+    my $standard_page_length = 35;
+
+    sub max_per_page {
+        my ($self, $max) = @_;
+        $self->{'_max_per_page'} = $max if $max;
+
+        return $self->{'_max_per_page'} || $standard_page_length;
+    }
+
+} # scoping curlies
+
+
 sub draw_paging_buttons{
     my ($self) = @_;
 
