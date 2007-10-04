@@ -3,12 +3,12 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2007-09-18 09:33:33 $
-# Id:            $Id: nph-find_clones,v 1.4 2007-09-18 09:33:33 jgrg Exp $
+# Last modified: $Date: 2007-10-04 12:03:27 $
+# Id:            $Id: nph-find_clones,v 1.5 2007-10-04 12:03:27 jgrg Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-find_clones,v $
 
 use strict;
-use SangerPaths qw{ otter48 ensembl46 bioperl123 core };
+use SangerPaths qw{ core bioperl123 ensembl46 otter48 };
 
 use Bio::Otter::ServerScriptSupport;
 use Bio::Otter::CloneFinder; # $server->running_headcode()==0 version

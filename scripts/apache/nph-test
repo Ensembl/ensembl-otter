@@ -3,12 +3,12 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2007-09-27 15:34:20 $
-# Id:            $Id: nph-test,v 1.6 2007-09-27 15:34:20 jgrg Exp $
+# Last modified: $Date: 2007-10-04 12:03:27 $
+# Id:            $Id: nph-test,v 1.7 2007-10-04 12:03:27 jgrg Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-test,v $
 
 use strict;
-use SangerPaths qw{ otter48 ensembl46 bioperl123 core };
+use SangerPaths qw{ core bioperl123 ensembl46 otter48 };
 use SangerWeb;
 
 use Bio::Otter::ServerScriptSupport;
