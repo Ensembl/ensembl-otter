@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2007-10-04 12:03:27 $
-# Id:            $Id: nph-get_sequencesets,v 1.5 2007-10-04 12:03:27 jgrg Exp $
+# Last modified: $Date: 2007-10-05 13:27:37 $
+# Id:            $Id: nph-get_sequencesets,v 1.6 2007-10-05 13:27:37 jgrg Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_sequencesets,v $
 
 use strict;
@@ -34,7 +34,7 @@ eval {
         my $name = $ss_slice->seq_region_name();
         my $description  = ''; # default
         my $write_access = 1;  # default
-        my $hidden       = 0;  # default
+        my $hidden       = 1;  # default
 
         # FIXME: we will need finer, by-author's-name control over visibility/writability of sequence sets
 
