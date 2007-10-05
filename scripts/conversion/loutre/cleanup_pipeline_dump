@@ -133,6 +133,9 @@ my %lns_to_go = map {$_,1}
 	   trf_new
    );
 
+#define which attrib_types are to be deleted
+my $codes_to_go = join "','", qw(equiv_asm htg);
+
 my $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
 
 # parse options
@@ -213,9 +216,7 @@ foreach my $t (@target_tables) {
 if ($support->param('count_rows')) {
 	my %report;
 	foreach my $t (@target_tables) {
-		warn "table $t...";
 		if ($t =~ /_feature/) {	
-			warn "--table $t...";
 			my $s = $pddbh->prepare(qq(
                    SELECT a.logic_name, count(*)
                    FROM analysis a, $t
@@ -231,7 +232,7 @@ if ($support->param('count_rows')) {
 			$report{$t} = 	$table_rows{$t}{'original'};
 		}
 	}	
-	warn Dumper(\%report);
+#	warn Dumper(\%report);
 	exit;
 }
 
@@ -354,6 +355,21 @@ foreach my $t (keys %ids_to_stay) {
 	my $c1 = $table_rows{$t}{'original'};
 	my $c2 = $pddbh->selectrow_array("SELECT COUNT(*) FROM $t");
 	$table_rows{$t}{'deleted_by_analysis_id'} = $c1-$c2;
+}
+
+#########################
+# seq_region_attributes #
+#########################
+
+if (!$support->param('dry_run')) {
+	$support->log_stamped("Deleting unwanted seq_region_attributes...\n");
+	$table_rows{'seq_region_attib'}{'deleted_by_attrib_type_id'} = $pddbh->do(
+		qq(DELETE sra 
+           FROM seq_region_attrib sra, attrib_type at
+           WHERE sra.attrib_type_id = at.attrib_type_id
+           AND at.code IN ('$codes_to_go')
+    ));
+	$support->log_stamped("...finished deleting unwanted seq_region_attributes...\n");
 }
 
 ##################
