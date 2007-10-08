@@ -29,6 +29,12 @@ sub sv {
     return $self->{'_sv'};
 }
 
+sub accession_dot_sv { # due to extreme popularity
+    my ($self) = @_;
+
+    return $self->accession().'.'.$self->sv();
+}
+
 sub clone_name {
     my( $self, $clone_name ) = @_;
     
@@ -229,23 +235,6 @@ sub get_lock_status{
 sub get_lock_as_CloneLock{
     my ($self) = @_;
     return $self->{'_lock_status'};
-}
-
-sub belongs_to { # the same CloneSequence may belong to multiple subsets (subregions|search_results)
-    my ($self, $subset_tag, $belongs_flag) = @_;
-
-    unless($subset_tag) { # counts how many subsets it belongs to: a convenient property
-        return scalar(keys %{$self->{'_belongs_to'}});
-    }
-
-    if(defined($belongs_flag)) {
-        if($belongs_flag) { # we have to do this the long way to maintain the previous property
-            $self->{'_belongs_to'}{$subset_tag} = 1;
-        } else {
-            delete $self->{'_belongs_to'}{$subset_tag};
-        }
-    }
-    return $self->{'_belongs_to'}{$subset_tag};
 }
 
 1;
