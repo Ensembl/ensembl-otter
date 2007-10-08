@@ -1,0 +1,237 @@
+#!/usr/local/bin/perl -w
+
+### show_locks
+
+use strict;
+
+
+
+use Getopt::Long 'GetOptions';
+use Bio::Otter::Lace::Defaults;
+use Bio::Otter::Lace::PipelineDB;
+
+$| = 1;
+
+{
+    
+    my $usage     = sub { exec('perldoc', $0) };
+    my $dataset_name = undef;
+    my $author    = undef;
+    my $assembly  = undef;
+    my $hostname  = undef;
+    my $do_delete = 0;
+    my @lock_id_range = ();
+    my $range_parser = sub{
+        my( $start, $end ) = $_[1] =~ /(\d+)(?:[^\d+](\d+))?/;
+        if ($start and ! $end) {
+            $end = $start;
+        }
+        if ($start and $end and $start <= $end) {
+            @lock_id_range = ($start, $end);
+        } else {
+            $usage->();
+        }
+    };
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'dataset=s'     => \$dataset_name,
+        'annotator=s'   => \$author,
+        'set=s'         => \$assembly,
+        'machine=s'     => \$hostname,
+        'delete!'       => \$do_delete,
+        'range=s'       => $range_parser,
+        ) or $usage->();
+    $usage->() unless $dataset_name;
+
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    my $otter_db = $ds->make_EnsEMBL_DBAdaptor;
+
+    my $sql = q{
+        SELECT l.contig_lock_id
+          , l.hostname
+          , au.author_name
+          , clone.name
+          , intl.value
+          , l.timestamp
+          , ss.name
+        FROM author au
+          , contig_lock l
+          , seq_region contig
+          , seq_region ss
+          , seq_region clone
+          , assembly ss_asm
+          , assembly clone_asm
+        LEFT JOIN seq_region_attrib hidden
+          ON ss.seq_region_id = hidden.seq_region_id
+          AND hidden.attrib_type_id = (SELECT attrib_type_id FROM attrib_type WHERE code = 'hidden')
+        LEFT JOIN seq_region_attrib intl
+          ON clone.seq_region_id = intl.seq_region_id
+          AND intl.attrib_type_id = (SELECT attrib_type_id FROM attrib_type WHERE code = 'intl_clone_name')
+        WHERE au.author_id = l.author_id
+          AND l.seq_region_id = contig.seq_region_id
+          AND contig.seq_region_id = ss_asm.cmp_seq_region_id
+          AND ss_asm.asm_seq_region_id = ss.seq_region_id
+          AND ss.coord_system_id = 2
+          AND contig.seq_region_id = clone_asm.cmp_seq_region_id
+          AND clone_asm.asm_seq_region_id = clone.seq_region_id
+          AND clone.coord_system_id = 4
+          AND hidden.value != 1
+        };
+    my( @param );
+    if ($author) {
+        $sql .= ' AND au.author_name = ? ';
+        push(@param, $author);
+    }
+    if ($assembly) {
+        $sql .= ' AND ss.name = ? ';
+        push(@param, $assembly);
+    }
+    if ($hostname) {
+        $sql .= ' AND l.hostname = ? ';
+        push(@param, $hostname);
+    }
+    if (@lock_id_range) {
+        $sql .= ' AND l.contig_lock_id BETWEEN ? AND ? ';
+        push(@param, @lock_id_range);
+    }
+    $sql .= ' ORDER BY l.contig_lock_id ASC ';
+
+    my $before_count = count_locks($otter_db);
+
+    my $sth = $otter_db->dbc->prepare($sql);
+    $sth->execute(@param);
+    
+    my( %lock_id );
+    while (my @row = $sth->fetchrow) {
+        my ($lid, $host, $author, $acc_sv, $intl, $date, $type) = @row;
+        if (my $info = $lock_id{$lid}) {
+            push(@$info, $type);
+        } else {
+            $lock_id{$lid} = [$host, $author, $acc_sv, $intl, $date, $type];
+        }
+    }
+
+    my $after_count = count_locks($otter_db);
+    
+    foreach my $lid (sort {$a <=> $b} keys %lock_id) {
+        my $info = $lock_id{$lid};
+        
+        my $host   = shift @$info;
+        my $author = shift @$info;
+        my $acc_sv = shift @$info;
+        my $intl   = shift @$info || '';    # From left join
+        my $date   = shift @$info;
+        my @type   = sort  @$info;
+        
+        printf  "  %6d  %-20s  %7s  %-12s  %15s  %19s  %s\n",
+            $lid, $host, $author, $acc_sv, $intl, $date, join(' ', @type);
+    }
+
+    
+    my $lock_count = scalar keys %lock_id;
+
+    if ($before_count != $lock_count or $after_count != $lock_count) {
+        my $report_count = $before_count > $after_count ? $before_count : $after_count;
+        print "There are $report_count locks in database, but complex query returns $lock_count\n";
+    }
+    elsif ($do_delete and scalar keys %lock_id) {
+        print STDERR "Delete all these locks? [y|N] ";
+        my $ans = <STDIN>;
+        if ($ans =~ /^y/i) {
+            my $del_sth = $otter_db->prepare(q{
+                DELETE FROM contig_lock
+                WHERE contig_lock_id = ?
+                });
+            my $count = 0;
+            foreach my $lid (sort {$a <=> $b} keys %lock_id) {
+                $del_sth->execute($lid);
+                $count += $del_sth->rows;
+            }
+            print "Deleted $count locks\n";
+        }
+    }
+    
+}
+
+sub count_locks {
+    my ($dba) = @_;
+    
+    my $sth = $dba->dbc->prepare(q{
+        SELECT count(*)
+        FROM contig_lock
+        });
+    $sth->execute;
+    
+    my ($count) = $sth->fetchrow;
+    return $count;
+}
+
+
+__END__
+
+
+=head1 NAME - show_locks
+
+=head1 DESCRIPTION
+
+Show and delete clone locks from an otter
+database.  If locks need to be removed by hand
+using this script it is because something has
+gone wrong in the annotation system - which may
+need to be fixed!
+
+=head1 SYNOPSIS
+
+  show_locks -dataset <DATASET_NAME> [-delete] [-annotator <UNAME>] \
+    [-set <TYPE>] [-machine <HOSTNAME>] [-range <INT[-INT]>]
+
+=head1 ARGUMENTS
+
+=over 4
+
+=item -dataset <DATASET_NAME>
+
+The name of the dataset to search.  eg: B<human>
+
+=item -delete
+
+With this flag set, the script will show the list
+of locks that match the search criteria followed
+by a prompt which asks if all the locks in the
+list should be deteleted.
+
+=back
+
+The rest of the arguments confine the list of
+locks shown to:
+
+=over 4
+
+=item -set <TYPE>
+
+Clones which are members of this sequence set. 
+(Sequence sets are listed on the far right of the
+output.)
+
+=item -annotator <UNAME>
+
+Those locked by this user name.
+
+=item -machine <HOSTNAME>
+
+Those that were locked from the named computer.
+
+=item -range <INT[-INT]>
+
+Those in this range (or this one if only one
+number is given).  The two integers can be
+separated by any non-integer non-whitespace
+characers.
+
+=back
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
+
