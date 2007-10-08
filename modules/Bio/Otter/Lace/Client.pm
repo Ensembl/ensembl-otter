@@ -105,6 +105,15 @@ sub password_attempts {
     return $self->{'_password_attempts'} || 3;
 }
 
+sub timeout_attempts {
+    my( $self, $timeout_attempts ) = @_;
+    
+    if (defined $timeout_attempts) {
+        $self->{'_timeout_attempts'} = $timeout_attempts;
+    }
+    return $self->{'_timeout_attempts'} || 5;
+}
+
 sub pfetch_server_pid {
     my( $self, $pfetch_server_pid ) = @_;
     
@@ -401,16 +410,22 @@ sub general_http_dialog {
     my ($self, $method, $scriptname, $params) = @_;
 
     my $password_attempts = $self->password_attempts;
+    my $timeout_attempts  = $self->timeout_attempts;
     my $response;
-    for (my $i = 0; $i < $password_attempts; $i++) {
+
+    while ($password_attempts and $timeout_attempts) {
         $response = $self->do_http_request($method, $scriptname, $params);
         last if $response->is_success;
         my $code = $response->code;
         if ($code == 401 or $code == 403) {
             # Unauthorized (We are swtiching from 403 to 401 from humpub-release-49.)
             $self->authorize;
+            $password_attempts--;
         } elsif ($code == 500) {
             die "Error on server ($code). Please inform anacode\@sanger.ac.uk\n", $response->decoded_content;
+        } elsif ($code == 502) {
+            warn "\nGot timeout (502 error) from the server, retrying...\n\n";
+            $timeout_attempts--;
         } elsif ($code == 503 or $code == 504) {
             die "The server timed out ($code). Please try again.\n";
         } else {
