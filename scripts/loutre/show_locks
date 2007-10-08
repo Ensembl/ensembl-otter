@@ -113,7 +113,7 @@ $| = 1;
 
     my $after_count = count_locks($otter_db);
     
-    my $ditto = '"';
+    my $ditto = '';
     my $last_date   = '';
     my $last_host   = '';
     my $last_author = '';
@@ -129,6 +129,8 @@ $| = 1;
         my $date   = shift @$info;
         my $type   = join ' ', sort  @$info;
         
+        # Make output easier to read by using ditto marks where
+        # columns are the same in a locked set of clones
         if ($date   eq $last_date   and
             $host   eq $last_host   and
             $author eq $last_author and
@@ -137,6 +139,7 @@ $| = 1;
             printf  $row_pattern,
               $lid, $ditto,  $ditto, $acc_sv, $intl, $ditto, $ditto;
         } else {
+            print "\n";
             printf  $row_pattern,
               $lid,  $host, $author, $acc_sv, $intl,  $date,  $type;
         }
@@ -145,7 +148,7 @@ $| = 1;
         $last_author = $author;
         $last_type   = $type;
     }
-
+    print "\n";
     
     my $lock_count = scalar keys %lock_id;
 
