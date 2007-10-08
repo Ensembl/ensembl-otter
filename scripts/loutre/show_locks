@@ -113,6 +113,12 @@ $| = 1;
 
     my $after_count = count_locks($otter_db);
     
+    my $ditto = '"';
+    my $last_date   = '';
+    my $last_host   = '';
+    my $last_author = '';
+    my $last_type   = '';
+    my $row_pattern = "  %6d  %-20s  %7s  %-12s  %15s  %19s  %s\n";
     foreach my $lid (sort {$a <=> $b} keys %lock_id) {
         my $info = $lock_id{$lid};
         
@@ -121,10 +127,23 @@ $| = 1;
         my $acc_sv = shift @$info;
         my $intl   = shift @$info || '';    # From left join
         my $date   = shift @$info;
-        my @type   = sort  @$info;
+        my $type   = join ' ', sort  @$info;
         
-        printf  "  %6d  %-20s  %7s  %-12s  %15s  %19s  %s\n",
-            $lid, $host, $author, $acc_sv, $intl, $date, join(' ', @type);
+        if ($date   eq $last_date   and
+            $host   eq $last_host   and
+            $author eq $last_author and
+            $type   eq $last_type)
+        {
+            printf  $row_pattern,
+              $lid, $ditto,  $ditto, $acc_sv, $intl, $ditto, $ditto;
+        } else {
+            printf  $row_pattern,
+              $lid,  $host, $author, $acc_sv, $intl,  $date,  $type;
+        }
+        $last_date   = $date;
+        $last_host   = $host;
+        $last_author = $author;
+        $last_type   = $type;
     }
 
     
