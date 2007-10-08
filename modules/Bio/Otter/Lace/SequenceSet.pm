@@ -273,65 +273,48 @@ sub agp_data {
     return $data;
 }
 
-    # find clones by names and make them 'match'
-    # The only argument is name->wanted_state hash
-    #
-sub set_match_state { 
-    my ($self, $statehash, $current_name) = @_;
+## subroutines dealing with subsets:
 
-    $current_name ||= '';
+sub accsv_belongs_to_subset { # the underlying mechanism
+    my ($self, $accsv, $subset_tag, $belongs_flag) = @_;
 
-    my $cs_list = $self->CloneSequence_list;
-    foreach my $cs (@$cs_list) {
-        my $fullname = $cs->accession().'.'.$cs->sv();
-        if(exists($statehash->{$fullname})) {
-            $cs->is_match($statehash->{$fullname});
-        }
-        $cs->current_match($fullname eq $current_name);
+    my $belhash = $self->{'_belongs_to'} ||= {};
+
+    unless($subset_tag) { # to which subsets does this accsv belong?
+        return map { $belhash->{$_}{$accsv} ? $_ : () } (keys %$belhash);
     }
+
+    if(defined($belongs_flag)) {
+        if($belongs_flag) { # a cleaner way - allows you to count keys, for example
+            $belhash->{$subset_tag}{$accsv} = 1;
+        } else {
+            delete $belhash->{$subset_tag}{$accsv};
+        }
+    }
+    return $self->{'_belongs_to'}{$subset_tag}{$accsv};
 }
 
 sub set_subset {
     my ($self, $subset_tag, $state_array_or_hash) = @_;
 
-    my $state_hash = (ref($state_array_or_hash) eq 'HASH')
+
+    $self->{'_belongs_to'}{$subset_tag} = (ref($state_array_or_hash) eq 'HASH')
         ? $state_array_or_hash
         : { map { ($_ => 1) } @$state_array_or_hash };
-
-    my $cs_list = $self->CloneSequence_list;
-    foreach my $cs (@$cs_list) {
-        my $fullname = $cs->accession().'.'.$cs->sv();
-        if(exists($state_hash->{$fullname})) {
-            $cs->belongs_to($subset_tag, $state_hash->{$fullname});
-        }
-    }
-}
-
-sub get_subset_hash {
-    my ($self, $subset_tag) = @_;
-
-    my %state_hash = ();
-
-    my $cs_list = $self->CloneSequence_list;
-    foreach my $cs (@$cs_list) {
-        my $fullname = $cs->accession().'.'.$cs->sv();
-        if($cs->belongs_to($subset_tag)) {
-            $state_hash{$fullname} = 1;
-        }
-    }
-
-    return \%state_hash;
 }
 
 sub get_subsets_first_last_index { # They are 0-based indices
+
+    ## NB: make sure the CloneSequences have been loaded,
+    ##     as it doesn't happen autimagically yet!
+    
     my ($self, $subset_tag) = @_;
 
     my ($first, $last);
     my $cs_list = $self->CloneSequence_list;
     foreach my $i (0..scalar(@$cs_list)-1) {
         my $cs = $cs_list->[$i];
-        my $fullname = $cs->accession().'.'.$cs->sv();
-        if($cs->belongs_to($subset_tag)) {
+        if($self->accsv_belongs_to_subset($cs->accession_dot_sv(), $subset_tag)) {
             unless(defined($first)) { $first = $i; }
             $last = $i;
         }

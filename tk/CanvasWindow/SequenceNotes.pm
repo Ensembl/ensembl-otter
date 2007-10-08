@@ -83,16 +83,17 @@ sub refresh_column {
     $self->_refresh_SequenceSet($col_no);
     #my $cs_list = $self->get_CloneSequence_list;
     my $cs_list = $self->get_rows_list;
-    my $method  = $self->column_methods->[$col_no]->[1];
+    my $data_method  = $self->column_methods->[$col_no]->[1];
 
     for (my $i = 0; $i < @$cs_list; $i++) {
 
         my $cs = $cs_list->[$i];
         my $tag_string = "$col_tag&&cs=$i";
         if (my ($obj) = $canvas->find('withtag', $tag_string) ) {
-	    my $new_content = $method->($cs, $i , $self);
+
+            my $new_content = $data_method->($cs, $i , $self, $ss);
             delete $new_content->{'-tags'};    # Don't want to alter tags
-#	    warn "re-configuring column  $col_no , row $i" ; 
+    #	    warn "re-configuring column  $col_no , row $i" ; 
             $canvas->itemconfigure($obj, %$new_content);
          } else {
             warn "No object withtag '$tag_string'";
@@ -129,7 +130,7 @@ sub _refresh_SequenceSet{
 # this method returns an anonymous array. Each element of the array consists of another annonymous array of two elements.
 # the first of the two elements is the method to be called on the canvas, 
 # and the second method that will produce the arguments for the first method
-# the first method will _write_text ($canvas->createText) or _draw_image ($canvas->createImage) 
+# the first method will _column_write_text ($canvas->createText) or _column_draw_image ($canvas->createImage) 
 sub column_methods {
     my( $self, $methods ) = @_;
     
@@ -141,8 +142,8 @@ sub column_methods {
     }
     elsif (! $self->{'_column_methods'}) {
         # Setup some default column methods
-        my $text_method  = \&_write_text ;   # this is the default method to be used  to display text (rather than drawing s graphic)
-        my $image_method = \&_draw_image ;
+        my $text_method  = \&_column_write_text ;   # this is the default method to be used  to display text (rather than drawing s graphic)
+        my $image_method = \&_column_draw_image ;
         
         my $norm = [$self->font, $self->font_size, 'normal'];
         my $bold = [$self->font, $self->font_size, 'bold'];
@@ -151,23 +152,24 @@ sub column_methods {
             [$text_method, 
                 sub{
                     # Use closure for font definition
-                    my $cs = shift;
-                    my $acc_sv = $cs->accession .'.'. $cs->sv;
-                    my $fontcolour = $cs->belongs_to() # currently we are only interested in whether it belongs *anywhere* or not
+                    my ($cs, $i, $self, $ss) = @_;
+                    my $accsv = $cs->accession_dot_sv();
+                    my $fontcolour = $ss->accsv_belongs_to_subset($accsv) # currently we are only interested in whether it belongs *anywhere* or not
                                         ? 'red'
                                         : 'black';
-                    return {-text => $acc_sv, -font => $bold, -fill => $fontcolour, -tags => ['searchable']};
+                    return {-text => $accsv, -font => $bold, -fill => $fontcolour, -tags => ['searchable']};
                 }],
             [$text_method, 
                 sub{
                     # Use closure for font definition
-                    my $cs = shift;
-                    my $fontcolour = $cs->belongs_to() # currently we are only interested in whether it belongs *anywhere* or not
+                    my ($cs, $i, $self, $ss) = @_;
+                    my $accsv = $cs->accession_dot_sv();
+                    my $fontcolour = $ss->accsv_belongs_to_subset($accsv) # currently we are only interested in whether it belongs *anywhere* or not
                                         ? 'red'
                                         : 'black';
                     return {-text => $cs->clone_name, -font => $bold, -fill => $fontcolour, -tags => ['searchable'] };
                 }],
-            [$text_method, \&_column_text_seq_note_status],
+            [$text_method, \&_column_text_pipeline_status],
 	        [$text_method , 
                 sub{
                     my $cs = shift;
@@ -182,14 +184,14 @@ sub column_methods {
                 }],
             [$text_method,  \&_column_text_seq_note_author],
             [$text_method,  \&_column_text_seq_note_text],
-            [$image_method, \&_padlock_icon ],
-            [$text_method,  \&_who_locked ]
+            [$image_method, \&_column_padlock_icon],
+            [$text_method,  \&_column_who_locked]
             ];
     }
     return $self->{'_column_methods'};
 }
 
-sub _write_text{
+sub _column_write_text {
     my ($canvas, @args) = @_ ;
     
     #warn "Drawing text with args [", join(', ', map "'$_'", @args), "]\n";
@@ -197,7 +199,7 @@ sub _write_text{
     $canvas->createText(@args) ;
 }
 
-sub _draw_image{
+sub _column_draw_image {
     my ($canvas, $x, $y, %args) = @_;
     
     ## need to remove some tags -as they are for create_text 
@@ -209,14 +211,14 @@ sub _draw_image{
 }
 
 sub _column_text_row_number {
-    my( $cs, $row, $self ) = @_;
+    my ($cs, $row, $self) = @_;
 
     my $row_no = ($self->_user_first_clone_seq || 1) + $row;
     return { -text => $row_no };
 }
 
 sub _column_text_seq_note_author {
-    my( $cs ) = @_;
+    my ($cs) = @_;
     
     if (my $sn = $cs->current_SequenceNote) {
         return { -text => $sn->author };
@@ -226,7 +228,7 @@ sub _column_text_seq_note_author {
 }
 
 sub _column_text_seq_note_text {
-    my( $cs ) = @_;
+    my ($cs) = @_;
 
     if (my $sn = $cs->current_SequenceNote) {
         my $ctg_name = $cs->super_contig_name();
@@ -238,9 +240,8 @@ sub _column_text_seq_note_text {
     }
 }
 
-
-sub _column_text_seq_note_status {
-    my $cs = shift;
+sub _column_text_pipeline_status {
+    my ($cs) = @_;
     
     my $text  = 'unavailable';
     my $color = 'DarkRed';
@@ -255,6 +256,7 @@ sub _column_text_seq_note_status {
         -tags => ['searchable'],
         };
 }
+
 
 sub max_column_width {
     my( $self, $max_column_width ) = @_;
@@ -1064,6 +1066,7 @@ sub draw {
     # gets a list of CloneSequence objects.
     # draws a row for each of them
 
+    my $ss        = $self->SequenceSet();
     my $cs_list   = $self->get_rows_list;
 
     my $size      = $self->font_size;
@@ -1120,7 +1123,7 @@ sub draw {
             my $col_tag = "col=$col";
             my ($draw_method, $data_method) = @{$methods->[$col]};
             
-	        my $opt_hash = $data_method->($cs, $i, $self) if $data_method;
+	        my $opt_hash = $data_method->($cs, $i, $self, $ss) if $data_method;
             $opt_hash->{'-anchor'} ||= 'nw';
 	        $opt_hash->{'-font'}   ||= $helv_def;
 	        $opt_hash->{'-width'}  ||= $max_width;
@@ -1508,8 +1511,8 @@ sub empty_canvas_message{
 }
 
 
-sub _padlock_icon{
-    my ($cs ,$i ,  $self) = @_ ;
+sub _column_padlock_icon {
+    my ($cs, $i, $self) = @_ ;
 
     my( $pixmap );
     if ($cs->get_lock_status){
@@ -1522,8 +1525,8 @@ sub _padlock_icon{
     return { -image => $pixmap } ;
 }    
 
-sub _who_locked {
-    my( $cs ) = @_;
+sub _column_who_locked {
+    my ($cs) = @_;
     
     if (my $lock = $cs->get_lock_as_CloneLock) {
         return { -text => $lock->author->name() };

@@ -103,10 +103,12 @@ sub do_search {
                 -command => sub {
                     print STDERR "Opening '$subset_tag'...\n";
 
-                        # pre-load the clone sequences, if they have not been loaded yet
-                    unless(defined($ss->CloneSequence_list())) {
-                        $ds->fetch_all_CloneSequences_for_SequenceSet($ss, 1);
-                    }
+                    # See whether this step can be omittied in the new implementation
+                    #
+                    #    # pre-load the clone sequences, if they have not been loaded yet
+                    #unless(defined($ss->CloneSequence_list())) {
+                    #    $ds->fetch_all_CloneSequences_for_SequenceSet($ss, 1);
+                    #}
                         # ACTUALLY SET the subset in the SequenceSet
                     $ss->set_subset($subset_tag, $clone_names);
 
