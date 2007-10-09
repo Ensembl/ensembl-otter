@@ -117,16 +117,23 @@ sub open_dataset {
             my $client = $self->Client;
             my $ds = $client->get_DataSet_by_name($name);
 
-            my $pipe_name = Bio::Otter::Lace::Defaults::pipe_name();
-            my $top = $canvas->Toplevel(-title => "DataSet $name [$pipe_name]");
-            my $ssc = CanvasWindow::SequenceSetChooser->new($top);
+            my $top = $self->{'_sequence_set_chooser'}{$name};
+            if (Tk::Exists($top)) {
+                $top->deiconify;
+                $top->raise;
+            } else {
+                my $pipe_name = Bio::Otter::Lace::Defaults::pipe_name();
+                $top = $canvas->Toplevel(-title => "DataSet $name [$pipe_name]");
+                my $ssc = CanvasWindow::SequenceSetChooser->new($top);
 
-            $ssc->name($name);
-            $ssc->Client($client);
-            $ssc->DataSet($ds);
-            $ssc->DataSetChooser($self);
-            $ssc->draw;
-            # $canvas->toplevel->withdraw;
+                $ssc->name($name);
+                $ssc->Client($client);
+                $ssc->DataSet($ds);
+                $ssc->DataSetChooser($self);
+                $ssc->draw;
+
+                $self->{'_sequence_set_chooser'}{$name} = $top;
+            }
             $canvas->Unbusy;
             return 1;
         }
