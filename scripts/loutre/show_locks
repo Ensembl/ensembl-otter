@@ -96,8 +96,6 @@ $| = 1;
     }
     $sql .= ' ORDER BY l.contig_lock_id ASC ';
 
-    my $before_count = count_locks($otter_db);
-
     my $sth = $otter_db->dbc->prepare($sql);
     $sth->execute(@param);
     
@@ -111,13 +109,8 @@ $| = 1;
         }
     }
 
-    my $after_count = count_locks($otter_db);
-    
     my $ditto = '';
-    my $last_date   = '';
-    my $last_host   = '';
-    my $last_author = '';
-    my $last_type   = '';
+    my $last_set = '';
     my $row_pattern = "  %6d  %-20s  %7s  %-12s  %15s  %19s  %s\n";
     foreach my $lid (sort {$a <=> $b} keys %lock_id) {
         my $info = $lock_id{$lid};
@@ -129,13 +122,11 @@ $| = 1;
         my $date   = shift @$info;
         my $type   = join ' ', sort  @$info;
         
+        my $this_set = join(' ', $host, $author, $date, $type);
+        
         # Make output easier to read by using ditto marks where
         # columns are the same in a locked set of clones
-        if ($date   eq $last_date   and
-            $host   eq $last_host   and
-            $author eq $last_author and
-            $type   eq $last_type)
-        {
+        if ($this_set eq $last_set) {
             printf  $row_pattern,
               $lid, $ditto,  $ditto, $acc_sv, $intl, $ditto, $ditto;
         } else {
@@ -143,24 +134,17 @@ $| = 1;
             printf  $row_pattern,
               $lid,  $host, $author, $acc_sv, $intl,  $date,  $type;
         }
-        $last_date   = $date;
-        $last_host   = $host;
-        $last_author = $author;
-        $last_type   = $type;
+        $last_set = $this_set;
     }
     print "\n";
     
     my $lock_count = scalar keys %lock_id;
 
-    if ($before_count != $lock_count or $after_count != $lock_count) {
-        my $report_count = $before_count > $after_count ? $before_count : $after_count;
-        print "There are $report_count locks in database, but complex query returns $lock_count\n";
-    }
-    elsif ($do_delete and scalar keys %lock_id) {
+    if ($do_delete and scalar keys %lock_id) {
         print STDERR "Delete all these locks? [y|N] ";
         my $ans = <STDIN>;
         if ($ans =~ /^y/i) {
-            my $del_sth = $otter_db->prepare(q{
+            my $del_sth = $otter_db->dbc->prepare(q{
                 DELETE FROM contig_lock
                 WHERE contig_lock_id = ?
                 });
@@ -173,19 +157,6 @@ $| = 1;
         }
     }
     
-}
-
-sub count_locks {
-    my ($dba) = @_;
-    
-    my $sth = $dba->dbc->prepare(q{
-        SELECT count(*)
-        FROM contig_lock
-        });
-    $sth->execute;
-    
-    my ($count) = $sth->fetchrow;
-    return $count;
 }
 
 
