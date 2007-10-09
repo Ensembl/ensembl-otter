@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2007-10-09 15:00:15 $
-# Id:            $Id: nph-get_sequencesets,v 1.7 2007-10-09 15:00:15 lg4 Exp $
+# Last modified: $Date: 2007-10-09 15:04:53 $
+# Id:            $Id: nph-get_sequencesets,v 1.8 2007-10-09 15:04:53 lg4 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_sequencesets,v $
 
 use strict;
@@ -43,7 +43,7 @@ eval {
         ORDER BY sub.name, cnt DESC
     };
 
-    my $sth = $dba->dbc()->prepare($sql);
+    my $sth = $odba->dbc()->prepare($sql);
     $sth->execute();
 
     my %sub_contig_count = ();
@@ -69,7 +69,7 @@ eval {
 
     foreach my $ss_slice (@{$slice_adaptor->fetch_all('chromosome', 'Otter')}) {
 
-        my $name = $ss_slice->seq_region_name();
+        my $chr_name = $ss_slice->seq_region_name();
         my $description  = ''; # default
         my $write_access = 1;  # default
         my $hidden       = 1;  # default
@@ -87,7 +87,7 @@ eval {
             }
         }
 
-        $xml .= qq`      <sequenceset name="$name">\n`;
+        $xml .= qq`      <sequenceset name="$chr_name">\n`;
         $xml .= qq`        <description>$description</description>\n`;
         $xml .= qq`        <is_hidden>$hidden</is_hidden>\n`;
         $xml .= qq`        <write_access>$write_access</write_access>\n`;
