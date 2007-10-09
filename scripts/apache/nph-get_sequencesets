@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2007-10-05 13:27:37 $
-# Id:            $Id: nph-get_sequencesets,v 1.6 2007-10-05 13:27:37 jgrg Exp $
+# Last modified: $Date: 2007-10-09 15:00:15 $
+# Id:            $Id: nph-get_sequencesets,v 1.7 2007-10-09 15:00:15 lg4 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_sequencesets,v $
 
 use strict;
@@ -22,6 +22,44 @@ eval {
     my $odba = $server->otter_dba();
 
     $server->fetch_Author_obj();  # will break if author cannot be fetched
+
+        # mapping between subregions and chromosomes:
+    my $sql = qq{
+        SELECT sub.name, chr.name, count(*) cnt, group_concat(ctg.name ORDER BY subasm.asm_start SEPARATOR ',')
+        FROM seq_region sub,
+             assembly subasm,
+             seq_region ctg,
+             assembly chrasm,
+             seq_region chr
+        WHERE sub.coord_system_id=(SELECT coord_system_id FROM coord_system where name='subregion')
+          AND sub.seq_region_id=subasm.asm_seq_region_id
+          AND ctg.seq_region_id=subasm.cmp_seq_region_id
+          AND ctg.coord_system_id=(SELECT coord_system_id FROM coord_system where name='contig')
+          AND subasm.cmp_seq_region_id=chrasm.cmp_seq_region_id
+          AND chr.seq_region_id=chrasm.asm_seq_region_id
+          AND (chr.coord_system_id=(SELECT coord_system_id FROM coord_system where name='chromosome' and version='Otter')
+               OR chr.seq_region_id=sub.seq_region_id)
+        GROUP BY sub.name, chr.name
+        ORDER BY sub.name, cnt DESC
+    };
+
+    my $sth = $dba->dbc()->prepare($sql);
+    $sth->execute();
+
+    my %sub_contig_count = ();
+    my %chr_2_sub = ();
+    my %sub_contigs = ();
+    while( my ($sub_name, $chr_name, $cnt, $contig_list) = $sth->fetchrow() ) {
+        if(!defined($sub_contig_count{$sub_name})) { # this is the first time we see it
+            $sub_contig_count{$sub_name} = $cnt;
+            $sub_contigs{$sub_name} = $contig_list; # just as comma-separated list
+        }
+
+        if(($cnt == $sub_contig_count{$sub_name}) && ($chr_name ne $sub_name)) {
+            push @{$chr_2_sub{$chr_name}}, $sub_name;
+        }
+    }
+
 
     $xml   .= qq`  <dataset name="$dataset">\n`;
     $xml   .= qq`    <sequencesets>\n`;
@@ -53,6 +91,11 @@ eval {
         $xml .= qq`        <description>$description</description>\n`;
         $xml .= qq`        <is_hidden>$hidden</is_hidden>\n`;
         $xml .= qq`        <write_access>$write_access</write_access>\n`;
+
+        foreach my $sub_name (@{$chr_2_sub{$chr_name}}) {
+            $xml .= qq`        <subregion name="$sub_name">$sub_contigs{$sub_name}</subregion>\n`;
+        }
+
         $xml .= qq`      </sequenceset>\n`;
     }
 
