@@ -303,6 +303,12 @@ sub set_subset {
         : { map { ($_ => 1) } @$state_array_or_hash };
 }
 
+sub get_subset_names {
+    my $self = shift @_;
+
+    return [ keys %{ $self->{'_belongs_to'} } ];
+}
+
 sub get_subsets_first_last_index { # They are 0-based indices
 
     ## NB: make sure the CloneSequences have been loaded,
