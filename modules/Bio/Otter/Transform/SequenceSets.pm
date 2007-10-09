@@ -12,6 +12,7 @@ my $SUB_ELE = { map { $_ => 1 } qw(description vega_set_id priority is_hidden wr
 # super elements to the actual sequence set
 my $SUP_ELE = { map { $_ => 1 } qw(otter sequencesets) };
 my $value;
+my $subregion_name; # I hate this global_var style!
 
 # this should be in xsl and use xslt to transform and create the objects
 sub start_handler{
@@ -26,6 +27,8 @@ sub start_handler{
         $ss->name($attr->{'name'});
         $ss->dataset_name($self->get_property('dataset_name'));
         $self->add_object($ss);
+    }elsif($ele eq 'subregion'){
+        $subregion_name = $attr->{'name'};
     }elsif($SUB_ELE->{$ele}){
        # print "* Interesting $ele\n";
     }else{
@@ -39,14 +42,18 @@ sub end_handler{
     $value =~ s/^\s*//;
     $value =~ s/\s*$//;
     my $context = shift;
-    if($SUB_ELE->{$context}){
+    if($context eq 'subregion') {
+        my $sss = $self->objects;
+        my $current_ss = $sss->[$#$sss];
+        $current_ss->set_subset($subregion_name, [split(/,/, $value)]);
+    } elsif($SUB_ELE->{$context}){
         my $context_method = $context;
-        my $ss = $self->objects;
-        my $current = $ss->[$#$ss];
-        if($current->can($context_method)){
-            $current->$context_method($value);
+        my $sss = $self->objects;
+        my $current_ss = $sss->[$#$sss];
+        if($current_ss->can($context_method)){
+            $current_ss->$context_method($value);
         }else{
-            print STDERR "$current can't $context_method\n";
+            print STDERR "$current_ss can't $context_method\n";
         }
     }
 }
@@ -55,7 +62,7 @@ sub char_handler{
   my $self = shift;
   my $xml  = shift;
   my $data = shift;
-  if ($data ne ""){
+  if ($data ne ''){
     $value .= $data;
   }
 }
