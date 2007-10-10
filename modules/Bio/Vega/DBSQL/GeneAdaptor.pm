@@ -319,7 +319,7 @@ sub fetch_all_by_Slice  {
 			 my $gene_att=$gene->get_all_Attributes;
 			 push @$gene_att, $remark_att ;
 			 $gene->truncated_flag(1);
-			 print STDERR "Found a truncated gene";
+			 print STDERR "Found a truncated gene\n";
 		  }
 		}
 		# Remove any genes that don't have transcripts left.
