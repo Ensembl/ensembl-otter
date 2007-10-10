@@ -1084,8 +1084,10 @@ sub class_object_start_end_from_clipboard {
     my $text = $self->get_clipboard_text or return;
     
     # Sequence:"RP5-931H19.1-001"    -160499 -160298 (202)   Coding 
-    my ($class, $obj_name, $start, $end) = $text =~ /^([^:]+):"([^"]+)"\s+-?(\d+)\s+-?(\d+)/;
+    my ($class, $obj_name, $start, $end) = $text =~ /^(?:([^:]+):)?"([^"]+)"\s+-?(\d+)\s+-?(\d+)/;
     # Having odd numbers of " messes up my syntax highlighting
+    
+    #warn "class = '$class'  name = '$obj_name'  start = '$start'  end = '$end'";
     
     return( $class, $obj_name, $start, $end );
 }

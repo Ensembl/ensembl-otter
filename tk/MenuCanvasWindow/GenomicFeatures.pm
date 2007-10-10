@@ -40,7 +40,7 @@ sub paste_eucomm_data {
 
     my ($class, $name, $clip_start, $clip_end) =
       $self->class_object_start_end_from_clipboard;
-    if (!$class or $class ne 'Sequence') {
+    if ($class and $class ne 'Sequence') {
         return;
     }
 
@@ -50,7 +50,7 @@ sub paste_eucomm_data {
 
     # Parse the old otter exon IDs from the existing text field
     my $display_otter = {};
-    my $text = $genomic_feature->{display_label};
+    my $text = $genomic_feature->{display_label} || '';
     foreach my $id (grep /E\d{11}$/, split /[^A-Z0-9]+/, $text) {
         $display_otter->{$id} = 1;
     }
