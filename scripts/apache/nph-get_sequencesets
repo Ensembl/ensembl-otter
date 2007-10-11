@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2007-10-09 15:04:53 $
-# Id:            $Id: nph-get_sequencesets,v 1.8 2007-10-09 15:04:53 lg4 Exp $
+# Last modified: $Date: 2007-10-11 13:01:55 $
+# Id:            $Id: nph-get_sequencesets,v 1.9 2007-10-11 13:01:55 lg4 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_sequencesets,v $
 
 use strict;
@@ -25,18 +25,23 @@ eval {
 
         # mapping between subregions and chromosomes:
     my $sql = qq{
-        SELECT sub.name, chr.name, count(*) cnt, group_concat(ctg.name ORDER BY subasm.asm_start SEPARATOR ',')
+        SELECT sub.name, chr.name, count(*) cnt, group_concat(cln.name ORDER BY sub_ctg.asm_start SEPARATOR ',')
         FROM seq_region sub,
-             assembly subasm,
+             assembly sub_ctg,
              seq_region ctg,
-             assembly chrasm,
-             seq_region chr
+             assembly chr_ctg,
+             seq_region chr,
+             assembly cln_ctg,
+             seq_region cln
         WHERE sub.coord_system_id=(SELECT coord_system_id FROM coord_system where name='subregion')
-          AND sub.seq_region_id=subasm.asm_seq_region_id
-          AND ctg.seq_region_id=subasm.cmp_seq_region_id
+          AND sub.seq_region_id=sub_ctg.asm_seq_region_id
+          AND ctg.seq_region_id=sub_ctg.cmp_seq_region_id
           AND ctg.coord_system_id=(SELECT coord_system_id FROM coord_system where name='contig')
-          AND subasm.cmp_seq_region_id=chrasm.cmp_seq_region_id
-          AND chr.seq_region_id=chrasm.asm_seq_region_id
+          AND cln.seq_region_id=cln_ctg.asm_seq_region_id
+          AND ctg.seq_region_id=cln_ctg.cmp_seq_region_id
+          AND cln.coord_system_id=(SELECT coord_system_id FROM coord_system where name='clone')
+          AND sub_ctg.cmp_seq_region_id=chr_ctg.cmp_seq_region_id
+          AND chr.seq_region_id=chr_ctg.asm_seq_region_id
           AND (chr.coord_system_id=(SELECT coord_system_id FROM coord_system where name='chromosome' and version='Otter')
                OR chr.seq_region_id=sub.seq_region_id)
         GROUP BY sub.name, chr.name
