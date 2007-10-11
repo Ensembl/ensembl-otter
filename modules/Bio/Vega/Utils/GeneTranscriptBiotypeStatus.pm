@@ -20,6 +20,7 @@ my @method_biotype_status = qw{
         Putative_CDS                protein_coding          PUTATIVE
         Nonsense_mediated_decay     =                       -
                                     
+    Novel_transcript                processed_transcript    KNOWN
     Novel_transcript                processed_transcript    NOVEL
     Transcript                      processed_transcript    -
         Non_coding                  =                       -
