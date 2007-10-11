@@ -188,7 +188,7 @@ my $ldba = $support->get_database('loutre','loutre');
 my $lsa  = $ldba->get_SliceAdaptor();
 my $lga  = $ldba->get_GeneAdaptor();
 my $laa  = $ldba->get_AttributeAdaptor();
-my $lpfa = $ldba->get_ProteinFeatureAdaptor;
+my $lcia = $ldba->get_ContigInfoAdaptor();
 my $ldbh = $ldba->dbc->db_handle;
 
 # connect to vega database and get adaptors
@@ -196,8 +196,7 @@ my $ldbh = $ldba->dbc->db_handle;
 my $vdba = $support->get_database('loutre');
 my $vsa  = $vdba->get_SliceAdaptor();
 my $vga  = $vdba->get_GeneAdaptor();
-my $vata  = $vdba->get_AttributeAdaptor();
-my $vpfa = $vdba->get_ProteinFeatureAdaptor;
+my $vata = $vdba->get_AttributeAdaptor();
 my $vaa  = $vdba->get_AnalysisAdaptor;
 my $vsfa = $vdba->get_SimpleFeatureAdaptor();
 my $vmsa = $vdba->get_MiscSetAdaptor;
@@ -561,9 +560,8 @@ foreach my $name (@{$chr_names_wanted}) {
 			$c++;
 		}
 	}
-	
 	$support->log("Transferred $c genes from chromosome $name\n",1);
-	
+
 	#transfer other seq_region based features
 	if (! $support->param('dry_run')) {
 		
@@ -578,18 +576,29 @@ foreach my $name (@{$chr_names_wanted}) {
 		#transfer seq_region_attributes
 		&transfer_sra($lslice,$vslice,$att_types_wanted);
 		
-		#transfer contig_attribs
-		&transfer_contig_attribs($lslice,$vslice);
+		#transform contig_attribs intoto seq_region_attribs
+		my $attribs_to_move = ['annotated'];
+		&transfer_contig_attribs($lslice,$vslice,$attribs_to_move);
 	}
 }
 $support->finish_log;
 
+=head2 transfer_gene
 
+  Arg[1]      : Bio::Vega::Gene - Loutre source gene
+  Arg[2]      : Bio::Vega::Slice - Vega destination chromosome
+  Arg[3]      : arrayref of attrib_type.codes
+  Description : Transforms a Loutre gene into a Vega gene
+  Return type : none
+  Exceptions  : none
+  Caller      : internal
+
+=cut
 
 sub transfer_gene {
 	my $gene = shift;
-	my $vsa = shift;
-	my $vga = shift;
+	my $vsa = shift;  #no need to transfer
+	my $vga = shift;  #no need to transfer
 	my $l_gene_slice = $gene->slice;
 	my $v_gene_slice = $vsa->fetch_by_region($l_gene_slice->coord_system->name,
 											 $l_gene_slice->seq_region_name,
@@ -629,13 +638,12 @@ sub transfer_gene {
 	}
 }
 
-
 =head2 transfer_contig_attribs
 
   Arg[1]      : Bio::Vega::Slice - Loutre source chromosome
   Arg[2]      : Bio::Vega::Slice - Vega destination chromosome
-  ARG[3]      : arrayref of attrib_type.codes
-  Description : Transfers the contig attributes from Loutre contigs onto Vega ones
+  Arg[3]      : arrayref of attrib_type.codes
+  Description : Transforms the contig attributes from Loutre contigs into Vega seq_region attributes
   Return type : none
   Exceptions  : none
   Caller      : internal
@@ -643,17 +651,43 @@ sub transfer_gene {
 =cut
 
 sub transfer_contig_attribs {
-
-#needs to be written when api support is there
-
+	my $lslice  = shift;
+	my $vslice  = shift;
+	my $attribs = shift;
+ SEG:
+	foreach my $seg (@{$lslice->project('contig')}) {
+		my $c = 0;
+		my $contig = $seg->to_Slice;
+		my $srname = $contig->seq_region_name();
+		my $vega_contig = $vsa->fetch_by_region('contig',$srname);
+		if (! $vega_contig ) {
+			$support->log_warning("Cannot retrieve contig $srname from Vega");
+			next SEG;
+		}
+		my $dbID = $lsa->get_seq_region_id($contig);
+		my $contig_info = $lcia->fetch_by_seq_region_id($dbID);
+		if (! $contig_info) {
+			$support->log_warning("Unable to retrieve contig_info for contig $srname (dbID = $dbID)\n");
+			next SEG;
+		}
+		my $attribs_to_store;
+		foreach my $l_attribute (@{$laa->fetch_all_by_ContigInfo($contig_info)}) {
+			next unless (grep {$l_attribute->code eq $_} @$attribs);
+			push @{$attribs_to_store},$l_attribute;
+			$c++;
+		}
+		if ($attribs_to_store) {
+			$vata->store_on_('Slice',$vega_contig,$attribs_to_store);
+		}
+		$support->log_verbose("Transferred $c contig attribs for contig $srname (dbID = $dbID)\n");
+	}
 }
-
 
 =head2 transfer_sra
 
   Arg[1]      : Bio::Vega::Slice - Loutre source chromosome
   Arg[2]      : Bio::Vega::Slice - Vega destination chromosome
-  ARG[3]      : arrayref of attrib_type.codes
+  Arg[3]      : arrayref of attrib_type.codes
   Description : Stores the seqregion attributes of a Loutre chromosome onto a Vega one
   Return type : none
   Exceptions  : none
@@ -672,6 +706,7 @@ sub transfer_sra {
 		my $l_attributes = $lslice->get_all_Attributes($type);
 
 		#create a new attribute if necc; add attributes to feature
+		#(actually could do the same as contig_attribs and reuse the one coming from loutre)
 		foreach my $l_attribute (@{$l_attributes}) {
 			$c++;
 			my $v_attribute = Bio::EnsEMBL::Attribute->new(
@@ -687,8 +722,6 @@ sub transfer_sra {
 	$vata->store_on_Slice($vslice,$attribs);
 	$support->log("Transferred $c seq_region_attributes for chromosome ".$lslice->seq_region_name."\n",1);	
 }
-
-
 
 =head2 transfer_misc_features
 
@@ -797,7 +830,6 @@ sub transfer_simple_features {
 	$support->log("$c simple features transferred for chromosome ".$lslice->seq_region_name."\n",1);
 }
 
-
 =head2 constraints
 
   Arg         : None
@@ -813,17 +845,17 @@ sub constraints {
 attrib_type                   u   #should be identical to pipeline but checked anyway
 
 author                        d   #author_group info is not accurate so no point in parsing it
-author_group                  d
+author_group                  d   #use this later for assigning contact details to chromosomes
 gene_author                   s
 transcript_author             s
 evidence                      s   #will have to be fixed (ie removed from loutre) eventually but OK for now
 
 assembly_tag                  i   #fixed by CK
 
-contig_attrib                 i   #check with jgrg
-contig_info                   i   #check with jgrg
 assembly_tagged_contig        i   #check with jgrg
 contig_lock                   i   #check with jgrg
+contig_attrib                 i
+contig_info                   i
 exon_stable_id_pool           i   #check with jgrg
 gene_stable_id_pool           i   #check with jgrg
 sequence_note                 i   #check with jgrg
