@@ -147,6 +147,7 @@ sub remove_selected_from_evidence_list {
             if ($name_list->[$i] eq $name) {
                 splice(@$name_list, $i, 1);
                 #warn "Found '$name'!";
+                last;
             }
         }
     }
