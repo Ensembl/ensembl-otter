@@ -970,11 +970,8 @@ sub draw_subset {
     my ($self, $subset_tag) = @_;
 
     my $ss = $self->SequenceSet();
+    $self->get_CloneSequence_list(); # make sure the clones are preloaded
 
-    my $subnames = $ss->get_subset_names();
-    warn "There are ".scalar(@$subnames)." : ".join(', ', @$subnames);
-
-    $self->get_CloneSequence_list(); # for preloading the clones only
     my ($first, $last) = $ss->get_subsets_first_last_index($subset_tag);
 
     if(defined($first)) {
