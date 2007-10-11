@@ -2,7 +2,7 @@ package Bio::Vega::Transform::XML;
 
 use strict;
 use Bio::Vega::Utils::XmlEscape qw (xml_escape);
-use Bio::EnsEMBL::Utils::Exception qw ( throw);
+use Bio::EnsEMBL::Utils::Exception qw (throw);
 use base 'Bio::Vega::Writer';
 use Bio::Vega::Utils::GeneTranscriptBiotypeStatus 'biotype_status2method';
 
@@ -16,6 +16,7 @@ sub get_geneXML{
 
 sub generate_OtterXML{
   my ($self,$slices,$odb,$indent,$genes,$sf)=@_;
+
   my $ot=$self->prettyprint('otter');
   $ot->indent($indent);
   foreach my $slice (@$slices){
@@ -26,19 +27,31 @@ sub generate_OtterXML{
 
 sub generate_SequenceSet{
   my ($self,$slice,$odb,$genes,$features)=@_;
+
   my $ss=$self->prettyprint('sequence_set');
   $ss->attribvals($self->generate_AssemblyType($slice));
+
   my $slice_projection = $slice->project('contig');
   foreach my $contig_seg (@$slice_projection) {
 	 $ss->attribobjs($self->generate_SequenceFragment($contig_seg,$slice,$odb));
   }
-  unless ($features) {
-	 $features = $slice->get_all_SimpleFeatures;
-  }
+
+  $features ||= $slice->get_all_SimpleFeatures;
+
+  # Now it is very important that we discard features that intersect the slice boundaries:
+
+    for (my $i = 0; $i < @$features; ) {
+        my $sf = $features->[$i];
+        if( ($sf->start()<1) || ($sf->end()>$slice->length()) ) {
+            splice(@$features, $i, 1);
+        } else {
+            $i++;
+        }
+    }
+  
   $ss->attribobjs($self->generate_FeatureSet($features,$slice));
-  unless ($genes){
-      $genes=$slice->get_all_Genes;
-  }
+
+  $genes ||= $slice->get_all_Genes;
   foreach my $gene(@$genes){
 	 $ss->attribobjs($self->generate_Locus($gene));
   }
@@ -361,32 +374,35 @@ sub generate_FeatureSet {
   my $offset=$slice->start-1;
   my $fs=$self->prettyprint('feature_set');
   foreach my $feature(@$features){
+
+    warn "SF: analysis_name=".$feature->analysis->logic_name()." start=".$feature->start." end=".$feature->end();
+
 	 my $f = $self->prettyprint('feature');
 	 if ($feature->analysis){
 		my $a=$feature->analysis;
 		$f->attribvals($self->prettyprint('type',$a->logic_name));
+	 } else {
+		throw "Cannot create Otter XML, feature type is absent: $feature";
 	 }
-	 else {
-		throw "Cannot create Otter XML, feature type is absent:$feature";
-	 }
+
 	 if ($feature->start){
 		$f->attribvals($self->prettyprint('start',$feature->start+$offset));
+	 } else {
+		throw "Cannot create Otter XML, feature start is absent: $feature";
 	 }
-	 else {
-		throw "Cannot create Otter XML, feature type is absent:$feature";
-	 }
+
 	 if ($feature->end){
 		$f->attribvals($self->prettyprint('end',$feature->end+$offset));
+	 } else {
+		throw "Cannot create Otter XML, feature end is absent: $feature";
 	 }
-	 else {
-		throw "Cannot create Otter XML, feature type is absent:$feature";
-	 }
+
 	 if ($feature->strand){
 		$f->attribvals($self->prettyprint('strand',$feature->strand));
+	 } else {
+		throw "Cannot create Otter XML, feature strand is absent: $feature";
 	 }
-	 else {
-		throw "Cannot create Otter XML, feature type is absent:$feature";
-	 }
+
 	 if ($feature->score){
 		$f->attribvals($self->prettyprint('score',$feature->score));
 	 }
