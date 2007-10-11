@@ -375,8 +375,6 @@ sub generate_FeatureSet {
   my $fs=$self->prettyprint('feature_set');
   foreach my $feature(@$features){
 
-    warn "SF: analysis_name=".$feature->analysis->logic_name()." start=".$feature->start." end=".$feature->end();
-
 	 my $f = $self->prettyprint('feature');
 	 if ($feature->analysis){
 		my $a=$feature->analysis;
