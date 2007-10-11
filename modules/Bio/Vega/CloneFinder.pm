@@ -165,12 +165,10 @@ sub find_by_stable_ids {
                 }
             };
 
-            warn "FEATURE=$feature\n";
-
                 # Just imagine: they raise an EXCEPTION to indicate nothing was found. Terrific!
             if($@) {
-                warn "'$qname' looks like a stable id, but wasn't found.";
-                warn ($@) if $DEBUG;
+                # warn "'$qname' looks like a stable id, but wasn't found.";
+                # warn ($@) if $DEBUG;
             } else {
                 $self->register_feature($qname, $qtype, $feature);
             }
