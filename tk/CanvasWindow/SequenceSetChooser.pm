@@ -133,49 +133,60 @@ sub draw {
 
     my $ds = $self->Client->get_DataSet_by_name($self->name);
 
-    my $ss_list = $ds->get_all_visible_SequenceSets;
+    my $ss_list  = $ds->get_all_visible_SequenceSets;
 
     if(@$ss_list) {
+
+        my $full_pairs = [ map { [$_->name(), $_->name().':', $_->description(), $_ ] }
+                            sort { ace_sort($a->name, $b->name) } @$ss_list ];
+
+        my $sub_pairs = [];
+        foreach my $ss (@$ss_list) {
+            foreach my $sub_name (@{$ss->get_subset_names()}) {
+                push @$sub_pairs, [$sub_name, $ss->name().':'.$sub_name, "Subregion of ".$ss->name(), $ss];
+            }
+        }
+        $sub_pairs = [sort { $a->[0] cmp $b->[0] } @$sub_pairs];
+
+        my $all_pairs = [@$full_pairs, @$sub_pairs];
 
         my $row_height = int $size * 1.5;
         my $x = $size;
 
         my $client_write_access = $self->Client->write_access;
 
-        $ss_list = [ sort { ace_sort($a->name, $b->name) } @$ss_list];
-
-        for (my $i = 0; $i < @$ss_list; $i++) {
-            my $ss = $ss_list->[$i];
+        for (my $i = 0; $i < @$all_pairs; $i++) {
+            my ($display_name, $tag, $desc, $ss) = @{$all_pairs->[$i]};
             my $row = $i + 1;
             my $y = $row_height * $row;
             my $ss_write_access = $client_write_access && $ss->write_access;
             $canvas->createText(
             $x, $y,
-            -text   => $ss->name,
+            -text   => $display_name,
             -font   => $font_def,
             -fill   => ($ss_write_access ? 'DarkGreen' : 'DarkRed'),
             -anchor => 'nw',
-            -tags   => ["row=$row", 'SetName', 'SequenceSet=' . $ss->name],
+            -tags   => ["row=$row", 'SetName', 'SequenceSet=' . $tag],
             );
         }
         
         $x = ($canvas->bbox('SetName'))[2] + ($size * 2);
-        for (my $i = 0; $i < @$ss_list; $i++) {
-            my $ss = $ss_list->[$i];
+        for (my $i = 0; $i < @$all_pairs; $i++) {
+            my ($display_name, $tag, $desc, $ss) = @{$all_pairs->[$i]};
             my $row = $i + 1;
             my $y = $row_height * $row;
             $canvas->createText(
             $x, $y,
-            -text   => $ss->description,
+            -text   => $desc,
             -font   => $helv_def,
             -anchor => 'nw',
-            -tags   => ["row=$row", 'SetDescription', 'SequenceSet=' . $ss->name],
+            -tags   => ["row=$row", 'SetDescription', 'SequenceSet=' . $tag],
             );
         }
         
         $x = ($canvas->bbox('SetDescription'))[2] + ($size * 2);
-        for (my $i = 0; $i < @$ss_list; $i++) {
-            my $ss = $ss_list->[$i];
+        for (my $i = 0; $i < @$all_pairs; $i++) {
+            my ($display_name, $tag, $desc, $ss) = @{$all_pairs->[$i]};
             my $row = $i + 1;
             my $y = $row_height * $row;
             my $ss_write_access = $client_write_access && $ss->write_access;
@@ -185,21 +196,21 @@ sub draw {
             -font   => $font_def,
             -fill   => ($ss_write_access ? 'DarkGreen' : 'DarkRed'),
             -anchor => 'nw',
-            -tags   => ["row=$row", 'SetDescription', 'SequenceSet=' . $ss->name],
+            -tags   => ["row=$row", 'SetDescription', 'SequenceSet=' . $tag],
             );
         }
         
         $x = $size;
         my $max_x = ($canvas->bbox('SetDescription'))[2];
-        for (my $i = 0; $i < @$ss_list; $i++) {
-            my $ss = $ss_list->[$i];
+        for (my $i = 0; $i < @$all_pairs; $i++) {
+            my ($display_name, $tag, $desc, $ss) = @{$all_pairs->[$i]};
             my $row = $i + 1;
             my $y = $row_height * $row;
             my $rec = $canvas->createRectangle(
             $x, $y, $max_x, $y + $size,
             -fill       => undef,
             -outline    => undef,
-            -tags   => ["row=$row", 'SetBackground', 'SequenceSet=' . $ss->name],
+            -tags   => ["row=$row", 'SetBackground', 'SequenceSet=' . $tag],
             );
 	    $canvas->lower($rec, "row=$row");
         }
@@ -286,12 +297,12 @@ sub open_sequence_set {
     my ($obj) = $self->list_selected;
     my $canvas = $self->canvas;
     foreach my $tag ($canvas->gettags($obj)) {
-        if ($tag =~ /^SequenceSet=(.+)/) {
-            my $ss_name = $1;
+        if ($tag =~ /^SequenceSet=([^:]+):([^:]*)/) {
+            my ($ss_name, $subset_name) = ($1, $2);
 
             my $ss = $self->DataSet->get_SequenceSet_by_name($ss_name);
 
-            $self->open_sequence_set_by_ssname_subset($ss_name);
+            $self->open_sequence_set_by_ssname_subset($ss_name, $subset_name);
             return 1;
         }
     }
@@ -299,7 +310,7 @@ sub open_sequence_set {
 }
 
 sub open_sequence_set_by_ssname_subset {
-    my ($self, $ss_name, $subset_tag) = @_;
+    my ($self, $ss_name, $subset_name) = @_;
     
     $self->watch_cursor();
 
@@ -322,8 +333,8 @@ sub open_sequence_set_by_ssname_subset {
         $self->add_SequenceNotes($sn);
     }
 
-    if( $subset_tag ) { # we assume that whoever calls this has set the subset previously
-        $sn->draw_subset($subset_tag);
+    if( $subset_name ) { # we assume that whoever calls this has set the subset previously
+        $sn->draw_subset($subset_name);
     } elsif(! $sn->canvas->find('withtag', 'all')) {
         $sn->draw_all();    
     }
