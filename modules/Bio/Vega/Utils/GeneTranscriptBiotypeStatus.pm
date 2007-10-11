@@ -29,7 +29,7 @@ my @method_biotype_status = qw{
         Antisense                   =                       -
         Disrupted_domain            =                       -
         IG_segment                  =                       -
-        Putative                    =                       -
+        Putative                    processed_transcript    PUTATIVE
                                     
     Pseudogene                      =                       -
         Processed_pseudogene        =                       -
@@ -42,7 +42,7 @@ my @method_biotype_status = qw{
 
     TEC                             =                       -
 
-    Predicted                       processed_transcript    PREDICTED
+    Predicted                       protein_coding          PREDICTED
 
 };
 
