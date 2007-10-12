@@ -154,9 +154,12 @@ sub column_methods {
                     # Use closure for font definition
                     my ($cs, $i, $self, $ss) = @_;
                     my $accsv = $cs->accession_dot_sv();
-                    my $fontcolour = $ss->accsv_belongs_to_subset($accsv) # currently we are only interested in whether it belongs *anywhere* or not
+                    my $current_subset_tag = $self->current_subset_tag();
+                    my $fontcolour = $ss->accsv_belongs_to_subset($accsv, $current_subset_tag)
                                         ? 'red'
-                                        : 'black';
+                                        : $ss->accsv_belongs_to_subset($accsv)
+                                            ? 'DarkRed'
+                                            : 'black';
                     return {-text => $accsv, -font => $bold, -fill => $fontcolour, -tags => ['searchable']};
                 }],
             [$text_method, 
@@ -164,9 +167,12 @@ sub column_methods {
                     # Use closure for font definition
                     my ($cs, $i, $self, $ss) = @_;
                     my $accsv = $cs->accession_dot_sv();
-                    my $fontcolour = $ss->accsv_belongs_to_subset($accsv) # currently we are only interested in whether it belongs *anywhere* or not
+                    my $current_subset_tag = $self->current_subset_tag();
+                    my $fontcolour = $ss->accsv_belongs_to_subset($accsv, $current_subset_tag)
                                         ? 'red'
-                                        : 'black';
+                                        : $ss->accsv_belongs_to_subset($accsv)
+                                            ? 'DarkRed'
+                                            : 'black';
                     return {-text => $cs->clone_name, -font => $bold, -fill => $fontcolour, -tags => ['searchable'] };
                 }],
             [$text_method, \&_column_text_pipeline_status],
@@ -966,6 +972,14 @@ sub draw_all {
     return $self->draw();
 }
 
+sub current_subset_tag {
+    my $self = shift @_;
+
+    $self->{'_current_subset_tag'} = shift @_ if @_;
+
+    return $self->{'_current_subset_tag'};
+}
+
 sub draw_subset {
     my ($self, $subset_tag) = @_;
 
@@ -975,6 +989,9 @@ sub draw_subset {
     my ($first, $last) = $ss->get_subsets_first_last_index($subset_tag);
 
     if(defined($first)) {
+
+            $self->current_subset_tag($subset_tag);
+
         # if($self->_currently_paging()) {
 
             $self->_currently_paging(1);
