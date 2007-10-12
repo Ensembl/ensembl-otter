@@ -39,11 +39,11 @@ This script does a number of jobs:
 - updates gene.analysis_id and transcript.analysis_id depending on gene.source
 - adds attributes for gene / transcript author and author_email according to source (hard coded)
 - then updates gene.source -> 'vega'
-- deletes interfering attrib types such as transcript synonyms
+- deletes transcript synonym attrib types
 - sets seq_region.name for chromosomes to that defined by the seqregion_attrib 'vega_name'
 - tidies up coord_system and related tables (meta), removes NCBI types [code can probably be removed -
-  need to test in mouse],  sets the default assembly version to 'Vega' from 'Otter'
-- adds and removes misc entries to meta
+  need to test in mouse],  sets the default assembly version to 'Vega' from 'Otter' and patches meta
+- tidies up meta table
 - patches coord_system.version for contigs to NULL
 
 The first time it is run it creates backup copies of the original tables; then when run
@@ -125,13 +125,12 @@ my $vdba = $support->get_database('ensembl');
 my $vsa  = $vdba->get_SliceAdaptor();
 my $vaa  = $vdba->get_AnalysisAdaptor();
 my $vata = $vdba->get_AttributeAdaptor();
-my $vpta = $vdba->get_PredictionTranscriptAdaptor();
 my $vdbh = $vdba->dbc->db_handle;
 
 #get tables from database
 # - if there are no backups of the originals make them
 # - if this is the first time the script has been run then offer to run in 'dry_run' mode
-my @tables = qw(coord_system meta seq_region analysis gene transcript);  
+my @tables = qw(coord_system meta seq_region analysis gene transcript gene_attrib transcript_attrib seq_region_attrib);
 my (%tabs);
 map { $_ =~ s/`//g; $tabs{$_} += 1; } $vdbh->tables;
 my $ask = 1;
@@ -139,7 +138,7 @@ foreach my $name (@tables) {
 	my $backup_name = 'backup_original_'.$name;
 	if (! exists($tabs{$backup_name})) {
 		if (! $support->param('dry_run') && $ask) {
-			if ($support->user_proceed("It seems as though this is the first time you've run this script so I'd advise running it in \'dry_run\' mode. Shall I set this for you, or do you want to proceed ?\n")) {
+			if ($support->user_proceed("It seems as though this is the first time you've run this script so I'd advise running it in \'dry_run\' mode. Shall I set this for you, or do you want to proceed anyway?\n")) {
 				$support->param('dry_run',1);
 				$support->log("Set to dry_run mode\n");
 			}
@@ -183,18 +182,18 @@ $support->log("\nChecking sources of genes...\n");
 
 #define the logic_name and the display name to use for each gene.source
 #also define author name and email - the latter could come out of author_group table ?
-#note that in the final Vega db, GD and KO will use multiple analysis_ids
+#(note that in the final Vega db, GD and KO will use multiple analysis_ids)
 my %all_logic_names = (
-	'havana' => ['otter','Havana','vega@sanger.ac.uk'],
-	'WU'     => ['otter_external','Washu','jspieth@watson.wust'],
-	'JGI'    => ['otter_external','JGI','UHellsten@lbl.gov'],
-	'GC'     => ['otter_external','Genoscope','ralph@genoscope.cns.fr'],
-	'SK'     => ['otter_external','Sick_Kids','jmacdonald@sickkids.ca'],
-	'BCM'    => ['otter_external','BCM','sabo@bcm.tmc.edu'],
-	'MIT'    => ['otter_external','Broad','daved@broad.mit.edu'],
-	'C22'    => ['otter_external','Sanger','chr22@sanger.ac.uk'],
-	'GD'     => ['otter_external','EGAG','egag@sanger.ac.uk'],
-	'KO'     => ['otter_eucomm','Havana','vega@sanger.ac.uk'],
+	'havana' => ['otter',          'Havana',    'vega@sanger.ac.uk'],
+	'WU'     => ['otter_external', 'Washu',     'jspieth@watson.wust'],
+	'JGI'    => ['otter_external', 'JGI',       'UHellsten@lbl.gov'],
+	'GC'     => ['otter_external', 'Genoscope', 'ralph@genoscope.cns.fr'],
+	'SK'     => ['otter_external', 'Sick_Kids', 'jmacdonald@sickkids.ca'],
+	'BCM'    => ['otter_external', 'BCM',       'sabo@bcm.tmc.edu'],
+	'MIT'    => ['otter_external', 'Broad',     'daved@broad.mit.edu'],
+	'C22'    => ['otter_external', 'Sanger',    'chr22@sanger.ac.uk'],
+	'GD'     => ['otter_external', 'EGAG',      'egag@sanger.ac.uk'],
+	'KO'     => ['otter_eucomm',   'Havana',    'vega@sanger.ac.uk'],
 );
 
 #get all the logic names that are used
