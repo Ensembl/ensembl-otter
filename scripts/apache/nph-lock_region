@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2007-10-04 12:03:27 $
-# Id:            $Id: nph-lock_region,v 1.5 2007-10-04 12:03:27 jgrg Exp $
+# Last modified: $Date: 2007-10-12 14:25:17 $
+# Id:            $Id: nph-lock_region,v 1.6 2007-10-12 14:25:17 lg4 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-lock_region,v $
 
 use strict;
@@ -45,7 +45,7 @@ $server->error_exit("Clones locked - exiting [$@]") if $@;
 
 $server->log("Obtained the locks.");
 
-my $xml = Bio::Vega::Transform::XML->generate_OtterXML([$slice],$odba,0, []);
+my $xml = Bio::Vega::Transform::XML->generate_OtterXML([$slice],$odba,0, [], []);
 $server->send_response($xml);
 
 1;
