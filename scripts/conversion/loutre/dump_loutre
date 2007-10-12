@@ -42,8 +42,9 @@ Options:
 
 =head1 DESCRIPTION
 
-This script uses the API to transfer genes and features associated with genes, and
-mysqldump to transfer other features in the loutre database.
+This script uses the API to transfer genes and other features (simple features, misc features
+and seq_region attributes) from Loutre.  MYSQLdump is also used to transfer a limited set of
+tables and data from the loutre database.
 
 The 'chr' options specify a comma separated list of chromosomes to use. In the abscence
 of either of these the script examines the loutre database to see which chromosomes
@@ -65,10 +66,6 @@ loutre seq_region_attrib.codes to be transfered or ignored are hardcoded into th
 any new ones in the database will be highlighted.
 
 The -prune 1 option can be used to remove all entries from all previous runs.
-
-To Do:
-- when we use B::V::GeneAdaptor->store then deal with evidence and author info
-- where are clone remarks kept ?
 
 =head1 LICENCE
 
@@ -177,12 +174,6 @@ $support->confirm_params;
 # get log filehandle and print heading and parameters to logfile
 $support->init_log;
 
-#info for MySQL dumping
-#character set
-my $character_set='latin1';
-#database type
-my $dbtype='MyISAM';
-
 # connect to loutre database and get adaptors
 my $ldba = $support->get_database('loutre','loutre');
 my $lsa  = $ldba->get_SliceAdaptor();
@@ -192,7 +183,6 @@ my $lcia = $ldba->get_ContigInfoAdaptor();
 my $ldbh = $ldba->dbc->db_handle;
 
 # connect to vega database and get adaptors
-#my $vdba = $support->get_database('ensembl');
 my $vdba = $support->get_database('loutre');
 my $vsa  = $vdba->get_SliceAdaptor();
 my $vga  = $vdba->get_GeneAdaptor();
@@ -289,9 +279,9 @@ while (my ($name,$group1,$group2,$group_email) = $lsth->fetchrow_array ) {
 #check all attrib_type.attrib_type_ids in loutre are in the newly created vega db
 ####
 if ($constraints{'attrib_type'} ne 'u') {
-        if (! $support->user_proceed("You haven't defined that the attrib_type table be checked and updated. Is that really correct ?\n")){
-                exit;
-        }
+	if (! $support->user_proceed("You haven't defined that the attrib_type table be checked and updated. Is that really correct ?\n")){
+		exit;
+	}
 }
 else {
 	my $vsth = $vdbh->prepare(qq(select attrib_type_id, code from attrib_type));
@@ -351,8 +341,6 @@ if ( @new_seq_region_attribs ) {
 # store simple_features and seq_region_attribs that were previously transferred
 # from the pipeline db in a backup table, make a backup of meta_coord table
 
-#my (%tabs);
-#map { $_ =~ s/`//g; $tabs{$_} += 1; } $vdbh->tables;
 if (! exists ($vega_tables{'backup_simple_feature_names'})) {
 	$support->log_verbose("Creating backup table of simple_feature logic_names\n\n");
 	$vdbh->do("CREATE table backup_simple_feature_names
@@ -433,7 +421,7 @@ if ($support->param('prune') && $support->user_proceed("\nDo you want to delete 
 	$vdbh->do(qq(DELETE FROM misc_attrib));
 	foreach my $t (keys %constraints) {
 		if ($constraints{$t} =~ /d|s/) {
-#			$vdbh->do(qq(DROP table $t));
+			$vdbh->do(qq(DROP table $t));
 		}
 	}	
 	$vdbh->do(qq(DELETE FROM meta_coord));
@@ -446,13 +434,20 @@ if ($support->param('prune') && $support->user_proceed("\nDo you want to delete 
 # create extra tables from loutre using MySQLdump direct transfer #
 ###################################################################
 
-#only add these extra tables if the author table is not there
-
-if ( $support->param('prune') || ! exists($vega_tables{'author'}) ) {
+#only add these extra tables if the author table is not there (ie if
+#it's the first dump or one done after a prune
+if ( ! exists($vega_tables{'author'} )) {
 	
 	#initialise mysqldump statements
+	#info for MySQL dumping
+	#character set
+	my $character_set='latin1';
+	#database type
+	my $dbtype='MyISAM';
 	my $cs;
-	if($character_set) {$cs="--default-character-set=\"$character_set\"";}
+	if($character_set) {
+		$cs="--default-character-set=\"$character_set\"";
+	}
 	my $luser   = $support->param('loutreuser');
 	my $ldbname = $support->param('loutredbname');
 	my $lhost   = $support->param('loutrehost');
@@ -536,7 +531,7 @@ foreach my $name (@{$chr_names_wanted}) {
 
 	$support->log_stamped("Looking at Chromosome $name...\n");
 	my $c = 0;
-	
+
 	#transfer genes and associated features
  GENE:
 	foreach my $lgene (@{$lga->fetch_all_by_Slice($lslice)} ) {
@@ -568,17 +563,19 @@ foreach my $name (@{$chr_names_wanted}) {
 		#transfer simple features 
 		&transfer_simple_features($lslice,$vslice);
 		
-		#transfer assembly_tag misc_features
-		if ($support->param('dump_assembly_tags')) {
-			&transfer_misc_features($lslice,$vslice,'atag');
-		}
-		
+
 		#transfer seq_region_attributes
 		&transfer_sra($lslice,$vslice,$att_types_wanted);
 		
 		#transform contig_attribs intoto seq_region_attribs
 		my $attribs_to_move = ['annotated'];
 		&transfer_contig_attribs($lslice,$vslice,$attribs_to_move);
+
+		#transfer assembly_tag misc_features
+		if ($support->param('dump_assembly_tags')) {
+			my $features_to_copy = ['atag_CLE','atag_CRE','atag_Misc','atag_Unsure'];
+			&transfer_misc_features($lslice,$vslice,$features_to_copy);
+		}
 	}
 }
 $support->finish_log;
@@ -667,7 +664,7 @@ sub transfer_contig_attribs {
 		my $dbID = $lsa->get_seq_region_id($contig);
 		my $contig_info = $lcia->fetch_by_seq_region_id($dbID);
 		if (! $contig_info) {
-			$support->log_warning("Unable to retrieve contig_info for contig $srname (dbID = $dbID)\n");
+			#no point in having a warning since this is common
 			next SEG;
 		}
 		my $attribs_to_store;
@@ -727,8 +724,8 @@ sub transfer_sra {
 
   Arg[1]      : Bio::Vega::Slice - Loutre source chromosome
   Arg[2]      : Bio::Vega::Slice - Vega destination chromosome
-  Arg[3]      : attrib_type.code (or root, eg atag) on which to limit transfer
-  Description : Stores the misc features on a Loutre chromosome onto a Vega one
+  Arg[3]      : attrib_type.code on which to limit transfer
+  Description : Stores the misc features from a Loutre chromosome onto a Vega one
   Return type : none
   Exceptions  : none
   Caller      : internal
@@ -738,50 +735,50 @@ sub transfer_sra {
 sub transfer_misc_features {
 	my $lslice = shift;
 	my $vslice = shift;
-	my $type   = shift;
+	my $types   = shift;
 	my @v_features;
 	my $c = 0;
- FEAT:
 	foreach my $l_feature (@{$lslice->get_all_MiscFeatures()}) {
-		next FEAT if (! grep {$_->code =~ /$type/} @{$l_feature->get_all_MiscSets});
-		$c++;
-
-		#create feature
-		my $v_feature = Bio::EnsEMBL::MiscFeature->new(
-			-start    => $l_feature->start,
-			-end      => $l_feature->end,
-			-strand   => $l_feature->strand,
-			-slice    => $vslice,
-		);
-
-		#create a new misc set if necc; add misc sets to features
-		foreach my $l_miscset (@{$l_feature->get_all_MiscSets}) {
-			my $v_miscset = $vmsa->fetch_by_code($l_miscset->code);
-			if (! $v_miscset) {
-				$v_miscset = Bio::EnsEMBL::MiscSet->new(
-					-CODE            => $l_miscset->code,
-					-NAME            => $l_miscset->name,
-					-DESCRIPTION     => $l_miscset->description,
-					-LONGEST_FEATURE => $l_miscset->longest_feature,
-				);
-				$vmsa->store($v_miscset);
-			}
-			$v_feature->add_MiscSet($v_miscset);
-		}			
-
-		#create a new attribute if necc; add attributes to feature
-		foreach my $l_attribute (@{$l_feature->get_all_Attributes}) {
-			my $v_attribute = Bio::EnsEMBL::Attribute->new(
-				-NAME        => $l_attribute->name,
-				-CODE        => $l_attribute->code,
-				-VALUE       => $l_attribute->value,
-				-DESCRIPTION => $l_attribute->description,
+	TYPE:
+		foreach my $type (@$types) {
+			next TYPE if (! grep {$_->code =~ /$type/} @{$l_feature->get_all_MiscSets($type)});
+			$c++;
+			#create feature
+			my $v_feature = Bio::EnsEMBL::MiscFeature->new(
+				-start    => $l_feature->start,
+				-end      => $l_feature->end,
+				-strand   => $l_feature->strand,
+				-slice    => $vslice,
 			);
-			$v_feature->add_Attribute($v_attribute);	
-		}
-		push @v_features, $v_feature;
-	}
 
+			#create a new misc set if necc; add misc sets to features
+			foreach my $l_miscset (@{$l_feature->get_all_MiscSets}) {
+				my $v_miscset = $vmsa->fetch_by_code($l_miscset->code);
+				if (! $v_miscset) {
+					$v_miscset = Bio::EnsEMBL::MiscSet->new(
+						-CODE            => $l_miscset->code,
+						-NAME            => $l_miscset->name,
+						-DESCRIPTION     => $l_miscset->description,
+						-LONGEST_FEATURE => $l_miscset->longest_feature,
+					);
+					$vmsa->store($v_miscset);
+			}
+				$v_feature->add_MiscSet($v_miscset);
+			}			
+
+			#create a new attribute if necc; add attributes to feature
+			foreach my $l_attribute (@{$l_feature->get_all_Attributes}) {
+				my $v_attribute = Bio::EnsEMBL::Attribute->new(
+					-NAME        => $l_attribute->name,
+					-CODE        => $l_attribute->code,
+					-VALUE       => $l_attribute->value,
+					-DESCRIPTION => $l_attribute->description,
+				);
+				$v_feature->add_Attribute($v_attribute);	
+			}
+			push @v_features, $v_feature;
+		}
+	}
 	#store all features on this slice
 	$vmfa->store(@v_features);
 	$support->log("Transferred $c misc_features for chromosome ".$lslice->seq_region_name."\n",1);	
@@ -863,31 +860,6 @@ sequence_set_access           i   #check with jgrg
 test_contig_info              i   #check with jgrg
 transcript_stable_id_pool     i   #check with jgrg
 translation_stable_id_pool    i   #check with jgrg
-
-
-##filter on seq_region_id:
-#analysis_description        # should have entries in loutre / pipeline, or populate during transfer to vega (this script)
-#assembly_exception          # ??? Is this part of the pipeline or loutre dumping ?
-#misc_feature etc (assembly_tags, anything else ?)
-
-##filter on attrib_type_id:
-#seq_region_attrib
-
-
-
-##these are tables have to be dealt with
-
-##make sure the api does the following
-#alt_allele
-#external_synonym
-
-#gene_attrib: name -> xref; synonym stays; remark taken across then 'Annotation remark' deleted
-#transcript_attrib: name -> xref; synonym stays; remark taken across then 'Annotation remark' deleted. 'CDS start not found' etc - take those with a value of 1 only
-
-
-#gene_archive, peptide_archive are not used at all ??
-
-#what to do with marker for Zfish ?
 
 ENDOFTEXT
 	return $txt;
