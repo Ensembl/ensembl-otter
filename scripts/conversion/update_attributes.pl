@@ -33,7 +33,9 @@ Specific options:
 =head1 DESCRIPTION
 
 This script populates the attrib_type table from a file with attribute type
-definitions. This file is maintained by Ensembl and stored in cvs.
+definitions. This file is maintained by Ensembl and stored in cvs. The script is
+rarely called directly from the command line but is executed during vega and ensembl-vega
+preparation.
 
 =head1 LICENCE
 
@@ -42,7 +44,8 @@ Please see http://www.ensembl.org/code_licence.html for details
 
 =head1 AUTHOR
 
-Patrick Meidl <pm2@sanger.ac.uk>
+Steve Trevanion <st3@sanger.ac.uk>
+Patrick Meidl <meidl@ebi.ac.uk>
 
 =head1 CONTACT
 

@@ -34,8 +34,9 @@ Specific options:
 
 This script reads external_db entries from a file that holds definitions for
 all external databases used in Vega. Vega usually reuses a file that is
-maintained by Ensembl, which is
-ensembl/misc-scripts/external_db/external_dbs.txt.
+maintained by Ensembl, which is ensembl/misc-scripts/external_db/external_dbs.txt.
+The script is rarely called directly from the command line but is executed during
+vega and ensembl-vega preparation.
 
 =head1 LICENCE
 
@@ -44,7 +45,8 @@ Please see http://www.ensembl.org/code_licence.html for details
 
 =head1 AUTHOR
 
-Patrick Meidl <pm2@sanger.ac.uk>
+Steve Trevanion <st3@sanger.ac.uk>
+Patrick Meidl <meidl@ebi.ac.uk>
 
 =head1 CONTACT
 
@@ -105,6 +107,9 @@ while (my $row = <IN>) {
 	next if ($row =~ /^#/);
     chomp($row);
     my @a = split(/\t/, $row);
+	foreach my $col (@a) {
+		$col =~ s/\\N//;
+	}
     push @rows, {
         'external_db_id'            => $a[0],
         'db_name'                   => $a[1],
@@ -114,6 +119,9 @@ while (my $row = <IN>) {
         'display_label_linkable'    => $a[5],
         'priority'                  => $a[6],
         'db_display_name'           => $a[7],
+		'type'                      => $a[8],
+		'secondary_db_name'         => $a[9],
+		'secondary_db_table'        => $a[10],
     } unless $a[0]=~/^#/;
 }
 close(IN);
@@ -132,8 +140,8 @@ unless ($support->param('dry_run')) {
     my $sth = $dbh->prepare('
         INSERT INTO external_db
             (external_db_id, db_name, db_release, status, dbprimary_acc_linkable, 
-            display_label_linkable, priority, db_display_name)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            display_label_linkable, priority, db_display_name, type)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     ');
     foreach my $row (@rows) {
         $sth->execute(
@@ -145,6 +153,7 @@ unless ($support->param('dry_run')) {
                 $row->{'display_label_linkable'},
                 $row->{'priority'},
                 $row->{'db_display_name'},
+				$row->{'type'},
         );
     }
     $sth->finish();
