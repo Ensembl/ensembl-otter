@@ -45,14 +45,16 @@ This script does a number of jobs:
   need to test in mouse],  sets the default assembly version to 'Vega' from 'Otter' and patches meta
 - tidies up meta table
 - patches coord_system.version for contigs to NULL
+- synchronises attribute table with ensembl/misc-scripts/attribute_types/attrib_types.txt
+- synchronises external_db table with ensembl/misc-scripts/external_db/external_dbs.txt
 
 The first time it is run it creates backup copies of the original tables; then when run
 subsequently with the -prune 1 option it restores these tables to their original state. Can
 therefore completely reset the database using a combination of -prune 1 -dry-run 1 options
 
-Does a number of usefull data checks which can be seen by running in -dry_run mode first, in fact
-the script will prompt you to run in dry_run mode if this is the first time it's been run on a
-particular database.
+Does a number of data checks which can be seen by running in -dry_run mode and looking for 'WARNING'
+in the log file. The script will prompt you to run in dry_run mode if this is the first time it's
+been run on a particular database.
 
 =head1 LICENCE
 
@@ -253,121 +255,109 @@ foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
 		}
 	}
 
-	$support->log("Patching analysis_ids for genes and transcripts, setting source...\n",1);
+	if (! $support->param('dry_run')) {
+		$support->log("Patching analysis_ids for genes and transcripts, setting source...\n",1);
 
-	#SQL to update gene analysis_id
- 	my $gsth = $vdbh->prepare(qq(
+		#SQL to update gene analysis_id
+		my $gsth = $vdbh->prepare(qq(
                    UPDATE gene g, analysis a
                    SET    g.analysis_id = a.analysis_id
                    WHERE  g.gene_id = ?
                    AND    a.logic_name = ?
-    ));
-
-	#SQL to update gene source
- 	my $gssth = $vdbh->prepare(qq(
+        ));
+		
+		#SQL to update gene source
+		my $gssth = $vdbh->prepare(qq(
                    UPDATE gene
                    SET    source = ?
                    WHERE  gene_id = ?
-    ));
-
-	#SQL to update transcript analysis_id
- 	my $tsth = $vdbh->prepare(qq(
+        ));
+		
+		#SQL to update transcript analysis_id
+		my $tsth = $vdbh->prepare(qq(
                    UPDATE transcript t, gene g
                    SET    t.analysis_id = g.analysis_id
                    WHERE  t.gene_id = g.gene_id
                    AND    t.transcript_id = ?
-    ));	
+        ));	
 
-	#loop through genes
-	foreach my $gene (@{$chrom->get_all_Genes()}) {
-		my $gsid = $gene->stable_id;
-		my $gid  = $gene->dbID;
-		my $old_source = $gene->source;
-		my $old_gln = $gene->analysis->logic_name;
-		my $new_ln = $used_logic_names{$old_source};
-
-		#set source to 'vega'
-		if (! $support->param('dry_run')) {
+		#loop through genes
+		foreach my $gene (@{$chrom->get_all_Genes()}) {
+			my $gsid = $gene->stable_id;
+			my $gid  = $gene->dbID;
+			my $old_source = $gene->source;
+			my $old_gln = $gene->analysis->logic_name;
+			my $new_ln = $used_logic_names{$old_source};
+			
+			#set source to 'vega'
 			if ($gssth->execute('vega',$gid)) {
 				$support->log_verbose("Patched gene $gsid ($gid) source from \'$old_source\' to \'vega\'\n",2);
 			}
-		}
-
-		#patch analysis_ids
-		if ($new_ln ne $old_gln) {
-			if (! $support->param('dry_run')) {
-				if ($gsth->execute($gid,$new_ln)) {
-					$support->log_verbose("gene $gsid ($gid) logic_name patched from $old_gln to $new_ln\n",3);					
-				}
-			}
-		}
-		else {
-			$support->log_verbose("Gene $gsid ($gid) logic name not changed\n",4);
-		}
-
-		# create attributes for author info
-        my $gene_attribs = [];
-
-        # author and author_email
-        push @{ $gene_attribs }, Bio::EnsEMBL::Attribute->new(
-            -CODE => 'author',
-            -NAME => 'Author',
-            -DESCRIPTION => 'Group responsible for Vega annotation',
-            -VALUE => $all_logic_names{$gene->source}[1],
-        );
-        push @{ $gene_attribs }, Bio::EnsEMBL::Attribute->new(
-            -CODE => 'author_email',
-            -NAME => 'Author email address',
-            -DESCRIPTION => 'Author\'s email address',
-            -VALUE => $all_logic_names{$gene->source}[2],
-        );
-
-		if (! $support->param('dry_run')) {
-			$support->log_verbose("Storing gene attributes for author and author_email.\n", 2);
-			unless ($support->param('dry_run')) {
-				$vata->store_on_Gene($gid, $gene_attribs);
-			}
-        }
-
-		#loop through transcripts
-		foreach my $trans (@{$gene->get_all_Transcripts()}){
-			my $tsid = $trans->stable_id;
-			my $tid  = $trans->dbID;
-			my $old_tln = $trans->analysis->logic_name;
+		
 			#patch analysis_ids
-			if ($new_ln ne $old_tln) {
-				if (! $support->param('dry_run')) {
-					if ($tsth->execute($tid)) {
-						$support->log_verbose("Patching transcript $tsid ($tid) from $old_tln to $new_ln\n",4);
-					}
+			if ($new_ln ne $old_gln) {
+				if ($gsth->execute($gid,$new_ln)) {
+					$support->log_verbose("gene $gsid ($gid) logic_name patched from $old_gln to $new_ln\n",3);
 				}
 			}
 			else {
-				$support->log_verbose("Transcript $tsid ($tid) logic name not changed\n",4);
+				$support->log_verbose("Gene $gsid ($gid) logic name not changed\n",4);
 			}
-
+			
 			# create attributes for author info
-			my $trans_attribs = [];
-
+			my $gene_attribs = [];
+			
 			# author and author_email
-			push @{ $trans_attribs }, Bio::EnsEMBL::Attribute->new(
+			push @{ $gene_attribs }, Bio::EnsEMBL::Attribute->new(
 				-CODE => 'author',
 				-NAME => 'Author',
 				-DESCRIPTION => 'Group responsible for Vega annotation',
 				-VALUE => $all_logic_names{$gene->source}[1],
 			);
-			push @{ $trans_attribs }, Bio::EnsEMBL::Attribute->new(
+			push @{ $gene_attribs }, Bio::EnsEMBL::Attribute->new(
 				-CODE => 'author_email',
 				-NAME => 'Author email address',
 				-DESCRIPTION => 'Author\'s email address',
 				-VALUE => $all_logic_names{$gene->source}[2],
 			);
+			
+			$support->log_verbose("Storing gene attributes for author and author_email.\n", 2);
+			$vata->store_on_Gene($gid, $gene_attribs);
 
-			if (! $support->param('dry_run')) {
-				$support->log_verbose("Storing transcript attributes for author and author_email.\n", 2);
-				unless ($support->param('dry_run')) {
-					$vata->store_on_Transcript($tid, $trans_attribs);
+			#loop through transcripts
+			foreach my $trans (@{$gene->get_all_Transcripts()}){
+				my $tsid = $trans->stable_id;
+				my $tid  = $trans->dbID;
+				my $old_tln = $trans->analysis->logic_name;
+				#patch analysis_ids
+				if ($new_ln ne $old_tln) {
+					if ($tsth->execute($tid)) {
+						$support->log_verbose("Patching transcript $tsid ($tid) from $old_tln to $new_ln\n",4);
+					}
 				}
+				else {
+					$support->log_verbose("Transcript $tsid ($tid) logic name not changed\n",4);
+				}
+				
+				# create attributes for author info
+				my $trans_attribs = [];
+				
+				# author and author_email
+				push @{ $trans_attribs }, Bio::EnsEMBL::Attribute->new(
+					-CODE => 'author',
+					-NAME => 'Author',
+					-DESCRIPTION => 'Group responsible for Vega annotation',
+					-VALUE => $all_logic_names{$gene->source}[1],
+				);
+				push @{ $trans_attribs }, Bio::EnsEMBL::Attribute->new(
+					-CODE => 'author_email',
+					-NAME => 'Author email address',
+					-DESCRIPTION => 'Author\'s email address',
+					-VALUE => $all_logic_names{$gene->source}[2],
+				);
+				
+				$support->log_verbose("Storing transcript attributes for author and author_email.\n", 2);
+				$vata->store_on_Transcript($tid, $trans_attribs);
 			}
 		}		
 	}
@@ -386,7 +376,7 @@ my %attribs_to_go = (
 #do the deletions
 foreach my $table (keys %attribs_to_go) {
 	foreach my $code (@{$attribs_to_go{$table}}) {
-		if ($support->param('dry_run')) {
+		if (! $support->param('dry_run')) {
 			my $r = $vdbh->do(qq(
                              DELETE t
                              FROM   attrib_type at, $table t
@@ -451,7 +441,7 @@ my $otter_coord_id = $vdbh->selectrow_array(qq(
                          SELECT coord_system_id
 					     FROM   coord_system
 						 WHERE  version = 'Otter'));
-	if ($chr_coord_id == $otter_coord_id) {
+if ($chr_coord_id == $otter_coord_id) {
 	$support->log("\nChanging assembly from \'Otter\' to \'VEGA\'\n");
 	push @sql_fixes, "UPDATE coord_system set version = \'VEGA\' WHERE version = \'Otter\';\n";
 	push @sql_fixes, "UPDATE coord_system set attrib = \'default_version\' WHERE version = \'VEGA\';\n";
@@ -460,7 +450,6 @@ my $otter_coord_id = $vdbh->selectrow_array(qq(
 	push @sql_fixes, "INSERT into meta (meta_key,meta_value) VALUES (\'assembly.default\',\'VEGA\');\n";
 	push @sql_fixes, "UPDATE meta set meta_value = \'chromosome:VEGA|contig\' WHERE meta_value = \'chromosome:Otter|contig\';\n";
 	push @sql_fixes, "UPDATE meta set meta_value = \'chromosome:VEGA|contig|clone\' WHERE meta_value = \'chromosome:Otter|contig|clone\';\n";	
-
 }
 else {
 	$support->log_error("Otter assembly not used for longest chromosome in seq_region table - check what\'s going on\n");
@@ -486,5 +475,30 @@ if (! $support->param('dry_run')) {
 if ($support->param('dry_run')) {
 	$support->log("\nNo changes made to database since this is a dry run\n");
 }
+
+#update attribute table
+my $options = $support->create_commandline_options({
+	'allowed_params' => 1,
+	'exclude' => ['prune'],
+	'replace' => {
+		'interactive' => 0,	
+		'logfile'     => 'finish_vega_creation_update_attributes.log',
+	}
+  });
+$support->log("Updating attrib_type table for ".$support->param('dbname')."...\n");
+system("../update_attributes.pl $options") == 0
+	or $support->throw("Error running update_attributes.pl: $!");
+
+$options = $support->create_commandline_options({
+	'allowed_params' => 1,
+	'exclude' => ['prune'],
+	'replace' => {
+		'interactive' => 0,	
+		'logfile'     => 'finish_vega_creation_update_external_dbs.log',
+	}
+});
+$support->log("\nUpdating external_db table on ".$support->param('dbname')."...\n");
+	system("../xref/update_external_dbs.pl $options") == 0
+		or $support->throw("Error running update_external_dbs.pl: $!");
 
 $support->finish_log;
