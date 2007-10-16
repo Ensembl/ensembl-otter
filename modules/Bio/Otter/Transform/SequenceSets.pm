@@ -29,7 +29,7 @@ sub start_handler{
         $ss->dataset_name($self->get_property('dataset_name'));
         $self->add_object($ss);
     }elsif($ele eq 'subregion'){
-        $subregion_name = $attr->{'name'};
+        $subregion_name   = $attr->{'name'};
         $subregion_hidden = $attr->{'hidden'};
     }elsif($SUB_ELE->{$ele}){
        # print "* Interesting $ele\n";
@@ -44,10 +44,12 @@ sub end_handler{
     $value =~ s/^\s*//;
     $value =~ s/\s*$//;
     my $context = shift;
-    if(($context eq 'subregion') && !$subregion_hidden) {
-        my $sss = $self->objects;
-        my $current_ss = $sss->[$#$sss];
-        $current_ss->set_subset($subregion_name, [split(/,/, $value)]);
+    if($context eq 'subregion') {
+        unless($subregion_hidden) {
+            my $sss = $self->objects;
+            my $current_ss = $sss->[$#$sss];
+            $current_ss->set_subset($subregion_name, [split(/,/, $value)]);
+        }
     } elsif($SUB_ELE->{$context}){
         my $context_method = $context;
         my $sss = $self->objects;
