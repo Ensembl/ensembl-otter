@@ -30,6 +30,7 @@ sub start_handler{
         $self->add_object($ss);
     }elsif($ele eq 'subregion'){
         $subregion_name = $attr->{'name'};
+        $subregion_hidden = $attr->{'hidden'};
     }elsif($SUB_ELE->{$ele}){
        # print "* Interesting $ele\n";
     }else{
