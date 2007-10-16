@@ -12,7 +12,8 @@ my $SUB_ELE = { map { $_ => 1 } qw(description vega_set_id priority is_hidden wr
 # super elements to the actual sequence set
 my $SUP_ELE = { map { $_ => 1 } qw(otter sequencesets) };
 my $value;
-my $subregion_name; # I hate this global_var style!
+my $subregion_name;   # I hate this global_var style!
+my $subregion_hidden; # me too!
 
 # this should be in xsl and use xslt to transform and create the objects
 sub start_handler{
@@ -42,7 +43,7 @@ sub end_handler{
     $value =~ s/^\s*//;
     $value =~ s/\s*$//;
     my $context = shift;
-    if($context eq 'subregion') {
+    if(($context eq 'subregion') && !$subregion_hidden) {
         my $sss = $self->objects;
         my $current_ss = $sss->[$#$sss];
         $current_ss->set_subset($subregion_name, [split(/,/, $value)]);
