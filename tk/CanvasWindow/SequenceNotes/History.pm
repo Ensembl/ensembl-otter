@@ -221,7 +221,7 @@ sub empty_canvas_message {
 }
 
 #already have this method in SequenceNotes.pm, but perl doesnt seem to like inheritance with anonymous subroutines
-sub _write_text {
+sub _column_write_text {
     my ($canvas, @args) = @_;
     $canvas->createText(@args);
 }
@@ -232,7 +232,7 @@ sub column_methods {
     my $norm = [ $self->font, $self->font_size, 'normal' ];
     my $bold = [ $self->font, $self->font_size, 'bold' ];
     unless (ref($self->{'_column_methods'}) eq 'ARRAY') {
-        my $calling_method = \&_write_text;
+        my $calling_method = \&_column_write_text;
         my $methods        = [
             [
                 $calling_method,
