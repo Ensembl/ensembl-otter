@@ -38,7 +38,6 @@ Options:
 This script does a number of jobs:
 - updates gene.analysis_id and transcript.analysis_id depending on gene.source
 - adds attributes for gene / transcript author and author_email according to source (hard coded)
-- then updates gene.source -> 'vega'
 - deletes transcript synonym attrib types
 - sets seq_region.name for chromosomes to that defined by the seqregion_attrib 'vega_name'
 - tidies up coord_system and related tables (meta), removes NCBI types [code can probably be removed -
@@ -256,7 +255,7 @@ foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
 	}
 
 	if (! $support->param('dry_run')) {
-		$support->log("Patching analysis_ids for genes and transcripts, setting source...\n",1);
+		$support->log("Patching analysis_ids for genes and transcripts...\n",1);
 
 		#SQL to update gene analysis_id
 		my $gsth = $vdbh->prepare(qq(
@@ -264,13 +263,6 @@ foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
                    SET    g.analysis_id = a.analysis_id
                    WHERE  g.gene_id = ?
                    AND    a.logic_name = ?
-        ));
-		
-		#SQL to update gene source
-		my $gssth = $vdbh->prepare(qq(
-                   UPDATE gene
-                   SET    source = ?
-                   WHERE  gene_id = ?
         ));
 		
 		#SQL to update transcript analysis_id
@@ -288,12 +280,7 @@ foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
 			my $old_source = $gene->source;
 			my $old_gln = $gene->analysis->logic_name;
 			my $new_ln = $used_logic_names{$old_source};
-			
-			#set source to 'vega'
-			if ($gssth->execute('vega',$gid)) {
-				$support->log_verbose("Patched gene $gsid ($gid) source from \'$old_source\' to \'vega\'\n",2);
-			}
-		
+					
 			#patch analysis_ids
 			if ($new_ln ne $old_gln) {
 				if ($gsth->execute($gid,$new_ln)) {
