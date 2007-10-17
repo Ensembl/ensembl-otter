@@ -31,6 +31,12 @@
       AND status = 'UNKNOWN';
 
     UPDATE gene
+    SET biotype = 'processed_transcript'
+      , status = 'PUTATIVE'
+    WHERE biotype = 'putative'
+      AND status = 'KNOWN';
+
+    UPDATE gene
     SET biotype = 'protein_coding'
       , status = 'PREDICTED'
     WHERE biotype = 'processed_transcript'
