@@ -120,22 +120,22 @@ sub initialise {
     my $status_colors = {'completed'   => 'DarkGreen', 
                          'missing'     => 'red', 
                          'unavailable' => 'DarkRed'};
-	my $write_text  = \&CanvasWindow::SequenceNotes::_write_text ;
+	my $column_write_text  = \&CanvasWindow::SequenceNotes::_column_write_text ;
     $self->column_methods([
-        [$write_text, sub{
+        [$column_write_text, sub{
 	         my $pipe_status = shift;
 	         return { -font => $norm, -tags => ['searchable'], -text => $pipe_status->{'name'} }; 
 	         }],
-        [$write_text, sub{
+        [$column_write_text, sub{
 	         my $pipe_status = shift;
              my $status = $pipe_status->{'status'};
 	         return { -font => $norm, -tags => ['searchable'], -text => $status, -fill => $status_colors->{$status}};
              }],
-        [$write_text, sub{
+        [$column_write_text, sub{
 	         my $pipe_status = shift;
 	         return { -font => $norm, -tags => ['searchable'], -text => $pipe_status->{'created'} };
              }],
-        [$write_text, sub{
+        [$column_write_text, sub{
 	         my $pipe_status = shift;
 	         return { -font => $bold, -tags => ['searchable'], -text => $pipe_status->{'version'} };
              }],
