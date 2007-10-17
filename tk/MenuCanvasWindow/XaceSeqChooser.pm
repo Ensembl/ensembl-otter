@@ -1861,13 +1861,10 @@ sub draw_sequence_list {
             my $style = 'bold';
             my $color = 'black';
             
-            if ($sub->is_mutable) {
-                $color = 'black';
-            }
-            elsif (my $locus = $sub->Locus) {
+            if ($sub->GeneMethod->name =~ /_trunc$/) {
                 $color = '#999999';
             }
-            else {
+            elsif (! $sub->is_mutable) {
                 $style = 'normal';
             }
 
