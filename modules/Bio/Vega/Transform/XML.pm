@@ -206,18 +206,20 @@ sub generate_Locus {
 		$g->attribvals($self->prettyprint('synonym',$syn->value));
 	 }
   }
-  if (my $remarks = $gene->get_all_Attributes('remark')){
+
+  if(my $remarks = $gene->get_all_Attributes('remark')) {
 	 foreach my $rem (@$remarks){
 		xml_escape($rem->value);
 		$g->attribvals($self->prettyprint('remark',$rem->value));
 	 }
   }
-  if (my $remarks = $gene->get_all_Attributes('hidden_remark')){
+  if(my $remarks = $gene->get_all_Attributes('hidden_remark')) {
 	 foreach my $rem (@$remarks){
 		xml_escape($rem->value);
-		$g->attribvals($self->prettyprint('remark',0,$rem->value));
+		$g->attribvals($self->prettyprint('remark','Annotation_remark- '.$rem->value));
 	 }
   }
+
   my $gene_author=$gene->gene_author;
   my $author_name='';
   my $author_email='';
@@ -259,11 +261,20 @@ sub generate_Transcript{
   }
   $t->attribvals($self->prettyprint('author',$author_name));
   $t->attribvals($self->prettyprint('author_email',$author_email));
-  my $tran_remark_att = $tran->get_all_Attributes('remark') ;
-  foreach my $r (@$tran_remark_att){
-	 xml_escape($r->value);
-	 $t->attribvals($self->prettyprint('remark',$r->value));
+
+  if(my $remarks = $tran->get_all_Attributes('remark')){
+     foreach my $rem (@$remarks){
+        xml_escape($rem->value);
+        $t->attribvals($self->prettyprint('remark',$rem->value));
+     }
   }
+  if(my $remarks = $tran->get_all_Attributes('hidden_remark')){
+	 foreach my $rem (@$remarks){
+		xml_escape($rem->value);
+		$t->attribvals($self->prettyprint('remark','Annotation_remark- '.$rem->value));
+	 }
+  }
+
   my $mRNA_start_NF = $tran->get_all_Attributes('mRNA_start_NF') ;
   my $mRNA_end_NF = $tran->get_all_Attributes('mRNA_end_NF') ;
   my $cds_start_NF = $tran->get_all_Attributes('cds_start_NF') ;
