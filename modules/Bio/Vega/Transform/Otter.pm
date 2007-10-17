@@ -430,19 +430,27 @@ sub build_Transcript {
 	 my $attrib= $self->make_Attribute('cds_end_NF','cds end not found','',$cds_end_not_found);
 	 push @$transcript_attributes,$attrib;
   }
-  my $remarks=$data->{'remark'};
-  foreach my $rem (@$remarks){
-	 my $attrib=$self->make_Attribute('remark','Remark','Annotation Remark',$rem);
-	 push @$transcript_attributes,$attrib;
+
+  if(my $remarks=$data->{'remark'}) {
+      foreach my $rem (@$remarks){
+        my $attrib;
+        if($rem=~/Annotation_remark-\s+(.+)/) {
+            $rem=$1;
+            $attrib=$self->make_Attribute('hidden_remark','Hidden Remark','',$rem);
+        } else {
+            $attrib=$self->make_Attribute('remark','Remark','Annotation Remark',$rem);
+        }
+        push @$transcript_attributes,$attrib;
+      }
   }
-  my $name=$data->{'name'};
-  if (defined $name) {
-	 if ($seen_transcript_name{$self}{$name}) {
-		die "more than one transcript has the name $name";
+
+  if(my $transcript_name=$data->{'name'}) {
+	 if ($seen_transcript_name{$self}{$transcript_name}) {
+		die "more than one transcript has the name $transcript_name";
 	 } else {
-		$seen_transcript_name{$self}{$name} = 1;
+		$seen_transcript_name{$self}{$transcript_name} = 1;
 	 }
-	 my $attrib=$self->make_Attribute('name','Name','Alternative/long name',$name);
+	 my $attrib=$self->make_Attribute('name','Name','Alternative/long name',$transcript_name);
 	 push @$transcript_attributes,$attrib;
   }
 
@@ -535,13 +543,20 @@ sub build_Locus {
 			push @$gene_attributes,$syn_attrib;
 		}
 	}
-	my $gene_remark= $data->{'remark'};
-	if (defined $gene_remark){
-		foreach my $rem (@$gene_remark){
-			my $rem_attrib=$self->make_Attribute('remark','Remark','Annotation Remark',$rem);
-			push @$gene_attributes,$rem_attrib;
-		}
-	}
+
+    if(my $remarks=$data->{'remark'}) {
+        foreach my $rem (@$remarks){
+            my $attrib;
+            if($rem=~/Annotation_remark-\s+(.+)/) {
+                $rem=$1;
+                $attrib=$self->make_Attribute('hidden_remark','Hidden Remark','',$rem);
+            } else {
+                $attrib=$self->make_Attribute('remark','Remark','Annotation Remark',$rem);
+            }
+            push @$gene_attributes,$attrib;
+        }
+    }
+
 	##share exons among transcripts of this gene
 	foreach my $tran (@$transcripts) {
 		$gene->add_Transcript($tran);
