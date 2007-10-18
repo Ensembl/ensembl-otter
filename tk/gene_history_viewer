@@ -3,14 +3,6 @@
 # gene_history_viewer.pl
 # Author: ck1@sanger.ac.uk
 
-## force it to run as a new schema script:
-BEGIN {
-    foreach my $path (@INC) {
-        unless( $path=~s{ensembl/modules}{ensembl_head/modules}g ) {
-            $path=~s{ensembl_head/modules}{ensembl/modules}g;
-        };
-    }
-}
 
 use strict;
 use Tk;
@@ -29,7 +21,7 @@ use Bio::Vega::Transform::PrettyPrint;
 
 my $dataset_name;
 Bio::Otter::Lace::Defaults::do_getopt('ds|dataset=s' => \$dataset_name);
-$dataset_name ||= 'cow';
+$dataset_name ||= 'human';
 
 my $client   = Bio::Otter::Lace::Defaults::make_Client();      # Bio::Otter::Lace::Client
 my $dset     = $client->get_DataSet_by_name($dataset_name);    # Bio::Otter::Lace::DataSet
@@ -358,7 +350,7 @@ sub get_all_sub_nodes {
 		push(@all_sub_nodes, $sn);
 		foreach my $ssn ( $tree->info('children', $sn) ){
 		  push(@all_sub_nodes, $ssn);
-		  push(@all_sub_nodes, "$ssn.TransInfo") if $ssn =~ /OTT/;
+		  push(@all_sub_nodes, "$ssn.TransInfo") if $ssn =~ /(OTT|LDR)/;
 		}
 	  }
 	}
@@ -385,9 +377,9 @@ sub get_gene_history {
   my $gsids; # list ref
 
   # first get relevant info of a gene from query
-  if ( $query_str =~ /OTT\w{3,3}G\d+/ ) {
+  if ( $query_str =~ /(OTT|LDR)\w{3,3}G\d+/ ) {
 	@$gsids = $query_str if check_query_exists($query_str, 'gene');
-  } elsif ( $query_str =~ /OTT\w{3,3}T\d+/ ) {
+  } elsif ( $query_str =~ /(OTT|LDR)\w{3,3}T\d+/ ) {
 	check_query_exists($query_str, 'trans');
 	my $genes = $ga->fetch_by_transcript_stable_id_constraint($query_str);
 

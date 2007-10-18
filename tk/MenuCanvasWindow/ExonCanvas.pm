@@ -1432,7 +1432,7 @@ sub get_Locus_from_tk {
     my $locus = Hum::Ace::Locus->new;
     $locus->name($name);
     $locus->gene_type($type);
-    if ($name =~ /^([A-Z_]+):/) {
+    if ($name =~ /^([A-Z_0-9]+):/) {
         $locus->gene_type_prefix($1);
     }
     $locus->description($desc) if $desc;
