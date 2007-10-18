@@ -716,7 +716,7 @@ sub zMapTagValues{
             my $otter_exon_ids = "";
             my $exon_ids       = [];
             foreach my $subseq(@$subseq_list){
-                $transcript_id = $subseq->otter_id() if ($subseq->otter_id());
+                $transcript_id = $subseq->otter_id;
 
                 $otter_id = $subseq->Locus->otter_id if ($subseq->Locus); 
 
@@ -724,24 +724,32 @@ sub zMapTagValues{
                     push(@$exon_ids, $exon->otter_id()) if ($exon->otter_id);
                 }
             }
-            $handled    = ($otter_id ? "true" : "false");
+            $handled    = ($transcript_id ? "true" : "false");
             $otter_id ||= "unable to fetch otter id";
             
             $transcript_id ||= "unable to fetch transcript id";
 
             my $counter = 1;
             foreach my $id(@$exon_ids){
-                $otter_exon_ids .= qq{\t\t\t\t<tagvalue name="Otter Exon ID [$counter]" type="simple">$id</tagvalue>\n};
+                $otter_exon_ids .= qq{\t\t\t\t<tagvalue name="Stable ID [$counter]" type="simple">$id</tagvalue>\n};
                 $counter++;
             }
             
-            $page = qq{\t\t<page name="OTTER">\n}       .
-                qq{\t\t\t<paragraph name="Otter" type="tagvalue_table">\n} .
-                qq{\t\t\t\t<tagvalue name="Otter Gene ID" type="simple">$otter_id</tagvalue>\n} .
-                qq{\t\t\t\t<tagvalue name="Otter Transcript ID" type="simple">$transcript_id</tagvalue>\n} .
-                qq{$otter_exon_ids}      .
-                qq{\t\t\t</paragraph>\n} .
-                qq{\t\t</page>\n}        ;
+            $page = qq{\t\t<page name="Stable IDs">\n}
+
+                . qq{\t\t\t<paragraph name="Gene" type="tagvalue_table">\n}
+                . qq{\t\t\t\t<tagvalue name="Stable ID" type="simple">$otter_id</tagvalue>\n}
+                . qq{\t\t\t</paragraph>\n}
+                
+                . qq{\t\t\t<paragraph name="Transcript" type="tagvalue_table">\n}
+                . qq{\t\t\t\t<tagvalue name="Stable ID" type="simple">$transcript_id</tagvalue>\n}
+                . qq{\t\t\t</paragraph>\n}
+                
+                . qq{\t\t\t<paragraph name="Exon" type="tagvalue_table">\n}
+                . $otter_exon_ids
+                . qq{\t\t\t</paragraph>\n}
+                
+                . qq{\t\t</page>\n};
         }else{
             foreach my $name($self->list_all_SubSeq_names()){
                 my $subseq = $self->get_SubSeq($name);

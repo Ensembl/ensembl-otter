@@ -1102,9 +1102,9 @@ sub hunt_for_Entry_text{
     my $canvas = $self->canvas;
     my( $query_str, $regex );
     eval{
-	$query_str = $entry->get();
-	$query_str =~ s{(\W)}{\\$1}g;
-	$regex =  qr/($query_str)/i;
+	    $query_str = $entry->get();
+	    $query_str =~ s{(\W)}{\\$1}g;
+	    $regex =  qr/($query_str)/i;
     };
     return unless $query_str;
 #    warn $query_str;
@@ -1125,7 +1125,7 @@ sub hunt_for_Entry_text{
 #        warn "matching $text against $regex\n";
         if (my ($hit) = $text =~ /$regex/) {
             $found = $obj;
-	    $self->highlight($obj);
+	        $self->highlight($obj);
         }
     }
     unless ($found) {
