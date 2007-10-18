@@ -730,7 +730,7 @@ sub show_subseq {
     }
 
     my $xc = $self->XaceSeqChooser();
-    if($xc->show_zmap){
+    if ($xc->show_zmap) {
         my $client;
 
         # We can't  rely on the cached object  here... The explanation
@@ -740,26 +740,28 @@ sub show_subseq {
         # for the current list  from the window that knows, repopulate
         # the cache and find a window that can zoom_to
 
-        my $id = $xc->xremote_cache->lookup_value('ZMapWindow');
-        $xc->xremote_cache->remove_client_with_id($id);
-        for(my $i = 0; $i < 10; $i++){
-            if($id = $xc->xremote_cache->lookup_value('ZMapWindow.'.$i)){
-                $xc->xremote_cache->remove_client_with_id($id);
+        if (my $cache = $xc->xremote_cache) {
+            my $id = $cache->lookup_value('ZMapWindow');
+            $cache->remove_client_with_id($id);
+            for (my $i = 0; $i < 10; $i++) {
+                if ($id = $cache->lookup_value('ZMapWindow.'.$i)) {
+                    $cache->remove_client_with_id($id);
+                }
             }
-        }
-        
-        if($client = $xc->zMapGetXRemoteClientByAction('list_windows', 1)){
-            $xc->zMapDoRequest($client, "list_windows", qq{<zmap action="list_windows" />});
-        }
-        if($client = $xc->zMapGetXRemoteClientByAction('zoom_to', 1)){
-            my $xml = qq{<zmap action="zoom_to">\n}   .
-                qq{\t<featureset>\n}                  .
-                qq{\t\t}                              .
-                $self->SubSeq->zmap_xml_feature_tag() .
-                qq{\t\t</feature>\n}                  .
-                qq{\t</featureset>\n}                 .
-                qq{</zmap>\n};
-            $xc->zMapDoRequest($client, "zoom_to", $xml);
+
+            if ($client = $xc->zMapGetXRemoteClientByAction('list_windows', 1)) {
+                $xc->zMapDoRequest($client, "list_windows", qq{<zmap action="list_windows" />});
+            }
+            if ($client = $xc->zMapGetXRemoteClientByAction('zoom_to', 1)) {
+                my $xml = qq{<zmap action="zoom_to">\n}   .
+                    qq{\t<featureset>\n}                  .
+                    qq{\t\t}                              .
+                    $self->SubSeq->zmap_xml_feature_tag() .
+                    qq{\t\t</feature>\n}                  .
+                    qq{\t</featureset>\n}                 .
+                    qq{</zmap>\n};
+                $xc->zMapDoRequest($client, "zoom_to", $xml);
+            }
         }
     }
 
@@ -1432,7 +1434,7 @@ sub get_Locus_from_tk {
     my $locus = Hum::Ace::Locus->new;
     $locus->name($name);
     $locus->gene_type($type);
-    if ($name =~ /^([A-Z_0-9]+):/) {
+    if ($name =~ /^([^:]+):/) {
         $locus->gene_type_prefix($1);
     }
     $locus->description($desc) if $desc;
