@@ -739,9 +739,7 @@ sub fetch_mapped_features {
     my $strand       = $self->param('strand');
 
     my $sdba = $self->satellite_dba( $metakey );
-    my $mdba;
-
-    ($mdba, $csver_remote) = $self->get_mapper_dba( $metakey, $cs, $csver_orig, $csver_remote, $name, $type);
+    my ($mdba, $csver_target) = $self->get_mapper_dba( $metakey, $cs, $csver_orig, $csver_remote, $name, $type);
 
     my $features = [];
 
@@ -749,7 +747,7 @@ sub fetch_mapped_features {
         $self->log("Proceeding with mapping code");
 
         my $original_slice_on_mapper = $self->get_slice($mdba, $cs, $name, $type, $start, $end, $strand, $csver_orig);
-        my $proj_segments_on_mapper = $original_slice_on_mapper->project( $cs, $csver_remote );
+        my $proj_segments_on_mapper = $original_slice_on_mapper->project( $cs, $csver_target );
 
         my $sa_on_target = $sdba->get_SliceAdaptor();
 
@@ -794,10 +792,10 @@ sub fetch_mapped_features {
             }
         }
 
-    } elsif(defined($csver_remote)) {
+    } elsif(($cs ne 'chromosome') || defined($csver_target)) {
         $self->log("Assuming the mappings to be identical, just cross-fetching");
 
-        my $original_slice = $self->get_slice($sdba, $cs, $name, $type, $start, $end, $strand, $csver_remote);
+        my $original_slice = $self->get_slice($sdba, $cs, $name, $type, $start, $end, $strand, $csver_target);
 
         $features = $original_slice->$fetching_method(@$call_parms)
             || $self->error_exit("Could not fetch anything - analysis may be missing from the DB");
