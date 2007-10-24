@@ -1,9 +1,32 @@
 package Bio::Otter::Compatibility;
 
-# let's keep here utility functions that should work in both old/new EnsEMBL API
+# Let's keep here utility functions that should work in both old/new EnsEMBL API.
+# You can either inherit from this package, call the functions directly or import:
+#
+# # Inheritance:
+# use base ('Bio::Otter::Compatibility', ...);
+# if($self->running_headcode()) {
+#  ...
+# }
+#
+# # Direct calls:
+# use Bio::Otter::Compatibility;
+# if(Bio::Otter::Compatibility::running_headcode()) {
+#  ...
+# }
+#
+# # Import:
+# use Bio::Otter::Compatibility qw( running_headcode );
+# if(running_headcode()) {
+#  ...
+# }
+#
 # Author: lg4
 
 use strict;
+
+use Exporter 'import';
+our @EXPORT_OK = qw( running_headcode );
 
 sub running_headcode {
     my $return_value;
