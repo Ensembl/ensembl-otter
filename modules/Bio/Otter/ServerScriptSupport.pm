@@ -12,7 +12,7 @@ use Bio::Otter::Lace::TempFile;
 
 use SangerWeb;
 
-use base 'CGI';
+use base ('CGI', 'Bio::Otter::Compatibility');
 #use CGI::Carp 'fatalsToBrowser';
 
 CGI->nph(1);
@@ -49,12 +49,14 @@ sub dataset_name {
 
 ############## getters: ###########################
 
-sub running_headcode {
-    my $self = shift @_;
-
-    #return $ENV{PIPEHEAD};    # the actual running code (0=>rel.19, 1=>rel.20+)
-    return 1;
-}
+## Now we should be inheriting this method:
+#
+#sub running_headcode {
+#    my $self = shift @_;
+#
+#    #return $ENV{PIPEHEAD};    # the actual running code (0=>rel.19, 1=>rel.20+)
+#    return 1;
+#}
 
 sub csn {   # needed by logging mechanism
     my $self = shift @_;
@@ -212,13 +214,10 @@ sub dataset_param {     # could move out into a separate class, living on top of
         # Check the dataset has been entered:
     my $dataset = $self->dataset_name;
 
-        # get the overriding dataset options from species.dat 
+        # get the dataset options from species.dat 
     my $dbinfo   = $self->species_hash()->{$dataset} || $self->error_exit("Unknown data set $dataset");
 
-        # get the defaults from species.dat
-    my $defaults = $self->species_hash()->{'defaults'};
-
-    return $dbinfo->{$param} || $defaults->{$param};
+    return $dbinfo->{$param};
 }
 
 sub dataset_headcode {
@@ -672,26 +671,26 @@ sub get_mapper_dba {
 
     if(!$metakey) {
         $self->log("Working with pipeline_db directly, no remapping is needed.");
-        return;
+        return (undef, $csver_orig);
     } elsif($metakey eq '.') {
         $self->log("Working with otter_db directly, no remapping is needed.");
-        return;
+        return (undef, $csver_orig);
     }
 
-    my $csver = $self->cached_csver($metakey, $cs, $csver_remote);
+    $csver_remote = $self->cached_csver($metakey, $cs, $csver_remote);
     if($cs eq 'chromosome') {
-        if($csver =~/^otter$/i) {
+        if($csver_remote =~/^otter$/i) {
             $self->log("Working with another Otter database, no remapping is needed.");
-            return;
-        } elsif($csver eq 'UNKNOWN') {
-            $self->log("The database's default assembly is not set correctly");
-            $self->return_emptyhanded();
+            return (undef, $csver_remote);
+        } elsif($csver_remote eq 'UNKNOWN') {
+            $self->log("The database's default assembly is not set correctly, but you can override it manually");
+            return (undef, undef);
         }
     }
 
     if(!$self->running_headcode()) {
         $self->log("Working with unknown OLD API database, please do the remapping on client side.");
-        return;
+        return (undef, $csver_remote);
     }
 
     ## What remains is head version of a non-otter satellite_db
@@ -706,20 +705,20 @@ sub get_mapper_dba {
 
     my %asm_is_equiv = map { ($_->value() => 1) } @{ $pipe_slice->get_all_Attributes('equiv_asm') };
 
-    if($asm_is_equiv{$csver}) { # we can simply rename instead of mapping
+    if($asm_is_equiv{$csver_remote}) { # we can simply rename instead of mapping
 
-        $self->log("This $cs is equivalent to '$name' in our reference '$csver' assembly");
-        return (undef, $csver);
+        $self->log("This $cs is equivalent to '$name' in our reference '$csver_remote' assembly");
+        return (undef, $csver_remote);
 
     } else { # assemblies are guaranteed to differ!
 
-        my $mapper_metakey = "mapper_db.${csver}";
+        my $mapper_metakey = "mapper_db.${csver_remote}";
 
         if( my $mdba = $self->satellite_dba($mapper_metakey) ) {
-            return ($mdba, $csver);
+            return ($mdba, $csver_remote);
         } else {
             $self->log("No '$mapper_metakey' defined in meta table => cannot map between assemblies => exiting");
-            $self->return_emptyhanded();
+            return (undef, undef);
         }
     }
 }
@@ -740,7 +739,9 @@ sub fetch_mapped_features {
     my $strand       = $self->param('strand');
 
     my $sdba = $self->satellite_dba( $metakey );
-    my ($mdba, $csver) = $self->get_mapper_dba( $metakey, $cs, $csver_orig, $csver_remote, $name, $type);
+    my $mdba;
+
+    ($mdba, $csver_remote) = $self->get_mapper_dba( $metakey, $cs, $csver_orig, $csver_remote, $name, $type);
 
     my $features = [];
 
@@ -748,7 +749,7 @@ sub fetch_mapped_features {
         $self->log("Proceeding with mapping code");
 
         my $original_slice_on_mapper = $self->get_slice($mdba, $cs, $name, $type, $start, $end, $strand, $csver_orig);
-        my $proj_segments_on_mapper = $original_slice_on_mapper->project( $cs, $csver );
+        my $proj_segments_on_mapper = $original_slice_on_mapper->project( $cs, $csver_remote );
 
         my $sa_on_target = $sdba->get_SliceAdaptor();
 
@@ -793,13 +794,16 @@ sub fetch_mapped_features {
             }
         }
 
-    } else {
-        $self->log("No mapping is needed, just fetching");
+    } elsif(defined($csver_remote)) {
+        $self->log("Assuming the mappings to be identical, just cross-fetching");
 
-        my $original_slice = $self->get_slice($sdba, $cs, $name, $type, $start, $end, $strand, $csver);
+        my $original_slice = $self->get_slice($sdba, $cs, $name, $type, $start, $end, $strand, $csver_remote);
 
         $features = $original_slice->$fetching_method(@$call_parms)
             || $self->error_exit("Could not fetch anything - analysis may be missing from the DB");
+    } else {
+            # some not-so-critical mapping error
+        $self->return_emptyhanded();
     }
 
     $self->log("Total of ".scalar(@$features).' '.join('/', grep { defined($_) && !ref($_) } @$call_parms)
