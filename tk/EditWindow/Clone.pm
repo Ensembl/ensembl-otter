@@ -237,6 +237,7 @@ sub get_new_Clone_if_changed {
     my $new = $old->clone;
     $new->drop_all_keywords;
     $new->drop_all_remarks;
+    $new->drop_description;
     
     foreach my $key ($self->get_cleaned_text($self->keyword_text)) {
         $new->add_keyword($key);
@@ -249,9 +250,9 @@ sub get_new_Clone_if_changed {
         $new->add_remark($rem);
     }
     
+    #printf STDERR "\nOLD: <%s>\n\nNEW: <%s>\n\n",
+    #    $old->ace_string, $new->ace_string;
     if ($old->ace_string ne $new->ace_string) {
-        #printf STDERR "\nOLD: <%s>\n\nNEW: <%s>\n\n",
-        #    $old->ace_string, $new->ace_string;
         return $new;
     } else {
         return;
