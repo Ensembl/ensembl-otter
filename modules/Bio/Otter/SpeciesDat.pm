@@ -81,6 +81,12 @@ sub keep_only_datasets {
     }
 }
 
+sub _species_hash { # used by nph-get_datasets only
+    my ($self) = @_;
+
+    return $self->{'_species_dat_hash'};
+}
+
 sub get_dataset_param {
     my ($self, $dataset_name, $param_name) = @_;
 
