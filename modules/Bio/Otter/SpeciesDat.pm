@@ -84,6 +84,7 @@ sub keep_only_datasets {
 sub _species_hash { # used by nph-get_datasets only
     my ($self) = @_;
 
+    $self->make_sure_species_dat_file_loaded();
     return $self->{'_species_dat_hash'};
 }
 
