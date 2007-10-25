@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2007-10-04 12:03:27 $
-# Id:            $Id: nph-get_datasets,v 1.6 2007-10-04 12:03:27 jgrg Exp $
+# Last modified: $Date: 2007-10-25 17:25:48 $
+# Id:            $Id: nph-get_datasets,v 1.7 2007-10-25 17:25:48 lg4 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_datasets,v $
 
 use strict;
@@ -16,7 +16,7 @@ my $server = Bio::Otter::ServerScriptSupport->new;
 
 my $xml;
 eval {
-    my $species_hash = $server->species_hash();
+    my $species_hash = $server->_species_hash(); # use of internal methods is generally discouraged
     
     # Only admin users get to see mysql connection details
     my $show_details = $server->local_user || $server->admin_user;
