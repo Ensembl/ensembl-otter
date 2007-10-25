@@ -1,3 +1,23 @@
+
+use strict;
+
+package Bio::EnsEMBL::DBSQL::StatementHandle;
+
+# Work around DBI/DBD::mysql bug on webservers
+sub bind_param {
+    my ($self, $pos, $value, $attr) = @_;
+
+    # Make $attr a hash ref if it is not
+    if (defined $attr) {
+        unless (ref $attr) {
+            $attr = {TYPE => $attr};
+        }
+        $self->SUPER::bind_param($pos, $value, $attr);
+    } else {
+        $self->SUPER::bind_param($pos, $value);
+    }
+}
+
 package Bio::Otter::ServerScriptSupport;
 
 use strict;
@@ -12,7 +32,7 @@ use Bio::Otter::Lace::TempFile;
 
 use SangerWeb;
 
-use base ('CGI', 'Bio::Otter::Compatibility');
+use base ('CGI', 'Bio::Otter::Compatibility', 'Bio::Otter::SpeciesDat');
 #use CGI::Carp 'fatalsToBrowser';
 
 CGI->nph(1);
@@ -33,6 +53,16 @@ sub new {
     } else {
         $self->authorized_user
     }
+
+    # '/GPFS/data1/WWW/SANGER_docs/data/otter/48/species.dat';
+    $self->species_dat_filename( join('/',
+                $self->server_root,
+                'data',
+                'otter',
+                $self->otter_version,
+                'species.dat')
+    );
+
     return $self;
 }
 
@@ -48,15 +78,6 @@ sub dataset_name {
 
 
 ############## getters: ###########################
-
-## Now we should be inheriting this method:
-#
-#sub running_headcode {
-#    my $self = shift @_;
-#
-#    #return $ENV{PIPEHEAD};    # the actual running code (0=>rel.19, 1=>rel.20+)
-#    return 1;
-#}
 
 sub csn {   # needed by logging mechanism
     my $self = shift @_;
@@ -98,85 +119,34 @@ sub server_root {
     return $root;
 }
 
-sub species_hash {
+    # overloading because certain species may need to be masked
+sub load_species_dat_file {
+    my ($self) = @_;
+
+    $self->SUPER::load_species_dat_file(@_);
+
+    unless ($self->local_user || $self->internal_user) {
+        
+            # External users only see datasets listed after their names in users.txt file
+        my $user = $self->authorized_user;
+        my $allowed = $self->users_hash->{$user};
+
+        $self->keep_only_datasets($allowed);
+    }
+}
+
+sub current_dataset_param {
+    my ($self, $param_name) = @_;
+
+    return $self->get_dataset_param( $self->dataset_name() , $param_name);
+}
+
+sub dataset_headcode {
     my $self = shift @_;
 
-    my $sp;
-    unless ($sp = $self->{'_species_hash'}) {
-        $sp = $self->read_species_dat_file;
-        unless ($self->local_user) {
-            $self->remove_unauthorized_species($sp);
-        }
-        $self->{'_species_hash'} = $sp;
-    }
-    return $sp;
+    return $self->current_dataset_param('HEADCODE');
 }
 
-sub remove_unauthorized_species {
-    my ($self, $sp) = @_;
-    
-    # Internal users see all species
-    return if $self->internal_user;
-    
-    # External users only see datasets listed after their names in users.txt file
-    my $user = $self->authorized_user;
-    my $allowed = $self->users_hash->{$user};
-    foreach my $species (keys %$sp) {
-        #printf STDERR "Species %s is %sallowed\n", $species, $allowed->{$species} ? '' : 'not ';
-        delete($sp->{$species}) unless $allowed->{$species};
-    }
-}
-
-sub read_species_dat_file {
-    my ($self) = @_;
-    
-    # '/GPFS/data1/WWW/SANGER_docs/data/otter/48/species.dat';
-    my $file = join('/', $self->server_root, 'data', 'otter', $self->otter_version, 'species.dat');
-
-    open my $dat, $file or die "Can't read species file '$file' : $!";
-
-    my $cursect = undef;
-    my $defhash = {};
-    my $curhash = undef;
-    my $sp = {};
-
-    while (<$dat>) {
-        next if /^\#/;
-        next unless /\w+/;
-        chomp;
-
-        if (/\[(.*)\]/) {
-            if (!defined($cursect) && $1 ne "defaults") {
-                die "ERROR: First section in species.dat should be defaults\n";
-            }
-            elsif ($1 eq "defaults") {
-	            #print STDERR "Got default section\n";
-                $curhash = $defhash;
-            }
-            else {
-                $curhash = {};
-                foreach my $key (keys %$defhash) {
-                    $key =~ tr/a-z/A-Z/;
-                    $curhash->{$key} = $defhash->{$key};
-                }
-            }
-            $cursect = $1;
-            $sp->{$cursect} = $curhash;
-
-        }
-        elsif (/(\S+)\s+(\S+)/) {
-            #print "Reading entry $1 $2\n";
-            $curhash->{$1} = $2;
-        }
-    }
-
-    close $dat or die "Error reading '$file' : $!";
-
-    # Have finished with defaults, so we can remove them.
-    delete $sp->{'defaults'};
-
-    return $sp;
-}
 
 sub users_hash {
     my ($self) = @_;
@@ -208,45 +178,26 @@ sub read_user_file {
     return $usr_hash;
 }
 
-sub dataset_param {     # could move out into a separate class, living on top of species.dat
-    my ($self, $param) = @_;
-
-        # Check the dataset has been entered:
-    my $dataset = $self->dataset_name;
-
-        # get the dataset options from species.dat 
-    my $dbinfo   = $self->species_hash()->{$dataset} || $self->error_exit("Unknown data set $dataset");
-
-    return $dbinfo->{$param};
-}
-
-sub dataset_headcode {
-    my $self = shift @_;
-
-    return $self->dataset_param('HEADCODE');
-}
-
 sub authenticate_user {
     my ($self) = @_;
     
     my $sw = SangerWeb->new({ cgi => $self });
-    my $auth_flag     = 0;
-    my $internal_flag = 0;
     
-    my $user;
-    if ($user = $sw->username) {
-        if ($user =~ /^[a-z0-9]+$/) {
-            # Internal users (simple user name)
+    if (my $user = $sw->username) {
+        my $auth_flag     = 0;
+        my $internal_flag = 0;
+
+        if ($user =~ /^[a-z0-9]+$/) {   # Internal users (simple user name)
             $auth_flag = 1;
             $internal_flag = 1;
-        } else {
-            # Check external users (email address)
-            $auth_flag = 1 if $self->users_hash->{$user};
+        } elsif($self->users_hash->{$user}) {  # Check external users (email address)
+            $auth_flag = 1;
         }
-    }
-    if ($auth_flag) {
-        $self->{'_authorized_user'} = $user;
-        $self->{'_internal_user'}   = $internal_flag;
+
+        if ($auth_flag) {
+            $self->{'_authorized_user'} = $user;
+            $self->{'_internal_user'}   = $internal_flag;
+        }
     }
 }
 
@@ -442,12 +393,12 @@ sub otter_dba {
 
     my( $odba, $dnadb );
 
-    if(my $dbname = $self->dataset_param('DBNAME')) {
+    if(my $dbname = $self->current_dataset_param('DBNAME')) {
         eval {
-           $odba = $adaptor_class->new( -host       => $self->dataset_param('HOST'),
-                                        -port       => $self->dataset_param('PORT'),
-                                        -user       => $self->dataset_param('USER'),
-                                        -pass       => $self->dataset_param('PASS'),
+           $odba = $adaptor_class->new( -host       => $self->current_dataset_param('HOST'),
+                                        -port       => $self->current_dataset_param('PORT'),
+                                        -user       => $self->current_dataset_param('USER'),
+                                        -pass       => $self->current_dataset_param('PASS'),
                                         -dbname     => $dbname,
                                         -group      => 'otter',
                                         -species    => $self->dataset_name,
@@ -460,12 +411,12 @@ sub otter_dba {
 		$self->error_exit("Failed opening otter database [No database name]");
     }
 
-    if(my $dna_dbname = $self->dataset_param('DNA_DBNAME')) {
+    if(my $dna_dbname = $self->current_dataset_param('DNA_DBNAME')) {
         eval {
-            $dnadb = new Bio::EnsEMBL::DBSQL::DBAdaptor( -host      => $self->dataset_param('DNA_HOST'),
-                                                         -port      => $self->dataset_param('DNA_PORT'),
-                                                         -user      => $self->dataset_param('DNA_USER'),
-                                                         -pass      => $self->dataset_param('DNA_PASS'),
+            $dnadb = new Bio::EnsEMBL::DBSQL::DBAdaptor( -host      => $self->current_dataset_param('DNA_HOST'),
+                                                         -port      => $self->current_dataset_param('DNA_PORT'),
+                                                         -user      => $self->current_dataset_param('DNA_USER'),
+                                                         -pass      => $self->current_dataset_param('DNA_PASS'),
                                                          -dbname    => $dna_dbname,
                                                          -group     => 'dnadb',
                                                          -species   => $self->dataset_name,
