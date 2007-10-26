@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2007-10-26 10:53:03 $
-# Id:            $Id: nph-get_prediction_transcripts,v 1.6 2007-10-26 10:53:03 lg4 Exp $
+# Last modified: $Date: 2007-10-26 11:28:57 $
+# Id:            $Id: nph-get_prediction_transcripts,v 1.7 2007-10-26 11:28:57 lg4 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_prediction_transcripts,v $
 
 use strict;
@@ -20,7 +20,7 @@ my $metakey       = $server->param('metakey') || ''; # defaults to pipeline
 
                     # last_arg=1 means "fetch all exons now"
 my $pts = $server->fetch_mapped_features('prediction_transcript', 'get_all_PredictionTranscripts', [$analysis_name, 1],
-    map { $server->param($_) } qw(cs name type start end strand metakey csver csver_remote)
+    map { defined($server->param($_)) ? $server->param($_) : '' } qw(cs name type start end strand metakey csver csver_remote)
 );
 
 my @pt_optnames = @{ $OrderOfOptions{PredictionTranscript} };
