@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2007-10-04 12:03:27 $
-# Id:            $Id: nph-get_cons_simple_features,v 1.5 2007-10-04 12:03:27 jgrg Exp $
+# Last modified: $Date: 2007-10-26 10:53:03 $
+# Id:            $Id: nph-get_cons_simple_features,v 1.6 2007-10-26 10:53:03 lg4 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_cons_simple_features,v $
 
 use strict;
@@ -86,8 +86,9 @@ if(!$server->running_headcode()) {
 
 my $cutoff = $server->param('cutoff') || 0;
 
-my $csfs = $server->fetch_mapped_features('cons_feature',
-            ['get_all_ConsFeatures', $server, $cutoff] );
+my $csfs = $server->fetch_mapped_features('cons_feature', 'get_all_ConsFeatures', [$server, $cutoff],
+    map { $server->param($_) } qw(cs name type start end strand metakey csver csver_remote)
+);
 
 my @sf_optnames = @{ $OrderOfOptions{SimpleFeature} };
 my $output_string = '';

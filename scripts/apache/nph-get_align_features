@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2007-10-04 12:03:27 $
-# Id:            $Id: nph-get_align_features,v 1.5 2007-10-04 12:03:27 jgrg Exp $
+# Last modified: $Date: 2007-10-26 10:53:03 $
+# Id:            $Id: nph-get_align_features,v 1.6 2007-10-26 10:53:03 lg4 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_align_features,v $
 
 use strict;
@@ -25,8 +25,9 @@ my $method = {
     'pafs' => 'get_all_ProteinAlignFeatures',
 }->{$kind};
 
-my $afs = $server->fetch_mapped_features('align_feature',
-            [$method, $analysis_name] );
+my $afs = $server->fetch_mapped_features('align_feature', $method, [$analysis_name],
+    map { $server->param($_) } qw(cs name type start end strand metakey csver csver_remote)
+);
 
     # Put the names into the hit_description hash:
 my %hd_hash = ();

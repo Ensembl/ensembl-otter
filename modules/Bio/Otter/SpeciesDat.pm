@@ -1,8 +1,9 @@
 package Bio::Otter::SpeciesDat;
 
-# Read and maintain the hash from 'species.dat'
+# Read and maintain the hash from 'species.dat'.
+# (Inherited by Bio::Otter::MFetcher)
 #
-# Inherited by Bio::Otter::ServerScriptSupport
+# Author: lg4
 
 use strict;
 
@@ -42,10 +43,10 @@ sub load_species_dat_file {
 
         if (/\[(.*)\]/) {
             if (!defined($cursect) && $1 ne "defaults") {
-                $self->error_exit("ERROR: First section in species.dat should be 'defaults'");
+                $self->error_exit("Error: first section in species.dat should be 'defaults'");
             }
             elsif ($1 eq "defaults") {
-	            #print STDERR "Got default section\n";
+	            $self->log("Got default section");
                 $curhash = $defhash;
             }
             else {
@@ -59,7 +60,7 @@ sub load_species_dat_file {
             $sp->{$cursect} = $curhash;
 
         } elsif (/(\S+)\s+(\S+)/) {
-            #print "Reading entry $1 $2\n";
+            $self->log("Reading entry $1 $2");
             $curhash->{$1} = $2;
         }
     }
@@ -76,7 +77,7 @@ sub keep_only_datasets {
     my $sp = $self->{'_species_dat_hash'};
 
     foreach my $dataset_name (keys %$sp) {
-        #printf STDERR "Dataset %s is %sallowed\n", $dataset_name, $allowed->{$dataset_name} ? '' : 'not ';
+        $self->log(sprintf("Dataset %s is %sallowed", $dataset_name, $allowed_hash->{$dataset_name} ? '' : 'not '));
         delete $sp->{$dataset_name} unless $allowed_hash->{$dataset_name};
     }
 }
@@ -98,10 +99,16 @@ sub get_dataset_param {
     return $subhash->{$param_name};
 }
 
-sub error_exit { # to be overloaded
+sub log { # to be overloaded
     my ($self, $message) = @_;
 
     print STDERR $message."\n";
+}
+
+sub error_exit { # to be overloaded
+    my ($self, $message) = @_;
+
+    $self->log($message);
     exit(1);
 }
 
