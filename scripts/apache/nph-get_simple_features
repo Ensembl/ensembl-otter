@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2007-10-04 12:03:27 $
-# Id:            $Id: nph-get_simple_features,v 1.5 2007-10-04 12:03:27 jgrg Exp $
+# Last modified: $Date: 2007-10-26 10:53:03 $
+# Id:            $Id: nph-get_simple_features,v 1.6 2007-10-26 10:53:03 lg4 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_simple_features,v $
 
 use strict;
@@ -21,8 +21,9 @@ eval {
     my $analysis_name = $server->param('analysis') || undef; # defaults to 'all analyses'
     my $metakey       = $server->param('metakey')  || '';    # defaults to pipeline
 
-    my $sfs = $server->fetch_mapped_features('simple_feature',
-                ['get_all_SimpleFeatures', $analysis_name] );
+    my $sfs = $server->fetch_mapped_features('simple_feature', 'get_all_SimpleFeatures', [$analysis_name],
+        map { $server->param($_) } qw(cs name type start end strand metakey csver csver_remote)
+    );
 
     my @sf_optnames = @{ $OrderOfOptions{SimpleFeature} };
 

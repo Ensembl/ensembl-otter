@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2007-10-04 12:03:27 $
-# Id:            $Id: nph-get_prediction_transcripts,v 1.5 2007-10-04 12:03:27 jgrg Exp $
+# Last modified: $Date: 2007-10-26 10:53:03 $
+# Id:            $Id: nph-get_prediction_transcripts,v 1.6 2007-10-26 10:53:03 lg4 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_prediction_transcripts,v $
 
 use strict;
@@ -18,9 +18,10 @@ my $server = Bio::Otter::ServerScriptSupport->new;
 my $analysis_name = $server->param('analysis');
 my $metakey       = $server->param('metakey') || ''; # defaults to pipeline
 
-my $pts = $server->fetch_mapped_features('prediction_transcript',
-            ['get_all_PredictionTranscripts', $analysis_name, 1] );
                     # last_arg=1 means "fetch all exons now"
+my $pts = $server->fetch_mapped_features('prediction_transcript', 'get_all_PredictionTranscripts', [$analysis_name, 1],
+    map { $server->param($_) } qw(cs name type start end strand metakey csver csver_remote)
+);
 
 my @pt_optnames = @{ $OrderOfOptions{PredictionTranscript} };
 my @pe_optnames = @{ $OrderOfOptions{PredictionExon} };

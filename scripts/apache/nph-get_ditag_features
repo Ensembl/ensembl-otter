@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2007-10-04 12:03:27 $
-# Id:            $Id: nph-get_ditag_features,v 1.5 2007-10-04 12:03:27 jgrg Exp $
+# Last modified: $Date: 2007-10-26 10:53:03 $
+# Id:            $Id: nph-get_ditag_features,v 1.6 2007-10-26 10:53:03 lg4 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_ditag_features,v $
 
 use strict;
@@ -26,8 +26,9 @@ if($ditypes) {
     $ditypes = [ split(',', $ditypes) ];
 }
 
-my $dfs = $server->fetch_mapped_features('ditag_feature', 
-            ['get_all_DitagFeatures', $ditypes, $analysis_name] );
+my $dfs = $server->fetch_mapped_features('ditag_feature', 'get_all_DitagFeatures', [$ditypes, $analysis_name],
+    map { $server->param($_) } qw(cs name type start end strand metakey csver csver_remote)
+);
 
 my @df_optnames = @{ $OrderOfOptions{DitagFeature} };
 my @do_optnames = @{ $OrderOfOptions{DitagObject} };

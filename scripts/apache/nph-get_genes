@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2007-10-04 12:03:27 $
-# Id:            $Id: nph-get_genes,v 1.5 2007-10-04 12:03:27 jgrg Exp $
+# Last modified: $Date: 2007-10-26 10:53:03 $
+# Id:            $Id: nph-get_genes,v 1.6 2007-10-26 10:53:03 lg4 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_genes,v $
 
 use strict;
@@ -41,8 +41,9 @@ eval {
         : '';
 
         # third parameter of $slice->get_all_Genes() helps preventing lazy-loading of transcripts
-    my $genes = $server->fetch_mapped_features('gene',
-                ['get_all_Genes', $analysis, undef, 1]);
+    my $genes = $server->fetch_mapped_features('gene', 'get_all_Genes', [$analysis, undef, 1],
+        map { $server->param($_) } qw(cs name type start end strand metakey csver csver_remote)
+    );
 
     foreach my $gene (@$genes) {
         $output_string .= $gene->toXMLstring(
