@@ -187,7 +187,7 @@ sub satellite_dba {
 }
 
 sub get_slice { # codebase-independent version for scripts
-    my ($self, $dba, $cs, $name, $type, $start, $end, $strand, $csver) = @_;
+    my ($self, $dba, $cs, $name, $type, $start, $end, $csver) = @_;
 
     my $slice;
 
@@ -195,7 +195,6 @@ sub get_slice { # codebase-independent version for scripts
 
     if($self->running_headcode()) {
 
-        $strand ||= 1;
         if(!$csver && ($cs eq 'chromosome')) {
             $csver = 'Otter';
         }
@@ -216,7 +215,7 @@ sub get_slice { # codebase-independent version for scripts
 	        $segment_name,
             $start,
             $end,
-            $strand,
+            1,      # somehow strand parameter is needed
             $csver,
         );
 
@@ -356,22 +355,12 @@ sub get_mapper_dba {
 
 sub fetch_mapped_features {
     my ($self, $feature_name, $fetching_method, $call_parms,
-        $cs, $name, $type, $start, $end, $strand, $metakey, $csver_orig, $csver_remote,
+        $cs, $name, $type, $start, $end, $metakey, $csver_orig, $csver_remote,
     ) = @_;
 
     $metakey      ||= '';    # defaults to pipeline
     $csver_orig   ||= undef; # defaults to NULL in the DB
     $csver_remote ||= undef; # defaults to NULL in the DB
-
-#    my $cs           = $self->param('cs')           || 'chromosome';
-#    my $csver_orig   = $self->param('csver')        || undef;
-#    my $csver_remote = $self->param('csver_remote') || undef;
-#    my $metakey      = $self->param('metakey')      || ''; # defaults to pipeline
-#    my $name         = $self->param('name');
-#    my $type         = $self->param('type');
-#    my $start        = $self->param('start');
-#    my $end          = $self->param('end');
-#    my $strand       = $self->param('strand');
 
     my $sdba = $self->satellite_dba( $metakey );
     my ($mdba, $csver_target) = $self->get_mapper_dba( $metakey, $cs, $csver_orig, $csver_remote, $name, $type);
@@ -381,7 +370,7 @@ sub fetch_mapped_features {
     if($mdba) {
         $self->log("Proceeding with mapping code");
 
-        my $original_slice_on_mapper = $self->get_slice($mdba, $cs, $name, $type, $start, $end, $strand, $csver_orig);
+        my $original_slice_on_mapper = $self->get_slice($mdba, $cs, $name, $type, $start, $end, $csver_orig);
         my $proj_segments_on_mapper = $original_slice_on_mapper->project( $cs, $csver_target );
 
         my $sa_on_target = $sdba->get_SliceAdaptor();
@@ -430,7 +419,7 @@ sub fetch_mapped_features {
     } elsif(($cs ne 'chromosome') || defined($csver_target)) {
         $self->log("Assuming the mappings to be identical, just cross-fetching");
 
-        my $original_slice = $self->get_slice($sdba, $cs, $name, $type, $start, $end, $strand, $csver_target);
+        my $original_slice = $self->get_slice($sdba, $cs, $name, $type, $start, $end, $csver_target);
 
         $features = $original_slice->$fetching_method(@$call_parms)
             || $self->error_exit("Could not fetch anything - analysis may be missing from the DB");
