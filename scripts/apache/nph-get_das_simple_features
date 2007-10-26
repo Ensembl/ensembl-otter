@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2007-10-26 10:53:03 $
-# Id:            $Id: nph-get_das_simple_features,v 1.6 2007-10-26 10:53:03 lg4 Exp $
+# Last modified: $Date: 2007-10-26 11:35:59 $
+# Id:            $Id: nph-get_das_simple_features,v 1.7 2007-10-26 11:35:59 lg4 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_das_simple_features,v $
 
 my $http_proxy = $ENV{http_proxy};
@@ -74,7 +74,7 @@ my $das = Bio::Das->new(
 $das->proxy($http_proxy) if $http_proxy;
 
 my $dsfs = $server->fetch_mapped_features('das_simple_feature', 'get_all_DasFeatures', [$server, $das, $chr_name, $analysis],
-    map { $server->param($_) } qw(cs name type start end strand metakey csver csver_remote)
+    map { defined($server->param($_)) ? $server->param($_) : '' } qw(cs name type start end strand metakey csver csver_remote)
 );
 
 my @sf_optnames = @{ $OrderOfOptions{SimpleFeature} };

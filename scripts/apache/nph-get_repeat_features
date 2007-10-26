@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2007-10-26 10:53:03 $
-# Id:            $Id: nph-get_repeat_features,v 1.6 2007-10-26 10:53:03 lg4 Exp $
+# Last modified: $Date: 2007-10-26 11:35:59 $
+# Id:            $Id: nph-get_repeat_features,v 1.7 2007-10-26 11:35:59 lg4 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_repeat_features,v $
 
 use strict;
@@ -18,7 +18,7 @@ my $server = Bio::Otter::ServerScriptSupport->new;
 my $analysis_name = $server->param('analysis');
 
 my $rfs = $server->fetch_mapped_features('repeat_feature', 'get_all_RepeatFeatures', [$analysis_name],
-    map { $server->param($_) } qw(cs name type start end strand metakey csver csver_remote)
+    map { defined($server->param($_)) ? $server->param($_) : '' } qw(cs name type start end strand metakey csver csver_remote)
 );
 
 my @rf_optnames = @{ $OrderOfOptions{RepeatFeature} };
