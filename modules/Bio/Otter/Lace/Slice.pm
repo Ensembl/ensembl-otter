@@ -138,7 +138,6 @@ sub toHash {
             'name'    => $self->seqname(),
             'start'   => $self->start(),
             'end'     => $self->end(),
-            'strand'  => 0,
     };
 }
 
