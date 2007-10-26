@@ -91,7 +91,7 @@ use Deletion;
 
 $| = 1;
 
-our $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
+my $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
 
 # parse options
 $support->parse_common_options(@_);
@@ -159,7 +159,7 @@ if ($support->param('keep')) {
 }
 
 # make sure user knows what he's doing
-exit unless ($support->user_proceed("You decided to ".uc($action)." all genes and/or transcripts $condition the list provided. The database is assumed to be a $schema one. Are you sure you want to proceed? (you can enter the schema version at the command line)"));
+exit unless ($support->user_proceed("You decided to ".uc($action)." all genes and/or transcripts $condition the list provided from the $schema database. Are you sure you want to proceed?"));
 
 my ($gene_stable_ids, $trans_stable_ids);
 # read list of stable IDs to keep or delete
@@ -193,13 +193,13 @@ if (@{$trans_stable_ids}) {
 # transcripts
 if ($deleted) {
     # delete exons
-    $support->delete_exons($dbh);
+    &Deletion::delete_exons($support,$dbh);
 
     # delete xrefs
-    $support->delete_xrefs($dbh);
+    &Deletion::delete_xrefs($support,$dbh);
 
     # optimize tables
-    $support->optimize_tables($dbh);
+    &Deletion::optimize_tables($support,$dbh);
 }
 
 # finish logfile
