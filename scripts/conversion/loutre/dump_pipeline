@@ -26,8 +26,8 @@ Options:
     -h, --help, -?                      print help (this message)
 
     -no_feature=1                       don't dump dna_ and protein_ align features
-    -sql_dump_location=DIR              location of SQL dump
-    -file_name=FILE                     name of SQL file
+    -sql_dump_location=DIR              location of SQL dump (defaults to /GPFS/tmp/vega_prep)
+    -file_name=FILE                     name of SQL file (defaults to species_date_create.sql)
 
 =head1 DESCRIPTION
 
@@ -38,7 +38,9 @@ read into the file - the exceptions are tables defined in the HEREDOC at the end
 tables where the features being dumped are restricted by analysis_id ('analysis_id'). This
 last filter is just for *_raw features for *_align_feature tables - if you want to transfer
 all align_features then just edit the HEREDOC.
-Note that earlier versions of this script (eg 1.6) attempted to restrict the transfer of all features on analysis_id and seq_region_id - this worked for small database but fell over with human.
+Note that earlier versions of this script (eg 1.6) attempted to restrict the transfer of all
+features on analysis_id and seq_region_id - this worked for small database but fell over with
+human.
 
 Transfer of features from the dna_ and protein_align_feature tables can be completely
 prevented using the -no_feature option to the script.
@@ -75,6 +77,7 @@ BEGIN {
     unshift(@INC, "$SERVERROOT/bioperl-live");
 }
 
+use POSIX qw(strftime);
 use Getopt::Long;
 use Pod::Usage;
 use Data::Dumper;
@@ -111,12 +114,21 @@ $support->check_required_params(
 	'pipehost',
 	'pipeport',
 	'pipeuser',
-	'sql_dump_location',
 	'dbname',
 );
 if ($support->param('help') or $support->error) {
     warn $support->error if $support->error;
     pod2usage(1);
+}
+
+#set defaults if not specified otherwise
+if (! $support->param('sql_dump_location')) {
+	$support->param('sql_dump_location','/GPFS/tmp/vega_prep');
+}
+my $date = strftime "%Y_%m_%d", localtime;
+if (! $support->param('file_name')) {
+	my $file_name = $support->param('pipedbname').'_'.$date.'_create.sql';
+	$support->param('file_name',$file_name);
 }
 
 # ask user to confirm parameters to proceed
@@ -135,8 +147,7 @@ my $character_set='latin1';
 my $dbtype='MyISAM';
 
 #open file to dump the sql into
-my $filename = $support->param('file_name') || ($support->param('pipedbname') . '_create.sql');
-my $file = $support->param('sql_dump_location') . '/' . $filename;
+my $file = $support->param('sql_dump_location') . '/' . $support->param('file_name');
 open(OUT,">$file") || die "cannot open $file";
 
 # connect to pipeline database and get adaptors
@@ -241,6 +252,9 @@ $log .= "The rest of the pipeline tables will be copied just with their structur
 foreach my $table (keys %table_constraints) {
 	$log .= "\t$table\n" if ($table_constraints{$table} eq 's');
 }
+
+$support->log($log);
+
 unless ($support->user_proceed("$log\nDo you want to proceed ?")) {
 	exit;
 }
