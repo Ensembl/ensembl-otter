@@ -166,7 +166,7 @@ if (! $support->param('filter_biotype')) {
 $support->comma_to_list('filter_biotype');
 
 #loutre seq_region_attributes to transfer or ignore - add new ones here
-my $att_types_wanted = [qw(name toplevel ack vega_name vega_release vega_export_mod)];
+my $att_types_wanted = [qw(name toplevel ack vega_name vega_release vega_export_mod ensembl_name intl_clone_name)];
 my $att_types_to_ignore = [qw(chr description embl_acc embl_version htg hidden write_access)];
 
 # ask user to confirm parameters to proceed
@@ -273,6 +273,7 @@ $lsth->execute;
 while (my ($name,$group1,$group2,$group_email) = $lsth->fetchrow_array ) {
 	if (! $group_email) {
 		$support->log_warning("Author $name in loutre is not properly linked to an author_group. Please fix before continuing\n");
+		exit;
 	}
 }
 ####
@@ -332,6 +333,7 @@ while (my ($code) = $lsth->fetchrow_array) {
 if ( @new_seq_region_attribs ) {
 	my $names = join ', ', @new_seq_region_attribs;
 	$support->log_warning("There are new seq_region_attribs in loutre ($names), please investigate and decide what to do with them\n");
+	exit;
 }
 
 ######################################################
@@ -396,10 +398,6 @@ if ($support->param('prune') && $support->user_proceed("\nDo you want to delete 
 	$vdbh->do(qq(DELETE FROM interpro));
 	$vdbh->do(qq(DELETE FROM object_xref));
 	$vdbh->do(qq(DELETE FROM xref));
-	$vdbh->do(qq(DELETE FROM gene_author));
-	$vdbh->do(qq(DELETE FROM transcript_author));
-	$vdbh->do(qq(DELETE FROM author));
-	$vdbh->do(qq(DELETE FROM author_group));
 	$vdbh->do(qq(DELETE FROM gene_attrib));
 	$vdbh->do(qq(DELETE FROM transcript_attrib));
 	$vdbh->do(qq(DELETE FROM translation_attrib));
@@ -436,7 +434,9 @@ if ($support->param('prune') && $support->user_proceed("\nDo you want to delete 
 
 #only add these extra tables if the author table is not there (ie if
 #it's the first dump or one done after a prune
-if ( ! exists($vega_tables{'author'} )) {
+my %current_vega_tables;
+map { $_ =~ s/`//g; $current_vega_tables{$_} = 1; } $vdbh->tables;
+if ( ! exists($current_vega_tables{'author'} )) {
 	
 	#initialise mysqldump statements
 	#info for MySQL dumping
@@ -536,20 +536,22 @@ foreach my $name (@{$chr_names_wanted}) {
  GENE:
 	foreach my $lgene (@{$lga->fetch_all_by_Slice($lslice)} ) {
 		#filter on name prefix
+		my $gname = $lgene->get_all_Attributes('name')->[0]->value;
 		if ($support->param('filter_prefix')) {
-			my $name = $lgene->get_all_Attributes('name')->[0]->value;
-			if ( my ($pref) = $name =~ /(\w+?):/) {
+			if ( my ($pref) = $gname =~ /(\w+?):/) {
 				if (grep {$pref eq $_} $support->param('filter_prefix')) {
-					$support->log_verbose("Skipping gene $name because of incorrect prefix\n",1);
+					$support->log_verbose("Skipping gene $gname because of incorrect prefix\n",1);
 					next GENE;
 				}
 			}
 		}
 
 		#filter on biotype
-		if (grep {lc($lgene->biotype) eq lc($_)} $support->param('filter_biotype') ) {
-			$support->log_verbose("Skipping gene $name because of incorrect biotype (".$lgene->biotype." )\n",1);
-			next GENE;
+		if ($support->param('filter_biotype') ) {
+			if (grep {lc($lgene->biotype) eq lc($_)} $support->param('filter_biotype') ) {
+				$support->log_verbose("Skipping gene $gname because of incorrect biotype (".$lgene->biotype.")\n",1);
+				next GENE;
+			}
 		}
 		if (&transfer_gene($lgene,$vsa,$vga)) {
 			$c++;
