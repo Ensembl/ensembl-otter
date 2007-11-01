@@ -50,7 +50,8 @@ Vega, for example different types of simple_features. The tables and the logic_n
 of the features wanted in each of those tables are hardcoded in the script in the
 lns_to_stay hash. In addition, the lns_to_go hash defines the features that we know
 are to be deleted. By hard coding them, then any new ones that arise in the future
-can be flagged and a decision made as to whether to delete or include them.
+can be flagged and a decision made as to whether to delete or include them. Some
+seq_region attributes are deleted; again these are defined in the script.
 
 Second, the pipeline database contains many seq_regions not wanted in Vega, for example
 old assemblies. The regions that are wanted are defined in the loutre database using
