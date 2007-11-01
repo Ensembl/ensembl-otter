@@ -114,6 +114,16 @@ sub show_labels {
     return defined($flag) ? $flag : 1;
 }
 
+sub relative_coords {
+    my( $self, $relative_coords ) = @_;
+    
+    if (defined $relative_coords) {
+        $self->{'_relative_coords'} = $relative_coords ? 1 : 0;
+    }
+    return $self->{'_relative_coords'} || 0;
+}
+
+
 sub band_bbox {
     my( $band ) = @_;
     
