@@ -295,7 +295,7 @@ sub draw_plot_axes {
 	# Scale along bottom of plot
 
 	my $vc = $band->virtual_contig;
-	my $chr_start  = $vc->chr_start;
+	my $chr_start  = $band->relative_coords ? 1 : $vc->chr_start;
 	my $seq_length = $vc->length;
 	my $seq_end = $chr_start + $seq_length;
 	my $rpp = $band->residues_per_pixel;
@@ -316,7 +316,7 @@ sub draw_plot_axes {
 	    } else {
 		$i = $chr_start;
 	    }
-	    #warn "First label = $i";
+	    warn "First label = $i";
 	    
 	    # added by klh 020507: increased size of horizontal scale by 2
 	    my $saved_font = $band->font_size;

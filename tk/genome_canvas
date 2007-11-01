@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl -w
+#!/usr/bin/perl -w
 
 ### genome_canvas
 
@@ -51,6 +51,7 @@ use Hum::EnsCmdLineDB;
     my $span_file       = undef;
     my $dataset_name    = undef;
     my $set_name        = undef;
+    my $relative_coords = 0;
     
     # Otter/Ensembl switch
     my $command_line_sub = \&Hum::EnsCmdLineDB::do_getopt;
@@ -94,12 +95,13 @@ use Hum::EnsCmdLineDB;
         'dataset=s'         => \$dataset_name,
         'chr=s'             => \$chr_name,
         'set=s'             => \$set_name,
+        'relative!'         => \$relative_coords,
         );
     
     my( $db, $ds, $cl );
     if ($otter) {
         unless ($dataset_name and $set_name) {
-            die "otter connection requires dataset_name and set";
+            die "otter connection requires dataset and set";
         }
         $cl = Bio::Otter::Lace::Defaults::make_Client();
         $ds = $cl->get_DataSet_by_name($dataset_name);
@@ -215,6 +217,7 @@ use Hum::EnsCmdLineDB;
             $plot->range(0.3, 0.7);
             $plot->x_major(0.2);
 	        $plot->show_horizontal_scale(1);
+            $plot->relative_coords($relative_coords);
             $gc->add_Band($plot);
         }
         
