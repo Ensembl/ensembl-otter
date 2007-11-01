@@ -61,8 +61,8 @@ sub strip_y_map {
         my $strip_count = scalar $band->strip_labels;
         my $y_offset    = $band->y_offset;
         my $height      = $band->strip_height;
-        ###my $pad         = $band->strip_padding;
-        my $pad = 0;
+        my $pad         = $band->strip_padding;
+        #my $pad = 0;
         $map = [];
         for (my $i = 0; $i < $strip_count; $i++) {
             my $y1 = $y_offset + ($i * ($height + $pad));

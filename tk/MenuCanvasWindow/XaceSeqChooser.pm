@@ -37,7 +37,7 @@ my $ZMAP_DEBUG = 1;
     };
 
     if ($@) {
-        #warn "ZMap not available\n$@";
+        warn "ZMap not available\n$@";
         $show = 0;
     }
 
