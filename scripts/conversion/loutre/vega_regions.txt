@@ -1,7 +1,7 @@
 #This file defines the regions to be exported from a loutre database for Vega
 #database production, and attributes to be given to those regions (by 
 #prepare_loutre). Entries must be tab delimited, and with the exception of
-#ensembl_name (used for ensembl_vega production) are compulsory.
+#ensembl_name (used for ensembl_vega production) and ack are compulsory.
 
 #loutre_id        = seq_region.name in loutre (minus the numerical suffix)
 #vega_name        = seq_region.name in Vega
@@ -10,7 +10,8 @@
 #ack              = Acknowledgement for group doing annotation
 #ensembl_name     = Name of equivalent seqregion in Ensembl
 
-#loutre_id	#vega_name	#name	#vega_export_mode	#ack	#ensembl_name	
+#loutre_id	#vega_name	#name	#vega_export_mode	#ack #ensembl_name	
+
 --pig--
 mhc	7-MHC	MHC region of Chromosome 7	External	Havana
 chr17-SSC17_MAX1	17-H20q13	H20q13 fragment of Chromosome 17	External	Havana
@@ -45,3 +46,32 @@ chrY	Y	Chromosome Y	External	Havana	Y
 MHC_COX	6-COX	Chromosome 6-COX	External	Havana	c6_COX
 MHC_QBL	6-QBL	Chromosome 6-QBL	External	Havana	c6_QBL
 --end--
+
+--mouse--
+chr1	1	Chromosome 1	External		1
+chr2	2	Chromosome 2	External		2
+chr3	3	Chromosome 3	External		3
+chr4	4	Chromosome 4	External		4
+chr5	5	Chromosome 5	External		5
+chr6	6	Chromosome 6	External		6
+chr7	7	Chromosome 7	External		7
+chr8	8	Chromosome 8	External		8
+chr9	9	Chromosome 9	External		9
+chr10	10	Chromosome 10	External		10
+chr11	11	Chromosome 11	External		11
+chr12	12	Chromosome 12	External		12
+chr13	13	Chromosome 13	External		13
+chr14	14	Chromosome 14	External		14
+chr15	15	Chromosome 15	External		15
+chr16	16	Chromosome 16	External		16
+chr17	17	Chromosome 17	External		17
+chr18	18	Chromosome 18	External		18
+chr19	19	Chromosome 19	External		19
+chrX	X	Chromosome X	External		X
+chrY	Y	Chromosome Y	External		Y
+CHORI29_IDD5.1_test	1-IDD5.1_CHORI29	IDD5.1 region of chromosome 1 (CHOR129 strain)	External	
+NOD_IDD5.1	1-IDD5.1_NOD	IDD5.1 region of chromosome 1 (NOD strain)	External
+129_IDD3	3-IDD3_129	IDD3 region of chromosome 3 (129 strain)	External
+NOD_IDD3	3-IDD3_NOD	IDD3 region of chromosome 3 (NOD strain)	External
+NOD_IDD10	3-IDD10_NOD	IDD10 region of chromosome 3 (NOD strain)	External
+NOD_IDD18	3-IDD18_NOD	IDD18 region of chromosome 3 (NOD strain)	External
