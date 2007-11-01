@@ -30,17 +30,19 @@ Options:
 
 =head1 DESCRIPTION
 
-Using FILE, this script defines the loutre seq_regions that are to be exported to Vega, and adds
-/ updates relevant seq_region attributes for these to the loutre database. In addition it adds
-toplevel and vega_release attributes to each loutre region that is going to be exported. The
-latter is defined in the script parameters and acts as a log of which regions were dumped for
-which website release.
+Using definition_file, this script defines the loutre seq_regions that are to
+be exported to Vega, and adds/updates relevant seq_region attributes for these
+to the loutre database. In addition it adds toplevel and vega_release
+attributes to each loutre region that is going to be exported. The latter is
+defined in the script parameters and acts as a log of which regions were
+dumped for which website release.
 
-Since API support for B::E::Attributes is very rudimentary, modification of attributes is done
-using MySQL. Consequently the attribute table in the loutre database must be upto date before
-running this script.
+Since API support for B::E::Attributes is very rudimentary, modification of
+attributes is done using MySQL. Consequently the attribute table in the
+loutre database must be upto date before running this script.
 
-Support for setting attrib_type export_mode to a value of 'I' has not been tested and is not guaranteed.
+Support for setting attrib_type export_mode to a value of 'I' has not been
+tested and is not guaranteed.
 
 =head1 LICENCE
 
@@ -83,21 +85,17 @@ my $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
 # parse options
 $support->parse_common_options(@_);
 $support->parse_extra_options(
-	'loutrehost=s',
-	'loutreport=s',
-	'loutreuser=s',
-	'loutrepass=s',
-	'loutredbname=s',
+	$support->get_loutre_params,
 	'definition_file=s',
 	'vega_release=s',
 	'release_type=s',
 );
 $support->allowed_params(
+	$support->get_common_params,
 	$support->get_loutre_params,
 	'definition_file',
 	'vega_release',
 	'release_type',
-	$support->get_common_params,
 );
 
 $support->check_required_params(
@@ -118,7 +116,7 @@ $support->init_log;
 
 #identify species we're working with
 my $species;
-if (! (($species) = $support->param('loutredbname') =~ /loutre_(\S+)_/ ) ) {
+if (! (($species) = $support->param('loutredbname') =~ /loutre_(\S+)_*/ ) ) {
 	$support->log_warning("No species name interpreted from loutredbname ".$support->param('loutredbname')." check configuration\n");
 	exit;
 }
@@ -143,16 +141,17 @@ while (my $rec = <$IN>) {
 		next REC;
 	}
 	next REC unless $active_record;
-	my ($loutre_id,$vega_id,$human_id,$type,$ack) = split '\t', $rec;
-	unless ($loutre_id && $vega_id && $human_id && $type && $ack) {
+	my ($loutre_id,$vega_id,$human_id,$type,$ack,$ensembl_name) = split '\t', $rec;
+	unless ($loutre_id && $vega_id && $human_id && $type) {
 		$support->log_warning("Parsing input file failed, check tab spacing for line $loutre_id\n");
 	}
 	$regions_wanted_details->{$loutre_id} =  {
-		vega_name        => "$vega_id",
-		name             => "$human_id",
-		vega_export_mod  => "$type",
-		ack              => "$ack",
+		vega_name        => $vega_id,
+		name             => $human_id,
+		vega_export_mod  => $type,
+		ack              => $ack,
 		vega_release     => $support->param('vega_release'),
+		ensembl_name     => $ensembl_name,
 	};
 }
 
@@ -167,11 +166,11 @@ my $chroms = $support->fetch_non_hidden_slices($aa,$sa);
 #get all chromosomes
 my $all_chromosomes = $sa->fetch_all('Chromosome','Otter');
 
-#for each chromosome that we want
+###################################################################
+# see which of the non hidden chromosomes best match what we want #
+###################################################################
 SLICE:
 foreach my $k (keys %$regions_wanted_details ) {
-
-	#see which of the non hidden chromosomes best match what we want
 	my $sr_name_to_use;
 	my $saved_extra = '';
 	my %possibles = map {$_->seq_region_name => $_} grep { $_->seq_region_name =~ /^$k-/ } @$chroms;
@@ -184,10 +183,9 @@ foreach my $k (keys %$regions_wanted_details ) {
 					$max_version = $version;
 					$sr_name_to_use = $sr_name;
 				}
+				#not sure what to do with non-numerical suffixes - try this for now
 				elsif ($extra) {
-#					warn "---$version---$max_version---";
 					if ($version >= $max_version) {
-#						warn "--$extra--$saved_extra--";
 						if ($extra gt $saved_extra) {
 							$max_version = $version;
 							$sr_name_to_use = $sr_name;
@@ -205,6 +203,7 @@ foreach my $k (keys %$regions_wanted_details ) {
 	else {		
 		($sr_name_to_use) = keys %possibles;
 	}
+
 	if ($sr_name_to_use) {
 		$support->log("\nWill use seq_region $sr_name_to_use for requested region $k ...\n");
 	}
@@ -212,6 +211,7 @@ foreach my $k (keys %$regions_wanted_details ) {
 		$support->log_warning("No matching seq_region found for requested region $k, check configuration file\n");
 		next SLICE;
 	}
+
 	my $attribs_wanted  = $regions_wanted_details->{$k};
 	my $slice           = $possibles{$sr_name_to_use};
 	my $sr_id           = $slice->get_seq_region_id;
@@ -227,14 +227,12 @@ foreach my $k (keys %$regions_wanted_details ) {
 			next SLICE;
 		}
 	}
-	#... otherwise no prompting is given
-
+	#... otherwise no prompting is given, just go ahead and add the vega_export_mod attribute 
 	my $r = [];
 	if (! $support->param('dry_run')) {
 		$r = $support->fix_attrib_value($attribs_present,$sr_id,$sr_name_to_use,$attrib,$export_mode);
 	}
 	&logit($r,$attrib,$export_mode,$sr_name_to_use);
-
 	delete($attribs_wanted->{$attrib});
 	
 	# mark any old assemblies export_mode as 'None'
@@ -257,7 +255,8 @@ foreach my $k (keys %$regions_wanted_details ) {
 		$r = $support->fix_attrib_value($attribs_present,$sr_id,$sr_name_to_use,'toplevel',1);
 	}
 	&logit($r,'toplevel',1,$sr_name_to_use);
-			
+
+	#sort out the rest of the attributes
 	while (my ($code,$value) = each %$attribs_wanted) {
 		#add another 'vega_release' attribute if the value is new (ie don't replace old values)
 		if ($code eq 'vega_release') {
@@ -278,20 +277,27 @@ foreach my $k (keys %$regions_wanted_details ) {
 		}
 	}
 }
-
-#do a final sanity check and report:
-#all of these attributes should only be present once for each chromosome that going to be exported.
-#The exception is vega_release which can have multiple values
+#####################################################################################################
+#do a final sanity check, all of these attributes should only be present once for each              #
+#chromosome that going to be exported, the exception is vega_release which can have multiple values #
+#####################################################################################################
 
 $support->log("\n\nSUMMARY\nRelevant attributes for chromosomes with a vega_export_mod attribute of value \'$rel_type\' are as follows:\n\n");
 
 #set up printing format
-my $template = "%-15s%-10s%-35s%-15s%-10s%-7s%-30s\n";
-my $txt = sprintf $template, qw(loutre_id vega_id name ack toplevel hidden releases);
+my $template = "%-15s%-10s%-20s%-15s%-15s%-10s%-7s%-30s\n";
+my $txt = sprintf $template, qw(loutre_id vega_id name ensembl_name ack toplevel hidden releases);
 $txt .= "-"x110 . "\n";
 
 #get attributes of chromosomes with a vega_export_mod of E
-my %final_attribs = map {$_=> 1} qw(vega_name name ack toplevel hidden vega_release);
+my %final_attribs = map {$_=> 1} qw(
+									vega_name
+									name
+									ensembl_name
+									ack
+									toplevel
+									hidden
+									vega_release);
 foreach my $chrom ( @{$sa->fetch_all('Chromosome','Otter')}) {
 	my $attribs = $aa->fetch_all_by_Slice($chrom);
 	my $name = $chrom->seq_region_name;
@@ -307,8 +313,7 @@ foreach my $chrom ( @{$sa->fetch_all('Chromosome','Otter')}) {
 			}
 			$val{$k} = join ',', @$c;
 		}
-		$txt .= sprintf $template, ($val{'loutre_id'},$val{'vega_name'},$val{'name'},$val{'ack'},$val{'toplevel'},$val{'hidden'},$val{'vega_release'});
-#		$txt .=	"\n";
+		$txt .= sprintf $template, ($val{'loutre_id'},$val{'vega_name'},$val{'name'},$val{'ensembl_name'},$val{'ack'},$val{'toplevel'},$val{'hidden'},$val{'vega_release'});
 	}
 	elsif (scalar(@$c > 1)) {
 		$support->log_warning("CRITICAL - chromosome $name has multiple vega_export_mod attributes with a value of \'$rel_type\'\n");
