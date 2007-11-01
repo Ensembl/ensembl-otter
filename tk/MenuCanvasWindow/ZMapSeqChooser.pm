@@ -249,6 +249,7 @@ sub zMapKillZmap {
         if(my $xr = $self->zMapGetXRemoteClientByName($main_window_name)){
             # check we can ping...
             if($xr->ping()){
+                warn "Ping OK - sending 'shutdown'";
                 $self->{'_relaunch_zmap'} = $relaunch;
                 
                 $xr->send_commands('<zmap action="shutdown" />');
