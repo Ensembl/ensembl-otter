@@ -154,7 +154,7 @@ $support->comma_to_list('chr');
 #set gene prefixes to ignore for human transfer if they are not already defined by the user
 if (! $support->param('filter_prefix')) {
 	if ($support->param('loutredbname') =~ /human/) {
-		$support->param('filter_prefix','OLD_MIT,HMIT,Em,ERI,GT,GH,API,DG,CCDS,MGC,MPI');
+		$support->param('filter_prefix','OLD_MIT,HMIT,Em,ERI,GT,GH,API,DG,CCDS,MGC,MPI,SK');
 	}
 }
 $support->comma_to_list('filter_prefix');
