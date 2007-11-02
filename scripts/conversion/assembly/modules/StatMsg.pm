@@ -46,6 +46,8 @@ use constant TRANSLATES             => 0x00200000;
 use constant SPLIT                  => 0x00400000;
 use constant NO_SEQUENCE_LEFT       => 0x00800000;
 use constant PARTIAL                => 0x01000000;
+use constant GENE                   => 0x02000000;
+use constant CHROMOSOME             => 0x04000000;
 
 use vars qw(@EXPORT_OK @ISA);
 
@@ -200,7 +202,16 @@ sub code2str {
     $str .= " no sequence left";
   }
 
+  if($code & GENE){
+    $str .= " gene";
 
+  }
+  
+  if($code & CHROMOSOME){
+
+    $str .= " chromosome";
+  }
+  
   return "$str\n";
 }
 
