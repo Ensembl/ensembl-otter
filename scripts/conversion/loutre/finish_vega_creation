@@ -147,7 +147,7 @@ foreach my $name (@tables) {
 	my $backup_name = 'backup_original_'.$name;
 	if (! exists($tabs{$backup_name})) {
 		if (! $support->param('dry_run') && $ask) {
-			if ($support->user_proceed("It seems as though this is the first time you've run this script so I'd advise running it in \'dry_run\' mode. Shall I set this for you, or do you want to proceed anyway?\n")) {
+			if ($support->user_proceed("It seems as though this is the first time you've run this script so I'd advise running it in \'dry_run\' mode. Shall I set this for you (select 'N' to proceed anyway?)\n")) {
 				$support->param('dry_run',1);
 				$support->log("Set to dry_run mode\n");
 			}
