@@ -44,9 +44,9 @@ It must be run after the vega xrefs have been set.
 Logic is:
 
 (i) retrieve each gene with a GD: prefix on its name (gene.display_xref)
-(ii) if that gene has at least one transcript with a remark of either
-'Annotation_remark- corf', or one that starts with the term 'corf', then
-set the analysis_id of it and its transcripts, to otter_corf.
+(ii) if that gene has at least one transcript with a hidden_remark of 'corf',
+or a remark that starts with the term 'corf', then set the analysis_id of it
+and its transcripts, to otter_corf.
 
 Reports on other GD: loci that have other remarks containing 'corf'.
 Verbosely reports on non GD: loci that have remarks containing 'corf'.
@@ -121,7 +121,7 @@ $support->comma_to_list('chromosomes');
 $support->param('logic_name','otter_corf') unless $support->param('logic_name');
 
 $support->param('delete') || $support->param('delete','GD_IDs_togo.txt');
-$support->param('delete',($support->param('logpath').'/'.$support->param('delete')));
+$support->param('delete',($support->param('logpath').$support->param('delete')));
 
 # ask user to confirm parameters to proceed
 $support->confirm_params;
@@ -189,122 +189,115 @@ foreach my $chr ($support->sort_chromosomes) {
 
 $support->log("Examining GD genes to identify corfs...\n");
 
-my (%non_GD,%to_change,%wrong_syntax_GD,%wrong_syntax_nonGD);
+my (%non_GD_hidden,%non_GD,%to_change,);
 foreach my $slice (@chroms) {
-	$support->log_stamped("Looping over chromosome ".$slice->seq_region_name."\n");
+	$support->log_stamped("\nLooping over chromosome ".$slice->seq_region_name."\n");
     my $genes = $slice->get_all_Genes;
-    $support->log_stamped("Done fetching ".scalar @$genes." genes.\n\n");
+    $support->log_stamped("Done fetching ".scalar @$genes." genes.\n");
 
     foreach my $gene (@$genes) {
 		my $gsi = $gene->stable_id;
 		my $name = $gene->display_xref->display_id;
-		$support->log_verbose("Studying gene $gsi ($name) for Annotation remark and name\n");
+		$support->log_verbose("Studying gene $gsi ($name) for remarks and name\n");
 		my $found_remark = 0;
 
 		#get all remarks
-		my %remarks;
+		my (%hidden_remarks,%remarks);
 		foreach my $trans (@{$gene->get_all_Transcripts()}) {
 			my $tsi = $trans->stable_id;
+			foreach my $remark ( @{$trans->get_all_Attributes('hidden_remark')} ) {
+				push @{$hidden_remarks{$tsi}},$remark->value
+			}
 			foreach my $remark ( @{$trans->get_all_Attributes('remark')} ) {
-				my $value = $remark->value;
-				push @{$remarks{$tsi}},$value
+				push @{$remarks{$tsi}},$remark->value
 			}
 		}
 		
-		#look for correctly formatted remarks				
-		foreach my $tsi (keys %remarks) {
-			foreach my $value (@{$remarks{$tsi}} ) {
-				if ( $value =~ /^Annotation_remark- corf/i) {
+		#look for correct hidden remarks				
+		foreach my $tsi (keys %hidden_remarks) {
+			foreach my $value (@{$hidden_remarks{$tsi}} ) {
+				if ( $value =~ /^corf/i) {
 					$found_remark = 1;
-					#capture nonGD genes with the correct remark
-					if ($name !~ /^GD:/) {
-						$non_GD{$gsi}->{'name'} = $name;
-						push @{$non_GD{$gsi}->{'transcripts'}},$tsi;
-					}
-					#capture genes to patch analysis_id
-					else {							
+					#capture GD genes to patch analysis_id
+					if ($name =~ /^GD:/) {
 						$to_change{$gsi}->{'name'} = $name;
 						push @{$to_change{$gsi}->{'transcripts'}}, [$tsi,$value];
 					}
+					#capture nonGD genes with the correct remark
+					else {
+						$non_GD_hidden{$gsi}->{'name'} = $name;
+						push @{$non_GD_hidden{$gsi}->{'transcripts'}},$tsi;
+					}
+
 				}
 			}
 		}
 
-		#otherwise look for other 'corf' type remarks
+		#otherwise look for 'corf' type remarks
 		if (! $found_remark) {
 			foreach my $tsi (keys %remarks) {
 				foreach my $value (@{$remarks{$tsi}} ) {
 					if ($value =~ /corf/i) {
-						#capture genes with a remark that should be a corf annotation remark
-						if ( ($value =~ /^corf/i) && ($name =~ /^GD:/)) { 
-							$support->log_warning("Setting gene $gsi to corf despite not having the properly formatted Annotation remark\n");
+						#capture GD genes with a remark that should be a corf hidden_remark
+						if ( $name =~ /^GD:/ ) {
+							$support->log_warning("Setting gene $gsi to corf despite not having the properly formatted hidden_remark\n");
 							$to_change{$gsi}->{'name'} = $name;
 							push @{$to_change{$gsi}->{'transcripts'}}, [$tsi,$value];
 						}
-						#capture incorrect syntax
+						#capture non GD genes with a corf remark
 						else {
-							if ($name =~ /^GD:/) {
-								$wrong_syntax_GD{$gsi}->{'name'} = $name;
-								push @{$wrong_syntax_GD{$gsi}->{'transcripts'}}, [$tsi,$value];
-							}
-							else {
-								$wrong_syntax_nonGD{$gsi}->{'name'} = $name;
-								push @{$wrong_syntax_nonGD{$gsi}->{'transcripts'}}, [$tsi,$value];
-							}
+							$non_GD{$gsi}->{'name'} = $name;
+							push @{$non_GD{$gsi}->{'transcripts'}},$tsi;
 						}
 					}
+
 				}									
 			}
 		}
 	}
 }
 
-#report on GD genes with the incorrect syntax
-$support->log("\nThe following are GD genes with the incorrect remark syntax:\n"); 
-foreach my $gsi (keys %wrong_syntax_GD) {
-	$support->log("\n$gsi (".$wrong_syntax_GD{$gsi}->{'name'}."):\n",1);
-	foreach my $t (@{$wrong_syntax_GD{$gsi}->{'transcripts'}}) {
-		$support->log($t->[0]." (".$t->[1].")\n",2);
+#report on non GD genes with a hidden corf remark
+$support->log("\nThe following are non GD genes with a corf hidden_remark:\n");
+my $c1 = 0;
+foreach my $gsi (keys %non_GD_hidden) {
+	$c1++;
+	$support->log("\n$gsi (".$non_GD_hidden{$gsi}->{'name'}.")",1);
+	foreach my $t (@{$non_GD_hidden{$gsi}->{'transcripts'}}) {
+		$support->log_verbose("\n".$t."\n",2);
 	}
 }
 
-#report on non GD genes with the incorrect syntax
-$support->log_verbose("\nThe following are non GD genes with the incorrect remark CORF syntax:\n"); 
-foreach my $gsi (keys %wrong_syntax_nonGD) {
-	$support->log_verbose("\n$gsi (".$wrong_syntax_nonGD{$gsi}->{'name'}."):\n",1);
-	foreach my $t (@{$wrong_syntax_nonGD{$gsi}->{'transcripts'}}) {
-		$support->log_verbose($t->[0]." (".$t->[1].")\n",2);
-	}
-}
-
-#report on non GD genes with the correct syntax
-$support->log_verbose("\nThe following are non GD genes with the correct CORF remark syntax:\n");
-my $c = 0;
+#report on non GD genes with corf remark
+$support->log("\nThe following are non GD genes with a CORF remark:\n"); 
+my $c2 = 0;
 foreach my $gsi (keys %non_GD) {
-	$c++;
-	$support->log_verbose("\n$gsi (".$non_GD{$gsi}->{'name'}."):\n",1);
+	$c2++;
+	$support->log("\n$gsi (".$non_GD{$gsi}->{'name'}.")",1);
 	foreach my $t (@{$non_GD{$gsi}->{'transcripts'}}) {
-		$support->log_verbose($t."\n",2);
+		$support->log_verbose("\n".$t."\n",2);
 	}
 }
-$support->log("\nIn total there are $c non GD genes with the correct CORF syntax.\n\n");
 
 #report on GD genes with the correct syntax, ie the ones to be updated
-$support->log("\nThe following GD genes with the correct CORF remark syntax will be updated:\n");
-$c = 0;
+$support->log("\nThe following GD genes with the correct CORF remark or hidden_remark will be updated:\n");
+my $c3 = 0;
 my @gene_stable_ids;
 foreach my $gsi (keys %to_change) {
-	$c++;
+	$c3++;
 	push @gene_stable_ids, $gsi;
-	$support->log("\n$gsi (".$to_change{$gsi}->{'name'}.")",1);
+	$support->log("\n$gsi (".$to_change{$gsi}->{'name'}.")\n",1);
 	foreach my $t (@{$to_change{$gsi}->{'transcripts'}}) {
-		$support->log_verbose($t->[0]." (".$t->[1].")\n",2);
+		$support->log_verbose("\n".$t->[0]." (".$t->[1].")\n",2);
 	}
 }
-$support->log("\nIn total there are $c GD genes with the correct CORF syntax.\n\n");
+$support->log("\nSummary\n");
+$support->log("There are $c1 non GD genes with a CORF hidden_remark.\n\n");
+$support->log("There are $c2 non GD genes with the CORF remark.\n\n");
+$support->log("There are $c3 GD genes with the correct CORF (hidden)remark that would be updated to otter_corf.\n\n");
 
 #do the updates to analysis
-if ( $support->param('dry_run') ) {
+if (! $support->param('dry_run') ) {
     $support->log("Adding new analysis...\n");
     my $analysis = new Bio::EnsEMBL::Analysis (
         -program     => "set_corf_genes.pl",
@@ -339,6 +332,9 @@ if ( $support->param('dry_run') ) {
 	else {
 		$support->log("Transcripts analysis_ids not updated.\n\n");
 	}
+}
+else {
+	$support->log("No analysis ids updated since this is a dry run\n");
 }
 
 #########################################################
