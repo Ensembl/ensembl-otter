@@ -629,6 +629,7 @@ sub make_embl_ft {
 
         #Get the Bio::EnsEMBL::Slice
         my $slice = $self->Slice($slice_aptr->fetch_by_chr_start_end(@$chr_s_e));
+
         my $tile_path = $self->get_tiling_path_for_Slice($slice);
 
         #Bio::EnsEMBL::RawContig: turn slice coords. into RawContig coord
@@ -637,19 +638,20 @@ sub make_embl_ft {
         my $slice_contig = $tile_path->[0]->component_Seq;
         $self->Slice_contig($slice_contig);
 
-		# add component_start/end of accession to indicate region of annotation
-        # the position of this code here makes it appears as the first FT line
-        # in the embl dump
-		my $feat = $embl->newFT;
-		$feat->key('misc_feature');
-		$feat->location(simple_location($cmp_start, $cmp_end));
-		$feat->addQualifierStrings('note', "annotated region of clone");
-
         my $gene_id_list = $gene_aptr->list_current_dbIDs_for_Slice($slice);
 
         # won't include this FT line if no genes are annotated
         # originally to deal with tomato clones
-        $feat->addQualifierStrings('note', "annotated region of clone") if $gene_id_list;
+        if ( $gene_id_list->[0] ){
+
+          # add component_start/end of accession to indicate region of annotation
+          # the position of this code here makes it appears as the first FT line
+          # in the embl dump
+          my $feat = $embl->newFT;
+          $feat->key('misc_feature');
+          $feat->location(simple_location($cmp_start, $cmp_end));
+          $feat->addQualifierStrings('note', "annotated region of clone");
+        }
 
         foreach my $gid (@$gene_id_list) {
             my $gene = $gene_aptr->fetch_by_dbID($gid);
