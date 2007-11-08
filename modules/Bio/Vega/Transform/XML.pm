@@ -1,7 +1,6 @@
 package Bio::Vega::Transform::XML;
 
 use strict;
-use Bio::Vega::Utils::XmlEscape qw (xml_escape);
 use Bio::EnsEMBL::Utils::Exception qw (throw);
 use base 'Bio::Vega::Writer';
 use Bio::Vega::Utils::GeneTranscriptBiotypeStatus 'biotype_status2method';
@@ -141,7 +140,6 @@ sub generate_SequenceFragment{
 		if ($cia->code eq 'description') {
 		  $cia->value("EMBL_dump_info.DE_line- ".$cia->value);
 		}
-		xml_escape($cia->value);
 		$sf->attribvals($self->prettyprint('remark',$cia->value));
 	 }
   }
@@ -182,7 +180,6 @@ sub generate_Locus {
   if ($gene->description){
 	 $gene_description=$gene->description;
   }
-  xml_escape($gene_description);
   $g->attribvals($self->prettyprint('description',$gene_description));
   my $gene_name_att = $gene->get_all_Attributes('name') ;
   my $gene_name='';
@@ -209,13 +206,11 @@ sub generate_Locus {
 
   if(my $remarks = $gene->get_all_Attributes('remark')) {
 	 foreach my $rem (@$remarks){
-		xml_escape($rem->value);
 		$g->attribvals($self->prettyprint('remark',$rem->value));
 	 }
   }
   if(my $remarks = $gene->get_all_Attributes('hidden_remark')) {
 	 foreach my $rem (@$remarks){
-		xml_escape($rem->value);
 		$g->attribvals($self->prettyprint('remark','Annotation_remark- '.$rem->value));
 	 }
   }
@@ -264,13 +259,11 @@ sub generate_Transcript{
 
   if(my $remarks = $tran->get_all_Attributes('remark')){
      foreach my $rem (@$remarks){
-        xml_escape($rem->value);
         $t->attribvals($self->prettyprint('remark',$rem->value));
      }
   }
   if(my $remarks = $tran->get_all_Attributes('hidden_remark')){
 	 foreach my $rem (@$remarks){
-		xml_escape($rem->value);
 		$t->attribvals($self->prettyprint('remark','Annotation_remark- '.$rem->value));
 	 }
   }

@@ -2,6 +2,7 @@ package Bio::Vega::Writer;
 
 use strict;
 use Bio::Vega::Transform::PrettyPrint;
+use Bio::Vega::Utils::XmlEscape qw (xml_escape);
 
 sub new {
   my ($pkg) = @_;
@@ -29,7 +30,7 @@ sub formatopenendtag{
 
 sub prettyprint{
   my ($self,$name,$value)=@_;
-  my $element=Bio::Vega::Transform::PrettyPrint->new(-name=>$name,-value=>$value);
+  my $element=Bio::Vega::Transform::PrettyPrint->new(-name=>$name,-value=>xml_escape($value));
   return $element;
 }
 
