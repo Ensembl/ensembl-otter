@@ -15,6 +15,14 @@ use Bio::Vega::DBSQL::DBAdaptor;
 
 use base ('Bio::Otter::Compatibility', 'Bio::Otter::SpeciesDat');
 
+sub new { # just to make it possible to instantiate an object
+    my $pkg = shift @_;
+
+    my $self = bless {}, $pkg;
+
+    return $self;
+}
+
     # to be overloaded by ServerScriptSupport
 sub dataset_name {
     my( $self, $dataset_name ) = @_;
