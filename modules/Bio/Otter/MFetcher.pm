@@ -30,7 +30,7 @@ sub dataset_name {
     if($dataset_name) {
         $self->{'_dataset_name'} = $dataset_name;
     }
-    return $dataset_name;
+    return $self->{'_dataset_name'};
 }
 
 sub current_dataset_param {
