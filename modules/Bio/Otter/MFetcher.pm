@@ -41,7 +41,7 @@ sub dataset_headcode {
 sub otter_dba {
     my $self = shift @_;
 
-    if ($self->{'_odba'}) {            # cached value
+    if($self->{'_odba'} && !scalar(@_)) {   # cached value and no override
         return $self->{'_odba'};
     }
 
@@ -59,6 +59,15 @@ sub otter_dba {
                 ? 'Bio::EnsEMBL::DBSQL::DBAdaptor'  # old pipeline of the new otter, get the minimal adaptor
                 : 'Bio::Otter::DBSQL::DBAdaptor'    # oldcode anyway, get the best adaptor
         );
+
+    if(@_) { # let's check that the class is ok
+        my $odba = shift @_;
+        if(UNIVERSAL::isa($odba, $adaptor_class)) {
+            return $self->{'_odba'} = $odba;
+        } else {
+            die "The object you assign to otter_dba must be a '$adaptor_class'";
+        }
+    }
 
     ########## AND DB CONNECTION #######################################
 
