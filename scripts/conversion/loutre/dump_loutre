@@ -60,7 +60,7 @@ for example CCDS. If the source database is human and no list is given, then a d
 list is used.
 
 --filter_biotypes can be used to define a list of gene biotypes that shouldn't be
-transferred. If it is not defined then a default list (TEC and artifact) is used.
+transferred. If it is not defined then a default list (artifact) is used.
 
 loutre seq_region_attrib.codes to be transfered or ignored are hardcoded into the script -
 any new ones in the database will be highlighted.
@@ -161,7 +161,7 @@ $support->comma_to_list('filter_prefix');
 
 #define gene types to ignore
 if (! $support->param('filter_biotype')) {
-	$support->param('filter_biotype','TEC,artifact');
+	$support->param('filter_biotype','artifact');
 }
 $support->comma_to_list('filter_biotype');
 
