@@ -1,0 +1,195 @@
+#!/usr/local/bin/perl -w
+
+### make_dist
+
+use strict;
+use File::Copy qw{ copy };
+use File::Path qw{ rmtree };
+use Getopt::Long qw{ GetOptions };
+
+{
+    my $version = 48;
+    my $release = "humpub-release-$version";
+    my $ensembl_tag = "branch-ensembl-19";
+    my $otter_home = $ENV{'OTTER_HOME'};
+    my $ace_dir = '/nfs/team71/acedb/zmap/BIN.DEVELOPMENT/LINUX';
+    my $ace_bin_dir = "$ace_dir/bin";
+    my $usage = sub { exec('perldoc', $0) };
+    my $internal_flag = 0;
+    my $dist_name = 'otterlace_linux';
+    GetOptions(
+        'internal!'     => \$internal_flag,
+        'h|help!'       => $usage,
+        'ace-bin=s'     => \$ace_bin_dir,
+        'name=s'        => \$dist_name,
+        ) or $usage->();
+    
+    unless ($otter_home) {
+        die "OTTER_HOME environment variable must be set to get config files\n";
+    }
+    unless (-d $ace_bin_dir) {
+        die "No such directory: $ace_bin_dir";
+    }
+    
+    # Make release directory and cd into it
+    my $release_dir;
+    if ($internal_flag) {
+        umask(002);
+        $release_dir = "otter_rel$version";
+        if (-e $release_dir) {
+            rmtree($release_dir);
+        }
+    } else {
+        opendir my $dot, '.' or die "Can't opendir '.'; $!";
+        my ($max) = sort {$b <=> $a}
+          map /${dist_name}_$version-(\d+)/o, readdir $dot;
+        $release_dir = sprintf "%s_%d-%02d", $dist_name, $version, $max + 1;
+    }
+    my $exe_mod = 0777 ^ umask;
+    
+    mkdir($release_dir) or die "Failed to create directory '$release_dir' : $!";
+    chdir($release_dir) or die "Failed to enter directory '$release_dir' : $!";
+    warn "Made release directory '$release_dir'\n";
+    
+    # The ReadMe file
+    warn "Copying ReadMe.txt\n";
+    my $readme = 'ReadMe.txt';
+    copy("../$readme", $readme) or die "Error copying '../$readme'; $!";
+    
+    # Get config files
+    my @otter_home_files = qw{
+        lace_acedb.tar
+        otter_config
+        methods.ace
+        acedbrc
+        otterlace
+        };
+    if ($internal_flag) {
+        warn "Copying config files from: $otter_home\n";
+    } else {
+        warn "Copying config files and otterlace sh script from: $otter_home\n";
+        push(@otter_home_files, 'otterlace');
+    }
+    foreach my $config (@otter_home_files) {
+        my $from = "$otter_home/$config";
+        copy($from, $config) or die "Failed to copy $from to $config; $!";
+    }
+    chmod $exe_mod, 'otterlace';
+    
+    # Acedb and zmap binaries
+    warn "Copying acedb binaries from $ace_bin_dir\n";
+    my $bin_dir = 'bin';
+    mkdir($bin_dir) or die "Failed to create directory '$bin_dir'; $!";
+    #    zmap
+    foreach my $exe (qw{
+        tace
+        xace
+        sgifaceserver
+        blixem
+        dotter
+        xremote
+        }
+    ) {
+        my $from = "$ace_bin_dir/$exe";
+        my $to   = "$bin_dir/$exe";
+        copy($from, $to) or die "Failed to copy $from to $to; $!";
+        chmod $exe_mod, $to;
+    }
+
+    # Special pfetch and server which use www.sanger
+    unless ($internal_flag) {
+        warn "Exporting special local pfetch scripts\n";
+        foreach my $script (qw{ pfetch local_pfetch }) {
+            my $pfetch = "ensembl-otter/scripts/$script";
+            my @pfetch_cvs = (
+                'cvs', '-Q',
+                  -d => ':ext:cvs.sanger.ac.uk:/cvsroot/ensembl',
+                'export',
+                  -r => $release,
+                $pfetch,
+                );
+            system(@pfetch_cvs) == 0
+                or die "Error running '@pfetch_cvs'; exit $?";
+            copy($pfetch, "$bin_dir/$script")
+                or die "Failed to copy $pfetch to $bin_dir/$script; $!";
+            chmod $exe_mod, "$bin_dir/$script";
+            rmtree('ensembl-otter')
+                or die "Failed to delete ensembl-otter directory; $!";
+        }
+    }
+    
+    my @bio_dist = ('bioperl-0.7.2', 'bioperl-1.2.3-patched', 'biodas-1.02');
+    foreach my $dist (@bio_dist) {
+        my @tar = ('tar', 'xzf', "../$dist.tar.gz");
+        system(@tar) == 0 or die "Error from '@tar'; exit $?";
+        warn "Expanding tar dist of $dist\n";
+    }
+    
+    my %cvs_params = (
+	    #'ace_skeleton'          => ['/nfs/humace2/CVS_master', $release ],
+	    'PerlModules/Hum'           => ['/nfs/humace2/CVS_master', $release ],
+	    'tk'                        => ['/nfs/humace2/CVS_master', $release ],
+	    'ensembl-ace'               => [":ext:cvs.sanger.ac.uk:/cvsroot/ensembl", $release],
+	    'ensembl-otter/modules'     => [":ext:cvs.sanger.ac.uk:/cvsroot/ensembl", $release],
+
+	    'ensembl/modules'           => [":ext:cvs.sanger.ac.uk:/cvsroot/ensembl", $ensembl_tag],
+	    'ensembl-pipeline/modules'  => [":ext:cvs.sanger.ac.uk:/cvsroot/ensembl", 'branch-finished-19'],
+    );
+    
+    my $co_command = $internal_flag ? 'checkout' : 'export';
+    foreach my $dir (sort keys %cvs_params) {
+        my ($cvs_d, $tag) = @{$cvs_params{$dir}};
+        warn "Exporting $dir\n";
+        my @cvs = (
+            'cvs', '-Q',
+              -d  => $cvs_d,
+            $co_command,
+              -r  => $tag,
+            $dir,
+            );
+        system(@cvs) == 0
+            or die "Error running '@cvs'; exit $?";
+    }
+    
+    # Tagged with:  xargs cvs tag humpub-release-48 < MANIFEST
+    warn "Exporting X11::Xremote code\n";
+    my $xremote_dir = 'X11-XRemote-0.01';
+    my @xremote_cvs = (
+        'cvs', '-Q',
+        -d => ':ext:cvs.internal.sanger.ac.uk:/repos/cvs/zmap',
+        'export',
+        -r => $release,
+        -d => $xremote_dir,
+        "ZMap/src/perl/$xremote_dir",
+        );
+    system(@xremote_cvs) == 0
+        or die "Error running '@xremote_cvs'; exit $?";
+    my @copy = ('cp', '-r', '-p', '-v', "$ace_dir/lib", "$ace_dir/include", "$xremote_dir/");
+    system(@copy) == 0
+        or die "Error running '@copy'; $!";
+    
+    #perl Makefile.PL PREFIX=~/work/otter_home \
+    #--with-zmap-inc=/nfs/team71/acedb/zmap/BIN.DEVELOPMENT/LINUX/include \
+    #--with-zmap-libs=/nfs/team71/acedb/zmap/BIN.DEVELOPMENT/LINUX/lib \
+    #--with-symbols
+    
+    if ($internal_flag) {
+        warn "Made release dir: $release_dir\n";
+    } else {
+        warn "Making tar archive file: $release_dir.tar.gz\n";
+        chdir('..') or die "Failed to return to dist directory; $!";
+        my @tar_up = ('tar', 'czf', "$release_dir.tar.gz", $release_dir);
+        system(@tar_up) == 0 or die "Error running '@tar_up'; $!";
+    }
+}
+
+
+
+__END__
+
+=head1 NAME - make_dist
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
