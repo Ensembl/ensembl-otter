@@ -164,7 +164,7 @@ use Getopt::Long qw{ GetOptions };
         );
     system(@xremote_cvs) == 0
         or die "Error running '@xremote_cvs'; exit $?";
-    my @copy = ('cp', '-r', '-p', '-v', "$ace_dir/lib", "$ace_dir/include", "$xremote_dir/");
+    my @copy = ('cp', '-r', '-p', "$ace_dir/lib", "$ace_dir/include", "$xremote_dir/");
     system(@copy) == 0
         or die "Error running '@copy'; $!";
     
