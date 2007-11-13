@@ -386,6 +386,7 @@ my %assembly_nonmatch_version = (
         'chr4-09'          => 9,
         'chr4-10'          => 10,
         'B6_MUP-01'        => 10.5, # this region has a better assembly!
+        'chr4-11'          => 11,   # better than NCBIM37
 
 
         #       'chr4-NCBIM36'     => 11,
