@@ -9,7 +9,7 @@ use Bio::Otter::Lace::Defaults;
 
 {
     my $dataset_name = undef;
-    my $which_db    = 'all'; # possible values: 'otter', 'oldpipe', 'newpipe', 'all'
+    my $which_db    = 'all'; # possible values: 'otter', 'newpipe', 'all'
     my $rescan_flag = 0;     # Re-scan the names even if they are already in the database
     my $change_flag = 0;     # Whether we should change or just show the stats
     Bio::Otter::Lace::Defaults::do_getopt(
@@ -32,7 +32,8 @@ use Bio::Otter::Lace::Defaults;
     for my $ds (@datasets) {
 
         $dataset_name = $ds->name();
-        next if $dataset_name eq "cow"; # temp solution
+        next if $dataset_name eq "cow"; # cow does not have clones - it has fake clones
+                                        # from whole genome shotgun
 
         my $headcode  = $ds->HEADCODE() || 0;
 
@@ -43,19 +44,9 @@ use Bio::Otter::Lace::Defaults;
 
         if(($which_db eq 'otter')
          ||($which_db eq 'all') ) {
-            repair_one_db($otter_db, $headcode, $rescan_flag, $change_flag, $dataset_name,
+            my $dbh = $otter_db->can('dbc') ? $otter_db->dbc : $otter_db;
+            repair_one_db($dbh, $headcode, $rescan_flag, $change_flag, $dataset_name,
                 $headcode ? 'head_otter' : 'otter');
-        }
-
-        if(($which_db eq 'oldpipe')
-         ||($which_db eq 'all') ) {
-
-            my ($oldpipe_db, $oldpipedb_options) =
-                Bio::Otter::Lace::SatelliteDB::_get_DBAdaptor_and_options(
-                    $otter_db,
-                    'pipeline_db_rw',
-            );
-            repair_one_db($oldpipe_db, 0, $rescan_flag, $change_flag, $dataset_name, 'oldpipe');
         }
 
         if(($which_db eq 'newpipe')
@@ -66,7 +57,7 @@ use Bio::Otter::Lace::Defaults;
                     $otter_db,
                     'pipeline_db_rw_head',
             );
-            repair_one_db($newpipe_db, 1, $rescan_flag, $change_flag, $dataset_name, 'newpipe');
+            repair_one_db($newpipe_db->dbc, 1, $rescan_flag, $change_flag, $dataset_name, 'newpipe');
         }
     }
 }
