@@ -268,6 +268,29 @@ my %assembly_nonmatch_version = (
         'tilling_20060307' => 0,
     },
     'mouse' => {
+        # force the NCBIM37 assemblies out of the comparison:
+        'chr1-NCBIM37' => -1,
+        'chr2-NCBIM37' => -1, 
+        'chr3-NCBIM37' => -1, 
+        'chr4-NCBIM37' => -1, 
+        'chr5-NCBIM37' => -1, 
+        'chr6-NCBIM37' => -1, 
+        'chr7-NCBIM37' => -1, 
+        'chr8-NCBIM37' => -1, 
+        'chr9-NCBIM37' => -1, 
+        'chr10-NCBIM37' => -1,
+        'chr11-NCBIM37' => -1,
+        'chr12-NCBIM37' => -1,
+        'chr13-NCBIM37' => -1,
+        'chr14-NCBIM37' => -1,
+        'chr15-NCBIM37' => -1,
+        'chr16-NCBIM37' => -1,
+        'chr17-NCBIM37' => -1,
+        'chr18-NCBIM37' => -1,
+        'chr19-NCBIM37' => -1,
+        'chrX-NCBIM37' => -1, 
+        'chrY-NCBIM37' => -1, 
+
         'CR293526_B1' => 0,
 
         'AL928605.11' => 0,
@@ -349,8 +372,6 @@ my %assembly_nonmatch_version = (
         'chr2-02' => 2,
         'chr2-03' => 3,
 
-        #       'chr2-NCBIM36' => 4,
-
         'black6_IDD3'       => 0,
         'black6_IDD3-02'    => 0.1,
         'black6_IDD10'      => 0.2,
@@ -387,9 +408,6 @@ my %assembly_nonmatch_version = (
         'chr4-10'          => 10,
         'B6_MUP-01'        => 10.5, # this region has a better assembly!
         'chr4-11'          => 11,   # better than NCBIM37
-
-
-        #       'chr4-NCBIM36'     => 11,
 
         'chr5_steel-01' => 0.1,
         'chr5_steel-02' => 0.2,
