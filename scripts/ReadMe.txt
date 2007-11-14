@@ -35,6 +35,18 @@ install include:
 during installation.  I say "yes" to the compiled
 C extension, and "no" to acebrowser.
 
+To use Zmap, you need to compile and install the
+X11::XRemote extension, which otterlace uses to
+communicate with Zmap.  To do this cd into the
+directory X11-XRemote-0.01, and compile as you
+would a CPAN module. eg:
+
+  cd X11-XRemote-0.01
+  perl Makefile.PL
+  make
+  make test
+  make install
+
 You will need to create a file "~/.otter_config"
 (ie: in your home directory) containing:
 

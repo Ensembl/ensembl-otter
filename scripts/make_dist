@@ -80,8 +80,8 @@ use Getopt::Long qw{ GetOptions };
     warn "Copying acedb binaries from $ace_bin_dir\n";
     my $bin_dir = 'bin';
     mkdir($bin_dir) or die "Failed to create directory '$bin_dir'; $!";
-    #    zmap
     foreach my $exe (qw{
+        zmap
         tace
         xace
         sgifaceserver
@@ -95,6 +95,12 @@ use Getopt::Long qw{ GetOptions };
         copy($from, $to) or die "Failed to copy $from to $to; $!";
         chmod $exe_mod, $to;
     }
+
+    warn "Copying foocanvas library\n";
+    mkdir('lib') or die "Failed to create directory 'lib'; $!";
+    my $foo_copy = 'cp -p -d /software/acedb/lib/libfoocanvas.so* lib/';
+    system($foo_copy) == 0
+      or die "Foo canvas copy '$foo_copy' failed; exited $?";
 
     # Special pfetch and server which use www.sanger
     unless ($internal_flag) {
