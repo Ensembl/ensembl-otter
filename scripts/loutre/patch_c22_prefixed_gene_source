@@ -1,0 +1,60 @@
+#!/usr/local/bin/perl -w
+
+### patch_c22_prefixed_gene_source
+
+use strict;
+
+use Bio::Otter::Lace::Defaults;
+use Bio::Vega::DBSQL::DBAdaptor;
+
+{
+    my $dsname  = 'human';
+
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'dataset=s'     => \$dsname,
+    );
+
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name($dsname);
+
+    my $dba = $ds->get_cached_DBAdaptor;
+    my $gene_dba = $dba->get_GeneAdaptor;
+    my $sth = $dba->dbc->prepare(q{
+        SELECT name.value name
+          , g.gene_id
+        FROM gene g
+          , gene_attrib name
+          , attrib_type name_attrib
+        WHERE g.gene_id = name.gene_id
+          AND name.attrib_type_id = name_attrib.attrib_type_id
+          AND name_attrib.code = 'name'
+          AND g.source = 'havana'
+          AND name.value like 'C22:%'
+        });
+    $sth->execute;
+
+    my $update = $dba->dbc->prepare(q{
+        UPDATE gene
+        SET source = 'C22'
+        WHERE gene_id = ?
+        });
+    while (my ($name, $gene_id) = $sth->fetchrow) {
+        warn "$name ($gene_id)\n";
+        $update->execute($gene_id);
+    }
+}
+
+
+
+
+__END__
+
+=head1 NAME - patch_c22_prefixed_gene_source
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
