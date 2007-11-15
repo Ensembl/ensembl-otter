@@ -1,0 +1,54 @@
+#!/usr/local/bin/perl -w
+
+### show_gene_versions
+
+use strict;
+
+use Bio::Otter::Lace::Defaults;
+use Bio::Vega::DBSQL::DBAdaptor;
+use Bio::Vega::Transform::XML;
+
+{
+    my $dsname  = 'human';
+
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'dataset=s'     => \$dsname,
+    );
+
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name($dsname);
+
+    my $dba = $ds->get_cached_DBAdaptor;
+    my $gene_dba = $dba->get_GeneAdaptor;
+    my $sth = $dba->dbc->prepare(q{
+        SELECT gene_id FROM gene_stable_id WHERE stable_id = ? ORDER BY gene_id DESC
+        });
+
+    foreach my $stable (@ARGV) {
+        $sth->execute($stable);
+        while (my ($gene_db_id) = $sth->fetchrow) {
+            my $out_file = "$stable.$gene_db_id.xml";
+            print STDERR "$out_file\n";
+            open my $out, "> $out_file" or die "Can't write to '$out_file'; $!";
+            my $gene = $gene_dba->fetch_by_dbID($gene_db_id);
+            print $out Bio::Vega::Transform::XML->new->get_geneXML($gene);
+            close $out or die "Error writing to '$out_file'; $!";
+        }
+    }
+}
+
+
+
+
+
+__END__
+
+=head1 NAME - show_gene_versions
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
