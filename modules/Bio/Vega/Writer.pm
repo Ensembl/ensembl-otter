@@ -30,7 +30,10 @@ sub formatopenendtag{
 
 sub prettyprint{
   my ($self,$name,$value)=@_;
-  my $element=Bio::Vega::Transform::PrettyPrint->new(-name=>$name,-value=>xml_escape($value));
+  my $element = Bio::Vega::Transform::PrettyPrint->new(
+    -name  => $name,
+    -value => defined($value) ? xml_escape($value) : undef,
+    );
   return $element;
 }
 
