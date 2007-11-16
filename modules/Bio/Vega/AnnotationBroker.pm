@@ -362,7 +362,7 @@ sub transcripts_diff {
         $this_transcript_any_changes = $exons_any_changes || $translation_any_changes || compare($db_transcript,$tran);
 
             # if the transcript is being restored, it is changed, too:
-        $this_transcript_any_changes ||= ! $db_transcript->is_current();
+        $this_transcript_any_changes ||= ! $db_transcript->is_current() || 0; # to get rid of undefs
 
             # deletion happens in GeneAdaptor, so just ignore it here
 
