@@ -105,7 +105,7 @@ sub fetch_by_stable_id  {
 sub fetch_by_stable_id_version  {
   my ($self, $stable_id, $version) = @_;
 
-  my $constraint = "tsi.stable_id = '$stable_id' AND tsi.version = $version";
+  my $constraint = "tsi.stable_id = '$stable_id' AND tsi.version = $version ORDER BY tsi.modified_date DESC, tsi.transcript_id DESC LIMIT 1";
   my ($transcript) = @{ $self->generic_fetch($constraint) };
   if ($transcript){
 	 $self->reincarnate_transcript($transcript);

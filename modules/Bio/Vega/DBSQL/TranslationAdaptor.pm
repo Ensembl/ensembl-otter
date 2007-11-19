@@ -24,9 +24,9 @@ sub fetch_by_stable_id  {
 
 sub fetch_by_stable_id_version  {
 
-  my ($self, $stable_id,$version) = @_;
+  my ($self, $stable_id, $version) = @_;
 
-  my $constraint = "tsi.stable_id = '$stable_id' AND tsi.version = $version";
+  my $constraint = "tsi.stable_id = '$stable_id' AND tsi.version = $version ORDER BY tsi.modified_date DESC, tsi.translation_id DESC LIMIT 1";
   my ($translation) = @{ $self->generic_fetch($constraint) };
 
   return $translation;
