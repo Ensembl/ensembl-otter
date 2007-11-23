@@ -63,7 +63,7 @@ sub get_all_gsids_via_geneTransNames_of_gsid {
 
   # first get gene/trans names by given gsids
   foreach my $gsid ( @$gsids ){
-    warn "GSID: $gsid";
+#    warn "GSID: $gsid";
 	foreach my $g ( @{$ga->fetch_all_versions_by_stable_id($gsid)} ){
  #     warn $g->stable_id;
 #      warn $g->version;
@@ -148,7 +148,7 @@ sub check_exons_overlap {
       $ov = 1;
       my @ovg = keys %$seen;
       push(@$query_gsids, @ovg);
-      print STDERR ". . . @ovg OK\n";
+  #    print STDERR ". . . @ovg OK\n";
     }
   }
   @$query_gsids = uniq($query_gsids);
