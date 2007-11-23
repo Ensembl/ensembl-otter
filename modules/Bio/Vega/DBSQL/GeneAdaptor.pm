@@ -34,6 +34,26 @@ sub fetch_by_stable_id  {
   return $gene;
 }
 
+sub fetch_all_versions_by_stable_id  {
+
+  # returns list of gene obj
+
+  my ($self, $stable_id) = @_;
+
+  my $gid_sth = $self->db->dbc->prepare(q{
+                                          SELECT gene_id FROM gene_stable_id
+                                          WHERE stable_id = ? ORDER BY gene_id
+                                        });
+  $gid_sth->execute($stable_id);
+
+  my $genes;
+  while ( my $g = $gid_sth->fetchrow ){
+    push( @$genes, $self->fetch_by_dbID($g) );
+  }
+
+  return $genes;
+}
+
 sub fetch_by_name {
   my ($self,$genename)=@_;
   unless ($genename) {
@@ -143,10 +163,12 @@ sub fetch_stable_id_by_name {
 
 	$sth->execute($attrib_code, qq{$attrib_value%});
 
+    my $seen;
 	while ( my ($gsid, $value) = $sth->fetchrow ){
 	  # exclude eg, SET7 SETX where search is 'SET%' (ie, allow SET-2)
 	  if ( lc($value) eq $attrib_value or lc($value) =~ /$attrib_value-\d+/ ){
-		push(@$gsids, $gsid);
+        $seen->{$gsid}++;
+		push(@$gsids, $gsid) if $seen->{$gsid} == 1;
 	  }
 	}
 	$sth->finish();
@@ -346,10 +368,10 @@ sub fetch_by_stable_id_version  {
 sub fetch_by_transcript_stable_id_constraint {
 
   # Ensembl has fetch_by_transcript_stable_id
-  # but this is restricted to is_current == 1
+  # but is restricted to is_current == 1
 
   # here, is_current is not restricted to 1
-  # use for tracking gene history
+  # use this for tracking gene history
   # returns a reference to a list of vega gene objects
 
     my ($self, $trans_stable_id) = @_;
@@ -365,15 +387,23 @@ sub fetch_by_transcript_stable_id_constraint {
 
 	my ($genes, $seen_genes);
 
-	# a transcript may be pointed to > 1 gene stable_ids
+	# check if a transcript is attached to multiple gene stable_ids
+    # should not be the case, but happens in gene history
+
 	while ( my $geneid = $sth->fetchrow ){
 	  throw("No gene id found: invalid gene stable id") unless $geneid;
+
 	  my $gene = $self->fetch_by_dbID($geneid);
 	  my $gsid = $gene->stable_id;
 	  $seen_genes->{$gsid}++;
-	  push(@$genes, $self->reincarnate_gene($gene)) if $seen_genes->{$gsid} == 1;
+      push(@$genes, $gene) if $seen_genes->{$gsid} == 1;
 	}
-	
+
+    if ( keys %$seen_genes > 1 ){
+      my @gsids = keys %$seen_genes;
+      printf STDERR "$trans_stable_id belongs to > 1 gene_stable_ids: @gsids\n";
+    }
+
     return $genes;
 }
 

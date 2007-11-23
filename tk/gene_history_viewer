@@ -408,24 +408,27 @@ sub get_gene_history {
   # first get relevant info of a gene from query
   if ( $query_str =~ /OTT\w{3,3}G\d+/ ) {
 	@$gsids = $query_str if check_query_exists($query_str, 'gene');
-     warn "G: @$gsids";
+    warn "[G] ";
   }
   elsif ( $query_str =~ /OTT\w{3,3}T\d+/ ) {
 	check_query_exists($query_str, 'trans');
 	my $genes = $ga->fetch_by_transcript_stable_id_constraint($query_str);
     @$gsids = map { $_->stable_id } @$genes;
-    warn "T: @$gsids";
+    print STDERR "[T] ";
   }
   else {
     # assuming gene_name
 	check_query_exists($query_str, 'name');
     if ( my $Gsids = $ga->fetch_stable_id_by_name($query_str, 'gene') ){
       push(@$gsids, uniq($Gsids));
+      print STDERR "[GN] ";
     }
     else {
       push(@$gsids, uniq($ga->fetch_stable_id_by_name($query_str, 'transcript')));
+      print STDERR "[TN] ";
     }
   }
+  print STDERR "Got @$gsids\n";
 
   #----------------------------------------------------------------------
   # now get all gsids associate with gene_name and trans names via gsid
@@ -433,9 +436,7 @@ sub get_gene_history {
   #----------------------------------------------------------------------
 
   my $found_gsids = get_all_gsids_via_geneTransNames_of_gsid($ga, $gsids);
-
-  warn "@$found_gsids";
-  warn "@$gsids";
+  print STDERR "@$found_gsids\n";
 
   print_all_gene_infos($ga, $found_gsids);
 }
