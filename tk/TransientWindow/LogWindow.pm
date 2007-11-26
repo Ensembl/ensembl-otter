@@ -181,7 +181,7 @@ sub mail_contents {
 
     my $mess      = $self->get_log_contents();
     my $fh        = gensym();
-    my $mail_pipe = qq{| Mail -s "$subj" $to};
+    my $mail_pipe = qq{| mailx -s "$subj" $to};
     open $fh, $mail_pipe or die "Error opening '$mail_pipe' : $!";
     print $fh "$pre\n\n$mess";
     close $fh or warn "Error emailing with pipe '$mail_pipe' : exit($?)";
