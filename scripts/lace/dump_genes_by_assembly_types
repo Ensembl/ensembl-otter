@@ -745,12 +745,20 @@ sub translation_qc {
 
         my $trans_name = '     '.$transcript->stable_id.'.'.$transcript->version().': ';
 
-        if($transcript->coding_region_end()-$transcript->coding_region_start()<3) {
+
+        eval {
+            $transcript->get_all_translateable_Exons();
+        };
+        my $translation_unrecoverable_reason = $@
+        || ( ($transcript->coding_region_end()-$transcript->coding_region_start()<3)
+           ? 'transcript shorter than codon'
+           : '');
+        if($translation_unrecoverable_reason) {
             my $translation_stable_id = $transcript->{'translation'}->stable_id();
             delete $transcript->{'translation'};
             delete $transcript->{'_translation_id'};
-            $transcript->transcript_info->remark(Bio::Otter::TranscriptRemark->new(-remark=>"$remark_prefix translation '$translation_stable_id' unrecoverable"));
-            return $trans_name.' [Translation unrecoverable, deleted] ';
+            $transcript->transcript_info->remark(Bio::Otter::TranscriptRemark->new(-remark=>"$remark_prefix translation '$translation_stable_id' unrecoverable ($translation_unrecoverable_reason)"));
+            return $trans_name.' [Translation unrecoverable ($translation_unrecoverable_reason), deleted] ';
         }
 
         my $original_phase = $translation->start_Exon()->phase();
