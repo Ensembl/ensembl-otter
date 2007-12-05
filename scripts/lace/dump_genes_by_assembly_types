@@ -465,6 +465,7 @@ my %assembly_nonmatch_version = (
 
         'chr12-01' => 1,
         'chr12-02' => 2,
+        'chr12-03' => 3,
 
         'del36H_set' => 0,
         'chr13-01'   => 1,
@@ -488,6 +489,8 @@ my %assembly_nonmatch_version = (
         'CHO_IDD16.1-02'    => 1.2,
         'chr17-01'          => 1,
         'chr17-02'          => 2,
+        'chr17-04'          => 4,
+        'chr17-05'          => 5,
         'chr17-06'          => 6,
 
         'chr18-01' => 1,
@@ -499,7 +502,6 @@ my %assembly_nonmatch_version = (
         'ChrX-01' => 1,
         'ChrX-02' => 2,
         'chrX-03' => 3,
-
         #       'chrX-NCBIM36' => 3.5,
         'chrX-04' => 4,
 
