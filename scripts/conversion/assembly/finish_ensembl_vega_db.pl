@@ -473,11 +473,11 @@ $support->log_stamped("Done transfering $c translation_attrib entries.\n\n");
 #.....
 
 # logic names and source
-if ($support->user_proceed("Would you like to ensure that all genes and transcripts have a logic_name of otter and a source of \'vega\'?")) {
-	$sql = qq(UPDATE gene set analysis_id = (SELECT analysis_id from analysis where logic_name = 'otter'));
-	$c = $dbh->{'evega'}->do($sql);
-	$sql = qq(UPDATE transcript set analysis_id = (SELECT analysis_id from analysis where logic_name = 'otter'));
-	$c = $dbh->{'evega'}->do($sql);
+if ($support->user_proceed("Would you like to ensure that all genes and transcripts have a source of \'vega\'?")) {
+#	$sql = qq(UPDATE gene set analysis_id = (SELECT analysis_id from analysis where logic_name = 'otter'));
+#	$c = $dbh->{'evega'}->do($sql);
+#	$sql = qq(UPDATE transcript set analysis_id = (SELECT analysis_id from analysis where logic_name = 'otter'));
+#	$c = $dbh->{'evega'}->do($sql);
 	$sql = qq(UPDATE gene set source = 'vega');
 	$c = $dbh->{'evega'}->do($sql);
 }
