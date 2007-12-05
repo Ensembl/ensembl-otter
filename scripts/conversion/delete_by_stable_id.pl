@@ -154,6 +154,9 @@ if ($support->param('keep')) {
     $infile = $support->param('delete');
     $action = 'delete';
     $condition = "IN";
+} elsif ($support->param('gene_stable_ids')) {
+	$action = 'delete';
+    $condition = "IN";
 } else {
     $support->log_error("You must choose to either delete or keep genes by their stable_ids.\n");
 }
@@ -343,7 +346,7 @@ sub delete_genes {
         return(0);
     }
 
-    $support->log_stamped("Deleting genes by stable ID (and their transcripts and translations) ...\n");
+    $support->log_stamped("Deleting genes, transcripts and translations by stable ID (and their features, attributes and authors) ...\n");
 
     my $gsi_string = join("', '", @{ $gene_stable_ids });
     my $sql;

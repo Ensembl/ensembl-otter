@@ -138,8 +138,10 @@ my $ea = $dba->get_DBEntryAdaptor();
 
 # delete all ensembl_ids if --prune option is used; basically this resets
 # xrefs to the state after running add_external_xrefs.pl
+
+my $external_db = $support->param('external_db') || 'ENST';
 if (!$support->param('dry_run')) {
-	if ($support->param('prune') and $support->user_proceed('Would you really like to delete all previously added ensembl_id xrefs before running this script?')) {
+	if ($support->param('prune') and $support->user_proceed("Would you really like to delete all previously added $external_db xrefs before running this script?")) {
 		my $num;
 		# xrefs
 		$support->log("Deleting all ensembl_id xrefs...\n");
@@ -147,7 +149,7 @@ if (!$support->param('dry_run')) {
            DELETE x
            FROM xref x, external_db ed
            WHERE x.external_db_id = ed.external_db_id
-           AND ed.db_name like 'ENST%'
+           AND ed.db_name = \'$external_db\'
 		));
 		$support->log("Done deleting $num entries.\n");
 
@@ -201,7 +203,6 @@ while (<ID> ) {
 }
 
 #check (user defined) external dbname
-my $external_db = $support->param('external_db') || 'ENST';
 my $sth = $dbh->prepare(qq(select * from external_db where db_name = ?));
 $sth->execute($external_db);
 unless (my @r = $sth->fetchrow_array) {
