@@ -1,0 +1,191 @@
+#!/usr/local/bin/perl -w
+
+### get_ko_gene_info
+
+use strict;
+use Bio::Otter::Lace::Defaults;
+
+{
+    my $dsname  = 'mouse';
+
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'dataset=s'     => \$dsname,
+    );
+
+
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    
+
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name($dsname);
+    
+    my $dba = $ds->get_cached_DBAdaptor;
+    my $gene_aptr  = $dba->get_GeneAdaptor;
+
+    foreach my $gene_stable_id (@ARGV) {
+        my $gene = $gene_aptr->fetch_by_stable_id($gene_stable_id);
+        my $gene_slice = $gene->feature_Slice;
+        printf "\nGene %s named %s on %s from %d to %d (strand %+d)\n",
+            $gene_stable_id,
+            $gene->get_all_Attributes('name')->[0]->value,
+            $gene_slice->seq_region_name,
+            $gene->start, $gene->end, $gene->strand;
+        
+        foreach my $exon (@{$gene->get_all_Exons}) {
+            printf "  Exon %s %d %d %+d\n",
+                $exon->stable_id, $exon->start, $exon->end, $exon->phase;
+        }
+        
+        foreach my $feat (@{$gene_slice->get_all_SimpleFeatures('EUCOMM')}) {
+            printf "  Feature %s %d %d %+d\n",
+                $feat->analysis->logic_name, $feat->start, $feat->end, $feat->strand;
+        }
+        
+        my $seq = $gene_slice->seq;
+        print ">$gene_stable_id genomic sequence\n";
+        while ($seq =~ /(.{1,60})/g) {
+            print "$1\n";
+        }
+    }
+}
+
+
+__END__
+
+=head1 NAME - get_ko_gene_info
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
+
+
+
+sub get_sequence {
+    my $self = shift;
+    my $dataset_name = shift;
+    my $sequence_set = shift;
+    my $chr = shift;
+    my $start = shift;
+    my $end = shift;
+    my $return_lines;
+
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+
+    my $otter_dba = $ds->get_cached_DBAdaptor;
+    $otter_dba->assembly_type($sequence_set);
+    my $slice = $otter_dba->get_SliceAdaptor->fetch_by_chr_start_end($chr, $start, $end);
+    push @{$return_lines}, "DATASET\t$dataset_name";
+    push @{$return_lines}, "CHR\t$chr";
+    push @{$return_lines}, "START\t$start";
+    push @{$return_lines}, "END\t$end";
+    push @{$return_lines}, "SEQUENCE_SET\t$sequence_set";
+    push @{$return_lines}, "SEQUENCE\t".$slice->seq;
+    return $return_lines;
+}
+
+sub get_otter_gene_structure {
+    my $self = shift;
+    my $dataset_name = shift;
+    my $gene_name = shift;
+    my $sequence_set_choices = shift;
+
+    my @return_strings;
+
+
+    #keep an array of sets (passed in in one csv string) that we _should_ use.
+    my @sequence_sets = split /,/,$sequence_set_choices;
+    my %allowed_sets;
+    foreach my $set(@sequence_sets){
+      $allowed_sets{$set} = 1;
+    }
+
+    print STDERR "running get_otter_gene_structure\n";
+
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+
+    my $otter_dba = $ds->get_cached_DBAdaptor;
+
+    my $gene_adaptor = $otter_dba->get_GeneAdaptor;
+
+    my $gene = $gene_adaptor->fetch_by_stable_id($gene_name);
+
+    my $first_exon = (@{$gene->get_all_Exons()})[0];
+
+    my $contig_id = $first_exon->contig->dbID();
+
+    my $slice_adaptor = $otter_dba->get_SliceAdaptor();
+
+    #hashref of possible seq-sets, and the chromosomes they lie on
+    my $possible_sequence_sets = get_possible_sequence_sets_for_contig($contig_id, $slice_adaptor);
+    my @possible_sets = keys %{$possible_sequence_sets};
+    my $first_chromosome = (values %{$possible_sequence_sets})[0];
+
+    my $containing_set;
+
+    #walk each of the sets this gene _could_ be in, and find the
+    #one it's _allowed_ to be in, according to the input.
+    foreach my $possible_set(@possible_sets){
+      if($allowed_sets{$possible_set}){
+        $containing_set = $possible_set;
+        last;
+      }
+    }
+
+    if(!$containing_set){
+      return ["ERROR\tThe list of possible sequence sets -- ".(join ",",@possible_sets)." -- doesnt contain any member of the allowed sets -- ".(join ",",keys %allowed_sets)."\n"];
+    }
+
+    $otter_dba->assembly_type($containing_set);
+
+    if(!$containing_set){
+      return ["ERROR\tno allowed sequence set contains the input gene\n"];
+    }
+
+
+    # fetch the slice exactly containing the gene
+    my $gene_slice = $slice_adaptor->fetch_by_gene_stable_id($gene_name);
+
+    # fetch the eucomm features contained by the gene.
+    my @eucomm_features = @{$otter_dba->get_SimpleFeatureAdaptor->fetch_all_by_Slice($gene_slice, 'EUCOMM')};
+
+    # now transform everything to the chromosome -- note -- we HAD to set the assembly type
+    # to get this to work.
+
+    my ($chr, $gene_start, $gene_end) = $slice_adaptor->_get_chr_start_end_of_gene($gene_name);
+
+    if(!$first_chromosome eq $chr){
+      return ["ERROR\tSomething is fishy here - the chromosome on which the contig sits ($first_chromosome) is not the chromosome on which the gene is supposed to sit, according to its preferred sequence set ($chr)\n"];
+    }
+
+    #get the whole chromosome as a slice and transform to it.
+    my $chromosome_slice = $slice_adaptor->fetch_by_chr_name($chr);
+
+    $gene->transform($chromosome_slice);
+    foreach my $feature(@eucomm_features){
+      $feature->transform($chromosome_slice);
+    }
+
+    push @return_strings, "SEQUENCE_SET\t$containing_set";
+    push @return_strings, "GENE\t".$gene->stable_id."\t".$chr."\t".$gene->start."\t".$gene->end."\t".$gene->strand."\t".$marker_symbol;
+    foreach my $exon(@{$gene->get_all_Exons}){
+      push @return_strings, "EXON\t".$exon->stable_id."\t".$exon->start."\t".$exon->end."\t".$exon->phase;
+    }
+    foreach my $feature(@eucomm_features){
+      push @return_strings,"EUCOMM_FEATURE\t".$feature->display_label."\t".$feature->score."\t".$feature->start."\t".$feature->end;
+    }
+
+    my $arrref = \@return_strings;
+    print STDERR "returning ".ref($arrref)."\n";
+    return $arrref;
+}
+
