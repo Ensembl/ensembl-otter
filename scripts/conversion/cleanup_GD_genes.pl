@@ -120,7 +120,7 @@ if ($support->param('help') or $support->error) {
 $support->comma_to_list('chromosomes');
 $support->param('logic_name','otter_corf') unless $support->param('logic_name');
 
-$support->param('delete') || $support->param('delete','GD_IDs_togo.txt');
+$support->param('delete') || $support->param('delete','/GD_IDs_togo.txt');
 $support->param('delete',($support->param('logpath').$support->param('delete')));
 
 # ask user to confirm parameters to proceed
@@ -191,7 +191,7 @@ $support->log("Examining GD genes to identify corfs...\n");
 
 my (%non_GD_hidden,%non_GD,%to_change,);
 foreach my $slice (@chroms) {
-	$support->log_stamped("\nLooping over chromosome ".$slice->seq_region_name."\n");
+	$support->log_stamped("\n\nLooping over chromosome ".$slice->seq_region_name."\n");
     my $genes = $slice->get_all_Genes;
     $support->log_stamped("Done fetching ".scalar @$genes." genes.\n");
 
@@ -349,9 +349,9 @@ my (%to_delete,%gomi_to_log_overlap,%gomi_to_log_no_overlap);
 #counters
 my ($tot_c,$noverlap_c,$overlap_c);
 foreach my $slice (@chroms) {
-	$support->log_stamped("Looping over chromosome ".$slice->seq_region_name."\n");
+	$support->log_stamped("\n\nLooping over chromosome ".$slice->seq_region_name."\n");
     my $genes = $slice->get_all_Genes;
-    $support->log_stamped("Done fetching ".scalar @$genes." genes.\n\n");
+    $support->log_stamped("Done fetching ".scalar @$genes." genes.\n");
  GENE:
     foreach my $gene (@$genes) {
 		my $gsi = $gene->stable_id;
@@ -360,9 +360,16 @@ foreach my $slice (@chroms) {
 		$tot_c++;
 		$support->log_verbose("Studying gene $gsi ($name) for overlap with Havana\n");
 	
-		#get any overlapping Havana genes - defined by logicname of otter
+		#get any overlapping Havana genes - defined by logicname of otter without a GD: name
 		my $slice = $gene->feature_Slice;
-		if (my @genes = @{$slice->get_all_Genes('otter')}) {
+		my @genes = @{$slice->get_all_Genes('otter')};
+		my $to_go = 0;
+		foreach my $gene (@genes) {
+			if ($gene->display_xref->display_id !~ /^GD:/) {
+				$to_go = 1;
+			}
+		}
+		if ($to_go) {
 			$overlap_c++;
 			#note stable id of file to be deleted
 			$to_delete{$gsi} = $name;
