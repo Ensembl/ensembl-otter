@@ -223,7 +223,7 @@ sub SimpleFeature_from_gfs_hash {
     }
     $feat->seq_strand($strand);
     $feat->score($hash->{'score'});
-    $feat->text($hash->{'display_label'});
+    $feat->text($hash->{'gf_type'});
     
     return $feat;
 }
@@ -235,7 +235,9 @@ sub create_genomic_feature {
 
     my $gf_type       = $feat->method_name;
     my $strand        = $feat->seq_strand || 1;
-    my $score         = $feat->score;
+    my $score         = $self->get_Method_by_name($gf_type)->edit_score
+                      ? $feat->score
+                      : $def_score;
     my $display_label = $feat->text;
 
     my $fiveprime  = $strand == 1 ? $feat->seq_start : $feat->seq_end;
