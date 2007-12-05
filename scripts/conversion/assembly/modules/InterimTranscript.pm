@@ -5,15 +5,12 @@ package InterimTranscript;
 
 use Bio::EnsEMBL::Utils::Exception qw(warning);
 
-
-
 sub new {
   my $class = shift;
 
   return bless {'exons' => [],
                 'StatsMsgs' => []}, $class;
 }
-
 
 sub add_StatMsg {
   my $self = shift;
@@ -139,7 +136,16 @@ sub move_cdna_coding_end {
 
 sub transcript_attribs {
   my $self = shift;
-  $self->{'transcript_attribs'} = shift if(@_);
+  my $attribs;
+  if ( ($attribs) = @_) {
+	  my $new_attribs;
+	  foreach my $attrib (@{$attribs}) {
+		  #don't transfer ccds attribs
+		  next if ($attrib->code eq 'ccds');
+		  push @{$new_attribs},$attrib;
+	  }
+	  $self->{'transcript_attribs'} = $new_attribs;
+  }
   return $self->{'transcript_attribs'};
 }
 
