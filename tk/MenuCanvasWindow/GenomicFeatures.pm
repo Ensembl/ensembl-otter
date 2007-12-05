@@ -213,7 +213,9 @@ sub SimpleFeature_from_gfs_hash {
     my $strand     = $hash->{'strand'}
       or confess "strand not set";
     
-    my $feat = $self->new_SimpleFeature_from_method_name($hash->{'gf_type'});
+    my $gf_type = $hash->{'gf_type'};
+    
+    my $feat = $self->new_SimpleFeature_from_method_name($gf_type);
     if ($strand == 1) {
         $feat->seq_start($fiveprime);
         $feat->seq_end($threeprime);
@@ -222,8 +224,10 @@ sub SimpleFeature_from_gfs_hash {
         $feat->seq_end($fiveprime);
     }
     $feat->seq_strand($strand);
-    $feat->score($hash->{'score'});
-    $feat->text($hash->{'gf_type'});
+    
+    my $method = $self->get_Method_by_name($gf_type);
+    $feat->score($method->edit_score         ? $hash->{'score'}         : $def_score        );
+    $feat->text( $method->edit_display_label ? $hash->{'display_label'} : $hash->{'gf_type'});
     
     return $feat;
 }
