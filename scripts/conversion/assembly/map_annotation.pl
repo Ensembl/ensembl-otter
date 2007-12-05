@@ -216,15 +216,17 @@ if ($support->param('prune') && $support->user_proceed("Do you want to delete al
     $E_dbh->do(qq(DELETE FROM exon_transcript));
     $E_dbh->do(qq(DELETE FROM gene));
     $E_dbh->do(qq(DELETE FROM gene_stable_id));
-#    $E_dbh->do(qq(DELETE FROM interpro));
+    $E_dbh->do(qq(DELETE FROM gene_attrib));
     $E_dbh->do(qq(DELETE FROM object_xref));
     $E_dbh->do(qq(DELETE FROM protein_align_feature));
     $E_dbh->do(qq(DELETE FROM protein_feature));
     $E_dbh->do(qq(DELETE FROM supporting_feature));
     $E_dbh->do(qq(DELETE FROM transcript));
     $E_dbh->do(qq(DELETE FROM transcript_stable_id));
+    $E_dbh->do(qq(DELETE FROM transcript_attrib));
     $E_dbh->do(qq(DELETE FROM translation));
     $E_dbh->do(qq(DELETE FROM translation_stable_id));
+    $E_dbh->do(qq(DELETE FROM translation_attrib));
     $E_dbh->do(qq(DELETE x
                   FROM xref x, external_db ed
                   WHERE x.external_db_id = ed.external_db_id
@@ -252,8 +254,7 @@ foreach my $V_chr ($support->sort_chromosomes($V_chrlength)) {
         $support->log_warning("Chromosome $E_chr not in Ensembl. Skipping.\n", 1);
         next;
     }
-    
-   
+
     # fetch chromosome slices
     my $V_slice = $V_sa->fetch_by_region('chromosome', $V_chr, undef, undef,
         undef, $support->param('assembly'));
@@ -275,7 +276,7 @@ foreach my $V_chr ($support->sort_chromosomes($V_chrlength)) {
 
         # is this gene annotated by 'Sick_kids' ? If so, we don't want it
         my @gene_attribs= @{$gene->get_all_Attributes('author')};
-        foreach my $attrib(@gene_attribs){            
+        foreach my $attrib(@gene_attribs){
             if($attrib->value eq 'Sick_Kids'){
                 $support->log("skipping gene $gsi as it has a Sick_Kids attribute\n");
                 next GENE;
