@@ -53,8 +53,9 @@ to facilitate this).
 
 The -prune option restores the data to the stage before this script was first run.
 
-The script can be used to change the root of transcript names after the addition of
-Zfin gene xrefs - of course here the fix_duplicated names option should not be taken
+The script can be used to change the root of transcript names either after the addition of
+Zfin gene xrefs or after case mismatches in gene names have been fixed - of course here the
+fix_duplicated names option should not be taken.
 
 =head1 LICENCE
 
@@ -160,7 +161,7 @@ if ($support->param('prune')
 	}
 }
 
-my ($c1,$c2,$c3);
+my ($c1,$c2,$c3,$c4);
 foreach my $chr ($support->sort_chromosomes) {
 	$support->log_stamped("Looping over chromosome $chr\n");
 	my $slice = $sa->fetch_by_region('toplevel', $chr);
@@ -179,7 +180,7 @@ foreach my $chr ($support->sort_chromosomes) {
 				$transnames{$new_name}++;
 				next if ($new_name eq $t_name);
 
-				#store a transcript attrib for the old name
+				#store a transcript attrib for the old name as long as it's not just a case change
 				my $attrib = [
 					Bio::EnsEMBL::Attribute->new(
 						-CODE => 'synonym',
@@ -187,10 +188,13 @@ foreach my $chr ($support->sort_chromosomes) {
 						-DESCRIPTION => 'Synonymous names',
 						-VALUE => $t_name,
 					)];
-				if (! $support->param('dry_run')) {
-					$aa->store_on_Transcript($t_dbID, $attrib);
+				unless (lc($t_name) eq lc($new_name)) {
+					if (! $support->param('dry_run')) {
+						$c4++;
+						$aa->store_on_Transcript($t_dbID, $attrib);
+					}
+					$support->log_verbose("Stored synonym transcript_attrib for old name for transcript $tsi\n",2);
 				}
-				$support->log_verbose("Stored synonym transcript_attrib for old name for transcript $tsi\n",2);
 
 				#update xref for new transcript name
 				if (! $support->param('dry_run')) {
@@ -217,7 +221,7 @@ foreach my $chr ($support->sort_chromosomes) {
 		}
 	}
 }
-$support->log("Done updating $c1 xrefs and adding $c1 synonym transcript_attribs.\n");
+$support->log("Done updating $c1 xrefs and adding $c4 synonym transcript_attribs.\n");
 $support->log("Patched names of $c3 transcripts from $c2 genes.\n");
 $support->finish_log;
 
