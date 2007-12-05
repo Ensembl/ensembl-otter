@@ -24,8 +24,8 @@ use Bio::Otter::Lace::Defaults;
 use Bio::EnsEMBL::Attribute;
 
 {
-    my $old_dsname  = 'human';
-    my $new_dsname  = 'ns_human';
+    my $old_dsname  = 'os_mouse';
+    my $new_dsname  = 'ns_mouse';
     my $code_wanted = 'hidden';
     my $change      = 0; # dry run
 
@@ -75,31 +75,39 @@ use Bio::EnsEMBL::Attribute;
     foreach my $ss_slice (@{$slice_adaptor->fetch_all('chromosome', 'Otter')}) {
         my $ss_name = $ss_slice->seq_region_name();
 
-        my $value = ($hidden{$ss_name} xor $inverted) ? 1 : 0;
+        my $new_value = ($hidden{$ss_name} xor $inverted) ? 1 : 0;
+        my $found_correct = 0;
 
         for my $attrib (@{ $attribute_adaptor->fetch_all_by_Slice( $ss_slice ) }) {
             my ($code, $value) = ($attrib->code(), $attrib->value());
 
-            if($code eq $code_wanted) { # whatever it was, just remove it
-                if($change) {
-                    print STDERR "Removing the old '$code_wanted' attribute from $ss_name\n";
-                    $attribute_adaptor->remove_from_Slice($ss_slice, $attribute_adaptor->_store_type($attrib) );
+            if($code eq $code_wanted) {
+                if($new_value eq $value) {
+                    print STDERR "Existing $code value '$value' is correct\n";
+                    $found_correct = 1;
                 } else {
-                    print STDERR "[pretending to be] Removing the '$code_wanted' attribute from $ss_name\n";
+                    if($change) {
+                        print STDERR "Removing the old '$code_wanted' attribute from $ss_name\n";
+                        $attribute_adaptor->remove_from_Slice($ss_slice, $attribute_adaptor->_store_type($attrib) );
+                    } else {
+                        print STDERR "[pretending to be] Removing the '$code_wanted' attribute from $ss_name\n";
+                    }
                 }
             }
         }
 
-        if($change) {
-            print STDERR "Adding the new '$code_wanted'='$value' attribute to $ss_name\n";
-            my $attribute = Bio::EnsEMBL::Attribute->new(
-                -CODE  => $code_wanted,
-                -NAME  => $name_wanted,
-                -VALUE => $value,
-            );
-            $attribute_adaptor->store_on_Slice($ss_slice, [ $attribute ]);
-        } else {
-            print STDERR "[pretending to be] Adding the new '$code_wanted'='$value' attribute to $ss_name\n";
+        unless($found_correct) {
+            if($change) {
+                print STDERR "Adding the new '$code_wanted'='$new_value' attribute to $ss_name\n";
+                my $attribute = Bio::EnsEMBL::Attribute->new(
+                    -CODE  => $code_wanted,
+                    -NAME  => $name_wanted,
+                    -VALUE => $new_value,
+                );
+                $attribute_adaptor->store_on_Slice($ss_slice, [ $attribute ]);
+            } else {
+                print STDERR "[pretending to be] Adding the new '$code_wanted'='$new_value' attribute to $ss_name\n";
+            }
         }
     }
 }
