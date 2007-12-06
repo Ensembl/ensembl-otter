@@ -1,5 +1,15 @@
 #!/usr/local/bin/perl -w
 
+BEGIN {
+    #
+    # This bit is only needed to ensure we are running EnsEMBL head code,
+    # not from the pre-release20 codebase.
+    #
+    foreach (@INC) {
+        s{ensembl/modules}{ensembl_head/modules}g;
+    }
+}
+
 ### show_locks
 
 use strict;
@@ -71,10 +81,10 @@ $| = 1;
           AND l.seq_region_id = contig.seq_region_id
           AND contig.seq_region_id = ss_asm.cmp_seq_region_id
           AND ss_asm.asm_seq_region_id = ss.seq_region_id
-          AND ss.coord_system_id = 2
+          AND ss.coord_system_id = (SELECT coord_system_id FROM coord_system WHERE name = 'chromosome' AND version = 'Otter')
           AND contig.seq_region_id = clone_asm.cmp_seq_region_id
           AND clone_asm.asm_seq_region_id = clone.seq_region_id
-          AND clone.coord_system_id = 4
+          AND clone.coord_system_id = (SELECT coord_system_id FROM coord_system where name = 'clone')
           AND hidden.value != 1
         };
     my( @param );
