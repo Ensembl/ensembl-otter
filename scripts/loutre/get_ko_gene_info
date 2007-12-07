@@ -4,6 +4,7 @@
 
 use strict;
 use Bio::Otter::Lace::Defaults;
+use Bio::Vega::DBSQL::DBAdaptor;
 
 {
     my $dsname  = 'mouse';
