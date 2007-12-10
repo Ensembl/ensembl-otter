@@ -863,20 +863,19 @@ author_group                  d   #use this later for assigning contact details 
 gene_author                   s
 transcript_author             s
 evidence                      s   #will have to be fixed (ie removed from loutre) eventually but OK for now
+exon_stable_id_pool           s   #not used for website but is needed if there are duplicate stable IDs
 
 assembly_tag                  i   #fixed by CK
-
-assembly_tagged_contig        i   #check with jgrg
-contig_lock                   i   #check with jgrg
+assembly_tagged_contig        i
+contig_lock                   i
 contig_attrib                 i
 contig_info                   i
-exon_stable_id_pool           i   #check with jgrg
-gene_stable_id_pool           i   #check with jgrg
-sequence_note                 i   #check with jgrg
-sequence_set_access           i   #check with jgrg
-test_contig_info              i   #check with jgrg
-transcript_stable_id_pool     i   #check with jgrg
-translation_stable_id_pool    i   #check with jgrg
+gene_stable_id_pool           i
+sequence_note                 i
+sequence_set_access           i
+test_contig_info              i
+transcript_stable_id_pool     i
+translation_stable_id_pool    i
 
 ENDOFTEXT
 	return $txt;
