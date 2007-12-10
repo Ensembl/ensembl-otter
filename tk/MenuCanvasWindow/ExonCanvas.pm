@@ -2610,9 +2610,15 @@ sub xace_save {
     }
     
     my $xc = $self->XaceSeqChooser;
-    if ($xc->show_zmap) {
-        $self->zmap_save($sub);
-    }
+
+    # For now we need xace running in order to save the subseq.
+    # If we save to zmap, but fail to save to xace and confess
+    # then the replace_SubSeq etc doesn't get run.  This means
+    # zmap has the changes but otterlace and xace don't and still
+    # consider the changes unsaved.  Next save attempts to delete
+    # the original again, but this fails in zmap as the feature
+    # is already deleted and changed.  It is for this reason we
+    # do the $xr->save() before the $self->zmap_save($sub);
     
     # Add ace_string method from locus with rename as above
     
@@ -2620,6 +2626,10 @@ sub xace_save {
     
     my $xr = $xc->xace_remote;
     if ($xr) {
+	if ($xc->show_zmap) {
+	    $xr->save();       # throws if no xace.
+	    $self->zmap_save($sub);
+	}
         $xr->load_ace($ace);
         $xr->save;
         $xr->send_command('gif ; seqrecalc');
