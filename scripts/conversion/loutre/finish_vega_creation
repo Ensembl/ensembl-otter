@@ -46,6 +46,7 @@ This script does a number of jobs:
 - patches coord_system.version for contigs to NULL
 - synchronises attribute table with ensembl/misc-scripts/attribute_types/attrib_types.txt
 - synchronises external_db table with ensembl/misc-scripts/external_db/external_dbs.txt
+- populates exon_stable_id_pool with max value (might be needed for removing duplicate stable IDS
 
 The first time it is run it creates backup copies of the original tables; then when run
 subsequently with the -prune 1 option it restores these tables to their original state. Can
@@ -139,7 +140,8 @@ my @tables = qw(coord_system
 				transcript
 				gene_attrib
 				transcript_attrib
-				seq_region_attrib);
+				seq_region_attrib
+                exon_stable_id_pool);
 my (%tabs);
 map { $_ =~ s/`//g; $tabs{$_} += 1; } $vdbh->tables;
 my $ask = 1;
@@ -392,6 +394,15 @@ foreach my $table (keys %attribs_to_go) {
 		}
 	}
 }
+
+
+#######################
+# exon_stable_id_pool #
+#######################
+
+my ($max_id) = $vdbh->selectrow_array(qq(select max(stable_id) from exon_stable_id));
+(my ($prefix,$number)) = $max_id =~ /(\w{7})(\d+)/;
+$vdbh->do(qq(INSERT into exon_stable_id_pool values ($number)));
 
 
 ##############
