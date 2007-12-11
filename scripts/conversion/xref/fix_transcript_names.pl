@@ -241,19 +241,23 @@ sub update_names {
 		) ];
 	#get gene and transcript remarks
 	my %remarks;
-	$remarks{'gene'} = [ map {$_->value} @{$gene->get_all_Attributes('remark')} ];
-	foreach my $trans (@{$ta->fetch_all_by_Gene($gene)}) {
-		my $tsi = $trans->stable_id;
-		push @{$remarks{'transcripts'}}, map {$_->value} @{$trans->get_all_Attributes('remark')};
+	foreach my $type ('remark','hidden_remark') {
+		$remarks{$type}->{'gene'} = [ map {$_->value} @{$gene->get_all_Attributes($type)} ];
+		foreach my $trans (@{$ta->fetch_all_by_Gene($gene)}) {
+			my $tsi = $trans->stable_id;
+			push @{$remarks{$type}->{'transcripts'}}, map {$_->value} @{$trans->get_all_Attributes('remark')};
+		}
 	}
 
 	#see if any of the remarks identify this gene as being known by Havana as being fragmented
-    #add gene_attrib anyway
-	if ( (grep {$_ eq 'Annotation_remark- fragmented_loci'} @{$remarks{'gene'}})
-			 || (grep {$_ =~ /fragmen/} @{$remarks{'transcripts'}}) ) {
-		if (grep { $_ eq $gene_remark} @{$remarks{'gene'}}) {
+	if ( (grep {$_ eq 'fragmented_locus'} @{$remarks{'hidden_remark'}->{'gene'}})
+			 || (grep {$_ =~ /fragmen/} @{$remarks{'remark'}->{'transcripts'}})
+				 || (grep {$_ =~ /fragmen/} @{$remarks{'hidden_remark'}->{'transcripts'}})
+			 ) {
+		if (grep { $_ eq $gene_remark} @{$remarks{'remark'}->{'gene'}}) {
 			$support->log("Fragmented loci annotation remark for gene $gid already exists\n");
 		}
+		#add gene_attrib anyway
 		else {
 			if (! $support->param('dry_run') ) {
 				$aa->store_on_Gene($gid,$attrib);
