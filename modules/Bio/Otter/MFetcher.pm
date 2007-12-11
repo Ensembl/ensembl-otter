@@ -342,7 +342,8 @@ sub get_mapper_dba {
 
     ## What remains is head version of a non-otter satellite_db
 
-    my $edba = $self->satellite_dba( '.' ); # from now on it's living in loutre_ databases
+    my $edba = $self->satellite_dba( 'equiv_asm_db' ); # the value is either '=otter' (for new schema)
+                                                       # or '=pipeline' (for old schema DB with new schema pipeline)
 
         # this slice does not have to be completely defined (no start/end/strand),
         # as we only need it to get the attributes
