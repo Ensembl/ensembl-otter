@@ -342,15 +342,13 @@ sub get_mapper_dba {
 
     ## What remains is head version of a non-otter satellite_db
 
-        # Currently we keep assembly equivalency information in the pipeline_db_head seq_region_attrib.
-        # Once otter_db is converted into new schema, we can keep this information there.
-    my $pdba = $self->satellite_dba( '' ); # it will be NEW pipeline by exclusion
+    my $edba = $self->satellite_dba( '.' ); # from now on it's living in loutre_ databases
 
         # this slice does not have to be completely defined (no start/end/strand),
         # as we only need it to get the attributes
-    my $pipe_slice = $self->get_slice($pdba, $cs, $name, $type, undef, undef, undef, $csver_orig);
+    my $equiv_slice = $self->get_slice($edba, $cs, $name, $type, undef, undef, undef, $csver_orig);
 
-    my %asm_is_equiv = map { ($_->value() => 1) } @{ $pipe_slice->get_all_Attributes('equiv_asm') };
+    my %asm_is_equiv = map { ($_->value() => 1) } @{ $equiv_slice->get_all_Attributes('equiv_asm') };
 
     if($asm_is_equiv{$csver_remote}) { # we can simply rename instead of mapping
 
