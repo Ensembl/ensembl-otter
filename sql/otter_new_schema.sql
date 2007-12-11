@@ -224,9 +224,9 @@ CREATE TABLE assembly_tag (
   tag_info		  TEXT,
 
   PRIMARY KEY  ( tag_id ),
-  UNIQUE ( seq_region_id, seq_region_start, seq_region_end, seq_region_strand, tag_type )
-
+  UNIQUE ( seq_region_id, seq_region_start, seq_region_end, seq_region_strand, tag_type, tag_info(500))
 ) TYPE=InnoDB ;
+
 
 #################################################################################
 # Table structure for table 'assembly_tagged_clone'
