@@ -61,14 +61,16 @@ if ($odba->isa('Bio::Otter::DBSQL::DBAdaptor')) {
   eval{
 	 my $parser = Bio::Vega::Transform::Otter->new;
 	 $parser->parse($xml_string);
-	 my $cs='chromosome';
-	 my $chr_slice=$parser->get_ChromosomeSliceDB($odba);
-	 my $chrstart=$chr_slice->start;
-	 my $chrend=$chr_slice->end;
-	 my $strand=$chr_slice->strand;
-	 my $cs_version=$parser->init_CoordSystem_Version;
-	 my $segment_name=$parser->get_AssemblyType;
-	 my $chrname=$chr_slice->seq_region_name;
+
+	 my $cs             = 'chromosome';
+	 my $segment_name   = $parser->get_AssemblyType;
+	 my $chr_slice      = $parser->get_ChromosomeSlice;
+	 my $chrstart       = $chr_slice->start;
+	 my $chrend         = $chr_slice->end;
+	 my $strand         = $chr_slice->strand;
+	 my $cs_version     = $parser->init_CoordSystem_Version;
+
+	 my $chrname        = $chr_slice->seq_region_name;
 	 $slice =  $odba->get_SliceAdaptor()->fetch_by_region($cs,$segment_name,$chrstart,$chrend,$strand,$cs_version);
 	 $server->log("Processed incoming xml file with slice: [$chrname] [$chrstart] [$chrend]");
   };
