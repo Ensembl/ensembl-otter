@@ -1,0 +1,174 @@
+#!/usr/local/bin/perl -w
+
+### HUGO_gene_name_to_otter
+
+use strict;
+use Bio::Otter::Lace::Defaults;
+use Bio::Vega::DBSQL::DBAdaptor;
+use GeneHist::DataUtils qw (process_query);
+
+# not doing gene type update anymore,
+# as HGNC no longer assign gene type and takes the data from Otter
+
+{
+  my ($dataset_name);
+
+  Bio::Otter::Lace::Defaults::do_getopt(
+                                        'ds|dataset=s' => \$dataset_name,
+                                       );
+  Bio::Otter::Lace::Defaults::show_help() unless $dataset_name;
+
+  my $hugo_data = parse_hugo_input();
+
+  my $cl         = Bio::Otter::Lace::Defaults::make_Client();
+  my $ds         = $cl->get_DataSet_by_name($dataset_name);
+  my $loutre_dba = $ds->make_Vega_DBAdaptor;
+
+  $loutre_dba->begin_work;
+  eval{
+    update_otter($loutre_dba, $hugo_data);
+  };
+  if ($@) {
+    $loutre_dba->rollback;
+    die $@, "\nNo changes saved to otter db\n";
+  } else {
+    $loutre_dba->commit;
+  }
+}
+
+sub update_otter {
+  my ($loutre_dba, $hugo_data) = @_;
+
+  my $gene_aptr = $loutre_dba->get_GeneAdaptor;
+  foreach my $hugo (@$hugo_data) {
+
+    my $trans_SID = $hugo->{'otter_tsct_id'};
+    my $hgnc_id   = $hugo->{'hgnc_id'};
+
+    # warn "Working on $trans_SID\n";
+
+    if ( $trans_SID =~ /OTTHUMG/ ) {
+      my $t = $gene_aptr->fetch_longest_transcript_by_stable_id($trans_SID);
+      printf STDERR ("%s %s (HGNC %d) should be %s\n\n", "BAD_VEGA ", $trans_SID, $hgnc_id, $t->stable_id);
+      next;
+    }
+
+    my $gene = $gene_aptr->fetch_by_transcript_stable_id($trans_SID);
+
+    # human intervention for obsolete genes
+    unless ( $gene ){
+      print STDERR "$trans_SID is obsolete\n";
+      my $genes = $gene_aptr->fetch_by_transcript_stable_id_constraint($trans_SID);
+
+      foreach my $g ( @$genes ) {
+        my $found_gsids = process_query($g->stable_id, $loutre_dba, undef);
+        if ( @$found_gsids == 1 ) {
+          print STDERR "DEAD_GENE? @$found_gsids\n\n";
+        } else {
+          print STDERR "LOOK INTO @$found_gsids\n\n";
+        }
+      }
+      next;
+    }
+
+    if (unexpected_gene_type($gene)) {
+      printf STDERR "#Unexpected gene type '%s' in gene '%s' from HUGO: %s\n",
+        $gene->biotype, $gene->stable_id, $hugo->{'original_line'};
+      next;
+    }
+
+    update_gene_name_and_description($loutre_dba, $gene_aptr, $gene, $hugo->{'locus_symbol'}, $hugo->{'locus_description'});
+  }
+}
+
+sub unexpected_gene_type {
+  my( $gene ) = @_;
+
+  my $type = $gene->biotype;
+  if ($type =~ /:/ or $type eq 'obsolete') {
+    return 1;
+  } else {
+    return 0;
+  }
+}
+sub parse_hugo_input {
+  my @field_names = qw{
+                       locus_symbol locus_description hgnc_id category otter_tsct_id locus_type notes
+                     };
+
+    my $hugo_data = [];
+    while (<>) {
+        next if /^\s*#/;                # Allow for hashed comment lines
+        next if /^\s*$/;                # Skip empty lines
+        next if /^Approved Symbol/;     # The header
+        chomp;
+        my @fields = split /\t/, $_;    # Fields should be tab separated
+        my $original_line = $_;
+
+        # There's something wrong with the line if we
+        # don't have the right number of fields.
+        unless (@fields == @field_names) {
+            die 'Bad line: ', fmt_list(@fields);
+        }
+
+        my $parsed_line = {};
+        for (my $i = 0 ; $i < @field_names ; $i++) {
+            my $field_name = $field_names[$i];
+            my $data = $fields[$i];
+            $data =~ s/(^\s+)|(\s+$)//g;    # Trim leading and trailing whitespace
+            unless ($data) {
+                die 'Bad data element: ', fmt_list(@fields);
+            }
+            next if $data eq 'NULL';
+            $parsed_line->{$field_name} = $data;
+        }
+        $parsed_line->{'original_line'} = $original_line;
+        push(@$hugo_data, $parsed_line);
+    }
+    return $hugo_data;
+}
+
+sub fmt_list {
+    return join(', ', map "'$_'", @_);
+}
+
+sub update_gene_name_and_description {
+  my ( $loutre_dba, $gene_aptr, $gene, $hugo_name, $hugo_desc ) = @_;
+
+  my $name_attr    = $gene->get_all_Attributes('name')->[0];
+  my $current_name = $name_attr->value;
+  my $current_desc = $gene->description;
+  my $flag = 0;
+
+  if ( $hugo_name and $current_name ne $hugo_name) {
+    $flag = 1;
+    $name_attr->value($hugo_name);
+    warn "NAME CHANGE from $current_name to ", $name_attr->value, "\n";
+  }
+
+  if ( $hugo_desc and $hugo_desc ne $current_desc ){
+    $flag = 1;
+    $gene->description($hugo_desc);
+    warn "DESC CHANGE from $current_desc to ", $gene->description, "\n";
+  }
+
+  # store gene
+  if ( $flag == 1 ){
+    warn "Storing ", $gene->stable_id, " ...\n";
+    $gene_aptr->store($gene);
+  }
+}
+
+__END__
+
+=head1 NAME - HUGO_gene_name_to_otter
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
+Updated for loutre
+
+Chao-Kung Chen B<email> ck1@sanger.ac.uk
+
+
