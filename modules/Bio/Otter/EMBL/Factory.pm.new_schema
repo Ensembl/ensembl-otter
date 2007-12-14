@@ -679,11 +679,11 @@ warn "Got ", scalar @$genes, " genes";
       }
     }
 
-    #PolyA signals and sites for the slice
+    #PolyA signals and sites are on chrom. slice
     $self->_do_polyA($chr_slice, $set);
 
-    # assembly_tags on the slice
-    $self->_do_assembly_tag($chr_slice, $set);
+    # assembly_tags are on the contig slice
+    $self->_do_assembly_tag($clone_slice, $set);
 
     #Finish up
     $set->sortByPosition;
@@ -841,8 +841,8 @@ Internal method called by make_embl_ft to add lines of the type:
 FT   assembly_tag    156832..156837
 FT   assembly_tag    complement(170549..170554)
 
-These are stored in Otter in assembly_tag table on the Slice
-
+These are stored in Otter in assembly_tag table and as misc_features
+Fetch them via misc_feature
 =cut
 
 
@@ -862,7 +862,7 @@ sub _do_assembly_tag {
     return(0);
   }
   else {
-    print STDERR "Fetching misc_feature(s) for assembly_tag(s) ...\n";
+    print STDERR "Fetching ", scalar @$misc_feats, " misc_feature(s) for assembly_tag(s) ...\n";
   }
 
   foreach my $mf (@$misc_feats) {
