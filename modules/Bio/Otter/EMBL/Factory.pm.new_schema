@@ -632,19 +632,33 @@ sub make_embl_ft {
       or confess "Could not fetch clone slice by accession_version"
         . "acc: $acc sv: $sequence_version";
 
-    # project clone coords to chr coords
-    my $chr_slice = $clone_slice->project('chromosome')->[0]->[2];
+    # project clone coords to chr coords (latest sset)
+    my $chr_projection = $clone_slice->project('chromosome', 'Otter');
+    my $chr_slice;
+
+    foreach my $segment ( @$chr_projection ){
+      $chr_slice = $segment->to_Slice();
+      #warn $clone_slice->seq_region_name(). ':'. $segment->from_start(). '-'.
+#          $segment->from_end(). ' -> '.
+#            $chr_slice->seq_region_name(). ':'. $chr_slice->start(). '-'.$chr_slice->end().
+#              $chr_slice->strand(). " length: ".($chr_slice->end()-$chr_slice->start()+1). "\n";
+    }
+
 
     # contig coord
-    my $tile_path = $chr_slice->project('clone');
-    my $cmp_start    = $tile_path->[0]->[2]->start;
-    my $cmp_end      = $tile_path->[0]->[2]->end;
+    #my $tile_path = $chr_slice->project('clone');
+    #my $cmp_start    = $tile_path->[0]->[2]->start;
+    #my $cmp_end      = $tile_path->[0]->[2]->end;
+    my $cmp_start    = $clone_slice->start;
+    my $cmp_end      = $clone_slice->end;
 
+#    $self->Slice_contig($clone_slice);
     $self->Slice_contig($chr_slice);
 
     # no lazy-loading transcripts,
     my $genes = $chr_slice->get_all_Genes(undef, undef, 1);
 
+warn "Got ", scalar @$genes, " genes";
     # won't include this FT line if no genes are annotated
     # originally to deal with tomato clones
     if ( $genes->[0] ){
@@ -657,7 +671,6 @@ sub make_embl_ft {
       $feat->addQualifierStrings('note', "annotated region of clone");
 
       foreach my $gene (@$genes) {
-
         # Don't dump deleted or non-Havana genes
         next if $gene->biotype eq 'obsolete';
         next if $gene->source ne 'havana';
@@ -736,7 +749,7 @@ sub _cache_annotated_clone {
 
     my ($loutre_db, $slice_aptr, $gene_aptr, $annotated_contig_aptr) = $self->get_DBAdaptors();
     my  $clone_slice = $slice_aptr->fetch_by_region('clone', $accession.".".$seq_version)
-      or confess "Could not fetch clone slice by accession_version"
+      or confess "Could not fetch clone slice by accession_version "
         . "acc: $accession sv: $seq_version";
 
     $self->{'_bio_otter_embl_factory_annotated_clone'} = $clone_slice;
@@ -1036,7 +1049,8 @@ sub _do_Gene {
       # submitted in the EMBL flat files as coding peptides as it causes
       # problems in translation for Uniprot - message from Havana group
       if ( $transcript->biotype eq "nonsense_mediated_decay" ){
-        warn "NMD TRANSNAME: ", $transcript->get_all_Attributes('name')->[0]->value;
+        warn "NMD - TRANSNAME: ", $transcript->get_all_Attributes('name')->[0]->value;
+        next;
       }
 
       my $all_CDS_Exons = $transcript->get_all_translateable_Exons;
@@ -1195,8 +1209,10 @@ sub _add_exons_to_exonlocation {
         elsif ($exon->seq_region_name ne $slice_contig->seq_region_name) {
           # Is not on the Slice
           $exon->seq_region_name =~ /(.*)\.(.*)/;
+
           my $acc = $1;
           my $sv  = $2;
+
           $hum_embl_exon->accession_version("$acc.$sv");
         }
 

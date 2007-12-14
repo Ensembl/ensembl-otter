@@ -132,6 +132,8 @@ sub populate_assembly_tagged_contig_table {
   print STDERR "Found ", scalar @seqids, " clones to update\n\n";
 
   my $vals = join(',', @seqids);
+  return 0 unless $vals;
+
   my $insert = $loutre_db->dbc->prepare(qq{INSERT INTO assembly_tagged_contig (seq_region_id) VALUES $vals});
   eval {
     $insert->execute;
@@ -149,8 +151,8 @@ sub prepare_assembly_tag_data {
     my $cln_db_ver  = $2;
     my $acc         = $1;
     my $contig_name = $cl->seq_region_name.".".$cl->start.".".$cl->end;
-
     my $seq;
+
     eval {
       # turn off warning temporarily
       # Use of uninitialized value in concatenation (.) or string at
@@ -175,13 +177,20 @@ sub prepare_assembly_tag_data {
         my $contig   = $sliceAd->fetch_by_region('contig', $contig_name);
 		my $seq_region_id = $sliceAd->get_seq_region_id($contig);
 
+        my $acefile;
         # double check existence of acefile
         if ( -e "$dir/rawdata/$seq_name.humace.ace" ) {
-          my $acefile = "$dir/rawdata/$seq_name.humace.ace";
-          print STDERR "INFO: updating $acc.$seq_ver: $acefile\n" if $verbose;
+          $acefile = "$dir/rawdata/$seq_name.humace.ace";
+        }
+        elsif ( -e "$dir/rawdata/$seq_name.humace.ace.gz" ){
+          $acefile = "$dir/rawdata/$seq_name.humace.ace.gz";
+        }
 
+        if ( $acefile ){
+          print STDERR "INFO: updating $acc.$seq_ver: $acefile\n" if $verbose;
           parse_ace($contig, $seq_region_id, $acefile, $loutre_db, $sliceAd, $verbose, $do_misc, $do_atag, $dataset); # create a list of atag objs
-        } else {
+        }
+        else {
           # external clones: omit
           #print STDERR "No update for $acc.$seq_ver: MISSING  $dir/rawdata/$seq_name.humace.ace\n";
         }
@@ -198,6 +207,7 @@ sub parse_ace {
   my $ctg_len           = $contig->seq_region_length;
   my $ctg_strand        = $contig->strand;
   $ctg_strand = 1 unless $ctg_strand; # default to 1 if info not available
+  my $aceori = $acefile;
 
   if ($acefile =~ /\.gz$/) {
     $acefile = "gzip -cd $acefile |";
@@ -292,10 +302,10 @@ sub parse_ace {
   # log/info message
   if ( $verbose ){
     if ($info) {
-      print $contig_name." => ".$acefile."\n".$info."\n";
+      print $contig_name." => ". $aceori."\n".$info."\n";
     }
     else {
-      print "\nNOTE: ".$contig_name." => ".$acefile." (no assembly_tag data)\n";
+      print "\nNOTE: ".$contig_name." => ".$aceori." (no assembly_tag data)\n";
     }
   }
 }
