@@ -205,6 +205,20 @@ sequence_server = "%s %s"
     return ;
 }
 
+=head1 post_response_client_cleanup
+
+A function to cleanup any bad windows that might exist.
+Primary user of this is the zMapRelaunchZMap function.
+
+=cut
+
+sub post_response_client_cleanup{
+    my ($zmap, $self) = @_;
+    $zmap->post_respond_handler();
+    $self->xremote_cache->remove_clients_to_bad_windows();
+    return ;
+}
+
 =head1 zMapRelaunchZMap
 
 A  handler to  handle finalise  requests. ZMap  sends these  when it's
@@ -216,14 +230,19 @@ zmap might be launched again.
 sub zMapRelaunchZMap{
     my ($self, $xml) = @_;
 
-    warn "In zMapRelaunchZMap $self $self->{'_relaunch_zmap'}" if $ZMAP_DEBUG;
+    my $relaunch = ($self->{'_relaunch_zmap'} ? 1 : 0);
+    warn "In zMapRelaunchZMap $self $relaunch" if $ZMAP_DEBUG;
 
     if($self->{'_relaunch_zmap'}){
         $self->_launchZMap();
         $self->{'_relaunch_zmap'} = 0;
     }else { 
-        $self->xremote_cache->remove_clients_to_bad_windows();
-        warn "not able to relaunch..." if $ZMAP_DEBUG; 
+	if(my $zmap = $self->zMapZmapConnector()){
+	    $zmap->post_respond_handler(\&post_response_client_cleanup, [$self]);
+	}
+	# calling this here creates a race condition.
+        # $self->xremote_cache->remove_clients_to_bad_windows();
+        warn "Relaunch was not requested..." if $ZMAP_DEBUG; 
     }
 
     return (200, "all closed");
@@ -268,7 +287,7 @@ sub zMapKillZmap {
         }
 
         # always remove the clients...
-        $self->xremote_cache->remove_clients_to_bad_windows();
+        #$self->xremote_cache->remove_clients_to_bad_windows();
 
         return $rval;
     }
