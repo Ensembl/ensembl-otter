@@ -64,6 +64,8 @@ $| = 1;
           , intl.value
           , l.timestamp
           , ss.name
+          , ss_asm.asm_start
+          , ss_asm.asm_end
         FROM author au
           , contig_lock l
           , seq_region contig
@@ -111,17 +113,17 @@ $| = 1;
     
     my( %lock_id );
     while (my @row = $sth->fetchrow) {
-        my ($lid, $host, $author, $acc_sv, $intl, $date, $type) = @row;
+        my ($lid, $host, $author, $acc_sv, $intl, $date, $type, $start, $end) = @row;
         if (my $info = $lock_id{$lid}) {
             push(@$info, $type);
         } else {
-            $lock_id{$lid} = [$host, $author, $acc_sv, $intl, $date, $type];
+            $lock_id{$lid} = [$host, $author, $acc_sv, $intl, $date, $type, $start, $end];
         }
     }
 
     my $ditto = '';
     my $last_set = '';
-    my $row_pattern = "  %6d  %-20s  %7s  %-12s  %15s  %19s  %s\n";
+    my $row_pattern = "  %6d  %-20s  %7s  %-12s  %15s  %19s  %10s (%u..%u)\n";
     foreach my $lid (sort {$a <=> $b} keys %lock_id) {
         my $info = $lock_id{$lid};
         
@@ -130,7 +132,10 @@ $| = 1;
         my $acc_sv = shift @$info;
         my $intl   = shift @$info || '';    # From left join
         my $date   = shift @$info;
-        my $type   = join ' ', sort  @$info;
+        # my $type   = join ' ', sort  @$info;
+        my $type   = shift @$info;
+        my $start  = shift @$info;
+        my $end    = shift @$info;
         
         my $this_set = join(' ', $host, $author, $date, $type);
         
@@ -138,11 +143,11 @@ $| = 1;
         # columns are the same in a locked set of clones
         if ($this_set eq $last_set) {
             printf  $row_pattern,
-              $lid, $ditto,  $ditto, $acc_sv, $intl, $ditto, $ditto;
+              $lid, $ditto,  $ditto, $acc_sv, $intl, $ditto, $ditto, $start, $end;
         } else {
             print "\n";
             printf  $row_pattern,
-              $lid,  $host, $author, $acc_sv, $intl,  $date,  $type;
+              $lid,  $host, $author, $acc_sv, $intl,  $date,  $type, $start, $end;
         }
         $last_set = $this_set;
     }
