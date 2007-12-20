@@ -175,7 +175,9 @@ sub generate_Locus {
   if (defined $indent) {
 	 $g->indent($indent);
   }
-  $g->attribvals($self->prettyprint('stable_id',$gene->stable_id));
+  if($gene->stable_id) {
+      $g->attribvals($self->prettyprint('stable_id',$gene->stable_id));
+  }
   my $gene_description='';
   if ($gene->description){
 	 $gene_description=$gene->description;
@@ -242,11 +244,9 @@ sub generate_Transcript{
 
   my ($self,$tran,$coord_offset)=@_;
   my $t=$self->prettyprint('transcript');
-  my $tran_stable_id='';
   if ($tran->stable_id) {
-	 $tran_stable_id=$tran->stable_id;
+     $t->attribvals($self->prettyprint('stable_id',$tran->stable_id));
   }
-  $t->attribvals($self->prettyprint('stable_id',$tran_stable_id));
   my $tran_author=$tran->transcript_author;
   my $author_name='';
   my $author_email='';
@@ -337,7 +337,9 @@ sub generate_ExonSet{
   my $exs=$self->prettyprint('exon_set');
   foreach my $exon (@$exon_set){
 	 my $e=$self->prettyprint('exon');
-	 $e->attribvals($self->prettyprint('stable_id',$exon->stable_id));
+     if($exon->stable_id) {
+         $e->attribvals($self->prettyprint('stable_id',$exon->stable_id));
+     }
 	 $e->attribvals($self->prettyprint('start',$exon->start + $coord_offset));
 	 $e->attribvals($self->prettyprint('end',$exon->end  + $coord_offset));
 	 $e->attribvals($self->prettyprint('strand',$exon->strand));
