@@ -220,7 +220,7 @@ if ($support->param('prune') and $support->user_proceed('Would you really like t
 	# xrefs
 	$support->log("Deleting all external xrefs...\n");
 	my $cond = $refs_to_delete{$support->param('xrefformat')} 
-		|| qq(not in ('Vega_gene','Vega_transcript','Vega_translation','Interpro','CCDS'));
+		|| qq(not in ('Vega_gene','Vega_transcript','Vega_translation','Interpro','CCDS','ENST_CDS','ENST_ident'));
 	$num = $dba->dbc->do(qq(
            DELETE x
            FROM xref x, external_db ed
@@ -305,9 +305,11 @@ else {
 
 push @xref_sources, [ $format, $xrefs ];
 
-#warn Dumper(\@xref_sources);
-#warn Dumper($lcmap);
-#exit;
+if ($support->param('verbose')) {
+	warn Dumper(\@xref_sources);
+	#warn Dumper($lcmap);
+	#exit;
+}
 
 use strict 'refs';
 $support->log_stamped("Done.\n\n");
@@ -337,6 +339,7 @@ my %extdb_def = (
 $support->log("Looping over chromosomes: @chr_sorted\n\n");
 my $seen_xrefs;
 my (%overall_stats,%overall_xrefs);
+
 foreach my $chr (@chr_sorted) {
     $support->log_stamped("> Chromosome $chr (".$chr_length->{$chr}."bp).\n\n");
 
@@ -525,6 +528,8 @@ foreach my $chr (@chr_sorted) {
 						}
 					}
 				DB: foreach my $extdb (keys %extdb_def) {
+						
+						$support->log_verbose("Studying db $extdb\n",2);
 
 						#don't go any further if this gene already has an xref for this source
 						if ($existing_dbnames{$extdb}) {
@@ -546,6 +551,9 @@ foreach my $chr (@chr_sorted) {
 							else {
 								$pid = $xid = $concat_xid;						
 							}
+
+							$support->log_verbose("Found match for $extdb\n",2);
+
 							$stats{$extdb}++;
 							if (!$support->param('dry_run')) {
 
@@ -591,9 +599,9 @@ foreach my $chr (@chr_sorted) {
 											}
 										}
 
-										#hack to not set MGI as display xref unless it's a 'proper' name
-										if ($support->param('xrefformat') eq 'mgi') {
-											next GENE unless ($xid =~ /^[A-Z][a-z]{2}/);
+										#hack to set MGI as display xref only if it's a 'proper' name
+										if ( $support->param('xrefformat') eq 'mgi') {
+											next DB unless ($xid =~ /^[A-Za-z]{2}/);																					
 										}
 
 										#if there is an original name (ie the otter name is an alias or a synonym to an HGNC) then use it
