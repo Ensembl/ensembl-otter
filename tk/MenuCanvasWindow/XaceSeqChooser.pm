@@ -1717,6 +1717,8 @@ sub Assembly {
         foreach my $sub ($assembly->get_all_SubSeqs) {
             $self->add_SubSeq($sub);
 
+            # Ignore loci from non-editable SubSeqs
+            next unless $sub->is_mutable;
             if (my $s_loc = $sub->Locus) {
                 my $locus = $self->get_Locus($s_loc);
                 $sub->Locus($locus);
