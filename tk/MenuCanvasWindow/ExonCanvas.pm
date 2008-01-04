@@ -293,7 +293,7 @@ sub initialize {
                 -side => 'top',
                 -fill => 'x',
                 );
-        $self->add_locus_editing_widgets($locus_frame);    
+        $self->add_locus_editing_widgets($locus_frame);
         
         
     } else {
