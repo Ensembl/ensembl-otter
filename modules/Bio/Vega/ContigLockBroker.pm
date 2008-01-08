@@ -125,7 +125,7 @@ sub lock_clones_by_slice {
 	    if ($@) {
             $lock_error_str .= sprintf "Failed to lock contig '%s'", $contig->seq_region_name;
             if (my $exlock = $db->get_ContigLockAdaptor->fetch_by_contig_id($ctg_seq_region_id)) {
-                $lock_error_str .= " already locked by '%s' on '%s' since %s\n",
+                $lock_error_str .= sprintf " already locked by '%s' on '%s' since %s\n",
                     $exlock->author->name,
                     $exlock->hostname,
                     scalar localtime($exlock->timestamp);
