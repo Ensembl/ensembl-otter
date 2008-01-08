@@ -98,7 +98,7 @@ use Bio::Otter::Lace::Defaults;
                     if($change_to_this = $stid2name{$stable_id}) {
                         print "name '$change_to_this' already created \n";
                     } else {
-                        $change_to_this = $name.'__'.(1+scalar(keys %stid2name));
+                        $change_to_this = $name.'-'.(1+scalar(keys %stid2name));
 
                         $stid2name{$stable_id} = $change_to_this;
                     }
