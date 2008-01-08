@@ -31,24 +31,31 @@ sub _generic_sql_fetch {
           , g.group_name as group_name
           , g.group_email as group_email
         FROM author a
-          , author_group g
+        LEFT JOIN author_group g
+          ON a.group_id = g.group_id
         WHERE $where_clause
-          AND a.group_id = g.group_id
         };
 
     my $sth = $self->prepare($sql);
     $sth->execute(@args);
 
     if (my $ref = $sth->fetchrow_hashref) {
+        
+        # Make a new author object
         my $author = Bio::Vega::Author->new;
         $author->dbID($ref->{author_id});
         $author->email($ref->{author_email});
         $author->name($ref->{author_name});
-        my $group = Bio::Vega::AuthorGroup->new;
-        $group->dbID($ref->{group_id});
-        $group->name($ref->{group_name});
-        $group->email($ref->{group_email});
-        $author->group($group);
+
+        # Give it a group if it has one
+        if (my $gid = $ref->group_id) {
+            my $group = Bio::Vega::AuthorGroup->new;
+            $group->dbID($gid);
+            $group->name($ref->{group_name});
+            $group->email($ref->{group_email});
+            $author->group($group);
+        }
+
         return $author;
     } else {
         return;
@@ -135,7 +142,7 @@ sub exists_in_db {
     foreach my $method (qw{ dbID name email group }) {
         $author->$method($db_author->$method());
     }
-    return $author;
+    return 1;
   } else {
     return 0;
   }
@@ -154,52 +161,44 @@ sub exists_in_db {
 =cut
 
 sub store {
-  my ($self,$author) = @_;
-  if (!defined($author)) {
-	 throw("Must provide an author object to the store method");
-  } elsif (! $author->isa("Bio::Vega::Author")) {
-	 throw("Argument must be an author object to the store method.  Currently is [$author]");
-  }
-  my $author_name  = $author->name  || throw "Author does not have a name";
-  my $author_email = $author->email || throw "Author does not have an email address";
-  # Is this author already in the database?
+    my ($self,$author) = @_;
+    if (!defined($author)) {
+	   throw("Must provide an author object to the store method");
+    } elsif (! $author->isa("Bio::Vega::Author")) {
+	   throw("Argument must be an author object to the store method.  Currently is [$author]");
+    }
+    my $author_name  = $author->name  || throw "Author does not have a name";
+    my $author_email = $author->email || throw "Author does not have an email address";
 
-  if ( $self->exists_in_db($author)){
-	 return 1;
-  }
-  my $group=$author->group;
-  my $group_id;
-  my $group_name;
-  if (defined $group) {
-	 $group_id=$group->dbID;
-	 $group_name=$group->name;
-  }
-  unless ($group_name) {
-	 $group=Bio::Vega::AuthorGroup->new('','');
-	 $group_name='';
-  }
+    # Is this author already in the database?
+    if ($self->exists_in_db($author)) {
+	   return 1;
+    }
 
+    my $group_id;
+    if (my $group = $author->group) {
+        unless ($group->dbID) {
+	       my $ga = $self->db->get_AuthorGroupAdaptor;
+           $ga->store($group);
+        }
+        $group_id = $group->dbID;
+    }
 
-  unless ($group_id ){
-	 my $ga=$self->db->get_AuthorGroupAdaptor;
-	 $group_id=$ga->fetch_id_by_name($group_name);
+    # Insert new author entry
+    if ($group_id) {
+        my $sth = $self->prepare(q{
+              INSERT INTO author(author_email, author_name, group_id) VALUES (?,?,?)
+              });
+        $sth->execute($author_email, $author_name, $group_id);
+    } else {
+        my $sth = $self->prepare(q{
+              INSERT INTO author(author_email, author_name) VALUES (?,?)
+              });
+        $sth->execute($author_email, $author_name);
+    }
 
-	 warning "\n\ngroup id is $group_id\n";
-	 unless ($group_id){
-		warning("about to store new author-group $group_name");
-		$ga->store($group);
-		$group_id=$group->dbID;
-	 }
-  }
-
-  # Insert new author entry
-  my $sth = $self->prepare(q{
-        INSERT INTO author(author_email,author_name, group_id) VALUES (?,?,?)
-        });
-  $sth->execute($author_email, $author_name,$group_id);
-  my $db_id = $sth->{'mysql_insertid'} || throw('Failed to get autoincremented ID from statement handle');
-  $author->dbID($db_id);
-
+    my $db_id = $sth->{'mysql_insertid'} || throw('Failed to get autoincremented ID from statement handle');
+    $author->dbID($db_id);
 }
 
 sub store_gene_author {

@@ -3,44 +3,56 @@
 package Bio::Vega::DBSQL::AuthorGroupAdaptor;
 
 use strict;
-use Bio::Vega::Author;
+use Bio::Vega::AuthorGroup;
 use Bio::EnsEMBL::Utils::Exception qw ( throw warning );
 use base 'Bio::EnsEMBL::DBSQL::BaseAdaptor';
 
-=head2 store
 
- Title   : store
- Usage   :
- Function:
- Example :
- Returns :
- Args    :
+sub fetch_by_name {
+    my ($self, $name) = @_;
 
-=cut
+    my $sth = $self->prepare(q{
+          SELECT group_id
+            , group_name
+            , group_email
+          FROM author_group
+          WHERE group_name = ?
+          });
+    $sth->execute($name);
+    my ($dbID, $name, $email) = $sth->fetchrow;
+    $sth->finish;
 
-sub fetch_id_by_name{
-  my ($self,$value) = @_;
-  my $sth = $self->prepare(q{
-        SELECT group_id
-        FROM author_group
-        WHERE group_name = ?
-        });
-  $sth->execute($value);
-  my $dbID=$sth->fetchrow;
-  $sth->finish;
-  return $dbID;
-
+    if ($dbID) {
+        my $group = Bio::Vega::AuthorGroup->new;
+        $group->dbID($dbID);
+        $group->name($name);
+        $group->email($email);
+    }
 }
 
-sub store{
-   my ($self,$value) = @_;
+sub store {
+   my ($self, $group) = @_;
+   
+   return 1 if $self->exists_in_db($group);
+   
    my $sth = $self->prepare(q{
-        INSERT INTO author_group(group_name,group_email) VALUES (?,?)
+        INSERT INTO author_group(group_name, group_email) VALUES (?,?)
         });
-	$sth->execute($value->name,$value->email);
+	$sth->execute($group->name, $group->email);
 	my $id = $sth->{'mysql_insertid'} or $self->throw('Failed to get autoincremented ID from statement handle');
-	$value->dbID($id);
+	$group->dbID($id);
+}
 
+sub exsits_in_db {
+    my ($self, $group) = @_;
+    
+    if (my $db_group = $self->fetch_by_name($group->name)) {
+        $group->dbID($db_group->dbID);
+        $group->email($db_group->email);
+        return 1;
+    } else {
+        return 0;
+    }
 }
 
 1;

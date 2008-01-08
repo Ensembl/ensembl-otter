@@ -386,6 +386,7 @@ sub otter_response_content {
 sub http_response_content {
     my ($self, $method, $scriptname, $params) = @_;
     
+    $params->{'log'} = 1 if $self->debug;
     my $response = $self->general_http_dialog($method, $scriptname, $params);
     
     my $xml = $response->content();
