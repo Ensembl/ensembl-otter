@@ -2,7 +2,7 @@
 
 =head1 NAME
 
-fix_transcript_names.pl - update transcript names with external names from genes
+fix_transcript_names.pl - update transcript names gene based names
 
 =head1 SYNOPSIS
 
@@ -11,7 +11,6 @@ fix_transcript_names.pl [options]
 General options:
     --conffile, --conf=FILE             read parameters from FILE
                                         (default: conf/Conversion.ini)
-
     --dbname, db_name=NAME              use database NAME
     --host, --dbhost, --db_host=HOST    use database host HOST
     --port, --dbport, --db_port=PORT    use database port PORT
@@ -26,10 +25,6 @@ General options:
     -n, --dry_run, --dry=0|1            don't write results to database
     -h, --help, -?                      print help (this message)
 
-Specific options:
-
-    --fix_xrefs, --fixxrefs=0|1         also fix xrefs
-
 =head1 DESCRIPTION
 
 This script updates vega transcript xrefs from the original clone-name
@@ -38,24 +33,29 @@ based transcript names to gene-name based ones.
 If the option to fix duplicated names is chosen, then where the above results
 in identical names for transcripts from the same gene then the transcripts are
 numbered incrementaly after ordering from the longest coding to the shortest
-non-coding.
+non-coding. If any of these identical names are from transcripts that do not
+overlap each other then a log is made and the ID dumped to file
+(new_fragmented_gene_list.txt). These should be reported to Havana for double
+checking they are not meant to be fragmented (see below). Using the verbose option
+will also report where transcripts with identical names *do* overlap each other,
+but this is probably unlikely to be very usefull.
 
-The exceptions to this are genes that have a 'Annotation_remark - fragmented loci'
-gene_attrib, or a '%fragmented%' transcript_attrib since these are truly fragmented.
-For these a human readable gene_attrib remark is added and the transcript IDs are not
-updated. For genes that don't have such a remark on the gene or a transcript, the stable_id
-is first compared against a list of previously OKeyed genes -  if any are seen then
-this is logged as they really should have a remark (the stable ID is also saved in a
-file - known_fragmented_gene_list.txt to facilitate this). For genes that aren't in the
-list then the transcript names are patched but these should also be reported back to
-Havana for checking (again the stable IDS are dumped into a file (new_fragmented_gene_list.txt
-to facilitate this).
+The exceptions to this are genes that have a 'fragmented locus' gene_attrib
+hidden_remark, or a '%fragmen%' transcript_attrib remark or hidden_remark
+since these are truly fragmented. For these a human readable gene_attrib remark
+is added and the transcript IDs are not updated. For genes that don't have such
+a remark on the gene or a transcript, the stable_id is first compared against a
+list of previously OKeyed genes - if any are seen then this is logged as they
+really should have a remark (the stable ID is also saved in a file -
+known_fragmented_gene_list.txt to facilitate this).
+
+See vega_data_curation.txt for further details on using this script.
 
 The -prune option restores the data to the stage before this script was first run.
 
-The script can be used to change the root of transcript names either after the addition of
-Zfin gene xrefs or after case mismatches in gene names have been fixed - of course here the
-fix_duplicated names option should not be taken.
+The script can be used to change the root of transcript names either after the
+addition of Zfin gene xrefs or after case mismatches in gene names have been fixed
+- of course here the fix_duplicated names option should not be taken.
 
 =head1 LICENCE
 
@@ -88,13 +88,13 @@ BEGIN {
 
 use Getopt::Long;
 use Pod::Usage;
-use Bio::EnsEMBL::Utils::ConversionSupport;
-use Bio::Otter::GeneRemark;
+use Bio::EnsEMBL::Utils::VegaCuration::Transcript;
 use Data::Dumper;
 
 $| = 1;
 
-my $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
+my $support = new Bio::EnsEMBL::Utils::VegaCuration::Transcript($SERVERROOT);
+
 
 # parse options
 $support->parse_common_options(@_);
@@ -122,7 +122,10 @@ my $n_flist_fh = $support->filehandle('>', $support->param('logpath').'/new_frag
 my %seen_genes;
 while (<DATA>) {
 	next if /^\s+$/ or /#+/;
-	$seen_genes{$_} = 1;
+	my ($obj,$comment) = split /=/;
+	$obj =~ s/^\s+|\s+$//g;
+	$comment =~ s/^\s+|\s+$//g;
+	$seen_genes{$obj} = $comment;
 }
 
 # connect to database and get adaptors
@@ -161,12 +164,12 @@ if ($support->param('prune')
 	}
 }
 
-my ($c1,$c2,$c3,$c4);
+my ($c1,$c2,$c3,$c4) = (0,0,0,0);
 foreach my $chr ($support->sort_chromosomes) {
 	$support->log_stamped("Looping over chromosome $chr\n");
 	my $slice = $sa->fetch_by_region('toplevel', $chr);
 	foreach my $gene (@{$slice->get_all_Genes()}) {
-		my %transnames;
+		my $transnames;
 		my $g_name = $gene->display_xref->display_id;
 		my $gsi    = $gene->stable_id;
 		my $ln     = $gene->analysis->logic_name;
@@ -177,7 +180,7 @@ foreach my $chr ($support->sort_chromosomes) {
 			my $t_dbID = $trans->dbID;
 			if ($t_name =~ /(\-\d+)$/) {
 				my $new_name = "$g_name$1";
-				$transnames{$new_name}++;
+				push @{$transnames->{$new_name}}, "$t_name|$tsi";
 				next if ($new_name eq $t_name);
 
 				#store a transcript attrib for the old name as long as it's not just a case change
@@ -210,14 +213,19 @@ foreach my $chr ($support->sort_chromosomes) {
 				$support->log(sprintf("%-20s%-3s%-20s", "$t_name", "->", " $new_name")."\n", 1);
 			}
 			elsif ($ln eq 'otter') {
-				$support->log_warning("Not updating transcript name for $ln transcript $tsi: unexpected transcript name ($t_name).\n", 1);
+				$support->log_warning("UNEXPECTED name for $ln transcript $tsi ($t_name), not updating.\n", 1);
 			}
 			else {
-				$support->log("Not updating transcript name for $ln transcript $tsi: unexpected transcript name ($t_name).\n", 1);
+				$support->log("UNEXPECTED name for $ln transcript $tsi ($t_name), not updating.\n", 1);
 			}	
 		}
-		if ( (grep { $transnames{$_} > 1 } keys %transnames) && $fix_names) {
-			&update_names($gene);
+		if ( (grep { scalar(@{$transnames->{$_}}) > 1 } keys %{$transnames}) && $fix_names) {
+			if (&update_names($gene)) {
+				unless ( $seen_genes{$gsi} eq 'OK') {
+					#decide what needs to be reported
+					&check_names_and_overlap($transnames,$gene);
+				}
+			}
 		}
 	}
 }
@@ -225,7 +233,8 @@ $support->log("Done updating $c1 xrefs and adding $c4 synonym transcript_attribs
 $support->log("Patched names of $c3 transcripts from $c2 genes.\n");
 $support->finish_log;
 
-
+#check remarks - return 0 if 'fragmented' remarks are there.
+#otherwise patch transcript names and return 1
 sub update_names {
 	my ($gene) = @_;
 	my $gsi    = $gene->stable_id;
@@ -263,25 +272,24 @@ sub update_names {
 				$aa->store_on_Gene($gid,$attrib);
 			}			
 			$support->log("Added correctly formatted fragmented loci annotation remark for gene $gsi\n");
-			return;
 		}
+		return 0;
 	}
-	#otherwise has it been reported before ? - log ID gsi since this should have a remark (add gene_attrib anyway)
-	elsif ($seen_genes{$gsi}) {
-		$support->log_warning("Added correctly formatted fragmented loci annotation remark for gene $gsi (has previously been OKeyed by Havana as being fragmented but has no Annotation remark, please add one!)\n");
+	#otherwise has it been reported before ? - log gsi since this should have a remark.
+    #add gene_attrib anyway.
+	elsif ($seen_genes{$gsi} eq 'fragmented') {
+		$support->log_warning("PREVIOUS: Added correctly formatted fragmented loci annotation remark for gene $gsi (has previously been OKeyed by Havana as being fragmented but has no Annotation remark, please add one!)\n");
 		print $k_flist_fh "$gsi\n";
 		if (! $support->param('dry_run') ) {
 			$aa->store_on_Gene($gid,$attrib);
 		}
-		return;
+		return 0;
 	}
-	#otherwise patch transcript names and log gsi (to be sent to Havana)
+	#otherwise patch transcript names
 	else {
 		$c2++;
-		$support->log_warning("$gsi ($g_name) has duplicated names and has no \'Annotation_remark- fragmented_loci\' on the gene or \'\%fragmen\%\' remark on any transcripts. Neither has it been OKeyed by Havana before. Transcript names are being patched but this ID should be reported to Havana for double checking\n");
-		print $n_flist_fh "$gsi\n";
 		my @trans = $gene->get_all_Transcripts();
-		#seperate coding and non_coding transcripts
+		#separate coding and non_coding transcripts
 		my $coding_trans = [];
 		my $noncoding_trans = [];
 		foreach my $trans ( @{$gene->get_all_Transcripts()} ) {
@@ -294,6 +302,7 @@ sub update_names {
 		}
 		my $c = 0;
 		#sort transcripts coding > non-coding, then on length
+		$support->log("\nPatching names according to CDS and length:\n",1);
 		foreach my $array_ref ($coding_trans,$noncoding_trans) {
 			foreach my $trans ( sort { $b->length <=> $a->length } @$array_ref ) {
 				my $tsi = $trans->stable_id;
@@ -301,8 +310,8 @@ sub update_names {
 				$c++;
 				my $ext = sprintf("%03d", $c);
 				my $new_name = $g_name.'-'.$ext;
-				$support->log(sprintf("%-20s%-3s%-20s", "$t_name ", "-->", "$new_name")."\n");
-				unless ($support->param('dry_run')) {
+				$support->log(sprintf("%-20s%-3s%-20s", "$t_name ", "-->", "$new_name")."\n",1);
+				if (! $support->param('dry_run')) {
 					# update transcript name
 					if ($dbh->do(qq(UPDATE  xref x, external_db edb
                                 SET     x.display_label  = "$new_name"
@@ -313,31 +322,80 @@ sub update_names {
 					}
 				}
 			}
-		}		
-	}			
-}	
+		}
+	}
+	return 1;
+}
 
-#add details of genes with duplicated names that have already been reported to Havana...
+sub check_names_and_overlap {
+	my ($transcript_info,$gene) = @_;
+	my $gsi = $gene->stable_id;
+	my $g_name = $gene->get_all_Attributes('name')->[0]->value;
+	foreach my $set (values %{$transcript_info} ) {
+		next if (scalar @{$set} == 1);
+		my $transcripts = [];
+		my $all_t_names;
+
+		#check for identical names
+		my $duplicate = 0;
+		foreach my $id1 (@{$set}) {
+			my ($name1,$tsi1) = split /\|/, $id1;
+			push @{$transcripts} , $ta->fetch_by_stable_id($tsi1);
+			$all_t_names .= "$tsi1 ";
+			foreach my $id2 (@{$set}) {
+				my ($name2,$tsi2) = split /\|/, $id2;
+				next if ($tsi1 eq $tsi2);
+				$duplicate = 1 if ( $name1 eq $name2);
+			}
+		}
+		if ($duplicate) {				
+			$support->log_warning("IDENTICAL: Gene $gsi ($g_name) has transcripts with identical loutre names, please fix\n");
+		}
+
+		my $non_overlaps = $support->find_non_overlaps($transcripts);
+		if (@{$non_overlaps}) {
+			my $tsi_string = join ' ', @{$non_overlaps};
+#			warn Dumper($non_overlaps);
+#			exit;
+	
+			#log gsi (to be sent to Havana) if the transcripts don't overlap				
+			$support->log_warning("NEW: Non-overlapping: $gsi ($g_name) has non-overlapping transcripts ($tsi_string) with duplicated names, and it has no \'Annotation_remark- fragmented_loci\' on the gene or \'\%fragmen\%\' remark on any transcripts. Neither has it been OKeyed by Havana before. Transcript names are being patched but this needs checking by Havana.\n");
+			print $n_flist_fh "$gsi\n";
+		}
+		elsif ($support->param('verbose')) {
+			$support->log_warning("NEW: Overlapping: $gsi ($g_name) has overlapping transcripts ($all_t_names) with duplicated names and it has no \'Annotation_remark- fragmented_loci\' on the gene or \'\%fragmen\%\' remark on any transcripts. Neither has it been OKeyed by Havana before. Transcript names are being patched but this could be checked by Havana if they were feeling keen.\n");
+			print $n_flist_fh "$gsi\n";
+		}
+	}
+}		
+
+
+#details of genes with duplicated names that have already been reported to Havana
+#OKeyed as either fragmented or OK
 __DATA__
 
-OTTMUSG00000005478
-OTTMUSG00000001936
-OTTMUSG00000003440
-OTTMUSG00000017081
-OTTMUSG00000016310
-OTTMUSG00000011441
-OTTMUSG00000012302
-OTTMUSG00000013368
-OTTMUSG00000013335
-OTTMUSG00000015766
-OTTMUSG00000016025
-OTTMUSG00000001066
-OTTMUSG00000016331
-OTTMUSG00000006935
-OTTMUSG00000011654
-OTTMUSG00000001835
-OTTMUSG00000007263
-OTTMUSG00000000304
-OTTMUSG00000009150
-OTTMUSG00000008023
-OTTMUSG00000017077
+
+OTTMUSG00000005478 = fragmented
+OTTMUSG00000001936 = fragmented
+OTTMUSG00000017081 = fragmented
+OTTMUSG00000011441 = fragmented
+OTTMUSG00000013335 = fragmented
+OTTMUSG00000011654 = fragmented
+OTTMUSG00000001835 = fragmented
+OTTMUSG00000012302 =
+OTTMUSG00000013368 =
+OTTMUSG00000015766 =
+OTTMUSG00000016025 =
+OTTMUSG00000001066 =
+OTTMUSG00000016331 =
+OTTMUSG00000006935 =
+OTTMUSG00000007263 =
+OTTMUSG00000000304 =
+OTTMUSG00000009150 =
+OTTMUSG00000008023 =
+OTTMUSG00000017077 =
+OTTMUSG00000003440 =
+OTTMUSG00000016310 =
+OTTMUSG00000026199 =
+OTTMUSG00000028423 =
+OTTMUSG00000007427 =
