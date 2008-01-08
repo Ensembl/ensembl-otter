@@ -185,13 +185,14 @@ sub store {
     }
 
     # Insert new author entry
+    my $sth;
     if ($group_id) {
-        my $sth = $self->prepare(q{
+        $sth = $self->prepare(q{
               INSERT INTO author(author_email, author_name, group_id) VALUES (?,?,?)
               });
         $sth->execute($author_email, $author_name, $group_id);
     } else {
-        my $sth = $self->prepare(q{
+        $sth = $self->prepare(q{
               INSERT INTO author(author_email, author_name) VALUES (?,?)
               });
         $sth->execute($author_email, $author_name);
