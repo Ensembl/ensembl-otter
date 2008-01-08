@@ -48,7 +48,7 @@ sub _generic_sql_fetch {
         $author->name($ref->{author_name});
 
         # Give it a group if it has one
-        if (my $gid = $ref->group_id) {
+        if (my $gid = $ref->{group_id}) {
             my $group = Bio::Vega::AuthorGroup->new;
             $group->dbID($gid);
             $group->name($ref->{group_name});
