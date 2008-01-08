@@ -144,8 +144,8 @@ sub lock_clones_by_slice {
         foreach my $lock (@successful_locks) {
             $aptr->remove($lock);
         }
+        throw($lock_error_str);
     }
-    throw($lock_error_str);
 }
 
 ##ported
