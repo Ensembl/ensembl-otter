@@ -13,13 +13,12 @@ sub fetch_by_name {
 
     my $sth = $self->prepare(q{
           SELECT group_id
-            , group_name
             , group_email
           FROM author_group
           WHERE group_name = ?
           });
     $sth->execute($name);
-    my ($dbID, $name, $email) = $sth->fetchrow;
+    my ($dbID, $email) = $sth->fetchrow;
     $sth->finish;
 
     if ($dbID) {
