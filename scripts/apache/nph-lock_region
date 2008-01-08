@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2007-10-12 14:25:17 $
-# Id:            $Id: nph-lock_region,v 1.6 2007-10-12 14:25:17 lg4 Exp $
+# Last modified: $Date: 2008-01-08 15:08:52 $
+# Id:            $Id: nph-lock_region,v 1.7 2008-01-08 15:08:52 jgrg Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-lock_region,v $
 
 use strict;
@@ -27,26 +27,30 @@ my $end     = $server->require_argument('end');
 my $strand  = $server->param('strand')   || undef;
 my $cl_host = $server->param('hostname') || $ENV{REMOTE_ADDR};
 
-my ($slice, $odba);
+my ($xml);
 eval {
-    $odba = $server->otter_dba();
+    my $odba = $server->otter_dba();
 
     my $cb = Bio::Vega::ContigLockBroker->new;
     $cb->client_hostname($cl_host);
 
     $server->log("Getting slice [$name] [$start] [$end]");
-    $slice = $server->get_slice($odba, $cs, $name, $type, $start, $end, $strand, $csver);
+    my $slice = $server->get_slice($odba, $cs, $name, $type, $start, $end, $strand, $csver);
     my $author_obj = $server->make_Author_obj();
 
     $server->log("Attempting to lock clones...");
-    $cb->lock_clones_by_slice($slice,$author_obj,$odba);
+    $cb->lock_clones_by_slice($slice, $author_obj, $odba);
+    $xml = Bio::Vega::Transform::XML->generate_OtterXML([$slice], $odba, 0, [], []);
 };
-$server->error_exit("Clones locked - exiting [$@]") if $@;
 
-$server->log("Obtained the locks.");
+if ($@) {
+    $server->log("Error getting locks: $@");
+    $server->error_exit("Clones locked - exiting [$@]");
+} else {
+    $server->log("Obtained the locks.");
+    $server->send_response($xml);
+}
 
-my $xml = Bio::Vega::Transform::XML->generate_OtterXML([$slice],$odba,0, [], []);
-$server->send_response($xml);
 
 1;
 

@@ -156,7 +156,7 @@ sub prune_Exons {
 		if (my $stable = $exon->stable_id) {
 		  if (my $seen_key = $stable_key{$stable}) {
 			 if ($seen_key ne $exon_key) {
-				printf STDERR  "Already seen exon_id '$stable' on different exon\n";
+				print STDERR  "Already seen exon_id '$stable' on different exon\n";
 				$exon->stable_id(undef);
 			 }
 		  } else {

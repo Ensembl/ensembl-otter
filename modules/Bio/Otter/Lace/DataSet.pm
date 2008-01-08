@@ -5,8 +5,6 @@ package Bio::Otter::Lace::DataSet;
 
 use strict;
 use Carp;
-use Bio::Otter::DBSQL::DBAdaptor;
-#use Bio::Vega::DBSQL::DBAdaptor;
 use Bio::Otter::Lace::CloneSequence;
 #use Bio::Otter::CloneLock;
 use Bio::Otter::Author;
@@ -514,18 +512,21 @@ sub make_DBAdaptor {
 sub make_Otter_DBAdaptor {
     my( $self ) = @_;
 
+    require Bio::Otter::DBSQL::DBAdaptor;
     return $self->_make_DBAdptor_with_class('Bio::Otter::DBSQL::DBAdaptor');
 }
 
 sub make_EnsEMBL_DBAdaptor {
     my( $self ) = @_;
     
+    require Bio::EnsEMBL::DBSQL::DBAdaptor;
     return $self->_make_DBAdptor_with_class('Bio::EnsEMBL::DBSQL::DBAdaptor');
 }
 
 sub make_Vega_DBAdaptor {
     my( $self ) = @_;
 
+    require Bio::Vega::DBSQL::DBAdaptor;
     return $self->_make_DBAdptor_with_class('Bio::Vega::DBSQL::DBAdaptor');
 }
 
@@ -565,7 +566,7 @@ sub _attach_DNA_DBAdaptor{
     if(("@dna_args" eq "@ott_args") && @dna_args){
         #warn "They are the same the DBAdaptor will just return itself\n";
     }elsif(@dna_args){
-        # warn "dna_args: @dna_args\n";
+        #warn "dna_args: @dna_args\n";
         my $dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
             @dna_args,
             # Extra arguments to stop Bio::EnsEMBL::Registry issuing warnings

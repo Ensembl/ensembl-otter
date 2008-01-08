@@ -103,52 +103,49 @@ sub lock_clones_by_slice {
   my $contig_list = $self->Contig_listref_from_Slice($slice);
   my $aptr       = $db->get_ContigLockAdaptor;
   my $sa=$db->get_SliceAdaptor;
-  my(   @successful_locks,   # locks we manange to create
-		@unsuccessful_locks, # locks that already existed
-		%existing_contig,    # contigs that had locks existing (for nice error message)
-	 );
 
-  foreach my $contig (@$contig_list) {
+    my(
+        @successful_locks,  # Locks we manange to create
+        $lock_error_str,    # Any locking problems
+    );
+    foreach my $contig (@$contig_list) {
 
-	 my $ctg_seq_region_id = $sa->get_seq_region_id($contig)
-		or throw('Contig does not have dbID set');
-	 my $lock = Bio::Vega::ContigLock->new(
-          -author     => $author,
-          -contig_id   => $ctg_seq_region_id,
-          -hostname   => $self->client_hostname,
-     );
+        my( $lock, $ctg_seq_region_id );
+	    eval {
+	        $ctg_seq_region_id = $sa->get_seq_region_id($contig)
+		        or die sprintf "Failed to fetch seq_region_id for '%s'", $contig->seq_region_name;
+	        $lock = Bio::Vega::ContigLock->new(
+                 -author       => $author,
+                 -contig_id    => $ctg_seq_region_id,
+                 -hostname     => $self->client_hostname,
+            );
+		    $db->get_ContigLockAdaptor->store($lock);
+	    };
 
-	 eval {
-		$db->get_ContigLockAdaptor->store($lock);
-	 };
-
-	 if ($@) {
-		my $exlock = $db->get_ContigLockAdaptor->fetch_by_contig_id($ctg_seq_region_id);
-		if ($exlock){
-            push(@unsuccessful_locks, $exlock);
+	    if ($@) {
+            $lock_error_str .= sprintf "Failed to lock contig '%s'", $contig->seq_region_name;
+            if (my $exlock = $db->get_ContigLockAdaptor->fetch_by_contig_id($ctg_seq_region_id)) {
+                $lock_error_str .= " already locked by '%s' on '%s' since %s\n",
+                    $exlock->author->name,
+                    $exlock->hostname,
+                    scalar localtime($exlock->timestamp);
+            } else {
+                # Locking failed for another reason.
+                $lock_error_str .= ": $@\n";
+                last;   # No point trying to lock other contigs
+            }
+	    } else {
+		    push(@successful_locks, $lock);
+	    }
+    }
+  
+    if ($lock_error_str) {
+        # Unlock any that we just locked (could do this with rollback?)
+        foreach my $lock (@successful_locks) {
+            $aptr->remove($lock);
         }
-		$existing_contig{$ctg_seq_region_id} = $contig;
-	 } else {
-		push(@successful_locks, $lock);
-	 }
-  }
-  if (@unsuccessful_locks) {
-	 # Unlock any that we just locked (could do this with rollback?)
-	 foreach my $lock (@successful_locks) {
-		$aptr->remove($lock);
-	 }
-	 # Give a nicely formatted error message about what is already locked
-	 my $lock_error_str = "Can't lock contigs because some are already locked:\n";
-	 foreach my $lock (@unsuccessful_locks) {
-		my $contig = $existing_contig{$lock->contig_id};
-		  $lock_error_str .= sprintf "  '%s' has been locked by '%s'@%s since %s\n",
-			 $contig->seq_region_name,
-             $lock->author->name,
-             $lock->hostname,
-             scalar localtime($lock->timestamp);
-	 }
-	 throw($lock_error_str);
-  }
+    }
+    throw($lock_error_str);
 }
 
 ##ported
