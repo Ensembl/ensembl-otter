@@ -175,7 +175,7 @@ if ($support->param('help') or $support->error) {
     warn $support->error if $support->error;
     pod2usage(1);
 }
-
+$support->remove_vega_params;
 $support->confirm_params;
 $support->init_log;
 

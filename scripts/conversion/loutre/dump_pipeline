@@ -121,6 +121,8 @@ if ($support->param('help') or $support->error) {
     pod2usage(1);
 }
 
+$support->remove_vega_params;
+
 #set defaults if not specified otherwise
 if (! $support->param('sql_dump_location')) {
 	$support->param('sql_dump_location','/GPFS/tmp/vega_prep');
