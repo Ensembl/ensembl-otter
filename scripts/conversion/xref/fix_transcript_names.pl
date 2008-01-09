@@ -119,20 +119,11 @@ my $k_flist_fh = $support->filehandle('>', $support->param('logpath').'/known_fr
 my $n_flist_fh = $support->filehandle('>', $support->param('logpath').'/new_fragmented_gene_list.txt');
 
 #get list of IDs that have previously been sent to annotators
-my %seen_genes;
-while (<DATA>) {
-	next if /^\s+$/ or /#+/;
-	my ($obj,$comment) = split /=/;
-	$obj =~ s/^\s+|\s+$//g;
-	$comment =~ s/^\s+|\s+$//g;
-	$seen_genes{$obj} = $comment;
-}
+my $seen_genes = $support->get_havana_comments;
 
 # connect to database and get adaptors
 my $dba = $support->get_database('ensembl');
 my $sa  = $dba->get_SliceAdaptor;
-my $ga  = $dba->get_GeneAdaptor;
-my $ta  = $dba->get_TranscriptAdaptor;
 my $aa  = $dba->get_AttributeAdaptor;
 my $dbh = $dba->dbc->db_handle;
 
@@ -166,14 +157,14 @@ if ($support->param('prune')
 
 my ($c1,$c2,$c3,$c4) = (0,0,0,0);
 foreach my $chr ($support->sort_chromosomes) {
-	$support->log_stamped("Looping over chromosome $chr\n");
+	$support->log_stamped("\n\nLooping over chromosome $chr\n");
 	my $slice = $sa->fetch_by_region('toplevel', $chr);
 	foreach my $gene (@{$slice->get_all_Genes()}) {
 		my $transnames;
 		my $g_name = $gene->display_xref->display_id;
 		my $gsi    = $gene->stable_id;
 		my $ln     = $gene->analysis->logic_name;
-		$support->log("\n$g_name ($gsi)\n");
+		$support->log("\n$g_name ($gsi)\n",1);
 	TRANS: foreach my $trans (@{$gene->get_all_Transcripts()}) {
 			my $t_name = $trans->display_xref->display_id;
 			my $tsi    =  $trans->stable_id;
@@ -193,7 +184,7 @@ foreach my $chr ($support->sort_chromosomes) {
 					)];
 				unless (lc($t_name) eq lc($new_name)) {
 					if (! $support->param('dry_run')) {
-						$c4++;
+						$c2++;
 						$aa->store_on_Transcript($t_dbID, $attrib);
 					}
 					$support->log_verbose("Stored synonym transcript_attrib for old name for transcript $tsi\n",2);
@@ -220,182 +211,17 @@ foreach my $chr ($support->sort_chromosomes) {
 			}	
 		}
 		if ( (grep { scalar(@{$transnames->{$_}}) > 1 } keys %{$transnames}) && $fix_names) {
-			if (&update_names($gene)) {
-				unless ( $seen_genes{$gsi} eq 'OK') {
+			my $success;
+			($success,$c3,$c4) = $support->update_names($gene,$k_flist_fh,$c3,$c4);
+			if ($success) {
+				unless ( $seen_genes->{$gsi} eq 'OK') {
 					#decide what needs to be reported
-					&check_names_and_overlap($transnames,$gene);
+					$support->check_names_and_overlap($transnames,$gene,$n_flist_fh);
 				}
 			}
 		}
 	}
 }
-$support->log("Done updating $c1 xrefs and adding $c4 synonym transcript_attribs.\n");
-$support->log("Patched names of $c3 transcripts from $c2 genes.\n");
+$support->log("Done updating $c1 xrefs and adding $c2 synonym transcript_attribs.\n");
+$support->log("Identified $c4 transcripts from $c3 genes as updatable.\n");
 $support->finish_log;
-
-#check remarks - return 0 if 'fragmented' remarks are there.
-#otherwise patch transcript names and return 1
-sub update_names {
-	my ($gene) = @_;
-	my $gsi    = $gene->stable_id;
-	my $gid    = $gene->dbID;
-	my $g_name = $gene->display_xref->display_id;
-	my $gene_remark = 'This locus has been annotated as fragmented because either there is not enough evidence covering the whole locus to identify the exact exon structure of the transcript, or because the transcript spans a gap in  the assembly';
-	my $attrib = [
-		Bio::EnsEMBL::Attribute->new(
-			-CODE => 'remark',
-			-NAME => 'Remark',
-			-DESCRIPTION => 'Annotation remark',
-			-VALUE => $gene_remark,
-		) ];
-	#get gene and transcript remarks
-	my %remarks;
-	foreach my $type ('remark','hidden_remark') {
-		$remarks{$type}->{'gene'} = [ map {$_->value} @{$gene->get_all_Attributes($type)} ];
-		foreach my $trans (@{$ta->fetch_all_by_Gene($gene)}) {
-			my $tsi = $trans->stable_id;
-			push @{$remarks{$type}->{'transcripts'}}, map {$_->value} @{$trans->get_all_Attributes('remark')};
-		}
-	}
-
-	#see if any of the remarks identify this gene as being known by Havana as being fragmented
-	if ( (grep {$_ eq 'fragmented_locus'} @{$remarks{'hidden_remark'}->{'gene'}})
-			 || (grep {$_ =~ /fragmen/} @{$remarks{'remark'}->{'transcripts'}})
-				 || (grep {$_ =~ /fragmen/} @{$remarks{'hidden_remark'}->{'transcripts'}})
-			 ) {
-		if (grep { $_ eq $gene_remark} @{$remarks{'remark'}->{'gene'}}) {
-			$support->log("Fragmented loci annotation remark for gene $gid already exists\n");
-		}
-		#add gene_attrib anyway
-		else {
-			if (! $support->param('dry_run') ) {
-				$aa->store_on_Gene($gid,$attrib);
-			}			
-			$support->log("Added correctly formatted fragmented loci annotation remark for gene $gsi\n");
-		}
-		return 0;
-	}
-	#otherwise has it been reported before ? - log gsi since this should have a remark.
-    #add gene_attrib anyway.
-	elsif ($seen_genes{$gsi} eq 'fragmented') {
-		$support->log_warning("PREVIOUS: Added correctly formatted fragmented loci annotation remark for gene $gsi (has previously been OKeyed by Havana as being fragmented but has no Annotation remark, please add one!)\n");
-		print $k_flist_fh "$gsi\n";
-		if (! $support->param('dry_run') ) {
-			$aa->store_on_Gene($gid,$attrib);
-		}
-		return 0;
-	}
-	#otherwise patch transcript names
-	else {
-		$c2++;
-		my @trans = $gene->get_all_Transcripts();
-		#separate coding and non_coding transcripts
-		my $coding_trans = [];
-		my $noncoding_trans = [];
-		foreach my $trans ( @{$gene->get_all_Transcripts()} ) {
-			if ($trans->translate) {
-				push @$coding_trans, $trans;
-			}
-			else {
-				push @$noncoding_trans, $trans;
-			}
-		}
-		my $c = 0;
-		#sort transcripts coding > non-coding, then on length
-		$support->log("\nPatching names according to CDS and length:\n",1);
-		foreach my $array_ref ($coding_trans,$noncoding_trans) {
-			foreach my $trans ( sort { $b->length <=> $a->length } @$array_ref ) {
-				my $tsi = $trans->stable_id;
-				my $t_name = $trans->display_xref->display_id;
-				$c++;
-				my $ext = sprintf("%03d", $c);
-				my $new_name = $g_name.'-'.$ext;
-				$support->log(sprintf("%-20s%-3s%-20s", "$t_name ", "-->", "$new_name")."\n",1);
-				if (! $support->param('dry_run')) {
-					# update transcript name
-					if ($dbh->do(qq(UPDATE  xref x, external_db edb
-                                SET     x.display_label  = "$new_name"
-                                WHERE   x.external_db_id = edb.external_db_id
-                                AND     x.dbprimary_acc  = "$tsi"
-                                AND     edb.db_name      = "Vega_transcript")) ) {
-						$c3++;
-					}
-				}
-			}
-		}
-	}
-	return 1;
-}
-
-sub check_names_and_overlap {
-	my ($transcript_info,$gene) = @_;
-	my $gsi = $gene->stable_id;
-	my $g_name = $gene->get_all_Attributes('name')->[0]->value;
-	foreach my $set (values %{$transcript_info} ) {
-		next if (scalar @{$set} == 1);
-		my $transcripts = [];
-		my $all_t_names;
-
-		#check for identical names
-		my $duplicate = 0;
-		foreach my $id1 (@{$set}) {
-			my ($name1,$tsi1) = split /\|/, $id1;
-			push @{$transcripts} , $ta->fetch_by_stable_id($tsi1);
-			$all_t_names .= "$tsi1 ";
-			foreach my $id2 (@{$set}) {
-				my ($name2,$tsi2) = split /\|/, $id2;
-				next if ($tsi1 eq $tsi2);
-				$duplicate = 1 if ( $name1 eq $name2);
-			}
-		}
-		if ($duplicate) {				
-			$support->log_warning("IDENTICAL: Gene $gsi ($g_name) has transcripts with identical loutre names, please fix\n");
-		}
-
-		my $non_overlaps = $support->find_non_overlaps($transcripts);
-		if (@{$non_overlaps}) {
-			my $tsi_string = join ' ', @{$non_overlaps};
-#			warn Dumper($non_overlaps);
-#			exit;
-	
-			#log gsi (to be sent to Havana) if the transcripts don't overlap				
-			$support->log_warning("NEW: Non-overlapping: $gsi ($g_name) has non-overlapping transcripts ($tsi_string) with duplicated names, and it has no \'Annotation_remark- fragmented_loci\' on the gene or \'\%fragmen\%\' remark on any transcripts. Neither has it been OKeyed by Havana before. Transcript names are being patched but this needs checking by Havana.\n");
-			print $n_flist_fh "$gsi\n";
-		}
-		elsif ($support->param('verbose')) {
-			$support->log_warning("NEW: Overlapping: $gsi ($g_name) has overlapping transcripts ($all_t_names) with duplicated names and it has no \'Annotation_remark- fragmented_loci\' on the gene or \'\%fragmen\%\' remark on any transcripts. Neither has it been OKeyed by Havana before. Transcript names are being patched but this could be checked by Havana if they were feeling keen.\n");
-			print $n_flist_fh "$gsi\n";
-		}
-	}
-}		
-
-
-#details of genes with duplicated names that have already been reported to Havana
-#OKeyed as either fragmented or OK
-__DATA__
-
-
-OTTMUSG00000005478 = fragmented
-OTTMUSG00000001936 = fragmented
-OTTMUSG00000017081 = fragmented
-OTTMUSG00000011441 = fragmented
-OTTMUSG00000013335 = fragmented
-OTTMUSG00000011654 = fragmented
-OTTMUSG00000001835 = fragmented
-OTTMUSG00000012302 =
-OTTMUSG00000013368 =
-OTTMUSG00000015766 =
-OTTMUSG00000016025 =
-OTTMUSG00000001066 =
-OTTMUSG00000016331 =
-OTTMUSG00000006935 =
-OTTMUSG00000007263 =
-OTTMUSG00000000304 =
-OTTMUSG00000009150 =
-OTTMUSG00000008023 =
-OTTMUSG00000017077 =
-OTTMUSG00000003440 =
-OTTMUSG00000016310 =
-OTTMUSG00000026199 =
-OTTMUSG00000028423 =
-OTTMUSG00000007427 =
