@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2007-10-04 12:03:27 $
-# Id:            $Id: nph-write_region,v 1.7 2007-10-04 12:03:27 jgrg Exp $
+# Last modified: $Date: 2008-01-10 17:24:44 $
+# Id:            $Id: nph-write_region,v 1.8 2008-01-10 17:24:44 jgrg Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-write_region,v $
 
 use strict;
@@ -117,6 +117,7 @@ use Bio::Vega::ContigLockBroker;
         $server->log("Attaching gene to slice ");
 
         my $time_now = time;
+        my $changed_genes = [];
         foreach my $gene (@$xml_genes) {
             ##attach gene and its components to the right slice
             $gene->slice($slice);
@@ -132,9 +133,11 @@ use Bio::Vega::ContigLockBroker;
             }
             ##update all gene and its components in db (new/mod)
             $gene->is_current(1);
-            $gene_adaptor->store($gene, $time_now);
+            if ($gene_adaptor->store($gene, $time_now)) {
+                push(@$changed_genes, $gene);
+            }
         }
-        $server->log("Updated " . scalar(@$xml_genes) . " genes");
+        $server->log("Updated " . scalar(@$changed_genes) . " genes");
         
         my %stored_genes_hash = map {$_->stable_id, $_} @$xml_genes;
         
@@ -194,7 +197,7 @@ use Bio::Vega::ContigLockBroker;
         ##the response xml has all the above changes done in this session
 
         ##pass on to the xml generator the current set of genes , simple features
-        $output_xml =  Bio::Vega::Transform::XML->new->generate_OtterXML([$slice], $odba, 0, $xml_genes, $xml_simple_features);
+        $output_xml =  Bio::Vega::Transform::XML->new->generate_OtterXML([$slice], $odba, 0, $changed_genes, $xml_simple_features);
     };
     if ($@) {
         $server->error_exit("Failed writing annotations [$@]");
