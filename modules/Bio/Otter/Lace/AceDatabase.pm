@@ -388,9 +388,7 @@ sub save_ace_to_otter {
 
     my $success = $client->save_otter_xml($xml, $dsname);
 
-    my $update_ace_output = $self->update_with_stable_ids($success);
-
-    return \$update_ace_output;
+    return $self->update_with_stable_ids($success);
 }
 
 
@@ -420,9 +418,7 @@ sub update_with_stable_ids {
     my ($genes, $slice, $seqstr, $tiles) = Bio::Otter::Converter::XML_to_otter($read);
 
     ## this should only contain the CHANGED genes.
-
-    ### Should this test @$genes?
-    unless($genes){
+    unless (@$genes) {
         warn "No genes changed\n";
         return undef;
     }
@@ -430,9 +426,7 @@ sub update_with_stable_ids {
     warn "Some genes changed\n";
     ## need to do genes, transcripts, translations and exons
 
-    my $ace_txt = Bio::Otter::Converter::ace_transcripts_locus_people($genes, $slice);
-
-    return $ace_txt;
+    return Bio::Otter::Converter::ace_transcripts_locus_people($genes, $slice);
 }
 
 sub unlock_otter_slice {
