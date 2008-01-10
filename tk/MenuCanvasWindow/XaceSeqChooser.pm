@@ -985,11 +985,11 @@ sub save_data {
             # exit zmap
             $self->zMapKillZmap;
         }
-        my $ace_data_ref = $self->AceDatabase->save_ace_to_otter;
+        my $ace_data = $self->AceDatabase->save_ace_to_otter;
         ## update_ace should be true unless this object is exiting
-        if($update_ace && ref($ace_data_ref) eq 'SCALAR'){
+        if ($update_ace and $ace_data) {
             $self->launch_xace;
-            $self->update_ace_display($$ace_data_ref);
+            $self->update_ace_display($ace_data);
             # resync here!
             $self->resync_with_db;
         }
