@@ -158,18 +158,54 @@ if ($support->param('prune')
 my ($c1,$c2,$c3,$c4) = (0,0,0,0);
 foreach my $chr ($support->sort_chromosomes) {
 	$support->log_stamped("\n\nLooping over chromosome $chr\n");
-	my $slice = $sa->fetch_by_region('toplevel', $chr);
-	foreach my $gene (@{$slice->get_all_Genes()}) {
-		my $transnames;
-		my $g_name = $gene->display_xref->display_id;
+	my $chrom = $sa->fetch_by_region('toplevel', $chr);
+ GENE:
+	foreach my $gene (@{$chrom->get_all_Genes()}) {
 		my $gsi    = $gene->stable_id;
-		my $ln     = $gene->analysis->logic_name;
-		$support->log("\n$g_name ($gsi)\n",1);
-	TRANS: foreach my $trans (@{$gene->get_all_Transcripts()}) {
-			my $t_name = $trans->display_xref->display_id;
+		my $transnames;
+		my %seen_names;
+		my %transcripts;
+		my $g_name = $gene->get_all_Attributes('name')->[0]->value;
+		my $ln = $gene->analysis->logic_name;
+		$support->log("\n$g_name ($gsi)\n");
+
+		#check for identical names in loutre
+		foreach my $trans (@{$gene->get_all_Transcripts()}) {
+			my $t_name = $trans->get_all_Attributes('name')->[0]->value;
+
+			#remove Leo's extensions and if there are duplicated names then skip this gene
+			my $base_name = $t_name;
+			$base_name =~ s/(-\d{1,2})$//;
+			$base_name =~ s/(__\d{1,2})$//;
+			if (exists $seen_names{$base_name}) {	
+				if ($ln eq 'otter') {
+					$support->log_warning("IDENTICAL: Havana gene $gsi ($g_name) has transcripts with identical base loutre names ($base_name), please fix\n");
+				}
+				elsif ($support->log_verbose) {
+					$support->log("IDENTICAL: $ln gene $gsi ($g_name) has transcripts with identical loutre names ($t_name)\n");
+				}
+				next GENE;
+			}
+			else {
+				$seen_names{$base_name}++;
+				$transcripts{$t_name} = $trans;
+			}
+		}
+		
+		#patch names
+	TRANS:
+		foreach my $t_name (keys %transcripts) {
+			my $trans = $transcripts{$t_name};
 			my $tsi    =  $trans->stable_id;
-			my $t_dbID = $trans->dbID;
-			if ($t_name =~ /(\-\d+)$/) {
+			my $t_dbID = $trans->dbID;		
+			my $base_name = $t_name;
+			$base_name =~ s/(-\d{1,2})$//;
+			$base_name =~ s/(__\d{1,2})$//;
+			if ($base_name =~ s/(__\d{1,2})$//) {
+				$support->log_warning("VERY UNEXPECTED name for $ln transcript $tsi ($t_name).\n", 1);
+			}
+
+			if ($base_name =~ /(\-\d{3})$/) {
 				my $new_name = "$g_name$1";
 				push @{$transnames->{$new_name}}, "$t_name|$tsi";
 				next if ($new_name eq $t_name);
@@ -201,21 +237,25 @@ foreach my $chr ($support->sort_chromosomes) {
                         AND     ed.db_name = "Vega_transcript"
                     ));
 				}
-				$support->log(sprintf("%-20s%-3s%-20s", "$t_name", "->", " $new_name")."\n", 1);
+				$support->log_verbose(sprintf("%-20s%-3s%-20s", "$t_name", "->", " $new_name")."\n", 1);
 			}
-			elsif ($ln eq 'otter') {
-				$support->log_warning("UNEXPECTED name for $ln transcript $tsi ($t_name), not updating.\n", 1);
+
+			#log unexpected names (ie don't have -001 etc after removing Leo's extension
+			elsif ( $ln eq 'otter' ) {
+				$support->log_warning("UNEXPECTED name for $ln transcript $tsi ($t_name).\n", 1);
 			}
 			else {
-				$support->log("UNEXPECTED name for $ln transcript $tsi ($t_name), not updating.\n", 1);
+				$support->log_verbose("UNEXPECTED name for $ln transcript $tsi ($t_name).\n", 1);
 			}	
 		}
+
+		#if there are duplicated names in Vega then check for remarks and patch if non fragmented
 		if ( (grep { scalar(@{$transnames->{$_}}) > 1 } keys %{$transnames}) && $fix_names) {
-			my $success;
-			($success,$c3,$c4) = $support->update_names($gene,$k_flist_fh,$c3,$c4);
-			if ($success) {
+			my $patched;
+			($patched,$c3,$c4) = $support->check_remarks_and_update_names($gene,$k_flist_fh,$c3,$c4);
+			if ($patched) {
 				unless ( $seen_genes->{$gsi} eq 'OK') {
-					#decide what needs to be reported
+					#distinguish between overlaping and non-overlapping genes for reporting
 					$support->check_names_and_overlap($transnames,$gene,$n_flist_fh);
 				}
 			}
