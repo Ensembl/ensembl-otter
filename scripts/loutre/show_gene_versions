@@ -2,6 +2,13 @@
 
 ### show_gene_versions
 
+BEGIN {
+    foreach (@INC) {
+        s{ensembl/modules}{ensembl_head/modules}g;
+    }
+}
+
+
 use strict;
 
 use Bio::Otter::Lace::Defaults;
