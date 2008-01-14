@@ -1,5 +1,12 @@
 #!/software/bin/perl -w
 
+BEGIN {
+    foreach my $path (@INC) {
+        $path=~s{ensembl/modules}{ensembl_head/modules}g;
+        $path=~s{ensembl-pipeline/modules}{ensembl-pipeline_head/modules}g;
+    }
+}
+
 # PROGRAM  : populate_dna_table.pl.pl
 # PURPOSE  :
 # AUTHOR   : Mustapha Larbaoui ml6@sanger.ac.uk

@@ -2,6 +2,12 @@
 
 ### remove_genes
 
+BEGIN {
+    foreach (@INC) {
+        s{ensembl/modules}{ensembl_head/modules}g;
+    }
+}
+
 use strict;
 
 use Bio::Otter::Lace::Defaults;
@@ -15,7 +21,7 @@ use Bio::Vega::DBSQL::DBAdaptor;
     );
 
     my $dba;
-    if (1) {
+    if (0) {
         $dba = Bio::Vega::DBSQL::DBAdaptor->new(
             -host   => 'otterlive',
             -port   => 3301,
