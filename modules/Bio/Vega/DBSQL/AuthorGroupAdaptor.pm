@@ -42,7 +42,7 @@ sub store {
 	$group->dbID($id);
 }
 
-sub exsits_in_db {
+sub exists_in_db {
     my ($self, $group) = @_;
     
     if (my $db_group = $self->fetch_by_name($group->name)) {
