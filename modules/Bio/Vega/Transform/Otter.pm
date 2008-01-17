@@ -15,7 +15,6 @@ use Bio::EnsEMBL::Slice;
 use Bio::EnsEMBL::CoordSystem;
 use Bio::EnsEMBL::Attribute;
 use Bio::Vega::Author;
-use Bio::Vega::AuthorGroup;
 use Bio::Vega::ContigInfo;
 use Bio::Vega::Evidence;
 use Bio::Vega::AssemblyTag;
@@ -520,7 +519,7 @@ sub build_Locus {
 	my ($gene_author,$author_name,$author_email);
 	$author_name  = $data->{'author'};
 	$author_email = $data->{'author_email'};
-	$gene_author  = $self->make_Author($author_name, $author_email, $source);
+	$gene_author  = $self->make_Author($author_name, $author_email);
 
 	$gene->gene_author($gene_author);
 
@@ -733,29 +732,16 @@ sub make_Slice {
 }
 
 sub make_Author {
-    my ($self, $name, $email, $group_name) = @_;
+    my ($self, $name, $email) = @_;
 
     $name  ||= 'nobody';
     $email ||= $name;
 
     my $author;
     unless ($author = $author_cache{$self}{$email}) {
-        # print STDERR "make_Author called: name=[$name], email=[$email], group_name=[$group_name]\n";
-        # for other groups, current strategy is to patch the database by hand
-        my $group_email;
-        if ($email =~ /[^\w\-]/) {
-            $group_name  ||= 'havana';
-            $group_email   = 'vega@sanger.ac.uk';
-        }
-        my $group = Bio::Vega::AuthorGroup->new (
-            -name   => $group_name,
-            -email  => $group_email,
-        );
-
         $author = Bio::Vega::Author->new (
             -name   => $name,
             -email  => $email,
-            -group  => $group,
         );
         $author_cache{$self}{$email} = $author;
     }
