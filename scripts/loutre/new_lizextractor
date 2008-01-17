@@ -1,0 +1,93 @@
+#!/usr/local/bin/perl -w
+
+# Lg4, 17.Jan'2008
+#
+# Extracts some very basic info about genes of an assembly.
+# Liz Hart asked for this feature.
+
+use strict;
+use Bio::Otter::Lace::Defaults;
+use Bio::Vega::Utils::GeneTranscriptBiotypeStatus 'biotype_status2method';
+
+{
+    my ($dataset_name, $chr_name, $chr_start, $chr_end);
+
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'dataset=s'     => \$dataset_name,
+        'chr=s'         => \$chr_name,
+        'start=s'       => \$chr_start,
+        'end=s'         => \$chr_end,
+    ) or usage();
+
+    if(!$dataset_name || !$chr_name) {
+        usage();
+    }
+    
+        # Client communicates with otter HTTP server:
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+
+        # DataSet interacts directly with an otter database:
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    
+    my $otter_dba = $ds->get_cached_DBAdaptor;
+
+    print STDERR "DataSet      = '$dataset_name'\n";
+    print STDERR "Chromosome   = '$chr_name'\n";
+
+    $chr_start ||=1;
+    #$chr_end   ||= $otter_dba->get_SliceAdaptor->fetch_by_region(
+    #                'chromosome', $chr_name, undef, undef, undef, 'Otter')->length();
+
+        # let's try and get the whole chromosome into slice:
+    my $otter_slice = $otter_dba->get_SliceAdaptor()
+        ->fetch_by_region('chromosome', $chr_name, $chr_start, $chr_end, 1, 'Otter');
+
+    my $len = $otter_slice->length();
+    print STDERR "Slice length = $len\n\n";
+
+    my $genes = $otter_dba->get_GeneAdaptor->fetch_all_by_Slice($otter_slice);
+    for my $gene (@$genes) {
+        my $gene_name  = $gene->get_all_Attributes('name')->[0]->value();
+        my $gene_type  = biotype_status2method($gene->biotype(), $gene->status());
+        my $gene_start = $gene->start();
+        my $gene_end   = $gene->end();
+        my $gene_length= $gene_end-$gene_start+1;
+
+        my @trans_names = ();
+        for my $transcript (@{ $gene->get_all_Transcripts() }) {
+            
+            my $trans_name  = $transcript->get_all_Attributes('name')->[0]->value();
+
+            push @trans_names, $trans_name;
+        }
+        print join("\t",
+            $gene_name,
+            $gene_type,
+            $gene_start,
+            $gene_end,
+            $gene_length,
+            scalar(@trans_names),
+            join(',',@trans_names),
+        )."\n";
+    }
+
+}
+
+sub usage {
+    print STDERR "\nOutputs a tab-separated list with the following columns:\n\n";
+    print STDERR "gene name\n";
+    print STDERR "gene type\n";
+    print STDERR "gene start\n";
+    print STDERR "gene end\n";
+    print STDERR "gene length\n";
+    print STDERR "number of transcripts\n";
+    print STDERR "comma-separated transcript names\n";
+    print STDERR "\n";
+    print STDERR "usage:\n";
+    print STDERR "\t$0 --dataset=pig --chr=chr17-SSC17_MAX1-03\n";
+    print STDERR "\t$0 --dataset=dog --chr=mhc-01\n";
+    print STDERR "\t$0 --dataset=human --chr=chr20-11 --start=48458950 --end=57913054\n";
+    print STDERR "...\t...\n\n";
+
+    exit;
+}
