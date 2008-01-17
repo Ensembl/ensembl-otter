@@ -649,6 +649,24 @@ sub remove {
     $self->SUPER::remove($gene);
 }
 
+sub resurrect { # make a particular gene current (without touching the previously current one)
+    my ($self, $gene) = @_;
+
+    my $ta = $self->db->get_TranscriptAdaptor;
+    my $ea = $self->db->get_ExonAdaptor;
+
+    $gene->is_current(1);
+    $self->update($gene);
+    foreach my $transcript (@{ $gene->get_all_Transcripts() }) {
+        $transcript->is_current(1);
+        $ta->update($transcript);
+        foreach my $exon (@{$transcript->get_all_Exons}) {
+            $exon->is_current(1);
+            $ea->update($exon); # may happen several times due to shared exons
+        }
+    }
+}
+
 1;
 __END__
 
