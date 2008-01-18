@@ -6,7 +6,7 @@
 #loutre_id        = seq_region.name in loutre (minus the numerical suffix)
 #vega_name        = seq_region.name in Vega
 #name             = human readable name (for Vega mapview)
-#vega_export_mode = External (E) or Internal (I)
+#vega_export_mode = External or Internal release
 #ack              = Acknowledgement for group doing annotation
 #ensembl_name     = Name of equivalent seqregion in Ensembl
 
@@ -45,6 +45,11 @@ chrX	X	Chromosome X	External	Havana / GAG	X
 chrY	Y	Chromosome Y	External	Havana	Y
 MHC_COX	6-COX	Chromosome 6-COX	External	Havana	c6_COX
 MHC_QBL	6-QBL	Chromosome 6-QBL	External	Havana	c6_QBL
+MHC_APD	6-APD	Chromosome 6-APD	External	Havana
+MHC_DBB	6-DBB	Chromosome 6-DBB	External	Havana
+MHC_MANN	6-MANN	Chromosome 6-MANN	External	Havana
+MHC_MCF	6-MCF	Chromosome 6-MCF	External	Havana
+MHC_SSTO	Chromosome 6-SSTO	External	Havana
 --end--
 
 --mouse--
