@@ -161,13 +161,13 @@ $support->comma_to_list('filter_prefix');
 
 #define gene types to ignore
 if (! $support->param('filter_biotype')) {
-	$support->param('filter_biotype','artifact');
+	$support->param('filter_biotype','artifact,obsolete');
 }
 $support->comma_to_list('filter_biotype');
 
 #loutre seq_region_attributes to transfer or ignore - add new ones here
 my $att_types_wanted = [qw(name toplevel ack vega_name vega_release vega_export_mod ensembl_name intl_clone_name)];
-my $att_types_to_ignore = [qw(chr description embl_acc embl_version htg hidden write_access)];
+my $att_types_to_ignore = [qw(chr description embl_acc embl_version htg hidden write_access equiv_asm)];
 
 # ask user to confirm parameters to proceed
 $support->confirm_params;
@@ -270,12 +270,18 @@ my $sql = qq(
 );
 my $lsth = $ldbh->prepare($sql);
 $lsth->execute;
+my $no_group = 0;
 while (my ($name,$group1,$group2,$group_email) = $lsth->fetchrow_array ) {
 	if (! $group_email) {
 		$support->log_warning("Author $name in loutre is not properly linked to an author_group. Please fix before continuing\n");
-		exit;
+		$no_group = 1;
 	}
 }
+if (! $support->param('dry_run') && $no_group ) {
+	exit;
+}
+
+ 
 ####
 #check all attrib_type.attrib_type_ids in loutre are in the newly created vega db
 ####
@@ -298,7 +304,7 @@ else {
 	#is this entry completely missing from Vega ?
 		if (! grep { $code eq $_} keys %v_attrib_ids) {
 			if (! grep { $id eq $_} keys %v_attrib_codes) {
-				if (! $support->param('dry_run')) {		
+				if ( ! $support->param('dry_run') ) {		
 					my $r = $vdbh->do(qq(
                                     insert into attrib_type
                                     values (?,?,?,?)),
@@ -480,7 +486,7 @@ if ( ! exists($current_vega_tables{'author'} )) {
 	open(OUT,"| $dest") || die "cannot open pipe for $dest";
 	
 	#do the table structure transfer
-	if (!$support->param('dry_run')) {
+	if ( !$support->param('dry_run') ) {
 		foreach my $command (@mysql_commands) {
 			open(MYSQL,"$command |") || die "cannot open mysql";
 			my $enable;
@@ -508,7 +514,7 @@ if ( ! exists($current_vega_tables{'author'} )) {
 
 #get chromosomes, either from a user defined list, or non-hidden
 #ones with the correct attributes for export mode and release number
-#-ignore_chr is used in get_wanted_chromosomes
+#(note that the -ignore_chr is used in get_wanted_chromosomes)
 my $chr_names_wanted;
 if ($support->param('chr')) {
 	$chr_names_wanted = [ $support->param('chr') ];
@@ -517,7 +523,8 @@ elsif ($support->param('add_chr')) {
 	$chr_names_wanted = [ $support->param('add_chr') ];
 }
 else {
-	$chr_names_wanted = &Slice::get_wanted_chromosomes($support,$laa,$lsa);
+#	$chr_names_wanted = &Slice::get_wanted_chromosomes($support,$laa,$lsa);
+	$chr_names_wanted = $support->get_wanted_chromosomes($laa,$lsa);
 }
 
 my $seq_regions = join "\n", @{$chr_names_wanted}; 
@@ -526,6 +533,7 @@ if (! $support->user_proceed("\nAnnotation on the following seq_regions will be 
 }
 
 foreach my $name (@{$chr_names_wanted}) {
+#	next unless ($name eq 'chr4-03');
 	my $lslice = $lsa->fetch_by_region('chromosome',$name,undef,undef,undef,'Otter');
 	my $vslice = $vsa->fetch_by_region('chromosome',$name,undef,undef,undef,'Otter');
 
@@ -556,6 +564,7 @@ foreach my $name (@{$chr_names_wanted}) {
 		if (&transfer_gene($lgene,$vsa,$vga)) {
 			$c++;
 		}
+
 	}
 	$support->log("Transferred $c genes from chromosome $name\n");
 
@@ -596,14 +605,15 @@ $support->finish_log;
 =cut
 
 sub transfer_gene {
-	my $gene = shift;
+	my $lgene = shift;
 	my $vsa = shift;  #no need to transfer
 	my $vga = shift;  #no need to transfer
-	my $l_gene_slice = $gene->slice;
+	my $l_gene_slice = $lgene->slice;
 	my $v_gene_slice = $vsa->fetch_by_region($l_gene_slice->coord_system->name,
 											 $l_gene_slice->seq_region_name,
 											 $l_gene_slice->start,
 											 $l_gene_slice->end);
+
 	if(!$l_gene_slice) {		
 		$support->log_error("Couldn't fetch loutre gene slice\n");
 		return 0;
@@ -612,12 +622,13 @@ sub transfer_gene {
 		$support->log_error("Couldn't fetch vega gene slice\n");
 		return 0;
 	}
-	if(!@{$gene->get_all_Transcripts}){
-		$support->log_error("No transcripts for loutre gene ".$gene->dbID."\n");
+	if(!@{$lgene->get_all_Transcripts}){
+		$support->log_error("No transcripts for loutre gene ".$lgene->dbID."\n");
 		return 0;
 	}
-
-	foreach my $transcript (@{$gene->get_all_Transcripts}){
+#	$lgene->dissociate;
+	foreach my $transcript (@{$lgene->get_all_Transcripts}){
+		$transcript->slice($v_gene_slice);
 		if($transcript->translation){
 			$transcript->translation;
 		}
@@ -629,15 +640,14 @@ sub transfer_gene {
 			$exon->stable_id;
 		}
 	}
-
-	$gene->slice($v_gene_slice);
+	$lgene->slice($v_gene_slice);
 	if (! $support->param('dry_run')) {
-		if ($vga->store_only($gene)) {
-			$support->log("Stored gene ".$gene->stable_id."\n",1);
+		if ($vga->store_only($lgene)) {
+			$support->log("Stored gene ".$lgene->stable_id."\n",1);
 			return 1;
 		}
 		else {
-			$support->log_warning("Failed to store gene ".$gene->stable_id."\n",1);
+			$support->log_warning("Failed to store gene ".$lgene->stable_id."\n",1);
 			return 0;
 		}
 	}
@@ -873,10 +883,9 @@ contig_info                   i
 gene_stable_id_pool           i
 sequence_note                 i
 sequence_set_access           i
-test_contig_info              i
 transcript_stable_id_pool     i
 translation_stable_id_pool    i
-
+tmp_align                     i
 ENDOFTEXT
 	return $txt;
 }
