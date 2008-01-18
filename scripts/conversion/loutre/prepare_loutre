@@ -14,7 +14,7 @@ Options:
                                         (default: conf/Conversion.ini)
     --definition_file=FILE              read definitions for vega regions for FILE
     --vega_release=NUM                  Vega release number
-    --release_type=STRING               Type of release, ie E
+    --release_type=STRING               Type of release, eg External
     --loutredbname=NAME                 use database NAME
     --loutrehost=HOST                   use database host HOST
     --loutreport=PORT                   use database port PORT
@@ -33,7 +33,7 @@ Options:
 Using definition_file, this script defines the loutre seq_regions that are to
 be exported to Vega, and adds/updates relevant seq_region attributes for these
 to the loutre database. In addition it adds toplevel and vega_release
-attributes to each loutre region that is going to be exported. The latter is
+attributes to each loutre region that is going to be exported. The latter are
 defined in the script parameters and acts as a log of which regions were
 dumped for which website release.
 
@@ -41,7 +41,7 @@ Since API support for B::E::Attributes is very rudimentary, modification of
 attributes is done using MySQL. Consequently the attribute table in the
 loutre database must be upto date before running this script.
 
-Support for setting attrib_type export_mode to a value of 'I' has not been
+Support for setting attrib_type export_mode to a value of 'Internal' has not been
 tested and is not guaranteed.
 
 =head1 LICENCE
@@ -108,7 +108,7 @@ if ($support->param('help') or $support->error) {
     warn $support->error if $support->error;
     pod2usage(1);
 }
-
+$support->remove_vega_params;
 # ask user to confirm parameters to proceed
 $support->confirm_params;
 # get log filehandle and print heading and parameters to logfile
@@ -125,9 +125,10 @@ unless (grep {$_ eq $species} qw(human mouse dog pig zebrafish)) {
 	exit;
 }
 
-#parse input file and store details
+#identify input file
 my $rel_type = $support->param('release_type');
 my $IN = $support->filehandle('<', $support->param('definition_file'));
+
 my $active_record = 0;
 my $regions_wanted_details;
 REC:
@@ -135,12 +136,16 @@ while (my $rec = <$IN>) {
 	next if $rec =~ /^[#;]/;
 	next if $rec =~ /^\s*$/;
 	chomp $rec;
+
+	#look for correct species
 	if ($rec =~ /^--(\S+)--$/) {
 		$active_record = 1 if ($1 eq $species);
 		$active_record = 0 if ($1 eq 'end');
 		next REC;
 	}
 	next REC unless $active_record;
+
+	#parse details
 	my ($loutre_id,$vega_id,$human_id,$type,$ack,$ensembl_name) = split '\t', $rec;
 	unless ($loutre_id && $vega_id && $human_id && $type) {
 		$support->log_warning("Parsing input file failed, check tab spacing for line $loutre_id\n");
@@ -166,9 +171,7 @@ my $chroms = $support->fetch_non_hidden_slices($aa,$sa);
 #get all chromosomes
 my $all_chromosomes = $sa->fetch_all('Chromosome','Otter');
 
-###################################################################
-# see which of the non hidden chromosomes best match what we want #
-###################################################################
+# see which of the non hidden chromosomes best match to what we want
 SLICE:
 foreach my $k (keys %$regions_wanted_details ) {
 	my $sr_name_to_use;
@@ -204,6 +207,7 @@ foreach my $k (keys %$regions_wanted_details ) {
 		($sr_name_to_use) = keys %possibles;
 	}
 
+
 	if ($sr_name_to_use) {
 		$support->log("\nWill use seq_region $sr_name_to_use for requested region $k ...\n");
 	}
@@ -215,9 +219,10 @@ foreach my $k (keys %$regions_wanted_details ) {
 	my $attribs_wanted  = $regions_wanted_details->{$k};
 	my $slice           = $possibles{$sr_name_to_use};
 	my $sr_id           = $slice->get_seq_region_id;
+
 	my $attribs_present = $aa->fetch_all_by_Slice($slice);
 
-	#prompt user to use this seq_region (ie update vega_export_mode attrib_type)
+	#prompt user to use this seq_region (ie update the vega_export_mode attrib_type)
 	#only if it has not been used in this export mode before...
 	my $attrib = 'vega_export_mod';
 	my $export_mode = $attribs_wanted->{$attrib};
@@ -227,7 +232,7 @@ foreach my $k (keys %$regions_wanted_details ) {
 			next SLICE;
 		}
 	}
-	#... otherwise no prompting is given, just go ahead and add the vega_export_mod attribute 
+	#... otherwise no prompting is given, just go ahead and add the vega_export_mod attribute
 	my $r = [];
 	if (! $support->param('dry_run')) {
 		$r = $support->fix_attrib_value($attribs_present,$sr_id,$sr_name_to_use,$attrib,$export_mode);
@@ -289,7 +294,7 @@ my $template = "%-15s%-10s%-20s%-15s%-15s%-10s%-7s%-30s\n";
 my $txt = sprintf $template, qw(loutre_id vega_id name ensembl_name ack toplevel hidden releases);
 $txt .= "-"x110 . "\n";
 
-#get attributes of chromosomes with a vega_export_mod of E
+#get attributes of chromosomes with a vega_export_mod of External
 my %final_attribs = map {$_=> 1} qw(
 									vega_name
 									name
