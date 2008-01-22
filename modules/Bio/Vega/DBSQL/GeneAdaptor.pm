@@ -575,6 +575,17 @@ sub store {
             $gene->dissociate();
         }
 
+            # Make sure we haven't spoilt the original gene's is_current flags
+            # if it was the same object as the db_gene:
+            #
+        foreach my $tran (@{ $gene->get_all_Transcripts() }) {
+            $tran->is_current(1);
+            foreach my $exon (@{$tran->get_all_Exons}) {
+                $exon->is_current(1);
+            }
+        }
+
+
         ###
         ##
         # End of code where order is critical
