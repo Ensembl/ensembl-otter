@@ -575,22 +575,6 @@ sub store {
             $gene->dissociate();
         }
 
-            # Make sure we haven't spoilt the original gene's is_current flags
-            # if it was the same object as the db_gene:
-            #
-        foreach my $tran (@{ $gene->get_all_Transcripts() }) {
-            $tran->is_current(1);
-            foreach my $exon (@{$tran->get_all_Exons}) {
-                $exon->is_current(1);
-            }
-        }
-
-
-        ###
-        ##
-        # End of code where order is critical
-        ##
-        ###
 
             # If a gene is marked is non-current, we assume it was intended for deletion.
             # We also assume unsetting is_current() is the only thing needed to declare such intention.
@@ -603,7 +587,23 @@ sub store {
                     $del_exon->is_current(0);
                 }
             }
+        } else {
+                # Otherwise make sure we haven't spoilt the original gene's is_current flags
+                # if it was the same object as the db_gene:
+                #
+            foreach my $tran (@{ $gene->get_all_Transcripts() }) {
+                $tran->is_current(1);
+                foreach my $exon (@{$tran->get_all_Exons}) {
+                    $exon->is_current(1);
+                }
+            }
         }
+
+        ###
+        ##
+        # End of code where order is critical
+        ##
+        ###
 
         $gene->version($db_gene->version() + $seq_changes);  # CHANGED||RESTORED||DELETED will affect the author, so get a new version
         $gene->created_date($db_gene->created_date());
