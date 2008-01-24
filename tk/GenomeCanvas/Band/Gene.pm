@@ -6,6 +6,7 @@ package GenomeCanvas::Band::Gene;
 use strict;
 use Carp;
 use GenomeCanvas::Band;
+use Bio::Vega::Utils::GeneTranscriptBiotypeStatus 'biotype_status2method';
 
 use vars '@ISA';
 @ISA = ('GenomeCanvas::Band');
@@ -207,28 +208,27 @@ sub get_gene_span_data {
 	        next if $en > $vc->length;
 
 	        my ($id, $desc);
-	        if ($s[8] =~ /(Sequence |ID=")([^"]+)"/) {
-		    $id = $2;
-	    }
+	        if ($s[8] =~ /(Sequence |ID=")([^"]+)/) {
+		        $id = $2;
+	        }
 
-	    push(@span, [$id, $type, $st, $en, $str]) if defined $id;
+	        push(@span, [$id, $type, $st, $en, $str]) if defined $id;
         }
         close SPANS;
     }
     else {
-        foreach my $vg (@{$vc->get_all_Genes}) {
-            my $id = $vg->isa('Bio::Otter::AnnotatedGene')
-                ? $vg->gene_info->name->name
-                : $vg->stable_id;
-            if ($id =~ /:/) {
-                warn "Skipping '$id' gene\n";
-                next;
-            }
-            #my $desc = $vg->description || 'NO DESCRIPTION';
+        foreach my $gene (@{$vc->get_all_Genes}) {
+            next unless $gene->source eq 'havana';
+            my $id = $gene->isa('Bio::Vega::Gene')
+                ? $gene->get_all_Attributes('name')->[0]->value
+                : $gene->stable_id;
+            #my $desc = $gene->description || 'NO DESCRIPTION';
             #print STDERR "$id: $desc\n";
-            my $type = $vg->type =~ /pseudo/i ? 'Pseudogene' : $vg->type;
-            #warn join("\t", $id, $type, $vg->start, $vg->end, $vg->strand), "\n";
-	        push(@span, [$id, $type, $vg->start, $vg->end, $vg->strand]);
+            my $type = $gene->biotype =~ /pseudo/i
+                ? 'Pseudogene'
+                : biotype_status2method($gene->biotype, $gene->status);
+            #warn join("\t", $id, $type, $gene->start, $gene->end, $gene->strand), "\n";
+	        push(@span, [$id, $type, $gene->start, $gene->end, $gene->strand]);
         }
     }
     return @span;

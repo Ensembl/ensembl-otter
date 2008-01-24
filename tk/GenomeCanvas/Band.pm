@@ -6,6 +6,7 @@ package GenomeCanvas::Band;
 use strict;
 use Carp;
 use GenomeCanvas::State;
+use Bio::Otter::Lace::Slice;
 
 use vars '@ISA';
 @ISA = ('GenomeCanvas::State');
@@ -256,12 +257,12 @@ sub LaceSlice_from_vc {
     return Bio::Otter::Lace::Slice->new(
         $band->Client,
         $band->DataSet->name,
-        $vc->assembly_type,
+        $vc->seq_region_name,
         'chromosome',
         'Otter',
-        $vc->chr_name,
-        $vc->chr_start,
-        $vc->chr_end,
+        $vc->get_all_Attributes('chr')->[0]->value,
+        $vc->start,
+        $vc->end,
         );
 }
 
@@ -363,11 +364,17 @@ sub sequence_gap_map {
     if (not @gaps) {
       if (not exists($band->{'_map_gap_positions'})) {
         my $prev_end = 0;
-        my @map_contig_list = @{$vc->get_tiling_path};
-        for (my $i = 0; $i < @map_contig_list; $i++) {
-          my $map_c = $map_contig_list[$i];
-          my $start = $map_c->assembled_start;
-          my $end   = $map_c->assembled_end;
+        #my @map_contig_list = @{$vc->get_tiling_path};
+        my @seg_list = @{$vc->project('contig')};
+        
+        #for (my $i = 0; $i < @map_contig_list; $i++) {
+        for (my $i = 0; $i < @seg_list; $i++) {
+          #my $map_c = $map_contig_list[$i];
+          #my $start = $map_c->assembled_start;
+          #my $end   = $map_c->assembled_end;
+          my $seg = $seg_list[$i];
+          my $start = $seg->from_start;
+          my $end   = $seg->from_end;
           
           # Gap at the start?
           if ($i == 0 and $start > 1) {
@@ -417,7 +424,7 @@ sub zone_color {
     my( $band, $start, $end ) = @_;
 
     my $vc = $band->virtual_contig or return;
-    my $offset = $vc->chr_start - 1;
+    my $offset = $vc->start - 1;
     $start += $offset;
     $end   += $offset;
     

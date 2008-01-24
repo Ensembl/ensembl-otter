@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/env perl -w
 
 ### genome_canvas
 
@@ -36,12 +36,15 @@ use Hum::EnsCmdLineDB;
     my $landscape       = 1;
     my $portrait        = 0;
     my $gene_labels     = 1;
+
+    my $show_gc_content = 1;
+    my $show_key        = 1;
     my $show_genes      = 1;
     my $show_repeats    = 1;
+
     my $show_cpg        = 0;
-    my $show_gc_content = 1;
     my $show_ruler      = 0;
-    my $show_key        = 1;
+
     my $homologies      = 0;
     my $markers         = 0;
     my $clusters        = 0;
@@ -52,7 +55,6 @@ use Hum::EnsCmdLineDB;
     my $eps_file        = undef;
     my $span_file       = undef;
     my $dataset_name    = undef;
-    my $set_name        = undef;
     my $relative_coords = 0;
     
     # Otter/Ensembl switch
@@ -67,8 +69,7 @@ use Hum::EnsCmdLineDB;
         }
     }   
     
-    my $usage = sub{ exec('perldoc', $0) };
-    $command_line_sub->(				 
+    $command_line_sub->(
         'scale=s'           => \$scale,
         'htiles=i'          => \$h_tiles,
         'vtiles=i'          => \$v_tiles,
@@ -92,16 +93,15 @@ use Hum::EnsCmdLineDB;
         'snps=s'            => \$snps,
         'psdir=s'           => \$psdir,
         'big!'              => \$big_picture,
-        'help'              => $usage,
         'eps=s'             => \$eps_file,
         'dataset=s'         => \$dataset_name,
-        '(chr|set)=s'       => \$chr_name,
+        'chr|set=s'         => \$chr_name,
         'relative!'         => \$relative_coords,
         );
     
     my( $db, $ds, $cl );
     if ($otter) {
-        unless ($dataset_name and $set_name) {
+        unless ($dataset_name and $chr_name) {
             die "otter connection requires dataset and set";
         }
         $cl = Bio::Otter::Lace::Defaults::make_Client();
@@ -116,7 +116,7 @@ use Hum::EnsCmdLineDB;
         $eps_file .= '.eps' unless $eps_file =~ /\.eps$/i;
     }
 
-    $usage->() unless $chr_name;
+    Bio::Otter::Lace::Defaults::show_help() unless $chr_name;
 
     if ($chr_start) {
         my $chr_start_num = parse_num($chr_start)
@@ -130,7 +130,7 @@ use Hum::EnsCmdLineDB;
     }
     
     my $mw = CanvasWindow::MainWindow->new;
-    $mw->title($fpc);
+    $mw->title($chr_name);
     my $gc = GenomeCanvas->new($mw);
 
     $gc->font_size( $font_size );
@@ -173,7 +173,7 @@ use Hum::EnsCmdLineDB;
                 $chr_end,
                 );
         } else {
-            print STDERR "Fetching virtual contig for all of chromosome '$chr_name'\n";
+            print STDERR "Fetching all of chromosome '$chr_name'\n";
 	        $vc = $stadp->fetch_by_region('chromosome', $chr_name);
         }
         
@@ -275,7 +275,7 @@ use Hum::EnsCmdLineDB;
             my $gene_names = GenomeCanvas::Band::Gene->new;
             $gene_names->show_labels($gene_labels);
             $gene_names->label_type_color_list(
-                [ 'Known',                  'Known',                    '#4169e7' ],
+                [ 'Known',                  'Known_CDS',                '#4169e7' ],
                 [ 'Novel CDS',              'Novel_CDS',                '#86ceff' ],
                 [ 'Novel Transcript',       'Novel_Transcript',         '#ffa600' ],
                 [ 'Putative',               'Putative',                 '#cccccc' ],
@@ -354,7 +354,7 @@ use Hum::EnsCmdLineDB;
         make_button($button_frame, 'PostScript',
             sub {
                 warn "Printed to files:\n",
-                    map "  $_\n", $gc->print_postscript("$psdir/$fpc");
+                    map "  $_\n", $gc->print_postscript("$psdir/$chr_name");
 
                 if ($big_picture) {
                     my $htile = $gc->horizontal_tile || 1;
@@ -376,7 +376,7 @@ use Hum::EnsCmdLineDB;
                     $gc->vertical_tile(0);
 
                     warn "Whole diagram printed to:\n",
-                        map "  $_\n", $gc->print_postscript($fpc);
+                        map "  $_\n", $gc->print_postscript($chr_name);
                 }
             });
     }
