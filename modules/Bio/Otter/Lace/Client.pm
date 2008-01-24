@@ -273,10 +273,10 @@ sub password_prompt{
         sub {
             my $self = shift;
             my $user = $self->author;
-            print "Please enter your password ($user): ";
+            print STDERR "Please enter your password ($user): ";
             ReadMode('noecho');
             my $password = ReadLine(0);
-            print "\n";
+            print STDERR "\n";
             chomp $password;
             ReadMode('normal');
             return $password;
