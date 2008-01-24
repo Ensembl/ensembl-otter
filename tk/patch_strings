@@ -1,0 +1,65 @@
+#!/usr/local/bin/perl -w
+
+### patch_strings
+
+use strict;
+
+my %lookup = (
+
+    zero    => '0',
+    one     => '1',
+    two     => '2',
+    three   => '3',
+    four    => '4',
+    five    => '5',
+    six     => '6',
+    seven   => '7',
+    eight   => '8',
+    nine    => '9',
+
+    period  => '.',
+    space   => ' ',
+    plus    => '+',
+
+    );
+
+while (<>) {
+    #  [/A/F/two/three/three/four/three/nine()]
+    
+    s{\[([/\w]+)\(\)\]}{ fix_string($1) }eg;
+    print;
+}
+
+sub fix_string {
+    my ($str) = @_;
+
+    #warn "Patching '$str'\n";
+    
+    $str =~ s{/([^/]+)}{ get_char($1) }eg;
+    return "[($str)]";
+}
+
+sub get_char {
+    my ($char) = @_;
+    
+    #warn "Returning char for '$char'\n";
+    
+    unless (length($char) == 1) {
+        if (defined(my $actual = $lookup{$char})) {
+            $char = $actual;
+        } else {
+            die "No entry in lookup table for '$char'";
+        }
+    }
+    return $char;
+}
+
+
+__END__
+
+=head1 NAME - patch_strings
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
