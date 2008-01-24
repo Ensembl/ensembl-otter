@@ -119,7 +119,7 @@ my $k_flist_fh = $support->filehandle('>', $support->param('logpath').'/known_fr
 my $n_flist_fh = $support->filehandle('>', $support->param('logpath').'/new_fragmented_gene_list.txt');
 
 #get list of IDs that have previously been sent to annotators
-my $seen_genes = $support->get_havana_comments;
+my $seen_genes = $support->get_havana_fragmented_loci_comments;
 
 # connect to database and get adaptors
 my $dba = $support->get_database('ensembl');
@@ -175,8 +175,14 @@ foreach my $chr ($support->sort_chromosomes) {
 
 			#remove Leo's extensions and if there are duplicated names then skip this gene
 			my $base_name = $t_name;
-			$base_name =~ s/(-\d{1,2})$//;
-			$base_name =~ s/(__\d{1,2})$//;
+			if ( ($base_name =~ s/(-\d{1,2})$//)
+			  || ($base_name =~ s/(__\d{1,2})$//)
+			  || ($base_name =~ s/(__\d{1,2})$//) ) {
+				$support->log_warning("**I thought transcript names like $t_name aren't used any more (RT#54477) ?\n");
+			}
+			#remove the current extensions
+			$base_name =~ s/(_\d)$//;
+
 			if (exists $seen_names{$base_name}) {	
 				if ($ln eq 'otter') {
 					$support->log_warning("IDENTICAL: Havana gene $gsi ($g_name) has transcripts with identical base loutre names ($base_name), please fix\n");
@@ -204,7 +210,7 @@ foreach my $chr ($support->sort_chromosomes) {
 			if ($base_name =~ s/(__\d{1,2})$//) {
 				$support->log_warning("VERY UNEXPECTED name for $ln transcript $tsi ($t_name).\n", 1);
 			}
-
+			$base_name =~ s/(_\d)$//;
 			if ($base_name =~ /(\-\d{3})$/) {
 				my $new_name = "$g_name$1";
 				push @{$transnames->{$new_name}}, "$t_name|$tsi";
