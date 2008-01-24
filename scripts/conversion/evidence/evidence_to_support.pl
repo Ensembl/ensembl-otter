@@ -56,9 +56,12 @@ Pseudocode:
 
 There are occasions where no match for annotated evidence can be found.
 Possible reasons for this are: spelling mistake by annotator; feature not found
-by protein pipeline run (e.g. removed from external database, renamed)
+by protein pipeline run (e.g. removed from external database, renamed); small 
+features found by Dotter and not by Blixem. The genes and transcripts without any
+evidence are reported by source (GC, havana etc), as are the evidence table entries
+that do not link to the align_feature tables (if check_evidence_table = 1)
 
-There si no prune option - changes can be easily undone by deleting entries from
+There is no prune option - changes can be easily undone by deleting entries from
 transcript_supporting_feature and supporting_feature
 
 =head1 LICENCE
@@ -158,16 +161,23 @@ my %ftype = (
 );
 
 #set up data structures to store details of which evidence table entries are in the align_feature tables
-my %evidence_stats = map {$_ => 0 } qw(evidence_with_match evidence_without_match evidence_without_covered_match);
+#my %evidence_stats = map {$_ => 0 } qw(evidence_with_match evidence_without_match evidence_without_covered_match);
 my $all_alignments = {};
 my $all_evidence = {};
+
+
+my $stats;
+my %transcripts_without_support;
+my %genes_without_support;
+my %transcripts_without_evidence;
+my %genes_without_evidence;
+
 
 # loop over chromosomes
 $support->log("Looping over chromosomes: @chr_sorted\n\n");
 foreach my $chr (@chr_sorted) {
+	my %chr_stats;
     $support->log_stamped("> Chromosome $chr (".$chr_length->{$chr}."bp).\n\n");
-
-#	next;
 
     # fetch genes from db
     $support->log("Fetching genes...\n");
@@ -176,12 +186,11 @@ foreach my $chr (@chr_sorted) {
     $support->log_stamped("Done fetching ".scalar @$genes." genes.\n\n");
 
     # loop over genes
-    my %stats = map { $_ => 0 } qw(genes transcripts exons genes_without_support transcripts_without_support);
-    my @transcripts_without_support;
     foreach my $gene (@$genes) {
         my $gsi = $gene->stable_id;
         my $gid = $gene->dbID;
         my $gene_name = $gene->display_xref->display_id;
+		my $source = $gene->source;
 
 		#skip KO genes since they shouldn't have supporting evidence
 		next if ($gene->analysis->logic_name eq 'otter_eucomm');
@@ -198,11 +207,13 @@ foreach my $chr (@chr_sorted) {
             $support->log_warning("Gene $gene_name ($gid, $gsi) doesn't transfer to padded gene_slice.\n");
             next;
         }
-        
-        $stats{'genes'}++;
+
+        $stats->{$source}{'genes'}++;
+        $chr_stats{'genes'}++;
         my %se_hash = ();
         my %tse_hash = ();
         my $gene_has_support = 0;
+        my $gene_has_evidence = 0;
         $support->log_verbose("Gene $gene_name ($gid, $gsi) on slice ".$gene->slice->name."...\n");
 
         # fetch similarity features from db and store required information in
@@ -220,8 +231,11 @@ foreach my $chr (@chr_sorted) {
         # loop over transcripts
         foreach my $trans (@{ $gene->get_all_Transcripts }) {
             my $transcript_has_support = 0;
-            $stats{'transcripts'}++;
-            $support->log_verbose("Transcript ".$trans->stable_id."...\n", 1);
+            my $transcript_has_evidence = 0;
+            $stats->{$source}{'transcripts'}++;
+            $chr_stats{'transcripts'}++;
+			my $tsid = $trans->stable_id;
+            $support->log_verbose("Transcript $tsid...\n", 1);
 
             # loop over evidence added by annotators for this transcript
             my @evidence = @{$trans->evidence_list};
@@ -229,13 +243,16 @@ foreach my $chr (@chr_sorted) {
 #			exit;
 
             my @exons = @{ $trans->get_all_Exons };
-            $stats{'exons'} += scalar(@exons);
+            $stats->{$source}{'exons'} += scalar(@exons);
+            $chr_stats{'exons'} += scalar(@exons);
             foreach my $evi (@evidence) {
+				$transcript_has_evidence = 1;
+				$gene_has_evidence = 1;
                 my $acc = $evi->name;
                 $acc =~ s/.*://;
                 $acc =~ s/\.[0-9]*$//;
 				my $acc_type = $evi->type;
-				$all_evidence->{$acc_type}{$acc}++;
+				$all_evidence->{$source}{$acc_type}{"$acc:$tsid"}++;
                 my $ana = $analysis{$evi->type . "_evidence"};
                 $support->log_verbose("Evidence $acc...\n", 2);
                 # loop over similarity features on the slice, compare name with
@@ -265,27 +282,35 @@ foreach my $chr (@chr_sorted) {
                             }
                         }
                     }
-					else {
-						$stats{'evidence_without_match'}{$acc}++;
-					}
                 }
 				if (!$match) {
 					$support->log_verbose("No matching similarity feature found for $acc.\n", 3);
-					$stats{'evidence_without_covered_match'}{$acc}++;
 				}
             }
+			my $id = $trans->stable_id." on gene $gsi (chr $chr)";
             unless ($transcript_has_support) {
-                $stats{'transcripts_without_support'}++;
-                push @transcripts_without_support, $trans->stable_id." on gene ".$gsi;
+                $stats->{$source}{'transcripts_without_support'}++;
+                push @{$transcripts_without_support{$source}}, $id;
+            }
+			unless ($transcript_has_evidence) {
+                $stats->{$source}{'transcripts_without_evidence'}++;
+                push @{$transcripts_without_evidence{$source}}, $id;
             }
         }
-        $stats{'genes_without_support'}++ unless ($gene_has_support);
-
+		my $id = "$gsi (chr $chr)";
+		unless ($gene_has_support) {
+			$stats->{$source}{'genes_without_support'}++;
+			push @{$genes_without_support{$source}}, $id;
+		}
+		unless ($gene_has_evidence) {
+			$stats->{$source}{'genes_without_evidence'}++;
+			push @{$genes_without_evidence{$source}}, $id;
+		}
         $support->log_verbose("Found $gene_has_support matches (".
                        scalar(keys %se_hash)." unique).\n", 1);
 
         # store supporting evidence in db
-        unless ($support->param('dry_run')) {
+        if (! $support->param('dry_run')) {
             foreach my $tse (keys %tse_hash) {
                 eval {
                     $sth1->execute(split(":", $tse));
@@ -294,7 +319,7 @@ foreach my $chr (@chr_sorted) {
             }
         }
 
-        if ($gene_has_support and !$support->param('dry_run')) {
+        if ($gene_has_support and ! $support->param('dry_run')) {
             $support->log_verbose("Storing supporting evidence... ".
                            $support->date_and_mem."\n", 1);
             foreach my $se (keys %se_hash) {
@@ -309,27 +334,42 @@ foreach my $chr (@chr_sorted) {
                            $support->date_and_mem."\n", 1);
         }
     }
-    $support->log("\nProcessed $stats{genes} genes (of ".scalar @$genes." on chromosome $chr), $stats{transcripts} transcripts, $stats{exons} exons.\n");
-    $support->log("WARNINGS:\n");
-    if ($stats{'genes_without_support'}) {
-        $support->log("No supporting evidence for any transcripts on $stats{genes_without_support} genes.\n", 1);
-        $support->log("No supporting evidence for $stats{transcripts_without_support} transcripts.\n", 1);
-        $support->log("Transcripts without supporting evidence:\n", 1);
-        foreach (@transcripts_without_support) {
-            $support->log("$_\n", 2);
-        }
-    } else {
-        $support->log("None.\n");
-    }
-    $support->log("Done with chromosome $chr. ".$support->date_and_mem."\n\n");
+    $support->log("\nProcessed $chr_stats{genes} genes (of ".scalar @$genes." on chromosome $chr), $chr_stats{transcripts} transcripts, $chr_stats{exons} exons.\n");
+	$support->log("Done with chromosome $chr. ".$support->date_and_mem."\n\n");
 }
 
-#look at overall stats for evidence table
-#$all_evidence->{'cDNA'}{'AW868554'} = 1;
-#$all_evidence->{'protein'}{'P13584'} = 1;
+#summarise genes missing support / evidence
+foreach my $source (keys %{$stats}) {
+
+	#summarise genes with no supporting_features and evidence
+    if (my $g_no_support = $stats->{$source}{'genes_without_support'}) {
+		$support->log("\nLooking at $source genes for missing supporting_features:\n");
+		my $tot_genes  = $stats->{$source}{'genes'};
+		my $perc_genes = $g_no_support / $tot_genes * 100;
+        $support->log("$source: No supporting_features for any transcripts on $g_no_support out of $tot_genes ($perc_genes %) genes.\n", 1);
+		$support->log("Genes without supporting_features:\n", 1);
+		foreach my $g (@{$genes_without_support{$source}}) {
+			#does this one have any evidence at all ?
+			my $extra = (grep {$g eq $_} @{$genes_without_evidence{$source}} ) ? ' (no evidence at all)' : '';
+            $support->log("$g$extra\n", 2);
+        }
+	}
+	#summarise transcripts with no supporting_features and evidence
+	if (my $t_no_support = $stats->{$source}{'transcripts_without_support'}) {
+		my $tot_transcripts = $stats->{$source}{'transcripts'};
+		my $perc_transcripts = $t_no_support / $tot_transcripts * 100;
+        $support->log("$source: No evidence for $t_no_support out of $tot_transcripts ($perc_transcripts) transcripts.\n", 1);
+        $support->log("Transcripts without supporting features:\n", 1);
+        foreach my $t (@{$transcripts_without_support{$source}}) {
+			#does this one have any evidence at all ?
+			my $extra = (grep {$t eq $_ } @{$transcripts_without_evidence{$source}}) ? ' (no evidence at all)' : '';
+            $support->log("$t$extra\n", 2);
+        }
+	}
+}
 
 if ($support->param('check_evidence_table')) {
-	$support->log("Examining links between evidence table and align_feature tables\n");
+	$support->log("\n\nExamining links between evidence table and align_feature tables\n");
 	foreach my $t ('dna_align_feature','protein_align_feature') {
 		$support->log_stamped("Retrieving features from $t\n",1);
 		my $sth = $dba->dbc->prepare(qq(Select hit_name from $t));
@@ -340,20 +380,30 @@ if ($support->param('check_evidence_table')) {
 		}
 	}
 
-	foreach my $type (keys %{$all_evidence}) {
-		my ($match,$no_match) = (0,0);
-		$support->log("Evidence type $type:\n");
-		foreach my $acc (keys %{$all_evidence->{$type}}) {
-			if (exists ($all_alignments->{$acc})) {
-				$match++;
+	foreach my $source (keys %{$all_evidence}) {
+		$support->log("\n\nStudying source $source:");
+		my $data = $all_evidence->{$source};
+		foreach my $type (keys %{$data}) {
+			my $c = 0;
+			my ($match,$no_match) = (0,0);
+			$support->log("\nNon $source matches for evidence type $type:\n",1);
+			foreach my $rec (sort keys %{$all_evidence->{$source}{$type}}) {
+				my ($acc,$tsi) = split ':', $rec;
+				if (exists ($all_alignments->{$acc})) {
+					$match++;
+				}
+				else {
+					$c++;
+					$no_match++;
+					$support->log_verbose("$c. $acc ($tsi)\n",2);
+				}
 			}
-			else {
-				$no_match++;
-			}
+			$support->log("$match accessions match, $no_match accessions do not match to align_features\n",1);
 		}
-		$support->log("$match accessions match to align_features; $no_match accessions do not match to align_features\n",1);
 	}
 }
+
+
 		
 # finish log
 $support->finish_log;
