@@ -86,34 +86,33 @@ sub render {
     my $rectangle_border = $band->rectangle_border;
     my $nudge_distance = ($rectangle_height + 1) * $y_dir;
     my $text_nudge_flag = 0;
-    #foreach my $map_c ($vc->_vmap->each_MapContig) {
-    foreach my $map_c (@{$vc->get_tiling_path}) {
+    #foreach my $map_c (@{$vc->get_tiling_path}) {
+    foreach my $seg (@{$vc->project('contig')}) {
+        my $contig = $seg->to_Slice;
         #print STDERR ".";
         $map_contig_count++;
-        #my $start     = $map_c->start;
-        #my $end       = $map_c->end;
-        my $start     = $map_c->assembled_start;
-        my $end       = $map_c->assembled_end;
+        #my $start     = $map_c->assembled_start;
+        #my $end       = $map_c->assembled_end;
+        my $start = $seg->from_start;
+        my $end   = $seg->from_end;
 
-        #my $raw_start = $map_c->rawcontig_start;
-        #my $raw_end   = $map_c->rawcontig_end;
-        my $raw_start = $map_c->component_start;
-        my $raw_end   = $map_c->component_end;
-	my $raw_ori = $map_c->component_ori;
+        #my $raw_start = $map_c->component_start;
+        #my $raw_end   = $map_c->component_end;
+	    #my $raw_ori = $map_c->component_ori;
+        my $raw_start = $contig->start;
+        my $raw_end   = $contig->end;
+        my $raw_ori   = $contig->strand;
 
-        #my $contig    = $map_c->contig;
-	my $contig    = $map_c->component_Seq;
-        my $length = $contig->length;
-        #my $name = $contig->id;
-	my $name = $contig->name;
+	    #my $contig    = $map_c->component_Seq;
+        my $length = $contig->seq_region_length;
+	    my $name = $contig->seq_region_name;
         if ($name_morpher) {
             $name = &$name_morpher($name);
         }
         my $group = "$tags[0]::$name";
-        #printf STDERR "%-10s  %2d %6d %6d %6d  %10d %10d\n", $name, $map_c->orientation, $raw_start, $raw_end, $length, $start, $end;
+        #printf STDERR "%-10s  %2d %6d %6d %6d  %10d %10d\n", $name, $raw_ori, $raw_start, $raw_end, $length, $start, $end;
 
         my( $left_overhang, $right_overhang );
-        #if ($map_c->orientation == 1) {
 	    if ($raw_ori == 1) {
             $left_overhang  = $raw_start - 1;
             $right_overhang = $length - $raw_end;
