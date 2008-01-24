@@ -20,6 +20,10 @@ UPDATE transcript
    SET biotype = 'transcribed_pseudogene'
  WHERE biotype = 'expressed_pseudogene';
 
+UPDATE gene
+   SET biotype = 'transcribed_pseudogene'
+ WHERE biotype = 'expressed_pseudogene';
+
 UPDATE transcript
    SET biotype = 'protein_coding',
 	   status  = 'KNOWN'
@@ -42,19 +46,3 @@ UPDATE gene
 update gene 
    set status = 'NOVEL'
  where status = 'UNKNOWN';
-
-
-delete at, sra
-from attrib_type at, seq_region_attrib sra
-where at.attrib_type_id = sra.attrib_type_id
-and at.code in
-('UnprocPsCount','ProcPsCount','IgPsSegCount','IgSegCount','NovelPTCount','NovelPCCount','KnownPTCount','KnownPCCount','PTCount')
-
-
-
-
-delete 
-select * 
-from attrib_type at, seq_region_attrib sra
-where at.attrib_type_id = sra.attrib_type_id
-and at.code in ('KnownPCCount','NovelPCCount','NovelPTCount','IgSegCount','IgPsSegCount, ProcPsCount','UnprocPsCount','KnownPTCount','TotAssemblyLeng');
