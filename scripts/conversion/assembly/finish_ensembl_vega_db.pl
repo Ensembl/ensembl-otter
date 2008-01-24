@@ -51,6 +51,7 @@ includes:
     - updating seq_region_ids to match those in the core Ensembl db
     - transfer selenocysteines
     - checking and setting the analysis_id and source for all genes and transcripts
+    - update analysis_description for external_genes
     - transfer the whole genome assembly information back into the Vega db
     - delete orphan entries from object_xref
 
@@ -450,6 +451,16 @@ $support->log_stamped("Updating seq_region_ids on all tables:\n");
 
 $support->log_stamped("Done.\n\n");
 
+#analysis_description;
+$support->log_stamped("Updating analysis_description table for external genes");
+$sql = qq(UPDATE analysis a, analysis_description ad
+             SET ad.description = 'See <a href=\"http://vega.sanger.ac.uk/info/about/man_annotation.html\">the Vega website</a> for details of the approaches used for the annotation of external Vega genes'
+          WHERE ad.analysis_id = a.analysis_id
+            AND a.logic_name = 'otter_external'
+);
+$c = $dbh->{'evega'}->do($sql);
+$support->log_stamped("Updated $c analysis_description entries.\n\n");
+
 # selenocysteines
 $support->log_stamped("Transfering Vega translation_attribs (selenocysteines)...\n");
 $sql = qq(
@@ -467,20 +478,23 @@ $sql = qq(
     AND at.code = at2.code
 );
 $c = $dbh->{'evega'}->do($sql);
-$support->log_stamped("Done transfering $c translation_attrib entries.\n\n");
+$support->log_stamped("Transferred $c selenocysteine translation_attrib entries.\n\n");
 
-# delete ccds transcript_attribs here if need be
-#.....
+# delete ccds transcript_attribs
+$sql = qq(DELETE ta
+            FROM attrib_type at, transcript_attrib ta
+           WHERE at.attrib_type_id = ta.attrib_type_id
+             AND at.code = 'ccds'
+);
+$c = $dbh->{'evega'}->do($sql);
+$support->log_stamped("Deleted $c ccds transcript_attrib entries.\n\n");
 
-# logic names and source
-if ($support->user_proceed("Would you like to ensure that all genes and transcripts have a source of \'vega\'?")) {
-#	$sql = qq(UPDATE gene set analysis_id = (SELECT analysis_id from analysis where logic_name = 'otter'));
-#	$c = $dbh->{'evega'}->do($sql);
-#	$sql = qq(UPDATE transcript set analysis_id = (SELECT analysis_id from analysis where logic_name = 'otter'));
-#	$c = $dbh->{'evega'}->do($sql);
+# set source to 'vega'
+if ($support->user_proceed("Would you like to ensure that all genes have a source of \'vega\'?")) {
 	$sql = qq(UPDATE gene set source = 'vega');
 	$c = $dbh->{'evega'}->do($sql);
 }
+$support->log_stamped("Updated $c gene.source entries.\n\n");
 
 if ($support->user_proceed("Would you like to delete orphan entries from object_xref?")) {
     $sql = qq(DELETE ox
@@ -489,13 +503,14 @@ if ($support->user_proceed("Would you like to delete orphan entries from object_
               WHERE x.xref_id IS NULL);	
 	$c = $dbh->{'evega'}->do($sql);
 }
+$support->log_stamped("Deleted $c orphan object_xref entries.\n\n");
 
 #we never say no to this option!
-#if ($support->user_proceed("Would you like to drop the temporary tables tmp_assembl and tmp_seq_region?")) {
-    $sql = qq(DROP TABLE tmp_assembly);
-    $c = $dbh->{'evega'}->do($sql);
-    $sql = qq(DROP TABLE tmp_seq_region);
-    $c = $dbh->{'evega'}->do($sql);
+#if ($support->user_proceed("Would you like to drop the transient tables tmp_assembl and tmp_seq_region?")) {
+#    $sql = qq(DROP TABLE tmp_assembly);
+#    $c = $dbh->{'evega'}->do($sql);
+#    $sql = qq(DROP TABLE tmp_seq_region);
+#    $c = $dbh->{'evega'}->do($sql);
 #}
 
 # finish logfile
