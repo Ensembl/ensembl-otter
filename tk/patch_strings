@@ -23,11 +23,21 @@ my %lookup = (
 
     );
 
-while (<>) {
-    #  [/A/F/two/three/three/four/three/nine()]
-    
-    s{\[([/\w]+)\(\)\]}{ fix_string($1) }eg;
-    print;
+foreach my $file (@ARGV) {
+    open IN, $file or die "Can't read '$file'; $!";
+
+    my $patched = "$file.patched";
+    open PATCH, "> $patched" or die "Can't write to '$patched'; $!";
+
+    while (<IN>) {
+        #  [/A/F/two/three/three/four/three/nine()]
+
+        s{\[([/\w]+)\(\)\]}{ fix_string($1) }eg;
+        print PATCH $_;
+    }
+    close IN or die "Error reading '$file'; $!";
+    close PATCH or die "Error writing to '$patched'; $!";
+    rename($patched, $file) or die "Error renaming '$patched' to '$file'; $!";
 }
 
 sub fix_string {
