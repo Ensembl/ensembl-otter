@@ -141,7 +141,8 @@ my @tables = qw(coord_system
 				gene_attrib
 				transcript_attrib
 				seq_region_attrib
-                exon_stable_id_pool);
+                exon_stable_id_pool
+                simple_feature);
 my (%tabs);
 map { $_ =~ s/`//g; $tabs{$_} += 1; } $vdbh->tables;
 my $ask = 1;
@@ -175,6 +176,54 @@ if ($support->param('prune') && $support->user_proceed("\nDo you want to undo al
 		}
 	}
 }
+
+##########################################################################
+# delete unwanted loutre-derived simple_features                         #
+##########################################################################
+my %lns_to_stay = map {$_,1} qw(CpG
+								  Eponine
+								  polyA_signal
+								  polyA_site
+								  pseudo_polyA
+								  RSS
+								  tRNAscan
+								  EUCOMM );
+my %lns_to_go = map {$_,1}	 qw(TATA_box EUCOMM_AUTO);
+
+my $s = $vdbh->prepare(qq(
+                SELECT a.logic_name, a.analysis_id, count(*)
+                FROM analysis a, simple_feature sf
+                WHERE a.analysis_id = sf.analysis_id
+                GROUP BY a.logic_name
+));
+$s->execute;
+my %sf_features;
+while (my ($logic_name,$analysis_id,$c) = $s->fetchrow) {
+	$sf_features{$logic_name} = $c;
+}
+my $problem = 0;
+foreach my $ln (keys %sf_features) {
+	if (! exists($lns_to_stay{$ln}) ) {
+		if (! exists($lns_to_go{$ln}) ) {
+			$support->log_warning("I don't know what to do with $ln simple features, please help me out\n");
+			$problem = 1;
+		}
+		else {
+			$support->log("Will delete $ln simple_features\n");
+		}
+	}
+	else {
+		$support->log("Keeping $ln simple_features\n");
+	}
+}
+
+if ($problem) {
+	if (! $support->user_proceed("There are features with logic names that I don't know what to do with, please look at the logs. Do you really want to proceed?\n")) {
+		exit;
+	}
+	$support->log_warning("There are logic_names that will be deleted even though this is not specifically defined\n");
+}
+
 
 ##########################################################################
 # - patch analysis_ids of genes and transcripts according to gene.source #
@@ -296,9 +345,15 @@ foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
 			my $gsid = $gene->stable_id;
 			my $gid  = $gene->dbID;
 			my $gname = $gene->get_all_Attributes('name')->[0]->value;
-			my $old_source = $gene->source;
+			my $source = $gene->source;
+			if ($source ne 'havana') {
+				$source = uc($source);
+				if ($gene->source ne $source) {
+					$support->log_warning("Gene $gsid ($gname) has a source of \'".$gene->source."\'\n",2);
+				}
+			}
 			my $old_gln = $gene->analysis->logic_name;
-			my $new_ln = $used_logic_names{$old_source};
+			my $new_ln = $used_logic_names{$source};
 					
 			#patch analysis_ids
 			if ($new_ln ne $old_gln) {
@@ -312,19 +367,19 @@ foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
 			
 			# create attributes for author info
 			my $gene_attribs = [];
-			
+
 			# author and author_email
 			push @{ $gene_attribs }, Bio::EnsEMBL::Attribute->new(
 				-CODE => 'author',
 				-NAME => 'Author',
 				-DESCRIPTION => 'Group responsible for Vega annotation',
-				-VALUE => $all_logic_names{$gene->source}[1],
+				-VALUE => $all_logic_names{$source}[1],
 			);
 			push @{ $gene_attribs }, Bio::EnsEMBL::Attribute->new(
 				-CODE => 'author_email',
 				-NAME => 'Author email address',
 				-DESCRIPTION => 'Author\'s email address',
-				-VALUE => $all_logic_names{$gene->source}[2],
+				-VALUE => $all_logic_names{$source}[2],
 			);
 			
 			$support->log_verbose("Storing gene attributes for author and author_email.\n", 3);
@@ -334,7 +389,14 @@ foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
 			foreach my $trans (@{$gene->get_all_Transcripts()}){
 				my $tsid = $trans->stable_id;
 				my $tid  = $trans->dbID;
-				my $tname = $trans->get_all_Attributes('name')->[0]->value;
+				my $tname = '';
+
+				#identify any transcripts without names
+				eval { $tname = $trans->get_all_Attributes('name')->[0]->value; };
+				if ($@) {
+					$support->log_warning("Transcript $tsid from gene $gsid ($gname) has no \'name\' transcript_attrib\n");
+				}
+
 				my $old_tln = $trans->analysis->logic_name;
 				#patch analysis_ids
 				if ($new_ln ne $old_tln) {
@@ -354,13 +416,13 @@ foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
 					-CODE => 'author',
 					-NAME => 'Author',
 					-DESCRIPTION => 'Group responsible for Vega annotation',
-					-VALUE => $all_logic_names{$gene->source}[1],
+					-VALUE => $all_logic_names{$source}[1],
 				);
 				push @{ $trans_attribs }, Bio::EnsEMBL::Attribute->new(
 					-CODE => 'author_email',
 					-NAME => 'Author email address',
 					-DESCRIPTION => 'Author\'s email address',
-					-VALUE => $all_logic_names{$gene->source}[2],
+					-VALUE => $all_logic_names{$source}[2],
 				);
 				
 				$support->log_verbose("Storing transcript attributes for author and author_email.\n", 3);
@@ -402,8 +464,9 @@ foreach my $table (keys %attribs_to_go) {
 
 my ($max_id) = $vdbh->selectrow_array(qq(select max(stable_id) from exon_stable_id));
 (my ($prefix,$number)) = $max_id =~ /(\w{7})(\d+)/;
-$vdbh->do(qq(INSERT into exon_stable_id_pool values ($number)));
-
+if ( ! $support->param('dry_run')) {
+#	$vdbh->do(qq(INSERT into exon_stable_id_pool values ($number)));
+}
 
 ##############
 # misc fixes #
@@ -415,30 +478,30 @@ my @sql_fixes;
 my $count = $vdbh->selectrow_array(qq(
                 SELECT count(*)
 				FROM   coord_system
-				WHERE   name = 'chromosome'));
+				WHERE  name = 'chromosome'));
 
 if ($count > 2) {
 	$support->log_warning("There is an unexpected number ($count) of chromosome coordinate systems - you need to investigate\n");
 	exit;
 }
 # remove NCBI* coordinates as long as they're not in the seq_region table (which would represent a mistake)
-#(this can probably be removed after dumping mouse)
 elsif ($count == 2) {
 	my ($other_coord_version,$other_coord_id) = $vdbh->selectrow_array(qq(
                                                     SELECT version, coord_system_id
 					                        		FROM   coord_system
-                      							    WHERE  version NOT IN ('Otter')));
+                      							    WHERE  name = 'chromosome'
+                                                      AND  version NOT IN ('Otter')));
 	if ($other_coord_version =~ /NCBI/) {
 		my $ncbi_used =  $vdbh->selectrow_array(qq(
                              SELECT count(*) 
                              FROM   seq_region
                              WHERE  coord_system_id = $other_coord_id));
 		if (! $ncbi_used) {
-			$support->log("\nDeleting $ncbi_used coordinate system\n");			
+			$support->log("\nDeleting $other_coord_version coordinate system\n");			
 			push @sql_fixes, "DELETE from coord_system WHERE coord_system_id = $other_coord_id;\n";
 		}
 		else {
-			$support->log_error("slices with a coord_system.version of $other_coord_version are present in the seq_region table. This should not happen, please investigate\n");
+			$support->log_error("Slices with a coord_system.version of $other_coord_version are present in the seq_region table. This should not happen, please investigate\n");
 		}
 	}
 	elsif ($other_coord_version) {
@@ -448,11 +511,11 @@ elsif ($count == 2) {
 
 #sanity check - if the Otter coord_system is actually used for the (longest) chromosome then rename it to Vega
 #also patch contig.version in coord_system
-my $chr_coord_id = $vdbh->selectrow_array(qq(
-                       SELECT coord_system_id 
-				       FROM   seq_region 
-					   ORDER  by length desc 
-					   LIMIT  1));
+my $chr_coord_id   = $vdbh->selectrow_array(qq(
+                         SELECT coord_system_id 
+				         FROM   seq_region 
+					     ORDER  by length desc 
+					     LIMIT  1));
 my $otter_coord_id = $vdbh->selectrow_array(qq(
                          SELECT coord_system_id
 					     FROM   coord_system
