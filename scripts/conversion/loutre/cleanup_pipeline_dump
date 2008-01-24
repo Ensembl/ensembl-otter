@@ -15,6 +15,9 @@ Options:
     --vega_release=NUM                  vega release number
     --release_type=STRING               type of release, ie External
 
+    --chr=LIST                          comma seperated list of chromsomes to use (optional)
+    --ignore_chr=LIST                   comma seperated list of chromsomes to ignore (optional)
+
     --count_rows=1                      if enabled then counts entries in tables and exits
 
     --pipedumpdbname=NAME               use pipeline dump database NAME
@@ -149,6 +152,8 @@ $support->parse_extra_options(
 	'vega_release=s',
 	'release_type=s',
 	'count_rows=s',
+    'chr=s',
+	'ignore_chr=s',
 	$support->get_loutre_params,
 );
 $support->allowed_params(
@@ -159,6 +164,8 @@ $support->allowed_params(
 	'vega_release',
 	'release_type',
 	'count_rows',
+	'chr',
+	'ignore_chr',
 	$support->get_loutre_params,
 	$support->get_common_params,
 );
@@ -175,6 +182,10 @@ if ($support->param('help') or $support->error) {
     warn $support->error if $support->error;
     pod2usage(1);
 }
+
+$support->comma_to_list('ignore_chr');
+$support->comma_to_list('chr');
+
 $support->remove_vega_params;
 $support->confirm_params;
 $support->init_log;
@@ -238,9 +249,16 @@ if ($support->param('count_rows')) {
 }
 
 #get wanted chromosomes - non-hidden ones with the correct attributes for export mode and release number
+#note that ignore_chr param is dealt with by get_wanted_chromosomes
 my $export_mode = $support->param('release_type');
 my $release = $support->param('vega_release');
-my $chr_names_wanted = &Slice::get_wanted_chromosomes($support,$laa,$lsa);
+my $chr_names_wanted;
+if ($support->param('chr')) {
+	$chr_names_wanted = [ $support->param('chr') ];
+}
+else {
+	$chr_names_wanted = $support->get_wanted_chromosomes($laa,$lsa);
+}
 
 my $seq_regions = join "\n", @{$chr_names_wanted};
 if (! $support->user_proceed("Data on the following assemblies will be retained in the pipeline database dump, proceed ?\n\n$seq_regions\n")) {
