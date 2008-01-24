@@ -14,8 +14,8 @@ Options:
                                         (default: conf/Conversion.ini)
     --vega_release=NUM                  vega release number
     --release_type=STRING               type of release, ie External
-    --chr=LIST                          comma seperated list of chromsomes to use
-    --ignore_chr=LIST                   comma seperated list of chromsomes to ignore
+    --chr=LIST                          comma seperated list of chromsomes to use (optional)
+    --ignore_chr=LIST                   comma seperated list of chromsomes to ignore (optional)
     --filter_prefix=LIST                comma seperated list of gene name prefixes to ignore (optional)
     --filter_biotype=LIST               comma seperated list of gene biotypes to ignore (optional)
     --dump_assembly_tags=BOOLEAN        choose to dump or not dump assembly_tag misc_features
@@ -117,9 +117,9 @@ $support->parse_extra_options(
 	'vega_release=s',
 	'release_type=s',
 	'chr=s',
+	'ignore_chr=s',
 	'filter_prefix=s',
 	'filter_biotype=s',
-	'ignore_chr=s',
 	'prune=s',
 	'dump_assembly_tags=s',
 	$support->get_loutre_params,
@@ -128,9 +128,9 @@ $support->allowed_params(
 	'vega_release',
 	'release_type',
 	'chr',
+	'ignore_chr',
 	'filter_prefix',
 	'filter_biotype',
-	'ignore_chr',
 	'prune',
 	'dump_assembly_tags',
 	$support->get_loutre_params,
@@ -151,10 +151,13 @@ if ($support->param('help') or $support->error) {
 $support->comma_to_list('ignore_chr');
 $support->comma_to_list('chr');
 
-#set gene prefixes to ignore for human transfer if they are not already defined by the user
+#set gene prefixes to ignore for transfer if they are not already defined by the user
 if (! $support->param('filter_prefix')) {
 	if ($support->param('loutredbname') =~ /human/) {
 		$support->param('filter_prefix','OLD_MIT,HMIT,Em,ERI,GT,GH,API,DG,CCDS,MGC,MPI,SK');
+	}
+	elsif ($support->param('loutredbname') =~ /mouse/) {
+		$support->param('filter_prefix','INT');
 	}
 }
 $support->comma_to_list('filter_prefix');
@@ -445,10 +448,7 @@ map { $_ =~ s/`//g; $current_vega_tables{$_} = 1; } $vdbh->tables;
 if ( ! exists($current_vega_tables{'author'} )) {
 	
 	#initialise mysqldump statements
-	#info for MySQL dumping
-	#character set
 	my $character_set='latin1';
-	#database type
 	my $dbtype='MyISAM';
 	my $cs;
 	if($character_set) {
@@ -519,11 +519,7 @@ my $chr_names_wanted;
 if ($support->param('chr')) {
 	$chr_names_wanted = [ $support->param('chr') ];
 }
-elsif ($support->param('add_chr')) {
-	$chr_names_wanted = [ $support->param('add_chr') ];
-}
 else {
-#	$chr_names_wanted = &Slice::get_wanted_chromosomes($support,$laa,$lsa);
 	$chr_names_wanted = $support->get_wanted_chromosomes($laa,$lsa);
 }
 
@@ -886,6 +882,7 @@ sequence_set_access           i
 transcript_stable_id_pool     i
 translation_stable_id_pool    i
 tmp_align                     i
+test_contig_info              i
 ENDOFTEXT
 	return $txt;
 }
