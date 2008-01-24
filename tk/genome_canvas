@@ -17,7 +17,10 @@ use GenomeCanvas::Band::FileFeatures;
 use GenomeCanvas::Band::HomolFeature;
 use GenomeCanvas::Band::GeneCluster;
 use GenomeCanvas::Band::Scale;
-use Bio::EnsEMBL::DBSQL::DBAdaptor;
+
+use Bio::Otter::Lace::Defaults;
+use Bio::Vega::DBSQL::DBAdaptor;
+
 use Hum::Submission 'prepare_statement'; # For Sanger sequence names
 use Hum::EnsCmdLineDB;
 
@@ -25,7 +28,6 @@ use Hum::EnsCmdLineDB;
     my $scale           = 2000;
     my $v_tiles         = 0;
     my $h_tiles         = 0;
-    my $fpc             = '';
     my $chr_name        = '';
     my $chr_start       = 0;
     my $chr_end         = 0;
@@ -93,8 +95,7 @@ use Hum::EnsCmdLineDB;
         'help'              => $usage,
         'eps=s'             => \$eps_file,
         'dataset=s'         => \$dataset_name,
-        'chr=s'             => \$chr_name,
-        'set=s'             => \$set_name,
+        '(chr|set)=s'       => \$chr_name,
         'relative!'         => \$relative_coords,
         );
     
@@ -107,7 +108,6 @@ use Hum::EnsCmdLineDB;
         $ds = $cl->get_DataSet_by_name($dataset_name);
 
         $db = $ds->get_cached_DBAdaptor;
-        $db->assembly_type($set_name);
     } else {
         $db = Hum::EnsCmdLineDB::connect();
     }
@@ -116,9 +116,7 @@ use Hum::EnsCmdLineDB;
         $eps_file .= '.eps' unless $eps_file =~ /\.eps$/i;
     }
 
-    if    (! $fpc and   $chr_name) {$fpc = $chr_name}
-    elsif (  $fpc and ! $chr_name) {$chr_name = $fpc}
-    elsif (! $fpc and ! $chr_name) {   $usage->()   }
+    $usage->() unless $chr_name;
 
     if ($chr_start) {
         my $chr_start_num = parse_num($chr_start)
@@ -156,9 +154,8 @@ use Hum::EnsCmdLineDB;
 
     {
 
-        $chr_name ||= $fpc;
         if ($chr_start and ! $chr_end) {
-            $chr_end = get_chr_end($db, $db->assembly_type, $chr_name);
+            $chr_end = get_chr_end($db, $chr_name);
         }
         elsif ($chr_end and ! $chr_start) {
             $chr_start = 1;
@@ -169,14 +166,15 @@ use Hum::EnsCmdLineDB;
         my( $vc );
         if ($chr_start) {
             print STDERR "Fetching region of chr '$chr_name' from $chr_start to $chr_end\n";
-	        $vc = $stadp->fetch_by_chr_start_end(
+	        $vc = $stadp->fetch_by_region(
+                'chromosome',
                 $chr_name,
                 $chr_start,
                 $chr_end,
                 );
         } else {
-            print STDERR "Fetching virtual contig for all of fpc contig '$fpc'\n";
-	        $vc = $stadp->fetch_by_supercontig_name($fpc);
+            print STDERR "Fetching virtual contig for all of chromosome '$chr_name'\n";
+	        $vc = $stadp->fetch_by_region('chromosome', $chr_name);
         }
         
         my $tiling = GenomeCanvas::Band::TilingPath->new($vc);
@@ -392,17 +390,16 @@ use Hum::EnsCmdLineDB;
 
 
 sub get_chr_end {
-    my( $db, $static_type, $chr_name ) = @_;
+    my( $db, $chr_name ) = @_;
     
     my $get_max = $db->prepare(q{
-        SELECT MAX(chr_end)
-        FROM static_golden_path
-        WHERE type = ?
-          AND chr_name = ?
+        SELECT length
+        FROM seq_region
+        WHERE name = ?
         });
-    $get_max->execute($static_type, $chr_name);
+    $get_max->execute($chr_name);
     my ($max) = $get_max->fetchrow;
-    die "No max for type = '$static_type' and chr_name = '$chr_name'" unless $max;
+    die "No max for chr_name = '$chr_name'" unless $max;
     return $max;
 }
 

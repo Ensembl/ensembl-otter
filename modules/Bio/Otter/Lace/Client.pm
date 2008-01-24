@@ -10,6 +10,8 @@ use Symbol 'gensym';
 use URI::Escape qw{ uri_escape };
 use MIME::Base64;
 use HTTP::Cookies;
+use Term::ReadKey qw{ ReadMode ReadLine };
+
 
 use Hum::Conf qw{ PFETCH_SERVER_LIST };
 
@@ -264,18 +266,21 @@ sub fork_local_pfetch_server {
 sub password_prompt{
     my ($self, $callback) = @_;
     
-    if($callback){
+    if ($callback) {
         $self->{'_password_prompt_callback'} = $callback;
     }
-    $callback = $self->{'_password_prompt_callback'};
-    unless($callback){
-        $callback = sub {
+    $callback = $self->{'_password_prompt_callback'} ||=
+        sub {
             my $self = shift;
             my $user = $self->author;
-            $self->password(Hum::EnsCmdLineDB::prompt_for_password("Please enter your password ($user): "));
+            print "Please enter your password ($user): ";
+            ReadMode('noecho');
+            my $password = ReadLine(0);
+            print "\n";
+            chomp $password;
+            ReadMode('normal');
+            return $password;
         };
-        $self->{'_password_prompt_callback'} = $callback;
-    }
     return $callback;
 }
 
