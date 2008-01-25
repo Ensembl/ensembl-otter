@@ -227,6 +227,9 @@ sub get_gene_span_data {
             my $type = $gene->biotype =~ /pseudo/i
                 ? 'Pseudogene'
                 : biotype_status2method($gene->biotype, $gene->status);
+            if ($type eq 'Polymorphic') {
+                $type = 'Known_CDS';
+            }
             #warn join("\t", $id, $type, $gene->start, $gene->end, $gene->strand), "\n";
 	        push(@span, [$id, $type, $gene->start, $gene->end, $gene->strand]);
         }

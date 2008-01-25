@@ -349,6 +349,10 @@ use Hum::EnsCmdLineDB;
                     -pagewidth  => $width / 2,
                     -rotate     => 0,
                     );
+                system('./patch_strings', $eps_file) == 0 or die "Error running './patch_strings' on '$eps_file'";
+                if ($^O eq 'darwin') {
+                    system('open', $eps_file);
+                }
             });
     } else {
         make_button($button_frame, 'PostScript',
