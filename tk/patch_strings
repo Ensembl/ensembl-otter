@@ -20,6 +20,7 @@ my %lookup = (
     period  => '.',
     space   => ' ',
     plus    => '+',
+    hyphen  => '-',
 
     );
 
@@ -30,7 +31,8 @@ foreach my $file (@ARGV) {
     open PATCH, "> $patched" or die "Can't write to '$patched'; $!";
 
     while (<IN>) {
-        #  [/A/F/two/three/three/four/three/nine()]
+        #  Turn strings such as: [/A/F/two/three/three/four/three/nine()]
+        #                  into: [(AF233439)]
 
         s{\[([/\w]+)\(\)\]}{ fix_string($1) }eg;
         print PATCH $_;
