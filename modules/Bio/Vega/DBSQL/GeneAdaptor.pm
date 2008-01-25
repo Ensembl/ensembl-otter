@@ -615,6 +615,15 @@ sub store {
 
         $gene->version(1);
         $gene->created_date($time_now);
+
+        my $gene_current = $gene->is_current();
+
+        foreach my $tran (@{ $gene->get_all_Transcripts() }) {
+            $tran->is_current($gene_current);
+            foreach my $exon (@{$tran->get_all_Exons}) {
+                $exon->is_current($gene_current);
+            }
+        }
     }
     $gene->modified_date($time_now);
 
