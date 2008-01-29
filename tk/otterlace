@@ -27,14 +27,14 @@ use POSIX ":sys_wait_h";
     my $pipe_name = Bio::Otter::Lace::Defaults::pipe_name();
 
     my $mw = CanvasWindow::MainWindow->new("Choose DataSet [$pipe_name]");
-    $mw->DoWhenIdle(
-        # Avoid Zombies.
-        # Get Tk to clean up dead processes for us when it isn't busy.
-        sub {
-            while ((my $dead_pid = waitpid(-1, WNOHANG)) > 0) {
-                warn "Process $dead_pid exited $?\n";
-            }
-        });
+    
+    # Look for zombies every 5 seconds
+    $mw->repeat(5000, sub {
+        while ((my $dead_pid = waitpid(-1, WNOHANG)) > 0) {
+            warn "Process $dead_pid exited $?\n";
+        }
+    });
+
     my $dc = CanvasWindow::DataSetChooser->new($mw);
     $dc->Client($cl);
 
