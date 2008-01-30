@@ -130,7 +130,7 @@ $support->parse_extra_options(
     'ensembluser=s',
     'ensemblpass=s',
     'ensembldbname=s',
-    'mismatch',
+    'mismatch=s',
     'prune=s',
 );
 $support->allowed_params(
@@ -362,6 +362,7 @@ foreach my $chr (@chr_sorted) {
  GENE:
 	foreach my $gene (@$genes) {
 		my $gsi = $gene->stable_id;
+#		next GENE unless ($gsi eq 'OTTMUSG00000025863');
         my $gid = $gene->dbID;
 		# filter to user-specified gene_stable_ids
         if (scalar(@gene_stable_ids)){
@@ -379,6 +380,7 @@ foreach my $chr (@chr_sorted) {
 			$xrefs_assigned{'no display xref'}++;
             next GENE;
         }
+#		next unless ($gsi eq 'OTTMUSG00000021951');
 
         $support->log("Gene $gene_name ($gid, $gsi)...\n");
 	
@@ -554,6 +556,18 @@ foreach my $chr (@chr_sorted) {
 
 							$support->log_verbose("Found match for $extdb\n",2);
 
+							#why is all this needed here -  I thought mismatches were already done at line ~700 ?
+							if ($support->param('mismatch')) {
+								if ( ($xid ne $gene_name) && lc($xid) eq lc($gene_name) ) {
+									my $new_name = $prefix ? $prefix.':'.$xid : $xid;
+									#update gene_name and display_xref
+									$support->log_warning("Fixing case mismatch $gene_name to $new_name...\n", 1);
+									$sth_case1->execute($new_name, $gene_name);
+									$xrefs_assigned{'wrong case'}++;
+									next GENE;
+								}
+							}
+
 							$stats{$extdb}++;
 							if (!$support->param('dry_run')) {
 
@@ -599,9 +613,15 @@ foreach my $chr (@chr_sorted) {
 											}
 										}
 
-										#hack to set MGI as display xref only if it's a 'proper' name
+										#hacks to set MGI as display xref only if it's a 'proper' name:
+										# exclusions are (i) clone based names have two capital letters
+										# (ii) names that are Gene models (Gm)
+										# (iii) names that end in Rik are Riken cDNA names
+										# (iv) a known list of dodgy names from jel
 										if ( $support->param('xrefformat') eq 'mgi') {
-											next DB unless ($xid =~ /^[A-Za-z]{2}/);																					
+											next DB if ( ($xid =~ /[A-Z]{2}|Gm/)
+                                                      || ($xid =~ /Rik$/) );
+											next DB if ( grep { $xid eq $_ } qw(D1Ertd622e D1Ertd471e D1Pas1 D2Bwg1335e D2Ertd391e U46068 N28178 D4Wsu132e D4Bwg0951e C87499 C77080 D4Ertd196e C79267 D4Ertd22e C87977 D4Wsu114e D6Mm5e D8Ertd457e C86695 P140 X83328 D11Wsu99e D11Wsu47e D11Bwg0517e C79407 D12Ertd647e D16Ertd472e D17Wsu92e C77370));																					
 										}
 
 										#if there is an original name (ie the otter name is an alias or a synonym to an HGNC) then use it
@@ -669,7 +689,7 @@ foreach my $chr (@chr_sorted) {
 					}
 				}
 			}
-		}
+				}
 
 		if ($xref_found) {
 			$xrefs_assigned{'assigned'}++;
@@ -1025,7 +1045,7 @@ sub parse_mgivega {
        my $desc = $fields[2];
        my $vegaID = $fields[5];
 	   if ( exists($xrefs->{$vegaID}) ) {
-		   $support->log_warning("$vegaID found more than once in MGI file\n");
+		   $support->log_warning("$vegaID found more than once in MGI file. Symbol\n");
 	   }
 	   push @{$xrefs->{$vegaID}{'MarkerSymbol'}}, $markersymbol . '||' . $pid;
    }
@@ -1090,7 +1110,7 @@ sub parse_mgi {
 	   $xrefs->{$gene_name}->{'Uniprot/SWISSPROT'} = [ $first_id .'||'.$first_id ];
 
 	   #add entrezgene entry
-	   my $entrezgenes = $fields[25];
+	   my $entrezgenes = $fields[4];
 	   ($first_id) = split ',',$entrezgenes; 
 	   $xrefs->{$gene_name}->{'EntrezGene'} = [ $first_id .'||'. $first_id ];
 
