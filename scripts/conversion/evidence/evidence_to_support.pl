@@ -189,7 +189,11 @@ foreach my $chr (@chr_sorted) {
     foreach my $gene (@$genes) {
         my $gsi = $gene->stable_id;
         my $gid = $gene->dbID;
-        my $gene_name = $gene->display_xref->display_id;
+
+		#use original loutre name attributes since likely to be reporting back to Havana
+        my $gene_name = $gene->get_all_Attributes('name')->[0]->value;
+#		my $gene_name = $gene->display_xref->display_id;
+
 		my $source = $gene->source;
 
 		#skip KO genes since they shouldn't have supporting evidence
@@ -250,9 +254,10 @@ foreach my $chr (@chr_sorted) {
 				$gene_has_evidence = 1;
                 my $acc = $evi->name;
                 $acc =~ s/.*://;
+				my $acc_ver = $acc;
                 $acc =~ s/\.[0-9]*$//;
 				my $acc_type = $evi->type;
-				$all_evidence->{$source}{$acc_type}{"$acc:$tsid"}++;
+				$all_evidence->{$source}{$acc_type}{"$acc:$tsid:$acc_ver"}++;
                 my $ana = $analysis{$evi->type . "_evidence"};
                 $support->log_verbose("Evidence $acc...\n", 2);
                 # loop over similarity features on the slice, compare name with
@@ -386,19 +391,19 @@ if ($support->param('check_evidence_table')) {
 		foreach my $type (keys %{$data}) {
 			my $c = 0;
 			my ($match,$no_match) = (0,0);
-			$support->log("\nNon $source matches for evidence type $type:\n",1);
+			$support->log("\nLooking at $source non matches for evidence type $type:\n",1);
 			foreach my $rec (sort keys %{$all_evidence->{$source}{$type}}) {
-				my ($acc,$tsi) = split ':', $rec;
+				my ($acc,$tsi,$acc_ver) = split ':', $rec;
 				if (exists ($all_alignments->{$acc})) {
 					$match++;
 				}
 				else {
 					$c++;
 					$no_match++;
-					$support->log_verbose("$c. $acc ($tsi)\n",2);
+					$support->log("$c. $acc:$acc_ver ($tsi)\n",2);
 				}
 			}
-			$support->log("$match accessions match, $no_match accessions do not match to align_features\n",1);
+			$support->log("$source $type: $match accessions match, $no_match accessions do not match to align_features\n",1);
 		}
 	}
 }
