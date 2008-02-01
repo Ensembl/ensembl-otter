@@ -1,0 +1,94 @@
+#!/usr/bin/env perl -w
+
+### count_transcripts_sequence_changed
+
+use strict;
+
+use Bio::Otter::Lace::Defaults;
+use Hum::Sort qw{ ace_sort };
+
+{
+    my $dataset_name = 'human';
+
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'dataset=s'     => \$dataset_name,
+        ) or Bio::Otter::Lace::Defaults::show_help();
+    
+    # Client communicates with otter HTTP server:
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+
+    # DataSet interacts directly with an otter database:
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    
+    my $dbc = $ds->get_cached_DBAdaptor->dbc;
+
+    my $start_date = '2007-10-01';
+    my $end_date   = '2008-01-01';
+
+    my $list_transcripts = $dbc->prepare(q{
+        SELECT tsid.stable_id
+          , MIN(tsid.version)
+          , sr.name
+        FROM transcript t
+          , gene g
+          , transcript_stable_id tsid
+          , gene_stable_id gsid
+          , seq_region sr
+          , seq_region_attrib sra
+          , attrib_type at
+          , coord_system cs
+        WHERE g.gene_id = t.gene_id
+          AND t.transcript_id = tsid.transcript_id
+          AND g.gene_id = gsid.gene_id
+          AND g.seq_region_id = sr.seq_region_id
+          AND sr.seq_region_id = sra.seq_region_id
+          AND sra.attrib_type_id = at.attrib_type_id
+          AND sr.coord_system_id = cs.coord_system_id
+          AND cs.name = 'chromosome'
+          AND cs.version = 'Otter'
+          AND at.code = 'hidden'
+          AND sra.value = 0
+          AND g.is_current = 1
+          AND g.source = 'havana'
+          AND tsid.modified_date BETWEEN ? AND ?
+        GROUP BY tsid.stable_id
+    });
+    $list_transcripts->execute($start_date, $end_date);
+    
+    my $last_modified = $dbc->prepare(q{
+        SELECT MAX(version)
+        FROM transcript_stable_id
+        WHERE stable_id = ?
+          AND modified_date < ?
+    });
+    
+    my (%chr_count);
+    while (my ($tsid, $mod_ver, $chr) = $list_transcripts->fetchrow) {
+        $last_modified->execute($tsid, $start_date);
+        my ($prev_ver) = $last_modified->fetchrow;
+        next unless $prev_ver;
+        if ($mod_ver > $prev_ver) {
+            $chr_count{$chr}++;
+        }
+    }
+    
+    foreach my $chr (sort {ace_sort($a, $b)} keys %chr_count) {
+        printf "  %-12s  %3d\n", $chr, $chr_count{$chr};
+    }
+}
+
+
+
+__END__
+
+=head1 NAME - count_transcripts_sequence_changed
+
+More difficult, since I need to count how many transcripts, not necessarily
+current, with a modified date within the period have a different version
+number to the previously most recent version of the same transcript before the
+beginning of the period. This requires a perl script.
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
