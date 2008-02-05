@@ -52,13 +52,7 @@ sub new {
     }
 
     # '/GPFS/data1/WWW/SANGER_docs/data/otter/48/species.dat';
-    $self->species_dat_filename( join('/',
-                $self->server_root,
-                'data',
-                'otter',
-                $self->otter_version,
-                'species.dat')
-    );
+    $self->species_dat_filename($self->data_dir . '/species.dat'));
 
     return $self;
 }
@@ -114,6 +108,12 @@ sub server_root {
         $self->{'server_root'} = $root;
     }
     return $root;
+}
+
+sub data_dir {
+    my ($self) = @_;
+    
+    return join('/', $self->server_root, 'data', 'otter', $self->otter_version);
 }
 
     # overloading because certain species may need to be masked
@@ -225,7 +225,7 @@ sub log {
 
     print STDERR '['.$self->csn()."] $line\n";
 }
-    
+
 sub send_response{
     my ($self, $response, $wrap) = @_;
 

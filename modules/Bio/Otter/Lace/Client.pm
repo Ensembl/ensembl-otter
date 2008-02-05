@@ -450,6 +450,7 @@ sub escaped_param_string {
 sub do_http_request {
     my ($self, $method, $scriptname, $params) = @_;
 
+    # Apache non-parsed-header scripts must begin "nph-"
     $scriptname = "nph-$scriptname";
 
     my $url = $self->url_root.'/'.$scriptname;
@@ -921,6 +922,26 @@ sub get_all_CloneSequences_for_DataSet_SequenceSet {
   $csl=$csp->objects;
   $ss->CloneSequence_list($csl);
   return $csl;
+}
+
+sub get_lace_acedb_tar {
+    my ($self) = @_;
+    
+    # We cache the whole lace_acedb tar.gz file in memory
+    unless ($self->{'_lace_acedb_tar'}) {
+        $self->{'_lace_acedb_tar'} = $self->http_response_content( 'GET', 'get_lace_acedb_tar', {});
+    }
+    return $self->{'_lace_acedb_tar'};
+}
+
+sub get_methods_ace {
+    my ($self) = @_;
+    
+    # We cache the whole methods.ace file in memory
+    unless ($self->{'_methods_ace'}) {
+        $self->{'_methods_ace'} = $self->http_response_content('GET', 'get_methods_ace', {});
+    }
+    return $self->{'_methods_ace'};
 }
 
 sub save_otter_xml {
