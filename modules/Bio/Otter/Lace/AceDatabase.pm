@@ -80,22 +80,6 @@ sub title {
     return $self->{'_title'};
 }
 
-sub tar_file {
-    my( $self, $tar_file ) = @_;
-
-    if ($tar_file) {
-        $self->{'_tar_file'} = $tar_file;
-    }
-    elsif (! $self->{'_tar_file'}) {
-        my $file = "$ENV{OTTER_HOME}/lace_acedb.tar";
-        if (-e $file) {
-            warn "FOUND '$file'\n";
-            $self->{'_tar_file'} = $file;
-        }
-    }
-    return $self->{'_tar_file'};
-}
-
 sub tace {
     my( $self, $tace ) = @_;
 
@@ -126,10 +110,7 @@ sub MethodCollection {
 sub get_default_MethodCollection {
     my( $self ) = @_;
 
-    # This file should be the default:
-    my $method_file = $ENV{'OTTER_HOME'} . "/methods.ace";
-
-    return Hum::Ace::MethodCollection->new_from_file($method_file);
+    return Hum::Ace::MethodCollection->new_from_string($self->Client->get_methods_ace);
 }
 
 sub add_acefile {
@@ -155,6 +136,15 @@ sub empty_acefile_list {
     $self->{'_acefile_list'} = undef;
 }
 
+sub add_zmap_styles_acefile {
+    my ($self) = @_;
+    
+    my $styles_file = $self->home . "/rawdata/zmap_styles.ace";
+    confess "Missing Zmap_Styles file: '$styles_file'"
+        unless -e $styles_file;
+    $self->add_acefile($styles_file);
+}
+
 sub init_AceDatabase {
     my( $self, $ss, $with_pipeline ) = @_;
 
@@ -166,6 +156,7 @@ sub init_AceDatabase {
     $self->MethodCollection($self->get_default_MethodCollection);
 
     $self->add_misc_acefile;
+    $self->add_zmap_styles_acefile;
     $self->write_otter_acefile($ss);
     $self->write_dna_data($ss);
 
@@ -473,13 +464,19 @@ sub make_database_directory {
     my( $self ) = @_;
 
     my $home = $self->home;
-    my $tar  = $self->tar_file or confess "tar_file not set";
+    my $tar  = $self->Client->get_lace_acedb_tar
+        or confess "Client did not return tar file for local acedb database directory structure";
     mkdir($home, 0777) or die "Can't mkdir('$home') : $!\n";
 
-    my $tar_command = qq{cd "$home" ; tar xf "$tar"};
-    if (system($tar_command) != 0) {
+    my $tar_command = qq{| (cd "$home" ; tar xzf -)};
+    eval {
+        open my $expand, $tar_command or die "Can't open pipe '$tar_command'; $?";
+        print $expand $tar;
+        close $expand or die "Error running pipe '$tar_command'; $?";
+    };
+    if ($@) {
         $self->error_flag(1);
-        confess "Error running '$tar_command' exit($?)";
+        confess $@;
     }
 
     # rawdata used to be in tar file, but no longer because
@@ -744,7 +741,7 @@ sub make_otterpipe_DataFactory {
 sub DESTROY {
     my( $self ) = @_;
     
-    # warn "Debug - leaving database intact"; return;
+    #warn "Debug - leaving database intact"; return;
     
     my $home = $self->home;
     print STDERR "DESTROY has been called for AceDatabase.pm with home $home\n";
