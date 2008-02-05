@@ -3,12 +3,12 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2007-10-25 17:25:48 $
-# Id:            $Id: nph-get_datasets,v 1.7 2007-10-25 17:25:48 lg4 Exp $
+# Last modified: $Date: 2008-02-05 17:35:29 $
+# Id:            $Id: nph-get_datasets,v 1.8 2008-02-05 17:35:29 jgrg Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_datasets,v $
 
 use strict;
-use SangerPaths qw{ core bioperl123 ensembl46 otter48 };
+use SangerPaths qw{ core bioperl123 ensembl46 otter49 };
 
 use Bio::Otter::ServerScriptSupport;
 
