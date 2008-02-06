@@ -29,7 +29,7 @@ my $atags  = [];
   my ($dataset, $verbose, $do_atag, $do_misc, $update);
 
   #default
-  $do_misc = $do_atag = 0;
+  $do_misc = $do_atag = 1;
 
   my $help = sub { exec('perldoc', $0) };
 
@@ -383,13 +383,15 @@ __END__
 
 Running the script
 
-Eg, fetch_assembly_tags B<-dataset> zebrafish -misc -atag [-verbose][-update]
+Eg, fetch_assembly_tags B<-dataset> zebrafish [-verbose][-update]
 
 B<-update>: use when AGP is changed
 
 B<-misc>:   loads assembly_tag data as misc_features to B<misc_set>, B<misc_feature_misc_set>, B<misc_attrib> and B<misc_feature> tables
 
 B<-atag>:   loads assembly_tag data to B<assembly_tag> and B<assembly_tagged_contig> tables
+
+-misc and -atag are turned on by default
 
 =head1 DESCRIPTION
 
