@@ -132,7 +132,7 @@ sub populate_assembly_tagged_contig_table {
   print STDERR "Found ", scalar @seqids, " clones to update\n\n";
 
   my $vals = join(',', @seqids);
-  return 0 unless $vals;
+  exit 0 unless $vals;
 
   my $insert = $loutre_db->dbc->prepare(qq{INSERT INTO assembly_tagged_contig (seq_region_id) VALUES $vals});
   eval {
