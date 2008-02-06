@@ -383,9 +383,9 @@ __END__
 
 Running the script
 
-Eg, fetch_assembly_tags B<-dataset> zebrafish -misc and/or -atag [-verbose][-update]
+Eg, fetch_assembly_tags B<-dataset> zebrafish -misc -atag [-verbose][-update]
 
-B<-update>: use when there is no existing assembly_tag data in database
+B<-update>: use when AGP is changed
 
 B<-misc>:   loads assembly_tag data as misc_features to B<misc_set>, B<misc_feature_misc_set>, B<misc_attrib> and B<misc_feature> tables
 
