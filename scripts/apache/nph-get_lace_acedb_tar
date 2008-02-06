@@ -1,5 +1,12 @@
 #!/usr/local/bin/perl -w
 
+# Author:        jgrg
+# Group:         anacode
+# Maintainer:    jgrg
+# Last modified: $Date: 2008-02-06 11:06:22 $
+# Id:            $Id: nph-get_lace_acedb_tar,v 1.2 2008-02-06 11:06:22 jgrg Exp $
+# Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_lace_acedb_tar,v $
+
 ### nph-get_lace_acedb_tar
 
 use strict;
