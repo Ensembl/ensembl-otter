@@ -9,7 +9,6 @@ use Hum::AnaStatus::Sequence;
 
 use Bio::Otter::Lace::Defaults;
 
-use Bio::EnsEMBL::DBSQL::CloneAdaptor;
 use Bio::EnsEMBL::MiscFeature;
 use Bio::EnsEMBL::MiscSet;
 use Bio::EnsEMBL::Attribute;
