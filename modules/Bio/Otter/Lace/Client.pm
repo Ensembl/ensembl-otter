@@ -90,12 +90,13 @@ sub email {
     return $self->option_from_array([qw( client email )]) || (getpwuid($<))[0];
 }
 
-sub debug{
+sub debug {
     my ($self, $debug) = @_;
 
     warn "Set using the Config file please.\n" if $debug;
 
-    return $self->option_from_array([qw( client debug )]) ? 1 : 0;
+    my $val = $self->option_from_array([qw( client debug )]);
+    return $val ? $val : 0;
 }
 
 sub password_attempts {
@@ -391,7 +392,8 @@ sub otter_response_content {
 sub http_response_content {
     my ($self, $method, $scriptname, $params) = @_;
     
-    $params->{'log'} = 1 if $self->debug;
+    # Set debug to 2 or more to turn on debugging on server side
+    $params->{'log'} = 1 if $self->debug > 1;
     my $response = $self->general_http_dialog($method, $scriptname, $params);
     
     my $xml = $response->content();

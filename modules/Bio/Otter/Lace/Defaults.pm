@@ -40,7 +40,7 @@ my @CLIENT_OPTIONS = qw(
     write_access!
     group=s
     gene_type_prefix=s
-    debug!
+    debug=i
     misc_acefile=s
     logdir=s
     );
@@ -508,9 +508,10 @@ __DATA__
 ##########
 ## This is where the HARDWIRED ABSOLUTE DEFAULTS are stored
 [client]
-host=localhost
-port=33999
+host=www.sanger.ac.uk
+port=80
+version=48
 write_access=0
-debug=1
+debug=0
 pipeline=1 
-pipehead=0
+pipehead=1
