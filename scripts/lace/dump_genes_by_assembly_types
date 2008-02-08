@@ -15,7 +15,7 @@ $|=1;
 
 my $gene_count=0;
 
-my %assembly_nonmatch_version = (
+my %assembly_to_version = (
     'zebrafish' => {
             'gw2_not_on_agp'   => 0,
             'gw2_on_agp'       => 1,
@@ -1388,6 +1388,7 @@ sub find_last_dbid {
                 GROUP BY asm.type
                 HAVING count(*)=$arity;
             };
+
             $cached_sth_by_arity{$arity} = $otter_dba->prepare($sql);
         }
         my $sth = $cached_sth_by_arity{$arity};
@@ -1728,6 +1729,10 @@ sub main {
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
     my $ds = $cl->get_DataSet_by_name($dataset_name);
 
+    if(! exists $assembly_to_version{$dataset_name} ) {
+        die "Make sure that '$dataset_name' is one of the keys in assembly_to_version{} hash";
+    }
+
         # init the global things:
     $otter_dba     = $ds->get_cached_DBAdaptor; # now it is global
     $gene_adaptor  = $otter_dba->get_GeneAdaptor();
@@ -1792,9 +1797,10 @@ sub main {
 
         while( my ($atype, $chr_name) = $sth_ctgids_2_asm->fetchrow()) {
 
-            my $version = exists($assembly_nonmatch_version{$dataset_name}{$atype})
-                    ? $assembly_nonmatch_version{$dataset_name}{$atype}
+            my $version = exists($assembly_to_version{$dataset_name}{$atype})
+                    ? $assembly_to_version{$dataset_name}{$atype}
                     : 0;
+
             if($version>=0) { # negative values mean we want to exclude this sequence set altogether
                 if(!$onlychrs || $chr_ok->{uc($chr_name)}) {
                     push @{$ver_2_asm_chr->{$version}}, [$atype, $chr_name];
