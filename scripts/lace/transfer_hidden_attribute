@@ -24,8 +24,8 @@ use Bio::Otter::Lace::Defaults;
 use Bio::EnsEMBL::Attribute;
 
 {
-    my $old_dsname  = 'os_mouse';
-    my $new_dsname  = 'ns_mouse';
+    my $old_dsname  = 'os_pig';
+    my $new_dsname  = 'ns_pig';
     my $code_wanted = 'hidden';
     my $change      = 0; # dry run
 

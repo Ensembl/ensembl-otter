@@ -1309,31 +1309,43 @@ my %assembly_nonmatch_version = (
         'MHC_SSTO-03'=> 3,
     },
     'pig' => {
-        'chr17-SSC17_MAX1-05' => 5,
-        'chr17-SSC17_MAX1-04' => 4,
-        'chr17-SSC17_MAX1-03' => 3,
-        'chr17-SSC17_MAX1-02' => 2,
-        'chr17-01'            => 1,
-        'chr17-SSC17_MAX1-01' => 0.8,
-        'bE447P16-01'         => 0,
-        'CR974431_CpG'        => 0,
-        'phrap_test-01'       => 0,
-        'chr4_HSD3B-01'       => 1,
-        'SSC6_test1-01'       => 3,
-        'Chr_6_NKG-02'        => 2,
-        'Chr_6_NKG'           => 1,
-        'mhc-08'              => 8,
-        'mhc-07'              => 7,
-        'mhc-06'              => 6,
-        'mhc-05'              => 5,
-        'mhc-04'              => 4,     # ? didn't find the agp
-        'mhc-03'              => 3,
-        'mhc-02'              => 2,
-        'mhc-01'              => 1,
-        'SSC7_test2-02'       => 0.8,
-        'SSC7_test2-01'       => 0.7,
-        'MHC_class-I'         => 0.6,
-        'MHC_class-II'        => 0.3,
+            # chr_17:
+        'CR974431_CpG'             => 5, 
+        'bE447P16-01'              => 5,
+        'phrap_test-01'            => 5,
+        'chr17-SSC17_MAX1-01'      => 10,
+        'chr17-01'                 => 15,
+        'chr17-SSC17_MAX1-02'      => 20,
+        'chr17-SSC17_MAX1-03'      => 30,
+        'chr17-SSC17_MAX1-04'      => 40,
+        'chr17-SSC17_MAX1-05'      => 50,
+
+            # chr_7:
+        'bE21M14-01'    => 1,
+        'SSC7_test2-01' => 2,   # only one clone
+        'SSC7_test2-02' => 5,   # 30 clones, but only one has exons (the same as above)
+        'mhc-01'        => 10,
+        'mhc-02'        => 20,
+        'mhc-03'        => 30,
+        'mhc-04'        => 40,  # didn't find the AGP
+        'MHC_class-I'   => 41,
+        'MHC_class-II'  => 42,
+        'mhc-05'        => 50,
+        'mhc-06'        => 60,
+        'mhc-07'        => 70,
+        'mhc-08'        => 80,
+
+            # chr_6:
+        'SSC6_test1-01' => 0, # doesn't contain any exons
+        'Chr_6_NKG'     => 1,
+        'Chr_6_NKG-02'  => 2, # the two versions contain the same exons (but assembly could be different)
+
+            # chr_4:
+        'bE192N14-01'   => 0, # doesn't contain any exons
+        'chr4_HSD3B-01' => 1,
+
+            # chr_13:
+        'bE240L11-01'   => 1,
     },
     'dog' => {},
 );
@@ -1486,7 +1498,7 @@ sub translation_qc {
             delete $transcript->{'translation'};
             delete $transcript->{'_translation_id'};
             $transcript->transcript_info->remark(Bio::Otter::TranscriptRemark->new(-remark=>"$remark_prefix translation '$translation_stable_id' unrecoverable ($translation_unrecoverable_reason)"));
-            return $trans_name.' [Translation unrecoverable ($translation_unrecoverable_reason), deleted] ';
+            return $trans_name." [Translation unrecoverable ($translation_unrecoverable_reason), deleted] ";
         }
 
         my $original_phase = $translation->start_Exon()->phase();
@@ -1518,7 +1530,7 @@ sub gene_transformed_successfully {
 
     my $slice_length = $slice->length;
     foreach my $exon (@{$gene->get_all_Exons}) {
-        if ($exon->contig != $slice or $exon->start < 1 or $exon->end > $slice_length) {
+        if ($exon->contig != $slice or $exon->start < 1 or $exon->end > $slice_length or $exon->length<1) {
             my $esi = $exon->stable_id;
             print STDERR "[$esi out of boundaries] ";
             return 0;
