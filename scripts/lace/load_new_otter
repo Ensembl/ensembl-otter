@@ -122,7 +122,7 @@ LOCUS: while (<>){  ## read from STDIN + @ARGV filenames
   }
 }
 
-$mc->update_key_value('prefix.primary','OTT');
+# $mc->update_key_value('prefix.primary','OTT');
 
 my $loading_finished=time();
 my $total_time=$loading_finished-$loading_started;
