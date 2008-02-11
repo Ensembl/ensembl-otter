@@ -439,6 +439,7 @@ $sql = qq(
 );
 $c = $dbh->{'vega'}->do($sql) unless ($support->param('dry_run'));
 $support->log_stamped("Done transfering $c interpro entries.\n\n");
+if ($c eq '0E0') { $support->log_warning("No Vega interpro entries transferred\n"); }
 
 # add appropriate entries to coord_system
 $support->log_stamped("Adding coord_system entries...\n");
