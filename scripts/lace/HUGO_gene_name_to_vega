@@ -1,6 +1,6 @@
 #!/usr/local/bin/perl -w
 
-### HUGO_gene_name_to_otter
+### HUGO_gene_name_to_vega
 
 use strict;
 use Bio::Otter::Lace::Defaults;
