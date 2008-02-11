@@ -164,7 +164,7 @@ foreach my $chr ($support->sort_chromosomes) {
 				if (! $support->param('dry_run')) {
 					$dbh->do(qq(UPDATE xref x, external_db edb
                                    SET x.display_label = "$new_name"
-                                 WHERE edb.dbprimary_acc = "$tsi"
+                                 WHERE x.dbprimary_acc = "$tsi"
                                    AND x.external_db_id = edb.external_db_id
                                    AND edb.db_name = 'Vega_transcript'));
 				}
