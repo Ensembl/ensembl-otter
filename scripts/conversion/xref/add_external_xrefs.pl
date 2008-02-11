@@ -34,6 +34,8 @@ Specific options:
     --xrefformat=FORMAT                 input file format FORMAT
                                         (hugo|tcag|imgt|refseq)
     --hugofile=FILE                     read Hugo input from FILE
+    --mgivega=FILE                      read MGI<->Vega ID links from FILE
+    --mgi=FILE                          read MGI data from FILE
     --tcagfile=FILE                     read TCAG input from FILE
     --imgtfile=FILE                     read IMGT input from FILE
     --refseqfile=FILE                   read Refseq input from FILE
