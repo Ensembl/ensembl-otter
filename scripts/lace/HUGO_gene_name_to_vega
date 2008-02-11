@@ -11,10 +11,11 @@ use GeneHist::DataUtils qw (process_query);
 # as HGNC no longer assign gene type and takes the data from Otter
 
 {
-  my ($dataset_name);
+  my ($dataset_name, $test);
 
   Bio::Otter::Lace::Defaults::do_getopt(
                                         'ds|dataset=s' => \$dataset_name,
+                                        'test'         => \$test
                                        );
   Bio::Otter::Lace::Defaults::show_help() unless $dataset_name;
 
@@ -26,7 +27,7 @@ use GeneHist::DataUtils qw (process_query);
 
   $loutre_dba->begin_work;
   eval{
-    update_otter($loutre_dba, $hugo_data);
+    update_otter($loutre_dba, $hugo_data, $test);
   };
   if ($@) {
     $loutre_dba->rollback;
@@ -37,7 +38,7 @@ use GeneHist::DataUtils qw (process_query);
 }
 
 sub update_otter {
-  my ($loutre_dba, $hugo_data) = @_;
+  my ($loutre_dba, $hugo_data, $test) = @_;
 
   my $gene_aptr = $loutre_dba->get_GeneAdaptor;
   foreach my $hugo (@$hugo_data) {
@@ -77,7 +78,7 @@ sub update_otter {
       next;
     }
 
-    update_gene_name_and_description($loutre_dba, $gene_aptr, $gene, $hugo->{'locus_symbol'}, $hugo->{'locus_description'});
+    update_gene_name_and_description($loutre_dba, $gene_aptr, $gene, $hugo->{'locus_symbol'}, $hugo->{'locus_description'}, $test);
   }
 }
 
@@ -133,7 +134,7 @@ sub fmt_list {
 }
 
 sub update_gene_name_and_description {
-  my ( $loutre_dba, $gene_aptr, $gene, $hugo_name, $hugo_desc ) = @_;
+  my ( $loutre_dba, $gene_aptr, $gene, $hugo_name, $hugo_desc, $test ) = @_;
 
   my $name_attr    = $gene->get_all_Attributes('name')->[0];
   my $current_name = $name_attr->value;
@@ -143,17 +144,17 @@ sub update_gene_name_and_description {
   if ( $hugo_name and $current_name ne $hugo_name) {
     $flag = 1;
     $name_attr->value($hugo_name);
-    warn "NAME CHANGE from $current_name to ", $name_attr->value, "\n";
+    warn "#NAME CHANGE from $current_name to ", $name_attr->value, "\n";
   }
 
   if ( $hugo_desc and $hugo_desc ne $current_desc ){
     $flag = 1;
     $gene->description($hugo_desc);
-    warn "DESC CHANGE from $current_desc to ", $gene->description, "\n";
+    warn "#DESC CHANGE from $current_desc to ", $gene->description, "\n";
   }
 
   # store gene
-  if ( $flag == 1 ){
+  if ( $flag == 1 and ! $test ){
     warn "Storing ", $gene->stable_id, " ...\n";
     $gene_aptr->store($gene);
   }
