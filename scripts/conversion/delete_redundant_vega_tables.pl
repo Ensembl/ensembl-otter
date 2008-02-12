@@ -121,9 +121,9 @@ my @backups   = grep { $_ =~ /backup|bkup/i } keys %tabs;
 $\ = "\n";
 
 if (@missing) {
-	$support->log_warning("You have tables missing from your vega database:\n");
 	my $tables = join "\n", @missing;
-	unless ($support->user_proceed("$tables\nDo you really want to continue?\n")) {
+	$support->log_warning("You have tables missing from your vega database:\n$tables\n");
+	unless ($support->user_proceed("The tables are missing:\n$tables\nDo you really want to continue?\n")) {
 		exit(0);
 	}
 }
