@@ -166,7 +166,11 @@ sub init_AceDatabase {
 
     $self->write_methods_acefile;
     $self->initialize_database;
-    if ($self->write_local_blast()) {
+
+    my $restart = 0;
+    $restart = 1 if $self->write_local_exonerate();
+    $restart = 1 if $self->write_local_blast();
+	if ($restart) {
         # Must parse in new acefile
         $self->initialize_database;
 
@@ -174,6 +178,44 @@ sub init_AceDatabase {
         # or it will not see any data added by blast.
         $self->ace_server->restart_server;
     }
+}
+
+sub write_local_exonerate {
+    my ($self) = @_;
+
+    # Do not have local blast searching working on the Mac yet
+    return if $^O eq 'darwin';
+
+    eval {
+        require Bio::Otter::Lace::Exonerate;
+    };
+    print "Exonerate error [$@]\n" if $@;
+
+    return 0 if $@;
+
+    # The Blast object gets all its configuration
+    # information from Lace::Defaults
+    ### Should be able to specify mulitple databases to search,
+    ### the results of each go into separate columns.
+    my $exon = Bio::Otter::Lace::Exonerate->new;
+    $exon->AceDatabase($self);
+    $exon->initialise or return;
+    my $ace_text = $exon->run or return;
+
+    my $ace_filename = $self->home . '/rawdata/local_exonerate_search.ace';
+    open(my $ace_fh, "> $ace_filename") or die "Can't write to '$ace_filename' : $!";
+    print $ace_fh $ace_text;
+    close $ace_fh or confess "Error writing to '$ace_filename' : $!";
+
+    # Need to add new method to collection if we don't have it already
+    my $coll = $self->MethodCollection;
+    my $method = $exon->ace_Method;
+    unless ($coll->get_Method_by_name($method->name)) {
+        $coll->add_Method($method);
+        $self->write_methods_acefile;
+    }
+
+    $self->add_acefile($ace_filename);
 }
 
 sub write_local_blast {
