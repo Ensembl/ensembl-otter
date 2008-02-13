@@ -149,20 +149,33 @@ sub get_DBAdaptors {
     my $loutre_db = $ds->make_DBAdaptor
       or confess 'get Bio::Vega::DBSQL::DBAdaptor failed';
 
+    my $ensdb_aptr = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
+                                                      -user   => $ds->USER,
+                                                      -dbname => $ds->DBNAME,
+                                                      -host   => $ds->HOST,
+                                                      -pass   => $ds->PASS,
+                                                      -port   => $ds->PORT,
+                                                      -driver => 'mysql');
+
+    # Bio::EnsEMBL::DBSQL::GeneAdaptor
+    my $gene_aptr  = $ensdb_aptr->get_GeneAdaptor
+      or confess "get Bio::EnsEMBL::DBSQL::GeneAdaptor failed";
+
+    #    # Bio::Vega::DBSQL::GeneAdaptor
+    #    my $gene_aptr  = $loutre_db->get_GeneAdaptor
+    #      or confess "get Bio::Vega::DBSQL::GeneAdaptor failed";
+
+
     # Bio::EnsEMBL::DBSQL::SliceAdaptor
     my $slice_aptr = $loutre_db->get_SliceAdaptor
       or confess "get Bio::EnsEMBL::DBSQL::SliceAdaptor failed";
-
-    # Bio::Vega::DBSQL::GeneAdaptor
-    my $gene_aptr  = $loutre_db->get_GeneAdaptor
-      or confess "get Bio::Vega::DBSQL::GeneAdaptor failed";
 
     # Bio::Vega::DBSQL::ContigInfoAdaptor
     $loutre_db->get_ContigInfoAdaptor;
     my $annotated_contig_aptr = $loutre_db->get_ContigInfoAdaptor
       or confess "get Bio::Vega::DBSQL::ContigInfoAdaptor failed";
 
-    return ($loutre_db, $slice_aptr, $gene_aptr, $annotated_contig_aptr);
+    return ($loutre_db, $ensdb_aptr, $slice_aptr, $gene_aptr, $annotated_contig_aptr);
 }
 
 =head2 embl_setup
@@ -622,7 +635,7 @@ sub make_embl_ft {
     my $ds = $self->DataSet
       or confess "DataSet must be set before calling make_embl";
 
-    my ($loutre_db, $slice_aptr, $gene_aptr, $annotated_contig_aptr)
+    my ($loutre_db, $ensdb_aptr, $slice_aptr, $gene_aptr, $annotated_contig_aptr)
       = $self->get_DBAdaptors();
 
     my $set = 'Hum::EMBL::FeatureSet'->new;
@@ -632,14 +645,24 @@ sub make_embl_ft {
       or confess "Could not fetch clone slice by accession_version"
         . "acc: $acc sv: $sequence_version";
     warn "Fetching from ", $ds->selected_SequenceSet;
+
     my $chrom_slice = $slice_aptr->fetch_by_region('chromosome', $ds->selected_SequenceSet)
       or die "Could not fetch chr slice by region $ds->selected_SequenceSet";
+
+    $chrom_slice->adaptor()->db($ensdb_aptr); # use Bio::EnsEMBL::DBSQL::GeneAdaptor to avoid truncating genes
+
 
     # project clone coords to chr coords of current seqset
     my $chr_projection = $clone_slice->project_to_slice($chrom_slice);
 
     # normalized start, end
     my $chr_slice = $chr_projection->[0]->to_Slice();
+
+    # test
+    warn sprintf("[chromslice] start: %s chromslice end: %s\n", $chrom_slice->start, $chrom_slice->end);
+    warn sprintf("[projected slice] start: %s projected slice end: %s\n", $chr_slice->start, $chr_slice->end);
+    warn sprintf("[clone slice] start: %s clone slice end: %s\n", $clone_slice->start, $clone_slice->end);
+
 
     $self->Slice_contig($chr_slice);
 
@@ -661,7 +684,7 @@ sub make_embl_ft {
 
     # no lazy-loading transcripts,
     my $genes = $chr_slice->get_all_Genes(undef, undef, 1);
-    warn "Got ", scalar @$genes, " genes";
+    warn "Got ", scalar @$genes, " gene(s)";
 
     # won't include this FT line if no genes are annotated
     # originally to deal with tomato clones
@@ -679,7 +702,9 @@ sub make_embl_ft {
         next if $gene->biotype eq 'obsolete';
         next if $gene->source ne 'havana';
 
-        $self->_do_Gene($gene, $set);
+        warn sprintf("Gene start: %s --- Gene end: %s", $gene->start, $gene->end);
+
+        $self->_do_Gene($gene, $set, $chr_slice);
       }
     }
 
@@ -751,7 +776,7 @@ sub _cache_annotated_clone {
     my $seq_version = $self->sequence_version
         or confess "sequence_version not set";
 
-    my ($loutre_db, $slice_aptr, $gene_aptr, $annotated_contig_aptr) = $self->get_DBAdaptors();
+    my ($loutre_db, $ensdb_aptr, $slice_aptr, $gene_aptr, $annotated_contig_aptr) = $self->get_DBAdaptors();
     my  $clone_slice = $slice_aptr->fetch_by_region('clone', $accession.".".$seq_version)
       or confess "Could not fetch clone slice by accession_version "
         . "acc: $accession sv: $seq_version";
@@ -789,9 +814,15 @@ Warns if no CloneRemarks are fetched for the clone, returning undef.
 sub get_description_from_otter {
 	my ( $self ) = @_;
 
+    my ($loutre_db, $ensdb_aptr, $slice_aptr, $gene_aptr, $annotated_contig_aptr)
+      = $self->get_DBAdaptors();
+
     my $clone_slice = $self->annotated_clone();
     my $ctgname     = $clone_slice->seq_region_name.".".$clone_slice->start.".".$clone_slice->end;
     my $ctg         = $clone_slice->adaptor->fetch_by_region('contig', $ctgname);
+
+    # need to turn DBAdaptor to loutre from Ensembl to work with contig_info
+    $clone_slice->adaptor()->db($loutre_db);
     my $ctginfo_ad  = $clone_slice->adaptor->db->get_ContigInfoAdaptor;
     my $ctginfo     = $ctginfo_ad->fetch_by_seq_region_id($ctg->get_seq_region_id);
 
@@ -989,7 +1020,7 @@ my %ens2embl_phase = (
     );
 
 sub _do_Gene {
-  my ( $self, $gene, $set ) = @_;
+  my ( $self, $gene, $set, $chrslice ) = @_;
 
   my $gtype = $gene->status;
 
@@ -1014,7 +1045,7 @@ sub _do_Gene {
 
       #This will only return true if one or more Exons are on the Slice.
       if ($self->_add_exons_to_exonlocation($mRNA_exonlocation
-                                            , $all_transcript_Exons)) {
+                                            , $all_transcript_Exons, $chrslice)) {
 
         my $ft = $set->newFeature;
         if ( $gtype eq "Transposon" ) {
@@ -1062,7 +1093,7 @@ sub _do_Gene {
       if ($all_CDS_Exons) {
         my $CDS_exonlocation = Hum::EMBL::ExonLocation->new;
         if ($self->_add_exons_to_exonlocation($CDS_exonlocation
-                                              , $all_CDS_Exons)) {
+                                              , $all_CDS_Exons, $chrslice)) {
 
           my $ft = $set->newFeature;
 
@@ -1180,70 +1211,75 @@ or undef if none are.
 =cut
 
 sub _add_exons_to_exonlocation {
-    my ( $self, $exonlocation, $exons ) = @_;
+  my ( $self, $exonlocation, $exons, $chrslice ) = @_;
 
-    my (@hum_embl_exons , $exons_on_slice);
-    my( @all_exons );
-    foreach my $exon (@$exons) {
-        if ($exon->isa('Bio::EnsEMBL::StickyExon')) {
-            push(@all_exons, @{$exon->get_all_component_Exons});
-        } else {
-            push(@all_exons, $exon);
-        }
+  my (@hum_embl_exons , $exons_on_slice);
+  my( @all_exons );
+  my $sa = $chrslice->adaptor;
+  my $seqset = $self->DataSet->selected_SequenceSet;
+
+  foreach my $exon (@$exons) {
+    if ($exon->isa('Bio::EnsEMBL::StickyExon')) {
+      push(@all_exons, @{$exon->get_all_component_Exons});
+    } else {
+      push(@all_exons, $exon);
     }
-    foreach my $exon (@all_exons) {
+  }
 
-        my $hum_embl_exon = Hum::EMBL::Exon->new;
-        $hum_embl_exon->strand($exon->strand);
+  foreach my $exon (@all_exons) {
 
-        my $start   = $exon->start;
-        my $end     = $exon->end;
+    my $hum_embl_exon = Hum::EMBL::Exon->new;
 
-        my $slice_contig = $self->Slice_contig;
-        my $contig_length = $self->contig_length;
+    #my $contig  = $exon->contig; # deprecated
+    my $start   = $exon->start;
+    my $end     = $exon->end;
+    my $strand  = $exon->strand;
+    my $slice_contig = $self->Slice_contig; # contig projected to chr
+    my $contig_length = $self->contig_length;
 
-        $hum_embl_exon->start($start);
-        $hum_embl_exon->end($end);
+    if ($end < 1 or $start > $slice_contig->length) {
+      # these exons are on another contig
+      # warn $exon->stable_id;
+      # carp "Unexpected exon start '$start' end '$end' "
+      #   . "on contig of length '$contig_length'\n";
+      my $exonCtg = $exon->transform('contig');
+      my ($acc_sv) = $exonCtg->seq_region_name =~ /^(\w+\.\d+)/;
+      $hum_embl_exon->accession_version($acc_sv);
 
-        # May be an is_sticky method?
-        if ($exon->isa('Bio::EnsEMBL::StickyExon')) {
-            # Deal with sticy exon
-            warn "STICKY!\n";
-        }
-        elsif ($exon->seq_region_name ne $slice_contig->seq_region_name) {
-          # Is not on the Slice
-          $exon->seq_region_name =~ /(.*)\.(.*)/;
-
-          my $acc = $1;
-          my $sv  = $2;
-
-          $hum_embl_exon->accession_version("$acc.$sv");
-        }
-
-       # elsif ($contig->dbID != $slice_contig->dbID) {
-#            # Is not on the Slice
-#            my $acc = $contig->clone->embl_id;
-#            my $sv  = $contig->clone->embl_version;
-#            $hum_embl_exon->accession_version("$acc.$sv");
-#        }
-        else {
-            # Is on Slice (ie: clone)
-            if ($end < 1 or $start > $slice_contig->length) {
-                carp "Unexpected exon start '$start' end '$end' "
-                    . "on contig of length '$contig_length'\n";
-            } else {
-                $exons_on_slice++;
-            }
-        }
-        push(@hum_embl_exons, $hum_embl_exon);
+      $start = $exonCtg->start;
+      $end   = $exonCtg->end;
+      $strand = $exonCtg->strand;
     }
-    $exonlocation->exons(@hum_embl_exons);
+    elsif ( ($start < 1 and $end > 1) or ($start < $slice_contig->length and $end > $slice_contig->length) ) {
+      # do something with overlapping exons in clone boundary
+      #testing
+    #  warn "Exons in clone boundary: clone LEN: ", $slice_contig->length;
+#      warn "START-1: $start == END-1: $end === STRAND-1: $strand";
+#      my $exonCtg = $exon->transform('contig');
+#      my ($acc_sv) = $exonCtg->seq_region_name =~ /^(\w+\.\d+)/;
+#      warn "$acc_sv, $exonCtg";
+#      $hum_embl_exon->accession_version($acc_sv);
+#      $start = $exonCtg->start;
+#      $end   = $exonCtg->end;
+#      $strand = $exonCtg->strand;
+#      warn "START-2: $start == END-2: $end === STRAND-2: $strand";
+    }
+    else {
+      $exons_on_slice++;
+    }
+    $hum_embl_exon->start($start);
+    $hum_embl_exon->end($end);
+    $hum_embl_exon->strand($strand);
+    push(@hum_embl_exons, $hum_embl_exon);
+  }
+  $exonlocation->exons(@hum_embl_exons);
 
-    #Set the start and end for the Hum::EMBL::ExonLocation
-    $exonlocation->start($hum_embl_exons[0]->start);
-    $exonlocation->end($hum_embl_exons[-1]->end);
-    return $exons_on_slice;
+  #Set the start and end for the Hum::EMBL::ExonLocation
+  $exonlocation->start($hum_embl_exons[0]->start);
+  $exonlocation->end($hum_embl_exons[-1]->end);
+  return $exons_on_slice;
 }
+
 
 =head2 SequenceSet
 
