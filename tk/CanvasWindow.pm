@@ -8,6 +8,7 @@ use Carp;
 use CanvasWindow::MainWindow;
 use CanvasWindow::Utils 'expand_bbox';
 use Tk::HeadedCanvas;
+use Hum::Sort 'ace_sort';
 
 sub new {
     my( $pkg, $tk, $x, $y, $where_scrollbars, $canvas_class) = @_;
@@ -986,7 +987,7 @@ sub next_message_id {
         my( $self ) = @_;
 
         if (my $sel = $self->{'_selected_list'}) {
-            my @selected = sort {$a <=> $b} keys %$sel;
+            my @selected = sort { ace_sort($a,$b) } keys %$sel;
             return @selected;
         } else {
             return;
