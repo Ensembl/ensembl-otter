@@ -1097,7 +1097,7 @@ sub process_gene {
             if ($transcript->get_all_Attributes('cds_start_NF')->[0]->value) {
                 $CDS_exonlocation->start_not_found(1);
 
-                my $phase = ($CDS_exonlocation->exons)[0]->phase;
+                my $phase = $transcript->get_all_translateable_Exons->[0]->phase;
                 my $embl_phase = $ens2embl_phase{$phase}
                     or confess "Bad exon phase '$phase'";
                 $cds_ft->addQualifierStrings('codon_start', $embl_phase);
