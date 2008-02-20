@@ -678,7 +678,7 @@ sub make_embl_ft {
     # PolyA signals and sites are on chrom. slice
     $self->_do_polyA($chr_slice, $set);
 
-    # assembly_tags are on the contig slice
+    # Assembly_tags are on the contig slice
     $self->_do_assembly_tag($ctg_slice, $set);
 
     # Finish up
@@ -1097,7 +1097,7 @@ sub process_gene {
             if ($transcript->get_all_Attributes('cds_start_NF')->[0]->value) {
                 $CDS_exonlocation->start_not_found(1);
 
-                my $phase = @{$CDS_exonlocation->exons}[0]->phase;
+                my $phase = ($CDS_exonlocation->exons)[0]->phase;
                 my $embl_phase = $ens2embl_phase{$phase}
                     or confess "Bad exon phase '$phase'";
                 $cds_ft->addQualifierStrings('codon_start', $embl_phase);
