@@ -169,7 +169,7 @@ sub find_by_stable_ids {
             if($@) {
                 # warn "'$qname' looks like a stable id, but wasn't found.";
                 # warn ($@) if $DEBUG;
-            } else {
+            } elsif($feature) { # however watch out, sometimes we just silently get nothing!
                 $self->register_feature($qname, $qtype, $feature);
             }
         }
