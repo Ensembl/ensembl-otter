@@ -644,9 +644,9 @@ sub make_embl_ft {
         $ctg_ori) = $self->get_ctg_coordinate_details($ens_db, "$acc.$sequence_version");
     warn "\nContig: ", quote_row($chr_name, $chr_start, $chr_end, $ctg_name, $ctg_start, $ctg_end, $ctg_ori);
     
+    # Not sure if we need $ctg_ori
     my $chr_slice = $ens_db->get_SliceAdaptor->fetch_by_region('chromosome', $chr_name, $chr_start, $chr_end, $ctg_ori);
-    $self->Slice_contig($chr_slice);
-    
+    my $ctg_slice = $ens_db->get_SliceAdaptor->fetch_by_region('contig', $ctg_name);
 
     my $set = 'Hum::EMBL::FeatureSet'->new;
 
@@ -679,9 +679,9 @@ sub make_embl_ft {
     $self->_do_polyA($chr_slice, $set);
 
     # assembly_tags are on the contig slice
-    $self->_do_assembly_tag($clone_slice, $set);
+    $self->_do_assembly_tag($ctg_slice, $set);
 
-    #Finish up
+    # Finish up
     $set->sortByPosition;
     $set->removeDuplicateFeatures;
     $set->addToEntry($embl);

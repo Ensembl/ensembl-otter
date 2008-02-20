@@ -292,7 +292,7 @@ sub authorize {
     my $password = $self->password_prompt()->($self)
       or die "No password given";
 
-    # need to encode these
+    # need to url-encode these
     $user     = uri_escape($user);      # possibly not worth it...
     $password = uri_escape($password);  # definitely worth it!
 
