@@ -273,6 +273,12 @@ sub password_prompt{
     $callback = $self->{'_password_prompt_callback'} ||=
         sub {
             my $self = shift;
+            
+            unless (-t STDIN) {
+                warn "Cannot prompt for password - not attached to terminal\n";
+                return;
+            }
+            
             my $user = $self->author;
             print STDERR "Please enter your password ($user): ";
             ReadMode('noecho');

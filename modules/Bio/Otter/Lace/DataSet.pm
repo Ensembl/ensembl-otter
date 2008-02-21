@@ -247,7 +247,7 @@ sub _make_DBAdptor_with_class {
     
     my(@args) = (
         # Extra arguments to stop Bio::EnsEMBL::Registry issuing warnings
-        -GROUP      => 'otter',
+        -GROUP      => "otter:$class",
         -SPECIES    => $self->name,
         );
 
