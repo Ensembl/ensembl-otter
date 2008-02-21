@@ -78,10 +78,8 @@ sub comments {
         unless (ref($value) eq 'ARRAY') {
             confess "Must pass an array reference";
         }
-        unless ($self->{'_bio_otter_embl_factory_comments'}) {
-            $self->{'_bio_otter_embl_factory_comments'} = [];
-        }
-        push(@{$self->{'_bio_otter_embl_factory_comments'}}, $value);
+        my $list = $self->{'_bio_otter_embl_factory_comments'} ||= [];
+        push(@$list, $value);
     }
     return $self->{'_bio_otter_embl_factory_comments'};
 }
@@ -112,10 +110,8 @@ sub references {
         unless (ref($value) eq 'ARRAY' and scalar(@$value == 4)) {
             confess "Must pass an array reference pointing to 4 elements";
         }
-        unless ($self->{'_bio_otter_embl_factory_references'}) {
-            $self->{'_bio_otter_embl_factory_references'} = [];
-        }
-        push(@{$self->{'_bio_otter_embl_factory_references'}}, $value);
+        my $list = $self->{'_bio_otter_embl_factory_references'} ||= [];
+        push(@$list, $value);
     }
     return $self->{'_bio_otter_embl_factory_references'};
 }
@@ -132,8 +128,12 @@ not been set. Fetches information from the Otter database, as necessary.
 
 =cut 
 
+### I think this subroutine hasn't been used for a long time - may be out of date or not work
 sub embl_setup {
     my ( $self ) = @_;
+    
+    confess "Called embl_setup - this code has not been tested since move to schema 20+";
+    $self->fetch_clone_and_chromosome_Slices;
 
     my $accession   = $self->accession;
     my $seq_version = $self->sequence_version;
@@ -195,7 +195,7 @@ sub embl_setup {
     # DE line
     my $description;
     unless ($description = $self->description) {
-        $description = $self->get_description_from_otter;
+###        $description = $self->get_description_from_otter;
     }
     my $de = $embl->newDE;
     $de->list($description);
@@ -282,14 +282,8 @@ Confesses if there is more than one Contig in the Clone.
 sub add_sequence_from_otter {
     my ( $self, $embl ) = @_;
 
-    my $annotated_clone = $self->annotated_clone();
-    my $contigs = $annotated_clone->get_all_Contigs();
-    if (@$contigs > 1) {
-        confess "More than one contig". $self->accession
-            . $self->sequence_version;
-    }
     $embl->newXX;
-   $embl->newSequence->seq($contigs->[0]->seq);
+    $embl->newSequence->seq($self->contig_Slice->seq);
 }
 
 =head2 secondary_accs
@@ -503,37 +497,89 @@ sub clone_name {
     return $self->{'_bio_otter_embl_factory_clone_name'};
 }
 
-=head2 Slice
+sub fetch_clone_and_chromosome_Slices {
+    my ($self) = @_;
+    
+    my $acc              = $self->accession;
+    my $sequence_version = $self->sequence_version;
 
-Get/set method for the Bio::EnsEMBL::Slice object being used to create the
-annotation for the EMBL accession. Initially set by make_embl.
+    my $ds = $self->DataSet
+      or confess "DataSet must be set before calling make_embl";
+    
+    my $ens_db = $ds->make_EnsEMBL_DBAdaptor;
+    my ($chr_name, $chr_start, $chr_end,
+        $ctg_name, $ctg_start, $ctg_end,
+        $ctg_ori) = $self->get_ctg_coordinate_details($ens_db, "$acc.$sequence_version");
+    warn "\nContig: ", join("\t", $chr_name, $chr_start, $chr_end, $ctg_name, $ctg_start, $ctg_end, $ctg_ori);
+    
+    # Not sure if we need $ctg_ori
+    my $chr_slice = $ens_db->get_SliceAdaptor->fetch_by_region('chromosome', $chr_name, $chr_start, $chr_end, $ctg_ori);
+    my $ctg_slice = $ens_db->get_SliceAdaptor->fetch_by_region('contig', $ctg_name);
+    
+    # Store contig name, start, end info
+    $self->contig_name($ctg_name);
+    $self->contig_start($ctg_start);
+    $self->contig_end($ctg_end);
 
-=cut
-
-sub Slice {
-    my ( $self, $slice ) = @_;
-
-    if ($slice) {
-        $self->{'_bio_otter_embl_factory_slice'} = $slice;
-    }
-    return $self->{'_bio_otter_embl_factory_slice'};
+    $self->chromosome_Slice($chr_slice);
+    $self->contig_Slice($ctg_slice);
 }
 
-=head2 Slice_contig
-
-Get/set method for Slice_contig (a Bio::EnsEMBL::RawContig object) fetched
-from the tiling path.
-
-=cut
-
-sub Slice_contig {
-    my ( $self, $slice_contig ) = @_;
-
-    if ($slice_contig) {
-        $self->{'_bio_otter_embl_factory_slice_contig'} = $slice_contig;
-        $self->contig_length($slice_contig->length);
+sub contig_name {
+    my( $self, $contig_name ) = @_;
+    
+    if ($contig_name) {
+        $self->{'_contig_name'} = $contig_name;
     }
-    return $self->{'_bio_otter_embl_factory_slice_contig'};
+    return $self->{'_contig_name'};
+}
+
+sub contig_start {
+    my( $self, $contig_start ) = @_;
+    
+    if ($contig_start) {
+        $self->{'_contig_start'} = $contig_start;
+    }
+    return $self->{'_contig_start'};
+}
+
+sub contig_end {
+    my( $self, $contig_end ) = @_;
+    
+    if ($contig_end) {
+        $self->{'_contig_end'} = $contig_end;
+    }
+    return $self->{'_contig_end'};
+}
+
+sub chromosome_Slice {
+    my( $self, $chromosome_Slice ) = @_;
+    
+    if ($chromosome_Slice) {
+        $self->{'_chromosome_Slice'} = $chromosome_Slice;
+    }
+    return $self->{'_chromosome_Slice'};
+}
+
+sub contig_Slice {
+    my( $self, $contig_Slice ) = @_;
+    
+    if ($contig_Slice) {
+        $self->{'_contig_Slice'} = $contig_Slice;
+    }
+    return $self->{'_contig_Slice'};
+}
+
+sub create_annotated_region_feature {
+    my ($self, $embl) = @_;
+
+    # add component_start/end of accession to indicate region of annotation
+    # the position of this code here makes it appears as the first FT line
+    # in the embl dump
+    my $feat = $embl->newFT;
+    $feat->key('misc_feature');
+    $feat->location(simple_location($self->contig_start, $self->contig_end));
+    $feat->addQualifierStrings('note', "annotated region of clone");
 }
 
 =head2 make_embl_ft
@@ -572,41 +618,16 @@ g)  Returns the populated Hum::EMBL object
 sub make_embl_ft {
     my ( $self, $embl ) = @_;
 
-    my $acc              = $self->accession;
-    my $sequence_version = $self->sequence_version;
-
-    my $ds = $self->DataSet
-      or confess "DataSet must be set before calling make_embl";
-
-    # my ($loutre_db, $ensdb_aptr, $slice_aptr, $gene_aptr, $annotated_contig_aptr)
-    #   = $self->get_DBAdaptors();
-    
-    my $ens_db = $ds->make_EnsEMBL_DBAdaptor;
-    my ($chr_name, $chr_start, $chr_end,
-        $ctg_name, $ctg_start, $ctg_end,
-        $ctg_ori) = $self->get_ctg_coordinate_details($ens_db, "$acc.$sequence_version");
-    warn "\nContig: ", quote_row($chr_name, $chr_start, $chr_end, $ctg_name, $ctg_start, $ctg_end, $ctg_ori);
-    
-    # Not sure if we need $ctg_ori
-    my $chr_slice = $ens_db->get_SliceAdaptor->fetch_by_region('chromosome', $chr_name, $chr_start, $chr_end, $ctg_ori);
-    my $ctg_slice = $ens_db->get_SliceAdaptor->fetch_by_region('contig', $ctg_name);
+    my $chr_slice = $self->chromosome_Slice;
 
     my $set = 'Hum::EMBL::FeatureSet'->new;
 
-    # no lazy-loading transcripts,
     my $genes = $chr_slice->get_all_Genes;
-    warn "Got ", scalar @$genes, " gene(s)";
 
-    # won't include this FT line if no genes are annotated
-    # originally to deal with tomato clones
-    if ( $genes->[0] ){
-        # add component_start/end of accession to indicate region of annotation
-        # the position of this code here makes it appears as the first FT line
-        # in the embl dump
-        my $feat = $embl->newFT;
-        $feat->key('misc_feature');
-        $feat->location(simple_location($ctg_start, $ctg_end));
-        $feat->addQualifierStrings('note', "annotated region of clone");
+    if (@$genes) {
+        # won't include this FT line if no genes are annotated
+        # originally to deal with tomato clones
+        $self->create_annotated_region_feature($embl);
 
         foreach my $gene (@$genes) {
             # Don't dump deleted or non-Havana genes
@@ -614,15 +635,15 @@ sub make_embl_ft {
             next if $gene->source ne 'havana';
 
             # $self->_do_Gene($gene, $set, $chr_slice);
-            $self->process_gene($set, $ens_db, $ctg_name, $gene);
+            $self->process_gene($set, $gene);
         }
     }
 
     # PolyA signals and sites are on chrom. slice
-    $self->_do_polyA($chr_slice, $set);
+    $self->_do_polyA($set);
 
     # Assembly_tags are on the contig slice
-    $self->_do_assembly_tag($ctg_slice, $set);
+    $self->_do_assembly_tag($set);
 
     # Finish up
     $set->sortByPosition;
@@ -666,8 +687,7 @@ sub get_ctg_coordinate_details {
           AND ctg.name like ?
     });
     
-    $get_ctg_coords->execute("$acc%");
-    
+    $get_ctg_coords->execute("$acc%");  # Fix Nedit syntax highlight with a "    
     if ($get_ctg_coords->rows > 1) {
         my $err = "Too many rows from coordinate fetching query:\n";
         while (my @row = $get_ctg_coords->fetchrow) {
@@ -694,14 +714,7 @@ there is only one contig in the clone, otherwise confesses.
 sub get_clone_length_from_otter {
     my ( $self ) = @_;
     
-    my $annotated_clone = $self->annotated_clone();
-    my $contigs = $annotated_clone->get_all_Contigs();
-    if (@$contigs > 1) {
-        confess "Can't work clone length for ". $self->accession
-            . $self->sequence_version;
-    }
-    my $length = length($contigs->[0]->seq);
-    return $length;
+    return $self->contig_Slice->length;
 }
 
 =head2 get_chromosome_name_from_otter
@@ -725,44 +738,14 @@ sub get_chromosome_name_from_otter {
     return $name;
 }
 
-=head2  _cache_annotated_clone
-
-Internal method, to fetch clone from Otter using accession and
-sequence version attributes. Confess if these have not
-previously set.
-
-=cut
-
-sub _cache_annotated_clone {
-    my ( $self ) = @_;
+sub clone_contig {
+    my ($self) = @_;
     
-    my $accession = $self->accession or confess "accession not set";
-    my $seq_version = $self->sequence_version
-        or confess "sequence_version not set";
-
-    my ($loutre_db, $ensdb_aptr, $slice_aptr, $gene_aptr, $annotated_contig_aptr) = $self->get_DBAdaptors();
-    my  $clone_slice = $slice_aptr->fetch_by_region('clone', $accession.".".$seq_version)
-      or confess "Could not fetch clone slice by accession_version "
-        . "acc: $accession sv: $seq_version";
-
-    $self->{'_bio_otter_embl_factory_annotated_clone'} = $clone_slice;
-}
-
-=head2 annotated_clone
-
-Returns the AnnotatedClone object point by accession and sequence_version.
-If it is not already in memory, it is retrieved and stored with
-_cache_annotated_clone
-
-=cut
-
-sub annotated_clone {
-    my ( $self ) = @_;
-    
-    unless ($self->{'_bio_otter_embl_factory_annotated_clone'}) {
-        $self->_cache_annotated_clone();
+    my $ctg;
+    unless ($ctg = $self->{'_clone_contig'}) {
+        
     }
-    return $self->{'_bio_otter_embl_factory_annotated_clone'};
+    return $ctg;
 }
 
 =head2 get_description_from_otter
@@ -778,21 +761,15 @@ Warns if no CloneRemarks are fetched for the clone, returning undef.
 sub get_description_from_otter {
 	my ( $self ) = @_;
 
-    my ($loutre_db, $ensdb_aptr, $slice_aptr, $gene_aptr, $annotated_contig_aptr)
-      = $self->get_DBAdaptors();
-
-    my $clone_slice = $self->annotated_clone();
-    my $ctgname     = $clone_slice->seq_region_name.".".$clone_slice->start.".".$clone_slice->end;
-    my $ctg         = $clone_slice->adaptor->fetch_by_region('contig', $ctgname);
-
-    # need to turn DBAdaptor to loutre from Ensembl to work with contig_info
-    $clone_slice->adaptor()->db($loutre_db);
-    my $ctginfo_ad  = $clone_slice->adaptor->db->get_ContigInfoAdaptor;
+    my $ctg = $self->contig_Slice;
+    my $ctginfo_ad  = $self->DataSet->make_Vega_DBAdaptor->get_ContigInfoAdaptor;
     my $ctginfo     = $ctginfo_ad->fetch_by_seq_region_id($ctg->get_seq_region_id);
 
-    unless ( $ctginfo ){ print STDERR "No description for $ctgname\n"; return '' }
+    unless ($ctginfo) {
+        printf STDERR "No description for %s\n", $self->contig_name;
+        return '';
+    }
 
-    warn "$ctgname [seq_reg id: ", $ctg->get_seq_region_id, "] [contig_info_id: ", $ctginfo->dbID, "]";
     my $desc;
     eval { $desc = $ctginfo->get_all_Attributes('description')->[0]->value };
     $desc = '' if $@;
@@ -812,13 +789,14 @@ Warns if no Keyword objects are fetched for the clone, returning undef.
 sub get_keywords_from_otter {
 	my ( $self ) = @_;
 
-    my $clone_slice = $self->annotated_clone();
-    my $ctgname     = $clone_slice->seq_region_name.".".$clone_slice->start.".".$clone_slice->end;
-    my $ctg         = $clone_slice->adaptor->fetch_by_region('contig', $ctgname);
-    my $ctginfo_ad  = $clone_slice->adaptor->db->get_ContigInfoAdaptor;
+    my $ctg         = $self->contig_Slice;
+    my $ctginfo_ad  = $self->DataSet->make_Vega_DBAdaptor->get_ContigInfoAdaptor;
     my $ctginfo     = $ctginfo_ad->fetch_by_seq_region_id($ctg->get_seq_region_id);
 
-    unless ( $ctginfo ){ print STDERR "No keyword for $ctgname\n"; return };
+    unless ($ctginfo) {
+        printf STDERR "No keywords for %s\n", $self->contig_name;
+        return;
+    };
 
     my @keywords_txt;
 
@@ -846,7 +824,9 @@ Fetch them via misc_feature
 
 
 sub _do_assembly_tag {
-  my ( $self, $slice, $set ) = @_;
+  my ( $self, $set ) = @_;
+
+    my $slice = $self->chromosome_Slice;
 
   # get assembly_tags as misc_features
   my $mfa = $slice->adaptor->db->get_MiscFeatureAdaptor;
@@ -913,7 +893,9 @@ These are stored in Otter as SimpleFeatures on the Slice
 =cut
 
 sub _do_polyA {
-    my ( $self, $slice, $set ) = @_;
+    my ( $self, $set ) = @_;
+
+    my $slice = $self->chromosome_Slice;
 
     my $polyA_signal_feats = $slice->get_all_SimpleFeatures('polyA_signal');
     my $polyA_site_feats   = $slice->get_all_SimpleFeatures('polyA_site');
@@ -984,7 +966,9 @@ my %ens2embl_phase = (
     );
 
 sub process_gene {
-    my ($self, $set, $ens_db, $ctg_name, $gene) = @_;
+    my ($self, $set, $gene) = @_;
+    
+    my $ens_db   = $self->DataSet->make_EnsEMBL_DBAdaptor;
     
     $gene = $ens_db->get_GeneAdaptor->fetch_by_dbID($gene->dbID);
 
@@ -999,7 +983,7 @@ sub process_gene {
         }
         
         # Create mRNA feature
-        my $mRNA_exonlocation = $self->make_ExonLocation($ctg_name, $transcript->get_all_Exons)
+        my $mRNA_exonlocation = $self->make_ExonLocation($transcript->get_all_Exons)
             or next;
 
         my $ft = $set->newFeature;
@@ -1030,7 +1014,7 @@ sub process_gene {
             and $transcript->translation
             and $transcript->biotype ne "nonsense_mediated_decay")
         {
-            my $CDS_exonlocation = $self->make_ExonLocation($ctg_name, $transcript->get_all_translateable_Exons)
+            my $CDS_exonlocation = $self->make_ExonLocation($transcript->get_all_translateable_Exons)
                 or next;
 
             my $cds_ft = $set->newFeature;
@@ -1055,111 +1039,11 @@ sub process_gene {
     }
 }
 
-sub _do_Gene {
-  my ( $self, $gene, $set, $chrslice ) = @_;
-
-  my $gtype = $gene->status;
-
-  #Bio::Vega::Transcript, isa Bio::EnsEMBL::Transcript
-  #Transcript here give an mRNA, potentially + a CDS in EMBL record.
-  foreach my $transcript (@{$gene->get_all_Transcripts}) {
-
-    #    warn %$transcript;
-    my $locus_tag = $transcript->get_all_Attributes('name')->[0]->value
-      or warn "No locus_tag for ", $transcript->stable_id, "\n";
-    if ($locus_tag =~ /^[A-Z]+:/) {
-      # There are some GD: transcripts in Havana genes!
-      warn "Skipping non-Havana transcript '$locus_tag'\n";
-      next;
-    }
-
-    #  #Do the mRNA
-    my $all_transcript_Exons = $transcript->get_all_Exons;
-    if ($all_transcript_Exons) {
-
-      my $mRNA_exonlocation = Hum::EMBL::ExonLocation->new;
-
-      #This will only return true if one or more Exons are on the Slice.
-      if ($self->_add_exons_to_exonlocation($mRNA_exonlocation
-                                            , $all_transcript_Exons, $chrslice)) {
-
-        my $ft = $set->newFeature;
-        if ( $gtype eq "Transposon" ) {
-          $ft->key('repeat_region');
-          $ft->addQualifierStrings('mobile_element', "transposon");
-        } elsif ($gtype !~ /pseudo/i) {
-          $ft->key('mRNA');
-        } else {
-          $ft->key('CDS');
-        }
-        $ft->location($mRNA_exonlocation);
-        $mRNA_exonlocation->start_not_found($transcript->get_all_Attributes('mRNA_start_NF')->[0]->value);
-        $mRNA_exonlocation->end_not_found($transcript->get_all_Attributes('mRNA_end_NF')->[0]->value);
-
-        $self->_add_gene_qualifiers($gene, $ft) if $gtype ne "Transposon";
-        $ft->addQualifierStrings('locus_tag', $locus_tag);
-
-        if ($gtype !~ /pseudo/i) {
-          $self->_supporting_evidence($transcript, $ft, 'EST', 'cDNA');
-        } else {
-          $self->_supporting_evidence($transcript, $ft, 'Protein');
-        }
-      }
-    } else {
-      warn "No mRNA exons\n";
-    }
-
-    next if $gtype eq "Transposon";
-
-    #Do the CDS, if it has a translation
-    if ($transcript->translation) {
-
-      # HAVANA have recently changed NMD
-      # transcripts from non-coding into coding transcripts because analysis
-      # done on them in Vega is better etc. However these should not be
-      # submitted in the EMBL flat files as coding peptides as it causes
-      # problems in translation for Uniprot - message from Havana group
-      if ( $transcript->biotype eq "nonsense_mediated_decay" ){
-        warn "NMD - TRANSNAME: ", $transcript->get_all_Attributes('name')->[0]->value;
-        next;
-      }
-
-      my $all_CDS_Exons = $transcript->get_all_translateable_Exons;
-
-      if ($all_CDS_Exons) {
-        my $CDS_exonlocation = Hum::EMBL::ExonLocation->new;
-        if ($self->_add_exons_to_exonlocation($CDS_exonlocation
-                                              , $all_CDS_Exons, $chrslice)) {
-
-          my $ft = $set->newFeature;
-
-          $ft->key('CDS');
-          $ft->location($CDS_exonlocation);
-          if ($transcript->get_all_Attributes('cds_start_NF')->[0]->value) {
-            $CDS_exonlocation->start_not_found(1);
-
-            my $phase = $all_CDS_Exons->[0]->phase;
-            my $embl_phase = $ens2embl_phase{$phase}
-              or confess "Bad exon phase '$phase'";
-            $ft->addQualifierStrings('codon_start', $embl_phase);
-          }
-          $CDS_exonlocation->end_not_found($transcript->get_all_Attributes('cds_end_NF')->[0]->value);
-
-          $self->_add_gene_qualifiers($gene, $ft);
-          $self->_supporting_evidence($transcript, $ft, 'Protein');
-          $ft->addQualifierStrings('standard_name', $transcript->translation->stable_id);
-          $ft->addQualifierStrings('locus_tag', $locus_tag);
-        }
-      } else {
-        warn "No CDS exons\n";
-      }
-    }
-  }
-}
-
 sub make_ExonLocation {
-    my ($self, $ctg_name, $exon_list) = @_;
+    my ($self, $exon_list) = @_;
     
+    my $ctg_name = $self->contig_name;
+    #my $loc = Hum::EMBL::Location->new;
     my $loc = Hum::EMBL::ExonLocation->new;
     
     my @all_exons;
@@ -1179,6 +1063,7 @@ sub make_ExonLocation {
     }
     if ($exon_in_ctg) {
         my $loc = Hum::EMBL::ExonLocation->new;
+        #my $loc = Hum::EMBL::Location->new;
         $loc->exons(@all_exons);
         return $loc;
     } else {
@@ -1222,10 +1107,9 @@ FT                   /note="match: proteins: Sw:P26367"
 sub _supporting_evidence {
   my ( $self, $transcript, $ft, @evidence_types ) = @_;
 
-  my $ta = $transcript->adaptor->db->get_TranscriptAdaptor();
-  my ($evids, $evidence);
+  my $ta = $self->DataSet->make_Vega_DBAdaptor->get_TranscriptAdaptor();
 
-  eval { $evids = $ta->fetch_evidence($transcript) };
+  my $evids = $ta->fetch_evidence($transcript);
 
   my %evidence_hash;
   foreach my $evid ( @$evids ){
@@ -1280,86 +1164,6 @@ sub _add_gene_qualifiers {
   if ($gene->biotype =~ /pseudo/i) {
     $ft->addQualifierStrings('pseudo');
   }
-}
-
-
-=head2 _add_exons_to_exonlocation
-
-Internal method called by _do_gene. See the latter for doumentation.
-
-Returns a count of how many exons are actually on the Slice (i.e. clone)
-or undef if none are.
-
-=cut
-
-sub _add_exons_to_exonlocation {
-  my ( $self, $exonlocation, $exons, $chrslice ) = @_;
-
-  my (@hum_embl_exons , $exons_on_slice);
-  my( @all_exons );
-  my $sa = $chrslice->adaptor;
-  my $seqset = $self->DataSet->selected_SequenceSet;
-
-  foreach my $exon (@$exons) {
-    if ($exon->isa('Bio::EnsEMBL::StickyExon')) {
-      push(@all_exons, @{$exon->get_all_component_Exons});
-    } else {
-      push(@all_exons, $exon);
-    }
-  }
-
-  foreach my $exon (@all_exons) {
-
-    my $hum_embl_exon = Hum::EMBL::Exon->new;
-
-    #my $contig  = $exon->contig; # deprecated
-    my $start   = $exon->start;
-    my $end     = $exon->end;
-    my $strand  = $exon->strand;
-    my $slice_contig = $self->Slice_contig; # contig projected to chr
-    my $contig_length = $self->contig_length;
-
-    if ($end < 1 or $start > $slice_contig->length) {
-      # these exons are on another contig
-      # warn $exon->stable_id;
-      # carp "Unexpected exon start '$start' end '$end' "
-      #   . "on contig of length '$contig_length'\n";
-      my $exonCtg = $exon->transform('contig');
-      my ($acc_sv) = $exonCtg->seq_region_name =~ /^(\w+\.\d+)/;
-      $hum_embl_exon->accession_version($acc_sv);
-
-      $start = $exonCtg->start;
-      $end   = $exonCtg->end;
-      $strand = $exonCtg->strand;
-    }
-    elsif ( ($start < 1 and $end > 1) or ($start < $slice_contig->length and $end > $slice_contig->length) ) {
-      # do something with overlapping exons in clone boundary
-      #testing
-    #  warn "Exons in clone boundary: clone LEN: ", $slice_contig->length;
-#      warn "START-1: $start == END-1: $end === STRAND-1: $strand";
-#      my $exonCtg = $exon->transform('contig');
-#      my ($acc_sv) = $exonCtg->seq_region_name =~ /^(\w+\.\d+)/;
-#      warn "$acc_sv, $exonCtg";
-#      $hum_embl_exon->accession_version($acc_sv);
-#      $start = $exonCtg->start;
-#      $end   = $exonCtg->end;
-#      $strand = $exonCtg->strand;
-#      warn "START-2: $start == END-2: $end === STRAND-2: $strand";
-    }
-    else {
-      $exons_on_slice++;
-    }
-    $hum_embl_exon->start($start);
-    $hum_embl_exon->end($end);
-    $hum_embl_exon->strand($strand);
-    push(@hum_embl_exons, $hum_embl_exon);
-  }
-  $exonlocation->exons(@hum_embl_exons);
-
-  #Set the start and end for the Hum::EMBL::ExonLocation
-  $exonlocation->start($hum_embl_exons[0]->start);
-  $exonlocation->end($hum_embl_exons[-1]->end);
-  return $exons_on_slice;
 }
 
 
