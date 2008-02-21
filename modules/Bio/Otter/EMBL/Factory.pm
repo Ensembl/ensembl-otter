@@ -1,15 +1,5 @@
+
 ### Bio::Otter::EMBL::Factory
-#
-# Copyright 2004 Genome Research Limited (GRL)
-#
-# Maintained by Mike Croning <mdr@sanger.ac.uk>
-#
-# You may distribute this file/module under the terms of the perl artistic
-# licence
-#
-# POD documentation main docs before the code. Internal methods are usually
-# preceded with a _
-#
 
 =head1 NAME Bio::Otter::EMBL::Factory
 
@@ -130,54 +120,6 @@ sub references {
     return $self->{'_bio_otter_embl_factory_references'};
 }
 
-=head2 get_DBAdaptors
-
-Providing $self->DataSet has been set, retrieves the cached DBAdaptor
-from the DataSet, together with Slice, Gene and ContigInfo adaptors.
-
-    my ($otter_db, $slice_aptr, $gene_aptr
-        , $annotated_contig_aptr) = get_DBAdaptors();
-
-=cut
-
-sub get_DBAdaptors {
-    my ( $self ) = @_;
-
-    my $ds = $self->DataSet or confess "DataSet not set";
-
-    # Bio::Vega::DBSQL::DBAdaptor
-    my $loutre_db = $ds->make_DBAdaptor
-      or confess 'get Bio::Vega::DBSQL::DBAdaptor failed';
-
-    my $ensdb_aptr = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
-                                                      -user   => $ds->USER,
-                                                      -dbname => $ds->DBNAME,
-                                                      -host   => $ds->HOST,
-                                                      -pass   => $ds->PASS,
-                                                      -port   => $ds->PORT,
-                                                      -driver => 'mysql');
-
-    # Bio::EnsEMBL::DBSQL::GeneAdaptor
-    my $gene_aptr  = $ensdb_aptr->get_GeneAdaptor
-      or confess "get Bio::EnsEMBL::DBSQL::GeneAdaptor failed";
-
-    #    # Bio::Vega::DBSQL::GeneAdaptor
-    #    my $gene_aptr  = $loutre_db->get_GeneAdaptor
-    #      or confess "get Bio::Vega::DBSQL::GeneAdaptor failed";
-
-
-    # Bio::EnsEMBL::DBSQL::SliceAdaptor
-    my $slice_aptr = $loutre_db->get_SliceAdaptor
-      or confess "get Bio::EnsEMBL::DBSQL::SliceAdaptor failed";
-
-    # Bio::Vega::DBSQL::ContigInfoAdaptor
-    $loutre_db->get_ContigInfoAdaptor;
-    my $annotated_contig_aptr = $loutre_db->get_ContigInfoAdaptor
-      or confess "get Bio::Vega::DBSQL::ContigInfoAdaptor failed";
-
-    return ($loutre_db, $ensdb_aptr, $slice_aptr, $gene_aptr, $annotated_contig_aptr);
-}
-
 =head2 embl_setup
 
 Used when creating EMBL annotation, by accessing an Otter database only, i.e.
@@ -201,12 +143,13 @@ sub embl_setup {
     if ($self->secondary_accs) {
         @sec = @{$self->secondary_accs};
     }
-    my $data_class = $self->data_class or confess "data_class not set";
-    my $mol_type = $self->mol_type or confess "mol_type not set";
-    my $clone_lib = $self->clone_lib;
-    my $clone_name = $self->clone_name;
-    my $comments_ref = $self->comments;
-    my $references_ref = $self->references;
+    
+    my $data_class      = $self->data_class or confess "data_class not set";
+    my $mol_type        = $self->mol_type   or confess "mol_type not set";
+    my $clone_lib       = $self->clone_lib;
+    my $clone_name      = $self->clone_name;
+    my $comments_ref    = $self->comments;
+    my $references_ref  = $self->references;
 
     # EMBL Division, species
     my( $division );
