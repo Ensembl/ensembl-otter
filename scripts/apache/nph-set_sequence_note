@@ -3,12 +3,12 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2008-02-05 17:35:29 $
-# Id:            $Id: nph-set_sequence_note,v 1.8 2008-02-05 17:35:29 jgrg Exp $
+# Last modified: $Date: 2008-02-22 14:29:37 $
+# Id:            $Id: nph-set_sequence_note,v 1.9 2008-02-22 14:29:37 jgrg Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-set_sequence_note,v $
 
 use strict;
-use SangerPaths qw{ core bioperl123 ensembl46 otter49 };
+use SangerPaths qw{ core bioperl123 ensembl46 otter48 };
 
 use Bio::Otter::ServerScriptSupport;
 
@@ -21,8 +21,11 @@ eval {
     my $action      = $server->require_argument('action');
     
     my $author = $server->make_Author_obj;
+    $server->otter_dba->get_AuthorAdaptor->store($author);
+
     my $odbc = $server->otter_dba->dbc;
-    $odbc->get_AuthorAdaptor->store($author);
+    
+    my $seq_region_sub_select = q{(SELECT seq_region_id FROM seq_region where name = ?)};
 
     if ($action=~/(change|modify|old)/) {
         $server->log("Changing a sequence_note");
@@ -30,10 +33,7 @@ eval {
         my $sth = $odbc->prepare(qq{
             UPDATE sequence_note
             SET note = ?
-            WHERE seq_region_id =
-              (SELECT seq_region_id
-                  FROM seq_region
-                  WHERE name = ?)
+            WHERE seq_region_id = $seq_region_sub_select
             AND author_id = ?
             AND note_time = FROM_UNIXTIME(?)
             });
@@ -48,10 +48,10 @@ eval {
     elsif ($action=~/(add|push|new)/) {
         $server->log("Adding a new sequence_note");
 
-        $sth = $odbc->prepare(qq{
+        my $sth = $odbc->prepare(qq{
             UPDATE sequence_note
                SET is_current = 'no'
-             WHERE seq_region_id = (SELECT seq_region_id FROM seq_region where name = ?)
+             WHERE seq_region_id = $seq_region_sub_select
         });
         my $non_curr=$sth->execute($contig_name);
         $server->log("Contig $contig_name has $non_curr non-current sequence_notes now...");
@@ -59,7 +59,7 @@ eval {
         $sth = $odbc->prepare(qq{
             INSERT INTO sequence_note (seq_region_id, author_id, note_time, is_current, note)
                  VALUES (
-                         (SELECT seq_region_id FROM seq_region where name=?),
+                         $seq_region_sub_select,
                          ?,
                          FROM_UNIXTIME(?),
                          'yes',
