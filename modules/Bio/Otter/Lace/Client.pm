@@ -17,12 +17,6 @@ use Hum::Conf qw{ PFETCH_SERVER_LIST };
 
 use Bio::Otter::Author;
 use Bio::Otter::CloneLock;
-#use Bio::Otter::Converter;
-#use Bio::Otter::DnaDnaAlignFeature;
-#use Bio::Otter::DnaPepAlignFeature;
-#use Bio::Otter::FromXML;
-#use Bio::Otter::HitDescription;
-#use Bio::Otter::Lace::AceDatabase;
 use Bio::Otter::Lace::DataSet;
 use Bio::Otter::Lace::Locator;
 use Bio::Otter::Lace::PersistentFile;
@@ -1007,9 +1001,7 @@ has methods to fetch annotated gene information
 in otter XML, lock and unlock clones, and save
 "ace" formatted annotation back.  It also returns
 lists of B<DataSet> objects provided by the
-server, and creates B<AceDatabase> objects (which
-mangage the acedb database directory structure
-for a lace session).
+server.
 
 =head1 AUTHOR
 
