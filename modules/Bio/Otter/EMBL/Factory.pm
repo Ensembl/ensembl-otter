@@ -128,10 +128,10 @@ not been set. Fetches information from the Otter database, as necessary.
 
 =cut 
 
-### I think this subroutine hasn't been used for a long time - may be out of date or not work
 sub embl_setup {
     my ( $self ) = @_;
     
+    ### I think this subroutine hasn't been used for a long time - may be out of date or not work
     confess "Called embl_setup - this code has not been tested since move to schema 20+";
     $self->fetch_clone_and_chromosome_Slices;
 
@@ -195,7 +195,7 @@ sub embl_setup {
     # DE line
     my $description;
     unless ($description = $self->description) {
-###        $description = $self->get_description_from_otter;
+        $description = $self->get_description_from_otter;
     }
     my $de = $embl->newDE;
     $de->list($description);
@@ -509,11 +509,11 @@ sub fetch_clone_and_chromosome_Slices {
     my $ens_db = $ds->make_EnsEMBL_DBAdaptor;
     my ($chr_name, $chr_start, $chr_end,
         $ctg_name, $ctg_start, $ctg_end,
-        $ctg_ori) = $self->get_ctg_coordinate_details($ens_db, "$acc.$sequence_version");
-    warn "\nContig: ", join("\t", $chr_name, $chr_start, $chr_end, $ctg_name, $ctg_start, $ctg_end, $ctg_ori);
+        ) = $self->get_ctg_coordinate_details($ens_db, "$acc.$sequence_version");
+    warn "\nContig: ", join("\t", $chr_name, $chr_start, $chr_end, $ctg_name, $ctg_start, $ctg_end);
     
     # Not sure if we need $ctg_ori
-    my $chr_slice = $ens_db->get_SliceAdaptor->fetch_by_region('chromosome', $chr_name, $chr_start, $chr_end, $ctg_ori);
+    my $chr_slice = $ens_db->get_SliceAdaptor->fetch_by_region('chromosome', $chr_name, $chr_start, $chr_end);
     my $ctg_slice = $ens_db->get_SliceAdaptor->fetch_by_region('contig', $ctg_name);
     
     # Store contig name, start, end info
@@ -662,7 +662,6 @@ sub get_ctg_coordinate_details {
           , ctg.name
           , a.cmp_start
           , a.cmp_end
-          , a.ori
         FROM seq_region ctg
           , assembly a
           , seq_region chr
@@ -895,7 +894,8 @@ These are stored in Otter as SimpleFeatures on the Slice
 sub _do_polyA {
     my ( $self, $set ) = @_;
 
-    my $slice = $self->chromosome_Slice;
+    my $slice    = $self->chromosome_Slice;
+    my $ctg_name = $self->contig_name;
 
     my $polyA_signal_feats = $slice->get_all_SimpleFeatures('polyA_signal');
     my $polyA_site_feats   = $slice->get_all_SimpleFeatures('polyA_site');
@@ -905,17 +905,34 @@ sub _do_polyA {
         my $ft = $set->newFeature;
         $ft->key('polyA_signal');
 
-        my $loc = Hum::EMBL::Location->new;
-        if ($polyA_signal->strand == 1) {
-            $ft->location(simple_location($polyA_signal->start, $polyA_signal->end));
-        } elsif ($polyA_signal->strand == -1) {
-            $ft->location(simple_location($polyA_signal->end, $polyA_signal->start));
-        } else {
-            confess "Bad strand: ", $polyA_signal->strand;
+        my @pos;
+        foreach my $seg (@{$polyA_signal->project('contig')}) {
+            push(@pos, $self->make_Hum_EMBL_Exon($ctg_name, $seg->to_Slice));
         }
+        my $loc = Hum::EMBL::ExonLocation->new;
+        $loc->exons(@pos);
+        $ft->location($loc);
     }
 
     foreach my $polyA_site (@$polyA_site_feats) {
+
+        # The acutal polyA site is a single base pair feature.
+        # We store it as a 2 bp feature so that acedb has strand info.
+        my $x = $polyA_site->strand == 1 ? $polyA_site->end : $polyA_site->start;
+        my $feat = Bio::EnsEMBL::Feature->new(
+            -start  => $x,
+            -end    => $x,
+            -strand => $polyA_site->strand,
+            -slice  => $slice,
+            );
+
+        # Feature is 1 bp long, so can only possibly get one segment
+        # from "project" call.
+        my $ctg_pos = $feat->project('contig')->[0]->to_Slice;
+
+        # The 2 bp feature might span a contig boundary,
+        # with the site ending up on the adjacent contig
+        next unless $ctg_pos->seq_region_name eq $ctg_name;
 
         my $ft = $set->newFeature;
         $ft->key('polyA_site');
@@ -923,14 +940,14 @@ sub _do_polyA {
         my $loc = Hum::EMBL::Location->new;
         $ft->location($loc);
 
-        if ($polyA_site->strand == 1) {
-            $loc->exons($polyA_site->end);
+        if ($ctg_pos->strand == 1) {
+            $loc->exons($ctg_pos->start);
             $loc->strand('W');
-        } elsif ($polyA_site->strand == -1) {
-            $loc->exons($polyA_site->start);
+        } elsif ($ctg_pos->strand == -1) {
+            $loc->exons($ctg_pos->start);   # Not an error 1 bp features so: start == end
             $loc->strand('C');
         } else {
-            confess "Bad strand: ", $polyA_site->strand;
+            confess "Bad strand: ", $ctg_pos->strand;
         }
     }
 }
