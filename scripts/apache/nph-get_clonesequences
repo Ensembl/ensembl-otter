@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2008-02-22 14:29:37 $
-# Id:            $Id: nph-get_clonesequences,v 1.7 2008-02-22 14:29:37 jgrg Exp $
+# Last modified: $Date: 2008-02-22 14:31:28 $
+# Id:            $Id: nph-get_clonesequences,v 1.8 2008-02-22 14:31:28 jgrg Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_clonesequences,v $
 
 use strict;
@@ -19,7 +19,11 @@ my $sequenceset  =  $server->require_argument('sequenceset');
 
 my $odba = $server->otter_dba();
 
-my $author_obj = $server->fetch_Author_obj($server->authorized_user); # will break if author cannot be fetched
+# Allow local scripts to access without authorization
+unless ($server->local_user) {
+    $server->authorized_user;
+}
+
 
 my $xml = '';
 $xml   .= qq`  <dataset name="$dataset">\n`;

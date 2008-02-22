@@ -3,12 +3,12 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2008-02-05 17:35:29 $
-# Id:            $Id: nph-get_cons_simple_features,v 1.9 2008-02-05 17:35:29 jgrg Exp $
+# Last modified: $Date: 2008-02-22 14:29:37 $
+# Id:            $Id: nph-get_cons_simple_features,v 1.10 2008-02-22 14:29:37 jgrg Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_cons_simple_features,v $
 
 use strict;
-use SangerPaths qw{ core bioperl123 ensembl46 otter49 };
+use SangerPaths qw{ core bioperl123 ensembl46 otter48 };
 
 #use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Compara::DBSQL::DBAdaptor;
