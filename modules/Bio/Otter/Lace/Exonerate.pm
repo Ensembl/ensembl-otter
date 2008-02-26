@@ -154,7 +154,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.1 $ ';
+$revision='$Revision: 1.2 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
@@ -248,6 +248,7 @@ sub initialise {
         method_tag
         method_color
         logic_name
+        query_type
       })
     {
         my $value = $cl->option_from_array([ 'local_exonerate', $attribute ]);
@@ -259,7 +260,7 @@ sub initialise {
         -LOGIC_NAME    => $self->logic_name,
         -INPUT_ID_TYPE => 'CONTIG',
         -PARAMETERS    => '',
-        -PROGRAM     => '/software/anacode/bin/exonerate-1.4.0',
+        -PROGRAM     => '/software/anacode/bin/exonerate',
         -GFF_SOURCE  => 'exonerate',
         -GFF_FEATURE => 'similarity',
         -DB_FILE     => $fasta_file,
@@ -287,6 +288,19 @@ sub analysis {
         $self->{'_analysis'} = $analysis;
     }
     return $self->{'_analysis'};
+}
+
+sub query_type {
+    my( $self, $query_type ) = @_;
+
+    if ($query_type) {
+    	my $type = lc($query_type);
+	    unless( $type eq 'dna' || $type eq 'protein' ){
+	      confess "not the right query type: $type";
+	    }
+        $self->{'_query_type'} = $type;
+    }
+    return $self->{'_query_type'};
 }
 
 sub database {
@@ -438,13 +452,16 @@ sub run_exonerate {
     my ($self, $masked, $smasked, $unmasked) = @_;
 
     my $analysis = $self->analysis();
+    my $exo_options = $self->query_type() eq 'dna' ?
+    	'-m e2g --forcescan q --softmasktarget yes  -M 1500 --dnahspthreshold 120 -s 2000 --geneseed 300' :
+    	'-m p2g --forcescan q --softmasktarget yes -M 1500  --score 150';
 
     my $runnable = Bio::EnsEMBL::Pipeline::Runnable::Finished_Exonerate->new(
         -analysis => $self->analysis(),
         -target    => $smasked,
         -query_db	=> 	$self->database(),
-        -query_type => 'dna',
-        -exo_options => '-m e2g --forcescan q --softmasktarget yes  -M 1500 --dnahspthreshold 120 -s 2000 --geneseed 300'
+        -query_type => $self->query_type() || 'dna',
+        -exo_options => $exo_options
         );
     $runnable->run();
     $self->sequence_fetcher($runnable->seqfetcher);
