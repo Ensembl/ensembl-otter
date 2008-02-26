@@ -154,7 +154,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.2 $ ';
+$revision='$Revision: 1.3 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
@@ -430,8 +430,12 @@ sub run {
         foreach my $hit_name (@$names) {
             my $seq = $fetcher->get_Seq_by_acc($hit_name)
                 or confess "Failed to fetch '$hit_name' by Acc using a '", ref($fetcher), "'";
-            $ace .= $self->ace_DNA($hit_name, $seq);
-        }
+            if($self->query_type eq 'dna') {
+            	$ace .= $self->ace_DNA($hit_name, $seq);
+            } else {
+            	$ace .= $self->ace_PEPTIDE($hit_name, $seq);
+        	}
+    	}
     }
     return $ace;
 }
@@ -440,6 +444,18 @@ sub ace_DNA {
     my ($self, $name, $seq) = @_;
 
     my $ace = qq{\nSequence "$name"\n\nDNA "$name"\n};
+
+    my $dna_string = $seq->seq;
+    while ($dna_string =~ /(.{1,60})/g) {
+        $ace .= $1 . "\n";
+    }
+    return $ace;
+}
+
+sub ace_PEPTIDE {
+    my ($self, $name, $seq) = @_;
+
+    my $ace = qq{\nSequence "$name"\n\nPEPTIDE "$name"\n};
 
     my $dna_string = $seq->seq;
     while ($dna_string =~ /(.{1,60})/g) {
@@ -490,7 +506,7 @@ sub format_ace_output {
         return '';
     }
 
-    my $is_protein = 0;
+    my $is_protein = $self->query_type eq 'protein';
     my $homol_tag   = $self->homol_tag;
     my $method_tag  = $self->method_tag;
 
