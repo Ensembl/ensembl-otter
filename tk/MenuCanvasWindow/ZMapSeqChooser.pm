@@ -380,18 +380,28 @@ sub zMapServerDefaults {
     
     return $self->formatZmapDefaults(
         'source',
-        url         => $url,
-        writeback   => 'false',
-        sequence    => 'true',
+        url             => $url,
+        writeback       => 'false',
+        sequence        => 'true',
+        use_zmap_styles => 'true',
         # navigator_sets specifies the feature sets to draw in the navigator pane.
         # so far the requested columns are just scale, genomic_canonical and locus
         # in line with keeping the columns to a minimum to save screen space.
         navigator_sets => qq{"scale genomic_canonical locus"},
 
-        featuresets => sprintf(q{"%s"}, join ' ', map qq{\\"$_\\"}, $self->zMapListMethodNames_ordered),
+        featuresets => $self->double_quote_escaped_list([$self->zMapListMethodNames_ordered]),
         # Can specify a stylesfile instead of featuresets
 
     );
+}
+
+sub double_quote_escaped_list {
+    my ($self, $list) = @_;
+    
+    return sprintf(q{"%s"},
+        join ' ',
+        map qq{\\"$_\\"},
+        @$list);
 }
 
 sub zMapZMapDefaults {
@@ -422,7 +432,10 @@ sub zMapBlixemDefaults {
             script      "blixem"
             scope       200000
             homol_max   0
-        }
+        },
+        protein_featuresets => [qw{ SwissProt TrEMBL }],
+        # dna_featuresets    => "",
+        transcript_featuresets => [qw{ Transcript }],
     );
     # script could also be "blixem_standalone" sh wrapper (if needed)
 }
@@ -455,6 +468,8 @@ sub formatZmapDefaults {
     
     my $def_str = "\n$key\n{\n";
     while (my ($setting, $value) = each %defaults) {
+        $value = $self->double_quote_escaped_list($value)
+            if ref($value);
         $def_str .= qq{$setting = $value\n};
     }
     $def_str .= "}\n";
