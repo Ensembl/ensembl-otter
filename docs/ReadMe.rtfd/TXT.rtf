@@ -1,0 +1,104 @@
+{\rtf1\mac\ansicpg10000\cocoartf824\cocoasubrtf440
+{\fonttbl\f0\fnil\fcharset77 LucidaGrande-Bold;\f1\fnil\fcharset77 LucidaGrande;\f2\fnil\fcharset77 Monaco;
+\f3\fswiss\fcharset77 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww15900\viewh18940\viewkind0
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\qc\pardirnatural
+
+\f0\b\fs36 \cf0 \
+Mac OS X otterlace client installation\
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\ql\qnatural\pardirnatural
+
+\f1\b0\fs24 \cf0 \
+
+\f0\b\fs28 System Requirements\
+
+\f1\b0\fs24 \
+This version of otterlace will only work on Mac OS X version 10.4 and later.\
+\
+
+\f0\b\fs28 Installation
+\f1\b0\fs24 \
+\
+To install the otterlace client, drag the "otterlace" application from the installation disk to the Applications folder (or any other folder) on your Mac's hard disk.\
+\
+You will need to create a file "~/.otter_config" (ie: in your home directory) containing:\
+\
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\fi560\ql\qnatural\pardirnatural
+
+\f2 \cf0 [client]\
+author=your@email.address\
+write_access=1\
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\ql\qnatural\pardirnatural
+
+\f1 \cf0 \
+You can leave off the "write_access" line if you don't need write access.\
+\
+\
+
+\f0\b\fs28 Sanger Authentication
+\f1\b0\fs24 \
+\
+In order to use the system each user will need to set up a Sanger website "Single Sign-On" account, which you can do this via this web page:\
+\
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\ql\qnatural\pardirnatural
+
+\f2 \cf0   {\field{\*\fldinst{HYPERLINK "http://www.sanger.ac.uk/perl/ssomanager?action=requestcreate"}}{\fldrslt http://www.sanger.ac.uk/perl/ssomanager?action=requestcreate}}\
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\ql\qnatural\pardirnatural
+
+\f1 \cf0 \
+When you have done this, send the email address you signed up with to {\field{\*\fldinst{HYPERLINK "mailto:anacode@sanger.ac.uk"}}{\fldrslt anacode@sanger.ac.uk}} to get added to the list of permitted users.  (I have pre-added the email addresses of the Cow annotation jamboree workshop delegates.)\
+\
+
+\f0\b\fs28 Pfetch server
+\f1\b0\fs24 \
+\
+The distribution uses a Sanger service called pfetch to fetch EMBL, Genbank and Uniprot entries.  A local process called "local_pfetch" which is forked by the script, but since it binds to an IP socket on the local machine, only 1 copy of it can run at time.  This might be a problem if you have more than 1 person running otterlace on a server machine.  The local_pfetch will exit as soon as a request fails, eg: when the authentication for that user has expired.  You will then be able start your own copy by choosing "Restart local pfetch server" from the "Tools" menu in the lace transcript chooser window.\
+\
+
+\f0\b\fs28 Running otterlace\
+
+\f1\b0\fs24 \
+To run otterlace double-click on the otterlace icon. It should start X11 if you don't already have it open. If the dataset chooser window:\
+\
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\qc\pardirnatural
+
+\f3 \cf0 {{\NeXTGraphic Pasted Graphic.tiff \width5380 \height9400
+}¬}\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\qc\pardirnatural
+
+\f1 \cf0 \
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\ql\qnatural\pardirnatural
+\cf0 \
+doesn't appear, then something may have gone wrong. Open /Applications/Utilities/Console and try opening otterlace again. Any error messages will appear in Console. You can paste them into an email and send them to us: {\field{\*\fldinst{HYPERLINK "mailto:anacode@sanger.ac.uk"}}{\fldrslt anacode@sanger.ac.uk}}
+\f2 \
+\
+
+\f0\b\fs28 X11 Tip\
+
+\f1\b0\fs24 \
+To get "focus follows mouse" behaviour in X11, so that you don't have to click in a window to make it active, enter this command:\
+\
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\ql\qnatural\pardirnatural
+
+\f2 \cf0   defaults write com.apple.x11 wm_ffm -bool true\
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\ql\qnatural\pardirnatural
+
+\f1 \cf0 \
+in a terminal.\
+\
+
+\f0\b\fs28 Mac OS 10.5 (Leopard)
+\f1\b0\fs24 \
+\
+This distribution works on Mac OS 10.5 Leopard (tested on 10.5.2), but you should install the latest version of {\field{\*\fldinst{HYPERLINK "http://trac.macosforge.org/projects/xquartz"}}{\fldrslt XQuartz}} (which was version 2.1.4 released on the 15th February 2008).\
+\
+
+\f0\b\fs28 Known problems with the Mac otterlace client\
+
+\f1\b0\fs24 \
+Copy-pasting transcripts doesn't work because it uses 
+\f2 cross_match
+\f1  to find non-identical exons. Due to licence restrictions, we are not allowed to distribute 
+\f2 cross_match
+\f1  with the application.\
+}
