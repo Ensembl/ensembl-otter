@@ -775,11 +775,9 @@ sub show_peptide {
         my $master = $self->canvas->toplevel;
         my $top = $master->Toplevel;
         $top->transient($master);
-        my $font = $self->font;
-        my $size = $self->font_size;
         
         my $peptext = $self->{'_pep_peptext'} = $top->ROText(
-            -font           => [$font, $size, 'normal'],
+            -font           => $self->font_fixed,
             #-justify        => 'left',
             -padx                   => 6,
             -pady                   => 6,
@@ -1064,18 +1062,17 @@ sub check_kozak{
         $kozak_window = $master->Toplevel(-title => 'Kozak Checker');
         $kozak_window->transient($master);
         
-        my $font = $self->font;
-        my $size = $self->font_size;
+        my $font = $self->font_fixed;
 
         $kozak_window->Label(
-                -font           => [$font, $size, 'normal'],
+                -font           => $font,
                 -text           => "5'\n3'" ,    
                 -padx                   => 6,
                 -pady                   => 6, 
                 )->pack(-side   => 'left'); 
         
         my $kozak_txt = $kozak_window->ROText(
-                -font           => [$font, $size, 'normal'],
+                -font           => $font,
                 #-justify        => 'left',
                 -padx                   => 6,
                 -pady                   => 6,
@@ -1094,7 +1091,7 @@ sub check_kozak{
                         
                      
         $kozak_window->Label(
-                -font           => [$font, $size, 'normal'],
+                -font           => $font,
                 -text           => "3'\n5'" ,    
                 -padx                   => 6,
                 -pady                   => 6, 
@@ -1308,7 +1305,7 @@ sub add_locus_editing_widgets {
         -exportselection    => 1,
         -background         => 'white',
         -selectbackground   => 'gold',
-        -font               => [$self->font, $self->font_size, 'normal'],
+        -font               => $self->font_fixed,
         )->pack(-side => 'left');
     #$be->bind('<Leave>', sub{ print STDERR "Variable now: ", ${$self->{'_locus_name_var'}}, "\n"; });
 
@@ -1320,18 +1317,6 @@ sub add_locus_editing_widgets {
                 #-listwidth => scalar @names,
                 );}
         );
-
-    ### Does not work:
-    ## Button for renaming locus
-    #$symbol_known_frame->Button(
-    #    -text    => 'Rename',
-    #    -command => sub {
-    #        eval { $self->rename_locus; };
-    #        if ($@) {
-    #            $self->exception_message($@, 'Error saving to acedb');
-    #        }
-    #    },
-    #)->pack(-side => 'left');
     
     $symbol_known_frame->Checkbutton(
         -text       => 'Known',
@@ -1354,7 +1339,7 @@ sub add_locus_editing_widgets {
         )->pack(-side => 'left');
 
     my $de = $de_frame->Entry(
-        -width              => 40,
+        -width              => 38,
         -exportselection    => 1,
         -font               => $de_frame->optionGet('font', 'CanvasWindow'),
         );
@@ -1366,7 +1351,7 @@ sub add_locus_editing_widgets {
     $self->locus_alias_Entry($ae);
 
     # Locus remark widget
-    my $re = $self->make_labelled_text_widget($widget, 'Remarks', 38, -anchor => 'se');
+    my $re = $self->make_labelled_text_widget($widget, 'Remarks', 36, -anchor => 'se');
     $self->locus_remark_Entry($re);
     if (my $locus = $self->SubSeq->Locus) {
         $self->update_locus_remark_widget($locus);
@@ -1501,7 +1486,7 @@ sub update_remark_Entry {
 sub add_transcript_remark_widget {
     my( $self, $widget ) = @_;
     
-    my $rt = $self->make_labelled_text_widget($widget, 'Remarks', 38, -anchor => 'se');
+    my $rt = $self->make_labelled_text_widget($widget, 'Remarks', 36, -anchor => 'se');
     $self->transcript_remark_Entry($rt);
     $self->update_transcript_remark_widget($self->SubSeq);
 }
@@ -2158,9 +2143,6 @@ sub exon_holder_coords {
 sub _coord_matrix {
     my( $self ) = @_;
     
-    #my $old = $self->font_size;
-    #$self->font_size($old * 1.2);
-    
     my( $m );
     unless ($m = $self->{'_coord_matrix'}) {
         my $uw      = $self->font_unit_width;
@@ -2192,8 +2174,6 @@ sub _coord_matrix {
             );
     }
     
-    #$self->font_size($old);
-    
     return @$m;
 }
 
@@ -2209,7 +2189,7 @@ sub add_exon_holder {
     }
     
     my $canvas  = $self->canvas;
-    my $font    = $self->font;
+    my $font    = $self->font_fixed;
     my $exon_id = 'exon_id-'. $self->next_exon_number;
     my( $size, $half, $pad,
         $x1, $y1, $x2, $y2 ) = $self->next_exon_holder_coords;
@@ -2219,7 +2199,7 @@ sub add_exon_holder {
         $x1, $y1 + $half,
         -anchor     => 'e',
         -text       => $start,
-        -font       => [$font, $size, 'normal'],
+        -font       => $font,
         -tags       => [$exon_id, 'exon_start', 'exon_pos'],
         );
     
@@ -2233,7 +2213,7 @@ sub add_exon_holder {
         $x2, $y1 + $half,
         -anchor     => 'w',
         -text       => $end,
-        -font       => [$font, $size, 'normal'],
+        -font       => $font,
         -tags       => [$exon_id, 'normal', 'exon_end', 'exon_pos'],
         );
     
@@ -2371,10 +2351,8 @@ sub strand_from_tk {
 
         my $color = $meth->cds_color;
         
-        my( $size, $half, $pad, $text_len )
-                        = $self->_coord_matrix;
-        my $font        = $self->font;
-        my $font_size   = $self->font_size;
+        my( $size, $half, $pad, $text_len ) = $self->_coord_matrix;
+        my $font = $self->font_fixed_bold;
 
         if ($strand == -1) {
             @trans = reverse @trans;
@@ -2384,14 +2362,14 @@ sub strand_from_tk {
             $half + $text_len, $size,
             -anchor => 'e',
             -text   => $trans[0],
-            -font   => [$font, $size, 'bold'],
+            -font   => $font,
             -tags   => ['t_start', $tr_tag],
             );
         my $t2 = $canvas->createText(
             (3 * $text_len) + (4 * $size), $size,
             -anchor => 'w',
             -text   => $trans[1],
-            -font   => [$font, $size, 'bold'],
+            -font   => $font,
             -tags   => ['t_end', $tr_tag],
             );
     }

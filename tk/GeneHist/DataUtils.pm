@@ -102,10 +102,8 @@ sub check_query_exists {
 
 sub gene_not_found_err {
 	my $mw = shift;
-	my $font_hl = $mw->fontCreate(-family=>'helvetica', -size=>9);
 
   $mw->messageBox(-title   => 'Gene not found!',
-                  -font    => $font_hl,
                   -message => "Please double check you query and try again.\n".
                             "If this is a software error, please report to anacoders.\nThanks.",
                   -default_button => 'OK' );
@@ -114,10 +112,8 @@ sub gene_not_found_err {
 sub show_err_message {
   my ($parent, $title, $msg) = @_;
 
-  my $font_hl = $parent->fontCreate(-family=>'helvetica', -size=>9);
 
   $parent->messageBox(-title   => $title,
-                      -font    => $font_hl,
                       -message => $msg,
                       -default_button => 'OK' );
 }

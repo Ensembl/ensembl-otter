@@ -145,8 +145,8 @@ sub column_methods {
         my $text_method  = \&_column_write_text ;   # this is the default method to be used  to display text (rather than drawing s graphic)
         my $image_method = \&_column_draw_image ;
         
-        my $norm = [$self->font, $self->font_size, 'normal'];
-        my $bold = [$self->font, $self->font_size, 'bold'];
+        my $norm = $self->font_fixed;
+        my $bold = $self->font_fixed_bold;
         $self->{'_column_methods'} = [
             [$text_method, \&_column_text_row_number],
             [$text_method, 

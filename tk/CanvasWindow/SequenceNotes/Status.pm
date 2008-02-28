@@ -115,8 +115,8 @@ sub initialise {
     $self->bind_close_window($top);
     
     # Define how the table gets drawn by supplying a column_methods array
-    my $norm = [$self->font, $self->font_size, 'normal'];
-    my $bold = [$self->font, $self->font_size, 'bold'];   
+    my $norm = $self->font_fixed;
+    my $bold = $self->font_fixed_bold;   
     my $status_colors = {'completed'   => 'DarkGreen', 
                          'missing'     => 'red', 
                          'unavailable' => 'DarkRed'};

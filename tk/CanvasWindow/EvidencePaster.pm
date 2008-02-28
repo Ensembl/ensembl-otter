@@ -163,7 +163,8 @@ sub draw_evidence {
     my $canvas = $self->canvas;
     $canvas->delete('all');
     
-    my $font = $self->font;
+    my $norm = $self->font_fixed;
+    my $bold = $self->font_fixed_bold;
     my $size = $self->font_size;
     my $row_height = $size + int($size / 6);
     my $type_pad = $row_height / 2;
@@ -177,7 +178,7 @@ sub draw_evidence {
         $canvas->createText(0, $y,
             -anchor => 'ne',
             -text   => $type,
-            -font   => [$font, $size, 'bold'],
+            -font   => $bold,
             -tags   => ['IGNORE'],
             );
 
@@ -186,7 +187,7 @@ sub draw_evidence {
             $canvas->createText($x, $y,
                 -anchor => 'nw',
                 -text   => $text,
-                -font   => [$font, $size, 'normal'],
+                -font   => $norm,
                 -tags   => [$type],
                 );
             $y += $row_height;

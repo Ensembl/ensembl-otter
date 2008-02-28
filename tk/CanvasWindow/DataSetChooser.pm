@@ -152,10 +152,9 @@ sub draw {
     $canvas->toplevel->raise;
     $canvas->toplevel->focus;
 
-    my $font = $self->font;
+    my $font = $self->font_fixed_bold;
     my $size = $self->font_size;
     my $row_height = int $size * 1.5;
-    my $font_def = [$font, $size, 'bold'];
     for (my $i = 0; $i < @dsl; $i++) {
         my $set = $dsl[$i];
         my $x = $size;
@@ -163,7 +162,7 @@ sub draw {
         $canvas->createText(
             $x, $y,
             -text   => $set->name,
-            -font   => $font_def,
+            -font   => $font,
             -anchor => 'nw',
             -tags   => ['DataSet=' . $set->name],
             );

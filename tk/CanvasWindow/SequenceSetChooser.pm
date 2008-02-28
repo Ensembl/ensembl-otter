@@ -124,11 +124,10 @@ sub LocalDatabaseFactory {
 sub draw {
     my( $self ) = @_;
     
-    my $font    = $self->font;
     my $size    = $self->font_size;
     my $canvas  = $self->canvas;
 
-    my $font_def = [$font,       $size, 'bold'];
+    my $font_def = $self->font_fixed_bold;
     my $helv_def = ['Helvetica', $size, 'normal'];
 
     my $ds = $self->Client->get_DataSet_by_name($self->name);
