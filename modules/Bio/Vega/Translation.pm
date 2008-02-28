@@ -30,7 +30,7 @@ sub vega_hashkey_structure {
 sub vega_hashkey_sub {
 
   my $self = shift;
-  my $sel = $self->get_all_Attributes('_selenocystine');
+  my $sel = $self->get_all_Attributes('_selenocysteine');
   my $hashkey_sub={};
   if (defined $sel) {
 	 foreach my $s (@$sel){
