@@ -229,6 +229,7 @@ sub get_gene_span_data {
                 : biotype_status2method($gene->biotype, $gene->status);
             if ($type eq 'Polymorphic') {
                 $type = 'Known_CDS';
+                warn "Changed type of gene '$id' from Polymorphic to $type";
             }
             #warn join("\t", $id, $type, $gene->start, $gene->end, $gene->strand), "\n";
 	        push(@span, [$id, $type, $gene->start, $gene->end, $gene->strand]);

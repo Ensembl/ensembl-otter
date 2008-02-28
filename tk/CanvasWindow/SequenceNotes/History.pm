@@ -99,7 +99,7 @@ sub draw {
         my $size   = $self->font_size();
         my $list   = $self->get_rows_list();
         my $row_t  = 'row=' . (@$list + 1);
-        my $bold   = [ 'Helvetica', $size, 'normal' ];
+        my $font   = [ 'Helvetica', $size, 'normal' ];
         my $locker = $current_clone->get_lock_as_CloneLock()->author->name;
         my $host   = $current_clone->get_lock_as_CloneLock()->hostname;
 
@@ -110,7 +110,7 @@ sub draw {
         $canvas->createText(
             $size, $max_vis_y,
             -anchor => 'nw',
-            -font   => $bold,
+            -font   => $font,
             -tags   => ['lock_status'],
             -fill   => 'red',
             -text   =>
@@ -229,8 +229,8 @@ sub _column_write_text {
 sub column_methods {
     my $self = shift @_;
     my $helv = [ 'helvetica', $self->font_size, 'normal' ];
-    my $norm = [ $self->font, $self->font_size, 'normal' ];
-    my $bold = [ $self->font, $self->font_size, 'bold' ];
+    my $norm = $self->font_fixed;
+    my $bold = $self->font_fixed_bold;
     unless (ref($self->{'_column_methods'}) eq 'ARRAY') {
         my $calling_method = \&_column_write_text;
         my $methods        = [

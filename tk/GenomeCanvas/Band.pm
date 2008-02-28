@@ -37,18 +37,6 @@ sub canvas {
     return $self->{'_canvas'};
 }
 
-#sub font_size {
-#    my ($band, $font_size) = @_;
-
-#    if ($font_size) {
-#	$band->{'_band_font_size'} = $font_size;
-#    }
-
-#    return exists($band->{'band_font_size'}) ? $band->{'band_font_size'} : $band->SUPER::font_size;
-
-#}
-
-
 sub draw_titles {
     my( $band ) = @_;
     

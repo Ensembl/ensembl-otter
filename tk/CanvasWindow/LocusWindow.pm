@@ -88,7 +88,8 @@ sub initialize{
                                     -exportselection    => 1,
                                     -background         => 'white',
                                     -selectbackground   => 'gold',
-#                                    -font               => [$self->font, $self->font_size, 'normal'],
+                                    # Should pick up default font from Entry or Listbox
+#                                    -font               => $self->font_fixed,
                                     -command            => sub {$self->update_checkbutton} ,
                                     )->pack(-side => 'left');
 

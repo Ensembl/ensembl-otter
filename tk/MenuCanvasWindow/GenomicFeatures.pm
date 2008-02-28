@@ -369,6 +369,7 @@ sub change_of_gf_type_callback {
 sub add_genomic_feature {
     my ($self, $feat) = @_;
 
+    # Frame to contain row
     my $subframe = $self->{_metaframe}->Frame()->pack(
         -fill   => 'x',
         -expand => 1,
@@ -378,12 +379,14 @@ sub add_genomic_feature {
 
     my @pack = (-side => 'left', -padx => 2);
 
+    # Popup menu for choosing type of feature
     $genomic_feature->{gf_type_menu} = $subframe->SmartOptionmenu(
        -options  => [ map { [ $_->remark => $_->name ] } ($self->get_all_Methods) ],
        -variable => \$genomic_feature->{'gf_type'},
        -command  => sub { $self->change_of_gf_type_callback($genomic_feature, shift @_); },
     )->pack(@pack);
 
+    # Entry for "start" position
     $genomic_feature->{fiveprime_entry} = $subframe->NoPasteEntry(
        -textvariable => \$genomic_feature->{fiveprime},
        -width        => 7,
@@ -394,11 +397,13 @@ sub add_genomic_feature {
     $genomic_feature->{fiveprime_entry}->bind('<Up>',     $recalc_fiveprime);
     $genomic_feature->{fiveprime_entry}->bind('<Down>',   $recalc_fiveprime);
 
+    # Right or left pointing arrow for forward or reverse strand indicator
     $genomic_feature->{direction_button} = $subframe->Button(
         -command => sub { flip_direction_callback($genomic_feature); },
     )->pack(-side => 'left');
     show_direction_callback($genomic_feature); # show it once
 
+    # Entry for "end" position
     $genomic_feature->{threeprime_entry} = $subframe->NoPasteEntry(
        -textvariable => \$genomic_feature->{threeprime},
        -width        => 7,
@@ -409,11 +414,13 @@ sub add_genomic_feature {
     $genomic_feature->{threeprime_entry}->bind('<Up>',     $recalc_threeprime);
     $genomic_feature->{threeprime_entry}->bind('<Down>',   $recalc_threeprime);
 
+    # Entry for score
     $genomic_feature->{score_entry} = $subframe->NoPasteEntry(
        -textvariable => \$genomic_feature->{score},
        -width        => 4,
     )->pack(@pack);
 
+    # Delete button
     my $delete_button = $subframe->Button(
         -text    => 'Delete',
         -command => sub {
@@ -425,14 +432,14 @@ sub add_genomic_feature {
     # Break circular reference caused by closure
     $delete_button->bind('<Destroy>', sub{ $self = undef });
     
+    # Entry for display label / comment text
     $genomic_feature->{display_label_entry} = $subframe->NoPasteEntry(
        -textvariable => \$genomic_feature->{display_label},
        -width        => 24,
     )->pack(@pack);
 
-        # bindings:
-
-    for my $event ('<<Paste>>', '<Button-2>') {
+    # Add callbacks for pasting and middle button paste
+    foreach my $event ('<<Paste>>', '<Button-2>') {
         $genomic_feature->{fiveprime_entry}->bind(
             $event,
             sub {

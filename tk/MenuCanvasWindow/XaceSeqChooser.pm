@@ -446,7 +446,7 @@ sub populate_menus {
     # Save annotations to otter
     my $save_command = sub {
         unless ($self->close_all_edit_windows) {
-            $self->message('No saving because some editing windows are still open');
+            $self->message('Not saving because some editing windows are still open');
             return;
         }
         $self->save_data(1);

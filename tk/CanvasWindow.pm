@@ -122,23 +122,60 @@ sub font {
     
     if ($font) {
         $self->{'_font'} = $font;
-        $self->{'_font_unit_width'} = undef;
+        $self->clear_font_caches;
     }
-    return $self->{'_font'} || 'lucidatypewriter';
+    return $self->{'_font'} || $self->canvas->optionGet('fontFixed', 'CanvasWindow');;
 }
 
-{
-    my $_default_font_size = 14;
+sub font_size {
+    my( $self, $font_size ) = @_;
 
-    sub font_size {
-        my( $self, $font_size ) = @_;
-
-        if ($font_size) {
-            $self->{'_font_size'} = $font_size;
-            $self->{'_font_unit_width'} = undef;
-        }
-        return $self->{'_font_size'} || $_default_font_size;
+    if ($font_size) {
+        $self->{'_font_size'} = $font_size;
+        $self->clear_font_caches;
     }
+    return $self->{'_font_size'} || 14;
+}
+
+sub clear_font_caches {
+    my ($self) = @_;
+    
+    $self->{'_font_fixed'}      = undef;
+    $self->{'_font_fixed_bold'} = undef;
+    $self->{'_font_unit_width'} = undef;
+}
+
+sub xlfd_array {
+    #           0 1    2      3 4      5 6    7
+    return qw{  * font weight r normal * size width * * * * * * };
+}
+
+sub font_fixed {
+    my ($self) = @_;
+    
+    unless ($self->{'_font_fixed'}) {
+        my @xlfd = $self->xlfd_array;
+        $xlfd[1] = $self->font;
+        $xlfd[2] = 'medium';
+        $xlfd[6] = $self->font_size;
+        $xlfd[7] = 10 * $xlfd[6];
+        $self->{'_font_fixed'} = '-' . join('-', @xlfd);
+    }
+    return $self->{'_font_fixed'};
+}
+
+sub font_fixed_bold {
+    my ($self) = @_;
+    
+    unless ($self->{'_font_fixed_bold'}) {
+        my @xlfd = $self->xlfd_array;
+        $xlfd[1] = $self->font;
+        $xlfd[2] = 'bold';
+        $xlfd[6] = $self->font_size;
+        $xlfd[7] = 10 * $xlfd[6];
+        $self->{'_font_fixed_bold'} = '-' . join('-', @xlfd);
+    }
+    return $self->{'_font_fixed_bold'};
 }
 
 sub font_unit_width {
@@ -150,8 +187,7 @@ sub font_unit_width {
         my $test_string = '0' x $string_length;
         my $font    = $self->font;
         my $size    = $self->font_size;
-        my $width   = $self->canvas->fontMeasure(
-            [$font, $size, 'normal'], $test_string);
+        my $width   = $self->canvas->fontMeasure($self->font_fixed, $test_string);
         $uw = $width / $string_length;
         $self->{'_font_unit_width'} = $uw;
     }

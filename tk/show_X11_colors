@@ -65,7 +65,7 @@ use CanvasWindow;
         
         my $txt = $canvas->createText(
             $x2 + $size + $size, $y1,
-            -text       => $name,
+            -text       => "$name ($red, $green, $blue)",
             -anchor     => 'nw',
             -font       => $font,
             -tags       => $tags,

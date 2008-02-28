@@ -60,6 +60,7 @@ sub add_default_options {
     # Priority level of 40 is equivalent to an
     # application specific startup file.
     my $priority = 40;
+
     my @opt_val = qw{
         CanvasWindow*color                      #ffd700
         CanvasWindow*background                 #bebebe
@@ -72,13 +73,13 @@ sub add_default_options {
         CanvasWindow*borderWidth                1
         CanvasWindow*activeborderWidth          1
         CanvasWindow*font                       -*-helvetica-medium-r-*-*-12-*-*-*-*-*-*-*
-
+        CanvasWindow*fontFixed                  lucidatypewriter
         CanvasWindow*TopLevel*background        #bebebe
         CanvasWindow*Frame.borderWidth          0
         CanvasWindow*Scrollbar.width            11
         CanvasWindow*Menubutton.padX            6
         CanvasWindow*Menubutton.padY            6
-    };
+        };
     
     for (my $i = 0; $i < @opt_val; $i += 2) {
         my ($opt, $val) = @opt_val[$i, $i + 1];
@@ -88,13 +89,11 @@ sub add_default_options {
     
     my @entry_class = qw{ Entry NoPasteEntry };
     foreach my $class (@entry_class) {
-        $mw->optionAdd("CanvasWindow\*$class.relief",     'sunken', $priority);
-        $mw->optionAdd("CanvasWindow\*$class.foreground", 'black',  $priority);
-        $mw->optionAdd("CanvasWindow\*$class.background", 'white',  $priority);
-        $mw->optionAdd(
-            "CanvasWindow\*$class.font",
-            "-*-lucidatypewriter-medium-r-*-*-14-140-*-*-*-*-*-*",
-            $priority);
+        $mw->optionAdd("CanvasWindow\*$class.relief",       'sunken',       $priority);
+        $mw->optionAdd("CanvasWindow\*$class.foreground",   'black',        $priority);
+        $mw->optionAdd("CanvasWindow\*$class.background",   'white',        $priority);
+        $mw->optionAdd("CanvasWindow\*$class.font",
+            '-*-lucidatypewriter-medium-r-normal-*-14-140-*-*-*-*-*-*',     $priority);
     }
 }
 
