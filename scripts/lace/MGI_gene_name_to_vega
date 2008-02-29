@@ -1,0 +1,267 @@
+#!/usr/local/bin/perl -w
+
+use strict;
+use Bio::Otter::Lace::Defaults;
+use Bio::Vega::DBSQL::DBAdaptor;
+use GeneHist::DataUtils qw (process_query);
+
+{
+  my ($dataset_name, $test);
+
+  Bio::Otter::Lace::Defaults::do_getopt(
+                                        'ds|dataset=s' => \$dataset_name,
+                                        'test'         => \$test
+                                       );
+  Bio::Otter::Lace::Defaults::show_help() unless $dataset_name;
+
+  my $cl         = Bio::Otter::Lace::Defaults::make_Client();
+  my $ds         = $cl->get_DataSet_by_name($dataset_name);
+  my $loutre_dba = $ds->make_Vega_DBAdaptor;
+  my $geneAd     = $loutre_dba->get_GeneAdaptor;
+
+  my $mgi_data = parse_mgi_input($geneAd);
+
+  $loutre_dba->begin_work;
+  eval{
+    update_loutre($loutre_dba, $mgi_data, $test);
+  };
+  if ($@) {
+    $loutre_dba->rollback;
+    die $@, "\nNo changes saved to otter db\n";
+  } else {
+    $loutre_dba->commit;
+  }
+}
+
+sub update_loutre {
+  my ($loutre_dba, $mgi_data, $test) = @_;
+
+  my $geneAd  = $loutre_dba->get_GeneAdaptor;
+  my $sliceAd = $loutre_dba->get_SliceAdaptor;
+
+  foreach my $mgi (@$mgi_data) {
+
+    my $mgi_symbol = $mgi->{'locus_symbol'};
+    my $gene_SID   = $mgi->{'vega_id'};
+    my $hgnc_id    = $mgi->{'mgi_id'};
+    my $mgi_desc   = $mgi->{'locus_description'};
+    my $mgi_chr    = $mgi->{'chromosome'};
+
+    my $curr_gene = $geneAd->fetch_by_stable_id($gene_SID);
+
+    # double check MGI VEGA chr
+    $curr_gene->slice->seq_region_name =~ /^chr(\d+)-/;
+    my $chr = $1;
+    unless ( $chr eq $mgi_chr ){
+      print STDERR "ERROR: chromosome diff: $chr (V) vs $mgi_chr (M)\n";
+      next;
+    }
+
+    my $curr_gene_name  = $curr_gene->get_all_Attributes('name')->[0]->value;
+    if ( $curr_gene_name ne $mgi_symbol ){
+      print STDERR "DIFF: $gene_SID $curr_gene_name (V) $mgi_symbol (M)\n";
+      update_gene_name_and_description($chr, $loutre_dba, $geneAd, $curr_gene, $curr_gene_name, $mgi_symbol, $mgi_desc, $test);
+    }
+  }
+}
+
+sub parse_mgi_input {
+
+  my $geneAd = shift;
+
+  my @field_names = qw{
+                       mgi_id locus_symbol locus_description score chromosome vega_id
+                     };
+
+  my $mgi_data = [];
+
+  while (<>) {
+    chomp;
+
+    my @fields = split /\t/, $_; # Fields should be tab separated
+    my $original_line = $_;
+
+    # There's something wrong with the line if we
+    # don't have the right number of fields.
+    unless (@fields == @field_names) {
+      die 'Bad line: ', fmt_list(@fields);
+    }
+
+    my $vega_id_from_mgi = $fields[5];
+    my $curr_gene = $geneAd->fetch_by_stable_id($vega_id_from_mgi);
+
+    unless ( $curr_gene ){
+      print STDERR "ERROR: $vega_id_from_mgi NOT FOUND in database\n";
+      next;
+    }
+
+    my $parsed_line = {};
+
+    # what is the point of checking symbols from a nomenclature consortium?
+    # Lots of name are still bad names!
+    my $ok = check_for_good_symbols($fields[1], $vega_id_from_mgi);
+    if ( $ok ){
+      for (my $i = 0 ; $i < @field_names ; $i++) {
+        my $field_name = $field_names[$i];
+        my $data = $fields[$i];
+        $data =~ s/(^\s+)|(\s+$)//g; # Trim leading and trailing whitespace
+        unless ($data) {
+          die 'Bad data element: ', fmt_list(@fields);
+        }
+        next if $data eq 'NULL';
+
+        $parsed_line->{$field_name} = $data if $ok;
+      }
+      $parsed_line->{'original_line'} = $original_line;
+      push(@$mgi_data, $parsed_line);
+    }
+  }
+  return $mgi_data;
+}
+
+sub check_for_good_symbols {
+  my ($mgi_symbol, $gsid_from_mgi) = @_;
+
+  # symbols to ignore (per info from HAVANA: Jane L.)
+  my @ignore_list = qw(D1Ertd622e D1Ertd471e D1Pas1 D2Bwg1335e D2Ertd391e
+                       U46068 N28178 D4Wsu132e D4Bwg0951e C87499 C77080 D4Ertd196e C79267
+                       D4Ertd22e C87977 D4Wsu114e D6Mm5e D8Ertd457e C86695 P140 X83328
+                       D11Wsu99e D11Wsu47e D11Bwg0517e C79407 D12Ertd647e D16Ertd472e D17Wsu92e
+                       C77370);
+
+  # do we need this?
+  my @usable_list = qw(B3gat2 C4bp B3galt2 C8g S100a7a C1qc C1qdc2 C1qtnf
+                       P2rx7 B3gnt4 B3galtl C1galt1 H1fx B4galnt3 M6pr E2f8 p P4ha3 B3gat1
+                       C1qtnf5 H2afv C1d B3gnt2 C1qtnf2 G3bp1 B9d1 B4galnt2 B3gntl1 B4galt7
+                       C1qtnf9 R3hcc1 C9 C1qtnf3 B3gnt5 B4galt4 N6amt1 T L3mbtl4 F9 P2ry10);
+
+  # also ignore these:
+  #   clone based names - starting with two capital letters
+  #   names that are Gene models - starting with Gm
+  #   riken based names - end with Rik
+
+  if ( $mgi_symbol =~ /^[A-Z]{2,2}|^Gm|Rik$|OTTMUS/ ){
+    #    print STDERR "TO ignore: $mgi_symbol";
+    return 0;
+  }
+  elsif ( grep(/$mgi_symbol/, @ignore_list) ){
+    #print STDERR $mgi_symbol;
+    return 0;
+  }
+  # give these names to HAVANA, as some could be usable
+  elsif ( ( $mgi_symbol =~ /^[a-zA-Z]{1,1}\d+/ or $mgi_symbol =~ /^[a-zA-Z]{1,1}$/ ) and
+          ! grep(/$mgi_symbol/, @usable_list) ){
+    print STDERR "SYMBOL_TO_CHECK: $gsid_from_mgi $mgi_symbol\n";
+    return 0;
+  }
+  # standard names we want
+  elsif ( $mgi_symbol =~ /^[A-Z]{1,1}[a-z]{1,1}/ or /[a-z]{2,2}/ ){
+    return 1;
+  }
+  else {
+    print STDERR "SURPRISE: $gsid_from_mgi $mgi_symbol\n";
+    return 0;
+  }
+}
+
+sub fmt_list {
+    return join(', ', map "'$_'", @_);
+}
+
+sub update_gene_name_and_description {
+
+  my ( $chr, $loutre_dba, $geneAd, $gene, $vega_name, $mgi_symbol, $mgi_desc, $test) = @_;
+
+  # look for gsids from both reference and all haploptype gene names
+  # only want current genes: specify as 1
+  my $gsids = $geneAd->fetch_stable_id_by_name($vega_name, 'gene', 1);
+
+  my $flag = 0;
+  my $num = @$gsids;
+  my @ids = @$gsids;
+  print STDERR "MULTIPLE OCCURRENCE: $num @ids\n" if $num > 1;
+
+  foreach my $gsid (@$gsids ){
+
+    my $gene         = $geneAd->fetch_by_stable_id($gsid);
+    my $name_attr    = $gene->get_all_Attributes('name')->[0];
+    my $current_name = $name_attr->value;
+    my $current_desc = $gene->description || 'NA';
+    my $seq_region   = $gene->slice->seq_region_name;
+
+    print STDERR "CHECKING ON $gsid on $seq_region\n";
+
+    my $mapping = get_expected_haplotype_from_chr($chr);
+    if ( $mapping ){
+      warn "HAPLOTYPE: @$mapping\n";
+      if ( $seq_region !~ /^chr/ ){
+        my $match;
+        foreach ( @$mapping ) {
+          warn "$_ vs $seq_region --------\n";
+          if ( index($seq_region, $_) == 0 ){ $match = 1; last};
+        }
+        print STDERR "ERROR: $seq_region unexpected for VEGA symbol $vega_name\n" unless $match;
+      }
+    }
+    my $source = $gene->source;
+    $mgi_symbol = $source . ":" . $mgi_symbol if $source ne 'havana';
+
+    print STDERR "SOURCE $source\n";
+    print STDERR "NAME   CHANGE from $current_name to $mgi_symbol\n";
+    $name_attr->value($mgi_symbol);
+    $flag = 1;
+
+    if ( $mgi_desc and $mgi_desc ne $current_desc ){
+      $gene->description($mgi_desc);
+      print STDERR "DESC   CHANGE from '$current_desc' to '$mgi_desc'\n";
+    }
+
+    if ( $gene->status eq 'KNOWN' ){
+      print STDERR "STATUS OK: KNOWN\n";
+    }
+    else {
+      print STDERR "STATUS CHANGE from ", $gene->status, " to KNOWN\n";
+    }
+
+    # store gene
+#    if ( $flag == 1 and ! $test ){
+    # make sure status becomes KNOWN
+    $gene->status('KNOWN') unless $gene->status eq 'KNOWN';
+#      print STDERR "Storing ", $gene->stable_id, " ...\n";
+#      $geneAd->store($gene);
+#    }
+  }
+  print STDERR "\n";
+}
+
+sub get_expected_haplotype_from_chr {
+
+  my $chr = shift;
+
+  my $map = {1  => [qw(NOD_IDD5.1 CHORI29_IDD5.1_test NOD_IDD5.4)],
+             3  => [qw(129_IDD3 NOD_IDD3 NOD_IDD10 NOD_IDD18)],
+             4  => [qw(129_MUP B6_MUP NOD_IDD9 mrc4)],
+             6  => [qw(CHO_IDD6)],
+             11 => [qw(CHO_IDD4 NOD_IDD4 lace_chr11_clones4)],
+             17 => [qw(CHO_IDD16 mhc_4)]
+            };
+
+  return $map->{$chr};
+
+}
+
+
+
+__END__
+
+=head1 NAME - MGI_gene_name_to_vega
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
+Modified from HUGO_gene_name_to_vega
+
+Chao-Kung Chen B<email> ck1@sanger.ac.uk
+
+
