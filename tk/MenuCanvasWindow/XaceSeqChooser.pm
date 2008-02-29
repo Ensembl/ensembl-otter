@@ -18,6 +18,7 @@ use Hum::Ace::AceText;
 use Hum::Ace;
 use Hum::Analysis::Factory::ExonLocator;
 use Hum::Conf qw{ PFETCH_SERVER_LIST };
+use Hum::Sort qw{ ace_sort };
 use EditWindow::Dotter;
 use EditWindow::Clone;
 use MenuCanvasWindow::ExonCanvas;
@@ -1605,12 +1606,20 @@ sub draw_subseq_list {
     my $slist = [];
     my $counter = 1;
     foreach my $clust ($self->get_all_Subseq_clusters) {
+    #foreach my $clust ($self->get_ace_sorted_SubSeqs) {
         push(@$slist, "") if @$slist;
         push(@$slist, @$clust);
     }
     
     $self->draw_sequence_list($slist);
     $self->fix_window_min_max_sizes;
+}
+
+sub get_ace_sorted_SubSeqs {
+    my ($self) = @_;
+    
+    my $assembly = $self->Assembly;
+    return [sort { ace_sort($a->name, $b->name) } $assembly->get_all_SubSeqs];
 }
 
 sub get_all_Subseq_clusters {

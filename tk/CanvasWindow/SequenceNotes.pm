@@ -717,18 +717,6 @@ sub _open_SequenceSet{
         return;
     }    
 
-### Commented out for tropicalis cDNA annotation workshop
-#    # Create EviCollection Object
-#    my( $ec );
-#    eval {
-#        $ec = $self->make_EviCollection($ss);
-#    };
-#    if ($@) {
-#        $adb->error_flag(0);
-#        $self->exception_message($@, 'Error creating EviCollection for supporting evidence selection');
-#        return;
-#    }
-
     warn "Making XaceSeqChooser";
     my $top = $self->canvas->Toplevel(
         -title  => $title,
