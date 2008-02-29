@@ -4,6 +4,7 @@
 
 use strict;
 
+use Hum::Ace::Colors qw{ webhex_to_acename };
 use CanvasWindow;
 
 {
@@ -40,6 +41,7 @@ use CanvasWindow;
         next if $name =~ /grey/i;
 
         my $hex = sprintf "#%02x%02x%02x", $red, $green, $blue;
+        my $ace = webhex_to_acename($hex);
 
         #warn "$name = $hex\n";
         
@@ -65,7 +67,7 @@ use CanvasWindow;
         
         my $txt = $canvas->createText(
             $x2 + $size + $size, $y1,
-            -text       => "$name ($red, $green, $blue)",
+            -text       => $ace ? "$name ($ace)" : $name,
             -anchor     => 'nw',
             -font       => $font,
             -tags       => $tags,
