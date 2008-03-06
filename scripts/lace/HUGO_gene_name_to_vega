@@ -78,7 +78,7 @@ sub update_otter {
       next;
     }
 
-    update_gene_name_and_description($loutre_dba, $gene_aptr, $gene, $hugo->{'locus_symbol'}, $hugo->{'locus_description'}, $test);
+    update_gene_name_and_description($loutre_dba, $gene_aptr, $gene, $hugo->{'locus_symbol'}, $hugo->{'locus_description'}, $hgnc_id, $test);
   }
 }
 
@@ -134,19 +134,19 @@ sub fmt_list {
 }
 
 sub update_gene_name_and_description {
-  my ( $loutre_dba, $gene_aptr, $gene, $hugo_name, $hugo_desc, $test ) = @_;
+  my ( $loutre_dba, $gene_aptr, $gene, $hugo_name, $hugo_desc, $hgnc_id, $test ) = @_;
 
   my $name_attr    = $gene->get_all_Attributes('name')->[0];
   my $current_name = $name_attr->value;
   my $current_desc = $gene->description;
   my $flag = 0;
+  my $gsid = $gene->stable_id;
 
   if ( $hugo_name and $current_name ne $hugo_name) {
     $flag = 1;
     $name_attr->value($hugo_name);
     warn "#NAME CHANGE from $current_name to ", $name_attr->value, "\n";
   }
-
   if ( $hugo_desc and $hugo_desc ne $current_desc ){
     $flag = 1;
     $gene->description($hugo_desc);
@@ -155,10 +155,53 @@ sub update_gene_name_and_description {
 
   # store gene
   if ( $flag == 1 and ! $test ){
-    warn "Storing ", $gene->stable_id, " ...\n";
-    $gene_aptr->store($gene);
+
+    # check lock before saving
+    # use project as some genes span multiple clones
+    if ( my $contig_lock = check_contig_lock($loutre_dba, $gene) ) {
+      print STDERR "LOCK: $gsid is locked on @$contig_lock\n";
+    }
+    else {
+      warn "Storing ", $gene->stable_id, " ...\n";
+
+      my $curr_gene_id = $gene->dbID;
+
+      # make sure status becomes KNOWN
+      $gene->status('KNOWN') unless $gene->status eq 'KNOWN';
+      $gene_aptr->store($gene);
+
+      my $new_gene_id  = $gene_aptr->fetch_by_stable_id($gsid)->dbID;
+      printf STDERR ("Storing %s ==> Old dbID: %d New dbID: %d\n", $gsid, $curr_gene_id, $new_gene_id);
+
+      my $curdate = "now()";
+      my $params = sprintf("%d, %s, %s", $new_gene_id, "'".$hgnc_id."'", $curdate);
+      my $sql = qq{INSERT INTO gene_name_update (gene_id, consortium_id, update_date) VALUES($params)};
+      my $update = $loutre_dba->dbc->prepare($sql);
+      $update->execute;
+    }
   }
 }
+
+sub check_contig_lock {
+  my ($loutre_dba, $gene) = @_;
+
+  my $lock = $loutre_dba->dbc->prepare(qq{
+                               SELECT contig_lock_id
+                               FROM contig_lock cl, seq_region sr
+                               WHERE sr.name= ?
+                               AND cl.seq_region_id=sr.seq_region_id
+                             });
+
+  my $locked_contigs;
+  foreach my $p ( @{$gene->project('contig')}) {
+    my $ctgname = $p->[2]->seq_region_name;
+    $lock->execute( $ctgname );
+    push(@$locked_contigs, $ctgname) if $lock->fetchrow;
+  }
+
+  return $locked_contigs;
+}
+
 
 __END__
 

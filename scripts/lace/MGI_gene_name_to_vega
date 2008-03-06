@@ -255,7 +255,7 @@ sub store_gene {
 
     my $curdate = "now()";
     my $params = sprintf("%d, %s, %s", $new_gene_id, "'".$mgi_id."'", $curdate);
-    my $sql = qq{INSERT INTO gene_name_update (gene_id, mgi_id, update_date) VALUES($params)};
+    my $sql = qq{INSERT INTO gene_name_update (gene_id, consortium_id, update_date) VALUES($params)};
     my $update = $loutre_dba->dbc->prepare($sql);
     $update->execute;
   }
