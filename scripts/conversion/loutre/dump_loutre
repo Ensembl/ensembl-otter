@@ -539,14 +539,12 @@ foreach my $name (@{$chr_names_wanted}) {
 	#transfer genes and associated features
  GENE:
 	foreach my $lgene (@{$lga->fetch_all_by_Slice($lslice)} ) {
-		#filter on name prefix
-		my $gname = $lgene->get_all_Attributes('name')->[0]->value;
+		#filter on source	
 		if ($support->param('filter_prefix')) {
-			if ( my ($pref) = $gname =~ /(\w+?):/) {
-				if (grep {$pref eq $_} $support->param('filter_prefix')) {
-					$support->log("Skipping gene $gname because of incorrect prefix\n",2);
-					next GENE;
-				}
+			if (grep { $lgene->source eq $_} $support->param('filter_prefix')) {
+				my $gname = $lgene->get_all_Attributes('name')->[0]->value;
+				$support->log("Skipping gene $gname because of incorrect source\n",2);
+				next GENE;
 			}
 		}
 
