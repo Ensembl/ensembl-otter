@@ -31,31 +31,25 @@ This script updates vega transcript xrefs from the original clone-name
 based transcript names to gene-name based ones.
 
 If the option to fix duplicated names is chosen, then where the above results
-in identical names for transcripts from the same gene then the transcripts are
+in identical names for transcripts from the same gene, then the transcripts are
 numbered incrementaly after ordering from the longest coding to the shortest
-non-coding. If any of these identical names are from transcripts that do not
-overlap each other then a log is made and the ID dumped to file
-(new_fragmented_gene_list.txt). These should be reported to Havana for double
+non-coding. If any of these identical names are from transcripts that have not
+been seen before then the ID is dumped to file (new_fragmented_gene_list.txt).
+These should be reported to Havana for double
 checking they are not meant to be fragmented (see below). Using the verbose option
-will also report where transcripts with identical names *do* overlap each other,
-but this is probably unlikely to be very usefull.
+will also report on non-havana loci.
 
-The exceptions to this are genes that have a 'fragmented locus' gene_attrib
-hidden_remark, or a '%fragmen%' transcript_attrib remark or hidden_remark
-since these are truly fragmented. For these a human readable gene_attrib remark
-is added and the transcript IDs are not updated. For genes that don't have such
-a remark on the gene or a transcript, the stable_id is first compared against a
-list of previously OKeyed genes - if any are seen then this is logged as they
-really should have a remark (the stable ID is also saved in a file -
-known_fragmented_gene_list.txt to facilitate this).
+The only transcripts who's names should not be patched are those from fragmented genes
+- these have a 'fragmented locus' gene_attrib hidden_remark, or a '%fragmen%'
+transcript_attrib remark or hidden_remark. For these a human readable gene_attrib remark
+is also added. For genes that don't have such a remark on the gene or a transcript,
+the stable_id is first compared against a list of previously curated fragmented genes -
+if any are seen then this is logged as they really shouldn't be seen.
 
-See vega_data_curation.txt for further details on using this script.
+See vega_data_curation.txt for further details on using this script and getting usefull
+reports from the log file
 
 The -prune option restores the data to the stage before this script was first run.
-
-The script can be used to change the root of transcript names either after the
-addition of Zfin gene xrefs or after case mismatches in gene names have been fixed
-- of course here the fix_duplicated names option should not be taken.
 
 =head1 LICENCE
 
@@ -113,8 +107,6 @@ $support->confirm_params;
 $support->init_log;
 
 #set filehandle for logging of gene IDs
-#genes that have been identified before but have no remark
-my $k_flist_fh = $support->filehandle('>', $support->param('logpath').'/known_fragmented_gene_list.txt');
 #new genes
 my $n_flist_fh = $support->filehandle('>', $support->param('logpath').'/new_fragmented_gene_list.txt');
 
@@ -243,7 +235,7 @@ foreach my $chr ($support->sort_chromosomes) {
                         AND     ed.db_name = "Vega_transcript"
                     ));
 				}
-				$support->log_verbose(sprintf("%-20s%-3s%-20s", "$t_name", "->", " $new_name")."\n", 1);
+				$support->log(sprintf("%-20s%-3s%-20s", "$t_name", "->", " $new_name")."\n", 1);
 			}
 
 			#log unexpected names (ie don't have -001 etc after removing Leo's extension
@@ -258,7 +250,7 @@ foreach my $chr ($support->sort_chromosomes) {
 		#if there are duplicated names in Vega then check for remarks and patch if non fragmented
 		if ( (grep { scalar(@{$transnames->{$_}}) > 1 } keys %{$transnames}) && $fix_names) {
 			my $patched;
-			($patched,$c3,$c4) = $support->check_remarks_and_update_names($gene,$k_flist_fh,$c3,$c4);
+			($patched,$c3,$c4) = $support->check_remarks_and_update_names($gene,$c3,$c4);
 			if ($patched) {
 				unless ( $seen_genes->{$gsi} eq 'OK') {
 					#distinguish between overlaping and non-overlapping genes for reporting
