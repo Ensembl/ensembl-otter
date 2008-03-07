@@ -212,6 +212,7 @@ foreach my $k (keys %$regions_wanted_details ) {
 		$support->log("\nWill use seq_region $sr_name_to_use for requested region $k ...\n");
 	}
 	else {
+		$support->log("\n");
 		$support->log_warning("No matching seq_region found for requested region $k, check configuration file\n");
 		next SLICE;
 	}
