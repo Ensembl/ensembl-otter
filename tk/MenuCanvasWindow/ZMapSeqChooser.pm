@@ -9,6 +9,7 @@ use Sys::Hostname;
 use ZMap::XRemoteCache;
 use Data::Dumper;
 use Hum::Conf qw{ PFETCH_SERVER_LIST };
+use XML::Simple;
 
 
 my $ZMAP_DEBUG = 1;
@@ -383,7 +384,7 @@ sub zMapServerDefaults {
         url             => $url,
         writeback       => 'false',
         sequence        => 'true',
-        use_zmap_styles => 'true',
+        use_zmap_styles => 'false',
         # navigator_sets specifies the feature sets to draw in the navigator pane.
         # so far the requested columns are just scale, genomic_canonical and locus
         # in line with keeping the columns to a minimum to save screen space.
@@ -730,8 +731,11 @@ response.
 
 =cut
 
-sub zMapTagValues{
+sub zMapTagValues {
     my ($self, $xml_hash) = @_;
+
+    #use Data::Dumper; warn Dumper($xml_hash);
+
     my $page    = "";
     my $handled = "false";
 
@@ -739,53 +743,18 @@ sub zMapTagValues{
         my $subseq_list   = [];
         my $feature       = $xml_hash->{'featureset'}->{'feature'} || {};
 
-        foreach my $name(keys(%$feature)){
-            if(my $subseq = $self->get_SubSeq($name)){ 
+        foreach my $name (keys %$feature) {
+            if (my $subseq = $self->get_SubSeq($name)) { 
                 push(@$subseq_list, $subseq);
             }
         }
 
-        if(scalar(@$subseq_list)){
-            my $otter_id       = undef;
-            my $transcript_id  = undef;
-            my $otter_exon_ids = "";
-            my $exon_ids       = [];
-            foreach my $subseq(@$subseq_list){
-                $transcript_id = $subseq->otter_id;
-
-                $otter_id = $subseq->Locus->otter_id if ($subseq->Locus); 
-
-                foreach my $exon($subseq->get_all_Exons_in_transcript_order()){
-                    push(@$exon_ids, $exon->otter_id()) if ($exon->otter_id);
-                }
+        if (@$subseq_list) {
+            foreach my $subseq (@$subseq_list) {
+                $page .= $subseq->zmap_info_xml;
             }
-            $handled    = ($transcript_id ? "true" : "false");
-            $otter_id ||= "unable to fetch otter id";
-            
-            $transcript_id ||= "unable to fetch transcript id";
-
-            my $counter = 1;
-            foreach my $id(@$exon_ids){
-                $otter_exon_ids .= qq{\t\t\t\t<tagvalue name="Stable ID [$counter]" type="simple">$id</tagvalue>\n};
-                $counter++;
-            }
-            
-            $page = qq{\t\t<page name="Stable IDs">\n}
-
-                . qq{\t\t\t<paragraph name="Gene" type="tagvalue_table">\n}
-                . qq{\t\t\t\t<tagvalue name="Stable ID" type="simple">$otter_id</tagvalue>\n}
-                . qq{\t\t\t</paragraph>\n}
-                
-                . qq{\t\t\t<paragraph name="Transcript" type="tagvalue_table">\n}
-                . qq{\t\t\t\t<tagvalue name="Stable ID" type="simple">$transcript_id</tagvalue>\n}
-                . qq{\t\t\t</paragraph>\n}
-                
-                . qq{\t\t\t<paragraph name="Exon" type="tagvalue_table">\n}
-                . $otter_exon_ids
-                . qq{\t\t\t</paragraph>\n}
-                
-                . qq{\t\t</page>\n};
-        }else{
+            $handled = "true";
+        } else {
             foreach my $name($self->list_all_SubSeq_names()){
                 my $subseq = $self->get_SubSeq($name);
                 push(@$subseq_list, $subseq);
@@ -848,7 +817,7 @@ sub zMapTagValues{
 #===========================================================
 
 sub RECEIVE_FILTER {
-    my ($_connect, $_request, $_obj, @list) = @_;
+    my ($connect, $request, $obj, @list) = @_;
 
     # The table of actions and functions...
     # N.B. the action _must_ be in @list as well as this table
@@ -865,15 +834,15 @@ sub RECEIVE_FILTER {
     # @list = keys(%$lookup);
 
     # find the action in the request XML
-    #warn "Request = '$_request'";
-    my $reqXML = parse_request($_request);
+    #warn "Request = '$request'";
+    my $reqXML = parse_request($request);
     my $action = $reqXML->{'action'};
 
     warn "In RECEIVE_FILTER for action=$action\n" if $ZMAP_DEBUG;
 
     # The default response code and message.
-    my ($_status, $_response) =
-      (404, $_obj->zMapZmapConnector->basic_error("Unknown Command"));
+    my ($status, $response) =
+      (404, $obj->zMapZmapConnector->basic_error("Unknown Command"));
 
     # find the method to call...
     foreach my $valid (@list) {
@@ -881,16 +850,18 @@ sub RECEIVE_FILTER {
             $action eq $valid
             && ($valid =
                 $lookup->{$valid}) # N.B. THIS SHOULD BE ASSIGNMENT NOT EQUALITY
-            && $_obj->can($valid)
+            && $obj->can($valid)
           )
         {
             # call the method to get the status and response
-            ($_status, $_response) = $_obj->$valid($reqXML);
+            ($status, $response) = $obj->$valid($reqXML);
             last;                  # no need to go any further...
         }
     }
 
-    return ($_status, $_response);
+    #warn "Response = $response";
+
+    return ($status, $response);
 }
 
 =head1 zMapGetXRemoteClientByName

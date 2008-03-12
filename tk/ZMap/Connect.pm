@@ -388,7 +388,7 @@ sub _do_callback{
     my $intSE = $self->basic_error("Internal Server Error");
     eval{ 
         X11::XRemote::block(); # this gets automatically unblocked for us, besides we have no way to do that!
-        my ($status,$xmlstr) = $cb->($self, $request_string, @data);
+        my ($status, $xmlstr) = $cb->($self, $request_string, @data);
         $status ||= 500; # If callback returns undef...
         $xmlstr ||= $intSE;
         $reply = sprintf($fstr, $status, $xmlstr);

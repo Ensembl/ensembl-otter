@@ -123,6 +123,17 @@ sub initialize {
             );
         $canvas->Tk::bind('<Control-e>',   $select_evidence);
         $canvas->Tk::bind('<Control-E>',   $select_evidence);
+        
+        # Show dialog for renaming the locus attached to this subseq
+        my $rename_locus = sub { $self->rename_locus };
+        $file_menu->add('command',
+            -label          => 'Rename locus',
+            -command        => $rename_locus,
+            -accelerator    => 'Ctrl+L',
+            -underline      => 1,
+            );
+        $canvas->Tk::bind('<Control-l>',     $rename_locus);
+        $canvas->Tk::bind('<Control-L>',     $rename_locus);
 
         # Save into db via xace
         my $save_command = sub{ $self->save_if_changed };
@@ -1291,7 +1302,6 @@ sub add_locus_editing_widgets {
     my $symbol_known_frame = $widget->Frame->pack(-side => 'top');
     
     my $be = $symbol_known_frame->ComboBox(
-        #-listwidth  => 18,
         -listheight => 10,
         -label      => 'Symbol: ',
         -width      => 18,
@@ -1324,7 +1334,7 @@ sub add_locus_editing_widgets {
         -offvalue   => 0,
         -variable   => $self->{'_locus_is_known_var'},
         -padx       => 6,
-        )->pack(-side => 'right', -padx => 6);
+        )->pack(-side => 'left', -padx => 6);
     #warn "Locus is known = ${$self->{'_locus_is_known_var'}}";
 
     # Description ("Full_name" in acedb) editing widget
@@ -2547,6 +2557,12 @@ sub otter_Transcript_from_tk {
     return $tsct;
 }
 
+sub rename_locus {
+    my ($self) = @_;
+    
+    print STDERR $self->SubSeq->zmap_info_xml;
+}
+
 sub save_if_changed {
     my( $self ) = @_;
     
@@ -2604,10 +2620,10 @@ sub xace_save {
     
     my $xr = $xc->xace_remote;
     if ($xr) {
-	if ($xc->show_zmap) {
-	    $xr->save();       # throws if no xace.
-	    $self->zmap_save($sub);
-	}
+        if ($xc->show_zmap) {
+            $xr->save();       # throws if no xace.
+            $self->zmap_save($sub);
+        }
         $xr->load_ace($ace);
         $xr->save;
         $xr->send_command('gif ; seqrecalc');
@@ -2616,7 +2632,7 @@ sub xace_save {
         $self->update_transcript_remark_widget($sub);        
         $self->name($new_name);
         $self->evidence_hash($sub->clone_evidence_hash);
-        
+
         # update_Locus in this object will be called
         # from update_Locus in the XaceSeqChooser
         $xc->update_Locus($sub->Locus);
