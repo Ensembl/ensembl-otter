@@ -254,6 +254,21 @@ sub type_and_name_from_clipboard {
 
     my $clip = $self->get_clipboard_text or return;
 
+    # Eeek!  Zmap puts lots of lines on the clipboard:
+    # 
+    #     "Em:AB210029.1"    -239446 -238473 (973)
+    #     "Em:AB210029.1"    -298966 -298888 (79)
+    #     "Em:AB210029.1"    -287517 -287424 (94)
+    #     "Em:AB210029.1"    -295809 -295676 (134)
+    #     "Em:AB210029.1"    -314017 -313941 (77)
+    #     "Em:AB210029.1"    -283202 -283065 (138)
+    #     "Em:AB210029.1"    -261873 -261750 (128)
+    #     "Em:AB210029.1"    -309805 -309694 (112)
+    #     "Em:AB210029.1"    -307814 -307749 (66)
+    #     "Em:AB210029.1"    -322519 -322352 (168)
+    # 
+    # type_and_name_from_text gets called for each line!
+
     my $clip_hash = {};
     foreach my $text (split /\n+/, $clip) {
         my ($type, $name) = $self->type_and_name_from_text($text);
