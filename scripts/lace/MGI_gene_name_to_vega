@@ -7,12 +7,10 @@ use Bio::Vega::DBSQL::DBAdaptor;
 {
   my ($dataset_name);
   my $test = 0; # default is NOT doing test
-  my $check = 1; # default, always check for MGI symbols linked to multiple VEGA IDs
 
   Bio::Otter::Lace::Defaults::do_getopt(
                                         'ds|dataset=s' => \$dataset_name,
                                         'test'         => \$test,
-                                        'check=i'      => \$check,
                                        );
   Bio::Otter::Lace::Defaults::show_help() unless $dataset_name;
 
@@ -21,11 +19,11 @@ use Bio::Vega::DBSQL::DBAdaptor;
   my $loutre_dba = $ds->make_Vega_DBAdaptor;
   my $geneAd     = $loutre_dba->get_GeneAdaptor;
 
-  my $mgi_data = parse_mgi_input($geneAd, $check);
+  my ($mgi_data, $problem_symbol) = parse_mgi_input($geneAd);
 
   $loutre_dba->begin_work;
   eval{
-    update_loutre($loutre_dba, $mgi_data, $test);
+    update_loutre($loutre_dba, $mgi_data, $test, $problem_symbol);
   };
   if ($@) {
     $loutre_dba->rollback;
@@ -36,7 +34,7 @@ use Bio::Vega::DBSQL::DBAdaptor;
 }
 
 sub update_loutre {
-  my ($loutre_dba, $mgi_data, $test) = @_;
+  my ($loutre_dba, $mgi_data, $test, $problem_symbol) = @_;
 
   my $geneAd  = $loutre_dba->get_GeneAdaptor;
   my $sliceAd = $loutre_dba->get_SliceAdaptor;
@@ -44,6 +42,8 @@ sub update_loutre {
   foreach my $mgi (@$mgi_data) {
 
     my $mgi_symbol = $mgi->{'locus_symbol'};
+    next if grep(/$mgi_symbol/, @$problem_symbol);
+
     my $gene_SID   = $mgi->{'vega_id'};
     my $mgi_id     = $mgi->{'mgi_id'};
     my $mgi_desc   = $mgi->{'locus_description'};
@@ -69,7 +69,7 @@ sub update_loutre {
 
 sub parse_mgi_input {
 
-  my ($geneAd, $check) = @_;
+  my ($geneAd) = @_;
   my @field_names = qw{
                        mgi_id locus_symbol locus_description score chromosome vega_id
                      };
@@ -133,15 +133,17 @@ sub parse_mgi_input {
     }
   }
 
-  if ( $check ){
-    foreach my $symbol ( keys %$mgiSymbol_2_vegaIDs ){
-      print STDERR "# $symbol: @{$mgiSymbol_2_vegaIDs->{$symbol}}\n" if @{$mgiSymbol_2_vegaIDs->{$symbol}} > 1;
+  my $problem_symbol = [];
+  foreach my $symbol ( keys %$mgiSymbol_2_vegaIDs ){
+    if ( @{$mgiSymbol_2_vegaIDs->{$symbol}} > 1 ){
+      print STDERR "# $symbol: @{$mgiSymbol_2_vegaIDs->{$symbol}}\n";
+      # don't want to update loutre with such gene names.
+      # give annotators to look at them first
+      push(@$problem_symbol, $symbol);
     }
-    print STDERR "\nFinished checking MGI symbol to VEGA ID mapping\n";
-    exit(0);
   }
 
-  return $mgi_data;
+  return ($mgi_data, $problem_symbol);
 }
 
 sub check_for_good_symbols {
