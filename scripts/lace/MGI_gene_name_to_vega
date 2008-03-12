@@ -7,10 +7,12 @@ use Bio::Vega::DBSQL::DBAdaptor;
 {
   my ($dataset_name);
   my $test = 0; # default is NOT doing test
+  my $check = 1; # default, always check for MGI symbols linked to multiple VEGA IDs
 
   Bio::Otter::Lace::Defaults::do_getopt(
                                         'ds|dataset=s' => \$dataset_name,
-                                        'test'         => \$test
+                                        'test'         => \$test,
+                                        'check=i'      => \$check,
                                        );
   Bio::Otter::Lace::Defaults::show_help() unless $dataset_name;
 
@@ -19,7 +21,7 @@ use Bio::Vega::DBSQL::DBAdaptor;
   my $loutre_dba = $ds->make_Vega_DBAdaptor;
   my $geneAd     = $loutre_dba->get_GeneAdaptor;
 
-  my $mgi_data = parse_mgi_input($geneAd);
+  my $mgi_data = parse_mgi_input($geneAd, $check);
 
   $loutre_dba->begin_work;
   eval{
@@ -67,12 +69,14 @@ sub update_loutre {
 
 sub parse_mgi_input {
 
-  my $geneAd = shift;
+  my ($geneAd, $check) = @_;
   my @field_names = qw{
                        mgi_id locus_symbol locus_description score chromosome vega_id
                      };
 
   my $mgi_data = [];
+  my $mgiSymbol_2_vegaIDs = {}; # for checking symbols linked to multiple VEGA ids
+                               # as there were quite a few in MGI data
 
   # bad vega ids (obsolte or source is not 'havana') are filtered
   while (<>) {
@@ -95,6 +99,8 @@ sub parse_mgi_input {
       next;
     }
 
+    my $mgi_symbol = $fields[1];
+
     my $source = $curr_gene->source;
     # double check that MGI update only contains genes which source is 'havana'
     if ( $source ne 'havana' ){
@@ -105,7 +111,7 @@ sub parse_mgi_input {
     my $parsed_line = {};
 
     # currently, lots of MGI name are still bad names!
-    my $ok = check_for_good_symbols($fields[1], $vega_id_from_mgi);
+    my $ok = check_for_good_symbols($mgi_symbol, $vega_id_from_mgi);
 
     if ( $ok ){
       for (my $i = 0 ; $i < @field_names ; $i++) {
@@ -119,10 +125,22 @@ sub parse_mgi_input {
 
         $parsed_line->{$field_name} = $data if $ok;
       }
+
+      push(@{$mgiSymbol_2_vegaIDs->{$mgi_symbol}}, $vega_id_from_mgi);
+
       $parsed_line->{'original_line'} = $original_line;
       push(@$mgi_data, $parsed_line);
     }
   }
+
+  if ( $check ){
+    foreach my $symbol ( keys %$mgiSymbol_2_vegaIDs ){
+      print STDERR "# $symbol: @{$mgiSymbol_2_vegaIDs->{$symbol}}\n" if @{$mgiSymbol_2_vegaIDs->{$symbol}} > 1;
+    }
+    print STDERR "\nFinished checking MGI symbol to VEGA ID mapping\n";
+    exit(0);
+  }
+
   return $mgi_data;
 }
 
@@ -179,57 +197,74 @@ sub update_gene_name_and_description {
 
   my ( $chr, $loutre_dba, $geneAd, $gene, $vega_name, $mgi_id, $mgi_symbol, $mgi_desc, $test) = @_;
 
+  # find all current genes with prefix:$vega_name and from its haplotype
+  my $gids = find_prefixed_genes($loutre_dba, $vega_name, $chr);
+
+  my $num = @$gids;
+  print STDERR "MULTIPLE OCCURRENCE: $num [@$gids]\n" if $num > 1;
+
   # find haplotype for the chr, if any
-  my $mapping = get_expected_haplotype_from_chr($chr);
+  foreach my $gene_id ( @$gids ){
 
-  # look for gene stable ids from both reference haploptype
-  # only want current genes: specify as 1
-  my $gsids = $geneAd->fetch_stable_id_by_name($vega_name, 'gene', 1);
-
-  my $num = @$gsids;
-  my @ids = @$gsids;
-  print STDERR "MULTIPLE OCCURRENCE: $num @ids\n" if $num > 1;
-
-  foreach my $gsid (@$gsids ){
-
-    my $flag = 0;
-    my $gene         = $geneAd->fetch_by_stable_id($gsid);
-    my $name_attr    = $gene->get_all_Attributes('name')->[0];
-    my $current_name = $name_attr->value;
-    my $current_desc = $gene->description || 'NA';
-    my $seq_region   = $gene->slice->seq_region_name;
-    my $source       = $gene->source;
+    my $curr_gene  = $geneAd->fetch_by_dbID($gene_id);
+    my $gsid       = $curr_gene->stable_id;
+    my $name_attr  = $curr_gene->get_all_Attributes('name')->[0];
+    my $curr_name  = $name_attr->value;
+    my $curr_desc  = $curr_gene->description || 'NA';
+    my $seq_region = $curr_gene->slice->seq_region_name;
+    my $source     = $curr_gene->source;
 
     print STDERR "CHECKING $gsid on $seq_region SOURCE $source\n";
 
-    if ( $mapping->[0] and $seq_region !~ /^chr/i ){
-      warn "MAPPING";
-      next unless find_haplotype_update($chr, $seq_region, $vega_name, $mapping);
-    }
-
     $mgi_symbol = $source . ":" . $mgi_symbol if $source ne 'havana';
 
-    # also check haplotype gene name
-    if ( $current_name ne $mgi_symbol ){
-      $flag = 1;
-      print STDERR "NAME   CHANGE from $current_name to $mgi_symbol\n";
-      $name_attr->value($mgi_symbol);
+    print STDERR "NAME   CHANGE from $curr_name to $mgi_symbol\n";
+    $name_attr->value($mgi_symbol);
+
+    if ( $mgi_desc and $mgi_desc ne $curr_desc ){
+      $curr_gene->description($mgi_desc);
+      print STDERR "DESC   CHANGE from '$curr_desc' to '$mgi_desc'\n";
     }
-    if ( $mgi_desc and $mgi_desc ne $current_desc ){
-      $flag = 1;
-      $gene->description($mgi_desc);
-      print STDERR "DESC   CHANGE from '$current_desc' to '$mgi_desc'\n";
-    }
-    if ( $gene->status ne 'KNOWN' ){
-      $flag = 1;
-      print STDERR "STATUS CHANGE from ", $gene->status, " to KNOWN\n";
+    if ( $curr_gene->status ne 'KNOWN' ){
+      print STDERR "STATUS CHANGE from ", $curr_gene->status, " to KNOWN\n";
     }
 
     # store gene if not already locked on contig
-    store_gene($loutre_dba, $geneAd, $gene, $mgi_id) if ( !$test and $flag == 1 );
+    store_gene($loutre_dba, $geneAd, $curr_gene, $mgi_id) unless $test;
 
     print STDERR "\n";
   }
+}
+
+sub find_prefixed_genes {
+  my ($loutre_dba, $vega_name, $chr) = @_;
+
+  my $mapping = get_expected_haplotype_from_chr($chr);
+  my $sql = qq{SELECT sr.name, ga.*, g.gene_id
+               FROM gene_attrib ga, gene g, seq_region sr, attrib_type at
+               WHERE sr.seq_region_id=g.seq_region_id
+               AND g.gene_id=ga.gene_id
+               AND ga.attrib_type_id=at.attrib_type_id
+               AND at.code='name'
+               AND g.is_current = 1
+               AND ga.value like "%$vega_name"};
+
+  warn $sql;
+  my $qry = $loutre_dba->prepare($sql);
+  $qry->execute();
+
+  my $gids;
+  while ( my ( $seq_region, $gid ) = $qry->fetchrow ){
+
+    if ( $mapping->[0] and $seq_region !~ /^chr/i ){
+      push(@$gids, $gid) if find_haplotype_update($chr, $seq_region, $vega_name, $mapping);
+    }
+    elsif ($seq_region =~ /^chr/i ) {
+      push(@$gids, $gid);
+    }
+  }
+
+  return $gids;
 }
 
 sub store_gene {
