@@ -168,8 +168,7 @@ sub fetch_dead_genes {
   }
 
   $mlist->columnDelete(0,'end');
-
-  foreach (qw(Stable_id dbID Gene_name Gene_synonym Created Modified) ) {
+ foreach (qw(Stable_id dbID Gene_name Gene_synonym Created Modified Transcritps) ) {
     $mlist->columnInsert('end',-text=>$_);
   }
   foreach ( @dg_list ){
