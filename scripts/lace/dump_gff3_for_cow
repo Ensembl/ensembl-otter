@@ -16,13 +16,11 @@ use URI::Escape;
   my $fix_phases     = 0;
   my $corf           = 0;
   my $sanger         = 1;
-  my $want_author;
 
   my $usage = sub { exec('perldoc', $0) };
   Bio::Otter::Lace::Defaults::do_getopt(
-                                        'h|help!'      => $usage,
-                                        'dataset|ds=s' => \$dataset_name,
-                                        'author'       => \$want_author
+                                        'h|help!'   => $usage,
+                                        'dataset=s' => \$dataset_name,
                                        )
       or $usage->();
   $usage->() unless $dataset_name;
@@ -60,23 +58,21 @@ use URI::Escape;
 
   foreach my $set_name (@ARGV) {
 
-    # ignore Encode sets
-    next if $set_name =~ /^EN/i;
-
     my $slice = $slice_aptr->fetch_by_region('chromosome', $set_name, undef, undef, undef, 'Otter');
 
     # this is much faster via EnsEMBL
     my $genes = $gene_aptr->Bio::EnsEMBL::DBSQL::GeneAdaptor::fetch_all_by_Slice($slice);
     #my $genes = $gene_aptr->get_current_Gene_by_slice($slice);
 
-    $set_name =~ /(Chr(\d+|\w+))-.*/i;
-    my $idstr = ucfirst $1;
-
     while ( my $gene = shift @$genes ) {
 
-
       $gene = $gene_aptr->reincarnate_gene($gene);
+      $gene = $gene_aptr->fetch_latest_by_stable_id($gene->stable_id);
+
       next if $gene->biotype eq 'obsolete';
+
+      $set_name =~ /(Chr(\d+|\w+))\.\d+.*/i;
+      my $idstr = ucfirst $1;
 
       my $strand = $gene->strand == 1 ? '+' : '-';
 
@@ -106,7 +102,7 @@ use URI::Escape;
         my $exons_truncated = $tsct->truncate_to_Slice($slice);
         eval {
           write_transcript_gtf($fh, $slice, $gene, $tsct, $local_coords,
-                               $exons_truncated, $include_codons, $fix_phases, $set_name, $want_author);
+                               $exons_truncated, $include_codons, $fix_phases, $set_name);
 
         };
         warn $@ if $@;
@@ -148,7 +144,7 @@ sub is_corf_transcript {
 
 sub write_transcript_gtf {
   my ($fh, $slice, $gene, $transcript, $localcoords, $exons_truncated,
-      $include_codons, $fix_phases, $seqname, $want_author) = @_;
+      $include_codons, $fix_phases, $seqname) = @_;
 
   my $sliceoffset = 0;
   if (!$localcoords) {
@@ -179,53 +175,35 @@ sub write_transcript_gtf {
 
   my $strand = $transcript->strand == 1 ? '+' : '-';
 
-  # skip author for now while database is being patched
-  my $trans_auth_name;
-  $trans_auth_name = $transcript->transcript_author->name if $want_author;
+  my $trans_auth_name = $transcript->transcript_author->name;
+  $trans_auth_name.= "\@sanger.ac.uk" unless $trans_auth_name =~ /@/;
 
-  if ( $trans_auth_name and $trans_auth_name !~ /@/ ){
-    $trans_auth_name.= "\@sanger.ac.uk, ";
-  }
-
-  $transcript->biotype('non_protein_coding') if $transcript->biotype eq "Retained_intron";
-
-  my $trans_line = sprintf("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\tID=%s;Parent=%s;Name=%s",
-              $idstr, $transcript->biotype, 'transcript',
+  my $trans_line = sprintf("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\tID=%s;Parent=%s;Name=%s;Note=\"%s",
+              $idstr, $gene->biotype, 'transcript',
               $transcript->start, $transcript->end, '.', $strand, '.',
               $transcript->stable_id,
               $gene->stable_id .".".$gene->version,
-              $transcript->get_all_Attributes("name")->[0]->value
-              );
-
-  my $notes;
-  $notes .= $trans_auth_name if defined $trans_auth_name;
+              $transcript->get_all_Attributes("name")->[0]->value,
+              $trans_auth_name);
 
   # further notes
-  my @nfs;
   foreach ( "mRNA_start_NF", "mRNA_end_NF", "cds_start_NF", "cds_end_NF" ) {
     if ( $transcript->get_all_Attributes("$_")->[0]->value ){
       my $nf = $_;
       $nf =~ s/NF/not_found/;
-      push(@nfs, "$nf");
+      $trans_line .= ",$nf";
     }
   }
-  $notes .= join(', ', @nfs) if @nfs;
 
-  my @rmks;
   foreach my $at ( @{$transcript->get_all_Attributes('remark')} ) {
     my $rem = $at->description;
     my $val = do_escape($at->value);
     unless ($rem eq "Annotation_remark") {
-      push(@rmks, do_escape(",transcript_remark=$val") );
+      $trans_line .= do_escape(",transcript_remark=$val");
     }
   }
-  $notes .= join(', ', @rmks) if @rmks;
-
-  if ( $notes ){
-    print $fh $trans_line.";Note=\"".$notes."\"\n";
-  }else {
-    print $fh "$trans_line\n";
-  }
+  $trans_line .= "\"\n";
+  print $fh $trans_line;
 
   #--------- end of transcript line -----------
 
@@ -271,7 +249,7 @@ sub write_transcript_gtf {
     #--------- exon line -----------
 
     print $fh $idstr . "\t"
-      . $transcript->biotype . "\t" . 'exon' . "\t"
+      . $gene->biotype . "\t" . 'exon' . "\t"
         . ($exon->start + $sliceoffset) . "\t"
           . ($exon->end + $sliceoffset) . "\t" . "." . "\t"
             . $strand . "\t" . "." . "\t";
@@ -587,4 +565,4 @@ Uses Steve Searle's gtf generation code (with minor modifications) from:
 
 Chao-Kung Chen B<email> ck1@sanger.ac.uk
 
-dump_gtf is compatible to GFF2; now updated to dump_gff3 to work with GFF3
+dump_gtf is compatible to GFF2; now updated to work with GFF3
