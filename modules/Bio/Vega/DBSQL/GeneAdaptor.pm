@@ -93,7 +93,6 @@ sub fetch_by_attribute_code_value {
   }
 
 }
-
 sub fetch_stable_id_by_name {
 
   # can search either genename or transname by name or synonym,
@@ -101,62 +100,65 @@ sub fetch_stable_id_by_name {
   # returns a reference to a list of gene stable ids if successful
   # $mode is either 'gene' or 'transcript' which corresponds to genename or transname
   # search uses LIKE command
+  # $current is either 1 or 0
 
-  my ($self, $name, $mode) = @_;
+  my ($self, $name, $mode, $current) = @_;
 
   unless ($name) {
-	 throw("Must enter a gene name to fetch a Gene");
+    throw("Must enter a gene name to fetch a Gene");
   }
 
   my $mode_attrib = ($mode eq 'gene') ? 'gene_attrib' : 'transcript_attrib';
 
   my ($attrib_code,$attrib_value, $gsids, $join);
+  my $seen;
 
-  foreach ( qw(name synonym) ){
-    warn "    Search $name by $_";
-	$attrib_code = $_;
-	$attrib_value = $name;
-
-	if ( $mode eq 'gene' ){
-	  $attrib_value =~ s/-\d+$//;
-	  $join = "m.gene_id = ma.gene_id";	}
-	else {
-	  $attrib_value =~ /(.*)-\d+.*/;   # eg, ABO-001
-	  $attrib_value =~ /(.*\.\d+).*/;  # want sth. like RP11-195F19.20, trim away eg, -001, -002-2-2
+  foreach ( qw(name synonym) ) {
+    # warn "    Search $name by $_";
+    $attrib_code = $_;
+    $attrib_value = $name;
+    if ( $mode eq 'gene' ) {
+      $attrib_value =~ s/-\d+$//;
+      $join = "m.gene_id = ma.gene_id";
+    } else {
+      $attrib_value =~ /(.*)-\d+.*/; # eg, ABO-001
+      $attrib_value =~ /(.*\.\d+).*/; # want sth. like RP11-195F19.20, trim away eg, -001, -002-2-2
 
       # BCM:NM_032242_26281 (OTTHUMG00000136748)
-	  $attrib_value = $1 ? $1 : $attrib_value;
- 	  $join = "m.transcript_id = ma.transcript_id";
-	}
+      $attrib_value = $1 ? $1 : $attrib_value;
+      $join = "m.transcript_id = ma.transcript_id";
+    }
 
-	$attrib_value = lc($attrib_value); # for case-insensitive comparison later
+    $attrib_value = lc($attrib_value); # for case-insensitive comparison later
+    my $sql = qq{
+                 SELECT distinct gsi.stable_id, ma.value
+                 FROM gene_stable_id gsi, $mode m, attrib_type a , $mode_attrib ma
+                 WHERE gsi.gene_id=m.gene_id
+                 AND $join
+                 AND ma.attrib_type_id = a.attrib_type_id
+                 AND a.code=?
+                 AND ma.value LIKE ?
+               };
 
-	my $sth=$self->prepare(qq{
-							  SELECT distinct gsi.stable_id, ma.value
-							  FROM gene_stable_id gsi, $mode m, attrib_type a , $mode_attrib ma
-							  WHERE gsi.gene_id=m.gene_id
-							  AND $join
-							  AND ma.attrib_type_id = a.attrib_type_id
-							  AND a.code=?
-							  AND ma.value LIKE ?
-							 }
-						  );
+    $sql .= " AND m.is_current = 1" if $current;
 
-	$sth->execute($attrib_code, qq{$attrib_value%});
+    #warn $sql;
+    my $sth=$self->prepare($sql);
 
-    my $seen;
-	while ( my ($gsid, $value) = $sth->fetchrow ){
-	  # exclude eg, SET7 SETX where search is 'SET%' (ie, allow SET-2)
+    $sth->execute($attrib_code, qq{$attrib_value%});
+
+    while ( my ($gsid, $value) = $sth->fetchrow ) {
+      # exclude eg, SET7 SETX where search is 'SET%' (ie, allow SET-2)
       # or BCM:bcm(AK057855)-2-001, bcm:bcm(ak057855)-2
       $value = lc($value);
       #warn "DB: $gsid, $value -- $attrib_value";
 
-	  if ( $value eq $attrib_value or $value =~ /\Q$attrib_value\E(\.\w*)?-\d+/ ){
+      if ( $value eq $attrib_value or $value =~ /\Q$attrib_value\E(\.\w*)?-\d+/ ) {
         $seen->{$gsid}++;
-		push(@$gsids, $gsid) if $seen->{$gsid} == 1;
-	  }
-	}
-	$sth->finish();
+        push(@$gsids, $gsid) if $seen->{$gsid} == 1;
+      }
+    }
+    $sth->finish();
   }
 
   return $gsids;
