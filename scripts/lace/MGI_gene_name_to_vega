@@ -287,7 +287,7 @@ sub store_gene {
     print STDERR "LOCK: $gsid is locked on @$contig_lock\n";
   }
   else {
-  #  $geneAd->store($gene);
+    $geneAd->store($gene);
 
     my $new_gene_id = $geneAd->fetch_by_stable_id($gsid)->dbID;
     #my $new_gene_id = $gene->dbID;
@@ -297,7 +297,7 @@ sub store_gene {
     my $params = sprintf("%d, %s, %s", $new_gene_id, "'".$mgi_id."'", $curdate);
     my $sql = qq{INSERT INTO gene_name_update (gene_id, consortium_id, update_date) VALUES($params)};
     my $update = $loutre_dba->dbc->prepare($sql);
-   # $update->execute;
+    $update->execute;
   }
 }
 
