@@ -32,7 +32,7 @@ use strict;
 
 sub process_query {
 
-	my ($query_str, $otter_db, $mw) = @_;
+	my ($query_str, $otter_db, $mw, $verbose) = @_;
 	my $ga = $otter_db->get_GeneAdaptor;
 	
 	my $gsids; # list ref
@@ -41,36 +41,37 @@ sub process_query {
 	if ( $query_str =~ /OTT\w{3,3}G\d+/ and 
          check_query_exists($otter_db, $mw, $query_str, 'gene') ){
       @$gsids = $query_str;
-      print STDERR "[G query]: ";
+      print STDERR "[G query]: " if $verbose;
 	}
 	elsif ( $query_str =~ /OTT\w{3,3}T\d+/ and
             check_query_exists($otter_db, $mw, $query_str, 'trans') ){
       my $genes = $ga->fetch_by_transcript_stable_id_constraint($query_str);
       @$gsids = map { $_->stable_id } @$genes;
-      print STDERR "[T query]: ";
+      print STDERR "[T query]: " if $verbose;
 	}
 	else {
+      my $Gsids;
       if ( check_query_exists($otter_db, $mw, $query_str, 'name') ){
-        if ( my $Gsids = $ga->fetch_stable_id_by_name($query_str, 'gene') ){
+        if ( $Gsids = $ga->fetch_stable_id_by_name($query_str, 'gene') ){
           push(@$gsids, uniq($Gsids));
-          print STDERR "[GN query]: ";
+          print STDERR "[GN query]: " if $verbose;
         }
-        elsif ( my $Gsids = $ga->fetch_stable_id_by_name($query_str, 'transcript')) {
+        elsif ( $Gsids = $ga->fetch_stable_id_by_name($query_str, 'transcript')) {
           push(@$gsids, uniq($Gsids));
-          print STDERR "[TN query]: ";
+          print STDERR "[TN query]: " if $verbose;
         }
       }
     }
-	print STDERR "got @$gsids\n";
+	print STDERR "got @$gsids\n" if $verbose;
 
 	#----------------------------------------------------------------------
 	# now get all gsids associate with gene_name and trans names via gsid
 	# this should pull out obsolete genes in the history
 	#----------------------------------------------------------------------
-    print STDERR "[1] GETTING ALL gsids VIA gene/trans NAMES OF @$gsids . . .\n";
+    print STDERR "[1] GETTING ALL gsids VIA gene/trans NAMES OF @$gsids . . .\n" if $verbose;
 	
 	my $found_gsids = get_all_gsids_via_geneTransNames_of_gsid($otter_db, $ga, $gsids);
-	print STDERR "[5] GENE HISTORY: @$found_gsids\n\n";
+	print STDERR "[5] GENE HISTORY: @$found_gsids\n\n" if $verbose;
 
 	return $found_gsids;
 }
@@ -102,8 +103,10 @@ sub check_query_exists {
 
 sub gene_not_found_err {
 	my $mw = shift;
+	my $font_hl = $mw->fontCreate(-family=>'helvetica', -size=>9);
 
   $mw->messageBox(-title   => 'Gene not found!',
+                  -font    => $font_hl,
                   -message => "Please double check you query and try again.\n".
                             "If this is a software error, please report to anacoders.\nThanks.",
                   -default_button => 'OK' );
@@ -112,8 +115,10 @@ sub gene_not_found_err {
 sub show_err_message {
   my ($parent, $title, $msg) = @_;
 
+  my $font_hl = $parent->fontCreate(-family=>'helvetica', -size=>9);
 
   $parent->messageBox(-title   => $title,
+                      -font    => $font_hl,
                       -message => $msg,
                       -default_button => 'OK' );
 }
@@ -142,7 +147,7 @@ sub get_list_of_obsolete_genes_by_assembly {
 
 sub get_all_gsids_via_geneTransNames_of_gsid {
 
-  my ($otter_db, $ga, $gsids) = @_;
+  my ($otter_db, $ga, $gsids, $verbose) = @_;
 
   my %query_gsids = map {$_, 1} @$gsids;
 
@@ -162,7 +167,7 @@ sub get_all_gsids_via_geneTransNames_of_gsid {
 
   # then get gsids via gene/trans names found above
   foreach ( @gnames ){
-	warn "[2] FOLLOW HISTORY VIA GENE NAME: $_";
+	warn "[2] FOLLOW HISTORY VIA GENE NAME: $_" if $verbose;
     foreach ( @{$ga->fetch_stable_id_by_name($_, 'gene')} ){
       next if $query_gsids{$_};
       $seen->{$_}++;
@@ -173,7 +178,7 @@ sub get_all_gsids_via_geneTransNames_of_gsid {
     }
   }
   foreach ( @tnames ){
-	warn "[3] FOLLOW HISTORY VIA TRANSCRIPT NAME: $_";
+	warn "[3] FOLLOW HISTORY VIA TRANSCRIPT NAME: $_" if $verbose;
     foreach ( @{$ga->fetch_stable_id_by_name($_, 'transcript')} ){
       next if $query_gsids{$_};
       $seen->{$_}++;
@@ -184,13 +189,13 @@ sub get_all_gsids_via_geneTransNames_of_gsid {
   # check exon overlap for additional gsids found via gene/trans names
   if ( @Gsids ){
     my @all_gsids = (@$gsids, @Gsids);
-	print STDERR "[4] GOT RELATED GENES: @Gsids: --> CHECKING EXONS OVERLAP\n";
+	print STDERR "[4] GOT RELATED GENES: @Gsids: --> CHECKING EXONS OVERLAP\n" if $verbose;
 	# check if exons overlaps
     if ( my $ok_gsids = check_exons_overlap($ga, $gsids, \@Gsids) ){
        return $ok_gsids;
     }
     else {
-      print STDERR " . . .no verlap - ignore\n";
+      print STDERR " . . .no verlap - ignore\n" if $verbose;
     }
   }
   return $gsids;
@@ -569,7 +574,14 @@ sub add_mlist_items {
   my $created  = convert_unix_time($og->created_date);
   my $modified = convert_unix_time($og->modified_date);
 
-  return [$gsid, $gid, $gname, $Syms, $created, $modified];
+  my $t_len;
+  foreach my $t ( @{$og->get_all_Transcripts} ){
+    push(@{$t_len->{$t->length}}, $t->stable_id);
+  }
+
+  my $tsids = join(', ', map { @{$t_len->{$_}} } sort {$a<=>$b} keys %$t_len);
+
+  return [$gsid, $gid, $gname, $Syms, $created, $modified, $tsids];
 }
 
 

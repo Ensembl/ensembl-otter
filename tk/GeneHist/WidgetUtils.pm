@@ -51,7 +51,7 @@ sub add_GH_qry_frm {
 
   $query_f->Label(-text=>'Dataset (eg, human)')->pack(-side=>'left');
 
-  my $ds = 'ns_human'; # default
+  my $ds = ''; # default
   my $entry2 = $query_f->Entry(-textvariable=>\$ds, -width => 18, -bg=>'white')->pack(-side=>'left');
   # reset
   $query_f->Button(-text=>'Clear', -font=>$font, -command=>sub {$entry2->delete('0.0', 'end')})->pack(-side=>'left');
