@@ -698,7 +698,7 @@ sub get_ctg_coordinate_details {
         die "No rows from contig coordinate query for '$acc%'"
     }
     else {
-        return $get_ctg_coords->fetchrow;
+      return $get_ctg_coords->fetchrow;
     }
 }
 
@@ -1221,6 +1221,15 @@ sub DataSet {
     }
     return $self->{'_bio_otter_embl_factory_DataSet'};
 }
+
+sub quote_row {
+    my (@row) = @_;
+
+    return join(",\t", map "'$_'", @row) . "\n";
+}
+
+
+
 
 1;
 
