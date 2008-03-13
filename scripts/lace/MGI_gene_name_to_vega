@@ -42,7 +42,9 @@ sub update_loutre {
   foreach my $mgi (@$mgi_data) {
 
     my $mgi_symbol = $mgi->{'locus_symbol'};
-    next if grep(/$mgi_symbol/, @$problem_symbol);
+    if ( grep(/$mgi_symbol/, @$problem_symbol) ){
+      print STDERR "NAME_2_MULTIPLE_ID: $mgi_symbol\n";
+    }
 
     my $gene_SID   = $mgi->{'vega_id'};
     my $mgi_id     = $mgi->{'mgi_id'};
@@ -102,15 +104,15 @@ sub parse_mgi_input {
     my $mgi_symbol = $fields[1];
 
     my $source = $curr_gene->source;
-    # double check that MGI update only contains genes which source is 'havana'
-    if ( $source ne 'havana' ){
+    # double check that MGI update only contains genes which source is 'havana/WU'
+    if ( $source ne 'havana' and $source ne 'WU'){
       print STDERR "SKIP: $vega_id_from_mgi source is $source\n";
       next;
     }
 
     my $parsed_line = {};
 
-    # currently, lots of MGI name are still bad names!
+    # currently, lots of MGI names are still bad names!
     my $ok = check_for_good_symbols($mgi_symbol, $vega_id_from_mgi);
 
     if ( $ok ){
@@ -136,7 +138,7 @@ sub parse_mgi_input {
   my $problem_symbol = [];
   foreach my $symbol ( keys %$mgiSymbol_2_vegaIDs ){
     if ( @{$mgiSymbol_2_vegaIDs->{$symbol}} > 1 ){
-      print STDERR "# $symbol: @{$mgiSymbol_2_vegaIDs->{$symbol}}\n";
+      print STDERR "MGI_2_MULTILE_IDs $symbol: @{$mgiSymbol_2_vegaIDs->{$symbol}}\n";
       # don't want to update loutre with such gene names.
       # give annotators to look at them first
       push(@$problem_symbol, $symbol);
@@ -242,7 +244,7 @@ sub find_prefixed_genes {
   my ($loutre_dba, $vega_name, $chr) = @_;
 
   my $mapping = get_expected_haplotype_from_chr($chr);
-  my $sql = qq{SELECT sr.name, ga.*, g.gene_id
+  my $sql = qq{SELECT sr.name, g.gene_id
                FROM gene_attrib ga, gene g, seq_region sr, attrib_type at
                WHERE sr.seq_region_id=g.seq_region_id
                AND g.gene_id=ga.gene_id
@@ -251,8 +253,8 @@ sub find_prefixed_genes {
                AND g.is_current = 1
                AND ga.value like "%$vega_name"};
 
-  warn $sql;
-  my $qry = $loutre_dba->prepare($sql);
+ # warn $sql;
+  my $qry = $loutre_dba->dbc->prepare($sql);
   $qry->execute();
 
   my $gids;
@@ -285,16 +287,17 @@ sub store_gene {
     print STDERR "LOCK: $gsid is locked on @$contig_lock\n";
   }
   else {
-    $geneAd->store($gene);
+  #  $geneAd->store($gene);
 
     my $new_gene_id = $geneAd->fetch_by_stable_id($gsid)->dbID;
+    #my $new_gene_id = $gene->dbID;
     printf STDERR ("Storing %s ==> Old dbID: %d New dbID: %d\n", $gsid, $curr_gene_id, $new_gene_id);
 
     my $curdate = "now()";
     my $params = sprintf("%d, %s, %s", $new_gene_id, "'".$mgi_id."'", $curdate);
     my $sql = qq{INSERT INTO gene_name_update (gene_id, consortium_id, update_date) VALUES($params)};
     my $update = $loutre_dba->dbc->prepare($sql);
-    $update->execute;
+   # $update->execute;
   }
 }
 
