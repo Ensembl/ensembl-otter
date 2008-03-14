@@ -123,17 +123,6 @@ sub initialize {
             );
         $canvas->Tk::bind('<Control-e>',   $select_evidence);
         $canvas->Tk::bind('<Control-E>',   $select_evidence);
-        
-        # Show dialog for renaming the locus attached to this subseq
-        my $rename_locus = sub { $self->rename_locus };
-        $file_menu->add('command',
-            -label          => 'Rename locus',
-            -command        => $rename_locus,
-            -accelerator    => 'Ctrl+L',
-            -underline      => 1,
-            );
-        $canvas->Tk::bind('<Control-l>',     $rename_locus);
-        $canvas->Tk::bind('<Control-L>',     $rename_locus);
 
         # Save into db via xace
         my $save_command = sub{ $self->save_if_changed };
@@ -722,26 +711,10 @@ sub window_close {
 sub show_subseq {
     my( $self ) = @_;
 
-    
-    my $xr = $self->XaceSeqChooser->xace_remote;
-    if ($xr) {
-        my $sub = $self->SubSeq;
-        unless ($sub->is_archival) {
-            $self->message("Not yet saved");
-            return;
-        }
-        
-        if ($sub->get_all_Exons) {
-            $xr->show_SubSeq($sub);
-        } else {
-            $self->message("Can't show an empty SubSequence");
-        }
-    } else {
-        $self->message("No xace attached");
-    }
-
     my $xc = $self->XaceSeqChooser();
     if ($xc->show_zmap) {
+        # Show in Zmap if it is running
+        
         my $client;
 
         # We can't  rely on the cached object  here... The explanation
@@ -764,19 +737,36 @@ sub show_subseq {
                 $xc->zMapDoRequest($client, "list_windows", qq{<zmap action="list_windows" />});
             }
             if ($client = $xc->zMapGetXRemoteClientByAction('zoom_to', 1)) {
-                my $xml = qq{<zmap action="zoom_to">\n}   .
-                    qq{\t<featureset>\n}                  .
-                    qq{\t\t}                              .
-                    $self->SubSeq->zmap_xml_feature_tag() .
-                    qq{\t\t</feature>\n}                  .
-                    qq{\t</featureset>\n}                 .
-                    qq{</zmap>\n};
-                $xc->zMapDoRequest($client, "zoom_to", $xml);
+                my $xml = Hum::XmlWriter->new;
+                $xml->open_tag('zmap', {action => 'zoom_to'});
+                $xml->open_tag('featureset');
+                $self->SubSeq->zmap_xml_feature_tag($xml);
+                $xml->close_all_open_tags;
+                $xc->zMapDoRequest($client, "zoom_to", $xml->flush);
+            } else {
+                $self->message("Zmap not running");
             }
         }
+    } else {
+        # Show it in fMap
+        my $xr = $self->XaceSeqChooser->xace_remote;
+        if ($xr) {
+            my $sub = $self->SubSeq;
+            unless ($sub->is_archival) {
+                $self->message("Not yet saved");
+                return;
+            }
+        
+            if ($sub->get_all_Exons) {
+                $xr->show_SubSeq($sub);
+            } else {
+                $self->message("Can't show an empty SubSequence");
+            }
+        } else {
+            $self->message("No xace attached");
+        }
     }
-
-};
+}
 
 
 sub show_peptide {
@@ -1289,9 +1279,7 @@ sub add_locus_editing_widgets {
         $locus_name         = $locus->name;
         $locus_alias        = join(' ', $locus->list_aliases);
         $locus_description  = $locus->description;
-        my $type            = $locus->gene_type || '';
-        #warn "Gene type = '$type'";
-        $locus_is_known     = $type eq 'Known' ? 1 : 0;
+        $locus_is_known     = $locus->known;
     }
     $locus_name        ||= '';
     $locus_description ||= '';
@@ -1373,10 +1361,10 @@ sub add_locus_editing_widgets {
     return $be;
 }
 
-sub get_locus_type {
+sub get_locus_known {
     my( $self ) = @_;
     
-    return ${$self->{'_locus_is_known_var'}} ? 'Known' : undef;
+    return ${$self->{'_locus_is_known_var'}} ? 1 : 0;
 }
 
 sub update_Locus_tk_fields {
@@ -1384,8 +1372,7 @@ sub update_Locus_tk_fields {
     
     ${$self->{'_locus_name_var'}} = $locus->name;
 
-    my $type = $locus->gene_type || '';
-    ${$self->{'_locus_is_known_var'}} = $type eq 'Known' ? 1 : 0;
+    ${$self->{'_locus_is_known_var'}} = $locus->known;
     
     my $de = $self->locus_description_Entry;
     $de->delete(0, 'end');
@@ -1420,7 +1407,7 @@ sub get_Locus_from_tk {
         return;
     }
 
-    my $type            = $self->get_locus_type;
+    my $known           = $self->get_locus_known;
     my $desc            = $self->get_locus_description;
     my @aliases         = $self->get_locus_aliases;
     
@@ -1428,7 +1415,7 @@ sub get_Locus_from_tk {
     
     my $locus = Hum::Ace::Locus->new;
     $locus->name($name);
-    $locus->gene_type($type);
+    $locus->known($known);
     if ($name =~ /^([^:]+):/) {
         $locus->gene_type_prefix($1);
     }
@@ -1439,27 +1426,6 @@ sub get_Locus_from_tk {
     
     return $locus;
 }
-
-### Does not work
-#sub rename_locus {
-#    my( $self ) = @_;
-#    
-#    my $sub_locus = $self->SubSeq->Locus or return;
-#    my $sub_name = $sub_locus->name;
-#    my $tk_name;
-#    if (my $sub = $self->get_SubSeq_if_changed) {
-#        $tk_name = $sub->Locus->name;
-#        if ($tk_name eq $sub_name) {
-#            $self->message("Locus name '$tk_name' has not changed");
-#            return;
-#        } else {
-#            warn "Renaming locus '$sub_name' to '$tk_name'";
-#        }
-#        $sub->validate;
-#        $self->xace_save($sub);
-#    }
-#    $self->XaceSeqChooser->rename_Locus($sub_name, $tk_name);
-#}
 
 sub update_Locus {
     my( $self, $locus ) = @_;
@@ -2557,12 +2523,6 @@ sub otter_Transcript_from_tk {
     return $tsct;
 }
 
-sub rename_locus {
-    my ($self) = @_;
-    
-    print STDERR $self->SubSeq->zmap_info_xml;
-}
-
 sub save_if_changed {
     my( $self ) = @_;
     
@@ -2659,7 +2619,7 @@ sub zmap_save {
     }
     push @xml, $sub->zmap_create_xml_string;
     
-    print STDERR "Sending:\n", @xml;
+    #print STDERR "Sending:\n", @xml;
 
     $self->XaceSeqChooser->send_zmap_commands(@xml);
 }
