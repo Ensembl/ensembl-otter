@@ -21,13 +21,12 @@ use Hum::Conf qw{ PFETCH_SERVER_LIST };
 use Hum::Sort qw{ ace_sort };
 use EditWindow::Dotter;
 use EditWindow::Clone;
+use EditWindow::LocusName;
 use MenuCanvasWindow::ExonCanvas;
 use MenuCanvasWindow::GenomicFeatures;
 use Bio::Otter::Lace::Defaults;
 
 use base 'MenuCanvasWindow';
-
-my $ZMAP_DEBUG = 1;
 
 # Work out whether or not we can use ZMap
 {
@@ -278,6 +277,7 @@ sub update_Locus {
         }
     }
 }
+
 
 
 ### Does not work
@@ -685,6 +685,19 @@ sub populate_menus {
         );
     $top->bind('<Control-period>',  $run_dotter_command);
     $top->bind('<Control-greater>', $run_dotter_command);
+    
+        
+    # Show dialog for renaming the locus attached to this subseq
+    my $rename_locus = sub { $self->rename_locus };
+    $tools_menu->add('command',
+        -label          => 'Rename locus',
+        -command        => $rename_locus,
+        -accelerator    => 'Ctrl+M',
+        -underline      => 1,
+        );
+    $top->bind('<Control-m>',     $rename_locus);
+    $top->bind('<Control-M>',     $rename_locus);
+    
 
     # (Re)start local pfetch server
     if ($PFETCH_SERVER_LIST->[0][0] eq 'localhost') {
@@ -1985,6 +1998,25 @@ sub list_selected_subseq_names {
     return @names;
 }
 
+sub rename_locus {
+    my ($self) = @_;
+    
+    warn "Renaming locus";
+    
+    unless ($self->close_all_subseq_edit_windows) {
+        $self->message('Must close all clone editing windows before renaming locus');
+    }
+    
+    my $parent = $self->top_window;
+    my $top = $parent->Toplevel(-title => 'rename locus');
+    $top->transient($parent);
+    my $lr = EditWindow::LocusName->new($top);
+    $lr->XaceSeqChooser($self);
+    $lr->initialise;
+    
+    return 1;
+}
+
 sub run_dotter {
     my( $self ) = @_;
     
@@ -2010,7 +2042,7 @@ sub send_zmap_commands {
         warn "No current window.";
         return ;
     }
-    warn "Current window " . $xr->window_id . " @_\n" if $ZMAP_DEBUG;
+    warn "Sending window '", $xr->window_id, "' this xml:\n", @xml;
 
     my @a = $xr->send_commands(@xml);
 
