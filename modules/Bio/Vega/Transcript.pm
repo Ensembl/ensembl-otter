@@ -57,18 +57,18 @@ sub evidence_list {
 #     if (!$self->adaptor() ) {
 #       return [];
 #     }
-# 
+#
 #     my $ta = $self->adaptor->db->get_TranscriptAdaptor();
 #     $self->{'evidence'} = $ta->fetch_evidence($self);
 #   }
 #   return $self->{'evidence'};
 # }
-# 
+#
 # sub add_Evidence {
 #   my ($self,$evidence_list) = @_;
-# 
+#
 #   $self->{'evidence'} ||= [];
-# 
+#
 #   foreach my $evidence ( @$evidence_list ) {
 #     if( ! $evidence->isa( "Bio::Vega::Evidence" )) {
 # 		throw( "Argument to add_Evidence has to be an Bio::Vega::Evidence" );
@@ -99,7 +99,9 @@ sub truncate_to_Slice {
 	 my $exon = $ex_list->[$i];
 	 my $exon_start = $exon->start;
 	 my $exon_end   = $exon->end;
-	 if ($exon->slice != $slice or $exon_end < 1 or $exon_start > $slice_length) {
+	 # now compare slice names instead of slice references
+	 # slice references can be different not the slice names
+	 if ($exon->slice->name != $slice->name or $exon_end < 1 or $exon_start > $slice_length) {
 		#warn "removing exon that is off slice";
 		### This won't work if get_all_Exons() ceases to return
 		### a ref to the actual array of exons in the transcript.
@@ -136,7 +138,7 @@ sub truncate_to_Slice {
 # Duplicated in Bio::Vega::Gene
 sub all_Attributes_string {
     my ($self) = @_;
-    
+
     return join ('-',
         map {$_->code . '=' . $_->value}
         sort {$a->code cmp $b->code || $a->value cmp $b->value}
@@ -188,7 +190,7 @@ sub vega_hashkey_sub {
 
 sub translatable_Exons_vega_hashkey {
     my $self = shift;
-    
+
     return join('+', map $_->vega_hashkey, @{$self->get_all_translateable_Exons});
 }
 
