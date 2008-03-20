@@ -50,25 +50,38 @@ sub update_otter {
 
     if ( $trans_SID =~ /OTTHUMG/ ) {
       my $t = $gene_aptr->fetch_longest_transcript_by_stable_id($trans_SID);
-      printf STDERR ("%s %s (HGNC %d) should be %s\n\n", "BAD_VEGA ", $trans_SID, $hgnc_id, $t->stable_id);
+      my $bad_gene = $gene_aptr->fetch_by_stable_id($trans_SID);
+      printf STDERR ("%s %s source: %s (HGNC %d) should be %s\n\n", "BAD_VEGA ", $trans_SID, $bad_gene->source, $hgnc_id, $t->stable_id);
       next;
     }
 
     my $gene = $gene_aptr->fetch_by_transcript_stable_id($trans_SID);
 
     # human intervention for obsolete genes
+    # send genes found here to HGNC for update
     unless ( $gene ){
       print STDERR "$trans_SID is obsolete\n";
       my $genes = $gene_aptr->fetch_by_transcript_stable_id_constraint($trans_SID);
 
       foreach my $g ( @$genes ) {
-        my $found_gsids = process_query($g->stable_id, $loutre_dba, undef);
-        if ( @$found_gsids == 1 ) {
-          print STDERR "DEAD_GENE? @$found_gsids\n\n";
-        } else {
-          print STDERR "LOOK INTO @$found_gsids\n\n";
+        # tracking gene history
+        my $found_gsids = process_query($g->stable_id, $loutre_dba, undef, 1);
+        foreach my $gsid ( @$found_gsids ){
+          # want only current genes
+          if ( $gene_aptr->fetch_by_stable_id($gsid) ){
+            print STDERR "LOOK INTO: $gsid\n";
+          }
+          else {
+            print STDERR "DEAD_GENE: $gsid\n";
+          }
         }
       }
+      print STDERR "\n\n";
+      next;
+    }
+
+    if ( $gene->source ne 'havana' and $gene->source ne 'WU' ){
+      printf STDERR ("%s %s %s %s\n", "SKIP SOURCE: ", $gene->source, $gene->stable_id, $trans_SID);
       next;
     }
 
