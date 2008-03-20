@@ -226,11 +226,11 @@ if ($problem) {
 
 if (! $support->param('dry_run')) {
 	$support->log("Deleting from simple_feature by analysis_id\n");
-	my $c = 0
+	my $c = 0;
 	foreach my $ln (keys %lns_to_go) {
 		$c += $vdbh->do(qq(DELETE sf
                              FROM simple_feature sf, analysis a
-                            WHERE a.analyis_id = sf.analysis_id
+                            WHERE a.analysis_id = sf.analysis_id
                               AND a.logic_name = \'$ln\'));
 	}
 	$support->log("Removed $c simple_features\n");
