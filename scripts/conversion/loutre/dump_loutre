@@ -196,6 +196,22 @@ my $vmsa = $vdba->get_MiscSetAdaptor;
 my $vmfa = $vdba->get_MiscFeatureAdaptor();
 my $vdbh = $vdba->dbc->db_handle;
 
+#get chromosomes, either from a user defined list, or non-hidden
+#ones with the correct attributes for export mode and release number
+#(note that the -ignore_chr is used in get_wanted_chromosomes)
+my $chr_names_wanted;
+if ($support->param('chr')) {
+	$chr_names_wanted = [ $support->param('chr') ];
+}
+else {
+	$chr_names_wanted = $support->get_wanted_chromosomes($laa,$lsa);
+}
+
+my $seq_regions = join "\n", @{$chr_names_wanted}; 
+if (! $support->user_proceed("\nAnnotation on the following seq_regions will be dumped from loutre, proceed ?\n$seq_regions")) {
+	exit;
+}
+
 ################################
 # get user defined constraints #
 ################################
@@ -273,15 +289,11 @@ my $sql = qq(
 );
 my $lsth = $ldbh->prepare($sql);
 $lsth->execute;
-my $no_group = 0;
+
 while (my ($name,$group1,$group2,$group_email) = $lsth->fetchrow_array ) {
 	if (! $group_email) {
-		$support->log_warning("Author $name in loutre is not properly linked to an author_group. Please fix before continuing\n");
-		$no_group = 1;
+		$support->log_warning("Author $name in loutre is not properly linked to an author_group. Please fix as soon as you can\n");
 	}
-}
-if (! $support->param('dry_run') && $no_group ) {
-	exit;
 }
 
  
@@ -512,21 +524,7 @@ if ( ! exists($current_vega_tables{'author'} )) {
 # do the real work and copy the genes and other features across #
 #################################################################
 
-#get chromosomes, either from a user defined list, or non-hidden
-#ones with the correct attributes for export mode and release number
-#(note that the -ignore_chr is used in get_wanted_chromosomes)
-my $chr_names_wanted;
-if ($support->param('chr')) {
-	$chr_names_wanted = [ $support->param('chr') ];
-}
-else {
-	$chr_names_wanted = $support->get_wanted_chromosomes($laa,$lsa);
-}
 
-my $seq_regions = join "\n", @{$chr_names_wanted}; 
-if (! $support->user_proceed("\nAnnotation on the following seq_regions will be dumped from loutre, proceed ?\n$seq_regions")) {
-	exit;
-}
 
 foreach my $name (@{$chr_names_wanted}) {
 #	next unless ($name eq 'chr4-03');
@@ -539,10 +537,10 @@ foreach my $name (@{$chr_names_wanted}) {
 	#transfer genes and associated features
  GENE:
 	foreach my $lgene (@{$lga->fetch_all_by_Slice($lslice)} ) {
+		my $gname = $lgene->get_all_Attributes('name')->[0]->value;
 		#filter on source	
 		if ($support->param('filter_prefix')) {
 			if (grep { $lgene->source eq $_} $support->param('filter_prefix')) {
-				my $gname = $lgene->get_all_Attributes('name')->[0]->value;
 				$support->log("Skipping gene $gname because of incorrect source\n",2);
 				next GENE;
 			}
@@ -609,20 +607,21 @@ sub transfer_gene {
 											 $l_gene_slice->end);
 
 	if(!$l_gene_slice) {		
-		$support->log_error("Couldn't fetch loutre gene slice\n");
+		$support->log_warning("Couldn't fetch loutre gene slice\n");
 		return 0;
 	}
 	if(!$v_gene_slice) {		
-		$support->log_error("Couldn't fetch vega gene slice\n");
+		$support->log_warning("Couldn't fetch vega gene slice\n");
 		return 0;
 	}
 	if(!@{$lgene->get_all_Transcripts}){
-		$support->log_error("No transcripts for loutre gene ".$lgene->dbID."\n");
+		$support->log_warning("No transcripts for loutre gene ".$lgene->dbID."\n");
 		return 0;
 	}
 #	$lgene->dissociate;
 	foreach my $transcript (@{$lgene->get_all_Transcripts}){
 		$transcript->slice($v_gene_slice);
+		$transcript->is_current(1);
 		if($transcript->translation){
 			$transcript->translation;
 		}
@@ -630,6 +629,7 @@ sub transfer_gene {
 		my @exons= @{$transcript->get_all_Exons};
 		foreach my $exon (@exons) {
 			$exon->slice($v_gene_slice);
+			$exon->is_current(1);
 			$exon->get_all_supporting_features;
 			$exon->stable_id;
 		}
