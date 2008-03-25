@@ -27,25 +27,25 @@ WHERE g.gene_id = t.gene_id
   AND gsid.created_date < '2007-10-01'
 GROUP BY sr.name
 
-    name      transcripts
-    --------  -----------
-    chr1-11   2          
-    chr2-03   157        
-    chr3-02   8          
-    chr5-02   6          
-    chr6-16   4          
-    chr7-03   74         
-    chr9-17   1          
-    chr10-09  2          
-    chr11-02  9          
-    chr13-12  1          
-    chr15-02  8          
-    chr16-02  14         
-    chr17-02  2          
-    chr20-11  2          
-    chr21-03  2          
-    chr22-07  205        
-    chrX-09   8          
+    name       transcripts
+    --------   -----------
+    chr1-11              2
+    chr2-03            157
+    chr3-02              8
+    chr5-02              6
+    chr6-16              4
+    chr7-03             74
+    chr9-17              1
+    chr10-09             2
+    chr11-02             9
+    chr13-12             1
+    chr15-02             8
+    chr16-02            14
+    chr17-02             2
+    chr20-11             2
+    chr21-03             2
+    chr22-07           205
+    chrX-09              8
 
 
 SELECT sr.name chr
@@ -64,19 +64,19 @@ GROUP BY sr.name, g.biotype
 
     chr      biotype                 genes
     -------  ----------------------  -----
-    chr2-03  artifact                4    
-    chr2-03  novel_transcript        32   
-    chr2-03  polymorphic             1    
-    chr2-03  processed_pseudogene    4    
-    chr2-03  processed_transcript    36   
-    chr2-03  protein_coding          20   
-    chr2-03  unprocessed_pseudogene  3    
-    chr7-03  artifact                3    
-    chr7-03  novel_transcript        26   
-    chr7-03  processed_pseudogene    10   
-    chr7-03  processed_transcript    18   
-    chr7-03  protein_coding          35   
-    chr7-03  unprocessed_pseudogene  4    
+    chr2-03  artifact                    4
+    chr2-03  novel_transcript           32
+    chr2-03  polymorphic                 1
+    chr2-03  processed_pseudogene        4
+    chr2-03  processed_transcript       36
+    chr2-03  protein_coding             20
+    chr2-03  unprocessed_pseudogene      3
+    chr7-03  artifact                    3
+    chr7-03  novel_transcript           26
+    chr7-03  processed_pseudogene       10
+    chr7-03  processed_transcript       18
+    chr7-03  protein_coding             35
+    chr7-03  unprocessed_pseudogene      4
 
 
 
@@ -98,17 +98,17 @@ GROUP BY sr.name, t.biotype
 
     chr      biotype                  transcripts
     -------  -----------------------  -----------
-    chr2-03  artifact                 29         
-    chr2-03  nonsense_mediated_decay  33         
-    chr2-03  processed_pseudogene     4          
-    chr2-03  processed_transcript     175        
-    chr2-03  protein_coding           126        
-    chr2-03  retained_intron          70         
-    chr2-03  unprocessed_pseudogene   4          
-    chr7-03  artifact                 9          
-    chr7-03  nonsense_mediated_decay  18         
-    chr7-03  processed_pseudogene     10         
-    chr7-03  processed_transcript     120        
-    chr7-03  protein_coding           143        
-    chr7-03  retained_intron          51         
-    chr7-03  unprocessed_pseudogene   4          
+    chr2-03  artifact                          29
+    chr2-03  nonsense_mediated_decay           33
+    chr2-03  processed_pseudogene               4
+    chr2-03  processed_transcript             175
+    chr2-03  protein_coding                   126
+    chr2-03  retained_intron                   70
+    chr2-03  unprocessed_pseudogene             4
+    chr7-03  artifact                           9
+    chr7-03  nonsense_mediated_decay           18
+    chr7-03  processed_pseudogene              10
+    chr7-03  processed_transcript             120
+    chr7-03  protein_coding                   143
+    chr7-03  retained_intron                   51
+    chr7-03  unprocessed_pseudogene             4

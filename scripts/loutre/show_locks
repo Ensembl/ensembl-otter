@@ -1,14 +1,4 @@
-#!/usr/local/bin/perl -w
-
-BEGIN {
-    #
-    # This bit is only needed to ensure we are running EnsEMBL head code,
-    # not from the pre-release20 codebase.
-    #
-    foreach (@INC) {
-        s{ensembl/modules}{ensembl_head/modules}g;
-    }
-}
+#!/usr/bin/env perl -w
 
 ### show_locks
 

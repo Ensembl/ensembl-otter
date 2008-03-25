@@ -1,0 +1,84 @@
+#!/usr/bin/env perl -w
+
+### remove_transcripts
+
+use strict;
+use Bio::Otter::Lace::Defaults;
+use Bio::Vega::DBSQL::DBAdaptor;
+
+{
+    my $dsname;
+
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'dataset=s'     => \$dsname,
+    );
+    
+    unless ($dsname) {
+        Bio::Otter::Lace::Defaults::show_help();
+    }
+
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    my $ds = $cl->get_DataSet_by_name($dsname);
+    my $dba = $ds->get_cached_DBAdaptor;
+    my $gene_dba = $dba->get_GeneAdaptor;
+
+    while (<>) {
+        foreach my $t_stable_id (split) {
+            delete_transcript($t_stable_id, $gene_dba);
+        }
+    }
+}
+
+sub delete_transcript {
+    my ($t_stable_id, $gene_dba) = @_;
+    
+    my $gene = $gene_dba->fetch_by_transcript_stable_id($t_stable_id);
+    unless ($gene) {
+        warn "Can't fetch gene for transcript '$t_stable_id'\n";
+        return;
+    }
+    
+    # Need to make a fresh transcript array because the old one
+    # is cached inside the TranscriptAdaptor.
+    my $tsct_list = [ @{$gene->get_all_Transcripts} ];
+    $gene->{'_transcript_array'} = $tsct_list;
+
+    printf STDERR "%s in gene with %d transcripts\n", $t_stable_id, scalar @$tsct_list;
+    my $found = 0;
+    for (my $i = 0; $i < @$tsct_list; $i++) {
+        my $this = $tsct_list->[$i];
+        if ($this->stable_id eq $t_stable_id) {
+            splice(@$tsct_list, $i, 1);
+            $found = 1;
+            last;
+        }
+    }
+    unless ($found) {
+        die "Failed to find transcript '$t_stable_id' in gene";
+    }
+    if (@$tsct_list) {
+        $gene_dba->store($gene);
+    } else {
+        $gene_dba->remove($gene);
+    }
+}
+
+
+__END__
+
+=head1 NAME - remove_transcripts
+
+=head1 USAGE
+
+  remove_transcripts -dataset <DSNAME>
+
+=head1 DESCRIPTION
+
+Removes all the transcripts given by a list of transcript stable IDs supplied
+via ARGV. A new version of each genes is saved, or the gene is removed if all
+of its transcripts are removed.
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
