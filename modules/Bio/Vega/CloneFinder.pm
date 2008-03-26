@@ -61,7 +61,7 @@ sub find_containing_chromosomes {
         # now map those contig_ids back onto a chromosome
     my $sql = qq{
         SELECT  chr.name,
-                count(*) as cmp_cnt
+                group_concat(distinct a.cmp_seq_region_id) as joined_cmps
         FROM    assembly a,
                 seq_region chr,
                 coord_system cs
@@ -79,8 +79,11 @@ sub find_containing_chromosomes {
     $sth->execute();
 
     my @chr_slices = ();
-    while( my ($atype, $cmp_cnt) = $sth->fetchrow() ) {
-        if($cmp_cnt == scalar(@$seq_level_slice_ids)) {
+    while( my ($atype, $joined_cmps) = $sth->fetchrow() ) {
+
+        my @cmps = split(/,/, $joined_cmps);
+
+        if(scalar(@cmps) == scalar(@$seq_level_slice_ids)) {
             my $chr_slice = $sa->fetch_by_region('chromosome', $atype, undef, undef, undef, 'Otter');
             push @chr_slices, $chr_slice;
         }
@@ -91,6 +94,7 @@ sub find_containing_chromosomes {
 
 sub register_feature {
     my ($self, $qname, $qtype, $feature) = @_;
+
 
     my $unhide = $self->{_unhide};
 
