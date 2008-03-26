@@ -51,7 +51,7 @@ use Bio::Otter::Lace::Defaults;
             SELECT
                     oa.value,
                     count(distinct stable_id) cnt,
-                    group_concat(concat(osi.${component}_id,':',stable_id,':',sr.name,':',o.seq_region_start,':',o.seq_region_end))
+                    group_concat(concat(osi.${component}_id,':',stable_id,':',sr.name,':',o.seq_region_start,':',o.seq_region_end) ORDER BY osi.${component}_id ASC )
             FROM
                     ${component}_attrib oa,
                     $component o,
