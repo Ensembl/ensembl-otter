@@ -307,6 +307,9 @@ my %final_attribs = map {$_=> 1} qw(
 foreach my $chrom ( @{$sa->fetch_all('Chromosome','Otter')}) {
 	my $attribs = $aa->fetch_all_by_Slice($chrom);
 	my $name = $chrom->seq_region_name;
+	
+	#only summarise non-hidden chromosomes
+	next if @{$support->get_attrib_values($attribs,'hidden',1)};
 	my $c = $support->get_attrib_values($attribs,'vega_export_mod',$rel_type);
 	if (scalar(@$c == 1)) {
 		my %val;
