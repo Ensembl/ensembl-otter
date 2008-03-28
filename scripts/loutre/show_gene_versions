@@ -1,13 +1,4 @@
-#!/usr/local/bin/perl -w
-
-### show_gene_versions
-
-BEGIN {
-    foreach (@INC) {
-        s{ensembl/modules}{ensembl_head/modules}g;
-    }
-}
-
+#!/usr/bin/env perl -w
 
 use strict;
 

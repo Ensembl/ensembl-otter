@@ -1,0 +1,175 @@
+#!/usr/bin/env perl -w
+
+### patch_nmd_genes
+
+use strict;
+use Sys::Hostname qw{ hostname };
+use Bio::Vega::DBSQL::DBAdaptor;
+use Bio::Otter::Lace::Defaults;
+use Bio::Vega::ContigLockBroker;
+
+{
+    my $dsname;
+
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'dataset=s'     => \$dsname,
+    );
+    
+    unless ($dsname) {
+        Bio::Otter::Lace::Defaults::show_help();
+    }
+
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    my $ds = $cl->get_DataSet_by_name($dsname);
+    my $dba = $ds->get_cached_DBAdaptor;
+    
+    my $list_nmd = $dba->dbc->prepare(q{
+        SELECT DISTINCT g.gene_id
+        FROM gene g
+          , transcript t
+        WHERE g.gene_id = t.gene_id
+          AND t.biotype = 'nonsense_mediated_decay'
+          AND g.is_current = 1
+    });
+    $list_nmd->execute;
+    my $gene_count = $list_nmd->rows;
+
+    my $latest_with_translation = $dba->dbc->prepare(q{
+        SELECT t.transcript_id
+        FROM gene_stable_id gsid
+          , transcript t
+          , translation tsl
+          , transcript_stable_id tsid
+        WHERE gsid.gene_id = t.gene_id
+          AND t.transcript_id = tsid.transcript_id
+          AND t.transcript_id = tsl.transcript_id
+          AND tsid.stable_id = ?
+        ORDER BY gsid.modified_date DESC limit 1
+    });
+    
+    my $locker = Bio::Vega::ContigLockBroker->new(
+        -HOSTNAME   => hostname(),
+        );
+    my $author = Bio::Vega::Author->new(
+        -NAME       => $cl->author,
+        -EMAIL      => $cl->email,
+        );
+
+    my $recovered = 0;
+    my $not_recov = 0;
+    eval {
+        while (my ($g_dbID) = $list_nmd->fetchrow) {
+            if (my $count = recover_coding_region($g_dbID, $dba, $latest_with_translation, $locker, $author)) {
+                $recovered += $count;
+            } else {
+                $not_recov++;
+            }
+        }
+    };
+    print STDERR "Found $gene_count Genes with nonsense_mediated_decay Transcripts\n",
+      "Found or recovered Translation for $recovered nonsense_mediated_decay Transcripts\n",
+      "Leaves $not_recov Genes with 1 or more nonsense_mediated_decay Transcripts missing Translation\n";
+}
+
+sub recover_coding_region {
+    my ($g_dbID, $dba, $latest_with_translation, $locker, $author) = @_;
+    
+    my $gene_aptr = $dba->get_GeneAdaptor;
+    my $tsct_aptr = $dba->get_TranscriptAdaptor;
+
+    my $gene = $gene_aptr->fetch_by_dbID($g_dbID);
+
+    # Need to make a fresh transcript array because the old one
+    # is cached inside the TranscriptAdaptor.
+    my $tsct_list = [ @{$gene->get_all_Transcripts} ];
+    $gene->{'_transcript_array'} = $tsct_list;
+    
+    my $found_tsl = 0;
+    my $already_tsl = 0;
+    for (my $i = 0; $i < @$tsct_list; $i++) {
+        my $tsct = $tsct_list->[$i];
+        next unless $tsct->biotype eq 'nonsense_mediated_decay';
+        if ($tsct->translation) {
+            printf STDERR "Transcript %s already has translation\n", $tsct->stable_id;
+            $already_tsl++;
+            next;
+        }
+        $latest_with_translation->execute($tsct->stable_id);
+        
+        my ($tsct_dbID) = $latest_with_translation->fetchrow;
+        unless ($tsct_dbID) {
+            printf STDERR "No previous version of Transcript %s with translation\n", $tsct->stable_id;
+            next;
+        }
+        my $tsct_tsl = $tsct_aptr->fetch_by_dbID($tsct_dbID);
+        my $tsl = $tsct_tsl->translation;
+        
+        # Check exon coords are the same
+        my $tsct_exons = $tsct->get_all_Exons;
+        my $tsct_tsl_exons = $tsct_tsl->get_all_Exons;
+        my $match = @$tsct_exons == @$tsct_tsl_exons ? 1 : 0;
+        unless ($match) {
+            printf STDERR "Most recent previous version of Transcript %s with translation has different number of exons (%d not %d)\n",
+                $tsct->stable_id, scalar(@$tsct_tsl_exons), scalar(@$tsct_exons);
+            next;
+        }
+        my $found_start_exon = 0;
+        my $found_end_exon = 0;
+        for (my $i = 0; $i < @$tsct_exons; $i++) {
+            my $ex1 = $tsct_exons->[$i];
+            my $ex2 = $tsct_tsl_exons->[$i];
+            if ($ex1->seq->seq ne $ex2->seq->seq) {
+                $match = 0;
+                last;
+            }
+            if ($ex2 == $tsl->start_Exon) {
+                $tsl->start_Exon($ex1);
+                $found_start_exon = 1;
+            }
+            if ($ex2 = $tsl->end_Exon) {
+                $tsl->end_Exon($ex1);
+                $found_end_exon = 1;
+            }
+        }
+        if ($match) {
+            printf STDERR "Found matching translation for Transcript %s\n", $tsct->stable_id;
+            if ($found_start_exon and $found_end_exon) {
+                $found_tsl++;
+                $tsct->translation($tsct_tsl->translation);
+            } else {
+                print STDERR " ... but failed to find start and end exons\n";
+            }
+        } else {
+            printf STDERR "No matching translation for Transcript %s\n", $tsct->stable_id;
+        }
+    }
+    if ($found_tsl) {
+        $dba->begin_work;
+        eval {
+            $locker->lock_by_object($gene, $author);
+            $gene_aptr->store($gene);
+            $locker->remove_by_object($gene, $author);
+        };
+        if ($@) {
+            $dba->rollback;
+            warn $@;
+        } else {
+            $dba->commit;
+            return $found_tsl + $already_tsl;
+        }    
+    } else {
+        return $already_tsl;
+    }
+}
+
+
+
+
+__END__
+
+=head1 NAME - patch_nmd_genes
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
