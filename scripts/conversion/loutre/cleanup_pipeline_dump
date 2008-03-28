@@ -264,7 +264,7 @@ my $seq_regions = join "\n", @{$chr_names_wanted};
 if (! $support->user_proceed("Data on the following assemblies will be retained in the pipeline database dump, proceed ?\n\n$seq_regions\n")) {
 	exit;
 }
-$support->log("Retained data on the following assemblies\n$seq_regions\n");
+$support->log("Will retain data on the following assemblies\n$seq_regions\n\n");
 
 #####################################################
 # delete any unwanted entries from meta_coord table #
@@ -273,12 +273,14 @@ my $noentry_tables = join("','",qw(gene transcript exon));
 
 if (! $support->param('dry_run')) {
 	my $c = $pddbh->do(qq(DELETE FROM meta_coord where table_name in ('$noentry_tables')));
-	$support->log("Removed $c entries from meta_coord table\n");
+	$support->log("Removed $c entries from meta_coord table\n\n");
 }
 
 ################
 # analysis ids #
 ################
+
+$support->log("Generating constraints for deletions:\n");
 
 #make a note of analysis_ids, and numbers of original features grouped by logic_name
 my %original_lncounts;
@@ -307,11 +309,11 @@ foreach my $t (keys %original_lncounts) {
 				$problem = 1;
 			}
 			else {
-				$support->log("Will delete features of logic name $ln from table $t\n");
+				$support->log("Will delete features of logic name $ln from table $t\n",1);
 			}
 		}
 		else {
-			$support->log("Keeping features of logic name $ln from table $t\n");
+			$support->log("Will keep features of logic name $ln from table $t\n",1);
 		}
 	}
 }
@@ -357,6 +359,8 @@ foreach my $t ('dna_align_feature','protein_align_feature') {
 
 #warn "lns to stay ",Dumper(\%ids_to_stay);
 
+$support->log("Doing the deletions:\n");
+
 #delete by analysis_id - faster to create tmp tables and truncate rather than delete
 foreach my $t (keys %ids_to_stay) {
 	my $ids_to_keep = join("','",@{$ids_to_stay{$t}});
@@ -381,14 +385,14 @@ foreach my $t (keys %ids_to_stay) {
 #########################
 
 if (!$support->param('dry_run')) {
-	$support->log_stamped("Deleting unwanted seq_region_attributes...\n");
+	$support->log_stamped("Deleting unwanted seq_region_attributes...\n",1);
 	$table_rows{'seq_region_attib'}{'deleted_by_attrib_type_id'} = $pddbh->do(
 		qq(DELETE sra 
            FROM seq_region_attrib sra, attrib_type at
            WHERE sra.attrib_type_id = at.attrib_type_id
            AND at.code IN ('$codes_to_go')
     ));
-	$support->log_stamped("...finished deleting unwanted seq_region_attributes...\n");
+	$support->log_stamped("...finished deleting unwanted seq_region_attributes...\n\n",1);
 }
 
 ##################
