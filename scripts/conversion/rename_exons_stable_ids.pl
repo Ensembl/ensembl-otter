@@ -98,6 +98,17 @@ my $dba = $support->get_database('loutre');
 my $dbh = $dba->dbc->db_handle;
 my $stida = $dba->get_StableIdAdaptor();
 
+#get current max exon stable id and populate exon_stable_id_pool -
+#shouldn't be needed since should be done by finish_vega_creation
+
+#my ($max_id) = $dbh->selectrow_array(qq(SELECT stable_id 
+#                             FROM exon_stable_id 
+#                            ORDER by stable_id desc limit 1));
+#$max_id =~ s{[a-z]}{}ig;
+#if (! $support->param('dry_run')) {
+#	$dbh->do(qq(INSERT into exon_stable_id_pool values ($max_id)));
+#}
+
 #get duplicate ids
 my $sth = $dbh->prepare(qq(
         SELECT list.stable_id,
@@ -105,7 +116,7 @@ my $sth = $dbh->prepare(qq(
         FROM        (SELECT esi.stable_id
                      FROM exon e, exon_stable_id esi
                      WHERE e.exon_id=esi.exon_id
-                     GROUP BY esi.stable_id, esi.version
+                     GROUP BY esi.stable_id
                      HAVING sum(is_current)>1) list,
                  exon_stable_id esi1,
                  exon e1,
@@ -114,11 +125,9 @@ my $sth = $dbh->prepare(qq(
                  exon e2,
                  seq_region sr2
          WHERE esi1.stable_id=list.stable_id
-         AND esi1.version=1
          AND e1.exon_id=esi1.exon_id
          AND sr1.seq_region_id=e1.seq_region_id
          AND esi2.stable_id=list.stable_id
-         AND esi2.version=1
          AND e2.exon_id=esi2.exon_id
          AND sr2.seq_region_id=e2.seq_region_id
          AND e1.exon_id<e2.exon_id
@@ -129,6 +138,9 @@ my %id_to_coords;
 while( my ($stable_id, $exon_id, $ssname, $start, $end) = $sth->fetchrow() ) {
 	$id_to_coords{$exon_id} = [ $stable_id, $ssname, $start, $end ];
 }
+
+#warn Dumper(\%id_to_coords);
+#exit;
 
 foreach my $obj_id (keys %id_to_coords) {
     my ($old_stable_id, $ssname, $start, $end) = @{ $id_to_coords{$obj_id} };
