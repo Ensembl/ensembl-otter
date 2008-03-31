@@ -1270,9 +1270,34 @@ sub edit_new_subsequence {
         # Get 3' most coordinate from those on clipboard
         # (feature highlighted in xace fMap)
         @ints = $self->integers_from_clipboard;
-        foreach my $i (@ints) {
-            $most_3prime ||= $i;
-            $most_3prime = $i if $i > $most_3prime;
+
+        # Reverse strand features from Zmap have pairs of coordinates
+        # where the first is larger than the second.
+        my $strand = 1;
+        my $fwd = 0;
+        my $rev = 0;
+        for (my $i = 0; $i < @ints; $i += 2) {
+            my ($l, $r) = @ints[$i, $i+1];
+            if ($l and $r) {
+                if ($l < $r) {
+                    $fwd++; # This pair votes forward
+                }
+                elsif ($l > $r) {
+                    $rev++; # This pari votes reverse
+                }
+            }
+        }
+        warn "Guessing strand is ", $rev > $fwd ? "reverse" : "forward";
+        $strand = -1 if $rev > $fwd;
+        $most_3prime = $ints[0];
+        if ($strand == 1) {
+            foreach my $i (@ints) {
+                $most_3prime = $i if $i > $most_3prime;
+            }
+        } else {
+            foreach my $i (@ints) {
+                $most_3prime = $i if $i < $most_3prime;
+            }            
         }
     }
     
@@ -1280,7 +1305,7 @@ sub edit_new_subsequence {
     my $region_name = $most_3prime
         ? $assembly->clone_name_overlapping($most_3prime)
         : $assembly->name;
-    #warn "Looking for clone overlapping '$most_3prime' in '$clone_name' found '$region_name'";
+    warn "Looking for clone overlapping '$most_3prime' found '$region_name'";
     
     # Trim sequence version from accession if clone_name ends .SV
     $region_name =~ s/\.\d+$//;
