@@ -477,7 +477,7 @@ foreach my $table (keys %attribs_to_go) {
 my ($max_id) = $vdbh->selectrow_array(qq(select max(stable_id) from exon_stable_id));
 (my ($prefix,$number)) = $max_id =~ /(\w{7})(\d+)/;
 if ( ! $support->param('dry_run')) {
-#	$vdbh->do(qq(INSERT into exon_stable_id_pool values ($number)));
+	$vdbh->do(qq(INSERT into exon_stable_id_pool values ($number)));
 }
 
 ##############
