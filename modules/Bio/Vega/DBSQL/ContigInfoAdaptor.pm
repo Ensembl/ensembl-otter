@@ -20,7 +20,7 @@ sub fetch_by_seq_region_id {
 sub fetch_by_contigSlice {
     my ($self, $contigSlice) = @_;
 
-    unless($contigSlice->coord_system_name() ne 'contig') {
+    if($contigSlice->coord_system_name() ne 'contig') {
         throw("the only argument has to be a contig slice");
     }
 
