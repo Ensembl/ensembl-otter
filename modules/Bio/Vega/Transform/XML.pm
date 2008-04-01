@@ -6,14 +6,16 @@ use base 'Bio::Vega::Writer';
 use Bio::Vega::Utils::GeneTranscriptBiotypeStatus 'biotype_status2method';
 
 
-sub get_geneXML{
+sub get_geneXML {
   my ($self,$gene)=@_;
+
   my $ppobj=$self->generate_Locus($gene,2);
   my $gene_xml=$self->formatxml($ppobj);
+
   return $gene_xml;
 }
 
-sub generate_OtterXML{
+sub generate_OtterXML {
   my ($self,$slices,$odb,$indent,$genes,$sf)=@_;
 
   my $ot=$self->prettyprint('otter');
@@ -24,7 +26,7 @@ sub generate_OtterXML{
   return $self->formatxml($ot);
 }
 
-sub generate_SequenceSet{
+sub generate_SequenceSet {
   my ($self,$slice,$odb,$genes,$features)=@_;
 
   my $ss=$self->prettyprint('sequence_set');
@@ -58,204 +60,199 @@ sub generate_SequenceSet{
 }
 
 
-sub generate_AssemblyType{
-   my ($self,$slice)=@_;
-	my $at=$self->prettyprint('assembly_type',$slice->seq_region_name);
-	return $at;
+sub generate_AssemblyType {
+    my ($self, $slice)=@_;
+
+    my $atype=$self->prettyprint('assembly_type', $slice->seq_region_name);
+
+    return $atype;
 }
 
-sub generate_SequenceFragment{
-  my ($self,$contig_seg,$slice,$odb)=@_;
-  my $assembly_offset = $slice->start()-1;
-  my $sf = $self->prettyprint('sequence_fragment');
-  my $contig_slice = $contig_seg->to_Slice();
-  my ($clone_seg) = @{ $contig_slice->project('clone') };
-  my $clone_slice = $clone_seg->to_Slice();
-  my $chrs = $slice->get_all_Attributes('chr');
-  my $chr_name;
-  if ($contig_slice->seq_region_name){
-	 $sf->attribvals($self->prettyprint('id',$contig_slice->seq_region_name));
-  }
+sub generate_SequenceFragment {
+    my ($self, $contig_seg, $slice, $odb)=@_;
 
-  if ($chrs) {
-	 if (@$chrs > 1){
-		throw("Chromosome Slice:$slice has more than one value for name attrib, cannot generate xml");
-	 }
-	 if ($chrs->[0]){
-		$chr_name=$chrs->[0]->value;
-	 }
-	 $sf->attribvals($self->prettyprint('chromosome',$chr_name));
-  }
-  my $accs=$clone_slice->get_all_Attributes('embl_acc');
-  if ($accs) {
-	 if (@$accs > 1){
-		throw("Clone Slice:$clone_slice has more than one value for accession attrib, cannot generate xml");
-	 }
-	 if ($accs->[0]){
-		my $acc_name=$accs->[0]->value;
-		$sf->attribvals($self->prettyprint('accession',$acc_name));
-	 }
-  }
-  else {
-	 throw("Missing clone accession, cannot generate xml:$clone_slice");
-  }
-  my $vers=$clone_slice->get_all_Attributes('embl_version');
-  if ($vers) {
-	 if (@$vers > 1){
-		throw("Clone Slice:$clone_slice has more than one value for version attrib, cannot generate xml");
-	 }
-	 if ($vers->[0]){
-		my $ver=$vers->[0]->value;
-		$sf->attribvals($self->prettyprint('version',$ver));
-	 }
-  }
-  else {
-	 throw("Missing clone version, cannot generate xml:$clone_slice");
-  }
-  my $cia=$odb->get_ContigInfoAdaptor;
-  my $contig_slice_dbid=$contig_slice->get_seq_region_id;
-  my $ci=$cia->fetch_by_seq_region_id($contig_slice_dbid);
-  ##test
-  my $auth;
-  my $auth_name;
-  my $auth_email;
-  if ($ci){
-	 $auth=$ci->author;
-  }
-  if ($auth){
-	 $auth_name=$auth->name;
-	 $auth_email=$auth->email;
-  }
-  $sf->attribvals($self->prettyprint('author',$auth_name));
-  $sf->attribvals($self->prettyprint('author_email',$auth_email));
-  my $ci_attribs;
-  if ($ci){
-	 $ci_attribs=$ci->get_all_Attributes;
-  }
-  foreach my $cia (@$ci_attribs){
-	 if ($cia->code eq 'remark' || $cia->code eq 'hidden_remark' || $cia->code eq 'annotated' || $cia->code eq 'description'){
-		if ($cia->code eq 'annotated' && $cia->value eq 'T'){
-		  $cia->value('Annotation_remark- annotated');
-		}
-		if ($cia->code eq 'description') {
-		  $cia->value("EMBL_dump_info.DE_line- ".$cia->value);
-		}
-		$sf->attribvals($self->prettyprint('remark',$cia->value));
-	 }
-  }
-  foreach my $cia (@$ci_attribs){
-	 if ($cia->code eq 'keyword'){
-		$sf->attribvals($self->prettyprint('keyword',$cia->value));
-	 }
-  }
+    my $sf = $self->prettyprint('sequence_fragment');
+    my $contig_slice = $contig_seg->to_Slice();
 
+    if($contig_slice->seq_region_name) {
+        $sf->attribvals($self->prettyprint('id',$contig_slice->seq_region_name));
+    }
 
-  $sf->attribvals($self->prettyprint('assembly_start',$contig_seg->from_start + $assembly_offset));
-  $sf->attribvals($self->prettyprint('assembly_end',  $contig_seg->from_end   + $assembly_offset));
-  if ($contig_slice->strand){
-	 $sf->attribvals($self->prettyprint('fragment_ori',$contig_slice->strand));
-  }
-  else {
-	 throw("Missing fragment orientation, cannot generate xml:$contig_slice");
-  }
-  if ($contig_slice->start){
-	 $sf->attribvals($self->prettyprint('fragment_offset',$contig_slice->start));
-  }
-  else {
-	 throw("Missing fragment offset, cannot generate xml:$contig_slice");
-  }
+    if( my $chrs = $slice->get_all_Attributes('chr') ) {
+        if(@$chrs > 1) {
+            throw("Chromosome Slice: $slice has more than one value for name attrib, cannot generate xml");
+        }
+        my $chr_name = $chrs->[0] && $chrs->[0]->value;
+        $sf->attribvals($self->prettyprint('chromosome',$chr_name));
+    }
 
-  return $sf;
+    my ($clone_seg) = @{ $contig_slice->project('clone') };
+    my $clone_slice = $clone_seg->to_Slice();
+
+    if( my $accs = $clone_slice->get_all_Attributes('embl_acc') ) {
+        if (@$accs > 1){
+            throw("Clone Slice:$clone_slice has more than one value for accession attrib, cannot generate xml");
+        }
+
+        my $acc_name = $accs->[0] && $accs->[0]->value;
+        $sf->attribvals($self->prettyprint('accession',$acc_name));
+    } else {
+        throw("Missing clone accession, cannot generate xml:$clone_slice");
+    }
+
+    if( my $vers = $clone_slice->get_all_Attributes('embl_version') ) {
+        if (@$vers > 1){
+            throw("Clone Slice:$clone_slice has more than one value for version attrib, cannot generate xml");
+        }
+
+        my $ver = $vers->[0] && $vers->[0]->value;
+        $sf->attribvals($self->prettyprint('version',$ver));
+    } else {
+        throw("Missing clone version, cannot generate xml:$clone_slice");
+    }
+
+    my $ci = $odb->get_ContigInfoAdaptor->fetch_by_contigSlice($contig_slice);
+
+    my $author_name;
+    my $author_email;
+    if(my $contig_author = $ci && $ci->author) {
+        $author_name  = $contig_author->name;
+        $author_email = $contig_author->email;
+    }
+    $sf->attribvals($self->prettyprint('author', $author_name));
+    $sf->attribvals($self->prettyprint('author_email', $author_email));
+
+    if($ci) {
+	    my $ci_attribs = $ci->get_all_Attributes;
+
+        foreach my $cia (@$ci_attribs) {
+            if ($cia->code eq 'remark'
+            || $cia->code eq 'hidden_remark'
+            || $cia->code eq 'annotated'
+            || $cia->code eq 'description') {
+                my $value = $cia->value;
+
+                if ($cia->code eq 'description') {
+                    $value = 'EMBL_dump_info.DE_line- ' . $value;
+                }
+                if ($cia->code eq 'annotated' && $cia->value eq 'T') {
+                    $value = 'Annotation_remark- annotated';
+                }
+                $sf->attribvals($self->prettyprint('remark', $value));
+            }
+        }
+        foreach my $cia (@$ci_attribs) {
+            if ($cia->code eq 'keyword') {
+                $sf->attribvals($self->prettyprint('keyword',$cia->value));
+            }
+        }
+    }
+
+    my $assembly_offset = $slice->start() - 1;
+    $sf->attribvals($self->prettyprint('assembly_start',$contig_seg->from_start + $assembly_offset));
+    $sf->attribvals($self->prettyprint('assembly_end',  $contig_seg->from_end   + $assembly_offset));
+
+    if ($contig_slice->strand) {
+        $sf->attribvals($self->prettyprint('fragment_ori',$contig_slice->strand));
+    } else {
+        throw("Missing fragment orientation, cannot generate xml:$contig_slice");
+    }
+    if ($contig_slice->start) {
+        $sf->attribvals($self->prettyprint('fragment_offset',$contig_slice->start));
+    } else {
+        throw("Missing fragment offset, cannot generate xml:$contig_slice");
+    }
+
+    return $sf;
 }
 
 sub generate_Locus {
-  my ($self, $gene,$indent) = @_;
-  return unless $gene;
-  my $g=$self->prettyprint('locus');
-  if (defined $indent) {
-	 $g->indent($indent);
-  }
-  if($gene->stable_id) {
-      $g->attribvals($self->prettyprint('stable_id',$gene->stable_id));
-  }
-  my $gene_description='';
-  if ($gene->description){
-	 $gene_description=$gene->description;
-  }
-  $g->attribvals($self->prettyprint('description',$gene_description));
-  my $gene_name_att = $gene->get_all_Attributes('name') ;
-  my $gene_name='';
-  if ($gene_name_att->[0]){
-	 $gene_name=$gene_name_att->[0]->value;
-  }
-  $g->attribvals($self->prettyprint('name',$gene_name));
+    my ($self, $gene, $indent) = @_;
 
-  my ($type) = biotype_status2method($gene->biotype, $gene->status);
+    return unless $gene;
 
-  my $source = $gene->source;
-  if ($source ne 'havana'){
-	 $type = "$source:$type";
-  }
-  $g->attribvals($self->prettyprint('type',$type));
+    my $g=$self->prettyprint('locus');
+    if (defined $indent) {
+        $g->indent($indent);
+    }
 
-  $g->attribvals($self->prettyprint('known',$gene->is_known || 0));
-  $g->attribvals($self->prettyprint('truncated',$gene->truncated_flag));
-  if (my $synonyms=$gene->get_all_Attributes('synonym')){
-	 foreach my $syn (@$synonyms){
-		$g->attribvals($self->prettyprint('synonym',$syn->value));
-	 }
-  }
+    if($gene->stable_id) {
+        $g->attribvals($self->prettyprint('stable_id',$gene->stable_id));
+    }
 
-  if(my $remarks = $gene->get_all_Attributes('remark')) {
-	 foreach my $rem (@$remarks){
-		$g->attribvals($self->prettyprint('remark',$rem->value));
-	 }
-  }
-  if(my $remarks = $gene->get_all_Attributes('hidden_remark')) {
-	 foreach my $rem (@$remarks){
-		$g->attribvals($self->prettyprint('remark','Annotation_remark- '.$rem->value));
-	 }
-  }
+    my $gene_description = $gene->description || '';
+    $g->attribvals($self->prettyprint('description', $gene_description));
 
-  my $gene_author=$gene->gene_author;
-  my $author_name='';
-  my $author_email='';
-  if ($gene_author) {
-	 $author_name=$gene_author->name;
-	 $author_email=$gene_author->email;
-  }
-  $g->attribvals($self->prettyprint('author',$author_name));
-  $g->attribvals($self->prettyprint('author_email',$author_email));
-  my $exons=$gene->get_all_Exons;
-  my $coord_offset=$exons->[0]->slice->start-1;
-  my $transcripts=$gene->get_all_Transcripts;
-  if ($transcripts) {
-	 foreach my $tran (@$transcripts){
-		$g->attribobjs($self->generate_Transcript($tran,$coord_offset));
-	 }
-  }
-  else {
-	 throw "Cannot create Otter XML, no transcripts attched to this gene:$gene";
-  }
-  return $g;
+    my $gene_name_att = $gene->get_all_Attributes('name');
+    my $gene_name = $gene_name_att->[0] ? $gene_name_att->[0]->value : '';
+    $g->attribvals($self->prettyprint('name', $gene_name));
+
+    my ($type) = biotype_status2method($gene->biotype, $gene->status);
+    my $source = $gene->source;
+    if ($source ne 'havana') {
+        $type = "$source:$type";
+    }
+    $g->attribvals($self->prettyprint('type',$type));
+
+    $g->attribvals($self->prettyprint('known',$gene->is_known || 0));
+    $g->attribvals($self->prettyprint('truncated',$gene->truncated_flag));
+
+    if(my $synonyms = $gene->get_all_Attributes('synonym')) {
+        foreach my $syn (@$synonyms){
+            $g->attribvals($self->prettyprint('synonym',$syn->value));
+        }
+    }
+
+    if(my $remarks = $gene->get_all_Attributes('remark')) {
+        foreach my $rem (@$remarks) {
+            $g->attribvals($self->prettyprint('remark',$rem->value));
+        }
+    }
+    if(my $remarks = $gene->get_all_Attributes('hidden_remark')) {
+        foreach my $rem (@$remarks) {
+            $g->attribvals($self->prettyprint('remark','Annotation_remark- '.$rem->value));
+        }
+    }
+
+    my $author_name;
+    my $author_email;
+    if( my $gene_author=$gene->gene_author ) {
+        $author_name  = $gene_author->name;
+        $author_email = $gene_author->email;
+    }
+    $g->attribvals($self->prettyprint('author', $author_name));
+    $g->attribvals($self->prettyprint('author_email', $author_email));
+
+    if( my $transcripts=$gene->get_all_Transcripts ) {
+
+        my $coord_offset=$gene->get_all_Exons->[0]->slice->start-1;
+
+        foreach my $tran (@$transcripts){
+            $g->attribobjs($self->generate_Transcript($tran, $coord_offset));
+        }
+    } else {
+        throw "Cannot create Otter XML, no transcripts attched to this gene:$gene";
+    }
+
+    return $g;
 }
 
-sub generate_Transcript{
+sub generate_Transcript {
+    my ($self, $tran, $coord_offset)=@_;
 
-  my ($self,$tran,$coord_offset)=@_;
-  my $t=$self->prettyprint('transcript');
-  if ($tran->stable_id) {
-     $t->attribvals($self->prettyprint('stable_id',$tran->stable_id));
-  }
-  my $tran_author=$tran->transcript_author;
-  my $author_name='';
-  my $author_email='';
-  if ($tran_author){
-	 $author_name=$tran_author->name;
-	 $author_email=$tran_author->email;
-  }
-  $t->attribvals($self->prettyprint('author',$author_name));
-  $t->attribvals($self->prettyprint('author_email',$author_email));
+    my $t=$self->prettyprint('transcript');
+    if($tran->stable_id) {
+        $t->attribvals($self->prettyprint('stable_id',$tran->stable_id));
+    }
+
+    my $author_name;
+    my $author_email;
+    if( my $transcript_author=$tran->transcript_author ) {
+        $author_name  = $transcript_author->name;
+        $author_email = $transcript_author->email;
+    }
+    $t->attribvals($self->prettyprint('author',$author_name));
+    $t->attribvals($self->prettyprint('author_email',$author_email));
 
   if(my $remarks = $tran->get_all_Attributes('remark')){
      foreach my $rem (@$remarks){
@@ -325,14 +322,15 @@ sub generate_Transcript{
 
   }
 
-
   $t->attribobjs($self->generate_ExonSet($tran,$coord_offset, $tran_low, $tran_high));
+
   return $t;
 }
 
 
-sub generate_ExonSet{
+sub generate_ExonSet {
   my ($self,$tran,$coord_offset,$tran_low, $tran_high)=@_;
+
   my $exon_set=$tran->get_all_Exons;
   my $exs=$self->prettyprint('exon_set');
   foreach my $exon (@$exon_set){
@@ -357,6 +355,7 @@ sub generate_ExonSet{
 
 sub generate_EvidenceSet {
   my ($self,$tran)=@_;
+
   my $evidence=$tran->evidence_list();
   my $es=$self->prettyprint('evidence_set');
   foreach my $evi (@$evidence){
@@ -365,7 +364,7 @@ sub generate_EvidenceSet {
 	 $e->attribvals($self->prettyprint('type',$evi->type));
 	 $es->attribobjs($e);
   }
-  my $c= $evidence ? scalar(@$evidence) : 0;
+  my $c = $evidence ? scalar(@$evidence) : 0;
 
   if ($c>0){
 	 return $es;
@@ -376,9 +375,12 @@ sub generate_EvidenceSet {
 
 sub generate_FeatureSet {
   my ($self, $features,$slice) = @_;
+
   return unless $features;
-  my $offset=$slice->start-1;
+
   my $fs=$self->prettyprint('feature_set');
+  my $offset=$slice->start-1;
+
   foreach my $feature(@$features){
 
 	 my $f = $self->prettyprint('feature');
@@ -420,14 +422,15 @@ sub generate_FeatureSet {
 
 
 sub generate_DNA {
-  my ($self,$slice);
-  my $dna=$slice->seq;
-  my $d=$self->prettyprint('dna',$dna);
-  return $d;
+    my ($self, $slice);
+
+    my $dna=$self->prettyprint('dna', $slice->seq);
+
+    return $dna;
 }
 
-
 1;
+
 __END__
 
 =head1 NAME - Bio::Vega::Transform::XML
@@ -435,3 +438,4 @@ __END__
 =head1 AUTHOR
 
 Sindhu K. Pillai B<email> sp1@sanger.ac.uk
+

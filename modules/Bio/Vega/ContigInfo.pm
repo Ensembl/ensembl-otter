@@ -6,77 +6,83 @@ use base qw(Bio::EnsEMBL::Storable);
 
 
 sub new {
-  my($class,@args) = @_;
-  my $self = $class->SUPER::new(@args);
-  my ($slice,$author,$attributes)  =
-        rearrange([qw(SLICE AUTHOR ATTRIBUTES)],@args);
-  $self->slice($slice);
-  $self->author($author);
-  $self->add_Attributes($attributes);
-  return $self;
+    my $class = shift @_;
+
+    my $self = $class->SUPER::new(@_);
+    my ($slice, $author, $attributes, $created_date, $current_status)  =
+        rearrange([qw(SLICE AUTHOR ATTRIBUTES CREATED_DATE CURRENT_STATUS)], @_);
+
+    $self->slice($slice)                    if $slice;
+    $self->author($author)                  if $author;
+    $self->add_Attributes($attributes)      if $attributes;
+    $self->created_date($created_date)      if $created_date;
+
+    return $self;
 }
 
-sub slice  {
-  my ($self,$value) = @_;
-  if(defined($value) ){
-	 if (!ref($value) || !$value->isa('Bio::EnsEMBL::Slice')) {
-		$self->throw('slice argument must be a Bio::EnsEMBL::Slice');
-	 }
-	 $self->{'slice'} = $value;
-  }
-  return $self->{'slice'};
-}
+sub slice {
+    my ($self, $slice) = @_;
 
-sub author{
-  my $self = shift;
-  my $value = shift if ( @_ );
-  if (defined($value) ){
-	 if (!ref($value) || !$value->isa("Bio::Vega::Author")) {
-		$self->throw("Argument is not a Bio::Vega::Author");
-	 }
-	 $self->{'author'}=$value;
-  }
-  return $self->{'author'};
-}
-
-sub created_date  {
-  my $self = shift;
-  return $self->{'created_date'};
-}
-
-sub current_status  {
-  my $self = shift;
-  return $self->{'current_status'};
-}
-
-sub add_Attributes  {
-  my ($self,$attribref) = @_;
-  if( ! exists $self->{'attributes'} ) {
-    $self->{'attributes'} = [];
-  }
-  foreach my $attrib ( @$attribref ) {
-    if( ! $attrib->isa( "Bio::EnsEMBL::Attribute" )) {
-     $self->throw( "Argument to add_Attribute has to be an Bio::EnsEMBL::Attribute" );
+    if($slice) {
+        if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
+            $self->throw('slice argument must be a Bio::EnsEMBL::Slice');
+        }
+        $self->{'slice'} = $slice;
     }
-    push( @{$self->{'attributes'}}, $attrib );
-  }
-  return;
+    return $self->{'slice'};
+}
+
+sub author {
+    my ($self, $author) = @_;
+
+    if($author) {
+        if(!ref($author) || !$author->isa('Bio::Vega::Author')) {
+            $self->throw("Argument is not a Bio::Vega::Author");
+        }
+        $self->{'author'} = $author;
+    }
+    return $self->{'author'};
+}
+
+    # created_date is only set for contig_info objects that either come directly
+    # from the DB or have just been stored.
+    # Since the date is not a part of XML, the XML->Vega parser will leave the created_date unset.
+    #
+sub created_date  {
+    my $self = shift;
+
+    $self->{'created_date'} = shift if scalar(@_);
+
+    return $self->{'created_date'};
+}
+
+sub add_Attributes {
+    my ($self, $attribref) = @_;
+
+    $self->{'attributes'} ||= [];
+
+    foreach my $attrib ( @$attribref ) {
+        if(! $attrib->isa('Bio::EnsEMBL::Attribute')) {
+            $self->throw( "Argument to add_Attribute has to be an Bio::EnsEMBL::Attribute" );
+        }
+        push( @{$self->{'attributes'}}, $attrib );
+    }
 }
 
 sub vega_hashkey_sub {
-  my $self = shift;
-  my $attributes = $self->get_all_Attributes;
-  my $hashkey_sub={};
-  foreach my $a (@$attributes){
-	 $hashkey_sub->{$a->value}=1;
-  }
-  return $hashkey_sub;
+    my $self = shift;
+    my $attributes = $self->get_all_Attributes;
+    my $hashkey_sub={};
+    foreach my $a (@$attributes) {
+        $hashkey_sub->{$a->value}=1;
+    }
+    return $hashkey_sub;
 }
 
 sub vega_hashkey {
-  my $self = shift;
+    my $self = shift;
 
-  return scalar @{$self->get_all_Attributes};
+    return scalar @{$self->get_all_Attributes};
 }
 
 sub get_all_Attributes  {

@@ -5,129 +5,138 @@ use Bio::Vega::ContigInfo;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::Vega::Utils::Comparator qw(compare);
 
-use base qw ( Bio::EnsEMBL::DBSQL::BaseAdaptor);
+use base qw(Bio::EnsEMBL::DBSQL::BaseAdaptor);
 
-#sub fetch_by_dbID {
-#    my( $self, $id ) = @_;
 
-#    unless ($id) {
-#        throw("Id must be entered to fetch a ContigInfo object");
-#    }
-
-#    my $sth = $self->prepare(q{
-#        SELECT contig_info_id
-#          , seq_region_id
-#          , author_id
-#          , FROM_UNIXTIME(created_date)
-#        FROM contig_info
-#        WHERE contig_info_id = ?
-#        });
-#    $sth->execute($id);
-
-#    return $self->_obj_from_sth($sth);
-#}
-
+    # kept for compatibility:
 sub fetch_by_seq_region_id {
-    my( $self, $id ) = @_;
+    my ($self, $seq_region_id) = @_;
 
-    unless($id) {
-        throw("seq region id must be entered to fetch a ContigInfo object");
+    my $contigSlice=$self->db->get_SliceAdaptor->fetch_by_seq_region_id($seq_region_id);
+
+    return $self->fetch_by_contigSlice( $contigSlice );
+}
+
+sub fetch_by_contigSlice {
+    my ($self, $contigSlice) = @_;
+
+    unless($contigSlice->coord_system_name() ne 'contig') {
+        throw("the only argument has to be a contig slice");
     }
 
-    my $sth = $self->prepare(q{
-        SELECT contig_info_id
-          , seq_region_id
-          , author_id
-          , FROM_UNIXTIME(created_date)
-        FROM contig_info
-        WHERE seq_region_id = ?
-          AND is_current = 1
-        });
-    $sth->execute($id);
-return undef if($sth->rows() == 0);
-	 my ($contiginfo_id, $seq_region_id, $author_id) = $sth->fetchrow_array();
-	 $sth->finish();
-	 my $sa=$self->db->get_SliceAdaptor;
-	 my $slice=$sa->fetch_by_seq_region_id($seq_region_id);
-	 my $authad = $self->db->get_AuthorAdaptor; 
-	 my $author=$authad->fetch_by_dbID($author_id);
-	 my $aa=$self->db->get_AttributeAdaptor;
-	 my $ci= Bio::Vega::ContigInfo->new(-dbID=>$contiginfo_id,
-												  -SLICE=>$slice,
-												  -AUTHOR=>$author,
-												  );
-	 
-	 my $attributes=$aa->fetch_all_by_ContigInfo($ci);
-	 $ci->add_Attributes($attributes);
-	 return $ci;
+    my $seq_region_id = $contigSlice->get_seq_region_id();
 
+    my $sth = $self->prepare(q{
+        SELECT contig_info_id, author_id, created_date
+          FROM contig_info
+         WHERE seq_region_id = ?
+           AND is_current
+    });
+    $sth->execute($seq_region_id);
+    return unless $sth->rows();
+
+        # created_date is only set for contig_info objects that either come directly
+        # from the DB (this case) or have just been stored.
+        # Since the date is not a part of XML, the XML->Vega parser will leave the date unset.
+    my ($contiginfo_id, $author_id, $created_date) = $sth->fetchrow_array();
+
+    my $created_uniseconds = $self->db->dbc->from_date_to_seconds($created_date);
+    $sth->finish();
+    my $author=$self->db->get_AuthorAdaptor->fetch_by_dbID($author_id);
+    my $contig_info= Bio::Vega::ContigInfo->new(
+        -dbID           => $contiginfo_id,
+        -SLICE          => $contigSlice,
+        -AUTHOR         => $author,
+        -CREATED_DATE   => $created_uniseconds,
+    );
+	 
+    my $attributes = $self->db->get_AttributeAdaptor->fetch_all_by_ContigInfo($contig_info);
+    $contig_info->add_Attributes($attributes);
+
+    return $contig_info;
 }
 
 
-
-
 sub store {
-  my( $self,$contiginfo ) = @_;
-  unless ($contiginfo) {
-	 $self->throw("Must provide a ContigInfo object to the store method");
-  } elsif (! $contiginfo->isa("Bio::Vega::ContigInfo")) {
-	 $self->throw("Argument '$contiginfo' to the store method must be a ContigInfo object.");
-  }
-  my $slice = $contiginfo->slice
-	 || throw('Cannot store contig_info without attached slice');
-  my $sa=$self->db->get_SliceAdaptor();
-  my $seq_region_id = $sa->get_seq_region_id($slice);
-  # if any clone_info exists for the same seq_region_id then make them non-current
-  if (defined $seq_region_id) {
-	 my $db_contiginfo=$self->fetch_by_seq_region_id($seq_region_id);
+    my ($self, $contig_info, $time_uniseconds ) = @_;
 
-	 my $change=0;
-	 if (defined $db_contiginfo){
-		$change=compare($contiginfo,$db_contiginfo);
-		if ($change==1){
-		  my $sth=$self->prepare(q{UPDATE contig_info
-                               SET is_current = 0
-                               WHERE seq_region_id = ?
-                               });
-		  $sth->execute($seq_region_id);
-		}
-	 }
-	 if (!defined $db_contiginfo || $change==1) {
-		my $authad = $self->db->get_AuthorAdaptor;
-		eval{
-		$authad->store($contiginfo->author);
+    unless ($contig_info) {
+        $self->throw("Must provide a ContigInfo object to the store method");
+    } elsif (! $contig_info->isa("Bio::Vega::ContigInfo")) {
+        $self->throw("Argument '$contig_info' to the store method must be a ContigInfo object.");
+    }
+
+    my $contigSlice = $contig_info->slice
+        || throw('Cannot store contig_info without attached slice');
+
+        # longer but better way than the following 'shorthand':
+        #       my $seq_region_id = $contigSlice->get_seq_region_id();
+
+    my $seq_region_id = $self->db->get_SliceAdaptor->get_seq_region_id($contigSlice);
+
+    unless(defined $seq_region_id) {
+        throw ('no dbID for slice, cannot store contig_info\n');
+    }
+
+    my $db_contig_info = $self->fetch_by_contigSlice($contigSlice);
+    my $changed = not $db_contig_info;
+
+        # if any clone_info exists for the same slice then make it non-current:
+    if($db_contig_info) {
+        if( $changed = compare($contig_info, $db_contig_info) ) {
+            my $sth=$self->prepare(q{UPDATE contig_info
+                                        SET is_current = 0
+                                      WHERE seq_region_id = ?
+            });
+            $sth->execute($seq_region_id);
+        }
+    }
+
+    if($changed) {
+        eval{
+                # this will have a 'magic' side-effect
+                # of updating the author_id valid for THIS database
+                # (in case the contig_info comes from a different one)
+            $self->db->get_AuthorAdaptor->store($contig_info->author);
 		};
 		if ($@){
-		  throw "\nerror due to contig_info author".$contiginfo->author->name."author email".$contiginfo->author->email." slice name:".$contiginfo->slice->name."\nerror is:".$@;
+            throw "Error due to contig_info author: ".$contig_info->author->name
+                 ." author_email: ".$contig_info->author->email
+                 ." slice name: ".$contig_info->slice->name
+                 ."\nerror is: ".$@;
 		}
 		
-		# Store a new row in the contig_info table and get contig_info_id
+            # Store a new row in the contig_info table and get contig_info_id
 		my $sth = $self->prepare(q{
                                INSERT INTO contig_info(
                                seq_region_id
                                , author_id
                                , created_date
                                , is_current)
-                               VALUES (?,?,NOW(),1)
-                               });
-		my $author=$contiginfo->author;
-		my $author_id=$author->dbID;
-		$sth->execute(
-						  $seq_region_id,
-						  $author_id,
-						 );
+                               VALUES (?,?,?,1)
+        });
+
+        my $created_date = $contig_info->created_date || $time_uniseconds || time;
+		my $author_id    = $contig_info->author->dbID;
+		$sth->execute( $seq_region_id,
+                       $author_id,
+                       $self->db->dbc->from_seconds_to_date($created_date)
+        );
+
+
 		my $contig_info_id = $sth->{'mysql_insertid'} or $self->throw("No insert id");
-		$contiginfo->dbID($contig_info_id);
-		my $aa=$self->db->get_AttributeAdaptor;
-		$aa->store_on_ContigInfo($contiginfo,$contiginfo->get_all_Attributes);
-	 }
-  }
-  else {
-	 throw ('no dbID for slice, cannot store contig info\n');
-	 }
+		$contig_info->dbID($contig_info_id);
 
+            # created_date is only set for contig_info objects that either come directly
+            # from the DB or have just been stored (this case).
+            # Since the date is not a part of XML, the XML->Vega parser will leave the date unset.
+        $contig_info->created_date( $created_date );
+
+		$self->db->get_AttributeAdaptor->store_on_ContigInfo($contig_info,$contig_info->get_all_Attributes);
+    }
+
+    return $changed;
 }
-
 
 1;
 
@@ -138,10 +147,4 @@ __END__
 =head1 AUTHOR
 
 Sindhu K. Pillai B<email> sp1@sanger.ac.uk
-
-	
-
-
-
-
 

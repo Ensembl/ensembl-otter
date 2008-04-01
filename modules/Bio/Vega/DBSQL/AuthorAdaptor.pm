@@ -178,8 +178,7 @@ sub store {
     my $group_id;
     if (my $group = $author->group) {
         unless ($group->dbID) {
-	       my $ga = $self->db->get_AuthorGroupAdaptor;
-           $ga->store($group);
+            $self->db->get_AuthorGroupAdaptor->store($group);
         }
         $group_id = $group->dbID;
     }

@@ -671,6 +671,10 @@ sub make_ContigInfo{
 	 $ctg_author->email($author->email);
 	 warn "contig author not set and setting author to client author\n";
   }
+
+        # created_date is only set for contig_info objects that either come directly
+        # from the DB or have just been stored.
+        # Since the date is not a part of XML, the XML->Vega parser will leave the created_date unset.
   my $ctg_info = Bio::Vega::ContigInfo->new (
 	  -slice => $ctg_slice,
 	  -author => $ctg_author,
