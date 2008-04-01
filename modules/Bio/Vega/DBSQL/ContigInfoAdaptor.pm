@@ -27,7 +27,7 @@ sub fetch_by_contigSlice {
     my $seq_region_id = $contigSlice->get_seq_region_id();
 
     my $sth = $self->prepare(q{
-        SELECT contig_info_id, author_id, created_date
+        SELECT contig_info_id, author_id, }.$self->db->dbc->from_date_to_seconds('created_date').q{
           FROM contig_info
          WHERE seq_region_id = ?
            AND is_current
@@ -38,9 +38,8 @@ sub fetch_by_contigSlice {
         # created_date is only set for contig_info objects that either come directly
         # from the DB (this case) or have just been stored.
         # Since the date is not a part of XML, the XML->Vega parser will leave the date unset.
-    my ($contiginfo_id, $author_id, $created_date) = $sth->fetchrow_array();
+    my ($contiginfo_id, $author_id, $created_uniseconds) = $sth->fetchrow_array();
 
-    my $created_uniseconds = $self->db->dbc->from_date_to_seconds($created_date);
     $sth->finish();
     my $author=$self->db->get_AuthorAdaptor->fetch_by_dbID($author_id);
     my $contig_info= Bio::Vega::ContigInfo->new(
