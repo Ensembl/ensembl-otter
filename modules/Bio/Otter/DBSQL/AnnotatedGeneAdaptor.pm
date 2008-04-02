@@ -56,8 +56,8 @@ sub fetch_by_stable_id{
         SELECT gsi1.gene_id
         FROM gene_stable_id gsi1
         LEFT JOIN gene_stable_id gsi2
-          ON gsi1.stable_id = gsi2.stable_id
-          AND gsi1.version < gsi2.version
+          ON (gsi1.stable_id = gsi2.stable_id
+              AND gsi1.version < gsi2.version)
         WHERE gsi2.stable_id IS NULL
           AND gsi1.stable_id = ?
         });

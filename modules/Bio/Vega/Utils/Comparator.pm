@@ -10,15 +10,20 @@ our @EXPORT_OK = qw{ compare };
 use Bio::EnsEMBL::Utils::Exception qw(throw);
 
 sub compare{
-    my ($obj1,$obj2) = @_;
+    my ($obj1, $obj2) = @_;
 
-      ## sanity checks:
-    if(!$obj1) {
+    ## sanity checks:
+    if (!$obj1) {
         throw("compare(): Cannot compare NULL to ".$obj2->stable_id." (key=".$obj2->vega_hashkey.")");
-    } elsif(!$obj2) {
+    }
+    elsif (!$obj2) {
         throw("compare(): Cannot compare ".$obj1->stable_id." (key=".$obj1->vega_hashkey.") to NULL");
-    } elsif(ref($obj1) ne ref($obj2)) {
+    }
+    elsif (ref($obj1) ne ref($obj2)) {
         throw("Cannot compare $obj1 to $obj2. Objects have to belong to the same class.");
+    }
+    elsif ($obj1 == $obj2) {
+        throw("Comparing object to itself. Cached object in DBAdaptor?");
     }
 
     if(!$obj1->can('vega_hashkey')) {

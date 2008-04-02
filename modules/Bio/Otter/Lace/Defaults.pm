@@ -23,12 +23,14 @@ my %OPTIONS_TO_TIE  = (
 
 my $HARDWIRED = {};
 tie %$HARDWIRED, 'Config::IniFiles', (-file => \*DATA, %OPTIONS_TO_TIE);
-# Make these accessible without call to do_getopt()
 push(@$CONFIG_INIFILES, $HARDWIRED); 
 
 # The tied hash for the GetOptions variables
-my $DEFAULTS = {};
-tie %$DEFAULTS, 'Config::IniFiles', %OPTIONS_TO_TIE;
+my $GETOPT = {};
+tie %$GETOPT, 'Config::IniFiles', (%OPTIONS_TO_TIE);
+
+my ($THIS_USER, $HOME_DIR) = (getpwuid($<))[0,7];    
+my $CALLED = "$0 @ARGV";
 
 our $GETOPT_ERRSTR  = undef;
 my @CLIENT_OPTIONS = qw(
@@ -46,13 +48,13 @@ my @CLIENT_OPTIONS = qw(
     );
 
 # @CLIENT_OPTIONS is Getopt::GetOptions() keys which will be included in the 
-# $DEFAULTS->{$CLIENT_STANZA} hash.  To add another client option just include in above
+# $GETOPT->{$CLIENT_STANZA} hash.  To add another client option just include in above
 # and if necessary add to hardwired defaults in do_getopt().
 
     # not a method
 sub save_option {
     my ($option, $value) = @_;
-    $DEFAULTS->{$CLIENT_STANZA}->{$option} = $value;
+    $GETOPT->{$CLIENT_STANZA}->{$option} = $value;
 }
 
     # not a method
@@ -63,13 +65,10 @@ sub save_deep_option {
     my $param = pop @$option;
     return unless @$option;
     my $opt_str = join('.', @$option);
-    $DEFAULTS->{$opt_str} ||= {};
-    $DEFAULTS->{$opt_str}->{$param} = $value;
+    $GETOPT->{$opt_str} ||= {};
+    $GETOPT->{$opt_str}->{$param} = $value;
 }
 
-
-my ($THIS_USER, $HOME_DIR) = (getpwuid($<))[0,7];    
-my $CALLED = "$0 @ARGV";
 
 
 ################################################
@@ -98,23 +97,18 @@ Suggested usage:
 
 =cut
 
+my $DONE_GETOPT = 0;
 sub do_getopt {
     my (@script_args) = @_;
+
+    confess "do_getopt already called" if $DONE_GETOPT;
+    $DONE_GETOPT = 1;
 
     ## If you have any 'local defaults' that you want to take precedence
     #  over the configuration files' settings, unshift them into @ARGV
     #  before running do_getopt()
 
-    $CONFIG_INIFILES = [];    # clear and add in case of multiple calls
-    push(@$CONFIG_INIFILES, $HARDWIRED);
-
-    my @conf_files = list_config_files();
-    my $file_options = [];
-    foreach my $file (@conf_files) {
-        if (my $file_opts = options_from_file($file)) {
-            push(@$CONFIG_INIFILES, $file_opts);
-        }
-    }
+    push(@$CONFIG_INIFILES, parse_available_config_files());
     ############################################################################
     ############################################################################
     my $start = "Called as:\n\t$CALLED\nGetOptions() Error parsing options:";
@@ -130,8 +124,8 @@ sub do_getopt {
         'cfgstr=s' => \&save_deep_option,
 
         # this is just a synonym feel free to add more
-        'view' => sub { $DEFAULTS->{$CLIENT_STANZA}->{'write_access'} = 0 },
-        'local_fasta=s' => sub { $DEFAULTS->{'local_blast'}->{'database'} = $_[1] },
+        'view' => sub { $GETOPT->{$CLIENT_STANZA}{'write_access'} = 0 },
+        'local_fasta=s' => sub { $GETOPT->{'local_blast'}{'database'} = pop },
         'noblast' => sub {
             map { $_->{'local_blast'} = {} if exists $_->{'local_blast'} }
               @$CONFIG_INIFILES;
@@ -139,8 +133,7 @@ sub do_getopt {
 
         # this allows multiple extra config file to be used
         'cfgfile=s' => sub {
-            my $opts = options_from_file($_[1]);
-            push(@$CONFIG_INIFILES, $opts) if $opts;
+            push(@$CONFIG_INIFILES, options_from_file(pop));
         },
         'log-file=s' => sub { die "log-file option is obsolete - use logdir" },
 
@@ -153,11 +146,25 @@ sub do_getopt {
     ############################################################################
     ############################################################################
 
-    push(@$CONFIG_INIFILES, $DEFAULTS);
+    push(@$CONFIG_INIFILES, $GETOPT);
 
     # now safe to call any subs which are required to setup stuff
 
     return 1;
+}
+
+sub save_server_otter_config {
+    my ($config) = @_;
+    
+    my $server_otter_config = "$HOME_DIR/.otter/server_otter_config";
+    open my $SRV_CFG, "> $server_otter_config"
+      or die "Can't write to '$server_otter_config'; $!";
+    print $SRV_CFG $config;
+    close $SRV_CFG or die "Error writing to '$server_otter_config'; $!";
+    my $ini = options_from_file($server_otter_config);
+    
+    # Server config file should be second in list, just after HARDWIRED
+    splice(@$CONFIG_INIFILES, 1, 0, $ini);
 }
 
 sub show_help {
@@ -216,37 +223,21 @@ sub option_from_array{
     return $value;
 }
 
-sub list_config_files{
-    #   ~/.otter_config
-    #   $ENV{'OTTER_HOME'}/otter_config
-    #   /etc/otter_config
-    my @conf_files = ();
-    push(@conf_files, "/etc/otter_config") if -e "/etc/otter_config";
-
+sub parse_available_config_files {
+    my @conf_files = ("/etc/otter_config");
     if ($ENV{'OTTER_HOME'}) {
-        # Only add if OTTER_HOME environment variable is set
-        push(@conf_files, "$ENV{'OTTER_HOME'}/otter_config");
+        push(@conf_files, "$ENV{OTTER_HOME}/otter_config");
     }
     push(@conf_files, "$HOME_DIR/.otter_config");
-    return @conf_files;
-}
 
-sub save_all_config_files{
-    eval{
-        foreach my $config(@$CONFIG_INIFILES){
-            my $obj = tied(%$config);
-            next unless $obj;
-            my $filename = $obj->GetFileName();
-            warn "Saving '$filename' \n";
-            next unless -w $filename;
-            warn "       '$filename' is writeable\n";
-            $obj->WriteConfig($filename) or die "Error Writing '$filename'";
-            warn "Wrote '$filename'\n";
+    my @ini;
+    foreach my $file (@conf_files) {
+        next unless -e $file;
+        if (my $file_opts = options_from_file($file)) {
+            push(@ini, $file_opts);
         }
-    };
-    if($@){
-        warn "Failed Saving Config:\n$@";
     }
+    return @ini;
 }
 
 
@@ -286,35 +277,6 @@ sub pipe_name {
 }
 
 
-sub get_config_list{
-    return $CONFIG_INIFILES;
-}
-
-sub get_dot_otter_config{
-    my $configs = get_config_list();
-    my $dot_otter_config;
-    my $location   = "$HOME_DIR/.otter_config";
-    foreach my $c(@{$configs}){
-        my $obj = tied(%$c);
-        next unless $obj;
-        my $obj_file = $obj->GetFileName;
-        $dot_otter_config = $c if $obj_file && $obj_file eq $location;
-        last if $dot_otter_config;
-    }
-    unless($dot_otter_config){
-        open(my $fh, ">>$location") || die "ERROR $!";
-        print $fh "[client]\n";
-        close $fh;
-        $dot_otter_config = options_from_file($location);
-    }
-    return $dot_otter_config;
-}
-
-sub cmd_line{
-    return $CALLED;
-}
-
-
 ################################################
 #
 ## INTERNAL METHODS - NOT MADE FOR YOU
@@ -322,9 +284,11 @@ sub cmd_line{
 ################################################
 # options_from_file
 
-sub options_from_file{
-    my ($file, $previous) = @_;
+sub options_from_file {
+    my ($file) = @_;
+    
     return unless -e $file;
+
     my $ini;
     print STDERR "Trying $file\n" if $DEBUG_CONFIG;
     tie %$ini, 'Config::IniFiles', ( -file => $file, %OPTIONS_TO_TIE)
@@ -335,7 +299,7 @@ sub options_from_file{
 sub __internal_option_from_array {
     my ($inifiles, $array) = @_;
 
-    return unless tied(%$inifiles);
+    #return unless tied(%$inifiles);    ### Why would this ever not be tied?
     
     if ($DEBUG_CONFIG) {
         my $filename = tied(%$inifiles)->GetFileName() || 'no filename';
@@ -362,11 +326,11 @@ sub __internal_option_from_array {
     };
 
     # get the explicit call for a parameter client host
-    if (exists $inifiles->{$section} && exists $inifiles->{$section}->{$param})
+    if (exists $inifiles->{$section}{$param})
     {
 
         #print STDERR "1\n";
-        $value = $inifiles->{$section}->{$param};
+        $value = $inifiles->{$section}{$param};
         $found = 1;
 
         # get the hash for a block [default.use_filters]
@@ -505,12 +469,13 @@ James Gilbert B<email> jgrg@sanger.ac.uk
 
 
 __DATA__
-##########
-## This is where the HARDWIRED ABSOLUTE DEFAULTS are stored
+
+# This is where the HARDWIRED ABSOLUTE DEFAULTS are stored
+
 [client]
 host=www.sanger.ac.uk
 port=80
-version=48
+version=49
 write_access=0
 debug=0
 pipeline=1 

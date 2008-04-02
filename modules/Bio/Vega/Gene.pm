@@ -45,21 +45,22 @@ sub all_Attributes_string {
 }
 
 sub vega_hashkey {
-  my $self=shift;
+    my $self=shift;
 
-  my $seq_region_name   = $self->seq_region_name    || throw(  'seq_region_name must be set to generate vega_hashkey');
-  my $start             = $self->seq_region_start   || throw( 'seq_region_start must be set to generate vega_hashkey');
-  my $end               = $self->seq_region_end     || throw(   'seq_region_end must be set to generate vega_hashkey');
-  my $strand            = $self->seq_region_strand  || throw('seq_region_strand must be set to generate vega_hashkey');
-  my $biotype           = $self->biotype            || throw(          'biotype must be set to generate vega_hashkey');
-  my $status            = $self->status             || throw(           'status must be set to generate vega_hashkey');
-  my $source            = $self->source             || throw(           'source must be set to generate vega_hashkey');
-  my $tran_count = scalar @{$self->get_all_Transcripts}
-    || throw("there are no transcripts for this gene to generate correct vega_hashkey");;
-  my $description = $self->description || '';
-  my $attrib_string = $self->all_Attributes_string;
+    my $seq_region_name   = $self->seq_region_name    || throw(  'seq_region_name must be set to generate vega_hashkey');
+    my $start             = $self->seq_region_start   || throw( 'seq_region_start must be set to generate vega_hashkey');
+    my $end               = $self->seq_region_end     || throw(   'seq_region_end must be set to generate vega_hashkey');
+    my $strand            = $self->seq_region_strand  || throw('seq_region_strand must be set to generate vega_hashkey');
+    my $biotype           = $self->biotype            || throw(          'biotype must be set to generate vega_hashkey');
+    my $status            = $self->status             || throw(           'status must be set to generate vega_hashkey');
+    my $source            = $self->source             || throw(           'source must be set to generate vega_hashkey');
+    my $tran_count = scalar @{$self->get_all_Transcripts}
+        || throw("there are no transcripts for this gene to generate correct vega_hashkey");
 
-  return "$seq_region_name-$start-$end-$strand-$biotype-$status-$source-$description-$tran_count-$attrib_string";
+    my $description = $self->description || '';
+    my $attrib_string = $self->all_Attributes_string;
+
+    return "$seq_region_name-$start-$end-$strand-$biotype-$status-$source-$description-$tran_count-$attrib_string";
 }
 
 sub vega_hashkey_structure {

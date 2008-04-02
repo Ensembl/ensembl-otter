@@ -1,10 +1,10 @@
-#!/usr/bin/env perl -w
+#!/usr/local/bin/perl -Tw
 
 ### nph-get_otter_config
 
 use strict;
 
-use SangerPaths qw{ core bioperl123 ensembl46 otter48 };
+use SangerPaths qw{ core bioperl123 ensembl48 otter49 };
 
 use Bio::Otter::ServerScriptSupport;
 

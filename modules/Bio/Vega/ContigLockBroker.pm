@@ -85,6 +85,12 @@ sub check_no_locks_exist_by_slice {
   return 1;
 }
 
+sub lock_by_object {
+    my ($self, $obj, $author) = @_;
+    
+    return $self->lock_clones_by_slice($obj->feature_Slice, $author, $obj->adaptor->db);
+}
+
 ##ported && tested
 sub lock_clones_by_slice {
   my ($self,$slice,$author,$db) = @_;
@@ -146,6 +152,12 @@ sub lock_clones_by_slice {
         }
         throw($lock_error_str);
     }
+}
+
+sub remove_by_object {
+    my ($self, $obj, $author) = @_;
+    
+    return $self->remove_by_slice($obj->feature_Slice, $author, $obj->adaptor->db);
 }
 
 ##ported

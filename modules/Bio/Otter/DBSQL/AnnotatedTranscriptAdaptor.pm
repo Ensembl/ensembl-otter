@@ -51,9 +51,9 @@ sub fetch_by_stable_id{
              SELECT tsi1.transcript_id
                FROM transcript_stable_id tsi1 LEFT JOIN transcript_stable_id tsi2 
                  ON tsi1.stable_id = tsi2.stable_id 
-                 && tsi1.version < tsi2.version
+                 AND tsi1.version < tsi2.version
               WHERE tsi2.stable_id IS NULL
-                 && tsi1.stable_id = ?`
+                 AND tsi1.stable_id = ?`
                             );
    $sth->execute( $id );
 
@@ -141,26 +141,27 @@ sub annotate_transcript {
 =cut
 
 sub fetch_by_translation_stable_id{
-      my ($self, $transl_stable_id) = @_;
+    my ($self, $transl_stable_id) = @_;
 
-      my $sth = $self->prepare(q`
-                   SELECT t.transcript_id
-                     FROM transcript t,
-                          translation_stable_id tsi1 LEFT JOIN translation_stable_id tsi2 
-                       ON tsi1.stable_id = tsi2.stable_id 
-                       && tsi1.version < tsi2.version
-                    WHERE tsi2.stable_id IS NULL
-                       && t.translation_id = tsi1.translation_id
-                       && tsi1.stable_id = ?
-                          `);
-      $sth->execute($transl_stable_id);
+    my $sth = $self->prepare(q{
+        SELECT t.transcript_id
+        FROM (transcript t
+              , translation_stable_id tsi1)
+        LEFT JOIN translation_stable_id tsi2
+          ON (tsi1.stable_id = tsi2.stable_id
+              AND tsi1.version < tsi2.version)
+        WHERE tsi2.stable_id IS NULL
+          AND t.translation_id = tsi1.translation_id
+          AND tsi1.stable_id = ?
+        });
+    $sth->execute($transl_stable_id);
 
-      my ($id) = $sth->fetchrow_array;
-      if ($id){
-          return $self->fetch_by_dbID($id);
-      } else {
-          return undef;
-      }
+    my ($id) = $sth->fetchrow_array;
+    if ($id) {
+        return $self->fetch_by_dbID($id);
+    } else {
+        return undef;
+    }
 }
 
 
