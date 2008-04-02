@@ -756,8 +756,9 @@ sub zMapTagValues {
             $handled = "true";
         } else {
             foreach my $name($self->list_all_SubSeq_names()){
-                my $subseq = $self->get_SubSeq($name);
-                push(@$subseq_list, $subseq);
+                if (my $subseq = $self->get_SubSeq($name)) {
+                    push(@$subseq_list, $subseq);
+                }
             }
             my $used_subseq_names = [];
             foreach my $subseq(@$subseq_list){
