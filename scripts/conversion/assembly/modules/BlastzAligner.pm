@@ -502,9 +502,16 @@ sub filter_overlaps {
                 }
             }
         }
-        
-        my @e_sort = sort { $a->[0] <=> $b->[0] } @{ $coord_check };
-        my @v_sort = sort { $a->[2] <=> $b->[2] } @{ $coord_check };
+
+        my @e_sort;
+        my @v_sort;
+		if ($coord_check) {
+			@e_sort = sort { $a->[0] <=> $b->[0] } @{ $coord_check };
+			@v_sort = sort { $a->[2] <=> $b->[2] } @{ $coord_check };
+		}
+		else {
+			$self->log_warning("No overlaps sorted\n");
+		}
 
         # sanity check: Ensembl alignments must not overlap (axtBest should
         # guarantee that)
