@@ -5,13 +5,6 @@ package Bio::Otter::Lace::DataSet;
 
 use strict;
 use Carp;
-use Bio::Otter::Lace::CloneSequence;
-#use Bio::Otter::CloneLock;
-use Bio::Otter::Author;
-use Bio::Otter::Lace::SequenceSet;
-use Bio::Otter::Lace::SequenceNote;
-use Bio::Otter::Lace::PipelineDB;
-use Bio::Otter::Lace::SatelliteDB;
 use Bio::Otter::Lace::Defaults;
 use Scalar::Util 'weaken';
 

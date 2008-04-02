@@ -168,9 +168,18 @@ sub init_AceDatabase {
     $self->initialize_database;
 
     my $restart = 0;
-    $restart = 1 if $self->write_local_exonerate();
-    $restart = 1 if $self->write_local_blast();
-	if ($restart) {
+    eval {
+        if ($self->write_local_exonerate) {
+            $restart = 1;
+        }
+        elsif ($self->write_local_blast) {
+            $restart = 1;
+        }
+    };
+    if ($@) {
+        warn $@;
+    }
+	elsif ($restart) {
         # Must parse in new acefile
         $self->initialize_database;
 

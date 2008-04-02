@@ -107,8 +107,10 @@ sub fetch_current_by_name {
 
 	my @obj = $self->_generic_sql_fetch(qq{
         LEFT JOIN current_gene_info cgi
-               ON gs.gene_info_id=cgi.gene_info_id
-            WHERE name = \'$name\' AND gene_stable_id IS NOT NULL });
+          ON gs.gene_info_id = cgi.gene_info_id
+        WHERE name = '$name'
+          AND gene_stable_id IS NOT NULL
+        });
 
 	return \@obj;
 }

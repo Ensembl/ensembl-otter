@@ -1,6 +1,6 @@
 #!/bin/sh
 
-key="pipeline_db"
+key="pipeline_db_head"
 species_list=" 
   cat
   chicken
@@ -20,8 +20,8 @@ do
     ./save_satellite_db \
 -dataset $species \
 -key $key \
--sathost otterslave \
+-sathost otterpipe1 \
 -satuser ottro \
--satport 3312 \
--satdbname ${species}_finished
+-satport 3302 \
+-satdbname pipe_$species
 done

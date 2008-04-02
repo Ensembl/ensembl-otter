@@ -52,6 +52,7 @@ use POSIX ":sys_wait_h";
         };
 
     $cl->password_prompt($prompt_sub);
+    $cl->get_server_otter_config;
     $dc->draw;
 
 

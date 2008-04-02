@@ -112,7 +112,7 @@ sub fetch_current_by_name {
 
     return $self->_generic_sql_fetch(q{
        LEFT JOIN current_gene_info cgi
-              ON gn.gene_info_id=cgi.gene_info_id
+              ON gn.gene_info_id = cgi.gene_info_id
            WHERE name = ? AND gene_stable_id IS NOT NULL }, [$name]);
 }
 

@@ -840,25 +840,39 @@ sub get_xml_region {
 }
 
 sub get_all_DataSets {
-  my( $self ) = @_;
-  my $ds = $self->{'_datasets'};
-  if (! $ds) {
+    my( $self ) = @_;
+
+    my $ds = $self->{'_datasets'};
+    if (! $ds) {
+      
+        my $content = $self->http_response_content(
+            'GET',
+            'get_datasets',
+            {},
+        );
+
+        # stream parsing expat non-validating parser
+        my $dsp = Bio::Otter::Transform::DataSets->new();
+        my $p = $dsp->my_parser();
+        $p->parse($content);
+        $ds = $self->{'_datasets'} = $dsp->sorted_objects;
+        foreach my $dataset (@$ds) {
+            $dataset->Client($self);
+        }
+    }
+    return @$ds;
+}
+
+sub get_server_otter_config {
+    my ($self) = @_;
+    
     my $content = $self->http_response_content(
         'GET',
-        'get_datasets',
+        'get_otter_config',
         {},
     );
-        
-    # stream parsing expat non-validating parser
-    my $dsp = Bio::Otter::Transform::DataSets->new();
-    my $p = $dsp->my_parser();
-    $p->parse($content);
-    $ds = $self->{'_datasets'} = $dsp->sorted_objects;
-    foreach my $dataset (@$ds) {
-        $dataset->Client($self);
-    }
-  }
-  return @$ds;
+    
+    Bio::Otter::Lace::Defaults::save_server_otter_config($content);
 }
 
 sub get_all_SequenceSets_for_DataSet {
