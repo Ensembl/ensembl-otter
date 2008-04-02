@@ -112,14 +112,14 @@ sub store {
                                , author_id
                                , created_date
                                , is_current)
-                               VALUES (?,?,?,1)
+                               VALUES (?,?,FROM_UNIXTIME(?),1)
         });
 
         my $created_date = $contig_info->created_date || $time_uniseconds || time;
 		my $author_id    = $contig_info->author->dbID;
 		$sth->execute( $seq_region_id,
                        $author_id,
-                       $self->db->dbc->from_seconds_to_date($created_date)
+                       $created_date,
         );
 
 
