@@ -97,6 +97,17 @@ sub version {
   return $self->{'version'};
 }
 
+sub created_date {
+  my $self = shift;
+  $self->{'created_date'} = shift if(@_);
+  return $self->{'created_date'};
+}
+
+sub modified_date {
+  my $self = shift;
+  $self->{'modified_date'} = shift if(@_);
+  return $self->{'modified_date'};
+}
 sub start {
   my $self = shift;
   $self->{'start'} = shift if(@_);

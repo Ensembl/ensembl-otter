@@ -220,6 +220,7 @@ if ($support->param('prune') && $support->user_proceed("Do you want to delete al
     $E_dbh->do(qq(DELETE FROM object_xref));
     $E_dbh->do(qq(DELETE FROM protein_align_feature));
     $E_dbh->do(qq(DELETE FROM protein_feature));
+    $E_dbh->do(qq(DELETE FROM transcript_supporting_feature));
     $E_dbh->do(qq(DELETE FROM supporting_feature));
     $E_dbh->do(qq(DELETE FROM transcript));
     $E_dbh->do(qq(DELETE FROM transcript_stable_id));
@@ -275,13 +276,13 @@ foreach my $V_chr ($support->sort_chromosomes($V_chrlength)) {
         $support->log("Gene $gsi/$name (logic_name $ln)\n", 2);
 
         # is this gene annotated by 'Sick_kids' ? If so, we don't want it
-        my @gene_attribs= @{$gene->get_all_Attributes('author')};
-        foreach my $attrib(@gene_attribs){
-            if($attrib->value eq 'Sick_Kids'){
-                $support->log("skipping gene $gsi as it has a Sick_Kids attribute\n");
-                next GENE;
-            }
-        }
+ #       my @gene_attribs= @{$gene->get_all_Attributes('author')};
+ #       foreach my $attrib(@gene_attribs){
+ #           if($attrib->value eq 'Sick_Kids'){
+ #               $support->log("skipping gene $gsi as it has a Sick_Kids attribute\n");
+ #               next GENE;
+ #           }
+ #       }
 
         my $transcripts = $gene->get_all_Transcripts;
         my (@finished, %all_protein_features);
@@ -299,6 +300,8 @@ foreach my $V_chr ($support->sort_chromosomes($V_chrlength)) {
                 if ($tr->translation && $transcript->translation) {
                     $tr->translation->stable_id($transcript->translation->stable_id);
                     $tr->translation->version($transcript->translation->version);
+					$tr->translation->created_date($transcript->translation->created_date);
+					$tr->translation->modified_date($transcript->translation->modified_date);
                 }
             }
 
@@ -417,6 +420,8 @@ sub transfer_transcript {
         my $E_exon = InterimExon->new;
         $E_exon->stable_id($V_exon->stable_id);
         $E_exon->version($V_exon->version);
+		$E_exon->created_date($V_exon->created_date);
+        $E_exon->modified_date($V_exon->modified_date);
         $E_exon->cdna_start($cdna_exon_start);
         $E_exon->start_phase($V_exon->phase);
         $E_exon->end_phase($V_exon->end_phase);
