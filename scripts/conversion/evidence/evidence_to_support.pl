@@ -56,10 +56,22 @@ Pseudocode:
 
 There are occasions where no match for annotated evidence can be found.
 Possible reasons for this are: spelling mistake by annotator; feature not found
-by protein pipeline run (e.g. removed from external database, renamed); small 
+by protein pipeline run (e.g. removed from external database, renamed); small
 features found by Dotter and not by Blixem. The genes and transcripts without any
 evidence are reported by source (GC, havana etc), as are the evidence table entries
-that do not link to the align_feature tables (if check_evidence_table = 1)
+that do not link to the align_feature tables (if check_evidence_table option = 1).
+Log output when verbose is indeed very long (for example reports stable IDs of all
+external genes without evidence and all evidence table entries that don't match to
+align_feature tables)
+
+- genes without any evidence at all:
+   $ grep 'No supporting feature' evidence_to_support.log
+
+- transcripts with no evidence:
+   $ grep 'No evidence for' evidence_to_support.log
+
+- evidence table entries not matched in align_feature tables:
+   $ grep 'accessions match' evidence_to_support.log
 
 There is no prune option - changes can be easily undone by deleting entries from
 transcript_supporting_feature and supporting_feature
@@ -352,11 +364,11 @@ foreach my $source (keys %{$stats}) {
 		my $tot_genes  = $stats->{$source}{'genes'};
 		my $perc_genes = $g_no_support / $tot_genes * 100;
         $support->log("$source: No supporting_features for any transcripts on $g_no_support out of $tot_genes ($perc_genes %) genes.\n", 1);
-		$support->log("Genes without supporting_features:\n", 1);
+		$support->log_verbose("Genes without supporting_features:\n", 1);
 		foreach my $g (@{$genes_without_support{$source}}) {
 			#does this one have any evidence at all ?
 			my $extra = (grep {$g eq $_} @{$genes_without_evidence{$source}} ) ? ' (no evidence at all)' : '';
-            $support->log("$g$extra\n", 2);
+            $support->log_verbose("$g$extra\n", 2);
         }
 	}
 	#summarise transcripts with no supporting_features and evidence
@@ -364,11 +376,11 @@ foreach my $source (keys %{$stats}) {
 		my $tot_transcripts = $stats->{$source}{'transcripts'};
 		my $perc_transcripts = $t_no_support / $tot_transcripts * 100;
         $support->log("$source: No evidence for $t_no_support out of $tot_transcripts ($perc_transcripts) transcripts.\n", 1);
-        $support->log("Transcripts without supporting features:\n", 1);
+        $support->log_verbose("Transcripts without supporting features:\n", 1);
         foreach my $t (@{$transcripts_without_support{$source}}) {
 			#does this one have any evidence at all ?
 			my $extra = (grep {$t eq $_ } @{$transcripts_without_evidence{$source}}) ? ' (no evidence at all)' : '';
-            $support->log("$t$extra\n", 2);
+            $support->log_verbose("$t$extra\n", 2);
         }
 	}
 }
@@ -400,7 +412,7 @@ if ($support->param('check_evidence_table')) {
 				else {
 					$c++;
 					$no_match++;
-					$support->log("$c. $acc:$acc_ver ($tsi)\n",2);
+					$support->log_verbose("$c. $acc:$acc_ver ($tsi)\n",2);
 				}
 			}
 			$support->log("$source $type: $match accessions match, $no_match accessions do not match to align_features\n",1);
