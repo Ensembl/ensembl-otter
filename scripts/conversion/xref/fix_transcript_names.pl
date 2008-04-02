@@ -9,6 +9,7 @@ fix_transcript_names.pl - update transcript names gene based names
 fix_transcript_names.pl [options]
 
 General options:
+
     --conffile, --conf=FILE             read parameters from FILE
                                         (default: conf/Conversion.ini)
     --dbname, db_name=NAME              use database NAME
@@ -147,7 +148,7 @@ if ($support->param('prune')
 	}
 }
 
-my ($c1,$c2,$c3,$c4) = (0,0,0,0);
+my ($c1,$c2,$c3) = (0,0,0);
 foreach my $chr ($support->sort_chromosomes) {
 	$support->log_stamped("\n\nLooping over chromosome $chr\n");
 	my $chrom = $sa->fetch_by_region('toplevel', $chr);
@@ -158,56 +159,56 @@ foreach my $chr ($support->sort_chromosomes) {
 		my %seen_names;
 		my %transcripts;
 		my $g_name = $gene->get_all_Attributes('name')->[0]->value;
-		my $ln = $gene->analysis->logic_name;
+		my $source = $gene->source;
+
 		$support->log("\n$g_name ($gsi)\n");
 
 		#check for identical names in loutre
 		foreach my $trans (@{$gene->get_all_Transcripts()}) {
 			my $t_name = $trans->get_all_Attributes('name')->[0]->value;
 
-			#remove Leo's extensions and if there are duplicated names then skip this gene
+			#remove unexpected extensions but report them for fixing
 			my $base_name = $t_name;
-			if ( ($base_name =~ s/(-\d{1,2})$//)
-			  || ($base_name =~ s/(__\d{1,2})$//)
-			  || ($base_name =~ s/(__\d{1,2})$//) ) {
-				$support->log_warning("**I thought transcript names like $t_name aren't used any more (RT#54477) ?\n");
+			if ( ($base_name =~ s/-\d{1,2}$//)
+			  || ($base_name =~ s/__\d{1,2}$//)
+			  || ($base_name =~ s/__\d{1,2}$//) 
+			  || ($base_name =~ s/_\d$//)) {
+				$support->log_warning("transcript names like $t_name aren't used any more - skipping\n");
 			}
-			#remove the current extensions
-			$base_name =~ s/(_\d)$//;
-
-			if (exists $seen_names{$base_name}) {	
-				if ($ln eq 'otter') {
-					$support->log_warning("IDENTICAL: Havana gene $gsi ($g_name) has transcripts with identical base loutre names ($base_name), please fix\n");
+			
+			#warn only Havana genes with duplicated names unless we're verbose
+			if (exists $seen_names{$base_name}) {
+				if ( $support->param('dbname') =~ /sapiens/) {
+					if ( $source =~ /GD|havana/) {
+						$support->log_warning("IDENTICAL: $source gene $gsi ($g_name) has transcripts with identical base loutre names ($base_name), please fix\n");
+					}
+					elsif ($support->param('verbose')) {
+						$support->log_warning("IDENTICAL: $source gene $gsi ($g_name) has transcripts with identical base loutre names ($base_name), please fix\n");
+					}	
 				}
-				elsif ($support->log_verbose) {
-					$support->log("IDENTICAL: $ln gene $gsi ($g_name) has transcripts with identical loutre names ($t_name)\n");
+				else {
+					$support->log_warning("IDENTICAL: $source gene $gsi ($g_name) has transcripts with identical base loutre names ($base_name), please fix\n");
 				}
-				next GENE;
 			}
+		
 			else {
 				$seen_names{$base_name}++;
-				$transcripts{$t_name} = $trans;
+				$transcripts{$t_name} = [$trans,$base_name];
 			}
 		}
 		
 		#patch names
 	TRANS:
 		foreach my $t_name (keys %transcripts) {
-			my $trans = $transcripts{$t_name};
+			my $trans = $transcripts{$t_name}->[0];
+			my $base_name = $transcripts{$t_name}->[1];
 			my $tsi    =  $trans->stable_id;
 			my $t_dbID = $trans->dbID;		
-			my $base_name = $t_name;
-			$base_name =~ s/(-\d{1,2})$//;
-			$base_name =~ s/(__\d{1,2})$//;
-			if ($base_name =~ s/(__\d{1,2})$//) {
-				$support->log_warning("VERY UNEXPECTED name for $ln transcript $tsi ($t_name).\n", 1);
-			}
-			$base_name =~ s/(_\d)$//;
-			if ($base_name =~ /(\-\d{3})$/) {
+			if ($t_name =~ /(\-\d{3})$/) {
 				my $new_name = "$g_name$1";
 				push @{$transnames->{$new_name}}, "$t_name|$tsi";
 				next if ($new_name eq $t_name);
-
+				
 				#store a transcript attrib for the old name as long as it's not just a case change
 				my $attrib = [
 					Bio::EnsEMBL::Attribute->new(
@@ -218,15 +219,14 @@ foreach my $chr ($support->sort_chromosomes) {
 					)];
 				unless (lc($t_name) eq lc($new_name)) {
 					if (! $support->param('dry_run')) {
-						$c2++;
 						$aa->store_on_Transcript($t_dbID, $attrib);
 					}
-					$support->log_verbose("Stored synonym transcript_attrib for old name for transcript $tsi\n",2);
+					$support->log_verbose("Stored synonym for old name ($t_name) for transcript $tsi\n",2);
 				}
+				$c1++;
 
 				#update xref for new transcript name
 				if (! $support->param('dry_run')) {
-					$c1++;
 					$dbh->do(qq(
                         UPDATE  xref x, external_db ed
                         SET     x.display_label = "$new_name"
@@ -239,18 +239,23 @@ foreach my $chr ($support->sort_chromosomes) {
 			}
 
 			#log unexpected names (ie don't have -001 etc after removing Leo's extension
-			elsif ( $ln eq 'otter' ) {
-				$support->log_warning("UNEXPECTED name for $ln transcript $tsi ($t_name).\n", 1);
+			elsif ( $support->param('dbname') =~ /sapiens/) {
+				if ( $source =~ /GD|havana/) {
+					$support->log_warning("IDENTICAL: $source gene $gsi ($g_name) has transcripts with identical base loutre names ($base_name), please fix\n");
+				}
+				elsif ($support->param('verbose')) {
+					$support->log_warning("IDENTICAL: $source gene $gsi ($g_name) has transcripts with identical base loutre names ($base_name), please fix\n");
+				}
 			}
 			else {
-				$support->log_verbose("UNEXPECTED name for $ln transcript $tsi ($t_name).\n", 1);
-			}	
+				$support->log_warning("IDENTICAL: $source gene $gsi ($g_name) has transcripts with identical base loutre names ($base_name), please fix\n");
+			}
 		}
 
 		#if there are duplicated names in Vega then check for remarks and patch if non fragmented
 		if ( (grep { scalar(@{$transnames->{$_}}) > 1 } keys %{$transnames}) && $fix_names) {
 			my $patched;
-			($patched,$c3,$c4) = $support->check_remarks_and_update_names($gene,$c3,$c4);
+			($patched,$c2,$c2) = $support->check_remarks_and_update_names($gene,$c2,$c3);
 			if ($patched) {
 				unless ( $seen_genes->{$gsi} eq 'OK') {
 					#distinguish between overlaping and non-overlapping genes for reporting
@@ -260,6 +265,6 @@ foreach my $chr ($support->sort_chromosomes) {
 		}
 	}
 }
-$support->log("Done updating $c1 xrefs and adding $c2 synonym transcript_attribs.\n");
-$support->log("Identified $c4 transcripts from $c3 genes as updatable.\n");
+$support->log("Done updating xrefs for $c1 transcripts\n");
+$support->log("Identified $c3 transcripts from $c2 genes as updatable.\n");
 $support->finish_log;
