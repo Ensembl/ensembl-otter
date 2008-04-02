@@ -169,6 +169,7 @@ sub init_AceDatabase {
 
     my $restart = 0;
     eval {
+        my $cl = $self->Client;
         if ($cl->option_from_array([ 'local_exonerate', 'database' ])) {
             $self->write_local_exonerate;
             $restart = 1;
