@@ -145,6 +145,16 @@ while( my ($stable_id, $exon_id, $ssname, $start, $end) = $sth->fetchrow() ) {
 foreach my $obj_id (keys %id_to_coords) {
     my ($old_stable_id, $ssname, $start, $end) = @{ $id_to_coords{$obj_id} };
 	my $new_stable_id = $stida->fetch_new_exon_stable_id();
+	if ($support->param('dbname') =~ /homo/) {		
+		$new_stable_id =~ s/OTTE/OTTHUME/;
+	}
+	elsif ($support->param('dbname') =~ /mus/) {		
+		$new_stable_id =~ s/OTTE/OTTMUSE/;
+	}
+	elsif ($support->param('dbname') =~ /dan/) {		
+		$new_stable_id =~ s/OTTE/OTTDANE/;
+	}
+
 	if (! $support->param('dry_run')) {
 		set_stable_id('exon', $obj_id, $new_stable_id);
 	}
