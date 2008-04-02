@@ -478,6 +478,6 @@ host=www.sanger.ac.uk
 port=80
 version=49
 write_access=0
-debug=0
+debug=1
 pipeline=1 
 pipehead=1
