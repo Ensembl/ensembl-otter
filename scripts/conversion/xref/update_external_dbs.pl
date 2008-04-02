@@ -105,6 +105,7 @@ open(IN, '<', "$extdbfile") or $support->throw(
 my @rows;
 while (my $row = <IN>) {
 	next if ($row =~ /^#/);
+	next if ($row =~ /^\s$/);
     chomp($row);
     my @a = split(/\t/, $row);
 	foreach my $col (@a) {
