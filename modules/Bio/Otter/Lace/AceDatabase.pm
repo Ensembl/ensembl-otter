@@ -169,10 +169,12 @@ sub init_AceDatabase {
 
     my $restart = 0;
     eval {
-        if ($self->write_local_exonerate) {
+        if ($cl->option_from_array([ 'local_exonerate', 'database' ])) {
+            $self->write_local_exonerate;
             $restart = 1;
         }
-        elsif ($self->write_local_blast) {
+        elsif ($cl->option_from_array([ 'local_blast', 'database' ])) {
+            $self->write_local_blast;
             $restart = 1;
         }
     };
