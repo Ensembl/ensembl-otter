@@ -481,3 +481,5 @@ write_access=0
 debug=1
 pipeline=1 
 pipehead=1
+show_zmap=1
+logdir=.otter
