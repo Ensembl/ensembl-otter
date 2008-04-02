@@ -8,7 +8,7 @@ use X11::XRemote;
 use Data::Dumper;
 
 my $CLIENT_DEBUG = 1;
-my $CACHE_DEBUG  = 1;
+my $CACHE_DEBUG  = 0;
 
 my $object_cache = {
     # 'window_id' => { object  => X11::XRemote, 
