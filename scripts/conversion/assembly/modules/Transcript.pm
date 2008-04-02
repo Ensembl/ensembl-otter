@@ -180,14 +180,16 @@ sub make_Transcript {
 		my $E_slice = $E_sa->fetch_by_seq_region_id($iexon->seq_region);
 
         my $exon = Bio::EnsEMBL::Exon->new
-            (-START     => $iexon->start,
-             -END       => $iexon->end,
-             -STRAND    => $iexon->strand,
-             -PHASE     => $iexon->start_phase,
-             -END_PHASE => $iexon->end_phase,
-             -STABLE_ID => $iexon->stable_id,
-             -VERSION   => $iexon->version,
-             -SLICE     => $E_slice);
+            (-START         => $iexon->start,
+             -END           => $iexon->end,
+             -STRAND        => $iexon->strand,
+             -PHASE         => $iexon->start_phase,
+             -END_PHASE     => $iexon->end_phase,
+             -STABLE_ID     => $iexon->stable_id,
+             -VERSION       => $iexon->version,
+			 -CREATED_DATE  => $iexon->created_date,
+			 -MODIFIED_DATE => $iexon->modified_date,
+             -SLICE         => $E_slice);
 
         # supporting evidence
         $exon->add_supporting_features(@{ $iexon->get_all_SupportingFeatures });
