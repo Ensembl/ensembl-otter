@@ -32,6 +32,7 @@ Specific options:
     --delete=FILE                       read list of stable IDs to *delete*
                                         from FILE
     --gene_stable_ids                   IDs of genes to delete
+    --transcript_stable_ids             IDs of transcripts to delete
     --find_missing                      print list of genes in infile but not in
                                         database
     --outfile=FILE                      write list of missing genes to FILE
@@ -48,7 +49,7 @@ by the presence or abscence of the gene_info table.
 You can provide either a list of gene_stable_ids to keep (--keep=FILE) or to
 delete (--delete=FILE), where FILE is a list of stable IDs, one per line. It will
 automatically determine whether a stable ID is a gene or a transcript. Alternatively
-gene_stable_IDs can be provided on the command line.
+gene or transcript stable_IDs can be provided on the command line.
 
 The script also checks if any genes/transcripts in the list are not in the
 database and optionally prints a list of these stable IDs (use --find_missing
@@ -101,7 +102,8 @@ $support->parse_extra_options(
     'outfile=s',
     'find_missing',
 	'schematype=s',
-	'gene_stable_ids=s@'
+	'gene_stable_ids=s@',
+	'transcript_stable_ids=s@',
 );
 $support->allowed_params(
     $support->get_common_params,
@@ -111,6 +113,7 @@ $support->allowed_params(
     'find_missing',
     'schematype',
 	'gene_stable_ids',
+	'transcript_stable_ids',
 );
 
 if ($support->param('help') or $support->error) {
@@ -119,6 +122,7 @@ if ($support->param('help') or $support->error) {
 }
 
 $support->comma_to_list('gene_stable_ids');
+$support->comma_to_list('transcript_stable_ids');
 
 # ask user to confirm parameters to proceed
 $support->confirm_params;
@@ -157,6 +161,9 @@ if ($support->param('keep')) {
 } elsif ($support->param('gene_stable_ids')) {
 	$action = 'delete';
     $condition = "IN";
+} elsif ($support->param('transcript_stable_ids')) {
+	$action = 'delete';
+    $condition = "IN";
 } else {
     $support->log_error("You must choose to either delete or keep genes by their stable_ids.\n");
 }
@@ -169,6 +176,10 @@ my ($gene_stable_ids, $trans_stable_ids);
 if ($support->param('gene_stable_ids')) {
 	$gene_stable_ids = [$support->param('gene_stable_ids')];
 	$trans_stable_ids = [];
+}
+elsif ($support->param('transcript_stable_ids')) {
+	$trans_stable_ids = [$support->param('transcript_stable_ids')];
+	$gene_stable_ids = [];
 }
 else {
 	($gene_stable_ids, $trans_stable_ids) = &read_infile($action, $infile); 
