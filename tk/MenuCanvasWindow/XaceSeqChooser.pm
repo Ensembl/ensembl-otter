@@ -1229,7 +1229,7 @@ sub edit_subsequences {
         # Get a copy of the subseq
         if (my $sub = $self->get_SubSeq($sub_name)) {
             my $edit = $sub->clone;
-            $edit->otter_id($self->otter_id);
+            $edit->otter_id($sub->otter_id);
             $edit->is_archival($sub->is_archival);
         
             $self->make_exoncanvas_edit_window($edit);
