@@ -25,8 +25,8 @@ sub compare {
         throw("Cannot compare $obj1 to $obj2. Objects have to belong to the same class.");
     }
     elsif ($obj1 == $obj2) {
-        # This check prevents saving
-        throw(sprintf "Comparing %s to itself. Cached object in DBAdaptor?", ref($obj1));
+        # This check prevents saving because we re-use Exons
+        # throw(sprintf "Comparing %s to itself. Cached object in DBAdaptor?", ref($obj1));
         return $changed;
     }
 
