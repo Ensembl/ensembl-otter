@@ -1892,7 +1892,6 @@ sub draw_sequence_list {
 
 
     my $canvas = $self->canvas;
-    my $font = $self->font;
     my $size = $self->font_size;
     my $pad  = int($size / 6);
     my $half = int($size / 2);
@@ -1922,7 +1921,7 @@ sub draw_sequence_list {
 		        $x, $y,
 		        -anchor     => 'nw',
 		        -text       => $sub->name,
-		        -font       => [$font, $size, $style],
+		        -font       => $style eq 'bold' ? $self->font_fixed_bold : $self->font_fixed,
 		        -tags       => ['subseq', 'searchable'],
 		        -fill       => $color,
 		        );

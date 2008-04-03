@@ -5,7 +5,7 @@
 use strict;
 use IO::Socket;
 use LWP;
-use HTTP::Cookies;
+use HTTP::Cookies::Netscape;
 use Getopt::Long 'GetOptions';
 
 
@@ -24,7 +24,7 @@ use Getopt::Long 'GetOptions';
     $pfetch->protocols_allowed([qw{ http https }]);
     $pfetch->agent('local_pfetch/0.1 ');
     push @{ $pfetch->requests_redirectable }, 'POST';
-    $pfetch->cookie_jar(HTTP::Cookies->new( file => $jar_file ));
+    $pfetch->cookie_jar(HTTP::Cookies::Netscape->new( file => $jar_file ));
     
     my $sock = IO::Socket::INET->new(
         LocalPort   => $port,

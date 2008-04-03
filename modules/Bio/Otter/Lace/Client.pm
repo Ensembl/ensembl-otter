@@ -9,7 +9,7 @@ use LWP;
 use Symbol 'gensym';
 use URI::Escape qw{ uri_escape };
 use MIME::Base64;
-use HTTP::Cookies;
+use HTTP::Cookies::Netscape;
 use Term::ReadKey qw{ ReadMode ReadLine };
 
 
@@ -32,7 +32,7 @@ use Bio::Otter::Transform::CloneSequences;
 sub new {
     my( $pkg ) = @_;
     
-    $ENV{'OTTERLACE_COOKIE_JAR'} ||= "$ENV{HOME}/.otter/cookie_jar";
+    $ENV{'OTTERLACE_COOKIE_JAR'} ||= "$ENV{HOME}/.otter/ns_cookie_jar";
     return bless {}, $pkg;
 }
 
@@ -332,7 +332,7 @@ sub get_UserAgent {
         $ua->protocols_allowed([qw{ http https }]);
         $ua->agent('LoginTest/0.1 ');
         push @{ $ua->requests_redirectable }, 'POST';
-        $ua->cookie_jar(HTTP::Cookies->new(
+        $ua->cookie_jar(HTTP::Cookies::Netscape->new(
             file => $ENV{'OTTERLACE_COOKIE_JAR'},
             ));
     }
