@@ -9,8 +9,10 @@ our @EXPORT_OK = qw{ compare };
 
 use Bio::EnsEMBL::Utils::Exception qw(throw);
 
-sub compare{
+sub compare {
     my ($obj1, $obj2) = @_;
+
+    my $changed = 0;
 
     ## sanity checks:
     if (!$obj1) {
@@ -23,7 +25,9 @@ sub compare{
         throw("Cannot compare $obj1 to $obj2. Objects have to belong to the same class.");
     }
     elsif ($obj1 == $obj2) {
-        throw("Comparing object to itself. Cached object in DBAdaptor?");
+        # This check prevents saving
+        throw(sprintf "Comparing %s to itself. Cached object in DBAdaptor?", ref($obj1));
+        return $changed;
     }
 
     if(!$obj1->can('vega_hashkey')) {
@@ -34,7 +38,6 @@ sub compare{
     my $obj2_hash_key=$obj2->vega_hashkey;
 
     ## First compare the main keys. If failed, try vega_hashkey_sub:
-    my $changed=0;
     if ($obj1_hash_key ne $obj2_hash_key) {
         $changed=1;
         print STDERR "*Changes observed\n";
