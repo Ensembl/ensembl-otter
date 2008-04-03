@@ -29,7 +29,8 @@ sub add_analysis {
     my( $self, $ana_name, $values ) = @_;
 
     if(@$values) {
-        $self->entry($ana_name, { 'created' => shift @$values, 'version' => shift @$values });
+        my ($created, $version) = @$values;
+        $self->entry($ana_name, { 'created' => $created, 'version' => $version });
         $self->{completed_count}++;
     } else {
         $self->entry($ana_name, {});
