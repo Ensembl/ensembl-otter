@@ -31,7 +31,8 @@ my %dir2params = (
 	'ensembl'          => [":ext:${user}\@cvs.sanger.ac.uk:/cvsroot/ensembl", 'branch-ensembl-19'],
 	'ensembl-pipeline' => [":ext:${user}\@cvs.sanger.ac.uk:/cvsroot/ensembl", 'branch-finished-19'],
 
-    'ensembl_head'     => [":ext:${user}\@cvs.sanger.ac.uk:/cvsroot/ensembl", $ensembl_tag, 'ensembl'],
+    'ensembl_head'          => [":ext:${user}\@cvs.sanger.ac.uk:/cvsroot/ensembl", $ensembl_tag, 'ensembl'],
+    'ensembl-pipeline_head' => [":ext:${user}\@cvs.sanger.ac.uk:/cvsroot/ensembl", 'HEAD', 'ensembl-pipeline'],
 );
 
 # ----------------------------------------------------------------------

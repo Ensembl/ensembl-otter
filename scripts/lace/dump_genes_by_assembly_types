@@ -16,6 +16,105 @@ $|=1;
 my $gene_count=0;
 
 my %assembly_to_version = (
+    'tropicalis' => {
+            'lw2_jgi-02' => 2,
+            'lw2_jgi-03' => 3,
+    },
+    'tomato' => {
+            'consH_K-01' => 1,
+            
+            'chr4-01'   => 1,
+            'chr4-02'   => 2,
+    },
+    'cat'   => {
+            'feline_mhc' => 1,
+    },
+    'dog'   => {
+            'mhc-01'    => 1,
+    },
+    'mus_spretus'   => {
+            'CH35_96O17-01' => 1,
+
+            'CT027994'      => 0.5,
+            'CT027994-02'   => 0.8,
+            'chr7-01'       => 1,
+            'chr7-02'       => 2,
+            'chr7-03'       => 3,
+            'chr7-04'       => 4,
+            'chr7-05'       => 5,
+            'chr7-06'       => 6,
+    },
+    'chicken'   => {
+            '2xchr5clones'  => 1,
+            'chrU'          => 2,
+            'Chr5'          => 3,
+            'chr5-hs11'     => 4,
+    },
+    'platypus'  => {
+            'chrU-18'   => 18,
+            'chrU-17'   => 17,
+            'chrU-16'   => 16,
+            'chrU-15'   => 15,
+            'chrU-14'   => 14,
+            'chrU-13'   => 13,
+            'chrU-12'   => 12,
+            'chrU-11'   => 11,
+            'chrU-10'   => 10,
+            'chrU-09'   =>  9,
+            'chrU-08'   =>  8,
+            'chrU-07'   =>  7,
+            'chrU-06'   =>  6,
+            'chrU-05'   =>  5,
+            'chrU-04'   =>  4,
+            'chrU-03'   =>  3,
+            'chrU-02'   =>  2,
+            'chrU-01'   =>  1,
+    },
+    'wallaby'   => {
+            'mhc-06'            => 6,
+            'mhc-05'            => 5,
+            'mhc-04'            => 4,
+            'mhc-03'            => 3,
+            'mhc-03-broken'     => -3,
+            'mhc-02'            => 2,
+            'mhc-01'            => 1,
+
+            'chrU-18'           => 18,
+            'chrU-17'           => 17,
+            'chrU-16'           => 16,
+            'chrU-15'           => 15,
+            'chrU-14'           => 14,
+            'chrU-13'           => 13,
+            'chrU-12'           => 12,
+            'chrU-11'           => 11,
+            'chrU-10'           => 10,
+            'chrU-09'           =>  9,
+            'chrU-08'           =>  8,
+            'chrU-07'           =>  7,
+            'chrU-06'           =>  6,
+            'chrU-05'           =>  5,
+            'chrU-04'           =>  4,
+            'chrU-03'           =>  3,
+            'chrU-02'           =>  2,
+            'chrU-02'           =>  2,
+            'Chr_U'             =>  1,
+                # it would be tricky if there are indeed any genes on this assembly:
+            '2wallabyClones'    =>  0.5,
+
+                # these are all separate clones:
+            'bME201O22-01'      => 1,
+            'bME163M12-02'      => 1,
+            'bME163M12-01'      => 1,
+            'bME205I8-01'       => 1,
+    },
+    'gorilla'   => {
+                # these two groups do not intersect:
+            'MHC-03'    => 3,
+            'MHC-02'    => 2,
+            'MHC-01'    => 1,
+
+            'KIR-01'    => 1,
+    },
     'zebrafish' => {
             'gw2_not_on_agp'   => 0,
             'gw2_on_agp'       => 1,
