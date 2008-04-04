@@ -2,6 +2,7 @@ package Bio::Vega::ContigLockBroker;
 
 use strict;
 use Bio::Vega::ContigLock;
+use Bio::Vega::DBSQL::ContigLockAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw ( throw warning );
 use Bio::EnsEMBL::Utils::Argument qw ( rearrange );
 
@@ -49,7 +50,6 @@ sub check_locks_exist_by_slice {
     $author ||= $self->author() || throw("An author object needs to be passed either on creation or on use");
 
     my $aptr        = $db->get_ContigLockAdaptor;
-    my $sa          = $db->get_SliceAdaptor();
     my $contig_hash = $self->Contig_hashref_from_Slice($slice, $db);
 
     my( @locks );
@@ -76,7 +76,6 @@ sub check_no_locks_exist_by_slice {
     $author ||= $self->author() || throw("An author object needs to be passed either on creation or on use");
 
     my $aptr        = $self->get_ContigLockAdaptor;
-    my $sa          = $db->get_SliceAdaptor();
     my $contig_hash = $self->Contig_hashref_from_Slice($slice, $db);
 
     while( my($contig_id, $contig_name) = each %$contig_hash) {
@@ -103,7 +102,6 @@ sub lock_clones_by_slice {
     $author ||= $self->author() || throw("An author object needs to be passed either on creation or on use");
 
     my $aptr        = $self->get_ContigLockAdaptor;
-    my $sa          = $db->get_SliceAdaptor();
     my $contig_hash = $self->Contig_hashref_from_Slice($slice, $db);
 
     my(
@@ -164,7 +162,6 @@ sub remove_by_slice {
     $author ||= $self->author() || throw("An author object needs to be passed either on creation or on use");
 
     my $aptr        = $db->get_ContigLockAdaptor;
-    my $sa          = $db->get_SliceAdaptor;
     my $contig_hash = $self->Contig_hashref_from_Slice($slice, $db);
 
     while( my($contig_id, $contig_name) = each %$contig_hash) {
