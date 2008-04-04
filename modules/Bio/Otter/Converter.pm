@@ -50,6 +50,7 @@ sub XML_to_otter {
   my $tl_stable_id  = undef;
   my $assembly_type = undef;
   my %frag;
+  my $frag_count = 0;
   my $currfragname;
   my @genes;
   my $foundend = 0;
@@ -319,6 +320,7 @@ sub XML_to_otter {
       }
     } elsif (/<sequence_fragment>/) {
       $currentobj = 'frag';
+      ++$frag_count;
       $author = Bio::Otter::Author->new;
 
     } elsif (/<\/sequence_fragment>/) {
@@ -387,10 +389,12 @@ sub XML_to_otter {
       $frag{$currfragname}{start} = $1;
 
     } elsif (/<id>(.*)<\/id>/) {
-      $currfragname = $1;
 
       if ($currentobj eq 'frag') {
+        $currfragname = $frag_count.';'.$1;
         $frag{$currfragname}{id} = $1;
+      } else {
+        $currfragname = $1;
       }
 
     } elsif (/<assembly_end>(.*)<\/assembly_end>/) {
@@ -476,10 +480,8 @@ sub XML_to_otter {
   my $chrstart = undef;
   my $chrend   = undef;
 
-  foreach my $f (keys %frag) {
-    my $frag_data = $frag{$f};
+  foreach my $frag_data (values %frag) {
     if ($chrname and $chrname ne $frag_data->{chr}) {
-      print STDERR "fname = " . $f . "\n";
       print STDERR "frag id = " . $frag_data->{id} . "\n";
       die " Chromosome names are different - can't make slice [$chrname]["
         . $frag_data->{chr} . "]\n";
@@ -501,20 +503,21 @@ sub XML_to_otter {
     my $start  = $frag_data->{start};
     my $end    = $frag_data->{end};
     my $strand = $frag_data->{strand};
+    my $f_name = $frag_data->{id};
 
     if (!defined($start)) {
-       print STDERR "ERROR: No start defined for $f\n";
+       print STDERR "ERROR: No start defined for $f_name\n";
     }
     if (!defined($end)) {
-       print STDERR "ERROR : No end defined for $f\n";
+       print STDERR "ERROR : No end defined for $f_name\n";
     }
     if (!defined($strand)) {
-       print STDERR "ERROR : No strand defined for $f\n";
+       print STDERR "ERROR : No strand defined for $f_name\n";
     }
     if (!defined($offset)) {
-       print STDERR "ERROR : No offset defined for $f\n";
+       print STDERR "ERROR : No offset defined for $f_name\n";
     }
-    # print STDERR "START $f:$start:$end:$offset:$strand\n";
+    # print STDERR "START $f_name:$start:$end:$offset:$strand\n";
 
     $tile->assembled_start($start);
     $tile->assembled_end($end);
@@ -524,15 +527,13 @@ sub XML_to_otter {
 
     my $contig = new Bio::EnsEMBL::RawContig();
 
-    $contig->name($f);
+    $contig->name($f_name);
     $contig->clone($frag_data->{clone});
 
     $tile->component_Seq($contig);
 
    push(@tiles,$tile);
   }
-
-  #$assembly_type = 'fake_gp_1' if (!defined($assembly_type));
 
   unless ($chrname and $chrstart and $chrend) {
       die "XML does not contain information needed to create slice:\n",
@@ -583,13 +584,11 @@ sub XML_to_otter {
 
   # The xml coordinates are all in chromosomal coords - these
   # Need to be converted back to slice coords 
-  if ($chrstart != 2000000000) {
-    foreach my $gene (@genes) {
+  foreach my $gene (@genes) {
       foreach my $exon (@{ $gene->get_all_Exons }) {
         $exon->start($exon->start - $chrstart + 1);
         $exon->end(  $exon->end   - $chrstart + 1);
       }
-    }
   }
 
   # Features need similarly to be fixed
@@ -616,7 +615,6 @@ sub XML_to_otter {
     }
   }
 
-  #return (\@genes, \@clones,$chrname, $chrstart, $chrend,$assembly_type,$seqstr,);
   return (\@genes, $slice, $seqstr, \@tiles, $feature_set, $assembly_tag_set);
 }
 
