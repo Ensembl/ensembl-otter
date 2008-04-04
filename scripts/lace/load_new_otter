@@ -53,7 +53,7 @@ my $ga  = $loutre_dba->get_GeneAdaptor();
 my %ss_hash = ();
 my $loading_started=time();
 
-$mc->update_key_value('prefix.primary','LDR');
+# $mc->update_key_value('prefix.primary','LDR');
 
 if($last_dbid) {
     ($last_dbid) = @{ $mc->list_value_by_key('last_gene_old_dbid') };

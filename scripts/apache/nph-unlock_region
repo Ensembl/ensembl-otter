@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2008-02-22 14:29:37 $
-# Id:            $Id: nph-unlock_region,v 1.9 2008-02-22 14:29:37 jgrg Exp $
+# Last modified: $Date: 2008-04-04 15:02:43 $
+# Id:            $Id: nph-unlock_region,v 1.10 2008-04-04 15:02:43 lg4 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-unlock_region,v $
 
 use strict;
@@ -45,17 +45,13 @@ use Bio::Vega::Transform::Otter;
   }
   $server->log("Checking region is locked...");
   my $cb=Bio::Vega::ContigLockBroker->new;
-  eval {
-	 $cb->check_locks_exist_by_slice($slice,$author_obj,$odba);
-  };
+  eval { $cb->check_locks_exist_by_slice($slice,$author_obj,$odba); };
   if ($@) {
 	 $server->error_exit("Failed checking locks [$@]");
   }
   $server->log("Done checking region is locked.");
   $server->log("Unlocking clones...");
-  eval{
-	 $cb->remove_by_slice($slice,$author_obj,$odba);
-  };
+  eval{ $cb->remove_by_slice($slice,$author_obj,$odba); };
   if ($@) {
       $server->error_exit("Failed to unlock clones\n $@\n***\n");
   }

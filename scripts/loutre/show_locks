@@ -1,10 +1,16 @@
-#!/usr/bin/env perl -w
+#!/usr/local/bin/perl -w
 
 ### show_locks
 
+BEGIN {
+    foreach my $path (@INC) {
+        unless( $path=~s{ensembl/modules}{ensembl_head/modules}g ) {
+            $path=~s{ensembl_head/modules}{ensembl/modules}g;
+        };
+    }
+}
+
 use strict;
-
-
 
 use Getopt::Long 'GetOptions';
 use Bio::Otter::Lace::Defaults;
