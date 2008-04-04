@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2008-02-22 14:29:37 $
-# Id:            $Id: nph-get_locks,v 1.7 2008-02-22 14:29:37 jgrg Exp $
+# Last modified: $Date: 2008-04-04 09:07:25 $
+# Id:            $Id: nph-get_locks,v 1.8 2008-04-04 09:07:25 lg4 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_locks,v $
 
 use strict;
@@ -23,7 +23,7 @@ my $aut_name = $server->param('author');
 
 my $sql = $running_headcode
 ? qq{
-    SELECT cl.name, concat(embl_acc.value, '.', embl_version.value), ctg.name,
+    SELECT DISTINCT cl.name, concat(embl_acc.value, '.', embl_version.value), ctg.name,
            l.hostname, l.timestamp, aut.author_name, aut.author_email
       FROM seq_region cl,
            seq_region ctg,
