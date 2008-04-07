@@ -76,15 +76,21 @@ use Bio::Vega::ContigLockBroker;
             # transcrpt stable IDs
             foreach my $old_tsid (sort keys %$old_tsid_hash) {
                 my $current = run_gene_tsct_query($get_current_non_ko_gene, $old_tsid);
-                my ($current_gene_id) = keys %$current;     # There can only be 1 row from the query
-                if ($current_gene_id) {
-                    my $current = run_gene_tsct_query($get_gene, $current_gene_id);
-                    my $ko_tsct_count = scalar keys %$tsid_hash;
-                    my $current_tsct_count = scalar keys %{$current->{$current_gene_id}{'transcrpts'}};
-                    print STDERR "\nKO: ", format_gene($gene_id, $gene_id_stable_tsid), "\n",
-                        "Current HAVNA: ", format_gene($current_gene_id, $current), "\n";
-                    last OLD_GENE;
-                }
+                my ($current_gene_id) = keys %$current; # There can only be 1 row from the query
+                next unless $current_gene_id;   # Try another transcript dbID
+
+                # Get all the transcript rows for gene
+                $current = run_gene_tsct_query($get_gene, $current_gene_id);
+
+                # Check that we have all the transcripts which were in the old gene?
+                
+                my $current_tsct_count = scalar keys %{$current->{$current_gene_id}{'transcrpts'}};
+                print STDERR "\n             KO: ", format_gene($gene_id, $gene_id_stable_tsid), "\n",
+                               "  Current HAVNA: ", format_gene($current_gene_id, $current), "\n";
+                
+                # Fetch current gene and KO gene, swap gene stable IDs, do a freeze-thaw and save
+                
+                last OLD_GENE;
             }
         }
     }
@@ -96,8 +102,9 @@ sub format_gene {
     my $gsid      = $results_hash->{$gene_id}{'stable_id'};
     my $tsid_hash = $results_hash->{$gene_id}{'transcripts'};
     my $str = "$gsid ($gene_id)\n";
+    my $pad = ' ' x 17;
     foreach my $tsid (sort keys %$tsid_hash) {
-        $str .= "  $tsid\n";
+        $str .= "$pad$tsid\n";
     }
     return $str;
 }
