@@ -1,0 +1,125 @@
+#!/usr/bin/env perl -w
+
+### repair_ko_gene_ott_ids
+
+use strict;
+
+use Bio::Vega::DBSQL::DBAdaptor;
+use Bio::Otter::Lace::Defaults;
+use Bio::Vega::ContigLockBroker;
+
+{
+    my $dsname = 'mouse';
+
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'dataset=s'     => \$dsname,
+    );
+
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    my $ds = $cl->get_DataSet_by_name($dsname);
+    my $dba = $ds->get_cached_DBAdaptor;
+
+    # Find KO genes which have the same Otter ID as
+    # older non-KO genes with different transcripts
+
+    my $sql_core = q{
+        SELECT g.gene_id
+          , gsid.stable_id
+          , tsid.stable_id
+        FROM gene g
+          , gene_stable_id gsid
+          , transcript t
+          , transcript_stable_id tsid
+        WHERE g.gene_id = gsid.gene_id
+          AND g.gene_id = t.gene_id
+          AND t.transcript_id = tsid.transcript_id
+    };
+    
+    my $get_ko_genes = $dba->dbc->prepare(qq{
+        $sql_core
+          AND g.is_current = 1
+          AND g.source = 'KO'
+    });
+    
+    my $find_previous_genes = $dba->dbc->prepare(qq{
+        $sql_core
+          AND g.is_current = 0
+          AND g.source != 'KO'
+          AND gsid.stable_id = ?
+    });
+    
+    my $get_current_non_ko_gene = $dba->dbc->prepare(qq{
+        $sql_core
+          AND g.is_current = 1
+          AND tsid.stable_id = ?
+    });
+    
+    my $get_gene = $dba->dbc->prepare(qq{
+        $sql_core
+          AND g.gene_id = ?
+    });
+    
+    my $gene_id_stable_tsid = run_gene_tsct_query($get_ko_genes);
+    
+    foreach my $gene_id (sort {$a <=> $b} keys %$gene_id_stable_tsid) {
+        my $gsid      = $gene_id_stable_tsid->{$gene_id}{'stable_id'};
+        my $tsid_hash = $gene_id_stable_tsid->{$gene_id}{'transcripts'};
+        
+        my $old_genes = run_gene_tsct_query($find_previous_genes, $gsid);
+        OLD_GENE: foreach my $old_gene_id (sort {$b <=> $a} keys %$old_genes) {
+            my $old_tsid_hash = $old_genes->{$old_gene_id}{'transcripts'};
+            foreach my $old_tsid (sort keys %$old_tsid_hash) {
+                next OLD_GENE if $tsid_hash->{$old_tsid};
+            }
+            # If we get here, we have found a previous version of this
+            # gene which is not a KO gene and shares none of its
+            # transcrpt stable IDs
+            foreach my $old_tsid (sort keys %$old_tsid_hash) {
+                my $current = run_gene_tsct_query($get_current_non_ko_gene, $old_tsid);
+                my ($current_gene_id) = keys %$current;     # There can only be 1 row from the query
+                if ($current_gene_id) {
+                    my $current = run_gene_tsct_query($get_gene, $current_gene_id);
+                    my $ko_tsct_count = scalar keys %$tsid_hash;
+                    my $current_tsct_count = scalar keys %{$current->{$current_gene_id}{'transcrpts'}};
+                    print STDERR "\nKO: ", format_gene($gene_id, $gene_id_stable_tsid), "\n",
+                        "Current HAVNA: ", format_gene($current_gene_id, $current), "\n";
+                    last OLD_GENE;
+                }
+            }
+        }
+    }
+}
+
+sub format_gene {
+    my ($gene_id, $results_hash) = @_;
+    
+    my $gsid      = $results_hash->{$gene_id}{'stable_id'};
+    my $tsid_hash = $results_hash->{$gene_id}{'transcripts'};
+    my $str = "$gsid ($gene_id)\n";
+    foreach my $tsid (sort keys %$tsid_hash) {
+        $str .= "  $tsid\n";
+    }
+    return $str;
+}
+
+sub run_gene_tsct_query {
+    my ($sth, @param) = @_;
+    
+    $sth->execute(@param);
+    my $results = {};    
+    while (my ($gene_id, $gsid, $tsid) = $sth->fetchrow) {
+        $results->{$gene_id}{'stable_id'} = $gsid;
+        $results->{$gene_id}{'transcripts'}{$tsid} = 1;
+    }
+    return $results;
+}
+
+
+__END__
+
+=head1 NAME - repair_ko_gene_ott_ids
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
