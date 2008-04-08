@@ -436,7 +436,13 @@ sub zMapBlixemDefaults {
         },
         protein_featuresets => [qw{ SwissProt TrEMBL }],
         # dna_featuresets    => "",
-        transcript_featuresets => [qw{ Transcript }],
+        transcript_featuresets => [qw{
+            Coding
+            Known_CDS
+            Novel_CDS
+            Putative_CDS
+            Nonsense_meditated_decay
+            }],
     );
     # script could also be "blixem_standalone" sh wrapper (if needed)
 }
