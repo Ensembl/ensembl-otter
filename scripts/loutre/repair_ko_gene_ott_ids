@@ -5,11 +5,16 @@
 use strict;
 
 use Bio::Vega::DBSQL::DBAdaptor;
+use Sys::Hostname qw{ hostname };
 use Bio::Otter::Lace::Defaults;
 use Bio::Vega::ContigLockBroker;
+use Bio::Vega::Transform::XML;
+use Bio::Vega::Transform::Otter;
 
 {
-    my $dsname = 'mouse';
+    my $dsname = 'test_mouse_jgrg';
+    my $now = time();
+    printf STDERR "Genes will be saved with modified_date of %s\n", scalar(localtime($now));
 
     Bio::Otter::Lace::Defaults::do_getopt(
         'dataset=s'     => \$dsname,
@@ -18,6 +23,14 @@ use Bio::Vega::ContigLockBroker;
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
     my $ds = $cl->get_DataSet_by_name($dsname);
     my $dba = $ds->get_cached_DBAdaptor;
+    my $gene_aptr = $dba->get_GeneAdaptor;
+    my $locker = Bio::Vega::ContigLockBroker->new(
+        -HOSTNAME   => hostname(),
+        );
+    my $author = Bio::Vega::Author->new(
+        -NAME       => $cl->author,
+        -EMAIL      => $cl->email,
+        );
 
     # Find KO genes which have the same Otter ID as
     # older non-KO genes with different transcripts
@@ -61,39 +74,64 @@ use Bio::Vega::ContigLockBroker;
     
     my $gene_id_stable_tsid = run_gene_tsct_query($get_ko_genes);
     
-    foreach my $gene_id (sort {$a <=> $b} keys %$gene_id_stable_tsid) {
-        my $gsid      = $gene_id_stable_tsid->{$gene_id}{'stable_id'};
-        my $tsid_hash = $gene_id_stable_tsid->{$gene_id}{'transcripts'};
+        foreach my $gene_id (sort {$a <=> $b} keys %$gene_id_stable_tsid) {
+            my $gsid      = $gene_id_stable_tsid->{$gene_id}{'stable_id'};
+            my $tsid_hash = $gene_id_stable_tsid->{$gene_id}{'transcripts'};
         
-        my $old_genes = run_gene_tsct_query($find_previous_genes, $gsid);
-        OLD_GENE: foreach my $old_gene_id (sort {$b <=> $a} keys %$old_genes) {
-            my $old_tsid_hash = $old_genes->{$old_gene_id}{'transcripts'};
-            foreach my $old_tsid (sort keys %$old_tsid_hash) {
-                next OLD_GENE if $tsid_hash->{$old_tsid};
-            }
-            # If we get here, we have found a previous version of this
-            # gene which is not a KO gene and shares none of its
-            # transcrpt stable IDs
-            foreach my $old_tsid (sort keys %$old_tsid_hash) {
-                my $current = run_gene_tsct_query($get_current_non_ko_gene, $old_tsid);
-                my ($current_gene_id) = keys %$current; # There can only be 1 row from the query
-                next unless $current_gene_id;   # Try another transcript dbID
+            my $old_genes = run_gene_tsct_query($find_previous_genes, $gsid);
+            OLD_GENE: foreach my $old_gene_id (sort {$b <=> $a} keys %$old_genes) {
+                my $old_tsid_hash = $old_genes->{$old_gene_id}{'transcripts'};
+                foreach my $old_tsid (sort keys %$old_tsid_hash) {
+                    next OLD_GENE if $tsid_hash->{$old_tsid};
+                }
+                # If we get here, we have found a previous version of this
+                # gene which is not a KO gene and shares none of its
+                # transcrpt stable IDs
+                foreach my $old_tsid (sort keys %$old_tsid_hash) {
+                    my $current = run_gene_tsct_query($get_current_non_ko_gene, $old_tsid);
+                    my ($current_gene_id) = keys %$current; # There can only be 1 row from the query
+                    next unless $current_gene_id;   # Try another transcript dbID
 
-                # Get all the transcript rows for gene
-                $current = run_gene_tsct_query($get_gene, $current_gene_id);
+                    # Get all the transcript rows for gene
+                    $current = run_gene_tsct_query($get_gene, $current_gene_id);
 
-                # Check that we have all the transcripts which were in the old gene?
+                    # Check that we have all the transcripts which were in the old gene?
+                    my $current_gsid = $current->{$current_gene_id}{'stable_id'};
+                    print STDERR "\n             KO: ", format_gene($gene_id, $gene_id_stable_tsid), "\n",
+                                   "  Current HAVNA: ", format_gene($current_gene_id, $current), "\n";
                 
-                my $current_tsct_count = scalar keys %{$current->{$current_gene_id}{'transcrpts'}};
-                print STDERR "\n             KO: ", format_gene($gene_id, $gene_id_stable_tsid), "\n",
-                               "  Current HAVNA: ", format_gene($current_gene_id, $current), "\n";
-                
-                # Fetch current gene and KO gene, swap gene stable IDs, do a freeze-thaw and save
-                
-                last OLD_GENE;
+                    # Fetch current gene and KO gene, swap gene stable IDs, and save
+                    my $ko_gene     = get_gene_on_slice($gene_aptr, $gene_id);
+                    my $havana_gene = get_gene_on_slice($gene_aptr, $current_gene_id);
+                    $ko_gene->stable_id($current_gsid);
+                    $havana_gene->stable_id($gsid);
+
+                    $dba->begin_work;
+                    eval {
+                        save_gene($locker, $author, $gene_aptr, $now, $ko_gene);
+                        save_gene($locker, $author, $gene_aptr, $now, $havana_gene);
+                    };
+                    if ($@) {
+                        $dba->rollback;
+                        warn $@;
+                    } else {
+                        printf STDERR "Swapped stable IDs to:  KO:%s (%d)  HAVANA:%s (%d)\n",
+                                $ko_gene->stable_id,     $ko_gene->dbID,
+                            $havana_gene->stable_id, $havana_gene->dbID;
+                        $dba->commit;
+                    }
+                    last OLD_GENE;
+                }
             }
         }
-    }
+}
+
+sub save_gene {
+    my ($locker, $author, $gene_aptr, $now, $gene) = @_;
+    
+    $locker->lock_by_object($gene, $author);
+    $gene_aptr->store($gene, $now);
+    $locker->remove_by_object($gene, $author);
 }
 
 sub format_gene {
@@ -121,6 +159,16 @@ sub run_gene_tsct_query {
     return $results;
 }
 
+# Returns new gene (ie: not attached to database) on shortest possible slice
+sub get_gene_on_slice {
+    my ($gene_aptr, $dbID) = @_;
+    
+    my $gene = $gene_aptr->fetch_by_dbID($dbID);
+    return $gene;
+    # my $slice = $gene->feature_Slice;
+    # my $new_gene = $gene->transfer($slice);
+    # return $new_gene;
+}
 
 __END__
 
