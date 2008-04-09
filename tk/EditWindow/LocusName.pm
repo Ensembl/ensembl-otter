@@ -76,6 +76,25 @@ sub do_rename {
     my $old_name = $self->chosen_name;
     my $new_name = $self->get_new_name;
     warn "Renaming '$old_name' to '$new_name'";
+    
+    my $xc = $self->XaceSeqChooser;
+    my $xr = $xc->xace_remote;
+    unless ($xr) {
+        $self->message('No xace attached');
+        return;
+    }
+
+    my $locus_cache = $xc->{'_locus_cache'}
+        or confess "Did not get locus cache from XaceSeqChooser";
+    my $locus = delete $locus_cache->{$old_name}
+        or confess "No loucs called '$old_name'";
+    $locus->name($new_name);
+    $xc->set_Locus($locus);
+    
+    $xr->load_ace(qq{\n-R Locus "$old_name" "$new_name"\n\n});
+    $xr->save;
+    
+    $self->top->destroy;
 }
 
 sub chosen_name {
