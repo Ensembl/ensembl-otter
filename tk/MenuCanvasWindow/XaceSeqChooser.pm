@@ -687,16 +687,16 @@ sub populate_menus {
     $top->bind('<Control-greater>', $run_dotter_command);
     
         
-    # # Show dialog for renaming the locus attached to this subseq
-    # my $rename_locus = sub { $self->rename_locus };
-    # $tools_menu->add('command',
-    #     -label          => 'Rename locus',
-    #     -command        => $rename_locus,
-    #     -accelerator    => 'Ctrl+M',
-    #     -underline      => 1,
-    #     );
-    # $top->bind('<Control-m>',     $rename_locus);
-    # $top->bind('<Control-M>',     $rename_locus);
+    # Show dialog for renaming the locus attached to this subseq
+    my $rename_locus = sub { $self->rename_locus };
+    $tools_menu->add('command',
+        -label          => 'Rename locus',
+        -command        => $rename_locus,
+        -accelerator    => 'Ctrl+M',
+        -underline      => 1,
+        );
+    $top->bind('<Control-m>',     $rename_locus);
+    $top->bind('<Control-M>',     $rename_locus);
     
 
     # (Re)start local pfetch server

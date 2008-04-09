@@ -18,22 +18,54 @@ sub initialise {
         -border     => 3,
         )->pack(-side => 'top', -fill => 'x');
 
+    # Menu for chosing from list of existing locus names
     my ($chosen, $menu_list) = $self->make_menu_choices;
-    $name_frame->Label(-text => 'Rename locus: ')->pack(-side => 'left');
-    $name_frame->SmartOptionmenu(
+    $name_frame->Label(-text => 'Rename locus:')->pack(-side => 'left', -padx => 3);
+    my $name_menu = $name_frame->SmartOptionmenu(
         -options    => $menu_list,
         -variable   => \$chosen,
-        -command    => sub {
-            warn "Chosen locus is ", $self->chosen_name;
-        },
     )->pack(-side => 'left');
     $self->{'_chosen_name'} = \$chosen;
     
+    $name_frame->Label(-text => 'to:')->pack(-side => 'left', -padx => 3);
+    
+    # Entry for editing new name of loucs
     my $new_name = $name_frame->Entry(-width => 20)->pack(-side => 'left');
     $self->{'_new_name_entry'} = $new_name;
+
+    # Command which copies the chosen name to the new name Entry widget
+    my $put_chosen_in_entry = sub {
+        $new_name->delete(0, 'end');
+        $new_name->insert(0, ${$self->{'_chosen_name'}});
+        $new_name->selectionRange(0, 'end');
+        $new_name->focus;
+    };
+    $name_menu->configure(-command => $put_chosen_in_entry);
+    $put_chosen_in_entry->();
     
+    my $button_frame = $top->Frame(
+        -border     => 3,
+        )->pack(-side => 'top', -fill => 'x');
+    
+    # Button which renames the locus
     my $do_rename = sub { $self->do_rename };
-    $name_frame->Button(-text => 'Rename', -command => $do_rename)->pack(-side => 'left');
+    my $rename_button = $button_frame->Button(
+            -text       => 'Rename',
+            -default    => 'active',
+            -command    => $do_rename,
+            )->pack(-side => 'left');
+    my $press_rename_button = sub{
+        $rename_button->focus;
+        $rename_button->invoke;
+        };
+    $top->bind('<Return>',      $press_rename_button);
+    $top->bind('<KP_Enter>',    $press_rename_button);
+    
+    my $cancel = sub { $top->destroy };
+    $button_frame->Button(-text => 'Cancel', -command => $cancel)->pack(-side => 'right');
+    $top->bind('<Escape>', $cancel);
+    
+
     
     $top->bind('<Destroy>', sub{ $self = undef; });
 }
