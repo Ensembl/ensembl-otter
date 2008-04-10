@@ -123,6 +123,17 @@ sub initialize {
             );
         $canvas->Tk::bind('<Control-e>',   $select_evidence);
         $canvas->Tk::bind('<Control-E>',   $select_evidence);
+        
+        
+        # Show dialog for renaming the locus attached to this subseq
+        my $rename_locus = sub { $self->rename_locus };
+        $file_menu->add('command',
+            -label          => 'Rename locus',
+            -command        => $rename_locus,
+            -accelerator    => 'Ctrl+Shift+L',
+            -underline      => 1,
+            );
+        $top->bind('<Control-Shift-L>',  $rename_locus);
 
         # Save into db via xace
         my $save_command = sub{ $self->save_if_changed };
@@ -1401,15 +1412,10 @@ sub update_Locus_tk_fields {
 sub get_Locus_from_tk {
     my( $self ) = @_;
     
-    my $name = ${$self->{'_locus_name_var'}} or return;
-    if ($name =~ /\s/) {
-        $self->message("Error: whitespace in Locus name '$name'");
-        return;
-    }
-
-    my $known           = $self->get_locus_known;
-    my $desc            = $self->get_locus_description;
-    my @aliases         = $self->get_locus_aliases;
+    my $name    = $self->get_locus_name or return;
+    my $known   = $self->get_locus_known;
+    my $desc    = $self->get_locus_description;
+    my @aliases = $self->get_locus_aliases;
     
     #warn "name '$name'\ndesc '$desc'\nremark '$remark'\n";
     
@@ -1425,6 +1431,24 @@ sub get_Locus_from_tk {
     $self->get_locus_remarks($locus);
     
     return $locus;
+}
+
+sub get_locus_name {
+    my ($self) = @_;
+    
+    my $name = ${$self->{'_locus_name_var'}} or return;
+    if ($name =~ /\s/) {
+        $self->message("Error: whitespace in Locus name '$name'");
+        return;
+    }
+    return $name;    
+}
+
+sub rename_locus {
+    my ($self) = @_;
+    
+    my $name = $self->get_locus_name or return;
+    $self->XaceSeqChooser->rename_locus($name);
 }
 
 sub update_Locus {
