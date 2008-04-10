@@ -554,6 +554,13 @@ push @sql_fixes, "INSERT into meta (meta_key,meta_value) VALUES ('genebuild.leve
 #delete patch script entries
 push @sql_fixes, "DELETE from meta WHERE meta_key = \'patch\';\n";
 
+#update biotypes of some genes for website display purposes
+push @sql_fixes, "UPDATE gene set biotype = 'IG_gene' where biotype = 'ig_gene';\n";
+push @sql_fixes, "UPDATE gene set biotype = 'IG_pseudogene' where biotype = 'ig_pseudogene';\n";
+push @sql_fixes, "UPDATE gene set biotype = 'TEC' where biotype = 'tec';\n";
+push @sql_fixes, "UPDATE transcript set biotype = 'IG_gene' where biotype = 'ig_gene';\n";
+push @sql_fixes, "UPDATE transcript set biotype = 'IG_pseudogene' where biotype = 'ig_pseudogene';\n";
+
 if (! $support->param('dry_run')) {
 	$support->log("\nFixing meta etc tables\n");
 	foreach my $fix (@sql_fixes) {
