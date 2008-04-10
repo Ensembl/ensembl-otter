@@ -1,7 +1,4 @@
-#!/usr/local/bin/perl5.8.0 -w
-#!/usr/local/bin/perl -w
-
-use lib '/nfs/disk84/jgrg/bin/Perl';
+#!/usr/bin/env perl -w
 
 ### tk_test ###
 
@@ -18,6 +15,15 @@ $mw->optionReadfile("$0.xdef");
 $mw->configure(
     -background     => 'grey',
     );
+foreach my $keys (qw{
+    <Control-l>
+    <Control-L>
+    <Control-Shift-l>
+    <Control-Shift-L>
+}) {
+    $mw->bind($keys, sub {warn "$keys"});
+}
+
 
 my $canvas_width = 600;
 my $canvas_height = 450;

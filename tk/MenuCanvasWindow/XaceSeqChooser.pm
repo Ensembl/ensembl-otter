@@ -278,25 +278,19 @@ sub update_Locus {
     }
 }
 
-
-
-### Does not work
-#sub rename_Locus {
-#    my( $self, $old_name, $new_name ) = @_;
-#    
-#    $self->{'_locus_cache'}{$old_name} = $self->get_Locus($new_name);
-#        
-#    foreach my $name ($self->list_all_subseq_edit_window_names) {
-#        my $sub = $self->get_SubSeq($name) or next;
-#        my $locus = $sub->Locus or next;
-#        if ($locus->name eq $old_name) {
-#            warn "Renaming locus on SubSeq '$name'\n";
-#            my $ec = $self->get_subseq_edit_window($name) or next;
-#            $ec->update_Locus_from_XaceSeqChooser;
-#        }
-#    }
-#    delete $self->{'_locus_cache'}{$old_name};
-#}
+sub fetch_SubSeqs_by_locus_name {
+   my( $self, $locus_name ) = @_;
+   
+   my @list;
+   foreach my $name ($self->list_all_SubSeq_names) {
+       my $sub = $self->get_SubSeq($name) or next;
+       my $locus = $sub->Locus or next;
+       if ($locus->name eq $locus_name) {
+           push(@list, $sub);
+       }
+   }
+   return @list;
+}
 
 
 #------------------------------------------------------------------------------------------
@@ -692,11 +686,10 @@ sub populate_menus {
     $tools_menu->add('command',
         -label          => 'Rename locus',
         -command        => $rename_locus,
-        -accelerator    => 'Ctrl+M',
+        -accelerator    => 'Ctrl+Shift+L',
         -underline      => 1,
         );
-    $top->bind('<Control-m>',     $rename_locus);
-    $top->bind('<Control-M>',     $rename_locus);
+    $top->bind('<Control-Shift-L>',     $rename_locus);
     
 
     # (Re)start local pfetch server
@@ -2024,7 +2017,7 @@ sub list_selected_subseq_names {
 }
 
 sub rename_locus {
-    my ($self) = @_;
+    my ($self, $locus_name) = @_;
     
     warn "Renaming locus";
     
@@ -2032,12 +2025,18 @@ sub rename_locus {
         $self->message('Must close all clone editing windows before renaming locus');
     }
     
+    if (my $ren_window = $self->{'_locus_rename_window'}) {
+        $ren_window->top->destroy;
+    }
     my $parent = $self->top_window;
     my $top = $parent->Toplevel(-title => 'rename locus');
     $top->transient($parent);
     my $lr = EditWindow::LocusName->new($top);
     $lr->XaceSeqChooser($self);
+    $lr->locus_name_arg($locus_name);
     $lr->initialise;
+    $self->{'_locus_rename_window'} = $lr;
+    weaken($self->{'_locus_rename_window'});
     
     return 1;
 }

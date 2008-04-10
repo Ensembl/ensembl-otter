@@ -8,6 +8,8 @@ use Carp;
 
 use Tk::SmartOptionmenu;
 use base 'EditWindow';
+use Scalar::Util 'weaken';
+
 
 sub initialise {
     my ($self) = @_;
@@ -75,26 +77,54 @@ sub do_rename {
     
     my $old_name = $self->chosen_name;
     my $new_name = $self->get_new_name;
-    warn "Renaming '$old_name' to '$new_name'";
+    if ($old_name eq $new_name) {
+        return;
+    }
+    warn "Renaming Locus '$old_name' to '$new_name'\n";
     
     my $xc = $self->XaceSeqChooser;
     my $xr = $xc->xace_remote;
     unless ($xr) {
-        $self->message('No xace attached');
+        $xc->message('No xace attached');
         return;
     }
 
     my $locus_cache = $xc->{'_locus_cache'}
         or confess "Did not get locus cache from XaceSeqChooser";
+
+    if ($locus_cache->{$new_name}) {
+        $xc->message("Cannot rename to '$new_name'; Locus already exists");
+        return;
+    }
+
     my $locus = delete $locus_cache->{$old_name}
-        or confess "No loucs called '$old_name'";
+        or confess "No locus called '$old_name'";
     $locus->name($new_name);
     $xc->set_Locus($locus);
     
+    # Send the rename command to xace
     $xr->load_ace(qq{\n-R Locus "$old_name" "$new_name"\n\n});
     $xr->save;
     
+    # Now we need to update Zmap with the new locus names
+    my @xml;
+    foreach my $sub ($xc->fetch_SubSeqs_by_locus_name($new_name)) {
+        push @xml,
+            $sub->zmap_delete_xml_string,
+            $sub->zmap_create_xml_string;
+    }
+    $xc->send_zmap_commands(@xml);
+    
     $self->top->destroy;
+}
+
+sub locus_name_arg {
+    my ($self, $arg) = @_;
+    
+    if ($arg) {
+        $self->{'_locus_name_arg'} = $arg;
+    }
+    return $self->{'_locus_name_arg'};
 }
 
 sub chosen_name {
@@ -114,6 +144,7 @@ sub XaceSeqChooser {
     
     if ($xc) {
         $self->{'_xace_seq_chooser'} = $xc;
+        weaken($self->{'_xace_seq_chooser'});
     }
     return $self->{'_xace_seq_chooser'};
 }
@@ -122,17 +153,35 @@ sub make_menu_choices {
     my ($self) = @_;
     
     my $xc = $self->XaceSeqChooser;
-    my $sel_locus_name;
-    foreach my $name ($xc->list_selected_subseq_names) {
-        my $sub = $xc->get_SubSeq($name) or next;
-        my $locus = $sub->Locus or next;
-        $sel_locus_name = $locus->name;
-        last;
-    }
+    my $sel_locus_name = $self->locus_name_arg;
     my @locus_name = $xc->list_Locus_names;
-    unless ($sel_locus_name) {
-        $sel_locus_name = $locus_name[@locus_name / 2];
+
+    # If we were passed a locus name, check that it is acutally a locus name
+    my $saw = 0;
+    if ($sel_locus_name) {
+        foreach my $name (@locus_name) {
+            if ($name eq $sel_locus_name) {
+                $saw = 1;
+                last;
+            }
+        }
     }
+    $sel_locus_name = undef unless $saw;
+    
+    # If we don't have a locus name, take the one from the first
+    # selected subseq we find
+    unless ($sel_locus_name) {
+        foreach my $name ($xc->list_selected_subseq_names) {
+            my $sub = $xc->get_SubSeq($name) or next;
+            my $locus = $sub->Locus or next;
+            $sel_locus_name = $locus->name;
+            last;
+        }
+    }
+    
+    # Or choose the one at the top of the menu.
+    $sel_locus_name ||= $locus_name[0];
+
     my $menu_list = [ map { [$_, $_] } @locus_name ];
     return ($sel_locus_name, $menu_list);
 }
