@@ -797,17 +797,18 @@ sub zMapTagValues {
                     }
                 }
             }
-            if(scalar(@$used_subseq_names)){
-                $handled      = "true";
-                my $names_xml = "";
-                foreach my $name(@$used_subseq_names){
-                    $names_xml .= qq{\t\t\t\t<tagvalue name="Parent Object" type="simple">$name</tagvalue>};
+            if (@$used_subseq_names) {
+                $handled = "true";
+                my $xml = Hum::XmlWriter->new;
+                $xml->open_tag('page', {name => 'Otter'});
+                $xml->open_tag('chapter');
+                $xml->open_tag('subsection', {name => 'Parents'});
+                $xml->open_tag('paragraph', {type => 'tagvalue_table'});
+                foreach my $name (@$used_subseq_names) {
+                    $xml->full_tag('tagvalue', {name => 'Transcript', type => 'simple'}, $name);
                 }
-                $page = qq{\t\t<page name="OTTER">\n}       .
-                    qq{\t\t\t<paragraph name="Otter" type="tagvalue_table">\n} .
-                    qq{$names_xml}           .
-                    qq{\t\t\t</paragraph>\n} .
-                    qq{\t\t</page>\n}        ;
+                $xml->close_all_open_tags;
+                $page = $xml->flush;
             }
         }
             
@@ -861,6 +862,7 @@ sub RECEIVE_FILTER {
           )
         {
             # call the method to get the status and response
+            warn "Calling $obj->$valid($reqXML)";
             ($status, $response) = $obj->$valid($reqXML);
             last;                  # no need to go any further...
         }
