@@ -60,8 +60,8 @@ use URI::Escape;
 
   foreach my $set_name (@ARGV) {
 
-    # ignore Encode sets
-    next if $set_name =~ /^EN/i;
+    # only dump reference chromosomes
+    next if $set_name !~ /^chr/i;
 
     my $slice = $slice_aptr->fetch_by_region('chromosome', $set_name, undef, undef, undef, 'Otter');
 
@@ -76,7 +76,10 @@ use URI::Escape;
 
 
       $gene = $gene_aptr->reincarnate_gene($gene);
+
       next if $gene->biotype eq 'obsolete';
+      next if $gene->source ne 'havana' and $gene->source ne 'WU';
+      next if $gene->biotype !~ /pseudogene/i;
 
       my $strand = $gene->strand == 1 ? '+' : '-';
 
@@ -163,13 +166,11 @@ sub write_transcript_gtf {
   my $chrname = $slice->seq_region_name;
   my $idstr;
 
-  # cow setname for jamboree looks like: ChrUn.003.2253-01
-  # want only eg, ChrUn
   if (defined($seqname)) {
-    $seqname =~ /(Chr(\d+|\w+))\.\d+.*/i;
+    $seqname =~ /(Chr(\d+|\w+))-.*/i;
     $idstr = ucfirst $1;
   } else {
-    $chrname =~ /(Chr(\d+|\w+))\.\d+.*/i;
+    $chrname =~ /(Chr(\d+|\w+))-.*/i;
     $idstr = ucfirst $1;
   }
 
