@@ -406,6 +406,9 @@ sub XML_to_otter {
     } elsif (/<fragment_offset>(.*)<\/fragment_offset>/) {
       $frag{$currfragname}{offset} = $1;
 
+    } elsif (/<clone_length>(.*)<\/clone_length>/) {
+      $frag{$currfragname}{clone_length} = $1;
+
     }
 
     elsif (/<assembly_tag>/) {
@@ -530,7 +533,10 @@ sub XML_to_otter {
     $contig->name($f_name);
     $contig->clone($frag_data->{clone});
 
+    $contig->length( $frag_data->{clone_length} );
+
     $tile->component_Seq($contig);
+
 
    push(@tiles,$tile);
   }
@@ -676,7 +682,6 @@ sub otter_to_ace {
 
     my $slice_name = $slice->display_id;
 
-
     my $str =  qq{\n\nSequence : "$slice_name"\nAssembly\n};
     $str .= sprintf qq{Species "%s"\n}, $dsname;
     $str .= sprintf qq{Assembly_name "%s"\n}, $slice->assembly_type;
@@ -685,32 +690,123 @@ sub otter_to_ace {
       $path = $slice->get_tiling_path;
     }
 
-    my $chr      = $slice->chr_name;
-    my $chrstart = $slice->chr_start;
+    my $chr                   = $slice->chr_name;
+    my $start_of_slice_in_chr = $slice->chr_start;
 
-
-    # Add SMap tags for assembly
+        # multiple contig occurences with identical names must be grouped
+        # by the widest start/end combination they cover in the assembly
+        #
+    my %group_start = (); # hashes by contig_name
+    my %group_end   = (); # ---------,,----------
+    my %group_list  = (); # ---------,,----------
     foreach my $tile (@$path) {
+        my $curr_name  = $tile->component_Seq->name;
+        my $tile_start = $tile->assembled_start - $start_of_slice_in_chr + 1;
+        my $tile_end   = $tile->assembled_end   - $start_of_slice_in_chr + 1;
+
+        if((!exists $group_start{$curr_name}) || ($tile_start < $group_start{$curr_name})) {
+            $group_start{$curr_name} = $tile_start;
+        }
+        if((!exists $group_end{$curr_name}) || ($group_end{$curr_name} < $tile_end)) {
+            $group_end{$curr_name} = $tile_end;
+        }
+        push @{$group_list{$curr_name}}, $tile;
+    }
+
+        # add SMap tags for assembly
+    foreach my $tile (@$path) {
+        my $ctg_name        = $tile->component_Seq->name;
+        my $contig_start    = $tile->component_start;
+        
         ### I think assembled_start should not need chr start taking away
         ### - probably should have been done already
-        my $start           = $tile->assembled_start - $chrstart + 1;
-        my $end             = $tile->assembled_end   - $chrstart + 1;
+        my $start           = $tile->assembled_start - $start_of_slice_in_chr + 1;
+        my $end             = $tile->assembled_end   - $start_of_slice_in_chr + 1;
+
+        my $group_start   = $group_start{$ctg_name};
+        my $group_end     = $group_end{$ctg_name};
 
         my $tile_length = $end - $start + 1;
 
-        my $contig_start    = $tile->component_start;
-        my $name            = $tile->component_Seq->name;
-
         if ($tile->component_ori == 1) {
-            $str .= qq{AGP_Fragment "$name" $start $end Align $start $contig_start $tile_length\n};
+            $str .= qq{AGP_Fragment "$ctg_name" $group_start $group_end Align $start $contig_start $tile_length\n};
         } else {
             # Clone in reverse orientaton in AGP is indicated
             # to acedb by first coordinate > second
-            $str .= qq{AGP_Fragment "$name" $end $start Align $end $contig_start $tile_length\n};
+            $str .= qq{AGP_Fragment "$ctg_name" $group_end $group_start Align $end $contig_start $tile_length\n};
         }
     }
 
-    # add SubSequence coordinates to Genomic
+        # add clone-related 'features' that only need appear once per clone
+    foreach my $tile (sort { $a->assembled_start <=> $b->assembled_start } map { $_->[0] } values %group_list) {
+
+        my $ctg_name     = $tile->component_Seq->name;
+        my $clone        = $tile->component_Seq->clone;
+
+        my $accession    = $clone->embl_id       or die "No embl_id on clone attached to '$ctg_name' in tile";
+        my $sv           = $clone->embl_version; # or die "No embl_version on clone attached to '$ctg_name' in tile";;
+        $str .= qq{\nSequence : "$ctg_name"\nSource "$slice_name"\nAccession "$accession"\nSequence_version $sv\n};
+
+        my $clone_info   = $clone->clone_info;
+        foreach my $keyword ($clone_info->keyword) {
+            $str .= sprintf qq{Keyword "%s"\n}, ace_escape($keyword->name);
+        }
+
+        foreach my $remark ($clone_info->remark) {
+            my $rem = ace_escape($remark->remark);
+            if ($rem =~ s/^Annotation_remark- //) {
+              $str .= qq{Annotation_remark "$rem"\n};
+            } elsif ($rem =~ s/^EMBL_dump_info.DE_line- //) {
+              $str .= qq{EMBL_dump_info DE_line "$rem"\n};
+            } else {
+                ### Shouldn't this be a Remark?
+              $str .= qq{Annotation_remark "$rem"\n};
+            }
+        }
+    }
+
+        # add non-golden features (first, just two)
+    foreach my $group (sort { $a->[0]->assembled_start <=> $b->[0]->assembled_start } values %group_list) {
+        my $substr   = '';
+
+        my $first    = $group->[0];
+        my $ctg_name = $first->component_Seq->name();
+        if(my $golden_start = ($first->component_start-1)) {
+            $substr .= qq{Feature "NonGolden" 1 $golden_start 100 "Region of $ctg_name not on golden path"\n};
+        }
+
+        my $last           = $group->[@$group-1];
+        my $overall_length = $last->component_Seq->length(); # FIXME: hope this works!
+        my $golden_length  = $last->assembled_end - $last->assembled_start;
+
+        if($golden_length != ($overall_length - $last->component_start())) {
+            my $golden_end = $last->component_end+1;
+            $substr .= qq{Feature "NonGolden" $overall_length $golden_end 100 "Region of $ctg_name not on golden path"\n};
+        }
+        if($substr) {
+            $str .= qq{\nSequence : "$ctg_name"\n} . $substr;
+        }
+    }
+
+        ## add CloneContext object - so that annotators can  see features as clone coords
+    foreach my $tile (@$path) {
+
+        my $ctg_name        = $tile->component_Seq->name;
+        my $contig_start    = 1; 
+        my $contig_end      = $tile->component_end  ;
+        my $cmp_start       = $tile->component_start ;
+        my $start_in_slice  = $tile->assembled_start - $start_of_slice_in_chr + 1;
+        my $cmp_length      = $tile->assembled_end   - $tile->assembled_start + 1;
+
+        $str .= qq{\nSequence : "CloneCtxt-$ctg_name"\nCloneContext\n} ;
+        if ($tile->component_ori == 1) {
+            $str .= qq{AGP_Fragment "$slice_name" $contig_start $contig_end Align $cmp_start $start_in_slice $cmp_length\n} ;
+        } else {
+            $str .= qq{AGP_Fragment "$slice_name" $contig_end $contig_start Align $contig_end $start_in_slice $cmp_length\n} ;
+        }
+    }
+
+        # add SubSequence coordinates to Genomic
     foreach my $gene (@$genes) {
         foreach my $tran (@{ $gene->get_all_Transcripts }) {
 
@@ -762,75 +858,25 @@ sub otter_to_ace {
       }
     }
 
-    my $clone_context = '' ;
-    my $original_start = $$path[0]->assembled_start ; 
-    foreach my $tile (@$path) {
-
-        my $clone        = $tile->component_Seq->clone;
-        my $name         = $tile->component_Seq->name;
-        my $accession    = $clone->embl_id       or die "No embl_id on clone attached to '$name' in tile";
-        my $sv           = $clone->embl_version; # or die "No embl_version on clone attached to '$name' in tile";;
-        my $clone_info   = $clone->clone_info;
-        my $orientation  = $tile->component_ori ;
-        my $clone_length = $tile->component_end - $tile->component_start + 1 ;
-
-        $str .= qq{\nSequence : "$name"\nSource "$slice_name"\nAccession "$accession"\nSequence_version $sv\n};
-
-        foreach my $keyword ($clone_info->keyword) {
-            $str .= sprintf qq{Keyword "%s"\n}, ace_escape($keyword->name);
-        }
-        foreach my $remark ($clone_info->remark) {
-	    my $rem = ace_escape($remark->remark);
-	    if ($rem =~ s/^Annotation_remark- //) {
-	      $str .= qq{Annotation_remark "$rem"\n};
-	    }
-	    elsif ($rem =~ s/^EMBL_dump_info.DE_line- //) {
-	      $str .= qq{EMBL_dump_info DE_line "$rem"\n};
-	    }
-	    else {
-            ### Shouldn't this be a Remark?
-	      $str .= qq{Annotation_remark "$rem"\n};
-	    }
-	}
-
-	## add CloneContext object - so that annotators can  see features as clone coords
-        my ( $contig_start , $contig_end, $gp_start, $target_start , $contig_length );
-
-        $contig_start  = 1; 
-        $contig_end    = $tile->component_end  ;
-
-        $gp_start = $tile->component_start ;
-        $target_start = $tile->assembled_start  - $original_start + 1;
-        $contig_length = $tile->assembled_end - $tile->assembled_start  + 1;
-
-        $clone_context .= qq{\nSequence : "CloneCtxt-$name" \n} ;
-        if ($orientation == 1 ){
-            $clone_context .= qq{AGP_Fragment "$slice_name" $contig_start $contig_end Align $gp_start $target_start $contig_length\n} ;
-        }else{
-            $clone_context .= qq{AGP_Fragment "$slice_name" $contig_end $contig_start Align $contig_end $target_start $contig_length\n} ;
-        }
-        $clone_context .= qq{CloneContext\n} ;
-
-        $str .= "\n$clone_context\n";
-    }
-
     $str .= ace_transcripts_locus_people($genes, $slice);
 
-    if ($seq) {
+
+        # I don't think we ever use the (assembled) DNA of the slice anymore
+    if($seq) {
         # Finally the dna
         $str .= "\nDNA \"" . $slice->display_id . "\"\n";
         while ($seq =~ /(.{1,72})/g) {
             $str .= $1 . "\n";
         }
     }
-     return $str;
+    return $str;
 }
 
 sub ace_transcripts_locus_people{
     my ($genes, $slice) = @_;
-    my (%authors, $str);
+    my %authors;
     # Add Sequence objects for Transcripts
-    $str = ace_transcript_seq_objs_from_genes($genes, $slice, \%authors);
+    my $str = ace_transcript_seq_objs_from_genes($genes, $slice, \%authors);
     $str .= "\n";
     # Locus objects for genes
     $str .= ace_locus_objs_from_genes($genes, \%authors);
@@ -1768,9 +1814,10 @@ sub ace_to_otter {
     }
 
     # Turn %frags into a Tiling Path
-    my $tile_path = [];
+    my @tile_path = ();
     foreach my $ctg_name (keys %frags) {
         my $fragment = $frags{$ctg_name};
+
         my $offset   = $fragment->{offset} or die "No offset for '$ctg_name'";
         my $start    = $fragment->{start} or die "No start for '$ctg_name'";
         my $end      = $fragment->{end} or die "No end for '$ctg_name'";
@@ -1833,14 +1880,14 @@ sub ace_to_otter {
         $tile->component_ori($strand);
         $tile->component_Seq($contig);
 
-        push(@$tile_path, $tile);
+        push @tile_path, $tile;
     }
 
     my $feature_set      = $sequence{$slice_name}{'feature_set'};
     my $assembly_tag_set = $sequence{$slice_name}{'assembly_tag_set'};
 
     return (
-        \@genes,  $tile_path,   $dataset_name, $assembly_type,
+        \@genes,  \@tile_path,  $dataset_name, $assembly_type,
         $dna,     $chr_name,    $chr_start,
         $chr_end, $feature_set, $assembly_tag_set
     );
