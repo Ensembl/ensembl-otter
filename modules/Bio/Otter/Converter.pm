@@ -701,6 +701,7 @@ sub otter_to_ace {
     my %group_list  = (); # ---------,,----------
     foreach my $tile (@$path) {
         my $curr_name  = $tile->component_Seq->name;
+
         my $tile_start = $tile->assembled_start - $start_of_slice_in_chr + 1;
         my $tile_end   = $tile->assembled_end   - $start_of_slice_in_chr + 1;
 
@@ -716,24 +717,22 @@ sub otter_to_ace {
         # add SMap tags for assembly
     foreach my $tile (@$path) {
         my $ctg_name        = $tile->component_Seq->name;
-        my $contig_start    = $tile->component_start;
         
-        ### I think assembled_start should not need chr start taking away
-        ### - probably should have been done already
-        my $start           = $tile->assembled_start - $start_of_slice_in_chr + 1;
-        my $end             = $tile->assembled_end   - $start_of_slice_in_chr + 1;
+        my $tile_start      = $tile->assembled_start - $start_of_slice_in_chr + 1;
+        my $tile_end        = $tile->assembled_end   - $start_of_slice_in_chr + 1;
+        my $tile_length     = $tile_end - $tile_start + 1;
 
-        my $group_start   = $group_start{$ctg_name};
-        my $group_end     = $group_end{$ctg_name};
-
-        my $tile_length = $end - $start + 1;
+        my $group_start     = $group_start{$ctg_name};
+        my $group_end       = $group_end{$ctg_name};
+        my $contig_start    = $tile->component_start;
 
         if ($tile->component_ori == 1) {
-            $str .= qq{AGP_Fragment "$ctg_name" $group_start $group_end Align $start $contig_start $tile_length\n};
+            # --------------------------------- (contig in slice coords) ---- 
+            $str .= qq{AGP_Fragment "$ctg_name" $group_start $group_end Align $tile_start $contig_start $tile_length\n};
         } else {
             # Clone in reverse orientaton in AGP is indicated
             # to acedb by first coordinate > second
-            $str .= qq{AGP_Fragment "$ctg_name" $group_end $group_start Align $end $contig_start $tile_length\n};
+            $str .= qq{AGP_Fragment "$ctg_name" $group_end $group_start Align $tile_end $contig_start $tile_length\n};
         }
     }
 
@@ -765,22 +764,28 @@ sub otter_to_ace {
         }
     }
 
-        # add non-golden features (first, just two)
+        # add non-golden features
     foreach my $group (sort { $a->[0]->assembled_start <=> $b->[0]->assembled_start } values %group_list) {
         my $substr   = '';
 
-        my $first    = $group->[0];
-        my $ctg_name = $first->component_Seq->name();
-        if(my $golden_start = ($first->component_start-1)) {
-            $substr .= qq{Feature "NonGolden" 1 $golden_start 100 "Region of $ctg_name not on golden path"\n};
-        }
+        my $first          = $group->[0];
+        my $ctg_name       = $first->component_Seq->name();
+        my $overall_length = $first->component_Seq->length();
 
-        my $last           = $group->[@$group-1];
-        my $overall_length = $last->component_Seq->length();
-        if($last->component_end < $overall_length) {
-            my $non_golden_start = $last->component_end+1;
+        my $non_golden_start = 1;
+        foreach my $tile (@$group) {
+            my $non_golden_end = $tile->component_start()-1;
+
+            if($non_golden_start <= $non_golden_end) {
+                $substr .= qq{Feature "NonGolden" $non_golden_start $non_golden_end 100 "Region of $ctg_name not on golden path"\n};
+            }
+
+            $non_golden_start = $tile->component_end + 1;
+        }
+        if($non_golden_start <= $overall_length) {
             $substr .= qq{Feature "NonGolden" $non_golden_start $overall_length 100 "Region of $ctg_name not on golden path"\n};
         }
+
         if($substr) {
             $str .= qq{\nSequence : "$ctg_name"\n} . $substr;
         }
@@ -793,14 +798,16 @@ sub otter_to_ace {
         my $contig_start    = 1; 
         my $contig_end      = $tile->component_end  ;
         my $cmp_start       = $tile->component_start ;
-        my $start_in_slice  = $tile->assembled_start - $start_of_slice_in_chr + 1;
-        my $cmp_length      = $tile->assembled_end   - $tile->assembled_start + 1;
+
+        my $tile_start      = $tile->assembled_start - $start_of_slice_in_chr + 1;
+        my $tile_end        = $tile->assembled_end   - $start_of_slice_in_chr + 1;
+        my $tile_length     = $tile_end - $tile_start + 1;
 
         $str .= qq{\nSequence : "CloneCtxt-$ctg_name"\nCloneContext\n} ;
         if ($tile->component_ori == 1) {
-            $str .= qq{AGP_Fragment "$slice_name" $contig_start $contig_end Align $cmp_start $start_in_slice $cmp_length\n} ;
+            $str .= qq{AGP_Fragment "$slice_name" $contig_start $contig_end Align $cmp_start $tile_start $tile_length\n} ;
         } else {
-            $str .= qq{AGP_Fragment "$slice_name" $contig_end $contig_start Align $contig_end $start_in_slice $cmp_length\n} ;
+            $str .= qq{AGP_Fragment "$slice_name" $contig_end $contig_start Align $contig_end $tile_start $tile_length\n} ;
         }
     }
 
