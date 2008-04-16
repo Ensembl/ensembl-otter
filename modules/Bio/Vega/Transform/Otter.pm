@@ -184,13 +184,17 @@ sub build_SequenceFragment {
         push @$chr_attrib_list,$chr_attrib;
     }
 
-    my $cmp_start = $offset;
-    my $cmp_end   = $offset + $end - $start;
-    my $ctg_name  = $data->{'id'};
-    my $cln_length;
-    if ($ctg_name =~ /\S+\.\d+\.\d+\.(\d+)/){
-        $cln_length=$1;
-    }
+    my $cmp_start  = $offset;
+    my $cmp_end    = $offset + $end - $start;
+    my $ctg_name   = $data->{'id'};
+    my $cln_length = $data->{'clone_length'};
+
+    ## This now becomes obsolete, because we extended XML with 'clone_length' tag
+    #
+    #if ($ctg_name =~ /\S+\.\d+\.\d+\.(\d+)/){
+    #    $cln_length=$1;
+    #}
+
     unless($start && $end && $strand && $offset && $ctg_name) {
         die "ERROR: Either start:$start or end:$end or strand:$strand or offset:$offset or contig_id:$ctg_name not defined in the xml file\n";
     }
@@ -226,7 +230,7 @@ sub build_SequenceFragment {
 
         ##make clone - contig slice
     my $cln_slice = $self->make_Slice($cln_name,1,$cln_length,$cln_length,$strand,$cln_coord_system);
-    my $ctg_slice = $self->make_Slice($ctg_name,  1,$cln_length,$cln_length,$strand,$ctg_coord_system);
+    my $ctg_slice = $self->make_Slice($ctg_name,1,$cln_length,$cln_length,$strand,$ctg_coord_system);
 
     my $cln_ctg_piece=[$cln_slice,$ctg_slice];
     my $cln_ctg_list = $slice{$self}{'cln_ctg'} ||= [];
