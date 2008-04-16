@@ -404,7 +404,7 @@ sub fetch_by_transcript_stable_id_constraint {
 
     if ( keys %$seen_genes > 1 ){
       my @gsids = keys %$seen_genes;
-      printf STDERR "$trans_stable_id belongs to > 1 gene_stable_ids: @gsids\n";
+      printf STDERR "$trans_stable_id (history) belongs to > 1 gene_stable_ids: @gsids\n";
     }
 
     return $genes;
