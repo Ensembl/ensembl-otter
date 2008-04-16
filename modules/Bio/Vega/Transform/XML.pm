@@ -162,8 +162,8 @@ sub generate_SequenceFragment {
     } else {
         throw("Missing fragment offset, cannot generate xml:$contig_slice");
     }
-    if ($clone_slice->length) {
-        $sf->attribvals($self->prettyprint('clone_length',$clone_slice->length));
+    if( my $clone_length = $clone_slice->seq_region_length()) {
+        $sf->attribvals($self->prettyprint('clone_length',$clone_length));
     } else {
         throw("Missing clone length, cannot generate xml:$clone_slice");
     }
