@@ -776,12 +776,10 @@ sub otter_to_ace {
         }
 
         my $last           = $group->[@$group-1];
-        my $overall_length = $last->component_Seq->length(); # FIXME: hope this works!
-        my $golden_length  = $last->assembled_end - $last->assembled_start;
-
-        if($golden_length != ($overall_length - $last->component_start())) {
-            my $golden_end = $last->component_end+1;
-            $substr .= qq{Feature "NonGolden" $overall_length $golden_end 100 "Region of $ctg_name not on golden path"\n};
+        my $overall_length = $last->component_Seq->length();
+        if($last->component_end < $overall_length) {
+            my $non_golden_start = $last->component_end+1;
+            $substr .= qq{Feature "NonGolden" $non_golden_start $overall_length 100 "Region of $ctg_name not on golden path"\n};
         }
         if($substr) {
             $str .= qq{\nSequence : "$ctg_name"\n} . $substr;
