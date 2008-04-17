@@ -819,8 +819,11 @@ sub zmap_feature_evidence_xml {
         my $xml = Hum::XmlWriter->new;
         $xml->open_tag('chapter');
         $xml->open_tag('page', {name => 'Otter'});
-        $xml->open_tag('subsection', {name => 'Used as evidence in'});
-        $xml->open_tag('paragraph', {type => 'tagvalue_table'});
+        $xml->open_tag('subsection');
+        $xml->open_tag('paragraph', {
+            name => 'Supporting evidence for:',
+            type => 'tagvalue_table',
+            });
         foreach my $name (@$used_subseq_names) {
             $xml->full_tag('tagvalue', {name => 'Transcript', type => 'simple'}, $name);
         }
