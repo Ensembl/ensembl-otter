@@ -745,7 +745,7 @@ sub zMapTagValues {
     my $page    = "";
     my $handled = "false";
 
-    if($xml_hash->{'action'} eq 'feature_details'){
+    if ($xml_hash->{'action'} eq 'feature_details') {
         my $subseq_list   = [];
         my $feature       = $xml_hash->{'featureset'}->{'feature'} || {};
 
@@ -759,59 +759,12 @@ sub zMapTagValues {
             foreach my $subseq (@$subseq_list) {
                 $page .= $subseq->zmap_info_xml;
             }
-            $handled = "true";
-        } else {
-            foreach my $name($self->list_all_SubSeq_names()){
-                if (my $subseq = $self->get_SubSeq($name)) {
-                    push(@$subseq_list, $subseq);
-                }
-            }
-            my $used_subseq_names = [];
-            foreach my $subseq(@$subseq_list){
-                my $evi_hash = $subseq->evidence_hash();
-
-                # evidence_hash looks like this
-                # evidence = { 
-                #   type    => [ qw(evidence names) ],
-                #   EST     => [ qw(Em:BC01234.1 Em:CR01234.2) ],
-                #   cDNA    => [ qw(Em:AB01221.3) ],
-                #   Protein => [ qw(Sw:Q99IVF1) ]
-                # }
-
-                foreach my $evi_type(keys %$evi_hash){
-
-                    my $evi_array = $evi_hash->{$evi_type};
-                    foreach my $evi_name(@$evi_array){
-
-                        if(my $req_evi = $feature->{$evi_name}){
-                            # check overlapping to see if it really is used.
-                            if(!(($req_evi->{'start'} > $subseq->end) &&
-                                 ($req_evi->{'end'}   < $subseq->start))){
-                                push(@$used_subseq_names, $subseq->name);
-                            }else{
-                                warn sprintf("Object %s does not overlap %s",
-                                             $subseq->name,
-                                             $evi_name);
-                            }
-                        }
-                    }
-                }
-            }
-            if (@$used_subseq_names) {
-                $handled = "true";
-                my $xml = Hum::XmlWriter->new;
-                $xml->open_tag('page', {name => 'Otter'});
-                $xml->open_tag('chapter');
-                $xml->open_tag('subsection', {name => 'Parents'});
-                $xml->open_tag('paragraph', {type => 'tagvalue_table'});
-                foreach my $name (@$used_subseq_names) {
-                    $xml->full_tag('tagvalue', {name => 'Transcript', type => 'simple'}, $name);
-                }
-                $xml->close_all_open_tags;
-                $page = $xml->flush;
-            }
+            $handled = 'true';
         }
-            
+        elsif (my $xml = $self->zmap_feature_evidence_xml($feature)) {
+            $handled = 'true';
+            $page = $xml;
+        }
     }
 
     return (200, 
@@ -820,6 +773,62 @@ sub zMapTagValues {
             qq{$page}                           .
             qq{\t</notebook>\n}                 .
             qq{</response>});
+}
+
+sub zmap_feature_evidence_xml {
+    my ($self, $feature) = @_;
+    
+    my $subseq_list = [];
+    foreach my $name ($self->list_all_SubSeq_names) {
+        if (my $subseq = $self->get_SubSeq($name)) {
+            push(@$subseq_list, $subseq);
+        }
+    }
+    my $used_subseq_names = [];
+    foreach my $subseq (@$subseq_list) {
+        my $evi_hash = $subseq->evidence_hash();
+
+        # evidence_hash looks like this
+        # evidence = { 
+        #   type    => [ qw(evidence names) ],
+        #   EST     => [ qw(Em:BC01234.1 Em:CR01234.2) ],
+        #   cDNA    => [ qw(Em:AB01221.3) ],
+        #   Protein => [ qw(Sw:Q99IVF1) ]
+        # }
+
+        foreach my $evi_type (keys %$evi_hash) {
+
+            my $evi_array = $evi_hash->{$evi_type};
+            foreach my $evi_name (@$evi_array) {
+
+                if (my $req_evi = $feature->{$evi_name}) {
+                    # check overlapping to see if it really is used.
+                    if (!(($req_evi->{'start'} > $subseq->end) &&
+                         ($req_evi->{'end'}   < $subseq->start))){
+                        push(@$used_subseq_names, $subseq->name);
+                    } else {
+                        warn sprintf("Transcript '%s' does not overlap '%s'",
+                            $subseq->name,
+                            $evi_name);
+                    }
+                }
+            }
+        }
+    }
+    if (@$used_subseq_names) {
+        my $xml = Hum::XmlWriter->new;
+        $xml->open_tag('chapter');
+        $xml->open_tag('page', {name => 'Otter'});
+        $xml->open_tag('subsection', {name => 'Used as evidence in'});
+        $xml->open_tag('paragraph', {type => 'tagvalue_table'});
+        foreach my $name (@$used_subseq_names) {
+            $xml->full_tag('tagvalue', {name => 'Transcript', type => 'simple'}, $name);
+        }
+        $xml->close_all_open_tags;
+        return $xml->flush;
+    } else {
+        return;
+    }
 }
 
 #===========================================================
