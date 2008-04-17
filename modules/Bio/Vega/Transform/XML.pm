@@ -117,7 +117,7 @@ sub generate_SequenceFragment {
             throw("Clone Slice:$clone_slice has more than one value for intl_clone_name attrib, cannot generate xml");
         }
 
-        $clone_name = ($clnames->[0] && $clnames->[0]->value) . '--' . scalar(@$clnames);
+        $clone_name = ($clnames->[0] && $clnames->[0]->value) || $acc_name. '.' .$ver
     } else {
         $clone_name = $acc_name. '.' .$ver ;
     }
