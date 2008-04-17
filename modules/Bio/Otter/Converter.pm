@@ -63,6 +63,7 @@ sub XML_to_otter {
   my $slice; 
   my $accession;
   my $version;
+  my $clone_name;
 
   # These two hashes are to check that we don't
   # have the same gene name more than once.
@@ -348,17 +349,27 @@ sub XML_to_otter {
          $cloneinfo->keyword(@keyobj);
          $cloneinfo->author($author);
 
+         $clone_name ||= $accession. '.' .$version;
+         $cloneinfo->clone_id($clone_name);
+
          $cloneobj->clone_info($cloneinfo);
 
          $frag{$currfragname}{clone} = $cloneobj;
 
        }
-       $accession = undef;
-       $version = undef;
+       $accession  = undef;
+       $version    = undef;
+       $clone_name = undef;
 
        @cloneremarks = ();
        @keywords     = ();
 
+    } elsif (/<clone_name>(.*)<\/clone_name>/) {
+      if ($currentobj eq 'frag') {
+         $clone_name = $1;
+      } else {
+         die "ERROR: clone_name tag only allowed for sequence fragments.  Current obj is [$currentobj]\n";
+      }
     } elsif (/<accession>(.*)<\/accession>/) {
       if ($currentobj eq 'frag') {
          $accession = $1;
@@ -702,41 +713,46 @@ sub otter_to_ace {
     foreach my $tile (@$path) {
         my $curr_name  = $tile->component_Seq->name;
 
-        my $tile_start = $tile->assembled_start - $start_of_slice_in_chr + 1;
-        my $tile_end   = $tile->assembled_end   - $start_of_slice_in_chr + 1;
+        my $tile_start_in_slice = $tile->assembled_start - $start_of_slice_in_chr + 1;
+        my $tile_end_in_slice   = $tile->assembled_end   - $start_of_slice_in_chr + 1;
 
-        if((!exists $group_start{$curr_name}) || ($tile_start < $group_start{$curr_name})) {
-            $group_start{$curr_name} = $tile_start;
+        if((!exists $group_start{$curr_name}) || ($tile_start_in_slice < $group_start{$curr_name})) {
+            $group_start{$curr_name} = $tile_start_in_slice;
         }
-        if((!exists $group_end{$curr_name}) || ($group_end{$curr_name} < $tile_end)) {
-            $group_end{$curr_name} = $tile_end;
+        if((!exists $group_end{$curr_name}) || ($group_end{$curr_name} < $tile_end_in_slice)) {
+            $group_end{$curr_name} = $tile_end_in_slice;
         }
         push @{$group_list{$curr_name}}, $tile;
     }
 
         # add SMap tags for assembly
     foreach my $tile (@$path) {
-        my $ctg_name        = $tile->component_Seq->name;
+        my $ctg_name     = $tile->component_Seq->name;
         
-        my $tile_start      = $tile->assembled_start - $start_of_slice_in_chr + 1;
-        my $tile_end        = $tile->assembled_end   - $start_of_slice_in_chr + 1;
-        my $tile_length     = $tile_end - $tile_start + 1;
+        my $tile_start_in_slice = $tile->assembled_start - $start_of_slice_in_chr + 1;
+        my $tile_end_in_slice   = $tile->assembled_end   - $start_of_slice_in_chr + 1;
+        my $tile_length         = $tile_end_in_slice - $tile_start_in_slice + 1;
 
-        my $group_start     = $group_start{$ctg_name};
-        my $group_end       = $group_end{$ctg_name};
-        my $contig_start    = $tile->component_start;
+        my $group_start         = $group_start{$ctg_name};
+        my $group_end           = $group_end{$ctg_name};
+        my $cmp_start           = $tile->component_start;
 
         if ($tile->component_ori == 1) {
-            # --------------------------------- (contig in slice coords) ---- 
-            $str .= qq{AGP_Fragment "$ctg_name" $group_start $group_end Align $tile_start $contig_start $tile_length\n};
+            # ---------------------------------   ( in slice coords )   ----- 
+            $str .= qq{AGP_Fragment "$ctg_name" $group_start $group_end Align $tile_start_in_slice $cmp_start $tile_length\n};
         } else {
             # Clone in reverse orientaton in AGP is indicated
             # to acedb by first coordinate > second
-            $str .= qq{AGP_Fragment "$ctg_name" $group_end $group_start Align $tile_end $contig_start $tile_length\n};
+            $str .= qq{AGP_Fragment "$ctg_name" $group_end $group_start Align $tile_end_in_slice $cmp_start $tile_length\n};
         }
     }
 
         # add clone-related 'features' that only need appear once per clone
+        #
+        # The following loop only iterates through the *first* occurences of each clone/contig in the asm order
+    my $contig_info_ace_txt = '';
+    my $clone_arrows_ace_txt = qq{\nSequence : "$slice_name"\n};
+    my $clone_contig_ace_txt = '';
     foreach my $tile (sort { $a->assembled_start <=> $b->assembled_start } map { $_->[0] } values %group_list) {
 
         my $ctg_name     = $tile->component_Seq->name;
@@ -744,70 +760,90 @@ sub otter_to_ace {
 
         my $accession    = $clone->embl_id       or die "No embl_id on clone attached to '$ctg_name' in tile";
         my $sv           = $clone->embl_version; # or die "No embl_version on clone attached to '$ctg_name' in tile";;
-        $str .= qq{\nSequence : "$ctg_name"\nSource "$slice_name"\nAccession "$accession"\nSequence_version $sv\n};
+
+        $contig_info_ace_txt .= qq{\nSequence : "$ctg_name"\nSource "$slice_name"\nAccession "$accession"\nSequence_version $sv\n};
 
         my $clone_info   = $clone->clone_info;
         foreach my $keyword ($clone_info->keyword) {
-            $str .= sprintf qq{Keyword "%s"\n}, ace_escape($keyword->name);
+            $contig_info_ace_txt .= sprintf qq{Keyword "%s"\n}, ace_escape($keyword->name);
         }
 
         foreach my $remark ($clone_info->remark) {
             my $rem = ace_escape($remark->remark);
             if ($rem =~ s/^Annotation_remark- //) {
-              $str .= qq{Annotation_remark "$rem"\n};
+              $contig_info_ace_txt .= qq{Annotation_remark "$rem"\n};
             } elsif ($rem =~ s/^EMBL_dump_info.DE_line- //) {
-              $str .= qq{EMBL_dump_info DE_line "$rem"\n};
+              $contig_info_ace_txt .= qq{EMBL_dump_info DE_line "$rem"\n};
             } else {
                 ### Shouldn't this be a Remark?
-              $str .= qq{Annotation_remark "$rem"\n};
+              $contig_info_ace_txt .= qq{Annotation_remark "$rem"\n};
             }
         }
+
+        my $group_start = $group_start{$ctg_name};
+        my $group_end   = $group_end{$ctg_name};
+        my $clone_name  = $tile->component_Seq->clone->clone_info->clone_id();
+
+        $clone_arrows_ace_txt .= qq{Clone_left_end  "$clone_name" $group_start\n}
+                              .  qq{Clone_right_end "$clone_name" $group_end\n};
+
+        $clone_contig_ace_txt .= qq{\nClone : "$clone_name"\nSequence "$ctg_name"\n};
     }
+    $str .= $contig_info_ace_txt . $clone_arrows_ace_txt . $clone_contig_ace_txt;
 
         # add non-golden features
+        #
+        # The following loop iterates through *lists* of occurences of each clone/contig (internal loop descends to tiles)
     foreach my $group (sort { $a->[0]->assembled_start <=> $b->[0]->assembled_start } values %group_list) {
-        my $substr   = '';
+        my $ng_ace_txt = '';
 
-        my $first          = $group->[0];
-        my $ctg_name       = $first->component_Seq->name();
-        my $overall_length = $first->component_Seq->length();
+        my $first        = $group->[0];
+        my $ctg_name     = $first->component_Seq->name();
+        my $clone_length = $first->component_Seq->length();
 
         my $non_golden_start = 1;
         foreach my $tile (@$group) {
             my $non_golden_end = $tile->component_start()-1;
 
             if($non_golden_start <= $non_golden_end) {
-                $substr .= qq{Feature "NonGolden" $non_golden_start $non_golden_end 100 "Region of $ctg_name not on golden path"\n};
+                $ng_ace_txt .= qq{Feature "NonGolden" $non_golden_start $non_golden_end 100 "Region of $ctg_name not on golden path"\n};
             }
 
             $non_golden_start = $tile->component_end + 1;
         }
-        if($non_golden_start <= $overall_length) {
-            $substr .= qq{Feature "NonGolden" $non_golden_start $overall_length 100 "Region of $ctg_name not on golden path"\n};
+        if($non_golden_start <= $clone_length) {
+            $ng_ace_txt .= qq{Feature "NonGolden" $non_golden_start $clone_length 100 "Region of $ctg_name not on golden path"\n};
         }
 
-        if($substr) {
-            $str .= qq{\nSequence : "$ctg_name"\n} . $substr;
+        if($ng_ace_txt) {
+            $str .= qq{\nSequence : "$ctg_name"\n} . $ng_ace_txt;
         }
     }
 
         ## add CloneContext object - so that annotators can  see features as clone coords
-    foreach my $tile (@$path) {
+        #
+        # The following loop iterates through *lists* of occurences of each clone/contig (internal loop descends to tiles)
+    foreach my $group (sort { $a->[0]->assembled_start <=> $b->[0]->assembled_start } values %group_list) {
 
-        my $ctg_name        = $tile->component_Seq->name;
-        my $contig_start    = 1; 
-        my $contig_end      = $tile->component_end  ;
-        my $cmp_start       = $tile->component_start ;
-
-        my $tile_start      = $tile->assembled_start - $start_of_slice_in_chr + 1;
-        my $tile_end        = $tile->assembled_end   - $start_of_slice_in_chr + 1;
-        my $tile_length     = $tile_end - $tile_start + 1;
-
+        my $first        = $group->[0];
+        my $ctg_name     = $first->component_Seq->name();
+        my $clone_length = $first->component_Seq->length();
         $str .= qq{\nSequence : "CloneCtxt-$ctg_name"\nCloneContext\n} ;
-        if ($tile->component_ori == 1) {
-            $str .= qq{AGP_Fragment "$slice_name" $contig_start $contig_end Align $cmp_start $tile_start $tile_length\n} ;
-        } else {
-            $str .= qq{AGP_Fragment "$slice_name" $contig_end $contig_start Align $contig_end $tile_start $tile_length\n} ;
+
+        foreach my $tile (@$group) {
+            my $cmp_start       = $tile->component_start;
+            my $cmp_end         = $tile->component_end;
+
+            my $tile_start_in_slice = $tile->assembled_start - $start_of_slice_in_chr + 1;
+            my $tile_end_in_slice   = $tile->assembled_end   - $start_of_slice_in_chr + 1;
+            my $tile_length         = $tile_end_in_slice - $tile_start_in_slice + 1;
+
+            if ($tile->component_ori == 1) {
+                # ---------------------------------- (in clone coords) ---- 
+                $str .= qq{AGP_Fragment "$slice_name" 1 $clone_length Align $cmp_start $tile_start_in_slice $tile_length\n} ;
+            } else {
+                $str .= qq{AGP_Fragment "$slice_name" $clone_length 1 Align $cmp_end $tile_start_in_slice $tile_length\n} ;
+            }
         }
     }
 
@@ -1864,6 +1900,10 @@ sub ace_to_otter {
             $remark->remark("EMBL_dump_info.DE_line- $de");
             $info->remark($remark);
         }
+
+            # FIXME: we will need to parse the clone_name from AceDB and set it here properly
+        my $clone_name = $acc. '.' .$sv;
+        $info->clone_id($clone_name);
 
         # Make new clone and attatch CloneInfo
         my $clone = Bio::Otter::AnnotatedClone->new;
