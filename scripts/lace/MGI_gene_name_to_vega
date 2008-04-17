@@ -41,12 +41,14 @@ sub update_loutre {
 
   foreach my $mgi (@$mgi_data) {
 
+    my $gene_SID   = $mgi->{'vega_id'};
+
     my $mgi_symbol = $mgi->{'locus_symbol'};
     if ( grep(/$mgi_symbol/, @$problem_symbol) ){
-      print STDERR "NAME_2_MULTIPLE_ID: $mgi_symbol\n";
+      print STDERR "NAME_2_MULTIPLE_ID: $mgi_symbol $gene_SID\n";
+      next;
     }
 
-    my $gene_SID   = $mgi->{'vega_id'};
     my $mgi_id     = $mgi->{'mgi_id'};
     my $mgi_desc   = $mgi->{'locus_description'};
     my $mgi_chr    = $mgi->{'chromosome'};
@@ -220,10 +222,21 @@ sub update_gene_name_and_description {
 
     print STDERR "CHECKING $gsid on $seq_region SOURCE $source\n";
 
-    $mgi_symbol = $source . ":" . $mgi_symbol if $source ne 'havana';
+    if ( $source ne 'havana' ){
+      my $prefixed_mgi_symbol = $source . ":" . $mgi_symbol;
 
-    print STDERR "NAME   CHANGE from $curr_name to $mgi_symbol\n";
-    $name_attr->value($mgi_symbol);
+      unless ( $curr_name eq $prefixed_mgi_symbol ){
+        print STDERR "NAME   CHANGE from $curr_name to $prefixed_mgi_symbol\n";
+        $name_attr->value($prefixed_mgi_symbol);
+      }
+      else {
+        print STDERR "SKIP WU update from $curr_name to $prefixed_mgi_symbol\n";
+      }
+    }
+    else {
+      print STDERR "NAME   CHANGE from $curr_name to $mgi_symbol\n";
+      $name_attr->value($mgi_symbol);
+    }
 
     if ( $mgi_desc and $mgi_desc ne $curr_desc ){
       $curr_gene->description($mgi_desc);
