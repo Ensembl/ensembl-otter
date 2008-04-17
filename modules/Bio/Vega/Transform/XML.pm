@@ -89,12 +89,13 @@ sub generate_SequenceFragment {
     my ($clone_seg) = @{ $contig_slice->project('clone') };
     my $clone_slice = $clone_seg->to_Slice();
 
+    my ($acc_name, $ver, $clone_name);
     if( my $accs = $clone_slice->get_all_Attributes('embl_acc') ) {
         if (@$accs > 1){
             throw("Clone Slice:$clone_slice has more than one value for accession attrib, cannot generate xml");
         }
 
-        my $acc_name = $accs->[0] && $accs->[0]->value;
+        $acc_name = $accs->[0] && $accs->[0]->value;
         $sf->attribvals($self->prettyprint('accession',$acc_name));
     } else {
         throw("Missing clone accession, cannot generate xml:$clone_slice");
@@ -105,11 +106,22 @@ sub generate_SequenceFragment {
             throw("Clone Slice:$clone_slice has more than one value for version attrib, cannot generate xml");
         }
 
-        my $ver = $vers->[0] && $vers->[0]->value;
+        $ver = $vers->[0] && $vers->[0]->value;
         $sf->attribvals($self->prettyprint('version',$ver));
     } else {
         throw("Missing clone version, cannot generate xml:$clone_slice");
     }
+
+    if( my $clnames = $clone_slice->get_all_Attributes('intl_clone_name') ) {
+        if (@$clnames > 1){
+            throw("Clone Slice:$clone_slice has more than one value for intl_clone_name attrib, cannot generate xml");
+        }
+
+        $clone_name = $clnames->[0] && $clnames->[0]->value;
+    } else {
+        $clone_name = $acc_name. '.' .$ver ;
+    }
+    $sf->attribvals($self->prettyprint('clone_name',$clone_name));
 
     my $ci = $odb->get_ContigInfoAdaptor->fetch_by_contigSlice($contig_slice);
 

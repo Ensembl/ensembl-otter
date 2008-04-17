@@ -199,10 +199,14 @@ sub build_SequenceFragment {
         die "ERROR: Either start:$start or end:$end or strand:$strand or offset:$offset or contig_id:$ctg_name not defined in the xml file\n";
     }
 
-    my $cln_name  = $data->{'accession'}.'.'.$data->{'version'};
-    ## make clone-info attributes from remark and keyword
-    my $cln_attrib_list=[];
+    my $clone_sr_name  = $data->{'accession'}.'.'.$data->{'version'};
 
+    my $intl_clone_name = $data->{'clone_name'} || $clone_sr_name;
+    my $intl_clone_name_attrib = $self->make_Attribute('intl_clone_name', 'International Clone Name','', $intl_clone_name);
+
+    my $cln_attrib_list=[ $intl_clone_name_attrib ];
+
+        ## make clone-info attributes from remark and keyword
     my $remarks=$data->{'remark'};
     foreach my $rem (@$remarks){
         my $cln_attrib;
@@ -229,7 +233,7 @@ sub build_SequenceFragment {
     }
 
         ##make clone - contig slice
-    my $cln_slice = $self->make_Slice($cln_name,1,$cln_length,$cln_length,$strand,$cln_coord_system);
+    my $cln_slice = $self->make_Slice($clone_sr_name,1,$cln_length,$cln_length,$strand,$cln_coord_system);
     my $ctg_slice = $self->make_Slice($ctg_name,1,$cln_length,$cln_length,$strand,$ctg_coord_system);
 
     my $cln_ctg_piece=[$cln_slice,$ctg_slice];
