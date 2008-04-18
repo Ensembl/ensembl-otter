@@ -747,6 +747,58 @@ sub otter_to_ace {
         }
     }
 
+        # add SubSequence coordinates to Genomic
+    foreach my $gene (@$genes) {
+        foreach my $tran (@{ $gene->get_all_Transcripts }) {
+
+            $str .= sprintf qq{Subsequence "%s" },
+                $tran->transcript_info->name || $tran->stable_id;
+
+            $tran->sort;
+            my $exons = $tran->get_all_Exons;
+
+            if ($exons->[0]->strand == 1) {
+                $str .= $tran->start . " " . $tran->end . "\n";
+            } else {
+                $str .= $tran->end . " " . $tran->start . "\n";
+            }
+        }
+    }
+
+    # Features (polyA signals and sites etc...)
+    if (defined $feature_set->[0]) {
+        foreach my $sf (@$feature_set) {
+            my $start = $sf->start;
+            my $end   = $sf->end;
+            if ($sf->strand == -1) {
+                ($start, $end) = ($end, $start);
+            }
+            my $type  = $sf->analysis->logic_name or die "no logic_name on analysis object";
+            my $score = $sf->score;
+            $score = 1 unless defined $score;
+            if (my $label = $sf->display_label) {
+                $str .= qq{Feature "$type" $start $end $score "$label"\n};
+            } else {
+                $str .= qq{Feature "$type" $start $end $score\n};
+            }
+        }
+    }
+
+    # assembly tag data
+    if (defined $assembly_tag_set->[0]) {
+      foreach my $at (@$assembly_tag_set) {
+
+        # coords are same as XML from otter db (ie, all -1 <-> 1 and all start coord <= end coord)
+	    my ($start, $end);
+        ($at->strand == 1) ? ($start = $at->start, $end = $at->end) : ($start=$at->end, $end=$at->start);
+	
+	    my $tag_type = $at->tag_type;
+	    my $tag_info = $at->tag_info;
+
+	    $str .= qq{Assembly_tags "$tag_type" $start $end "$tag_info"\n};
+      }
+    }
+
         # add clone-related 'features' that only need appear once per clone
         #
         # The following loop only iterates through the *first* occurences of each clone/contig in the asm order
@@ -845,58 +897,6 @@ sub otter_to_ace {
                 $str .= qq{AGP_Fragment "$slice_name" $clone_length 1 Align $cmp_end $tile_start_in_slice $tile_length\n} ;
             }
         }
-    }
-
-        # add SubSequence coordinates to Genomic
-    foreach my $gene (@$genes) {
-        foreach my $tran (@{ $gene->get_all_Transcripts }) {
-
-            $str .= sprintf qq{Subsequence "%s" },
-                $tran->transcript_info->name || $tran->stable_id;
-
-            $tran->sort;
-            my $exons = $tran->get_all_Exons;
-
-            if ($exons->[0]->strand == 1) {
-                $str .= $tran->start . " " . $tran->end . "\n";
-            } else {
-                $str .= $tran->end . " " . $tran->start . "\n";
-            }
-        }
-    }
-
-    # Features (polyA signals and sites etc...)
-    if (defined $feature_set->[0]) {
-        foreach my $sf (@$feature_set) {
-            my $start = $sf->start;
-            my $end   = $sf->end;
-            if ($sf->strand == -1) {
-                ($start, $end) = ($end, $start);
-            }
-            my $type  = $sf->analysis->logic_name or die "no logic_name on analysis object";
-            my $score = $sf->score;
-            $score = 1 unless defined $score;
-            if (my $label = $sf->display_label) {
-                $str .= qq{Feature "$type" $start $end $score "$label"\n};
-            } else {
-                $str .= qq{Feature "$type" $start $end $score\n};
-            }
-        }
-    }
-
-    # assembly tag data
-    if (defined $assembly_tag_set->[0]) {
-      foreach my $at (@$assembly_tag_set) {
-
-        # coords are same as XML from otter db (ie, all -1 <-> 1 and all start coord <= end coord)
-	    my ($start, $end);
-        ($at->strand == 1) ? ($start = $at->start, $end = $at->end) : ($start=$at->end, $end=$at->start);
-	
-	    my $tag_type = $at->tag_type;
-	    my $tag_info = $at->tag_info;
-
-	    $str .= qq{Assembly_tags "$tag_type" $start $end "$tag_info"\n};
-      }
     }
 
     $str .= ace_transcripts_locus_people($genes, $slice);
