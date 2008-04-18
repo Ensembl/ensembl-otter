@@ -67,7 +67,7 @@ use URI::Escape;
 
     # this is much faster via EnsEMBL
     my $genes = $gene_aptr->Bio::EnsEMBL::DBSQL::GeneAdaptor::fetch_all_by_Slice($slice);
-    #my $genes = $gene_aptr->get_current_Gene_by_slice($slice);
+    #my $genes = $gene_aptr->get_current_Gene_by_slice($slice); # very slow
 
     $set_name =~ /(Chr(\d+|\w+))-.*/i;
     my $idstr = ucfirst $1;
@@ -79,7 +79,7 @@ use URI::Escape;
 
       next if $gene->biotype eq 'obsolete';
       next if $gene->source ne 'havana' and $gene->source ne 'WU';
-      next if $gene->biotype !~ /pseudogene/i;
+    #  next if $gene->biotype !~ /pseudogene/i;
 
       my $strand = $gene->strand == 1 ? '+' : '-';
 
