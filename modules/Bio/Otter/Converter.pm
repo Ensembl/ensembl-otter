@@ -2067,7 +2067,8 @@ sub path_to_XML {
     $xmlstr .= "  <assembly_start>" . ($chrstart + $p->assembled_start() - 1) . "</assembly_start>\n";
     $xmlstr .= "  <assembly_end>" . ($chrstart + $p->assembled_end() - 1) . "</assembly_end>\n";
     $xmlstr .= "  <fragment_ori>" . $p->component_ori() . "</fragment_ori>\n";
-    $xmlstr .= "  <fragment_offset>" . $p->component_start() . "</fragment_offset>\n";
+    $xmlstr .= "  <fragment_offset>" . $p->component_start() ."</fragment_offset>\n";
+    $xmlstr .= "  <clone_length>". $p->component_Seq->length() ."</clone_length>\n";
     $xmlstr .= "</sequence_fragment>\n";
   }
 
@@ -2087,6 +2088,9 @@ sub clone_to_XML {
 
     if ($clone->isa("Bio::Otter::AnnotatedClone") && $clone->clone_info) {
         my $info = $clone->clone_info;
+
+        $str .= "  <clone_name>" . $info->clone_id ."<\/clone_name>\n";
+
         if (my $author = $info->author) {
             $str .= $author->toXMLString;
         }
