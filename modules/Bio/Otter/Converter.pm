@@ -1269,6 +1269,10 @@ sub ace_to_otter {
                     $dataset_name = ace_unescape($1);
                 } elsif (/Assembly_name $STRING/x) {
                     $assembly_type = ace_unescape($1);
+                } elsif (/Clone $STRING/x) {
+                    $curr_seq->{clone_name} = $1;
+                } elsif (/DNA $STRING $INT/x) {
+                    $curr_seq->{clone_length} = $2;
                 }
 
                 # SMap assembly information is formatted like this:
@@ -1870,6 +1874,8 @@ sub ace_to_otter {
         my $sv = $cln->{Sequence_version} || 0; # try not to die too soon;
                                                 #  or die "No Sequence_version for '$ctg_name'";
         my $auth = $cln->{author};
+        my $clone_name   = $cln->{clone_name};
+        my $clone_length = $cln->{clone_length};
 
         $start -= $chr_start - 1;
         $end   -= $chr_start - 1;
@@ -1901,8 +1907,6 @@ sub ace_to_otter {
             $info->remark($remark);
         }
 
-            # FIXME: we will need to parse the clone_name from AceDB and set it here properly
-        my $clone_name = $acc. '.' .$sv;
         $info->clone_id($clone_name);
 
         # Make new clone and attatch CloneInfo
@@ -1915,6 +1919,7 @@ sub ace_to_otter {
         my $contig = Bio::EnsEMBL::RawContig->new;
         $contig->name($ctg_name);
         $contig->clone($clone);
+        $contig->length( $clone_length );
 
         # Make new Tile
         my $tile = Bio::EnsEMBL::Tile->new;

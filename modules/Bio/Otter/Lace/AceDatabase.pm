@@ -395,6 +395,8 @@ sub save_ace_to_otter {
         Otter
         DB_info
         Annotation
+        Clone
+        DNA
         })
     {
         $ace_txt .= $ace->raw_query("show -a $tag");
