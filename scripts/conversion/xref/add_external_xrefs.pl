@@ -292,7 +292,7 @@ else {
 }
 
 if ($support->param('verbose')) {
-#	warn Dumper($parsed_xrefs);
+	warn Dumper($parsed_xrefs);
 #	warn Dumper($lcmap);
 #	exit;
 }
@@ -395,7 +395,7 @@ foreach my $chr (@chr_sorted) {
 		}
 		else {
 			#get all names to search on
-			push my (@gene_names), $real_name;
+			push my @gene_names, $real_name;
 			
 			#use previously set MarkerSymbol xrefs as searchable names
 			if ( $support->param('xrefformat') eq 'mgi') {
@@ -410,8 +410,8 @@ foreach my $chr (@chr_sorted) {
 			}
 
 			#look only for stable_ids for certain types of record
-			if ($support->param('xrefformat') =~ /imgt_hla|mgivega/) {
-				$real_name = $gsi ;
+			if ($support->param('xrefformat') =~ /imgt|mgivega/) {
+				@gene_names = ( $gsi );
 			}
 
 			#get a list of names of databases for existing xrefs on this gene
@@ -482,13 +482,12 @@ foreach my $chr (@chr_sorted) {
 									-primary_id => $pid,
 									-display_id => $xid,
 									-version    => 1,
-									-release    => 1,
 									-dbname     => $db,
 								);
 								$dbentry->status($extdb_def{$db}->[0]); ##is this necc?
 								$gene->add_DBEntry($dbentry);
 								if (! $support->param('dry_run')) {
-									$dbID = $ea->store($dbentry, $gid, 'gene');
+									$dbID = $ea->store($dbentry, $gid, 'gene', 1);
 								}
 							}
 							#was the store succesfull ?
@@ -510,18 +509,17 @@ foreach my $chr (@chr_sorted) {
 									}
 								}
 
-								#if there is a preficx then we need another xref
+								#if there is a prefix then we need another xref
 								else {
 									my $new_dbentry = Bio::EnsEMBL::DBEntry->new(
 										-primary_id => $pid,
 										-display_id => $gene_name,
 										-version    => 1,
-										-release    => 1,
 										-dbname     => $db,
 										-info_text  => 'vega_source_prefix',
 									);
 									if (! $support->param('dry_run')) {
-										my $new_dbID = $ea->store($new_dbentry, $gid, 'gene');
+										my $new_dbID = $ea->store($new_dbentry, $gid, 'gene', 1);
 										$sth_display_xref->execute($new_dbID,$gid);	
 										$support->log("UPDATED display xref (pid = $new_dbID) for gene $gene_name ($gsi) using prefixed name\n",3);	
 									}
@@ -969,7 +967,7 @@ sub parse_tcag {
 
 sub parse_imgt_hla {
     my ($xrefs, $lcmap) = @_;
-	$support->log_stamped("IMGT...\n", 1);
+	$support->log_stamped("IMGT_HLA...\n", 1);
     # read input file from IMGT
     open (IMGT, '<', $support->param('imgt_hlafile')) or $support->throw(
         "Couldn't open ".$support->param('imgt_hlafile')." for reading: $!\n");
@@ -986,5 +984,25 @@ sub parse_imgt_hla {
 		my $pid = $xid;
 		$pid =~ s/\*/_/; 
 		push @{$xrefs->{$gsi}->{'IMGT_HLA'}} , $xid.'||'.$pid;
+	}
+}
+
+=head2 parse_imgt_gdb
+
+=cut
+
+sub parse_imgt_gdb {
+    my ($xrefs, $lcmap) = @_;
+	$support->log_stamped("IMGT_GDB...\n", 1);
+	my $sql = qq(SELECT gsi.stable_id, x.display_label
+                   FROM gene_stable_id gsi, gene g, xref x
+                  WHERE gsi.gene_id = g.gene_id
+                    AND g.display_xref_id = x.xref_id
+                    AND g.biotype like 'IG%'
+                    AND g.source = 'havana');
+	my $sth = $dba->dbc->prepare($sql);
+	$sth->execute;
+	while ( my ($gsi, $id) = $sth->fetchrow_array) {		
+		push @{$xrefs->{$gsi}->{'IMGT/GENE_DB'}} , $id.'||'.$id;
 	}
 }
