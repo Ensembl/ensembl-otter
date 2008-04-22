@@ -105,7 +105,6 @@ $support->init_log;
 
 
 # connect to database and get adaptors
-# get an ensembl database for better performance (no otter tables are needed)
 my $dba = $support->get_database('ensembl');
 my $dbh = $dba->dbc->db_handle;
 my $sa = $dba->get_SliceAdaptor();
@@ -123,7 +122,7 @@ if ($support->param('prune') and $support->user_proceed('Would you really like t
            DELETE x
            FROM xref x, external_db ed
            WHERE x.external_db_id = ed.external_db_id
-           AND ed.db_name = 'Havana_gene'; 
+           AND ed.db_name = 'Havana_gene';
         ));
 	$support->log("Done deleting $num entries.\n");
 
@@ -153,16 +152,15 @@ foreach my $chr (@chr_sorted) {
     # fetch genes from db
     $support->log("Fetching genes...\n");
     my $slice = $sa->fetch_by_region('chromosome', $chr);
-    my $genes = $ga->fetch_all_by_Slice($slice);
+    my $genes = $slice->get_all_Genes();
     $support->log_stamped("Done fetching ".scalar @$genes." genes.\n\n");
 
 	my $havana_genes;
-	# loop over genes and get Havana ones (identified by logic_name)
-	$support->log("Analysing Havana genes...\n");
 	my ($havana_c,$external_c,$found,$not_found) = (0,0,0,0);
-	foreach my $gene (@$genes) {
+    $support->log("Analysing Havana genes...\n");
+	foreach my $gene (@{$genes}) {
 		my $analysis_name = $gene->analysis->logic_name;
-		next if ($analysis_name ne 'otter');
+		next unless ($analysis_name eq 'otter');
 		$havana_c++;
 		my $gsi = $gene->stable_id;
         my $gene_name = $gene->display_xref->display_id;
@@ -171,23 +169,11 @@ foreach my $chr (@chr_sorted) {
             next unless $gene_stable_ids{$gsi};
         }
 		#add display_xref name
-		$havana_genes->{$gene_name} = $gsi;
-
-		#add any other HUGO xref names (ie aliases)
-	XREF:
-		foreach my $xref (@{$gene->get_all_DBEntries('HUGO')}) {
-			my $name = $xref->display_id;
-			next XREF if ($name eq $gene_name);
-			if ($havana_genes->{$name} ) {
-				$support->log_warning("HUGO name $name attached to genes $gsi and ".$havana_genes->{$name}."\n");
-			}
-			else {
-				##uncomment this to include aliases of Havana genes to be compared to names of external genes
-				## - have not used yet since I'm not sure if HGNC aliases are reliable (genes OTTHUMG00000136816 
-                ##and OTTHUMG000001330404049 are linked by an alias in the HGNC record
-
-#				$havana_genes->{$name} = $gsi;
-			}
+		if ($havana_genes->{$gene_name} ) {
+			$support->log_warning("Name $gene_name attached to genes $gsi and ".$havana_genes->{$gene_name}."\n");
+		}
+		else {
+			$havana_genes->{$gene_name} = $gsi;
 		}
 	}
 
@@ -216,12 +202,12 @@ foreach my $chr (@chr_sorted) {
         $support->log_verbose("Checking gene $gene_name ($gid, $gsi) using $stripped_name...\n",1);
 		#store xref if there is one
 		if (my $pid = $havana_genes->{$stripped_name} ) {
-			$support->log("Gene $gene_name matches Havana gene $stripped_name ($pid).\n",1);
+			$support->log("Gene $gene_name ($gsi) matches Havana gene $stripped_name ($pid).\n",1);
 			$found++;
 			#check if it's there already...
 			my ($existing_xref,$dbID);		
 			if ($existing_xref = $ea->fetch_by_db_accession('Havana_gene',$pid)) {
-				$support->log_verbose("Using previous xref for gene $gid (Havana_gene display_id $pid).\n", 1);
+				$support->log_verbose("Using previous xref for gene $gsi (Havana_gene display_id $pid).\n", 1);
 				$gene->add_DBEntry($existing_xref);
 				$dbID = $ea->store($existing_xref, $gid, 'gene') unless $support->param('dry_run');
 			} else {
@@ -235,15 +221,15 @@ foreach my $chr (@chr_sorted) {
 														);
 				$gene->add_DBEntry($dbentry);
 				if ($support->param('dry_run')) {
-					$support->log_verbose("Would store xref for gene $gene_name ($gsi, $gid\n)", 1);
+					$support->log_verbose("Would store xref ($pid) for gene $gene_name ($gsi, $gid)\n", 1);
 				}
 				else {
 					$dbID = $ea->store($dbentry, $gid, 'gene') unless $support->param('dry_run');
 					if ($dbID) {
-						$support->log_verbose("Stored xref: display_id $pid, pid = $pid for gene $gid (dbID $dbID)\n", 1);
+						$support->log_verbose("Stored xref: display_id $pid (dbID $dbID) for gene $gene_name ($gsi, $gid)\n", 1);
 					}
 					else {
-						$support->log_warning("Problem storing xref for gene $gene_name ($gsi, $gid)\n");
+						$support->log_warning("Problem storing xref ($pid) for gene $gene_name ($gsi, $gid)\n");
 					}
 				}
 			}
