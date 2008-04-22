@@ -145,8 +145,8 @@ while (my $rec = <$IN>) {
 	}
 	next REC unless $active_record;
 
-	#parse details
-	my ($loutre_id,$vega_id,$human_id,$type,$ack,$ensembl_name) = split '\t', $rec;
+	#parse details, removing any trailing whitespace
+	my ($loutre_id,$vega_id,$human_id,$type,$ack,$ensembl_name) = map { s/\s$//; $_; } split '\t', $rec;
 	unless ($loutre_id && $vega_id && $human_id && $type) {
 		$support->log_warning("Parsing input file failed, check tab spacing for line $loutre_id\n");
 	}
@@ -291,9 +291,9 @@ foreach my $k (keys %$regions_wanted_details ) {
 $support->log("\n\nSUMMARY\nRelevant attributes for chromosomes with a vega_export_mod attribute of value \'$rel_type\' are as follows:\n\n");
 
 #set up printing format
-my $template = "%-15s%-10s%-20s%-15s%-15s%-10s%-7s%-30s\n";
+my $template = "%-23s%-17s%-57s%-15s%-12s%-10s%-7s%-30s\n";
 my $txt = sprintf $template, qw(loutre_id vega_id name ensembl_name ack toplevel hidden releases);
-$txt .= "-"x110 . "\n";
+$txt .= "-"x147 . "\n";
 
 #get attributes of chromosomes with a vega_export_mod of External
 my %final_attribs = map {$_=> 1} qw(

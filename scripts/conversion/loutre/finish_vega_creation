@@ -352,6 +352,13 @@ foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
                    AND    t.transcript_id = ?
         ));	
 
+		#SQL to update source case mismatch
+		my $ssth = $vdbh->prepare(qq(
+                   UPDATE gene
+                   SET    source = ?
+                   WHERE  g.gene_id = ?
+        ));	
+
 		#loop through genes
 		foreach my $gene (@{$chrom->get_all_Genes()}) {
 			my $gsid = $gene->stable_id;
@@ -361,7 +368,8 @@ foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
 			if ($source ne 'havana') {
 				$source = uc($source);
 				if ($gene->source ne $source) {
-					$support->log_warning("Gene $gsid ($gname) has a source of \'".$gene->source."\'\n",2);
+					$support->log_warning("Gene $gsid ($gname) has a source of \'".$gene->source."\', patching, but you might want to check the name\n",2);
+					$ssth->execute($source,$gid);
 				}
 			}
 			my $old_gln = $gene->analysis->logic_name;
@@ -554,19 +562,24 @@ push @sql_fixes, "INSERT into meta (meta_key,meta_value) VALUES ('genebuild.leve
 #delete patch script entries
 push @sql_fixes, "DELETE from meta WHERE meta_key = \'patch\';\n";
 
-#update biotypes of some genes for website display purposes
-push @sql_fixes, "UPDATE gene set biotype = 'IG_gene' where biotype = 'ig_gene';\n";
-push @sql_fixes, "UPDATE gene set biotype = 'IG_pseudogene' where biotype = 'ig_pseudogene';\n";
-push @sql_fixes, "UPDATE gene set biotype = 'TEC' where biotype = 'tec';\n";
-push @sql_fixes, "UPDATE transcript set biotype = 'IG_gene' where biotype = 'ig_gene';\n";
-push @sql_fixes, "UPDATE transcript set biotype = 'IG_pseudogene' where biotype = 'ig_pseudogene';\n";
+#update biotypes of some genes/transcripts for website display purposes
+push @sql_fixes, "UPDATE gene SET biotype = 'IG_gene' WHERE biotype = 'ig_gene';\n";
+push @sql_fixes, "UPDATE gene SET biotype = 'IG_pseudogene' WHERE biotype = 'ig_pseudogene';\n";
+push @sql_fixes, "UPDATE gene SET biotype = 'TEC' WHERE biotype = 'tec';\n";
+push @sql_fixes, "UPDATE gene SET biotype = 'processed_transcript' WHERE biotype = 'novel_transcript';\n");
+push @sql_fixes, "UPDATE gene SET biotype = 'transcribed_pseudogene' WHERE biotype = 'expressed_pseudogene';\n";
+push @sql_fixes, "UPDATE gene SET status = 'NOVEL' WHERE status = 'UNKNOWN';\n";
+push @sql_fixes, "UPDATE transcript SET biotype = 'transcribed_pseudogene' WHERE biotype = 'expressed_pseudogene';\n";
+push @sql_fixes, "UPDATE transcript SET biotype = 'IG_gene' WHERE biotype = 'ig_gene';\n";
+push @sql_fixes, "UPDATE transcript SET biotype = 'processed_transcript', status  = 'PUTATIVE' WHERE biotype = 'putative' AND status  = 'UNKNOWN';\n";
+
 
 if (! $support->param('dry_run')) {
-	$support->log("\nFixing meta etc tables\n");
+	$support->log("\nFixing meta table, updating gene / transcript types\n");
 	foreach my $fix (@sql_fixes) {
 		if (my $r = $vdbh->do("$fix")) {
 			if ($r eq '0E0') {
-				$support->log_warning("No rows affected for $fix");
+				$support->log("No rows affected for $fix");
 			}
 			else {
 				$support->log("Updated $r rows for $fix");
@@ -592,7 +605,7 @@ if (! $support->param('dry_run')) {
 			'logfile'     => 'finish_vega_creation_update_attributes.log',
 		}
 	});
-	$support->log("Updating attrib_type table for ".$support->param('dbname')."...\n");
+	$support->log("\nUpdating attrib_type table for ".$support->param('dbname')."...\n");
 	system("../update_attributes.pl $options") == 0
 		or $support->throw("Error running update_attributes.pl: $!");
 	
