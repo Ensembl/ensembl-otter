@@ -150,6 +150,7 @@ if ($support->param('prune')
 
 my ($c1,$c2,$c3) = (0,0,0);
 foreach my $chr ($support->sort_chromosomes) {
+#	next unless ($chr eq '4-IDD9.1M_DIL');
 	$support->log_stamped("\n\nLooping over chromosome $chr\n");
 	my $chrom = $sa->fetch_by_region('toplevel', $chr);
  GENE:
@@ -159,6 +160,7 @@ foreach my $chr ($support->sort_chromosomes) {
 		my %seen_names;
 		my %transcripts;
 		my $g_name = $gene->get_all_Attributes('name')->[0]->value;
+#		my $g_name = $gene->display_xref->display_id;
 		my $source = $gene->source;
 
 		$support->log("\n$g_name ($gsi)\n");
@@ -173,7 +175,7 @@ foreach my $chr ($support->sort_chromosomes) {
 			  || ($base_name =~ s/__\d{1,2}$//)
 			  || ($base_name =~ s/__\d{1,2}$//) 
 			  || ($base_name =~ s/_\d$//)) {
-				$support->log_warning("transcript names like $t_name aren't used any more - skipping\n");
+				$support->log_warning("Transcript names like $t_name shouldn't be used any more\n");
 			}
 			
 			#warn only Havana genes with duplicated names unless we're verbose
@@ -204,6 +206,7 @@ foreach my $chr ($support->sort_chromosomes) {
 			my $base_name = $transcripts{$t_name}->[1];
 			my $tsi    =  $trans->stable_id;
 			my $t_dbID = $trans->dbID;		
+#			if ($t_name =~ /(\-\d{3})_\d{1}$/) { #hack used for patching mouse duplicate transcript names
 			if ($t_name =~ /(\-\d{3})$/) {
 				my $new_name = "$g_name$1";
 				push @{$transnames->{$new_name}}, "$t_name|$tsi";
@@ -241,14 +244,14 @@ foreach my $chr ($support->sort_chromosomes) {
 			#log unexpected names (ie don't have -001 etc after removing Leo's extension
 			elsif ( $support->param('dbname') =~ /sapiens/) {
 				if ( $source =~ /GD|havana/) {
-					$support->log_warning("IDENTICAL: $source gene $gsi ($g_name) has transcripts with identical base loutre names ($base_name), please fix\n");
+					$support->log_warning("UNEXPECTED transcript name $t_name ($tsi)\n");
 				}
 				elsif ($support->param('verbose')) {
-					$support->log_warning("IDENTICAL: $source gene $gsi ($g_name) has transcripts with identical base loutre names ($base_name), please fix\n");
+					$support->log_warning("UNEXPECTED transcript name $t_name ($tsi)\n");
 				}
 			}
 			else {
-				$support->log_warning("IDENTICAL: $source gene $gsi ($g_name) has transcripts with identical base loutre names ($base_name), please fix\n");
+				$support->log_warning("UNEXPECTED transcript name $t_name ($tsi)\n");
 			}
 		}
 
