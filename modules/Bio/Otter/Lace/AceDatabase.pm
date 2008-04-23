@@ -708,7 +708,16 @@ sub write_pipeline_data {
     my $client  = $self->Client();
     my ($dsname, $ssname, $chr_name, $chr_start, $chr_end) = $ss->selected_CloneSequences_parameters;
 
-    my $factory = $self->make_otterpipe_DataFactory($dsname);
+    my $ds = $self->Client()->get_DataSet_by_name($dsname);
+    my $ds_alias = $ds->ALIAS(); # defaults to $dsname if not set
+        # It is a means to create a 'species alias' to reuse the otter_config for one species without duplication.
+        # For example, if you need a test_human database that would fetch all human analyses from the pipeline
+        # it is the shortest way to go.
+        #
+        # Feel free to revert back to the original behaviour.
+        #
+    # my $factory = $self->make_otterpipe_DataFactory($dsname);
+    my $factory = $self->make_otterpipe_DataFactory($ds_alias);
 
     # create file for output and add it to the acedb object
     my $ace_filename = $self->home . '/rawdata/pipeline.ace';
@@ -727,20 +736,20 @@ sub write_pipeline_data {
 }
 
 sub make_otterpipe_DataFactory {
-    my( $self, $dsname ) = @_;
+    my( $self, $ds_alias ) = @_;
 
     my $client = $self->Client();
-    warn "This dataset is '$dsname'\n";
+    warn "Making DataFactory for '$ds_alias' species\n";
 
     # create new datafactory object - contains all ace filters and produces the data from these
-    my $factory = Bio::EnsEMBL::Ace::DataFactory->new($client, $dsname);
+    my $factory = Bio::EnsEMBL::Ace::DataFactory->new();
 
     ##----------code to add all of the ace filters to data factory-----------------------------------
 
     my $debug = $client->debug();
     
-    my $logic_to_load  = $client->option_from_array([ $dsname, 'use_filters' ]);
-    my $module_options = $client->option_from_array([ $dsname, 'filter' ]);
+    my $logic_to_load  = $client->option_from_array([ $ds_alias, 'use_filters' ]);
+    my $module_options = $client->option_from_array([ $ds_alias, 'filter' ]);
 
     my @analysis_names = grep $logic_to_load->{$_}, keys %$logic_to_load;
 
