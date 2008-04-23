@@ -87,8 +87,8 @@ sub remove_restricted_datasets {
     
     my $sp = $self->{'_species_dat_hash'};
 
-    foreach my $dataset_name (keys %$sp) {
-        next unless $sp->{$dataset_name}{'RESTRICTED'};
+    DATASET: foreach my $dataset_name (keys %$sp) {
+        next DATASET unless $sp->{$dataset_name}{'RESTRICTED'};
         $self->log(sprintf("Dataset %s is %srestricted", $dataset_name, $allowed_hash->{$dataset_name} ? '' : 'not '));
         delete $sp->{$dataset_name} unless $allowed_hash->{$dataset_name};
     }
