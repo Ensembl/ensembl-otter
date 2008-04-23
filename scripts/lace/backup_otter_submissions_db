@@ -12,7 +12,7 @@ use Net::Netrc;
     umask(002);
     {
         my $path = $ENV{'PATH'};
-        $ENV{'PATH'} = "//usr/local/mysql-standard-4.1.14-dec-osf5.1b-alphaev67/bin:usr/local/bin:/usr/apps/bin:$path";
+        $ENV{'PATH'} = "/usr/local/mysql-standard-4.1.14-dec-osf5.1b-alphaev67/bin:usr/local/bin:/usr/apps/bin:$path";
     }
 
     my $host = 'otterslave';
@@ -131,7 +131,7 @@ sub list_otter_databases {
     
     my $dbs = [];
     while (my ($db_name) = $sth->fetchrow) {
-        if ($db_name =~ /^(otter|loutre|submissions)/i) {
+        if ($db_name =~ /^(otter|loutre|submissions|act2)/i) {
             push(@$dbs, $db_name);
         } else {
             print STDERR "Skipping database '$db_name'\n";

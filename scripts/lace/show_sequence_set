@@ -47,6 +47,7 @@ use Hum::Sort 'ace_sort';
     } else {
         print "Datasets:\n";
         foreach my $ds ($cl->get_all_DataSets) {
+            #use Data::Dumper;  print Dumper($ds);
             print "  ", $ds->name, "\n";
         }
     }
