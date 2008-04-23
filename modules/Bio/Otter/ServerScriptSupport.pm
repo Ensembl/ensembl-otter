@@ -218,6 +218,8 @@ sub local_user {
 }
 
 sub show_restricted_datasets {
+    my ($self) = @_;
+    
     if (my $client = $self->param('client')) {
         return $client =~ /otterlace/;
     } else {
