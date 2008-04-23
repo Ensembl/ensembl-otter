@@ -45,10 +45,10 @@ sub new {
     my $pkg = shift;
     
     my $self = $pkg->SUPER::new(@_);
-    if ($self->local_user) {
-        $self->authenticate_user;
-    } else {
+    if ($self->show_restricted_datasets or ! $self->local_user) {
         $self->authorized_user
+    } else {
+        $self->authenticate_user;
     }
 
     # '/GPFS/data1/WWW/SANGER_docs/data/otter/48/species.dat';
@@ -122,14 +122,22 @@ sub load_species_dat_file {
 
     $self->SUPER::load_species_dat_file(@_);
 
-    unless ($self->local_user || $self->internal_user) {
-        
-            # External users only see datasets listed after their names in users.txt file
-        my $user = $self->authorized_user;
-        my $allowed = $self->users_hash->{$user};
-
-        $self->keep_only_datasets($allowed);
+    unless ($self->local_user || $self->internal_user) {        
+        # External users only see datasets listed after their names in users.txt file
+        $self->keep_only_datasets($self->allowed_datasets);
     }
+    if ($self->show_restricted_datasets) {
+        $self->remove_restricted_datasets($self->allowed_datasets);
+    } else {
+        $self->remove_restricted_datasets({});
+    }
+}
+
+sub allowed_datasets {
+    my ($self) = @_;
+    
+    my $user = $self->authorized_user;
+    return $self->users_hash->{$user} || {};
 }
 
 sub users_hash {
@@ -205,15 +213,16 @@ sub internal_user {
     return $self->{'_internal_user'};
 }
 
-sub admin_user {
-    my ($self) = @_;
-    
-    my $user = $self->authorized_user;
-    return $self->internal_user && $self->users_hash->{$user}{'admin'};
-}
-
 sub local_user {
     return $ENV{'localuser'} =~ /local/ ? 1 : 0;
+}
+
+sub show_restricted_datasets {
+    if (my $client = $self->param('client')) {
+        return $client =~ /otterlace/;
+    } else {
+        return;
+    }
 }
 
 ############## I/O: ################################

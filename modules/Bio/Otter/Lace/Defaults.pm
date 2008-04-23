@@ -70,6 +70,13 @@ sub save_deep_option {
     $GETOPT->{$opt_str}->{$param} = $value;
 }
 
+sub client_name {
+    if (my ($script) = $0 =~ m{([^/]+)$}) {
+        return $script;
+    } else {
+        confess "Can't parse client name from '$0'";
+    }
+}
 
 
 ################################################
