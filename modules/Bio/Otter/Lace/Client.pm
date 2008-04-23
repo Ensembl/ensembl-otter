@@ -402,9 +402,6 @@ sub otter_response_content {
 sub http_response_content {
     my ($self, $method, $scriptname, $params) = @_;
     
-    # Set debug to 2 or more to turn on debugging on server side
-    $params->{'log'} = 1 if $self->debug > 1;
-    $params->{'client'} = $self->client_name;
     my $response = $self->general_http_dialog($method, $scriptname, $params);
     
     my $xml = $response->content();
@@ -427,6 +424,10 @@ sub response_info {
 
 sub general_http_dialog {
     my ($self, $method, $scriptname, $params) = @_;
+
+    # Set debug to 2 or more to turn on debugging on server side
+    $params->{'log'} = 1 if $self->debug > 1;
+    $params->{'client'} = $self->client_name;
 
     my $password_attempts = $self->password_attempts;
     my $timeout_attempts  = $self->timeout_attempts;
@@ -859,7 +860,7 @@ sub get_all_DataSets {
         my $content = $self->http_response_content(
             'GET',
             'get_datasets',
-            {}
+            {},
         );
 
         # stream parsing expat non-validating parser
