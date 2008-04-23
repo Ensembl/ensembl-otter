@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2008-02-22 14:29:37 $
-# Id:            $Id: nph-get_datasets,v 1.9 2008-02-22 14:29:37 jgrg Exp $
+# Last modified: $Date: 2008-04-23 17:32:50 $
+# Id:            $Id: nph-get_datasets,v 1.10 2008-04-23 17:32:50 jgrg Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_datasets,v $
 
 use strict;
@@ -18,8 +18,8 @@ my $xml;
 eval {
     my $species_hash = $server->_species_hash(); # use of internal methods is generally discouraged
     
-    # Only admin users get to see mysql connection details
-    my $show_details = $server->local_user || $server->admin_user;
+    # Only local users get to see mysql connection details
+    my $show_details = $server->local_user;
 
     $xml   .= qq{  <datasets>\n};
     foreach my $dataset (keys %$species_hash) {

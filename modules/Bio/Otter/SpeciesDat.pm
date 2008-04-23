@@ -82,6 +82,18 @@ sub keep_only_datasets {
     }
 }
 
+sub remove_restricted_datasets {
+    my ($self, $allowed_hash) = @_;
+    
+    my $sp = $self->{'_species_dat_hash'};
+
+    foreach my $dataset_name (keys %$sp) {
+        next $sp->{$dataset_name}{'restricted'};
+        $self->log(sprintf("Dataset %s is %srestricted", $dataset_name, $allowed_hash->{$dataset_name} ? '' : 'not '));
+        delete $sp->{$dataset_name} unless $allowed_hash->{$dataset_name};
+    }
+}
+
 sub _species_hash { # used by nph-get_datasets only
     my ($self) = @_;
 

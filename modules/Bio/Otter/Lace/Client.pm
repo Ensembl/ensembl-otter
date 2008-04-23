@@ -84,6 +84,16 @@ sub email {
     return $self->option_from_array([qw( client email )]) || (getpwuid($<))[0];
 }
 
+sub client_name {
+    my ($self) = @_;
+    
+    my $name;
+    unless ($name = $self->{'_client_name'}) {
+        $name = $self->{'_client_name'} = Bio::Otter::Lace::Defaults::client_name();
+    }
+    return $name;
+}
+
 sub debug {
     my ($self, $debug) = @_;
 
@@ -394,6 +404,7 @@ sub http_response_content {
     
     # Set debug to 2 or more to turn on debugging on server side
     $params->{'log'} = 1 if $self->debug > 1;
+    $params->{'client'} = $self->client_name;
     my $response = $self->general_http_dialog($method, $scriptname, $params);
     
     my $xml = $response->content();
@@ -848,7 +859,7 @@ sub get_all_DataSets {
         my $content = $self->http_response_content(
             'GET',
             'get_datasets',
-            {},
+            {}
         );
 
         # stream parsing expat non-validating parser
