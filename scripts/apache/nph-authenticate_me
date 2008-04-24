@@ -3,12 +3,12 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2008-04-24 16:33:29 $
-# Id:            $Id: nph-authenticate_me,v 1.1 2008-04-24 16:33:29 jgrg Exp $
+# Last modified: $Date: 2008-04-24 16:36:38 $
+# Id:            $Id: nph-authenticate_me,v 1.2 2008-04-24 16:36:38 jgrg Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-authenticate_me,v $
 
 use strict;
-use SangerPaths qw{ core bioperl123 ensembl46 otter48 };
+use SangerPaths qw{ core bioperl123 ensembl46 otter49 };
 use SangerWeb;
 
 use Bio::Otter::ServerScriptSupport;
