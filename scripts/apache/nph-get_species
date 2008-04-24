@@ -1,0 +1,27 @@
+#!/usr/bin/env perl -Tw
+
+# Author:        jgrg
+# Group:         anacode
+# Maintainer:    jgrg
+# Last modified: $Date: 2008-04-24 16:33:29 $
+# Id:            $Id: nph-get_species,v 1.1 2008-04-24 16:33:29 jgrg Exp $
+# Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_species,v $
+
+use strict;
+use SangerPaths qw{ core bioperl123 ensembl46 otter48 };
+use SangerWeb;
+
+use Bio::Otter::ServerScriptSupport;
+
+my $server = Bio::Otter::ServerScriptSupport->new;
+
+
+
+__END__
+
+=head1 NAME - nph-get_species
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
