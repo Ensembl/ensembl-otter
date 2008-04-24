@@ -225,10 +225,13 @@ sub update_gene_name_and_description {
 
     my $curr_gene  = $geneAd->fetch_by_dbID($gene_id);
     my $gsid       = $curr_gene->stable_id;
+
+    # reason see store_gene() below
     if ( $updated_gsid{$gsid} ){
       print STDERR "SKIP $gsid ($gene_id)\n";
       next;
     }
+
     my $name_attr  = $curr_gene->get_all_Attributes('name')->[0];
     my $curr_name  = $name_attr->value;
     my $curr_desc  = $curr_gene->description || 'NA';
@@ -325,7 +328,7 @@ sub store_gene {
     my $update = $loutre_dba->dbc->prepare($sql);
     $update->execute;
 
-    # ------------- IMPORTANT --------------
+    # --------------------------------------- IMPORTANT -----------------------------------------------------------
     # Needs to record updated gsid to make sure no second update will be done with it
     # as gene_name is used to find those in haplotype and prefixed genes
     # ie, this avoids, eg,
@@ -338,8 +341,8 @@ sub store_gene {
     # Here, Hba-a1 is used to find all genes in haplotype and gene_names with
     #  "prefix:Hba-a1", which we also need to update.
     # So without excluding updated gsids, this will pick up Hba-a1 of OTTMUSG00000005377 and changes back to Hba-a2
-
     $updated_gsid{$gsid}++;
+    #---------------------------------------------------------------------------------------------------------------
   }
 }
 
