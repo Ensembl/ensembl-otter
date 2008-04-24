@@ -4,6 +4,8 @@ use strict;
 use Bio::Otter::Lace::Defaults;
 use Bio::Vega::DBSQL::DBAdaptor;
 
+my %updated_gsid;
+
 {
   my ($dataset_name);
   my $test = 0; # default is NOT doing test
@@ -43,9 +45,13 @@ sub update_loutre {
 
     my $gene_SID   = $mgi->{'vega_id'};
 
+    if ( $mgi->{'locus_symbol'} eq 'Tcra-V8' ){ # temporarily
+      warn "SKIP Tcra-8 for now";
+      next;
+    }
+
     my $mgi_symbol = $mgi->{'locus_symbol'};
     if ( grep(/$mgi_symbol/, @$problem_symbol) ){
-      print STDERR "NAME_2_MULTIPLE_ID: $mgi_symbol $gene_SID\n";
       next;
     }
 
@@ -99,7 +105,7 @@ sub parse_mgi_input {
     my $curr_gene = $geneAd->fetch_by_stable_id($vega_id_from_mgi);
 
     unless ( $curr_gene ){
-      print STDERR "ERROR: $vega_id_from_mgi NOT FOUND in database\n";
+      print STDERR "ERROR: $vega_id_from_mgi NOT CURRENT in database\n";
       next;
     }
 
@@ -140,7 +146,11 @@ sub parse_mgi_input {
   my $problem_symbol = [];
   foreach my $symbol ( keys %$mgiSymbol_2_vegaIDs ){
     if ( @{$mgiSymbol_2_vegaIDs->{$symbol}} > 1 ){
-      print STDERR "MGI_2_MULTILE_IDs $symbol: @{$mgiSymbol_2_vegaIDs->{$symbol}}\n";
+
+#      my $ok = check_for_good_symbols($symbol);
+      my $val = check_for_good_symbols($symbol) ? 'good' : 'bad';
+
+      print STDERR "MGI_2_MULTILE_IDs $symbol: ($val) @{$mgiSymbol_2_vegaIDs->{$symbol}}\n";
       # don't want to update loutre with such gene names.
       # give annotators to look at them first
       push(@$problem_symbol, $symbol);
@@ -204,6 +214,7 @@ sub update_gene_name_and_description {
   my ( $chr, $loutre_dba, $geneAd, $gene, $vega_name, $mgi_id, $mgi_symbol, $mgi_desc, $test) = @_;
 
   # find all current genes with prefix:$vega_name and from its haplotype
+  warn "Finding all genes with PREFIX:$vega_name\n";
   my $gids = find_prefixed_genes($loutre_dba, $vega_name, $chr);
 
   my $num = @$gids;
@@ -214,6 +225,10 @@ sub update_gene_name_and_description {
 
     my $curr_gene  = $geneAd->fetch_by_dbID($gene_id);
     my $gsid       = $curr_gene->stable_id;
+    if ( $updated_gsid{$gsid} ){
+      print STDERR "SKIP $gsid ($gene_id)\n";
+      next;
+    }
     my $name_attr  = $curr_gene->get_all_Attributes('name')->[0];
     my $curr_name  = $name_attr->value;
     my $curr_desc  = $curr_gene->description || 'NA';
@@ -300,7 +315,8 @@ sub store_gene {
     print STDERR "LOCK: $gsid is locked on @$contig_lock\n";
   }
   else {
-    my $new_gene_id = $geneAd->store($gene);
+    $geneAd->store($gene);
+    my $new_gene_id = $gene->dbID;
     printf STDERR ("Storing %s ==> Old dbID: %d New dbID: %d\n", $gsid, $curr_gene_id, $new_gene_id);
 
     my $curdate = "now()";
@@ -308,6 +324,22 @@ sub store_gene {
     my $sql = qq{INSERT INTO gene_name_update (gene_id, consortium_id, update_date) VALUES($params)};
     my $update = $loutre_dba->dbc->prepare($sql);
     $update->execute;
+
+    # ------------- IMPORTANT --------------
+    # Needs to record updated gsid to make sure no second update will be done with it
+    # as gene_name is used to find those in haplotype and prefixed genes
+    # ie, this avoids, eg,
+
+    # MGI:96015	Hba-a1	hemoglobin alpha, adult chain 1	16.0	11	OTTMUSG00000005377 (old name is Hba-a2)
+    # MGI:96016	Hba-a2	hemoglobin alpha, adult chain 2	16.0	11	OTTMUSG00000005376 (old name is Hba-a1)
+
+    # As when the old Hba-a2 of OTTMUSG00000005377 is first changed to Hba-a1,
+    # it comes to updating Hba-a1 of OTTMUSG00000005376.
+    # Here, Hba-a1 is used to find all genes in haplotype and gene_names with
+    #  "prefix:Hba-a1", which we also need to update.
+    # So without excluding updated gsids, this will pick up Hba-a1 of OTTMUSG00000005377 and changes back to Hba-a2
+
+    $updated_gsid{$gsid}++;
   }
 }
 
