@@ -570,10 +570,11 @@ sub store {
             }
         }
 
-            # If the gene is still associated with the last fetchable version,
-            # (for example, if it is being DELETED or RESTORED)
-            # it has to be dissociated from the DB to get a new set of dbIDs:
+        # If the gene is still associated with the last fetchable version,
+        # (for example, if it is being DELETED or RESTORED)
+        # it has to be dissociated from the DB to get a new set of dbIDs:
         if($gene->dbID() && ($gene->dbID() == $db_gene->dbID())) {
+        # if($gene->dbID()) {   # Dropped second condition to get repair_ko_gene_ott_ids script to work
             $gene->dissociate();
         }
 

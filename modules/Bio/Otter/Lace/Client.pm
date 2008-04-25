@@ -887,6 +887,17 @@ sub get_server_otter_config {
     Bio::Otter::Lace::Defaults::save_server_otter_config($content);
 }
 
+sub do_authentication {
+    my ($self) = @_;
+    
+    my $user = $self->http_response_content(
+        'GET',
+        'authenticate_me',
+        {},
+    );
+    return $user
+}
+
 sub get_all_SequenceSets_for_DataSet {
   my( $self, $ds ) = @_;
   return [] unless $ds;

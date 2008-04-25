@@ -696,7 +696,13 @@ sub populate_menus {
     if ($PFETCH_SERVER_LIST->[0][0] eq 'localhost') {
         $tools_menu->add('command',
             -label          => 'Restart local pfetch server',
-            -command        => sub{ $self->AceDatabase->Client->fork_local_pfetch_server },
+            -command        => sub{
+                my $client = $self->AceDatabase->Client;
+                # Make sure that we are authorized here by running a query against the server
+                my $user = $client->do_authentication;
+                warn "User '$user' is authenticated\n";
+                $client->fork_local_pfetch_server;
+                },
             #-accelerator    => 'Ctrl+P',
             -underline      => 0,
             );
