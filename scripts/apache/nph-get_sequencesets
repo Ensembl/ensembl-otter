@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2008-04-25 14:02:23 $
-# Id:            $Id: nph-get_sequencesets,v 1.15 2008-04-25 14:02:23 lg4 Exp $
+# Last modified: $Date: 2008-04-25 14:18:31 $
+# Id:            $Id: nph-get_sequencesets,v 1.16 2008-04-25 14:18:31 lg4 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_sequencesets,v $
 
 use strict;
@@ -103,7 +103,7 @@ eval {
 
         # An attempt at finer, by-author's-name control over visibility/writability of sequence sets
         #
-        my $sth=$odba->prepare(q{
+        my $sth=$odba->dbc()->prepare(q{
             SELECT acc.access_type
               FROM sequence_set_access acc,
                    seq_region sr,
