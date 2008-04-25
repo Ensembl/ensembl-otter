@@ -740,7 +740,7 @@ response.
 sub zMapTagValues {
     my ($self, $xml_hash) = @_;
 
-    use Data::Dumper; warn Dumper($xml_hash);
+    # warn Dumper($xml_hash);
 
     my $pages = "";
     if ($xml_hash->{'action'} eq 'feature_details') {
@@ -911,7 +911,7 @@ sub RECEIVE_FILTER {
         }
     }
 
-    warn "Response:\n$response";
+    #warn "Response:\n$response";
 
     return ($status, $response);
 }
@@ -947,7 +947,7 @@ sub zMapGetXRemoteClientByAction{
     my $cache = $self->xremote_cache();
     $cache  ||= $self->xremote_cache(ZMap::XRemoteCache->new());
 
-    #warn Dumper $cache;
+    # warn Dumper $cache;
 
     $method = ($own_windows_only ? 
                'get_own_client_for_action_pid' : 
