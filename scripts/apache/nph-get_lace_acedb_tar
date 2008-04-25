@@ -1,10 +1,10 @@
-#!/usr/local/bin/perl -w
+#!/usr/local/bin/perl -Tw
 
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2008-04-25 09:43:10 $
-# Id:            $Id: nph-get_lace_acedb_tar,v 1.5 2008-04-25 09:43:10 jgrg Exp $
+# Last modified: $Date: 2008-04-25 09:48:46 $
+# Id:            $Id: nph-get_lace_acedb_tar,v 1.6 2008-04-25 09:48:46 jgrg Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_lace_acedb_tar,v $
 
 ### nph-get_lace_acedb_tar
