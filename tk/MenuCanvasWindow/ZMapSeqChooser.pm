@@ -740,43 +740,74 @@ response.
 sub zMapTagValues {
     my ($self, $xml_hash) = @_;
 
-    #use Data::Dumper; warn Dumper($xml_hash);
+    use Data::Dumper; warn Dumper($xml_hash);
 
-    my $page    = "";
-    my $handled = "false";
-
+    my $pages = "";
     if ($xml_hash->{'action'} eq 'feature_details') {
-        my $subseq_list   = [];
-        my $feature       = $xml_hash->{'featureset'}->{'feature'} || {};
+        my $feature_hash = $xml_hash->{'featureset'}->{'feature'} || {};
 
-        foreach my $name (keys %$feature) {
-            if (my $subseq = $self->get_SubSeq($name)) { 
-                push(@$subseq_list, $subseq);
-            }
-        }
+        # There is only ever 1 feature in the XML from Zmap
+        my ($name) = keys %$feature_hash;
+        my $info = $feature_hash->{$name};
 
-        if (@$subseq_list) {
-            foreach my $subseq (@$subseq_list) {
-                $page .= $subseq->zmap_info_xml;
-            }
-            $handled = 'true';
+        unless ($name) {
+            warn "No feature in featurset of XML";
         }
-        elsif (my $xml = $self->zmap_feature_evidence_xml($feature)) {
-            $handled = 'true';
-            $page = $xml;
+        elsif (my $subseq = $self->get_SubSeq($name)) {
+            $pages .= $subseq->zmap_info_xml;
+        }
+        else {
+            $pages .= $self->zmap_feature_details_xml($name, $info);
+            $pages .= $self->zmap_feature_evidence_xml($name, $info);
         }
     }
 
-    return (200, 
-            qq{<response handled="$handled">\n} .
-            qq{\t<notebook>\n}                  .
-            qq{$page}                           .
-            qq{\t</notebook>\n}                 .
-            qq{</response>});
+    my $xml = Hum::XmlWriter->new;
+    $xml->open_tag('response', {handled => $pages ? 'true' : 'false'});
+    if ($pages) {
+        $xml->open_tag('notebook');
+        $xml->open_tag('chapter');
+        $xml->add_raw_data($pages);
+    }
+    $xml->close_all_open_tags;
+    
+    return (200, $xml->flush);
+}
+
+sub zmap_feature_details_xml {
+    my ($self, $name, $info) = @_;
+    
+    my $ace = $self->ace_handle;
+    my ($taxon_id, $desc);
+    foreach my $class (qw{ Sequence Protein }) {
+        $ace->raw_query(qq{find $class "$name"});
+        my $txt = Hum::Ace::AceText->new($ace->raw_query(qq{show -a}));
+        # print STDERR $$txt;
+        next unless $txt->get_values($class);
+        ($taxon_id) = $txt->get_values('Taxon_id');
+        ($desc) = $txt->get_values('Title');
+    }    
+    
+    return '' unless $taxon_id or $desc;
+    
+    my $xml = Hum::XmlWriter->new(5);
+    
+    # Put this on the "Details" page which already exists.
+    $xml->open_tag('page', {name => 'Details'});
+    $xml->open_tag('subsection', {name => 'Feature'});
+    $xml->open_tag('paragraph', {type => 'tagvalue_table'});
+    $xml->full_tag('tagvalue', {name => 'Taxon ID', type => 'simple'}, $taxon_id->[0])
+        if $taxon_id;
+    $xml->full_tag('tagvalue', {name => 'Description', type => 'scrolled_text'}, $desc->[0])
+        if $desc;
+    
+    $xml->close_all_open_tags;
+    
+    return $xml->flush;
 }
 
 sub zmap_feature_evidence_xml {
-    my ($self, $feature) = @_;
+    my ($self, $feat_name, $info) = @_;
     
     my $subseq_list = [];
     foreach my $name ($self->list_all_SubSeq_names) {
@@ -785,7 +816,7 @@ sub zmap_feature_evidence_xml {
         }
     }
     my $used_subseq_names = [];
-    foreach my $subseq (@$subseq_list) {
+    SUBSEQ: foreach my $subseq (@$subseq_list) {
         my $evi_hash = $subseq->evidence_hash();
 
         # evidence_hash looks like this
@@ -797,27 +828,25 @@ sub zmap_feature_evidence_xml {
         # }
 
         foreach my $evi_type (keys %$evi_hash) {
-
             my $evi_array = $evi_hash->{$evi_type};
             foreach my $evi_name (@$evi_array) {
-
-                if (my $req_evi = $feature->{$evi_name}) {
-                    # check overlapping to see if it really is used.
-                    if (!(($req_evi->{'start'} > $subseq->end) &&
-                         ($req_evi->{'end'}   < $subseq->start))){
-                        push(@$used_subseq_names, $subseq->name);
-                    } else {
-                        warn sprintf("Transcript '%s' does not overlap '%s'",
-                            $subseq->name,
-                            $evi_name);
-                    }
+                next unless $feat_name eq $evi_name;
+                # check overlapping to see if it really is used.
+                if (!(($info->{'start'} > $subseq->end) &&
+                     ($info->{'end'}    < $subseq->start)))
+                {
+                    push(@$used_subseq_names, $subseq->name);
+                    next SUBSEQ;
+                } else {
+                    warn sprintf("Transcript '%s' does not overlap '%s'",
+                        $subseq->name,
+                        $evi_name);
                 }
             }
         }
     }
     if (@$used_subseq_names) {
-        my $xml = Hum::XmlWriter->new;
-        $xml->open_tag('chapter');
+        my $xml = Hum::XmlWriter->new(5);    
         $xml->open_tag('page', {name => 'Otter'});
         $xml->open_tag('subsection');
         $xml->open_tag('paragraph', {
@@ -830,9 +859,11 @@ sub zmap_feature_evidence_xml {
         $xml->close_all_open_tags;
         return $xml->flush;
     } else {
-        return;
+        return '';
     }
 }
+
+
 
 #===========================================================
 
@@ -880,7 +911,7 @@ sub RECEIVE_FILTER {
         }
     }
 
-    warn "Response = $response";
+    warn "Response:\n$response";
 
     return ($status, $response);
 }
