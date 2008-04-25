@@ -3,18 +3,28 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2008-04-25 09:50:19 $
-# Id:            $Id: nph-get_species,v 1.4 2008-04-25 09:50:19 jgrg Exp $
+# Last modified: $Date: 2008-04-25 13:43:17 $
+# Id:            $Id: nph-get_species,v 1.5 2008-04-25 13:43:17 jgrg Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_species,v $
 
 use strict;
+use DBI;
 use SangerPaths qw{ core bioperl123 ensembl48 otter49 };
 use SangerWeb;
 
 use Bio::Otter::ServerScriptSupport;
-
-my $server = Bio::Otter::ServerScriptSupport->new;
-
+{
+    my $server = Bio::Otter::ServerScriptSupport->new;
+    my $uesr = $server->authorized_user;
+    my $dbh = DBI->connect('DBI:mysql:host=cbi3.internal.sanger.ac.uk', 'genero', undef);
+    my $taxon_id_string = $server->require_argument('taxon_id_list');
+    my @taxon;
+    foreach my $tid (split /,/, $taxon_id_string) {
+        $tid =~ s/\D+//g;
+        push(@taxon, $tid);
+    }
+    warn "User '$user' is fetching taxonomy info for (@taxon)";
+}
 
 
 __END__
