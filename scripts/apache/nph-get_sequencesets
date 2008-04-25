@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2008-04-25 09:43:10 $
-# Id:            $Id: nph-get_sequencesets,v 1.14 2008-04-25 09:43:10 jgrg Exp $
+# Last modified: $Date: 2008-04-25 14:02:23 $
+# Id:            $Id: nph-get_sequencesets,v 1.15 2008-04-25 14:02:23 lg4 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_sequencesets,v $
 
 use strict;
@@ -19,9 +19,12 @@ eval {
 
     my $dataset = $server->require_argument('dataset');
 
+
     # Allow local scripts to access without authorization
+
+    my $author  = $server->require_argument('client');
     unless ($server->local_user) {
-        $server->authorized_user;
+        $author = $server->authorized_user;
     }
 
     my $odba = $server->otter_dba();
@@ -87,8 +90,6 @@ eval {
         my $write_access = 1;  # default
         my $hidden       = 1;  # default
 
-        # FIXME: we will need finer, by-author's-name control over visibility/writability of sequence sets
-
         for my $attrib (@{ $attribute_adaptor->fetch_all_by_Slice( $ss_slice ) }) {
             my ($code, $value) = ($attrib->code(), $attrib->value());
             if($code eq 'description') {
@@ -97,6 +98,28 @@ eval {
                 $write_access = $value;
             }elsif($code eq 'hidden') {
                 $hidden       = $value;
+            }
+        }
+
+        # An attempt at finer, by-author's-name control over visibility/writability of sequence sets
+        #
+        my $sth=$odba->prepare(q{
+            SELECT acc.access_type
+              FROM sequence_set_access acc,
+                   seq_region sr,
+                   author au
+             WHERE acc.seq_region_id=sr.seq_region_id
+               AND acc.author_id = au.author_id
+               AND au.author_name = ?
+               AND sr.name        = ?
+        });
+        $sth->execute($author, $chr_name);
+        while (my($access) = $sth->fetchrow) { # we're only expecting max one value
+            if($access=~/W/) {
+                $write_access = 1;
+            }
+            if($access=~/R/) {
+                $hidden = 0;
             }
         }
 
