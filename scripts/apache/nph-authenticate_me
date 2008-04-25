@@ -1,10 +1,10 @@
-#!/usr/bin/env perl -Tw
+#!/usr/local/bin/perl -Tw
 
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2008-04-25 09:43:10 $
-# Id:            $Id: nph-authenticate_me,v 1.4 2008-04-25 09:43:10 jgrg Exp $
+# Last modified: $Date: 2008-04-25 09:50:19 $
+# Id:            $Id: nph-authenticate_me,v 1.5 2008-04-25 09:50:19 jgrg Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-authenticate_me,v $
 
 use strict;
