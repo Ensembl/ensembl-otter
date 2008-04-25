@@ -902,7 +902,7 @@ sub RECEIVE_FILTER {
           )
         {
             # call the method to get the status and response
-            warn "Calling $obj->$valid($reqXML)";
+            #warn "Calling $obj->$valid($reqXML)";
             ($status, $response) = $obj->$valid($reqXML);
             last;                  # no need to go any further...
         }
