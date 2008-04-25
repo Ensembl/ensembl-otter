@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2008-04-25 14:18:31 $
-# Id:            $Id: nph-get_sequencesets,v 1.16 2008-04-25 14:18:31 lg4 Exp $
+# Last modified: $Date: 2008-04-25 14:32:04 $
+# Id:            $Id: nph-get_sequencesets,v 1.17 2008-04-25 14:32:04 lg4 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_sequencesets,v $
 
 use strict;
@@ -22,8 +22,8 @@ eval {
 
     # Allow local scripts to access without authorization
 
-    my $author  = $server->require_argument('client');
-    unless ($server->local_user) {
+    my $author  = '';
+    if($server->show_restricted_datasets) {
         $author = $server->authorized_user;
     }
 
