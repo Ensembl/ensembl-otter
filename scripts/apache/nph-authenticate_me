@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2008-04-24 16:36:38 $
-# Id:            $Id: nph-authenticate_me,v 1.2 2008-04-24 16:36:38 jgrg Exp $
+# Last modified: $Date: 2008-04-25 09:41:09 $
+# Id:            $Id: nph-authenticate_me,v 1.3 2008-04-25 09:41:09 jgrg Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-authenticate_me,v $
 
 use strict;
@@ -14,7 +14,8 @@ use SangerWeb;
 use Bio::Otter::ServerScriptSupport;
 
 my $server = Bio::Otter::ServerScriptSupport->new;
-
+my $user = $server->authorized_user;
+$server->send_response($user);
 
 
 __END__
