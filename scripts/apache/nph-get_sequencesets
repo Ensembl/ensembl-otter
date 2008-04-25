@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2008-04-25 14:32:04 $
-# Id:            $Id: nph-get_sequencesets,v 1.17 2008-04-25 14:32:04 lg4 Exp $
+# Last modified: $Date: 2008-04-25 15:12:36 $
+# Id:            $Id: nph-get_sequencesets,v 1.18 2008-04-25 15:12:36 lg4 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_sequencesets,v $
 
 use strict;
@@ -114,13 +114,10 @@ eval {
                AND sr.name        = ?
         });
         $sth->execute($author, $chr_name);
-        while (my($access) = $sth->fetchrow) { # we're only expecting max one value
-            if($access=~/W/) {
-                $write_access = 1;
-            }
-            if($access=~/R/) {
-                $hidden = 0;
-            }
+        if (my($access) = $sth->fetchrow) {  # we're only expecting max one value
+                                             # due to schema restrictions
+            $write_access = ($access=~/W/);
+            $hidden       = ($access!~/R/);
         }
 
         $xml .= qq`      <sequenceset name="$chr_name">\n`;
