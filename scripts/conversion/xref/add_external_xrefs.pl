@@ -64,14 +64,12 @@ Genomics) is used exclusively for human to add xrefs for externally annotated (S
 genes on human chr 7. IMGT_HLA is used to add xrefs for HLA genes on human haplotypes.
 IMGT_GDB is used to add xrefs for IG genes
 
-For mouse two files are parsed - the first (mgivega) associates OTTMUS IDs with MGI marker
-symbols, the second (mgi) adds links to external databases.
+For mouse, mgi xrefformat adds links both to MGI and to external databases.
 
 Currently, these input formats are supported:
 
     hgnc        => http://www.genenames.org/data/gdlw_index.html
                    ('All data' in text format)
-    mgivega     => ftp://ftp.informatics.jax.org/pub/reports/MGI_VEGA.rpt
     mgi         => ftp://ftp.informatics.jax.org/pub/reports/MGI_MouseHumanSequence.rpt
     imgt_hla    => by email Steven Marsh <marsh@ebi.ac.uk>
     imgt_gdb    => use vega database
@@ -85,7 +83,6 @@ Please see http://www.ensembl.org/code_licence.html for details
 =head1 AUTHOR
 
 Steve Trevanion <st3@sanger.ac.uk>
-Original code by Patrick Meidl <meidl@ebi.ac.uk> and Tim Hubbard <th@sanger.ac.uk>
 
 =head1 CONTACT
 
@@ -124,7 +121,6 @@ $support->parse_extra_options(
     'gene_stable_id|gsi=s@',
     'xrefformat=s@',
     'hgncfile=s',
-    'mgivegafile=s',
     'mgifile=s',
 	'imgt_hlafile=s',
 	'imgt_gdbfile=s',
@@ -142,7 +138,6 @@ $support->allowed_params(
     'gene_stable_id',
     'xrefformat',
     'hgncfile',
-    'mgivegafile',
     'mgifile',
     'imgt_hlafile',
 	'imgt_gdbfile',
@@ -168,11 +163,6 @@ $support->list_or_file('gene_stable_id');
 # ask user to confirm parameters to proceed
 $support->confirm_params;
 
-# make sure the corrct sequence of options have been run
-if ( $support->param('xrefformat') eq 'mgi' ) {
-	exit unless $support->user_proceed("MGI files can be parsed only after first using the mgivega option. Have you done this?");
-}
-
 # get log filehandle and print heading and parameters to logfile
 $support->init_log;
 
@@ -188,16 +178,6 @@ my $sth_display_xref = $dba->dbc->prepare("UPDATE gene SET display_xref_id=? WHE
 
 # statement handles for fixing case errors
 my $sth_case = $dba->dbc->prepare("UPDATE xref set display_label = ? WHERE display_label = ?");
-
-#make sure mgivega xrefs aren't pruned by mistake
-if ( ($support->param('prune')) && ($support->param('xrefformat') eq 'mgi') ) {
-	if ($support->user_proceed('You should not be pruning mgi_vega xrefs now. Shall I switch off pruning for you?') ) {
-		$support->param('prune',0);
-	}
-	else {
-		exit;
-	}
-}
 
 # delete external xrefs if --prune option is used; removes only those added using this source (hgnc, imgt etc)
 if ($support->param('prune') and $support->user_proceed('Would you really like to delete xrefs from previous runs of this script that have used these options?')) {
@@ -292,8 +272,8 @@ else {
 }
 
 if ($support->param('verbose')) {
-	warn Dumper($parsed_xrefs);
-#	warn Dumper($lcmap);
+	$support->log("Parsed xrefs are ".Dumper($parsed_xrefs)."\n");
+	$support->log("Parsed lc xrefs are ".Dumper($lcmap)."\n");
 #	exit;
 }
 
@@ -304,7 +284,7 @@ $support->log_stamped("Done.\n\n");
 my %extdb_def = (
     HGNC                     => ['KNOWNXREF', 1],
     EntrezGene               => ['KNOWNXREF', 0],
-    MarkerSymbol             => ['KNOWNXREF', 1],
+    MGI                      => ['KNOWNXREF', 1],
     RefSeq_dna               => ['KNOWN'    , 0],
     RefSeq_dna_predicted     => ['PRED'     , 0],
     RefSeq_peptide           => ['KNOWN'    , 0],
@@ -386,7 +366,7 @@ foreach my $chr (@chr_sorted) {
 					
 					if (! $support->param('dry_run')) {
 						#update gene_name and display_xref
-						$support->log_("Fixing case mismatch $gene_name to $new_name...\n", 1);
+						$support->log("Fixing case mismatch $gene_name to $new_name...\n", 1);
 						$sth_case->execute($new_name, $gene_name);
 						$xrefs_assigned{'wrong case'}++;
 					}
@@ -805,11 +785,13 @@ sub parse_hgnc {
   Arg[2]      : Hashref $lcmap - keys: lowercase gene names, values: list of
                 gene names (with case preserved)
   Example     : &parse_mgi($xrefs, $lcmap);
-  Description : Parses a specific rtf file from MGI. Used to add MarkerSymbol, Swissprot
-                RefSeq and EntrezGene xrefs to Vega genes
+  Description : Parses a specific rtf file from MGI. Used to add links between
+                MarkerSymbol and Vega genes
   Return type : none
   Exceptions  : thrown if input file can't be read
   Caller      : internal
+  Status      : Deprecated (used to be used to assocaiate OTT and MGI but
+                this is now done by anacode)
 
 =cut
 
@@ -876,7 +858,8 @@ sub parse_mgi {
 	   #add mgi entries
 	   my $gene_name = $fields[1];
 	   my $mgi_pid = $fields[0];
-	   $xrefs->{$gene_name}->{'MarkerSymbol'} = [ $gene_name .'||'. $mgi_pid ];
+	   $mgi_pid =~ s/^MGI://;
+	   $xrefs->{$gene_name}->{'MGI'} = [ $gene_name .'||'. $mgi_pid ];
 
 	   #add refseq dna entries
 	   my $refseqs = $fields[21];
