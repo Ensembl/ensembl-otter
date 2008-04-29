@@ -27,23 +27,20 @@ General options:
 
 Specific options:
 
-    --external_db=NAME                  use external_db NAME for xrefs (default is OTTT)
-    --chromosomes, --chr=LIST           only process LIST chromosomes
-    --gene_stable_id, --gsi=LIST|FILE   only process LIST gene_stable_ids
-                                        (or read list from FILE)
-    --id_file=FILE                      file containing mappings between E! and vega transcripts
-                                         - if not tab delimited then whitespace delimited
     --prune                             reset to the state before running this
-                                        script (i.e. after running
-                                        add_vega_xrefs.pl)
+                                        script
 
 =head1 DESCRIPTION
 
-This script parses a tab separated input file containing mappings between ensembl
-and vega transcript IDs and adds the Ensembl IDs as xrefs. The external DB name can be specified
-allowing the script to be used to add different types of xrefs.
+This script extracts xrefs from an ensembl database that link OTT and ENST transcripts.
+For each pair of transcripts, the 'best' type is then added to Vega as an xref.
 
-[probably want to add the ability to query a database directly]
+Identify where a Vega transcript matches to more than one Ensembl one by:
+
+   $ grep 'matches to multiple Ensembl transcripts' my_log.log
+
+WARNINGS indicate where a Vega transcript used in Ensembl is no longer present in Vega,
+and also other problems such as failure to store an xref in the db for whatever reason
 
 =head1 LICENCE
 
@@ -77,7 +74,6 @@ use Getopt::Long;
 use Pod::Usage;
 use Bio::EnsEMBL::Utils::ConversionSupport;
 use Data::Dumper;
-#use Bio::SeqIO::genbank;
 
 $| = 1;
 
@@ -88,26 +84,22 @@ $support->parse_common_options(@_);
 $support->parse_extra_options(
     'chromosomes|chr=s@',
     'gene_stable_id|gsi=s@',
-	'id_file=s',
-	'external_db=s',
- #   'ensemblhost=s',
- #   'ensemblport=s',
- #   'ensembluser=s',
- #   'ensemblpass=s',
- #   'ensembldbname=s',
+    'ensemblhost=s',
+    'ensemblport=s',
+    'ensembluser=s',
+    'ensemblpass=s',
+    'ensembldbname=s',
     'prune',
 );
 $support->allowed_params(
     $support->get_common_params,
     'chromosomes',
     'gene_stable_id',
-    'id_file',
-	'external_db',
-#    'ensemblhost',
-#    'ensemblport',
-#    'ensembluser',
-#    'ensemblpass',
-#    'ensembldbname',
+    'ensemblhost',
+    'ensemblport',
+    'ensembluser',
+    'ensemblpass',
+    'ensembldbname',
     'prune',
 );
 
@@ -121,27 +113,22 @@ $support->comma_to_list('chromosomes');
 # ask user to confirm parameters to proceed
 $support->confirm_params;
 
-# make sure add_vega_xrefs.pl has been run
-exit unless $support->user_proceed("This script should be run after add_external_xrefs.pl. Have you run it?");
 
 # get log filehandle and print heading and parameters to logfile
 $support->init_log;
 
-# connect to database and get adaptors (caching features on one slice only)
-# get an ensembl database for better performance (no otter tables are needed)
+# connect databases and get adaptors
 my $dba = $support->get_database('ensembl');
 my $dbh = $dba->dbc->db_handle;
-my $sa = $dba->get_SliceAdaptor();
-my $ga = $dba->get_GeneAdaptor();
 my $ta = $dba->get_TranscriptAdaptor();
 my $ea = $dba->get_DBEntryAdaptor();
+#ensembl db
+my $edba = $support->get_database('ensembl','ensembl');
+my $esa  = $edba->get_SliceAdaptor();
 
-# delete all ensembl_ids if --prune option is used; basically this resets
-# xrefs to the state after running add_external_xrefs.pl
-
-my $external_db = $support->param('external_db') || 'ENST';
+# delete all ensembl xrefs if --prune option is used
 if (!$support->param('dry_run')) {
-	if ($support->param('prune') and $support->user_proceed("Would you really like to delete all previously added $external_db xrefs before running this script?")) {
+	if ($support->param('prune') and $support->user_proceed("Would you really like to delete all previously added ENST xrefs before running this script?")) {
 		my $num;
 		# xrefs
 		$support->log("Deleting all ensembl_id xrefs...\n");
@@ -149,7 +136,7 @@ if (!$support->param('dry_run')) {
            DELETE x
            FROM xref x, external_db ed
            WHERE x.external_db_id = ed.external_db_id
-           AND ed.db_name = \'$external_db\'
+           AND ed.db_name like \'ENST%\'
 		));
 		$support->log("Done deleting $num entries.\n");
 
@@ -170,85 +157,101 @@ elsif ($support->param('prune')){
 	
 my @gene_stable_ids = $support->param('gene_stable_id');
 my %gene_stable_ids = map { $_, 1 } @gene_stable_ids;
-my $chr_length = $support->get_chrlength($dba);
-my @chr_sorted = $support->sort_chromosomes($chr_length);
 
-# parse input file
-open (ID, '<', $support->param('id_file')) or $support->throw(
-        "Couldn't open ".$support->param('id_file')." for reading: $!\n");
+#get xrefs from E! db for wanted chromosomes
+
 my $ens_ids;
-while (<ID> ) {
-	next if (/stable_id/);
-	my ($e_id,$v_id) = split /\t/;
-	($e_id,$v_id) = split / / unless ($e_id && $v_id);
-	if ($e_id =~ /^OTT/) {
-		my $t = $e_id;
-		$e_id = $v_id;
-		$v_id = $t;
+CHR:
+foreach my $slice (@{$esa->fetch_all('toplevel')}) {
+	my $chr_name = $slice->seq_region_name;
+	next CHR if ($chr_name =~ /^NT|MT/);
+	$support->log("Retrieving Ensembl genes from chromosome $chr_name...\n");		
+ GENE:
+	foreach my $g (@{$slice->get_all_Genes()}) {
+		next GENE unless ($g->analysis->logic_name =~ /havana/);
+		foreach my $t (@{$g->get_all_Transcripts}) {
+			my $tsi = $t->stable_id;
+		XREF:
+			foreach my $x (@{$t->get_all_DBEntries}){
+				my $dbname = $x->dbname;
+				my $name = $x->display_id;
+				next XREF unless ($dbname =~ /OTTT/);
+				next XREF unless ($name =~ /OTT/);
+
+				$ens_ids->{$name}{$tsi}{$dbname}++;
+			}
+		}
 	}
-	chomp $v_id;
-	chomp $e_id;
-	if ( exists($ens_ids->{$v_id}) && ($e_id ne $ens_ids->{$v_id}) ) {
-		my $prev_id = $ens_ids->{$v_id};
-		eval {
-			my $trans = $ta->fetch_by_stable_id($v_id);
-			my $chr_name = $trans->seq_region_name;
-			my $chr_start = $trans->seq_region_start;
-			my $chr_end = $trans->seq_region_end;
-			$support->log_warning("$v_id $chr_name:$chr_start:$chr_end matched to more than one Ensembl transcript ($e_id and $prev_id). Using the latter for xref mapping\n");
-		};
-		$support->log_warning("problem retrieving transcript $v_id - $@") if $@;
-	}
-	$ens_ids->{$v_id} = $e_id;
+#	last;
 }
 
-#check (user defined) external dbname
-my $sth = $dbh->prepare(qq(select * from external_db where db_name = ?));
-$sth->execute($external_db);
-unless (my @r = $sth->fetchrow_array) {
-	$support->log_warning("External db name provided is not in the database, please check and add if neccesary\n");
-	exit;
-}
+warn Dumper($ens_ids);
 
-#retrieve transcripts and add xrefs
+my $external_db;
+
+#this defines the order in which the e! xrefs will be used, and which external_db 
+#they match in Vega
+my @priorities = qw(shares_CDS_and_UTR_with_OTTT:ENST_ident
+					shares_CDS_with_OTTT:ENST_CDS
+					OTTT:ENST_ident);
+
+#add xrefs to each 
 foreach my $v_id (keys %$ens_ids) {
 	my $transcript = $ta->fetch_by_stable_id($v_id);
 	unless ($transcript) {
 		$support->log_warning("Can't retrieve transcript $v_id from Vega\n");
 		next;
 	}
-	my $e_id       = $ens_ids->{$v_id};
-	my $dbentry    = Bio::EnsEMBL::DBEntry->new(
-					  -primary_id => $e_id,
-					  -display_id => $e_id,
-                      -version    => 1,
-                      -release    => 1,
-                      -dbname     => $external_db,
-					);
-	$transcript->add_DBEntry($dbentry);
-	if ($support->param('dry_run')) {
-		$support->log("Would store $external_db xref $e_id for transcript $v_id.\n", 1);
-	} else {
-		my $dbID = $ea->store($dbentry, $transcript->dbID, 'transcript');
+	$support->log("Studying transcript $v_id\n");
+	my @c = ();
+	while ( my ($e_id, $xrefs) =  each %{$ens_ids->{$v_id}} ) {
+		push @c, $e_id;
+		my $found = 0;
+		foreach my $db (@priorities) {
+			my ($edb,$vdb) = split ':',$db;
+			last if $found;
+			if ($xrefs->{$edb}) {
+				my $dbentry = Bio::EnsEMBL::DBEntry->new(
+					-primary_id => $e_id,
+					-display_id => $e_id,
+					-version    => 1,
+					-release    => 1,
+					-dbname     => $vdb,
+				);
+				$transcript->add_DBEntry($dbentry);
+				if ($support->param('dry_run')) {
+					$support->log("Would store $vdb xref $e_id for transcript $v_id.\n", 1);
+					$found = 1;
+				}
+				else {
+					my $dbID = $ea->store($dbentry, $transcript->dbID, 'transcript');
 		
-		# apparently, this xref had been stored already, so get
-		# xref_id from db
-		unless ($dbID) {
-			my $sql = qq(
+					# apparently, this xref had been stored already, so get
+					# xref_id from db
+					unless ($dbID) {
+						my $sql = qq(
                          SELECT x.xref_id
                          FROM xref x, external_db ed
                          WHERE x.external_db_id = ed.external_db_id
                          AND x.dbprimary_acc = '$e_id'
-                         AND ed.db_name = '$external_db'
+                         AND ed.db_name = '$vdb'
                          );
-			($dbID) = @{ $dbh->selectall_arrayref($sql) || [] };
+						($dbID) = @{ $dbh->selectall_arrayref($sql) || [] };
+						$support->log_verbose
+					}
+					if ($dbID) {
+						$support->log("Stored $vdb xref $e_id for transcript $v_id.\n", 1);
+						$found = 1;
+					} else {
+						$support->log_warning("No dbID for $vdb xref ($e_id) transcript $v_id\n", 1);
+					}
+				}
+			}
 		}
-
-		if ($dbID) {
-			$support->log("Stored $external_db xref $e_id for transcript $v_id.\n", 1);
-		} else {
-			$support->log_warning("No dbID for $external_db xref ($e_id) transcript $v_id\n", 1);
-		}
+	}
+	if (scalar(@c) > 1) {
+		my $ids = join ' ',@c;
+		$support->log("Vega transcript $v_id matches to multiple Ensembl transcripts: $ids\n");
 	}
 }
 
