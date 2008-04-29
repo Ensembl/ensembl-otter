@@ -272,13 +272,13 @@ $aligner->remove_tempdir;
 $support->log_stamped("Done.\n");
 
 # drop tmp_align
-unless ($support->param('dry_run')) {
-    if ($support->user_proceed("Would you like to drop the tmp_align table?")) {
-        $support->log_stamped("Dropping tmp_align table...\n");
-        $E_dbh->do(qq(DROP TABLE tmp_align));
-        $support->log_stamped("Done.\n");
-    }
-}
+#unless ($support->param('dry_run')) {
+#    if ($support->user_proceed("Would you like to drop the tmp_align table?")) {
+#        $support->log_stamped("Dropping tmp_align table...\n");
+#        $E_dbh->do(qq(DROP TABLE tmp_align));
+#        $support->log_stamped("Done.\n");
+#    }
+#}
 
 # overall stats
 $aligner->log_overall_stats;
