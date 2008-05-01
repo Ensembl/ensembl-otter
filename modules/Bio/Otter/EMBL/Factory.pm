@@ -632,7 +632,12 @@ sub make_embl_ft {
         foreach my $gene (@$genes) {
             # Don't dump deleted or non-Havana genes
             next if $gene->biotype eq 'obsolete';
-            next if $gene->source ne 'havana' and $gene->source ne 'WU';
+            #next if $gene->source ne 'havana' and $gene->source ne 'WU';
+            warn "WORKING ON SOURCE: ", $gene->source;
+            if ( $gene->source ne 'havana' and $gene->source ne 'WU' ){
+              warn "BAD SOURCE: ", $gene->source;
+              next;
+            }
 
             # $self->_do_Gene($gene, $set, $chr_slice);
             $self->process_gene($set, $gene);
@@ -993,7 +998,7 @@ sub process_gene {
     
     foreach my $transcript (@{$gene->get_all_Transcripts}) {
         my $name = $transcript->get_all_Attributes('name')->[0]->value;
-        if ($name =~ /[A-Z]+:/) {
+        if ($name =~ /[A-Z]+:/ and $name !~ /^WU:/ ) {
             # There are some GD: transcripts in Havana genes!
             warn "Skipping non-Havana transcript '$name'\n";
             next;
