@@ -1,6 +1,7 @@
 package ToXML; # a module, but not really a class
 
 use strict;
+use Bio::Vega::Transform::XML;
 
 # ----------------[simplify some formatting]----------------------
 
@@ -55,6 +56,14 @@ sub Bio::EnsEMBL::DBEntry::toXMLstring {
     $str .= emit_closing_tag('xref',2);
 
     return $str;
+}
+
+sub Bio::Vega::Gene::toXMLstring {
+    my ($gene, $allowed_transcript_analyses_hash, $allowed_translation_xref_db_hash) = @_;
+
+    # FIXME: not yet possible to filter loutre transcripts by analyses
+
+    return Bio::Vega::Transform::XML->new->get_geneXML($gene);
 }
 
 sub Bio::EnsEMBL::Gene::toXMLstring {
