@@ -10,6 +10,7 @@ use Bio::EnsEMBL::PredictionTranscript;
 use Bio::EnsEMBL::RepeatConsensus;
 use Bio::EnsEMBL::RepeatFeature;
 use Bio::EnsEMBL::SimpleFeature;
+use Bio::EnsEMBL::Slice;
 use Bio::EnsEMBL::Map::MarkerSynonym;
 use Bio::EnsEMBL::Map::Marker;
 use Bio::EnsEMBL::Map::MarkerFeature;
@@ -817,7 +818,7 @@ sub get_all_Genes { # non-default :)
 
     $analysis_name ||= 'otter';
 
-    return $self->get_all_PipelineGenes($analysis_name, 0, '.');
+    return $self->get_all_PipelineGenes($analysis_name, 1, '.');
 }
 
 1;
