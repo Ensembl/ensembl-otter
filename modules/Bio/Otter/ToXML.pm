@@ -336,7 +336,7 @@ sub Bio::Vega::Gene::toXMLstring_ginfo {
         }
     }
 
-    if(my $author = $gene->author) {
+    if(my $author = $gene->gene_author) {
         $str .= $author->toXMLstring;
     }
 
