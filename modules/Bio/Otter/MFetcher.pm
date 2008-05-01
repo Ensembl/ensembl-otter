@@ -197,8 +197,7 @@ sub satellite_dba {
 
 
         # not the most beautiful way (and place) to do it :(
-    my ($asm_def) = @{ $self->satellite_dba($metakey)
-                       ->get_MetaContainer()->list_value_by_key('assembly.default') };
+    my ($asm_def) = @{ $sdba->get_MetaContainer()->list_value_by_key('assembly.default') };
     if($asm_def =~ /^otter$/i) {
         bless $sdba,'Bio::Vega::DBSQL::DBAdaptor';
     }
