@@ -1,6 +1,7 @@
 package ToXML; # a module, but not really a class
 
 use strict;
+use Bio::Vega::Utils::GeneTranscriptBiotypeStatus 'biotype_status2method';
 
 # ----------------[simplify some formatting]----------------------
 
@@ -332,7 +333,7 @@ sub Bio::Vega::Gene::toXMLstring_ginfo {
     }
     if(my $hremarks = $gene->get_all_Attributes('hidden_remark')) {
         foreach my $hrem (@$hremarks){
-            $str .= emit_tagpair('remark', $hrem->value, 4);
+            $str .= emit_tagpair('remark', 'Annotation_remark- '.$hrem->value, 4);
         }
     }
 
@@ -344,6 +345,73 @@ sub Bio::Vega::Gene::toXMLstring_ginfo {
 
     return $str;
 }
+
+sub Bio::Vega::Transcript::toXMLstring_tinfo {
+    my $transcript = shift @_;
+
+    my $str = '';
+    $str .= emit_opening_tag('transcript_info', 4);
+
+    if (my $author = $transcript->transcript_author) {
+        $str .= $author->toXMLstring();
+    }
+
+    if(my $remarks = $transcript->get_all_Attributes('remark')){
+        foreach my $rem (@$remarks){
+            my $rem_value = $rem->value();
+            $rem_value =~ s/\n/ /g;
+            $str .= emit_tagpair('remark', $rem_value, 6);
+        }
+    }
+    if(my $hremarks = $transcript->get_all_Attributes('hidden_remark')) {
+        foreach my $hrem (@$hremarks){
+            my $hrem_value = $hrem->value();
+            $hrem_value =~ s/\n/ /g;
+            $str .= emit_tagpair('remark', 'Annotation_remark- '.$hrem_value, 6);
+        }
+    }
+
+    my $mRNA_start_NF = $transcript->get_all_Attributes('mRNA_start_NF') ;
+    my $mRNA_end_NF   = $transcript->get_all_Attributes('mRNA_end_NF') ;
+    my $cds_start_NF  = $transcript->get_all_Attributes('cds_start_NF') ;
+    my $cds_end_NF    = $transcript->get_all_Attributes('cds_end_NF') ;
+    if (defined $cds_start_NF){
+        my $csNF=$cds_start_NF->[0]->value;
+        $str .= emit_tagpair('cds_start_not_found', $csNF, 6);
+    }
+    if (defined $cds_end_NF){
+        my $ceNF=$cds_end_NF->[0]->value;
+        $str .= emit_tagpair('cds_end_not_found', $ceNF, 6);
+    }
+    if (defined $mRNA_start_NF){
+        my $msNF=$mRNA_start_NF->[0]->value;
+        $str .= emit_tagpair('mRNA_start_not_found', $msNF, 6);
+    }
+    if (defined $mRNA_end_NF){
+        my $meNF=$mRNA_end_NF->[0]->value;
+        $str .= emit_tagpair('mRNA_end_not_found', $meNF, 6);
+    }
+
+    my $name_att = $transcript->get_all_Attributes('name') ;
+    my $name= $name_att->[0] && $name_att->[0]->value || '';
+    $str .= emit_tagpair('name', $name, 6);
+
+    my ($class) = biotype_status2method($transcript->biotype, $transcript->status);
+    $str .= emit_tagpair('transcript_class', $class, 6);
+
+    foreach my $evi (sort {$a->name cmp $b->name} @{$transcript->evidence_list}) {
+        $str .= emit_opening_tag('evidence', 6);
+        $str .= emit_tagpair('name', $evi->name(), 8);
+        $str .= emit_tagpair('type', $evi->type(), 8);
+        $str .= emit_closing_tag('evidence', 6);
+    }
+
+    $str .= emit_closing_tag('transcript_info', 4);
+	    
+    return $str;
+}
+
+# ----------------[back-porting the system to support Vega/Loutre genes]--------------
 
 sub Bio::Vega::Author::toXMLstring {
     my $author = shift @_;
