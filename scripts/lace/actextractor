@@ -1,24 +1,24 @@
 #!/usr/local/bin/perl -w
 
-# Lg4, 3.aug'2006 - 
+# Author: lg4
 #
-# Extracts some transcript stats for "annotation consistency test" run 1-2.aug'2006
-# jla1 asked for this feature.
+# ver.3.aug'2006.Extracts some transcript stats for "annotation consistency test" run 1-2.aug'2006
+# ver.1.may'2008.Extracts some transcript stats for "annotation consistency test 2" run 29-30.apr'2008
 
 use strict;
 use Bio::Otter::Lace::Defaults;
+use Bio::Otter::Lace::Slice;
 
 {
-    my $dataset_name = '*';
-    my $chr_name     = 10;
-    my $set_name     = 'chr10-act';
-    my $help_flag    = 0;
+    my $dataset_name    = '';
+    my $dataset_pattern = qr{^act2_};
+    my $set_name        = 'act2-01';
+    my $help_flag       = 0;
 
-    unshift @ARGV, '--port=33977'; # a 'local default'
+    unshift @ARGV, '--host=wwwdev.sanger.ac.uk';
 
     Bio::Otter::Lace::Defaults::do_getopt(
         'dataset=s'     => \$dataset_name,
-        'chr=s'         => \$chr_name,
         'set=s'         => \$set_name,
     );
 
@@ -26,16 +26,16 @@ use Bio::Otter::Lace::Defaults;
 
         # Client communicates with otter HTTP server:
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
-    $cl->debug(0);
     
-
-    if($dataset_name eq '*') {
-        foreach my $ds ($cl->get_all_DataSets) {
-            show_one_set($cl, $ds, $set_name);
-        }
-    } else {
+    if($dataset_name) {
         my $ds = $cl->get_DataSet_by_name($dataset_name);
         show_one_set($cl, $ds, $set_name);
+    } else {
+        foreach my $ds ($cl->get_all_DataSets) {
+            if($ds->name() =~ $dataset_pattern) {
+                show_one_set($cl, $ds, $set_name);
+            }
+        }
     }
 }
 
