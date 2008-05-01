@@ -189,11 +189,20 @@ sub satellite_dba {
         $uppercased_options{uc($k)} = $v;
     }
     
+    $self->error_exit("No connection parameters for '$metakey' in otter database")
+        unless (keys %uppercased_options);
+
     my $sdba = $adaptor_class->new(%uppercased_options)
         || $self->error_exit("Couldn't connect to '$metakey' satellite db");
 
-    $self->error_exit("No connection parameters for '$metakey' in otter database")
-        unless (keys %uppercased_options);
+
+        # not the most beautiful way (and place) to do it :(
+    my ($asm_def) = @{ $self->satellite_dba($metakey)
+                       ->get_MetaContainer()->list_value_by_key('assembly.default') };
+    if($asm_def =~ /^otter$/i) {
+        bless $sdba,'Bio::Vega::DBSQL::DBAdaptor';
+    }
+
 
         # if it's needed AND we can...
     $sdba->assembly_type($self->otter_dba()->assembly_type()) unless ($satehead || $running_headcode);
