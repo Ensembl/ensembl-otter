@@ -632,6 +632,7 @@ sub make_embl_ft {
         foreach my $gene (@$genes) {
             # Don't dump deleted or non-Havana genes
             next if $gene->biotype eq 'obsolete';
+            next if $gene->biotype =~ /^ig_/;
             next if $gene->source ne 'havana' and $gene->source ne 'WU';
 
             # $self->_do_Gene($gene, $set, $chr_slice);
