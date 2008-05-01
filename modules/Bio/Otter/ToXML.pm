@@ -93,8 +93,8 @@ sub Bio::EnsEMBL::Gene::toXMLstring {
         if(my $ginfo = $gene->gene_info()) {
             $str .= $ginfo->toXMLstring();
         }
-    } elsif($gene->can('toXMLstring_ginfo')) { # do we have a Loutre gene?
-        $str .= $gene->toXMLstring_ginfo();
+    } elsif($gene->can('toXMLstring_info')) { # do we have a Loutre gene?
+        $str .= $gene->toXMLstring_info();
     }
 
     foreach my $transcript (sort by_stable_id_or_name @{$gene->get_all_Transcripts}) {
@@ -143,6 +143,8 @@ sub Bio::EnsEMBL::Transcript::toXMLstring {
         if(my $tinfo = $transcript->transcript_info()) {
             $str .= $tinfo->toXMLstring();
         }
+    } elsif($transcript->can('toXMLstring_info')) { # do we have a Loutre transcript?
+        $str .= $transcript->toXMLstring_info();
     }
 
     my ($tsl, $translation_ok, $tran_low, $tran_high, $tl_start, $tl_end, $tl_stable_id);
@@ -308,7 +310,7 @@ sub Bio::Otter::TranscriptInfo::toXMLstring {
 
 # ----------------[back-porting the system to support Vega/Loutre genes]--------------
 
-sub Bio::Vega::Gene::toXMLstring_ginfo {
+sub Bio::Vega::Gene::toXMLstring_info {
     my $gene = shift @_;
 
     my $str = '';
@@ -346,7 +348,7 @@ sub Bio::Vega::Gene::toXMLstring_ginfo {
     return $str;
 }
 
-sub Bio::Vega::Transcript::toXMLstring_tinfo {
+sub Bio::Vega::Transcript::toXMLstring_info {
     my $transcript = shift @_;
 
     my $str = '';
