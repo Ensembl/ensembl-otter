@@ -1,7 +1,6 @@
 package ToXML; # a module, but not really a class
 
 use strict;
-use Bio::Vega::Transform::XML;
 
 # ----------------[simplify some formatting]----------------------
 
@@ -58,14 +57,6 @@ sub Bio::EnsEMBL::DBEntry::toXMLstring {
     return $str;
 }
 
-sub Bio::Vega::Gene::toXMLstring {
-    my ($gene, $allowed_transcript_analyses_hash, $allowed_translation_xref_db_hash) = @_;
-
-    # FIXME: not yet possible to filter loutre transcripts by analyses
-
-    return Bio::Vega::Transform::XML->new->get_geneXML($gene);
-}
-
 sub Bio::EnsEMBL::Gene::toXMLstring {
     my ($gene, $allowed_transcript_analyses_hash, $allowed_translation_xref_db_hash) = @_;
 
@@ -101,6 +92,8 @@ sub Bio::EnsEMBL::Gene::toXMLstring {
         if(my $ginfo = $gene->gene_info()) {
             $str .= $ginfo->toXMLstring();
         }
+    } elsif($gene->can('toXMLstring_ginfo')) { # do we have a Loutre gene?
+        $str .= $gene->toXMLstring_ginfo();
     }
 
     foreach my $transcript (sort by_stable_id_or_name @{$gene->get_all_Transcripts}) {
@@ -309,6 +302,58 @@ sub Bio::Otter::TranscriptInfo::toXMLstring {
 
     $str .= emit_closing_tag('transcript_info', 4);
 	    
+    return $str;
+}
+
+# ----------------[back-porting the system to support Vega/Loutre genes]--------------
+
+sub Bio::Vega::Gene::toXMLstring_ginfo {
+    my $gene = shift @_;
+
+    my $str = '';
+    $str .= emit_opening_tag('gene_info', 2);
+
+    my $gene_name_att = $gene->get_all_Attributes('name');
+    my $gene_name = $gene_name_att->[0] ? $gene_name_att->[0]->value : '';
+	$str .= emit_tagpair('name', $gene_name, 4);
+
+	$str .= emit_tagpair('known', $gene->is_known || 0, 4);
+	$str .= emit_tagpair('truncated', $gene->truncated_flag, 4);
+
+    if(my $synonyms = $gene->get_all_Attributes('synonym')) {
+        foreach my $syn (@$synonyms){
+            $str .= emit_tagpair('synonym', $syn->value, 4);
+        }
+    }
+    if(my $remarks = $gene->get_all_Attributes('remark')) {
+        foreach my $rem (@$remarks){
+            $str .= emit_tagpair('remark', $rem->value, 4);
+        }
+    }
+    if(my $hremarks = $gene->get_all_Attributes('hidden_remark')) {
+        foreach my $hrem (@$hremarks){
+            $str .= emit_tagpair('remark', $hrem->value, 4);
+        }
+    }
+
+    if(my $author = $gene->author) {
+        $str .= $author->toXMLstring;
+    }
+
+    $str .= emit_closing_tag('gene_info', 2);
+
+    return $str;
+}
+
+sub Bio::Vega::Author::toXMLstring {
+    my $author = shift @_;
+
+    my $str = '';
+    $str .= emit_opening_tag('author', 4);
+    $str .= emit_tagpair('name', $author->name(), 6);
+    $str .= emit_tagpair('email', $author->email(), 6);
+    $str .= emit_closing_tag('author', 4);
+
     return $str;
 }
 
