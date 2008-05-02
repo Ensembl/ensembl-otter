@@ -620,6 +620,7 @@ sub make_embl_ft {
 
     my $chr_slice = $self->chromosome_Slice;
 
+    warn $
     my $set = 'Hum::EMBL::FeatureSet'->new;
 
     my $genes = $chr_slice->get_all_Genes;
@@ -632,8 +633,7 @@ sub make_embl_ft {
         foreach my $gene (@$genes) {
             # Don't dump deleted or non-Havana genes
             next if $gene->biotype eq 'obsolete';
-            next if $gene->biotype =~ /^ig_/;
-            next if $gene->source ne 'havana' and $gene->source ne 'WU';
+            next if $gene->source ne 'havana';
 
             # $self->_do_Gene($gene, $set, $chr_slice);
             $self->process_gene($set, $gene);
@@ -994,7 +994,7 @@ sub process_gene {
     
     foreach my $transcript (@{$gene->get_all_Transcripts}) {
         my $name = $transcript->get_all_Attributes('name')->[0]->value;
-        if ($name =~ /[A-Z]+:/ and $name !~ /^WU:/ ) {
+        if ($name =~ /[A-Z]+:/ ) {
             # There are some GD: transcripts in Havana genes!
             warn "Skipping non-Havana transcript '$name'\n";
             next;
