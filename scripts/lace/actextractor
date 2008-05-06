@@ -12,7 +12,7 @@ use Bio::Otter::Lace::Slice;
 {
     my $dataset_name    = '';
     my $dataset_pattern = qr{^act2_};
-    my $set_name        = 'act2-01';
+    my $set_name        = 'chr13-02';
     my $help_flag       = 0;
 
     unshift @ARGV, '--host=wwwdev.sanger.ac.uk';
